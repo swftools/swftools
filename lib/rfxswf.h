@@ -562,8 +562,7 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f);
 void swf_FontCreateLayout(SWFFONT*f);
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
 
-int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
-	void(*callback)(int*chars, int nr, int id));
+int swf_ParseDefineText(TAG * t, void(*callback)(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA* color), void*self);
 
 void swf_WriteFont(SWFFONT* font, char* filename);
 SWFFONT* swf_ReadFont(char* filename);
