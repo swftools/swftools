@@ -157,9 +157,18 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
     }
     else if(cinfo.out_color_space == JCS_YCbCr) 
     {
-	//FIXME
-	fprintf(stderr, "Error: Can't convert YCbCr(YUV) to RGB.\n");
-	return -1;
+	for (y=0;y<cinfo.output_height;y++) {
+	  int x;
+	  for(x=0;x<cinfo.output_width;x++) {
+	      int y = js[x*3+0];
+	      int u = js[x*3+1];
+	      int v = js[x*3+1];
+	      // untested:
+	      js[x*3+0] = y + ((360*(v-128))>>8);
+	      js[x*3+1] = y - ((88*(u-128)-183*(v-128))>>8);
+	      js[x*3+2] = y + ((455 * (u-128))>>8);
+	  }
+	}
     }
     else if(cinfo.out_color_space == JCS_CMYK) 
     { 
