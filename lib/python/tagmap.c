@@ -42,10 +42,10 @@ PyObject* tagmap_new()
     tagmap->id2obj = PyDict_New();
     tagmap->objlist = PyList_New(0);
     tagmap->currentID = 0; //IDs start at 1
-    mylog("+%08x(%d) tagmap_new %08x(%d) %08x(%d), %08x(%d)", (int)self, self->ob_refcnt,
+/*    mylog("+%08x(%d) tagmap_new %08x(%d) %08x(%d), %08x(%d)", (int)self, self->ob_refcnt,
 	    tagmap->obj2id, tagmap->obj2id->ob_refcnt ,
 	    tagmap->id2obj, tagmap->id2obj->ob_refcnt ,
-	    tagmap->objlist, tagmap->objlist->ob_refcnt);
+	    tagmap->objlist, tagmap->objlist->ob_refcnt);*/
     return self;
 }
 
