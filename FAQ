@@ -38,8 +38,8 @@
 
     No. pdf2swf only runs on Unix platforms, like Linux, *BSD, MacOS X, etc.
     There have been some reports on more or less successfully compling pdf2swf on Win32 using
-    Cygwin (http://sources.redhat.com/cygwin), however, there's no working version
-    yet.
+    Cygwin (http://sources.redhat.com/cygwin), however, there's no working version yet.
+
     If you want to use pdf2swf, find a Unix machine.
 
 5.) Is there *going to* be a pdf2swf for Windows?
@@ -60,11 +60,9 @@
 7.) Can png2swf handle transparency?
 
     It supports PNG mode 2 transparency (256 color palettes with alpha) since version 0.4.2. 
-    Mode 6 (32 bit RGBA truecolor) is also supported since version 0.4.3, however
-    it seems most Flash players don't handle the alpha channel in the resulting 
-    32 bit images correctly.
+    Mode 6 (32 bit RGBA truecolor) is also supported since version 0.4.4.
 
-8.) How to get Flash MX compression with SWFTools?
+8.) How to do Flash MX compression with SWFTools?
 
     Most tools support the -z flag for outputting compressed SWF.
     Furthermore you can compress/uncompress SWF files using swfcombine:

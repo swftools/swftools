@@ -152,3 +152,8 @@
 	* lib/rfxswf: support for definejpegbits3
 	* src/png2swf: better support for 32 bit images with transparency
 	* pdf2swf/pdf2swf: slightly better TTF support, some fixes
+	* pdf2swf/pdf2swf: Output filename is no longer mandatory
+	* lib/rfxswf: added workaround for the 63-byte BMF_32 bug in the Flash Player
+	* lib/rfxswf: fix for ratios in swfobject.c
+	* src/swfdump: shows some info about video tags now
+	* pdf2swf/pdf2swf: greatly improved spline conversion
