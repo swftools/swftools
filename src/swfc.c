@@ -642,8 +642,11 @@ static void s_endSWF()
 
     swf = stack[stackpos].swf;
     filename = stack[stackpos].filename;
-   
+  
+    //if(tag->prev && tag->prev->id != ST_SHOWFRAME)
+    //    tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_SHOWFRAME);
+
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
