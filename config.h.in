@@ -106,6 +106,9 @@
 /* use gzip/uncompress */
 #undef USE_GZIP
 
+/* use libfreetype */
+#undef USE_FREETYPE
+
 /* system() can handle command substitution */
 #undef SYSTEM_BACKTICKS
 
