@@ -7,7 +7,7 @@ AC_ARG_ENABLE(debug,
 [  --enable-debug          turn on debugging], DEBUG=true)
 
 PACKAGE=swftools
-VERSION=0.4.4-pre6
+VERSION=0.4.4-pre9
 # -Winline?
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -72,6 +72,14 @@ if test -d /usr/local/include; then
 # Leave that alone. It's causing trouble e.g. with gcc 3.2 on gentoo.
 #   CPPFLAGS="$CPPFLAGS -I/usr/local/include"
     echo > /dev/null
+fi
+if test "$prefix" != "NONE" -a "$prefix" != "/usr/local" -a "$prefix" != "/usr/local/"; then
+    # if the user has a special prefix (like /opt), there might also be $prefix/lib
+    # and $prefix/include, which should be included in our search paths for libraries
+    # and includes.
+    LDFLAGS="$LDFLAGS -L${libdir}"
+    CPPFLAGS="$CPPFLAGS -I${includedir}"
+    # TODO- test whether gcc still works after this
 fi
 
 dnl Checks for libraries.
