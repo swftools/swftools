@@ -123,3 +123,5 @@
 /* Typedefs */
 #undef boolean 
 
+/* use gzip/uncompress */
+#undef USE_GZIP
