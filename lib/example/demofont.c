@@ -128,12 +128,12 @@ SWFFONT * Font_Demo_Font(U16 id)
   f->ascii2glyph = (int*)malloc(sizeof(int)*256);
   memset(f->ascii2glyph, -1, sizeof(int)*256);
 
-  addGlyph(f, 0, 102,  64, &Glyphs_Demo_Font[0x0000], 872); // f
-  addGlyph(f, 1, 108,  53, &Glyphs_Demo_Font[0x006d], 452); // l
-  addGlyph(f, 2, 111,  96, &Glyphs_Demo_Font[0x00a6], 743); // o
-  addGlyph(f, 3, 115,  74, &Glyphs_Demo_Font[0x0103], 951); // s
-  addGlyph(f, 4, 116,  53, &Glyphs_Demo_Font[0x017a], 570); // t
-  addGlyph(f, 5, 119, 138, &Glyphs_Demo_Font[0x01c2], 806); // w
+  addGlyph(f, 0, 102,  64*20, &Glyphs_Demo_Font[0x0000], 872); // f
+  addGlyph(f, 1, 108,  53*20, &Glyphs_Demo_Font[0x006d], 452); // l
+  addGlyph(f, 2, 111,  96*20, &Glyphs_Demo_Font[0x00a6], 743); // o
+  addGlyph(f, 3, 115,  74*20, &Glyphs_Demo_Font[0x0103], 951); // s
+  addGlyph(f, 4, 116,  53*20, &Glyphs_Demo_Font[0x017a], 570); // t
+  addGlyph(f, 5, 119, 138*20, &Glyphs_Demo_Font[0x01c2], 806); // w
   return f;
 }
 

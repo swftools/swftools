@@ -48,6 +48,7 @@ sprites: $(RFXSWF) sprites.o $(RFXSWF)
 transtest: $(RFXSWF) transtest.o $(RFXSWF)
 		$(CC) -o transtest transtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
+text.o: demofont.c
 text: $(RFXSWF) text.o $(RFXSWF)
 		$(CC) -o text text.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 

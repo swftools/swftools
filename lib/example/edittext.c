@@ -89,7 +89,7 @@ int main (int argc,char ** argv)
 
 	  if(t==0) {
 	      /* this is the standard edit field, upper left corner */
-	      swf_SetEditText(tag, ET_MULTILINE|ET_BORDER, r, 
+	      swf_SetEditText(tag, ET_USEOUTLINES|ET_MULTILINE|ET_BORDER, r, 
 		      "everything you\ntype in the\nleft box\nalso appears\nin the right\nbox", 
 		      &rgb, 0, /*font id*/76, 30*20, &layout, "/:variable1");
 	  } if (t==1) {
@@ -1969,154 +1969,154 @@ SWFFONT * Font_Courier(U16 id)
   f->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*148);
   memset(f->layout->bounds, 0, sizeof(SRECT)*148);
 
-  addGlyph(f,  0, 0x021,  36, &Glyphs_Courier[0x0000],  547, 480, -1236, 720, 30); // !
-  addGlyph(f,  1, 0x022,  45, &Glyphs_Courier[0x0045],  393, 292, -1208, 908, -628); // "
-  addGlyph(f,  2, 0x023,  50, &Glyphs_Courier[0x0077], 1376, 184, -1294, 1016, 125); // #
-  addGlyph(f,  3, 0x024,  49, &Glyphs_Courier[0x0123], 1393, 219, -1320, 980, 180); // $
-  addGlyph(f,  4, 0x025,  51, &Glyphs_Courier[0x01d2], 1184, 172, -1220, 1027, 23); // %
-  addGlyph(f,  5, 0x026,  47, &Glyphs_Courier[0x0266], 1207, 220, -1040, 956, 32); // &
-  addGlyph(f,  6, 0x027,  34, &Glyphs_Courier[0x02fd],  251, 270, -1208, 680, -626); // '
-  addGlyph(f,  7, 0x028,  45, &Glyphs_Courier[0x031d],  475, 580, -1208, 916, 250); // (
-  addGlyph(f,  8, 0x029,  31, &Glyphs_Courier[0x0359],  471, 294, -1212, 622, 248); // )
-  addGlyph(f,  9, 0x02a,  48, &Glyphs_Courier[0x0394],  857, 226, -1208, 975, -499); // *
-  addGlyph(f, 10, 0x02b,  52, &Glyphs_Courier[0x0400],  534, 144, -1060, 1056, -64); // +
-  addGlyph(f, 11, 0x02c,  34, &Glyphs_Courier[0x0443],  243, 270, -290, 680, 291); // ,
-  addGlyph(f, 12, 0x02d,  52, &Glyphs_Courier[0x0462],  254, 144, -600, 1056, -519); // -
-  addGlyph(f, 13, 0x02e,  37, &Glyphs_Courier[0x0482],  240, 452, -232, 748, 30); // .
-  addGlyph(f, 14, 0x02f,  48, &Glyphs_Courier[0x04a0],  350, 225, -1337, 975, 163); // /
-  addGlyph(f, 15, 0x030,  49, &Glyphs_Courier[0x04cc],  691, 220, -1230, 980, 30); // 0
-  addGlyph(f, 16, 0x031,  48, &Glyphs_Courier[0x0523],  531, 225, -1224, 974, 0); // 1
-  addGlyph(f, 17, 0x032,  49, &Glyphs_Courier[0x0566],  704, 168, -1230, 986, 0); // 2
-  addGlyph(f, 18, 0x033,  50, &Glyphs_Courier[0x05be], 1009, 188, -1232, 1000, 30); // 3
-  addGlyph(f, 19, 0x034,  47, &Glyphs_Courier[0x063d],  721, 210, -1220, 956, 0); // 4
-  addGlyph(f, 20, 0x035,  50, &Glyphs_Courier[0x0698],  842, 190, -1220, 1000, 30); // 5
-  addGlyph(f, 21, 0x036,  51, &Glyphs_Courier[0x0702], 1045, 274, -1230, 1020, 30); // 6
-  addGlyph(f, 22, 0x037,  48, &Glyphs_Courier[0x0785],  424, 219, -1220, 960, 4); // 7
-  addGlyph(f, 23, 0x038,  49, &Glyphs_Courier[0x07ba],  851, 220, -1230, 980, 30); // 8
-  addGlyph(f, 24, 0x039,  51, &Glyphs_Courier[0x0825], 1005, 280, -1230, 1022, 29); // 9
-  addGlyph(f, 25, 0x03a,  37, &Glyphs_Courier[0x08a3],  467, 452, -840, 748, 30); // :
-  addGlyph(f, 26, 0x03b,  35, &Glyphs_Courier[0x08de],  470, 278, -840, 700, 291); // ;
-  addGlyph(f, 27, 0x03c,  52, &Glyphs_Courier[0x0919],  420, 144, -1036, 1044, -88); // <
-  addGlyph(f, 28, 0x03d,  54, &Glyphs_Courier[0x094e],  499, 102, -740, 1098, -379); // =
-  addGlyph(f, 29, 0x03e,  52, &Glyphs_Courier[0x098d],  440, 155, -1036, 1056, -88); // >
-  addGlyph(f, 30, 0x03f,  49, &Glyphs_Courier[0x09c4],  889, 259, -1148, 997, 29); // ?
-  addGlyph(f, 31, 0x040,  47, &Glyphs_Courier[0x0a34], 1176, 215, -1242, 957, 123); // @
-  addGlyph(f, 32, 0x041,  59, &Glyphs_Courier[0x0ac7],  902, 18, -1120, 1182, 0); // A
-  addGlyph(f, 33, 0x042,  54, &Glyphs_Courier[0x0b38],  923, 86, -1120, 1080, 0); // B
-  addGlyph(f, 34, 0x043,  53, &Glyphs_Courier[0x0bac],  822, 120, -1147, 1070, 31); // C
-  addGlyph(f, 35, 0x044,  52, &Glyphs_Courier[0x0c13],  687, 86, -1120, 1040, 0); // D
-  addGlyph(f, 36, 0x045,  52, &Glyphs_Courier[0x0c69],  930, 86, -1120, 1040, 0); // E
-  addGlyph(f, 37, 0x046,  52, &Glyphs_Courier[0x0cde],  874, 86, -1120, 1041, 0); // F
-  addGlyph(f, 38, 0x047,  56, &Glyphs_Courier[0x0d4c], 1093, 120, -1149, 1124, 32); // G
-  addGlyph(f, 39, 0x048,  55, &Glyphs_Courier[0x0dd5], 1098, 105, -1120, 1102, 0); // H
-  addGlyph(f, 40, 0x049,  48, &Glyphs_Courier[0x0e5f],  544, 226, -1120, 974, 0); // I
-  addGlyph(f, 41, 0x04a,  58, &Glyphs_Courier[0x0ea3],  689, 159, -1120, 1166, 32); // J
-  addGlyph(f, 42, 0x04b,  57, &Glyphs_Courier[0x0efa], 1133, 86, -1120, 1144, 0); // K
-  addGlyph(f, 43, 0x04c,  54, &Glyphs_Courier[0x0f88],  592, 126, -1120, 1080, 0); // L
-  addGlyph(f, 44, 0x04d,  59, &Glyphs_Courier[0x0fd2], 1035, 22, -1120, 1186, 0); // M
-  addGlyph(f, 45, 0x04e,  56, &Glyphs_Courier[0x1054],  799, 44, -1120, 1124, 0); // N
-  addGlyph(f, 46, 0x04f,  55, &Glyphs_Courier[0x10b8],  489, 100, -1146, 1100, 32); // O
-  addGlyph(f, 47, 0x050,  50, &Glyphs_Courier[0x10f6],  756, 86, -1120, 1000, 0); // P
-  addGlyph(f, 48, 0x051,  55, &Glyphs_Courier[0x1155], 1238, 100, -1146, 1100, 228); // Q
-  addGlyph(f, 49, 0x052,  58, &Glyphs_Courier[0x11f0], 1038, 86, -1120, 1178, 0); // R
-  addGlyph(f, 50, 0x053,  51, &Glyphs_Courier[0x1272], 1194, 179, -1151, 1020, 31); // S
-  addGlyph(f, 51, 0x054,  53, &Glyphs_Courier[0x1308],  650, 140, -1120, 1061, 0); // T
-  addGlyph(f, 52, 0x055,  56, &Glyphs_Courier[0x135a],  770, 80, -1121, 1121, 32); // U
-  addGlyph(f, 53, 0x056,  59, &Glyphs_Courier[0x13bb],  644, 18, -1121, 1182, 0); // V
-  addGlyph(f, 54, 0x057,  58, &Glyphs_Courier[0x140c],  781, 40, -1120, 1160, 0); // W
-  addGlyph(f, 55, 0x058,  56, &Glyphs_Courier[0x146e], 1096, 80, -1121, 1120, 0); // X
-  addGlyph(f, 56, 0x059,  54, &Glyphs_Courier[0x14f7],  849, 102, -1120, 1098, 0); // Y
-  addGlyph(f, 57, 0x05a,  50, &Glyphs_Courier[0x1562],  538, 206, -1120, 1001, 0); // Z
-  addGlyph(f, 58, 0x05b,  44, &Glyphs_Courier[0x15a6],  350, 560, -1220, 890, 241); // [
-  addGlyph(f, 59, 0x05c,  48, &Glyphs_Courier[0x15d2],  350, 225, -1336, 975, 163); //  
-  addGlyph(f, 60, 0x05d,  32, &Glyphs_Courier[0x15fe],  348, 310, -1221, 640, 240); // ]
-  addGlyph(f, 61, 0x05e,  48, &Glyphs_Courier[0x162a],  388, 224, -1230, 974, -707); // ^
-  addGlyph(f, 62, 0x05f,  61, &Glyphs_Courier[0x165b],  156, -24, 160, 1224, 240); // _
-  addGlyph(f, 63, 0x060,  46, &Glyphs_Courier[0x166f],  245, 520, -1208, 930, -684); // `
-  addGlyph(f, 64, 0x061,  54, &Glyphs_Courier[0x168e], 1111, 140, -868, 1080, 33); // a
-  addGlyph(f, 65, 0x062,  54, &Glyphs_Courier[0x1719],  769, 40, -1220, 1080, 32); // b
-  addGlyph(f, 66, 0x063,  53, &Glyphs_Courier[0x177a],  706, 160, -868, 1070, 32); // c
-  addGlyph(f, 67, 0x064,  58, &Glyphs_Courier[0x17d3],  811, 120, -1220, 1160, 31); // d
-  addGlyph(f, 68, 0x065,  52, &Glyphs_Courier[0x1839],  685, 126, -868, 1044, 32); // e
-  addGlyph(f, 69, 0x066,  54, &Glyphs_Courier[0x188f],  973, 210, -1220, 1082, 0); // f
-  addGlyph(f, 70, 0x067,  56, &Glyphs_Courier[0x1909],  887, 120, -868, 1122, 381); // g
-  addGlyph(f, 71, 0x068,  55, &Glyphs_Courier[0x1978], 1040, 86, -1220, 1102, 0); // h
-  addGlyph(f, 72, 0x069,  50, &Glyphs_Courier[0x19fa],  574, 184, -1242, 1016, 0); // i
-  addGlyph(f, 73, 0x06a,  46, &Glyphs_Courier[0x1a42],  567, 294, -1242, 920, 381); // j
-  addGlyph(f, 74, 0x06b,  54, &Glyphs_Courier[0x1a89],  936, 120, -1220, 1082, 0); // k
-  addGlyph(f, 75, 0x06c,  50, &Glyphs_Courier[0x1afe],  449, 184, -1220, 1016, 0); // l
-  addGlyph(f, 76, 0x06d,  59, &Glyphs_Courier[0x1b37], 1302, 20, -869, 1186, 0); // m
-  addGlyph(f, 77, 0x06e,  54, &Glyphs_Courier[0x1bda], 1053, 105, -869, 1082, 0); // n
-  addGlyph(f, 78, 0x06f,  53, &Glyphs_Courier[0x1c5e],  469, 140, -868, 1060, 32); // o
-  addGlyph(f, 79, 0x070,  54, &Glyphs_Courier[0x1c99],  904, 40, -872, 1080, 381); // p
-  addGlyph(f, 80, 0x071,  58, &Glyphs_Courier[0x1d0a],  876, 120, -868, 1163, 381); // q
-  addGlyph(f, 81, 0x072,  54, &Glyphs_Courier[0x1d78],  854, 168, -860, 1084, 0); // r
-  addGlyph(f, 82, 0x073,  49, &Glyphs_Courier[0x1de3], 1159, 199, -868, 983, 33); // s
-  addGlyph(f, 83, 0x074,  49, &Glyphs_Courier[0x1e74],  798, 85, -1124, 998, 31); // t
-  addGlyph(f, 84, 0x075,  54, &Glyphs_Courier[0x1ed8],  723, 86, -840, 1080, 31); // u
-  addGlyph(f, 85, 0x076,  57, &Glyphs_Courier[0x1f33],  662, 60, -840, 1140, 0); // v
-  addGlyph(f, 86, 0x077,  57, &Glyphs_Courier[0x1f86],  785, 60, -840, 1140, 0); // w
-  addGlyph(f, 87, 0x078,  54, &Glyphs_Courier[0x1fe9], 1106, 102, -841, 1098, 0); // x
-  addGlyph(f, 88, 0x079,  54, &Glyphs_Courier[0x2074],  826, 102, -840, 1098, 381); // y
-  addGlyph(f, 89, 0x07a,  49, &Glyphs_Courier[0x20dc],  498, 230, -840, 980, 0); // z
-  addGlyph(f, 90, 0x07b,  40, &Glyphs_Courier[0x211b],  670, 394, -1208, 808, 248); // {
-  addGlyph(f, 91, 0x07c,  32, &Glyphs_Courier[0x216f],  246, 560, -1208, 640, 248); // |
-  addGlyph(f, 92, 0x07d,  40, &Glyphs_Courier[0x218e],  670, 391, -1208, 806, 248); // }
-  addGlyph(f, 93, 0x07e,  50, &Glyphs_Courier[0x21e2],  789, 182, -700, 1016, -419); // ~
-  addGlyph(f, 94, 0x0a1,  36, &Glyphs_Courier[0x2245],  549, 480, -840, 720, 432); // ¡
-  addGlyph(f, 95, 0x0a2,  46, &Glyphs_Courier[0x228a], 1039, 220, -1260, 938, 25); // ¢
-  addGlyph(f, 96, 0x0a3,  52, &Glyphs_Courier[0x230c], 1164, 126, -1150, 1040, 0); // £
-  addGlyph(f, 97, 0x0a4,  55, &Glyphs_Courier[0x239e],  347, 98, -940, 1101, -276); // ¤
-  addGlyph(f, 98, 0x0a5,  54, &Glyphs_Courier[0x23ca], 1371, 102, -1120, 1098, 0); // ¥
-  addGlyph(f, 99, 0x0a6,  51, &Glyphs_Courier[0x2476], 1078, 174, -1230, 1037, 180); // ¦
-  addGlyph(f,100, 0x0a7,  53, &Glyphs_Courier[0x24fd], 1425, 131, -1200, 1072, 120); // §
-  addGlyph(f,101, 0x0a8,  49, &Glyphs_Courier[0x25b0], 1170, 203, -980, 997, -187); // ¨
-  addGlyph(f,102, 0x0a9,  36, &Glyphs_Courier[0x2643],  203, 472, -1208, 728, -628); // ©
-  addGlyph(f,103, 0x0aa,  50, &Glyphs_Courier[0x265d],  429, 186, -1208, 1014, -684); // ª
-  addGlyph(f,104, 0x0ab,  54, &Glyphs_Courier[0x2693],  705, 126, -840, 1086, 0); // «
-  addGlyph(f,105, 0x0ac,  31, &Glyphs_Courier[0x26ec],  358, 126, -840, 628, 0); // ¬
-  addGlyph(f,106, 0x0ad,  54, &Glyphs_Courier[0x2719],  366, 582, -840, 1082, 0); // ­
-  addGlyph(f,107, 0x0ae,  58, &Glyphs_Courier[0x2747], 1516, 20, -1242, 1170, 0); // ®
-  addGlyph(f,108, 0x0af,  58, &Glyphs_Courier[0x2805], 1373, 20, -1220, 1174, 0); // ¯
-  addGlyph(f,109, 0x0b1,  52, &Glyphs_Courier[0x28b1],  254, 144, -600, 1056, -519); // ±
-  addGlyph(f,110, 0x0b2,  47, &Glyphs_Courier[0x28d1],  598, 248, -1208, 952, 126); // ²
-  addGlyph(f,111, 0x0b3,  47, &Glyphs_Courier[0x291c],  890, 248, -1208, 952, 124); // ³
-  addGlyph(f,112, 0x0b4,  37, &Glyphs_Courier[0x298c],  240, 452, -696, 748, -434); // ´
-  addGlyph(f,113, 0x0b6,  52, &Glyphs_Courier[0x29aa], 1005, 160, -1220, 1050, 121); // ¶
-  addGlyph(f,114, 0x0b7,  39, &Glyphs_Courier[0x2a28],  225, 404, -674, 796, -282); // ·
-  addGlyph(f,115, 0x0b8,  34, &Glyphs_Courier[0x2a45],  243, 270, -290, 680, 291); // ¸
-  addGlyph(f,116, 0x0b9,  50, &Glyphs_Courier[0x2a64],  423, 186, -290, 1014, 234); // ¹
-  addGlyph(f,117, 0x0ba,  50, &Glyphs_Courier[0x2a99],  429, 186, -1208, 1014, -684); // º
-  addGlyph(f,118, 0x0bb,  54, &Glyphs_Courier[0x2acf],  717, 122, -840, 1082, 0); // »
-  addGlyph(f,119, 0x0bc,  55, &Glyphs_Courier[0x2b29],  597, 100, -168, 1100, 30); // ¼
-  addGlyph(f,120, 0x0bd,  57, &Glyphs_Courier[0x2b74], 1578, 60, -1222, 1140, 17); // ½
-  addGlyph(f,121, 0x0bf,  47, &Glyphs_Courier[0x2c3a],  889, 202, -840, 941, 340); // ¿
-  addGlyph(f,122, 0x0c1,  32, &Glyphs_Courier[0x2caa],  317, 308, -1278, 642, -980); // Á
-  addGlyph(f,123, 0x0c2,  44, &Glyphs_Courier[0x2cd2],  330, 557, -1278, 891, -979); // Â
-  addGlyph(f,124, 0x0c3,  44, &Glyphs_Courier[0x2cfc],  340, 308, -1278, 893, -980); // Ã
-  addGlyph(f,125, 0x0c4,  45, &Glyphs_Courier[0x2d27],  791, 289, -1220, 915, -1040); // Ä
-  addGlyph(f,126, 0x0c5,  44, &Glyphs_Courier[0x2d8a],  238, 310, -1146, 890, -1066); // Å
-  addGlyph(f,127, 0x0c6,  44, &Glyphs_Courier[0x2da8],  371, 310, -1240, 890, -980); // Æ
-  addGlyph(f,128, 0x0c7,  35, &Glyphs_Courier[0x2dd7],  211, 500, -1222, 700, -1022); // Ç
-  addGlyph(f,129, 0x0c8,  46, &Glyphs_Courier[0x2df2],  409, 280, -1222, 920, -1022); // È
-  addGlyph(f,130, 0x0ca,  40, &Glyphs_Courier[0x2e26],  425, 400, -1320, 800, -960); // Ê
-  addGlyph(f,131, 0x0cb,  38, &Glyphs_Courier[0x2e5c],  552, 417, 0, 760, 340); // Ë
-  addGlyph(f,132, 0x0cd,  44, &Glyphs_Courier[0x2ea1],  596, 305, -1266, 894, -980); // Í
-  addGlyph(f,133, 0x0ce,  43, &Glyphs_Courier[0x2eec],  448, 554, 0, 866, 301); // Î
-  addGlyph(f,134, 0x0cf,  44, &Glyphs_Courier[0x2f24],  338, 308, -1278, 893, -980); // Ï
-  addGlyph(f,135, 0x0d0,  59, &Glyphs_Courier[0x2f4f],  308, 2, -600, 1198, -519); // Ð
-  addGlyph(f,136, 0x0e1,  59, &Glyphs_Courier[0x2f76], 1367, 20, -1120, 1180, 0); // á
-  addGlyph(f,137, 0x0e3,  45, &Glyphs_Courier[0x3021], 1043, 300, -1142, 900, -559); // ã
-  addGlyph(f,138, 0x0e8,  54, &Glyphs_Courier[0x30a4], 1002, 84, -1120, 1080, 0); // è
-  addGlyph(f,139, 0x0e9,  56, &Glyphs_Courier[0x3122], 1022, 77, -1210, 1121, 86); // é
-  addGlyph(f,140, 0x0ea,  59, &Glyphs_Courier[0x31a2], 1083, 20, -1120, 1180, 0); // ê
-  addGlyph(f,141, 0x0eb,  45, &Glyphs_Courier[0x322a],  457, 300, -1148, 900, -560); // ë
-  addGlyph(f,142, 0x0f1,  57, &Glyphs_Courier[0x3264], 1808, 20, -868, 1159, 33); // ñ
-  addGlyph(f,143, 0x0f5,  50, &Glyphs_Courier[0x3346],  443, 184, -840, 1016, 0); // õ
-  addGlyph(f,144, 0x0f8,  50, &Glyphs_Courier[0x337e],  831, 184, -1220, 1016, 0); // ø
-  addGlyph(f,145, 0x0f9,  54, &Glyphs_Courier[0x33e6], 1040, 104, -916, 1088, 86); // ù
-  addGlyph(f,146, 0x0fa,  57, &Glyphs_Courier[0x3468], 1193, 20, -868, 1159, 32); // ú
-  addGlyph(f,147, 0x0fb,  50, &Glyphs_Courier[0x34fe], 1063, 86, -1220, 1000, 31); // û
+  addGlyph(f,  0, 0x021,  36*20, &Glyphs_Courier[0x0000],  547, 480, -1236, 720, 30); // !
+  addGlyph(f,  1, 0x022,  45*20, &Glyphs_Courier[0x0045],  393, 292, -1208, 908, -628); // "
+  addGlyph(f,  2, 0x023,  50*20, &Glyphs_Courier[0x0077], 1376, 184, -1294, 1016, 125); // #
+  addGlyph(f,  3, 0x024,  49*20, &Glyphs_Courier[0x0123], 1393, 219, -1320, 980, 180); // $
+  addGlyph(f,  4, 0x025,  51*20, &Glyphs_Courier[0x01d2], 1184, 172, -1220, 1027, 23); // %
+  addGlyph(f,  5, 0x026,  47*20, &Glyphs_Courier[0x0266], 1207, 220, -1040, 956, 32); // &
+  addGlyph(f,  6, 0x027,  34*20, &Glyphs_Courier[0x02fd],  251, 270, -1208, 680, -626); // '
+  addGlyph(f,  7, 0x028,  45*20, &Glyphs_Courier[0x031d],  475, 580, -1208, 916, 250); // (
+  addGlyph(f,  8, 0x029,  31*20, &Glyphs_Courier[0x0359],  471, 294, -1212, 622, 248); // )
+  addGlyph(f,  9, 0x02a,  48*20, &Glyphs_Courier[0x0394],  857, 226, -1208, 975, -499); // *
+  addGlyph(f, 10, 0x02b,  52*20, &Glyphs_Courier[0x0400],  534, 144, -1060, 1056, -64); // +
+  addGlyph(f, 11, 0x02c,  34*20, &Glyphs_Courier[0x0443],  243, 270, -290, 680, 291); // ,
+  addGlyph(f, 12, 0x02d,  52*20, &Glyphs_Courier[0x0462],  254, 144, -600, 1056, -519); // -
+  addGlyph(f, 13, 0x02e,  37*20, &Glyphs_Courier[0x0482],  240, 452, -232, 748, 30); // .
+  addGlyph(f, 14, 0x02f,  48*20, &Glyphs_Courier[0x04a0],  350, 225, -1337, 975, 163); // /
+  addGlyph(f, 15, 0x030,  49*20, &Glyphs_Courier[0x04cc],  691, 220, -1230, 980, 30); // 0
+  addGlyph(f, 16, 0x031,  48*20, &Glyphs_Courier[0x0523],  531, 225, -1224, 974, 0); // 1
+  addGlyph(f, 17, 0x032,  49*20, &Glyphs_Courier[0x0566],  704, 168, -1230, 986, 0); // 2
+  addGlyph(f, 18, 0x033,  50*20, &Glyphs_Courier[0x05be], 1009, 188, -1232, 1000, 30); // 3
+  addGlyph(f, 19, 0x034,  47*20, &Glyphs_Courier[0x063d],  721, 210, -1220, 956, 0); // 4
+  addGlyph(f, 20, 0x035,  50*20, &Glyphs_Courier[0x0698],  842, 190, -1220, 1000, 30); // 5
+  addGlyph(f, 21, 0x036,  51*20, &Glyphs_Courier[0x0702], 1045, 274, -1230, 1020, 30); // 6
+  addGlyph(f, 22, 0x037,  48*20, &Glyphs_Courier[0x0785],  424, 219, -1220, 960, 4); // 7
+  addGlyph(f, 23, 0x038,  49*20, &Glyphs_Courier[0x07ba],  851, 220, -1230, 980, 30); // 8
+  addGlyph(f, 24, 0x039,  51*20, &Glyphs_Courier[0x0825], 1005, 280, -1230, 1022, 29); // 9
+  addGlyph(f, 25, 0x03a,  37*20, &Glyphs_Courier[0x08a3],  467, 452, -840, 748, 30); // :
+  addGlyph(f, 26, 0x03b,  35*20, &Glyphs_Courier[0x08de],  470, 278, -840, 700, 291); // ;
+  addGlyph(f, 27, 0x03c,  52*20, &Glyphs_Courier[0x0919],  420, 144, -1036, 1044, -88); // <
+  addGlyph(f, 28, 0x03d,  54*20, &Glyphs_Courier[0x094e],  499, 102, -740, 1098, -379); // =
+  addGlyph(f, 29, 0x03e,  52*20, &Glyphs_Courier[0x098d],  440, 155, -1036, 1056, -88); // >
+  addGlyph(f, 30, 0x03f,  49*20, &Glyphs_Courier[0x09c4],  889, 259, -1148, 997, 29); // ?
+  addGlyph(f, 31, 0x040,  47*20, &Glyphs_Courier[0x0a34], 1176, 215, -1242, 957, 123); // @
+  addGlyph(f, 32, 0x041,  59*20, &Glyphs_Courier[0x0ac7],  902, 18, -1120, 1182, 0); // A
+  addGlyph(f, 33, 0x042,  54*20, &Glyphs_Courier[0x0b38],  923, 86, -1120, 1080, 0); // B
+  addGlyph(f, 34, 0x043,  53*20, &Glyphs_Courier[0x0bac],  822, 120, -1147, 1070, 31); // C
+  addGlyph(f, 35, 0x044,  52*20, &Glyphs_Courier[0x0c13],  687, 86, -1120, 1040, 0); // D
+  addGlyph(f, 36, 0x045,  52*20, &Glyphs_Courier[0x0c69],  930, 86, -1120, 1040, 0); // E
+  addGlyph(f, 37, 0x046,  52*20, &Glyphs_Courier[0x0cde],  874, 86, -1120, 1041, 0); // F
+  addGlyph(f, 38, 0x047,  56*20, &Glyphs_Courier[0x0d4c], 1093, 120, -1149, 1124, 32); // G
+  addGlyph(f, 39, 0x048,  55*20, &Glyphs_Courier[0x0dd5], 1098, 105, -1120, 1102, 0); // H
+  addGlyph(f, 40, 0x049,  48*20, &Glyphs_Courier[0x0e5f],  544, 226, -1120, 974, 0); // I
+  addGlyph(f, 41, 0x04a,  58*20, &Glyphs_Courier[0x0ea3],  689, 159, -1120, 1166, 32); // J
+  addGlyph(f, 42, 0x04b,  57*20, &Glyphs_Courier[0x0efa], 1133, 86, -1120, 1144, 0); // K
+  addGlyph(f, 43, 0x04c,  54*20, &Glyphs_Courier[0x0f88],  592, 126, -1120, 1080, 0); // L
+  addGlyph(f, 44, 0x04d,  59*20, &Glyphs_Courier[0x0fd2], 1035, 22, -1120, 1186, 0); // M
+  addGlyph(f, 45, 0x04e,  56*20, &Glyphs_Courier[0x1054],  799, 44, -1120, 1124, 0); // N
+  addGlyph(f, 46, 0x04f,  55*20, &Glyphs_Courier[0x10b8],  489, 100, -1146, 1100, 32); // O
+  addGlyph(f, 47, 0x050,  50*20, &Glyphs_Courier[0x10f6],  756, 86, -1120, 1000, 0); // P
+  addGlyph(f, 48, 0x051,  55*20, &Glyphs_Courier[0x1155], 1238, 100, -1146, 1100, 228); // Q
+  addGlyph(f, 49, 0x052,  58*20, &Glyphs_Courier[0x11f0], 1038, 86, -1120, 1178, 0); // R
+  addGlyph(f, 50, 0x053,  51*20, &Glyphs_Courier[0x1272], 1194, 179, -1151, 1020, 31); // S
+  addGlyph(f, 51, 0x054,  53*20, &Glyphs_Courier[0x1308],  650, 140, -1120, 1061, 0); // T
+  addGlyph(f, 52, 0x055,  56*20, &Glyphs_Courier[0x135a],  770, 80, -1121, 1121, 32); // U
+  addGlyph(f, 53, 0x056,  59*20, &Glyphs_Courier[0x13bb],  644, 18, -1121, 1182, 0); // V
+  addGlyph(f, 54, 0x057,  58*20, &Glyphs_Courier[0x140c],  781, 40, -1120, 1160, 0); // W
+  addGlyph(f, 55, 0x058,  56*20, &Glyphs_Courier[0x146e], 1096, 80, -1121, 1120, 0); // X
+  addGlyph(f, 56, 0x059,  54*20, &Glyphs_Courier[0x14f7],  849, 102, -1120, 1098, 0); // Y
+  addGlyph(f, 57, 0x05a,  50*20, &Glyphs_Courier[0x1562],  538, 206, -1120, 1001, 0); // Z
+  addGlyph(f, 58, 0x05b,  44*20, &Glyphs_Courier[0x15a6],  350, 560, -1220, 890, 241); // [
+  addGlyph(f, 59, 0x05c,  48*20, &Glyphs_Courier[0x15d2],  350, 225, -1336, 975, 163); //  
+  addGlyph(f, 60, 0x05d,  32*20, &Glyphs_Courier[0x15fe],  348, 310, -1221, 640, 240); // ]
+  addGlyph(f, 61, 0x05e,  48*20, &Glyphs_Courier[0x162a],  388, 224, -1230, 974, -707); // ^
+  addGlyph(f, 62, 0x05f,  61*20, &Glyphs_Courier[0x165b],  156, -24, 160, 1224, 240); // _
+  addGlyph(f, 63, 0x060,  46*20, &Glyphs_Courier[0x166f],  245, 520, -1208, 930, -684); // `
+  addGlyph(f, 64, 0x061,  54*20, &Glyphs_Courier[0x168e], 1111, 140, -868, 1080, 33); // a
+  addGlyph(f, 65, 0x062,  54*20, &Glyphs_Courier[0x1719],  769, 40, -1220, 1080, 32); // b
+  addGlyph(f, 66, 0x063,  53*20, &Glyphs_Courier[0x177a],  706, 160, -868, 1070, 32); // c
+  addGlyph(f, 67, 0x064,  58*20, &Glyphs_Courier[0x17d3],  811, 120, -1220, 1160, 31); // d
+  addGlyph(f, 68, 0x065,  52*20, &Glyphs_Courier[0x1839],  685, 126, -868, 1044, 32); // e
+  addGlyph(f, 69, 0x066,  54*20, &Glyphs_Courier[0x188f],  973, 210, -1220, 1082, 0); // f
+  addGlyph(f, 70, 0x067,  56*20, &Glyphs_Courier[0x1909],  887, 120, -868, 1122, 381); // g
+  addGlyph(f, 71, 0x068,  55*20, &Glyphs_Courier[0x1978], 1040, 86, -1220, 1102, 0); // h
+  addGlyph(f, 72, 0x069,  50*20, &Glyphs_Courier[0x19fa],  574, 184, -1242, 1016, 0); // i
+  addGlyph(f, 73, 0x06a,  46*20, &Glyphs_Courier[0x1a42],  567, 294, -1242, 920, 381); // j
+  addGlyph(f, 74, 0x06b,  54*20, &Glyphs_Courier[0x1a89],  936, 120, -1220, 1082, 0); // k
+  addGlyph(f, 75, 0x06c,  50*20, &Glyphs_Courier[0x1afe],  449, 184, -1220, 1016, 0); // l
+  addGlyph(f, 76, 0x06d,  59*20, &Glyphs_Courier[0x1b37], 1302, 20, -869, 1186, 0); // m
+  addGlyph(f, 77, 0x06e,  54*20, &Glyphs_Courier[0x1bda], 1053, 105, -869, 1082, 0); // n
+  addGlyph(f, 78, 0x06f,  53*20, &Glyphs_Courier[0x1c5e],  469, 140, -868, 1060, 32); // o
+  addGlyph(f, 79, 0x070,  54*20, &Glyphs_Courier[0x1c99],  904, 40, -872, 1080, 381); // p
+  addGlyph(f, 80, 0x071,  58*20, &Glyphs_Courier[0x1d0a],  876, 120, -868, 1163, 381); // q
+  addGlyph(f, 81, 0x072,  54*20, &Glyphs_Courier[0x1d78],  854, 168, -860, 1084, 0); // r
+  addGlyph(f, 82, 0x073,  49*20, &Glyphs_Courier[0x1de3], 1159, 199, -868, 983, 33); // s
+  addGlyph(f, 83, 0x074,  49*20, &Glyphs_Courier[0x1e74],  798, 85, -1124, 998, 31); // t
+  addGlyph(f, 84, 0x075,  54*20, &Glyphs_Courier[0x1ed8],  723, 86, -840, 1080, 31); // u
+  addGlyph(f, 85, 0x076,  57*20, &Glyphs_Courier[0x1f33],  662, 60, -840, 1140, 0); // v
+  addGlyph(f, 86, 0x077,  57*20, &Glyphs_Courier[0x1f86],  785, 60, -840, 1140, 0); // w
+  addGlyph(f, 87, 0x078,  54*20, &Glyphs_Courier[0x1fe9], 1106, 102, -841, 1098, 0); // x
+  addGlyph(f, 88, 0x079,  54*20, &Glyphs_Courier[0x2074],  826, 102, -840, 1098, 381); // y
+  addGlyph(f, 89, 0x07a,  49*20, &Glyphs_Courier[0x20dc],  498, 230, -840, 980, 0); // z
+  addGlyph(f, 90, 0x07b,  40*20, &Glyphs_Courier[0x211b],  670, 394, -1208, 808, 248); // {
+  addGlyph(f, 91, 0x07c,  32*20, &Glyphs_Courier[0x216f],  246, 560, -1208, 640, 248); // |
+  addGlyph(f, 92, 0x07d,  40*20, &Glyphs_Courier[0x218e],  670, 391, -1208, 806, 248); // }
+  addGlyph(f, 93, 0x07e,  50*20, &Glyphs_Courier[0x21e2],  789, 182, -700, 1016, -419); // ~
+  addGlyph(f, 94, 0x0a1,  36*20, &Glyphs_Courier[0x2245],  549, 480, -840, 720, 432); // ¡
+  addGlyph(f, 95, 0x0a2,  46*20, &Glyphs_Courier[0x228a], 1039, 220, -1260, 938, 25); // ¢
+  addGlyph(f, 96, 0x0a3,  52*20, &Glyphs_Courier[0x230c], 1164, 126, -1150, 1040, 0); // £
+  addGlyph(f, 97, 0x0a4,  55*20, &Glyphs_Courier[0x239e],  347, 98, -940, 1101, -276); // ¤
+  addGlyph(f, 98, 0x0a5,  54*20, &Glyphs_Courier[0x23ca], 1371, 102, -1120, 1098, 0); // ¥
+  addGlyph(f, 99, 0x0a6,  51*20, &Glyphs_Courier[0x2476], 1078, 174, -1230, 1037, 180); // ¦
+  addGlyph(f,100, 0x0a7,  53*20, &Glyphs_Courier[0x24fd], 1425, 131, -1200, 1072, 120); // §
+  addGlyph(f,101, 0x0a8,  49*20, &Glyphs_Courier[0x25b0], 1170, 203, -980, 997, -187); // ¨
+  addGlyph(f,102, 0x0a9,  36*20, &Glyphs_Courier[0x2643],  203, 472, -1208, 728, -628); // ©
+  addGlyph(f,103, 0x0aa,  50*20, &Glyphs_Courier[0x265d],  429, 186, -1208, 1014, -684); // ª
+  addGlyph(f,104, 0x0ab,  54*20, &Glyphs_Courier[0x2693],  705, 126, -840, 1086, 0); // «
+  addGlyph(f,105, 0x0ac,  31*20, &Glyphs_Courier[0x26ec],  358, 126, -840, 628, 0); // ¬
+  addGlyph(f,106, 0x0ad,  54*20, &Glyphs_Courier[0x2719],  366, 582, -840, 1082, 0); // ­
+  addGlyph(f,107, 0x0ae,  58*20, &Glyphs_Courier[0x2747], 1516, 20, -1242, 1170, 0); // ®
+  addGlyph(f,108, 0x0af,  58*20, &Glyphs_Courier[0x2805], 1373, 20, -1220, 1174, 0); // ¯
+  addGlyph(f,109, 0x0b1,  52*20, &Glyphs_Courier[0x28b1],  254, 144, -600, 1056, -519); // ±
+  addGlyph(f,110, 0x0b2,  47*20, &Glyphs_Courier[0x28d1],  598, 248, -1208, 952, 126); // ²
+  addGlyph(f,111, 0x0b3,  47*20, &Glyphs_Courier[0x291c],  890, 248, -1208, 952, 124); // ³
+  addGlyph(f,112, 0x0b4,  37*20, &Glyphs_Courier[0x298c],  240, 452, -696, 748, -434); // ´
+  addGlyph(f,113, 0x0b6,  52*20, &Glyphs_Courier[0x29aa], 1005, 160, -1220, 1050, 121); // ¶
+  addGlyph(f,114, 0x0b7,  39*20, &Glyphs_Courier[0x2a28],  225, 404, -674, 796, -282); // ·
+  addGlyph(f,115, 0x0b8,  34*20, &Glyphs_Courier[0x2a45],  243, 270, -290, 680, 291); // ¸
+  addGlyph(f,116, 0x0b9,  50*20, &Glyphs_Courier[0x2a64],  423, 186, -290, 1014, 234); // ¹
+  addGlyph(f,117, 0x0ba,  50*20, &Glyphs_Courier[0x2a99],  429, 186, -1208, 1014, -684); // º
+  addGlyph(f,118, 0x0bb,  54*20, &Glyphs_Courier[0x2acf],  717, 122, -840, 1082, 0); // »
+  addGlyph(f,119, 0x0bc,  55*20, &Glyphs_Courier[0x2b29],  597, 100, -168, 1100, 30); // ¼
+  addGlyph(f,120, 0x0bd,  57*20, &Glyphs_Courier[0x2b74], 1578, 60, -1222, 1140, 17); // ½
+  addGlyph(f,121, 0x0bf,  47*20, &Glyphs_Courier[0x2c3a],  889, 202, -840, 941, 340); // ¿
+  addGlyph(f,122, 0x0c1,  32*20, &Glyphs_Courier[0x2caa],  317, 308, -1278, 642, -980); // Á
+  addGlyph(f,123, 0x0c2,  44*20, &Glyphs_Courier[0x2cd2],  330, 557, -1278, 891, -979); // Â
+  addGlyph(f,124, 0x0c3,  44*20, &Glyphs_Courier[0x2cfc],  340, 308, -1278, 893, -980); // Ã
+  addGlyph(f,125, 0x0c4,  45*20, &Glyphs_Courier[0x2d27],  791, 289, -1220, 915, -1040); // Ä
+  addGlyph(f,126, 0x0c5,  44*20, &Glyphs_Courier[0x2d8a],  238, 310, -1146, 890, -1066); // Å
+  addGlyph(f,127, 0x0c6,  44*20, &Glyphs_Courier[0x2da8],  371, 310, -1240, 890, -980); // Æ
+  addGlyph(f,128, 0x0c7,  35*20, &Glyphs_Courier[0x2dd7],  211, 500, -1222, 700, -1022); // Ç
+  addGlyph(f,129, 0x0c8,  46*20, &Glyphs_Courier[0x2df2],  409, 280, -1222, 920, -1022); // È
+  addGlyph(f,130, 0x0ca,  40*20, &Glyphs_Courier[0x2e26],  425, 400, -1320, 800, -960); // Ê
+  addGlyph(f,131, 0x0cb,  38*20, &Glyphs_Courier[0x2e5c],  552, 417, 0, 760, 340); // Ë
+  addGlyph(f,132, 0x0cd,  44*20, &Glyphs_Courier[0x2ea1],  596, 305, -1266, 894, -980); // Í
+  addGlyph(f,133, 0x0ce,  43*20, &Glyphs_Courier[0x2eec],  448, 554, 0, 866, 301); // Î
+  addGlyph(f,134, 0x0cf,  44*20, &Glyphs_Courier[0x2f24],  338, 308, -1278, 893, -980); // Ï
+  addGlyph(f,135, 0x0d0,  59*20, &Glyphs_Courier[0x2f4f],  308, 2, -600, 1198, -519); // Ð
+  addGlyph(f,136, 0x0e1,  59*20, &Glyphs_Courier[0x2f76], 1367, 20, -1120, 1180, 0); // á
+  addGlyph(f,137, 0x0e3,  45*20, &Glyphs_Courier[0x3021], 1043, 300, -1142, 900, -559); // ã
+  addGlyph(f,138, 0x0e8,  54*20, &Glyphs_Courier[0x30a4], 1002, 84, -1120, 1080, 0); // è
+  addGlyph(f,139, 0x0e9,  56*20, &Glyphs_Courier[0x3122], 1022, 77, -1210, 1121, 86); // é
+  addGlyph(f,140, 0x0ea,  59*20, &Glyphs_Courier[0x31a2], 1083, 20, -1120, 1180, 0); // ê
+  addGlyph(f,141, 0x0eb,  45*20, &Glyphs_Courier[0x322a],  457, 300, -1148, 900, -560); // ë
+  addGlyph(f,142, 0x0f1,  57*20, &Glyphs_Courier[0x3264], 1808, 20, -868, 1159, 33); // ñ
+  addGlyph(f,143, 0x0f5,  50*20, &Glyphs_Courier[0x3346],  443, 184, -840, 1016, 0); // õ
+  addGlyph(f,144, 0x0f8,  50*20, &Glyphs_Courier[0x337e],  831, 184, -1220, 1016, 0); // ø
+  addGlyph(f,145, 0x0f9,  54*20, &Glyphs_Courier[0x33e6], 1040, 104, -916, 1088, 86); // ù
+  addGlyph(f,146, 0x0fa,  57*20, &Glyphs_Courier[0x3468], 1193, 20, -868, 1159, 32); // ú
+  addGlyph(f,147, 0x0fb,  50*20, &Glyphs_Courier[0x34fe], 1063, 86, -1220, 1000, 31); // û
   return f;
 }
 
