@@ -14,7 +14,7 @@ DBFLAGS	= -g2
 %.swf: %
 		./$<
 
-all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape edittext protect
+all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape edittext protect hexfont
 
 movies: sound.swf jpegtest.swf box.swf shape1.swf transtest.swf zlibtest.swf sprites.swf buttontest.swf dumpfont.swf text.swf glyphshape.swf edittext.swf
 	
@@ -47,6 +47,9 @@ sprites: $(RFXSWF) sprites.o $(RFXSWF)
 
 transtest: $(RFXSWF) transtest.o $(RFXSWF)
 		$(CC) -o transtest transtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+hexfont: $(RFXSWF) hexfont.o $(RFXSWF)
+		$(CC) -o hexfont hexfont.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 text.o: demofont.c
 text: $(RFXSWF) text.o $(RFXSWF)
