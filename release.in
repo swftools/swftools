@@ -36,6 +36,7 @@ ${name}/lib/example/shape1.c \
 ${name}/lib/example/sprites.c \
 ${name}/lib/example/transtest.c \
 ${name}/lib/example/zlibtest.c \
+${name}/lib/example/makefonts.cc \
 ${name}/lib/example/Makefile \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/modules/swfdump.c \
