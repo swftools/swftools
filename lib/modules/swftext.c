@@ -6,6 +6,7 @@
    Part of the swftools package.
 
    Copyright (c) 2001 Rainer Böhme <rfxswf@reflex-studio.de>
+   Copyright (c) 2003,2004 Matthias Kramm
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -173,6 +174,31 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
   swf_RestoreTagPos(t);
   return id;
 }
+
+int swf_FontExtract_GlyphNames(int id,SWFFONT * f,TAG * tag)
+{ 
+    U16 fid;
+    U16 maxcode;
+    U8 flags;
+    swf_SaveTagPos(tag);
+    swf_SetTagPos(tag,0);
+
+    fid = swf_GetU16(tag);
+
+    if (fid==id)
+    { 
+        int num = swf_GetU16(tag);
+	int t;
+	f->glyphnames = malloc(sizeof(char*)*num);
+	for(t=0;t<num;t++) {
+	    f->glyphnames[t] = strdup(swf_GetString(tag));
+	}
+    }
+
+    swf_RestoreTagPos(tag);
+    return id;
+}
+
 
 int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 {
@@ -399,6 +425,10 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
       case ST_DEFINETEXT:
       case ST_DEFINETEXT2:
         nid = swf_FontExtract_DefineText(id,f,t,f->layout?0:FEDTJ_MODIFY);
+        break;
+      
+      case ST_GLYPHNAMES:
+        nid = swf_FontExtract_GlyphNames(id,f,t);
         break;
     }
     if (nid>0) id = nid;
@@ -830,6 +860,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
   RGBA rgb;
   int f;
   int useDefineFont2 = 0;
+  int storeGlyphNames = 1;
 
   if(font->layout)
       useDefineFont2 = 1; /* the only thing new in definefont2 
@@ -863,6 +894,17 @@ void swf_WriteFont(SWFFONT*font, char* filename)
   } else {
     t = swf_InsertTag(t,ST_DEFINEFONT2);
     swf_FontSetDefine2(t,font);
+  }
+
+  if(storeGlyphNames)
+  {
+    int c;
+    t = swf_InsertTag(t,ST_GLYPHNAMES);
+    swf_SetU16(t, font->id);
+    swf_SetU16(t, font->numchars);
+    for(c=0;c<font->numchars;c++) {
+	swf_SetString(t, font->glyphnames[c]);
+    }
   }
 
   if(1) //neccessary only for df1, but pretty to look at anyhow, so do it always
