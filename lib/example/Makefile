@@ -11,23 +11,13 @@ DBFLAGS	= -g2
 		$(CC) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 %.o: %.cc
 		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
+%.swf: %
+		./$<
 
-all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape edittext
+all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape edittext
 
-movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape edittext
-		./sound
-		./jpegtest
-		./box
-		./glyphshape
-		./shape1
-		./transtest
-		./zlibtest
-		./sprites
-		./buttontest
-		./text
-		./makefonts
-		./edittext
-
+movies: sound.swf jpegtest.swf box.swf shape1.swf transtest.swf zlibtest.swf sprites.swf buttontest.swf dumpfont.swf text.swf glyphshape.swf edittext.swf
+	
 sound: $(RFXSWF) sound.o
 		$(CC) -o sound sound.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
@@ -66,10 +56,10 @@ zlibtest: $(RFXSWF) zlibtest.o
 
 clean:
 		rm -f jpegtest.o box.o shape1.o transtest.o zlibtest.o \
-                sprites.o glyphshape.o \
-		buttontest.o dumpfont.o text.o makefonts.o\
-		jpegtest.swf box.swf shape1.swf trastest.swf zlibtest.swf \
+                sprites.o glyphshape.o edittext.o \
+		buttontest.o dumpfont.o text.o \
+		jpegtest.swf box.swf shape1.swf transtest.swf zlibtest.swf \
                 sprites.swf buttontest.swf text.swf glyphshape.swf sound.swf \
 		transtest.swf
 
-
+.SUFFIXES:
