@@ -21,6 +21,9 @@
 
 #ifndef __pdf_h__
 #define __pdf_h__
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void pdfswf_setparameter(char*name, char*value);
 void pdfswf_addfont(char*filename);
@@ -68,5 +71,9 @@ typedef struct _pdf_page_info
 } pdf_page_info_t;
 
 pdf_page_info_t* pdf_getpageinfo(pdf_page_info_t*info);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__pdf_h__
