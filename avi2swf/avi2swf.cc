@@ -28,7 +28,11 @@
 
 #include "../lib/args.h"
 #include "v2swf.h"
+#ifdef WIN32
+#include "videoreader_vfw.hh"
+#else
 #include "videoreader_avifile.hh"
+#endif
 
 static char * filename = 0;
 static char * outputfilename = "output.swf";
@@ -226,7 +230,11 @@ int main (int argc,char ** argv)
 	exit(1);
     }
 
+#ifdef WIN32
+    ret = videoreader_vfw_open(&video, filename);
+#else
     ret = videoreader_avifile_open(&video, filename);
+#endif
 
     if(!ret) {
 	printf("Error opening %s\n", filename);
@@ -236,7 +244,7 @@ int main (int argc,char ** argv)
     if(verbose) {
 	printf("| video framerate: %f\n", video.fps);
 	printf("| video size: %dx%d\n", video.width, video.height);
-	printf("| audio rate: %d\n", video.rate);
+	printf("| audio rate: %d\n", video.samplerate);
 	printf("| audio channels: %d\n", video.channels);
     }
 
@@ -265,7 +273,7 @@ int main (int argc,char ** argv)
 	printf("\n");
 
     if(audio_adjust>0) {
-	int num = ((int)(audio_adjust*video.rate))*video.channels*2;
+	int num = ((int)(audio_adjust*video.samplerate))*video.channels*2;
 	void*buf = malloc(num);
 	video.getsamples(&video, buf, num);
 	free(buf);
@@ -284,7 +292,7 @@ int main (int argc,char ** argv)
 	void*buf = malloc(video.width*video.height*4);
 	for(t=0;t<skip;t++) {
 	    video.getimage(&video, buf);
-	    video.getsamples(&video, buf, (int)((video.rate/video.fps)*video.channels*2));
+	    video.getsamples(&video, buf, (int)((video.samplerate/video.fps)*video.channels*2));
 	    if(!verbose) {
 		printf("\rSkipping frame %d", video.frame);fflush(stdout);
 	    }
