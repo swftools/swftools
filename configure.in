@@ -42,9 +42,9 @@ dnl Checks for libraries.
  MISSINGLIBS="${MISSINGLIBS} T1lib"
  )
 
-SWF_CHECK_BYTEORDER
+RFX_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
-SWF_CHECK_SYSTEM_BACKTICKS
+RFX_CHECK_SYSTEM_BACKTICKS
 AC_SUBST(SYSTEM_BACKTICKS)
 
 AC_ARG_PROGRAM
@@ -99,7 +99,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
  AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand)
- SWF_CHECK_AVI2SWF
+ RFX_CHECK_AVI2SWF
 
 avi2swf="avi2swf/Makefile"
 if test "x${AVIFILE}" != "xtrue"; then
