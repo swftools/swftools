@@ -117,8 +117,10 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	fprintf(stderr, "Couldn't load file %s- not a TTF file?\n", filename);
 	return 0;
     }
-    if(face->num_glyphs <= 0)
+    if(face->num_glyphs <= 0) {
+	fprintf(stderr, "File %s contains %d glyphs\n", face->num_glyphs);
 	return 0;
+    }
 
     font = malloc(sizeof(SWFFONT));
     memset(font, 0, sizeof(SWFFONT));
@@ -215,9 +217,15 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    continue;
 	}
 	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP|FT_LOAD_NO_SCALE);
-	if(error) return 0;
+	if(error) {
+	    fprintf(stderr, "Couldn't load glyph %d\n", t);
+	    continue;
+	}
 	error = FT_Get_Glyph(face->glyph, &glyph);
-	if(error) return 0;
+	if(error) {
+	    fprintf(stderr, "Couldn't get glyph %d\n", t);
+	    continue;
+	}
 
 	FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
 	bbox.yMin = -bbox.yMin;
@@ -239,7 +247,13 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
 	//error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
 	error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
-	if(error) return 0;
+	draw.finish(&draw);
+	
+	if(error) {
+	    fprintf(stderr, "Couldn't decompose glyph %d\n", t);
+	    draw.dealloc(&draw);
+	    continue;
+	}
 
 	draw.finish(&draw);
 
