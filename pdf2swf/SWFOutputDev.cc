@@ -804,11 +804,6 @@ char*writeEmbeddedFontToFile(GfxFont*font)
       return fileName;
 }
 
-int embeddedids[128];
-int embeddedt1ids[128];
-int embedded_mappos = 0;
-int embedded_maxpos = 128;
-
 char* gfxFontName(GfxFont* gfxFont)
 {
       GString *gstr;
@@ -851,35 +846,20 @@ void SWFOutputDev::updateFont(GfxState *state)
   Ref embRef;
   GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
   if(embedded) {
-    int t;
-    for(t=0;t<embedded_mappos;t++)
-	if(embeddedids[t] == embRef.num)
-	    break;
-    if(t==embedded_mappos || 1)
-    {
-	if (!gfxFont->is16Bit() &&
-	    (gfxFont->getType() == fontType1 ||
-	     gfxFont->getType() == fontType1C)) {
-	    
-	    fileName = writeEmbeddedFontToFile(gfxFont);
-	    if(!fileName)
-	      return ;
-	}
-	else {
-	    showFontError(gfxFont,0);
-	    return ;
-	}
+    if (!gfxFont->is16Bit() &&
+	(gfxFont->getType() == fontType1 ||
+	 gfxFont->getType() == fontType1C)) {
 	
-	t1id = T1_AddFont(fileName);
-	embeddedids[embedded_mappos] = embRef.num;
-	embeddedt1ids[embedded_mappos] = t1id;
-	if(embedded_mappos < embedded_maxpos-1)
-	    embedded_mappos++;
+	fileName = writeEmbeddedFontToFile(gfxFont);
+	if(!fileName)
+	  return ;
     }
-    else 
-    {
-	t1id = embeddedt1ids[t];
+    else {
+	showFontError(gfxFont,0);
+	return ;
     }
+    
+    t1id = T1_AddFont(fileName);
   } else {
     fontname = NULL;
     if(gfxFont->getName()) {
