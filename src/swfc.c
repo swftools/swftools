@@ -1102,6 +1102,7 @@ void s_sound(char*name, char*filename)
     sound_t* sound;
     U16*samples;
     int numsamples;
+    int t;
 
     if(!readWAV(filename, &wav)) {
 	warning("Couldn't read wav file \"%s\"", filename);
