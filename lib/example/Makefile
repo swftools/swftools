@@ -62,7 +62,7 @@ zlibtest: $(RFXSWF) zlibtest.o
 
 makefonts: $(RFXSWF) makefonts.o ../../pdf2swf/swfoutput.o
 		$(CXX) -o makefonts makefonts.o ../../pdf2swf/swfoutput.o \
-                ../../pdf2swf/spline.o ../librfxswf.a -lt1 $(LDLIBS) \
+                ../../pdf2swf/spline.o ../../pdf2swf/encodings.o ../librfxswf.a -lt1 $(LDLIBS) \
                 ../../pdf2swf/xpdf/libpdf.a $(DBFLAGS)
 
 clean:

@@ -9,8 +9,6 @@
    external files.
 
    Usage: ./dumpfont filename.swf > myfont.c
-
-   Limits: does not parse ST_DEFINEFONT2 
    
    Part of the swftools package.
 

@@ -20,15 +20,15 @@ extern "C" {
 #include "../../pdf2swf/swfoutput.h"
 #include "../../pdf2swf/spline.h"
 
-#define standardEncodingSize 335
-#define symbolEncodingSize 257
-#define zapfDingbatsEncodingSize 270
+#define standardEncodingSize 256
+#define symbolEncodingSize 256
+#define zapfDingbatsEncodingSize 256
 #define macRomanEncodingSize 256
 
-extern char *standardEncodingNames[standardEncodingSize];
-extern char *symbolEncodingNames[symbolEncodingSize];
-extern char *zapfDingbatsEncodingNames[zapfDingbatsEncodingSize];
-extern char *macRomanEncodingNames[macRomanEncodingSize];
+extern char *standardEncoding[standardEncodingSize];
+extern char *symbolEncoding[symbolEncodingSize];
+extern char *zapfDingbatsEncoding[zapfDingbatsEncodingSize];
+extern char *macRomanEncoding[macRomanEncodingSize];
 
 char*DATADIR = "/usr/local/share/swftools";
 
@@ -48,17 +48,17 @@ SWFFONT * t1font2swffont(int i)
     float underline = T1_GetUnderlinePosition(i);
     BBox bbox = T1_GetFontBBox(i);
 
-    char ** encoding = standardEncodingNames;
+    char ** encoding = standardEncoding;
     int encodingsize = standardEncodingSize;
 
     printf("processing \"%s\"...\n", fullname);
 
     if(strstr(fullname, "Dingbats")) {// Zapf Dingbats
-	encoding = zapfDingbatsEncodingNames;
+	encoding = zapfDingbatsEncoding;
 	encodingsize = zapfDingbatsEncodingSize;
     }
     else if(strstr(fullname, "Symbol")) {// Symbol
-	encoding = symbolEncodingNames;
+	encoding = symbolEncoding;
 	encodingsize = zapfDingbatsEncodingSize;
     }
 
