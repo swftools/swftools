@@ -28,6 +28,7 @@ extern "C" {
 #include "../lib/rfxswf.h"
 }
 
+int opennewwindow=0;
 int ignoredraworder=0;
 int drawonlyshapes=0;
 int jpegquality=85;
@@ -1020,6 +1021,133 @@ void swfoutput_endclip(swfoutput*obj)
     swf_ObjectPlaceClip(cliptags[clippos],clipshapes[clippos],clipdepths[clippos],NULL,NULL,NULL,depth++);
 }
 
+void drawlink(struct swfoutput*obj, ActionTAG*, swfcoord*points);
+
+void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
+{
+    ActionTAG* actions;
+    
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+    
+    actions = swf_ActionStart(tag);
+    if(opennewwindow)
+      action_GetUrl(url, "_parent");
+    else
+      action_GetUrl(url, "_this");
+      action_End();
+    swf_ActionEnd();
+    
+    drawlink(obj, actions, points);
+}
+void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
+{
+    ActionTAG* actions;
+
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+   
+    actions = swf_ActionStart(tag);
+      action_GotoFrame(page);
+      action_End();
+    swf_ActionEnd();
+
+    drawlink(obj, actions, points);
+}
+
+void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
+{
+    RGBA rgb;
+    SRECT r;
+    int lsid=0;
+    int fsid;
+    struct plotxy p1,p2,p3,p4;
+    int myshapeid;
+    int myshapeid2;
+    double xmin,ymin;
+    double xmax=xmin=points[0].x,ymax=ymin=points[0].y;
+    int t;
+    int buttonid = ++currentswfid;
+    for(t=1;t<4;t++)
+    {
+	if(points[t].x>xmax) xmax=points[t].x;
+	if(points[t].y>ymax) ymax=points[t].y;
+	if(points[t].x<xmin) xmin=points[t].x;
+	if(points[t].y<ymin) ymin=points[t].y;
+    }
+    p1.x=points[0].x; p1.y=points[0].y; p2.x=points[1].x; p2.y=points[1].y; 
+    p3.x=points[2].x; p3.y=points[2].y; p4.x=points[3].x; p4.y=points[3].y;
+    
+    /* shape */
+    myshapeid = ++currentswfid;
+    tag = swf_InsertTag(tag,ST_DEFINESHAPE3);
+    swf_ShapeNew(&shape);
+    rgb.r = rgb.b = rgb.a = rgb.g = 0; 
+    fsid = swf_ShapeAddSolidFillStyle(shape,&rgb);
+    swf_SetU16(tag, myshapeid);
+    r.xmin = (int)(xmin*20);
+    r.ymin = (int)(ymin*20);
+    r.xmax = (int)(xmax*20);
+    r.ymax = (int)(ymax*20);
+    swf_SetRect(tag,&r);
+    swf_SetShapeStyles(tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(tag,shape);
+    swf_ShapeSetAll(tag,shape,/*x*/0,/*y*/0,0,fsid,0);
+    swflastx = swflasty = 0;
+    moveto(tag, p1);
+    lineto(tag, p2);
+    lineto(tag, p3);
+    lineto(tag, p4);
+    lineto(tag, p1);
+    swf_ShapeSetEnd(tag);
+
+    /* shape2 */
+    myshapeid2 = ++currentswfid;
+    tag = swf_InsertTag(tag,ST_DEFINESHAPE3);
+    swf_ShapeNew(&shape);
+    rgb.r = rgb.b = rgb.a = rgb.g = 255;
+    rgb.a = 40;
+    fsid = swf_ShapeAddSolidFillStyle(shape,&rgb);
+    swf_SetU16(tag, myshapeid2);
+    r.xmin = (int)(xmin*20);
+    r.ymin = (int)(ymin*20);
+    r.xmax = (int)(xmax*20);
+    r.ymax = (int)(ymax*20);
+    swf_SetRect(tag,&r);
+    swf_SetShapeStyles(tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(tag,shape);
+    swf_ShapeSetAll(tag,shape,/*x*/0,/*y*/0,0,fsid,0);
+    swflastx = swflasty = 0;
+    moveto(tag, p1);
+    lineto(tag, p2);
+    lineto(tag, p3);
+    lineto(tag, p4);
+    lineto(tag, p1);
+    swf_ShapeSetEnd(tag);
+
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(tag, buttonid, depth ++, 0,0,0);
+   
+    tag = swf_InsertTag(tag,ST_DEFINEBUTTON);
+    swf_SetU16(tag,buttonid); //id
+    swf_ButtonSetFlags(tag, 0); //menu=no
+    swf_ButtonSetRecord(tag,0x01,myshapeid,depth,0,0);
+    swf_ButtonSetRecord(tag,0x02,myshapeid2,depth,0,0);
+    swf_ButtonSetRecord(tag,0x04,myshapeid2,depth,0,0);
+    swf_ButtonSetRecord(tag,0x08,myshapeid,depth,0,0);
+    swf_SetU8(tag,0);
+    swf_SetActions(tag,actions);
+    swf_SetU8(tag,0);
+
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(tag, buttonid, depth++,0,0,0);
+}
 
 void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
         double x1,double y1,

@@ -15,7 +15,7 @@ extern "C" {
 #include "../lib/rfxswf.h"
 }
 
-
+extern int opennewwindow; //default:0
 extern int ignoredraworder; //default:0
 extern int drawonlyshapes; //default:0
 extern int jpegquality; //default:100;
@@ -111,6 +111,9 @@ void swfoutput_drawimageagain(struct swfoutput*, int id, int sizex, int sizey,
 	double x2,double y2,
 	double x3,double y3,
 	double x4,double y4);
+
+void swfoutput_linktopage(struct swfoutput*, int page, swfcoord*points);
+void swfoutput_linktourl(struct swfoutput*, char*url, swfcoord*points);
 
 void swfoutput_destroy(struct swfoutput*);
 
