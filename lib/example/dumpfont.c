@@ -64,13 +64,16 @@ void DumpFont(SWFFONT * f,char * name)
   printf("  f->name     = strdup(\"%s\");\n",f->name);
   printf("  f->flags    = 0x%02x;\n",f->flags);
   printf("  f->numchars = %d;\n",f->numchars);
-  printf("  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*%d);\n\n",f->numchars);
-  printf("  f->codes    = (U16*)malloc(sizeof(U16)*%d);\n\n",f->numchars);
+  printf("  f->maxascii = %d;\n",f->maxascii);
+  printf("  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*%d);\n",f->numchars);
+  printf("  f->glyph2ascii = (U16*)malloc(sizeof(U16)*%d);\n",f->numchars);
+  printf("  f->ascii2glyph = (int*)malloc(sizeof(int)*%d);\n",f->maxascii);
+  printf("  memset(f->ascii2glyph, -1, sizeof(int)*%d)\n\n", f->maxascii);
 
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
-    { printf("  addGlyph(f,%3i, 0x%02x,%4i,%3i, &Glyphs_%s[0x%04x],%4i); // %c\n",
-             i, f->codes[i], f->glyph[i].advance, f->glyph[i].gid, name, gpos[i],
+    { printf("  addGlyph(f,%3i, 0x%02x,%4i, &Glyphs_%s[0x%04x],%4i); // %c\n",
+             i, f->glyph2ascii[i], f->glyph[i].advance, name, gpos[i],
              f->glyph[i].shape->bitlen,(i!='\\')?i:0x20);
     }
 
@@ -79,17 +82,17 @@ void DumpFont(SWFFONT * f,char * name)
 }
 
 void DumpGlobal(char * funcname)
-{ printf("\nvoid %s(SWFFONT * f,int i,U16 code,U16 advance,U16 gid,U8 * data,U32 bitlen)\n",funcname);
+{ printf("\nvoid %s(SWFFONT * f,int i,U16 ascii,U16 advance,U8 * data,U32 bitlen)\n",funcname);
   printf("{ SHAPE * s;\n  U32 l = (bitlen+7)/8;\n\n");
   printf("  if (FAILED(swf_ShapeNew(&s))) return;\n");
   printf("  s->data = malloc(l);\n");
   printf("  if (!s->data) { swf_ShapeFree(s); return; }\n\n");
-  printf("  f->codes[i]         = code;\n");
-  printf("  f->glyph[i].advance = advance;\n");
-  printf("  f->glyph[i].gid     = gid;\n");
-  printf("  f->glyph[i].shape   = s;\n");
-  printf("  s->bitlen           = bitlen;\n");
-  printf("  s->bits.fill        = 1;\n");
+  printf("  f->glyph2ascii[i]     = ascii;\n");
+  printf("  f->ascii2glyph[ascii] = i;\n");
+  printf("  f->glyph[i].advance   = advance;\n");
+  printf("  f->glyph[i].shape     = s;\n");
+  printf("  s->bitlen             = bitlen;\n");
+  printf("  s->bits.fill          = 1;\n");
   printf("  memcpy(s->data,data,l);\n}\n\n");
 }
 
