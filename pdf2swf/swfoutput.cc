@@ -163,10 +163,10 @@ static void spline(TAG*tag,plotxy p0,plotxy p1,plotxy p2,plotxy p3,struct swfmat
 
     if(storefont) {
 	/* fonts use a different approximation than shapes */
-	num = cspline_approximate(&c, q, 10.0, APPROXIMATE_RECURSIVE_BINARY);
+	num = cspline_approximate(&c, q, 0.05, APPROXIMATE_RECURSIVE_BINARY);
 	//num = cspline_approximate(&c, q, 10.0, APPROXIMATE_INFLECTION);
     } else {
-	num = cspline_approximate(&c, q, 1.0, APPROXIMATE_RECURSIVE_BINARY);
+	num = cspline_approximate(&c, q, 0.05, APPROXIMATE_RECURSIVE_BINARY);
     }
     for(t=0;t<num;t++) {
 	if(!t) 
