@@ -293,7 +293,7 @@ int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitma
     if (!s->fillstyle.data) return -1;
   }
 
-  // set fillstyle  (no gradients yet!)
+  // set fillstyle
   
   s->fillstyle.data[s->fillstyle.n].type = type; 
   s->fillstyle.data[s->fillstyle.n].id_bitmap = id_bitmap;
