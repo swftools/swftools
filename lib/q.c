@@ -77,7 +77,7 @@ void mem_init(mem_t*mem)
 }
 void mem_clear(mem_t*mem)
 {
-    free(mem->buffer);
+    free(mem->buffer);mem->buffer = 0;
 }
 void mem_destroy(mem_t*mem)
 {
@@ -191,7 +191,7 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
 void ringbuffer_clear(ringbuffer_t*r)
 {
     ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
-    free(i->buffer);
+    free(i->buffer);i->buffer = 0;
     free(i);
 }
 
