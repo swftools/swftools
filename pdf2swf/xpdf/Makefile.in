@@ -70,7 +70,7 @@ UNCOMPRESS = @UNCOMPRESS@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
 noinst_LIBRARIES = libpdf.a
-libpdf_a_SOURCES =  Array.cc BuiltinFont.cc BuiltinFontTables.cc CMap.cc Catalog.cc CharCodeToUnicode.cc Decrypt.cc Dict.cc Error.cc FontEncodingTables.cc FontFile.cc Function.cc GHash.cc GList.cc GString.cc Gfx.cc GfxFont.cc GfxState.cc GlobalParams.cc Lexer.cc Link.cc NameToCharCode.cc Object.cc OutputDev.cc PDFDoc.cc PSTokenizer.cc Page.cc Parser.cc Stream.cc UnicodeMap.cc XRef.cc gfile.cc gmem.c
+libpdf_a_SOURCES =  Annot.cc Array.cc BuiltinFont.cc BuiltinFontTables.cc CMap.cc Catalog.cc CharCodeToUnicode.cc Decrypt.cc Dict.cc Error.cc FontEncodingTables.cc FontFile.cc Function.cc GHash.cc GList.cc GString.cc Gfx.cc GfxFont.cc GfxState.cc GlobalParams.cc Lexer.cc Link.cc NameToCharCode.cc Object.cc OutputDev.cc PDFDoc.cc PSTokenizer.cc Page.cc Parser.cc Stream.cc UnicodeMap.cc XRef.cc gfile.cc gmem.c
 
 
 COMPILE = $(CC)
@@ -85,8 +85,8 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 libpdf_a_LIBADD = 
-libpdf_a_OBJECTS =  Array.o BuiltinFont.o BuiltinFontTables.o CMap.o \
-Catalog.o CharCodeToUnicode.o Decrypt.o Dict.o Error.o \
+libpdf_a_OBJECTS =  Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
+CMap.o Catalog.o CharCodeToUnicode.o Decrypt.o Dict.o Error.o \
 FontEncodingTables.o FontFile.o Function.o GHash.o GList.o GString.o \
 Gfx.o GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
 NameToCharCode.o Object.o OutputDev.o PDFDoc.o PSTokenizer.o Page.o \
