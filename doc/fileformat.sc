@@ -240,14 +240,14 @@
 .png stoplogo "Stop.png" #TODO
 
 .button playbutton
-    .put play as=shape
-    .put play as=area
-    .put play_pressed as=pressed
-    .put play_pressed as=hower
+    .show play as=shape
+    .show play as=area
+    .show play_pressed as=pressed
+    .show play_pressed as=hower
 .end
 
 .button playbutton2
-    .put play as=shape
+    .show play as=shape
     .on_press inside
     .on_release inside
     .on_release outside
@@ -261,8 +261,8 @@
 .end
 
 .button mybutton
-    .put play as=shape
-    .put obj1 x=300 y=400 scale=110% pivot=center 
+    .show play as=shape
+    .show obj1 x=300 y=400 scale=110% pivot=center 
          as=pressed
 .end
 
@@ -275,17 +275,17 @@
 # button which is blue, get's green when the mouse hovers over it, and
 # white when it is pressed:
 .button b1
-    .put blueshape as=idle
-    .put greenshape as=hower
-    .put whiteshape as=press
+    .show blueshape as=idle
+    .show greenshape as=hower
+    .show whiteshape as=press
 .end
 
 # button where the button position is not identical to the active area:
 .button b2
-    .put activearea as=area
-    .put blueshape as=idle
-    .put greenshape as=hower
-    .put whiteshape as=press
+    .show activearea as=area
+    .show blueshape as=idle
+    .show greenshape as=hower
+    .show whiteshape as=press
 .end
 
 # (if area is not set, it's the same as shape)
@@ -293,9 +293,9 @@
 # the above put into use: pop up a window if the mouse cursor enters a certain
 # area:
 .button b3
-    .put activearea as=area
-    .put emtpyshape as=idle
-    .put window1 as=hower
+    .show activearea as=area
+    .show emtpyshape as=idle
+    .show window1 as=hower
 .end
 
 # fonts
