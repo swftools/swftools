@@ -10828,6 +10828,12 @@ if test "x${HAVE_FONTCONFIG}" = "x1"; then
 echo "$as_me:$LINENO: checking whether we can compile the fontconfig test program" >&5
 echo $ECHO_N "checking whether we can compile the fontconfig test program... $ECHO_C" >&6
 
+if (echo $LIBS | grep lfreetype >/dev/null 2>&1); then
+    #move freetype library to the end of libraries, otherwise fontconfig
+    #won't compile.
+    LIBS=`echo $LIBS | sed -e 's/-lfreetype//g' -e 's/$/ -lfreetype/'`
+fi
+
 cat > conftest.c << EOF
 #include <fontconfig.h>
 
