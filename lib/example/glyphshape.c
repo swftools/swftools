@@ -90,7 +90,7 @@ int main(int argc, char ** argv)
   FONTUSAGE use;
   SWFFONT * font = Font_Demo_Font(ID_FONT); // change font name here
 
-  swf_FontInitUsage(&use);
+  swf_FontInitUsage(font,&use);
   swf_FontUse(&use,s);        
   swf_FontReduce(font,&use);            // make sure that gid's point to the specific glyphs
   

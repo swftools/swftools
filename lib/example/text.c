@@ -75,7 +75,7 @@ int main(int argc, char ** argv)
   if(definefont2)
       swf_FontAddLayout(font,0,0,0);
 
-  swf_FontInitUsage(&use);
+  swf_FontInitUsage(font,&use);
   swf_FontUse(&use,BANNER_TEXT);        // SWF reduces font information to the used glyphs
   swf_FontReduce(font,&use);  
     
