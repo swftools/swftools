@@ -8,7 +8,6 @@ pdf2swf:
     * The following pdf properties are not yet dealt with:
       o dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
-      o (type 3 and truetype fonts)
     * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
 

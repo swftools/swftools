@@ -36,3 +36,5 @@
 	* lib/example/glyphshape.c: new file, demonstrates using font characters as shapes
 	* pdfswf: many bugfixes. The "pdfscreen" manual now get's converted correctly
 	* rfxswf-lib: bugfix: Couldn't handle jpeg grayscale images
+0.1.3:	
+	* pdf2swf: TrueType support added. (using ttf2pt1)
