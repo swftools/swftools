@@ -64,13 +64,17 @@ void draw_string(drawer_t*draw, const char*string)
 	char*token = getToken(&p);
 	if(!token || !*token) 
 	    break;
-	if(!strncmp(token, "moveTo", 6)) {
+	if(!strncmp(token, "moveTo", 6) ||
+	   !strncmp(token, "M", 1) //svg
+	   ) {
 	    FPOINT to;
 	    to.x = atoi(getToken(&p));
 	    to.y = atoi(getToken(&p));
 	    draw->moveTo(draw, &to);
 	}
-	else if(!strncmp(token, "lineTo", 6)) {
+	else if(!strncmp(token, "lineTo", 6) ||
+	        !strncmp(token, "L", 1) //svg
+	     ) {
 	    FPOINT to;
 	    to.x = atoi(getToken(&p));
 	    to.y = atoi(getToken(&p));
@@ -92,7 +96,9 @@ void draw_string(drawer_t*draw, const char*string)
 	    to.y = atoi(getToken(&p));
 	    draw_conicTo(draw, &mid, &to);
 	}
-	else if(!strncmp(token, "cubicTo", 5)) {
+	else if(!strncmp(token, "cubicTo", 5) ||
+	        !strncmp(token, "C", 1) //svg
+		) {
 	    FPOINT mid1,mid2,to;
 	    mid1.x = atoi(getToken(&p));
 	    mid1.y = atoi(getToken(&p));
@@ -102,7 +108,12 @@ void draw_string(drawer_t*draw, const char*string)
 	    to.y = atoi(getToken(&p));
 	    draw_cubicTo(draw, &mid1, &mid2, &to);
 	}
-	else fprintf(stderr, "drawer: Warning: unknown primitive '%s'\n", token);
+	else if(!strncmp(token, "z", 1) //svg
+	       ) {
+	    // ignore
+	}
+	else    
+	    fprintf(stderr, "drawer: Warning: unknown primitive '%s'\n", token);
 	
 	free(token);
     }
