@@ -29,6 +29,7 @@ dnl Checks for libraries.
  echo "Error: The zlib compression library is required."
  DISABLEPDF2SWF=true; 
  MISSINGLIBS="${MISSINGLIBS} zlib"
+ exit;
  )
  AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, 
  DISABLEPDF2SWF=true;
@@ -121,7 +122,7 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   FILES="./release Makefile lib/bladeenc/Makefile lib/Makefile src/Makefile swfs/Makefile"
 else
-  FILES="./release Makefile lib/bladeenc/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
+  FILES="./release Makefile lib/bladeenc/Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
 fi
 AC_SUBST(JPEG2SWF)
 
