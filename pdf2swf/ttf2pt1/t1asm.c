@@ -526,14 +526,14 @@ int main(int argc, char **argv)
 
   /* possibly open input & output files */
   if (argc - optind >= 1) {
-    ifp = fopen(argv[optind], "r");
+    ifp = fopen(argv[optind], "rb");
     if (!ifp) {
       fprintf(stderr, "error: cannot open %s for reading\n", argv[1]);
       exit(1);
     }
   }
   if (argc - optind >= 2) {
-    ofp = fopen(argv[optind + 1], "w");
+    ofp = fopen(argv[optind + 1], "wb");
     if (!ofp) {
       fprintf(stderr, "error: cannot open %s for writing\n", argv[2]);
       exit(1);

@@ -428,7 +428,7 @@ openfont(
 	struct line *cl;
 	int i, l;
 
-	if ((bdf_file = fopen(fname, "r")) == NULL) {
+	if ((bdf_file = fopen(fname, "rb")) == NULL) {
 		fprintf(stderr, "**** Cannot open file '%s'\n", fname);
 		exit(1);
 	} else {

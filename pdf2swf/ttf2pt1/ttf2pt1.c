@@ -607,7 +607,7 @@ unicode_init_user(
 	} 
 
 	/* now read in the encoding description file, if requested */
-	if ((unicode_map_file = fopen(path, "r")) == NULL) {
+	if ((unicode_map_file = fopen(path, "rb")) == NULL) {
 		fprintf(stderr, "**** Cannot access map file '%s' ****\n", path);
 		exit(1);
 	}
@@ -1709,7 +1709,7 @@ ttf2pt1_main(
 	/* save the command line for the record 
 	 * (we don't bother about escaping the shell special characters)
 	 */
-
+		
 	j = 0;
 	for(i=1; i<argc; i++) {
 		j += strlen(argv[i])+1;
@@ -1733,7 +1733,7 @@ ttf2pt1_main(
 		switch(oc) {
 		case 'W':
 			if(sscanf(optarg, "%d", &warnlevel) < 1 || warnlevel < 0) {
-				fprintf(stderr, "**** warning level must be a positive number\n");
+				fprintf(stderr, "**** warning level must be a positive number: %s (%d)\n", optarg, warnlevel);
 				exit(1);
 			}
 			break;
@@ -1983,6 +1983,7 @@ ttf2pt1_main(
 			break;
 		}
 	}
+
 	argc-=optind-1; /* the rest of code counts from argv[0] */
 	argv+=optind-1;
 
@@ -1994,7 +1995,6 @@ ttf2pt1_main(
 		usage();
 		exit(1);
 	}
-
 	/* try to guess the language by the locale used */
 	if(uni_lang_selected==0 && (lang=getenv("LANG"))!=0 ) {
 		for(i=0; i < sizeof uni_lang/sizeof(struct uni_language); i++) {
@@ -2069,7 +2069,7 @@ ttf2pt1_main(
 				}
 	}
 
-	if ((null_file = fopen(BITBUCKET, "w")) == NULL) {
+	if ((null_file = fopen(BITBUCKET, "wb")) == NULL) {
 		fprintf(stderr, "**** Cannot open %s ****\n",
 			BITBUCKET);
 		exit(1);
@@ -2142,12 +2142,12 @@ ttf2pt1_main(
 			exit(1);
 		}
 		ofp = pfa_file;
-		ifp = fdopen(p[0], "r");
+		ifp = fdopen(p[0], "rb");
 		if (ifp == NULL) {
 			perror("**** Cannot use pipe for reading ****\n");
 			exit(1);
 		}
-		pfa_file = fdopen(p[1], "w");
+		pfa_file = fdopen(p[1], "wb");
 		if (pfa_file == NULL) {
 			perror("**** Cannot use pipe for writing ****\n");
 			exit(1);
