@@ -175,6 +175,7 @@ void writer_init_filewriter2(struct writer_t*w, char*filename)
 
 static int writer_nullwrite_write(struct writer_t*w, void* data, int len) 
 {
+    w->pos += len;
     return len;
 }
 static void writer_nullwrite_finish(struct writer_t*w)
