@@ -2078,8 +2078,6 @@ gfxline_t* SVPtogfxline(ArtSVP*svp)
     }
 }
 
-
-
 static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int targetheight, int* newwidth, int* newheight)
 {
     RGBA*newpic = 0;
@@ -2130,32 +2128,8 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 	    /*newsizex, newsizey,*/
 	    num_colors>256?">":"", num_colors>256?256:num_colors);
 
-    if(has_alpha) {
-	if(num_colors<=256 || sizex<8 || sizey<8) {
-	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS2);
-	    swf_SetU16(i->tag, bitid);
-	    swf_SetLosslessImage(i->tag,mem,sizex,sizey);
-	} else {
-	    /*TODO: check what is smaller */
-	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG3);
-	    swf_SetU16(i->tag, bitid);
-	    swf_SetJPEGBits3(i->tag,sizex,sizey,mem,config_jpegquality);
-	    //swf_SetLosslessImage(i->tag,mem,sizex,sizey);
-	}
-    } else {
-	if(num_colors<=256 || sizex<8 || sizey<8) {
-	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS);
-	    swf_SetU16(i->tag, bitid);
-	    swf_SetLosslessImage(i->tag,mem,sizex,sizey);
-	} else {
-	    /*TODO: check what is smaller */
-	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG2);
-	    swf_SetU16(i->tag, bitid);
-	    swf_SetJPEGBits2(i->tag,sizex,sizey,mem,config_jpegquality);
-	    //swf_SetLosslessImage(i->tag,mem,sizex,sizey);
-	}
-    }
-    
+    i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, config_jpegquality);
+
     if(newpic)
 	free(newpic);
 
