@@ -575,11 +575,13 @@ int swf_FontReduce(SWFFONT * f, FONTUSAGE * use)
 
 void swf_FontSort(SWFFONT * font)
 {
+    int i, j, k;
+    int *newplace;
+    int *newpos;
     if (!font)
 	return;
-    int i, j, k;
-    int *newplace = malloc(sizeof(int) * font->numchars);
-    int *newpos;
+    
+    newplace = malloc(sizeof(int) * font->numchars);
 
     for (i = 0; i < font->numchars; i++) {
 	newplace[i] = i;
