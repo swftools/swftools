@@ -22,11 +22,15 @@ swfcombine:
     * Allow ids instead of names
     * Relocate  SetTarget "/content"  stuff
 
+swfdump:
+
+    * Support for actionscript in buttons. Make the output shorter.
+
 rfxswf-lib:
     
     * modules/swfshape doesn't allow changing to fillstyle 0
     * s/GetDataSize/GetTagLen/g
       s/GetDataSizePtr/GetTagLenPtr/g
-      s/GetFrameNo/GetTagFrameNo/g ?
+      (s/GetFrameNo/GetTagFrameNo/g ?)
     
   
