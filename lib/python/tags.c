@@ -14,7 +14,7 @@ typedef struct _font_internal
 } font_internal_t;
 staticforward tag_internals_t font_tag;
 
-static int font_parse(tag_internals_t*self)
+static int font_parse(tag_internals_t*self, PyObject*swftagmap)
 {
     font_internal_t*font = (font_internal_t*)self->data;
     /* TODO */
@@ -83,8 +83,7 @@ static tag_internals_t font_tag =
 typedef struct _placeobject_internal
 {
     SWFPLACEOBJECT* po;
-
-    //PyObject*character //TODO
+    PyObject*character;
 } placeobject_internal_t;
 staticforward tag_internals_t placeobject_tag;
 
@@ -96,12 +95,27 @@ static void po_dealloc(tag_internals_t*self)
 	pi->po = 0;
     }
 }
-static int po_parse(tag_internals_t*self)
+static int po_parse(tag_internals_t*self, PyObject*swftagmap)
 {
-    placeobject_internal_t*pi = (placeobject_internal_t*)self->data;
-    /* TODO */
-    PyErr_SetString(PyExc_Exception, setError("Placeobject parsing not implemented yet"));
-    return 0;
+    placeobject_internal_t*i = (placeobject_internal_t*)self->data;
+    if(i->po)
+	return 1;
+    if(!self->tag)
+	return 0;
+    SWFPLACEOBJECT* swfpo = malloc(sizeof(SWFPLACEOBJECT));
+    swf_GetPlaceObject(self->tag, swfpo);
+    i->po = swfpo;
+    swf_DeleteTag(self->tag);self->tag = 0;
+	
+    if(i->po->id) {
+	i->character = tagmap_id2obj(self->tagmap, i->po->id);
+	if(i->character) {
+	    Py_INCREF(i->character);
+	} else {
+	    //PyErr_Clear(); //?
+	}
+    }
+    return 1;
 }
 static int po_fillTAG(tag_internals_t*self)
 {
@@ -112,8 +126,17 @@ static int po_fillTAG(tag_internals_t*self)
 }
 static PyObject* po_getattr(tag_internals_t*self,char*a)
 {
-    placeobject_internal_t*si = (placeobject_internal_t*)self->data;
-    if(!strcmp(a, "cxform")) {
+    placeobject_internal_t*i = (placeobject_internal_t*)self->data;
+    if(!shape_parse(itag,0))
+	return PY_ERROR("Couldn't parse placeobject");
+    if(!strcmp(a, "character")) {
+	if(!i->character)
+	    return PY_NONE;
+	Py_INCREF(i->character); //TODO: ??
+	return i->character;
+    } else if(!strcmp(a, "matrix")) {
+	return f_Matrix2(&i->po->matrix);
+    } else if(!strcmp(a, "cxform")) {
 	/* TODO */
 	return 0;
     }
@@ -600,7 +623,7 @@ static int shape_fillTAG(tag_internals_t*self)
     swf_SetShape2(self->tag, ti->shape2);
     return 1;
 }
-static int shape_parse(tag_internals_t*self)
+static int shape_parse(tag_internals_t*self, PyObject*swftagmap)
 {
     shape_internal_t*i= (shape_internal_t*)self->data;
     if(i->shape2)
@@ -718,7 +741,7 @@ static PyObject* f_DefineShape(PyObject* self, PyObject* args, PyObject* kwargs)
 static PyObject* shape_getfillstyles(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
-    if(!shape_parse(itag))
+    if(!shape_parse(itag,0))
 	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int num = fi->shape2->numfillstyles;
@@ -727,7 +750,7 @@ static PyObject* shape_getfillstyles(PyObject*self, PyObject*args)
 static PyObject* shape_getlinestyles(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
-    if(!shape_parse(itag))
+    if(!shape_parse(itag,0))
 	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int num = fi->shape2->numlinestyles;
@@ -736,7 +759,7 @@ static PyObject* shape_getlinestyles(PyObject*self, PyObject*args)
 static PyObject* shape_getfillstyle(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
-    if(!shape_parse(itag))
+    if(!shape_parse(itag,0))
 	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int nr = 0;
@@ -751,7 +774,7 @@ static PyObject* shape_getfillstyle(PyObject*self, PyObject*args)
 static PyObject* shape_getlinestyle(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
-    if(!shape_parse(itag))
+    if(!shape_parse(itag,0))
 	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int nr = 0;
@@ -766,7 +789,7 @@ static PyObject* shape_getlinestyle(PyObject*self, PyObject*args)
 static PyObject* shape_setfillstyle(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
-    if(!shape_parse(itag))
+    if(!shape_parse(itag,0))
 	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int nr = 0;
@@ -783,7 +806,7 @@ static PyObject* shape_setfillstyle(PyObject*self, PyObject*args)
 static PyObject* shape_setlinestyle(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
-    if(!shape_parse(itag))
+    if(!shape_parse(itag,0))
 	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int nr = 0;
@@ -827,7 +850,7 @@ typedef struct _videostream_internal
 staticforward tag_internals_t videostream_tag;
 staticforward tag_internals_t videoframe_tag;
 
-static int videostream_parse(tag_internals_t*self)
+static int videostream_parse(tag_internals_t*self, PyObject*swftagmap)
 {
     videostream_internal_t*videostream = (videostream_internal_t*)self->data;
     /* TODO */
