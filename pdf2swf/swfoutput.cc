@@ -160,8 +160,8 @@ static swfoutput_internal* init_internal_struct()
 
     i->storefont = 0;
     i->currentswfid = 0;
-    i->depth = 1;
-    i->startdepth = 1;
+    i->depth = 0;
+    i->startdepth = 0;
     i->linewidth = 0;
     i->shapeid = -1;
     i->textid = -1;
@@ -196,6 +196,19 @@ static swfoutput_internal* init_internal_struct()
 
     return i;
 };
+
+static int id_error = 0;
+
+static U16 getNewID(struct swfoutput* obj)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    if(i->currentswfid == 65535) {
+	if(!id_error)
+	    msg("<error> ID Table overflow");
+	id_error=1;
+    }
+    return ++i->currentswfid;
+}
 
 static void startshape(struct swfoutput* obj);
 static void starttext(struct swfoutput* obj);
@@ -787,7 +800,7 @@ static void endtext(swfoutput*obj)
     MATRIX m2;
     swf_MatrixJoin(&m2,&obj->fontmatrix, &i->page_matrix);
 
-    swf_ObjectPlace(i->tag,i->textid,/*depth*/i->depth++,&m2,NULL,NULL);
+    swf_ObjectPlace(i->tag,i->textid,/*depth*/++i->depth,&m2,NULL,NULL);
     i->textid = -1;
 }
 
@@ -899,7 +912,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
         }
     }
 
-    swf_FontSetID(swffont, ++i->currentswfid);
+    swf_FontSetID(swffont, getNewID(obj));
     
     if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
 	// print font information
@@ -1023,7 +1036,7 @@ void swfoutput_pagefeed(struct swfoutput*obj)
     i->tag = swf_InsertTag(i->tag,ST_SHOWFRAME);
     i->frameno ++;
     
-    for(i->depth--;i->depth>=i->startdepth;i->depth--) {
+    for(i->depth;i->depth>i->startdepth;i->depth--) {
         i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
         swf_SetU16(i->tag,i->depth);
     }
@@ -1038,7 +1051,7 @@ static void setBackground(struct swfoutput*obj, int x1, int y1, int x2, int y2)
     SRECT r;
     SHAPE* s;
     int ls1=0,fs1=0;
-    int shapeid = ++i->currentswfid;
+    int shapeid = getNewID(obj);
     r.xmin = x1;
     r.ymin = y1;
     r.xmax = x2;
@@ -1057,9 +1070,9 @@ static void setBackground(struct swfoutput*obj, int x1, int y1, int x2, int y2)
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(s);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,shapeid,i->depth++,0,0,0);
+    swf_ObjectPlace(i->tag,shapeid,++i->depth,0,0,0);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-    swf_ObjectPlaceClip(i->tag,shapeid,i->depth++,0,0,0,65535);
+    swf_ObjectPlaceClip(i->tag,shapeid,++i->depth,0,0,0,65535);
     i->cliptag = i->tag;
 }
 
@@ -1076,7 +1089,7 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
     if(i->cliptag && i->frameno == i->lastframeno) {
         SWFPLACEOBJECT obj;
         swf_GetPlaceObject(i->cliptag, &obj);
-        obj.clipdepth = i->depth++;
+        obj.clipdepth = i->depth;
         swf_ResetTag(i->cliptag, i->cliptag->id);
         swf_SetPlaceObject(i->cliptag, &obj);
         swf_PlaceObjectFree(&obj);
@@ -1138,7 +1151,7 @@ void swfoutput_init(struct swfoutput* obj)
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
     swf_SetRGB(i->tag,&rgb);
 
-    i->startdepth = i->depth = 3; /* leave room for clip and background rectangle */
+    i->startdepth = i->depth = 0;
     
     if(config_protect)
       i->tag = swf_InsertTag(i->tag, ST_PROTECT);
@@ -1161,7 +1174,7 @@ static void startshape(struct swfoutput*obj)
     i->linestyleid = swf_ShapeAddLineStyle(i->shape,i->linewidth,&obj->strokergb);
     i->fillstyleid = swf_ShapeAddSolidFillStyle(i->shape,&obj->fillrgb);
 
-    i->shapeid = ++i->currentswfid;
+    i->shapeid = getNewID(obj);
     
     msg("<debug> Using shape id %d", i->shapeid);
 
@@ -1194,7 +1207,7 @@ static void starttext(struct swfoutput*obj)
     if(i->shapeid>=0)
         endshape(obj);
       
-    i->textid = ++i->currentswfid;
+    i->textid = getNewID(obj);
 
     i->swflastx=i->swflasty=0;
 }
@@ -1320,7 +1333,7 @@ static void endshape(swfoutput*obj)
     msg("<trace> Placing shape id %d", i->shapeid);
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,i->shapeid,/*depth*/i->depth++,&i->page_matrix,NULL,NULL);
+    swf_ObjectPlace(i->tag,i->shapeid,/*depth*/++i->depth,&i->page_matrix,NULL,NULL);
 
     swf_ShapeFree(i->shape);
     i->shape = 0;
@@ -1608,7 +1621,7 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     double posx = 0;
     double posy = 0;
     int t;
-    int buttonid = ++i->currentswfid;
+    int buttonid = getNewID(obj);
     for(t=1;t<4;t++)
     {
         if(points[t].x>xmax) xmax=points[t].x;
@@ -1630,7 +1643,7 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     xmax -= posx; ymax -= posy;
     
     /* shape */
-    myshapeid = ++i->currentswfid;
+    myshapeid = getNewID(obj);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     swf_ShapeNew(&i->shape);
     rgb.r = rgb.b = rgb.a = rgb.g = 0; 
@@ -1654,7 +1667,7 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     swf_ShapeSetEnd(i->tag);
 
     /* shape2 */
-    myshapeid2 = ++i->currentswfid;
+    myshapeid2 = getNewID(obj);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     swf_ShapeNew(&i->shape);
     rgb.r = rgb.b = rgb.a = rgb.g = 255;
@@ -1725,10 +1738,9 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
         m = i->page_matrix;
         m.tx = p.x;
         m.ty = p.y;
-	swf_ObjectPlace(i->tag, buttonid, i->depth++,&m,0,0);
-    }
-    else {
-	swf_ObjectPlace(i->tag, buttonid, i->depth++,&i->page_matrix,0,0);
+	swf_ObjectPlace(i->tag, buttonid, ++i->depth,&m,0,0);
+    } else {
+	swf_ObjectPlace(i->tag, buttonid, ++i->depth,&i->page_matrix,0,0);
     }
 }
 
@@ -2086,9 +2098,10 @@ gfxline_t* SVPtogfxline(ArtSVP*svp)
 
 static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int targetheight, int* newwidth, int* newheight)
 {
+    swfoutput*obj = i->obj;
     RGBA*newpic = 0;
     RGBA*mem = (RGBA*)img->data;
-    int bitid = ++i->currentswfid;
+    int bitid = getNewID(obj);
     
     int sizex = img->width;
     int sizey = img->height;
@@ -2191,7 +2204,7 @@ void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     m.ty = (int)(matrix->ty*20);
   
     /* shape */
-    int myshapeid = ++i->currentswfid;
+    int myshapeid = getNewID(obj);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
     SHAPE*shape;
     swf_ShapeNew(&shape);
@@ -2210,7 +2223,7 @@ void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     CXFORM cxform2 = gfxcxform_to_cxform(cxform);
-    swf_ObjectPlace(i->tag,myshapeid,/*depth*/i->depth++,&i->page_matrix,&cxform2,NULL);
+    swf_ObjectPlace(i->tag,myshapeid,/*depth*/++i->depth,&i->page_matrix,&cxform2,NULL);
 }
 
 void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
@@ -2227,7 +2240,7 @@ void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
         i->clippos --;
     } 
 
-    int myshapeid = ++i->currentswfid;
+    int myshapeid = getNewID(obj);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
     RGBA col;
     memset(&col, 0, sizeof(RGBA));
@@ -2251,7 +2264,7 @@ void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     i->cliptags[i->clippos] = i->tag;
     i->clipshapes[i->clippos] = myshapeid;
-    i->clipdepths[i->clippos] = i->depth++;
+    i->clipdepths[i->clippos] = ++i->depth;
     i->clippos++;
 }
 
@@ -2269,7 +2282,10 @@ void swf_endclip(gfxdevice_t*dev)
         return;
     }
     i->clippos--;
-    swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],&i->page_matrix,NULL,NULL,i->depth++);
+    /*swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],&i->page_matrix,NULL,NULL,
+	    / * clip to depth: * / i->depth <= i->clipdepths[i->clippos]? i->depth : i->depth - 1);
+    i->depth ++;*/
+    swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],&i->page_matrix,NULL,NULL,i->depth);
 }
 int swf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
