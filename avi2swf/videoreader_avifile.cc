@@ -265,11 +265,11 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     printf("fps: %d\n", 1000000/head.dwMicroSecPerFrame);
     printf("frames: %d\n", head.dwTotalFrames);
     printf("streams: %d\n", head.dwStreams);
-    printf("width: %d\n", head.dwWidth);
-    printf("height: %d\n", head.dwHeight);
+    printf("width: %d\n", abs(head.dwWidth));
+    printf("height: %d\n", abs(head.dwHeight));
     printf("sound: %u samples (%f seconds)\n", i->astream->GetEndPos(), i->astream->GetEndTime());
-    v->width = head.dwWidth;
-    v->height = head.dwHeight;
+    v->width = abs(head.dwWidth);
+    v->height = abs(head.dwHeight);
     dwMicroSecPerFrame = head.dwMicroSecPerFrame;
     samplesperframe = astream->GetEndPos()/astream->GetEndTime()*head.dwMicroSecPerFrame/1000000;
     v->samplerate = (int)(astream->GetEndPos()/astream->GetEndTime());
@@ -280,8 +280,8 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     {
 	StreamInfo*videoinfo;
 	videoinfo = i->vstream->GetStreamInfo();
-	v->width = videoinfo->GetVideoWidth();
-	v->height = videoinfo->GetVideoHeight();
+	v->width = abs(videoinfo->GetVideoWidth());
+	v->height = abs(videoinfo->GetVideoHeight());
 	v->fps = (double)(videoinfo->GetFps());
     }
     if(i->do_audio)

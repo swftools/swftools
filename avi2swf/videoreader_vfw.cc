@@ -73,8 +73,8 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     
     ULONG*dest = (ULONG*)buffer;
 
-    int width = bi->biWidth;
-    int height = bi->biHeight;
+    int width = abs(bi->biWidth);
+    int height = abs(bi->biHeight);
     if(dest_width != width || dest_height != height) {
 	/* TODO: size conversion */
 	fprintf(stderr, "size mismatch: %dx%d != %dx%d\n", width, height, dest_width, dest_height);
@@ -326,11 +326,11 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
 	    if(1) {
 		i->bitmap = bitmap;
 		i->vs = stream;
-		i->width = bitmap.biWidth;
-		i->height = bitmap.biHeight;
+		i->width = abs(bitmap.biWidth);
+		i->height = abs(bitmap.biHeight);
 	    } else {
 		fprintf(stderr, "Ignoring video stream: %dx%d compression=%d planes=%d\n", 
-			bitmap.biWidth, bitmap.biHeight,
+			abs(bitmap.biWidth), abs(bitmap.biHeight),
 			bitmap.biCompression,bitmap.biPlanes);
 	    }
         }
