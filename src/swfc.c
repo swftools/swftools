@@ -320,7 +320,8 @@ static void parameters_clear(parameters_t*p)
 {
     p->x = 0; p->y = 0; 
     p->scalex = 1.0; p->scaley = 1.0;
-    p->pin.x = 1; p->pin.y = 0;
+    p->pin.x = 0;  //1??
+    p->pin.y = 0;
     p->pivot.x = 0; p->pivot.y = 0;
     p->rotate = 0; 
     p->shear = 0; 
@@ -347,7 +348,7 @@ static void makeMatrix(MATRIX*m, parameters_t*p)
     m->sy = (int)(sy*65536+0.5);
 
     m->tx = m->ty = 0;
-
+   
     h = swf_TurnPoint(p->pin, m);
     m->tx = p->x - h.x;
     m->ty = p->y - h.y;
@@ -1335,6 +1336,7 @@ void s_endClip()
     swf_SetTagPos(stack[stackpos].tag, 0);
     swf_GetPlaceObject(stack[stackpos].tag, &p);
     p.clipdepth = currentdepth;
+    p.name = 0;
     swf_ClearTag(stack[stackpos].tag);
     swf_SetPlaceObject(stack[stackpos].tag, &p);
     currentdepth++;
