@@ -29,12 +29,15 @@
 #include <freetype/ttnameid.h>
 #include <freetype/ftoutln.h>
 
+#define FT_SCALE 1
+#define FT_SUBPIXELS 64
+
 static int ft_move_to(FT_Vector* _to, void* user) 
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT to;
-    to.x = _to->x/256.0;
-    to.y = _to->y/256.0;
+    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
+    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw->moveTo(draw, &to);
     return 0;
 }
@@ -42,8 +45,8 @@ static int ft_line_to(FT_Vector* _to, void* user)
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT to;
-    to.x = _to->x/256.0;
-    to.y = _to->y/256.0;
+    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
+    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw->lineTo(draw, &to);
     return 0;
 }
@@ -51,12 +54,12 @@ static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* use
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT c1,c2,to;
-    to.x = _to->x/256.0;
-    to.y = _to->y/256.0;
-    c1.x = _c1->x/256.0;
-    c1.y = _c1->y/256.0;
-    c2.x = _c2->x/256.0;
-    c2.y = _c2->y/256.0;
+    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
+    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
+    c1.x = _c1->x*FT_SCALE/(float)FT_SUBPIXELS;
+    c1.y = -_c1->y*FT_SCALE/(float)FT_SUBPIXELS;
+    c2.x = _c2->x*FT_SCALE/(float)FT_SUBPIXELS;
+    c2.y = -_c2->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw_cubicTo(draw, &c1, &c2, &to);
     return 0;
 }
@@ -64,10 +67,10 @@ static int ft_conic_to(FT_Vector* _c, FT_Vector* _to, void* user)
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT c,to;
-    to.x = _to->x/256.0;
-    to.y = _to->y/256.0;
-    c.x = _c->x/256.0;
-    c.y = _c->y/256.0;
+    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
+    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
+    c.x = _c->x*FT_SCALE/(float)FT_SUBPIXELS;
+    c.y = -_c->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw_conicTo(draw, &c, &to);
     return 0;
 }
@@ -118,8 +121,9 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	          |((face->style_flags&FT_STYLE_FLAG_BOLD)?FONT_STYLE_BOLD:0);
     font->encoding = FONT_ENCODING_UNICODE;
     font->glyph2ascii = malloc(face->num_glyphs*sizeof(U16));
+    memset(font->glyph2ascii, 0, face->num_glyphs*sizeof(U16));
     font->maxascii = 0;
-    memset(font->ascii2glyph, 0, font->maxascii*sizeof(int));
+    memset(font->ascii2glyph, -1, font->maxascii*sizeof(int));
     font->glyph = malloc(face->num_glyphs*sizeof(SWFGLYPH));
     memset(font->glyph, 0, face->num_glyphs*sizeof(U16));
     if(FT_HAS_GLYPH_NAMES(face)) {
@@ -162,17 +166,21 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	charcode = FT_Get_Next_Char(face, charcode, &gindex);
     }
     
-    memset(font->glyph2ascii, 0, face->num_glyphs*sizeof(U16));
     font->ascii2glyph = malloc(font->maxascii*sizeof(int));
     
-    for(t=0;t<font->maxascii;t++)
+    for(t=0;t<font->maxascii;t++) {
 	font->ascii2glyph[t] = FT_Get_Char_Index(face, t);
+	if(!font->ascii2glyph[t])
+	    font->ascii2glyph[t] = -1;
+    }
 
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
 	FT_BBox bbox;
+	FT_Matrix matrix;
 	char name[128];
 	drawer_t draw;
+	int ret;
 	name[0]=0;
 	if(FT_HAS_GLYPH_NAMES(face)) {
 	    error = FT_Get_Glyph_Name(face, t, name, 127);
@@ -185,23 +193,47 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	if(error) return 0;
 
 	FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
+	bbox.yMin = -bbox.yMin;
+	bbox.yMax = -bbox.yMax;
+	if(bbox.xMax < bbox.xMin) {
+	    // swap
+	    bbox.xMax ^= bbox.xMin;
+	    bbox.xMin ^= bbox.xMax;
+	    bbox.xMax ^= bbox.xMin;
+	}
+	if(bbox.yMax < bbox.yMin) {
+	    // swap
+	    bbox.yMax ^= bbox.yMin;
+	    bbox.yMin ^= bbox.yMax;
+	    bbox.yMax ^= bbox.yMin;
+	}
 
 	swf_Shape01DrawerInit(&draw, 0);
 
+	//error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
 	error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
 	if(error) return 0;
 
 	draw.finish(&draw);
 
-	font->glyph[t].advance = glyph->advance.x*20/256;
+#if 0
+	if(bbox.xMin > 0) {
+	    font->glyph[t].advance = (bbox.xMax*FT_SCALE)/FT_SUBPIXELS;
+	} else {
+	    font->glyph[t].advance = ((bbox.xMax - bbox.xMin)*FT_SCALE)/FT_SUBPIXELS;
+	}
+#else
+	font->glyph[t].advance = glyph->advance.x/65536;
+#endif
+	
 	font->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
-	//swf_ShapeDrawerGetBBox(&draw);
+	
+	font->layout->bounds[t].xmin = (bbox.xMin*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[t].ymin = (bbox.yMin*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[t].xmax = (bbox.xMax*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[t].ymax = (bbox.yMax*FT_SCALE*20)/FT_SUBPIXELS;
+
 	draw.dealloc(&draw);
-    
-	font->layout->bounds[t].xmin = (bbox.xMin*5*20)/266;
-	font->layout->bounds[t].ymin = (bbox.yMin*5*20)/266;
-	font->layout->bounds[t].xmax = (bbox.xMax*5*20)/266;
-	font->layout->bounds[t].ymax = (bbox.yMax*5*20)/266;
 
 	FT_Done_Glyph(glyph);
     }

@@ -502,10 +502,9 @@ typedef struct _SWFFONT
   char **	glyphnames;
 } SWFFONT, * LPSWFFONT;
 
-#define MAX_CHAR_PER_FONT 512
 // does not support wide characters !
 typedef struct _FONTUSAGE
-{ U8 code[MAX_CHAR_PER_FONT];
+{ U8* code;
 } FONTUSAGE, * LPFONTUSAGE;
 
 #define ET_HASTEXT 32768
@@ -547,7 +546,7 @@ int swf_FontIsBold(SWFFONT * f);
 int swf_FontSetID(SWFFONT * f,U16 id);
 int swf_FontReduce(SWFFONT * f,FONTUSAGE * use);
 
-int swf_FontInitUsage(FONTUSAGE * use);
+int swf_FontInitUsage(SWFFONT * f,FONTUSAGE * use);
 int swf_FontUse(FONTUSAGE * use,U8 * s);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);

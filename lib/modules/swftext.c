@@ -319,7 +319,11 @@ int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs,
   flags = swf_GetU8(t);
   
   while(flags)
-  { if (flags&TF_TEXTCONTROL)
+  { 
+    // FIXME: according to open-swf@macromedia.com, this is wrong.
+    // it should alternate textcontrol and text arrays, not
+    // rely on the high bit. (and length can be 0-255).
+    if (flags&TF_TEXTCONTROL)
     { if (flags&TF_HASFONT) fid = swf_GetU16(t);
       if (flags&TF_HASCOLOR)
       { swf_GetU8(t); // rgb
@@ -417,7 +421,7 @@ int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
   j = 0;
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
-    { if (f->glyph2ascii[i]<MAX_CHAR_PER_FONT && 
+    { if (f->glyph2ascii[i]<f->numchars&& 
 	    use->code[f->glyph2ascii[i]])
       { f->ascii2glyph[f->glyph2ascii[i]] = j;
         f->glyph2ascii[j] = f->glyph2ascii[i];
@@ -438,10 +442,16 @@ int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
   return j;
 }
 
-int swf_FontInitUsage(FONTUSAGE * use)
+int swf_FontInitUsage(SWFFONT* f, FONTUSAGE * use)
 { if (!use) return -1;
-  memset(use->code,0,sizeof(use->code[0])*MAX_CHAR_PER_FONT);
+  use->code = malloc(sizeof(use->code[0])*f->numchars);
+  memset(use->code,0,sizeof(use->code[0])*f->numchars);
   return 0;
+}
+
+void swf_FontClearUsage(SWFFONT* f, FONTUSAGE * use)
+{ if (!use) return;
+  free(use->code);
 }
 
 int swf_FontUse(FONTUSAGE * use,U8 * s)
@@ -483,6 +493,17 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
   return 0;
 }
 
+static inline int fontSize(SWFFONT*font)
+{
+    int t;
+    int size = 0;
+    for(t=0;t<font->numchars;t++) {
+	int l = (font->glyph[t].shape->bitlen+7)/8;
+	size += l+1;
+    }
+    return size + (font->numchars+1)*2;
+}
+
 int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
 {
     U8 flags = 0;
@@ -490,6 +511,7 @@ int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
     int pos;
     int pos2;
     swf_SetU16(tag, f->id);
+
     if(f->layout) 
 	flags |= 128; // haslayout
     if(f->numchars>256)
@@ -498,7 +520,12 @@ int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
 	flags |= 1; // bold
     if(f->style & FONT_STYLE_ITALIC)
 	flags |= 2; // italic
-    /* wideoffs 8 */
+    if(f->maxascii>=256)
+	flags |= 4; //wide codecs
+    if(fontSize(f)>65535)
+	flags |= 8; //wide offsets
+    flags |= 8; //FIXME: the above check doesn't work
+
     if(f->encoding & FONT_ENCODING_ANSI)
 	flags |= 16; // ansi
     if(f->encoding & FONT_ENCODING_UNICODE)
@@ -520,25 +547,38 @@ int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
     swf_SetU16(tag, f->numchars);
     /* font offset table */
     pos = tag->len;
-    for(t=0;t<f->numchars;t++)
+    for(t=0;t<=f->numchars;t++)
     {
-	swf_SetU16(tag, /* fontoffset */ 0); /*placeholder*/
-    }
-    pos2 = tag->len;
-    swf_SetU16(tag, 0); //fontcode-fontoffset
-    for(t=0;t<f->numchars;t++) {
-	tag->data[pos + t*2] = (tag->len-pos);
-	tag->data[pos + t*2 + 1] = (tag->len-pos) >> 8;
-	swf_SetSimpleShape(tag, f->glyph[t].shape);
+	if(flags&8)
+	    swf_SetU32(tag, /* fontoffset */ 0); /*placeholder*/
+	else
+	    swf_SetU16(tag, /* fontoffset */ 0); /*placeholder*/
     }
 
-    tag->data[pos2] = tag->len - pos;
-    tag->data[pos2 + 1] = (tag->len - pos) >> 8;
+    for(t=0;t<=f->numchars;t++) {
+	if(flags&8) {
+	    tag->data[pos + t*4    ] = (tag->len-pos);
+	    tag->data[pos + t*4 + 1] = (tag->len-pos) >> 8;
+	    tag->data[pos + t*4 + 2] = (tag->len-pos) >> 16;
+	    tag->data[pos + t*4 + 3] = (tag->len-pos) >> 24;
+	} else {
+	    if(tag->len - pos > 65535) {
+		fprintf(stderr, "Internal error: Font too big and WideOffsets flag not set\n");
+		exit(1);
+	    }
+	    tag->data[pos + t*2    ] = (tag->len-pos);
+	    tag->data[pos + t*2 + 1] = (tag->len-pos) >> 8;
+	}
+	if(t<f->numchars)
+	    swf_SetSimpleShape(tag, f->glyph[t].shape);
+    }
+
     
     /* font code table */
     if(flags & 4) /* wide codes */ {
-	for(t=0;t<f->numchars;t++)
+	for(t=0;t<f->numchars;t++) {
 	    swf_SetU16(tag,f->glyph2ascii[t]);
+	}
     } else {
 	for(t=0;t<f->numchars;t++)
 	    swf_SetU8(tag,f->glyph2ascii[t]);
@@ -557,11 +597,11 @@ int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
 	swf_SetU16(tag, f->layout->kerningcount);
 	for(t=0;t<f->layout->kerningcount;t++) {
 	    if(flags & 4) /* wide codes */ {
-		swf_SetU8(tag,f->layout->kerning[t].char1);
-		swf_SetU8(tag,f->layout->kerning[t].char2);
-	    } else {
 		swf_SetU16(tag,f->layout->kerning[t].char1);
 		swf_SetU16(tag,f->layout->kerning[t].char2);
+	    } else {
+		swf_SetU8(tag,f->layout->kerning[t].char1);
+		swf_SetU8(tag,f->layout->kerning[t].char2);
 	    }
 	    swf_SetU16(tag,f->layout->kerning[t].adjustment);
 	}
@@ -660,6 +700,13 @@ void swf_FontFree(SWFFONT * f)
     if(f->glyph2ascii) {
       free(f->glyph2ascii);
       f->glyph2ascii = NULL;
+    }
+    if(f->glyphnames) {
+      int t;
+      for(t=0;t<f->numchars;t++) {
+	free(f->glyphnames[t]);
+      }
+      free(f->glyphnames);
     }
   }
   free(f);
@@ -804,8 +851,8 @@ void swf_WriteFont(SWFFONT*font, char* filename)
      did use definefont2 -mk*/
   t = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
   swf.firstTag = t;
-	rgb.r = 0xff;
-	rgb.g = 0xff;
+	rgb.r = 0xef;
+	rgb.g = 0xef;
 	rgb.b = 0xff;
 	swf_SetRGB(t,&rgb);
   if(!useDefineFont2) {
@@ -818,24 +865,35 @@ void swf_WriteFont(SWFFONT*font, char* filename)
     swf_FontSetDefine2(t,font);
   }
 
-  if(1) //useDefineFont2
-  {     int textscale = 400;
+  if(1) //neccessary only for df1, but pretty to look at anyhow, so do it always
+  {
+        int textscale = 400;
 	int s;
 	int xmax = 0;
-	int ymax = textscale * 2 * (font->maxascii/16+1);
+	int ymax = 0;
+	int ypos = 1;
 	U8 gbits,abits;
-	U8 text[MAX_CHAR_PER_FONT+1];
-	int x,y;
-	text[MAX_CHAR_PER_FONT]=0;
+	int x,y,c;
+	
+	c=0;
 	for(s=0;s<font->maxascii;s++)
 	{
 	    int g = font->ascii2glyph[s];
-	    text[s] = s;
 	    if(g>=0) {
-	       if(font->glyph[g].advance*textscale/64 > xmax)
+	       if(font->glyph[g].advance*textscale/64 > xmax) {
 		   xmax = font->glyph[g].advance*textscale/64;
+	       }
+	       c++;
+	    }
+	    if((s&15)==0) {
+		if(c) {
+		    ypos++;
+		}
+		c=0;
 	    }
 	}
+	ymax = ypos*textscale*2;
+
 	swf.movieSize.xmax = xmax*20;
 	swf.movieSize.ymax = ymax;
 
@@ -845,7 +903,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 
 	    r.xmin = 0;
 	    r.ymin = 0;
-	    r.xmax = swf.movieSize.xmax*20;
+	    r.xmax = swf.movieSize.xmax;
 	    r.ymax = swf.movieSize.ymax;
 	    
 	    swf_SetRect(t,&r);
@@ -861,10 +919,10 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	    rgb.r = 0x00;
 	    rgb.g = 0x00;
 	    rgb.b = 0x00;
-	    for(y=0;y<=((font->maxascii-1)/16);y++)
+	    ypos = 1;
+	    for(y=0;y<((font->maxascii+15)/16);y++)
 	    {
 		int c=0,lastx=-1;
-		/* TODO: firstx?? */
 		for(x=0;x<16;x++) {
 		    int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
 		    if(g>=0 && font->glyph[g].shape) {
@@ -874,7 +932,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 		    }
 		}
 		if(c) {
-		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*y*2);
+		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*ypos*2);
 		  for(x=0;x<16;x++)
 		  {
 		      int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
@@ -889,6 +947,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 			swf_ResetWriteBits(t);
 		      }
 		  }
+		  ypos++;
 		} 
 	    }
 	    swf_SetU8(t,0);
@@ -899,6 +958,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
             swf_ObjectPlace(t,font->id+1,1,NULL,NULL,NULL);
      
         t = swf_InsertTag(t,ST_SHOWFRAME);
+
   }
   
   t = swf_InsertTag(t,ST_END);
@@ -1092,7 +1152,7 @@ static U32 readUTF8char(char**text)
     return *((*text)++);
 }
 
-void swf_DrawText(SWFSHAPEDRAWER*draw, SWFFONT*font, char*text)
+void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text)
 {
     char*s = text;
     int advance = 0;
@@ -1109,19 +1169,19 @@ void swf_DrawText(SWFSHAPEDRAWER*draw, SWFFONT*font, char*text)
 		FPOINT to;
 		to.x = l->x/20.0+advance;
 		to.y = l->y/20.0;
-		swf_DrawerMoveTo(draw, &to);
+		draw->moveTo(draw, &to);
 	    } else if(l->type == lineTo) {
 		FPOINT to;
 		to.x = l->x/20.0+advance;
 		to.y = l->y/20.0;
-		swf_DrawerLineTo(draw, &to);
+		draw->lineTo(draw, &to);
 	    } else if(l->type == splineTo) {
 		FPOINT mid,to;
 		mid.x = l->sx/20.0+advance;
 		mid.y = l->sy/20.0;
 		to.x = l->x/20.0+advance;
 		to.y = l->y/20.0;
-		swf_DrawerSplineTo(draw, &mid, &to);
+		draw->splineTo(draw, &mid, &to);
 	    }
 	    l = l->next;
 	}
