@@ -196,8 +196,6 @@ char* swf_TagGetName(TAG*tag)
 	    return "IMPORTASSETS";
 	case ST_ENABLEDEBUGGER:
 	    return "ENABLEDEBUGGER";
-        case ST_REFLEX:
-            return "REFLEX";
         case ST_DOINITACTION:
             return "DOINITACTION";
         case ST_DEFINEMOVIE:
@@ -216,6 +214,11 @@ char* swf_TagGetName(TAG*tag)
             return "SCRIPTLIMITS";
         case ST_SETTABINDEX:
             return "SETTABINDEX";
+        
+	case ST_REFLEX:
+            return "REFLEX";
+	case ST_GLYPHNAMES:
+            return "GLYPHNAMES";
     }
     return 0;
 }
