@@ -64,11 +64,6 @@ edittext: $(RFXSWF) edittext.o
 zlibtest: $(RFXSWF) zlibtest.o
 		$(CC) -o zlibtest zlibtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-makefonts: $(RFXSWF) makefonts.o ../../pdf2swf/swfoutput.o
-		$(CXX) -o makefonts makefonts.o ../../pdf2swf/swfoutput.o \
-                ../../pdf2swf/spline.o ../../pdf2swf/encodings.o ../librfxswf.a -lt1 $(LDLIBS) \
-                ../../pdf2swf/xpdf/libpdf.a $(DBFLAGS)
-
 clean:
 		rm -f jpegtest.o box.o shape1.o transtest.o zlibtest.o \
                 sprites.o glyphshape.o \
