@@ -1,7 +1,7 @@
 swfc:
 
-    * .editbox
     * .buttons
+    * .editbox
     * .texture
     * .orbit
     * plugins?
@@ -31,7 +31,6 @@ pdf2swf:
 
 avi2swf:
 
-    * update manpage
     * speed up h.263 routines (MMX?)
 
 swfcombine:
@@ -56,6 +55,7 @@ swfbbox:
 wav2swf:
 
     * pad blocks for mp3 compression
+    * stereo support?
 
 librfxswf:
 
