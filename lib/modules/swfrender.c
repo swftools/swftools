@@ -31,11 +31,13 @@ typedef struct _dummyshape
     struct _dummyshape*next;
 } dummyshape_t;
 
+/* one bit flag: */
 #define clip_type 0
 #define fill_type 1
 
 typedef struct _renderpoint
 {
+    char type;
     float x;
     U32 depth;
 
@@ -44,7 +46,6 @@ typedef struct _renderpoint
     U32 clipdepth;
     dummyshape_t*s;
     
-    char type;
 } renderpoint_t;
 
 /* 
@@ -102,16 +103,63 @@ static void renderpoint_write(TAG*tag, renderpoint_t*p)
     if(tag->len == 0) {
 	swf_SetU32(tag, 1);
     } else {
-	PUT32(tag->data, GET32(tag->data)+1);
+	int num = GET32(tag->data);
+	PUT32(tag->data, num+1);
     }
-    //swf_SetU8(tag, 0);
-    swf_SetBlock(tag, (U8*)p, sizeof(renderpoint_t));
+
+    swf_SetBits(tag, p->type, 1);
+    swf_SetBits(tag, *(U32*)&p->x, 32);
+    if(p->depth & 0xffff) {
+	swf_SetBits(tag, 1, 1);
+	swf_SetBits(tag, p->depth, 32);
+    } else {
+	swf_SetBits(tag, 0, 1);
+	swf_SetBits(tag, p->depth >> 16, 16);
+    }
+    swf_SetBits(tag, *(U32*)&p->shapeline, 32);
+    if(p->type == clip_type) {
+	if(p->clipdepth & 0xffff) {
+	    swf_SetBits(tag, 1, 1);
+	    swf_SetBits(tag, p->clipdepth, 32);
+	} else {
+	    swf_SetBits(tag, 0, 1);
+	    swf_SetBits(tag, p->clipdepth >> 16, 16);
+	}
+	/* don't set s */
+    } else {
+	swf_SetBits(tag, *(U32*)&p->s, 32);
+	/* don't set clipdepth */
+    }
 }
-static renderpoint_t renderpoint_read(TAG*tag)
+static renderpoint_t renderpoint_read(TAG*tag, int num)
 {
     renderpoint_t p;
-    //swf_GetU8(tag);
-    swf_GetBlock(tag, (U8*)&p, sizeof(renderpoint_t));
+    U8 flag = 0;
+    U32 dummy = 0;
+
+    p.type = swf_GetBits(tag, 1);
+    
+    dummy = swf_GetBits(tag, 32);p.x = *(float*)&dummy;
+    flag = swf_GetBits(tag, 1);
+    if(flag) {
+	p.depth = swf_GetBits(tag, 32);
+    } else {
+	p.depth = swf_GetBits(tag, 16) << 16;
+    }
+    dummy = swf_GetBits(tag, 32);p.shapeline = *(SHAPELINE**)&dummy;
+    if(p.type == clip_type) {
+	flag = swf_GetBits(tag, 1);
+	if(flag) {
+	    p.clipdepth = swf_GetBits(tag, 32);
+	} else {
+	    p.clipdepth = swf_GetBits(tag, 16) << 16;
+	}
+	p.s = 0;
+    } else {
+	dummy = swf_GetBits(tag, 32);p.s = *(dummyshape_t**)&dummy;
+	p.clipdepth = 0;
+    }
+
     return p;
 }
 
@@ -128,10 +176,13 @@ static renderpoint_t* renderpoint_readall(TAG*tag)
     int t;
     renderpoint_t*p;
     swf_SetTagPos(tag, 0);
-    num = swf_GetU32(tag);
+    if(tag->len == 0)
+	num = 0;
+    else
+	num = swf_GetU32(tag);
     p = (renderpoint_t*)rfx_alloc(num*sizeof(renderpoint_t));
     for(t=0;t<num;t++)
-	p[t] = renderpoint_read(tag);
+	p[t] = renderpoint_read(tag,t);
     return p;
 }
 
@@ -140,7 +191,10 @@ static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     if(x >= i->width2 || y >= i->height2 || y<0) return;
     p->x = x;
-    renderpoint_write(i->lines[y].points, p);
+    if(y<10)
+	renderpoint_write(i->lines[y].points, p);
+    else
+	renderpoint_write(i->lines[y].points, p);
 }
 
 /* set this to 0.777777 or something if the "both fillstyles set while not inside shape"
@@ -878,7 +932,6 @@ RGBA* swf_Render(RENDERBUF*dest)
     for(y=0;y<i->height2;y++) {
         TAG*tag = i->lines[y].points;
         int n;
-        int size = sizeof(renderpoint_t);
         int num = renderpoint_num(tag);
 	renderpoint_t*points = renderpoint_readall(tag);
         RGBA*line = line1;
@@ -889,7 +942,6 @@ RGBA* swf_Render(RENDERBUF*dest)
 
         if((y&1) && i->antialize)
             line = line2;
-
 
 	if(!i->background) {
 	    memset(line, 0, sizeof(RGBA)*i->width2);
@@ -944,6 +996,7 @@ RGBA* swf_Render(RENDERBUF*dest)
                 }
             }
         }
+	free(points);
     }
     free(line1);
     free(line2);
