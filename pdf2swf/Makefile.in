@@ -8,18 +8,18 @@ all: pdf2swf$(E)
 fonts = n021003l.pfb n021023l.pfb n021004l.pfb n021024l.pfb n019003l.pfb n019023l.pfb n019004l.pfb n019024l.pfb n022003l.pfb n022023l.pfb n022004l.pfb n022024l.pfb s050000l.pfb d050000l.pfb n021003l.afm n021023l.afm n021004l.afm n021024l.afm n019003l.afm n019023l.afm n019004l.afm n019024l.afm n022003l.afm n022023l.afm n022004l.afm n022024l.afm s050000l.afm d050000l.afm
 
 SWFOutputDev.$(O): swfoutput.h SWFOutputDev.cc
-	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib -Ixpdf SWFOutputDev.cc -o $@
+	$(CC) -I../lib -Ixpdf SWFOutputDev.cc -o $@
 spline.$(O): spline.cc spline.h
-	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib spline.cc -o $@
+	$(CC) -I../lib spline.cc -o $@
 encodings.$(O): encodings.cc
-	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib encodings.cc -o $@
+	$(CC) -I../lib encodings.cc -o $@
 swfoutput.$(O): swfoutput.cc swfoutput.h spline.h
-	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib swfoutput.cc -o $@
+	$(CC) -I../lib swfoutput.cc -o $@
 pdf2swf.$(O): pdf2swf.cc SWFOutputDev.h
-	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib pdf2swf.cc -o $@
+	$(CC) -I../lib pdf2swf.cc -o $@
 
-pdf2swf$(A): Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
-	$(AR) r pdf2swf$(A) SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
+pdf2swf$(A): Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O)
+	$(AR) r pdf2swf$(A) SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O)
 	$(RANLIB) pdf2swf$(A)
 
 pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) 
