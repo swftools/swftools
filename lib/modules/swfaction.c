@@ -13,6 +13,8 @@
 
 #include "../rfxswf.h"
 
+#define MAX_LOOKUP 1024   // make cross references in dumps
+
 struct Action
 {
     int version;
@@ -229,7 +231,7 @@ int OpAdvance(char c, char*data)
 		return 1+4; //int
 	    } else if (type == 8) {
 		return 1+1; //lookup
-	    }
+	    } else return 1;
 	    break;
 	}
     }
@@ -242,8 +244,18 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
     int t;
     U8*data;
     char* cp;
-    if(!prefix) 
-	prefix="";
+    int entry = 0;
+
+#ifdef MAX_LOOKUP
+
+    char * lookup[MAX_LOOKUP];
+    memset(lookup,0x00,sizeof(lookup));
+
+#endif
+
+   if (!prefix)
+        prefix="";
+
     while(atag)
     {
 	U8 poollen = 0;
@@ -278,9 +290,14 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		} break;
 		case 'c': {
 		    printf(" String:\"%s\"", data);
+#ifdef MAX_LOOKUP
+                    if (entry<MAX_LOOKUP)
+		      lookup[entry++] = strdup(data);
+#endif
 	        } break;
 		case 'C': {
 		    poollen = *data;
+                    entry = 0;
 		    printf("(%d entries)", poollen);
 	    	} break;
 		case 's': {
@@ -312,6 +329,10 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 			printf(" int:%d", *(int*)value);
 		    } else if (type == 8) {
 			printf(" Lookup:%d", *value);
+#ifdef MAX_LOOKUP
+			if (lookup[*value])
+			  printf(" (\"%s\")",lookup[*value]);
+#endif
 		    } else {
 			printf(" UNKNOWN[%02x]",type);
 		    }
@@ -341,6 +362,10 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 	printf("\n");
 	atag = atag->next;
     }
+
+#ifdef MAX_LOOKUP
+  for (t=0;t<MAX_LOOKUP;t++) if (lookup[t]) free(lookup[t]);
+#endif
 }
 
 static const char TYPE_URL = 1;

@@ -335,7 +335,7 @@ void handlePlaceObject2(TAG*tag, char*prefix)
 	    swf_ActionFree(a);
 	}
 	if(globalflags) // should go to sterr.
-	    printf("%s ERROR: unsatisfied handlerflags: %02x", globalflags);
+	    printf("ERROR: unsatisfied handlerflags: %02x", globalflags);
     } else {
       printf(" has action code\n");
     }
