@@ -276,8 +276,8 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 	{
 	    switch(*cp)
 	    {
-		case 'f': {
-		    printf(" %d", SWAP16(*(U16*)data));
+		case 'f': { //frame
+		    printf(" %d", data[0]+256*data[1]);
 		} break;
 		case 'u': {
 		    printf(" URL:\"%s\"", data);
@@ -308,7 +308,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    printf(" %d", *data);
 		} break;
 		case 'b': {
-		    printf(" %d", *(U16*)data);
+		    printf(" %d", data[0]+256*data[1]);
 		} break;
 		case 'p': {
 		    U8 type = *data;
@@ -316,8 +316,9 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    if(type == 0) {
 			printf(" String:\"%s\"", value);
 		    } else if (type == 1) {
-			U32 v = SWAP32(*(U32*)value);
-			printf(" Float:%f", *(float*)&v);
+			U32 f = value[0]+(value[1]<<8)+
+				(value[2]<<16)+(value[3]<<24);
+			printf(" Float:%f", *(float*)&f);
 		    } else if (type == 2) {
 			printf(" NULL");
 		    } else if (type == 4) {
@@ -325,17 +326,18 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    } else if (type == 5) {
 			printf(" bool:%s", *value?"true":"false");
 		    } else if (type == 6) {
-#ifdef WORDS_BIGENDIAN
 			U8 a[8];
 			int t;
+#ifdef WORDS_BIGENDIAN
 			for(t=0;t<8;t++)
 			    a[7-t]=value[t];
-			printf(" double:%f", *(double*)a);
 #else
-			printf(" double:%f", *(double*)value);
+			memcpy(a,value,8);
 #endif
+			printf(" double:%f", *(double*)a);
 		    } else if (type == 7) {
-			printf(" int:%d", SWAP32(*(int*)value));
+			printf(" int:%d", value[0]+(value[1]<<8)+
+					  (value[2]<<16)+(value[3]<<24));
 		    } else if (type == 8) {
 			printf(" Lookup:%d", *value);
 #ifdef MAX_LOOKUP
