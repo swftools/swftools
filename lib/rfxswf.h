@@ -889,7 +889,7 @@ int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 typedef struct _SWFPLACEOBJECT {
     U16 depth;
     U16 id; // may be 0
-    bool move; //true: move/replace character, false: set character
+    char move; //true: move/replace character, false: set character
     MATRIX matrix;
     CXFORM cxform;
     U16 ratio;
