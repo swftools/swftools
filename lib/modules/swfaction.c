@@ -29,7 +29,7 @@ l: label (string)
 C: constant pool header (byte)
 c: constant pool entry (string)
 s: skip (byte) (number of actions)
-m: method (byte) GetUrl2:(0=none, 1=get, 2=post)/GotoFrame2:(1=play)
+m: method (byte) swf_GetUrl2:(0=none, 1=get, 2=post)/GotoFrame2:(1=play)
 b: branch (word) (number of bytes)
 p (push): type(byte), type=0:string, type=1:double
 {: define function (name (string), num (word), params (num strings), codesize (word)
@@ -39,8 +39,8 @@ r: register (byte)
 {3,"End", 0x00, ""},
 {3,"GotoFrame", 0x81, "f"},
 {4,"GotoFrame2", 0x9f, "m"}, // -1 (/Movieclip:3)
-{3,"GetUrl", 0x83, "ul"},
-{4,"GetUrl2", 0x9a, "m"}, //-2
+{3,"swf_GetUrl", 0x83, "ul"},
+{4,"swf_GetUrl2", 0x9a, "m"}, //-2
 {3,"NextFrame", 0x04, ""},
 {3,"PreviousFrame", 0x05, ""},
 {3,"Play", 0x06, ""},
@@ -128,7 +128,7 @@ r: register (byte)
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 
-ActionTAG* GetActions(TAG*tag) 
+ActionTAG* swf_GetActions(TAG*tag) 
 {
     U8 op = 1;
     int length;
@@ -143,17 +143,17 @@ ActionTAG* GetActions(TAG*tag)
 	action->next->next = 0;
 	action = action->next;
 
-	op = GetU8(tag);
+	op = swf_GetU8(tag);
 	if(op<0x80)
 	    length = 0;
 	else
-	    length = GetU16(tag);
+	    length = swf_GetU16(tag);
 
 	if(length) {
 	    int t;
 	    data = malloc(length);
 	    for(t=0;t<length;t++)
-		data[t] = GetU8(tag);
+		data[t] = swf_GetU8(tag);
 	} else {
 	  data = 0;
 	}
@@ -165,15 +165,15 @@ ActionTAG* GetActions(TAG*tag)
     return tmp.next;
 }
 
-void SetActions(TAG*tag, ActionTAG*action)
+void swf_SetActions(TAG*tag, ActionTAG*action)
 {
     while(action)
     {
-	SetU8(tag, action->op);
+	swf_SetU8(tag, action->op);
 	if(action->op & 128)
-	  SetU16(tag, action->len);
+	  swf_SetU16(tag, action->len);
 
-	SetBlock(tag, action->data, action->len);
+	swf_SetBlock(tag, action->data, action->len);
 
 	action = action->next;
     }
@@ -227,7 +227,7 @@ int OpAdvance(char c, char*data)
 }
 
 /* TODO: this should be in swfdump.c */
-void DumpActions(ActionTAG*atag, char*prefix) 
+void swf_DumpActions(ActionTAG*atag, char*prefix) 
 {
     U8 op;
     int t;
