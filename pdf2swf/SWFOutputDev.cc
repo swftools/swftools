@@ -634,6 +634,21 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
     return (gfxline_t*)draw.result(&draw);
 }
 
+
+void dump_outline(gfxline_t*line)
+{
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    msg("<debug> |     moveTo %.2f %.2f", line->x,line->y);
+	} else if(line->type == gfx_lineTo) {
+	    msg("<debug> |     lineTo %.2f %.2f", line->x,line->y);
+	} else if(line->type == gfx_splineTo) {
+	    msg("<debug> |     splineTo (%.2f %.2f) %.2f %.2f", line->sx,line->sy, line->x, line->y);
+	}
+	line = line->next;
+    }
+}
+
 /*----------------------------------------------------------------------------
  * Primitive Graphic routines
  *----------------------------------------------------------------------------*/
@@ -668,21 +683,30 @@ void SWFOutputDev::stroke(GfxState *state)
     gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
     
     int dashnum = 0;
-    double dashstart = 0;
+    double dashphase = 0;
     double * ldash = 0;
-    state->getLineDash(&ldash, &dashnum, &dashstart);
-    if(dashnum && ldash) {
-	float * dash = (float*)malloc(sizeof(float)*(dashnum+2));
-	dash[0] = dashstart;
-	int t;
-	for(t=0;t<dashnum;t++) {
-	    dash[t+1] = ldash[t];
-	}
-	dash[dashnum+1] = 0;
+    state->getLineDash(&ldash, &dashnum, &dashphase);
 
-	gfxline_t*line2 = gfxtool_dash_line(line, dash);
+    if(dashnum && ldash) {
+	float * dash = (float*)malloc(sizeof(float)*(dashnum+1));
+	int t;
+	double cut = 0;
+	int fixzero = 0;
+	msg("<trace> %d dashes", dashnum);
+	msg("<trace> |  phase: %f", dashphase);
+	for(t=0;t<dashnum;t++) {
+	    dash[t] = ldash[t];
+	    msg("<trace> |  d%-3d: %f", t, ldash[t]);
+	}
+	dash[dashnum] = -1;
+	if(getLogLevel() >= LOGLEVEL_TRACE) {
+	    dump_outline(line);
+	}
+
+	gfxline_t*line2 = gfxtool_dash_line(line, dash, dashphase);
 	gfxline_free(line);
 	line = line2;
+	msg("<trace> After dashing:");
     }
     
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
@@ -692,7 +716,7 @@ void SWFOutputDev::stroke(GfxState *state)
 		lineCap==0?"butt": (lineJoin==1?"round":"square"),
 		dashnum
 		);
-        //gfxline_show(line, stdout);
+        dump_outline(line);
     }
    
     swfoutput_drawgfxline(&output, line, width, &col, capType, joinType, miterLimit);
@@ -713,8 +737,8 @@ void SWFOutputDev::fill(GfxState *state)
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> fill\n");
-        //dump_outline(line);
+        msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
+        dump_outline(line);
     }
 
     swfoutput_fillgfxline(&output, line, &col);
@@ -736,7 +760,7 @@ void SWFOutputDev::eoFill(GfxState *state)
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eofill\n");
-        //dump_outline(line);
+        dump_outline(line);
     }
 
     swfoutput_fillgfxline(&output, line, &col);
@@ -749,7 +773,7 @@ void SWFOutputDev::clip(GfxState *state)
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> clip\n");
-        //dump_outline(line);
+        dump_outline(line);
     }
 
     swfoutput_startclip(&output, line);
@@ -763,7 +787,7 @@ void SWFOutputDev::eoClip(GfxState *state)
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eoclip\n");
-        //dump_outline(line);
+        dump_outline(line);
     }
 
     swfoutput_startclip(&output, line);
