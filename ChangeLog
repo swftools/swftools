@@ -184,3 +184,7 @@
 
 0.5.2 (not yet released):
 	* configure: added check for broken freetype- disable freetype in some cases
+	* swfbbox: Added support for text boxes
+	* png2swf: Fixed alpha conversion (removed definejpeg3 workaround)
+	* swfc: added buttons, edittext fields
+	* rfxswf: fixed font advance parameters (editboxes with custom font now work)
