@@ -19,6 +19,12 @@
 /* Define if your <sys/time.h> declares struct tm.  */
 #undef TM_IN_SYS_TIME
 
+/* Define if you have the time() function */
+#undef HAVE_TIME
+
+/* Define if you have the time.h header file */
+#undef HAVE_TIME_H
+
 /* Define if you have the lrand48 function.  */
 #undef HAVE_LRAND48
 
