@@ -22,7 +22,7 @@ pdf2swf$(A): Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O
 	$(AR) r pdf2swf$(A) SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O) ../lib/gfxtools.$(O)
 	$(RANLIB) pdf2swf$(A)
 
-pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) 
+pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) ../lib/art/libart$(A)
 	$(LL) pdf2swf.$(O) pdf2swf$(A) ../lib/librfxswf$(A) ../lib/art/libart$(A) xpdf/libpdf$(A) $(LIBS) -o pdf2swf$(E) 
 	$(STRIP) pdf2swf$(E)
 
