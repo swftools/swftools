@@ -39,8 +39,8 @@ r: register (byte)
 {3,"End", 0x00, ""},
 {3,"GotoFrame", 0x81, "f"},
 {4,"GotoFrame2", 0x9f, "m"}, // -1 (/Movieclip:3)
-{3,"swf_GetUrl", 0x83, "ul"},
-{4,"swf_GetUrl2", 0x9a, "m"}, //-2
+{3,"GetUrl", 0x83, "ul"},
+{4,"GetUrl2", 0x9a, "m"}, //-2
 {3,"NextFrame", 0x04, ""},
 {3,"PreviousFrame", 0x05, ""},
 {3,"Play", 0x06, ""},
@@ -63,7 +63,7 @@ r: register (byte)
 {4,"Not", 0x12, ""}, //  -1, +1
 {4,"StringAdd", 0x21, ""}, // -2,+1
 {4,"StringLength", 0x14, ""}, // -1, +1
-{4,"MBStringLength", 0x31}, // -1, +1
+{4,"MBStringLength", 0x31, ""}, // -1, +1
 {4,"StringEquals", 0x13, ""}, // -2, +1
 {4,"StringLess", 0x29, ""}, //-2, +1
 {4,"StringExtract", 0x15, ""}, // -3, +1
@@ -77,7 +77,7 @@ r: register (byte)
 {4,"MBAsciiToChar", 0x37, ""}, // -1, +1
 {4,"Jump", 0x99, "b"},
 {4,"If", 0x9d, "b"}, // -1
-{4,"Call", 0x9e, ""}, //-1 (frame label/number)
+{4,"Call", 0x9e, ""}, //-1 (frame label/number) (high bit is wrong.)
 {4,"GetVariable", 0x1c,""}, // -1, +1
 {4,"SetVariable", 0x1d,""}, // -2
 {4,"GetProperty", 0x22,""}, //-2, +1
@@ -137,7 +137,6 @@ ActionTAG* swf_GetActions(TAG*tag)
     U8*data;
     while(op)
     {
-	int pos;
 	action->next = (ActionTAG*)malloc(sizeof(ActionTAG));
 	action->next->prev = action;
 	action->next->next = 0;
@@ -229,7 +228,6 @@ int OpAdvance(char c, char*data)
 /* TODO: this should be in swfdump.c */
 void swf_DumpActions(ActionTAG*atag, char*prefix) 
 {
-    U8 op;
     int t;
     U8*data;
     char* cp;
@@ -243,7 +241,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		break;
 
 	if(t==definedactions) {
-	    printf("%s (%5d bytes) action: %02x\n", prefix, atag->len, op);
+	    printf("%s (%5d bytes) action: %02x\n", prefix, atag->len, atag->op);
 	    atag = atag->next;
 	    continue;
 	}
@@ -275,11 +273,11 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    printf("(%d entries)", poollen);
 	    	} break;
 		case 's': {
-		    printf(" +%d", data);
+		    printf(" +%d", *data);
 		} break;
 		case 'm': {
 		    //m: method (byte) url:(0=none, 1=get, 2=datat)/gf2:(1=play)
-		    printf(" %d", data);
+		    printf(" %d", *data);
 		} break;
 		case 'b': {
 		    printf(" %d", *(U16*)data);
@@ -294,7 +292,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    } else if (type == 2) {
 			printf(" NULL");
 		    } else if (type == 4) {
-			printf(" register:%d", value);
+			printf(" register:%d", *value);
 		    } else if (type == 5) {
 			printf(" %s", *value?"true":"false");
 		    } else if (type == 6) {
@@ -337,11 +335,10 @@ static const char TYPE_STRING = 4;
 
 int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 {
-    U8 op;
     int t;
     U8*data;
     char* cp;
-    
+    int count = 0;
     while(atag)
     {
 	U8 poollen = 0;
@@ -352,6 +349,7 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 	if(t==definedactions) {
 	    // unknown actiontag
 	    atag = atag->next;
+	    count++;
 	    continue;
 	}
 	cp = actions[t].flags;
@@ -428,7 +426,9 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 	    }
 	}
 	atag = atag->next;
+	count ++;
     }
+    return count;
 }
 
 void swf_ActionEnumerateTargets(ActionTAG*atag, char*(*callback)(char*))
@@ -444,3 +444,311 @@ void swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
     swf_ActionEnumerate(atag, callback, TYPE_URL);
 }
 
+static ActionTAG * currentatag;
+
+ActionTAG* swf_ActionStart()
+{
+    currentatag = (ActionTAG*)malloc(sizeof(ActionTAG));
+    currentatag->prev = 0;
+    currentatag->parent = 0;
+    currentatag->data = 0;
+    currentatag->len = 0;
+    return currentatag;
+}
+
+void swf_ActionEnd()
+{
+    currentatag->prev->next = 0;
+    free(currentatag);
+}
+
+void swf_AddActionTAG(U8 op, U8*data, U16 len)
+{
+    currentatag->next = (ActionTAG*)malloc(sizeof(ActionTAG));
+    currentatag->next->prev = currentatag;
+    currentatag->parent = 0;
+    currentatag->data = data;
+    currentatag->len = len;
+    currentatag->op = op;
+    currentatag = currentatag->next;
+}
+
+#define ACTION_END            0x00
+#define ACTION_NEXTFRAME      0x04
+#define ACTION_PREVIOUSFRAME  0x05
+#define ACTION_PLAY           0x06
+#define ACTION_STOP           0x07
+#define ACTION_TOGGLEQUALITY  0x08
+#define ACTION_STOPSOUNDS     0x09
+#define ACTION_ADD            0x0a
+#define ACTION_SUBTRACT       0x0b
+#define ACTION_MULTIPLY       0x0c
+#define ACTION_DIVIDE         0x0d
+#define ACTION_EQUALS         0x0e
+#define ACTION_LESS           0x0f
+#define ACTION_AND            0x10
+#define ACTION_OR             0x11
+#define ACTION_NOT            0x12
+#define ACTION_STRINGEQUALS   0x13
+#define ACTION_STRINGLENGTH   0x14
+#define ACTION_STRINGEXTRACT  0x15
+#define ACTION_POP            0x17
+#define ACTION_TOINTEGER      0x18
+#define ACTION_GETVARIABLE    0x1c
+#define ACTION_SETVARIABLE    0x1d
+#define ACTION_SETTARGET2     0x20
+#define ACTION_STRINGADD      0x21
+#define ACTION_GETPROPERTY    0x22
+#define ACTION_SETPROPERTY    0x23
+#define ACTION_CLONESPRITE    0x24
+#define ACTION_REMOVESPRITE   0x25
+#define ACTION_TRACE          0x26
+#define ACTION_STARTDRAG      0x27
+#define ACTION_ENDDRAG        0x28
+#define ACTION_STRINGLESS     0x29
+#define ACTION_RANDOMNUMBER   0x30
+#define ACTION_MBSTRINGLENGTH 0x31
+#define ACTION_CHARTOASCII    0x32
+#define ACTION_ASCIITOCHAR    0x33
+#define ACTION_GETTIME        0x34
+#define ACTION_MBSTRINGEXTRACT 0x35
+#define ACTION_MBCHARTOASCII  0x36
+#define ACTION_MBASCIITOCHAR  0x37
+#define ACTION_DELETE         0x3a
+#define ACTION_DELETE2        0x3b
+#define ACTION_DEFINELOCAL    0x3c
+#define ACTION_CALLFUNCTION   0x3d
+#define ACTION_RETURN         0x3e
+#define ACTION_MODULO         0x3f
+#define ACTION_NEWOBJECT      0x40
+#define ACTION_DEFINELOCAL2   0x41
+#define ACTION_INITARRAY      0x42
+#define ACTION_MAKEHASH       0x43
+#define ACTION_TYPEOF         0x44
+#define ACTION_TARGETPATH     0x45
+#define ACTION_ENUMERATE      0x46
+#define ACTION_ADD2           0x47
+#define ACTION_LESS2          0x48
+#define ACTION_EQUALS2        0x49
+#define ACTION_TONUMBER       0x4a
+#define ACTION_TOSTRING       0x4b
+#define ACTION_PUSHDUPLICATE  0x4c
+#define ACTION_STACKSWAP      0x4d
+#define ACTION_GETMEMBER      0x4e
+#define ACTION_SETMEMBER      0x4f
+#define ACTION_INCREMENT      0x50
+#define ACTION_DECREMENT      0x51
+#define ACTION_CALLMETHOD     0x52
+#define ACTION_NEWMETHOD      0x53
+#define ACTION_BITAND         0x60
+#define ACTION_BITOR          0x61
+#define ACTION_BITXOR         0x62
+#define ACTION_BITLSHIFT      0x63
+#define ACTION_BITRSHIFT      0x64
+#define ACTION_BITURSHIFT     0x65
+#define ACTION_GOTOFRAME      0x81
+#define ACTION_GETURL         0x83
+#define ACTION_STOREREGISTER  0x87
+#define ACTION_CONSTANTPOOL   0x88
+#define ACTION_WAITFORFRAME   0x8a
+#define ACTION_SETTARGET      0x8b
+#define ACTION_GOTOLABEL      0x8c
+#define ACTION_WAITFORFRAME2  0x8d
+#define ACTION_WITH           0x94
+#define ACTION_PUSH           0x96
+#define ACTION_JUMP           0x99
+#define ACTION_GETURL2        0x9a
+#define ACTION_DEFINEFUNCTION 0x9b
+#define ACTION_IF             0x9d
+#define ACTION_CALL           0x9e
+#define ACTION_GOTOFRAME2     0x9f
+
+void action_NextFrame() {swf_AddActionTAG(ACTION_NEXTFRAME, 0, 0);}
+void action_PreviousFrame() {swf_AddActionTAG(ACTION_PREVIOUSFRAME, 0, 0);}
+void action_Play() {swf_AddActionTAG(ACTION_PLAY, 0, 0);}
+void action_Stop() {swf_AddActionTAG(ACTION_STOP, 0, 0);}
+void action_ToggleQuality() {swf_AddActionTAG(ACTION_TOGGLEQUALITY, 0, 0);}
+void action_StopSounds() {swf_AddActionTAG(ACTION_STOPSOUNDS, 0, 0);}
+void action_Add() {swf_AddActionTAG(ACTION_ADD, 0, 0);}
+void action_Subtract() {swf_AddActionTAG(ACTION_SUBTRACT, 0, 0);}
+void action_Multiply() {swf_AddActionTAG(ACTION_MULTIPLY, 0, 0);}
+void action_Divide() {swf_AddActionTAG(ACTION_DIVIDE, 0, 0);}
+void action_Equals() {swf_AddActionTAG(ACTION_EQUALS, 0, 0);}
+void action_Less() {swf_AddActionTAG(ACTION_LESS, 0, 0);}
+void action_And() {swf_AddActionTAG(ACTION_AND, 0, 0);}
+void action_Or() {swf_AddActionTAG(ACTION_OR, 0, 0);}
+void action_Not() {swf_AddActionTAG(ACTION_NOT, 0, 0);}
+void action_StringEquals() {swf_AddActionTAG(ACTION_STRINGEQUALS, 0, 0);}
+void action_StringLength() {swf_AddActionTAG(ACTION_STRINGLENGTH, 0, 0);}
+void action_StringExtract() {swf_AddActionTAG(ACTION_STRINGEXTRACT, 0, 0);}
+void action_Pop() {swf_AddActionTAG(ACTION_POP, 0, 0);}
+void action_ToInteger() {swf_AddActionTAG(ACTION_TOINTEGER, 0, 0);}
+void action_GetVariable() {swf_AddActionTAG(ACTION_GETVARIABLE, 0, 0);}
+void action_SetVariable() {swf_AddActionTAG(ACTION_SETVARIABLE, 0, 0);}
+void action_SetTarget2() {swf_AddActionTAG(ACTION_SETTARGET2, 0, 0);}
+void action_StringAdd() {swf_AddActionTAG(ACTION_STRINGADD, 0, 0);}
+void action_GetProperty() {swf_AddActionTAG(ACTION_GETPROPERTY, 0, 0);}
+void action_SetProperty() {swf_AddActionTAG(ACTION_SETPROPERTY, 0, 0);}
+void action_CloneSprite() {swf_AddActionTAG(ACTION_CLONESPRITE, 0, 0);}
+void action_RemoveSprite() {swf_AddActionTAG(ACTION_REMOVESPRITE, 0, 0);}
+void action_Trace() {swf_AddActionTAG(ACTION_TRACE, 0, 0);}
+void action_StartDrag() {swf_AddActionTAG(ACTION_STARTDRAG, 0, 0);}
+void action_EndDrag() {swf_AddActionTAG(ACTION_ENDDRAG, 0, 0);}
+void action_StringLess() {swf_AddActionTAG(ACTION_STRINGLESS, 0, 0);}
+void action_RandomNumber() {swf_AddActionTAG(ACTION_RANDOMNUMBER, 0, 0);}
+void action_MBStringLength() {swf_AddActionTAG(ACTION_MBSTRINGLENGTH, 0, 0);}
+void action_CharToAscii() {swf_AddActionTAG(ACTION_CHARTOASCII, 0, 0);}
+void action_AsciiToChar() {swf_AddActionTAG(ACTION_ASCIITOCHAR, 0, 0);}
+void action_GetTime() {swf_AddActionTAG(ACTION_GETTIME, 0, 0);}
+void action_MBStringExtract() {swf_AddActionTAG(ACTION_MBSTRINGEXTRACT, 0, 0);}
+void action_MBCharToAscii() {swf_AddActionTAG(ACTION_MBCHARTOASCII, 0, 0);}
+void action_MBAsciiToChar() {swf_AddActionTAG(ACTION_MBASCIITOCHAR, 0, 0);}
+void action_Delete() {swf_AddActionTAG(ACTION_DELETE, 0, 0);}
+void action_Delete2() {swf_AddActionTAG(ACTION_DELETE2, 0, 0);}
+void action_DefineLocal() {swf_AddActionTAG(ACTION_DEFINELOCAL, 0, 0);}
+void action_CallFunction() {swf_AddActionTAG(ACTION_CALLFUNCTION, 0, 0);}
+void action_Return() {swf_AddActionTAG(ACTION_RETURN, 0, 0);}
+void action_Modulo() {swf_AddActionTAG(ACTION_MODULO, 0, 0);}
+void action_NewObject() {swf_AddActionTAG(ACTION_NEWOBJECT, 0, 0);}
+void action_DefineLocal2() {swf_AddActionTAG(ACTION_DEFINELOCAL2, 0, 0);}
+void action_InitArray() {swf_AddActionTAG(ACTION_INITARRAY, 0, 0);}
+void action_Makehash() {swf_AddActionTAG(ACTION_MAKEHASH, 0, 0);}
+void action_TypeOf() {swf_AddActionTAG(ACTION_TYPEOF, 0, 0);}
+void action_TargetPath() {swf_AddActionTAG(ACTION_TARGETPATH, 0, 0);}
+void action_Enumerate() {swf_AddActionTAG(ACTION_ENUMERATE, 0, 0);}
+void action_Add2() {swf_AddActionTAG(ACTION_ADD2, 0, 0);}
+void action_Less2() {swf_AddActionTAG(ACTION_LESS2, 0, 0);}
+void action_Equals2() {swf_AddActionTAG(ACTION_EQUALS2, 0, 0);}
+void action_ToNumber() {swf_AddActionTAG(ACTION_TONUMBER, 0, 0);}
+void action_ToString() {swf_AddActionTAG(ACTION_TOSTRING, 0, 0);}
+void action_PushDuplicate() {swf_AddActionTAG(ACTION_PUSHDUPLICATE, 0, 0);}
+void action_StackSwap() {swf_AddActionTAG(ACTION_STACKSWAP, 0, 0);}
+void action_GetMember() {swf_AddActionTAG(ACTION_GETMEMBER, 0, 0);}
+void action_SetMember() {swf_AddActionTAG(ACTION_SETMEMBER, 0, 0);}
+void action_Increment() {swf_AddActionTAG(ACTION_INCREMENT, 0, 0);}
+void action_Decrement() {swf_AddActionTAG(ACTION_DECREMENT, 0, 0);}
+void action_CallMethod() {swf_AddActionTAG(ACTION_CALLMETHOD, 0, 0);}
+void action_NewMethod() {swf_AddActionTAG(ACTION_NEWMETHOD, 0, 0);}
+void action_BitAnd() {swf_AddActionTAG(ACTION_BITAND, 0, 0);}
+void action_BitOr() {swf_AddActionTAG(ACTION_BITOR, 0, 0);}
+void action_BitXor() {swf_AddActionTAG(ACTION_BITXOR, 0, 0);}
+void action_BitLShift() {swf_AddActionTAG(ACTION_BITLSHIFT, 0, 0);}
+void action_BitRShift() {swf_AddActionTAG(ACTION_BITRSHIFT, 0, 0);}
+void action_BitURShift() {swf_AddActionTAG(ACTION_BITURSHIFT, 0, 0);}
+void action_Call() {swf_AddActionTAG(ACTION_CALL, 0, 0);}
+void action_End() {swf_AddActionTAG(ACTION_END, 0, 0);}
+void action_GotoFrame(U16 frame) 
+{
+    *(U16*)currentatag->tmp = frame;
+    swf_AddActionTAG(ACTION_GOTOFRAME, (U8*)currentatag->tmp, 2);
+}
+void action_Jump(U16 branch) 
+{
+    *(U16*)currentatag->tmp = branch;
+    swf_AddActionTAG(ACTION_JUMP, (U8*)currentatag->tmp, 2);
+}
+void action_If(U16 branch) 
+{
+    *(U16*)currentatag->tmp = branch;
+    swf_AddActionTAG(ACTION_IF, (U8*)currentatag->tmp, 2);
+}
+void action_StoreRegister(U8 reg) 
+{
+    *(U8*)currentatag->tmp = reg;
+    swf_AddActionTAG(ACTION_STOREREGISTER, (U8*)currentatag->tmp, 1);
+}
+void action_GotoFrame2(U8 method) 
+{
+    *(U8*)currentatag->tmp = method;
+    swf_AddActionTAG(ACTION_GOTOFRAME2, (U8*)currentatag->tmp, 1);
+}
+void action_GetUrl2(U8 method) 
+{
+    *(U8*)currentatag->tmp = method;
+    swf_AddActionTAG(ACTION_GETURL2, (U8*)currentatag->tmp, 1);
+}
+void action_WaitForFrame2(U8 skip) 
+{
+    *(U8*)currentatag->tmp = skip;
+    swf_AddActionTAG(ACTION_WAITFORFRAME2, (U8*)currentatag->tmp, 1);
+}
+void action_WaitForFrame(U16 frame, U8 skip) 
+{
+    *(U16*)currentatag->tmp = frame;
+    *(U8*)&currentatag->tmp[2] = skip;
+    swf_AddActionTAG(ACTION_WAITFORFRAME, (U8*)currentatag->tmp, 3);
+}
+void action_SetTarget(char* target)
+{
+    char*ptr = strdup(target);
+    swf_AddActionTAG(ACTION_SETTARGET, (U8*)ptr, strlen(ptr)+1);
+}
+void action_PushNULL() 
+{
+    *(U8*)currentatag->tmp = 2; //NULL
+    swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 1);
+}
+void action_PushBoolean(char c) 
+{
+    *(U8*)currentatag->tmp = 5; //bool
+    *(U8*)&currentatag->tmp[1] = c;
+    swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 2);
+}
+void action_PushRegister(U8 reg) 
+{
+    *(U8*)currentatag->tmp = 4; //register
+    *(U8*)&currentatag->tmp[1] = reg;
+    swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 2);
+}
+void action_PushLookup(U8 index) 
+{
+    *(U8*)currentatag->tmp = 8; //lookup
+    *(U8*)&currentatag->tmp[1] = index;
+    swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 2);
+}
+void action_PushString(char*str) 
+{
+    int l = strlen(str);
+    char*ptr = (char*)malloc(l+2);
+    ptr[0] = 0; // string
+    strcpy(&ptr[1], str);
+    swf_AddActionTAG(ACTION_PUSH, (U8*)ptr, l+2);
+}
+void action_PushFloat(float f)
+{
+    char*ptr = (char*)malloc(5);
+    ptr[0] = 1; //float
+    *(float*)&ptr[1]  = f;
+    swf_AddActionTAG(ACTION_PUSH, (U8*)ptr, 5);
+}
+void action_PushDouble(double d) 
+{
+    char*ptr = (char*)malloc(9);
+    ptr[0] = 6; //double
+    *(double*)&ptr[1]  = d;
+    swf_AddActionTAG(ACTION_PUSH, (U8*)ptr, 9);
+}
+void action_PushInt(int i)
+{
+    *(U8*)currentatag->tmp = 7; //int
+    *(U8*)&currentatag->tmp[1] = i;
+    swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 5);
+}
+void action_GotoLabel(char* label)
+{
+    char*ptr = strdup(label);
+    swf_AddActionTAG(ACTION_GOTOLABEL, (U8*)ptr, strlen(ptr));
+}
+void action_GetUrl(char* url, char* label) 
+{
+    int l1= strlen(url);
+    int l2= strlen(label);
+    char*ptr = malloc(l1+l2+2);
+    strcpy(ptr, url);
+    strcat(&ptr[l2+1], label);
+    swf_AddActionTAG(ACTION_GOTOLABEL, ptr, strlen(ptr));
+}
+//TODO:
+void action_DefineFunction(U8*data, int len) {}
+void action_Constantpool(char* constantpool) {}
+void action_With(char*object) {}
