@@ -121,7 +121,7 @@ static void warning(char*format, ...)
     va_end(arglist);
     printf("\"%s\", line %d column %d: warning- %s\n", filename, line, column, buf);
 }
-   
+
 static void readToken()
 {
     type = file[pos].type;
@@ -811,28 +811,16 @@ void dumpSWF(SWF*swf)
     
 void s_font(char*name, char*filename)
 {
-    int f;
-    SWF swf;
     SWFFONT* font;
     font = swf_LoadFont(filename);
-    
-    /*f = open(filename,O_RDONLY|O_BINARY);
-    if (f<0) { 
-	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
+   
+    if(font == 0) {
+	warning("Couldn't open font file \"%s\"", filename);
 	font = (SWFFONT*)malloc(sizeof(SWFFONT));
 	memset(font, 0, sizeof(SWFFONT));
 	dictionary_put2(&fonts, name, font);
 	return;
     }
-    font = 0;
-    if (swf_ReadSWF(f,&swf)>=0) { 
-	swf_FontExtract(&swf, 0x4e46, &font);
-	swf_FreeTags(&swf);
-    }
-    close(f);
-    if (font==0) { 
-	syntaxerror("File \"%s\" isn't a valid rfxswf font file", filename);
-    }*/
 
     if(0)
     {
@@ -1935,7 +1923,7 @@ static int c_primitive(map_t*args)
     int type=0;
     char* font;
     char* text;
-    char* outline;
+    char* outline=0;
     RGBA fill;
     if(!strcmp(command, "circle"))
 	type = 1;
@@ -2055,9 +2043,12 @@ int fakechar(map_t*args)
 
 static int c_egon(map_t*args) {return fakechar(args);}
 static int c_button(map_t*args) {
+    char*action = "";
     readToken();
-    if(type != RAWDATA)
-	syntaxerror("colon (:) expected");
+    if(type == RAWDATA)
+	action = text;
+    else
+	pushBack();
 
     return fakechar(args);
 }
@@ -2313,6 +2304,7 @@ static void parseArgumentsForCommand(char*command)
     int t;
     map_t args;
     int nr = -1;
+    msg("<verbose> parse Command: %s (line %d)", command, line);
     for(t=0;t<sizeof(arguments)/sizeof(arguments[0]);t++) {
 	if(!strcmp(arguments[t].command, command)) {
 
