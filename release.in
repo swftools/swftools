@@ -51,6 +51,7 @@ ${name}/lib/example/glyphshape.c \
 ${name}/lib/example/avi2swf.cc \
 ${name}/lib/example/buttontest.c \
 ${name}/swfs/simple_viewer.c \
+${name}/swfs/PreLoaderTemplate.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/modules/swfdump.c \
 ${name}/lib/modules/swfobject.c \
