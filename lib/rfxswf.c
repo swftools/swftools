@@ -968,8 +968,7 @@ int swf_WriteHeader(int handle,SWF * swf)
   SWF myswf;
   memcpy(&myswf,swf,sizeof(SWF));
   myswf.firstTag = 0;
-  swf_WriteSWF(handle, &myswf);
-  return 0;
+  return swf_WriteSWF(handle, &myswf);
 }
 
 int swf_WriteCGI(SWF * swf)
