@@ -1,0 +1,41 @@
+Usage: %s [-atpdu] file.swf
+
+Display an SWF file's content.
+
+A tool for displaying information about flash files
+.PP
+swfdump shows ids, names and depths of objects defined in the SWF file.
+It can furthermore also disassemble Actionscript, extract texts, and
+display placement information about objects.
+
+-h, --help
+    Print short help message and exit
+-D, --full
+    Show everything. Same as -atp
+-V, --version
+    Print version info and exit
+-e, --html
+    Print out html code for embedding the file
+-a, --action
+    Disassemble action tags
+-t, --text
+    Show text fields (like swfstrings).
+-p, --placements
+    Show placement information
+-X, --width
+    Prints out a string of the form "-X width".
+    Print out the horizontal dimension of the movie, in a string of the form "-X width"
+-Y, --height
+    Prints out a string of the form "-Y height".
+    Print out the vertical dimension of the movie, in a string of the form "-Y height"
+-r, --rate
+    Prints out a string of the form "-r rate".
+    Print out the frame rate of the movie, in a string of the form "-r rate".
+-f, --frames
+    Prints out a string of the form "-f framenum".
+    Print out the number of frames in the movie, in a string of the form "-f frames"
+-d, --hex
+    Print hex output of tag data, too.
+-u, --used
+    Show referred IDs for each Tag.
+

@@ -1,0 +1,19 @@
+Usage: %s [-o file.swf] file.sc
+
+compile .sc files to swf.
+
+Compiles a file written in sc (SWF Script) into a number of SWF files.
+
+-h, --help
+    Print short help message and exit
+-V, --version
+    Print version info and exit
+-v, --verbose
+    Increase verbosity. 
+    Increase verbosity. Use more than one \fB-v\fR for greater effect.
+-o, --output <filename>
+    Set output file to <filename>.
+    Specify output file (Default: output.swf). 
+    This affects only the parts of the .sc file which haven't
+    specified an output file themselves. 
+

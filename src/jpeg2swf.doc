@@ -1,0 +1,33 @@
+Usage: %s [-options [value]] imagefiles[.jpg]|[.jpeg] [...]
+
+Converts jpeg images to SWF.
+
+This tools converts jpeg image files into an SWF animation. It takes any
+number of input pictures, and converts them to SWF one-by-one, where every
+converted picture is a seperate frame in the target SWF.
+
+-o --output <outputfile>
+    Explicitly specify output file. (otherwise, output.swf will be used)
+    Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+-m --mx  	 
+    Use Flash MX H.263 compression (use for correlated images)
+-q --quality <quality>
+    Set compression quality (1-100, 1=worst, 100=best)
+    Set compression quality (1-100, 1=worst, 100=best).
+    This option can be set independently for each image.
+-r --rate <framerate>     
+    Set movie framerate (frames per second)
+-X --width <width>   
+    Force movie width to <width> (default: autodetect)
+-Y --height <height>  
+    Force movie height to <height> (default: autodetect)
+-v --verbose <level> 
+    Set verbose level to <level> (0=quiet, 1=default, 2=debug)
+-V --version  
+    Print version information and exit
+
+.SH AUTHORS
+
+Rainer Böhme <rfxswf@reflex-studio.de>
+.TP
+Matthias Kramm

@@ -1,0 +1,22 @@
+Usage: %s [-OS] file.swf
+
+Tool for playing around with SWF bounding boxes.
+
+This tool can, among others, recalculate some bounding boxes of SWFs
+in order to speed them up or make them smaller.
+.PP
+It can also dump the corners of the bounding boxes of all frames of a movie.
+
+-h, --help 
+    Print help and exit
+-O, --optimize 
+    Recalculate bounding boxes
+-S, --swifty
+    Print out transformed bounding boxes
+-o, --output <filename>
+    Set output filename to <filename> (for -O)
+-v, --verbose
+    Be more verbose
+-V, --version
+    Print program version and exit
+

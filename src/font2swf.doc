@@ -1,0 +1,23 @@
+Usage: %s <fontfile>
+
+Converts a font to SWF.
+
+Takes a font file (.ttf, .afm, .pfa, .pfb and all other types
+supported by FreeType) and converts it into a SWF file.
+.PP
+The SWF will contain the Font in SWF format (that is, a
+DefineFont2 Tag) as well as a textfield containing all the
+characters the font has. This means the resulting SWF will
+be viewable.
+
+-h, --help
+    Print short help message and exit
+-v, --verbose
+    Be verbose. Use more than one -v for greater effect.
+-o, --output <filename>
+    Write output to file <filename>.
+    Write output to file <filename>. (If not given, the output will go
+    to a file called "output.swf")
+-V, --version
+    Print version info and exit
+

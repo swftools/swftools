@@ -1,0 +1,31 @@
+Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.png [file2.png...]
+
+Takes a number of png files and converts them to a swf movie, one
+picture per frame.
+
+This tools converts png image files into an SWF animation. It takes any
+number of input pictures, and converts them to SWF one-by-one, where every
+converted picture is a seperate frame in the target SWF. 
+.PP
+The way the
+images are encoded in SWF is very similar to PNG (in that a zlib-based, lossless
+compression algorithm is used). Under special circumstances, when the image
+is 32 bpp with alpha information, it is converted to (lossy) jpeg compression
+though, to preserve the alpha, which can't be encoded in any other way in the SWF.
+
+-r, --rate <framerate>
+    Set movie framerate (frames per second)
+-o, --output <filename>
+    Set name for SWF output file.
+    Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+-X, --pixel <width>
+    Force movie width to <width> (default: autodetect)
+-Y, --pixel <height>
+    Force movie height to <height> (default: autodetect)
+-v, --verbose <level>
+    Set verbose level (0=quiet, 1=default, 2=debug)
+-C, --cgi
+    For use as CGI- prepend http header, write to stdout
+-V, --version
+    Print version information and exit
+
