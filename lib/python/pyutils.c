@@ -36,8 +36,8 @@ void mylog(char*format, ...)
 	buf[l-1] = 0;
 	l--;
     }
-    fprintf(stderr, "[SWF] %s\n", buf);
-    fflush(stderr);
+    fprintf(stdout, "[SWF] %s\n", buf);
+    fflush(stdout);
 }
 
 #define PY_NONE Py_BuildValue("s", 0)
