@@ -805,16 +805,18 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     r2.ymax = height;
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
-    if(linewidth)
-        ls1 = swf_ShapeAddLineStyle(s,linewidth>=20?linewidth-20:0,&color);
+    if(linewidth) {
+	linewidth = linewidth>=20?linewidth-20:0;
+        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+    }
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
 
     swf_SetU16(tag,id);
-    r.xmin = r2.xmin-linewidth-linewidth/2;
-    r.ymin = r2.ymin-linewidth-linewidth/2;
-    r.xmax = r2.xmax+linewidth+linewidth/2;
-    r.ymax = r2.ymax+linewidth+linewidth/2;
+    r.xmin = r2.xmin-linewidth/2;
+    r.ymin = r2.ymin-linewidth/2;
+    r.xmax = r2.xmax+linewidth/2;
+    r.ymax = r2.ymax+linewidth/2;
     swf_SetRect(tag,&r);
     swf_SetShapeHeader(tag,s);
     swf_ShapeSetAll(tag,s,0,0,ls1,fs1,0);
@@ -843,22 +845,24 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
 
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
-    if(linewidth)
-        ls1 = swf_ShapeAddLineStyle(s,linewidth>=20?linewidth-20:0,&color);
+    if(linewidth) {
+	linewidth = linewidth>=20?linewidth-20:0;
+        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+    }
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
     
     swf_SetU16(tag,id);
-    rect.xmin = r2.xmin-linewidth-linewidth/2;
-    rect.ymin = r2.ymin-linewidth-linewidth/2;
-    rect.xmax = r2.xmax+linewidth+linewidth/2;
-    rect.ymax = r2.ymax+linewidth+linewidth/2;
+    rect.xmin = r2.xmin-linewidth/2;
+    rect.ymin = r2.ymin-linewidth/2;
+    rect.xmax = r2.xmax+linewidth/2;
+    rect.ymax = r2.ymax+linewidth/2;
 
     swf_SetRect(tag,&rect);
     swf_SetShapeStyles(tag, s);
     swf_ShapeCountBits(s,0,0);
-    swf_RecodeShapeData(outline->shape->data, outline->shape->bitlen, 1,            1, 
-                        &s->data,             &s->bitlen,             s->bits.fill, s->bits.line);
+    swf_RecodeShapeData(outline->shape->data, outline->shape->bitlen, outline->shape->bits.fill, outline->shape->bits.line, 
+                        &s->data,             &s->bitlen,             s->bits.fill,              s->bits.line);
     swf_SetShapeBits(tag, s);
     swf_SetBlock(tag, s->data, (s->bitlen+7)/8);
     swf_ShapeFree(s);
@@ -878,15 +882,17 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
 
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
-    if(linewidth)
-        ls1 = swf_ShapeAddLineStyle(s,linewidth>=20?linewidth-20:0,&color);
+    if(linewidth) {
+	linewidth = linewidth>=20?linewidth-20:0;
+        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+    }
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
     swf_SetU16(tag,id);
-    rect.xmin = r2.xmin-linewidth-linewidth/2;
-    rect.ymin = r2.ymin-linewidth-linewidth/2;
-    rect.xmax = r2.xmax+linewidth+linewidth/2;
-    rect.ymax = r2.ymax+linewidth+linewidth/2;
+    rect.xmin = r2.xmin-linewidth/2;
+    rect.ymin = r2.ymin-linewidth/2;
+    rect.xmax = r2.xmax+linewidth/2;
+    rect.ymax = r2.ymax+linewidth/2;
 
     swf_SetRect(tag,&rect);
     swf_SetShapeHeader(tag,s);
@@ -1341,7 +1347,9 @@ void s_outline(char*name, char*format, char*source)
     SHAPE2* shape2;
     SRECT bounds;
     
+    //swf_Shape10DrawerInit(&draw, 0);
     swf_Shape11DrawerInit(&draw, 0);
+
     draw_string(&draw, source);
     draw.finish(&draw);
     shape = swf_ShapeDrawerToShape(&draw);
