@@ -23,12 +23,6 @@
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
-#ifdef HAVE_DIRENT_H
-#include <dirent.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
 #ifdef HAVE_FONTCONFIG_H
 #include <fontconfig.h>
 #endif
@@ -110,8 +104,8 @@ struct mapping {
 {"ZapfDingbats",          "d050000l"}};
 
 class SWFOutputDev:  public OutputDev {
-  int outputstarted;
   struct swfoutput output;
+  int outputstarted;
 public:
 
   // Constructor.
@@ -124,8 +118,6 @@ public:
   void setClip(int x1,int y1,int x2,int y2);
   
   int save(char*filename);
-
-  void getDimensions(int*x1,int*y1,int*x2,int*y2);
 
   //----- get info about output device
 
@@ -348,13 +340,6 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
     this->user_clipy1 = y1;
     this->user_clipx2 = x2;
     this->user_clipy2 = y2;
-}
-void SWFOutputDev::getDimensions(int*x1,int*y1,int*x2,int*y2)
-{
-    if(x1) *x1 = output.swf.movieSize.xmin/20;
-    if(y1) *y1 = output.swf.movieSize.ymin/20;
-    if(x2) *x2 = output.swf.movieSize.xmax/20;
-    if(y2) *y2 = output.swf.movieSize.ymax/20;
 }
 
 static char*getFontID(GfxFont*font)
@@ -700,7 +685,7 @@ void SWFOutputDev::stroke(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
     
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
         msg("<trace> stroke\n");
         dump_outline(outline);
     }
@@ -736,7 +721,7 @@ void SWFOutputDev::fill(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
         msg("<trace> fill\n");
         dump_outline(outline);
     }
@@ -753,7 +738,7 @@ void SWFOutputDev::eoFill(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
         msg("<trace> eofill\n");
         dump_outline(outline);
     }
@@ -771,7 +756,7 @@ void SWFOutputDev::clip(GfxState *state)
     m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
         msg("<trace> clip\n");
         dump_outline(outline);
     }
@@ -788,7 +773,7 @@ void SWFOutputDev::eoClip(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
         msg("<trace> eoclip\n");
         dump_outline(outline);
     }
@@ -1909,13 +1894,10 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
 
 void pdfswf_setparameter(char*name, char*value)
 {
-    msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strcmp(name, "caplinewidth")) {
 	caplinewidth = atof(value);
     } else if(!strcmp(name, "zoom")) {
 	zoom = atoi(value);
-    } else if(!strcmp(name, "fontdir")) {
-        pdfswf_addfontdir(value);
     } else {
 	swfoutput_setparameter(name, value);
     }
@@ -1931,53 +1913,6 @@ void pdfswf_addfont(char*filename)
         msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
     }
 }
-
-void pdfswf_addfontdir(char*dirname)
-{
-#ifdef HAVE_DIRENT_H
-    DIR*dir = opendir(dirname);
-    if(!dir) {
-	msg("<warning> Couldn't open directory %s\n", dirname);
-	return;
-    }
-    struct dirent*ent;
-    while(1) {
-	ent = readdir (dir);
-	if (!ent) 
-	    break;
-	int l;
-	char*name = ent->d_name;
-	char type = 0;
-	if(!name) continue;
-	l=strlen(name);
-	if(l<4)
-	    continue;
-	if(!strncasecmp(&name[l-4], ".pfa", 4)) 
-	    type=1;
-	if(!strncasecmp(&name[l-4], ".pfb", 4)) 
-	    type=3;
-	if(!strncasecmp(&name[l-4], ".ttf", 4)) 
-	    type=2;
-	if(type)
-	{
-	    char*fontname = (char*)malloc(strlen(dirname)+strlen(name)+2);
-	    strcpy(fontname, dirname);
-#ifdef WIN32
-		strcat(fontname, "\\");
-#else
-		strcat(fontname, "/");
-#endif
-	    strcat(fontname, name);
-	    msg("<debug> Adding %s to fonts", fontname);
-	    pdfswf_addfont(fontname);
-	}
-    }
-    closedir(dir);
-#else
-    msg("<warning> No dirent.h- unable to add font dir %s");
-#endif
-}
-
 
 typedef struct _pdf_doc_internal
 {
@@ -2024,7 +1959,7 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
     // print doc info
     i->doc->getDocInfo(&info);
     if (info.isDict() &&
-      (getScreenLogLevel()>=LOGLEVEL_NOTICE)) {
+      (screenloglevel>=LOGLEVEL_NOTICE)) {
       printInfoString(info.getDict(), "Title",        "Title:        %s\n");
       printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
       printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
@@ -2146,9 +2081,7 @@ void swf_output_setparameter(swf_output_t*swf_output, char*name, char*value)
 int swf_output_save(swf_output_t*swf, char*filename)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
-    int ret = i->outputDev->save(filename);
-    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
-    return ret;
+    return i->outputDev->save(filename);
 }
 
 void swf_output_destroy(swf_output_t*output)
@@ -2159,10 +2092,10 @@ void swf_output_destroy(swf_output_t*output)
     free(output);
 }
 
-void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
+void pdf_page_render2(pdf_page_t*page, swf_output_t*output)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    swf_output_internal_t*si = (swf_output_internal_t*)swf->internal;
+    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
 
     if(pi->protect) {
         swfoutput_setparameter("protect", "1");
@@ -2173,7 +2106,6 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
 #else
     pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
 #endif
-    si->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
 }
 
 void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
