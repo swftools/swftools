@@ -571,6 +571,11 @@ static void scaleimage(v2swf_internal_t*i)
     int xv,yv;
     int xm = (i->video->width*65536)/i->width;
     int ym = (i->video->height*65536)/i->height;
+    msg("scaling from %dx%d to %dx%d\n", 
+	    i->video->width, i->video->height,
+	    i->width, i->height
+	    );
+
     memset(i->buffer, 255, i->width*i->height*4);
     for(y=0,yv=0;y<i->height;y++,yv+=ym) {
 	int*src = &((int*)i->vrbuffer)[(yv>>16)*i->video->width];
@@ -635,8 +640,6 @@ static int encodeoneframe(v2swf_internal_t*i)
 	writeShowFrame(i);
     }
     
-    msg("scaling\n");
-
     scaleimage(i);
 
     msg("version is %d\n", i->version);
