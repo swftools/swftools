@@ -5,7 +5,6 @@ include ../Makefile.common
 
 all: librfxswf.a q.o
 
-lame_objects_2 =  lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
 lame_objects = @lame_objects@
 
 h263_objects = h.263/dct.o h.263/h263tables.o h.263/swfvideo.o
