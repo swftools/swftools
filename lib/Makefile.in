@@ -77,7 +77,7 @@ noinst_LIBRARIES = librfxswf.a
 librfxswf_a_SOURCES = rfxswf.c rfxswf.h log.c log.h
 librfxswf_a_LIBADD = bladeenc/codec.o 	        bladeenc/common.o bladeenc/encode.o bladeenc/formatbitstream2.o 		bladeenc/l3bitstream.o bladeenc/l3psy.o bladeenc/loop.o bladeenc/mdct.o 		bladeenc/reservoir.o bladeenc/subs.o bladeenc/tables.o
 
-COMPILE = $(CC)
+COMPILE = $(CC) $(CFLAGS)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
