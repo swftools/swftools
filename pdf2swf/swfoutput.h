@@ -36,6 +36,7 @@ class SWFFont
 {
     T1_OUTLINE**outline;
     char**charname;
+    int*width;
     char*used;
 
     char*name;
@@ -57,6 +58,7 @@ class SWFFont
     int getSWFCharID(char*name);
     char*getName();
     char*getCharName(int t);
+    int getCharWidth(int t) {return width[t];}
 };
 
 struct swfoutput 
