@@ -73,12 +73,12 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
     
 static lame_global_flags*lame_flags;
 
-void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples)
+void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
 {
     unsigned char buf[4096];
-    int bufsize = 4096;
+    int bufsize = 1152*2;
     int len;
-    short int samples[1152];
+    short int samples[1152*2];
 
     U8 playbackrate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
     U8 playbacksize = 1; // 0 = 8 bit, 1 = 16 bit
@@ -122,11 +122,12 @@ void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples)
     //printf("init:flush():%d\n", len);
 }
 
-void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first)
 {
     char*buf;
     int oldlen=0,len = 0;
     int bufsize = 16384;
+    int numsamples = 1152*2;
 
     buf = malloc(bufsize);
     if(!buf)
