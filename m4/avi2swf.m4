@@ -2,7 +2,7 @@ AC_DEFUN(RFX_CHECK_AVI2SWF,
 [
 AC_MSG_CHECKING([whether we can compile the avifile test program])
 
-cat > conftest.$ac_ext << EOF
+cat > conftest.cpp << EOF
 #include <avifile/version.h>
 #if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
@@ -66,7 +66,7 @@ int main (int argc, char*argv[])
 }
 EOF
 
-ac_link='$CXX $CPPFLAGS $CXXFLAGS `avifile-config --cflags` `avifile-config --libs` conftest.$ac_ext -o conftest${ac_exeext}'
+ac_link='$CXX $CPPFLAGS $CXXFLAGS `avifile-config --cflags` `avifile-config --libs` conftest.cpp -o conftest${ac_exeext}'
 ##if {(eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
 if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   AC_MSG_RESULT(yes)
