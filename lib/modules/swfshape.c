@@ -446,6 +446,12 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
   { b = swf_CountBits(x,2);
     b = swf_CountBits(y,b);
     if (b<2) b=2;
+    if(b-2 >= 16) {
+	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(1)- %d\n", b);
+	fflush(stdout);
+	*(int*)0 = 0xdead;
+	b = 17;
+    }
     swf_SetBits(t, b-2, 4);
     swf_SetBits(t,1,1);
     swf_SetBits(t,x,b);
@@ -457,6 +463,10 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
   { b = swf_CountBits(y,2);
     if(b<2) 
         b=2;
+    if(b-2 >= 16) {
+	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(2)- %d\n", b);
+	b = 17;
+    }
     swf_SetBits(t, b-2, 4);
     swf_SetBits(t,1,2);
     swf_SetBits(t,y,b);
@@ -465,6 +475,10 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
   { b = swf_CountBits(x,2);
     if(b<2) 
         b=2;
+    if(b-2 >= 16) {
+	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(3)- %d\n", b);
+	b = 17;
+    }
     swf_SetBits(t, b-2, 4);
     swf_SetBits(t,0,2);
     swf_SetBits(t,x,b);
@@ -799,5 +813,42 @@ int	   swf_SetShape2(TAG*tag, SHAPE2*shape)
     fprintf(stderr, "Not implemented yet!\n");
     exit(1);
     return 0;
+}
+
+void swf_ShapeSetBitmapRect(TAG*tag, U16 gfxid, int width, int height)
+{
+    SHAPE*shape;
+    MATRIX m;
+    RGBA rgb;
+    SRECT r;
+    int lines = 0;
+    int ls,fs;
+    swf_ShapeNew(&shape);
+    rgb.b = rgb.g = rgb.r = 0xff;
+    if(lines)
+	ls = swf_ShapeAddLineStyle(shape,20,&rgb);  
+    swf_GetMatrix(NULL,&m);
+    m.sx = 20*65536;
+    m.sy = 20*65536;
+
+    fs = swf_ShapeAddBitmapFillStyle(shape,&m,gfxid,0);
+    r.xmin = 0;
+    r.ymin = 0;
+    r.xmax = width*20;
+    r.ymax = height*20;
+    swf_SetRect(tag,&r);
+
+    swf_SetShapeStyles(tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(tag,shape);
+
+    swf_ShapeSetAll(tag,shape,0,0,lines?ls:0,fs,0);
+
+    swf_ShapeSetLine(tag,shape,width*20,0);
+    swf_ShapeSetLine(tag,shape,0,height*20);
+    swf_ShapeSetLine(tag,shape,-width*20,0);
+    swf_ShapeSetLine(tag,shape,0,-height*20);
+    swf_ShapeSetEnd(tag);
+    swf_ShapeFree(shape);
 }
 

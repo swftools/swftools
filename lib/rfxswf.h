@@ -410,6 +410,8 @@ int   swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
 int   swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
 int   swf_ShapeSetEnd(TAG * t);
 
+void  swf_ShapeSetBitmapRect(TAG * t, U16 gfxid, int width, int height);
+
 SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
 SHAPE2*	   swf_ShapeToShape2(SHAPE*shape);
 SHAPE*	   swf_Shape2ToShape(SHAPE2*shape);
