@@ -1857,7 +1857,7 @@ static map_t parseArguments(char*command, char*pattern)
     len = pos;
 
 /*    for(t=0;t<len;t++) {
-	printf("(%d) %s=%s %s\n", t, strndup(name[t], namelen[t]), strndup(value[t], valuelen[t]),
+	printf("(%d) %s=%s %s\n", t, strdup_n(name[t], namelen[t]), strdup_n(value[t], valuelen[t]),
 		isboolean[t]?"(boolean)":"");
     }*/
 
@@ -1878,8 +1878,8 @@ static map_t parseArguments(char*command, char*pattern)
 		value[pos].str = text;
 		value[pos].len = strlen(text);
 		/*printf("setting boolean parameter %s (to %s)\n",
-			strndup(name[pos], namelen[pos]),
-			strndup(value[pos], valuelen[pos]));*/
+			strdup_n(name[pos], namelen[pos]),
+			strdup_n(value[pos], valuelen[pos]));*/
 		break;
 	    }
 	}
@@ -1891,7 +1891,7 @@ static map_t parseArguments(char*command, char*pattern)
 	    if((type == ASSIGNMENT && !strncmp(name[pos].str, text, name[pos].len>textlen?name[pos].len:textlen)) ||
 	       (type != ASSIGNMENT && !set[pos])) {
 		if(set[pos]) {
-		    syntaxerror("value %s set twice (old value:%s)", text, strndup(value[pos].str, value[pos].len));
+		    syntaxerror("value %s set twice (old value:%s)", text, strdup_n(value[pos].str, value[pos].len));
 		}
 		if(type == ASSIGNMENT)
 		    readToken();
@@ -1900,8 +1900,8 @@ static map_t parseArguments(char*command, char*pattern)
 		value[pos].len = strlen(text);
 #if 0//def DEBUG
 		printf("setting parameter %s (to %s)\n",
-			strndup(name[pos].str, name[pos].len),
-			strndup(value[pos].str, value[pos].len));
+			strdup_n(name[pos].str, name[pos].len),
+			strdup_n(value[pos].str, value[pos].len));
 #endif
 		break;
 	    }
@@ -1912,7 +1912,7 @@ static map_t parseArguments(char*command, char*pattern)
     }
 #if 0//def DEBUG
     for(t=0;t<len;t++) {
-	printf("%s=%s\n", strndup(name[t].str, name[t].len), strndup(value[t].str, value[t].len));
+	printf("%s=%s\n", strdup_n(name[t].str, name[t].len), strdup_n(value[t].str, value[t].len));
     }
 #endif
     for(t=0;t<len;t++) {
@@ -1927,7 +1927,7 @@ static map_t parseArguments(char*command, char*pattern)
 	}
 	if(value[t].str == 0) {
 	    pushBack();
-	    syntaxerror("value for parameter %s missing (no default)", strndup(name[t].str, name[t].len));
+	    syntaxerror("value for parameter %s missing (no default)", strdup_n(name[t].str, name[t].len));
 	}
     }
 
