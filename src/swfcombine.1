@@ -18,9 +18,9 @@ movie. swfcombine can be used to perform the latter.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Print short help message and exit
-.\".TP
-.\" \fB\-\-version\fR
-.\" Print version info and exit
+.TP
+\fB\-\-version\fR
+Print version info and exit
 .TP
 \fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
 Explicitly specify output file. (otherwise, output.swf will be used)
@@ -31,12 +31,24 @@ Don't remove any master objects, only overlay new objects.
 \fB\-c\fR, \fB\-\-clip\fR
 Clip the slave objects by the corresponding master objects.
 .TP
+\fB\-d\fR, \fB\-\-dummy\fR
+Don't require the presence of slave objects. Usually used together with \fB\-X\fR, \fB\-Y\fR or \fB\-r\fR.
+.TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Be verbose. Use more than one -v for greater effect.
 .TP
 \fB\-t\fR, \fB\-\-stack\fR
 Don't assume the first file is a master file. Instead, store each
 file in a seperate frame.
+.TP
+\fB\-X\fR, \fB\-\-width\fR \fIwidth\fR
+Force the output to width \fIwidth\fR. (Otherwise, the width of the master file will be used)
+.TP
+\fB\-Y\fR, \fB\-\-height\fR \fIheight\fR
+Force the output to height \fIheight\fR. (Otherwise, the height of the master file will be used)
+.TP
+\fB\-r\fR, \fB\-\-rate\fR \fIrate\fR
+Force the output to have the framerate \fIrate\fR. (Otherwise, the framerate of the master file will be used)
 .TP
 \fB\-x\fR, \fB\-\-xpos\fR \fIxpos\fR
 (move x) Adjust position of slave by xpos twips (1/20 pixel).
@@ -72,7 +84,7 @@ the decimal number of the file, starting by zero (00).
 Create two flash movies. Insert some rectangle into one of them, and give
 it a name. (E.g. "foo") Now call
 
-swfcombine -o combined.swf master.swf foo:slave.swf
+swfcombine -o combined.swf master.swf foo=slave.swf
 
 As a result, the slave movie should be visible inside the master movie
 at the position where the rectangle used to be.
