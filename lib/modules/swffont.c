@@ -89,7 +89,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 {
     FT_Face face;
     FT_Error error;
-    const char* name;
+    const char* name = 0;
     FT_ULong charcode;
     FT_UInt gindex;
     SWFFONT* font;
@@ -135,8 +135,9 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     font->layout->leading = -face->bbox.xMin;
     font->layout->kerningcount = 0;
     
+    name = FT_Get_Postscript_Name(face);
     if(name && *name)
-	font->name = (U8*)strdup(FT_Get_Postscript_Name(face));
+	font->name = (U8*)strdup(name);
 
 /*    // Map Glyphs to Unicode, version 1 (quick and dirty):
     int t;
