@@ -336,6 +336,9 @@ void qsplines_getdrawpoints(qspline*s, int num, float**p, int*pnum, double acc)
     *p = positions;
 }
 
+
+#define TANGENTS
+
 int approximate2(struct cspline*s, struct qspline*q, double quality, double start, double end)
 {
     int num=0;
@@ -349,6 +352,23 @@ int approximate2(struct cspline*s, struct qspline*q, double quality, double star
     test.control = cspline_getpoint(s, (start+end)/2);
     test.end = cspline_getpoint(s, end);
     fixcp(&test);
+
+#ifdef TANGENTS
+    if(start< 0.5) {
+	test.control = cspline_getderivative(s, start);
+	test.control.x *= (end-start)/2;
+	test.control.y *= (end-start)/2;
+	test.control.x += test.start.x;
+	test.control.y += test.start.y;
+    } else {
+	test.control = cspline_getderivative(s, end);
+	test.control.x *= -(end-start)/2;
+	test.control.y *= -(end-start)/2;
+	test.control.x += test.end.x;
+	test.control.y += test.end.y;
+    }
+#endif
+
     for(t=0;t<probes;t++) {
 	double pos = 0.5/(probes*2)*(t*2+1);
 	qr1 = qspline_getpoint(&test, pos);
