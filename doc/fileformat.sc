@@ -694,6 +694,10 @@
 
 .end
 
+# fonts.sc
+#
+# fonts&text
+
 .swf name="fonts.swf"
     .font courier "Courier.swf"
     .font helvetica "Helvetica.swf"
