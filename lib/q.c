@@ -36,30 +36,6 @@ char* strdup_n(const char*str, int size)
     return m;
 }
 #endif
-void* qmalloc_internal(int len)
-{
-    void*val = malloc(len);
-    if(!val) {
-	printf("memory error! Couldn't reserve %d bytes\n", len);
-	fprintf(stderr, "memory error! Couldn't reserve %d bytes\n", len);
-	exit(1);
-    }
-    return val;
-}
-void* qrealloc_internal(void*old, int len)
-{
-    void*val = realloc(old, len);
-    if(!val) {
-	printf("memory error! Couldn't reserve %d bytes\n", len);
-	fprintf(stderr, "memory error! Couldn't reserve %d bytes\n", len);
-	exit(1);
-    }
-    return val;
-}
-void qfree_internal(void*old)
-{
-    free(old);
-}
 char*qstrdup(const char*string)
 {
     return strdup(string);

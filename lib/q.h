@@ -128,14 +128,6 @@ void** heap_flatten(heap_t*h);
 
 char* strdup_n(const char*str, int size);
 
-void* qmalloc_internal(int len);
-void* qrealloc_internal(void*old, int len);
-void qfree_internal(void*old);
-
-#define qmalloc(len) qmalloc_internal(len)
-#define qrealloc(old, len) qmalloc_internal(old, len)
-#define qfree(old) qmalloc_internal(old)
-
 #ifdef __cplusplus
 }
 #endif

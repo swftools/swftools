@@ -835,13 +835,6 @@ void swf_ResetTag(TAG*tag, U16 id)
     tag->id = id;
 }
 
-TAG* swf_CopyTag(TAG*tag, TAG*to_copy)
-{
-    tag = swf_InsertTag(tag, to_copy->id);
-    swf_SetBlock(tag, to_copy->data, to_copy->len);
-    return tag;
-}
-
 int swf_DeleteTag(TAG * t)
 { if (!t) return -1;
 

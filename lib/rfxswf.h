@@ -224,7 +224,6 @@ int   swf_DeleteTag(TAG * t);
 
 void  swf_ClearTag(TAG * t);                //frees tag data
 void  swf_ResetTag(TAG*tag, U16 id);        //set's tag position and length to 0, without freeing it
-TAG*  swf_CopyTag(TAG*tag, TAG*to_copy);     //stores a copy of another tag into this taglist
     
 void  swf_SetTagPos(TAG * t,U32 pos);       // resets Bitcount
 U32   swf_GetTagPos(TAG * t);
@@ -731,9 +730,6 @@ void swf_Optimize(SWF*swf);
 U8 swf_isDefiningTag(TAG * t);
 U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
-U8 swf_isImageTag(TAG*tag);
-U8 swf_isShapeTag(TAG*tag);
-
 U16 swf_GetDefineID(TAG * t);
 SRECT swf_GetDefineBBox(TAG * t);
 void swf_SetDefineID(TAG * t, U16 newid);
