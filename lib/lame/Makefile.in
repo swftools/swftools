@@ -45,5 +45,5 @@ lame.o: lame.c
 install:
 uninstall:
 clean: 
-	rm -f *.o *.lo *.a *.la
+	rm -f *.o *.lo *.a *.la gmon.out
 

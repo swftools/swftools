@@ -24,7 +24,7 @@ distclean:
 	rm -f lib/lame/Makefile lib/Makefile src/Makefile avi2swf/Makefile pdf2swf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/xpdf/Makefile
 
 clean-local:
-	rm -f config.cache
+	rm -f config.cache gmon.out
 
 uninstall-local:
 	rm -rf $(pkgdatadir)
