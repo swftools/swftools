@@ -131,7 +131,7 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
 typedef struct _SOUNDINFO 
 {
     U8 stop;
-    U8 multiple; //continue playing if already started
+    U8 nomultiple; //continue playing if already started
 
     U32 inpoint;
     U32 outpoint;
