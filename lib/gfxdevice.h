@@ -1,8 +1,17 @@
+#ifndef __gfxdevice_h__
+#define __gfxdevice_h__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GFX_SUBPIXEL 2560
 
-typedef float gfxcoord_t;
+typedef double gfxcoord_t;
     
 typedef enum {gfx_moveTo, gfx_lineTo, gfx_splineTo} gfx_linetype;
+typedef enum {gfx_joinMiter, gfx_joinRound, gfx_joinBevel} gfx_joinType;
+typedef enum {gfx_capButt, gfx_capRound, gfx_capSquare} gfx_capType;
 
 typedef struct _gfxline
 {
@@ -40,8 +49,8 @@ typedef struct _gfxcolor
 
 typedef struct _gfxmatrix
 {
-    float m00,m10,tx;
-    float m01,m11,ty;
+    double m00,m10,tx;
+    double m01,m11,ty;
 } gfxmatrix_t;
 
 typedef struct _gfximage
@@ -80,9 +89,9 @@ typedef struct _gfxdevice
 
     int (*startpage)(struct _gfxdevice*dev, int xmin, int ymin, int xmax, int ymax); /*xmin/ymin?*/
 
-    void (*startClip)(struct _gfxdevice*dev, gfxline_t*line);
-    void (*endClip)(struct _gfxdevice*dev);
-    void (*stroke)(struct _gfxdevice*dev, gfxline_t*line, int width, gfxcolor_t*color, int cap_style, int joint_style);
+    void (*startclip)(struct _gfxdevice*dev, gfxline_t*line);
+    void (*endclip)(struct _gfxdevice*dev);
+    void (*stroke)(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
     void (*fill)(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color);
     void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform); //cxform? tiling?
     void (*fillgradient)(struct _gfxdevice*dev, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix); //?
@@ -90,7 +99,7 @@ typedef struct _gfxdevice
     void (*addfont)(struct _gfxdevice*dev, char*fontid, gfxfont_t*font, gfxmatrix_t*matrix);
     void (*drawchar)(struct _gfxdevice*dev, char*fontid, int glyph, int x, int y);
 
-    void (*drawLink)(struct _gfxdevice*dev, int x1, int y1, int x2, int y2, char*action);
+    void (*drawlink)(struct _gfxdevice*dev, int x1, int y1, int x2, int y2, char*action);
     
     int (*endpage)(struct _gfxdevice*dev); //?
     
@@ -99,3 +108,8 @@ typedef struct _gfxdevice
     void* internal;
 } gfxdevice_t;
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__gfxdevice_h__
