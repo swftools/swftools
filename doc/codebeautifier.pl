@@ -4,14 +4,19 @@ while(<stdin>)
 	$code .= $_ if(!/CALLPERL/);
 	$name = $1 if(/.flash.*name=([^&][^ ]*)/);
 	$name = $1 if(/.flash.*name=&quot;([^&]*)&quot;/);
+	chomp $name;
     } 
     elsif(/\[CALLPERL .*right\]/ ... /\[CALLPERL end\]/) {
 	$highlight .= $_ if(!/CALLPERL/);
     }
     elsif ($code ne "") {
 	$code =~ s/&quot;/"/g;
+
+#	    print stderr "Warning: ttf->swf\n" if($code =~ s/Arial.ttf/Arial.swf/g);
+
 	open(fi, ">tmp.sc");print fi $code;close(fi);
-	system("swfc tmp.sc");
+	print stderr "swfc tmp.sc ($name)\n";
+	system("swfc tmp.sc >&2");
 	($embed = `swfdump -e $name`) =~ /WIDTH="([^"]*)"/;
 	$width = $1;
 	print "<td bgcolor=\"#ffffff\" width=\"$width\">";
