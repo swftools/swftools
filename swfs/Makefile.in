@@ -169,6 +169,8 @@ install-pkgdataDATA: $(pkgdata_DATA)
 	test -f $(DESTDIR)$(pkgdatadir)/default_loader.swf || \
 	    $(LN_S) $(DESTDIR)$(pkgdatadir)/tessel_loader.swf $(DESTDIR)$(pkgdatadir)/default_loader.swf; \
 
+uninstall-binPROGRAMS:
+
 uninstall-pkgdataDATA:
 	@$(NORMAL_UNINSTALL)
 	list='$(pkgdata_DATA)'; for p in $$list; do \
