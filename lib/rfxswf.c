@@ -1299,4 +1299,3 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfbits.c"
 #include "modules/swfaction.c"
 #include "modules/swfsound.c"
-#include "h.263/swfvideo.c"
