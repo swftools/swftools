@@ -735,7 +735,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=0.5.0
+VERSION=0.5.1
 
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
@@ -6578,7 +6578,7 @@ EOF
 
 fi
 
- for ac_hdr in zlib.h jpeglib.h t1lib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h
+ for ac_hdr in zlib.h jpeglib.h t1lib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
 do
 ac_safe=`echo "$ac_hdr" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for $ac_hdr""... $ac_c" 1>&6
@@ -6930,7 +6930,7 @@ EOF
 fi
 
      
- for ac_func in popen mkstemp stat lrand48 rand srand48 srand bcopy bzero
+ for ac_func in popen mkstemp stat lrand48 rand srand48 srand bcopy bzero time
 do
 echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
 echo "configure:6937: checking for $ac_func" >&5
@@ -6986,12 +6986,13 @@ fi
 done
 
  
+
 for ac_prog in avifile-config
 do
 # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:6995: checking for $ac_word" >&5
+echo "configure:6996: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_AVIFILE_CONFIG'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -7020,11 +7021,80 @@ fi
 test -n "$AVIFILE_CONFIG" && break
 done
 
+
+if test "x$AVIFILE_CONFIG" '!=' "x";then
+    OLDCPPFLAGS="$CPPFLAGS"
+    #OLDLDFLAGS="$LDFLAGS"
+    CPPFLAGS="$CPPFLAGS $CXXFLAGS "`$AVIFILE_CONFIG --cflags`
+    #LDFLAGS="$LDFLAGS `$AVIFILE_CONFIG --libs`"
+    for ac_hdr in avifile/version.h version.h
+do
+ac_safe=`echo "$ac_hdr" | sed 'y%./+-%__p_%'`
+echo $ac_n "checking for $ac_hdr""... $ac_c" 1>&6
+echo "configure:7035: checking for $ac_hdr" >&5
+if eval "test \"`echo '$''{'ac_cv_header_$ac_safe'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 7040 "configure"
+#include "confdefs.h"
+#include <$ac_hdr>
+EOF
+ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
+{ (eval echo configure:7045: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
+if test -z "$ac_err"; then
+  rm -rf conftest*
+  eval "ac_cv_header_$ac_safe=yes"
+else
+  echo "$ac_err" >&5
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -rf conftest*
+  eval "ac_cv_header_$ac_safe=no"
+fi
+rm -f conftest*
+fi
+if eval "test \"`echo '$ac_cv_header_'$ac_safe`\" = yes"; then
+  echo "$ac_t""yes" 1>&6
+    ac_tr_hdr=HAVE_`echo $ac_hdr | sed 'y%abcdefghijklmnopqrstuvwxyz./-%ABCDEFGHIJKLMNOPQRSTUVWXYZ___%'`
+  cat >> confdefs.h <<EOF
+#define $ac_tr_hdr 1
+EOF
+ 
+else
+  echo "$ac_t""no" 1>&6
+fi
+done
+
+    #LDFLAGS="$OLDLDFLAGS"
+    CPPFLAGS="$OLDCPPFLAGS"
+fi
+
 echo $ac_n "checking whether we can compile the avifile test program""... $ac_c" 1>&6
-echo "configure:7025: checking whether we can compile the avifile test program" >&5
+echo "configure:7076: checking whether we can compile the avifile test program" >&5
+
+if test "x${ac_cv_header_version_h}" '=' "xyes";then
+    HAVE_VERSION_H_DEFINE='#define HAVE_VERSION_H'
+fi
+if test "x${ac_cv_header_avifile_version_h}" '=' "xyes";then
+    HAVE_AVIFILE_VERSION_H_DEFINE='#define HAVE_AVIFILE_VERSION_H'
+fi
 
 cat > conftest.cpp << EOF
-#include <avifile/version.h>
+
+// hack- we can't yet access the variables in config.h (because it hasn't been generated yet),
+// so we have to introduce them this way
+$HAVE_VERSION_H_DEFINE
+$HAVE_AVIFILE_VERSION_H_DEFINE
+
+#ifdef HAVE_VERSION_H
+  #include <version.h>
+#endif
+#ifdef HAVE_AVIFILE_VERSION_H
+  #include <avifile/version.h>
+#endif
+
 #if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
    #include <aviplay.h>
@@ -7042,7 +7112,7 @@ cat > conftest.cpp << EOF
    #define Bpp bpp
 #endif
 
-int test()
+void test()
 {
   IAviReadFile* player;
   IAviReadStream* astream;
