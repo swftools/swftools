@@ -944,7 +944,7 @@ static int tagHash(TAG*tag)
         a >>= 8;
         a += tag->data[t]*0xefbc35a5*b*(t+1);
     }
-    return a;
+    return a&0x7fffffff; //always return unsigned
 }
 
 void swf_Optimize(SWF*swf)
