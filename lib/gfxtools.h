@@ -48,8 +48,8 @@ typedef struct _gfxpoint
 
 void gfxdrawer_target_gfxline(gfxdrawer_t*d);
 
-void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*dashes);
-gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes);
+void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*dashes, float phase);
+gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase);
 
 void gfxline_dump(gfxline_t*l, FILE*fi);
 void gfxline_free(gfxline_t*l);
