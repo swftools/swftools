@@ -29,6 +29,7 @@ void swf_SetLoadFontParameters(int _scale, int _skip_unused, int _full_unicode)
 {
     if(_scale) loadfont_scale = _scale;
     skip_unused = _skip_unused;
+    full_unicode = _full_unicode;
 }
 
 #ifdef HAVE_FREETYPE
