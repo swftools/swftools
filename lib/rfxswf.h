@@ -141,6 +141,10 @@ int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), 
 int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
 void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
+
+// for streaming:
+int  swf_WriteHeader(int handle,SWF * swf);    // Writes Header of swf to file
+int  swf_WriteTag(int handle,TAG * tag);    // Writes TAG to file
     
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
 int   swf_DeleteTag(TAG * t);
