@@ -669,6 +669,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
     int frame = 0;
     int sframe = 0;
     int slavewritten = 0;
+    int deletedepth = -1;
 
     TAG* rtag = master->firstTag;
     TAG* stag = slave->firstTag;
@@ -726,7 +727,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		swf_SetBlock(tag, rtag->data, rtag->len);
 	    }
 	}
-	if(frame == slaveframe)
+	if(frame == slaveframe) /* only happens with config.isframe: put slave at specific frame */
 	{
 	    if(flags&FLAGS_WRITESLAVE) {
 		outputslave = 1;
@@ -736,6 +737,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    {
 		int id = get_free_id(masterbitmap);
 		int depth = 65535;
+		deletedepth = 65536;
 		if(config.clip) {
 		    msg("<fatal> Can't combine --clip and --frame");
 		}
@@ -776,6 +778,12 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 			rtag->id, rtag->len);
 		tag = swf_InsertTag(tag, rtag->id);
 		write_changepos(tag, rtag, config.mastermovex, config.mastermovey, config.masterscalex, config.masterscaley, 1);
+		
+		if(rtag->id == ST_SHOWFRAME && deletedepth) {
+		    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+		    swf_SetU16(tag, deletedepth);
+		    deletedepth = -1;
+		}
 	    }
 	}
 	rtag = rtag->next;
