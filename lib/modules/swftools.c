@@ -872,6 +872,9 @@ void swf_RelocateDepth(SWF*swf, char*bitmap)
 
     while(tag)
     {
+	/* TODO * clip depths 
+	        * sprites
+	 */
 	int depth = swf_GetDepth(tag);
 	if(depth>=0) {
 	    int newdepth = depth+nr;

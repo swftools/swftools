@@ -162,6 +162,8 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
     if(flags&4) swf_GetMatrix(tag, &obj->matrix);
     if(flags&8) swf_GetCXForm(tag, &obj->cxform,1);
     if(flags&16) obj->ratio = swf_GetU16(tag);
+    /* if you modify the order of these operations, also
+       modify it in ../src/swfcombine.c */
     if(flags&64) 
 	obj->clipdepth = swf_GetU16(tag); //clip
     if(flags&32) {
