@@ -1749,7 +1749,7 @@ void swfoutput_finalize(struct swfoutput*obj)
 
     if(i->tag && i->tag->id == ST_END)
         return; //already done
-       
+
     if(i->frameno == i->lastframeno) // fix: add missing pagefeed
         swfoutput_pagefeed(obj);
 
@@ -1767,6 +1767,15 @@ void swfoutput_finalize(struct swfoutput*obj)
         iterator = iterator->next;
     }
     i->tag = swf_InsertTag(i->tag,ST_END);
+    TAG* tag = i->tag->prev;
+
+    /* remove the removeobject2 tags between the last ST_SHOWFRAME
+       and the ST_END- they confuse the flash player  */
+    while(tag->id == ST_REMOVEOBJECT2) {
+        TAG* prev = tag->prev;
+        swf_DeleteTag(tag);
+        tag = prev;
+    }
 }
 
 SWF* swfoutput_get(struct swfoutput*obj)
