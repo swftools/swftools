@@ -931,3 +931,75 @@ TAG* swf_Concatenate (TAG*list1,TAG*list2)
 
     return swf1.firstTag;
 }
+
+static int tagHash(TAG*tag)
+{
+    int t, h=0;
+    unsigned int a = 0x6b973e5a;
+    for(t=0;t<tag->len;t++) {
+        unsigned int b = a;
+        a >>= 8;
+        a += tag->data[t]*0xefbc35a5*b*(t+1);
+    }
+    return a;
+}
+
+void swf_Optimize(SWF*swf)
+{
+    TAG* tag = swf->firstTag;
+    int hash_size = 131072;
+    U16* remap = malloc(sizeof(U16)*65536);
+    TAG** hashmap = malloc(sizeof(TAG*)*hash_size);
+    memset(hashmap, 0, sizeof(TAG*)*hash_size);
+    int t;
+    for(t=0;t<65536;t++) {
+        remap[t] = t;
+    }
+    while(tag) {
+        TAG*next = tag->next;
+        if(!swf_isDefiningTag(tag)) {
+            int num = swf_GetNumUsedIDs(tag);
+            int*positions = malloc(sizeof(int)*num);
+            int t;
+            swf_GetUsedIDs(tag, positions);
+            for(t=0;t<num;t++) {
+                int id = GET16(&tag->data[positions[t]]);
+                id = remap[id];
+                PUT16(&tag->data[positions[t]], id);
+            }
+            tag = tag->next;
+        } else {
+            TAG*tag2;
+            int hash = tagHash(tag);
+            int match=0;
+            while((tag2 = hashmap[hash%hash_size])) {
+                if(tag->len == tag2->len) {
+                    int t;
+                    for(t=0;t<tag->len;t++) {
+                        if(tag->data[t] != tag2->data[t])
+                            break;
+                    }
+                    if(t == tag->len) {
+                        match=1;
+                    }
+                }
+                if(match) {
+                    /* we found two identical tags- remap one
+                       of them */
+                    remap[swf_GetDefineID(tag2)] = swf_GetDefineID(tag);
+                    break;
+                }
+                hash++;
+            }
+            if(!match) {
+                while(hashmap[hash%hash_size]) hash++;
+                hashmap[hash%hash_size] = tag;
+            } else {
+                swf_DeleteTag(tag);
+                if(tag == swf->firstTag)
+                    swf->firstTag = next;
+            }
+        }
+        tag = next;
+    }
+}
