@@ -185,7 +185,7 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 {NAME}{S}*-=		    {s(ASSIGNMENT);prefix="<minus>";c();BEGIN(R);}
 {NAME}{S}*=		    {s(ASSIGNMENT);c();BEGIN(R);}
 <R>{ /* values which appear only on the right-hand side of assignments, like: x=50% */
-    [^ \n\t\r]*		    {s(IDENTIFIER);c();BEGIN(0);}
+    [^ :\n\t\r]*		    {s(IDENTIFIER);c();BEGIN(0);}
 }
 \.include{S}.*\n		    {handleInclude(yytext, yyleng);}
 \.{NAME}	            {s(COMMAND);c();}
