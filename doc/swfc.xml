@@ -35,8 +35,8 @@ Line breaking:
 
 Links:
 
-    <uri>http://www.quiss.org</uri> OR
-    <uri link=http://www.quiss.org>Quiss</uri>
+    <a>http://www.quiss.org</a> OR
+    <a href=http://www.quiss.org>Quiss</a>
 
 Shell scripts, commands to execute:
 
@@ -253,8 +253,7 @@ them for clipping:
   <code lang="swfc">
 .flash name="text5.swf"
 .font courier "Courier.swf"
-.font helvetica "Helvetica.swf"
-.text hithere text="HELLO" font=courier size=50%
+.text hithere text="HELLO" font=courier size=200%
 .swf scene Scenery50.swf
 
 .frame 0
@@ -274,10 +273,9 @@ which is used here together with the alpha parameter of <c>.change</c>:
 
   <code lang="swfc">
 .flash name="text6.swf"
-.font courier "Courier.swf"
-.font helvetica "Helvetica.swf"
-.text hello text="HELLO" font=helvetica size=50% color=blue
-.text world text="WORLD" font=helvetica size=50% color=red
+.font times "Times.swf"
+.text hello text="HELLO" font=times size=100% color=blue
+.text world text="WORLD" font=times size=100% color=red
 
 .frame 0
 	.put hello pin=center x=50 y=50 
@@ -321,6 +319,14 @@ which is used here together with the alpha parameter of <c>.change</c>:
 .end
 </code>
 
+Or, for much more interesting ActionScript examples, see
+Laurent Lalanne's 
+<a href="http://technoargia.free.fr/swftools/examples/flash_eyes/flash_eyes.html">Flash Eyes</a>
+or the 
+<a href="http://melusine.eu.org/syracuse/flash/20040429/fabrique/">source</a>
+of Jean-Michel Sarlat's
+<a href="http://melusine.eu.org/syracuse/flash/20040429/">Mandelbrot explorer</a>.
+
 </section>
 
 
@@ -340,17 +346,18 @@ once the cursor is over it.
 <code lang="swfc">
 .flash name="button1.swf" fps=50
 
-.box box1 color=white fill=#336633 width=100 height=100 .box box2 color=white fill=#99cc99 width=150 height=150
+.box box1 color=white fill=#336633 width=50 height=50 
+.box box2 color=white fill=#99cc99 width=100 height=100
 .button mybutton1
-    .show box1 as=shape x=50 y=50
-    .show box2 as=hover x=25 y=25
+    .show box1 as=shape x=25 y=25
+    .show box2 as=hover x=12.5 y=12.5
 .end
 
 .frame 0
     .put b1=mybutton1
-    .put b2=mybutton1 x=200 red=+255
-    .put b3=mybutton1 y=200 green=+255
-    .put b4=mybutton1 x=200 y=200 blue=+255
+    .put b2=mybutton1 x=100 red=+255
+    .put b3=mybutton1 y=100 green=+255
+    .put b4=mybutton1 x=100 y=100 blue=+255
 .end
 </code>
 </p>
@@ -381,32 +388,38 @@ There are four allowed parameters to <c>as</c>:
 </ul>
 </p>
 
+<!--
 <section><title>Another button example: tooltips</title>
 
+Due to the fact that button shapes can be put <i>anywhere</i> especially
+outside the active area, it's easy to generate tooltips or subtitles.
+
 <code lang="swfc">
-.flash name="button2.swf" fps=50
+.flash name="tooltips.swf" fps=50
 
-.sprite red_tooltip
-    .font arial Arial.swf
-    .text text font=arial text="A red shape" color=white
-    .box box fill=blue color=turquoise width=90 height=20
-    .put box
-    .put text x=10 y=15
-.end
+.jpeg pic fence.jpg
+.put pic
 
-.box box1 fill=red width=50 height=50 
+.font arial Arial.ttf
+.edittext tooltip_fence text="fence" readonly color=green font=arial width=200 height=50 size=20%
+.edittext tooltip_wheel text="wheel" readonly color=green font=arial width=200 height=50 size=20%
+.edittext tooltip_tree text="tree" readonly color=green font=arial width=200 height=50 size=20%
+.edittext tooltip_mountain text="mountain" readonly color=green font=arial width=200 height=50 size=20%
+
+.box box1 fill=red width=1 height=1
 .button mybutton1
     .show box1 as=area x=0 y=0
-    .show red_tooltip as=hover x=25 y=25 alpha=50%
+    .show tooltip_fence as=hover x=25 y=25 scalex=100 scaley=100 alpha=50%
+    .show tooltip_fence as=idle x=25 y=25 scalex=100 scaley=100 alpha=50%
 .end
 
 .frame 0
     .put mybutton1
 .end
 </code>
-    
 
 </section>
+-->
 
 </chapter>
 
