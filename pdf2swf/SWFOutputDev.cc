@@ -213,7 +213,7 @@ public:
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
-				   GBool inlineImg, int mask);
+				   GBool inlineImg, int mask, int *maskColors);
   int clipping[64];
   int clippos;
 
@@ -1646,7 +1646,7 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
 
 void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
-				   GBool inlineImg, int mask)
+				   GBool inlineImg, int mask, int*maskColors)
 {
   FILE *fi;
   int c;
@@ -1773,7 +1773,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   } 
 
   int x,y;
-  
+
   if(colorMap->getNumPixelComps()!=1 || str->getKind()==strDCT) {
       RGBA*pic=new RGBA[width*height];
       for (y = 0; y < height; ++y) {
@@ -1800,10 +1800,32 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       for(t=0;t<256;t++) {
 	  pixBuf[0] = t;
 	  colorMap->getRGB(pixBuf, &rgb);
-	  pal[t].r = (U8)(rgb.r * 255 + 0.5);
-	  pal[t].g = (U8)(rgb.g * 255 + 0.5);
-	  pal[t].b = (U8)(rgb.b * 255 + 0.5);
-	  pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
+	  /*if(maskColors && *maskColors==t) {
+	      msg("<notice> Color %d is transparent", t);
+	      if (imgData->maskColors) {
+		*alpha = 0;
+		for (i = 0; i < imgData->colorMap->getNumPixelComps(); ++i) {
+		  if (pix[i] < imgData->maskColors[2*i] ||
+		      pix[i] > imgData->maskColors[2*i+1]) {
+		    *alpha = 1;
+		    break;
+		  }
+		}
+	      } else {
+		*alpha = 1;
+	      }
+	      if(!*alpha) {
+		    pal[t].r = 0;
+		    pal[t].g = 0;
+		    pal[t].b = 0;
+		    pal[t].a = 0;
+	      }
+	  } else*/ {
+	      pal[t].r = (U8)(rgb.r * 255 + 0.5);
+	      pal[t].g = (U8)(rgb.g * 255 + 0.5);
+	      pal[t].b = (U8)(rgb.b * 255 + 0.5);
+	      pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
+	  }
       }
       for (y = 0; y < height; ++y) {
 	for (x = 0; x < width; ++x) {
@@ -1824,7 +1846,7 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   GBool inlineImg) 
 {
   msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
-  drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1);
+  drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0);
 }
 
 void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
@@ -1838,7 +1860,7 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   if(colorMap)
       msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
 	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
-  drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0);
+  drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0,maskColors);
 }
 
 SWFOutputDev*output = 0; 
