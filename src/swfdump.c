@@ -7,8 +7,9 @@
 
    This file is distributed under the GPL, see file COPYING for details */
 
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#include <sys/types.h>
+#endif
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -59,7 +60,9 @@ int main (int argc,char ** argv)
 { 
     SWF swf;
     TAG*tag;
+#ifdef HAVE_SYS_STAT_H
     struct stat statbuf;
+#endif
     int f;
     char prefix[128];
     prefix[0] = 0;
@@ -68,7 +71,6 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     f = open(filename,O_RDONLY);
-    fstat(f, &statbuf);
 
     if (f<0)
     { 
@@ -81,13 +83,18 @@ int main (int argc,char ** argv)
         close(f);
 	exit(1);
     }
+
+#ifdef HAVE_SYS_STAT_H
+    fstat(f, &statbuf);
+    if(statbuf.st_size != swf.FileSize)
+	fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
+		statbuf.st_size, swf.FileSize);
+#endif
+
     close(f);
 
     printf("[HEADER]        File version: %d\n", swf.FileVersion);
     printf("[HEADER]        File size: %d\n", swf.FileSize);
-    if(statbuf.st_size != swf.FileSize)
-	fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
-		statbuf.st_size, swf.FileSize);
     printf("[HEADER]        Frame rate: %f\n",swf.FrameRate/256.0);
     printf("[HEADER]        Frame count: %d\n",swf.FrameCount);
     printf("[HEADER]        Movie width: %.3f\n",(swf.MovieSize.xmax-swf.MovieSize.xmin)/20.0);
