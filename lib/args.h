@@ -15,8 +15,8 @@ extern int args_callback_longoption(char*,char*);
 extern int args_callback_command(char*,char*);
 extern void args_callback_usage(char*name);
 
-int argn;
-char**argv;
+//int argn;
+//char**argv;
 
 void processargs(int argn2,char**argv2)
 {
@@ -50,7 +50,28 @@ void processargs(int argn2,char**argv2)
 		    args_callback_usage(argv2[0]);
 		    exit(1);
 		}
-		t+=args_callback_option(&argv2[t][1],next);
+		if(argv2[t][1]) // this might be something like e.g. -xvf
+		{
+		    char buf[2];
+		    buf[1]=0;
+		    int s=1;
+		    int ret;
+		    do{
+			if(argv2[t][s+1]) {
+			  buf[0] = argv2[t][s];
+			  ret = args_callback_option(buf,&argv2[t][s+1]);
+			}
+			else {
+			  t+= args_callback_option(&argv2[t][s], next);
+			  break;
+			}
+			s++;
+		    } while(!ret);
+		}
+		else // - usually means "read stdout"
+		{
+		    t+=args_callback_option(&argv2[t][1],next);
+		}
 	    }
 	}
 	else
