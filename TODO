@@ -26,10 +26,6 @@ swfextract:
     * mp3 extraction should also work for movieclips and definesound.
     * improve placeobject handling
 
-lib/examples:
-
-    * make an example for edittext fields
-
 rfxswf-lib:
    
     * modules/swfshape doesn't allow changing to fillstyle 0
