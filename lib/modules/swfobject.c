@@ -173,7 +173,7 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 
         obj->depth = swf_GetU16(tag);
 	//obj->internal = flags;
-        //flags&1: move
+        if(flags&1) obj->move = 1;
         if(flags&2) obj->id = swf_GetU16(tag);
         if(flags&4) swf_GetMatrix(tag, &obj->matrix);
         if(flags&8) swf_GetCXForm(tag, &obj->cxform,1);
