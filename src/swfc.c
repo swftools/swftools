@@ -174,11 +174,13 @@ static struct level
    int oldframe;
    dictionary_t oldinstances;
    SRECT oldrect;
+   TAG* cut;
 
 } stack[256];
 static int stackpos = 0;
 
 static dictionary_t characters;
+static dictionary_t images;
 static char idmap[65536];
 static TAG*tag = 0; //current tag
 
@@ -264,6 +266,17 @@ static void s_addcharacter(char*name, U16 id, TAG*ctag, SRECT r)
     swf_SetU16(tag, 1);
     swf_SetU16(tag, id);
     swf_SetString(tag, name);
+}
+static void s_addimage(char*name, U16 id, TAG*ctag, SRECT r)
+{
+    character_t* c = character_new();
+    c->definingTag = ctag;
+    c->id = id;
+    c->size = r;
+
+    if(dictionary_lookup(&images, name))
+	syntaxerror("image %s defined twice", name);
+    dictionary_put2(&images, name, c);
 }
 static instance_t* s_addinstance(char*name, character_t*c, U16 depth)
 {
@@ -356,6 +369,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
 	syntaxerror("too many levels of recursion");
     
     dictionary_init(&characters);
+    dictionary_init(&images);
     dictionary_init(&instances);
     dictionary_init(&fonts);
     dictionary_init(&sounds);
@@ -402,9 +416,25 @@ void s_sprite(char*name)
     incrementid();
 }
 
+TAG* removeFromTo(TAG*from, TAG*to)
+{
+    TAG*save = from->prev;
+    while(from!=to) {
+	TAG*next = from->next;
+	swf_DeleteTag(from);
+	from = next;
+    }
+    save->next = 0;
+    return save;
+}
+
 static void s_endSprite()
 {
     SRECT r = currentrect;
+    
+    if(stack[stackpos].cut)
+	tag = removeFromTo(stack[stackpos].cut, tag);
+
     stackpos--;
    
     /* TODO: before clearing, prepend "<spritename>." to names and
@@ -415,6 +445,7 @@ static void s_endSprite()
     currentrect = stack[stackpos].oldrect;
     currentdepth = stack[stackpos].olddepth;
     instances = stack[stackpos].oldinstances;
+
     tag = swf_InsertTag(tag, ST_END);
 
     tag = stack[stackpos].tag;
@@ -431,12 +462,17 @@ static void s_endSWF()
     int fi;
     SWF* swf;
     char*filename;
+    
+    if(stack[stackpos].cut)
+	tag = removeFromTo(stack[stackpos].cut, tag);
+
     stackpos--;
 
     swf = stack[stackpos].swf;
     filename = stack[stackpos].filename;
-    
-    tag = swf_InsertTag(tag, ST_SHOWFRAME);
+   
+    //tag = swf_InsertTag(tag, ST_SHOWFRAME); //?
+
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
@@ -462,6 +498,7 @@ static void s_endSWF()
     
     dictionary_clear(&instances);
     dictionary_clear(&characters);
+    dictionary_clear(&images);
     dictionary_clear(&fonts);
     dictionary_clear(&sounds);
 
@@ -469,6 +506,7 @@ static void s_endSWF()
     free(swf);
     free(filename);
 }
+
 void s_close()
 {
     if(stackpos) {
@@ -486,31 +524,74 @@ int s_getframe()
     return currentframe;
 }
 
-void s_frame(int nr)
+void s_frame(int nr, int cut)
 {
     int t;
+    TAG*now = tag;
+
     for(t=currentframe;t<nr;t++) {
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
     }
+
+    if(cut) {
+	if(now == tag) {
+	    syntaxerror("Can't cut, frame empty");
+	}
+	stack[stackpos].cut = tag;
+    }
+
     currentframe = nr;
+}
+
+int parseColor2(char*str, RGBA*color);
+
+int addFillStyle(SHAPE*s, SRECT*r, char*texture)
+{
+    RGBA color;
+    character_t*image;
+    if(texture[0] == '#') {
+	parseColor2(texture, &color);
+	return swf_ShapeAddSolidFillStyle(s, &color);
+    } else if((image = dictionary_lookup(&images, texture))) {
+	MATRIX m;
+	swf_GetMatrix(0, &m);
+	m.sx = 65536.0*20.0*(r->xmax - r->xmin)/image->size.xmax;
+	m.sy = 65536.0*20.0*(r->ymax - r->ymin)/image->size.ymax;
+	m.tx = r->xmin;
+	m.ty = r->ymin;
+	return swf_ShapeAddBitmapFillStyle(s, &m, image->id, 0);
+    } /*else if ((texture = dictionary_lookup(&textures, texture))) {
+    } else if ((gradient = dictionary_lookup(&gradients, texture))) {
+    } */ else if (parseColor2(texture, &color)) {
+	return swf_ShapeAddSolidFillStyle(s, &color);
+    } else {
+	syntaxerror("not a color/fillstyle: %s", texture);
+	return 0;
+    }
 }
 	
 RGBA black={r:0,g:0,b:0,a:0};
-void s_box(char*name, int width, int height, RGBA color, int linewidth, RGBA fill, int dofill)
+void s_box(char*name, int width, int height, RGBA color, int linewidth, char*texture)
 {
-    SRECT r;
+    SRECT r,r2;
     SHAPE* s;
     int ls1,fs1=0;
+    r2.xmin = 0;
+    r2.ymin = 0;
+    r2.xmax = width;
+    r2.ymax = height;
     tag = swf_InsertTag(tag, ST_DEFINESHAPE);
     swf_ShapeNew(&s);
     ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
-    if(dofill)
-	fs1 = swf_ShapeAddSolidFillStyle(s,&fill);
+
+    if(texture)
+	fs1 = addFillStyle(s, &r2, texture);
+
     swf_SetU16(tag,id);
-    r.xmin = -linewidth-linewidth/2;
-    r.ymin = -linewidth-linewidth/2;
-    r.xmax = width+linewidth+linewidth/2;
-    r.ymax = height+linewidth+linewidth/2;
+    r.xmin = r2.xmin-linewidth-linewidth/2;
+    r.ymin = r2.ymin-linewidth-linewidth/2;
+    r.xmax = r2.xmax+linewidth+linewidth/2;
+    r.ymax = r2.ymax+linewidth+linewidth/2;
     swf_SetRect(tag,&r);
     swf_SetShapeHeader(tag,s);
     swf_ShapeSetAll(tag,s,0,0,ls1,fs1,0);
@@ -525,21 +606,25 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, RGBA fil
     incrementid();
 }
 
-void s_circle(char*name, int r, RGBA color, int linewidth, RGBA fill, int dofill)
+void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
 {
-    SRECT rect;
+    SRECT rect,r2;
     SHAPE* s;
     int ls1,fs1=0;
+    r2.xmin = r2.ymin = 0;
+    r2.xmax = 2*r;
+    r2.ymax = 2*r;
+
     tag = swf_InsertTag(tag, ST_DEFINESHAPE);
     swf_ShapeNew(&s);
     ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
-    if(dofill)
-	fs1 = swf_ShapeAddSolidFillStyle(s,&fill);
+    if(texture)
+	fs1 = addFillStyle(s, &r2, texture);
     swf_SetU16(tag,id);
-    rect.xmin = -linewidth-linewidth/2;
-    rect.ymin = -linewidth-linewidth/2;
-    rect.xmax = 2*r+linewidth+linewidth/2;
-    rect.ymax = 2*r+linewidth+linewidth/2;
+    rect.xmin = r2.xmin-linewidth-linewidth/2;
+    rect.ymin = r2.ymin-linewidth-linewidth/2;
+    rect.xmax = r2.xmax+linewidth+linewidth/2;
+    rect.ymax = r2.ymax+linewidth+linewidth/2;
 
     swf_SetRect(tag,&rect);
     swf_SetShapeHeader(tag,s);
@@ -552,9 +637,9 @@ void s_circle(char*name, int r, RGBA color, int linewidth, RGBA fill, int dofill
     incrementid();
 }
 
-void s_textshape(char*name, char*fontname, char*_text, RGBA color, int linewidth, RGBA fill, int dofill)
+void s_textshape(char*name, char*fontname, char*_text, RGBA color, int linewidth, char*texture)
 {
-    SRECT rect;
+    SRECT rect,r2;
     SHAPE* s;
     int ls1,fs1=0;
     int g;
@@ -564,12 +649,18 @@ void s_textshape(char*name, char*fontname, char*_text, RGBA color, int linewidth
     font = dictionary_lookup(&fonts, fontname);
     if(!font)
 	syntaxerror("font \"%s\" not known!", fontname);
-    if(!dofill)
+    
+    if(!texture)
+	/* the shape information we have implies exactly one fill style 
+	   This means to support outlines we'd have to rework the whole shape.
+	 */
 	syntaxerror("textshapes must be filled", fontname);
+
+    /* TODO: supporting more than once character would be nice... */
 
     if(text[0] >= font->maxascii || font->ascii2glyph[text[0]]<0) {
 	warning("no character 0x%02x (%c) in font \"%s\"", text[0], text[0], fontname);
-	s_box(name, 0, 0, black, 20, black, 0);
+	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
     g = font->ascii2glyph[text[0]];
@@ -577,8 +668,13 @@ void s_textshape(char*name, char*fontname, char*_text, RGBA color, int linewidth
 
     swf_ShapeNew(&s);
     ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
-    if(dofill)
-	fs1 = swf_ShapeAddSolidFillStyle(s,&fill);
+    if(texture)
+	fs1 = addFillStyle(s, &rect, texture);
+
+    rect.xmin -= linewidth + linewidth/2;
+    rect.ymin -= linewidth + linewidth/2;
+    rect.xmin += linewidth + linewidth/2;
+    rect.ymin += linewidth + linewidth/2;
      
     tag = swf_InsertTag(tag, ST_DEFINESHAPE);
     swf_SetU16(tag,id);
@@ -590,6 +686,7 @@ void s_textshape(char*name, char*fontname, char*_text, RGBA color, int linewidth
     s_addcharacter(name, id, tag, rect);
     incrementid();
 }
+
 void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 {
     SRECT r;
@@ -602,11 +699,53 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
     tag = swf_InsertTag(tag, ST_DEFINETEXT2);
     swf_SetU16(tag, id);
     if(!font->numchars) {
-	s_box(name, 0, 0, black, 20, black, 0);
+	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
     r = swf_SetDefineText(tag, font, &color, text, size);
    
+    s_addcharacter(name, id, tag, r);
+    incrementid();
+}
+
+/* type: either "jpeg" or "png"
+ */
+void s_image(char*name, char*type, char*filename, int quality)
+{
+    /* an image is actually two folded: 1st bitmap, 2nd character.
+       Both of them can be used separately */
+    
+    /* step 1: the bitmap */
+    SRECT r;
+    int imageID = id;
+    int width, height;
+    if(type=="png") {
+	warning("image type \"png\" not supported yet!");
+	s_box(name, 0, 0, black, 20, 0);
+	return;
+    }
+    tag = swf_InsertTag(tag, ST_DEFINEBITSJPEG2);
+    swf_SetU16(tag, imageID);
+
+    if(swf_SetJPEGBits(tag, filename, quality) < 0) {
+	syntaxerror("Image \"%s\" not found, or contains errors", filename);
+    }
+
+    swf_GetJPEGSize(filename, &width, &height);
+
+    r.xmin = 0;
+    r.ymin = 0;
+    r.xmax = width*20;
+    r.ymax = height*20;
+
+    s_addimage(name, id, tag, r);
+    incrementid();
+
+    /* step 2: the character */
+    tag = swf_InsertTag(tag, ST_DEFINESHAPE); // todo: should be defineshape2/3 once images can be transparent.(?)
+    swf_SetU16(tag, id);
+    swf_ShapeSetBitmapRect(tag, imageID, width, height);
+
     s_addcharacter(name, id, tag, r);
     incrementid();
 }
@@ -724,7 +863,7 @@ void s_playsound(char*name, int loops, int nomultiple, int stop)
     swf_SetSoundInfo(tag, &info);
 }
 
-void s_shape(char*name, char*filename)
+void s_includeswf(char*name, char*filename)
 {
     int f;
     SWF swf;
@@ -736,12 +875,12 @@ void s_shape(char*name, char*filename)
     f = open(filename,O_RDONLY);
     if (f<0) { 
 	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
-	s_box(name, 0, 0, black, 20, black, 0);
+	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
     if (swf_ReadSWF(f,&swf)<0) { 
 	warning("Only SWF files supported in .shape for now. File \"%s\" wasn't SWF.", filename);
-	s_box(name, 0, 0, black, 20, black, 0);
+	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
     close(f);
@@ -1256,7 +1395,7 @@ static char* lu(map_t* args, char*name)
     return value;
 }
 
-static int c_swf(map_t*args) 
+static int c_flash(map_t*args) 
 {
     char* name = lu(args, "name");
     char* compressstr = lu(args, "compress");
@@ -1600,7 +1739,11 @@ static int c_sprite(map_t*args)
 static int c_frame(map_t*args) 
 {
     char*framestr = lu(args, "n");
+    char*cutstr = lu(args, "cut");
     int frame;
+    int cut = 0;
+    if(strcmp(cutstr, "no"))
+	cut = 1;
     if(isRelative(framestr)) {
 	frame = s_getframe();
 	if(getSign(framestr)<0)
@@ -1613,7 +1756,7 @@ static int c_frame(map_t*args)
 		&& !(frame==0 && s_getframe()==frame)) // equality is o.k. for frame 0
 	    syntaxerror("frame expression must be >%d (is:%s)", s_getframe(), framestr);
     }
-    s_frame(frame);
+    s_frame(frame, cut);
     return 0;
 }
 static int c_primitive(map_t*args) 
@@ -1648,29 +1791,24 @@ static int c_primitive(map_t*args)
     if(!strcmp(fillstr, "fill"))
 	fillstr = colorstr;
     if(!strcmp(fillstr, "none"))
-	dofill = 0;
+	fillstr = 0;
     if(width<0 || height<0 || linewidth<0 || r<0)
 	syntaxerror("values width, height, line, r must be positive");
-    if(!dofill || isColor(fillstr)) {
-	if(dofill) 
-	    fill = parseColor(fillstr);
-    } else {
-	/* FIXME - texture fill */
-	fill.r = fill.g = 0;
-	fill.b = fill.a = 255;
-	warning("texture fill not supported yet. Filling with black.");
-    }
-    if(type == 0) s_box(name, width, height, color, linewidth, fill, dofill);
-    else if(type==1) s_circle(name, r, color, linewidth, fill, dofill);
-    else if(type==2) s_textshape(name, font, text, color, linewidth, fill, dofill);
+    
+    if(type == 0) s_box(name, width, height, color, linewidth, fillstr);
+    else if(type==1) s_circle(name, r, color, linewidth, fillstr);
+    else if(type==2) s_textshape(name, font, text, color, linewidth, fillstr);
     return 0;
 }
 
-static int c_shape(map_t*args) 
+static int c_swf(map_t*args) 
 {
     char*name = lu(args, "name");
     char*filename = lu(args, "filename");
-    s_shape(name, filename);
+    char*command = lu(args, "commandname");
+    if(!strcmp(command, "shape"))
+	warning("Please use .swf instead of .shape");
+    s_includeswf(name, filename);
     return 0;
 }
 
@@ -1706,10 +1844,24 @@ static int c_soundtrack(map_t*args)
     return 0;
 }
 
+static int c_image(map_t*args) 
+{
+    char*command = lu(args, "commandname");
+    char*name = lu(args, "name");
+    char*filename = lu(args, "filename");
+    if(!strcmp(command,"jpeg")) {
+	int quality = (int)(parsePercent(lu(args, "quality"))*100);
+	s_image(name, "jpeg", filename, quality);
+    } else {
+	s_image(name, "png", filename, 0);
+    }
+    return 0;
+}
+
 int fakechar(map_t*args)
 {
     char*name = lu(args, "name");
-    s_box(name, 0, 0, black, 20, black, 0);
+    s_box(name, 0, 0, black, 20, 0);
     return 0;
 }
 
@@ -1718,7 +1870,6 @@ static int c_button(map_t*args) {return fakechar(args);}
 static int c_edittext(map_t*args) {return fakechar(args);}
 
 static int c_morphshape(map_t*args) {return fakechar(args);}
-static int c_image(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
 
 static int c_buttonsounds(map_t*args) {return 0;}
@@ -1731,11 +1882,11 @@ static struct {
     command_func_t* func;
     char*arguments;
 } arguments[] =
-{{"swf", c_swf, "bbox=autocrop background=black version=5 fps=50 name=!default! @compress=default"},
- {"frame", c_frame, "n=<plus>1"},
-
-    // "import" type stuff
- {"shape", c_shape, "name filename"},
+{{"flash", c_flash, "bbox=autocrop background=black version=5 fps=50 name=!default! @compress=default"},
+ {"frame", c_frame, "n=<plus>1 @cut=no"},
+ // "import" type stuff
+ {"swf", c_swf, "name filename"},
+ {"shape", c_swf, "name filename"},
  {"morphshape", c_morphshape, "name start end"},
  {"jpeg", c_image, "name filename quality=80%"},
  {"png", c_image, "name filename"},
@@ -1753,6 +1904,7 @@ static struct {
  {"box", c_primitive, "name width height color=white line=1 @fill=none"},
  {"circle", c_primitive, "name r color=white line=1 @fill=none"},
  {"textshape", c_primitive, "name text font color=white line=1 @fill=none"},
+
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
  {"button", c_button, "name shape over=*shape press=*shape area=*shape"},
  {"text", c_text, "name text font size=100% color=white"},
@@ -1957,8 +2109,18 @@ static void parseArgumentsForCommand(char*command)
     int nr = -1;
     for(t=0;t<sizeof(arguments)/sizeof(arguments[0]);t++) {
 	if(!strcmp(arguments[t].command, command)) {
+
+	    /* ugly hack- will be removed soon (once documentation and .sc generating
+	       utilities have been changed) */
+	    if(!strcmp(command, "swf") && !stackpos) {
+		warning("Please use .flash instead of .swf- this will be mandatory soon");	
+		command = "flash";
+		t = 0;
+	    }
+
 	    args = parseArguments(command, arguments[t].arguments);
 	    nr = t;
+	    break;
 	}
     }
     if(nr<0)
