@@ -77,6 +77,13 @@ PyObject * taglist_new2(TAG*tag)
 TAG* taglist_getTAGs(PyObject*self)
 {
     PyObject* tagmap = tagmap_new();
+    TAG* tag = taglist_getTAGs2(self, tagmap, 1);
+    Py_DECREF(tagmap);
+    return tag;
+}
+//----------------------------------------------------------------------------
+TAG* taglist_getTAGs2(PyObject*self, PyObject*tagmap, int addDependencies)
+{
     if(!PY_CHECK_TYPE(self,&TagListClass)) {
 	PyErr_SetString(PyExc_Exception, setError("Not a taglist (%08x).", self));
 	return 0;
@@ -92,16 +99,30 @@ TAG* taglist_getTAGs(PyObject*self)
     mylog(" %08x(%d) taglist_getTAGs", (int)self, self->ob_refcnt);
     for(t=0;t<l;t++) {
 	PyObject*item = PyList_GetItem(taglist->taglist, t);
-	tag = tag_getTAG(item, tag, tagmap);
-	if(!tag) {
-	    //pass through errors
-	    Py_DECREF(tagmap);
-	    return 0;
+	if(addDependencies) {
+	    PyObject* deps = tag_getDependencies(item);
+	    int l = PyList_Size(deps);
+	    int t;
+	    for(t=0;t<l;t++) {
+		PyObject*item = PyList_GetItem(deps, t);
+		if(tagmap_obj2id(tagmap, item)<0) {
+		    /*PyObject*_self = taglist_concat(self, item);
+		    Py_DECREF(self);
+		    self = _self;*/
+		    tag = tag_getTAG(item, tag, tagmap);
+		    if(!tag) { return 0; }
+		    if(!firstTag)
+			firstTag = tag;
+		}
+	    }
 	}
+
+	tag = tag_getTAG(item, tag, tagmap);
+	if(!tag) { /* pass through errors */ return 0; }
+
 	if(!firstTag)
 	    firstTag = tag;
     }
-    Py_DECREF(tagmap);
     return firstTag;
 }
 //----------------------------------------------------------------------------
@@ -192,15 +213,6 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
     mylog(" %08x(%d) taglist_concat %08x(%d)", (int)self, self->ob_refcnt, list, list->ob_refcnt);
 
     if (PyArg_Parse(list, "O!", &TagClass, &tag)) {
-	list = tag_getDependencies(tag);
-	int l = PyList_Size(list);
-	int t;
-	for(t=0;t<l;t++) {
-	    PyObject*item = PyList_GetItem(list, t);
-	    PyObject*_self = taglist_concat(self, item);
-	    Py_DECREF(self);
-	    self = _self;
-	}
 	if(!taglist_contains(self, tag)) {
 	    mylog(" %08x(%d) taglist_concat: Adding Tag %08x(%d)", (int)self, self->ob_refcnt, tag, tag->ob_refcnt);
 	    PyList_Append(taglist->taglist, tag);
