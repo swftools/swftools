@@ -30,55 +30,6 @@
 #define PF_CLIPACTION   0x40
 #define PF_ACTIONEVENT  0x80
 
-int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name)
-{ U8 flags;
-  if (!t) return -1;
-
-  if(cx && cx->r1==0 && cx->g1==0 && cx->b1==0 && cx->a1==0
-	&& cx->r0==256 && cx->g0==256 && cx->b0==256 && cx->a0==256)
-      cx = 0;
-
-  flags = (id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|(name?PF_NAME:0)|((m||cx)&&(!id)?PF_MOVE:0);
-
-  swf_SetU8(t,flags);
-  swf_SetU16(t,depth);
-  if (flags&PF_CHAR) swf_SetU16(t,id);
-  if (flags&PF_MATRIX) swf_SetMatrix(t,m);
-  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
-  if (flags&PF_RATIO) swf_SetU16(t,0);
-  if (flags&PF_NAME) swf_SetString(t,name);
-  
-  return 0; 
-}
-
-int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction)
-{ U8 flags;
-  if (!t) return -1;
-  
-  if(cx && cx->r1==0 && cx->g1==0 && cx->b1==0 && cx->a1==0
-	&& cx->r0==256 && cx->g0==256 && cx->b0==256 && cx->a0==256)
-      cx = 0;
-
-  flags = (id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|(name?PF_NAME:0)|
-          ((m||cx)&&(!id)?PF_MOVE:0)|(clipaction?PF_CLIPACTION:0);
-
-  swf_SetU8(t,flags);
-  swf_SetU16(t,depth);
-  if (flags&PF_CHAR) swf_SetU16(t,id);
-  if (flags&PF_MATRIX) swf_SetMatrix(t,m);
-  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
-  if (flags&PF_RATIO) swf_SetU16(t,0);
-
-  /* ??? The spec states that name comes first? */
-  if (flags&PF_CLIPACTION) swf_SetU16(t, clipaction);
-  if (flags&PF_NAME) swf_SetString(t,name);
-  return 0; 
-}
-
-int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx)
-{ return swf_ObjectPlace(t,0,depth,m,cx,NULL);
-}
-
 int isUnitMatrix(MATRIX* m)
 {
     /* a matrix with all zeros is also considered
@@ -105,6 +56,61 @@ int isUnitCXForm(CXFORM* cx)
        (cx->a1==0 && cx->r1==0 && cx->g1==0 && cx->b1==0))
 	return 1;
     return 0;
+}
+
+int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name)
+{ U8 flags;
+  if (!t) return -1;
+
+  if(cx && cx->r1==0 && cx->g1==0 && cx->b1==0 && cx->a1==0
+	&& cx->r0==256 && cx->g0==256 && cx->b0==256 && cx->a0==256)
+      cx = 0;
+
+  if(m && isUnitMatrix(m)) 
+      m = 0;
+
+  flags = (id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|(name?PF_NAME:0)|((m||cx)&&(!id)?PF_MOVE:0);
+
+  swf_SetU8(t,flags);
+  swf_SetU16(t,depth);
+  if (flags&PF_CHAR) swf_SetU16(t,id);
+  if (flags&PF_MATRIX) swf_SetMatrix(t,m);
+  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
+  if (flags&PF_RATIO) swf_SetU16(t,0);
+  if (flags&PF_NAME) swf_SetString(t,name);
+  
+  return 0; 
+}
+
+int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction)
+{ U8 flags;
+  if (!t) return -1;
+  
+  if(cx && cx->r1==0 && cx->g1==0 && cx->b1==0 && cx->a1==0
+	&& cx->r0==256 && cx->g0==256 && cx->b0==256 && cx->a0==256)
+      cx = 0;
+  
+  if(m && isUnitMatrix(m)) 
+      m = 0;
+
+  flags = (id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|(name?PF_NAME:0)|
+          ((m||cx)&&(!id)?PF_MOVE:0)|(clipaction?PF_CLIPACTION:0);
+
+  swf_SetU8(t,flags);
+  swf_SetU16(t,depth);
+  if (flags&PF_CHAR) swf_SetU16(t,id);
+  if (flags&PF_MATRIX) swf_SetMatrix(t,m);
+  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
+  if (flags&PF_RATIO) swf_SetU16(t,0);
+
+  /* ??? The spec states that name comes first? */
+  if (flags&PF_CLIPACTION) swf_SetU16(t, clipaction);
+  if (flags&PF_NAME) swf_SetString(t,name);
+  return 0; 
+}
+
+int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx)
+{ return swf_ObjectPlace(t,0,depth,m,cx,NULL);
 }
 
 void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
