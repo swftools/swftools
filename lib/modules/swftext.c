@@ -939,12 +939,12 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 	    if(*c < font->maxascii) {
 		int g = font->ascii2glyph[*c];
 		SRECT rn = font->layout->bounds[g];
-		rn.xmin = (rn.xmin * scale)/2000 + pos;
-		rn.xmax = (rn.xmax * scale)/2000 + pos;
-		rn.ymin = (rn.ymin * scale)/2000;
-		rn.ymax = (rn.ymax * scale)/2000;
+		rn.xmin = (rn.xmin * scale)/100 + pos;
+		rn.xmax = (rn.xmax * scale)/100 + pos;
+		rn.ymin = (rn.ymin * scale)/100;
+		rn.ymax = (rn.ymax * scale)/100;
 		swf_ExpandRect2(&r, &rn);
-		pos += (font->glyph[g].advance*scale)/100;
+		pos += (font->glyph[g].advance*scale*20)/100;
 	    }
 	    c++;
 	}
@@ -960,11 +960,22 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 
     swf_SetRect(tag,&r);
     swf_SetMatrix(tag,NULL);
-    swf_TextCountBits(font,text,scale,&gbits,&abits);
+    swf_TextCountBits(font,text,scale*20,&gbits,&abits);
     swf_SetU8(tag,gbits);
     swf_SetU8(tag,abits);
-    swf_TextSetInfoRecord(tag,font,scale/2 /*?? why /2? */,rgb,0,0); //scale
-    swf_TextSetCharRecord(tag,font,text,scale,gbits,abits);
+
+    /* now set the text params- notice that a font size of
+       1024 means that the glyphs will be displayed exactly
+       as they would be in/with a defineshape. (Try to find
+       *that* in the flash specs)
+     */
+    swf_TextSetInfoRecord(tag,font,(scale*1024)/100,rgb,0,0); //scale
+
+    /* set the actual text- notice that we just pass our scale
+       parameter over, as TextSetCharRecord calculates with 
+       percent, too */
+    swf_TextSetCharRecord(tag,font,text,scale*20,gbits,abits);
+
     swf_SetU8(tag,0);
     return r;
 }
