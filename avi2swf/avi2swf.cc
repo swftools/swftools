@@ -73,6 +73,7 @@ struct options_t options[] =
  {"n","num"},
  {"p","flip"},
  {"s","start"},
+ {"d","scale"},
  {"z","zlib"},
  {"V","version"},
  {0,0}
@@ -313,7 +314,7 @@ class GfxBlockCache {
 	}
 	best = bestsum/block->len;
 
-	if(best > 96.0) {
+	if(best > 64.0) {
 	    misses++;
 	    return -1;
 	} 
