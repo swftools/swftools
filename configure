@@ -468,7 +468,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP RANLIB ac_ct_RANLIB SET_MAKE INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN_S ECHO STRIP ac_ct_STRIP EGREP LIBTOOL UNCOMPRESS AR SLEXT FREETYPE_CONFIG target target_cpu target_vendor target_os WORDS_BIGENDIAN SYSTEM_BACKTICKS PACKAGE VERSION HAVE_UNISTD_H AVIFILE_CONFIG lame_objects USE_GZIP PYTHON_LIB PYTHON_INCLUDES JPEG2SWF PNG2SWF LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP RANLIB ac_ct_RANLIB SET_MAKE INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN_S ECHO STRIP ac_ct_STRIP EGREP LIBTOOL UNCOMPRESS AR SLEXT FREETYPE_CONFIG target target_cpu target_vendor target_os WORDS_BIGENDIAN SYSTEM_BACKTICKS PACKAGE VERSION HAVE_UNISTD_H lame_objects AVIFILE_CONFIG USE_GZIP PYTHON_LIB PYTHON_INCLUDES JPEG2SWF PNG2SWF LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -5779,6 +5779,30 @@ EOF
     hardcode_shlibpath_var=no
     ;;
 
+  linux*)
+    if $LD --help 2>&1 | egrep ': supported targets:.* elf' > /dev/null; then
+      archive_cmds='$CC -shared $libobjs $deplibs $compiler_flags ${wl}-soname $wl$soname -o $lib'
+      supports_anon_versioning=no
+      case `$LD -v 2>/dev/null` in
+        *\ 01.* | *\ 2.[0-9].* | *\ 2.10.*) ;; # catch versions < 2.11
+        *\ 2.11.93.0.2\ *) supports_anon_versioning=yes ;; # RH7.3 ...
+        *\ 2.11.92.0.12\ *) supports_anon_versioning=yes ;; # Mandrake 8.2 ...
+        *\ 2.11.*) ;; # other 2.11 versions
+        *) supports_anon_versioning=yes ;;
+      esac
+      if test $supports_anon_versioning = yes; then
+        archive_expsym_cmds='$echo "{ global:" > $output_objdir/$libname.ver~
+cat $export_symbols | sed -e "s/\(.*\)/\1;/" >> $output_objdir/$libname.ver~
+$echo "local: *; };" >> $output_objdir/$libname.ver~
+        $CC -shared $libobjs $deplibs $compiler_flags ${wl}-soname $wl$soname ${wl}-version-script ${wl}$output_objdir/$libname.ver -o $lib'
+      else
+        $archive_expsym_cmds="$archive_cmds"
+      fi
+    else
+      ld_shlibs=no
+    fi
+    ;;
+
   *)
     if $LD --help 2>&1 | egrep ': supported targets:.* elf' > /dev/null; then
       archive_cmds='$CC -shared $libobjs $deplibs $compiler_flags ${wl}-soname $wl$soname -o $lib'
@@ -6573,7 +6597,7 @@ linux-gnu*)
   libsuff=
   case "$host_cpu" in
   x86_64*)
-    echo '#line 6576 "configure"' > conftest.$ac_ext
+    echo '#line 6600 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7321,7 +7345,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7324 "configure"
+#line 7348 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -7419,7 +7443,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7422 "configure"
+#line 7446 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10476,6 +10500,269 @@ fi
 done
 
 
+# ------------------------------------------------------------------
+
+lame_objects=
+lame_makefile=
+if test "x${DISABLE_LAME}" = "xtrue"; then
+    echo "*" Disabling lame support...
+else
+    # old lame code at lib/lame
+    if test -f lib/lame/Makefile.in; then
+	lame_objects="lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o"
+	lame_makefile="lib/lame/Makefile"
+	CPPFLAGS="$CPPFLAGS -Ilame"
+	cat >>confdefs.h <<_ACEOF
+#define HAVE_LAME 1
+_ACEOF
+
+    else
+	if test -d /usr/include/lame; then
+	    CPPFLAGS="$CPPFLAGS -I /usr/include/lame"
+	else
+	    if test -d /usr/local/include/lame; then
+		CPPFLAGS="$CPPFLAGS -I /usr/local/include/lame"
+	    fi
+	fi
+
+echo "$as_me:$LINENO: checking for lame_init in -lmp3lame" >&5
+echo $ECHO_N "checking for lame_init in -lmp3lame... $ECHO_C" >&6
+if test "${ac_cv_lib_mp3lame_lame_init+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmp3lame  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char lame_init ();
+int
+main ()
+{
+lame_init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_mp3lame_lame_init=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_mp3lame_lame_init=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_mp3lame_lame_init" >&5
+echo "${ECHO_T}$ac_cv_lib_mp3lame_lame_init" >&6
+if test $ac_cv_lib_mp3lame_lame_init = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMP3LAME 1
+_ACEOF
+
+  LIBS="-lmp3lame $LIBS"
+
+else
+  NO_LIBMP3LAME=1
+fi
+
+
+for ac_header in lame.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_header_compiler=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: $ac_header: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: $ac_header: in the future, the compiler will take precedence" >&2;}
+    (
+      cat <<\_ASBOX
+## ------------------------------------------ ##
+## Report this to the AC_PACKAGE_NAME lists.  ##
+## ------------------------------------------ ##
+_ASBOX
+    ) |
+      sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=\$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+	if test "x$NO_LIBMP3LAME" "!=" "x1" -a "x$ac_cv_header_lame_h" "!=" "x";then
+	    cat >>confdefs.h <<_ACEOF
+#define HAVE_LAME 1
+_ACEOF
+
+	fi
+    fi
+fi
+
+
+# ------------------------------------------------------------------
+
+
 
 for ac_prog in avifile-config
 do
@@ -10800,17 +11087,7 @@ if test "x${AVIFILE}" != "xtrue"; then
  avi2swf=
 fi
 
-if test "x${DISABLE_LAME}" = "xtrue"; then
-    echo "*" Disabling lame support...
-    lame_objects=
-else
-    cat >>confdefs.h <<_ACEOF
-#define HAVE_LAME 1
-_ACEOF
-
-    lame_objects='$(lame_objects_2)'
-fi
-
+# ------------------------------------------------------------------
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
     cat >>confdefs.h <<_ACEOF
@@ -10820,12 +11097,8 @@ _ACEOF
 fi
 
 
-JPEG2SWF='jpeg2swf$(E)'
-export JPEG2SWF
-PNG2SWF='png2swf$(E)'
-export PNG2SWF
-
 # ------------------------------------------------------------------
+
 
 echo "$as_me:$LINENO: checking for Python.h and PIL" >&5
 echo $ECHO_N "checking for Python.h and PIL... $ECHO_C" >&6
@@ -10841,6 +11114,8 @@ if test -f "/usr/lib/python2.4/site-packages/PIL/_imaging.so" -a -f "/usr/includ
 fi
 
 if test "x$PY_VERSION" "!=" "x"; then
+    echo "$as_me:$LINENO: result: python$PY_VERSION" >&5
+echo "${ECHO_T}python$PY_VERSION" >&6
     pythonrfxswf="lib/python/Makefile"
     if test "x$PYTHON_LIB" = "x";then
 	PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
@@ -10851,17 +11126,48 @@ if test "x$PY_VERSION" "!=" "x"; then
     export PYTHON_INCLUDES PYTHON_LIB
 
 
-    echo "$as_me:$LINENO: result: yes" >&5
+    echo "$as_me:$LINENO: checking whether we can compile the python test program" >&5
+echo $ECHO_N "checking whether we can compile the python test program... $ECHO_C" >&6
+
+    cat > conftest.c << EOF
+#include <Python.h>
+#include <Imaging.h>
+
+int main(int argn, char*argv)
+{
+    return Py_Main(argn, argv);
+}
+EOF
+    ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
+    if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+	echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
+	PYTHON_OK=yes
+    else
+	echo "configure: failed program was:" >&5
+	cat conftest.c >&5
+	echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+    fi
+    rm -f conftest*
 else
-    echo all install uninstall clean: > lib/python/Makefile
-    echo "* No usable python installation found"
-    echo "* Not compiling the python interface"
     echo "$as_me:$LINENO: result: nope" >&5
 echo "${ECHO_T}nope" >&6
 fi
 
+
+if test "x$PYTHON_OK" '!=' "xyes";then
+    echo all install uninstall clean: > lib/python/Makefile
+    echo "* No usable python installation found"
+    echo "* Not compiling the python interface"
+fi
+
 # ------------------------------------------------------------------
+
+JPEG2SWF='jpeg2swf$(E)'
+export JPEG2SWF
+PNG2SWF='png2swf$(E)'
+export PNG2SWF
 
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
@@ -10887,9 +11193,9 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
     echo "or write compressed Flash MX files!"
   fi
   echo "***************************************************"
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf}"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
 else
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf}"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
 fi
 
 
@@ -11551,8 +11857,8 @@ s,@SYSTEM_BACKTICKS@,$SYSTEM_BACKTICKS,;t t
 s,@PACKAGE@,$PACKAGE,;t t
 s,@VERSION@,$VERSION,;t t
 s,@HAVE_UNISTD_H@,$HAVE_UNISTD_H,;t t
-s,@AVIFILE_CONFIG@,$AVIFILE_CONFIG,;t t
 s,@lame_objects@,$lame_objects,;t t
+s,@AVIFILE_CONFIG@,$AVIFILE_CONFIG,;t t
 s,@USE_GZIP@,$USE_GZIP,;t t
 s,@PYTHON_LIB@,$PYTHON_LIB,;t t
 s,@PYTHON_INCLUDES@,$PYTHON_INCLUDES,;t t
