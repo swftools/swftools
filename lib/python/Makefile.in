@@ -3,10 +3,6 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-#LIB=-L/usr/lib/python2.2/config/ -lpython2.2
-PYTHON_LIB=-lpython2.3 /usr/lib/python2.3/site-packages/PIL/_imaging.so
-PYTHON_INCLUDES=-I/usr/include/python2.3
-
 all: mypython swfpython SWF.so testmem
 
 primitives.o: primitives.c primitives.h
@@ -30,16 +26,16 @@ SWF.o: SWF.c pyutils.h primitives.h taglist.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.o
 
 SWF.so: SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
-	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.so ../librfxswf.a $(PYTHON_LIB) -ljpeg -lz -lt1 -lfreetype 
+	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.so $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 
 mypython: mypython.c Makefile
-	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython $(PYTHON_LIB) -ldl -lm -lpthread -lutil
+	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython $(PYTHON_LIB)
 
 swfpython: swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o tags.o action.o pyutils.o SWF.o
-	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) swfpython.c -o swfpython $(PYTHON_LIB) -ldl -lm -lpthread -lutil ../librfxswf.a $(PYTHON_LIB) -ljpeg -lz -lt1 -lfreetype 
+	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) swfpython.c -o swfpython $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 
 testmem: testmem.c Makefile
-	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem $(PYTHON_LIB) -ldl -lm -lpthread -lutil
+	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem $(PYTHON_LIB) $(LIBS)
 
 test: test6
 

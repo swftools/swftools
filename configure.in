@@ -86,9 +86,14 @@ dnl Checks for system services
 
 RFX_CHECK_MING
 
+SLEXT="so"
 if test "x${MINGW}" != "xyes"; then
     AC_DEFINE_UNQUOTED(O_BINARY, 0)
+    SLEXT="dll"
 fi
+export SLEXT
+AC_SUBST(SLEXT)
+
 # The following tries to make use of includes and libraries in
 # /usr/local, too. Notice: A -I/usr/local/include might break
 # things (MingW, cross-compiling etc.) in the same way as -I/usr/include, 
@@ -221,11 +226,40 @@ export JPEG2SWF
 PNG2SWF='png2swf$(E)'
 export PNG2SWF
 
-if test "x" = "x"; then
+# ------------------------------------------------------------------
+
+AC_MSG_CHECKING([for Python.h and PIL])
+# should we support python versions below 2.2?
+if test -f "/usr/lib/python2.2/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.2/Python.h";then
+    PY_VERSION=2.2
+fi
+if test -f "/usr/lib/python2.3/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.3/Python.h";then
+    PY_VERSION=2.3
+fi
+if test -f "/usr/lib/python2.4/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.4/Python.h";then
+    PY_VERSION=2.4
+fi
+
+if test "x$PY_VERSION" "!=" "x"; then
     pythonrfxswf="lib/python/Makefile"
+    if test "x$PYTHON_LIB" = "x";then
+	PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
+    fi
+    if test "x$PYTHON_INCLUDES" = "x";then
+	PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
+    fi
+    export PYTHON_INCLUDES PYTHON_LIB
+    AC_SUBST(PYTHON_LIB)
+    AC_SUBST(PYTHON_INCLUDES)
+    AC_MSG_RESULT(yes)
 else
     echo all install uninstall clean: > lib/python/Makefile
+    echo "* No usable python installation found"
+    echo "* Not compiling the python interface"
+    AC_MSG_RESULT(nope)
 fi
+
+# ------------------------------------------------------------------
 
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"

@@ -19,13 +19,15 @@ SCC=$(LIBTOOL) @CXX@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CXXFLAGS@
 SL=$(LIBTOOL) --mode=link @CC@ $(DEFS) -rpath $(libdir)
 SLL=$(LIBTOOL) --mode=link @CXX@ $(DEFS) -rpath $(libdir)
 LIBS= @LDFLAGS@ @LIBS@
-
 transform = @program_transform_name@
+PYTHON_LIB=@PYTHON_LIB@
+PYTHON_INCLUDES=@PYTHON_INCLUDES@
 
 # libtool stuff
 OBJEXT=@OBJEXT@
 EXEEXT=@EXEEXT@
 E=$(EXEEXT)
+SLEXT=@SLEXT@
 ECHO=@ECHO@
 RANLIB=@RANLIB@
 STRIP=@STRIP@
