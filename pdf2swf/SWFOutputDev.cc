@@ -657,9 +657,6 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
     swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
-    
-    msg("<debug> fontmatrix %7.3f %7.3f\n", m11,-m21);
-    msg("<debug> fontmatrix %7.3f %7.3f\n", m12,-m22);
 }
 
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
