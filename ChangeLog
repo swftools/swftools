@@ -68,4 +68,8 @@
 	* lib/example/sound.c: New file, demonstrates use of the sound module in librfxswf.
 0.2.3: 
 	* pdf2swf: New option --fontdir, can now handle external fonts.
+	* lib/modules/swftext.c: Several font-extraction bugfixes
+	* src/swfdump: Bugfixes, ids and depths are now in decimal
+	* src/swfcombine: Bugfixes.
+	* configure.in: Cleaned up.
 
