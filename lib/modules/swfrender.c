@@ -423,7 +423,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             nm.r1 *= i->multiply;
             nm.tx *= i->multiply;
             nm.ty *= i->multiply;
-            s2->fillstyles[t].m = nm; //!!!!!!!!!!!!!!!!
+            s2->fillstyles[t].m = nm;
         }
 
         /* add this shape to the global shape list, for deallocing */
@@ -484,7 +484,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             
             if(DEBUG&4) printf("\n");
         } else if(line->type == splineTo) {
-	    int c,t,y,parts,qparts;
+	    int c,t,parts,qparts;
 	    double xx,yy;
             
             transform_point(&mat, x, y, &x1, &y1);
