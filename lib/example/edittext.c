@@ -4,7 +4,7 @@
    
    Part of the swftools package.
 
-   Copyright (c) 2000, 2001 Matthias Kramm <kramm@quiss.org>
+   Copyright (c) 2000, 2001 Matthias Kramm
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,8 +25,6 @@
 #include <math.h>
 #include "../rfxswf.h"
 
-TAG* tag;
-
 /* defined below: */
 extern char * longtext;		       
 extern SWFFONT * Font_Courier(U16 id);
@@ -36,6 +34,7 @@ int main (int argc,char ** argv)
   RGBA rgb;
   SRECT r;
   MATRIX m;
+  TAG* tag;
   EditTextLayout layout;
   SWFFONT*font;
   S32 width=640,height = 480;
@@ -60,7 +59,6 @@ int main (int argc,char ** argv)
   swf_GetMatrix(0, &m);
 
   tag = swf_InsertTag(tag,ST_DEFINEFONT2);
-      //font = Font_Dingbats(76);
       font = Font_Courier(76);
       swf_FontSetDefine2(tag, font);
 
@@ -92,18 +90,18 @@ int main (int argc,char ** argv)
 	  } if (t==1) {
 	      /* this field (upper right corner) mirrors the first field, without being editable */
 	      swf_SetEditText(tag, ET_NOSELECT|ET_MULTILINE|ET_BORDER|ET_READONLY, r, 0, &rgb, 0, 
-		      /*font id*/76, 20*20, &layout, "/:variable1");
+		      /*font id*/0, 20*20, &layout, "/:variable1");
 	  } if (t==2) {
 	      /* another edit field, in brown (lower left corner) */
 	      rgb.r = 80;
 	      rgb.g = 80;
 	      swf_SetEditText(tag, ET_WORDWRAP|ET_MULTILINE|ET_BORDER, r, longtext, &rgb, 0, 
-		      /*font id*/76, 10*20, &layout, "/:variable2");
+		      /*font id*/0, 10*20, &layout, "/:variable2");
 	  } if (t==3) {
 	      m.ty += 40*20;
 	      /* password edit field , lower right corner*/
 	      swf_SetEditText(tag, ET_PASSWORD, r, 0, &rgb, 0, 
-		      /*font id*/76, 24*20, &layout, "/:variable3");
+		      /*font id*/0, 24*20, &layout, "/:variable3");
 	  }
 
       tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
@@ -124,10 +122,10 @@ int main (int argc,char ** argv)
   tag = swf_InsertTag(tag,ST_END);
 
   f = open("edittext.swf",O_WRONLY|O_CREAT|O_TRUNC, 0644);
-  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
+  if(swf_WriteSWF(f,&swf)<0) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 
-  swf_FreeTags(&swf);                       // cleanup
+  swf_FreeTags(&swf);
   return 0;
 }
 
