@@ -15,7 +15,7 @@ AC_ARG_ENABLE(lame,
 PACKAGE=swftools
 VERSION=0.5.0_pre1
 
-WARNINGS="-Wparentheses -Wimplicit -Wreturn-type -Winline"
+WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
     WARNINGS="-Wall -Wno-unused -Wno-format"
 fi
@@ -30,8 +30,8 @@ if test "x$DEBUG" '!=' "x";then
     export STRIP
     AC_SUBST(STRIP)
 else if test "x$OPTIMIZE" '!=' "x"; then
-    CFLAGS="$WARNINGS -O3 -fomit-frame-pointer $CFLAGS"
-    CXXFLAGS="$WARNINGS -O3 -fomit-frame-pointer $CXXFLAGS"
+    CFLAGS="$WARNINGS -O3 -fomit-frame-pointer -Winline $CFLAGS"
+    CXXFLAGS="$WARNINGS -O3 -fomit-frame-pointer -Winline $CXXFLAGS"
 else
     CFLAGS="$WARNINGS -O -fomit-frame-pointer $CFLAGS"
     CXXFLAGS="$WARNINGS -O -fomit-frame-pointer $CXXFLAGS"
