@@ -2437,7 +2437,7 @@ static int c_edittext(map_t*args)
  //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
     char*name = lu(args, "name");
     char*font = lu(args, "font");
-    int size = (int)(100*20*parsePercent(lu(args, "size")));
+    int size = (int)(1024*parsePercent(lu(args, "size")));
     int width = parseTwip(lu(args, "width"));
     int height = parseTwip(lu(args, "height"));
     char*text  = lu(args, "text");
