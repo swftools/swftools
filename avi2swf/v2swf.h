@@ -26,36 +26,6 @@ extern "C" {
 typedef unsigned char bool;
 #endif
 
-typedef struct _videoreader_t
-{
-    void*internal;
-
-    /* video */
-    int width;
-    int height;
-    double fps;
-
-    /* audio */
-    int channels;
-    int rate;
-
-    int (*getsamples) (struct _videoreader_t*, void*buffer, int num);
-    /* buffer must be big enough to hold width*height*4 bytes: */
-    int (*getimage) (struct _videoreader_t*, void*buffer);
-    bool (*eof) (struct _videoreader_t*);
-    /* multi purpose functions */
-    void (*setparameter) (struct _videoreader_t*, char*name, char*value);
-    void* (*getinfo) (struct _videoreader_t*, char*name);
-    void (*close) (struct _videoreader_t*);
-} videoreader_t;
-
-#define videoreader_getsamples(v, buffer, num) ((v)->getsamples((v),(buffer),(num)))
-#define videoreader_getimage(v, buffer) ((v)->getimage((v),(buffer)))
-#define videoreader_eof(v) ((v)->eof(v))
-#define videoreader_setparameter(v,name,value) ((v)->setparameter((v),(name),(value)))
-#define videoreader_getinfo(v,name) ((v)->getinfo((v),(name)))
-#define videoreader_close(v) ((v)->close(v))
-
 typedef struct _v2swf_t
 {
     void*internal;
