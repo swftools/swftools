@@ -100,6 +100,10 @@ typedef struct _ActionTAG
   U8 tmp[4]; // store small operands here.
 } ActionTAG;
 
+typedef struct _ActionMarker
+{
+  ActionTAG* atag;
+} ActionMarker;
 
 typedef struct _SWF
 { U8            fileVersion;
@@ -590,5 +594,7 @@ void action_If(U16 branch);
 void action_Call();
 void action_GotoFrame2(U8 method);
 void swf_ActionEnd();
+ActionMarker action_setMarker();
+void action_fixjump(ActionMarker m1, ActionMarker m2);
 
 #endif
