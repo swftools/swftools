@@ -1222,8 +1222,10 @@ int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns leng
 {
   struct writer_t writer;
   swf->compressed = 0;
-  if(handle<0)
+  if(handle<0) {
+    writer_init_nullwriter(&writer);
     return swf_WriteSWF2(&writer, swf);
+  }
   writer_init_filewriter(&writer, handle);
   return swf_WriteSWF2(&writer, swf);
 }
@@ -1232,8 +1234,10 @@ int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns leng
 {
   struct writer_t writer;
   swf->compressed = 1;
-  if(handle<0)
+  if(handle<0) {
+    writer_init_nullwriter(&writer);
     return swf_WriteSWF2(&writer, swf);
+  }
   writer_init_filewriter(&writer, handle);
   return swf_WriteSWF2(&writer, swf);
 }
