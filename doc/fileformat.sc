@@ -752,3 +752,20 @@
     .change t9 alpha=0% shear=-0
 .end
 
+# sound.sc
+#
+# Sound effects
+
+.swf name="sound.swf" fps=25
+.sound loco "LocoStart.wav"
+.sound whistle "Whistle.wav"
+
+.frame 0
+    .play loco
+.frame 25
+    .stop loco
+    .play whistle loop=20
+.frame 200
+    .stop whistle
+.end
+
