@@ -61,7 +61,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
-    //rgb.g = 0xff; <--- handy for testing alpha conversion
+    //rgb.g = 0xff; //<--- handy for testing alpha conversion
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -575,40 +575,30 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	free(firstline);
 
 	/* the image is now compressed and stored in data. Now let's take
-	   a look at the alpha values to determine which bitmap type we
-	   should write */
-	if(header.mode == 6)
-	for(y=0;y<header.height;y++) {
-	    U8*l = &data2[(y*header.width)*4];
-	    for(x=0;x<header.width;x++) {
-		if(l[x*4+0]==255) transparent++;
-		else if(l[x*4+0]==0) opaque++;
-		else semitransparent++;
+	   a look at the alpha values */
+	if(header.mode == 6) {
+	    for(y=0;y<header.height;y++) {
+		U8*l = &data2[(y*header.width)*4];
+		for(x=0;x<header.width;x++) {
+		    U8 a = l[x*4];
+		    U8 b = l[x*4+1];
+		    U8 g = l[x*4+2];
+		    U8 r = l[x*4+3];
+		    if(a==255) transparent++;
+		    else {
+			if(a==0) opaque++;
+			else semitransparent++;
+			l[x*4+3]=(int)r*a/255;
+			l[x*4+2]=(int)g*a/255;
+			l[x*4+1]=(int)b*a/255;
+		    }
+		}
+	    }
+	    if(semitransparent || opaque) {
+		t->id = ST_DEFINEBITSLOSSLESS2;
 	    }
 	}
-	/* mode 6 images which are not fully opaque or fully transparent
-	   will be stored as definejpeg3 */
-	if(header.mode == 6 && transparent != header.width*header.height
-		            && opaque != header.width*header.height)
-#ifndef HAVE_JPEGLIB
-	    fprintf(stderr, "Warning: No jpeg lib compiled in- not able to store transparency information\n");
-#else
-	{   
-	    fprintf(stderr, "Image has transparency information. Storing as DefineBitsJpeg3 Tag (jpeg+alpha)\n");
-	    if(VERBOSE(2))
-		printf("Image is semi-transparent\n");
-
-	    // we always use quality 100, since png2swf is expected to
-	    // use more or less lossless compression
-	    
-	    swf_SetJPEGBits3(t, header.width, header.height, (RGBA*)data2, 100);
-	    t->id = ST_DEFINEBITSJPEG3;
-	} 
-	else
-#endif
-	{
-	    swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
-	}
+	swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
 	free(data2);
     } else if(header.mode == 0 || header.mode == 3) {
 	RGBA*rgba;
@@ -630,13 +620,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		rgba[i].b = palette[i*3+2];
 		if(alphapalette && i<alphapalettelen) {
 		    rgba[i].a = alphapalette[i];
-		    if(alphapalette[i] == 0) {
-			/* if the color is fully transparent, it doesn't matter
-			   what it's rgb values are. furthermore, all Flash 
-			   players up to Flash 5 can't deal with anything beyond
-			   one transparent color with value (00,00,00,00). */
-			rgba[i].r = rgba[i].g = rgba[i].b = 0;
-		    }
+		    rgba[i].r = ((int)rgba[i].r*rgba[i].a)/255;
+		    rgba[i].g = ((int)rgba[i].g*rgba[i].a)/255;
+		    rgba[i].b = ((int)rgba[i].b*rgba[i].a)/255;
 		} else {
 		    rgba[i].a = 255;
 		}
