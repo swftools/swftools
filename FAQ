@@ -1,0 +1,61 @@
+1.) What's the cost of swftools?
+
+    SWFTools is free of charge, and is released under the GPL
+    (http://www.gnu.org/licenses/gpl.html).
+
+2.) How to compile/link swftools?
+
+    Download swftools-0.4.2.tar.gz and t1lib-1.3.1.tar.gz.
+
+    gzip -d swftools-0.4.2.tar.gz
+    gzip -d t1lib-1.3.1.tar.gz
+    tar -xf t1lib-1.3.1.tar
+    cd t1lib-1.3.1
+    ./configure
+    make 
+    make install
+    cd ..
+    tar -xf swftools-0.4.2.tar
+    cd swftools-0.4.2
+    ./configure
+    make 
+    make install
+
+3.) Is there a pdf2swf for Windows?
+
+    No. pdf2swf only runs on Unix platforms, like Linux, *BSD, MacOS X, etc.
+    There have been some successes reported on compling pdf2swf on Win32 using
+    Cygwin (http://sources.redhat.com/cygwin), however, there's no working version
+    yet.
+    If you want to use pdf2swf, find a Unix machine.
+
+4.) Is there *going to* be a pdf2swf for Windows?
+
+    Probably. As soon as we find the time to look into the Cygwin compile issues.
+
+5.) Can png2swf handle transparency?
+
+    Yes.
+
+6.) How to get Flash MX compression with SWFTools?
+
+    Most tools support the -z flag for outputting compressed SWF.
+    Furthermore you can compress/uncompress SWF files using swfcombine:
+
+    swfcombine -dz file.swf -o file_new.swf
+
+    compresses, while
+
+    swfcombine -d file.swf -o file_new.swf
+
+    decompresses.
+
+7.) Is there a mailing list for SWFTools?
+
+    There used to be, however it was shut down due to lack of traffic. The archive
+    is available as raw INBOX file on http://www.quiss.org/swftools/list.tar.gz.
+
+8.) avi2swf converts my avi files upside down!
+
+    Try using the -p (--flip) switch.
+

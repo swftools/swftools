@@ -55,6 +55,7 @@ ${name}/avi2swf/avi2swf.cc \
 ${name}/avi2swf/Makefile \
 ${name}/lib/example/buttontest.c \
 ${name}/swfs/simple_viewer.c \
+${name}/swfs/keyboard_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/modules/swfdump.c \
@@ -212,6 +213,7 @@ ${name}/INSTALL \
 ${name}/COPYING \
 ${name}/AUTHORS \
 ${name}/ChangeLog \
+${name}/FAQ \
 ${name}/release.in \
 ${name}/TODO \
 ${name}/pdf2swf/ttf2pt1/COPYRIGHT \
