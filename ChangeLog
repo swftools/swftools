@@ -121,3 +121,5 @@
 
 0.4.2:
 	* src/Makefile: OpenBSD fixes
+	* lib/lame: Removed *.o files from archive
+	* avi2swf: Implemented --flip option
