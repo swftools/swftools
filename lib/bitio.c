@@ -89,7 +89,7 @@ static int reader_memread(struct reader_t*reader, void* data, int len)
 	return len;
     } else {
 	memcpy(data, &mr->data[reader->pos], mr->length - reader->pos);
-	reader->pos = mr->length;
+	reader->pos += mr->length;
 	return mr->length - reader->pos;
     }
 }
