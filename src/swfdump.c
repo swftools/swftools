@@ -571,14 +571,84 @@ void handlePlaceObject(TAG*tag, char*prefix)
 
     handlePlaceObject2(tag2, prefix);
 }
+char stylebuf[256];
+char* fillstyle2str(FILLSTYLE*style)
+{
+    switch(style->type) {
+	case 0x00:
+	    sprintf(stylebuf, "SOLID %02x%02x%02x%02x", style->color.r, style->color.g, style->color.b, style->color.a);
+	    break;
+	case 0x10: case 0x12:
+	    sprintf(stylebuf, "GRADIENT (%d steps)", style->gradient.num);
+	    break;
+	case 0x40: case 0x41:
+	    /* TODO: display information about that bitmap */
+	    sprintf(stylebuf, "BITMAP %d", style->id_bitmap);
+	    break;
+	default:
+	    sprintf(stylebuf, "UNKNOWN[%02x]",style->type);
+    }
+    return stylebuf;
+}
+char* linestyle2str(LINESTYLE*style)
+{
+    sprintf(stylebuf, "%.2f %02x%02x%02x%02x", style->width/20.0, style->color.r, style->color.g, style->color.b, style->color.a);
+    return stylebuf;
+}
+
 void handleShape(TAG*tag, char*prefix)
 {
-    /*TODO*/ return;
-
     SHAPE2 shape;
-    tag->len = 0;
+    tag->pos = 0;
     tag->readBit = 0;
     swf_ParseDefineShape(tag, &shape);
+    SHAPELINE*line;
+
+    int t;
+    int max = shape.numlinestyles > shape.numfillstyles?shape.numlinestyles:shape.numfillstyles;
+
+    if(max) printf("%s | fillstyles(%02d)        linestyles(%02d)\n", 
+	    prefix,
+	    shape.numfillstyles,
+	    shape.numlinestyles
+	    );
+    else    printf("%s | (Neither line nor fill styles)\n", prefix);
+
+    for(t=0;t<max;t++) {
+	printf("%s", prefix);
+	if(t < shape.numfillstyles) {
+	    printf(" | %-2d) %-18.18s", t+1, fillstyle2str(&shape.fillstyles[t]));
+	} else {
+	    printf("                    ");
+	}
+	if(t < shape.numlinestyles) {
+	    printf("%-2d) %s", t+1, linestyle2str(&shape.linestyles[t]));
+	}
+	printf("\n");
+    }
+
+    printf("%s |\n", prefix);
+
+    line = shape.lines;
+    while(line) {
+	printf("%s | fill: %02d/%02d line:%02d - ",
+		prefix, 
+		line->fillstyle0,
+		line->fillstyle1,
+		line->linestyle);
+	if(line->type == moveTo) {
+	    printf("moveTo %.2f %.2f\n", line->x/20.0, line->y/20.0);
+	} else if(line->type == lineTo) {
+	    printf("lineTo %.2f %.2f\n", line->x/20.0, line->y/20.0);
+	} else if(line->type == splineTo) {
+	    printf("splineTo (%.2f %.2f) %.2f %.2f\n", 
+		    line->sx/20.0, line->sy/20.0,
+		    line->x/20.0, line->y/20.0
+		    );
+	}
+	line = line->next;
+    }
+    printf("%s |\n", prefix);
 }
     
 void fontcallback1(U16 id,U8 * name)
@@ -745,9 +815,9 @@ int main (int argc,char ** argv)
     if(html)
     {
 	char*fileversions[] = {"","1,0,0,0", "2,0,0,0","3,0,0,0","4,0,0,0",
-			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0"};
-	if(swf.fileVersion>8) {
-	    fprintf(stderr, "Fileversion>8\n");
+			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0","9,0,0,0"};
+	if(swf.fileVersion>9) {
+	    fprintf(stderr, "Fileversion>9\n");
 	    exit(1);
 	}
  	printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
@@ -931,6 +1001,8 @@ int main (int argc,char ** argv)
 	else if(tag->id == ST_PROTECT) {
 	    if(tag->len>0) {
 		printf(" %s\n", swf_GetString(tag));
+	    } else {
+		printf("\n");
 	    }
 	}
 	else if(tag->id == ST_DEFINEBITSLOSSLESS ||
