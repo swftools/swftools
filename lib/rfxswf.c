@@ -864,6 +864,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
   TAG * t;
   int frameCount=0;
   struct writer_t zwriter;
+  int fileSize = 0;
     
   if (!swf) return -1;
 
@@ -909,8 +910,9 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
       l = swf_GetTagLen(&t2)+8;
     }
 
+    fileSize = l+len;
     if(len) {// don't touch headers without tags
-	swf->fileSize = l+len;
+	swf->fileSize = fileSize;
 	swf->frameCount = frameCount;
     }
    
@@ -957,7 +959,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
       writer->finish(writer); //e.g. flush zlib buffers
     }
   }
-  return (int)swf->fileSize;
+  return (int)fileSize;
 }
 
 int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
