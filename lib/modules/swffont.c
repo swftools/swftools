@@ -123,7 +123,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     font->glyph2ascii = malloc(face->num_glyphs*sizeof(U16));
     memset(font->glyph2ascii, 0, face->num_glyphs*sizeof(U16));
     font->maxascii = 0;
-    memset(font->ascii2glyph, -1, font->maxascii*sizeof(int));
     font->glyph = malloc(face->num_glyphs*sizeof(SWFGLYPH));
     memset(font->glyph, 0, face->num_glyphs*sizeof(U16));
     if(FT_HAS_GLYPH_NAMES(face)) {
