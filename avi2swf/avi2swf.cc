@@ -26,17 +26,7 @@
 
 #include "../config.h"
 
-#ifdef HAVE_SIGNAL_H
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#include <signal.h>
-#define DO_SIGNALS
-#endif
-#endif
-
-extern "C" {
 #include "../lib/args.h"
-}
 #include "v2swf.h"
 #include "videoreader_avifile.hh"
 
@@ -188,9 +178,6 @@ static char*itoa(int a)
     return toabuf;
 }
 
-static int shutdown_avi2swf = 0;
-static int frameno = 0;
-
 #ifdef DO_SIGNALS
 pthread_t main_thread;
 static void sigterm(int sig)
@@ -295,7 +282,7 @@ int main (int argc,char ** argv)
 	    video.getimage(&video, buf);
 	    video.getsamples(&video, buf, (int)((video.rate/video.fps)*video.channels*2));
 	    if(!verbose) {
-		printf("\rSkipping frame %d", frameno);fflush(stdout);
+		printf("\rSkipping frame %d", video.frame);fflush(stdout);
 	    }
 	}
 	free(buf);
@@ -308,7 +295,7 @@ int main (int argc,char ** argv)
 	if(!l)
 	    break;
 	if(!verbose) {
-	    printf("\rConverting frame %d", frameno);fflush(stdout);
+	    printf("\rConverting frame %d", video.frame);fflush(stdout);
 	}
     }
     if(!verbose)

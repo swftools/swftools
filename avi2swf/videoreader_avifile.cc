@@ -19,13 +19,10 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
 #include "../config.h"
-
-extern "C" {
-#include "../lib/args.h"
-}
-#include "v2swf.h"
-#include "../lib/q.h"
 
 #undef HAVE_CONFIG_H
 
@@ -53,7 +50,20 @@ extern "C" {
    #define Bpp bpp
 #endif
 
+#ifdef HAVE_SIGNAL_H
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#include <signal.h>
+#define DO_SIGNALS
+#endif
+#endif
+
+#include "../lib/q.h"
 #include "videoreader.h"
+
+static int shutdown_avi2swf = 0;
+static int verbose = 0;
+static int flip = 0;
 
 typedef struct _videoreader_avifile_internal
 {
@@ -138,8 +148,7 @@ static int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
 	img = img2;
     }
 
-
-    frameno++;
+    v->frame++;
     i->frame++;
     unsigned char*data = img->Data();
     int bpp = img->Bpp();
@@ -199,13 +208,13 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     memset(i, 0, sizeof(videoreader_avifile_internal));
     memset(v, 0, sizeof(videoreader_t));
     v->getsamples = videoreader_avifile_getsamples;
-    v->getinfo = videoreader_avifile_getinfo;
     v->close = videoreader_avifile_close;
     v->eof = videoreader_avifile_eof;
     v->getimage = videoreader_avifile_getimage;
     v->getsamples = videoreader_avifile_getsamples;
     v->setparameter = videoreader_avifile_setparameter;
     v->internal = i;
+    v->frame = 0;
     
     i->do_video = 1;
     i->do_audio = 1;
