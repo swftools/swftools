@@ -441,7 +441,7 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 	char* charname = character;
 
 	if(!outline) {
-	 logf("Didn't find %s in current charset (%s)", 
+	 logf("<warning> Didn't find %s in current charset (%s)", 
 		 character,font->getName());
 	 return;
 	}
