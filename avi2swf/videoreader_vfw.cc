@@ -62,7 +62,7 @@ static bool videoreader_vfw_eof(videoreader_t* vr)
     return (i->video_pos >= i->video_end);
 }
 
-static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width, const int dest_height)
+static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width, const int dest_height, int flip)
 {
     UCHAR*data = (UCHAR*)(bi+1); // actual bitmap data starts after the header
 
@@ -89,9 +89,9 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     int linex = ((bytesperpixel/8)+3)&~3;
     memset(dest, 255, dest_width*dest_height*4);//pre-fill alpha channel
 
-    int starty = i->flip? 0 : dest_height-1;
-    int endy   = i->flip? dest_height-1 : 0;
-    int yinc   = i->flip? 1 : -1;
+    int starty = flip? 0 : dest_height-1;
+    int endy   = flip? dest_height-1 : 0;
+    int yinc   = flip? 1 : -1;
 
     if(bi->biBitCount==1) {
 	UCHAR*img = data;
@@ -175,7 +175,7 @@ static int videoreader_vfw_getimage(videoreader_t* vr, void*buffer)
 	return 0;
     }
     
-    if(!bitmap_to_rgba(bi, buffer, i->width, i->height)) {
+    if(!bitmap_to_rgba(bi, buffer, i->width, i->height, i->flip)) {
 	fprintf(stderr, "couldn't convert bitmap to RGBA.\n");
 	return 0;
     }
