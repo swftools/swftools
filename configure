@@ -735,7 +735,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2004-02-05-1504
+VERSION=0.5.0
 
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
