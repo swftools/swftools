@@ -140,6 +140,13 @@ PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs)
     bbox->bbox = box;
     return (PyObject*)bbox;
 }
+PyObject* f_BBox2(SRECT box)
+{
+    BBoxObject* bbox;
+    bbox = PyObject_New(BBoxObject, &BBoxClass);
+    bbox->bbox = box;
+    return (PyObject*)bbox;
+}
 static PyObject* bbox_getattr(PyObject * self, char* a)
 {
     BBoxObject*bbox = (BBoxObject*)self;

@@ -39,6 +39,7 @@ PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_ColorTransform(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_Gradient(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs);
+PyObject* f_BBox2(SRECT bbox);
 PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs);
 
 RGBA color_getRGBA(PyObject*self);
