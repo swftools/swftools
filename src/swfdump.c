@@ -233,23 +233,6 @@ void dumpButtonActions(TAG*tag, char*prefix)
     swf_DumpActions(actions, prefix);
 }
 
-#define ET_HASTEXT 32768
-#define ET_WORDWRAP 16384
-#define ET_MULTILINE 8192
-#define ET_PASSWORD 4096
-#define ET_READONLY 2048
-#define ET_HASTEXTCOLOR 1024
-#define ET_HASMAXLENGTH 512
-#define ET_HASFONT 256
-#define ET_X3 128
-#define ET_X2 64
-#define ET_HASLAYOUT 32
-#define ET_NOSELECT 16
-#define ET_BORDER 8
-#define ET_X1 4
-#define ET_X0 2
-#define ET_USEOUTLINES 1
-
 SWF swf;
 int fontnum = 0;
 SWFFONT**fonts;
@@ -339,7 +322,9 @@ void handleEditText(TAG*tag)
     int t;
     id = swf_GetU16(tag);
     swf_GetRect(tag,0);
+    
     //swf_ResetReadBits(tag);
+
     if (tag->readBit)  
     { tag->pos++; 
       tag->readBit = 0; 
@@ -365,15 +350,15 @@ void handleEditText(TAG*tag)
 	swf_GetU16(tag); //indent
 	swf_GetU16(tag); //leading
     }
-    printf(" variable \"%s\"", &tag->data[tag->pos]);
+    printf(" variable \"%s\" ", &tag->data[tag->pos]);
+    if(flags & ET_HTML) printf("(html)");
+    if(flags & ET_NOSELECT) printf("(noselect)");
+    if(flags & ET_PASSWORD) printf("(password)");
+    if(flags & ET_READONLY) printf("(readonly)");
 
-    if(flags & (ET_X1 | ET_X2 | ET_X3 | ET_X0))
+    if(flags & (ET_X1 | ET_X3 ))
     {
-	printf(" undefined flags: %d%d%d%d", 
-		(flags&ET_X0?1:0),
-		(flags&ET_X1?1:0),
-		(flags&ET_X2?1:0),
-		(flags&ET_X3?1:0));
+	printf(" undefined flags: %08x (%08x)", (flags&(ET_X1|ET_X3)), flags);
     }
     
     while(tag->data[tag->pos++]);
