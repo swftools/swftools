@@ -40,7 +40,6 @@ static struct options_t options[] = {
 {"o", "output"},
 {"r", "framerate"},
 {"s", "samplerate"},
-{"b", "bitrate"},
 {"d", "definesound"},
 {"l", "loop"},
 {"C", "cgi"},
@@ -163,7 +162,6 @@ void args_callback_usage(char *name)
     printf("-o , --output <filename>       Explicitly specify output file. (Otherwise, output will go to output.swf)\n");
     printf("-r , --framerate <fps>         Set file framerate to <fps> frames per second.\n");
     printf("-s , --samplerate <sps>        Set samplerate to <sps> frames per second (default: 11025).\n");
-    printf("-b , --bitrate bps             Set mp3 bitrate to <bps>.\n");
     printf("-d , --definesound             Generate a DefineSound tag instead of streaming sound.\n");
     printf("-l , --loop n                  (Only used with -d)\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout.\n");
