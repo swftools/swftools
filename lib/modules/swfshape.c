@@ -54,7 +54,7 @@ int swf_GetSimpleShape(TAG * t,SHAPE * * s) // without Linestyle/Fillstyle Recor
   if (FAILED(swf_ShapeNew(s))) return -1;
   sh = s[0];
 
-  swf_ResetBitmask(t); 
+  swf_ResetReadBits(t); 
   sh->bits.fill = (U16)swf_GetBits(t,4);
   sh->bits.line = (U16)swf_GetBits(t,4);
   bitl = 0; end = 0; pos = swf_GetTagPos(t);
@@ -144,13 +144,13 @@ int swf_SetSimpleShape(TAG * t,SHAPE * s) // without Linestyle/Fillstyle Record
   l = (s->bitlen+7)/8;
 
   if (t)
-  { swf_ResetBitcount(t);
+  { swf_ResetWriteBits(t);
 
     swf_SetBits(t,s->bits.fill,4);
     swf_SetBits(t,s->bits.line,4);
     swf_SetBlock(t,s->data,l);
 
-    swf_ResetBitcount(t);
+    swf_ResetWriteBits(t);
   }
   return l+1;
 }
@@ -231,7 +231,7 @@ int swf_ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits)
 
 int swf_SetShapeBits(TAG * t,SHAPE * s)
 { if ((!t)||(!s)) return -1;
-  swf_ResetBitcount(t);
+  swf_ResetWriteBits(t);
   swf_SetBits(t,s->bits.fill,4);
   swf_SetBits(t,s->bits.line,4);
   return 0;
@@ -439,7 +439,7 @@ int swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
 int swf_ShapeSetEnd(TAG * t)
 { if (!t) return -1;
   swf_SetBits(t,0,6);
-  swf_ResetBitcount(t);
+  swf_ResetWriteBits(t);
   return 0;
 }
 

@@ -70,18 +70,27 @@ typedef struct _CXFORM
 
 typedef struct _TAG             // NEVER access a Tag-Struct directly !
 { U16           id;
-  U32           len;
   U8 *          data;
+  U32           memsize;        // to minimize realloc() calls
 
-  int           frame;
+  union
+  { U32         len;            // for Set-Access
+    U32         dataWritePos;        
+  };
+
+  union
+  { U32         pos;            // for Get-Access
+    U32         dataReadPos;
+  };
+
+  int           frame;          // not really up-to-date
 
   struct _TAG * next;
   struct _TAG * prev;
 
-  U32           memsize;        // to minimize realloc() calls
-  U32           pos;            // for Get/Set-Access
-  U8            bitmask;        // for Bit-Manipulating Functions [read]
-  U8            bitcount;       // [write]
+  U8            readBit;        // for Bit-Manipulating Functions [read]
+  U8            writeBit;       // [write]
+  
 } TAG, * LPTAG;
 
 typedef struct _ActionTAG 
@@ -457,7 +466,7 @@ U8 swf_isAllowedSpriteTag(TAG * t);
 U16 swf_GetDefineID(TAG * t);
 U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
 U16 swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
-char* swf_GetTagName(TAG * t); //PLACEOBJECT2, FRAMELABEL
+char* swf_GetName(TAG * t); //PLACEOBJECT2, FRAMELABEL
 MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2);
 MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
                     int x0,int y0,int x1,int y1,int x2,int y2);

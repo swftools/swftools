@@ -267,7 +267,7 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
   int p,i,j;
     
   if ((!t)||(!f)) return -1;
-  swf_ResetBitcount(t);
+  swf_ResetWriteBits(t);
   swf_SetU16(t,f->id);
 
   p = 0; j = 0;
@@ -283,14 +283,14 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
     if (f->glyph[i].shape)
       swf_SetSimpleShape(t,f->glyph[i].shape);
   
-  swf_ResetBitcount(t);
+  swf_ResetWriteBits(t);
   return 0;
 }
 
 int swf_FontSetInfo(TAG * t,SWFFONT * f)
 { int l,i;
   if ((!t)||(!f)) return -1;
-  swf_ResetBitcount(t);
+  swf_ResetWriteBits(t);
   swf_SetU16(t,f->id);
   l = strlen(f->name); if (l>255) l = 255;
   swf_SetU8(t,l);
@@ -484,7 +484,7 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
     swf_SetBits(t,(((U32)font->glyph[s[i]].advance)*scale)/100,abits);
   }
 
-  swf_ResetBitcount(t);
+  swf_ResetWriteBits(t);
   return 0;
 }
 

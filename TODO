@@ -26,6 +26,5 @@ swfcombine:
 rfxswf-lib:
     
     * modules/swfshape doesn't allow changing to fillstyle 0
-    * DataPos should be named DataReadPos, DataSize DataWritePos.
-    * bitcount should be named BitWritePos, bitmask BitReadPos
+    
   

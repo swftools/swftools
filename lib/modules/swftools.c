@@ -223,7 +223,7 @@ U16 swf_GetDepth(TAG * t)
   return depth;
 }
 
-char* swf_GetTagName(TAG * t)
+char* swf_GetName(TAG * t)
 {
     char* name = 0;
     U32 oldTagPos;
@@ -248,7 +248,7 @@ char* swf_GetTagName(TAG * t)
             if(flags&PF_RATIO)
               swf_GetU16(t);
             if(flags&PF_NAME) {
-              swf_ResetBitmask(t);
+              swf_ResetReadBits(t);
               name = &t->data[swf_GetTagPos(t)];
             }
         }

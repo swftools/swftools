@@ -333,7 +333,7 @@ void putcharacters(TAG*tag)
                 }
                 if(charstorepos && pass==1)
                 {
-                    tag->bitcount = 0;
+                    tag->writeBit = 0; // Q&D
                     swf_SetBits(tag, 0, 1); // GLYPH Record
                     swf_SetBits(tag, charstorepos, 7); // number of glyphs
                     int s;
@@ -366,7 +366,7 @@ void putcharacters(TAG*tag)
                     if(lastfontid != chardata[t].fontid || lastsize != chardata[t].size)
                         newfont = &font;
 
-                    tag->bitcount = 0;
+                    tag->writeBit = 0; // Q&D
                     swf_TextSetInfoRecord(tag, newfont, chardata[t].size, newcolor, newx,newy);
                 }
 
