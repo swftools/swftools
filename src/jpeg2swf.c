@@ -240,6 +240,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality,
 	swf_GetMatrix(NULL, &m);
 	m.sx = 20 * 0x10000;
 	m.sy = 20 * 0x10000;
+	m.tx = -10;
+	m.ty = -10;
 	fs = swf_ShapeAddBitmapFillStyle(s, &m, id, 0);
 	swf_SetU16(t, id + 1);	// id
 	r.xmin = r.ymin = 0;
