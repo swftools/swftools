@@ -69,9 +69,7 @@ ${name}/lib/modules/swfsound.c \
 ${name}/lib/lame/fft.c \
 ${name}/lib/lame/util.h \
 ${name}/lib/lame/tables.h \
-${name}/lib/lame/fft.o \
 ${name}/lib/lame/lame.c \
-${name}/lib/lame/psymodel.o \
 ${name}/lib/lame/quantize.c \
 ${name}/lib/lame/encoder.c \
 ${name}/lib/lame/lameerror.h \
