@@ -548,18 +548,30 @@ void fontcallback2(U16 id,U8 * name)
   fontnum++;
 }
 
+static U8 printable(U8 a)
+{
+    if(a<32 || a==127) return '.';
+    else return a;
+}
 void hexdumpTag(TAG*tag, char* prefix)
 {
     int t;
+    char ascii[32];
     printf("                %s-=> ",prefix);
     for(t=0;t<tag->len;t++) {
 	printf("%02x ", tag->data[t]);
+	ascii[t&15] = printable(tag->data[t]);
 	if((t && ((t&15)==15)) || (t==tag->len-1))
 	{
+	    int s,p=((t-1)&15)+1;
+	    ascii[p] = 0;
+	    for(s=p;s<16;s++) {
+		printf("   ");
+	    }
 	    if(t==tag->len-1)
-		printf("\n");
+		printf(" %s\n", ascii);
 	    else
-		printf("\n                %s-=> ",prefix);
+		printf(" %s\n                %s-=> ",ascii,prefix);
 	}
     }
 }
@@ -749,10 +761,14 @@ int main (int argc,char ** argv)
         char myprefix[128];
         if(!name) {
             dumperror("Unknown tag:0x%03x", tag->id);
-            tag = tag->next;
-            continue;
+            //tag = tag->next;
+            //continue;
         }
-        printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
+	if(swf_TagGetName(tag)) {
+	    printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
+	} else {
+	    printf("[%03x] %9ld %sUNKNOWN TAG %03x", tag->id, tag->len, prefix, tag->id);
+	}
 	
 	if(tag->id == ST_FREECHARACTER) {
 	    U16 id = swf_GetU16(tag);
