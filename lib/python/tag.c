@@ -91,16 +91,6 @@ static void tag_dealloc(PyObject * self)
     PyObject_Del(self);
 }
 //----------------------------------------------------------------------------
-static PyObject* tag_setU8(PyObject * self, PyObject*other)
-{
-    return NULL;
-}
-//----------------------------------------------------------------------------
-static PyMethodDef common_tagfunctions[] =
-{{"setU8", tag_setU8, METH_VARARGS, "sets a byte to the tag data"},
- {NULL, NULL, 0, NULL}
-};
-
 static int fillTAG(PyObject*self) 
 {
     TagObject*tag = (TagObject*)self;
@@ -119,6 +109,22 @@ static int fillTAG(PyObject*self)
     }
     return 1;
 }
+//----------------------------------------------------------------------------
+static PyObject* tag_isShape(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    if(!PyArg_ParseTuple(args, ""))
+	return NULL;
+    if(!fillTAG((PyObject*)self))
+	return NULL;
+    return PyInt_FromLong(swf_isShapeTag(self->internals.tag));
+}
+//----------------------------------------------------------------------------
+static PyMethodDef common_tagfunctions[] =
+{{"isShape", tag_isShape, METH_VARARGS, "tests whether the tag is a shape tag"},
+ {NULL, NULL, 0, NULL}
+};
+
 static PyObject* tag_getattr(PyObject * self, char* a)
 {
     TagObject*tag = (TagObject*)self;
@@ -139,30 +145,37 @@ static PyObject* tag_getattr(PyObject * self, char* a)
     }
     if(tag->internals.getattr) {
 	PyObject* ret = tag->internals.getattr(&tag->internals, a);
-	if(ret)
-	    return ret;
+	if(ret) return ret;
     }
     
     /* search for a tag specific function */
     if(tag->internals.tagfunctions) {
 	mylog(" %08x(%d) tag_getattr: tag has specific functions\n", (int)self, self->ob_refcnt);
 	ret = Py_FindMethod(tag->internals.tagfunctions, self, a);
-	if(!ret) return ret;
+	if(ret) return ret;
+	PyErr_Clear();
 	ret = FindMethodMore(ret, common_tagfunctions, self, a);
 	mylog(" %08x(%d) tag_getattr %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
-	return ret;
+	if(ret) return ret;
+	PyErr_Clear();
     }
-   
+  
     ret = Py_FindMethod(common_tagfunctions, self, a);
 
     mylog(" %08x(%d) tag_getattr %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
     return ret;
 }
-static int tag_setattr(PyObject * self, char* a, PyObject * o)
+static int tag_setattr(PyObject * _self, char* a, PyObject * o)
 {
-    TagObject*tag = (TagObject*)self;
-    if(tag->internals.setattr) {
-	int ret = tag->internals.setattr(&tag->internals, a, o);
+    TagObject*self= (TagObject*)_self;
+    /* a setattr will almost certainly change the tag data,
+       so delete the tag */
+    if(self->internals.tag) {
+	swf_DeleteTag(self->internals.tag);
+	self->internals.tag = 0;
+    }
+    if(self->internals.setattr) {
+	int ret = self->internals.setattr(&self->internals, a, o);
 	return ret;
     }
     return 1;
@@ -300,7 +313,8 @@ int tag_print(PyObject * self, FILE * fi, int flags)
     mylog(" %08x(%d) tag_print flags=%08x\n", (int)self, self->ob_refcnt, flags);
     if(!fillTAG(self))
 	return -1;
-	fprintf(fi, "tag-%08x-%d-%s", (int)tag->internals.tag, tag->internals.tag->id, swf_TagGetName(tag->internals.tag));
+    //fprintf(fi, "tag-%08x-%d-%s", (int)tag->internals.tag, tag->internals.tag->id, swf_TagGetName(tag->internals.tag));
+    fprintf(fi, "%s", swf_TagGetName(tag->internals.tag));
     return 0;
 }
 //----------------------------------------------------------------------------
