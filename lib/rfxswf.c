@@ -1311,9 +1311,11 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
 
 #ifdef INSERT_RFX_TAG
 
-  if (swf->firstTag && swf_NextTag(swf->firstTag))
-    if (swf_GetTagID(swf_NextTag(swf->firstTag))!=ST_REFLEX)
+  if (swf->firstTag && swf->firstTag->next &&
+      (swf->firstTag->id != ST_REFLEX || swf->firstTag->next->id != ST_REFLEX)
+     ) {
       swf_SetBlock(swf_InsertTagBefore(swf, swf->firstTag,ST_REFLEX),"rfx",3);
+  }
 
 #endif // INSERT_RFX_TAG
 
@@ -1499,6 +1501,7 @@ SWF* swf_CopySWF(SWF*swf)
         ntag = swf_CopyTag(ntag, tag);
         if(!nswf->firstTag)
             nswf->firstTag = ntag;
+        tag = tag->next;
     }
     return nswf;
 }
