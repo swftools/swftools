@@ -188,6 +188,7 @@ void swf_OptimizeTagOrder(SWF*swf);
 // basic routines:
     
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
+TAG * swf_InsertTagBefore(SWF*swf, TAG * before,U16 id);     // like InsertTag, but insert tag before argument
 int   swf_DeleteTag(TAG * t);
 
 void  swf_ClearTag(TAG * t);                //frees tag data

@@ -640,6 +640,30 @@ TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
   return t;
 }
 
+TAG * swf_InsertTagBefore(SWF* swf, TAG * before,U16 id)     // updates frames, if nescessary
+{ TAG * t;
+
+  t = (TAG *)malloc(sizeof(TAG));
+  if (t)
+  { memset(t,0x00,sizeof(TAG));
+    t->id = id;
+    
+    if (before)
+    { t->frame = before->frame;
+      t->next  = before;
+      t->prev  = before->prev;
+      before->prev = t;
+      if (t->prev) t->prev->next = t;
+      
+      if (id==ST_SHOWFRAME) swf_UpdateFrame(t->next,+1);
+    }
+  }
+  if(swf && swf->firstTag == before) {
+    swf->firstTag = t;
+  }
+  return t;
+}
+
 void swf_ClearTag(TAG * t)
 {
   if (t->data) free(t->data);
@@ -1119,6 +1143,9 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
       swf_SetU16(&t2, swf->frameCount);
       l = swf_GetTagLen(&t2)+8;
     }
+    if(swf->compressed == 8) {
+      l -= 8;
+    }
 
     fileSize = l+len;
     if(len) {// don't touch headers without tags
@@ -1148,6 +1175,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
 	writer = &zwriter;
       }
     }
+
     swf_SetRect(&t1,&swf->movieSize);
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
