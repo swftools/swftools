@@ -820,12 +820,14 @@ int args_callback_option(char *arg, char *val)
 
 struct options_t options[] = 
 { 
+{"h", "help"},
 {"o", "output"},
 {"r", "rate"},
 {"v", "verbose"},
 {"X", "width"},
 {"Y", "height"},
 {"V", "version"},
+{0,0}
 };
 
 int args_callback_longoption(char *name, char *val)
