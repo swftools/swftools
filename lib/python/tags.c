@@ -530,7 +530,7 @@ static int imagetag_getHeight(PyObject* self)
 }
 static PyObject* f_DefineImage(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    static char *kwlist[] = {"image"};
+    static char *kwlist[] = {"image", NULL};
     PyObject*image = 0;
     PyObject*tag = tag_new(&image_tag);
 
@@ -568,7 +568,7 @@ staticforward tag_internals_t shape_tag;
 
 typedef struct _shape_internal
 {
-    SHAPE2*shape;
+    SHAPE2*shape2;
 } shape_internal_t;
 staticforward tag_internals_t shape_tag;
 
@@ -577,31 +577,29 @@ static int shape_fillTAG(tag_internals_t*self)
     shape_internal_t*ti = (shape_internal_t*)self->data;
     self->tag= swf_InsertTag(0, ST_DEFINESHAPE3);
     swf_SetU16(self->tag, /*ID*/0);
-    swf_SetShape2(self->tag, ti->shape);
+    swf_SetShape2(self->tag, ti->shape2);
     return 1;
 }
 static void shape_dealloc(tag_internals_t*self)
 {
     shape_internal_t*pi = (shape_internal_t*)self->data;
-    if(pi->shape) {
-	swf_Shape2Free(pi->shape);
-	pi->shape = 0;
+    if(pi->shape2) {
+	swf_Shape2Free(pi->shape2);
+	pi->shape2 = 0;
     }
 }
 static PyObject* f_DefineImageShape(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    static char *kwlist[] = {"image"};
-    PyObject*shape = 0;
-    PyObject*tag = tag_new(&shape_tag);
+    static char *kwlist[] = {"image", NULL};
     PyObject*image = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist, &TagClass, &image))
 	return NULL;
     
-    tag = tag_new(&shape_tag);
+    PyObject*tag = tag_new(&shape_tag);
     tag_internals_t* itag = tag_getinternals(tag);
     shape_internal_t*ti = (shape_internal_t*)itag->data;
-    ti->shape = 0; /*HACK*/
+    ti->shape2 = 0; /*HACK*/
 
     int width = imagetag_getWidth(image);
     int height = imagetag_getHeight(image);
@@ -611,6 +609,99 @@ static PyObject* f_DefineImageShape(PyObject* self, PyObject* args, PyObject* kw
     swf_ShapeSetBitmapRect(itag->tag, id, width, height);
     return (PyObject*)tag;
 }
+
+/* TODO: move to lib/ */
+SHAPE2*swf_StringToShape2(char*s,FILLSTYLE*f, LINESTYLE*l)
+{
+    drawer_t draw;
+    swf_Shape11DrawerInit(&draw, 0);
+    draw_string(&draw, s);
+    draw.finish(&draw);
+    SHAPE*s1 =  swf_ShapeDrawerToShape(&draw);
+    SRECT r = swf_ShapeDrawerGetBBox(&draw);
+    RGBA col;col.r=col.g=col.b=128;col.a=255;
+    if(l) 
+	swf_ShapeAddLineStyle(s1, 1, &col);
+    if(f)
+	swf_ShapeAddSolidFillStyle(s1, &col);
+    draw.dealloc(&draw);
+    SHAPE2*shape2 = swf_ShapeToShape2(s1);
+    swf_ShapeFree(s1);
+    shape2->bbox = malloc(sizeof(SRECT));
+    *(shape2->bbox) = r;
+    if(f && shape2->numfillstyles)
+	shape2->fillstyles[0] = *f;
+    if(l && shape2->numlinestyles)
+	shape2->linestyles[0] = *l;
+    return shape2;
+}
+
+static PyObject* f_DefineShape(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"s", "fill", "line", NULL};
+    char*s = 0;
+    PyObject*fillstyle=0,*linestyle=0;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OO", kwlist, &s,&fillstyle,&linestyle))
+	return NULL;
+
+    PyObject*tag = tag_new(&shape_tag);
+    tag_internals_t* itag = tag_getinternals(tag);
+    shape_internal_t*ti = (shape_internal_t*)itag->data;
+    
+    FILLSTYLE _f,*f=0;
+    LINESTYLE _l,*l=0;
+
+    if(fillstyle) {
+	f = &_f;
+	if(PY_CHECK_TYPE(fillstyle, &ColorClass)) {
+	    f->type = /*FILL_SOLID*/ 0;
+	    f->color = color_getRGBA(fillstyle);
+	} else {
+	    return PY_ERROR("Invalid Fillstyle");
+	}
+    }
+
+    if(linestyle) {
+	l = &_l;
+	if(PyTuple_Check(linestyle) && PyTuple_GET_SIZE(linestyle)==2) {
+	    float f = 0.0;
+	    PyObject*color = 0;
+	    if(!PyArg_ParseTuple(linestyle, "fO!", &f, &ColorClass, &color))
+		return 0;
+
+	    l->width = (int)(f*20);
+	    l->color = color_getRGBA(color);
+	} else {
+	    return PY_ERROR("Invalid Linestyle");
+	}
+    }
+    ti->shape2 = swf_StringToShape2(s,f,l);
+
+    itag->tag = 0;
+    
+    return (PyObject*)tag;
+}
+static PyObject* shape_getfillstyles(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    shape_internal_t*fi = (shape_internal_t*)itag->data;
+    int num = fi->shape2->numfillstyles;
+    return Py_BuildValue("i", num);
+}
+static PyObject* shape_getlinestyles(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    shape_internal_t*fi = (shape_internal_t*)itag->data;
+    int num = fi->shape2->numlinestyles;
+    return Py_BuildValue("i", num);
+}
+static PyMethodDef shape_methods[] = 
+{{"fillstyles", shape_getfillstyles, METH_VARARGS, "get's the number of fillstyles"},
+ {"linestyles", shape_getlinestyles, METH_VARARGS, "get's the number of linestyles"},
+ {NULL, NULL, 0, NULL}
+};
+
 static tag_internals_t shape_tag =
 {
     parse: 0,
@@ -618,7 +709,7 @@ static tag_internals_t shape_tag =
     dealloc: shape_dealloc,
     getattr: 0, 
     setattr: 0,
-    tagfunctions: 0,
+    tagfunctions: shape_methods,
     datasize: sizeof(shape_internal_t),
 };
 //----------------------------------------------------------------------------
@@ -924,6 +1015,7 @@ static PyMethodDef TagMethods[] =
     {"VideoStream", (PyCFunction)f_DefineVideoStream, METH_KEYWORDS, "Create a Videostream."},
     {"Image", (PyCFunction)f_DefineImage, METH_KEYWORDS, "Create an SWF Image Tag."},
     {"ImageShape", (PyCFunction)f_DefineImageShape, METH_KEYWORDS, "Create an SWF Image Shape Tag."},
+    {"Shape", (PyCFunction)f_DefineShape, METH_KEYWORDS, "Create an SWF Shape Tag."},
     {"ShowFrame", (PyCFunction)f_ShowFrame, METH_KEYWORDS, "Create an SWF Show Frame Tag."},
     {"Sprite", (PyCFunction)f_Sprite, METH_KEYWORDS, "Create an SWF Sprite Tag."},
     {NULL, NULL, 0, NULL}
@@ -945,6 +1037,9 @@ PyMethodDef* tags_getMethods()
     register_tag(ST_DEFINEBITSJPEG3,&image_tag);
     register_tag(ST_DEFINEBITSLOSSLESS,&image_tag);
     register_tag(ST_DEFINEBITSLOSSLESS2,&image_tag);
+    register_tag(ST_DEFINESHAPE,&shape_tag);
+    register_tag(ST_DEFINESHAPE2,&shape_tag);
+    register_tag(ST_DEFINESHAPE3,&shape_tag);
     register_tag(ST_SHOWFRAME,&showframe_tag);
     register_tag(ST_DEFINEVIDEOSTREAM,&videostream_tag);
     register_tag(ST_VIDEOFRAME,&videoframe_tag);
