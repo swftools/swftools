@@ -53,6 +53,16 @@ dnl AC_PATH_XTRA
  AC_HEADER_STDC
  AC_CHECK_HEADERS(math.h fcntl.h limits.h malloc.h unistd.h memory.h zlib.h jpeglib.h t1lib.h)
 
+if test "$ac_cv_header_jpeglib_h" != yes; then
+ DISABLEPDF2SWF=true;
+ DISABLEJPEG2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} jpeglib.h"
+fi
+if test "$ac_cv_header_t1lib_h" != yes; then
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} t1lib.h"
+fi
+
 AC_SUBST(HAVE_UNISTD_H)
 AC_SUBST(EXEEXT)
 
@@ -75,9 +85,10 @@ dnl Checks for library functions.
  AC_CHECK_FUNCS(getcwd putenv socket strcspn strdup strerror strstr)
 
 
+
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
-  echo "The following libraries are missing: " ${MISSINGLIBS}
+  echo "The following header/libraries are missing: " ${MISSINGLIBS}
   echo "Disabling pdf2swf tool..."
   rm pdf2swf/Makefile
   echo all: > pdf2swf/Makefile
