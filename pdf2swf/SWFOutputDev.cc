@@ -1279,8 +1279,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<notice> Collection: %s", c.getCString());
     }*/
 
-    if (font->getType() == fontType1C ||
-	font->getType() == fontCIDType0C) {
+    if (font->getType() == fontType1C) {
       if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
 	fclose(f);
 	msg("<error> Couldn't read embedded font file");
