@@ -96,14 +96,14 @@ int args_callback_longoption(char*name,char*val)
 void args_callback_usage(char*name)
 {    
     printf("Usage: %s [-at] file.swf\n", name);
-    printf("\t-h , --help\t\t\t Print help and exit\n");
-    printf("\t-e , --html\t\t\t Create a html embedding the file (simple, but useful)\n");
-    printf("\t-X , --width\t\t\t Prints out a string of the form \"-X width\"\n");
-    printf("\t-Y , --height\t\t\t Prints out a string of the form \"-Y height\"\n");
-    printf("\t-r , --rate\t\t\t Prints out a string of the form \"-r rate\"\n");
-    printf("\t-a , --action\t\t\t Disassemble action tags\n");
-    printf("\t-t , --text\t\t\t Show text data\n");
-    printf("\t-V , --version\t\t\t Print program version and exit\n");
+    printf("\t-h , --help\t\t Print help and exit\n");
+    printf("\t-e , --html\t\t Create a html embedding the file (simple, but useful)\n");
+    printf("\t-X , --width\t\t Prints out a string of the form \"-X width\"\n");
+    printf("\t-Y , --height\t\t Prints out a string of the form \"-Y height\"\n");
+    printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");
+    printf("\t-a , --action\t\t Disassemble action tags\n");
+    printf("\t-t , --text\t\t Show text data\n");
+    printf("\t-V , --version\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
 {
@@ -308,30 +308,38 @@ void handlePlaceObject2(TAG*tag, char*prefix)
     }
     if(flags&64) swf_GetU16(tag); //clip
     if(flags&128) {
-	U8 handlerflags;
-	swf_GetU16(tag);
-	handlerflags = swf_GetU16(tag);
-	printf("%s global flags:%04x ",prefix, handlerflags);
-	printhandlerflags(handlerflags);
+      if (action) {
+	U16 globalflags;
 	printf("\n");
-	while(1) {
+	swf_GetU16(tag);
+	globalflags = swf_GetU16(tag);
+//	printf("%s global flags:%04x ",prefix, handlerflags);
+//	printhandlerflags(globalflags);
+//	printf("\n");
+	while(1)  {
 	    int length;
 	    int t;
+	    U16 handlerflags;
 	    ActionTAG*a;
 	    handlerflags = swf_GetU16(tag);
 	    if(!handlerflags)
 		break;
-	    printf("%s flags:%04x ",prefix, handlerflags);
+	    globalflags &= ~handlerflags;
+	    printf("%s flags %04x ",prefix, handlerflags);
 	    printhandlerflags(handlerflags);
 
-	    printf("\n");
 	    length = swf_GetU32(tag);
-	    printf("%s %d bytes actioncode\n",prefix);
+	    printf(", %d bytes actioncode\n",length);
 	    a = swf_ActionGet(tag);
 	    swf_DumpActions(a,prefix);
 	    swf_ActionFree(a);
 	}
+	if(globalflags) // should go to sterr.
+	    printf("%s ERROR: unsatisfied handlerflags: %02x", globalflags);
+    } else {
+      printf(" has action code\n");
     }
+    } else printf("\n");
 }
     
 void fontcallback1(U16 id,U8 * name)
@@ -494,7 +502,20 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_SHOWFRAME) {
 	    char*label = issprite?spriteframelabel:framelabel;
-	    printf(" %d", issprite?spriteframe:mainframe);
+	    int frame = issprite?spriteframe:mainframe;
+	    int nframe = frame;
+	    if(!label) {
+		while(tag->next && tag->next->id == ST_SHOWFRAME && tag->next->len == 0) {
+		    tag = tag->next;
+		    if(issprite) spriteframe++;
+		    else mainframe++;
+		    nframe++;
+		}
+	    }
+	    if(nframe == frame)
+		printf(" %d", frame);
+	    else
+		printf(" %d-%d", frame, nframe);
 	    if(label)
 		printf(" (label \"%s\")", label);
 	    if(issprite) {spriteframe++; spriteframelabel = 0;}
@@ -510,6 +531,8 @@ int main (int argc,char ** argv)
 		handleText(tag);
 	    else
 		printf("\n");
+	}
+	else if(tag->id == ST_PLACEOBJECT2) {
 	}
 	else {
 	    printf("\n");
@@ -544,8 +567,10 @@ int main (int argc,char ** argv)
 	    dumpButton2Actions(tag, myprefix);
 	}
 	else if(tag->id == ST_PLACEOBJECT2) {
-	    if((*(U8*)tag->data)&0x80) 
-	    handlePlaceObject2(tag, myprefix);
+	    if((*(U8*)tag->data)&0x80)
+		handlePlaceObject2(tag, myprefix);
+	    else
+		printf("\n");
 	}
         tag = tag->next;
     }
