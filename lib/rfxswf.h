@@ -105,7 +105,6 @@ int   DeleteTag(LPTAG t);
 
 void  SetTagPos(LPTAG t,U32 pos);       // resets Bitcount
 U32   GetTagPos(LPTAG t);
-U8*   GetTagPosPtr(LPTAG t);
 
 LPTAG NextTag(LPTAG t);
 LPTAG PrevTag(LPTAG t);
@@ -113,6 +112,7 @@ LPTAG PrevTag(LPTAG t);
 int   GetFrameNo(LPTAG t);
 U16   GetTagID(LPTAG t);
 U32   GetDataSize(LPTAG t);
+U8*   GetDataSizePtr(LPTAG t);
 
 U32   GetBits(LPTAG t,int nbits);
 S32   GetSBits(LPTAG t,int nbits);
