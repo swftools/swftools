@@ -235,6 +235,8 @@ public:
   int t1id;
   int jpeginfo; // did we write "Page contains jpegs" yet?
   int pbminfo; // did we write "Page contains jpegs" yet?
+
+  GfxState *laststate;
 };
 
 char mybuf[1024];
@@ -619,6 +621,7 @@ void SWFOutputDev::endString(GfxState *state)
 void SWFOutputDev::startPage(int pageNum, GfxState *state) 
 {
   double x1,y1,x2,y2;
+  laststate = state;
   logf("<debug> startPage %d\n", pageNum);
   logf("<notice> processing page %d", pageNum);
 
@@ -645,16 +648,16 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     rgb.r = 0;
     rgb.g = 0;
     rgb.b = 1;
-    cvtu2d(this, x1, y1, &x, &y);
+    cvtUserToDev(x1, y1, &x, &y);
     points[0].x = points[4].x = (int)x;
     points[0].y = points[4].y = (int)y;
-    cvtu2d(this, x2, y1, &x, &y);
+    cvtUserToDev(x2, y1, &x, &y);
     points[1].x = (int)x;
     points[1].y = (int)y;
-    cvtu2d(this, x2, y2, &x, &y);
+    cvtUserToDev(x2, y2, &x, &y);
     points[2].x = (int)x;
     points[2].y = (int)y;
-    cvtu2d(this, x1, y2, &x, &y);
+    cvtUserToDev(x1, y2, &x, &y);
     points[3].x = (int)x;
     points[3].y = (int)y;
 
@@ -759,7 +762,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     {
 	swfoutput_linktourl(&output, url, points);
     }
-    logf("<notice> \"%s\" link to \"%s\" (%d)\n", type, s, page);
+    logf("<verbose> \"%s\" link to \"%s\" (%d)\n", type, s, page);
   }
 }
 
