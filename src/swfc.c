@@ -1178,7 +1178,7 @@ void s_sound(char*name, char*filename)
     U16*samples;
     int numsamples;
     int t;
-    int blocksize = 576;
+    int blocksize = 1152;
 
     if(!readWAV(filename, &wav)) {
 	warning("Couldn't read wav file \"%s\"", filename);
