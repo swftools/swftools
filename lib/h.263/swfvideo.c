@@ -24,13 +24,13 @@
 #include <assert.h>
 #include <math.h>
 #include "../rfxswf.h"
-#include "h263tables.c"
+#include "h263tables.h"
+#include "dct.h"
 
 /* TODO:
-   - get rid of _vxy, _i endings
-   - use prepare* / write* in encode_blockI
+   - use prepare* / write* in encode_IFrame_block
+   - check whether mvd steps of 2 lead to (much) smaller results
 */ 
-
 
 #ifdef MAIN
 U16 totalframes = 0;
@@ -66,6 +66,11 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
 
     memset(stream->oldpic, 0, width*height*sizeof(YUV));
     memset(stream->current, 0, width*height*sizeof(YUV));
+
+    assert((stream->width&15) == 0);
+    assert((stream->height&15) == 0);
+    assert((stream->bbx*16) == stream->width);
+    assert((stream->bby*16) == stream->height);
 }
 void swf_VideoStreamClear(VIDEOSTREAM*stream)
 {
@@ -85,188 +90,6 @@ typedef struct _block_t
     int v[64];
 } block_t;
 
-static int zigzagtable[64] = {
-    0, 1, 5, 6, 14, 15, 27, 28,
-    2, 4, 7, 13, 16, 26, 29, 42,
-    3, 8, 12, 17, 25, 30, 41, 43,
-    9, 11, 18, 24, 31, 40, 44, 53,
-    10, 19, 23, 32, 39, 45, 52, 54,
-    20, 22, 33, 38, 46, 51, 55, 60,
-    21, 34, 37, 47, 50, 56, 59, 61,
-    35, 36, 48, 49, 57, 58, 62, 63};
-
-static void zigzag(int*src)
-{
-    int tmp[64];
-    int t;
-    for(t=0;t<64;t++) {
-	tmp[zigzagtable[t]] = src[t];
-    }
-    memcpy(src, tmp, sizeof(int)*64);
-}
-
-#define PI 3.14159265358979
-#define SQRT2 1.414214
-#define RSQRT2 (1.0/1.414214)
-
-static double table[8][8] =
-{
-{0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548},
-{0.980785280403230,0.831469612302545,0.555570233019602,0.195090322016128,-0.195090322016128,-0.555570233019602,-0.831469612302545,-0.980785280403230},
-{0.923879532511287,0.382683432365090,-0.382683432365090,-0.923879532511287,-0.923879532511287,-0.382683432365090,0.382683432365090,0.923879532511287},
-{0.831469612302545,-0.195090322016128,-0.980785280403230,-0.555570233019602,0.555570233019602,0.980785280403230,0.195090322016129,-0.831469612302545},
-{0.707106781186548,-0.707106781186547,-0.707106781186548,0.707106781186547,0.707106781186548,-0.707106781186547,-0.707106781186547,0.707106781186547},
-{0.555570233019602,-0.980785280403230,0.195090322016128,0.831469612302545,-0.831469612302545,-0.195090322016128,0.980785280403231,-0.555570233019602},
-{0.382683432365090,-0.923879532511287,0.923879532511287,-0.382683432365090,-0.382683432365091,0.923879532511287,-0.923879532511286,0.382683432365090},
-{0.195090322016128,-0.555570233019602,0.831469612302545,-0.980785280403231,0.980785280403230,-0.831469612302545,0.555570233019602,-0.195090322016129}
-};
-
-static void dct(int*src)
-{
-    double tmp[64];
-    int x,y,u,v,t;
-
-    for(v=0;v<8;v++)
-    for(u=0;u<8;u++)
-    {
-	double c = 0;
-	for(x=0;x<8;x++)
-	{
-	    c+=table[u][x]*src[v*8+x];
-	}
-	tmp[v*8+u] = c;
-    }
-    for(u=0;u<8;u++)
-    for(v=0;v<8;v++)
-    {
-	double c = 0;
-	for(y=0;y<8;y++)
-	{
-	    c+=table[v][y]*tmp[y*8+u];
-	}
-	src[v*8+u] = (int)(c*0.25+0.5);
-    }
-}
-
-static void idct(int*src)
-{
-    double tmp[64];
-    int x,y,u,v;
-    for(y=0;y<8;y++)
-    for(x=0;x<8;x++)
-    {
-	double c = 0;
-	for(u=0;u<8;u++)
-	{
-	    c+=table[u][x]*src[y*8+u];
-	}
-	tmp[y*8+x] = c;
-    }
-    for(y=0;y<8;y++)
-    for(x=0;x<8;x++)
-    {
-	double c = 0;
-	for(v=0;v<8;v++)
-	{
-	    c+=table[v][y]*tmp[v*8+x];
-	}
-	src[y*8+x] = (int)(c*0.25+0.5);
-    }
-}
-
-static double c[8] = {1.0,
-0.980785280403230, // cos(Pi*1/16), sin(Pi*7/16)
-0.923879532511287, // cos(Pi*2/16), sin(Pi*6/16)
-0.831469612302545, // cos(Pi*3/16), sin(Pi*5/16)
-0.707106781186548, // cos(Pi*4/16), sin(Pi*4/16), 1/sqrt(2)
-0.555570233019602, // cos(Pi*5/16), sin(Pi*3/16)
-0.382683432365090, // cos(Pi*6/16), sin(Pi*2/16)
-0.195090322016128 // cos(Pi*7/16), sin(Pi*1/16)
-};
-
-static double cc[8];
-static int ccquant = -1;
-
-static void preparequant(int quant)
-{
-    if(ccquant == quant)
-	return;
-    cc[0] = c[0]/(quant*2*4);
-    cc[1] = c[1]/(quant*2*4);
-    cc[2] = c[2]/(quant*2*4);
-    cc[3] = c[3]/(quant*2*4);
-    cc[4] = c[4]/(quant*2*4);
-    cc[5] = c[5]/(quant*2*4);
-    cc[6] = c[6]/(quant*2*4);
-    cc[7] = c[7]/(quant*2*4);
-    ccquant = quant;
-}
-
-inline static void innerdct(double*a,double*b, double*c)
-{
-    // c1*c7*2 = c6
-    // c2*c6*2 = c4
-    // c3*c5*2 = c2
-    // c4*c4*2 = 1
-
-     //{  1,  3,  5,  7, -7, -5, -3, -1},
-     //{  3, -7, -1, -5,  5,  1,  7, -3},
-     //{  5, -1,  7,  3, -3, -7,  1, -5},
-     //{  7, -5,  3, -1,  1, -3,  5, -7}
-    double b0,b1,b2,b3,b4,b5;
-    b2 = (a[0]+a[7]);
-    b3 = (a[1]+a[6]);
-    b4 = (a[2]+a[5]);
-    b5 = (a[3]+a[4]);
-
-    b0 = (b2+b5)*c[4];
-    b1 = (b3+b4)*c[4];
-    b[0*8] = b0 + b1;
-    b[4*8] = b0 - b1;
-    b[2*8] = (b2-b5)*c[2] + (b3-b4)*c[6];
-    b[6*8] = (b2-b5)*c[6] + (b4-b3)*c[2];
-
-    b0 = (a[0]-a[7]);
-    b1 = (a[1]-a[6]);
-    b2 = (a[2]-a[5]);
-    b3 = (a[3]-a[4]);
-
-    b[1*8] = b0*c[1] + b1*c[3] + b2*c[5] + b3*c[7];
-    b[3*8] = b0*c[3] - b1*c[7] - b2*c[1] - b3*c[5];
-    b[5*8] = b0*c[5] - b1*c[1] + b2*c[7] + b3*c[3];
-    b[7*8] = b0*c[7] - b1*c[5] + b2*c[3] - b3*c[1];
-}
-
-static void dct2(int*src, int*dest)
-{
-    double tmp[64], tmp2[64];
-    double*p;
-    int u,x,v,t;
-
-    for(t=0;t<64;t++)
-	tmp2[t] = src[t];
-
-    for(v=0;v<8;v++)
-    {
-	double* a=&tmp2[v*8];
-	double* b=&tmp[v];
-	innerdct(a,b,c);
-    }
-    for(v=0;v<8;v++)
-    {
-	double* a=&tmp[v*8];
-	double* b=&tmp2[v];
-	innerdct(a,b,cc);
-    }
-    for(t=0;t<64;t++) {
-	int v = (int)(tmp2[t]);
-	if(v>127) v=127;
-	if(v<-127) v=-127;
-	dest[zigzagtable[t]] = v;
-    }
-}
-
-
 static inline int truncate256(int a)
 {
     if(a>255) return 255;
@@ -278,8 +101,7 @@ static void getregion(block_t* bb, YUV*pic, int posx, int posy, int linex)
 {
     YUV*p1;
     YUV*p2;
-    int y1=0, y2=0, y3=0, y4=0;
-    int u=0,v=0;
+    int i=0;
     int x,y;
     posx*=16;
     posy*=16;
@@ -287,18 +109,20 @@ static void getregion(block_t* bb, YUV*pic, int posx, int posy, int linex)
     p2 = p1;
     for(y=0;y<8;y++) {
 	for(x=0;x<8;x++) {
-	    bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
-	    bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
-	    bb->y1[y1++] = p1[x].y;
-	    bb->y2[y2++] = p1[x+8].y;
-	    bb->y3[y3++] = p1[linex*8+x].y;
-	    bb->y4[y4++] = p1[linex*8+x+8].y;
+	    bb->u[i] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
+	    bb->v[i] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
+	    bb->y1[i] = p1[x].y;
+	    bb->y2[i] = p1[x+8].y;
+	    bb->y3[i] = p1[linex*8+x].y;
+	    bb->y4[i] = p1[linex*8+x+8].y;
+	    i++;
 	}
 	p1+=linex;
 	p2+=linex*2;
     }
 }
 
+/* This function is pretty complex. Let's hope it works correctly */
 static void getmvdregion(block_t* bb, YUV*pic, int posx, int posy, int mvdx, int mvdy, int linex)
 {
     YUV*p1;
@@ -307,7 +131,7 @@ static void getmvdregion(block_t* bb, YUV*pic, int posx, int posy, int mvdx, int
     int x,y;
     int yhp = 0, uvhp=0;
     int uvposx, uvposy;
-    posx = posx*16 + ((mvdx&~1)/2);
+    posx = posx*16 + ((mvdx&~1)/2); //works also for negative mvdx (unlike mvdx/2)
     posy = posy*16 + ((mvdy&~1)/2);
     p1 = &pic[posy*linex+posx];
     p2 = &pic[(posy&~1)*linex+(posx&~1)];
@@ -440,8 +264,8 @@ static void rgb2yuv(YUV*dest, RGBA*src, int dlinex, int slinex, int width, int h
 
 static void copyregion(VIDEOSTREAM*s, YUV*dest, YUV*src, int bx, int by)
 {
-    YUV*p1 = &src[by*s->linex*16+bx*16];
-    YUV*p2 = &dest[by*s->linex*16+bx*16];
+    YUV*p1 = &dest[by*s->linex*16+bx*16];
+    YUV*p2 = &src[by*s->linex*16+bx*16];
     int y;
     for(y=0;y<16;y++) {
 	memcpy(p1, p2, 16*sizeof(YUV));
@@ -464,7 +288,7 @@ static void yuv2rgb(RGBA*dest, YUV*src, int linex, int width, int height)
 	}
     }
 }
-static void copyblock(VIDEOSTREAM*s, YUV*dest, block_t*b, int bx, int by)
+static void copy_block_pic(VIDEOSTREAM*s, YUV*dest, block_t*b, int bx, int by)
 {
     YUV*p1 = &dest[(by*16)*s->linex+bx*16];
     YUV*p2 = &dest[(by*16+8)*s->linex+bx*16];
@@ -490,11 +314,11 @@ static void copyblock(VIDEOSTREAM*s, YUV*dest, block_t*b, int bx, int by)
     }
 }
 
-static int compare_pic_oldpic(VIDEOSTREAM*s, int bx, int by)
+static int compare_pic_pic(VIDEOSTREAM*s, YUV*pp1, YUV*pp2, int bx, int by)
 {
     int linex = s->width;
-    YUV*p1 = &s->current[by*linex*16+bx*16];
-    YUV*p2 = &s->oldpic[by*linex*16+bx*16];
+    YUV*p1 = &pp1[by*linex*16+bx*16];
+    YUV*p2 = &pp2[by*linex*16+bx*16];
     int diffy=0, diffuv = 0;
     int x,y;
     for(y=0;y<16;y++) {
@@ -513,19 +337,20 @@ static int compare_pic_oldpic(VIDEOSTREAM*s, int bx, int by)
     return diffy + diffuv/4;
 }
 
-static int compare_pic_block(VIDEOSTREAM*s, block_t* b, int bx, int by)
+static int compare_pic_block(VIDEOSTREAM*s, block_t* b, YUV*pic, int bx, int by)
 {
     int linex = s->width;
-    YUV*y1 = &s->current[(by*2)*linex*8+bx*16];
-    YUV*y2 = &s->current[(by*2)*linex*8+bx*16+8];
-    YUV*y3 = &s->current[(by*2+1)*linex*8+bx*16];
-    YUV*y4 = &s->current[(by*2+1)*linex*8+bx*16+8];
-    YUV*uv = y1;
+    YUV*y1 = &pic[(by*2)*linex*8+bx*16];
+    YUV*y2 = &pic[(by*2)*linex*8+bx*16+8];
+    YUV*y3 = &pic[(by*2+1)*linex*8+bx*16];
+    YUV*y4 = &pic[(by*2+1)*linex*8+bx*16+8];
+    YUV*uv1 = y1;
+    YUV*uv2 = &y1[linex];
     int diffy=0, diffuv = 0;
     int x,y;
     for(y=0;y<8;y++) {
 	for(x=0;x<8;x++) {
-	    int yy,u,v;
+	    int yy,u1,v1,u2,v2,u3,v3,u4,v4;
 	    int y8x = y*8+x;
 	    yy = y1[x].y - b->y1[y8x];
 	    diffy += abs(yy);
@@ -535,15 +360,25 @@ static int compare_pic_block(VIDEOSTREAM*s, block_t* b, int bx, int by)
 	    diffy += abs(yy);
 	    yy = y4[x].y - b->y4[y8x];
 	    diffy += abs(yy);
-	    u = uv[x*2].u - b->u[y8x];
-	    v = uv[x*2].v - b->v[y8x];
-	    diffuv += (abs(u)+abs(v))*4;
+	    u1 = uv1[x*2].u - b->u[y8x];
+	    v1 = uv1[x*2].v - b->v[y8x];
+	    u2 = uv1[x*2+1].u - b->u[y8x];
+	    v2 = uv1[x*2+1].v - b->v[y8x];
+	    u3 = uv2[x*2].u - b->u[y8x];
+	    v3 = uv2[x*2].v - b->v[y8x];
+	    u4 = uv2[x*2+1].u - b->u[y8x];
+	    v4 = uv2[x*2+1].v - b->v[y8x];
+	    diffuv += (abs(u1)+abs(v1));
+	    diffuv += (abs(u2)+abs(v2));
+	    diffuv += (abs(u3)+abs(v3));
+	    diffuv += (abs(u4)+abs(v4));
 	}
 	y1+=linex;
 	y2+=linex;
 	y3+=linex;
 	y4+=linex;
-	uv+=linex*2;
+	uv1+=linex*2;
+	uv2+=linex*2;
     }
     return diffy + diffuv/4;
 }
@@ -578,6 +413,7 @@ static int dctoval(int dc)
     return val;
 }
 
+/* TODO: we could also just let the caller pass only the string table[index] here */
 static int codehuffman(TAG*tag, struct huffcode*table, int index)
 {
     /* TODO: !optimize! */
@@ -800,6 +636,7 @@ static void dodct(block_t*fb)
     zigzag(fb->u);
     zigzag(fb->v);
 }
+
 static void dodctandquant(block_t*fb, block_t*b, int has_dc, int quant)
 {
     int t;
@@ -811,6 +648,24 @@ static void dodctandquant(block_t*fb, block_t*b, int has_dc, int quant)
     preparequant(quant);
     dct2(fb->y1,b->y1); dct2(fb->y2,b->y2); dct2(fb->y3,b->y3); dct2(fb->y4,b->y4);
     dct2(fb->u,b->u);  dct2(fb->v,b->v);
+
+    for(t=0;t<64;t++) {
+	/* prepare for encoding (only values in (-127..-1,1..127) are
+	   allowed as non-zero, non-dc values */
+	if(b->y1[t]<-127) b->y1[t]=-127;
+	if(b->y2[t]<-127) b->y2[t]=-127;
+	if(b->y3[t]<-127) b->y3[t]=-127;
+	if(b->y4[t]<-127) b->y4[t]=-127;
+	if(b->u[t]<-127) b->u[t]=-127;
+	if(b->v[t]<-127) b->v[t]=-127;
+
+	if(b->y1[t]>127) b->y1[t]=127;
+	if(b->y2[t]>127) b->y2[t]=127;
+	if(b->y3[t]>127) b->y3[t]=127;
+	if(b->y4[t]>127) b->y4[t]=127;
+	if(b->u[t]>127) b->u[t]=127;
+	if(b->v[t]>127) b->v[t]=127;
+    }
 }
 
 static void doidct(block_t*b)
@@ -827,15 +682,10 @@ static void doidct(block_t*b)
     }
     idct(fb.y1); idct(fb.y2); idct(fb.y3); idct(fb.y4);
     idct(fb.u);  idct(fb.v);
-    for(t=0;t<64;t++) {
-	b->y1[t] = fb.y1[t];
-	b->y2[t] = fb.y2[t];
-	b->y3[t] = fb.y3[t];
-	b->y4[t] = fb.y4[t];
-	b->u[t] = fb.u[t];
-	b->v[t] = fb.v[t];
-    }
+
+    memcpy(b, &fb, sizeof(block_t));
 }
+
 static void truncateblock(block_t*b)
 {
     int t;
@@ -989,50 +839,64 @@ static inline int mvd2index(int px, int py, int x, int y, int xy)
 
 typedef struct _iblockdata_t
 {
-    block_t b_i; //transformed quantized coefficients
+    block_t b; //transformed quantized coefficients
     block_t reconstruction;
     int bits;
     int bx,by;
+    struct huffcode*ctable; //table to use for chrominance encoding (different for i-frames)
+    int iframe; // 1 if this is part of an iframe
 } iblockdata_t;
 
 typedef struct _mvdblockdata_t
 {
-    block_t b_vxy;
-    block_t fbold_vxy;
+    block_t b;
+    block_t fbold;
     block_t reconstruction;
-    int predictmvdx;
-    int predictmvdy;
-    int x_vxy;
-    int y_vxy;
+    int xindex;
+    int yindex;
+    int movex;
+    int movey;
     int bits;
     int bx,by;
 } mvdblockdata_t;
 
-void prepareIBlock(VIDEOSTREAM*s, iblockdata_t*data, int bx, int by, block_t* fb, int*bits)
+void prepareIBlock(VIDEOSTREAM*s, iblockdata_t*data, int bx, int by, block_t* fb, int*bits, int iframe)
 {
     /* consider I-block */
     block_t fb_i;
     block_t b;
     int y,c;
+    struct huffcode*ctable;
+
     data->bx = bx;
     data->by = by;
 
+    data->iframe = iframe;
+    if(!iframe) {
+	data->ctable = &mcbpc_inter[3*4];
+    } else {
+	data->ctable = &mcbpc_intra[0];
+    }
+
     memcpy(&fb_i, fb, sizeof(block_t));
-    dodctandquant(&fb_i, &data->b_i, 1, s->quant);
-    getblockpatterns(&data->b_i, &y, &c, 1);
-    *bits = 1; //cod
-    *bits += mcbpc_inter[3*4+c].len;
+    dodctandquant(&fb_i, &data->b, 1, s->quant);
+    getblockpatterns(&data->b, &y, &c, 1);
+    *bits = 0;
+    if(!data->iframe) {
+	*bits += 1; //cod
+    }
+    *bits += data->ctable[c].len;
     *bits += cbpy[y].len;
-    *bits += coefbits8x8(data->b_i.y1, 1);
-    *bits += coefbits8x8(data->b_i.y2, 1);
-    *bits += coefbits8x8(data->b_i.y3, 1);
-    *bits += coefbits8x8(data->b_i.y4, 1);
-    *bits += coefbits8x8(data->b_i.u, 1);
-    *bits += coefbits8x8(data->b_i.v, 1);
+    *bits += coefbits8x8(data->b.y1, 1);
+    *bits += coefbits8x8(data->b.y2, 1);
+    *bits += coefbits8x8(data->b.y3, 1);
+    *bits += coefbits8x8(data->b.y4, 1);
+    *bits += coefbits8x8(data->b.u, 1);
+    *bits += coefbits8x8(data->b.v, 1);
     data->bits = *bits;
     
     /* -- reconstruction -- */
-    memcpy(&data->reconstruction,&data->b_i,sizeof(block_t));
+    memcpy(&data->reconstruction,&data->b,sizeof(block_t));
     dequantize(&data->reconstruction, 1, s->quant);
     doidct(&data->reconstruction);
     truncateblock(&data->reconstruction);
@@ -1040,29 +904,49 @@ void prepareIBlock(VIDEOSTREAM*s, iblockdata_t*data, int bx, int by, block_t* fb
 
 int writeIBlock(VIDEOSTREAM*s, TAG*tag, iblockdata_t*data)
 {
-    int cbpcbits = 0, cbpybits=0;
-    int mode = 3; /* i block (mode=3) */
+    int c = 0, y = 0;
     int has_dc=1;
     int bits = 0;
     block_t b;
 
-    getblockpatterns(&data->b_i, &cbpybits, &cbpcbits, has_dc);
-    swf_SetBits(tag,0,1); bits += 1; // COD
-    bits += codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
-    bits += codehuffman(tag, cbpy, cbpybits);
+    getblockpatterns(&data->b, &y, &c, has_dc);
+    if(!data->iframe) {
+	swf_SetBits(tag,0,1); bits += 1; // COD
+    }
+    bits += codehuffman(tag, data->ctable, c);
+    bits += codehuffman(tag, cbpy, y);
 
     /* luminance */
-    bits += encode8x8(tag, data->b_i.y1, has_dc, cbpybits&8);
-    bits += encode8x8(tag, data->b_i.y2, has_dc, cbpybits&4);
-    bits += encode8x8(tag, data->b_i.y3, has_dc, cbpybits&2);
-    bits += encode8x8(tag, data->b_i.y4, has_dc, cbpybits&1);
+    bits += encode8x8(tag, data->b.y1, has_dc, y&8);
+    bits += encode8x8(tag, data->b.y2, has_dc, y&4);
+    bits += encode8x8(tag, data->b.y3, has_dc, y&2);
+    bits += encode8x8(tag, data->b.y4, has_dc, y&1);
 
     /* chrominance */
-    bits += encode8x8(tag, data->b_i.u, has_dc, cbpcbits&2);
-    bits += encode8x8(tag, data->b_i.v, has_dc, cbpcbits&1);
+    bits += encode8x8(tag, data->b.u, has_dc, c&2);
+    bits += encode8x8(tag, data->b.v, has_dc, c&1);
 
-    copyblock(s, s->current, &data->reconstruction, data->bx, data->by);
+    copy_block_pic(s, s->current, &data->reconstruction, data->bx, data->by);
     assert(data->bits == bits);
+    return bits;
+}
+
+int getmvdbits(VIDEOSTREAM*s,block_t*fb, int bx,int by,int hx,int hy)
+{
+    block_t b;
+    block_t fbold;
+    block_t fbdiff;
+    int bits = 0;
+    memcpy(&fbdiff, fb, sizeof(block_t));
+    getmvdregion(&fbold, s->oldpic, bx, by, hx, hy, s->linex);
+    yuvdiff(&fbdiff, &fbold);
+    dodctandquant(&fbdiff, &b, 0, s->quant);
+    bits += coefbits8x8(b.y1, 0);
+    bits += coefbits8x8(b.y2, 0);
+    bits += coefbits8x8(b.y3, 0);
+    bits += coefbits8x8(b.y4, 0);
+    bits += coefbits8x8(b.u, 0);
+    bits += coefbits8x8(b.v, 0);
     return bits;
 }
 
@@ -1072,15 +956,16 @@ void prepareMVDBlock(VIDEOSTREAM*s, mvdblockdata_t*data, int bx, int by, block_t
     int t;
     int y,c;
     block_t fbdiff;
+    int predictmvdx;
+    int predictmvdy;
 
     data->bx = bx;
     data->by = by;
-    predictmvd(s,bx,by,&data->predictmvdx,&data->predictmvdy);
+    predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
 
     data->bits = 65535;
-    data->x_vxy=0;
-    data->y_vxy=0;
-
+    data->movex=0;
+    data->movey=0;
 
     if(s->do_motion) {
 	int hx,hy;
@@ -1093,62 +978,77 @@ void prepareMVDBlock(VIDEOSTREAM*s, mvdblockdata_t*data, int bx, int by, block_t
 	if(bx==s->bbx-1) endx=0;
 	if(by==s->bby-1) endy=0;
 
-	for(hx=startx;hx<=endx;hx+=1)
-	for(hy=starty;hy<=endy;hy+=1)
+	for(hx=startx;hx<=endx;hx+=4)
+	for(hy=starty;hy<=endy;hy+=4)
 	{
-	    block_t b;
-	    block_t fbold;
 	    int bits = 0;
-	    memcpy(&fbdiff, fb, sizeof(block_t));
-	    getmvdregion(&fbold, s->oldpic, bx, by, hx, hy, s->linex);
-	    yuvdiff(&fbdiff, &fbold);
-	    dodctandquant(&fbdiff, &b, 0, s->quant);
-	    bits += coefbits8x8(b.y1, 0);
-	    bits += coefbits8x8(b.y2, 0);
-	    bits += coefbits8x8(b.y3, 0);
-	    bits += coefbits8x8(b.y4, 0);
-	    bits += coefbits8x8(b.u, 0);
-	    bits += coefbits8x8(b.v, 0);
+	    bits = getmvdbits(s,fb,bx,by,hx,hy);
 	    if(bits<bestbits) {
 		bestbits = bits;
 		bestx = hx;
 		besty = hy;
 	    }
 	}
-	data->x_vxy = bestx;
-	data->y_vxy = besty;
+	
+	if(bestx-3 > startx) startx = bestx-3;
+	if(besty-3 > starty) starty = besty-3;
+	if(bestx+3 < endx) endx = bestx+3;
+	if(besty+3 < endy) endy = besty+3;
+
+	for(hx=startx;hx<=endx;hx++)
+	for(hy=starty;hy<=endy;hy++)
+	{
+	    int bits = 0;
+	    bits = getmvdbits(s,fb,bx,by,hx,hy);
+	    if(bits<bestbits) {
+		bestbits = bits;
+		bestx = hx;
+		besty = hy;
+	    }
+	}
+	data->movex = bestx;
+	data->movey = besty;
     }
 
     memcpy(&fbdiff, fb, sizeof(block_t));
-    getmvdregion(&data->fbold_vxy, s->oldpic, bx, by, data->x_vxy, data->y_vxy, s->linex);
-    yuvdiff(&fbdiff, &data->fbold_vxy);
-    dodctandquant(&fbdiff, &data->b_vxy, 0, s->quant);
-    getblockpatterns(&data->b_vxy, &y, &c, 0);
+    getmvdregion(&data->fbold, s->oldpic, bx, by, data->movex, data->movey, s->linex);
+    yuvdiff(&fbdiff, &data->fbold);
+    dodctandquant(&fbdiff, &data->b, 0, s->quant);
+    getblockpatterns(&data->b, &y, &c, 0);
+
+    data->xindex = mvd2index(predictmvdx, predictmvdy, data->movex, data->movey, 0);
+    data->yindex = mvd2index(predictmvdx, predictmvdy, data->movex, data->movey, 1);
 
     *bits = 1; //cod
     *bits += mcbpc_inter[0*4+c].len;
     *bits += cbpy[y^15].len;
-    *bits += mvd[mvd2index(data->predictmvdx, data->predictmvdy, data->x_vxy, data->y_vxy, 0)].len; // (0,0)
-    *bits += mvd[mvd2index(data->predictmvdx, data->predictmvdy, data->x_vxy, data->y_vxy, 1)].len;
-    *bits += coefbits8x8(data->b_vxy.y1, 0);
-    *bits += coefbits8x8(data->b_vxy.y2, 0);
-    *bits += coefbits8x8(data->b_vxy.y3, 0);
-    *bits += coefbits8x8(data->b_vxy.y4, 0);
-    *bits += coefbits8x8(data->b_vxy.u, 0);
-    *bits += coefbits8x8(data->b_vxy.v, 0);
+    *bits += mvd[data->xindex].len; // (0,0)
+    *bits += mvd[data->yindex].len;
+    *bits += coefbits8x8(data->b.y1, 0);
+    *bits += coefbits8x8(data->b.y2, 0);
+    *bits += coefbits8x8(data->b.y3, 0);
+    *bits += coefbits8x8(data->b.y4, 0);
+    *bits += coefbits8x8(data->b.u, 0);
+    *bits += coefbits8x8(data->b.v, 0);
     data->bits = *bits;
 
     /* -- reconstruction -- */
-    memcpy(&data->reconstruction, &data->b_vxy, sizeof(block_t));
+    memcpy(&data->reconstruction, &data->b, sizeof(block_t));
     dequantize(&data->reconstruction, 0, s->quant);
     doidct(&data->reconstruction);
     for(t=0;t<64;t++) {
-	data->reconstruction.y1[t] = truncate256(data->reconstruction.y1[t] + (int)data->fbold_vxy.y1[t]);
-	data->reconstruction.y2[t] = truncate256(data->reconstruction.y2[t] + (int)data->fbold_vxy.y2[t]);
-	data->reconstruction.y3[t] = truncate256(data->reconstruction.y3[t] + (int)data->fbold_vxy.y3[t]);
-	data->reconstruction.y4[t] = truncate256(data->reconstruction.y4[t] + (int)data->fbold_vxy.y4[t]);
-	data->reconstruction.u[t] = truncate256(data->reconstruction.u[t] + (int)data->fbold_vxy.u[t]);
-	data->reconstruction.v[t] = truncate256(data->reconstruction.v[t] + (int)data->fbold_vxy.v[t]);
+	data->reconstruction.y1[t] = 
+	    truncate256(data->reconstruction.y1[t] + (int)data->fbold.y1[t]);
+	data->reconstruction.y2[t] = 
+	    truncate256(data->reconstruction.y2[t] + (int)data->fbold.y2[t]);
+	data->reconstruction.y3[t] = 
+	    truncate256(data->reconstruction.y3[t] + (int)data->fbold.y3[t]);
+	data->reconstruction.y4[t] = 
+	    truncate256(data->reconstruction.y4[t] + (int)data->fbold.y4[t]);
+	data->reconstruction.u[t] = 
+	    truncate256(data->reconstruction.u[t] + (int)data->fbold.u[t]);
+	data->reconstruction.v[t] = 
+	    truncate256(data->reconstruction.v[t] + (int)data->fbold.v[t]);
     }
 }
 
@@ -1163,35 +1063,34 @@ int writeMVDBlock(VIDEOSTREAM*s, TAG*tag, mvdblockdata_t*data)
     int by = data->by;
     int bits = 0;
 
-    getblockpatterns(&data->b_vxy, &y, &c, has_dc);
+    getblockpatterns(&data->b, &y, &c, has_dc);
     swf_SetBits(tag,0,1); bits += 1; // COD
     bits += codehuffman(tag, mcbpc_inter, mode*4+c);
     bits += codehuffman(tag, cbpy, y^15);
 
     /* vector */
-    bits += codehuffman(tag, mvd, mvd2index(data->predictmvdx, data->predictmvdy, data->x_vxy, data->y_vxy, 0));
-    bits += codehuffman(tag, mvd, mvd2index(data->predictmvdx, data->predictmvdy, data->x_vxy, data->y_vxy, 1));
-    s->mvdx[by*s->bbx+bx] = data->x_vxy;
-    s->mvdy[by*s->bbx+bx] = data->y_vxy;
+    bits += codehuffman(tag, mvd, data->xindex);
+    bits += codehuffman(tag, mvd, data->yindex);
 
     /* luminance */
-    bits += encode8x8(tag, data->b_vxy.y1, has_dc, y&8);
-    bits += encode8x8(tag, data->b_vxy.y2, has_dc, y&4);
-    bits += encode8x8(tag, data->b_vxy.y3, has_dc, y&2);
-    bits += encode8x8(tag, data->b_vxy.y4, has_dc, y&1);
+    bits += encode8x8(tag, data->b.y1, has_dc, y&8);
+    bits += encode8x8(tag, data->b.y2, has_dc, y&4);
+    bits += encode8x8(tag, data->b.y3, has_dc, y&2);
+    bits += encode8x8(tag, data->b.y4, has_dc, y&1);
 
     /* chrominance */
-    bits += encode8x8(tag, data->b_vxy.u, has_dc, c&2);
-    bits += encode8x8(tag, data->b_vxy.v, has_dc, c&1);
+    bits += encode8x8(tag, data->b.u, has_dc, c&2);
+    bits += encode8x8(tag, data->b.v, has_dc, c&1);
 
-    copyblock(s, s->current, &data->reconstruction, data->bx, data->by);
+    s->mvdx[by*s->bbx+bx] = data->movex;
+    s->mvdy[by*s->bbx+bx] = data->movey;
+
+    copy_block_pic(s, s->current, &data->reconstruction, data->bx, data->by);
     assert(data->bits == bits);
     return bits;
 }
 
-
-/* should be called encode_PFrameBlock */
-static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by)
+static int encode_PFrame_block(TAG*tag, VIDEOSTREAM*s, int bx, int by)
 {
     block_t fb;
     int diff1,diff2;
@@ -1201,13 +1100,13 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by)
     iblockdata_t iblock;
     mvdblockdata_t mvdblock;
     
-    getregion(&fb, s->current, bx, by, s->width);
-    prepareIBlock(s, &iblock, bx, by, &fb, &bits_i);
+    getregion(&fb, s->current, bx, by, s->linex);
+    prepareIBlock(s, &iblock, bx, by, &fb, &bits_i, 0);
 
     /* encoded last frame <=> original current block: */
-    diff1 = compare_pic_oldpic(s, bx, by);
+    diff1 = compare_pic_pic(s, s->current, s->oldpic, bx, by);
     /* encoded current frame <=> original current block: */
-    diff2 = compare_pic_block(s, &iblock.reconstruction, bx, by);
+    diff2 = compare_pic_block(s, &iblock.reconstruction, s->current, bx, by);
 
     if(diff1 <= diff2) {
 	swf_SetBits(tag, 1,1); /* cod=1, block skipped */
@@ -1225,91 +1124,20 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by)
 }
 
 /* should be called encode_IFrameBlock */
-static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by)
+static void encode_IFrame_block(TAG*tag, VIDEOSTREAM*s, int bx, int by)
 {
     block_t fb;
-    block_t b;
-    int dquant=0;
-    int c = 0, y=0;
+    iblockdata_t data;
+    int bits;
 
     getregion(&fb, s->current, bx, by, s->width);
-
-    change_quant(s->quant, &dquant);
-    s->quant+=dquant;
-
-    dodctandquant(&fb, &b, 1, s->quant);
-
-    getblockpatterns(&b, &y, &c, 1);
-
-    if(dquant) {
-	codehuffman(tag, mcbpc_intra, 4+c);
-    } else {
-	codehuffman(tag, mcbpc_intra, 0+c);
-    }
-
-    codehuffman(tag, cbpy, y);
-
-    if(dquant) {
-	setQuant(tag, dquant);
-    }
-
-    /* luminance */
-    encode8x8(tag, b.y1, 1, y&8);
-    encode8x8(tag, b.y2, 1, y&4);
-    encode8x8(tag, b.y3, 1, y&2);
-    encode8x8(tag, b.y4, 1, y&1);
-
-    /* chrominance */
-    encode8x8(tag, b.u, 1, c&2);
-    encode8x8(tag, b.v, 1, c&1);
-
-    /* reconstruct */
-    dequantize(&b, 1, s->quant);
-    doidct(&b);
-    truncateblock(&b);
-    copyblock(s, s->current, &b, bx, by);
+    prepareIBlock(s, &data, bx, by, &fb, &bits, 1);
+    writeIBlock(s, tag, &data);
 }
 
-/*static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by)
-{
-    block_t fb;
-    block_t b;
-    iblockdata_t data;
-    int bits, quality;
-    int dquant = 0;
-    int cbpcbits = 0, cbpybits = 0;
-
-    getregion(&fb, s->current, bx, by, s->width);
-    prepareIBlock(s, &data, bx, by, &fb, &bits, &quality);
-    
-    getblockpatterns(&data.b_i, &cbpybits, &cbpcbits, has_dc);
-
-    if(dquant) {
-	codehuffman(tag, mcbpc_intra, 4+cbpcbits);
-    } else {
-	codehuffman(tag, mcbpc_intra, 0+cbpcbits);
-    }
-
-    codehuffman(tag, cbpy, cbpybits);
-
-    if(dquant) {
-	setQuant(tag, dquant);
-    }
-
-    // luminance
-    encode8x8(tag, b.y1, 1, cbpybits&8);
-    encode8x8(tag, b.y2, 1, cbpybits&4);
-    encode8x8(tag, b.y3, 1, cbpybits&2);
-    encode8x8(tag, b.y4, 1, cbpybits&1);
-
-    // chrominance
-    encode8x8(tag, b.u, 1, cbpcbits&2);
-    encode8x8(tag, b.v, 1, cbpcbits&1);
-
-    copyblock(s, s->current, &data->reconstruction, data->bx, data->by);
-}*/
-
+#ifdef MAIN
 static int bmid = 0;
+
 void setdbgpic(TAG*tag, RGBA*pic, int width, int height)
 {
     MATRIX m;
@@ -1333,6 +1161,7 @@ void setdbgpic(TAG*tag, RGBA*pic, int width, int height)
 
     bmid++;
 }
+#endif
 
 #define TYPE_IFRAME 0
 #define TYPE_PFRAME 1
@@ -1370,6 +1199,7 @@ static void writeHeader(TAG*tag, int width, int height, int frame, int quant, in
     swf_SetBits(tag, type, 2); /* I-Frame or P-Frame */
     swf_SetBits(tag, 0, 1); /* No deblock filter */
     assert(quant>0);
+    assert(quant<32);
     swf_SetBits(tag, quant, 5); /* quantizer (1-31), may be updated later on*/
     swf_SetBits(tag, 0, 1); /* No extra info */
 }
@@ -1384,16 +1214,16 @@ void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
 
+    /* fixme: should fill with 0,128,128, not 0,0,0 */
     memset(s->current, 0, s->linex*s->height*sizeof(YUV));
-    rgb2yuv(s->current, pic, s->linex, s->olinex, s->owidth, s->oheight);
 
-    //dostat(s);
+    rgb2yuv(s->current, pic, s->linex, s->olinex, s->owidth, s->oheight);
 
     for(by=0;by<s->bby;by++)
     {
 	for(bx=0;bx<s->bbx;bx++)
 	{
-	    encode_blockI(tag, s, bx, by);
+	    encode_IFrame_block(tag, s, bx, by);
 	}
     }
     s->frame++;
@@ -1410,7 +1240,9 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
 
+    /* fixme: should fill with 0,128,128, not 0,0,0 */
     memset(s->current, 0, s->linex*s->height*sizeof(YUV));
+
     rgb2yuv(s->current, pic, s->linex, s->olinex, s->owidth, s->oheight);
     memset(s->mvdx, 0, s->bbx*s->bby*sizeof(int));
     memset(s->mvdy, 0, s->bbx*s->bby*sizeof(int));
@@ -1419,35 +1251,21 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
     {
 	for(bx=0;bx<s->bbx;bx++)
 	{
-	    encode_blockP(tag, s, bx, by);
+	    encode_PFrame_block(tag, s, bx, by);
 	}
     }
     s->frame++;
     memcpy(s->oldpic, s->current, s->width*s->height*sizeof(YUV));
 
-//#define PNG
 #ifdef MAIN
 #ifdef PNG
     yuv2rgb(pic, s->current, s->linex, s->width, s->height);
     setdbgpic(tag, pic, s->width, s->height);
 #endif
-    if(s->frame == (int)totalframes-1)
-    {
-	int t;
-	FILE*fi = fopen("test.ppm", "wb");
-	fprintf(fi, "P6\n%d %d\n255\n", s->width, s->height);
-	for(t=0;t<s->width*s->height;t++)
-	{
-	    fwrite(&pic[t].r, 1, 1, fi);
-	    fwrite(&pic[t].g, 1, 1, fi);
-	    fwrite(&pic[t].b, 1, 1, fi);
-	}
-	fclose(fi);
-    }
 #endif
 }
 
-int uline[64],vline[64],yline[64];
+static int uline[64],vline[64],yline[64];
 void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
 {
     int bx, by;
@@ -1518,6 +1336,50 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
     }
 }
 
+#define TESTS
+#ifdef TESTS
+void test_copy_diff()
+{
+    VIDEOSTREAM stream;
+    VIDEOSTREAM* s = &stream;
+    TAG*tag;
+    RGBA*pic = malloc(256*256*sizeof(RGBA));
+    block_t fb;
+    int x,y;
+    int bx,by;
+    for(x=0;x<256;x++)
+    for(y=0;y<256;y++) {
+	pic[y*256+x].r = x*y;
+	pic[y*256+x].g = x+y;
+	pic[y*256+x].b = (x+1)%(y+1);
+    }
+    tag = swf_InsertTag(0, ST_DEFINEVIDEOSTREAM);
+    swf_SetU16(tag, 33);
+    swf_SetVideoStreamDefine(tag, s, 10, 256, 256);
+    
+    rgb2yuv(s->current, pic, s->linex, s->olinex, s->owidth, s->oheight);
+    for(by=0;by<16;by++)
+    for(bx=0;bx<16;bx++) {
+	int diff1,diff2;
+	/* test1: does compare pic pic return zero for identical blocks? */
+	diff1 = compare_pic_pic(s, s->current, s->current, bx, by);
+	assert(!diff1);
+	/* test2: do blocks which are copied back return zero diff? */
+	getregion(&fb, s->current, bx, by, s->linex);
+	copy_block_pic(s, s->oldpic, &fb, bx, by);
+	diff1 = compare_pic_block(s, &fb, s->oldpic, bx, by);
+	assert(!diff1);
+	/* test3: does compare_pic_block return the same result as compare_pic_pic? */
+	getregion(&fb, s->current, 15-bx, 15-by, s->linex);
+	copy_block_pic(s, s->oldpic, &fb, bx, by);
+	diff1 = compare_pic_block(s, &fb, s->current, bx, by);
+	diff2 = compare_pic_pic(s, s->current, s->oldpic, bx, by);
+	assert(diff1 == diff2);
+    }
+}
+
+#endif
+
 #ifdef MAIN
 #include "png.h"
 int main(int argn, char*argv[])
@@ -1530,12 +1392,16 @@ int main(int argn, char*argv[])
     SWFPLACEOBJECT obj;
     int width = 0;
     int height = 0;
-    int frames = 20;
+    int frames = 10;
     int framerate = 29;
     unsigned char*data;
     char* fname = "/home/kramm/pics/peppers.png";
     VIDEOSTREAM stream;
     double d = 1.0;
+
+#ifdef TESTS
+    test_copy_diff();
+#endif
 
     memset(&stream, 0, sizeof(stream));
 
