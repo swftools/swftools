@@ -101,36 +101,54 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
     return (PyObject*)swf;
 }
 //----------------------------------------------------------------------------
-static PyObject* f_load(PyObject* self, PyObject* args)
+static PyObject* f_load(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    char* filename;
+    static char *kwlist1[] = {"filename", NULL};
+    static char *kwlist2[] = {"data", NULL};
+    char* filename = 0;
+    char* data = 0;
+    int len = 0;
     SWFObject* swf;
     int fi;
 
-    if (!PyArg_ParseTuple(args,"s:load", &filename)) 
-	return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist1, &filename)) {
+	PyErr_Clear();
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#", kwlist2, &data, &len)) {
+	    PyErr_Clear();
+	    PyArg_ParseTupleAndKeywords(args, kwargs, "s:load", kwlist1, &filename);
+	    return 0;
+	}
+    }
 
     swf = PyObject_New(SWFObject, &SWFClass);
     mylog("+%08x(%d) f_load\n", (int)swf, swf->ob_refcnt);
 
     memset(&swf->swf, 0, sizeof(SWF));
 
-    if(!filename) {
-	PyErr_SetString(PyExc_Exception, setError("Couldn't open file %s", filename));
-        return 0;
+    if(filename) {
+	if(!filename) {
+	    PyErr_SetString(PyExc_Exception, setError("Couldn't open file %s", filename));
+	    return 0;
+	}
+	swf->filename = strdup(filename);
+	fi = open(filename,O_RDONLY|O_BINARY);
+	if (fi<0) { 
+	    return PY_ERROR("Couldn't open file %s", filename);
+	}
+	if(swf_ReadSWF(fi,&swf->swf)<0) { 
+	    close(fi);
+	    return PY_ERROR("%s is not a valid SWF file or contains errors",filename);
+	}
+	close(fi);
+    } else {
+	struct reader_t r;
+	reader_init_memreader(&r, data, len);
+	swf->filename = 0;
+	if(swf_ReadSWF2(&r, &swf->swf)<0) {
+	    return PY_ERROR("<data> is not a valid SWF file or contains errors");
+	}
+	r.dealloc(&r);
     }
-    swf->filename = strdup(filename);
-    fi = open(filename,O_RDONLY|O_BINARY);
-    if (fi<0) { 
-        PyErr_SetString(PyExc_Exception, setError("Couldn't open file %s", filename));
-	return 0;
-    }
-    if(swf_ReadSWF(fi,&swf->swf)<0) { 
-        close(fi);
-        PyErr_SetString(PyExc_Exception, setError("%s is not a valid SWF file or contains errors",filename));
-	return 0;
-    }
-    close(fi);
     swf_FoldAll(&swf->swf);
 
     swf->taglist = taglist_new2(swf->swf.firstTag);
@@ -395,7 +413,7 @@ static PyTypeObject SWFClass =
 static PyMethodDef SWFMethods[] = 
 {
     /* SWF creation*/
-    {"load", f_load, METH_VARARGS, "Load a SWF from disc."},
+    {"load", (PyCFunction)f_load, METH_KEYWORDS, "Load a SWF from disc."},
     {"create", (PyCFunction)f_create, METH_KEYWORDS, "Create a new SWF from scratch."},
     {0,0,0,0}
     // save is a member function
