@@ -15,7 +15,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <math.h>
-#include <zlib.h>     
 #include "../rfxswf.h"
 
 #define WIDTH           256
