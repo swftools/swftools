@@ -10091,20 +10091,19 @@ done
 
 
 
-
-for ac_prog in freetype-config
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+# Extract the first word of "freetype-config", so it can be a program name with args.
+set dummy freetype-config; ac_word=$2
 echo "$as_me:$LINENO: checking for $ac_word" >&5
 echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
-if test "${ac_cv_prog_FREETYPE_CONFIG+set}" = set; then
+if test "${ac_cv_path_FREETYPE_CONFIG+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  if test -n "$FREETYPE_CONFIG"; then
-  ac_cv_prog_FREETYPE_CONFIG="$FREETYPE_CONFIG" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+  case $FREETYPE_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_FREETYPE_CONFIG="$FREETYPE_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
 as_dummy=""$PATH:/usr/local/bin:/sw/bin:/opt/local/bin""
 for as_dir in $as_dummy
 do
@@ -10112,16 +10111,18 @@ do
   test -z "$as_dir" && as_dir=.
   for ac_exec_ext in '' $ac_executable_extensions; do
   if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_FREETYPE_CONFIG="$ac_prog"
+    ac_cv_path_FREETYPE_CONFIG="$as_dir/$ac_word$ac_exec_ext"
     echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
 done
 done
 
+  ;;
+esac
 fi
-fi
-FREETYPE_CONFIG=$ac_cv_prog_FREETYPE_CONFIG
+FREETYPE_CONFIG=$ac_cv_path_FREETYPE_CONFIG
+
 if test -n "$FREETYPE_CONFIG"; then
   echo "$as_me:$LINENO: result: $FREETYPE_CONFIG" >&5
 echo "${ECHO_T}$FREETYPE_CONFIG" >&6
@@ -10129,11 +10130,6 @@ else
   echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
 fi
-
-  test -n "$FREETYPE_CONFIG" && break
-done
-
-
 
 
 OLDCPPFLAGS="${CPPFLAGS}"
