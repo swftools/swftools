@@ -44,6 +44,7 @@ struct options_t options[] =
  {"i","id"},
  {"j","jpegs"},
  {"p","pngs"},
+ {"m","mp3"},
  {"n","name"},
  {"f","frame"},
  {"V","version"},
