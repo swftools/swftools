@@ -1,8 +1,8 @@
 # Makefile
 
-RFXSWF	= ../rfxswf.o
-LDLIBS	= -ljpeg -lm -lz 
-CFLAGS	= -funsigned-char
+RFXSWF	= ../librfxswf.a
+LDLIBS	= -L/usr/X11R6/lib -ljpeg -lm -lz -lX11
+#CFLAGS	= -funsigned-char
 CC	= gcc
 CXX	= g++
 DBFLAGS	= -g2
@@ -12,9 +12,10 @@ DBFLAGS	= -g2
 %.o: %.cc
 		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape avi2swf
+all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape avi2swf
 
-movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape
+movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape
+		./sound
 		./jpegtest
 		./box
 		./glyphshape
@@ -27,10 +28,13 @@ movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text 
 		./makefonts
 
 avi2swf.o: avi2swf.cc
-		$(CXX) -o avi2swf.o -c avi2swf.cc `avifile-config --cflags`
+		$(CXX) -O2 -fomit-frame-pointer -o avi2swf.o -c avi2swf.cc `avifile-config --cflags`
 
 avi2swf: $(RFXSWF) avi2swf.o
-		$(CXX) -o avi2swf avi2swf.o  $(RFXSWF) $(LDLIBS) `avifile-config --libs`
+		$(CXX) -O2 -fomit-frame-pointer -o avi2swf avi2swf.o  $(RFXSWF) $(LDLIBS) `avifile-config --libs`
+
+sound: $(RFXSWF) sound.o
+		$(CC) -o sound sound.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 box: $(RFXSWF) box.o
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
@@ -64,7 +68,7 @@ zlibtest: $(RFXSWF) zlibtest.o
 
 makefonts: $(RFXSWF) makefonts.o ../../pdf2swf/swfoutput.o
 		$(CXX) -o makefonts makefonts.o ../../pdf2swf/swfoutput.o \
-                ../../pdf2swf/spline.o ../rfxswf.o ../log.o -lt1 $(LDLIBS) \
+                ../../pdf2swf/spline.o ../librfxswf.a -lt1 $(LDLIBS) \
                 ../../pdf2swf/xpdf/libpdf.a $(DBFLAGS)
 
 clean:
