@@ -13,40 +13,6 @@
 #ifdef WINDOWS_FUNCTIONS
 /* byte order */
 
-static unsigned short StoM(unsigned short inv) {
-    union iconv {
-        unsigned short    ui;
-        unsigned char   uc[2];
-    } *inp, outv;
-
-    inp = (union iconv *)&inv;
-
-    outv.uc[0] = inp->uc[1];
-    outv.uc[1] = inp->uc[0];
- 
-    return (outv.ui);
-}
-
-static unsigned int ItoM(unsigned int inv) {
-    union iconv {
-        unsigned int    ui;
-        unsigned char   uc[4];
-    } *inp, outv;
-
-    inp = (union iconv *)&inv;
-
-    outv.uc[0] = inp->uc[3];
-    outv.uc[1] = inp->uc[2];
-    outv.uc[2] = inp->uc[1];
-    outv.uc[3] = inp->uc[0];
-
-    return (outv.ui);
-}
-
-unsigned short ntohs(unsigned short inv) { return StoM(inv); }
-unsigned long ntohl(unsigned long inv) { return ItoM(inv); }
-unsigned long htonl(unsigned long inv) { return ItoM(inv); }
-
 char *optarg;
 int optind=1;
 
