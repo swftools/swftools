@@ -61,25 +61,23 @@
 
 #include <math.h>
 
-static PDFDoc*doc = 0;
-static char* swffilename = 0;
-static int numpages;
-static int currentpage;
-
 typedef struct _fontfile
 {
     char*filename;
     int used;
 } fontfile_t;
 
+// for pdfswf_addfont
 static fontfile_t fonts[2048];
 static int fontnum = 0;
 
 // swf <-> pdf pages
+// TODO: move into pdf_doc_t
 static int*pages = 0;
 static int pagebuflen = 0;
 static int pagepos = 0;
 
+/* config */
 static double caplinewidth = 3.0;
 static int zoom = 72; /* xpdf: 86 */
 
@@ -115,6 +113,8 @@ public:
 
   // Destructor.
   virtual ~SWFOutputDev() ;
+  
+  void save(char*filename);
 
   //----- get info about output device
 
@@ -132,7 +132,7 @@ public:
 
   //----- initialization and control
 
-  void startDoc(XRef *xref);
+  void setXRef(PDFDoc*doc, XRef *xref);
 
   // Start a page.
   virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
@@ -199,6 +199,9 @@ public:
   int clipping[64];
   int clippos;
 
+  int currentpage;
+
+  PDFDoc*doc;
   XRef*xref;
 
   char* searchFont(char*name);
@@ -229,6 +232,59 @@ public:
   int substitutepos;
 };
 
+static char*getFontID(GfxFont*font);
+
+class InfoOutputDev:  public OutputDev 
+{
+  public:
+  int x1,y1,x2,y2;
+  int has_links;
+  int has_images;
+
+  InfoOutputDev() 
+  {
+      has_links = 0;
+      has_images = 0;
+  }
+  virtual ~InfoOutputDev() {}
+  virtual GBool upsideDown() {return gTrue;}
+  virtual GBool useDrawChar() {return gTrue;}
+  virtual GBool useGradients() {return gTrue;}
+  virtual GBool interpretType3Chars() {return gTrue;}
+  virtual void startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
+  {
+      double x1,y1,x2,y2;
+      state->transform(crop_x1,crop_y1,&x1,&y1);
+      state->transform(crop_x2,crop_y2,&x2,&y2);
+      if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
+      if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
+      this->x1 = (int)x1;
+      this->y1 = (int)y1;
+      this->x2 = (int)x2;
+      this->y2 = (int)y2;
+  }
+  virtual void drawLink(Link *link, Catalog *catalog) 
+  {
+      has_links = 1;
+  }
+  virtual void updateFont(GfxState *state) 
+  {
+      char*id = getFontID(state->getFont());
+  }
+  virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
+			     int width, int height, GBool invert,
+			     GBool inlineImg) 
+  {
+      has_images = 1;
+  }
+  virtual void drawImage(GfxState *state, Object *ref, Stream *str,
+			 int width, int height, GfxImageColorMap *colorMap,
+			 int *maskColors, GBool inlineImg)
+  {
+      has_images = 1;
+  }
+};
+
 SWFOutputDev::SWFOutputDev()
 {
     jpeginfo = 0;
@@ -257,15 +313,20 @@ static char*getFontID(GfxFont*font)
 	sprintf(buf, "UFONT%d", r->num);
 	return strdup(buf);
     }
-    return fontname;
+    return strdup(fontname);
 }
 
 static char*getFontName(GfxFont*font)
 {
-    char*fontname = getFontID(font);
-    char* plus = strchr(fontname, '+');
-    if(plus && plus < &fontname[strlen(fontname)-1])
-	fontname = plus+1;
+    char*fontid = getFontID(font);
+    char*fontname= 0;
+    char* plus = strchr(fontid, '+');
+    if(plus && plus < &fontid[strlen(fontid)-1]) {
+	fontname = strdup(plus+1);
+    } else {
+        fontname = strdup(fontid);
+    }
+    free(fontid);
     return fontname;
 }
 
@@ -474,12 +535,35 @@ static void free_outline(SWF_OUTLINE*outline)
     }
 }
 
+static void dump_outline(SWF_OUTLINE*outline)
+{
+    double x=0,y=0;
+    while(outline) {
+        double lastx=x,lasty=y;
+        x += (outline->dest.x/(float)0xffff);
+        y += (outline->dest.y/(float)0xffff);
+        if(outline->type == SWF_PATHTYPE_MOVE) {
+            msg("<trace> | moveto %f,%f", x,y);
+        } else if(outline->type == SWF_PATHTYPE_LINE) {
+            msg("<trace> | lineto: %f,%f\n",x,y);
+        } else if(outline->type == SWF_PATHTYPE_BEZIER) {
+            SWF_BEZIERSEGMENT*o2 = (SWF_BEZIERSEGMENT*)outline;
+            float x1 = o2->C.x/(float)0xffff+lastx;
+            float y1 = o2->C.y/(float)0xffff+lasty;
+            float x2 = o2->B.x/(float)0xffff+lastx;
+            float y2 = o2->B.y/(float)0xffff+lasty;
+            msg("<trace> | spline: %f,%f -> %f,%f -> %f,%f\n",x1,y1,x2,y2,x,y);
+        } 
+        outline = outline->link;
+    }
+}
+
 SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 {
     int num = path->getNumSubpaths();
     int s,t;
     bezierpathsegment*start,*last=0;
-    bezierpathsegment*outline = start = new bezierpathsegment();
+    bezierpathsegment*outline = start = (bezierpathsegment*)malloc(sizeof(bezierpathsegment));
     int cpos = 0;
     double lastx=0,lasty=0;
     if(!num) {
@@ -505,7 +589,7 @@ SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 		outline->type = SWF_PATHTYPE_MOVE;
 		outline->dest.x = x;
 		outline->dest.y = y;
-		outline->link = (SWF_OUTLINE*)new bezierpathsegment();
+		outline->link = (SWF_OUTLINE*)malloc(sizeof(bezierpathsegment));
 		outline = (bezierpathsegment*)outline->link;
 		cpos = 0;
 		lastx = nx;
@@ -529,8 +613,7 @@ SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 		outline->dest.x = x;
 		outline->dest.y = y;
 		outline->type = cpos?SWF_PATHTYPE_BEZIER:SWF_PATHTYPE_LINE;
-		outline->link = 0;
-		outline->link = (SWF_OUTLINE*)new bezierpathsegment();
+		outline->link = (SWF_OUTLINE*)malloc(sizeof(bezierpathsegment));
 		outline = (bezierpathsegment*)outline->link;
 		cpos = 0;
 		lastx = nx;
@@ -538,7 +621,9 @@ SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 	   }
 	}
     }
+    if(last->link) {free(last->link);}
     last->link = 0;
+
     return (SWF_OUTLINE*)start;
 }
 /*----------------------------------------------------------------------------
@@ -547,7 +632,6 @@ SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 
 void SWFOutputDev::stroke(GfxState *state) 
 {
-    msg("<debug> stroke\n");
     GfxPath * path = state->getPath();
     int lineCap = state->getLineCap(); // 0=butt, 1=round 2=square
     int lineJoin = state->getLineJoin(); // 0=miter, 1=round 2=bevel
@@ -561,6 +645,11 @@ void SWFOutputDev::stroke(GfxState *state)
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+    
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
+        msg("<trace> stroke\n");
+        dump_outline(outline);
+    }
 
     lineJoin = 1; // other line joins are not yet supported by the swf encoder
                   // TODO: support bevel joints
@@ -587,53 +676,80 @@ void SWFOutputDev::stroke(GfxState *state)
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
-    msg("<debug> fill\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
+        msg("<trace> fill\n");
+        dump_outline(outline);
+    }
+
     swfoutput_setdrawmode(&output, DRAWMODE_FILL);
     swfoutput_drawpath(&output, outline, &m);
+    free_outline(outline);
 }
 void SWFOutputDev::eoFill(GfxState *state) 
 {
-    msg("<debug> eofill\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
+        msg("<trace> eofill\n");
+        dump_outline(outline);
+    }
+
     swfoutput_setdrawmode(&output, DRAWMODE_EOFILL);
     swfoutput_drawpath(&output, outline, &m);
+    free_outline(outline);
 }
 void SWFOutputDev::clip(GfxState *state) 
 {
-    msg("<debug> clip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m22 = 1;
     m.m12 = 0; m.m21 = 0; 
     m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
+        msg("<trace> clip\n");
+        dump_outline(outline);
+    }
+
     swfoutput_startclip(&output, outline, &m);
     clipping[clippos] ++;
+    free_outline(outline);
 }
 void SWFOutputDev::eoClip(GfxState *state) 
 {
-    msg("<debug> eoclip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+
+    if(screenloglevel >= LOGLEVEL_TRACE)  {
+        msg("<trace> eoclip\n");
+        dump_outline(outline);
+    }
+
     swfoutput_startclip(&output, outline, &m);
     clipping[clippos] ++;
+    free_outline(outline);
+}
+void SWFOutputDev::save(char*filename)
+{
+    swfoutput_save(&output, filename);
 }
 
 SWFOutputDev::~SWFOutputDev() 
 {
-    swfoutput_save(&output, swffilename);
     swfoutput_destroy(&output);
     outputstarted = 0;
 };
@@ -740,35 +856,36 @@ void SWFOutputDev::endType3Char(GfxState *state)
 
 void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
 {
-  double x1,y1,x2,y2;
-  int rot = doc->getPageRotate(1);
-  laststate = state;
-  msg("<verbose> startPage %d (%f,%f,%f,%f)\n", pageNum, crop_x1, crop_y1, crop_x2, crop_y2);
-  if(rot!=0)
-    msg("<verbose> page is rotated %d degrees\n", rot);
+    this->currentpage = pageNum;
+    double x1,y1,x2,y2;
+    int rot = doc->getPageRotate(1);
+    laststate = state;
+    msg("<verbose> startPage %d (%f,%f,%f,%f)\n", pageNum, crop_x1, crop_y1, crop_x2, crop_y2);
+    if(rot!=0)
+        msg("<verbose> page is rotated %d degrees\n", rot);
 
-  /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
-  state->transform(state->getX2(),state->getY2(),&x2,&y2);
-  Use CropBox, not MediaBox, as page size
-  */
-  
-  /*x1 = crop_x1;
-  y1 = crop_y1;
-  x2 = crop_x2;
-  y2 = crop_y2;*/
-  state->transform(crop_x1,crop_y1,&x1,&y1);
-  state->transform(crop_x2,crop_y2,&x2,&y2);
-
-  if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
-  if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-
-  if(!outputstarted) {
-    msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
-    swfoutput_init(&output);
-    outputstarted = 1;
-  }
+    /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
+    state->transform(state->getX2(),state->getY2(),&x2,&y2);
+    Use CropBox, not MediaBox, as page size
+    */
     
-  swfoutput_newpage(&output, pageNum, (int)x1, (int)y1, (int)x2, (int)y2);
+    /*x1 = crop_x1;
+    y1 = crop_y1;
+    x2 = crop_x2;
+    y2 = crop_y2;*/
+    state->transform(crop_x1,crop_y1,&x1,&y1);
+    state->transform(crop_x2,crop_y2,&x2,&y2);
+
+    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
+    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
+
+    if(!outputstarted) {
+        msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
+        swfoutput_init(&output);
+        outputstarted = 1;
+    }
+      
+    swfoutput_newpage(&output, pageNum, (int)x1, (int)y1, (int)x2, (int)y2);
 }
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
@@ -854,7 +971,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
                     }
                     else if(strstr(s, "last") || strstr(s, "end"))
                     {
-                        page = pages[pagepos-1]; //:)
+                        page = pagepos>0?pages[pagepos-1]:0;
                     }
                     else if(strstr(s, "first") || strstr(s, "top"))
                     {
@@ -908,7 +1025,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
             if(pages[t]==page)
                 break;
         if(t!=pagepos)
-        swfoutput_linktopage(&output, t, points);
+            swfoutput_linktopage(&output, t, points);
     }
     else if(url)
     {
@@ -971,7 +1088,7 @@ char* SWFOutputDev::searchFont(char*name)
 		if(!is_standard_font)
 		    msg("<notice> Using %s for %s", fonts[i].filename, name);
 	    }
-	    return fonts[i].filename;
+	    return strdup(fonts[i].filename);
 	}
     }
     return 0;
@@ -1123,7 +1240,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 
     return strdup(tmpFileName);
 }
-
+    
 char* searchForSuitableFont(GfxFont*gfxFont)
 {
     char*name = getFontName(gfxFont);
@@ -1135,11 +1252,12 @@ char* searchForSuitableFont(GfxFont*gfxFont)
     FcResult result;
     FcChar8 *v;
 
-    // call init ony once
     static int fcinitcalled = false; 
+    
+    // call init ony once
     if (!fcinitcalled) {
         fcinitcalled = true;
-	FcInit();
+	FcInit(); //leaks
     }
    
     pattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString, name, NULL);
@@ -1234,7 +1352,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 	msg("<notice> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	substitutepos ++;
     }
-    return filename;
+    return strdup(filename);
 }
 
 void unlinkfont(char* filename)
@@ -1266,8 +1384,9 @@ void unlinkfont(char* filename)
     }
 }
 
-void SWFOutputDev::startDoc(XRef *xref) 
+void SWFOutputDev::setXRef(PDFDoc*doc, XRef *xref) 
 {
+    this->doc = doc;
     this->xref = xref;
 }
 
@@ -1355,6 +1474,8 @@ void SWFOutputDev::updateFont(GfxState *state)
    
     if(fileName && del)
 	unlinkfont(fileName);
+    if(fileName)
+        free(fileName);
 }
 
 #define SQR(x) ((x)*(x))
@@ -1724,8 +1845,49 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
   obj.free();
 }
 
-void pdfswf_init(char*filename, char*userPassword) 
+void pdfswf_setparameter(char*name, char*value)
 {
+    if(!strcmp(name, "caplinewidth")) {
+	caplinewidth = atof(value);
+    } else if(!strcmp(name, "zoom")) {
+	zoom = atoi(value);
+    } else {
+	swfoutput_setparameter(name, value);
+    }
+}
+void pdfswf_addfont(char*filename)
+{
+    fontfile_t f;
+    memset(&f, 0, sizeof(fontfile_t));
+    f.filename = filename;
+    if(fontnum < sizeof(fonts)/sizeof(fonts[0])) {
+        fonts[fontnum++] = f;
+    } else {
+        msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
+    }
+}
+
+typedef struct _pdf_doc_internal
+{
+    int protect;
+    PDFDoc*doc;
+} pdf_doc_internal_t;
+typedef struct _pdf_page_internal
+{
+} pdf_page_internal_t;
+typedef struct _swf_output_internal
+{
+    SWFOutputDev*outputDev;
+} swf_output_internal_t;
+
+pdf_doc_t* pdf_init(char*filename, char*userPassword)
+{
+    pdf_doc_t*pdf_doc = (pdf_doc_t*)malloc(sizeof(pdf_doc_t));
+    memset(pdf_doc, 0, sizeof(pdf_doc_t));
+    pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
+    memset(i, 0, sizeof(pdf_doc_internal_t));
+    pdf_doc->internal = i;
+    
     GString *fileName = new GString(filename);
     GString *userPW;
     Object info;
@@ -1739,16 +1901,16 @@ void pdfswf_init(char*filename, char*userPassword)
     } else {
       userPW = NULL;
     }
-    doc = new PDFDoc(fileName, userPW);
+    i->doc = new PDFDoc(fileName, userPW);
     if (userPW) {
       delete userPW;
     }
-    if (!doc->isOk()) {
-      exit(1);
+    if (!i->doc->isOk()) {
+        return 0;
     }
 
     // print doc info
-    doc->getDocInfo(&info);
+    i->doc->getDocInfo(&info);
     if (info.isDict() &&
       (screenloglevel>=LOGLEVEL_NOTICE)) {
       printInfoString(info.getDict(), "Title",        "Title:        %s\n");
@@ -1759,66 +1921,39 @@ void pdfswf_init(char*filename, char*userPassword)
       printInfoString(info.getDict(), "Producer",     "Producer:     %s\n");
       printInfoDate(info.getDict(),   "CreationDate", "CreationDate: %s\n");
       printInfoDate(info.getDict(),   "ModDate",      "ModDate:      %s\n");
-      printf("Pages:        %d\n", doc->getNumPages());
-      printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
+      printf("Pages:        %d\n", i->doc->getNumPages());
+      printf("Linearized:   %s\n", i->doc->isLinearized() ? "yes" : "no");
       printf("Encrypted:    ");
-      if (doc->isEncrypted()) {
+      if (i->doc->isEncrypted()) {
         printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
-               doc->okToPrint() ? "yes" : "no",
-               doc->okToCopy() ? "yes" : "no",
-               doc->okToChange() ? "yes" : "no",
-               doc->okToAddNotes() ? "yes" : "no");
+               i->doc->okToPrint() ? "yes" : "no",
+               i->doc->okToCopy() ? "yes" : "no",
+               i->doc->okToChange() ? "yes" : "no",
+               i->doc->okToAddNotes() ? "yes" : "no");
       } else {
         printf("no\n");
       }
     }
     info.free();
                    
-    numpages = doc->getNumPages();
-    int protect = 0;
-    if (doc->isEncrypted()) {
-          if(!doc->okToCopy()) {
+    pdf_doc->num_pages = i->doc->getNumPages();
+    i->protect = 0;
+    if (i->doc->isEncrypted()) {
+          if(!i->doc->okToCopy()) {
               printf("PDF disallows copying. Terminating.\n");
               exit(1); //bail out
           }
-          if(!doc->okToChange() || !doc->okToAddNotes())
-              protect = 1;
+          if(!i->doc->okToChange() || !i->doc->okToAddNotes())
+              i->protect = 1;
     }
    
-    if(protect)
-        swfoutput_setparameter("protect", "1");
-
-    output = new SWFOutputDev();
-    output->startDoc(doc->getXRef());
+    return pdf_doc;
 }
 
-void pdfswf_setparameter(char*name, char*value)
+void pdfswf_preparepage(int page)
 {
-    if(!strcmp(name, "outputfilename")) {
-	swffilename = value;
-    } else if(!strcmp(name, "caplinewidth")) {
-	caplinewidth = atof(value);
-    } else if(!strcmp(name, "zoom")) {
-	zoom = atoi(value);
-    } else {
-	swfoutput_setparameter(name, value);
-    }
-}
-
-void pdfswf_addfont(char*filename)
-{
-    fontfile_t f;
-    memset(&f, 0, sizeof(fontfile_t));
-    f.filename = filename;
-    fonts[fontnum++] = f;
-}
-
-void pdfswf_setoutputfilename(char*_filename) { swffilename = _filename; }
-
-void pdfswf_convertpage(int page)
-{
-    if(!pages)
-    {
+    /*FIXME*/
+    if(!pages) {
 	pages = (int*)malloc(1024*sizeof(int));
 	pagebuflen = 1024;
     } else {
@@ -1831,33 +1966,104 @@ void pdfswf_convertpage(int page)
     pages[pagepos++] = page;
 }
 
-void pdfswf_performconversion()
+class MemCheck
 {
-    int t;
-    for(t=0;t<pagepos;t++)
+    public: ~MemCheck()
     {
-       currentpage = pages[t];
-#ifdef XPDF_101
-       doc->displayPage((OutputDev*)output, currentpage, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
-#else
-       doc->displayPage((OutputDev*)output, currentpage, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
-#endif
+        delete globalParams;
+        Object::memCheck(stderr);
+        gMemReport(stderr);
     }
-}
-int pdfswf_numpages()
+} myMemCheck;
+
+void pdf_destroy(pdf_doc_t*pdf_doc)
 {
-  return doc->getNumPages();
-}
-void pdfswf_close()
-{
+    pdf_doc_internal_t*i= (pdf_doc_internal_t*)pdf_doc->internal;
+
     msg("<debug> pdfswf.cc: pdfswf_close()");
-    delete output; output=0;
-    delete doc; doc=0;
-    free(pages); pages = 0;
-    //freeParams();
-    // check for memory leaks
-    Object::memCheck(stderr);
-    gMemReport(stderr);
+    delete i->doc; i->doc=0;
+    
+    free(pages); pages = 0; //FIXME
+
+    free(pdf_doc->internal);pdf_doc->internal=0;
+    free(pdf_doc);pdf_doc=0;
 }
 
+pdf_page_t* pdf_getpage(pdf_doc_t*pdf_doc, int page)
+{
+    pdf_doc_internal_t*di= (pdf_doc_internal_t*)pdf_doc->internal;
+    
+    pdf_page_t* pdf_page = (pdf_page_t*)malloc(sizeof(pdf_page_t));
+    pdf_page_internal_t*pi= (pdf_page_internal_t*)malloc(sizeof(pdf_page_internal_t));
+    memset(pi, 0, sizeof(pdf_page_internal_t));
+    pdf_page->internal = pi;
+
+    pdf_page->parent = pdf_doc;
+    pdf_page->nr = page;
+    return pdf_page;
+}
+
+void pdf_page_destroy(pdf_page_t*pdf_page)
+{
+    pdf_page_internal_t*i= (pdf_page_internal_t*)pdf_page->internal;
+    free(pdf_page->internal);pdf_page->internal = 0;
+    free(pdf_page);pdf_page=0;
+}
+
+swf_output_t* swf_output_init() 
+{
+    swf_output_t*swf_output = (swf_output_t*)malloc(sizeof(swf_output_t));
+    memset(swf_output, 0, sizeof(swf_output_t));
+    swf_output_internal_t*i= (swf_output_internal_t*)malloc(sizeof(swf_output_internal_t));
+    memset(i, 0, sizeof(swf_output_internal_t));
+    swf_output->internal = i;
+
+    i->outputDev = new SWFOutputDev();
+    return swf_output;
+}
+
+void swf_output_setparameter(swf_output_t*swf_output, char*name, char*value)
+{
+    /* FIXME */
+    pdfswf_setparameter(name, value);
+}
+
+void swf_output_save(swf_output_t*swf, char*filename)
+{
+    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    i->outputDev->save(filename);
+}
+
+void swf_output_destroy(swf_output_t*output)
+{
+    swf_output_internal_t*i = (swf_output_internal_t*)output->internal;
+    delete i->outputDev; i->outputDev=0;
+    free(output->internal);output->internal=0;
+    free(output);
+}
+
+
+void pdf_page_render(pdf_page_t*page, swf_output_t*output)
+{
+    pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
+    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
+
+    if(pi->protect) {
+        swfoutput_setparameter("protect", "1");
+    }
+    si->outputDev->setXRef(pi->doc, pi->doc->getXRef());
+#ifdef XPDF_101
+    pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
+#else
+    pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
+#endif
+}
+
+pdf_page_info_t* pdf_page_getinfo(pdf_page_t*page)
+{
+    pdf_page_internal_t*i= (pdf_page_internal_t*)page->internal;
+    pdf_page_info_t*info = (pdf_page_info_t*)malloc(sizeof(pdf_page_info_t));
+    memset(info, 0, sizeof(pdf_page_info_t));
+    return info;
+}
 
