@@ -270,7 +270,7 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-si] [-j quality] [-p range] [-P password] input.pdf -o output.swf\n", name);
+    printf("Usage: %s [-si] [-j quality] [-p range] [-P password] input.pdf [-o output.swf]\n", name);
     printf("\n");
     printf("-p  --pages=range          Convert only pages in range\n");
     printf("-P  --password=password    Use password for deciphering the pdf\n");
@@ -351,6 +351,25 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 }
 #endif
 
+char* stripfilename(char*filename, char*newext)
+{
+    char*last1 = strrchr(filename, '/');
+    char*last2 = strrchr(filename, '\\');
+    char*pos = filename;
+    char*name;
+    char*dot;
+    if(last1>pos) pos = last1 + 1;
+    if(last2>pos) pos = last2 + 1;
+    name = (char*)malloc(strlen(pos)+5);
+    strcpy(name, pos);
+    dot = strrchr(name, '.');
+    if(dot) {
+	*dot = 0;
+    }
+    strcat(name, newext);
+    return name;
+}
+
 int main(int argn, char *argv[])
 {
     int ret;
@@ -367,6 +386,14 @@ int main(int argn, char *argv[])
 #endif
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,loglevel);
+    if(!outputname)
+    {
+	if(filename) {
+	    outputname = stripfilename(filename, ".swf");
+	    logf("<notice> Output filename not giving. Writing to %s", outputname);
+	} 
+    }
+	
     if(!outputname)
     {
 	fprintf(stderr, "Please use -o to specify an output file\n");
