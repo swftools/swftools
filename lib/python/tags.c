@@ -417,6 +417,7 @@ typedef struct _text_internal
     SWFFONT* swffont;
     RGBA rgba;
     int size;
+    SRECT bbox;
 } text_internal_t;
 staticforward tag_internals_t placeobject_tag;
 
@@ -425,8 +426,16 @@ static int text_fillTAG(tag_internals_t*self)
     text_internal_t*ti = (text_internal_t*)self->data;
     self->tag= swf_InsertTag(0, ST_DEFINETEXT2);
     swf_SetU16(self->tag, /*ID*/0);
-    SRECT r = swf_SetDefineText(self->tag, ti->swffont, &ti->rgba, ti->text, ti->size);
+    ti->bbox = swf_SetDefineText(self->tag, ti->swffont, &ti->rgba, ti->text, ti->size);
     return 1;
+}
+static PyObject* text_getattr(tag_internals_t*self,char*a)
+{
+    text_internal_t*si = (text_internal_t*)self->data;
+    if(!strcmp(a, "bbox")) {
+	return f_BBox2(si->bbox);
+    }
+    return 0;
 }
 static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
 {
@@ -441,7 +450,11 @@ static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!Oi|O!", kwlist, &TagClass, &font, &otext, &size, &ColorClass, &color))
 	return NULL;
-    text = PyString_AS_STRING(PyUnicode_AsUTF8String(otext));
+    if(PyUnicode_Check(otext)) {
+	text = PyString_AS_STRING(PyUnicode_AsUTF8String(otext));
+    } else if(PyString_Check(otext)) {
+	text = PyString_AS_STRING(otext);
+    }
 
     if(color)
 	rgba = color_getRGBA(color);
@@ -466,7 +479,7 @@ static tag_internals_t text_tag =
     parse: 0,
     fillTAG: text_fillTAG,
     dealloc: 0,
-    getattr: 0, 
+    getattr: text_getattr, 
     setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(text_internal_t),
