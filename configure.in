@@ -16,6 +16,7 @@ dnl Checks for programs.
  AC_PROG_MAKE_SET
  AC_PROG_INSTALL
  AC_PROG_LN_S
+ AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
 
 dnl Checks for system services
  AC_EXEEXT
@@ -92,6 +93,11 @@ dnl Checks for library functions.
  AC_FUNC_MMAP
  AC_FUNC_VPRINTF
  AC_CHECK_FUNCS(getcwd putenv socket strcspn strdup strerror strstr)
+
+if test "x${UNCOMPRESS}" = "xgzip"; then
+    AC_DEFINE_UNQUOTED(USE_GZIP, 1)
+fi
+AC_SUBST(USE_GZIP)
 
 export JPEG2SWF='jpeg2swf$(EXEEXT)'
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
