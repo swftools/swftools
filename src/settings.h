@@ -16,9 +16,12 @@ struct config_t
    char alloctest;
    char clip;
    char stack;
+   char stack1;
    char antistream;
    char dummy;
    char cat;
+   char merge;
+   char isframe;
    int loglevel;
    int movex;
    int movey;

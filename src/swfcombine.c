@@ -25,6 +25,7 @@ int slave_movex[128];
 int slave_movey[128];
 float slave_scalex[128];
 float slave_scaley[128];
+char slave_isframe[128];
 int numslaves = 0;
 
 char * outputname = "output.swf";
@@ -70,6 +71,16 @@ int args_callback_option(char*name,char*val) {
 	config.movey = atoi(val);
 	return 1;
     }
+    else if (!strcmp(name, "m"))
+    {
+	config.merge = 1;
+	return 0;
+    }
+    else if (!strcmp(name, "f"))
+    {
+	config.isframe = 1;
+	return 0;
+    }
     else if (!strcmp(name, "d"))
     {
 	config.dummy = 1;
@@ -97,13 +108,15 @@ int args_callback_option(char*name,char*val) {
 	config.scalex = config.scaley = atoi(val)/100.0;
 	return 1;
     }
-    else if (!strcmp(name, "t"))
+    else if (!strcmp(name, "t") || !strcmp(name, "T"))
     {
 	if(master_filename) {
 	    fprintf(stderr, "error with arguments. Try --help.\n");
 	    exit(1);
 	}
 	config.stack = 1;
+	if(!strcmp(name,"T"))
+	    config.stack1 = 1;
 	master_filename = "__none__";
 	return 0;
     }
@@ -128,8 +141,11 @@ struct options_t options[] =
  {"X","width"},
  {"Y","height"},
  {"r","rate"},
+ {"f","frame"},
  {"l","overlay"},
+ {"m","merge"},
  {"t","stack"},
+ {"T","stack1"},
  {"v","verbose"},
  {"V","version"},
  {"c","clip"},
@@ -160,7 +176,6 @@ int args_callback_command(char*name, char*val) {
     }
 
     if(!master_filename) {
-
 	master_filename = filename;
 	master_name = myname;
     } else {		 
@@ -172,6 +187,8 @@ int args_callback_command(char*name, char*val) {
 	slave_movey[numslaves] = config.movey;
 	slave_scalex[numslaves] = config.scalex;
 	slave_scaley[numslaves] = config.scaley;
+	slave_isframe[numslaves] = config.isframe; 
+	config.isframe = 0;
 	config.movex = config.movey = 0;
 	config.scalex = config.scaley = 1.0;
 	numslaves ++;
@@ -181,21 +198,27 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-l][-t] [-o outputfile] [[name=]masterfile] [-x xpos] [-y ypos] [-s scale] [name1=]slavefile1 .. [-x xpos] [-y ypos] [-s scale] [nameN=]slavefileN\n", name);
+    printf("Usage: %s [-rXYomlcv] [-f] masterfile] [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
+    printf("OR:    %s [-rXYomv] --stack[1] [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
+    printf("OR:    %s [-rXYov] --cat [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
+    printf("OR:    %s [-rXYomlcv] --dummy [-xys] [file]\n", name);
     printf("\n");
-    printf("-o outputfile       (output) explicitly specify output file. (otherwise, output.swf will be used)\n");
-    printf("-t                  (stack) place each slave into a seperate frame (no master movie)\n");
-    printf("-a                  (cat) concatenate all slave files (no master movie)\n");
-    printf("-l                  (overlay) Don't remove any master objects, only overlay new objects\n");
-    printf("-c                  (clip) Clip the slave objects by the corresponding master objects\n");
-    printf("-v                  (verbose) Use more than one -v for greater effect \n");
-    printf("-d                  (dummy) Don't require slave objects \n");
-    printf("-x xpos             (move x) Adjust position of slave by xpos twips (1/20 pixel)\n");
-    printf("-y ypos             (move y) Adjust position of slave by ypos twips (1/20 pixel)\n");
-    printf("-s scale            (scale) Adjust size of slave by scale%\n");
-    printf("-r framerate        (rate) Set movie framerate (100 frames/sec)\n");
-    printf("-X width            (width) Force movie width to scale (default: use master width) (not with -t)\n");
-    printf("-Y height           (height) Force movie height to scale (default: use master height) (not with -t)\n");
+    printf("-o outputfile       --output    explicitly specify output file. (otherwise, output.swf will be used\n");
+    printf("-t                  --stack     place each slave in a seperate frame (no master movie\n");
+    printf("-T                  --stack1    place each slave in the first frame (no master movie\n");
+    printf("-m                  --merge     Don't store the slaves in Sprites/MovieClips\n");
+    printf("-a                  --cat       concatenate all slave files (no master movie\n");
+    printf("-l                  --overlay   Don't remove any master objects, only overlay new objects\n");
+    printf("-c                  --clip      Clip the slave objects by the corresponding master objects\n");
+    printf("-v                  --verbose   Use more than one -v for greater effect \n");
+    printf("-d                  --dummy     Don't require slave objects \n");
+    printf("-f                  --frame     The following identifier is a frame or framelabel, not an id or objectname\n");
+    printf("-x xpos             --movex     x Adjust position of slave by xpos twips (1/20 pixel\n");
+    printf("-y ypos             --movey     y Adjust position of slave by ypos twips (1/20 pixel\n");
+    printf("-s scale            --scale     Adjust size of slave by scale%\n");
+    printf("-r framerate        --rate      Set movie framerate (100 frames/sec\n");
+    printf("-X width            --width     Force movie width to scale (default: use master width (not with -t\n");
+    printf("-Y height           --height    Force movie height to scale (default: use master height (not with -t\n");
 }
 
 /* read a whole file in memory */
@@ -320,16 +343,19 @@ void makestackmaster(u8**masterdata, int*masterlength)
 	*(u16*)&pos[6] = 0; // TAG1
 	*(u16*)&pos[8] = (u16)(TAGID_PLACEOBJECT2<<6) + 6 + namelen;
 	*(u16*)&pos[10]= 34; //flags: id+name
-	*(u16*)&pos[11]= 1; // depth
+	*(u16*)&pos[11]= 1+t; // depth
 	*(u16*)&pos[13]= t+1; // id
 	sprintf(&pos[15],slave_name[t]);
 	pos += 15 + namelen + 1;
-	*(u16*)&pos[0]= (u16)(TAGID_SHOWFRAME<<6) + 0;
-	pos += 2;
+	if(!config.stack1 || t == numslaves-1) {
+	    *(u16*)&pos[0]= (u16)(TAGID_SHOWFRAME<<6) + 0;
+	    pos += 2;
+	}
+	if(!config.stack)
 	if(t!=numslaves-1)
 	{
 	    *(u16*)&pos[0]= (u16)(TAGID_REMOVEOBJECT2<<6) + 2;
-	    *(u16*)&pos[2]= 1; // depth;
+	    *(u16*)&pos[2]= 1+t; // depth;
 	    pos += 4;
 	}
     }
@@ -354,6 +380,7 @@ int main(int argn, char *argv[])
     config.antistream = 0; 
     config.alloctest = 0;
     config.cat = 0;
+    config.merge = 0;
     config.clip = 0;
     config.loglevel = 2; 
     config.movex = 0;
@@ -366,10 +393,16 @@ int main(int argn, char *argv[])
     config.hassizey = 0;
     config.framerate = 0;
     config.stack = 0;
+    config.stack1 = 0;
     config.dummy = 0;
 
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,config.loglevel);
+
+    if(config.merge && config.cat) {
+	logf("<error> Can't combine --cat and --merge");
+	exit(1);
+    }
 
     if(config.stack) {
 
@@ -403,8 +436,10 @@ int main(int argn, char *argv[])
 	fclose(fi);
     }
 
-    for(t=0;t<numslaves;t++)
-	logf("<verbose> slave entity(%d) %s (named \"%s\")\n", t+1, slave_filename[t], slave_name[t]);
+    for(t=0;t<numslaves;t++) {
+	    logf("<verbose> slave entity(%d) %s (%s \"%s\")\n", t+1, slave_filename[t], 
+		    slave_isframe[t]?"frame":"object", slave_name[t]);
+    }
 
     if(config.dummy)
     {
@@ -414,8 +449,9 @@ int main(int argn, char *argv[])
 	    exit(1);
 	}
 	numslaves = 1;
-	slave_filename[t] = "!!dummy!!";
-	slave_name[t] = "!!dummy!!";
+	slave_filename[0] = "!!dummy!!";
+	slave_name[0] = "!!dummy!!";
+	slave_isframe[0] = 0;
     }
 
     if (config.alloctest)
@@ -441,6 +477,7 @@ int main(int argn, char *argv[])
 	    config.movey = slave_movey[t];
 	    config.scalex = slave_scalex[t];
 	    config.scaley = slave_scaley[t];
+	    config.isframe = slave_isframe[t];
 
 	    logf("<notice> Combine [%s]%s and [%s]%s", master_name, master_filename,
 		    slave_name[t], slave_filename[t]);

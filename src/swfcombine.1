@@ -12,6 +12,9 @@ swfcombine - a tool for combining swf (flash) files
 [\fIoptions\fR] --stack [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
 
 .B swfcombine
+[\fIoptions\fR] --cat [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
+
+.B swfcombine
 [\fIoptions\fR] --dummy [\fIfile.swf\fR]
 .SH DESCRIPTION
 Take two or more SWF files, and combine them into a new SWF. SWFs can either
@@ -40,6 +43,9 @@ Don't remove any master objects, only overlay new objects.
 \fB\-c\fR, \fB\-\-clip\fR
 Clip the slave objects by the corresponding master objects.
 .TP
+\fB\-m\fR, \fB\-\-merge\fR
+Do not store the slave files in a sprite/MovieClip. Instead, merge the files frame by frame.
+.TP
 \fB\-d\fR, \fB\-\-dummy\fR
 Don't require the presence of slave objects. Usually used together with \fB\-X\fR, \fB\-Y\fR or \fB\-r\fR.
 .TP
@@ -61,6 +67,10 @@ Force the output to height \fIheight\fR. (Otherwise, the height of the master fi
 .TP
 \fB\-r\fR, \fB\-\-rate\fR \fIrate\fR
 Force the output to have the framerate \fIrate\fR. (Otherwise, the framerate of the master file will be used)
+.TP
+\fB\-f\fR, \fB\-\-frame\fR
+The next slave replaces a frame, not an object. Therefore the slave identifier is a
+frame number (#frame=) or frame label (framelabel=).
 .TP
 \fB\-x\fR, \fB\-\-xpos\fR \fIxpos\fR
 (move x) Adjust position of slave by xpos twips (1/20 pixel).

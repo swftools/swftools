@@ -19,8 +19,9 @@
 // TODO:
 // * readers should be object-oriented
 
-static char* slavename;
-static int slaveid;
+static char* slavename = 0;
+static int slaveid = -1;
+static int slaveframe = -1;
 
 static char* tag_placeobject2_name (struct swf_tag* tag)
 {
@@ -230,7 +231,7 @@ void write_sprite(struct writer_t*w, int spriteid, int replaceddefine)
 	writer_write(w, &tmp,2);
     }
 
-    if(config.overlay) {
+    if(config.overlay && !config.isframe) {
 	tmp = 5 + (TAGID_PLACEOBJECT2 << 6);
 	writer_write(w, &tmp, 2);
 	tmp = 2; //flags: character
@@ -263,18 +264,47 @@ void write_sprite(struct writer_t*w, int spriteid, int replaceddefine)
     logf("<verbose> sprite length is %d",*tagidpos);
 }
 
+static char tag_ok_for_slave(int id)
+{
+    if(id == TAGID_BACKGROUNDCOLOR)
+	return 0;
+    return 1;
+}
+
 #define FLAGS_WRITEDEFINES 1
 #define FLAGS_WRITENONDEFINES 2
 #define FLAGS_WRITESPRITE 4
+#define FLAGS_WRITESLAVE 8
 void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags)
 {
     int pos = 0;
-    do {
-	if(is_defining_tag(master.tags[pos].id) && (flags&1))
+    int spos = 0;
+    int outputslave = 0;
+    int frame = 0;
+    int sframe = 0;
+    int slavewritten = 0;
+    while(master.tags[pos].id != 0)
+    {
+	if(master.tags[pos].id == TAGID_SHOWFRAME && outputslave)
+	{
+	    while(slave.tags[spos].id) {
+		if(slave.tags[spos].id == TAGID_SHOWFRAME) {
+		    spos++;
+		    sframe++;
+		    break;
+		}
+		if(tag_ok_for_slave(slave.tags[spos].id))
+		    writer_write(w, slave.tags[spos].fulldata, slave.tags[spos].fulllength);
+		spos++;
+	    }
+	    frame ++;
+	}
+
+	if(is_defining_tag(master.tags[pos].id) && (flags&FLAGS_WRITEDEFINES))
 	{
 	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
 		    master.tags[pos].id, master.tags[pos].length);
-	    if( getidfromtag(&master.tags[pos]) == spriteid) 
+	    if(getidfromtag(&master.tags[pos]) == spriteid && !config.isframe)
 	    {
 		if(config.overlay)
 		{
@@ -286,23 +316,84 @@ void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags
 			    ,spriteid);
 		}
 
-		if(flags&4)
+		if(flags&FLAGS_WRITESPRITE)
 		{
 		    write_sprite_defines(w);
 		    write_sprite(w, spriteid, replaceddefine);
+		}
+		if(flags&FLAGS_WRITESLAVE)
+		{
+		    outputslave = 1;
 		}
 	    } else { 
 		writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
 	    }
 	}
-	if(!is_defining_tag(master.tags[pos].id) && (flags&2))
+	if(frame == slaveframe)
 	{
-	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
-		    master.tags[pos].id, master.tags[pos].length);
-	    writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
+	    if(flags&FLAGS_WRITESLAVE) {
+		outputslave = 1;
+		slavewritten = 1;
+	    }
+	    if((flags&FLAGS_WRITESPRITE) && !slavewritten)
+	    {
+		int id = get_free_id();
+		int depth = 0;
+		char data[7];
+		if(config.clip) {
+		    logf("<fatal> Can't combine --clip and --frame");
+		}
+		*(u16*)&data[0] = (u16)(TAGID_PLACEOBJECT2<<6) + 5 ;
+		*(u8*)&data[2]= 2; //flags: id
+		*(u16*)&data[3]= depth; // depth
+		*(u16*)&data[5]= id;
+		write_sprite_defines(w);
+		write_sprite(w, id, -1);
+		writer_write(w,data,7);
+		slavewritten = 1;
+	    }
 	}
+	if(!is_defining_tag(master.tags[pos].id) && (flags&FLAGS_WRITENONDEFINES))
+	{
+	    int dontwrite = 0;
+	    switch(master.tags[pos].id) {
+		case TAGID_PLACEOBJECT:
+		case TAGID_PLACEOBJECT2:
+		    if(frame == slaveframe && !config.overlay)
+			dontwrite = 1;
+		case TAGID_REMOVEOBJECT:
+//		case TAGID_REMOVEOBJECT2:
+		    /* place/removetags for the object we replaced
+		       should be discarded, too, as the object to insert 
+		       isn't a sprite 
+		     */
+		    if(spriteid>=0 && getidfromtag(&master.tags[pos]) == spriteid && !config.isframe)
+			dontwrite = 1;
+		break;
+	    }
+	    if(!dontwrite) {
+		logf("<debug> [master] write tag %02x (%d bytes in body)", 
+			master.tags[pos].id, master.tags[pos].length);
+		writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
+	    }
+	}
+	pos++;
     }
-    while(master.tags[pos++].id != 0);
+   
+    if(outputslave) 
+    while(slave.tags[spos].id)
+    {
+	    if(tag_ok_for_slave(slave.tags[spos].id))
+		writer_write(w, slave.tags[spos].fulldata, slave.tags[spos].fulllength);
+	    spos++;
+    }
+    if(!slavewritten && config.isframe && (flags&(FLAGS_WRITESLAVE|FLAGS_WRITESPRITE)))
+    {
+	logf("<warning> Frame %d doesn't exist in file. No substitution will occur",
+		slaveframe);
+    }
+    //write END tag: 
+    writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
 }
 
 void writeheader(struct writer_t*w, u8*data, int length)
@@ -335,12 +426,18 @@ uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*sl
 	struct writer_t w;
 	u32*headlength;
 	u32 tmp32;
-	int length = masterlength + slavelength;
+	int length = masterlength*2 + slavelength;
 	int pos = 0;
+	int t;
+	char* depths;
 	uchar*newdata = malloc(length);
 	if(!newdata) {
 	    logf("<fatal> Couldn't allocate %d bytes of memory", length);
 	    return 0;
+	}
+	if(config.isframe) {
+	    logf("<fatal> Can't combine --cat and --frame");
+	    exit(1);
 	}
 	writer_init(&w, newdata, length);
 	
@@ -361,14 +458,53 @@ uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*sl
 	headlength = (u32*)(writer_getpos(&w) + 1);
 	writeheader(&w, master.header.headerdata, master.header.headerlength);
 
+	depths = malloc(65536);
+	if(!depths) {
+	    logf("<fatal> Couldn't allocate %d bytes of memory", 65536);
+	    return 0;
+	}
+	memset(depths, 0, 65536);
 	pos = 0;
 	do {
+	    int num=1;
+	    u16 depth;
 	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
 		    master.tags[pos].id, master.tags[pos].length);
+	    switch(master.tags[pos].id) {
+		case TAGID_PLACEOBJECT2:
+		    num++;
+		case TAGID_PLACEOBJECT:
+		   reader_init (master.tags[pos].data, master.tags[pos].length);
+		   if(num>=2)
+			readu8();
+		   depth = readu16();
+		   depths[depth] = 1;
+	        break;
+		case TAGID_REMOVEOBJECT:
+		   reader_init (master.tags[pos].data, master.tags[pos].length);
+		   readu16();
+		   depths[readu16()] = 0;
+		break;
+		case TAGID_REMOVEOBJECT2:
+		   reader_init (master.tags[pos].data, master.tags[pos].length);
+		   depths[readu16()] = 0;
+		break;
+	    }
 	    if(master.tags[pos].id != 0)
 		writer_write(&w, master.tags[pos].fulldata, master.tags[pos].fulllength);
 	}
 	while(master.tags[pos++].id != 0);
+
+	for(t=0;t<65536;t++) 
+	if(depths[t])
+	{
+	    char data[16];
+	    int len;
+	    *(u16*)(&data[0]) = (TAGID_REMOVEOBJECT2<<6) + 2;
+	    *(u16*)(&data[2]) = t;
+	    writer_write(&w, data, 4);
+	}
+	free(depths);
 
 	pos = 0;
 	do {
@@ -395,6 +531,8 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 	int spriteid = -1;
 	int replaceddefine = -1;
 	struct writer_t w;
+	int frame;
+	char*framelabel;
 	
 	length = masterlength + slavelength*2 + 128; // this is a guess, but a good guess.
 	newdata = malloc(length);
@@ -429,12 +567,22 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 		      logf("<notice> Slave file attached to object %d.", id);
 		    }
 		}
+	    } else if(tag == TAGID_SHOWFRAME) {
+		if(slaveframe>=0 && frame==slaveframe) {
+		    logf("<notice> Slave file attached to frame %d.", frame);
+		}
+		frame++;
+	    } else if(tag == TAGID_FRAMELABEL) {
+		char * name = master.tags[pos].data;
+		if(name && slavename && config.isframe && !strcmp(name, slavename)) {
+		    slaveframe = frame;
+		    logf("<notice> Slave file attached to frame %d (%s).", frame, name);
+		}
 	    }
 	}
 	while(master.tags[pos++].id != 0);
 
-	if (spriteid<0)
-	{
+	if (spriteid<0 && !config.isframe) {
 	    if(slavename) {
 		if(strcmp(slavename,"!!dummy!!"))
 		    logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
@@ -448,7 +596,7 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 
 	read_swf(&slave, slavedata, slavelength);
 	
-	if(config.overlay)
+	if (config.overlay)
 	    replaceddefine = get_free_id();
 	
 	// write file 
@@ -457,13 +605,20 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 	headlength = (u32*)(writer_getpos(&w) + 1);
 	writeheader(&w, master.header.headerdata, master.header.headerlength);
 
-	if(config.antistream) {
+	if (config.antistream) {
+	    if (config.merge) {
+		logf("<fatal> Can't combine --antistream and --merge");
+	    }
 	    write_sprite_defines(&w);
 	    write_sprite(&w, spriteid, replaceddefine);
 	    write_master(&w, spriteid, replaceddefine, FLAGS_WRITEDEFINES);
 	    write_master(&w, spriteid, replaceddefine, FLAGS_WRITENONDEFINES);
 	} else {
-	    write_master(&w, spriteid, replaceddefine, 
+	    if (config.merge)
+		write_master(&w, spriteid, replaceddefine, 
+		    FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESLAVE);
+	    else
+		write_master(&w, spriteid, replaceddefine, 
 		    FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESPRITE);
 	}
 
@@ -479,16 +634,26 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
     char master_flash = 0;
     char slave_flash = 0;
     slavename = _slavename;
+
+    slaveid = -1;
+    slaveframe = -1;
+
     if(slavename[0] == '#')
     {
 	slaveid = atoi(&slavename[1]);
 	slavename = 0;
+    }
+    if(config.isframe)
+    {
+	slaveframe = slaveid;
+	slaveid = -1;
     }
 
     logf("<debug> move x (%d)", config.movex);
     logf("<debug> move y (%d)", config.movey);
     logf("<debug> scale x (%d)", config.scalex);
     logf("<debug> scale y (%d)", config.scaley);
+    logf("<debug> is frame (%d)", config.isframe);
     
     memset(masterids, -1, sizeof(masterids));
 
