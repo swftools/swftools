@@ -177,3 +177,7 @@
 	* lib/modules/swfshape.c: Support for gradients
 	* lib/rfxswf.h: Support for MD5 encrypted passwords (PROTECT tags)
 
+0.5.1:
+	* png2swf: fixed a bug for 8 bit indexed images
+	* lib/rfxswf.h: fixed a bug- could previously only be compiled with either t1lib or freetype
+	* configure: newer avifile versions (>= 0.7.38) now also work.
