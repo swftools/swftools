@@ -106,7 +106,6 @@ typedef struct _ringbuffer_internal_t
     int readpos;
     int writepos;
     int buffersize;
-    int available;
 } ringbuffer_internal_t;
 
 void ringbuffer_init(ringbuffer_t*r)
@@ -122,8 +121,8 @@ int ringbuffer_read(ringbuffer_t*r, void*buf, int len)
 {
     unsigned char* data = (unsigned char*)buf;
     ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
-    if(i->available < len)
-	len = i->available;
+    if(r->available < len)
+	len = r->available;
     if(!len)
 	return 0;
     if(i->readpos + len > i->buffersize) {
@@ -136,7 +135,7 @@ int ringbuffer_read(ringbuffer_t*r, void*buf, int len)
 	i->readpos += len;
 	i->readpos %= i->buffersize;
     }
-    i->available -= len;
+    r->available -= len;
     return len;
 }
 void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
@@ -144,26 +143,24 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
     unsigned char* data = (unsigned char*)buf;
     ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
     
-/*    if( (i->writepos < i->readpos && i->writepos + len >= i->readpos) ||
-	(i->writepos >  i->readpos && i->writepos + len >= i->buffersize && 
-	 (i->writepos + len) % i->buffersize >= i->readpos)
-      ) */
-    if(i->buffersize - i->available < len)
+    if(i->buffersize - r->available < len)
     {
 	unsigned char* buf2;
 	int newbuffersize = i->buffersize;
-	newbuffersize*=3;newbuffersize/=2; /*grow by 50% each time */
+	int oldavailable = r->available;
+	newbuffersize*=3;newbuffersize/=2; /*grow at least by 50% each time */
 
-	if(newbuffersize < i->available + len)
-	    newbuffersize = i->available + len;
+	if(newbuffersize < r->available + len)
+	    newbuffersize = r->available + len + 1024;
 
 	buf2 = (unsigned char*)malloc(newbuffersize);
-	ringbuffer_read(r, buf2, i->available);
+	ringbuffer_read(r, buf2, r->available);
 	free(i->buffer);
 	i->buffer = buf2;
 	i->buffersize = newbuffersize;
-	i->writepos = 0;
-	i->readpos = i->available;
+	i->readpos = 0;
+	i->writepos = oldavailable;
+	r->available = oldavailable;
     }
     if(i->writepos + len > i->buffersize) {
 	int read1 = i->buffersize-i->writepos;
@@ -175,7 +172,7 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
 	i->writepos += len;
 	i->writepos %= i->buffersize;
     }
-    i->available += len;
+    r->available += len;
 }
 void ringbuffer_clear(ringbuffer_t*r)
 {

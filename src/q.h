@@ -22,7 +22,7 @@ typedef struct _mem_t {
 typedef struct _ringbuffer_t
 {
     void*internal;
-    int size;
+    int available;
 } ringbuffer_t;
 
 /* non-nul terminated string */
