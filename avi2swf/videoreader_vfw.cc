@@ -37,6 +37,9 @@ typedef struct _videoreader_vfw_internal {
     BITMAPINFOHEADER bitmap;
     WAVEFORMATEX waveformat;
 
+    int audio_eof;
+    int video_eof;
+
     int video_pos;
     int video_end;
 
