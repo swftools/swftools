@@ -3,93 +3,111 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: libpdf.a
+all: libpdf.a test
 
-#%.o: %.cc
-#	$(CC) -I./ $< -o $@
-#%.o: %.c
-#	$(C) -I./ $< -o $@
+libpdf_objects =  GHash.o GList.o GString.o gmem.o gfile.o \
+		  FoFiTrueType.o FoFiType1.o FoFiType1C.o FoFiBase.o FoFiEncodings.o \
+		  OutputDev.o PDFDoc.o Error.o Stream.o Object.o \
+		  Decrypt.o Array.o XRef.o Dict.o Parser.o \
+		  Lexer.o Outline.o PDFDocEncoding.o Catalog.o \
+		  Link.o GlobalParams.o JBIG2Stream.o Page.o JPXStream.o \
+		  JArithmeticDecoder.o Gfx.o GfxFont.o CMap.o CharCodeToUnicode.o \
+		  PSTokenizer.o FontEncodingTables.o BuiltinFont.o BuiltinFontTables.o \
+		  GfxState.o Function.o Annot.o NameToCharCode.o UnicodeMap.o
 
-libpdf_objects =  Annot.o Array.o BuiltinFont.o BuiltinFontTables.o \
-CMap.o Catalog.o CharCodeToUnicode.o Decrypt.o Dict.o Error.o \
-FontEncodingTables.o FontFile.o Function.o GHash.o GList.o GString.o \
-Gfx.o GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
-NameToCharCode.o Object.o OutputDev.o PDFDoc.o PSTokenizer.o Page.o \
-Parser.o Stream.o UnicodeMap.o XRef.o gfile.o gmem.o
-
+UnicodeMap.o: UnicodeMap.cc
+	$(CC) -I./ UnicodeMap.cc -o $@
+NameToCharCode.o: NameToCharCode.cc
+	$(CC) -I./ NameToCharCode.cc -o $@
 Annot.o: Annot.cc
 	$(CC) -I./ Annot.cc -o $@
-Array.o: Array.cc
-	$(CC) -I./ Array.cc -o $@
-BuiltinFont.o: BuiltinFont.cc
-	$(CC) -I./ BuiltinFont.cc -o $@
-BuiltinFontTables.o: BuiltinFontTables.cc
-	$(CC) -I./ BuiltinFontTables.cc -o $@
-CMap.o: CMap.cc
-	$(CC) -I./ CMap.cc -o $@
-Catalog.o: Catalog.cc
-	$(CC) -I./ Catalog.cc -o $@
-CharCodeToUnicode.o: CharCodeToUnicode.cc
-	$(CC) -I./ CharCodeToUnicode.cc -o $@
-Decrypt.o: Decrypt.cc
-	$(CC) -I./ Decrypt.cc -o $@
-Dict.o: Dict.cc
-	$(CC) -I./ Dict.cc -o $@
-Error.o: Error.cc
-	$(CC) -I./ Error.cc -o $@
-FontEncodingTables.o: FontEncodingTables.cc
-	$(CC) -I./ FontEncodingTables.cc -o $@
-FontFile.o: FontFile.cc
-	$(CC) -I./ FontFile.cc -o $@
 Function.o: Function.cc
 	$(CC) -I./ Function.cc -o $@
-GHash.o: GHash.cc
-	$(CC) -I./ GHash.cc -o $@
+BuiltinFontTables.o: BuiltinFontTables.cc
+	$(CC) -I./ BuiltinFontTables.cc -o $@
+BuiltinFont.o: BuiltinFont.cc
+	$(CC) -I./ BuiltinFont.cc -o $@
+FontEncodingTables.o: FontEncodingTables.cc
+	$(CC) -I./ FontEncodingTables.cc -o $@
+PSTokenizer.o: PSTokenizer.cc
+	$(CC) -I./ PSTokenizer.cc -o $@
+CharCodeToUnicode.o: CharCodeToUnicode.cc
+	$(CC) -I./ CharCodeToUnicode.cc -o $@
+CMap.o: CMap.cc
+	$(CC) -I./ CMap.cc -o $@
+GfxFont.o: GfxFont.cc
+	$(CC) -I./ GfxFont.cc -o $@
+Gfx.o: Gfx.cc
+	$(CC) -I./ Gfx.cc -o $@
+GfxState.o: GfxState.cc
+	$(CC) -I./ GfxState.cc -o $@
+JArithmeticDecoder.o: JArithmeticDecoder.cc
+	$(CC) -I./ JArithmeticDecoder.cc -o $@
+JPXStream.o: JPXStream.cc
+	$(CC) -I./ JPXStream.cc -o $@
+GlobalParams.o: GlobalParams.cc
+	$(CC) -I./ GlobalParams.cc -o $@
+JBIG2Stream.o: JBIG2Stream.cc
+	$(CC) -I./ JBIG2Stream.cc -o $@
+Page.o: Page.cc
+	$(CC) -I./ Page.cc -o $@
+Link.o: Link.cc
+	$(CC) -I./ Link.cc -o $@
+Catalog.o: Catalog.cc
+	$(CC) -I./ Catalog.cc -o $@
+PDFDocEncoding.o: PDFDocEncoding.cc
+	$(CC) -I./ PDFDocEncoding.cc -o $@
+Outline.o: Outline.cc
+	$(CC) -I./ Outline.cc -o $@
+Lexer.o: Lexer.cc
+	$(CC) -I./ Lexer.cc -o $@
+Parser.o: Parser.cc
+	$(CC) -I./ Parser.cc -o $@
+XRef.o: XRef.cc
+	$(CC) -I./ XRef.cc -o $@
+Array.o: Array.cc
+	$(CC) -I./ Array.cc -o $@
+Dict.o: Dict.cc
+	$(CC) -I./ Dict.cc -o $@
+Decrypt.o: Decrypt.cc
+	$(CC) -I./ Decrypt.cc -o $@
+Object.o: Object.cc
+	$(CC) -I./ Object.cc -o $@
+Error.o: Error.cc aconf.h
+	$(CC) -I./ Error.cc -o $@
+Stream.o: Stream.cc
+	$(CC) -I./ Stream.cc -o $@
+PDFDoc.o: PDFDoc.cc
+	$(CC) -I./ PDFDoc.cc -o $@
+OutputDev.o: OutputDev.cc GfxState.h Stream.h Object.h OutputDev.h gtypes.h CharTypes.h
+	$(CC) -I./ OutputDev.cc -o $@
+FoFiBase.o: FoFiBase.cc
+	$(CC) -I./ FoFiBase.cc -o $@
+FoFiTrueType.o: FoFiTrueType.cc FoFiBase.h
+	$(CC) -I./ FoFiTrueType.cc -o $@
+FoFiEncodings.o: FoFiEncodings.cc FoFiEncodings.h
+	$(CC) -I./ FoFiEncodings.cc -o $@
+FoFiType1C.o: FoFiType1C.cc FoFiBase.h
+	$(CC) -I./ FoFiType1C.cc -o $@
+FoFiType1.o: FoFiType1.cc FoFiBase.h
+	$(CC) -I./ FoFiType1.cc -o $@
 GList.o: GList.cc
 	$(CC) -I./ GList.cc -o $@
 GString.o: GString.cc
 	$(CC) -I./ GString.cc -o $@
-Gfx.o: Gfx.cc
-	$(CC) -I./ Gfx.cc -o $@
-GfxFont.o: GfxFont.cc
-	$(CC) -I./ GfxFont.cc -o $@
-GfxState.o: GfxState.cc
-	$(CC) -I./ GfxState.cc -o $@
-GlobalParams.o: GlobalParams.cc
-	$(CC) -I./ GlobalParams.cc -o $@
-Lexer.o: Lexer.cc
-	$(CC) -I./ Lexer.cc -o $@
-Link.o: Link.cc
-	$(CC) -I./ Link.cc -o $@
-NameToCharCode.o: NameToCharCode.cc
-	$(CC) -I./ NameToCharCode.cc -o $@
-Object.o: Object.cc
-	$(CC) -I./ Object.cc -o $@
-OutputDev.o: OutputDev.cc
-	$(CC) -I./ OutputDev.cc -o $@
-PDFDoc.o: PDFDoc.cc
-	$(CC) -I./ PDFDoc.cc -o $@
-PSTokenizer.o: PSTokenizer.cc
-	$(CC) -I./ PSTokenizer.cc -o $@
-Page.o: Page.cc
-	$(CC) -I./ Page.cc -o $@
-Parser.o: Parser.cc
-	$(CC) -I./ Parser.cc -o $@
-Stream.o: Stream.cc
-	$(CC) -I./ Stream.cc -o $@
-UnicodeMap.o: UnicodeMap.cc
-	$(CC) -I./ UnicodeMap.cc -o $@
-XRef.o: XRef.cc
-	$(CC) -I./ XRef.cc -o $@
+GHash.o: GHash.cc
+	$(CC) -I./ GHash.cc -o $@
 gfile.o: gfile.cc
 	$(CC) -I./ gfile.cc -o $@
-
 gmem.o: gmem.c
 	$(C) -I./ gmem.c -o $@
 
 libpdf.a: $(libpdf_objects)
 	$(AR) r libpdf.a $(libpdf_objects)
 	$(RANLIB) libpdf.a
+
+test: test.cc
+	g++ -I. test.cc libpdf.a
 
 install:
 uninstall:
