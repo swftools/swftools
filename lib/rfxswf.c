@@ -545,12 +545,15 @@ TAG * RFXSWF_ReadTag(int handle,TAG * prev)
   int id;
 
   if (read(handle,&raw,2)!=2) return NULL;
+  raw = SWAP16(raw);
 
   len = raw&0x3f;
   id  = raw>>6;
 
   if (len==0x3f)
-  { if (read(handle,&len,4)!=4) return NULL;
+  {
+      if (read(handle,&len,4)!=4) return NULL;
+      len = SWAP32(len);
   }
 
   if (id==ST_DEFINESPRITE) len = 2*sizeof(U16);
@@ -610,7 +613,7 @@ int RFXSWF_WriteTag(int handle,TAG * t)
 
   if (handle>=0)
   { if (short_tag)
-    { raw[0] = len|((t->id&0x3ff)<<6);
+    { raw[0] = SWAP16(len|((t->id&0x3ff)<<6));
       if (write(handle,raw,2)!=2)
       {
         #ifdef DEBUG_RFXSWF
@@ -620,13 +623,21 @@ int RFXSWF_WriteTag(int handle,TAG * t)
       }
     }
     else
-    { raw[0] = (t->id<<6)|0x3f;
-      raw[1] = (U16)(len&0xffff);
-      raw[2] = (U16)(len>>16);
-      if (write(handle,raw,6)!=6)
+    {
+      raw[0] = SWAP16((t->id<<6)|0x3f);
+      if (write(handle,raw,2)!=2)
+      {
+#ifdef DEBUG_RFXSWF
+          fprintf(stderr,"WriteTag() failed: Long Header (1).\n");
+#endif
+	  return -1;
+      }
+      
+      len = SWAP32(len);
+      if (write(handle,&len,4)!=4)
       {
         #ifdef DEBUG_RFXSWF
-          fprintf(stderr,"WriteTag() failed: Long Header.\n");
+          fprintf(stderr,"WriteTag() failed: Long Header (2).\n");
         #endif
         return -1;
       }

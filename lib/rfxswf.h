@@ -29,6 +29,14 @@
 #define FALSE (0)
 #endif
 
+#ifdef WORDS_BIGENDIAN
+#define SWAP16(s) ((U16) ((U8*)&s)[0] | ((U16) ((U8*)&s)[1] << 8))
+#define SWAP32(s) ((U32) ((U8*)&s)[0] | ((U32) ((U8*)&s)[1] << 8) | ((U32) ((U8*)&s)[2] << 16) | ((U32) ((U8*)&s)[3] << 24))
+#else
+#define SWAP16(x) x
+#define SWAP32(x) x
+#endif
+
 // SWF Types
 
 typedef         unsigned long   U32;
