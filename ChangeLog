@@ -1,0 +1,10 @@
+0.0.1: initial release
+0.0.2: 
+	* pdf2swf: Added support for pdf bitmaps, clipping, state saving/restoring, colors,
+	           solid fill and line width.
+	* swfcombine: Added stacking option (-t)
+	* swfcombine: Small bugfixes with the command line options
+	* rfxswf-lib: some bugfixes concerning sprites and cgi
+	* swfstrings: New: Allows extraction of text from swf files
+	* swfdump: New: Dumps swf file information. (Only the bare essentials, though)
+

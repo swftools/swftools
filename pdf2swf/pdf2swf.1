@@ -1,0 +1,37 @@
+.TH pdf2swf "1" "October 2001" "pdf2swf" "swftools"
+.SH NAME
+pdf2swf - convert PDF files into SWF
+.SH Synopsis
+.B pdf2swf
+[\fIoptions\fR] \fIfile.pdf\fR [\fIfile.swf\fR]
+.SH DESCRIPTION
+This tools attempts to convert Acrobat PDF files into Flash SWF Animation
+files.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print short help message and exit
+.\".TP
+.\" \fB\-\-version\fR
+.\" Print version info and exit
+.TP
+\fB\-p\fR, \fB\-\-pages\fR \fIrange\fR
+Convert only pages in \fIrange\fR with \fIrange\fR e.g. 1-20 or 1,4,6,9-11 or
+3-5,10-12
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Be verbose. Use more than one -v for greater effect.
+.SH NOTES
+Every page in the PDF will be a frame in the SWF. This means the generated
+SWF must be inserted into some wrapper SWF if the SWF needs to be 
+browsed. See the documentation of
+\fIswfcombine\fR for information about how to insert SWFs into one another.
+.SH BUGS
+.PP
+type 3 and some truetype fonts don't work yet
+.PP
+Output files tend to be a little big
+
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>
