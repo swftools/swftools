@@ -607,7 +607,7 @@ unicode_init_user(
 	} 
 
 	/* now read in the encoding description file, if requested */
-	if ((unicode_map_file = fopen(path, "rb")) == NULL) {
+	if ((unicode_map_file = fopen(path, "r")) == NULL) {
 		fprintf(stderr, "**** Cannot access map file '%s' ****\n", path);
 		exit(1);
 	}
@@ -2069,7 +2069,7 @@ ttf2pt1_main(
 				}
 	}
 
-	if ((null_file = fopen(BITBUCKET, "wb")) == NULL) {
+	if ((null_file = fopen(BITBUCKET, "w")) == NULL) {
 		fprintf(stderr, "**** Cannot open %s ****\n",
 			BITBUCKET);
 		exit(1);
@@ -2142,12 +2142,12 @@ ttf2pt1_main(
 			exit(1);
 		}
 		ofp = pfa_file;
-		ifp = fdopen(p[0], "rb");
+		ifp = fdopen(p[0], "r");
 		if (ifp == NULL) {
 			perror("**** Cannot use pipe for reading ****\n");
 			exit(1);
 		}
-		pfa_file = fdopen(p[1], "wb");
+		pfa_file = fdopen(p[1], "w");
 		if (pfa_file == NULL) {
 			perror("**** Cannot use pipe for writing ****\n");
 			exit(1);
