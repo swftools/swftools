@@ -1533,8 +1533,7 @@ void swfoutput_newpage(struct swfoutput*obj)
         swf_SetU16(tag,depth);
     }
 
-    depth = 1;
-    startdepth = depth;
+    depth = startdepth;
 }
 
 /* "destroy" like in (oo-terminology) "destructor". Perform cleaning
