@@ -233,7 +233,6 @@ ${name}/pdf2swf/xpdf/JBIG2Stream.h \
 ${name}/pdf2swf/xpdf/JPXStream.h \
 ${name}/pdf2swf/xpdf/Outline.h \
 ${name}/pdf2swf/xpdf/PDFDocEncoding.h \
-${name}/pdf2swf/swfoutput.cc \
 ${name}/configure.in \
 ${name}/config.guess \
 ${name}/config.sub \
