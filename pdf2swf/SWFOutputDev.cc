@@ -707,18 +707,25 @@ void SWFOutputDev::endType3Char(GfxState *state)
 void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
 {
   double x1,y1,x2,y2;
+  int rot = doc->getPageRotate(1);
   laststate = state;
   msg("<verbose> startPage %d (%f,%f,%f,%f)\n", pageNum, crop_x1, crop_y1, crop_x2, crop_y2);
+  if(rot!=0)
+    msg("<verbose> page is rotated %d degrees\n", rot);
+
   msg("<notice> processing page %d", pageNum);
 
   /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
   Use CropBox, not MediaBox, as page size
   */
-  x1 = crop_x1;
+  
+  /*x1 = crop_x1;
   y1 = crop_y1;
   x2 = crop_x2;
-  y2 = crop_y2;
+  y2 = crop_y2;*/
+  state->transform(crop_x1,crop_y1,&x1,&y1);
+  state->transform(crop_x2,crop_y2,&x2,&y2);
 
   if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
   if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
@@ -919,7 +926,7 @@ char* SWFOutputDev::searchFont(char*name)
     /* look in all font files */
     for(i=0;i<fontnum;i++) 
     {
-	if(!strstr(fonts[i], name))
+	if(strstr(fonts[i], name))
 	{
 	    return fonts[i];
 	}
@@ -1606,15 +1613,9 @@ void pdfswf_init(char*filename, char*userPassword)
     }
   }
   info.free();
-
+		 
   numpages = doc->getNumPages();
   if (doc->isEncrypted()) {
-	/*ERROR: This pdf is encrypted, and disallows copying.
-	  Due to the DMCA, paragraph 1201, (2) A-C, circumventing
-	  a technological measure that efficively controls access to
-	  a protected work is violating American law. 
-	  See www.eff.org for more information about DMCA issues.
-	 */
 	if(!doc->okToCopy()) {
 	    printf("PDF disallows copying. Bailing out.\n");
 	    exit(1); //bail out
