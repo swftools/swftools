@@ -138,7 +138,10 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo); 
 
-  if ((f=fopen(fname,"rb"))==NULL) return -1;
+  if ((f=fopen(fname,"rb"))==NULL) {
+      fprintf(stderr, "rfxswf: file open error\n");
+      return -1;
+  }
 
   jpeg_stdio_src(&cinfo,f);
   jpeg_read_header(&cinfo, TRUE);
@@ -264,6 +267,7 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
       bps = width*4;
       break;
     default:
+      fprintf(stderr, "rfxswf: unknown bitmap type %d\n", bitmap_flags);
       return -1;
   }
   
@@ -309,7 +313,10 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
     ncolors = 256;
   }
   
-  if ((ncolors<2)||(ncolors>256)||(!t)) return -1; // parameter error
+  if ((ncolors<2)||(ncolors>256)||(!t)) {
+      fprintf(stderr, "rfxswf: unsupported number of colors: %d\n", ncolors);
+      return -1; // parameter error
+  }
 
   swf_SetU8(t,BMF_8BIT);
   swf_SetU16(t,width);
