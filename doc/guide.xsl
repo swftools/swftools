@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xsl:stylesheet [<!ENTITY nbsp "&#160;">]>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 <!--
    SWFTools documentation stylesheet.
@@ -23,67 +24,77 @@
 	 </title>
 	</head>
 	<body style="margin-left:0px;margin-top:0px;" bgcolor="#ffffff">
-	 <table>
-	  <tr>
-	   <td>
-		<h1>
-		 <b>
-		 <font class="dochead">
-		    <xsl:value-of select="title"/>
-		 </font>
-	 	 </b>
-		</h1>
-	   </td>
-	  </tr>
-	  <tr>
-	   <td>
-	     <img src="line.gif" alt="line"/>
-	   </td>
-	  </tr>
-	  <tr>
-	   <td class="alttext"><b>Summary:</b>&#160;<xsl:apply-templates select="abstract"/></td>
-	  </tr>
-	  <tr>
-	   <td>
-	     <img src="line.gif" alt="line"/>
-	   </td>
-	  </tr>
+
+	<h1>
+	 <b>
+	 <font class="dochead" align="center">
+	    <xsl:value-of select="title"/>
+	 </font>
+	 </b>
+	</h1>
+
+	<hr/>
+	<table cellspacing="0" cellpadding="0">
+	<tr>
+	    <xsl:apply-templates select="chapter" mode="toc"/>
+	</tr>
 	</table>
+	<hr/>
 
 	<xsl:apply-templates select="chapter"/>
+
+	<hr/>
+	<table cellspacing="0" cellpadding="0">
+	<tr>
+	    <td>__prevlink__</td>
+	    <td width="100%" align="center">SWFC Manual: __currentchapter__</td>
+	    <td>__nextlink__</td>
+	</tr>
+	</table>
+	<hr/>
+
 	</body>
 	</html>
   </xsl:template>
+  
+  <xsl:template match="chapter" mode="toc">
+    <xsl:variable name="chid2"><xsl:number/></xsl:variable>
+    <td>
+	chapterlink<xsl:value-of select="$chid2"/>
+    </td>
+    <td width="20">&nbsp;</td>
+  </xsl:template>
     
+  <xsl:template match="chapter">
+
+    <xsl:text disable-output-escaping = "yes">
+&lt;!-- snip:chapter !!!"</xsl:text><xsl:value-of select="@title"/><xsl:text disable-output-escaping = "yes">"!!! --&gt;
+    </xsl:text>
+
+    <xsl:variable name="chid"><xsl:number/></xsl:variable>
+
+    <p class="chaphead">
+      <font class="chapnum">
+	<a name="doc_chap{$chid}"><xsl:number/>.</a>
+      </font>
+      <xsl:value-of select="@title"/>
+    </p>
+
+    <xsl:apply-templates>
+      <xsl:with-param name="chid" select="$chid"/>
+    </xsl:apply-templates>
+
+    <xsl:text disable-output-escaping = "yes">
+&lt;!-- snip:/chapter --&gt;
+    </xsl:text>
+  </xsl:template>
+  
   <xsl:template match="mail">
     <a href="mailto:{@link}">
       <xsl:value-of select="."/>
     </a>
   </xsl:template>
 
-  <xsl:template match="chapter">
-    <xsl:variable name="chid"><xsl:number/></xsl:variable>
-    <xsl:choose>
-      <xsl:when test="title">
-	<p class="chaphead">
-	  <font class="chapnum">
-	    <a name="doc_chap{$chid}"><xsl:number/>.</a>
-	  </font>
-	  <xsl:value-of select="title"/>
-	</p>
-      </xsl:when>
-      <xsl:otherwise>
-	<p class="chaphead">
-	  <font class="chapnum">
-	    <a name="doc_chap{$chid}"><xsl:number/>.</a>
-	  </font>
-	</p>
-      </xsl:otherwise>
-    </xsl:choose>
-    <xsl:apply-templates>
-      <xsl:with-param name="chid" select="$chid"/>
-    </xsl:apply-templates>
-  </xsl:template>
 
   <xsl:template match="section">
     <xsl:param name="chid"/>
