@@ -42,6 +42,21 @@ struct flash_header swf_read_header()
     return head;
 }
 
+void swf_write_header(struct writer_t*w, struct flash_header*head)
+{
+    writer_writeu8(w, head->version);
+    writer_writeu32(w, head->length);
+    
+    writer_writebits(w, 31, 5); 
+    writer_writebits(w, head->boundingBox.x1, 31);
+    writer_writebits(w, head->boundingBox.x2, 31);
+    writer_writebits(w, head->boundingBox.y1, 31);
+    writer_writebits(w, head->boundingBox.y2, 31);
+    writer_resetbits(w);
+    writer_writeu16(w, head->rate);
+    writer_writeu16(w, head->count);
+}
+
 struct RGB readRGB()
 {
     struct RGB rgb;
