@@ -631,6 +631,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     char*s = "-?-";
     char*type = "-?-";
     char*url = 0;
+    char*named = 0;
     int page = -1;
     switch(action->getKind())
     {
@@ -666,6 +667,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 	    GString*name = l->getName();
 	    if(name) {
 	      s = name->lowerCase()->getCString();
+	      named = name->getCString();
 	      if(strstr(s, "next") || strstr(s, "forward"))
 	      {
 		  page = currentpage + 1;
@@ -731,6 +733,10 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     else if(url)
     {
 	swfoutput_linktourl(&output, url, points);
+    }
+    else if(named)
+    {
+	swfoutput_namedlink(&output, named, points);
     }
     logf("<verbose> \"%s\" link to \"%s\" (%d)\n", type, s, page);
   }
