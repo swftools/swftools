@@ -38,7 +38,7 @@ f: frame (word)
 u: url (string)
 t: target (string)
 l: label (string)
-C: constant pool header (byte)
+C: constant pool header (word)
 c: constant pool entry (string)
 s: skip (byte) (number of actions)
 m: method (byte) swf_GetUrl2:(0=none, 1=get, 2=post)/GotoFrame2:(1=play)
@@ -251,6 +251,8 @@ int OpAdvance(char c, U8*data)
 		return 1+4; //float
 	    } else if (type == 2) {
 		return 1+0; //NULL
+	    } else if (type == 3) {
+		return 1+0; //Undefined
 	    } else if (type == 4) {
 		return 1+1; //register
 	    } else if (type == 5) {
@@ -261,6 +263,8 @@ int OpAdvance(char c, U8*data)
 		return 1+4; //int
 	    } else if (type == 8) {
 		return 1+1; //lookup
+	    } else if (type == 9) {
+		return 1+2; //lookup 16
 	    } else return 1;
 	    break;
 	}
@@ -312,7 +316,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
     while(atag)
     {
 	char*indent = &spaces[sizeof(spaces)-1-countpos*4];
-	U8 poollen = 0;
+	U16 poollen = 0;
 	for(t=0;t<definedactions;t++)
 	    if(actions[t].op == atag->op)
 		break;
@@ -350,7 +354,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 #endif
 		  } break;
 		  case 'C': {
-		      poollen = *data;
+		      poollen = *(U16*)data;
 		      entry = 0;
 		      printf("(%d entries)", poollen);
 		  } break;
@@ -426,6 +430,8 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 			  printf(" Float:%f", *(float*)&f);
 		      } else if (type == 2) {
 			  printf(" NULL");
+		      } else if (type == 3) {
+			  printf(" Undefined");
 		      } else if (type == 4) {
 			  printf(" register:%d", *value);
 		      } else if (type == 5) {
@@ -451,6 +457,13 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 #ifdef MAX_LOOKUP
 			  if (lookup[*value])
 			    printf(" (\"%s\")",lookup[*value]);
+#endif
+		      } else if (type == 9) {
+			  U32 offset = value[0]+(value[1]<<8);
+			  printf(" Lookup16:%d", offset);
+#ifdef MAX_LOOKUP
+			  if (lookup[offset])
+			    printf(" (\"%s\")",lookup[offset]);
 #endif
 		      } else {
 			  printf(" UNKNOWN[%02x]",type);
@@ -518,7 +531,7 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
     int count = 0;
     while(atag)
     {
-	U8 poollen = 0;
+	U16 poollen = 0;
 	for(t=0;t<definedactions;t++)
 	    if(actions[t].op == atag->op)
 		break;
@@ -563,7 +576,7 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 			}
 		    } break;
 		    case 'C': {
-			poollen = (*data);
+			poollen = (*(U16*)data);
 		    } break;
 		    case 'o': {
 		    } break;
@@ -964,6 +977,12 @@ ActionTAG* action_PushNULL(ActionTAG*atag)
     *(U8*)atag->tmp = 2; //NULL
     return atag;
 }
+ActionTAG* action_PushUndefined(ActionTAG*atag) 
+{
+    atag = swf_AddActionTAG(atag, ACTION_PUSH, 0, 1);
+    *(U8*)atag->tmp = 3; //Undefined
+    return atag;
+}
 ActionTAG* action_PushBoolean(ActionTAG*atag, char c) 
 {
     atag = swf_AddActionTAG(atag, ACTION_PUSH, 0, 2);
@@ -983,6 +1002,14 @@ ActionTAG* action_PushLookup(ActionTAG*atag, U8 index)
     atag = swf_AddActionTAG(atag, ACTION_PUSH, 0, 2);
     *(U8*)atag->tmp = 8; //lookup
     *(U8*)&atag->tmp[1] = index;
+    return atag;
+}
+ActionTAG* action_PushLookup16(ActionTAG*atag, U16 index) 
+{
+    atag = swf_AddActionTAG(atag, ACTION_PUSH, 0, 3);
+    *(U8*)atag->tmp = 9; //lookup
+    *(U8*)&atag->tmp[1] = index;
+    *(U8*)&atag->tmp[2] = index>>8;
     return atag;
 }
 ActionTAG* action_PushString(ActionTAG*atag, char*str) 
