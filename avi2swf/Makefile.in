@@ -8,13 +8,13 @@ VIDEO_CFLAGS=@VIDEO_CFLAGS@
 
 all: avi2swf$(E)
 
-videoreader_avifile.o: videoreader_avifile.cc
+videoreader_avifile.o: videoreader_avifile.cc videoreader_avifile.hh
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
 
-videoreader_vfw.o: videoreader_vfw.cc
+videoreader_vfw.o: videoreader_vfw.cc videoreader_vfw.hh
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
 
-avi2swf.o: avi2swf.cc
+avi2swf.o: avi2swf.cc videoreader_vfw.hh videoreader_avifile.hh
 	$(CC) $< -o $@
 
 v2swf.o: v2swf.c ../lib/q.h
