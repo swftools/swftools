@@ -1,0 +1,5 @@
+#include <windows.h>
+
+MYICON1	    ICON    "swftools.ico"
+SWFTOOLS    BITMAP  "swftools.bmp"
+
