@@ -1,4 +1,4 @@
-.TH swfbbox "1" "February 2004" "swfbbox" "swftools"
+.TH swfbbox "1" "October 2004" "swfbbox" "swftools"
 .SH NAME
 swfbbox - Tool for playing around with SWF bounding boxes.
 
@@ -15,6 +15,15 @@ It can also dump the corners of the bounding boxes of all frames of a movie.
 .TP
 \fB\-h\fR, \fB\-\-help\fR 
     Print help and exit
+.TP
+\fB\-b\fR, \fB\-\-bbox\fR 
+    Show movie bounding box (default)
+.TP
+\fB\-B\fR, \fB\-\-newbbox\fR 
+    Show recalculated (optimized/expanded) bounding box
+.TP
+\fB\-e\fR, \fB\-\-expand\fR 
+    Write out a new file using the recalculated bounding box
 .TP
 \fB\-O\fR, \fB\-\-optimize\fR 
     Recalculate bounding boxes

@@ -1,4 +1,4 @@
-.TH png2swf "1" "February 2004" "png2swf" "swftools"
+.TH png2swf "1" "October 2004" "png2swf" "swftools"
 .SH NAME
 png2swf - Takes a number of png files and converts them to a swf movie, one
 picture per frame.
@@ -24,6 +24,10 @@ though, to preserve the alpha, which can't be encoded in any other way in the SW
 .TP
 \fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
     Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+.TP
+\fB\-z\fR, \fB\-\-zlib\fR \fIzlib\fR        
+    Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
+    smaller, but not playable in Flash Plugins of Version 5 and below.
 .TP
 \fB\-X\fR, \fB\-\-pixel\fR \fIwidth\fR
     Force movie width to \fIwidth\fR (default: autodetect)

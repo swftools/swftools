@@ -1,4 +1,4 @@
-.TH jpeg2swf "1" "February 2004" "jpeg2swf" "swftools"
+.TH jpeg2swf "1" "October 2004" "jpeg2swf" "swftools"
 .SH NAME
 jpeg2swf - Converts jpeg images to SWF.
 
@@ -24,6 +24,10 @@ converted picture is a seperate frame in the target SWF.
 .TP
 \fB\-r\fR, \fB\-\-rate\fR \fIframerate\fR     
     Set movie framerate (frames per second)
+.TP
+\fB\-z\fR, \fB\-\-zlib\fR \fIzlib\fR        
+    Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
+    smaller, but not playable in Flash Plugins of Version 5 and below.
 .TP
 \fB\-X\fR, \fB\-\-width\fR \fIwidth\fR   
     Force movie width to \fIwidth\fR (default: autodetect)

@@ -1,4 +1,4 @@
-.TH wav2swf "1" "February 2004" "wav2swf" "swftools"
+.TH wav2swf "1" "October 2004" "wav2swf" "swftools"
 .SH NAME
 wav2swf - convert a WAV file to an SWF animation.
 
@@ -25,9 +25,6 @@ Takes a wav file and converts it to a swf movie.
 \fB\-s\fR, \fB\-\-samplerate\fR \fIsps\fR
     Set samplerate to \fIsps\fR frames per second (default: 11025).
 .TP
-\fB\-b\fR, \fB\-\-bitrate\fR bps
-    Set mp3 bitrate to \fIbps\fR.
-.TP
 \fB\-d\fR, \fB\-\-definesound\fR 
     Store the sound as DEFINESOUND tag, not as streaming sound. Allows for
     looping.
@@ -42,6 +39,9 @@ Takes a wav file and converts it to a swf movie.
     Stop the movie at frame 0, and start the sound at 1, so that the
     sound will not play until a "GotoFrame(1)" is issued.
     (For use with flashsound.js).
+.TP
+\fB\-E\fR, \fB\-\-end\fR 
+    Stop the movie at the end frame
 .TP
 \fB\-b\fR, \fB\-\-bitrate\fR \fIbps\fR
     Set mp3 bitrate to \fIbps\fR (default: 32)
