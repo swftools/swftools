@@ -125,9 +125,11 @@ install: install-am
 uninstall-am:
 uninstall: uninstall-am
 
-rfxswf.o: rfxswf.c
+rfxswf.o: rfxswf.c rfxswf.h modules/swfaction.c modules/swfbits.c modules/swfbutton.c \
+	    modules/swfcgi.c modules/swfdump.c modules/swfobject.c modules/swfshape.c \
+	    modules/swftext.c modules/swftools.c
 	$(COMPILE) -c rfxswf.c
-log.o: log.c
+log.o: log.c log.h
 	$(COMPILE) -c log.c
 all-am: Makefile rfxswf.o log.o
 
