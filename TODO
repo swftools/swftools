@@ -35,6 +35,4 @@ rfxswf-lib:
    
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
-    * getUsedIDs doesn't work for bitmap fill
-    * parsing of DefineFont2 has bugs.
 

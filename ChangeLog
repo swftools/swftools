@@ -8,6 +8,7 @@
 	* swfstrings: New: Allows extraction of text from swf files
 	* swfdump: New: Dumps swf file information. (And does some error checking on the SWF)
 	* jpeg2swf: New: Converts one or more jpegs to a swf movie.
+
 0.1.0: 
 	* configure: Now works without automake, automatically disables 
 			jpeg2swf and pdf2swf if jpeglib is not found (disable
@@ -23,12 +24,14 @@
 	* lib/example/zlibtest: new file, demonstrates using lossless images with rfxswf-lib
 	* lib/example/dumpfont: utility for dumping fonts out of swf (and generate c sourcecode for creating them)
 	* lib/example/demofont: example font, generated with lib/example/dumpfont.
+
 0.1.1:  
 	* swfcombine: Wasn't able to handle converted pdfs with links. Fixed.
 	* swfcombine: Introduce --dummy, -X,-Y,-r options
 	* swfdump: new: -r option
 	* pdf2swf: small bugfixes
 	* HOWTO_pdf2swf: added section about correcting size and framerate
+
 0.1.2:
 	* swfdump: can dump all actionscript flavours (button, button2, standalone) now
 	* rfxswf-lib: improved font handling
@@ -36,6 +39,7 @@
 	* lib/example/glyphshape.c: new file, demonstrates using font characters as shapes
 	* pdfswf: many bugfixes. The "pdfscreen" manual now get's converted correctly
 	* rfxswf-lib: bugfix: Couldn't handle jpeg grayscale images
+
 0.2.0:	
 	* pdf2swf: TrueType support added. (using ttf2pt1)
 	* rfxswf-lib: performs conversion of jpeg colorspaces now. (Makes pdf2swf cope
@@ -46,6 +50,7 @@
 	* swfdump: now dumps also the undocumented placeobject2 actioncode.
 	* lib/example/avi2swf.cc: For now, converts small (!) avi movie files to swf.  (using 
 			          libavifile)
+
 0.2.1:	
 	* configure: Does checking for byte order and command substitution capability now.
 	* rfxswf: Applied Anjo Krank's patch for MacOS X.
@@ -55,6 +60,7 @@
 	         installs into ${DATADIR}/swftools/swfs
 	* pdf2swf: New options --viewer, --preloader, -b, -l
 	* pdf2swf: Fonts are now in ${DATADIR}/swftools/fonts
+
 0.2.2:	
 	* swfs/: Added/Wrote sources for some of the swf files 
 	* swfdump: Major bugfix in placeobject2, hex output function
@@ -66,12 +72,14 @@
 	* lib/: Added Bladeenc 0.94.1 for mp3 compression
 	* lib/example/avi2swf.cc: Can now handle big files. Slightly better compression ratio. Sound.
 	* lib/example/sound.c: New file, demonstrates use of the sound module in librfxswf.
+
 0.2.3: 
 	* pdf2swf: New option --fontdir, can now handle external fonts.
 	* lib/modules/swftext.c: Several font-extraction bugfixes
 	* src/swfdump: Bugfixes, ids and depths are now in decimal
 	* src/swfcombine: Bugfixes.
 	* configure.in: Cleaned up.
+
 0.3.0:
 	* pdf2swf: The --ignore option now actually makes the pdf files smaller.
 	* rfxswf: Can now write DefineFont2 tags
@@ -86,11 +94,14 @@
 	* pdf2swf: Fixed Image handling
 	* avi2swf/: Is part of the main distribution now
 	* src/wav2swf: New tool.
+
 0.3.1:
 	* configure: Didn't create all Makefiles when t1lib or jpeglib were absent. Fixed.
 	* swfs/Makefile: FreeBSD fixes.
-0.4.0:
+
+0.4.0: (not released yet)
 	* pdf2swf/xpdf: Upgraded PDF Parser to Version 1.01.
 	* pdf2swf: Can now handle Type 3 Fonts. (As Bitmaps)
 	* src/swfcombine: Completely rewritten, using the rfxswf routines
-
+	* configure: Check for libtool
+	* lib/rfxswf: Fixed some parsing bugs (swffont, swfdump)
