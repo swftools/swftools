@@ -69,6 +69,7 @@ void args_callback_usage(char*name)
     printf("\n");
     printf("\t-h , --help\t\t Print help and exit\n");
     printf("\t-o , --output filename\t set output filename\n");
+    printf("\t-v , --verbose\t\t Be more verbose\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -251,6 +252,10 @@ int main(int argc, char ** argv)
   char cwd[128];
   getcwd(cwd, 128);
   processargs(argc, argv);
+  if(!all && !filenum) {
+      fprintf(stderr, "You must supply a filename.\n");
+      exit(1);
+  }
   //TODO: use tempnam here. Check if environment already contains a
   //T1LIB_CONFIG.
   putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
