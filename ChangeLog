@@ -46,3 +46,7 @@
 	* swfdump: now dumps also the undocumented placeobject2 actioncode.
 	* lib/example/avi2swf.cc: For now, converts small (!) avi movie files to swf.  (using 
 			          libavifile)
+0.2.1:	
+	* configure: Does checking for byte order now.
+	* rfxswf/pdfswf: Applied Anjo Krank's patch for MacOSX.
+

@@ -2,12 +2,12 @@ General:
 
     * make more stuff dependent on the information in config.h
     * consistent output handling if -o is missing. (out.swf/stdout)
+    * check for WORDS_BIGENDIAN in all routines handling SWF data.
 
 pdf2swf:
 
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
-    * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
     * some bounding boxes are too big
 
@@ -32,6 +32,5 @@ rfxswf-lib:
     * swf_WriteFont() should write definefont2 tags for more complex fonts
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
-    *  s/ObjectPlace/ObjectSet/g
-      (s/GetFrameNo/GetTagFrameNo/g ?)
+    * (s/GetFrameNo/GetTagFrameNo/g ?)
   
