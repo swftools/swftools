@@ -75,7 +75,9 @@ typedef struct _swfoutput_internal
     fontlist_t* fontlist;
 
     char storefont;
-    
+
+    MATRIX page_matrix;
+
     SWF swf;
     TAG *tag;
     int currentswfid;
@@ -1155,7 +1157,11 @@ static void endtext(swfoutput*obj)
     putcharacters(obj, i->tag);
     swf_SetU8(i->tag,0);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,i->textid,/*depth*/i->depth++,&obj->fontmatrix,NULL,NULL);
+    //swf_ObjectPlace(i->tag,i->textid,/*depth*/i->depth++,&i->page_matrix,NULL,NULL);
+    MATRIX m2;
+    swf_MatrixJoin(&m2,&obj->fontmatrix, &i->page_matrix);
+
+    swf_ObjectPlace(i->tag,i->textid,/*depth*/i->depth++,&m2,NULL,NULL);
     i->textid = -1;
 }
 
@@ -1403,11 +1409,15 @@ static void endpage(struct swfoutput*obj)
     i->tag = swf_InsertTag(i->tag,ST_SHOWFRAME);
 }
 
-void swfoutput_newpage(struct swfoutput*obj, int pageNum, int x1, int y1, int x2, int y2)
+void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
     if(!i->firstpage)
         endpage(obj);
+
+    swf_GetMatrix(0, &i->page_matrix);
+    i->page_matrix.tx = movex;
+    i->page_matrix.ty = movey;
 
     for(i->depth--;i->depth>=i->startdepth;i->depth--) {
         i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
@@ -1675,10 +1685,11 @@ static void endshape(swfoutput*obj, int clipdepth)
     changeRect(obj, i->tag, i->bboxrectpos, &i->bboxrect);
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+
     if(clipdepth)
-	swf_ObjectPlaceClip(i->tag,i->shapeid,i->depth++,NULL,NULL,NULL,clipdepth);
+	swf_ObjectPlaceClip(i->tag,i->shapeid,i->depth++,&i->page_matrix,NULL,NULL,clipdepth);
     else
-	swf_ObjectPlace(i->tag,i->shapeid,/*depth*/i->depth++,NULL,NULL,NULL);
+	swf_ObjectPlace(i->tag,i->shapeid,/*depth*/i->depth++,&i->page_matrix,NULL,NULL);
 
     swf_ShapeFree(i->shape);
     i->shape = 0;
@@ -1733,11 +1744,15 @@ void swfoutput_save(struct swfoutput* obj, char*filename)
 void swfoutput_destroy(struct swfoutput* obj) 
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    if(!i) {
+        /* not initialized yet- nothing to destroy */
+        return;
+    }
 
     fontlist_t *tmp,*iterator = i->fontlist;
     while(iterator) {
 	if(iterator->swffont) {
-	    swf_FontFree(iterator->swffont);
+	    swf_FontFree(iterator->swffont);iterator->swffont=0;
 	}
         tmp = iterator;
         iterator = iterator->next;
@@ -1852,7 +1867,7 @@ void swfoutput_endclip(swfoutput*obj)
         return;
     }
     i->clippos--;
-    swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],NULL,NULL,NULL,i->depth++);
+    swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],&i->page_matrix,NULL,NULL,i->depth++);
 }
 
 static void drawlink(struct swfoutput*obj, ActionTAG*,ActionTAG*, swfcoord*points, char mouseover);
@@ -2076,14 +2091,18 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
 
     if(posx!=0 || posy!=0) {
+        SPOINT p;
+        p.x = (int)(posx*20);
+        p.y = (int)(posy*20);
+        p = swf_TurnPoint(p, &i->page_matrix);
 	MATRIX m;
-	swf_GetMatrix(0,&m);
-	m.tx = (int)(posx*20);
-	m.ty = (int)(posy*20);
+        m = i->page_matrix;
+        m.tx = p.x;
+        m.ty = p.y;
 	swf_ObjectPlace(i->tag, buttonid, i->depth++,&m,0,0);
     }
     else {
-	swf_ObjectPlace(i->tag, buttonid, i->depth++,0,0,0);
+	swf_ObjectPlace(i->tag, buttonid, i->depth++,&i->page_matrix,0,0);
     }
 }
 
@@ -2171,7 +2190,8 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
 
     /* instance */
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,myshapeid,/*depth*/i->depth++,NULL,NULL,NULL);
+
+    swf_ObjectPlace(i->tag,myshapeid,/*depth*/i->depth++,&i->page_matrix,NULL,NULL);
 }
 
 int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,int sizey, 
