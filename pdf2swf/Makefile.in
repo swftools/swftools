@@ -18,18 +18,18 @@ swfoutput.$(O): swfoutput.cc swfoutput.h spline.h
 pdf2swf.$(O): pdf2swf.cc SWFOutputDev.h
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib pdf2swf.cc -o $@
 
-pdf2swf.a: Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
-	$(AR) r pdf2swf.a SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
-	$(RANLIB) pdf2swf.a
+pdf2swf$(A): Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
+	$(AR) r pdf2swf$(A) SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
+	$(RANLIB) pdf2swf$(A)
 
-pdf2swf$(E): pdf2swf.$(O) pdf2swf.a xpdf/libpdf.a ../lib/librfxswf.a 
-	$(LL) pdf2swf.$(O) pdf2swf.a ../lib/librfxswf.a xpdf/libpdf.a $(LIBS) -o pdf2swf$(E) 
+pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) 
+	$(LL) pdf2swf.$(O) pdf2swf$(A) ../lib/librfxswf$(A) xpdf/libpdf$(A) $(LIBS) -o pdf2swf$(E) 
 	$(STRIP) pdf2swf$(E)
 
-xpdf/libpdf.a: Makefile xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
+xpdf/libpdf$(A): Makefile xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
 	cd xpdf;$(MAKE)
 
-ttf2pt1/ttf2pt1.a: Makefile ttf2pt1/ttf2pt1.c ttf2pt1/t1asm.c
+ttf2pt1/ttf2pt1$(A): Makefile ttf2pt1/ttf2pt1.c ttf2pt1/t1asm.c
 	cd ttf2pt1;$(MAKE)
 
 install:
@@ -44,7 +44,7 @@ uninstall:
 	@for file in $(fonts);do $(UNINSTALL_DATA) $(pkgdatadir)/fonts/$$file;done
 
 clean: 
-	rm -f *.o *.obj *.lo *.a *.la pdf2swf font2swf gmon.out
+	rm -f *.o *.obj *.lo *.a *.lib *.la pdf2swf font2swf gmon.out
 	@rm -f pdf2swf.exe font2swf.exe
 	@rm -f pdf2swf$(E) font2swf.exe$(E)
 	cd xpdf && $(MAKE) clean && cd ..

@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf.a q.$(O)
+all: librfxswf$(A) q.$(O)
 
 lame_objects = @lame_objects@
 
@@ -36,9 +36,9 @@ h.263/h263tables.$(O): h.263/h263tables.c h.263/h263tables.h
 h.263/swfvideo.$(O): h.263/swfvideo.c h.263/h263tables.h h.263/dct.h
 	$(C) h.263/swfvideo.c -o h.263/swfvideo.$(O)
 
-librfxswf.a: Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
-	$(AR) r librfxswf.a rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
-	$(RANLIB) librfxswf.a
+librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+	$(RANLIB) librfxswf$(A)
 
 install:
 uninstall:

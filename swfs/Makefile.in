@@ -14,12 +14,12 @@ keyboard_viewer.$(O): keyboard_viewer.c
 PreLoaderTemplate.$(O): PreLoaderTemplate.c
 	$(C) -I../lib PreLoaderTemplate.c -o $@
 
-simple_viewer$(E): simple_viewer.$(O) ../lib/librfxswf.a
-	$(L) simple_viewer.$(O) -o $@ ../lib/librfxswf.a $(LIBS) 
-keyboard_viewer$(E): keyboard_viewer.$(O) ../lib/librfxswf.a
-	$(L) keyboard_viewer.$(O) -o $@ ../lib/librfxswf.a $(LIBS) 
-PreLoaderTemplate$(E): PreLoaderTemplate.$(O) ../lib/librfxswf.a
-	$(L) PreLoaderTemplate.$(O) -o $@ ../lib/librfxswf.a $(LIBS) 
+simple_viewer$(E): simple_viewer.$(O) ../lib/librfxswf$(A)
+	$(L) simple_viewer.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS) 
+keyboard_viewer$(E): keyboard_viewer.$(O) ../lib/librfxswf$(A)
+	$(L) keyboard_viewer.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS) 
+PreLoaderTemplate$(E): PreLoaderTemplate.$(O) ../lib/librfxswf$(A)
+	$(L) PreLoaderTemplate.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS) 
 
 simple_viewer.swf: $(programs)
 	@echo Calling ./keybard_viewer to create keyboard_viewer.swf
@@ -56,7 +56,7 @@ uninstall:
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/default_loader.swf
 
 clean: 
-	rm -f *.o *.obj *.lo *.a *.la gmon.out 
+	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out 
 	rm -f simple_viewer keyboard_viewer PreLoaderTemplate 
 	rm -f simple_viewer$(E) keyboard_viewer$(E) PreLoaderTemplate$(E) 
 	rm -f simple_viewer.exe keyboard_viewer.exe PreLoaderTemplate.exe

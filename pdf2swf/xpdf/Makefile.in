@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: libpdf.a
+all: libpdf$(A)
 
 libpdf_objects =  GHash.$(O) GList.$(O) GString.$(O) gmem.$(O) gfile.$(O) \
 		  FoFiTrueType.$(O) FoFiType1.$(O) FoFiType1C.$(O) FoFiBase.$(O) FoFiEncodings.$(O) \
@@ -102,13 +102,13 @@ gfile.$(O): gfile.cc
 gmem.$(O): gmem.c
 	$(C) -I./ gmem.c -o $@
 
-libpdf.a: $(libpdf_objects)
-	$(AR) r libpdf.a $(libpdf_objects)
-	$(RANLIB) libpdf.a
+libpdf$(A): $(libpdf_objects)
+	$(AR) r libpdf$(A) $(libpdf_objects)
+	$(RANLIB) libpdf$(A)
 
 install:
 uninstall:
 
 clean: 
-	rm -f *.o *.obj *.lo *.a *.la gmon.out
+	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
 

@@ -36,35 +36,35 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 parser.yy.c: parser.lex
 	flex -Bs -oparser.yy.c parser.lex
 
-wav2swf$(E): wav2swf.$(O) wav.$(O) ../lib/librfxswf.a
-	$(L) wav2swf.$(O) wav.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+wav2swf$(E): wav2swf.$(O) wav.$(O) ../lib/librfxswf$(A)
+	$(L) wav2swf.$(O) wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-png2swf$(E): png2swf.$(O) ../lib/librfxswf.a
-	$(L) png2swf.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+png2swf$(E): png2swf.$(O) ../lib/librfxswf$(A)
+	$(L) png2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfcombine$(E): swfcombine.$(O) ../lib/librfxswf.a
-	$(L) swfcombine.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+swfcombine$(E): swfcombine.$(O) ../lib/librfxswf$(A)
+	$(L) swfcombine.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfdump$(E): swfdump.$(O) ../lib/librfxswf.a
-	$(L) swfdump.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+swfdump$(E): swfdump.$(O) ../lib/librfxswf$(A)
+	$(L) swfdump.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfextract$(E): swfextract.$(O) ../lib/librfxswf.a
-	$(L) swfextract.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+swfextract$(E): swfextract.$(O) ../lib/librfxswf$(A)
+	$(L) swfextract.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfstrings$(E): swfstrings.$(O) ../lib/librfxswf.a
-	$(L) swfstrings.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+swfstrings$(E): swfstrings.$(O) ../lib/librfxswf$(A)
+	$(L) swfstrings.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfbbox$(E): swfbbox.$(O) ../lib/librfxswf.a
-	$(L) swfbbox.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+swfbbox$(E): swfbbox.$(O) ../lib/librfxswf$(A)
+	$(L) swfbbox.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-font2swf$(E): font2swf.$(O) ../lib/librfxswf.a
-	$(L) font2swf.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A)
+	$(L) font2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf.a
-	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
+	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/librfxswf.a
-	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
+swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/librfxswf$(A)
+	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
 
 install:

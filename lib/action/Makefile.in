@@ -82,7 +82,7 @@ main: main.$(O) $(OBJS)
 	$(L) -o main main.$(O) $(OBJS) $(LIBS)
 
 test: test.$(O) $(OBJECTS)
-	$(L) -o test $(OBJECTS) test.$(O) ../librfxswf.a -lm -ljpeg -lz -lt1 -lfreetype
+	$(L) -o test $(OBJECTS) test.$(O) ../librfxswf$(A) -lm -ljpeg -lz -lt1 -lfreetype
 
 # === CLEANING ===
 

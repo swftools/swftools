@@ -21,7 +21,7 @@ v2swf.$(O): v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
 avi2swf$(E): avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O)
-	$(LL) avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O) -o avi2swf$(E) ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
+	$(LL) avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O) -o avi2swf$(E) ../lib/librfxswf$(A) $(LIBS) $(VIDEO_LIBS)
 	$(STRIP) avi2swf$(E)
 
 install:
@@ -33,7 +33,7 @@ uninstall:
 	@file=avi2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
 
 clean: 
-	rm -f *.o *.obj *.lo *.a *.la avi2swf avi2swf.exe gmon.out
+	rm -f *.o *.obj *.lo *.a *.lib *.la avi2swf avi2swf.exe gmon.out
 
 doc:
 	perl ../parsedoc.pl avi2swf.doc
