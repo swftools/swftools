@@ -246,27 +246,18 @@ int args_callback_option(char*arg,char*val)
   return res;
 }
 
-struct options_t
-{ char*shortoption;
-  char*longoption;
-} options[] =
+struct options_t options[] =
 {{"q","quality"},
  {"o","output"},
  {"r","rate"},
  {"v","verbose"},
  {"X","width"},
  {"Y","height"},
- {"v","verbose"},
  {"V","version"}
 };
 
 int args_callback_longoption(char*name,char*val) {
-    int t;
-    for(t=0;t<sizeof(options)/sizeof(struct options_t);t++)
-        if(!strcmp(options[t].longoption, name))
-            return args_callback_option(options[t].shortoption,val);
-    if (VERBOSE(1)) fprintf(stderr, "Unknown option: --%s\n", name);
-    exit(1);
+    return args_long2shortoption(options, name, val);
 }
 
 int args_callback_command(char*arg,char*next)  // actually used as filename
