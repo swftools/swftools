@@ -37,6 +37,7 @@
 extern "C" {
 #include "log.h"
 }
+#include "xpdf/gfile.h"
 
 #ifndef WIN32
 #define FONTDIR SWFTOOLS_DATADIR "/fonts"
@@ -484,11 +485,18 @@ int main(int argn, char *argv[])
     msg("<verbose> reading font files from %s\n", FONTDIR);
     //TODO: use tempnam here. Check if environment already contains a
     //T1LIB_CONFIG.
-    putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
-    FILE*db = fopen("/tmp/FontDataBase", "wb");
-    FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
+    char buf1[256],buf2[256],buf3[256];
+    char* t1lib_config = mktmpname(buf1);
+    char* fontdatabase = mktmpname(buf2);
+   
+    sprintf(buf3, "T1LIB_CONFIG=%s", t1lib_config);
+    putenv(buf3);
+
+    FILE*db = fopen(fontdatabase, "wb");
+    FILE*fi = fopen(t1lib_config, "wb");
     if(!db || !fi) {
-	fprintf(stderr, "Couldn't create temporary file in /tmp/\n");
+	if(!db) fprintf(stderr, "Couldn't create temporary file %s\n",fontdatabase);
+	if(!fi) fprintf(stderr, "Couldn't create temporary file %s\n",t1lib_config);
 	exit(1);
     }
     t1searchpath[0] = 0;
@@ -530,7 +538,7 @@ int main(int argn, char *argv[])
     fprintf(db, "d050000l.afm\n");
 #endif
 
-    fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n");
+    fprintf(fi, "FONTDATABASE=%s\n",fontdatabase);
 #ifndef WIN32
     fprintf(fi, "ENCODING=%s:.\n", t1searchpath);
     fprintf(fi, "AFM=%s:.\n", t1searchpath);
@@ -548,7 +556,7 @@ int main(int argn, char *argv[])
 	fprintf(stderr, "Initialization of t1lib failed\n");
 	exit(1);
     }
-    unlink("/tmp/t1lib.config.tmp");
+    unlink(t1lib_config);
 
     pdfswf_init(filename, password);
     pdfswf_setoutputfilename(outputname);
@@ -593,7 +601,7 @@ int main(int argn, char *argv[])
 	systemf("rm __tmp__.swf");
     }
 
-    unlink("/tmp/FontDataBase");
+    unlink(fontdatabase);
     return 0;
 }
 
