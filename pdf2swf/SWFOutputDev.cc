@@ -89,7 +89,6 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 struct mapping {
     char*pdffont;
     char*filename;
-    int id;
 } pdf2t1map[] ={
 {"Times-Roman",           "n021003l"},
 {"Times-Italic",          "n021023l"},
@@ -466,6 +465,15 @@ static void dumpFontInfo(char*loglevel, GfxFont*font)
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
 //void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) {printf("void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) \n");}
 
+static void free_outline(SWF_OUTLINE*outline)
+{
+    while(outline) {
+        SWF_OUTLINE*next = outline->link;
+        free(outline);
+        outline = next;
+    }
+}
+
 SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 {
     int num = path->getNumSubpaths();
@@ -575,6 +583,7 @@ void SWFOutputDev::stroke(GfxState *state)
 	updateStrokeColor(state); //reset
 	updateFillColor(state);  //reset
     }
+    free_outline(outline);
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
@@ -624,6 +633,7 @@ void SWFOutputDev::eoClip(GfxState *state)
 
 SWFOutputDev::~SWFOutputDev() 
 {
+    swfoutput_save(&output, swffilename);
     swfoutput_destroy(&output);
     outputstarted = 0;
 };
@@ -754,7 +764,7 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
   if(!outputstarted) {
     msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
-    swfoutput_init(&output, swffilename);
+    swfoutput_init(&output);
     outputstarted = 1;
   }
     
@@ -763,19 +773,17 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
-  msg("<debug> drawlink\n");
-  double x1, y1, x2, y2, w;
-  GfxRGB rgb;
-  swfcoord points[5];
-  int x, y;
+    msg("<debug> drawlink\n");
+    double x1, y1, x2, y2, w;
+    GfxRGB rgb;
+    swfcoord points[5];
+    int x, y;
 
 #ifdef XPDF_101
-  link->getBorder(&x1, &y1, &x2, &y2, &w);
+    link->getBorder(&x1, &y1, &x2, &y2, &w);
 #else
-  link->getRect(&x1, &y1, &x2, &y2);
+    link->getRect(&x1, &y1, &x2, &y2);
 #endif
-//  if (w > 0) 
-  {
     rgb.r = 0;
     rgb.g = 0;
     rgb.b = 1;
@@ -794,121 +802,124 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 
     LinkAction*action=link->getAction();
     char buf[128];
-    char*s = "-?-";
+    char*s = 0;
     char*type = "-?-";
     char*url = 0;
     char*named = 0;
     int page = -1;
     switch(action->getKind())
     {
-	case actionGoTo: {
-	    type = "GoTo";
-	    LinkGoTo *ha=(LinkGoTo *)link->getAction();
-	    LinkDest *dest=NULL;
-	    if (ha->getDest()==NULL) 
-		dest=catalog->findDest(ha->getNamedDest());
-	    else dest=ha->getDest();
-	    if (dest){ 
-	      if (dest->isPageRef()){
-		Ref pageref=dest->getPageRef();
-		page=catalog->findPage(pageref.num,pageref.gen);
-	      }
-	      else  page=dest->getPageNum();
-	      sprintf(buf, "%d", page);
-	      s = buf;
-	    }
-	}
+        case actionGoTo: {
+            type = "GoTo";
+            LinkGoTo *ha=(LinkGoTo *)link->getAction();
+            LinkDest *dest=NULL;
+            if (ha->getDest()==NULL) 
+                dest=catalog->findDest(ha->getNamedDest());
+            else dest=ha->getDest();
+            if (dest){ 
+              if (dest->isPageRef()){
+                Ref pageref=dest->getPageRef();
+                page=catalog->findPage(pageref.num,pageref.gen);
+              }
+              else  page=dest->getPageNum();
+              sprintf(buf, "%d", page);
+              s = strdup(buf);
+            }
+        }
         break;
-	case actionGoToR: {
-	    type = "GoToR";
-	    LinkGoToR*l = (LinkGoToR*)action;
-	    GString*g = l->getNamedDest();
-	    if(g)
-	     s = g->getCString();
-	}
+        case actionGoToR: {
+            type = "GoToR";
+            LinkGoToR*l = (LinkGoToR*)action;
+            GString*g = l->getNamedDest();
+            if(g)
+             s = strdup(g->getCString());
+        }
         break;
-	case actionNamed: {
-	    type = "Named";
-	    LinkNamed*l = (LinkNamed*)action;
-	    GString*name = l->getName();
-	    if(name) {
-		s = name->lowerCase()->getCString();
-		named = name->getCString();
-		if(!strchr(s,':')) 
-		{
-		    if(strstr(s, "next") || strstr(s, "forward"))
-		    {
-			page = currentpage + 1;
-		    }
-		    else if(strstr(s, "prev") || strstr(s, "back"))
-		    {
-			page = currentpage - 1;
-		    }
-		    else if(strstr(s, "last") || strstr(s, "end"))
-		    {
-			page = pages[pagepos-1]; //:)
-		    }
-		    else if(strstr(s, "first") || strstr(s, "top"))
-		    {
-			page = 1;
-		    }
-		}
-	    }
-	}
+        case actionNamed: {
+            type = "Named";
+            LinkNamed*l = (LinkNamed*)action;
+            GString*name = l->getName();
+            if(name) {
+                s = strdup(name->lowerCase()->getCString());
+                named = name->getCString();
+                if(!strchr(s,':')) 
+                {
+                    if(strstr(s, "next") || strstr(s, "forward"))
+                    {
+                        page = currentpage + 1;
+                    }
+                    else if(strstr(s, "prev") || strstr(s, "back"))
+                    {
+                        page = currentpage - 1;
+                    }
+                    else if(strstr(s, "last") || strstr(s, "end"))
+                    {
+                        page = pages[pagepos-1]; //:)
+                    }
+                    else if(strstr(s, "first") || strstr(s, "top"))
+                    {
+                        page = 1;
+                    }
+                }
+            }
+        }
         break;
-	case actionLaunch: {
-	    type = "Launch";
-	    LinkLaunch*l = (LinkLaunch*)action;
-	    GString * str = new GString(l->getFileName());
-	    str->append(l->getParams());
-	    s = str->getCString();
-	}
+        case actionLaunch: {
+            type = "Launch";
+            LinkLaunch*l = (LinkLaunch*)action;
+            GString * str = new GString(l->getFileName());
+            str->append(l->getParams());
+            s = strdup(str->getCString());
+            delete str;
+        }
         break;
-	case actionURI: {
-	    type = "URI";
-	    LinkURI*l = (LinkURI*)action;
-	    GString*g = l->getURI();
-	    if(g) {
-	     url = g->getCString();
-	     s = url;
-	    }
-	}
+        case actionURI: {
+            type = "URI";
+            LinkURI*l = (LinkURI*)action;
+            GString*g = l->getURI();
+            if(g) {
+             url = g->getCString();
+             s = strdup(url);
+            }
+        }
         break;
-	case actionUnknown: {
-	    type = "Unknown";
-	    LinkUnknown*l = (LinkUnknown*)action;
-	    s = "";
-	}
+        case actionUnknown: {
+            type = "Unknown";
+            LinkUnknown*l = (LinkUnknown*)action;
+            s = strdup("");
+        }
         break;
-	default: {
-	    msg("<error> Unknown link type!\n");
-	    break;
-	}
+        default: {
+            msg("<error> Unknown link type!\n");
+            break;
+        }
     }
+    if(!s) s = strdup("-?-");
+
     if(!linkinfo && (page || url))
     {
-	msg("<notice> File contains links");
-	linkinfo = 1;
+        msg("<notice> File contains links");
+        linkinfo = 1;
     }
     if(page>0)
     {
-	int t;
-	for(t=0;t<pagepos;t++)
-	    if(pages[t]==page)
-		break;
-	if(t!=pagepos)
-	swfoutput_linktopage(&output, t, points);
+        int t;
+        for(t=0;t<pagepos;t++)
+            if(pages[t]==page)
+                break;
+        if(t!=pagepos)
+        swfoutput_linktopage(&output, t, points);
     }
     else if(url)
     {
-	swfoutput_linktourl(&output, url, points);
+        swfoutput_linktourl(&output, url, points);
     }
     else if(named)
     {
-	swfoutput_namedlink(&output, named, points);
+        swfoutput_namedlink(&output, named, points);
     }
     msg("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
-  }
+    free(s);s=0;
 }
 
 void SWFOutputDev::saveState(GfxState *state) {
@@ -1840,8 +1851,9 @@ int pdfswf_numpages()
 void pdfswf_close()
 {
     msg("<debug> pdfswf.cc: pdfswf_close()");
-    delete output;
-    delete doc;
+    delete output; output=0;
+    delete doc; doc=0;
+    free(pages); pages = 0;
     //freeParams();
     // check for memory leaks
     Object::memCheck(stderr);
