@@ -48,6 +48,9 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar() = 0;
 
+  // Is this device able to draw gradients?
+  virtual GBool useGradients() = 0;
+
   // Does this device use beginType3Char/endType3Char?  Otherwise,
   // text in Type 3 fonts will be drawn with drawChar/drawString.
   virtual GBool interpretType3Chars() = 0;

@@ -1581,6 +1581,8 @@ void Gfx::doFunctionShFill1(GfxFunctionShading *shading,
   // center of the rectangle
   xM = 0.5 * (x0 + x1);
   yM = 0.5 * (y0 + y1);
+  
+  out->useGradients();
 
   // the four corner colors are close (or we hit the recursive limit)
   // -- fill the rectangle; but require at least one subdivision
@@ -1799,6 +1801,9 @@ void Gfx::doAxialShFill(GfxAxialShading *shading) {
   vy0 = ty + sMax * dx;
 
   i = 0;
+  if(i < axialMaxSplits)
+    out->useGradients();
+
   while (i < axialMaxSplits) {
 
     // bisect until color difference is small enough or we hit the
@@ -2008,6 +2013,9 @@ void Gfx::doRadialShFill(GfxRadialShading *shading) {
   } else {
     shading->getColor(ta, &colorA);
   }
+
+  if(ia < radialMaxSplits)
+    out->useGradients();
 
   while (ia < radialMaxSplits) {
 
