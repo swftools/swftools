@@ -151,6 +151,8 @@ static PyObject* f_load(PyObject* self, PyObject* args)
     swf->taglist->firstTag = swf->swf.firstTag;
     swf->taglist->searchTag = swf->swf.firstTag;
     swf->taglist->lastTag = swf->swf.firstTag;
+    while(swf->taglist->lastTag->next)
+	swf->taglist->lastTag = swf->taglist->lastTag->next;
     swf->taglist->currentID = 1;
     swf->taglist->char2id = (PyDictObject*)PyDict_New();
     swf->taglist->id2char = (PyDictObject*)PyDict_New();
@@ -592,12 +594,14 @@ static PyObject* tag_getattr(PyObject * self, char* a)
 	if(id==tagfunctions[t].id) {
 	    mylog("tag_getattr: id %d found\n", id);
 	    ret = Py_FindMethod(tagfunctions[t].f, self, a);
-	    break;
+	    if(!ret) return ret;
+	    ret = FindMethodMore(ret, common_tagfunctions, self, a);
+	    mylog("tag_getattr %08x(%d) %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
+	    return ret;
 	}
     }
-
-    /* search in the functions common to all tags */
-    FindMethodMore(ret, common_tagfunctions, self, a);
+   
+    ret = Py_FindMethod(common_tagfunctions, self, a);
 
     mylog("tag_getattr %08x(%d) %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
     return ret;
@@ -818,8 +822,19 @@ static PyTypeObject TagClass =
 };
 //----------------------------------------------------------------------------
 
+static PyObject* module_verbose(PyObject* self, PyObject* args)
+{
+    if (!PyArg_ParseTuple(args,"i", &verbose)) 
+	return NULL;
+    return Py_BuildValue("s", 0);
+}
+
+
 static PyMethodDef SWFMethods[] = 
 {
+    /* Module functions */
+    {"verbose", module_verbose, METH_VARARGS, "Set the module verbosity"},
+
     /* SWF creation*/
     {"load", f_load, METH_VARARGS, "Load a SWF from disc."},
     {"create", (PyCFunction)f_create, METH_KEYWORDS, "Create a new SWF from scratch."},
