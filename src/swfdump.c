@@ -115,6 +115,58 @@ char* testfunc(char*str)
     return 0;
 }
 
+void dumpButton2Actions(TAG*tag, char*prefix)
+{
+    U32 oldTagPos;
+    U32 offsetpos;
+    U32 condition;
+
+    oldTagPos = swf_GetTagPos(tag);
+
+    // scan DefineButton2 Record
+    
+    swf_GetU16(tag);          // Character ID
+    swf_GetU8(tag);           // Flags;
+
+    offsetpos = swf_GetTagPos(tag);  // first offset
+    swf_GetU16(tag);
+
+    while (swf_GetU8(tag))      // state  -> parse ButtonRecord
+    { swf_GetU16(tag);          // id
+      swf_GetU16(tag);          // layer
+      swf_GetMatrix(tag,NULL);  // matrix
+      swf_GetCXForm(tag,NULL,0);  // matrix
+    }
+
+    while(offsetpos)
+    { U8 a;
+      ActionTAG*actions;
+        
+      offsetpos = swf_GetU16(tag);
+      condition = swf_GetU16(tag);                // condition
+      
+      actions = swf_GetActions(tag);
+      printf("%s condition %04x\n", prefix, condition);
+      swf_DumpActions(actions, prefix);
+    }
+    
+    swf_SetTagPos(tag,oldTagPos);
+    return;
+}
+
+void dumpButtonActions(TAG*tag, char*prefix)
+{
+    ActionTAG*actions;
+    swf_GetU16(tag); // id
+    while (swf_GetU8(tag))      // state  -> parse ButtonRecord
+    { swf_GetU16(tag);          // id
+      swf_GetU16(tag);          // layer
+      swf_GetMatrix(tag,NULL);  // matrix
+    }
+    actions = swf_GetActions(tag);
+    swf_DumpActions(actions, prefix);
+}
+
 int main (int argc,char ** argv)
 { 
     SWF swf;
@@ -209,6 +261,7 @@ int main (int argc,char ** argv)
 
     while(tag) {
         char*name = swf_TagGetName(tag);
+        char myprefix[128];
         if(!name) {
             fprintf(stderr, "Error: Unknown tag:0x%03x\n", tag->id);
             tag = tag->next;
@@ -237,6 +290,7 @@ int main (int argc,char ** argv)
         }
         
         printf("\n");
+        sprintf(myprefix, "                %s", prefix);
 
         if(tag->id == ST_DEFINESPRITE) {
             sprintf(prefix, "         ");
@@ -245,21 +299,16 @@ int main (int argc,char ** argv)
             *prefix = 0;
         }
         else if(tag->id == ST_DOACTION && action) {
-            char myprefix[128];
             ActionTAG*actions;
-            sprintf(myprefix, "                %s", prefix);
-            
             actions = swf_GetActions(tag);
-
             swf_DumpActions(actions, myprefix);
-
-/*          what = "URL";
-            ActionEnumerateURLs(actions, testfunc);
-            what = "String";
-            ActionEnumerateStrings(actions, testfunc);
-            what = "Target";
-            ActionEnumerateTargets(actions, testfunc);*/
         }
+	else if(tag->id == ST_DEFINEBUTTON && action) {
+	    dumpButtonActions(tag, myprefix);
+	}
+	else if(tag->id == ST_DEFINEBUTTON2 && action) {
+	    dumpButton2Actions(tag, myprefix);
+	}
         tag = tag->next;
     }
 
