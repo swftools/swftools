@@ -34,7 +34,7 @@ parser.o: parser.yy.c parser.h ../lib/q.h
 
 # TODO: include the following rule only if lex is available
 parser.yy.c: parser.lex
-	lex -Bs -oparser.yy.c parser.lex
+	flex -Bs -oparser.yy.c parser.lex
 
 wav2swf$(E): wav2swf.o wav.o ../lib/librfxswf.a
 	$(L) wav2swf.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
@@ -77,7 +77,7 @@ uninstall:
 
 clean: 
 	rm -f *.o *.lo *.a *.la *~ gmon.out
-	rm -f swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf
-	@rm -f swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe
-	@rm -f swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E)
+	rm -f swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf
+	@rm -f swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
+	@rm -f swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)
 
