@@ -782,6 +782,7 @@ void  swf_SetPassword(TAG * t, const char * password)
     fprintf(stderr, "rfxswf: Warning- no usable random generator found\n");
     fprintf(stderr, "Your password will be vulnerable to dictionary attacks\n");
 #endif
+    salt[2] = 0;
     
     md5string = crypt_md5(password, salt);
 
