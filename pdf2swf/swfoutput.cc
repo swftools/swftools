@@ -1166,6 +1166,15 @@ static void drawlink(struct swfoutput*obj, ActionTAG*,ActionTAG*, swfcoord*point
 void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
 {
     ActionTAG* actions;
+    if(!strncmp("http://pdf2swf:", url, 15)) {
+     char*tmp = strdup(url);
+     int l = strlen(tmp);
+     if(tmp[l-1] == '/')
+        tmp[l-1] = 0;
+     swfoutput_namedlink(obj, tmp+15, points);
+     free(tmp);
+     return;
+    }
     
     if(shapeid>=0)
      endshape();
