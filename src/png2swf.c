@@ -42,7 +42,7 @@ TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
 
     memset(swf, 0x00, sizeof(SWF));
 
-    swf->fileVersion = 4;
+    swf->fileVersion = 5;
     swf->frameRate = (25600 / framerate);
     swf->movieSize.xmax = dx * 20;
     swf->movieSize.ymax = dy * 20;
@@ -50,6 +50,7 @@ TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
+    rgb.g = 0xff;
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -511,6 +512,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	int i,s=0;
 	int x,y;
 	int pos=0;
+	int opaque=0;
+	int transparent=0;
 	/* in case for mode 2, the following also performs 24->32 bit conversion */
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
@@ -540,7 +543,37 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    else
 		applyfilter3(mode, src, old, dest, header.width);
 	}
-	swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
+
+#ifdef HAVE_LIBJPEG
+	/* the image is now compressed and stored in data. Now let's take
+	   a look at the alpha values to determine which bitmap type we
+	   should write */
+	if(header.mode == 6)
+	for(y=0;y<header.height;y++) {
+	    U8*l = &data2[(y*header.width)*4];
+	    for(x=0;x<header.width;x++) {
+		if(l[x*4+0]==255) transparent++;
+		if(l[x*4+0]==0) opaque++;
+	    }
+	}
+	/* mode 6 images which are not fully opaque or fully transparent
+	   will be stored as definejpeg3 */
+	if(header.mode == 6 && transparent != header.width*header.height
+		            && opaque != header.width*header.height) {
+	   
+	    printf("Image has transparency information. Storing as DefineBitsJpeg3 Tag (jpeg+alpha)\n");
+
+	    // we always use quality 100, since png2swf is expected to
+	    // use more or less lossless compression
+	    
+	    swf_SetJPEGBits3(t, header.width, header.height, (RGBA*)data2, 100);
+	    t->id = ST_DEFINEBITSJPEG3;
+	} 
+	else
+#endif
+	{
+	    swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
+	}
 	free(data2);
     }
     else {
@@ -610,7 +643,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	free(data2);
     }
 
-    t = swf_InsertTag(t, ST_DEFINESHAPE);
+    t = swf_InsertTag(t, ST_DEFINESHAPE3);
 
     swf_ShapeNew(&s);
     swf_GetMatrix(NULL, &m);
@@ -636,14 +669,14 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     swf_ShapeSetEnd(t);
 
     t = swf_InsertTag(t, ST_REMOVEOBJECT2);
-    swf_SetU16(t, 1);		// depth
+    swf_SetU16(t, 50);		// depth
 
     t = swf_InsertTag(t, ST_PLACEOBJECT2);
 
     swf_GetMatrix(NULL, &m);
     m.tx = (swf->movieSize.xmax - (int) header.width * 20) / 2;
     m.ty = (swf->movieSize.ymax - (int) header.height * 20) / 2;
-    swf_ObjectPlace(t, id + 1, 1, &m, NULL, NULL);
+    swf_ObjectPlace(t, id + 1, 50, &m, NULL, NULL);
 
     t = swf_InsertTag(t, ST_SHOWFRAME);
 
