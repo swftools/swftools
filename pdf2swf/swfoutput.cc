@@ -1728,13 +1728,7 @@ static void endshape(swfoutput*obj, int clipdepth)
     if(i->shapeisempty ||
        /*bbox empty?*/
        (i->bboxrect.xmin == i->bboxrect.xmax && 
-        i->bboxrect.ymin == i->bboxrect.ymax) ||
-       /*bbox outside page?*/
-       (i->bboxrect.xmax <= i->min_x*20 ||
-	i->bboxrect.ymax <= i->min_y*20 ||
-	i->bboxrect.xmin >= i->max_x*20 ||
-	i->bboxrect.ymin >= i->max_y*20)
-       )
+        i->bboxrect.ymin == i->bboxrect.ymax))
     {
 	// delete the shape again, we didn't do anything
 	cancelshape(obj);
