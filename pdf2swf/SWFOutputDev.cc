@@ -624,8 +624,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode c, Unicode *_u, int uLen)
 {
-    msg("<debug> drawChar(%f,%f,%f,%f,'%c')\n",x,y,dx,dy,c);
-    
     // check for invisible text -- this is used by Acrobat Capture
     if ((state->getRender() & 3) == 3)
 	return;
@@ -640,13 +638,16 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     x1 = x;
     y1 = y;
     state->transform(x, y, &x1, &y1);
+	
+    Unicode u=0;
+    if(_u) 
+	u = *_u;
+    
+    msg("<debug> drawChar(%f,%f,%f,%f,'%c',%d)\n",x,y,dx,dy,c,u);
 
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
-	Unicode u=0;
 	char*name=0;
-	if(_u) 
-	    u = *_u;
 	if(u) {
 	    int t;
 	    for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++)
@@ -656,8 +657,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 		    break;
 		}
 	}
-/*	   printf("%02x %04x/%04x-%d \"%s\" %s %d\n", c,u, *_u, uLen, name, cfont->getName()->getCString(),
-		cfont->getType());*/
 
 	if(name)
 	   swfoutput_drawchar(&output, x1, y1, name, c);
@@ -983,7 +982,6 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
       int c;
       char *fontBuf;
       int fontLen;
-      Type1CFontFile *cvt;
       Ref embRef;
       Object refObj, strObj;
       char namebuf[512];
@@ -1009,8 +1007,19 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	  msg("<error> Couldn't read embedded font file");
 	  return 0;
 	}
-	cvt = new Type1CFontFile(fontBuf, fontLen);
+	Type1CFontFile *cvt = new Type1CFontFile(fontBuf, fontLen);
 	cvt->convertToType1(f);
+	delete cvt;
+	gfree(fontBuf);
+      } else if(font->getType() == fontTrueType) {
+	msg("<verbose> writing font using TrueTypeFontFile::writeTTF");
+	if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
+	  fclose(f);
+	  msg("<error> Couldn't read embedded font file");
+	  return 0;
+	}
+	TrueTypeFontFile *cvt = new TrueTypeFontFile(fontBuf, fontLen);
+	cvt->writeTTF(f);
 	delete cvt;
 	gfree(fontBuf);
       } else {
@@ -1069,7 +1078,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	      "-b", tmpFileName, name2};
 	  msg("<verbose> Invoking %s %s %s %s %s %s %s %s",a[0],a[1],a[2],a[3],a[4],a[5],a[6],a[7]);
 	  ttf2pt1_main(8,a);
-	  unlink(tmpFileName);
+	  //unlink(tmpFileName);
 	  sprintf(name2,"%s.pfb",tmp);
 	  tmpFileName = strdup(name2);
       }
