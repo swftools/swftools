@@ -674,10 +674,6 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	free(data2);
     }
 
-    while(t->len < 64) {
-	swf_SetU8(t, 0); //fix for flash player bug- see ../lib/modules/swfbits.c
-    }
-
     t = swf_InsertTag(t, ST_DEFINESHAPE3);
 
     swf_ShapeNew(&s);
