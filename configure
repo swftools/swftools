@@ -544,7 +544,7 @@ test "$program_transform_name" = "" && program_transform_name="s,x,x,"
 
 
 export PACKAGE=swftools
-export VERSION=pre0.0.3
+export VERSION=pre0.1.0
 
 export CFLAGS="-O2 -fomit-frame-pointer"
 export CXXFLAGS="-O2 -fomit-frame-pointer"
