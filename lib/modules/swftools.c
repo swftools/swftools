@@ -136,6 +136,7 @@ SRECT swf_GetDefineBBox(TAG * t)
   U32 oldTagPos;
   U16 id = 0;
   SRECT b1,b2;
+  memset(&b1, 0, sizeof(b1));
 
   oldTagPos = swf_GetTagPos(t);
   swf_SetTagPos(t,0);
