@@ -266,7 +266,7 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 }
 \.include{S}.*\n		    {handleInclude(yytext, yyleng);}
 \.{NAME}	            {s(COMMAND);c();}
-:({NS}|{S}[^.]|{S}\.[^e]|{S}\.e[^n]|{S}\.en[^d])*{S}\.end	    {s(RAWDATA);c();}
+:({NS}|{S}[^.]|{S}\.[^e]|{S}\.e[^n]|{S}\.en[^d]|{S}\.end{NS})*{S}\.end	    {s(RAWDATA);c();}
 {NAME}                      {s(IDENTIFIER);c();}
 "["		            {c();BEGIN(BINARY);}
 {S} 		            {c();}
