@@ -25,7 +25,7 @@
 	* lib/example/demofont: example font, generated with lib/example/dumpfont.
 0.1.1:  
 	* swfcombine: Wasn't able to handle converted pdfs with links. Fixed.
-	* swfcombine: Introduce --dump, -X,-Y,-r options
+	* swfcombine: Introduce --dummy, -X,-Y,-r options
 	* swfdump: new: -r option
 	* pdf2swf: small bugfixes
 	* HOWTO_pdf2swf: added section about correcting size and framerate
@@ -38,3 +38,8 @@
 	* rfxswf-lib: bugfix: Couldn't handle jpeg grayscale images
 0.1.3:	
 	* pdf2swf: TrueType support added. (using ttf2pt1)
+	* rfxswf-lib: performs conversion of jpeg colorspaces now. (Makes pdf2swf cope
+	               with more types of jpegs)
+	* swfextract: new tool, allows to extract single objects from movieclips
+	* swfcombine: allows ids instead of names, now, too.
+	* swfdump: added text extracting functionality.

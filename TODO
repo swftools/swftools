@@ -5,19 +5,23 @@ General:
 
 pdf2swf:
 
-    * The following pdf properties are not yet dealt with:
-      o dashed lines (maybe by using fillstyle to keep Shapes small, maybe
+    * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
     * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
+    * some bounding boxes are too big
 
 swfcombine:
 
     * Allow substituting frames (which have a name), too?
-    * Allow ids instead of names
     * --cat option (concatenates the movies)?
     * Relocate  SetTarget "/content"  stuff
     * --merge mode? (Doesn't store everything in movieclips)
+
+swfextract:
+    
+    * add support for extraction of bitmaps and sounds into 'native' formats (mp3, jpg, png)
+    * Support for extracting frames?
 
 swfdump:
 
