@@ -170,7 +170,7 @@ int main (int argc,char ** argv)
  	printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
 	       " WIDTH=\"%d\"\n"
 	       " HEIGHT=\"%d\"\n"
-	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=5,0,0,0\">\n"
+	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=%d,0,0,0\">\n"
                "  <PARAM NAME=\"MOVIE\" VALUE=\"%s\">\n"
 	       "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
 	       "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
@@ -179,7 +179,7 @@ int main (int argc,char ** argv)
 	       "   PLAY=\"true\" LOOP=\"true\" QUALITY=\"high\"\n"
 	       "   PLUGINSPAGE=\"http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash\">\n"
                "  </EMBED>\n" 
-	       "</OBJECT>\n", xsize, ysize, filename, filename, xsize, ysize);
+	       "</OBJECT>\n", xsize, ysize, swf.fileVersion, filename, filename, xsize, ysize);
 	return 0;
     } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);
