@@ -37,6 +37,30 @@ int swf_ImageHasAlpha(RGBA*img, int width, int height)
     return hasalpha;
 }
 
+int swf_ImageGetNumberOfPaletteEntries2(RGBA*_img, int width, int height)
+{
+    int len = width*height;
+    int t;
+    U32* img = (U32*)_img;
+    U32 color1 = img[0];
+    U32 color2 = 0;
+    for(t=1;t<len;t++) {
+	if(img[t] != color1) {
+	    color2 = img[t];
+	    break;
+	}
+    }
+    if(t==len)
+	return 1;
+
+    for(;t<len;t++) {
+	if(img[t] != color1 && img[t] != color2) {
+	    return width*height;
+	}
+    }
+    return 2;
+}
+
 /*int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*palette)
 {
     int len = width*height;
@@ -1097,7 +1121,6 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
     lblockx[newwidth] = p_x;
     return lblockx;
 }
-
 RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight)
 {
     int x,y;
@@ -1107,6 +1130,12 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
     
     if(newwidth<1 || newheight<1)
 	return 0;
+
+    /* this is bad because this scaler doesn't yet handle monochrome
+       images with 2 colors in a way that the final image hasn't more
+       than 256 colors */
+    if(swf_ImageGetNumberOfPaletteEntries2(data, width, height) == 2)
+	fprintf(stderr, "Warning: scaling monochrome image\n");
 
     tmpline = (rgba_int_t*)malloc(width*sizeof(rgba_int_t));
     newdata = (RGBA*)malloc(newwidth*newheight*sizeof(RGBA));
