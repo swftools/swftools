@@ -70,18 +70,20 @@ USE_GZIP = @USE_GZIP@
 VERSION = @VERSION@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-bin_PROGRAMS = simple_viewer PreLoaderTemplate
+bin_PROGRAMS = keyboard_viewer simple_viewer PreLoaderTemplate
 LDADD = 
 simple_viewer_SOURCES = simple_viewer.c
 simple_viewer_LDADD = ../lib/librfxswf.a
+keyboard_viewer_SOURCES = keyboard_viewer.c
+keyboard_viewer_LDADD = ../lib/librfxswf.a
 PreLoaderTemplate_SOURCES = PreLoaderTemplate.c
 PreLoaderTemplate_LDADD = ../lib/librfxswf.a
 INCLUDES = -I../lib
-pkgdata_DATA = simple_viewer.swf PreLoaderTemplate.swf swft_loader.swf tessel_loader.swf
+pkgdata_DATA = simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf swft_loader.swf tessel_loader.swf
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  simple_viewer$(EXEEXT) PreLoaderTemplate$(EXEEXT)
+bin_PROGRAMS =  simple_viewer$(EXEEXT) keyboard_viewer.swf$(EXEEXT) PreLoaderTemplate$(EXEEXT)
 PROGRAMS =  $(bin_PROGRAMS)
 
 
@@ -92,6 +94,9 @@ LIBS = @LIBS@
 simple_viewer_OBJECTS =  simple_viewer.o
 simple_viewer_DEPENDENCIES =  ../lib/librfxswf.a
 simple_viewer_LDFLAGS = 
+keyboard_viewer_OBJECTS =  keyboard_viewer.o
+keyboard_viewer_DEPENDENCIES =  ../lib/librfxswf.a
+keyboard_viewer_LDFLAGS = 
 PreLoaderTemplate_OBJECTS =  PreLoaderTemplate.o
 PreLoaderTemplate_DEPENDENCIES =  ../lib/librfxswf.a
 PreLoaderTemplate_LDFLAGS = 
@@ -108,9 +113,9 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = tar
 GZIP_ENV = --best
-DEP_FILES =  .deps/simple_viewer.P .deps/PreLoaderTemplate.P
-SOURCES = $(simple_viewer_SOURCES) $(PreLoaderTemplate_SOURCES)
-OBJECTS = $(simple_viewer_OBJECTS) $(PreLoaderTemplate_OBJECTS)
+DEP_FILES =  .deps/simple_viewer.P .deps/PreLoaderTemplate.P .deps/keyboard_viewer.P
+SOURCES = $(keyboard_viewer_SOURCES) $(simple_viewer_SOURCES) $(PreLoaderTemplate_SOURCES)
+OBJECTS = $(keyboard_viewer_OBJECTS) $(simple_viewer_OBJECTS) $(PreLoaderTemplate_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -123,6 +128,9 @@ clean-binPROGRAMS:
 
 distclean-binPROGRAMS:
 
+keyboard_viewer.swf: keyboard_viewer
+	echo Calling ./keybard_viewer to create keyboard_viewer.swf
+	./keyboard_viewer
 simple_viewer.swf: simple_viewer
 	echo Calling ./simple_viewer to create simple_viewer.swf
 	./simple_viewer
@@ -147,6 +155,10 @@ distclean-compile:
 simple_viewer$(EXEEXT): $(simple_viewer_OBJECTS) $(simple_viewer_DEPENDENCIES)
 	@rm -f simple_viewer$(EXEEXT)
 	$(LINK) $(simple_viewer_LDFLAGS) $(simple_viewer_OBJECTS) $(simple_viewer_LDADD) $(LIBS)
+
+keyboard_viewer$(EXEEXT): $(keyboard_viewer_OBJECTS) $(keyboard_viewer_DEPENDENCIES)
+	@rm -f keyboard_viewer$(EXEEXT)
+	$(LINK) $(keyboard_viewer_LDFLAGS) $(keyboard_viewer_OBJECTS) $(keyboard_viewer_LDADD) $(LIBS)
 
 PreLoaderTemplate$(EXEEXT): $(PreLoaderTemplate_OBJECTS) $(PreLoaderTemplate_DEPENDENCIES)
 	@rm -f PreLoaderTemplate$(EXEEXT)
