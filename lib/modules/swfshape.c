@@ -749,17 +749,26 @@ SRECT swf_GetShapeBoundingBox(SHAPE2*shape2)
 void swf_Shape2Free(SHAPE2 * s)
 {
     SHAPELINE*line = s->lines;
+    s->lines = 0;
     while(line) {
 	SHAPELINE*next = line->next;
+	line->next = 0;
 	rfx_free(line);
 	line = next;
     }
-    if(s->linestyles)
+
+    if(s->linestyles) {
 	rfx_free(s->linestyles);
-    if(s->fillstyles)
+	s->linestyles = 0;
+    }
+    if(s->fillstyles) {
 	rfx_free(s->fillstyles);
-    if(s->bbox)
+	s->fillstyles = 0;
+    }
+    if(s->bbox) {
 	rfx_free(s->bbox);
+	s->bbox = 0;
+    }
 }
 
 SHAPE2* swf_Shape2Clone(SHAPE2 * s)
