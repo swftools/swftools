@@ -1059,6 +1059,12 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     swf_SetLoadFontParameters(32, 0);
 
     SWFFONT *swffont = swf_LoadFont(filename);
+
+    if(!swffont) {
+	msg("<error> Coudln't load font %s (%s)", fontid, filename);
+	swffont = swf_LoadFont(0);
+    }
+
     swf_FontSetID(swffont, ++currentswfid);
     
     if(screenloglevel >= LOGLEVEL_DEBUG)  {
