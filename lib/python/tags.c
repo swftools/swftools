@@ -83,6 +83,8 @@ static tag_internals_t font_tag =
 typedef struct _placeobject_internal
 {
     SWFPLACEOBJECT* po;
+
+    //PyObject*character //TODO
 } placeobject_internal_t;
 staticforward tag_internals_t placeobject_tag;
 
