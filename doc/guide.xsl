@@ -351,11 +351,11 @@
     </font>
   </xsl:template>
 
-  <xsl:template match="uri">
-  <!-- expand templates to handle things like <uri link="http://bar"><c>foo</c></uri> -->
+  <xsl:template match="a">
+  <!-- expand templates to handle things like <a href="http://bar"><c>foo</c></a> -->
     <xsl:choose>
-      <xsl:when test="@link">
-	<a href="{@link}">
+      <xsl:when test="@href">
+	<a href="{@href}">
 	  <xsl:apply-templates/>
 	</a>
       </xsl:when>
