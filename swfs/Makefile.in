@@ -73,16 +73,18 @@ USE_GZIP = @USE_GZIP@
 VERSION = @VERSION@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-bin_PROGRAMS = simple_viewer
+bin_PROGRAMS = simple_viewer PreLoaderTemplate
 LDADD = 
 simple_viewer_SOURCES = simple_viewer.c
 simple_viewer_LDADD = ../lib/rfxswf.o
+PreLoaderTemplate_SOURCES = simple_viewer.c
+PreLoaderTemplate_LDADD = ../lib/rfxswf.o
 INCLUDES = -I../lib
 pkgdata_DATA = simple_viewer.swf PreLoaderTemplate.swf swft_loader.swf tessel_loader.swf
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  simple_viewer$(EXEEXT)
+bin_PROGRAMS =  simple_viewer$(EXEEXT) PreLoaderTemplate$(EXEEXT)
 PROGRAMS =  $(bin_PROGRAMS)
 
 
@@ -93,6 +95,9 @@ LIBS = @LIBS@
 simple_viewer_OBJECTS =  simple_viewer.o
 simple_viewer_DEPENDENCIES =  ../lib/rfxswf.o
 simple_viewer_LDFLAGS = 
+PreLoaderTemplate_OBJECTS =  PreLoaderTemplate.o
+PreLoaderTemplate_DEPENDENCIES =  ../lib/rfxswf.o
+PreLoaderTemplate_LDFLAGS = 
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
@@ -106,9 +111,9 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = tar
 GZIP_ENV = --best
-DEP_FILES =  .deps/simple_viewer.P
-SOURCES = $(simple_viewer_SOURCES)
-OBJECTS = $(simple_viewer_OBJECTS)
+DEP_FILES =  .deps/simple_viewer.P .deps/PreLoaderTemplate.P
+SOURCES = $(simple_viewer_SOURCES) $(PreLoaderTemplate_SOURCES)
+OBJECTS = $(simple_viewer_OBJECTS) $(PreLoaderTemplate_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -126,6 +131,9 @@ maintainer-clean-binPROGRAMS:
 simple_viewer.swf: simple_viewer
 	echo Calling ./simple_viewer to create simple_viewer.swf
 	./simple_viewer
+PreLoaderTemplate.swf: PreLoaderTemplate
+	echo Calling ./PreLoaderTemplate to create PreLoaderTemplate.swf
+	./PreLoaderTemplate
 
 .s.o:
 	$(COMPILE) -c $<
@@ -146,6 +154,10 @@ maintainer-clean-compile:
 simple_viewer$(EXEEXT): $(simple_viewer_OBJECTS) $(simple_viewer_DEPENDENCIES)
 	@rm -f simple_viewer$(EXEEXT)
 	$(LINK) $(simple_viewer_LDFLAGS) $(simple_viewer_OBJECTS) $(simple_viewer_LDADD) $(LIBS)
+
+PreLoaderTemplate$(EXEEXT): $(PreLoaderTemplate_OBJECTS) $(PreLoaderTemplate_DEPENDENCIES)
+	@rm -f PreLoaderTemplate$(EXEEXT)
+	$(LINK) $(PreLoaderTemplate_LDFLAGS) $(PreLoaderTemplate_OBJECTS) $(PreLoaderTemplate_LDADD) $(LIBS)
 
 install-pkgdataDATA: $(pkgdata_DATA)
 	@$(NORMAL_INSTALL)
