@@ -128,7 +128,7 @@ r: register (byte)
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 
-ActionTAG* swf_GetActions(TAG*tag) 
+ActionTAG* swf_ActionGet(TAG*tag) 
 {
     U8 op = 1;
     int length;
@@ -149,10 +149,8 @@ ActionTAG* swf_GetActions(TAG*tag)
 	    length = swf_GetU16(tag);
 
 	if(length) {
-	    int t;
 	    data = malloc(length);
-	    for(t=0;t<length;t++)
-		data[t] = swf_GetU8(tag);
+	    swf_GetBlock(tag, data, length);
 	} else {
 	  data = 0;
 	}
@@ -164,7 +162,20 @@ ActionTAG* swf_GetActions(TAG*tag)
     return tmp.next;
 }
 
-void swf_SetActions(TAG*tag, ActionTAG*action)
+void swf_ActionFree(ActionTAG*action)
+{
+    while(action)
+    {
+	ActionTAG*tmp;
+	if(action->data && action->data != action->tmp)
+	    free(action->data);
+	tmp = action;
+	action=action->next;
+	free(tmp);
+    }
+}
+
+void swf_ActionSet(TAG*tag, ActionTAG*action)
 {
     while(action)
     {
