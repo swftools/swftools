@@ -303,6 +303,10 @@ static int writer_zlibdeflate_write(struct writer_t*writer, void* data, int len)
 #ifdef HAVE_ZLIB
     struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
     int ret;
+    if(writer->type != WRITER_TYPE_ZLIB) {
+	fprintf(stderr, "Wrong writer ID (writer not initialized?)\n");
+	return 0;
+    }
     if(!z) {
 	fprintf(stderr, "zlib not initialized!\n");
 	return 0;
@@ -341,6 +345,10 @@ static void writer_zlibdeflate_finish(struct writer_t*writer)
     struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
     struct writer_t*output;
     int ret;
+    if(writer->type != WRITER_TYPE_ZLIB) {
+	fprintf(stderr, "Wrong writer ID (writer not initialized?)\n");
+	return;
+    }
     if(!z)
 	return;
     output= z->output;
@@ -364,7 +372,7 @@ static void writer_zlibdeflate_finish(struct writer_t*writer)
     if (ret != Z_OK) zlib_error(ret, "bitio:deflate_end", &z->zs);
     free(writer->internal);
     writer->internal = 0;
-    output->finish(output);
+    //output->finish(output); 
 #else
     fprintf(stderr, "Error: swftools was compiled without zlib support");
     exit(1);
