@@ -174,4 +174,6 @@
 	* avi2swf: added -r (--mp3-samplerate) parameter (Marcus Doemling)
 	* lib/action: Integrated Ming Actioncompiler
 	* lib/modules/swffont.c: New module, allows creation of SWF fonts from Type1 and TTF
+	* lib/modules/swfshape.c: Support for gradients
+	* lib/rfxswf.h: Support for MD5 encrypted passwords (PROTECT tags)
 
