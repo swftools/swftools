@@ -46,7 +46,7 @@ void swfoutput_setprotected(); //write PROTECT tag
 
 void swfoutput_newpage(struct swfoutput*);
 
- int swfoutput_setfont(struct swfoutput*, int t1font);
+ int swfoutput_setfont(struct swfoutput*, int fontid, int t1font);
 void swfoutput_setdrawmode(struct swfoutput*, int drawmode);
 void swfoutput_setfillcolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void swfoutput_setstrokecolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);

@@ -562,7 +562,7 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
-    swfoutput_setfontmatrix(&output,m11,-m12,m21,-m22);
+    swfoutput_setfontmatrix(&output, m11, -m12, m21, -m22);
 }
 
 int charcounter = 0;
@@ -789,7 +789,8 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 	                              (char)(rgb.b*255), (char)(opaq*255));
 }
 
-void SWFOutputDev::updateFont(GfxState *state) {
+void SWFOutputDev::updateFont(GfxState *state) 
+{
   double m11, m12, m21, m22;
   char * fontname = 0;
   GfxFont*gfxFont = state->getFont();
@@ -934,7 +935,7 @@ void SWFOutputDev::updateFont(GfxState *state) {
     }
   }
 
-  swfoutput_setfont(&output,t1id);
+  swfoutput_setfont(&output,gfxFont->getID().num,t1id);
 }
 
 void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
