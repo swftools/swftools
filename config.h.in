@@ -142,4 +142,7 @@
 /* use gzip/uncompress */
 #undef USE_GZIP
 
+/* system() can handle command substitution */
+#undef SYSTEM_BACKTICKS
+
 #endif

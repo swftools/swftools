@@ -44,3 +44,31 @@ exit 1
 fi
 ])
 
+AC_DEFUN(SWF_CHECK_SYSTEM_BACKTICKS,
+[
+AC_MSG_CHECKING([whether system() can handle command substitution])
+AC_TRY_RUN([
+#include "stdlib.h"
+int main (int argc, char*argv[])
+{
+    return system("echo `echo 0` > config.tmp2");
+}
+], OK=OK,,CROSSCOMPILE=1)
+
+if test "x${OK}" = "xOK";then
+    test -s config.tmp2 || OK=
+fi
+
+if test "x${CROSSCOMPILE}" = "x1";then
+    OK=OK;
+fi
+if test "x${OK}" = "xOK";then
+rm -f config.tmp2
+AC_MSG_RESULT(yes)
+export SYSTEM_BACKTICKS=1
+AC_DEFINE_UNQUOTED(SYSTEM_BACKTICKS, 1)
+else
+AC_MSG_RESULT(no)
+fi
+])
+
