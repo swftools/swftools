@@ -49,6 +49,7 @@ struct options_t options[] =
  {"t","text"},
  {"X","width"},
  {"Y","height"},
+ {"f","frames"},
  {"r","rate"},
  {"e","html"},
  {"u","used"},
@@ -89,6 +90,10 @@ int args_callback_option(char*name,char*val)
 	xy |= 4;
 	return 0;
     }
+    else if(name[0]=='f') {
+	xy |= 8;
+	return 0;
+    }
     else if(name[0]=='d') {
 	hex = 1;
 	return 0;
@@ -115,6 +120,7 @@ void args_callback_usage(char*name)
     printf("\t-X , --width\t\t Prints out a string of the form \"-X width\"\n");
     printf("\t-Y , --height\t\t Prints out a string of the form \"-Y height\"\n");
     printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");
+    printf("\t-f , --frames\t\t Prints out a string of the form \"-f framenum\"\n");
     printf("\t-a , --action\t\t Disassemble action tags\n");
     printf("\t-t , --text\t\t Show text data\n");
     printf("\t-d , --hex\t\t Print hex output of tag data, too\n");
@@ -513,6 +519,12 @@ int main (int argc,char ** argv)
 
 	if(xy&4)
 	printf("-r %d", swf.frameRate*100/256);
+	
+	if((xy&7) && (xy&8))
+	printf(" ");
+	
+	if(xy&8)
+	printf("-f %d", swf.frameCount);
 	
 	printf("\n");
 	return 0;
