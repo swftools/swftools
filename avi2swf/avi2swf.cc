@@ -12,11 +12,16 @@
 #include <string.h>
 #include <fcntl.h>
 
-// TODO: those two should be checked for by configure
+#include "../config.h"
+
+#ifdef HAVE_SIGNAL_H
+#ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #include <signal.h>
+#define DO_SIGNALS
+#endif
+#endif
 
-#include "../config.h"
 extern "C" {
 #include "../lib/args.h"
 }
@@ -57,7 +62,6 @@ struct options_t options[] =
  {"p","flip"},
  {"q","quality"},
  {"d","scale"},
- {"z","zlib"},
  {"x","extragood"},
  {"V","version"},
  {0,0}
@@ -114,9 +118,11 @@ void args_callback_usage(char*name)
     printf("\t-h , --help\t\t Print help and exit\n");
     printf("\t-o , --output filename\t Specify output filename\n"); 
     printf("\t-n , --num frames\t Number of frames to encode\n");
-    printf("\t-s , --start frame\t First frame to encode\n");
-    printf("\t-d , --scale factor\t Scale to factor percent\n");
+    printf("\t-d , --scale <val>\t Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
     printf("\t-p , --flip\t\t Turn movie upside down\n");
+    printf("\t-q , --quality <val>\t Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
+    printf("\t-x , --extragood\t Enable some *very* expensive compression strategies. You may\n");
+    printf("\t                \t want to let this run overnight.\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
     exit(0);
 }
@@ -156,6 +162,8 @@ typedef struct _videoreader_avifile_internal
 
 static int shutdown_avi2swf = 0;
 static int frameno = 0;
+
+#ifdef DO_SIGNALS
 pthread_t main_thread;
 static void sigterm(int sig)
 {
@@ -170,6 +178,7 @@ static void sigterm(int sig)
 	}
     }
 }
+#endif
 
 int videoreader_avifile_getsamples(videoreader_t* v, void*buffer, int num)
 {
@@ -371,10 +380,12 @@ int main (int argc,char ** argv)
     int ret;
     FILE*fi;
 
+#ifdef DO_SIGNALS
     signal(SIGTERM, sigterm);
     signal(SIGINT , sigterm);
     signal(SIGQUIT, sigterm);
     main_thread = pthread_self();
+#endif
 
     processargs(argc, argv);
     if(!filename)
