@@ -548,6 +548,11 @@ typedef struct _SWFFONT
 #define ET_HTML 2 /* MX? */
 #define ET_USEOUTLINES 1
 
+#define ET_ALIGN_LEFT 0
+#define ET_ALIGN_RIGHT  1
+#define ET_ALIGN_CENTER 2
+#define ET_ALIGN_JUSTIFY 3
+
 typedef struct _EditTextLayout
 {
     U8 align; // 0=left, 1=right, 2=center, 3=justify
