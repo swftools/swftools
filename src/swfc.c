@@ -498,11 +498,11 @@ void s_buttonput(char*character, char*as, parameters_t p)
 
     while(1) {
 	if(*s==',' || *s==0) {
-	    if(!strncmp(o,"idle",s-o)) mybutton.records[0]=r;
-	    else if(!strncmp(o,"shape",s-o)) mybutton.records[0]=r;
-	    else if(!strncmp(o,"hover",s-o)) mybutton.records[1]=r;
-	    else if(!strncmp(o,"pressed",s-o)) mybutton.records[2]=r;
-	    else if(!strncmp(o,"area",s-o)) mybutton.records[3]=r;
+	    if(!strncmp(o,"idle",s-o)) {mybutton.records[0]=r;o=s+1;}
+	    else if(!strncmp(o,"shape",s-o)) {mybutton.records[0]=r;o=s+1;}
+	    else if(!strncmp(o,"hover",s-o)) {mybutton.records[1]=r;o=s+1;}
+	    else if(!strncmp(o,"pressed",s-o)) {mybutton.records[2]=r;o=s+1;}
+	    else if(!strncmp(o,"area",s-o)) {mybutton.records[3]=r;o=s+1;}
 	    else syntaxerror("unknown \"as\" argument: \"%s\"", strdup_n(o,s-o));
 	}
 	if(!*s)
