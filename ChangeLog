@@ -8,4 +8,7 @@
 	* swfstrings: New: Allows extraction of text from swf files
 	* swfdump: New: Dumps swf file information. (And does some error checking on the SWF)
 	* jpeg2swf: New: Converts one or more jpegs to a swf movie.
-
+0.0.3: 
+	* configure: Now works without automake, automatically disables 
+			jpeg2swf and pdf2swf if jpeglib is not found (disable
+			both) or t1lib is not found (disable pdf2swf)
