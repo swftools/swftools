@@ -965,8 +965,30 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	refObj.fetch(ref, &strObj);
 	refObj.free();
 	strObj.streamReset();
-	while ((c = strObj.streamGetChar()) != EOF) {
-	  fputc(c, f);
+	int f4[4];
+	char f4c[4];
+	int t;
+	for(t=0;t<4;t++) {
+	    f4[t] = strObj.streamGetChar();
+	    f4c[t] = (char)f4[t];
+	    if(f4[t] == EOF)
+		break;
+	}
+	if(t==4) {
+	    if(!strncmp(f4c, "true", 4)) {
+		/* some weird TTF fonts don't start with 0,1,0,0 but with "true".
+		   Change this on the fly */
+		f4[0] = f4[2] = f4[3] = 0;
+		f4[1] = 1;
+	    }
+	    fputc(f4[0], f);
+	    fputc(f4[1], f);
+	    fputc(f4[2], f);
+	    fputc(f4[3], f);
+
+	    while ((c = strObj.streamGetChar()) != EOF) {
+	      fputc(c, f);
+	    }
 	}
 	strObj.streamClose();
 	strObj.free();
