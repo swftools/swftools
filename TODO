@@ -33,8 +33,6 @@ rfxswf-lib:
       example textfields don't show characters >256.
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
-    * s/GetDataSize/GetTagLen/g
-      s/GetDataSizePtr/GetTagLenPtr/g
-      s/ObjectPlace/ObjectSet/g
+    *  s/ObjectPlace/ObjectSet/g
       (s/GetFrameNo/GetTagFrameNo/g ?)
   

@@ -36,7 +36,7 @@
 	* lib/example/glyphshape.c: new file, demonstrates using font characters as shapes
 	* pdfswf: many bugfixes. The "pdfscreen" manual now get's converted correctly
 	* rfxswf-lib: bugfix: Couldn't handle jpeg grayscale images
-0.1.3:	
+0.2.0:	
 	* pdf2swf: TrueType support added. (using ttf2pt1)
 	* rfxswf-lib: performs conversion of jpeg colorspaces now. (Makes pdf2swf cope
 	               with more types of jpegs)
@@ -44,3 +44,5 @@
 	* swfcombine: allows ids instead of names, now, too.
 	* swfdump: added text displaying functionality. (like swfstrings)
 	* swfdump: now dumps also the undocumented placeobject2 actioncode.
+	* lib/example/avi2swf.cc: For now, converts small (!) avi movie files to swf.  (using 
+			          libavifile)
