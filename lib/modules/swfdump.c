@@ -47,6 +47,17 @@ void swf_DumpTag(FILE * f,TAG * t)
   fprintf(f,"\n");
 }
 
+void swf_DumpSWF(FILE * f, SWF*swf)
+{
+    TAG* tag = swf->firstTag;
+    fprintf(f, "vvvvvvvvvvvvvvvvvvvvv\n");
+    while(tag) {
+	printf("%8d %s\n", tag->len, swf_TagGetName(tag));
+	tag = tag->next;
+    }
+    fprintf(f, "^^^^^^^^^^^^^^^^^^^^^\n");
+}
+
 void swf_DumpFont(SWFFONT * font)
 {
     printf("ID: %d\n", font->id);
