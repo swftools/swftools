@@ -64,7 +64,6 @@ PACKAGE = @PACKAGE@
 RANLIB = @RANLIB@
 VERSION = @VERSION@
 
-bin_PROGRAMS = swfcombine swfstrings swfdump jpeg2swf
 jpeg2swf_SOURCES = jpeg2swf.c
 swfdump_SOURCES = swfdump.c
 swfcombine_SOURCES = bitio.c bitio.h reloc.c reloc.h combine.c combine.h flash.c flash.h swfcombine.c types.h
@@ -77,8 +76,7 @@ man_MANS = swfcombine.1 swfstrings.1 swfdump.1 jpeg2swf.1
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  swfcombine$(EXEEXT) swfstrings$(EXEEXT) swfdump$(EXEEXT) \
-jpeg2swf$(EXEEXT)
+bin_PROGRAMS =  swfcombine$(EXEEXT) swfstrings$(EXEEXT) swfdump$(EXEEXT) @JPEG2SWF@
 PROGRAMS =  $(bin_PROGRAMS)
 
 
