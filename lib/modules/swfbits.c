@@ -801,6 +801,8 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 	    palette[t].b = data[pos++];
 	    if (alpha) {
 		palette[t].a = data[pos++];
+	    } else {
+		palette[t].a = 255;
 	    }
 	}
     }
@@ -820,7 +822,11 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 		}
 	    } else {
 		for (x = 0; x < width; x++) {
-		    /* TODO: un-premultiply alpha? */
+		    /* TODO: premultiply alpha? 
+		    dest[pos2].r = (data[pos + 1]*255)/data[pos+0];
+		    dest[pos2].g = (data[pos + 2]*255)/data[pos+0];
+		    dest[pos2].b = (data[pos + 3]*255)/data[pos+0];
+		    */
 		    dest[pos2].r = data[pos + 1];
 		    dest[pos2].g = data[pos + 2];
 		    dest[pos2].b = data[pos + 3];
