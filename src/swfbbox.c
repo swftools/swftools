@@ -60,7 +60,7 @@ int args_callback_option(char*name,char*val)
 	return 0;
     } 
     else if(!strcmp(name, "v")) {
-	verbose = 1;
+	verbose ++;
 	return 0;
     } 
     else if(!strcmp(name, "o")) {
@@ -128,7 +128,6 @@ void parseFillStyleArray(TAG*tag, SHAPE2*shape)
 	int type;
 	U8*pos;
 	FILLSTYLE*dest = &shape->fillstyles[t];
-	swf_ResetReadBits(tag);
 	type = swf_GetU8(tag); //type
 	shape->fillstyles[t].type = type;
 	if(type == 0) {
@@ -163,7 +162,7 @@ void parseFillStyleArray(TAG*tag, SHAPE2*shape)
     if(count == 0xff)
 	count = swf_GetU16(tag);
 
-    if(verbose) printf("lnum: %d\n", count);
+    //if(verbose) printf("lnum: %d\n", count);
 
     shape->numlinestyles = count;
     shape->linestyles = malloc(sizeof(LINESTYLE)*count);
@@ -335,9 +334,94 @@ MATRIX getmatrix(TAG*tag)
     return o.matrix;
 }
 
+
+static int fontnum = -1;
+static SWFFONT**fonts;
+static SWF*c_swf;
+static void fontcallback1(U16 id,U8 * name)
+{ fontnum++;
+}
+static void fontcallback2(U16 id,U8 * name)
+{ 
+    fonts[fontnum] = 0;
+    swf_FontExtract(c_swf,id,&fonts[fontnum]);
+    if(verbose) {
+	if(fonts[fontnum]) printf("Extracting font %d (%s)\n", id, name);
+	else		   printf("Extracting font %d (%s) failed\n", id, name);
+	fflush(stdout);
+    }
+    fontnum++;
+}
+typedef struct _textbounds
+{
+    SRECT r;
+    MATRIX m; // character transform matrix
+} textbounds_t;
+
+static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, 
+		    int xstart, int ystart, RGBA* color)
+{
+    textbounds_t * bounds = (textbounds_t*)self;
+    SWFFONT*font = 0;
+    int t;
+    for(t=0;t<fontnum;t++) {
+	if(fonts[t]->id == fontid) {
+	    font = fonts[t];
+	    break;
+	}
+    }
+    if(!font) {
+	fprintf(stderr, "Font %d unknown\n", fontid);
+	exit(1);
+    }
+    if(!font->layout) {
+	/* This is an expensive operation- but what should we do, we
+	   need the glyph's bounding boxes */
+	swf_FontCreateLayout(font);
+    }
+
+    if(verbose)
+	printf("%d chars, font %d, size %d, at (%d,%d)\n", nr, fontid, fontsize, xstart, ystart);
+
+    for(t=0;t<nr;t++) {
+	/* not tested yet- the matrix/fontsize calculation is probably all wrong */
+	int x = xstart + xpos[t];
+	int y = ystart;
+	int ch;
+	SRECT newglyphbbox, glyphbbox = font->layout->bounds[chars[t]];
+	MATRIX m = bounds->m;
+	
+	if(ch < font->numchars && font->glyph2ascii) {
+	    ch = font->glyph2ascii[ch];
+	}
+
+	m.sx = (m.sx * fontsize) / 1024;
+	m.sy = (m.sy * fontsize) / 1024;
+	m.r0 = (m.r0 * fontsize) / 1024;
+	m.r1 = (m.r1 * fontsize) / 1024;
+
+	m.tx += x;
+	m.ty += y;
+	newglyphbbox = swf_TurnRect(glyphbbox, &m);
+
+	if(ch<32) ch='?';
+	    
+	swf_ExpandRect2(&(bounds->r), &newglyphbbox);
+	if(verbose >= 2) {
+	    printf("%5d %c, %d %d %d %d (%d %d %d %d) -> %d %d %d %d\n", 
+		xpos[t], ch, 
+		glyphbbox.xmin, glyphbbox.ymin, glyphbbox.xmax, glyphbbox.ymax,
+		newglyphbbox.xmin, newglyphbbox.ymin, newglyphbbox.xmax, newglyphbbox.ymax,
+		bounds->r.xmin, bounds->r.ymin, bounds->r.xmax, bounds->r.ymax);
+	}
+
+    }
+}
+
 static void swf_OptimizeBoundingBoxes(SWF*swf)
 {
     TAG* tag = swf->firstTag;
+    
     while (tag) {
 	if (tag->id == ST_DEFINESHAPE ||
 	    tag->id == ST_DEFINESHAPE2 ||
@@ -350,6 +434,56 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 	    tag->pos = 0;
 	    swf_SetShape2(tag, &s);
 	}
+	if (tag->id == ST_DEFINETEXT || tag->id == ST_DEFINETEXT2) {
+	    SRECT oldbox;
+	    int matrix_offset;
+	    int len;
+	    U8*data;
+	    if(verbose) printf("%s\n", swf_TagGetName(tag));
+	    if(fontnum < 0) {
+		if(verbose) printf("Extracting fonts...\n");
+		c_swf = swf;
+		fontnum = 0;
+		swf_FontEnumerate(swf,&fontcallback1);
+		fonts = (SWFFONT**)malloc(fontnum*sizeof(SWFFONT*));
+		memset(fonts, 0, fontnum*sizeof(SWFFONT*));
+		fontnum = 0;
+		swf_FontEnumerate(swf,&fontcallback2);
+	    }
+
+	    textbounds_t bounds;
+	    memset(&bounds, 0, sizeof(bounds));
+
+	    swf_SetTagPos(tag, 0);
+	    swf_GetU16(tag);
+	    swf_GetRect(tag,&oldbox);
+	    swf_ResetReadBits(tag);
+	    matrix_offset = tag->pos;
+  	    swf_GetMatrix(tag,&bounds.m);
+	    swf_ParseDefineText(tag, textcallback, &bounds);
+	    if(verbose) {
+		printf("\n");
+		swf_DumpMatrix(stdout, &bounds.m);
+	    	printf("old: %d %d %d %d\n", oldbox.xmin, oldbox.ymin, oldbox.xmax, oldbox.ymax);
+	    	printf("new: %d %d %d %d\n", bounds.r.xmin, bounds.r.ymin, bounds.r.xmax, bounds.r.ymax);
+	    }
+	    
+	    /* now comes the tricky part: 
+	       we have to fiddle the data back in 
+	       thank heavens that the bbox is follow by a matrix
+	       struct, which always starts on a byte boundary.
+	     */
+	    len = tag->len - matrix_offset;
+	    data = malloc(len);
+	    memcpy(data, &tag->data[matrix_offset], len);
+	    tag->writeBit = 0;
+	    tag->len = 2;
+	    swf_SetRect(tag, &bounds.r);
+	    swf_SetBlock(tag, data, len);
+	    free(data);
+	    tag->pos = tag->readBit = 0;
+	}
+	tag = tag->next;
     }
 }
 
