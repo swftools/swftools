@@ -215,7 +215,7 @@ int unpack_archive(void*data, char*destdir, statusfunc_t f)
 	
 	pos += len;
     }
-    f(0, "Installation finished");
+    f(0, "Finishing Installation");
     return 1;
 }
 
