@@ -405,7 +405,7 @@ Gfx::Gfx(XRef *xrefA, OutputDev *outA, int pageNum, Dict *resDict, double dpi,
   }
 
   // set crop box
-  /*if (crop) {
+  if (crop) {
     state->moveTo(cropBox->x1, cropBox->y1);
     state->lineTo(cropBox->x2, cropBox->y1);
     state->lineTo(cropBox->x2, cropBox->y2);
@@ -414,7 +414,7 @@ Gfx::Gfx(XRef *xrefA, OutputDev *outA, int pageNum, Dict *resDict, double dpi,
     state->clip();
     out->clip(state);
     state->clearPath();
-  }*/
+  }
 }
 
 Gfx::Gfx(XRef *xrefA, OutputDev *outA, Dict *resDict,
