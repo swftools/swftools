@@ -126,7 +126,7 @@ void args_callback_usage(char*name)
     printf("\t-n , --num frames\t Number of frames to encode\n");
     printf("\t-s , --start frame\t First frame to encode\n");
     printf("\t-d , --scale factor\t Scale to factor percent\n");
-    printf("\t-f , --flip\t\t Turn movie upside down\n");
+    printf("\t-p , --flip\t\t Turn movie upside down\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
     exit(0);
 }
