@@ -89,7 +89,7 @@ char fillstylechanged = 0;
 static void startshape(struct swfoutput* obj);
 static void starttext(struct swfoutput* obj);
 static void endshape();
-static void endtext();
+static void endtext(struct swfoutput* obj);
 
 // matrix multiplication. changes p0
 static void transform (plotxy*p0,struct swfmatrix*m)
@@ -887,7 +887,7 @@ static void putcharacter(struct swfoutput*obj, int fontid, int charid,
     if(chardatapos == CHARDATAMAX)
     {
 	msg("<warning> Character buffer too small. SWF will be slightly bigger");
-        endtext();
+        endtext(obj);
         starttext(obj);
     }
     chardata[chardatapos].fontid = fontid;
@@ -908,48 +908,41 @@ struct fontlist_t
 /* process a character. */
 static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
 {
-    int usefonts=1;
-    if(m->m12!=0 || m->m21!=0)
-        usefonts=0;
-    if(m->m11 != m->m22)
-        usefonts=0;
-
     if(!swffont) {
 	msg("<warning> Font is NULL");
 	return 0;
     }
 
-    if(!usefonts) {
-	msg("<verbose> Non diagonal font matrix: %f %f", m->m11, m->m21);
-	msg("<verbose> |                         %f %f", m->m12, m->m22);
+    int charid = getCharID(swffont, charnr, character, u); 
+    
+    if(charid<0) {
+	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
+		FIXNULL(character),charnr, u, FIXNULL((char*)swffont->name), swffont->numchars);
+	return 0;
     }
 
-    //if(usefonts && ! drawonlyshapes)
-    if (1)
-    {
-        int charid = getCharID(swffont, charnr, character, u); 
-        
-	if(charid<0) {
-	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
-		    FIXNULL(character),charnr, u, FIXNULL((char*)swffont->name), swffont->numchars);
-	    /*fontlist_t*it = fontlist;
-	    while(it) {
-		msg("<warning> Font history: %s [%d]", it->swffont->name, getCharID(it->swffont, charnr, character, u));
-		it = it->next;
-	    }*/
-	    return 0;
-	}
+    if(shapeid>=0)
+	endshape();
+    if(textid<0)
+	starttext(obj);
 
-        if(shapeid>=0)
-            endshape();
-        if(textid<0)
-            starttext(obj);
-
-        putcharacter(obj, swffont->id, charid,(int)(m->m13*20),(int)(m->m23*20),
-                (int)(m->m11+0.5));
-	swf_FontUseGlyph(swffont, charid);
+    float x = m->m13;
+    float y = m->m23;
+    float det = ((m->m11*m->m22)-(m->m21*m->m12));
+    if(fabs(det) < 0.0005) { 
+	/* x direction equals y direction- the text is invisible */
 	return 1;
     }
+    det = 20 / det;
+
+    SPOINT p;
+    p.x = (SCOORD)((  x * m->m22 - y * m->m12)*det);
+    p.y = (SCOORD)((- x * m->m21 + y * m->m11)*det);
+
+    putcharacter(obj, swffont->id, charid,p.x,p.y,1);
+    swf_FontUseGlyph(swffont, charid);
+    return 1;
+
     /*else
     {
         SWF_OUTLINE*outline = font->getOutline(character, charnr);
@@ -968,7 +961,7 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
         m2.m22/=100;
 
         if(textid>=0)
-            endtext();
+            endtext(obj);
         if(shapeid<0)
             startshape(obj);
 
@@ -981,12 +974,24 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     }*/
 }
 
+static void endtext(swfoutput*obj)
+{
+    if(textid<0)
+        return;
+    putcharacters(tag);
+    swf_SetU8(tag,0);
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(tag,textid,/*depth*/depth++,&obj->fontmatrix,NULL,NULL);
+    textid = -1;
+}
+
+
 /* draw a curved polygon. */
 void swfoutput_drawpath(swfoutput*output, SWF_OUTLINE*outline, 
                             struct swfmatrix*m)
 {
     if(textid>=0)
-        endtext();
+        endtext(output);
 
     /* Multiple polygons in one shape don't overlap correctly, 
        so we better start a new shape here if the polygon is filled
@@ -1009,7 +1014,7 @@ void swfoutput_drawpath(swfoutput*output, SWF_OUTLINE*outline,
 void swfoutput_drawpath2poly(struct swfoutput*output, SWF_OUTLINE*outline, struct swfmatrix*m, int line_join, int line_cap, double line_width, double miter_limit)
 {
     if(textid>=0)
-        endtext();
+        endtext(output);
     if(shapeid>=0)
 	endshape();
     assert(shapeid<0);
@@ -1153,12 +1158,19 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
        obj->fontm21 == m21 &&
        obj->fontm22 == m22)
         return;
-//    if(textid>=0)
-//      endtext();
+   if(textid>=0)
+      endtext(obj);
     obj->fontm11 = m11;
     obj->fontm12 = m12;
     obj->fontm21 = m21;
     obj->fontm22 = m22;
+    
+    MATRIX m;
+    m.sx = (U32)((obj->fontm11)*65536); m.r1 = (U32)((obj->fontm12)*65536);
+    m.r0 = (U32)((obj->fontm21)*65536); m.sy = (U32)((obj->fontm22)*65536); 
+    m.tx = 0;
+    m.ty = 0;
+    obj->fontmatrix = m;
 }
 
 /* draws a character at x,y. */
@@ -1251,7 +1263,7 @@ static void startshape(struct swfoutput*obj)
   SRECT r;
 
   if(textid>=0)
-      endtext();
+      endtext(obj);
 
   tag = swf_InsertTag(tag,ST_DEFINESHAPE);
 
@@ -1265,6 +1277,7 @@ static void startshape(struct swfoutput*obj)
   shapeid = ++currentswfid;
   swf_SetU16(tag,shapeid);  // ID
 
+  /* TODO: patch back */
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = 20*sizex;
@@ -1288,10 +1301,12 @@ static void starttext(struct swfoutput*obj)
   MATRIX m;
   if(shapeid>=0)
       endshape();
+
   tag = swf_InsertTag(tag,ST_DEFINETEXT);
   textid = ++currentswfid;
   swf_SetU16(tag, textid);
 
+  /* TODO: patch back */
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = 20*sizex;
@@ -1299,13 +1314,7 @@ static void starttext(struct swfoutput*obj)
   
   swf_SetRect(tag,&r);
 
-  m.sx = 65536;
-  m.sy = 65536;
-  m.r0 = 0;
-  m.r1 = 0;
-  m.tx = 0;
-  m.ty = 0;
- 
+  swf_GetMatrix(0, &m);
   swf_SetMatrix(tag,&m);
   swflastx=swflasty=0;
 }
@@ -1329,23 +1338,12 @@ static void endshape()
     shapeid = -1;
 }
 
-static void endtext()
-{
-    if(textid<0)
-        return;
-    putcharacters(tag);
-    swf_SetU8(tag,0);
-    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(tag,textid,/*depth*/depth++,NULL,NULL,NULL);
-    textid = -1;
-}
-
 static void endpage(struct swfoutput*obj)
 {
     if(shapeid>=0)
       endshape();
     if(textid>=0)
-      endtext();
+      endtext(obj);
     while(clippos)
         swfoutput_endclip(obj);
 
@@ -1477,7 +1475,7 @@ void swfoutput_setlinewidth(struct swfoutput*obj, double linewidth)
 void swfoutput_startclip(swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m)
 {
     if(textid>=0)
-     endtext();
+     endtext(obj);
     if(shapeid>=0)
      endshape();
 
@@ -1505,7 +1503,7 @@ void swfoutput_startclip(swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m)
 void swfoutput_endclip(swfoutput*obj)
 {
     if(textid>=0)
-     endtext();
+     endtext(obj);
     if(shapeid>=0)
      endshape();
 
@@ -1535,7 +1533,7 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
     
     if(opennewwindow)
       actions = action_GetUrl(0, url, "_parent");
@@ -1552,7 +1550,7 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
    
       actions = action_GotoFrame(0, page);
       actions = action_End(actions);
@@ -1572,7 +1570,7 @@ void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
 
     if(!strncmp(tmp, "call:", 5))
     {
@@ -1839,7 +1837,7 @@ int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,i
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1867,7 +1865,7 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey,
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1888,7 +1886,7 @@ int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int si
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1915,7 +1913,7 @@ int swfoutput_drawimagelosslessN(struct swfoutput*obj, U8*mem, RGBA*pal, int siz
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
 
     if(sizex&3)
     { 
@@ -1959,7 +1957,7 @@ void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey,
     if(shapeid>=0)
      endshape();
     if(textid>=0)
-     endtext();
+     endtext(obj);
 
     drawimage(obj, id, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
 }
