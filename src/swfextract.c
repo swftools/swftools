@@ -20,6 +20,7 @@ int verbose = 2;
 
 char* extractids = 0;
 char* extractframes = 0;
+char* extractjpegids = 0;
 
 char* extractname = 0;
 
@@ -31,6 +32,7 @@ struct options_t options[] =
  {"w","hollow"},
  {"v","verbose"},
  {"i","id"},
+ {"j","jpegs"},
  {"n","name"},
  {"f","frame"},
  {"V","version"},
@@ -67,6 +69,14 @@ int args_callback_option(char*name,char*val)
 	verbose ++;
 	return 0;
     } 
+    else if(!strcmp(name, "j")) {
+	if(extractjpegids) {
+	    fprintf(stderr, "Only one --jpegs argument is allowed. (Try to use a range, e.g. -j 1,2,3)\n");
+	    exit(1);
+	}
+	extractjpegids = val;
+	return 1;
+    } 
     else if(!strcmp(name, "f")) {
 	extractframes = val;
 	return 1;
@@ -88,13 +98,14 @@ int args_callback_longoption(char*name,char*val)
 }
 void args_callback_usage(char*name)
 {    
-    printf("Usage: %s [-v] [-i id] file.swf\n", name);
+    printf("Usage: %s [-v] [-n name] [-ijf ids] file.swf\n", name);
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-o , --output filename\t\t set output filename\n");
-    printf("\t-i , --id ID\t\t\t ID of the object to extract\n");
     printf("\t-n , --name name\t\t instance name of the object to extract\n");
-    printf("\t-f , --frame frame\t\t frame number to extract\n");
-    printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames\n");
+    printf("\t-i , --id IDs\t\t\t ID of the object to extract\n");
+    printf("\t-j , --jpeg IDs\t\t\t IDs of the jpeg pictures to extract\n");
+    printf("\t-f , --frame frames\t\t frame numbers to extract\n");
+    printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames (use with -f)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -253,7 +264,7 @@ void listObjects(SWF*swf)
     char first;
     int t;
     int frame = 0;
-    char*names[] = {"Shapes","MovieClips","Bitmaps","Sounds","Frames"};
+    char*names[] = {"Shapes","MovieClips","JPEGs","Sounds","Frames"};
     printf("Objects in file %s:\n",filename);
     for(t=0;t<5;t++) {
 	tag = swf->firstTag;
@@ -279,9 +290,8 @@ void listObjects(SWF*swf)
 		    tag = tag->next;
 	    }
 
-	    if(t == 2 && (tag->id == ST_DEFINEBITSLOSSLESS ||
+	    if(t == 2 && (tag->id == ST_DEFINEBITS ||
 		tag->id == ST_DEFINEBITSJPEG2 ||
-		tag->id == ST_DEFINEBITSLOSSLESS2 ||
 		tag->id == ST_DEFINEBITSJPEG3)) {
 		show = 1;
 		sprintf(text,"%d", swf_GetDefineID(tag));
@@ -313,6 +323,81 @@ void listObjects(SWF*swf)
     }
 }
 
+U8*jpegtables = 0;
+int jpegtablessize;
+
+void handlejpegtables(TAG*tag)
+{
+    if(tag->id == ST_JPEGTABLES) {
+	jpegtables = tag->data;
+	jpegtablessize = tag->len;
+    }
+}
+
+FILE* save_fopen(char* name, char* mode)
+{
+    FILE*fi = fopen(name, mode);
+    if(!fi) {
+	fprintf(stderr, "Error: Couldn't open %s\n", name);
+	exit(1);
+    }
+    return fi;
+}
+
+int findjpegboundary(U8*data, int len)
+{
+    int t;
+    int pos=-1;
+    for(t=0;t<len;t++) {
+	if(data[t  ]==0xff &&
+	   data[t+1]==0xd9 &&
+	   data[t+2]==0xff &&
+	   data[t+3]==0xd8) {
+	    pos = t;
+	}
+    }
+    return pos;
+}
+
+/* extract jpeg data out of a tag */
+void handlejpeg(TAG*tag)
+{
+    char name[80];
+    FILE*fi;
+    sprintf(name, "pic%d.jpeg", *(U16*)tag->data);
+    /* swf jpeg images have two streams, which both start with ff d8 and
+       end with ff d9. The following code handles sorting the middle
+       <ff d9 ff d8> bytes out, so that one stream remains */
+    if(tag->id == ST_DEFINEBITS && tag->len>2 && jpegtables) {
+	fi = save_fopen(name, "wb");
+	fwrite(jpegtables, 1, jpegtablessize-2, fi); //don't write end tag (ff,d8)
+	fwrite(&tag->data[2+2], tag->len-2-2, 1, fi); //don't write start tag (ff,d9)
+	fclose(fi);
+    }
+    if(tag->id == ST_DEFINEBITSJPEG2 && tag->len>2) {
+	int end = tag->len;
+	int pos = findjpegboundary(&tag->data[2], tag->len-2);
+	if(pos<0)
+	    return;
+	pos+=2;
+	fi = save_fopen(name, "wb");
+	fwrite(&tag->data[2], pos-2, 1, fi);
+	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
+	fclose(fi);
+    }
+    if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
+	U32 end = *(U32*)&tag->data[2]+6;
+	int pos = findjpegboundary(&tag->data[6], tag->len-6);
+	if(pos<0)
+	    return;
+	pos+=6;
+	fi = save_fopen(name, "wb");
+	fwrite(&tag->data[6], pos-6, 1, fi);
+	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
+	fclose(fi);
+    }
+}
+
 int main (int argc,char ** argv)
 { 
     TAG*tag;
@@ -325,7 +410,7 @@ int main (int argc,char ** argv)
     char listavailable = 0;
     processargs(argc, argv);
 
-    if(!extractframes && !extractids && ! extractname)
+    if(!extractframes && !extractids && ! extractname && !extractjpegids)
 	listavailable = 1;
 
     if(!filename)
@@ -398,12 +483,18 @@ int main (int argc,char ** argv)
 	    }
 	}
 
+	if(tag->id == ST_JPEGTABLES)
+	    handlejpegtables(tag);
+
 	if(swf_isDefiningTag(tag)) {
 	    int id = swf_GetDefineID(tag);
 	    tags[id] = tag;
 	    if(extractids && is_in_range(id, extractids)) {
 		used[id] = 5;
 		found = 1;
+	    }
+	    if(extractjpegids && is_in_range(id, extractjpegids)) {
+		handlejpeg(tag);
 	    }
 	}
 	else if (tag->id == ST_SETBACKGROUNDCOLOR) {
