@@ -176,9 +176,9 @@ public:
   virtual void beginString(GfxState *state, GString *s) ;
   virtual void endString(GfxState *state) ;
   virtual void drawChar(GfxState *state, double x, double y,
-			double dx, double dy, Guchar c) ;
-  virtual void drawChar16(GfxState *state, double x, double y,
-			  double dx, double dy, int c) ;
+			double dx, double dy,
+			double originX, double originY,
+			CharCode code, Unicode *u, int uLen);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
@@ -186,7 +186,7 @@ public:
 			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
-			 GBool inlineImg);
+			 int *maskColors, GBool inlineImg);
 
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
@@ -355,7 +355,7 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   if(gstr) 
    logf("%sTag: %s\n", loglevel, FIXNULL(gstr->getCString()));
   
-  //if(font->is16Bit()) logf("%sis 16 bit\n", loglevel); //FIXME: not existing in xpdf 1.01
+  if(font->isCIDFont()) logf("%sis CID font\n", loglevel);
 
   GfxFontType type=font->getType();
   switch(type) {
@@ -416,6 +416,7 @@ SWFOutputDev::SWFOutputDev()
     clippos = 0;
     clipping[clippos] = 0;
     outputstarted = 0;
+    xref = 0;
 //    printf("SWFOutputDev::SWFOutputDev() \n");
 };
 
@@ -566,7 +567,10 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
 }
 
 int charcounter = 0;
-void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, double dy, Guchar c) 
+void SWFOutputDev::drawChar(GfxState *state, double x, double y,
+			double dx, double dy,
+			double originX, double originY,
+			CharCode c, Unicode *u, int uLen)
 {
     logf("<debug> drawChar(%f,%f,%f,%f,'%c')\n",x,y,dx,dy,c);
     // check for invisible text -- this is used by Acrobat Capture
@@ -575,7 +579,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, doub
        GfxFont*font = state->getFont();
        Gfx8BitFont*font8;
        if(font->isCIDFont()) {
-	   logf("<error> CID Font\n");
+	   logf("<error> CID Font");
 	   return;
        }
        font8 = (Gfx8BitFont*)font;
@@ -592,12 +596,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, doub
        else
 	  logf("<warning> couldn't get name for character %02x from Encoding", c);
     }
-}
-
-void SWFOutputDev::drawChar16(GfxState *state, double x, double y, double dx, double dy, int c) 
-{
-    printf("<error> drawChar16(%f,%f,%f,%f,%08x)\n",x,y,dx,dy,c);
-    exit(1);
 }
 
 void SWFOutputDev::endString(GfxState *state) 
@@ -1135,7 +1133,7 @@ void SWFOutputDev::updateFont(GfxState *state)
   Ref embRef;
   GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
   if(embedded) {
-    if (//!gfxFont->is16Bit() && FIXME: not in xpdf 1.01
+    if (!gfxFont->isCIDFont() &&
 	(gfxFont->getType() == fontType1 ||
 	 gfxFont->getType() == fontType1C ||
 	 gfxFont->getType() == fontTrueType)) {
@@ -1401,11 +1399,13 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 }
 
 void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
-			       int width, int height,
-			       GfxImageColorMap *colorMap, GBool inlineImg) 
+			 int width, int height, GfxImageColorMap *colorMap,
+			 int *maskColors, GBool inlineImg)
 {
-  logf("<verbose> drawImage %dx%d, %s, inline=%d", width, height, 
-	  colorMap?"colorMap":"no colorMap", inlineImg);
+  logf("<verbose> drawImage %dx%d, %s %s, inline=%d", width, height, 
+	  colorMap?"colorMap":"no colorMap", 
+	  maskColors?"maskColors":"no maskColors",
+	  inlineImg);
   if(colorMap)
       logf("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
 	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
@@ -1461,8 +1461,6 @@ void pdfswf_init(char*filename, char*userPassword)
   GString *fileName = new GString(filename);
   GString *userPW;
   Object info;
-  // init error file
-  //errorInit(); FIXME xpdf 1.01
 
   // read config file
   globalParams = new GlobalParams("");
