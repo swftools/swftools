@@ -1729,6 +1729,11 @@ int pdfswf_numpages()
   return doc->getNumPages();
 }
 
+void pdfswf_insertstop()
+{
+    insertstoptag = 1;
+}
+
 int closed=0;
 void pdfswf_close()
 {

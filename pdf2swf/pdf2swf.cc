@@ -115,6 +115,11 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_linksopennewwindow();
 	return 0;
     }
+    else if (!strcmp(name, "t"))
+    {
+	pdfswf_insertstop();
+	return 0;
+    }
     else if (!strcmp(name, "f"))
     {
 	pdfswf_storeallcharacters();
@@ -231,6 +236,7 @@ struct options_t options[] =
  {"L","preloader"},
  {"b","defaultviewer"},
  {"l","defaultpreloader"},
+ {"t","stop"},
  {0,0}
 };
 
@@ -272,6 +278,7 @@ void args_callback_usage(char*name)
 #endif
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-V  --version              Print program version\n");
+    printf("-t  --stop                 Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
 #ifndef SYSTEM_BACKTICKS
     printf("The following might not work because your system call doesn't support command substitution:\n");
 #endif

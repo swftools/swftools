@@ -18,6 +18,7 @@ void pdfswf_linksopennewwindow();
 void pdfswf_jpegquality(int);
 void pdfswf_performconversion();
 void pdfswf_storeallcharacters();
+void pdfswf_insertstop();
 
 int pdfswf_numpages();
 void pdfswf_convertpage(int page) ;

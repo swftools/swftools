@@ -21,6 +21,7 @@ extern int ignoredraworder; //default:0
 extern int drawonlyshapes; //default:0
 extern int jpegquality; //default:100;
 extern int storeallcharacters; // default:0
+extern int insertstoptag; //default:0
 
 typedef long int twip;
 

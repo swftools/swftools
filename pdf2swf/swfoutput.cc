@@ -36,6 +36,7 @@ int drawonlyshapes=0;
 int jpegquality=85;
 int storeallcharacters=0;
 int enablezlib=0;
+int insertstoptag=0;
 static int flag_protected = 0;
 
 typedef unsigned char u8;
@@ -969,6 +970,14 @@ static void endpage(struct swfoutput*obj)
       endtext();
     while(clippos)
         swfoutput_endclip(obj);
+
+    if(insertstoptag) {
+	ActionTAG*atag=0;
+	atag = action_Stop(atag);
+	atag = action_End(atag);
+	tag = swf_InsertTag(tag,ST_DOACTION);
+	swf_ActionSet(tag,atag);
+    }
     tag = swf_InsertTag(tag,ST_SHOWFRAME);
 }
 
