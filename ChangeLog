@@ -125,3 +125,14 @@
 	* avi2swf: Implemented --flip option
 	* pdf2swf: Implemented --flashversion option
 	* pdf2swf: Implemented Viewer gadgets- it's now possible to call Flash functions via hyperlink
+
+0.4.3:
+	* src/jpeg2swf: Grayscale fix
+	* lib/rfxswf: Improved MX support
+	* pdf2swf: Command line fixes
+	* swfdump: Added -f (--frames) option
+	* png2swf: Added support for mode 6 images
+	* swfs: Support for print protection in simple_viewer
+	* swfs: added keyboard_viewer
+	* swfcombine: Bugfixes
+	* swfdump: Shows frame position now.
