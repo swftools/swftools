@@ -1,5 +1,4 @@
 #!/bin/sh
-datadir=@datadir@
 name=@PACKAGE@-@VERSION@
 rm -f ${name}
 rm -f ${name}.tar
@@ -154,7 +153,6 @@ ${name}/missing \
 ${name}/configure \
 ${name}/config.guess \
 ${name}/config.sub \
-${name}/aclocal.m4 \
 ${name}/config.h.in \
 ${name}/stamp-h.in \
 ${name}/Makefile.am \
