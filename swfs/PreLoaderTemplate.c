@@ -53,21 +53,17 @@ int main (int argc,char ** argv)
   
   tag = swf_InsertTag(tag,ST_SHOWFRAME);
 
-  a1 = swf_ActionStart(tag);
-    action_PushFloat(12.0);
-    action_PushString("");
-    action_GetProperty();
-    action_PushFloat(2.0);
-    action_Less();
-    action_If(2);
-    action_GotoFrame(1);
-    action_End();
-  swf_ActionEnd();
+    a1 = action_PushFloat(0, 12.0);
+    a1 = action_PushString(a1, "");
+    a1 = action_GetProperty(a1);
+    a1 = action_PushFloat(a1, 2.0);
+    a1 = action_Less(a1);
+    a1 = action_If(a1, 2);
+    a1 = action_GotoFrame(a1, 1);
+    a1 = action_End(a1);
 
-  a2 = swf_ActionStart(tag);
-    action_Stop();
-    action_End();
-  swf_ActionEnd();
+    a2 = action_Stop(0);
+    a2 = action_End(a2);
 
   tag = swf_InsertTag(tag,ST_DOACTION);
   swf_ActionSet(tag, a1);

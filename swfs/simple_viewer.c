@@ -117,31 +117,25 @@ int main (int argc,char ** argv)
       swf_ShapeFree(s);   // clean shape structure (which isn't needed anymore after writing the tag)
   }
 
-  a1 = swf_ActionStart(tag);
-    action_SetTarget("viewport");
-    action_PreviousFrame();
-    action_SetTarget("");
-    action_End();
-  swf_ActionEnd();
+    a1 = action_SetTarget(0, "viewport");
+    a1 = action_PreviousFrame(a1);
+    a1 = action_SetTarget(a1, "");
+    a1 = action_End(a1);
 
-  a2 = swf_ActionStart(tag);
-    action_SetTarget("viewport");
-    action_NextFrame();
-    action_SetTarget("");
-    action_End();
-  swf_ActionEnd();
+    a2 = action_SetTarget(0, "viewport");
+    a2 = action_NextFrame(a2);
+    a2 = action_SetTarget(a2,"");
+    a2 = action_End(a2);
 
-  a3 = swf_ActionStart(tag);
-    action_SetTarget("viewport");
-    action_Stop();
-    action_SetTarget("");
+    a3 = action_SetTarget(0,"viewport");
+    a3 = action_Stop(a3);
+    a3 = action_SetTarget(a3,"");
 #ifdef SUBTITLES
-    action_PushString("/:subtitle");
-    action_PushString(""); //reset variable
-    action_SetVariable();
+    a3 = action_PushString(a3,"/:subtitle");
+    a3 = action_PushString(a3,""); //reset variable
+    a3 = action_SetVariable(a3);
 #endif
-    action_End();
-  swf_ActionEnd();
+    a3 = action_End(a3);
 
   for(t=0;t<2;t++)
   {

@@ -1137,13 +1137,11 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     if(textid>=0)
      endtext();
     
-    actions = swf_ActionStart();
     if(opennewwindow)
-      action_GetUrl(url, "_parent");
+      actions = action_GetUrl(0, url, "_parent");
     else
-      action_GetUrl(url, "_this");
-      action_End();
-    swf_ActionEnd();
+      actions = action_GetUrl(0, url, "_this");
+    actions = action_End(actions);
     
     drawlink(obj, actions, 0, points,0);
 }
@@ -1156,10 +1154,8 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
     if(textid>=0)
      endtext();
    
-    actions = swf_ActionStart();
-      action_GotoFrame(page);
-      action_End();
-    swf_ActionEnd();
+      actions = action_GotoFrame(0, page);
+      actions = action_End(actions);
 
     drawlink(obj, actions, 0, points,0);
 }
@@ -1172,19 +1168,15 @@ void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
     if(textid>=0)
      endtext();
    
-    actions1 = swf_ActionStart();
-      action_PushString("/:subtitle");
-      action_PushString(name);
-      action_SetVariable();
-      action_End();
-    swf_ActionEnd();
+      actions1 = action_PushString(0, "/:subtitle");
+      actions1 = action_PushString(actions1, name);
+      actions1 = action_SetVariable(actions1);
+      actions1 = action_End(actions1);
 
-    actions2 = swf_ActionStart();
-      action_PushString("/:subtitle");
-      action_PushString("");
-      action_SetVariable();
-      action_End();
-    swf_ActionEnd();
+      actions2 = action_PushString(0, "/:subtitle");
+      actions2 = action_PushString(actions2, "");
+      actions2 = action_SetVariable(actions2);
+      actions2 = action_End(actions2);
 
     drawlink(obj, actions1, actions2, points,1);
 

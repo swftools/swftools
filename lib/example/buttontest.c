@@ -69,24 +69,18 @@ int main (int argc,char ** argv)
       swf_ShapeFree(s);                   // clean shape structure (which isn't needed anymore after writing the tag)
   }
 
-  a1 = swf_ActionStart(t);
-    action_SetTarget("movie");
-    action_NextFrame();
-    action_SetTarget("");
-    action_End();
-  swf_ActionEnd();
+  a1 = action_SetTarget(0, "movie");
+  a1 = action_NextFrame(a1);
+  a1 = action_SetTarget(a1, "");
+  a1 = action_End(a1);
  
-  a2 = swf_ActionStart(t);
-    //action_GetUrl("test.swf","_level0"); // load a swf
-    //action_GetUrl("index.html","_this"); // load html in new window
-    action_GetUrl("http://www.quiss.org/swftools/index.html","_parent"); // load html in this window
-    action_End();
-  swf_ActionEnd();
+    //a2 = action_GetUrl(a2, "test.swf","_level0"); // load a swf
+    //a2 = action_GetUrl(a2, "index.html","_this"); // load html in new window
+    a2 = action_GetUrl(0, "http://www.quiss.org/swftools/index.html","_parent"); // load html in this window
+    a2 = action_End(a2);
 
-  a3 = swf_ActionStart(t);
-    action_GotoFrame(33);
-    action_End();
-  swf_ActionEnd();
+    a3 = action_GotoFrame(0,33);
+    a3 = action_End(a3);
 
   actiontoset = a2;  
 
