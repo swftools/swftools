@@ -1020,10 +1020,16 @@ int swf_TextSetInfoRecord(TAG * t, SWFFONT * font, U16 size, RGBA * color, int d
 	else
 	    swf_SetRGB(t, color);
     }
-    if (dx)
+    if (dx) {
+	if(dx>32767 || dx<-32768)
+	    fprintf(stderr, "Warning: Horizontal char position overflow: %d\n", dx);
 	swf_SetS16(t, dx);
-    if (dy)
+    }
+    if (dy) {
+	if(dy>32767 || dy<-32768)
+	    fprintf(stderr, "Warning: Vertical char position overflow: %d\n", dy);
 	swf_SetS16(t, dy);
+    }
     if (font)
 	swf_SetU16(t, size);
 
