@@ -850,16 +850,20 @@ typedef struct _VIDEOSTREAM
 {
     int width;
     int height;
+    int linex;
+
     int owidth;
     int oheight;
-    int frame;
-    int linex;
     int olinex;
+
+    int frame;
     YUV*oldpic;
     YUV*current;
-    int bbx,bby;
+    int bbx;
+    int bby;
     int*mvdx;
     int*mvdy;
+    int quant;
 
     /* modifyable: */
     int do_motion; //enable motion compensation (slow!)
