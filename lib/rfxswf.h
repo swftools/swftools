@@ -954,7 +954,7 @@ typedef struct RENDERBUF
 
 void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height);
 RGBA* swf_Render(RENDERBUF*dest);
-void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, int depth,int clipdepth);
+void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 depth,U16 clipdepth);
 void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
 void swf_Render_ClearCanvas(RENDERBUF*dest);
 void swf_Render_Delete(RENDERBUF*dest);
