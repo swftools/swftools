@@ -110,7 +110,7 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 	int m = !isUnitMatrix(&obj->matrix);
 	int cx = !isUnitCXForm(&obj->cxform);
 
-	flags = (obj->id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|
+	flags = (obj->id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|(obj->ratio?PF_RATIO:0)|
 		(obj->name?PF_NAME:0)|(obj->move?PF_MOVE:0)|
 		(obj->clipdepth?PF_CLIPACTION:0);
 
