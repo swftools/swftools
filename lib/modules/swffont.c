@@ -196,7 +196,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    g = -1;
 	font->ascii2glyph[t] = g;
 	if(g>=0) {
-	    max_unicode = t;
+	    max_unicode = t+1;
 	    if(!font->glyph2ascii[g]) {
 		font->glyph2ascii[g] = t;
 	    }
