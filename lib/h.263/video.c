@@ -558,11 +558,107 @@ char has_mvd[] = {1,1,3,0,0};
 
 int tagnr = 0;
 
+void decode_block(TAG*tag, int pictype)
+{
+    int t;
+    int mb_type = -1, cbpc = -1;
+    int dbquant;
+    int cbpy_index, cbpy_value;
+    int intrablock = 0;
+    int type;
+    if(pictype == TYPE_INTER) /* non-intra pictures have a cod flag */
+    /* TODO: according to the flash spec, this field is always present */
+    {
+	int cod = swf_GetBits(tag, 1);
+	if(cod) {
+	    printf(".");
+	    return;
+	}
+    }
+    type = -1;
+    
+    /* read mcbpc */
+
+    if(pictype == TYPE_INTRA) { /* I-frame */
+	type = gethuffvalue(tag, mcbpc_intra);
+	mb_type = mcbpc_intra_params[type].mb_type;
+	cbpc = mcbpc_intra_params[type].cbpc;
+	if(type == MCBPC_INTRA_STUFFING)
+	    exit(1); //TODO: goto COD
+    } 
+    else if(pictype == 1) { /* P-frame */
+	type = gethuffvalue(tag, mcbpc_inter);
+	mb_type = mcbpc_inter_params[type].mb_type;
+	cbpc = mcbpc_inter_params[type].cbpc;
+	if(type == MCBPC_INTER_STUFFING)
+	    exit(1); //TODO: goto COD
+    }
+
+    if(mb_type == 3 || mb_type == 4)
+    {
+	intrablock = 1;
+    }
+	
+    printf("%d", intrablock);
+
+    DEBUG printf("mcbpc type: %d mb_type:%d cbpc:%d\n", type, mb_type, cbpc);
+
+    /* read cbpy */
+
+    cbpy_index = gethuffvalue(tag, cbpy);
+    cbpy_value = cbpy_index;
+    if(!intrablock)
+	cbpy_value ^= 15;
+    DEBUG printf("cbpy value:%d (%d)\n", cbpy_value, cbpy_index);
+
+
+    /* I 0: 00 mcbpc/cbpy 
+       P 0: 00 cod/mcbpc/cbpy/mvd
+       P 6: 10 cod/mcbpc/cbpy/dquant/mvd
+       P 8: 00 cod/mcbpc/cbpy/mvd/mvd24
+    */
+
+    /* quantizer */
+    if(has_quant[mb_type]) {
+	dbquant = swf_GetBits(tag, 2);
+	DEBUG printf("quantizer: %d\n", dbquant);
+    }
+
+    if(has_mvd[mb_type]&1) {
+	readMVD(tag); //horizontal
+	readMVD(tag); //vertical
+    }
+    if(has_mvd[mb_type]&2) {
+	/* only in advanced prediction mode */
+	readMVD(tag); //horizontal
+	readMVD(tag); //vertical
+	readMVD(tag); //horizontal
+	readMVD(tag); //vertical
+	readMVD(tag); //horizontal
+	readMVD(tag); //vertical
+    }
+
+    for(t=0;t<4;t++) {
+	int has_intradc = intrablock;
+	int has_tcoef = cbpy_value & (8>>t);
+	DEBUG printf("luminance%d ", t);
+	getCoefficient(tag, t, has_intradc, has_tcoef); /*luminance - affected by cbpy*/
+	DEBUG printf("\n");
+    }
+    for(t=0;t<2;t++) {
+	int has_intradc = intrablock;
+	int has_tcoef = cbpc & (2>>t);
+	DEBUG printf("chrominance%d ", t); 
+	getCoefficient(tag, t, has_intradc, has_tcoef); /*chrominance - affected by mcbc*/
+	DEBUG printf("\n");
+    }
+}
+
 void handleVideoFrame(TAG*tag, char*prefix)
 {
     U32 code, version, reference, sizeflags;
     U32 width, height;
-    U8 blocktype, type, pictype;
+    U8 blocktype, pictype;
     U16 id = swf_GetU16(tag);
     U16 frame = swf_GetU16(tag);
     U8 deblock,flags, tmp, bit;
@@ -572,7 +668,7 @@ void handleVideoFrame(TAG*tag, char*prefix)
     int num;
     int disposable = 0;
     int blocknum;
-    int bx,by;
+    int bbx,bby,bx,by;
     char*types[] = {"intra- (I-)frame", "inter- (P-)frame", "disposable interframe", "<reserved>"};
     printf("============================= frame %d ===================================", frame);
 
@@ -633,8 +729,10 @@ void handleVideoFrame(TAG*tag, char*prefix)
     }
 
     /* macro block */
-    blocknum = ((width+15)/16)*((height+15)/16);
-    printf("%dx%d [blocks: %dx%d=%d]\n", width, height, width/16, height/16, blocknum);
+    bbx = (width+15)/16;
+    bby = (height+15)/16;
+    blocknum = bbx*bby;
+    printf("%dx%d [blocks: %dx%d=%d]\n", width, height, bbx,bby, blocknum);
 
     /*if(pictype == TYPE_INTER)
 	return;*/
@@ -646,108 +744,13 @@ void handleVideoFrame(TAG*tag, char*prefix)
 	return;*/
 
     DEBUG printf("\n");
-    while(1) {
-	int x,y,t;
-	int mb_type = -1, cbpc = -1;
-	int dbquant;
-	int cbpy_index, cbpy_value;
-	int intrablock = 0;
-	if(pictype == TYPE_INTER) /* non-intra pictures have a cod flag */
-	/* TODO: according to the flash spec, this field is always present */
+    for(by=0;by<bby;by++)
+    {
+	for(bx=0;bx<bbx;bx++)
 	{
-	    int cod = swf_GetBits(tag, 1);
-	    if(cod) {
-		pos++;
-		if(pos == blocknum)
-		    break;
-		skipped++;
-		continue; //don't do anything- block hasn't changed
-	    }
+	    decode_block(tag, pictype);
 	}
-	if(skipped) {
-	    DEBUG printf("skipped (cod):%d\n", skipped);
-	    skipped = 0;
-	}
-	type = -1;
-	
-	DEBUG printf("---------> block %d\n", pos);
-
-	/* read mcbpc */
-
-	if(pictype == TYPE_INTRA) { /* I-frame */
-	    type = gethuffvalue(tag, mcbpc_intra);
-	    mb_type = mcbpc_intra_params[type].mb_type;
-	    cbpc = mcbpc_intra_params[type].cbpc;
-	    if(type == MCBPC_INTRA_STUFFING)
-		exit(1); //TODO: goto COD
-	} 
-	else if(pictype == 1) { /* P-frame */
-	    type = gethuffvalue(tag, mcbpc_inter);
-	    mb_type = mcbpc_inter_params[type].mb_type;
-	    cbpc = mcbpc_inter_params[type].cbpc;
-	    if(type == MCBPC_INTER_STUFFING)
-		exit(1); //TODO: goto COD
-	}
-
-	if(mb_type == 3 || mb_type == 4)
-	{
-	    intrablock = 1;
-	}
-
-	DEBUG printf("mcbpc type: %d mb_type:%d cbpc:%d\n", type, mb_type, cbpc);
-
-	/* read cbpy */
-
-	cbpy_index = gethuffvalue(tag, cbpy);
-	cbpy_value = cbpy_index;
-	if(!intrablock)
-	    cbpy_value ^= 15;
-	DEBUG printf("cbpy value:%d (%d)\n", cbpy_value, cbpy_index);
-
-
-	/* I 0: 00 mcbpc/cbpy 
-	   P 0: 00 cod/mcbpc/cbpy/mvd
-	   P 6: 10 cod/mcbpc/cbpy/dquant/mvd
-	   P 8: 00 cod/mcbpc/cbpy/mvd/mvd24
-	*/
-
-	/* quantizer */
-	if(has_quant[mb_type]) {
-	    dbquant = swf_GetBits(tag, 2);
-	    DEBUG printf("quantizer: %d\n", dbquant);
-	}
-
-	if(has_mvd[mb_type]&1) {
-	    readMVD(tag); //horizontal
-	    readMVD(tag); //vertical
-	}
-	if(has_mvd[mb_type]&2) {
-	    /* only in advanced prediction mode */
-	    readMVD(tag); //horizontal
-	    readMVD(tag); //vertical
-	    readMVD(tag); //horizontal
-	    readMVD(tag); //vertical
-	    readMVD(tag); //horizontal
-	    readMVD(tag); //vertical
-	}
-
-	for(t=0;t<4;t++) {
-	    int has_intradc = intrablock;
-	    int has_tcoef = cbpy_value & (8>>t);
-	    DEBUG printf("luminance%d ", t);
-	    getCoefficient(tag, t, has_intradc, has_tcoef); /*luminance - affected by cbpy*/
-	    DEBUG printf("\n");
-	}
-	for(t=0;t<2;t++) {
-	    int has_intradc = intrablock;
-	    int has_tcoef = cbpc & (2>>t);
-	    DEBUG printf("chrominance%d ", t); 
-	    getCoefficient(tag, t, has_intradc, has_tcoef); /*chrominance - affected by mcbc*/
-	    DEBUG printf("\n");
-	}
-	pos++;
-	if(pos == blocknum)
-	    break;
+	printf("\n");
     }
 }
 
