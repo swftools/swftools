@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "../config.h"
+#include "bladeenc/codec.h"
 
 #define DEBUG_RFXSWF
 
@@ -557,6 +558,10 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality); // paste jpg file into sw
 int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
 int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
+
+// swfsound.c
+void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples);
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first);
 
 // swftools.c
 
