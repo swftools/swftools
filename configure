@@ -1610,7 +1610,7 @@ EOF
 
 else
   echo "$ac_t""no" 1>&6
-echo "Error: The jpeg library jpeglib is required.";exit
+echo "Error: The jpeg library 'jpeglib' is required.";exit
 fi
 
  echo $ac_n "checking for crc32 in -lz""... $ac_c" 1>&6
@@ -1658,7 +1658,7 @@ EOF
 
 else
   echo "$ac_t""no" 1>&6
-echo "Error: The zlib compressiong handling library is required.";exit
+echo "Error: The zlib compression library is required.";exit
 fi
 
  echo $ac_n "checking for T1_LoadFont in -lt1""... $ac_c" 1>&6
