@@ -218,3 +218,20 @@
 	* avi2swf: Is now ported to Win32, too.
 	* pdf2swf: Upgraded to xpdf 3.00
 
+0.6.3:
+	* lib/modules/swfrender.c: New module, for shape->bitmap conversion
+	* lib/rfxswf.c: Several small bugfixes
+	* lib/modules/swftools.c: New function swf_Optimize()
+	* src/swfc.c: .outline and .textshape support line drawings now, too
+	* src/swfc.c: added -O option
+	* src/swfc.c: added support for including actionscript
+	* src/swfc.c: frames now start at 1
+	* src/swfextract.c: Objects extracted with -i are now scaled to width 512
+	* src/swfextract.c: Fixed jpeg extraction bug
+	* src/wav2swf.c: Big endian fixes
+	* lib/modules/swfshape.c: too long lines are now split automatically
+	* configure: Several Mac OS X fixes
+	* pdf2swf/SWFOutputDev: refactored interface to pdf2swf.cc
+	* src/png2swf.c: added -z option
+	* src/jpeg2swf.c: added -z option
+

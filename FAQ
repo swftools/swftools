@@ -5,21 +5,16 @@
 
 2.) How to compile/link swftools on Unix/Linux/BSD?
 
-    Download swftools-0.x.x.tar.gz and t1lib-1.3.1.tar.gz.
+    Download swftools-0.x.x.tar.gz. Then type, on the
+    command-line:
 
-    gzip -d swftools-0.x.x.tar.gz
-    gzip -d t1lib-1.3.1.tar.gz
-    tar -xf t1lib-1.3.1.tar
-    cd t1lib-1.3.1
-    ./configure
-    make 
-    make install
-    cd ..
-    tar -xf swftools-0.x.x.tar
+    tar -zvxf swftools-0.x.x.tar
     cd swftools-0.x.x
     ./configure
     make 
     make install
+
+    (you will have to be root for the last step)
 
 3.) What libraries do I need to compile swftools on Unix/Linux/BSD?
 
@@ -78,7 +73,7 @@
 
     If this doesn't work, especially if you want to use the python library and
     get weird exceptions, try to remove all versions of jpeglib, freetype and 
-    lame from /usr/lib and /usr/local/lib, and then run configure/make/make install
+    lame from /usr/lib and /usr/local/lib, and then run configure / make / make install
     again.
 
 7.) Is there a pdf2swf/avi2swf for Windows?
@@ -113,13 +108,13 @@
     Provided you actually own the font in question (here: Myriad-Roman.ttf), 
     you can copy that fonts into your current directory and pass 
     the "-F ./" (--fontpath ./) option to pdf2swf. 
-    If you use a page in several PDFs, you can also simply copy it
+    If you use a font in several PDFs, you can also simply copy it
     to (on Windows) C:\SWFTools\Fonts\, or (on Unix) /usr/local/share/swftools/fonts 
     to make it work all the time.
 
 10.) Can png2swf handle transparency?
 
-    It supports PNG mode 2 transparency (256 color palettes with alpha) since version 0.4.2. 
+    Yes. It supports PNG mode 2 transparency (256 color palettes with alpha) since version 0.4.2. 
     Mode 6 (32 bit RGBA truecolor) is also supported since version 0.4.4.
 
 11.) How to do Flash MX compression with SWFTools?
@@ -148,14 +143,14 @@
     The result is something like:
 
 	Objects in file myfile.swf:
-	3 Shapes: ID(s) 1-3
-	5 MovieClips: ID(s) 4, 5, 8, 10, 12
-	3 JPEGs: ID(s) 69, 116, 447
-	1 PNG: ID(s) 318
-	3 Sounds: ID(s) 28-30
-	10 Frames: ID(s) 0-10
+	 [-i] 3 Shapes: ID(s) 1-3
+	 [-i] 5 MovieClips: ID(s) 4, 5, 8, 10, 12
+	 [-j] 3 JPEGs: ID(s) 69, 116, 447
+	 [-p] 1 PNG: ID(s) 318
+	 [-s] 3 Sounds: ID(s) 28-30
+	 [-f] 10 Frames: ID(s) 0-10
 
-    Not you can extract a shape using
+    Now you can extract a shape using
 
 	swfextract -i 2 myfile.swf -o shape.swf
 

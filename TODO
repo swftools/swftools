@@ -32,7 +32,6 @@ avi2swf:
 
 swfcombine:
 
-    * allow "combining" Actionscript and SWF.
     * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
     * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
     * "swfcombine file.swf -x 200 -y 200 -s 200 box1=file1.swf" doesn't work?
