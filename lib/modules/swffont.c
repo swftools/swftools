@@ -21,6 +21,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+static int loadfont_scale = 1;
+
+int swf_SetLoadFontScale(int scale)
+{
+    loadfont_scale = scale;
+}
+
 #ifdef HAVE_FREETYPE
 
 #include <freetype/freetype.h>
@@ -29,7 +36,7 @@
 #include <freetype/ttnameid.h>
 #include <freetype/ftoutln.h>
 
-#define FT_SCALE 1
+#define FT_SCALE loadfont_scale
 #define FT_SUBPIXELS 64
 
 static int ft_move_to(FT_Vector* _to, void* user) 
