@@ -31,9 +31,6 @@ TAG* tag;
 extern char * longtext;		       
 extern SWFFONT * Font_Courier(U16 id);
 
-/* Notice: It seems Flash Players 5 and below always use their
-   built-in font for edittext, even if some other font is given */
-
 int main (int argc,char ** argv)
 { SWF swf;
   RGBA rgb;
@@ -91,7 +88,7 @@ int main (int argc,char ** argv)
 	      /* this is the standard edit field, upper left corner */
 	      swf_SetEditText(tag, ET_USEOUTLINES|ET_MULTILINE|ET_BORDER, r, 
 		      "everything you\ntype in the\nleft box\nalso appears\nin the right\nbox", 
-		      &rgb, 0, /*font id*/76, 30*20, &layout, "/:variable1");
+		      &rgb, 0, /*font id*/76, 10*20, &layout, "/:variable1");
 	  } if (t==1) {
 	      /* this field (upper right corner) mirrors the first field, without being editable */
 	      swf_SetEditText(tag, ET_NOSELECT|ET_MULTILINE|ET_BORDER|ET_READONLY, r, 0, &rgb, 0, 
@@ -228,7 +225,7 @@ void fn5b6e(SWFFONT * f,int i,U16 ascii,U16 advance,U8 * data,U32 bitlen,int xmi
 }
 
 U8 Glyphs_Courier[] = {
-	  0x0a, 0x0b, 0x0a, 0x92, 0xe6, 0xa0, 0x22, 0x90, 
+	  0x00, 0x00, 0x00, 0x92, 0xe6, 0xa0, 0x22, 0x90, 
 	  0x2a, 0xc0, 0xe6, 0x6f, 0xab, 0x8b, 0x8f, 0xa9, 
 	  0xad, 0x41, 0xbe, 0xd2, 0x24, 0xfc, 0xc0, 0xd4, 
 	  0xe6, 0x09, 0x14, 0x64, 0xa0, 0x9c, 0xa6, 0xff, 
@@ -1961,7 +1958,7 @@ SWFFONT * Font_Courier(U16 id)
   memset(f->ascii2glyph, -1, sizeof(int)*256);
 
   f->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
-  f->layout->ascent = 137;
+  f->layout->ascent = 1037;
   f->layout->descent = 911;
   f->layout->leading = 274;
   f->layout->kerningcount = 0;
@@ -1969,7 +1966,7 @@ SWFFONT * Font_Courier(U16 id)
   f->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*148);
   memset(f->layout->bounds, 0, sizeof(SRECT)*148);
 
-  addGlyph(f,  0, 0x021,  36*20, &Glyphs_Courier[0x0000],  547, 480, -1236, 720, 30); // !
+  addGlyph(f,  0, 0x020,  36*20, &Glyphs_Courier[0x0000],  14, 480, -1236, 720, 30); // ' '
   addGlyph(f,  1, 0x022,  45*20, &Glyphs_Courier[0x0045],  393, 292, -1208, 908, -628); // "
   addGlyph(f,  2, 0x023,  50*20, &Glyphs_Courier[0x0077], 1376, 184, -1294, 1016, 125); // #
   addGlyph(f,  3, 0x024,  49*20, &Glyphs_Courier[0x0123], 1393, 219, -1320, 980, 180); // $
@@ -2117,6 +2114,7 @@ SWFFONT * Font_Courier(U16 id)
   addGlyph(f,145, 0x0f9,  54*20, &Glyphs_Courier[0x33e6], 1040, 104, -916, 1088, 86); // ù
   addGlyph(f,146, 0x0fa,  57*20, &Glyphs_Courier[0x3468], 1193, 20, -868, 1159, 32); // ú
   addGlyph(f,147, 0x0fb,  50*20, &Glyphs_Courier[0x34fe], 1063, 86, -1220, 1000, 31); // û
+
   return f;
 }
 
