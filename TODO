@@ -9,7 +9,7 @@ pdf2swf:
 	      optional- use another color for dashed lines)
     * fix memory leaks
     * some bounding boxes are too big
-    * allow additional fontdirectories to be specified?
+    * support for ttf fonts in --fontdirs
     * implement -q (--quiet) option, especially for -b and -l
 
 swfcombine:

@@ -66,4 +66,6 @@
 	* lib/: Added Bladeenc 0.94.1 for mp3 compression
 	* lib/example/avi2swf.cc: Can now handle big files. Slightly better compression ratio. Sound.
 	* lib/example/sound.c: New file, demonstrates use of the sound module in librfxswf.
+0.2.3: 
+	* pdf2swf: New option --fontdir, can now handle external fonts.
 
