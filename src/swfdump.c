@@ -916,8 +916,16 @@ int main (int argc,char ** argv)
 		printf(" object");
 
             printf(" at depth %04d", swf_GetDepth(tag));
+	    
+	    if(tag->data[0]&64) {
+		SWFPLACEOBJECT po;
+		swf_GetPlaceObject(tag, &po);
+		printf(" (clip to %04d)", po.clipdepth);
+		swf_PlaceObjectFree(&po);
+	    }
             if(swf_GetName(tag))
                 printf(" name \"%s\"",swf_GetName(tag));
+
 	}
         else if(tag->id == ST_REMOVEOBJECT) {
             printf(" removes id %04d from depth %04d", swf_GetPlaceID(tag), swf_GetDepth(tag));
