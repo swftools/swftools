@@ -418,6 +418,7 @@ void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
     else if(mode==3) {
 	for(x=0;x<width;x++) {
 	    *dest = *src+(*old+last)/2;
+	    last = *dest;
 	    dest++;
 	    old++;
 	    src++;
