@@ -1,6 +1,9 @@
 swfc:
 
+    * simple actionscript commands
+    * rewrite in python
     * .texture
+    * .lock/.unlock
     * object rel coords, as in obj1.(x,y) and monkey.nose
 	"follow me" feature:  default, or should it be explicitly specified?
     * .replace command
@@ -8,7 +11,6 @@ swfc:
     * .soundstream
     * text:  newlines
     * .egon  (stub is there, never really implemented)... folding edges?
-    * dump format for ingestion into swifty?
     * .editbox
     * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
@@ -23,14 +25,17 @@ pdf2swf:
 
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
-    * fix memory leaks
-    * some bounding boxes are too big
+    * several bounding boxes are too big
     * support for ttf fonts in --fontdirs
-    * upgrade ttf2pt1
 
 font2swf:
     
     * implement support for truetype fonts.
+
+avi2swf:
+
+    * update manpage
+    * speed up h.263 routines (MMX?)
 
 swfcombine:
 
@@ -45,14 +50,22 @@ swfextract:
     
     * mp3 extraction should also work for movieclips.
 
+swfbbox:
+
+    * add manpage
+    * support for text boxes
+
 librfxswf:
 
     * Actionscript has memory leaks
     * Font routines still need a little more work (shape alignment)
 
+Makefiles/configure/installation:
+
+    * check for vsnprintf
+
 other:
 
-    * swfcrop
     * swf2fig
     * swfrender
 
