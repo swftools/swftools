@@ -65,7 +65,7 @@ int MovieFinish(SWF * swf,TAG * t,char * sname)
    if ((!isatty(so))&&(!sname)) handle = so;
    else
    { if (!sname) sname = "output.swf";
-     handle = open(sname,O_RDWR|O_CREAT|O_TRUNC,0666);
+     handle = open(sname,O_BINARY|O_RDWR|O_CREAT|O_TRUNC,0666);
    }
    if FAILED(swf_WriteSWF(handle,swf)) if (VERBOSE(1)) fprintf(stderr,"Unable to write output file: %s\n",sname);
    if (handle!=so) close(handle);
@@ -486,7 +486,7 @@ int ConvertJPEG2SWF(char * sname,char * dname,int quality)
   jpeg_finish_decompress(&cinfo);
   fclose(f);
   
-  handle = open(dname,O_RDWR|O_CREAT|O_TRUNC,0666);
+  handle = open(dname,O_BINARY|O_RDWR|O_CREAT|O_TRUNC,0666);
   if FAILED(WriteSWF(handle,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(handle);
 
