@@ -1665,41 +1665,12 @@ void pdfswf_init(char*filename, char*userPassword)
 
 void pdfswf_setparameter(char*name, char*value)
 {
-    if(!strcmp(name, "drawonlyshapes")) {
-	drawonlyshapes = atoi(value);
-    } else if(!strcmp(name, "ignoredraworder")) {
-	ignoredraworder = atoi(value);
-    } else if(!strcmp(name, "linksopennewwindow")) {
-	opennewwindow = atoi(value);
-    } else if(!strcmp(name, "storeallcharacters")) {
-	storeallcharacters = atoi(value);
-    } else if(!strcmp(name, "enablezlib")) {
-	enablezlib = atoi(value);
-    } else if(!strcmp(name, "insertstop")) {
-	insertstoptag = atoi(value);
-    } else if(!strcmp(name, "flashversion")) {
-	flashversion = atoi(value);
-    } else if(!strcmp(name, "jpegquality")) {
-	int val = atoi(value);
-	if(val<0) val=0;
-	if(val>100) val=100;
-	jpegquality = val;
-    } else if(!strcmp(name, "outputfilename")) {
+    if(!strcmp(name, "outputfilename")) {
 	swffilename = value;
     } else if(!strcmp(name, "caplinewidth")) {
 	caplinewidth = atof(value);
-    } else if(!strcmp(name, "splinequality")) {
-	int v = atoi(value);
-	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
-	if(v<1) v = 1;
-	splinemaxerror = v;
-    } else if(!strcmp(name, "fontquality")) {
-	int v = atoi(value);
-	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
-	if(v<1) v = 1;
-	fontsplinemaxerror = v;
     } else {
-	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
+	swfoutput_setparameter(name, value);
     }
 }
 
@@ -1711,52 +1682,25 @@ void pdfswf_addfont(char*filename)
     fonts[fontnum++] = f;
 }
 
-void pdfswf_drawonlyshapes()
-{
-    drawonlyshapes = 1;
+/* TODO: get rid of this */
+void pdfswf_drawonlyshapes() { pdfswf_setparameter("drawonlyshapes", "1"); }
+void pdfswf_ignoredraworder() { pdfswf_setparameter("ignoredraworder", "1"); }
+void pdfswf_linksopennewwindow() { pdfswf_setparameter("opennewwindow", "1"); }
+void pdfswf_storeallcharacters() { pdfswf_setparameter("storeallcharacters", "1"); }
+void pdfswf_enablezlib() { pdfswf_setparameter("enablezlib", "1"); }
+void pdfswf_setoutputfilename(char*_filename) { swffilename = _filename; }
+void pdfswf_insertstop() { pdfswf_setparameter("insertstoptag", "1"); }
+void pdfswf_jpegquality(int val) {
+    char tmp[32];
+    sprintf(tmp, "%d", val);
+    pdfswf_setparameter("jpegquality", tmp);
+}
+void pdfswf_setversion(int n) {
+    char tmp[32];
+    sprintf(tmp, "%d", n);
+    pdfswf_setparameter("flashversion", tmp);
 }
 
-void pdfswf_ignoredraworder()
-{
-    ignoredraworder = 1;
-}
-
-void pdfswf_linksopennewwindow()
-{
-    opennewwindow = 1;
-}
-
-void pdfswf_storeallcharacters()
-{
-    storeallcharacters = 1;
-}
-
-void pdfswf_enablezlib()
-{
-    enablezlib = 1;
-}
-
-void pdfswf_jpegquality(int val)
-{
-    if(val<0) val=0;
-    if(val>100) val=100;
-    jpegquality = val;
-}
-
-void pdfswf_setoutputfilename(char*_filename)
-{
-    swffilename = _filename;
-}
-
-void pdfswf_insertstop()
-{
-    insertstoptag = 1;
-}
-
-void pdfswf_setversion(int n)
-{
-    flashversion = n;
-}
 
 
 void pdfswf_convertpage(int page)
@@ -1784,7 +1728,6 @@ void pdfswf_performconversion()
        doc->displayPage((OutputDev*)output, currentpage, /*dpi*/72, /*rotate*/0, /*doLinks*/(int)1);
     }
 }
-
 int pdfswf_numpages()
 {
   return doc->getNumPages();
