@@ -62,7 +62,7 @@ int args_callback_command(char*name,char*val)
 
 SWF swf;
   
-void fontcallback(U16 id,U8 * name)
+void fontcallback(void*self,U16 id,U8 * name)
 { LPSWFFONT font;
   LPTAG t;
   
@@ -94,7 +94,7 @@ int main (int argc,char ** argv)
     }
     else
     { close(f);
-      swf_FontEnumerate(&swf,&fontcallback);
+      swf_FontEnumerate(&swf,&fontcallback,0);
       swf_FreeTags(&swf);
     }
   } else {
