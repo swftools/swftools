@@ -386,35 +386,35 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
 
   GString*gstr  = font->getTag();
    
-  msg("%sTag: %s\n", loglevel, name);
+  msg("%s| Tag: %s\n", loglevel, name);
   
-  if(font->isCIDFont()) msg("%sis CID font\n", loglevel);
+  if(font->isCIDFont()) msg("%s| is CID font\n", loglevel);
 
   GfxFontType type=font->getType();
   switch(type) {
     case fontUnknownType:
-     msg("%sType: unknown\n",loglevel);
+     msg("%s| Type: unknown\n",loglevel);
     break;
     case fontType1:
-     msg("%sType: 1\n",loglevel);
+     msg("%s| Type: 1\n",loglevel);
     break;
     case fontType1C:
-     msg("%sType: 1C\n",loglevel);
+     msg("%s| Type: 1C\n",loglevel);
     break;
     case fontType3:
-     msg("%sType: 3\n",loglevel);
+     msg("%s| Type: 3\n",loglevel);
     break;
     case fontTrueType:
-     msg("%sType: TrueType\n",loglevel);
+     msg("%s| Type: TrueType\n",loglevel);
     break;
     case fontCIDType0:
-     msg("%sType: CIDType0\n",loglevel);
+     msg("%s| Type: CIDType0\n",loglevel);
     break;
     case fontCIDType0C:
-     msg("%sType: CIDType0C\n",loglevel);
+     msg("%s| Type: CIDType0C\n",loglevel);
     break;
     case fontCIDType2:
-     msg("%sType: CIDType2\n",loglevel);
+     msg("%s| Type: CIDType2\n",loglevel);
     break;
   }
   
@@ -423,18 +423,18 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   if(font->getEmbeddedFontName())
     name = font->getEmbeddedFontName()->getCString();
   if(embedded)
-   msg("%sEmbedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
+   msg("%s| Embedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
 
   gstr = font->getExtFontFile();
   if(gstr)
-   msg("%sExternal Font file: %s\n", loglevel, FIXNULL(gstr->getCString()));
+   msg("%s| External Font file: %s\n", loglevel, FIXNULL(gstr->getCString()));
 
   // Get font descriptor flags.
-  if(font->isFixedWidth()) msg("%sis fixed width\n", loglevel);
-  if(font->isSerif()) msg("%sis serif\n", loglevel);
-  if(font->isSymbolic()) msg("%sis symbolic\n", loglevel);
-  if(font->isItalic()) msg("%sis italic\n", loglevel);
-  if(font->isBold()) msg("%sis bold\n", loglevel);
+  if(font->isFixedWidth()) msg("%s| is fixed width\n", loglevel);
+  if(font->isSerif()) msg("%s| is serif\n", loglevel);
+  if(font->isSymbolic()) msg("%s| is symbolic\n", loglevel);
+  if(font->isItalic()) msg("%s| is italic\n", loglevel);
+  if(font->isBold()) msg("%s| is bold\n", loglevel);
 }
 
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
@@ -1160,7 +1160,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     int del = 0;
     if(embedded &&
        (gfxFont->getType() == fontType1 ||
-	gfxFont->getType() == fontCIDType0C ||
+	//gfxFont->getType() == fontCIDType0C ||
 	gfxFont->getType() == fontType1C ||
 	gfxFont->getType() == fontTrueType ||
 	gfxFont->getType() == fontCIDType2
@@ -1182,6 +1182,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     }
 	
     msg("<verbose> updateFont(%s) -> %s", fontname, fileName);
+    dumpFontInfo("<verbose>", gfxFont);
 
     swfoutput_setfont(&output, fontname, fileName);
    
