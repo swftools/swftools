@@ -26,6 +26,8 @@
 #undef HAVE_STAT
 #include <Python.h>
 
+#include "../rfxswf.h"
+
 /* exported to allow casting to this type */
 extern PyTypeObject ColorClass;
 extern PyTypeObject BBoxClass;

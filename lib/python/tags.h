@@ -1,6 +1,6 @@
-/* tag.h
+/* tags.h
 
-   Python wrapper for librfxswf- tag handlers
+   Python wrapper for librfxswf- various tag implementations
 
    Part of the swftools package.
 
@@ -20,36 +20,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#ifndef __tag_h__
-#define __tag_h__
+#ifndef __tags_h__
+#define __tags_h__
 
+#include "../rfxswf.h"
 #undef HAVE_STAT
 #include <Python.h>
-#include "../rfxswf.h"
 
-#include "tagmap.h"
-
-typedef struct _tag_internals
-{
-    int (*parse)(struct _tag_internals*);
-    int (*fillTAG)(struct _tag_internals*);
-    void (*dealloc)(struct _tag_internals*);
-    int datasize;
-    void*data;
-    PyMethodDef* tagfunctions;
-    TAG*tag;
-    PyObject* tagmap;
-} tag_internals_t;
-
-PyObject* tag_new(tag_internals_t*tag_internals);
-PyObject* tag_new2(TAG*_tag, PyObject* tagmap);
-TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap);
-PyObject* tag_getDependencies(PyObject*self);
-tag_internals_t* tag_getinternals(PyObject*tag);
-void register_tag(int id, tag_internals_t*spec);
-
-PyMethodDef* tag_getMethods();
-
-extern PyTypeObject TagClass;
+PyMethodDef* tags_getMethods();
 
 #endif

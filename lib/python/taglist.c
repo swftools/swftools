@@ -284,7 +284,6 @@ static void taglist_dealloc(PyObject* self)
 {
     TagListObject*taglist = (TagListObject*)self;
     mylog("-%08x(%d) taglist_dealloc list=%08x(%d)\n", (int)self, self->ob_refcnt, taglist->taglist, taglist->taglist->ob_refcnt);
-    taglist_showcontents(self);
     Py_DECREF(taglist->taglist);
     taglist->taglist = 0;
     PyObject_Del(self);

@@ -25,7 +25,7 @@
 #include "../rfxswf.h"
 #include "../log.h"
 #include "./pyutils.h"
-#include "./tag.h"
+#include "./tags.h"
 #include "./taglist.h"
 
 /*
@@ -417,7 +417,7 @@ void initSWF(void)
 {
     PyObject*module;
     PyMethodDef* primitive_methods = primitive_getMethods();
-    PyMethodDef* tag_methods = tag_getMethods();
+    PyMethodDef* tag_methods = tags_getMethods();
     PyMethodDef* action_methods = action_getMethods();
     PyMethodDef* swf_methods = swf_getMethods();
 
