@@ -1496,7 +1496,6 @@ int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int s
     if(sizex&3)
     { 
 	/* SWF expects scanlines to be 4 byte aligned */
-	printf("%d -> %d\n", sizex, BYTES_PER_SCANLINE(sizex));
 	int x,y;
 	U8*ptr;
 	mem2 = (U8*)malloc(BYTES_PER_SCANLINE(sizex)*sizey);
