@@ -151,7 +151,7 @@ void swf_endclip(gfxdevice_t*dev);
 void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
 void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
 void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
-void swf_fillgradient(gfxdevice_t*dev, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
+void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
 
 static swfoutput_internal* init_internal_struct()
 {
@@ -2128,6 +2128,7 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     *newheight  = sizey;
     
     if(newsizex<sizex || newsizey<sizey) {
+	msg("<notice> Scaling %dx%d image to %dx%d", sizex, sizey, newsizex, newsizey);
 	newpic = swf_ImageScale(mem, sizex, sizey, newsizex, newsizey);
 	*newwidth = sizex = newsizex;
 	*newheight  = sizey = newsizey;
@@ -2422,7 +2423,7 @@ void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     drawgfxline(obj, line);
     msg("<trace> end of swf_fill (shapeid=%d)", i->shapeid);
 }
-void swf_fillgradient(gfxdevice_t*dev, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
+void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     msg("<error> Gradient filling not implemented yet");
 }
