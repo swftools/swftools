@@ -1,0 +1,37 @@
+.TH png2swf "1" "October 2001" "png2swf" "swftools"
+.SH NAME
+png2swf - convert one or more PNG pictures to swf
+.SH Synopsis
+.B png2swf [-X width] [-Y height] [-o file.swf] [-r rate] file1.png [file2.png...]
+.SH DESCRIPTION
+Takes a number of png files and converts them to a swf movie, one
+picture per frame.
+.PP
+(SWF files are animation files which can be displayed in Web Browsers using
+the Flash Plugin)
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print short help message and exit
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version info and exit
+.TP
+\fB\-X\fR, \fB\-\-width\fR \fIscale\fR
+Force movie width to \fIscale\fR (default: autodetect)
+.TP
+\fB\-Y\fR, \fB\-\-height\fR \fIscale\fR
+Force movie height to \fIscale\fR (default: autodetect)
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
+Explicitly specify output file. (Otherwise, output will go to stdout)
+.TP
+\fB\-r\fR, \fB\-\-framerate\fR \fIrate\fR
+Set movie framerate (100/sec)
+
+.SH AUTHORS
+
+Matthias Kramm <kramm@quiss.org>
+.TP
+Rainer Böhme <rfxswf@reflex-studio.de>
+
