@@ -34,9 +34,7 @@ oldincludedir = /usr/include
 
 DESTDIR =
 
-pkgdatadir = $(datadir)/@PACKAGE@
-pkglibdir = $(libdir)/@PACKAGE@
-pkgincludedir = $(includedir)/@PACKAGE@
+pkgdatadir = $(datadir)/@PACKAGE@/swfs
 
 top_builddir = ..
 
@@ -171,12 +169,16 @@ install-pkgdataDATA: $(pkgdata_DATA)
 	    $(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/$$p; \
 	  fi; fi; \
 	done
+	$(LN_S) $(DESTDIR)$(pkgdatadir)/simple_viewer.swf $(DESTDIR)$(pkgdatadir)/default_viewer.swf
+	$(LN_S) $(DESTDIR)$(pkgdatadir)/tessel_loader.swf $(DESTDIR)$(pkgdatadir)/default_loader.swf
 
 uninstall-pkgdataDATA:
 	@$(NORMAL_UNINSTALL)
 	list='$(pkgdata_DATA)'; for p in $$list; do \
 	  rm -f $(DESTDIR)$(pkgdatadir)/$$p; \
 	done
+	rm -f $(DESTDIR)$(pkgdatadir)/default_viewer.swf
+	rm -f $(DESTDIR)$(pkgdatadir)/default_loader.swf
 
 tags: TAGS
 
