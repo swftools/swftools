@@ -64,7 +64,7 @@ int MovieFinish(SWF * swf,TAG * t,char * sname)
 
    if ((!isatty(so))&&(!sname)) handle = so;
    else
-   { if (!sname) sname = "out.swf";
+   { if (!sname) sname = "output.swf";
      handle = open(sname,O_RDWR|O_CREAT|O_TRUNC,0666);
    }
    if FAILED(swf_WriteSWF(handle,swf)) if (VERBOSE(1)) fprintf(stderr,"Unable to write output file: %s\n",sname);
@@ -278,7 +278,8 @@ int args_callback_option(char*arg,char*val)
   }
   
   if (res<0)
-  { if (VERBOSE(1)) fprintf(stderr,"Unknown option: -v%s\n",arg);
+  { if (VERBOSE(1)) fprintf(stderr,"Unknown option: -%s\n",arg);
+    exit(1);
     return 0;
   }
   return res;
