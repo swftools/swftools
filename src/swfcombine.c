@@ -380,6 +380,7 @@ static char* slavename = 0;
 static int slaveid = -1;
 static int slaveframe = -1;
 static char masterbitmap[65536];
+static char depthbitmap[65536];
 
 #define FLAGS_WRITEDEFINES 1
 #define FLAGS_WRITENONDEFINES 2
@@ -891,14 +892,21 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     int frame = 0;
     char*framelabel;
     TAG * tag = master->firstTag;
+
+    memset(depthbitmap, 0, sizeof(depthbitmap));
     
     // set the idtab
     while(tag)
     {
+	int depth = swf_GetDepth(tag);
+	if(depth>=0) {
+	    depthbitmap[depth] = 1;
+	}
 	if(swf_isDefiningTag(tag)) {
 	    int defineid = swf_GetDefineID(tag);
 	    msg("<debug> tagid %02x defines object %d", tag->id, defineid);
 	    masterbitmap[defineid] = 1;
+
 	    if (!slavename && defineid==slaveid) {
 		if(defineid>=0) {
 		  spriteid = defineid;
@@ -946,6 +954,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     }
 
     swf_Relocate (slave, masterbitmap);
+    swf_RelocateDepth (slave, depthbitmap);
     jpeg_assert(slave, master);
     
     if (config.overlay)
