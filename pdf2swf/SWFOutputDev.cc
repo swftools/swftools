@@ -34,7 +34,6 @@
 #include "Catalog.h"
 #include "Page.h"
 #include "PDFDoc.h"
-#include "Params.h"
 #include "Error.h"
 #include "config.h"
 #include "OutputDev.h"
@@ -131,6 +130,8 @@ public:
 
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar();
+  
+  virtual GBool interpretType3Chars() {return false;}
 
   //----- initialization and control
 
@@ -319,15 +320,15 @@ int lastdumppos = 0;
  */
 void showFontError(GfxFont*font, int nr) 
 {  
-    Ref r=font->getID();
+    Ref*r=font->getID();
     int t;
     for(t=0;t<lastdumppos;t++)
-	if(lastdumps[t] == r.num)
+	if(lastdumps[t] == r->num)
 	    break;
     if(t < lastdumppos)
       return;
     if(lastdumppos<sizeof(lastdumps)/sizeof(int))
-    lastdumps[lastdumppos++] = r.num;
+    lastdumps[lastdumppos++] = r->num;
     if(nr == 0)
       logf("<warning> The following font caused problems:");
     else if(nr == 1)
@@ -340,23 +341,21 @@ void showFontError(GfxFont*font, int nr)
 void dumpFontInfo(char*loglevel, GfxFont*font)
 {
   GString *gstr;
-  char*name;
+  char*name = 0;
   gstr = font->getName();
-  Ref r=font->getID();
-  logf("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?FIXNULL(gstr->getCString()):"(unknown font)", r.num,r.gen);
+  Ref* r=font->getID();
+  logf("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?FIXNULL(gstr->getCString()):"(unknown font)", r->num,r->gen);
 
   gstr  = font->getTag();
   if(gstr) 
    logf("%sTag: %s\n", loglevel, FIXNULL(gstr->getCString()));
-  if(font->is16Bit()) logf("%sis 16 bit\n", loglevel);
+  
+  //if(font->is16Bit()) logf("%sis 16 bit\n", loglevel); //FIXME: not existing in xpdf 1.01
 
   GfxFontType type=font->getType();
   switch(type) {
     case fontUnknownType:
      logf("%sType: unknown\n",loglevel);
-    break;
-    case fontType0:
-     logf("%sType: 0\n",loglevel);
     break;
     case fontType1:
      logf("%sType: 1\n",loglevel);
@@ -370,11 +369,21 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
     case fontTrueType:
      logf("%sType: TrueType\n",loglevel);
     break;
+    case fontCIDType0:
+     logf("%sType: CIDType0\n",loglevel);
+    break;
+    case fontCIDType0C:
+     logf("%sType: CIDType0C\n",loglevel);
+    break;
+    case fontCIDType2:
+     logf("%sType: CIDType2\n",loglevel);
+    break;
   }
   
   Ref embRef;
   GBool embedded = font->getEmbeddedFontID(&embRef);
-  name = font->getEmbeddedFontName();
+  if(font->getEmbeddedFontName())
+    name = font->getEmbeddedFontName()->getCString();
   if(embedded)
    logf("%sEmbedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
 
@@ -558,15 +567,23 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, doub
     // check for invisible text -- this is used by Acrobat Capture
     if ((state->getRender() & 3) != 3)
     {
-       FontEncoding*enc=state->getFont()->getEncoding();
+       GfxFont*font = state->getFont();
+       Gfx8BitFont*font8;
+       if(font->isCIDFont()) {
+	   logf("<error> CID Font\n");
+	   return;
+       }
+       font8 = (Gfx8BitFont*)font;
+
+       char**enc=font8->getEncoding();
 
        double x1,y1;
        x1 = x;
        y1 = y;
        state->transform(x, y, &x1, &y1);
 
-       if(enc->getCharName(c))
-	  swfoutput_drawchar(&output, x1, y1, enc->getCharName(c), c);
+       if(enc[c])
+	  swfoutput_drawchar(&output, x1, y1, enc[c], c);
        else
 	  logf("<warning> couldn't get name for character %02x from Encoding", c);
     }
@@ -843,12 +860,12 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 
 char*SWFOutputDev::writeEmbeddedFontToFile(GfxFont*font)
 {
-      char*tmpFileName = NULL;
+/*      char*tmpFileName = NULL;
       FILE *f;
       int c;
       char *fontBuf;
       int fontLen;
-      Type1CFontConverter *cvt;
+//      Type1CFontConverter *cvt;
       Ref embRef;
       Object refObj, strObj;
       tmpFileName = "/tmp/tmpfont";
@@ -901,7 +918,9 @@ char*SWFOutputDev::writeEmbeddedFontToFile(GfxFont*font)
 	  tmpFileName = strdup(name2);
       }
 
-      return tmpFileName;
+      return tmpFileName;*/
+
+    return 0;
 }
 
 char* gfxFontName(GfxFont* gfxFont)
@@ -913,8 +932,8 @@ char* gfxFontName(GfxFont* gfxFont)
       }
       else {
 	  char buf[32];
-	  Ref r=gfxFont->getID();
-	  sprintf(buf, "UFONT%d", r.num);
+	  Ref*r=gfxFont->getID();
+	  sprintf(buf, "UFONT%d", r->num);
 	  return strdup(buf);
       }
 }
@@ -925,7 +944,8 @@ int substitutepos = 0;
 
 char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 {
-      //substitute font
+    return "Times-Roman";
+/*      //substitute font
       char* fontname = 0;
       double m11, m12, m21, m22;
       int index;
@@ -939,7 +959,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 
 //	  printf("%d %s\n", t, gfxFont->getCharName(t));
       showFontError(gfxFont, 1);
-      if (!gfxFont->is16Bit()) {
+      if(1) { //if (!gfxFont->is16Bit()) { FIXME: xpdf 1.01 does not have is16Bit()
 	if(gfxFont->isSymbolic()) {
 	  if(fontname && (strstr(fontname,"ing"))) //Dingbats, Wingdings etc.
 	   index = 16;
@@ -1009,7 +1029,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 	  logf("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	  substitutepos ++;
       }
-      return fontname;
+      return fontname;*/
 }
 
 void unlinkfont(char* filename)
@@ -1075,7 +1095,7 @@ void SWFOutputDev::updateFont(GfxState *state)
   Ref embRef;
   GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
   if(embedded) {
-    if (!gfxFont->is16Bit() &&
+    if (//!gfxFont->is16Bit() && FIXME: not in xpdf 1.01
 	(gfxFont->getType() == fontType1 ||
 	 gfxFont->getType() == fontType1C ||
 	 gfxFont->getType() == fontTrueType)) {
@@ -1402,13 +1422,12 @@ void pdfswf_init(char*filename, char*userPassword)
   GString *userPW;
   Object info;
   // init error file
-  errorInit();
+  //errorInit(); FIXME xpdf 1.01
 
   // read config file
-  initParams(xpdfConfigFile);
+  //initParams(xpdfConfigFile); FIXME xpdf 1.01
 
   // open PDF file
-  xref = NULL;
   if (userPassword && userPassword[0]) {
     userPW = new GString(userPassword);
   } else {
@@ -1547,7 +1566,7 @@ void pdfswf_close()
     logf("<debug> pdfswf.cc: pdfswf_close()");
     delete output;
     delete doc;
-    freeParams();
+    //freeParams();
     // check for memory leaks
     Object::memCheck(stderr);
     gMemReport(stderr);
