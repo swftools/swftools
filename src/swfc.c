@@ -48,7 +48,6 @@ static struct options_t options[] = {
 {"V", "version"},
 {"v", "verbose"},
 {"o", "output"},
-{"O", "optimize"},
 {0,0}
 };
     
@@ -1286,6 +1285,24 @@ void s_action(const char*text)
 
     tag = swf_InsertTag(tag, ST_DOACTION);
 
+    swf_ActionSet(tag, a);
+
+    swf_ActionFree(a);
+}
+
+void s_initaction(const char*character, const char*text)
+{
+    ActionTAG* a = 0;
+    character_t*c = 0;
+    a = swf_ActionCompile(text, stack[0].swf->fileVersion);
+    if(!a) {
+	syntaxerror("Couldn't compile ActionScript");
+    }
+
+    c = (character_t*)dictionary_lookup(&characters, character);
+
+    tag = swf_InsertTag(tag, ST_DOINITACTION);
+    swf_SetU16(tag, c->id);
     swf_ActionSet(tag, a);
 
     swf_ActionFree(a);
@@ -2717,6 +2734,23 @@ static int c_edittext(map_t*args)
 static int c_morphshape(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
 
+static char* readfile(const char*filename)
+{
+    FILE*fi = fopen(filename, "rb");
+    int l;
+    char*text;
+    if(!fi) 
+	syntaxerror("Couldn't find file %s: %s", filename, strerror(errno));
+    fseek(fi, 0, SEEK_END);
+    l = ftell(fi);
+    fseek(fi, 0, SEEK_SET);
+    text = rfx_alloc(l+1);
+    fread(text, l, 1, fi);
+    text[l]=0;
+    fclose(fi);
+    return text;
+}
+
 static int c_action(map_t*args) 
 {
     char* filename  = map_lookup(args, "filename");
@@ -2727,20 +2761,24 @@ static int c_action(map_t*args)
 	}
 	s_action(text);
     } else {
-	FILE*fi = fopen(filename, "rb");
-	int l;
-	char*text;
-	if(!fi) 
-	    syntaxerror("Couldn't find file %s: %s", filename, strerror(errno));
-	fseek(fi, 0, SEEK_END);
-	l = ftell(fi);
-	fseek(fi, 0, SEEK_SET);
-	text = rfx_alloc(l+1);
-	fread(text, l, 1, fi);
-	text[l]=0;
-	fclose(fi);
+	s_action(readfile(filename));
+    }
+   
+    return 0;
+}
 
-	s_action(text);
+static int c_initaction(map_t*args) 
+{
+    char* character = lu(args, "name");
+    char* filename  = map_lookup(args, "filename");
+    if(!filename ||!*filename) {
+	readToken();
+	if(type != RAWDATA) {
+	    syntaxerror("colon (:) expected");
+	}
+	s_initaction(character, text);
+    } else {
+	s_initaction(character, readfile(filename));
     }
    
     return 0;
@@ -2809,6 +2847,7 @@ static struct {
 //startclip (see above)
  {"sprite", c_sprite, "name"},
  {"action", c_action, "filename="},
+ {"initaction", c_initaction, "name filename="},
 
  {"end", c_end, ""}
 };
