@@ -65,7 +65,6 @@ ${name}/avi2swf/videoreader_avifile.hh \
 ${name}/avi2swf/videoreader_avifile.cc \
 ${name}/avi2swf/v2swf.c \
 ${name}/avi2swf/v2swf.h \
-${name}/lib/example/buttontest.c \
 ${name}/swfs/simple_viewer.c \
 ${name}/swfs/keyboard_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
