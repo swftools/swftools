@@ -250,6 +250,7 @@ static int swf_pseudodefiningtagids[] =
  ST_NAMECHARACTER,
  ST_DOINITACTION,
  ST_VIDEOFRAME,
+ ST_GLYPHNAMES,
  -1
 };
 
@@ -658,6 +659,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 	    break;
 	}
+	case ST_GLYPHNAMES:
 	case ST_DEFINEFONTINFO:
 	case ST_DEFINEFONTINFO2:
 	case ST_VIDEOFRAME:
