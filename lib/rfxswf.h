@@ -73,15 +73,8 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   U8 *          data;
   U32           memsize;        // to minimize realloc() calls
 
-  union
-  { U32         len;            // for Set-Access
-    U32         dataWritePos;        
-  };
-
-  union
-  { U32         pos;            // for Get-Access
-    U32         dataReadPos;
-  };
+  U32         len;            // for Set-Access
+  U32         pos;            // for Get-Access
 
   int           frame;          // not really up-to-date
 
