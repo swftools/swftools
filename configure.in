@@ -1,6 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/)
-AC_ARG_PROGRAM
 
 export PACKAGE=swftools
 export VERSION=0.2.0
@@ -43,6 +42,8 @@ dnl Checks for libraries.
 
 SWF_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
+
+AC_ARG_PROGRAM
 
 dnl do we need those?
 dnl AC_CHECK_LIB(pthread, pthread_create)
