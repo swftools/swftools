@@ -23,3 +23,9 @@
 */
 #define GetDataSize GetTagLen
 #define GetDataSizePtr GetTagLenPtr
+#define RFXSWF_ReadTag(a,b) swf_ReadTag(a,b)  
+#define RFXSWF_WriteTag(a,b) swf_WriteTag(a,b)
+#define RFXSWF_UpdateFrame(a,b) swf_UpdateFrame(a,b)
+#define RFXSWF_WriteTag(a,b) swf_WriteTag(a,b)
+#define RFXSWF_DefineSprite_GetRealSize(a) swf_DefineSprite_GetRealSize(a)
+
