@@ -21,7 +21,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#ifdef USE_FREETYPE
+#ifdef HAVE_FREETYPE
 
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
@@ -244,7 +244,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
     return font;
 }
-#else  //USE_FREETYPE
+#else  //HAVE_FREETYPE
 
 SWFFONT* swf_LoadTrueTypeFont(char*filename)
 {
@@ -431,7 +431,7 @@ SWFFONT* swf_LoadFont(char*filename)
     if(isSWF(filename)) {
 	return swf_ReadFont(filename);
     }
-#if defined(USE_FREETYPE)
+#if defined(HAVE_FREETYPE)
     return swf_LoadTrueTypeFont(filename);
 #elif defined(HAVE_T1LIB)
     return swf_LoadT1Font(filename);
