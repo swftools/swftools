@@ -643,8 +643,6 @@ static void s_endSWF()
 
     swf_OptimizeTagOrder(swf);
     
-    swf_Optimize(swf);
-
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize = currentrect; /* "autocrop" */
     }
