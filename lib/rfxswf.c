@@ -120,6 +120,16 @@ void rfx_free(void*ptr)
   free(ptr);
 }
 
+#ifdef MEMORY_INFO
+long rfx_memory_used()
+{
+}
+
+char* rfx_memory_used_str()
+{
+}
+#endif
+
 // internal constants
 
 #define MALLOC_SIZE     128
@@ -549,6 +559,8 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m)
 {
     SRECT g;
     SPOINT p1,p2,p3,p4,pp1,pp2,pp3,pp4;
+    if(!m)
+      return r;
     p1.x = r.xmin;p1.y = r.ymin;
     p2.x = r.xmax;p2.y = r.ymin;
     p3.x = r.xmin;p3.y = r.ymax;
