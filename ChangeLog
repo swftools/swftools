@@ -119,7 +119,7 @@
 	* src/swfcombine: Bugfixes
 	* lib/rfxswf: Added Sprite Unfolding routines
 
-0.4.2: (not released yet)
+0.4.2:
 	* src/Makefile: OpenBSD fixes
 	* lib/lame: Removed *.o files from archive
 	* avi2swf: Implemented --flip option
