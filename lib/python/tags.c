@@ -721,8 +721,7 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     if(!pic)
 	return 0;
 
-    
-{  int f,j=0,i=0,rr,gg,bb;
+/*{  int f,j=0,i=0,rr,gg,bb;
    FILE *o;
    RGBA*it = pic;
    char*filename="test.ppm";
@@ -739,7 +738,7 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     j++;
    }
    fclose(o);
-}
+}*/
 
     TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
     if((type && (type[0]=='I' || type[0]=='i')) || (type==0 && fi->lastiframe+64 < fi->stream->frame)) {
