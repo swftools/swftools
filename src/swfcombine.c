@@ -65,6 +65,11 @@ int args_callback_option(char*name,char*val) {
 	config.movey = atoi(val);
 	return 1;
     }
+    else if (!strcmp(name, "d"))
+    {
+	config.dummy = 1;
+	return 0;
+    }
     else if (!strcmp(name, "r"))
     {
 	config.framerate = atoi(val)*256/100;
@@ -112,6 +117,7 @@ int args_callback_option(char*name,char*val) {
 struct options_t options[] =
 {{"o","output"},
  {"s","scale"},
+ {"d","dummy"},
  {"x","xpos"},
  {"y","ypos"},
  {"X","width"},
@@ -176,6 +182,7 @@ void args_callback_usage(char*name)
     printf("-l                  (overlay) Don't remove any master objects, only overlay new objects\n");
     printf("-c                  (clip) Clip the slave objects by the corresponding master objects\n");
     printf("-v                  (verbose) Use more than one -v for greater effect \n");
+    printf("-d                  (dummy) Don't require slave objects \n");
     printf("-x xpos             (move x) Adjust position of slave by xpos twips (1/20 pixel)\n");
     printf("-y ypos             (move y) Adjust position of slave by ypos twips (1/20 pixel)\n");
     printf("-s scale            (scale) Adjust size of slave by scale%\n");
@@ -351,6 +358,7 @@ int main(int argn, char *argv[])
     config.hassizey = 0;
     config.framerate = 0;
     config.stack = 0;
+    config.dummy = 0;
 
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,config.loglevel);
@@ -386,9 +394,21 @@ int main(int argn, char *argv[])
 	logf("<debug> Read %d bytes from masterfile\n", masterlength);
 	fclose(fi);
     }
-    
+
     for(t=0;t<numslaves;t++)
 	logf("<verbose> slave entity(%d) %s (named \"%s\")\n", t+1, slave_filename[t], slave_name[t]);
+
+    if(config.dummy)
+    {
+	if(numslaves)
+	{
+	    logf("<error> --dummy (-d) implies there are zero slave objects. You supplied %d.", numslaves);
+	    exit(1);
+	}
+	numslaves = 1;
+	slave_filename[t] = "!!dummy!!";
+	slave_name[t] = "!!dummy!!";
+    }
 
     if (config.alloctest)
     {
@@ -416,18 +436,35 @@ int main(int argn, char *argv[])
 
 	    logf("<notice> Combine [%s]%s and [%s]%s", master_name, master_filename,
 		    slave_name[t], slave_filename[t]);
-	    fi = fopen(slave_filename[t], "rb");
-	    if(!fi) {
-		fprintf(stderr, "Failed to open %s\n", slave_filename[t]);
-		return 1;
+	    if(!config.dummy)
+	    {
+		fi = fopen(slave_filename[t], "rb");
+		if(!fi) {
+		    fprintf(stderr, "Failed to open %s\n", slave_filename[t]);
+		    return 1;
+		}
+		slavedata = fi_slurp(fi, &slavelength);
+		if(!slavedata) {
+		    fprintf(stderr, "Failed to read from %s\n", slave_filename[t]);
+		    return 1;
+		}
+		logf("<debug> Read %d bytes from slavefile\n", slavelength);
+		fclose(fi);
 	    }
-	    slavedata = fi_slurp(fi, &slavelength);
-	    if(!slavedata) {
-		fprintf(stderr, "Failed to read from %s\n", slave_filename[t]);
-		return 1;
+	    else
+	    {
+		slavedata = (u8*)malloc(16);
+		slavedata[0] = 'F';
+		slavedata[1] = 'W';
+		slavedata[2] = 'S';
+		slavedata[3] = 4; //version
+		*(u32*)&slavedata[4] = 14; // length
+		slavedata[8] = 0; // boundingbox
+		*(u16*)&slavedata[9] = 0; // rate
+		*(u16*)&slavedata[11] = 0; // count
+		*(u16*)&slavedata[13] = 0; // end tag
+		slavelength = 17;
 	    }
-	    logf("<debug> Read %d bytes from slavefile\n", slavelength);
-	    fclose(fi);
 
 	    newdata = combine(masterdata, masterlength, slave_name[t], slavedata, slavelength, &newlength);
 	    if(!newdata) { 
