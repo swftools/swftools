@@ -123,10 +123,9 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 {
     U8 flags = swf_GetU8(tag);
     memset(obj,0,sizeof(SWFPLACEOBJECT));
-    if(!tag) {
-	swf_GetMatrix(0,&obj->matrix);
-	swf_GetCXForm(0,&obj->cxform,1);
-    }
+	
+    swf_GetMatrix(0,&obj->matrix);
+    swf_GetCXForm(0,&obj->cxform,1);
 
     obj->depth = swf_GetU16(tag);
     //flags&1: move
@@ -135,9 +134,12 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
     if(flags&8) swf_GetCXForm(tag, &obj->cxform,1);
     if(flags&16) obj->ratio = swf_GetU16(tag);
     if(flags&32) {
-	int l = strlen(&tag->data[tag->pos]);
-	int t = 0;
-	U8*data = malloc(l+1);
+	int l,t;
+	U8*data;
+	swf_ResetReadBits(tag);
+	l = strlen(&tag->data[tag->pos]);
+	t = 0;
+	data = malloc(l+1);
 	obj->name = data;
 	while((data[t++] = swf_GetU8(tag))); 
     }
