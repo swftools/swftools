@@ -132,7 +132,7 @@ U16 swf_GetPlaceID(TAG * t)
   return id;
 }
 
-int definingtagids[] =
+static int swf_definingtagids[] =
 {ST_DEFINESHAPE,
  ST_DEFINESHAPE2,
  ST_DEFINESHAPE3,
@@ -156,7 +156,7 @@ int definingtagids[] =
 };
 
 // tags which may be used inside a sprite definition
-int spritetagids[] =
+static int swf_spritetagids[] =
 {ST_SHOWFRAME,
  ST_PLACEOBJECT,
  ST_PLACEOBJECT2,
@@ -176,9 +176,9 @@ U8 swf_isAllowedSpriteTag(TAG * tag)
 {
     int id = tag->id;
     int t=0;
-    while(spritetagids[t]>=0)
+    while(swf_spritetagids[t]>=0)
     {
-        if(spritetagids[t] == id) 
+        if(swf_spritetagids[t] == id) 
             return 1;
         t++;
     }
@@ -189,9 +189,9 @@ U8 swf_isDefiningTag(TAG * tag)
 {
     int id = tag->id;
     int t=0;
-    while(definingtagids[t]>=0)
+    while(swf_definingtagids[t]>=0)
     {
-        if(definingtagids[t] == id) 
+        if(swf_definingtagids[t] == id) 
             return 1;
         t++;
     }
