@@ -247,6 +247,14 @@ typedef struct {
     MATRIX matrix;
 } MatrixObject;
 
+PyObject* f_Matrix2(MATRIX* m)
+{
+    PyObject*self = (PyObject*)PyObject_New(MatrixObject, &MatrixClass);
+    MatrixObject*matrix = (MatrixObject*)self;
+    matrix->matrix = *m;
+    return self;
+}
+
 PyObject* f_Matrix(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     PyObject*self = (PyObject*)PyObject_New(MatrixObject, &MatrixClass);
