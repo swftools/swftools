@@ -101,6 +101,7 @@ static void unescapeString(string_t * tmp)
 	    case 't': p[0] = '\t'; break;
 	    case 'x':  {
 		int num=0;
+		char*utf8;
 		while(strchr("0123456789abcdefABCDEF", p[nr])) {
 		    num <<= 4;
 		    if(p[nr]>='0' && p[nr]<='9') num |= p[nr] - '0';
@@ -108,7 +109,7 @@ static void unescapeString(string_t * tmp)
 		    if(p[nr]>='A' && p[nr]<='F') num |= p[nr] - 'A' + 10;
 		    nr++;
 		}
-		char*utf8 = getUTF8(num);
+		utf8 = getUTF8(num);
 		new = strlen(utf8);
 
 		memcpy(p, utf8, new); // do not copy the terminating zero
@@ -118,12 +119,14 @@ static void unescapeString(string_t * tmp)
 		continue;
 	}
 	tmp->len -= (nr-new); 
-	int t;
-	char*to=p+new,*from=p+nr;
-	while(*from) {
-	    *to = *from;
-	    to++;
-	    from++;
+	{
+	    int t;
+	    char*to=p+new,*from=p+nr;
+	    while(*from) {
+		*to = *from;
+		to++;
+		from++;
+	    }
 	}
     }
 }
