@@ -56,6 +56,7 @@ void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input);
 void reader_init_memreader(struct reader_t*r, void*data, int length);
 
 void writer_init_filewriter(struct writer_t*w, int handle);
+void writer_init_filewriter2(struct writer_t*w, char*filename);
 void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output);
 void writer_init_memwriter(struct writer_t*r, void*data, int length);
 
