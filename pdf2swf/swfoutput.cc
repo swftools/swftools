@@ -1046,6 +1046,13 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	return charnr;
     }
 
+    /* the following is technically wrong, and only works if the font encoding
+       is US-ASCII based. It's needed for fonts which return broken unicode
+       indices */
+/*    if(charnr>=0 && charnr<font->maxascii && font->ascii2glyph[charnr]>=0) {
+	return font->ascii2glyph[charnr];
+    }*/
+
     return -1;
 }
 
@@ -1077,6 +1084,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	return;
     }
 
+    swf_SetLoadFontParameters(0,/*skip unused*/0,/*full unicode*/1);
     SWFFONT*swffont = swf_LoadFont(filename);
 
     if(swffont == 0) {
@@ -1307,6 +1315,7 @@ static void endshape()
 	tag = tag->prev;
 	swf_DeleteTag(todel);
     } else {
+	/* TODO: fix bounding box */
 	tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
 	swf_ObjectPlace(tag,shapeid,/*depth*/depth++,NULL,NULL,NULL);
     }
