@@ -1,3 +1,15 @@
+/* shape1.c
+
+   Example implementation for drawing a shape with rfxswf
+   
+   Part of the swftools package.
+
+   Copyright (c) 2000, 2001 Rainer Böhme <rfxswf@reflex-studio.de>
+ 
+   This file is distributed under the GPL, see file COPYING for details 
+
+*/
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <math.h>
@@ -12,71 +24,82 @@ int main (int argc,char ** argv)
   LPSHAPE s;
   S32 width=300,height = 300;
   
-  int f,i,j;
+  int f,i,ls1,ls2;
 
-  memset(&swf,0x00,sizeof(SWF));
+  memset(&swf,0x00,sizeof(SWF));        // set global movie parameters
 
-  swf.FileVersion    = 4;
-  swf.FrameRate      = 0x1900;
-  swf.MovieSize.xmax = 20*width;
-  swf.MovieSize.ymax = 20*height;
+  swf.fileVersion    = 4;               // make flash 4 compatible swf
+  swf.frameRate      = 0x1900;          // about 0x19 frames per second
+  
+  swf.movieSize.xmax = 20*width;        // flash units: 1 pixel = 20 units
+  swf.movieSize.ymax = 20*height;
 
-  swf.FirstTag = InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-  t = swf.FirstTag;
+  swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+
+                                        // now create a tag list be connecting one after another
+  
+  t = swf.firstTag;
 
         rgb.r = 0xff;
         rgb.g = 0xff;
         rgb.b = 0xff;
-        SetRGB(t,&rgb);
+        swf_SetRGB(t,&rgb);
 
-  t = InsertTag(t,ST_DEFINESHAPE);
+  t = swf_InsertTag(t,ST_DEFINESHAPE);
 
-        NewShape(&s);
-        rgb.b = rgb.g = 0x00;
-        j = ShapeAddLineStyle(s,40,&rgb);
+        swf_ShapeNew(&s);               // create new shape instance
+
+                                        // add two different linestyles
+        rgb.b = rgb.g = 0x00;           
+        ls1 = swf_ShapeAddLineStyle(s,40,&rgb);
+        
         rgb.r = 0; rgb.b = 0xff;
-        ShapeAddLineStyle(s,40,&rgb);
+        ls2 = swf_ShapeAddLineStyle(s,40,&rgb);
 
-        SetU16(t,1);  // ID
+        swf_SetU16(t,1);                // now set character ID
 
         r.xmin = 0;
         r.ymin = 0;
-        r.xmax = 4*width;
-        r.ymax = 4*height;
+        r.xmax = 20*width;
+        r.ymax = 20*height;
         
-        SetRect(t,&r);
+        swf_SetRect(t,&r);              // set shape bounds
 
-        SetShapeStyles(t,s);
-        ShapeCountBits(s,NULL,NULL);
-        SetShapeBits(t,s);
 
-        ShapeSetAll(t,s,0,0,j,0,0);
-//        ShapeSetCurve(t,s,4*width,0,0,4*height);
-        ShapeSetLine(t,s,4*width,4*height);
-        ShapeSetStyle(t,s,2,0,0);
+        swf_SetShapeHeader(t,s);        // write all styles to tag
+
+        swf_ShapeSetAll(t,s,0,0,ls1,0,0); // move to (0,0), select linestyle ls1 and no fillstyle
+
+                                        
+        swf_ShapeSetLine(t,s,10*width,10*height);    // draw something
+        swf_ShapeSetStyle(t,s,ls2,0,0);            // change to second linestyle 
+        
         for (i=1;i<10;i++)
-        ShapeSetCircle(t,s,4*width,4*height,i*width/2,i*height/2);
-        ShapeSetEnd(t);
+          swf_ShapeSetCircle(t,s,10*width,10*height,i*width,i*height);
+          
+        swf_ShapeSetEnd(t);                 // finish drawing
 
-  t = InsertTag(t,ST_PLACEOBJECT2);
+        swf_ShapeFree(s);                   // clean shape structure (which isn't needed anymore after writing the tag)
 
-        ObjectPlace(t,1,1,NULL,NULL,NULL);
+  t = swf_InsertTag(t,ST_PLACEOBJECT2);     // append tag to place your shape into the scene
 
-  t = InsertTag(t,ST_SHOWFRAME);
+        swf_ObjectPlace(t,1,1,NULL,NULL,NULL); // set character with id 1 (our shape) to depth 1 (upper most layer)
 
-  t = InsertTag(t,ST_END);
+  t = swf_InsertTag(t,ST_SHOWFRAME);        // finish current frame
+
+  t = swf_InsertTag(t,ST_END);              // finish current movie (which has just one frame)
   
-//  WriteCGI(&swf);
+//  swf_WriteCGI(&swf);    <- use this to create direct CGI output
   
+                                            // write movie to file
 
-  f = open("shape1.swf",O_WRONLY|O_CREAT, 0777);
-//  f = 1;
-  if FAILED(WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
+  f = open("shape1.swf",O_WRONLY|O_CREAT, 0644);
+  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 
-  FreeTags(&swf);
+  swf_FreeTags(&swf);                       // cleanup
 
-#ifdef __NT__
+#ifdef __NT__                               // start flash player to show result on windows systems
   system("start ..\\shape1.swf");
 #endif
   

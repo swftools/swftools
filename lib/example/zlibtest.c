@@ -1,7 +1,7 @@
 /* zlibtest.c
 
    Little example for rfxswf's lossless bitmap functions.
-   This program gives swf cgi output of three zlib compressed
+   This program creates a swf with three zlib compressed
    images: 8 bit indexed, 16 and 32 bit
 
    Part of the swftools package.
@@ -12,10 +12,8 @@
 
 */
 
-// There's no makefile so try to compile like this on linux/gcc:
-// cc zlibtest.c ../rfxswf.c -funsigned-char -o zlibtest -lm -ljpeg -lz; cp zlibtest /home/www/cgi-bin/zlibtest
-
 #include <stdio.h>
+#include <fcntl.h>
 #include <math.h>
 #include <zlib.h>     
 #include "../rfxswf.h"
@@ -35,7 +33,7 @@ int main ( int argc, char ** argv)
   MATRIX m;
   SRECT r;
   LPJPEGBITS jpeg;
-  int i;
+  int i,f;
   
   int ls; // line style
   int fs; // fill style
@@ -91,25 +89,25 @@ int main ( int argc, char ** argv)
 
   memset(&swf,0x00,sizeof(SWF));
 
-  swf.FileVersion       = 4;
-  swf.FrameRate         = 0x1800;
-  swf.MovieSize.xmax    = 20*WIDTH;
-  swf.MovieSize.ymax    = 20*HEIGHT;
+  swf.fileVersion       = 4;
+  swf.frameRate         = 0x1800;
+  swf.movieSize.xmax    = 20*WIDTH;
+  swf.movieSize.ymax    = 20*HEIGHT;
 
-  swf.FirstTag = InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-  t = swf.FirstTag;
+  swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+  t = swf.firstTag;
 
     rgb.r = 0xff;
     rgb.b = 0xff;
     rgb.g = 0xff;
-    SetRGB(t,&rgb);
+    swf_SetRGB(t,&rgb);
 
-  t = InsertTag(t,ST_DEFINEBITSLOSSLESS);
+  t = swf_InsertTag(t,ST_DEFINEBITSLOSSLESS);
 
-    SetU16(t,ID_BITS);
-    SetLosslessBits(t,dx,dy,bitmap32,BMF_32BIT);
+    swf_SetU16(t,ID_BITS);
+    swf_SetLosslessBits(t,dx,dy,bitmap32,BMF_32BIT);
     
-  t = InsertTag(t,ST_DEFINEBITSLOSSLESS2);
+  t = swf_InsertTag(t,ST_DEFINEBITSLOSSLESS2);
 
     /* be careful with ST_DEFINEBITSLOSSLESS2, because
        the Flash player produces great bugs if you use too many
@@ -119,13 +117,13 @@ int main ( int argc, char ** argv)
        handling is implemented in lossless routines of rfxswf.
     */
 
-    SetU16(t,ID_BITS+1);
-    SetLosslessBitsIndexed(t,dx,dy,bitmap8,pal,256);
+    swf_SetU16(t,ID_BITS+1);
+    swf_SetLosslessBitsIndexed(t,dx,dy,bitmap8,pal,256);
     
-  t = InsertTag(t,ST_DEFINEBITSLOSSLESS);
+  t = swf_InsertTag(t,ST_DEFINEBITSLOSSLESS);
 
-    SetU16(t,ID_BITS+2);
-    SetLosslessBits(t,dx,dy,bitmap16,BMF_16BIT);
+    swf_SetU16(t,ID_BITS+2);
+    swf_SetLosslessBits(t,dx,dy,bitmap16,BMF_16BIT);
 
   /* By the way: ST_DEFINELOSSLESS2 produces stange output on
      16 and 32 bits image data, too.... it seems that the
@@ -134,54 +132,63 @@ int main ( int argc, char ** argv)
 
   for (i=0;i<9;i++)
   {
-    t = InsertTag(t,ST_DEFINESHAPE);
+    t = swf_InsertTag(t,ST_DEFINESHAPE);
     
-    NewShape(&s);
+    swf_ShapeNew(&s);
     rgb.b = rgb.g = rgb.r = 0x00;
-    ls = ShapeAddLineStyle(s,10,&rgb);  
+    ls = swf_ShapeAddLineStyle(s,10,&rgb);  
 
-    GetMatrix(NULL,&m);
+    swf_GetMatrix(NULL,&m);
     m.sx = (6*WIDTH/dx)<<16;
     m.sy = (6*HEIGHT/dy)<<16;
 
-    fs = ShapeAddBitmapFillStyle(s,&m,ID_BITS+((i+(i/3))%3),0);
+    fs = swf_ShapeAddBitmapFillStyle(s,&m,ID_BITS+((i+(i/3))%3),0);
     
-    SetU16(t,ID_SHAPE+i);   // ID   
+    swf_SetU16(t,ID_SHAPE+i);   // ID   
 
     r.xmin = 0;
     r.ymin = 0;
     r.xmax = 6*WIDTH;
     r.ymax = 6*HEIGHT;
 
-    SetRect(t,&r);
+    swf_SetRect(t,&r);
 
-    SetShapeStyles(t,s);
-    ShapeCountBits(s,NULL,NULL);
-    SetShapeBits(t,s);
+    swf_SetShapeStyles(t,s);
+    swf_ShapeCountBits(s,NULL,NULL);
+    swf_SetShapeBits(t,s);
 
-    ShapeSetAll(t,s,0,0,ls,fs,0);
+    swf_ShapeSetAll(t,s,0,0,ls,fs,0);
 
-    ShapeSetLine(t,s,6*WIDTH,0);
-    ShapeSetLine(t,s,0,6*HEIGHT);
-    ShapeSetLine(t,s,-6*WIDTH,0);
-    ShapeSetLine(t,s,0,-6*HEIGHT);
-    ShapeSetEnd(t);
+    swf_ShapeSetLine(t,s,6*WIDTH,0);
+    swf_ShapeSetLine(t,s,0,6*HEIGHT);
+    swf_ShapeSetLine(t,s,-6*WIDTH,0);
+    swf_ShapeSetLine(t,s,0,-6*HEIGHT);
+    swf_ShapeSetEnd(t);
 
-    GetMatrix(NULL,&m);
+    swf_GetMatrix(NULL,&m);
     m.tx = (i%3) * (6*WIDTH+60);
     m.ty = (i/3) * (6*HEIGHT+60);
 
-  t = InsertTag(t,ST_PLACEOBJECT2);
-    ObjectPlace(t,ID_SHAPE+i,1+i,&m,NULL,NULL);
+  t = swf_InsertTag(t,ST_PLACEOBJECT2);
+    swf_ObjectPlace(t,ID_SHAPE+i,1+i,&m,NULL,NULL);
   }
 
-  t = InsertTag(t,ST_SHOWFRAME);
+  t = swf_InsertTag(t,ST_SHOWFRAME);
 
-  t = InsertTag(t,ST_END);
+  t = swf_InsertTag(t,ST_END);
 
-  WriteCGI(&swf);
-  FreeTags(&swf);
+//  swf_WriteCGI(&swf);
 
+  f = open("zlibtest.swf",O_RDWR|O_CREAT|O_TRUNC,0644);
+  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
+  close(f);
+
+  swf_FreeTags(&swf);
+
+#ifdef __NT__
+  system("start ..\\zlibtest.swf");
+#endif
+  
   free(pal);
   free(bitmap8);
   free(bitmap16);

@@ -1,17 +1,28 @@
-// linux/gcc cc jpegtest.c ../rfxswf.c -funsigned-char -o jpegtest -lm -ljpeg; cp jpegtest /home/www/cgi-bin/jpegtest
+/* jpegtest.c
+
+   Example for including and mapping jpeg images to swf shapes
+   
+   Part of the swftools package.
+
+   Copyright (c) 2000, 2001 Rainer Böhme <rfxswf@reflex-studio.de>
+ 
+   This file is distributed under the GPL, see file COPYING for details 
+
+*/
 
 #include <stdio.h>
-#include <math.h>	
+#include <fcntl.h>
+#include <math.h>       
 #include "../rfxswf.h"
 
-#define WIDTH 		256
-#define HEIGHT 	256
-#define QUALITY 	85
+#define WIDTH           256
+#define HEIGHT          256
+#define QUALITY         85
 
-#define ID_BITS 	1
-#define ID_SHAPE 	2
+#define ID_BITS         1
+#define ID_SHAPE        2
 
-int main ( int argc, char ** argv)
+int main( int argc, char ** argv)
 { SWF swf;
   LPTAG t;
   RGBA rgb;
@@ -19,6 +30,8 @@ int main ( int argc, char ** argv)
   MATRIX m;
   SRECT r;
   LPJPEGBITS jpeg;
+
+  int f; // file handle
   
   int ls; // line style
   int fs; // fill style
@@ -26,25 +39,27 @@ int main ( int argc, char ** argv)
 
   memset(&swf,0x00,sizeof(SWF));
 
-  swf.FileVersion 	= 4;
-  swf.FrameRate		= 0x1800;
-  swf.MovieSize.xmax	= 20*WIDTH;
-  swf.MovieSize.ymax	= 20*HEIGHT;
+  swf.fileVersion       = 4;
+  swf.frameRate         = 0x1800;
+  swf.movieSize.xmax    = 20*WIDTH;
+  swf.movieSize.ymax    = 20*HEIGHT;
 
-  swf.FirstTag = InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-  t = swf.FirstTag;
+  swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+  t = swf.firstTag;
 
     rgb.r = 0xff;
     rgb.b = 0xff;
     rgb.g = 0xff;
-    SetRGB(t,&rgb);
+    swf_SetRGB(t,&rgb);
 
-  t = InsertTag(t,ST_DEFINEBITSJPEG2);
+  t = swf_InsertTag(t,ST_DEFINEBITSJPEG2);
 
-    SetU16(t,ID_BITS);
-    SetJPEGBits(t,"eye.jpg",QUALITY);
+    swf_SetU16(t,ID_BITS);
+//    swf_SetJPEGBits(t,"test.jpg",QUALITY);  <- use this to include an image from disk
     
-/*    jpeg = SetJPEGBitsStart(t,WIDTH,HEIGHT,QUALITY);
+//  That's the way to use memory bitmaps (24bit,RGB)
+
+    jpeg = swf_SetJPEGBitsStart(t,WIDTH,HEIGHT,QUALITY);
     { int y;
       for (y=0;y<HEIGHT;y++)
       { U8 scanline[3*WIDTH];
@@ -54,71 +69,80 @@ int main ( int argc, char ** argv)
           scanline[p++] = y;    // G
           scanline[p++] = 0x80; // B          
         }
-        SetJPEGBitsLine(jpeg,scanline);
+        swf_SetJPEGBitsLine(jpeg,scanline);
       }
     }
-    SetJPEGBitsFinish(jpeg);
-*/
+    swf_SetJPEGBitsFinish(jpeg);
 
-for (frame=0;frame<64;frame++)
-{
-  t = InsertTag(t,ST_DEFINESHAPE);
+// do some rotation animation
+
+    for (frame=0;frame<64;frame++)
+    {
+      t = swf_InsertTag(t,ST_DEFINESHAPE);
     
-    NewShape(&s);
-    rgb.b = rgb.g = rgb.r = 0x00;
-    ls = ShapeAddLineStyle(s,40,&rgb);	
-    rgb.b = 0xff;
-  //  fs = ShapeAddSolidFillStyle(s,&rgb);
-    //  
-    GetMatrix(NULL,&m);
-    m.sy = m.sx = (int)(cos(((float)(frame))/32*3.141)*0x80000);
-    m.r0 = (int)(sin(((float)(frame))/32*3.141)*0x80000);
-    m.r1 = -m.r0;
+          swf_ShapeNew(&s);
+          
+          rgb.b = rgb.g = rgb.r = 0x00;
+          ls = swf_ShapeAddLineStyle(s,40,&rgb);
+          
+          swf_GetMatrix(NULL,&m);
+          
+          m.sy = m.sx = (int)(cos(((float)(frame))/32*3.141)*0x80000);
+          m.r0 = (int)(sin(((float)(frame))/32*3.141)*0x80000);
+          m.r1 = -m.r0;
        
-    fs = ShapeAddBitmapFillStyle(s,&m,ID_BITS,0);
+          fs = swf_ShapeAddBitmapFillStyle(s,&m,ID_BITS,0);
     
-    SetU16(t,ID_SHAPE+frame);	// ID	
+          swf_SetU16(t,ID_SHAPE+frame);   // ID   
 
-    r.xmin = 0;
-    r.ymin = 0;
-    r.xmax = 10*WIDTH;
-    r.ymax = 10*HEIGHT;
+          r.xmin = 0;
+          r.ymin = 0;
+          r.xmax = 10*WIDTH;
+          r.ymax = 10*HEIGHT;
 
-    SetRect(t,&r);
+          swf_SetRect(t,&r);
 
-    SetShapeStyles(t,s);
-    ShapeCountBits(s,NULL,NULL);
-    SetShapeBits(t,s);
+          swf_SetShapeHeader(t,s);
 
-    ShapeSetAll(t,s,0,0,ls,fs,0);
+          swf_ShapeSetAll(t,s,0,0,ls,fs,0);
 
-    ShapeSetLine(t,s,10*WIDTH,0);
-    ShapeSetLine(t,s,-10*WIDTH,10*HEIGHT);
-//    ShapeSetLine(t,s,-10*WIDTH,-10*WIDTH);
-    ShapeSetLine(t,s,0,-10*HEIGHT);
-    ShapeSetEnd(t);
+          swf_ShapeSetLine(t,s,10*WIDTH,0);
+          swf_ShapeSetLine(t,s,-10*WIDTH,10*HEIGHT);
+//    swf_ShapeSetLine(t,s,-10*WIDTH,-10*WIDTH);
+          swf_ShapeSetLine(t,s,0,-10*HEIGHT);
+          swf_ShapeSetEnd(t);
 
-  if (frame) 
-  { t = InsertTag(t,ST_REMOVEOBJECT2); SetU16(t,1);
-    t = InsertTag(t,ST_REMOVEOBJECT2); SetU16(t,2);
-  }
-	 
-  t = InsertTag(t,ST_PLACEOBJECT2);
-    ObjectPlace(t,ID_SHAPE+frame,1,NULL,NULL,NULL); 
+          swf_ShapeFree(s);
 
-  t = InsertTag(t,ST_PLACEOBJECT2);
-    GetMatrix(NULL,&m);
-    m.tx = m.ty = 10*WIDTH+frame*10;
-    m.sx = m.sy = 0xfffeffff;
-    ObjectPlace(t,ID_SHAPE+frame,2,&m,NULL,NULL);
+      if (frame) 
+      { t = swf_InsertTag(t,ST_REMOVEOBJECT2); swf_SetU16(t,1);
+        t = swf_InsertTag(t,ST_REMOVEOBJECT2); swf_SetU16(t,2);
+      }
+         
+      t = swf_InsertTag(t,ST_PLACEOBJECT2);
+          swf_ObjectPlace(t,ID_SHAPE+frame,1,NULL,NULL,NULL); 
+
+      t = swf_InsertTag(t,ST_PLACEOBJECT2);
+          swf_GetMatrix(NULL,&m); // get default matrix with no transformation
+          
+          m.tx = m.ty = 10*WIDTH+frame*10;
+          m.sx = m.sy = 0xfffeffff;
+          swf_ObjectPlace(t,ID_SHAPE+frame,2,&m,NULL,NULL);
 
 
-  t = InsertTag(t,ST_SHOWFRAME);
-}
+      t = swf_InsertTag(t,ST_SHOWFRAME);
+      
+    } // frame loop
 
-  t = InsertTag(t,ST_END);
+  t = swf_InsertTag(t,ST_END);
 
-  WriteCGI(&swf);
-  FreeTags(&swf);
+//  swf_WriteCGI(&swf);
+
+  f = open("jpegtest.swf",O_WRONLY|O_CREAT, 0644);
+  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
+  close(f);
+  
+  swf_FreeTags(&swf); // cleanup
+  
   return 0;
 }

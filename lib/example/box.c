@@ -1,18 +1,25 @@
+/* box.c
 
-// linux/gcc: cc box.c ../rfxswf.c -funsigned-char -o box -lm; cp box /home/www/cgi-bin/box
+   Example for drawing 3D grind objects
+   
+   Part of the swftools package.
+
+   Copyright (c) 2000, 2001 Rainer Böhme <rfxswf@reflex-studio.de>
+ 
+   This file is distributed under the GPL, see file COPYING for details 
+
+*/
 
 #include <stdio.h>
 #include <fcntl.h>
 #include <math.h>
 #include "../rfxswf.h"
 
-// Box
-
-#define BANNER_TEXT 	"reflex"
-#define ID_FONT   	2000
-#define ID_BANNER 	2001
-#define ID_HIGHLIGHT 	2002
-#define ID_BUTTON	2003
+#define BANNER_TEXT     "reflex" // banner is disabled due to new font handling
+#define ID_FONT         2000
+#define ID_BANNER       2001
+#define ID_HIGHLIGHT    2002
+#define ID_BUTTON       2003
 
 #define a 200
 int sX[] = { a,-a, a,-a, a,-a, a,-a};
@@ -40,15 +47,16 @@ void ShapeSquare(LPTAG t,LPSHAPE s,int p1,int p2,int p3,int p4,int dx,int dy)
   // Hidden-Line-Check
     if (((dX[p2]-dX[p1])*(dY[p3]-dY[p1])-(dX[p3]-dX[p1])*(dY[p2]-dY[p1]))<0) return;
 
-  ShapeSetMove(t,s,dX[p1]+dx,dY[p1]+dy);
-  ShapeSetLine(t,s,dX[p2]-dX[p1],dY[p2]-dY[p1]);
-  ShapeSetLine(t,s,dX[p3]-dX[p2],dY[p3]-dY[p2]);
-  ShapeSetLine(t,s,dX[p4]-dX[p3],dY[p4]-dY[p3]);
-  ShapeSetLine(t,s,dX[p1]-dX[p4],dY[p1]-dY[p4]);
+  swf_ShapeSetMove(t,s,dX[p1]+dx,dY[p1]+dy);
+  swf_ShapeSetLine(t,s,dX[p2]-dX[p1],dY[p2]-dY[p1]);
+  swf_ShapeSetLine(t,s,dX[p3]-dX[p2],dY[p3]-dY[p2]);
+  swf_ShapeSetLine(t,s,dX[p4]-dX[p3],dY[p4]-dY[p3]);
+  swf_ShapeSetLine(t,s,dX[p1]-dX[p4],dY[p1]-dY[p4]);
 }
 
 
 void mapBox(int xw,int yw,int zw)
+// simple trigonometry without using transformation matrices
 { int i;
   int x1,y1,z1,x2,y2,z2,x3,y3,z3;
   int y,x,z;
@@ -61,7 +69,7 @@ void mapBox(int xw,int yw,int zw)
   { x = sX[i];
     y = sY[i];
     z = sZ[i];
-		  
+                  
     y1 = ( y*cos_[xw]- z*sin_[xw])>>8;
     z1 = ( y*sin_[xw]+ z*cos_[xw])>>8;
     x1 = x;
@@ -75,7 +83,7 @@ void mapBox(int xw,int yw,int zw)
 
     dX[i] = x3*4000/(z3+950);
     dY[i] = y3*4000/(z3+950);
-	
+        
   }
 }
                
@@ -87,8 +95,6 @@ int main (int argc,char ** argv)
   LPSHAPE s;
   S32 width = 800,height = 800;
   U8 gbits,abits;
-  LPSWFFONT font;
-  FONTUSAGE use;
   CXFORM cx1,cx2;
   MATRIX m;
   
@@ -96,7 +102,7 @@ int main (int argc,char ** argv)
   
 /*  f = open("Arial.efont",O_RDONLY);
   if (f>=0)
-  { if (FAILED(FontImport(f,&font)))
+  { if (FAILED(swf_FontImport(f,&font)))
     { fprintf(stderr,"Font import failed\n");
       close(f);
       return -1;
@@ -108,195 +114,194 @@ int main (int argc,char ** argv)
   }
   close(f);
 
-  FontSetID(font,ID_FONT);
-  FontInitUsage(&use);
-  FontUse(&use,BANNER_TEXT);
-  FontReduce(font,&use);*/
+  swf_FontSetID(font,ID_FONT);
+  swf_FontInitUsage(&use);
+  swf_FontUse(&use,BANNER_TEXT);
+  swf_FontReduce(font,&use);
+*/
   
   calcTables();
   
   memset(&swf,0x00,sizeof(SWF));
 
-  swf.FileVersion    = 4;
-  swf.FrameRate      = 0x4000;
-  swf.MovieSize.xmax = 4*width;
-  swf.MovieSize.ymax = 4*height;
+  swf.fileVersion    = 4;
+  swf.frameRate      = 0x4000;
+  swf.movieSize.xmax = 4*width;
+  swf.movieSize.ymax = 4*height;
 
-  swf.FirstTag = InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-  t = swf.FirstTag;
+  swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+  t = swf.firstTag;
 
         rgb.r = 0xff;
         rgb.g = 0xff;
         rgb.b = 0xff;
-        SetRGB(t,&rgb);
+        swf_SetRGB(t,&rgb);
+        
+/* This part can't be used because of missing fonts. Nevertheless it shows, how
+   rfxswf handles fonts, fontusages (in order to include only the used glyphs
+   into the output swf) and how to make a simple button
 
-  t = InsertTag(t,ST_DEFINEFONT);
 
-        FontSetDefine(t,font);
+  t = swf_InsertTag(t,ST_DEFINEFONT);
 
-  t = InsertTag(t,ST_DEFINEFONTINFO);
+        swf_FontSetDefine(t,font);
 
-        FontSetInfo(t,font);
+  t = swf_InsertTag(t,ST_DEFINEFONTINFO);
 
-  t = InsertTag(t,ST_DEFINETEXT);
+        swf_FontSetInfo(t,font);
 
-        SetU16(t,ID_BANNER);            // ID
+  t = swf_InsertTag(t,ST_DEFINETEXT);
+
+        swf_SetU16(t,ID_BANNER);            // ID
         
         r.xmin = 0;
         r.ymin = 0;
         r.xmax = 400;
         r.ymax = 400;
-        SetRect(t,&r);
-
-        SetMatrix(t,NULL);
-
-        TextCountBits(font,BANNER_TEXT,80,&gbits,&abits);
         
-        SetU8(t,gbits);
-        SetU8(t,abits);
+        swf_SetRect(t,&r);
+
+        swf_SetMatrix(t,NULL);
+
+        swf_TextCountBits(font,BANNER_TEXT,80,&gbits,&abits);
+        
+        swf_SetU8(t,gbits);
+        swf_SetU8(t,abits);
 
         rgb.r = 0xc0;
         rgb.g = 0xc0;
         rgb.b = 0xc0;
 
-        TextSetInfoRecord(t,font,height/4,&rgb,0,200);
-        TextSetCharRecord(t,font,BANNER_TEXT,80,gbits,abits);
+        swf_TextSetInfoRecord(t,font,height/4,&rgb,0,200);
+        swf_TextSetCharRecord(t,font,BANNER_TEXT,80,gbits,abits);
 
-        SetU8(t,0);
+        swf_SetU8(t,0);
         
-  t = InsertTag(t,ST_DEFINETEXT);
+  t = swf_InsertTag(t,ST_DEFINETEXT);
 
-        SetU16(t,ID_HIGHLIGHT);            // ID
+        swf_SetU16(t,ID_HIGHLIGHT);            // ID
         
         r.xmin = 0;
         r.ymin = 0;
         r.xmax = 800;
         r.ymax = 400;
-        SetRect(t,&r);
-
-        SetMatrix(t,NULL);
-
-        TextCountBits(font,BANNER_TEXT,80,&gbits,&abits);
         
-        SetU8(t,gbits);
-        SetU8(t,abits);
+        swf_SetRect(t,&r);
+
+        swf_SetMatrix(t,NULL);
+
+        swf_TextCountBits(font,BANNER_TEXT,80,&gbits,&abits);
+        
+        swf_SetU8(t,gbits);
+        swf_SetU8(t,abits);
 
         rgb.r = 0x20;
         rgb.g = 0x20;
         rgb.b = 0x20;
 
-        TextSetInfoRecord(t,font,height/4,&rgb,0,200);
-        TextSetCharRecord(t,font,BANNER_TEXT,80,gbits,abits);
+        swf_TextSetInfoRecord(t,font,height/4,&rgb,0,200);
+        swf_TextSetCharRecord(t,font,BANNER_TEXT,80,gbits,abits);
 
-        SetU8(t,0);
-	
-    t = InsertTag(t,ST_DEFINEBUTTON);
-    
-        GetMatrix(NULL,&m);
-	
-	m.tx = 3*width;
-	m.ty = 7*height/2;
+        swf_SetU8(t,0);
         
-        SetU16(t,ID_BUTTON); // ID
-	ButtonSetRecord(t,BS_UP,ID_BANNER,1,&m,NULL);
-	ButtonSetRecord(t,BS_DOWN|BS_HIT|BS_OVER,ID_HIGHLIGHT,1,&m,NULL);
-	SetU8(t,0); // End of Button Records
-	SetU8(t,0); // End of Action Records
+    t = swf_InsertTag(t,ST_DEFINEBUTTON);
+    
+        swf_GetMatrix(NULL,&m);
+        
+        m.tx = 3*width;
+        m.ty = 7*height/2;
+        
+        swf_SetU16(t,ID_BUTTON); // ID
+        swf_ButtonSetRecord(t,BS_UP,ID_BANNER,1,&m,NULL);
+        swf_ButtonSetRecord(t,BS_DOWN|BS_HIT|BS_OVER,ID_HIGHLIGHT,1,&m,NULL);
+        swf_SetU8(t,0); // End of Button Records
+        swf_SetU8(t,0); // End of Action Records
     
       
-    t = InsertTag(t,ST_PLACEOBJECT2);
+    t = swf_InsertTag(t,ST_PLACEOBJECT2);
 
-         ObjectPlace(t,ID_BUTTON,1,NULL,NULL,NULL);
-	 
-    GetCXForm(NULL,&cx1,1);
-    GetCXForm(NULL,&cx2,1);
-    
-//    cx1.a1 = -(0x40*1);
-//    cx2.a1 = -(0x40*2);
-    
-    cx1.r1 = cx1.g1 = 0x80;
-    cx2.r1 = cx2.g1 = 0xc0;	
-    
-
-	
+         swf_ObjectPlace(t,ID_BUTTON,1,NULL,NULL,NULL);
+         
+*/
+        
   for (frame=0;frame<256;frame+=2)
   { int id = frame +1;
     
-    t = InsertTag(t,ST_DEFINESHAPE);
+    t = swf_InsertTag(t,ST_DEFINESHAPE);
 
-        NewShape(&s);
+        swf_ShapeNew(&s);
         rgb.r = rgb.g = 0x00; rgb.b = 0xff;
-        j = ShapeAddLineStyle(s,40,&rgb);
+        j = swf_ShapeAddLineStyle(s,40,&rgb);
 
-        SetU16(t,id);  // ID
+        swf_SetU16(t,id);  // ID
 
         r.xmin = 0;
         r.ymin = 0;
         r.xmax = 4*width;
         r.ymax = 4*height;
         
-        SetRect(t,&r);
+        swf_SetRect(t,&r);
+        swf_SetShapeHeader(t,s);
+        swf_ShapeSetAll(t,s,0,0,j,0,0);
+        
+        mapBox(frame,frame,frame>>1);
 
-        SetShapeStyles(t,s);
-        ShapeCountBits(s,NULL,NULL);
-        SetShapeBits(t,s);
-
-        ShapeSetAll(t,s,0,0,j,0,0);
-	
-	mapBox(frame,frame,frame>>1);
-
-	ShapeSquare(t,s,0,2,3,1,2*width,2*height);
-	ShapeSquare(t,s,4,5,7,6,2*width,2*height);
-	ShapeSquare(t,s,0,4,6,2,2*width,2*height);
-	ShapeSquare(t,s,1,3,7,5,2*width,2*height);
-	ShapeSquare(t,s,0,1,5,4,2*width,2*height);
-	ShapeSquare(t,s,2,6,7,3,2*width,2*height);
-	
-        ShapeSetEnd(t);
+        ShapeSquare(t,s,0,2,3,1,2*width,2*height);
+        ShapeSquare(t,s,4,5,7,6,2*width,2*height);
+        ShapeSquare(t,s,0,4,6,2,2*width,2*height);
+        ShapeSquare(t,s,1,3,7,5,2*width,2*height);
+        ShapeSquare(t,s,0,1,5,4,2*width,2*height);
+        ShapeSquare(t,s,2,6,7,3,2*width,2*height);
+        
+        swf_ShapeSetEnd(t);
+        swf_ShapeFree(s);
   }
   
+  swf_GetCXForm(NULL,&cx1,1);  // get default ColorTransforms
+  swf_GetCXForm(NULL,&cx2,1);
+    
+  cx1.r1 = cx1.g1 = 0x80;  // set alpha for blur effect
+  cx2.r1 = cx2.g1 = 0xc0;     
+    
   for (frame=0;frame<256;frame+=2)
   { int id = frame +1;
     int id2 = ((frame-2)&255)+1;
     int id3 = ((frame-4)&255)+1;
 
     if (frame)
-    { t = InsertTag(t,ST_REMOVEOBJECT2); SetU16(t,2); // depth
-      t = InsertTag(t,ST_REMOVEOBJECT2); SetU16(t,3); // depth
-      t = InsertTag(t,ST_REMOVEOBJECT2); SetU16(t,4); // depth
+    { t = swf_InsertTag(t,ST_REMOVEOBJECT2); swf_SetU16(t,2); // depth
+      t = swf_InsertTag(t,ST_REMOVEOBJECT2); swf_SetU16(t,3); // depth
+      t = swf_InsertTag(t,ST_REMOVEOBJECT2); swf_SetU16(t,4); // depth
     }
 
-    t = InsertTag(t,ST_PLACEOBJECT2);
+    t = swf_InsertTag(t,ST_PLACEOBJECT2);
 
-        ObjectPlace(t,id,4,NULL,NULL,NULL);
-	
-    t = InsertTag(t,ST_PLACEOBJECT2);
+        swf_ObjectPlace(t,id,4,NULL,NULL,NULL);
+        
+    t = swf_InsertTag(t,ST_PLACEOBJECT2);
 
-        ObjectPlace(t,id2,3,NULL,&cx1,NULL);
+        swf_ObjectPlace(t,id2,3,NULL,&cx1,NULL);
   
-    t = InsertTag(t,ST_PLACEOBJECT2);
+    t = swf_InsertTag(t,ST_PLACEOBJECT2);
 
-        ObjectPlace(t,id3,2,NULL,&cx2,NULL);
- 
-    
-    t = InsertTag(t,ST_SHOWFRAME);
+        swf_ObjectPlace(t,id3,2,NULL,&cx2,NULL);
+  
+    t = swf_InsertTag(t,ST_SHOWFRAME);
   }
   
-  
-
-  t = InsertTag(t,ST_END);
+  t = swf_InsertTag(t,ST_END);
  
-//  WriteCGI(&swf);
-  
+//  swf_WriteCGI(&swf);
+ 
 
-  f = open("shape1.swf",O_RDWR|O_CREAT|O_TRUNC);
-  if FAILED(WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
+  f = open("box.swf",O_RDWR|O_CREAT|O_TRUNC,0644);
+  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 
-  FreeTags(&swf);
+  swf_FreeTags(&swf);
 
 #ifdef __NT__
-  system("start ..\\shape1.swf");
+  system("start ..\\box.swf");
 #endif
   
   return 0;
