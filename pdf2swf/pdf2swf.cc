@@ -66,6 +66,11 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_ignoredraworder();
 	return 0;
     }
+    else if (!strcmp(name, "n"))
+    {
+	pdfswf_linksopennewwindow();
+	return 0;
+    }
     else if (name[0]=='j')
     {
 	if(name[1]) {
@@ -96,6 +101,7 @@ struct options_t options[] =
  {"s","shapes"},
  {"j","jpegquality"},
  {"p","pages"},
+ {"w","samewindow"},
  {0,0}
 };
 
@@ -128,6 +134,7 @@ void args_callback_usage(char*name)
     printf("-i  --ignore               Ignore draw order (makes the SWF file smaller)\n");
     printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
+    printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
     printf("-V  --version              Print program version\n");
 }
 
@@ -253,6 +260,7 @@ int main(int argn, char *argv[])
 	if(is_in_range(t, pagerange))
 	pdfswf_convertpage(t);
     }
+    pdfswf_performconversion();
 
     pdfswf_close();
     return 0;
