@@ -28,6 +28,7 @@
 #include "./tags.h"
 #include "./taglist.h"
 #include "./primitives.h"
+#include "./action.h"
 
 /*
 TODO:
