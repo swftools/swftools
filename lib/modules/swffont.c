@@ -267,9 +267,10 @@ SWFFONT* swf_LoadT1Font(char*filename)
     int s,num;
     char*encoding[256];
     char**charnames;
-    char*charname;
+    char**charname;
+    int c;
 
-    T1_SetBitmapPad( 16);
+    T1_SetBitmapPad(16);
     if ((T1_InitLib(NO_LOGFILE)==NULL)){
 	fprintf(stderr, "Initialization of t1lib failed\n");
 	return 0;
@@ -298,13 +299,13 @@ SWFFONT* swf_LoadT1Font(char*filename)
     memset(font->layout, 0, sizeof(SWFLAYOUT));
 
     num = 0;
-    charname = charnames[0];
+    charname = charnames;
     while(*charname) {
 	charname++;
 	num++;
     }
 
-    font->maxascii = 256;
+    font->maxascii = num;
     font->numchars = num;
     
     font->style = (/*bold*/0?FONT_STYLE_BOLD:0) + (angle>0.05?FONT_STYLE_ITALIC:0);
@@ -324,31 +325,69 @@ SWFFONT* swf_LoadT1Font(char*filename)
     memset(font->layout->bounds, 0, sizeof(SRECT)*num);
     font->layout->kerningcount = 0;
     font->layout->kerning = 0;
+    font->glyphnames = malloc(num*sizeof(char*));
+    memset(font->glyphnames, 0, num*sizeof(char*));
   
     num = 0;
-    
-    charname = charnames[0];
-    while(*charname) {
-	int c;
-	T1_OUTLINE * outline = T1_GetCharOutline(nr, c, 100.0, 0);
-	int firstx = outline->dest.x/0xffff;
 
-	font->ascii2glyph[s] = num;
-	font->glyph2ascii[num] = s;
-	    
-	/* fix bounding box */
-	SHAPE2*shape2;
+    charname = charnames;
+    for(c=0;c<font->numchars;c++) {
+	drawer_t draw;
 	SRECT bbox;
-	shape2 = swf_ShapeToShape2(font->glyph[s].shape);
-	if(!shape2) { fprintf(stderr, "Shape parse error\n");exit(1);}
-	bbox = swf_GetShapeBoundingBox(shape2);
-	swf_Shape2Free(shape2);
-	font->layout->bounds[num] = bbox;
-	//font->glyph[num].advance = (int)(width/6.4); // 128/20
-	font->glyph[num].advance = bbox.xmax/20;
-	if(!font->glyph[num].advance) {
-	    font->glyph[num].advance = firstx;
+	T1_OUTLINE * outline;
+	FPOINT pos,last;
+	int firstx;
+	
+	outline = T1_GetCharOutline(nr, c, 100.0, 0);
+	firstx = outline->dest.x/0xffff;
+
+	pos.x = 0;
+	pos.y = 0;
+	last = pos;
+	
+	font->glyphnames[c] = strdup(*charname);
+
+	if(c<font->maxascii)
+	    font->ascii2glyph[c] = c;
+	font->glyph2ascii[c] = c;
+	
+	swf_Shape01DrawerInit(&draw, 0);
+
+	while(outline) {
+	    pos.x += (outline->dest.x/(float)0xffff);
+	    pos.y += (outline->dest.y/(float)0xffff);
+
+	    if(outline->type == T1_PATHTYPE_MOVE) {
+		draw.moveTo(&draw,&pos);
+	    } else if(outline->type == T1_PATHTYPE_LINE) {
+		draw.lineTo(&draw,&pos);
+	    } else if(outline->type == T1_PATHTYPE_BEZIER) {
+		T1_BEZIERSEGMENT*o2 = (T1_BEZIERSEGMENT*)outline;
+		FPOINT b,c;
+		b.x = o2->B.x/(float)0xffff+last.x;
+		b.y = o2->B.y/(float)0xffff+last.y;
+		c.x = o2->C.x/(float)0xffff+last.x;
+		c.y = o2->C.y/(float)0xffff+last.y;
+		draw_cubicTo(&draw,&b,&c,&pos);
+	    } else {
+		fprintf(stderr, "loadT1Font: unknown outline type:%d\n", outline->type);
+	    }
+	    last = pos;
+	    outline = outline->link;
 	}
+	
+	draw.finish(&draw);
+
+	font->glyph[c].shape = swf_ShapeDrawerToShape(&draw);
+	bbox = swf_ShapeDrawerGetBBox(&draw);
+	draw.dealloc(&draw);
+	    
+	font->layout->bounds[c] = bbox;
+	font->glyph[c].advance = bbox.xmax/20;
+	if(!font->glyph[c].advance) {
+	    font->glyph[c].advance = firstx;
+	}
+	charname++;
     }
     return font;
 }
