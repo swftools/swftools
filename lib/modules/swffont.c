@@ -133,7 +133,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
     font->layout->ascent = face->ascender*20/FT_SUBPIXELS; //face->bbox.xMin;
     font->layout->descent = abs(face->descender)*20/FT_SUBPIXELS; //face->bbox.xMax;
-    font->layout->leading = -face->bbox.xMin*20/FT_SUBPIXELS;
+    font->layout->leading = abs(face->bbox.yMin - face->bbox.yMax); //-face->bbox.xMin*20/FT_SUBPIXELS;
     font->layout->kerningcount = 0;
     
     name = FT_Get_Postscript_Name(face);
