@@ -237,6 +237,16 @@
 	* m4/python.m4: Python MacOS X fixes
 	* src/gif2swf.c: New tool, for converting (animated) gifs to swf (Daichi Shinozaki)
 
-0.6.4:
+0.7.0:
 	* swfdump: Fixed bit overflow bug
 	* lib/gfxdevice.h: Started implementation of graphic layer abstraction
+	* pdf2swf: Fixed Type 3 color bug
+	* pdf2swf: Fixed a rare rendering bug caused by the float conversion in moveTo
+	* pdf2swf: Fixed CMYK conversion
+	* pdf2swf: added support for joinstyles 
+	* pdf2swf: capstyles don't require clipping anymore
+	* pdf2swf: added support for dashed/dotted lines
+	* pdf2swf: Images are now stored as either jpeg or zlib, whatever is smaller.
+	* pdf2swf: Fixed Type0C handling
+	* swfcombine: Fixed jpeg table conversion
+
