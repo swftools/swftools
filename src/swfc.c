@@ -692,13 +692,17 @@ int s_getframe()
     return currentframe;
 }
 
-void s_frame(int nr, int cut)
+void s_frame(int nr, int cut, char*name)
 {
     int t;
     TAG*now = tag;
 
     for(t=currentframe;t<nr;t++) {
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
+	if(t==nr-1 && name && *name) {
+	    tag = swf_InsertTag(tag, ST_FRAMELABEL);
+	    swf_SetString(tag, name);
+	}
     }
 
     if(cut) {
@@ -2153,6 +2157,7 @@ static int c_frame(map_t*args)
 {
     char*framestr = lu(args, "n");
     char*cutstr = lu(args, "cut");
+    char*name = lu(args, "name");
     int frame;
     int cut = 0;
     if(strcmp(cutstr, "no"))
@@ -2169,7 +2174,7 @@ static int c_frame(map_t*args)
 		&& !(frame==0 && s_getframe()==frame)) // equality is o.k. for frame 0
 	    syntaxerror("frame expression must be >%d (is:%s)", s_getframe(), framestr);
     }
-    s_frame(frame, cut);
+    s_frame(frame, cut, name);
     return 0;
 }
 static int c_primitive(map_t*args) 
@@ -2481,7 +2486,7 @@ static struct {
     char*arguments;
 } arguments[] =
 {{"flash", c_flash, "bbox=autocrop background=black version=5 fps=50 name=!default! @compress=default"},
- {"frame", c_frame, "n=<plus>1 @cut=no"},
+ {"frame", c_frame, "n=<plus>1 name= @cut=no"},
  // "import" type stuff
  {"swf", c_swf, "name filename"},
  {"shape", c_swf, "name filename"},
