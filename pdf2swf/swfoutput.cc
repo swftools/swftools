@@ -121,7 +121,8 @@ static void splineto(TAG*tag, plotxy control,plotxy end)
     int ey = ((int)(end.y*20)-swflasty);
     swflastx += ex;
     swflasty += ey;
-    swf_ShapeSetCurve(tag, shape, cx,cy,ex,ey);
+    if(cx || cy || ex || ey)
+	swf_ShapeSetCurve(tag, shape, cx,cy,ex,ey);
 }
 
 /* write a line, given two points and the transformation
