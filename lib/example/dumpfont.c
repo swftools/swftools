@@ -83,7 +83,7 @@ void DumpFont(SWFFONT * f,char * name)
 
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
-    { printf("  addGlyph(f,%3i, 0x%02x,%4i, &Glyphs_%s[0x%04x],%4i); // %c\n",
+    { printf("  addGlyph(f,%3i, 0x%03x,%4i, &Glyphs_%s[0x%04x],%4i); // %c\n",
              i, f->glyph2ascii[i], f->glyph[i].advance, name, gpos[i],
              f->glyph[i].shape->bitlen,PRINTABLE(f->glyph2ascii[i]));
     }
