@@ -64,7 +64,7 @@ int main (int argc,char ** argv)
 	  block[s] = (int)(32767*sin(s*8*3.14159/blocksize));
 	  if(t==0) block[s] = 0;
       }
-      swf_SetSoundStreamBlock(tag, block, 1);
+      swf_SetSoundStreamBlock(tag, block, 1, 0);
       tag = swf_InsertTag(tag, ST_SHOWFRAME);
   }
   
