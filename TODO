@@ -1,10 +1,9 @@
 Priorities:
 1. Make the swfs that pdf2swf generates smaller
-2. Make pdf2swf faster
-3. General improvements
-4. Make pdf2swf cope with more complex pdfs
-5. Do some sample swfs for swfcombine 
-6. Cleanups in rfxswf-lib.
+2. General improvements
+3. Make pdf2swf cope with more complex pdfs
+4. Do some sample swfs for swfcombine 
+5. Cleanups in rfxswf-lib.
 
 Make the swfs pdf2swf generates smaller:
 
@@ -21,12 +20,6 @@ Make pdf2swf cope with more complex pdfs:
     * (type 3 and truetype fonts)
     Bugs:
     * big jpegs sometimes have wrong colors
-
-Make pdf2swf faster:
-
-    * Embedded fonts which are used more than once are also converted more
-      than once. Implement a font cache, like the one in xpdf. (font->getID().num
-      seems to be unique for every font)
 
 Do some sample swfs for swfcombine:
 
