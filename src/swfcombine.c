@@ -306,6 +306,7 @@ static void makestackmaster(SWF*swf)
 	    exit(1);
 	}
 	close(fi);
+	swf_RemoveJPEGTables(&head);
 	msg("<verbose> File %s has bounding box %d:%d:%d:%d\n",
 		slave_filename[t], 
 		head.movieSize.xmin, head.movieSize.ymin,
@@ -1151,6 +1152,7 @@ int main(int argn, char *argv[])
 	    msg("<fatal> Failed to read from %s\n", master_filename);
 	    exit(1);
 	}
+	swf_RemoveJPEGTables(&master);
 	msg("<debug> Read %d bytes from masterfile\n", ret);
 	close(fi);
     }
@@ -1218,6 +1220,7 @@ int main(int argn, char *argv[])
 		}
 		msg("<debug> Read %d bytes from slavefile\n", ret);
 		close(fi);
+		swf_RemoveJPEGTables(&slave);
 	    }
 	    else
 	    {
