@@ -43,6 +43,7 @@ ${name}/lib/modules/swftools.c \
 ${name}/lib/modules/swfcgi.c \
 ${name}/lib/rfxswf.c \
 ${name}/lib/rfxswf.h \
+${name}/lib/old_rfxswf.h \
 ${name}/lib/log.c \
 ${name}/lib/log.h \
 ${name}/lib/Makefile.am \
