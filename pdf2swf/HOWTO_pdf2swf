@@ -12,7 +12,7 @@ Step 1: Converting the documents
    use
    jpeg2swf -o tmp.swf pic1.jpeg pic2.jpeg ...
    and read on)
-   
+
 Step 2: Linking a viewer
 
    Just take a viewer of your choice (e.g. [1]SimpleViewer.swf ) and put
@@ -21,7 +21,7 @@ Step 2: Linking a viewer
    swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
    Now, 'flashfile.swf' is "browsable", i.e. there are some buttons in it
    for turning pages.
-   
+
 Step 3: Linking a Preloader
 
    Depending on the size of your PDFs/SWFs, you may want to have some
@@ -40,7 +40,7 @@ Step 3: Linking a Preloader
    swfcombine -o flashfile.swf PreLoader.swf -x 3000 -y 3000
    loader=loading.swf movie=flashfile.swf 
    and try playing around with the values after -x and -y)
-   
+
 Step 4: Correcting the size and framerate
 
    Sometimes, the bounding box of the generated flash file is not
@@ -56,7 +56,7 @@ Step 4: Correcting the size and framerate
    Use:
    swfcombine --dummy `swfdump -r loading.swf` flashfile.swf -o
    flashfile.swf 
-   
+
 Step 5: Embedding the SWF into a html page
 
    Usually, one wants to put the generated SWFs on his web page. To do
@@ -66,7 +66,7 @@ Step 5: Embedding the SWF into a html page
    Also, you can simply type
    swfdump --html flashfile.swf 
    and insert the output into your html document
-   
+
 Appendix A: Creating your own Viewers
 
    If you know about Flash, and you want to substitute SimpleViewer from
@@ -76,17 +76,17 @@ Appendix A: Creating your own Viewers
    when using swfcombine for merging it with the converted pdfs)
    2. Browsing buttons next to the rectangle (which turn pages in the
    shown pdf) should trigger some Actionsscript events, like
-   
+
      SetTarget "viewport"
      NextFrame
      SetTarget ""
-     
+
    to set the frame in the to-be-replaced rectangle. (It will be replaced
    with a MovieClip, therefore a SetTarget is neccessary)
    It's important that the Target Name ist "viewport", not "/viewport",
    as the Movie will get inserted into a Movieclip.
      _________________________________________________________________
-   
+
    [5]Back to the SWFTools Project page
 
 References
