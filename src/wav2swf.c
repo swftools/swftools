@@ -24,7 +24,7 @@ struct options_t options[] =
  {"v","verbose"},
  {"d","definesound"},
  {"l","loop"},
- {"f","framerate"},
+ {"r","framerate"},
  {"V","version"},
  {0,0}
 };
@@ -55,7 +55,7 @@ int args_callback_option(char*name,char*val)
 	verbose ++;
 	return 0;
     }
-    else if(!strcmp(name, "f")) {
+    else if(!strcmp(name, "r")) {
 	float f;
 	sscanf(val, "%f", &f);
 	framerate = f*256;
@@ -77,7 +77,7 @@ void args_callback_usage(char*name)
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-d , --definesound\t\t\t Generate a DefineSound tag instead of streaming sound\n");
     printf("\t-l , --loop n\t\t\t Loop sound n times (implies -d)\n");
-    printf("\t-f , --framerate fps\t\t\t Set framerate to fps frames per seond\n");
+    printf("\t-r , --framerate fps\t\t\t Set framerate to fps frames per seond\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
@@ -162,6 +162,7 @@ int main (int argc,char ** argv)
 	    logf("<notice> Writing block %d", t);
 	    block1 = &samples[t*2*blocksize];
 	    swf_SetSoundStreamBlock(tag, block1, 1);
+
 	    oldframe = (int)framepos;
 	    framepos += framesperblock;
 	    newframe = (int)framepos;
