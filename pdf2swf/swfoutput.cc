@@ -451,7 +451,7 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
     }
     else
     {
-        T1_OUTLINE*outline = font->getOutline(character);
+        T1_OUTLINE*outline = font->getOutline(character, charnr);
         char* charname = character;
 
         if(!outline) {
@@ -699,32 +699,29 @@ SWFFont::~SWFFont()
     free(char2swfcharid);
 }
 
-T1_OUTLINE*SWFFont::getOutline(char*name)
+T1_OUTLINE*SWFFont::getOutline(char*name, int charnr)
 {
     int t;
     for(t=0;t<this->charnum;t++) {
         if(!strcmp(this->charname[t],name)) {
-            if(!used[t])
-            {
-                swfcharid2char[swfcharpos] = t;
-                char2swfcharid[t] = swfcharpos;
-                swfcharpos++;
-                used[t] = 1;
-            }
             return outline[t];
         }
     }
-    return 0;
-}
-
-int SWFFont::getWidth(char*name)
-{
-    int t;
+    
+    /* if we didn't find the character, maybe
+       we can find the capitalized version */
     for(t=0;t<this->charnum;t++) {
-        if(!strcmp(this->charname[t],name)) {
-            return this->width[t];
-        }
+        if(!strcasecmp(this->charname[t],name))
+	    return outline[t];
     }
+
+    /* if we didn't find it by name, use the names of the first 256 characters
+       of the font to try a new name based on charnr */
+    if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
+	return getOutline(this->standardtable[charnr], -1);
+    }
+
+    logf("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
     return 0;
 }
 
@@ -742,10 +739,38 @@ int SWFFont::getSWFCharID(char*name, int charnr)
             return char2swfcharid[t];
         }
     }
+
+    /* if we didn't find the character, maybe
+       we can find the capitalized version */
+    for(t=0;t<this->charnum;t++) {
+        if(!strcasecmp(this->charname[t],name)) {
+            if(!used[t])
+            {
+                swfcharid2char[swfcharpos] = t;
+                char2swfcharid[t] = swfcharpos++;
+                used[t] = 1;
+            }
+            return char2swfcharid[t];
+        }
+    }
+
+    /* if we didn't find it by name, use the names of the first 256 (or so) characters
+       of the font to try a new name based on charnr */
     if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
 	return getSWFCharID(this->standardtable[charnr], -1);
     }
     logf("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
+    return 0;
+}
+
+int SWFFont::getWidth(char*name)
+{
+    int t;
+    for(t=0;t<this->charnum;t++) {
+        if(!strcmp(this->charname[t],name)) {
+            return this->width[t];
+        }
+    }
     return 0;
 }
 
