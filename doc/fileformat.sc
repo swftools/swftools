@@ -89,12 +89,6 @@
     # sound object otherwise, and I'd rather have that done explicitly.
     .soundtrack "LocoStart.wav" # TODO
 
-# Sound effects on user pressing or releasing a button 
-
-.button mybutton shape=obj1 # TODO
-    .buttonsound press=sound1 release=sound2 enter=sound3 leave=sound4 # TODO
-.end
-
 # Elements of the movie should be animated by various means 
 # moving (x,y and zoom) 
 # ---------------------
@@ -245,12 +239,16 @@
 .png play_pressed "Play_pressed.png" #TODO
 .png stoplogo "Stop.png" #TODO
 
-.button playbutton shape=play press=play_pressed #TODO
+.button playbutton
+    .put play as=shape
+    .put play as=area
+    .put play_pressed as=pressed
+    .put play_pressed as=hower
 .end
 
-.button playbutton2 shape=play press=play_pressed
+.button playbutton2
+    .put play as=shape
     .on_press inside
-    .on_press outside
     .on_release inside
     .on_release outside
     .on_move_in pressed
@@ -262,31 +260,42 @@
     .end
 .end
 
+.button mybutton
+    .put play as=shape
+    .put obj1 x=300 y=400 scale=110% pivot=center 
+         as=pressed
+.end
+
+.box blueshape 10 10
+.box greenshape 10 10
+.box whiteshape 10 10
+.box activearea 10 10
+.box emtpyshape 10 10
+.box window1 10 10
 # button which is blue, get's green when the mouse hovers over it, and
 # white when it is pressed:
-.button b1 shape=blueshape over=greenshape press=whiteshape #TODO
+.button b1
+    .put blueshape as=idle
+    .put greenshape as=hower
+    .put whiteshape as=press
 .end
 
 # button where the button position is not identical to the active area:
-.button b2 area=activearea shape=blueshape over=greenshape press=whiteshape #TODO
+.button b2
+    .put activearea as=area
+    .put blueshape as=idle
+    .put greenshape as=hower
+    .put whiteshape as=press
 .end
 
 # (if area is not set, it's the same as shape)
 
 # the above put into use: pop up a window if the mouse cursor enters a certain
 # area:
-.button b3 area=activearea shape=emptyshape over=window1 press=window1 #TODO
-.end
-
-# button characters also support positioning and cxforming characters.
-# to use this, we put the characters "virtually", and then use the
-# instances in the button
-.buttonput area1=playlogo x=300 y=400 rotate=0 #TODO
-.buttonput shape1=playlogo x=400 y=400 rotate=0 red=50% #TODO
-.buttonput over1=playlogo x=400 y=400 rotate=30 red=50% #TODO
-.buttonput press1=playlogo x=500 y=500 rotate=180 #TODO
-.button mybutton1 area=area1 shape=shape1 over=over1 press=press1: #TODO
-     #[...actionscript...]
+.button b3
+    .put activearea as=area
+    .put emtpyshape as=idle
+    .put window1 as=hower
 .end
 
 # fonts
