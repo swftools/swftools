@@ -144,7 +144,7 @@ public:
   void startDoc(XRef *xref);
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state) ;
+  virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
 
   //----- link borders
   virtual void drawLink(Link *link, Catalog *catalog) ;
@@ -700,18 +700,27 @@ void SWFOutputDev::endType3Char(GfxState *state)
     msg("<debug> endType3Char");
 }
 
-void SWFOutputDev::startPage(int pageNum, GfxState *state) 
+void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
 {
   double x1,y1,x2,y2;
   laststate = state;
   msg("<debug> startPage %d\n", pageNum);
   msg("<notice> processing page %d", pageNum);
 
-  state->transform(state->getX1(),state->getY1(),&x1,&y1);
+  /*state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
+  */
+  x1 = crop_x1;
+  y1 = crop_y1;
+  x2 = crop_x2;
+  y2 = crop_y2;
+
+  if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
+  if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
+
   if(!outputstarted) {
-    msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
-    swfoutput_init(&output, swffilename, abs((int)(x2-x1)),abs((int)(y2-y1)));
+    msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", crop_x1,crop_y1,crop_x2,crop_y2);
+    swfoutput_init(&output, swffilename,(int)crop_x1,(int)crop_y1,(int)crop_y2,(int)crop_y2);
     outputstarted = 1;
   }
   else
