@@ -1954,7 +1954,7 @@ EOF
 
 fi
 
- for ac_hdr in math.h fcntl.h limits.h malloc.h unistd.h memory.h zlib.h jpeglib.h t1lib.h
+ for ac_hdr in math.h fcntl.h limits.h malloc.h unistd.h memory.h zlib.h jpeglib.h t1lib.h sys/stat.h
 do
 ac_safe=`echo "$ac_hdr" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for $ac_hdr""... $ac_c" 1>&6
