@@ -23,15 +23,15 @@ PreLoaderTemplate$(E): PreLoaderTemplate.o ../lib/librfxswf.a
 
 simple_viewer.swf: $(programs)
 	@echo Calling ./keybard_viewer to create keyboard_viewer.swf
-	./simple_viewer$(E)
+	./simple_viewer$(E) || true
 
 keyboard_viewer.swf: $(programs)
 	@echo Calling ./simple_viewer to create simple_viewer.swf
-	./keyboard_viewer$(E)
+	./keyboard_viewer$(E) || true
 
 PreLoaderTemplate.swf: $(programs)
 	@echo Calling ./PreLoaderTemplate to create PreLoaderTemplate.swf
-	./PreLoaderTemplate$(E)
+	./PreLoaderTemplate$(E) || true
 
 install:
 	$(mkinstalldirs) $(pkgdatadir)
