@@ -900,8 +900,8 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
     {
         int charid = font->getSWFCharID(character, charnr);
 	if(charid<0) {
-	    msg("<warning> Didn't find %s in current charset (%s)", 
-		    FIXNULL(character),FIXNULL(font->getName()));
+	    msg("<warning> Didn't find character '%s' (%d) in current charset (%s)", 
+		    FIXNULL(character),charnr, FIXNULL(font->getName()));
 	    return;
 	}
         if(shapeid>=0)
@@ -917,8 +917,8 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
         char* charname = character;
 
         if(!outline) {
-         msg("<warning> Didn't find %s in current charset (%s)", 
-                 FIXNULL(character),FIXNULL(font->getName()));
+         msg("<warning> Didn't find character '%s' (%d) in current charset (%s)", 
+                 FIXNULL(character),charnr,FIXNULL(font->getName()));
          return;
         }
         
@@ -1012,9 +1012,18 @@ SWFFont::SWFFont(char*name, int id, char*filename)
 
     for(t = 0; t < this->standardtablesize; t++) {
 	char*name = T1_GetCharName(id,t);
-	if(!name)
-	    name = "";
+	char chh[2] = "";
+	chh[0] = t;
+	if(!name || !strstr(name, "notdef")) {
+	    if(t<standardEncodingSize) {
+		name = standardEncodingNames[t];
+	    } 
+	    if(!name) {
+		name = ""; //TODO: store something like <%d>
+	    }
+	}
 	standardtable[t] = strdup(name);
+	msg("<debug> Char %d is named %s\n", t, name);
     }
     
     outline = (T1_OUTLINE**)malloc(charnum*sizeof(T1_OUTLINE*));
@@ -1191,10 +1200,10 @@ T1_OUTLINE*SWFFont::getOutline(char*name, int charnr)
     /* if we didn't find it by name, use the names of the first 256 characters
        of the font to try a new name based on charnr */
     if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
-	return getOutline(this->standardtable[charnr], -1);
+	T1_OUTLINE*ret =  getOutline(this->standardtable[charnr], -1);
+	if(ret) return ret;
     }
 
-    msg("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
     return 0;
 }
 
@@ -1230,9 +1239,9 @@ int SWFFont::getSWFCharID(char*name, int charnr)
     /* if we didn't find it by name, use the names of the first 256 (or so) characters
        of the font to try a new name based on charnr */
     if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
-	return getSWFCharID(this->standardtable[charnr], -1);
+	int ret = getSWFCharID(this->standardtable[charnr], -1);
+	if(ret) return ret;
     }
-    msg("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
     return -1;
 }
 
