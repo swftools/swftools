@@ -343,6 +343,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     unsigned long int zimagedatalen=0;
     U8*palette = 0;
     int palettelen = 0;
+    U8*alphapalette = 0;
+    int alphapalettelen = 0;
     struct png_header header;
     int bypp;
 
@@ -377,9 +379,18 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	if(!strncmp(tagid, "PLTE", 4)) {
 	    palette = data;
 	    palettelen = len/3;
-	    data = 0;
+	    data = 0; //don't free data
 	    if(VERBOSE(2))
 		printf("%d colors in palette\n", palettelen);
+	}
+	if(!strncmp(tagid, "tRNS", 4)) {
+	    if(header.mode == 3) {
+		alphapalette = data;
+		alphapalettelen = len;
+		data = 0; //don't free data
+		if(VERBOSE(2))
+		    printf("found %d alpha colors\n", alphapalettelen);
+	    }
 	}
 	if(!strncmp(tagid, "IDAT", 4)) {
 	    if(!zimagedata) {
@@ -404,7 +415,11 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     }
     free(zimagedata);
 
-    t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
+    if(alphapalette)
+	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS2);
+    else
+	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
+
     swf_SetU16(t, id);		// id
     if(header.mode == 2) {
 	U8*data2 = malloc(header.width*header.height*4);
@@ -456,8 +471,20 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    rgba[i].r = palette[i*3+0];
 	    rgba[i].g = palette[i*3+1];
 	    rgba[i].b = palette[i*3+2];
-	    rgba[i].a = 255;
+	    if(alphapalette && i<alphapalettelen) {
+		rgba[i].a = alphapalette[i];
+		if(alphapalette[i] == 0) {
+		    /* if the color is fully transparent, it doesn't matter
+		       what it's rgb values are. furthermore, all Flash 
+		       players up to Flash 5 can't deal with anything beyond
+		       one transparent color with value (00,00,00,00). */
+		    rgba[i].r = rgba[i].g = rgba[i].b = 0;
+		}
+	    } else {
+		rgba[i].a = 255;
+	    }
 	}
+
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
 	    U8*old;
