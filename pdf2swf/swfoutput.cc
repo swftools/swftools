@@ -1001,8 +1001,8 @@ struct fontlist_t
     fontlist_t*next;
 } *fontlist = 0;
 
-/* todo: why don't higher values (64, 1024) work here? */
-#define FONT_INTERNAL_SIZE 1
+/* TODO: why don't higher values (64, 1024) work here? */
+#define FONT_INTERNAL_SIZE 16
 
 /* process a character. */
 static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
@@ -1400,7 +1400,6 @@ static void startshape(struct swfoutput*obj)
   shapeid = ++currentswfid;
   swf_SetU16(tag,shapeid);  // ID
 
-  /* TODO: patch back */
   bboxrectpos = tag->len;
   r.xmin = 0;
   r.ymin = 0;
