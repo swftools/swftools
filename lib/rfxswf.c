@@ -52,8 +52,8 @@ TAG * swf_NextTag(TAG * t) { return t->next; }
 TAG * swf_PrevTag(TAG * t) { return t->prev; }
 int   swf_GetFrameNo(TAG * t)  { return t->frame; }
 U16   swf_GetTagID(TAG * t)    { return t->id; }
-U32   swf_GetDataSize(TAG * t) { return t->len; }
-U8*   swf_GetDataSizePtr(TAG * t) { return &(t->data[t->len]); }
+U32   swf_GetTagLen(TAG * t) { return t->len; }
+U8*   swf_GetTagLenPtr(TAG * t) { return &(t->data[t->len]); }
 U32   swf_GetTagPos(TAG * t)   { return t->pos; }
 
 // Basic Data Access Functions
@@ -746,7 +746,7 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
 
-    l = swf_GetDataSize(&t1);
+    l = swf_GetTagLen(&t1);
     swf->fileSize = l+len;
     t1.len = 4;                         // bad & ugly trick !
     swf_SetU32(&t1,swf->fileSize);

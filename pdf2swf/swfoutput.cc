@@ -606,7 +606,7 @@ SWFFont::~SWFFont()
         logf("<verbose> Font %s has %d used characters",fontid, usednum);
         TAG*ftag = swf_InsertTag(swf.firstTag,ST_DEFINEFONT);
         swf_SetU16(ftag, this->swfid);
-        int initpos = swf_GetDataSize(ftag);
+        int initpos = swf_GetTagLen(ftag);
         swfmatrix m;
         m.m11 = m.m22 = 1;
         m.m21 = m.m12 = 0;
@@ -615,12 +615,12 @@ SWFFont::~SWFFont()
 
         for(t=0;t<swfcharpos;t++) 
         {
-            ptr[t] = swf_GetDataSize(ftag);
+            ptr[t] = swf_GetTagLen(ftag);
             swf_SetU16(ftag, 0x1234);
         }
         for(t=0;t<swfcharpos;t++)
         {
-            *(U16*)&ftag->data[ptr[t]] = swf_GetDataSize(ftag)-initpos;
+            *(U16*)&ftag->data[ptr[t]] = swf_GetTagLen(ftag)-initpos;
             swflastx=0;
             swflasty=0;
             swf_SetU8(ftag,0x10); //0 fill bits, 0 linestyle bits

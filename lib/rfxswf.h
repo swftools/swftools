@@ -132,8 +132,8 @@ TAG * swf_PrevTag(TAG * t);
 
 int   swf_GetFrameNo(TAG * t);              // should be renamed to TagGetFrame
 U16   swf_GetTagID(TAG * t);                // ... TagGetID
-U32   swf_GetDataSize(TAG * t);             // ... TagGetDataSize
-U8*   swf_GetDataSizePtr(TAG * t);
+U32   swf_GetTagLen(TAG * t);             // ... TagGetTagLen
+U8*   swf_GetTagLenPtr(TAG * t);
 
 U32   swf_GetBits(TAG * t,int nbits);
 S32   swf_GetSBits(TAG * t,int nbits);

@@ -21,3 +21,5 @@
 #define bitmask bitWritePos
 
 */
+#define GetDataSize GetTagLen
+#define GetDataSizePtr GetTagLenPtr
