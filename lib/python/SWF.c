@@ -128,6 +128,8 @@ static PyObject* f_load(PyObject* self, PyObject* args)
     if(swf->taglist == NULL) {
 	return NULL;
     }
+    
+    swf_FreeTags(&swf->swf);
     swf->swf.firstTag = 0;
     
     return (PyObject*)swf;
@@ -160,6 +162,8 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 	swf->compressed = 1;
     
     swf->firstTag = taglist_getTAGs(swfo->taglist);
+    if(!swf->firstTag)
+	return NULL;
 
     // fix the file, in case it is empty or not terminated properly
     {
@@ -167,7 +171,6 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 	if(!tag)
 	    tag = swf->firstTag = swf_InsertTag(0,ST_END);
 	while(tag && tag->next) {
-	    mylog(" tag:%08x\n", tag);
 	    tag = tag->next;
 	}
 	if(tag->id != ST_END) {
@@ -194,8 +197,10 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 	    }
     }
     close(fi);
-    
-    swf->firstTag = 0;
+
+    /* TODO: why is this segfaulting?? */
+   /* swf_FreeTags(swf);
+    swf->firstTag = 0;*/
     
     return PY_NONE;
 }
@@ -206,6 +211,8 @@ static PyObject * swf_writeCGI(PyObject* self, PyObject* args)
     if(!self || !PyArg_ParseTuple(args,"")) 
 	return NULL;
     swf->swf.firstTag = taglist_getTAGs(swf->taglist);
+    if(!swf->swf.firstTag)
+	return NULL;
     swf_WriteCGI(&swf->swf);
     swf->swf.firstTag = 0;
     return PY_NONE;

@@ -13,14 +13,12 @@
 typedef struct {
     PyObject_HEAD
     PyObject* taglist;
-    PyObject* tagmap;
 } TagListObject;
 //----------------------------------------------------------------------------
 PyObject * taglist_new()
 {
     TagListObject* taglist = PyObject_New(TagListObject, &TagListClass);
     mylog("+%08x(%d) taglist_new", (int)taglist, taglist->ob_refcnt);
-    taglist->tagmap = tagmap_new();
     taglist->taglist = PyList_New(0);
     return (PyObject*)taglist;
 }
@@ -29,7 +27,9 @@ PyObject * taglist_new2(TAG*tag)
 {
     TagListObject* taglist = PyObject_New(TagListObject, &TagListClass);
     mylog("+%08x(%d) taglist_new2 tag=%08x", (int)taglist, taglist->ob_refcnt, tag);
-    taglist->tagmap = tagmap_new();
+    PyObject* tagmap = tagmap_new();
+
+    swf_FoldAllTags(tag);
 
     int nr=0;
     TAG*t = tag;
@@ -48,24 +48,27 @@ PyObject * taglist_new2(TAG*tag)
     nr = 0;
     t = tag;
     while(t) {
-	PyObject*newtag = tag_new2(t, taglist->tagmap);
+	PyObject*newtag = tag_new2(t, tagmap);
 	if(newtag==NULL) {
 	    // pass through exception
+	    Py_DECREF(tagmap);
 	    return NULL;
 	}
 	PyList_SET_ITEM(taglist->taglist,nr,newtag);Py_INCREF(newtag);
 	if(swf_isDefiningTag(t)) {
 	    int id = swf_GetDefineID(t);
-	    tagmap_addMapping(taglist->tagmap, id, newtag);
+	    tagmap_addMapping(tagmap, id, newtag);
 	}
 	nr++;
 	t=t->next;
     }
+    Py_DECREF(tagmap);
     return (PyObject*)taglist;
 }
 //----------------------------------------------------------------------------
 TAG* taglist_getTAGs(PyObject*self)
 {
+    PyObject* tagmap = tagmap_new();
     if(!PY_CHECK_TYPE(self,&TagListClass)) {
 	PyErr_SetString(PyExc_Exception, setError("Not a taglist (%08x).", self));
 	return 0;
@@ -81,11 +84,17 @@ TAG* taglist_getTAGs(PyObject*self)
     mylog(" %08x(%d) taglist_getTAGs", (int)self, self->ob_refcnt);
     for(t=0;t<l;t++) {
 	PyObject*item = PyList_GetItem(taglist->taglist, t);
-	tag = tag_getTAG(item, tag, taglist->tagmap);
+	tag = tag_getTAG(item, tag, tagmap);
+	if(!tag) {
+	    //pass through errors
+	    Py_DECREF(tagmap);
+	    return 0;
+	}
 	if(!firstTag)
 	    firstTag = tag;
 	mylog(" %08x(%d) taglist_getTAGs: added tag %08x", (int)self, self->ob_refcnt, tag);
     }
+    Py_DECREF(tagmap);
     return firstTag;
 }
 //----------------------------------------------------------------------------
@@ -137,8 +146,6 @@ static void taglist_dealloc(PyObject* self)
     mylog("-%08x(%d) taglist_dealloc\n", (int)self, self->ob_refcnt);
     Py_DECREF(taglist->taglist);
     taglist->taglist = 0;
-    Py_DECREF(taglist->tagmap);
-    taglist->tagmap= 0;
     PyObject_Del(self);
 }
 //----------------------------------------------------------------------------

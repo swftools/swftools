@@ -30,7 +30,10 @@
 extern PyTypeObject TagListClass;
 
 PyObject * taglist_new();
+
+/* warning: will modify tag order*/
 PyObject * taglist_new2(TAG*tag);
+
 TAG* taglist_getTAGs(PyObject*);
 
 PyMethodDef* taglist_getMethods();

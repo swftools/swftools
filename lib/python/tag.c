@@ -143,8 +143,11 @@ PyObject* tag_new2(TAG*t, PyObject* tagmap)
     tag->font = 0;
     tag->character = 0;
     tag->placeobject = 0;
-    tag->tag = t;
     tag->tagmap = tagmap_new();
+    // copy tag
+    tag->tag = swf_InsertTag(0, t->id);
+    swf_SetBlock(tag->tag, t->data, t->len);
+    t = tag->tag;
     
     int num = swf_GetNumUsedIDs(t);
     int * positions = malloc(num*sizeof(int));
@@ -159,6 +162,7 @@ PyObject* tag_new2(TAG*t, PyObject* tagmap)
 	}
 	tagmap_addMapping(tag->tagmap, id, obj);
     }
+    free(positions);
     return (PyObject*)tag;
 }
 
@@ -325,22 +329,20 @@ static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
     return (PyObject*)tag;
 }
 
-TAG* tag_getRAWTAG(PyObject*self)
-{
-    TagObject*tag = (TagObject*)self;
-    return tag->tag;
-}
-
 /* serialize */
 TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 {
     TagObject*tag = (TagObject*)self;
-    TAG* t = tag_getRAWTAG(self);
-    mylog(" %08x(%d) tag_getTAG tagmap=%08x tag=%08x\n", (int)self, self->ob_refcnt, tagmap, t);
-    t->next = 0;
-    t->prev = prevTag;
-    if(prevTag)
-	prevTag->next = t;
+    
+    TAG* t = swf_InsertTag(prevTag, tag->tag->id);
+    swf_SetBlock(t, tag->tag->data, tag->tag->len);
+
+    mylog(" %08x(%d) tag_getTAG tagmap=%08x tag=%08x/%08x\n", (int)self, self->ob_refcnt, tagmap, tag->tag, t);
+
+    if(swf_isDefiningTag(t)) {
+	int newid = tagmap_add(tagmap, self);
+	swf_SetDefineID(t, newid);
+    }
 
     int num = swf_GetNumUsedIDs(t);
     int * positions = malloc(num*sizeof(int));
@@ -349,18 +351,11 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
     for(i=0;i<num;i++) {
 	int id = GET16(&t->data[positions[i]]);
 	PyObject* obj =  tagmap_id2obj(tag->tagmap, id);
-	mylog(" %08x(%d) tag_getTAG: id %d is %08x\n", (int)tag, tag->ob_refcnt, id, obj);
-	assert(obj!=NULL);
-	TAG*othertag = tag_getRAWTAG(obj);
-	int newid = tagmap_add(tagmap, obj);
-	mylog(" %08x(%d) tag_getTAG: othertag->tagid=%d, new ID: %d\n", (int)tag, tag->ob_refcnt, othertag->id, newid);
-
-	/* here comes the big hack- we define the *other* tags define ID.
-	   This assumes that the other tag is not yet written or processed,
-	   and we are, apart from the calling taglist, the only ones who know
-	   about it.  */
-	swf_SetDefineID(othertag, newid);
-
+	if(obj==NULL) {
+	    PyErr_SetString(PyExc_Exception, setError("Internal error: id %d not known in taglist:"));
+	    return 0;
+	}
+	int newid = tagmap_obj2id(tagmap, obj);
 	PUT16(&t->data[positions[i]], newid);
     }
     return t;
