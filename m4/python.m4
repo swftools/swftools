@@ -1,24 +1,32 @@
 AC_DEFUN(RFX_CHECK_PYTHON,
 [
 AC_MSG_CHECKING([for Python.h and PIL])
-# should we support python versions below 2.2?
-if test -f "/usr/lib/python2.2/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.2/Python.h";then
-    PY_VERSION=2.2
-fi
-if test -f "/usr/lib/python2.3/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.3/Python.h";then
-    PY_VERSION=2.3
-fi
-if test -f "/usr/lib/python2.4/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.4/Python.h";then
-    PY_VERSION=2.4
+
+if test "x$PYTHON_LIB" '!=' "x" -a "x$PYTHON_INCLUDES" '!=' "x";then
+    PY_VERSION=unknown
+else
+    # should we support python versions below 2.2?
+    if test -f "/usr/lib/python2.2/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.2/Python.h";then
+        PY_VERSION=2.2
+    fi
+    if test -f "/usr/lib/python2.3/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.3/Python.h";then
+        PY_VERSION=2.3
+    fi
+    if test -f "/usr/lib/python2.4/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.4/Python.h";then
+        PY_VERSION=2.4
+    fi
+    # OS X:
+    # /System/Library/Frameworks/Python.framework/Versions/2.3/include/python2.3/Python.h
+    # /Library/Python/2.3/_imaging.so
 fi
 
 if test "x$PY_VERSION" "!=" "x"; then
-    AC_MSG_RESULT(python$PY_VERSION)
+    AC_MSG_RESULT($PY_VERSION)
     if test "x$PYTHON_LIB" = "x";then
-	PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
+	PYTHON_LIB="-l$PY_VERSION /usr/lib/$PY_VERSION/site-packages/PIL/_imaging.so"
     fi
     if test "x$PYTHON_INCLUDES" = "x";then
-	PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
+	PYTHON_INCLUDES="-I/usr/include/$PY_VERSION"
     fi
     export PYTHON_INCLUDES PYTHON_LIB
     AC_SUBST(PYTHON_LIB)
