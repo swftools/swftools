@@ -748,12 +748,17 @@ int chardatapos = 0;
 static SRECT getcharacterbbox(SWFFONT*font)
 {
     SRECT r;
+    char debug = 0;
     memset(&r, 0, sizeof(r));
 
     int t;
-    printf("\n");
+    if(debug) printf("\n");
     for(t=0;t<chardatapos;t++)
     {
+	if(chardata[t].fontid != font->id) {
+	    msg("<error> Internal error: fontid %d != fontid %d", chardata[t].fontid, font->id);
+	    exit(1);
+	}
 	SRECT b = font->layout->bounds[chardata[t].charid];
 	b.xmin *= chardata[t].size;
 	b.ymin *= chardata[t].size;
@@ -767,22 +772,34 @@ static SRECT getcharacterbbox(SWFFONT*font)
 	b.ymin += chardata[t].y;
 	b.xmax += chardata[t].x;
 	b.ymax += chardata[t].y;
-	printf("(%d,%d,%d,%d) -> (%d,%d,%d,%d)\n",
-		font->layout->bounds[chardata[t].charid].xmin,
-		font->layout->bounds[chardata[t].charid].ymin,
-		font->layout->bounds[chardata[t].charid].xmax,
-		font->layout->bounds[chardata[t].charid].ymax,
-		b.xmin,
-		b.ymin,
-		b.xmax,
-		b.ymax);
+
+	/* until we solve the INTERNAL_SCALING problem (see below)
+	   make sure the bounding box is big enough */
+	b.xmin -= 20;
+	b.ymin -= 20;
+	b.xmax += 20;
+	b.ymax += 20;
+
+	if(debug) printf("(%f,%f,%f,%f) -> (%f,%f,%f,%f) [font %d/%d, char %d]\n",
+		font->layout->bounds[chardata[t].charid].xmin/20.0,
+		font->layout->bounds[chardata[t].charid].ymin/20.0,
+		font->layout->bounds[chardata[t].charid].xmax/20.0,
+		font->layout->bounds[chardata[t].charid].ymax/20.0,
+		b.xmin/20.0,
+		b.ymin/20.0,
+		b.xmax/20.0,
+		b.ymax/20.0,
+		chardata[t].fontid,
+		font->id,
+		chardata[t].charid
+		);
 	swf_ExpandRect2(&r, &b);
     }
-    printf("-----> (%d,%d,%d,%d)\n",
-	    r.xmin,
-	    r.ymin,
-	    r.xmax,
-	    r.ymax);
+    if(debug) printf("-----> (%f,%f,%f,%f)\n",
+	    r.xmin/20.0,
+	    r.ymin/20.0,
+	    r.xmax/20.0,
+	    r.ymax/20.0);
     return r;
 }
 
@@ -946,6 +963,7 @@ struct fontlist_t
     fontlist_t*next;
 } *fontlist = 0;
 
+/* todo: why don't higher values (64, 1024) work here? */
 #define FONT_INTERNAL_SIZE 1
 
 /* process a character. */
@@ -1132,6 +1150,10 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     if(obj->swffont && obj->swffont->name && !strcmp((char*)obj->swffont->name,fontid))
         return;
 
+    /* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
+             with multiple fonts */
+    endtext(obj);
+
     iterator = fontlist;
     while(iterator) {
         if(!strcmp((char*)iterator->swffont->name,fontid)) {
@@ -1147,7 +1169,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	return;
     }
 
-    swf_SetLoadFontParameters(0,/*skip unused*/0,/*full unicode*/1);
+    swf_SetLoadFontParameters(64,/*skip unused*/0,/*full unicode*/1);
     SWFFONT*swffont = swf_LoadFont(filename);
 
     if(swffont == 0) {
@@ -1215,7 +1237,7 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
        obj->fontm22 == m22)
         return;
    if(textid>=0)
-      endtext(obj);
+	endtext(obj);
     obj->fontm11 = m11;
     obj->fontm12 = m12;
     obj->fontm21 = m21;
