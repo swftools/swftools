@@ -16,6 +16,7 @@ ${name}/src/wav2swf.1 \
 ${name}/src/swfc.1 \
 ${name}/avi2swf/avi2swf.1 \
 ${name}/pdf2swf/pdf2swf.1 \
+${name}/pdf2swf/font2swf.1 \
 ${name}/src/swfcombine.c \
 ${name}/src/swfstrings.c \
 ${name}/src/swfdump.c \
