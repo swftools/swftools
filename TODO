@@ -18,7 +18,7 @@ swfc:
     * SWF 3 actionscript commands shortcuts: geturl, gotoframe?
     * .hide/.show?
     * store instance coordinates for .put with same name after .del?
-    * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
+    * Macros: .macro x=30 y=30 .text x=x+30 y=y+30 text="testtext" .end
 
 pdf2swf:
 
@@ -78,6 +78,12 @@ swfrender:
 Makefiles/configure/installation:
 
     * check for vsnprintf, bcopy, bzero, strndup etc. and supply replacements
+
+Win32 Installation:
+
+    * The installer colors are ugly
+    * Add Logo
+    * Make ParseDisplayName work
 
 other:
 

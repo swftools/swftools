@@ -218,7 +218,7 @@
 	* avi2swf: Is now ported to Win32, too.
 	* pdf2swf: Upgraded to xpdf 3.00
 
-0.6.3 (not released yet):
+0.6.3:
 	* lib/modules/swfrender.c: New module, for shape->bitmap conversion
 	* lib/rfxswf.c: Several small bugfixes
 	* lib/modules/swftools.c: New function swf_Optimize()
