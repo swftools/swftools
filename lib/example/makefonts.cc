@@ -168,10 +168,27 @@ int main(int argc, char ** argv)
   //T1LIB_CONFIG.
   putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
   FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
-  fprintf(fi, "FONTDATABASE=%s/fonts/FontDataBase\n", DATADIR);
+  fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n", DATADIR);
   fprintf(fi, "ENCODING=%s/fonts:.\n", DATADIR);
   fprintf(fi, "AFM=%s/fonts:.\n", DATADIR);
   fprintf(fi, "TYPE1=%s/fonts:.\n", DATADIR);
+  fclose(fi);
+  fi = fopen("/tmp/FontDataBase", "wb");
+  fprintf(fi, "14\n");             
+  fprintf(fi, "n021003l.afm\n"); //fixme
+  fprintf(fi, "n021023l.afm\n");
+  fprintf(fi, "n021004l.afm\n");
+  fprintf(fi, "n021024l.afm\n");
+  fprintf(fi, "n019003l.afm\n");
+  fprintf(fi, "n019023l.afm\n");
+  fprintf(fi, "n019004l.afm\n");
+  fprintf(fi, "n019024l.afm\n");
+  fprintf(fi, "n022003l.afm\n");
+  fprintf(fi, "n022023l.afm\n");
+  fprintf(fi, "n022004l.afm\n");
+  fprintf(fi, "n022024l.afm\n");
+  fprintf(fi, "s050000l.afm\n");
+  fprintf(fi, "d050000l.afm\n");
   fclose(fi);
   /* initialize t1lib */
   T1_SetBitmapPad( 16);
