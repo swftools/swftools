@@ -724,8 +724,6 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 
   swf.fileVersion    = 4;
   swf.frameRate      = 0x4000;
-  swf.movieSize.xmax = 20*640;
-  swf.movieSize.ymax = 20*480;
 
   if(!useDefineFont2)
   /* if we use DefineFont1 to store the characters,
@@ -756,18 +754,18 @@ void swf_WriteFont(SWFFONT*font, char* filename)
   {     int textscale = 400;
 	int s;
 	int xmax = 0;
-	int ymax = textscale * 2 * 20;
+	int ymax = textscale * 2 * (font->maxascii/16+1);
 	U8 gbits,abits;
-	char text[257];
+	char text[MAX_CHAR_PER_FONT+1];
 	int x,y;
-	text[256]=0;
-	for(s=0;s<256;s++)
+	text[MAX_CHAR_PER_FONT]=0;
+	for(s=0;s<font->maxascii;s++)
 	{
 	    int g = font->ascii2glyph[s];
 	    text[s] = s;
 	    if(g>=0) {
-	       if(font->glyph[g].advance*textscale/100 > xmax)
-		   xmax = font->glyph[g].advance*textscale/100;
+	       if(font->glyph[g].advance*textscale/50 > xmax)
+		   xmax = font->glyph[g].advance*textscale/50;
 	    }
 	}
 	swf.movieSize.xmax = xmax*20;
@@ -795,11 +793,11 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	    rgb.r = 0x00;
 	    rgb.g = 0x00;
 	    rgb.b = 0x00;
-	    for(y=0;y<16;y++)
+	    for(y=0;y<=((font->maxascii-1)/16);y++)
 	    {
 		int c=0,lastx=-1, firstx=0;
 		for(x=0;x<16;x++) {
-		    int g = font->ascii2glyph[y*16+x];
+		    int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
 		    if(g>=0 && font->glyph[g].shape) {
 			c++;
 			if(lastx<0) 
@@ -810,7 +808,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*y*2);
 		  for(x=0;x<16;x++)
 		  {
-		      int g = font->ascii2glyph[y*16+x];
+		      int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
 		      if(g>=0 && font->glyph[g].shape) {
 			if(lastx != x*xmax) {
 			    swf_TextSetInfoRecord(t,0,0,0,x*xmax+1,0);
