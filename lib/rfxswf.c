@@ -31,6 +31,9 @@
 #endif // HAVE_ZLIB_H
 #endif // HAVE_LIBZ
 
+#define LAME
+#include "lame/lame.h"
+
 #include "./bitio.h"
 
 // internal constants

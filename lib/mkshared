@@ -1,0 +1,27 @@
+#!/bin/sh
+INCLUDEDIR=/usr/local/include
+LIBDIR=/usr/local/lib
+
+files=lame/*.c
+files="$files rfxswf.c bitio.c"
+for file in $files
+do
+    libtool gcc -g -c $file
+done
+lofiles=*.lo
+
+libtool gcc -g -o librfxswf.la $lofiles -rpath ${LIBDIR} -lm -lz -ljpeg
+
+
+#perl -pe 's/^#include "\.\.\/config"/#define WORDS_BIGENDIAN/' rfxswf.h > rfxswf.tmp
+perl -pe 's/^#include "\.\.\/config.h"//' rfxswf.h > rfxswf.tmp
+
+su -c "cp rfxswf.tmp ${INCLUDEDIR}/rfxswf.h;
+       cp ../config.h ${INCLUDEDIR}/rfxswf_config.h;
+       cp bitio.h ${INCLUDEDIR}/bitio.h;
+       libtool cp librfxswf.la $LIBDIR/librfxswf.la;
+       ldconfig $LIBDIR
+       "
+
+rm -f *.o *.lo rfxswf.tmp
+

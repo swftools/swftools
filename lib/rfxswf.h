@@ -22,9 +22,6 @@
 #include "../config.h"
 #include "./bitio.h"
 
-#define LAME
-#include "lame/lame.h"
-
 #define DEBUG_RFXSWF
 
 #ifndef TRUE
