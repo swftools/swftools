@@ -65,7 +65,8 @@ fi
 if test "x${OK}" = "xOK";then
 rm -f config.tmp2
 AC_MSG_RESULT(yes)
-export SYSTEM_BACKTICKS=1
+SYSTEM_BACKTICKS=1
+export SYSTEM_BACKTICKS
 AC_DEFINE_UNQUOTED(SYSTEM_BACKTICKS, 1)
 else
 AC_MSG_RESULT(no)

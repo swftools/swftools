@@ -1,11 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/)
 
-export PACKAGE=swftools
-export VERSION=0.2.1
-
-export CFLAGS="-O2 -fomit-frame-pointer"
-export CXXFLAGS="-O2 -fomit-frame-pointer"
+PACKAGE=swftools
+VERSION=0.2.1
+CFLAGS="-O2 -fomit-frame-pointer"
+CXXFLAGS="-O2 -fomit-frame-pointer"
+export PACKAGE VERSION CFLAGS CXXFLAGS
 
 dnl Checks for programs.
  AC_PROG_CC
@@ -105,7 +105,8 @@ if test "x${UNCOMPRESS}" = "xgzip"; then
 fi
 AC_SUBST(USE_GZIP)
 
-export JPEG2SWF='jpeg2swf$(EXEEXT)'
+JPEG2SWF='jpeg2swf$(EXEEXT)'
+export JPEG2SWF
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
@@ -116,7 +117,8 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo clean: >> pdf2swf/Makefile
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
     echo "Disabling jpeg2swf tool..."
-    export JPEG2SWF=
+    JPEG2SWF=
+    export JPEG2SWF
   fi
   echo "***************************************************"
   FILES="./release Makefile lib/bladeenc/Makefile lib/Makefile src/Makefile swfs/Makefile"
