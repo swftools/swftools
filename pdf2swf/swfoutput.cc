@@ -745,6 +745,47 @@ struct chardata {
 } chardata[CHARDATAMAX];
 int chardatapos = 0;
 
+static SRECT getcharacterbbox(SWFFONT*font)
+{
+    SRECT r;
+    memset(&r, 0, sizeof(r));
+
+    int t;
+    printf("\n");
+    for(t=0;t<chardatapos;t++)
+    {
+	SRECT b = font->layout->bounds[chardata[t].charid];
+	b.xmin *= chardata[t].size;
+	b.ymin *= chardata[t].size;
+	b.xmax *= chardata[t].size;
+	b.ymax *= chardata[t].size;
+	b.xmin /= 1024;
+	b.ymin /= 1024;
+	b.xmax /= 1024;
+	b.ymax /= 1024;
+	b.xmin += chardata[t].x;
+	b.ymin += chardata[t].y;
+	b.xmax += chardata[t].x;
+	b.ymax += chardata[t].y;
+	printf("(%d,%d,%d,%d) -> (%d,%d,%d,%d)\n",
+		font->layout->bounds[chardata[t].charid].xmin,
+		font->layout->bounds[chardata[t].charid].ymin,
+		font->layout->bounds[chardata[t].charid].xmax,
+		font->layout->bounds[chardata[t].charid].ymax,
+		b.xmin,
+		b.ymin,
+		b.xmax,
+		b.ymax);
+	swf_ExpandRect2(&r, &b);
+    }
+    printf("-----> (%d,%d,%d,%d)\n",
+	    r.xmin,
+	    r.ymin,
+	    r.xmax,
+	    r.ymax);
+    return r;
+}
+
 static void putcharacters(TAG*tag)
 {
     int t;
@@ -905,6 +946,8 @@ struct fontlist_t
     fontlist_t*next;
 } *fontlist = 0;
 
+#define FONT_INTERNAL_SIZE 1
+
 /* process a character. */
 static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
 {
@@ -933,13 +976,13 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
 	/* x direction equals y direction- the text is invisible */
 	return 1;
     }
-    det = 20 / det;
+    det = 20*FONT_INTERNAL_SIZE / det;
 
     SPOINT p;
     p.x = (SCOORD)((  x * m->m22 - y * m->m12)*det);
     p.y = (SCOORD)((- x * m->m21 + y * m->m11)*det);
 
-    putcharacter(obj, swffont->id, charid,p.x,p.y,1);
+    putcharacter(obj, swffont->id, charid,p.x,p.y,FONT_INTERNAL_SIZE);
     swf_FontUseGlyph(swffont, charid);
     return 1;
 
@@ -978,6 +1021,19 @@ static void endtext(swfoutput*obj)
 {
     if(textid<0)
         return;
+
+    tag = swf_InsertTag(tag,ST_DEFINETEXT);
+    swf_SetU16(tag, textid);
+
+    SRECT r;
+    r = getcharacterbbox(obj->swffont);
+    
+    swf_SetRect(tag,&r);
+
+    MATRIX m;
+    swf_GetMatrix(0, &m);
+    swf_SetMatrix(tag,&m);
+
     putcharacters(tag);
     swf_SetU8(tag,0);
     tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
@@ -1166,8 +1222,8 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
     obj->fontm22 = m22;
     
     MATRIX m;
-    m.sx = (U32)((obj->fontm11)*65536); m.r1 = (U32)((obj->fontm12)*65536);
-    m.r0 = (U32)((obj->fontm21)*65536); m.sy = (U32)((obj->fontm22)*65536); 
+    m.sx = (U32)(((obj->fontm11)*65536)/FONT_INTERNAL_SIZE); m.r1 = (U32)(((obj->fontm12)*65536)/FONT_INTERNAL_SIZE);
+    m.r0 = (U32)(((obj->fontm21)*65536)/FONT_INTERNAL_SIZE); m.sy = (U32)(((obj->fontm22)*65536)/FONT_INTERNAL_SIZE); 
     m.tx = 0;
     m.ty = 0;
     obj->fontmatrix = m;
@@ -1297,25 +1353,11 @@ static void startshape(struct swfoutput*obj)
 
 static void starttext(struct swfoutput*obj)
 {
-  SRECT r;
-  MATRIX m;
   if(shapeid>=0)
       endshape();
-
-  tag = swf_InsertTag(tag,ST_DEFINETEXT);
+    
   textid = ++currentswfid;
-  swf_SetU16(tag, textid);
 
-  /* TODO: patch back */
-  r.xmin = 0;
-  r.ymin = 0;
-  r.xmax = 20*sizex;
-  r.ymax = 20*sizey;
-  
-  swf_SetRect(tag,&r);
-
-  swf_GetMatrix(0, &m);
-  swf_SetMatrix(tag,&m);
   swflastx=swflasty=0;
 }
 
