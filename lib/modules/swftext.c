@@ -599,104 +599,6 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f)
   return 0;
 }
 
-int swf_FontExport(int handle,SWFFONT * f)
-{ int l;
-  int i;
-  if (!f) return 0;
-
-  l = sizeof(SWFFONT);
-  if (handle>=0)
-    if (write(handle,f,sizeof(SWFFONT))!=sizeof(SWFFONT)) return -1;
-
-  if (f->name)
-  { U16 ln = strlen(f->name);
-    l+=2+ln;
-    if (handle>=0)
-    { if (write(handle,&ln,2)!=2) return -1;
-      if (write(handle,f->name,ln)!=ln) return -1;
-    }
-  }
-
-  if (f->layout)
-  { l+=sizeof(SWFLAYOUT);
-    if (handle>=0)
-      if (write(handle,f->layout,sizeof(SWFLAYOUT))!=sizeof(SWFLAYOUT)) return -1;
-/*    new kerning struct. hope commenting this out doesn't break things
-      if (f->layout->kerning.data)
-    { l+=f->layout->kerning.count*4;
-      if (handle>=0)
-        if (write(handle,f->layout->kerning.data,f->layout->kerning.count*4)!=f->layout->kerning.count*4) return -1;
-    }*/
-  }
-
-  for (i=0;i<f->numchars;i++)
-  { if (f->glyph[i].shape)
-    { int ll = swf_ShapeExport(handle,f->glyph[i].shape);
-      if (ll<0) return -1;
-      l+=ll;
-    }  
-  }
-
-  return l;
-}
-
-int swf_FontImport(int handle,SWFFONT * * font)
-{ SWFFONT * f;
-  int layout;
-  int i = 0;
-
-  if ((!font)||(handle<0)) return -1;
-
-  f = (SWFFONT *)malloc(sizeof(SWFFONT)); font[0] = f;
-  if (!f) return -1;
-
-  memset(f,0x00,sizeof(SWFFONT));
-  
-  if (read(handle,f,sizeof(SWFFONT))!=sizeof(SWFFONT)) goto fehler;
-
-  layout = (f->layout)?1:0;             // avoid illegal free()
-  f->layout = NULL;
-
-  if (f->name)
-  { U16 ln;
-    f->name = NULL;
-    if (read(handle,&ln,2)!=2) goto fehler;
-    f->name = (U8*)malloc(ln+1);
-    if (!f->name) goto fehler;
-    if (read(handle,f->name,ln)!=ln) goto fehler;
-    f->name[ln] = 0;
-  }
-
-  if (f->layout)
-  { f->layout = (SWFLAYOUT *)malloc(sizeof(SWFLAYOUT));
-    if (!f->layout) goto fehler;
-    if (read(handle,f->layout,sizeof(SWFLAYOUT))!=sizeof(SWFLAYOUT)) goto fehler;
-    /* new kerning struct. hope commenting this out doesn't break things
-    if (f->layout->kerning.data)
-    { int l = f->layout->kerning.count*4;
-      f->layout->kerning.data = (U8*)malloc(l);
-      if (!f->layout->kerning.data) goto fehler;
-      if (read(handle,f->layout->kerning.data,l)!=l) goto fehler;
-    } */
-  }
-
-  for (i=0;i<f->numchars;i++)
-  { if (f->glyph[i].shape)
-    { if (swf_ShapeImport(handle,&f->glyph[i].shape)<0) goto fehler;
-    }
-  }
-
-  f->id = 0;
-  
-  return 0;
-  
-fehler:
-  if (f) for (;i<MAX_CHAR_PER_FONT;i++) f->glyph[i].shape = NULL;
-  swf_FontFree(f);
-  font[0] = NULL;
-  return -1;
-}
-
 int swf_TextPrintDefineText(TAG * t,SWFFONT * f)
 { int id = swf_GetTagID(t);
   if ((id==ST_DEFINETEXT)||(id==ST_DEFINETEXT2)) swf_FontExtract_DefineText(f->id,f,t,FEDTJ_PRINT);
@@ -902,8 +804,8 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	    int g = font->ascii2glyph[s];
 	    text[s] = s;
 	    if(g>=0) {
-	       if(font->glyph[g].advance*textscale/200 > xmax)
-		   xmax = font->glyph[g].advance*textscale/200;
+	       if(font->glyph[g].advance*textscale/64 > xmax)
+		   xmax = font->glyph[g].advance*textscale/64;
 	    }
 	}
 	swf.movieSize.xmax = xmax*20;
@@ -1016,5 +918,23 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
     swf_SetString(tag, variable);
     if(flags & ET_HASTEXT)
 	swf_SetString(tag,text);
+}
+
+void swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
+{
+    SRECT r;
+    U8 gbits, abits;
+    
+    r.xmin = r.ymin = 0; /*FIXME*/
+    r.xmax = r.ymax = 1024*20;
+
+    swf_SetRect(tag,&r);
+    swf_SetMatrix(tag,NULL);
+    swf_TextCountBits(font,text,scale,&gbits,&abits);
+    swf_SetU8(tag,gbits);
+    swf_SetU8(tag,abits);
+    swf_TextSetInfoRecord(tag,font,scale,rgb,0,scale);
+    swf_TextSetCharRecord(tag,font,text,scale,gbits,abits);
+    swf_SetU8(tag,0);
 }
 

@@ -480,10 +480,6 @@ void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
 int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
 	void(*callback)(int*chars, int nr, int id));
 
-// the following two functions are obsolete and will be removed soon
-int swf_FontExport(int handle,SWFFONT * f);
-int swf_FontImport(int handle,SWFFONT * * f);
-
 void swf_WriteFont(SWFFONT* font, char* filename);
 SWFFONT* swf_ReadFont(char* filename);
 
@@ -501,6 +497,8 @@ int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 /* notice: if you set the fontid, make sure the corresponding font has layout information */
 void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
+
+void swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
 
 // swfdump.c
 
