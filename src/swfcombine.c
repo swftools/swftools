@@ -52,6 +52,11 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "a"))
     {
+	config.cat = 1;
+	return 0;
+    }
+    else if (!strcmp(name, "A"))
+    {
 	config.alloctest = 1;
 	return 0;
     }
@@ -128,6 +133,7 @@ struct options_t options[] =
  {"v","verbose"},
  {"V","version"},
  {"c","clip"},
+ {"a","cat"},
  {0,0}
 };
 
@@ -179,6 +185,7 @@ void args_callback_usage(char*name)
     printf("\n");
     printf("-o outputfile       (output) explicitly specify output file. (otherwise, output.swf will be used)\n");
     printf("-t                  (stack) place each slave into a seperate frame (no master movie)\n");
+    printf("-a                  (cat) concatenate all slave files (no master movie)\n");
     printf("-l                  (overlay) Don't remove any master objects, only overlay new objects\n");
     printf("-c                  (clip) Clip the slave objects by the corresponding master objects\n");
     printf("-v                  (verbose) Use more than one -v for greater effect \n");
@@ -346,6 +353,7 @@ int main(int argn, char *argv[])
     config.overlay = 0; 
     config.antistream = 0; 
     config.alloctest = 0;
+    config.cat = 0;
     config.clip = 0;
     config.loglevel = 2; 
     config.movex = 0;

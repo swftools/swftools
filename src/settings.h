@@ -18,6 +18,7 @@ struct config_t
    char stack;
    char antistream;
    char dummy;
+   char cat;
    int loglevel;
    int movex;
    int movey;

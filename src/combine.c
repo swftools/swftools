@@ -330,56 +330,63 @@ void writeheader(struct writer_t*w, u8*data, int length)
     writer_write(w, data, length);
 }
 
-uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slavedata, int slavelength, int*newlength)
+uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*slavedata, int slavelength, int*newlength)
 {
-    char master_flash = 0;
-    char slave_flash = 0;
-    slavename = _slavename;
-    if(slavename[0] == '#')
-    {
-	slaveid = atoi(&slavename[1]);
-	slavename = 0;
-    }
+	struct writer_t w;
+	u32*headlength;
+	u32 tmp32;
+	int length = masterlength + slavelength;
+	int pos = 0;
+	uchar*newdata = malloc(length);
+	if(!newdata) {
+	    logf("<fatal> Couldn't allocate %d bytes of memory", length);
+	    return 0;
+	}
+	writer_init(&w, newdata, length);
+	
+	do {
+	    int tag = master.tags[pos].id;
+	    if(is_defining_tag(tag)) {
+		int defineid = getidfromtag(&master.tags[pos]);
+		logf("<debug> tagid %02x defines object %d", tag, defineid);
+		masterids[defineid] = 1;
+	    }
+	}
+	while(master.tags[pos++].id != 0);
+	
+	swf_relocate (slavedata, slavelength, masterids);
+	read_swf(&slave, slavedata, slavelength);
+	
+	writer_write(&w, "FWS",3);
+	headlength = (u32*)(writer_getpos(&w) + 1);
+	writeheader(&w, master.header.headerdata, master.header.headerlength);
 
-    logf("<debug> move x (%d)", config.movex);
-    logf("<debug> move y (%d)", config.movey);
-    logf("<debug> scale x (%d)", config.scalex);
-    logf("<debug> scale y (%d)", config.scaley);
-    
-    memset(masterids, -1, sizeof(masterids));
+	pos = 0;
+	do {
+	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
+		    master.tags[pos].id, master.tags[pos].length);
+	    if(master.tags[pos].id != 0)
+		writer_write(&w, master.tags[pos].fulldata, master.tags[pos].fulllength);
+	}
+	while(master.tags[pos++].id != 0);
 
-    if(masterlength < 3)
-    {
-	logf("<fatal> the master file is too small (%d bytes)", masterlength);
-	return 0;
-    }
-    if(slavelength < 3)
-    {
-	logf("<fatal> the slave file is too small (%d bytes)", slavelength);
-	return 0;
-    }
-    if(masterdata[2] == 'S' &&
-       masterdata[1] == 'W' &&
-       masterdata[0] == 'F')
-    {
-	logf("<notice> the master file is flash (swf) format\n");
-	master_flash = 1;
-    }
-    else
-	logf("<notice> the master file is not flash (swf) format!\n");
+	pos = 0;
+	do {
+	    logf("<debug> [slave] write tag %02x (%d bytes in body)", 
+		    slave.tags[pos].id, slave.tags[pos].length);
+	    writer_write(&w, slave.tags[pos].fulldata, slave.tags[pos].fulllength);
+	}
+	while(slave.tags[pos++].id != 0);
 
-    if(slavedata[2] == 'S' &&
-       slavedata[1] == 'W' &&
-       slavedata[0] == 'F')
-    {
-	logf("<notice> the slave file is flash (swf) format\n");
-	slave_flash = 1;
-    }
-    else
-	logf("<notice> the slave file is not flash (swf) format!\n");
+	tmp32 = (u8*)writer_getpos(&w) - (u8*)newdata; //length
+	*newlength = tmp32;
+	*headlength = tmp32; // set the header to the correct length
 
-    if(master_flash && slave_flash)
-    {
+	return newdata; //length
+}
+
+uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*slavedata, int slavelength, int*newlength)
+{
 	int length;
 	int pos=0;
 	u32 tmp32;
@@ -389,8 +396,6 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 	int replaceddefine = -1;
 	struct writer_t w;
 	
-	read_swf(&master, masterdata, masterlength);
-
 	length = masterlength + slavelength*2 + 128; // this is a guess, but a good guess.
 	newdata = malloc(length);
 	writer_init(&w, newdata, length);
@@ -467,6 +472,62 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 	*headlength = tmp32; // set the header to the correct length
 
 	return newdata; //length
+}
+
+uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slavedata, int slavelength, int*newlength)
+{
+    char master_flash = 0;
+    char slave_flash = 0;
+    slavename = _slavename;
+    if(slavename[0] == '#')
+    {
+	slaveid = atoi(&slavename[1]);
+	slavename = 0;
+    }
+
+    logf("<debug> move x (%d)", config.movex);
+    logf("<debug> move y (%d)", config.movey);
+    logf("<debug> scale x (%d)", config.scalex);
+    logf("<debug> scale y (%d)", config.scaley);
+    
+    memset(masterids, -1, sizeof(masterids));
+
+    if(masterlength < 3)
+    {
+	logf("<fatal> the master file is too small (%d bytes)", masterlength);
+	return 0;
+    }
+    if(slavelength < 3)
+    {
+	logf("<fatal> the slave file is too small (%d bytes)", slavelength);
+	return 0;
+    }
+    if(masterdata[2] == 'S' &&
+       masterdata[1] == 'W' &&
+       masterdata[0] == 'F')
+    {
+	logf("<notice> the master file is flash (swf) format\n");
+	master_flash = 1;
+    }
+    else
+	logf("<notice> the master file is not flash (swf) format!\n");
+
+    if(slavedata[2] == 'S' &&
+       slavedata[1] == 'W' &&
+       slavedata[0] == 'F')
+    {
+	logf("<notice> the slave file is flash (swf) format\n");
+	slave_flash = 1;
+    }
+    else
+	logf("<notice> the slave file is not flash (swf) format!\n");
+
+    if(master_flash && slave_flash) {
+	read_swf(&master, masterdata, masterlength);
+	if(config.cat) 
+	    return catcombine(masterdata, masterlength, _slavename, slavedata, slavelength, newlength);
+	else
+	    return normalcombine(masterdata, masterlength, _slavename, slavedata, slavelength, newlength);
     }
     
     *newlength = 0;
