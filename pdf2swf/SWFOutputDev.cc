@@ -1261,9 +1261,11 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
       }
 #ifdef XPDF_101
       Type1CFontFile *cvt = new Type1CFontFile(fontBuf, fontLen);
+      if(!cvt) return 0;
       cvt->convertToType1(f);
 #else
       FoFiType1C *cvt = FoFiType1C::make(fontBuf, fontLen);
+      if(!cvt) return 0;
       cvt->convertToType1(NULL, gTrue, FoFiWrite, f);
 #endif
       //cvt->convertToCIDType0("test", f);
