@@ -206,9 +206,11 @@ public:
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg);
   
-  virtual GBool beginType3Char(GfxState *state,
-			       CharCode code, Unicode *u, int uLen);
+  virtual GBool beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen);
   virtual void endType3Char(GfxState *state);
+
+  virtual void type3D0(GfxState *state, double wx, double wy);
+  virtual void type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury);
 
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
@@ -575,6 +577,21 @@ static void dumpFontInfo(char*loglevel, GfxFont*font)
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
 //void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) {printf("void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) \n");}
 
+
+void dump_outline(gfxline_t*line)
+{
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    msg("<debug> |     moveTo %.2f %.2f", line->x,line->y);
+	} else if(line->type == gfx_lineTo) {
+	    msg("<debug> |     lineTo %.2f %.2f", line->x,line->y);
+	} else if(line->type == gfx_splineTo) {
+	    msg("<debug> |     splineTo (%.2f %.2f) %.2f %.2f", line->sx,line->sy, line->x, line->y);
+	}
+	line = line->next;
+    }
+}
+
 gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
 {
     int num = path->getNumSubpaths();
@@ -631,22 +648,8 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
     if(closed && needsfix && (fabs(posx-lastx)+fabs(posy-lasty))>0.001) {
 	draw.lineTo(&draw, lastx, lasty);
     }
-    return (gfxline_t*)draw.result(&draw);
-}
-
-
-void dump_outline(gfxline_t*line)
-{
-    while(line) {
-	if(line->type == gfx_moveTo) {
-	    msg("<debug> |     moveTo %.2f %.2f", line->x,line->y);
-	} else if(line->type == gfx_lineTo) {
-	    msg("<debug> |     lineTo %.2f %.2f", line->x,line->y);
-	} else if(line->type == gfx_splineTo) {
-	    msg("<debug> |     splineTo (%.2f %.2f) %.2f %.2f", line->sx,line->sy, line->x, line->y);
-	}
-	line = line->next;
-    }
+    gfxline_t*result = (gfxline_t*)draw.result(&draw);
+    return result;
 }
 
 /*----------------------------------------------------------------------------
@@ -663,13 +666,16 @@ void SWFOutputDev::stroke(GfxState *state)
 
     GfxRGB rgb;
     double opaq = state->getStrokeOpacity();
-    state->getStrokeRGB(&rgb);
+    if(type3active)
+	state->getFillRGB(&rgb);
+    else
+	state->getStrokeRGB(&rgb);
     gfxcolor_t col;
     col.r = (unsigned char)(rgb.r*255);
     col.g = (unsigned char)(rgb.g*255);
     col.b = (unsigned char)(rgb.b*255);
     col.a = (unsigned char)(opaq*255);
-    
+   
     gfx_capType capType = gfx_capRound;
     if(lineCap == 0) capType = gfx_capButt;
     else if(lineCap == 1) capType = gfx_capRound;
@@ -710,11 +716,15 @@ void SWFOutputDev::stroke(GfxState *state)
     }
     
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d\n",
+	double gray;
+	state->getStrokeGray(&gray);
+        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d color=%02x%02x%02x%02x gray=%f\n",
 		width,
 		lineJoin==0?"miter": (lineJoin==1?"round":"bevel"),
 		lineCap==0?"butt": (lineJoin==1?"round":"square"),
-		dashnum
+		dashnum,
+		col.r,col.g,col.b,col.a,
+		gray
 		);
         dump_outline(line);
     }
@@ -917,15 +927,31 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 void SWFOutputDev::endString(GfxState *state) { 
 }    
 
- 
-GBool SWFOutputDev::beginType3Char(GfxState *state,
-			       CharCode code, Unicode *u, int uLen)
+/* the logic seems to be as following:
+   first, beginType3Char is called, with the charcode and the coordinates.
+   if this function returns true, it already knew about the char and has now drawn it.
+   if the function returns false, it's a new char, and type3D1 is called with some parameters-
+   the all draw operations until endType3Char are part of the char (which in this moment is
+   at the position first passed to beginType3Char). the char ends with endType3Char.
+
+   The drawing operations between beginType3Char and endType3Char are somewhat different to
+   the normal ones. For example, the fillcolor equals the stroke color.
+*/
+
+GBool SWFOutputDev::beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen)
 {
     msg("<debug> beginType3Char %d, %08x, %d", code, *u, uLen);
     type3active = 1;
-    /* the character itself is going to be passed using
-       drawImageMask() */
+    /* the character itself is going to be passed using the draw functions */
     return gFalse; /* gTrue= is_in_cache? */
+}
+
+void SWFOutputDev::type3D0(GfxState *state, double wx, double wy) {
+    msg("<debug> type3D0 width=%f height=%f", wx, wy);
+}
+void SWFOutputDev::type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury) {
+    msg("<debug> type3D1 width=%f height=%f bbox=(%f,%f,%f,%f)", wx, wy,
+	    llx,lly,urx,ury);
 }
 
 void SWFOutputDev::endType3Char(GfxState *state)
@@ -1212,7 +1238,6 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
     GfxRGB rgb;
     double opaq = state->getStrokeOpacity();
     state->getStrokeRGB(&rgb);
-
     //swfoutput_setstrokecolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), (char)(rgb.b*255), (char)(opaq*255));
 }
 
