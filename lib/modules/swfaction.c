@@ -312,7 +312,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		} break;
 		case 'p': {
 		    U8 type = *data;
-		    char*value = data+1;
+		    unsigned char*value = data+1;
 		    if(type == 0) {
 			printf(" String:\"%s\"", value);
 		    } else if (type == 1) {

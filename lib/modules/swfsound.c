@@ -47,10 +47,9 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
     char*buf;
     int len = 0;
 
+    buf = malloc(init->bufferSize);
     if(!buf)
 	return;
-    
-    buf = malloc(init->bufferSize);
     
     len = codecEncodeChunk (numsamples, samples, buf);
     len += codecFlush (&buf[len]);

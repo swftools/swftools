@@ -80,7 +80,7 @@ int swf_FontExtract_DefineFont(int id,SWFFONT * f,TAG * t)
 
   fid = swf_GetU16(t);
   if ((!id)||(id==fid))
-  { U16 of,*ofs;
+  { U16 of;
     int n,i;
       
     id = fid;
@@ -392,7 +392,7 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
 int swf_FontSetID(SWFFONT * f,U16 id) { if (!f) return -1; f->id = id; return 0; }
 
 int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
-{ int i,j,num;
+{ int i,j;
   if ((!f)||(!use)) return -1;
 
   j = 0;
@@ -927,7 +927,8 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	    rgb.b = 0x00;
 	    for(y=0;y<=((font->maxascii-1)/16);y++)
 	    {
-		int c=0,lastx=-1, firstx=0;
+		int c=0,lastx=-1;
+		/* TODO: firstx?? */
 		for(x=0;x<16;x++) {
 		    int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
 		    if(g>=0 && font->glyph[g].shape) {
