@@ -224,7 +224,8 @@ void args_callback_usage(char*name)
     printf("-p  --pages=range          Convert only pages in range\n");
     printf("-P  --password=password    Use password for deciphering the pdf\n");
     printf("-s  --shapes               Don't use SWF Fonts, but store everything as shape\n");
-    printf("-i  --ignore               Ignore draw order (makes the SWF file smaller)\n");
+    printf("-i  --ignore               Ignore draw order (makes the SWF file smaller, but may produce\n");
+    printf("                           graphic errors)\n");
     printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
