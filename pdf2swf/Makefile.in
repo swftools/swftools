@@ -25,7 +25,7 @@ pdf2swf$(E): pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o xpdf/libp
 xpdf/libpdf.a: xpdf/gfile.cc
 	cd xpdf;$(MAKE)
 
-ttf2pt1/ttf2pt1.a: ttf2pt1/ttf2pt1.c
+ttf2pt1/ttf2pt1.a: ttf2pt1/ttf2pt1.c ttf2pt1/t1asm.c
 	cd ttf2pt1;$(MAKE)
 
 install:
