@@ -37,10 +37,10 @@ if test "x$PY_VERSION" "!=" "x"; then
 #include <Python.h>
 #include <Imaging.h>
 
-int main(int argn, char*argv[])
+int main()
 {
     int ret;
-    ret = Py_Main(argn, argv);
+    ret = Py_Main(0, 0);
     int x; // check also for gcc 2.95.x incompatibilities
     return ret;
 }
