@@ -246,10 +246,9 @@ if test "x$JPEGLIBMISSING" = "xtrue";then
     DISABLEPDF2SWF=true;
     DISABLEJPEG2SWF=true;
 fi
-#if test "x$T1LIBMISSING" = "xtrue";then
-#    MISSINGLIBS="${MISSINGLIBS} t1lib"
-#    DISABLEPDF2SWF=true;
-#fi
+if test "x$T1LIBMISSING" = "xtrue";then
+    MISSINGLIBS="${MISSINGLIBS} t1lib"
+fi
 
 if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
  DISABLEPDF2SWF=true;
