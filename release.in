@@ -18,6 +18,7 @@ ${name}/src/swfdump.c \
 ${name}/src/swfextract.c \
 ${name}/src/jpeg2swf.c \
 ${name}/src/bitio.c \
+${name}/lib/bitio.c \
 ${name}/src/bitio.h \
 ${name}/src/types.h \
 ${name}/src/flash.c \
@@ -49,7 +50,8 @@ ${name}/lib/example/transtest.c \
 ${name}/lib/example/zlibtest.c \
 ${name}/lib/example/makefonts.cc \
 ${name}/lib/example/glyphshape.c \
-${name}/lib/example/avi2swf.cc \
+${name}/avi2swf/avi2swf.cc \
+${name}/avi2swf/Makefile \
 ${name}/lib/example/buttontest.c \
 ${name}/swfs/simple_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
