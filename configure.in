@@ -203,6 +203,36 @@ dnl Checks for library functions.
 
 # ------------------------------------------------------------------
  
+lame_objects= 
+lame_makefile=
+if test "x${DISABLE_LAME}" = "xtrue"; then
+    echo "*" Disabling lame support...
+else
+    # old lame code at lib/lame
+    if test -f lib/lame/Makefile.in; then
+	lame_objects="lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o"
+	lame_makefile="lib/lame/Makefile"
+	CPPFLAGS="$CPPFLAGS -Ilame"
+	AC_DEFINE_UNQUOTED(HAVE_LAME, 1)
+    else
+	if test -d /usr/include/lame; then
+	    CPPFLAGS="$CPPFLAGS -I /usr/include/lame"
+	else
+	    if test -d /usr/local/include/lame; then
+		CPPFLAGS="$CPPFLAGS -I /usr/local/include/lame"
+	    fi
+	fi
+	AC_CHECK_LIB(mp3lame, lame_init,, NO_LIBMP3LAME=1)
+	AC_CHECK_HEADERS(lame.h)
+	if test "x$NO_LIBMP3LAME" "!=" "x1" -a "x$ac_cv_header_lame_h" "!=" "x";then
+	    AC_DEFINE_UNQUOTED(HAVE_LAME, 1)
+	fi
+    fi
+fi
+AC_SUBST(lame_objects)
+
+# ------------------------------------------------------------------
+ 
 RFX_CHECK_AVI2SWF
 
 avi2swf="avi2swf/Makefile"
@@ -219,17 +249,6 @@ if test "x${UNCOMPRESS}" = "xgzip"; then
     AC_DEFINE_UNQUOTED(USE_GZIP, 1)
 fi
 AC_SUBST(USE_GZIP)
-
-# ------------------------------------------------------------------
-
-if test "x${DISABLE_LAME}" = "xtrue"; then
-    echo "*" Disabling lame support...
-    lame_objects= 
-else
-    AC_DEFINE_UNQUOTED(HAVE_LAME, 1)
-    lame_objects='$(lame_objects_2)'
-fi
-AC_SUBST(lame_objects)
 
 # ------------------------------------------------------------------
 
@@ -272,9 +291,9 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
     echo "or write compressed Flash MX files!"
   fi
   echo "***************************************************"
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf}"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
 else
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf}"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
 fi
 AC_SUBST(JPEG2SWF)
 AC_SUBST(PNG2SWF)
