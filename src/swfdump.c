@@ -33,11 +33,16 @@ char * filename = 0;
    to detect errors in the file. (i.e. ids which are defined more than 
    once */
 char idtab[65536];
+
 int action = 0;
+int html = 0;
+int xy = 0;
 
 struct options_t options[] =
 {
  {"a","action"},
+ {"XY","size"},
+ {"e","html"},
  {"v","verbose"},
  {"V","version"},
  {0,0}
@@ -54,6 +59,18 @@ int args_callback_option(char*name,char*val)
         action = 1;
         return 0;
     }
+    else if(name[0]=='e') {
+        html = 1;
+        return 0;
+    }
+    else if(name[0]=='X') {
+	xy |= 1;
+	return 0;
+    }
+    else if(name[0]=='Y') {
+	xy |= 2;
+	return 0;
+    }
     else {
         printf("Unknown option: -%s\n", name);
     }
@@ -68,6 +85,9 @@ void args_callback_usage(char*name)
 {    
     printf("Usage: %s [-a] file.swf\n", name);
     printf("-h , --help\t\t\t Print help and exit\n");
+    printf("-e , --html\t\t\t Create a html embedding the file (simple, but useful)\n");
+    printf("-X , --width\t\t\t Prints out a string of the form \"-X width\"\n");
+    printf("-Y , --height\t\t\t Prints out a string of the form \"-Y height\"\n");
     printf("-a , --action\t\t\t Disassemble action tags\n");
     printf("-V , --version\t\t\t Print program version and exit\n");
 }
@@ -96,6 +116,7 @@ int main (int argc,char ** argv)
     struct stat statbuf;
 #endif
     int f;
+    int xsize,ysize;
     char prefix[128];
     prefix[0] = 0;
     memset(idtab,0,65536);
@@ -131,6 +152,36 @@ int main (int argc,char ** argv)
 
     close(f);
 
+    xsize = (swf.movieSize.xmax-swf.movieSize.xmin)/20;
+    ysize = (swf.movieSize.ymax-swf.movieSize.ymin)/20;
+    if(xy)
+    {
+	if(xy&1)
+	printf("-X %d", xsize);
+	if(xy==3)
+	printf(" ");
+	if(xy&2)
+	printf("-Y %d", ysize);
+	printf("\n");
+	return 0;
+    }
+    if(html)
+    {
+ 	printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
+	       " WIDTH=\"%d\"\n"
+	       " HEIGHT=\"%d\"\n"
+	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=5,0,0,0\">\n"
+               "  <PARAM NAME=\"MOVIE\" VALUE=\"%s\">\n"
+	       "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
+	       "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
+	       "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
+	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n"
+	       "   PLAY=\"true\" LOOP=\"true\" QUALITY=\"high\"\n"
+	       "   PLUGINSPAGE=\"http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash\">\n"
+               "  </EMBED>\n" 
+	       "</OBJECT>\n", xsize, ysize, filename, filename, xsize, ysize);
+	return 0;
+    } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);
     printf("[HEADER]        File size: %ld\n", swf.fileSize);
     printf("[HEADER]        Frame rate: %f\n",swf.frameRate/256.0);
