@@ -856,7 +856,7 @@ void s_change(char*instance, parameters_t p2)
     p1 = i->parameters;
     
     allframes = currentframe - i->lastFrame - 1;
-    if(!allframes) {
+    if(allframes < 0) {
 	warning(".change ignored. can only .put/.change an object once per frame.");
 	return;
     }
@@ -1479,9 +1479,11 @@ static int c_frame(map_t*args)
 {
     char*framestr = lu(args, "n");
     int frame;
-    if(framestr[0]=='+') {
+    if(isRelative(framestr)) {
 	frame = s_getframe();
-	frame += parseInt(framestr+1);
+	if(getSign(framestr)<0)
+	    syntaxerror("relative frame expressions must be positive");
+	frame += parseInt(getOffset(framestr));
     }
     else {
 	frame = parseInt(framestr);
@@ -1601,7 +1603,7 @@ static struct {
     char*arguments;
 } arguments[] =
 {{"swf", c_swf, "bbox=autocrop version=5 fps=50 name=!default! @compress=default"},
- {"frame", c_frame, "n=+1"},
+ {"frame", c_frame, "n=<plus>1"},
 
     // "import" type stuff
  {"shape", c_shape, "name filename"},
