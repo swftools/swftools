@@ -65,6 +65,8 @@
 #include <ctype.h>
 #include <math.h>
 
+#include "../../config.h"
+
 #ifdef _GNU_SOURCE
 #include <getopt.h>
 #endif
