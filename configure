@@ -6529,9 +6529,7 @@ avi2swf="avi2swf/Makefile"
 if test "x${AVIFILE}" != "xtrue"; then
  echo "* Couldn't compile the avifile test program."
  echo "* Disabling avi2swf tool..."
- echo all: > avi2swf/Makefile
- echo install: >> avi2swf/Makefile
- echo clean: >> avi2swf/Makefile
+ echo all install uninstall clean: > avi2swf/Makefile
  avi2swf=
 fi
 
@@ -6550,19 +6548,20 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
   echo "Disabling pdf2swf tool..."
   rm -f pdf2swf/Makefile
-  echo all: > pdf2swf/Makefile
-  echo install: >> pdf2swf/Makefile
-  echo clean: >> pdf2swf/Makefile
+  echo all install uninstall clean: > pdf2swf/Makefile
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
     echo "Disabling jpeg2swf tool..."
     JPEG2SWF=
     export JPEG2SWF
   fi
   echo "***************************************************"
-  FILES="./release ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile swfs/Makefile"
 else
-  FILES="./release ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile"
 fi
+
+
+AR=ar
 
 
 trap '' 1 2 15
@@ -6735,6 +6734,7 @@ s%@VERSION@%$VERSION%g
 s%@HAVE_UNISTD_H@%$HAVE_UNISTD_H%g
 s%@USE_GZIP@%$USE_GZIP%g
 s%@JPEG2SWF@%$JPEG2SWF%g
+s%@AR@%$AR%g
 
 CEOF
 EOF

@@ -1,322 +1,42 @@
-# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
-
-# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
-# This Makefile.in is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
-# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-# PARTICULAR PURPOSE.
-
-
-SHELL = @SHELL@
-
+top_builddir = ..
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
-VPATH = @srcdir@
-prefix = @prefix@
-exec_prefix = @exec_prefix@
+include ../Makefile.common
 
-bindir = @bindir@
-sbindir = @sbindir@
-libexecdir = @libexecdir@
-datadir = @datadir@
-sysconfdir = @sysconfdir@
-sharedstatedir = @sharedstatedir@
-localstatedir = @localstatedir@
-libdir = @libdir@
-infodir = @infodir@
-mandir = @mandir@
-includedir = @includedir@
-oldincludedir = /usr/include
+all: simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf
 
-DESTDIR =
-
-pkgdatadir = $(datadir)/@PACKAGE@/swfs
-
-top_builddir = ..
-
-INSTALL = @INSTALL@
-INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
-INSTALL_DATA = @INSTALL_DATA@
-INSTALL_SCRIPT = @INSTALL_SCRIPT@
-transform = @program_transform_name@
-
-NORMAL_INSTALL = :
-PRE_INSTALL = :
-POST_INSTALL = :
-NORMAL_UNINSTALL = :
-PRE_UNINSTALL = :
-POST_UNINSTALL = :
-build_alias = @build_alias@
-build_triplet = @build@
-host_alias = @host_alias@
-host_triplet = @host@
-target_alias = @target_alias@
-target_triplet = @target@
-CPP = @CPP@
-CXX = @CXX@
-EXEEXT = @EXEEXT@
-HAVE_UNISTD_H = @HAVE_UNISTD_H@
-JPEG2SWF = @JPEG2SWF@
-LN_S = @LN_S@
-PACKAGE = @PACKAGE@
-RANLIB = @RANLIB@
-SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
-UNCOMPRESS = @UNCOMPRESS@
-USE_GZIP = @USE_GZIP@
-VERSION = @VERSION@
-WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
-
-bin_PROGRAMS = keyboard_viewer simple_viewer PreLoaderTemplate
-LDADD = 
-simple_viewer_SOURCES = simple_viewer.c
-simple_viewer_LDADD = ../lib/librfxswf.a
-keyboard_viewer_SOURCES = keyboard_viewer.c
-keyboard_viewer_LDADD = ../lib/librfxswf.a
-PreLoaderTemplate_SOURCES = PreLoaderTemplate.c
-PreLoaderTemplate_LDADD = ../lib/librfxswf.a
-INCLUDES = -I../lib
-pkgdata_DATA = simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf swft_loader.swf tessel_loader.swf
-mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
-CONFIG_HEADER = ../config.h
-CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  simple_viewer$(EXEEXT) keyboard_viewer.swf$(EXEEXT) PreLoaderTemplate$(EXEEXT)
-PROGRAMS =  $(bin_PROGRAMS)
-
-
-DEFS = @DEFS@ -I. -I$(srcdir) -I..
-CPPFLAGS = @CPPFLAGS@
-LDFLAGS = @LDFLAGS@
-LIBS = @LIBS@
-simple_viewer_OBJECTS =  simple_viewer.o
-simple_viewer_DEPENDENCIES =  ../lib/librfxswf.a
-simple_viewer_LDFLAGS = 
-keyboard_viewer_OBJECTS =  keyboard_viewer.o
-keyboard_viewer_DEPENDENCIES =  ../lib/librfxswf.a
-keyboard_viewer_LDFLAGS = 
-PreLoaderTemplate_OBJECTS =  PreLoaderTemplate.o
-PreLoaderTemplate_DEPENDENCIES =  ../lib/librfxswf.a
-PreLoaderTemplate_LDFLAGS = 
-CFLAGS = @CFLAGS@
-CC = @CC@ $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-CCLD = @CC@
-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
-DATA =  $(pkgdata_DATA)
-
-DIST_COMMON = Makefile.in
-
-
-DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
-
-TAR = tar
-GZIP_ENV = --best
-DEP_FILES =  .deps/simple_viewer.P .deps/PreLoaderTemplate.P .deps/keyboard_viewer.P
-SOURCES = $(keyboard_viewer_SOURCES) $(simple_viewer_SOURCES) $(PreLoaderTemplate_SOURCES)
-OBJECTS = $(keyboard_viewer_OBJECTS) $(simple_viewer_OBJECTS) $(PreLoaderTemplate_OBJECTS)
-
-all: all-redirect
-.SUFFIXES:
-.SUFFIXES: .S .c .o .s
-
-mostlyclean-binPROGRAMS:
-
-clean-binPROGRAMS:
-	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
-
-distclean-binPROGRAMS:
-
-keyboard_viewer.swf: keyboard_viewer
-	echo Calling ./keybard_viewer to create keyboard_viewer.swf
-	./keyboard_viewer
-simple_viewer.swf: simple_viewer
-	echo Calling ./simple_viewer to create simple_viewer.swf
-	./simple_viewer
-PreLoaderTemplate.swf: PreLoaderTemplate
-	echo Calling ./PreLoaderTemplate to create PreLoaderTemplate.swf
-	./PreLoaderTemplate
-
-.s.o:
-	$(CC) -c $<
-
-.S.o:
-	$(CC) -c $<
-
-mostlyclean-compile:
-	-rm -f *.o core *.core
-
-clean-compile:
-
-distclean-compile:
-	-rm -f *.tab.c
-
-simple_viewer$(EXEEXT): $(simple_viewer_OBJECTS) $(simple_viewer_DEPENDENCIES)
-	@rm -f simple_viewer$(EXEEXT)
-	$(LINK) $(simple_viewer_LDFLAGS) $(simple_viewer_OBJECTS) $(simple_viewer_LDADD) $(LIBS)
-
-keyboard_viewer$(EXEEXT): $(keyboard_viewer_OBJECTS) $(keyboard_viewer_DEPENDENCIES)
-	@rm -f keyboard_viewer$(EXEEXT)
-	$(LINK) $(keyboard_viewer_LDFLAGS) $(keyboard_viewer_OBJECTS) $(keyboard_viewer_LDADD) $(LIBS)
-
-PreLoaderTemplate$(EXEEXT): $(PreLoaderTemplate_OBJECTS) $(PreLoaderTemplate_DEPENDENCIES)
-	@rm -f PreLoaderTemplate$(EXEEXT)
-	$(LINK) $(PreLoaderTemplate_LDFLAGS) $(PreLoaderTemplate_OBJECTS) $(PreLoaderTemplate_LDADD) $(LIBS)
-
-install-pkgdataDATA: $(pkgdata_DATA)
-	@$(NORMAL_INSTALL)
-	$(mkinstalldirs) $(DESTDIR)$(pkgdatadir)
-	@list='$(pkgdata_DATA)'; for p in $$list; do \
-	  if test -f $(srcdir)/$$p; then \
-	    echo " $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkgdatadir)/$$p"; \
-	    $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkgdatadir)/$$p; \
-	  else if test -f $$p; then \
-	    echo " $(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/$$p"; \
-	    $(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/$$p; \
-	  fi; fi; \
-	done
-	test -f $(DESTDIR)$(pkgdatadir)/default_viewer.swf || \
-	    $(LN_S) $(DESTDIR)$(pkgdatadir)/simple_viewer.swf $(DESTDIR)$(pkgdatadir)/default_viewer.swf; \
-	test -f $(DESTDIR)$(pkgdatadir)/default_loader.swf || \
-	    $(LN_S) $(DESTDIR)$(pkgdatadir)/tessel_loader.swf $(DESTDIR)$(pkgdatadir)/default_loader.swf; \
-
-uninstall-binPROGRAMS:
-
-uninstall-pkgdataDATA:
-	@$(NORMAL_UNINSTALL)
-	list='$(pkgdata_DATA)'; for p in $$list; do \
-	  rm -f $(DESTDIR)$(pkgdatadir)/$$p; \
-	done
-	rm -f $(DESTDIR)$(pkgdatadir)/default_viewer.swf
-	rm -f $(DESTDIR)$(pkgdatadir)/default_loader.swf
-
-tags: TAGS
-
-ID: $(HEADERS) $(SOURCES) $(LISP)
-	list='$(SOURCES) $(HEADERS)'; \
-	unique=`for i in $$list; do echo $$i; done | \
-	  awk '    { files[$$0] = 1; } \
-	       END { for (i in files) print i; }'`; \
-	here=`pwd` && cd $(srcdir) \
-	  && mkid -f$$here/ID $$unique $(LISP)
-
-TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) $(LISP)
-	tags=; \
-	here=`pwd`; \
-	list='$(SOURCES) $(HEADERS)'; \
-	unique=`for i in $$list; do echo $$i; done | \
-	  awk '    { files[$$0] = 1; } \
-	       END { for (i in files) print i; }'`; \
-	test -z "$(ETAGS_ARGS)$$unique$(LISP)$$tags" \
-	  || (cd $(srcdir) && etags $(ETAGS_ARGS) $$tags  $$unique $(LISP) -o $$here/TAGS)
-
-mostlyclean-tags:
-
-clean-tags:
-
-distclean-tags:
-	-rm -f TAGS ID
-
-distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
-
-subdir = swfs
-
-distdir: $(DISTFILES)
-	here=`cd $(top_builddir) && pwd`; \
-	top_distdir=`cd $(top_distdir) && pwd`; \
-	distdir=`cd $(distdir) && pwd`; \
-	@for file in $(DISTFILES); do \
-	  d=$(srcdir); \
-	  if test -d $$d/$$file; then \
-	    cp -pr $$d/$$file $(distdir)/$$file; \
-	  else \
-	    test -f $(distdir)/$$file \
-	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
-	    || cp -p $$d/$$file $(distdir)/$$file || :; \
-	  fi; \
-	done
-
-DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
-
-mostlyclean-depend:
-
-clean-depend:
-
-distclean-depend:
-	-rm -rf .deps
+programs = simple_viewer keyboard_viewer PreLoaderTemplate
 
 %.o: %.c
-	@echo '$(CC) -c $<'; \
-	$(CC) -Wp,-MD,.deps/$(*F).pp -c $<
-	@-cp .deps/$(*F).pp .deps/$(*F).P; \
-	tr ' ' '\012' < .deps/$(*F).pp \
-	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
-	    >> .deps/$(*F).P; \
-	rm .deps/$(*F).pp
+	$(C) -I../lib $< -o $@
 
-info-am:
-info: info-am
-dvi-am:
-dvi: dvi-am
-check-am: all-am
-check: check-am
-installcheck-am:
-installcheck: installcheck-am
+%: %.o
+	$(L) $< -o $@ ../lib/librfxswf.a $(LIBS) 
 
-install-data-am: install-pkgdataDATA
-install-data: install-data-am
+simple_viewer.swf: $(programs)
+	@echo Calling ./keybard_viewer to create keyboard_viewer.swf
+	./simple_viewer
 
-install-am: all-am
-	@$(MAKE) $(AM_MAKEFLAGS) install-data-am
-install: install-am
-uninstall-am: uninstall-binPROGRAMS uninstall-pkgdataDATA
-uninstall: uninstall-am
-all-am: Makefile $(PROGRAMS) $(DATA)
-all-redirect: all-am
-install-strip:
-	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
-installdirs:
-	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(pkgdatadir)
+keyboard_viewer.swf: $(programs)
+	@echo Calling ./simple_viewer to create simple_viewer.swf
+	./keyboard_viewer
 
+PreLoaderTemplate.swf: $(programs)
+	@echo Calling ./PreLoaderTemplate to create PreLoaderTemplate.swf
+	./PreLoaderTemplate
 
-mostlyclean-generic:
+install:
+	$(mkinstalldirs) $(pkgdatadir)
+	$(mkinstalldirs) $(pkgdatadir)/swfs
+	$(INSTALL_DATA) ./simple_viewer.swf $(pkgdatadir)/swfs/simple_viewer.swf
+	$(INSTALL_DATA) ./keyboard_viewer.swf $(pkgdatadir)/swfs/keyboard_viewer.swf
+	$(INSTALL_DATA) ./PreLoaderTemplate.swf $(pkgdatadir)/swfs/PreLoaderTemplate.swf
+		
+uninstall:
+	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/simple_viewer.swf
+	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/keyboard_viewer.swf
+	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/PreLoaderTemplate.swf
 
-clean-generic:
+clean: 
+	rm -f *.o *.lo *.a *.la simple_viewer keyboard_viewer PreLoaderTemplate simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf
 
-distclean-generic:
-	-rm -f Makefile $(CONFIG_CLEAN_FILES)
-	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
-
-mostlyclean-am:  mostlyclean-binPROGRAMS mostlyclean-compile \
-		mostlyclean-tags mostlyclean-depend mostlyclean-generic
-
-mostlyclean: mostlyclean-am
-
-clean-am:  clean-binPROGRAMS clean-compile clean-tags clean-depend \
-		clean-generic mostlyclean-am
-
-clean: clean-am
-
-distclean-am:  distclean-binPROGRAMS distclean-compile distclean-tags \
-		distclean-depend distclean-generic clean-am
-
-distclean: distclean-am
-
-.PHONY: mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
-maintainer-clean-binPROGRAMS \
-mostlyclean-compile distclean-compile clean-compile \
-maintainer-clean-compile uninstall-pkgdataDATA install-pkgdataDATA tags \
-mostlyclean-tags distclean-tags clean-tags maintainer-clean-tags \
-distdir mostlyclean-depend distclean-depend clean-depend \
-maintainer-clean-depend info-am info dvi-am dvi check check-am \
-installcheck-am installcheck \
-install-data-am install-data install-am install uninstall-am uninstall \
-all-redirect all-am all installdirs mostlyclean-generic \
-distclean-generic clean-generic maintainer-clean-generic clean \
-mostlyclean distclean maintainer-clean
-
-
-# Tell versions [3.59,3.63) of GNU make to not export all variables.
-# Otherwise a system limit (for SysV at least) may be exceeded.
-.NOEXPORT:

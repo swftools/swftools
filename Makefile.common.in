@@ -1,0 +1,57 @@
+# --------------------- init --------------------------
+
+# shells, skripts, tools etc.
+SHELL = @SHELL@
+mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
+
+# compiling
+DEFS=@DEFS@
+C=@CC@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CFLAGS@
+CC=@CXX@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CXXFLAGS@
+L=@CC@ $(DEFS)
+LL=@CXX@ $(DEFS)
+AR=@AR@
+LIBTOOL=@LIBTOOL@
+SC=$(LIBTOOL) @CC@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CFLAGS@
+SCC=$(LIBTOOL) @CXX@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CXXFLAGS@
+SL=$(LIBTOOL) --mode=link @CC@ $(DEFS) -rpath $(libdir)
+SLL=$(LIBTOOL) --mode=link @CXX@ $(DEFS) -rpath $(libdir)
+LIBS= @LDFLAGS@ @LIBS@
+
+transform = @program_transform_name@
+
+# libtool stuff
+OBJEXT=@OBJEXT@
+EXEEXT=@EXEEXT@
+ECHO=@ECHO@
+RANLIB=@RANLIB@
+STRIP=@STRIP@
+
+# installing
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+UNINSTALL_DATA = rm -f
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+datadir = @datadir@
+libdir = @libdir@
+includedir = @includedir@
+sysconfdir = @sysconfdir@
+pkgdatadir = $(datadir)/@PACKAGE@
+
+# man pages
+mandir = @mandir@
+man1dir = $(mandir)/man1
+
+# ------------------- defines -------------------------
+
+INSTALL_BIN = echo installing $$file to $(bindir);$(INSTALL_PROGRAM) $$file $(bindir)/`echo $$file|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`
+UNINSTALL_BIN = ff=`echo $$file|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`;echo rm -f $(bindir)/$$ff;rm -f $(bindir)/$$ff
+INSTALL_MAN1 = ff=$(srcdir)/$$file.1; inst=`echo $$file | sed '$(transform)'`.1; echo "$(INSTALL_DATA) $$ff $(man1dir)/$$inst"; $(INSTALL_DATA) $$ff $(man1dir)/$$inst
+UNINSTALL_MAN1 = ff=$(srcdir)/$$file.1; inst=`echo $$file | sed '$(transform)'`.1; echo "rm -f $(man1dir)/$$inst"; rm -f $(man1dir)/$$inst
+
+# GNU Makefile stuff
+
+.SUFFIXES:

@@ -29,11 +29,11 @@ ${name}/lib/Makefile.in \
 ${name}/lib/lame/Makefile.in \
 ${name}/avi2swf/Makefile.in \
 ${name}/pdf2swf/Makefile.in \
-${name}/pdf2swf/fonts/Makefile.in \
 ${name}/pdf2swf/xpdf/Makefile.in \
 ${name}/pdf2swf/ttf2pt1/Makefile.in \
 ${name}/swfs/Makefile.in \
 ${name}/Makefile.in \
+${name}/Makefile.common.in \
 ${name}/lib/args.h \
 ${name}/lib/bitio.c \
 ${name}/lib/bitio.h \
@@ -258,8 +258,6 @@ ${name}/pdf2swf/fonts/n022004l.afm \
 ${name}/pdf2swf/fonts/n022024l.afm \
 ${name}/pdf2swf/fonts/s050000l.afm \
 ${name}/pdf2swf/fonts/d050000l.afm \
-${name}/swfs/simple_viewer.swf \
-${name}/swfs/PreLoaderTemplate.swf \
 ${name}/swfs/swft_loader.swf \
 ${name}/swfs/tessel_loader.swf \
 ${name}/m4/byteorder.m4 \

@@ -1,390 +1,43 @@
-# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
-
-# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
-# This Makefile.in is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
-# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-# PARTICULAR PURPOSE.
-
-
-SHELL = @SHELL@
-
+top_builddir = ..
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
-VPATH = @srcdir@
-prefix = @prefix@
-exec_prefix = @exec_prefix@
+include ../Makefile.common
 
-bindir = @bindir@
-sbindir = @sbindir@
-libexecdir = @libexecdir@
-datadir = @datadir@
-sysconfdir = @sysconfdir@
-sharedstatedir = @sharedstatedir@
-localstatedir = @localstatedir@
-libdir = @libdir@
-infodir = @infodir@
-mandir = @mandir@
-includedir = @includedir@
-oldincludedir = /usr/include
+programs = wav2swf png2swf swfcombine swfstrings swfextract swfdump @JPEG2SWF@
 
-DESTDIR =
+all: $(programs)
 
-pkgdatadir = $(datadir)/@PACKAGE@
-pkglibdir = $(libdir)/@PACKAGE@
-pkgincludedir = $(includedir)/@PACKAGE@
+%.o: %.c
+	$(C) $< -o $@
 
-top_builddir = ..
+wav2swf.o: wav2swf.c wav.h
 
+wav2swf: wav2swf.o wav.o
+	$(L) wav2swf.o wav.o -o wav2swf ../lib/librfxswf.a $(LIBS)
 
+png2swf: png2swf.o
+	$(L) png2swf.o -o png2swf ../lib/librfxswf.a $(LIBS) 
 
+swfcombine: swfcombine.o
+	$(L) swfcombine.o -o swfcombine ../lib/librfxswf.a $(LIBS) 
 
+swfextract: swfextract.o
+	$(L) swfextract.o -o swfextract ../lib/librfxswf.a $(LIBS) 
 
+swfstrings: swfstrings.o
+	$(L) swfstrings.o -o swfstrings ../lib/librfxswf.a $(LIBS) 
 
-INSTALL = @INSTALL@
-INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
-INSTALL_DATA = @INSTALL_DATA@
-INSTALL_SCRIPT = @INSTALL_SCRIPT@
-transform = @program_transform_name@
+jpeg2swf: jpeg2swf.o
+	$(L) jpeg2swf.o -o jpeg2swf ../lib/librfxswf.a $(LIBS) 
 
-NORMAL_INSTALL = :
-PRE_INSTALL = :
-POST_INSTALL = :
-NORMAL_UNINSTALL = :
-PRE_UNINSTALL = :
-POST_UNINSTALL = :
-CC = @CC@
-CPP = @CPP@
-CXX = @CXX@
-EXEEXT = @EXEEXT@
-HAVE_UNISTD_H = @HAVE_UNISTD_H@
-JPEG2SWF = @JPEG2SWF@
-LN_S = @LN_S@
-RANLIB = @RANLIB@
-SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
-UNCOMPRESS = @UNCOMPRESS@
-WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
+install:
+	$(mkinstalldirs) $(bindir)
+	$(mkinstalldirs) $(man1dir)
+	@for file in $(programs); do $(INSTALL_BIN);$(INSTALL_MAN1);done
+	
+uninstall:
+	@for file in $(programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
-bin_PROGRAMS = wav2swf png2swf swfcombine swfstrings swfextract swfdump @JPEG2SWF@
-wav2swf_SOURCES = wav2swf.c wav.c wav.h
-png2swf_SOURCES = png2swf.c
-swfextract_SOURCES = swfextract.c
-swfdump_SOURCES = swfdump.c
-swfcombine_SOURCES = swfcombine.c
-swfstrings_SOURCES = swfstrings.c
-jpeg2swf_SOURCES = jpeg2swf.c
-png2swf_LINK = $(LINK) ../lib/librfxswf.a
-wav2swf_LINK = $(LINK) ../lib/librfxswf.a
-swfextract_LINK = $(LINK)
-swfdump_LINK = $(LINK) ../lib/librfxswf.a
-swfcombine_LINK = $(LINK) ../lib/librfxswf.a
-swfstrings_LINK = $(LINK) ../lib/librfxswf.a
-jpeg2swf_LINK = $(LINK) #-o $@
-wav2swf_LDADD = ../lib/librfxswf.a
-png2swf_LDADD = ../lib/librfxswf.a
-swfstrings_LDADD = ../lib/librfxswf.a
-swfcombine_LDADD = ../lib/librfxswf.a
-swfdump_LDADD = ../lib/librfxswf.a
-swfextract_LDADD = ../lib/librfxswf.a
-jpeg2swf_LDADD = ../lib/librfxswf.a
-man_MANS = png2swf.1 wav2swf.1 swfcombine.1 swfstrings.1 swfextract.1 swfdump.1 jpeg2swf.1
-mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
-CONFIG_HEADER = ../config.h
-CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  wav2swf$(EXEEXT) png2swf$(EXEEXT) swfcombine$(EXEEXT) \
-swfstrings$(EXEEXT) swfextract$(EXEEXT) swfdump$(EXEEXT) \
- @JPEG2SWF@
-PROGRAMS =  $(bin_PROGRAMS)
+clean: 
+	rm -f *.o *.lo *.a *.la wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf *~
 
-
-DEFS = @DEFS@ -I. -I$(srcdir) -I..
-CPPFLAGS = @CPPFLAGS@
-LDFLAGS = @LDFLAGS@
-LIBS = @LIBS@
-wav2swf_OBJECTS =  wav2swf.o wav.o
-wav2swf_DEPENDENCIES =  ../lib/librfxswf.a
-wav2swf_LDFLAGS = 
-png2swf_OBJECTS =  png2swf.o
-png2swf_DEPENDENCIES =  ../lib/librfxswf.a
-png2swf_LDFLAGS = 
-swfcombine_OBJECTS =  swfcombine.o
-swfcombine_DEPENDENCIES =  ../lib/librfxswf.a
-swfcombine_LDFLAGS = 
-swfstrings_OBJECTS =  swfstrings.o
-swfstrings_DEPENDENCIES =  ../lib/librfxswf.a
-swfstrings_LDFLAGS = 
-swfextract_OBJECTS =  swfextract.o
-swfextract_DEPENDENCIES =  ../lib/librfxswf.a
-swfextract_LDFLAGS = 
-swfdump_OBJECTS =  swfdump.o
-swfdump_DEPENDENCIES =  ../lib/librfxswf.a
-swfdump_LDFLAGS = 
-jpeg2swf_OBJECTS =  jpeg2swf.o
-jpeg2swf_DEPENDENCIES =  ../lib/librfxswf.a
-jpeg2swf_LDFLAGS = 
-CFLAGS = @CFLAGS@
-COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-CCLD = $(CC)
-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
-man1dir = $(mandir)/man1
-MANS = $(man_MANS)
-
-NROFF = nroff
-DIST_COMMON =  Makefile.in
-
-
-PACKAGE = @PACKAGE@
-VERSION = @VERSION@
-
-DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
-
-TAR = tar
-GZIP_ENV = --best
-SOURCES = $(wav2swf_SOURCES) $(png2swf_SOURCES) $(swfcombine_SOURCES) $(swfstrings_SOURCES) $(swfextract_SOURCES) $(swfdump_SOURCES) $(jpeg2swf_SOURCES)
-OBJECTS = $(wav2swf_OBJECTS) $(png2swf_OBJECTS) $(swfcombine_OBJECTS) $(swfstrings_OBJECTS) $(swfextract_OBJECTS) $(swfdump_OBJECTS) $(jpeg2swf_OBJECTS)
-
-all: all-redirect
-.SUFFIXES:
-.SUFFIXES: .S .c .o .s
-
-
-
-
-
-
-
-
-mostlyclean-binPROGRAMS:
-
-clean-binPROGRAMS:
-	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
-
-distclean-binPROGRAMS:
-
-maintainer-clean-binPROGRAMS:
-
-install-binPROGRAMS: $(bin_PROGRAMS)
-	@$(NORMAL_INSTALL)
-	$(mkinstalldirs) $(DESTDIR)$(bindir)
-	@list='$(bin_PROGRAMS)'; for p in $$list; do \
-	  if test -f $$p; then \
-	    echo "  $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
-	     $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
-	  else :; fi; \
-	done
-
-uninstall-binPROGRAMS:
-	@$(NORMAL_UNINSTALL)
-	list='$(bin_PROGRAMS)'; for p in $$list; do \
-	  rm -f $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
-	done
-
-.c.o:
-	$(COMPILE) -c $<
-
-.s.o:
-	$(COMPILE) -c $<
-
-.S.o:
-	$(COMPILE) -c $<
-
-mostlyclean-compile:
-	-rm -f *.o core *.core
-
-clean-compile:
-
-distclean-compile:
-	-rm -f *.tab.c
-
-maintainer-clean-compile:
-
-wav2swf$(EXEEXT): $(wav2swf_OBJECTS) $(wav2swf_DEPENDENCIES)
-	@rm -f wav2swf$(EXEEXT)
-	$(wav2swf_LINK) $(wav2swf_LDFLAGS) $(wav2swf_OBJECTS) $(wav2swf_LDADD) $(LIBS)
-
-png2swf$(EXEEXT): $(png2swf_OBJECTS) $(png2swf_DEPENDENCIES)
-	@rm -f png2swf$(EXEEXT)
-	$(png2swf_LINK) $(png2swf_LDFLAGS) $(png2swf_OBJECTS) $(png2swf_LDADD) $(LIBS)
-
-swfcombine$(EXEEXT): $(swfcombine_OBJECTS) $(swfcombine_DEPENDENCIES)
-	@rm -f swfcombine$(EXEEXT)
-	$(swfcombine_LINK) $(swfcombine_LDFLAGS) $(swfcombine_OBJECTS) $(swfcombine_LDADD) $(LIBS)
-
-swfstrings$(EXEEXT): $(swfstrings_OBJECTS) $(swfstrings_DEPENDENCIES)
-	@rm -f swfstrings$(EXEEXT)
-	$(swfstrings_LINK) $(swfstrings_LDFLAGS) $(swfstrings_OBJECTS) $(swfstrings_LDADD) $(LIBS)
-
-swfextract$(EXEEXT): $(swfextract_OBJECTS) $(swfextract_DEPENDENCIES)
-	@rm -f swfextract$(EXEEXT)
-	$(swfextract_LINK) $(swfextract_LDFLAGS) $(swfextract_OBJECTS) $(swfextract_LDADD) $(LIBS)
-
-swfdump$(EXEEXT): $(swfdump_OBJECTS) $(swfdump_DEPENDENCIES)
-	@rm -f swfdump$(EXEEXT)
-	$(swfdump_LINK) $(swfdump_LDFLAGS) $(swfdump_OBJECTS) $(swfdump_LDADD) $(LIBS)
-
-jpeg2swf$(EXEEXT): $(jpeg2swf_OBJECTS) $(jpeg2swf_DEPENDENCIES)
-	@rm -f jpeg2swf$(EXEEXT)
-	$(jpeg2swf_LINK) $(jpeg2swf_LDFLAGS) $(jpeg2swf_OBJECTS) $(jpeg2swf_LDADD) $(LIBS)
-
-install-man1:
-	$(mkinstalldirs) $(DESTDIR)$(man1dir)
-	@list='$(man1_MANS)'; \
-	l2='$(man_MANS)'; for i in $$l2; do \
-	  case "$$i" in \
-	    *.1*) list="$$list $$i" ;; \
-	  esac; \
-	done; \
-	for i in $$list; do \
-	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
-	  else file=$$i; fi; \
-	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
-	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
-	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
-	  echo " $(INSTALL_DATA) $$file $(DESTDIR)$(man1dir)/$$inst"; \
-	  $(INSTALL_DATA) $$file $(DESTDIR)$(man1dir)/$$inst; \
-	done
-
-uninstall-man1:
-	@list='$(man1_MANS)'; \
-	l2='$(man_MANS)'; for i in $$l2; do \
-	  case "$$i" in \
-	    *.1*) list="$$list $$i" ;; \
-	  esac; \
-	done; \
-	for i in $$list; do \
-	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
-	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
-	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
-	  echo " rm -f $(DESTDIR)$(man1dir)/$$inst"; \
-	  rm -f $(DESTDIR)$(man1dir)/$$inst; \
-	done
-install-man: $(MANS)
-	@$(NORMAL_INSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) install-man1
-uninstall-man:
-	@$(NORMAL_UNINSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) uninstall-man1
-
-tags: TAGS
-
-ID: $(HEADERS) $(SOURCES) $(LISP)
-	list='$(SOURCES) $(HEADERS)'; \
-	unique=`for i in $$list; do echo $$i; done | \
-	  awk '    { files[$$0] = 1; } \
-	       END { for (i in files) print i; }'`; \
-	here=`pwd` && cd $(srcdir) \
-	  && mkid -f$$here/ID $$unique $(LISP)
-
-TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) $(LISP)
-	tags=; \
-	here=`pwd`; \
-	list='$(SOURCES) $(HEADERS)'; \
-	unique=`for i in $$list; do echo $$i; done | \
-	  awk '    { files[$$0] = 1; } \
-	       END { for (i in files) print i; }'`; \
-	test -z "$(ETAGS_ARGS)$$unique$(LISP)$$tags" \
-	  || (cd $(srcdir) && etags $(ETAGS_ARGS) $$tags  $$unique $(LISP) -o $$here/TAGS)
-
-mostlyclean-tags:
-
-clean-tags:
-
-distclean-tags:
-	-rm -f TAGS ID
-
-maintainer-clean-tags:
-
-distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
-
-subdir = src
-
-distdir: $(DISTFILES)
-	@for file in $(DISTFILES); do \
-	  d=$(srcdir); \
-	  if test -d $$d/$$file; then \
-	    cp -pr $$d/$$file $(distdir)/$$file; \
-	  else \
-	    test -f $(distdir)/$$file \
-	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
-	    || cp -p $$d/$$file $(distdir)/$$file || :; \
-	  fi; \
-	done
-info-am:
-info: info-am
-dvi-am:
-dvi: dvi-am
-check-am: all-am
-check: check-am
-installcheck-am:
-installcheck: installcheck-am
-install-exec-am: install-binPROGRAMS
-install-exec: install-exec-am
-
-install-data-am: install-man
-install-data: install-data-am
-
-install-am: all-am
-	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
-install: install-am
-uninstall-am: uninstall-binPROGRAMS uninstall-man
-uninstall: uninstall-am
-all-am: Makefile $(PROGRAMS) $(MANS)
-all-redirect: all-am
-install-strip:
-	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
-installdirs:
-	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(mandir)/man1
-
-
-mostlyclean-generic:
-
-clean-generic:
-
-distclean-generic:
-	-rm -f Makefile $(CONFIG_CLEAN_FILES)
-	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
-
-maintainer-clean-generic:
-mostlyclean-am:  mostlyclean-binPROGRAMS mostlyclean-compile \
-		mostlyclean-tags mostlyclean-generic
-
-mostlyclean: mostlyclean-am
-
-clean-am:  clean-binPROGRAMS clean-compile clean-tags clean-generic \
-		mostlyclean-am
-
-clean: clean-am
-
-distclean-am:  distclean-binPROGRAMS distclean-compile distclean-tags \
-		distclean-generic clean-am
-
-distclean: distclean-am
-
-maintainer-clean-am:  maintainer-clean-binPROGRAMS \
-		maintainer-clean-compile maintainer-clean-tags \
-		maintainer-clean-generic distclean-am
-	@echo "This command is intended for maintainers to use;"
-	@echo "it deletes files that may require special tools to rebuild."
-
-maintainer-clean: maintainer-clean-am
-
-.PHONY: mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
-maintainer-clean-binPROGRAMS uninstall-binPROGRAMS install-binPROGRAMS \
-mostlyclean-compile distclean-compile clean-compile \
-maintainer-clean-compile install-man1 uninstall-man1 install-man \
-uninstall-man tags mostlyclean-tags distclean-tags clean-tags \
-maintainer-clean-tags distdir info-am info dvi-am dvi check check-am \
-installcheck-am installcheck install-exec-am install-exec \
-install-data-am install-data install-am install uninstall-am uninstall \
-all-redirect all-am all installdirs mostlyclean-generic \
-distclean-generic clean-generic maintainer-clean-generic clean \
-mostlyclean distclean maintainer-clean
-
-
-# Tell versions [3.59,3.63) of GNU make to not export all variables.
-# Otherwise a system limit (for SysV at least) may be exceeded.
-.NOEXPORT:

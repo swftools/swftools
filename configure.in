@@ -2,12 +2,22 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/)
 
 PACKAGE=swftools
-VERSION=0.4.2
+VERSION=0.4.3-rc1
 # -Winline?
-CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
-CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
+CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer $CFLAGS"
+CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer $CXXFLAGS"
 export PACKAGE VERSION CFLAGS CXXFLAGS
 
+dnl Checks for programs.
+ AC_CANONICAL_HOST
+MACOSX=
+case $host_os in
+    *darwin* ) 
+	MACOSX=yes
+	CFLAGS="$CFLAGS -fno-rtti"
+	CXXFLAGS="$CXXFLAGS -fno-rtti"
+	;;
+esac
 dnl Checks for programs.
  AC_PROG_CC
  AC_PROG_CPP
@@ -106,9 +116,7 @@ avi2swf="avi2swf/Makefile"
 if test "x${AVIFILE}" != "xtrue"; then
  echo "* Couldn't compile the avifile test program."
  echo "* Disabling avi2swf tool..."
- echo all: > avi2swf/Makefile
- echo install: >> avi2swf/Makefile
- echo clean: >> avi2swf/Makefile
+ echo all install uninstall clean: > avi2swf/Makefile
  avi2swf=
 fi
 
@@ -124,19 +132,20 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
   echo "Disabling pdf2swf tool..."
   rm -f pdf2swf/Makefile
-  echo all: > pdf2swf/Makefile
-  echo install: >> pdf2swf/Makefile
-  echo clean: >> pdf2swf/Makefile
+  echo all install uninstall clean: > pdf2swf/Makefile
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
     echo "Disabling jpeg2swf tool..."
     JPEG2SWF=
     export JPEG2SWF
   fi
   echo "***************************************************"
-  FILES="./release ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile swfs/Makefile"
 else
-  FILES="./release ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile"
 fi
 AC_SUBST(JPEG2SWF)
+
+AR=ar
+AC_SUBST(AR)
 
 AC_OUTPUT(${FILES})
