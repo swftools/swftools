@@ -746,9 +746,10 @@ int CheckInputFile(char *fname, char **realname)
 	    sprintf(s, "%s.PNG", fname);
 	    if ((fi = fopen(s, "rb")) == NULL) {
 		sprintf(s, "%s.Png", fname);
-		if ((fi = fopen(s, "rb")) == NULL)
+		if ((fi = fopen(s, "rb")) == NULL) {
 		    fprintf(stderr, "Couldn't open %s!\n", fname);
 		    return -1;
+		}
 	    }
 	}
     }
