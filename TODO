@@ -24,10 +24,6 @@ swfextract:
     * mp3 extraction should also work for movieclips and definesound.
     * improve placeobject handling
 
-swfdump:
-    
-    * write out dependencies between objects
-
 lib/examples:
 
     * make an example for edittext fields

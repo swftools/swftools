@@ -75,5 +75,6 @@
 0.2.4:
 	* pdf2swf: The --ignore option now actually makes the pdf files smaller.
 	* rfxswf: Can now write DefineFont2 tags
-	* swfextract: Bugfixes (DefineEditText)
+	* swfextract/swfcombine: Bugfixes (DefineEditText)
+	* swfdump: New option --used, prints out referred IDs of each tag.
 
