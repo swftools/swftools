@@ -253,7 +253,7 @@ void logf(const char* format, ...)
     /* speed up hack */
     if(format[0]=='<') {
 	char*z = "fewnvd";
-	char*x = strchr(z,format[0]);
+	char*x = strchr(z,format[1]);
 	if(x && (x-z)>maxloglevel)
 		return;
     }
