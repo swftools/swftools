@@ -182,10 +182,18 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
     double lastx,lasty;
     double vx,vy;
     double xx,yy;
-   
-    /* The Flash Player does this, too. This means every line is always at least
-       one pixel wide */
+  
+    /* Make sure the line is always at least one pixel wide */
+#define LINEMODE1
+#ifdef LINEMODE1
+    /* That's what Macromedia's Player does at least at zoom level >= 1.  */
     width += 20;
+#else
+    /* That's what Macromedia's Player seems to do at zoom level 0.  */
+    /* TODO: needs testing */
+    if(width<20)
+	width = 20;
+#endif
 
     sd = (double)dx*(double)dx+(double)dy*(double)dy;
     d = sqrt(sd);
