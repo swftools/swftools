@@ -1167,11 +1167,6 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	}
     }
 
-    if(charnr>=0 && charnr<font->numchars) {
-	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
-	return charnr;
-    }
-
     if(font->encoding != FONT_ENCODING_UNICODE) {
 	/* the following only works if the font encoding
 	   is US-ASCII based. It's needed for fonts which return broken unicode
@@ -1180,8 +1175,13 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	    msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, font->ascii2glyph[charnr]);
 	    return font->ascii2glyph[charnr];
 	}
+    } 
+    
+    if(charnr>=0 && charnr<font->numchars) {
+	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
+	return charnr;
     }
-
+    
     return -1;
 }
 
