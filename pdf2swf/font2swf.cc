@@ -28,7 +28,6 @@
 #include "../lib/args.h"
 #include "swfoutput.h"
 #include "spline.h"
-#include "iso_encodings.c"
 
 static char * filenames[256];
 static int filenum;
