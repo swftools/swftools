@@ -743,24 +743,27 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 	    LinkNamed*l = (LinkNamed*)action;
 	    GString*name = l->getName();
 	    if(name) {
-	      s = name->lowerCase()->getCString();
-	      named = name->getCString();
-	      if(strstr(s, "next") || strstr(s, "forward"))
-	      {
-		  page = currentpage + 1;
-	      }
-	      else if(strstr(s, "prev") || strstr(s, "back"))
-	      {
-		  page = currentpage - 1;
-	      }
-	      else if(strstr(s, "last") || strstr(s, "end"))
-	      {
-		  page = pages[pagepos-1]; //:)
-	      }
-	      else if(strstr(s, "first") || strstr(s, "top"))
-	      {
-		  page = 1;
-	      }
+		s = name->lowerCase()->getCString();
+		named = name->getCString();
+		if(!strchr(s,':')) 
+		{
+		    if(strstr(s, "next") || strstr(s, "forward"))
+		    {
+			page = currentpage + 1;
+		    }
+		    else if(strstr(s, "prev") || strstr(s, "back"))
+		    {
+			page = currentpage - 1;
+		    }
+		    else if(strstr(s, "last") || strstr(s, "end"))
+		    {
+			page = pages[pagepos-1]; //:)
+		    }
+		    else if(strstr(s, "first") || strstr(s, "top"))
+		    {
+			page = 1;
+		    }
+		}
 	    }
 	}
         break;
@@ -1771,6 +1774,11 @@ int pdfswf_numpages()
 void pdfswf_insertstop()
 {
     insertstoptag = 1;
+}
+
+void pdfswf_setversion(int n)
+{
+    flashversion = n;
 }
 
 int closed=0;

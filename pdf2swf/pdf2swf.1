@@ -30,12 +30,18 @@ Use Flash 6 (MX) zlib compression.
 Allows pdf2swf to change the draw order of the pdf. This may make the generated
 SWF files a little bit smaller, but it may also cause the images in the pdf to look funny.
 .TP
-\fB\-j\fR, \fB\-\-jpegquality\fR
-Set quality of embedded jpeg pictures. 0 is worst (small), 100 is best (big). (default:85)
+\fB\-j\fR, \fB\-\-jpegquality\fR \fIquality\fR
+Set quality of embedded jpeg pictures to \fIquality\fR. 0 is worst (small), 100 is best (big). (default:85)
 .TP
 \fB\-w\fR, \fB\-\-samewindow\fR
 When converting pdf hyperlinks, don't make the links open a new window when clicked on,
 but open the page they point to in the window the SWF is displayed.
+.TP
+\fB\-t\fR, \fB\-\-stop\fR
+Insert a stop() command in each page. The resulting SWF file will not turn pages automatically.
+.TP
+\fB\-T\fR, \fB\-\-flashversion\fR \fInum\fR
+Set Flash Version in the SWF header to \fInum\fR.
 .TP
 \fB\-F\fR, \fB\-\-fontdir\fR \fIdirectory\fR
 Add \fIdirectory\fR to the font search path.

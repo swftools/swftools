@@ -120,6 +120,14 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_insertstop();
 	return 0;
     }
+    else if (!strcmp(name, "T"))
+    {
+	int i = atoi(val);
+	if(!strcasecmp(val, "mx"))
+	    i = 6;
+	pdfswf_setversion(i);
+	return 1;
+    }
     else if (!strcmp(name, "f"))
     {
 	pdfswf_storeallcharacters();
@@ -237,6 +245,7 @@ struct options_t options[] =
  {"b","defaultviewer"},
  {"l","defaultpreloader"},
  {"t","stop"},
+ {"T","flashversion"},
  {0,0}
 };
 
@@ -279,6 +288,7 @@ void args_callback_usage(char*name)
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-V  --version              Print program version\n");
     printf("-t  --stop                 Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
+    printf("-T  --flashversion=num     Set the flash version in the header to num (default: 4)\n");
 #ifndef SYSTEM_BACKTICKS
     printf("The following might not work because your system call doesn't support command substitution:\n");
 #endif

@@ -37,6 +37,7 @@ int jpegquality=85;
 int storeallcharacters=0;
 int enablezlib=0;
 int insertstoptag=0;
+int flashversion=4;
 static int flag_protected = 0;
 
 typedef unsigned char u8;
@@ -880,7 +881,7 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
   
   memset(&swf,0x00,sizeof(SWF));
 
-  swf.fileVersion    = 4;
+  swf.fileVersion    = flashversion;
   swf.frameRate      = 0x0040; // 1 frame per 4 seconds
   swf.movieSize.xmax = 20*sizex;
   swf.movieSize.ymax = 20*sizey;
@@ -1193,29 +1194,56 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
 
     drawlink(obj, actions, 0, points,0);
 }
+
+/* Named Links (a.k.a. Acrobatmenu) are used to implement various gadgets
+   of the viewer objects, like subtitles, index elements etc.
+*/
 void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
 {
     ActionTAG *actions1,*actions2;
+    char*tmp = strdup(name);
+    char mouseover = 1;
 
     if(shapeid>=0)
      endshape();
     if(textid>=0)
      endtext();
-   
-      actions1 = action_PushString(0, "/:subtitle");
-      actions1 = action_PushString(actions1, name);
-      actions1 = action_SetVariable(actions1);
-      actions1 = action_End(actions1);
 
-      actions2 = action_PushString(0, "/:subtitle");
-      actions2 = action_PushString(actions2, "");
-      actions2 = action_SetVariable(actions2);
-      actions2 = action_End(actions2);
+    if(!strncmp(tmp, "call:", 5))
+    {
+	char*x = strchr(&tmp[5], ':');
+	if(!x) {
+	    actions1 = action_PushInt(0, 0); //number of parameters (0)
+	    actions1 = action_PushString(actions1, &tmp[5]); //function name
+	    actions1 = action_CallFunction(actions1);
+	} else {
+	    *x = 0;
+	    actions1 = action_PushString(0, x+1); //parameter
+	    actions1 = action_PushInt(actions1, 1); //number of parameters (1)
+	    actions1 = action_PushString(actions1, &tmp[5]); //function name
+	    actions1 = action_CallFunction(actions1);
+	}
+	actions2 = action_End(0);
+	mouseover = 0;
+    }
+    else
+    {
+	actions1 = action_PushString(0, "/:subtitle");
+	actions1 = action_PushString(actions1, name);
+	actions1 = action_SetVariable(actions1);
+	actions1 = action_End(actions1);
 
-    drawlink(obj, actions1, actions2, points,1);
+	actions2 = action_PushString(0, "/:subtitle");
+	actions2 = action_PushString(actions2, "");
+	actions2 = action_SetVariable(actions2);
+	actions2 = action_End(actions2);
+    }
+
+    drawlink(obj, actions1, actions2, points,mouseover);
 
     swf_ActionFree(actions1);
     swf_ActionFree(actions2);
+    free(tmp);
 }
 
 static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions2, swfcoord*points, char mouseover)

@@ -22,6 +22,7 @@ extern int drawonlyshapes; //default:0
 extern int jpegquality; //default:100;
 extern int storeallcharacters; // default:0
 extern int insertstoptag; //default:0
+extern int flashversion; //default:4
 
 typedef long int twip;
 
