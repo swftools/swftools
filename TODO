@@ -1,7 +1,8 @@
 swfc:
 
-    * .editbox
     * .morph
+    * .soundstream
+    * text: newlines
     * .texture
     * .orbit
     * plugins?
@@ -10,8 +11,6 @@ swfc:
 	"follow me" feature:  default, or should it be explicitly specified?
     * .replace command
 	.crossfade command?
-    * .soundstream
-    * text: newlines
     * .egon  (stub is there, never really implemented)... folding edges?
     * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
