@@ -412,6 +412,12 @@ int main (int argc,char ** argv)
                 fprintf(stderr, "Error: Id %04x is defined more than once.\n", id);
             idtab[id] = 1;
         }
+	else if(swf_isPseudoDefiningTag(tag)) {
+            U16 id = swf_GetDefineID(tag);
+            printf(" adds information to id %04x", id);
+            if(!idtab[id])
+                fprintf(stderr, "Error: Id %04x is not yet defined.\n", id);
+	}
         else if(tag->id == ST_PLACEOBJECT || 
                 tag->id == ST_PLACEOBJECT2) {
             printf(" places id %04x at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
@@ -447,7 +453,10 @@ int main (int argc,char ** argv)
 	    printf("\n");
 	}
 	else if(tag->id == ST_DEFINETEXT || tag->id == ST_DEFINETEXT2) {
-	    handleText(tag);
+	    if(showtext)
+		handleText(tag);
+	    else
+		printf("\n");
 	}
 	else {
 	    printf("\n");
