@@ -51,6 +51,10 @@ typedef struct _videoreader_vfw_internal {
 
 } videoreader_vfw_internal_t;
 
+static int avifile_initialized = 0;
+
+#define _TRACE_ {printf("%s: %d (%s)\n",__FILE__,__LINE__,__func__);fflush(stdout);}
+
 bool videoreader_vfw_eof(videoreader_t* vr)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
@@ -231,8 +235,6 @@ void videoreader_vfw_close(videoreader_t* vr)
 
 void videoreader_vfw_setparameter(videoreader_t* vr, char*name, char*value) {}
 
-static int avifile_initialized = 0;
-
 int videoreader_vfw_open(videoreader_t* vr, char* filename)
 {
     memset(vr, 0, sizeof(videoreader_t));
@@ -264,7 +266,7 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
     /* calculate framerate */
     i->fps = (double)info.dwRate/(double)info.dwScale;
 
-    unsigned int t;
+    unsigned int t=0;
     while(t<info.dwStreams) {
 	PAVISTREAM stream;
         if(AVIFileGetStream(i->avifile, &stream, streamtypeANY, t) != AVIERR_OK || !stream)
@@ -278,7 +280,7 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
 
 	    BITMAPINFOHEADER bitmap;
 	    LONG size = sizeof(i->bitmap);
-	    AVIStreamReadFormat(i->vs, 0, &bitmap, &size);
+	    AVIStreamReadFormat(stream, 0, &bitmap, &size);
 
 	    if(i->bitmap.biCompression == 0/*RGB*/) {
 		i->bitmap = bitmap;
@@ -292,7 +294,7 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
 
 	    WAVEFORMATEX waveformat;
 	    LONG size = sizeof(i->waveformat);
-	    AVIStreamReadFormat(i->as, 0, &waveformat, &size);
+	    AVIStreamReadFormat(stream, 0, &waveformat, &size);
 
 	    if(i->waveformat.wBitsPerSample == 16 || i->waveformat.wBitsPerSample == 8) {
 		i->waveformat = waveformat;
@@ -301,6 +303,7 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
 		i->samplerate = i->waveformat.nSamplesPerSec;
 	    }
         }
+	t++;
     }
 
     if(i->vs) {
