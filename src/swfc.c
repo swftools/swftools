@@ -967,13 +967,16 @@ void s_quicktime(char*name, char*url)
 
 void s_edittext(char*name, char*fontname, int size, int width, int height, char*text, RGBA*color, int maxlength, char*variable, int flags)
 {
-    SWFFONT*font;
+    SWFFONT*font = 0;
     EditTextLayout layout;
     SRECT r;
 
-    font = dictionary_lookup(&fonts, fontname);
-    if(!font)
-	syntaxerror("font \"%s\" not known!", fontname);
+    if(fontname && *fontname) {
+	flags |= ET_USEOUTLINES;
+	font = dictionary_lookup(&fonts, fontname);
+	if(!font)
+	    syntaxerror("font \"%s\" not known!", fontname);
+    }
     tag = swf_InsertTag(tag, ST_DEFINEEDITTEXT);
     swf_SetU16(tag, id);
     layout.align = 0;
@@ -985,7 +988,8 @@ void s_edittext(char*name, char*fontname, int size, int width, int height, char*
     r.ymin = 0;
     r.xmax = width;
     r.ymax = height;
-    swf_SetEditText(tag, flags|ET_USEOUTLINES, r, text, color, maxlength, font->id, size, &layout, variable);
+    
+    swf_SetEditText(tag, flags, r, text, color, maxlength, font?font->id:0, size, &layout, variable);
 
     s_addcharacter(name, id, tag, r);
     incrementid();
@@ -2616,7 +2620,7 @@ static struct {
 
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
  {"text", c_text, "name text font size=100% color=white"},
- {"edittext", c_edittext, "name font size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0"},
+ {"edittext", c_edittext, "name font= size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0"},
  {"morphshape", c_morphshape, "name start end"},
  {"button", c_button, "name"},
     {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
