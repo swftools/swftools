@@ -103,7 +103,7 @@ Boxes:
   </p>
 
   <code lang="swfc">
-.flash name="box.swf"
+.flash filename="box.swf"
     .box b1 100 100 color=yellow fill=red
     .put b1 pin=center scale=0%
     .frame 100
@@ -154,7 +154,7 @@ The following example demonstrates a few of the possible transforms:
 
 
   <code lang="swfc">
-.flash name="cxform.swf" version=5 fps=25
+.flash filename="cxform.swf" version=5 fps=25
     
     .jpeg s1 "photo.jpeg" quality=80%
 
@@ -200,7 +200,7 @@ You now have a font named <c>Arial</c> to play with.
 For example, for the obligatory hello world program:
 
   <code lang="swfc">
-.flash name="helloworld.swf"
+.flash filename="helloworld.swf"
     
     .font Arial filename="Arial.ttf"
     .text helloworld font=Arial text="Hello World!"
@@ -258,7 +258,7 @@ objects which you can use in other commands.
 </p>
 
 <code lang="swfc">
-.flash name="fontoutline.swf"
+.flash filename="fontoutline.swf"
     .font Arial "Arial.swf"
     .textshape helloworld font=Arial size=200% text="Hello World"
     .filled filled_helloworld outline=helloworld fill=blue line=3 color=green
@@ -273,7 +273,7 @@ To make this a little more interesting, let's fill with a gradient instead
 of a plain color:
 
 <code lang="swfc">
-.flash name="fontgradient.swf"
+.flash filename="fontgradient.swf"
     .font Arial "Arial.swf"
     .textshape helloworld font=Arial text="SHADE"
     
@@ -291,7 +291,7 @@ of a plain color:
 While at it, you can also fill with an image:
 
 <code lang="swfc">
-.flash name="fontimage.swf"
+.flash filename="fontimage.swf"
     .font courier "Courier.swf"
     .jpeg beach "beach.jpg"
     .textshape text font=courier text="HOLIDAY"
@@ -307,12 +307,12 @@ with <c>.text</c> like normal shapes, i.e., scale them, move them, and use
 them for clipping:
 
   <code lang="swfc">
-.flash name="text5.swf"
+.flash filename="text5.swf"
 .font courier "Courier.swf"
 .text hithere text="HELLO" font=courier size=200%
 .jpeg scenery "scenery.jpg"
 
-.frame 0
+.frame 1
     .startclip hithere pin=center x=100 y=75 scale=50% #text clips...
         .put scenery scale=50%
     .end
@@ -326,7 +326,8 @@ them for clipping:
 The last two examples look similar, but their underlying structure
 is different:  The first is a shape object filled with
 image data (that is, a texture), while the second uses a normal
-text object to clip an rectangular image. 
+text object to clip an rectangular image. (More about clipping in
+the next section)
 </p>
 
 <p>
@@ -337,12 +338,12 @@ which is used here together with the alpha parameter of <c>.change</c>:
 </p>
 
   <code lang="swfc">
-.flash name="text6.swf"
+.flash filename="text6.swf"
 .font times "Times.swf"
 .text hello text="HELLO" font=times size=100% color=blue
 .text world text="WORLD" font=times size=100% color=red
 
-.frame 0
+.frame 1
         .put hello pin=center x=50 y=50 
         .put world pin=center x=50 y=50 alpha=25%
 .frame 200
@@ -353,6 +354,36 @@ which is used here together with the alpha parameter of <c>.change</c>:
  
  </section>
 
+<section title="Clipping">
+
+
+<code lang="swfc">
+.flash filename="xorclip.swf" bbox=640x480 background=black version=6
+.font times "Times.swf"
+.textshape helloworld text="HELLO WORLD" font=times size=500%
+.filled helloworld1 outline=helloworld fill=blue line=0
+.filled helloworld2 outline=helloworld fill=green line=0
+
+.frame 1
+	.box background width=640 height=480 fill=white line=0
+	.sprite twotexts
+	    .put h1=helloworld1 y=200
+	    .put h2=helloworld2 y=200
+	    .frame 1000
+	    .change h1 x=-500
+	    .change h2 x=-1000
+	.end
+
+	.startclip twotexts
+	    .put background
+	.end
+.frame 1000
+.end
+</code>
+ 
+
+</section>
+
 <section title="Edittext">
 
 A special type of text in SWF is the <c>edittext</c>, which
@@ -361,7 +392,7 @@ and set from ActionScript (see below).
 You can generate this type of text with the <c>.edittext</c> command:
 
 <code lang="swfc">
-.flash name="edittext.swf" bbox=210x110
+.flash filename="edittext.swf" bbox=210x110
     .font Arial "Arial.swf"
     .edittext myedittext font=Arial size=20% 
                          width=200 height=100 
@@ -383,7 +414,7 @@ using <c>.textshape</c>. The other way to create outlines is to
 use the .outline command:
 
 <code lang="swfc">
-.flash name="house.swf"
+.flash filename="house.swf"
 
     .outline house_outline:
         M 36.99 29.93 L 15.52 51.39 L 20.44 51.39 L 20.44 81.91 
@@ -420,7 +451,7 @@ Outlines can be filled with gradients, bitmaps etc., just like
 seen previously with <c>.textshape</c>:
 
 <code lang="swfc">
-.flash name="gradients.swf"
+.flash filename="gradients.swf"
 
     .outline star:
         M 521,640 C 502,678 370,546 328,554 C 270,566 152,731 93,722 
@@ -483,23 +514,23 @@ seen previously with <c>.textshape</c>:
     the ActionScript into the block:
   
 <code lang="swfc">
-.flash name="action.swf" bbox=300x300 fps=50
+.flash filename="action.swf" bbox=300x300 fps=50
 
 .box mybox color=blue fill=green width=100 height=100
 .put mybox
 
-.frame 0
+.frame 1
     .action:
         _root.angle += 0.05;
         mybox._x = 100*Math.cos(_root.angle)+100;
         mybox._y = 100*Math.sin(_root.angle)+100;
     .end
-.frame 1
+.frame 2
     .action:
         gotoFrame(0);
         Play();
     .end
-.frame 2
+.frame 3
 .end
 </code>
 
@@ -530,7 +561,7 @@ mouse buttons, and key presses.
 The following is a trivial example: Four objects which change their shape
 once the cursor is over it.
 <code lang="swfc">
-.flash name="button1.swf" fps=50
+.flash filename="button1.swf" fps=50
 
 .box box1 color=white fill=#336633 width=50 height=50 
 .box box2 color=white fill=#99cc99 width=100 height=100
@@ -539,7 +570,7 @@ once the cursor is over it.
     .show box2 as=hover x=12.5 y=12.5
 .end
 
-.frame 0
+.frame 1
     .put b1=mybutton1
     .put b2=mybutton1 x=100 red=+255
     .put b3=mybutton1 y=100 green=+255
@@ -583,7 +614,7 @@ Due to the fact that button shapes can be put <i>anywhere</i> especially
 outside the active area, it's easy to generate tooltips or subtitles.
 
 <code lang="swfc">
-.flash name="tooltips.swf" fps=50
+.flash filename="tooltips.swf" fps=50
 
 .jpeg pic fence.jpg
 .put pic
@@ -601,7 +632,7 @@ outside the active area, it's easy to generate tooltips or subtitles.
     .show tooltip_fence as=idle x=25 y=25 scalex=100 scaley=100 alpha=50%
 .end
 
-.frame 0
+.frame 1
     .put mybutton1
 .end
 </code>
