@@ -286,8 +286,10 @@ static PyObject * taglist_item(PyObject * self, int index)
 {
     TagListObject*taglist = (TagListObject*)self;
     PyObject*tag;
-    mylog(" %08x(%d) taglist_item(%d)", (int)self, self->ob_refcnt, index);
     tag = PyList_GetItem(taglist->taglist, index);
+    if(!tag)
+	return 0;
+    mylog(" %08x(%d) taglist_item(%d): %08x", (int)self, self->ob_refcnt, index, tag);
     Py_INCREF(tag);
     return tag;
 }
