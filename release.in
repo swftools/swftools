@@ -20,6 +20,8 @@ ${name}/pdf2swf/font2swf.1 \
 ${name}/src/swfcombine.c \
 ${name}/src/swfstrings.c \
 ${name}/src/swfdump.c \
+${name}/src/swfbbox.c \
+${name}/src/swfbbox.1 \
 ${name}/src/swfextract.c \
 ${name}/src/jpeg2swf.c \
 ${name}/src/png2swf.c \
@@ -78,6 +80,10 @@ ${name}/lib/modules/swfcgi.c \
 ${name}/lib/modules/swfsound.c \
 ${name}/lib/h.263/swfvideo.c \
 ${name}/lib/h.263/h263tables.c \
+${name}/lib/h.263/h263tables.h \
+${name}/lib/h.263/dct.c \
+${name}/lib/h.263/dct.h \
+${name}/lib/h.263/Makefile \
 ${name}/lib/lame/fft.c \
 ${name}/lib/lame/util.h \
 ${name}/lib/lame/tables.h \
@@ -231,6 +237,8 @@ ${name}/TODO \
 ${name}/pdf2swf/ttf2pt1/COPYRIGHT \
 ${name}/pdf2swf/ttf2pt1/byteorder.h \
 ${name}/pdf2swf/ttf2pt1/ft.c \
+${name}/pdf2swf/ttf2pt1/bdf.c \
+${name}/pdf2swf/ttf2pt1/bitmap.c \
 ${name}/pdf2swf/ttf2pt1/global.h \
 ${name}/pdf2swf/ttf2pt1/pt1.c \
 ${name}/pdf2swf/ttf2pt1/pt1.h \
