@@ -17,7 +17,9 @@ typedef struct _VIDEOSTREAM
 {
     int width;
     int height;
+    int frame;
     RGBA*oldpic;
+    RGBA*current;
 } VIDEOSTREAM;
 
 void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width, U16 height)
@@ -29,9 +31,12 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
     swf_SetU8(tag, 1); /* smoothing on */
     swf_SetU8(tag, 2); /* codec = h.263 sorenson spark */
 
-    stream->width = width;
-    stream->height = height;
-    stream->oldpic = 0;
+    memset(stream, 0, sizeof(VIDEOSTREAM));
+    stream->width = width&~15;
+    stream->height = height&~15;
+    stream->oldpic = (RGBA*)malloc(width*height*sizeof(RGBA));
+
+    memset(stream->oldpic, 0, width*height*sizeof(RGBA));
 }
 
 typedef struct _block_t
@@ -172,6 +177,28 @@ static void getregion(fblock_t* bb, RGBA*pic, int bx, int by, int width, int hei
 	p1+=linex;
 	p2+=linex*2;
     }
+}
+
+int compareregions(VIDEOSTREAM*s, int bx, int by)
+{
+    int linex = s->width;
+    RGBA*p1 = &s->current[by*linex*16+bx*16];
+    RGBA*p2 = &s->oldpic[by*linex*16+bx*16];
+    int diff = 0;
+    int x,y;
+    for(y=0;y<16;y++) {
+	for(x=0;x<16;x++) {
+	    RGBA*m = &p1[x];
+	    RGBA*n = &p2[x];
+	    int r = m->r - n->r;
+	    int g = m->g - n->g;
+	    int b = m->b - n->b;
+	    diff += r*r+g*g+b*b;
+	}
+	p1+=linex;
+	p2+=linex;
+    }
+    return diff;
 }
 
 static int valtodc(int val)
@@ -374,20 +401,32 @@ static void change_quant(int quant, int*dquant)
     *dquant = 0;
 }
 
-void encode_blockI(TAG*tag, RGBA*pic, int bx, int by, int width, int height, int*quant)
+void decode_blockI(VIDEOSTREAM*s, block_t*b, int bx, int by)
+{
+    int x,y;
+    /* FIXME */
+    for(x=0;x<16;x++)
+    for(y=0;y<16;y++) {
+	s->oldpic[(y+by*16)*s->width+(x+bx*16)] = s->current[(y+by*16)*s->width+(x+bx*16)];
+    }
+}
+
+void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 {
     fblock_t fb;
     block_t b;
     int dquant=0;
     int cbpcbits = 0, cbpybits=0;
 
-    getregion(&fb, pic, bx, by, width, height);
+    getregion(&fb, s->current, bx, by, s->width, s->height);
     dodct(&fb);
     
     change_quant(*quant, &dquant);
     *quant+=dquant;
-
     quantize(&fb, &b, 1, *quant);
+
+    decode_blockI(s, &b, bx, by);
+
     getblockpatterns(&b, &cbpybits, &cbpcbits, 1);
 
     if(dquant) {
@@ -413,7 +452,7 @@ void encode_blockI(TAG*tag, RGBA*pic, int bx, int by, int width, int height, int
     encode8x8(tag, b.v, 1, cbpcbits&1);
 }
 
-void encode_blockP(TAG*tag, RGBA*pic, int bx, int by, int width, int height, int*quant)
+void encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 {
     fblock_t fb;
     block_t b;
@@ -424,7 +463,16 @@ void encode_blockP(TAG*tag, RGBA*pic, int bx, int by, int width, int height, int
     int mode = 0;
     int cbpcbits = 0, cbpybits=0;
 
-    getregion(&fb, pic, bx, by, width, height);
+    {
+	int diff;
+	diff = compareregions(s, bx, by);
+	if(diff < 64/*TODO: should be a parameter*/) {
+	    swf_SetBits(tag, 1,1); /* cod=1, block skipped */
+	    return;
+	}
+    }
+
+    getregion(&fb, s->current, bx, by, s->width, s->height);
     dodct(&fb);
 
     change_quant(*quant, &dquant);
@@ -510,48 +558,48 @@ static void writeHeader(TAG*tag, int width, int height, int frame, int quant, in
     swf_SetBits(tag, 0, 1); /* No extra info */
 }
 
-void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, U16 width, U16 height, int frame)
+void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic)
 {
     int bx, by, bbx, bby;
     int quant = 7;
 
-    /* TODO: width not divisible by 16 will get us in trouble */
-    width=width&~15; height=height&~15;
+    writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
 
-    writeHeader(tag, width, height, frame, quant, TYPE_IFRAME);
+    bbx = (s->width+15)/16;
+    bby = (s->height+15)/16;
 
-    bbx = (width+15)/16;
-    bby = (height+15)/16;
+    s->current = pic;
 
     for(by=0;by<bby;by++)
     {
 	for(bx=0;bx<bbx;bx++)
 	{
-	    encode_blockI(tag, pic, bx, by, width, height, &quant);
+	    encode_blockI(tag, s, bx, by, &quant);
 	}
     }
+    s->frame++;
 }
 
-void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, U16 width, U16 height, int frame)
+void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic)
 {
     int bx, by, bbx, bby;
     int quant = 7;
 
-    /* TODO: width not divisible by 16 will get us in trouble */
-    width=width&~15; height=height&~15;
+    writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
 
-    writeHeader(tag, width, height, frame, quant, TYPE_PFRAME);
+    bbx = (s->width+15)/16;
+    bby = (s->height+15)/16;
 
-    bbx = (width+15)/16;
-    bby = (height+15)/16;
+    s->current = pic;
 
     for(by=0;by<bby;by++)
     {
 	for(bx=0;bx<bbx;bx++)
 	{
-	    encode_blockP(tag, pic, bx, by, width, height, &quant);
+	    encode_blockP(tag, s, bx, by, &quant);
 	}
     }
+    s->frame++;
 }
 
 int main(int argn, char*argv[])
@@ -560,19 +608,21 @@ int main(int argn, char*argv[])
     int t;
     SWF swf;
     TAG * tag;
-    RGBA* pic, rgb;
+    RGBA* pic, *pic2, rgb;
     SWFPLACEOBJECT obj;
     int width = 0;
     int height = 0;
-    int frames = 2;
+    int frames = 100;
     unsigned char*data;
     char* fname = "/home/kramm/pics/peppers.png";
     VIDEOSTREAM stream;
+    double d = 1.0;
 
     memset(&stream, 0, sizeof(stream));
 
     getPNG(fname, &width, &height, &data);
     pic = (RGBA*)malloc(width*height*sizeof(RGBA));
+    pic2 = (RGBA*)malloc(width*height*sizeof(RGBA));
     memcpy(pic, data, width*height*sizeof(RGBA));
     free(data);
 
@@ -597,12 +647,22 @@ int main(int argn, char*argv[])
     
     for(t=0;t<frames;t++)
     {
+	int x,y;
+	double xx,yy;
+	for(y=0,yy=0;y<height;y++,yy+=d)  {
+	    RGBA*line = &pic[((int)yy)*width];
+	    for(x=0,xx=0;x<width;x++,xx+=d) {
+		pic2[y*width+x] = line[((int)xx)];
+	    }
+	}
+	printf("frame:%d\n", t);fflush(stdout);
+
 	tag = swf_InsertTag(tag, ST_VIDEOFRAME);
 	swf_SetU16(tag, 33);
 	if(t==0)
-	    swf_SetVideoStreamIFrame(tag, &stream, pic, width, height, t);
+	    swf_SetVideoStreamIFrame(tag, &stream, pic2);
 	else
-	    swf_SetVideoStreamPFrame(tag, &stream, pic, width, height, t);
+	    swf_SetVideoStreamPFrame(tag, &stream, pic2);
 
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
 	swf_GetPlaceObject(0, &obj);
@@ -617,6 +677,7 @@ int main(int argn, char*argv[])
 	swf_SetPlaceObject(tag,&obj);
 
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
+	d-=0.005;
     }
    
     tag = swf_InsertTag(tag, ST_END);
