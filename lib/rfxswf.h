@@ -70,6 +70,7 @@ extern "C" {
 #define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
 #define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
 #endif
+
 // SWF Types
 
 typedef         unsigned long   U32;
@@ -239,6 +240,7 @@ int   swf_SetBlock(TAG * t,U8 * b,int l);
 
 U8    swf_GetU8(TAG * t);                   // resets Bitcount
 U16   swf_GetU16(TAG * t);
+#define swf_GetS16(tag)     ((S16)swf_GetU16(tag))
 U32   swf_GetU32(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
@@ -246,7 +248,9 @@ void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
 char* swf_GetString(TAG*t);
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
+void  swf_SetS16(TAG * t,int v);
 int   swf_SetU32(TAG * t,U32 v);
+#define swf_SetString(t,s)  swf_SetBlock(t,s,strlen(s)+1)
 
 //int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_GetRect(TAG * t,SRECT * r);
@@ -271,26 +275,8 @@ void swf_ExpandRect3(SRECT*src, SPOINT center, int radius);
 SPOINT swf_TurnPoint(SPOINT p, MATRIX* m);
 SRECT swf_TurnRect(SRECT r, MATRIX* m);
 
-// Function Macros
-
-#define swf_GetS8(tag)      ((S8)swf_GetU8(tag))
-#define swf_GetS16(tag)     ((S16)swf_GetU16(tag))
-#define swf_GetS32(tag)     ((S32)swf_GetU32(tag))
-#define swf_GetCoord(tag)   ((SCOORD)swf_GetU32(tag))
-#define swf_GetFixed(tag)   ((SFIXED)swf_GetU32(tag))
-
-#define swf_SetS8(tag,v)    swf_SetU8(tag,(U8)v)
-#define swf_SetS16(tag,v)   swf_SetU16(tag,(U16)v)
-#define swf_SetS32(tag,v)   swf_SetU32(tag,(U32)v)
-#define swf_SetCoord(tag,v) swf_SetU32(tag,(U32)v)
-#define swf_SetFixed(tag,v) swf_SetU32(tag,(U32)v)
-#define swf_SetString(t,s)  swf_SetBlock(t,s,strlen(s)+1)
-
 #ifndef FAILED
 #define FAILED(b)       ((b)<0)
-#endif
-#ifndef SUCCEEDED
-#define SUCCEEDED(b)     ((b)>=0)
 #endif
 
 // Tag IDs (adopted from J. C. Kessels' Form2Flash)
