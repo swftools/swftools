@@ -18,7 +18,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2005-01-09-1739
+VERSION=2005-01-21-2006
 
 
 # ------------------------------------------------------------------
@@ -308,6 +308,7 @@ fi
 if test "x$UNGIFMISSING" = "xtrue";then
     DISABLEGIF2SWF=true
     MISSINGLIBS="${MISSINGLIBS} ungif"
+    PARTIAL=true
 fi
 
 if test "x${ac_cv_header_jpeglib_h}" '!=' "xyes"; then
