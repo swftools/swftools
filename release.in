@@ -63,6 +63,8 @@ ${name}/avi2swf/avi2swf.cc \
 ${name}/avi2swf/videoreader.h \
 ${name}/avi2swf/videoreader_avifile.hh \
 ${name}/avi2swf/videoreader_avifile.cc \
+${name}/avi2swf/videoreader_vfw.hh \
+${name}/avi2swf/videoreader_vfw.cc \
 ${name}/avi2swf/v2swf.c \
 ${name}/avi2swf/v2swf.h \
 ${name}/swfs/simple_viewer.c \
