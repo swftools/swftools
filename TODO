@@ -1,7 +1,7 @@
 swfc:
 
-    * .buttons
     * .editbox
+    * .morph
     * .texture
     * .orbit
     * plugins?
@@ -15,7 +15,7 @@ swfc:
     * .egon  (stub is there, never really implemented)... folding edges?
     * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
-    * SWF 3 actionscript commands shortcut
+    * SWF 3 actionscript commands shortcuts: geturl, gotoframe?
     * .hide/.show?
     * store instance coordinates for .put with same name after .del?
     * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
@@ -46,11 +46,11 @@ swfcombine:
 swfextract:
     
     * mp3 extraction should also work for movieclips.
+    * frame extraction should also extract not yet deleted characters from the previous frames.
 
 swfbbox:
 
-    * add manpage
-    * support for text boxes
+    * support for MorphShape?
 
 wav2swf:
 
