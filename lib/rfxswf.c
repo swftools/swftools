@@ -50,73 +50,25 @@
 
 // memory allocation
 
-void* rfx_alloc(int size)
+void* rfxalloc(int size)
 {
   void*ptr;
-  if(size == 0) {
-    *(int*)0 = 0xdead;
-    fprintf(stderr, "Warning: Zero alloc\n");
-    return 0;
-  }
-
-  ptr = malloc(size);
-  if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory\n");
-    /* TODO: we should send a signal, so that the debugger kicks in */
-    exit(1);
-  }
-  return ptr;
-}
-void* rfx_realloc(void*data, int size)
-{
-  void*ptr;
-  if(size == 0) {
-    *(int*)0 = 0xdead;
-    fprintf(stderr, "Warning: Zero realloc\n");
-    rfx_free(data);
-    return 0;
-  }
-  if(!data) {
-    ptr = malloc(size);
-  } else {
-    ptr = realloc(data, size);
-  }
-
-  if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory\n");
-    /* TODO: we should send a signal, so that the debugger kicks in */
-    exit(1);
-  }
-  return ptr;
-}
-void* rfx_calloc(int size)
-{
-  void*ptr;
-  if(size == 0) {
-    *(int*)0 = 0xdead;
-    fprintf(stderr, "Warning: Zero alloc\n");
-    return 0;
-  }
 #ifdef HAVE_CALLOC
   ptr = calloc(size);
 #else
   ptr = malloc(size);
+  memset(ptr, 0, size);
 #endif
   if(!ptr) {
     fprintf(stderr, "FATAL: Out of memory\n");
     /* TODO: we should send a signal, so that the debugger kicks in */
     exit(1);
   }
-#ifndef HAVE_CALLOC
-  memset(ptr, 0, size);
-#endif
   return ptr;
 }
 
-void rfx_free(void*ptr)
+void rfxdealloc(void*ptr)
 {
-  if(!ptr)
-    return;
   free(ptr);
 }
 
@@ -214,7 +166,15 @@ int swf_SetBlock(TAG * t,U8 * b,int l)
   swf_ResetWriteBits(t);
   if (newlen>t->memsize)
   { U32  newmem  = MEMSIZE(newlen);  
-    U8 * newdata = (U8*)(rfx_realloc(t->data,newmem));
+    U8 * newdata = (U8*)((t->data)?realloc(t->data,newmem):malloc(newmem));
+    if (!newdata)
+    {
+      #ifdef DEBUG_RFXSWF
+        fprintf(stderr,"Fatal Error: malloc()/realloc() failed (1). (%d bytes)\n", newmem);
+	*(int*)0=0;
+      #endif
+      return 0;
+    }
     t->memsize = newmem;
     t->data    = newdata;
   }
@@ -804,12 +764,12 @@ int swf_VerifyPassword(TAG * t, const char * password)
 	return 0;
     }
     n = x-(md5string1+3);
-    salt = (char*)rfx_alloc(n+1);
+    salt = (char*)malloc(n+1);
     memcpy(salt, md5string1+3, n);
     salt[n] = 0;
 
     md5string2 = crypt_md5(password, salt);
-    rfx_free(salt);
+    free(salt);
     if(strcmp(md5string1, md5string2) != 0)
 	return 0;
     return 1;
@@ -820,15 +780,18 @@ int swf_VerifyPassword(TAG * t, const char * password)
 TAG * swf_InsertTag(TAG * after,U16 id)
 { TAG * t;
 
-  t = (TAG *)rfx_calloc(sizeof(TAG));
-  t->id = id;
-  
-  if (after)
-  {
-    t->prev  = after;
-    t->next  = after->next;
-    after->next = t;
-    if (t->next) t->next->prev = t;
+  t = (TAG *)malloc(sizeof(TAG));
+  if (t)
+  { memset(t,0x00,sizeof(TAG));
+    t->id = id;
+    
+    if (after)
+    {
+      t->prev  = after;
+      t->next  = after->next;
+      after->next = t;
+      if (t->next) t->next->prev = t;
+    }
   }
   return t;
 }
@@ -836,15 +799,18 @@ TAG * swf_InsertTag(TAG * after,U16 id)
 TAG * swf_InsertTagBefore(SWF* swf, TAG * before,U16 id)
 { TAG * t;
 
-  t = (TAG *)rfx_calloc(sizeof(TAG));
-  t->id = id;
-  
-  if (before)
-  {
-    t->next  = before;
-    t->prev  = before->prev;
-    before->prev = t;
-    if (t->prev) t->prev->next = t;
+  t = (TAG *)malloc(sizeof(TAG));
+  if (t)
+  { memset(t,0x00,sizeof(TAG));
+    t->id = id;
+    
+    if (before)
+    {
+      t->next  = before;
+      t->prev  = before->prev;
+      before->prev = t;
+      if (t->prev) t->prev->next = t;
+    }
   }
   if(swf && swf->firstTag == before) {
     swf->firstTag = t;
@@ -854,7 +820,7 @@ TAG * swf_InsertTagBefore(SWF* swf, TAG * before,U16 id)
 
 void swf_ClearTag(TAG * t)
 {
-  if (t->data) rfx_free(t->data);
+  if (t->data) free(t->data);
   t->data = 0;
   t->pos = 0;
   t->len = 0;
@@ -882,8 +848,8 @@ int swf_DeleteTag(TAG * t)
   if (t->prev) t->prev->next = t->next;
   if (t->next) t->next->prev = t->prev;
 
-  if (t->data) rfx_free(t->data);
-  rfx_free(t);
+  if (t->data) free(t->data);
+  free(t);
   return 0;
 }
 
@@ -908,13 +874,30 @@ TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
   if (id==ST_DEFINESPRITE) len = 2*sizeof(U16);
   // Sprite handling fix: Flatten sprite tree
 
-  t = (TAG *)rfx_calloc(sizeof(TAG));
+  t = (TAG *)malloc(sizeof(TAG));
+  
+  if (!t)
+  {
+    #ifdef DEBUG_RFXSWF
+      fprintf(stderr,"Fatal Error: malloc()/realloc() failed (2). (%d bytes)\n", sizeof(TAG));
+    #endif
+    return NULL;
+  }
+
+  memset(t,0x00,sizeof(TAG));
   
   t->len = len;
   t->id  = id;
 
   if (t->len)
-  { t->data = (U8*)rfx_alloc(t->len);
+  { t->data = (U8*)malloc(t->len);
+    if (!t->data)
+    {
+      #ifdef DEBUG_RFXSWF
+        fprintf(stderr,"Fatal Error: malloc()/realloc() failed (3). (%d bytes)\n", t->len);
+      #endif
+      return NULL;
+    }
     t->memsize = t->len;
     if (reader->read(reader, t->data, t->len) != t->len) return NULL;
   }
@@ -1055,7 +1038,7 @@ void swf_UnFoldSprite(TAG * t)
     it->len = len;
     it->id  = id;
     if (it->len)
-    { it->data = (U8*)rfx_alloc(it->len);
+    { it->data = (U8*)malloc(it->len);
       it->memsize = it->len;
       swf_GetBlock(t, it->data, it->len);
     }
@@ -1064,7 +1047,7 @@ void swf_UnFoldSprite(TAG * t)
 	break;
   }
   
-  rfx_free(t->data); t->data = 0;
+  free(t->data); t->data = 0;
   t->memsize = t->len = t->pos = 0;
 
   swf_SetU16(t, spriteid);
@@ -1089,7 +1072,7 @@ void swf_FoldSprite(TAG * t)
 
   t->pos = 0;
   id = swf_GetU16(t);
-  rfx_free(t->data);
+  free(t->data);
   t->len = t->pos = t->memsize = 0;
   t->data = 0;
 
@@ -1472,8 +1455,8 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 
   while (t)
   { TAG * tnew = t->next;
-    if (t->data) rfx_free(t->data);
-    rfx_free(t);
+    if (t->data) free(t->data);
+    free(t);
     t = tnew;
   }
   swf->firstTag = 0;
