@@ -39,6 +39,7 @@
 #include "lame/lame.h"
 
 #include "./bitio.h"
+#include "./MD5.h"
 
 // internal constants
 
@@ -625,8 +626,42 @@ int swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
   return 0;
 }
 
-int swf_GetPoint(TAG * t,SPOINT * p) { return 0; }
-int swf_SetPoint(TAG * t,SPOINT * p) { return 0; }
+//int swf_GetPoint(TAG * t,SPOINT * p) { return 0; }
+//int swf_SetPoint(TAG * t,SPOINT * p) { return 0; }
+
+void  swf_SetPassword(TAG * t, const char * password)
+{
+    /* WARNING: crypt_md5 is not reentrant */
+    char* md5string = crypt_md5(password, "salt"); /* FIXME- get random salt */
+    swf_SetString(t, md5string);
+}
+
+int swf_VerifyPassword(TAG * t, const char * password)
+{
+    char*md5string1, *md5string2;
+    char*x;
+    char*md5, *salt;
+    int n;
+
+    md5string1 = swf_GetString(t);
+
+    if(!strncmp(md5string1, "$1$",3 )) {
+	return 0;
+    }
+    x = strchr(md5string1+3, '$');
+    if(!x)
+	return 0;
+    n = x-(md5string1+3);
+    salt = (char*)malloc(n+1);
+    memcpy(salt, md5string1+3, n);
+    salt[n] = 0;
+
+    md5string2 = crypt_md5(password, salt);
+    free(salt);
+    if(strcmp(md5string1, md5string2) != 0)
+	return 0;
+    return 1;
+}
 
 // Tag List Manipulating Functions
 

@@ -236,17 +236,20 @@ int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
 int   swf_SetU32(TAG * t,U32 v);
 
-int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
+//int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_GetRect(TAG * t,SRECT * r);
 int   swf_GetMatrix(TAG * t,MATRIX * m);
 int   swf_GetCXForm(TAG * t,CXFORM * cx,U8 alpha);
 
-int   swf_SetPoint(TAG * t,SPOINT * p);     // resets Bitcount
+//int   swf_SetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_SetRect(TAG * t,SRECT * r);
 int   swf_SetMatrix(TAG * t,MATRIX * m);
 int   swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha);
 int   swf_SetRGB(TAG * t,RGBA * col);
 int   swf_SetRGBA(TAG * t,RGBA * col);
+void  swf_SetPassword(TAG * t, const char * password);
+
+int   swf_VerifyPassword(TAG * t, const char * password);
 
 // helper functions:
 
