@@ -1,6 +1,8 @@
 %{
 
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "q.h"
 #include "parser.h"
 
@@ -118,6 +120,8 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 
 #define MAX_INCLUDE_DEPTH 16
 YY_BUFFER_STATE include_stack[MAX_INCLUDE_DEPTH];
+int line_stack[MAX_INCLUDE_DEPTH];
+int column_stack[MAX_INCLUDE_DEPTH];
 int include_stack_ptr = 0;
 
 void handleInclude(char*text, int len)
@@ -137,7 +141,10 @@ void handleInclude(char*text, int len)
     	fprintf( stderr, "Includes nested too deeply" );
     	exit( 1 );
     }
-    include_stack[include_stack_ptr++] = YY_CURRENT_BUFFER;
+    include_stack[include_stack_ptr] = YY_CURRENT_BUFFER;
+    line_stack[include_stack_ptr] = line;
+    column_stack[include_stack_ptr] = column;
+    include_stack_ptr++;
     yyin = fopen(text, "rb");
     if (!yyin) {
 	fprintf(stderr, "Couldn't open %s\n", text);
@@ -208,6 +215,8 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 				 yy_delete_buffer( YY_CURRENT_BUFFER );
 				 yy_switch_to_buffer(
 				      include_stack[include_stack_ptr] );
+				 column = column_stack[include_stack_ptr];
+				 line = line_stack[include_stack_ptr];
 			     }
 			    }
 
