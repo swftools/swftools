@@ -131,6 +131,9 @@
 /* have/use freetype library */
 #undef HAVE_FREETYPE
 
+/* have/use freetype library */
+#undef HAVE_AVIFILE
+
 #undef HAVE_FONTCONFIG_H
 #undef HAVE_FONTCONFIG
 
