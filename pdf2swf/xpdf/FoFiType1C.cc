@@ -231,8 +231,11 @@ void FoFiType1C::convertToType1(char **newEncoding, GBool ascii,
     (*outputFunc)(outputStream,
 		  "0 1 255 {1 index exch /.notdef put} for\n", 40);
     enc = newEncoding ? newEncoding : encoding;
+    if(!enc) {
+	fprintf(stderr, "convertToType1: Warning: No Encoding\n");
+    }
     for (i = 0; i < 256; ++i) {
-      if (enc[i]) {
+      if (enc && enc[i]) {
 	sprintf(buf, "dup %d /%s put\n", i, enc[i]);
 	(*outputFunc)(outputStream, buf, strlen(buf));
       }
