@@ -1166,7 +1166,7 @@ int main(int argn, char *argv[])
 	}
     }
 
-    fi = open(outputname, O_RDWR|O_TRUNC|O_CREAT, 0777);
+    fi = open(outputname, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
 
     if(config.zlib)
 	swf_WriteSWC(fi, &newswf);
