@@ -1,4 +1,4 @@
-# Makefile.in generated automatically by automake 1.4 from Makefile.am
+# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
 
 # Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
@@ -34,7 +34,9 @@ oldincludedir = /usr/include
 
 DESTDIR =
 
-pkgdatadir = $(datadir)/@PACKAGE@/swfs
+pkgdatadir = $(datadir)/@PACKAGE@
+pkglibdir = $(libdir)/@PACKAGE@
+pkgincludedir = $(includedir)/@PACKAGE@
 
 top_builddir = ..
 
@@ -50,33 +52,100 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-AWK = @AWK@
+build_alias = @build_alias@
+build_triplet = @build@
+host_alias = @host_alias@
+host_triplet = @host@
+target_alias = @target_alias@
+target_triplet = @target@
 CC = @CC@
 CPP = @CPP@
 CXX = @CXX@
 EXEEXT = @EXEEXT@
 HAVE_UNISTD_H = @HAVE_UNISTD_H@
+JPEG2SWF = @JPEG2SWF@
 LN_S = @LN_S@
-MAKEINFO = @MAKEINFO@
 PACKAGE = @PACKAGE@
 RANLIB = @RANLIB@
+SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
+UNCOMPRESS = @UNCOMPRESS@
+USE_GZIP = @USE_GZIP@
 VERSION = @VERSION@
+WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-pkgdata_DATA = PreLoaderTemplate.swf simple_viewer.swf swft_loader.swf tessel_loader.swf
-
+bin_PROGRAMS = simple_viewer
+LDADD = 
+simple_viewer_SOURCES = simple_viewer.c
+simple_viewer_LDADD = ../lib/rfxswf.o
+INCLUDES = -I../lib
+pkgdata_DATA = simple_viewer.swf PreLoaderTemplate.swf swft_loader.swf tessel_loader.swf
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
+CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
+bin_PROGRAMS =  simple_viewer$(EXEEXT)
+PROGRAMS =  $(bin_PROGRAMS)
+
+
+DEFS = @DEFS@ -I. -I$(srcdir) -I..
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+simple_viewer_OBJECTS =  simple_viewer.o
+simple_viewer_DEPENDENCIES =  ../lib/rfxswf.o
+simple_viewer_LDFLAGS = 
+CFLAGS = @CFLAGS@
+COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
 DATA =  $(pkgdata_DATA)
 
-DIST_COMMON =  Makefile.in
+DIST_COMMON = Makefile.in
 
 
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
-TAR = gtar
+TAR = tar
 GZIP_ENV = --best
+DEP_FILES =  .deps/simple_viewer.P
+SOURCES = $(simple_viewer_SOURCES)
+OBJECTS = $(simple_viewer_OBJECTS)
+
 all: all-redirect
 .SUFFIXES:
+.SUFFIXES: .S .c .o .s
+
+mostlyclean-binPROGRAMS:
+
+clean-binPROGRAMS:
+	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+
+distclean-binPROGRAMS:
+
+maintainer-clean-binPROGRAMS:
+
+simple_viewer.swf: simple_viewer
+	echo Calling ./simple_viewer to create simple_viewer.swf
+	./simple_viewer
+
+.s.o:
+	$(COMPILE) -c $<
+
+.S.o:
+	$(COMPILE) -c $<
+
+mostlyclean-compile:
+	-rm -f *.o core *.core
+
+clean-compile:
+
+distclean-compile:
+	-rm -f *.tab.c
+
+maintainer-clean-compile:
+
+simple_viewer$(EXEEXT): $(simple_viewer_OBJECTS) $(simple_viewer_DEPENDENCIES)
+	@rm -f simple_viewer$(EXEEXT)
+	$(LINK) $(simple_viewer_LDFLAGS) $(simple_viewer_OBJECTS) $(simple_viewer_LDADD) $(LIBS)
 
 install-pkgdataDATA: $(pkgdata_DATA)
 	@$(NORMAL_INSTALL)
@@ -90,18 +159,41 @@ install-pkgdataDATA: $(pkgdata_DATA)
 	    $(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/$$p; \
 	  fi; fi; \
 	done
-	$(LN_S) -f $(DESTDIR)$(pkgdatadir)/simple_viewer.swf $(DESTDIR)$(pkgdatadir)/default_viewer.swf
-	$(LN_S) -f $(DESTDIR)$(pkgdatadir)/tessel_loader.swf $(DESTDIR)$(pkgdatadir)/default_loader.swf
 
 uninstall-pkgdataDATA:
 	@$(NORMAL_UNINSTALL)
 	list='$(pkgdata_DATA)'; for p in $$list; do \
 	  rm -f $(DESTDIR)$(pkgdatadir)/$$p; \
 	done
-	rm $(DESTDIR)$(pkgdatadir)/default_*.swf
-tags: TAGS
-TAGS:
 
+tags: TAGS
+
+ID: $(HEADERS) $(SOURCES) $(LISP)
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	here=`pwd` && cd $(srcdir) \
+	  && mkid -f$$here/ID $$unique $(LISP)
+
+TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) $(LISP)
+	tags=; \
+	here=`pwd`; \
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	test -z "$(ETAGS_ARGS)$$unique$(LISP)$$tags" \
+	  || (cd $(srcdir) && etags $(ETAGS_ARGS) $$tags  $$unique $(LISP) -o $$here/TAGS)
+
+mostlyclean-tags:
+
+clean-tags:
+
+distclean-tags:
+	-rm -f TAGS ID
+
+maintainer-clean-tags:
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
@@ -121,6 +213,38 @@ distdir: $(DISTFILES)
 	    || cp -p $$d/$$file $(distdir)/$$file || :; \
 	  fi; \
 	done
+
+DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
+
+-include $(DEP_FILES)
+
+mostlyclean-depend:
+
+clean-depend:
+
+distclean-depend:
+	-rm -rf .deps
+
+maintainer-clean-depend:
+
+%.o: %.c
+	@echo '$(COMPILE) -c $<'; \
+	$(COMPILE) -Wp,-MD,.deps/$(*F).pp -c $<
+	@-cp .deps/$(*F).pp .deps/$(*F).P; \
+	tr ' ' '\012' < .deps/$(*F).pp \
+	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
+	    >> .deps/$(*F).P; \
+	rm .deps/$(*F).pp
+
+%.lo: %.c
+	@echo '$(LTCOMPILE) -c $<'; \
+	$(LTCOMPILE) -Wp,-MD,.deps/$(*F).pp -c $<
+	@-sed -e 's/^\([^:]*\)\.o[ 	]*:/\1.lo \1.o :/' \
+	  < .deps/$(*F).pp > .deps/$(*F).P; \
+	tr ' ' '\012' < .deps/$(*F).pp \
+	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
+	    >> .deps/$(*F).P; \
+	rm -f .deps/$(*F).pp
 info-am:
 info: info-am
 dvi-am:
@@ -129,23 +253,21 @@ check-am: all-am
 check: check-am
 installcheck-am:
 installcheck: installcheck-am
-install-exec-am:
-install-exec: install-exec-am
 
 install-data-am: install-pkgdataDATA
 install-data: install-data-am
 
 install-am: all-am
-	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
+	@$(MAKE) $(AM_MAKEFLAGS) install-data-am
 install: install-am
-uninstall-am: uninstall-pkgdataDATA
+uninstall-am: uninstall-binPROGRAMS uninstall-pkgdataDATA
 uninstall: uninstall-am
-all-am: Makefile $(DATA)
+all-am: Makefile $(PROGRAMS) $(DATA)
 all-redirect: all-am
 install-strip:
 	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs:
-	$(mkinstalldirs)  $(DESTDIR)$(pkgdatadir)
+	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(pkgdatadir)
 
 
 mostlyclean-generic:
@@ -154,33 +276,45 @@ clean-generic:
 
 distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
-	-rm -f config.cache config.log
+	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
 
 maintainer-clean-generic:
-mostlyclean-am:  mostlyclean-generic
+mostlyclean-am:  mostlyclean-binPROGRAMS mostlyclean-compile \
+		mostlyclean-tags mostlyclean-depend mostlyclean-generic
 
 mostlyclean: mostlyclean-am
 
-clean-am:  clean-generic mostlyclean-am
+clean-am:  clean-binPROGRAMS clean-compile clean-tags clean-depend \
+		clean-generic mostlyclean-am
 
 clean: clean-am
 
-distclean-am:  distclean-generic clean-am
+distclean-am:  distclean-binPROGRAMS distclean-compile distclean-tags \
+		distclean-depend distclean-generic clean-am
 
 distclean: distclean-am
 
-maintainer-clean-am:  maintainer-clean-generic distclean-am
+maintainer-clean-am:  maintainer-clean-binPROGRAMS \
+		maintainer-clean-compile maintainer-clean-tags \
+		maintainer-clean-depend maintainer-clean-generic \
+		distclean-am
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
 
 maintainer-clean: maintainer-clean-am
 
-.PHONY: uninstall-pkgdataDATA install-pkgdataDATA tags distdir info-am \
-info dvi-am dvi check check-am installcheck-am installcheck \
-install-exec-am install-exec install-data-am install-data install-am \
-install uninstall-am uninstall all-redirect all-am all installdirs \
-mostlyclean-generic distclean-generic clean-generic \
-maintainer-clean-generic clean mostlyclean distclean maintainer-clean
+.PHONY: mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
+maintainer-clean-binPROGRAMS \
+mostlyclean-compile distclean-compile clean-compile \
+maintainer-clean-compile uninstall-pkgdataDATA install-pkgdataDATA tags \
+mostlyclean-tags distclean-tags clean-tags maintainer-clean-tags \
+distdir mostlyclean-depend distclean-depend clean-depend \
+maintainer-clean-depend info-am info dvi-am dvi check check-am \
+installcheck-am installcheck \
+install-data-am install-data install-am install uninstall-am uninstall \
+all-redirect all-am all installdirs mostlyclean-generic \
+distclean-generic clean-generic maintainer-clean-generic clean \
+mostlyclean distclean maintainer-clean
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
