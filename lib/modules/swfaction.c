@@ -487,6 +487,19 @@ void swf_AddActionTAG(U8 op, U8*data, U16 len)
     currentatag = currentatag->next;
 }
 
+ActionMarker action_setMarker()
+{
+    ActionMarker m;
+    m.atag = currentatag;
+    return m;
+}
+
+int inline ActionTagSize(ActionTAG*atag)
+{
+    return (atag->op&0x80)?3+(atag->len):1+0;
+}
+
+
 #define ACTION_END            0x00
 #define ACTION_NEXTFRAME      0x04
 #define ACTION_PREVIOUSFRAME  0x05
@@ -576,6 +589,56 @@ void swf_AddActionTAG(U8 op, U8*data, U16 len)
 #define ACTION_IF             0x9d
 #define ACTION_CALL           0x9e
 #define ACTION_GOTOFRAME2     0x9f
+
+void action_fixjump(ActionMarker m1, ActionMarker m2)
+{
+    ActionTAG* a1 = m1.atag;
+    ActionTAG* a2 = m2.atag;
+    ActionTAG* a;
+    int len = 0;
+    int oplen = 0;
+    a = a1;
+    while(a && a!=a2)
+    {
+	if(a != a1) //first one is for free
+	{
+	   len += ActionTagSize(a);
+	   oplen ++;
+	}
+	a = a->next;
+    }
+    if(!a)
+    { len = 0;
+      oplen = 0;
+      a = a2;
+      while(a && a!=a1) {
+	  len -= ActionTagSize(a);
+	  oplen --;
+	  a = a->next;
+      }
+      if(!a) {
+	  fprintf(stderr, "action_fixjump: couldn't find second tag\n");
+	  return;
+      }
+      len -= ActionTagSize(a);
+      oplen --;
+    }
+
+    if (a1->op == ACTION_IF || a1->op == ACTION_JUMP) 
+    {
+	*(U16*)(a1->data) = len;
+    }
+    else if(a1->op == ACTION_WAITFORFRAME)
+    {
+	((U8*)(a1->data))[2] = oplen;
+    }
+    else if(a1->op == ACTION_WAITFORFRAME2)
+    {
+	((U8*)(a1->data))[0] = oplen;
+    }
+    
+}
+
 
 void action_NextFrame() {swf_AddActionTAG(ACTION_NEXTFRAME, 0, 0);}
 void action_PreviousFrame() {swf_AddActionTAG(ACTION_PREVIOUSFRAME, 0, 0);}
