@@ -1612,12 +1612,14 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
   double x[gfxColorMaxComps];
   double y[gfxColorMaxComps];
   int i, j, k;
+  int maxPixelForAlloc;
 
   ok = gTrue;
 
   // bits per component and color space
   bits = bitsA;
   maxPixel = (1 << bits) - 1;
+  maxPixelForAlloc = (1 << (bits>8?bits:8));
   colorSpace = colorSpaceA;
 
   // get decode map
@@ -1664,7 +1666,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
     colorSpace2 = indexedCS->getBase();
     indexHigh = indexedCS->getIndexHigh();
     nComps2 = colorSpace2->getNComps();
-    lookup = (double *)gmalloc((maxPixel + 1) * nComps2 * sizeof(double));
+    lookup = (double *)gmalloc((maxPixelForAlloc + 1) * nComps2 * sizeof(double));
     lookup2 = indexedCS->getLookup();
     for (i = 0; i <= indexHigh; ++i) {
       j = (int)(decodeLow[0] +(i * decodeRange[0]) / maxPixel + 0.5);
@@ -1676,7 +1678,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
     sepCS = (GfxSeparationColorSpace *)colorSpace;
     colorSpace2 = sepCS->getAlt();
     nComps2 = colorSpace2->getNComps();
-    lookup = (double *)gmalloc((maxPixel + 1) * nComps2 * sizeof(double));
+    lookup = (double *)gmalloc((maxPixelForAlloc + 1) * nComps2 * sizeof(double));
     sepFunc = sepCS->getFunc();
     for (i = 0; i <= maxPixel; ++i) {
       x[0] = decodeLow[0] + (i * decodeRange[0]) / maxPixel;
@@ -1686,7 +1688,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
       }
     }
   } else {
-    lookup = (double *)gmalloc((maxPixel + 1) * nComps * sizeof(double));
+    lookup = (double *)gmalloc((maxPixelForAlloc + 1) * nComps * sizeof(double));
     for (i = 0; i <= maxPixel; ++i) {
       for (k = 0; k < nComps; ++k) {
 	lookup[i*nComps + k] = decodeLow[k] +
@@ -1734,12 +1736,14 @@ void GfxImageColorMap::getRGB(Guchar *x, GfxRGB *rgb) {
   int i;
 
   if (colorSpace2) {
+    //printf("lookup[%d] bits=%d\n",x[0],bits);fflush(stdout);
     p = &lookup[x[0] * nComps2];
     for (i = 0; i < nComps2; ++i) {
       color.c[i] = *p++;
     }
     colorSpace2->getRGB(&color, rgb);
   } else {
+    //printf("for i=0,i<%d, bits=%d\n",nComps,bits);fflush(stdout);
     for (i = 0; i < nComps; ++i) {
       color.c[i] = lookup[x[i] * nComps + i];
     }
