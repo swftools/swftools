@@ -249,6 +249,23 @@ void handleText(TAG*tag)
   printf("\n");
   swf_FontExtract_DefineTextCallback(-1,0,tag,4, textcallback);
 }
+	    
+void handleDefineBits(TAG*tag)
+{
+    U16 id;
+    U8 mode;
+    U16 width,height;
+    int bpp;
+    id = swf_GetU16(tag);
+    mode = swf_GetU8(tag);
+    width = swf_GetU16(tag);
+    height = swf_GetU16(tag);
+    printf(" image %dx%d",width,height);
+    if(mode == 3) printf(" (8 bpp)");
+    else if(mode == 4) printf(" (16 bpp)");
+    else if(mode == 5) printf(" (32 bpp)");
+    else printf(" (? bpp)");
+}
 
 void handleEditText(TAG*tag)
 {
@@ -470,14 +487,15 @@ int main (int argc,char ** argv)
 	}
  	printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
 	       " WIDTH=\"%d\"\n"
-	       //" BGCOLOR=#ffffffff\n"
+	       //" BGCOLOR=#ffffffff\n"?
 	       " HEIGHT=\"%d\"\n"
+	       //http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,23,0?
 	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=%s\">\n"
                "  <PARAM NAME=\"MOVIE\" VALUE=\"%s\">\n"
 	       "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
 	       "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
 	       "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
-	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n" //bgcolor=#ffffff
+	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n" //bgcolor=#ffffff?
 	       "   PLAY=\"true\" ALIGN=\"\" LOOP=\"true\" QUALITY=\"high\"\n"
 	       "   TYPE=\"application/x-shockwave-flash\"\n"
 	       "   PLUGINSPAGE=\"http://www.macromedia.com/go/getflashplayer\">\n"
@@ -605,7 +623,12 @@ int main (int argc,char ** argv)
 	    if(!issprite) {mainframe++; framelabel = 0;}
 	}
 
-	if(tag->id == ST_DEFINEEDITTEXT) {
+	if(tag->id == ST_DEFINEBITSLOSSLESS ||
+	   tag->id == ST_DEFINEBITSLOSSLESS2) {
+	    handleDefineBits(tag);
+	    printf("\n");
+	}
+	else if(tag->id == ST_DEFINEEDITTEXT) {
 	    handleEditText(tag);
 	    printf("\n");
 	}
