@@ -158,6 +158,93 @@ static void idct(double*src)
     }
 }
 
+static double c[8] = {1.0,
+0.980785280403230, // cos(Pi*1/16), sin(Pi*7/16)
+0.923879532511287, // cos(Pi*2/16), sin(Pi*6/16)
+0.831469612302545, // cos(Pi*3/16), sin(Pi*5/16)
+0.707106781186548, // cos(Pi*4/16), sin(Pi*4/16), 1/sqrt(2)
+0.555570233019602, // cos(Pi*5/16), sin(Pi*3/16)
+0.382683432365090, // cos(Pi*6/16), sin(Pi*2/16)
+0.195090322016128 // cos(Pi*7/16), sin(Pi*1/16)
+};
+
+static double cc[8];
+int ccquant = -1;
+
+static void preparequant(int quant)
+{
+    if(ccquant == quant)
+	return;
+    cc[0] = c[0]/(quant*2*4);
+    cc[1] = c[1]/(quant*2*4);
+    cc[2] = c[2]/(quant*2*4);
+    cc[3] = c[3]/(quant*2*4);
+    cc[4] = c[4]/(quant*2*4);
+    cc[5] = c[5]/(quant*2*4);
+    cc[6] = c[6]/(quant*2*4);
+    cc[7] = c[7]/(quant*2*4);
+    ccquant = quant;
+}
+
+inline static void innerdct(double*a,double*b, double*c)
+{
+    // c1*c7*2 = c6
+    // c2*c6*2 = c4
+    // c3*c5*2 = c2
+    // c4*c4*2 = 1
+
+     //{  1,  3,  5,  7, -7, -5, -3, -1},
+     //{  3, -7, -1, -5,  5,  1,  7, -3},
+     //{  5, -1,  7,  3, -3, -7,  1, -5},
+     //{  7, -5,  3, -1,  1, -3,  5, -7}
+    double b0,b1,b2,b3,b4,b5;
+    b2 = (a[0]+a[7]);
+    b3 = (a[1]+a[6]);
+    b4 = (a[2]+a[5]);
+    b5 = (a[3]+a[4]);
+
+    b0 = (b2+b5)*c[4];
+    b1 = (b3+b4)*c[4];
+    b[0*8] = b0 + b1;
+    b[4*8] = b0 - b1;
+    b[2*8] = (b2-b5)*c[2] + (b3-b4)*c[6];
+    b[6*8] = (b2-b5)*c[6] + (b4-b3)*c[2];
+
+    b0 = (a[0]-a[7]);
+    b1 = (a[1]-a[6]);
+    b2 = (a[2]-a[5]);
+    b3 = (a[3]-a[4]);
+
+    b[1*8] = b0*c[1] + b1*c[3] + b2*c[5] + b3*c[7];
+    b[3*8] = b0*c[3] - b1*c[7] - b2*c[1] - b3*c[5];
+    b[5*8] = b0*c[5] - b1*c[1] + b2*c[7] + b3*c[3];
+    b[7*8] = b0*c[7] - b1*c[5] + b2*c[3] - b3*c[1];
+}
+
+static void dct2(double*src, int*dest)
+{
+    double tmp[64], tmp2[64];
+    double*p;
+    int u,x,v,t;
+
+    for(v=0;v<8;v++)
+    {
+	double* a=&src[v*8];
+	double* b=&tmp[v];
+	innerdct(a,b,c);
+    }
+    for(v=0;v<8;v++)
+    {
+	double* a=&tmp[v*8];
+	double* b=&tmp2[v];
+	innerdct(a,b,cc);
+    }
+    for(t=0;t<64;t++) {
+	dest[zigzagtable[t]] = (int)(tmp2[t]);
+    }
+}
+
+
 static inline int truncate256(int a)
 {
     if(a>255) return 255;
@@ -504,9 +591,18 @@ static void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
     }
 }
 
+static void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
+{
+    quantize8x8(fb->y1, b->y1, has_dc, quant); 
+    quantize8x8(fb->y2, b->y2, has_dc, quant); 
+    quantize8x8(fb->y3, b->y3, has_dc, quant); 
+    quantize8x8(fb->y4, b->y4, has_dc, quant); 
+    quantize8x8(fb->u, b->u, has_dc, quant);   
+    quantize8x8(fb->v, b->v, has_dc, quant);   
+}
+
 static void dodct(fblock_t*fb)
 {
-    int t;
     dct(fb->y1); dct(fb->y2); dct(fb->y3); dct(fb->y4); 
     dct(fb->u);  dct(fb->v);  
     fzigzag(fb->y1);
@@ -515,6 +611,18 @@ static void dodct(fblock_t*fb)
     fzigzag(fb->y4);
     fzigzag(fb->u);
     fzigzag(fb->v); 
+}
+static void dodctandquant(fblock_t*fb, block_t*b, int has_dc, int quant)
+{
+    int t;
+    if(has_dc) {
+	dodct(fb);
+	quantize(fb,b,has_dc,quant);
+	return;
+    }
+    preparequant(quant);
+    dct2(fb->y1,b->y1); dct2(fb->y2,b->y2); dct2(fb->y3,b->y3); dct2(fb->y4,b->y4); 
+    dct2(fb->u,b->u);  dct2(fb->v,b->v);  
 }
 
 static void doidct(block_t*b)
@@ -553,15 +661,6 @@ static void truncateblock(block_t*b)
     }
 }
 
-static void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
-{
-    quantize8x8(fb->y1, b->y1, has_dc, quant); 
-    quantize8x8(fb->y2, b->y2, has_dc, quant); 
-    quantize8x8(fb->y3, b->y3, has_dc, quant); 
-    quantize8x8(fb->y4, b->y4, has_dc, quant); 
-    quantize8x8(fb->u, b->u, has_dc, quant);   
-    quantize8x8(fb->v, b->v, has_dc, quant);   
-}
 static void dequantize(block_t*b, int has_dc, int quant)
 {
     dequantize8x8(b->y1, has_dc, quant); 
@@ -619,11 +718,12 @@ static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int cbpcbits = 0, cbpybits=0;
 
     getregion(&fb, s->current, bx*16, by*16, s->width);
-    dodct(&fb);
     
     change_quant(*quant, &dquant);
     *quant+=dquant;
-    quantize(&fb, &b, 1, *quant);
+
+    dodctandquant(&fb, &b, 1, *quant);
+    //quantize(&fb, &b, 1, *quant);
 
     //decode_blockI(s, &b, bx, by);
 
@@ -779,8 +879,8 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	fblock_t fb_i;
 	int y,c;
 	memcpy(&fb_i, &fb, sizeof(fblock_t));
-	dodct(&fb_i);
-	quantize(&fb_i, &b_i, 1, *quant);
+	dodctandquant(&fb_i, &b_i, 1, *quant);
+	//quantize(&fb_i, &b_i, 1, *quant);
 	getblockpatterns(&b_i, &y, &c, 1);
 	bits_i = 1; //cod
 	bits_i += mcbpc_inter[3*4+c].len;
@@ -793,7 +893,6 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	bits_i += coefbits8x8(b_i.v, 1);
     }
 
-    if(bx&&by&&(bx<s->bbx-1)&&(by<s->bby-1))
     { /* consider mvd(x,y)-block */
 	fblock_t fbdiff;
 	int y,c;
@@ -804,9 +903,16 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	if(s->do_motion) {
 	    int hx,hy;
 	    int bestx=0,besty=0,bestbits=65536;
+	    int startx=-8,endx=8;
+	    int starty=-8,endy=8;
 
-	    for(hx=-8;hx<8;hx+=4)
-	    for(hy=-8;hy<8;hy+=4)
+	    if(!bx) startx=0;
+	    if(!by) starty=0;
+	    if(bx==s->bbx-1) endx=0;
+	    if(by==s->bby-1) endy=0;
+
+	    for(hx=startx;hx<=endx;hx+=4)
+	    for(hy=starty;hy<=endy;hy+=4)
 	    {
 		block_t b;
 		fblock_t fbold;
@@ -814,8 +920,8 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 		memcpy(&fbdiff, &fb, sizeof(fblock_t));
 		getregion(&fbold, s->oldpic, bx*16+hx/2, by*16+hy/2, s->linex);
 		yuvdiff(&fbdiff, &fbold);
-		dodct(&fbdiff);
-		quantize(&fbdiff, &b, 0, *quant);
+		dodctandquant(&fbdiff, &b, 0, *quant);
+		//quantize(&fbdiff, &b, 0, *quant);
 		bits += coefbits8x8(b.y1, 0);
 		bits += coefbits8x8(b.y2, 0);
 		bits += coefbits8x8(b.y3, 0);
@@ -835,8 +941,8 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	memcpy(&fbdiff, &fb, sizeof(fblock_t));
 	getregion(&fbold_v00, s->oldpic, bx*16+x_v00/2, by*16+y_v00/2, s->linex);
 	yuvdiff(&fbdiff, &fbold_v00);
-	dodct(&fbdiff);
-	quantize(&fbdiff, &b_v00, 0, *quant);
+	dodctandquant(&fbdiff, &b_v00, 0, *quant);
+	//quantize(&fbdiff, &b_v00, 0, *quant);
 	getblockpatterns(&b_v00, &y, &c, 0);
 
 	bits_v00 = 1; //cod
@@ -1176,8 +1282,8 @@ void dostat(VIDEOSTREAM*s)
 	    memcpy(&fbdiff, &fbnew, sizeof(fblock_t));
 	    getregion(&fbold, s->current, bx2*16, by2*16, s->linex);
 	    yuvdiff(&fbdiff, &fbold);
-	    dodct(&fbdiff);
-	    quantize(&fbdiff, &b, 0, quant);
+	    dodctandquant(&fbdiff, &b, 0, quant);
+	    //quantize(&fbdiff, &b, 0, quant);
 
 	    stat(fi, b.y1, fbnew.y1, fbold.y1);
 	    stat(fi, b.y2, fbnew.y2, fbold.y2);
