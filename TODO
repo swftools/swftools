@@ -1,7 +1,6 @@
 General:
 
     * make more stuff dependent on the information in config.h
-    * consistent output handling if -o is missing. (out.swf/stdout)
 
 pdf2swf:
 
@@ -10,7 +9,6 @@ pdf2swf:
     * fix memory leaks
     * some bounding boxes are too big
     * support for ttf fonts in --fontdirs
-    * implement -q (--quiet) option, especially for -b and -l
     * antialize ImageMasks.
 
 png2swf:
@@ -37,5 +35,6 @@ rfxswf-lib:
    
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
-    * swf_WriteHeader shouldn't modify fileSize and frameNum.
+    * getUsedIDs doesn't work for bitmap fill
+    * parsing of DefineFont2 has bugs.
 
