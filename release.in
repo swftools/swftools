@@ -86,7 +86,6 @@ ${name}/pdf2swf/fonts/FontDataBase \
 ${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/pdf2swf/swfoutput.h \
 ${name}/pdf2swf/swfoutput.cc \
-${name}/pdf2swf/swfoutput_x11.cc \
 ${name}/pdf2swf/pdfswf.h \
 ${name}/pdf2swf/pdfswf.cc \
 ${name}/pdf2swf/spline.h \
