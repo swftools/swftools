@@ -300,23 +300,10 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
       fprintf(stderr, "rfxswf: unknown bitmap type %d\n", bitmap_flags);
       return -1;
   }
-  
+
   swf_SetU8(t,bitmap_flags);
   swf_SetU16(t,width);
   swf_SetU16(t,height);
-
-
-  /* fix for buggy flash players which can't handle plain-color bitmaps 
-     TODO: is there a better solution?
-  */
-  { int s;
-    int l=32;
-    for(s=0;s<height*width*4;s+=4) {
-	((U8*)bitmap)[s+0] = s;
-	if(s>l)
-	    break;
-    }
-  }
 
   { z_stream zs;
       
@@ -332,6 +319,17 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
       deflateEnd(&zs);
       
     } else res = -3; // zlib error
+  }
+
+  while(t->len < 64) { /* actually, 63 and above is o.k., but let's stay on the safe side */
+
+      /* Flash players up to MX crash or do strange things if they encounter a 
+	 DefineLossless Tag with a payload of less than 63 bytes. They also
+	 substitute the whole bitmap by a red rectangle.
+
+	 This loop fills up the tag with zeroes so that this doesn't happen.
+      */
+      swf_SetU8(t, 0);
   }
   
   return res;
