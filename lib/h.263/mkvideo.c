@@ -379,10 +379,57 @@ static int hascoef(int*b, int has_dc)
     return 0;
 }
 
+static int coefbits8x8(int*bb, int has_dc)
+{
+    int t;
+    int pos=0;
+    int bits=0;
+    int last;
+
+    if(has_dc) {
+	bits+=8;
+	pos++;
+    }
+    for(last=63;last>=pos;last--) {
+	if(bb[last])
+	    break;
+    }
+    if(last < pos)
+	return bits;
+    while(1) {
+	int run=0, level=0, islast=0,t;
+	while(!bb[pos] && pos<last) {
+	    pos++;
+	    run++;
+	}
+	if(pos==last)
+	    islast=1;
+	level=bb[pos];
+	if(level<0) level=-level;
+	assert(level);
+	for(t=0;t<RLE_ESCAPE;t++) {
+	    if(rle_params[t].run == run &&
+	       rle_params[t].level == level &&
+	       rle_params[t].last == islast) {
+		bits += rle[t].len + 1;
+		break;
+	    }
+	}
+	if(t==RLE_ESCAPE) {
+	    bits += rle[RLE_ESCAPE].len + 1 + 6 + 8;
+	}
+	if(islast)
+	    break;
+	pos++;
+    }
+    return bits;
+}
+
 static void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
 {
     int t;
     int pos=0;
+    int bits=0;
 
     if(has_dc) {
 	swf_SetBits(tag, bb[0], 8);
@@ -421,6 +468,7 @@ static void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
 		sign = 1;
 	    }
 	    for(t=0;t<RLE_ESCAPE;t++) {
+		/* TODO: lookup table */
 		if(rle_params[t].run == run &&
 		   rle_params[t].level == level &&
 		   rle_params[t].last == islast) {
@@ -616,9 +664,9 @@ static void yuvdiff(fblock_t*a, fblock_t*b)
     }
 }
 
-static void encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
+static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 {
-    fblock_t fb,fbdiff, fbold;
+    fblock_t fb;
     block_t b;
     int dquant=0;
     int has_mvd=0;
@@ -627,6 +675,13 @@ static void encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int mode = 0;
     int cbpcbits = 0, cbpybits=0;
     int diff;
+
+    block_t b_i;
+    int bits_i;
+
+    fblock_t fbold_v00;
+    block_t b_v00;
+    int bits_v00;
 
     diff = compareregions(s, bx, by);
     if(diff < 24 /*TODO: should be a parameter- good values are between 32 and 48 */) {
@@ -637,21 +692,55 @@ static void encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 
     getregion(&fb, s->current, bx, by, s->width);
 
-    //if(diff < 128)
-    if(1)
+    { /* consider I-block */
+	fblock_t fb_i;
+	int y,c;
+	memcpy(&fb_i, &fb, sizeof(fblock_t));
+	dodct(&fb_i);
+	quantize(&fb_i, &b_i, 1, *quant);
+	getblockpatterns(&b_i, &y, &c, 1);
+	bits_i = 1; //cod
+	bits_i += mcbpc_inter[3*4+c].len;
+	bits_i += cbpy[y].len;
+	bits_i += coefbits8x8(b_i.y1, 1);
+	bits_i += coefbits8x8(b_i.y2, 1);
+	bits_i += coefbits8x8(b_i.y3, 1);
+	bits_i += coefbits8x8(b_i.y4, 1);
+	bits_i += coefbits8x8(b_i.u, 1);
+	bits_i += coefbits8x8(b_i.v, 1);
+    }
+
+    { /* consider mvd(0,0)-block */
+	fblock_t fbdiff;
+	int y,c;
+    	memcpy(&fbdiff, &fb, sizeof(fblock_t));
+    	getregion(&fbold_v00, s->oldpic, bx, by, s->linex);
+    	yuvdiff(&fbdiff, &fbold_v00);
+    	dodct(&fbdiff);
+    	quantize(&fbdiff, &b_v00, 0, *quant);
+	getblockpatterns(&b_v00, &y, &c, 0);
+	bits_v00 = 1; //cod
+	bits_v00 += mcbpc_inter[0*4+c].len;
+	bits_v00 += cbpy[y^15].len;
+	bits_v00 += mvd[32].len; // (0,0)
+	bits_v00 += mvd[32].len;
+	bits_v00 += coefbits8x8(b_v00.y1, 0);
+	bits_v00 += coefbits8x8(b_v00.y2, 0);
+	bits_v00 += coefbits8x8(b_v00.y3, 0);
+	bits_v00 += coefbits8x8(b_v00.y4, 0);
+	bits_v00 += coefbits8x8(b_v00.u, 0);
+	bits_v00 += coefbits8x8(b_v00.v, 0);
+    }
+
+    if(bits_i > bits_v00)
     { 
 	/* mvd (0,0) block (mode=0) */
 	int t;
-    	memcpy(&fbdiff, &fb, sizeof(fblock_t));
-    	getregion(&fbold, s->oldpic, bx, by, s->linex);
-    	yuvdiff(&fbdiff, &fbold);
-	//getregiondiff(&fbdiff, s->oldpic, s->current, bx, by, s->linex);
-    	dodct(&fbdiff);
-	has_dc = 0;
-
-    	quantize(&fbdiff, &b, has_dc, *quant);
-	getblockpatterns(&b, &cbpybits, &cbpcbits, has_dc);
 	mode = 0; // mvd w/o mvd24
+	has_dc = 0;
+	memcpy(&b, &b_v00, sizeof(block_t));
+
+	getblockpatterns(&b, &cbpybits, &cbpcbits, has_dc);
 	swf_SetBits(tag,0,1); // COD
 	codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
 	codehuffman(tag, cbpy, cbpybits^15);
@@ -669,27 +758,27 @@ static void encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	/* chrominance */
 	encode8x8(tag, b.u, has_dc, cbpcbits&2);
 	encode8x8(tag, b.v, has_dc, cbpcbits&1);
-
+	
 	/* -- reconstruction -- */
 	dequantize(&b, 0, *quant);
-	
 	doidct(&b);
 	for(t=0;t<64;t++) {
-	    b.y1[t] = truncate256(b.y1[t] + (int)fbold.y1[t]);
-	    b.y2[t] = truncate256(b.y2[t] + (int)fbold.y2[t]);
-	    b.y3[t] = truncate256(b.y3[t] + (int)fbold.y3[t]);
-	    b.y4[t] = truncate256(b.y4[t] + (int)fbold.y4[t]);
-	    b.u[t] = truncate256(b.u[t] + (int)fbold.u[t]);
-	    b.v[t] = truncate256(b.v[t] + (int)fbold.v[t]);
+	    b.y1[t] = truncate256(b.y1[t] + (int)fbold_v00.y1[t]);
+	    b.y2[t] = truncate256(b.y2[t] + (int)fbold_v00.y2[t]);
+	    b.y3[t] = truncate256(b.y3[t] + (int)fbold_v00.y3[t]);
+	    b.y4[t] = truncate256(b.y4[t] + (int)fbold_v00.y4[t]);
+	    b.u[t] = truncate256(b.u[t] + (int)fbold_v00.u[t]);
+	    b.v[t] = truncate256(b.v[t] + (int)fbold_v00.v[t]);
 	}
 	copyblock(s, s->current, &b, bx, by);
-	return;
+	return bits_v00;
     } else {
 	/* i block (mode=3) */
 	mode = 3;
 	has_dc = 1;
-	dodct(&fb);
-	quantize(&fb, &b, has_dc, *quant);
+	memcpy(&b, &b_i, sizeof(block_t));
+	//dodct(&fb);
+	//quantize(&fb, &b, has_dc, *quant);
 	getblockpatterns(&b, &cbpybits, &cbpcbits, has_dc);
 	swf_SetBits(tag,0,1); // COD
 	codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
@@ -704,12 +793,13 @@ static void encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	/* chrominance */
 	encode8x8(tag, b.u, has_dc, cbpcbits&2);
 	encode8x8(tag, b.v, has_dc, cbpcbits&1);
-    
+
+	/* -- reconstruction -- */
 	dequantize(&b, 1, *quant);
 	doidct(&b);
 	truncateblock(&b);
 	copyblock(s, s->current, &b, bx, by);
-	return;
+	return bits_i;
     }
 
     exit(1);
@@ -797,7 +887,7 @@ static void writeHeader(TAG*tag, int width, int height, int frame, int quant, in
 void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic)
 {
     int bx, by, bbx, bby;
-    int quant = 3;
+    int quant = 31;
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
 
@@ -820,7 +910,7 @@ void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic)
 void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic)
 {
     int bx, by, bbx, bby;
-    int quant = 3;
+    int quant = 31;
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
 
@@ -864,8 +954,8 @@ int main(int argn, char*argv[])
     SWFPLACEOBJECT obj;
     int width = 0;
     int height = 0;
-    int frames = 50;
-    int framerate = 29;
+    int frames = 2;
+    int framerate = 1;
     unsigned char*data;
     char* fname = "/home/kramm/pics/peppers.png";
     VIDEOSTREAM stream;
