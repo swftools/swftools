@@ -982,9 +982,9 @@ int main (int argc,char ** argv)
 	else if(tag->id == ST_FRAMELABEL) {
 	    int l = strlen(tag->data);
 	    printf(" \"%s\"", tag->data);
-	    if(l < tag->len-1) {
+	    if((l+1) < tag->len) {
 		printf(" has %d extra bytes", tag->len-1-l);
-		if(tag ->len-1-l == 1 && tag->data[tag->len-1] == 1)
+		if(tag ->len - (l+1) == 1 && tag->data[tag->len-1] == 1)
 		    printf(" (ANCHOR)");
 	    }
 	    if((framelabel && !issprite) ||
