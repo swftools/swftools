@@ -227,7 +227,7 @@ static int moveto(struct swfoutput*obj, TAG*tag, plotxy p0)
     }
     return 0;
 }
-static int moveto(struct swfoutput*obj, TAG*tag, float x, float y)
+static int moveto(struct swfoutput*obj, TAG*tag, double  x, double y)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
     plotxy p;
