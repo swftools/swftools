@@ -211,4 +211,6 @@
 	* swfdump: Fixed handling of PLACEOBJECT
 	* configure: Improved freetype and python detection
 	* swfdump: Support for shapes added
+	* swfdump: several bugfixes from simon-swf@munton.demon.co.uk
+	* pdf2swf: Added fontconfig font replacement
 
