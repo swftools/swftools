@@ -1160,7 +1160,7 @@ static void endtext(swfoutput*obj)
     swf_SetRect(i->tag,&r);
 
     MATRIX m;
-    swf_GetMatrix(0, &m);
+    swf_GetMatrix(0, &m); /* set unit matrix- the real matrix is in the placeobject */
     swf_SetMatrix(i->tag,&m);
 
     putcharacters(obj, i->tag);
