@@ -62,6 +62,30 @@
     100% #ffffff
 .end
 
+# with a hard edge:
+
+.gradient mygradient:
+    0% red
+    50% green
+    50% red
+    75% aquamarine
+    100% #ffffff
+.end
+
+# with alpha:
+
+.gradient mygradient:
+    0%   #00000000
+    50%  #0000ff40
+    75%  #0000ff80
+    100% #0000ffc0
+.end
+
+# define a texture from a gradient:
+# ---------------------------------
+
+.texture grad2=mygradient x=0 y=0 width=125 height=200 rotate=45
+
 # Create simple objects:
 # ----------------------
 
@@ -69,9 +93,10 @@
 .box mybox2 width=100 height=50 color=black	      #same as above
 .box mybox3 width=100 height=50 color=black fill      #filled black rectangle
 .box mybox4 width=100 height=50 color=red line=2 fill=blue #blue rectangle with red edges
-.box mybox5 width=100 height=50 color=red line=2 fill=background #part the background image, with red edges
+.box mybox5 width=100 height=50 color=red line=2 fill=background #filled with image "background", with red edges
 
 .circle mycircle1 r=50 color=#aa33ff fill=mygradient # filled with gradient (defined above)
+.circle mycircle1 r=50 color=#aa33ff fill=grad2      # filled with gradient texture
 
 # Sounds:
 # -------
