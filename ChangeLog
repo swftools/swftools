@@ -105,3 +105,6 @@
 	* src/swfcombine: Completely rewritten, using the rfxswf routines
 	* configure: Check for libtool
 	* lib/rfxswf: Fixed some parsing bugs (swffont, swfdump)
+	* pdf2swf: Added antialiasing capabilities for Type 3 Fonts
+	* lib/examples/makefonts: Fonts: Bounding boxes are now handled correctly
+

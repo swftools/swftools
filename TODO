@@ -9,7 +9,6 @@ pdf2swf:
     * fix memory leaks
     * some bounding boxes are too big
     * support for ttf fonts in --fontdirs
-    * antialize ImageMasks.
 
 png2swf:
 
@@ -35,4 +34,5 @@ rfxswf-lib:
    
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
+    * modules/swftools:getUsedIDs doesn't handle Morphshapes
 
