@@ -68,7 +68,7 @@ SUBDIRS = lib src pdf2swf
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES =  release 
-DIST_COMMON =  README ./stamp-h.in AUTHORS COPYING ChangeLog INSTALL \
+DIST_COMMON =  README AUTHORS COPYING ChangeLog INSTALL \
 Makefile.in NEWS TODO config.guess config.h.in \
 config.sub configure configure.in install-sh missing mkinstalldirs \
 release.in
@@ -278,7 +278,7 @@ clean-generic:
 
 distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
-	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
+	-rm -f config.cache config.log
 
 maintainer-clean-generic:
 mostlyclean-am:  mostlyclean-hdr mostlyclean-tags mostlyclean-generic
