@@ -231,7 +231,7 @@ SWFFONT * t1font2swffont(int i)
 		SRECT bbox;
 		shape2 = swf_ShapeToShape2(shape);
 		if(!shape2) { fprintf(stderr, "Shape parse error\n");exit(1);}
-		bbox = swf_GetShapeBoundingBox(shape2->lines);
+		bbox = swf_GetShapeBoundingBox(shape2);
 		swf_Shape2Free(shape2);
 		wfont->layout->bounds[num] = bbox;
 		//wfont->glyph[num].advance = (int)(width/6.4); // 128/20
