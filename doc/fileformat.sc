@@ -240,14 +240,14 @@
 .png stoplogo "Stop.png" #TODO
 
 .button playbutton
-    .show play as=shape
+    .show play as=idle
     .show play as=area
     .show play_pressed as=pressed
     .show play_pressed as=hower
 .end
 
 .button playbutton2
-    .show play as=shape
+    .show play as=idle
     .on_press inside
     .on_release inside
     .on_release outside
@@ -261,7 +261,7 @@
 .end
 
 .button mybutton
-    .show play as=shape
+    .show play as=idle
     .show obj1 x=300 y=400 scale=110% pivot=center 
          as=pressed
 .end
@@ -336,7 +336,7 @@
 
 .put o1=obj1 #TODO
 .put o2=obj1 below=o1 x=50 #TODO
-.frame #TODO
+.frame
 .change o1 #TODO
 .change o2 above=o1 x=50 #TODO
 
