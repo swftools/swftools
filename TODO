@@ -1,23 +1,22 @@
 swfc:
 
-    * simple actionscript commands
-    * rewrite in python
-    * python plugins?
     * .texture
+    * .editbox
+    * simple actionscript commands
+    * .buttons
+    * .orbit
+    * plugins?
     * .lock/.unlock
     * object rel coords, as in obj1.(x,y) and monkey.nose
 	"follow me" feature:  default, or should it be explicitly specified?
     * .replace command
-	.crossfade command????
+	.crossfade command?
     * .soundstream
-    * text:  newlines
+    * text: newlines
     * .egon  (stub is there, never really implemented)... folding edges?
-    * .editbox
-    * .buttons
     * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
     * .hide/.show?
-    * .orbit
     * store instance coordinates for .put with same name after .del?
     * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
 
@@ -28,6 +27,7 @@ pdf2swf:
     * several bounding boxes are too big
     * support for ttf fonts in --fontdirs
     * add support for FreeType
+    * upgrade xpdf
 
 font2swf:
     
