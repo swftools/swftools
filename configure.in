@@ -26,7 +26,7 @@ dnl Checks for libraries.
  echo "Error: Math library not found.";
  exit;
  )
- AC_CHECK_LIB(z, crc32,, 
+ AC_CHECK_LIB(z, deflate,, 
  echo "Error: The zlib compression library is required."
  DISABLEPDF2SWF=true; 
  MISSINGLIBS="${MISSINGLIBS} zlib"
