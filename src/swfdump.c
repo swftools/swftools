@@ -229,7 +229,7 @@ void textcallback(int*glyphs, int nr, int fontid)
 	    a = glyphs[t];
 	}
 	if(a>=32)
-	    printf("%c", a,a);
+	    printf("%c", a);
 	else
 	    printf("\\x%x", (int)a);
     }
