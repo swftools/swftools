@@ -108,6 +108,12 @@ struct frontsw *frontswtab[] = {
 	NULL /* end of table */
 };
 
+#ifdef WIN32
+#define NOPIPES
+#else
+#undef NOPIPES
+#endif
+
 struct frontsw *cursw=0; /* the active front end */
 char *front_arg=""; /* optional argument */
 
@@ -607,7 +613,7 @@ unicode_init_user(
 	} 
 
 	/* now read in the encoding description file, if requested */
-	if ((unicode_map_file = fopen(path, "r")) == NULL) {
+	if ((unicode_map_file = fopen(path, "rb")) == NULL) {
 		fprintf(stderr, "**** Cannot access map file '%s' ****\n", path);
 		exit(1);
 	}
@@ -2069,19 +2075,18 @@ ttf2pt1_main(
 				}
 	}
 
-	if ((null_file = fopen(BITBUCKET, "w")) == NULL) {
+	if ((null_file = fopen(BITBUCKET, "wb")) == NULL) {
 		fprintf(stderr, "**** Cannot open %s ****\n",
 			BITBUCKET);
 		exit(1);
 	}
-
 	if (argv[2][0] == '-' && argv[2][1] == 0) {
-#ifdef WIN32
+#ifdef NOPIPES
 		if(encode) {
 			fprintf(stderr, "**** can't write encoded file to stdout ***\n");
 			exit(1);
 		}
-#endif /* WIN32 */
+#endif /* NOPIPES */
 		pfa_file = afm_file = dvienc_file = null_file;
 
 		if(wantafm || genlast == &gen_afm) { /* print .afm instead of .pfa */
@@ -2092,13 +2097,13 @@ ttf2pt1_main(
 			pfa_file=stdout;
 		}
 	} else {
-#ifndef WIN32
+#ifndef NOPIPES
 		snprintf(filename, sizeof filename, "%s.%s", argv[2], encode ? (pfbflag ? "pfb" : "pfa") : "t1a" );
-#else /* WIN32 */
+#else /* NOPIPES  */
 		snprintf(filename, sizeof filename, "%s.t1a", argv[2]);
-#endif /* WIN32 */
+#endif /* NOPIPES  */
 		if(gen_pfa) {
-			if ((pfa_file = fopen(filename, "w+b")) == NULL) {
+			if ((pfa_file = fopen(filename, "wb+")) == NULL) {
 				fprintf(stderr, "**** Cannot create %s ****\n", filename);
 				exit(1);
 			} else {
@@ -2129,25 +2134,25 @@ ttf2pt1_main(
 	/*
 	 * Now check whether we want a fully encoded .pfa file
 	 */
-#ifndef WIN32
+#ifndef NOPIPES
 	if (encode && pfa_file != null_file) {
 		int             p[2];
 		extern FILE    *ifp, *ofp;	/* from t1asm.c */
 
-		ifp=stdin;
-		ofp=stdout;
+		ifp=stdin; //?
+		ofp=stdout; //?
 
 		if (pipe(p) < 0) {
 			perror("**** Cannot create pipe ****\n");
 			exit(1);
 		}
 		ofp = pfa_file;
-		ifp = fdopen(p[0], "r");
+		ifp = fdopen(p[0], "rb");
 		if (ifp == NULL) {
 			perror("**** Cannot use pipe for reading ****\n");
 			exit(1);
 		}
-		pfa_file = fdopen(p[1], "w");
+		pfa_file = fdopen(p[1], "wb");
 		if (pfa_file == NULL) {
 			perror("**** Cannot use pipe for writing ****\n");
 			exit(1);
@@ -2163,7 +2168,7 @@ ttf2pt1_main(
 			fclose(ifp); fclose(ofp);
 		}
 	}
-#endif /* WIN32 */
+#endif /* NOPIPES  */
 
 	numglyphs = cursw->nglyphs();
 
@@ -2529,7 +2534,7 @@ ttf2pt1_main(
 
 	cursw->close();
 
-#ifndef WIN32
+#ifndef NOPIPES
 	while (wait(&ws) > 0) {
 	}
 #else 
@@ -2538,8 +2543,7 @@ ttf2pt1_main(
 
 		snprintf(filename, sizeof filename, "%s.%s", argv[2], pfbflag ? "pfb" : "pfa" );
 
-		if ((ofp = fopen(filename, "w+b")) == NULL) {
-			fprintf(stderr, "**** Cannot create %s ****\n", filename);
+		if ((ofp = fopen(filename, "wb+")) == NULL) {
 			exit(1);
 		} else {
 			WARNING_2 fprintf(stderr, "Creating file %s\n", filename);
@@ -2548,7 +2552,6 @@ ttf2pt1_main(
 		snprintf(filename, sizeof filename, "%s.t1a", argv[2]);
 
 		if ((ifp = fopen(filename, "rb")) == NULL) {
-			fprintf(stderr, "**** Cannot read %s ****\n", filename);
 			exit(1);
 		} else {
 			WARNING_2 fprintf(stderr, "Converting file %s\n", filename);
@@ -2560,7 +2563,7 @@ ttf2pt1_main(
 		if(unlink(filename) < 0) 
 			WARNING_1 fprintf(stderr, "Unable to remove file %s\n", filename);
 	}
-#endif /* WIN32 */
+#endif /* NOPIPES */
 
 	fclose(null_file);
 	return 0;
