@@ -27,6 +27,8 @@ extern "C" {
 #include "../lib/log.h"
 #include "../lib/rfxswf.h"
 }
+#define standardEncodingSize 335
+extern char *standardEncodingNames[standardEncodingSize];
 
 int opennewwindow=0;
 int ignoredraworder=0;
@@ -601,6 +603,22 @@ SWFFont::~SWFFont()
             fill = lastfill;
             swf_ShapeSetEnd(ftag);
         }
+        ftag = swf_InsertTag(ftag,ST_DEFINEFONTINFO);
+	swf_SetU16(ftag, this->swfid);
+	swf_SetU8(ftag, strlen(this->fontid));
+	swf_SetBlock(ftag, (U8*)this->fontid, strlen(this->fontid));
+	swf_SetU8(ftag, 0);
+	for(t=0;t<swfcharpos;t++)
+	{
+	    int s;
+	    char * name = this->charname[this->swfcharid2char[t]];
+	    for(s=0;s<256;s++) {
+		if(standardEncodingNames[s] && 
+			!strcasecmp(name,standardEncodingNames[s]))
+		    break;
+	    }
+	    swf_SetU8(ftag, (U8)s);
+	}
     }
 
     free(ptr);
