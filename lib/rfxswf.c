@@ -804,6 +804,7 @@ void FreeTags(SWF * swf)                 // Frees all malloc'ed memory for tags
 #include "modules\swftools.c"
 #include "modules\swfcgi.c"
 #include "modules\swfbits.c"
+#include "modules\swfaction.c"
 
 #else
 
@@ -815,6 +816,7 @@ void FreeTags(SWF * swf)                 // Frees all malloc'ed memory for tags
 #include "modules/swftools.c"
 #include "modules/swfcgi.c"
 #include "modules/swfbits.c"
+#include "modules/swfaction.c"
 
 #endif
 

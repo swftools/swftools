@@ -85,6 +85,18 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   U8            bitcount;       // [write]
 } TAG, * LPTAG;
 
+typedef struct _ActionTAG 
+{ U8            op;
+  U16           len;
+  U8 *          data;
+
+  struct _ActionTAG * next;
+  struct _ActionTAG * prev;
+
+  TAG* parent; // may be null
+} ActionTAG;
+
+
 typedef struct _SWF
 { U8            FileVersion;
   U32           FileSize;       // valid after load and save
@@ -454,5 +466,10 @@ MATRIX * MatrixMapTriangle(MATRIX * m,int dx,int dy,
 // swfcgi.c
 
 void uncgi();  // same behaviour as Steven Grimm's uncgi-library
+
+// swfaction.c
+
+ActionTAG* GetActions(TAG*tag);
+void DumpActions(ActionTAG*atag, char*prefix);
 
 #endif
