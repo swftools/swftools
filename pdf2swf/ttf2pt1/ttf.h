@@ -35,7 +35,7 @@
 typedef struct short_2 {
 	SHORT	upper;
 	USHORT	lower;
-} FIXED ;
+} TTF2PT1_FIXED ;
 
 typedef struct longhormetric {
 	UFWORD	advanceWidth;
@@ -159,7 +159,7 @@ typedef struct ttf_maxp {
 
 typedef struct ttf_post_head {
 	ULONG	formatType;
-	FIXED	italicAngle;
+	TTF2PT1_FIXED	italicAngle;
 	FWORD	underlinePosition;
 	FWORD	underlineThickness;
 	ULONG	isFixedPitch;
