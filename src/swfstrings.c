@@ -63,8 +63,8 @@ int args_callback_command(char*name,char*val)
 SWF swf;
   
 void fontcallback(void*self,U16 id,U8 * name)
-{ LPSWFFONT font;
-  LPTAG t;
+{ SWFFONT* font;
+  TAG* t;
   
   swf_FontExtract(&swf,id,&font);
   printf("#< %s %s %s>\n",name,swf_FontIsBold(font)?"bold":"",swf_FontIsItalic(font)?"italic":"");
