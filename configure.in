@@ -3,8 +3,8 @@ AC_INIT(src/)
 
 PACKAGE=swftools
 VERSION=0.2.2
-CFLAGS="-O2 -fomit-frame-pointer"
-CXXFLAGS="-O2 -fomit-frame-pointer"
+CFLAGS="-Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
+CXXFLAGS="-Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
 export PACKAGE VERSION CFLAGS CXXFLAGS
 
 dnl Checks for programs.
@@ -57,7 +57,7 @@ dnl AC_PATH_X
 dnl AC_PATH_XTRA
  AC_HEADER_DIRENT
  AC_HEADER_STDC
- AC_CHECK_HEADERS(math.h fcntl.h limits.h malloc.h unistd.h memory.h zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h)
+ AC_CHECK_HEADERS(zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h dirent.h sys/ndir.h sys/dir.h ndir.h)
 
 if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
  DISABLEPDF2SWF=true;
@@ -95,10 +95,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
  dnl AC_CHECK_TYPE(uint,unsigned long int)
 
 dnl Checks for library functions.
- AC_FUNC_MEMCMP
- AC_FUNC_MMAP
- AC_FUNC_VPRINTF
- AC_CHECK_FUNCS(getcwd putenv socket strcspn strdup strerror strstr lrand48 rand srand48 srand)
+ AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand)
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
     AC_DEFINE_UNQUOTED(USE_GZIP, 1)
