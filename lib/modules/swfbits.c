@@ -121,10 +121,10 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
   jpeg_create_decompress(&cinfo); 
 
   if ((f=fopen(fname,"rb"))==NULL) return -1;
-  
 
   jpeg_stdio_src(&cinfo,f);
   jpeg_read_header(&cinfo, TRUE);
+  cinfo.out_color_space = JCS_RGB; //automatically convert grayscale images
   jpeg_start_decompress(&cinfo);
 
   out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
