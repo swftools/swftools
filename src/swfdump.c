@@ -463,6 +463,7 @@ void handlePlaceObject2(TAG*tag, char*prefix)
     char pstr[3][160];
     int ppos[3] = {0,0,0};
     swf_GetU16(tag); //depth
+
     //flags&1: move
     if(flags&2) swf_GetU16(tag); //id
     if(flags&4) {
@@ -703,7 +704,7 @@ int main (int argc,char ** argv)
 	printf(" ");
 
 	if(xy&4)
-	printf("-r %d", swf.frameRate*100/256);
+	printf("-r %.2f", swf.frameRate/256.0);
 	
 	if((xy&7) && (xy&8))
 	printf(" ");
