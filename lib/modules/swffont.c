@@ -407,8 +407,29 @@ SWFFONT* swf_LoadT1Font(char*filename)
 
 #endif
 
+static int isSWF(const char*filename)
+{
+    FILE*fi = fopen(filename, "rb");
+    char a[8];
+    if(!fi) {
+	perror(filename);
+	return 0;
+    }
+    memset(a, 0, sizeof(a));
+    fread(a, 4, 1, fi);
+    fclose(fi);
+
+    if(!strncmp(a, "FWS", 3) || !strncmp(a, "CWS", 3)) {
+	return 1;
+    }
+    return 0;
+}
+
 SWFFONT* swf_LoadFont(char*filename)
 {
+    if(isSWF(filename)) {
+	return swf_ReadFont(filename);
+    }
 #if defined(USE_FREETYPE)
     return swf_LoadTrueTypeFont(filename);
 #elif defined(HAVE_T1LIB)
