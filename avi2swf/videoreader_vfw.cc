@@ -53,8 +53,9 @@ typedef struct _videoreader_vfw_internal {
 } videoreader_vfw_internal_t;
 
 static int avifile_initialized = 0;
+static int verbose;
 
-#define _TRACE_ {printf("%s: %d (%s)\n",__FILE__,__LINE__,__func__);fflush(stdout);}
+#define _TRACE_ {printf("vfw: %s: %d (%s)\n",__FILE__,__LINE__,__func__);fflush(stdout);}
 
 static bool videoreader_vfw_eof(videoreader_t* vr)
 {
@@ -92,6 +93,10 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     const int starty = flip? 0 : dest_height-1;
     const int endy   = flip? dest_height : -1;
     const int yinc   = flip? 1 : -1;
+
+    if(verbose) {
+	printf("vfw: Convering scanlines %d to %d from bpp %d, %d stepping, flip=%d\n", starty, endy, bi->biBitCount, yinc, flip);
+    }
 
     if(bi->biBitCount==1) {
 	UCHAR*img = data;
@@ -244,6 +249,8 @@ static void videoreader_vfw_setparameter(videoreader_t*vr, char*name, char*value
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
     if(!strcmp(name, "flip")) {
 	i->flip = atoi(value);
+    } else if(!strcmp(name, "verbose")) {
+	verbose = atoi(value);
     }
 }
 
@@ -277,6 +284,10 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
    
     /* calculate framerate */
     i->fps = (double)info.dwRate/(double)info.dwScale;
+
+    if(verbose) {
+	printf("vfw: file %s has %f fps, and %d streams\n", i->fps, info.dwStreams);
+    }
 
     unsigned int t=0;
     while(t<info.dwStreams) {
@@ -328,6 +339,9 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
     }
 
     if(i->vs) {
+	if(verbose) {
+	    printf("vfw: video stream: %dx%d, %.2f\n", i->width, i->height, i->fps);
+	}
 	vr->width = i->width;
 	vr->height = i->height;
 	vr->fps = i->fps;
@@ -335,6 +349,9 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
 	fprintf(stderr, "AVIReader: Warning: No video stream\n");
     }
     if(i->as) {
+	if(verbose) {
+	    printf("vfw: audio stream: %d channels, %d samples/sec", i->channels, i->samplerate);
+	}
 	vr->channels = i->channels;
 	vr->samplerate = i->samplerate;
     } else {
