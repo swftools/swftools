@@ -30,7 +30,6 @@ dnl Checks for libraries.
  echo "Error: The zlib compression library is required."
  DISABLEPDF2SWF=true; 
  MISSINGLIBS="${MISSINGLIBS} zlib"
- exit;
  )
  AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, 
  DISABLEPDF2SWF=true;
@@ -43,8 +42,8 @@ dnl Checks for libraries.
  )
 
 dnl do we need those?
- AC_CHECK_LIB(pthread, pthread_create)
- AC_CHECK_LIB(X11, XFlush)
+dnl AC_CHECK_LIB(pthread, pthread_create)
+dnl AC_CHECK_LIB(X11, XFlush)
 
 dnl Checks for header files.
  AC_CONFIG_HEADER(config.h)
