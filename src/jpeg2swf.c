@@ -42,7 +42,12 @@ struct {
     int verbose;
     char *outfile;
     int mx;
+    int next_id;
+    char *asset_name;
     int version;
+    int xoffset;
+    int yoffset;
+    int fit_to_movie;
 } global;
 
 typedef struct _image {
@@ -64,8 +69,10 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 
     swf->fileVersion = global.version;
     swf->frameRate = (int)(256.0 * framerate);
-    swf->movieSize.xmax = dx * 20;
-    swf->movieSize.ymax = dy * 20;
+    swf->movieSize.xmin = global.xoffset * 20;
+    swf->movieSize.ymin = global.yoffset * 20;
+    swf->movieSize.xmax = swf->movieSize.xmin + dx * 20;
+    swf->movieSize.ymax = swf->movieSize.ymin + dy * 20;
 
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
@@ -76,6 +83,10 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 	t = swf_InsertTag(t, ST_DEFINEVIDEOSTREAM);
 	swf_SetU16(t, 0xf00d);
 	swf_SetVideoStreamDefine(t, &stream, 65535, dx, dy);
+    } else if (global.asset_name) {
+	t = swf_InsertTag(t, ST_DEFINESPRITE);
+	swf_SetU16(t, 1);
+	swf_SetU16(t, global.next_id++);
     }
 
     return t;
@@ -84,6 +95,25 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 int MovieFinish(SWF * swf, TAG * t, char *sname)
 {
     int handle, so = fileno(stdout);
+
+    if (global.asset_name) {
+	SWFPLACEOBJECT obj;
+
+	t = swf_InsertTag(t, ST_END);
+	t = swf_InsertTag(t, ST_EXPORTASSETS);
+	swf_SetU16(t, 1);
+	swf_SetU16(t, 1);
+	swf_SetString(t, global.asset_name);
+
+	t = swf_InsertTag(t, ST_PLACEOBJECT2);
+	swf_GetPlaceObject(0, &obj);
+	obj.depth = 1;
+	obj.id = 1;
+	swf_SetPlaceObject(t, &obj);
+
+	t = swf_InsertTag(t, ST_SHOWFRAME);
+    }
+
     t = swf_InsertTag(t, ST_END);
 
     if ((!isatty(so)) && (!sname))
@@ -189,13 +219,14 @@ int getJPEG(char*filename, int* width, int* height, RGBA**pic2)
 
 int frame = 0;
 TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality, 
-		   int id, int width, int height)
+		   int width, int height)
 {
     SHAPE *s;
     SRECT r;
     MATRIX m;
     int fs;
-
+    int movie_width = swf->movieSize.xmax - swf->movieSize.xmin;
+    int movie_height = swf->movieSize.ymax - swf->movieSize.ymin;
 
     if(global.mx) {
 	int sizex, sizey;
@@ -232,41 +263,50 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality,
 	t = swf_InsertTag(t, ST_SHOWFRAME);
     } else {
 	t = swf_InsertTag(t, ST_DEFINEBITSJPEG2);
-	swf_SetU16(t, id);		// id
+	swf_SetU16(t, global.next_id);		// id
 	swf_SetJPEGBits(t,sname,quality);
 
 	t = swf_InsertTag(t, ST_DEFINESHAPE);
 	swf_ShapeNew(&s);
 	swf_GetMatrix(NULL, &m);
-	m.sx = 20 * 0x10000;
-	m.sy = 20 * 0x10000;
-	m.tx = -10;
-	m.ty = -10;
-	fs = swf_ShapeAddBitmapFillStyle(s, &m, id, 0);
-	swf_SetU16(t, id + 1);	// id
-	r.xmin = r.ymin = 0;
-	r.xmax = width * 20;
-	r.ymax = height * 20;
+	if (global.fit_to_movie) {
+	    m.sx = 0x10000 * movie_width / width;
+	    m.sy = 0x10000 * movie_height / height;
+	    width = movie_width / 20;
+	    height = movie_height / 20;
+	} else {
+		m.sx = 20 * 0x10000;
+		m.sy = 20 * 0x10000;
+	}
+	m.tx = global.xoffset * 20;
+	m.ty = global.yoffset * 20;
+	fs = swf_ShapeAddBitmapFillStyle(s, &m, global.next_id, 1);
+	global.next_id++;
+	swf_SetU16(t, global.next_id);	// id
+	r.xmin = global.xoffset * 20;
+	r.ymin = global.yoffset * 20;
+	r.xmax = r.xmin + width * 20;
+	r.ymax = r.ymin + height * 20;
 	swf_SetRect(t, &r);
 	swf_SetShapeHeader(t, s);
-	swf_ShapeSetAll(t, s, 0, 0, 0, fs, 0);
-	swf_ShapeSetLine(t, s, r.xmax, 0);
-	swf_ShapeSetLine(t, s, 0, r.ymax);
-	swf_ShapeSetLine(t, s, -r.xmax, 0);
-	swf_ShapeSetLine(t, s, 0, -r.ymax);
+	swf_ShapeSetAll(t, s, r.xmin, r.ymin, 0, fs, 0);
+	swf_ShapeSetLine(t, s, r.xmax - r.xmin, 0);
+	swf_ShapeSetLine(t, s, 0, r.ymax - r.ymin);
+	swf_ShapeSetLine(t, s, -r.xmax + r.xmin, 0);
+	swf_ShapeSetLine(t, s, 0, -r.ymax + r.ymin);
 	swf_ShapeSetEnd(t);
 
-        if(frame) {
+	if(frame) {
 	    t = swf_InsertTag(t, ST_REMOVEOBJECT2);
 	    swf_SetU16(t, 1);		// depth
-        }
+	}
 
 	t = swf_InsertTag(t, ST_PLACEOBJECT2);
 	swf_GetMatrix(NULL, &m);
-	m.tx = (swf->movieSize.xmax - (int) width * 20) / 2;
-	m.ty = (swf->movieSize.ymax - (int) height * 20) / 2;
-	swf_ObjectPlace(t, id + 1, 1, &m, NULL, NULL);
-
+	m.tx = (movie_width - width * 20) / 2;
+	m.ty = (movie_height - height * 20) / 2;
+	swf_ObjectPlace(t, global.next_id, 1, &m, NULL, NULL);
+	global.next_id++;
 	t = swf_InsertTag(t, ST_SHOWFRAME);
     }
     frame++;
@@ -396,6 +436,31 @@ int args_callback_option(char *arg, char *val)
 	    printf("jpeg2swf - part of %s %s\n", PACKAGE, VERSION);
 	    exit(0);
 
+	case 'e':
+	    if (val)
+		global.asset_name = val;
+	    res = 1;
+	    break;
+
+	case 'x':
+	    if (val) {
+		global.xoffset = atoi(val);
+	    }
+	    res = 1;
+	    break;
+
+	case 'y':
+	    if (val) {
+		global.yoffset = atoi(val);
+	    }
+	    res = 1;
+	    break;
+
+	case 'f':
+	    global.fit_to_movie = 1;
+	    res = 0;
+	    break;
+
 	default:
 	    res = -1;
 	    break;
@@ -418,6 +483,10 @@ static struct options_t options[] = {
 {"z", "zlib"},
 {"X", "width"},
 {"Y", "height"},
+{"x", "xoffset"},
+{"y", "yoffset"},
+{"e", "export"},
+{"f", "fit-to-movie"},
 {"v", "verbose"},
 {"V", "version"},
 {0,0}
@@ -459,8 +528,12 @@ void args_callback_usage(char *name)
     printf("-q , --quality <quality>       Set compression quality (1-100, 1=worst, 100=best)\n");
     printf("-r , --rate <framerate>         Set movie framerate (frames per second)\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
+    printf("-x , --xoffset <offset>        horizontally offset images by <offset>\n");
+    printf("-y , --yoffset <offset>        vertically offset images by <offset>\n");
     printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
+    printf("-f , --fit-to-movie            Fit images to movie size\n");
+    printf("-e , --export <assetname>      Make importable as asset with <assetname>\n");
     printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
     printf("-V , --version                 Print version information and exit\n");
     printf("\n");
@@ -478,7 +551,12 @@ int main(int argc, char **argv)
     global.framerate = 1.0;
     global.verbose = 1;
     global.version = 4;
-
+    global.asset_name = NULL;
+    global.next_id = 1;
+    global.xoffset = 0;
+    global.yoffset = 0;
+    global.fit_to_movie = 0;
+	
     processargs(argc, argv);
 
     if (VERBOSE(2))
@@ -497,7 +575,6 @@ int main(int argc, char **argv)
 		fprintf(stderr, "[%03i] %s (%i%%, 1/%i)\n", i,
 			image[i].filename, image[i].quality);
 	    t = MovieAddFrame(&swf, t, image[i].filename, image[i].quality,
-			      (i * 2) + 1, 
 			      image[i].width, image[i].height);
 	    free(image[i].filename);
 	}
