@@ -168,7 +168,6 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m)
     double lastx=0,lasty=0;
     double firstx=0,firsty=0;
     int init=1;
-    if(log) printf("shape-start %d\n", fill);
 
     while (outline)
     {
@@ -178,7 +177,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m)
 	{
 	    if(((int)(lastx*20) != (int)(firstx*20) ||
 		(int)(lasty*20) != (int)(firsty*20)) &&
-		     fill)
+		     fill && !init)
 	    {
 		plotxy p0;
 		plotxy p1;
@@ -191,6 +190,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m)
 	    }
 	    firstx=x;
 	    firsty=y;
+	    init = 0;
 	}
 	else if(outline->type == T1_PATHTYPE_LINE) 
 	{
@@ -241,7 +241,6 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m)
 	if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
 	line(tag, p0, p1, m);
     }
-    if(log) printf("shape-end\n");
 }
 
 int colorcompare(RGBA*a,RGBA*b)
@@ -990,11 +989,13 @@ void swfoutput_startclip(swfoutput*obj, T1_OUTLINE*outline, struct swfmatrix*m)
 	logf("<warning> Too many clip levels.");
 	clippos --;
     } 
-
+    
     startshape(obj);
+    int olddrawmode = drawmode;
     swfoutput_setdrawmode(obj, DRAWMODE_CLIP);
     swfoutput_drawpath(obj, outline, m);
     ShapeSetEnd(tag);
+    swfoutput_setdrawmode(obj, olddrawmode);
 
     tag = InsertTag(tag,ST_PLACEOBJECT2);
     cliptags[clippos] = tag;
