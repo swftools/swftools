@@ -57,22 +57,26 @@ int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
   n = 0;
 
   while (t)
-  { if (swf_GetTagID(t)==ST_DEFINEFONTINFO || swf_GetTagID(t)==ST_DEFINEFONTINFO2 ||
-	  swf_GetTagID(t)==ST_DEFINEFONT2)
+  { 
+    if (swf_GetTagID(t)==ST_DEFINEFONT2 || swf_GetTagID(t)==ST_DEFINEFONT)
     { n++;
       if (FontCallback)
       { U16 id;
         int l;
         U8 s[257];
+	s[0] = 0;
         swf_SaveTagPos(t);
         swf_SetTagPos(t,0);
 	
         id  = swf_GetU16(t);
-	if(swf_GetTagID(t) == ST_DEFINEFONT2)
+	if(swf_GetTagID(t) == ST_DEFINEFONT2 ||
+	   swf_GetTagID(t) == ST_DEFINEFONTINFO ||
+	   swf_GetTagID(t) == ST_DEFINEFONTINFO2) {
 	    swf_GetU16(t);
-        l   = swf_GetU8(t);
-        swf_GetBlock(t,s,l);
-        s[l] = 0;
+	    l = swf_GetU8(t);
+            swf_GetBlock(t,s,l);
+            s[l] = 0;
+	}
 
         (FontCallback)(id,s); 
       
@@ -323,15 +327,18 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 #define FEDTJ_MODIFY 0x02
 #define FEDTJ_CALLBACK 0x04
 
-int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
-	void(*callback)(int*chars, int nr, int fontid))
+static int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
+	void(*callback)(void*self, int*chars, int*ypos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA* color), void*self)
 { U16    cid;
   SRECT  r;
   MATRIX m;
-  U8     gbits, abits, flags;
-  int    fid;
+  U8     gbits, abits;
+  int    fid=0;
+  RGBA	 color;
+  int	 x=0,y=0;
+  int	 fontsize=0;
 
-  fid = 0;
+  memset(&color, 0, sizeof(color));
 
   swf_SaveTagPos(t);
   swf_SetTagPos(t,0);
@@ -342,57 +349,77 @@ int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs,
   gbits = swf_GetU8(t);
   abits = swf_GetU8(t);
 
-  flags = swf_GetU8(t);
-  
-  while(flags)
+  while(1)
   { 
-    // FIXME: according to open-swf@macromedia.com, this is wrong.
-    // it should alternate textcontrol and text arrays, not
-    // rely on the high bit. (and length can be 0-255).
+    int flags,num;
+    flags = swf_GetU8(t);
+    if(!flags)
+	break;
+  
     if (flags&TF_TEXTCONTROL)
     { if (flags&TF_HASFONT) fid = swf_GetU16(t);
       if (flags&TF_HASCOLOR)
-      { swf_GetU8(t); // rgb
-        swf_GetU8(t);
-        swf_GetU8(t);
-        if (swf_GetTagID(t)==ST_DEFINETEXT2) swf_GetU8(t);
+      { color.r = swf_GetU8(t); // rgb
+        color.g = swf_GetU8(t);
+        color.b = swf_GetU8(t);
+        if (swf_GetTagID(t)==ST_DEFINETEXT2) color.a = swf_GetU8(t);
       }
-      if (flags&TF_HASXOFFSET) swf_GetS16(t);
-      if (flags&TF_HASYOFFSET) swf_GetS16(t);
-      if (flags&TF_HASFONT) swf_GetU16(t);
+      if (flags&TF_HASXOFFSET) x = swf_GetS16(t);
+      if (flags&TF_HASYOFFSET) y = swf_GetS16(t);
+      if (flags&TF_HASFONT) fontsize = swf_GetU16(t);
     }
-    else
+
+    num = swf_GetU8(t);
+    if(!num)
+	break;
+
     { int i;
       int buf[256];
-      for (i=0;i<flags;i++)
+      int advance[256];
+      int xpos = 0;
+      for (i=0;i<num;i++)
       { int glyph;
-        int adv;
+        int adv = 0;
+	advance[i] = xpos;
         glyph = swf_GetBits(t,gbits);
         adv = swf_GetBits(t,abits);
-        if (id==fid)                    // mitlesen ?
+	xpos+=adv;
+       
+	// <deprectated>
+	if (id==fid) {
           if (jobs&FEDTJ_PRINT) {
-	    { int code = f->glyph2ascii[glyph];
+	      int code = f->glyph2ascii[glyph];
 	      printf("%c",code);
 	  }
           if (jobs&FEDTJ_MODIFY)
-            /*if (!f->glyph[code].advance)*/ f->glyph[glyph].advance = adv;
-        }
+	    f->glyph[glyph].advance = adv;
+        } else {
+            if (jobs&FEDTJ_PRINT) {
+		printf("?");
+	    }
+	}
+	// </deprectated>
+
 	buf[i] = glyph;
       }
       if ((id==fid)&&(jobs&FEDTJ_PRINT)) printf("\n");
       if (jobs&FEDTJ_CALLBACK)
-	  callback(buf, flags, fid);
+	  callback(self, buf, advance, num, fid, fontsize, x, y, &color);
+      x += xpos;
     }
-    flags = swf_GetU8(t);
   }
   
   swf_RestoreTagPos(t);
   return id;
 }  
+int swf_ParseDefineText(TAG * tag, void(*callback)(void*self, int*chars, int*ypos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA* color), void*self)
+{
+    return swf_FontExtract_DefineTextCallback(-1, 0, tag, FEDTJ_CALLBACK, callback, self);
+}
 
 int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
 {
-    return swf_FontExtract_DefineTextCallback(id,f,t,jobs,0);
+    return swf_FontExtract_DefineTextCallback(id,f,t,jobs,0,0);
 }
 
 int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
