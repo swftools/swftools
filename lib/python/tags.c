@@ -123,9 +123,10 @@ static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char
     SWFPLACEOBJECT* po;
     po = malloc(sizeof(SWFPLACEOBJECT));
     memset(po, 0, sizeof(SWFPLACEOBJECT));
-
+    
     swf_GetPlaceObject(0, po);
-
+   
+    PyErr_Clear();
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oi|O!O!isiO!", kwlist, 
 		&character, 
 		&depth, 
@@ -137,6 +138,7 @@ static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char
 		&ActionClass, &action
 		))
 	return NULL;
+
     po->depth = depth;
     po->clipdepth = clipdepth;
     po->ratio = ratio;
@@ -662,8 +664,6 @@ static PyObject* f_DefineVideoStream(PyObject* self, PyObject* args, PyObject* k
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|i", kwlist, &width, &height, &frames))
 	return NULL;
 
-    printf(": %d %d\n", width, height);
-    
     tag_internals_t*itag = tag_getinternals(tag);
     videostream_internal_t*fi = (videostream_internal_t*)itag->data;
     fi->stream = malloc(sizeof(VIDEOSTREAM));
@@ -696,6 +696,24 @@ static PyObject* videostream_getbheight(PyObject*self, PyObject*args)
     videostream_internal_t*fi = (videostream_internal_t*)itag->data;
     int height = fi->stream->bby;
     return Py_BuildValue("i", height);
+}
+static PyObject* videostream_addBlackFrame(PyObject*self, PyObject*args, PyObject*kwargs)
+{
+    tag_internals_t*_itag = tag_getinternals(self);
+    videostream_internal_t*fi = (videostream_internal_t*)_itag->data;
+    
+    TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
+    
+    PyObject*tag = tag_new(&videoframe_tag);
+    tag_internals_t*itag = tag_getinternals(tag);
+    
+    swf_SetU16(t,0); /* id */
+    swf_SetVideoStreamBlackFrame(t, fi->stream);
+    fi->lastiframe = fi->stream->frame;
+    
+    itag->tag = t;
+    tagmap_addMapping(itag->tagmap, 0, self);
+    return tag;
 }
 static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwargs)
 {
@@ -765,10 +783,12 @@ static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args, Py
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|i", kwlist, &array, &quant))
 	return NULL;
 
-    signed char* movex = malloc(fi->stream->bbx * fi->stream->bby);
-    signed char* movey = malloc(fi->stream->bbx * fi->stream->bby);
+    signed char* movex = malloc(fi->stream->bbx * fi->stream->bby * 1);
+    signed char* movey = malloc(fi->stream->bbx * fi->stream->bby * 1);
+    RGBA** pics = (RGBA**)malloc(fi->stream->bbx * fi->stream->bby * sizeof(void*));
     signed char* itx=movex;
     signed char* ity=movey;
+    RGBA**pic=pics;
     int x,y;
     if(!array || !PySequence_Check(array))
 	return PY_ERROR("Not an array");
@@ -783,18 +803,54 @@ static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args, Py
 
 	for(x=0;x<fi->stream->bbx;x++) {
 	    PyObject*pixel = PySequence_GetItem(line, x);
+	    PyObject*xy = 0;
+	    PyObject*image = 0;
+
 	    if(!pixel) {
-		*itx = 0;
-		*ity = 0;
+		xy = image = 0;
 	    } else {
-		if(!PyComplex_Check(pixel)) {
-		    return PY_ERROR("Not an array of arrays of complex numbers");
+		if(PyComplex_Check(pixel)) {
+		    xy = pixel; image = 0;
+		} else if(PyString_Check(pixel)) {
+		    xy = 0; image = pixel;
+		} else if(PyTuple_Check(pixel)) {
+		    int size = PyTuple_GET_SIZE(pixel);
+		    if(size!=2) return PY_ERROR("Tuples have to have size 2 (xy,img)");
+		    xy = PyTuple_GetItem(pixel, 0);
+		    if(!xy) return 0;
+		    if(!PyComplex_Check(xy)) return PY_ERROR("Tuples must be (COMPLEX,string)");
+		    image = PyTuple_GetItem(pixel, 1);
+		    if(!image) return 0;
+		    if(!PyString_Check(image)) return PY_ERROR("Tuples must be (complex,STRING)");
 		}
+	    }
+
+	    *itx = *ity = 0;
+	    *pic= 0;
+
+	    if(xy) {
 		*itx = (signed char)PyComplex_RealAsDouble(pixel);
 		*ity = (signed char)PyComplex_ImagAsDouble(pixel);
 	    }
+	    if(image) {
+		char*string;
+		int size;
+		PyString_AsStringAndSize(image,&string,&size);
+		if(size<256*3) {
+		    return PY_ERROR("image strings must be >= 256*3");
+		}
+		*pic = malloc(sizeof(RGBA)*16*16);
+		int t;
+		for(t=0;t<16*16;t++) {
+		    (*pic)[t].r = string[t*3];
+		    (*pic)[t].g = string[t*3+1];
+		    (*pic)[t].b = string[t*3+2];
+		    (*pic)[t].a = 255;
+		}
+	    }
 	    itx++;
 	    ity++;
+	    pic++;
 	}
     }
     
@@ -803,13 +859,20 @@ static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args, Py
     
     TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
     swf_SetU16(t,0); /* id */
-    swf_SetVideoStreamMover(t, fi->stream, movex, movey, quant);
+    swf_SetVideoStreamMover(t, fi->stream, movex, movey,(void**)pics, quant);
 
     itag->tag = t;
     tagmap_addMapping(itag->tagmap, 0, self);
 
+    for(x=0;x<fi->stream->bbx*fi->stream->bby;x++) {
+	if(pics[x]) {
+	    free(pics[x]);pics[x] = 0;
+	}
+    }
+
     free(movex);
     free(movey);
+    free(pics);
 
     return tag;
 }
@@ -817,6 +880,7 @@ static PyMethodDef videostream_methods[] =
 {{"xblocks", videostream_getbwidth, METH_VARARGS, "get's the number of horizontal blocks"},
  {"yblocks", videostream_getbheight, METH_VARARGS, "get's the number of vertical blocks"},
  {"addFrame", (PyCFunction)videostream_addFrame, METH_KEYWORDS, "add a Video Frame"},
+ {"addBlackFrame", (PyCFunction)videostream_addBlackFrame, METH_KEYWORDS, "add a black Video Frame"},
  {"addDistortionFrame", (PyCFunction)videostream_addDistortionFrame, METH_KEYWORDS, "add a MVD frame"},
  {NULL, NULL, 0, NULL}
 };
