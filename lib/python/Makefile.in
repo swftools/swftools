@@ -25,8 +25,8 @@ pyutils.o: pyutils.c pyutils.h
 SWF.o: SWF.c pyutils.h primitives.h taglist.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.o
 
-SWF.so: SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
-	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.so $(PYTHON_LIB) ../librfxswf.a $(LIBS)
+SWF.$(SLEXT): SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
+	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 
 mypython: mypython.c Makefile
 	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython $(PYTHON_LIB)
@@ -39,21 +39,21 @@ testmem: testmem.c Makefile
 
 test: test6
 
-test1: SWF.so
+test1: SWF.$(SLEXT)
 	./test_create.py
 	swfdump -p tmp/test.swf
-test2: SWF.so
+test2: SWF.$(SLEXT)
 	./test_combine.py
 	swfdump -u -p tmp/combined.swf
-test3: SWF.so
+test3: SWF.$(SLEXT)
 	./test_simple.py
-test4: SWF.so
+test4: SWF.$(SLEXT)
 	./test_movie.py
 	swfdump -u -p tmp/test.swf
-test5: SWF.so
+test5: SWF.$(SLEXT)
 	./test_image.py
 	swfdump -u -p tmp/test.swf
-test6: SWF.so
+test6: SWF.$(SLEXT)
 	./test_sprite.py
 clean:
 	rm -f *.o *.so mypython swfpython
