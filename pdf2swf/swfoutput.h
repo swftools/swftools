@@ -55,6 +55,7 @@ struct swfoutput
     SWFFONT *swffont;
     RGBA strokergb;
     RGBA fillrgb;
+    int drawmode;
 };
 
 /* outline definition, adapted from t1lib.h */
