@@ -141,7 +141,7 @@ int main (int argc, char*argv[])
 }
 EOF
 
-ac_link='g++ `avifile-config --cflags` `avifile-config --libs` conftest.$ac_ext -o conftest${ac_exeext}'
+ac_link='$CXX $CPPFLAGS $CXXFLAGS `avifile-config --cflags` `avifile-config --libs` conftest.$ac_ext -o conftest${ac_exeext}'
 if {(eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   AC_MSG_RESULT(yes)
   AVIFILE=true
