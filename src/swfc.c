@@ -1156,6 +1156,10 @@ void s_font(char*name, char*filename)
     font->id = id;
     tag = swf_InsertTag(tag, ST_DEFINEFONT2);
     swf_FontSetDefine2(tag, font);
+    tag = swf_InsertTag(tag, ST_EXPORTASSETS);
+    swf_SetU16(tag, 1);
+    swf_SetU16(tag, id);
+    swf_SetString(tag, name);
     incrementid();
 
     if(dictionary_lookup(&fonts, name))
