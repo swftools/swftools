@@ -135,7 +135,6 @@ static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char
 		))
 	return NULL;
     po->depth = depth;
-    po->id = /*ID*/ 0;
     po->clipdepth = clipdepth;
     po->ratio = ratio;
     po->name = name;
@@ -150,7 +149,11 @@ static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char
     tag_internals_t*itag = tag_getinternals(tag);
     placeobject_internal_t*pi = (placeobject_internal_t*)itag->data;
     pi->po = po;
-    pi->po->id = tagmap_add(itag->tagmap,(PyObject*)character);
+    if(!move) {
+	pi->po->id = tagmap_add(itag->tagmap,(PyObject*)character);
+    } else {
+	pi->po->id = 0;
+    }
     
     mylog("+%08x(%d) PlaceObject %08x(%d)\n", (int)tag, tag->ob_refcnt, character, character->ob_refcnt);
 
@@ -581,9 +584,30 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     RGBA*pic = image_toRGBA(image);
     if(!pic)
 	return 0;
+
+    
+{  int f,j=0,i=0,rr,gg,bb;
+   FILE *o;
+   RGBA*it = pic;
+   char*filename="test.ppm";
+   printf("Creating %s %dx%d\n",filename, 512,512);
+   o=fopen(filename, "wb");
+   fprintf(o,"P6\n%d %d\n255\n",512, 512);
+   
+   while(j<512*512) {
+    rr=it->r;
+    gg=it->g;
+    bb=it->b;
+    fprintf(o,"%c%c%c",rr,gg,bb);
+    it++;
+    j++;
+   }
+   fclose(o);
+}
+
     TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
     if((type && (type[0]=='I' || type[0]=='i')) || (type==0 && fi->lastiframe+64 < fi->stream->frame)) {
-	swf_SetU16(t,0);
+	swf_SetU16(t,0); /* id */
 	swf_SetVideoStreamIFrame(t, fi->stream, pic, quant);
 	fi->lastiframe = fi->stream->frame;
     } else {
@@ -595,16 +619,62 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     free(pic);
     return tag;
 }
-static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args)
+static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args, PyObject*kwargs)
 {
     tag_internals_t*_itag = tag_getinternals(self);
     videostream_internal_t*fi = (videostream_internal_t*)_itag->data;
     
+    static char *kwlist[] = {"image", "quant", NULL};
+    int quant=7;
+    PyObject* array = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|i", kwlist, &array, &quant))
+	return NULL;
+
+    signed char* movex = malloc(fi->stream->bbx * fi->stream->bby);
+    signed char* movey = malloc(fi->stream->bbx * fi->stream->bby);
+    signed char* itx=movex;
+    signed char* ity=movey;
+    int x,y;
+    if(!array || !PySequence_Check(array))
+	return PY_ERROR("Not an array");
+    if(PySequence_Length(array) < fi->stream->bby)
+	return PY_ERROR("Array (y) has to have at least %d elements, but has only %d ", fi->stream->bby, PySequence_Length(array));
+    for(y=0;y<fi->stream->bby;y++) {
+	PyObject*line = PySequence_GetItem(array, y);
+	if(!line || !PySequence_Check(line))
+	    return PY_ERROR("Not an array of arrays");
+	if(PySequence_Length(line) < fi->stream->bbx)
+	    return PY_ERROR("Inner arrays (x) have to be at least %d long- %dth is only %d", fi->stream->bbx, y, PySequence_Length(line));
+
+	for(x=0;x<fi->stream->bbx;x++) {
+	    PyObject*pixel = PySequence_GetItem(line, x);
+	    if(!pixel) {
+		*itx = 0;
+		*ity = 0;
+	    } else {
+		if(!PyComplex_Check(pixel)) {
+		    return PY_ERROR("Not an array of arrays of complex numbers");
+		}
+		*itx = (signed char)PyComplex_RealAsDouble(pixel);
+		*ity = (signed char)PyComplex_ImagAsDouble(pixel);
+	    }
+	    itx++;
+	    ity++;
+	}
+    }
+    
     PyObject*tag = tag_new(&videoframe_tag);
     tag_internals_t*itag = tag_getinternals(tag);
-    /* DUMMY */
-    TAG* t = swf_InsertTag(0, ST_REFLEX);
+    
+    TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
+    swf_SetU16(t,0); /* id */
+    swf_SetVideoStreamMover(t, fi->stream, movex, movey, quant);
+
     itag->tag = t;
+    tagmap_addMapping(itag->tagmap, 0, self);
+
+    free(movex);
+    free(movey);
 
     return tag;
 }
@@ -672,4 +742,3 @@ PyMethodDef* tags_getMethods()
 
     return TagMethods;
 }
-
