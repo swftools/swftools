@@ -36,13 +36,15 @@ void swf_SetLoadFontParameters(int _scale, int _skip_unused, int _full_unicode)
 
 #ifdef HAVE_FREETYPE_FT2BUILD_H
 #include <freetype/ft2build.h>
-#endif
+#include FT_FREETYPE_H
+#else
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
 #include <freetype/ftsizes.h>
 #include <freetype/ftsnames.h>
 #include <freetype/ttnameid.h>
 #include <freetype/ftoutln.h>
+#endif
 
 #define FT_SCALE 1
 #define FT_SUBPIXELS 64
