@@ -14,8 +14,10 @@
 
 #include "rfxswf.h"
 
+#ifdef HAVE_JPEGLIB_H
 #include <jpeglib.h>
 #define _JPEGLIB_INCLUDED_
+#endif
 
 // Win32 support may be broken since it was only tested in an older version for Watcom C
 #ifdef __NT__
@@ -790,9 +792,9 @@ void FreeTags(LPSWF swf)                 // Frees all malloc'ed memory for tags
 #include "modules\swftext.c"
 #include "modules\swfobject.c"
 #include "modules\swfbutton.c"
-#include "modules\swfbits.c"
 #include "modules\swftools.c"
 #include "modules\swfcgi.c"
+#include "modules\swfbits.c"
 
 #else
 
@@ -801,9 +803,9 @@ void FreeTags(LPSWF swf)                 // Frees all malloc'ed memory for tags
 #include "modules/swftext.c"
 #include "modules/swfobject.c"
 #include "modules/swfbutton.c"
-#include "modules/swfbits.c"
 #include "modules/swftools.c"
 #include "modules/swfcgi.c"
+#include "modules/swfbits.c"
 
 #endif
 
