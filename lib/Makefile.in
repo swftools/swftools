@@ -73,7 +73,7 @@ SUBDIRS = lame
 noinst_LIBRARIES = librfxswf.a
 
 librfxswf_a_SOURCES = bitio.c bitio.h rfxswf.c rfxswf.h log.c log.h rfxswf.o
-librfxswf_a_DEPENDENCIES = bitio.c bitio.h rfxswf.o rfxswf.h log.c log.h modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swftools.c modules/swfsound.c modules/swfshape.c lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
+librfxswf_a_DEPENDENCIES = bitio.c bitio.h rfxswf.o rfxswf.h log.c log.h modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
 
 
 librfxswf_a_LIBADD = lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
@@ -344,7 +344,7 @@ maintainer-clean-generic clean mostlyclean distclean maintainer-clean
 rfxswf.o: rfxswf.c rfxswf.h bitio.c bitio.h modules/swfbits.c \
 modules/swfaction.c modules/swfdump.c modules/swfcgi.c \
 modules/swfbutton.c modules/swftext.c modules/swftools.c \
-modules/swfsound.c modules/swfshape.c
+modules/swfsound.c modules/swfshape.c modules/swfobject.c
 	$(COMPILE) -c $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
