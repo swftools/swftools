@@ -141,8 +141,7 @@ void parseFillStyleArray(TAG*tag, SHAPE2*shape)
 	    swf_ResetReadBits(tag);
 	    swf_GetMatrix(tag, &dest->m);
 	    swf_ResetReadBits(tag);
-	    dest->gradient = malloc(sizeof(GRADIENT)); // TODO: free this again
-	    swf_GetGradient(tag, dest->gradient, num>=3?1:0);
+	    swf_GetGradient(tag, &dest->gradient, num>=3?1:0);
 	}
 	else if(type == 0x40 || type == 0x41)
 	{
