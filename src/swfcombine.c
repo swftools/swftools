@@ -497,7 +497,6 @@ TAG* write_sprite_defines(TAG*tag, SWF*sprite)
 
 void changedepth(TAG*tag, int add)
 {
-    /* fucking byteorders */
     if(tag->id == ST_PLACEOBJECT)
 	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == ST_PLACEOBJECT2)
@@ -506,6 +505,23 @@ void changedepth(TAG*tag, int add)
 	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == ST_REMOVEOBJECT2)
 	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
+    if(tag->id == ST_PLACEOBJECT2) {
+	SWFPLACEOBJECT obj;
+	swf_SetTagPos(tag, 0);
+	U8 flags;
+	flags = swf_GetU8(tag);
+	if(flags&2) swf_GetU16(tag); //id
+	if(flags&4) swf_GetMatrix(tag, 0);
+	if(flags&8) swf_GetCXForm(tag, 0,1);
+	if(flags&16) swf_GetU16(tag); //ratio
+	if(flags&64) {
+	    swf_ResetReadBits(tag);
+	    printf("%d->%d\n", GET16(&tag->data[tag->pos]),
+		               GET16(&tag->data[tag->pos])+add);
+	    PUT16(&tag->data[tag->pos],GET16(&tag->data[tag->pos])+add);
+	}
+	msg("<warning> Depth relocation not fully working yet with clipdepths", tag->id);
+    }
 }
 
 void matrix_adjust(MATRIX*m, int movex, int movey, float scalex, float scaley, int scalepos)
@@ -618,8 +634,9 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
 		    rtag->id, rtag->len);
 	    tag = swf_InsertTag(tag, rtag->id);
 	    write_changepos(tag, rtag, config.movex, config.movey, config.scalex, config.scaley, 0);
-	
-	    changedepth(tag, +2);
+
+	    if(config.clip || (config.overlay && !config.isframe))
+		changedepth(tag, +2);
 
 	    if(tag->id == ST_SHOWFRAME)
 	    {
