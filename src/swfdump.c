@@ -624,7 +624,7 @@ int main (int argc,char ** argv)
 	    printf("                %s-=> ",prefix);
 	    for(t=0;t<tag->len;t++) {
 		printf("%02x ", tag->data[t]);
-		if((t && !(t&15)) || (t==tag->len-1))
+		if((t && ((t&15)==15)) || (t==tag->len-1))
 		{
 		    if(t==tag->len-1)
 			printf("\n");
