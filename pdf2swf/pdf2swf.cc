@@ -502,22 +502,22 @@ int main(int argn, char *argv[])
     }
 
     if(viewer && !preloader) {
-	systemf("swfcombine `swfdump -XY %s` %s viewport=%s -o %s",
+	systemf("swfcombine `swfdump -XY \"%s\"` \"%s\" viewport=\"%s\" -o \"%s\"",
 		outputname, viewer, outputname, outputname);
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && !viewer) {
 	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-	ret = systemf("swfcombine `swfdump -r %s` %s/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
+	ret = systemf("swfcombine `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",
 		preloader, SWFDIR, preloader, outputname, outputname);
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && viewer) {
-	systemf("swfcombine %s viewport=%s -o __tmp__.swf",
+	systemf("swfcombine \"%s\" viewport=%s -o __tmp__.swf",
 		viewer, outputname, outputname);
-	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o %s",
+	systemf("swfcombine `swfdump -XY \"%s\"` `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",
 		outputname, preloader, SWFDIR, preloader, outputname);
 	systemf("rm __tmp__.swf");
     }
