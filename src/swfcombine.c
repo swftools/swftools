@@ -30,15 +30,19 @@ struct config_t
    char merge;
    char isframe;
    int loglevel;
-   int movex;
-   int movey;
    int sizex;
    char hassizex;
    int sizey;
    char hassizey;
    int framerate;
+   int movex;
+   int movey;
    float scalex;
    float scaley;
+   int mastermovex;
+   int mastermovey;
+   float masterscalex;
+   float masterscaley;
 };
 struct config_t config;
 
@@ -209,6 +213,12 @@ int args_callback_command(char*name, char*val) {
     if(!master_filename) {
 	master_filename = filename;
 	master_name = myname;
+	config.mastermovex = config.movex;
+	config.mastermovey = config.movey;
+	config.masterscalex = config.scalex;
+	config.masterscaley = config.scaley;
+	config.movex = config.movey = 0;
+	config.scalex = config.scaley = 1.0;
     } else {		 
 	logf("<verbose> slave entity %s (named \"%s\")\n", filename, myname);
 
@@ -477,19 +487,19 @@ void changedepth(TAG*tag, int add)
 	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
 }
 
-void matrix_adjust(MATRIX*m)
+void matrix_adjust(MATRIX*m, int movex, int movey, float scalex, float scaley)
 {
-    m->sx = (int)(m->sx*config.scalex);
-    m->sy = (int)(m->sy*config.scaley);
-    m->r0 = (int)(m->r0*config.scalex);
-    m->r1 = (int)(m->r1*config.scaley);
-    m->tx += config.movex;
-    m->ty += config.movey;
+    m->sx = (int)(m->sx*scalex);
+    m->sy = (int)(m->sy*scaley);
+    m->r0 = (int)(m->r0*scalex);
+    m->r1 = (int)(m->r1*scaley);
+    m->tx += movex;
+    m->ty += movey;
 }
 
-void write_changepos(TAG*output, TAG*tag)
+void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, float scaley)
 {
-    if(config.movex || config.movey || config.scalex != 1 || config.scaley != 1)
+    if(movex || movey || scalex != 1 || scaley != 1)
     {
 	switch(tag->id)
 	{
@@ -513,7 +523,7 @@ void write_changepos(TAG*output, TAG*tag)
 		} else {
 		    swf_GetMatrix(0, &m);
 		}
-		matrix_adjust(&m);
+		matrix_adjust(&m, movex, movey, scalex, scaley);
 		swf_SetMatrix(output, &m);
 
 		//swf_ResetReadBits(tag);
@@ -526,7 +536,7 @@ void write_changepos(TAG*output, TAG*tag)
 		swf_SetU16(output, swf_GetU16(tag)); //depth
 		
 		swf_GetMatrix(tag, &m);
-		matrix_adjust(&m);
+		matrix_adjust(&m, movex, movey, scalex, scaley);
 		swf_SetMatrix(output, &m);
 		
 		//swf_ResetReadBits(tag);
@@ -580,7 +590,7 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
 	    logf("<debug> [sprite main] write tag %02x (%d bytes in body)", 
 		    rtag->id, rtag->len);
 	    tag = swf_InsertTag(tag, rtag->id);
-	    write_changepos(tag, rtag);
+	    write_changepos(tag, rtag, config.movex, config.movey, config.scalex, config.scaley);
 	
 	    changedepth(tag, +2);
 
@@ -700,7 +710,6 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		    if(frame == slaveframe && !config.overlay)
 			dontwrite = 1;
 		case ST_REMOVEOBJECT:
-//		case ST_REMOVEOBJECT2:
 		    /* place/removetags for the object we replaced
 		       should be discarded, too, as the object to insert 
 		       isn't a sprite 
@@ -709,12 +718,14 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 			    !config.isframe && config.merge)
 			dontwrite = 1;
 		break;
+		case ST_REMOVEOBJECT2:
+		break;
 	    }
 	    if(!dontwrite) {
 		logf("<debug> [master] write tag %02x (%d bytes in body)", 
 			rtag->id, rtag->len);
 		tag = swf_InsertTag(tag, rtag->id);
-		swf_SetBlock(tag, rtag->data, rtag->len);
+		write_changepos(tag, rtag, config.mastermovex, config.mastermovey, config.masterscalex, config.masterscaley);
 	    }
 	}
 	rtag = rtag->next;
@@ -865,6 +876,12 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	    int defineid = swf_GetDefineID(tag);
 	    logf("<debug> tagid %02x defines object %d", tag->id, defineid);
 	    masterbitmap[defineid] = 1;
+	    if (!slavename && defineid==slaveid) {
+		if(defineid>=0) {
+		  spriteid = defineid;
+		  logf("<notice> Slave file attached to object %d.", defineid);
+		}
+	    }
 	} else if(tag->id == ST_PLACEOBJECT2) {
 	    char * name = swf_GetName(tag);
 	    int id = swf_GetPlaceID(tag);
@@ -874,11 +891,10 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	    else
 	      logf("<verbose> tagid %02x places object %d (no name)", tag->id, id);
 
-	    if ((name && slavename && !strcmp(name,slavename)) || 
-		(!slavename && id==slaveid)) {
+	    if (name && slavename && !strcmp(name,slavename)) {
 		if(id>=0) {
 		  spriteid = id;
-		  logf("<notice> Slave file attached to object %d.", id);
+		  logf("<notice> Slave file attached to named object %s (%d).", name, id);
 		}
 	    }
 	} else if(tag->id == ST_SHOWFRAME) {
@@ -930,10 +946,10 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     } else {
 	if (config.merge)
 	    tag = write_master(tag, master, slave, spriteid, replaceddefine, 
-		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESLAVE);
+		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|   FLAGS_WRITESLAVE	);
 	else
 	    tag = write_master(tag, master, slave, spriteid, replaceddefine, 
-		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESPRITE);
+		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|   FLAGS_WRITESPRITE	);
     }
 
     tag = newswf->firstTag;
@@ -975,7 +991,7 @@ void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	    slaveid = -1;
 	} else {
 	/* if id wasn't given as either #number or number,
-	   the name is a frame label. BTW: The user wouldn't have
+	   the name is a frame label. BTW: The user wouldn't necessarily have
 	   needed to supply the -f option in this case */
 	}
     }
@@ -984,6 +1000,10 @@ void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     logf("<debug> move y (%d)", config.movey);
     logf("<debug> scale x (%f)", config.scalex);
     logf("<debug> scale y (%f)", config.scaley);
+    logf("<debug> master move x (%d)", config.mastermovex);
+    logf("<debug> master move y (%d)", config.mastermovey);
+    logf("<debug> master scale x (%f)", config.masterscalex);
+    logf("<debug> master scale y (%f)", config.masterscaley);
     logf("<debug> is frame (%d)", config.isframe);
     
     memset(masterbitmap, 0, sizeof(masterbitmap));
@@ -1015,6 +1035,10 @@ int main(int argn, char *argv[])
     config.scaley = 1.0;
     config.sizex = 0;
     config.sizey = 0;
+    config.masterscalex = 1.0;
+    config.masterscaley = 1.0;
+    config.mastermovex = 0;
+    config.mastermovey = 0;
     config.hassizex = 0;
     config.hassizey = 0;
     config.framerate = 0;
