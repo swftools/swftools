@@ -429,7 +429,29 @@ int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 #define BC_PAGEUP               0x2000
 #define BC_PAGEDOWN             0x2200
 #define BC_TAB                  0x2400
+#define BC_ESCAPE		0x3600
 #define BC_SPACE                0x4000
+
+/* these are probably only valid with linux:
+   Ctrl-A	 0x0200
+   Ctrl-X	 0x3000
+   Ctrl-Y	 0x3200
+   Ctrl-Z	 0x3400
+   Escape/Ctrl-[ 0x3600
+   Ctrl-\	 0x3800
+   Ctrl-]	 0x3a00
+   Ctrl-^	 0x3c00
+   Ctrl-/	 0x3e00
+   */
+
+/* everything above 0x4000 is standard ascii:
+   0x4000 ' ' 0x4200 '!' 0x4600 '#' 0x4800 '$' 0x4a00 '%' 0x4c00 '&' ...
+   0x6000 '0' ... 0x7200 '9' 
+   0x8000 '@' 
+   0x8200 'A' ...  0xb400 'Z' 
+   ...
+   0xfc00 '~'
+ */
 
 // Button Flag
 
