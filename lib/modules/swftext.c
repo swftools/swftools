@@ -24,6 +24,8 @@
 #define FF_SHIFTJIS     0x10
 #define FF_UNICODE      0x20
 
+static const int WRITEFONTID = 0x4e46; // font id for WriteFont and ReadFont
+
 int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
 { int n;
   TAG * t;
@@ -500,3 +502,159 @@ U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale)
   }
   return res;
 }
+
+void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
+{ SWF swf;
+  TAG * t;
+  SRECT r;
+  RGBA rgb;
+  int f;
+
+  if(useDefineFont2) {
+      fprintf(stderr, "DefineFont2 is not yet supported!\n");
+      useDefineFont2 = 0;
+  }
+
+  font->id = WRITEFONTID; //"FN"
+
+  memset(&swf,0x00,sizeof(SWF));
+
+  swf.fileVersion    = 4;
+  swf.frameRate      = 0x4000;
+  swf.movieSize.xmax = 20*640;
+  swf.movieSize.ymax = 20*480;
+
+  if(!useDefineFont2)
+  /* if we use DefineFont1 to store the characters,
+     we have to build a textfield to store the
+     advance values. While at it, we can also
+     make the whole .swf viewable */
+  {
+      t = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+      swf.firstTag = t;
+	    rgb.r = 0xff;
+	    rgb.g = 0xff;
+	    rgb.b = 0xff;
+	    swf_SetRGB(t,&rgb);
+      t = swf_InsertTag(t,ST_DEFINEFONT);
+  }
+  else
+  {
+      t = swf_InsertTag(NULL,ST_DEFINEFONT);
+      swf.firstTag = t;
+  }
+
+        swf_FontSetDefine(t,font);
+  
+  t = swf_InsertTag(t,ST_DEFINEFONTINFO);
+        swf_FontSetInfo(t,font);
+
+  if(!useDefineFont2)
+  {
+	int textscale = 400;
+	int s;
+	int xmax = 0;
+	int ymax = textscale * 20;
+	U8 gbits,abits;
+	char text[257];
+	int x,y;
+	text[256]=0;
+	for(s=0;s<256;s++)
+	{
+	    text[s] = s;
+	    if(font->glyph[s].advance*textscale/100 > xmax)
+		xmax = font->glyph[s].advance*textscale/100;
+	}
+	swf.movieSize.xmax = xmax*20;
+	swf.movieSize.ymax = ymax;
+
+	t = swf_InsertTag(t,ST_DEFINETEXT);
+
+	    swf_SetU16(t,font->id+1);            // ID
+
+	    r.xmin = 0;
+	    r.ymin = 0;
+	    r.xmax = swf.movieSize.xmax*20;
+	    r.ymax = swf.movieSize.ymax;
+	    
+	    swf_SetRect(t,&r);
+
+	    swf_SetMatrix(t,NULL);
+
+	    abits = swf_CountBits(xmax*16, 0);
+	    gbits = 8;
+	    
+	    swf_SetU8(t,gbits);
+	    swf_SetU8(t,abits);
+
+	    rgb.r = 0x00;
+	    rgb.g = 0x00;
+	    rgb.b = 0x00;
+	    for(y=0;y<16;y++)
+	    {
+		int c=0,lastx=-1, firstx=0;
+		for(x=0;x<16;x++) {
+		    if(font->glyph[y*16+x].shape) {
+			c++;
+			if(lastx<0) 
+			    lastx = x*xmax;
+		    }
+		}
+		if(c) {
+		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*y);
+		  for(x=0;x<16;x++)
+		  {
+		      if(font->glyph[y*16+x].shape) {
+			if(lastx != x*xmax) {
+			    swf_TextSetInfoRecord(t,0,0,0,x*xmax+1,0);
+			}
+			swf_SetU8(t,1);
+			swf_SetBits(t, font->glyph[y*16+x].gid, gbits);
+		        swf_SetBits(t, font->glyph[y*16+x].advance, abits);
+			lastx = x*xmax+font->glyph[y*16+x].advance;
+			swf_ResetWriteBits(t);
+		      }
+		  }
+		} 
+	    }
+	    swf_SetU8(t,0);
+        
+	t = swf_InsertTag(t,ST_PLACEOBJECT2);
+
+	    swf_ObjectPlace(t,font->id+1,1,NULL,NULL,NULL);
+     
+	t = swf_InsertTag(t,ST_SHOWFRAME);
+  }
+  
+  t = swf_InsertTag(t,ST_END);
+
+  f = open(filename, O_RDWR|O_CREAT|O_TRUNC,0644);
+  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed in writeFont().\n");
+  close(f);
+
+  swf_FreeTags(&swf);
+}
+
+SWFFONT* swf_ReadFont(char* filename)
+{
+  int f;
+  SWF swf;
+  if(!filename)
+      return 0;
+  f = open(filename,O_RDONLY);
+  
+  if (f<0 || swf_ReadSWF(f,&swf)<0)
+  { fprintf(stderr,"%s is not a valid SWF font file or contains errors.\n",filename);
+    close(f);
+    return 0;
+  }
+  else
+  { SWFFONT*font;
+    close(f);
+    if(swf_FontExtract(&swf, WRITEFONTID, &font) < 0)
+       return 0;
+    swf_FreeTags(&swf);
+    return font;
+  }
+}
+
