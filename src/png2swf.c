@@ -39,6 +39,7 @@ struct {
     int nfiles;
     int verbose;
     int do_cgi;
+    int version;
     char *outfile;
 } global;
 
@@ -53,7 +54,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 
     memset(swf, 0x00, sizeof(SWF));
 
-    swf->fileVersion = 5;
+    swf->fileVersion = global.version;
     swf->frameRate = (int)(256.0 * framerate);
     swf->movieSize.xmax = dx * 20;
     swf->movieSize.ymax = dy * 20;
@@ -83,7 +84,13 @@ int MovieFinish(SWF * swf, TAG * t, char *sname)
     if(global.do_cgi) {
 	if FAILED(swf_WriteCGI(swf)) fprintf(stderr,"WriteCGI() failed.\n");
     } else {
-	if FAILED(swf_WriteSWF(f,swf)) fprintf(stderr,"WriteSWF() failed.\n");
+	if(global.version >= 6) {
+	    if (swf_WriteSWC(handle, swf)<0) 
+		    fprintf(stderr, "Unable to write output file: %s\n", sname);
+	} else {
+	    if (swf_WriteSWF(handle, swf)<0) 
+		    fprintf(stderr, "Unable to write output file: %s\n", sname);
+	}
 	if (f != so)
 	    close(f);
     }
@@ -783,6 +790,11 @@ int args_callback_option(char *arg, char *val)
 	    res = 1;
 	    break;
 
+	case 'z':
+	    global.version = 1;
+	    res = 1;
+	    break;
+
 	case 'C':
 	    global.do_cgi = 1;
 	    break;
@@ -826,6 +838,7 @@ int args_callback_option(char *arg, char *val)
 static struct options_t options[] = {
 {"r", "rate"},
 {"o", "output"},
+{"z", "zlib"},
 {"X", "pixel"},
 {"Y", "pixel"},
 {"v", "verbose"},
@@ -865,6 +878,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
     printf("-o , --output <filename>       Set name for SWF output file.\n");
+    printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
     printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");
@@ -882,6 +896,7 @@ int main(int argc, char **argv)
 
     global.framerate = 1.0;
     global.verbose = 1;
+    global.version = 4;
 
     processargs(argc, argv);
 

@@ -378,6 +378,10 @@ int args_callback_option(char *arg, char *val)
 	    global.version = 6;
 	    return 0;
 
+	case 'z':
+	    global.version = 6;
+	    return 0;
+
 	case 'Y':
 	    if (val)
 		global.force_height = atoi(val);
@@ -407,6 +411,7 @@ static struct options_t options[] = {
 {"m", "mx"},
 {"q", "quality"},
 {"r", "rate"},
+{"z", "zlib"},
 {"X", "width"},
 {"Y", "height"},
 {"v", "verbose"},
@@ -449,6 +454,7 @@ void args_callback_usage(char *name)
     printf("-m , --mx                      Use Flash MX H.263 compression (use for correlated images)\n");
     printf("-q , --quality <quality>       Set compression quality (1-100, 1=worst, 100=best)\n");
     printf("-r , --rate <framerate>         Set movie framerate (frames per second)\n");
+    printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
     printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
