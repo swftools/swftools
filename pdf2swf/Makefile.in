@@ -18,8 +18,12 @@ swfoutput.o: swfoutput.cc swfoutput.h spline.h
 pdf2swf.o: pdf2swf.cc SWFOutputDev.h
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib pdf2swf.cc -o $@
 
-pdf2swf$(E): pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o xpdf/libpdf.a ../lib/librfxswf.a 
-	$(LL) pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o -o pdf2swf$(E) ../lib/librfxswf.a xpdf/libpdf.a $(LIBS) 
+pdf2swf.a: SWFOutputDev.o swfoutput.o encodings.o spline.o 
+	$(AR) r pdf2swf.a SWFOutputDev.o swfoutput.o encodings.o spline.o 
+	$(RANLIB) pdf2swf.a
+
+pdf2swf$(E): pdf2swf.o pdf2swf.a xpdf/libpdf.a ../lib/librfxswf.a 
+	$(LL) pdf2swf.o pdf2swf.a ../lib/librfxswf.a xpdf/libpdf.a $(LIBS) -o pdf2swf$(E) 
 	$(STRIP) pdf2swf$(E)
 
 xpdf/libpdf.a: xpdf/gfile.cc xpdf/GfxState.cc
