@@ -128,4 +128,5 @@ char* getTagName(TAG*tag)
 	case ST_REFLEX:
 	    return "REFLEX";
     }
+    return 0;
 }
