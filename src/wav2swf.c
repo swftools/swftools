@@ -18,6 +18,8 @@ char * filename = 0;
 char * outputname = "output.swf";
 int verbose = 2;
 
+#define DEFINESOUND_MP3 1 //define sound uses mp3?- undefine for raw sound.
+
 struct options_t options[] =
 {
  {"o","output"},
@@ -218,7 +220,14 @@ int main (int argc,char ** argv)
 	SOUNDINFO info;
 	tag = swf_InsertTag(tag, ST_DEFINESOUND);
 	swf_SetU16(tag, 24); //id
+#ifdef DEFINESOUND_MP3
 	swf_SetSoundDefine(tag, samples, numsamples);
+#else
+	swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
+	swf_SetU32(tag, numsamples); // 44100 -> 11025
+	swf_SetBlock(tag, wav2.data, numsamples*2);
+#endif
+
 	tag = swf_InsertTag(tag, ST_STARTSOUND);
 	swf_SetU16(tag, 24); //id
 	memset(&info, 0, sizeof(info));
