@@ -34,31 +34,31 @@ parser.o: parser.yy.c parser.h ../lib/q.h
 parser.yy.c: parser.lex
 	lex -Bs -oparser.yy.c parser.lex
 
-wav2swf$(E): wav2swf.o wav.o
+wav2swf$(E): wav2swf.o wav.o ../lib/librfxswf.a
 	$(L) wav2swf.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-png2swf$(E): png2swf.o
+png2swf$(E): png2swf.o ../lib/librfxswf.a
 	$(L) png2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfcombine$(E): swfcombine.o
+swfcombine$(E): swfcombine.o ../lib/librfxswf.a
 	$(L) swfcombine.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfdump$(E): swfdump.o
+swfdump$(E): swfdump.o ../lib/librfxswf.a
 	$(L) swfdump.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfextract$(E): swfextract.o
+swfextract$(E): swfextract.o ../lib/librfxswf.a
 	$(L) swfextract.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfstrings$(E): swfstrings.o
+swfstrings$(E): swfstrings.o ../lib/librfxswf.a
 	$(L) swfstrings.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfbbox$(E): swfbbox.o
+swfbbox$(E): swfbbox.o ../lib/librfxswf.a
 	$(L) swfbbox.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-jpeg2swf$(E): jpeg2swf.o
+jpeg2swf$(E): jpeg2swf.o ../lib/librfxswf.a
 	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfc$(E): parser.o swfc.o ../lib/q.o wav.o
+swfc$(E): parser.o swfc.o ../lib/q.o wav.o ../lib/librfxswf.a
 	$(L) parser.o swfc.o ../lib/q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
 
