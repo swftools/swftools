@@ -82,7 +82,7 @@ static int mem_put_(mem_t*m,void*data, int length, int null)
 	while(m->len < m->pos)
 	    m->len += 64;
 
-	m->buffer = m->buffer?realloc(m->buffer,m->len):malloc(m->len);
+	m->buffer = m->buffer?(char*)realloc(m->buffer,m->len):(char*)malloc(m->len);
     }
     memcpy(&m->buffer[n], data, length);
     if(null)
@@ -98,7 +98,93 @@ int mem_putstring(mem_t*m,string_t str)
     return mem_put_(m, str.str, str.len, 1);
 }
 
-// ------------------------------- string_t ------------------------------------
+// ------------------------------- ringbuffer_t -------------------------------
+
+typedef struct _ringbuffer_internal_t
+{
+    unsigned char*buffer;
+    int readpos;
+    int writepos;
+    int buffersize;
+    int available;
+} ringbuffer_internal_t;
+
+void ringbuffer_init(ringbuffer_t*r)
+{
+    ringbuffer_internal_t*i = (ringbuffer_internal_t*)malloc(sizeof(ringbuffer_internal_t)); 
+    memset(r, 0, sizeof(ringbuffer_t));
+    memset(i, 0, sizeof(ringbuffer_internal_t));
+    r->internal = i;
+    i->buffer = (unsigned char*)malloc(1024);
+    i->buffersize = 1024;
+}
+int ringbuffer_read(ringbuffer_t*r, void*buf, int len)
+{
+    unsigned char* data = (unsigned char*)buf;
+    ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
+    if(i->available < len)
+	len = i->available;
+    if(!len)
+	return 0;
+    if(i->readpos + len > i->buffersize) {
+	int read1 = i->buffersize-i->readpos;
+	memcpy(data, &i->buffer[i->readpos], read1);
+	memcpy(&data[read1], &i->buffer[0], len - read1);
+	i->readpos = len - read1;
+    } else {
+	memcpy(data, &i->buffer[i->readpos], len);
+	i->readpos += len;
+	i->readpos %= i->buffersize;
+    }
+    i->available -= len;
+    return len;
+}
+void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
+{
+    unsigned char* data = (unsigned char*)buf;
+    ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
+    
+/*    if( (i->writepos < i->readpos && i->writepos + len >= i->readpos) ||
+	(i->writepos >  i->readpos && i->writepos + len >= i->buffersize && 
+	 (i->writepos + len) % i->buffersize >= i->readpos)
+      ) */
+    if(i->buffersize - i->available < len)
+    {
+	unsigned char* buf2;
+	int newbuffersize = i->buffersize;
+	newbuffersize*=3;newbuffersize/=2; /*grow by 50% each time */
+
+	if(newbuffersize < i->available + len)
+	    newbuffersize = i->available + len;
+
+	buf2 = (unsigned char*)malloc(newbuffersize);
+	ringbuffer_read(r, buf2, i->available);
+	free(i->buffer);
+	i->buffer = buf2;
+	i->buffersize = newbuffersize;
+	i->writepos = 0;
+	i->readpos = i->available;
+    }
+    if(i->writepos + len > i->buffersize) {
+	int read1 = i->buffersize-i->writepos;
+	memcpy(&i->buffer[i->writepos], data, read1);
+	memcpy(&i->buffer[0], &data[read1], len - read1);
+	i->writepos = len - read1;
+    } else {
+	memcpy(&i->buffer[i->writepos], data, len);
+	i->writepos += len;
+	i->writepos %= i->buffersize;
+    }
+    i->available += len;
+}
+void ringbuffer_clear(ringbuffer_t*r)
+{
+    ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
+    free(i->buffer);
+    free(i);
+}
+
+// ------------------------------- string_t -----------------------------------
 
 void string_set2(string_t*str, char*text, int len)
 {
@@ -273,7 +359,7 @@ void map_destroy(map_t*map)
     free(map);
 }
 
-// ------------------------------- dictionary_t --------------------------------------
+// ------------------------------- dictionary_t -------------------------------
 
 typedef struct _dictionary_internal_t
 {

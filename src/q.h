@@ -19,6 +19,12 @@ typedef struct _mem_t {
     int pos;
 } mem_t;
 
+typedef struct _ringbuffer_t
+{
+    void*internal;
+    int size;
+} ringbuffer_t;
+
 /* non-nul terminated string */
 typedef struct _string_t {
     char*str;
@@ -36,7 +42,7 @@ typedef struct _dictionary_t {
 } dictionary_t;
 
 /* array of strings */
-typedef struct stringarray_t
+typedef struct _stringarray_t
 {
     void*internal;
 } stringarray_t;
@@ -46,6 +52,11 @@ int mem_put(mem_t*m, void*data, int length);
 int mem_putstring(mem_t*m, string_t str);
 void mem_clear(mem_t*mem);
 void mem_destroy(mem_t*mem);
+
+void ringbuffer_init(ringbuffer_t*r);
+void ringbuffer_put(ringbuffer_t*r, void*buf, int size);
+int ringbuffer_read(ringbuffer_t*r, void*buf, int size);
+void ringbuffer_clear(ringbuffer_t*r);
 
 void string_set(string_t*str, char*text);
 void string_set2(string_t*str, char*text, int len);
