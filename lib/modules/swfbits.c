@@ -849,6 +849,44 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
     rfx_free(data);
     return 0;
 }
+
+TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quality)
+{
+    TAG *tag1 = 0, *tag2 = 0;
+    int has_alpha = swf_ImageHasAlpha(mem,width,height);
+
+    /* try lossless image */
+    tag1 = swf_InsertTag(0, /*ST_DEFINEBITSLOSSLESS1/2*/0);
+    swf_SetU16(tag1, bitid);
+    swf_SetLosslessImage(tag1, mem, width, height);
+
+    /* try jpeg image */
+    if(has_alpha) {
+	tag2 = swf_InsertTag(0, ST_DEFINEBITSJPEG3);
+	swf_SetU16(tag2, bitid);
+	swf_SetJPEGBits3(tag2, width, height, mem, quality);
+    } else {
+	tag2 = swf_InsertTag(0, ST_DEFINEBITSJPEG2);
+	swf_SetU16(tag2, bitid);
+	swf_SetJPEGBits2(tag2, width, height, mem, quality);
+    }
+
+    if(tag1 && tag1->len < tag2->len) {
+	/* use the zlib version- it's smaller */
+	tag1->prev = tag;
+	if(tag) tag->next = tag1;
+	tag = tag1;
+	swf_DeleteTag(tag2);
+    } else {
+	/* use the jpeg version- it's smaller */
+	tag2->prev = tag;
+	if(tag) tag->next = tag2;
+	tag = tag2;
+	swf_DeleteTag(tag1);
+    }
+    return tag;
+}
+
 #endif
 
 RGBA *swf_ExtractImage(TAG * tag, int *dwidth, int *dheight)
