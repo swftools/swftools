@@ -33,34 +33,57 @@ typedef struct {
     RGBA rgba;
 } ColorObject;
 
-PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* f_Color2(U8 r, U8 g, U8 b, U8 a)
 {
-    static char *kwlist[] = {"r", "g", "b", "a", NULL};
-    ColorObject* color;
-    int r=0,g=0,b=0,a=255;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii|i", kwlist, &r,&g,&b,&a))
-	return NULL;
-    color = PyObject_New(ColorObject, &ColorClass);
-    mylog("+%08x(%d) color_new(%d,%d,%d,%d)\n", (int)color, color->ob_refcnt, r,g,b,a);
+    ColorObject* color = PyObject_New(ColorObject, &ColorClass);
     color->rgba.r = r;
     color->rgba.g = g;
     color->rgba.b = b;
     color->rgba.a = a;
     return (PyObject*)color;
 }
+PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"r", "g", "b", "a", NULL};
+    ColorObject* color;
+    int r=0,g=0,b=0,a=255;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii|i", kwlist, &r,&g,&b,&a)) {
+	char*s= 0;
+	int mya = -1;
+	PyErr_Clear();
+	static char *kwlist[] = {"col", "alpha", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|i", kwlist, &s, &mya))
+	    return NULL;
+	if(mya>=0) a=mya;
+	sscanf(s, "%02x%02x%02x%02x",&r,&g,&b,&a);
+    }
+    color = PyObject_New(ColorObject, &ColorClass);
+    mylog("+%08x(%d) color_new(%d,%d,%d,%d)\n", (int)color, color->ob_refcnt, r,g,b,a);
+    return f_Color2(r,g,b,a);
+}
 static PyObject* color_getattr(PyObject * self, char* a)
 {
     ColorObject*color = (ColorObject*)self;
     if(!strcmp(a, "r")) {
-	return Py_BuildValue("r", color->rgba.r);
+	return Py_BuildValue("i", color->rgba.r);
     } else if(!strcmp(a, "g")) {
-	return Py_BuildValue("g", color->rgba.g);
+	return Py_BuildValue("i", color->rgba.g);
     } else if(!strcmp(a, "b")) {
-	return Py_BuildValue("b", color->rgba.b);
+	return Py_BuildValue("i", color->rgba.b);
     } else if(!strcmp(a, "a")) {
-	return Py_BuildValue("a", color->rgba.a);
+	return Py_BuildValue("i", color->rgba.a);
+    } else if(!strcmp(a, "alpha")) {
+	return Py_BuildValue("i", color->rgba.a);
+    } else if(!strcmp(a, "rgb")) {
+	char text[80];
+	sprintf(text, "%02x%02x%02x", color->rgba.r, color->rgba.g, color->rgba.b);
+	return PyString_FromString(text);
+    } else if(!strcmp(a, "rgba")) {
+	char text[80];
+	sprintf(text, "%02x%02x%02x%02x", color->rgba.r, color->rgba.g, color->rgba.b, color->rgba.a);
+	return PyString_FromString(text);
     }
-    return NULL;
+    return PY_ERROR("bad attribute");
 }
 static int color_setattr(PyObject * self, char* attr, PyObject* o)
 {
@@ -398,6 +421,179 @@ PyTypeObject GradientClass =
 };
 //----------------------------------------------------------------------------
 
+typedef struct {
+    PyObject_HEAD
+    LINESTYLE ls;
+} LineStyleObject;
+
+PyObject* f_LineStyle2(RGBA color, int width) 
+{
+    LineStyleObject* self = PyObject_New(LineStyleObject, &LineStyleClass);
+    self->ls.color = color;
+    self->ls.width = width;
+    return (PyObject*)self;
+}
+PyObject* f_LineStyle3(LINESTYLE ls)
+{
+    LineStyleObject* self = PyObject_New(LineStyleObject, &LineStyleClass);
+    self->ls = ls;
+    return (PyObject*)self;
+}
+PyObject* f_LineStyle(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"line", "color", NULL};
+    float linewidth;
+    PyObject*color;
+    if(!kwargs) {
+	if (!PyArg_ParseTuple(args, "fO!", &linewidth, &ColorClass, &color))
+	    return NULL;
+    }
+    return f_LineStyle2(color_getRGBA(color), (int)(linewidth*20));
+}
+LINESTYLE linestyle_getLineStyle(PyObject*_self)
+{
+    LineStyleObject* self = (LineStyleObject*)_self;
+    return self->ls;
+}
+static PyObject* linestyle_getattr(PyObject * _self, char* a)
+{
+    LineStyleObject*self = (LineStyleObject*)_self;
+    if(!strcmp(a, "width")) {
+	return Py_BuildValue("i", self->ls.width);
+    } else if(!strcmp(a, "color")) {
+	return f_Color2(self->ls.color.r, self->ls.color.g, self->ls.color.b, self->ls.color.a);
+    }
+    return NULL;
+}
+static int linestyle_setattr(PyObject * _self, char* a, PyObject* o)
+{
+    LineStyleObject*self = (LineStyleObject*)_self;
+    if(!strcmp(a, "color")) {
+	self->ls.color = color_getRGBA(o);
+	return 0;
+    }
+    return -1;
+}
+static LINESTYLE linestyle_getlinestyle(PyObject*_self)
+{
+    LineStyleObject*self = (LineStyleObject*)_self;
+    return self->ls;
+}
+static void linestyle_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) linestyle_dealloc", self, self->ob_refcnt);
+    PyObject_Del(self);
+}
+static int linestyle_print(PyObject * _self, FILE *fi, int flags) //flags&Py_PRINT_RAW
+{
+    LineStyleObject* self = (LineStyleObject*)_self;
+    fprintf(fi, "line-%d-%02x%02x%02x%02x", self->ls.width, self->ls.color.r, self->ls.color.g, self->ls.color.b, self->ls.color.a);
+    return 0;
+}
+PyTypeObject LineStyleClass = 
+{
+    PyObject_HEAD_INIT(NULL)
+    0,
+    tp_name: "linestyle",
+    tp_basicsize: sizeof(LineStyleObject),
+    tp_itemsize: 0,
+    tp_dealloc: linestyle_dealloc,
+    tp_print: linestyle_print,
+    tp_getattr: linestyle_getattr,
+    tp_setattr: linestyle_setattr,
+};
+//----------------------------------------------------------------------------
+
+typedef struct {
+    PyObject_HEAD
+    FILLSTYLE fs;
+} FillStyleObject;
+
+PyObject* f_FillStyle2(FILLSTYLE fs)
+{
+    FillStyleObject* self = PyObject_New(FillStyleObject, &FillStyleClass);
+    self->fs = fs;
+    return (PyObject*)self;
+}
+PyObject* f_SolidFillStyle2(RGBA color)
+{
+    FillStyleObject* self = PyObject_New(FillStyleObject, &FillStyleClass);
+    self->fs.type = FILL_SOLID;
+    self->fs.color = color;
+    return (PyObject*)self;
+}
+PyObject* f_SolidFillStyle(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"color", NULL};
+    PyObject*color;
+    if(!kwargs) {
+	if (!PyArg_ParseTuple(args, "O!", &ColorClass, &color))
+	    return NULL;
+    }
+    return f_SolidFillStyle2(color_getRGBA(color));
+}
+FILLSTYLE fillstyle_getFillStyle(PyObject*_self)
+{
+    FillStyleObject* self = (FillStyleObject*)_self;
+    return self->fs;
+}
+static void fillstyle_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) linestyle_dealloc", self, self->ob_refcnt);
+    PyObject_Del(self);
+}
+static int fillstyle_print(PyObject * _self, FILE *fi, int flags) //flags&Py_PRINT_RAW
+{
+    FillStyleObject* self = (FillStyleObject*)_self;
+    if(self->fs.type == FILL_SOLID)
+	fprintf(fi, "fill-solid(%02x%02x%02x%02x)", self->fs.color.r, self->fs.color.g, self->fs.color.b, self->fs.color.a);
+    else
+	fprintf(fi, "fill-%02x", self->fs.type);
+    return 0;
+}
+PyObject* fillstyle_issolid(PyObject*_self, PyObject*args)
+{
+    FillStyleObject* self = (FillStyleObject*)_self;
+    int b = self->fs.type == FILL_SOLID;
+    return PyInt_FromLong(b);
+}
+static PyMethodDef FillStyleMethods[] = 
+{
+    /* Module functions */
+    {"isSolid", fillstyle_issolid, METH_VARARGS, "Queries whether this is a solid fill"},
+    {0,0,0,0}
+};
+static PyObject* fillstyle_getattr(PyObject * _self, char* a)
+{
+    FillStyleObject* self = (FillStyleObject*)_self;
+    if(!strcmp(a, "color")) {
+	return f_Color2(self->fs.color.r, self->fs.color.g, self->fs.color.b, self->fs.color.a);
+    }
+    return Py_FindMethod(FillStyleMethods, _self, a);
+}
+static int fillstyle_setattr(PyObject * _self, char* a, PyObject* o)
+{
+    FillStyleObject*self = (FillStyleObject*)_self;
+    if(!strcmp(a, "color")) {
+	self->fs.color = color_getRGBA(o);
+	return 0;
+    }
+    return -1;
+}
+
+PyTypeObject FillStyleClass = 
+{
+    PyObject_HEAD_INIT(NULL)
+    0,
+    tp_name: "fillstyle",
+    tp_basicsize: sizeof(FillStyleObject),
+    tp_itemsize: 0,
+    tp_dealloc: fillstyle_dealloc,
+    tp_print: fillstyle_print,
+    tp_getattr: fillstyle_getattr,
+    tp_setattr: fillstyle_setattr,
+};
+//----------------------------------------------------------------------------
 static PyMethodDef primitive_methods[] = 
 {
     {"Color", (PyCFunction)f_Color, METH_KEYWORDS, "Create a new color object."},
@@ -405,6 +601,8 @@ static PyMethodDef primitive_methods[] =
     {"ColorTransform", (PyCFunction)f_ColorTransform, METH_KEYWORDS, "Create a new colortransform object."},
     {"Matrix", (PyCFunction)f_Matrix, METH_KEYWORDS, "Create a new matrix object."},
     {"BBox", (PyCFunction)f_BBox, METH_KEYWORDS, "Create a new bounding box object."},
+    {"SolidFillStyle", (PyCFunction)f_SolidFillStyle, METH_KEYWORDS, "Creates a new solid fill style."},
+    {"LineStyle", (PyCFunction)f_SolidFillStyle, METH_KEYWORDS, "Creates a new line style."},
     {NULL, NULL, 0, NULL}
 };
 

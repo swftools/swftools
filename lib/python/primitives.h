@@ -34,6 +34,8 @@ extern PyTypeObject BBoxClass;
 extern PyTypeObject CXFormClass;
 extern PyTypeObject GradientClass;
 extern PyTypeObject MatrixClass;
+extern PyTypeObject LineStyleClass;
+extern PyTypeObject FillStyleClass;
 
 PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_ColorTransform(PyObject* self, PyObject* args, PyObject* kwargs);
@@ -41,12 +43,20 @@ PyObject* f_Gradient(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_BBox2(SRECT bbox);
 PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs);
+PyObject* f_FillStyle2(FILLSTYLE fs);
+PyObject* f_SolidFillstyle(PyObject* self, PyObject* args, PyObject* kwargs);
+PyObject* f_SolidFillstyle2(RGBA color);
+PyObject* f_LineStyle(PyObject* self, PyObject* args, PyObject* kwargs);
+PyObject* f_LineStyle2(RGBA color, int width);
+PyObject* f_LineStyle3(LINESTYLE ls);
 
 RGBA color_getRGBA(PyObject*self);
 CXFORM colortransform_getCXForm(PyObject*self);
 GRADIENT gradient_getGradient(PyObject*self);
 SRECT bbox_getSRECT(PyObject*self);
 MATRIX matrix_getMatrix(PyObject*self);
+FILLSTYLE fillstyle_getFillStyle(PyObject*self);
+LINESTYLE linestyle_getLineStyle(PyObject*self);
 
 extern PyMethodDef* primitive_getMethods();
 
