@@ -1,4 +1,4 @@
-# Makefile.in generated automatically by automake 1.4 from Makefile.am
+# Makefile.in generated automatically by automake 1.4a from Makefile.am
 
 # Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
@@ -33,15 +33,21 @@ includedir = @includedir@
 oldincludedir = /usr/include
 
 DESTDIR =
-
-pkgdatadir = $(datadir)/@PACKAGE@/fonts
+pkglibdir = $(libdir)/@PACKAGE@
+pkgincludedir = $(includedir)/@PACKAGE@
 
 top_builddir = ../..
 
+
+
+
+
+
 INSTALL = @INSTALL@
-INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
+INSTALL_STRIP_FLAG =
 transform = @program_transform_name@
 
 NORMAL_INSTALL = :
@@ -50,20 +56,20 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-AWK = @AWK@
 CC = @CC@
 CPP = @CPP@
 CXX = @CXX@
 EXEEXT = @EXEEXT@
 HAVE_UNISTD_H = @HAVE_UNISTD_H@
+JPEG2SWF = @JPEG2SWF@
 LN_S = @LN_S@
-MAKEINFO = @MAKEINFO@
-PACKAGE = @PACKAGE@
 RANLIB = @RANLIB@
-VERSION = @VERSION@
+SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
+UNCOMPRESS = @UNCOMPRESS@
+WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-pkgdata_DATA =   n021003l.pfb  n021023l.pfb  n021004l.pfb  n021024l.pfb  n019003l.pfb  n019023l.pfb  n019004l.pfb  n019024l.pfb  n022003l.pfb  n022023l.pfb  n022004l.pfb  n022024l.pfb  s050000l.pfb  d050000l.pfb  n021003l.afm  n021023l.afm  n021004l.afm  n021024l.afm  n019003l.afm  n019023l.afm  n019004l.afm  n019024l.afm  n022003l.afm  n022023l.afm  n022004l.afm  n022024l.afm  s050000l.afm  d050000l.afm
-
+pkgdata_DATA = n021003l.pfb  n021023l.pfb  n021004l.pfb  n021024l.pfb  n019003l.pfb  n019023l.pfb  n019004l.pfb  n019024l.pfb  n022003l.pfb  n022023l.pfb  n022004l.pfb  n022024l.pfb  s050000l.pfb  d050000l.pfb  n021003l.afm  n021023l.afm  n021004l.afm  n021024l.afm  n019003l.afm  n019023l.afm  n019004l.afm  n019024l.afm  n022003l.afm  n022023l.afm  n022004l.afm  n022024l.afm  s050000l.afm  d050000l.afm
+pkgdatadir = $(datadir)/@PACKAGE@/fonts
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../../config.h
 CONFIG_CLEAN_FILES = 
@@ -72,12 +78,22 @@ DATA =  $(pkgdata_DATA)
 DIST_COMMON =  Makefile.in
 
 
+PACKAGE = @PACKAGE@
+VERSION = @VERSION@
+
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = gtar
 GZIP_ENV = --best
 all: all-redirect
 .SUFFIXES:
+
+
+
+
+
+
+
 
 install-pkgdataDATA: $(pkgdata_DATA)
 	@$(NORMAL_INSTALL)
@@ -106,9 +122,6 @@ distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 subdir = pdf2swf/fonts
 
 distdir: $(DISTFILES)
-	here=`cd $(top_builddir) && pwd`; \
-	top_distdir=`cd $(top_distdir) && pwd`; \
-	distdir=`cd $(distdir) && pwd`; \
 	@for file in $(DISTFILES); do \
 	  d=$(srcdir); \
 	  if test -d $$d/$$file; then \
@@ -141,7 +154,7 @@ uninstall: uninstall-am
 all-am: Makefile $(DATA)
 all-redirect: all-am
 install-strip:
-	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
+	$(MAKE) $(AM_MAKEFLAGS) INSTALL_STRIP_FLAG=-s install
 installdirs:
 	$(mkinstalldirs)  $(DESTDIR)$(pkgdatadir)
 
@@ -152,7 +165,7 @@ clean-generic:
 
 distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
-	-rm -f config.cache config.log
+	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
 
 maintainer-clean-generic:
 mostlyclean-am:  mostlyclean-generic

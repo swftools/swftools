@@ -70,8 +70,11 @@ SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
 UNCOMPRESS = @UNCOMPRESS@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-noinst_LIBRARIES = libbladeenc.a
-libbladeenc_a_SOURCES = codec.c codec.h common.c common.h encode.c encoder.h formatbitstream2.c formatbitstream2.h huffman.h l3bitstream-pvt.h l3bitstream.c l3bitstream.h l3psy.c l3psy.h l3side.h loop-pvt.h loop.c loop.h mdct.c mdct.h reservoir.c reservoir.h subs.c system.h tables.c tables.h
+noinst_LIBRARIES = lame.a
+lame_a_SOURCES =  psymodel.c  fft.c newmdct.c  quantize.c  takehiro.c  reservoir.c  quantize_pvt.c  vbrquantize.c  encoder.c  id3tag.c  version.c  tables.c  util.c  bitstream.c  set_get.c  VbrTag.c  lame.c 
+
+
+lame_a_LIBADD = 
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../../config.h
 CONFIG_CLEAN_FILES = 
@@ -82,9 +85,10 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I../..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-libbladeenc_a_LIBADD = 
-libbladeenc_a_OBJECTS =  codec.o common.o encode.o formatbitstream2.o \
-l3bitstream.o l3psy.o loop.o mdct.o reservoir.o subs.o tables.o
+lame_a_DEPENDENCIES = 
+lame_a_OBJECTS =  psymodel.o fft.o newmdct.o quantize.o takehiro.o \
+reservoir.o quantize_pvt.o vbrquantize.o encoder.o id3tag.o version.o \
+tables.o util.o bitstream.o set_get.o VbrTag.o lame.o
 AR = ar
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -100,8 +104,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = gtar
 GZIP_ENV = --best
-SOURCES = $(libbladeenc_a_SOURCES)
-OBJECTS = $(libbladeenc_a_OBJECTS)
+SOURCES = $(lame_a_SOURCES)
+OBJECTS = $(lame_a_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -142,10 +146,10 @@ distclean-compile:
 
 maintainer-clean-compile:
 
-libbladeenc.a: $(libbladeenc_a_OBJECTS) $(libbladeenc_a_DEPENDENCIES)
-	-rm -f libbladeenc.a
-	$(AR) cru libbladeenc.a $(libbladeenc_a_OBJECTS) $(libbladeenc_a_LIBADD)
-	$(RANLIB) libbladeenc.a
+lame.a: $(lame_a_OBJECTS) $(lame_a_DEPENDENCIES)
+	-rm -f lame.a
+	$(AR) cru lame.a $(lame_a_OBJECTS) $(lame_a_LIBADD)
+	$(RANLIB) lame.a
 
 tags: TAGS
 
@@ -178,7 +182,7 @@ maintainer-clean-tags:
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
-subdir = lib/bladeenc
+subdir = lib/lame
 
 distdir: $(DISTFILES)
 	@for file in $(DISTFILES); do \
