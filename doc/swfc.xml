@@ -113,12 +113,45 @@ Boxes:
 .end
   </code>
 
+  <p> 
   The <c>.box</c> command creates the box. Every object that is created must also be explicitly
   put into the scene using <c>.put</c> to become visible.
+  </p> 
+  <p>
+  Change, on the other hand, modifies an already existing object.
+  It works gradually: In the example above, the change happens over 100 frames.
+  If you want to change an object suddently from one frame to the next, you
+  would use the <c>.jump</c> command.
+  </p>
 
  </section>
  
  <section><title>Color transforms</title>
+
+<p>
+You can define a number of parameters in the <c>.put</c>, <c>.change</c> and <c>.jump</c>
+tags. Among those are the color transform parameters <c>red</c>, <c>green</c>,
+<c>blue</c> and <c>alpha</c>.
+Furthermore, for convenience, there's also <c>luminance</c>, which sets <c>red</c>, <c>green</c> and
+<c>blue</c> in one go.
+</p>
+<p>
+Each one of these consists of two parts: The multiplicator and the shift.
+The syntax is
+<c> &#177;&lt;multiplicator&gt;&#177;&lt;shift&gt; </c>.
+So, for example, to make an object 50% brighter, you would use
+<c>luminance=+128</c>. Notice that all color components inside the transformed object in the range 128-255
+will be mapped to 255 with this. To map 0 to 128, 255 to 255, but 128 to 192, you would
+use <c>luminance=0.5+128</c>.
+</p>
+<p>
+You can also specify negative values for both <c>&lt;mutliplicator&gt;</c> and <c>&lt;shift&gt;</c>.
+This makes it e.g. possible to invert an object: <c>luminance=-1+255</c>.
+</p>
+<p>
+The following example demonstrates a few of the possible transforms:
+</p>
+
 
   <code lang="swfc">
 .flash name="cxform.swf" version=5
@@ -142,7 +175,11 @@ Boxes:
     .change s1 x=105 y=105 scalex=0 scaley=0 luminance=0 #fadeout
 .end
   </code>
- 
+
+A very useful fact is also that you can color transform the alpha component.
+So to fade any object into the background, you would simply transform it's
+alpha color: E.g. <c>alpha=64</c> would make the object 75% transparent.
+This is used in an example further below.
  </section>
  
 
@@ -170,6 +207,12 @@ For example, for the obligatory hello world program:
     .put helloworld
 .end
   </code>
+
+<notice>
+The text argument expects UTF-8 strings. So if you want to
+pass any special characters (umlauts, digraphs etc.), they have to
+be UTF-8 encoded.
+</notice>
 
 Besides TrueType fonts, swfc also supports native SWF fonts.
 If you have a SWF with a font you would like to use, do a 
@@ -204,7 +247,7 @@ conversion has to take place).
 <section>
 <p>
 So much for the basics. Now let's go to the more advanced
-functionality.
+functionality around fonts.
 </p>
 
 <p>
@@ -217,7 +260,7 @@ objects which you can use in other commands.
 <code lang="swfc">
 .flash name="fontoutline.swf"
     .font Arial "Arial.swf"
-    .textshape helloworld font=Arial text="Hello World"
+    .textshape helloworld font=Arial size=200% text="Hello World"
     .filled filled_helloworld outline=helloworld fill=blue line=5 color=green
     .put filled_helloworld
 .end
@@ -245,6 +288,19 @@ of a plain color:
 .end
 </code>
 
+While at it, you can also fill with an image:
+
+<code lang="swfc">
+.flash name="fontimage.swf"
+    .font courier "Courier.swf"
+    .jpeg beach "beach.jpg"
+    .textshape text font=courier text="HOLIDAY"
+    
+    .filled filled_text outline=text fill=beach line=1 color=#2c2c2c
+    .put filled_text scale=200%
+.end
+</code>
+
 But let's get back to normal <c>.text</c> characters.
 The following demonstrates that you can treat objects defined
 with <c>.text</c> like normal shapes, i.e., scale them, move them, and use
@@ -266,10 +322,19 @@ them for clipping:
 .end
   </code>
 
+<p>
+The last two examples look similar, but their underlying structure
+is different:  The first is a shape object filled with
+image data (that is, a texture), while the second uses a normal
+text object to clip an rectangular image. 
+</p>
+
+<p>
 Also, <c>.text</c> takes a color attribute (that's actually
 the poor man's version of the more advanced filling options
 that <c>.textshape</c> in conjunction with <c>.filled</c> offers),
 which is used here together with the alpha parameter of <c>.change</c>:
+</p>
 
   <code lang="swfc">
 .flash name="text6.swf"
@@ -287,6 +352,26 @@ which is used here together with the alpha parameter of <c>.change</c>:
   </code>
  
  </section>
+
+<section>
+
+A special type of text in SWF is the <c>edittext</c>, which
+can be modified by the viewer. It's content can also be queried
+and set from ActionScript (see below).
+You can generate this type of text with the <c>.edittext</c> command:
+
+<code lang="swfc">
+.flash name="edittext.swf" bbox=210x110
+    .font Arial "Arial.swf"
+    .edittext myedittext font=Arial size=20% 
+			 width=200 height=100 
+			 color=blue border multiline wordwrap
+			 text="Edit me!\nClick with your mouse on this text to edit it."
+    .put myedittext x=3 y=3
+.end
+</code>
+
+</section>
 
 </chapter>
 
@@ -306,7 +391,7 @@ which is used here together with the alpha parameter of <c>.change</c>:
 
 .frame 0
     .action:
-	_root.angle += 0.3;
+	_root.angle += 0.1;
 	mybox._x = 100*Math.cos(_root.angle)+100;
 	mybox._y = 100*Math.sin(_root.angle)+100;
     .end
