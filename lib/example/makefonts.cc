@@ -130,7 +130,7 @@ SWFFONT * t1font2swffont(int i)
 		wfont->glyph2ascii[num] = s;
 		swf_ShapeNew(&wfont->glyph[num].shape);
 		SHAPE*shape = wfont->glyph[num].shape;
-		wfont->glyph[num].advance = width/2;
+		wfont->glyph[num].advance = (int)(width/6.4); // 128/20
 		
 		TAG*tag = swf_InsertTag(0,ST_DEFINESHAPE);
 
