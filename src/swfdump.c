@@ -561,8 +561,10 @@ void handlePlaceObject(TAG*tag, char*prefix)
 
     U16 id = swf_GetU16(tag);
     U16 depth = swf_GetU16(tag);
-    MATRIX matrix; swf_GetMatrix(tag, &matrix);
-    CXFORM cxform; swf_GetCXForm(tag, &cxform, 0);
+    MATRIX matrix; 
+    CXFORM cxform;
+    swf_GetMatrix(tag, &matrix);
+    swf_GetCXForm(tag, &cxform, 0);
 
     swf_SetU8(tag2, 14);
     swf_SetU16(tag2, depth);
@@ -599,13 +601,14 @@ char* linestyle2str(LINESTYLE*style)
 void handleShape(TAG*tag, char*prefix)
 {
     SHAPE2 shape;
+    SHAPELINE*line;
+    int t,max;
+
     tag->pos = 0;
     tag->readBit = 0;
     swf_ParseDefineShape(tag, &shape);
-    SHAPELINE*line;
 
-    int t;
-    int max = shape.numlinestyles > shape.numfillstyles?shape.numlinestyles:shape.numfillstyles;
+    max = shape.numlinestyles > shape.numfillstyles?shape.numlinestyles:shape.numfillstyles;
 
     if(max) printf("%s | fillstyles(%02d)        linestyles(%02d)\n", 
 	    prefix,
