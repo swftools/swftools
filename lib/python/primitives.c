@@ -631,6 +631,8 @@ PyMethodDef* primitive_getMethods()
     CXFormClass.ob_type = &PyType_Type;
     BBoxClass.ob_type = &PyType_Type;
     MatrixClass.ob_type = &PyType_Type;
+    FillStyleClass.ob_type = &PyType_Type;
+    LineStyleClass.ob_type = &PyType_Type;
     return primitive_methods;
 }
 
