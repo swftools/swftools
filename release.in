@@ -1,4 +1,6 @@
 #!/bin/sh
+echo @INSTALL@
+echo @CPPFLAGS@
 name=@PACKAGE@-@VERSION@
 rm -f ${name}
 rm -f ${name}.tar
@@ -24,7 +26,6 @@ ${name}/src/settings.h \
 ${name}/src/reloc.c \
 ${name}/src/reloc.h \
 ${name}/src/Makefile.in \
-${name}/src/Makefile.am \
 ${name}/lib/args.h \
 ${name}/lib/example/box.c \
 ${name}/lib/example/jpegtest.c \
@@ -45,11 +46,9 @@ ${name}/lib/rfxswf.h \
 ${name}/lib/old_rfxswf.h \
 ${name}/lib/log.c \
 ${name}/lib/log.h \
-${name}/lib/Makefile.am \
 ${name}/lib/Makefile.in \
 ${name}/pdf2swf/Makefile.in \
 ${name}/pdf2swf/fonts/Makefile.in \
-${name}/pdf2swf/fonts/Makefile.am \
 ${name}/pdf2swf/fonts/n021003l.pfb \
 ${name}/pdf2swf/fonts/n021023l.pfb \
 ${name}/pdf2swf/fonts/n021004l.pfb \
@@ -87,7 +86,6 @@ ${name}/pdf2swf/pdfswf.cc \
 ${name}/pdf2swf/spline.h \
 ${name}/pdf2swf/spline.cc \
 ${name}/pdf2swf/pdf2swf.cc \
-${name}/pdf2swf/Makefile.am \
 ${name}/pdf2swf/xpdf/Array.cc \
 ${name}/pdf2swf/xpdf/Array.h \
 ${name}/pdf2swf/xpdf/Catalog.cc \
@@ -142,7 +140,6 @@ ${name}/pdf2swf/xpdf/gfile.h \
 ${name}/pdf2swf/xpdf/gmem.c \
 ${name}/pdf2swf/xpdf/gmem.h \
 ${name}/pdf2swf/xpdf/gtypes.h \
-${name}/pdf2swf/xpdf/Makefile.am \
 ${name}/pdf2swf/xpdf/Makefile.in \
 ${name}/pdf2swf/pdf2swf.1 \
 ${name}/pdf2swf/swfoutput.cc \
@@ -155,7 +152,6 @@ ${name}/config.guess \
 ${name}/config.sub \
 ${name}/config.h.in \
 ${name}/stamp-h.in \
-${name}/Makefile.am \
 ${name}/Makefile.in \
 ${name}/INSTALL \
 ${name}/COPYING \
