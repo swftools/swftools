@@ -103,7 +103,7 @@ int main (int argc, char*argv[])
 EOF
 
 if test "x$AVIFILE_CONFIG" '!=' "x";then
-    ac_link='$CXX $CPPFLAGS $CXXFLAGS `$AVIFILE_CONFIG --cflags` `$AVIFILE_CONFIG --libs` conftest.cpp -o conftest${ac_exeext}'
+    ac_link='$CXX $CPPFLAGS $CXXFLAGS `$AVIFILE_CONFIG --cflags` conftest.cpp `$AVIFILE_CONFIG --libs` -o conftest${ac_exeext}'
     if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
       AC_MSG_RESULT(yes)
       AVIFILE=true
