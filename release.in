@@ -40,7 +40,6 @@ ${name}/lib/example/Makefile \
 ${name}/lib/example/box.c \
 ${name}/lib/example/dumpfont.c \
 ${name}/lib/example/demofont.c \
-${name}/lib/example/buttontest.c \
 ${name}/lib/example/text.c \
 ${name}/lib/example/jpegtest.c \
 ${name}/lib/example/shape1.c \
@@ -50,6 +49,8 @@ ${name}/lib/example/zlibtest.c \
 ${name}/lib/example/makefonts.cc \
 ${name}/lib/example/glyphshape.c \
 ${name}/lib/example/avi2swf.cc \
+${name}/lib/example/buttontest.c \
+${name}/swfs/simple_viewer.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/modules/swfdump.c \
 ${name}/lib/modules/swfobject.c \
