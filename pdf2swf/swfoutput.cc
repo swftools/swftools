@@ -72,6 +72,8 @@ float config_minlinewidth=0.05;
 
 typedef struct _swfoutput_internal
 {
+    SWF swf;
+
     fontlist_t* fontlist;
 
     char storefont;
@@ -111,6 +113,7 @@ typedef struct _swfoutput_internal
     chardata_t chardata[CHARDATAMAX];
     int chardatapos;
     int firstpage;
+    char pagefinished;
 } swfoutput_internal;
 
 static swfoutput_internal* init_internal_struct()
@@ -141,6 +144,7 @@ static swfoutput_internal* init_internal_struct()
     i->bboxrectpos = -1;
     i->chardatapos = 0;
     i->firstpage = 1;
+    i->pagefinished = 1;
 
     return i;
 };
@@ -1418,6 +1422,15 @@ static void endpage(struct swfoutput*obj)
       endtext(obj);
     while(i->clippos)
         swfoutput_endclip(obj);
+    i->pagefinished = 1;
+}
+
+void swfoutput_pagefeed(struct swfoutput*obj)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    
+    if(!i->pagefinished)
+        endpage(obj);
 
     if(config_insertstoptag) {
 	ActionTAG*atag=0;
@@ -1432,7 +1445,7 @@ static void endpage(struct swfoutput*obj)
 void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    if(!i->firstpage)
+    if(!i->firstpage && !i->pagefinished)
         endpage(obj);
 
     swf_GetMatrix(0, &i->page_matrix);
@@ -1443,6 +1456,8 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
         i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
         swf_SetU16(i->tag,i->depth);
     }
+    /* TODO: this should all be done in SWFOutputDev */
+
     i->depth = i->startdepth = 3; /* leave room for clip and background rectangle */
 
     i->sizex = x2;
@@ -1499,9 +1514,10 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
     i->lastpagesize.xmax = x2;
     i->lastpagesize.ymin = y1;
     i->lastpagesize.ymax = y2;
-    swf_ExpandRect2(&obj->swf.movieSize, &i->lastpagesize);
+    swf_ExpandRect2(&i->swf.movieSize, &i->lastpagesize);
 
     i->firstpage = 0;
+    i->pagefinished = 0;
 }
 
 /* initialize the swf writer */
@@ -1520,18 +1536,18 @@ void swfoutput_init(struct swfoutput* obj)
     obj->swffont = 0;
     obj->drawmode = -1;
     
-    memset(&obj->swf,0x00,sizeof(SWF));
+    memset(&i->swf,0x00,sizeof(SWF));
     memset(&i->lastpagesize,0x00,sizeof(SRECT));
 
-    obj->swf.fileVersion    = config_flashversion;
-    obj->swf.frameRate      = 0x0040; // 1 frame per 4 seconds
-    obj->swf.movieSize.xmin = 0;
-    obj->swf.movieSize.ymin = 0;
-    obj->swf.movieSize.xmax = 0;
-    obj->swf.movieSize.ymax = 0;
+    i->swf.fileVersion    = config_flashversion;
+    i->swf.frameRate      = 0x0040; // 1 frame per 4 seconds
+    i->swf.movieSize.xmin = 0;
+    i->swf.movieSize.ymin = 0;
+    i->swf.movieSize.xmax = 0;
+    i->swf.movieSize.ymax = 0;
     
-    obj->swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-    i->tag = obj->swf.firstTag;
+    i->swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+    i->tag = i->swf.firstTag;
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
     swf_SetRGB(i->tag,&rgb);
 
@@ -1717,13 +1733,17 @@ static void endshape(swfoutput*obj, int clipdepth)
     i->bboxrectpos = -1;
 }
 
-int swfoutput_save(struct swfoutput* obj, char*filename) 
+void swfoutput_finalize(struct swfoutput*obj)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+
+    if(i->tag && i->tag->id == ST_END)
+        return; //already done
+
     endpage(obj);
     fontlist_t *tmp,*iterator = i->fontlist;
     while(iterator) {
-	TAG*mtag = obj->swf.firstTag;
+	TAG*mtag = i->swf.firstTag;
 	if(iterator->swffont) {
 	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
 	    /*if(!storeallcharacters)
@@ -1733,8 +1753,33 @@ int swfoutput_save(struct swfoutput* obj, char*filename)
 
         iterator = iterator->next;
     }
-    int fi;
+    i->tag = swf_InsertTag(i->tag,ST_END);
+}
 
+SWF* swfoutput_get(struct swfoutput*obj)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+
+    swfoutput_finalize(obj);
+
+    return swf_CopySWF(&i->swf);
+}
+
+void swfoutput_getdimensions(struct swfoutput*obj, int*x1, int*y1, int*x2, int*y2)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    if(x1) *x1 = i->swf.movieSize.xmin/20;
+    if(y1) *y1 = i->swf.movieSize.ymin/20;
+    if(x2) *x2 = i->swf.movieSize.xmax/20;
+    if(y2) *y2 = i->swf.movieSize.ymax/20;
+}
+
+int swfoutput_save(struct swfoutput* obj, char*filename) 
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_finalize(obj);
+
+    int fi;
     if(filename)
      fi = open(filename, O_BINARY|O_CREAT|O_TRUNC|O_WRONLY, 0777);
     else
@@ -1744,14 +1789,12 @@ int swfoutput_save(struct swfoutput* obj, char*filename)
      msg("<fatal> Could not create \"%s\". ", FIXNULL(filename));
      return 0;
     }
- 
-    i->tag = swf_InsertTag(i->tag,ST_END);
-
+    
     if(config_enablezlib || config_flashversion>=6) {
-      if FAILED(swf_WriteSWC(fi,&obj->swf)) 
+      if FAILED(swf_WriteSWC(fi,&i->swf)) 
        msg("<error> WriteSWC() failed.\n");
     } else {
-      if FAILED(swf_WriteSWF(fi,&obj->swf)) 
+      if FAILED(swf_WriteSWF(fi,&i->swf)) 
        msg("<error> WriteSWF() failed.\n");
     }
 
@@ -1779,7 +1822,7 @@ void swfoutput_destroy(struct swfoutput* obj)
         iterator = iterator->next;
         delete tmp;
     }
-    swf_FreeTags(&obj->swf);
+    swf_FreeTags(&i->swf);
 
     free(i);i=0;
     memset(obj, 0, sizeof(swfoutput));

@@ -126,6 +126,8 @@ public:
   void setClip(int x1,int y1,int x2,int y2);
   
   int save(char*filename);
+  void  pagefeed();
+  void* getSWF();
 
   void getDimensions(int*x1,int*y1,int*x2,int*y2);
 
@@ -353,10 +355,7 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
 }
 void SWFOutputDev::getDimensions(int*x1,int*y1,int*x2,int*y2)
 {
-    if(x1) *x1 = output.swf.movieSize.xmin/20;
-    if(y1) *y1 = output.swf.movieSize.ymin/20;
-    if(x2) *x2 = output.swf.movieSize.xmax/20;
-    if(y2) *y2 = output.swf.movieSize.ymax/20;
+    return swfoutput_getdimensions(&output, x1,y2,x2,y2);
 }
 
 static char*getFontID(GfxFont*font)
@@ -799,9 +798,19 @@ void SWFOutputDev::eoClip(GfxState *state)
     clipping[clippos] ++;
     free_outline(outline);
 }
+
+/* pass through functions for swf_output */
 int SWFOutputDev::save(char*filename)
 {
     return swfoutput_save(&output, filename);
+}
+void SWFOutputDev::pagefeed()
+{
+    swfoutput_pagefeed(&output);
+}
+void* SWFOutputDev::getSWF()
+{
+    return (void*)swfoutput_get(&output);
 }
 
 SWFOutputDev::~SWFOutputDev() 
@@ -2213,10 +2222,25 @@ void swf_output_setparameter(swf_output_t*swf_output, char*name, char*value)
     pdfswf_setparameter(name, value);
 }
 
+void swf_output_pagefeed(swf_output_t*swf)
+{
+    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    i->outputDev->pagefeed();
+    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
+}
+
 int swf_output_save(swf_output_t*swf, char*filename)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     int ret = i->outputDev->save(filename);
+    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
+    return ret;
+}
+
+void* swf_output_get(swf_output_t*swf, char*filename)
+{
+    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    void* ret = i->outputDev->getSWF();
     i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
     return ret;
 }

@@ -52,8 +52,10 @@ typedef struct _swf_output
 } swf_output_t;
 
 swf_output_t* swf_output_init();
+void swf_output_pagefeed(swf_output_t*);
 void swf_output_setparameter(swf_output_t*, char*name, char*value);
 int swf_output_save(swf_output_t*, char*filename);
+void* swf_output_get(swf_output_t*);
 
 typedef struct _pdf_page
 {
