@@ -29,8 +29,7 @@ swfdump:
 
 rfxswf-lib:
    
-    * swf_WriteFont() should write definefont2 tags for more complex fonts,
-      example textfields don't show characters >256.
+    * swf_WriteFont() should write definefont2 tags for more complex fonts
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
     *  s/ObjectPlace/ObjectSet/g
