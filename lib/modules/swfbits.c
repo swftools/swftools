@@ -36,29 +36,40 @@ int swf_ImageHasAlpha(RGBA*img, int width, int height)
     }
     return hasalpha;
 }
-   
+
 int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*palette)
 {
     int len = width*height;
     int t;
     int palsize = 0;
-    RGBA pal[256];
+    RGBA pal[512];
+    U32*pal32=(U32*)pal;
     int palette_overflow = 0;
-    for(t=0;t<len;t++) {
+    U32 lastcol32 = 0;
+
+    if(sizeof(RGBA)!=sizeof(U32))
+	fprintf(stderr, "rfxswf: sizeof(RGBA)!=sizeof(U32))");
+
+    lastcol32 = pal32[palsize++] = *(U32*)&img[0];
+
+    for(t=1;t<len;t++) {
 	RGBA col = img[t];
 	U32 col32 = *(U32*)&img[t];
-	int i=0;
+	int i;
+	if(col32==lastcol32)
+	    continue;
 	for(i=0;i<palsize;i++) {
-	    if(col32 == *(U32*)&pal[i])
+	    if(col32 == pal32[i])
 		break;
 	}
 	if(i==palsize) {
-	    if(palsize==256) {
+	    if(palsize==512) {
 		palette_overflow = 1;
 		break;
 	    }
-	    pal[palsize++] = col;
+	    pal32[palsize++] = col32;
 	}
+	lastcol32 = col32;
     }
     if(palette_overflow)
 	return width*height;
