@@ -38,7 +38,7 @@ extern "C" {
 #include "../lib/gfxdevice.h"
 #include "../lib/gfxtools.h"
 }
-#include "../lib/libart/libart.h"
+#include "../lib/art/libart.h"
 
 #define CHARDATAMAX 8192
 #define CHARMIDX 0
@@ -2042,10 +2042,6 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     }
     /// }
 
-    *newwidth = newsizex;
-    *newheight  = newsizey;
-
-
     /* TODO: cache images */
     
     msg("<verbose> Drawing %dx%d %s%simage at size %dx%d (%dx%d), %s%d colors",
@@ -2057,15 +2053,15 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 	    /*newsizex, newsizey,*/
 	    num_colors>256?">":"", num_colors>256?256:num_colors);
 
-    if(newsizex!=sizex || newsizey!=sizey) {
+    if(newsizex>sizex || newsizey>sizey) {
 	newpic = swf_ImageScale(mem, sizex, sizey, newsizex, newsizey);
-	sizex = newsizex;
-	sizey = newsizey;
+	*newwidth = sizex = newsizex;
+	*newheight  = sizey = newsizey;
 	mem = newpic;
     }
 
     if(has_alpha) {
-	if(num_colors<=256 || sizex<8 || sizey<8) {
+	if(!is_jpeg || num_colors<=256 || sizex<8 || sizey<8) {
 	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS2);
 	    swf_SetU16(i->tag, bitid);
 	    swf_SetLosslessImage(i->tag,mem,sizex,sizey);
@@ -2077,7 +2073,7 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 	    //swf_SetLosslessImage(i->tag,mem,sizex,sizey);
 	}
     } else {
-	if(num_colors<=256 || sizex<8) {
+	if(!is_jpeg || num_colors<=256 || sizex<8 || sizey<8) {
 	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS);
 	    swf_SetU16(i->tag, bitid);
 	    swf_SetLosslessImage(i->tag,mem,sizex,sizey);
