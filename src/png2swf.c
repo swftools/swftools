@@ -66,7 +66,7 @@ int MovieFinish(SWF * swf, TAG * t, char *sname)
     else {
 	if (!sname)
 	    sname = "output.swf";
-	handle = open(sname, O_RDWR | O_CREAT | O_TRUNC, 0666);
+	handle = open(sname, O_BINARY | O_RDWR | O_CREAT | O_TRUNC, 0666);
     }
     if FAILED
 	(swf_WriteSWF(handle, swf)) if (VERBOSE(1))
