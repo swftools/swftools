@@ -629,6 +629,7 @@ int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits);
 
 int swf_SetJPEGBits(TAG * t,char * fname,int quality);
 void swf_SetJPEGBits2(TAG * t,U16 width,U16 height,RGBA * bitmap,int quality);
+int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);
 
 #define BYTES_PER_SCANLINE(width) ((width+3)&0xfffffffc)
 

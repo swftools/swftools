@@ -13,7 +13,7 @@
 
 #define OUTBUFFER_SIZE 0x8000
 
-#ifdef _JPEGLIB_INCLUDED_
+#ifdef HAVE_JPEGLIB
 
 typedef struct _JPEGDESTMGR
 { struct jpeg_destination_mgr mgr;
@@ -216,7 +216,7 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
   return 0;
 }
 
-#endif // _JPEGLIB_INCLUDED_
+#endif // HAVE_JPEGLIB
 
 // Lossless compression texture based on zlib
 
@@ -247,6 +247,7 @@ int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
   }
   return 0;
 }
+
 
 int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
 { int res = 0;
@@ -287,7 +288,6 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
       if (zs.next_out>data) swf_SetBlock(t,data,zs.next_out-data);
 
       deflateEnd(&zs);
-      
       
     } else res = -3; // zlib error
     free(data);
@@ -394,6 +394,90 @@ int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap)
 
 #endif // HAVE_ZLIB
 
-#undef OUTBUFFER_SIZE
+#if defined(HAVE_ZLIB) && defined(HAVE_JPEGLIB)
+int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality)
+{
+  JPEGBITS* jpeg;
+  int y;
+  int pos;
+  int res = 0;
+  U8 * data;
+  z_stream zs;
+  
+  pos = tag->len;
+  swf_SetU32(tag, 0); //placeholder
+  jpeg = swf_SetJPEGBitsStart(tag,width,height,quality);
+  for (y=0;y<height;y++)
+  { U8 scanline[3*width];
+    int x,p = 0;
+    for (x=0;x<width;x++) 
+    { scanline[p++] = bitmap[width*y+x].r;
+      scanline[p++] = bitmap[width*y+x].g;
+      scanline[p++] = bitmap[width*y+x].b;
+    }
+    swf_SetJPEGBitsLine(jpeg,scanline);
+  }
+  swf_SetJPEGBitsFinish(jpeg);
+  PUT32(&tag->data[pos], tag->len - pos - 4);
 
+  data=malloc(OUTBUFFER_SIZE);
+  memset(&zs,0x00,sizeof(z_stream));
+
+  if (deflateInit(&zs,Z_DEFAULT_COMPRESSION)!=Z_OK) {
+      fprintf(stderr, "rfxswf: zlib compression failed");
+      return -3;
+  }
+    
+  zs.next_out         = data;
+  zs.avail_out        = OUTBUFFER_SIZE;
+
+  for (y=0;y<height;y++)
+  { U8 scanline[width];
+    int x,p = 0;
+    for (x=0;x<width;x++) {
+      scanline[p++] = bitmap[width*y+x].a;
+    }
+    zs.avail_in         = width;
+    zs.next_in          = scanline;
+
+    while(1) {
+	if(deflate(&zs, Z_NO_FLUSH) != Z_OK) {
+	    fprintf(stderr, "rfxswf: zlib compression failed");
+	    return -4;
+	}
+	if(zs.next_out != data) {
+	    swf_SetBlock(tag, data, zs.next_out - data);
+	    zs.next_out = data;
+	    zs.avail_out = OUTBUFFER_SIZE;
+	}
+	if(!zs.avail_in) {
+	    break;
+	}
+    }
+  }
+
+  while(1) {
+      int ret = deflate(&zs, Z_FINISH);
+      if (ret != Z_OK &&
+	  ret != Z_STREAM_END)  {
+	  fprintf(stderr, "rfxswf: zlib compression failed");
+	  return -5;
+      }
+      if(zs.next_out != data) {
+	  swf_SetBlock(tag, data, zs.next_out - data);
+	  zs.next_out = data;
+	  zs.avail_out = OUTBUFFER_SIZE;
+      }
+      if (ret == Z_STREAM_END) {
+	  break;
+      }
+  }
+
+  deflateEnd(&zs);
+  free(data);
+  return 0;
+}
+#endif
+
+#undef OUTBUFFER_SIZE
 

@@ -16,13 +16,10 @@
 
 #include "rfxswf.h"
 
-#ifdef HAVE_LIBJPEG
-#ifdef HAVE_JPEGLIB_H
+#ifdef HAVE_JPEGLIB
 #define HAVE_BOOLEAN
 #include <jpeglib.h>
-#define _JPEGLIB_INCLUDED_
-#endif // HAVE_JPEGLIB_H
-#endif // HAVE_LIBJPEG
+#endif // HAVE_JPEGLIB
 
 #ifdef HAVE_ZLIB
 #include <zlib.h>
@@ -1246,4 +1243,3 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfbits.c"
 #include "modules/swfaction.c"
 #include "modules/swfsound.c"
-
