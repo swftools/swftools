@@ -11,7 +11,7 @@
 
 */
 
-int ButtonSetRecord(LPTAG t,U8 state,U16 id,U16 layer,LPMATRIX m,LPCXFORM cx)
+int ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx)
 
 { SetU8(t,state);
   SetU16(t,id);
@@ -21,13 +21,13 @@ int ButtonSetRecord(LPTAG t,U8 state,U16 id,U16 layer,LPMATRIX m,LPCXFORM cx)
   return 0;
 }
 
-int ButtonSetCondition(LPTAG t,U16 condition)
+int ButtonSetCondition(TAG * t,U16 condition)
 { SetU16(t,0); // dummy for Action Offset -> later set by ButtonPostProcess
   SetU16(t,condition);
   return 0;
 }
 
-int ButtonSetFlags(LPTAG t,U8 flags)
+int ButtonSetFlags(TAG * t,U8 flags)
 { if (GetTagID(t)==ST_DEFINEBUTTON2)
   { SetU8(t,flags);
     SetU16(t,0); // dummy for Action Offset -> later set by ButtonPostProcess
@@ -35,7 +35,7 @@ int ButtonSetFlags(LPTAG t,U8 flags)
   return 0;
 }
 
-void SetButtonOffset(LPTAG t,U32 offsetpos)
+void SetButtonOffset(TAG * t,U32 offsetpos)
 { U32 now = GetTagPos(t);
   U16 diff = now-offsetpos;
   SetTagPos(t,offsetpos);
@@ -44,7 +44,7 @@ void SetButtonOffset(LPTAG t,U32 offsetpos)
   SetTagPos(t,now);
 }
 
-int ButtonPostProcess(LPTAG t,int anz_action)
+int ButtonPostProcess(TAG * t,int anz_action)
 { if (GetTagID(t)==ST_DEFINEBUTTON2)
   { U32 oldTagPos;
     U32 offsetpos;

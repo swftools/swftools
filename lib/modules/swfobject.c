@@ -19,7 +19,7 @@
 #define PF_NAME         0x20
 #define PF_CLIPACTION   0x40
 
-int ObjectPlace(LPTAG t,U16 id,U16 depth,LPMATRIX m,LPCXFORM cx,U8 * name)
+int ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name)
 { U8 flags;
   if (!t) return -1;
 
@@ -36,7 +36,7 @@ int ObjectPlace(LPTAG t,U16 id,U16 depth,LPMATRIX m,LPCXFORM cx,U8 * name)
   return 0; 
 }
 
-int PlaceObject(LPTAG t,U16 id,U16 depth,LPMATRIX m,LPCXFORM cx,U8 * name, U16 clipaction)
+int PlaceObject(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction)
 { U8 flags;
   if (!t) return -1;
 
@@ -54,6 +54,6 @@ int PlaceObject(LPTAG t,U16 id,U16 depth,LPMATRIX m,LPCXFORM cx,U8 * name, U16 c
   return 0; 
 }
 
-int ObjectMove(LPTAG t,U16 depth,LPMATRIX m,LPCXFORM cx)
+int ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx)
 { return ObjectPlace(t,0,depth,m,cx,NULL);
 }

@@ -16,7 +16,7 @@
 
 typedef struct _JPEGDESTMGR
 { struct jpeg_destination_mgr mgr;
-  LPTAG  t;
+  TAG *  t;
   JOCTET * buffer;
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
@@ -25,14 +25,14 @@ typedef struct _JPEGDESTMGR
 // Destination manager callbacks
 
 void swf_init_destination(j_compress_ptr cinfo) 
-{ LPJPEGDESTMGR dmgr = (LPJPEGDESTMGR)cinfo->dest;
+{ JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
   dmgr->buffer = (JOCTET*)malloc(OUTBUFFER_SIZE);
   dmgr->mgr.next_output_byte = dmgr->buffer;
   dmgr->mgr.free_in_buffer = OUTBUFFER_SIZE;
 }
 
 boolean swf_empty_output_buffer(j_compress_ptr cinfo)
-{ LPJPEGDESTMGR dmgr = (LPJPEGDESTMGR)cinfo->dest;
+{ JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
   SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE);
   dmgr->mgr.next_output_byte = dmgr->buffer;
   dmgr->mgr.free_in_buffer = OUTBUFFER_SIZE;
@@ -40,19 +40,19 @@ boolean swf_empty_output_buffer(j_compress_ptr cinfo)
 }
 
 void swf_term_destination(j_compress_ptr cinfo) 
-{ LPJPEGDESTMGR dmgr = (LPJPEGDESTMGR)cinfo->dest;
+{ JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
   SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE-dmgr->mgr.free_in_buffer);
   free(dmgr->buffer);
   dmgr->mgr.free_in_buffer = 0;
 }
 
-LPJPEGBITS SetJPEGBitsStart(LPTAG t,int width,int height,int quality)
+JPEGBITS * SetJPEGBitsStart(TAG * t,int width,int height,int quality)
 {
-  LPJPEGDESTMGR jpeg;
+  JPEGDESTMGR * jpeg;
         
   // redirect compression lib output to local SWF Tag structure
   
-  jpeg = (LPJPEGDESTMGR)malloc(sizeof(JPEGDESTMGR));
+  jpeg = (JPEGDESTMGR *)malloc(sizeof(JPEGDESTMGR));
   if (!jpeg) return NULL;
   
   memset(jpeg,0x00,sizeof(JPEGDESTMGR));
@@ -87,32 +87,32 @@ LPJPEGBITS SetJPEGBitsStart(LPTAG t,int width,int height,int quality)
   jpeg_suppress_tables(&jpeg->cinfo, TRUE);
   jpeg_start_compress(&jpeg->cinfo, FALSE);
 
-  return (LPJPEGBITS)jpeg;
+  return (JPEGBITS *)jpeg;
 }
 
-int SetJPEGBitsLines(LPJPEGBITS jpegbits,U8 ** data,int n)
-{ LPJPEGDESTMGR jpeg = (LPJPEGDESTMGR)jpegbits;
+int SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n)
+{ JPEGDESTMGR * jpeg = (JPEGDESTMGR *)jpegbits;
   if (!jpeg) return -1;
   jpeg_write_scanlines(&jpeg->cinfo,data,n);
   return 0;
 }
 
-int SetJPEGBitsLine(LPJPEGBITS jpegbits,U8 * data)
+int SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data)
 { return SetJPEGBitsLines(jpegbits,&data,1);
 }
 
-int SetJPEGBitsFinish(LPJPEGBITS jpegbits)
-{ LPJPEGDESTMGR jpeg = (LPJPEGDESTMGR)jpegbits;
+int SetJPEGBitsFinish(JPEGBITS * jpegbits)
+{ JPEGDESTMGR * jpeg = (JPEGDESTMGR *)jpegbits;
   if (!jpeg) return -1;
   jpeg_finish_compress(&jpeg->cinfo);
   free(jpeg);
   return 0;
 }
 
-int SetJPEGBits(LPTAG t,char * fname,int quality)
+int SetJPEGBits(TAG * t,char * fname,int quality)
 { struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
-  LPJPEGBITS out;
+  JPEGBITS * out;
   FILE * f;
   U8 * scanline;
   

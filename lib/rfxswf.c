@@ -41,13 +41,13 @@
 
 // inline wrapper functions
 
-LPTAG NextTag(LPTAG t) { return t->next; }
-LPTAG PrevTag(LPTAG t) { return t->prev; }
-int   GetFrameNo(LPTAG t)  { return t->frame; }
-U16   GetTagID(LPTAG t)    { return t->id; }
-U32   GetDataSize(LPTAG t) { return t->len; }
-U8*   GetDataSizePtr(LPTAG t) { return &(t->data[t->len]); }
-U32   GetTagPos(LPTAG t)   { return t->pos; }
+TAG * NextTag(TAG * t) { return t->next; }
+TAG * PrevTag(TAG * t) { return t->prev; }
+int   GetFrameNo(TAG * t)  { return t->frame; }
+U16   GetTagID(TAG * t)    { return t->id; }
+U32   GetDataSize(TAG * t) { return t->len; }
+U8*   GetDataSizePtr(TAG * t) { return &(t->data[t->len]); }
+U32   GetTagPos(TAG * t)   { return t->pos; }
 
 // Basic Data Access Functions
 
@@ -59,7 +59,7 @@ U32   GetTagPos(LPTAG t)   { return t->pos; }
 #define SaveTagPos(tag)
 #define RestoreTagPos(tag)
 
-void SetTagPos(LPTAG t,U32 pos)
+void SetTagPos(TAG * t,U32 pos)
 { ResetBitmask(t);
   if (pos<=t->len) t->pos = pos;
   #ifdef DEBUG_RFXSWF
@@ -67,7 +67,7 @@ void SetTagPos(LPTAG t,U32 pos)
   #endif
 }
 
-U8 GetU8(LPTAG t)
+U8 GetU8(TAG * t)
 { ResetBitmask(t);
   #ifdef DEBUG_RFXSWF
     if (t->pos>=t->len) 
@@ -78,7 +78,7 @@ U8 GetU8(LPTAG t)
   return t->data[t->pos++];
 }
 
-U16 GetU16(LPTAG t)
+U16 GetU16(TAG * t)
 { U16 res;
   ResetBitmask(t);
   #ifdef DEBUG_RFXSWF
@@ -92,7 +92,7 @@ U16 GetU16(LPTAG t)
   return res;
 }
 
-U32 GetU32(LPTAG t)
+U32 GetU32(TAG * t)
 { U32 res;
   ResetBitmask(t);
   #ifdef DEBUG_RFXSWF
@@ -107,7 +107,7 @@ U32 GetU32(LPTAG t)
   return res;
 }
 
-int GetBlock(LPTAG t,U8 * b,int l)
+int GetBlock(TAG * t,U8 * b,int l)
 // returns number of bytes written (<=l)
 // b = NULL -> skip data
 { ResetBitmask(t);
@@ -117,7 +117,7 @@ int GetBlock(LPTAG t,U8 * b,int l)
   return l;
 }
 
-int SetBlock(LPTAG t,U8 * b,int l)
+int SetBlock(TAG * t,U8 * b,int l)
 // Appends Block to the end of Tagdata, returns size
 { U32 newlen = t->len + l;
   ResetBitcount(t);
@@ -140,14 +140,14 @@ int SetBlock(LPTAG t,U8 * b,int l)
   return l;
 }
 
-int SetU8(LPTAG t,U8 v)
+int SetU8(TAG * t,U8 v)
 { ResetBitcount(t);
   if ((t->len+1)>t->memsize) return (SetBlock(t,&v,1)==1)?0:-1;
   t->data[t->len++] = v;
   return 0;
 }
 
-int SetU16(LPTAG t,U16 v)
+int SetU16(TAG * t,U16 v)
 { U8 a[2];
   a[0] = v&0xff;
   a[1] = v>>8;
@@ -159,7 +159,7 @@ int SetU16(LPTAG t,U16 v)
   return 0;
 }
 
-int SetU32(LPTAG t,U32 v)
+int SetU32(TAG * t,U32 v)
 { U8 a[4];
   a[0] = v&0xff;        // to ensure correct handling of non-intel byteorder
   a[1] = (v>>8)&0xff;
@@ -175,7 +175,7 @@ int SetU32(LPTAG t,U32 v)
   return 0;
 }
 
-U32 GetBits(LPTAG t,int nbits)
+U32 GetBits(TAG * t,int nbits)
 { U32 res = 0;
   if (!nbits) return 0;
   if (!t->bitmask) t->bitmask = 0x80;
@@ -198,13 +198,13 @@ U32 GetBits(LPTAG t,int nbits)
   return res;
 }
 
-S32 GetSBits(LPTAG t,int nbits)
+S32 GetSBits(TAG * t,int nbits)
 { U32 res = GetBits(t,nbits);
   if (res&(1<<(nbits-1))) res|=(0xffffffff<<nbits);  
   return (S32)res;
 }
 
-int SetBits(LPTAG t,U32 v,int nbits)
+int SetBits(TAG * t,U32 v,int nbits)
 { U32 bm = 1<<(nbits-1);
 
   while (nbits)
@@ -222,7 +222,7 @@ int SetBits(LPTAG t,U32 v,int nbits)
 
 // Advanced Data Access Functions
 
-int SetRGB(LPTAG t,LPRGBA col)
+int SetRGB(TAG * t,RGBA * col)
 { if (!t) return -1;
   if (col)
   { SetU8(t,col->r);
@@ -232,7 +232,7 @@ int SetRGB(LPTAG t,LPRGBA col)
   return 0;
 }
 
-int SetRGBA(LPTAG t,LPRGBA col)
+int SetRGBA(TAG * t,RGBA * col)
 { if (!t) return -1;
   if (col)
   { SetU8(t,col->r);
@@ -264,7 +264,7 @@ int CountBits(U32 v,int nbits)
   return (n>nbits)?n:nbits;
 }
 
-int GetRect(LPTAG t,LPSRECT r)
+int GetRect(TAG * t,SRECT * r)
 { int nbits;
   SRECT dummy;
   if (!r) r = &dummy;
@@ -276,7 +276,7 @@ int GetRect(LPTAG t,LPSRECT r)
   return 0;
 }
 
-int SetRect(LPTAG t,LPSRECT r)
+int SetRect(TAG * t,SRECT * r)
 { int nbits;
     
   nbits = CountBits(r->xmin,0);
@@ -293,7 +293,7 @@ int SetRect(LPTAG t,LPSRECT r)
   return 0;
 }
 
-int GetMatrix(LPTAG t,LPMATRIX m)
+int GetMatrix(TAG * t,MATRIX * m)
 { MATRIX dummy;
   int nbits;
     
@@ -329,7 +329,7 @@ int GetMatrix(LPTAG t,LPMATRIX m)
   return 0;
 }
 
-int SetMatrix(LPTAG t,LPMATRIX m)
+int SetMatrix(TAG * t,MATRIX * m)
 { int nbits;
   MATRIX ma;
 
@@ -371,7 +371,7 @@ int SetMatrix(LPTAG t,LPMATRIX m)
   return 0;
 }
 
-int GetCXForm(LPTAG t,LPCXFORM cx,U8 alpha) //FIXME: alpha should be type bool
+int GetCXForm(TAG * t,CXFORM * cx,U8 alpha) //FIXME: alpha should be type bool
 { CXFORM cxf;
   int hasadd;
   int hasmul;
@@ -408,7 +408,7 @@ int GetCXForm(LPTAG t,LPCXFORM cx,U8 alpha) //FIXME: alpha should be type bool
   return 0;
 }
 
-int SetCXForm(LPTAG t,LPCXFORM cx,U8 alpha)
+int SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
 { CXFORM cxf;
   int hasadd;
   int hasmul;
@@ -466,12 +466,12 @@ int SetCXForm(LPTAG t,LPCXFORM cx,U8 alpha)
   return 0;
 }
 
-int GetPoint(LPTAG t,LPSPOINT p) { return 0; }
-int SetPoint(LPTAG t,LPSPOINT p) { return 0; }
+int GetPoint(TAG * t,SPOINT * p) { return 0; }
+int SetPoint(TAG * t,SPOINT * p) { return 0; }
 
 // Tag List Manipulating Functions
 
-int RFXSWF_UpdateFrame(LPTAG t,S8 delta)
+int RFXSWF_UpdateFrame(TAG * t,S8 delta)
 // returns number of frames
 { int res = -1;
   while (t)
@@ -484,10 +484,10 @@ int RFXSWF_UpdateFrame(LPTAG t,S8 delta)
 
 #define UpdateFrame(a,b) RFXSWF_UpdateFrame(a,b)
 
-LPTAG InsertTag(LPTAG after,U16 id)     // updates frames, if nescessary
-{ LPTAG t;
+TAG * InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
+{ TAG * t;
 
-  t = (LPTAG)malloc(sizeof(TAG));
+  t = (TAG *)malloc(sizeof(TAG));
   if (t)
   { memset(t,0x00,sizeof(TAG));
     t->id = id;
@@ -506,7 +506,7 @@ LPTAG InsertTag(LPTAG after,U16 id)     // updates frames, if nescessary
   return t;
 }
 
-int DeleteTag(LPTAG t)
+int DeleteTag(TAG * t)
 { if (!t) return -1;
 
   if (t->id==ST_SHOWFRAME) UpdateFrame(t->next,-1);
@@ -519,8 +519,8 @@ int DeleteTag(LPTAG t)
   return 0;
 }
 
-LPTAG RFXSWF_ReadTag(int handle,LPTAG prev)
-{ LPTAG t;
+TAG * RFXSWF_ReadTag(int handle,TAG * prev)
+{ TAG * t;
   U16 raw;
   U32 len;
   int id;
@@ -537,7 +537,7 @@ LPTAG RFXSWF_ReadTag(int handle,LPTAG prev)
   if (id==ST_DEFINESPRITE) len = 2*sizeof(U16);
   // Sprite handling fix: Flaten sprite tree
 
-  t = (LPTAG)malloc(sizeof(TAG));
+  t = (TAG *)malloc(sizeof(TAG));
   
   if (!t)
   {
@@ -574,9 +574,9 @@ LPTAG RFXSWF_ReadTag(int handle,LPTAG prev)
   return t;
 }
 
-int DefineSprite_GetRealSize(LPTAG t);
+int DefineSprite_GetRealSize(TAG * t);
 
-int RFXSWF_WriteTag(int handle,LPTAG t)
+int RFXSWF_WriteTag(int handle,TAG * t)
 // returns tag length in bytes (incl. Header), -1 = Error
 // handle = -1 -> no output
 { U16 raw[3];
@@ -630,7 +630,7 @@ int RFXSWF_WriteTag(int handle,LPTAG t)
   return t->len+(short_tag?2:6);
 }
 
-int DefineSprite_GetRealSize(LPTAG t)
+int DefineSprite_GetRealSize(TAG * t)
 // Sprite Handling: Helper function to pack DefineSprite-Tag
 { U32 len = t->len;
   do
@@ -646,14 +646,14 @@ int DefineSprite_GetRealSize(LPTAG t)
 
 // Movie Functions
 
-int ReadSWF(int handle,LPSWF swf)       // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int ReadSWF(int handle,SWF * swf)       // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 {     
   if (!swf) return -1;
   memset(swf,0x00,sizeof(SWF));
 
   { char b[32];                         // Header lesen
     TAG t1;
-    LPTAG t;
+    TAG * t;
     
     memset(&t1,0x00,sizeof(TAG));
     
@@ -682,9 +682,9 @@ int ReadSWF(int handle,LPSWF swf)       // Reads SWF to memory (malloc'ed), retu
   
   return 0;
 }
-int  WriteSWF(int handle,LPSWF swf)     // Writes SWF to file, returns length or <0 if fails
+int  WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
-  LPTAG t;
+  TAG * t;
     
   if (!swf) return -1;
 
@@ -756,7 +756,7 @@ int  WriteSWF(int handle,LPSWF swf)     // Writes SWF to file, returns length or
   return (int)swf->FileSize;
 }
 
-int WriteCGI(LPSWF swf)
+int WriteCGI(SWF * swf)
 { int len;
   char s[1024];
     
@@ -774,11 +774,11 @@ int WriteCGI(LPSWF swf)
   return WriteSWF(fileno(stdout),swf);
 }
 
-void FreeTags(LPSWF swf)                 // Frees all malloc'ed memory for tags
-{ LPTAG t = swf->FirstTag;
+void FreeTags(SWF * swf)                 // Frees all malloc'ed memory for tags
+{ TAG * t = swf->FirstTag;
 
   while (t)
-  { LPTAG tnew = t->next;
+  { TAG * tnew = t->next;
     if (t->data) free(t->data);
     free(t);
     t = tnew;

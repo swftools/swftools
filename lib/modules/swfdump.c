@@ -11,7 +11,7 @@
 
 */
 
-void DumpHeader(FILE * f,LPSWF swf)
+void DumpHeader(FILE * f,SWF * swf)
 { if (!f) f = stderr;
   fprintf(f,"File size\t%u\n",swf->FileSize);
   fprintf(f,"Movie width\t%u\n",(swf->MovieSize.xmax - swf->MovieSize.xmin)/20);
@@ -20,14 +20,14 @@ void DumpHeader(FILE * f,LPSWF swf)
   fprintf(f,"Frame count\t%u\n",swf->FrameCount);
 }
 
-void DumpMatrix(FILE * f,LPMATRIX m)
+void DumpMatrix(FILE * f,MATRIX * m)
 { if (!f) f = stderr;
   fprintf(f,"[%08x][%08x]\n",m->sx,m->r1);
   fprintf(f,"[%08x][%08x]\n",m->r0,m->sy);
   fprintf(f," %08x, %08x\n",m->tx,m->ty);
 }
 
-void DumpTag(FILE * f,LPTAG t)
+void DumpTag(FILE * f,TAG * t)
 { int i;
   if (!f) f = stderr;
   for (i=0;i<t->len;i++)

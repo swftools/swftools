@@ -91,56 +91,56 @@ typedef struct _SWF
   SRECT         MovieSize;
   U16           FrameRate;
   U16           FrameCount;     // valid after load and save
-  LPTAG         FirstTag;
+  TAG *         FirstTag;
 } SWF, * LPSWF;
 
 // Basic Functions
 
-int  ReadSWF(int handle,LPSWF swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
-int  WriteSWF(int handle,LPSWF swf);    // Writes SWF to file, returns length or <0 if fails
-int  WriteCGI(LPSWF swf);               // Outputs SWF with valid CGI header to stdout
-void FreeTags(LPSWF swf);               // Frees all malloc'ed memory for swf
+int  ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int  WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
+int  WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
+void FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
     
-LPTAG InsertTag(LPTAG after,U16 id);    // updates frames, if necessary
-int   DeleteTag(LPTAG t);
+TAG * InsertTag(TAG * after,U16 id);    // updates frames, if necessary
+int   DeleteTag(TAG * t);
 
-void  SetTagPos(LPTAG t,U32 pos);       // resets Bitcount
-U32   GetTagPos(LPTAG t);
+void  SetTagPos(TAG * t,U32 pos);       // resets Bitcount
+U32   GetTagPos(TAG * t);
 
-LPTAG NextTag(LPTAG t);
-LPTAG PrevTag(LPTAG t);
+TAG * NextTag(TAG * t);
+TAG * PrevTag(TAG * t);
 
-int   GetFrameNo(LPTAG t);
-U16   GetTagID(LPTAG t);
-U32   GetDataSize(LPTAG t);
-U8*   GetDataSizePtr(LPTAG t);
+int   GetFrameNo(TAG * t);              // should be renamed to TagGetFrame
+U16   GetTagID(TAG * t);                // ... TagGetID
+U32   GetDataSize(TAG * t);             // ... TagGetDataSize
+U8*   GetDataSizePtr(TAG * t);
 
-U32   GetBits(LPTAG t,int nbits);
-S32   GetSBits(LPTAG t,int nbits);
-int   SetBits(LPTAG t,U32 v,int nbits);
+U32   GetBits(TAG * t,int nbits);
+S32   GetSBits(TAG * t,int nbits);
+int   SetBits(TAG * t,U32 v,int nbits);
 
-int   GetBlock(LPTAG t,U8 * b,int l);   // resets Bitcount
-int   SetBlock(LPTAG t,U8 * b,int l);
+int   GetBlock(TAG * t,U8 * b,int l);   // resets Bitcount
+int   SetBlock(TAG * t,U8 * b,int l);
 
-U8    GetU8(LPTAG t);                   // resets Bitcount
-U16   GetU16(LPTAG t);
-U32   GetU32(LPTAG t);
+U8    GetU8(TAG * t);                   // resets Bitcount
+U16   GetU16(TAG * t);
+U32   GetU32(TAG * t);
 
-int   SetU8(LPTAG t,U8 v);              // resets Bitcount
-int   SetU16(LPTAG t,U16 v);
-int   SetU32(LPTAG t,U32 v);
+int   SetU8(TAG * t,U8 v);              // resets Bitcount
+int   SetU16(TAG * t,U16 v);
+int   SetU32(TAG * t,U32 v);
 
-int   GetPoint(LPTAG t,LPSPOINT p);     // resets Bitcount
-int   GetRect(LPTAG t,LPSRECT r);
-int   GetMatrix(LPTAG t,LPMATRIX m);
-int   GetCXForm(LPTAG t,LPCXFORM cx,U8 alpha);
+int   GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
+int   GetRect(TAG * t,SRECT * r);
+int   GetMatrix(TAG * t,MATRIX * m);
+int   GetCXForm(TAG * t,CXFORM * cx,U8 alpha);
 
-int   SetPoint(LPTAG t,LPSPOINT p);     // resets Bitcount
-int   SetRect(LPTAG t,LPSRECT r);
-int   SetMatrix(LPTAG t,LPMATRIX m);
-int   SetCXForm(LPTAG t,LPCXFORM cx,U8 alpha);
-int   SetRGB(LPTAG t,LPRGBA col);
-int   SetRGBA(LPTAG t,LPRGBA col);
+int   SetPoint(TAG * t,SPOINT * p);     // resets Bitcount
+int   SetRect(TAG * t,SRECT * r);
+int   SetMatrix(TAG * t,MATRIX * m);
+int   SetCXForm(TAG * t,CXFORM * cx,U8 alpha);
+int   SetRGB(TAG * t,RGBA * col);
+int   SetRGBA(TAG * t,RGBA * col);
 
 // Function Macros
 
@@ -194,7 +194,7 @@ int   SetRGBA(LPTAG t,LPRGBA col);
 #define ST_DEFINEBITSJPEG3      35 /* A JPEG bitmap with alpha info. */
 #define ST_DEFINEBITSLOSSLESS2  36 /* A lossless bitmap with alpha info. */
 #define ST_DEFINEEDITTEXT       37
-#define ST_DEFINEMOVIE		38
+#define ST_DEFINEMOVIE          38
 #define ST_DEFINESPRITE         39 /* Define a sequence of tags that describe the behavior of a sprite. */
 #define ST_NAMECHARACTER        40 /* Name a character definition, character id and a string, (used for buttons, bitmaps, sprites and sounds). */
 #define ST_SERIALNUMBER         41
@@ -213,9 +213,9 @@ int   SetRGBA(LPTAG t,LPRGBA col);
 
 // swfdump.c
 
-void DumpHeader(FILE * f,LPSWF swf);
-void DumpMatrix(FILE * f,LPMATRIX m);
-void DumpTag(FILE * f,LPTAG t); 
+void DumpHeader(FILE * f,SWF * swf);
+void DumpMatrix(FILE * f,MATRIX * m);
+void DumpTag(FILE * f,TAG * t); 
 char* getTagName(TAG*tag);
 
 // swfshape.c
@@ -235,12 +235,12 @@ typedef struct _FILLSTYLE
 typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
 {                 
   struct
-  { LPLINESTYLE data;
+  { LINESTYLE * data;
     U16         n;
   } linestyle;
                   // note: changes of shape structure
   struct                  // lead to incompatible .efont formats
-  { LPFILLSTYLE data;
+  { FILLSTYLE * data;
     U16         n;
   } fillstyle;
 
@@ -258,29 +258,29 @@ typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
 
 // Shapes
 
-int   NewShape(LPSHAPE * s);
-void  ShapeFree(LPSHAPE s);
+int   NewShape(SHAPE ** s);
+void  ShapeFree(SHAPE * s);
 
-int   GetSimpleShape(LPTAG t,LPSHAPE * s); // without Linestyle/Fillstyle Record
-int   SetSimpleShape(LPTAG t,LPSHAPE s);   // without Linestyle/Fillstyle Record
+int   GetSimpleShape(TAG * t,SHAPE ** s); // without Linestyle/Fillstyle Record
+int   SetSimpleShape(TAG * t,SHAPE * s);   // without Linestyle/Fillstyle Record
 
-int   ShapeAddLineStyle(LPSHAPE s,U16 width,LPRGBA color);
-int   ShapeAddSolidFillStyle(LPSHAPE s,LPRGBA color);
-int   ShapeAddBitmapFillStyle(LPSHAPE s,LPMATRIX m,U16 id_bitmap,int clip);
+int   ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color);
+int   ShapeAddSolidFillStyle(SHAPE * s,RGBA * color);
+int   ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip);
 
-int   SetShapeStyles(LPTAG t,LPSHAPE s);
-int   ShapeCountBits(LPSHAPE s,U8 * fbits,U8 * lbits);
-int   SetShapeBits(LPTAG t,LPSHAPE s);
-int   SetShapeHeader(LPTAG t,LPSHAPE s); // one call for upper three functions
+int   SetShapeStyles(TAG * t,SHAPE * s);
+int   ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits);
+int   SetShapeBits(TAG * t,SHAPE * s);
+int   SetShapeHeader(TAG * t,SHAPE * s); // one call for upper three functions
 
-int   ShapeSetMove(LPTAG t,LPSHAPE s,S32 x,S32 y);
-int   ShapeSetStyle(LPTAG t,LPSHAPE s,U16 line,U16 fill0,U16 fill1);
-int   ShapeSetAll(LPTAG t,LPSHAPE s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1);
+int   ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y);
+int   ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1);
+int   ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1);
 
-int   ShapeSetLine(LPTAG t,LPSHAPE s,S32 x,S32 y);
-int   ShapeSetCurve(LPTAG t,LPSHAPE s,S32 x,S32 y,S32 ax,S32 ay);
-int   ShapeSetCircle(LPTAG t,LPSHAPE s,S32 x,S32 y,S32 rx,S32 ry);
-int   ShapeSetEnd(LPTAG t);
+int   ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y);
+int   ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
+int   ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
+int   ShapeSetEnd(TAG * t);
 
 
 // swffont.c
@@ -303,7 +303,7 @@ typedef struct _SWFLAYOUT
 typedef struct _SWFFONT
 { U16           id;
   U8 *          name;
-  LPSWFLAYOUT   layout;
+  SWFLAYOUT *   layout;
 
   U8            flags; // bold/italic/unicode/ansi ...
 
@@ -312,7 +312,7 @@ typedef struct _SWFFONT
   struct
   { U16         advance;
     U16         gid;            // Glyph-ID after DefineFont
-    LPSHAPE     shape;
+    SHAPE *     shape;
   }             glyph[MAX_CHAR_PER_FONT];
 } SWFFONT, * LPSWFFONT;
 
@@ -320,37 +320,37 @@ typedef struct _FONTUSAGE
 { U8 code[MAX_CHAR_PER_FONT];
 } FONTUSAGE, * LPFONTUSAGE;
 
-int FontEnumerate(LPSWF swf,void (*FontCallback) (U16,U8*));
+int FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*));
 // -> void fontcallback(U16 id,U8 * name); returns number of defined fonts
 
-int FontExtract(LPSWF swf,int id,LPSWFFONT * f);
+int FontExtract(SWF * swf,int id,SWFFONT ** f);
 // Fetches all available information from DefineFont, DefineFontInfo, DefineText, ...
 // id = FontID, id=0 -> Extract first Font
 
-int FontIsItalic(LPSWFFONT f);
-int FontIsBold(LPSWFFONT f);
+int FontIsItalic(SWFFONT * f);
+int FontIsBold(SWFFONT * f);
 
-int FontSetID(LPSWFFONT f,U16 id);
-int FontReduce(LPSWFFONT f,LPFONTUSAGE use);
+int FontSetID(SWFFONT * f,U16 id);
+int FontReduce(SWFFONT * f,FONTUSAGE * use);
 
-int FontInitUsage(LPFONTUSAGE use);
-int FontUse(LPFONTUSAGE use,U8 * s);
+int FontInitUsage(FONTUSAGE * use);
+int FontUse(FONTUSAGE * use,U8 * s);
 
-int FontSetDefine(LPTAG t,LPSWFFONT f);
-int FontSetInfo(LPTAG t,LPSWFFONT f);
+int FontSetDefine(TAG * t,SWFFONT * f);
+int FontSetInfo(TAG * t,SWFFONT * f);
 
-int FontExport(int handle,LPSWFFONT f);
-int FontImport(int handle,LPSWFFONT * f);
+int FontExport(int handle,SWFFONT * f);
+int FontImport(int handle,SWFFONT * * f);
 
-void FontFree(LPSWFFONT f);
+void FontFree(SWFFONT * f);
 
-U32 TextGetWidth(LPSWFFONT font,U8 * s,int scale);
-int TextCountBits(LPSWFFONT font,U8 * s,int scale,U8 * gbits,U8 * abits);
+U32 TextGetWidth(SWFFONT * font,U8 * s,int scale);
+int TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits);
 
-int TextSetInfoRecord(LPTAG t,LPSWFFONT font,U16 size,LPRGBA color,S16 dx,S16 dy);
-int TextSetCharRecord(LPTAG t,LPSWFFONT font,U8 * s,int scale,U8 gbits,U8 abits);
+int TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,S16 dx,S16 dy);
+int TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits);
 
-int TextPrintDefineText(LPTAG t,LPSWFFONT f);
+int TextPrintDefineText(TAG * t,SWFFONT * f);
 // Prints text defined in tag t with font f to stdout
 
 
@@ -358,9 +358,9 @@ int TextPrintDefineText(LPTAG t,LPSWFFONT f);
 
 // Always use ST_PLACEOBJECT2 !!!
 
-int ObjectPlace(LPTAG t,U16 id,U16 depth,LPMATRIX m,LPCXFORM cx,U8 * name);
-int PlaceObject(LPTAG t,U16 id,U16 depth,LPMATRIX m,LPCXFORM cx,U8 * name, U16 clipaction);
-int ObjectMove(LPTAG t,U16 depth,LPMATRIX m,LPCXFORM cx);
+int ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
+int PlaceObject(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
+int ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 
 // swfbutton.c
 
@@ -404,32 +404,32 @@ int ObjectMove(LPTAG t,U16 depth,LPMATRIX m,LPCXFORM cx);
 
 #define BF_TRACKMENU            0x01
 
-int ButtonSetRecord(LPTAG t,U8 state,U16 id,U16 layer,LPMATRIX m,LPCXFORM cx);
-int ButtonSetCondition(LPTAG t,U16 condition); // for DefineButton2
-int ButtonSetFlags(LPTAG t,U8 flags);  // necessary for DefineButton2
-int ButtonPostProcess(LPTAG t,int anz_action); // Set all offsets in DefineButton2-Tags (how many conditions to process)
+int ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx);
+int ButtonSetCondition(TAG * t,U16 condition); // for DefineButton2
+int ButtonSetFlags(TAG * t,U8 flags);  // necessary for DefineButton2
+int ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineButton2-Tags (how many conditions to process)
 
 // swfbits.c
 
-typedef int * LPJPEGBITS; // cover libjpeg structures
+typedef int JPEGBITS,* LPJPEGBITS; // cover libjpeg structures
 
-LPJPEGBITS SetJPEGBitsStart(LPTAG t,int width,int height,int quality);
-int SetJPEGBitsLines(LPJPEGBITS jpegbits,U8 ** data,int n);
-int SetJPEGBitsLine(LPJPEGBITS jpegbits,U8 * data);
-int SetJPEGBitsFinish(LPJPEGBITS jpegbits);
+JPEGBITS * SetJPEGBitsStart(TAG * t,int width,int height,int quality);
+int SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n);
+int SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data);
+int SetJPEGBitsFinish(JPEGBITS * jpegbits);
 
-int SetJPEGBits(LPTAG t,char * fname,int quality); // paste jpg file into swf stream
+int SetJPEGBits(TAG * t,char * fname,int quality); // paste jpg file into swf stream
 
 // swftools.c
 
-char isDefiningTag(LPTAG t);
-char isAllowedSpriteTag(LPTAG t);
-U16 GetDefineID(LPTAG t);
-U16 GetPlaceID(LPTAG t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
-U16 GetDepth(LPTAG t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
-char* GetName(LPTAG t); //PLACEOBJECT2, FRAMELABEL
-LPMATRIX MatrixJoin(LPMATRIX d,LPMATRIX s1,LPMATRIX s2);
-LPMATRIX MatrixMapTriangle(LPMATRIX m,int dx,int dy,
+char isDefiningTag(TAG * t);
+char isAllowedSpriteTag(TAG * t);
+U16 GetDefineID(TAG * t);
+U16 GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
+U16 GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
+char* GetName(TAG * t); //PLACEOBJECT2, FRAMELABEL
+MATRIX * MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2);
+MATRIX * MatrixMapTriangle(MATRIX * m,int dx,int dy,
                     int x0,int y0,int x1,int y1,int x2,int y2);
 
 

@@ -26,11 +26,11 @@ SFIXED QFIX(int zaehler,int nenner) // bildet Quotient von zwei INTs in SFIXED
 }
 #undef S64
 
-LPMATRIX MatrixJoin(LPMATRIX d,LPMATRIX s1,LPMATRIX s2)
+MATRIX * MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2)
 {        
   if (!d) return NULL;
-  if (!s1) return (s2)?(LPMATRIX)memcpy(d,s2,sizeof(MATRIX)):NULL;
-  if (!s2) return (LPMATRIX)memcpy(d,s1,sizeof(MATRIX));
+  if (!s1) return (s2)?(MATRIX *)memcpy(d,s2,sizeof(MATRIX)):NULL;
+  if (!s2) return (MATRIX *)memcpy(d,s1,sizeof(MATRIX));
   
   d->tx = s1->tx + s2->tx;
   d->ty = s1->ty + s2->ty;
@@ -45,7 +45,7 @@ LPMATRIX MatrixJoin(LPMATRIX d,LPMATRIX s1,LPMATRIX s2)
   return d;
 }
 
-LPMATRIX MatrixMapTriangle(LPMATRIX m,int dx,int dy,int x0,int y0,
+MATRIX * MatrixMapTriangle(MATRIX * m,int dx,int dy,int x0,int y0,
                                int x1,int y1,int x2,int y2)
 { int dx1 = x1 - x0;
   int dy1 = y1 - y0;
@@ -65,7 +65,7 @@ LPMATRIX MatrixMapTriangle(LPMATRIX m,int dx,int dy,int x0,int y0,
   return m;
 }
 
-U16 GetDefineID(LPTAG t)
+U16 GetDefineID(TAG * t)
 // up to SWF 4.0
 { U32 oldTagPos;
   U16 id = 0;
@@ -103,7 +103,7 @@ U16 GetDefineID(LPTAG t)
   return id;
 }
 
-U16 GetPlaceID(LPTAG t)
+U16 GetPlaceID(TAG * t)
 // up to SWF 4.0
 { U32 oldTagPos;
   U16 id = 0;
@@ -197,7 +197,7 @@ char isDefiningTag (TAG*tag)
     return 0; 
 }
 
-U16 GetDepth(LPTAG t)
+U16 GetDepth(TAG * t)
 // up to SWF 4.0
 { 
   U16 depth = 0;
@@ -223,7 +223,7 @@ U16 GetDepth(LPTAG t)
   return depth;
 }
 
-char* GetName(LPTAG t)
+char* GetName(TAG * t)
 {
     char* name = 0;
     U32 oldTagPos;

@@ -24,9 +24,9 @@
 #define FF_SHIFTJIS     0x10
 #define FF_UNICODE      0x20
 
-int FontEnumerate(LPSWF swf,void (*FontCallback) (U16,U8*))
+int FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
 { int n;
-  LPTAG t;
+  TAG * t;
   if (!swf) return -1;
   t = swf->FirstTag;
   n = 0;
@@ -56,7 +56,7 @@ int FontEnumerate(LPSWF swf,void (*FontCallback) (U16,U8*))
   return n;
 }
 
-int FontExtract_DefineFont(int id,LPSWFFONT f,LPTAG t,LPSHAPE * shapes)
+int FontExtract_DefineFont(int id,SWFFONT * f,TAG * t,SHAPE * * shapes)
 { U16 fid;
   SaveTagPos(t);
   SetTagPos(t,0);
@@ -81,7 +81,7 @@ int FontExtract_DefineFont(int id,LPSWFFONT f,LPTAG t,LPSHAPE * shapes)
   return id;
 }
 
-int FontExtract_DefineFontInfo(int id,LPSWFFONT f,LPTAG t,LPSHAPE * shapes)
+int FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t,SHAPE * * shapes)
 { U16 fid;
   SaveTagPos(t);
   SetTagPos(t,0);
@@ -124,7 +124,7 @@ int FontExtract_DefineFontInfo(int id,LPSWFFONT f,LPTAG t,LPSHAPE * shapes)
 #define FEDTJ_PRINT  0x01
 #define FEDTJ_MODIFY 0x02
 
-int FontExtract_DefineText(int id,LPSWFFONT f,LPTAG t,int jobs)
+int FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
 { U16    cid;
   SRECT  r;
   MATRIX m;
@@ -180,14 +180,14 @@ int FontExtract_DefineText(int id,LPSWFFONT f,LPTAG t,int jobs)
   return id;
 }  
 
-int FontExtract(LPSWF swf,int id,LPSWFFONT * font)
-{ LPTAG t;
-  LPSWFFONT f;
-  LPSHAPE shapes[MAX_CHAR_PER_FONT];
+int FontExtract(SWF * swf,int id,SWFFONT * * font)
+{ TAG * t;
+  SWFFONT * f;
+  SHAPE * shapes[MAX_CHAR_PER_FONT];
     
   if ((!swf)||(!font)) return -1;
 
-  f = (LPSWFFONT)malloc(sizeof(SWFFONT)); font[0] = f;
+  f = (SWFFONT *)malloc(sizeof(SWFFONT)); font[0] = f;
   if (!f) return -1;
   
   memset(shapes,0x00,sizeof(shapes));
@@ -217,12 +217,12 @@ int FontExtract(LPSWF swf,int id,LPSWFFONT * font)
   return 0;
 }
 
-int FontIsItalic(LPSWFFONT f) { return f->flags&FF_ITALIC; }
-int FontIsBold(LPSWFFONT f)   { return f->flags&FF_BOLD; }
+int FontIsItalic(SWFFONT * f) { return f->flags&FF_ITALIC; }
+int FontIsBold(SWFFONT * f)   { return f->flags&FF_BOLD; }
 
-int FontSetID(LPSWFFONT f,U16 id) { if (!f) return -1; f->id = id; return 0; }
+int FontSetID(SWFFONT * f,U16 id) { if (!f) return -1; f->id = id; return 0; }
 
-int FontReduce(LPSWFFONT f,LPFONTUSAGE use)
+int FontReduce(SWFFONT * f,FONTUSAGE * use)
 { int i,j;
   if ((!f)||(!use)) return -1;
 
@@ -247,13 +247,13 @@ int FontReduce(LPSWFFONT f,LPFONTUSAGE use)
   return j;
 }
 
-int FontInitUsage(LPFONTUSAGE use)
+int FontInitUsage(FONTUSAGE * use)
 { if (!use) return -1;
   memset(&use->code,0x00,sizeof(use->code));
   return 0;
 }
 
-int FontUse(LPFONTUSAGE use,U8 * s)
+int FontUse(FONTUSAGE * use,U8 * s)
 { if ((!use)||(!s)) return -1;
   while (s[0])
   { use->code[s[0]] = 1;
@@ -262,7 +262,7 @@ int FontUse(LPFONTUSAGE use,U8 * s)
   return 0;  
 }
 
-int FontSetDefine(LPTAG t,LPSWFFONT f)
+int FontSetDefine(TAG * t,SWFFONT * f)
 { U16 ofs[MAX_CHAR_PER_FONT];
   int p,i,j;
     
@@ -287,7 +287,7 @@ int FontSetDefine(LPTAG t,LPSWFFONT f)
   return 0;
 }
 
-int FontSetInfo(LPTAG t,LPSWFFONT f)
+int FontSetInfo(TAG * t,SWFFONT * f)
 { int l,i;
   if ((!t)||(!f)) return -1;
   ResetBitcount(t);
@@ -304,7 +304,7 @@ int FontSetInfo(LPTAG t,LPSWFFONT f)
   return 0;
 }
 
-int FontExport(int handle,LPSWFFONT f)
+int FontExport(int handle,SWFFONT * f)
 { int l;
   int i;
   if (!f) return 0;
@@ -344,14 +344,14 @@ int FontExport(int handle,LPSWFFONT f)
   return l;
 }
 
-int FontImport(int handle,LPSWFFONT * font)
-{ LPSWFFONT f;
+int FontImport(int handle,SWFFONT * * font)
+{ SWFFONT * f;
   int layout;
   int i = 0;
 
   if ((!font)||(handle<0)) return -1;
 
-  f = (LPSWFFONT)malloc(sizeof(SWFFONT)); font[0] = f;
+  f = (SWFFONT *)malloc(sizeof(SWFFONT)); font[0] = f;
   if (!f) return -1;
 
   memset(f,0x00,sizeof(SWFFONT));
@@ -372,7 +372,7 @@ int FontImport(int handle,LPSWFFONT * font)
   }
 
   if (f->layout)
-  { f->layout = (LPSWFLAYOUT)malloc(sizeof(SWFLAYOUT));
+  { f->layout = (SWFLAYOUT *)malloc(sizeof(SWFLAYOUT));
     if (!f->layout) goto fehler;
     if (read(handle,f->layout,sizeof(SWFLAYOUT))!=sizeof(SWFLAYOUT)) goto fehler;
     if (f->layout->kerning.data)
@@ -400,14 +400,14 @@ fehler:
   return -1;
 }
 
-int TextPrintDefineText(LPTAG t,LPSWFFONT f)
+int TextPrintDefineText(TAG * t,SWFFONT * f)
 { int id = GetTagID(t);
   if ((id==ST_DEFINETEXT)||(id==ST_DEFINETEXT2)) FontExtract_DefineText(f->id,f,t,FEDTJ_PRINT);
     else return -1;
   return 0;
 }
 
-void LayoutFree(LPSWFLAYOUT l)
+void LayoutFree(SWFLAYOUT * l)
 { if (l)
   { if (l->kerning.data) free(l->kerning.data);
     l->kerning.data = NULL;
@@ -415,7 +415,7 @@ void LayoutFree(LPSWFLAYOUT l)
   free(l);
 }
 
-void FontFree(LPSWFFONT f)
+void FontFree(SWFFONT * f)
 { if (f)
   { int i;
       
@@ -434,7 +434,7 @@ void FontFree(LPSWFFONT f)
   free(f);
 }
 
-int TextSetInfoRecord(LPTAG t,LPSWFFONT font,U16 size,LPRGBA color,S16 dx,S16 dy)
+int TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,S16 dx,S16 dy)
 { U8 flags;
   if (!t) return -1;
 
@@ -453,7 +453,7 @@ int TextSetInfoRecord(LPTAG t,LPSWFFONT font,U16 size,LPRGBA color,S16 dx,S16 dy
   return 0;
 }
 
-int TextCountBits(LPSWFFONT font,U8 * s,int scale,U8 * gbits,U8 * abits)
+int TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits)
 { U16 g,a;
   if ((!s)||(!font)||((!gbits)&&(!abits))) return -1;
   g = a = 0;
@@ -470,7 +470,7 @@ int TextCountBits(LPSWFFONT font,U8 * s,int scale,U8 * gbits,U8 * abits)
   return 0;
 }
 
-int TextSetCharRecord(LPTAG t,LPSWFFONT font,U8 * s,int scale,U8 gbits,U8 abits)
+int TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits)
 { int l,i;
     
   if ((!t)||(!font)||(!s)) return -1;
@@ -488,7 +488,7 @@ int TextSetCharRecord(LPTAG t,LPSWFFONT font,U8 * s,int scale,U8 gbits,U8 abits)
   return 0;
 }
 
-U32 TextGetWidth(LPSWFFONT font,U8 * s,int scale)
+U32 TextGetWidth(SWFFONT * font,U8 * s,int scale)
 { U32 res = 0;
 
   if (font&&s)

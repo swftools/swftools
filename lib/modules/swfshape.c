@@ -23,7 +23,7 @@
 #define FILL_TILED      0x40  // Bitmap
 #define FILL_CLIPPED    0x41
 
-void ShapeFree(LPSHAPE s)
+void ShapeFree(SHAPE * s)
 { if (s)
   { if (s->linestyle.data) free(s->linestyle.data);
     s->linestyle.data = NULL;
@@ -37,16 +37,16 @@ void ShapeFree(LPSHAPE s)
   free(s);
 }
 
-int NewShape(LPSHAPE * s)
-{ LPSHAPE sh;
+int NewShape(SHAPE * * s)
+{ SHAPE * sh;
   if (!s) return -1;
-  sh = (LPSHAPE)malloc(sizeof(SHAPE)); s[0] = sh;
+  sh = (SHAPE *)malloc(sizeof(SHAPE)); s[0] = sh;
   if (sh) memset(sh,0x00,sizeof(SHAPE));
   return sh?0:-1;
 }
 
-int GetSimpleShape(LPTAG t,LPSHAPE * s) // without Linestyle/Fillstyle Record
-{ LPSHAPE sh;
+int GetSimpleShape(TAG * t,SHAPE * * s) // without Linestyle/Fillstyle Record
+{ SHAPE * sh;
   int bitl, len;
   int end;
   U32 pos;
@@ -137,7 +137,7 @@ int GetSimpleShape(LPTAG t,LPSHAPE * s) // without Linestyle/Fillstyle Record
   return len;
 }
 
-int SetSimpleShape(LPTAG t,LPSHAPE s) // without Linestyle/Fillstyle Record
+int SetSimpleShape(TAG * t,SHAPE * s) // without Linestyle/Fillstyle Record
 { int l;
 
   if (!s) return -1;
@@ -155,7 +155,7 @@ int SetSimpleShape(LPTAG t,LPSHAPE s) // without Linestyle/Fillstyle Record
   return l+1;
 }
 
-int SetFillStyle(LPTAG t,LPFILLSTYLE f)
+int SetFillStyle(TAG * t,FILLSTYLE * f)
 { if ((!t)||(!f)) return -1;
   SetU8(t,f->type);
   
@@ -177,7 +177,7 @@ int SetFillStyle(LPTAG t,LPFILLSTYLE f)
   return 0;
 }
 
-int SetLineStyle(LPTAG t,LPLINESTYLE l)
+int SetLineStyle(TAG * t,LINESTYLE * l)
 { if ((!l)||(!t)) return -1;
   SetU16(t,l->width);
 
@@ -187,7 +187,7 @@ int SetLineStyle(LPTAG t,LPLINESTYLE l)
   return 0;
 }
 
-int SetShapeStyleCount(LPTAG t,U16 n)
+int SetShapeStyleCount(TAG * t,U16 n)
 { if (n>254)
   { SetU8(t,0xff);
     SetU16(t,n);
@@ -199,7 +199,7 @@ int SetShapeStyleCount(LPTAG t,U16 n)
   }
 }
 
-int SetShapeStyles(LPTAG t,LPSHAPE s)
+int SetShapeStyles(TAG * t,SHAPE * s)
 { int i,l;
   if (!s) return -1;
 
@@ -217,7 +217,7 @@ int SetShapeStyles(LPTAG t,LPSHAPE s)
   return l;
 }
 
-int ShapeCountBits(LPSHAPE s,U8 * fbits,U8 * lbits)
+int ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits)
 { if (!s) return -1;
     
   s->bits.fill = CountBits(s->fillstyle.n,0);
@@ -229,7 +229,7 @@ int ShapeCountBits(LPSHAPE s,U8 * fbits,U8 * lbits)
   return 0;    
 }
 
-int SetShapeBits(LPTAG t,LPSHAPE s)
+int SetShapeBits(TAG * t,SHAPE * s)
 { if ((!t)||(!s)) return -1;
   ResetBitcount(t);
   SetBits(t,s->bits.fill,4);
@@ -237,7 +237,7 @@ int SetShapeBits(LPTAG t,LPSHAPE s)
   return 0;
 }
 
-int SetShapeHeader(LPTAG t,LPSHAPE s)
+int SetShapeHeader(TAG * t,SHAPE * s)
 { int res;
   res = SetShapeStyles(t,s);
   if (res>=0) res = ShapeCountBits(s,NULL,NULL);
@@ -245,7 +245,7 @@ int SetShapeHeader(LPTAG t,LPSHAPE s)
   return res;
 }
 
-int ShapeExport(int handle,LPSHAPE s)  // without Linestyle/Fillstyle Record
+int ShapeExport(int handle,SHAPE * s)  // without Linestyle/Fillstyle Record
 { int l;
   if (!s) return 0;
 
@@ -266,12 +266,12 @@ int ShapeExport(int handle,LPSHAPE s)  // without Linestyle/Fillstyle Record
   return l;
 }
 
-int ShapeImport(int handle,LPSHAPE * shape)
-{ LPSHAPE s;
+int ShapeImport(int handle,SHAPE * * shape)
+{ SHAPE * s;
 
   if (handle<0) return -1;
 
-  s = (LPSHAPE)malloc(sizeof(SHAPE)); shape[0] = s;
+  s = (SHAPE *)malloc(sizeof(SHAPE)); shape[0] = s;
   if (!s) return -1;
 
   if (read(handle,s,sizeof(SHAPE))!=sizeof(SHAPE))
@@ -299,7 +299,7 @@ int ShapeImport(int handle,LPSHAPE * shape)
   return 0;
 }
 
-int ShapeAddFillStyle(LPSHAPE s,U8 type,LPMATRIX m,LPRGBA color,U16 id_bitmap)
+int ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap)
 { RGBA def_c;
   MATRIX def_m;    
 
@@ -319,12 +319,12 @@ int ShapeAddFillStyle(LPSHAPE s,U8 type,LPMATRIX m,LPRGBA color,U16 id_bitmap)
   // handle memory
   
   if (s->fillstyle.data)
-  { LPFILLSTYLE new = (LPFILLSTYLE)realloc(s->fillstyle.data,(s->fillstyle.n+1)*sizeof(FILLSTYLE));
+  { FILLSTYLE * new = (FILLSTYLE *)realloc(s->fillstyle.data,(s->fillstyle.n+1)*sizeof(FILLSTYLE));
     if (!new) return -1;
     s->fillstyle.data = new;
   }
   else
-  { s->fillstyle.data = (LPFILLSTYLE)malloc(sizeof(FILLSTYLE));
+  { s->fillstyle.data = (FILLSTYLE *)malloc(sizeof(FILLSTYLE));
     s->fillstyle.n = 0;
     if (!s->fillstyle.data) return -1;
   }
@@ -339,15 +339,15 @@ int ShapeAddFillStyle(LPSHAPE s,U8 type,LPMATRIX m,LPRGBA color,U16 id_bitmap)
   return (++s->fillstyle.n);
 }
 
-int ShapeAddSolidFillStyle(LPSHAPE s,LPRGBA color)
+int ShapeAddSolidFillStyle(SHAPE * s,RGBA * color)
 { return ShapeAddFillStyle(s,FILL_SOLID,NULL,color,0);
 }
 
-int ShapeAddBitmapFillStyle(LPSHAPE s,LPMATRIX m,U16 id_bitmap,int clip)
+int ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip)
 { return ShapeAddFillStyle(s,clip?FILL_CLIPPED:FILL_TILED,m,NULL,id_bitmap);
 }
 
-int ShapeAddLineStyle(LPSHAPE s,U16 width,LPRGBA color)
+int ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color)
 { RGBA def;
   if (!s) return -1;
   if (!color)
@@ -356,12 +356,12 @@ int ShapeAddLineStyle(LPSHAPE s,U16 width,LPRGBA color)
     def.r = def.g = def.b = 0; 
   }
   if (s->linestyle.data)
-  { LPLINESTYLE new = (LPLINESTYLE)realloc(s->linestyle.data,(s->linestyle.n+1)*sizeof(LINESTYLE));
+  { LINESTYLE * new = (LINESTYLE *)realloc(s->linestyle.data,(s->linestyle.n+1)*sizeof(LINESTYLE));
     if (!new) return -1;
     s->linestyle.data = new;
   }
   else
-  { s->linestyle.data = (LPLINESTYLE)malloc(sizeof(LINESTYLE));
+  { s->linestyle.data = (LINESTYLE *)malloc(sizeof(LINESTYLE));
     s->linestyle.n = 0;
     if (!s->linestyle.data) return -1;
   }
@@ -372,7 +372,7 @@ int ShapeAddLineStyle(LPSHAPE s,U16 width,LPRGBA color)
   return (++s->linestyle.n);
 }
 
-int ShapeSetMove(LPTAG t,LPSHAPE s,S32 x,S32 y)
+int ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
 { U8 b;
   if (!t) return -1;
   SetBits(t,0,1);
@@ -392,7 +392,7 @@ int ShapeSetMove(LPTAG t,LPSHAPE s,S32 x,S32 y)
   return 0;
 }
 
-int ShapeSetStyle(LPTAG t,LPSHAPE s,U16 line,U16 fill0,U16 fill1)
+int ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
 { if ((!t)||(!s)) return -1;
     
   SetBits(t,0,1);
@@ -413,7 +413,7 @@ int ShapeSetStyle(LPTAG t,LPSHAPE s,U16 line,U16 fill0,U16 fill1)
  */
 #define FILL_RESET 0x8000
 #define LINE_RESET 0x8000
-int ShapeSetAll(LPTAG t,LPSHAPE s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
+int ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
 { U8 b;
   if ((!t)||(!s)) return -1;
 
@@ -435,14 +435,14 @@ int ShapeSetAll(LPTAG t,LPSHAPE s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
   return 0;
 }
 
-int ShapeSetEnd(LPTAG t)
+int ShapeSetEnd(TAG * t)
 { if (!t) return -1;
   SetBits(t,0,6);
   ResetBitcount(t);
   return 0;
 }
 
-int ShapeSetLine(LPTAG t,LPSHAPE s,S32 x,S32 y)
+int ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
 { U8 b;
   if (!t) return -1;
   SetBits(t,3,2); // Straight Edge
@@ -484,7 +484,7 @@ int ShapeSetLine(LPTAG t,LPSHAPE s,S32 x,S32 y)
   return 0;
 }
 
-int ShapeSetCurve(LPTAG t,LPSHAPE s,S32 x,S32 y,S32 ax,S32 ay)
+int ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
 { U8 b;
   if (!t) return -1;
 
@@ -508,7 +508,7 @@ int ShapeSetCurve(LPTAG t,LPSHAPE s,S32 x,S32 y,S32 ax,S32 ay)
   return 0;
 }
 
-int ShapeSetCircle(LPTAG t,LPSHAPE s,S32 x,S32 y,S32 rx,S32 ry)
+int ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry)
 { double C1 = 0.2930;    
   double C2 = 0.4140;   
   double begin = 0.7070; 
