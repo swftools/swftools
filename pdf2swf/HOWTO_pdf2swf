@@ -1,0 +1,59 @@
+
+Creating browseable SWFs from PDFs
+
+   Suppose you have an arbitrary pdf file, "document.pdf". Furthermore,
+   you have downloaded [1]SimpleViewer.swf into the directory where
+   document.pdf lies.
+   Now call:
+   $ pdf2swf -o tmp.swf document.pdf
+   $ swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
+   Now, flashfile.swf should be a browseable flash representation of
+   document.pdf which can be embedded into your web page.
+   If you don't know how to embed SWFs into html pages, it's explained at
+   [2]http://www.macromedia.com/support/flash/ts/documents/tn4150.html .
+   
+Creating JPEG Slideshows
+
+   You can do the same thing described above with jpeg files. Simply use
+   $ jpeg2swf -o tmp.swf pic1.jpeg pic2.jpeg ...
+   $ swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
+   
+Linking a Preloader
+
+   Depending on the size of your PDFs/SWFs, you may want to have some
+   kind of loading animation displayed while the browser is busy getting
+   the actual document. Assuming you have some file like flashfile.swf
+   above, you furthermore need the file [3]PreLoader.swf and an arbirtary
+   loading animation of your choice. (To get started, try [4]loading.swf,
+   or just convert a "Loading" JPEG picture to swf (jpeg2swf -o
+   loading.swf picture.jpg)) Now use
+   $ swfcombine -o flashfilewithloader.swf PreLoader.swf
+   loader=loading.swf movie=flashfile.swf 
+   
+Creating your own Viewers
+
+   If you know about Flash, and you want to substitute SimpleViewer from
+   above with something more sophisticated, follow these rules:
+   1. There has to be some rectangle (Movieclip, whatever... ) in your
+   Viewer, named "viewport". (This name is used to reference the object
+   when using swfcombine for merging it with the converted pdfs)
+   2. Browsing buttons next to the rectangle (which turn pages in the
+   shown pdf) should trigger some Actionsscript events, like
+   
+     SetTarget "viewport"
+     NextFrame
+     SetTarget ""
+     
+   to set the frame in the to-be-replaced rectangle. (It will be replaced
+   with a MovieClip, therefore a SetTarget is neccessary)
+     _________________________________________________________________
+   
+   [5]Back to the SWFTools Project page
+
+References
+
+   1. http://www.quiss.org/swftools/SimpleViewer.swf
+   2. http://www.macromedia.com/support/flash/ts/documents/tn4150.html
+   3. http://www.quiss.org/swftools/PreLoader.swf
+   4. http://www.quiss.org/swftools/loading.swf
+   5. http://www.quiss.org/swftools
