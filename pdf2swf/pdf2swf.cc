@@ -239,7 +239,7 @@ struct options_t options[] =
  {"p","pages"},
  {"w","samewindow"},
  {"f","fonts"},
- {"F","fontpath"},
+ {"F","fontdir"},
  {"B","viewer"},
  {"L","preloader"},
  {"b","defaultviewer"},
@@ -282,7 +282,7 @@ void args_callback_usage(char*name)
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-q  --quiet                Suppress normal messages. Use -qq to suppress warnings, also.\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
-#ifdef HAVE_DIRENT
+#ifdef HAVE_DIRENT_H
     printf("-F  --fontdir directory    Add directory to font search path\n");
 #endif
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
