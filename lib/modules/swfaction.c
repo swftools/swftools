@@ -375,7 +375,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		      num = (data[s++]); //num
 		      num += (data[s++])*256;
 		      for(t=0;t<num;t++) {
-			  printf("%s",data);
+			  printf("%s",data+s);  // 10/22/04 MD: added +s to
 			  if(t<num-1)
 			      printf(", ");
 			  while(data[s++]); //param
