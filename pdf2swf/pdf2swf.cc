@@ -42,8 +42,8 @@ extern "C" {
 #define FONTDIR SWFTOOLS_DATADIR "/fonts"
 #define SWFDIR SWFTOOLS_DATADIR "/swfs"
 #else
-#define FONTDIR "C:\\pdf2swf\\fonts"
-#define SWFDIR "C:\\pdf2swf\\swfs"
+#define FONTDIR "C:\\swftools\\fonts"
+#define SWFDIR "C:\\swftools\\swfs"
 #endif
 
 static char * outputname = 0;
