@@ -103,48 +103,6 @@ struct mapping {
 {"Symbol",                "s050000l.pfb"},
 {"ZapfDingbats",          "d050000l.pfb"}};
 
-static void printInfoString(Dict *infoDict, char *key, char *fmt) {
-  Object obj;
-  GString *s1, *s2;
-  int i;
-
-  if (infoDict->lookup(key, &obj)->isString()) {
-    s1 = obj.getString();
-    if ((s1->getChar(0) & 0xff) == 0xfe &&
-	(s1->getChar(1) & 0xff) == 0xff) {
-      s2 = new GString();
-      for (i = 2; i < obj.getString()->getLength(); i += 2) {
-	if (s1->getChar(i) == '\0') {
-	  s2->append(s1->getChar(i+1));
-	} else {
-	  delete s2;
-	  s2 = new GString("<unicode>");
-	  break;
-	}
-      }
-      printf(fmt, s2->getCString());
-      delete s2;
-    } else {
-      printf(fmt, s1->getCString());
-    }
-  }
-  obj.free();
-}
-
-static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
-  Object obj;
-  char *s;
-
-  if (infoDict->lookup(key, &obj)->isString()) {
-    s = obj.getString()->getCString();
-    if (s[0] == 'D' && s[1] == ':') {
-      s += 2;
-    }
-    printf(fmt, s);
-  }
-  obj.free();
-}
-
 class GfxState;
 class GfxImageColorMap;
 
@@ -1045,8 +1003,19 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   ImageStream *imgStr;
   Guchar pixBuf[4];
   GfxRGB rgb;
-  if(!width || !height)
+  if(!width || !height || (height<=1 && width<=1))
+  {
+      logf("<verbose> Ignoring %d by %d image", width, height);
+      int i,j;
+      if (inlineImg) {
+	j = height * ((width + 7) / 8);
+	str->reset();
+	for (i = 0; i < j; ++i) {
+	  str->getChar();
+	}
+      }
       return;
+  }
   
   state->transform(0, 1, &x1, &y1);
   state->transform(0, 0, &x2, &y2);
@@ -1106,25 +1075,62 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
     if(!pbminfo) {
 	logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
 	if(mask)
-	logf("<verbose> ignoring %d by %d masked picture\n", width, height);
+	logf("<verbose> drawing %d by %d masked picture\n", width, height);
 	pbminfo = 1;
     }
 
     if(mask) {
-	str->reset();
-	int yes=0;
-	while ((c = str->getChar()) != EOF)
+	imgStr = new ImageStream(str, width, 1, 1);
+	imgStr->reset();
+	return;
+	int yes=0,i,j;
+	unsigned char buf[8];
+	int xid = 0;
+	int yid = 0;
+	int x,y;
+	int width2 = (width+3)&(~3);
+	unsigned char*pic = new unsigned char[width2*height];
+	RGBA pal[256];
+	GfxRGB rgb;
+	state->getFillRGB(&rgb);
+	pal[0].r = (int)(rgb.r*255); pal[0].g = (int)(rgb.g*255); 
+	pal[0].b = (int)(rgb.b*255); pal[0].a = 255;
+	pal[1].r = 0; pal[1].g = 0; pal[1].b = 0; pal[1].a = 0;
+	xid += pal[1].r*3 + pal[1].g*11 + pal[1].b*17;
+	yid += pal[1].r*7 + pal[1].g*5 + pal[1].b*23;
+	for (y = 0; y < height; ++y)
+        for (x = 0; x < width; ++x)
 	{
-	    if((c<32 || c>'z') && yes && (c!=13) && (c!=10)) {
-		printf("no ascii: %02x\n", c);
-		yes = 1;
-	   }
+	      imgStr->getPixel(buf);
+              pic[width*y+x] = buf[0];
+	      xid+=x*buf[0]+1;
+	      yid+=y*buf[0]+1;
 	}
+	int t,found = -1;
+	for(t=0;t<picpos;t++)
+	{
+	    if(pic_xids[t] == xid &&
+	       pic_yids[t] == yid) {
+		found = t;break;
+	    }
+	}
+	if(found<0) {
+	    pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
+		    x1,y1,x2,y2,x3,y3,x4,y4);
+	    pic_xids[picpos] = xid;
+	    pic_yids[picpos] = yid;
+	    if(picpos<1024)
+		picpos++;
+	} else {
+	    swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+		    x1,y1,x2,y2,x3,y3,x4,y4);
+	}
+	free(pic);
     } else {
 	int x,y;
 	int width2 = (width+3)&(~3);
 	imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
-				 colorMap->getBits());
+	        		   colorMap->getBits());
 	imgStr->reset();
 
 	if(colorMap->getNumPixelComps()!=1)
@@ -1234,6 +1240,48 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 }
 
 SWFOutputDev*output = 0; 
+
+static void printInfoString(Dict *infoDict, char *key, char *fmt) {
+  Object obj;
+  GString *s1, *s2;
+  int i;
+
+  if (infoDict->lookup(key, &obj)->isString()) {
+    s1 = obj.getString();
+    if ((s1->getChar(0) & 0xff) == 0xfe &&
+	(s1->getChar(1) & 0xff) == 0xff) {
+      s2 = new GString();
+      for (i = 2; i < obj.getString()->getLength(); i += 2) {
+	if (s1->getChar(i) == '\0') {
+	  s2->append(s1->getChar(i+1));
+	} else {
+	  delete s2;
+	  s2 = new GString("<unicode>");
+	  break;
+	}
+      }
+      printf(fmt, s2->getCString());
+      delete s2;
+    } else {
+      printf(fmt, s1->getCString());
+    }
+  }
+  obj.free();
+}
+
+static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
+  Object obj;
+  char *s;
+
+  if (infoDict->lookup(key, &obj)->isString()) {
+    s = obj.getString()->getCString();
+    if (s[0] == 'D' && s[1] == ':') {
+      s += 2;
+    }
+    printf(fmt, s);
+  }
+  obj.free();
+}
 
 void pdfswf_init(char*filename, char*userPassword) 
 {
