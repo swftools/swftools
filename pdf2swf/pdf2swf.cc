@@ -441,6 +441,7 @@ int main(int argn, char *argv[])
 	if(is_in_range(t, pagerange)) {
             pdf_page_t*page = pdf_getpage(pdf, t);
 	    pdf_page_render(page, swf);
+            swf_output_pagefeed(swf);
             pdf_page_destroy(page);
         }
     }
