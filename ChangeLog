@@ -142,7 +142,7 @@
 	           e.g.: http://pdf2swf:call:_root.myFunction:parameter
 	* ./*/Makefile: all Makefiles rewritten.
 
-0.4.4: (not yet released)
+0.4.4:
 	* src/swfextract: output file name handling fix
 	* lib/rfxswf: better sprite fold/unfold support
 	* src/swfdump: new option -p (--placements), support for exportassets, namecharacter
@@ -157,3 +157,5 @@
 	* lib/rfxswf: fix for ratios in swfobject.c
 	* src/swfdump: shows some info about video tags now
 	* pdf2swf/pdf2swf: greatly improved spline conversion
+	* pdf2swf/: Fix for t1lib-5.0.0
+	* src/wav2swf: streaming sound now works for all framerates < 35.

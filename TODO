@@ -10,7 +10,7 @@ swfc:
     * .egon  (stub is there, never really implemented)... folding edges?
     * dump format for ingestion into swifty?
     * .editbox
-    * .importassets, .import
+    * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
     * change .swf to .flash ?  
 	import swfs with .swf instead of .movie?
@@ -30,8 +30,7 @@ pdf2swf:
 
 font2swf:
     
-    * implement support for truetype fonts.  [yes please :-)]
-    * command line option parsing
+    * implement support for truetype fonts.
 
 swfcombine:
 
@@ -45,10 +44,6 @@ swfcombine:
 swfextract:
     
     * mp3 extraction should also work for movieclips.
-
-wav2swf:
-    
-    * -r flag doesn't work without -d option.
 
 librfxswf:
 
