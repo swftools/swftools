@@ -14,7 +14,7 @@ extern "C" {
 #include "../lib/args.h"
 }
 #include <avifile/version.h>
-#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION==6) 
+#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
    #include <aviplay.h>
    #include <fourcc.h>
@@ -754,7 +754,8 @@ int main (int argc,char ** argv)
     {
 	int x,y;
 	for(y=0;y<yblocksize;y++) {
-#ifdef VERSION6
+	    /* avifile 0.6 returns images upside down. versoins 5 and >=7 don't */
+#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION==6) 
 	    U8*mydata = img->At(oldheight-(int)((yy*yblocksize+y)*reziscale));
 #else
 	    U8*mydata = img->At((int)((yy*yblocksize+y)*reziscale));
