@@ -578,6 +578,7 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
 }
 
 int charcounter = 0;
+int ciderror = 0;
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
@@ -590,7 +591,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
        GfxFont*font = state->getFont();
        Gfx8BitFont*font8;
        if(font->isCIDFont()) {
-	   logf("<error> CID Font");
+	   if(!ciderror)
+	    logf("<error> Not drawing CID Font characters!");
+	   ciderror++;
 	   return;
        }
        if(font->getType() == fontType3) {
