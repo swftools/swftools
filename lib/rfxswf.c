@@ -239,6 +239,16 @@ int swf_SetRGB(TAG * t,RGBA * col)
   } else swf_SetBlock(t,NULL,3);
   return 0;
 }
+void swf_GetRGB(TAG * t, RGBA * col)
+{
+    RGBA dummy;
+    if(!col);
+	col = &dummy;
+    col->r = swf_GetU8(t);
+    col->g = swf_GetU8(t);
+    col->b = swf_GetU8(t);
+    col->a = 255;
+}
 
 int swf_SetRGBA(TAG * t,RGBA * col)
 { if (!t) return -1;
@@ -249,6 +259,36 @@ int swf_SetRGBA(TAG * t,RGBA * col)
     swf_SetU8(t,col->a);
   } else swf_SetBlock(t,NULL,4);
   return 0;
+}
+void swf_GetRGBA(TAG * t, RGBA * col)
+{
+    RGBA dummy;
+    if(!col);
+	col = &dummy;
+    col->r = swf_GetU8(t);
+    col->g = swf_GetU8(t);
+    col->b = swf_GetU8(t);
+    col->a = swf_GetU8(t);
+}
+
+void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
+{
+    GRADIENT dummy;
+    int t;
+    if(!gradient)
+	gradient = &dummy;
+    gradient->num = swf_GetU8(tag);
+    for(t=0;t<gradient->num;t++)
+    {
+	int s=t;
+	if(s>=8) //FIXME
+	    s=7;
+	gradient->ratios[t] = swf_GetU8(tag);
+	if(!alpha)
+	    swf_GetRGB(tag, &gradient->rgba[t]);
+	else
+	    swf_GetRGBA(tag, &gradient->rgba[t]);
+    }
 }
 
 int swf_CountBits(U32 v,int nbits)
