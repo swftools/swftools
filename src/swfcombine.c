@@ -746,7 +746,7 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     jpeg_assert(master, slave);
     
     memcpy(newswf, master, sizeof(SWF));
-    tag = newswf->firstTag = swf_InsertTag(0, ST_REFLEX);
+    tag = newswf->firstTag = swf_InsertTag(0, ST_REFLEX); // to be removed later
 
     depths = malloc(65536);
     if(!depths) {
@@ -806,6 +806,10 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	stag = stag->next;
     }
     tag = swf_InsertTag(tag, ST_END);
+
+    tag = newswf->firstTag;
+    newswf->firstTag = newswf->firstTag->next; //remove temporary tag
+    swf_DeleteTag(tag);
 }
 
 void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
@@ -873,7 +877,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     // write file 
 
     memcpy(newswf, master, sizeof(SWF));
-    newswf->firstTag = tag = swf_InsertTag(0, ST_REFLEX);
+    newswf->firstTag = tag = swf_InsertTag(0, ST_REFLEX); // to be removed later
 
     if (config.antistream) {
 	if (config.merge) {
@@ -891,6 +895,10 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	    tag = write_master(tag, master, slave, spriteid, replaceddefine, 
 		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESPRITE);
     }
+
+    tag = newswf->firstTag;
+    newswf->firstTag = newswf->firstTag->next; //remove temporary tag
+    swf_DeleteTag(tag);
 }
 
 void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
