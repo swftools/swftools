@@ -64,12 +64,12 @@ PACKAGE = @PACKAGE@
 RANLIB = @RANLIB@
 VERSION = @VERSION@
 
-SUBDIRS = xpdf fonts
+SUBDIRS = xpdf fonts ttf2pt1
 bin_PROGRAMS = pdf2swf
 LDADD = 
 pdf2swf_SOURCES = pdf2swf.cc pdfswf.cc pdfswf.h swfoutput.cc swfoutput.h spline.cc spline.h
-pdf2swf_LDADD = ../lib/log.o ../lib/rfxswf.o xpdf/libpdf.a
-INCLUDES = -I../lib -I./xpdf
+pdf2swf_LDADD = ../lib/log.o ../lib/rfxswf.o xpdf/libpdf.a ttf2pt1/ttf2pt1.a
+INCLUDES = -I../lib -I./xpdf -I./ttf2pt1
 man_MANS = pdf2swf.1
 CXXCOMPILE = $(CXX) -DDATADIR=\"$(pkgdatadir)\" $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -84,7 +84,7 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 pdf2swf_OBJECTS =  pdf2swf.o pdfswf.o swfoutput.o spline.o
-pdf2swf_DEPENDENCIES =  ../lib/log.o ../lib/rfxswf.o xpdf/libpdf.a
+pdf2swf_DEPENDENCIES =  ../lib/log.o ../lib/rfxswf.o xpdf/libpdf.a ttf2pt1/ttf2pt1.a
 pdf2swf_LDFLAGS = 
 CXXFLAGS = @CXXFLAGS@
 CXXLD = $(CXX)
