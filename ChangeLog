@@ -6,5 +6,5 @@
 	* swfcombine: Small bugfixes with the command line options
 	* rfxswf-lib: some bugfixes concerning sprites and cgi
 	* swfstrings: New: Allows extraction of text from swf files
-	* swfdump: New: Dumps swf file information. (Only the bare essentials, though)
+	* swfdump: New: Dumps swf file information. (And does some error checking on the SWF)
 
