@@ -158,7 +158,7 @@ static void lineto(TAG*tag, plotxy p0)
     swflastx+=rx;
     swflasty+=ry;
 }
-static void lineto(TAG*tag, float x, float y)
+static void lineto(TAG*tag, double x, double y)
 {
     plotxy p;
     p.x = x;
@@ -1461,25 +1461,26 @@ void fixAreas()
         bboxrect.ymin == bboxrect.ymax) &&
         minlinewidth >= 0.001
        ) {
+	SRECT r = bboxrect;
 	msg("<debug> Shape has size 0");
     
-	if(bboxrect.xmin == bboxrect.xmax && bboxrect.ymin == bboxrect.ymax) {
+	if(r.xmin == r.xmax && r.ymin == r.ymax) {
 	    /* this thing comes down to a single dot- nothing to fix here */
 	    return;
 	}
 
-	float x=0,y=0;
-	if(bboxrect.xmin == bboxrect.xmax) {
+	double x=0,y=0;
+	if(r.xmin == r.xmax) {
 	    x = minlinewidth;
 	} else {
 	    y = minlinewidth;
 	}
 	/* warning: doing this inside endshape() is dangerous */
-	moveto(tag, bboxrect.xmin/20.0    , bboxrect.ymin/20.0);
-	lineto(tag, bboxrect.xmax/20.0 + x, bboxrect.ymin/20.0);
-	lineto(tag, bboxrect.xmax/20.0 + x, bboxrect.ymax/20.0 + y);
-	lineto(tag, bboxrect.xmin/20.0    , bboxrect.ymax/20.0 + y);
-	lineto(tag, bboxrect.xmin/20.0    , bboxrect.ymin/20.0);
+	moveto(tag, r.xmin/20.0    , r.ymin/20.0);
+	lineto(tag, r.xmax/20.0 + x, r.ymin/20.0);
+	lineto(tag, r.xmax/20.0 + x, r.ymax/20.0 + y);
+	lineto(tag, r.xmin/20.0    , r.ymax/20.0 + y);
+	lineto(tag, r.xmin/20.0    , r.ymin/20.0);
     }
     
 }
