@@ -323,7 +323,6 @@ SWFFONT* swf_LoadT1Font(char*filename)
     char*fontname,*fullname,*familyname;
     BBox bbox;
     int s,num;
-    char*encoding[256];
     char**charnames;
     char**charname;
     int c;
@@ -338,9 +337,6 @@ SWFFONT* swf_LoadT1Font(char*filename)
     }
     nr = T1_AddFont(filename);
     T1_LoadFont(nr);
-
-    num = T1_SetDefaultEncoding(encoding);
-    for(;num<256;num++) encoding[num] = 0;
 
     charnames = T1_GetAllCharNames(nr);
 
