@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "../config.h"
+#include "videoreader.h"
 
 #ifdef HAVE_AVIFILE
 
@@ -61,7 +62,6 @@
 #endif
 
 #include "../lib/q.h"
-#include "videoreader.h"
 
 static int shutdown_avi2swf = 0;
 static int verbose = 0;
@@ -333,7 +333,6 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
 }
 
 #else  //HAVE_AVIFILE
-
 
 int videoreader_avifile_open(videoreader_t* v, char* filename)
 {
