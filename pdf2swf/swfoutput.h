@@ -23,6 +23,7 @@
 #define __swfoutput_h__
 
 #include <t1lib.h>
+#include "CharTypes.h"
 #ifdef T1ERR_SCAN_ENCODING //t1lib 5.0.0
 #define T1_Get_no_fonts T1_GetNoFonts
 #endif
@@ -91,7 +92,8 @@ struct swfoutput
     //int t1font;
     double fontm11,fontm12,fontm21,fontm22;
     unsigned short int linewidth;
-    SWFFont*font;
+    SWFFont *font;
+    SWFFONT *swffont;
     RGBA strokergb;
     RGBA fillrgb;
 };
@@ -109,13 +111,15 @@ void swfoutput_newpage(struct swfoutput*);
 
 void swfoutput_setfont(struct swfoutput*, char*fontid, int t1font, char*filename);
 int swfoutput_queryfont(struct swfoutput*, char*fontid);
+int getCharID(SWFFONT *font, int charnr, char *charname, Unicode u);
+
 void swfoutput_setdrawmode(struct swfoutput*, int drawmode);
 void swfoutput_setfillcolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void swfoutput_setstrokecolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void swfoutput_setfontmatrix(struct swfoutput*,double,double,double,double);
 void swfoutput_setlinewidth(struct swfoutput*, double linewidth);
 
-void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr);
+void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr, Unicode u);
 void swfoutput_drawpath(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 #define LINE_CAP_BUTT 0
 #define LINE_CAP_ROUND 1 

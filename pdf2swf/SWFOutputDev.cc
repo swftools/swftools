@@ -675,10 +675,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	}
 
 	if(name)
-	   swfoutput_drawchar(&output, x1, y1, name, c);
+	   swfoutput_drawchar(&output, x1, y1, name, c, u);
 	else {
 	   msg("<warning> couldn't get name for CID character %02x from Encoding", c);
-	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c);
+	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c, u);
 	}
     } else {
 	Gfx8BitFont*font8;
@@ -686,10 +686,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	char**enc=font8->getEncoding();
 
 	if(enc && enc[c])
-	   swfoutput_drawchar(&output, x1, y1, enc[c], c);
+	   swfoutput_drawchar(&output, x1, y1, enc[c], c, u);
 	else {
 	   msg("<warning> couldn't get name for character %02x from Encoding", c);
-	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c);
+	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c, u);
 	}
     }
 }

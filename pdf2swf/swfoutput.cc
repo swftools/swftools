@@ -884,7 +884,7 @@ static void putcharacter(struct swfoutput*obj, int fontid, int charid,
 
 
 /* process a character. */
-static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int charnr, swfmatrix*m)
+static void drawchar(struct swfoutput*obj, SWFFont*font, SWFFONT *swffont, char*character, int charnr, swfmatrix*m, Unicode u)
 {
     int usefonts=1;
     if(m->m12!=0 || m->m21!=0)
@@ -896,9 +896,16 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
 	msg("<warning> Font is NULL");
     }
 
-    if(usefonts && ! drawonlyshapes)
+    //if(usefonts && ! drawonlyshapes)
+    if (1)
     {
         int charid = font->getSWFCharID(character, charnr);
+        printf("charID %d, character %s\n", charid, character);
+        if (charid == -1) {
+                charid = 0;
+        	charid = getCharID(swffont, charnr, character, u); 
+        }
+        
 	if(charid<0) {
 	    msg("<warning> Didn't find character '%s' (%d) in current charset (%s)", 
 		    FIXNULL(character),charnr, FIXNULL(font->getName()));
@@ -908,6 +915,7 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
             endshape();
         if(textid<0)
             starttext(obj);
+         
         putcharacter(obj, font->swfid, charid,(int)(m->m13*20),(int)(m->m23*20),
                 (int)(m->m11*20/2+0.5)); //where does the /2 come from?
     }
@@ -1251,6 +1259,33 @@ int SWFFont::getSWFCharID(char*name, int charnr)
     return -1;
 }
 
+int getCharID(SWFFONT *font, int charnr, char *charname, Unicode u)
+{
+    int t;
+    for(t=0;t<font->numchars;t++) {
+        if(!strcmp(font->glyphnames[t],charname)) {
+            return t;
+        }
+    }
+
+    /* if we didn't find the character, maybe
+       we can find the capitalized version */
+    for(t=0;t<font->numchars;t++) {
+        if(!strcasecmp(font->glyphnames[t],charname)) {
+            return t;
+        }
+    }
+
+    /* try to use the unicode id */
+    for(t=0;t<font->numchars;t++) {
+        if(font->ascii2glyph[t] == u) {
+            return t;
+        }
+    }   
+
+    return -1;
+}
+
 int SWFFont::getWidth(char*name)
 {
     int t;
@@ -1269,13 +1304,52 @@ char*SWFFont::getName()
 
 struct fontlist_t 
 {
-    SWFFont * font;
+    SWFFont *font;
+    SWFFONT *swffont;
     fontlist_t*next;
 } *fontlist = 0;
 
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
 void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filename)
 {
+    static int currentswfid = 0;
+
+    if (0)
+    {
+    	fontlist_t*last=0,*iterator;
+    	if(obj->swffont && (obj->swffont->id == atoi(fontid)))
+        	return;
+
+    	iterator = fontlist;
+    	while(iterator) {
+        	if(iterator->swffont->id == atoi(fontid))
+            		break;
+        	last = iterator;
+        	iterator = iterator->next;
+    	}
+    	if(iterator)
+    	{
+        	obj->swffont = iterator->swffont;
+        	return ;
+    	}
+
+    	if(t1id<0) {
+        	msg("<error> internal error: t1id:%d, fontid:%s\n", t1id,FIXNULL(fontid));
+    	}
+
+        SWFFONT *swffont = swf_LoadFont(filename);
+        swf_FontSetID(swffont, atoi(fontid));
+    	iterator = new fontlist_t;
+    	iterator->swffont = swffont;
+    	iterator->next = 0;
+
+    	if(last)
+        	last->next = iterator;
+    	else
+        	fontlist = iterator;
+    	obj->swffont = swffont;
+    } else 
+    {
     fontlist_t*last=0,*iterator;
     if(obj->font && !strcmp(obj->font->fontid,fontid))
         return;
@@ -1290,6 +1364,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
     if(iterator) 
     {
         obj->font = iterator->font;
+        obj->swffont = iterator->swffont; 
         return ;
     }
 
@@ -1298,8 +1373,29 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
     }
     
     SWFFont*font = new SWFFont(fontid, t1id, filename);
+
+    //load swffont and print font information
+    SWFFONT *swffont = swf_LoadFont(filename);
+    swf_FontSetID(swffont, ++currentswfid);
+    // print font information
+    /*
+    printf("\n----------------------SWF Font Information:\n");
+    printf("ID:%d\n", swffont->id);
+    printf("Version:%d\n", swffont->version);
+    printf("Name:%s\n", swffont->name);
+    printf("Numchars:%d\n", swffont->numchars);
+    printf("Maxascii:%d\n", swffont->maxascii);
+    printf("Style:%d\n", swffont->style);
+    printf("Encoding:%d\n", swffont->encoding);
+    for(int iii=0; iii<swffont->numchars;iii++)
+    {
+	printf("Glyphname, glyph2ascii, ascii2glyph %d:%s, %d, %d\n", iii, swffont->glyphnames[iii], swffont->glyph2ascii[iii],  swffont->ascii2glyph[iii]);
+    }
+    printf("\n----------------------SWF Font Information End.\n");
+    */
     iterator = new fontlist_t;
     iterator->font = font;
+    iterator->swffont = swffont;
     iterator->next = 0;
 
     if(last) 
@@ -1307,10 +1403,23 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
     else 
         fontlist = iterator;
     obj->font = font;
+    obj->swffont = swffont; 
+    }
 }
 
 int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
 {
+    if (0)
+    {
+	fontlist_t *iterator = fontlist;
+    	while(iterator) {
+        	if(iterator->swffont->id == atoi(fontid))
+            		return 1;
+        	iterator = iterator->next;
+    	}
+    	return 0;
+    } else
+    {
     fontlist_t *iterator = fontlist;
     while(iterator) {
         if(!strcmp(iterator->font->fontid,fontid))
@@ -1318,6 +1427,7 @@ int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
         iterator = iterator->next;
     }
     return 0;
+    }
 }
 
 /* set's the matrix which is to be applied to characters drawn by
@@ -1339,7 +1449,7 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
 }
 
 /* draws a character at x,y. */
-void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, int charnr) 
+void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, int charnr, Unicode u) 
 {
     swfmatrix m;
     m.m11 = obj->fontm11;
@@ -1348,7 +1458,7 @@ void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, 
     m.m22 = obj->fontm22;
     m.m13 = x;
     m.m23 = y;
-    drawchar(obj, obj->font, character, charnr, &m);
+    drawchar(obj, obj->font, obj->swffont, character, charnr, &m, u);
 }
 
 /* initialize the swf writer */
