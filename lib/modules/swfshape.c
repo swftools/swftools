@@ -450,7 +450,9 @@ int ShapeSetLine(LPTAG t,LPSHAPE s,S32 x,S32 y)
   if ((!s)||((x!=0)&&(y!=0)))
   { b = CountBits(x,2);
     b = CountBits(y,b);
-    SetBits(t, b>=2 ? b-2 : 0, 4);
+    if(b<2) 
+	b=2;
+    SetBits(t, b-2, 4);
     SetBits(t,1,1);
     SetBits(t,x,b);
     SetBits(t,y,b);
@@ -463,14 +465,18 @@ int ShapeSetLine(LPTAG t,LPSHAPE s,S32 x,S32 y)
 
   if (x==0)
   { b = CountBits(y,2);
-    SetBits(t, b>=2 ? b-2 : 0, 4);
+    if(b<2) 
+	b=2;
+    SetBits(t, b-2, 4);
     SetBits(t,1,2);
     SetBits(t,y,b);
     s->py += y;
   }
   else
   { b = CountBits(x,2);
-    SetBits(t, b>=2 ? b-2 : 0, 4);
+    if(b<2) 
+	b=2;
+    SetBits(t, b-2, 4);
     SetBits(t,0,2);
     SetBits(t,x,b);
     s->px += x;
