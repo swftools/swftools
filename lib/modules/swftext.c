@@ -24,6 +24,18 @@
 #define FF_SHIFTJIS     0x10
 #define FF_UNICODE      0x20
 
+#define FF2_BOLD         0x01
+#define FF2_ITALIC       0x02
+#define FF2_WIDECODES    0x04
+#define FF2_WIDEOFFSETS  0x08
+#define FF2_ANSI         0x10
+#define FF2_UNICODE      0x20
+#define FF2_SHIFTJIS     0x40
+#define FF2_LAYOUT	 0x80
+
+int swf_FontIsItalic(SWFFONT * f) { return f->version==2?f->flags&FF2_ITALIC:f->flags&FF_ITALIC; }
+int swf_FontIsBold(SWFFONT * f)   { return f->version==2?f->flags&FF2_BOLD:f->flags&FF_BOLD; }
+
 static const int WRITEFONTID = 0x4e46; // font id for WriteFont and ReadFont
 
 int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
@@ -58,35 +70,44 @@ int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
   return n;
 }
 
-int swf_FontExtract_DefineFont(int id,SWFFONT * f,TAG * t,SHAPE * * shapes)
+int swf_FontExtract_DefineFont(int id,SWFFONT * f,TAG * t, SHAPE***shapes)
 { U16 fid;
   swf_SaveTagPos(t);
   swf_SetTagPos(t,0);
 
   fid = swf_GetU16(t);
   if ((!id)||(id==fid))
-  { U16 ofs[MAX_CHAR_PER_FONT];
+  { U16 of,*ofs;
     int n,i;
       
     id = fid;
+    f->version = 1;
     f->id = fid;
 
-    ofs[0] = swf_GetU16(t);
-    n = ofs[0]/2;
+    of = swf_GetU16(t);
+    n = of/2;
+    f->numchars = n;
+    (*shapes) = (SHAPE**)malloc(sizeof(SHAPE*)*n);
+    memset((*shapes), 0, sizeof(SHAPE*)*n);
 
-    for (i=1;i<n;i++) if (i<MAX_CHAR_PER_FONT) ofs[i] = swf_GetU16(t); else swf_GetU16(t);
-    for (i=0;i<n;i++) if (i<MAX_CHAR_PER_FONT) swf_GetSimpleShape(t,&shapes[i]);
-    
+    for (i=1;i<n;i++) swf_GetU16(t);
+    for (i=0;i<n;i++) swf_GetSimpleShape(t,&((*shapes)[i]));
   }
 
   swf_RestoreTagPos(t);
   return id;
 }
 
-int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t,SHAPE * * shapes)
+int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t,SHAPE**shapes)
 { U16 fid;
   swf_SaveTagPos(t);
   swf_SetTagPos(t,0);
+
+  if(f->version>1) {
+      // DefineFont2 doesn't have FontInfo fields
+      fprintf(stderr, "fixme: FontInfo field for DefineFont2 encountered\n");
+      return -1;
+  }
 
   fid = swf_GetU16(t);
   if (fid==id)
@@ -107,21 +128,108 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t,SHAPE * * shapes)
     }
     f->flags = swf_GetU8(t);
 
-    i = 0;
-    while (shapes[i])
-    { U16 code = ((f->flags&FF_WIDECODES)?swf_GetU16(t):swf_GetU8(t))%MAX_CHAR_PER_FONT;
-        
-      f->glyph[code].shape = shapes[i];
-      f->glyph[code].gid   = i;
-      if (i<MAX_CHAR_PER_FONT) f->codes[i] = code;
-
-      i++;
+    f->glyph = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*f->numchars);
+    memset(f->glyph, 0, sizeof(SWFGLYPH)*f->numchars);
+    f->codes = (U16*)malloc(sizeof(U16)*f->numchars);
+    memset(f->codes, 0, sizeof(U16)*f->numchars);
+    for(i=0; i < f->numchars; i++)
+    { U16 code = ((f->flags&FF_WIDECODES)?swf_GetU16(t):swf_GetU8(t));
+       
+      if(code < f->numchars) {
+	  f->glyph[code].shape = shapes[i];
+	  f->glyph[code].gid   = i;
+      }
+      f->codes[i] = code;
     }
   }
 
   swf_RestoreTagPos(t);
   return id;
 }
+
+int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag,SHAPE * * * shapes)
+{
+    int t, glyphcount;
+    U8 flags1,flags2,namelen;
+    font->version=2;
+    font->id = swf_GetU16(tag);
+    flags1 = swf_GetU8(tag);
+    flags2 = swf_GetU8(tag); //reserved flags
+    namelen = swf_GetU8(tag);
+    font->flags = flags1;
+    font->name = (U8*)malloc(namelen+1);
+    font->name[namelen]=0;
+    swf_GetBlock(tag, font->name, namelen);
+    font->version = 2;
+    glyphcount = swf_GetU16(tag);
+    font->numchars = glyphcount;
+    (*shapes) = (SHAPE**)malloc(sizeof(SHAPE*)*glyphcount);
+    memset((*shapes), 0, sizeof(SHAPE*)*glyphcount);
+    if(flags1&8) { // wide offsets
+	for(t=0;t<glyphcount;t++)
+	    swf_GetU32(tag); //offset[t]
+	swf_GetU32(tag); // fontcodeoffset
+    } else {
+	for(t=0;t<glyphcount;t++)
+	    swf_GetU16(tag); //offset[t]
+	swf_GetU16(tag); // fontcodeoffset
+    }
+    for(t=0;t<glyphcount;t++)
+	swf_GetSimpleShape(tag,&((*shapes)[t]));
+
+    font->glyph = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*glyphcount);
+    memset(font->glyph, 0, sizeof(SWFGLYPH)*glyphcount);
+    font->codes = (U16*)malloc(sizeof(U16)*glyphcount);
+    memset(font->codes, 0, sizeof(U16)*glyphcount);
+    for(t=0;t<glyphcount;t++) {
+	U16 code;
+	if(flags1&4) // wide codes
+	    code = swf_GetU16(tag);
+	else
+	    code = swf_GetU8(tag);
+
+	font->glyph[code].shape = (*shapes)[t];
+	font->glyph[code].gid   = t;
+	if (t<MAX_CHAR_PER_FONT) 
+	    font->codes[t] = code;
+    }
+    if(flags1&128) { // has layout
+	U16 kerningcount;
+	font->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
+	font->layout->ascent=swf_GetU16(tag);
+	font->layout->descent=swf_GetU16(tag);
+	font->layout->leading=swf_GetU16(tag);
+	for(t=0;t<glyphcount;t++) {
+	    S16 advance = swf_GetS16(tag);
+	    font->glyph[t].advance = advance;
+	}
+	font->layout->bounds = malloc(glyphcount*sizeof(SRECT));
+	for(t=0;t<glyphcount;t++) {
+	    swf_ResetReadBits(tag);
+	    swf_GetRect(tag, font->layout->bounds);
+	}
+	kerningcount = swf_GetU16(tag);
+	font->layout->kerningcount = kerningcount;
+	font->layout->kerning = (SWFKERNING*)malloc(sizeof(SWFKERNING)*kerningcount);
+	if(kerningcount) {
+	    font->layout->kerning = 
+		malloc(sizeof(*font->layout->kerning)* kerningcount);
+	    for(t=0;t<kerningcount;t++)
+	    {
+		if(flags1&4) { // wide codes
+		    font->layout->kerning[t].char1 = swf_GetU16(tag);
+		    font->layout->kerning[t].char2 = swf_GetU16(tag);
+		} else {
+		    font->layout->kerning[t].char1 = swf_GetU16(tag);
+		    font->layout->kerning[t].char2 = swf_GetU16(tag);
+		}
+		font->layout->kerning[t].adjustment = swf_GetS16(tag);
+	    }
+	}
+    }
+    return font->id;
+}
+
 
 #define FEDTJ_PRINT  0x01
 #define FEDTJ_MODIFY 0x02
@@ -170,7 +278,7 @@ int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
         { int code = f->codes[glyph];
           if (jobs&FEDTJ_PRINT) printf("%c",code);
           if (jobs&FEDTJ_MODIFY)
-            /*if (f->glyph[code].advance)*/ f->glyph[code].advance = adv;
+            /*if (!f->glyph[code].advance)*/ f->glyph[code].advance = adv;
         }
       }
       if ((id==fid)&&(jobs&FEDTJ_PRINT)) printf("\n");
@@ -185,14 +293,13 @@ int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
 int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
 { TAG * t;
   SWFFONT * f;
-  SHAPE * shapes[MAX_CHAR_PER_FONT];
+  SHAPE ** shapes;
     
   if ((!swf)||(!font)) return -1;
 
   f = (SWFFONT *)malloc(sizeof(SWFFONT)); font[0] = f;
   if (!f) return -1;
   
-  memset(shapes,0x00,sizeof(shapes));
   memset(f,0x00,sizeof(SWFFONT));
 
   t = swf->firstTag;
@@ -201,7 +308,11 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
   { int nid = 0;
     switch (swf_GetTagID(t))
     { case ST_DEFINEFONT:
-        nid = swf_FontExtract_DefineFont(id,f,t,shapes);
+        nid = swf_FontExtract_DefineFont(id,f,t,&shapes);
+        break;
+    
+      case ST_DEFINEFONT2:
+        nid = swf_FontExtract_DefineFont2(id,f,t,&shapes);
         break;
         
       case ST_DEFINEFONTINFO:
@@ -210,7 +321,7 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
         
       case ST_DEFINETEXT:
       case ST_DEFINETEXT2:
-        nid = swf_FontExtract_DefineText(id,f,t,FEDTJ_MODIFY);
+        nid = swf_FontExtract_DefineText(id,f,t,f->layout?0:FEDTJ_MODIFY);
         break;
     }
     if (nid>0) id = nid;
@@ -219,21 +330,18 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
   return 0;
 }
 
-int swf_FontIsItalic(SWFFONT * f) { return f->flags&FF_ITALIC; }
-int swf_FontIsBold(SWFFONT * f)   { return f->flags&FF_BOLD; }
-
 int swf_FontSetID(SWFFONT * f,U16 id) { if (!f) return -1; f->id = id; return 0; }
 
 int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
-{ int i,j;
+{ int i,j,num;
   if ((!f)||(!use)) return -1;
 
-  memset(&f->codes,0x00,sizeof(f->codes));
+  memset(f->codes,0,sizeof(f->codes[0])*f->numchars);
 
   j = 0;
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
-    { if (use->code[i])
+    { if (i<MAX_CHAR_PER_FONT && use->code[i])
       { f->glyph[i].gid = j;
         f->codes[j] = i;
         j++;
@@ -265,7 +373,7 @@ int swf_FontUse(FONTUSAGE * use,U8 * s)
 }
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f)
-{ U16 ofs[MAX_CHAR_PER_FONT];
+{ U16*ofs = (U16*)malloc(f->numchars*2);
   int p,i,j;
     
   if ((!t)||(!f)) return -1;
@@ -273,7 +381,7 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
   swf_SetU16(t,f->id);
 
   p = 0; j = 0;
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
     { ofs[j++] = p;
       p+=swf_SetSimpleShape(NULL,f->glyph[i].shape);
@@ -281,27 +389,32 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
 
   for (i=0;i<j;i++) swf_SetU16(t,ofs[i]+j*2);
   
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
       swf_SetSimpleShape(t,f->glyph[i].shape);
   
   swf_ResetWriteBits(t);
+  free(ofs);
   return 0;
 }
 
 int swf_FontSetInfo(TAG * t,SWFFONT * f)
 { int l,i;
+  U8 wide=0;
   if ((!t)||(!f)) return -1;
   swf_ResetWriteBits(t);
   swf_SetU16(t,f->id);
   l = strlen(f->name); if (l>255) l = 255;
   swf_SetU8(t,l);
   swf_SetBlock(t,f->name,l);
-  swf_SetU8(t,f->flags&0xfe); // no Wide-Codes
+  if(f->numchars>=256)
+      wide=1;
+  swf_SetU8(t,(f->flags&0xfe)|wide);
 
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++) {
     if (f->glyph[i].shape)
-      swf_SetU8(t,i);
+      wide?swf_SetU16(t,i):swf_SetU16(t,i);
+  }
   
   return 0;
 }
@@ -328,14 +441,15 @@ int swf_FontExport(int handle,SWFFONT * f)
   { l+=sizeof(SWFLAYOUT);
     if (handle>=0)
       if (write(handle,f->layout,sizeof(SWFLAYOUT))!=sizeof(SWFLAYOUT)) return -1;
-    if (f->layout->kerning.data)
+/*    new kerning struct. hope commenting this out doesn't break things
+      if (f->layout->kerning.data)
     { l+=f->layout->kerning.count*4;
       if (handle>=0)
         if (write(handle,f->layout->kerning.data,f->layout->kerning.count*4)!=f->layout->kerning.count*4) return -1;
-    }
+    }*/
   }
 
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
   { if (f->glyph[i].shape)
     { int ll = swf_ShapeExport(handle,f->glyph[i].shape);
       if (ll<0) return -1;
@@ -377,15 +491,16 @@ int swf_FontImport(int handle,SWFFONT * * font)
   { f->layout = (SWFLAYOUT *)malloc(sizeof(SWFLAYOUT));
     if (!f->layout) goto fehler;
     if (read(handle,f->layout,sizeof(SWFLAYOUT))!=sizeof(SWFLAYOUT)) goto fehler;
+    /* new kerning struct. hope commenting this out doesn't break things
     if (f->layout->kerning.data)
     { int l = f->layout->kerning.count*4;
       f->layout->kerning.data = (U8*)malloc(l);
       if (!f->layout->kerning.data) goto fehler;
       if (read(handle,f->layout->kerning.data,l)!=l) goto fehler;
-    }
+    } */
   }
 
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
   { if (f->glyph[i].shape)
     { if (swf_ShapeImport(handle,&f->glyph[i].shape)<0) goto fehler;
     }
@@ -411,8 +526,10 @@ int swf_TextPrintDefineText(TAG * t,SWFFONT * f)
 
 void swf_LayoutFree(SWFLAYOUT * l)
 { if (l)
-  { if (l->kerning.data) free(l->kerning.data);
-    l->kerning.data = NULL;
+  { if (l->kerning) free(l->kerning);
+    l->kerning = NULL;
+    if (l->bounds) free(l->bounds);
+    l->bounds = NULL;
   }
   free(l);
 }
@@ -427,11 +544,19 @@ void swf_FontFree(SWFFONT * f)
     f->name = NULL;
     f->layout = NULL;
 
-    for (i=0;i<MAX_CHAR_PER_FONT;i++)
-      if (f->glyph[i].shape)
-      { swf_ShapeFree(f->glyph[i].shape);
-        f->glyph[i].shape = NULL;
-      }
+    if(f->glyph) {
+      for (i=0;i<f->numchars;i++)
+	if (f->glyph[i].shape)
+	{ swf_ShapeFree(f->glyph[i].shape);
+	  f->glyph[i].shape = NULL;
+	}
+      free(f->glyph);
+      f->glyph = NULL;
+    }
+    if(f->codes) {
+      free(f->codes);
+      f->codes = NULL;
+    }
   }
   free(f);
 }
