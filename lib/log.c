@@ -27,7 +27,7 @@
 
 #include "log.h"
 
-static int screenloglevel = 1;
+int screenloglevel = 1;
 static int fileloglevel = -1;
 static int socketloglevel = -1;
 static int maxloglevel = 1;
