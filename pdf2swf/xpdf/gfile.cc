@@ -489,7 +489,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   // with this file name after the tmpnam call and before the fopen
   // call.  I will happily accept fixes to this function for non-Unix
   // OSs.
-  if (!(s = tmpnam(NULL))) {
+  if (!(s = mktmpname(NULL))) { //was: tmpnam
     return gFalse;
   }
   *name = new GString(s);
@@ -516,7 +516,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX")->append(ext);
     fd = mkstemps((*name)->getCString(), strlen(ext));
 #else
-    if (!(s = tmpnam(NULL))) {
+    if (!(s = mktmpname(NULL))) { //was: tmpnam
       return gFalse;
     }
     *name = new GString(s);
@@ -533,7 +533,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX");
     fd = mkstemp((*name)->getCString());
 #else // HAVE_MKSTEMP
-    if (!(s = tmpnam(NULL))) {
+    if (!(s = mktmpname(NULL))) { //was: tmpnam
       return gFalse;
     }
     *name = new GString(s);
