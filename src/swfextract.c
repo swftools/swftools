@@ -457,6 +457,8 @@ void listObjects(SWF*swf)
     int t;
     int frame = 0;
     char*names[] = {"Shape", "MovieClip", "JPEG", "PNG", "Sound", "Font"};
+    char*options[] = {"-i", "-i", "-j", "-p", "-s", "-F"};
+    int mp3=0;
     printf("Objects in file %s:\n",filename);
     swf_FoldAll(swf);
     for(t=0;t<sizeof(names)/sizeof(names[0]);t++) {
@@ -466,6 +468,8 @@ void listObjects(SWF*swf)
 	tag = swf->firstTag;
 	first = 1;
 	while(tag) {
+	    if(tag->id == ST_SOUNDSTREAMHEAD || tag->id == ST_SOUNDSTREAMHEAD2)
+		mp3 = 1;
 	    if(isOfType(t,tag))
 		nr++;
 	    tag = tag->next;
@@ -473,7 +477,7 @@ void listObjects(SWF*swf)
 	if(!nr)
 	    continue;
 	
-	printf(" %d %s%s: ID(s) ", nr, names[t], nr>1?"s":"");
+	printf(" [%s] %d %s%s: ID(s) ", options[t], nr, names[t], nr>1?"s":"");
 
 	tag = swf->firstTag;
 	while(tag) {
@@ -516,9 +520,12 @@ void listObjects(SWF*swf)
     }
 
     if(frame)
-	printf(" %d Frames: ID(s) 0-%d\n", frame, frame);
+	printf(" [-f] %d Frames: ID(s) 0-%d\n", frame, frame);
     else
-	printf(" 1 Frame: ID(s) 0\n");
+	printf(" [-f] 1 Frame: ID(s) 0\n");
+
+    if(mp3)
+	printf(" [-m] 1 MP3 Soundstream\n");
 }
 
 void handlefont(SWF*swf, TAG*tag)
