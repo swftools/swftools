@@ -431,6 +431,7 @@ static void parse_charstring()
 
   charstring_start();
   while (fscanf(ifp, "%s", line) == 1) {
+    //char*bracket;
     if (line[0] == '%') {
       /* eat comment to end of line */
       while (fgetc(ifp) != '\n' && !feof(ifp))
@@ -439,6 +440,9 @@ static void parse_charstring()
     }
     if (line[0] == '}')
       break;
+    //if(bracket=strchr(line, '}')) {
+    //    *bracket = 0;
+    //}
     if (is_integer(line)) {
       charstring_int(atoi(line));
     } else {
@@ -456,6 +460,10 @@ static void parse_charstring()
         exit(1);
       }
     }
+    //if(bracket) {
+    //    //line ended with }
+    //    break;
+    //}
   }
   charstring_end();
 }
@@ -544,6 +552,11 @@ int main(int argc, char **argv)
 int runt1asm(int pfbflag)
 {
   char *p, *q, *r;
+
+  /* need to reset this. (For some reason, if ttf2pt1.c fork()s, it doesn't
+     matter whether we reset this or not, triggering a bug which only appears
+     on Win32 */
+  active = 0;
 
   pfb = pfbflag;
 #endif
