@@ -557,7 +557,7 @@ int swf_FontSetID(SWFFONT * f,U16 id);
 int swf_FontReduce(SWFFONT * f,FONTUSAGE * use);
 
 int swf_FontInitUsage(SWFFONT * f,FONTUSAGE * use);
-int swf_FontUse(FONTUSAGE * use,U8 * s);
+int swf_FontUse(SWFFONT* f,FONTUSAGE * use,U8 * s);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetDefine2(TAG * t,SWFFONT * f);
