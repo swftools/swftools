@@ -78,7 +78,7 @@ int args_callback_command(char*name,char*val)
 
 struct Action
 {
-    int flashversion;
+    int version;
     char*name;
     U8 op;
     char*flags;
@@ -137,7 +137,7 @@ r: register (byte)
 {4,"MBCharToAscii", 0x36, ""}, // -1, +1
 {4,"MBAsciiToChar", 0x37, ""}, // -1, +1
 {4,"Jump", 0x99, "b"},
-{4,"If", 0x9a, "b"}, // -1
+{4,"If", 0x9d, "b"}, // -1
 {4,"Call", 0x9e, ""}, //-1 (frame label/number)
 {4,"GetVariable", 0x1c,""}, // -1, +1
 {4,"SetVariable", 0x1d,""}, // -2
@@ -161,7 +161,7 @@ r: register (byte)
 {5,"Decrement", 0x51,""},
 {5,"Increment", 0x50,""},
 {5,"PushDuplicate", 0x4c,""},
-{5,"StackSwap", 0x4d,""},
+{5,"StackSwap", 0x4d,""}, //?
 {5,"StoreRegister", 0x87,"r"},
 {5,"CallFunction", 0x3d,""},
 {5,"DefineFunction", 0x9b, "{"},
@@ -172,24 +172,25 @@ r: register (byte)
 {5,"Constantpool", 0x88, "c"},
 {5,"DefineLocal", 0x3c,""},
 {5,"DefineLocal2", 0x41,""},
-{5,"Delete", 0x3a,""},
+{5,"Makehash", 0x43, ""}, //??
+{5,"Delete", 0x3a,""}, //?
 {5,"Delete2", 0x3b,""},
 {5,"Enumerate", 0x46,""},
 {5,"Equals2", 0x49,""},
 {5,"InitArray", 0x42,""}, // InitObject?
-{5,"NewMethod", 0x53,""},
+{5,"NewMethod", 0x53,""}, //?
 {5,"NewObject", 0x40,""},
-{5,"TargetPath", 0x45,""},
+{5,"TargetPath", 0x45,""}, //?
 {5,"With", 0x94, "o"},
-{5,"ToNumber", 0x4a,""},
-{5,"ToString", 0x4b,""},
+{5,"ToNumber", 0x4a,""}, //?
+{5,"ToString", 0x4b,""}, //?
 {5,"TypeOf", 0x44,""},
 {5,"Add2", 0x47,""},
-{5,"Less2", 0x48,""},
-
-{5,"???", 0x9d, ""}
+{5,"Less2", 0x48,""}
 };
+
 int definedactions = sizeof(actions)/sizeof(struct Action);
+
 
 struct _ActionTAG {
   U8            op;
