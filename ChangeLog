@@ -12,3 +12,4 @@
 	* configure: Now works without automake, automatically disables 
 			jpeg2swf and pdf2swf if jpeglib is not found (disable
 			both) or t1lib is not found (disable pdf2swf)
+	* swfcombine: bugfixes
