@@ -393,6 +393,22 @@ void fontcallback2(U16 id,U8 * name)
   fontnum++;
 }
 
+void hexdumpTag(TAG*tag, char* prefix)
+{
+    int t;
+    printf("                %s-=> ",prefix);
+    for(t=0;t<tag->len;t++) {
+	printf("%02x ", tag->data[t]);
+	if((t && ((t&15)==15)) || (t==tag->len-1))
+	{
+	    if(t==tag->len-1)
+		printf("\n");
+	    else
+		printf("\n                %s-=> ",prefix);
+	}
+    }
+}
+
 void dumperror(const char* format, ...)
 {
     char buf[1024];
@@ -583,6 +599,9 @@ int main (int argc,char ** argv)
         else if(tag->id == ST_REMOVEOBJECT2) {
             printf(" removes object from depth %04d", swf_GetDepth(tag));
         }
+        else if(tag->id == ST_FREECHARACTER) {
+            printf(" frees object %04d", swf_GetPlaceID(tag));
+        }
 	else if(tag->id == ST_STARTSOUND) {
 	    printf(" starts id %04d", swf_GetPlaceID(tag));
 	}
@@ -690,7 +709,7 @@ int main (int argc,char ** argv)
 		swf_GetUsedIDs(tag, used);
 		printf("%s%suses IDs: ", indent, prefix);
 		for(t=0;t<num;t++) {
-		    tag->pos = used[t];
+		    swf_SetTagPos(tag, used[t]);
 		    printf("%d%s", swf_GetU16(tag), t<num-1?", ":"");
 		}
 		printf("\n");
@@ -698,18 +717,7 @@ int main (int argc,char ** argv)
 	}
 
 	if(tag->len && hex) {
-	    int t;
-	    printf("                %s-=> ",prefix);
-	    for(t=0;t<tag->len;t++) {
-		printf("%02x ", tag->data[t]);
-		if((t && ((t&15)==15)) || (t==tag->len-1))
-		{
-		    if(t==tag->len-1)
-			printf("\n");
-		    else
-			printf("\n                %s-=> ",prefix);
-		}
-	    }
+	    hexdumpTag(tag, prefix);
 	}
         tag = tag->next;
 	fflush(stdout);
