@@ -37,7 +37,7 @@ static int flag_protected;
 static SWF swf;
 static TAG *tag;
 static int shapeid = -1;
-static int shapecount = 0;
+static int currentswfid = 0;
 static SHAPE* shape;
 static int fillstyleid;
 static int linestyleid;
@@ -269,6 +269,14 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     
     outline = (T1_OUTLINE**)malloc(t*sizeof(T1_OUTLINE*));
     charname = (char**)malloc(t*sizeof(char*));
+    used = (char*)malloc(t*sizeof(char));
+    memset(used,0,t*sizeof(char));
+
+    /*
+    tag = InsertTag(tag,ST_DEFINEFONT);
+    SetU16(tag, ++currentswfid);
+    this->swfid = currentswfid;
+    */
     
     t=0;
     while(*a)
@@ -302,12 +310,22 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     }
 }
 
+SWFFont::~SWFFont()
+{
+    int t,s=0;
+    for(t=0;t<charnum;t++)
+	if(used[t]) s++;
+    logf("<notice> Font %s has %d used characters",fontid, s);
+}
+
 T1_OUTLINE*SWFFont::getOutline(char*name)
 {
     int t;
     for(t=0;t<this->charnum;t++) {
-	if(!strcmp(this->charname[t],name))
+	if(!strcmp(this->charname[t],name)) {
+	    used[t] = 1;
 	    return outline[t];
+	}
     }
     return 0;
 }
@@ -447,7 +465,7 @@ void startshape(struct swfoutput*obj)
   rgb.b = obj->fillrgb.b;
   fillstyleid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
 
-  shapeid = ++shapecount;
+  shapeid = ++currentswfid;
   SetU16(tag,shapeid);  // ID
 
   r.xmin = 0;
@@ -503,6 +521,12 @@ void swfoutput_newpage(struct swfoutput*obj)
 void swfoutput_destroy(struct swfoutput* obj) 
 {
     endpage(obj);
+    fontlist_t *iterator = fontlist;
+    while(iterator) {
+	delete iterator->font;
+	iterator->font = 0;
+	iterator = iterator->next;
+    }
 
     T1_CloseLib();
     if(!filename) 
@@ -666,7 +690,7 @@ void swfoutput_drawimagefile(struct swfoutput*, char*filename, int sizex,int siz
     if(shape>=0)
      endshape();
 
-    bitid = ++shapecount;
+    bitid = ++currentswfid;
   
     /* bitmap */
     tag = InsertTag(tag,ST_DEFINEBITSJPEG2);
@@ -674,7 +698,7 @@ void swfoutput_drawimagefile(struct swfoutput*, char*filename, int sizex,int siz
     SetJPEGBits(tag, filename, 85);
 
     /* shape */
-    myshapeid = ++shapecount;
+    myshapeid = ++currentswfid;
     tag = InsertTag(tag,ST_DEFINESHAPE);
     NewShape(&shape);
     //lsid = ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
