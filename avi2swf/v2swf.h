@@ -26,6 +26,8 @@ extern "C" {
 typedef unsigned char bool;
 #endif
 
+#include "videoreader.h"
+
 typedef struct _v2swf_t
 {
     void*internal;
