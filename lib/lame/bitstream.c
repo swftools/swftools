@@ -18,7 +18,7 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  *
- * $Id: bitstream.c,v 1.1 2002/04/28 17:30:17 kramm Exp $
+ * $Id: bitstream.c,v 1.2 2002/05/19 18:09:36 kramm Exp $
  */
 
 
@@ -806,7 +806,7 @@ compute_flushbits( const lame_global_flags * gfp, int *total_bytes_output )
     DEBUGF(gfc,"bitsperframe:              %i \n",bitsPerFrame);
     DEBUGF(gfc,"sidelen:                   %i \n",gfc->sideinfo_len);
 #endif
-    ERRORF(gfc,"strange error flushing buffer ... \n");
+//    ERRORF(gfc,"strange error flushing buffer ... \n");
   }
   return flushbits;
 }
