@@ -17,7 +17,7 @@
 #include <dirent.h>
 #endif
 #include "../lib/args.h"
-#include "pdfswf.h"
+#include "SWFOutputDev.h"
 #include "t1lib.h"
 extern "C" {
 #include "log.h"
