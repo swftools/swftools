@@ -4,12 +4,15 @@ RFXSWF	= ../rfxswf.o
 LDLIBS	= -ljpeg -lm -lz
 CFLAGS	= -funsigned-char
 CC	= gcc
+CXX	= g++
 DBFLAGS	= -g2
 
-.c.o:
+%.o: %.c
 		$(CC) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
+%.o: %.cc
+		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
+all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts
 
 movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
 		./jpegtest
@@ -20,6 +23,7 @@ movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
 		./sprites
 		./buttontest
 		./text
+		./makefonts
 
 box: $(RFXSWF) box.o
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
@@ -47,6 +51,9 @@ text: $(RFXSWF) text.o
 
 zlibtest: $(RFXSWF) zlibtest.o
 		$(CC) -o zlibtest zlibtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+makefonts: $(RFXSWF) makefonts.o ../../pdf2swf/swfoutput.o
+		$(CXX) -o makefonts makefonts.o ../../pdf2swf/swfoutput.o ../../pdf2swf/spline.o ../rfxswf.o ../log.o -lt1 -ljpeg -lz ../../pdf2swf/xpdf/libpdf.a 
 
 clean:
 		rm -f jpegtest.o box.o shape1.o trastest.o zlibtest.o sprites.o\
