@@ -979,7 +979,7 @@ void s_quicktime(char*name, char*url)
     incrementid();
 }
 
-void s_edittext(char*name, char*fontname, int size, int width, int height, char*text, RGBA*color, int maxlength, char*variable, int flags)
+void s_edittext(char*name, char*fontname, int size, int width, int height, char*text, RGBA*color, int maxlength, char*variable, int flags, int align)
 {
     SWFFONT*font = 0;
     EditTextLayout layout;
@@ -993,7 +993,7 @@ void s_edittext(char*name, char*fontname, int size, int width, int height, char*
     }
     tag = swf_InsertTag(tag, ST_DEFINEEDITTEXT);
     swf_SetU16(tag, id);
-    layout.align = 0;
+    layout.align = align;
     layout.leftmargin = 0;
     layout.rightmargin = 0;
     layout.indent = 0;
@@ -2708,7 +2708,7 @@ static int c_on_key(map_t*args)
 
 static int c_edittext(map_t*args) 
 {
- //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
+ //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @autosize=0"},
     char*name = lu(args, "name");
     char*font = lu(args, "font");
     int size = (int)(1024*parsePxOrPercent(font, lu(args, "size")));
@@ -2725,6 +2725,9 @@ static int c_edittext(map_t*args)
     char*noselectstr = lu(args, "noselect");
     char*readonlystr = lu(args, "readonly");
     char*borderstr = lu(args, "border");
+    char*autosizestr = lu(args, "autosize");
+    char*alignstr = lu(args, "align");
+    int align = -1;
 
     int flags = 0;
     if(!strcmp(passwordstr, "password")) flags |= ET_PASSWORD;
@@ -2734,8 +2737,14 @@ static int c_edittext(map_t*args)
     if(!strcmp(htmlstr, "html")) flags |= ET_HTML;
     if(!strcmp(noselectstr, "noselect")) flags |= ET_NOSELECT;
     if(!strcmp(borderstr, "border")) flags |= ET_BORDER;
+    if(!strcmp(autosizestr, "autosize")) flags |= ET_AUTOSIZE;
+    if(!strcmp(alignstr, "left") || !*alignstr) align = ET_ALIGN_LEFT;
+    else if(!strcmp(alignstr, "right")) align = ET_ALIGN_RIGHT;
+    else if(!strcmp(alignstr, "center")) align = ET_ALIGN_CENTER;
+    else if(!strcmp(alignstr, "justify")) align = ET_ALIGN_JUSTIFY;
+    else syntaxerror("Unknown alignment: %s", alignstr);
 
-    s_edittext(name, font, size, width, height, text, &color, maxlength, variable, flags);
+    s_edittext(name, font, size, width, height, text, &color, maxlength, variable, flags, align);
     return 0;
 }
 
@@ -2824,7 +2833,7 @@ static struct {
 
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
  {"text", c_text, "name text font size=100% color=white"},
- {"edittext", c_edittext, "name font= size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0"},
+ {"edittext", c_edittext, "name font= size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0 @autosize=0 align="},
  {"morphshape", c_morphshape, "name start end"},
  {"button", c_button, "name"},
     {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
