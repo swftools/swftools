@@ -56,5 +56,5 @@ uninstall:
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/default_loader.swf
 
 clean: 
-	rm -f *.o *.lo *.a *.la simple_viewer keyboard_viewer PreLoaderTemplate simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf
+	rm -f *.o *.lo *.a *.la gmon.out simple_viewer keyboard_viewer PreLoaderTemplate simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf
 

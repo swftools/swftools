@@ -48,7 +48,7 @@ uninstall:
 	@for file in $(fonts);do $(UNINSTALL_DATA) $(pkgdatadir)/fonts/$$file;done
 
 clean: 
-	rm -f *.o *.lo *.a *.la pdf2swf font2swf
+	rm -f *.o *.lo *.a *.la pdf2swf font2swf gmon.out
 	@rm -f pdf2swf.exe font2swf.exe
 	@rm -f pdf2swf$(E) font2swf.exe$(E)
 	cd xpdf;$(MAKE) clean;cd ..

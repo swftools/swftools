@@ -71,7 +71,7 @@ uninstall:
 	@for file in $(programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
 clean: 
-	rm -f *.o *.lo *.a *.la *~
+	rm -f *.o *.lo *.a *.la *~ gmon.out
 	rm -f swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf
 	@rm -f swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe
 	@rm -f swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E)
