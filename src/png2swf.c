@@ -355,6 +355,7 @@ void applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
 	    dest[1] = src[0]+(old[1]+lastr)/2;
 	    dest[2] = src[1]+(old[2]+lastg)/2;
 	    dest[3] = src[2]+(old[3]+lastb)/2;
+	    lasta = dest[0];
 	    lastr = dest[1];
 	    lastg = dest[2];
 	    lastb = dest[3];
@@ -538,6 +539,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	int pos=0;
 	int opaque=0;
 	int transparent=0;
+	int semitransparent=0;
 	/* in case for mode 2, the following also performs 24->32 bit conversion */
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
@@ -568,7 +570,6 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		applyfilter3(mode, src, old, dest, header.width);
 	}
 
-#ifdef HAVE_LIBJPEG
 	/* the image is now compressed and stored in data. Now let's take
 	   a look at the alpha values to determine which bitmap type we
 	   should write */
@@ -577,15 +578,21 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    U8*l = &data2[(y*header.width)*4];
 	    for(x=0;x<header.width;x++) {
 		if(l[x*4+0]==255) transparent++;
-		if(l[x*4+0]==0) opaque++;
+		else if(l[x*4+0]==0) opaque++;
+		else semitransparent++;
 	    }
 	}
 	/* mode 6 images which are not fully opaque or fully transparent
 	   will be stored as definejpeg3 */
 	if(header.mode == 6 && transparent != header.width*header.height
-		            && opaque != header.width*header.height) {
-	   
+		            && opaque != header.width*header.height)
+#ifndef HAVE_JPEGLIB
+	    fprintf(stderr, "Warning: No jpeg lib compiled in- not able to store transparency information\n");
+#else
+	{   
 	    fprintf(stderr, "Image has transparency information. Storing as DefineBitsJpeg3 Tag (jpeg+alpha)\n");
+	    if(VERBOSE(2))
+		printf("Image is semi-transparent\n");
 
 	    // we always use quality 100, since png2swf is expected to
 	    // use more or less lossless compression
