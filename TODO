@@ -1,6 +1,5 @@
 swfc:
 
-    * .outline should also support creating unfilled objects somehow
     * .morph
     * .soundstream
     * text: newlines
@@ -71,7 +70,6 @@ png2swf:
 Makefiles/configure/installation:
 
     * check for vsnprintf, bcopy, bzero, strndup etc. and supply replacements
-    * -shared is named -bundle on MacOSX
 
 other:
 
