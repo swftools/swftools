@@ -865,7 +865,7 @@ int swf_WriteTag2(struct writer_t*writer, TAG * t)
 
   len = (t->id==ST_DEFINESPRITE)?swf_DefineSprite_GetRealSize(t):t->len;
 
-  short_tag = len<0x3f;
+  short_tag = len<0x3f&&(t->id!=ST_DEFINEBITSLOSSLESS&&t->id!=ST_DEFINEBITSLOSSLESS2);
 
   if (writer)
   { if (short_tag)
@@ -1042,7 +1042,7 @@ void swf_FoldSprite(TAG * t)
 
   do
   { 
-    if(t->len<0x3f) {
+    if(t->len<0x3f&&t->id!=ST_DEFINEBITSLOSSLESS&&t->id!=ST_DEFINEBITSLOSSLESS2) {
 	swf_SetU16(sprtag,t->len|(t->id<<6));
     } else {
 	swf_SetU16(sprtag,0x3f|(t->id<<6));
