@@ -1,7 +1,3 @@
-General:
-
-    * make more stuff dependent on the information in config.h
-
 pdf2swf:
 
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
@@ -9,11 +5,6 @@ pdf2swf:
     * fix memory leaks
     * some bounding boxes are too big
     * support for ttf fonts in --fontdirs
-
-png2swf:
-
-    * handle bit packing
-    * handle splitted IDAT chunks etc.
 
 swfcombine:
 
@@ -25,10 +16,4 @@ swfextract:
     
     * mp3 extraction should also work for movieclips and definesound.
     * improve placeobject handling
-
-rfxswf-lib:
-   
-    * modules/swfshape doesn't allow changing to fillstyle 0
-    * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
-    * modules/swftools:getUsedIDs doesn't handle Morphshapes
 

@@ -107,4 +107,5 @@
 	* lib/rfxswf: Fixed some parsing bugs (swffont, swfdump)
 	* pdf2swf: Added antialiasing capabilities for Type 3 Fonts
 	* lib/examples/makefonts: Fonts: Bounding boxes are now handled correctly
+	* png2swf: Support for more image types
 
