@@ -68,7 +68,7 @@ void DumpFont(SWFFONT * f,char * name)
   printf("  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*%d);\n",f->numchars);
   printf("  f->glyph2ascii = (U16*)malloc(sizeof(U16)*%d);\n",f->numchars);
   printf("  f->ascii2glyph = (int*)malloc(sizeof(int)*%d);\n",f->maxascii);
-  printf("  memset(f->ascii2glyph, -1, sizeof(int)*%d)\n\n", f->maxascii);
+  printf("  memset(f->ascii2glyph, -1, sizeof(int)*%d);\n\n", f->maxascii);
 
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)

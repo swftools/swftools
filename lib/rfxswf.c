@@ -498,7 +498,6 @@ TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
   if (t)
   { memset(t,0x00,sizeof(TAG));
     t->id = id;
-    t->writeBit = 0x80;
     
     if (after)
     { t->frame = after->frame;

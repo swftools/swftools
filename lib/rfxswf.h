@@ -250,20 +250,17 @@ typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
   { LINESTYLE * data;
     U16         n;
   } linestyle;
-                  // note: changes of shape structure
-  struct                  // lead to incompatible .efont formats
+                  
+  struct                    
   { FILLSTYLE * data;
     U16         n;
   } fillstyle;
-
-  S32           px;
-  S32           py;
-  
+ 
   struct
   { U16         fill;
     U16         line;
   } bits;
-  
+  				// used by Get/SetSimpleShape and glyph handling
   U8 *          data;
   U32           bitlen;         // length of data in bits
 } SHAPE, * LPSHAPE;

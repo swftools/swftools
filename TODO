@@ -34,6 +34,4 @@ rfxswf-lib:
       s/GetDataSizePtr/GetTagLenPtr/g
       s/ObjectPlace/ObjectSet/g
       (s/GetFrameNo/GetTagFrameNo/g ?)
-    * swfshape.c: the shape parameter is mostly unused. so are px, py.
-    * swf_SetBits() crashes if the tag has no data allocated yet.
   

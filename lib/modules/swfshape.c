@@ -385,10 +385,6 @@ int swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
   swf_SetBits(t,x,b);
   swf_SetBits(t,y,b);
 
-  if (s)
-  { s->px = x;
-    s->py = y;
-  }
   return 0;
 }
 
@@ -426,8 +422,6 @@ int swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
   swf_SetBits(t,b,5);
   swf_SetBits(t,x,b);
   swf_SetBits(t,y,b);
-  s->px = x;
-  s->py = y;
 
   if (fill0) swf_SetBits(t,fill0,s->bits.fill);
   if (fill1) swf_SetBits(t,fill1,s->bits.fill);
@@ -456,10 +450,6 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     swf_SetBits(t,1,1);
     swf_SetBits(t,x,b);
     swf_SetBits(t,y,b);
-    if (s)
-    { s->px += x;
-      s->py += y;
-    }
     return 0;
   }
 
@@ -470,8 +460,7 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     swf_SetBits(t, b-2, 4);
     swf_SetBits(t,1,2);
     swf_SetBits(t,y,b);
-    s->py += y;
-  }
+  } 
   else
   { b = swf_CountBits(x,2);
     if(b<2) 
@@ -479,7 +468,6 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     swf_SetBits(t, b-2, 4);
     swf_SetBits(t,0,2);
     swf_SetBits(t,x,b);
-    s->px += x;
   }
   return 0;
 }
@@ -501,10 +489,6 @@ int swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
   swf_SetBits(t,ax,b);
   swf_SetBits(t,ay,b);
 
-  if (s)
-  { s->px += x+ax;
-    s->py += y+ay;
-  }
   return 0;
 }
 
