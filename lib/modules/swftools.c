@@ -122,6 +122,8 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DOINITACTION: //pseudodefine
       id = swf_GetU16(t);
       break;
+    default:
+      fprintf(stderr, "rfxswf: Error: tag %d (%s) has no id\n", t->id, swf_TagGetName(t));
   }
 
   swf_SetTagPos(t,oldTagPos);
@@ -936,7 +938,8 @@ static int tagHash(TAG*tag)
 {
     int t, h=0;
     unsigned int a = 0x6b973e5a;
-    for(t=0;t<tag->len;t++) {
+    /* start at pos 2, as 0 and 1 are the id */
+    for(t=2;t<tag->len;t++) {
         unsigned int b = a;
         a >>= 8;
         a += tag->data[t]*0xefbc35a5*b*(t+1);
@@ -946,36 +949,51 @@ static int tagHash(TAG*tag)
 
 void swf_Optimize(SWF*swf)
 {
-    TAG* tag = swf->firstTag;
-    int hash_size = 131072;
+    const int hash_size = 131072;
+    char* dontremap = malloc(sizeof(char)*65536);
     U16* remap = malloc(sizeof(U16)*65536);
+    TAG* id2tag = malloc(sizeof(TAG*)*65536);
     TAG** hashmap = malloc(sizeof(TAG*)*hash_size);
+    TAG* tag;
+    memset(dontremap, 0, sizeof(char)*65536);
     memset(hashmap, 0, sizeof(TAG*)*hash_size);
+    memset(id2tag, 0, sizeof(TAG*)*65536);
     int t;
     for(t=0;t<65536;t++) {
         remap[t] = t;
     }
+
+    swf_FoldAll(swf);
+
+    tag = swf->firstTag;
     while(tag) {
+        /* make sure we don't remap to this tag,
+           as it might have different "helper tags" 
+           FIXME: a better way would be to compare
+                  the helper tags, too.
+         */
+        if(swf_isPseudoDefiningTag(tag)) {
+            //dontremap[swf_GetDefineID(tag)] = 1; //FIXME
+        }
+        tag=tag->next;
+    }
+    tag = swf->firstTag;
+    while(tag) {
+        int doremap=1;
+        
         TAG*next = tag->next;
-        if(!swf_isDefiningTag(tag)) {
-            int num = swf_GetNumUsedIDs(tag);
-            int*positions = malloc(sizeof(int)*num);
-            int t;
-            swf_GetUsedIDs(tag, positions);
-            for(t=0;t<num;t++) {
-                int id = GET16(&tag->data[positions[t]]);
-                id = remap[id];
-                PUT16(&tag->data[positions[t]], id);
-            }
-            tag = tag->next;
-        } else {
+        
+        if(swf_isDefiningTag(tag)) {
             TAG*tag2;
+            int id = swf_GetDefineID(tag);
             int hash = tagHash(tag);
             int match=0;
+            if(!dontremap[id]) 
             while((tag2 = hashmap[hash%hash_size])) {
-                if(tag->len == tag2->len) {
+                if(tag2 != (TAG*)(-1) && tag->len == tag2->len) {
                     int t;
-                    for(t=0;t<tag->len;t++) {
+                    /* start at pos 2, as 0 and 1 are the id */
+                    for(t=2;t<tag->len;t++) {
                         if(tag->data[t] != tag2->data[t])
                             break;
                     }
@@ -986,7 +1004,7 @@ void swf_Optimize(SWF*swf)
                 if(match) {
                     /* we found two identical tags- remap one
                        of them */
-                    remap[swf_GetDefineID(tag2)] = swf_GetDefineID(tag);
+                    remap[id] = swf_GetDefineID(tag2);
                     break;
                 }
                 hash++;
@@ -998,8 +1016,40 @@ void swf_Optimize(SWF*swf)
                 swf_DeleteTag(tag);
                 if(tag == swf->firstTag)
                     swf->firstTag = next;
+                doremap = 0;
+            }
+        } else if(swf_isPseudoDefiningTag(tag)) {
+            int id = swf_GetDefineID(tag);
+            if(remap[id]!=id) {
+                /* if this tag was remapped, we don't
+                   need the helper tag anymore. Discard
+                   it. */
+                swf_DeleteTag(tag);
+                if(tag == swf->firstTag)
+                    swf->firstTag = next;
+                doremap = 0;
             }
         }
+
+        if(doremap)
+        {
+            int num = swf_GetNumUsedIDs(tag);
+            int*positions = malloc(sizeof(int)*num);
+            int t;
+            swf_GetUsedIDs(tag, positions);
+            for(t=0;t<num;t++) {
+                int id = GET16(&tag->data[positions[t]]);
+                id = remap[id];
+                PUT16(&tag->data[positions[t]], id);
+            }
+            free(positions);
+            tag = tag->next;
+        }
+
         tag = next;
     }
+    free(dontremap);
+    free(remap);
+    free(id2tag);
+    free(hashmap);
 }
