@@ -24,12 +24,14 @@ struct options_t options[] =
  {"v","verbose"},
  {"d","definesound"},
  {"l","loop"},
+ {"f","framerate"},
  {"V","version"},
  {0,0}
 };
 
 static int loop = 0;
 static int definesound = 0;
+static int framerate = 0;
 
 int args_callback_option(char*name,char*val)
 {
@@ -53,6 +55,12 @@ int args_callback_option(char*name,char*val)
 	verbose ++;
 	return 0;
     }
+    else if(!strcmp(name, "f")) {
+	float f;
+	sscanf(val, "%f", &f);
+	framerate = f*256;
+	return 1;
+    }
     else {
         printf("Unknown option: -%s\n", name);
 	exit(1);
@@ -69,6 +77,7 @@ void args_callback_usage(char*name)
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-d , --definesound\t\t\t Generate a DefineSound tag instead of streaming sound\n");
     printf("\t-l , --loop n\t\t\t Loop sound n times (implies -d)\n");
+    printf("\t-f , --framerate fps\t\t\t Set framerate to fps frames per seond\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
@@ -94,11 +103,23 @@ int main (int argc,char ** argv)
     int count;
     int t;
     struct WAV wav,wav2;
-    int blocksize = 1152;
+    int blocksize;
+    float blockspersecond;
+    float framespersecond;
+    float framesperblock;
+    float framepos = 0;
     U16* samples;
     int numsamples;
 
     processargs(argc, argv);
+
+    blocksize = 1152;
+    blockspersecond = 11025.0/blocksize;
+    framespersecond = blockspersecond;
+    if(framerate)
+	framespersecond = framerate/256.0;
+    framesperblock = framespersecond/blockspersecond;
+
     initLog(0,-1,0,0,-1,verbose);
 
     if(!readWAV(filename, &wav))
@@ -115,7 +136,7 @@ int main (int argc,char ** argv)
     memset(&swf,0x00,sizeof(SWF));
 
     swf.fileVersion    = 5;
-    swf.frameRate      = 11025*256/(blocksize);
+    swf.frameRate      = (int)(framespersecond*256);
 
     swf.movieSize.xmax = 20*width;
     swf.movieSize.ymax = 20*height;
@@ -135,12 +156,17 @@ int main (int argc,char ** argv)
 	logf("<notice> %d blocks", numsamples/(blocksize*2));
 	for(t=0;t<numsamples/(blocksize*2);t++) {
 	    int s;
+	    int oldframe, newframe;
 	    U16*block1;
 	    tag = swf_InsertTag(tag, ST_SOUNDSTREAMBLOCK);
 	    logf("<notice> Writing block %d", t);
 	    block1 = &samples[t*2*blocksize];
 	    swf_SetSoundStreamBlock(tag, block1, 1);
-	    tag = swf_InsertTag(tag, ST_SHOWFRAME);
+	    oldframe = (int)framepos;
+	    framepos += framesperblock;
+	    newframe = (int)framepos;
+	    for(s=oldframe;s<newframe;s++)
+		tag = swf_InsertTag(tag, ST_SHOWFRAME);
 	}
 	tag = swf_InsertTag(tag, ST_END);
     } else {
