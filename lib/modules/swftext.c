@@ -1152,7 +1152,8 @@ U32 swf_TextGetWidth(SWFFONT * font, U8 * s, int scale)
 
 SRECT swf_TextCalculateBBoxUTF8(SWFFONT * font, U8 * s, int scale)
 {
-    int pos = 0;
+    int xpos = 0;
+    int ypos = 0;
     SRECT r;
     swf_GetRect(0, &r);
     while (*s) {
@@ -1161,12 +1162,12 @@ SRECT swf_TextCalculateBBoxUTF8(SWFFONT * font, U8 * s, int scale)
 	    int g = font->ascii2glyph[c];
 	    if (g >= 0) {
 		SRECT rn = font->layout->bounds[g];
-		rn.xmin = (rn.xmin * scale) / 20 / 100 + pos;
-		rn.xmax = (rn.xmax * scale) / 20 / 100 + pos;
-		rn.ymin = (rn.ymin * scale) / 20 / 100;
-		rn.ymax = (rn.ymax * scale) / 20 / 100;
+		rn.xmin = (rn.xmin * scale) / 20 / 100 + xpos;
+		rn.xmax = (rn.xmax * scale) / 20 / 100 + xpos;
+		rn.ymin = (rn.ymin * scale) / 20 / 100 + ypos;
+		rn.ymax = (rn.ymax * scale) / 20 / 100 + ypos;
 		swf_ExpandRect2(&r, &rn);
-		pos += (font->glyph[g].advance * scale) / 20 / 100;
+		xpos += (font->glyph[g].advance * scale) / 20 / 100;
 	    }
 	}
 	c++;
