@@ -318,6 +318,125 @@ static tag_internals_t text_tag =
     datasize: sizeof(text_internal_t),
 };
 //----------------------------------------------------------------------------
+staticforward tag_internals_t image_tag;
+
+typedef struct _image_internal
+{
+    RGBA*rgba;
+    int size;
+    int width;
+    int height;
+    int bpp;
+    char isindexed;
+    char islossless;
+} image_internal_t;
+staticforward tag_internals_t image_tag;
+
+static int image_fillTAG(tag_internals_t*self)
+{
+    image_internal_t*ti = (image_internal_t*)self->data;
+    self->tag= swf_InsertTag(0, ST_DEFINEBITSLOSSLESS2);
+    swf_SetU16(self->tag, /*ID*/0);
+    swf_SetLosslessBits(self->tag, ti->width, ti->height, ti->rgba, BMF_32BIT);
+    return 1;
+}
+static void image_dealloc(tag_internals_t*self)
+{
+    image_internal_t*pi = (image_internal_t*)self->data;
+    if(pi->rgba) {
+	free(pi->rgba);pi->rgba = 0;
+    }
+}
+static PyObject* f_DefineImage(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"image"};
+    PyObject*image = 0;
+    PyObject*tag = tag_new(&image_tag);
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &image))
+	return NULL;
+    
+    tag = tag_new(&image_tag);
+    tag_internals_t* itag = tag_getinternals(tag);
+    image_internal_t*ti = (image_internal_t*)itag->data;
+
+    ti->rgba = image_toRGBA(image);
+    if(!ti->rgba) // pass through exception
+	return 0;
+    ti->width = image_getWidth(image);
+    ti->height = image_getHeight(image);
+    ti->isindexed = 0;
+    ti->islossless = 1;
+    ti->bpp = 32;
+    ti->size = ti->width*ti->height;
+
+    return (PyObject*)tag;
+}
+static tag_internals_t image_tag =
+{
+    parse: 0,
+    fillTAG: image_fillTAG,
+    dealloc: image_dealloc,
+    tagfunctions: 0,
+    datasize: sizeof(image_internal_t),
+};
+//----------------------------------------------------------------------------
+staticforward tag_internals_t shape_tag;
+
+typedef struct _shape_internal
+{
+    SHAPE2*shape;
+} shape_internal_t;
+staticforward tag_internals_t shape_tag;
+
+static int shape_fillTAG(tag_internals_t*self)
+{
+    shape_internal_t*ti = (shape_internal_t*)self->data;
+    self->tag= swf_InsertTag(0, ST_DEFINESHAPE3);
+    swf_SetU16(self->tag, /*ID*/0);
+    swf_SetShape2(self->tag, ti->shape);
+    return 1;
+}
+static void shape_dealloc(tag_internals_t*self)
+{
+    shape_internal_t*pi = (shape_internal_t*)self->data;
+    if(pi->shape) {
+	swf_Shape2Free(pi->shape);
+	pi->shape = 0;
+    }
+}
+static PyObject* f_DefineImageShape(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"image"};
+    PyObject*shape = 0;
+    PyObject*tag = tag_new(&shape_tag);
+    PyObject*image = 0;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", kwlist, &TagClass, &image))
+	return NULL;
+    
+    tag = tag_new(&shape_tag);
+    tag_internals_t* itag = tag_getinternals(tag);
+    shape_internal_t*ti = (shape_internal_t*)itag->data;
+    ti->shape = 0; /*HACK*/
+
+    int width = image_getWidth(image);
+    int height = image_getHeight(image);
+    int id = tagmap_add(itag->tagmap, image);
+    itag->tag= swf_InsertTag(0, ST_DEFINESHAPE3);
+    swf_SetU16(itag->tag, 0);
+    swf_ShapeSetBitmapRect(itag->tag, id, width, height);
+    return (PyObject*)tag;
+}
+static tag_internals_t shape_tag =
+{
+    parse: 0,
+    fillTAG: shape_fillTAG,
+    dealloc: shape_dealloc,
+    tagfunctions: 0,
+    datasize: sizeof(shape_internal_t),
+};
+//----------------------------------------------------------------------------
 
 typedef struct _videostream_internal
 {
@@ -474,6 +593,8 @@ static PyMethodDef TagMethods[] =
     {"Text", (PyCFunction)f_DefineText, METH_KEYWORDS, "Create a DefineText Tag."},
     {"PlaceObject", (PyCFunction)f_PlaceObject, METH_KEYWORDS, "Create a PlaceObject Tag."},
     {"VideoStream", (PyCFunction)f_DefineVideoStream, METH_KEYWORDS, "Create a Videostream."},
+    {"Image", (PyCFunction)f_DefineImage, METH_KEYWORDS, "Create an SWF Image Tag."},
+    {"ImageShape", (PyCFunction)f_DefineImageShape, METH_KEYWORDS, "Create an SWF Image Shape Tag."},
     {NULL, NULL, 0, NULL}
 };
 PyMethodDef* tags_getMethods()
@@ -486,6 +607,11 @@ PyMethodDef* tags_getMethods()
     register_tag(ST_DEFINEFONT,&font_tag);
     register_tag(ST_PROTECT,&protect_tag);
     register_tag(ST_DEFINETEXT,&text_tag);
+    register_tag(ST_DEFINEBITSJPEG,&image_tag);
+    register_tag(ST_DEFINEBITSJPEG2,&image_tag);
+    register_tag(ST_DEFINEBITSJPEG3,&image_tag);
+    register_tag(ST_DEFINEBITSLOSSLESS,&image_tag);
+    register_tag(ST_DEFINEBITSLOSSLESS2,&image_tag);
     register_tag(ST_END,&end_tag);
 
     return TagMethods;
