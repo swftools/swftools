@@ -2,8 +2,6 @@ General:
 
     * make more stuff dependent on the information in config.h
     * consistent output handling if -o is missing. (out.swf/stdout)
-    * either implement -X,-Y options for every program, or do some kind
-      of swfresize/swffix tool
 
 pdf2swf:
 
@@ -11,8 +9,6 @@ pdf2swf:
       o dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
       o (type 3 and truetype fonts)
-    * write DEFINE_FONTINFO-Tags to give results for swfstrings 
-      (suppress them as option)
     * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
 
