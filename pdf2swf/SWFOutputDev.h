@@ -27,6 +27,7 @@ extern "C" {
 
 void pdfswf_setparameter(char*name, char*value);
 void pdfswf_addfont(char*filename);
+void pdfswf_addfontdir(char*dir);
 void pdfswf_preparepage(int page);
 
 typedef struct _pdf_doc
