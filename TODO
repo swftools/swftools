@@ -2,6 +2,7 @@ General:
 
     * make more stuff dependent on the information in config.h
     * consistent output handling if -o is missing. (out.swf/stdout)
+    * do some pf{a,b}->swf converter for the standard fonts
 
 pdf2swf:
 
@@ -25,7 +26,7 @@ swfdump:
 
 rfxswf-lib:
    
-    * ExtractFont() can't handle DefineFont2, neither can swf_WriteFont().
+    * swf_WriteFont() should write definefont2 tags for more complex fonts.
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
     * s/GetDataSize/GetTagLen/g
