@@ -241,7 +241,7 @@ of a plain color:
     .end
 
     .filled filled_helloworld outline=helloworld fill=whitefade line=1 color=#2c2c2c
-    .put filled_helloworld
+    .put filled_helloworld scale=200%
 .end
 </code>
 
@@ -292,5 +292,122 @@ which is used here together with the alpha parameter of <c>.change</c>:
 
 </chapter>
 
+<chapter><title>ActionScript</title>
+
+<section>
+    <c>swfc</c> has Actionscript support.
+    For normal actionscript, which is executed once a given frame
+    is reached, just open an <c>.action</c> block, and write
+    the ActionScript into the block:
+  
+<code lang="swfc">
+.flash name="action.swf" bbox=300x300 fps=50
+
+.box mybox color=blue fill=green width=100 height=100
+.put mybox
+
+.frame 0
+    .action:
+	_root.angle += 0.3;
+	mybox._x = 100*Math.cos(_root.angle)+100;
+	mybox._y = 100*Math.sin(_root.angle)+100;
+    .end
+.frame 1
+    .action:
+	gotoFrame(0);
+	Play();
+    .end
+.frame 2
+.end
+</code>
+
+</section>
+
+
+</chapter>
+
+<chapter><title>Buttons</title>
+<p>
+Actionscript comes in handy when dealing with SWF Buttons.
+</p>
+<p>
+A button defines, in SWF context, an object sensitive to mouse movement,
+mouse buttons, and key presses.
+</p>
+<p>
+The following is a trivial example: Four objects which change their shape
+once the cursor is over it.
+<code lang="swfc">
+.flash name="button1.swf" fps=50
+
+.box box1 color=white fill=#336633 width=100 height=100 .box box2 color=white fill=#99cc99 width=150 height=150
+.button mybutton1
+    .show box1 as=shape x=50 y=50
+    .show box2 as=hover x=25 y=25
+.end
+
+.frame 0
+    .put b1=mybutton1
+    .put b2=mybutton1 x=200 red=+255
+    .put b3=mybutton1 y=200 green=+255
+    .put b4=mybutton1 x=200 y=200 blue=+255
+.end
+</code>
+</p>
+
+<p>
+The <c>.show</c> command (which can only be used inside <c>.button</c>) has a syntax
+very similar to <c>.put</c>. 
+For every shape a button uses, you can specify the position, color transform, scaling,
+rotation etc. just like with <c>.put</c>.
+</p>
+<p>
+The only <i>real</i> difference between those two commands is the <c>as</c> parameter:
+with that you tell the button when to display that specific shape.
+There are four allowed parameters to <c>as</c>:
+<ul>
+    <li><b>idle</b> The shape to display when the button is idle, that is, the
+                    mouse is somewhere else, and not over the button.
+    </li><li><b>hover</b> The shape to display if the mouse cursor is <i>inside</i> the button.
+                     What exactly is <i>"inside"</i> is defined by <b>area</b>:
+    </li><li><b>area</b> This shape is not displayed. It serves as bounding box (actually,
+                     bounding polygon) for the button. A button considers itself
+		     active (that is, the <c>hover</c> shape is active, not the <c>idle</c>
+		     shape) if the mouse is inside this area. Also, mouse button clicks
+		     have to be in this area for this button.
+    </li><li><b>pressed</b> The shape to display if the user clicks on the button. This shape
+                       is displayed as long as the mouse button is down.
+    </li>
+</ul>
+</p>
+
+<section><title>Another button example: tooltips</title>
+
+<code lang="swfc">
+.flash name="button2.swf" fps=50
+
+.sprite red_tooltip
+    .font arial Arial.swf
+    .text text font=arial text="A red shape" color=white
+    .box box fill=blue color=turquoise width=90 height=20
+    .put box
+    .put text x=10 y=15
+.end
+
+.box box1 fill=red width=50 height=50 
+.button mybutton1
+    .show box1 as=area x=0 y=0
+    .show red_tooltip as=hover x=25 y=25 alpha=50%
+.end
+
+.frame 0
+    .put mybutton1
+.end
+</code>
+    
+
+</section>
+
+</chapter>
 
 </guide>
