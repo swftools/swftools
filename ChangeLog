@@ -167,3 +167,8 @@
 	* pdf2swf/ttf2pt1: upgraded to ttf2pt1 3.4.3.
 	* lib/: changed logf to msg (support for gcc 3.2)
 	* src/jpeg2swf: Added support for H.263 compression (for correlated images).
+	* swfc: New tool, allow compilation of .sc files to swf
+	* swfbbox: New Tool, allows several bounding box operations on SWFs
+	* wav2swf: added support for samplerate 44100 (Marcus Doemling)
+	* avi2swf: added -r (--mp3-samplerate) parameter (Marcus Doemling)
+

@@ -2,6 +2,7 @@ swfc:
 
     * simple actionscript commands
     * rewrite in python
+    * python plugins?
     * .texture
     * .lock/.unlock
     * object rel coords, as in obj1.(x,y) and monkey.nose
@@ -12,10 +13,9 @@ swfc:
     * text:  newlines
     * .egon  (stub is there, never really implemented)... folding edges?
     * .editbox
+    * .buttons
     * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
-    * change .swf to .flash ?  
-	import swfs with .swf instead of .movie?
     * .hide/.show?
     * .orbit
     * store instance coordinates for .put with same name after .del?
@@ -47,6 +47,7 @@ swfcombine:
 	relocate depth in normalcombine()
     * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
     * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
+    * "swfcombine file.swf -x 200 -y 200 -s 200 box1=file1.swf" doesn't work?
     * support for centering (remove need to set -x,-y parameters manually when linking
       preloaders)
 
@@ -61,13 +62,17 @@ swfbbox:
 
 wav2swf:
 
-    * support for 44100khz
     * pad blocks for mp3 compression
 
 librfxswf:
 
     * Actionscript has memory leaks
     * Font routines still need a little more work (shape alignment)
+
+png2swf:
+
+    * Image mode 4
+    * Interlace mode 1
 
 Makefiles/configure/installation:
 
