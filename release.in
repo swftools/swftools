@@ -13,6 +13,7 @@ ${name}/src/swfdump.1 \
 ${name}/src/swfextract.1 \
 ${name}/src/jpeg2swf.1 \
 ${name}/src/png2swf.1 \
+${name}/src/gif2swf.1 \
 ${name}/src/wav2swf.1 \
 ${name}/src/swfc.1 \
 ${name}/avi2swf/avi2swf.1 \
@@ -27,6 +28,7 @@ ${name}/src/font2swf.1 \
 ${name}/src/swfextract.c \
 ${name}/src/jpeg2swf.c \
 ${name}/src/png2swf.c \
+${name}/src/gif2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/wav.c \
 ${name}/src/wav.h \
