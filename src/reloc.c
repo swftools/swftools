@@ -160,6 +160,7 @@ void map_ids_mem(u8*mem, int length)
 	    reader_init (newtag->data, newtag->length);
 	    id = readu16(); //id
 	    readRECT(); //bounding box
+	    resetbits();
 	    readMATRIX(); //matrix
 	    resetbits();
 	    glyphbits = readu8(); //glyphbits
@@ -242,6 +243,7 @@ void map_ids_mem(u8*mem, int length)
 		}
 		if(type == 0x10 || type == 0x12)
 		{
+		    resetbits();
 		    readMATRIX();
 		    resetbits();
 		    readGRADIENT(num);
