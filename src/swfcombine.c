@@ -103,12 +103,14 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "x"))
     {
-	config.movex = atoi(val);
+	float x = atof(val);
+	config.movex = (int)(x*20+0.5);
 	return 1;
     }
     else if (!strcmp(name, "y"))
     {
-	config.movey = atoi(val);
+	float y = atof(val);
+	config.movey = (int)(y*20+0.5);
 	return 1;
     }
     else if (!strcmp(name, "m"))
@@ -268,15 +270,15 @@ void args_callback_usage(char*name)
     printf("-a                  --cat       concatenate all slave files (no master movie)\n");
     printf("-l                  --overlay   Don't remove any master objects, only overlay new objects\n");
     printf("-c                  --clip      Clip the slave objects by the corresponding master objects\n");
-    printf("-v                  --verbose   Use more than one -v for greater effect \n");
-    printf("-d                  --dummy     Don't require slave objects \n");
+    printf("-v                  --verbose   Be verbose. Use more than one -v for greater effect \n");
+    printf("-d                  --dummy     Don't require slave objects (for changing movie attributes)\n");
     printf("-f                  --frame     The following identifier is a frame or framelabel, not an id or objectname\n");
-    printf("-x xpos             --movex     x Adjust position of slave by xpos twips (1/20 pixel)\n");
-    printf("-y ypos             --movey     y Adjust position of slave by ypos twips (1/20 pixel)\n");
-    printf("-s scale            --scale     Adjust size of slave by scale%\n");
+    printf("-x xpos             --movex     x Adjust position of slave by xpos pixels\n");
+    printf("-y ypos             --movey     y Adjust position of slave by ypos pixels\n");
+    printf("-s scale            --scale     Adjust size of slave by scale% (e.g. 100%% = original size)\n");
     printf("-r framerate        --rate      Set movie framerate (frames/sec)\n");
-    printf("-X width            --width     Force movie width to scale (default: use master width (not with -t))\n");
-    printf("-Y height           --height    Force movie height to scale (default: use master height (not with -t))\n");
+    printf("-X width            --width     Force movie bbox width to scale (default: use master width (not with -t))\n");
+    printf("-Y height           --height    Force movie bbox height to scale (default: use master height (not with -t))\n");
     printf("-z zlib             --zlib      Enable Flash 6 (MX) Zlib Compression\n");
 }
 
