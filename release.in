@@ -150,7 +150,6 @@ ${name}/configure \
 ${name}/config.guess \
 ${name}/config.sub \
 ${name}/config.h.in \
-${name}/stamp-h.in \
 ${name}/Makefile.in \
 ${name}/INSTALL \
 ${name}/COPYING \
