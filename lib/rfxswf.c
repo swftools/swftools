@@ -78,9 +78,11 @@ U32   swf_GetTagPos(TAG * t)   { return t->pos; }
 void swf_SetTagPos(TAG * t,U32 pos)
 { swf_ResetReadBits(t);
   if (pos<=t->len) t->pos = pos;
-  #ifdef DEBUG_RFXSWF
-  else fprintf(stderr,"SetTagPos() out of bounds: TagID = %i\n",t->id);
-  #endif
+  else { 
+#ifdef DEBUG_RFXSWF
+    fprintf(stderr,"SetTagPos(%d) out of bounds: TagID = %i\n",pos, t->id);
+#endif
+  }
 }
 
 char* swf_GetString(TAG*t)
@@ -288,7 +290,7 @@ int swf_SetRGBA(TAG * t,RGBA * col)
 void swf_GetRGBA(TAG * t, RGBA * col)
 {
     RGBA dummy;
-    if(!col);
+    if(!col)
 	col = &dummy;
     col->r = swf_GetU8(t);
     col->g = swf_GetU8(t);
@@ -433,6 +435,8 @@ void swf_ExpandRect2(SRECT*src, SRECT*add)
 {
     if((add->xmin | add->ymin | add->xmax | add->ymax)==0)
 	return;
+    if((src->xmin | src->ymin | src->xmax | src->ymax)==0)
+	*src = *add;
     if(add->xmin < src->xmin)
 	src->xmin = add->xmin;
     if(add->ymin < src->ymin)
