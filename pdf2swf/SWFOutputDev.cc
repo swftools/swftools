@@ -1916,6 +1916,8 @@ void pdfswf_setparameter(char*name, char*value)
 	zoom = atoi(value);
     } else if(!strcmp(name, "fontdir")) {
         pdfswf_addfontdir(value);
+    } else if(!strcmp(name, "languagedir")) {
+        pdfswf_addlanguagedir(value);
     } else {
 	swfoutput_setparameter(name, value);
     }
@@ -1930,6 +1932,38 @@ void pdfswf_addfont(char*filename)
     } else {
         msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
     }
+}
+
+static char* dirseparator()
+{
+#ifdef WIN32
+    return "\\";
+#else
+    return "/";
+#endif
+}
+
+void pdfswf_addlanguagedir(char*dir)
+{
+    if(!globalParams)
+        globalParams = new GlobalParams("");
+    
+    msg("<notice> Adding %s to language pack directories", dir);
+
+    int l;
+    FILE*fi = 0;
+    char* config_file = (char*)malloc(strlen(dir)+256);
+    strcpy(config_file, dir);
+    strcat(config_file, dirseparator());
+    strcat(config_file, "add-to-xpdfrc");
+
+    fi = fopen(config_file, "rb");
+    if(!fi) {
+        msg("<error> Could not open %s");
+        return;
+    }
+    globalParams->parseFile(new GString(config_file), fi);
+    fclose(fi);
 }
 
 void pdfswf_addfontdir(char*dirname)
@@ -1963,11 +1997,7 @@ void pdfswf_addfontdir(char*dirname)
 	{
 	    char*fontname = (char*)malloc(strlen(dirname)+strlen(name)+2);
 	    strcpy(fontname, dirname);
-#ifdef WIN32
-		strcat(fontname, "\\");
-#else
-		strcat(fontname, "/");
-#endif
+            strcat(fontname, dirseparator());
 	    strcat(fontname, name);
 	    msg("<verbose> Adding %s to fonts", fontname);
 	    pdfswf_addfont(fontname);
@@ -2006,7 +2036,8 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
     Object info;
 
     // read config file
-    globalParams = new GlobalParams("");
+    if(!globalParams)
+        globalParams = new GlobalParams("");
 
     // open PDF file
     if (userPassword && userPassword[0]) {
@@ -2083,7 +2114,7 @@ class MemCheck
 {
     public: ~MemCheck()
     {
-        delete globalParams;
+        delete globalParams;globalParams=0;
         Object::memCheck(stderr);
         gMemReport(stderr);
     }
