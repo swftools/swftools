@@ -56,7 +56,6 @@ struct options_t options[] =
  {"e","html"},
  {"p","placements"},
  {"u","used"},
- {"v","verbose"},
  {"V","version"},
  {"d","hex"},
  {0,0}
