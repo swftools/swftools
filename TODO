@@ -41,6 +41,7 @@ swfcombine:
     * support for centering (remove need to set -x,-y parameters manually when linking
       preloaders)
     * fix clipdepths
+    * rotating
 
 swfextract:
     
