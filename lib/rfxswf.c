@@ -916,7 +916,12 @@ TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
   if (t->len)
   { t->data = (U8*)rfx_alloc(t->len);
     t->memsize = t->len;
-    if (reader->read(reader, t->data, t->len) != t->len) return NULL;
+    if (reader->read(reader, t->data, t->len) != t->len) {
+      fprintf(stderr, "rfxswf: Warning: Short read (tagid %d). File truncated?\n", t->id);
+      free(t->data);t->data=0;
+      free(t);
+      return NULL;
+    }
   }
 
   if (prev)
