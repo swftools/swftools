@@ -10103,7 +10103,7 @@ done
 
 OLDCPPFLAGS="${CPPFLAGS}"
 OLDLIBS="${LIBS}"
-if test "x${FREETYPE_CONFIG}" != "x"; then
+if test "x${FREETYPE_CONFIG}" '!=' "x"; then
     CPPFLAGS="$CPPFLAGS "`freetype-config --cflags`
 else if test -d /usr/include/freetype2; then
     CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
@@ -10482,14 +10482,17 @@ fi
 done
 
 
-if test "x${HAVE_LIB_FREETYPE}" != "x";then
-if test "x${HAVE_FREETYPE_FREETYPE_H}" != "x";then
-    HAVE_FREETYPE=1
-fi
+if test "x${HAVE_LIB_FREETYPE}" '!=' "x";then
+    if test "x${HAVE_FREETYPE_FREETYPE_H}" '!=' "x";then
+	HAVE_FREETYPE=1
+    fi
+    if test "x${HAVE_FT2BUILD_H}" '!=' "x";then
+	HAVE_FREETYPE=1
+    fi
 fi
 
 if test "x${HAVE_FREETYPE}" = "x1"; then
-    if test "x{$FREETYPE_CONFIG}" != "x"; then
+    if test "x{$FREETYPE_CONFIG}" '!=' "x"; then
 	LIBS="$LIBS "`freetype-config --libs`
     else
 	LIBS="$LIBS -lfreetype"
@@ -10581,7 +10584,7 @@ echo "${ECHO_T}no" >&6
 fi
 
 # if the above didn't work out, reset all changes to the compiler variables.
-if test "x${HAVE_FREETYPE}" "!=" "x1"; then
+if test "x${HAVE_FREETYPE}" '!=' "x1"; then
     CPPFLAGS=$OLDCPPFLAGS
     LIBS=$OLDLIBS
 fi
