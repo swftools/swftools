@@ -1053,8 +1053,8 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	if(s->do_motion) {
 	    int hx,hy;
 	    int bestx=0,besty=0,bestbits=65536;
-	    int startx=-31,endx=32;
-	    int starty=-31,endy=32;
+	    int startx=-32,endx=31;
+	    int starty=-32,endy=31;
 
 	    if(!bx) startx=0;
 	    if(!by) starty=0;
@@ -1383,7 +1383,7 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
 		int predictmvdx, predictmvdy;
 		//int mvx=-1+(2*(s->frame&1));
 		//int mvy=-1+((s->frame&2));
-		int mvx=(lrand48()%4)-2;
+		int mvx=0;//(lrand48()%4)-2;
 		int mvy=3;
 
 		swf_SetBits(tag,0,1); // COD
