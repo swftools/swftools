@@ -21,6 +21,7 @@ General Improvements:
     * consistent output handling if -o is missing. (out.swf/stdout)
     * swfcombine: Allow substituting frames (which have a name), too?
     * swfcombine: Allow ids instead of names
+    * swfcombine: Relocate  SetTarget "/content"  stuff
     * make more stuff dependent on the information in config.h
 
 Cleanups in rfxswf-lib:
