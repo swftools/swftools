@@ -56,30 +56,25 @@ struct fontlist_t
     fontlist_t*next;
 };
 
-static struct _config
-{
-    int opennewwindow;
-    int ignoredraworder;
-    int drawonlyshapes; 
-    int jpegquality;
-    int storeallcharacters;
-    int enablezlib;
-    int insertstoptag;
-    int flashversion;
-    int splinemaxerror;
-    int fontsplinemaxerror;
-    int filloverlap;
-    int protect;
-    float minlinewidth;
-} config;
+int config_opennewwindow=0;
+int config_ignoredraworder=0;
+int config_drawonlyshapes=0;
+int config_jpegquality=85;
+int config_storeallcharacters=0;
+int config_enablezlib=0;
+int config_insertstoptag=0;
+int config_flashversion=5;
+int config_splinemaxerror=1;
+int config_fontsplinemaxerror=1;
+int config_filloverlap=0;
+int config_protect=0;
+float config_minlinewidth=0.05;
 
 typedef struct _swfoutput_internal
 {
-    
     fontlist_t* fontlist;
 
     char storefont;
-    int flag_protected;
     
     SWF swf;
     TAG *tag;
@@ -117,30 +112,13 @@ typedef struct _swfoutput_internal
     int firstpage;
 } swfoutput_internal;
 
-static int global_init;
-
 static swfoutput_internal* init_internal_struct()
 {
     swfoutput_internal*i = (swfoutput_internal*)malloc(sizeof(swfoutput_internal));
     memset(i, 0, sizeof(swfoutput_internal));
    
-    if(!global_init) {
-        config.opennewwindow=0;
-        config.ignoredraworder=0;
-        config.drawonlyshapes=0;
-        config.jpegquality=85;
-        config.storeallcharacters=0;
-        config.enablezlib=0;
-        config.insertstoptag=0;
-        config.flashversion=5;
-        config.splinemaxerror=1;
-        config.fontsplinemaxerror=1;
-        config.filloverlap=0;
-        config.minlinewidth=0.05;
-    }
 
     i->storefont = 0;
-    i->flag_protected = 0;
     i->currentswfid = 0;
     i->depth = 1;
     i->startdepth = 1;
@@ -301,10 +279,10 @@ static void spline(struct swfoutput*obj, TAG*tag,plotxy p0,plotxy p1,plotxy p2,p
 
     if(i->storefont) {
 	/* fonts use a different approximation than shapes */
-	num = cspline_approximate(&c, q, config.fontsplinemaxerror/20.0, APPROXIMATE_RECURSIVE_BINARY);
+	num = cspline_approximate(&c, q, config_fontsplinemaxerror/20.0, APPROXIMATE_RECURSIVE_BINARY);
 	//num = cspline_approximate(&c, q, 10.0, APPROXIMATE_INFLECTION);
     } else {
-	num = cspline_approximate(&c, q, config.splinemaxerror/20.0, APPROXIMATE_RECURSIVE_BINARY);
+	num = cspline_approximate(&c, q, config_splinemaxerror/20.0, APPROXIMATE_RECURSIVE_BINARY);
     }
     for(t=0;t<num;t++) {
 	if(!t) 
@@ -365,7 +343,7 @@ void drawpath(struct swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m, int
         if(outline->type == SWF_PATHTYPE_MOVE)
         {
 	    //if(!init && fill && obj->drawmode != DRAWMODE_EOFILL && !ignoredraworder) {
-	    if(config.filloverlap && !init && i->fill && obj->drawmode != DRAWMODE_EOFILL) {
+	    if(config_filloverlap && !init && i->fill && obj->drawmode != DRAWMODE_EOFILL) {
 		/* drawmode=FILL (not EOFILL) means that
 		   seperate shapes do not cancel each other out.
 		   On SWF side, we need to start a new shape for each
@@ -1193,12 +1171,13 @@ void swfoutput_drawpath(swfoutput*obj, SWF_OUTLINE*outline,
     /* Multiple polygons in one shape don't overlap correctly, 
        so we better start a new shape here if the polygon is filled
      */
-    if(i->shapeid>=0 && i->fill && !config.ignoredraworder) {
+    if(i->shapeid>=0 && i->fill && !config_ignoredraworder) {
 	endshape(obj,0);
     }
 
-    if(i->shapeid<0)
+    if(i->shapeid<0) {
         startshape(obj);
+    }
 
     if(!i->fill)
 	stopFill(obj);
@@ -1414,7 +1393,7 @@ static void endpage(struct swfoutput*obj)
     while(i->clippos)
         swfoutput_endclip(obj);
 
-    if(config.insertstoptag) {
+    if(config_insertstoptag) {
 	ActionTAG*atag=0;
 	atag = action_Stop(atag);
 	atag = action_End(atag);
@@ -1514,7 +1493,7 @@ void swfoutput_init(struct swfoutput* obj)
     memset(&i->swf,0x00,sizeof(SWF));
     memset(&i->lastpagesize,0x00,sizeof(SRECT));
 
-    i->swf.fileVersion    = config.flashversion;
+    i->swf.fileVersion    = config_flashversion;
     i->swf.frameRate      = 0x0040; // 1 frame per 4 seconds
     i->swf.movieSize.xmin = 0;
     i->swf.movieSize.ymin = 0;
@@ -1527,14 +1506,9 @@ void swfoutput_init(struct swfoutput* obj)
     swf_SetRGB(i->tag,&rgb);
 
     i->startdepth = i->depth = 0;
-}
-
-void swfoutput_setprotected(struct swfoutput*obj) //write PROTECT tag
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    if(!i->flag_protected)
+    
+    if(config_protect)
       i->tag = swf_InsertTag(i->tag, ST_PROTECT);
-    i->flag_protected = 1;
 }
 
 static void startshape(struct swfoutput*obj)
@@ -1620,6 +1594,7 @@ void cancelshape(swfoutput*obj)
     TAG*todel = i->tag;
     i->tag = i->tag->prev;
     swf_DeleteTag(todel);
+    if(i->shape) {swf_ShapeFree(i->shape);i->shape=0;}
     i->shapeid = -1;
     i->bboxrectpos = -1;
 }
@@ -1630,7 +1605,7 @@ void fixAreas(swfoutput*obj)
     if(!i->shapeisempty && i->fill &&
        (i->bboxrect.xmin == i->bboxrect.xmax ||
         i->bboxrect.ymin == i->bboxrect.ymax) &&
-        config.minlinewidth >= 0.001
+        config_minlinewidth >= 0.001
        ) {
 	msg("<debug> Shape has size 0: width=%.2f height=%.2f",
 		(i->bboxrect.xmax-i->bboxrect.xmin)/20.0,
@@ -1650,7 +1625,7 @@ void fixAreas(swfoutput*obj)
 	int  save_width = i->linewidth;
 
 	obj->strokergb = obj->fillrgb;
-	i->linewidth = (int)(config.minlinewidth*20);
+	i->linewidth = (int)(config_minlinewidth*20);
 	if(i->linewidth==0) i->linewidth = 1;
 	
 	startshape(obj);
@@ -1662,6 +1637,19 @@ void fixAreas(swfoutput*obj)
 	i->linewidth = save_width;
     }
     
+}
+
+static void endshape_noput(swfoutput*obj)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    if(i->shapeid<0) 
+        return;
+    //changeRect(obj, i->tag, i->bboxrectpos, &i->bboxrect);
+    i->shapeid = -1;
+    if(i->shape) {
+        swf_ShapeFree(i->shape);
+        i->shape=0;
+    }
 }
 
 static void endshape(swfoutput*obj, int clipdepth)
@@ -1692,6 +1680,8 @@ static void endshape(swfoutput*obj, int clipdepth)
     else
 	swf_ObjectPlace(i->tag,i->shapeid,/*depth*/i->depth++,NULL,NULL,NULL);
 
+    swf_ShapeFree(i->shape);
+    i->shape = 0;
     i->shapeid = -1;
     i->bboxrectpos = -1;
 }
@@ -1726,7 +1716,7 @@ void swfoutput_save(struct swfoutput* obj, char*filename)
  
     i->tag = swf_InsertTag(i->tag,ST_END);
 
-    if(config.enablezlib || config.flashversion>=6) {
+    if(config_enablezlib || config_flashversion>=6) {
       if FAILED(swf_WriteSWC(fi,&i->swf)) 
        msg("<error> WriteSWC() failed.\n");
     } else {
@@ -1753,7 +1743,9 @@ void swfoutput_destroy(struct swfoutput* obj)
         iterator = iterator->next;
         delete tmp;
     }
-    free(i);
+    swf_FreeTags(&i->swf);
+
+    free(i);i=0;
     memset(obj, 0, sizeof(swfoutput));
 }
 
@@ -1843,7 +1835,8 @@ void swfoutput_startclip(swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m)
     i->clipshapes[i->clippos] = i->shapeid;
     i->clipdepths[i->clippos] = i->depth++;
     i->clippos++;
-    i->shapeid = -1;
+    
+    endshape_noput(obj);
 }
 
 void swfoutput_endclip(swfoutput*obj)
@@ -1883,7 +1876,7 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     if(i->textid>=0)
 	endtext(obj);
     
-    if(config.opennewwindow)
+    if(config_opennewwindow)
       actions = action_GetUrl(0, url, "_parent");
     else
       actions = action_GetUrl(0, url, "_this");
@@ -2146,20 +2139,21 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     /* shape */
     myshapeid = ++i->currentswfid;
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
-    swf_ShapeNew(&i->shape);
+    SHAPE*shape;
+    swf_ShapeNew(&shape);
     //lsid = ShapeAddLineStyle(shape,linewidth,&obj->strokergb);
     //fsid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
-    fsid = swf_ShapeAddBitmapFillStyle(i->shape,&m,bitid,1);
+    fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
     swf_SetU16(i->tag, myshapeid);
     r.xmin = (int)(xmin*20);
     r.ymin = (int)(ymin*20);
     r.xmax = (int)(xmax*20);
     r.ymax = (int)(ymax*20);
     swf_SetRect(i->tag,&r);
-    swf_SetShapeStyles(i->tag,i->shape);
-    swf_ShapeCountBits(i->shape,NULL,NULL);
-    swf_SetShapeBits(i->tag,i->shape);
-    swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,lsid,fsid,0);
+    swf_SetShapeStyles(i->tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(i->tag,shape);
+    swf_ShapeSetAll(i->tag,shape,/*x*/0,/*y*/0,lsid,fsid,0);
     i->swflastx = i->swflasty = 0;
     moveto(obj, i->tag, p1);
     lineto(obj, i->tag, p2);
@@ -2173,6 +2167,7 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     ShapeSetLine (tag, shape, 0,-y*20);
     ShapeSetLine (tag, shape, -x*20,0);*/
     swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(shape);
 
     /* instance */
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
@@ -2196,7 +2191,7 @@ int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,i
     oldtag = i->tag;
     i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG2);
     swf_SetU16(i->tag, bitid);
-    if(swf_SetJPEGBits(i->tag, filename, config.jpegquality)<0) {
+    if(swf_SetJPEGBits(i->tag, filename, config_jpegquality)<0) {
 	swf_DeleteTag(i->tag);
 	i->tag = oldtag;
 	return -1;
@@ -2225,7 +2220,7 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey,
     oldtag = i->tag;
     i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG2);
     swf_SetU16(i->tag, bitid);
-    swf_SetJPEGBits2(i->tag,sizex,sizey,mem,config.jpegquality);
+    swf_SetJPEGBits2(i->tag,sizex,sizey,mem,config_jpegquality);
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
 }
@@ -2322,42 +2317,42 @@ void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey,
 void swfoutput_setparameter(char*name, char*value)
 {
     if(!strcmp(name, "drawonlyshapes")) {
-	config.drawonlyshapes = atoi(value);
+	config_drawonlyshapes = atoi(value);
     } else if(!strcmp(name, "ignoredraworder")) {
-	config.ignoredraworder = atoi(value);
+	config_ignoredraworder = atoi(value);
     } else if(!strcmp(name, "filloverlap")) {
-	config.filloverlap = atoi(value);
+	config_filloverlap = atoi(value);
     } else if(!strcmp(name, "linksopennewwindow")) {
-	config.opennewwindow = atoi(value);
+	config_opennewwindow = atoi(value);
     } else if(!strcmp(name, "opennewwindow")) {
-	config.opennewwindow = atoi(value);
+	config_opennewwindow = atoi(value);
     } else if(!strcmp(name, "storeallcharacters")) {
-	config.storeallcharacters = atoi(value);
+	config_storeallcharacters = atoi(value);
     } else if(!strcmp(name, "enablezlib")) {
-	config.enablezlib = atoi(value);
+	config_enablezlib = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
-	config.insertstoptag = atoi(value);
+	config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protected")) {
-	config.protect = atoi(value);
+	config_protect = atoi(value);
     } else if(!strcmp(name, "flashversion")) {
-	config.flashversion = atoi(value);
+	config_flashversion = atoi(value);
     } else if(!strcmp(name, "minlinewidth")) {
-	config.minlinewidth = atof(value);
+	config_minlinewidth = atof(value);
     } else if(!strcmp(name, "jpegquality")) {
 	int val = atoi(value);
 	if(val<0) val=0;
 	if(val>100) val=100;
-	config.jpegquality = val;
+	config_jpegquality = val;
     } else if(!strcmp(name, "splinequality")) {
 	int v = atoi(value);
 	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
 	if(v<1) v = 1;
-	config.splinemaxerror = v;
+	config_splinemaxerror = v;
     } else if(!strcmp(name, "fontquality")) {
 	int v = atoi(value);
 	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
 	if(v<1) v = 1;
-	config.fontsplinemaxerror = v;
+	config_fontsplinemaxerror = v;
     } else {
 	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
     }
