@@ -21,14 +21,17 @@ swfcombine:
     * Allow substituting frames (which have a name), too?
     * Allow ids instead of names
     * Relocate  SetTarget "/content"  stuff
+    * --merge mode? (Doesn't store everything in movieclips)
 
 swfdump:
 
     * Support for actionscript in buttons. Make the output shorter.
 
 rfxswf-lib:
-    
+   
+    * ExtractFont() can't handle DefineFont2, neither can swf_WriteFont().
     * modules/swfshape doesn't allow changing to fillstyle 0
+    * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
     * s/GetDataSize/GetTagLen/g
       s/GetDataSizePtr/GetTagLenPtr/g
       (s/GetFrameNo/GetTagFrameNo/g ?)
