@@ -38,6 +38,7 @@ extern "C" {
 
 /* little/big endian stuff */
 
+#define PUT8(ptr,x) {((U8*)(ptr))[0]=x;}
 #define PUT16(ptr,x) {((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)((x)>>8);}
 #define PUT32(ptr,x) {((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)((x)>>8);((U8*)(ptr))[2]=(U8)((x)>>16);((U8*)(ptr))[3]=(U8)((x)>>24);}
 #define GET16(ptr) (((U16)(((U8*)(ptr))[0]))+(((U16)(((U8*)(ptr))[1]))<<8))
@@ -653,7 +654,7 @@ int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 
 // swfsound.c
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
-void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first); /* expects 2304 samples */
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first); /* expects 2304 samples */
 
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num);
 

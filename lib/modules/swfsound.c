@@ -127,7 +127,7 @@ void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
     swf_SetU16(tag,avgnumsamples);
 }
 
-void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first)
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
 {
     char*buf;
     int oldlen=0,len = 0;
@@ -142,7 +142,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first)
 	int fs = lame_get_framesize(lame_flags);
 	//printf("framesize:%d\n", fs);
 	swf_SetU16(tag, fs); // samples per mp3 frame
-	swf_SetU16(tag, 0); // seek
+	swf_SetU16(tag, seek); // seek
     }
 
     len += lame_encode_buffer(lame_flags, samples, samples, numsamples, &buf[len], bufsize-len);
