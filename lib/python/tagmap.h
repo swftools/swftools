@@ -1,6 +1,6 @@
-/* tag.h
+/* action.h
 
-   Python wrapper for librfxswf- tag handlers
+   Python wrapper for librfxswf- actionscript stuff (header)
 
    Part of the swftools package.
 
@@ -20,19 +20,19 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#ifndef __tag_h__
-#define __tag_h__
+#ifndef __tagmap_h__
+#define __tagmap_h__
 
 #include "../rfxswf.h"
 #undef HAVE_STAT
 #include <Python.h>
 
-extern PyTypeObject TagClass;
+extern PyTypeObject TagMapClass;
+int tagmap_obj2id(PyObject* self, PyObject* obj);
+PyObject* tagmap_id2obj(PyObject* self, int _id);
+int tagmap_add(PyObject* self, PyObject* obj);
+PyObject* tagmap_getObjectList(PyObject* self);
 
-PyObject* tag_new();
-PyObject* tag_new2(TAG*tag);
-TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap);
-PyObject* tag_getDependencies(PyObject*self);
+PyObject* tagmap_new();
 
-PyMethodDef* tag_getMethods();
 #endif

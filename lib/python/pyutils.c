@@ -75,3 +75,8 @@ PyMethodDef* addMethods(PyMethodDef*obj1, PyMethodDef*obj2)
     //free(obj1)?
     return result;
 }
+void setVerbosity(int _verbose)
+{
+    verbose = _verbose;
+    mylog("setting verbosity to %d", verbose);
+}

@@ -63,6 +63,9 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
     PyObject * obbox = 0;
     SRECT bbox = {0,0,0,0};
     char* filename = 0;
+    
+    swf = PyObject_New(SWFObject, &SWFClass);
+    mylog("+%08x(%d) create\n", (int)swf, swf->ob_refcnt);
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|idOs", 
 		kwlist, &version, &framerate, 
@@ -72,7 +75,6 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
     if (!PyArg_Parse(obbox, "(iiii)", &bbox.xmin, &bbox.ymin, &bbox.xmax, &bbox.ymax))
 	return NULL;
 
-    swf = PyObject_New(SWFObject, &SWFClass);
     memset(&swf->swf, 0, sizeof(SWF));
     if(filename)
 	swf->filename = strdup(filename);
@@ -87,7 +89,7 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
     if(swf->swf.fileVersion>=6)
 	swf->swf.compressed = 1;
 
-    mylog("create %08x -> %08x\n", (int)self, (int)swf);
+    mylog(" %08x(%d) create: done\n", (int)swf, swf->ob_refcnt);
     return (PyObject*)swf;
 }
 //----------------------------------------------------------------------------
@@ -123,7 +125,7 @@ static PyObject* f_load(PyObject* self, PyObject* args)
 
     swf->taglist = taglist_new2(swf->swf.firstTag);
     
-    mylog("load %08x -> %08x\n", (int)self, (int)swf);
+    mylog("+%08x(%d) load\n", (int)self, self->ob_refcnt);
     return (PyObject*)swf;
 }
 //----------------------------------------------------------------------------
@@ -213,11 +215,11 @@ static PyMethodDef swf_functions[] =
 //----------------------------------------------------------------------------
 static void swf_dealloc(PyObject* self)
 {
+    mylog("-%08x(%d) swf_dealloc\n", (int)self, self->ob_refcnt);
     SWFObject*swfo;
     SWF*swf;
     swfo = (SWFObject*)self;
     swf = &swfo->swf;
-    mylog("swf_dealloc %08x(%d)\n", (int)self, self->ob_refcnt);
     if(swfo->filename) {
 	free(swfo->filename);
 	swfo->filename = 0;
@@ -229,10 +231,10 @@ static void swf_dealloc(PyObject* self)
 //----------------------------------------------------------------------------
 static int swf_print(PyObject * self, FILE *fi, int flags) //flags&Py_PRINT_RAW
 {
+    mylog(" %08x(%d) print \n", (int)self, self->ob_refcnt);
     SWFObject*swf = (SWFObject*)self;
     swf_DumpHeader(fi, &swf->swf);
     //void swf_DumpSWF(FILE * f,SWF*swf);
-    mylog("print %08x(%d)\n", (int)self, self->ob_refcnt);
     return 0;
 }
 //----------------------------------------------------------------------------
@@ -243,15 +245,15 @@ static PyObject* swf_getattr(PyObject * self, char* a)
 
     if(!strcmp(a, "fps")) {
 	double fps = swf->swf.frameRate/256.0;
-	mylog("swf_getattr %08x(%d) %s = %f\n", (int)self, self->ob_refcnt, a, fps);
+	mylog(" %08x(%d) swf_getattr %s = %f\n", (int)self, self->ob_refcnt, a, fps);
 	return Py_BuildValue("d", fps);
     } else if(!strcmp(a, "version")) {
 	int version = swf->swf.fileVersion;;
-	mylog("swf_getattr %08x(%d) %s = %d\n", (int)self, self->ob_refcnt, a, version);
+	mylog(" %08x(%d) swf_getattr %s = %d\n", (int)self, self->ob_refcnt, a, version);
 	return Py_BuildValue("i", version);
     } else if(!strcmp(a, "name")) {
 	char*filename = swf->filename;
-	mylog("swf_getattr %08x(%d) %s = %s\n", (int)self, self->ob_refcnt, a, filename);
+	mylog(" %08x(%d) swf_getattr %s = %s\n", (int)self, self->ob_refcnt, a, filename);
 	return Py_BuildValue("s", filename);
     } else if(!strcmp(a, "bbox")) {
 	int xmin,ymin,xmax,ymax;
@@ -259,17 +261,17 @@ static PyObject* swf_getattr(PyObject * self, char* a)
 	ymin = swf->swf.movieSize.ymin;
 	xmax = swf->swf.movieSize.xmax;
 	ymax = swf->swf.movieSize.ymax;
-	mylog("swf_getattr %08x(%d) %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, xmin,ymin,xmax,ymax);
+	mylog(" %08x(%d) swf_getattr %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, xmin,ymin,xmax,ymax);
 	return Py_BuildValue("(iiii)", xmin, ymin, xmax, ymax); 
     } else if(!strcmp(a, "tags")) {
 	PyObject*ret =  (PyObject*)(swf->taglist);
 	Py_INCREF(ret);
-	mylog("swf_getattr %08x(%d) %s = %08x(%d)\n", (int)self, self->ob_refcnt, a, ret, ret->ob_refcnt);
+	mylog(" %08x(%d) swf_getattr %s = %08x(%d)\n", (int)self, self->ob_refcnt, a, ret, ret->ob_refcnt);
 	return ret;
     }
 
     ret = Py_FindMethod(swf_functions, self, a);
-    mylog("swf_getattr %08x(%d) %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
+    mylog(" %08x(%d) swf_getattr %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
     return ret;
 }
 //----------------------------------------------------------------------------
@@ -281,14 +283,14 @@ static int swf_setattr(PyObject * self, char* a, PyObject * o)
 	if (!PyArg_Parse(o, "d", &fps)) 
 	    goto err;
 	swf->swf.frameRate = (int)(fps*0x100);
-	mylog("swf_setattr %08x(%d) %s = %f\n", (int)self, self->ob_refcnt, a, fps);
+	mylog(" %08x(%d) swf_setattr %s = %f\n", (int)self, self->ob_refcnt, a, fps);
 	return 0;
     } else if(!strcmp(a, "version")) {
 	int version;
 	if (!PyArg_Parse(o, "i", &version)) 
 	    goto err;
 	swf->swf.fileVersion = version;
-	mylog("swf_setattr %08x(%d) %s = %d\n", (int)self, self->ob_refcnt, a, version);
+	mylog(" %08x(%d) swf_setattr %s = %d\n", (int)self, self->ob_refcnt, a, version);
 	return 0;
     } else if(!strcmp(a, "name")) {
 	char*filename;
@@ -298,7 +300,7 @@ static int swf_setattr(PyObject * self, char* a, PyObject * o)
 	    free(swf->filename);swf->filename=0;
 	}
 	swf->filename = strdup(filename);
-	mylog("swf_setattr %08x(%d) %s = %s\n", (int)self, self->ob_refcnt, a, filename);
+	mylog(" %08x(%d) swf_setattr %s = %s\n", (int)self, self->ob_refcnt, a, filename);
 	return 0;
     } else if(!strcmp(a, "bbox")) {
 	int xmin=0,ymin=0,xmax=0,ymax=0;
@@ -309,7 +311,7 @@ static int swf_setattr(PyObject * self, char* a, PyObject * o)
 	swf->swf.movieSize.ymin = ymin;
 	swf->swf.movieSize.xmax = xmax;
 	swf->swf.movieSize.ymax = ymax;
-	mylog("swf_setattr %08x(%d) %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, xmin,ymin,xmax,ymax);
+	mylog(" %08x(%d) swf_setattr %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, xmin,ymin,xmax,ymax);
 	return 0;
     } else if(!strcmp(a, "tags")) {
 	PyObject* taglist;
@@ -320,11 +322,11 @@ static int swf_setattr(PyObject * self, char* a, PyObject * o)
 	Py_DECREF(swf->taglist);
 	swf->taglist = taglist;
 	Py_INCREF(swf->taglist);
-	mylog("swf_setattr %08x(%d) %s = %08x\n", (int)self, self->ob_refcnt, a, swf->taglist);
+	mylog(" %08x(%d) swf_setattr %s = %08x\n", (int)self, self->ob_refcnt, a, swf->taglist);
 	return 0;
     }
 err:
-    mylog("swf_setattr %08x(%d) %s = ? (%08x)\n", (int)self, self->ob_refcnt, a, o);
+    mylog(" %08x(%d) swf_setattr %s = ? (%08x)\n", (int)self, self->ob_refcnt, a, o);
     return 1;
 }
 
@@ -364,28 +366,31 @@ PyMethodDef* swf_getMethods()
 #include "tag.h"
 #include "taglist.h"
 
-static PyObject* module_verbose(PyObject* self, PyObject* args)
+static PyObject* module_verbose(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    if (!PyArg_ParseTuple(args,"i", &verbose)) 
+    int _verbose = 0;
+    static char *kwlist[] = {"verbosity", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &verbose))
 	return NULL;
+    setVerbosity(_verbose);
+
     return Py_BuildValue("s", 0);
 }
 
 static PyMethodDef LoggingMethods[] = 
 {
     /* Module functions */
-    {"verbose", module_verbose, METH_VARARGS, "Set the module verbosity"},
+    {"verbose", (PyCFunction)module_verbose, METH_KEYWORDS, "Set the module verbosity"},
     {0,0,0,0}
 };
     
 void initSWF(void)
 {
+    PyObject*module;
     PyMethodDef* primitive_methods = primitive_getMethods();
     PyMethodDef* tag_methods = tag_getMethods();
     PyMethodDef* action_methods = action_getMethods();
     PyMethodDef* swf_methods = swf_getMethods();
-
-    initLog("test.log",8,0,0,0,0);
 
     PyMethodDef* all_methods = 0;
     all_methods = addMethods(all_methods, primitive_methods);
@@ -395,5 +400,5 @@ void initSWF(void)
 
     all_methods = addMethods(all_methods, LoggingMethods);
 
-    (void)Py_InitModule("SWF", all_methods);
+    module = Py_InitModule("SWF", all_methods);
 }

@@ -189,27 +189,39 @@ typedef struct {
     MATRIX matrix;
 } MatrixObject;
 
-PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* f_Matrix(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
-    return NULL;
+    PyObject*self = (PyObject*)PyObject_New(MatrixObject, &MatrixClass);
+    MatrixObject*matrix = (MatrixObject*)self;
+    mylog("+%08x(%d) f_Matrix", self, self->ob_refcnt);
+    static char *kwlist[] = {"x", "y", "scale", "rotate", NULL};
+    float x=0,y=0,scale=1.0,rotate=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ffff", kwlist, &x,&y,&scale,&rotate))
+	return NULL;
+    mylog(" %08x(%d) f_Matrix: x=%f y=%f scale=%f rotate=%f", self, self->ob_refcnt, x,y,scale,rotate);
+    swf_GetMatrix(0, &matrix->matrix);
+    matrix->matrix.tx = (int)(x*20);
+    matrix->matrix.ty = (int)(y*20);
+    matrix->matrix.sx = (int)(scale*65536);
+    matrix->matrix.sy = (int)(scale*65536);
+    /* TODO: rotate */
+    return self;
 }
 static PyObject* matrix_getattr(PyObject * self, char* a)
 {
+    PY_ASSERT_TYPE(self,&MatrixClass);
     return NULL;
 }
 static int matrix_setattr(PyObject * self, char* a, PyObject* o)
 {
+    PY_ASSERT_TYPE(self,&MatrixClass);
     return 0;
 }
 MATRIX matrix_getMatrix(PyObject*self)
 {
-    MatrixObject*matrix= 0;
-    if (!PyArg_Parse(self, "O!", &MatrixClass, &matrix)) {
-	MATRIX dummy;
-	memset(&dummy, 0, sizeof(dummy));
-	mylog("Error: wrong type for function color_getRGBA");
-	return dummy;
-    }
+    mylog(" %08x(%d) matrix_getMatrix", self, self->ob_refcnt);
+    PY_ASSERT_TYPE(self,&MatrixClass);
+    MatrixObject*matrix = (MatrixObject*)self;
     return matrix->matrix;
 }
 PyTypeObject MatrixClass = 
