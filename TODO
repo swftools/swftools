@@ -7,8 +7,8 @@ swfc:
 	.crossfade command????
     * .sound file.wav ?  
 	syntax for single sound hits, looping, synch sound stream.
-    * .include
     * text:  newlines
+    * .egon  (stub is there, never really implemented)... folding edges?
     * dump format for ingestion into swifty?
     * .editbox
     * .importassets, .import
@@ -20,6 +20,8 @@ swfc:
     * .orbit
     * store instance coordinates for .put with same name after .del?
     * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
+
+    + .include		[DONE Feb 22 2003]
 
 pdf2swf:
 
