@@ -143,7 +143,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
     int len = 0;
     int bufsize = 16384;
     int numsamples = 576*(swf_mp3_in_samplerate/swf_mp3_out_samplerate);
-    int fs;
+    int fs = 0;
 
     buf = malloc(bufsize);
     if(!buf)
