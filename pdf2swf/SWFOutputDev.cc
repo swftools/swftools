@@ -157,6 +157,9 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar();
   
+  // Can this device draw gradients?
+  virtual GBool useGradients();
+  
   virtual GBool interpretType3Chars() {return gTrue;}
 
   //----- initialization and control
@@ -238,6 +241,7 @@ public:
   int pbminfo; // did we write "File contains jpegs" yet?
   int linkinfo; // did we write "File contains links" yet?
   int ttfinfo; // did we write "File contains TrueType Fonts" yet?
+  int gradientinfo; // did we write "File contains Gradients yet?
 
   int type3active; // are we between beginType3()/endType3()?
 
@@ -646,6 +650,15 @@ GBool SWFOutputDev::upsideDown()
 };
 GBool SWFOutputDev::useDrawChar() 
 {
+    return gTrue;
+}
+GBool SWFOutputDev::useGradients()
+{
+    if(!gradientinfo)
+    {
+	msg("<notice> File contains gradients");
+	gradientinfo = 1;
+    }
     return gTrue;
 }
 
