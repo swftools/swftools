@@ -7,6 +7,9 @@
 
    This file is distributed under the GPL, see file COPYING for details */
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include "../lib/rfxswf.h"
@@ -56,6 +59,7 @@ int main (int argc,char ** argv)
 { 
     SWF swf;
     TAG*tag;
+    struct stat statbuf;
     int f;
     char prefix[128];
     prefix[0] = 0;
@@ -64,6 +68,7 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     f = open(filename,O_RDONLY);
+    fstat(f, &statbuf);
 
     if (f<0)
     { 
@@ -78,10 +83,20 @@ int main (int argc,char ** argv)
     }
     close(f);
 
+    printf("[HEADER]        File version: %d\n", swf.FileVersion);
+    printf("[HEADER]        File size: %d\n", swf.FileSize);
+    if(statbuf.st_size != swf.FileSize)
+	fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
+		statbuf.st_size, swf.FileSize);
+    printf("[HEADER]        Frame rate: %f\n",swf.FrameRate/256.0);
+    printf("[HEADER]        Frame count: %d\n",swf.FrameCount);
+    printf("[HEADER]        Movie width: %.3f\n",(swf.MovieSize.xmax-swf.MovieSize.xmin)/20.0);
+    printf("[HEADER]        Movie height: %.3f\n",(swf.MovieSize.ymax-swf.MovieSize.ymin)/20.0);
+
     tag = swf.FirstTag;
 
     while(tag) {
-	printf("[%02x] %9d %s%s", tag->id, tag->len, prefix, getTagName(tag));
+	printf("[%03x] %9d %s%s", tag->id, tag->len, prefix, getTagName(tag));
 	if(isDefiningTag(tag)) {
 	    U16 id = GetDefineID(tag);
 	    printf(" defines id %04x", id);
