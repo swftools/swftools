@@ -2237,7 +2237,7 @@ int swf_output_save(swf_output_t*swf, char*filename)
     return ret;
 }
 
-void* swf_output_get(swf_output_t*swf, char*filename)
+void* swf_output_get(swf_output_t*swf)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     void* ret = i->outputDev->getSWF();
