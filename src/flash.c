@@ -325,6 +325,7 @@ void placeobject_write (struct PlaceObject*obj, struct writer_t*w)
     u16 taghead = 0x3f | TAGID_PLACEOBJECT<<6;
     u8*pos;
     u8*lenpos;
+    U32 len;
     writer_resetbits(w);
     writer_write(w, &taghead, 2);
     lenpos = writer_getpos(w);
@@ -343,8 +344,12 @@ void placeobject_write (struct PlaceObject*obj, struct writer_t*w)
 	CXFORM_write(&obj->cxform, w);
     }
     writer_resetbits(w);
-    
-    *(u32*)lenpos = SWAP32((u8*)writer_getpos(w) - pos);
+   
+    len = (u8*)writer_getpos(w) - pos;
+    lenpos[0] = len;
+    lenpos[1] = len>>8;
+    lenpos[2] = len>>16;
+    lenpos[3] = len>>24;
 }
 
 void placeobject2_init (struct PlaceObject2*obj,struct swf_tag*tag)
@@ -392,6 +397,7 @@ void placeobject2_write (struct PlaceObject2*obj, struct writer_t*w)
     u16 taghead = SWAP16(0x3f | TAGID_PLACEOBJECT2<<6);
     u8*pos;
     u8*lenpos;
+    U32 len;
     writer_resetbits(w);
     writer_write(w, &taghead, 2);
     lenpos = writer_getpos(w);
@@ -416,7 +422,12 @@ void placeobject2_write (struct PlaceObject2*obj, struct writer_t*w)
     if(obj->hasclipactions)
 	writer_writeu16(w, obj->clipactions);
     writer_resetbits(w);
-    *(u32*)lenpos = SWAP32((u8*)writer_getpos(w) - pos);
+    
+    len = (u8*)writer_getpos(w) - pos;
+    lenpos[0] = len;
+    lenpos[1] = len>>8;
+    lenpos[2] = len>>16;
+    lenpos[3] = len>>24;
 }
 
 void read_swf(struct swffile*swf, uchar*data, int length)
@@ -514,19 +525,20 @@ int getidfromtag(struct swf_tag* tag)
 	}
 	break;
 	case TAGID_REMOVEOBJECT:
-	   return SWAP16(*(u16*)tag->data);
+	   return tag->data[0]+tag->data[1]*256;
 	break;
 	case TAGID_REMOVEOBJECT2:
 	   return -1;
 	break;
     }
 
-    return SWAP16(*(u16*)tag->data);
+    return tag->data[0]+tag->data[1]*256;
 }
 
 void setidintag(struct swf_tag* tag, int id)
 {
-    *(u16*)tag->data = SWAP16(id);
+    tag->data[0] = id;
+    tag->data[1] = id>>8;
 }
 
 char is_sprite_tag (int id)
