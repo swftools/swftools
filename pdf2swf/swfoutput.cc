@@ -701,6 +701,12 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
 		FIXNULL(character),charnr, u, FIXNULL((char*)swffont->name), swffont->numchars);
 	return 0;
     }
+    /*if(swffont->glyph[charid].shape->bitlen <= 16) {
+	msg("<warning> Character '%s' (c=%d,u=%d), glyph %d in current charset (%s, %d characters) is empty", 
+		FIXNULL(character),charnr, u, charid, FIXNULL((char*)swffont->name), swffont->numchars);
+	return 0;
+    }*/
+
 
     if(i->shapeid>=0)
 	endshape(obj);
@@ -2127,6 +2133,17 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 	    targetwidth, targetheight,
 	    /*newsizex, newsizey,*/
 	    num_colors>256?">":"", num_colors>256?256:num_colors);
+
+    /*RGBA* pal = (RGBA*)rfx_alloc(sizeof(RGBA)*num_colors);
+    swf_ImageGetNumberOfPaletteEntries(mem,sizex,sizey,pal);
+    int t;
+    for(t=0;t<num_colors;t++) {
+	printf("%02x%02x%02x%02x ",
+		pal[t].r, pal[t].g, pal[t].b, pal[t].a);
+	if((t&7)==7)
+	    printf("\n");
+    }
+    printf("\n");*/
 
     i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, config_jpegquality);
 
