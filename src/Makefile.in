@@ -174,7 +174,7 @@ swfstrings$(EXEEXT): $(swfstrings_OBJECTS) $(swfstrings_DEPENDENCIES)
 	@rm -f swfstrings$(EXEEXT)
 	$(swfstrings_LINK) $(swfstrings_LDFLAGS) $(swfstrings_OBJECTS) $(swfstrings_LDADD) $(LIBS)
 
-swfdump$(EXEEXT): $(swfdump_OBJECTS) $(swfdump_DEPENDENCIES)
+swfdump$(EXEEXT): $(swfdump_OBJECTS) $(swfdump_DEPENDENCIES) ../lib/rfxswf.o
 	@rm -f swfdump$(EXEEXT)
 	$(swfdump_LINK) $(swfdump_LDFLAGS) $(swfdump_OBJECTS) $(swfdump_LDADD) $(LIBS)
 
