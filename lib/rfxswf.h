@@ -134,8 +134,6 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   U32         len;            // for Set-Access
   U32         pos;            // for Get-Access
 
-  int           frame;          // not really up-to-date
-
   struct _TAG * next;
   struct _TAG * prev;
 
@@ -216,7 +214,6 @@ U32   swf_GetTagPos(TAG * t);
 TAG * swf_NextTag(TAG * t);
 TAG * swf_PrevTag(TAG * t);
 
-int   swf_GetFrameNo(TAG * t);              // should be renamed to TagGetFrame
 U16   swf_GetTagID(TAG * t);                // ... TagGetID
 U32   swf_GetTagLen(TAG * t);             // ... TagGetTagLen
 U8*   swf_GetTagLenPtr(TAG * t);
@@ -567,6 +564,7 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
 void swf_DumpHeader(FILE * f,SWF * swf);
 void swf_DumpMatrix(FILE * f,MATRIX * m);
 void swf_DumpTag(FILE * f,TAG * t); 
+void swf_DumpSWF(FILE * f,SWF*swf);
 char* swf_TagGetName(TAG*tag);
 void swf_DumpFont(SWFFONT * font);
 

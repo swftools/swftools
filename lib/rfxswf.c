@@ -52,7 +52,6 @@
 
 TAG * swf_NextTag(TAG * t) { return t->next; }
 TAG * swf_PrevTag(TAG * t) { return t->prev; }
-int   swf_GetFrameNo(TAG * t)  { return t->frame; }
 U16   swf_GetTagID(TAG * t)    { return t->id; }
 U32   swf_GetTagLen(TAG * t) { return t->len; }
 U8*   swf_GetTagLenPtr(TAG * t) { return &(t->data[t->len]); }
@@ -631,18 +630,7 @@ int swf_SetPoint(TAG * t,SPOINT * p) { return 0; }
 
 // Tag List Manipulating Functions
 
-int swf_UpdateFrame(TAG * t,S8 delta)
-// returns number of frames
-{ int res = -1;
-  while (t)
-  { t->frame+=delta;
-    res = t->frame;
-    t = t->next;
-  }
-  return res;
-}
-
-TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
+TAG * swf_InsertTag(TAG * after,U16 id)
 { TAG * t;
 
   t = (TAG *)malloc(sizeof(TAG));
@@ -651,19 +639,17 @@ TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
     t->id = id;
     
     if (after)
-    { t->frame = after->frame;
+    {
       t->prev  = after;
       t->next  = after->next;
       after->next = t;
       if (t->next) t->next->prev = t;
-      
-      if (id==ST_SHOWFRAME) swf_UpdateFrame(t->next,+1);
     }
   }
   return t;
 }
 
-TAG * swf_InsertTagBefore(SWF* swf, TAG * before,U16 id)     // updates frames, if nescessary
+TAG * swf_InsertTagBefore(SWF* swf, TAG * before,U16 id)
 { TAG * t;
 
   t = (TAG *)malloc(sizeof(TAG));
@@ -672,13 +658,11 @@ TAG * swf_InsertTagBefore(SWF* swf, TAG * before,U16 id)     // updates frames, 
     t->id = id;
     
     if (before)
-    { t->frame = before->frame;
+    {
       t->next  = before;
       t->prev  = before->prev;
       before->prev = t;
       if (t->prev) t->prev->next = t;
-      
-      if (id==ST_SHOWFRAME) swf_UpdateFrame(t->next,+1);
     }
   }
   if(swf && swf->firstTag == before) {
@@ -707,8 +691,6 @@ void swf_ResetTag(TAG*tag, U16 id)
 int swf_DeleteTag(TAG * t)
 { if (!t) return -1;
 
-  if (t->id==ST_SHOWFRAME) swf_UpdateFrame(t->next,-1);
-    
   if (t->prev) t->prev->next = t->next;
   if (t->next) t->next->prev = t->prev;
 
@@ -736,7 +718,7 @@ TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
   }
 
   if (id==ST_DEFINESPRITE) len = 2*sizeof(U16);
-  // Sprite handling fix: Flaten sprite tree
+  // Sprite handling fix: Flatten sprite tree
 
   t = (TAG *)malloc(sizeof(TAG));
   
@@ -767,7 +749,7 @@ TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
   }
 
   if (prev)
-  { t->frame = prev->frame+((prev->id==ST_SHOWFRAME)?1:0);
+  {
     t->prev  = prev;
     prev->next = t;
   }
@@ -994,9 +976,12 @@ int swf_IsFolded(TAG * t)
 void swf_FoldAll(SWF*swf)
 {
     TAG*tag = swf->firstTag;
+    //swf_DumpSWF(stdout, swf);
     while(tag) {
-	if(tag->id == ST_DEFINESPRITE)
+	if(tag->id == ST_DEFINESPRITE) {
 	    swf_FoldSprite(tag);
+	    //swf_DumpSWF(stdout, swf);
+	}
 	tag = swf_NextTag(tag);
     }
 }
