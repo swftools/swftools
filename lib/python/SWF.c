@@ -294,13 +294,7 @@ static PyObject* swf_getattr(PyObject * self, char* a)
 	mylog(" %08x(%d) swf_getattr %s = %s\n", (int)self, self->ob_refcnt, a, filename);
 	return Py_BuildValue("s", filename);
     } else if(!strcmp(a, "bbox")) {
-	int xmin,ymin,xmax,ymax;
-	xmin = swf->swf.movieSize.xmin;
-	ymin = swf->swf.movieSize.ymin;
-	xmax = swf->swf.movieSize.xmax;
-	ymax = swf->swf.movieSize.ymax;
-	mylog(" %08x(%d) swf_getattr %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, xmin,ymin,xmax,ymax);
-	return Py_BuildValue("(iiii)", xmin, ymin, xmax, ymax); 
+	return f_BBox2(swf->swf.movieSize);
     } else if(!strcmp(a, "tags")) {
 	PyObject*ret =  (PyObject*)(swf->taglist);
 	Py_INCREF(ret);
@@ -341,15 +335,16 @@ static int swf_setattr(PyObject * self, char* a, PyObject * o)
 	mylog(" %08x(%d) swf_setattr %s = %s\n", (int)self, self->ob_refcnt, a, filename);
 	return 0;
     } else if(!strcmp(a, "bbox")) {
-	int xmin=0,ymin=0,xmax=0,ymax=0;
-	if (!PyArg_Parse(o, "(iiii)", &xmin, &ymin, &xmax, &ymax)) 
-	    goto err;
+	PyObject *obbox = o;
+	if (!PY_CHECK_TYPE(obbox, &BBoxClass)) {
+	    obbox = f_BBox(0, o, 0);
+	    if(!obbox)
+		return 1;
+	}
+	SRECT bbox = bbox_getSRECT(obbox);
 
-	swf->swf.movieSize.xmin = xmin;
-	swf->swf.movieSize.ymin = ymin;
-	swf->swf.movieSize.xmax = xmax;
-	swf->swf.movieSize.ymax = ymax;
-	mylog(" %08x(%d) swf_setattr %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, xmin,ymin,xmax,ymax);
+	swf->swf.movieSize = bbox;
+	mylog(" %08x(%d) swf_setattr %s = (%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, a, bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax);
 	return 0;
     } else if(!strcmp(a, "tags")) {
 	PyObject* taglist;
