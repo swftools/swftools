@@ -78,4 +78,7 @@
 	* swfextract/swfcombine: Bugfixes (DefineEditText)
 	* swfdump: New option --used, prints out referred IDs of each tag.
 	* rfxswf: Can now read and write Flash 6 (MX) compressed SWFs. (SWCs)
+	* pdf2swf: Added compression flag (-z)
+	* swfcombine: Added compression flag (-z)
+	* configure.in: zlib is now required.
 
