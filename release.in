@@ -151,6 +151,8 @@ ${name}/install-sh \
 ${name}/mkinstalldirs \
 ${name}/missing \
 ${name}/configure \
+${name}/config.guess \
+${name}/config.sub \
 ${name}/aclocal.m4 \
 ${name}/config.h.in \
 ${name}/stamp-h.in \
