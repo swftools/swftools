@@ -338,10 +338,11 @@ typedef struct _LINESTYLE
 } LINESTYLE, * LPLINESTYLE;
 
 typedef struct _FILLSTYLE
-{ U8     type;
-  RGBA   color;
-  MATRIX         m; 
-  U16    id_bitmap;
+{ U8	    type;
+  RGBA	    color;
+  MATRIX    m; 
+  U16	    id_bitmap;
+  GRADIENT* gradient;
 } FILLSTYLE, * LPFILLSTYLE;
      
 typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
@@ -419,9 +420,9 @@ void  swf_ShapeSetBitmapRect(TAG * t, U16 gfxid, int width, int height);
 
 SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
 SHAPE2*	   swf_ShapeToShape2(SHAPE*shape);
-SHAPE*	   swf_Shape2ToShape(SHAPE2*shape);
-SRECT	   swf_GetShapeBoundingBox(SHAPELINE*shape);
-int	   swf_SetShape2(TAG*tag, SHAPE2*shape);
+void	   swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
+SRECT	   swf_GetShapeBoundingBox(SHAPE2*shape);
+void	    swf_SetShape2(TAG*tag, SHAPE2*shape);
 void	   swf_Shape2Free(SHAPE2 * s);
 
 // swffont.c
@@ -849,6 +850,8 @@ typedef struct _VIDEOSTREAM
 {
     int width;
     int height;
+    int owidth;
+    int oheight;
     int frame;
     int linex;
     int olinex;
