@@ -259,14 +259,18 @@ static void makestackmaster(SWF*swf)
     int t;
     SRECT box;
     int fileversion = 1;
+    int frameRate = 256;
+    RGBA rgb;
+    rgb.r=rgb.b=rgb.g=0;
     memset(&box, 0, sizeof(box));
 
     /* scan all slaves for bounding box */
-    for(t=0;t<numslaves;t++)
+    for(t=numslaves-1;t>=0;t--)
     {
 	SWF head;
 	int ret;
 	int fi=open(slave_filename[t],O_RDONLY);
+	TAG*tag;
 	if(fi<0 || swf_ReadSWF(fi, &head)<0) {
 	    logf("<fatal> Couldn't open/read %s.", slave_filename[t]);
 	    exit(1);
@@ -276,6 +280,17 @@ static void makestackmaster(SWF*swf)
 		slave_filename[t], 
 		head.movieSize.xmin, head.movieSize.ymin,
 		head.movieSize.xmax, head.movieSize.ymax);
+
+	tag = head.firstTag;
+	while(tag) {
+	    if(tag->id == ST_SETBACKGROUNDCOLOR && tag->len>=3) {
+		rgb.r = tag->data[0];
+		rgb.g = tag->data[1];
+		rgb.b = tag->data[2];
+	    }
+	    tag=tag->next;
+	}
+	frameRate = head.frameRate;
 	if(head.fileVersion > fileversion)
 	    fileversion = head.fileVersion;
 	if(!t)
@@ -297,12 +312,13 @@ static void makestackmaster(SWF*swf)
     }
 
     memset(swf, 0, sizeof(SWF));
+    swf->fileVersion = fileversion;
+    swf->movieSize = box;
+    swf->frameRate = frameRate;
 
     swf->firstTag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
     tag = swf->firstTag;
-    swf_SetU8(tag, 0);
-    swf_SetU8(tag, 0);
-    swf_SetU8(tag, 0);
+    swf_SetRGB(tag, &rgb);
     
     for(t=0;t<numslaves;t++)
     {
