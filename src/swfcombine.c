@@ -363,7 +363,7 @@ void makestackmaster(u8**masterdata, int*masterlength)
 	    pos += 4;
 	}
     }
-    PUT16(pos, (TAGID_END<<6 + 0));
+    PUT16(pos, ((TAGID_END<<6) + 0));
     *masterlength = pos - *masterdata;
     PUT32(fixpos, *masterlength);
 }

@@ -76,7 +76,7 @@ int swf_ButtonPostProcess(TAG * t,int anz_action)
 
       swf_GetU16(t);                // condition
       
-      while (a=swf_GetU8(t))        // skip action records
+      while ((a=swf_GetU8(t)))        // skip action records
       { if (a&0x80)
         { U16 l = swf_GetU16(t);
           swf_GetBlock(t,NULL,l);

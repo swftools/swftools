@@ -252,7 +252,7 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
   swf_SetU16(t,width);
   swf_SetU16(t,height);
 
-  if (data=malloc(OUTBUFFER_SIZE))
+  if ((data=malloc(OUTBUFFER_SIZE)))
   { z_stream zs;
       
     memset(&zs,0x00,sizeof(z_stream));
@@ -298,7 +298,7 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
   swf_SetU16(t,height);
   swf_SetU8(t,ncolors-1); // number of pal entries
 
-  if (data=malloc(OUTBUFFER_SIZE))
+  if ((data=malloc(OUTBUFFER_SIZE)))
   { z_stream zs;
 
     memset(&zs,0x00,sizeof(z_stream));
@@ -307,7 +307,7 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
 
     if (deflateInit(&zs,Z_DEFAULT_COMPRESSION)==Z_OK)
     { U8 * zpal;                    // compress palette
-      if (zpal = malloc(ncolors*4))
+      if ((zpal = malloc(ncolors*4)))
       { U8 * pp = zpal;
         int i;
 
