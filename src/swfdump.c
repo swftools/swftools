@@ -994,8 +994,13 @@ int main (int argc,char ** argv)
 		swf_GetUsedIDs(tag, used);
 		printf("%s%suses IDs: ", indent, prefix);
 		for(t=0;t<num;t++) {
+		    int id;
 		    swf_SetTagPos(tag, used[t]);
-		    printf("%d%s", swf_GetU16(tag), t<num-1?", ":"");
+		    id = swf_GetU16(tag);
+		    printf("%d%s", id, t<num-1?", ":"");
+		    if(!idtab[id]) {
+			dumperror("Id %04d is not yet defined.\n", id);
+		    }
 		}
 		printf("\n");
 	    }
