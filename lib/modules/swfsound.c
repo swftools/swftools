@@ -74,6 +74,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
 /* TODO: find a way to set these from the outside */
 int swf_mp3_samplerate = 44100;
 int swf_mp3_channels = 1;
+int swf_mp3_bitrate = 32;
 
 static lame_global_flags*lame_flags;
 
@@ -93,6 +94,7 @@ static void initlame(unsigned char*buf, int bufsize)
 
     lame_set_quality(lame_flags, 0);
     lame_set_mode(lame_flags, MONO/*3*/);
+    lame_set_brate(lame_flags, swf_mp3_bitrate);
     //lame_set_compression_ratio(lame_flags, 11.025);
     lame_set_bWriteVbrTag(lame_flags, 0);
 
@@ -187,7 +189,8 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
     blocks = num / (blocksize);
 
     swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
-    swf_SetU32(tag,blocks*blocksize);
+
+    swf_SetU32(tag,blocks*blocksize / 4); // 44100 -> 11025
 
     buf = malloc(bufsize);
     if(!buf)
@@ -219,7 +222,7 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info)
 {
     U8 flags = (info->stop?SOUNDINFO_STOP:0)
-	      |(info->multiple?SOUNDINFO_NOMULTIPLE:0)
+	      |(info->nomultiple?SOUNDINFO_NOMULTIPLE:0)
 	      |(info->envelopes?SOUNDINFO_HASENVELOPE:0)
 	      |(info->loops?SOUNDINFO_HASLOOPS:0)
 	      |(info->outpoint?SOUNDINFO_HASOUTPOINT:0)
