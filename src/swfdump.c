@@ -463,11 +463,13 @@ void handleVideoFrame(TAG*tag, char*prefix)
 
 void handlePlaceObject2(TAG*tag, char*prefix)
 {
-    U8 flags = swf_GetU8(tag);
+    U8 flags;
     MATRIX m;
     CXFORM cx;
     char pstr[3][160];
     int ppos[3] = {0,0,0};
+    swf_SetTagPos(tag, 0);
+    flags = swf_GetU8(tag);
     swf_GetU16(tag); //depth
 
     //flags&1: move
@@ -558,16 +560,19 @@ void handlePlaceObject2(TAG*tag, char*prefix)
 void handlePlaceObject(TAG*tag, char*prefix)
 {
     TAG*tag2 = swf_InsertTag(0, ST_PLACEOBJECT2);
+    U16 id, depth;
 
-    U16 id = swf_GetU16(tag);
-    U16 depth = swf_GetU16(tag);
+    swf_SetTagPos(tag, 0);
+    id = swf_GetU16(tag);
+    depth = swf_GetU16(tag);
     MATRIX matrix; 
     CXFORM cxform;
     swf_GetMatrix(tag, &matrix);
     swf_GetCXForm(tag, &cxform, 0);
 
-    swf_SetU8(tag2, 14);
+    swf_SetU8(tag2, 14 /* char, matrix, cxform */);
     swf_SetU16(tag2, depth);
+    swf_SetU16(tag2, id);
     swf_SetMatrix(tag2, &matrix);
     swf_SetCXForm(tag2, &cxform, 1);
 
@@ -934,7 +939,8 @@ int main (int argc,char ** argv)
 		printf(" object");
 
             printf(" at depth %04d", swf_GetDepth(tag));
-	    
+	   
+	    swf_SetTagPos(tag, 0);
 	    if(tag->data[0]&64) {
 		SWFPLACEOBJECT po;
 		swf_GetPlaceObject(tag, &po);
