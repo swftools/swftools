@@ -254,8 +254,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality,
 	swf_ShapeSetLine(t, s, 0, -r.ymax);
 	swf_ShapeSetEnd(t);
 
-	t = swf_InsertTag(t, ST_REMOVEOBJECT2);
-	swf_SetU16(t, 1);		// depth
+        if(frame) {
+	    t = swf_InsertTag(t, ST_REMOVEOBJECT2);
+	    swf_SetU16(t, 1);		// depth
+        }
 
 	t = swf_InsertTag(t, ST_PLACEOBJECT2);
 	swf_GetMatrix(NULL, &m);
