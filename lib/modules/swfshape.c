@@ -912,6 +912,7 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
     else {
 	fprintf(stderr, "parseDefineShape must be called with a shape tag");
     }
+    swf_SetTagPos(tag, 0);
 
     id = swf_GetU16(tag); //id
     memset(shape, 0, sizeof(SHAPE2));
