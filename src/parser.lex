@@ -153,11 +153,10 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 {NAME}                      {s(IDENTIFIER);c();}
 "["		            {c();BEGIN(BINARY);}
 {S} 		            {c();}
-.		            {char c,c1=0;
+.		            {char c,c1=yytext[0];
 		             printf("Syntax error in line %d, %d: %s", line, column, yytext);
 		             while(1) {
 		                 c=input();
-				 if(!c1) c1=c;
 		                 if(c=='\n' || c==EOF) 
 		                     break;
 		                printf("%c", c);
