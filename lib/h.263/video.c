@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <assert.h>
 #include "../rfxswf.h"
 #include "../args.h"
 #include "h263tables.c"
@@ -129,6 +130,62 @@ int checkhufftable(struct huffcode*code, char*name)
     }
 }
 
+
+struct hufftree
+{
+    struct hufftree*left;//0
+    struct hufftree*right;//1
+    int index;
+};
+
+struct hufftree * rle_tree;
+struct hufftree * mcbpc_intra_tree;
+struct hufftree * mcbpc_inter_tree;
+struct hufftree * cbpy_tree;
+struct hufftree * mvd_tree;
+
+static void insert(struct hufftree*tree, char*code, int index)
+{
+    if(!*code) {
+	assert(!tree->left); //shannon conditional
+	assert(!tree->right);
+	tree->left = 0;
+	tree->right = 0;
+	tree->index = index;
+	return;
+    }
+    if(code[0] == '0') {
+	if(!tree->left) {
+	    tree->left = (struct hufftree*)malloc(sizeof(struct hufftree));
+	    memset(tree->left, 0, sizeof(struct hufftree));
+	    tree->left->index = -1;
+	}
+	insert(tree->left, code+1, index);
+	return;
+    } else {
+	assert(code[0] == '1');
+	if(!tree->right) {
+	    tree->right = (struct hufftree*)malloc(sizeof(struct hufftree));
+	    memset(tree->right, 0, sizeof(struct hufftree));
+	    tree->right->index = -1;
+	}
+	insert(tree->right, code+1, index);
+	return;
+    }
+}
+
+struct hufftree* huffcode2tree(struct huffcode*code)
+{
+    struct hufftree* t = malloc(sizeof(struct hufftree));
+    memset(t, 0, sizeof(struct hufftree));
+    t->index = -1;
+    while(code->code) {
+	insert(t, code->code, code->index);
+	code++;
+    }
+    return t;
+}
+
 int gethuffvalue(TAG*tag, struct huffcode*code)
 {
     int len = 0;
@@ -177,6 +234,22 @@ int gethuffvalue(TAG*tag, struct huffcode*code)
 	}*/
 }
 		
+int gethuffvalue2(TAG*tag, struct huffcode*code, struct hufftree*tree)
+{
+    while(1) {
+	if(tree->index>=0) {
+	    return tree->index;
+	}
+	if(!swf_GetBits(tag, 1)) {
+	    assert(tree->left);
+	    tree=tree->left;
+	} else {
+	    assert(tree->right);
+	    tree=tree->right;
+	}
+    }
+}
+
 void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 {
     int dc;
@@ -200,7 +273,7 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 	    int last;
 	    int run;
 	    int level;
-	    index = gethuffvalue(tag, rle);
+	    index = gethuffvalue2(tag, rle, rle_tree);
 	    last = rle_params[index].last;
 	    run = rle_params[index].run;
 	    level = rle_params[index].level;
@@ -243,7 +316,7 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 	    
 int readMVD(TAG*tag)
 {
-    int index = gethuffvalue(tag, mvd);
+    int index = gethuffvalue2(tag, mvd, mvd_tree);
     DEBUG printf("mvd index:%d\n", index);
     return index;
 }
@@ -278,7 +351,7 @@ void decode_block(TAG*tag, int pictype)
     /* read mcbpc */
 
     if(pictype == TYPE_INTRA) { /* I-frame */
-	type = gethuffvalue(tag, mcbpc_intra);
+	type = gethuffvalue2(tag, mcbpc_intra, mcbpc_intra_tree);
 	DEBUG printf("mcbpc=%d\n",type);
 	mb_type = mcbpc_intra_params[type].mb_type;
 	cbpc = mcbpc_intra_params[type].cbpc;
@@ -288,7 +361,7 @@ void decode_block(TAG*tag, int pictype)
 	}
     } 
     else if(pictype == 1) { /* P-frame */
-	type = gethuffvalue(tag, mcbpc_inter);
+	type = gethuffvalue2(tag, mcbpc_inter, mcbpc_inter_tree);
 	DEBUG printf("mcbpc=%d\n",type);
 	mb_type = mcbpc_inter_params[type].mb_type;
 	cbpc = mcbpc_inter_params[type].cbpc;
@@ -309,7 +382,7 @@ void decode_block(TAG*tag, int pictype)
 
     /* read cbpy */
 
-    cbpy_index = gethuffvalue(tag, cbpy);
+    cbpy_index = gethuffvalue2(tag, cbpy, cbpy_tree);
     cbpy_value = cbpy_index;
     if(!intrablock)
 	cbpy_value ^= 15;
@@ -496,6 +569,12 @@ int main (int argc,char ** argv)
     checkhufftable(mcbpc_inter, "inter");
     checkhufftable(cbpy, "cbpy");
     checkhufftable(mvd, "mvd");
+
+    rle_tree = huffcode2tree(rle);
+    mcbpc_intra_tree = huffcode2tree(mcbpc_intra);
+    mcbpc_inter_tree = huffcode2tree(mcbpc_inter);
+    cbpy_tree = huffcode2tree(cbpy);
+    mvd_tree = huffcode2tree(mvd);
 
     processargs(argc, argv);
     if(!filename) {
