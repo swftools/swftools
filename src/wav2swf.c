@@ -150,7 +150,7 @@ int args_callback_longoption(char*name,char*val)
 void args_callback_usage(char *name)
 {
     printf("\n");
-    printf("Usage: %s [-o filename] file.wav\n\n", name);
+    printf("Usage: %s [-o filename] file.wav\n", name);
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-V , --version                 Print version info and exit\n");
