@@ -217,7 +217,22 @@ AC_SUBST(lame_objects)
 # ------------------------------------------------------------------
  
 RFX_CHECK_AVI2SWF
+if test "x${AVIFILE}" = "xtrue"; then
+    VIDEO_LIBS="$VIDEO_LIBS $AVIFILE_LIBS"
+    VIDEO_CFLAGS="$VIDEO_CFLAGS $AVIFILE_CFLAGS"
+fi
 
+if test "x${WIN32}" != "x"; then
+    #AC_CHECK_LIB(vfw32, AVIFileInit,VFW32=true)
+    #if test "x${VFW32}" != "x"; then
+    #  VIDEO_LIBS="$VIDEO_LIBS -lvfw32"
+    #fi
+    VIDEO_LIBS="$VIDEO_LIBS -lvfw32"
+    VFW32=true
+fi
+
+AC_SUBST(VIDEO_LIBS)
+AC_SUBST(VIDEO_CFLAGS)
 # ------------------------------------------------------------------
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
@@ -254,24 +269,24 @@ if test "x$T1LIBMISSING" = "xtrue";then
     MISSINGLIBS="${MISSINGLIBS} t1lib"
 fi
 
-if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
+if test "x${ac_cv_header_jpeglib_h}" '!=' "xyes"; then
  DISABLEPDF2SWF=true;
  DISABLEJPEG2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} jpeglib.h"
 fi
-if test "x$HAVE_FREETYPE" != "x1"; then
+if test "x$HAVE_FREETYPE" '!=' "x1"; then
  DISABLEPDF2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} freetype"
 fi
-if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
+if test "x${ac_cv_header_t1lib_h}" '!=' "xyes"; then
  DISABLEPDF2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} t1lib.h"
 fi
-if test "x${ac_cv_header_zlib_h}" != "xyes"; then
+if test "x${ac_cv_header_zlib_h}" '!=' "xyes"; then
  DISABLEPNG2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} zlib.h"
 fi
-if test "x${AVIFILE}" != "xtrue"; then
+if test "x${AVIFILE}" '!=' "xtrue" -a "x${VFW32}" '!=' "xtrue"; then
  MISSINGLIBS="${MISSINGLIBS} avifile"
 fi
 
@@ -285,7 +300,7 @@ if test "x${MISSINGLIBS}" '!=' "x"; then
 fi
 
 avi2swf="avi2swf/Makefile"
-if test "x${AVIFILE}" != "xtrue"; then
+if test "x${AVIFILE}" '!=' "xtrue" -a "x${VFW32}" '!=' "xtrue"; then
  echo "* Disabling avi2swf tool..."
  echo all install uninstall clean: > avi2swf/Makefile
  avi2swf=
