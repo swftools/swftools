@@ -157,6 +157,7 @@ typedef struct _SWF
 
 int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
+int  swf_WriteSWC(int handle, SWF * swf);   // Write Compressed SWF to file, returns length or <0 if fails
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
 void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
 

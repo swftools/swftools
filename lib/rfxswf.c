@@ -1,4 +1,4 @@
-/* vi:sts=2 sw=2 */
+/* vi: set sts=2 sw=2 :*/
 
 /* rfxswf.c 
 
@@ -800,7 +800,7 @@ void swf_FoldAll(SWF*swf)
 
 // Movie Functions
 
-int swf_ReadSWF2(struct reader_t*reader2, SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int swf_ReadSWF2(struct reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 {     
   if (!swf) return -1;
   memset(swf,0x00,sizeof(SWF));
@@ -810,7 +810,6 @@ int swf_ReadSWF2(struct reader_t*reader2, SWF * swf)   // Reads SWF to memory (m
     TAG * t;
     TAG t1;
     struct reader_t zreader;
-    struct reader_t* reader;
     
     if ((len = reader->read(reader ,b,8))<8) return -1;
 
@@ -821,12 +820,9 @@ int swf_ReadSWF2(struct reader_t*reader2, SWF * swf)   // Reads SWF to memory (m
     swf->compressed  = (b[0]=='C')?1:0;
     swf->fileSize    = GET32(&b[4]);
     
-    /* TODO: start decompression here */
     if(swf->compressed) {
-	reader_init_zlibinflate(&zreader, reader2);
+	reader_init_zlibinflate(&zreader, reader);
 	reader = &zreader;
-    } else {
-	reader = reader2;
     }
 
     reader_GetRect(reader, &swf->movieSize);
@@ -852,9 +848,10 @@ int swf_ReadSWF(int handle, SWF * swf)
   return swf_ReadSWF2(&reader, swf);
 }
 
-int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
+int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
+  struct writer_t zwriter;
     
   if (!swf) return -1;
 
@@ -881,34 +878,52 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
   }
   
   { TAG t1;
-    char b[64];
+    char b[64],b4[4];
     U32 l;
 
     memset(&t1,0x00,sizeof(TAG));
     t1.data    = (U8*)b;
     t1.memsize = 64;
     
-    swf_SetU8(&t1,'F');      
-    swf_SetU8(&t1,'W');      
-    swf_SetU8(&t1,'S');
-    swf_SetU8(&t1,swf->fileVersion);
-    
-    swf_SetU32(&t1,swf->fileSize);         // Keep space for filesize
+    { // measure header file size
+      TAG t2;
+      char b2[64];
+      memset(&t2,0x00,sizeof(TAG));
+      t2.data    = (U8*)b2;
+      t2.memsize = 64;
+      swf_SetRect(&t2, &swf->movieSize);
+      swf_SetU16(&t2, swf->frameRate);
+      swf_SetU16(&t2, swf->frameCount);
+      l = swf_GetTagLen(&t2)+8;
+    }
+    swf->fileSize = l+len;
+   
+    if(compress) {
+      char*id = "CWS";
+      writer->write(writer, id, 3);
+    }
+    else {
+      char*id = "FWS";
+      writer->write(writer, id, 3);
+    }
+
+    writer->write(writer, &swf->fileVersion, 1);
+    PUT32(b4, swf->fileSize);
+    writer->write(writer, b4, 4);
+
+    if(compress) {
+      writer_init_zlibdeflate(&zwriter, writer);
+      writer = &zwriter;
+    }
+
     swf_SetRect(&t1,&swf->movieSize);
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
 
-    l = swf_GetTagLen(&t1);
-    swf->fileSize = l+len;
-    if(swf->firstTag) {
-	t1.len = 4;                         // bad & ugly trick !
-	swf_SetU32(&t1,swf->fileSize);
-    }
-
     if (writer)
     { 
-      int ret = writer->write(writer,b,l);
-      if (ret!=l)
+      int ret = writer->write(writer,b,swf_GetTagLen(&t1));
+      if (ret!=swf_GetTagLen(&t1))
       {
         #ifdef DEBUG_RFXSWF
           printf("ret:%d\n",ret);
@@ -923,6 +938,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
       { if (swf_WriteTag2(writer, t)<0) return -1;
         t = swf_NextTag(t);
       }
+      writer->finish(writer); //e.g. flush zlib buffers
     }
   }
   return (int)swf->fileSize;
@@ -932,10 +948,20 @@ int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns leng
 {
   struct writer_t writer;
   if(handle<0)
-    return swf_WriteSWF2(&writer, swf);
+    return swf_WriteSWF2(&writer, swf, FALSE);
   writer_init_filewriter(&writer, handle);
-  return swf_WriteSWF2(&writer, swf);
+  return swf_WriteSWF2(&writer, swf, FALSE);
 }
+
+int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
+{
+  struct writer_t writer;
+  if(handle<0)
+    return swf_WriteSWF2(&writer, swf, TRUE);
+  writer_init_filewriter(&writer, handle);
+  return swf_WriteSWF2(&writer, swf, TRUE);
+}
+
 
 int swf_WriteHeader(int handle,SWF * swf)
 {
