@@ -1405,7 +1405,7 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     swf_ObjectPlace(tag,myshapeid,/*depth*/depth++,NULL,NULL,NULL);
 }
 
-int swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int sizey, 
+int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,int sizey, 
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,
@@ -1427,6 +1427,29 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int s
 	return -1;
     }
 
+    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+    return bitid;
+}
+
+int swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4)
+{
+    TAG*oldtag;
+    JPEGBITS*jpeg;
+
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+
+    int bitid = ++currentswfid;
+    oldtag = tag;
+    tag = swf_InsertTag(tag,ST_DEFINEBITSJPEG2);
+    swf_SetU16(tag, bitid);
+    swf_SetJPEGBits2(tag,sizex,sizey,mem,jpegquality);
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
 }
@@ -1464,10 +1487,28 @@ int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int s
         double x4,double y4)
 {
     TAG*oldtag;
+    U8*mem2 = 0;
     if(shapeid>=0)
      endshape();
     if(textid>=0)
      endtext();
+
+    if(sizex&3)
+    { 
+	/* SWF expects scanlines to be 4 byte aligned */
+	printf("%d -> %d\n", sizex, BYTES_PER_SCANLINE(sizex));
+	int x,y;
+	U8*ptr;
+	mem2 = (U8*)malloc(BYTES_PER_SCANLINE(sizex)*sizey);
+	ptr = mem2;
+	for(y=0;y<sizey;y++)
+	{
+	    for(x=0;x<sizex;x++)
+		*ptr++ = mem[y*sizex+x];
+	    ptr+= BYTES_PER_SCANLINE(sizex)-sizex;
+	}
+	mem = mem2;
+    }
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1478,6 +1519,8 @@ int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int s
 	tag = oldtag;
 	return -1;
     }
+    if(mem2)
+	free(mem2);
   
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
