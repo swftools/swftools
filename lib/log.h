@@ -35,5 +35,5 @@ extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPo
 extern void log(char* logString);
 extern void logf(const char* logFormat, ...);
 extern void exitLog(void);
- 
+
 #endif  // __log_h__
