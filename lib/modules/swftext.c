@@ -927,7 +927,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
   {
     int c;
     t = swf_InsertTag(t,ST_GLYPHNAMES);
-    swf_SetU16(t, font->id);
+    swf_SetU16(t, WRITEFONTID);
     swf_SetU16(t, font->numchars);
     for(c=0;c<font->numchars;c++) {
 	swf_SetString(t, font->glyphnames[c]);
@@ -943,9 +943,14 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	int ypos = 1;
 	U8 gbits,abits;
 	int x,y,c;
+	int range = font->maxascii;
 	
 	c=0;
-	for(s=0;s<font->maxascii;s++)
+	if(useDefineFont2 && range > 256) {
+	    range = 256;
+	}
+
+	for(s=0;s<range;s++)
 	{
 	    int g = font->ascii2glyph[s];
 	    if(g>=0) {
@@ -989,11 +994,11 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	    rgb.g = 0x00;
 	    rgb.b = 0x00;
 	    ypos = 1;
-	    for(y=0;y<((font->maxascii+15)/16);y++)
+	    for(y=0;y<((range+15)/16);y++)
 	    {
 		int c=0,lastx=-1;
 		for(x=0;x<16;x++) {
-		    int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
+		    int g = (y*16+x<range)?font->ascii2glyph[y*16+x]:-1;
 		    if(g>=0 && font->glyph[g].shape) {
 			c++;
 			if(lastx<0) 
@@ -1004,7 +1009,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*ypos*2);
 		  for(x=0;x<16;x++)
 		  {
-		      int g = (y*16+x<font->maxascii)?font->ascii2glyph[y*16+x]:-1;
+		      int g = (y*16+x<range)?font->ascii2glyph[y*16+x]:-1;
 		      if(g>=0 && font->glyph[g].shape) {
 			if(lastx != x*xmax) {
 			    swf_TextSetInfoRecord(t,0,0,0,x*xmax+1,0);
