@@ -300,7 +300,10 @@ SWFFONT* swf_LoadT1Font(char*filename)
     memset(font, 0, sizeof(SWFFONT));
 
     font->version = 2;
-    font->name = (U8*)strdup(fontname);
+    if(fontname) 
+	font->name = (U8*)strdup(fontname);
+    else 
+	font->name = 0;
     font->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
     memset(font->layout, 0, sizeof(SWFLAYOUT));
 
