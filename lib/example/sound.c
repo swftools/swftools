@@ -22,8 +22,6 @@ int main (int argc,char ** argv)
   S32 width=300,height = 300;
   U16 block[1152*2];
   TAG * tag;
-  FILE* fi = fopen("test.mp3","wb");
-  FILE* fi2 = fopen("test2.wav","wb");
   
   int f,i,ls1,fs1;
   int count;
@@ -55,12 +53,8 @@ int main (int argc,char ** argv)
       }
       swf_SetSoundStreamBlock(tag, block, 1152,1);
       swf_SetSoundStreamBlock(tag, &block[1152], 1152,0);
-      fwrite(&tag->data[4], tag->len-4, 1, fi);
-      fwrite(block, 1152*2*2, 1, fi2);
       tag = swf_InsertTag(tag, ST_SHOWFRAME);
   }
-  fclose(fi);
-  fclose(fi2);
 
   f = open("sound.swf",O_WRONLY|O_CREAT|O_TRUNC, 0644);
   if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");

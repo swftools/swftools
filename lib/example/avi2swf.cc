@@ -1,7 +1,7 @@
 /* avi2swf.cc
    Convert avi movie files into swf.
-   As soon as there's an algorithm implemented for writing the
-   data directly to disk, this file should maybe go to ../src.
+   As soon as the size of the generated swfs is reasonable, this file 
+   will go to ../../src
 
    Part of the swftools package.
    
@@ -19,6 +19,7 @@ extern "C" {
 #include "aviplay.h"
 
 /*
+statistics: (for now)
    37   bytes per shape (rectangle)
    8-12 bytes per placeobject
    4    bytes per removeobject2
@@ -655,9 +656,6 @@ int main (int argc,char ** argv)
   printf("\n");
   destroydisplay(file);
 
-  printf("mp3 samples read:%d\n", mp3_sound_pos);
-  printf("mp3 samples read:%d\n", mp3_sound_pos);
-  
   tag = swf_InsertTag(NULL, ST_END);
   swf_WriteTag(file, tag);
   swf_DeleteTag(tag);
