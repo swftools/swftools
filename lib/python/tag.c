@@ -137,6 +137,11 @@ static PyObject* tag_getattr(PyObject * self, char* a)
 	char* name = swf_TagGetName(tag->internals.tag);
 	return Py_BuildValue("s", name);
     }
+    if(tag->internals.getattr) {
+	PyObject* ret = tag->internals.getattr(&tag->internals, a);
+	if(ret)
+	    return ret;
+    }
     
     /* search for a tag specific function */
     if(tag->internals.tagfunctions) {
@@ -152,6 +157,15 @@ static PyObject* tag_getattr(PyObject * self, char* a)
 
     mylog(" %08x(%d) tag_getattr %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
     return ret;
+}
+static int tag_setattr(PyObject * self, char* a, PyObject * o)
+{
+    TagObject*tag = (TagObject*)self;
+    if(tag->internals.setattr) {
+	int ret = tag->internals.setattr(&tag->internals, a, o);
+	return ret;
+    }
+    return 1;
 }
 //----------------------------------------------------------------------------
 //                     Tag Constructors
@@ -251,10 +265,14 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 	    }
 	    //int newid = tagmap_obj2id(tag->internals.tagmap, obj);
 	    int newid = tagmap_obj2id(tagmap, obj);
-	    if(newid<0) {
-		PyErr_SetString(PyExc_Exception, setError("Unknown object %08x", obj));return 0;
+	    if(newid>=0) {
+		mylog(" %08x(%d) tag_getTAG: dependency %d) %d->%08x -> assigning(%08x) id %d", (int)self, self->ob_refcnt, i, id, obj, tagmap, newid);
+	    } else {
+		/* TODO: this is only needed for sprites, so maybe it should throw an
+		   exception otherwise */
+		newid = tagmap_add(tagmap, obj);
+		mylog(" %08x(%d) tag_getTAG: added dependency %d) %d->%08x -> assigning(%08x) id %d", (int)self, self->ob_refcnt, i, id, obj, tagmap, newid);
 	    }
-	    mylog(" %08x(%d) tag_getTAG: dependency %d) %d->%08x -> assigning(%08x) id %d", (int)self, self->ob_refcnt, i, id, obj, tagmap, newid);
 	    PUT16(&t->data[positions[i]], newid);
 	}
 	free(positions);
@@ -296,4 +314,5 @@ PyTypeObject TagClass =
     tp_dealloc: tag_dealloc,
     tp_print: tag_print,
     tp_getattr: tag_getattr,
+    tp_setattr: tag_setattr,
 };
