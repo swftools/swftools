@@ -418,6 +418,17 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
   
   if (!palette) free(pal);
 
+  while(t->len < 64) { /* actually, 63 and above is o.k., but let's stay on the safe side */
+
+      /* Flash players up to MX crash or do strange things if they encounter a 
+	 DefineLossless(2) Tag with a payload of less than 63 bytes. They also
+	 substitute the whole bitmap by a red rectangle.
+
+	 This loop fills up the tag with zeroes so that this doesn't happen.
+      */
+      swf_SetU8(t, 0);
+  }
+  
   return res;
 }
 
