@@ -115,6 +115,50 @@ U16 swf_GetDefineID(TAG * t)
   return id;
 }
 
+SRECT swf_GetDefineBBox(TAG * t)
+{
+  U32 oldTagPos;
+  U16 id = 0;
+  SRECT b1,b2;
+
+  oldTagPos = swf_GetTagPos(t);
+  swf_SetTagPos(t,0);
+
+  swf_GetRect(0, &b1);
+
+  switch (swf_GetTagID(t))
+  { case ST_DEFINESHAPE:
+    case ST_DEFINESHAPE2:
+    case ST_DEFINESHAPE3:
+    case ST_DEFINEEDITTEXT:
+    case ST_DEFINEBUTTON:
+    case ST_DEFINEBUTTON2:
+    case ST_DEFINETEXT:
+    case ST_DEFINETEXT2:
+    case ST_DEFINEVIDEOSTREAM:
+      id = swf_GetU16(t);
+      swf_GetRect(t, &b1);
+      break;
+    case ST_DEFINEMORPHSHAPE:
+      id = swf_GetU16(t);
+      swf_GetRect(t, &b1);
+      swf_GetRect(t, &b2);
+      swf_ExpandRect2(&b1, &b2);
+      break;
+    case ST_DEFINEBITSLOSSLESS:
+    case ST_DEFINEBITSLOSSLESS2:
+    case ST_DEFINEBITS:
+    case ST_DEFINEBITSJPEG2:
+    case ST_DEFINEBITSJPEG3:
+      // FIXME
+      break;
+  }
+
+  swf_SetTagPos(t,oldTagPos);
+
+  return b1;
+}
+
 U16 swf_GetPlaceID(TAG * t)
 // up to SWF 4.0
 { U32 oldTagPos;
@@ -284,6 +328,8 @@ char* swf_GetName(TAG * t)
             if(flags&PF_CXFORM)
               swf_GetCXForm(t, &c, 1);
             if(flags&PF_RATIO)
+              swf_GetU16(t);
+            if(flags&PF_CLIPACTION)
               swf_GetU16(t);
             if(flags&PF_NAME) {
               swf_ResetReadBits(t);

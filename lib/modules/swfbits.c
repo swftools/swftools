@@ -220,7 +220,7 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 
 // Lossless compression texture based on zlib
 
-#ifdef _ZLIB_INCLUDED_
+#ifdef HAVE_ZLIB
 
 int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
 { while (1)
@@ -392,7 +392,7 @@ int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap)
 }
 
 
-#endif // _ZLIB_INCLUDED_
+#endif // HAVE_ZLIB
 
 #undef OUTBUFFER_SIZE
 

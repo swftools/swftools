@@ -24,12 +24,9 @@
 #endif // HAVE_JPEGLIB_H
 #endif // HAVE_LIBJPEG
 
-#ifdef HAVE_LIBZ
-#ifdef HAVE_ZLIB_H
+#ifdef HAVE_ZLIB
 #include <zlib.h>
-#define _ZLIB_INCLUDED_
-#endif // HAVE_ZLIB_H
-#endif // HAVE_LIBZ
+#endif // HAVE_ZLIB
 
 #define LAME
 #include "lame/lame.h"
@@ -70,6 +67,13 @@ void swf_SetTagPos(TAG * t,U32 pos)
   #ifdef DEBUG_RFXSWF
   else fprintf(stderr,"SetTagPos() out of bounds: TagID = %i\n",t->id);
   #endif
+}
+
+char* swf_GetString(TAG*t)
+{
+    char* str = ((char*)(&(t)->data[(t)->pos]));
+    while(swf_GetU8(t));
+    return str;
 }
 
 U8 swf_GetU8(TAG * t)
@@ -322,7 +326,7 @@ int swf_CountBits(U32 v,int nbits)
 int swf_GetRect(TAG * t,SRECT * r)
 { int nbits;
   SRECT dummy;
-  if(!t) {r->xmin=r->xmax=r->ymin=r->ymax;return 0;}
+  if(!t) {r->xmin=r->xmax=r->ymin=r->ymax=0;return 0;}
   if (!r) r = &dummy;
   nbits = (int) swf_GetBits(t,5);
   r->xmin = swf_GetSBits(t,nbits);
@@ -378,6 +382,8 @@ void swf_ExpandRect(SRECT*src, SPOINT add)
 }
 void swf_ExpandRect2(SRECT*src, SRECT*add)
 {
+    if((add->xmin | add->ymin | add->xmax | add->ymax)==0)
+	return;
     if(add->xmin < src->xmin)
 	src->xmin = add->xmin;
     if(add->ymin < src->ymin)
@@ -390,8 +396,8 @@ void swf_ExpandRect2(SRECT*src, SRECT*add)
 SPOINT swf_TurnPoint(SPOINT p, MATRIX* m)
 {
     SPOINT r;
-    r.x = (int)(m->sx*(1/65536.0)*p.x + m->r0*(1/65536.0)*p.y + 0.5) + m->tx;
-    r.y = (int)(m->r1*(1/65536.0)*p.x + m->sy*(1/65536.0)*p.y + 0.5) + m->ty;
+    r.x = (int)(m->sx*(1/65536.0)*p.x + m->r1*(1/65536.0)*p.y + 0.5) + m->tx;
+    r.y = (int)(m->r0*(1/65536.0)*p.x + m->sy*(1/65536.0)*p.y + 0.5) + m->ty;
     return r;
 }
 SRECT swf_TurnRect(SRECT r, MATRIX* m)
@@ -635,6 +641,17 @@ TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
     }
   }
   return t;
+}
+
+void swf_ClearTag(TAG * t)
+{
+  if (t->data) free(t->data);
+  t->data = 0;
+  t->pos = 0;
+  t->len = 0;
+  t->readBit = 0;
+  t->writeBit = 0;
+  t->memsize = 0;
 }
 
 int swf_DeleteTag(TAG * t)

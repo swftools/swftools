@@ -13,6 +13,10 @@
 #ifndef __RFX_SWF_INCLUDED__
 #define __RFX_SWF_INCLUDED__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,9 +37,6 @@
 
 
 /* little/big endian stuff */
-
-//#define SWAP16(s) ((U16) ((U8*)&s)[0] | ((U16) ((U8*)&s)[1] << 8))
-//#define SWAP32(s) ((U32) ((U8*)&s)[0] | ((U32) ((U8*)&s)[1] << 8) | ((U32) ((U8*)&s)[2] << 16) | ((U32) ((U8*)&s)[3] << 24))
 
 #define PUT16(ptr,x) {((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)((x)>>8);}
 #define PUT32(ptr,x) {((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)((x)>>8);((U8*)(ptr))[2]=(U8)((x)>>16);((U8*)(ptr))[3]=(U8)((x)>>24);}
@@ -188,6 +189,8 @@ void swf_OptimizeTagOrder(SWF*swf);
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
 int   swf_DeleteTag(TAG * t);
 
+void  swf_ClearTag(TAG * t);                //frees tag data
+
 void  swf_SetTagPos(TAG * t,U32 pos);       // resets Bitcount
 U32   swf_GetTagPos(TAG * t);
 
@@ -212,7 +215,7 @@ U32   swf_GetU32(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
 void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
-
+char* swf_GetString(TAG*t);
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
 int   swf_SetU32(TAG * t,U32 v);
@@ -243,7 +246,6 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define swf_GetS32(tag)     ((S32)swf_GetU32(tag))
 #define swf_GetCoord(tag)   ((SCOORD)swf_GetU32(tag))
 #define swf_GetFixed(tag)   ((SFIXED)swf_GetU32(tag))
-#define swf_GetString(t)    ((char*)(&(t)->data[(t)->pos]))
 
 #define swf_SetS8(tag,v)    swf_SetU8(tag,(U8)v)
 #define swf_SetS16(tag,v)   swf_SetU16(tag,(U16)v)
@@ -252,8 +254,12 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define swf_SetFixed(tag,v) swf_SetU32(tag,(U32)v)
 #define swf_SetString(t,s)  swf_SetBlock(t,s,strlen(s)+1)
 
+#ifndef FAILED
 #define FAILED(b)       ((b)<0)
-#define SUCCEDED(b)     ((b)>=0)
+#endif
+#ifndef SUCCEEDED
+#define SUCCEEDED(b)     ((b)>=0)
+#endif
 
 // Tag IDs (adopted from J. C. Kessels' Form2Flash)
 
@@ -508,6 +514,7 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetDefine2(TAG * t,SWFFONT * f);
 int swf_FontSetInfo(TAG * t,SWFFONT * f);
 
+void swf_FontCreateLayout(SWFFONT*f);
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
 
 int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
@@ -531,7 +538,7 @@ int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
-void swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
+SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
 
 // swfdump.c
 
@@ -659,6 +666,7 @@ U8 swf_isDefiningTag(TAG * t);
 U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
 U16 swf_GetDefineID(TAG * t);
+SRECT swf_GetDefineBBox(TAG * t);
 void swf_SetDefineID(TAG * t, U16 newid);
 U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
 U16 swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
@@ -823,6 +831,10 @@ typedef struct _SWFPLACEOBJECT {
 void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj);
 void swf_GetPlaceObject(TAG * t,SWFPLACEOBJECT* obj);
 void swf_PlaceObjectFree(SWFPLACEOBJECT* obj);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

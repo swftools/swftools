@@ -10,11 +10,16 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <memory.h>
 #include <fcntl.h>
-#include <zlib.h>
-#include "./bitio.h"
 
+#include "../config.h"
+
+#ifdef HAVE_ZLIB
+#include <zlib.h>
 #define ZLIB_BUFFER_SIZE 16384
+#endif
+#include "./bitio.h"
 
 struct memread_t
 {
@@ -30,16 +35,20 @@ struct memwrite_t
 
 struct zlibinflate_t
 {
+#ifdef HAVE_ZLIB
     z_stream zs;
     struct reader_t*input;
     unsigned char readbuffer[ZLIB_BUFFER_SIZE];
+#endif
 };
 
 struct zlibdeflate_t
 {
+#ifdef HAVE_ZLIB
     z_stream zs;
     struct writer_t*output;
     unsigned char writebuffer[ZLIB_BUFFER_SIZE];
+#endif
 };
 
 void reader_resetbits(struct reader_t*r)
@@ -52,7 +61,9 @@ void reader_resetbits(struct reader_t*r)
 static int reader_zlibinflate(struct reader_t*reader, void* data, int len);
 static int reader_fileread(struct reader_t*reader, void* data, int len);
 static int reader_memread(struct reader_t*reader, void* data, int len);
+#ifdef HAVE_ZLIB
 static void zlib_error(int ret, char* msg, z_stream*zs);
+#endif
 
 void reader_init_filereader(struct reader_t*r, int handle)
 {
@@ -79,6 +90,7 @@ void reader_init_memreader(struct reader_t*r, void*newdata, int newlength)
 
 void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input)
 {
+#ifdef HAVE_ZLIB
     struct zlibinflate_t*z;
     int ret;
     memset(r, 0, sizeof(struct reader_t));
@@ -96,8 +108,12 @@ void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input)
     ret = inflateInit(&z->zs);
     if (ret != Z_OK) zlib_error(ret, "bitio:inflate_init", &z->zs);
     reader_resetbits(r);
+#else
+    fprintf(stderr, "Error: swftools was compiled without zlib support");
+#endif
 }
 
+#ifdef HAVE_ZLIB
 static void zlib_error(int ret, char* msg, z_stream*zs)
 {
     fprintf(stderr, "%s: zlib error (%d): last zlib error: %s\n",
@@ -107,6 +123,7 @@ static void zlib_error(int ret, char* msg, z_stream*zs)
     perror("errno:");
     exit(1);
 }
+#endif
 
 static int reader_fileread(struct reader_t*reader, void* data, int len) 
 {
@@ -133,6 +150,7 @@ static int reader_memread(struct reader_t*reader, void* data, int len)
 
 static int reader_zlibinflate(struct reader_t*reader, void* data, int len) 
 {
+#ifdef HAVE_ZLIB
     struct zlibinflate_t*z = (struct zlibinflate_t*)reader->internal;
     int ret;
     if(!z)
@@ -169,6 +187,10 @@ static int reader_zlibinflate(struct reader_t*reader, void* data, int len)
     }
     reader->pos += len;
     return len;
+#else
+    fprintf(stderr, "Error: swftools was compiled without zlib support");
+    exit(1);
+#endif
 }
 unsigned int reader_readbit(struct reader_t*r)
 {
@@ -258,6 +280,7 @@ void writer_init_memwriter(struct writer_t*w, void*data, int len)
 
 void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output)
 {
+#ifdef HAVE_ZLIB
     struct zlibdeflate_t*z;
     int ret;
     memset(w, 0, sizeof(struct writer_t));
@@ -279,9 +302,14 @@ void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output)
     w->mybyte = 0;
     z->zs.next_out = z->writebuffer;
     z->zs.avail_out = ZLIB_BUFFER_SIZE;
+#else
+    fprintf(stderr, "Error: swftools was compiled without zlib support");
+    exit(1);
+#endif
 }
 static int writer_zlibdeflate_write(struct writer_t*writer, void* data, int len) 
 {
+#ifdef HAVE_ZLIB
     struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
     int ret;
     if(!z)
@@ -307,9 +335,14 @@ static int writer_zlibdeflate_write(struct writer_t*writer, void* data, int len)
     }
     writer->pos += len;
     return len;
+#else
+    fprintf(stderr, "Error: swftools was compiled without zlib support");
+    exit(1);
+#endif
 }
 static void writer_zlibdeflate_finish(struct writer_t*writer)
 {
+#ifdef HAVE_ZLIB
     struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
     struct writer_t*output;
     int ret;
@@ -337,6 +370,10 @@ static void writer_zlibdeflate_finish(struct writer_t*writer)
     free(writer->internal);
     writer->internal = 0;
     output->finish(output);
+#else
+    fprintf(stderr, "Error: swftools was compiled without zlib support");
+    exit(1);
+#endif
 }
 
 void writer_writebit(struct writer_t*w, int bit)

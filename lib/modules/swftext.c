@@ -120,18 +120,12 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
       return id;
     }
     
-    if (l)
-    { if (f->name) free(f->name);
-      f->name = (U8*)malloc(l+1);
-      if (f->name)
-      { swf_GetBlock(t,f->name,l);
-        f->name[l] = 0;
-      }
-      else
-      { swf_RestoreTagPos(t);
-        return -1;
-      }
-    }
+    if (f->name) free(f->name);
+
+    f->name = (U8*)malloc(l+1);
+    swf_GetBlock(t,f->name,l);
+    f->name[l] = 0;
+    
     flags = swf_GetU8(t);
     if(flags & 2)
 	f->style |= FONT_STYLE_BOLD;
@@ -367,9 +361,7 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
     
   if ((!swf)||(!font)) return -1;
 
-  f = (SWFFONT *)malloc(sizeof(SWFFONT)); font[0] = f;
-  if (!f) return -1;
-  
+  f = (SWFFONT *)malloc(sizeof(SWFFONT));
   memset(f,0x00,sizeof(SWFFONT));
 
   t = swf->firstTag;
@@ -397,6 +389,11 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
     if (nid>0) id = nid;
     t = swf_NextTag(t);
   }
+  if(f->id != id) {
+      free(f);
+      f=0;
+  }
+  font[0] = f;
   return 0;
 }
 
@@ -461,6 +458,10 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
     }
 
   for (i=0;i<j;i++) swf_SetU16(t,ofs[i]+j*2);
+  if(!j) {
+      fprintf(stderr, "rfxswf: warning: Font is empty\n");
+      swf_SetU16(t, 0);
+  }
   
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
@@ -576,9 +577,10 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f)
   if ((!t)||(!f)) return -1;
   swf_ResetWriteBits(t);
   swf_SetU16(t,f->id);
-  l = strlen(f->name); if (l>255) l = 255;
+  l = f->name?strlen(f->name):0; if (l>255) l = 255;
   swf_SetU8(t,l);
-  swf_SetBlock(t,f->name,l);
+  if(l)
+    swf_SetBlock(t,f->name,l);
   if(f->numchars>=256)
       wide=1;
 
@@ -925,21 +927,91 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 	swf_SetString(tag,text);
 }
 
-void swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
+SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 {
     SRECT r;
     U8 gbits, abits;
-    
-    r.xmin = r.ymin = 0; /*FIXME*/
-    r.xmax = r.ymax = 1024*20;
+    U8*c = (U8*)text;
+    int pos = 0;
+    swf_GetRect(0, &r);
+    if(font->layout) {
+	while(*c) {
+	    if(*c < font->maxascii) {
+		int g = font->ascii2glyph[*c];
+		SRECT rn = font->layout->bounds[g];
+		rn.xmin = (rn.xmin * scale)/2000 + pos;
+		rn.xmax = (rn.xmax * scale)/2000 + pos;
+		rn.ymin = (rn.ymin * scale)/2000;
+		rn.ymax = (rn.ymax * scale)/2000;
+		swf_ExpandRect2(&r, &rn);
+		pos += (font->glyph[g].advance*scale)/100;
+	    }
+	    c++;
+	}
+    } else {
+	/* Hm, without layout information, we can't compute a bounding
+	   box. We could call swf_FontCreateLayout to create a layout,
+	   but the caller probably doesn't want us to mess up his font
+	   structure.
+	*/
+	r.xmin = r.ymin = 0;
+	r.xmax = r.ymax = 1024*20;
+    }
 
     swf_SetRect(tag,&r);
     swf_SetMatrix(tag,NULL);
     swf_TextCountBits(font,text,scale,&gbits,&abits);
     swf_SetU8(tag,gbits);
     swf_SetU8(tag,abits);
-    swf_TextSetInfoRecord(tag,font,scale,rgb,0,scale);
+    swf_TextSetInfoRecord(tag,font,scale/2 /*?? why /2? */,rgb,0,0); //scale
     swf_TextSetCharRecord(tag,font,text,scale,gbits,abits);
     swf_SetU8(tag,0);
+    return r;
 }
+
+void swf_FontCreateLayout(SWFFONT*f)
+{
+    S16 leading = 0;
+    int t;
+    if(f->layout)
+	return;
+    if(!f->numchars)
+	return;
+    
+    f->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
+    memset(f->layout, 0, sizeof(SWFLAYOUT));
+    f->layout->bounds = (SRECT*)malloc(f->numchars*sizeof(SRECT));
+    f->layout->ascent = -32767;
+    f->layout->descent = -32767;
+
+    for(t=0;t<f->numchars;t++) {
+	SHAPE2*shape2;
+	SRECT bbox;
+	int width;
+	shape2 = swf_ShapeToShape2(f->glyph[t].shape);
+	if(!shape2) { 
+	    fprintf(stderr, "Shape parse error\n");exit(1);
+	}
+	bbox = swf_GetShapeBoundingBox(shape2->lines);
+	swf_Shape2Free(shape2);
+	f->layout->bounds[t] = bbox;
+	/* FIXME */
+	//width = (bbox.xmax - bbox.xmin)/20;
+	width = (bbox.xmax)/20;
+
+	/* The following is a heuristic- it may be that extractfont_DefineText
+	   has already found out some widths for individual characters (from the way
+	   they are used)- we now have to guess whether that width might be possible,
+	   which is the case if it isn't either much too big or much too small */
+	if(width > f->glyph[t].advance*3/2 ||
+	   width*2 < f->glyph[t].advance)
+	    f->glyph[t].advance = width;
+
+	if(-bbox.ymin > f->layout->ascent)
+	    f->layout->ascent = bbox.ymin;
+	if(bbox.ymax > f->layout->descent)
+	    f->layout->descent = bbox.ymax;
+    }
+}
+	
 

@@ -93,7 +93,7 @@ int main (int argc,char ** argv)
   
                                             // write movie to file
 
-  f = open("shape1.swf",O_WRONLY|O_CREAT, 0644);
+  f = open("shape1.swf",O_WRONLY|O_CREAT|O_TRUNC, 0644);
   if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 

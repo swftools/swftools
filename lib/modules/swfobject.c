@@ -58,8 +58,10 @@ int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * nam
   if (flags&PF_MATRIX) swf_SetMatrix(t,m);
   if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
   if (flags&PF_RATIO) swf_SetU16(t,0);
-  if (flags&PF_NAME) swf_SetString(t,name);
+
+  /* ??? The spec states that name comes first? */
   if (flags&PF_CLIPACTION) swf_SetU16(t, clipaction);
+  if (flags&PF_NAME) swf_SetString(t,name);
   return 0; 
 }
 
@@ -118,8 +120,10 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 	if (flags&PF_MATRIX) swf_SetMatrix(t,&obj->matrix);
 	if (flags&PF_CXFORM) swf_SetCXForm(t,&obj->cxform,1);
 	if (flags&PF_RATIO) swf_SetU16(t,obj->ratio);
-	if (flags&PF_NAME) swf_SetString(t,obj->name);
+  
+	/* ??? The spec states that name comes first? */
 	if (flags&PF_CLIPACTION) swf_SetU16(t,obj->clipdepth);
+	if (flags&PF_NAME) swf_SetString(t,obj->name);
 	if (flags&PF_ACTIONEVENT) {
 	    // ...
 	}
@@ -128,7 +132,15 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 
 void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 {
-    U8 flags = swf_GetU8(tag);
+    U8 flags;
+    if(!tag) {
+	memset(obj, 0, sizeof(SWFPLACEOBJECT));
+	swf_GetMatrix(0, &obj->matrix);
+	swf_GetCXForm(0, &obj->cxform, 1);
+	return;
+    }
+    
+    flags = swf_GetU8(tag);
     memset(obj,0,sizeof(SWFPLACEOBJECT));
 	
     swf_GetMatrix(0,&obj->matrix);
@@ -140,6 +152,8 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
     if(flags&4) swf_GetMatrix(tag, &obj->matrix);
     if(flags&8) swf_GetCXForm(tag, &obj->cxform,1);
     if(flags&16) obj->ratio = swf_GetU16(tag);
+    if(flags&64) 
+	obj->clipdepth = swf_GetU16(tag); //clip
     if(flags&32) {
 	int l,t;
 	U8*data;
@@ -150,8 +164,6 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 	obj->name = data;
 	while((data[t++] = swf_GetU8(tag))); 
     }
-    if(flags&64) 
-	obj->clipdepth = swf_GetU16(tag); //clip
 
     /* Actionscript ignored (for now) */
     obj->actions = 0;
