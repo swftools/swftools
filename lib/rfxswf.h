@@ -255,6 +255,7 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 #define ST_PROTECT              24 /* This file should not be importable for editing. */
 #define ST_PLACEOBJECT2         26 /* The new style place w/ alpha color transform and name. */
 #define ST_REMOVEOBJECT2        28 /* A more compact remove object that omits the character tag (just depth). */
+#define ST_FREEALL              31 /* ? */
 #define ST_DEFINESHAPE3         32 /* A shape V3 includes alpha values. */
 #define ST_DEFINETEXT2          33 /* A text V2 includes alpha values. */
 #define ST_DEFINEBUTTON2        34 /* A button V2 includes color transform, alpha and multiple actions */

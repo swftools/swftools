@@ -161,6 +161,8 @@ char* swf_TagGetName(TAG*tag)
             return "VIDEOFRAME";
         case ST_DEFINEFONTINFO2:
             return "DEFINEFONTINFO2";
+        case ST_FREEALL:
+            return "FREEALL";
         case ST_MX4:
             return "MX4";
     }
