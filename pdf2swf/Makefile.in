@@ -22,9 +22,11 @@ font2swf.o: font2swf.cc swfoutput.h spline.h
 
 pdf2swf: pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o xpdf/pdflib.a ttf2pt1/ttf2pt1.a ../lib/librfxswf.a 
 	$(LL) pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o -o pdf2swf ../lib/librfxswf.a ttf2pt1/ttf2pt1.a xpdf/libpdf.a $(LIBS) 
+	$(STRIP) pdf2swf
 
 font2swf: font2swf.o swfoutput.o spline.o encodings.o xpdf/pdflib.a ../lib/librfxswf.a 
 	$(LL) font2swf.o swfoutput.o spline.o encodings.o ../lib/librfxswf.a xpdf/libpdf.a -o font2swf $(LIBS)
+	$(STRIP) font2swf
 
 xpdf/pdflib.a:
 	cd xpdf;$(MAKE);cd ..
@@ -36,11 +38,13 @@ install:
 	$(mkinstalldirs) $(bindir)
 	$(mkinstalldirs) $(man1dir)
 	@file=pdf2swf;$(INSTALL_BIN);$(INSTALL_MAN1)
+	@file=font2swf;$(INSTALL_BIN);$(INSTALL_MAN1)
 	$(mkinstalldirs) $(pkgdatadir)/fonts
 	@for file in $(fonts);do $(INSTALL_DATA) fonts/$$file $(pkgdatadir)/fonts/$$file;done
 	
 uninstall:
 	@file=pdf2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
+	@file=font2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
 	@for file in $(fonts);do $(UNINSTALL_DATA) $(pkgdatadir)/fonts/$$file;done
 
 clean: 
