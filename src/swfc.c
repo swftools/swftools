@@ -508,9 +508,6 @@ void s_buttonput(char*character, char*as, parameters_t p)
 	    break;
 	s++;
     }
-    printf("%s\n", as);
-    swf_DumpMatrix(stdout,&mybutton.records[0].matrix);
-    
 }
 static void setbuttonrecords(TAG*tag)
 {
