@@ -126,22 +126,6 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   
 } TAG, * LPTAG;
 
-typedef struct _ActionTAG 
-{ U8            op;
-  U16           len;
-  U8 *          data;
-
-  struct _ActionTAG * next;
-  struct _ActionTAG * prev;
-
-  struct _ActionTAG * parent;
-  U8 tmp[4]; // store small operands here.
-} ActionTAG;
-
-typedef struct _ActionMarker
-{
-  ActionTAG* atag;
-} ActionMarker;
 
 typedef struct _SWF
 { U8            fileVersion;
@@ -175,6 +159,8 @@ int  swf_ReadHeader(struct reader_t*reader, SWF * swf);   // Reads SWF Header vi
 
 void swf_FoldAll(SWF*swf);
 void swf_FoldSprite(TAG*tag);
+
+// basic routines:
     
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
 int   swf_DeleteTag(TAG * t);
@@ -203,6 +189,7 @@ U32   swf_GetU32(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
 void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
+void  swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2);
 
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
@@ -333,6 +320,19 @@ typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
   U32           bitlen;         // length of data in bits
 } SHAPE, * LPSHAPE;
 
+/* data/bitlen can be expanded into a SHAPELINE record using
+   parseShapeData: */
+typedef struct _SHAPELINE
+{
+    enum {moveTo, lineTo, splineTo} type;
+    SCOORD x,y;
+    SCOORD sx,sy; //only if type==splineTo
+    int fillstyle0;
+    int fillstyle1;
+    int linestyle;
+    struct _SHAPELINE*next;
+} SHAPELINE;
+
 // Shapes
 
 int   swf_ShapeNew(SHAPE ** s);
@@ -359,6 +359,8 @@ int   swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
 int   swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
 int   swf_ShapeSetEnd(TAG * t);
 
+SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
+SRECT	   swf_GetBoundingBox(SHAPELINE*shape);
 
 // swffont.c
 
@@ -494,14 +496,6 @@ void swf_DumpTag(FILE * f,TAG * t);
 char* swf_TagGetName(TAG*tag);
 void swf_DumpFont(SWFFONT * font);
 
-// swfobject.c
-
-// Always use ST_PLACEOBJECT2 !!!
-
-int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
-int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
-int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
-
 // swfbutton.c
 
 // Button States
@@ -634,6 +628,23 @@ void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // swfaction.c
 
+typedef struct _ActionTAG 
+{ U8            op;
+  U16           len;
+  U8 *          data;
+
+  struct _ActionTAG * next;
+  struct _ActionTAG * prev;
+
+  struct _ActionTAG * parent;
+  U8 tmp[4]; // store small operands here.
+} ActionTAG;
+
+typedef struct _ActionMarker
+{
+  ActionTAG* atag;
+} ActionMarker;
+
 ActionTAG* swf_ActionGet(TAG*tag);
 void swf_ActionFree(ActionTAG*tag);
 void swf_ActionSet(TAG*tag, ActionTAG*actions);
@@ -741,4 +752,29 @@ ActionTAG* action_GotoFrame2(ActionTAG*atag, U8 method);
 ActionMarker action_setMarker(ActionTAG*atag);
 void action_fixjump(ActionMarker m1, ActionMarker m2);
 
+// swfobject.c
+
+// The following routines only use placeobject2:
+
+int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
+int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
+int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
+
+typedef struct _SWFPLACEOBJECT {
+    U16 depth;
+    U16 id; // may be 0
+    bool move; //true: move/replace character, false: set character
+    MATRIX matrix;
+    CXFORM cxform;
+    U16 ratio;
+    U8*name;
+    U16 clipdepth;
+    ActionTAG* actions;
+} SWFPLACEOBJECT;
+
+void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj);
+void swf_GetPlaceObject(TAG * t,SWFPLACEOBJECT* obj);
+void swf_PlaceObjectFree(SWFPLACEOBJECT* obj);
+
 #endif
+
