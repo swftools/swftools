@@ -5,14 +5,17 @@ include ../Makefile.common
 
 all: avi2swf
 
-avi2swf.o: avi2swf.cc
+videoreader_avifile.o: videoreader_avifile.cc
 	$(CC) `avifile-config --cflags` $< -o $@
+
+avi2swf.o: avi2swf.cc
+	$(CC) $< -o $@
 
 v2swf.o: v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
-avi2swf: avi2swf.o v2swf.o ../lib/q.o
-	$(LL) avi2swf.o v2swf.o ../lib/q.o -o avi2swf ../lib/librfxswf.a $(LIBS) `avifile-config --libs`
+avi2swf: avi2swf.o v2swf.o videoreader_avifile.o ../lib/q.o
+	$(LL) avi2swf.o v2swf.o videoreader_avifile.o ../lib/q.o -o avi2swf ../lib/librfxswf.a $(LIBS) `avifile-config --libs`
 	$(STRIP) avi2swf
 
 install:
