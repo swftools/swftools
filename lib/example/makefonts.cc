@@ -82,7 +82,9 @@ SWFFONT * t1font2swffont(int i)
 
     wfont->maxascii = encodingsize;
     wfont->numchars = num;
-    wfont->flags = /*layout*/0x80 + /*bold*/0?1:0 + /*italic*/(angle>0.05)?2:0;
+    
+    wfont->style = (/*bold*/0?FONT_STYLE_BOLD:0) + (angle>0.05?FONT_STYLE_ITALIC:0);
+
     wfont->glyph = (SWFGLYPH*)malloc(num*sizeof(SWFGLYPH));
     memset(wfont->glyph, 0, num*sizeof(SWFGLYPH));
     wfont->glyph2ascii = (U16*)malloc(num*sizeof(U16));
