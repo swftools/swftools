@@ -18,7 +18,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2004-11-03-1856
+VERSION=2004-11-13-2026
 
 
 # ------------------------------------------------------------------
@@ -106,7 +106,12 @@ fi
  AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
 
 dnl Checks for system services
+OBJEXT="o"
  AC_EXEEXT
+if test "x$EXEEXT" = "x.exe";then
+    OBJEXT="obj"
+fi
+AC_SUBST(OBJEXT)
 
 RFX_CHECK_MING
 
@@ -212,7 +217,7 @@ if test "x${DISABLE_LAME}" = "xtrue"; then
 else
     # old lame code at lib/lame
     if test -f lib/lame/Makefile.in; then
-	lame_objects="lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o"
+	lame_objects="lame/psymodel.\$(O) lame/fft.\$(O) lame/newmdct.\$(O) lame/quantize.\$(O) lame/takehiro.\$(O) lame/reservoir.\$(O) lame/quantize_pvt.\$(O) lame/vbrquantize.\$(O) lame/encoder.\$(O) lame/id3tag.\$(O) lame/version.\$(O) lame/tables.\$(O) lame/util.\$(O) lame/bitstream.\$(O) lame/set_get.\$(O) lame/VbrTag.\$(O) lame/lame.\$(O)"
 	lame_makefile="lib/lame/Makefile"
 	CPPFLAGS="$CPPFLAGS -Ilame"
 	AC_DEFINE_UNQUOTED(HAVE_LAME, 1)
