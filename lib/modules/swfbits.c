@@ -1043,12 +1043,13 @@ void swf_RemoveJPEGTables(SWF * swf)
     tag = swf->firstTag;
     while (tag) {
 	if (tag->id == ST_DEFINEBITSJPEG) {
-	    void *data = rfx_alloc(tag->len);
+	    int len = tag->len;
+	    void *data = rfx_alloc(len);
 	    swf_GetBlock(tag, data, tag->len);
 	    swf_ResetTag(tag, ST_DEFINEBITSJPEG2);
 	    swf_SetBlock(tag, &((U8*)data)[0], 2); //id
 	    swf_SetBlock(tag, tables_tag->data, tables_tag->len);
-	    swf_SetBlock(tag, &((U8*)data)[2], tag->len-2);
+	    swf_SetBlock(tag, &((U8*)data)[2], len-2);
 	    free(data);
 	}
 	tag = tag->next;
