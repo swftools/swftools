@@ -30,6 +30,8 @@ class SWFFont
 {
     T1_OUTLINE**outline;
     char**charname;
+    char*used;
+
     char*name;
     int charnum;
 
@@ -37,8 +39,10 @@ class SWFFont
     
     int t1id;
     char*fontid;
+    unsigned int swfid;
 
     SWFFont(char*name, int t1id, char*filename);
+    SWFFont::~SWFFont();
     T1_OUTLINE*getOutline(char*charname);
     char*getName();
     char*getCharName(int t);
