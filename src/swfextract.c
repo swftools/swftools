@@ -363,7 +363,7 @@ void extractTag(SWF*swf, char*filename)
     }
     desttag = swf_InsertTag(desttag,ST_END);
     
-    f = open(filename, O_TRUNC|O_WRONLY|O_CREAT, 0644);
+    f = open(filename, O_TRUNC|O_WRONLY|O_CREAT|O_BINARY, 0644);
     if FAILED(swf_WriteSWF(f,&newswf)) fprintf(stderr,"WriteSWF() failed.\n");
     close(f);
 
