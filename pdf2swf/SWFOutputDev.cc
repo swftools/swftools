@@ -944,6 +944,12 @@ void SWFOutputDev::updateFont(GfxState *state)
       unlink(fileName);
 }
 
+int pic_xids[1024];
+int pic_yids[1024];
+int pic_ids[1024];
+int picpos = 0;
+int pic_id = 0;
+
 void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask)
@@ -955,7 +961,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   ImageStream *imgStr;
   Guchar pixBuf[4];
   GfxRGB rgb;
-
+  if(!width || !height)
+      return;
+  
   state->transform(0, 1, &x1, &y1);
   state->transform(0, 0, &x2, &y2);
   state->transform(1, 0, &x3, &y3);
@@ -977,10 +985,37 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
     }
     str = ((DCTStream *)str)->getRawStream();
     str->reset();
+    int xid = 0;
+    int yid = 0;
+    int count = 0;
     while ((c = str->getChar()) != EOF)
+    {
       fputc(c, fi);
+      xid += count*c;
+      yid += (~count)*c;
+      count++;
+    }
     fclose(fi);
-    swfoutput_drawimagejpeg(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+    
+    int t,found = -1;
+    for(t=0;t<picpos;t++)
+    {
+	if(pic_xids[t] == xid &&
+	   pic_yids[t] == yid) {
+	    found = t;break;
+	}
+    }
+    if(found<0) {
+	pic_ids[picpos] = swfoutput_drawimagejpeg(&output, fileName, width, height, 
+		x1,y1,x2,y2,x3,y3,x4,y4);
+	pic_xids[picpos] = xid;
+	pic_yids[picpos] = yid;
+	if(picpos<1024)
+	    picpos++;
+    } else {
+	swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+		x1,y1,x2,y2,x3,y3,x4,y4);
+    }
     unlink(fileName);
   } else {
 
@@ -1011,18 +1046,40 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	if(colorMap->getNumPixelComps()!=1)
 	{
 	    RGBA*pic=new RGBA[width*height];
+	    int xid = 0;
+	    int yid = 0;
 	    for (y = 0; y < height; ++y) {
 	      for (x = 0; x < width; ++x) {
+		int r,g,b,a;
 		imgStr->getPixel(pixBuf);
 		colorMap->getRGB(pixBuf, &rgb);
-		pic[width*y+x].r = (U8)(rgb.r * 255 + 0.5);
-		pic[width*y+x].g = (U8)(rgb.g * 255 + 0.5);
-		pic[width*y+x].b = (U8)(rgb.b * 255 + 0.5);
-		pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
+		pic[width*y+x].r = r = (U8)(rgb.r * 255 + 0.5);
+		pic[width*y+x].g = g = (U8)(rgb.g * 255 + 0.5);
+		pic[width*y+x].b = b = (U8)(rgb.b * 255 + 0.5);
+		pic[width*y+x].a = a = 255;//(U8)(rgb.a * 255 + 0.5);
+		xid += x*r+x*b*3+x*g*7+x*a*11;
+		yid += y*r*3+y*b*17+y*g*19+y*a*11;
 	      }
 	    }
-	    swfoutput_drawimagelossless(&output, pic, width, height, 
-		    x1,y1,x2,y2,x3,y3,x4,y4);
+	    int t,found = -1;
+	    for(t=0;t<picpos;t++)
+	    {
+		if(pic_xids[t] == xid &&
+		   pic_yids[t] == yid) {
+		    found = t;break;
+		}
+	    }
+	    if(found<0) {
+		pic_ids[picpos] = swfoutput_drawimagelossless(&output, pic, width, height, 
+			x1,y1,x2,y2,x3,y3,x4,y4);
+		pic_xids[picpos] = xid;
+		pic_yids[picpos] = yid;
+		if(picpos<1024)
+		    picpos++;
+	    } else {
+		swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+			x1,y1,x2,y2,x3,y3,x4,y4);
+	    }
 	    delete pic;
 	}
 	else
@@ -1030,23 +1087,46 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	    U8*pic = new U8[width2*height];
 	    RGBA pal[256];
 	    int t;
+	    int xid=0,yid=0;
 	    for(t=0;t<256;t++)
 	    {
+		int r,g,b,a;
 		pixBuf[0] = t;
 		colorMap->getRGB(pixBuf, &rgb);
-		pal[t].r = (U8)(rgb.r * 255 + 0.5);
-		pal[t].g = (U8)(rgb.g * 255 + 0.5);
-		pal[t].b = (U8)(rgb.b * 255 + 0.5);
-		pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
+		pal[t].r = r = (U8)(rgb.r * 255 + 0.5);
+		pal[t].g = g = (U8)(rgb.g * 255 + 0.5);
+		pal[t].b = b = (U8)(rgb.b * 255 + 0.5);
+		pal[t].a = a = 255;//(U8)(rgb.b * 255 + 0.5);
+		xid += t*r+t*b*3+t*g*7+t*a*11;
+		xid += (~t)*r+t*b*3+t*g*7+t*a*11;
 	    }
 	    for (y = 0; y < height; ++y) {
 	      for (x = 0; x < width; ++x) {
 		imgStr->getPixel(pixBuf);
 		pic[width2*y+x] = pixBuf[0];
+		xid += x*pixBuf[0]*7;
+		yid += y*pixBuf[0]*3;
 	      }
 	    }
-	    swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
-		    x1,y1,x2,y2,x3,y3,x4,y4);
+	    int found = -1;
+	    for(t=0;t<picpos;t++)
+	    {
+		if(pic_xids[t] == xid &&
+		   pic_yids[t] == yid) {
+		    found = t;break;
+		}
+	    }
+	    if(found<0) {
+		pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
+			x1,y1,x2,y2,x3,y3,x4,y4);
+		pic_xids[picpos] = xid;
+		pic_yids[picpos] = yid;
+		if(picpos<1024)
+		    picpos++;
+	    } else {
+		swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+			x1,y1,x2,y2,x3,y3,x4,y4);
+	    }
 	    delete pic;
 	}
 	delete imgStr;
