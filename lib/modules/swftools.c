@@ -439,7 +439,6 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
 	case ST_GENERATORTEXT:
-	case ST_MX3:
 	    callback(tag, tag->pos + base, callback_data);
         break;
 	case ST_PLACEOBJECT:

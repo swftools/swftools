@@ -145,7 +145,7 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
 	f->encoding |= FONT_ENCODING_UNICODE;
 
     if(t->id == ST_DEFINEFONTINFO2) {
-	f->language = swf_GetU8();
+	f->language = swf_GetU8(t);
     }
 
     f->glyph2ascii = (U16*)malloc(sizeof(U16)*f->numchars);

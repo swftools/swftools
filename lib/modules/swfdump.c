@@ -153,14 +153,14 @@ char* swf_TagGetName(TAG*tag)
 	    return "ENABLEDEBUGGER";
         case ST_REFLEX:
             return "REFLEX";
-        case ST_MX0:
-            return "MX0";
-        case ST_MX1:
-            return "MX1";
-        case ST_MX2:
-            return "MX2";
-        case ST_MX3:
-            return "MX3";
+        case ST_DOINITACTION:
+            return "DOINITACTION";
+        case ST_DEFINEVIDEOSTREAM:
+            return "DEFINEVIDEOSTREAM";
+        case ST_VIDEOFRAME:
+            return "VIDEOFRAME";
+        case ST_DEFINEFONTINFO2:
+            return "DEFINEFONTINFO2";
         case ST_MX4:
             return "MX4";
     }
