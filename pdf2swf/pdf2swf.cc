@@ -202,6 +202,7 @@ char is_in_range(int t, char*irange)
 
 int main(int argn, char *argv[])
 {
+    srand48(time(0));
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,loglevel);
 
