@@ -41,7 +41,7 @@ PyObject * taglist_new2(TAG*tag)
     nr = 0;
     t = tag;
     while(t) {
-	PyObject*newtag = tag_new2(tag, taglist->tagmap);
+	PyObject*newtag = tag_new2(t, taglist->tagmap);
 	PyList_SET_ITEM(taglist->taglist,nr,newtag);Py_INCREF(newtag);
 	if(swf_isDefiningTag(t)) {
 	    tagmap_add(taglist->tagmap, newtag);
@@ -72,6 +72,7 @@ TAG* taglist_getTAGs(PyObject*self)
 	tag = tag_getTAG(item, tag, taglist->tagmap);
 	if(!firstTag)
 	    firstTag = tag;
+	mylog(" %08x(%d) taglist_getTAGs: added tag %08x", (int)self, self->ob_refcnt, tag);
     }
     return firstTag;
 }
