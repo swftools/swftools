@@ -46,18 +46,23 @@ statistics: (for now)
    2    bytes per showframe
 */
 
-int cache_size=38; //in frames
+static int cache_size=38; //in frames
 
-char * filename = 0;
-char * outputfilename = "output.swf";
-unsigned int firstframe = 0;
-unsigned int lastframe = 0x7fffffff;
+static char * filename = 0;
+static char * outputfilename = "output.swf";
+static unsigned int firstframe = 0;
+static unsigned int lastframe = 0x7fffffff;
 
-int jpeg_quality = 20;
+static int jpeg_quality = 20;
+
+static char zlib = 0;
+static double scale = 1.0;
 
 #ifndef ST_DEFINEBITSJPEG
 #define ST_DEFINEBITSJPEG       6 
 #endif
+  
+int filesize = 0;
 
 struct options_t options[] =
 {
@@ -65,6 +70,7 @@ struct options_t options[] =
  {"o","output"},
  {"n","num"},
  {"s","start"},
+ {"z","zlib"},
  {"V","version"},
  {0,0}
 };
@@ -87,6 +93,20 @@ int args_callback_option(char*name,char*val)
 	firstframe = atoi(val);
 	return 1;
     }
+    else if(!strcmp(name, "d")) {
+	scale = atoi(val)/100.0;
+	if(scale>1.0 || scale<=0) {
+	    fprintf(stderr, "Scale must be in the range 1-100!\n");
+	    exit(1);
+	}
+	return 1;
+    }
+    else if(!strcmp(name, "z")) {
+	zlib = 1;
+	return 0;
+    }
+    fprintf(stderr, "Unknown option: -%s\n", name);
+    exit(1);
 }
 int args_callback_longoption(char*name,char*val)
 {
@@ -94,11 +114,12 @@ int args_callback_longoption(char*name,char*val)
 }
 void args_callback_usage(char*name)
 {    
-    printf("\nUsage: %s file.swf\n", name);
+    printf("\nUsage: %s file.avi\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-o , --output=filename\t Specify output filename\n"); 
-    printf("\t-n , --num=frames\t\t Number of frames to encode\n");
-    printf("\t-s , --start=frame\t\t First frame to encode\n");
+    printf("\t-o , --output filename\t Specify output filename\n"); 
+    printf("\t-n , --num frames\t Number of frames to encode\n");
+    printf("\t-s , --start frame\t First frame to encode\n");
+    printf("\t-d , --scale factor\t Scale to factor percent\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
     exit(0);
 }
@@ -164,7 +185,7 @@ void makeshape(int file, int id, int gfxid, int width, int height)
     swf_ShapeSetLine(tag,s,-width*20,0);
     swf_ShapeSetLine(tag,s,0,-height*20);
     swf_ShapeSetEnd(tag);
-    swf_WriteTag(file, tag);
+    filesize += swf_WriteTag(file, tag);
     swf_DeleteTag(tag);
     swf_ShapeFree(s);
 }
@@ -181,7 +202,7 @@ void setshape(int file,int id,int depth,int x,int y,CXFORM*cx)
 		||(cx->a1|cx->r1|cx->g1|cx->b1))) cx = 0;
     tag = swf_InsertTag(NULL,ST_PLACEOBJECT2);
       swf_ObjectPlace(tag,id,depth,&m,cx,0);
-    swf_WriteTag(file, tag);
+    filesize += swf_WriteTag(file, tag);
     swf_DeleteTag(tag);
 }
 
@@ -312,8 +333,10 @@ class GfxBlockCache {
     {
 	int t;
 	printf("destroying cache...\n");
-	printf("hits:%d (%02d%%)\n", hits, hits*100/(hits+misses));
-	printf("misses:%d (%02d%%)\n", misses, misses*100/(hits+misses));
+	if(hits+misses) {
+	    printf("hits:%d (%02d%%)\n", hits, hits*100/(hits+misses));
+	    printf("misses:%d (%02d%%)\n", misses, misses*100/(hits+misses));
+	}
 	for(t=0;t<size;t++)
 	    if(expire[t] && list[t].data)
 		free(list[t].data);
@@ -350,7 +373,7 @@ class GfxBlockEncoder {
 	    TAG*tag;
 	    tag = swf_InsertTag(NULL, ST_REMOVEOBJECT2);
 	    swf_SetU16(tag, basedepth+t); //depth
-	    swf_WriteTag(file, tag);
+	    filesize += swf_WriteTag(file, tag);
 	    swf_DeleteTag(tag);
 	    depth[t] = -1;
 	}
@@ -371,7 +394,7 @@ class GfxBlockEncoder {
 	for(y=0;y<sizey;y++)
 	    swf_SetJPEGBitsLine(jb,&block->data[y*sizex*3]);
 	swf_SetJPEGBitsFinish(jb);
-	swf_WriteTag(file, tag);
+	filesize += swf_WriteTag(file, tag);
 	swf_DeleteTag(tag);
 
 	cache->insert(block, shapeid);
@@ -433,7 +456,7 @@ void initdisplay(int file)
 
     TAG*tag = swf_InsertTag(NULL, ST_JPEGTABLES);
     JPEGBITS * jpeg = swf_SetJPEGBitsStart(tag, xblocksize, yblocksize, jpeg_quality);
-    swf_WriteTag(file, tag);
+    filesize += swf_WriteTag(file, tag);
     swf_DeleteTag(tag);
     free(jpeg);
 }
@@ -448,6 +471,79 @@ void destroydisplay(int file)
 SWF swf;
 TAG*tag;
 
+class SoundReader
+{
+
+    short int* sound_buffer;
+    int mp3_block_size;
+    int write_pos;
+    int read_pos;
+    IAviReadStream* astream;
+    void readBlock()
+    {
+	unsigned samples_read, bytes_read;
+	int ret;
+	short int tmpbuf[4096];
+	ret = astream->ReadFrames(tmpbuf, 4096*sizeof(short int),
+		4096, samples_read, bytes_read);
+	if(ret<0) {
+	    printf("couldn't read %d samples\n", mp3_block_size);
+	    exit(1);
+	}
+	int t;
+	samples_read = bytes_read/sizeof(short int);
+	for(t=0;t<samples_read/2;t++) {
+	    sound_buffer[write_pos+t] = tmpbuf[t*2];
+	}
+	write_pos += samples_read/2;
+
+	if(write_pos >= mp3_block_size*8)
+	{
+	    if(write_pos > mp3_block_size*8)
+		memcpy(&sound_buffer[0],&sound_buffer[mp3_block_size*8],write_pos - mp3_block_size*8);
+	    write_pos %= (mp3_block_size*8);
+	}
+    }
+    public:
+
+    SoundReader(IAviReadStream*astream)
+    {
+	this->astream = astream;
+	this->write_pos = 0;
+	this->read_pos = 0;
+	this->mp3_block_size = 2304;
+	this->sound_buffer = new short int[mp3_block_size*16];
+    }
+    ~SoundReader()
+    {
+	delete sound_buffer;
+    }
+    int available()
+    {
+	if(read_pos<=write_pos)
+	    return write_pos-read_pos;
+	else
+	    return (write_pos+mp3_block_size*8)-read_pos;
+    }
+    short int* readFrame()
+    {
+	int tmp;
+	while(available()<mp3_block_size) {
+	    readBlock();
+	}
+	tmp = read_pos;
+	read_pos += mp3_block_size;
+	read_pos %= mp3_block_size*8;
+	return &sound_buffer[tmp];
+    }
+};
+
+
+static int mp3_block_size = 2304;
+
+static int do_video = 1;
+static int do_audio = 1;
+
 int main (int argc,char ** argv)
 { 
   int file;
@@ -459,6 +555,9 @@ int main (int argc,char ** argv)
   int samplerate;
   int samplefix;
   double fps;
+  int oldwidth;
+  int oldheight;
+  double reziscale;
 
   processargs(argc, argv);
   lastframe += firstframe;
@@ -470,6 +569,10 @@ int main (int argc,char ** argv)
   player = CreateIAviReadFile(filename);    
   astream = player->GetStream(0, AviStream::Audio);
   vstream = player->GetStream(0, AviStream::Video);
+  if(!vstream)
+      do_video = 0;
+  if(!astream)
+      do_audio = 0;
 #ifndef VERSION6
   MainAVIHeader head;
   int dwMicroSecPerFrame = 0;
@@ -481,8 +584,8 @@ int main (int argc,char ** argv)
   printf("height: %d\n", head.dwHeight);
   printf("sound: %u samples (%f seconds)\n", astream->GetEndPos(),
 	  astream->GetEndTime());
-  width = head.dwWidth;
-  height = head.dwHeight;
+  oldwidth = head.dwWidth;
+  oldheight = head.dwHeight;
   dwMicroSecPerFrame = head.dwMicroSecPerFrame;
   samplesperframe = astream->GetEndPos()/astream->GetEndTime()*head.dwMicroSecPerFrame/1000000;
   samplerate = (int)(astream->GetEndPos()/astream->GetEndTime());
@@ -490,36 +593,44 @@ int main (int argc,char ** argv)
 #else
   StreamInfo*audioinfo;
   StreamInfo*videoinfo;
-  audioinfo = astream->GetStreamInfo();
-  videoinfo = vstream->GetStreamInfo();
-  width = videoinfo->GetVideoWidth();
-  height = videoinfo->GetVideoHeight();
-  samplerate = audioinfo->GetAudioSamplesPerSec();
-  samplesperframe = audioinfo->GetAudioSamplesPerSec()/videoinfo->GetFps();
-  fps = (double)(videoinfo->GetFps());
-  delete(audioinfo);
-  delete(videoinfo);
+  if(do_video)
+  {
+    videoinfo = vstream->GetStreamInfo();
+    oldwidth = videoinfo->GetVideoWidth();
+    oldheight = videoinfo->GetVideoHeight();
+    fps = (double)(videoinfo->GetFps());
+    delete(videoinfo);
+  }
+  if(do_audio)
+  {
+    audioinfo = astream->GetStreamInfo();
+    samplerate = audioinfo->GetAudioSamplesPerSec();
+    samplesperframe = audioinfo->GetAudioSamplesPerSec()/videoinfo->GetFps();
+    delete(audioinfo);
+  }
 #endif
+  width = (int)(oldwidth*scale);
+  height = (int)(oldheight*scale);
+  reziscale = 1/scale;
 
   vstream -> StartStreaming();
-  astream -> StartStreaming();
-
-  printf("%f samples/frame\n", samplesperframe);
-  printf("%d samplerate\n", samplerate);
-  samplefix = 44100/samplerate;
-
-  if(!samplefix) {
-      printf("samplerate too high!\n");
-      return 0;
+  if(do_audio)
+  {
+    astream -> StartStreaming();
+    printf("%f framerate\n", fps);
+    printf("%f samples/frame\n", samplesperframe);
+    printf("%d samplerate\n", samplerate);
   }
-  printf("%d mp3 samples per movie sample\n", samplefix);
 
-  file = open(outputfilename,O_WRONLY|O_CREAT|O_TRUNC, 0644);
+  if(zlib)
+    file = open("__tmp__.swf", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+  else
+    file = open(outputfilename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
   
   memset(&swf, 0, sizeof(swf));
   swf.frameRate = (int)(fps*256);
   swf.fileVersion = 4;
-  swf.fileSize = 476549;//0x0fffffff;
+  swf.fileSize = 0x0fffffff;
   swf.frameCount = lastframe - firstframe;
   r.xmin = 0;
   r.ymin = 0;
@@ -527,45 +638,40 @@ int main (int argc,char ** argv)
   r.ymax = height*20;
   swf.movieSize = r;
 
-  swf_WriteHeader(file, &swf);
+  filesize += swf_WriteHeader(file, &swf);
 
   tag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
   swf_SetU8(tag,0); //black
   swf_SetU8(tag,0);
   swf_SetU8(tag,0);
-  swf_WriteTag(file, tag);
+  filesize += swf_WriteTag(file, tag);
   swf_DeleteTag(tag);
 
   tag = swf_InsertTag(NULL, ST_SOUNDSTREAMHEAD2);
-  swf_SetSoundStreamHead(tag, 1152);
-  swf_WriteTag(file, tag);
+  swf_SetSoundStreamHead(tag, (int)samplesperframe/4);
+  filesize += swf_WriteTag(file, tag);
   swf_DeleteTag(tag);
 
   int frame = 0;
   initdisplay(file);
 
-  int mp3_block_size = 1152;
-
-  int bufsize = mp3_block_size;
-  if(mp3_block_size < (int)(samplesperframe+1))
-	  bufsize = (int)(samplesperframe + 1);
-  unsigned char*buffer = (unsigned char*)malloc(bufsize);
-  short*block = (short*)malloc(bufsize*2*samplefix);
-
-  unsigned samples_read, bytes_read;
-
   double movie_sound_pos = 0;
   int mp3_sound_pos = 0;
 
-  WAVEFORMATEX wave;
-  astream->GetAudioFormatInfo(&wave,0);
+  if(do_audio)
+  {
+      WAVEFORMATEX wave;
+      astream->GetAudioFormatInfo(&wave,0);
 
-  printf("nChannels:%d\n", wave.nChannels);
-  printf("nSamplesPerSec:%d\n", wave.nChannels);
-  printf("nAvgBytesPerSec:%d\n", wave.nAvgBytesPerSec);
-  printf("nBlockAlign:%d\n", wave.nBlockAlign);
-  printf("wBitsPerSample:%d\n", wave.wBitsPerSample);
-  printf("cbSize:%d\n", wave.cbSize);
+      printf("nChannels:%d\n", wave.nChannels);
+      printf("nSamplesPerSec:%d\n", wave.nSamplesPerSec);
+      printf("nAvgBytesPerSec:%d\n", wave.nAvgBytesPerSec);
+      printf("nBlockAlign:%d\n", wave.nBlockAlign);
+      printf("wBitsPerSample:%d\n", wave.wBitsPerSample);
+      printf("cbSize:%d\n", wave.cbSize);
+  }
+
+  SoundReader* sound = new SoundReader(astream);
 
   while(1) {
     if(vstream->ReadFrame()<0) {
@@ -575,12 +681,12 @@ int main (int argc,char ** argv)
 
     if(frame < firstframe)
     {
-	if(astream->ReadFrames(buffer, bufsize,
-		    (int)samplesperframe,
-		samples_read, bytes_read)<0) {
-	    printf("\n");
-	    break;
-	};
+	movie_sound_pos += samplesperframe;
+	if(do_audio)
+	while(mp3_sound_pos<movie_sound_pos) {
+	    short int* samples = sound->readFrame();
+	    mp3_sound_pos += mp3_block_size;
+	}
 	printf("\rskipping frame %d",frame);
 	fflush(stdout);
 	frame++;
@@ -588,7 +694,7 @@ int main (int argc,char ** argv)
 	    printf("\n");
 	continue;
     }
-
+    
     printf("\rconvert frame %d",frame);
     fflush(stdout);
 
@@ -596,35 +702,23 @@ int main (int argc,char ** argv)
     movie_sound_pos += samplesperframe;
 
     int first=1;
+    if(do_audio)
     while(mp3_sound_pos<movie_sound_pos) {
-	if(astream->ReadFrames(buffer, bufsize,
-		    mp3_block_size/samplefix,
-		samples_read, bytes_read)<0) {
-	    printf("couldn't read %d samples\n", mp3_block_size);
-	    break;
-	};
-	int t=0;
+	// rawplay -s 44100 -f s16_le -c 2 samples.test 
+	short int* samples = sound->readFrame();
 	int s;
 	int c=0;
-	for(s=0;s<mp3_block_size;s++) {
-	    block[s] = ((int)buffer[t]-128)*256;
-	    c++;
-	    if(c==samplefix) {
-		t++;
-		c=0;
-	    }
-	}
 	if(first) { //first run
-	    tag = swf_InsertTag(NULL, ST_SOUNDSTREAMBLOCK);
-	      swf_SetSoundStreamBlock(tag, block, mp3_block_size,1);
+	      tag = swf_InsertTag(NULL, ST_SOUNDSTREAMBLOCK);
+	      swf_SetSoundStreamBlock(tag, samples, 1);
 	} else {
-	      swf_SetSoundStreamBlock(tag, block, mp3_block_size,0);
+	      swf_SetSoundStreamBlock(tag, samples, 0);
 	}
 	
-	mp3_sound_pos += mp3_block_size/samplefix;
+	mp3_sound_pos += mp3_block_size;
 
 	if(mp3_sound_pos>=movie_sound_pos) { // last run
-	    swf_WriteTag(file, tag);
+	    filesize += swf_WriteTag(file, tag);
 	    swf_DeleteTag(tag);
 	}
 	first = 0;
@@ -645,11 +739,13 @@ int main (int argc,char ** argv)
     RGBA rgb;
 
     /* some movies have changing dimensions */
-    if(img->Width() != width ||
-       img->Height() != height) {
+    if(img->Width() != oldwidth ||
+       img->Height() != oldheight) {
 	printf("\n");
-	width = img->Width();
-	height = img->Height();
+	oldwidth = img->Width();
+	oldheight = img->Height();
+	width = (int)(oldwidth*scale);
+	height = (int)(oldheight*scale);
 	initdisplay(file);
     }
 
@@ -658,11 +754,15 @@ int main (int argc,char ** argv)
     {
 	int x,y;
 	for(y=0;y<yblocksize;y++) {
-	    U8*mydata = img->At(yy*yblocksize+y);
+#ifdef VERSION6
+	    U8*mydata = img->At(oldheight-(int)((yy*yblocksize+y)*reziscale));
+#else
+	    U8*mydata = img->At((int)((yy*yblocksize+y)*reziscale));
+#endif
 	    for(x=0;x<xblocksize;x++) {
-		blockbuffer[(y*xblocksize+x)*3+2] = mydata[(xx*xblocksize+x)*3+0];
-		blockbuffer[(y*xblocksize+x)*3+1] = mydata[(xx*xblocksize+x)*3+1];
-		blockbuffer[(y*xblocksize+x)*3+0] = mydata[(xx*xblocksize+x)*3+2];
+		blockbuffer[(y*xblocksize+x)*3+2] = mydata[((int)(((xx*xblocksize+x)*reziscale)))*3+0];
+		blockbuffer[(y*xblocksize+x)*3+1] = mydata[((int)(((xx*xblocksize+x)*reziscale)))*3+1];
+		blockbuffer[(y*xblocksize+x)*3+0] = mydata[((int)(((xx*xblocksize+x)*reziscale)))*3+2];
 	    }
 	}
 	GfxBlock b;
@@ -672,7 +772,7 @@ int main (int argc,char ** argv)
     }
 
     tag = swf_InsertTag(NULL, ST_SHOWFRAME);
-    swf_WriteTag(file, tag);
+    filesize += swf_WriteTag(file, tag);
     swf_DeleteTag(tag);
 
     cache->newframe();
@@ -681,14 +781,42 @@ int main (int argc,char ** argv)
     if(frame == lastframe)
 	break;
   }
+  delete sound;
   printf("\n");
   destroydisplay(file);
 
   tag = swf_InsertTag(NULL, ST_END);
-  swf_WriteTag(file, tag);
+  filesize += swf_WriteTag(file, tag);
   swf_DeleteTag(tag);
 
   close(file);
+
+  FILE*fi;
+  if(zlib)
+    fi=fopen("tmp.swf", "r+");
+  else
+    fi=fopen(outputfilename, "r+");
+
+  if(fi)
+  {
+       fseek(fi,4,SEEK_SET);
+       unsigned char f;
+       f = filesize      ;fwrite(&f,1,1,fi);
+       f = filesize >> 8 ;fwrite(&f,1,1,fi);
+       f = filesize >> 16;fwrite(&f,1,1,fi);
+       f = filesize >> 24;fwrite(&f,1,1,fi);
+       fclose(fi);
+  }
+
+  if(zlib) {
+      char buffer[1024];
+      snprintf(buffer, 1024, "swfcombine -dz __tmp__.swf -o %s", outputfilename);
+      printf("%s\n", buffer);
+      system(buffer);
+      sprintf(buffer, "rm __tmp__.swf");
+      printf("%s\n", buffer);
+      system(buffer);
+  }
   
   return 0;
 }
