@@ -325,7 +325,9 @@ SWFFONT* swf_LoadT1Font(char*filename)
     int s,num;
     char**charnames;
     char**charname;
+    char*encoding[256];
     int c;
+    int t;
 
     if(!t1lib_initialized) {
 	T1_SetBitmapPad(16);
@@ -339,6 +341,10 @@ SWFFONT* swf_LoadT1Font(char*filename)
     T1_LoadFont(nr);
 
     charnames = T1_GetAllCharNames(nr);
+    if(!charnames) {
+	fprintf(stderr, "No Charnames record- not a Type1 Font?\n");
+	return 0;
+    }
 
     angle = T1_GetItalicAngle(nr);
     fontname = T1_GetFontName(nr);
@@ -362,8 +368,16 @@ SWFFONT* swf_LoadT1Font(char*filename)
     charname = charnames;
     while(*charname) {
 	charname++;
+	if(num<256) {
+	    if(*charname) encoding[num] = strdup(*charname);
+	    else          encoding[num] = strdup(".notdef");
+	}
 	num++;
     }
+    for(t=num;t<256;t++)
+	encoding[t] = strdup(".notdef");
+    
+    //T1_ReencodeFont(nr, encoding);
 
     font->maxascii = num;
     font->numchars = num;
@@ -413,6 +427,7 @@ SWFFONT* swf_LoadT1Font(char*filename)
 	
 	swf_Shape01DrawerInit(&draw, 0);
 
+	printf("Char %d (%08x)", c, outline);
 	while(outline) {
 	    pos.x += (outline->dest.x/(float)0xffff);
 	    pos.y += (outline->dest.y/(float)0xffff);
@@ -434,7 +449,9 @@ SWFFONT* swf_LoadT1Font(char*filename)
 	    }
 	    last = pos;
 	    outline = outline->link;
+	    printf("(%f,%f) ", pos.x, pos.y);
 	}
+	printf("\n");
 	
 	draw.finish(&draw);
 
@@ -449,6 +466,10 @@ SWFFONT* swf_LoadT1Font(char*filename)
 	}
 	charname++;
     }
+    T1_DeleteFont(nr);
+
+    for(t=0;t<256;t++)
+	free(encoding[t]);
     return font;
 }
 
@@ -498,6 +519,10 @@ SWFFONT* swf_LoadFont(char*filename)
     if(is_swf) {
 	return swf_ReadFont(filename);
     }
+
+
+    return swf_LoadT1Font(filename);
+
 #if defined(HAVE_FREETYPE)
     return swf_LoadTrueTypeFont(filename);
 #elif defined(HAVE_T1LIB)
