@@ -434,6 +434,17 @@ void GfxDeviceCMYKColorSpace::getGray(GfxColor *color, double *gray) {
 		 - 0.114 * color->c[2]);
 }
 
+/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+    double c,m,y,k,white;
+    c = color->c[0];
+    m = color->c[1];
+    y = color->c[2];
+    k = color->c[3];
+    white = 1.0 - k;
+    rgb->r = white - (c*white);
+    rgb->g = white - (m*white);
+    rgb->b = white - (y*white);
+}*/
 void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   double c, m, y, aw, ac, am, ay, ar, ag, ab;
 
