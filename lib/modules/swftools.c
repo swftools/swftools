@@ -891,9 +891,9 @@ TAG* swf_Concatenate (TAG*list1,TAG*list2)
     TAG*tag=0,*lasttag=0;
     char bitmap[65536];
     char depthmap[65536];
+    SWF swf1,swf2;
     memset(bitmap, 0, sizeof(bitmap));
     memset(depthmap, 0, sizeof(depthmap));
-    SWF swf1,swf2;
     memset(&swf1, 0, sizeof(swf1));
     memset(&swf2, 0, sizeof(swf2));
 
