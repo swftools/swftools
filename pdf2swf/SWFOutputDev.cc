@@ -59,10 +59,6 @@ int pagepos = 0;
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
-static char userPassword[33] = "";
-static GBool printVersion = gFalse;
-static GBool printHelp = gFalse;
-
 double fontsizes[] = 
 {
  0.833,0.833,0.889,0.889,0.788,0.722,0.833,0.778,0.600,0.600,0.600,0.600,0.576,0.576,0.576,0.576
@@ -812,6 +808,7 @@ int SWFOutputDev::setT1Font(char*name, FontEncoding*encoding)
      return 0;
 
     this->t1id = id;
+    return 1;
 }
 
 void SWFOutputDev::updateLineWidth(GfxState *state)
