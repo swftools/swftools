@@ -30,6 +30,8 @@ Takes a wav file and converts it to a swf movie.
     Stop the movie at frame 0, and start the sound at 1, so that the
     sound will not play until a "GotoFrame(1)" is issued.
     (For use with flashsound.js).
+-E, --end
+    Stop the movie at the end frame
 -b --bitrate <bps>
     Set mp3 bitrate to <bps> (default: 32)
 -v --verbose
