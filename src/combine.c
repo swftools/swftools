@@ -430,8 +430,10 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 
 	if (spriteid<0)
 	{
-	    if(slavename)
-		logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
+	    if(slavename) {
+		if(strcmp(slavename,"!!dummy!!"))
+		    logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
+	    }
 	    else
 		logf("<warning> Didn't find id %d in file. No substitutions will occur.", slaveid);
 	    spriteid = get_free_id();
