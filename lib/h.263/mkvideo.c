@@ -29,8 +29,13 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
     stream->linex = width;
     stream->width = width;
     stream->height = height;
+    stream->bbx = width/16;
+    stream->bby = height/16;
     stream->current = (YUV*)malloc(width*height*sizeof(YUV));
     stream->oldpic = (YUV*)malloc(width*height*sizeof(YUV));
+    stream->mvdx = (int*)malloc(stream->bbx*stream->bby*sizeof(int));
+    stream->mvdy = (int*)malloc(stream->bbx*stream->bby*sizeof(int));
+    stream->do_motion = 0;
 
     memset(stream->oldpic, 0, width*height*sizeof(YUV));
     memset(stream->current, 0, width*height*sizeof(YUV));
@@ -39,6 +44,8 @@ void swf_VideoStreamClear(VIDEOSTREAM*stream)
 {
     free(stream->oldpic);stream->oldpic = 0;
     free(stream->current);stream->current = 0;
+    free(stream->mvdx);stream->mvdx=0;
+    free(stream->mvdy);stream->mvdy=0;
 }
 
 typedef struct _block_t
@@ -158,9 +165,9 @@ static inline int truncate256(int a)
     return a;
 }
 
-static void getregion(fblock_t* bb, YUV*pic, int bx, int by, int linex)
+static void getregion(fblock_t* bb, YUV*pic, int posx, int posy, int linex)
 {
-    YUV*p1 = &pic[by*linex*16+bx*16];
+    YUV*p1 = &pic[posy*linex+posx];
     YUV*p2 = p1;
     int y1=0, y2=0, y3=0, y4=0;
     int u=0,v=0;
@@ -611,7 +618,7 @@ static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int dquant=0;
     int cbpcbits = 0, cbpybits=0;
 
-    getregion(&fb, s->current, bx, by, s->width);
+    getregion(&fb, s->current, bx*16, by*16, s->width);
     dodct(&fb);
     
     change_quant(*quant, &dquant);
@@ -664,6 +671,76 @@ static void yuvdiff(fblock_t*a, fblock_t*b)
     }
 }
 
+static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
+{
+    int i1,i2;
+    int x1,y1,x2,y2,x3,y3;
+    int x4,y4,p;
+    if(bx) {x1=s->mvdx[by*s->bbx+bx-1];
+	    y1=s->mvdy[by*s->bbx+bx-1];
+    } else {x1=y1=0;}
+
+    if(by) {x2=s->mvdx[(by-1)*s->bbx+bx];
+	    y2=s->mvdy[(by-1)*s->bbx+bx];
+	    if(bx<s->bbx-1) {
+		x3=s->mvdx[(by-1)*s->bbx+bx+1];
+		y3=s->mvdy[(by-1)*s->bbx+bx+1];		
+	    } else {
+		x3=y3=0;
+	    }
+           }
+    else   {x2=x3=x1;y2=y3=y1;}
+
+	   if((x1 <= x2 && x2 <= x3) || 
+	      (x3 <= x2 && x2 <= x1)) {
+	x4=x2;
+    } else if((x2 <= x1 && x1 <= x3) ||
+	      (x3 <= x1 && x1 <= x2)) {
+	x4=x1;
+    } else if((x1 <= x3 && x3 <= x2) ||
+	      (x2 <= x3 && x3 <= x1)) {
+	x4=x3;
+    }
+
+	   if((y1 <= y2 && y2 <= y3) || 
+	      (y3 <= y2 && y2 <= y1)) {
+	y4=y2;
+    } else if((y2 <= y1 && y1 <= y3) ||
+	      (y3 <= y1 && y1 <= y2)) {
+	y4=y1;
+    } else if((y1 <= y3 && y3 <= y2) ||
+	      (y2 <= y3 && y3 <= y1)) {
+	y4=y3;
+    }
+
+    *px = x4;
+    *py = y4;
+    assert((x4>=-32 && x4<=31) && (y4>=-32 && y4<=31));
+}
+
+static inline int mvd2index(int px, int py, int x, int y, int xy)
+{
+    assert((x>=-32 && x<=31) && (y>=-32 && y<=31));
+    assert((x&1)==0 && (y&1)==0);//for now
+    assert((x&2)==0 && (y&2)==0);//for now(2)
+    
+    x-=px;
+    y-=py;
+
+    if(xy)
+	x=y;
+    x+=32;
+
+    /* (x&63) */
+    if(x>63)
+	x-=64;
+    if(x<0)
+	x+=64;
+
+    assert(x>=0 && x<64);
+    return x;
+}
+
 static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 {
     fblock_t fb;
@@ -675,22 +752,28 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int mode = 0;
     int cbpcbits = 0, cbpybits=0;
     int diff;
+    int predictmvdx;
+    int predictmvdy;
 
     block_t b_i;
     int bits_i;
 
     fblock_t fbold_v00;
     block_t b_v00;
-    int bits_v00;
+    int bits_v00 = 65535;
+    int x_v00=0;
+    int y_v00=0;
 
     diff = compareregions(s, bx, by);
-    if(diff < 16 /*TODO: should be a parameter- good values are between 32 and 48 */) {
+    if(diff < 20 /*TODO: should be a parameter- good values are between 32 and 48 */) {
 	swf_SetBits(tag, 1,1); /* cod=1, block skipped */
+	/* copy the region from the last frame so that we have a complete reconstruction */
 	copyregion(s, s->current, s->oldpic, bx, by);
 	return 1;
     }
 
-    getregion(&fb, s->current, bx, by, s->width);
+    predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
+    getregion(&fb, s->current, bx*16, by*16, s->width);
 
     { /* consider I-block */
 	fblock_t fb_i;
@@ -710,20 +793,57 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	bits_i += coefbits8x8(b_i.v, 1);
     }
 
-    { /* consider mvd(0,0)-block */
+    if(bx&&by&&(bx<s->bbx-1)&&(by<s->bby-1))
+    { /* consider mvd(x,y)-block */
 	fblock_t fbdiff;
 	int y,c;
-    	memcpy(&fbdiff, &fb, sizeof(fblock_t));
-    	getregion(&fbold_v00, s->oldpic, bx, by, s->linex);
-    	yuvdiff(&fbdiff, &fbold_v00);
-    	dodct(&fbdiff);
-    	quantize(&fbdiff, &b_v00, 0, *quant);
+
+	x_v00=0;
+	y_v00=0;
+
+	if(s->do_motion) {
+	    int hx,hy;
+	    int bestx=0,besty=0,bestbits=65536;
+
+	    for(hx=-8;hx<8;hx+=4)
+	    for(hy=-8;hy<8;hy+=4)
+	    {
+		block_t b;
+		fblock_t fbold;
+		int bits = 0;
+		memcpy(&fbdiff, &fb, sizeof(fblock_t));
+		getregion(&fbold, s->oldpic, bx*16+hx/2, by*16+hy/2, s->linex);
+		yuvdiff(&fbdiff, &fbold);
+		dodct(&fbdiff);
+		quantize(&fbdiff, &b, 0, *quant);
+		bits += coefbits8x8(b.y1, 0);
+		bits += coefbits8x8(b.y2, 0);
+		bits += coefbits8x8(b.y3, 0);
+		bits += coefbits8x8(b.y4, 0);
+		bits += coefbits8x8(b.u, 0);
+		bits += coefbits8x8(b.v, 0);
+		if(bits<bestbits) {
+		    bestbits = bits;
+		    bestx = hx;
+		    besty = hy;
+		}
+	    }
+	    x_v00 = bestx;
+	    y_v00 = besty;
+	}
+
+	memcpy(&fbdiff, &fb, sizeof(fblock_t));
+	getregion(&fbold_v00, s->oldpic, bx*16+x_v00/2, by*16+y_v00/2, s->linex);
+	yuvdiff(&fbdiff, &fbold_v00);
+	dodct(&fbdiff);
+	quantize(&fbdiff, &b_v00, 0, *quant);
 	getblockpatterns(&b_v00, &y, &c, 0);
+
 	bits_v00 = 1; //cod
 	bits_v00 += mcbpc_inter[0*4+c].len;
 	bits_v00 += cbpy[y^15].len;
-	bits_v00 += mvd[32].len; // (0,0)
-	bits_v00 += mvd[32].len;
+	bits_v00 += mvd[mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 0)].len; // (0,0)
+	bits_v00 += mvd[mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 1)].len;
 	bits_v00 += coefbits8x8(b_v00.y1, 0);
 	bits_v00 += coefbits8x8(b_v00.y2, 0);
 	bits_v00 += coefbits8x8(b_v00.y3, 0);
@@ -745,9 +865,11 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
 	codehuffman(tag, cbpy, cbpybits^15);
 
-	/* 0,0 */
-	codehuffman(tag, mvd, 32);
-	codehuffman(tag, mvd, 32);
+	/* vector */
+	codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 0));
+	codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 1)); 
+	s->mvdx[by*s->bbx+bx] = x_v00;
+	s->mvdy[by*s->bbx+bx] = y_v00;
 
 	/* luminance */
 	encode8x8(tag, b.y1, has_dc, cbpybits&8);
@@ -777,8 +899,6 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	mode = 3;
 	has_dc = 1;
 	memcpy(&b, &b_i, sizeof(block_t));
-	//dodct(&fb);
-	//quantize(&fb, &b, has_dc, *quant);
 	getblockpatterns(&b, &cbpybits, &cbpcbits, has_dc);
 	swf_SetBits(tag,0,1); // COD
 	codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
@@ -884,23 +1004,216 @@ static void writeHeader(TAG*tag, int width, int height, int frame, int quant, in
     swf_SetBits(tag, 0, 1); /* No extra info */
 }
 
+int stat_qdiff(double*b1, double*b2)
+{
+    int x;
+    double diff=0;
+    for(x=0;x<64;x++) {
+	double y1 = b1[x] - b2[x];
+	diff += y1*y1;
+    }
+    return (int)(diff/64);
+}
+
+int stat_absdiff(double*b1, double*b2)
+{
+    int x;
+    double diff=0;
+    for(x=0;x<64;x++) {
+	double y1 = b1[x] - b2[x];
+	diff += fabs(y1);
+    }
+    return (int)(diff/64);
+}
+
+int stat_absfreq(double*b1, double*b2)
+{
+    int x;
+    double diff=0;
+    double d1[64],d2[64];
+    memcpy(&d1, b1, 64*sizeof(double));
+    dct(d1);
+    memcpy(&d2, b2, 64*sizeof(double));
+    dct(d2);
+    for(x=0;x<64;x++) {
+	double y1 = d1[x] - d2[x];
+	diff += fabs(y1);
+    }
+    return (int)(diff/64);
+}
+
+int stat_qfreq(double*b1, double*b2)
+{
+    int x;
+    double diff=0;
+    double d1[64],d2[64];
+    memcpy(&d1, b1, 64*sizeof(double));
+    dct(d1);
+    memcpy(&d2, b2, 64*sizeof(double));
+    dct(d2);
+    for(x=0;x<64;x++) {
+	double y1 = d1[x] - d2[x];
+	diff += y1*y1;
+    }
+    return (int)(diff/64);
+}
+
+int stat_nonnull(double*b1, double*b2)
+{
+    int x;
+    int diff=0;
+    double d1[64],d2[64];
+    memcpy(&d1, b1, 64*sizeof(double));
+    dct(d1);
+    memcpy(&d2, b2, 64*sizeof(double));
+    dct(d2);
+    for(x=0;x<64;x++) {
+	int y1 = (int)((d1[x] - d2[x])/9);
+	if(y1)
+	    diff++;
+    }
+    return diff;
+}
+
+void stat_filter(FILE*fi, double*d1, double*d2)
+{
+    int x,y,xx,yy,b;
+    for(b=3;b>=0;b--) {
+	int d = 1<<b;
+	double diff=0;
+	for(x=0;x<8;x+=d)
+	for(y=0;y<8;y+=d)
+	{
+	    double add1=0,add2=0;
+	    for(xx=x;xx<x+d;xx++)
+	    for(yy=y;yy<y+d;yy++)
+	    {
+		add1 += d1[yy*8+xx];
+		add2 += d2[yy*8+xx];
+	    }
+	    diff += fabs(add1-add2);
+	}
+	fprintf(fi, "\t%d",(int)(diff/64));
+    }
+}
+
+void qstat_filter(FILE*fi, double*d1, double*d2)
+{
+    int x,y,xx,yy,b;
+    for(b=3;b>=0;b--) {
+	int d = 1<<b;
+	double diff=0;
+	for(x=0;x<8;x+=d)
+	for(y=0;y<8;y+=d)
+	{
+	    double add1=0,add2=0;
+	    for(xx=x;xx<x+d;xx++)
+	    for(yy=y;yy<y+d;yy++)
+	    {
+		add1 += d1[yy*8+xx];
+		add2 += d2[yy*8+xx];
+	    }
+	    diff += (add1-add2)*(add1-add2);
+	}
+	fprintf(fi, "\t%d",(int)(diff/64));
+    }
+}
+
+void qqstat_filter(FILE*fi, double*d1, double*d2)
+{
+    int x,y,xx,yy,b;
+    for(b=3;b>=0;b--) {
+	int d = 1<<b;
+	double diff=0;
+	for(x=0;x<8;x+=d)
+	for(y=0;y<8;y+=d)
+	{
+	    double add1=0,add2=0;
+	    for(xx=x;xx<x+d;xx++)
+	    for(yy=y;yy<y+d;yy++)
+	    {
+		add1 += d1[yy*8+xx]*d1[yy*8+xx];
+		add2 += d2[yy*8+xx]*d2[yy*8+xx];
+	    }
+	    diff += fabs(add1-add2);
+	}
+	fprintf(fi, "\t%d",(int)(diff/64));
+    }
+}
+
+void stat(FILE*fi, int*vals, double*yold, double*ynew)
+{
+    int t;
+    int bits = coefbits8x8(vals, 0);
+    fprintf(fi, "%d\t%d\t%d\t%d\t%d\t%d", bits, 
+	     stat_nonnull(ynew, yold),
+	     stat_qdiff(ynew,yold), 
+	     stat_absdiff(ynew,yold),
+	     stat_absfreq(ynew,yold),
+	     stat_qfreq(ynew,yold));
+    stat_filter(fi, ynew, yold);
+    qqstat_filter(fi, ynew, yold);
+    fprintf(fi, "\n");
+}
+
+void dostat(VIDEOSTREAM*s)
+{
+    int bx,by,bx2,by2;
+    int quant = 9;
+    int num = 0;
+    FILE*fi = fopen("mvd.dat", "wb");
+    fprintf(fi, "bits\tnonnull\tqdiff\tabsdiff\tabsfreq\tqfreq\tf1\tf2\tf4\tf8\tqf1\tqf2\tqf4\tqf8\n");
+    for(by=0;by<s->bby;by++)
+    for(bx=0;bx<s->bbx;bx++)
+    {
+	for(by2=0;by2<s->bby;by2++)
+	for(bx2=0;bx2<bx;bx2++)
+	{
+	    fblock_t fbnew,fbdiff,fbold;
+	    block_t b;
+	    int t, y,c,bits;
+	    getregion(&fbnew, s->current, bx*16, by*16, s->linex);
+	    memcpy(&fbdiff, &fbnew, sizeof(fblock_t));
+	    getregion(&fbold, s->current, bx2*16, by2*16, s->linex);
+	    yuvdiff(&fbdiff, &fbold);
+	    dodct(&fbdiff);
+	    quantize(&fbdiff, &b, 0, quant);
+
+	    stat(fi, b.y1, fbnew.y1, fbold.y1);
+	    stat(fi, b.y2, fbnew.y2, fbold.y2);
+	    stat(fi, b.y3, fbnew.y3, fbold.y3);
+	    stat(fi, b.y4, fbnew.y4, fbold.y4);
+	    stat(fi, b.u, fbnew.u, fbold.u);
+	    stat(fi, b.v, fbnew.v, fbold.v);
+
+	    num++;
+	    if(num==1000) {
+		fclose(fi);
+		exit(7);
+	    }
+	}
+	printf("%d\n", num);fflush(stdout);
+    }
+    fclose(fi);
+    exit(7);
+}
+
 void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 {
-    int bx, by, bbx, bby;
+    int bx, by;
 
     if(quant<1) quant=1;
     if(quant>31) quant=31;
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
 
-    bbx = (s->width+15)/16; //TODO: move bbx,bby into VIDEOSTREAM
-    bby = (s->height+15)/16;
-
     rgb2yuv(s->current, pic, s->linex, s->olinex, s->width, s->height);
 
-    for(by=0;by<bby;by++)
+    //dostat(s);
+
+    for(by=0;by<s->bby;by++)
     {
-	for(bx=0;bx<bbx;bx++)
+	for(bx=0;bx<s->bbx;bx++)
 	{
 	    encode_blockI(tag, s, bx, by, &quant);
 	}
@@ -911,28 +1224,27 @@ void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 
 void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 {
-    int bx, by, bbx, bby;
+    int bx, by;
 
     if(quant<1) quant=1;
     if(quant>31) quant=31;
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
 
-    bbx = (s->width+15)/16;
-    bby = (s->height+15)/16;
-
     rgb2yuv(s->current, pic, s->linex, s->olinex, s->width, s->height);
+    memset(s->mvdx, 0, s->bbx*s->bby*sizeof(int));
+    memset(s->mvdy, 0, s->bbx*s->bby*sizeof(int));
 
-    for(by=0;by<bby;by++)
+    for(by=0;by<s->bby;by++)
     {
-	for(bx=0;bx<bbx;bx++)
+	for(bx=0;bx<s->bbx;bx++)
 	{
 	    encode_blockP(tag, s, bx, by, &quant);
 	}
     }
     s->frame++;
     memcpy(s->oldpic, s->current, s->width*s->height*sizeof(YUV));
-
+#ifdef MAIN
     {
 	int t;
 	FILE*fi = fopen("test.ppm", "wb");
@@ -946,6 +1258,7 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 	}
 	fclose(fi);
     }
+#endif
 }
 
 #ifdef MAIN
@@ -960,10 +1273,10 @@ int main(int argn, char*argv[])
     SWFPLACEOBJECT obj;
     int width = 0;
     int height = 0;
-    int frames = 10;
+    int frames = 50;
     int framerate = 29;
     unsigned char*data;
-    char* fname = "/home/kramm/pics/lena.png";
+    char* fname = "/home/kramm/pics/peppers.png";
     VIDEOSTREAM stream;
     double d = 1.0;
 
@@ -993,6 +1306,7 @@ int main(int argn, char*argv[])
     tag = swf_InsertTag(tag, ST_DEFINEVIDEOSTREAM);
     swf_SetU16(tag, 33);
     swf_SetVideoStreamDefine(tag, &stream, frames, width, height);
+    stream.do_motion = 1;
     
     for(t=0;t<frames;t++)
     {
