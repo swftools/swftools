@@ -635,12 +635,13 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		}
 	    }
 	} else {
-	    palettelen = 256;
+            int mult = (0x1ff>>header.bpp);
+	    palettelen = 1<<header.bpp;
 	    rgba = (RGBA*)malloc(palettelen*sizeof(RGBA));
-	    for(i=0;i<256;i++) {
-		rgba[i].r = i;
-		rgba[i].g = i;
-		rgba[i].b = i;
+	    for(i=0;i<palettelen;i++) {
+		rgba[i].r = i*mult;
+		rgba[i].g = i*mult;
+		rgba[i].b = i*mult;
 	    }
 	}
 
