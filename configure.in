@@ -172,7 +172,7 @@ dnl Checks for libraries.
  AC_CHECK_LIB(z, deflate,, ZLIBMISSING=true)
  AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
  AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
- AC_CHECK_LIB(ungif, EGifOpenFileName,, UNGIFMISSING=true)
+ AC_CHECK_LIB(ungif, DGifOpen,, UNGIFMISSING=true)
 
 RFX_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
