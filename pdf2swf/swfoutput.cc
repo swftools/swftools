@@ -34,6 +34,7 @@ int opennewwindow=0;
 int ignoredraworder=0;
 int drawonlyshapes=0;
 int jpegquality=85;
+int storeallcharacters=0;
 static int flag_protected = 0;
 
 typedef unsigned char u8;
@@ -518,6 +519,7 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     
     outline = (T1_OUTLINE**)malloc(t*sizeof(T1_OUTLINE*));
     charname = (char**)malloc(t*sizeof(char*));
+    memset(charname, t*sizeof(char*), 0);
     used = (char*)malloc(t*sizeof(char));
     char2swfcharid = (U16*)malloc(t*2);
     swfcharid2char = (U16*)malloc(t*2);
@@ -564,7 +566,19 @@ SWFFont::SWFFont(char*name, int id, char*filename)
 SWFFont::~SWFFont()
 {
     int t,usednum=0;
-    int*ptr = (int*)malloc(swfcharpos*sizeof(int));
+    int*ptr; 
+
+    if(storeallcharacters)
+    {
+	int t;
+	for(t=0;t<this->charnum;t++) 
+	{
+	    if(this->charname[t])
+	      getSWFCharID(this->charname[t]);
+	}
+    }
+    
+    ptr = (int*)malloc(swfcharpos*sizeof(int));
 
     for(t=0;t<charnum;t++)
         if(used[t]) usednum++;
@@ -580,6 +594,7 @@ SWFFont::~SWFFont()
         m.m21 = m.m12 = 0;
         m.m13 = CHARMIDX;
         m.m23 = CHARMIDY;
+
         for(t=0;t<swfcharpos;t++) 
         {
             ptr[t] = swf_GetDataSize(ftag);
@@ -605,16 +620,20 @@ SWFFont::~SWFFont()
         }
         ftag = swf_InsertTag(ftag,ST_DEFINEFONTINFO);
 	swf_SetU16(ftag, this->swfid);
-	swf_SetU8(ftag, strlen(this->fontid));
-	swf_SetBlock(ftag, (U8*)this->fontid, strlen(this->fontid));
-	swf_SetU8(ftag, 0);
+	if(this->fontid) {
+	    swf_SetU8(ftag, strlen(this->fontid));
+	    swf_SetBlock(ftag, (U8*)this->fontid, strlen(this->fontid));
+	} else {
+	    swf_SetU8(ftag, 0);
+	}
+	swf_SetU8(ftag, 0); //flags
 	for(t=0;t<swfcharpos;t++)
 	{
 	    int s;
 	    char * name = this->charname[this->swfcharid2char[t]];
 	    for(s=0;s<256;s++) {
 		if(standardEncodingNames[s] && 
-			!strcasecmp(name,standardEncodingNames[s]))
+			!strcmp(name,standardEncodingNames[s]))
 		    break;
 	    }
 	    swf_SetU8(ftag, (U8)s);

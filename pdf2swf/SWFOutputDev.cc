@@ -1317,6 +1317,11 @@ void pdfswf_linksopennewwindow()
     opennewwindow = 1;
 }
 
+void pdfswf_storeallcharacters()
+{
+    storeallcharacters = 1;
+}
+
 void pdfswf_jpegquality(int val)
 {
     if(val<0) val=0;

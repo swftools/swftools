@@ -71,6 +71,11 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_linksopennewwindow();
 	return 0;
     }
+    else if (!strcmp(name, "f"))
+    {
+	pdfswf_storeallcharacters();
+	return 0;
+    }
     else if (name[0]=='j')
     {
 	if(name[1]) {
@@ -102,6 +107,7 @@ struct options_t options[] =
  {"j","jpegquality"},
  {"p","pages"},
  {"w","samewindow"},
+ {"f","fonts"},
  {0,0}
 };
 
@@ -135,6 +141,7 @@ void args_callback_usage(char*name)
     printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
+    printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-V  --version              Print program version\n");
 }
 
