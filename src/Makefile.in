@@ -90,7 +90,7 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
 bin_PROGRAMS =  swfcombine$(EXEEXT) swfstrings$(EXEEXT) \
-swfextract$(EXEEXT) swfdump$(EXEEXT) jpeg2swf$(EXEEXT) @JPEG2SWF@
+swfextract$(EXEEXT) swfdump$(EXEEXT)  @JPEG2SWF@
 PROGRAMS =  $(bin_PROGRAMS)
 
 
