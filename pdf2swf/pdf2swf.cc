@@ -44,6 +44,7 @@ static int loglevel = 3;
 static char * pagerange = 0;
 static char * filename = 0;
 static char * password = 0;
+static int zlib = 0;
 
 static char * preloader = 0;
 static char * viewer = 0;
@@ -150,6 +151,7 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "z"))
     {
 	pdfswf_setparameter("enablezlib", "1");
+	zlib = 1;
 	return 0;
     }
     else if (!strcmp(name, "n"))
@@ -474,15 +476,19 @@ int main(int argn, char *argv[])
 	    printf("\n");
     }
 
+    char*zip = "";
+    if(zlib)
+	zip = "-z";
+
     if(viewer && !preloader) {
-	systemf("swfcombine `swfdump -XY \"%s\"` \"%s\" viewport=\"%s\" -o \"%s\"",
+	systemf("swfcombine %s `swfdump -XY \"%s\"` \"%s\" viewport=\"%s\" -o \"%s\"",zip,
 		outputname, viewer, outputname, outputname);
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && !viewer) {
 	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-	ret = systemf("swfcombine `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",
+	ret = systemf("swfcombine %s `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,
 		preloader, SWFDIR, preloader, outputname, outputname);
 	if(!system_quiet)
 	    printf("\n");
@@ -490,7 +496,7 @@ int main(int argn, char *argv[])
     if(preloader && viewer) {
 	systemf("swfcombine \"%s\" viewport=%s -o __tmp__.swf",
 		viewer, outputname, outputname);
-	systemf("swfcombine `swfdump -XY \"%s\"` `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",
+	systemf("swfcombine %s `swfdump -XY \"%s\"` `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,
 		outputname, preloader, SWFDIR, preloader, outputname);
 	systemf("rm __tmp__.swf");
     }
