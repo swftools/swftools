@@ -774,6 +774,8 @@ void swf_RelocateDepth(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[d
 
 TAG* swf_Concatenate (TAG*list1,TAG*list2); // warning: both list1 and list2 are invalid after this call.
 
+RGBA swf_GetSWFBackgroundColor(SWF*swf);
+
 // swfcgi.c
 
 void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
@@ -979,6 +981,7 @@ void swf_Render_SetBackground(RENDERBUF*buf, RGBA*img, int width, int height);
 void swf_Render_SetBackgroundColor(RENDERBUF*buf, RGBA color);
 RGBA* swf_Render(RENDERBUF*dest);
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 depth,U16 clipdepth);
+void swf_RenderSWF(RENDERBUF*buf, SWF*swf);
 void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
 void swf_Render_ClearCanvas(RENDERBUF*dest);
 void swf_Render_Delete(RENDERBUF*dest);
