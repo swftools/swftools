@@ -258,8 +258,10 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 
 #define FEDTJ_PRINT  0x01
 #define FEDTJ_MODIFY 0x02
+#define FEDTJ_CALLBACK 0x04
 
-int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
+int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
+	void(*callback)(int*chars, int nr, int fontid))
 { U16    cid;
   SRECT  r;
   MATRIX m;
@@ -294,6 +296,7 @@ int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
     }
     else
     { int i;
+      int buf[256];
       for (i=0;i<flags;i++)
       { int glyph;
         int adv;
@@ -305,8 +308,11 @@ int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
           if (jobs&FEDTJ_MODIFY)
             /*if (!f->glyph[code].advance)*/ f->glyph[glyph].advance = adv;
         }
+	buf[i] = glyph;
       }
       if ((id==fid)&&(jobs&FEDTJ_PRINT)) printf("\n");
+      if (jobs&FEDTJ_CALLBACK)
+	  callback(buf, flags, fid);
     }
     flags = swf_GetU8(t);
   }
@@ -314,6 +320,11 @@ int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
   swf_RestoreTagPos(t);
   return id;
 }  
+
+int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
+{
+    return swf_FontExtract_DefineTextCallback(id,f,t,jobs,0);
+}
 
 int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
 { TAG * t;
