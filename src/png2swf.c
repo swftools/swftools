@@ -26,7 +26,6 @@ struct {
     int max_image_height;
     int force_width;
     int force_height;
-    int prescale;
     int nfiles;
     int verbose;
     char *outfile;
@@ -34,7 +33,6 @@ struct {
 
 struct {
     char *filename;
-    int scale;
 } image[MAX_INPUT_FILES];
 
 TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
@@ -161,8 +159,7 @@ int png_read_header(FILE*fi, struct png_header*header)
     return 0;
 }
 
-TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int scale,
-		   int id)
+TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 {
     SHAPE *s;
     SRECT r;
@@ -432,7 +429,6 @@ struct options_t options[] =
 {"X", "width"},
 {"Y", "height"},
 {"V", "version"},
-{"s", "scale"}
 };
 
 int args_callback_longoption(char *name, char *val)
@@ -443,14 +439,12 @@ int args_callback_longoption(char *name, char *val)
 int args_callback_command(char *arg, char *next)	// actually used as filename
 {
     char *s;
-    int scale;
     if (CheckInputFile(arg, &s) < 0) {
 	if (VERBOSE(1))
 	    fprintf(stderr, "Error opening input file: %s\n", arg);
 	free(s);
     } else {
 	image[global.nfiles].filename = s;
-	image[global.nfiles].scale = global.prescale;
 	global.nfiles++;
 	if (global.nfiles >= MAX_INPUT_FILES) {
 	    if (VERBOSE(1))
@@ -466,8 +460,8 @@ void args_callback_usage(char *name)
     printf("Usage: %s  [-options [value]] imagefiles[.png] [...]\n", name);
     printf("-r framerate          (rate) Set movie framerate (100/sec)\n");
     printf("-o outputfile         (output) Set name for SWF output file\n");
-    printf("-X pixel              (width) Force movie width to scale (default: autodetect)\n");
-    printf("-Y pixel              (height) Force movie height to scale (default: autodetect)\n");
+    printf("-X pixel              (width) Force movie width to pixel (default: autodetect)\n");
+    printf("-Y pixel              (height) Force movie height to pixel (default: autodetect)\n");
     printf("-v level              (verbose) Set verbose level (0=quiet, 1=default, 2=debug)\n");
     printf("-V                    (version) Print version information and exit\n");
     printf("The following options can be set independently for each image: -q -s\n");
@@ -483,7 +477,6 @@ int main(int argc, char **argv)
 
     global.framerate = 100;
     global.verbose = 1;
-    global.prescale = 1;
 
     processargs(argc, argv);
 
@@ -500,11 +493,9 @@ int main(int argc, char **argv)
 	int i;
 	for (i = 0; i < global.nfiles; i++) {
 	    if (VERBOSE(3))
-		fprintf(stderr, "[%03i] %s (1/%i)\n", i,
-			image[i].filename, 
-			image[i].scale);
-	    t = MovieAddFrame(&swf, t, image[i].filename, 
-			      image[i].scale, (i * 2) + 1);
+		fprintf(stderr, "[%03i] %s\n", i,
+			image[i].filename);
+	    t = MovieAddFrame(&swf, t, image[i].filename, (i * 2) + 1);
 	    free(image[i].filename);
 	}
     }
