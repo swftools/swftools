@@ -107,16 +107,17 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
   swf_SaveTagPos(t);
   swf_SetTagPos(t,0);
 
-  if(f->version>1) {
-      // DefineFont2 doesn't have FontInfo fields
-      fprintf(stderr, "fixme: FontInfo field for DefineFont2 encountered\n");
-      return -1;
-  }
 
   fid = swf_GetU16(t);
   if (fid==id)
   { U8 l = swf_GetU8(t);
     int i;
+  
+    if(f->version>1) {
+      // DefineFont2 doesn't have FontInfo fields
+      fprintf(stderr, "fixme: FontInfo field for DefineFont2 encountered\n");
+      return -1;
+    }
     
     if (l)
     { if (f->name) free(f->name);
@@ -165,7 +166,7 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
     font->version=2;
     fid = swf_GetU16(tag);
     if(id && id!=fid)
-	return;
+	return id;
     font->id = fid;
     flags1 = swf_GetU8(tag);
     flags2 = swf_GetU8(tag); //reserved flags
@@ -303,8 +304,10 @@ int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs,
         glyph = swf_GetBits(t,gbits);
         adv = swf_GetBits(t,abits);
         if (id==fid)                    // mitlesen ?
-        { int code = f->glyph2ascii[glyph];
-          if (jobs&FEDTJ_PRINT) printf("%c",code);
+          if (jobs&FEDTJ_PRINT) {
+	    { int code = f->glyph2ascii[glyph];
+	      printf("%c",code);
+	  }
           if (jobs&FEDTJ_MODIFY)
             /*if (!f->glyph[code].advance)*/ f->glyph[glyph].advance = adv;
         }
