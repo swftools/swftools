@@ -6,28 +6,28 @@ include ../../Makefile.common
 all: SWF.$(SLEXT)
 exe: mypython$(E) swfpython$(E) testmem$(E)
 
-primitives.o: primitives.c primitives.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c primitives.c -o primitives.o
-tagmap.o: tagmap.c tagmap.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tagmap.c -o tagmap.o
-taglist.o: taglist.c taglist.h tagmap.h tag.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c taglist.c -o taglist.o
-tag.o: tag.c tag.h tagmap.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tag.c -o tag.o
-tags.o: tags.c tags.h tagmap.h tag.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tags.c -o tags.o
-image.o: image.c image.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c image.c -o image.o
-action.o: action.c action.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c action.c -o action.o
-pyutils.o: pyutils.c pyutils.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c pyutils.c -o pyutils.o
+primitives.$(O): primitives.c primitives.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c primitives.c -o primitives.$(O)
+tagmap.$(O): tagmap.c tagmap.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tagmap.c -o tagmap.$(O)
+taglist.$(O): taglist.c taglist.h tagmap.h tag.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c taglist.c -o taglist.$(O)
+tag.$(O): tag.c tag.h tagmap.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tag.c -o tag.$(O)
+tags.$(O): tags.c tags.h tagmap.h tag.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tags.c -o tags.$(O)
+image.$(O): image.c image.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c image.c -o image.$(O)
+action.$(O): action.c action.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c action.c -o action.$(O)
+pyutils.$(O): pyutils.c pyutils.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c pyutils.c -o pyutils.$(O)
 
-SWF.o: SWF.c pyutils.h primitives.h taglist.h
-	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.o
+SWF.$(O): SWF.c pyutils.h primitives.h taglist.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.$(O)
 
-SWF.$(SLEXT): SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
-	$(L) -g $(SHARED) SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
+SWF.$(SLEXT): SWF.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) tagmap.$(O) action.$(O) primitives.$(O) pyutils.$(O) ../librfxswf.a Makefile
+	$(L) -g $(SHARED) SWF.$(O) tagmap.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) action.$(O) primitives.$(O) pyutils.$(O)  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 
 #TODO:
 install:
@@ -35,7 +35,7 @@ install:
 # for debugging:
 mypython$(E): mypython.c Makefile
 	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython$(E) $(PYTHON_LIB)
-swfpython$(E): swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o tags.o action.o pyutils.o SWF.o
+swfpython$(E): swfpython.c Makefile primitives.$(O) tagmap.$(O) taglist.$(O) tag.$(O) tags.$(O) action.$(O) pyutils.$(O) SWF.$(O)
 	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) swfpython.c -o swfpython$(E) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 testmem$(E): testmem.c Makefile
 	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem$(E) $(PYTHON_LIB) $(LIBS)
@@ -59,6 +59,6 @@ test5: SWF.$(SLEXT)
 test6: SWF.$(SLEXT)
 	./test_sprite.py
 clean:
-	rm -f *.o *.so mypython swfpython
+	rm -f *.o *.obj *.so mypython swfpython
 
 .PHONY: test,test1,test2

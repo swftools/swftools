@@ -8,20 +8,20 @@ VIDEO_CFLAGS=@VIDEO_CFLAGS@
 
 all: avi2swf$(E)
 
-videoreader_avifile.o: videoreader_avifile.cc videoreader_avifile.hh
+videoreader_avifile.$(O): videoreader_avifile.cc videoreader_avifile.hh
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
 
-videoreader_vfw.o: videoreader_vfw.cc videoreader_vfw.hh
+videoreader_vfw.$(O): videoreader_vfw.cc videoreader_vfw.hh
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
 
-avi2swf.o: avi2swf.cc videoreader_vfw.hh videoreader_avifile.hh
+avi2swf.$(O): avi2swf.cc videoreader_vfw.hh videoreader_avifile.hh
 	$(CC) $< -o $@
 
-v2swf.o: v2swf.c ../lib/q.h
+v2swf.$(O): v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
-avi2swf$(E): avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o
-	$(LL) avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o -o avi2swf$(E) ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
+avi2swf$(E): avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O)
+	$(LL) avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O) -o avi2swf$(E) ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
 	$(STRIP) avi2swf$(E)
 
 install:
@@ -33,7 +33,7 @@ uninstall:
 	@file=avi2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
 
 clean: 
-	rm -f *.o *.lo *.a *.la avi2swf gmon.out
+	rm -f *.o *.obj *.lo *.a *.la avi2swf gmon.out
 
 doc:
 	perl ../parsedoc.pl avi2swf.doc

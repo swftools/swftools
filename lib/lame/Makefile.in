@@ -3,47 +3,47 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-lame_objects =  psymodel.o fft.o newmdct.o quantize.o takehiro.o reservoir.o quantize_pvt.o vbrquantize.o encoder.o id3tag.o version.o tables.o util.o bitstream.o set_get.o VbrTag.o lame.o
+lame_objects =  psymodel.$(O) fft.$(O) newmdct.$(O) quantize.$(O) takehiro.$(O) reservoir.$(O) quantize_pvt.$(O) vbrquantize.$(O) encoder.$(O) id3tag.$(O) version.$(O) tables.$(O) util.$(O) bitstream.$(O) set_get.$(O) VbrTag.$(O) lame.$(O)
 
 all: $(lame_objects)
 
-psymodel.o: psymodel.c 
+psymodel.$(O): psymodel.c 
 	$(C) psymodel.c -o $@
-fft.o: fft.c 
+fft.$(O): fft.c 
 	$(C) fft.c -o $@
-newmdct.o: newmdct.c 
+newmdct.$(O): newmdct.c 
 	$(C) newmdct.c -o $@
-quantize.o: quantize.c 
+quantize.$(O): quantize.c 
 	$(C) quantize.c -o $@
-takehiro.o: takehiro.c 
+takehiro.$(O): takehiro.c 
 	$(C) takehiro.c -o $@
-reservoir.o: reservoir.c 
+reservoir.$(O): reservoir.c 
 	$(C) reservoir.c -o $@
-quantize_pvt.o: quantize_pvt.c 
+quantize_pvt.$(O): quantize_pvt.c 
 	$(C) quantize_pvt.c -o $@
-vbrquantize.o: vbrquantize.c 
+vbrquantize.$(O): vbrquantize.c 
 	$(C) vbrquantize.c -o $@
-encoder.o: encoder.c 
+encoder.$(O): encoder.c 
 	$(C) encoder.c -o $@
-id3tag.o: id3tag.c 
+id3tag.$(O): id3tag.c 
 	$(C) id3tag.c -o $@
-version.o: version.c 
+version.$(O): version.c 
 	$(C) version.c -o $@
-tables.o: tables.c 
+tables.$(O): tables.c 
 	$(C) tables.c -o $@
-util.o: util.c 
+util.$(O): util.c 
 	$(C) util.c -o $@
-bitstream.o: bitstream.c 
+bitstream.$(O): bitstream.c 
 	$(C) bitstream.c -o $@
-set_get.o: set_get.c 
+set_get.$(O): set_get.c 
 	$(C) set_get.c -o $@
-VbrTag.o: VbrTag.c 
+VbrTag.$(O): VbrTag.c 
 	$(C) VbrTag.c -o $@
-lame.o: lame.c
+lame.$(O): lame.c
 	$(C) lame.c -o $@
 
 install:
 uninstall:
 clean: 
-	rm -f *.o *.lo *.a *.la gmon.out
+	rm -f *.o *.obj *.lo *.a *.la gmon.out
 

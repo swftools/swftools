@@ -7,29 +7,29 @@ all: pdf2swf$(E)
 
 fonts = n021003l.pfb n021023l.pfb n021004l.pfb n021024l.pfb n019003l.pfb n019023l.pfb n019004l.pfb n019024l.pfb n022003l.pfb n022023l.pfb n022004l.pfb n022024l.pfb s050000l.pfb d050000l.pfb n021003l.afm n021023l.afm n021004l.afm n021024l.afm n019003l.afm n019023l.afm n019004l.afm n019024l.afm n022003l.afm n022023l.afm n022004l.afm n022024l.afm s050000l.afm d050000l.afm
 
-SWFOutputDev.o: swfoutput.h SWFOutputDev.cc
+SWFOutputDev.$(O): swfoutput.h SWFOutputDev.cc
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib -Ixpdf SWFOutputDev.cc -o $@
-spline.o: spline.cc spline.h
+spline.$(O): spline.cc spline.h
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib spline.cc -o $@
-encodings.o: encodings.cc
+encodings.$(O): encodings.cc
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib encodings.cc -o $@
-swfoutput.o: swfoutput.cc swfoutput.h spline.h
+swfoutput.$(O): swfoutput.cc swfoutput.h spline.h
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib swfoutput.cc -o $@
-pdf2swf.o: pdf2swf.cc SWFOutputDev.h
+pdf2swf.$(O): pdf2swf.cc SWFOutputDev.h
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib pdf2swf.cc -o $@
 
-pdf2swf.a: SWFOutputDev.o swfoutput.o encodings.o spline.o 
-	$(AR) r pdf2swf.a SWFOutputDev.o swfoutput.o encodings.o spline.o 
+pdf2swf.a: Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
+	$(AR) r pdf2swf.a SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) 
 	$(RANLIB) pdf2swf.a
 
-pdf2swf$(E): pdf2swf.o pdf2swf.a xpdf/libpdf.a ../lib/librfxswf.a 
-	$(LL) pdf2swf.o pdf2swf.a ../lib/librfxswf.a xpdf/libpdf.a $(LIBS) -o pdf2swf$(E) 
+pdf2swf$(E): pdf2swf.$(O) pdf2swf.a xpdf/libpdf.a ../lib/librfxswf.a 
+	$(LL) pdf2swf.$(O) pdf2swf.a ../lib/librfxswf.a xpdf/libpdf.a $(LIBS) -o pdf2swf$(E) 
 	$(STRIP) pdf2swf$(E)
 
-xpdf/libpdf.a: xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
+xpdf/libpdf.a: Makefile xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
 	cd xpdf;$(MAKE)
 
-ttf2pt1/ttf2pt1.a: ttf2pt1/ttf2pt1.c ttf2pt1/t1asm.c
+ttf2pt1/ttf2pt1.a: Makefile ttf2pt1/ttf2pt1.c ttf2pt1/t1asm.c
 	cd ttf2pt1;$(MAKE)
 
 install:
@@ -44,7 +44,7 @@ uninstall:
 	@for file in $(fonts);do $(UNINSTALL_DATA) $(pkgdatadir)/fonts/$$file;done
 
 clean: 
-	rm -f *.o *.lo *.a *.la pdf2swf font2swf gmon.out
+	rm -f *.o *.obj *.lo *.a *.la pdf2swf font2swf gmon.out
 	@rm -f pdf2swf.exe font2swf.exe
 	@rm -f pdf2swf$(E) font2swf.exe$(E)
 	cd xpdf && $(MAKE) clean && cd ..

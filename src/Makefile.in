@@ -7,64 +7,64 @@ programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) sw
 
 all: $(programs)
 
-wav2swf.o: wav2swf.c wav.h
+wav2swf.$(O): wav2swf.c wav.h
 	$(C) wav2swf.c -o $@
-wav.o: wav.c wav.h
+wav.$(O): wav.c wav.h
 	$(C) wav.c -o $@
-png2swf.o: png2swf.c
+png2swf.$(O): png2swf.c
 	$(C) png2swf.c -o $@
-swfcombine.o: swfcombine.c
+swfcombine.$(O): swfcombine.c
 	$(C) swfcombine.c -o $@
-swfdump.o: swfdump.c
+swfdump.$(O): swfdump.c
 	$(C) swfdump.c -o $@
-swfextract.o: swfextract.c
+swfextract.$(O): swfextract.c
 	$(C) swfextract.c -o $@
-swfstrings.o: swfstrings.c
+swfstrings.$(O): swfstrings.c
 	$(C) swfstrings.c -o $@
-swfbbox.o: swfbbox.c
+swfbbox.$(O): swfbbox.c
 	$(C) swfbbox.c -o $@
-jpeg2swf.o: jpeg2swf.c
+jpeg2swf.$(O): jpeg2swf.c
 	$(C) jpeg2swf.c -o $@
-font2swf.o: font2swf.c
+font2swf.$(O): font2swf.c
 	$(C) font2swf.c -o $@
-swfc.o: swfc.c parser.h ../lib/q.h
+swfc.$(O): swfc.c parser.h ../lib/q.h
 	$(C) swfc.c -o $@
-parser.o: parser.yy.c parser.h ../lib/q.h
+parser.$(O): parser.yy.c parser.h ../lib/q.h
 	$(C) parser.yy.c -o $@
 
 # TODO: include the following rule only if lex is available
 parser.yy.c: parser.lex
 	flex -Bs -oparser.yy.c parser.lex
 
-wav2swf$(E): wav2swf.o wav.o ../lib/librfxswf.a
-	$(L) wav2swf.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
+wav2swf$(E): wav2swf.$(O) wav.$(O) ../lib/librfxswf.a
+	$(L) wav2swf.$(O) wav.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-png2swf$(E): png2swf.o ../lib/librfxswf.a
-	$(L) png2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
+png2swf$(E): png2swf.$(O) ../lib/librfxswf.a
+	$(L) png2swf.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfcombine$(E): swfcombine.o ../lib/librfxswf.a
-	$(L) swfcombine.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfcombine$(E): swfcombine.$(O) ../lib/librfxswf.a
+	$(L) swfcombine.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfdump$(E): swfdump.o ../lib/librfxswf.a
-	$(L) swfdump.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfdump$(E): swfdump.$(O) ../lib/librfxswf.a
+	$(L) swfdump.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfextract$(E): swfextract.o ../lib/librfxswf.a
-	$(L) swfextract.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfextract$(E): swfextract.$(O) ../lib/librfxswf.a
+	$(L) swfextract.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfstrings$(E): swfstrings.o ../lib/librfxswf.a
-	$(L) swfstrings.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfstrings$(E): swfstrings.$(O) ../lib/librfxswf.a
+	$(L) swfstrings.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfbbox$(E): swfbbox.o ../lib/librfxswf.a
-	$(L) swfbbox.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfbbox$(E): swfbbox.$(O) ../lib/librfxswf.a
+	$(L) swfbbox.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-font2swf$(E): font2swf.o ../lib/librfxswf.a
-	$(L) font2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
+font2swf$(E): font2swf.$(O) ../lib/librfxswf.a
+	$(L) font2swf.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-jpeg2swf$(E): jpeg2swf.o ../lib/librfxswf.a
-	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
+jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf.a
+	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
-swfc$(E): parser.o swfc.o ../lib/q.o wav.o ../lib/librfxswf.a
-	$(L) parser.o swfc.o ../lib/q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/librfxswf.a
+	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) $@
 
 install:
@@ -76,7 +76,7 @@ uninstall:
 	@for file in $(programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
 clean: 
-	rm -f *.o *.lo *.a *.la *~ gmon.out
+	rm -f *.o *.obj *.lo *.a *.la *~ gmon.out
 	rm -f swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf
 	@rm -f swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
 	@rm -f swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)

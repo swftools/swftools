@@ -3,25 +3,25 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf.a q.o
+all: librfxswf.a q.$(O)
 
 lame_objects = @lame_objects@
 
-h263_objects = h.263/dct.o h.263/h263tables.o h.263/swfvideo.o
-actioncompiler_objects = action/assembler.o action/compile.o action/lex.swf4.o action/lex.swf5.o action/libming.o action/swf4compiler.tab.o action/swf5compiler.tab.o action/actioncompiler.o
+h263_objects = h.263/dct.$(O) h.263/h263tables.$(O) h.263/swfvideo.$(O)
+actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.swf4.$(O) action/lex.swf5.$(O) action/libming.$(O) action/swf4compiler.tab.$(O) action/swf5compiler.tab.$(O) action/actioncompiler.$(O)
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swfrender.c h.263/swfvideo.c
 
-bitio.o: bitio.c bitio.h
+bitio.$(O): bitio.c bitio.h
 	$(C) bitio.c -o $@
-drawer.o: drawer.c drawer.h
+drawer.$(O): drawer.c drawer.h
 	$(C) drawer.c -o $@
-q.o: q.c q.h $(top_builddir)/config.h
+q.$(O): q.c q.h $(top_builddir)/config.h
 	$(C) q.c -o $@
-MD5.o: MD5.c MD5.h
+MD5.$(O): MD5.c MD5.h
 	$(C) MD5.c -o $@
-log.o: log.c log.h
+log.$(O): log.c log.h
 	$(C) log.c -o $@
-rfxswf.o: rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules) $(top_builddir)/config.h
+rfxswf.$(O): rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules) $(top_builddir)/config.h
 	$(C) rfxswf.c -o $@
 
 $(lame_objects):
@@ -29,22 +29,22 @@ $(lame_objects):
 $(actioncompiler_objects):
 	cd action;make all;cd ..
 
-h.263/dct.o:  h.263/dct.c h.263/dct.h
-	$(C) h.263/dct.c -o h.263/dct.o
-h.263/h263tables.o: h.263/h263tables.c h.263/h263tables.h
-	$(C) h.263/h263tables.c -o h.263/h263tables.o
-h.263/swfvideo.o: h.263/swfvideo.c h.263/h263tables.h h.263/dct.h
-	$(C) h.263/swfvideo.c -o h.263/swfvideo.o
+h.263/dct.$(O):  h.263/dct.c h.263/dct.h
+	$(C) h.263/dct.c -o h.263/dct.$(O)
+h.263/h263tables.$(O): h.263/h263tables.c h.263/h263tables.h
+	$(C) h.263/h263tables.c -o h.263/h263tables.$(O)
+h.263/swfvideo.$(O): h.263/swfvideo.c h.263/h263tables.h h.263/dct.h
+	$(C) h.263/swfvideo.c -o h.263/swfvideo.$(O)
 
-librfxswf.a: rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects) $(actioncompiler_objects)
-	$(AR) r librfxswf.a rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+librfxswf.a: Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+	$(AR) r librfxswf.a rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(RANLIB) librfxswf.a
 
 install:
 uninstall:
 
 clean: 
-	rm -f *.o *.lo *.a *.la gmon.out
+	rm -f *.o *.obj *.lo *.a *.la gmon.out
 	cd lame && $(MAKE) clean && cd .. || true
 	cd h.263 && $(MAKE) clean && cd ..
 	cd action && $(MAKE) clean && cd ..

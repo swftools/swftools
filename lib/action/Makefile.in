@@ -8,9 +8,9 @@ include ../../Makefile.common
 # In case we need to get more information out of flex
 #FLEXDEBUG = -d
 
-OBJECTS = compile.o \
-          lex.swf4.o lex.swf5.o swf5compiler.tab.o swf4compiler.tab.o \
-          assembler.o libming.o actioncompiler.o
+OBJECTS = compile.$(O) \
+          lex.swf4.$(O) lex.swf5.$(O) swf5compiler.tab.$(O) swf4compiler.tab.$(O) \
+          assembler.$(O) libming.$(O) actioncompiler.$(O)
 
 COMPILER_FILES = action.h assembler.c assembler.h compile.c compile.h \
 		 listaction.c swf4compiler.flex swf4compiler.y swf5compiler.flex swf5compiler.y
@@ -42,52 +42,52 @@ lex.swf5.c: swf5compiler.flex swf5compiler.tab.h
 
 # === OBJECTS ===
 
-lex.swf4.o: lex.swf4.c
-	$(C) lex.swf4.c -o lex.swf4.o
+lex.swf4.$(O): lex.swf4.c
+	$(C) lex.swf4.c -o lex.swf4.$(O)
 
-lex.swf5.o: lex.swf5.c
-	$(C) lex.swf5.c -o lex.swf5.o
+lex.swf5.$(O): lex.swf5.c
+	$(C) lex.swf5.c -o lex.swf5.$(O)
 
-compile.o: compile.c compile.h libming.h action.h blocks/error.h
-	$(C) compile.c -o compile.o
+compile.$(O): compile.c compile.h libming.h action.h blocks/error.h
+	$(C) compile.c -o compile.$(O)
 
-listaction.o: listaction.c action.h compile.h
-	$(C) listaction.c -o listaction.o
+listaction.$(O): listaction.c action.h compile.h
+	$(C) listaction.c -o listaction.$(O)
 
-actioncompiler.o: actioncompiler.c compile.h action.h libming.h
-	$(C) actioncompiler.c -o actioncompiler.o
+actioncompiler.$(O): actioncompiler.c compile.h action.h libming.h
+	$(C) actioncompiler.c -o actioncompiler.$(O)
 
-assembler.o: assembler.c compile.h action.h assembler.h
-	$(C) assembler.c -o assembler.o
+assembler.$(O): assembler.c compile.h action.h assembler.h
+	$(C) assembler.c -o assembler.$(O)
 
-swf4compiler.tab.o: swf4compiler.tab.c compile.h action.h assembler.h
-	$(C) swf4compiler.tab.c -o swf4compiler.tab.o
+swf4compiler.tab.$(O): swf4compiler.tab.c compile.h action.h assembler.h
+	$(C) swf4compiler.tab.c -o swf4compiler.tab.$(O)
 
-swf5compiler.tab.o: swf5compiler.tab.c compile.h action.h assembler.h
-	$(C) swf5compiler.tab.c -o swf5compiler.tab.o
+swf5compiler.tab.$(O): swf5compiler.tab.c compile.h action.h assembler.h
+	$(C) swf5compiler.tab.c -o swf5compiler.tab.$(O)
 
-libming.o: libming.c libming.h
-	$(C) libming.c -o libming.o
+libming.$(O): libming.c libming.h
+	$(C) libming.c -o libming.$(O)
 
 # === TESTING ===
 
-test.o: test.c actioncompiler.h
-	$(C) test.c -o test.o
+test.$(O): test.c actioncompiler.h
+	$(C) test.c -o test.$(O)
 
-main.o: main.c
-	$(C) main.c -o main.o
+main.$(O): main.c
+	$(C) main.c -o main.$(O)
 
-O = compile.o listaction.o lex.swf4.o lex.swf5.o swf5compiler.tab.o swf4compiler.tab.o assembler.o actioncompiler.o
-main: main.o $(O)
-	$(L) -o main main.o $(O) $(LIBS)
+OBJS = compile.$(O) listaction.$(O) lex.swf4.$(O) lex.swf5.$(O) swf5compiler.tab.$(O) swf4compiler.tab.$(O) assembler.$(O) actioncompiler.$(O)
+main: main.$(O) $(OBJS)
+	$(L) -o main main.$(O) $(OBJS) $(LIBS)
 
-test: test.o $(OBJECTS)
-	$(L) -o test $(OBJECTS) test.o ../librfxswf.a -lm -ljpeg -lz -lt1 -lfreetype
+test: test.$(O) $(OBJECTS)
+	$(L) -o test $(OBJECTS) test.$(O) ../librfxswf.a -lm -ljpeg -lz -lt1 -lfreetype
 
 # === CLEANING ===
 
 clean:
-	rm -f $(OBJECTS) compiler compiler.exe core test main main.o *~ gmon.out
+	rm -f $(OBJECTS) compiler compiler.exe core test main main.$(O) *~ gmon.out
 
 distclean: clean
 	rm -f $(GENERATED) swf*compiler.tab.* lex*.c 

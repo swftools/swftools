@@ -7,19 +7,19 @@ all: simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf
 
 programs = simple_viewer$(E) keyboard_viewer$(E) PreLoaderTemplate$(E)
 
-simple_viewer.o: simple_viewer.c
+simple_viewer.$(O): simple_viewer.c
 	$(C) -I../lib simple_viewer.c -o $@
-keyboard_viewer.o: keyboard_viewer.c
+keyboard_viewer.$(O): keyboard_viewer.c
 	$(C) -I../lib keyboard_viewer.c -o $@
-PreLoaderTemplate.o: PreLoaderTemplate.c
+PreLoaderTemplate.$(O): PreLoaderTemplate.c
 	$(C) -I../lib PreLoaderTemplate.c -o $@
 
-simple_viewer$(E): simple_viewer.o ../lib/librfxswf.a
-	$(L) simple_viewer.o -o $@ ../lib/librfxswf.a $(LIBS) 
-keyboard_viewer$(E): keyboard_viewer.o ../lib/librfxswf.a
-	$(L) keyboard_viewer.o -o $@ ../lib/librfxswf.a $(LIBS) 
-PreLoaderTemplate$(E): PreLoaderTemplate.o ../lib/librfxswf.a
-	$(L) PreLoaderTemplate.o -o $@ ../lib/librfxswf.a $(LIBS) 
+simple_viewer$(E): simple_viewer.$(O) ../lib/librfxswf.a
+	$(L) simple_viewer.$(O) -o $@ ../lib/librfxswf.a $(LIBS) 
+keyboard_viewer$(E): keyboard_viewer.$(O) ../lib/librfxswf.a
+	$(L) keyboard_viewer.$(O) -o $@ ../lib/librfxswf.a $(LIBS) 
+PreLoaderTemplate$(E): PreLoaderTemplate.$(O) ../lib/librfxswf.a
+	$(L) PreLoaderTemplate.$(O) -o $@ ../lib/librfxswf.a $(LIBS) 
 
 simple_viewer.swf: $(programs)
 	@echo Calling ./keybard_viewer to create keyboard_viewer.swf
@@ -56,7 +56,7 @@ uninstall:
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/default_loader.swf
 
 clean: 
-	rm -f *.o *.lo *.a *.la gmon.out 
+	rm -f *.o *.obj *.lo *.a *.la gmon.out 
 	rm -f simple_viewer keyboard_viewer PreLoaderTemplate 
 	rm -f simple_viewer$(E) keyboard_viewer$(E) PreLoaderTemplate$(E) 
 	rm -f simple_viewer.exe keyboard_viewer.exe PreLoaderTemplate.exe
