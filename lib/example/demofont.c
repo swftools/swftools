@@ -25,7 +25,7 @@ void fn3711(SWFFONT * f,int i,U16 code,U16 advance,U16 gid,U8 * data,U32 bitlen)
   f->glyph[i].gid     = gid;
   f->glyph[i].shape   = s;
   s->bitlen           = bitlen;
-  s->bits.fill  = 1;
+  s->bits.fill	      = 1;
   memcpy(s->data,data,l);
 }
 
@@ -107,8 +107,12 @@ SWFFONT * Font_Demo_Font(U16 id)
   if (!(f=malloc(sizeof(SWFFONT)))) return NULL;
   memset(f,0x00,sizeof(SWFFONT));
   f->id       = id;
+  f->version  = 1;
   f->name     = strdup("Demo Font");
-  f->flags    = 0x10;
+  f->flags    = 0x00;
+  f->numchars = 6;
+  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*208);
+
 
   addGlyph(f,102, 0x00,  64,  0, &Glyphs_Demo_Font[0x0000], 872); // f
   addGlyph(f,108, 0x00,  53,  1, &Glyphs_Demo_Font[0x006d], 452); // l
