@@ -294,6 +294,17 @@ PyObject* f_Matrix(PyObject* _self, PyObject* args, PyObject* kwargs)
 static PyObject* matrix_getattr(PyObject * self, char* a)
 {
     PY_ASSERT_TYPE(self,&MatrixClass);
+    MatrixObject*matrix = (MatrixObject*)self;
+    if(!strcmp(a, "entries")) {
+	return Py_BuildValue("(ffffff)",
+		matrix->matrix.sx/65536.0,
+		matrix->matrix.r0/65536.0,
+		matrix->matrix.r1/65536.0,
+		matrix->matrix.sy/65536.0,
+		matrix->matrix.tx/20.0,
+		matrix->matrix.ty/20.0
+		);
+    }
     return NULL;
 }
 static int matrix_setattr(PyObject * self, char* a, PyObject* o)
