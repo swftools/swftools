@@ -159,8 +159,14 @@ int png_read_header(FILE*fi, struct png_header*header)
 	    c = data[10];     // compression mode (0)
 	    f = data[11];     // filter mode (0)
 	    i = data[12];     // interlace mode (0)
+	
+	    if(VERBOSE(2)) printf("image mode:%d\n", b);
+	    if(VERBOSE(2)) printf("bpp: %d\n", a);
+	    if(VERBOSE(2)) printf("compression: %d\n", c);
+	    if(VERBOSE(2)) printf("filter: %d\n", f);
+	    if(VERBOSE(2)) printf("interlace: %d\n", i);
 
-	    if(b!=2 && b!=3 && b!=6) {
+	    if(b!=0 && b!=2 && b!=3 && b!=6) {
 		fprintf(stderr, "Image mode %d not supported!\n", b);
 		exit(1);
 	    }
@@ -454,7 +460,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     if(!png_read_header(fi, &header))
 	return 0;
 
-    if(header.mode == 3) bypp = 1;
+    if(header.mode == 3 || header.mode == 0) bypp = 1;
     else
     if(header.mode == 2) bypp = 3;
     else
@@ -586,33 +592,44 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	}
 	free(data2);
     }
-    else {
-	RGBA*rgba = (RGBA*)malloc(palettelen*sizeof(RGBA));
+    else if(header.mode == 0 || header.mode == 3) {
+	RGBA*rgba;
 	int swf_width = BYTES_PER_SCANLINE(header.width);
 	U8*data2 = malloc(swf_width*header.height);
 	U8*tmpline = malloc(header.width);
 	int i,x,y;
 	int pos=0;
-	if(!palette) {
-	    fprintf(stderr, "Error: No palette found!\n");
-	    exit(1);
-	}
-	/* 24->32 bit conversion */
-	for(i=0;i<palettelen;i++) {
-	    rgba[i].r = palette[i*3+0];
-	    rgba[i].g = palette[i*3+1];
-	    rgba[i].b = palette[i*3+2];
-	    if(alphapalette && i<alphapalettelen) {
-		rgba[i].a = alphapalette[i];
-		if(alphapalette[i] == 0) {
-		    /* if the color is fully transparent, it doesn't matter
-		       what it's rgb values are. furthermore, all Flash 
-		       players up to Flash 5 can't deal with anything beyond
-		       one transparent color with value (00,00,00,00). */
-		    rgba[i].r = rgba[i].g = rgba[i].b = 0;
+	if(header.mode == 3) { // palette or grayscale?
+	    rgba = (RGBA*)malloc(palettelen*sizeof(RGBA));
+	    if(!palette) {
+		fprintf(stderr, "Error: No palette found!\n");
+		exit(1);
+	    }
+	    /* 24->32 bit conversion */
+	    for(i=0;i<palettelen;i++) {
+		rgba[i].r = palette[i*3+0];
+		rgba[i].g = palette[i*3+1];
+		rgba[i].b = palette[i*3+2];
+		if(alphapalette && i<alphapalettelen) {
+		    rgba[i].a = alphapalette[i];
+		    if(alphapalette[i] == 0) {
+			/* if the color is fully transparent, it doesn't matter
+			   what it's rgb values are. furthermore, all Flash 
+			   players up to Flash 5 can't deal with anything beyond
+			   one transparent color with value (00,00,00,00). */
+			rgba[i].r = rgba[i].g = rgba[i].b = 0;
+		    }
+		} else {
+		    rgba[i].a = 255;
 		}
-	    } else {
-		rgba[i].a = 255;
+	    }
+	} else {
+	    palettelen = 256;
+	    rgba = (RGBA*)malloc(palettelen*sizeof(RGBA));
+	    for(i=0;i<256;i++) {
+		rgba[i].r = i;
+		rgba[i].g = i;
+		rgba[i].b = i;
 	    }
 	}
 
