@@ -1395,6 +1395,7 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
     free(t);
     t = tnew;
   }
+  swf->firstTag = 0;
 }
 
 // include advanced functions
