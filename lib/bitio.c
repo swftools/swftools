@@ -16,6 +16,7 @@ struct reader_t
 struct writer_t
 {
     int (*write)(struct writer_t*, void*data, int len);
+    void (*finish)();
     void *internal;
     int type;
     unsigned char mybyte;
@@ -35,7 +36,8 @@ static void reader_init_filereader(struct reader_t*r, int handle)
     r->read = reader_fileread;
     r->internal = (void*)handle;
     r->type = READER_TYPE_FILE;
-    reader_resetbits(r);
+    r->mybyte = 0;
+    r->bitpos = 8;
 }
 #define ZLIB_BUFFER_SIZE 16384
 struct zlibinflate_t
@@ -128,9 +130,12 @@ static unsigned int reader_readbits(struct reader_t*r, int num)
     }
     return val;
 }
-static int writer_filewrite(struct writer_t*w, void* data, int len) 
+static int writer_filewrite_write(struct writer_t*w, void* data, int len) 
 {
     return write((int)w->internal, data, len);
+}
+static void writer_filewrite_finish()
+{
 }
 static void writer_resetbits(struct writer_t*w)
 {
@@ -141,12 +146,97 @@ static void writer_resetbits(struct writer_t*w)
 }
 static void writer_init_filewriter(struct writer_t*w, int handle)
 {
-    w->write = writer_filewrite;
+    w->write = writer_filewrite_write;
+    w->finish = writer_filewrite_finish;
     w->internal = (void*)handle;
     w->type = WRITER_TYPE_FILE;
     w->bitpos = 0;
     w->mybyte = 0;
 }
+struct zlibdeflate_t
+{
+    z_stream zs;
+    struct writer_t*output;
+    U8 writebuffer[ZLIB_BUFFER_SIZE];
+};
+static int writer_zlibdeflate_write(struct writer_t*writer, void* data, int len);
+static void writer_zlibdeflate_finish();
+static void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output)
+{
+    struct zlibdeflate_t*z;
+    int ret;
+    z = (struct zlibdeflate_t*)malloc(sizeof(struct zlibdeflate_t));
+    w->internal = z;
+    w->write = writer_zlibdeflate_write;
+    w->finish = writer_zlibdeflate_finish;
+    w->type = WRITER_TYPE_ZLIB;
+    z->output = output;
+    memset(&z->zs,0,sizeof(z_stream));
+    z->zs.zalloc = Z_NULL;
+    z->zs.zfree  = Z_NULL;
+    z->zs.opaque = Z_NULL;
+    ret = deflateInit(&z->zs, 9);
+    if (ret != Z_OK) zlib_error(ret, "bitio:deflate_init", &z->zs);
+    w->bitpos = 0;
+    w->mybyte = 0;
+    z->zs.next_out = z->writebuffer;
+    z->zs.avail_out = ZLIB_BUFFER_SIZE;
+}
+static int writer_zlibdeflate_write(struct writer_t*writer, void* data, int len) 
+{
+    struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
+    int ret;
+    if(!z)
+	return 0;
+    
+    z->zs.next_in = data;
+    z->zs.avail_in = len;
+
+    while(1) {
+	ret = deflate(&z->zs, Z_NO_FLUSH);
+	
+	if (ret != Z_OK) zlib_error(ret, "bitio:deflate_deflate", &z->zs);
+
+	if(z->zs.next_out != z->writebuffer) {
+	    z->output->write(z->output, z->writebuffer, z->zs.next_out - (Bytef*)z->writebuffer);
+	    z->zs.next_out = z->writebuffer;
+	    z->zs.avail_out = ZLIB_BUFFER_SIZE;
+	}
+
+	if(!z->zs.avail_in) {
+	    break;
+	}
+    }
+    return len;
+}
+static void writer_zlibdeflate_finish(struct writer_t*writer)
+{
+    struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
+    int ret;
+    if(!z)
+	return;
+    while(1) {
+	ret = deflate(&z->zs, Z_FINISH);
+	if (ret != Z_OK &&
+	    ret != Z_STREAM_END) zlib_error(ret, "bitio:deflate_deflate", &z->zs);
+
+	if(z->zs.next_out != z->writebuffer) {
+	    z->output->write(z->output, z->writebuffer, z->zs.next_out - (Bytef*)z->writebuffer);
+	    z->zs.next_out = z->writebuffer;
+	    z->zs.avail_out = ZLIB_BUFFER_SIZE;
+	}
+
+	if (ret == Z_STREAM_END) {
+	    break;
+
+	}
+    }
+    ret = deflateEnd(&z->zs);
+    if (ret != Z_OK) zlib_error(ret, "bitio:deflate_end", &z->zs);
+    free(writer->internal);
+    writer->internal = 0;
+}
+
 static void writer_writebit(struct writer_t*w, int bit)
 {    
     if(w->bitpos==8) 
