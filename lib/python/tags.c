@@ -3,6 +3,7 @@
 #include "action.h"
 #include "tag.h"
 #include "tags.h"
+#include "image.h"
 
 //----------------------------------------------------------------------------
 
@@ -321,8 +322,10 @@ static tag_internals_t text_tag =
 typedef struct _videostream_internal
 {
     VIDEOSTREAM* stream;
+    int lastiframe;
 } videostream_internal_t;
 staticforward tag_internals_t videostream_tag;
+staticforward tag_internals_t videoframe_tag;
 
 static int videostream_parse(tag_internals_t*self)
 {
@@ -353,9 +356,9 @@ static PyObject* f_DefineVideoStream(PyObject* self, PyObject* args, PyObject* k
 {
     PyObject*tag = tag_new(&videostream_tag);
    
-    int width=0,height=0,quant=7,frames=65535;
-    static char *kwlist[] = {"width", "height", "quant", "frames", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|ii", kwlist, &TagClass, &width, &height, &quant, &frames))
+    int width=0,height=0,frames=65535;
+    static char *kwlist[] = {"width", "height", "frames", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|i", kwlist, &TagClass, &width, &height, &frames))
 	return NULL;
     
     tag_internals_t*itag = tag_getinternals(tag);
@@ -365,6 +368,7 @@ static PyObject* f_DefineVideoStream(PyObject* self, PyObject* args, PyObject* k
 
     TAG*t = swf_InsertTag(0, ST_DEFINEVIDEOSTREAM);
     swf_SetVideoStreamDefine(t, fi->stream, frames, width, height);
+    fi->lastiframe = -65536;
     return (PyObject*)tag;
 }
 static VIDEOSTREAM* videostream_getVIDEOSTREAM(PyObject*self)
@@ -388,33 +392,54 @@ static PyObject* videostream_getbheight(PyObject*self, PyObject*args)
     int height = fi->stream->bby;
     return Py_BuildValue("i", height);
 }
-static PyObject* videostream_addIFrame(PyObject*self, PyObject*args)
+static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwargs)
 {
-    tag_internals_t*itag = tag_getinternals(self);
-    videostream_internal_t*fi = (videostream_internal_t*)itag->data;
-    /* TODO */
-    return Py_BuildValue("s", 0);
-}
-static PyObject* videostream_addPFrame(PyObject*self, PyObject*args)
-{
-    tag_internals_t*itag = tag_getinternals(self);
-    videostream_internal_t*fi = (videostream_internal_t*)itag->data;
-    /* TODO */
+    tag_internals_t*_itag = tag_getinternals(self);
+    videostream_internal_t*fi = (videostream_internal_t*)_itag->data;
+   
+    PyObject*image = 0;
+    char*type=0; // none, "i", "p"
+    int quant=7;
+    static char *kwlist[] = {"image", "quant", "type", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|is", kwlist, &image, &quant, &type))
+	return NULL;
+    if(fi->stream->width != image_getWidth(image)) {
+	PyErr_SetString(PyExc_Exception, setError("bad image width %d!=%d", image_getWidth(image), fi->stream->width));return 0;
+    }
+    if(fi->stream->height != image_getHeight(image)) {
+	PyErr_SetString(PyExc_Exception, setError("bad image width %d!=%d", image_getHeight(image), fi->stream->height));return 0;
+    }
+    PyObject*tag = tag_new(&videoframe_tag);
+    tag_internals_t*itag = tag_getinternals(tag);
+
+    RGBA*pic = image_toRGBA(image);
+    TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
+    if((type && (type[0]=='I' || type[0]=='i')) || (type==0 && fi->lastiframe+64 < fi->stream->frame)) {
+	swf_SetU16(t,0);
+	swf_SetVideoStreamIFrame(t, fi->stream, pic, quant);
+	fi->lastiframe = fi->stream->frame;
+    } else {
+	swf_SetU16(t,0);
+	swf_SetVideoStreamPFrame(t, fi->stream, pic, quant);
+    }
+    itag->tag = t;
+    tagmap_addMapping(itag->tagmap, 0, self);
+    free(pic);
     return Py_BuildValue("s", 0);
 }
 static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
     videostream_internal_t*fi = (videostream_internal_t*)itag->data;
+    
     /* TODO */
     return Py_BuildValue("s", 0);
 }
 static PyMethodDef videostream_methods[] = 
 {{"xblocks", videostream_getbwidth, METH_VARARGS, "get's the number of horizontal blocks"},
  {"yblocks", videostream_getbheight, METH_VARARGS, "get's the number of vertical blocks"},
- {"addIFrame", videostream_addIFrame, METH_VARARGS, "add a I Video Frame"},
- {"addPFrame", videostream_addPFrame, METH_VARARGS, "add a P Video Frame"},
- {"addDistortionFrame", videostream_addDistortionFrame, METH_VARARGS, "add a MVD frame"},
+ {"addFrame", (PyCFunction)videostream_addFrame, METH_KEYWORDS, "add a Video Frame"},
+ {"addDistortionFrame", (PyCFunction)videostream_addDistortionFrame, METH_KEYWORDS, "add a MVD frame"},
  {NULL, NULL, 0, NULL}
 };
 
@@ -425,6 +450,17 @@ static tag_internals_t videostream_tag =
     dealloc: videostream_dealloc,
     tagfunctions: videostream_methods,
     datasize: sizeof(videostream_internal_t),
+};
+
+//============================================================================
+
+static tag_internals_t videoframe_tag =
+{
+    parse: 0,
+    fillTAG: 0,
+    dealloc: 0,
+    tagfunctions: 0,
+    datasize: 0
 };
 
 //============================================================================
