@@ -514,14 +514,14 @@ int getidfromtag(struct swf_tag* tag)
 	}
 	break;
 	case TAGID_REMOVEOBJECT:
-	   return *(u16*)tag->data;
+	   return SWAP16(*(u16*)tag->data);
 	break;
 	case TAGID_REMOVEOBJECT2:
 	   return -1;
 	break;
     }
 
-    return *(u16*)tag->data;
+    return SWAP16(*(u16*)tag->data);
 }
 
 void setidintag(struct swf_tag* tag, int id)
