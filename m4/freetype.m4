@@ -20,7 +20,7 @@ AC_DEFUN(RFX_CHECK_FREETYPE,
 AC_CHECK_PROGS(FREETYPE_CONFIG, freetype-config,)
 OLDCPPFLAGS="${CPPFLAGS}"
 OLDLIBS="${LIBS}"
-if test "x${FREETYPE_CONFIG}" != "x"; then
+if test "x${FREETYPE_CONFIG}" '!=' "x"; then
     CPPFLAGS="$CPPFLAGS "`freetype-config --cflags`
 else if test -d /usr/include/freetype2; then
     CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
@@ -34,14 +34,17 @@ AC_CHECK_LIB(freetype, FT_Init_FreeType,HAVE_LIB_FREETYPE=1,)
 AC_CHECK_HEADERS(freetype/freetype.h,HAVE_FREETYPE_FREETYPE_H=1)
 AC_CHECK_HEADERS(ft2build.h,HAVE_FT2BUILD_H=1)
 
-if test "x${HAVE_LIB_FREETYPE}" != "x";then
-if test "x${HAVE_FREETYPE_FREETYPE_H}" != "x";then
-    HAVE_FREETYPE=1
-fi
+if test "x${HAVE_LIB_FREETYPE}" '!=' "x";then
+    if test "x${HAVE_FREETYPE_FREETYPE_H}" '!=' "x";then
+	HAVE_FREETYPE=1
+    fi
+    if test "x${HAVE_FT2BUILD_H}" '!=' "x";then
+	HAVE_FREETYPE=1
+    fi
 fi
 
 if test "x${HAVE_FREETYPE}" = "x1"; then 
-    if test "x{$FREETYPE_CONFIG}" != "x"; then
+    if test "x{$FREETYPE_CONFIG}" '!=' "x"; then
 	LIBS="$LIBS "`freetype-config --libs`
     else
 	LIBS="$LIBS -lfreetype"
@@ -124,7 +127,7 @@ EOF
 fi
 
 # if the above didn't work out, reset all changes to the compiler variables.
-if test "x${HAVE_FREETYPE}" "!=" "x1"; then 
+if test "x${HAVE_FREETYPE}" '!=' "x1"; then 
     CPPFLAGS=$OLDCPPFLAGS
     LIBS=$OLDLIBS
 fi 
