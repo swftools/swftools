@@ -186,7 +186,7 @@ public:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask);
-  int clipping[32];
+  int clipping[64];
   int clippos;
 
   int setT1Font(char*name,FontEncoding*enc);
@@ -507,7 +507,7 @@ void SWFOutputDev::clip(GfxState *state)
     m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_startclip(&output, outline, &m);
-    clipping[clippos] = 1;
+    clipping[clippos] ++;
 }
 void SWFOutputDev::eoClip(GfxState *state) 
 {
@@ -518,7 +518,7 @@ void SWFOutputDev::eoClip(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_startclip(&output, outline, &m);
-    clipping[clippos] = 1;
+    clipping[clippos] ++;
 }
 
 SWFOutputDev::~SWFOutputDev() 
@@ -735,15 +735,20 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 void SWFOutputDev::saveState(GfxState *state) {
   logf("<debug> saveState\n");
   updateAll(state);
-  clippos ++;
+  if(clippos<64)
+    clippos ++;
+  else
+    logf("<error> Too many nested states in pdf.");
   clipping[clippos] = 0;
 };
 
 void SWFOutputDev::restoreState(GfxState *state) {
   logf("<debug> restoreState\n");
   updateAll(state);
-  if(clipping[clippos])
+  while(clipping[clippos]) {
       swfoutput_endclip(&output);
+      clipping[clippos]--;
+  }
   clippos--;
 }
 
