@@ -1,5 +1,6 @@
 swfc:
 
+    * .outline should also support creating unfilled objects somehow
     * .morph
     * .soundstream
     * text: newlines
