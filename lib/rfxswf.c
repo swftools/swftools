@@ -417,6 +417,14 @@ int swf_SetRect(TAG * t,SRECT * r)
 
 void swf_ExpandRect(SRECT*src, SPOINT add)
 {
+    if((src->xmin | src->ymin | src->xmax | src->ymax)==0) {
+	src->xmin = add.x;
+	src->ymin = add.y;
+	src->xmax = add.x;
+	src->ymax = add.y;
+	if((add.x|add.y) == 0) src->xmax++; //make sure the bbox is not NULL anymore
+	return;
+    }
     if(add.x < src->xmin)
 	src->xmin = add.x;
     if(add.x > src->xmax)
@@ -440,6 +448,25 @@ void swf_ExpandRect2(SRECT*src, SRECT*add)
 	src->xmax = add->xmax;
     if(add->ymax > src->ymax)
 	src->ymax = add->ymax;
+}
+void swf_ExpandRect3(SRECT*src, SPOINT center, int radius)
+{
+    if((src->xmin | src->ymin | src->xmax | src->ymax)==0) {
+	src->xmin = center.x-radius;
+	src->ymin = center.y-radius;
+	src->xmax = center.x+radius;
+	src->ymax = center.y+radius;
+	if((center.x|cetner.y|radius) == 0) src->xmax++; //make sure the bbox is not NULL anymore
+	return;
+    }
+    if(center.x - radius < src->xmin)
+	src->xmin = center.x - radius;
+    if(center.x + radius > src->xmax)
+	src->xmax = center.x - radius;
+    if(center.y - radius < src->ymin)
+	src->ymin = center.y - radius;
+    if(center.y + radius > src->ymax)
+	src->ymax = center.y - radius;
 }
 SPOINT swf_TurnPoint(SPOINT p, MATRIX* m)
 {
