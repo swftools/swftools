@@ -65,7 +65,7 @@ struct CLIPACTIONS;
 
 struct swf_tag
 {
-    u8 id;
+    u16 id;
     u32 length;
     u8*data;
     u32 fulllength; // includes id

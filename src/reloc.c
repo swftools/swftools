@@ -18,12 +18,13 @@ int slaveids[65536];
 void maponeid(void*idpos)
 {
     u16*idptr = (u16*)idpos;
-    if(slaveids[SWAP16(*idptr)]<0) {
-	logf("<error> Trying to map id never encountered before: id=%d", SWAP16(*idptr));
+    U16 id = GET16(idptr);
+    if(slaveids[id]<0) {
+	logf("<error> Trying to map id never encountered before: id=%d", id);
 	return ;
     }
-    logf("<debug> mapping %d to %d", SWAP16(*idptr), slaveids[SWAP16(*idptr)]);
-    *idptr =  SWAP16(slaveids[*idptr]);
+    logf("<debug> mapping %d to %d", id, slaveids[id]);
+    PUT16(idptr, slaveids[id]);
 }
 
 
@@ -194,7 +195,7 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 		u16 charid;
 		if(!reader_readu8(&reader)) //flags
 		    break; 
-		charid = SWAP16(*(u16*)reader_getinputpos(&reader));
+		charid = GET16(reader_getinputpos(&reader));
 		callback(reader_getinputpos(&reader));
 		reader_readu16(&reader); //char
 		reader_readu16(&reader); //layer

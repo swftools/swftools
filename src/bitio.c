@@ -33,12 +33,12 @@ void reader_input1(struct reader_t*r, void*target)
 }
 void reader_input2(struct reader_t*r, void*target)
 {
-    *(u16*)target = SWAP16(*(u16*)&r->data[r->datapos]);
+    *(u16*)target = GET16(&r->data[r->datapos]);
     r->datapos += 2;
 }
 void reader_input4(struct reader_t*r, void*target)
 {
-    *(u32*)target = SWAP32(*(u32*)&r->data[r->datapos]);
+    *(u32*)target = GET32(&r->data[r->datapos]);
     r->datapos += 4;
 }
 uchar*reader_getinputpos(struct reader_t*r)

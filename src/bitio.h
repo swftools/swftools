@@ -11,6 +11,7 @@
 #define __bitio_h__
 
 #include "types.h"
+#include "../lib/rfxswf.h"
 
 struct reader_t {
     u8* data;

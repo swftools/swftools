@@ -58,17 +58,13 @@ void changedepth(struct swf_tag*tag, int add)
 {
     /* fucking big endian byte order */
     if(tag->id == TAGID_PLACEOBJECT)
-	(*(u16*)&tag->data[2]) =
-	SWAP16(SWAP16(*(u16*)&tag->data[2]) + add);
+	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == TAGID_PLACEOBJECT2)
-	(*(u16*)&tag->data[1]) =
-	SWAP16(SWAP16(*(u16*)&tag->data[1]) + add);
+	PUT16(&tag->data[1],GET16(&tag->data[1])+add);
     if(tag->id == TAGID_REMOVEOBJECT)
-	(*(u16*)&tag->data[2]) =
-	SWAP16(SWAP16(*(u16*)&tag->data[2]) + add);
+	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == TAGID_REMOVEOBJECT2)
-	(*(u16*)&tag->data[0]) =
-	SWAP16(SWAP16(*(u16*)&tag->data[0]) + add);
+	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
 }
 
 void jpeg_assert()
@@ -305,8 +301,8 @@ void write_sprite(struct writer_t*w, int spriteid, int replaceddefine)
     }
     while(slave.tags[pos++].id != TAGID_END);
 
-    *tagidpos = SWAP32((u8*)writer_getpos(w) - startpos); // set length of sprite (in header)
-    logf("<verbose> sprite length is %d",SWAP32(*tagidpos));
+    PUT32(tagidpos, (u8*)writer_getpos(w) - startpos); // set length of sprite (in header)
+    logf("<verbose> sprite length is %d",GET32(tagidpos));
 }
 
 static char tag_ok_for_slave(int id)
@@ -353,7 +349,7 @@ void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags
 	    {
 		if(config.overlay)
 		{
-		    *(u16*)master.tags[pos].data = SWAP16(replaceddefine);
+		    PUT16(master.tags[pos].data, replaceddefine);
 		    writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
 		} else {
 		    /* don't write this tag */
@@ -388,10 +384,10 @@ void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags
 		if(config.clip) {
 		    logf("<fatal> Can't combine --clip and --frame");
 		}
-		*(u16*)&data[0] = SWAP16((u16)(TAGID_PLACEOBJECT2<<6) + 5);
+		PUT16(&data[0], (u16)(TAGID_PLACEOBJECT2<<6) + 5);
 		*(u8*)&data[2]= 2; //flags: id
-		*(u16*)&data[3]= SWAP16(depth); // depth
-		*(u16*)&data[5]= SWAP16(id);
+		PUT16(&data[3], depth);
+		PUT16(&data[5], id);
 		write_sprite_defines(w);
 		write_sprite(w, id, -1);
 		writer_write(w,data,7);
@@ -554,8 +550,8 @@ uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*sl
 	{
 	    char data[16];
 	    int len;
-	    *(u16*)(&data[0]) = SWAP16((TAGID_REMOVEOBJECT2<<6) + 2);
-	    *(u16*)(&data[2]) = SWAP16(t);
+	    PUT16(&data[0], (TAGID_REMOVEOBJECT2<<6) + 2);
+	    PUT16(&data[2], t);
 	    writer_write(&w, data, 4);
 	}
 	free(depths);
@@ -570,7 +566,7 @@ uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*sl
 
 	tmp32 = (u8*)writer_getpos(&w) - (u8*)newdata; //length
 	*newlength = tmp32;
-	*headlength = SWAP32(tmp32); // set the header to the correct length
+	PUT32(headlength, tmp32); // set the header to the correct length
 
 	return newdata; //length
 }
@@ -678,7 +674,7 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 
 	tmp32 = (u8*)writer_getpos(&w) - (u8*)newdata; //length
 	*newlength = tmp32;
-	*headlength = SWAP32(tmp32); // set the header to the correct length
+	PUT32(headlength, tmp32);
 
 	return newdata; //length
 }
