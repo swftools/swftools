@@ -851,6 +851,7 @@ int swf_ReadSWF(int handle, SWF * swf)
 int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
+  int frameCount=0;
   struct writer_t zwriter;
     
   if (!swf) return -1;
@@ -869,11 +870,11 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writ
 
   len = 0;
   t = swf->firstTag;
-  swf->frameCount = 0;
+  frameCount = 0;
 
   while(t)
   { len += swf_WriteTag(-1, t);
-    if (t->id==ST_SHOWFRAME) swf->frameCount++;
+    if (t->id==ST_SHOWFRAME) frameCount++;
     t = swf_NextTag(t);
   }
   
@@ -896,7 +897,11 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writ
       swf_SetU16(&t2, swf->frameCount);
       l = swf_GetTagLen(&t2)+8;
     }
-    swf->fileSize = l+len;
+
+    if(len) {// don't touch headers without tags
+	swf->fileSize = l+len;
+	swf->frameCount = frameCount;
+    }
    
     if(compress) {
       char*id = "CWS";
