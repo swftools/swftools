@@ -2,15 +2,16 @@
 //
 // UnicodeMap.cc
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <stdio.h>
 #include <string.h>
 #include "gmem.h"
@@ -101,37 +102,52 @@ UnicodeMap *UnicodeMap::parse(GString *encodingNameA) {
     ++line;
   }
 
+  fclose(f);
+
   return map;
 }
 
 UnicodeMap::UnicodeMap(GString *encodingNameA) {
   encodingName = encodingNameA;
+  unicodeOut = gFalse;
   kind = unicodeMapUser;
   ranges = NULL;
   len = 0;
   eMaps = NULL;
   eMapsLen = 0;
   refCnt = 1;
+#if MULTITHREADED
+  gInitMutex(&mutex);
+#endif
 }
 
-UnicodeMap::UnicodeMap(char *encodingNameA,
+UnicodeMap::UnicodeMap(char *encodingNameA, GBool unicodeOutA,
 		       UnicodeMapRange *rangesA, int lenA) {
   encodingName = new GString(encodingNameA);
+  unicodeOut = unicodeOutA;
   kind = unicodeMapResident;
   ranges = rangesA;
   len = lenA;
   eMaps = NULL;
   eMapsLen = 0;
   refCnt = 1;
+#if MULTITHREADED
+  gInitMutex(&mutex);
+#endif
 }
 
-UnicodeMap::UnicodeMap(char *encodingNameA, UnicodeMapFunc funcA) {
+UnicodeMap::UnicodeMap(char *encodingNameA, GBool unicodeOutA,
+		       UnicodeMapFunc funcA) {
   encodingName = new GString(encodingNameA);
+  unicodeOut = unicodeOutA;
   kind = unicodeMapFunc;
   func = funcA;
   eMaps = NULL;
   eMapsLen = 0;
   refCnt = 1;
+#if MULTITHREADED
+  gInitMutex(&mutex);
+#endif
 }
 
 UnicodeMap::~UnicodeMap() {
@@ -142,14 +158,32 @@ UnicodeMap::~UnicodeMap() {
   if (eMaps) {
     gfree(eMaps);
   }
+#if MULTITHREADED
+  gDestroyMutex(&mutex);
+#endif
 }
 
 void UnicodeMap::incRefCnt() {
+#if MULTITHREADED
+  gLockMutex(&mutex);
+#endif
   ++refCnt;
+#if MULTITHREADED
+  gUnlockMutex(&mutex);
+#endif
 }
 
 void UnicodeMap::decRefCnt() {
-  if (--refCnt == 0) {
+  GBool done;
+
+#if MULTITHREADED
+  gLockMutex(&mutex);
+#endif
+  done = --refCnt == 0;
+#if MULTITHREADED
+  gUnlockMutex(&mutex);
+#endif
+  if (done) {
     delete this;
   }
 }
@@ -168,29 +202,28 @@ int UnicodeMap::mapUnicode(Unicode u, char *buf, int bufSize) {
 
   a = 0;
   b = len;
-  if (u < ranges[a].start) {
-    return 0;
-  }
-  // invariant: ranges[a].start <= u < ranges[b].start
-  while (b - a > 1) {
-    m = (a + b) / 2;
-    if (u >= ranges[m].start) {
-      a = m;
-    } else if (u < ranges[m].start) {
-      b = m;
+  if (u >= ranges[a].start) {
+    // invariant: ranges[a].start <= u < ranges[b].start
+    while (b - a > 1) {
+      m = (a + b) / 2;
+      if (u >= ranges[m].start) {
+	a = m;
+      } else if (u < ranges[m].start) {
+	b = m;
+      }
     }
-  }
-  if (u <= ranges[a].end) {
-    n = ranges[a].nBytes;
-    if (n > bufSize) {
-      return 0;
+    if (u <= ranges[a].end) {
+      n = ranges[a].nBytes;
+      if (n > bufSize) {
+	return 0;
+      }
+      code = ranges[a].code + (u - ranges[a].start);
+      for (i = n - 1; i >= 0; --i) {
+	buf[i] = (char)(code & 0xff);
+	code >>= 8;
+      }
+      return n;
     }
-    code = ranges[a].code + (u - ranges[a].start);
-    for (i = n - 1; i >= 0; --i) {
-      buf[i] = (char)(code & 0xff);
-      code >>= 8;
-    }
-    return n;
   }
 
   for (i = 0; i < eMapsLen; ++i) {

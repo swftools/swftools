@@ -2,14 +2,16 @@
 //
 // Decrypt.h
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef DECRYPT_H
 #define DECRYPT_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 

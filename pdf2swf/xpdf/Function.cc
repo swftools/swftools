@@ -2,15 +2,16 @@
 //
 // Function.cc
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -379,8 +380,8 @@ void SampledFunction::transform(double *in, double *out) {
 
     // pull 2^m values out of the sample array
     for (j = 0; j < (1<<m); ++j) {
-      idx = e[j & 1][m - 1];
-      for (k = m - 2; k >= 0; --k) {
+      idx = 0;
+      for (k = m - 1; k >= 0; --k) {
 	idx = idx * sampleSize[k] + e[(j >> k) & 1][k];
       }
       idx = idx * n + i;
@@ -411,7 +412,6 @@ void SampledFunction::transform(double *in, double *out) {
 
 ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
   Object obj1, obj2;
-  GBool hasN;
   int i;
 
   ok = gFalse;
@@ -424,23 +424,14 @@ ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
     error(-1, "Exponential function with more than one input");
     goto err1;
   }
-  hasN = hasRange;
-
-  //----- default values
-  for (i = 0; i < funcMaxOutputs; ++i) {
-    c0[i] = 0;
-    c1[i] = 1;
-  }
 
   //----- C0
   if (dict->lookup("C0", &obj1)->isArray()) {
-    if (!hasN) {
-      n = obj1.arrayGetLength();
-      hasN = gTrue;
-    } else if (obj1.arrayGetLength() != n) {
+    if (hasRange && obj1.arrayGetLength() != n) {
       error(-1, "Function's C0 array is wrong length");
       goto err2;
     }
+    n = obj1.arrayGetLength();
     for (i = 0; i < n; ++i) {
       obj1.arrayGet(i, &obj2);
       if (!obj2.isNum()) {
@@ -450,15 +441,19 @@ ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
       c0[i] = obj2.getNum();
       obj2.free();
     }
+  } else {
+    if (hasRange && n != 1) {
+      error(-1, "Function's C0 array is wrong length");
+      goto err2;
+    }
+    n = 1;
+    c0[0] = 0;
   }
   obj1.free();
 
   //----- C1
   if (dict->lookup("C1", &obj1)->isArray()) {
-    if (!hasN) {
-      n = obj1.arrayGetLength();
-      hasN = gTrue;
-    } else if (obj1.arrayGetLength() != n) {
+    if (obj1.arrayGetLength() != n) {
       error(-1, "Function's C1 array is wrong length");
       goto err2;
     }
@@ -471,6 +466,12 @@ ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
       c1[i] = obj2.getNum();
       obj2.free();
     }
+  } else {
+    if (n != 1) {
+      error(-1, "Function's C1 array is wrong length");
+      goto err2;
+    }
+    c1[0] = 1;
   }
   obj1.free();
 
@@ -481,13 +482,6 @@ ExponentialFunction::ExponentialFunction(Object *funcObj, Dict *dict) {
   }
   e = obj1.getNum();
   obj1.free();
-
-  // this isn't supposed to happen, but I've run into (broken) PDF
-  // files where it does
-  if (!hasN) {
-    error(-1, "Exponential function does not define number of output values");
-    n = 1;
-  }
 
   ok = gTrue;
   return;
@@ -622,9 +616,13 @@ StitchingFunction::StitchingFunction(Object *funcObj, Dict *dict) {
 }
 
 StitchingFunction::StitchingFunction(StitchingFunction *func) {
+  int i;
+
   k = func->k;
   funcs = (Function **)gmalloc(k * sizeof(Function *));
-  memcpy(funcs, func->funcs, k * sizeof(Function *));
+  for (i = 0; i < k; ++i) {
+    funcs[i] = func->funcs[i]->copy();
+  }
   bounds = (double *)gmalloc((k + 1) * sizeof(double));
   memcpy(bounds, func->bounds, (k + 1) * sizeof(double));
   encode = (double *)gmalloc(2 * k * sizeof(double));
@@ -635,9 +633,11 @@ StitchingFunction::StitchingFunction(StitchingFunction *func) {
 StitchingFunction::~StitchingFunction() {
   int i;
 
-  for (i = 0; i < k; ++i) {
-    if (funcs[i]) {
-      delete funcs[i];
+  if (funcs) {
+    for (i = 0; i < k; ++i) {
+      if (funcs[i]) {
+	delete funcs[i];
+      }
     }
   }
   gfree(funcs);
@@ -1095,13 +1095,13 @@ GBool PostScriptFunction::parseCode(Stream *str, int *codePtr) {
 	if (!parseCode(str, codePtr)) {
 	  return gFalse;
 	}
+	delete tok;
+	if (!(tok = getToken(str))) {
+	  error(-1, "Unexpected end of PostScript function stream");
+	  return gFalse;
+	}
       } else {
 	elsePtr = -1;
-      }
-      delete tok;
-      if (!(tok = getToken(str))) {
-	error(-1, "Unexpected end of PostScript function stream");
-	return gFalse;
       }
       if (!tok->cmp("if")) {
 	if (elsePtr >= 0) {
@@ -1247,7 +1247,7 @@ void PostScriptFunction::exec(PSStack *stack, int codePtr) {
 	} else {
 	  b2 = stack->popBool();
 	  b1 = stack->popBool();
-	  stack->pushReal(b1 && b2);
+	  stack->pushBool(b1 && b2);
 	}
 	break;
       case psOpAtan:
@@ -1314,8 +1314,8 @@ void PostScriptFunction::exec(PSStack *stack, int codePtr) {
 	stack->roll(2, 1);
 	break;
       case psOpExp:
-	r2 = stack->popInt();
-	r1 = stack->popInt();
+	r2 = stack->popNum();
+	r1 = stack->popNum();
 	stack->pushReal(pow(r1, r2));
 	break;
       case psOpFalse:
@@ -1427,7 +1427,7 @@ void PostScriptFunction::exec(PSStack *stack, int codePtr) {
 	if (stack->topIsInt()) {
 	  stack->pushInt(~stack->popInt());
 	} else {
-	  stack->pushReal(!stack->popBool());
+	  stack->pushBool(!stack->popBool());
 	}
 	break;
       case psOpOr:
@@ -1438,7 +1438,7 @@ void PostScriptFunction::exec(PSStack *stack, int codePtr) {
 	} else {
 	  b2 = stack->popBool();
 	  b1 = stack->popBool();
-	  stack->pushReal(b1 || b2);
+	  stack->pushBool(b1 || b2);
 	}
 	break;
       case psOpPop:
@@ -1456,7 +1456,7 @@ void PostScriptFunction::exec(PSStack *stack, int codePtr) {
 	}
 	break;
       case psOpSin:
-	stack->pushReal(cos(stack->popNum()));
+	stack->pushReal(sin(stack->popNum()));
 	break;
       case psOpSqrt:
 	stack->pushReal(sqrt(stack->popNum()));
@@ -1489,7 +1489,7 @@ void PostScriptFunction::exec(PSStack *stack, int codePtr) {
 	} else {
 	  b2 = stack->popBool();
 	  b1 = stack->popBool();
-	  stack->pushReal(b1 ^ b2);
+	  stack->pushBool(b1 ^ b2);
 	}
 	break;
       case psOpIf:

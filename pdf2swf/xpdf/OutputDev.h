@@ -2,14 +2,16 @@
 //
 // OutputDev.h
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef OUTPUTDEV_H
 #define OUTPUTDEV_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
@@ -59,7 +61,7 @@ public:
   virtual void setDefaultCTM(double *ctm);
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {}
+  virtual void startPage(int pageNum, GfxState *state) {}
 
   // End a page.
   virtual void endPage() {}
@@ -70,7 +72,7 @@ public:
   //----- coordinate conversion
 
   // Convert between device and user coordinates.
-  virtual void cvtDevToUser(int dx, int dy, double *ux, double *uy);
+  virtual void cvtDevToUser(double dx, double dy, double *ux, double *uy);
   virtual void cvtUserToDev(double ux, double uy, int *dx, int *dy);
 
   //----- link borders
@@ -123,9 +125,11 @@ public:
 			double originX, double originY,
 			CharCode code, Unicode *u, int uLen) {}
   virtual void drawString(GfxState *state, GString *s) {}
-  virtual GBool beginType3Char(GfxState *state,
+  virtual GBool beginType3Char(GfxState *state, double x, double y,
+			       double dx, double dy,
 			       CharCode code, Unicode *u, int uLen);
   virtual void endType3Char(GfxState *state) {}
+  virtual void endTextObject(GfxState *state) {}
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,

@@ -4,20 +4,13 @@
 //
 // Miscellaneous file and directory name manipulation.
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #include <aconf.h>
-#include "../../config.h"
 
-#ifdef WIN32
-   extern "C" {
-//#  ifndef _MSC_VER
-//#    include <kpathsea/win32lib.h>
-//#  endif
-   }
-#else // !WIN32
+#ifndef WIN32
 #  if defined(MACOS)
 #    include <sys/stat.h>
 #  elif !defined(ACORN)
@@ -443,58 +436,11 @@ time_t getModTime(char *fileName) {
   return statBuf.st_mtime;
 #endif
 }
- 
-static char* getTempDir()
-{
-#ifdef WIN32
-    char*dir = getenv("TMP");
-    if(!dir) dir = getenv("TEMP");
-    if(!dir) dir = getenv("tmp");
-    if(!dir) dir = getenv("temp");
-    if(!dir) dir = "C:\\";
-#else
-    char* dir = "/tmp/";
-#endif
-    return dir;
-}
-
-char* mktmpname(char*ptr) {
-    static char tmpbuf[128];
-    char*dir = getTempDir();
-    int l = strlen(dir);
-    char*sep = "";
-    if(!ptr)
-	ptr = tmpbuf;
-    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
-#ifdef WIN32
-	sep = "\\";
-#else
-	sep = "/";
-#endif
-    }
-
- //   used to be mktemp. This does remove the warnings, but
- //   It's not exactly an improvement.
-#ifdef HAVE_LRAND48
-    sprintf(ptr, "%s%s%08x%08x",dir,sep,lrand48(),lrand48());
-#else
-#   ifdef HAVE_RAND
-	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
-#   else
-	static int count = 1;
-	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
-	count ++;
-#   endif
-#endif
-     return ptr;
-}
 
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
 #if defined(WIN32)
   //---------- Win32 ----------
   char *s;
-  char buf[_MAX_PATH];
-  char *fp;
 
   if (!(s = _tempnam(getenv("TEMP"), NULL))) {
     return gFalse;
@@ -517,7 +463,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   // with this file name after the tmpnam call and before the fopen
   // call.  I will happily accept fixes to this function for non-Unix
   // OSs.
-  if (!(s = mktmpname(NULL))) { //was: tmpnam
+  if (!(s = tmpnam(NULL))) {
     return gFalse;
   }
   *name = new GString(s);
@@ -544,7 +490,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX")->append(ext);
     fd = mkstemps((*name)->getCString(), strlen(ext));
 #else
-    if (!(s = mktmpname(NULL))) { //was: tmpnam
+    if (!(s = tmpnam(NULL))) {
       return gFalse;
     }
     *name = new GString(s);
@@ -561,7 +507,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX");
     fd = mkstemp((*name)->getCString());
 #else // HAVE_MKSTEMP
-    if (!(s = mktmpname(NULL))) { //was: tmpnam
+    if (!(s = tmpnam(NULL))) {
       return gFalse;
     }
     *name = new GString(s);
@@ -692,36 +638,48 @@ GDir::~GDir() {
 }
 
 GDirEntry *GDir::getNextEntry() {
-  struct dirent *ent;
   GDirEntry *e;
 
-  e = NULL;
 #if defined(WIN32)
-  e = new GDirEntry(path->getCString(), ffd.cFileName, doStat);
-  if (hnd  && !FindNextFile(hnd, &ffd)) {
-    FindClose(hnd);
-    hnd = NULL;
+  if (hnd) {
+    e = new GDirEntry(path->getCString(), ffd.cFileName, doStat);
+    if (hnd  && !FindNextFile(hnd, &ffd)) {
+      FindClose(hnd);
+      hnd = NULL;
+    }
+  } else {
+    e = NULL;
   }
 #elif defined(ACORN)
 #elif defined(MACOS)
-#else
+#elif defined(VMS)
+  struct dirent *ent;
+  e = NULL;
   if (dir) {
-#ifdef VMS
     if (needParent) {
       e = new GDirEntry(path->getCString(), "-", doStat);
       needParent = gFalse;
       return e;
     }
-#endif
     ent = readdir(dir);
-#ifndef VMS
-    if (ent && !strcmp(ent->d_name, "."))
-      ent = readdir(dir);
-#endif
-    if (ent)
+    if (ent) {
       e = new GDirEntry(path->getCString(), ent->d_name, doStat);
+    }
+  }
+#else
+  struct dirent *ent;
+  e = NULL;
+  if (dir) {
+    ent = readdir(dir);
+    if (ent && !strcmp(ent->d_name, ".")) {
+      ent = readdir(dir);
+    }
+    if (ent) {
+      e = new GDirEntry(path->getCString(), ent->d_name, doStat);
+    }
   }
 #endif
+
   return e;
 }
 
@@ -734,6 +692,7 @@ void GDir::rewind() {
   tmp = path->copy();
   tmp->append("/*.*");
   hnd = FindFirstFile(tmp->getCString(), &ffd);
+  delete tmp;
 #elif defined(ACORN)
 #elif defined(MACOS)
 #else

@@ -2,19 +2,25 @@
 //
 // CMap.h
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef CMAP_H
 #define CMAP_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
 #include "gtypes.h"
 #include "CharTypes.h"
+
+#if MULTITHREADED
+#include "GMutex.h"
+#endif
 
 class GString;
 struct CMapVectorEntry;
@@ -67,6 +73,9 @@ private:
   CMapVectorEntry *vector;	// vector for first byte (NULL for
 				//   identity CMap)
   int refCnt;
+#ifdef MULTITHREADED
+  GMutex mutex;
+#endif
 };
 
 //------------------------------------------------------------------------

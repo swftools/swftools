@@ -2,14 +2,16 @@
 //
 // Object.h
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
@@ -93,6 +95,7 @@ public:
     { initObj(objNull); return this; }
   Object *initArray(XRef *xref);
   Object *initDict(XRef *xref);
+  Object *initDict(Dict *dictA);
   Object *initStream(Stream *streamA);
   Object *initRef(int numA, int genA)
     { initObj(objRef); ref.num = numA; ref.gen = genA; return this; }
@@ -152,6 +155,7 @@ public:
   Ref getRef() { return ref; }
   int getRefNum() { return ref.num; }
   int getRefGen() { return ref.gen; }
+  char *getCmd() { return cmd; }
 
   // Array accessors.
   int arrayGetLength();

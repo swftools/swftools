@@ -2,15 +2,16 @@
 //
 // Link.cc
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <stddef.h>
 #include <string.h>
 #include "gmem.h"
@@ -22,8 +23,117 @@
 #include "Link.h"
 
 //------------------------------------------------------------------------
+// LinkAction
+//------------------------------------------------------------------------
 
-static GString *getFileSpecName(Object *fileSpecObj);
+LinkAction *LinkAction::parseDest(Object *obj) {
+  LinkAction *action;
+
+  action = new LinkGoTo(obj);
+  if (!action->isOk()) {
+    delete action;
+    return NULL;
+  }
+  return action;
+}
+
+LinkAction *LinkAction::parseAction(Object *obj, GString *baseURI) {
+  LinkAction *action;
+  Object obj2, obj3, obj4;
+
+  if (!obj->isDict()) {
+    error(-1, "Bad annotation action");
+    return NULL;
+  }
+
+  obj->dictLookup("S", &obj2);
+
+  // GoTo action
+  if (obj2.isName("GoTo")) {
+    obj->dictLookup("D", &obj3);
+    action = new LinkGoTo(&obj3);
+    obj3.free();
+
+  // GoToR action
+  } else if (obj2.isName("GoToR")) {
+    obj->dictLookup("F", &obj3);
+    obj->dictLookup("D", &obj4);
+    action = new LinkGoToR(&obj3, &obj4);
+    obj3.free();
+    obj4.free();
+
+  // Launch action
+  } else if (obj2.isName("Launch")) {
+    action = new LinkLaunch(obj);
+
+  // URI action
+  } else if (obj2.isName("URI")) {
+    obj->dictLookup("URI", &obj3);
+    action = new LinkURI(&obj3, baseURI);
+    obj3.free();
+
+  // Named action
+  } else if (obj2.isName("Named")) {
+    obj->dictLookup("N", &obj3);
+    action = new LinkNamed(&obj3);
+    obj3.free();
+
+  // Movie action
+  } else if (obj2.isName("Movie")) {
+    obj->dictLookupNF("Annot", &obj3);
+    obj->dictLookup("T", &obj4);
+    action = new LinkMovie(&obj3, &obj4);
+    obj3.free();
+    obj4.free();
+
+  // unknown action
+  } else if (obj2.isName()) {
+    action = new LinkUnknown(obj2.getName());
+
+  // action is missing or wrong type
+  } else {
+    error(-1, "Bad annotation action");
+    action = NULL;
+  }
+
+  obj2.free();
+
+  if (action && !action->isOk()) {
+    delete action;
+    return NULL;
+  }
+  return action;
+}
+
+GString *LinkAction::getFileSpecName(Object *fileSpecObj) {
+  GString *name;
+  Object obj1;
+
+  name = NULL;
+
+  // string
+  if (fileSpecObj->isString()) {
+    name = fileSpecObj->getString()->copy();
+
+  // dictionary
+  } else if (fileSpecObj->isDict()) {
+    if (!fileSpecObj->dictLookup("Unix", &obj1)->isString()) {
+      obj1.free();
+      fileSpecObj->dictLookup("F", &obj1);
+    }
+    if (obj1.isString())
+      name = obj1.getString()->copy();
+    else
+      error(-1, "Illegal file spec in link");
+    obj1.free();
+
+  // error
+  } else {
+    error(-1, "Illegal file spec in link");
+  }
+
+  return name;
+}
 
 //------------------------------------------------------------------------
 // LinkDest
@@ -37,6 +147,10 @@ LinkDest::LinkDest(Array *a) {
   ok = gFalse;
 
   // get page
+  if (a->getLength() < 2) {
+    error(-1, "Annotation destination array is too short");
+    return;
+  }
   a->getNF(0, &obj1);
   if (obj1.isInt()) {
     pageNum = obj1.getInt() + 1;
@@ -57,46 +171,66 @@ LinkDest::LinkDest(Array *a) {
   // XYZ link
   if (obj1.isName("XYZ")) {
     kind = destXYZ;
-    a->get(2, &obj2);
-    if (obj2.isNull()) {
+    if (a->getLength() < 3) {
       changeLeft = gFalse;
-    } else if (obj2.isNum()) {
-      changeLeft = gTrue;
-      left = obj2.getNum();
     } else {
-      error(-1, "Bad annotation destination position");
-      goto err1;
+      a->get(2, &obj2);
+      if (obj2.isNull()) {
+	changeLeft = gFalse;
+      } else if (obj2.isNum()) {
+	changeLeft = gTrue;
+	left = obj2.getNum();
+      } else {
+	error(-1, "Bad annotation destination position");
+	goto err1;
+      }
+      obj2.free();
     }
-    obj2.free();
-    a->get(3, &obj2);
-    if (obj2.isNull()) {
+    if (a->getLength() < 4) {
       changeTop = gFalse;
-    } else if (obj2.isNum()) {
-      changeTop = gTrue;
-      top = obj2.getNum();
     } else {
-      error(-1, "Bad annotation destination position");
-      goto err1;
+      a->get(3, &obj2);
+      if (obj2.isNull()) {
+	changeTop = gFalse;
+      } else if (obj2.isNum()) {
+	changeTop = gTrue;
+	top = obj2.getNum();
+      } else {
+	error(-1, "Bad annotation destination position");
+	goto err1;
+      }
+      obj2.free();
     }
-    obj2.free();
-    a->get(4, &obj2);
-    if (obj2.isNull()) {
+    if (a->getLength() < 5) {
       changeZoom = gFalse;
-    } else if (obj2.isNum()) {
-      changeZoom = gTrue;
-      zoom = obj2.getNum();
     } else {
-      error(-1, "Bad annotation destination position");
-      goto err1;
+      a->get(4, &obj2);
+      if (obj2.isNull()) {
+	changeZoom = gFalse;
+      } else if (obj2.isNum()) {
+	changeZoom = gTrue;
+	zoom = obj2.getNum();
+      } else {
+	error(-1, "Bad annotation destination position");
+	goto err1;
+      }
+      obj2.free();
     }
-    obj2.free();
 
   // Fit link
   } else if (obj1.isName("Fit")) {
+    if (a->getLength() < 2) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFit;
 
   // FitH link
   } else if (obj1.isName("FitH")) {
+    if (a->getLength() < 3) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFitH;
     if (!a->get(2, &obj2)->isNum()) {
       error(-1, "Bad annotation destination position");
@@ -107,6 +241,10 @@ LinkDest::LinkDest(Array *a) {
 
   // FitV link
   } else if (obj1.isName("FitV")) {
+    if (a->getLength() < 3) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFitV;
     if (!a->get(2, &obj2)->isNum()) {
       error(-1, "Bad annotation destination position");
@@ -117,6 +255,10 @@ LinkDest::LinkDest(Array *a) {
 
   // FitR link
   } else if (obj1.isName("FitR")) {
+    if (a->getLength() < 6) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFitR;
     if (!a->get(2, &obj2)->isNum()) {
       error(-1, "Bad annotation destination position");
@@ -145,10 +287,18 @@ LinkDest::LinkDest(Array *a) {
 
   // FitB link
   } else if (obj1.isName("FitB")) {
+    if (a->getLength() < 2) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFitB;
 
   // FitBH link
   } else if (obj1.isName("FitBH")) {
+    if (a->getLength() < 3) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFitBH;
     if (!a->get(2, &obj2)->isNum()) {
       error(-1, "Bad annotation destination position");
@@ -159,6 +309,10 @@ LinkDest::LinkDest(Array *a) {
 
   // FitBV link
   } else if (obj1.isName("FitBV")) {
+    if (a->getLength() < 3) {
+      error(-1, "Annotation destination array is too short");
+      goto err2;
+    }
     kind = destFitBV;
     if (!a->get(2, &obj2)->isNum()) {
       error(-1, "Bad annotation destination position");
@@ -292,18 +446,33 @@ LinkLaunch::LinkLaunch(Object *actionObj) {
       fileName = getFileSpecName(&obj1);
     } else {
       obj1.free();
+#ifdef WIN32
+      if (actionObj->dictLookup("Win", &obj1)->isDict()) {
+	obj1.dictLookup("F", &obj2);
+	fileName = getFileSpecName(&obj2);
+	obj2.free();
+	if (obj1.dictLookup("P", &obj2)->isString()) {
+	  params = obj2.getString()->copy();
+	}
+	obj2.free();
+      } else {
+	error(-1, "Bad launch-type link action");
+      }
+#else
       //~ This hasn't been defined by Adobe yet, so assume it looks
       //~ just like the Win dictionary until they say otherwise.
       if (actionObj->dictLookup("Unix", &obj1)->isDict()) {
 	obj1.dictLookup("F", &obj2);
 	fileName = getFileSpecName(&obj2);
 	obj2.free();
-	if (obj1.dictLookup("P", &obj2)->isString())
+	if (obj1.dictLookup("P", &obj2)->isString()) {
 	  params = obj2.getString()->copy();
+	}
 	obj2.free();
       } else {
 	error(-1, "Bad launch-type link action");
       }
+#endif
     }
     obj1.free();
   }
@@ -378,6 +547,28 @@ LinkNamed::~LinkNamed() {
 }
 
 //------------------------------------------------------------------------
+// LinkMovie
+//------------------------------------------------------------------------
+
+LinkMovie::LinkMovie(Object *annotObj, Object *titleObj) {
+  annotRef.num = -1;
+  title = NULL;
+  if (annotObj->isRef()) {
+    annotRef = annotObj->getRef();
+  } else if (titleObj->isString()) {
+    title = titleObj->getString()->copy();
+  } else {
+    error(-1, "Movie action is missing both the Annot and T keys");
+  }
+}
+
+LinkMovie::~LinkMovie() {
+  if (title) {
+    delete title;
+  }
+}
+
+//------------------------------------------------------------------------
 // LinkUnknown
 //------------------------------------------------------------------------
 
@@ -390,13 +581,42 @@ LinkUnknown::~LinkUnknown() {
 }
 
 //------------------------------------------------------------------------
+// LinkBorderStyle
+//------------------------------------------------------------------------
+
+LinkBorderStyle::LinkBorderStyle(LinkBorderType typeA, double widthA,
+				 double *dashA, int dashLengthA,
+				 double rA, double gA, double bA) {
+  type = typeA;
+  width = widthA;
+  dash = dashA;
+  dashLength = dashLengthA;
+  r = rA;
+  g = gA;
+  b = bA;
+}
+
+LinkBorderStyle::~LinkBorderStyle() {
+  if (dash) {
+    gfree(dash);
+  }
+}
+
+//------------------------------------------------------------------------
 // Link
 //------------------------------------------------------------------------
 
 Link::Link(Dict *dict, GString *baseURI) {
-  Object obj1, obj2, obj3, obj4;
+  Object obj1, obj2, obj3;
+  LinkBorderType borderType;
+  double borderWidth;
+  double *borderDash;
+  int borderDashLength;
+  double borderR, borderG, borderB;
   double t;
+  int i;
 
+  borderStyle = NULL;
   action = NULL;
   ok = gFalse;
 
@@ -441,82 +661,110 @@ Link::Link(Dict *dict, GString *baseURI) {
     y2 = t;
   }
 
-  // get border
-  borderW = 1;
-  if (!dict->lookup("Border", &obj1)->isNull()) {
-    if (obj1.isArray() && obj1.arrayGetLength() >= 3) {
-      if (obj1.arrayGet(2, &obj2)->isNum()) {
-	borderW = obj2.getNum();
-      } else {
-	error(-1, "Bad annotation border");
+  // get the border style info
+  borderType = linkBorderSolid;
+  borderWidth = 1;
+  borderDash = NULL;
+  borderDashLength = 0;
+  borderR = 0;
+  borderG = 0;
+  borderB = 1;
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    if (obj1.dictLookup("S", &obj2)->isName()) {
+      if (obj2.isName("S")) {
+	borderType = linkBorderSolid;
+      } else if (obj2.isName("D")) {
+	borderType = linkBorderDashed;
+      } else if (obj2.isName("B")) {
+	borderType = linkBorderEmbossed;
+      } else if (obj2.isName("I")) {
+	borderType = linkBorderEngraved;
+      } else if (obj2.isName("U")) {
+	borderType = linkBorderUnderlined;
       }
-      obj2.free();
+    }
+    obj2.free();
+    if (obj1.dictLookup("W", &obj2)->isNum()) {
+      borderWidth = obj2.getNum();
+    }
+    obj2.free();
+    if (obj1.dictLookup("D", &obj2)->isArray()) {
+      borderDashLength = obj2.arrayGetLength();
+      borderDash = (double *)gmalloc(borderDashLength * sizeof(double));
+      for (i = 0; i < borderDashLength; ++i) {
+	if (obj2.arrayGet(i, &obj3)->isNum()) {
+	  borderDash[i] = obj3.getNum();
+	} else {
+	  borderDash[i] = 1;
+	}
+	obj3.free();
+      }
+    }
+    obj2.free();
+  } else {
+    obj1.free();
+    if (dict->lookup("Border", &obj1)->isArray()) {
+      if (obj1.arrayGetLength() >= 3) {
+	if (obj1.arrayGet(2, &obj2)->isNum()) {
+	  borderWidth = obj2.getNum();
+	}
+	obj2.free();
+	if (obj1.arrayGetLength() >= 4) {
+	  if (obj1.arrayGet(3, &obj2)->isArray()) {
+	    borderType = linkBorderDashed;
+	    borderDashLength = obj2.arrayGetLength();
+	    borderDash = (double *)gmalloc(borderDashLength * sizeof(double));
+	    for (i = 0; i < borderDashLength; ++i) {
+	      if (obj2.arrayGet(i, &obj3)->isNum()) {
+		borderDash[i] = obj3.getNum();
+	      } else {
+		borderDash[i] = 1;
+	      }
+	      obj3.free();
+	    }
+	  }
+	  obj2.free();
+	}
+      }
     }
   }
   obj1.free();
+  if (dict->lookup("C", &obj1)->isArray() && obj1.arrayGetLength() == 3) {
+    if (obj1.arrayGet(0, &obj2)->isNum()) {
+      borderR = obj2.getNum();
+    }
+    obj1.free();
+    if (obj1.arrayGet(1, &obj2)->isNum()) {
+      borderG = obj2.getNum();
+    }
+    obj1.free();
+    if (obj1.arrayGet(2, &obj2)->isNum()) {
+      borderB = obj2.getNum();
+    }
+    obj1.free();
+  }
+  obj1.free();
+  borderStyle = new LinkBorderStyle(borderType, borderWidth,
+				    borderDash, borderDashLength,
+				    borderR, borderG, borderB);
 
   // look for destination
   if (!dict->lookup("Dest", &obj1)->isNull()) {
-    action = new LinkGoTo(&obj1);
+    action = LinkAction::parseDest(&obj1);
 
   // look for action
   } else {
     obj1.free();
     if (dict->lookup("A", &obj1)->isDict()) {
-      obj1.dictLookup("S", &obj2);
-
-      // GoTo action
-      if (obj2.isName("GoTo")) {
-	obj1.dictLookup("D", &obj3);
-	action = new LinkGoTo(&obj3);
-	obj3.free();
-
-      // GoToR action
-      } else if (obj2.isName("GoToR")) {
-	obj1.dictLookup("F", &obj3);
-	obj1.dictLookup("D", &obj4);
-	action = new LinkGoToR(&obj3, &obj4);
-	obj3.free();
-	obj4.free();
-
-      // Launch action
-      } else if (obj2.isName("Launch")) {
-	action = new LinkLaunch(&obj1);
-
-      // URI action
-      } else if (obj2.isName("URI")) {
-	obj1.dictLookup("URI", &obj3);
-	action = new LinkURI(&obj3, baseURI);
-	obj3.free();
-
-      // Named action
-      } else if (obj2.isName("Named")) {
-	obj1.dictLookup("N", &obj3);
-	action = new LinkNamed(&obj3);
-	obj3.free();
-
-      // unknown action
-      } else if (obj2.isName()) {
-	action = new LinkUnknown(obj2.getName());
-
-      // action is missing or wrong type
-      } else {
-	error(-1, "Bad annotation action");
-	action = NULL;
-      }
-
-      obj2.free();
-
-    } else {
-      error(-1, "Missing annotation destination/action");
-      action = NULL;
+      action = LinkAction::parseAction(&obj1, baseURI);
     }
   }
   obj1.free();
 
   // check for bad action
-  if (action && action->isOk())
+  if (action) {
     ok = gTrue;
+  }
 
   return;
 
@@ -527,8 +775,12 @@ Link::Link(Dict *dict, GString *baseURI) {
 }
 
 Link::~Link() {
-  if (action)
+  if (borderStyle) {
+    delete borderStyle;
+  }
+  if (action) {
     delete action;
+  }
 }
 
 //------------------------------------------------------------------------
@@ -594,37 +846,4 @@ GBool Links::onLink(double x, double y) {
       return gTrue;
   }
   return gFalse;
-}
-
-//------------------------------------------------------------------------
-
-// Extract a file name from a file specification (string or dictionary).
-static GString *getFileSpecName(Object *fileSpecObj) {
-  GString *name;
-  Object obj1;
-
-  name = NULL;
-
-  // string
-  if (fileSpecObj->isString()) {
-    name = fileSpecObj->getString()->copy();
-
-  // dictionary
-  } else if (fileSpecObj->isDict()) {
-    if (!fileSpecObj->dictLookup("Unix", &obj1)->isString()) {
-      obj1.free();
-      fileSpecObj->dictLookup("F", &obj1);
-    }
-    if (obj1.isString())
-      name = obj1.getString()->copy();
-    else
-      error(-1, "Illegal file spec in link");
-    obj1.free();
-
-  // error
-  } else {
-    error(-1, "Illegal file spec in link");
-  }
-
-  return name;
 }

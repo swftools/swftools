@@ -2,14 +2,16 @@
 //
 // PSTokenizer.h
 //
-// Copyright 2002 Glyph & Cog, LLC
+// Copyright 2002-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef PSTOKENIZER_H
 #define PSTOKENIZER_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 

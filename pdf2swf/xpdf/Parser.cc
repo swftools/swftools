@@ -2,15 +2,16 @@
 //
 // Parser.cc
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <stddef.h>
 #include "Object.h"
 #include "Array.h"
@@ -88,8 +89,10 @@ Object *Parser::getObj(Object *obj) {
       } else {
 	key = copyString(buf1.getName());
 	shift();
-	if (buf1.isEOF() || buf1.isError())
+	if (buf1.isEOF() || buf1.isError()) {
+	  gfree(key);
 	  break;
+	}
 #ifndef NO_DECRYPTION
 	obj->dictAdd(key, getObj(&obj2, fileKey, keyLength, objNum, objGen));
 #else
@@ -173,8 +176,14 @@ Stream *Parser::makeStream(Object *dict) {
   }
 
   // check for length in damaged file
-  if (xref->getStreamEnd(pos, &endPos)) {
+  if (xref && xref->getStreamEnd(pos, &endPos)) {
     length = endPos - pos;
+  }
+
+  // in badly damaged PDF files, we can run off the end of the input
+  // stream immediately after the "stream" token
+  if (!lexer->getStream()) {
+    return NULL;
   }
 
   // make base stream
@@ -190,17 +199,25 @@ Stream *Parser::makeStream(Object *dict) {
   // refill token buffers and check for 'endstream'
   shift();  // kill '>>'
   shift();  // kill 'stream'
-  if (buf1.isCmd("endstream"))
+  if (buf1.isCmd("endstream")) {
     shift();
-  else
+  } else {
     error(getPos(), "Missing 'endstream'");
+    str->ignoreLength();
+  }
 
   return str;
 }
 
 void Parser::shift() {
   if (inlineImg > 0) {
-    ++inlineImg;
+    if (inlineImg < 2) {
+      ++inlineImg;
+    } else {
+      // in a damaged content stream, if 'ID' shows up in the middle
+      // of a dictionary, we need to reset
+      inlineImg = 0;
+    }
   } else if (buf2.isCmd("ID")) {
     lexer->skipChar();		// skip char after 'ID' command
     inlineImg = 1;

@@ -2,14 +2,16 @@
 //
 // PDFDoc.h
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef PDFDOC_H
 #define PDFDOC_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
@@ -25,6 +27,7 @@ class OutputDev;
 class Links;
 class LinkAction;
 class LinkDest;
+class Outline;
 
 //------------------------------------------------------------------------
 // PDFDoc
@@ -34,9 +37,9 @@ class PDFDoc {
 public:
 
   PDFDoc(GString *fileNameA, GString *ownerPassword = NULL,
-	 GString *userPassword = NULL, GBool printCommandsA = gFalse);
+	 GString *userPassword = NULL);
   PDFDoc(BaseStream *strA, GString *ownerPassword = NULL,
-	 GString *userPassword = NULL, GBool printCommandsA = gFalse);
+	 GString *userPassword = NULL);
   ~PDFDoc();
 
   // Was PDF document successfully opened?
@@ -76,12 +79,25 @@ public:
   Object *getStructTreeRoot() { return catalog->getStructTreeRoot(); }
 
   // Display a page.
-  void displayPage(OutputDev *out, int page, double zoom,
-		   int rotate, GBool doLinks);
+  void displayPage(OutputDev *out, int page, double hDPI, double vDPI,
+		   int rotate, GBool crop, GBool doLinks,
+		   GBool (*abortCheckCbk)(void *data) = NULL,
+		   void *abortCheckCbkData = NULL);
 
   // Display a range of pages.
   void displayPages(OutputDev *out, int firstPage, int lastPage,
-		    int zoom, int rotate, GBool doLinks);
+		    double hDPI, double vDPI, int rotate,
+		    GBool crop, GBool doLinks,
+		    GBool (*abortCheckCbk)(void *data) = NULL,
+		    void *abortCheckCbkData = NULL);
+
+  // Display part of a page.
+  void displayPageSlice(OutputDev *out, int page,
+			double hDPI, double vDPI,
+			int rotate, GBool crop,
+			int sliceX, int sliceY, int sliceW, int sliceH,
+			GBool (*abortCheckCbk)(void *data) = NULL,
+			void *abortCheckCbkData = NULL);
 
   // Find a page, given its object ID.  Returns page number, or 0 if
   // not found.
@@ -89,7 +105,8 @@ public:
 
   // If point <x>,<y> is in a link, return the associated action;
   // else return NULL.
-  LinkAction *findLink(double x, double y) { return links->find(x, y); }
+  LinkAction *findLink(double x, double y)
+    { return links ? links->find(x, y) : (LinkAction *)NULL; }
 
   // Return true if <x>,<y> is in a link.
   GBool onLink(double x, double y) { return links->onLink(x, y); }
@@ -98,6 +115,11 @@ public:
   // NULL if <name> is not a destination.
   LinkDest *findDest(GString *name)
     { return catalog->findDest(name); }
+
+#ifndef DISABLE_OUTLINE
+  // Return the outline object.
+  Outline *getOutline() { return outline; }
+#endif
 
   // Is the file encrypted?
   GBool isEncrypted() { return xref->isEncrypted(); }
@@ -117,12 +139,14 @@ public:
 
   // Return the document's Info dictionary (if any).
   Object *getDocInfo(Object *obj) { return xref->getDocInfo(obj); }
+  Object *getDocInfoNF(Object *obj) { return xref->getDocInfoNF(obj); }
 
   // Return the PDF version specified by the file.
   double getPDFVersion() { return pdfVersion; }
 
   // Save this file with another name.
   GBool saveAs(GString *name);
+
 
 private:
 
@@ -137,7 +161,10 @@ private:
   XRef *xref;
   Catalog *catalog;
   Links *links;
-  GBool printCommands;
+#ifndef DISABLE_OUTLINE
+  Outline *outline;
+#endif
+
 
   GBool ok;
   int errCode;

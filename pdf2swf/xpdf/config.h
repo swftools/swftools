@@ -2,7 +2,7 @@
 //
 // config.h
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2004 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -14,15 +14,23 @@
 //------------------------------------------------------------------------
 
 // xpdf version
-
-#define xpdfVersion "1.01"
+#define xpdfVersion         "3.00"
+#define xpdfVersionNum      3.00
+#define xpdfMajorVersion    3
+#define xpdfMinorVersion    0
+#define xpdfMajorVersionStr "3"
+#define xpdfMinorVersionStr "0"
 
 // supported PDF version
-#define supportedPDFVersionStr "1.4"
-#define supportedPDFVersionNum 1.4
+#define supportedPDFVersionStr "1.5"
+#define supportedPDFVersionNum 1.5
 
 // copyright notice
-#define xpdfCopyright "Copyright 1996-2002 Glyph & Cog, LLC"
+#define xpdfCopyright "Copyright 1996-2004 Glyph & Cog, LLC"
+
+// Windows resource file stuff
+#define winxpdfVersion "WinXpdf 3.00"
+#define xpdfCopyrightAmp "Copyright 1996-2004 Glyph && Cog, LLC"
 
 //------------------------------------------------------------------------
 // paper size
@@ -74,44 +82,16 @@
 // popen
 //------------------------------------------------------------------------
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__BORLANDC__)
 #define popen _popen
 #define pclose _pclose
 #endif
 
-#if defined(VMS) || defined(VMCMS) || defined(DOS) || defined(OS2) || defined(__EMX__) || defined(WIN32) || defined(__DJGPP__) || defined(__CYGWIN32__) || defined(MACOS)
+#if defined(VMS) || defined(VMCMS) || defined(DOS) || defined(OS2) || defined(__EMX__) || defined(WIN32) || defined(__DJGPP__) || defined(MACOS)
 #define POPEN_READ_MODE "rb"
 #else
 #define POPEN_READ_MODE "r"
 #endif
-
-//------------------------------------------------------------------------
-// uncompress program
-//------------------------------------------------------------------------
-
-#ifdef HAVE_POPEN
-
-// command to uncompress to stdout
-#  ifdef USE_GZIP
-#    define uncompressCmd "gzip -d -c -q"
-#  else
-#    ifdef __EMX__
-#      define uncompressCmd "compress -d -c"
-#    else
-#      define uncompressCmd "uncompress -c"
-#    endif // __EMX__
-#  endif // USE_GZIP
-
-#else // HAVE_POPEN
-
-// command to uncompress a file
-#  ifdef USE_GZIP
-#    define uncompressCmd "gzip -d -q"
-#  else
-#    define uncompressCmd "uncompress"
-#  endif // USE_GZIP
-
-#endif // HAVE_POPEN
 
 //------------------------------------------------------------------------
 // Win32 stuff
@@ -121,7 +101,7 @@
 #undef CDECL
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__BORLANDC__)
 #define CDECL __cdecl
 #else
 #define CDECL

@@ -2,15 +2,16 @@
 //
 // NameToCharCode.cc
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <string.h>
 #include "gmem.h"
 #include "NameToCharCode.h"

@@ -2,14 +2,16 @@
 //
 // Annot.h
 //
-// Copyright 2000-2002 Glyph & Cog, LLC
+// Copyright 2000-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef ANNOT_H
 #define ANNOT_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 

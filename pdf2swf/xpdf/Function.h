@@ -2,14 +2,16 @@
 //
 // Function.h
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef FUNCTION_H
 #define FUNCTION_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
@@ -25,8 +27,8 @@ class PSStack;
 // Function
 //------------------------------------------------------------------------
 
-#define funcMaxInputs  8
-#define funcMaxOutputs 8
+#define funcMaxInputs   8
+#define funcMaxOutputs 32
 
 class Function {
 public:

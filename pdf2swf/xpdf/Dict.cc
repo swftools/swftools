@@ -2,15 +2,16 @@
 //
 // Dict.cc
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <stddef.h>
 #include <string.h>
 #include "gmem.h"
@@ -40,8 +41,12 @@ Dict::~Dict() {
 }
 
 void Dict::add(char *key, Object *val) {
-  if (length + 1 > size) {
-    size += 8;
+  if (length == size) {
+    if (length == 0) {
+      size = 8;
+    } else {
+      size *= 2;
+    }
     entries = (DictEntry *)grealloc(entries, size * sizeof(DictEntry));
   }
   entries[length].key = key;

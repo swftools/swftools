@@ -2,15 +2,17 @@
 //
 // Array.cc
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include "gmem.h"
 #include "Object.h"
@@ -36,8 +38,12 @@ Array::~Array() {
 }
 
 void Array::add(Object *elem) {
-  if (length + 1 > size) {
-    size += 8;
+  if (length == size) {
+    if (length == 0) {
+      size = 8;
+    } else {
+      size *= 2;
+    }
     elems = (Object *)grealloc(elems, size * sizeof(Object));
   }
   elems[length] = *elem;
@@ -45,9 +51,23 @@ void Array::add(Object *elem) {
 }
 
 Object *Array::get(int i, Object *obj) {
+  if (i < 0 || i >= length) {
+#ifdef DEBUG_MEM
+    abort();
+#else
+    return obj->initNull();
+#endif
+  }
   return elems[i].fetch(xref, obj);
 }
 
 Object *Array::getNF(int i, Object *obj) {
+  if (i < 0 || i >= length) {
+#ifdef DEBUG_MEM
+    abort();
+#else
+    return obj->initNull();
+#endif
+  }
   return elems[i].copy(obj);
 }

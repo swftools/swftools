@@ -4,7 +4,7 @@
 //
 // Miscellaneous file and directory name manipulation.
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
@@ -14,14 +14,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include "./aconf.h"
 #if defined(WIN32)
 #  include <sys/stat.h>
 #  ifdef FPTEX
 #    include <win32lib.h>
 #  else
 #    include <windows.h>
-#    include <winbase.h>
 #  endif
 #elif defined(ACORN)
 #elif defined(MACOS)
@@ -136,8 +134,5 @@ private:
 #endif
 #endif
 };
-
-/* create a temporary filename */
-char* mktmpname(char*ptr);
 
 #endif

@@ -2,14 +2,16 @@
 //
 // GHash.h
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef GHASH_H
 #define GHASH_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
@@ -27,17 +29,24 @@ public:
   GHash(GBool deleteKeysA = gFalse);
   ~GHash();
   void add(GString *key, void *val);
+  void add(GString *key, int val);
   void *lookup(GString *key);
+  int lookupInt(GString *key);
   void *lookup(char *key);
+  int lookupInt(char *key);
   void *remove(GString *key);
+  int removeInt(GString *key);
   void *remove(char *key);
+  int removeInt(char *key);
   int getLength() { return len; }
   void startIter(GHashIter **iter);
   GBool getNext(GHashIter **iter, GString **key, void **val);
+  GBool getNext(GHashIter **iter, GString **key, int *val);
   void killIter(GHashIter **iter);
 
 private:
 
+  void expand();
   GHashBucket *find(GString *key, int *h);
   GHashBucket *find(char *key, int *h);
   int hash(GString *key);

@@ -2,15 +2,16 @@
 //
 // Object.cc
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
-#include <aconf.h>
 #include <stddef.h>
 #include "Object.h"
 #include "Array.h"
@@ -54,6 +55,13 @@ Object *Object::initArray(XRef *xref) {
 Object *Object::initDict(XRef *xref) {
   initObj(objDict);
   dict = new Dict(xref);
+  return this;
+}
+
+Object *Object::initDict(Dict *dictA) {
+  initObj(objDict);
+  dict = dictA;
+  dict->incRef();
   return this;
 }
 

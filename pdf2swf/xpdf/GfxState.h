@@ -2,14 +2,16 @@
 //
 // GfxState.h
 //
-// Copyright 1996-2002 Glyph & Cog, LLC
+// Copyright 1996-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef GFXSTATE_H
 #define GFXSTATE_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
@@ -19,7 +21,8 @@
 
 class Array;
 class GfxFont;
-struct PDFRectangle;
+class PDFRectangle;
+class GfxShading;
 
 //------------------------------------------------------------------------
 // GfxColor
@@ -51,6 +54,8 @@ struct GfxCMYK {
 // GfxColorSpace
 //------------------------------------------------------------------------
 
+// NB: The nGfxColorSpaceModes constant and the gfxColorSpaceModeNames
+// array defined in GfxState.cc must match this enum.
 enum GfxColorSpaceMode {
   csDeviceGray,
   csCalGray,
@@ -88,6 +93,12 @@ public:
   // with a max pixel value of <maxImgPixel>.
   virtual void getDefaultRanges(double *decodeLow, double *decodeRange,
 				int maxImgPixel);
+
+  // Return the number of color space modes
+  static int getNumColorSpaceModes();
+
+  // Return the name of the <idx>th color space mode.
+  static char *getColorSpaceModeName(int idx);
 
 private:
 };
@@ -342,6 +353,7 @@ public:
   GfxColorSpace *getBase() { return base; }
   int getIndexHigh() { return indexHigh; }
   Guchar *getLookup() { return lookup; }
+  GfxColor *mapColorToBase(GfxColor *color, GfxColor *baseColor);
 
 private:
 
@@ -391,7 +403,7 @@ private:
 class GfxDeviceNColorSpace: public GfxColorSpace {
 public:
 
-  GfxDeviceNColorSpace(int nComps, GfxColorSpace *alt, Function *func);
+  GfxDeviceNColorSpace(int nCompsA, GfxColorSpace *alt, Function *func);
   virtual ~GfxDeviceNColorSpace();
   virtual GfxColorSpace *copy();
   virtual GfxColorSpaceMode getMode() { return csDeviceN; }
@@ -406,7 +418,9 @@ public:
   virtual int getNComps() { return nComps; }
 
   // DeviceN-specific access.
+  GString *getColorantName(int i) { return names[i]; }
   GfxColorSpace *getAlt() { return alt; }
+  Function *getTintTransformFunc() { return func; }
 
 private:
 
@@ -415,7 +429,6 @@ private:
     *names[gfxColorMaxComps];
   GfxColorSpace *alt;		// alternate color space
   Function *func;		// tint transform (into alternate color space)
-  
 };
 
 //------------------------------------------------------------------------
@@ -476,7 +489,7 @@ private:
 class GfxTilingPattern: public GfxPattern {
 public:
 
-  GfxTilingPattern(Dict *streamDict, Object *stream);
+  static GfxTilingPattern *parse(Object *patObj);
   virtual ~GfxTilingPattern();
 
   virtual GfxPattern *copy();
@@ -493,7 +506,10 @@ public:
 
 private:
 
-  GfxTilingPattern(GfxTilingPattern *pat);
+  GfxTilingPattern(int paintTypeA, int tilingTypeA,
+		   double *bboxA, double xStepA, double yStepA,
+		   Object *resDictA, double *matrixA,
+		   Object *contentStreamA);
 
   int paintType;
   int tilingType;
@@ -505,16 +521,42 @@ private:
 };
 
 //------------------------------------------------------------------------
+// GfxShadingPattern
+//------------------------------------------------------------------------
+
+class GfxShadingPattern: public GfxPattern {
+public:
+
+  static GfxShadingPattern *parse(Object *patObj);
+  virtual ~GfxShadingPattern();
+
+  virtual GfxPattern *copy();
+
+  GfxShading *getShading() { return shading; }
+  double *getMatrix() { return matrix; }
+
+private:
+
+  GfxShadingPattern(GfxShading *shadingA, double *matrixA);
+
+  GfxShading *shading;
+  double matrix[6];
+};
+
+//------------------------------------------------------------------------
 // GfxShading
 //------------------------------------------------------------------------
 
 class GfxShading {
 public:
 
-  GfxShading();
+  GfxShading(int typeA);
+  GfxShading(GfxShading *shading);
   virtual ~GfxShading();
 
   static GfxShading *parse(Object *obj);
+
+  virtual GfxShading *copy() = 0;
 
   int getType() { return type; }
   GfxColorSpace *getColorSpace() { return colorSpace; }
@@ -524,7 +566,9 @@ public:
     { *xMinA = xMin; *yMinA = yMin; *xMaxA = xMax; *yMaxA = yMax; }
   GBool getHasBBox() { return hasBBox; }
 
-private:
+protected:
+
+  GBool init(Dict *dict);
 
   int type;
   GfxColorSpace *colorSpace;
@@ -532,6 +576,37 @@ private:
   GBool hasBackground;
   double xMin, yMin, xMax, yMax;
   GBool hasBBox;
+};
+
+//------------------------------------------------------------------------
+// GfxFunctionShading
+//------------------------------------------------------------------------
+
+class GfxFunctionShading: public GfxShading {
+public:
+
+  GfxFunctionShading(double x0A, double y0A,
+		     double x1A, double y1A,
+		     double *matrixA,
+		     Function **funcsA, int nFuncsA);
+  GfxFunctionShading(GfxFunctionShading *shading);
+  virtual ~GfxFunctionShading();
+
+  static GfxFunctionShading *parse(Dict *dict);
+
+  virtual GfxShading *copy();
+
+  void getDomain(double *x0A, double *y0A, double *x1A, double *y1A)
+    { *x0A = x0; *y0A = y0; *x1A = x1; *y1A = y1; }
+  double *getMatrix() { return matrix; }
+  void getColor(double x, double y, GfxColor *color);
+
+private:
+
+  double x0, y0, x1, y1;
+  double matrix[6];
+  Function *funcs[gfxColorMaxComps];
+  int nFuncs;
 };
 
 //------------------------------------------------------------------------
@@ -546,9 +621,12 @@ public:
 		  double t0A, double t1A,
 		  Function **funcsA, int nFuncsA,
 		  GBool extend0A, GBool extend1A);
+  GfxAxialShading(GfxAxialShading *shading);
   virtual ~GfxAxialShading();
 
   static GfxAxialShading *parse(Dict *dict);
+
+  virtual GfxShading *copy();
 
   void getCoords(double *x0A, double *y0A, double *x1A, double *y1A)
     { *x0A = x0; *y0A = y0; *x1A = x1; *y1A = y1; }
@@ -579,9 +657,12 @@ public:
 		   double t0A, double t1A,
 		   Function **funcsA, int nFuncsA,
 		   GBool extend0A, GBool extend1A);
+  GfxRadialShading(GfxRadialShading *shading);
   virtual ~GfxRadialShading();
 
   static GfxRadialShading *parse(Dict *dict);
+
+  virtual GfxShading *copy();
 
   void getCoords(double *x0A, double *y0A, double *r0A,
 		 double *x1A, double *y1A, double *r1A)
@@ -614,6 +695,9 @@ public:
   // Destructor.
   ~GfxImageColorMap();
 
+  // Return a copy of this color map.
+  GfxImageColorMap *copy() { return new GfxImageColorMap(this); }
+
   // Is color map valid?
   GBool isOk() { return ok; }
 
@@ -632,8 +716,11 @@ public:
   void getGray(Guchar *x, double *gray);
   void getRGB(Guchar *x, GfxRGB *rgb);
   void getCMYK(Guchar *x, GfxCMYK *cmyk);
+  void getColor(Guchar *x, GfxColor *color);
 
 private:
+
+  GfxImageColorMap(GfxImageColorMap *colorMap);
 
   GfxColorSpace *colorSpace;	// the image color space
   int bits;			// bits per component
@@ -684,6 +771,9 @@ public:
   // Close the subpath.
   void close();
   GBool isClosed() { return closed; }
+
+  // Add (<dx>, <dy>) to each point in the subpath.
+  void offset(double dx, double dy);
 
 private:
 
@@ -737,6 +827,12 @@ public:
   // Close the last subpath.
   void close();
 
+  // Append <path> to <this>.
+  void append(GfxPath *path);
+
+  // Add (<dx>, <dy>) to each point in the path.
+  void offset(double dx, double dy);
+
 private:
 
   GBool justMoved;		// set if a new subpath was just started
@@ -756,11 +852,11 @@ private:
 class GfxState {
 public:
 
-  // Construct a default GfxState, for a device with resolution <dpi>,
-  // page box <pageBox>, page rotation <rotate>, and coordinate system
-  // specified by <upsideDown>.
-  GfxState(double dpi, PDFRectangle *pageBox, int rotate,
-	   GBool upsideDown);
+  // Construct a default GfxState, for a device with resolution <hDPI>
+  // x <vDPI>, page box <pageBox>, page rotation <rotate>, and
+  // coordinate system specified by <upsideDown>.
+  GfxState(double hDPI, double vDPI, PDFRectangle *pageBox,
+	   int rotate, GBool upsideDown);
 
   // Destructor.
   ~GfxState();
@@ -781,7 +877,7 @@ public:
   void getFillGray(double *gray)
     { fillColorSpace->getGray(&fillColor, gray); }
   void getStrokeGray(double *gray)
-    { strokeColorSpace->getGray(&fillColor, gray); }
+    { strokeColorSpace->getGray(&strokeColor, gray); }
   void getFillRGB(GfxRGB *rgb)
     { fillColorSpace->getRGB(&fillColor, rgb); }
   void getStrokeRGB(GfxRGB *rgb)
@@ -813,6 +909,7 @@ public:
   double getRise() { return rise; }
   int getRender() { return render; }
   GfxPath *getPath() { return path; }
+  void setPath(GfxPath *pathA);
   double getCurX() { return curX; }
   double getCurY() { return curY; }
   void getClipBBox(double *xMin, double *yMin, double *xMax, double *yMax)
@@ -898,6 +995,7 @@ public:
   void clip();
 
   // Text position.
+  void textSetPos(double tx, double ty) { lineX = tx; lineY = ty; }
   void textMoveTo(double tx, double ty)
     { lineX = tx; lineY = ty; textTransform(tx, ty, &curX, &curY); }
   void textShift(double tx, double ty);

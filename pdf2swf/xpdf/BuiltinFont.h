@@ -2,14 +2,16 @@
 //
 // BuiltinFont.h
 //
-// Copyright 2001-2002 Glyph & Cog, LLC
+// Copyright 2001-2003 Glyph & Cog, LLC
 //
 //========================================================================
 
 #ifndef BUILTINFONT_H
 #define BUILTINFONT_H
 
-#ifdef __GNUC__
+#include <aconf.h>
+
+#ifdef USE_GCC_PRAGMAS
 #pragma interface
 #endif
 
