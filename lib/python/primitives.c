@@ -189,22 +189,22 @@ static int bbox_setattr(PyObject * self, char* a, PyObject* o)
     BBoxObject*bbox= (BBoxObject*)self;
     if(!strcmp(a, "xmin")) {
 	float xmin;
-	if (!PyArg_Parse(o, "i", &xmin)) goto err;
+	if (!PyArg_Parse(o, "f", &xmin)) goto err;
 	bbox->bbox.xmin = (int)(xmin*20);
 	return 0;
     } else if(!strcmp(a, "ymin")) {
 	float ymin;
-	if (!PyArg_Parse(o, "i", &ymin)) goto err;
+	if (!PyArg_Parse(o, "f", &ymin)) goto err;
 	bbox->bbox.ymin = (int)(ymin*20);
 	return 0;
     } else if(!strcmp(a, "xmax")) {
 	float xmax;
-	if (!PyArg_Parse(o, "i", &xmax)) goto err;
+	if (!PyArg_Parse(o, "f", &xmax)) goto err;
 	bbox->bbox.xmax = (int)(xmax*20);
 	return 0;
     } else if(!strcmp(a, "ymax")) {
 	float ymax;
-	if (!PyArg_Parse(o, "i", &ymax)) goto err;
+	if (!PyArg_Parse(o, "f", &ymax)) goto err;
 	bbox->bbox.ymax = (int)(ymax*20);
 	return 0;
     } 
