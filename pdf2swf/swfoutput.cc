@@ -817,8 +817,12 @@ static void putcharacters(TAG*tag)
                     if(lastx != chardata[t].x ||
                        lasty != chardata[t].y)
                     {
-                        newx=chardata[t].x;
-                        newy=chardata[t].y;
+                        newx = chardata[t].x;
+                        newy = chardata[t].y;
+			if(newx == 0)
+			    newx = SET_TO_ZERO;
+			if(newy == 0)
+			    newy = SET_TO_ZERO;
                     }
                     if(!colorcompare(&color, &chardata[t].color)) 
                     {
