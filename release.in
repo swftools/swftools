@@ -24,17 +24,6 @@ ${name}/src/png2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/wav.c \
 ${name}/src/wav.h \
-${name}/src/bitio.c \
-${name}/lib/bitio.c \
-${name}/src/bitio.h \
-${name}/src/types.h \
-${name}/src/flash.c \
-${name}/src/flash.h \
-${name}/src/combine.c \
-${name}/src/combine.h \
-${name}/src/settings.h \
-${name}/src/reloc.c \
-${name}/src/reloc.h \
 ${name}/src/Makefile.in \
 ${name}/lib/Makefile.in \
 ${name}/lib/lame/Makefile.in \
@@ -46,6 +35,8 @@ ${name}/pdf2swf/ttf2pt1/Makefile.in \
 ${name}/swfs/Makefile.in \
 ${name}/Makefile.in \
 ${name}/lib/args.h \
+${name}/lib/bitio.c \
+${name}/lib/bitio.h \
 ${name}/lib/example/Makefile \
 ${name}/lib/example/box.c \
 ${name}/lib/example/dumpfont.c \
