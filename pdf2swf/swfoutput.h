@@ -59,6 +59,7 @@ class SWFFont
     SWFFont::~SWFFont();
     T1_OUTLINE*getOutline(char*charname);
     int getSWFCharID(char*name, int charnr);
+    int getWidth(char*name);
     char*getName();
     char*getCharName(int t);
     int getCharWidth(int t) {return width[t];}
