@@ -285,13 +285,6 @@ static PyMethodDef swf_functions[] =
  {NULL, NULL, 0, NULL}
 };
  
-static PyMethodDef taglist_functions[] =
-{{"foldAll", taglist_foldAll, METH_VARARGS, "fold all sprites (movieclips) in the list"},
- {"unfoldAll", taglist_unfoldAll, METH_VARARGS, "unfold (expand) all sprites (movieclips) in the list"},
- {"optimizeOrder", taglist_optimizeOrder, METH_VARARGS, "Reorder the Tag structure"},
- {NULL, NULL, 0, NULL}
-};
-
 //----------------------------------------------------------------------------
 static void swf_dealloc(PyObject* self)
 {
@@ -423,6 +416,13 @@ err:
 }
 
 //----------------------------------------------------------------------------
+static PyMethodDef taglist_functions[] =
+{{"foldAll", taglist_foldAll, METH_VARARGS, "fold all sprites (movieclips) in the list"},
+ {"unfoldAll", taglist_unfoldAll, METH_VARARGS, "unfold (expand) all sprites (movieclips) in the list"},
+ {"optimizeOrder", taglist_optimizeOrder, METH_VARARGS, "Reorder the Tag structure"},
+ {NULL, NULL, 0, NULL}
+};
+
 static PyObject* taglist_getattr(PyObject * self, char* a)
 {
     PyObject* ret = Py_FindMethod(taglist_functions, self, a);
@@ -496,9 +496,9 @@ static PyObject * taglist_item(PyObject * self, int index)
     TAG*tag;
     TagObject*tagobject;
     int i = 0;
-    mylog("taglist_item %08x(%d) [%d]", (int)self, self->ob_refcnt, i);
+    mylog("taglist_item %08x(%d) [%d]", (int)self, self->ob_refcnt, index);
 
-    if(i<0) {
+    if(index<0) {
 	PyErr_SetString(PyExc_Exception, setError("Negative Indices not supported."));
 	return NULL;
     }
@@ -506,9 +506,18 @@ static PyObject * taglist_item(PyObject * self, int index)
     tag = taglist->firstTag;
     while(tag && i<index) {
 	tag = tag->next;
+	i++;
     }
     if(!tag || i != index) {
-	PyErr_SetString(PyExc_Exception, setError("No Tag at position %d", index));
+	if(index> i+10) {
+	    PyErr_SetString(PyExc_Exception, setError("No Tag at position %d", index));
+	    return NULL;
+	}
+
+	mylog("taglist_item %08x(%d)->IndexError (%d)", (int)self, self->ob_refcnt, index);
+
+	Py_INCREF(PyExc_IndexError);
+	PyErr_SetObject(PyExc_IndexError, Py_None);
 	return NULL;
     }
 
@@ -581,7 +590,7 @@ static PyObject* tag_getattr(PyObject * self, char* a)
     for(t=0;t<sizeof(tagfunctions)/sizeof(tagfunctions[0]);t++)
     {
 	if(id==tagfunctions[t].id) {
-	    mylog("taglist_getattr: id %d found\n", id);
+	    mylog("tag_getattr: id %d found\n", id);
 	    ret = Py_FindMethod(tagfunctions[t].f, self, a);
 	    break;
 	}
@@ -590,7 +599,7 @@ static PyObject* tag_getattr(PyObject * self, char* a)
     /* search in the functions common to all tags */
     FindMethodMore(ret, common_tagfunctions, self, a);
 
-    mylog("taglist_getattr %08x(%d) %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
+    mylog("tag_getattr %08x(%d) %s: %08x\n", (int)self, self->ob_refcnt, a, ret);
     return ret;
 }
 //----------------------------------------------------------------------------
@@ -656,6 +665,24 @@ static PyObject* f_DefineFont(PyObject* self, PyObject* args, PyObject* kwargs)
     return (PyObject*)tag;
 }
 //----------------------------------------------------------------------------
+static PyObject* f_Protect(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"password", NULL};
+    char*password = 0;
+    TagObject*tag;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s", kwlist, &password))
+	return NULL;
+
+    tag = TagObject_New();
+    tag->tag = swf_InsertTag(0, ST_PROTECT);
+    if(password) {
+	swf_SetPassword(tag->tag, password);
+    }
+    mylog("f_Protect %08x -> %08x\n", (int)self, (int)tag);
+    return (PyObject*)tag;
+}
+//----------------------------------------------------------------------------
 static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"font", "text", "size", "color", NULL};
@@ -692,7 +719,7 @@ static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
 //----------------------------------------------------------------------------
 static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    static char *kwlist[] = {"character", "depth", "matrix", "colortransform", "ratio", "name", "clipdepth", "action"};
+    static char *kwlist[] = {"character", "depth", "matrix", "colortransform", "ratio", "name", "clipdepth", "action", NULL};
     TagObject*tag;
     
     TagObject*character = 0;
@@ -806,6 +833,7 @@ static PyMethodDef SWFMethods[] =
 
     /* TAGS */
     {"SetBackgroundColor", (PyCFunction)f_SetBackgroundColor, METH_KEYWORDS, "Create a SetBackGroundColor Tag."},
+    {"Protect", (PyCFunction)f_Protect, METH_KEYWORDS, "Create a Protect Tag."},
     {"DefineFont", (PyCFunction)f_DefineFont, METH_KEYWORDS, "Create a DefineFont Tag."},
     {"DefineText", (PyCFunction)f_DefineText, METH_KEYWORDS, "Create a DefineText Tag."},
     {"PlaceObject", (PyCFunction)f_PlaceObject, METH_KEYWORDS, "Create a PlaceObject Tag."},
