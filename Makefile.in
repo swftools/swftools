@@ -18,6 +18,11 @@ all install uninstall clean:
 	cd swfs;$(MAKE) $@
 	@$(MAKE) $@-local
 
+distclean:
+	$(MAKE) clean
+	rm -f config.status config.cache configure config.h Makefile Makefile.common
+	rm -f lib/lame/Makefile lib/Makefile src/Makefile avi2swf/Makefile pdf2swf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/xpdf/Makefile
+
 clean-local:
 	rm -f config.cache
 
@@ -26,4 +31,5 @@ uninstall-local:
 
 all-local:
 install-local:
-	
+
+.PHONY: all install uninstall clean distclean clean-local uninstall-local all-local install-local
