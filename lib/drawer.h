@@ -45,8 +45,8 @@ typedef struct _drawer_t
 
 } drawer_t;
 
-void draw_cubicto(drawer_t*drawer, FPOINT*  control1, FPOINT* control2, FPOINT*  to);
-void draw_conicto(drawer_t*drawer, FPOINT*  control, FPOINT*  to);
+void draw_cubicTo(drawer_t*drawer, FPOINT*  control1, FPOINT* control2, FPOINT*  to);
+void draw_conicTo(drawer_t*drawer, FPOINT*  control, FPOINT*  to);
 void draw_string(drawer_t*drawer, const char*code);
 
 #endif
