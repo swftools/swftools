@@ -101,7 +101,7 @@ int args_callback_option(char*name,char*val)
 	    samplerate = 44100;
 	else {
 	    fprintf(stderr, "Invalid samplerate: %d\n", samplerate);
-	    fprintf(stderr, "Allowed values: 11025, 22050\n", samplerate);
+	    fprintf(stderr, "Allowed values: 11025, 22050, 44100\n", samplerate);
 	    exit(1);
 	}
 	return 1;
