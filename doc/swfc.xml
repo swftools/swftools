@@ -118,43 +118,6 @@ Boxes:
 
  </section>
  
- <section><title>Text generation</title>
-  
-  <code lang="swfc">
-.flash name="text5.swf"
-.font courier "Courier.swf"
-.font helvetica "Helvetica.swf"
-.text hithere text="HELLO" font=courier size=50% color=blue
-.swf scene Scenery50.swf
-
-.frame 0
-    .startclip hithere pin=center x=100 y=75 scale=50% #text clips...
-        .put scene # ...the image "scene"
-    .end
-.frame 100
-     .change hithere rotate+=360 pin=center scale=100%
-
-.end
-  </code>
-  
-  <code lang="swfc">
-.flash name="text6.swf"
-.font courier "Courier.swf"
-.font helvetica "Helvetica.swf"
-.text hello text="HELLO" font=helvetica size=50% color=blue
-.text world text="WORLD" font=helvetica size=50% color=red
-
-.frame 0
-	.put hello pin=center x=50 y=50 
-	.put world pin=center x=50 y=50 alpha=25%
-.frame 200
-     .change hello rotate+=360 pin=center alpha=25% 
-     .change world rotate-=360 pin=center alpha=100% 
-.end
-  </code>
- 
- </section>
-
  <section><title>Color transforms</title>
 
   <code lang="swfc">
@@ -184,4 +147,141 @@ Boxes:
  
 
 </chapter>
+
+<chapter><title>Fonts</title>
+
+<section>
+
+swfc has font support. That means you can also insert texts into
+your animations.
+The easiest way to load a font is to do something like
+<c>
+    .font Arial filename="Arial.ttf"
+</c>
+.
+You now have a font named <c>Arial</c> to play with.
+For example, for the obligatory hello world program:
+
+  <code lang="swfc">
+.flash name="helloworld.swf"
+    
+    .font Arial filename="Arial.ttf"
+    .text helloworld font=Arial text="Hello World!"
+    .put helloworld
+.end
+  </code>
+
+Besides TrueType fonts, swfc also supports native SWF fonts.
+If you have a SWF with a font you would like to use, do a 
+<shell>
+    swfextract file.swf
+</shell>
+Then write down the font ID of the font, and do a
+<shell>
+    swfextract -f <fontid> file.swf -o myfont.swf
+</shell>
+.
+This will give you a file named myfont.swf which you can
+also use in the <c>filename</c> parameter of <c>.font</c>.
+
+</section>
+<section>
+<p>
+So much for the basics. Now let's go to the more advanced
+functionality.
+</p>
+
+<p>
+Apart from being able to define text in your swfc files,
+you can also define text <c>outlines</c>. 
+Those are not real characters but rather abstract vector 
+objects which you can use in other commands.
+</p>
+
+<code lang="swfc">
+.flash name="fontoutline.swf"
+    .font Arial "Arial.swf"
+    .textshape helloworld font="arial" text="Hello World"
+    .filled filled_helloworld outline=helloworld fill=blue line=5 color=green
+    .put filled_helloworld
+.end
+</code>
+
+Here, <c>.textshape helloworld</c> defines an outline named "helloworld",
+which is then used to construct a filled outline named filled_helloworld.
+
+To make this a little more interesting, let's fill with a gradient instead
+of a plain color:
+
+<code lang="swfc">
+.flash name="fontgradient.swf"
+    .font Arial "Arial.swf"
+    .textshape helloworld font="arial" text="Hello World"
+    
+    .gradient whitefade:
+	0% black
+	50% #505050
+	100% yellow
+    .end
+
+    .filled filled_helloworld outline=helloworld fill=blue line=5 color=green
+    .put filled_helloworld
+.end
+</code>
+
+But let's get back to normal <c>.text</c> characters.
+The following demonstrates that you can treat objects defined
+with <c>.text</c> like normal shapes, i.e., scale them, move them, and use
+them for clipping:
+
+  <code lang="swfc">
+.flash name="text5.swf"
+.font courier "Courier.swf"
+.font helvetica "Helvetica.swf"
+.text hithere text="HELLO" font=courier size=50%
+.swf scene Scenery50.swf
+
+.frame 0
+    .startclip hithere pin=center x=100 y=75 scale=50% #text clips...
+        .put scene # ...the image "scene"
+    .end
+.frame 100
+     .change hithere rotate+=360 pin=center scale=100%
+
+.end
+  </code>
+
+Also, <c>.text</c> takes a color attribute (that's actually
+the poor man's version of the more advanced filling options
+that <c>.textshape</c> in conjunction with <c>.filled</c> offers),
+which is used here together with the alpha parameter of <c>.change</c>:
+
+  <code lang="swfc">
+.flash name="text6.swf"
+.font courier "Courier.swf"
+.font helvetica "Helvetica.swf"
+.text hello text="HELLO" font=helvetica size=50% color=blue
+.text world text="WORLD" font=helvetica size=50% color=red
+
+.frame 0
+	.put hello pin=center x=50 y=50 
+	.put world pin=center x=50 y=50 alpha=25%
+.frame 200
+     .change hello rotate+=360 pin=center alpha=25% 
+     .change world rotate-=360 pin=center alpha=100% 
+.end
+  </code>
+ 
+ </section>
+
+
+
+</section>
+
+
+
+
+</chapter>
+
+
 </guide>
