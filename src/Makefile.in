@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-programs = wav2swf @PNG2SWF@ swfcombine swfstrings swfextract swfdump swfc @JPEG2SWF@ swfbbox
+programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ swfbbox$(E)
 
 all: $(programs)
 
@@ -34,33 +34,33 @@ parser.o: parser.yy.c parser.h ../lib/q.h
 parser.yy.c: parser.lex
 	lex -Bs -oparser.yy.c parser.lex
 
-wav2swf: wav2swf.o wav.o
+wav2swf$(E): wav2swf.o wav.o
 	$(L) wav2swf.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) wav2swf
-png2swf: png2swf.o
+	$(STRIP) $@
+png2swf$(E): png2swf.o
 	$(L) png2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) png2swf
-swfcombine: swfcombine.o
+	$(STRIP) $@
+swfcombine$(E): swfcombine.o
 	$(L) swfcombine.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfcombine
-swfdump: swfdump.o
+	$(STRIP) $@
+swfdump$(E): swfdump.o
 	$(L) swfdump.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfdump
-swfextract: swfextract.o
+	$(STRIP) $@
+swfextract$(E): swfextract.o
 	$(L) swfextract.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfextract
-swfstrings: swfstrings.o
+	$(STRIP) $@
+swfstrings$(E): swfstrings.o
 	$(L) swfstrings.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfstrings
-swfbbox: swfbbox.o
+	$(STRIP) $@
+swfbbox$(E): swfbbox.o
 	$(L) swfbbox.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfbbox
-jpeg2swf: jpeg2swf.o
+	$(STRIP) $@
+jpeg2swf$(E): jpeg2swf.o
 	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) jpeg2swf
-swfc: parser.o swfc.o ../lib/q.o wav.o
+	$(STRIP) $@
+swfc$(E): parser.o swfc.o ../lib/q.o wav.o
 	$(L) parser.o swfc.o ../lib/q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfc
+	$(STRIP) $@
 
 install:
 	$(mkinstalldirs) $(bindir)
@@ -71,5 +71,8 @@ uninstall:
 	@for file in $(programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
 clean: 
-	rm -f *.o *.lo *.a *.la swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf *~
+	rm -f *.o *.lo *.a *.la *~
+	rm -f swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf
+	@rm -f swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe
+	@rm -f swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E)
 
