@@ -317,18 +317,20 @@ void args_callback_usage(char*name)
 #endif
     printf("-V  --version              Print program version\n");
     printf("\nEnhanced conversion options:\n");
-    printf("-t  --stop                 Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
     printf("-S  --shapes               Don't use SWF Fonts, but store everything as shape\n");
     printf("-z  --zlib                 Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)\n");
-    printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-T  --flashversion=num     Set the flash version in the header to num (default: 4)\n");
+    printf("-s insertstop              Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
+    printf("-s jpegquality=quality     Set quality of embedded jpeg pictures (default:85)\n");
     printf("-s caplinewidth=value      Set the minimum line width to trigger cap style handling to value. (3)\n");
     printf("-s splinequality=value     Set the quality of spline convertion to value (0-100, default: 100).\n");
     printf("-s fontquality=value       Set the quality of font convertion to value (0-100, default: 100).\n");
     printf("-s ignoredraworder         Ignore draw order (makes the SWF file smaller, but may produce\n"
 	   "                           graphic errors)\n");
+    printf("-s filloverlap             Make intersecting shapes overlap, instead of canceling each\n"
+	   "                           other out. (Needed for some Powerpoint PDFs)\n");
     printf("Postprocessing options:\n");
 #ifndef SYSTEM_BACKTICKS
     printf("(They might not work because your system call doesn't support command substitution)\n");
