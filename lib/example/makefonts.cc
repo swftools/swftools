@@ -48,10 +48,26 @@ SWFFONT * t1font2swffont(int i)
     float underline = T1_GetUnderlinePosition(i);
     BBox bbox = T1_GetFontBBox(i);
 
+    /* if "all" is given, translate the font names in something more
+       readable */
+    if(!strcmp(fullname, "Nimbus Roman No9 L Regular")) fontname = "Helvetica";
+    if(!strcmp(fullname, "Nimbus Roman No9 L Regular Italic")) fontname = "HelveticaItalic";
+    if(!strcmp(fullname, "Nimbus Roman No9 L Medium")) fontname = "HelveticaBold";
+    if(!strcmp(fullname, "Nimbus Roman No9 L Medium Italic")) fontname = "HelveticaBoldItalic";
+    if(!strcmp(fullname, "Nimbus Sans L Regular")) fontname = "Times";
+    if(!strcmp(fullname, "Nimbus Sans L Regular Italic")) fontname = "TimesItalic";
+    if(!strcmp(fullname, "Nimbus Sans L Bold")) fontname = "TimesBold";
+    if(!strcmp(fullname, "Nimbus Sans L Bold Italic")) fontname = "TimesBoldItalic";
+    if(!strcmp(fullname, "Nimbus Mono L Regular")) fontname = "Courier";
+    if(!strcmp(fullname, "Nimbus Mono L Regular Oblique")) fontname = "CourierItalic";
+    if(!strcmp(fullname, "Nimbus Mono L Bold")) fontname = "CourierBold";
+    if(!strcmp(fullname, "Nimbus Mono L Bold Oblique")) fontname = "CourierBoldItalic";
+    if(!strcmp(fullname, "Standard Symbols L")) fontname = "Symbol";
+
     char ** encoding = standardEncoding;
     int encodingsize = standardEncodingSize;
 
-    printf("processing \"%s\"...\n", fullname);
+    printf("processing \"%s\" (\"%s\")...\n", fullname, fontname);
 
     if(strstr(fullname, "Dingbats")) {// Zapf Dingbats
 	encoding = zapfDingbatsEncoding;
@@ -59,7 +75,7 @@ SWFFONT * t1font2swffont(int i)
     }
     else if(strstr(fullname, "Symbol")) {// Symbol
 	encoding = symbolEncoding;
-	encodingsize = zapfDingbatsEncodingSize;
+	encodingsize = symbolEncodingSize;
     }
 
     SWFFONT * wfont = (SWFFONT*)malloc(sizeof(SWFFONT));
@@ -68,6 +84,7 @@ SWFFONT * t1font2swffont(int i)
     wfont->version = 2;
     wfont->name = (U8*)strdup(fontname);
     wfont->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
+    memset(wfont->layout, 0, sizeof(SWFLAYOUT));
 
     int s,num;
     num = 0;
@@ -96,11 +113,8 @@ SWFFONT * t1font2swffont(int i)
     wfont->layout->leading = (U16)(wfont->layout->ascent - 
 	                     wfont->layout->descent -
 			     (bbox.lly - bbox.ury));
-    wfont->layout->bounds = (SRECT*)malloc(sizeof(SRECT));
-    wfont->layout->bounds->xmin = bbox.llx;
-    wfont->layout->bounds->ymin = bbox.lly;
-    wfont->layout->bounds->xmax = bbox.urx;
-    wfont->layout->bounds->ymax = bbox.ury;
+    wfont->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*num);
+    memset(wfont->layout->bounds, 0, sizeof(SRECT)*num);
     wfont->layout->kerningcount = 0;
     wfont->layout->kerning = 0;
   
@@ -137,19 +151,9 @@ SWFFONT * t1font2swffont(int i)
 		drawpath(tag, outline, &m, log);
 		
 		/*uncomment this to mark the glyph sizes:
-		plotxy p1,p2;
-		p1.x=0;
-		p1.y=0;
-		p2.x=width/8;
-		p2.y=-width/8;
-		moveto(tag, p1);
-		lineto(tag, p2);
-		p1.x += 2;
-		p2.x += 2;
-		lineto(tag, p2);
-		lineto(tag, p1);
-		p1.x -= 2;
-		lineto(tag, p1);// */
+		plotxy p1,p2; p1.x=0; p1.y=0; p2.x=width/8; p2.y=-width/8;
+		moveto(tag, p1); lineto(tag, p2); p1.x += 2; p2.x += 2;
+		lineto(tag, p2); lineto(tag, p1); p1.x -= 2; lineto(tag, p1);// */
 
 		swf_ShapeSetEnd(tag);
 
@@ -157,6 +161,16 @@ SWFFONT * t1font2swffont(int i)
 		wfont->glyph[num].shape->data = (U8*)malloc(tag->len-1);
 		memcpy(wfont->glyph[num].shape->data, &tag->data[1], tag->len-1);
 		swf_DeleteTag(tag);
+		    
+		/* fix bounding box */
+		SHAPE2*shape2;
+		SRECT bbox;
+		shape2 = swf_ShapeToShape2(shape);
+		if(!shape2) { fprintf(stderr, "Shape parse error\n");exit(1);}
+		bbox = swf_GetShapeBoundingBox(shape2->lines);
+		swf_Shape2Free(shape2);
+		wfont->layout->bounds[num] = bbox;
+		
 		num++;
 	    }
 	}
@@ -166,6 +180,18 @@ SWFFONT * t1font2swffont(int i)
 
 int main(int argc, char ** argv)
 {
+  int all=0;
+  if(argc<=1) {
+      printf("Usage: %s font.afm\n", argv[0]);
+      printf("OR:    %s all\n", argv[0]);
+      printf("\n");
+      printf("\tIf \"all\" is given instead of font names, all standard fonts\n");
+      printf("\t(Courier, Arial etc.) will be created\n");
+      return 0;
+  } else {
+      if(!strcmp(argv[1],"all"))
+	  all=1;
+  }
   //TODO: use tempnam here. Check if environment already contains a
   //T1LIB_CONFIG.
   putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
@@ -176,21 +202,29 @@ int main(int argc, char ** argv)
   fprintf(fi, "TYPE1=%s/fonts:.\n", DATADIR);
   fclose(fi);
   fi = fopen("/tmp/FontDataBase", "wb");
-  fprintf(fi, "14\n");             
-  fprintf(fi, "n021003l.afm\n"); //fixme
-  fprintf(fi, "n021023l.afm\n");
-  fprintf(fi, "n021004l.afm\n");
-  fprintf(fi, "n021024l.afm\n");
-  fprintf(fi, "n019003l.afm\n");
-  fprintf(fi, "n019023l.afm\n");
-  fprintf(fi, "n019004l.afm\n");
-  fprintf(fi, "n019024l.afm\n");
-  fprintf(fi, "n022003l.afm\n");
-  fprintf(fi, "n022023l.afm\n");
-  fprintf(fi, "n022004l.afm\n");
-  fprintf(fi, "n022024l.afm\n");
-  fprintf(fi, "s050000l.afm\n");
-  fprintf(fi, "d050000l.afm\n");
+  if(all) {
+      fprintf(fi, "14\n");             
+      fprintf(fi, "n021003l.afm\n"); //fixme
+      fprintf(fi, "n021023l.afm\n");
+      fprintf(fi, "n021004l.afm\n");
+      fprintf(fi, "n021024l.afm\n");
+      fprintf(fi, "n019003l.afm\n");
+      fprintf(fi, "n019023l.afm\n");
+      fprintf(fi, "n019004l.afm\n");
+      fprintf(fi, "n019024l.afm\n");
+      fprintf(fi, "n022003l.afm\n");
+      fprintf(fi, "n022023l.afm\n");
+      fprintf(fi, "n022004l.afm\n");
+      fprintf(fi, "n022024l.afm\n");
+      fprintf(fi, "s050000l.afm\n");
+      fprintf(fi, "d050000l.afm\n");
+  } else {
+    fprintf(fi, "%d\n",argc-1);
+    int t;
+    for(t=1;t<argc;t++) {
+	fprintf(fi, "%s\n",argv[t]);
+    }
+  }
   fclose(fi);
   /* initialize t1lib */
   T1_SetBitmapPad( 16);
@@ -212,4 +246,5 @@ int main(int argc, char ** argv)
     swf_FontFree(font);
   }
 }
+
 
