@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../lib/rfxswf.h"
+#include "../lib/log.h"
 #include "../lib/args.h"
 #include "wav.h"
 
@@ -54,7 +55,7 @@ void args_callback_usage(char*name)
     printf("Usage: %s [-o filename] file.wav\n", name);
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
-    printf("\t-V , --version\t\t Print program version and exit\n");
+    printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
 {
@@ -90,23 +91,15 @@ int main (int argc,char ** argv)
       exit(1);
   }
   convertWAV2mono(&wav,&wav2, 44100);
-  printWAVInfo(&wav);
-  printWAVInfo(&wav2);
+  //printWAVInfo(&wav);
+  //printWAVInfo(&wav2);
   samples = (U16*)wav2.data;
   numsamples = wav2.size/2;
-
-  /* the following is a big hack to prevent against
-     periods of total silence- these get written as
-     blocks of length 0 by bladeenc, which causes
-     the flashplayer to crash */
-
-  for(t=0;t<wav2.size/2;t+=2)
-      wav2.data[t]^=(t&2)<<1;
 
   memset(&swf,0x00,sizeof(SWF));
 
   swf.fileVersion    = 4;
-  swf.frameRate      = 44100*256/(blocksize*2);
+  swf.frameRate      = 11025*256/(blocksize);
 
   swf.movieSize.xmax = 20*width;
   swf.movieSize.ymax = 20*height;
@@ -125,13 +118,10 @@ int main (int argc,char ** argv)
   for(t=0;t<numsamples/(blocksize*2);t++) {
       int s;
       U16*block1;
-      U16*block2;
       tag = swf_InsertTag(tag, ST_SOUNDSTREAMBLOCK);
       logf("<notice> Writing block %d", t);
-      block1 = &samples[(t*2+0)*blocksize];
-      block2 = &samples[(t*2+1)*blocksize];
-      swf_SetSoundStreamBlock(tag, block1, blocksize,1);
-      swf_SetSoundStreamBlock(tag, block2, blocksize,0);
+      block1 = &samples[t*2*blocksize];
+      swf_SetSoundStreamBlock(tag, block1, blocksize*2,1);
       tag = swf_InsertTag(tag, ST_SHOWFRAME);
   }
 
