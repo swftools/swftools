@@ -49,7 +49,7 @@ staticforward PyTypeObject SWFClass;
 
 typedef struct {
     PyObject_HEAD
-    SWF swf; //swf.firstTag ist not used
+    SWF swf; //swf.firstTag is not used
     PyObject*taglist;
     char*filename;
 } SWFObject;
@@ -304,6 +304,18 @@ static PyObject* swf_getattr(PyObject * self, char* a)
 	Py_INCREF(ret);
 	mylog(" %08x(%d) swf_getattr %s = %08x(%d)\n", (int)self, self->ob_refcnt, a, ret, ret->ob_refcnt);
 	return ret;
+    } else if(!strcmp(a, "filesize")) {
+	int s = swf->swf.fileSize;
+	return Py_BuildValue("i", s);
+    } else if(!strcmp(a, "width")) {
+	int w = (swf->swf.movieSize.xmax - swf->swf.movieSize.xmin) / 20;
+	return Py_BuildValue("i", w);
+    } else if(!strcmp(a, "height")) {
+	int h =  (swf->swf.movieSize.ymax - swf->swf.movieSize.ymin) / 20;
+	return Py_BuildValue("i", h);
+    } else if(!strcmp(a, "framecount")) {
+	int f = swf->swf.frameCount;
+	return Py_BuildValue("i", f);
     }
 
     ret = Py_FindMethod(swf_functions, self, a);
@@ -441,4 +453,3 @@ void initSWF(void)
        to keep it around */
     // free(all_methods) 
 }
-
