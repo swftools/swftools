@@ -61,8 +61,8 @@ void* rfx_alloc(int size)
 
   ptr = malloc(size);
   if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory\n");
-    /* TODO: we should send a signal, so that the debugger kicks in */
+    fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
+    /* TODO: we should send a signal, so that the debugger kicks in? */
     exit(1);
   }
   return ptr;
@@ -83,8 +83,8 @@ void* rfx_realloc(void*data, int size)
   }
 
   if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory\n");
-    /* TODO: we should send a signal, so that the debugger kicks in */
+    fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
+    /* TODO: we should send a signal, so that the debugger kicks in? */
     exit(1);
   }
   return ptr;
@@ -103,8 +103,8 @@ void* rfx_calloc(int size)
   ptr = malloc(size);
 #endif
   if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory\n");
-    /* TODO: we should send a signal, so that the debugger kicks in */
+    fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
+    /* TODO: we should send a signal, so that the debugger kicks in? */
     exit(1);
   }
 #ifndef HAVE_CALLOC
