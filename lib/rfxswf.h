@@ -730,6 +730,8 @@ void swf_GetUsedIDs(TAG * t, int * positions);
 void swf_Relocate(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[a]==0 means id a is free
 void swf_RelocateDepth(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[d]==0 means depth d is free
 
+TAG* swf_Concatenate (TAG*list1,TAG*list2); // warning: both list1 and list2 are invalid after this call.
+
 // swfcgi.c
 
 void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
