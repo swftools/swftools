@@ -80,6 +80,26 @@ void swf_DumpFont(SWFFONT * font)
     printf("language: %d\n", font->language);
 }
 
+void swf_DumpShape(SHAPE2*shape2)
+{
+    SHAPELINE*l = shape2->lines;
+    while(l) {
+	if(l->type == moveTo) {
+	    //printf("fill %d/%d line %d\n", l->fillstyle0, l->fillstyle1, l->linestyle);
+	    printf("moveTo %.2f,%.2f\n", l->x/20.0, l->y/20.0);
+	}
+	if(l->type == lineTo) {
+	    //printf("fill %d/%d line %d\n", l->fillstyle0,  l->fillstyle1, l->linestyle);
+	    printf("lineTo %.2f,%.2f\n", l->x/20.0, l->y/20.0);
+	}
+	if(l->type == splineTo) {
+	    //printf("fill %d/%d line %d\n", l->fillstyle0, l->fillstyle1, l->linestyle);
+	    printf("splineTo %.2f,%.2f %.2f,%.2f\n", l->sx/20.0, l->sy/20.0, l->x/20.0, l->y/20.0);
+	}
+	l = l->next;
+    }
+}
+
 char* swf_TagGetName(TAG*tag)
 {
     switch(tag->id)
