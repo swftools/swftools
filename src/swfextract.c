@@ -356,6 +356,7 @@ void extractTag(SWF*swf, char*filename)
 	if(!originalplaceobjects && (extractids||extractname_id>=0)) {
             int number = 0;
             int id = 0;
+	    int t;
             TAG* objtag = 0;
             SRECT bbox;
             memset(&bbox, 0, sizeof(SRECT));
@@ -381,7 +382,6 @@ void extractTag(SWF*swf, char*filename)
                 }
             }
 
-	    int t;
 	    if((objectbbox.xmin|objectbbox.ymin|objectbbox.xmax|objectbbox.ymax)!=0)
 		newswf.movieSize = objectbbox;
 	    if(extractname_id>=0) {
