@@ -398,7 +398,7 @@ void handleVideoFrame(TAG*tag, char*prefix)
     U16 id = swf_GetU16(tag);
     U16 frame = swf_GetU16(tag);
     U8 deblock,flags, tmp, bit;
-    U32 quantizer, extrainfo;
+    U32 quantizer;
     char*types[] = {"I-frame", "P-frame", "disposable P-frame", "<reserved>"};
     printf(" (frame %d) ", frame);
 
@@ -410,7 +410,7 @@ void handleVideoFrame(TAG*tag, char*prefix)
     sizeflags = swf_GetBits(tag, 3);
     switch(sizeflags)
     {
-	case 0: width = swf_GetU8(tag); height = swf_GetU8(tag); break;
+	case 0: width = swf_GetBits(tag, 8); height = swf_GetBits(tag, 8); break;
 	case 1: width = swf_GetBits(tag, 16); height = swf_GetBits(tag, 16); break;
 	case 2: width = 352; height = 288; break;
 	case 3: width = 176; height = 144; break;
@@ -423,6 +423,11 @@ void handleVideoFrame(TAG*tag, char*prefix)
     type = swf_GetBits(tag, 2);
     printf("%s", types[type]);
 
+    deblock = swf_GetBits(tag, 1);
+    if(deblock)
+	printf(" deblock ", deblock);
+    quantizer = swf_GetBits(tag, 5);
+    printf(" quant: %d ", quantizer);
 }
 
 void handlePlaceObject2(TAG*tag, char*prefix)
