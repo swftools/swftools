@@ -26,69 +26,69 @@ void maponeid(void*idpos)
 }
 
 
-void mapstyles(int num, void(*callback)(void*))
+void mapstyles(struct reader_t*reader, int num, void(*callback)(void*))
 {
     u16 count;
     int t;
-    resetbits();
-    count = readu8();
+    reader_resetbits(reader);
+    count = reader_readu8(reader);
     if(count == 0xff && num>1) // defineshape2,3 only
-	count = readu16();
+	count = reader_readu16(reader);
 
 //	    printf("%d fillstyles\n", count);
     for(t=0;t<count;t++)
     {
 	int type;
 	u8*pos;
-	pos=getinputpos();
+	pos=reader_getinputpos(reader);
 //		printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", 
 //			pos[0],pos[1],pos[2],pos[3],pos[4],pos[5],pos[6],pos[7]);
-	resetbits();
-	type = readu8(); //type
+	reader_resetbits(reader);
+	type = reader_readu8(reader); //type
 //		printf("fillstyle %d is type 0x%02x\n", t, type);
 	if(type == 0) {
 //	    printf("solid fill\n");
 	    if(num == 3)
-		readRGBA();
+		readRGBA(reader);
 	    else 
-		readRGB();
+		readRGB(reader);
 	}
 	else if(type == 0x10 || type == 0x12)
 	{
 //	    printf("gradient fill\n");
-	    resetbits();
-	    readMATRIX();
-	    resetbits();
-	    readGRADIENT(num);
+	    reader_resetbits(reader);
+	    readMATRIX(reader);
+	    reader_resetbits(reader);
+	    readGRADIENT(reader, num);
 	}
 	else if(type == 0x40 || type == 0x41)
 	{
-	    resetbits();
+	    reader_resetbits(reader);
 	    // we made it.
 //	    printf("bitmap fill:%04x\n", *(u16*)getinputpos());
-	    if(*(u16*)getinputpos() != 65535)
-		(callback)(getinputpos());
+	    if(*(u16*)reader_getinputpos(reader) != 65535)
+		(callback)(reader_getinputpos(reader));
 
-	    readu16();
-	    resetbits();
-	    readMATRIX();
+	    reader_readu16(reader);
+	    reader_resetbits(reader);
+	    readMATRIX(reader);
 	}
 	else {
 	    logf("<error> Unknown fillstyle:0x%02x\n",type);
 	}
     }
-    resetbits();
-    count = readu8(); // line style array
+    reader_resetbits(reader);
+    count = reader_readu8(reader); // line style array
 //	    printf("%d linestyles\n", count);
     if(count == 0xff)
-	count = readu16();
+	count = reader_readu16(reader);
     for(t=0;t<count;t++) 
     {
-	readu16();
+	reader_readu16(reader);
 	if(num == 3)
-	    readRGBA();
+	    readRGBA(reader);
 	else
-	    readRGB();
+	    readRGB(reader);
     }
 }
 
@@ -99,35 +99,37 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
     int num=1;
     struct swf_tag newtag_instance;
     struct swf_tag*newtag = &newtag_instance;
-    reader_init (mem, length);
-    swf_read_tag(newtag);
+    struct reader_t reader;
+    reader_init (&reader, mem, length);
+    swf_read_tag(&reader, newtag);
 
     switch(newtag->id)
     {
 	case TAGID_DEFINEBUTTONCXFORM: {
 	    int t;
+	    struct reader_t reader;
 	    callback(&newtag->data[0]); //button id
-	    reader_init (newtag->data, newtag->length);
+	    reader_init (&reader, newtag->data, newtag->length);
 	    for(t=0;t<4;t++) {
 		int flags;
 		callback(&newtag->data[0]);
-		readu16(); //sound id
-		flags = readu8();
+		reader_readu16(&reader); //sound id
+		flags = reader_readu8(&reader);
 		if(flags&1)
-		    readu32(); // in point
+		    reader_readu32(&reader); // in point
 		if(flags&2)
-		    readu32(); // out points
+		    reader_readu32(&reader); // out points
 		if(flags&4)
-		    readu16(); // loop count
+		    reader_readu16(&reader); // loop count
 		if(flags&8)
 		{
-		    int npoints = readu8();
+		    int npoints = reader_readu8(&reader);
 		    int s;
 		    for(s=0;s<npoints;s++)
 		    {
-			readu32();
-			readu16();
-			readu16();
+			reader_readu32(&reader);
+			reader_readu16(&reader);
+			reader_readu16(&reader);
 		    }
 		}
 	    }
@@ -158,12 +160,13 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 		u8*fmem = mem;
 		int flen = len;
 		struct swf_tag sprtag;
+		struct reader_t reader;
 
-		reader_init (mem, len);
-		swf_read_tag (&sprtag);
+		reader_init (&reader, mem, len);
+		swf_read_tag (&reader, &sprtag);
 
-		mem = getinputpos();
-		len = getinputlength();
+		mem = reader_getinputpos(&reader);
+		len = reader_getinputlength(&reader);
 
 		if(sprtag.id == TAGID_END)
 		    break;
@@ -175,43 +178,46 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 	case TAGID_DEFINEBUTTON2: // has some font ids in the button records
 	    num++; 
 	//fallthrough
-	case TAGID_DEFINEBUTTON:
-	    reader_init (newtag->data, newtag->length);
-	    readu16(); //button id
+	case TAGID_DEFINEBUTTON: {
+	    struct reader_t reader;
+	    reader_init (&reader, newtag->data, newtag->length);
+	    reader_readu16(&reader); //button id
 	    if(num>1)
 	    { 
 		int offset;
-		readu8(); //flag
-		offset = readu16(); //offset
+		reader_readu8(&reader); //flag
+		offset = reader_readu16(&reader); //offset
 	    }
 	    while(1)
 	    {
 		u16 charid;
-		if(!readu8()) //flags
+		if(!reader_readu8(&reader)) //flags
 		    break; 
-		charid = *(u16*)getinputpos();
-		callback(getinputpos());
-		readu16(); //char
-		readu16(); //layer
-		resetbits();
-		readMATRIX();
+		charid = *(u16*)reader_getinputpos(&reader);
+		callback(reader_getinputpos(&reader));
+		reader_readu16(&reader); //char
+		reader_readu16(&reader); //layer
+		reader_resetbits(&reader);
+		readMATRIX(&reader);
 		if(num>1) {
-		  resetbits();
-		  readCXFORM(1);
+		  reader_resetbits(&reader);
+		  readCXFORM(&reader, 1);
 		}
 	    }
 	    // ...
+	}
 	break;
 	case TAGID_DEFINEEDITTEXT:  {
 	    u8 flags1,flags2;
-	    reader_init (newtag->data, newtag->length);
-	    readu16(); //id
-	    readRECT(); //bounding box
-	    resetbits();
-	    flags1 = readu8();
-	    flags2 = readu8();
+	    struct reader_t reader;
+	    reader_init (&reader, newtag->data, newtag->length);
+	    reader_readu16(&reader); //id
+	    readRECT(&reader); //bounding box
+	    reader_resetbits(&reader);
+	    flags1 = reader_readu8(&reader);
+	    flags2 = reader_readu8(&reader);
 	    if(flags1 & 128)
-		callback(getinputpos());
+		callback(reader_getinputpos(&reader));
 	}
 	break;
 	case TAGID_DEFINETEXT2:
@@ -219,48 +225,49 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 	case TAGID_DEFINETEXT: { 
 	    int glyphbits, advancebits;
 	    int id;
-	    reader_init (newtag->data, newtag->length);
-	    id = readu16(); //id
-	    readRECT(); //bounding box
-	    resetbits();
-	    readMATRIX(); //matrix
-	    resetbits();
-	    glyphbits = readu8(); //glyphbits
-	    advancebits = readu8(); //advancebits
+	    struct reader_t reader;
+	    reader_init (&reader, newtag->data, newtag->length);
+	    id = reader_readu16(&reader); //id
+	    readRECT(&reader); //bounding box
+	    reader_resetbits(&reader);
+	    readMATRIX(&reader); //matrix
+	    reader_resetbits(&reader);
+	    glyphbits = reader_readu8(&reader); //glyphbits
+	    advancebits = reader_readu8(&reader); //advancebits
 	    while(1) {
 		u16 flags;
-		resetbits();
-		flags = getbits(8);
+		reader_resetbits(&reader);
+		flags = reader_getbits(&reader, 8);
 		if(!flags) break;
 		if(flags & 128) // text style record
 		{
-		    resetbits();
+		    reader_resetbits(&reader);
 		    if(flags & 8) { // hasfont
-			callback(getinputpos());
-			id = readu16();
+			callback(reader_getinputpos(&reader));
+			id = reader_readu16(&reader);
 		    }
 		    if(flags & 4) { // hascolor
-			if(num==1) readRGB();
-			else       readRGBA();
+			if(num==1) readRGB(&reader);
+			else       readRGBA(&reader);
 		    }
 		    if(flags & 2) { //has x offset
-			resetbits();
-			readu16();
+			reader_resetbits(&reader);
+			reader_readu16(&reader);
 		    }
 		    if(flags & 1) { //has y offset
-			resetbits();
-			readu16();
+			reader_resetbits(&reader);
+			reader_readu16(&reader);
 		    }
 		    if(flags & 8) { //has height
-			resetbits();
-			readu16();
+			reader_resetbits(&reader);
+			reader_readu16(&reader);
 		    }
 		} else { // glyph record
 		    int t;
-		    resetbits();
+		    reader_resetbits(&reader);
 		    for(t=0;t<flags;t++) {
-			getbits(glyphbits);
-			getbits(advancebits);
+			reader_getbits(&reader, glyphbits);
+			reader_getbits(&reader, advancebits);
 		    }
 		}
 	    }
@@ -278,16 +285,17 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 	    int fillbits;
 	    int linebits;
 	    struct RECT r;
+	    struct reader_t reader;
 	    //printf("defineshape%d\n", num);
-	    reader_init (newtag->data, newtag->length);
-	    readu16(); // id;
-	    r = readRECT(); // bounds
+	    reader_init (&reader, newtag->data, newtag->length);
+	    reader_readu16(&reader); // id;
+	    r = readRECT(&reader); // bounds
 //	    printf("%d shape bounds: %d %d %d %d\n",newtag->id,r.x1,r.y1,r.x2,r.y2);
 
-	    mapstyles(num, callback);
-	    fillbits = getbits(4);
-	    linebits = getbits(4);
-	    resetbits();
+	    mapstyles(&reader, num, callback);
+	    fillbits = reader_getbits(&reader, 4);
+	    linebits = reader_getbits(&reader, 4);
+	    reader_resetbits(&reader);
 	    //printf("%d %d\n", fillbits, linebits);
 	    while(1) {
 		int flags;
@@ -297,50 +305,50 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 		    ((u8*)getinputpos())[0],
 		    ((u8*)getinputpos())[1],
 		    ((u8*)getinputpos())[2]);*/
-		flags = getbits(1);
+		flags = reader_getbits(&reader, 1);
 		if(!flags) { //style change
-		    flags = getbits(5);
+		    flags = reader_getbits(&reader, 5);
 		    //printf("style flags:%02x\n",flags);
 		    if(!flags)
 			break;
 		    if(flags&1) { //move
-			int n = getbits(5); 
+			int n = reader_getbits(&reader, 5); 
 			//printf("n:%d\n",n);
-			getbits(n); //x
-			getbits(n); //y
+			reader_getbits(&reader, n); //x
+			reader_getbits(&reader, n); //y
 		    }
 		    if(flags&2) { //fill0
-			getbits(fillbits); 
+			reader_getbits(&reader, fillbits); 
 		    }
 		    if(flags&4) { //fill1
-			getbits(fillbits); 
+			reader_getbits(&reader, fillbits); 
 		    }
 		    if(flags&8) { //linestyle
-			getbits(linebits); 
+			reader_getbits(&reader, linebits); 
 		    }
 		    if(flags&16) {
-			mapstyles(num, callback);
-			fillbits = getbits(4);
-			linebits = getbits(4);
+			mapstyles(&reader, num, callback);
+			fillbits = reader_getbits(&reader, 4);
+			linebits = reader_getbits(&reader, 4);
 		    }
 		} else {
-		    flags = getbits(1);
+		    flags = reader_getbits(&reader, 1);
 		    //printf("edge:%d\n", flags);
 		    if(flags) { //straight edge
-			int n = getbits(4) + 2;
-			if(getbits(1)) { //line flag
-			    getbits(n); //delta x
-			    getbits(n); //delta y
+			int n = reader_getbits(&reader, 4) + 2;
+			if(reader_getbits(&reader, 1)) { //line flag
+			    reader_getbits(&reader, n); //delta x
+			    reader_getbits(&reader, n); //delta y
 			} else {
-			    int v=getbits(1);
-			    getbits(n); //vert/horz
+			    int v=reader_getbits(&reader, 1);
+			    reader_getbits(&reader, n); //vert/horz
 			}
 		    } else { //curved edge
-			int n = getbits(4) + 2;
-			getbits(n);
-			getbits(n);
-			getbits(n);
-			getbits(n);
+			int n = reader_getbits(&reader, 4) + 2;
+			reader_getbits(&reader, n);
+			reader_getbits(&reader, n);
+			reader_getbits(&reader, n);
+			reader_getbits(&reader, n);
 		    }
 		}
 	    }

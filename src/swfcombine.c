@@ -1,5 +1,5 @@
 /* swfcombine.c
-   main routine for swfcombine(1), which is a tool for merging .swf-files.
+   main routine for swfcombine(1), a tool for merging .swf-files.
 
    Part of the swftools package.
    
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "combine.h"
 #include "settings.h"
@@ -257,6 +258,7 @@ void fi_dump(FILE*fi, void*_mem, int length)
     }
 }
 
+/* todo: use rfxswf */
 void makestackmaster(u8**masterdata, int*masterlength)
 {
     u8 head[] = {'F','W','S'};
@@ -274,6 +276,7 @@ void makestackmaster(u8**masterdata, int*masterlength)
 	u8 data[256];
 	int ret;
 	struct flash_header head;
+	struct reader_t r;
 	strlength += strlen(slave_name[t]) + 9;
 	if(!fi) {
 	    logf("<fatal> Couldn't open %s.", slave_filename[t]);
@@ -284,8 +287,8 @@ void makestackmaster(u8**masterdata, int*masterlength)
 	    logf("<fatal> File %s is to small (%d bytes)", slave_filename[t], ret);
 	    exit(1);
 	}
-	swf_init(data,256);
-	head = swf_read_header();
+	swf_init(&r, data,256);
+	head = swf_read_header(&r);
 	logf("<verbose> File %s has bounding box %d:%d:%d:%d\n",
 		slave_filename[t], 
 		head.boundingBox.x1, head.boundingBox.y1,
@@ -311,7 +314,6 @@ void makestackmaster(u8**masterdata, int*masterlength)
     }
 
     /* we don't have a master, so we create one ourselves. */
-    /* (please notice the philosophical content) */
     *masterlength = (numslaves + 1) * 32 + strlength;
     *masterdata = (u8*)malloc(*masterlength);
     pos = *masterdata;
@@ -319,12 +321,12 @@ void makestackmaster(u8**masterdata, int*masterlength)
     pos += sizeof(head);
     *pos++ = fileversion;
     fixpos = (u32*)pos;
-    *(u32*)pos = 0x12345678; // to be overwritten
+    *(u32*)pos = SWAP32(0x12345678); // to be overwritten
     pos += 4;
     writeRECT(&pos, &box);
-    *(u16*)pos = 0x2000; // framerate
+    *(u16*)pos = SWAP16(0x2000); // framerate
     pos += 2;
-    *(u16*)pos = numslaves;
+    *(u16*)pos = SWAP16(numslaves);
     pos += 2;
     for(t=0;t<numslaves;t++)
     {
@@ -337,31 +339,31 @@ void makestackmaster(u8**masterdata, int*masterlength)
 	} 
 	namelen = strlen(slave_name[t]);
 
-	*(u16*)&pos[0] = (u16)(TAGID_DEFINESPRITE<<6) + 6;
-	*(u16*)&pos[2] = t+1; //ID
+	*(u16*)&pos[0] = SWAP16((u16)(TAGID_DEFINESPRITE<<6) + 6);
+	*(u16*)&pos[2] = SWAP16(t+1); //ID
 	*(u16*)&pos[4] = 0; // Frames
 	*(u16*)&pos[6] = 0; // TAG1
-	*(u16*)&pos[8] = (u16)(TAGID_PLACEOBJECT2<<6) + 6 + namelen;
-	*(u16*)&pos[10]= 34; //flags: id+name
-	*(u16*)&pos[11]= 1+t; // depth
-	*(u16*)&pos[13]= t+1; // id
+	*(u16*)&pos[8] = SWAP16((u16)(TAGID_PLACEOBJECT2<<6) + 6 + namelen);
+	*(u16*)&pos[10]= SWAP16(34); //flags: id+name
+	*(u16*)&pos[11]= SWAP16(1+t); // depth
+	*(u16*)&pos[13]= SWAP16(t+1); // id
 	sprintf(&pos[15],slave_name[t]);
 	pos += 15 + namelen + 1;
 	if(!config.stack1 || t == numslaves-1) {
-	    *(u16*)&pos[0]= (u16)(TAGID_SHOWFRAME<<6) + 0;
+	    *(u16*)&pos[0]= SWAP16((u16)(TAGID_SHOWFRAME<<6) + 0);
 	    pos += 2;
 	}
 	if(!config.stack)
 	if(t!=numslaves-1)
 	{
-	    *(u16*)&pos[0]= (u16)(TAGID_REMOVEOBJECT2<<6) + 2;
-	    *(u16*)&pos[2]= 1+t; // depth;
+	    *(u16*)&pos[0]= SWAP16((u16)(TAGID_REMOVEOBJECT2<<6) + 2);
+	    *(u16*)&pos[2]= SWAP16(1+t); // depth;
 	    pos += 4;
 	}
     }
-    *(u16*)pos = TAGID_END<<6 + 0;
+    *(u16*)pos = SWAP16(TAGID_END<<6 + 0);
     *masterlength = pos - *masterdata;
-    *fixpos = *masterlength;
+    *fixpos = SWAP32(*masterlength);
 }
 
 struct config_t config;
@@ -503,11 +505,11 @@ int main(int argn, char *argv[])
 		slavedata[1] = 'W';
 		slavedata[2] = 'S';
 		slavedata[3] = 4; //version
-		*(u32*)&slavedata[4] = 14; // length
+		*(u32*)&slavedata[4] = SWAP32(14); // length
 		slavedata[8] = 0; // boundingbox
-		*(u16*)&slavedata[9] = 0; // rate
-		*(u16*)&slavedata[11] = 0; // count
-		*(u16*)&slavedata[13] = 0; // end tag
+		*(u16*)&slavedata[9] = SWAP16(0); // rate
+		*(u16*)&slavedata[11] = SWAP16(0); // count
+		*(u16*)&slavedata[13] = SWAP16(0); // end tag
 		slavelength = 17;
 	    }
 

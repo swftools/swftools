@@ -402,8 +402,9 @@ void writeheader(struct writer_t*w, u8*data, int length)
     if(config.hassizex || config.hassizey || config.framerate)
     {
 	struct flash_header head;
-	swf_init(data-3, length+3);
-	head = swf_read_header();
+	struct reader_t reader;
+	swf_init(&reader, data-3, length+3);
+	head = swf_read_header(&reader);
 	if(config.hassizex)
 	{
 	    head.boundingBox.x2 = head.boundingBox.x1 + config.sizex;
@@ -474,21 +475,27 @@ uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*sl
 	    switch(master.tags[pos].id) {
 		case TAGID_PLACEOBJECT2:
 		    num++;
-		case TAGID_PLACEOBJECT:
-		   reader_init (master.tags[pos].data, master.tags[pos].length);
+		case TAGID_PLACEOBJECT: {
+		   struct reader_t r;
+		   reader_init (&r, master.tags[pos].data, master.tags[pos].length);
 		   if(num>=2)
-			readu8();
-		   depth = readu16();
+			reader_readu8(&r);
+		   depth = reader_readu16(&r);
 		   depths[depth] = 1;
+		}
 	        break;
-		case TAGID_REMOVEOBJECT:
-		   reader_init (master.tags[pos].data, master.tags[pos].length);
-		   readu16();
-		   depths[readu16()] = 0;
+		case TAGID_REMOVEOBJECT: {
+		   struct reader_t r;
+		   reader_init (&r, master.tags[pos].data, master.tags[pos].length);
+		   reader_readu16(&r);
+		   depths[reader_readu16(&r)] = 0;
+		}
 		break;
-		case TAGID_REMOVEOBJECT2:
-		   reader_init (master.tags[pos].data, master.tags[pos].length);
-		   depths[readu16()] = 0;
+		case TAGID_REMOVEOBJECT2: {
+		   struct reader_t r;
+		   reader_init (&r, master.tags[pos].data, master.tags[pos].length);
+		   depths[reader_readu16(&r)] = 0;
+		}
 		break;
 	    }
 	    if(master.tags[pos].id != 0)

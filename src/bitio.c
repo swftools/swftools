@@ -9,82 +9,74 @@
 
 #include "bitio.h"
 
-static uchar*data;
-static int datalength;
-static int datapos;
 
-void resetbits();
-
-void reader_init(uchar*newdata, int newlength)
+void reader_init(struct reader_t*r, uchar*newdata, int newlength)
 {
-    data = newdata;
-    datalength = newlength;
-    datapos = 0;
-    resetbits();
+    r->data = newdata;
+    r->datalength = newlength;
+    r->datapos = 0;
+    reader_resetbits(r);
 }
-void skip(int length)
+void reader_skip(struct reader_t*r, int length)
 {
-    datapos += length;
+    r->datapos += length;
 }
-static u8 bitpos=8,mybyte;
-static u8 bitmem=0;
-void resetbits()
+void reader_resetbits(struct reader_t*r)
 {
-    bitpos=8;
+    r->bitpos = 8;
 }
 
-void input1(void*target)
+void reader_input1(struct reader_t*r, void*target)
 {
-    *(uchar*)target = *(uchar*)&data[datapos];
-    datapos ++;
+    *(uchar*)target = *(uchar*)&r->data[r->datapos];
+    r->datapos ++;
 }
-void input2(void*target)
+void reader_input2(struct reader_t*r, void*target)
 {
-    *(unsigned short int*)target = *(unsigned short int*)&data[datapos];
-    datapos += 2;
+    *(unsigned short int*)target = *(unsigned short int*)&r->data[r->datapos];
+    r->datapos += 2;
 }
-void input4(void*target)
+void reader_input4(struct reader_t*r, void*target)
 {
-    *(unsigned int*)target = *(unsigned int*)&data[datapos];
-    datapos += 4;
+    *(unsigned int*)target = *(unsigned int*)&r->data[r->datapos];
+    r->datapos += 4;
 }
-uchar*getinputpos()
+uchar*reader_getinputpos(struct reader_t*r)
 {
-    return &data[datapos];
+    return &r->data[r->datapos];
 }
-int getinputlength()
+int reader_getinputlength(struct reader_t*r)
 {
-    return datalength;
+    return r->datalength;
 }
-void setinputpos(uchar*pos)
+void reader_setinputpos(struct reader_t*r, uchar*pos)
 {
-    datapos = pos-data;
+    r->datapos = pos-r->data;
 }
-
-u32 readbit()
+u32 reader_readbit(struct reader_t*r)
 {
-    if(bitpos==8) 
+    if(r->bitpos==8) 
     {
-	bitpos=0;
-        input1(&mybyte);
+	r->bitpos=0;
+        reader_input1(r, &r->mybyte);
     }
-    return (mybyte>>(7-bitpos++))&1;
+    return (r->mybyte>>(7-r->bitpos++))&1;
 }
-void readbits(u32*val,int num)
+void reader_readbits(struct reader_t*r, u32*val,int num)
 {
     int t;
     *val=0;
     for(t=0;t<num;t++)
     {
 	*val<<=1;
-	*val|=readbit();
+	*val|=reader_readbit(r);
     }
 }
 
-void readsbits(s32*val,int num)
+void reader_readsbits(struct reader_t*r, s32*val,int num)
 {
     u32 x;
-    readbits(&x, num);
+    reader_readbits(r, &x, num);
     if((x>>(num-1))&1)
     {
 	x|=(0xffffffff<<num);
@@ -92,42 +84,42 @@ void readsbits(s32*val,int num)
     *(s32*)val=x;
 }
 
-u32 getbits(int num)
+u32 reader_getbits(struct reader_t*r, int num)
 {
     u32 x;
-    readbits(&x,num);
+    reader_readbits(r,&x,num);
     return x;
 }
 
-s32 getsbits(int num)
+s32 reader_getsbits(struct reader_t*r, int num)
 {
     s32 x;
-    readsbits(&x,num);
+    reader_readsbits(r, &x,num);
     return x;
 }
 
-u8 readu8()
+u8 reader_readu8(struct reader_t*r)
 {
     u8 a;
-    input1(&a);
+    reader_input1(r, &a);
     return a;
 }
 
-u16 readu16()
+u16 reader_readu16(struct reader_t*r)
 {
     u8 a,b;
-    input1(&a);
-    input1(&b);
+    reader_input1(r, &a);
+    reader_input1(r, &b);
     return ((u16)b)*256+a;
 }
 
-u32 readu32()
+u32 reader_readu32(struct reader_t*r)
 {
     u8 a,b,c,d;
-    input1(&a);
-    input1(&b);
-    input1(&c);
-    input1(&d);
+    reader_input1(r, &a);
+    reader_input1(r, &b);
+    reader_input1(r, &c);
+    reader_input1(r, &d);
     return (((((u32)d)*256+(u32)c)*256+(u32)b)*256+(u32)a);
 }
 

@@ -12,25 +12,13 @@
 
 #include "types.h"
 
-void resetbits();
-void reader_init(uchar*newdata, int newlength);
-void skip(int length);
-void input1(void*target);
-void input2(void*target);
-void input4(void*target);
-
-uchar*getinputpos();
-int getinputlength();
-void setinputpos(uchar*pos);
-
-u32 readbit();
-void readbits(u32*val,int num);
-void readsbits(s32*val,int num);
-u32 getbits(int num);
-s32 getsbits(int num);
-u8 readu8();
-u16 readu16();
-u32 readu32();
+struct reader_t {
+    u8* data;
+    int datalength;
+    int datapos;
+    u8 bitpos,mybyte;
+    u8 bitmem;
+};
 
 struct writer_t {
     u8* data;
@@ -39,6 +27,24 @@ struct writer_t {
     int bitpos;
     u8 mybyte;
 };
+
+void reader_resetbits(struct reader_t*);
+void reader_init(struct reader_t*,uchar*newdata, int newlength);
+void reader_skip(struct reader_t*,int length);
+void reader_input1(struct reader_t*, void*target);
+void reader_input2(struct reader_t*, void*target);
+void reader_input4(struct reader_t*, void*target);
+uchar*reader_getinputpos(struct reader_t*);
+int reader_getinputlength(struct reader_t*);
+void reader_setinputpos(struct reader_t*,uchar*pos);
+u32 reader_readbit(struct reader_t*);
+void reader_readbits(struct reader_t*,u32*val,int num);
+void reader_readsbits(struct reader_t*,s32*val,int num);
+u32 reader_getbits(struct reader_t*,int num);
+s32 reader_getsbits(struct reader_t*,int num);
+u8 reader_readu8(struct reader_t*);
+u16 reader_readu16(struct reader_t*);
+u32 reader_readu32(struct reader_t*);
 
 void writer_init(struct writer_t*w, u8*data, int maxlength);
 void writer_write(struct writer_t*w, void*data, int length);

@@ -10,33 +10,33 @@
 #include "flash.h"
 #include "bitio.h"
 
-void swf_init(uchar*newdata, int newlength)
+void swf_init(struct reader_t*r, uchar*newdata, int newlength)
 {
-    reader_init (&newdata[3], newlength - 3);
+    reader_init (r, &newdata[3], newlength - 3);
 }
 
-struct flash_header swf_read_header()
+struct flash_header swf_read_header(struct reader_t*r)
 {
     struct flash_header head;
     u16 rate;
     u16 count;
     char version;
     int length;
-    u8* oldpos = getinputpos();
+    u8* oldpos = reader_getinputpos(r);
 
-    input1(&version);
+    reader_input1(r,&version);
     head.version = version;
-    input4(&length);
+    reader_input4(r,&length);
     head.length = length;
     
-    resetbits();
-    head.boundingBox = readRECT();
-    input2(&rate);
+    reader_resetbits(r);
+    head.boundingBox = readRECT(r);
+    reader_input2(r,&rate);
     head.rate = rate;
-    input2(&count);
+    reader_input2(r,&count);
     head.count = count;
 
-    head.headerlength = getinputpos() - oldpos;
+    head.headerlength = reader_getinputpos(r) - oldpos;
     head.headerdata = oldpos;
 
     return head;
@@ -57,53 +57,53 @@ void swf_write_header(struct writer_t*w, struct flash_header*head)
     writer_writeu16(w, head->count);
 }
 
-struct RGB readRGB()
+struct RGB readRGB(struct reader_t*r)
 {
     struct RGB rgb;
-    input1(&rgb.r);
-    input1(&rgb.g);
-    input1(&rgb.b);
+    reader_input1(r,&rgb.r);
+    reader_input1(r,&rgb.g);
+    reader_input1(r,&rgb.b);
     return rgb;
 }
 
-struct RGBA readRGBA()
+struct RGBA readRGBA(struct reader_t*r)
 {
     struct RGBA rgba;
-    input1(&rgba.r);
-    input1(&rgba.g);
-    input1(&rgba.b);
-    input1(&rgba.a);
+    reader_input1(r,&rgba.r);
+    reader_input1(r,&rgba.g);
+    reader_input1(r,&rgba.b);
+    reader_input1(r,&rgba.a);
     return rgba;
 }
 
-struct GRADIENT readGRADIENT(int shape)
+struct GRADIENT readGRADIENT(struct reader_t*r, int shape)
 {
     struct GRADIENT gradient;
     int t;
-    gradient.num = readu8();
+    gradient.num = reader_readu8(r);
     for(t=0;t<gradient.num;t++)
     {
-	gradient.ratios[t] = readu8();
+	gradient.ratios[t] = reader_readu8(r);
 	if(shape<3)
-	    gradient.rgb[t] = readRGB();
+	    gradient.rgb[t] = readRGB(r);
 	else
-	    gradient.rgba[t] = readRGBA();
+	    gradient.rgba[t] = readRGBA(r);
     }
 }
 
-struct RECT readRECT()
+struct RECT readRECT(struct reader_t*reader)
 {
     u32 a;
     struct RECT r;
     s32 b;
-    readbits(&a,5);
-    readsbits(&b,a);
+    reader_readbits(reader,&a,5);
+    reader_readsbits(reader,&b,a);
     r.x1=b;
-    readsbits(&b,a);
+    reader_readsbits(reader,&b,a);
     r.x2=b;
-    readsbits(&b,a);
+    reader_readsbits(reader,&b,a);
     r.y1=b;
-    readsbits(&b,a);
+    reader_readsbits(reader,&b,a);
     r.y2=b;
     return r;
 }
@@ -123,30 +123,30 @@ void writeRECT(u8**pos, struct RECT*r)
     *pos = writer_getpos(&w);
 }
 
-struct CXFORM readCXFORM(char alpha)
+struct CXFORM readCXFORM(struct reader_t*r, char alpha)
 {
     struct CXFORM c;
     int bits;
-    c.hasadd=readbit();
-    c.hasmult=readbit();
-    bits=getbits(4);
+    c.hasadd=reader_readbit(r);
+    c.hasmult=reader_readbit(r);
+    bits=reader_getbits(r,4);
     c.alpha = alpha;
 
     if (c.hasmult)
     {
-	c.rmult=getsbits(bits)/65536.0;
-	c.gmult=getsbits(bits)/65536.0;
-	c.bmult=getsbits(bits)/65536.0;
+	c.rmult=reader_getsbits(r,bits)/65536.0;
+	c.gmult=reader_getsbits(r,bits)/65536.0;
+	c.bmult=reader_getsbits(r,bits)/65536.0;
 	if(c.alpha)
-	    c.amult=getsbits(bits)/65536.0;
+	    c.amult=reader_getsbits(r,bits)/65536.0;
     }
     if (c.hasadd)
     {
-	c.radd=getsbits(bits)/65536.0;
-	c.gadd=getsbits(bits)/65536.0;
-	c.badd=getsbits(bits)/65536.0;
+	c.radd=reader_getsbits(r,bits)/65536.0;
+	c.gadd=reader_getsbits(r,bits)/65536.0;
+	c.badd=reader_getsbits(r,bits)/65536.0;
 	if(c.alpha)
-	    c.aadd=getsbits(bits)/65536.0;
+	    c.aadd=reader_getsbits(r,bits)/65536.0;
     }
     return c;
 }
@@ -175,13 +175,13 @@ void CXFORM_write(struct CXFORM *obj, struct writer_t*w)
     }
 }
 
-unsigned char* readSTRING()
+unsigned char* readSTRING(struct reader_t*r)
 {
-    unsigned char*now = getinputpos();
+    unsigned char*now = reader_getinputpos(r);
     char a;
     do
     {
-	input1(&a);
+	reader_input1(r,&a);
     }
     while(a);
     return now;
@@ -197,7 +197,7 @@ void MATRIX_init(struct MATRIX*m)
     m->a[1][0] = 0;
     m->a[0][1] = 0;
 }
-struct MATRIX readMATRIX()
+struct MATRIX readMATRIX(struct reader_t*r)
 {
     struct MATRIX m;
     u8 hasrotate;
@@ -207,28 +207,28 @@ struct MATRIX readMATRIX()
 
     m.a[0][0] = m.a[1][1] = 1;
     m.a[0][1] = m.a[1][0] = 0;
-    m.hasscale=readbit();
+    m.hasscale=reader_readbit(r);
     if(m.hasscale)
     {
-	u8 scalebits=getbits(5);
-	s32 scalex=getsbits(scalebits);
-	s32 scaley=getsbits(scalebits);
+	u8 scalebits=reader_getbits(r,5);
+	s32 scalex=reader_getsbits(r,scalebits);
+	s32 scaley=reader_getsbits(r,scalebits);
 	m.a[0][0]=scalex/65536.0;
 	m.a[1][1]=scaley/65536.0;
     }
-    m.hasrotate=readbit();
+    m.hasrotate=reader_readbit(r);
     if(m.hasrotate)
     {
-	u8 rotbits=getbits(5);
-	s32 rotateskew0=getsbits(rotbits);
-	s32 rotateskew1=getsbits(rotbits);
+	u8 rotbits=reader_getbits(r,5);
+	s32 rotateskew0=reader_getsbits(r,rotbits);
+	s32 rotateskew1=reader_getsbits(r,rotbits);
 	m.a[0][1]=rotateskew0/65536.0;
 	m.a[1][0]=rotateskew1/65536.0;
     }
 
-    translatebits=getbits(5);
-    translatex=getsbits(translatebits);
-    translatey=getsbits(translatebits);
+    translatebits=reader_getbits(r,5);
+    translatex=reader_getsbits(r,translatebits);
+    translatey=reader_getsbits(r,translatebits);
     m.b[0]=translatex;
     m.b[1]=translatey;
 
@@ -264,59 +264,60 @@ void MATRIX_write(struct MATRIX * m , struct writer_t*w)
 }
 
 
-int swf_read_tag(struct swf_tag* swftag)
+int swf_read_tag(struct reader_t*r, struct swf_tag* swftag)
 {
-    u8*pos2,*pos = getinputpos();
+    u8*pos2,*pos = reader_getinputpos(r);
     u16 tag;
     u32 taglength;
     u32 tagid;
     int t;
 
-    input2(&tag);
+    reader_input2(r, &tag);
 
     taglength = tag & 0x3f;
     if (taglength == 0x3f)
     {
-	input4(&taglength);
+	reader_input4(r, &taglength);
     }
 
     swftag->id=tag>>6;
     swftag->length = taglength;
-    swftag->data = getinputpos();
-    skip(taglength);
-    pos2 = getinputpos();
+    swftag->data = reader_getinputpos(r);
+    reader_skip(r,taglength);
+    pos2 = reader_getinputpos(r);
     swftag->fulllength = pos2 - pos;
     swftag->fulldata = pos;
     return 1;
 }
 
-int swf_count_tags()
+int swf_count_tags(struct reader_t*r)
 {
-    u8*pos = getinputpos();
+    u8*pos = reader_getinputpos(r);
     int t=0;
     struct swf_tag tag;
 
     while(1)
     {
-	swf_read_tag(&tag);
+	swf_read_tag(r,&tag);
 	t++;
 	if (tag.id == 0)
 	    break;
     }
     
-    setinputpos(pos);
+    reader_setinputpos(r,pos);
     return t;
 }
 
 void placeobject_init (struct PlaceObject*obj, struct swf_tag*tag)
 {
-    reader_init (tag->data, tag->length);
-    obj -> id = readu16();
-    obj -> depth = readu16();
-    obj -> matrix = readMATRIX();
-    obj -> hascxform = (getinputpos() < &tag->data[tag->length]);
+    struct reader_t r;
+    reader_init (&r, tag->data, tag->length);
+    obj -> id = reader_readu16(&r);
+    obj -> depth = reader_readu16(&r);
+    obj -> matrix = readMATRIX(&r);
+    obj -> hascxform = (reader_getinputpos(&r) < &tag->data[tag->length]);
     if(obj -> hascxform)
-	obj -> cxform = readCXFORM(0);
+	obj -> cxform = readCXFORM(&r, 0);
 }
 
 void placeobject_write (struct PlaceObject*obj, struct writer_t*w)
@@ -348,9 +349,10 @@ void placeobject_write (struct PlaceObject*obj, struct writer_t*w)
 
 void placeobject2_init (struct PlaceObject2*obj,struct swf_tag*tag)
 {    
+    struct reader_t r;
     u8 b;
-    reader_init (tag->data, tag->length);
-    b=readu8();
+    reader_init (&r, tag->data, tag->length);
+    b=reader_readu8(&r);
     obj->reserved=         (b>>7)&1;
     obj->hasclipactions=   (b>>6)&1;
     obj->hasname=          (b>>5)&1;
@@ -360,26 +362,26 @@ void placeobject2_init (struct PlaceObject2*obj,struct swf_tag*tag)
     obj->hascharacter=     (b>>1)&1;
     obj->hasmove=          (b>>0)&1;
 
-    obj->depth = readu16();
+    obj->depth = reader_readu16(&r);
     obj->id = -1;
     if(obj->hascharacter) {
-	obj->id = readu16();
+	obj->id = reader_readu16(&r);
     }
     if(obj->hasmatrix) { 
-	obj->matrix = readMATRIX();
+	obj->matrix = readMATRIX(&r);
     } 
     if(obj->hascolortransform) {
-	obj->cxform = readCXFORM(0);
+	obj->cxform = readCXFORM(&r,0);
     }
     if(obj->hasratio) {
-	obj->ratio=readu16();
+	obj->ratio=reader_readu16(&r);
     }
     obj->name = 0;
     if(obj->hasname) {
-	obj->name=readSTRING();
+	obj->name=readSTRING(&r);
     }
     if(obj->hasclipactions) {
-	obj->clipactions=readu16();
+	obj->clipactions=reader_readu16(&r);
     }
 }
 
@@ -422,8 +424,9 @@ void read_swf(struct swffile*swf, uchar*data, int length)
     int pos;
     struct flash_header head;
     int tagnum;
-    swf_init(data, length);
-    head = swf_read_header(data);
+    struct reader_t r;
+    swf_init(&r, data, length);
+    head = swf_read_header(&r);
     logf("<debug> [HEADER] the version is %d", head.version);
     logf("<debug> [HEADER] the length is %d", head.length);
     logf("<debug> [HEADER] the boundingBox is %d:%d:%d:%d", 
@@ -432,7 +435,7 @@ void read_swf(struct swffile*swf, uchar*data, int length)
     logf("<debug> [HEADER] the rate (frames/second) is %d", head.rate);
     logf("<debug> [HEADER] the count (frame number) is %d", head.count);
 
-    tagnum = swf_count_tags();
+    tagnum = swf_count_tags(&r);
     swf->tags = (struct swf_tag*)malloc(sizeof(struct swf_tag)*tagnum);
     
     logf("<debug> [HEADER] the file consists of %d tags", tagnum);
@@ -441,7 +444,7 @@ void read_swf(struct swffile*swf, uchar*data, int length)
     while(1)
     {
 	struct swf_tag tag;
-	swf_read_tag(&tag);
+	swf_read_tag(&r, &tag);
 	logf("<debug> read tag %02x (%d bytes)", tag.id, tag.length);
 	swf->tags[pos] = tag;
 	pos++;
@@ -498,15 +501,17 @@ int getidfromtag(struct swf_tag* tag)
     switch(tag->id) {
 	case TAGID_PLACEOBJECT2:
 	    num++;
-	case TAGID_PLACEOBJECT:
-	   reader_init (tag->data, tag->length);
+	case TAGID_PLACEOBJECT: {
+	   struct reader_t r;
+	   reader_init (&r, tag->data, tag->length);
 	   if(num>=2) {
-		char b = readu8();
+		char b = reader_readu8(&r);
 		if(!(b&2))
 		    return -1;
 	   }
-	   readu16();
-	   return readu16();
+	   reader_readu16(&r);
+	   return reader_readu16(&r);
+	}
 	break;
 	case TAGID_REMOVEOBJECT:
 	   return *(u16*)tag->data;

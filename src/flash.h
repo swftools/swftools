@@ -119,7 +119,7 @@ struct CLIPACTIONS readCLIPACTIONS();
 
 void writeRECT(u8**pos, struct RECT*r);
 
-void swf_init(uchar*newdata, int newlength);
+void swf_init(struct reader_t*,uchar*newdata, int newlength);
 struct flash_header
 {
     int version;
@@ -139,16 +139,16 @@ struct swffile
     struct swf_tag* tags;
 };
 
-struct flash_header swf_read_header();
-struct RGB readRGB();
-struct RGBA readRGBA();
-struct GRADIENT readGRADIENT(int shape);
-struct RECT readRECT();
-struct CXFORM readCXFORM(char alpha);
-struct MATRIX readMATRIX();
-unsigned char* readSTRING();
-int swf_read_tag(struct swf_tag* swftag);
-int swf_count_tags();
+struct flash_header swf_read_header(struct reader_t*);
+struct RGB readRGB(struct reader_t*);
+struct RGBA readRGBA(struct reader_t*);
+struct GRADIENT readGRADIENT(struct reader_t*,int shape);
+struct RECT readRECT(struct reader_t*);
+struct CXFORM readCXFORM(struct reader_t*,char alpha);
+struct MATRIX readMATRIX(struct reader_t*);
+unsigned char* readSTRING(struct reader_t*);
+int swf_read_tag(struct reader_t*,struct swf_tag* swftag);
+int swf_count_tags(struct reader_t*);
 
 
 struct PlaceObject
