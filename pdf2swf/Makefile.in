@@ -40,7 +40,7 @@ install:
 	@file=pdf2swf;$(INSTALL_BIN);$(INSTALL_MAN1)
 	@file=font2swf;$(INSTALL_BIN);$(INSTALL_MAN1)
 	$(mkinstalldirs) $(pkgdatadir)/fonts
-	@for file in $(fonts);do $(INSTALL_DATA) fonts/$$file $(pkgdatadir)/fonts/$$file;done
+	@echo installing fonts in $(pkgdatadir)/fonts;for file in $(fonts);do $(INSTALL_DATA) fonts/$$file $(pkgdatadir)/fonts/$$file;done
 	
 uninstall:
 	@file=pdf2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
