@@ -68,7 +68,7 @@ void mapstyles(struct reader_t*reader, int num, void(*callback)(void*))
 	    reader_resetbits(reader);
 	    // we made it.
 //	    printf("bitmap fill:%04x\n", *(u16*)getinputpos());
-	    if(*(u16*)reader_getinputpos(reader) != 65535)
+	    if(GET16(reader_getinputpos(reader)) != 65535)
 		(callback)(reader_getinputpos(reader));
 
 	    reader_readu16(reader);
