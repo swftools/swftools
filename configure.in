@@ -15,6 +15,7 @@ dnl Checks for programs.
  AC_PROG_MAKE_SET
  AC_PROG_INSTALL
  AC_PROG_LN_S
+ AC_PROG_LIBTOOL
  AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
 
 dnl Checks for system services
@@ -58,7 +59,7 @@ dnl AC_PATH_X
 dnl AC_PATH_XTRA
  AC_HEADER_DIRENT
  AC_HEADER_STDC
- AC_CHECK_HEADERS(zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h dirent.h sys/ndir.h sys/dir.h ndir.h)
+ AC_CHECK_HEADERS(zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h)
 
 if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
  DISABLEPDF2SWF=true;
