@@ -2247,8 +2247,8 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     m.r0 = (int)(65536*20*(p1.x-p2.x)/sizey);
     m.sy = -(int)(65536*20*(p1.y-p2.y)/sizey);
 
-    m.tx = (int)(p1.x*20);
-    m.ty = (int)(p1.y*20);
+    m.tx = (int)(p1.x*20) - 10;
+    m.ty = (int)(p1.y*20) - 10;
   
     /* shape */
     myshapeid = ++i->currentswfid;
