@@ -65,6 +65,14 @@ MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,int x0,int y0,
   return m;
 }
 
+void swf_SetDefineID(TAG * tag, U16 newid)
+{
+  int oldlen = tag->len;
+  tag->len = 0;
+  swf_SetU16(tag, newid); /* set defining ID */
+  tag->len = oldlen;
+}
+
 U16 swf_GetDefineID(TAG * t)
 // up to SWF 4.0
 { U32 oldTagPos;
@@ -282,7 +290,7 @@ char* swf_GetName(TAG * t)
     return name;
 }
 
-void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num)
+static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num)
 {
     U16 count;
     int t;
@@ -606,3 +614,59 @@ void swf_GetUsedIDs(TAG * t, int * positions)
     enumerateUsedIDs(t, 0, callbackFillin, &ptr);
 }
 
+void swf_Relocate (SWF*swf, char*bitmap)
+{
+    TAG*tag;
+    int slaveids[65536];
+    memset(slaveids, -1, sizeof(slaveids));
+    tag = swf->firstTag;
+    while(tag)
+    {
+	int num; 
+	int *ptr;
+	int t;
+
+	if(swf_isDefiningTag(tag))
+	{
+	    int newid;
+	    int id;
+	    
+	    id = swf_GetDefineID(tag); //own id
+
+	    if(!bitmap[id]) { //free
+		newid = id;
+	    }
+	    else {
+		newid = 0;
+		for (t=1;t<65536;t++)
+		{
+		    if(!bitmap[t])
+		    {
+			newid = t;
+			break;
+		    }
+		}
+	    }
+	    bitmap[newid] = 1;
+	    slaveids[id] = newid;
+
+	    swf_SetDefineID(tag, newid);
+	} 
+	
+	num = swf_GetNumUsedIDs(tag);
+	ptr = malloc(sizeof(int)*num);
+	swf_GetUsedIDs(tag, ptr);
+
+	for(t=0;t<num;t++) {
+	    int id = GET16(&tag->data[ptr[t]]);
+	    if(slaveids[id]<0) {
+		fprintf(stderr, "swf_Relocate: Mapping id never encountered before: %d\n", id);
+		return ;
+	    }
+	    id = slaveids[id];
+	    PUT16(&tag->data[ptr[t]], id);
+	}
+	tag=tag->next;
+    }
+}
+	
