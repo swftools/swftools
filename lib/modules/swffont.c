@@ -257,6 +257,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
 #include <t1lib.h>
 
+static int t1lib_initialized = 0;
+
 SWFFONT* swf_LoadT1Font(char*filename)
 {
     SWFFONT * font;
@@ -270,10 +272,13 @@ SWFFONT* swf_LoadT1Font(char*filename)
     char**charname;
     int c;
 
-    T1_SetBitmapPad(16);
-    if ((T1_InitLib(NO_LOGFILE)==NULL)){
-	fprintf(stderr, "Initialization of t1lib failed\n");
-	return 0;
+    if(!t1lib_initialized) {
+	T1_SetBitmapPad(16);
+	if ((T1_InitLib(NO_LOGFILE)==NULL)){
+	    fprintf(stderr, "Initialization of t1lib failed\n");
+	    return 0;
+	}
+	t1lib_initialized = 1;
     }
     nr = T1_AddFont(filename);
     T1_LoadFont(nr);
@@ -401,4 +406,16 @@ SWFFONT* swf_LoadT1Font(char*filename)
 }
 
 #endif
+
+SWFFONT* swf_LoadFont(char*filename)
+{
+#if defined(USE_FREETYPE)
+    return swf_LoadTrueTypeFont(filename);
+#elif defined(HAVE_T1LIB)
+    return swf_LoadT1Font(filename);
+#else
+    fprintf(stderr, "Error: Neither T1lib nor FreeType support compiled in. Could not load %s\n", infile);
+    return 0;
+#endif
+}
 

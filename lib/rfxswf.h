@@ -588,6 +588,7 @@ void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text);
 
 SWFFONT* swf_LoadTrueTypeFont(char*filename);
 SWFFONT* swf_LoadT1Font(char*filename);
+SWFFONT* swf_LoadFont(char*filename);
 
 // swfdump.c
 
