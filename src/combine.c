@@ -358,6 +358,9 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 	logf("<notice> the master file is flash (swf) format\n");
 	master_flash = 1;
     }
+    else
+	logf("<notice> the master file is not flash (swf) format!\n");
+
     if(slavedata[2] == 'S' &&
        slavedata[1] == 'W' &&
        slavedata[0] == 'F')
@@ -365,6 +368,8 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 	logf("<notice> the slave file is flash (swf) format\n");
 	slave_flash = 1;
     }
+    else
+	logf("<notice> the slave file is not flash (swf) format!\n");
 
     if(master_flash && slave_flash)
     {
