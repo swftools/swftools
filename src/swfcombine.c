@@ -506,7 +506,11 @@ void write_changepos(TAG*output, TAG*tag)
 		    swf_SetU16(output, swf_GetU16(tag)); //id
 		}
 		// flags & 4
-		swf_GetMatrix(tag, &m);
+		if(flags&4) {
+		    swf_GetMatrix(tag, &m);
+		} else {
+		    swf_GetMatrix(0, &m);
+		}
 		matrix_adjust(&m);
 		swf_SetMatrix(output, &m);
 
@@ -562,7 +566,7 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
     if(config.overlay && !config.isframe) {
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
 	swf_SetU8(tag, 2); //flags: character
-	swf_SetU16(tag, 0); //depth
+	swf_SetU16(tag, 1); //depth
 	swf_SetU16(tag, replaceddefine); //id
     }
 
@@ -575,8 +579,8 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
 		    rtag->id, rtag->len);
 	    tag = swf_InsertTag(tag, rtag->id);
 	    write_changepos(tag, rtag);
-	  
-	    changedepth(tag, +1);
+	
+	    changedepth(tag, +2);
 
 	    if(tag->id == ST_SHOWFRAME)
 	    {
