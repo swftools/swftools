@@ -711,7 +711,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=0.4.4-pre11
+VERSION=0.4.4-pre12
 # -Winline?
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -720,7 +720,7 @@ fi
 if test "x$DEBUG" '!=' "x";then
     CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -g $CFLAGS"
     CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -g $CXXFLAGS"
-    STRIP="echo debug enabled, not stripping "
+    STRIP="@echo debug enabled, not stripping "
     export STRIP
     
 else
