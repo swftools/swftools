@@ -9,7 +9,7 @@ avi2swf.o: avi2swf.cc
 	$(CC) `avifile-config --cflags` $< -o $@
 
 avi2swf: avi2swf.o
-	$(L) avi2swf.o -o avi2swf ../lib/librfxswf.a $(LIBS) `avifile-config --libs`
+	$(LL) avi2swf.o -o avi2swf ../lib/librfxswf.a $(LIBS) `avifile-config --libs`
 
 install:
 	$(mkinstalldirs) $(bindir)

@@ -13,6 +13,7 @@ extern "C" {
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 }
+#undef HAVE_CONFIG_H
 #include <avifile/version.h>
 #if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
