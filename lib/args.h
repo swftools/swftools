@@ -66,7 +66,7 @@ struct options_t
     char*longoption;
 };
 
-int args_long2shortoption(options_t*options, char*name, char*val)
+int args_long2shortoption(struct options_t*options, char*name, char*val)
 {
     char*equal = strchr(name,'=');
     if (equal) {
