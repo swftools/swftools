@@ -8,6 +8,8 @@ all install uninstall clean:
 	cd m4;$(MAKE) $@
 	@echo making $@ in lib...
 	cd lib;$(MAKE) $@
+	@echo making $@ in lib/python...
+	cd lib/python;$(MAKE) $@
 	@echo making $@ in src...
 	cd src;$(MAKE) $@
 	@echo making $@ in pdf2swf...
@@ -21,7 +23,7 @@ all install uninstall clean:
 distclean:
 	$(MAKE) clean
 	rm -f config.status config.cache configure config.h Makefile Makefile.common libtool
-	rm -f lib/lame/Makefile lib/Makefile src/Makefile avi2swf/Makefile pdf2swf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/xpdf/Makefile
+	rm -f lib/lame/Makefile lib/python/Makefile lib/Makefile src/Makefile avi2swf/Makefile pdf2swf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/xpdf/Makefile
 
 clean-local:
 	rm -f config.cache gmon.out
