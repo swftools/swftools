@@ -693,9 +693,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     state->transform(x, y, &x1, &y1);
     
     Unicode u=0;
-    if(_u) 
+    if(_u && uLen) 
 	u = *_u;
-    
+
     /* find out the character name */
     char*name=0;
     if(font->isCIDFont() && u) {
