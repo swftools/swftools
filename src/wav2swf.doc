@@ -1,4 +1,4 @@
-Usage: %s [-o filename] file.wav\n
+Usage: %s [-o filename] file.wav
 
 convert a WAV file to an SWF animation.
 
