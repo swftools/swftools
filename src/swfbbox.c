@@ -34,12 +34,15 @@ static char * outfilename = "output.swf";
 static int optimize = 0;
 static int swifty = 0;
 static int verbose = 0;
+static int showbbox = 1;
+static int expand = 1;
 
 static struct options_t options[] = {
 {"h", "help"},
 {"O", "optimize"},
 {"S", "swifty"},
 {"o", "output"},
+{"e", "expand"},
 {"v", "verbose"},
 {"V", "version"},
 {0,0}
@@ -53,14 +56,20 @@ int args_callback_option(char*name,char*val)
     } 
     else if(!strcmp(name, "O")) {
 	optimize = 1;
+	showbbox = 0;
 	return 0;
     } 
     else if(!strcmp(name, "S")) {
 	swifty = 1;
+	showbbox = 0;
 	return 0;
     } 
     else if(!strcmp(name, "v")) {
 	verbose ++;
+	return 0;
+    } 
+    else if(!strcmp(name, "e")) {
+	expand = 1;
 	return 0;
     } 
     else if(!strcmp(name, "o")) {
@@ -81,12 +90,13 @@ int args_callback_longoption(char*name,char*val)
 void args_callback_usage(char *name)
 {
     printf("\n");
-    printf("Usage: %s [-OS] file.swf\n", name);
+    printf("Usage: %s [-OSe] file.swf\n", name);
     printf("\n");
     printf("-h , --help                    Print help and exit\n");
-    printf("-O , --optimize                Recalculate bounding boxes\n");
     printf("-S , --swifty                  Print out transformed bounding boxes\n");
-    printf("-o , --output <filename>       Set output filename to <filename> (for -O)\n");
+    printf("-O , --optimize                Recalculate bounding boxes and write new file\n");
+    printf("-e , --expand                  Recalculate main bounding box and write new file\n");
+    printf("-o , --output <filename>       Set output filename to <filename> (for -O/-e)\n");
     printf("-v , --verbose                 Be more verbose\n");
     printf("-V , --version                 Print program version and exit\n");
     printf("\n");
@@ -355,13 +365,48 @@ static void showSwiftyOutput(SWF*swf)
     }
     printf("}\n");
 }
+static SRECT getMovieClipBBox(TAG*tag) 
+{
+    //TAG*tag = swf->firstTag;
+    int frame=0;
+    SRECT movieSize;
+    U16 depth2id[65536];
+    memset(depth2id, 0, sizeof(depth2id));
 
+    memset(&movieSize,0,sizeof(SRECT));
+
+    while (tag->id != ST_END) {
+	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	    if(hasid(tag)) {
+		depth2id[swf_GetDepth(tag)] = swf_GetPlaceID(tag);
+	    }
+	}
+	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	    MATRIX m = getmatrix(tag);
+	    U16 id = depth2id[swf_GetDepth(tag)];
+	    SRECT bbox = bboxes[id];
+	    
+	    SRECT tbbox = swf_TurnRect(bbox, &m);
+	    swf_ExpandRect2(&movieSize, &tbbox);
+	}
+	tag = tag->next;
+    }
+    return movieSize;
+}
+
+static SRECT getSWFBBox(SWF*swf)
+{
+    SRECT movieSize = getMovieClipBBox(swf->firstTag);
     
+    return movieSize;
+}
+
 int main (int argc,char ** argv)
 { 
     TAG*tag;
     SWF swf;
     int fi;
+    SRECT newMovieSize;
     memset(bboxes, 0, sizeof(bboxes));
     memset(depth2name, 0, sizeof(depth2name));
 
@@ -399,8 +444,20 @@ int main (int argc,char ** argv)
     /* Create an ID to Bounding Box table */
     tag = swf.firstTag;
     while (tag) {
-	if(swf_isDefiningTag(tag) && tag->id != ST_DEFINESPRITE) {
-	    bboxes[swf_GetDefineID(tag)] = swf_GetDefineBBox(tag);
+	if(swf_isDefiningTag(tag)) {
+	    int id = swf_GetDefineID(tag);
+	    if(tag->id != ST_DEFINESPRITE) {
+		bboxes[id] = swf_GetDefineBBox(tag);
+	    } else {
+		swf_UnFoldSprite(tag);
+		bboxes[id] = getMovieClipBBox(tag);
+		swf_FoldSprite(tag);
+		if(verbose) {
+		    printf("sprite %d is %.2fx%.2f\n", id, 
+			    (bboxes[id].xmax - bboxes[id].xmin)/20.0,
+			    (bboxes[id].ymax - bboxes[id].ymin)/20.0);
+		}
+	    }
 	}
 	tag = tag->next;
     }
@@ -410,7 +467,13 @@ int main (int argc,char ** argv)
 	showSwiftyOutput(&swf);
     }
 
-    if(optimize) {
+    newMovieSize = getSWFBBox(&swf);
+
+    if(optimize || expand) {
+
+	if(expand)
+	    swf.movieSize = newMovieSize;
+
 	fi = open(outfilename, O_BINARY | O_RDWR | O_CREAT | O_TRUNC, 0666);
 	if(swf_WriteSWF(fi, &swf) < 0) {
 	    fprintf(stderr, "Error writing file %s", outfilename);
@@ -418,6 +481,15 @@ int main (int argc,char ** argv)
 	    exit(1);
 	}
 	close(fi);
+    }
+    
+    if(showbbox) {
+	printf("Real Movie Size: %.2fx%.2f (:%.2f:%.2f)\n", 
+		(newMovieSize.xmax-newMovieSize.xmin)/20.0,
+		(newMovieSize.ymax-newMovieSize.ymin)/20.0,
+		(newMovieSize.xmin)/20.0,
+		(newMovieSize.ymin)/20.0
+		);
     }
 
     swf_FreeTags(&swf);
