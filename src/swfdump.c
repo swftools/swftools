@@ -396,6 +396,7 @@ int main (int argc,char ** argv)
     char* spriteframelabel;
     char* framelabel = 0;
     char prefix[128];
+    int filesize = 0;
     prefix[0] = 0;
     memset(idtab,0,65536);
 
@@ -426,6 +427,7 @@ int main (int argc,char ** argv)
     if(statbuf.st_size != swf.fileSize && !swf.compressed)
         dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
                 statbuf.st_size, swf.fileSize);
+    filesize = statbuf.st_size;
 #endif
 
     close(f);
@@ -471,9 +473,14 @@ int main (int argc,char ** argv)
 	return 0;
     } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);
-    if(swf.compressed)
-    printf("[HEADER]        File is compressed.\n");
-    printf("[HEADER]        File size: %ld\n", swf.fileSize);
+    if(swf.compressed) {
+	printf("[HEADER]        File is zlib compressed.");
+	if(filesize && swf.fileSize)
+	    printf(" Ratio: %02d%%\n", filesize*100/(swf.fileSize));
+	else
+	    printf("\n");
+    }
+    printf("[HEADER]        File size: %ld%s\n", swf.fileSize, swf.compressed?" (Depacked)":"");
     printf("[HEADER]        Frame rate: %f\n",swf.frameRate/256.0);
     printf("[HEADER]        Frame count: %d\n",swf.frameCount);
     printf("[HEADER]        Movie width: %.3f\n",(swf.movieSize.xmax-swf.movieSize.xmin)/20.0);
