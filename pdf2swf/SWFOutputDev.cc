@@ -1534,7 +1534,7 @@ void pdfswf_performconversion()
     for(t=0;t<pagepos;t++)
     {
        currentpage = pages[t];
-       doc->displayPage((OutputDev*)output, currentpage, /*zoom*/100, /*rotate*/0, /*doLinks*/(int)1);
+       doc->displayPage((OutputDev*)output, currentpage, /*dpi*/72, /*rotate*/0, /*doLinks*/(int)1);
     }
 }
 
