@@ -255,6 +255,7 @@ static void rgb2yuv(YUV*dest, RGBA*src, int dlinex, int slinex, int width, int h
 	    dest[y*dlinex+x].v = (r*0.500 + g*-0.419 + b*-0.0813 + 128.0);*/
 
 	    //dest[y*dlinex+x].y = 128;//(r*((int)( 0.299*256)) + g*((int)( 0.587*256)) + b*((int)( 0.114 *256)))>>8;
+
 	    dest[y*dlinex+x].y = (r*((int)( 0.299*256)) + g*((int)( 0.587*256)) + b*((int)( 0.114 *256)))>>8;
 	    dest[y*dlinex+x].u = (r*((int)(-0.169*256)) + g*((int)(-0.332*256)) + b*((int)( 0.500 *256))+ 128*256)>>8;
 	    dest[y*dlinex+x].v = (r*((int)( 0.500*256)) + g*((int)(-0.419*256)) + b*((int)(-0.0813*256))+ 128*256)>>8;
@@ -597,9 +598,15 @@ static int encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
 		bits += codehuffman(tag, rle, RLE_ESCAPE);
 		level=bb[pos];
 		/* table 14/h.263 */
+		if(!level || level<-127 || level>127) {
+		    fprintf(stderr, "Warning: Overflow- Level %d at pos %d\n", level, pos);
+		    if(level<-127) level=-127;
+		    if(level>127) level=127;
+		}
+
 		assert(level);
 		assert(level>=-127);
-		assert(level<=127);
+		assert(level<=127); //TODO: known to fail for pos=0 (with custom frames?)
 
 		swf_SetBits(tag, islast, 1);
 		swf_SetBits(tag, run, 6);
@@ -1232,6 +1239,38 @@ void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
     s->frame++;
     memcpy(s->oldpic, s->current, s->width*s->height*sizeof(YUV));
 }
+void swf_SetVideoStreamBlackFrame(TAG*tag, VIDEOSTREAM*s)
+{
+    int bx, by;
+    int quant = 31;
+    s->quant = quant;
+
+    writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
+
+    int x,y;
+    for(y=0;y<s->height;y++)
+    for(x=0;x<s->width;x++) {
+	s->current[y*s->width+x].y = 0;
+	s->current[y*s->width+x].u = 128;
+	s->current[y*s->width+x].v = 128;
+    }
+    for(x=0;x<16;x++)
+    for(y=0;y<16;y++) {
+	s->current[y*s->width+x].y = 64; 
+	s->current[y*s->width+x].u = 128; 
+	s->current[y*s->width+x].v = 128;
+    }
+
+    for(by=0;by<s->bby;by++)
+    {
+	for(bx=0;bx<s->bbx;bx++)
+	{
+	    encode_IFrame_block(tag, s, bx, by);
+	}
+    }
+    s->frame++;
+    memcpy(s->oldpic, s->current, s->width*s->height*sizeof(YUV));
+}
 
 void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 {
@@ -1268,9 +1307,10 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 #endif
 }
 
-void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, void**picture, int quant)
+void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, void**pictures, int quant)
 {
     int bx, by;
+    YUV pic[16*16];
 
     if(quant<1) quant=1;
     if(quant>31) quant=31;
@@ -1288,6 +1328,7 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
 	    int predictmvdx=0, predictmvdy=0;
 	    int mvx=movex[by*s->bbx+bx];
 	    int mvy=movey[by*s->bbx+bx];
+	    void*picture = pictures?pictures[by*s->bbx+bx]:0;
     
 	    if(mvx<-32) mvx=-32;
 	    if(mvx>31) mvx=31;
@@ -1305,13 +1346,16 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
 		
 		swf_SetBits(tag,0,1); // COD
 
-		if(mvx==0 && mvy==0) { // only picture
+		if(mvx==0 && mvy==0 && picture) { // only picture
 		    mode = 3;
 		    has_dc = 1;
 		}
 
 		if(picture) {
-		    /* todo: store picture in b */
+		    RGBA* picblock = (RGBA*)picture;
+		    rgb2yuv(pic, picblock,16,16,16,16);
+		    /* TODO: if has_dc!=1, subtract 128 from rgb values */
+		    getregion(&b, pic, 0,0,16);
 		    dodctandquant(&b, &b2, 1, s->quant);
 		    getblockpatterns(&b2, &y, &c, 1);
 		} else {
@@ -1319,7 +1363,7 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
 		}
 
 		codehuffman(tag, mcbpc_inter, mode*4+c);
-		codehuffman(tag, cbpy, y^15);
+		codehuffman(tag, cbpy, mode==3?y:y^15);
 		
 		if(mode < 3) {
 		    /* has motion vector */
@@ -1330,7 +1374,7 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
 		    s->mvdy[by*s->bbx+bx] = mvy;
 		}
 
-		if(picture) {
+		if(has_dc||y||c) {
 		    encode8x8(tag, b2.y1, has_dc, y&8);
 		    encode8x8(tag, b2.y2, has_dc, y&4);
 		    encode8x8(tag, b2.y3, has_dc, y&2);
