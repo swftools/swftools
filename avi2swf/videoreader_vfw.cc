@@ -133,6 +133,18 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
 		line++;
 	    }
 	}
+    } else if(bi->biBitCount==16) {
+	UCHAR*img = data;
+	int y;
+	for(y=starty;y!=endy;y+=yinc) {
+	    UCHAR*line = &img[linex*y];
+	    int x;
+	    for(x=0;x<dest_width;x++) {
+		U16 c = line[0]|line[1]<<8;
+		*dest++ = 255|(c&0x1f)<<(8+3)|(c>>5&0x1f)<<(16+3)|(c>>10&0x1f)<<(24+3);
+		line+=2;
+	    }
+	}
     } else if(bi->biBitCount==24) {
 	UCHAR*img = data;
 	int y;
