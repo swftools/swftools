@@ -145,7 +145,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
     if(first) {
 	int fs = lame_get_framesize(lame_flags);
 	//printf("framesize:%d\n", fs);
-	swf_SetU16(tag, fs); // samples per mp3 frame
+	swf_SetU16(tag, fs * first); // samples per mp3 frame
 	swf_SetU16(tag, seek); // seek
     }
 
