@@ -37,13 +37,6 @@ U16 totalframes = 0;
 #endif
 void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width, U16 height)
 {
-    swf_SetU16(tag, frames);
-    swf_SetU16(tag, width);
-    swf_SetU16(tag, height);
-    //swf_SetU8(tag, 1); /* smoothing on */
-    swf_SetU8(tag, 0); /* smoothing off */
-    swf_SetU8(tag, 2); /* codec = h.263 sorenson spark */
-
 #ifdef MAIN
     totalframes = frames;
 #endif
@@ -71,6 +64,14 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
     assert((stream->height&15) == 0);
     assert((stream->bbx*16) == stream->width);
     assert((stream->bby*16) == stream->height);
+    
+    swf_SetU16(tag, frames);
+    swf_SetU16(tag, width);
+    swf_SetU16(tag, height);
+    //swf_SetU8(tag, 1); /* smoothing on */
+    swf_SetU8(tag, 0); /* smoothing off */
+    swf_SetU8(tag, 2); /* codec = h.263 sorenson spark */
+
 }
 void swf_VideoStreamClear(VIDEOSTREAM*stream)
 {
