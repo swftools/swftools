@@ -552,8 +552,8 @@ SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits)
 	    }
 	    if(flags&1) { //move
 		int n = swf_GetBits(tag, 5); 
-		x = swf_GetBits(tag, n); //x
-		y = swf_GetBits(tag, n); //y
+		x = swf_GetSBits(tag, n); //x
+		y = swf_GetSBits(tag, n); //y
 
 		lines->next = (SHAPELINE*)malloc(sizeof(SHAPELINE));
 		lines = lines->next;
@@ -570,7 +570,6 @@ SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits)
 	    flags = swf_GetBits(tag, 1);
 	    if(flags) { //straight edge
 		int n = swf_GetBits(tag, 4) + 2;
-		int x=0,y=0;
 		if(swf_GetBits(tag, 1)) { //line flag
 		    x += swf_GetSBits(tag, n); //delta x
 		    y += swf_GetSBits(tag, n); //delta y
