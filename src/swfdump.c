@@ -676,9 +676,9 @@ void hexdumpTag(TAG*tag, char* prefix)
 	ascii[t&15] = printable(tag->data[t]);
 	if((t && ((t&15)==15)) || (t==tag->len-1))
 	{
-	    int s,p=((t-1)&15)+1;
+	    int s,p=((t)&15)+1;
 	    ascii[p] = 0;
-	    for(s=p;s<16;s++) {
+	    for(s=p-1;s<16;s++) {
 		printf("   ");
 	    }
 	    if(t==tag->len-1)
@@ -1070,6 +1070,12 @@ int main (int argc,char ** argv)
 	}
         else if(tag->id == ST_DOACTION && action) {
             ActionTAG*actions;
+            actions = swf_ActionGet(tag);
+            swf_DumpActions(actions, myprefix);
+        }
+        else if(tag->id == ST_DOINITACTION && action) {
+            ActionTAG*actions;
+            swf_GetU16(tag); // id
             actions = swf_ActionGet(tag);
             swf_DumpActions(actions, myprefix);
         }
