@@ -239,7 +239,7 @@ int main (int argc,char ** argv)
 #endif
 
     if(ret<0) {
-	printf("Error opening %s\n", filename);
+	fprintf(stderr, "Error opening %s\n", filename);
 	exit(1);
     }
 
