@@ -1187,7 +1187,7 @@ SWFFONT *swf_ReadFont(char *filename)
     SWF swf;
     if (!filename)
 	return 0;
-    f = open(filename, O_RDONLY);
+    f = open(filename, O_RDONLY|O_BINARY);
 
     if (f < 0 || swf_ReadSWF(f, &swf) < 0) {
 	fprintf(stderr, "%s is not a valid SWF font file or contains errors.\n", filename);
@@ -1360,7 +1360,7 @@ void swf_WriteFont(SWFFONT * font, char *filename)
 
     t = swf_InsertTag(t, ST_END);
 
-    f = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    f = open(filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0644);
     if FAILED
 	(swf_WriteSWF(f, &swf)) fprintf(stderr, "WriteSWF() failed in writeFont().\n");
     close(f);
