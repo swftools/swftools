@@ -40,6 +40,7 @@
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "FontFile.h"
+#include "GlobalParams.h"
 //swftools header files
 #include "swfoutput.h"
 extern "C" {
@@ -131,7 +132,7 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar();
   
-  virtual GBool interpretType3Chars() {return false;}
+  virtual GBool interpretType3Chars() {return gFalse;}
 
   //----- initialization and control
 
@@ -1425,7 +1426,7 @@ void pdfswf_init(char*filename, char*userPassword)
   //errorInit(); FIXME xpdf 1.01
 
   // read config file
-  //initParams(xpdfConfigFile); FIXME xpdf 1.01
+  globalParams = new GlobalParams("");
 
   // open PDF file
   if (userPassword && userPassword[0]) {
