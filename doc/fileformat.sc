@@ -92,7 +92,8 @@
 # Sound effects on user pressing or releasing a button 
 
 .button mybutton shape=obj1 # TODO
-.buttonsounds mybutton press=sound1 release=sound2 enter=sound3 leave=sound4 # TODO
+    .buttonsound press=sound1 release=sound2 enter=sound3 leave=sound4 # TODO
+.end
 
 # Elements of the movie should be animated by various means 
 # moving (x,y and zoom) 
@@ -245,25 +246,37 @@
 .png stoplogo "Stop.png" #TODO
 
 .button playbutton shape=play press=play_pressed #TODO
+.end
 
-.button playbutton2 shape=play press=play_pressed:
-    [mouse down]
-	... actionscript ...
-#    ...
+.button playbutton2 shape=play press=play_pressed
+    .on_press inside
+    .on_press outside
+    .on_release inside
+    .on_release outside
+    .on_move_in pressed
+    .on_move_out pressed
+    .on_move_in
+    .on_move_out
+    .on_key "a":
+	# actionscript...
+    .end
 .end
 
 # button which is blue, get's green when the mouse hovers over it, and
 # white when it is pressed:
 .button b1 shape=blueshape over=greenshape press=whiteshape #TODO
+.end
 
 # button where the button position is not identical to the active area:
 .button b2 area=activearea shape=blueshape over=greenshape press=whiteshape #TODO
+.end
 
 # (if area is not set, it's the same as shape)
 
 # the above put into use: pop up a window if the mouse cursor enters a certain
 # area:
 .button b3 area=activearea shape=emptyshape over=window1 press=window1 #TODO
+.end
 
 # button characters also support positioning and cxforming characters.
 # to use this, we put the characters "virtually", and then use the
