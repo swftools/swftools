@@ -65,6 +65,8 @@ int*pages = 0;
 int pagebuflen = 0;
 int pagepos = 0;
 
+double caplinewidth = 1.0;
+
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
@@ -161,6 +163,8 @@ public:
   virtual void updateFillColor(GfxState *state);
   virtual void updateStrokeColor(GfxState *state);
   virtual void updateLineWidth(GfxState *state);
+  virtual void updateLineJoin(GfxState *state);
+  virtual void updateLineCap(GfxState *state);
   
   virtual void updateAll(GfxState *state) 
   {
@@ -168,6 +172,8 @@ public:
       updateFillColor(state);
       updateStrokeColor(state);
       updateLineWidth(state);
+      updateLineJoin(state);
+      updateLineCap(state);
   };
 
   //----- path painting
@@ -509,12 +515,40 @@ void SWFOutputDev::stroke(GfxState *state)
 {
     logf("<debug> stroke\n");
     GfxPath * path = state->getPath();
+    int lineCap = state->getLineCap(); // 0=butt, 1=round 2=square
+    int lineJoin = state->getLineJoin(); // 0=miter, 1=round 2=bevel
+    double miterLimit = state->getMiterLimit();
+    double width = state->getTransformedLineWidth();
     struct swfmatrix m;
+    GfxRGB rgb;
+    double opaq = state->getStrokeOpacity();
+    state->getStrokeRGB(&rgb);
+
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
-    swfoutput_setdrawmode(&output, DRAWMODE_STROKE);
-    swfoutput_drawpath(&output, outline, &m);
+
+    lineJoin = 1; // other line joins are not yet supported by the swf encoder
+                  // TODO: support bevel joints
+
+    if(((lineCap==1) && (lineJoin==1)) || width<=caplinewidth) {
+	/* FIXME- if the path is smaller than 2 segments, we could ignore
+	   lineJoin */
+	swfoutput_setdrawmode(&output, DRAWMODE_STROKE);
+	swfoutput_drawpath(&output, outline, &m);
+    } else {
+	swfoutput_setfillcolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), 
+					(char)(rgb.b*255), (char)(opaq*255));
+
+	//swfoutput_setlinewidth(&output, 1.0); //only for debugging
+	//swfoutput_setstrokecolor(&output, 0, 255, 0, 255); //likewise, see below
+	//swfoutput_setfillcolor(&output, 255, 0, 0, 255); //likewise, see below
+
+	swfoutput_drawpath2poly(&output, outline, &m, lineJoin, lineCap, width, miterLimit);
+	updateLineWidth(state);  //reset
+	updateStrokeColor(state); //reset
+	updateFillColor(state);  //reset
+    }
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
@@ -909,6 +943,16 @@ void SWFOutputDev::updateLineWidth(GfxState *state)
 {
     double width = state->getTransformedLineWidth();
     swfoutput_setlinewidth(&output, width);
+}
+
+void SWFOutputDev::updateLineCap(GfxState *state)
+{
+    int c = state->getLineCap();
+}
+
+void SWFOutputDev::updateLineJoin(GfxState *state)
+{
+    int j = state->getLineJoin();
 }
 
 void SWFOutputDev::updateFillColor(GfxState *state) 
@@ -1737,6 +1781,46 @@ void pdfswf_init(char*filename, char*userPassword)
   output->startDoc(doc->getXRef());
 }
 
+void pdfswf_setparameter(char*name, char*value)
+{
+    if(!strcmp(name, "drawonlyshapes")) {
+	drawonlyshapes = atoi(value);
+    } else if(!strcmp(name, "ignoredraworder")) {
+	ignoredraworder = atoi(value);
+    } else if(!strcmp(name, "linksopennewwindow")) {
+	opennewwindow = atoi(value);
+    } else if(!strcmp(name, "storeallcharacters")) {
+	storeallcharacters = atoi(value);
+    } else if(!strcmp(name, "enablezlib")) {
+	enablezlib = atoi(value);
+    } else if(!strcmp(name, "insertstop")) {
+	insertstoptag = atoi(value);
+    } else if(!strcmp(name, "flashversion")) {
+	flashversion = atoi(value);
+    } else if(!strcmp(name, "jpegquality")) {
+	int val = atoi(value);
+	if(val<0) val=0;
+	if(val>100) val=100;
+	jpegquality = val;
+    } else if(!strcmp(name, "outputfilename")) {
+	swffilename = value;
+    } else if(!strcmp(name, "caplinewidth")) {
+	caplinewidth = atof(value);
+    } else if(!strcmp(name, "splinequality")) {
+	int v = atoi(value);
+	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
+	if(v<1) v = 1;
+	splinemaxerror = v;
+    } else if(!strcmp(name, "fontquality")) {
+	int v = atoi(value);
+	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
+	if(v<1) v = 1;
+	fontsplinemaxerror = v;
+    } else {
+	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
+    }
+}
+
 void pdfswf_drawonlyshapes()
 {
     drawonlyshapes = 1;
@@ -1774,6 +1858,16 @@ void pdfswf_setoutputfilename(char*_filename)
     swffilename = _filename;
 }
 
+void pdfswf_insertstop()
+{
+    insertstoptag = 1;
+}
+
+void pdfswf_setversion(int n)
+{
+    flashversion = n;
+}
+
 
 void pdfswf_convertpage(int page)
 {
@@ -1805,17 +1899,6 @@ int pdfswf_numpages()
 {
   return doc->getNumPages();
 }
-
-void pdfswf_insertstop()
-{
-    insertstoptag = 1;
-}
-
-void pdfswf_setversion(int n)
-{
-    flashversion = n;
-}
-
 int closed=0;
 void pdfswf_close()
 {
