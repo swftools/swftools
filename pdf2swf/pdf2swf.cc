@@ -250,6 +250,7 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 	    strcat(searchpath, ":");
 	strcat(searchpath, dirname);
     }
+    logf("<verbose> Adding %s to search path\n", dirname);
 
     DIR*dir = opendir(dirname);
     if(!dir) {
@@ -261,34 +262,32 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 	ent = readdir (dir);
 	if (!ent) 
 	    break;
-	if(ent->d_type == DT_REG)
+	int l;
+	char*name = ent->d_name;
+	char type = 0;
+	if(!name) continue;
+	l=strlen(name);
+	if(l<4)
+	    continue;
+	if(!strncasecmp(&name[l-4], ".afm", 4)) 
+	    type=1;
+	if(!strncasecmp(&name[l-4], ".ttf", 4)) 
+	    type=2;
+	if(type)
 	{
-	    int l;
-	    char*name = ent->d_name;
-	    char type = 0;
-	    if(!name) continue;
-	    l=strlen(name);
-	    if(l<4)
-		continue;
-	    if(!strncasecmp(&name[l-4], ".afm", 4)) 
-		type=1;
-	    if(!strncasecmp(&name[l-4], ".ttf", 4)) 
-		type=2;
-	    if(type)
-	    {
-		if(database && type==1) {
-		    char buf[256],a;
-		    FILE*fi;
-		    sprintf(buf, "%s/%s", dirname,name);
-		    fi = fopen(buf, "rb");
-		    if(!fi || !fread(&a,1,1,fi)) {
-			logf("<warning> Couldn't read from %s", buf);
-		    }
-		    fprintf(database, "%s\n", name);
-		} 
-		if(numfonts)
-		    (*numfonts)++;
-	    }
+	    if(database && type==1) {
+		char buf[256],a;
+		FILE*fi;
+		sprintf(buf, "%s/%s", dirname,name);
+		fi = fopen(buf, "rb");
+		if(!fi || !fread(&a,1,1,fi)) {
+		    logf("<warning> Couldn't read from %s", buf);
+		}
+		fprintf(database, "%s\n", buf);
+		logf("<verbose> Found font %s\n", buf);
+	    } 
+	    if(numfonts)
+		(*numfonts)++;
 	}
     }
     closedir(dir);
