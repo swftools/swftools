@@ -1295,15 +1295,21 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int s
         double x3,double y3,
         double x4,double y4)
 {
+    TAG*oldtag;
     if(shapeid>=0)
      endshape();
     if(textid>=0)
      endtext();
 
     int bitid = ++currentswfid;
+    oldtag = tag;
     tag = swf_InsertTag(tag,ST_DEFINEBITSJPEG2);
     swf_SetU16(tag, bitid);
-    swf_SetJPEGBits(tag, filename, jpegquality);
+    if(swf_SetJPEGBits(tag, filename, jpegquality)<0) {
+	swf_DeleteTag(tag);
+	tag = oldtag;
+	return -1;
+    }
 
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
@@ -1315,15 +1321,21 @@ int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int si
         double x3,double y3,
         double x4,double y4)
 {
+    TAG*oldtag;
     if(shapeid>=0)
      endshape();
     if(textid>=0)
      endtext();
 
     int bitid = ++currentswfid;
+    oldtag = tag;
     tag = swf_InsertTag(tag,ST_DEFINEBITSLOSSLESS);
     swf_SetU16(tag, bitid);
-    swf_SetLosslessBits(tag,sizex,sizey,mem, BMF_32BIT);
+    if(swf_SetLosslessBits(tag,sizex,sizey,mem, BMF_32BIT)<0) {
+	swf_DeleteTag(tag);
+	tag = oldtag;
+	return -1;
+    }
     
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
@@ -1335,15 +1347,21 @@ int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int s
         double x3,double y3,
         double x4,double y4)
 {
+    TAG*oldtag;
     if(shapeid>=0)
      endshape();
     if(textid>=0)
      endtext();
 
     int bitid = ++currentswfid;
+    oldtag = tag;
     tag = swf_InsertTag(tag,ST_DEFINEBITSLOSSLESS2);
     swf_SetU16(tag, bitid);
-    swf_SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256);
+    if(swf_SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256)<0) {
+	swf_DeleteTag(tag);
+	tag = oldtag;
+	return -1;
+    }
   
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
@@ -1355,6 +1373,7 @@ void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey,
         double x3,double y3,
         double x4,double y4)
 {
+    if(id<0) return;
     if(shapeid>=0)
      endshape();
     if(textid>=0)
