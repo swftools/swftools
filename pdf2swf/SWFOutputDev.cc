@@ -442,6 +442,14 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
     bezierpathsegment*outline = start = new bezierpathsegment();
     int cpos = 0;
     double lastx=0,lasty=0;
+    if(!num) {
+	logf("<warning> empty path");
+	outline->type = T1_PATHTYPE_MOVE;
+	outline->dest.x = 0;
+	outline->dest.y = 0;
+	outline->link = 0;
+	return (T1_OUTLINE*)outline;
+    }
     for(t = 0; t < num; t++) {
 	GfxSubpath *subpath = path->getSubpath(t);
 	int subnum = subpath->getNumPoints();
