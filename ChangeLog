@@ -89,4 +89,6 @@
 0.3.1:
 	* configure: Didn't create all Makefiles when t1lib or jpeglib were absent. Fixed.
 	* swfs/Makefile: FreeBSD fixes.
+0.3.2:
+	* pdf2swf/xpdf: Upgraded PDF Parser to Version 1.01.
 
