@@ -25,6 +25,7 @@ transform = @program_transform_name@
 # libtool stuff
 OBJEXT=@OBJEXT@
 EXEEXT=@EXEEXT@
+E=$(EXEEXT)
 ECHO=@ECHO@
 RANLIB=@RANLIB@
 STRIP=@STRIP@
