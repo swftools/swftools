@@ -367,7 +367,8 @@ void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags
 		       should be discarded, too, as the object to insert 
 		       isn't a sprite 
 		     */
-		    if(spriteid>=0 && getidfromtag(&master.tags[pos]) == spriteid && !config.isframe)
+		    if(spriteid>=0 && getidfromtag(&master.tags[pos]) == spriteid && 
+			    !config.isframe && config.merge)
 			dontwrite = 1;
 		break;
 	    }
