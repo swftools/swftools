@@ -39,7 +39,7 @@ AC_DEFINE_UNQUOTED(WORDS_BIGENDIAN, 1)
 fi
 if test "x${BYTEORDERCHECKOK}" != "x1"; then
 AC_MSG_RESULT(unknown)
-echo Byte order could not determined. Try to insert your system type into aclocal.m4 about line 21
+echo Byte order could not determined.
 exit 1
 fi
 ])
