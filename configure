@@ -11472,12 +11472,12 @@ _ACEOF
 fi
 
 if test "x${WIN32}" != "x"; then
-    #AC_CHECK_LIB(vfw32, AVIFileInit,VFW32=true)
-    #if test "x${VFW32}" != "x"; then
-    #  VIDEO_LIBS="$VIDEO_LIBS -lvfw32"
+    #AC_CHECK_LIB(avifil32, AVIFileInit,AVIFIL32=true)
+    #if test "x${AVIFIL32}" != "x"; then
+    #  VIDEO_LIBS="$VIDEO_LIBS -lavifil32"
     #fi
-    VIDEO_LIBS="$VIDEO_LIBS -lvfw32"
-    VFW32=true
+    VIDEO_LIBS="$VIDEO_LIBS -lavifil32"
+    AVIFIL32=true
 fi
 
 
@@ -11596,7 +11596,7 @@ if test "x${ac_cv_header_zlib_h}" '!=' "xyes"; then
  DISABLEPNG2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} zlib.h"
 fi
-if test "x${AVIFILE}" '!=' "xtrue" -a "x${VFW32}" '!=' "xtrue"; then
+if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
  MISSINGLIBS="${MISSINGLIBS} avifile"
 fi
 
@@ -11611,7 +11611,7 @@ if test "x${MISSINGLIBS}" '!=' "x"; then
 fi
 
 avi2swf="avi2swf/Makefile"
-if test "x${AVIFILE}" '!=' "xtrue" -a "x${VFW32}" '!=' "xtrue"; then
+if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
  echo "* Disabling avi2swf tool..."
  echo all install uninstall clean: > avi2swf/Makefile
  avi2swf=
