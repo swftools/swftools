@@ -671,15 +671,39 @@ U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale)
   return res;
 }
 
-void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
+SWFFONT* swf_ReadFont(char* filename)
+{
+  int f;
+  SWF swf;
+  if(!filename)
+      return 0;
+  f = open(filename,O_RDONLY);
+  
+  if (f<0 || swf_ReadSWF(f,&swf)<0)
+  { fprintf(stderr,"%s is not a valid SWF font file or contains errors.\n",filename);
+    close(f);
+    return 0;
+  }
+  else
+  { SWFFONT*font;
+    close(f);
+    if(swf_FontExtract(&swf, WRITEFONTID, &font) < 0)
+       return 0;
+    swf_FreeTags(&swf);
+    return font;
+  }
+}
+
+void swf_WriteFont(SWFFONT*font, char* filename)
 { SWF swf;
   TAG * t;
   SRECT r;
   RGBA rgb;
   int f;
+  int useDefineFont2 = 1;
 
   if(useDefineFont2) {
-      fprintf(stderr, "DefineFont2 is not yet supported!\n");
+      //fprintf(stderr, "DefineFont2 is not yet supported!\n");
       useDefineFont2 = 0;
   }
 
@@ -721,7 +745,7 @@ void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
   {     int textscale = 400;
 	int s;
 	int xmax = 0;
-	int ymax = textscale * 20;
+	int ymax = textscale * 2 * 20;
 	U8 gbits,abits;
 	char text[257];
 	int x,y;
@@ -772,7 +796,7 @@ void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
 		    }
 		}
 		if(c) {
-		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*y);
+		  swf_TextSetInfoRecord(t,font,textscale,&rgb,lastx+1,textscale*y*2);
 		  for(x=0;x<16;x++)
 		  {
 		      int g = font->ascii2glyph[y*16+x];
@@ -808,26 +832,4 @@ void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
   swf_FreeTags(&swf);
 }
 
-SWFFONT* swf_ReadFont(char* filename)
-{
-  int f;
-  SWF swf;
-  if(!filename)
-      return 0;
-  f = open(filename,O_RDONLY);
-  
-  if (f<0 || swf_ReadSWF(f,&swf)<0)
-  { fprintf(stderr,"%s is not a valid SWF font file or contains errors.\n",filename);
-    close(f);
-    return 0;
-  }
-  else
-  { SWFFONT*font;
-    close(f);
-    if(swf_FontExtract(&swf, WRITEFONTID, &font) < 0)
-       return 0;
-    swf_FreeTags(&swf);
-    return font;
-  }
-}
 
