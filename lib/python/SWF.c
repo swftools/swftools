@@ -123,6 +123,7 @@ static PyObject* f_load(PyObject* self, PyObject* args)
 	return 0;
     }
     close(fi);
+    swf_FoldAll(&swf->swf);
 
     swf->taglist = taglist_new2(swf->swf.firstTag);
     if(swf->taglist == NULL) {
@@ -198,7 +199,7 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
     }
     close(fi);
 
-    //swf_FreeTags(swf);
+    swf_FreeTags(swf);
     /*{ TAG * t = swf->firstTag;
       while (t)
       { 
