@@ -1,4 +1,6 @@
-/* rfxswf.c
+/* vi:sts=2 sw=2 */
+
+/* rfxswf.c 
 
    Library for creating and reading SWF files or parts of it.
    There's a module directory which provides some extended functionality.
@@ -29,23 +31,13 @@
 #endif // HAVE_ZLIB_H
 #endif // HAVE_LIBZ
 
-// Win32 support may be broken since it was only tested in an older version for Watcom C
-#ifdef __NT__
-#  include <io.h>
-#  include <malloc.h>
-#  include <string.h>
-#  ifdef DEBUG_RFXSWF
-#    include <stdio.h>
-#  endif
-#else
-#endif
-
 // internal constants
 
 #define MALLOC_SIZE     128
 #define INSERT_RFX_TAG
 
 #define MEMSIZE(l) (((l/MALLOC_SIZE)+1)*MALLOC_SIZE)
+
 
 // inline wrapper functions
 
@@ -135,7 +127,7 @@ int swf_SetBlock(TAG * t,U8 * b,int l)
     if (!newdata)
     {
       #ifdef DEBUG_RFXSWF
-        fprintf(stderr,"Fatal Error: malloc()/realloc() failed.\n");
+        fprintf(stderr,"Fatal Error: malloc()/realloc() failed (1). (%d bytes)\n", newmem);
       #endif
       return 0;
     }
@@ -206,8 +198,20 @@ U32 swf_GetBits(TAG * t,int nbits)
   return res;
 }
 
+/* reader/writer stuff - from ../src/bitio.c */
+#include "./bitio.c"
+
 S32 swf_GetSBits(TAG * t,int nbits)
 { U32 res = swf_GetBits(t,nbits);
+  if (res&(1<<(nbits-1))) res|=(0xffffffff<<nbits);  
+  return (S32)res;
+}
+
+U32 reader_GetBits(struct reader_t*reader, int nbits)
+{ return reader_readbits(reader, nbits);
+}
+S32 reader_GetSBits(struct reader_t*reader, int nbits)
+{ U32 res = reader_readbits(reader, nbits);
   if (res&(1<<(nbits-1))) res|=(0xffffffff<<nbits);  
   return (S32)res;
 }
@@ -321,6 +325,18 @@ int swf_GetRect(TAG * t,SRECT * r)
   r->xmax = swf_GetSBits(t,nbits);
   r->ymin = swf_GetSBits(t,nbits);
   r->ymax = swf_GetSBits(t,nbits);
+  return 0;
+}
+
+int reader_GetRect(struct reader_t*reader,SRECT * r)
+{ int nbits;
+  SRECT dummy;
+  if (!r) r = &dummy;
+  nbits = (int) reader_GetBits(reader,5);
+  r->xmin = reader_GetSBits(reader,nbits);
+  r->xmax = reader_GetSBits(reader,nbits);
+  r->ymin = reader_GetSBits(reader,nbits);
+  r->ymax = reader_GetSBits(reader,nbits);
   return 0;
 }
 
@@ -531,7 +547,7 @@ int swf_SetPoint(TAG * t,SPOINT * p) { return 0; }
 
 // Tag List Manipulating Functions
 
-int RFXSWF_UpdateFrame(TAG * t,S8 delta)
+int swf_UpdateFrame(TAG * t,S8 delta)
 // returns number of frames
 { int res = -1;
   while (t)
@@ -541,8 +557,6 @@ int RFXSWF_UpdateFrame(TAG * t,S8 delta)
   }
   return res;
 }
-
-#define swf_UpdateFrame(a,b) RFXSWF_UpdateFrame(a,b)
 
 TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
 { TAG * t;
@@ -578,13 +592,13 @@ int swf_DeleteTag(TAG * t)
   return 0;
 }
 
-TAG * RFXSWF_ReadTag(int handle,TAG * prev)
+TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
 { TAG * t;
   U16 raw;
   U32 len;
   int id;
 
-  if (read(handle,&raw,2)!=2) return NULL;
+  if (reader->read(reader, &raw, 2) !=2 ) return NULL;
   raw = SWAP16(raw);
 
   len = raw&0x3f;
@@ -592,7 +606,7 @@ TAG * RFXSWF_ReadTag(int handle,TAG * prev)
 
   if (len==0x3f)
   {
-      if (read(handle,&len,4)!=4) return NULL;
+      if (reader->read(reader, &len, 4) != 4) return NULL;
       len = SWAP32(len);
   }
 
@@ -604,7 +618,7 @@ TAG * RFXSWF_ReadTag(int handle,TAG * prev)
   if (!t)
   {
     #ifdef DEBUG_RFXSWF
-      fprintf(stderr,"Fatal Error: malloc()/realloc() failed.\n");
+      fprintf(stderr,"Fatal Error: malloc()/realloc() failed (2). (%d bytes)\n", sizeof(TAG));
     #endif
     return NULL;
   }
@@ -619,12 +633,12 @@ TAG * RFXSWF_ReadTag(int handle,TAG * prev)
     if (!t->data)
     {
       #ifdef DEBUG_RFXSWF
-        fprintf(stderr,"Fatal Error: malloc()/realloc() failed.\n");
+        fprintf(stderr,"Fatal Error: malloc()/realloc() failed (3). (%d bytes)\n", t->len);
       #endif
       return NULL;
     }
     t->memsize = t->len;
-    if (read(handle,t->data,t->len)!=t->len) return NULL;
+    if (reader->read(reader, t->data, t->len) != t->len) return NULL;
   }
 
   if (prev)
@@ -636,25 +650,25 @@ TAG * RFXSWF_ReadTag(int handle,TAG * prev)
   return t;
 }
 
-int RFXSWF_DefineSprite_GetRealSize(TAG * t);
+int swf_DefineSprite_GetRealSize(TAG * t);
 
-int RFXSWF_WriteTag(int handle,TAG * t)
+int swf_WriteTag2(struct writer_t*writer, TAG * t)
 // returns tag length in bytes (incl. Header), -1 = Error
-// handle = -1 -> no output
+// writer = 0 -> no output
 { U16 raw[3];
   U32 len;
   int short_tag;
 
   if (!t) return -1;
 
-  len = (t->id==ST_DEFINESPRITE)?RFXSWF_DefineSprite_GetRealSize(t):t->len;
+  len = (t->id==ST_DEFINESPRITE)?swf_DefineSprite_GetRealSize(t):t->len;
 
   short_tag = len<0x3f;
 
-  if (handle>=0)
+  if (writer)
   { if (short_tag)
     { raw[0] = SWAP16(len|((t->id&0x3ff)<<6));
-      if (write(handle,raw,2)!=2)
+      if (writer->write(writer,raw,2)!=2)
       {
         #ifdef DEBUG_RFXSWF
           fprintf(stderr,"WriteTag() failed: Short Header.\n");
@@ -665,7 +679,7 @@ int RFXSWF_WriteTag(int handle,TAG * t)
     else
     {
       raw[0] = SWAP16((t->id<<6)|0x3f);
-      if (write(handle,raw,2)!=2)
+      if (writer->write(writer,raw,2)!=2)
       {
 #ifdef DEBUG_RFXSWF
           fprintf(stderr,"WriteTag() failed: Long Header (1).\n");
@@ -674,7 +688,7 @@ int RFXSWF_WriteTag(int handle,TAG * t)
       }
       
       len = SWAP32(len);
-      if (write(handle,&len,4)!=4)
+      if (writer->write(writer,&len,4)!=4)
       {
         #ifdef DEBUG_RFXSWF
           fprintf(stderr,"WriteTag() failed: Long Header (2).\n");
@@ -684,7 +698,7 @@ int RFXSWF_WriteTag(int handle,TAG * t)
     }
     
     if (t->data)
-    { if (write(handle,t->data,t->len)!=t->len)
+    { if (writer->write(writer,t->data,t->len)!=t->len)
       {
         #ifdef DEBUG_RFXSWF
           fprintf(stderr,"WriteTag() failed: Data.\n");
@@ -700,12 +714,16 @@ int RFXSWF_WriteTag(int handle,TAG * t)
   return t->len+(short_tag?2:6);
 }
 
-int swf_WriteTag(int handle,TAG * t)
+int swf_WriteTag(int handle, TAG * t)
 {
-    return RFXSWF_WriteTag(handle, t);
+  struct writer_t writer;
+  if(handle<0)
+    return swf_WriteTag2(0, t);
+  writer_init_filewriter(&writer, handle);
+  return swf_WriteTag2(&writer, t);
 }
 
-int RFXSWF_DefineSprite_GetRealSize(TAG * t)
+int swf_DefineSprite_GetRealSize(TAG * t)
 // Sprite Handling: Helper function to pack DefineSprite-Tag
 { U32 len = t->len;
   if(len>4) { // folded sprite
@@ -713,7 +731,7 @@ int RFXSWF_DefineSprite_GetRealSize(TAG * t)
   }
   do
   { t = swf_NextTag(t);
-    if (t->id!=ST_DEFINESPRITE) len += RFXSWF_WriteTag(-1,t);
+    if (t->id!=ST_DEFINESPRITE) len += swf_WriteTag(-1, t);
     else t = NULL;
   } while (t&&(t->id!=ST_END));
   return len;
@@ -780,75 +798,46 @@ void swf_FoldAll(SWF*swf)
     }
 }
 
-#define swf_ReadTag(a,b)  RFXSWF_ReadTag(a,b)
-#define swf_WriteTag(a,b)  RFXSWF_WriteTag(a,b)
-
 // Movie Functions
 
-int swf_InitSWF(void*data, int length, SWF * swf) /* copy a swf in memory into SWF struct */
-{
-  TAG reader;
-    /* 
-	unfinished!
-     */
-  *(int*)0=0xDEAD;
-  if (!swf) return -1;
-  memset(swf,0x00,sizeof(SWF));
-  memset(&reader,0x00,sizeof(TAG));
-  reader.data = data;
-  reader.len = reader.memsize = length;
-
-  { char b[32];                         // read Header
-    TAG * t;
-    
-    if (swf_GetU8(&reader)!=(U8)'F') return -1;
-    if (swf_GetU8(&reader)!=(U8)'W') return -1;
-    if (swf_GetU8(&reader)!=(U8)'S') return -1;
-
-    swf->fileVersion = swf_GetU8(&reader);
-    swf->fileSize    = swf_GetU32(&reader);
-    swf_GetRect(&reader,&swf->movieSize);
-    swf->frameRate   = swf_GetU16(&reader);
-    swf->frameCount  = swf_GetU16(&reader);
-
-    /*t = &t1;
-    while (t) t = swf_ReadTag(handle,t);
-    swf->firstTag = t1.next;
-    t1.next->prev = NULL;*/
-  }
-  return 0;
-}
-
-int swf_ReadSWF(int handle,SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int swf_ReadSWF2(struct reader_t*reader2, SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 {     
   if (!swf) return -1;
   memset(swf,0x00,sizeof(SWF));
 
   { char b[32];                         // read Header
-    TAG t1;
+    int len;
     TAG * t;
+    TAG t1;
+    struct reader_t zreader;
+    struct reader_t* reader;
     
-    memset(&t1,0x00,sizeof(TAG));
+    if ((len = reader->read(reader ,b,8))<8) return -1;
+
+    if (b[0]!='F' && b[0]!='C') return -1;
+    if (b[1]!='W') return -1;
+    if (b[2]!='S') return -1;
+    swf->fileVersion = b[3];
+    swf->compressed  = (b[0]=='C')?1:0;
+    swf->fileSize    = GET32(&b[4]);
     
-    if ((t1.len=read(handle,b,32))<21) return -1;
-    t1.data = (U8*)b;
+    /* TODO: start decompression here */
+    if(swf->compressed) {
+	reader_init_zlibinflate(&zreader, reader2);
+	reader = &zreader;
+    } else {
+	reader = reader2;
+    }
 
-    if (swf_GetU8(&t1)!=(U8)'F') return -1;
-    if (swf_GetU8(&t1)!=(U8)'W') return -1;
-    if (swf_GetU8(&t1)!=(U8)'S') return -1;
+    reader_GetRect(reader, &swf->movieSize);
+    reader->read(reader, &swf->frameRate, 2);
+    swf->frameRate = SWAP16(swf->frameRate);
+    reader->read(reader, &swf->frameCount, 2);
+    swf->frameCount = SWAP16(swf->frameCount);
 
-    swf->fileVersion = swf_GetU8(&t1);
-    swf->fileSize    = swf_GetU32(&t1);
-    swf_GetRect(&t1,&swf->movieSize);
-    swf->frameRate   = swf_GetU16(&t1);
-    swf->frameCount  = swf_GetU16(&t1);
-
-    swf_GetU8(&t1);
-    lseek(handle,swf_GetTagPos(&t1)-1,SEEK_SET);
-  
-                                        // reda tags and connect to list
+    /* read tags and connect to list */
     t = &t1;
-    while (t) t = swf_ReadTag(handle,t);
+    while (t) t = swf_ReadTag(reader,t);
     swf->firstTag = t1.next;
     t1.next->prev = NULL;
   }
@@ -856,7 +845,14 @@ int swf_ReadSWF(int handle,SWF * swf)   // Reads SWF to memory (malloc'ed), retu
   return 0;
 }
 
-int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or <0 if fails
+int swf_ReadSWF(int handle, SWF * swf)
+{
+  struct reader_t reader;
+  reader_init_filereader(&reader, handle);
+  return swf_ReadSWF2(&reader, swf);
+}
+
+int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
     
@@ -879,7 +875,7 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
   swf->frameCount = 0;
 
   while(t)
-  { len += swf_WriteTag(-1,t);
+  { len += swf_WriteTag(-1, t);
     if (t->id==ST_SHOWFRAME) swf->frameCount++;
     t = swf_NextTag(t);
   }
@@ -909,13 +905,13 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
 	swf_SetU32(&t1,swf->fileSize);
     }
 
-    if (handle>=0)
+    if (writer)
     { 
-      int ret = write(handle,b,l);
+      int ret = writer->write(writer,b,l);
       if (ret!=l)
       {
         #ifdef DEBUG_RFXSWF
-          printf("ret:%d (fd:%d)\n",ret, handle);
+          printf("ret:%d\n",ret);
           perror("write:");
           fprintf(stderr,"WriteSWF() failed: Header.\n");
         #endif
@@ -924,7 +920,7 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
 
       t = swf->firstTag;
       while (t)
-      { if (swf_WriteTag(handle,t)<0) return -1;
+      { if (swf_WriteTag2(writer, t)<0) return -1;
         t = swf_NextTag(t);
       }
     }
@@ -932,13 +928,22 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
   return (int)swf->fileSize;
 }
 
+int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
+{
+  struct writer_t writer;
+  if(handle<0)
+    return swf_WriteSWF2(&writer, swf);
+  writer_init_filewriter(&writer, handle);
+  return swf_WriteSWF2(&writer, swf);
+}
+
 int swf_WriteHeader(int handle,SWF * swf)
 {
-    SWF myswf;
-    memcpy(&myswf,swf,sizeof(SWF));
-    myswf.firstTag = 0;
-    swf_WriteSWF(handle, &myswf);
-    return 0;
+  SWF myswf;
+  memcpy(&myswf,swf,sizeof(SWF));
+  myswf.firstTag = 0;
+  swf_WriteSWF(handle, &myswf);
+  return 0;
 }
 
 int swf_WriteCGI(SWF * swf)
@@ -972,21 +977,6 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 
 // include advanced functions
 
-#ifdef __NT__
-
-#include "modules\swfdump.c"
-#include "modules\swfshape.c"
-#include "modules\swftext.c"
-#include "modules\swfobject.c"
-#include "modules\swfbutton.c"
-#include "modules\swftools.c"
-#include "modules\swfcgi.c"
-#include "modules\swfbits.c"
-#include "modules\swfaction.c"
-#include "modules\swfsound.c"
-
-#else
-
 #include "modules/swfdump.c"
 #include "modules/swfshape.c"
 #include "modules/swftext.c"
@@ -997,7 +987,4 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfbits.c"
 #include "modules/swfaction.c"
 #include "modules/swfsound.c"
-
-#endif
-
 
