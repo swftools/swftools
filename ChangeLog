@@ -234,4 +234,8 @@
 	* pdf2swf/SWFOutputDev: refactored interface to pdf2swf.cc
 	* src/png2swf.c: added -z option
 	* src/jpeg2swf.c: added -z option
+	* m4/python.m4: Python MacOS X fixes
+	* pdf2swf/xpdf: CMYK conversion fix
+	* src/gif2swf.c: New tool, for converting (animated) gifs to swf (Daichi Shinozaki)
+
 
