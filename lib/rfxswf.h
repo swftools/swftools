@@ -359,6 +359,9 @@ int swf_FontUse(FONTUSAGE * use,U8 * s);
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetInfo(TAG * t,SWFFONT * f);
 
+int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
+	void(*callback)(int*chars, int nr, int id));
+
 // the following two functions are obsolete and will be removed soon
 int swf_FontExport(int handle,SWFFONT * f);
 int swf_FontImport(int handle,SWFFONT * * f);
@@ -422,6 +425,7 @@ int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 #define BC_END                  0x0800
 #define BC_INSERT               0x0a00
 #define BC_DELETE               0x0c00
+#define BC_CLEAR		0x0e00
 #define BC_BACKSPACE            0x1000
 #define BC_ENTER                0x1a00
 #define BC_CURSORUP             0x1c00
