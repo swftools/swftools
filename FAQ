@@ -26,6 +26,7 @@
     In case some of your libraries/include files are installed in /usr/local,
     try the following:
 
+    rm -f config.cache
     LDFLAGS="-L/usr/local/lib" CPPFLAGS="-I/usr/local/include" ./configure
 
     Furthermore, a new installation of jpeglib (the following assumes it's in
@@ -33,6 +34,9 @@
 
     ranlib /usr/local/lib/libjpeg.a
     ldconfig /usr/local/lib
+
+    If it still doesn't work, try removing the file "config.cache"
+    before running configure again.
 
 4.) Is there a pdf2swf for Windows?
 

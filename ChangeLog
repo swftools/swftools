@@ -159,3 +159,11 @@
 	* pdf2swf/pdf2swf: greatly improved spline conversion
 	* pdf2swf/: Fix for t1lib-5.0.0
 	* src/wav2swf: streaming sound now works for all framerates < 35.
+0.5.0: (not yet released)
+	* pdf2swf: added support for capline-styles
+	* avi2swf: added h.263 support
+	* avi2swf: improved sound support
+	* Makefiles: added MingW/Cygwin support
+	* pdf2swf/ttf2pt1: upgraded to ttf2pt1 3.4.3.
+	* lib/: changed logf to msg (support for gcc 3.2)
+	* src/jpeg2swf: Added support for H.263 compression (for correlated images).

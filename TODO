@@ -27,6 +27,7 @@ pdf2swf:
 	      optional- use another color for dashed lines)
     * several bounding boxes are too big
     * support for ttf fonts in --fontdirs
+    * add support for FreeType
 
 font2swf:
     
@@ -45,6 +46,9 @@ swfcombine:
     * "swfcombine -m" (e.g. "swfcombine -mT test.swf") duplicates depths:
 	relocate depth in normalcombine()
     * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
+    * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
+    * support for centering (remove need to set -x,-y parameters manually when linking
+      preloaders)
 
 swfextract:
     
@@ -62,7 +66,7 @@ librfxswf:
 
 Makefiles/configure/installation:
 
-    * check for vsnprintf
+    * check for vsnprintf, strndup etc. and supply replacements
 
 other:
 
