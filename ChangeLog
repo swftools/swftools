@@ -60,5 +60,7 @@
 	* swfdump: Major bugfix in placeobject2, hex output function
 	* swfextract: Can now extract png and jpeg.
 	* swfcombine: big endian fixes
+	* swfextract: big endian fixes
 	* lib/example/avi2swf.cc: Can now handle big files. Better compression ratio.
+	* pdf2swf: Changed from 100dpi to 72dpi conversion
 
