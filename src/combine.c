@@ -389,7 +389,7 @@ void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags
 		    logf("<fatal> Can't combine --clip and --frame");
 		}
 		*(u16*)&data[0] = SWAP16((u16)(TAGID_PLACEOBJECT2<<6) + 5);
-		*(u8*)&data[2]= SWAP16(2); //flags: id
+		*(u8*)&data[2]= 2; //flags: id
 		*(u16*)&data[3]= SWAP16(depth); // depth
 		*(u16*)&data[5]= SWAP16(id);
 		write_sprite_defines(w);
