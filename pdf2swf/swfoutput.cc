@@ -1375,17 +1375,43 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int x1, int y1, int x
   swf.movieSize.xmax = 20*x2;
   swf.movieSize.ymax = 20*y2;
   
+  depth = 1;
+  
   swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
   tag = swf.firstTag;
-  rgb.r = 0xff;
-  rgb.g = 0xff;
-  rgb.b = 0xff;
+  rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
   swf_SetRGB(tag,&rgb);
+
+  if(1)/* add white rectangle */
+  {
+      SRECT r;
+      SHAPE* s;
+      int ls1=0,fs1=0;
+      int shapeid = ++currentswfid;
+      r.xmin = x1*20;
+      r.ymin = y1*20;
+      r.xmax = x2*20;
+      r.ymax = y2*20;
+      tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+      swf_ShapeNew(&s);
+      fs1 = swf_ShapeAddSolidFillStyle(s, &rgb);
+      swf_SetU16(tag,shapeid);
+      swf_SetRect(tag,&r);
+      swf_SetShapeHeader(tag,s);
+      swf_ShapeSetAll(tag,s,x1*20,y1*20,ls1,fs1,0);
+      swf_ShapeSetLine(tag,s,20*(x2-x1),0);
+      swf_ShapeSetLine(tag,s,0,20*(y2-y1));
+      swf_ShapeSetLine(tag,s,20*(x1-x2),0);
+      swf_ShapeSetLine(tag,s,0,20*(y1-y2));
+      swf_ShapeSetEnd(tag);
+      swf_ShapeFree(s);
+      tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+      swf_ObjectPlace(tag,shapeid,depth++,0,0,0);
+  }
 
   if(flag_protected)
     tag = swf_InsertTag(tag, ST_PROTECT);
-
-  depth = 1;
+  
   startdepth = depth;
 }
 
