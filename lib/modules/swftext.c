@@ -896,7 +896,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
     swf_FontSetDefine2(t,font);
   }
 
-  if(storeGlyphNames)
+  if(storeGlyphNames && font->glyphnames)
   {
     int c;
     t = swf_InsertTag(t,ST_GLYPHNAMES);
