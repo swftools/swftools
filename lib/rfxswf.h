@@ -416,8 +416,8 @@ int   swf_SetShapeBits(TAG * t,SHAPE * s);
 int   swf_SetShapeHeader(TAG * t,SHAPE * s); // one call for upper three functions
 
 int   swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y);
-int   swf_ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1);
-int   swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1);
+int   swf_ShapeSetStyle(TAG * t,SHAPE * s,int line,int fill0,int fill1);
+int   swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,int line,int fill0,int fill1);
 
 int   swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y);
 int   swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
@@ -569,7 +569,8 @@ void swf_FontFree(SWFFONT * f);
 U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale);
 int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits);
 
-int swf_TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,S16 dx,S16 dy);
+#define SET_TO_ZERO 0x80000000
+int swf_TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,int dx,int dy);
 int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits);
 
 int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
