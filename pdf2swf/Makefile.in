@@ -2,7 +2,6 @@ top_builddir = ..
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
-@SET_MAKE@
 
 all: pdf2swf
 
@@ -34,6 +33,7 @@ install:
 	
 uninstall:
 	@file=pdf2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
+	@for file in $(fonts);do $(UNINSTALL_DATA) $(pkgdatadir)/fonts/$$file;done
 
 clean: 
 	rm -f *.o *.lo *.a *.la pdf2swf

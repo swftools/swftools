@@ -1,9 +1,9 @@
-SHELL = @SHELL@
+top_builddir = ..
+srcdir = @srcdir@
 top_srcdir = @top_srcdir@
-mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
-@SET_MAKE@
+include ./Makefile.common
 
-all install uninstall:
+all install uninstall clean:
 	@echo making $@ in lib...
 	cd lib;$(MAKE) $@;cd ..
 	@echo making $@ in src...
@@ -14,16 +14,14 @@ all install uninstall:
 	cd avi2swf;$(MAKE) $@;cd ..
 	@echo making $@ in swfs...
 	cd swfs;$(MAKE) $@;cd ..
+	$(MAKE) $@-local
 
-clean:
-	@echo making $@ in lib...
-	cd lib;$(MAKE) $@;cd ..
-	@echo making $@ in src...
-	cd src;$(MAKE) $@;cd ..
-	@echo making $@ in pdf2swf...
-	cd pdf2swf;$(MAKE) $@;cd ..
-	@echo making $@ in avi2swf...
-	cd avi2swf;$(MAKE) $@;cd ..
-	@echo making $@ in swfs...
-	cd swfs;$(MAKE) $@;cd ..
+clean-local:
 	rm -f config.cache
+
+uninstall-local:
+	rm -rf $(pkgdatadir)
+
+all-local:
+install-local:
+	

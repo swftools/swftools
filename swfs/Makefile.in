@@ -44,6 +44,8 @@ uninstall:
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/PreLoaderTemplate.swf
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/tessel_loader.swf
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/swft_loader.swf
+	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/default_viewer.swf
+	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/default_loader.swf
 
 clean: 
 	rm -f *.o *.lo *.a *.la simple_viewer keyboard_viewer PreLoaderTemplate simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf

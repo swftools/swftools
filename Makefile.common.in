@@ -3,6 +3,7 @@
 # shells, skripts, tools etc.
 SHELL = @SHELL@
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
+@SET_MAKE@
 
 # compiling
 DEFS=@DEFS@
