@@ -1,7 +1,5 @@
 /* avi2swf.cc
    Convert avi movie files into swf.
-   As soon as the size of the generated swfs is reasonable, this file 
-   will go to ../../src
 
    Part of the swftools package.
    
@@ -15,8 +13,23 @@ extern "C" {
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 }
-#include "avifile.h"
-#include "aviplay.h"
+#include <avifile/version.h>
+#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION==6) 
+   #include <avifile.h>
+   #include <aviplay.h>
+   #include <fourcc.h>
+   #include <creators.h>
+   #include <StreamInfo.h>
+   #define VERSION6
+#else
+   #include <avifile.h>
+   #include <aviplay.h>
+   #include <aviutil.h>
+   #define Width width
+   #define Height height
+   #define Data data
+   #define Bpp bpp
+#endif
 
 /*
 statistics: (for now)
@@ -441,11 +454,11 @@ int main (int argc,char ** argv)
   IAviReadFile* player;
   IAviReadStream* astream;
   IAviReadStream* vstream;
-  MainAVIHeader head;
   SRECT r;
   double samplesperframe;
   int samplerate;
   int samplefix;
+  double fps;
 
   processargs(argc, argv);
   lastframe += firstframe;
@@ -455,28 +468,43 @@ int main (int argc,char ** argv)
   memset(idtab, 0, sizeof(idtab));
 
   player = CreateIAviReadFile(filename);    
+  astream = player->GetStream(0, AviStream::Audio);
+  vstream = player->GetStream(0, AviStream::Video);
+#ifndef VERSION6
+  MainAVIHeader head;
+  int dwMicroSecPerFrame = 0;
   player->GetFileHeader(&head);
   printf("fps: %d\n", 1000000/head.dwMicroSecPerFrame);
   printf("frames: %d\n", head.dwTotalFrames);
   printf("streams: %d\n", head.dwStreams);
-  printf("streams: %d\n", player->StreamCount());
   printf("width: %d\n", head.dwWidth);
   printf("height: %d\n", head.dwHeight);
-  
-  astream = player->GetStream(0, AviStream::Audio);
-  vstream = player->GetStream(0, AviStream::Video);
+  printf("sound: %u samples (%f seconds)\n", astream->GetEndPos(),
+	  astream->GetEndTime());
+  width = head.dwWidth;
+  height = head.dwHeight;
+  dwMicroSecPerFrame = head.dwMicroSecPerFrame;
+  samplesperframe = astream->GetEndPos()/astream->GetEndTime()*head.dwMicroSecPerFrame/1000000;
+  samplerate = (int)(astream->GetEndPos()/astream->GetEndTime());
+  fps = 1000000.0/dwMicroSecPerFrame;
+#else
+  StreamInfo*audioinfo;
+  StreamInfo*videoinfo;
+  audioinfo = astream->GetStreamInfo();
+  videoinfo = vstream->GetStreamInfo();
+  width = videoinfo->GetVideoWidth();
+  height = videoinfo->GetVideoHeight();
+  samplerate = audioinfo->GetAudioSamplesPerSec();
+  samplesperframe = audioinfo->GetAudioSamplesPerSec()/videoinfo->GetFps();
+  fps = (double)(videoinfo->GetFps());
+  delete(audioinfo);
+  delete(videoinfo);
+#endif
 
   vstream -> StartStreaming();
   astream -> StartStreaming();
 
-  width = head.dwWidth;
-  height = head.dwHeight;
-
-  printf("sound: %u samples (%f seconds)\n", astream->GetEndPos(),
-	  astream->GetEndTime());
-  samplesperframe = astream->GetEndPos()/astream->GetEndTime()*head.dwMicroSecPerFrame/1000000;
   printf("%f samples/frame\n", samplesperframe);
-  samplerate = (int)(astream->GetEndPos()/astream->GetEndTime());
   printf("%d samplerate\n", samplerate);
   samplefix = 44100/samplerate;
 
@@ -489,7 +517,7 @@ int main (int argc,char ** argv)
   file = open(outputfilename,O_WRONLY|O_CREAT|O_TRUNC, 0644);
   
   memset(&swf, 0, sizeof(swf));
-  swf.frameRate = (int)(1000000.0/head.dwMicroSecPerFrame*256);
+  swf.frameRate = (int)(fps*256);
   swf.fileVersion = 4;
   swf.fileSize = 476549;//0x0fffffff;
   swf.frameCount = lastframe - firstframe;
@@ -606,8 +634,8 @@ int main (int argc,char ** argv)
 
     CImage*img = vstream->GetFrame();
     img->ToRGB();
-    U8*data = img->data();
-    int bpp = img->bpp();
+    U8*data = img->Data();
+    int bpp = img->Bpp();
     int x,y;
     int xx,yy;
     int fs,ls;
@@ -617,11 +645,11 @@ int main (int argc,char ** argv)
     RGBA rgb;
 
     /* some movies have changing dimensions */
-    if(img->width() != width ||
-       img->height() != height) {
+    if(img->Width() != width ||
+       img->Height() != height) {
 	printf("\n");
-	width = img->width();
-	height = img->height();
+	width = img->Width();
+	height = img->Height();
 	initdisplay(file);
     }
 
@@ -630,7 +658,7 @@ int main (int argc,char ** argv)
     {
 	int x,y;
 	for(y=0;y<yblocksize;y++) {
-	    U8*mydata = img->at(yy*yblocksize+y);
+	    U8*mydata = img->At(yy*yblocksize+y);
 	    for(x=0;x<xblocksize;x++) {
 		blockbuffer[(y*xblocksize+x)*3+2] = mydata[(xx*xblocksize+x)*3+0];
 		blockbuffer[(y*xblocksize+x)*3+1] = mydata[(xx*xblocksize+x)*3+1];
