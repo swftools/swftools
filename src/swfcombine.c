@@ -524,7 +524,7 @@ void matrix_adjust(MATRIX*m, int movex, int movey, float scalex, float scaley, i
 
 void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, float scaley, int scalepos)
 {
-    if(movex || movey || scalex != 1 || scaley != 1)
+    if(movex || movey || scalex != 1.0 || scaley != 1.0)
     {
 	switch(tag->id)
 	{
@@ -551,7 +551,8 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
 		matrix_adjust(&m, movex, movey, scalex, scaley, scalepos);
 		swf_SetMatrix(output, &m);
 
-		//swf_ResetReadBits(tag);
+		if (tag->readBit)  { tag->pos++; tag->readBit = 0; } //swf_ResetReadBits(tag);
+
 		swf_SetBlock(output, &tag->data[tag->pos], tag->len - tag->pos);
 		break;
 	    }
@@ -564,7 +565,8 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
 		matrix_adjust(&m, movex, movey, scalex, scaley, scalepos);
 		swf_SetMatrix(output, &m);
 		
-		//swf_ResetReadBits(tag);
+		if (tag->readBit)  { tag->pos++; tag->readBit = 0; } //swf_ResetReadBits(tag);
+
 		swf_SetBlock(output, &tag->data[tag->pos], tag->len - tag->pos);
 		break;
 	    }
