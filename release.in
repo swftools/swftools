@@ -271,6 +271,7 @@ ${name}/swfs/swft_loader.swf \
 ${name}/swfs/tessel_loader.swf \
 ${name}/m4/byteorder.m4 \
 ${name}/m4/backticks.m4 \
+${name}/m4/Makefile \
 ${name}/m4/avi2swf.m4
 gzip -9 ${name}.tar
 rm -f ${name}
