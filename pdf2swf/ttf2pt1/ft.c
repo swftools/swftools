@@ -5,6 +5,7 @@
  *
  */
 
+#include "../../config.h"
 #ifdef USE_FREETYPE
 
 #include <stdio.h>
@@ -307,9 +308,8 @@ glenc(
 		e = 0;
 	}
 	
-	if( FT_Set_Charmap(face, face->charmaps[e]) ) {
+	if( !face->charmaps || FT_Set_Charmap(face, face->charmaps[e]) ) {
 		fprintf(stderr, "**** Cannot set charmap in FreeType ****\n");
-		exit(1);
 	}
 
 populate_map:
@@ -414,6 +414,10 @@ fnmetrics(
 	{
 		int len;
 
+		if(!fm->name_family)
+		    fm->name_family = "";
+		if(!fm->name_style)
+		    fm->name_style= "";
 		len = strlen(fm->name_family) + strlen(fm->name_style) + 2;
 		if(( fm->name_full = malloc(len) )==NULL) {
 			fprintf (stderr, "****malloc failed %s line %d\n", __FILE__, __LINE__);
@@ -452,7 +456,7 @@ fnmetrics(
 #endif /* ENABLE_SFNT */
 	for(i=0; fm->name_ps[i]!=0; i++)
 		if(fm->name_ps[i] == ' ')
-			fm->name_ps[i] = '_'; /* no spaces in the Postscript name *m
+			fm->name_ps[i] = '_'; /* no spaces in the Postscript name */
 
 	/* guess the boldness from the font names */
 	fm->force_bold=0;
@@ -462,14 +466,15 @@ fnmetrics(
 	fieldstocheck[2] = fm->name_ps;
 
 	for(i=0; !fm->force_bold && i<sizeof fieldstocheck /sizeof(fieldstocheck[0]); i++) {
+		int j;
 		str=fieldstocheck[i];
-		for(i=0; str[i]!=0; i++) {
-			if( (str[i]=='B'
-				|| str[i]=='b' 
-					&& ( i==0 || !isalpha(str[i-1]) )
+		for(j=0; str[j]!=0; j++) {
+			if( (str[j]=='B'
+				|| str[j]=='b' 
+					&& ( j==0 || !isalpha(str[j-1]) )
 				)
-			&& !strncmp("old",&str[i+1],3)
-			&& !islower(str[i+4])
+			&& !strncmp("old",&str[j+1],3)
+			&& !islower(str[j+4])
 			) {
 				fm->force_bold=1;
 				break;
