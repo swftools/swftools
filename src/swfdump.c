@@ -451,6 +451,21 @@ void dumperror(const char* format, ...)
 	printf("==== Error: %s ====\n", buf);
 }
 
+static char strbuf[800];
+static int bufpos=0;
+
+char* timestring(double f)
+{
+    int hours   = (int)(f/3600);
+    int minutes = (int)((f-hours*3600)/60);
+    int seconds = (int)((f-hours*3600-minutes*60));
+    int useconds = (int)((f-(int)f)*1000+0.5);
+    bufpos+=100;
+    bufpos%=800;
+    sprintf(&strbuf[bufpos], "%02d:%02d:%02d,%03d",hours,minutes,seconds,useconds);
+    return &strbuf[bufpos];
+}
+
 int main (int argc,char ** argv)
 { 
     TAG*tag;
@@ -669,9 +684,12 @@ int main (int argc,char ** argv)
 		}
 	    }
 	    if(nframe == frame)
-		printf(" %d", frame);
+		printf(" %d (%s)", frame, timestring(frame*(256.0/(swf.frameRate+0.1))));
 	    else
-		printf(" %d-%d", frame, nframe);
+		printf(" %d-%d (%s-%s)", frame, nframe,
+			timestring(frame*(256.0/(swf.frameRate+0.1))),
+			timestring(nframe*(256.0/(swf.frameRate+0.1)))
+			);
 	    if(label)
 		printf(" (label \"%s\")", label);
 	    if(issprite) {spriteframe++; spriteframelabel = 0;}
