@@ -34,12 +34,14 @@ char * filename = 0;
    to detect errors in the file. (i.e. ids which are defined more than 
    once */
 char idtab[65536];
+char * indent = "                ";
 
 int action = 0;
 int html = 0;
 int xy = 0;
 int showtext = 0;
 int hex = 0;
+int used = 0;
 
 struct options_t options[] =
 {
@@ -49,6 +51,7 @@ struct options_t options[] =
  {"Y","height"},
  {"r","rate"},
  {"e","html"},
+ {"u","used"},
  {"v","verbose"},
  {"V","version"},
  {"d","hex"},
@@ -90,6 +93,10 @@ int args_callback_option(char*name,char*val)
 	hex = 1;
 	return 0;
     }
+    else if(name[0]=='u') {
+	used = 1;
+	return 0;
+    }
     else {
         printf("Unknown option: -%s\n", name);
     }
@@ -111,6 +118,7 @@ void args_callback_usage(char*name)
     printf("\t-a , --action\t\t Disassemble action tags\n");
     printf("\t-t , --text\t\t Show text data\n");
     printf("\t-d , --hex\t\t Print hex output of tag data, too\n");
+    printf("\t-u , --used\t\t Show referred IDs for each Tag\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -619,6 +627,23 @@ int main (int argc,char ** argv)
 	    else
 		printf("\n");
 	}
+
+	if(tag->len && used) {
+	    int num = swf_GetNumUsedIDs(tag);
+	    int* used;
+	    int t;
+	    if(num) {
+		used = (int*)malloc(sizeof(int)*num);
+		swf_GetUsedIDs(tag, used);
+		printf("%s%suses IDs: ", indent, prefix);
+		for(t=0;t<num;t++) {
+		    tag->pos = used[t];
+		    printf("%d%s", swf_GetU16(tag), t<num-1?", ":"");
+		}
+		printf("\n");
+	    }
+	}
+
 	if(tag->len && hex) {
 	    int t;
 	    printf("                %s-=> ",prefix);
