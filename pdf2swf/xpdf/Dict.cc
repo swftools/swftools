@@ -86,3 +86,20 @@ Object *Dict::getVal(int i, Object *obj) {
 Object *Dict::getValNF(int i, Object *obj) {
   return entries[i].val.copy(obj);
 }
+
+void Dict::dumpEntries()
+{
+    int t;
+    for(t=0;t<size;t++)
+    {
+	printf("key: %s\n", entries[t].key);
+	fflush(stdout);
+	{
+	   printf(" value:\n");
+	   entries[t].val.print();
+	}
+	fflush(stdout);
+	printf("---\n");
+	fflush(stdout);
+    }
+}

@@ -64,6 +64,10 @@ private:
   int ref;			// reference count
 
   DictEntry *find(char *key);
+
+public:
+  void dumpEntries();
+
 };
 
 #endif
