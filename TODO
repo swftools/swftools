@@ -11,6 +11,8 @@ pdf2swf:
     * fix memory leaks
     * some bounding boxes are too big
     * allow additional fontdirectories to be specified?
+    * viewer/preloader: naming scheme; pass -X,-Y,-r options
+    * implement -q (--quiet) option, especially for -b and -l
 
 swfcombine:
 
