@@ -127,8 +127,11 @@ r: register (byte)
 {5,"TypeOf", 0x44,""},
 {5,"Add2", 0x47,""},
 {5,"Less2", 0x48,""},
-{5/*6?*/,"Less3?", 0x67,""},
-{5/*6?*/,"GetMembers?", 0x55,""}
+{6,"Greater", 0x67,""},
+{6,"StringGreater", 0x68,""},
+{6,"Enumerate2", 0x55,""}
+{6,"InstanceOf", 0x54,""}
+{6,"StrictEquals", 0x66,""}
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 

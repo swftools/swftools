@@ -276,10 +276,10 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 #define ST_EXPORTASSETS		56
 #define ST_IMPORTASSETS		57
 #define ST_ENABLEDEBUGGER	58
-#define ST_MX0			59 /*(?) Components/InitClip */
-#define ST_MX1			60 /*(?) Sorensen Video*/
-#define ST_MX2			61 /*(?) Sorensen Video*/
-#define ST_MX3			62 /*(?) fontinfo2? */
+#define ST_DOINITACTION         59
+#define ST_DEFINEVIDEOSTREAM    60
+#define ST_VIDEOFRAME           61
+#define ST_DEFINEFONTINFO2	62
 #define ST_MX4			63 /*(?) */
 
 #define ST_REFLEX              777 /* to identify generator software */
@@ -425,6 +425,7 @@ typedef struct _SWFFONT
   U16	*	glyph2ascii;
   int	*	ascii2glyph;
   SWFGLYPH *	glyph;
+  U8		language;
 } SWFFONT, * LPSWFFONT;
 
 typedef struct _FONTUSAGE
@@ -440,12 +441,12 @@ typedef struct _FONTUSAGE
 #define ET_HASMAXLENGTH 512
 #define ET_HASFONT 256
 #define ET_X3 128
-#define ET_X2 64
+#define ET_AUTOSIZE 64 /* MX */
 #define ET_HASLAYOUT 32
 #define ET_NOSELECT 16
 #define ET_BORDER 8
 #define ET_X1 4
-#define ET_X0 2
+#define ET_HTML 2 /* MX? */
 #define ET_USEOUTLINES 1
 
 typedef struct _EditTextLayout

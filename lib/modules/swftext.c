@@ -46,7 +46,7 @@ int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
   n = 0;
 
   while (t)
-  { if (swf_GetTagID(t)==ST_DEFINEFONTINFO ||
+  { if (swf_GetTagID(t)==ST_DEFINEFONTINFO || swf_GetTagID(t)==ST_DEFINEFONTINFO2 ||
 	  swf_GetTagID(t)==ST_DEFINEFONT2)
     { n++;
       if (FontCallback)
@@ -114,9 +114,10 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
     int i;
   
     if(f->version>1) {
-      // DefineFont2 doesn't have FontInfo fields
-      fprintf(stderr, "fixme: FontInfo field for DefineFont2 encountered\n");
-      return -1;
+      /* Especially with Flash MX, DefineFont2 may have FontInfo fields,
+	 too. However, they only add little information to what's already
+	 inside the DefineFont2 tag */
+      return id;
     }
     
     if (l)
@@ -142,6 +143,10 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
 	f->encoding |= FONT_ENCODING_SHIFTJIS;
     if(flags & 32)
 	f->encoding |= FONT_ENCODING_UNICODE;
+
+    if(t->id == ST_DEFINEFONTINFO2) {
+	f->language = swf_GetU8();
+    }
 
     f->glyph2ascii = (U16*)malloc(sizeof(U16)*f->numchars);
     maxcode = 0;

@@ -99,10 +99,12 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINEFONT:
     case ST_DEFINEFONT2:
     case ST_DEFINEFONTINFO: //pseudodefine
+    case ST_DEFINEFONTINFO2: //pseudodefine
     case ST_DEFINETEXT:
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
     case ST_DEFINESPRITE:
+    case ST_DEFINEVIDEOSTREAM:
     case ST_NAMECHARACTER: //pseudodefine
       id = swf_GetU16(t);
       break;
@@ -162,6 +164,7 @@ static int swf_definingtagids[] =
  ST_DEFINEBUTTON,
  ST_DEFINEBUTTON2,
  ST_DEFINESOUND,
+ ST_DEFINEVIDEOSTREAM,
  -1
 };
 
@@ -185,9 +188,11 @@ static int swf_spritetagids[] =
 static int swf_pseudodefiningtagids[] = 
 {
  ST_DEFINEFONTINFO,
+ ST_DEFINEFONTINFO2,
  ST_DEFINEBUTTONCXFORM,
  ST_DEFINEBUTTONSOUND,
  ST_NAMECHARACTER,
+ ST_DOINITACTION,
  -1
 };
 
@@ -572,11 +577,19 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    break;
 	}
 	case ST_DEFINEFONTINFO:
+	case ST_DEFINEFONTINFO2:
+	case ST_VIDEOFRAME:
+	    callback(tag, tag->pos + base, callback_data);
+	break;
+	case ST_DEFINEVIDEOSTREAM:
+	break;
+
+	case ST_DOINITACTION:
 	    callback(tag, tag->pos + base, callback_data);
 	break;
 
-	case ST_DEFINEMORPHSHAPE: /* disabled for now (doesn't work) */
-	case ST_DEFINESHAPE3: // these thingies might have bitmap ids in their fillstyles
+	case ST_DEFINEMORPHSHAPE:
+	case ST_DEFINESHAPE3:
 	num++; //fallthrough
 	case ST_DEFINESHAPE2:
 	num++; //fallthrough
