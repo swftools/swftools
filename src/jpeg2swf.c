@@ -175,7 +175,7 @@ int CheckInputFile(char * fname,char ** realname)
         if ((f=fopen(s,"rb"))==NULL)
         { sprintf(s,"%s.JPEG",fname);
           if ((f=fopen(s,"rb"))==NULL)
-            return 0;
+            return -1;
         }
       }
     }
