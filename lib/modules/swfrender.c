@@ -109,6 +109,8 @@ static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
 static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, renderpoint_t*p)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
+    double diffx, diffy;
+    double ny1, ny2, stepx;
 /*    if(DEBUG&4) {
         int l = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
         printf(" l[%d - %.2f/%.2f -> %.2f/%.2f]", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
@@ -125,15 +127,17 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
     x2 = x2/20.0;
 
     if(y2 < y1) {
-        double x = x1;x1 = x2;x2=x;
-        double y = y1;y1 = y2;y2=y;
+        double x;
+        double y;
+	x = x1;x1 = x2;x2=x;
+	y = y1;y1 = y2;y2=y;
     }
     
-    double diffx = x2 - x1;
-    double diffy = y2 - y1;
+    diffx = x2 - x1;
+    diffy = y2 - y1;
     
-    double ny1 = (int)(y1)+CUT;
-    double ny2 = (int)(y2)+CUT;
+    ny1 = (int)(y1)+CUT;
+    ny2 = (int)(y2)+CUT;
 
     if(ny1 < y1) {
         ny1 = (int)(y1) + 1.0 + CUT;
@@ -145,20 +149,22 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
     if(ny1 > ny2)
         return;
 
-    double stepx = diffx/diffy;
+    stepx = diffx/diffy;
     x1 = x1 + (ny1-y1)*stepx;
     x2 = x2 + (ny2-y2)*stepx;
 
-    int posy=(int)ny1;
-    int endy=(int)ny2;
-    double posx=0;
-    double startx = x1;
+    {
+	int posy=(int)ny1;
+	int endy=(int)ny2;
+	double posx=0;
+	double startx = x1;
 
-    while(posy<=endy) {
-        float xx = (float)(startx + posx);
-        add_pixel(buf, xx ,posy, p);
-        posx+=stepx;
-        posy++;
+	while(posy<=endy) {
+	    float xx = (float)(startx + posx);
+	    add_pixel(buf, xx ,posy, p);
+	    posx+=stepx;
+	    posy++;
+	}
     }
 }
 #define PI 3.14159265358979
@@ -454,11 +460,12 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
         if(line->type == moveTo) {
         } else if(line->type == lineTo) {
             if(DEBUG&4) {
+		int l;
                 x1 = x;
                 y1 = y;
                 x2 = line->x;
                 y2 = line->y;
-                int l = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+                l = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
                 printf("%d - %.2f/%.2f -> %.2f/%.2f ", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
             }
 
@@ -477,15 +484,16 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             
             if(DEBUG&4) printf("\n");
         } else if(line->type == splineTo) {
+	    int c,t,y,parts,qparts;
+	    double xx,yy;
             
             transform_point(&mat, x, y, &x1, &y1);
             transform_point(&mat, line->sx, line->sy, &x2, &y2);
             transform_point(&mat, line->x, line->y, &x3, &y3);
             
-            int c = abs(x3-2*x2+x1) + abs(y3-2*y2+y1);
-            int parts,qparts;
-            int t;
-            double xx=x1,yy=y1;
+            c = abs(x3-2*x2+x1) + abs(y3-2*y2+y1);
+            xx=x1;
+	    yy=y1;
 
             parts = (int)(sqrt(c)/3);
             if(!parts) parts = 1;
@@ -581,8 +589,10 @@ static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, 
     }
 
     do {
+	RGBA col;
         int xx = (int)((  (x - rx) * m22 - (y - ry) * m21)*det);
         int yy = (int)((- (x - rx) * m12 + (y - ry) * m11)*det);
+	int ainv;
         
         if(clip) {
             if(xx<0) xx=0;
@@ -594,8 +604,8 @@ static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, 
             yy %= b->height;
         }
 
-        RGBA col = b->data[yy*b->width+xx];
-        int ainv = 255-col.a;
+        col = b->data[yy*b->width+xx];
+        ainv = 255-col.a;
 
         line[x].r = ((line[x].r*ainv)>>8)+col.r;
         line[x].g = ((line[x].g*ainv)>>8)+col.g;
@@ -607,13 +617,14 @@ static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, 
 static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*state)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
+    U32 clipdepth;
 
     layer_t*l = state->layers;
 
     if(x1>=x2) //zero width? nothing to do.
         return;
 
-    U32 clipdepth = 0;
+    clipdepth = 0;
     while(l) {
         if(l->p->depth < clipdepth) {
             if(DEBUG&2) printf("(clipped)");
@@ -802,11 +813,12 @@ RGBA* swf_Render(RENDERBUF*dest)
         int size = sizeof(renderpoint_t);
         int num = tag->len / size;
         RGBA*line = line1;
+	state_t state;
+        memset(&state, 0, sizeof(state_t));
+
         if((y&1) && i->antialize)
             line = line2;
 
-        state_t state;
-        memset(&state, 0, sizeof(state_t));
 
 	if(!i->background) {
 	    memset(line, 0, sizeof(RGBA)*i->width2);

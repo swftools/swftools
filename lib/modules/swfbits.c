@@ -37,7 +37,7 @@ typedef struct _JPEGDESTMGR
 
 static void RFXSWF_init_destination(j_compress_ptr cinfo) 
 { JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
-  dmgr->buffer = (JOCTET*)malloc(OUTBUFFER_SIZE);
+  dmgr->buffer = (JOCTET*)rfx_alloc(OUTBUFFER_SIZE);
   dmgr->mgr.next_output_byte = dmgr->buffer;
   dmgr->mgr.free_in_buffer = OUTBUFFER_SIZE;
 }
@@ -53,7 +53,7 @@ static boolean RFXSWF_empty_output_buffer(j_compress_ptr cinfo)
 static void RFXSWF_term_destination(j_compress_ptr cinfo) 
 { JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
   swf_SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE-dmgr->mgr.free_in_buffer);
-  free(dmgr->buffer);
+  rfx_free(dmgr->buffer);
   dmgr->mgr.free_in_buffer = 0;
 }
 
@@ -63,10 +63,8 @@ JPEGBITS * swf_SetJPEGBitsStart(TAG * t,int width,int height,int quality)
         
   // redirect compression lib output to local SWF Tag structure
   
-  jpeg = (JPEGDESTMGR *)malloc(sizeof(JPEGDESTMGR));
-  if (!jpeg) return NULL;
+  jpeg = (JPEGDESTMGR *)rfx_calloc(sizeof(JPEGDESTMGR));
   
-  memset(jpeg,0x00,sizeof(JPEGDESTMGR));
   jpeg->cinfo.err = jpeg_std_error(&jpeg->jerr);
 
   jpeg_create_compress(&jpeg->cinfo);
@@ -116,7 +114,7 @@ int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits)
 { JPEGDESTMGR * jpeg = (JPEGDESTMGR *)jpegbits;
   if (!jpeg) return -1;
   jpeg_finish_compress(&jpeg->cinfo);
-  free(jpeg);
+  rfx_free(jpeg);
   return 0;
 }
 
@@ -178,7 +176,7 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
   jpeg_start_decompress(&cinfo);
 
   out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
-  scanline = (U8*)malloc(4*cinfo.output_width);
+  scanline = (U8*)rfx_alloc(4*cinfo.output_width);
   
   if (scanline) 
   { int y;
@@ -295,6 +293,7 @@ RGBA* swf_JPEG2TagToImage(TAG*tag, int*width, int*height)
     struct jpeg_error_mgr jerr;
     struct jpeg_source_mgr mgr;
     RGBA * dest;
+    int y;
     *width = 0;
     *height = 0;
 
@@ -322,10 +321,9 @@ RGBA* swf_JPEG2TagToImage(TAG*tag, int*width, int*height)
     jpeg_read_header(&cinfo, TRUE);
     *width = cinfo.image_width;
     *height = cinfo.image_height;
-    dest = malloc(sizeof(RGBA)*cinfo.image_width*cinfo.image_height);
+    dest = rfx_alloc(sizeof(RGBA)*cinfo.image_width*cinfo.image_height);
     
     jpeg_start_decompress(&cinfo);
-    int y;
     for (y=0;y<cinfo.output_height;y++) {
         RGBA* line = &dest[y*cinfo.image_width];
         U8* to = (U8*)line;
@@ -357,7 +355,7 @@ RGBA* swf_JPEG2TagToImage(TAG*tag, int*width, int*height)
 
 int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,boolean finish)
 { 
-  U8*data=malloc(OUTBUFFER_SIZE);
+  U8*data=rfx_alloc(OUTBUFFER_SIZE);
   zs->next_out = data;
   zs->avail_out = OUTBUFFER_SIZE;
   while (1)
@@ -368,7 +366,7 @@ int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,boolean finish)
 #ifdef DEBUG_RFXSWF
       fprintf(stderr,"rfxswf: zlib compression error (%i)\n",status);
 #endif
-      free(data);
+      rfx_free(data);
       return status;
     }
 
@@ -383,7 +381,7 @@ int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,boolean finish)
   }
 
   if(!finish) {
-      free(data);
+      rfx_free(data);
       return 0;
   }
 
@@ -394,7 +392,7 @@ int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,boolean finish)
 #ifdef DEBUG_RFXSWF
       fprintf(stderr,"rfxswf: zlib compression error (%i)\n",status);
 #endif
-      free(data);
+      rfx_free(data);
       return status;
     }
 
@@ -408,7 +406,7 @@ int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,boolean finish)
     if(status == Z_STREAM_END)
 	break;
   }
-  free(data);
+  rfx_free(data);
   return 0;
 }
 
@@ -460,7 +458,7 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
     
   if (!pal)     // create default palette for grayscale images
   { int i;
-    pal = malloc(256*sizeof(RGBA));
+    pal = rfx_alloc(256*sizeof(RGBA));
     for (i=0;i<256;i++) { pal[i].r = pal[i].g = pal[i].b = i; pal[i].a = 0xff;}
     ncolors = 256;
   }
@@ -483,7 +481,7 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
 
     if (deflateInit(&zs,Z_DEFAULT_COMPRESSION)==Z_OK)
     { U8 * zpal;                    // compress palette
-      if ((zpal = malloc(ncolors*4)))
+      if ((zpal = rfx_alloc(ncolors*4)))
       { U8 * pp = zpal;
         int i;
 
@@ -530,12 +528,12 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
 
         deflateEnd(&zs);
 
-        free(zpal);
+        rfx_free(zpal);
       } else res = -2; // memory error
     } else res = -3; // zlib error
   }
   
-  if (!palette) free(pal);
+  if (!palette) rfx_free(pal);
 
   return res;
 }
@@ -554,7 +552,7 @@ RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*dwidth, int*dheight)
     int pos2=0;
     char alpha = tag->id == ST_DEFINEBITSLOSSLESS2;
     int t,x,y;
-    RGBA*palette;
+    RGBA*palette = 0;
     U8*data,*data2;
     RGBA*dest;
     if(tag->id != ST_DEFINEBITSLOSSLESS &&
@@ -578,7 +576,7 @@ RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*dwidth, int*dheight)
     *dwidth = width = swf_GetU16(tag);
     *dheight = height = swf_GetU16(tag);
     
-    dest = malloc(sizeof(RGBA)*width*height);
+    dest = rfx_alloc(sizeof(RGBA)*width*height);
 
     if(format == 3) cols = swf_GetU8(tag) + 1;
     else            cols = 0;
@@ -587,9 +585,9 @@ RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*dwidth, int*dheight)
     datalen = (width*height*bpp/8+cols*8);
     do {
 	if(data)
-	    free(data);
+	    rfx_free(data);
 	datalen+=4096;
-	data = malloc(datalen);
+	data = rfx_alloc(datalen);
 	error = uncompress (data, &datalen, &tag->data[tag->pos], tag->len-tag->pos);
     } while(error == Z_BUF_ERROR);
     if(error != Z_OK) {
@@ -597,15 +595,17 @@ RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*dwidth, int*dheight)
 	return 0;
     }
     pos = 0;
-    
-    palette = (RGBA*)malloc(cols*sizeof(RGBA));
-    for(t=0;t<cols;t++) {
-	palette[t].r = data[pos++];
-	palette[t].g = data[pos++];
-	palette[t].b = data[pos++];
-	if(alpha) {
-	    palette[t].a = data[pos++];
-	}
+   
+    if(cols) {
+        palette = (RGBA*)rfx_alloc(cols*sizeof(RGBA));
+        for(t=0;t<cols;t++) {
+            palette[t].r = data[pos++];
+            palette[t].g = data[pos++];
+            palette[t].b = data[pos++];
+            if(alpha) {
+                palette[t].a = data[pos++];
+            }
+        }
     }
 
     for(y=0;y<height;y++) {
@@ -640,8 +640,8 @@ RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*dwidth, int*dheight)
        pos+=((srcwidth+3)&~3)-srcwidth; //align
     }
     if(palette)
-        free(palette);
-    free(data);
+        rfx_free(palette);
+    rfx_free(data);
     return dest;
 }
 
@@ -673,7 +673,7 @@ int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality)
   swf_SetJPEGBitsFinish(jpeg);
   PUT32(&tag->data[pos], tag->len - pos - 4);
 
-  data=malloc(OUTBUFFER_SIZE);
+  data=rfx_alloc(OUTBUFFER_SIZE);
   memset(&zs,0x00,sizeof(z_stream));
 
   if (deflateInit(&zs,Z_DEFAULT_COMPRESSION)!=Z_OK) {
@@ -727,7 +727,7 @@ int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality)
   }
 
   deflateEnd(&zs);
-  free(data);
+  rfx_free(data);
   return 0;
 }
 #endif

@@ -1273,10 +1273,10 @@ void s_outline(char*name, char*format, char*source)
 int s_playsound(char*name, int loops, int nomultiple, int stop)
 {
     sound_t* sound;
+    SOUNDINFO info;
     if(!name)
 	return 0;
     sound = dictionary_lookup(&sounds, name);
-    SOUNDINFO info;
     if(!sound)
 	return 0;
 
@@ -2570,10 +2570,10 @@ static int c_action(map_t*args)
 	s_action(text);
     } else {
 	FILE*fi = fopen(filename, "rb");
-	if(!fi) 
-	    syntaxerror("Couldn't find file %s: %s", filename, strerror(errno));
 	int l;
 	char*text;
+	if(!fi) 
+	    syntaxerror("Couldn't find file %s: %s", filename, strerror(errno));
 	fseek(fi, 0, SEEK_END);
 	l = ftell(fi);
 	fseek(fi, 0, SEEK_SET);
