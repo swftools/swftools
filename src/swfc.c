@@ -1332,8 +1332,13 @@ static int c_play(map_t*args)
     char*name = lu(args, "sound");
     char*loop = lu(args, "loop");
     char*nomultiple = lu(args, "nomultiple");
+    int nm = 0;
+    if(!strcmp(nomultiple, "nomultiple"))
+	nm = 1;
+    else
+	nm = parseInt(nomultiple);
 
-    s_playsound(name, parseInt(loop), parseInt(nomultiple), 0);
+    s_playsound(name, parseInt(loop), nm, 0);
     return 0;
 }
 
