@@ -56,6 +56,26 @@ int args_callback_option(char*name,char*val) {
 	password = val;
 	return 1;
     }
+    else if (!strcmp(name, "s"))
+    {
+	pdfswf_drawonlyshapes();
+	return 0;
+    }
+    else if (!strcmp(name, "i"))
+    {
+	pdfswf_ignoredraworder();
+	return 0;
+    }
+    else if (name[0]=='j')
+    {
+	if(name[1]) {
+	    pdfswf_jpegquality(atoi(&name[1]));
+	    return 0;
+	} else {
+	    pdfswf_jpegquality(atoi(val));
+	    return 1;
+	}
+    }
     else if (!strcmp(name, "V"))
     {	
 	printf("pdf2swf - part of %s %s\n", PACKAGE, VERSION);
@@ -76,6 +96,9 @@ struct options_t
 } options[] =
 {{'o',"output"},
  {'V',"version"},
+ {'i',"ignore"},
+ {'s',"shapes"},
+ {'j',"jpegquality"},
  {'p',"pages"}
 };
 
@@ -88,7 +111,7 @@ int args_callback_longoption(char*name,char*val) {
     }
     for(t=0;t<sizeof(options)/sizeof(struct options_t);t++) {
         if(!strcmp(options[t].longoption, name)) {
-		char*tmp = (char*)malloc(strlen(equal)+strlen(name)+2);
+		char*tmp = (char*)malloc(strlen(name)+(equal?strlen(equal)+2:2));
 		tmp[0] = options[t].shortoption;
 		tmp[1] = 0;
 		if(equal) {
@@ -97,7 +120,7 @@ int args_callback_longoption(char*name,char*val) {
 		return args_callback_option(tmp,val);
 	}
     }
-    fprintf(stderr, "Unknown option: %s\n", name);
+    fprintf(stderr, "Unknown option: --%s\n", name);
     exit(1);
 }
 
@@ -118,11 +141,15 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-p range] [-P password] input.pdf [output.swf]\n", name);
+    printf("Usage: %s [-si] [-j quality] [-p range] [-P password] input.pdf [output.swf]\n", name);
     printf("\n");
-    printf("-p range            (range) Convert only pages in range\n");
-    printf("-P password         (password) Use password for deciphering the pdf\n");
-    printf("\n");
+    printf("-p  --pages=range          Convert only pages in range\n");
+    printf("-P  --password=password    Use password for deciphering the pdf\n");
+    printf("-s  --shapes               Don't use SWF Fonts, but store everything as shape\n");
+    printf("-i  --ignore               Ignore draw order (makes the SWF file smaller)\n");
+    printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
+    printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
+    printf("-V  --version              Print program version\n");
 }
 
 /* check whether the value t is in a given range.
