@@ -104,8 +104,8 @@ struct mapping {
 {"ZapfDingbats",          "d050000l"}};
 
 class SWFOutputDev:  public OutputDev {
-  struct swfoutput output;
   int outputstarted;
+  struct swfoutput output;
 public:
 
   // Constructor.
@@ -118,6 +118,8 @@ public:
   void setClip(int x1,int y1,int x2,int y2);
   
   int save(char*filename);
+
+  void getDimensions(int*x1,int*y1,int*x2,int*y2);
 
   //----- get info about output device
 
@@ -340,6 +342,13 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
     this->user_clipy1 = y1;
     this->user_clipx2 = x2;
     this->user_clipy2 = y2;
+}
+void SWFOutputDev::getDimensions(int*x1,int*y1,int*x2,int*y2)
+{
+    if(x1) *x1 = output.swf.movieSize.xmin/20;
+    if(y1) *y1 = output.swf.movieSize.ymin/20;
+    if(x2) *x2 = output.swf.movieSize.xmax/20;
+    if(y2) *y2 = output.swf.movieSize.ymax/20;
 }
 
 static char*getFontID(GfxFont*font)
@@ -685,7 +694,7 @@ void SWFOutputDev::stroke(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
     
-    if(screenloglevel >= LOGLEVEL_TRACE)  {
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> stroke\n");
         dump_outline(outline);
     }
@@ -721,7 +730,7 @@ void SWFOutputDev::fill(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(screenloglevel >= LOGLEVEL_TRACE)  {
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> fill\n");
         dump_outline(outline);
     }
@@ -738,7 +747,7 @@ void SWFOutputDev::eoFill(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(screenloglevel >= LOGLEVEL_TRACE)  {
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eofill\n");
         dump_outline(outline);
     }
@@ -756,7 +765,7 @@ void SWFOutputDev::clip(GfxState *state)
     m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(screenloglevel >= LOGLEVEL_TRACE)  {
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> clip\n");
         dump_outline(outline);
     }
@@ -773,7 +782,7 @@ void SWFOutputDev::eoClip(GfxState *state)
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
     SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
-    if(screenloglevel >= LOGLEVEL_TRACE)  {
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eoclip\n");
         dump_outline(outline);
     }
@@ -1894,6 +1903,7 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
 
 void pdfswf_setparameter(char*name, char*value)
 {
+    msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strcmp(name, "caplinewidth")) {
 	caplinewidth = atof(value);
     } else if(!strcmp(name, "zoom")) {
@@ -1959,7 +1969,7 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
     // print doc info
     i->doc->getDocInfo(&info);
     if (info.isDict() &&
-      (screenloglevel>=LOGLEVEL_NOTICE)) {
+      (getScreenLogLevel()>=LOGLEVEL_NOTICE)) {
       printInfoString(info.getDict(), "Title",        "Title:        %s\n");
       printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
       printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
@@ -2081,7 +2091,9 @@ void swf_output_setparameter(swf_output_t*swf_output, char*name, char*value)
 int swf_output_save(swf_output_t*swf, char*filename)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
-    return i->outputDev->save(filename);
+    int ret = i->outputDev->save(filename);
+    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
+    return ret;
 }
 
 void swf_output_destroy(swf_output_t*output)
@@ -2092,10 +2104,10 @@ void swf_output_destroy(swf_output_t*output)
     free(output);
 }
 
-void pdf_page_render2(pdf_page_t*page, swf_output_t*output)
+void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
+    swf_output_internal_t*si = (swf_output_internal_t*)swf->internal;
 
     if(pi->protect) {
         swfoutput_setparameter("protect", "1");
@@ -2106,6 +2118,7 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*output)
 #else
     pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
 #endif
+    si->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
 }
 
 void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
