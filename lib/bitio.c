@@ -160,6 +160,26 @@ void writer_init_filewriter2(struct writer_t*w, char*filename)
     ((struct filewrite_t*)w->internal)->free_handle = 1;
 }
 
+/* ---------------------------- null writer ------------------------------- */
+
+static int writer_nullwrite_write(struct writer_t*w, void* data, int len) 
+{
+    return len;
+}
+static void writer_nullwrite_finish(struct writer_t*w)
+{
+}
+void writer_init_nullwriter(struct writer_t*w)
+{
+    memset(w, 0, sizeof(struct writer_t));
+    w->write = writer_nullwrite_write;
+    w->finish = writer_nullwrite_finish;
+    w->internal = 0;
+    w->type = WRITER_TYPE_NULL;
+    w->bitpos = 0;
+    w->mybyte = 0;
+    w->pos = 0;
+}
 /* ---------------------------- zlibinflate writer -------------------------- */
 
 struct zlibinflate_t

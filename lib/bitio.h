@@ -17,6 +17,7 @@
 #define WRITER_TYPE_FILE 0
 #define WRITER_TYPE_MEM  1
 #define WRITER_TYPE_ZLIB 2
+#define WRITER_TYPE_NULL 3
 
 struct reader_t
 {
@@ -59,5 +60,6 @@ void writer_init_filewriter(struct writer_t*w, int handle);
 void writer_init_filewriter2(struct writer_t*w, char*filename);
 void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output);
 void writer_init_memwriter(struct writer_t*r, void*data, int length);
+void writer_init_nullwriter(struct writer_t*w);
 
 #endif //__rfxswf_bitio_h__
