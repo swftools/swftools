@@ -10520,7 +10520,7 @@ done
 fi
 
 if test "x${HAVE_LIB_FREETYPE}" '!=' "x" -o \
-        "x${HAVE_FREETYPE_CONFIG}" '!=' "x";then
+        "x${FREETYPE_CONFIG}" '!=' "x";then
     if test "x${HAVE_FREETYPE_FREETYPE_H}" '!=' "x";then
 	HAVE_FREETYPE=1
     fi
@@ -11548,14 +11548,22 @@ else
             PY_VERSION=2.$v
 	    PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
-        fi
         # Mac OS X
-        if test -f "/Library/Python/2.$v/PIL/_imaging.so" \
-                -a "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
+        elif test -f "/Library/Python/2.$v/PIL/_imaging.so" \
+               -a -f "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
-            #PYTHON_LIB="-lpython$PY_VERSION /Library/Python/2.$v/PIL/_imaging.so"
             PYTHON_LIB="-framework Python /Library/Python/2.$v/PIL/_imaging.so"
             PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
+	# Mac OS X [Fink]:
+        elif test "(" -f "/sw/lib/python2.$v/config/libpython2.$v.dylib" \
+	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.a" \
+	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.so" \
+	          ")" \
+	       -a -f "/sw/include/python2.$v/Python.h" \
+               -a -f "/sw/lib/python2.$v/site-packages/PIL/_imaging.so";then
+            PY_VERSION=2.$v
+            PYTHON_LIB="-L /sw/lib/python2.$v/config/ -lpython$PY_VERSION /sw/lib/python2.$v/site-packages/PIL/_imaging.so"
+            PYTHON_INCLUDES="-I /sw/include/python2.$v/"
         fi
     done
 fi
