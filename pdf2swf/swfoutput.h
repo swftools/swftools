@@ -46,6 +46,9 @@ class SWFFont
     U16*swfcharid2char;
     int swfcharpos;
 
+    char**standardtable;
+    int standardtablesize;
+
     public:
     
     int t1id;
@@ -55,7 +58,7 @@ class SWFFont
     SWFFont(char*name, int t1id, char*filename);
     SWFFont::~SWFFont();
     T1_OUTLINE*getOutline(char*charname);
-    int getSWFCharID(char*name);
+    int getSWFCharID(char*name, int charnr);
     char*getName();
     char*getCharName(int t);
     int getCharWidth(int t) {return width[t];}
@@ -90,7 +93,7 @@ void swfoutput_setstrokecolor(struct swfoutput*, unsigned char r, unsigned char 
 void swfoutput_setfontmatrix(struct swfoutput*,double,double,double,double);
 void swfoutput_setlinewidth(struct swfoutput*, double linewidth);
 
-void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a);
+void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr);
 void swfoutput_drawpath(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_startclip(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_endclip(struct swfoutput*);

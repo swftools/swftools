@@ -421,7 +421,7 @@ void putcharacter(struct swfoutput*obj, int fontid, int charid,
 
 
 /* process a character. */
-void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
+void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int charnr, swfmatrix*m)
 {
     int usefonts=1;
     if(m->m12!=0 || m->m21!=0)
@@ -431,7 +431,7 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 
     if(usefonts && ! drawonlyshapes)
     {
-        int charid = font->getSWFCharID(character);
+        int charid = font->getSWFCharID(character, charnr);
         if(shapeid>=0)
             endshape();
         if(textid<0)
@@ -505,32 +505,45 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     this->name = strdup(T1_GetFontFileName(id));
     this->fontid = strdup(name);
     this->t1id = id;
-
+    
     char**a= T1_GetAllCharNames(id);
-    int t=0, outlinepos=0;
+    int t, outlinepos=0;
     char*map[256];
+
+    t=0;
     while(a[t])
         t++;
- 
     this->charnum = t;
-    if(!t) 
+
+    if(!charnum) 
         return;
-    logf("<verbose> Font %s(%d): Storing %d outlines.\n", name, id, t);
+    logf("<verbose> Font %s(%d): Storing %d outlines.\n", name, id, charnum);
+
+    this->standardtablesize = 256;
+    if(this->charnum < this->standardtablesize)
+	this->standardtablesize = this->charnum;
+    this->standardtable = (char**)malloc(standardtablesize*sizeof(char*));
+
+    for(t = 0; t < this->standardtablesize; t++) {
+	char*name = T1_GetCharName(id,t);
+	if(!name)
+	    name = "";
+	standardtable[t] = strdup(name);
+    }
     
-    outline = (T1_OUTLINE**)malloc(t*sizeof(T1_OUTLINE*));
-    charname = (char**)malloc(t*sizeof(char*));
-    width = (int*)malloc(t*sizeof(int));
-    memset(width, 0, t*sizeof(int));
-    memset(charname, 0, t*sizeof(char*));
-    used = (char*)malloc(t*sizeof(char));
-    char2swfcharid = (U16*)malloc(t*2);
-    swfcharid2char = (U16*)malloc(t*2);
+    outline = (T1_OUTLINE**)malloc(charnum*sizeof(T1_OUTLINE*));
+    charname = (char**)malloc(charnum*sizeof(char*));
+    width = (int*)malloc(charnum*sizeof(int));
+    memset(width, 0, charnum*sizeof(int));
+    memset(charname, 0, charnum*sizeof(char*));
+    used = (char*)malloc(charnum*sizeof(char));
+    char2swfcharid = (U16*)malloc(charnum*2);
+    swfcharid2char = (U16*)malloc(charnum*2);
     swfcharpos = 0;
 
-    memset(used,0,t*sizeof(char));
+    memset(used,0,charnum*sizeof(char));
 
     this->swfid = ++currentswfid;
-
     
     t=0;
     while(*a)
@@ -555,9 +568,11 @@ SWFFont::SWFFont(char*name, int id, char*filename)
             // parsecharacters
             for(s=0;s<t;s++)
             {
+		char* name = T1_GetCharName(id, s);
+		if(!name) name = "";
                 this->outline[outlinepos] = T1_CopyOutline(T1_GetCharOutline(id, s, 100.0, 0));
 		this->width[outlinepos] = T1_GetCharWidth(id, s);
-                this->charname[outlinepos] = strdup(T1_GetCharName(id, s));
+                this->charname[outlinepos] = strdup(name);
                 outlinepos++;
             }
             t=0;
@@ -577,7 +592,7 @@ SWFFont::~SWFFont()
 	for(t=0;t<this->charnum;t++) 
 	{
 	    if(this->charname[t])
-	      getSWFCharID(this->charname[t]);
+	      getSWFCharID(this->charname[t], -1);
 	}
     }
     
@@ -647,6 +662,11 @@ SWFFont::~SWFFont()
     free(outline);
     for(t=0;t<charnum;t++)
         free(charname[t]);
+    for(t=0;t<standardtablesize;t++)
+	if(standardtable[t]) {
+	    free(standardtable[t]);
+	}
+    free(standardtable);
     free(charname);
     free(width);
     free(used);
@@ -672,7 +692,7 @@ T1_OUTLINE*SWFFont::getOutline(char*name)
     return 0;
 }
 
-int SWFFont::getSWFCharID(char*name)
+int SWFFont::getSWFCharID(char*name, int charnr)
 {
     int t;
     for(t=0;t<this->charnum;t++) {
@@ -685,6 +705,9 @@ int SWFFont::getSWFCharID(char*name)
             }
             return char2swfcharid[t];
         }
+    }
+    if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
+	return getSWFCharID(this->standardtable[charnr], -1);
     }
     logf("<warning> Didn't find character '%s' in font '%s'", name, this->name);
     return 0;
@@ -767,7 +790,7 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
 }
 
 /* draws a character at x,y. */
-void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character) 
+void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, int charnr) 
 {
     swfmatrix m;
     m.m11 = obj->fontm11;
@@ -776,7 +799,7 @@ void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character)
     m.m22 = obj->fontm22;
     m.m13 = x;
     m.m23 = y;
-    drawchar(obj, obj->font, character, &m);
+    drawchar(obj, obj->font, character, charnr, &m);
 }
 
 /* initialize the swf writer */
