@@ -23,6 +23,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
+#ifdef HAVE_FONTCONFIG_H
+#include <fontconfig.h>
+#endif
 //xpdf header files
 #include "config.h"
 #include "gfile.h"
@@ -46,6 +49,7 @@
 #include "GlobalParams.h"
 //swftools header files
 #include "swfoutput.h"
+#include "SWFOutputDev.h"
 #include "../lib/log.h"
 
 #include <math.h>
@@ -1097,11 +1101,106 @@ char* substitutetarget[256];
 char* substitutesource[256];
 int substitutepos = 0;
 
+char* searchForSuitableFont(GfxFont*gfxFont)
+{
+    char*name = getFontName(gfxFont);
+    char*fontname = 0;
+    char*filename = 0;
+    
+#ifdef HAVE_FONTCONFIG
+    FcPattern *pattern, *match;
+    FcResult result;
+    FcChar8 *v;
+
+    // call init ony once
+    static int fcinitcalled = false; 
+    if (!fcinitcalled) {
+        fcinitcalled = true;
+	FcInit();
+    }
+   
+    pattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString, name, NULL);
+    if (gfxFont->isItalic()) // check for italic
+	FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
+    if (gfxFont->isBold()) // check for bold
+        FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
+
+    // configure and match using the original font name 
+    FcConfigSubstitute(0, pattern, FcMatchPattern); 
+    FcDefaultSubstitute(pattern);
+    match = FcFontMatch(0, pattern, &result);
+    
+    if (FcPatternGetString(match, "family", 0, &v) == FcResultMatch) {
+        // if we get an exact match
+        if (strcmp((char *)v, name) == 0) {
+	    if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
+		filename = strdup((char*)v);
+		char *nfn = strrchr(filename, '/');
+		if(nfn) fontname = strdup(nfn+1);
+		else    fontname = filename;
+            }
+        } else {
+            // initialize patterns
+            FcPatternDestroy(pattern);
+    	    FcPatternDestroy(match);
+
+            // now match against serif etc.
+	    if (gfxFont->isSerif()) {
+                pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "serif", NULL);
+            } else if (gfxFont->isFixedWidth()) {
+                pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "monospace", NULL);
+            } else {
+                pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "sans", NULL);
+            }
+
+            // check for italic
+            if (gfxFont->isItalic()) {
+                int bb = FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
+            }
+            // check for bold
+            if (gfxFont->isBold()) {
+                int bb = FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
+            }
+
+            // configure and match using serif etc
+    	    FcConfigSubstitute (0, pattern, FcMatchPattern);
+            FcDefaultSubstitute (pattern);
+            match = FcFontMatch (0, pattern, &result);
+            
+            if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
+		filename = strdup((char*)v);
+		char *nfn = strrchr(filename, '/');
+		if(nfn) fontname = strdup(nfn+1);
+		else    fontname = filename;
+    	    }
+        }        
+    }
+
+    //printf("FONTCONFIG: pattern");
+    //FcPatternPrint(pattern);
+    //printf("FONTCONFIG: match");
+    //FcPatternPrint(match);
+ 
+    FcPatternDestroy(pattern);
+    FcPatternDestroy(match);
+
+    pdfswf_addfont(filename);
+    return fontname;
+#else
+    return 0;
+#endif
+}
+
 char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 {
-    char*fontname = "Times-Roman";
-    msg("<verbose> substituteFont(,%s)", FIXNULL(oldname));
-    char*filename = searchFont(fontname);
+    char*fontname = 0, *filename = 0;
+    msg("<notice> subsituteFont(%s)", oldname);
+
+    if(!(fontname = searchForSuitableFont(gfxFont))) {
+	fontname = "Times-Roman";
+    }
+    filename = searchFont(fontname);
+
     if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
 	msg("<fatal> Too many fonts in file.");
 	exit(1);
@@ -1217,6 +1316,8 @@ void SWFOutputDev::updateFont(GfxState *state)
 	msg("<warning> Font %s %scould not be loaded.", fontname, embedded?"":"(not embedded) ");
 	msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into /swftools/fonts", fontname);
 	fileName = substituteFont(gfxFont, fontid);
+	if(fontid) { fontid = substitutetarget[substitutepos-1]; /*ugly hack*/};
+	msg("<notice> Font is now %s (%s)", fontid, fileName);
     }
 
     if(!fileName) {
