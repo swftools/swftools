@@ -62,6 +62,7 @@ static TAG *tag;
 static int currentswfid = 0;
 static int depth = 1;
 static int startdepth = 1;
+static int linewidth = 0;
 
 static SHAPE* shape;
 static int shapeid = -1;
@@ -86,9 +87,12 @@ int CHARMIDY = 0;
 
 char fillstylechanged = 0;
 
+int bboxrectpos = -1;
+SRECT bboxrect;
+
 static void startshape(struct swfoutput* obj);
 static void starttext(struct swfoutput* obj);
-static void endshape();
+static void endshape(int clip);
 static void endtext(struct swfoutput* obj);
 
 // matrix multiplication. changes p0
@@ -116,6 +120,18 @@ static int moveto(TAG*tag, plotxy p0)
     return 0;
 }
 
+static void addPointToBBox(int px, int py) 
+{
+    SPOINT p;
+    p.x = px;
+    p.y = py;
+    if(fill) {
+	swf_ExpandRect(&bboxrect, p);
+    } else {
+	swf_ExpandRect3(&bboxrect, p, linewidth*3/2);
+    }
+}
+
 // write a line-to command into the swf
 static void lineto(TAG*tag, plotxy p0)
 {
@@ -127,8 +143,8 @@ static void lineto(TAG*tag, plotxy p0)
        are plots */
     swf_ShapeSetLine (tag, shape, rx,ry);
 
-    //swf_ExpandRect3(boundingBox, px, py, linewidth);
-    //swf_ExpandRect3(boundingBox, swflastx, swflasty, linewidth);
+    addPointToBBox(swflastx,swflasty);
+    addPointToBBox(px,py);
 
     shapeisempty = 0;
     swflastx+=rx;
@@ -138,6 +154,9 @@ static void lineto(TAG*tag, plotxy p0)
 // write a spline-to command into the swf
 static void splineto(TAG*tag, plotxy control,plotxy end)
 {
+    int lastlastx = swflastx;
+    int lastlasty = swflasty;
+
     int cx = ((int)(control.x*20)-swflastx);
     int cy = ((int)(control.y*20)-swflasty);
     swflastx += cx;
@@ -146,8 +165,13 @@ static void splineto(TAG*tag, plotxy control,plotxy end)
     int ey = ((int)(end.y*20)-swflasty);
     swflastx += ex;
     swflasty += ey;
-    if(cx || cy || ex || ey)
+    
+    if(cx || cy || ex || ey) {
 	swf_ShapeSetCurve(tag, shape, cx,cy,ex,ey);
+	addPointToBBox(lastlastx   ,lastlasty   );
+	addPointToBBox(lastlastx+cx,lastlasty+cy);
+	addPointToBBox(lastlastx+cx+ex,lastlasty+cy+ey);
+    }
     shapeisempty = 0;
 }
 
@@ -246,7 +270,7 @@ void drawpath(struct swfoutput*output, SWF_OUTLINE*outline, struct swfmatrix*m, 
 		   On SWF side, we need to start a new shape for each
 		   closed polygon, because SWF only knows EOFILL.
 		*/
-		endshape();
+		endshape(0);
 		startshape(output);
 		startFill();
 	    }
@@ -471,7 +495,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
     int back = 0;
 
     if(line_cap == LINE_CAP_BUTT || line_cap == LINE_CAP_SQUARE) {
-	endshape();
+	endshape(0);
 	startshape(output);
 	SWF_OUTLINE *last, *tmp=outline;
 	plotxy s,e,p0,p1,p2,p3,m0,m1,m2,m3;
@@ -517,6 +541,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
 	for(nr=0;nr<2;nr++) {
 	    int dir=0;
 	    struct plotxy q0,q1,q2,q3,q4,q5;
+
 	    startFill();
 	    if(line_cap == LINE_CAP_BUTT) {
 		if(dir) {
@@ -549,11 +574,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
 
 	    if(line_cap == LINE_CAP_BUTT) {
 		lineto(tag, q0);
-		swf_ShapeSetEnd(tag);
-		tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-		swf_ObjectPlaceClip(tag,shapeid,depth,NULL,NULL,NULL,depth+2-nr);
-		depth++;
-		shapeid = -1;
+		endshape(depth+2-nr);
 		startshape(output);
 	    }
 	    p0 = m0;
@@ -568,7 +589,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
     drawShortPath(output,x,y,m,outline);
 
     if(line_cap == LINE_CAP_BUTT) {
-	endshape();
+	endshape(0);
 	startshape(output);
     }
 }
@@ -630,7 +651,7 @@ void drawShortPathWithStraightEnds(struct swfoutput*output, double x, double y, 
 	       need to draw) are very likely to overlap. To avoid that
 	       they cancel each other out at the end points, start a new
 	       shape for the second one */
-	    endshape();startshape(output);
+	    endshape(0);startshape(output);
 	    startFill();
 	}
 
@@ -983,7 +1004,7 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     }
 
     if(shapeid>=0)
-	endshape();
+	endshape(0);
     if(textid<0)
 	starttext(obj);
 
@@ -1071,7 +1092,7 @@ void swfoutput_drawpath(swfoutput*output, SWF_OUTLINE*outline,
        so we better start a new shape here if the polygon is filled
      */
     if(shapeid>=0 && fill && !ignoredraworder) {
-	endshape();
+	endshape(0);
     }
 
     if(shapeid<0)
@@ -1090,7 +1111,7 @@ void swfoutput_drawpath2poly(struct swfoutput*output, SWF_OUTLINE*outline, struc
     if(textid>=0)
         endtext(output);
     if(shapeid>=0)
-	endshape();
+	endshape(0);
     assert(shapeid<0);
     startshape(output);
     stopFill();
@@ -1346,7 +1367,7 @@ static void startshape(struct swfoutput*obj)
   tag = swf_InsertTag(tag,ST_DEFINESHAPE);
 
   swf_ShapeNew(&shape);
-  linestyleid = swf_ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
+  linestyleid = swf_ShapeAddLineStyle(shape,linewidth,&obj->strokergb);
   rgb.r = obj->fillrgb.r;
   rgb.g = obj->fillrgb.g;
   rgb.b = obj->fillrgb.b;
@@ -1356,17 +1377,20 @@ static void startshape(struct swfoutput*obj)
   swf_SetU16(tag,shapeid);  // ID
 
   /* TODO: patch back */
+  bboxrectpos = tag->len;
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = 20*sizex;
   r.ymax = 20*sizey;
-  
   swf_SetRect(tag,&r);
+ 
+  memset(&bboxrect, 0, sizeof(bboxrect));
 
   swf_SetShapeStyles(tag,shape);
   swf_ShapeCountBits(shape,NULL,NULL);
   swf_SetShapeBits(tag,shape);
 
+  /* TODO: do we really need this? */
   swf_ShapeSetAll(tag,shape,/*x*/0,/*y*/0,linestyleid,0,0);
   swflastx=swflasty=0;
   lastwasfill = 0;
@@ -1376,14 +1400,37 @@ static void startshape(struct swfoutput*obj)
 static void starttext(struct swfoutput*obj)
 {
   if(shapeid>=0)
-      endshape();
+      endshape(0);
     
   textid = ++currentswfid;
 
   swflastx=swflasty=0;
 }
+	    
 
-static void endshape()
+/* TODO: move to ../lib/rfxswf */
+void changeRect(TAG*tag, int pos, SRECT*newrect)
+{
+    /* determine length of old rect */
+    tag->pos = pos;
+    tag->readBit = 0;
+    SRECT old;
+    swf_GetRect(tag, &old);
+    swf_ResetReadBits(tag);
+    int pos_end = tag->pos;
+
+    int len = tag->len - pos_end;
+    U8*data = (U8*)malloc(len);
+    memcpy(data, &tag->data[pos_end], len);
+    tag->writeBit = 0;
+    tag->len = pos;
+    swf_SetRect(tag, newrect);
+    swf_SetBlock(tag, data, len);
+    free(data);
+    tag->pos = tag->readBit = 0;
+}
+
+static void endshape(int clipdepth)
 {
     if(shapeid<0) 
         return;
@@ -1394,18 +1441,27 @@ static void endshape()
 	TAG*todel = tag;
 	tag = tag->prev;
 	swf_DeleteTag(todel);
-    } else {
-	/* TODO: fix bounding box */
-	tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-	swf_ObjectPlace(tag,shapeid,/*depth*/depth++,NULL,NULL,NULL);
+	shapeid = -1;
+	bboxrectpos = -1;
+	return;
     }
+
+    changeRect(tag, bboxrectpos, &bboxrect);
+
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    if(clipdepth)
+	swf_ObjectPlaceClip(tag,shapeid,depth++,NULL,NULL,NULL,clipdepth);
+    else
+	swf_ObjectPlace(tag,shapeid,/*depth*/depth++,NULL,NULL,NULL);
+
     shapeid = -1;
+    bboxrectpos = -1;
 }
 
 static void endpage(struct swfoutput*obj)
 {
     if(shapeid>=0)
-      endshape();
+      endshape(0);
     if(textid>=0)
       endtext(obj);
     while(clippos)
@@ -1502,7 +1558,7 @@ void swfoutput_setfillcolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
        obj->fillrgb.b == b &&
        obj->fillrgb.a == a) return;
     if(shapeid>=0)
-     endshape();
+     endshape(0);
 
     obj->fillrgb.r = r;
     obj->fillrgb.g = g;
@@ -1518,7 +1574,7 @@ void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
        obj->strokergb.a == a) return;
 
     if(shapeid>=0)
-     endshape();
+     endshape(0);
     obj->strokergb.r = r;
     obj->strokergb.g = g;
     obj->strokergb.b = b;
@@ -1527,12 +1583,12 @@ void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
 
 void swfoutput_setlinewidth(struct swfoutput*obj, double linewidth)
 {
-    if(obj->linewidth == (u16)(linewidth*20))
+    if(linewidth == (u16)(linewidth*20))
         return;
 
     if(shapeid>=0)
-     endshape();
-    obj->linewidth = (u16)(linewidth*20);
+	endshape(0);
+    linewidth = (u16)(linewidth*20);
 }
 
 
@@ -1541,7 +1597,7 @@ void swfoutput_startclip(swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m)
     if(textid>=0)
      endtext(obj);
     if(shapeid>=0)
-     endshape();
+     endshape(0);
 
     if(clippos >= 127)
     {
@@ -1567,9 +1623,9 @@ void swfoutput_startclip(swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m)
 void swfoutput_endclip(swfoutput*obj)
 {
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
     if(shapeid>=0)
-     endshape();
+	endshape(0);
 
     if(!clippos) {
         msg("<error> Invalid end of clipping region");
@@ -1595,9 +1651,9 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     }
     
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
     
     if(opennewwindow)
       actions = action_GetUrl(0, url, "_parent");
@@ -1612,9 +1668,9 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
     ActionTAG* actions;
 
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
    
       actions = action_GotoFrame(0, page);
       actions = action_End(actions);
@@ -1632,9 +1688,9 @@ void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
     char mouseover = 1;
 
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
 
     if(!strncmp(tmp, "call:", 5))
     {
@@ -1859,7 +1915,7 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     myshapeid = ++currentswfid;
     tag = swf_InsertTag(tag,ST_DEFINESHAPE);
     swf_ShapeNew(&shape);
-    //lsid = ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
+    //lsid = ShapeAddLineStyle(shape,linewidth,&obj->strokergb);
     //fsid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
     fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
     swf_SetU16(tag, myshapeid);
@@ -1899,9 +1955,9 @@ int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,i
 {
     TAG*oldtag;
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1927,9 +1983,9 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey,
     JPEGBITS*jpeg;
 
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1948,9 +2004,9 @@ int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int si
 {
     TAG*oldtag;
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
 
     int bitid = ++currentswfid;
     oldtag = tag;
@@ -1975,9 +2031,9 @@ int swfoutput_drawimagelosslessN(struct swfoutput*obj, U8*mem, RGBA*pal, int siz
     TAG*oldtag;
     U8*mem2 = 0;
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
 
     if(sizex&3)
     { 
@@ -2019,9 +2075,9 @@ void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey,
 {
     if(id<0) return;
     if(shapeid>=0)
-     endshape();
+	endshape(0);
     if(textid>=0)
-     endtext(obj);
+	endtext(obj);
 
     drawimage(obj, id, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
 }
