@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf$(A) q.$(O)
+all: librfxswf$(A) q.$(O) os.$(O)
 
 lame_objects = @lame_objects@
 
@@ -17,6 +17,9 @@ drawer.$(O): drawer.c drawer.h
 	$(C) drawer.c -o $@
 q.$(O): q.c q.h $(top_builddir)/config.h
 	$(C) q.c -o $@
+os.$(O): os.c os.h $(top_builddir)/config.h
+	$(C) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" os.c -o $@
+
 MD5.$(O): MD5.c MD5.h
 	$(C) MD5.c -o $@
 log.$(O): log.c log.h
