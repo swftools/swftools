@@ -10,13 +10,11 @@ pdf2swf:
 	      optional- use another color for dashed lines)
     * fix memory leaks
     * some bounding boxes are too big
+    * allow additional fontdirectories to be specified?
 
 swfcombine:
 
-    * Allow substituting frames (which have a name), too?
-    * --cat option (concatenates the movies)?
-    * Relocate  SetTarget "/content"  stuff
-    * --merge mode? (Doesn't store everything in movieclips)
+    * Relocate  SetTarget "/content"  stuff, too?
 
 swfextract:
     
