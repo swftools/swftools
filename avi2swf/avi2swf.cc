@@ -328,9 +328,11 @@ bool videoreader_avifile_eof(videoreader_t* v)
 void videoreader_avifile_close(videoreader_t* v)
 {
     videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
-    ringbuffer_clear(&i->audio_buffer);
     if(verbose) {
 	printf("videoreader_close()\n");fflush(stdout);
+    }
+    if(i->do_audio) {
+	ringbuffer_clear(&i->audio_buffer);
     }
 }
 void* videoreader_avifile_getinfo(videoreader_t* v, char* name)
