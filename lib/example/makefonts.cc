@@ -168,10 +168,10 @@ int main(int argc, char ** argv)
   //T1LIB_CONFIG.
   putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
   FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
-  fprintf(fi, "FONTDATABASE=%s/FontDataBase\n", DATADIR);
-  fprintf(fi, "ENCODING=%s:.\n", DATADIR);
-  fprintf(fi, "AFM=%s:.\n", DATADIR);
-  fprintf(fi, "TYPE1=%s:.\n", DATADIR);
+  fprintf(fi, "FONTDATABASE=%s/fonts/FontDataBase\n", DATADIR);
+  fprintf(fi, "ENCODING=%s/fonts:.\n", DATADIR);
+  fprintf(fi, "AFM=%s/fonts:.\n", DATADIR);
+  fprintf(fi, "TYPE1=%s/fonts:.\n", DATADIR);
   fclose(fi);
   /* initialize t1lib */
   T1_SetBitmapPad( 16);
