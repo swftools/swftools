@@ -292,10 +292,9 @@ U8 swf_isPseudoDefiningTag(TAG * tag)
     return 0; 
 }
 
-U16 swf_GetDepth(TAG * t)
-// up to SWF 4.0
+int swf_GetDepth(TAG * t)
 { 
-  U16 depth = 0;
+  int depth = -1;
   U32 oldTagPos;
   oldTagPos = swf_GetTagPos(t);
   swf_SetTagPos(t,0);
@@ -313,9 +312,34 @@ U16 swf_GetDepth(TAG * t)
     { U8 flags = swf_GetU8(t);
       depth = swf_GetU16(t);
     } break;
+    case ST_SETTABINDEX:
+    {
+      depth = swf_GetU16(t);
+    }
   }
   swf_SetTagPos(t,oldTagPos);
   return depth;
+}
+
+void swf_SetDepth(TAG * t, U16 depth)
+{ 
+  switch (swf_GetTagID(t))
+  { case ST_PLACEOBJECT:
+    case ST_REMOVEOBJECT:
+      PUT16(t->data, depth);
+      break;
+    case ST_REMOVEOBJECT2:
+      PUT16(t->data, depth);
+      break;
+    case ST_PLACEOBJECT2:
+      PUT16(&t->data[1], depth);
+      break;
+    case ST_SETTABINDEX:
+      PUT16(t->data, depth);
+      break;
+    default:
+      fprintf(stderr, "rfxswf: Error: tag %d has no depth\n", t->id);
+  }
 }
 
 char* swf_GetName(TAG * t)
@@ -827,6 +851,34 @@ void swf_Relocate (SWF*swf, char*bitmap)
 	    }
 	    id = slaveids[id];
 	    PUT16(&tag->data[ptr[t]], id);
+	}
+	tag=tag->next;
+    }
+}
+
+void swf_RelocateDepth(SWF*swf, char*bitmap)
+{
+    TAG*tag;
+    tag = swf->firstTag;
+    int nr;
+    for(nr=65535;nr>=0;nr--) {
+	if(bitmap[nr] != 0) 
+	    break;
+    }
+    // now nr is the highest used depth. So we start
+    // assigning depths at nr+1
+    nr++;
+
+    while(tag)
+    {
+	int depth = swf_GetDepth(tag);
+	if(depth>=0) {
+	    int newdepth = depth+nr;
+	    if(newdepth>65535) {
+		fprintf(stderr, "Couldn't relocate depths: too large values\n");
+		newdepth = 65535;
+	    }
+	    swf_SetDepth(tag, newdepth);
 	}
 	tag=tag->next;
     }

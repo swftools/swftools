@@ -723,7 +723,7 @@ U16 swf_GetDefineID(TAG * t);
 SRECT swf_GetDefineBBox(TAG * t);
 void swf_SetDefineID(TAG * t, U16 newid);
 U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
-U16 swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
+int swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2,SETTABINDEX
 char* swf_GetName(TAG * t); //PLACEOBJECT2, FRAMELABEL
 MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2);
 MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
@@ -731,6 +731,7 @@ MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
 int swf_GetNumUsedIDs(TAG * t);
 void swf_GetUsedIDs(TAG * t, int * positions);
 void swf_Relocate(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[a]==0 means id a is free
+void swf_RelocateDepth(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[d]==0 means depth d is free
 
 // swfcgi.c
 
