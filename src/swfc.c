@@ -642,6 +642,8 @@ static void s_endSWF()
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
+    
+    swf_Optimize(swf);
 
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize = currentrect; /* "autocrop" */
@@ -704,6 +706,10 @@ void s_frame(int nr, int cut, char*name)
 	    tag = swf_InsertTag(tag, ST_FRAMELABEL);
 	    swf_SetString(tag, name);
 	}
+    }
+    if(nr == 0 && currentframe == 0 && name) {
+        tag = swf_InsertTag(tag, ST_FRAMELABEL);
+        swf_SetString(tag, name);
     }
 
     if(cut) {
