@@ -109,6 +109,11 @@ int main (int argc,char ** argv)
 
   int frame = 0;
 
+  int lastsize = (head.dwWidth+3) * head.dwHeight * 4;
+  U8* lastdata = (U8*)malloc(lastsize);
+  U8* data;
+  memset(lastdata,0, lastsize);
+
   while(1) {
     if(vstream->ReadFrame()<0) {
 	printf("\n");
@@ -118,7 +123,7 @@ int main (int argc,char ** argv)
     fflush(stdout);
     CImage*img = vstream->GetFrame();
     img->ToRGB();
-    U8* data = img->data();
+    data = img->data();
     int width = img->width();
     int bpp = img->bpp();
     int width4 = width*4;
@@ -143,19 +148,49 @@ int main (int argc,char ** argv)
      */
 
     int type = 1;
+    int rel = 0;
     if(type == 0) {
 	tag = swf_InsertTag(tag, ST_DEFINEBITSLOSSLESS);
 	swf_SetU16(tag, frame*2);
+	U8*mylastdata = lastdata;
 	for(y=0;y<height;y++) {
 	    U8*nd = &newdata[width4*y];
-	    data = img->at(y);
+	    U8*mydata = img->at(y);
+	    if(!rel)
 	    for(x=0;x<width;x++) {
-		nd[0]=255;
-		nd[3]=data[0];
-		nd[2]=data[1];
-		nd[1]=data[2];
+		nd[3]=mydata[0];
+		nd[2]=mydata[1];
+		nd[1]=mydata[2];
+		mylastdata[2] = mydata[2];
+		mylastdata[1] = mydata[1];
+		mylastdata[0] = mydata[0];
 		nd+=4;
-		data+=3;
+		mydata+=3;
+		mylastdata+=3;
+	    }
+	    else
+	    for(x=0;x<width;x++) {
+		int a = mylastdata[3]-data[3];
+		int b = mylastdata[2]-data[2];
+		int c = mylastdata[1]-data[1];
+		if((a*a+b*b+c*c)>64)
+		{
+		    nd[3]=mydata[0];
+		    nd[2]=mydata[1];
+		    nd[1]=mydata[2];
+		    nd[0]=255;
+		} else {
+		    nd[3]=0;
+		    nd[2]=0;
+		    nd[1]=0;
+		    nd[0]=0;
+		}
+		mylastdata[2] = mydata[2];
+		mylastdata[1] = mydata[1];
+		mylastdata[0] = mydata[0];
+		nd+=4;
+		mydata+=3;
+		mylastdata+=3;
 	    }
 	}
 	swf_SetLosslessBits(tag,width,height,newdata,BMF_32BIT);
@@ -163,16 +198,26 @@ int main (int argc,char ** argv)
     if(type == 1) {
 	tag = swf_InsertTag(tag, ST_DEFINEBITSJPEG2);
 	swf_SetU16(tag, frame*2);
-	JPEGBITS * jb = swf_SetJPEGBitsStart(tag,width,height,10);
+	JPEGBITS * jb = swf_SetJPEGBitsStart(tag,width,height,1);
+	U8*mylastdata = lastdata;
 	for(y=0;y<height;y++) {
 	    U8*nd = newdata;
-	    data = img->at(y);
+	    U8*mydata = img->at(y);
 	    for(x=0;x<width;x++) {
-		nd[0] = data[2];
-		nd[1] = data[1];
-		nd[2] = data[0];
+		nd[0] = mydata[2];
+		nd[1] = mydata[1];
+		nd[2] = mydata[0];
+		if(rel) {
+		    nd[0] = (mydata[2]-mylastdata[2])/2+0x80;
+		    nd[1] = (mydata[1]-mylastdata[1])/2+0x80;
+		    nd[2] = (mydata[0]-mylastdata[0])/2+0x80;
+		}
+		mylastdata[2] = mydata[2];
+		mylastdata[1] = mydata[1];
+		mylastdata[0] = mydata[0];
 		nd+=3;
-		data+=3;
+		mydata+=3;
+		mylastdata+=3;
 	    }
 	    swf_SetJPEGBitsLine(jb,newdata);
 	}
@@ -212,9 +257,9 @@ int main (int argc,char ** argv)
 
     tag = swf_InsertTag(tag, ST_SHOWFRAME);
 
-    frame++;
+/*    frame++;
     if(frame == 200)
-	break;
+	break;*/
   }
   free(newdata);
   
