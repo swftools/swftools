@@ -79,7 +79,7 @@ AC_MSG_CHECKING([whether we can compile the avifile test program])
 
 cat > conftest.$ac_ext << EOF
 #include <avifile/version.h>
-#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION==6) 
+#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
    #include <aviplay.h>
    #include <fourcc.h>
