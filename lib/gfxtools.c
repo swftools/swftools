@@ -37,6 +37,12 @@ static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
     gfxline_t*l = rfx_alloc(sizeof(gfxline_t));
     l->type = gfx_moveTo;
+    if((int)((d->x * 5120) == (int)(x * 5120)) &&
+       (int)((d->y * 5120) == (int)(y * 5120))) {
+	/* never mind- we're already there */
+	return;
+
+    }
     d->x = l->x = x;
     d->y = l->y = y;
     l->next = 0;
@@ -523,15 +529,15 @@ gfxbbox_t gfxline_getbbox(gfxline_t*line)
     return bbox;
 }
 
-void gfxline_dump(gfxline_t*line, FILE*fi)
+void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
 {
     while(line) {
 	if(line->type == gfx_moveTo) {
-	    fprintf(fi, "moveTo %.2f %.2f\n", line->x, line->y);
+	    fprintf(fi, "%smoveTo %.2f %.2f\n", prefix, line->x, line->y);
 	} else if(line->type == gfx_lineTo) {
-	    fprintf(fi, "lineTo %.2f %.2f\n", line->x, line->y);
+	    fprintf(fi, "%slineTo %.2f %.2f\n", prefix, line->x, line->y);
 	} else if(line->type == gfx_splineTo) {
-	    fprintf(fi, "splineTo (%.2f %.2f) %.2f %.2f\n", line->sx, line->sy, line->x, line->y);
+	    fprintf(fi, "%ssplineTo (%.2f %.2f) %.2f %.2f\n", prefix, line->sx, line->sy, line->x, line->y);
 	}
 	line = line->next;
     }
