@@ -523,7 +523,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=0.2.3
+VERSION=0.3.0
 CFLAGS="-Winline -Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
 CXXFLAGS="-Winline -Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
 export PACKAGE VERSION CFLAGS CXXFLAGS
