@@ -28,12 +28,23 @@
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #include "../lib/args.h"
 #include "SWFOutputDev.h"
 #include "t1lib.h"
 extern "C" {
 #include "log.h"
 }
+
+#ifndef WIN32
+#define FONTDIR SWFTOOLS_DATADIR "/fonts"
+#define SWFDIR SWFTOOLS_DATADIR "/swfs"
+#else
+#define FONTDIR "C:\\pdf2swf\\fonts"
+#define SWFDIR "C:\\pdf2swf\\swfs"
+#endif
 
 static char * outputname = 0;
 static int loglevel = 3;
@@ -172,14 +183,14 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "l"))
     {
 	char buf[256];
-	sprintf(buf, "%s/swfs/default_loader.swf", SWFTOOLS_DATADIR);
+	sprintf(buf, "%s/default_loader.swf", SWFDIR);
 	preloader = strdup(buf);
 	return 0;
     }
     else if (!strcmp(name, "b"))
     {
 	char buf[256];
-	sprintf(buf, "%s/swfs/default_viewer.swf", SWFTOOLS_DATADIR);
+	sprintf(buf, "%s/default_viewer.swf", SWFDIR);
 	viewer = strdup(buf);
 	return 0;
     }
@@ -191,7 +202,7 @@ int args_callback_option(char*name,char*val) {
 	}
 	else
 	{
-	    systemf("ls %s/swfs/*_loader.swf", SWFTOOLS_DATADIR);
+	    systemf("ls %s/*_loader.swf", SWFDIR);
 	    if(!system_quiet)
 		printf("\n");
 	    exit(1);
@@ -206,7 +217,7 @@ int args_callback_option(char*name,char*val) {
 	}
 	else
 	{
-	    systemf("ls %s/swfs/*_viewer.swf", SWFTOOLS_DATADIR);
+	    systemf("ls %s/*_viewer.swf", SWFDIR);
 	    if(!system_quiet)
 		printf("\n");
 	    exit(1);
@@ -337,7 +348,8 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 	    strcat(searchpath, ":");
 	strcat(searchpath, dirname);
     }
-    msg("<verbose> Adding %s to search path\n", dirname);
+    if(!numfonts)
+	msg("<verbose> Adding %s to search path\n", dirname);
 
     DIR*dir = opendir(dirname);
     if(!dir) {
@@ -365,12 +377,24 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 	    if(database && type==1) {
 		char buf[256],a;
 		FILE*fi;
+#ifdef WIN32
+		sprintf(buf, "%s\\%s", dirname,name);
+#else
 		sprintf(buf, "%s/%s", dirname,name);
+#endif
 		fi = fopen(buf, "rb");
 		if(!fi || !fread(&a,1,1,fi)) {
 		    msg("<warning> Couldn't read from %s", buf);
 		}
-		fprintf(database, "%s\n", buf);
+
+#ifdef WIN32
+/* might also work for all other systems, but we *need* it for win32 */
+		if(!strncmp(buf, FONTDIR, strlen(FONTDIR)))
+		    fprintf(database, "%s\n", buf+strlen(FONTDIR));
+		else
+#endif
+		    fprintf(database, "%s\n", buf);
+
 		msg("<verbose> Found font %s\n", buf);
 		fclose(fi);
 	    } 
@@ -408,6 +432,17 @@ int main(int argn, char *argv[])
     int numfonts = 0;
     int t;
     char t1searchpath[1024];
+
+#if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
+    FILE*test = fopen(FONTDIR "\\d050000l.afm", "rb");
+    if(!test) {
+	fprintf(stderr, "Couldn't find file " FONTDIR "\\d050000l.afm- pdf2swf not installed properly? OS says:\n");
+	perror("open");
+	exit(1);
+    }
+    fclose(test);
+#endif
+
 #ifdef HAVE_SRAND48
     srand48(time(0));
 #else
@@ -446,7 +481,7 @@ int main(int argn, char *argv[])
 	exit(0);
     }
 
-    msg("<verbose> reading font files from %s/fonts\n", SWFTOOLS_DATADIR);
+    msg("<verbose> reading font files from %s\n", FONTDIR);
     //TODO: use tempnam here. Check if environment already contains a
     //T1LIB_CONFIG.
     putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
@@ -458,19 +493,21 @@ int main(int argn, char *argv[])
     }
     t1searchpath[0] = 0;
 #ifdef HAVE_DIRENT_H
-    sprintf(buf, "%s/fonts",SWFTOOLS_DATADIR);
     // pass 1
-    addfontdir(0, buf, &numfonts, 0);
+    addfontdir(0, FONTDIR, &numfonts, 0);
     for(t=0;t<fontpathpos;t++) {
 	addfontdir(0, fontpaths[t], &numfonts,0);
     }
     fprintf(db, "%d\n", numfonts);
     // pass 2
-    addfontdir(db, buf, 0, t1searchpath);
+    addfontdir(db, FONTDIR, 0, t1searchpath);
     for(t=0;t<fontpathpos;t++) {
 	addfontdir(db, fontpaths[t], 0, t1searchpath);
     }
 #else
+#ifdef WIN32
+#error Win32 version requires dirent.h
+#endif
 /* This is a workaround. The correct way would be to
    get directory listings working on all systems.
 */
@@ -494,14 +531,20 @@ int main(int argn, char *argv[])
 #endif
 
     fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n");
+#ifndef WIN32
     fprintf(fi, "ENCODING=%s:.\n", t1searchpath);
     fprintf(fi, "AFM=%s:.\n", t1searchpath);
     fprintf(fi, "TYPE1=%s:.\n", t1searchpath);
+#else
+    fprintf(fi, "ENCODING=%s\n", FONTDIR);
+    fprintf(fi, "AFM=%s\n", FONTDIR);
+    fprintf(fi, "TYPE1=%s\n", FONTDIR);
+#endif
     fclose(fi);
     fclose(db);
     /* initialize t1lib */
     T1_SetBitmapPad( 16);
-    if ((T1_InitLib(NO_LOGFILE)==NULL)){
+    if ((T1_InitLib(LOGFILE)==NULL)){
 	fprintf(stderr, "Initialization of t1lib failed\n");
 	exit(1);
     }
@@ -537,16 +580,16 @@ int main(int argn, char *argv[])
     }
     if(preloader && !viewer) {
 	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-	ret = systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
-		preloader, SWFTOOLS_DATADIR, preloader, outputname, outputname);
+	ret = systemf("swfcombine `swfdump -r %s` %s/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
+		preloader, SWFDIR, preloader, outputname, outputname);
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && viewer) {
 	systemf("swfcombine %s viewport=%s -o __tmp__.swf",
 		viewer, outputname, outputname);
-	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o %s",
-		outputname, preloader, SWFTOOLS_DATADIR, preloader, outputname);
+	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o %s",
+		outputname, preloader, SWFDIR, preloader, outputname);
 	systemf("rm __tmp__.swf");
     }
 
