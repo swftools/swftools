@@ -77,7 +77,7 @@ int args_callback_longoption(char*name,char*val)
 }
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-o filename] file.wav\n", name);
+    printf("Usage: %s [-o filename] file.sc\n", name);
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
@@ -957,6 +957,18 @@ void s_gradient(char*name, const char*text, int radial)
     if(dictionary_lookup(&gradients, name))
 	syntaxerror("gradient %s defined twice", name);
     dictionary_put2(&gradients, name, gradient);
+}
+
+void s_action(const char*text)
+{
+    ActionTAG* a = 0;
+    a = swf_ActionCompile(text, stack[0].swf->fileVersion);
+
+    tag = swf_InsertTag(tag, ST_DOACTION);
+
+    swf_ActionSet(tag, a);
+
+    swf_ActionFree(a);
 }
 
 void s_outline(char*name, char*format, char*source)
@@ -2040,7 +2052,13 @@ int fakechar(map_t*args)
 }
 
 static int c_egon(map_t*args) {return fakechar(args);}
-static int c_button(map_t*args) {return fakechar(args);}
+static int c_button(map_t*args) {
+    readToken();
+    if(type != RAWDATA)
+	syntaxerror("colon (:) expected");
+
+    return fakechar(args);
+}
 static int c_edittext(map_t*args) {return fakechar(args);}
 
 static int c_morphshape(map_t*args) {return fakechar(args);}
@@ -2049,7 +2067,17 @@ static int c_movie(map_t*args) {return fakechar(args);}
 static int c_buttonsounds(map_t*args) {return 0;}
 static int c_buttonput(map_t*args) {return 0;}
 static int c_texture(map_t*args) {return 0;}
-static int c_action(map_t*args) {return 0;}
+
+static int c_action(map_t*args) 
+{
+    readToken();
+    if(type != RAWDATA)
+	syntaxerror("colon (:) expected");
+
+    s_action(text);
+   
+    return 0;
+}
 
 static struct {
     char*command;
@@ -2309,7 +2337,7 @@ static void parseArgumentsForCommand(char*command)
 
     (*arguments[nr].func)(&args);
 
-    if(!strcmp(command, "button") ||
+    /*if(!strcmp(command, "button") ||
        !strcmp(command, "action")) {
 	while(1) {
 	    readToken();
@@ -2322,7 +2350,7 @@ static void parseArgumentsForCommand(char*command)
 		}
 	    }
 	}
-    }
+    }*/
 
     map_clear(&args);
     return;
