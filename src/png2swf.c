@@ -542,6 +542,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	int transparent=0;
 	int semitransparent=0;
 	/* in case for mode 2, the following also performs 24->32 bit conversion */
+	unsigned char* firstline = malloc(header.width*4);
+
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
 	    U8*src;
@@ -560,8 +562,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    }
 
 	    if(!y) {
-		memset(data2,0,header.width*4);
-		old = &data2[y*header.width*4];
+		old = firstline;
+		memset(old, 0, header.width*4);
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
@@ -570,6 +572,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    else if(header.mode==2)
 		applyfilter3(mode, src, old, dest, header.width);
 	}
+	free(firstline);
 
 	/* the image is now compressed and stored in data. Now let's take
 	   a look at the alpha values to determine which bitmap type we
