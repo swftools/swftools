@@ -101,15 +101,17 @@ int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*pal
 	RGBA col = img[t];
 	U32 col32 = *(U32*)&img[t];
 	int i;
+	int csize;
 	U32 hash;
+	U32* cpal;
 	if(col32 == lastcol32)
 	    continue;
 	hash = (col32 >> 17) ^ col32;
 	hash ^= ((hash>>8) + 1) ^ hash;
 	hash &= 255;
 
-	int csize = size[hash];
-	U32* cpal = &pal[hash*256];
+	csize = size[hash];
+	cpal = &pal[hash*256];
 	for(i=0;i<csize;i++) {
 	    if(col32 == cpal[i])
 		break;
@@ -684,21 +686,22 @@ int swf_SetLosslessBitsGrayscale(TAG * t, U16 width, U16 height, U8 * bitmap)
 void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height)
 {
     int hasalpha = swf_ImageHasAlpha(data, width, height);
+    int num;
     if(!hasalpha) {
 	tag->id = ST_DEFINEBITSLOSSLESS;
     } else {
 	tag->id = ST_DEFINEBITSLOSSLESS2;
 	/* TODO: premultiply alpha? */
     }
-    int num = swf_ImageGetNumberOfPaletteEntries(data, width, height, 0);
+    num = swf_ImageGetNumberOfPaletteEntries(data, width, height, 0);
     if(num>1 && num<=256) {
 	RGBA*palette = (RGBA*)malloc(sizeof(RGBA)*num);
-	swf_ImageGetNumberOfPaletteEntries(data, width, height, palette);
 	int width2 = BYTES_PER_SCANLINE(width);
 	U8*data2 = (U8*)malloc(width2*height);
 	int len = width*height;
 	int x,y;
 	int r;
+	swf_ImageGetNumberOfPaletteEntries(data, width, height, palette);
 	for(y=0;y<height;y++) {
 	    RGBA*src = &data[width*y];
 	    U8*dest = &data2[width2*y];
@@ -1047,7 +1050,6 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
 
     if(newwidth<=width) {
 	for(x=0;x<newwidth;x++) {
-	    lblockx[x] = p_x;
 	    double ex = px + fx;
 	    int fromx = (int)px;
 	    int tox = (int)ex;
@@ -1056,6 +1058,7 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
 	    int xweight = (int)(rem*256/fx);
 	    int xx;
 	    int w = 0;
+	    lblockx[x] = p_x;
 	    if(tox>=width) tox = width-1;
 	    for(xx=fromx;xx<=tox;xx++) {
 		if(xx==fromx && xx==tox) p_x->weight = 256;
@@ -1070,11 +1073,11 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
 	}
     } else {
 	for(x=0;x<newwidth;x++) {
-	    lblockx[x] = p_x;
 	    int ix1 = (int)px;
 	    int ix2 = ((int)px)+1;
-	    if(ix2>=width) ix2=width-1;
 	    double r = px-ix1;
+	    if(ix2>=width) ix2=width-1;
+	    lblockx[x] = p_x;
 	    if(bicubic)
 		r = -2*r*r*r+3*r*r;
 	    p_x[0].weight = (int)(256*(1-r));
@@ -1091,12 +1094,16 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
 
 RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight)
 {
+    int x,y;
+    RGBA* newdata; 
+    scale_lookup_t *p, **lblockx,**lblocky;
+    rgba_int_t*tmpline;
+    
     if(newwidth<1 || newheight<1)
 	return 0;
-    int x,y;
-    RGBA* newdata= (RGBA*)malloc(newwidth*newheight*sizeof(RGBA));
-    scale_lookup_t *p, **lblockx,**lblocky;
-    rgba_int_t*tmpline = (rgba_int_t*)malloc(width*sizeof(rgba_int_t));
+
+    tmpline = (rgba_int_t*)malloc(width*sizeof(rgba_int_t));
+    newdata = (RGBA*)malloc(newwidth*newheight*sizeof(RGBA));
   
     lblockx = make_scale_lookup(width, newwidth);
     lblocky = make_scale_lookup(height, newheight);
@@ -1109,7 +1116,7 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
 	
 	/* create lookup table for y */
 	rgba_int_t*l = tmpline;
-	scale_lookup_t*p_y;
+	scale_lookup_t*p_y,*p_x;
 	memset(tmpline, 0, width*sizeof(rgba_int_t));
 	for(p_y=lblocky[y];p_y<lblocky[y+1];p_y++) {
 	    RGBA*line = &data[p_y->pos];
@@ -1124,7 +1131,7 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
 	}
 
 	/* process x direction */
-	scale_lookup_t*p_x = lblockx[0];
+	p_x = lblockx[0];
 	for(x=0;x<newwidth;x++) {
 	    unsigned int r=0,g=0,b=0,a=0;
 	    scale_lookup_t*p_x_to = lblockx[x+1];

@@ -142,11 +142,13 @@ static void spline_get_controlpoint(qspline_abc_t*q, double t1, double t2, doubl
 static double get_spline_len(qspline_abc_t*s)
 {
     int parts = (int)(sqrt(fabs(s->ax) + fabs(s->ay))*3);
-    if(parts < 3) parts = 3;
     int i;
     double len = 0;
-    double r = 1.0/parts;
-    double r2 = 1.0/(parts*parts);
+    double r;
+    double r2;
+    if(parts < 3) parts = 3;
+    r = 1.0/parts;
+    r2 = 1.0/(parts*parts);
     for(i=0;i<parts;i++)
     {
 	double dx = s->ax*(2*i+1)*r2 + s->bx*r;
@@ -200,11 +202,13 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
 	    double dx = line->x - x;
 	    double dy = line->y - y;
 	    double len = sqrt(dx*dx+dy*dy);
+	    double vx;
+	    double vy;
+	    double lineend = linepos+len;
 	    if(len==0)
 		continue;
-	    double vx = dx/len;
-	    double vy = dy/len;
-	    double lineend = linepos+len;
+	    vx = dx/len;
+	    vy = dy/len;
 	    assert(nextpos>=linepos);
 	    //printf("(line) on:%d apos: %d nextpos: %f, line pos: %f, line end: %f\n", on, apos, nextpos, linepos, linepos+len);
 	    while(nextpos<lineend) {
@@ -225,14 +229,15 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
 	    x = line->x; y = line->y;
 	} else if(line->type == gfx_splineTo) {
 	    qspline_abc_t q;
+	    double len, lineend,lastt;
 	    mkspline(&q, x, y, line);
 
-	    double len = get_spline_len(&q);
+	    len = get_spline_len(&q);
 	    //printf("%f %f -> %f %f, len: %f\n", x, y, line->x, line->y, len);
 	    if(len==0)
 		continue;
-	    double lineend = linepos+len;
-	    double lastt = 0;
+	    lineend = linepos+len;
+	    lastt = 0;
 	    if(nextpos<linepos)
 		printf("%f !< %f\n", nextpos, linepos);
 	    assert(nextpos>=linepos);
@@ -272,9 +277,10 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
 gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase)
 {
     gfxdrawer_t d;
+    gfxline_t*result;
     gfxdrawer_target_gfxline(&d);
     gfxtool_draw_dashed_line(&d, line, dashes, phase);
-    gfxline_t*result= (gfxline_t*)d.result(&d);
+    result= (gfxline_t*)d.result(&d);
     return result;
 }
 

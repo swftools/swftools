@@ -561,12 +561,12 @@ void handlePlaceObject(TAG*tag, char*prefix)
 {
     TAG*tag2 = swf_InsertTag(0, ST_PLACEOBJECT2);
     U16 id, depth;
+    MATRIX matrix; 
+    CXFORM cxform;
 
     swf_SetTagPos(tag, 0);
     id = swf_GetU16(tag);
     depth = swf_GetU16(tag);
-    MATRIX matrix; 
-    CXFORM cxform;
     swf_GetMatrix(tag, &matrix);
     swf_GetCXForm(tag, &cxform, 0);
 
