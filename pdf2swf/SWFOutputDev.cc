@@ -65,7 +65,7 @@ int*pages = 0;
 int pagebuflen = 0;
 int pagepos = 0;
 
-double caplinewidth = 1.0;
+double caplinewidth = 3.0;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
