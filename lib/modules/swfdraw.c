@@ -98,13 +98,22 @@ static void swf_ShapeDrawerMoveTo(drawer_t*draw, FPOINT * to)
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
     int x = to->x*20;
     int y = to->y*20;
-    if(sdraw->lastx != x || sdraw->lasty != y) {
+
+    /* we need to write moveto always- it
+       might be that it signals the end of a polygon, otherwise
+       we would end up connecting two polygons which should
+       be seperate 
+	TODO: check if the last operation was a moveTo- if
+	      yes we *can* skip it.
+     */
+
+    //if(sdraw->lastx != x || sdraw->lasty != y) {
 	fixEndPoint(draw);
 	swf_ShapeSetMove(sdraw->tag,sdraw->shape,x,y);
 	sdraw->firstx = sdraw->lastx = x;
 	sdraw->firsty = sdraw->lasty = y;
 	draw->pos = *to;
-    }
+    //}
 }
 static void swf_ShapeDrawerLineTo(drawer_t*draw, FPOINT * to)
 {
