@@ -34,8 +34,10 @@
 #define FILL_CLIPPED    0x41
 
 void swf_ShapeFree(SHAPE * s)
-{ if (s)
-  { if (s->linestyle.data) free(s->linestyle.data);
+{ 
+    if(!s)
+        return;
+    if (s->linestyle.data) free(s->linestyle.data);
     s->linestyle.data = NULL;
     s->linestyle.n    = 0;
     if (s->fillstyle.data) free(s->fillstyle.data);
@@ -43,16 +45,17 @@ void swf_ShapeFree(SHAPE * s)
     s->fillstyle.n    = 0;
     if (s->data) free(s->data);
     s->data = NULL;
-  }
-  free(s);
+    free(s);
 }
 
 int swf_ShapeNew(SHAPE * * s)
-{ SHAPE * sh;
-  if (!s) return -1;
-  sh = (SHAPE *)malloc(sizeof(SHAPE)); s[0] = sh;
-  if (sh) memset(sh,0x00,sizeof(SHAPE));
-  return sh?0:-1;
+{ 
+    SHAPE * sh;
+    if (!s) return -1;
+    sh = (SHAPE *)malloc(sizeof(SHAPE)); 
+    *s = sh;
+    memset(sh,0,sizeof(SHAPE));
+    return 0;
 }
 
 int swf_GetSimpleShape(TAG * t,SHAPE * * s) // without Linestyle/Fillstyle Record
@@ -168,8 +171,6 @@ int swf_SetSimpleShape(TAG * t,SHAPE * s) // without Linestyle/Fillstyle Record
 int swf_SetFillStyle(TAG * t,FILLSTYLE * f)
 { if ((!t)||(!f)) return -1;
   swf_SetU8(t,f->type);
-  
-  // no gradients yet!
   
   switch (f->type)
   { case FILL_SOLID:
