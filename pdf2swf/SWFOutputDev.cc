@@ -64,6 +64,8 @@
 //swftools header files
 #include "swfoutput.h"
 #include "../lib/log.h"
+#include "../lib/gfxdevice.h"
+#include "gfxtools.h"
 
 #include <math.h>
 
@@ -573,106 +575,65 @@ static void dumpFontInfo(char*loglevel, GfxFont*font)
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
 //void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) {printf("void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) \n");}
 
-static void free_outline(SWF_OUTLINE*outline)
-{
-    while(outline) {
-        SWF_OUTLINE*next = outline->link;
-        free(outline);
-        outline = next;
-    }
-}
-
-static void dump_outline(SWF_OUTLINE*outline)
-{
-    double x=0,y=0;
-    while(outline) {
-        double lastx=x,lasty=y;
-        x += (outline->dest.x/(float)0xffff);
-        y += (outline->dest.y/(float)0xffff);
-        if(outline->type == SWF_PATHTYPE_MOVE) {
-            msg("<trace> | moveto %f,%f", x,y);
-        } else if(outline->type == SWF_PATHTYPE_LINE) {
-            msg("<trace> | lineto: %f,%f\n",x,y);
-        } else if(outline->type == SWF_PATHTYPE_BEZIER) {
-            SWF_BEZIERSEGMENT*o2 = (SWF_BEZIERSEGMENT*)outline;
-            float x1 = o2->C.x/(float)0xffff+lastx;
-            float y1 = o2->C.y/(float)0xffff+lasty;
-            float x2 = o2->B.x/(float)0xffff+lastx;
-            float y2 = o2->B.y/(float)0xffff+lasty;
-            msg("<trace> | spline: %f,%f -> %f,%f -> %f,%f\n",x1,y1,x2,y2,x,y);
-        } 
-        outline = outline->link;
-    }
-}
-
-SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
+gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
 {
     int num = path->getNumSubpaths();
     int s,t;
-    bezierpathsegment*start,*last=0;
-    bezierpathsegment*outline = start = (bezierpathsegment*)malloc(sizeof(bezierpathsegment));
     int cpos = 0;
-    double lastx=0,lasty=0;
+    double lastx=0,lasty=0,posx=0,posy=0;
+    int needsfix=0;
     if(!num) {
 	msg("<warning> empty path");
-	outline->type = SWF_PATHTYPE_MOVE;
-	outline->dest.x = 0;
-	outline->dest.y = 0;
-	outline->link = 0;
-	return (SWF_OUTLINE*)outline;
+	return 0;
     }
+    gfxdrawer_t draw;
+    gfxdrawer_target_gfxline(&draw);
+
     for(t = 0; t < num; t++) {
 	GfxSubpath *subpath = path->getSubpath(t);
 	int subnum = subpath->getNumPoints();
+	double bx=0,by=0,cx=0,cy=0;
 
 	for(s=0;s<subnum;s++) {
-	   double nx,ny;
-	   state->transform(subpath->getX(s),subpath->getY(s),&nx,&ny);
-	   int x = (int)((nx-lastx)*0xffff);
-	   int y = (int)((ny-lasty)*0xffff);
-	   if(s==0) 
-	   {
-		last = outline;
-		outline->type = SWF_PATHTYPE_MOVE;
-		outline->dest.x = x;
-		outline->dest.y = y;
-		outline->link = (SWF_OUTLINE*)malloc(sizeof(bezierpathsegment));
-		outline = (bezierpathsegment*)outline->link;
+	   double x,y;
+	   state->transform(subpath->getX(s),subpath->getY(s),&x,&y);
+	   if(s==0) {
+		if(closed && needsfix && (fabs(posx-lastx)+fabs(posy-lasty))>0.001) {
+		    draw.lineTo(&draw, lastx, lasty);
+		}
+		draw.moveTo(&draw, x,y);
+		posx = lastx = x; 
+		posy = lasty = y;
 		cpos = 0;
-		lastx = nx;
-		lasty = ny;
-	   }
-	   else if(subpath->getCurve(s) && !cpos)
-	   {
-		outline->B.x = x;
-		outline->B.y = y;
+		needsfix = 0;
+	   } else if(subpath->getCurve(s) && cpos==0) {
+		bx = x;
+		by = y;
 		cpos = 1;
-	   } 
-	   else if(subpath->getCurve(s) && cpos)
-	   {
-		outline->C.x = x;
-		outline->C.y = y;
+	   } else if(subpath->getCurve(s) && cpos==1) {
+		cx = x;
+		cy = y;
 		cpos = 2;
-	   }
-	   else
-	   {
-		last = outline;
-		outline->dest.x = x;
-		outline->dest.y = y;
-		outline->type = cpos?SWF_PATHTYPE_BEZIER:SWF_PATHTYPE_LINE;
-		outline->link = (SWF_OUTLINE*)malloc(sizeof(bezierpathsegment));
-		outline = (bezierpathsegment*)outline->link;
+	   } else {
+	        posx = x;
+	        posy = y;
+	        if(cpos==0) {
+		    draw.lineTo(&draw, x,y);
+		} else {
+		    gfxdraw_cubicTo(&draw, bx,by, cx,cy, x,y);
+		}
+		needsfix = 1;
 		cpos = 0;
-		lastx = nx;
-		lasty = ny;
 	   }
 	}
     }
-    if(last->link) {free(last->link);}
-    last->link = 0;
-
-    return (SWF_OUTLINE*)start;
+    /* fix non-closed lines */
+    if(closed && needsfix && (fabs(posx-lastx)+fabs(posy-lasty))>0.001) {
+	draw.lineTo(&draw, lastx, lasty);
+    }
+    return (gfxline_t*)draw.result(&draw);
 }
+
 /*----------------------------------------------------------------------------
  * Primitive Graphic routines
  *----------------------------------------------------------------------------*/
@@ -684,111 +645,130 @@ void SWFOutputDev::stroke(GfxState *state)
     int lineJoin = state->getLineJoin(); // 0=miter, 1=round 2=bevel
     double miterLimit = state->getMiterLimit();
     double width = state->getTransformedLineWidth();
-    struct swfmatrix m;
+
     GfxRGB rgb;
     double opaq = state->getStrokeOpacity();
     state->getStrokeRGB(&rgb);
+    gfxcolor_t col;
+    col.r = (unsigned char)(rgb.r*255);
+    col.g = (unsigned char)(rgb.g*255);
+    col.b = (unsigned char)(rgb.b*255);
+    col.a = (unsigned char)(opaq*255);
+    
+    gfx_capType capType = gfx_capRound;
+    if(lineCap == 0) capType = gfx_capButt;
+    else if(lineCap == 1) capType = gfx_capRound;
+    else if(lineCap == 2) capType = gfx_capSquare;
 
-    m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+    gfx_joinType joinType = gfx_joinRound;
+    if(lineJoin == 0) joinType = gfx_joinMiter;
+    else if(lineJoin == 1) joinType = gfx_joinRound;
+    else if(lineJoin == 2) joinType = gfx_joinBevel;
+
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
+    
+    int dashnum = 0;
+    double dashstart = 0;
+    double * ldash = 0;
+    state->getLineDash(&ldash, &dashnum, &dashstart);
+    if(dashnum && ldash) {
+	float * dash = (float*)malloc(sizeof(float)*(dashnum+2));
+	dash[0] = dashstart;
+	int t;
+	for(t=0;t<dashnum;t++) {
+	    dash[t+1] = ldash[t];
+	}
+	dash[dashnum+1] = 0;
+
+	gfxline_t*line2 = gfxtool_dash_line(line, dash);
+	gfxline_free(line);
+	line = line2;
+    }
     
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> stroke\n");
-        dump_outline(outline);
+        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d\n",
+		width,
+		lineJoin==0?"miter": (lineJoin==1?"round":"bevel"),
+		lineCap==0?"butt": (lineJoin==1?"round":"square"),
+		dashnum
+		);
+        //gfxline_show(line, stdout);
     }
-
-    lineJoin = 1; // other line joins are not yet supported by the swf encoder
-                  // TODO: support bevel joints
-
-    if(((lineCap==1) && (lineJoin==1)) || width<=caplinewidth) {
-	/* FIXME- if the path is smaller than 2 segments, we could ignore
-	   lineJoin */
-	swfoutput_setdrawmode(&output, DRAWMODE_STROKE);
-	swfoutput_drawpath(&output, outline, &m);
-    } else {
-	swfoutput_setfillcolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), 
-					(char)(rgb.b*255), (char)(opaq*255));
-
-	//swfoutput_setlinewidth(&output, 1.0); //only for debugging
-	//swfoutput_setstrokecolor(&output, 0, 255, 0, 255); //likewise, see below
-	//swfoutput_setfillcolor(&output, 255, 0, 0, 255); //likewise, see below
-
-	swfoutput_drawpath2poly(&output, outline, &m, lineJoin, lineCap, width, miterLimit);
-	updateLineWidth(state);  //reset
-	updateStrokeColor(state); //reset
-	updateFillColor(state);  //reset
-    }
-    free_outline(outline);
+   
+    swfoutput_drawgfxline(&output, line, width, &col, capType, joinType, miterLimit);
+    gfxline_free(line);
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    struct swfmatrix m;
-    m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+    double opaq = state->getFillOpacity();
+    GfxRGB rgb;
+    state->getFillRGB(&rgb);
+    gfxcolor_t col;
+    col.r = (unsigned char)(rgb.r*255);
+    col.g = (unsigned char)(rgb.g*255);
+    col.b = (unsigned char)(rgb.b*255);
+    col.a = (unsigned char)(opaq*255);
+
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> fill\n");
-        dump_outline(outline);
+        //dump_outline(line);
     }
 
-    swfoutput_setdrawmode(&output, DRAWMODE_FILL);
-    swfoutput_drawpath(&output, outline, &m);
-    free_outline(outline);
+    swfoutput_fillgfxline(&output, line, &col);
+    gfxline_free(line);
 }
 void SWFOutputDev::eoFill(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    struct swfmatrix m;
-    m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+    double opaq = state->getFillOpacity();
+    GfxRGB rgb;
+    state->getFillRGB(&rgb);
+    gfxcolor_t col;
+    col.r = (unsigned char)(rgb.r*255);
+    col.g = (unsigned char)(rgb.g*255);
+    col.b = (unsigned char)(rgb.b*255);
+    col.a = (unsigned char)(opaq*255);
+
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eofill\n");
-        dump_outline(outline);
+        //dump_outline(line);
     }
 
-    swfoutput_setdrawmode(&output, DRAWMODE_EOFILL);
-    swfoutput_drawpath(&output, outline, &m);
-    free_outline(outline);
+    swfoutput_fillgfxline(&output, line, &col);
+    gfxline_free(line);
 }
 void SWFOutputDev::clip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    struct swfmatrix m;
-    m.m11 = 1; m.m22 = 1;
-    m.m12 = 0; m.m21 = 0; 
-    m.m13 = 0; m.m23 = 0;
-    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> clip\n");
-        dump_outline(outline);
+        //dump_outline(line);
     }
 
-    swfoutput_startclip(&output, outline, &m);
+    swfoutput_startclip(&output, line);
     clipping[clippos] ++;
-    free_outline(outline);
+    gfxline_free(line);
 }
 void SWFOutputDev::eoClip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    struct swfmatrix m;
-    m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eoclip\n");
-        dump_outline(outline);
+        //dump_outline(line);
     }
 
-    swfoutput_startclip(&output, outline, &m);
+    swfoutput_startclip(&output, line);
     clipping[clippos] ++;
-    free_outline(outline);
+    gfxline_free(line);
 }
 
 /* pass through functions for swf_output */
@@ -847,6 +827,15 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     // check for invisible text -- this is used by Acrobat Capture
     if ((state->getRender() & 3) == 3)
 	return;
+    GfxRGB rgb;
+    double opaq = state->getFillOpacity();
+    state->getFillRGB(&rgb);
+    gfxcolor_t col;
+    col.r = (unsigned char)(rgb.r*255);
+    col.g = (unsigned char)(rgb.g*255);
+    col.b = (unsigned char)(rgb.b*255);
+    col.a = (unsigned char)(opaq*255);
+
     Gushort *CIDToGIDMap = 0;
     GfxFont*font = state->getFont();
 
@@ -894,10 +883,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
  
     if (CIDToGIDMap) {
 	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\"\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name));
-	swfoutput_drawchar(&output, x1, y1, name, CIDToGIDMap[c], u);
+	swfoutput_drawchar(&output, x1, y1, name, CIDToGIDMap[c], u, &col);
     } else {
 	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\"\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
-	swfoutput_drawchar(&output, x1, y1, name, c, u);
+	swfoutput_drawchar(&output, x1, y1, name, c, u, &col);
     }
 }
 
@@ -1172,7 +1161,7 @@ char* SWFOutputDev::searchFont(char*name)
 void SWFOutputDev::updateLineWidth(GfxState *state)
 {
     double width = state->getTransformedLineWidth();
-    swfoutput_setlinewidth(&output, width);
+    //swfoutput_setlinewidth(&output, width);
 }
 
 void SWFOutputDev::updateLineCap(GfxState *state)
@@ -1191,8 +1180,7 @@ void SWFOutputDev::updateFillColor(GfxState *state)
     double opaq = state->getFillOpacity();
     state->getFillRGB(&rgb);
 
-    swfoutput_setfillcolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), 
-	                            (char)(rgb.b*255), (char)(opaq*255));
+    //swfoutput_setfillcolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), (char)(rgb.b*255), (char)(opaq*255));
 }
 
 void SWFOutputDev::updateStrokeColor(GfxState *state) 
@@ -1201,8 +1189,7 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
     double opaq = state->getStrokeOpacity();
     state->getStrokeRGB(&rgb);
 
-    swfoutput_setstrokecolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), 
-	                              (char)(rgb.b*255), (char)(opaq*255));
+    //swfoutput_setstrokecolor(&output, (char)(rgb.r*255), (char)(rgb.g*255), (char)(rgb.b*255), (char)(opaq*255));
 }
 
 void FoFiWrite(void *stream, char *data, int len)
