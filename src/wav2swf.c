@@ -27,7 +27,9 @@ struct options_t options[] =
  {"d","definesound"},
  {"l","loop"},
  {"r","framerate"},
+ {"s","samplerate"},
  {"b","bitrate"},
+ {"C","cgi"},
  {"V","version"},
  {0,0}
 };
@@ -35,7 +37,12 @@ struct options_t options[] =
 static int loop = 0;
 static int definesound = 0;
 static int framerate = 0;
+static int samplerate = 11025;
 static int bitrate = 32;
+static int do_cgi = 0;
+
+static int mp3_bitrates[] =
+{ 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0};
 
 int args_callback_option(char*name,char*val)
 {
@@ -60,23 +67,56 @@ int args_callback_option(char*name,char*val)
 	verbose ++;
 	return 0;
     }
+    else if(!strcmp(name, "C")) {
+	do_cgi = 1;
+	return 0;
+    }
     else if(!strcmp(name, "r")) {
 	float f;
 	sscanf(val, "%f", &f);
 	framerate = f*256;
 	return 1;
     }
-    else if(!strcmp(name, "b")) {
-	bitrate = atoi(val);
-	if(bitrate<=0) {
-	    fprintf(stderr, "Not a valid bitrate: %s\n", val);
-	    exit(1);
-	}
-	if(bitrate>144) {
-	    fprintf(stderr, "Bitrate must be <144. (%s)\n", val);
+    else if(!strcmp(name, "s")) {
+	samplerate = atoi(val);
+	if(samplerate > 5000 && samplerate < 6000)
+	    samplerate = 5512;
+	else if(samplerate > 11000 && samplerate < 12000)
+	    samplerate = 11025;
+	else if(samplerate > 22000 && samplerate < 23000)
+	    samplerate = 22050;
+	else if(samplerate > 44000 && samplerate < 45000)
+	    samplerate = 44100;
+	else {
+	    fprintf(stderr, "Invalid samplerate: %d\n", samplerate);
+	    fprintf(stderr, "Allowed values: 11025, 22050\n", samplerate);
 	    exit(1);
 	}
 	return 1;
+    }
+    else if(!strcmp(name, "b")) {
+	int t;
+	int b = atoi(val);
+	if(b<=0) {
+	    fprintf(stderr, "Not a valid bitrate: %s\n", val);
+	    exit(1);
+	}
+	if(b>160) {
+	    fprintf(stderr, "Bitrate must be <144. (%s)\n", val);
+	    exit(1);
+	}
+	for(t=0;mp3_bitrates[t];t++) {
+	    if(b== mp3_bitrates[t]) {
+		bitrate = b;
+		return 1;
+	    }
+	}
+	fprintf(stderr, "Invalid bitrate. Allowed bitrates are:\n");
+	for(t=0;mp3_bitrates[t];t++) {
+	    printf("%d ", mp3_bitrates[t]);
+	}
+	printf("\n");
+	exit(1);
     }
     else {
         printf("Unknown option: -%s\n", name);
@@ -94,9 +134,11 @@ void args_callback_usage(char*name)
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-d , --definesound\t\t Generate a DefineSound tag instead of streaming sound\n");
     printf("\t-l , --loop n\t\t\t Loop sound n times (implies -d)\n");
-    printf("\t-r , --framerate fps\t\t Set framerate to fps frames per seond\n");
+    printf("\t-r , --framerate fps\t\t Set framerate to fps frames per second\n");
+    printf("\t-s , --samplerate sps\t\t Set samplerate to sps frames per second (default: 11025)\n");
     printf("\t-b , --bitrate bps\t\t Set mp3 bitrate (default: 32)\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
+    printf("\t-C , --cgi\t\t\t For use as CGI- prepend http header, write to stdout\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -110,6 +152,8 @@ int args_callback_command(char*name,char*val)
 }
 
 extern int swf_mp3_bitrate;
+extern int swf_mp3_out_samplerate;
+extern int swf_mp3_in_samplerate;
 
 int main (int argc,char ** argv)
 { 
@@ -135,7 +179,7 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     blocksize = 576;
-    blockspersecond = 11025.0/blocksize;
+    blockspersecond = (float)samplerate/blocksize;
 
     framespersecond = blockspersecond;
     if(framerate)
@@ -147,12 +191,17 @@ int main (int argc,char ** argv)
     
     initLog(0,-1,0,0,-1,verbose);
 
-    if(!readWAV(filename, &wav))
-    {
-	logf("<fatal> Error reading %s", filename);
+    if(!filename) {
+	msg("<fatal> You must supply a filename");
 	exit(1);
     }
-    convertWAV2mono(&wav,&wav2, 44100);
+
+    if(!readWAV(filename, &wav))
+    {
+	msg("<fatal> Error reading %s", filename);
+	exit(1);
+    }
+    convertWAV2mono(&wav,&wav2, samplerate);
     //printWAVInfo(&wav);
     //printWAVInfo(&wav2);
     samples = (U16*)wav2.data;
@@ -174,6 +223,8 @@ int main (int argc,char ** argv)
     swf_SetRGB(tag,&rgb);
 	
     swf_mp3_bitrate = bitrate;
+    swf_mp3_out_samplerate = samplerate;
+    swf_mp3_in_samplerate = samplerate;
 
     if(!definesound)
     {
@@ -181,25 +232,25 @@ int main (int argc,char ** argv)
 	float framesamplepos = 0;
 	float framepos = 0;
 	float samplepos = 0;
+	ActionTAG* a = 0;
 	U16 v1=0,v2=0;
 	tag = swf_InsertTag(tag, ST_SOUNDSTREAMHEAD);
 	swf_SetSoundStreamHead(tag, samplesperframe);
-
-	logf("<notice> %d blocks", numsamples/(blocksize*4));
-	for(t=0;t<numsamples/(blocksize*4);t++) {
+	msg("<notice> %d blocks", numsamples/blocksize);
+	for(t=0;t<numsamples/blocksize;t++) {
 	    int s;
 	    U16*block1;
 	    int seek = blocksize - ((int)samplepos - (int)framesamplepos);
 
 	    if(newframepos!=oldframepos) {
 		tag = swf_InsertTag(tag, ST_SOUNDSTREAMBLOCK);
-		logf("<notice> Starting block %d %d+%d", t, (int)samplepos, (int)blocksize);
-		block1 = &samples[t*blocksize*4];
+		msg("<notice> Starting block %d %d+%d", t, (int)samplepos, (int)blocksize);
+		block1 = &samples[t*blocksize];
 		swf_SetSoundStreamBlock(tag, block1, seek, 1);
 		v1 = v2 = GET16(tag->data);
 	    } else {
-		logf("<notice> Adding data...", t);
-		block1 = &samples[t*blocksize*4];
+		msg("<notice> Adding data...", t);
+		block1 = &samples[t*blocksize];
 		swf_SetSoundStreamBlock(tag, block1, seek, 0);
 		v1+=v2;
 		PUT16(tag->data, v1);
@@ -221,12 +272,13 @@ int main (int argc,char ** argv)
 	tag = swf_InsertTag(tag, ST_DEFINESOUND);
 	swf_SetU16(tag, 24); //id
 #ifdef DEFINESOUND_MP3
-	swf_SetSoundDefine(tag, samples, numsamples);
+        swf_SetSoundDefine(tag, samples, numsamples);
 #else
-	swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
-	swf_SetU32(tag, numsamples); // 44100 -> 11025
-	swf_SetBlock(tag, wav2.data, numsamples*2);
+        swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
+        swf_SetU32(tag, numsamples); // 44100 -> 11025
+        swf_SetBlock(tag, wav2.data, numsamples*2);
 #endif
+
 
 	tag = swf_InsertTag(tag, ST_STARTSOUND);
 	swf_SetU16(tag, 24); //id
@@ -237,9 +289,13 @@ int main (int argc,char ** argv)
 	tag = swf_InsertTag(tag, ST_END);
     }
 
-    f = open(outputname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
-    if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
-    close(f);
+    if(do_cgi) {
+	if FAILED(swf_WriteCGI(&swf)) fprintf(stderr,"WriteCGI() failed.\n");
+    } else {
+	f = open(outputname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
+	if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
+	close(f);
+    }
 
     swf_FreeTags(&swf);
     return 0;
