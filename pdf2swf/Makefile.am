@@ -8,3 +8,5 @@ INCLUDES = -I../lib -I./xpdf
 man_MANS = pdf2swf.1
 CXXCOMPILE = $(CXX) -DDATADIR=\"$(pkgdatadir)\" $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 
+# don't build Makefile, only executables:
+all-am: $(PROGRAMS) $(MANS)
