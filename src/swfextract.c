@@ -593,7 +593,7 @@ static void make_crc32_table(void)
     crc32_table[t] = c;
   }
 }
-static void png_write_byte(FILE*fi, U8 byte)
+static inline void png_write_byte(FILE*fi, U8 byte)
 {
     fwrite(&byte,1,1,fi);
     mycrc32 = crc32_table[(mycrc32 ^ byte) & 0xff] ^ (mycrc32 >> 8);
@@ -738,8 +738,10 @@ void handlelossless(TAG*tag)
      png_write_byte(fi,8);
      if(format == 3)
      png_write_byte(fi,3); //indexed
-     else if(format == 5)
+     else if(format == 5 && alpha==0)
      png_write_byte(fi,2); //rgb
+     else if(format == 5 && alpha==1)
+     png_write_byte(fi,6); //rgba
      else return;
 
      png_write_byte(fi,0); //compression mode
@@ -749,6 +751,7 @@ void handlelossless(TAG*tag)
    
     if(format == 3) {
 	png_start_chunk(fi, "PLTE", 768);
+	 
 	 for(t=0;t<256;t++) {
 	     png_write_byte(fi,palette[t].r);
 	     png_write_byte(fi,palette[t].g);
@@ -766,12 +769,22 @@ void handlelossless(TAG*tag)
 	{
 	   data3[pos2++]=0; //filter type
 	   if(bpp==32) {
-	    // 32 bit to 24 bit "conversion"
-	    for(x=0;x<width;x++) {
-	        data3[pos2++]=data[pos+1];
-	        data3[pos2++]=data[pos+2];
-		data3[pos2++]=data[pos+3];
-		pos+=4; //ignore padding byte
+	    if(!alpha) {
+		// 32 bit to 24 bit "conversion"
+		for(x=0;x<width;x++) {
+		    data3[pos2++]=data[pos+1];
+		    data3[pos2++]=data[pos+2];
+		    data3[pos2++]=data[pos+3];
+		    pos+=4; //ignore padding byte
+		}
+	    } else {
+		for(x=0;x<width;x++) {
+		    data3[pos2++]=data[pos+1];
+		    data3[pos2++]=data[pos+2];
+		    data3[pos2++]=data[pos+3];
+		    data3[pos2++]=data[pos+0]; //alpha
+		    pos+=4;
+		}
 	    }
 	   }
 	   else {
