@@ -57,6 +57,7 @@ static struct options_t options[] = {
 {"m", "mp3-bitrate"},
 {"r", "mp3-samplerate"},
 {"d", "scale"},
+{"k", "keyframe"},
 {"p", "flip"},
 {"q", "quality"},
 {"x", "extragood"},
@@ -86,6 +87,10 @@ int args_callback_option(char*name,char*val)
     else if(!strcmp(name, "p")) {
 	flip = 1;
 	return 0;
+    }
+    else if(!strcmp(name, "k")) {
+	keyframe_interval = atoi(val);
+	return 1;
     }
     else if(!strcmp(name, "A")) {
 	audio_adjust = atof(val);
@@ -220,7 +225,7 @@ int main (int argc,char ** argv)
     }
     if(keyframe_interval<0) {
 	if(flashversion>=6)
-	    keyframe_interval=200;
+	    keyframe_interval=20;
 	else
 	    keyframe_interval=5;
     }
