@@ -34,7 +34,7 @@ int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name)
   swf_SetU16(t,depth);
   if (flags&PF_CHAR) swf_SetU16(t,id);
   if (flags&PF_MATRIX) swf_SetMatrix(t,m);
-  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,(cx->a0!=256)||(cx->a1));
+  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
   if (flags&PF_RATIO) swf_SetU16(t,0);
   if (flags&PF_NAME) swf_SetString(t,name);
   
@@ -56,7 +56,7 @@ int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * nam
   swf_SetU16(t,depth);
   if (flags&PF_CHAR) swf_SetU16(t,id);
   if (flags&PF_MATRIX) swf_SetMatrix(t,m);
-  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,(cx->a0!=256)||(cx->a1));
+  if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
   if (flags&PF_RATIO) swf_SetU16(t,0);
   if (flags&PF_NAME) swf_SetString(t,name);
   if (flags&PF_CLIPACTION) swf_SetU16(t, clipaction);
@@ -116,8 +116,7 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 	swf_SetU16(t,obj->depth);
 	if (flags&PF_CHAR) swf_SetU16(t,obj->id);
 	if (flags&PF_MATRIX) swf_SetMatrix(t,&obj->matrix);
-	if (flags&PF_CXFORM) swf_SetCXForm(t,&obj->cxform,(obj->cxform.a0!=256)||
-							  (obj->cxform.a1));
+	if (flags&PF_CXFORM) swf_SetCXForm(t,&obj->cxform,1);
 	if (flags&PF_RATIO) swf_SetU16(t,obj->ratio);
 	if (flags&PF_NAME) swf_SetString(t,obj->name);
 	if (flags&PF_CLIPACTION) swf_SetU16(t,obj->clipdepth);
