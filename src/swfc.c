@@ -796,7 +796,7 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
     if(linewidth)
-        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+        ls1 = swf_ShapeAddLineStyle(s,linewidth>=20?linewidth-20:0,&color);
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
 
@@ -834,7 +834,7 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
     if(linewidth)
-        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+        ls1 = swf_ShapeAddLineStyle(s,linewidth>=20?linewidth-20:0,&color);
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
     
@@ -869,7 +869,7 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
     if(linewidth)
-        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+        ls1 = swf_ShapeAddLineStyle(s,linewidth>=20?linewidth-20:0,&color);
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
     swf_SetU16(tag,id);
@@ -1637,8 +1637,8 @@ int parseTwip(char*str)
 	    if(*s<'0' || *s>'9')
 		syntaxerror("Not a coordinate: \"%s\"", str);
 	}
-	if(l>2 || (l==2 && (dot[1]!='0' || dot[1]!='5'))) {
-	    warning("precision loss: %s converted to twip", str);
+	if(l>2 || (l==2 && (dot[1]!='0' && dot[1]!='5'))) {
+	    warning("precision loss: %s converted to twip: %s", str, dot);
 	    dot[2] = 0;
 	    l=2;
 	}
