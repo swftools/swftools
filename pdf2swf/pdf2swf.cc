@@ -341,6 +341,7 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 		}
 		fprintf(database, "%s\n", buf);
 		logf("<verbose> Found font %s\n", buf);
+		fclose(fi);
 	    } 
 	    if(numfonts)
 		(*numfonts)++;
