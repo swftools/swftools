@@ -78,6 +78,7 @@ ${name}/lib/modules/swfbits.c \
 ${name}/lib/modules/swftools.c \
 ${name}/lib/modules/swfcgi.c \
 ${name}/lib/modules/swfsound.c \
+${name}/lib/modules/swfdraw.c \
 ${name}/lib/h.263/swfvideo.c \
 ${name}/lib/h.263/h263tables.c \
 ${name}/lib/h.263/h263tables.h \
