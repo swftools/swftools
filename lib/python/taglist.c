@@ -15,6 +15,16 @@ typedef struct {
     PyObject* taglist;
 } TagListObject;
 //----------------------------------------------------------------------------
+static void taglist_showcontents(PyObject* self)
+{
+    TagListObject*taglist = (TagListObject*)self;
+    int t, l = PyList_Size(taglist->taglist);
+    for(t=0;t<l;t++) {
+	PyObject*item = PyList_GetItem(taglist->taglist, t);
+	mylog(" %08x(%d) taglist_showcontents   item=%08x(%d)\n", (int)self, self->ob_refcnt, item, item->ob_refcnt);
+    }
+}
+//----------------------------------------------------------------------------
 PyObject * taglist_new()
 {
     TagListObject* taglist = PyObject_New(TagListObject, &TagListClass);
@@ -58,6 +68,7 @@ PyObject * taglist_new2(TAG*tag)
 	}
 	nr++;
 	t=t->next;
+	Py_DECREF(newtag);
     }
     Py_DECREF(tagmap);
     return (PyObject*)taglist;
@@ -134,15 +145,6 @@ static PyObject * taglist_optimizeOrder(PyObject* self, PyObject* args)
     taglist->lastTag = 0; // FIXME
     taglist->searchTag = 0;*/
     return PY_NONE;
-}
-//----------------------------------------------------------------------------
-static void taglist_dealloc(PyObject* self)
-{
-    TagListObject*taglist = (TagListObject*)self;
-    mylog("-%08x(%d) taglist_dealloc list=%08x(%d)\n", (int)self, self->ob_refcnt, taglist->taglist, taglist->taglist->ob_refcnt);
-    Py_DECREF(taglist->taglist);
-    taglist->taglist = 0;
-    PyObject_Del(self);
 }
 //----------------------------------------------------------------------------
 static PyMethodDef taglist_functions[] =
@@ -277,6 +279,17 @@ static PyObject * taglist_item(PyObject * self, int index)
     Py_INCREF(tag);
     return tag;
 }
+//----------------------------------------------------------------------------
+static void taglist_dealloc(PyObject* self)
+{
+    TagListObject*taglist = (TagListObject*)self;
+    mylog("-%08x(%d) taglist_dealloc list=%08x(%d)\n", (int)self, self->ob_refcnt, taglist->taglist, taglist->taglist->ob_refcnt);
+    taglist_showcontents(self);
+    Py_DECREF(taglist->taglist);
+    taglist->taglist = 0;
+    PyObject_Del(self);
+}
+//----------------------------------------------------------------------------
 static PySequenceMethods taglist_as_sequence =
 {
     sq_length: taglist_length, // len(obj)
