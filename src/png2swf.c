@@ -168,6 +168,10 @@ int png_read_header(FILE*fi, struct png_header*header)
 
 	    if(b!=0 && b!=2 && b!=3 && b!=6) {
 		fprintf(stderr, "Image mode %d not supported!\n", b);
+		if(b == 4) {
+		    fprintf(stderr, "(This is a grayscale image with alpha channel-\n");
+		    fprintf(stderr, " try converting it into an RGB image with alpha channel)\n");
+		}
 		exit(1);
 	    }
 	    if(a!=8 && (b==2 || b==6)) {
@@ -556,7 +560,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    }
 	    if(header.mode==6)
 		applyfilter4(mode, src, old, dest, header.width);
-	    else
+	    else if(header.mode==2)
 		applyfilter3(mode, src, old, dest, header.width);
 	}
 
@@ -591,8 +595,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
 	}
 	free(data2);
-    }
-    else if(header.mode == 0 || header.mode == 3) {
+    } else if(header.mode == 0 || header.mode == 3) {
 	RGBA*rgba;
 	int swf_width = BYTES_PER_SCANLINE(header.width);
 	U8*data2 = malloc(swf_width*header.height);
