@@ -39,7 +39,8 @@ LinkDest::LinkDest(Array *a, GBool pageIsRef1) {
   // get page
   if (pageIsRef) {
     if (!a->getNF(0, &obj1)->isRef()) {
-      error(-1, "Bad annotation destination");
+      if(obj1.getType()!=objInt)
+        error(-1, "Bad annotation destination (1) type=%d", obj1.getType());
       goto err2;
     }
     pageRef.num = obj1.getRefNum();
@@ -47,7 +48,7 @@ LinkDest::LinkDest(Array *a, GBool pageIsRef1) {
     obj1.free();
   } else {
     if (!a->get(0, &obj1)->isInt()) {
-      error(-1, "Bad annotation destination");
+      error(-1, "Bad annotation destination (2)");
       goto err2;
     }
     pageNum = obj1.getInt() + 1;
