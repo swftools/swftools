@@ -8,5 +8,5 @@ jpeg2swf_LINK = $(CCLD) ../lib/rfxswf.o -o $@
 swfdump_LINK = $(CCLD) ../lib/rfxswf.o -o $@
 swfcombine_LINK = $(CCLD) ../lib/log.o -o $@
 swfstrings_LINK = $(CCLD) ../lib/log.o ../lib/rfxswf.o -o $@
-man_MANS = swfcombine.1 swfstrings.1 swfdump.1
+man_MANS = swfcombine.1 swfstrings.1 swfdump.1 jpeg2swf.1
 
