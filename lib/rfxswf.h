@@ -693,6 +693,7 @@ void swf_GetJPEGSize(char * fname, int*width, int*height);
 int swf_SetJPEGBits(TAG * t,char * fname,int quality);
 void swf_SetJPEGBits2(TAG * t,U16 width,U16 height,RGBA * bitmap,int quality);
 int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);
+RGBA* swf_JPEG2TagToImage(TAG*tag, int*width, int*height);
 
 #define BYTES_PER_SCANLINE(width) ((width+3)&0xfffffffc)
 
@@ -703,6 +704,9 @@ int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);
 int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
 int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
+RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*width, int*height);
+
+RGBA* swf_ExtractImage(TAG*tag, int*dwidth, int*dheight);
 
 // swfsound.c
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
