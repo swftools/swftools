@@ -13,6 +13,7 @@ ${name}/src/swfextract.1 \
 ${name}/src/jpeg2swf.1 \
 ${name}/src/png2swf.1 \
 ${name}/src/wav2swf.1 \
+${name}/src/swfc.1 \
 ${name}/avi2swf/avi2swf.1 \
 ${name}/pdf2swf/pdf2swf.1 \
 ${name}/src/swfcombine.c \
@@ -24,6 +25,13 @@ ${name}/src/png2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/wav.c \
 ${name}/src/wav.h \
+${name}/src/q.c \
+${name}/src/q.h \
+${name}/src/swfc.c \
+${name}/doc/fileformat.sc \
+${name}/src/parser.yy.c \
+${name}/src/parser.lex \
+${name}/src/parser.h \
 ${name}/src/Makefile.in \
 ${name}/lib/Makefile.in \
 ${name}/lib/lame/Makefile.in \
@@ -47,7 +55,6 @@ ${name}/lib/example/shape1.c \
 ${name}/lib/example/sprites.c \
 ${name}/lib/example/transtest.c \
 ${name}/lib/example/zlibtest.c \
-${name}/lib/example/makefonts.cc \
 ${name}/lib/example/glyphshape.c \
 ${name}/lib/example/sound.c \
 ${name}/lib/example/edittext.c \
@@ -112,6 +119,7 @@ ${name}/lib/old_rfxswf.h \
 ${name}/lib/log.c \
 ${name}/lib/log.h \
 ${name}/pdf2swf/HOWTO_pdf2swf \
+${name}/pdf2swf/font2swf.cc \
 ${name}/pdf2swf/swfoutput.h \
 ${name}/pdf2swf/swfoutput.cc \
 ${name}/pdf2swf/encodings.cc \
@@ -229,7 +237,7 @@ ${name}/pdf2swf/ttf2pt1/ttf.h \
 ${name}/pdf2swf/ttf2pt1/ttf2pt1.c \
 ${name}/pdf2swf/ttf2pt1/ttf2pt1.h \
 ${name}/pdf2swf/ttf2pt1/version.h \
-${name}/pdf2swf/ttf2pt1/windows.h \
+${name}/pdf2swf/ttf2pt1/win_missing.h \
 ${name}/pdf2swf/fonts/n021003l.pfb \
 ${name}/pdf2swf/fonts/n021023l.pfb \
 ${name}/pdf2swf/fonts/n021004l.pfb \
