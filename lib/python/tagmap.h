@@ -23,9 +23,9 @@
 #ifndef __tagmap_h__
 #define __tagmap_h__
 
-#include "../rfxswf.h"
-#undef HAVE_STAT
 #include <Python.h>
+#undef HAVE_STAT
+#include "../rfxswf.h"
 
 extern PyTypeObject TagMapClass;
 int tagmap_obj2id(PyObject* self, PyObject* obj);

@@ -23,9 +23,9 @@
 #ifndef __taglist_h__
 #define __taglist_h__
 
-#include "../rfxswf.h"
-#undef HAVE_STAT
 #include <Python.h>
+#undef HAVE_STAT
+#include "../rfxswf.h"
 
 extern PyTypeObject TagListClass;
 

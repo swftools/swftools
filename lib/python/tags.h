@@ -23,9 +23,9 @@
 #ifndef __tags_h__
 #define __tags_h__
 
-#include "../rfxswf.h"
-#undef HAVE_STAT
 #include <Python.h>
+#undef HAVE_STAT
+#include "../rfxswf.h"
 
 PyMethodDef* tags_getMethods();
 

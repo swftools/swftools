@@ -23,8 +23,8 @@
 #ifndef __tag_h__
 #define __tag_h__
 
-#undef HAVE_STAT
 #include <Python.h>
+#undef HAVE_STAT
 #include "../rfxswf.h"
 
 #include "tagmap.h"

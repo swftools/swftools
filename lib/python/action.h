@@ -23,9 +23,9 @@
 #ifndef __action_h__
 #define __action_h__
 
-#include "../rfxswf.h"
-#undef HAVE_STAT
 #include <Python.h>
+#undef HAVE_STAT
+#include "../rfxswf.h"
 
 extern PyTypeObject ActionClass;
 PyObject* f_Action(PyObject* self, PyObject* args, PyObject* kwargs);
