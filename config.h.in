@@ -120,3 +120,6 @@
 /* Version number of package */
 #undef VERSION
 
+/* Typedefs */
+#undef boolean 
+
