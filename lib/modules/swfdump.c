@@ -37,6 +37,24 @@ void swf_DumpTag(FILE * f,TAG * t)
   fprintf(f,"\n");
 }
 
+void swf_DumpFont(SWFFONT * font)
+{
+    printf("ID: %d\n", font->id);
+    printf("Version: %d\n", font->version);
+    printf("name: %s\n", font->name);
+    printf("characters: %d\n", font->numchars);
+    printf("layout: %s\n", font->layout?"yes":"no");
+    if(font->layout)
+    {
+	printf(" ascent:%d\n", font->layout->ascent);
+	printf(" descent:%d\n", font->layout->descent);
+	printf(" leading:%d\n", font->layout->leading);
+	printf(" bounds: (not shown)\n");
+	printf(" kerning records:%d\n", font->layout->kerningcount);
+	printf(" kerning records: (not shown)\n");
+    }
+}
+
 char* swf_TagGetName(TAG*tag)
 {
     switch(tag->id)
