@@ -41,7 +41,9 @@ int xy = 0;
 struct options_t options[] =
 {
  {"a","action"},
- {"XY","size"},
+ {"X","width"},
+ {"Y","height"},
+ {"r","rate"},
  {"e","html"},
  {"v","verbose"},
  {"V","version"},
@@ -71,6 +73,10 @@ int args_callback_option(char*name,char*val)
 	xy |= 2;
 	return 0;
     }
+    else if(name[0]=='r') {
+	xy |= 4;
+	return 0;
+    }
     else {
         printf("Unknown option: -%s\n", name);
     }
@@ -88,6 +94,7 @@ void args_callback_usage(char*name)
     printf("-e , --html\t\t\t Create a html embedding the file (simple, but useful)\n");
     printf("-X , --width\t\t\t Prints out a string of the form \"-X width\"\n");
     printf("-Y , --height\t\t\t Prints out a string of the form \"-Y height\"\n");
+    printf("-r , --rate\t\t\t Prints out a string of the form \"-r rate\"\n");
     printf("-a , --action\t\t\t Disassemble action tags\n");
     printf("-V , --version\t\t\t Print program version and exit\n");
 }
@@ -158,10 +165,19 @@ int main (int argc,char ** argv)
     {
 	if(xy&1)
 	printf("-X %d", xsize);
-	if(xy==3)
+
+	if((xy&1) && (xy&6))
 	printf(" ");
+
 	if(xy&2)
 	printf("-Y %d", ysize);
+	
+	if((xy&3) && (xy&4))
+	printf(" ");
+
+	if(xy&4)
+	printf("-r %d", swf.frameRate*100/256);
+	
 	printf("\n");
 	return 0;
     }
