@@ -643,7 +643,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(_u) 
 	u = *_u;
     
-    msg("<debug> drawChar(%f,%f,%f,%f,'%c',%d)\n",x,y,dx,dy,c,u);
+    msg("<debug> drawChar(%f,%f,%f,%f,'%c',%d) CID=%d\n",x,y,dx,dy,c,u, font->isCIDFont());
 
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
@@ -660,9 +660,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 
 	if(name)
 	   swfoutput_drawchar(&output, x1, y1, name, c);
-	else
+	else {
 	   msg("<warning> couldn't get name for CID character %02x from Encoding", c);
 	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c);
+	}
     } else {
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
@@ -1001,7 +1002,8 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<error> Couldn't create temporary Type 1 font file");
 	  return 0;
       }
-      if (font->getType() == fontType1C) {
+      if (font->getType() == fontType1C ||
+	  font->getType() == fontCIDType0C) {
 	if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
 	  fclose(f);
 	  msg("<error> Couldn't read embedded font file");
@@ -1078,7 +1080,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	      "-b", tmpFileName, name2};
 	  msg("<verbose> Invoking %s %s %s %s %s %s %s %s",a[0],a[1],a[2],a[3],a[4],a[5],a[6],a[7]);
 	  ttf2pt1_main(8,a);
-	  //unlink(tmpFileName);
+	  unlink(tmpFileName);
 	  sprintf(name2,"%s.pfb",tmp);
 	  tmpFileName = strdup(name2);
       }
@@ -1290,9 +1292,11 @@ void SWFOutputDev::updateFont(GfxState *state)
   GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
   if(embedded) {
     if (gfxFont->getType() == fontType1 ||
+	gfxFont->getType() == fontCIDType0C ||
 	gfxFont->getType() == fontType1C ||
 	gfxFont->getType() == fontTrueType ||
-	gfxFont->getType() == fontCIDType2)
+	gfxFont->getType() == fontCIDType2
+	)
     {
 	fileName = writeEmbeddedFontToFile(xref, gfxFont);
 	if(!fileName) {
