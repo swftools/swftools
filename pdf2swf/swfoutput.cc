@@ -885,6 +885,11 @@ static void putcharacter(struct swfoutput*obj, int fontid, int charid,
     chardatapos++;
 }
 
+struct fontlist_t 
+{
+    SWFFONT *swffont;
+    fontlist_t*next;
+} *fontlist = 0;
 
 /* process a character. */
 static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
@@ -897,6 +902,12 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
 
     if(!swffont) {
 	msg("<warning> Font is NULL");
+	return 0;
+    }
+
+    if(!usefonts) {
+	msg("<verbose> Non diagonal font matrix: %f %f", m->m11, m->m21);
+	msg("<verbose> |                         %f %f", m->m12, m->m22);
     }
 
     //if(usefonts && ! drawonlyshapes)
@@ -907,13 +918,19 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
 	if(charid<0) {
 	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
 		    FIXNULL(character),charnr, u, FIXNULL((char*)swffont->name), swffont->numchars);
+	    /*fontlist_t*it = fontlist;
+	    while(it) {
+		msg("<warning> Font history: %s [%d]", it->swffont->name, getCharID(it->swffont, charnr, character, u));
+		it = it->next;
+	    }*/
 	    return 0;
 	}
+
         if(shapeid>=0)
             endshape();
         if(textid<0)
             starttext(obj);
-         
+
         putcharacter(obj, swffont->id, charid,(int)(m->m13*20),(int)(m->m23*20),
                 (int)(m->m11+0.5));
 	return 1;
@@ -1012,20 +1029,18 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	    msg("<debug> u=%d, font->maxascii=%d ascci2glyph[%d]=%d",u,font->maxascii,u,font->ascii2glyph[u]);
 
 	/* try to use the unicode id */
-	if(u>=0 && u<font->maxascii && font->ascii2glyph[u]>=0)
+	if(u>=0 && u<font->maxascii && font->ascii2glyph[u]>=0) {
 	    return font->ascii2glyph[u];
+	}
     }
 
-    if(charnr>=0 && charnr<font->numchars)
+    if(charnr>=0 && charnr<font->numchars) {
 	return charnr;
+    }
+
     return -1;
 }
 
-struct fontlist_t 
-{
-    SWFFONT *swffont;
-    fontlist_t*next;
-} *fontlist = 0;
 
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
 void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
@@ -1054,14 +1069,10 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	return;
     }
 
-    /* TODO: sometimes, scale has to be 64, and sometimes 32.
-       It's probably font format related */
-    swf_SetLoadFontParameters(32, 0);
+    SWFFONT*swffont = swf_LoadFont(filename);
 
-    SWFFONT *swffont = swf_LoadFont(filename);
-
-    if(!swffont) {
-	msg("<error> Coudln't load font %s (%s)", fontid, filename);
+    if(swffont == 0) {
+	msg("<warning> Couldn't load font %s (%s)", fontid, filename);
 	swffont = swf_LoadFont(0);
     }
 
