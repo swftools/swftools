@@ -378,6 +378,7 @@ int swf_FontExtract(SWF * swf,int id,SWFFONT * * font)
         break;
         
       case ST_DEFINEFONTINFO:
+      case ST_DEFINEFONTINFO2:
         nid = swf_FontExtract_DefineFontInfo(id,f,t);
         break;
         
