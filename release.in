@@ -12,6 +12,8 @@ ${name}/src/swfstrings.1 \
 ${name}/src/swfstrings.c \
 ${name}/src/swfdump.1 \
 ${name}/src/swfdump.c \
+${name}/src/jpeg2swf.c \
+${name}/src/jpeg2swf.1 \
 ${name}/src/bitio.c \
 ${name}/src/bitio.h \
 ${name}/src/types.h \
