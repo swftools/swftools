@@ -145,6 +145,7 @@ typedef struct _ActionMarker
 
 typedef struct _SWF
 { U8            fileVersion;
+  U8		compressed;     // SWF or SWC?
   U32           fileSize;       // valid after load and save
   SRECT         movieSize;
   U16           frameRate;
