@@ -81,7 +81,7 @@ int main (int argc,char ** argv)
     tag = swf.FirstTag;
 
     while(tag) {
-	printf("[%02x] %s%s", tag->id, prefix, getTagName(tag));
+	printf("[%02x] %9d %s%s", tag->id, tag->len, prefix, getTagName(tag));
 	if(isDefiningTag(tag)) {
 	    U16 id = GetDefineID(tag);
 	    printf(" defines id %04x", id);
