@@ -49,6 +49,7 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "l")) {
 	loop = atoi(val);
+	definesound = 1;
 	return 1;
     }
     else if(!strcmp(name, "v")) {
