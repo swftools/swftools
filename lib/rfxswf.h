@@ -72,8 +72,10 @@ extern "C" {
 #endif
 
 #define ALLOC_ARRAY(type, num) (((type)*)rfxalloc(sizeof(type)*(num)))
-void* rfxalloc(int size);
-void rfxdealloc(void*data);
+void* rfx_alloc(int size);
+void* rfx_calloc(int size);
+void* rfx_realloc(void*data, int size);
+void rfx_free(void*data);
 
 // SWF Types
 
@@ -224,6 +226,7 @@ int   swf_DeleteTag(TAG * t);
 
 void  swf_ClearTag(TAG * t);                //frees tag data
 void  swf_ResetTag(TAG*tag, U16 id);        //set's tag position and length to 0, without freeing it
+TAG*  swf_CopyTag(TAG*tag, TAG*to_copy);     //stores a copy of another tag into this taglist
     
 void  swf_SetTagPos(TAG * t,U32 pos);       // resets Bitcount
 U32   swf_GetTagPos(TAG * t);
@@ -730,6 +733,9 @@ void swf_Optimize(SWF*swf);
 U8 swf_isDefiningTag(TAG * t);
 U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
+U8 swf_isImageTag(TAG*tag);
+U8 swf_isShapeTag(TAG*tag);
+
 U16 swf_GetDefineID(TAG * t);
 SRECT swf_GetDefineBBox(TAG * t);
 void swf_SetDefineID(TAG * t, U16 newid);
@@ -935,6 +941,23 @@ void swf_SetVideoStreamBlackFrame(TAG*tag, VIDEOSTREAM*s);
 void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant/* 1-31, 1=best quality, 31=best compression*/);
 void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, void** image, int quant);
 void swf_VideoStreamClear(VIDEOSTREAM*stream);
+
+// swfrender.c
+
+typedef struct RENDERBUF 
+{
+    int width;
+    int height;
+    int posx,posy;
+    void*internal;
+} RENDERBUF;
+
+void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height);
+RGBA* swf_Render(RENDERBUF*dest);
+void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, int depth,int clipdepth);
+void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
+void swf_Render_ClearCanvas(RENDERBUF*dest);
+void swf_Render_Delete(RENDERBUF*dest);
 
 #ifdef __cplusplus
 }
