@@ -23,10 +23,11 @@
 
 static int loadfont_scale = 64;
 static int skip_unused = 1;
+static int full_unicode = 0;
 
-void swf_SetLoadFontParameters(int _scale, int _skip_unused)
+void swf_SetLoadFontParameters(int _scale, int _skip_unused, int _full_unicode)
 {
-    loadfont_scale = _scale;
+    if(_scale) loadfont_scale = _scale;
     skip_unused = _skip_unused;
 }
 
@@ -106,6 +107,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     int t;
     int*glyph2glyph;
     FT_Size size;
+    int max_unicode = 0;
    
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
@@ -181,6 +183,9 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	}
 	charcode = FT_Get_Next_Char(face, charcode, &gindex);
     }
+
+    if(full_unicode)
+	font->maxascii = 65535;
     
     font->ascii2glyph = malloc(font->maxascii*sizeof(int));
     
@@ -190,11 +195,13 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    g = -1;
 	font->ascii2glyph[t] = g;
 	if(g>=0) {
+	    max_unicode = t;
 	    if(!font->glyph2ascii[g]) {
 		font->glyph2ascii[g] = t;
 	    }
 	}
     }
+    font->maxascii = max_unicode;
 
     font->numchars = 0;
 

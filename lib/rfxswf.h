@@ -491,11 +491,6 @@ typedef struct
   SHAPE *     shape;
 } SWFGLYPH;
 
-typedef struct _FONTUSAGE
-{ int* chars;
-  char is_reduced;
-} FONTUSAGE, * LPFONTUSAGE;
-
 #define FONT_STYLE_BOLD 1
 #define FONT_STYLE_ITALIC 2
 #define FONT_ENCODING_UNICODE 1
@@ -518,11 +513,12 @@ typedef struct _SWFFONT
   SWFGLYPH *	glyph;
   U8		language;
   char **	glyphnames;
-
-  FONTUSAGE *   use;
-
 } SWFFONT, * LPSWFFONT;
 
+// does not support wide characters !
+typedef struct _FONTUSAGE
+{ U8* code;
+} FONTUSAGE, * LPFONTUSAGE;
 
 #define ET_HASTEXT 32768
 #define ET_WORDWRAP 16384
@@ -561,11 +557,10 @@ int swf_FontIsItalic(SWFFONT * f);
 int swf_FontIsBold(SWFFONT * f);
 
 int swf_FontSetID(SWFFONT * f,U16 id);
-int swf_FontReduce(SWFFONT * f);
+int swf_FontReduce(SWFFONT * f,FONTUSAGE * use);
 
-int swf_FontInitUsage(SWFFONT * f);
-int swf_FontUseGlyph(SWFFONT * f, int glyph);
-int swf_FontUse(SWFFONT* f,U8 * s);
+int swf_FontInitUsage(SWFFONT * f,FONTUSAGE * use);
+int swf_FontUse(SWFFONT* f,FONTUSAGE * use,U8 * s);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetDefine2(TAG * t,SWFFONT * f);
