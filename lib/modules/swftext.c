@@ -1254,7 +1254,7 @@ void swf_FontCreateLayout(SWFFONT*f)
     }
 }
 	
-void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text)
+void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, char*text)
 {
     U8*s = (U8*)text;
     int advance = 0;
@@ -1270,26 +1270,26 @@ void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text)
 	while(l) {
 	    if(l->type == moveTo) {
 		FPOINT to;
-		to.x = l->x/20.0+advance;
-		to.y = l->y/20.0;
+		to.x = l->x*size/100.0/20.0+advance;
+		to.y = l->y*size/100.0/20.0;
 		draw->moveTo(draw, &to);
 	    } else if(l->type == lineTo) {
 		FPOINT to;
-		to.x = l->x/20.0+advance;
-		to.y = l->y/20.0;
+		to.x = l->x*size/100.0/20.0+advance;
+		to.y = l->y*size/100.0/20.0;
 		draw->lineTo(draw, &to);
 	    } else if(l->type == splineTo) {
 		FPOINT mid,to;
-		mid.x = l->sx/20.0+advance;
-		mid.y = l->sy/20.0;
-		to.x = l->x/20.0+advance;
-		to.y = l->y/20.0;
+		mid.x = l->sx*size/100.0/20.0+advance;
+		mid.y = l->sy*size/100.0/20.0;
+		to.x = l->x*size/100.0/20.0+advance;
+		to.y = l->y*size/100.0/20.0;
 		draw->splineTo(draw, &mid, &to);
 	    }
 	    l = l->next;
 	}
 	swf_Shape2Free(shape2);
-	advance += font->glyph[g].advance/20.0;
+	advance += font->glyph[g].advance*size/100.0/20.0;
     }
 }
 
