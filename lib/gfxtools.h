@@ -51,7 +51,7 @@ void gfxdrawer_target_gfxline(gfxdrawer_t*d);
 void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*dashes, float phase);
 gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase);
 
-void gfxline_dump(gfxline_t*l, FILE*fi);
+void gfxline_dump(gfxline_t*l, FILE*fi, char*prefix);
 void gfxline_free(gfxline_t*l);
 
 void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, double c2y, double x, double y);
