@@ -3,7 +3,7 @@
 
    Part of the swftools package.
    
-   Copyright (c) 2001 Matthias Kramm <kramm@quiss.org>
+   Copyright (c) 2001,2002,2003 Matthias Kramm <kramm@quiss.org>
 
    This file is distributed under the GPL, see file COPYING for details */
 
@@ -26,6 +26,7 @@ extern "C" {
 #include "../lib/args.h"
 }
 #include "v2swf.h"
+#include "../lib/q.h"
 
 #undef HAVE_CONFIG_H
 #include <avifile/version.h>
@@ -54,15 +55,22 @@ static int quality = 80;
 static double scale = 1.0;
 static int flip = 0;
 static int expensive = 0;
+static int flashversion = 6;
+static int keyframe_interval = -1;
+static int skip = 0;
+static float audio_adjust = 0;
 
 struct options_t options[] =
 {
  {"v","verbose"},
+ {"A","adjust"},
  {"o","output"},
  {"p","flip"},
  {"q","quality"},
- {"d","scale"},
+ {"s","scale"},
+ {"S","skip"},
  {"x","extragood"},
+ {"T","flashversion"},
  {"V","version"},
  {0,0}
 };
@@ -70,7 +78,7 @@ struct options_t options[] =
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
-        printf("avi2swf - part of %s %s\n", PACKAGE, VERSION);
+        printf("avi2swf-ng - part of %s %s\n", PACKAGE, VERSION);
         exit(0);
     } 
     else if(!strcmp(name, "o")) {
@@ -89,15 +97,27 @@ int args_callback_option(char*name,char*val)
 	flip = 1;
 	return 0;
     }
+    else if(!strcmp(name, "A")) {
+	audio_adjust = atof(val);
+	return 1;
+    }
     else if(!strcmp(name, "v")) {
 	verbose = 1;
 	return 0;
+    }
+    else if(!strcmp(name, "T")) {
+	flashversion = atoi(val);
+	return 1;
     }
     else if(!strcmp(name, "x")) {
 	expensive = 1;
 	return 0;
     }
-    else if(!strcmp(name, "d")) {
+    else if(!strcmp(name, "S")) {
+	skip = atoi(val);
+	return 1;
+    }
+    else if(!strcmp(name, "s")) {
 	scale = atoi(val)/100.0;
 	if(scale>1.0 || scale<=0) {
 	    fprintf(stderr, "Scale must be in the range 1-100!\n");
@@ -117,12 +137,15 @@ void args_callback_usage(char*name)
     printf("\nUsage: %s file.avi\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
     printf("\t-o , --output filename\t Specify output filename\n"); 
+    printf("\t-A , --adjust seconds\t Audio adjust: Shift sound -seconds to the future or +seconds into the past.\n"); 
     printf("\t-n , --num frames\t Number of frames to encode\n");
     printf("\t-d , --scale <val>\t Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
     printf("\t-p , --flip\t\t Turn movie upside down\n");
     printf("\t-q , --quality <val>\t Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
     printf("\t-x , --extragood\t Enable some *very* expensive compression strategies. You may\n");
     printf("\t                \t want to let this run overnight.\n");
+    printf("\t-T , --flashversion <n>\t Set output flash version to <n>. Notice: H.263 compression will only be\n");
+    printf("\t                       \t used for n >= 6.\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
     exit(0);
 }
@@ -158,6 +181,7 @@ typedef struct _videoreader_avifile_internal
     int eof;
     int frame;
     int soundbits;
+    ringbuffer_t audio_buffer;
 } videoreader_avifile_internal;
 
 static int shutdown_avi2swf = 0;
@@ -180,16 +204,26 @@ static void sigterm(int sig)
 }
 #endif
 
-int videoreader_avifile_getsamples(videoreader_t* v, void*buffer, int num)
+static void readSamples(videoreader_avifile_internal*i, void*buffer, int buffer_size, int numsamples)
 {
     int ret;
-    unsigned int samples_read, bytes_read;
+    while(i->audio_buffer.available < buffer_size) {
+	unsigned int samples_read = 0, bytes_read = 0;
+	ret = i->astream->ReadFrames(buffer, buffer_size, numsamples, samples_read, bytes_read);
+	if(samples_read<=0)
+	    return;
+	ringbuffer_put(&i->audio_buffer, buffer, bytes_read);
+    }
+    ringbuffer_read(&i->audio_buffer, buffer, buffer_size);
+}
+int videoreader_avifile_getsamples(videoreader_t* v, void*buffer, int num)
+{
     if(verbose) {
 	printf("videoreader_getsamples(%d)\n", num);fflush(stdout);
     }
     videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
     if(i->soundbits == 8) {
-	ret = i->astream->ReadFrames(buffer, num/2, num/(v->channels*2), samples_read, bytes_read);
+	readSamples(i, buffer, num/2, num/(v->channels*2));
 	unsigned char*b = (unsigned char*)buffer;
 	int t;
 	for(t=num-2;t>=0;t-=2) {
@@ -200,7 +234,7 @@ int videoreader_avifile_getsamples(videoreader_t* v, void*buffer, int num)
 	return num;
     }
     if(i->soundbits == 16) {
-	ret = i->astream->ReadFrames(buffer, num, num/(v->channels*2), samples_read, bytes_read);
+	readSamples(i, buffer, num, num/(v->channels*2));
 	return num;
     }
     return 0;
@@ -219,15 +253,30 @@ int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
 	return 0;
 
     if(i->vstream->ReadFrame() < 0) {
+	if(verbose) printf("vstream->ReadFrame() returned value < 0, shutting down...\n");
 	i->eof = 1;
 	return 0;
     }
-    CImage*img = i->vstream->GetFrame(true);
+    CImage*img2 = 0;
+    CImage*img = i->vstream->GetFrame();
     if(!img) {
+	if(verbose) printf("vstream->GetFrame() returned NULL, shutting down...\n");
 	i->eof = 1;
 	return 0;
     }
+    /* we convert the image to YUV first, because we can convert to RGB from YUV only */
+    img->ToYUV();
     img->ToRGB();
+    if(img->Bpp() != 3) {
+	/* TODO: this doesn't work yet */
+	if(verbose) printf("Can't handle Bpp %d, shutting down...\n", img->Bpp());
+	return 0;
+	BitmapInfo tmp(v->width, v->height, 24);
+	img2 = new CImage(img, &tmp);
+	img = img2;
+    }
+
+
     frameno++;
     i->frame++;
     unsigned char*data = img->Data();
@@ -248,8 +297,11 @@ int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
 		to[x*4+3] = from[x*3+0];
 	    }
 	}
+	if(img2) delete img2;
 	return v->width*v->height*4;
     } else {
+	if(img2) delete img2;
+	if(verbose) printf("Can't handle bpp %d, shutting down...\n", bpp);
 	return 0;
     }
 }
@@ -264,6 +316,7 @@ bool videoreader_avifile_eof(videoreader_t* v)
 void videoreader_avifile_close(videoreader_t* v)
 {
     videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
+    ringbuffer_clear(&i->audio_buffer);
     if(verbose) {
 	printf("videoreader_close()\n");fflush(stdout);
     }
@@ -293,7 +346,7 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     v->getsamples = videoreader_avifile_getsamples;
     v->setparameter = videoreader_avifile_setparameter;
     v->internal = i;
-
+    
     i->do_video = 1;
     i->do_audio = 1;
 
@@ -338,10 +391,9 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     v->fps = 1000000.0/dwMicroSecPerFrame;
     i->soundbits = 16;
 #else
-    StreamInfo*audioinfo;
-    StreamInfo*videoinfo;
     if(i->do_video)
     {
+	StreamInfo*videoinfo;
 	videoinfo = i->vstream->GetStreamInfo();
 	v->width = videoinfo->GetVideoWidth();
 	v->height = videoinfo->GetVideoHeight();
@@ -350,25 +402,44 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     if(i->do_audio)
     {
 	WAVEFORMATEX wave;
+	StreamInfo*audioinfo;
+
 	i->astream->GetAudioFormatInfo(&wave,0);
+	audioinfo = i->astream->GetStreamInfo();
+
 	v->channels = wave.nChannels;
+	v->rate = wave.nSamplesPerSec;
 	i->soundbits = wave.wBitsPerSample;
-	if(wave.wBitsPerSample != 8 && wave.wBitsPerSample != 16) {
+
+	if(v->channels==0 || v->rate==0 || i->soundbits==0 || wave.wFormatTag!=1) {
+	    v->rate = audioinfo->GetAudioSamplesPerSec();
+	    v->channels = audioinfo->GetAudioChannels();
+	    i->soundbits = audioinfo->GetAudioBitsPerSample();
+	}
+
+	if(verbose) {
+	    printf("formatinfo: format %d, %d channels, %d bits/sample, rate %d, blockalign %d\n", wave.wFormatTag, wave.nChannels, wave.wBitsPerSample, wave.nSamplesPerSec, wave.nBlockAlign);
+	    printf("audioinfo: %d channels, %d bits/sample, rate %d\n", audioinfo->GetAudioChannels(), audioinfo->GetAudioBitsPerSample(), audioinfo->GetAudioSamplesPerSec());
+	}
+	if(i->soundbits != 8 && i->soundbits != 16) {
 	    printf("Can't handle %d bit audio, disabling sound\n", wave.wBitsPerSample);
 	    i->do_audio = 0;
+	    i->soundbits = 0;
 	    v->channels = 0;
 	    v->rate = 0;
 	}
     }
-    if(i->do_audio)
-    {
-	audioinfo = i->astream->GetStreamInfo();
-	v->rate = audioinfo->GetAudioSamplesPerSec();
-    }
 #endif
     i->vstream -> StartStreaming();
-    if(i->do_audio)
+    if(i->do_audio) {
 	i->astream -> StartStreaming();
+	ringbuffer_init(&i->audio_buffer);
+#ifdef VERSION6
+	WAVEFORMATEX wave;
+	i->astream -> GetOutputFormat(&wave, sizeof(wave));
+	printf("formatinfo: format %d, %d channels, %d bits/sample, rate %d, blockalign %d\n", wave.wFormatTag, wave.nChannels, wave.wBitsPerSample, wave.nSamplesPerSec, wave.nBlockAlign);
+#endif
+    }
 
     return 1;
 }
@@ -390,6 +461,12 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
     if(!filename)
 	exit(0);
+    if(keyframe_interval<0) {
+	if(flashversion>=6)
+	    keyframe_interval=200;
+	else
+	    keyframe_interval=5;
+    }
     
     fi = fopen(outputfilename, "wb");
     if(!fi) {
@@ -418,20 +495,48 @@ int main (int argc,char ** argv)
     v2swf_setparameter(&v2swf, "quality", itoa(quality));
     v2swf_setparameter(&v2swf, "blockdiff", "0");
     v2swf_setparameter(&v2swf, "blockdiff_mode", "exact");
-    v2swf_setparameter(&v2swf, "mp3_bitrate", "128");
+    v2swf_setparameter(&v2swf, "mp3_bitrate", "32");
     //v2swf_setparameter(&v2swf, "fixheader", "1");
     //v2swf_setparameter(&v2swf, "framerate", "15");
     v2swf_setparameter(&v2swf, "scale", ftoa(scale));
     v2swf_setparameter(&v2swf, "prescale", "1");
-    v2swf_setparameter(&v2swf, "keyframe_interval", "200");
-    v2swf_setparameter(&v2swf, "flash_version", "6");
+    v2swf_setparameter(&v2swf, "flash_version", itoa(flashversion));
+    v2swf_setparameter(&v2swf, "keyframe_interval", itoa(keyframe_interval));
     if(expensive)
 	v2swf_setparameter(&v2swf, "motioncompensation", "1");
 
-
-    char buffer[4096];
     if(!verbose)
 	printf("\n");
+
+    if(audio_adjust>0) {
+	int num = ((int)(audio_adjust*video.rate))*video.channels*2;
+	void*buf = malloc(num);
+	video.getsamples(&video, buf, num);
+	free(buf);
+    } else if(audio_adjust<0) {
+	int num = (int)(-audio_adjust*video.fps);
+	void*buf = malloc(video.width*video.height*4);
+	int t;
+	for(t=0;t<num;t++) {
+	    video.getimage(&video, buf);
+	}
+	free(buf);
+    }
+
+    if(skip) {
+	int t;
+	void*buf = malloc(video.width*video.height*4);
+	for(t=0;t<skip;t++) {
+	    video.getimage(&video, buf);
+	    video.getsamples(&video, buf, (int)((video.rate/video.fps)*video.channels*2));
+	    if(!verbose) {
+		printf("\rSkipping frame %d", frameno);fflush(stdout);
+	    }
+	}
+	free(buf);
+    }
+
+    char buffer[4096];
     while(1) {
 	int l=v2swf_read(&v2swf, buffer, 4096);
 	fwrite(buffer, l, 1, fi);
