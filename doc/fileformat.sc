@@ -6,13 +6,13 @@
 # ==================================================================================
 
 # Notice that the following is actually a valid .sc file, generating the four swfs
-# spec.swf, scroll1.swf, scroll2.swf and simple_viewer.swf. (Provided all included 
+# spec.flash, scroll1.flash, scroll2.flash and simple_viewer.flash. (Provided all included 
 # files are present)
 
 # File header
 # -----------
 
-.swf bbox=200x200 version=6 fps=50 name="spec.swf" compress
+.flash bbox=200x200 version=6 fps=50 name="spec.swf" compress
 
 # bbox=200x200         : set bounding box to 200x200
 # bbox=200x200:100:100 : set bounding box to (100,100)-(300,300)
@@ -22,17 +22,17 @@
 #
 # version=6    : generate flash mx movie
 # fps=50       : set framerate to 50 frames/second
-# name="..."   : save result to spec.swf. (Default: input file with extension 
-#					   changed to .swf, or the value of the -o command line 
+# name="..."   : save result to spec.flash. (Default: input file with extension 
+#					   changed to .flash, or the value of the -o command line 
 #					   parameter if given)
 
 # load a simple object:
 # ---------------------
 
-.shape myshape1 "choo1.swf"
-.shape myshape2 filename="choo1.swf" # long form
-.shape myshape3 filename=choo1.swf # long form, without quotes
-.shape myshape4 choo1.swf # short form, without quotes
+.swf myshape1 "choo1.swf"
+.swf myshape2 filename="choo1.swf" # long form
+.swf myshape3 filename=choo1.swf # long form, without quotes
+.swf myshape4 choo1.swf # short form, without quotes
 
 #TODO: Do those files come from the current directory, the script directory or both?
 
@@ -152,7 +152,7 @@
 # interpolation between crude manual animation frames
 # ---------------------------------------------------
 
-.shape ball "ball.fig" #The ball should be white or violet to make the cxforms below work
+.swf ball "ball.fig" #The ball should be white or violet to make the cxforms below work
 
 # now draw two balls, which fly around each other.
 
@@ -246,7 +246,7 @@
 
 # clipping an animation inside a star-shaped sprite:
 
-.shape mystar1 "star.swf"
+.swf mystar1 "star.swf"
 .movie anim1 "penguins.swf"
 
 .sprite cspr1
@@ -427,7 +427,7 @@
 # a background image
 #
 
-.swf bbox=200x200 fps=25 version=6 name="scroll1.swf"
+.flash bbox=200x200 fps=25 version=6 name="scroll1.swf"
 
 .jpeg background "panorama.jpg"
 
@@ -460,7 +460,7 @@
 # This example now also fades the text in and out again
 #
 
-.swf bbox=200x200 fps=25 version=6 name="scroll2.swf"
+.flash bbox=200x200 fps=25 version=6 name="scroll2.swf"
 .jpeg background "panorama.jpg"
 
 #create some text for a title and credits 
@@ -481,12 +481,12 @@
 
 # simpleviewer.sc
 #
-# Create the simple_viewer.swf file used in SWFTools.
+# Create the simple_viewer.flash file used in SWFTools.
 
-.swf bbox=1024x768 version=4 fps=25 name="simple_viewer.swf"
+.flash bbox=1024x768 version=4 fps=25 name="simple_viewer.swf"
 .frame 1
-.shape leftshape "left.fig"
-.shape rightshape "right.fig"
+.swf leftshape "left.fig"
+.swf rightshape "right.fig"
 
 .sprite viewport
 .end
@@ -525,7 +525,7 @@
 # boxlayers.sc
 # test "above"
 
-.swf bbox=400x300 version=4 fps=50 name="boxLayers.swf"
+.flash bbox=400x300 version=4 fps=50 name="boxLayers.swf"
 
 .box box1 width=100 height=100 color=white fill
 .box box2 width=100 height=100 color=white fill
@@ -546,7 +546,7 @@
 #
 # Do things with rectangles.
 
-.swf bbox=autocrop version=6 fps=50 name="boxes.swf" compress
+.flash bbox=autocrop version=6 fps=50 name="boxes.swf" compress
 
     .box box1 width=100 height=100 color=red fill #filled red box
     .box box2 width=100 height=100 color=white    #white hollow frame
@@ -569,10 +569,10 @@
 # monkey.sc
 #
 
-.swf bbox=autocrop version=4 fps=50 name="monkey.swf"
+.flash bbox=autocrop version=4 fps=50 name="monkey.swf"
 
-    .shape island "island.swf"
-    .shape monkey "monkey4.swf"
+    .swf island "island.swf"
+    .swf monkey "monkey4.swf"
     .put island
     .point leftfoot 45 177
     .point rightfoot 138 177
@@ -597,9 +597,9 @@
 #
 # Try color transforms
 
-.swf name="cxform.swf" version=5
+.flash name="cxform.swf" version=5
     
-    .shape s1 "photo.swf"
+    .swf s1 "photo.swf"
 
     .put s1 x=50 y=50 scalex=110 scaley=110
     .frame 100
@@ -622,7 +622,7 @@
 #
 # Test transparency
 
-.swf bbox=200x200 version=5 fps=25 name="transparency.swf"
+.flash bbox=200x200 version=5 fps=25 name="transparency.swf"
 
 .box box1 90 90 color=yellow fill=blue line=5
 .box box2 90 90 color=white fill=red line=5
@@ -645,7 +645,7 @@
 #
 # Test points, pivots, pins
 
-.swf version=5 fps=20 name="points.swf"
+.flash version=5 fps=20 name="points.swf"
 
 .box box 90 90 color=white fill=red line=5
 .point center 45 45
@@ -677,7 +677,7 @@
 #
 # Test clipping
 
-.swf name="clip.swf" fps=25
+.flash name="clip.swf" fps=25
     .sprite s1 # this just constructs a colorful object "s1"
         .box b1 40 40 color=red fill=violet line=10
         .box b2 40 40 color=blue fill=green line=10
@@ -707,7 +707,7 @@
 #
 # fonts&text
 
-.swf name="fonts.swf"
+.flash name="fonts.swf"
     .font courier "Courier.swf"
     .font helvetica "Helvetica.swf"
     .text abc text="abcdefghijklmnopqrstuvwxyz" font=courier size=100% color=blue
@@ -721,7 +721,7 @@
 #
 # Shearing
 
-.swf bbox=300x200:-30 name="shear.swf" fps=25
+.flash bbox=300x200:-30 name="shear.swf" fps=25
     .font helvetica "Helvetica.swf"
     .text text text="Shear" font=helvetica size=100% color=yellow
     .put t0=text y=150 alpha=0% shear=0
@@ -765,7 +765,7 @@
 #
 # Sound effects
 
-.swf name="sound.swf" fps=25
+.flash name="sound.swf" fps=25
 .sound loco "LocoStart.wav"
 .sound whistle "Whistle.wav"
 
