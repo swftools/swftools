@@ -184,9 +184,8 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 	      int y = js[x*3+0];
 	      int u = js[x*3+1];
 	      int v = js[x*3+1];
-	      // untested:
 	      js[x*3+0] = y + ((360*(v-128))>>8);
-	      js[x*3+1] = y - ((88*(u-128)-183*(v-128))>>8);
+	      js[x*3+1] = y - ((88*(u-128)+183*(v-128))>>8);
 	      js[x*3+2] = y + ((455 * (u-128))>>8);
 	  }
 	}
