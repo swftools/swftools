@@ -109,6 +109,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     int*glyph2glyph;
     FT_Size size;
     int max_unicode = 0;
+    int charmap = -1;
    
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
@@ -157,32 +158,47 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     if(name && *name)
 	font->name = (U8*)strdup(name);
 
-/*    // Map Glyphs to Unicode, version 1 (quick and dirty):
-    int t;
-    for(t=0;t<65536;t++) {
-	int index = FT_Get_Char_Index(face, t);
-	if(index>=0 && index<face->num_glyphs) {
-	    if(font->glyph2ascii[index]<0)
-		font->glyph2ascii[index] = t;
-	}
-    }*/
-    
-    // Map Glyphs to Unicode, version 2 (much nicer):
-    // (The third way would be the AGL algorithm, as proposed
-    //  by Werner Lemberg on freetype@freetype.org)
-
-    charcode = FT_Get_First_Char(face, &gindex);
-    while(gindex != 0)
+    while(1) 
     {
-	if(gindex >= 0 && gindex<face->num_glyphs) {
-	    if(!font->glyph2ascii[gindex]) {
-		font->glyph2ascii[gindex] = charcode;
-		if(charcode + 1 > font->maxascii) {
-		    font->maxascii = charcode + 1;
+    /*    // Map Glyphs to Unicode, version 1 (quick and dirty):
+	int t;
+	for(t=0;t<65536;t++) {
+	    int index = FT_Get_Char_Index(face, t);
+	    if(index>=0 && index<face->num_glyphs) {
+		if(font->glyph2ascii[index]<0)
+		    font->glyph2ascii[index] = t;
+	    }
+	}*/
+	
+	// Map Glyphs to Unicode, version 2 (much nicer):
+	// (The third way would be the AGL algorithm, as proposed
+	//  by Werner Lemberg on freetype@freetype.org)
+
+	charcode = FT_Get_First_Char(face, &gindex);
+	while(gindex != 0)
+	{
+	    if(gindex >= 0 && gindex<face->num_glyphs) {
+		if(!font->glyph2ascii[gindex]) {
+		    font->glyph2ascii[gindex] = charcode;
+		    if(charcode + 1 > font->maxascii) {
+			font->maxascii = charcode + 1;
+		    }
 		}
 	    }
+	    charcode = FT_Get_Next_Char(face, charcode, &gindex);
 	}
-	charcode = FT_Get_Next_Char(face, charcode, &gindex);
+
+	/* if we didn't find a single encoding character, try
+	   the font's charmaps instead. That usually means that
+	   the encoding is no longer unicode. 
+	   TODO: find a way to convert the encoding to unicode
+	 */
+	if(font->maxascii == 0 && charmap < face->num_charmaps - 1) {
+	    charmap++;
+	    FT_Set_Charmap(face, face->charmaps[charmap]);
+	    font->encoding = 0;//anything but unicode FIXME
+	} else 
+	    break;
     }
 
     if(full_unicode)
