@@ -32,6 +32,18 @@ dnl Checks for programs.
 dnl Checks for system services
  AC_EXEEXT
 
+# The following tries to make use of includes and libraries in
+# /usr/local, too. Notice: A -I/usr/local/include might break
+# things (MingW, cross-compiling etc.) in the same way as -I/usr/include, 
+# especially on systems which link /usr/local to /usr, so it has yet
+# to be seen how useful this is.
+if test -d /usr/local/include; then
+    CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+fi
+if test -d /usr/local/lib; then
+    LDFLAGS="$LDFLAGS -L/usr/local/lib"
+fi
+
 dnl Checks for libraries.
  AC_CHECK_LIB(m, sin,, 
  echo "Error: Math library not found.";
@@ -60,14 +72,8 @@ AC_SUBST(SYSTEM_BACKTICKS)
 
 AC_ARG_PROGRAM
 
-dnl do we need those?
-dnl AC_CHECK_LIB(pthread, pthread_create)
-dnl AC_CHECK_LIB(X11, XFlush)
-
 dnl Checks for header files.
  AC_CONFIG_HEADER(config.h)
-dnl AC_PATH_X
-dnl AC_PATH_XTRA
  AC_HEADER_DIRENT
  AC_HEADER_STDC
  AC_CHECK_HEADERS(zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h)

@@ -104,6 +104,7 @@ int args_callback_option(char*name,char*val)
     }
     else {
         printf("Unknown option: -%s\n", name);
+	exit(1);
     }
 
     return 0;
@@ -116,7 +117,7 @@ void args_callback_usage(char*name)
 {    
     printf("Usage: %s [-at] file.swf\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-e , --html\t\t Create a html embedding the file (simple, but useful)\n");
+    printf("\t-e , --html\t\t Create html output embedding the file (simple, but useful)\n");
     printf("\t-X , --width\t\t Prints out a string of the form \"-X width\"\n");
     printf("\t-Y , --height\t\t Prints out a string of the form \"-Y height\"\n");
     printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");

@@ -14,7 +14,7 @@ all install uninstall clean:
 	cd avi2swf;$(MAKE) $@;cd ..
 	@echo making $@ in swfs...
 	cd swfs;$(MAKE) $@;cd ..
-	$(MAKE) $@-local
+	@$(MAKE) $@-local
 
 clean-local:
 	rm -f config.cache
