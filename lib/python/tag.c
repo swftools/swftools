@@ -117,6 +117,17 @@ static PyObject* tag_isShape(PyObject * _self, PyObject*args)
     if(!fillTAG((PyObject*)self))   return NULL;
     return PyInt_FromLong(swf_isShapeTag(self->internals.tag));
 }
+static PyObject* tag_isFont(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    if(!PyArg_ParseTuple(args, "")) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
+    int id = self->internals.tag->id;
+    int isfont=0;
+    if(id == ST_DEFINEFONT || id == ST_DEFINEFONT2)
+	isfont = 1;
+    return PyInt_FromLong(isfont);
+}
 static PyObject* tag_isImage(PyObject * _self, PyObject*args)
 {
     TagObject*self = (TagObject*)_self;
@@ -131,6 +142,14 @@ static PyObject* tag_isDefiningTag(PyObject * _self, PyObject*args)
     if(!fillTAG((PyObject*)self))   return NULL;
     return PyInt_FromLong(swf_isDefiningTag(self->internals.tag));
 }
+static PyObject* tag_isPlacement(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    if(!PyArg_ParseTuple(args, "")) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
+    return PyInt_FromLong((self->internals.tag->id == ST_PLACEOBJECT ||
+	                   self->internals.tag->id == ST_PLACEOBJECT2));
+}
 static PyObject* tag_getBBox(PyObject * _self, PyObject*args)
 {
     TagObject*self = (TagObject*)_self;
@@ -138,12 +157,24 @@ static PyObject* tag_getBBox(PyObject * _self, PyObject*args)
     if(!fillTAG((PyObject*)self))   return NULL;
     return f_BBox2(swf_GetDefineBBox(self->internals.tag));
 }
+static PyObject* tag_setBBox(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    PyObject*bbox = 0;
+    if(!PyArg_ParseTuple(args, "O!", &BBoxClass, &bbox)) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
+    swf_SetDefineBBox(self->internals.tag, bbox_getSRECT(bbox));
+    return PY_NONE;
+}
 //----------------------------------------------------------------------------
 static PyMethodDef common_tagfunctions[] =
 {{"isShape", tag_isShape, METH_VARARGS, "tests whether the tag is a shape tag"},
  {"isImage", tag_isImage, METH_VARARGS, "tests whether the tag is an image"},
+ {"isFont", tag_isFont, METH_VARARGS, "tests whether the tag is a font"},
  {"isDefiningTag", tag_isDefiningTag, METH_VARARGS, "tests whether the tag is a defining tag"},
+ {"isPlacement", tag_isPlacement, METH_VARARGS, "tests whether the tag is a placement"},
  {"getBBox", tag_getBBox, METH_VARARGS, "get's the tags bounding box"},
+ {"setBBox", tag_setBBox, METH_VARARGS, "set's the tags bounding box"},
  {NULL, NULL, 0, NULL}
 };
 
