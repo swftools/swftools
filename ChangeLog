@@ -109,6 +109,7 @@
 	* lib/examples/makefonts: Fonts: Bounding boxes are now handled correctly
 	* png2swf: Support for more image types
 	* pdf2swf: New option -t (--stop)
+
 0.4.1:
 	* src/swfcombine: Bugfix with -x option
 	* lib/Makefile: MacOSX fixes
