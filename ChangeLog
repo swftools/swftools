@@ -188,3 +188,4 @@
 	* png2swf: Fixed alpha conversion (removed definejpeg3 workaround)
 	* swfc: added buttons, edittext fields
 	* rfxswf: fixed font advance parameters (editboxes with custom font now work)
+	* swfextract: Is able to extract alpha channels out of DEFINEBITS2 now.
