@@ -20,6 +20,8 @@
 
 #include <windows.h>
 #include <commctrl.h>
+#include <commdlg.h>
+#include <shlobj.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -30,11 +32,13 @@
 extern char*crndata;
 
 static char*install_path = "c:\\swftools\\";
+static char pathBuf[1024];
+static int do_abort = 0;
 
 static HWND wnd_progress = 0;
 static HWND wnd_params = 0;
 
-#define USER_SETMESSAGE 0x7fff0001
+#define USER_SETMESSAGE 0x7f01
 
 struct progress_data {
     int width,height;
@@ -54,9 +58,9 @@ struct params_data {
     int ok;
     HWND installButton;
     HWND edit;
+    HWND explore;
 };
 
-	
 LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     printf("%08x, %d %08x %08x\n", hwnd, message, wParam, lParam);
@@ -84,7 +88,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	{
 	    case USER_SETMESSAGE:
 		data.text3 = (char*)wParam;
-		SendMessage(data.wnd_text3, WM_SETTEXT, 0, data.text3);
+		SendMessage(data.wnd_text3, WM_SETTEXT, 0, (LPARAM)data.text3);
 		return 0;
 	    case WM_CREATE: {
 		memset(&data, 0, sizeof(data));
@@ -131,9 +135,10 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			cs->hInstance,
 			NULL
 			);
+		SendMessage(data.wnd_text3, WM_SETTEXT, 0, (LPARAM)"");
+
 		SendMessage(data.hwndButton, PBM_SETRANGE, 0, (LPARAM) MAKELONG(0,data.range));
 		SendMessage(data.hwndButton, PBM_SETSTEP, (WPARAM) data.step, 0);
-		//ShowWindow(hwndButton, SW_SHOW);
 		return 0;
 	    }   
 	    case PBM_STEPIT: {
@@ -153,16 +158,13 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 GetTextMetrics(hdc, &tm);
                 ReleaseDC(hwnd, hdc);
 
+
 		hdc = BeginPaint (hwnd, &ps);
+
+		SetBkMode(hdc, TRANSPARENT);
 		
 		rc.top = 8; rc.left= 0; rc.right = data.width; rc.bottom = 24;
 		DrawText(hdc, data.text1, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-
-		/*if(data.text3) {
-		    rc.top = 112; rc.left= 0; rc.right = data.width; rc.bottom = 128;
-		    InvalidateRect(hwnd,&rc,1);
-		    DrawText(hdc, data.text3, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-		}*/
 
 		char buf[256];
 		char*text = data.text2;
@@ -204,7 +206,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			"Select Installation Directory:",
 			WS_CHILD | WS_VISIBLE,
 			32, 
-			0,
+			16,
 			data.width-32*2, 
 			20,
 			hwnd,  /* Parent */
@@ -212,23 +214,35 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			cs->hInstance,
 			NULL
 			);
-
-		SendMessage(text, WM_SETTEXT, "test1", "test2");
 
 		data.edit = CreateWindow (
 			WC_EDIT,
 			"EditPath",
 			WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL,
 			32, 
-			32,
-			data.width-32*2, 
+			48,
+			(data.width-64)-32*2, 
 			20,
 			hwnd,  /* Parent */
-			(HMENU)1,
+			(HMENU)0x1234,
 			cs->hInstance,
 			NULL
 			);
- 
+		
+		data.explore = CreateWindow (
+			WC_BUTTON,
+			"Explore",
+			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+			data.width-32-64,
+			48,
+			64, 
+			20,
+			hwnd,  /* Parent */
+			(HMENU)0x9999,
+			cs->hInstance,
+			NULL
+			);
+		
 		data.installButton = CreateWindow (
 			WC_BUTTON,
 			"Install",
@@ -238,19 +252,61 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			80, 
 			32,
 			hwnd,  /* Parent */
-			(HMENU)1,
+			(HMENU)0xabcd,
 			cs->hInstance,
 			NULL
 			);
+		
+		SendMessage(data.edit, WM_SETTEXT, 0, (LPARAM)install_path);
 		return 0;
 	    }   
+	    case USER_SETMESSAGE: {
+		//install_path = (char*)lParam;
+		SendMessage(data.edit, WM_SETTEXT, 0, (LPARAM)install_path);
+		printf("Setting path to %s\n", install_path);
+		return 0;
+	    }
 	    case WM_PAINT: {
 		return DefWindowProc(hwnd, message, wParam, lParam);
 	    }
 	    case WM_COMMAND: {
-		data.ok = 1;
-		DestroyWindow(wnd_params);
-		return;
+		if((wParam&0xffff) == 0x9999) {
+		    BROWSEINFOA browse;
+		    memset(&browse, 0, sizeof(browse));
+		    browse.ulFlags = BIF_EDITBOX | BIF_NEWDIALOGSTYLE | BIF_USENEWUI;// | BIF_RETURNONLYFSDIRS; //BIF_VALIDATE
+		    browse.pszDisplayName = (CHAR*)malloc(MAX_PATH);
+		    memset(browse.pszDisplayName, 0, MAX_PATH);
+		    browse.lpszTitle = "Select installation directory";
+		    /*browse.pidlRoot = (ITEMIDLIST*)malloc(sizeof(ITEMIDLIST)*200);
+		    memset((void*)browse.pidlRoot, 0, sizeof(ITEMIDLIST)*200);*/
+		    printf("Start browsing %s\n", browse.pszDisplayName);
+		    //SHGetDesktopFolder
+		    //ParseDisplayName(install_path,0,&browse.pidlRoot,0,0);
+		    //SHParseDisplayName(install_path,0,&browse.pidlRoot,0,0);
+		    //SHBrowseForFolderA(&browse);
+		    browse.pidlRoot = SHBrowseForFolder(&browse);
+		    printf("Browsing returns %s / %08x\n", browse.pszDisplayName, browse.pidlRoot);
+		    if(browse.pszDisplayName) {
+			if(SHGetPathFromIDList(browse.pidlRoot, browse.pszDisplayName)) {
+			    printf("Path is %s\n", browse.pszDisplayName);
+			    install_path = browse.pszDisplayName;
+			}
+		    }
+		    SendMessage(data.edit, WM_SETTEXT, 0, (LPARAM)install_path);
+		    return 0;
+		} else if((wParam&0xffff) == 0xabcd) {
+		    data.ok = 1;
+		    DestroyWindow(wnd_params);
+		    return 0;
+		} else if((wParam&0xffff) == 0x1234) {
+		    SendMessage(data.edit, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
+		    if(pathBuf[0]) {
+			install_path = pathBuf;
+			printf("Path edited: now \"%s\"\n", install_path);
+		    }
+		    return 0;
+		}
+		return DefWindowProc(hwnd, message, wParam, lParam);
 	    }
 	    case WM_KEYDOWN: {
 		if(wParam == 0x49) {
@@ -259,8 +315,10 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		return 0;
 	    }
 	    case WM_DESTROY:
-		if(!data.ok)
+		if(!data.ok) {
+		    do_abort = 1;
                     PostQuitMessage (0);
+		}
 		wnd_params = 0;
 		return DefWindowProc(hwnd, message, wParam, lParam);
 	    default:
@@ -296,7 +354,7 @@ void myarchivestatus(int type, char*text)
 	/* while we're here, we might also make ourselves useful */
 	processMessages();
 	/* we want the user to see what we're writing, right? */
-	Sleep(20);
+	Sleep(30);
     }
 
     if(type<0) {
@@ -341,7 +399,6 @@ int addRegistryEntries(char*install_dir)
 int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
 {
     WNDCLASSEX wcl;
-    char*install_dir = "C:\\swftools\\";
 
     wcl.hInstance    = me;
     wcl.lpszClassName= "SWFTools-Installer";
@@ -354,13 +411,16 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     wcl.cbClsExtra   = 0;
     wcl.cbWndExtra   = 0;
     //wcl.hbrBackground= (HBRUSH) GetStockObject(DKGRAY_BRUSH);
-    wcl.hbrBackground= (HBRUSH) GetStockObject (WHITE_BRUSH);
+    //wcl.hbrBackground= (HBRUSH) GetStockObject (WHITE_BRUSH);
+    wcl.hbrBackground= (HBRUSH) GetStockObject (LTGRAY_BRUSH);
+    //wcl.hbrBackground= (HBRUSH) GetStockObject (GRAY_BRUSH);
     wcl.cbSize       = sizeof(WNDCLASSEX);
 
     if(!RegisterClassEx (&wcl)) {
 	return 0;
     }
 
+    CoInitialize(0);
     InitCommonControls();
    
     CreateWindow (
@@ -376,6 +436,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	    me,                         /* This program instance */
 	    (void*)"params"		/* Creation parameters */
 	    );
+
     ShowWindow (wnd_params, nWinMode);
     UpdateWindow (wnd_params);
    
@@ -386,13 +447,15 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-   
-    char buf[1024];
-    sprintf(buf, "Do you want me to install SWFTools into the directory %s now?", install_dir);
-    int ret = MessageBox(0, buf, "SWFTools Install", MB_YESNO|MB_ICONQUESTION);
 
-    if(ret == IDNO)
+    if(do_abort)
 	return 0;
+   
+    /*char buf[1024];
+    sprintf(buf, "Do you want me to install SWFTools into the directory %s now?", install_path);
+    int ret = MessageBox(0, buf, "SWFTools Install", MB_YESNO|MB_ICONQUESTION);
+    if(ret == IDNO)
+	return 0;*/
     
     CreateWindow (
 	    wcl.lpszClassName,          /* Class name */
@@ -417,14 +480,15 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     while(wnd_progress)
 	processMessages();
 
-    if(!addRegistryEntries(install_dir)) {
+    if(!addRegistryEntries(install_path)) {
 	success = 0;
-	ret = MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
+	MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
     }
 
     if(success) {
-	sprintf(buf, "SWFTools Version %s has been installed into %s successfully", VERSION, install_dir);
-	ret = MessageBox(0, buf, "SWFTools Install", MB_OK|MB_ICONINFORMATION);
+	char buf[1024];
+	sprintf(buf, "SWFTools Version %s has been installed into %s successfully", VERSION, install_path);
+	MessageBox(0, buf, "SWFTools Install", MB_OK|MB_ICONINFORMATION);
     } else {
 	/* error will already have been notified by either myarchivestatus or some other
 	   routine */
