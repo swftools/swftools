@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
@@ -24,6 +25,22 @@ static int loglevel = 3;
 static char * pagerange = 0;
 static char * filename = 0;
 static char * password = 0;
+
+static char * preloader = 0;
+static char * viewer = 0;
+
+int systemf(const char* format, ...)
+{
+    char buf[1024];
+    va_list arglist;
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+
+    printf("%s:\n\n", buf);
+    fflush(stdout);
+    return system(buf);
+}
 
 int args_callback_option(char*name,char*val) {
     if (!strcmp(name, "o"))
@@ -76,6 +93,34 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_storeallcharacters();
 	return 0;
     }
+    else if (!strcmp(name, "l"))
+    {
+	if(val)
+	{
+	    preloader = val;
+	}
+	else
+	{
+	    systemf("ls %s/swfs/*_loader.swf", DATADIR);
+	    printf("\n");
+	    exit(1);
+	}
+	return 1;
+    }
+    else if (!strcmp(name, "b"))
+    {
+	if(val)
+	{
+	    viewer = val;
+	}
+	else
+	{
+	    systemf("ls %s/swfs/*_viewer.swf", DATADIR);
+	    printf("\n");
+	    exit(1);
+	}
+	return 1;
+    }
     else if (name[0]=='j')
     {
 	if(name[1]) {
@@ -108,6 +153,8 @@ struct options_t options[] =
  {"p","pages"},
  {"w","samewindow"},
  {"f","fonts"},
+ {"b","viewer"},
+ {"l","preloader"},
  {0,0}
 };
 
@@ -142,6 +189,8 @@ void args_callback_usage(char*name)
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
+    printf("-b  --viewer name	       Link viewer \"name\" to the pdf (\"%s -b\" for list)\n");
+    printf("-l  --preloader name       Link preloader \"name\" to the pdf (\"%s -l\" for list)\n");
     printf("-V  --version              Print program version\n");
 }
 
@@ -175,10 +224,10 @@ int main(int argn, char *argv[])
     //T1LIB_CONFIG.
     putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
     FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
-    fprintf(fi, "FONTDATABASE=%s/FontDataBase\n", DATADIR);
-    fprintf(fi, "ENCODING=%s:.\n", DATADIR);
-    fprintf(fi, "AFM=%s:.\n", DATADIR);
-    fprintf(fi, "TYPE1=%s:.\n", DATADIR);
+    fprintf(fi, "FONTDATABASE=%s/fonts/FontDataBase\n", DATADIR);
+    fprintf(fi, "ENCODING=%s/fonts:.\n", DATADIR);
+    fprintf(fi, "AFM=%s/fonts:.\n", DATADIR);
+    fprintf(fi, "TYPE1=%s/fonts:.\n", DATADIR);
     fclose(fi);
     /* initialize t1lib */
     T1_SetBitmapPad( 16);
@@ -201,6 +250,18 @@ int main(int argn, char *argv[])
     pdfswf_performconversion();
 
     pdfswf_close();
+
+    if(viewer) {
+	systemf("swfcombine %s viewport=%s -o %s",
+		viewer, outputname, outputname);
+	printf("\n");
+    }
+    if(preloader) {
+	systemf("swfcombine %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
+		DATADIR, preloader, outputname, outputname);
+	printf("\n");
+    }
+
     return 0;
 }
 
