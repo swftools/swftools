@@ -767,8 +767,6 @@ char type3Warning=0;
 int SWFOutputDev::searchT1Font(char*name) 
 {	
     int i;
-    
-    int id=-1;
     int mapid=-1;
     char*filename=0;
     for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
@@ -779,17 +777,41 @@ int SWFOutputDev::searchT1Font(char*name)
 	    mapid = i;
 	}
     }
-    if(filename)
-    for(i=0; i<T1_Get_no_fonts(); i++)
-    {
-	char*fontfilename = T1_GetFontFileName (i);
-	if(strstr(fontfilename, filename))
+    if(filename) {
+	for(i=0; i<T1_Get_no_fonts(); i++)
 	{
-		id = i;
-		pdf2t1map[i].id = mapid;
+	    char*fontfilename = T1_GetFontFileName (i);
+	    if(strstr(fontfilename, filename))
+	    {
+		    pdf2t1map[i].id = mapid;
+		    return i;
+	    }
+	}
+    } else {
+	for(i=0; i<T1_Get_no_fonts(); i++)
+	{
+	    char*fontname = T1_GetFontName (i);
+	    if(!fontname) {
+		T1_LoadFont(i);
+		fontname = T1_GetFontName (i);
+		logf("<verbose> Loading extra font %s from %s\n", FIXNULL(fontname), 
+								  FIXNULL(T1_GetFontFileName(i)));
+	    }
+	    if(fontname && !strcmp(name, fontname)) {
+		logf("<notice> Extra font %s is being used.\n", fontname);
+		return i;
+	    }
+	    fontname = T1_GetFontFileName(i);
+	    if(strrchr(fontname,'/'))
+		    fontname = strrchr(fontname,'/')+1;
+ 
+	    if(strstr(fontname, name)) {
+		logf("<notice> Extra font %s is being used.\n", fontname);
+		return i;
+	    }
 	}
     }
-    return id;
+    return -1;
 }
 
 void SWFOutputDev::updateLineWidth(GfxState *state)
