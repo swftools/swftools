@@ -113,15 +113,37 @@ static int fillTAG(PyObject*self)
 static PyObject* tag_isShape(PyObject * _self, PyObject*args)
 {
     TagObject*self = (TagObject*)_self;
-    if(!PyArg_ParseTuple(args, ""))
-	return NULL;
-    if(!fillTAG((PyObject*)self))
-	return NULL;
+    if(!PyArg_ParseTuple(args, "")) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
     return PyInt_FromLong(swf_isShapeTag(self->internals.tag));
+}
+static PyObject* tag_isImage(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    if(!PyArg_ParseTuple(args, "")) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
+    return PyInt_FromLong(swf_isImageTag(self->internals.tag));
+}
+static PyObject* tag_isDefiningTag(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    if(!PyArg_ParseTuple(args, "")) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
+    return PyInt_FromLong(swf_isDefiningTag(self->internals.tag));
+}
+static PyObject* tag_getBBox(PyObject * _self, PyObject*args)
+{
+    TagObject*self = (TagObject*)_self;
+    if(!PyArg_ParseTuple(args, "")) return NULL;
+    if(!fillTAG((PyObject*)self))   return NULL;
+    return f_BBox2(swf_GetDefineBBox(self->internals.tag));
 }
 //----------------------------------------------------------------------------
 static PyMethodDef common_tagfunctions[] =
 {{"isShape", tag_isShape, METH_VARARGS, "tests whether the tag is a shape tag"},
+ {"isImage", tag_isImage, METH_VARARGS, "tests whether the tag is an image"},
+ {"isDefiningTag", tag_isDefiningTag, METH_VARARGS, "tests whether the tag is a defining tag"},
+ {"getBBox", tag_getBBox, METH_VARARGS, "get's the tags bounding box"},
  {NULL, NULL, 0, NULL}
 };
 
