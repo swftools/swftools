@@ -8,8 +8,8 @@
 
    This file is distributed under the GPL, see file COPYING for details */
 
-#ifndef __config_h__
-#define __config_h__
+#ifndef __settings_h__
+#define __settings_h__
 struct config_t
 {
    char overlay;
