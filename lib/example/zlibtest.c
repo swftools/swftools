@@ -75,15 +75,26 @@ int main ( int argc, char ** argv)
         bitmap8[y*bps8+x] = (y/16)*16+(x/16);
 
     for (x=0;x<256;x++)
-    { pal[x].r = (x&0xf)*16;
-      pal[x].g = (x*2)&0xff;
-      pal[x].b = x&0xf0;
-      pal[x].a = (x==0xff)?0:0xff;
+    {
+      pal[x].r = (x/16)*16;
+      pal[x].g = (x&15)*16;
+      pal[x].b = 0;
+      pal[x].a = x;
+      pal[x].r = (pal[x].r*pal[x].a)/255;
+      pal[x].g = (pal[x].g*pal[x].a)/255;
+      pal[x].b = (pal[x].b*pal[x].a)/255;
     }
 
     for (y=0;y<dy;y++)
-      for (x=0;x<dx;x++)
-        bitmap16[y*(bps16>>1)+x] = ((x&0xf0)==(y&0xf0))?0xffff:(x&0x0f)<(y&0xf)?BM16_RED|BM16_GREEN:BM16_BLUE;
+      for (x=0;x<dx;x++) {
+	U8 red = x;
+	U8 green = y;
+	U8 blue = x+y;
+        bitmap16[y*(bps16>>1)+x] = ((green/0x40)&0x03)|
+	                           ((red/4)&0x3f)<<2|
+				   ((blue/8)&0x1f)<<8|
+				   ((green/0x08)&0x07)<<13;
+      }
 
     for (y=0;y<dy;y++)
       for (x=0;x<dx;x++)
@@ -106,9 +117,9 @@ int main ( int argc, char ** argv)
   swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
   t = swf.firstTag;
 
-    rgb.r = 0xff;
-    rgb.b = 0xff;
-    rgb.g = 0xff;
+    rgb.r = 0x00;
+    rgb.b = 0x00;
+    rgb.g = 0x00;
     swf_SetRGB(t,&rgb);
 
   t = swf_InsertTag(t,ST_DEFINEBITSLOSSLESS);
