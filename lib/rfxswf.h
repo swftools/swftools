@@ -22,6 +22,13 @@
 
 #define DEBUG_RFXSWF
 
+#ifndef TRUE
+#define TRUE (1)
+#endif
+#ifndef FALSE
+#define FALSE (1)
+#endif
+
 // SWF Types
 
 typedef         unsigned long   U32;
