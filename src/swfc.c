@@ -2512,7 +2512,7 @@ static struct {
     {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
     {"on_press", c_on_press, "position=inside"},
     {"on_release", c_on_release, "position=anywhere"},
-    {"on_move_in", c_on_move_out, "state=not_pressed"},
+    {"on_move_in", c_on_move_in, "state=not_pressed"},
     {"on_move_out", c_on_move_out, "state=not_pressed"},
     {"on_key", c_on_key, "key=any"},
  
