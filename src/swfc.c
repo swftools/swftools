@@ -643,8 +643,7 @@ static void s_endSWF()
     swf = stack[stackpos].swf;
     filename = stack[stackpos].filename;
    
-    //tag = swf_InsertTag(tag, ST_SHOWFRAME); //?
-
+    tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
@@ -707,6 +706,14 @@ void s_frame(int nr, int cut, char*name)
 {
     int t;
     TAG*now = tag;
+
+    /* // enabling the following code will make the frame
+       handling much more intuitive, but also break old
+	code:
+       
+       if(nr<1) 
+	syntaxerror("Frame number need to be at least 1");
+    nr--;*/
 
     for(t=currentframe;t<nr;t++) {
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
@@ -1201,8 +1208,11 @@ void s_action(const char*text)
 int s_swf3action(char*name, char*action)
 {
     ActionTAG* a = 0;
-    instance_t* object = dictionary_lookup(&instances, name);
-    if(!object) {
+    instance_t* object = 0;
+    if(name) 
+	dictionary_lookup(&instances, name);
+    if(!object && name && *name) {
+	/* we have a name, but couldn't find it. Abort. */
 	return 0;
     }
     a = action_SetTarget(0, name);
@@ -1250,7 +1260,10 @@ void s_outline(char*name, char*format, char*source)
 
 int s_playsound(char*name, int loops, int nomultiple, int stop)
 {
-    sound_t* sound = dictionary_lookup(&sounds, name);
+    sound_t* sound;
+    if(!name)
+	return 0;
+    sound = dictionary_lookup(&sounds, name);
     SOUNDINFO info;
     if(!sound)
 	return 0;
@@ -1921,7 +1934,7 @@ static int c_play(map_t*args)
 
 static int c_stop(map_t*args) 
 {
-    char*name = lu(args, "name");
+    char*name = map_lookup(args, "name");
 
     if(s_playsound(name, 0,0,1)) {
 	return 0;
@@ -2578,7 +2591,7 @@ static struct {
  
     // control tags
  {"play", c_play, "name loop=0 @nomultiple=0"},
- {"stop", c_stop, "name"},
+ {"stop", c_stop, "name= "},
  {"nextframe", c_nextframe, "name"},
  {"previousframe", c_previousframe, "name"},
 
