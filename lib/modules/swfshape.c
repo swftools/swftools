@@ -470,6 +470,11 @@ int swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
   b = swf_CountBits(x,b);
   b = swf_CountBits(y,b);
 
+  if(b-2 >= 16) {
+	fprintf(stderr, "Bit overflow in swf_ShapeSetCurve- %d (%d,%d,%d,%d)\n", b, ax,ay,x,y);
+	b = 17;
+  }
+
   swf_SetBits(t,b-2,4);
   swf_SetBits(t,x,b);
   swf_SetBits(t,y,b);
