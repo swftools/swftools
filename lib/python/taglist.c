@@ -42,6 +42,10 @@ PyObject * taglist_new2(TAG*tag)
     t = tag;
     while(t) {
 	PyObject*newtag = tag_new2(t, taglist->tagmap);
+	if(newtag==NULL) {
+	    // pass through exception
+	    return NULL;
+	}
 	PyList_SET_ITEM(taglist->taglist,nr,newtag);Py_INCREF(newtag);
 	if(swf_isDefiningTag(t)) {
 	    tagmap_add(taglist->tagmap, newtag);

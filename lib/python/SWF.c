@@ -125,6 +125,9 @@ static PyObject* f_load(PyObject* self, PyObject* args)
     close(fi);
 
     swf->taglist = taglist_new2(swf->swf.firstTag);
+    if(swf->taglist == NULL) {
+	return NULL;
+    }
     swf->swf.firstTag = 0;
     
     return (PyObject*)swf;
@@ -163,8 +166,10 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 	TAG*tag = swf->firstTag;
 	if(!tag)
 	    tag = swf->firstTag = swf_InsertTag(0,ST_END);
-	while(tag && tag->next)
+	while(tag && tag->next) {
+	    mylog(" tag:%08x\n", tag);
 	    tag = tag->next;
+	}
 	if(tag->id != ST_END) {
 	    tag = swf_InsertTag(tag,ST_END);
 	}

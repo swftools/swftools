@@ -139,7 +139,7 @@ PyObject* tag_new()
 PyObject* tag_new2(TAG*t, PyObject* tagmap)
 {
     TagObject*tag = PyObject_New(TagObject, &TagClass);
-    mylog("+%08x(%d) tag_new\n", (int)tag, tag->ob_refcnt);
+    mylog("+%08x(%d) tag_new tag=%08x\n", (int)tag, tag->ob_refcnt, t);
     tag->font = 0;
     tag->character = 0;
     tag->placeobject = 0;
@@ -334,9 +334,9 @@ TAG* tag_getRAWTAG(PyObject*self)
 /* serialize */
 TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 {
-    mylog(" %08x(%d) tag_getTAG tagmap=%08x \n", (int)self, self->ob_refcnt, tagmap);
     TagObject*tag = (TagObject*)self;
     TAG* t = tag_getRAWTAG(self);
+    mylog(" %08x(%d) tag_getTAG tagmap=%08x tag=%08x\n", (int)self, self->ob_refcnt, tagmap, t);
     t->next = 0;
     t->prev = prevTag;
     if(prevTag)
