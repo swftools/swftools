@@ -727,11 +727,13 @@ void s_frame(int nr, int cut, char*name)
 	if(t==nr-1 && name && *name) {
 	    tag = swf_InsertTag(tag, ST_FRAMELABEL);
 	    swf_SetString(tag, name);
+	    swf_SetU8(tag, 1); //make this an anchor
 	}
     }
     if(nr == 0 && currentframe == 0 && name) {
         tag = swf_InsertTag(tag, ST_FRAMELABEL);
         swf_SetString(tag, name);
+	swf_SetU8(tag, 1); //make this an anchor
     }
 
     if(cut) {
