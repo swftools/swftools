@@ -20,7 +20,8 @@ else
         if test -f "/Library/Python/2.$v/PIL/_imaging.so" \
                 -a "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
-            PYTHON_LIB="-lpython$PY_VERSION /Library/Python/2.$v/PIL/_imaging.so"
+            #PYTHON_LIB="-lpython$PY_VERSION /Library/Python/2.$v/PIL/_imaging.so"
+            PYTHON_LIB="-framework Python /Library/Python/2.$v/PIL/_imaging.so"
             PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
         fi
     done
