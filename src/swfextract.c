@@ -676,11 +676,11 @@ void handlelossless(TAG*tag)
 //    if(format == 5) cols = swf_GetU32(tag) + 1;
     else cols = 0;
 
-    logf("<verbose> Width %d", width);
-    logf("<verbose> Height %d", height);
-    logf("<verbose> Format %d", format);
-    logf("<verbose> Cols %d", cols);
-    logf("<verbose> Bpp %d", bpp);
+    msg("<verbose> Width %d", width);
+    msg("<verbose> Height %d", height);
+    msg("<verbose> Format %d", format);
+    msg("<verbose> Cols %d", cols);
+    msg("<verbose> Bpp %d", bpp);
 
     datalen = (width*height*bpp/8+cols*8);
     do {
@@ -694,7 +694,7 @@ void handlelossless(TAG*tag)
 	fprintf(stderr, "Zlib error %d (image %d)\n", error, id);
 	return;
     }
-    logf("<verbose> Uncompressed image is %d bytes (%d colormap)", datalen, (3+alpha)*cols);
+    msg("<verbose> Uncompressed image is %d bytes (%d colormap)", datalen, (3+alpha)*cols);
     pos = 0;
     datalen2 = datalen;
     data2 = malloc(datalen2);
@@ -774,7 +774,7 @@ void handlelossless(TAG*tag)
 	fprintf(stderr, "zlib error in pic %d\n", id);
 	return;
     }
-    logf("<verbose> Compressed data is %d bytes", datalen2);
+    msg("<verbose> Compressed data is %d bytes", datalen2);
     png_start_chunk(fi, "IDAT", datalen2);
     png_write_bytes(fi,data2,datalen2);
     png_end_chunk(fi);
@@ -800,18 +800,18 @@ void handlesoundstream(TAG*tag)
 	case ST_SOUNDSTREAMHEAD:
 	    if((tag->data[1]&0x30) == 0x20) { //mp3 compression
 		mp3file = fopen(filename, "wb");
-		logf("<notice> Writing mp3 data to %s",filename);
+		msg("<notice> Writing mp3 data to %s",filename);
 	    }
 	    else
-		logf("<error> Soundstream is not mp3");
+		msg("<error> Soundstream is not mp3");
 	break;
 	case ST_SOUNDSTREAMHEAD2:
 	    if((tag->data[1]&0x30) == 0x20) {//mp3 compression
 		mp3file = fopen(filename, "wb");
-		logf("<notice> Writing mp3 data to %s",filename);
+		msg("<notice> Writing mp3 data to %s",filename);
 	    }
 	    else
-		logf("<error> Soundstream is not mp3 (2)");
+		msg("<error> Soundstream is not mp3 (2)");
 	break;
 	case ST_SOUNDSTREAMBLOCK:
 	    if(mp3file)

@@ -13,9 +13,7 @@
 #include <string.h>
 #include <memory.h>
 #include <errno.h>
-#define logf logarithmf // logf is also used by ../lib/log.h
 #include <math.h>
-#undef logf
 #include "../config.h"
 #include "../lib/rfxswf.h"
 #include "../lib/log.h"
@@ -1315,6 +1313,10 @@ SPOINT getPoint(SRECT r, char*name)
     l--;
     return *(SPOINT*)&mpoints.buffer[l];
 }
+static int c_gradient(map_t*args) 
+{
+    return 0;
+}
 static int c_point(map_t*args) 
 {
     char*name = lu(args, "name");
@@ -1731,6 +1733,11 @@ static struct {
  {"font", c_font, "name filename"},
  {"soundtrack", c_soundtrack, "filename"},
 
+    // generators of primitives
+
+ {"point", c_point, "name x=0 y=0"},
+ {"gradient", c_gradient, "name"},
+
     // character generators
  {"box", c_primitive, "name width height color=white line=1 @fill=none"},
  {"circle", c_primitive, "name r color=white line=1 @fill=none"},
@@ -1757,7 +1764,6 @@ static struct {
     // virtual object placement
  {"buttonput", c_buttonput, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex=100% scaley=100% shear=0 rotate=0 above= below="},
  {"texture", c_texture, "<i> x=0 y=0 scale= scalex=100% scaley=100% shear=0 rotate=0"},
- {"point", c_point, "name x=0 y=0"},
 
     // commands which start a block
 //startclip (see above)
