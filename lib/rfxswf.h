@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "../config.h"
 
 #define DEBUG_RFXSWF
@@ -355,6 +357,9 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f);
 
 int swf_FontExport(int handle,SWFFONT * f);
 int swf_FontImport(int handle,SWFFONT * * f);
+
+void swf_WriteFont(SWFFONT* font, char* filename, int useDefineFont2);
+SWFFONT* swf_ReadFont(char* filename);
 
 void swf_FontFree(SWFFONT * f);
 
