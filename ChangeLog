@@ -182,5 +182,5 @@
 	* lib/rfxswf.h: fixed a bug- could previously only be compiled with either t1lib or freetype
 	* configure: newer avifile versions (>= 0.7.38) now also work.
 
-0.5.1 (not yet released):
+0.5.2 (not yet released):
 	* configure: added check for broken freetype- disable freetype in some cases
