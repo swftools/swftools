@@ -27,32 +27,38 @@
 
 #include "log.h"
 
-#define LOGLEVEL_FATAL 0
-#define LOGLEVEL_ERROR 1
-#define LOGLEVEL_WARNING 2
-#define LOGLEVEL_NOTICE 3
-#define LOGLEVEL_VERBOSE 4
-#define LOGLEVEL_DEBUG 5
-
-int screenloglevel;
-int fileloglevel;
-int socketloglevel;
-FILE *logFile = 0;
+static int screenloglevel = 1;
+static int fileloglevel = -1;
+static int socketloglevel = -1;
+static int maxloglevel = 1;
+static FILE *logFile = 0;
 #ifdef __NT__
-SOCKET logSocket;
+static SOCKET logSocket;
 #else
-int logSocket = 0;
+static int logSocket = 0;
 #endif
 
-char bLogToSock = 0;
+static char bLogToSock = 0;
 
-void initlogSocket(char* servAddr, char* logPort);
+static void initlogSocket(char* servAddr, char* logPort);
 
 void initLog(char* pLogName, int fileloglevel, char* servAddr, char* logPort, int serverlevel, int screenlevel)
 {
    screenloglevel = screenlevel;
    fileloglevel = fileloglevel;
    socketloglevel = screenlevel;
+
+   maxloglevel=screenloglevel;
+   if(fileloglevel>maxloglevel && pLogName)
+       maxloglevel=fileloglevel;
+   if(serverlevel>maxloglevel && servAddr)
+       maxloglevel=serverlevel;
+
+   if(!servAddr)
+       serverlevel = -1;
+   if(!pLogName)
+       fileloglevel = -1;
+
    logFile = NULL;
    bLogToSock = 0;
 
@@ -63,7 +69,7 @@ void initLog(char* pLogName, int fileloglevel, char* servAddr, char* logPort, in
        initlogSocket(servAddr, logPort);
 }
 
-void initlogSocket(char* servAddr, char* logPort)
+static void initlogSocket(char* servAddr, char* logPort)
 {
 #ifndef __NT__
    bLogToSock = 0;
@@ -243,8 +249,16 @@ void logf(const char* format, ...)
     char buf[1024];
 	va_list arglist;
 	va_start(arglist, format);
-    buf[0] = 0;
-    vsprintf(&buf[strlen(buf)], format, arglist);
+    
+    /* speed up hack */
+    if(format[0]=='<') {
+	char*z = "fewnvd";
+	char*x = strchr(z,format[0]);
+	if(x && (x-z)>maxloglevel)
+		return;
+    }
+
+    vsprintf(buf, format, arglist);
 	va_end(arglist);
     strcat(buf, "\n");
     log(buf);

@@ -27,10 +27,6 @@
 #define LOGLEVEL_VERBOSE 4
 #define LOGLEVEL_DEBUG 5
 
-extern int screenloglevel;
-extern int socketloglevel;
-extern int fileloglevel;
-
 extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPort, int serverloglevel, int screenloglevel);
 extern void log(char* logString);
 extern void logf(const char* logFormat, ...);
