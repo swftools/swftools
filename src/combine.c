@@ -20,6 +20,7 @@
 // * readers should be object-oriented
 
 static char* slavename;
+static int slaveid;
 
 static char* tag_placeobject2_name (struct swf_tag* tag)
 {
@@ -205,12 +206,6 @@ void write_sprite(struct writer_t*w, int spriteid, int replaceddefine)
     
     startpos = (u8*)writer_getpos(w);
 
-    if (spriteid<0)
-    {
-	logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
-	spriteid = get_free_id();
-    }
-
     logf ("<notice> sprite id is %d", spriteid);
     tmp = spriteid;
     writer_write(w, &tmp, 2);
@@ -340,6 +335,11 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
     char master_flash = 0;
     char slave_flash = 0;
     slavename = _slavename;
+    if(slavename[0] == '#')
+    {
+	slaveid = atoi(&slavename[1]);
+	slavename = 0;
+    }
 
     logf("<debug> move x (%d)", config.movex);
     logf("<debug> move y (%d)", config.movey);
@@ -417,7 +417,8 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 		else
 		  logf("<verbose> tagid %02x places object %d (no name)", tag, id);
 
-		if (name && !strcmp(name,slavename)) {
+		if ((name && slavename && !strcmp(name,slavename)) || 
+		    (!slavename && id==slaveid)) {
 		    if(id>=0) {
 		      spriteid = id;
 		      logf("<notice> Slave file attached to object %d.", id);
@@ -426,6 +427,15 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 	    }
 	}
 	while(master.tags[pos++].id != 0);
+
+	if (spriteid<0)
+	{
+	    if(slavename)
+		logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
+	    else
+		logf("<warning> Didn't find id %d in file. No substitutions will occur.", slaveid);
+	    spriteid = get_free_id();
+	}
 
 	swf_relocate (slavedata, slavelength, masterids);
 
