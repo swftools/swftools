@@ -598,13 +598,12 @@ void action_fixjump(ActionMarker m1, ActionMarker m2)
     int len = 0;
     int oplen = 0;
     a = a1;
+    
+    a = a->next; //first one is free
     while(a && a!=a2)
     {
-	if(a != a1) //first one is for free
-	{
-	   len += ActionTagSize(a);
-	   oplen ++;
-	}
+	len += ActionTagSize(a);
+	oplen ++;
 	a = a->next;
     }
     if(!a)
