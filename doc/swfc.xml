@@ -178,11 +178,27 @@ If you have a SWF with a font you would like to use, do a
 </shell>
 Then write down the font ID of the font, and do a
 <shell>
-    swfextract -f <fontid> file.swf -o myfont.swf
+    swfextract -f &lt;fontid&gt; file.swf -o myfont.swf
 </shell>
 .
+<p>
 This will give you a file named myfont.swf which you can
 also use in the <c>filename</c> parameter of <c>.font</c>.
+</p>
+
+<p>
+Furthermore, you can convert TTF and Type1
+fonts into SWF using <c>font2swf</c>:
+<shell>
+    font2swf Arial.ttf -o Arial.swf
+</shell>
+The nice advantage of this is that you can play
+Arial.swf in the flash player and see what the
+font looks like.
+(Also, loading a font in SWF format is slighly
+faster than from a TTF file, as with TTFs spline
+conversion has to take place).
+</p>
 
 </section>
 <section>
@@ -201,7 +217,7 @@ objects which you can use in other commands.
 <code lang="swfc">
 .flash name="fontoutline.swf"
     .font Arial "Arial.swf"
-    .textshape helloworld font="arial" text="Hello World"
+    .textshape helloworld font=Arial text="Hello World"
     .filled filled_helloworld outline=helloworld fill=blue line=5 color=green
     .put filled_helloworld
 .end
@@ -216,7 +232,7 @@ of a plain color:
 <code lang="swfc">
 .flash name="fontgradient.swf"
     .font Arial "Arial.swf"
-    .textshape helloworld font="arial" text="Hello World"
+    .textshape helloworld font=Arial text="SHADE"
     
     .gradient whitefade:
 	0% black
@@ -224,7 +240,7 @@ of a plain color:
 	100% yellow
     .end
 
-    .filled filled_helloworld outline=helloworld fill=blue line=5 color=green
+    .filled filled_helloworld outline=helloworld fill=whitefade line=1 color=#2c2c2c
     .put filled_helloworld
 .end
 </code>
@@ -273,13 +289,6 @@ which is used here together with the alpha parameter of <c>.change</c>:
   </code>
  
  </section>
-
-
-
-</section>
-
-
-
 
 </chapter>
 
