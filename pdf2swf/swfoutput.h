@@ -50,6 +50,7 @@ struct swfcoord {
 
 struct swfoutput 
 {
+    MATRIX fontmatrix;
     double fontm11,fontm12,fontm21,fontm22;
     unsigned short int linewidth;
     SWFFONT *swffont;
