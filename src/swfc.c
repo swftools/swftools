@@ -788,15 +788,15 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
 {
     SRECT r,r2;
     SHAPE* s;
-    int ls1,fs1=0;
+    int ls1=0,fs1=0;
     r2.xmin = 0;
     r2.ymin = 0;
     r2.xmax = width;
     r2.ymax = height;
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
-    ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
-
+    if(linewidth)
+        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
 
@@ -819,6 +819,37 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     incrementid();
 }
 
+void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line, 
+                         U8**destdata, U32*destbitlen, int out_bits_fill, int out_bits_line)
+{
+    SHAPE2 s2;
+    SHAPE s;
+    SHAPELINE*line;
+    memset(&s2, 0, sizeof(s2));
+    s2.lines = swf_ParseShapeData(data, bitlen, in_bits_fill, in_bits_line);
+    s2.numfillstyles = out_bits_fill?1<<(out_bits_fill-1):0;
+    s2.numlinestyles = out_bits_line?1<<(out_bits_line-1):0;
+    s2.fillstyles = rfx_calloc(sizeof(FILLSTYLE)*s2.numfillstyles);
+    s2.linestyles = rfx_calloc(sizeof(LINESTYLE)*s2.numlinestyles);
+
+    line = s2.lines;
+    while(line) {
+        if(line->fillstyle0 > s2.numfillstyles) line->fillstyle0 = 0;
+        if(line->fillstyle1 > s2.numfillstyles) line->fillstyle1 = 0;
+        if(line->linestyle > s2.numlinestyles) line->linestyle = 0;
+        line = line->next;
+    }
+
+    swf_Shape2ToShape(&s2,&s);
+
+    free(s2.fillstyles);
+    free(s2.linestyles);
+    free(s.fillstyle.data);
+    free(s.linestyle.data);
+    *destdata = s.data;
+    *destbitlen = s.bitlen;
+}
+
 void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*texture)
 {
     SRECT rect,r2;
@@ -833,11 +864,11 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
 
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
-    ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+    if(linewidth)
+        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
-    else 
-	syntaxerror("non filled outlines not yet supported- please supply a fill=<color/texture> argument");
+    
     swf_SetU16(tag,id);
     rect.xmin = r2.xmin-linewidth-linewidth/2;
     rect.ymin = r2.ymin-linewidth-linewidth/2;
@@ -846,8 +877,11 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
 
     swf_SetRect(tag,&rect);
     swf_SetShapeStyles(tag, s);
-    swf_SetShapeBits(tag, outline->shape); //does not count bits!
-    swf_SetBlock(tag, outline->shape->data, (outline->shape->bitlen+7)/8);
+    swf_ShapeCountBits(s,0,0);
+    swf_RecodeShapeData(outline->shape->data, outline->shape->bitlen, 1,            1, 
+                        &s->data,             &s->bitlen,             s->bits.fill, s->bits.line);
+    swf_SetShapeBits(tag, s);
+    swf_SetBlock(tag, s->data, (s->bitlen+7)/8);
     swf_ShapeFree(s);
 
     s_addcharacter(name, id, tag, rect);
@@ -858,14 +892,15 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
 {
     SRECT rect,r2;
     SHAPE* s;
-    int ls1,fs1=0;
+    int ls1=0,fs1=0;
     r2.xmin = r2.ymin = 0;
     r2.xmax = 2*r;
     r2.ymax = 2*r;
 
     tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
-    ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+    if(linewidth)
+        ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
     swf_SetU16(tag,id);
@@ -1241,14 +1276,10 @@ void s_outline(char*name, char*format, char*source)
     draw_string(&draw, source);
     draw.finish(&draw);
     shape = swf_ShapeDrawerToShape(&draw);
-    //shape2 = swf_ShapeToShape2(shape);
-    //bounds = swf_GetShapeBoundingBox(shape2);
-    //swf_Shape2Free(shape2);
     bounds = swf_ShapeDrawerGetBBox(&draw);
     draw.dealloc(&draw);
     
-    outline = (outline_t*)malloc(sizeof(outline_t));
-    memset(outline, 0, sizeof(outline_t));
+    outline = (outline_t*)rfx_calloc(sizeof(outline_t));
     outline->shape = shape;
     outline->bbox = bounds;
     
