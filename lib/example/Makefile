@@ -12,7 +12,7 @@ DBFLAGS	= -g2
 %.o: %.cc
 		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape avi2swf
+all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape
 
 movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape
 		./sound
@@ -26,12 +26,6 @@ movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont
 		./buttontest
 		./text
 		./makefonts
-
-avi2swf.o: avi2swf.cc
-		$(CXX) -O2 -fomit-frame-pointer -o avi2swf.o -c avi2swf.cc `avifile-config --cflags`
-
-avi2swf: $(RFXSWF) avi2swf.o
-		$(CXX) -O2 -fomit-frame-pointer -o avi2swf avi2swf.o  $(RFXSWF) $(LDLIBS) `avifile-config --libs`
 
 sound: $(RFXSWF) sound.o
 		$(CC) -o sound sound.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
