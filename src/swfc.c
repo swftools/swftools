@@ -28,6 +28,7 @@
 static char * filename = 0;
 static char * outputname = "output.swf";
 static int verbose = 2;
+static int override_outputname = 0;
 
 static struct options_t options[] =
 {
@@ -45,6 +46,7 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "o")) {
 	outputname = val;
+	override_outputname = 1;
 	return 1;
     }
     else if(!strcmp(name, "v")) {
@@ -1041,7 +1043,7 @@ int parseColor2(char*str, RGBA*color)
     int r,g,b,a;
     int t;
     char*names[8] = {"black", "blue", "green", "cyan",
-	             "red", "violet", "yellow", "white"};
+	             "red", "magenta", "yellow", "white"};
     a=255;
     r=g=b=0;
     if(str[0]=='#' && (l==7 || l==9)) {
@@ -1168,7 +1170,7 @@ static int c_swf(map_t*args)
     int version = parseInt(lu(args, "version"));
     int fps = (int)(parseFloat(lu(args, "fps"))*256);
     int compress = 0;
-    if(!strcmp(name, "!default!"))
+    if(!strcmp(name, "!default!") || override_outputname)
 	name = outputname;
     
     if(!strcmp(compressstr, "default"))
