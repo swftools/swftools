@@ -32,16 +32,12 @@
 #include <sys/stat.h>
 #endif
 #include "../lib/args.h"
+#include "../lib/os.h"
 #include "SWFOutputDev.h"
 #include "log.h"
 
-#ifndef WIN32
-#define FONTDIR SWFTOOLS_DATADIR "/fonts"
-#define SWFDIR SWFTOOLS_DATADIR "/swfs"
-#else
-#define FONTDIR "C:\\swftools\\fonts"
-#define SWFDIR "C:\\swftools\\swfs"
-#endif
+#define FONTDIR concatPaths(getInstallationPath(), "fonts")
+#define SWFDIR concatPaths(getInstallationPath(), "swfs")
 
 static char * outputname = 0;
 static int loglevel = 3;
@@ -351,29 +347,10 @@ void args_callback_usage(char*name)
 #ifndef SYSTEM_BACKTICKS
     printf("(They might not work because your system call doesn't support command substitution)\n");
 #endif
-    printf("-b  --defaultviewer        Link default viewer to the pdf (%s/swfs/default_viewer.swf)\n", SWFTOOLS_DATADIR);
-    printf("-l  --defaultpreloader     Link default preloader the pdf (%s/swfs/default_loader.swf)\n", SWFTOOLS_DATADIR);
+    printf("-b  --defaultviewer        Link default viewer to the pdf (%s)\n", concatPaths(SWFDIR, "default_viewer.swf"));
+    printf("-l  --defaultpreloader     Link default preloader the pdf (%s)\n", concatPaths(SWFDIR, "default_loader.swf"));
     printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
     printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
-}
-
-static char* stripfilename(char*filename, char*newext)
-{
-    char*last1 = strrchr(filename, '/');
-    char*last2 = strrchr(filename, '\\');
-    char*pos = filename;
-    char*name;
-    char*dot;
-    if(last1>pos) pos = last1 + 1;
-    if(last2>pos) pos = last2 + 1;
-    name = (char*)malloc(strlen(pos)+5);
-    strcpy(name, pos);
-    dot = strrchr(name, '.');
-    if(dot) {
-	*dot = 0;
-    }
-    strcat(name, newext);
-    return name;
 }
 
 int main(int argn, char *argv[])
@@ -389,9 +366,9 @@ int main(int argn, char *argv[])
     initLog(0,-1,0,0,-1,loglevel);
 
 #if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
-    FILE*test = fopen(FONTDIR "\\d050000l.afm", "rb");
+    FILE*test = fopen(concatPaths(FONTDIR,"\\d050000l.afm"), "rb");
     if(!test) {
-	fprintf(stderr, "Couldn't find file " FONTDIR "\\d050000l.afm- pdf2swf not installed properly? OS says:\n");
+	fprintf(stderr, "Couldn't find file %s - pdf2swf not installed properly? OS says:\n", concatPaths(FONTDIR, "\\d050000l.afm"));
 	perror("open");
 	exit(1);
     }
@@ -416,7 +393,7 @@ int main(int argn, char *argv[])
     if(!outputname)
     {
 	if(filename) {
-	    outputname = stripfilename(filename, ".swf");
+	    outputname = stripFilename(filename, ".swf");
 	    msg("<notice> Output filename not given. Writing to %s", outputname);
 	} 
     }
