@@ -12,7 +12,7 @@ case $host_os in
 esac
 
 AR=ar
-if test "x$MINGW" == "xyes"; then
+if test "x$MINGW" = "xyes"; then
     #fix for the debian distribution of mingw
     if test -x "/usr/i586-mingw32msvc/bin/ar";then
 	AR="/usr/i586-mingw32msvc/bin/ar"
