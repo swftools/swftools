@@ -440,6 +440,7 @@ int   swf_SetShapeHeader(TAG * t,SHAPE * s); // one call for upper three functio
 
 int   swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y);
 int   swf_ShapeSetStyle(TAG * t,SHAPE * s,int line,int fill0,int fill1);
+#define UNDEFINED_COORD 0x7fffffff
 int   swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,int line,int fill0,int fill1);
 
 int   swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y);
@@ -706,12 +707,14 @@ int swf_ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineB
 
 // swfbits.c
 
-typedef int JPEGBITS;
+int swf_ImageHasAlpha(RGBA*img, int width, int height);
+int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*palette);
 
-JPEGBITS * swf_SetJPEGBitsStart(TAG * t,int width,int height,int quality);
-int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n);
-int swf_SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data);
-int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits);
+typedef int JPEGBITS;
+JPEGBITS * swf_SetJPEGBitsStart(TAG * t,int width,int height,int quality); // deprecated
+int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n); // deprecated
+int swf_SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data); // deprecated
+int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits); // deprecated
 
 void swf_GetJPEGSize(char * fname, int*width, int*height);
 
@@ -730,9 +733,12 @@ void swf_RemoveJPEGTables(SWF*swf);
 int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
 int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
+void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height); //WARNING: will change tag->id
+
 RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*width, int*height);
 
 RGBA* swf_ExtractImage(TAG*tag, int*dwidth, int*dheight);
+RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight);
 
 // swfsound.c
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
