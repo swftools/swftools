@@ -24,18 +24,18 @@ Set output filename to \fIfilename\fR.
 \fB\-p\fR, \fB\-\-flip\fR
 Turn the movie upside down.
 .TP
-\fB\-n\fR \fIframes\fR, \fB\-\-num \fIframes\fR\fR
-Set number of frames to encode to \fIframes\fR.
+\fB\-x\fR, \fB\-\-extragood\fR
+Enable highest-quality encoding. Warning: This is slow!
 .TP
-\fB\-s\fR \fIframe\fR, \fB\-\-start \fIframe\fR\fR
-Start with frame \fIframe\fR.
+\fB\-S\fR \fIn\fR, \fB\-\-skip \fIn\fR\fR
+Skip \fIn\fR frames before starting to encode.
 .TP
-\fB\-d\fR \fIfactor\fR, \fB\-\-scale \fIfactor\fR\fR
+\fB\-s\fR \fIfactor\fR, \fB\-\-scale \fIfactor\fR\fR
 Scale movie by factor%. factor must be in the range 1-100.
 .TP
-\fB\-z\fR, \fB\-\-zlib\fR
-Compress the movie afterwards. (Using swfcombine)
-Playing compressed Movies requires Flash MX!
+\fB\-q\fR \fIq\fR, \fB\-\-quality\fR \fIq\fR
+Set the compression quality to \fIq\fR. \fIq\fR must be
+in the range 1-100. (1=worst, 100=best).
 
 .SH AUTHOR
 
