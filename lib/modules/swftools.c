@@ -575,8 +575,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    callback(tag, tag->pos + base, callback_data);
 	break;
 
-	//case ST_DEFINEMORPHSHAPE: /* disabled for now (doesn't work) */
-
+	case ST_DEFINEMORPHSHAPE: /* disabled for now (doesn't work) */
 	case ST_DEFINESHAPE3: // these thingies might have bitmap ids in their fillstyles
 	num++; //fallthrough
 	case ST_DEFINESHAPE2:
@@ -585,23 +584,28 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    int fillbits;
 	    int linebits;
 	    int id; 
+	    int numshapes = 1;
 	    int morph = 0;
-	    if(tag->id == ST_DEFINEMORPHSHAPE)
+	    if(tag->id == ST_DEFINEMORPHSHAPE) {
+		numshapes = 2;
 		morph = 1;
+	    }
 
 	    id = swf_GetU16(tag); // id;
 	    swf_GetRect(tag, NULL); // bounds
 	    if(morph) {
+		swf_ResetReadBits(tag);
 		swf_GetRect(tag, NULL); // bounds2
 		swf_GetU32(tag); //offset to endedges
 	    }
-    
+   
 	    DEBUG_ENUMERATE printf("Tag:%d Name:%s ID:%d\n", tag->id, swf_TagGetName(tag), id);
 
 	    enumerateUsedIDs_styles(tag, callback, callback_data, num, morph);
 	    DEBUG_ENUMERATE printf("-------\n");
-	    while(--morph>=0) /* morph shapes define two shapes */
+	    while(--numshapes>=0) /* morph shapes define two shapes */
 	    {
+		DEBUG_ENUMERATE printf("shape:%d\n", numshapes);
 		fillbits = swf_GetBits(tag, 4);
 		linebits = swf_GetBits(tag, 4);
 		DEBUG_ENUMERATE printf("%d %d\n", fillbits, linebits);
