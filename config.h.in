@@ -1,4 +1,5 @@
-/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+#ifndef __config_h__
+#define __config_h__
 
 /* Define to empty if the keyword does not work.  */
 #undef const
@@ -50,6 +51,18 @@
 
 /* Define if you have the strstr function.  */
 #undef HAVE_STRSTR
+
+/* Define if you have the lrand48 function.  */
+#undef HAVE_LRAND48
+
+/* Define if you have the lrand48 function.  */
+#undef HAVE_RAND
+
+/* Define if you have the lrand48 function.  */
+#undef HAVE_SRAND48
+
+/* Define if you have the lrand48 function.  */
+#undef HAVE_SRAND
 
 /* Define if you have the <dirent.h> header file.  */
 #undef HAVE_DIRENT_H
@@ -125,3 +138,5 @@
 
 /* use gzip/uncompress */
 #undef USE_GZIP
+
+#endif
