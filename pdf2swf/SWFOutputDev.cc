@@ -1527,6 +1527,7 @@ void pdfswf_init(char*filename, char*userPassword)
 
 
   output = new SWFOutputDev();
+  output->startDoc(doc->getXRef());
 }
 
 void pdfswf_drawonlyshapes()
