@@ -13,8 +13,10 @@ libpdf_objects =  GHash.$(O) GList.$(O) GString.$(O) gmem.$(O) gfile.$(O) \
 		  Link.$(O) GlobalParams.$(O) JBIG2Stream.$(O) Page.$(O) JPXStream.$(O) \
 		  JArithmeticDecoder.$(O) Gfx.$(O) GfxFont.$(O) CMap.$(O) CharCodeToUnicode.$(O) \
 		  PSTokenizer.$(O) FontEncodingTables.$(O) BuiltinFont.$(O) BuiltinFontTables.$(O) \
-		  GfxState.$(O) Function.$(O) Annot.$(O) NameToCharCode.$(O) UnicodeMap.$(O)
+		  GfxState.$(O) Function.$(O) Annot.$(O) NameToCharCode.$(O) UnicodeMap.$(O) cmyk.$(O)
 
+cmyk.$(O): cmyk.cc
+	$(CC) -I./ cmyk.cc -o $@
 UnicodeMap.$(O): UnicodeMap.cc
 	$(CC) -I./ UnicodeMap.cc -o $@
 NameToCharCode.$(O): NameToCharCode.cc
