@@ -38,38 +38,61 @@
 
 #include "log.h"
 
-int screenloglevel = 1;
+static int screenloglevel = 1;
 static int fileloglevel = -1;
-static int maxloglevel = 1;
 static FILE *logFile = 0;
+static int maxloglevel = 1;
 
-void initLog(char* pLogName, int fileloglevel, char* s00, char* s01, int s02, int screenlevel)
+int getScreenLogLevel()
 {
-   screenloglevel = screenlevel;
-   fileloglevel = fileloglevel;
+    return screenloglevel;
+}
 
-   maxloglevel=screenloglevel;
-   if(fileloglevel>maxloglevel && pLogName)
-       maxloglevel=fileloglevel;
-
-   logFile = NULL;
-
-   if (pLogName && fileloglevel>=0)
-    logFile = fopen(pLogName, "a+");
+void setConsoleLogging(int level)
+{
+    if(level>maxloglevel)
+        maxloglevel=level;
+    screenloglevel = level;
+}
+void setFileLogging(char*filename, int level, char append)
+{
+    if(level>maxloglevel)
+        maxloglevel=level;
+    if(logFile) {
+        fclose(logFile);logFile=0;
+    }
+    if(filename && level>=0) {
+        logFile = fopen(filename, append?"ab+":"wb");
+        fileloglevel = level;
+    } else {
+        logFile = 0;
+        fileloglevel = 0;
+    }
+}
+/* deprecated */
+void initLog(char* filename, int fileloglevel, char* s00, char* s01, int s02, int screenlevel)
+{
+    setFileLogging(filename, fileloglevel, 0);
+    setConsoleLogging(screenloglevel);
 }
 
 void exitLog()
 {
    // close file
-   if(logFile != NULL)
+   if(logFile != NULL) {
      fclose(logFile);
+     logFile = 0;
+     fileloglevel = -1;
+     screenloglevel = 1;
+     maxloglevel = 1;
+   }
 }
 
 static char * logimportance[]= {"Fatal","Error","Warning","Notice","Verbose","Debug","Trace"};
 static int loglevels=7;
 static char * logimportance2[]= {"       ","FATAL  ","ERROR  ","WARNING","NOTICE ","VERBOSE","DEBUG  ", "TRACE  "};
 
-static inline void log(char* logString)
+static inline void log(const char* logString)
 {
    char timebuffer[32];
    char* logBuffer;
@@ -156,6 +179,16 @@ static inline void log(char* logString)
    free (logBuffer);
 }
 
+void msg_str(const char* buf)
+{
+    if(buf[0]=='<') {
+	char*z = "fewnvdt";
+	char*x = strchr(z,buf[1]);
+	if(x && (x-z)>maxloglevel)
+		return;
+    }
+    log(buf);
+}
 void msg(const char* format, ...)
 {
     char buf[1024];

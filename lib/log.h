@@ -25,15 +25,9 @@
 extern "C" {
 #endif
 
-#ifdef __NT__
-#include "stdafx.h"
-#include <time.h>
-#include <windef.h>
-#else
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#endif
 
 #define LOGLEVEL_FATAL 0
 #define LOGLEVEL_ERROR 1
@@ -43,10 +37,14 @@ extern "C" {
 #define LOGLEVEL_DEBUG 5
 #define LOGLEVEL_TRACE 6
 
-extern int screenloglevel;
+extern int getScreenLogLevel();
 
 extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPort, int serverloglevel, int screenloglevel);
+extern void setConsoleLogging(int level);
+extern void setFileLogging(char*filename, int level, char append);
+
 extern void msg(const char* logFormat, ...);
+extern void msg_str(const char* log);
 extern void exitLog(void);
 
 #define FIXNULL(a) ((int)(a)?(a):"NULL")
