@@ -270,6 +270,10 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
     int ac;// = swf_GetBits();
     int index;
     int pos = 0;
+    int line[64];
+    int show_rle_code=0;
+    memset(line, 0, sizeof(line));
+
     //printf("DC:%d\n", dc);
     if(has_dc) {
 	dc = swf_GetBits(tag, 8);
@@ -277,12 +281,13 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 	    printf("error: dc=%d\n", dc);
 	    exit(1);
 	}
-	DEBUG printf(" %d ", dc);
+	DEBUG if(show_rle_code) printf(" %d ", dc);
+	line[pos] = dc;
 	pos++;
     }
 
     if(has_tcoef) {
-	DEBUG printf("[");
+	DEBUG if(show_rle_code) printf("[");
 	while(1) {
 	    int last;
 	    int run;
@@ -296,10 +301,11 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 		last = swf_GetBits(tag, 1);
 		run = swf_GetBits(tag, 6);
 		level = swf_GetBits(tag, 8);
-		if(run)
-		    DEBUG printf(" (%d) E%d", run, level);
-		else
-		    DEBUG printf("E");
+		if(run) {
+		    DEBUG if(show_rle_code) printf(" (%d) E%d", run, level);
+		} else {
+		    DEBUG if(show_rle_code) printf("E");
+		}
 		if(level == 0 || level == 128) {
 		    printf("error: level=%d\n", level);
 		    exit(1);
@@ -311,23 +317,36 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 		    level = -level;
 		}
 		if(run) {
-		    DEBUG printf(" (%d) %s%d", run, level>0?"+":"",level);
+		    DEBUG if(show_rle_code) printf(" (%d) %s%d", run, level>0?"+":"",level);
 		} else {
-		    DEBUG printf(" %s%d", level>0?"+":"",level);
+		    DEBUG if(show_rle_code) printf(" %s%d", level>0?"+":"",level);
 		}
 	    }
-	    pos += run+1;
+	    pos += run;
+	    if(pos>=64) {
+		printf("\nerror:bad pos: %d\n", pos);
+		exit(1);
+	    }
+	    line[pos++] = level;
 	    //DEBUG printf("run:%d level:%d\n", run, level);
 	    if(last) {
-		DEBUG printf("] pos: %d", pos);
+		DEBUG if(show_rle_code) printf("] pos: %d", pos);
 		if(pos>64) {
 		    printf("\nerror:bad pos (%d)\n", pos);
 		    exit(1);
 		}
-		return;
+		break;
 	    }
 	}
     }
+    DEBUG if(show_rle_code) printf("\n");
+
+    DEBUG printf("[");
+    for(t=0;t<pos;t++) {
+	DEBUG printf("%d", line[t]);
+	DEBUG if(t<pos-1) printf(" ");
+    }
+    DEBUG printf("]\n");
 }
 	    
 int readMVD(TAG*tag)
@@ -444,14 +463,12 @@ void decode_block(TAG*tag, int pictype)
 	int has_tcoef = cbpy_value & (8>>t);
 	DEBUG printf("luminance%d ", t);
 	get_DC_TCOEF(tag, t, has_intradc, has_tcoef); /*luminance - affected by cbpy*/
-	DEBUG printf("\n");
     }
     for(t=0;t<2;t++) {
 	int has_intradc = intrablock;
 	int has_tcoef = cbpc & (2>>t);
 	DEBUG printf("chrominance%d ", t); 
 	get_DC_TCOEF(tag, t, has_intradc, has_tcoef); /*chrominance - affected by mcbc*/
-	DEBUG printf("\n");
     }
 }
 
