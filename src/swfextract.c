@@ -28,6 +28,7 @@ char* extractids = 0;
 char* extractframes = 0;
 char* extractjpegids = 0;
 char* extractpngids = 0;
+char* extractsoundids = 0;
 char extractmp3 = 0;
 
 char* extractname = 0;
@@ -45,6 +46,7 @@ struct options_t options[] =
  {"j","jpegs"},
  {"p","pngs"},
  {"m","mp3"},
+ {"s","sound"},
  {"n","name"},
  {"f","frame"},
  {"V","version"},
@@ -98,6 +100,15 @@ int args_callback_option(char*name,char*val)
 	extractjpegids = val;
 	return 1;
     } 
+    else if(!strcmp(name, "s")) {
+	if(extractsoundids) {
+	    fprintf(stderr, "Only one --sound argument is allowed. (Try to use a range, e.g. -s 1,2,3)\n");
+	    exit(1);
+	}
+	numextracts++;
+	extractsoundids = val;
+	return 1;
+    } 
 #ifdef _ZLIB_INCLUDED_
     else if(!strcmp(name, "p")) {
 	if(extractpngids) {
@@ -134,17 +145,22 @@ void args_callback_usage(char*name)
     printf("Usage: %s [-v] [-n name] [-ijf ids] file.swf\n", name);
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
     printf("\t-o , --output filename\t\t set output filename\n");
-    printf("\t-n , --name name\t\t instance name of the object to extract\n");
-    printf("\t-i , --id IDs\t\t\t ID of the object to extract\n");
-    printf("\t-j , --jpeg IDs\t\t\t IDs of the JPEG pictures to extract\n");
-#ifdef _ZLIB_INCLUDED_
-    printf("\t-p , --pngs IDs\t\t\t IDs of the PNG pictures to extract\n");
-#endif
-    printf("\t-m , --mp3\t\t\t Extract main mp3 stream\n");
+    printf("\t-V , --version\t\t\t Print program version and exit\n\n");
+    printf("SWF Subelement extraction:\n");
+    printf("\t-n , --name name\t\t instance name of the object (SWF Define) to extract\n");
+    printf("\t-i , --id ID\t\t\t ID of the object (SWF Define) to extract\n");
     printf("\t-f , --frame frames\t\t frame numbers to extract\n");
     printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames\n"); 
     printf("\t             \t\t\t (use with -f)\n");
-    printf("\t-V , --version\t\t\t Print program version and exit\n");
+    printf("Picture extraction:\n");
+    printf("\t-j , --jpeg ID\t\t\t Extract JPEG picture(s)\n");
+#ifdef _ZLIB_INCLUDED_
+    printf("\t-p , --pngs ID\t\t\t Extract PNG picture(s)\n");
+#endif
+    printf("\n");
+    printf("Sound extraction:\n");
+    printf("\t-m , --mp3\t\t\t Extract main mp3 stream\n");
+    printf("\t-s , --sound ID\t\t\t Extract Sound(s)\n");
 }
 int args_callback_command(char*name,char*val)
 {
@@ -429,7 +445,7 @@ void handlejpeg(TAG*tag)
 	fwrite(&tag->data[2+2], tag->len-2-2, 1, fi); //don't write start tag (ff,d9)
 	fclose(fi);
     }
-    if(tag->id == ST_DEFINEBITSJPEG2 && tag->len>2) {
+    else if(tag->id == ST_DEFINEBITSJPEG2 && tag->len>2) {
 	int end = tag->len;
 	int pos = findjpegboundary(&tag->data[2], tag->len-2);
 	if(pos<0)
@@ -440,7 +456,7 @@ void handlejpeg(TAG*tag)
 	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
 	fclose(fi);
     }
-    if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
+    else if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
 	U32 end = GET32(&tag->data[2])+6;
 	int pos = findjpegboundary(&tag->data[6], tag->len-6);
 	if(pos<0)
@@ -450,6 +466,11 @@ void handlejpeg(TAG*tag)
 	fwrite(&tag->data[6], pos-6, 1, fi);
 	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
 	fclose(fi);
+    }
+    else {
+	int id = GET16(tag->data);
+	fprintf(stderr, "Object %d is not a JPEG picture!\n",id);
+	exit(1);
     }
 }
 
@@ -542,8 +563,11 @@ void handlelossless(TAG*tag)
     make_crc32_table();
 
     if(tag->id != ST_DEFINEBITSLOSSLESS &&
-       tag->id != ST_DEFINEBITSLOSSLESS2)
-	return;
+       tag->id != ST_DEFINEBITSLOSSLESS2) {
+	int id = GET16(tag->data);
+	fprintf(stderr, "Object %d is not a PNG picture!\n",id);
+	exit(1);
+    }
 
     id =swf_GetU16(tag);
     format = swf_GetU8(tag);
@@ -692,7 +716,7 @@ void handlesoundstream(TAG*tag)
 	break;
 	case ST_SOUNDSTREAMHEAD2:
 	    if((tag->data[1]&0x30) == 0x20) {//mp3 compression
-		mp3file = fopen("mainstream.mp3", "wb");
+		mp3file = fopen(filename, "wb");
 		logf("<notice> Writing mp3 data to %s",filename);
 	    }
 	    else
@@ -703,6 +727,37 @@ void handlesoundstream(TAG*tag)
 		fwrite(&tag->data[4],tag->len-4,1,mp3file);
 	break;
     }
+}
+
+void handledefinesound(TAG*tag)
+{
+    U8 flags;
+    U32 samples;
+    char buf[128];
+    char*filename = buf;
+    FILE*fi;
+    U16 id;
+    id = swf_GetU16(tag); //id
+    sprintf(buf, "sound%d.mp3", id);
+
+    if(numextracts==1) {
+	filename = destfilename;
+	if(!strcmp(filename,"output.swf"))
+	    filename = "output.mp3";
+    }
+    flags = swf_GetU8(tag);
+    if((flags>>4)!=2) {
+	printf("Sorry, can only extract MP3 sounds. Sound %d is ADPCM or RAW.\n", id);
+	/* not mp3 */
+	return;
+    }
+    samples = swf_GetU32(tag);
+    
+    swf_GetU16(tag); //(only for mp3) numsamples_seek
+
+    fi = save_fopen(filename, "wb");
+    fwrite(&tag->data[tag->pos], tag->len - tag->pos, 1, fi);
+    fclose(fi);
 }
 
 int main (int argc,char ** argv)
@@ -718,7 +773,7 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     if(!extractframes && !extractids && ! extractname && !extractjpegids && !extractpngids
-	&& !extractmp3)
+	&& !extractmp3 && !extractsoundids)
 	listavailable = 1;
 
     if(!filename)
@@ -794,7 +849,8 @@ int main (int argc,char ** argv)
 	if(tag->id == ST_SOUNDSTREAMHEAD ||
 	   tag->id == ST_SOUNDSTREAMHEAD2 ||
 	   tag->id == ST_SOUNDSTREAMBLOCK) {
-	    handlesoundstream(tag);
+	    if(extractmp3)
+		handlesoundstream(tag);
 	}
 
 	if(tag->id == ST_JPEGTABLES)
@@ -809,6 +865,9 @@ int main (int argc,char ** argv)
 	    }
 	    if(extractjpegids && is_in_range(id, extractjpegids)) {
 		handlejpeg(tag);
+	    }
+	    if(extractsoundids && is_in_range(id, extractsoundids)) {
+		handledefinesound(tag);
 	    }
 #ifdef _ZLIB_INCLUDED_
 	    if(extractpngids && is_in_range(id, extractpngids)) {

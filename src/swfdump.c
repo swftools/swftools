@@ -250,6 +250,29 @@ void handleText(TAG*tag)
   swf_FontExtract_DefineTextCallback(-1,0,tag,4, textcallback);
 }
 	    
+void handleDefineSound(TAG*tag)
+{
+    U16 id = swf_GetU16(tag);
+    U8 flags = swf_GetU8(tag);
+    int compression = (flags>>4)&3;
+    int rate = (flags>>2)&3;
+    int bits = flags&2?16:8;
+    int stereo = flags&1;
+    printf(" (");
+    if(compression == 0) printf("Raw ");
+    else if(compression == 1) printf("ADPCM ");
+    else if(compression == 2) printf("MP3 ");
+    else printf("? ");
+    if(rate == 0) printf("5.5Khz ");
+    if(rate == 1) printf("11Khz ");
+    if(rate == 2) printf("22Khz ");
+    if(rate == 3) printf("44Khz ");
+    printf("%dBit ", bits);
+    if(stereo) printf("stereo");
+    else printf("mono");
+    printf(")");
+}
+
 void handleDefineBits(TAG*tag)
 {
     U16 id;
@@ -646,6 +669,10 @@ int main (int argc,char ** argv)
 	if(tag->id == ST_DEFINEBITSLOSSLESS ||
 	   tag->id == ST_DEFINEBITSLOSSLESS2) {
 	    handleDefineBits(tag);
+	    printf("\n");
+	}
+	else if(tag->id == ST_DEFINESOUND) {
+	    handleDefineSound(tag);
 	    printf("\n");
 	}
 	else if(tag->id == ST_DEFINEEDITTEXT) {
