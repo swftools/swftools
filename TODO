@@ -26,6 +26,7 @@ General Improvements:
     * rfxswf: modules/swfshape doesn't allow changing to fillstyle 0
     * consistent output handling if -o is missing. (out.swf/stdout)
     * swfcombine: Allow substituting frames (which have a name), too?
+    * make more stuff dependent on the information in config.h
 
 Cleanups in rfxswf-lib:
     
@@ -35,6 +36,3 @@ Cleanups in rfxswf-lib:
     * DataPos should be named DataReadPos, DataSize DataWritePos.
     * bitcount should be named BitWritePos, bitmask BitReadPos
   
-Autoconf:
-    * Disabling of jpeg2swf (if libjpeg isn't there) doesn't work yet
-
