@@ -84,7 +84,7 @@ struct GRADIENT readGRADIENT(int shape)
     for(t=0;t<gradient.num;t++)
     {
 	gradient.ratios[t] = readu8();
-	if(shape>=3)
+	if(shape<3)
 	    gradient.rgb[t] = readRGB();
 	else
 	    gradient.rgba[t] = readRGBA();
@@ -123,14 +123,14 @@ void writeRECT(u8**pos, struct RECT*r)
     *pos = writer_getpos(&w);
 }
 
-struct CXFORM readCXFORM()
+struct CXFORM readCXFORM(char alpha)
 {
     struct CXFORM c;
     int bits;
     c.hasadd=readbit();
     c.hasmult=readbit();
     bits=getbits(4);
-    c.alpha = 0;
+    c.alpha = alpha;
 
     if (c.hasmult)
     {
@@ -316,7 +316,7 @@ void placeobject_init (struct PlaceObject*obj, struct swf_tag*tag)
     obj -> matrix = readMATRIX();
     obj -> hascxform = (getinputpos() < &tag->data[tag->length]);
     if(obj -> hascxform)
-	obj -> cxform = readCXFORM();
+	obj -> cxform = readCXFORM(0);
 }
 
 void placeobject_write (struct PlaceObject*obj, struct writer_t*w)
@@ -369,7 +369,7 @@ void placeobject2_init (struct PlaceObject2*obj,struct swf_tag*tag)
 	obj->matrix = readMATRIX();
     } 
     if(obj->hascolortransform) {
-	obj->cxform = readCXFORM();
+	obj->cxform = readCXFORM(0);
     }
     if(obj->hasratio) {
 	obj->ratio=readu16();

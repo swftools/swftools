@@ -115,7 +115,6 @@ struct RECT readRECT();
 struct RGB readRGB();
 struct MATRIX readMATRIX();
 unsigned char* readSTRING();
-struct CXFORM readCXFORM();
 struct CLIPACTIONS readCLIPACTIONS();
 
 void writeRECT(u8**pos, struct RECT*r);
@@ -145,7 +144,7 @@ struct RGB readRGB();
 struct RGBA readRGBA();
 struct GRADIENT readGRADIENT(int shape);
 struct RECT readRECT();
-struct CXFORM readCXFORM();
+struct CXFORM readCXFORM(char alpha);
 struct MATRIX readMATRIX();
 unsigned char* readSTRING();
 int swf_read_tag(struct swf_tag* swftag);
