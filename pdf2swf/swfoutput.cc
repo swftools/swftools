@@ -996,13 +996,18 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     int t, outlinepos=0;
     char*map[256];
 
+    char*null = 0;
+    if(!a)
+	a=&null;
+
     t=0;
     while(a[t])
         t++;
     this->charnum = t;
 
-    if(!charnum) 
-        return;
+    if(!charnum) {
+	this->standardtablesize = 0;
+    }
     msg("<verbose> Font %s(%d): Storing %d outlines.\n", FIXNULL(name), id, charnum);
 
     this->standardtablesize = 256;
@@ -1166,7 +1171,8 @@ SWFFont::~SWFFont()
     }
 
     free(ptr);
-    free(outline);
+    if(outline)
+	free(outline);
     for(t=0;t<charnum;t++)
         free(charname[t]);
     for(t=0;t<standardtablesize;t++)
