@@ -30,11 +30,11 @@ $(lame_objects):
 $(actioncompiler_objects):
 	cd action;make all;cd ..
 
-h.263/dct.o:
+h.263/dct.o:  h.263/dct.c h.263/dct.h
 	$(C) h.263/dct.c -o h.263/dct.o
-h.263/h263tables.o:
+h.263/h263tables.o: h.263/h263tables.c h.263/h263tables.h
 	$(C) h.263/h263tables.c -o h.263/h263tables.o
-h.263/swfvideo.o:
+h.263/swfvideo.o: h.263/swfvideo.c h.263/h263tables.h h.263/dct.h
 	$(C) h.263/swfvideo.c -o h.263/swfvideo.o
 
 librfxswf.a: rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects) $(actioncompiler_objects)
