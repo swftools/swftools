@@ -1,0 +1,31 @@
+%file FILE
+%log FILE
+%logpid FILE
+%dont-log-chain
+%only-log-chain
+%set only-count 0
+set load-dynlibs 1
+
+%set check-start 0
+%set silent
+set file-info 1
+%set continue 0
+%set chain-length 0
+%set additional-line 1
+%set sort-by-wasted 1
+%set sort-by-size 1
+%set debug X
+%set align-8-byte 0
+set only-wasting-alloc 1
+
+set print-addresses 1
+set print-on-one-line 1
+set statistics 1
+
+set check-free-space 1
+set check-interval 1
+set check-overwrites 1
+set check-underwrites 1
+set keep-deallocated-data 1
+set library-chains 1
+
