@@ -28,6 +28,7 @@
 #include "../lib/args.h"
 #include "swfoutput.h"
 #include "spline.h"
+#include "iso_encodings.c"
 
 static char * filenames[256];
 static int filenum;
@@ -96,7 +97,9 @@ int args_callback_command(char*name,char*val)
 #define symbolEncodingSize 256
 #define zapfDingbatsEncodingSize 256
 #define macRomanEncodingSize 256
+#define winAnsiEncodingSize 256
 
+extern char *winAnsiEncoding[winAnsiEncodingSize];
 extern char *standardEncoding[standardEncodingSize];
 extern char *symbolEncoding[symbolEncodingSize];
 extern char *zapfDingbatsEncoding[zapfDingbatsEncodingSize];
@@ -134,8 +137,8 @@ SWFFONT * t1font2swffont(int i)
     if(!strcmp(fullname, "Nimbus Mono L Bold Oblique")) fontname = "CourierBoldItalic";
     if(!strcmp(fullname, "Standard Symbols L")) fontname = "Symbol";
 
-    char ** encoding = standardEncoding;
-    int encodingsize = standardEncodingSize;
+    char ** encoding = winAnsiEncoding;
+    int encodingsize = winAnsiEncodingSize;
 
     printf("processing \"%s\" (\"%s\")...\n", fullname, fontname);
 
@@ -162,10 +165,15 @@ SWFFONT * t1font2swffont(int i)
     num = 0;
     for(s=0;s<encodingsize;s++)
     {
+	char charinfont=0;
 	if(encoding[s]) {
 	    T1_OUTLINE*outline = font->getOutline(encoding[s], 0);
-	    if(outline) num++;
+	    if(outline) {num++;charinfont=1;}
 	}
+	/*if(charinfont) printf("x");
+	else printf(".");
+	if((s&15) == 15)
+	    printf("\n");*/
     }
 
     wfont->maxascii = encodingsize;
