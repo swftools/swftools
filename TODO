@@ -16,7 +16,7 @@ pdf2swf:
 png2swf:
 
     * handle bit packing
-    * handle filter bytes, splitted IDAT chunks etc.
+    * handle splitted IDAT chunks etc.
 
 swfcombine:
 
