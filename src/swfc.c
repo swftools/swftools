@@ -895,6 +895,32 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
     incrementid();
 }
 
+void s_edittext(char*name, char*fontname, int size, int width, int height, char*text, RGBA*color, int maxlength, char*variable, int flags)
+{
+    SWFFONT*font;
+    EditTextLayout layout;
+    SRECT r;
+
+    font = dictionary_lookup(&fonts, fontname);
+    if(!font)
+	syntaxerror("font \"%s\" not known!", fontname);
+    tag = swf_InsertTag(tag, ST_DEFINEEDITTEXT);
+    swf_SetU16(tag, id);
+    layout.align = 0;
+    layout.leftmargin = 0;
+    layout.rightmargin = 0;
+    layout.indent = 0;
+    layout.leading = 0;
+    r.xmin = 0;
+    r.ymin = 0;
+    r.xmax = width;
+    r.ymax = height;
+    swf_SetEditText(tag, flags|ET_USEOUTLINES, r, text, color, maxlength, font->id, size, &layout, variable);
+
+    s_addcharacter(name, id, tag, r);
+    incrementid();
+}
+
 /* type: either "jpeg" or "png"
  */
 void s_image(char*name, char*type, char*filename, int quality)
@@ -2385,7 +2411,36 @@ static int c_on_key(map_t*args)
     return 0;
 }
 
-static int c_edittext(map_t*args) {return fakechar(args);}
+static int c_edittext(map_t*args) 
+{
+ //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
+    char*name = lu(args, "name");
+    char*font = lu(args, "font");
+    int size = (int)(100*20*parsePercent(lu(args, "size")));
+    int width = parseTwip(lu(args, "width"));
+    int height = parseTwip(lu(args, "height"));
+    char*text  = lu(args, "text");
+    RGBA color = parseColor(lu(args, "color"));
+    int maxlength = parseInt(lu(args, "maxlength"));
+    char*variable = lu(args, "variable");
+    char*passwordstr = lu(args, "password");
+    char*wordwrapstr = lu(args, "wordwrap");
+    char*multilinestr = lu(args, "multiline");
+    char*htmlstr = lu(args, "html");
+    char*noselectstr = lu(args, "noselect");
+    char*readonlystr = lu(args, "readonly");
+
+    int flags = 0;
+    if(!strcmp(passwordstr, "password")) flags |= ET_PASSWORD;
+    if(!strcmp(wordwrapstr, "wordwrap")) flags |= ET_WORDWRAP;
+    if(!strcmp(multilinestr, "multiline")) flags |= ET_MULTILINE;
+    if(!strcmp(readonlystr, "readonly")) flags |= ET_READONLY;
+    if(!strcmp(htmlstr, "html")) flags |= ET_HTML;
+    if(!strcmp(noselectstr, "noselect")) flags |= ET_NOSELECT;
+
+    s_edittext(name, font, size, width, height, text, &color, maxlength, variable, flags);
+    return 0;
+}
 
 static int c_morphshape(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
@@ -2435,7 +2490,7 @@ static struct {
 
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
  {"text", c_text, "name text font size=100% color=white"},
- {"edittext", c_edittext, "name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
+ {"edittext", c_edittext, "name font size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
  {"morphshape", c_morphshape, "name start end"},
  {"button", c_button, "name"},
     {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
