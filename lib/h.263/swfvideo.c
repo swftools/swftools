@@ -43,6 +43,8 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
 #endif
     memset(stream, 0, sizeof(VIDEOSTREAM));
     stream->olinex = width;
+    stream->owidth = width;
+    stream->oheight = height;
     width+=15;width&=~15;
     height+=15;height&=~15;
     stream->linex = width;
@@ -1292,7 +1294,8 @@ void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
 
-    rgb2yuv(s->current, pic, s->linex, s->olinex, s->width, s->height);
+    memset(s->current, 0, s->linex*s->height*sizeof(YUV));
+    rgb2yuv(s->current, pic, s->linex, s->olinex, s->owidth, s->oheight);
 
     //dostat(s);
 
@@ -1316,7 +1319,8 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
 
-    rgb2yuv(s->current, pic, s->linex, s->olinex, s->width, s->height);
+    memset(s->current, 0, s->linex*s->height*sizeof(YUV));
+    rgb2yuv(s->current, pic, s->linex, s->olinex, s->owidth, s->oheight);
     memset(s->mvdx, 0, s->bbx*s->bby*sizeof(int));
     memset(s->mvdy, 0, s->bbx*s->bby*sizeof(int));
 
