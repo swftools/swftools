@@ -1207,6 +1207,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
   int fileSize = 0;
   int inSprite = 0;
   int writer_lastpos = 0;
+  int ret;
     
   if (!swf) return -1;
   if (!writer) return -1; // the caller should provide a nullwriter, not 0, for querying SWF size
@@ -1296,7 +1297,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
 
-    int ret = writer->write(writer,b,swf_GetTagLen(&t1));
+    ret = writer->write(writer,b,swf_GetTagLen(&t1));
     if (ret!=swf_GetTagLen(&t1))
     {
       #ifdef DEBUG_RFXSWF

@@ -262,6 +262,7 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 	    int matrix_offset;
 	    int len;
 	    U8*data;
+	    textbounds_t bounds;
 	    if(verbose) printf("%s\n", swf_TagGetName(tag));
 	    if(fontnum < 0) {
 		if(verbose) printf("Extracting fonts...\n");
@@ -274,7 +275,6 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 		swf_FontEnumerate(swf,&fontcallback2);
 	    }
 
-	    textbounds_t bounds;
 	    memset(&bounds, 0, sizeof(bounds));
 
 	    swf_SetTagPos(tag, 0);

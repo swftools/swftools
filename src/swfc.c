@@ -476,6 +476,7 @@ void s_buttonput(char*character, char*as, parameters_t p)
     character_t* c = dictionary_lookup(&characters, character);
     MATRIX m;
     int flags = 0;
+    buttonrecord_t r;
     if(!c) {
 	syntaxerror("character %s not known (in .shape %s)", character, character);
     }
@@ -485,7 +486,6 @@ void s_buttonput(char*character, char*as, parameters_t p)
    
     m = s_instancepos(c->size, &p);
 
-    buttonrecord_t r;
     r.id = c->id;
     r.matrix = m;
     r.cxform = p.cxform;
@@ -537,12 +537,13 @@ void s_buttonaction(int flags, char*action)
 
 static void s_endButton()
 {
+    SRECT r;
     setbuttonrecords(stack[stackpos-1].tag);
     stackpos--;
       
     swf_ButtonPostProcess(stack[stackpos].tag, mybutton.nr_actions);
 
-    SRECT r = currentrect;
+    r = currentrect;
 
     tag = stack[stackpos].tag;
     currentrect = stack[stackpos].oldrect;
@@ -2254,6 +2255,7 @@ static int current_button_flags = 0;
 static int c_on_press(map_t*args)
 {
     char*position = lu(args, "position");
+    char*action = "";
     if(!strcmp(position, "inside")) {
 	current_button_flags |= BC_OVERUP_OVERDOWN;
     } else if(!strcmp(position, "outside")) {
@@ -2262,7 +2264,6 @@ static int c_on_press(map_t*args)
     } else if(!strcmp(position, "anywhere")) {
 	current_button_flags |= /*BC_IDLE_OUTDOWN|*/BC_OVERUP_OVERDOWN|BC_IDLE_OVERDOWN;
     }
-    char*action = "";
     readToken();
     if(type == RAWDATA) {
 	action = text;
@@ -2276,6 +2277,7 @@ static int c_on_press(map_t*args)
 static int c_on_release(map_t*args)
 {
     char*position = lu(args, "position");
+    char*action = "";
     if(!strcmp(position, "inside")) {
 	current_button_flags |= BC_OVERDOWN_OVERUP;
     } else if(!strcmp(position, "outside")) {
@@ -2283,7 +2285,6 @@ static int c_on_release(map_t*args)
     } else if(!strcmp(position, "anywhere")) {
 	current_button_flags |= BC_OVERDOWN_OVERUP|BC_OUTDOWN_IDLE|BC_OVERDOWN_IDLE;
     }
-    char*action = "";
     readToken();
     if(type == RAWDATA) {
 	action = text;
@@ -2297,6 +2298,7 @@ static int c_on_release(map_t*args)
 static int c_on_move_in(map_t*args)
 {
     char*position = lu(args, "state");
+    char*action = "";
     if(!strcmp(position, "pressed")) {
 	current_button_flags |= BC_OUTDOWN_OVERDOWN;
     } else if(!strcmp(position, "not_pressed")) {
@@ -2304,7 +2306,6 @@ static int c_on_move_in(map_t*args)
     } else if(!strcmp(position, "any")) {
 	current_button_flags |= BC_OUTDOWN_OVERDOWN|BC_IDLE_OVERUP|BC_IDLE_OVERDOWN;
     }
-    char*action = "";
     readToken();
     if(type == RAWDATA) {
 	action = text;
@@ -2318,6 +2319,7 @@ static int c_on_move_in(map_t*args)
 static int c_on_move_out(map_t*args)
 {
     char*position = lu(args, "state");
+    char*action = "";
     if(!strcmp(position, "pressed")) {
 	current_button_flags |= BC_OVERDOWN_OUTDOWN;
     } else if(!strcmp(position, "not_pressed")) {
@@ -2325,7 +2327,6 @@ static int c_on_move_out(map_t*args)
     } else if(!strcmp(position, "any")) {
 	current_button_flags |= BC_OVERDOWN_OUTDOWN|BC_OVERUP_IDLE|BC_OVERDOWN_IDLE;
     }
-    char*action = "";
     readToken();
     if(type == RAWDATA) {
 	action = text;
@@ -2339,6 +2340,7 @@ static int c_on_move_out(map_t*args)
 static int c_on_key(map_t*args)
 {
     char*key = lu(args, "key");
+    char*action = "";
     if(strlen(key)==1) {
 	/* ascii */
 	if(key[0]>=32) {
@@ -2355,7 +2357,6 @@ static int c_on_key(map_t*args)
 	*/
 	syntaxerror("invalid key: %s",key);
     }
-    char*action = "";
     readToken();
     if(type == RAWDATA) {
 	action = text;
