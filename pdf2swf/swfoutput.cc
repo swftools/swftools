@@ -1226,7 +1226,7 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	}
     }
 
-    if(u>0) {
+    if(u>0 && font->encoding != 255) {
 	/* try to use the unicode id */
 	if(u>=0 && u<font->maxascii && font->ascii2glyph[u]>=0) {
 	    msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->ascii2glyph[u]);
@@ -1291,6 +1291,27 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     if(swffont == 0) {
 	msg("<warning> Couldn't load font %s (%s)", fontid, filename);
 	swffont = swf_LoadFont(0);
+    }
+    
+    if(swffont->glyph2ascii) {
+        int t;
+        int bad = 0;
+        /* check whether the Unicode indices look o.k.
+           If they don't, disable the unicode lookup by setting
+           the encoding to 255 */
+        for(t=0;t<swffont->numchars;t++) {
+            int c = swffont->glyph2ascii[t];
+            if(c && c < 32 && swffont->glyph[t].shape->bitlen > 16) {
+                // the character maps into the unicode control character range
+                // between 0001-001f. Yet it is not empty. Treat the one
+                // mapping as broken, and look how many of those we find.
+                bad ++;
+            }
+        }
+        if(bad>5) {
+	    msg("<warning> Font %s has bad unicode mapping", swffont->name);
+            swffont->encoding = 255;
+        }
     }
 
     swf_FontSetID(swffont, ++i->currentswfid);
