@@ -344,8 +344,9 @@ void args_callback_usage(char*name)
 	   "                           graphic errors)\n");
     printf("-s filloverlap             Make intersecting shapes overlap, instead of canceling each\n"
 	   "                           other out. (Needed for some Powerpoint PDFs)\n");
-    printf("-2                         Put 2 pages into each frame.\n");
-    printf("-4                         Put 4 pages into each frame.\n");
+    //deliberately undocumented (for now)
+    //printf("-2                         Put 2 pages into each frame.\n");
+    //printf("-4                         Put 4 pages into each frame.\n");
     printf("Postprocessing options:\n");
 #ifndef SYSTEM_BACKTICKS
     printf("(They might not work because your system call doesn't support command substitution)\n");
