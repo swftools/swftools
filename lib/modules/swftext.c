@@ -208,11 +208,15 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
     if(flags1&8) { // wide offsets
 	for(t=0;t<glyphcount;t++)
 	    swf_GetU32(tag); //offset[t]
-	swf_GetU32(tag); // fontcodeoffset
+	
+	if(glyphcount) /* this _if_ is not in the specs */
+	    swf_GetU32(tag); // fontcodeoffset
     } else {
 	for(t=0;t<glyphcount;t++)
 	    swf_GetU16(tag); //offset[t]
-	swf_GetU16(tag); // fontcodeoffset
+
+	if(glyphcount) /* this _if_ is not in the specs */
+	    swf_GetU16(tag); // fontcodeoffset
     }
     for(t=0;t<glyphcount;t++)
 	swf_GetSimpleShape(tag,&(font->glyph[t].shape));
@@ -254,8 +258,10 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 	    swf_ResetReadBits(tag);
 	    swf_GetRect(tag, font->layout->bounds);
 	}
+
 	kerningcount = swf_GetU16(tag);
 	font->layout->kerningcount = kerningcount;
+
 	font->layout->kerning = (SWFKERNING*)malloc(sizeof(SWFKERNING)*kerningcount);
 	if(kerningcount) {
 	    font->layout->kerning = 
