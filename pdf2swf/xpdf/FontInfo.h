@@ -357,7 +357,7 @@ static FontEncoding standardEncoding(standardEncodingNames,
                                      standardEncodingSize);
 
 #define symbolEncodingSize 257
-static char *symbolEncodingNames[symbolEncodingSize] = {
+char *symbolEncodingNames[symbolEncodingSize] = {
   NULL,
   NULL,
   NULL,
@@ -620,7 +620,7 @@ static FontEncoding symbolEncoding(symbolEncodingNames,
                                    symbolEncodingSize);
 
 #define zapfDingbatsEncodingSize 270
-static char *zapfDingbatsEncodingNames[zapfDingbatsEncodingSize] = {
+char *zapfDingbatsEncodingNames[zapfDingbatsEncodingSize] = {
   NULL,
   NULL,
   NULL,
