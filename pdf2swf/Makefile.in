@@ -26,7 +26,7 @@ pdf2swf$(E): pdf2swf.o pdf2swf.a xpdf/libpdf.a ../lib/librfxswf.a
 	$(LL) pdf2swf.o pdf2swf.a ../lib/librfxswf.a xpdf/libpdf.a $(LIBS) -o pdf2swf$(E) 
 	$(STRIP) pdf2swf$(E)
 
-xpdf/libpdf.a: xpdf/gfile.cc xpdf/GfxState.cc
+xpdf/libpdf.a: xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
 	cd xpdf;$(MAKE)
 
 ttf2pt1/ttf2pt1.a: ttf2pt1/ttf2pt1.c ttf2pt1/t1asm.c

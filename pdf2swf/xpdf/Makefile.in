@@ -45,7 +45,7 @@ JArithmeticDecoder.o: JArithmeticDecoder.cc
 	$(CC) -I./ JArithmeticDecoder.cc -o $@
 JPXStream.o: JPXStream.cc
 	$(CC) -I./ JPXStream.cc -o $@
-GlobalParams.o: GlobalParams.cc
+GlobalParams.o: GlobalParams.cc GlobalParams.h
 	$(CC) -I./ GlobalParams.cc -o $@
 JBIG2Stream.o: JBIG2Stream.cc
 	$(CC) -I./ JBIG2Stream.cc -o $@
