@@ -1,5 +1,5 @@
-/* swfextract.c
-   Allows to extract parts of the swf into a new file.
+/* wav2swf.c
+   Converts WAV/WAVE files to SWF.
 
    Part of the swftools package.
 
@@ -25,6 +25,7 @@ struct options_t options[] =
  {"d","definesound"},
  {"l","loop"},
  {"r","framerate"},
+ {"b","bitrate"},
  {"V","version"},
  {0,0}
 };
@@ -32,6 +33,7 @@ struct options_t options[] =
 static int loop = 0;
 static int definesound = 0;
 static int framerate = 0;
+static int bitrate = 32;
 
 int args_callback_option(char*name,char*val)
 {
@@ -62,6 +64,18 @@ int args_callback_option(char*name,char*val)
 	framerate = f*256;
 	return 1;
     }
+    else if(!strcmp(name, "b")) {
+	bitrate = atoi(val);
+	if(bitrate<=0) {
+	    fprintf(stderr, "Not a valid bitrate: %s\n", val);
+	    exit(1);
+	}
+	if(bitrate>144) {
+	    fprintf(stderr, "Bitrate must be <144. (%s)\n", val);
+	    exit(1);
+	}
+	return 1;
+    }
     else {
         printf("Unknown option: -%s\n", name);
 	exit(1);
@@ -76,9 +90,10 @@ void args_callback_usage(char*name)
 {
     printf("Usage: %s [-o filename] file.wav\n", name);
     printf("\t-v , --verbose\t\t\t Be more verbose\n");
-    printf("\t-d , --definesound\t\t\t Generate a DefineSound tag instead of streaming sound\n");
+    printf("\t-d , --definesound\t\t Generate a DefineSound tag instead of streaming sound\n");
     printf("\t-l , --loop n\t\t\t Loop sound n times (implies -d)\n");
-    printf("\t-r , --framerate fps\t\t\t Set framerate to fps frames per seond\n");
+    printf("\t-r , --framerate fps\t\t Set framerate to fps frames per seond\n");
+    printf("\t-b , --bitrate bps\t\t Set mp3 bitrate (default: 32)\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
@@ -91,6 +106,8 @@ int args_callback_command(char*name,char*val)
     filename = name;
     return 0;
 }
+
+extern int swf_mp3_bitrate;
 
 int main (int argc,char ** argv)
 { 
@@ -107,24 +124,25 @@ int main (int argc,char ** argv)
     int blocksize;
     float blockspersecond;
     float framespersecond;
+    float samplesperframe;
     float framesperblock;
-    float framepos = 0;
+    float samplesperblock;
     U16* samples;
     int numsamples;
 
     processargs(argc, argv);
 
-    if(!definesound && framerate) {
-	printf("Warning! The -r option is experimental and won't work without -d\n");
-    }
-
-    blocksize = 1152;
+    blocksize = 576;
     blockspersecond = 11025.0/blocksize;
+
     framespersecond = blockspersecond;
     if(framerate)
 	framespersecond = framerate/256.0;
-    framesperblock = framespersecond/blockspersecond;
 
+    framesperblock = framespersecond / blockspersecond;
+    samplesperframe = (blocksize * blockspersecond) / framespersecond;
+    samplesperblock = samplesperframe * framesperblock;
+    
     initLog(0,-1,0,0,-1,verbose);
 
     if(!readWAV(filename, &wav))
@@ -152,27 +170,48 @@ int main (int argc,char ** argv)
     rgb.g = 0xff;
     rgb.b = 0xff;
     swf_SetRGB(tag,&rgb);
+	
+    swf_mp3_bitrate = bitrate;
 
     if(!definesound)
     {
+	int oldframepos=-1, newframepos=0;
+	float framesamplepos = 0;
+	float framepos = 0;
+	float samplepos = 0;
+	U16 v1=0,v2=0;
 	tag = swf_InsertTag(tag, ST_SOUNDSTREAMHEAD);
-	swf_SetSoundStreamHead(tag, blocksize);
+	swf_SetSoundStreamHead(tag, samplesperframe);
 
-	logf("<notice> %d blocks", numsamples/(blocksize*2));
-	for(t=0;t<numsamples/(blocksize*2);t++) {
+	logf("<notice> %d blocks", numsamples/(blocksize*4));
+	for(t=0;t<numsamples/(blocksize*4);t++) {
 	    int s;
-	    int oldframe, newframe;
 	    U16*block1;
-	    tag = swf_InsertTag(tag, ST_SOUNDSTREAMBLOCK);
-	    logf("<notice> Writing block %d", t);
-	    block1 = &samples[t*2*blocksize];
-	    swf_SetSoundStreamBlock(tag, block1, 0, 1);
+	    int seek = blocksize - ((int)samplepos - (int)framesamplepos);
 
-	    oldframe = (int)framepos;
+	    if(newframepos!=oldframepos) {
+		tag = swf_InsertTag(tag, ST_SOUNDSTREAMBLOCK);
+		logf("<notice> Starting block %d %d+%d", t, (int)samplepos, (int)blocksize);
+		block1 = &samples[t*blocksize*4];
+		swf_SetSoundStreamBlock(tag, block1, seek, 1);
+		v1 = v2 = GET16(tag->data);
+	    } else {
+		logf("<notice> Adding data...", t);
+		block1 = &samples[t*blocksize*4];
+		swf_SetSoundStreamBlock(tag, block1, seek, 0);
+		v1+=v2;
+		PUT16(tag->data, v1);
+	    }
+	    samplepos += blocksize;
+
+	    oldframepos = (int)framepos;
 	    framepos += framesperblock;
-	    newframe = (int)framepos;
-	    for(s=oldframe;s<newframe;s++)
+	    newframepos = (int)framepos;
+
+	    for(s=oldframepos;s<newframepos;s++) {
 		tag = swf_InsertTag(tag, ST_SHOWFRAME);
+		framesamplepos += samplesperframe;
+	    }
 	}
 	tag = swf_InsertTag(tag, ST_END);
     } else {
@@ -189,7 +228,7 @@ int main (int argc,char ** argv)
 	tag = swf_InsertTag(tag, ST_END);
     }
 
-    f = open(outputname,O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    f = open(outputname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
     if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
     close(f);
 
