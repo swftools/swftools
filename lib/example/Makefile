@@ -18,50 +18,49 @@ all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont te
 
 movies: sound.swf jpegtest.swf box.swf shape1.swf transtest.swf zlibtest.swf sprites.swf buttontest.swf dumpfont.swf text.swf glyphshape.swf edittext.swf
 	
-sound: $(RFXSWF) sound.o
+sound: $(RFXSWF) sound.o $(RFXSWF)
 		$(CC) -o sound sound.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-box: $(RFXSWF) box.o
+box: $(RFXSWF) box.o $(RFXSWF)
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-protect: $(RFXSWF) protect.o
+protect: $(RFXSWF) protect.o $(RFXSWF)
 		$(CC) -o protect protect.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-buttontest: $(RFXSWF) buttontest.o
-buttontest: $(RFXSWF) buttontest.o
+buttontest: $(RFXSWF) buttontest.o $(RFXSWF)
 		$(CC) -o buttontest buttontest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-dumpfont: $(RFXSWF) dumpfont.o
+dumpfont: $(RFXSWF) dumpfont.o $(RFXSWF)
 		$(CC) -o dumpfont dumpfont.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-glyphshape: $(RFXSWF) glyphshape.o
+glyphshape: $(RFXSWF) glyphshape.o $(RFXSWF)
 		$(CC) -o glyphshape glyphshape.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-jpegtest: $(RFXSWF) jpegtest.o
+jpegtest: $(RFXSWF) jpegtest.o $(RFXSWF)
 		$(CC) -o jpegtest jpegtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-shape1: $(RFXSWF) shape1.o
+shape1: $(RFXSWF) shape1.o $(RFXSWF)
 		$(CC) -o shape1 shape1.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-sprites: $(RFXSWF) sprites.o
+sprites: $(RFXSWF) sprites.o $(RFXSWF)
 		$(CC) -o sprites sprites.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-transtest: $(RFXSWF) transtest.o
+transtest: $(RFXSWF) transtest.o $(RFXSWF)
 		$(CC) -o transtest transtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-text: $(RFXSWF) text.o
+text: $(RFXSWF) text.o $(RFXSWF)
 		$(CC) -o text text.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-edittext: $(RFXSWF) edittext.o
+edittext: $(RFXSWF) edittext.o $(RFXSWF)
 		$(CC) -o edittext edittext.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
-zlibtest: $(RFXSWF) zlibtest.o
+zlibtest: $(RFXSWF) zlibtest.o $(RFXSWF)
 		$(CC) -o zlibtest zlibtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 clean:
 		rm -f jpegtest.o box.o shape1.o transtest.o zlibtest.o \
                 sprites.o glyphshape.o edittext.o \
-		buttontest.o dumpfont.o text.o \
+		buttontest.o dumpfont.o text.o edittext.swf \
 		jpegtest.swf box.swf shape1.swf transtest.swf zlibtest.swf \
                 sprites.swf buttontest.swf text.swf glyphshape.swf sound.swf \
 		transtest.swf
