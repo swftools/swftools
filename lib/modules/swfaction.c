@@ -88,7 +88,6 @@ r: register (byte)
 {4,"Trace", 0x26, ""}, //-1
 {4,"GetTime", 0x34, ""}, //+1
 {4,"RandomNumber", 0x30, ""}, //-1,+1
-
 {5,"Modulo", 0x3f,""},
 {5,"BitAnd", 0x60,""},
 {5,"BitLShift", 0x63,""},
@@ -133,15 +132,15 @@ ActionTAG* GetActions(TAG*tag)
     U8 op = 1;
     int length;
     ActionTAG tmp;
-    ActionTAG*atag = &tmp;
+    ActionTAG*action = &tmp;
     U8*data;
     while(op)
     {
 	int pos;
-	atag->next = (ActionTAG*)malloc(sizeof(ActionTAG));
-	atag->next->prev = atag;
-	atag->next->next = 0;
-	atag = atag->next;
+	action->next = (ActionTAG*)malloc(sizeof(ActionTAG));
+	action->next->prev = action;
+	action->next->next = 0;
+	action = action->next;
 
 	op = GetU8(tag);
 	if(op<0x80)
@@ -157,11 +156,26 @@ ActionTAG* GetActions(TAG*tag)
 	} else {
 	  data = 0;
 	}
-	atag->op = op;
-	atag->len = length;
-	atag->data = data;
+	action->op = op;
+	action->len = length;
+	action->data = data;
+	action->parent = tag;
     }
     return tmp.next;
+}
+
+void SetActions(TAG*tag, ActionTAG*action)
+{
+    while(action)
+    {
+	SetU8(tag, action->op);
+	if(action->op & 128)
+	  SetU16(tag, action->len);
+
+	SetBlock(tag, action->data, action->len);
+
+	action = action->next;
+    }
 }
 
 /* TODO: this should be in swfdump.c */
