@@ -167,6 +167,73 @@ void dumpButtonActions(TAG*tag, char*prefix)
     swf_DumpActions(actions, prefix);
 }
 
+#define ET_HASTEXT 32768
+#define ET_WORDWRAP 16384
+#define ET_MULTILINE 8192
+#define ET_PASSWORD 4096
+#define ET_READONLY 2048
+#define ET_HASTEXTCOLOR 1024
+#define ET_HASMAXLENGTH 512
+#define ET_HASFONT 256
+#define ET_X3 128
+#define ET_X2 64
+#define ET_HASLAYOUT 32
+#define ET_NOSELECT 16
+#define ET_BORDER 8
+#define ET_X1 4
+#define ET_X0 2
+#define ET_USEOUTLINES 1
+
+void handleEditText(TAG*tag)
+{
+    U16 id ;
+    U16 flags;
+    int t;
+    id = swf_GetU16(tag);
+    swf_GetRect(tag,0);
+    //swf_ResetReadBits(tag);
+    if (tag->readBit)  
+    { tag->pos++; 
+      tag->readBit = 0; 
+    }
+    flags = swf_GetBits(tag,16);
+    if(flags & ET_HASFONT) {
+	swf_GetU16(tag); //font
+	swf_GetU16(tag); //fontheight
+    }
+    if(flags & ET_HASTEXTCOLOR) {
+	swf_GetU8(tag); //rgba
+	swf_GetU8(tag);
+	swf_GetU8(tag);
+	swf_GetU8(tag);
+    }
+    if(flags & ET_HASMAXLENGTH) {
+	swf_GetU16(tag); //maxlength
+    }
+    if(flags & ET_HASLAYOUT) {
+	swf_GetU8(tag); //align
+	swf_GetU16(tag); //left margin
+	swf_GetU16(tag); //right margin
+	swf_GetU16(tag); //indent
+	swf_GetU16(tag); //leading
+    }
+    printf(" variable \"%s\"", &tag->data[tag->pos]);
+
+    if(flags & (ET_X1 | ET_X2 | ET_X3 | ET_X0))
+    {
+	printf(" undefined flags: %d%d%d%d", 
+		(flags&ET_X0?1:0),
+		(flags&ET_X1?1:0),
+		(flags&ET_X2?1:0),
+		(flags&ET_X3?1:0));
+    }
+    
+    while(tag->data[tag->pos++]);
+    if(flags & ET_HASTEXT)
+   //  printf(" text \"%s\"\n", &tag->data[tag->pos])
+	;
+}
+
 int main (int argc,char ** argv)
 { 
     SWF swf;
@@ -289,6 +356,12 @@ int main (int argc,char ** argv)
         else if(tag->id == ST_REMOVEOBJECT2) {
             printf(" removes object from depth %04x", swf_GetDepth(tag));
         }
+	else if(tag->id == ST_FRAMELABEL) {
+	    printf(" \"%s\"", tag->data);
+	}
+	if(tag->id == ST_DEFINEEDITTEXT) {
+	    handleEditText(tag);
+	}
         
         printf("\n");
         sprintf(myprefix, "                %s", prefix);
@@ -298,6 +371,8 @@ int main (int argc,char ** argv)
         }
         else if(tag->id == ST_END) {
             *prefix = 0;
+	    if(tag->len)
+		fprintf(stderr, "Error: End Tag not empty");
         }
         else if(tag->id == ST_DOACTION && action) {
             ActionTAG*actions;
