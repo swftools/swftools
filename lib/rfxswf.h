@@ -126,6 +126,22 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   
 } TAG, * LPTAG;
 
+typedef struct _SOUNDINFO 
+{
+    U8 stop;
+    U8 multiple; //continue playing if already started
+
+    U32 inpoint;
+    U32 outpoint;
+
+    U16 loops;
+    U8 envelopes;
+
+    //envelope:
+    U32* pos;
+    U32* left;
+    U32* right;
+} SOUNDINFO;
 
 typedef struct _SWF
 { U8            fileVersion;
@@ -616,8 +632,11 @@ int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 
 // swfsound.c
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
-/* expects 2304 samples */
-void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first);
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first); /* expects 2304 samples */
+
+void swf_SetSoundDefine(TAG*tag, S16*samples, int num);
+
+void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info);
 
 #endif // RFXSWF_DISABLESOUND
 

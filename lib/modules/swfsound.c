@@ -23,7 +23,7 @@ void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples)
     U8 playbackrate = 3; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
     U8 playbacksize = 1; // 0 = 8 bit, 1 = 16 bit
     U8 playbacktype = 0; // 0 = mono, 1 = stereo
-    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3
+    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3, 3 = raw le, 6 = nellymoser
     U8 rate = 3; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
     U8 size = 1; // 0 = 8 bit, 1 = 16 bit
     U8 type = 0; // 0 = mono, 1 = stereo
@@ -73,23 +73,8 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
     
 static lame_global_flags*lame_flags;
 
-void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
+static void initlame(unsigned char*buf, int bufsize)
 {
-    unsigned char buf[4096];
-    int bufsize = 1152*2;
-    int len;
-    short int samples[1152*2];
-
-    U8 playbackrate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
-    U8 playbacksize = 1; // 0 = 8 bit, 1 = 16 bit
-    U8 playbacktype = 0; // 0 = mono, 1 = stereo
-    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3
-    U8 rate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
-    U8 size = 1; // 0 = 8 bit, 1 = 16 bit
-    U8 type = 0; // 0 = mono, 1 = stereo
-    
-    memset(samples,0,sizeof(samples));
-
     lame_flags = lame_init();
 
     lame_set_in_samplerate(lame_flags, 44100);
@@ -110,16 +95,36 @@ void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
     lame_init_params(lame_flags);
     lame_init_bitstream(lame_flags);
 
+    /* The first two flush calls to lame always fail, for
+       some reason. Do them here where they cause no damage. */
+    lame_encode_flush_nogap(lame_flags, buf, bufsize);
+    //printf("init:flush_nogap():%d\n", len);
+    lame_encode_flush(lame_flags, buf, bufsize);
+    //printf("init:flush():%d\n", len);
+}
+
+void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
+{
+    unsigned char buf[4096];
+    int bufsize = 1152*2;
+    int len;
+    short int samples[1152*2];
+
+    U8 playbackrate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
+    U8 playbacksize = 1; // 0 = 8 bit, 1 = 16 bit
+    U8 playbacktype = 0; // 0 = mono, 1 = stereo
+    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3, 3 = raw le, 6 = nellymoser
+    U8 rate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
+    U8 size = 1; // 0 = 8 bit, 1 = 16 bit
+    U8 type = 0; // 0 = mono, 1 = stereo
+    
+    memset(samples,0,sizeof(samples));
+
+    initlame(buf, bufsize);
+
     swf_SetU8(tag,(playbackrate<<2)|(playbacksize<<1)|playbacktype);
     swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
     swf_SetU16(tag,avgnumsamples);
-   
-    /* The first two flush calls to lame always fail, for
-       some reason. Do them here where they cause no damage. */
-    len = lame_encode_flush_nogap(lame_flags, buf, bufsize);
-    //printf("init:flush_nogap():%d\n", len);
-    len = lame_encode_flush(lame_flags, buf, bufsize);
-    //printf("init:flush():%d\n", len);
 }
 
 void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first)
@@ -160,6 +165,79 @@ void swf_SetSoundStreamEnd(TAG*tag)
 {
     lame_close (lame_flags);
 }
+
+void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
+{
+    char*buf;
+    int oldlen=0,len = 0;
+    int bufsize = 16384;
+    int blocksize = 1152*2;
+    int t;
+    int blocks;
+
+    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3, 3 = raw le, 6 = nellymoser
+    U8 rate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
+    U8 size = 1; // 0 = 8 bit, 1 = 16 bit
+    U8 type = 0; // 0 = mono, 1 = stereo
+
+    blocks = num / (blocksize);
+
+    swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
+    swf_SetU32(tag,blocks*blocksize);
+
+    buf = malloc(bufsize);
+    if(!buf)
+	return;
+
+    initlame(buf, bufsize);
+
+    swf_SetU16(tag, 0); //delayseek
+    for(t=0;t<blocks;t++) {
+	int s;
+	U16*pos;
+	pos= &samples[t*blocksize];
+	len += lame_encode_buffer(lame_flags, pos, pos, blocksize, &buf[len], bufsize-len);
+	len += lame_encode_flush_nogap(lame_flags, &buf[len], bufsize-len);
+	swf_SetBlock(tag, buf, len);
+	len = 0;
+    }
+
+    free(buf);
+}
+
+#define SOUNDINFO_STOP 32
+#define SOUNDINFO_NOMULTIPLE 16
+#define SOUNDINFO_HASENVELOPE 8
+#define SOUNDINFO_HASLOOPS 4
+#define SOUNDINFO_HASOUTPOINT 2
+#define SOUNDINFO_HASINPOINT 1
+
+void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info)
+{
+    U8 flags = (info->stop?SOUNDINFO_STOP:0)
+	      |(info->multiple?SOUNDINFO_NOMULTIPLE:0)
+	      |(info->envelopes?SOUNDINFO_HASENVELOPE:0)
+	      |(info->loops?SOUNDINFO_HASLOOPS:0)
+	      |(info->outpoint?SOUNDINFO_HASOUTPOINT:0)
+	      |(info->inpoint?SOUNDINFO_HASINPOINT:0);
+    swf_SetU8(tag, flags);
+    if(flags&SOUNDINFO_HASINPOINT)
+	swf_SetU32(tag, info->inpoint);
+    if(flags&SOUNDINFO_HASOUTPOINT)
+	swf_SetU32(tag, info->outpoint);
+    if(flags&SOUNDINFO_HASLOOPS)
+	swf_SetU16(tag, info->loops);
+    if(flags&SOUNDINFO_HASENVELOPE) {
+	int t;
+	swf_SetU8(tag, info->envelopes);
+	for(t=0;t<info->envelopes;t++) {
+	    swf_SetU32(tag, info->pos[t]);
+	    swf_SetU16(tag, info->left[t]);
+	    swf_SetU16(tag, info->right[t]);
+	}
+    }
+}
+
 #endif
 
 #endif // RFXSWF_DISABLESOUND
