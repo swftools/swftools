@@ -434,13 +434,20 @@ int findjpegboundary(U8*data, int len)
 void handlejpeg(TAG*tag)
 {
     char name[80];
+    char*filename = name;
     FILE*fi;
-    sprintf(name, "pic%d.jpeg", GET16(tag->data));
+    
+    sprintf(name, "pic%d.jpg", GET16(tag->data));
+    if(numextracts==1) {
+	filename = destfilename;
+	if(!strcmp(filename,"output.swf"))
+	    filename = "output.jpg";
+    }
     /* swf jpeg images have two streams, which both start with ff d8 and
        end with ff d9. The following code handles sorting the middle
        <ff d9 ff d8> bytes out, so that one stream remains */
     if(tag->id == ST_DEFINEBITS && tag->len>2 && jpegtables) {
-	fi = save_fopen(name, "wb");
+	fi = save_fopen(filename, "wb");
 	fwrite(jpegtables, 1, jpegtablessize-2, fi); //don't write end tag (ff,d8)
 	fwrite(&tag->data[2+2], tag->len-2-2, 1, fi); //don't write start tag (ff,d9)
 	fclose(fi);
@@ -451,7 +458,7 @@ void handlejpeg(TAG*tag)
 	if(pos<0)
 	    return;
 	pos+=2;
-	fi = save_fopen(name, "wb");
+	fi = save_fopen(filename, "wb");
 	fwrite(&tag->data[2], pos-2, 1, fi);
 	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
 	fclose(fi);
@@ -462,7 +469,7 @@ void handlejpeg(TAG*tag)
 	if(pos<0)
 	    return;
 	pos+=6;
-	fi = save_fopen(name, "wb");
+	fi = save_fopen(filename, "wb");
 	fwrite(&tag->data[6], pos-6, 1, fi);
 	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
 	fclose(fi);
@@ -538,6 +545,7 @@ static void png_end_chunk(FILE*fi)
 void handlelossless(TAG*tag)
 {
     char name[80];
+    char*filename = name;
     FILE*fi;
     int width, height;
     int crc;
@@ -624,7 +632,12 @@ void handlelossless(TAG*tag)
     }
 
     sprintf(name, "pic%d.png", id);
-    fi = save_fopen(name, "wb");
+    if(numextracts==1) {
+	filename = destfilename;
+	if(!strcmp(filename,"output.swf"))
+	    filename = "output.png";
+    }
+    fi = save_fopen(filename, "wb");
     fwrite(head,sizeof(head),1,fi);     
 
     png_start_chunk(fi, "IHDR", 13);
