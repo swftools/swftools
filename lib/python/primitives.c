@@ -115,6 +115,8 @@ typedef struct {
     PyObject_HEAD
     SRECT bbox;
 } BBoxObject;
+//void swf_ExpandRect(SRECT*src, SPOINT add);
+//void swf_ExpandRect2(SRECT*src, SRECT*add);
 
 PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs)
 {
@@ -220,16 +222,34 @@ PyObject* f_Matrix(PyObject* _self, PyObject* args, PyObject* kwargs)
     PyObject*self = (PyObject*)PyObject_New(MatrixObject, &MatrixClass);
     MatrixObject*matrix = (MatrixObject*)self;
     mylog("+%08x(%d) f_Matrix", self, self->ob_refcnt);
-    static char *kwlist[] = {"x", "y", "scale", "rotate", NULL};
-    float x=0,y=0,scale=1.0,rotate=0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ffff", kwlist, &x,&y,&scale,&rotate))
+    static char *kwlist[] = {"x", "y", "scale", "rotate", "pivotx", "pivoty", NULL};
+    float x=0,y=0,scale=1.0,rotate=0,pivotx,pivoty;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ffffff", kwlist, &x,&y,&scale,&rotate,&pivotx,&pivoty))
 	return NULL;
     mylog(" %08x(%d) f_Matrix: x=%f y=%f scale=%f rotate=%f", self, self->ob_refcnt, x,y,scale,rotate);
     swf_GetMatrix(0, &matrix->matrix);
+
     matrix->matrix.tx = (int)(x*20);
     matrix->matrix.ty = (int)(y*20);
-    matrix->matrix.sx = (int)(scale*65536);
-    matrix->matrix.sy = (int)(scale*65536);
+
+    if(!rotate) {
+    	matrix->matrix.sx = (int)(scale*65536);
+    	matrix->matrix.sy = (int)(scale*65536);
+    } else {
+	matrix->matrix.sx = (int)(scale*cos(rotate)*65536);
+	matrix->matrix.sy = (int)(scale*cos(rotate)*65536);
+	matrix->matrix.r0 = (int)(scale*sin(rotate)*65536);
+	matrix->matrix.r1 = (int)(-scale*sin(rotate)*65536);
+    }
+    if(pivotx || pivoty) {
+	SPOINT p,d;
+	p.x = (int)(pivotx*20);
+	p.y = (int)(pivoty*20);
+	p = swf_TurnPoint(p, &matrix->matrix);
+	matrix->matrix.tx += matrix->matrix.tx-p.x;
+	matrix->matrix.ty += matrix->matrix.ty-p.y;
+    }
+
     /* TODO: rotate */
     return self;
 }
@@ -255,6 +275,8 @@ void matrix_dealloc(PyObject* self)
     mylog("-%08x(%d) matrix_dealloc", self, self->ob_refcnt);
     PyObject_Del(self);
 }
+//SPOINT swf_TurnPoint(SPOINT p, MATRIX* m);
+//SRECT swf_TurnRect(SRECT r, MATRIX* m);
 PyTypeObject MatrixClass = 
 {
     PyObject_HEAD_INIT(NULL)
