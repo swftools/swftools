@@ -1,0 +1,39 @@
+.TH avi2swf "1" "October 2001" "avi2swf" "swftools"
+.SH NAME
+avi2swf - convert AVI files into SWF
+.SH Synopsis
+.B avi2swf
+[\fIoptions\fR] \fIfile.pdf\fR [\fIfile.swf\fR]
+.SH DESCRIPTION
+This tools converts AVI Video files into Flash SWF Animation
+files.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print short help message and exit
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version info and exit
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Be verbose. Use more than one -v for greater effect.
+.TP
+\fB\-o\fR \fIfilename\fR, \fB\-\-output\fR \fIfilename\fR
+Set output filename to \fIfilename\fR.
+.TP
+\fB\-n\fR \fIframes\fR, \fB\-\-num \fIframes\fR\fR
+Set number of frames to encode to \fIframes\fR.
+.TP
+\fB\-s\fR \fIframe\fR, \fB\-\-start \fIframe\fR\fR
+Start with frame \fIframe\fR.
+.TP
+\fB\-d\fR \fIfactor\fR, \fB\-\-scale \fIfactor\fR\fR
+Scale movie by factor%. factor must be in the range 1-100.
+.TP
+\fB\-z\fR, \fB\-\-zlib\fR
+Compress the movie afterwards. (Using swfcombine)
+Playing compressed Movies requires Flash MX!
+
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>
