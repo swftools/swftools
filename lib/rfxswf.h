@@ -178,6 +178,10 @@ void swf_UnFoldAll(SWF*swf);
 void swf_FoldSprite(TAG*tag);
 void swf_UnFoldSprite(TAG*tag);
 
+// tag reordering:
+
+void swf_OptimizeTagOrder(SWF*swf);
+
 // basic routines:
     
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary

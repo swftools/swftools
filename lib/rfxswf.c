@@ -865,6 +865,56 @@ void swf_UnFoldAll(SWF*swf)
     }
 }
 
+void swf_OptimizeTagOrder(SWF*swf)
+{
+  TAG*tag,*next;
+  TAG*level0;
+  int level;
+  int changes;
+  swf_UnFoldAll(swf);
+  /* at the moment, we don't actually do optimizing,
+     only fixing of non-spec-conformant things like
+     sprite tags */
+
+  do {
+    changes = 0;
+    level = 0;
+    level0 = 0;
+    tag = swf->firstTag;
+    while(tag) {
+      next = tag->next;
+      if(tag->id == ST_DEFINESPRITE) {
+	level++;
+	if(level==1) {
+	  level0 = tag;
+	  tag = next;
+	  continue;
+	}
+      }
+      if(level>=1) {
+	/* move non-sprite tags out of sprite */
+	if(!swf_isAllowedSpriteTag(tag) || level>=2) {
+	  /* remove tag from current position */
+	  tag->prev->next = tag->next;
+	  tag->next->prev = tag->prev;
+
+	  /* insert before tag level0 */
+	  tag->next = level0;
+	  tag->prev = level0->prev;
+	  level0->prev = tag;
+	  tag->prev->next = tag;
+	  changes = 1;
+	}
+      }
+      if(tag->id == ST_END) {
+	level--;
+      }
+
+      tag = next;
+    }
+  } while(changes);
+}
+
 // Movie Functions
 
 int swf_ReadSWF2(struct reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
