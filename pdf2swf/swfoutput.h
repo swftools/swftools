@@ -22,10 +22,9 @@
 #ifndef __swfoutput_h__
 #define __swfoutput_h__
 
-extern "C" {
 #include "../lib/rfxswf.h"
 #include "../lib/gfxdevice.h"
-}
+
 typedef long int twip;
 
 struct swfmatrix {
