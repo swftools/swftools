@@ -55,4 +55,6 @@
 	         installs into ${DATADIR}/swftools/swfs
 	* pdf2swf: New options --viewer, --preloader, -b, -l
 	* pdf2swf: Fonts are now in ${DATADIR}/swftools/fonts
-
+0.2.2:	
+	* swfs/: Added/Wrote sources for some of the swf files 
+	* swfdump: Major bugfix in placeobject2, hex output function
