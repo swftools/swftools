@@ -315,7 +315,6 @@ void printhandlerflags(U16 handlerflags)
 void handlePlaceObject2(TAG*tag, char*prefix)
 {
     U8 flags = swf_GetU8(tag);
-    printf("flags: %02x", flags);
     swf_GetU16(tag); //depth
     //flags&1: move
     if(flags&2) swf_GetU16(tag); //id
@@ -398,9 +397,9 @@ int main (int argc,char ** argv)
     int f;
     int xsize,ysize;
     char issprite = 0; // are we inside a sprite definition?
-    int spriteframe;
+    int spriteframe = 0;
     int mainframe=0;
-    char* spriteframelabel;
+    char* spriteframelabel = 0;
     char* framelabel = 0;
     char prefix[128];
     int filesize = 0;
@@ -463,20 +462,28 @@ int main (int argc,char ** argv)
     }
     if(html)
     {
+	char*fileversions[] = {"","1,0,0,0", "2,0,0,0","3,0,0,0","4,0,0,0",
+			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0"};
+	if(swf.fileVersion>8) {
+	    fprintf(stderr, "Fileversion>8\n");
+	    exit(1);
+	}
  	printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
 	       " WIDTH=\"%d\"\n"
+	       //" BGCOLOR=#ffffffff\n"
 	       " HEIGHT=\"%d\"\n"
-	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=%d,0,0,0\">\n"
+	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=%s\">\n"
                "  <PARAM NAME=\"MOVIE\" VALUE=\"%s\">\n"
 	       "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
 	       "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
 	       "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
-	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n"
-	       "   PLAY=\"true\" LOOP=\"true\" QUALITY=\"high\"\n"
+	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n" //bgcolor=#ffffff
+	       "   PLAY=\"true\" ALIGN=\"\" LOOP=\"true\" QUALITY=\"high\"\n"
 	       "   TYPE=\"application/x-shockwave-flash\"\n"
-	       "   PLUGINSPAGE=\"http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash\">\n"
+	       "   PLUGINSPAGE=\"http://www.macromedia.com/go/getflashplayer\">\n"
                "  </EMBED>\n" 
-	       "</OBJECT>\n", xsize, ysize, swf.fileVersion, filename, filename, xsize, ysize);
+	       "</OBJECT>\n", xsize, ysize, fileversions[swf.fileVersion], 
+		              filename, filename, xsize, ysize);
 	return 0;
     } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);
