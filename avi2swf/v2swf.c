@@ -43,6 +43,9 @@ typedef struct _v2swf_internal_t
     int width;
     int height;
 
+    int video_eof;
+    int audio_eof;
+
     unsigned char* vrbuffer;
     unsigned char* buffer;
     unsigned char* lastbitmap;
@@ -165,6 +168,7 @@ static void writeShape(v2swf_internal_t*i, int id, int gfxid, int width, int hei
     swf_ShapeFree(shape);
 }
 
+/* returns 0 on partial read */
 static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
 {
     double pos = 0;
@@ -175,8 +179,13 @@ static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
     int r = /*resampled len */ rlen * 
 	          /* s16_le */ 2 * 
 		               video->channels;
-    if(videoreader_getsamples(video, tmp, r) < r)
+    int l;
+    memset(tmp, 0, sizeof(tmp));
+    l = videoreader_getsamples(video, tmp, r);
+    if(l <= 0) {
 	return 0;
+    }
+    msg("%d samples read", l);
 
     /* convert to 1 channel */
     for(t=0;t<rlen;t++) {
@@ -192,7 +201,7 @@ static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
 	data[t] = tmp[(int)pos];
 	pos+=ratio;
     }
-    return 1;
+    return l == r;
 }
 
 static void writeAudioForOneFrame(v2swf_internal_t* i)
@@ -209,8 +218,10 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
 
     msg("writeAudioForOneFrame()");
 
-    if(i->video->channels<=0 || i->video->samplerate<=0)
+    if(i->audio_eof || i->video->channels<=0 || i->video->samplerate<=0) {
+	i->audio_eof = 1;
 	return; /* no sound in video */
+    }
 
     blocksize = (i->samplerate > 22050) ? 1152 : 576;
     blockspersecond = ((double)i->samplerate)/blocksize;
@@ -268,8 +279,9 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     /* write num frames, max 1 block */
     for(pos=0;pos<num;pos++) {
         if(!getSamples(i->video, block1, blocksize * (double)swf_mp3_in_samplerate/swf_mp3_out_samplerate, speedup)) {
-	    i->video->samplerate = i->video->channels = 0; //end of soundtrack
-	    return;
+	    i->audio_eof = 1; i->video->samplerate = i->video->channels = 0; //end of soundtrack
+	    /* fall through, this probably was a partial read. (We did, after all,
+	       come to this point, so i->audio_eof must have been false so far) */
 	}
 	if(!pos) {
 	    swf_ResetTag(i->tag, ST_SOUNDSTREAMBLOCK);
@@ -570,6 +582,20 @@ static void scaleimage(v2swf_internal_t*i)
     //memcpy(i->buffer, i->vrbuffer, i->width*i->height*4);
 }
 
+static int writeAudioOnly(v2swf_internal_t*i)
+{
+    if(i->showframe) {
+	i->fpspos += i->fpsratio;
+	/* skip frames */
+	if(i->fpspos<1.0) {
+	    return 0;
+	}
+	writeShowFrame(i);
+    }
+    i->showframe = 1;
+    return 1;
+}
+
 static int encodeoneframe(v2swf_internal_t*i)
 {
     videoreader_t*video = i->video;
@@ -577,11 +603,26 @@ static int encodeoneframe(v2swf_internal_t*i)
 
     checkInit(i);
 
-    if(videoreader_eof(i->video) || !videoreader_getimage(i->video, i->vrbuffer)) 
-    {
-	msg("videoreader returned eof\n");
-	finish(i);
+    if(i->video_eof && i->audio_eof) {
+	if(!i->finished)
+	    finish(i);
 	return 0;
+    }
+
+    if(!i->audio_eof && i->video_eof) {
+	return writeAudioOnly(i);
+    }
+
+    if(!videoreader_getimage(i->video, i->vrbuffer)) 
+    {
+	i->video_eof = 1;
+	msg("videoreader returned eof\n");
+	if(i->audio_eof) {
+	    finish(i);
+	    return 0;
+	} else {
+	    return writeAudioOnly(i);
+	}
     }
 
     msg("encoding image for frame %d\n", i->frames);
