@@ -70,6 +70,7 @@ clean:
                 sprites.o glyphshape.o \
 		buttontest.o dumpfont.o text.o makefonts.o\
 		jpegtest.swf box.swf shape1.swf trastest.swf zlibtest.swf \
-                sprites.swf buttontest.swf text.swf glyphshape.swf
+                sprites.swf buttontest.swf text.swf glyphshape.swf sound.swf \
+		transtest.swf
 
 
