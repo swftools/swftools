@@ -40,6 +40,7 @@
 static char * filename = 0;
 static char * outputname = "output.swf";
 static int verbose = 2;
+static int optimize = 0;
 static int override_outputname = 0;
 
 static struct options_t options[] = {
@@ -47,6 +48,7 @@ static struct options_t options[] = {
 {"V", "version"},
 {"v", "verbose"},
 {"o", "output"},
+{"O", "optimize"},
 {0,0}
 };
     
@@ -60,6 +62,10 @@ int args_callback_option(char*name,char*val)
 	outputname = val;
 	override_outputname = 1;
 	return 1;
+    }
+    else if(!strcmp(name, "O")) {
+	optimize = 1;
+	return 0;
     }
     else if(!strcmp(name, "v")) {
 	verbose ++;
@@ -642,6 +648,10 @@ static void s_endSWF()
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
+   
+    if(optimize) {
+	swf_Optimize(swf);
+    }
     
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize = currentrect; /* "autocrop" */
