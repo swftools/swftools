@@ -13,6 +13,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
 #include "../lib/args.h"
 #include "pdfswf.h"
 #include "t1lib.h"
@@ -28,6 +31,9 @@ static char * password = 0;
 
 static char * preloader = 0;
 static char * viewer = 0;
+
+char* fontpaths[256];
+int fontpathpos = 0;
 
 int systemf(const char* format, ...)
 {
@@ -98,6 +104,17 @@ int args_callback_option(char*name,char*val) {
     {
 	pdfswf_storeallcharacters();
 	return 0;
+    }
+    else if (!strcmp(name, "F"))
+    {
+	char *s = strdup(val);
+	int l = strlen(s);
+	while(l && s[l-1]=='/') {
+	    s[l-1] = 0;
+	    l--;
+	}
+	fontpaths[fontpathpos++] = s;
+	return 1;
     }
     else if (!strcmp(name, "l"))
     {
@@ -173,6 +190,7 @@ struct options_t options[] =
  {"p","pages"},
  {"w","samewindow"},
  {"f","fonts"},
+ {"F","fontpath"},
  {"B","viewer"},
  {"L","preloader"},
  {"b","defaultviewer"},
@@ -210,6 +228,9 @@ void args_callback_usage(char*name)
     printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
+#ifdef HAVE_DIRENT
+    printf("-F  --fontdir directory    Add directory to font search path\n");
+#endif
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-V  --version              Print program version\n");
 #ifndef SYSTEM_BACKTICKS
@@ -221,9 +242,66 @@ void args_callback_usage(char*name)
     printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
 }
 
+#ifdef HAVE_DIRENT_H
+void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath) 
+{
+    if(searchpath) {
+	if(searchpath[0])
+	    strcat(searchpath, ":");
+	strcat(searchpath, dirname);
+    }
+
+    DIR*dir = opendir(dirname);
+    if(!dir) {
+	logf("<warning> Couldn't open directory %s\n", dirname);
+	return;
+    }
+    dirent*ent;
+    while(1) {
+	ent = readdir (dir);
+	if (!ent) 
+	    break;
+	if(ent->d_type == DT_REG)
+	{
+	    int l;
+	    char*name = ent->d_name;
+	    char type = 0;
+	    if(!name) continue;
+	    l=strlen(name);
+	    if(l<4)
+		continue;
+	    if(!strncasecmp(&name[l-4], ".afm", 4)) 
+		type=1;
+	    if(!strncasecmp(&name[l-4], ".ttf", 4)) 
+		type=2;
+	    if(type)
+	    {
+		if(database && type==1) {
+		    char buf[256],a;
+		    FILE*fi;
+		    sprintf(buf, "%s/%s", dirname,name);
+		    fi = fopen(buf, "rb");
+		    if(!fi || !fread(&a,1,1,fi)) {
+			logf("<warning> Couldn't read from %s", buf);
+		    }
+		    fprintf(database, "%s\n", name);
+		} 
+		if(numfonts)
+		    (*numfonts)++;
+	    }
+	}
+    }
+    closedir(dir);
+}
+#endif
+
 int main(int argn, char *argv[])
 {
     int ret;
+    char buf[256];
+    int numfonts = 0;
+    int t;
+    char t1searchpath[1024];
 #ifdef HAVE_SRAND48
     srand48(time(0));
 #else
@@ -251,12 +329,55 @@ int main(int argn, char *argv[])
     //TODO: use tempnam here. Check if environment already contains a
     //T1LIB_CONFIG.
     putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
+    FILE*db = fopen("/tmp/FontDataBase", "wb");
     FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
-    fprintf(fi, "FONTDATABASE=%s/fonts/FontDataBase\n", DATADIR);
-    fprintf(fi, "ENCODING=%s/fonts:.\n", DATADIR);
-    fprintf(fi, "AFM=%s/fonts:.\n", DATADIR);
-    fprintf(fi, "TYPE1=%s/fonts:.\n", DATADIR);
+    if(!db || !fi) {
+	fprintf(stderr, "Couldn't create temporary file in /tmp/\n");
+	exit(1);
+    }
+    t1searchpath[0] = 0;
+#ifdef HAVE_DIRENT_H
+    sprintf(buf, "%s/fonts",DATADIR);
+    // pass 1
+    addfontdir(0, buf, &numfonts, 0);
+    for(t=0;t<fontpathpos;t++) {
+	addfontdir(0, fontpaths[t], &numfonts,0);
+    }
+    fprintf(db, "%d\n", numfonts);
+    // pass 2
+    addfontdir(db, buf, 0, t1searchpath);
+    for(t=0;t<fontpathpos;t++) {
+	addfontdir(db, fontpaths[t], 0, t1searchpath);
+    }
+#else
+/* This is a workaround. The correct way would be to
+   get directory listings working on all systems.
+*/
+    strcpy(t1searchpath, DATADIR);
+    strcat(t1searchpath, "/fonts");
+    fprintf(db, "14\n");
+    fprintf(db, "n021003l.afm\n");
+    fprintf(db, "n021023l.afm\n");
+    fprintf(db, "n021004l.afm\n");
+    fprintf(db, "n021024l.afm\n");
+    fprintf(db, "n019003l.afm\n");
+    fprintf(db, "n019023l.afm\n");
+    fprintf(db, "n019004l.afm\n");
+    fprintf(db, "n019024l.afm\n");
+    fprintf(db, "n022003l.afm\n");
+    fprintf(db, "n022023l.afm\n");
+    fprintf(db, "n022004l.afm\n");
+    fprintf(db, "n022024l.afm\n");
+    fprintf(db, "s050000l.afm\n");
+    fprintf(db, "d050000l.afm\n");
+#endif
+
+    fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n");
+    fprintf(fi, "ENCODING=%s:.\n", t1searchpath);
+    fprintf(fi, "AFM=%s:.\n", t1searchpath);
+    fprintf(fi, "TYPE1=%s:.\n", t1searchpath);
     fclose(fi);
+    fclose(db);
     /* initialize t1lib */
     T1_SetBitmapPad( 16);
     if ((T1_InitLib(NO_LOGFILE)==NULL)){
@@ -269,7 +390,6 @@ int main(int argn, char *argv[])
     pdfswf_setoutputfilename(outputname);
 
     int pages = pdfswf_numpages();
-    int t = 1;
     for(t = 1; t <= pages; t++) 
     {
 	if(is_in_range(t, pagerange))
@@ -306,6 +426,7 @@ int main(int argn, char *argv[])
 	systemf("rm __tmp__.swf");
     }
 
+    unlink("/tmp/FontDataBase");
     return 0;
 }
 
