@@ -1,5 +1,5 @@
 /* args.h
-   Settings for swfcombine. This is deliberately not named "config.h" to
+   Settings for swfcombine. This file is deliberately not named "config.h" to
    avoid conflicts with GNU autoconf.
 
    Part of the swftools package.
@@ -16,6 +16,7 @@ struct config_t
    char alloctest;
    char clip;
    char stack;
+   char antistream;
    int loglevel;
    int movex;
    int movey;
