@@ -102,7 +102,7 @@ void draw_string(drawer_t*draw, const char*string)
 	    to.y = atoi(getToken(&p));
 	    draw_cubicTo(draw, &mid1, &mid2, &to);
 	}
-	else fprintf(stderr, "drawer: Warning: unknown primitive '%s'", token);
+	else fprintf(stderr, "drawer: Warning: unknown primitive '%s'\n", token);
 	
 	free(token);
     }
