@@ -601,8 +601,9 @@ int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 #ifndef RFXSWF_DISABLESOUND
 
 // swfsound.c
-void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples);
-void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first);
+void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
+/* expects 2304 samples */
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, char first);
 
 #endif // RFXSWF_DISABLESOUND
 
