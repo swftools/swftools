@@ -136,3 +136,8 @@
 	* swfs: added keyboard_viewer
 	* swfcombine: Bugfixes
 	* swfdump: Shows frame position now.
+	* swfdump: Some definesound infos added
+	* wav2swf: added support for definesound, looping and framerate
+	* pdf2swf: Calling Actionscript Functions can now also be done via http: hyperlink,
+	           e.g.: http://pdf2swf:call:_root.myFunction:parameter
+
