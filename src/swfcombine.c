@@ -14,12 +14,33 @@
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "../lib/log.h"
-#include "combine.h"
-#include "settings.h"
-#include "types.h"
-#include "flash.h"
-#include "reloc.h"
 #include "../config.h"
+
+struct config_t
+{
+   char overlay;
+   char alloctest;
+   char clip;
+   char stack;
+   char stack1;
+   char antistream;
+   char dummy;
+   char zlib;
+   char cat;
+   char merge;
+   char isframe;
+   int loglevel;
+   int movex;
+   int movey;
+   int sizex;
+   char hassizex;
+   int sizey;
+   char hassizey;
+   int framerate;
+   float scalex;
+   float scaley;
+};
+struct config_t config;
 
 char * master_filename = 0;
 char * master_name = 0;
@@ -208,300 +229,606 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-rXYomlcv] [-f] masterfile] [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
+    printf("Usage: %s [-rXYomlcv] [-f] masterfile [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYomv] --stack[1] [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYov] --cat [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYomlcv] --dummy [-xys] [file]\n", name);
     printf("\n");
     printf("-o outputfile       --output    explicitly specify output file. (otherwise, output.swf will be used\n");
-    printf("-t                  --stack     place each slave in a seperate frame (no master movie\n");
-    printf("-T                  --stack1    place each slave in the first frame (no master movie\n");
+    printf("-t                  --stack     place each slave in a seperate frame (no master movie)\n");
+    printf("-T                  --stack1    place each slave in the first frame (no master movie)\n");
     printf("-m                  --merge     Don't store the slaves in Sprites/MovieClips\n");
-    printf("-a                  --cat       concatenate all slave files (no master movie\n");
+    printf("-a                  --cat       concatenate all slave files (no master movie)\n");
     printf("-l                  --overlay   Don't remove any master objects, only overlay new objects\n");
     printf("-c                  --clip      Clip the slave objects by the corresponding master objects\n");
     printf("-v                  --verbose   Use more than one -v for greater effect \n");
     printf("-d                  --dummy     Don't require slave objects \n");
     printf("-f                  --frame     The following identifier is a frame or framelabel, not an id or objectname\n");
-    printf("-x xpos             --movex     x Adjust position of slave by xpos twips (1/20 pixel\n");
-    printf("-y ypos             --movey     y Adjust position of slave by ypos twips (1/20 pixel\n");
+    printf("-x xpos             --movex     x Adjust position of slave by xpos twips (1/20 pixel)\n");
+    printf("-y ypos             --movey     y Adjust position of slave by ypos twips (1/20 pixel)\n");
     printf("-s scale            --scale     Adjust size of slave by scale%\n");
-    printf("-r framerate        --rate      Set movie framerate (100 frames/sec\n");
-    printf("-X width            --width     Force movie width to scale (default: use master width (not with -t\n");
-    printf("-Y height           --height    Force movie height to scale (default: use master height (not with -t\n");
+    printf("-r framerate        --rate      Set movie framerate (100 frames/sec)\n");
+    printf("-X width            --width     Force movie width to scale (default: use master width (not with -t))\n");
+    printf("-Y height           --height    Force movie height to scale (default: use master height (not with -t))\n");
     printf("-z zlib             --zlib      Enable Flash 6 (MX) Zlib Compression\n");
 }
 
-static void zlib_error(int ret, char* msg, z_stream*zs)
+static void makestackmaster(SWF*swf)
 {
-    fprintf(stderr, "%s: zlib error (%d): last zlib error: %s\n",
-	  msg,
-	  ret,
-	  zs->msg?zs->msg:"unknown");
-    perror("errno:");
-    exit(1);
-}
-
-static char* fi_depack(FILE* fi, unsigned int * setlength) {
-    char * mem;
-    z_stream zs;
-    int ret;
-    char buffer1[8192], *buffer2;
-    int memsize = 8192;
-    int mempos = 0;
-    memset(&zs,0,sizeof(z_stream));
-    zs.zalloc = Z_NULL;
-    zs.zfree  = Z_NULL;
-    zs.opaque = Z_NULL;
-    buffer2 = malloc(8192);
-
-    ret = inflateInit(&zs);
-    if (ret != Z_OK) zlib_error(ret, "inflate_init", &zs);
-
-    fread(buffer2, 8, 1, fi);
-    buffer2[0] = 'F';
-    
-    zs.next_out         = &buffer2[8];
-    zs.avail_out        = 8192-8;
-    zs.avail_in		= 0;
-
-    while(1)
-    {
-	if(!zs.avail_in) {
-	    zs.avail_in = fread(buffer1, 1, 8192, fi);
-	    zs.next_in = buffer1;
-	}
-	if(zs.avail_in)
-	    ret = inflate(&zs, Z_NO_FLUSH);
-	else
-	    ret = inflate(&zs, Z_FINISH);
-
-	if (ret == Z_STREAM_END)
-	    break;
-	if (ret != Z_OK) zlib_error(ret, "inflate_init", &zs);
-	
-	if (zs.avail_out == 0)
-	{	
-	    buffer2 = realloc(buffer2, memsize + 8192);
-	    zs.avail_out = 8192;
-	    zs.next_out = &buffer2[memsize];
-	    memsize += 8192;
-	}
-    }
-    *setlength = (zs.next_out - (Bytef*)buffer2);
-    ret = inflateEnd(&zs);
-    if(ret != Z_OK) zlib_error(ret, "inflate_init", &zs);
-    return buffer2;
-}
-
-/* read a whole file in memory */
-static char* fi_slurp(FILE*fi, unsigned int * setlength)
-{
-    char * mem;
-    long long int length; //;)  
-    long long int pos = 0;
-    unsigned char id[3];
-    fseek(fi,0,SEEK_END);
-    length = ftell(fi);
-    fseek(fi,0,SEEK_SET);
-    if(length<3)
-	return 0;
-    fread(id, 3, 1, fi);
-    fseek(fi, 0, SEEK_SET);
-    if(!strncmp(id, "CWS", 3)) {
-	return fi_depack(fi, setlength);
-    }
-
-    mem = malloc(length);
-    if(!mem)
-	return 0;
-    while(!feof(fi))
-    {
-	pos += fread(&mem[pos], 1, 65536, fi);
-    }
-    if (setlength) 
-	*setlength = length;
-    return mem;
-}
-
-static void fi_pack(FILE*fi, void*_mem, int length)
-{
-    z_stream zs;
-    int ret;
-    char*mem = (char*)_mem;
-    char buffer[8192];
-    memset(&zs,0,sizeof(z_stream));
-    zs.zalloc = Z_NULL;
-    zs.zfree  = Z_NULL;
-    zs.opaque = Z_NULL;
-
-    ret = deflateInit(&zs, 9);
-    if (ret != Z_OK) zlib_error(ret, "deflate_init", &zs);
-
-    mem[0] = 'C';
-    fwrite(mem, 8, 1, fi);
-    
-    zs.avail_in         = length-8;
-    zs.next_in          = mem+8;
-    zs.avail_out        = 8192;
-    zs.next_out         = buffer;
-
-    while(1)
-    {
-	if(zs.avail_in)
-	    ret = deflate(&zs, Z_NO_FLUSH);
-	else
-	    ret = deflate(&zs, Z_FINISH);
-
-	if (ret == Z_STREAM_END)
-	    break;
-
-	if (ret != Z_OK) zlib_error(ret, "deflate_sync", &zs);
-	
-	if (zs.avail_out == 0)
-	{	
-	    fwrite(buffer, 8192, 1, fi);
-	    zs.next_out = buffer;
-	    zs.avail_out = 8192;
-	}
-    }
-    fwrite(buffer, zs.next_out - (Bytef*)buffer, 1, fi);
-    
-    ret = deflateEnd(&zs);
-    if (ret != Z_OK) zlib_error(ret, "deflate_end", &zs);
-}
-
-static void fi_dump(FILE*fi, void*_mem, int length)
-{
-    char*mem = (char*)_mem;
-    int pos = 0;
-    while(pos < length)
-    {
-	int size = 65536;
-	if (size > (length - pos))
-		size = (length - pos);
-	pos += fwrite(&mem[pos], 1, size, fi);
-    }
-}
-
-/* todo: use rfxswf */
-static void makestackmaster(u8**masterdata, int*masterlength)
-{
-    u8 head[] = {'F','W','S'};
-    u8 *pos;
-    u32 * fixpos;
+    TAG*tag;
     int t;
-    struct RECT box;
-    int strlength = 0;
+    SRECT box;
     int fileversion = 1;
+    memset(&box, 0, sizeof(box));
 
     /* scan all slaves for bounding box */
     for(t=0;t<numslaves;t++)
     {
-	FILE*fi=fopen(slave_filename[t],"rb");
-	u8 data[256];
+	SWF head;
 	int ret;
-	struct flash_header head;
-	struct reader_t r;
-	strlength += strlen(slave_name[t]) + 9;
-	if(!fi) {
-	    logf("<fatal> Couldn't open %s.", slave_filename[t]);
+	int fi=open(slave_filename[t],O_RDONLY);
+	if(fi<0 || swf_ReadSWF(fi, &head)<0) {
+	    logf("<fatal> Couldn't open/read %s.", slave_filename[t]);
 	    exit(1);
 	}
-	ret = fread(data,1,256,fi);
-	if(ret < 13) {
-	    logf("<fatal> File %s is to small (%d bytes)", slave_filename[t], ret);
-	    exit(1);
-	}
-	swf_init(&r, data,256);
-	head = swf_read_header(&r);
+	close(fi);
 	logf("<verbose> File %s has bounding box %d:%d:%d:%d\n",
 		slave_filename[t], 
-		head.boundingBox.x1, head.boundingBox.y1,
-		head.boundingBox.x2, head.boundingBox.y2);
-	if(head.version > fileversion)
-	    fileversion = head.version;
+		head.movieSize.xmin, head.movieSize.ymin,
+		head.movieSize.xmax, head.movieSize.ymax);
+	if(head.fileVersion > fileversion)
+	    fileversion = head.fileVersion;
 	if(!t)
-	    box = head.boundingBox;
+	    box = head.movieSize;
 	else {
-	    if(head.boundingBox.x1 < box.x1)
-		box.x1 = head.boundingBox.x1;
-	    if(head.boundingBox.y1 < box.y1)
-		box.y1 = head.boundingBox.y1;
-	    if(head.boundingBox.x2 > box.x2)
-		box.x2 = head.boundingBox.x2;
-	    if(head.boundingBox.y2 > box.y2)
-		box.y2 = head.boundingBox.y2;
+	    if(head.movieSize.xmin < box.xmin)
+		box.xmin = head.movieSize.xmin;
+	    if(head.movieSize.ymin < box.ymin)
+		box.ymin = head.movieSize.ymin;
+	    if(head.movieSize.xmax > box.xmax)
+		box.xmax = head.movieSize.xmax;
+	    if(head.movieSize.ymax > box.ymax)
+		box.ymax = head.movieSize.ymax;
 	}
 	logf("<verbose> New master bounding box is %d:%d:%d:%d\n",
-		box.x1, box.y1,
-		box.x2, box.y2);
-	fclose(fi);
+		box.xmin, box.ymin,
+		box.xmax, box.ymax);
+	swf_FreeTags(&head);
     }
 
-    /* we don't have a master, so we create one ourselves. */
-    *masterlength = (numslaves + 1) * 32 + strlength;
-    *masterdata = (u8*)malloc(*masterlength);
-    pos = *masterdata;
-    memcpy(pos, head, sizeof(head));
-    pos += sizeof(head);
-    *pos++ = fileversion;
-    fixpos = (u32*)pos;
-    PUT32(pos, 0x12345678); // to be overwritten
-    pos += 4;
-    writeRECT(&pos, &box);
-    PUT16(pos, 0x2000) // framerate
-    pos += 2;
-    PUT16(pos, numslaves) // framerate
-    pos += 2;
+    memset(swf, 0, sizeof(SWF));
+
+    swf->firstTag = swf_InsertTag(tag, ST_SETBACKGROUNDCOLOR);
+    tag = swf->firstTag;
+    swf_SetU8(tag, 0);
+    swf_SetU8(tag, 0);
+    swf_SetU8(tag, 0);
+    
     for(t=0;t<numslaves;t++)
     {
 	char buf[128];
-	int namelen;
+	sprintf(buf, "Frame%02d", t);
+	slave_name[t] = strdup(buf);
 
-	if(1) {
-	    sprintf(buf, "Frame%02d", t);
-	    slave_name[t] = strdup(buf);
-	} 
-	namelen = strlen(slave_name[t]);
+	tag = swf_InsertTag(tag, ST_DEFINESPRITE);
+	swf_SetU16(tag, t+1);
+	swf_SetU16(tag, 0);
+	tag = swf_InsertTag(tag, ST_END);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, t+1, 1+t,0,0, slave_name[t]);
 
-	PUT16(&pos[0] , ((u16)(TAGID_DEFINESPRITE<<6) + 6));
-	PUT16(&pos[2] , (t+1)); //ID
-	PUT16(&pos[4] , 0); // Frames
-	PUT16(&pos[6] , 0); // TAG1
-	PUT16(&pos[8] , ((u16)(TAGID_PLACEOBJECT2<<6) + 6 + namelen));
-	PUT16(&pos[10], (34)); //flags: id+name
-	PUT16(&pos[11], (1+t)); // depth
-	PUT16(&pos[13], (t+1)); // id
-	sprintf(&pos[15],slave_name[t]);
-	pos += 15 + namelen + 1;
 	if(!config.stack1 || t == numslaves-1) {
-	    PUT16(&pos[0],((u16)(TAGID_SHOWFRAME<<6) + 0));
-	    pos += 2;
+	    tag = swf_InsertTag(tag, ST_SHOWFRAME);
 	}
 	if(!config.stack)
 	if(t!=numslaves-1)
 	{
-	    PUT16(&pos[0], ((u16)(TAGID_REMOVEOBJECT2<<6) + 2));
-	    PUT16(&pos[2], (1+t)); // depth;
-	    pos += 4;
+	    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+	    swf_SetU16(tag, 1+t);
 	}
     }
-    PUT16(pos, ((TAGID_END<<6) + 0));
-    *masterlength = pos - *masterdata;
-    PUT32(fixpos, *masterlength);
+    tag = swf_InsertTag(tag, ST_END);
 }
 
-struct config_t config;
+static char* slavename = 0;
+static int slaveid = -1;
+static int slaveframe = -1;
+static char masterbitmap[65536];
+
+#define FLAGS_WRITEDEFINES 1
+#define FLAGS_WRITENONDEFINES 2
+#define FLAGS_WRITESPRITE 4
+#define FLAGS_WRITESLAVE 8
+
+int get_free_id(char*bitmap)
+{
+    int t;
+    for(t=1;t<65537;t++)
+	if(!bitmap[t]) {
+	    bitmap[t] = 1;
+	    return t;
+	}
+    return -1;
+}
+
+void jpeg_assert()
+{
+}
+
+TAG* write_sprite_defines(TAG*tag, SWF*sprite)
+{
+    int pos = 0;
+    TAG*rtag = sprite->firstTag;
+    while(rtag) {
+	if(!swf_isAllowedSpriteTag(rtag)) {
+	    logf("<debug> processing sprite tag %02x", tag->id);
+	    if(swf_isDefiningTag(rtag))
+	    {
+		logf("<debug> [sprite defs] write tag %02x (%d bytes in body)", 
+			tag->id, tag->len);
+		tag = swf_InsertTag(tag, rtag->id);
+		swf_SetBlock(tag, rtag->data, rtag->len);
+	    }
+	    else if(swf_isPseudoDefiningTag(rtag))
+	    {
+		logf("<debug> [sprite defs] write tag %02x (%d bytes in body)", 
+			tag->id, tag->len);
+		tag = swf_InsertTag(tag, rtag->id);
+		swf_SetBlock(tag, rtag->data, rtag->len);
+	    }
+	    else {
+		switch(rtag->id)
+		{
+		    case ST_JPEGTABLES:
+			   /* if we get here, jpeg_assert has already run,
+			      ensuring this is the only one of it's kind,
+			      so we may safely write it out */
+			   tag = swf_InsertTag(tag, rtag->id);
+			   swf_SetBlock(tag, rtag->data, rtag->len);
+		       break;
+		    case ST_EXPORTASSETS:
+		       logf("<debug> deliberately ignoring EXPORTASSETS tag");
+		       break;
+		    case ST_ENABLEDEBUGGER:
+		       logf("<debug> deliberately ignoring ENABLEDEBUGGER tag");
+		       break;
+		    case ST_SETBACKGROUNDCOLOR:
+		       logf("<debug> deliberately ignoring BACKGROUNDCOLOR tag");
+		       break;
+		    case 40:
+		    case 49:
+		    case 51:
+		       logf("<notice> found tag %d. This is a Generator template, isn't it?", tag->id);
+		       break;
+		    default:
+		       logf("<notice> funny tag: %d is neither defining nor sprite", tag->id);
+		}
+	    }
+	}
+	pos++;
+    }
+    return tag;
+}
+
+void changedepth(TAG*tag, int add)
+{
+    /* fucking byteorders */
+    if(tag->id == ST_PLACEOBJECT)
+	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
+    if(tag->id == ST_PLACEOBJECT2)
+	PUT16(&tag->data[1],GET16(&tag->data[1])+add);
+    if(tag->id == ST_REMOVEOBJECT)
+	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
+    if(tag->id == ST_REMOVEOBJECT2)
+	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
+}
+
+void matrix_adjust(MATRIX*m)
+{
+    m->sx = (int)(m->sx*config.scalex);
+    m->sy = (int)(m->sy*config.scaley);
+    m->r0 = (int)(m->r0*config.scalex);
+    m->r1 = (int)(m->r1*config.scaley);
+    m->tx += config.movex;
+    m->ty += config.movey;
+}
+
+void write_changepos(TAG*output, TAG*tag)
+{
+    if(config.movex || config.movey || config.scalex != 1 || config.scaley != 1)
+    {
+	switch(tag->id)
+	{
+	    case ST_PLACEOBJECT2: {
+		MATRIX m;
+		U8 flags;
+		swf_GetMatrix(0, &m);
+
+		flags = swf_GetU8(tag);
+		swf_SetU8(output, flags|4);
+		swf_SetU16(output, swf_GetU16(tag)); //depth
+		//flags&1: move
+		if(flags&2) {
+		    swf_SetU16(output, swf_GetU16(tag)); //id
+		}
+		if(flags&4) {
+		    swf_GetMatrix(tag, &m);
+		    matrix_adjust(&m);
+		    swf_SetMatrix(tag, &m);
+		}
+		swf_SetBlock(output, &tag->data[tag->pos], tag->len - tag->pos);
+		break;
+	    }
+	    case ST_PLACEOBJECT: {
+		MATRIX m;
+		swf_SetU16(output, swf_GetU16(tag)); //id
+		swf_SetU16(output, swf_GetU16(tag)); //depth
+		swf_GetMatrix(tag, &m);
+		matrix_adjust(&m);
+		swf_SetMatrix(tag, &m);
+		swf_SetBlock(output, &tag->data[tag->pos], tag->len - tag->pos);
+		break;
+	    }
+	    default:
+	    swf_SetBlock(output, tag->data, tag->len);
+	}
+    } 
+    else 
+    {
+	    swf_SetBlock(output, tag->data, tag->len);
+    }
+}
+
+TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
+{
+    int pos = 0;
+    TAG* definespritetag;
+    TAG* rtag;
+    int tmp;
+
+    definespritetag = tag = swf_InsertTag(tag, ST_DEFINESPRITE);
+    swf_SetU16(tag, spriteid);
+    swf_SetU16(tag, sprite->frameCount);
+    logf ("<notice> sprite id is %d", spriteid);
+
+    // write slave(2) (body)
+    tmp = sprite->frameCount;
+    logf("<debug> %d frames to go",tmp);
+
+    if(config.clip) {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_SetU8(tag, 2+64); //flags: character+clipdepth
+	swf_SetU16(tag, 0); //depth
+	swf_SetU16(tag, replaceddefine); //id
+	swf_SetU16(tag, 65535); //clipdepth
+    }
+
+    if(config.overlay && !config.isframe) {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_SetU8(tag, 2); //flags: character
+	swf_SetU16(tag, 0); //depth
+	swf_SetU16(tag, replaceddefine); //id
+    }
+
+    rtag = sprite->firstTag;
+    while(rtag)
+    {
+	if (swf_isAllowedSpriteTag(rtag)) {
+
+	    changedepth(rtag, +1);
+	    logf("<debug> [sprite main] write tag %02x (%d bytes in body)", 
+		    rtag->id, rtag->len);
+
+	    tag = swf_InsertTag(tag, rtag->id);
+	    write_changepos(rtag, tag);
+
+	    if(tag->id == ST_SHOWFRAME)
+	    {
+		tmp--;
+		logf("<debug> %d frames to go",tmp);
+	    }
+	}
+    }
+    return tag;
+}
+
+static char tag_ok_for_slave(int id)
+{
+    if(id == ST_SETBACKGROUNDCOLOR)
+	return 0;
+    return 1;
+}
+
+TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefine, int flags)
+{
+    int outputslave = 0;
+    int frame = 0;
+    int sframe = 0;
+    int slavewritten = 0;
+
+    TAG* rtag = master->firstTag;
+    TAG* stag = slave->firstTag;
+
+    while(rtag)
+    {
+	if(rtag->id == ST_SHOWFRAME && outputslave)
+	{
+	    while(stag) {
+		if(stag->id == ST_SHOWFRAME) {
+		    stag = stag->next;
+		    sframe++;
+		    break;
+		}
+		if(tag_ok_for_slave(stag->id)) {
+		    tag = swf_InsertTag(tag, stag->id);
+		    swf_SetBlock(tag, stag->data, stag->len);
+		}
+		stag = stag->next;
+	    }
+	}
+	if(rtag->id == ST_SHOWFRAME)
+	{
+	    frame ++;
+	}
+
+	if(swf_isDefiningTag(rtag) && (flags&FLAGS_WRITEDEFINES))
+	{
+	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
+		    rtag->id, rtag->len);
+	    if(swf_GetDefineID(rtag) == spriteid && !config.isframe)
+	    {
+		if(config.overlay)
+		{
+		    PUT16(rtag->data, replaceddefine);
+		    tag = swf_InsertTag(tag, rtag->id);
+		    swf_SetBlock(tag, rtag->data, rtag->len);
+		} else {
+		    /* don't write this tag */
+		    logf("<verbose> replacing tag %d id %d with sprite", rtag->id
+			    ,spriteid);
+		}
+
+		if(flags&FLAGS_WRITESPRITE)
+		{
+		    tag = write_sprite_defines(tag, slave);
+		    tag = write_sprite(tag, slave, spriteid, replaceddefine);
+		}
+		if(flags&FLAGS_WRITESLAVE)
+		{
+		    outputslave = 1;
+		}
+	    } else { 
+		tag = swf_InsertTag(tag, rtag->id);
+		swf_SetBlock(tag, rtag->data, rtag->len);
+	    }
+	}
+	if(frame == slaveframe)
+	{
+	    if(flags&FLAGS_WRITESLAVE) {
+		outputslave = 1;
+		slavewritten = 1;
+	    }
+	    if((flags&FLAGS_WRITESPRITE) && !slavewritten)
+	    {
+		int id = get_free_id(masterbitmap);
+		int depth = 0;
+		if(config.clip) {
+		    logf("<fatal> Can't combine --clip and --frame");
+		}
+		
+		tag = write_sprite_defines(tag, slave);
+		tag = write_sprite(tag, slave, id, -1);
+
+		tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+		    swf_SetU8(tag, 2); //flags: id
+		    swf_SetU16(tag, depth);
+		    swf_SetU16(tag, id);
+
+		slavewritten = 1;
+	    }
+	}
+	if(!swf_isDefiningTag(rtag) && (flags&FLAGS_WRITENONDEFINES))
+	{
+	    int dontwrite = 0;
+	    switch(rtag->id) {
+		case ST_PLACEOBJECT:
+		case ST_PLACEOBJECT2:
+		    if(frame == slaveframe && !config.overlay)
+			dontwrite = 1;
+		case ST_REMOVEOBJECT:
+//		case ST_REMOVEOBJECT2:
+		    /* place/removetags for the object we replaced
+		       should be discarded, too, as the object to insert 
+		       isn't a sprite 
+		     */
+		    if(spriteid>=0 && swf_GetPlaceID(rtag) == spriteid && 
+			    !config.isframe && config.merge)
+			dontwrite = 1;
+		break;
+	    }
+	    if(!dontwrite) {
+		logf("<debug> [master] write tag %02x (%d bytes in body)", 
+			rtag->id, rtag->len);
+		tag = swf_InsertTag(tag, rtag->id);
+		swf_SetBlock(tag, rtag->data, rtag->len);
+	    }
+	}
+	tag = tag->next;
+    }
+   
+    if(outputslave) 
+    while(stag)
+    {
+	    if(tag_ok_for_slave(stag->id)) {
+		tag = swf_InsertTag(tag, stag->id);
+		swf_SetBlock(tag, stag->data, stag->len);
+	    }
+	    stag = stag->next;
+    }
+    if(!slavewritten && config.isframe && (flags&(FLAGS_WRITESLAVE|FLAGS_WRITESPRITE)))
+    {
+	if(slaveframe>=0)
+	    logf("<warning> Frame %d doesn't exist in file. No substitution will occur",
+		    slaveframe);
+	else
+	    logf("<warning> Frame \"%s\" doesn't exist in file. No substitution will occur",
+		    slavename);
+    }
+    return tag;
+}
+
+void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
+{
+    printf("--cat not implemented yet. Please use the swfcombine from swftools 0.3.1 or 0.2.3.\n");
+    exit(1);
+}
+
+void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
+{
+    int pos=0;
+    int spriteid = -1;
+    int replaceddefine = -1;
+    int frame = 0;
+    char*framelabel;
+    TAG * tag = master->firstTag;
+    
+    // set the idtab
+    pos = 0;
+
+    while(tag)
+    {
+	if(swf_isDefiningTag(tag)) {
+	    int defineid = swf_GetDefineID(tag);
+	    logf("<debug> tagid %02x defines object %d", tag, defineid);
+	    masterbitmap[defineid] = 1;
+	} else if(tag->id == ST_PLACEOBJECT2) {
+	    char * name = swf_GetName(tag);
+	    int id = swf_GetPlaceID(tag);
+
+	    if(name)
+	      logf("<verbose> tagid %02x places object %d named \"%s\"", tag, id, name);
+	    else
+	      logf("<verbose> tagid %02x places object %d (no name)", tag, id);
+
+	    if ((name && slavename && !strcmp(name,slavename)) || 
+		(!slavename && id==slaveid)) {
+		if(id>=0) {
+		  spriteid = id;
+		  logf("<notice> Slave file attached to object %d.", id);
+		}
+	    }
+	} else if(tag->id == ST_SHOWFRAME) {
+	    if(slaveframe>=0 && frame==slaveframe) {
+		logf("<notice> Slave file attached to frame %d.", frame);
+	    }
+	    frame++;
+	} else if(tag->id == ST_FRAMELABEL) {
+	    char * name = tag->data;
+	    if(name && slavename && config.isframe && !strcmp(name, slavename)) {
+		slaveframe = frame;
+		logf("<notice> Slave file attached to frame %d (%s).", frame, name);
+	    }
+	}
+    };
+
+    if (spriteid<0 && !config.isframe) {
+	if(slavename) {
+	    if(strcmp(slavename,"!!dummy!!"))
+		logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
+	}
+	else
+	    logf("<warning> Didn't find id %d in file. No substitutions will occur.", slaveid);
+	spriteid = get_free_id(masterbitmap);
+    }
+
+    swf_Relocate (slave, masterbitmap);
+    jpeg_assert();
+    
+    if (config.overlay)
+	replaceddefine = get_free_id(masterbitmap);
+    
+    // write file 
+
+    memcpy(newswf, master, sizeof(SWF));
+    newswf->firstTag = tag = swf_InsertTag(0, ST_REFLEX);
+
+    if (config.antistream) {
+	if (config.merge) {
+	    logf("<fatal> Can't combine --antistream and --merge");
+	}
+	tag = write_sprite_defines(tag, slave);
+	tag = write_sprite(tag, slave, spriteid, replaceddefine);
+	tag = write_master(tag, master, slave, spriteid, replaceddefine, FLAGS_WRITEDEFINES);
+	tag = write_master(tag, master, slave, spriteid, replaceddefine, FLAGS_WRITENONDEFINES);
+    } else {
+	if (config.merge)
+	    tag = write_master(tag, master, slave, spriteid, replaceddefine, 
+		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESLAVE);
+	else
+	    tag = write_master(tag, master, slave, spriteid, replaceddefine, 
+		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESPRITE);
+    }
+}
+
+void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
+{
+    slavename = slave_name;
+    slaveid = -1;
+    slaveframe = -1;
+
+    swf_FoldAll(master);
+    swf_FoldAll(slave);
+
+    if(slavename[0] == '#')
+    {
+	slaveid = atoi(&slavename[1]);
+	slavename = 0;
+    }
+
+    if(config.isframe)
+    {
+	int tmp;
+	if(slavename && slavename[0]!='#' && (sscanf(slavename, "%d", &tmp) ==
+		strlen(slavename))) {
+	/* if the name the slave should replace 
+	   consists only of digits and the -f
+	   option is given, it probably is not
+	   a frame name but a frame number.
+	 */
+	    slaveid = tmp;
+	    slavename = 0;
+	}
+
+	if(slaveid>=0) {
+	    slaveframe = slaveid;
+	    slaveid = -1;
+	} else {
+	/* if id wasn't given as either #number or number,
+	   the name is a frame label. BTW: The user wouldn't have
+	   needed to supply the -f option in this case */
+	}
+    }
+
+    logf("<debug> move x (%d)", config.movex);
+    logf("<debug> move y (%d)", config.movey);
+    logf("<debug> scale x (%f)", config.scalex);
+    logf("<debug> scale y (%f)", config.scaley);
+    logf("<debug> is frame (%d)", config.isframe);
+    
+    memset(masterbitmap, 0, sizeof(masterbitmap));
+
+    if(config.cat) 
+	return catcombine(master, slave_name, slave, newswf);
+    else
+	return normalcombine(master, slave_name, slave, newswf);
+}
+
 int main(int argn, char *argv[])
 {
-    FILE*fi;
-    u8*masterdata;
-    unsigned int masterlength;
-    u8*slavedata;
-    unsigned int slavelength;
-    u8*newdata;
-    unsigned int newlength;
+    int fi;
+    SWF master;
+    SWF slave;
+    SWF newswf;
     int t;
 
     config.overlay = 0; 
@@ -534,7 +861,6 @@ int main(int argn, char *argv[])
     }
 
     if(config.stack) {
-
 	if(config.overlay) {
 	    logf("<error> Can't combine -l and -t");
 	    exit(1);
@@ -545,24 +871,23 @@ int main(int argn, char *argv[])
 	}
 	logf("<verbose> (stacking) %d files found\n", numslaves);
 
-	makestackmaster(&masterdata,&masterlength);
-
-	logf("<verbose> Generated %d bytes of master data", masterlength);
+	makestackmaster(&master);
     }
     else {
+	int ret;
 	logf("<verbose> master entity %s (named \"%s\")\n", master_filename, master_name);
-	fi = fopen(master_filename, "rb");
-	if(!fi) {
+	fi = open(master_filename, O_RDONLY);
+	if(fi<0) {
 	    logf("<fatal> Failed to open %s\n", master_filename);
 	    exit(1);
 	}
-	masterdata = fi_slurp(fi, &masterlength);
-	if(!masterdata) {
+	ret = swf_ReadSWF(fi, &master);
+	if(ret<0) {
 	    logf("<fatal> Failed to read from %s\n", master_filename);
 	    exit(1);
 	}
-	logf("<debug> Read %d bytes from masterfile\n", masterlength);
-	fclose(fi);
+	logf("<debug> Read %d bytes from masterfile\n", ret);
+	close(fi);
     }
 
     for(t=0;t<numslaves;t++) {
@@ -585,19 +910,22 @@ int main(int argn, char *argv[])
 
     if (config.alloctest)
     {
-	int*bitmap = malloc(sizeof(int)*65536);
-	memset(bitmap, -1, 65536*sizeof(int));
-	memset(bitmap, 1, 101*sizeof(int));
-	swf_relocate(masterdata, masterlength, bitmap);
-	newdata = masterdata;
-	newlength = masterlength;
+	char*bitmap = malloc(sizeof(char)*65536);
+	memset(bitmap, 0, 65536*sizeof(char));
+	memset(bitmap, 1, 101*sizeof(char));
+	swf_Relocate(&master, bitmap);
+	newswf = master;
 	free(bitmap);
+//	makestackmaster(&newswf);
     }
     else
     {
 	if (!numslaves)
 	{
-	    logf("<error> You must have at least one slave entity.");
+	    if(config.cat)
+		logf("<error> You must have at least two objects.");
+	    else
+		logf("<error> You must have at least one slave entity.");
 	    return 0;
 	}
 	for(t = 0; t < numslaves; t++)
@@ -612,55 +940,40 @@ int main(int argn, char *argv[])
 		    slave_name[t], slave_filename[t]);
 	    if(!config.dummy)
 	    {
-		fi = fopen(slave_filename[t], "rb");
+		int ret;
+		fi = open(slave_filename[t], O_RDONLY);
 		if(!fi) {
 		    logf("<fatal> Failed to open %s\n", slave_filename[t]);
 		    exit(1);
 		}
-		slavedata = fi_slurp(fi, &slavelength);
-		if(!slavedata) {
+		ret = swf_ReadSWF(fi, &slave);
+		if(ret<0) {
 		    logf("<fatal> Failed to read from %s\n", slave_filename[t]);
 		    exit(1);
 		}
-		logf("<debug> Read %d bytes from slavefile\n", slavelength);
-		fclose(fi);
+		logf("<debug> Read %d bytes from slavefile\n", ret);
+		close(fi);
 	    }
 	    else
 	    {
-		slavedata = (u8*)malloc(16);
-		slavedata[0] = 'F';
-		slavedata[1] = 'W';
-		slavedata[2] = 'S';
-		slavedata[3] = 4; //version
-		PUT32(&slavedata[4], 14); ; // length
-		slavedata[8] = 0; // boundingbox
-		PUT16(&slavedata[9] , (0)); // rate
-		PUT16(&slavedata[11] , (0)); // count
-		PUT16(&slavedata[13] , (0)); // end tag
-		slavelength = 17;
+		memset(&slave, 0, sizeof(slave));
+		slave.firstTag = swf_InsertTag(0, ST_END);
+		slave.frameRate = 0;
+		slave.fileVersion = 4;
+		slave.frameCount = 0;
 	    }
 
-	    newdata = combine(masterdata, masterlength, slave_name[t], slavedata, slavelength, &newlength);
-	    if(!newdata) { 
-		logf("<fatal> Aborting.");
-		return 1;
-	    }
-
-	    free(masterdata);
-	    masterdata = newdata;
-	    masterlength = newlength;
+	    combine(&master, slave_name[t], &slave, &newswf);
+	    master = newswf;
 	}
     }
 
-    logf("<debug> New File is %d bytes \n", newlength);
-    if(newdata && newlength) {
-	FILE*fi = fopen(outputname, "wb");
-	if(config.zlib)
-	    fi_pack(fi, newdata, newlength);
-	else
-	    fi_dump(fi, newdata, newlength);
-	fclose(fi);
-    }
+    fi = open(outputname, O_RDWR|O_TRUNC|O_CREAT);
+    if(config.zlib)
+	swf_WriteSWC(fi, &newswf);
+    else
+	swf_WriteSWF(fi, &newswf);
+    close(fi);
     return 0;
 }
 
