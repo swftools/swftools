@@ -36,6 +36,7 @@ extern "C" {
 #include <ctype.h>
 #include "../config.h"
 #include "./bitio.h"
+#include "./drawer.h"
 
 #define DEBUG_RFXSWF
 
@@ -76,6 +77,9 @@ typedef         unsigned char   U8;
 typedef         signed char     S8;
 typedef         signed long     SFIXED;
 typedef         signed long     SCOORD;
+
+#define SCOORD_MAX 0x7fffffff
+#define SCOORD_MIN -0x80000000
 
 // Basic Structures
 
@@ -338,6 +342,8 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_VIDEOFRAME           61
 #define ST_DEFINEFONTINFO2	62
 #define ST_MX4			63 /*(?) */
+#define ST_SCRIPTLIMITS		65 /* version 7- u16 maxrecursedepth, u16 scripttimeoutseconds */
+#define ST_SETTABINDEX		66 /* version 7- u16 depth(!), u16 tab order value */
 
 #define ST_REFLEX              777 /* to identify generator software */
 
@@ -442,39 +448,14 @@ void	swf_DumpShape(SHAPE2*shape2);
 
 // swfdraw.c
 
-typedef struct _FPOINT
-{
-    float x,y;
-} FPOINT;
+void swf_Shape01DrawerInit(drawer_t*draw, TAG*tag);
+void swf_Shape11DrawerInit(drawer_t*draw, TAG*tag);
+SHAPE* swf_ShapeDrawerToShape(drawer_t*draw);
+SRECT swf_ShapeDrawerGetBBox(drawer_t*draw);
 
-typedef struct _SWFSHAPEDRAWER
-{
-    FPOINT pos;
-    SHAPE*shape;
-    TAG*tag;
-    int tagfree;
-    int lastx;
-    int lasty;
-    SRECT bbox;
-    char isfinished;
-} SWFSHAPEDRAWER;
+void swf_DrawString(drawer_t*draw, const char*source);
 
-void swf_DrawerInit(SWFSHAPEDRAWER*draw, TAG*tag);
-void swf_DrawerMoveTo(SWFSHAPEDRAWER*draw, FPOINT * to);
-void swf_DrawerLineTo(SWFSHAPEDRAWER*draw, FPOINT * to);
-void swf_DrawerSplineTo(SWFSHAPEDRAWER*draw, FPOINT *  control1, FPOINT*  to);
-void swf_DrawerCubicTo(SWFSHAPEDRAWER*draw, FPOINT*  control1, FPOINT* control2, FPOINT*  to);
-void swf_DrawerConicTo(SWFSHAPEDRAWER*draw, FPOINT*  control, FPOINT*  to);
-void swf_DrawerFinish(SWFSHAPEDRAWER*draw);
-SHAPE* swf_DrawerToShape(SWFSHAPEDRAWER*draw);
-
-void swf_DrawString(SWFSHAPEDRAWER*draw, const char*source);
-
-// swffont.c
-
-// does not support wide characters !
-
-#define MAX_CHAR_PER_FONT 512
+// swftext.c
 
 typedef struct _KERNING
 {
@@ -518,8 +499,11 @@ typedef struct _SWFFONT
   int	*	ascii2glyph;
   SWFGLYPH *	glyph;
   U8		language;
+  char **	glyphnames;
 } SWFFONT, * LPSWFFONT;
 
+#define MAX_CHAR_PER_FONT 512
+// does not support wide characters !
 typedef struct _FONTUSAGE
 { U8 code[MAX_CHAR_PER_FONT];
 } FONTUSAGE, * LPFONTUSAGE;
@@ -597,7 +581,12 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 
 SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
 
-void swf_DrawText(SWFSHAPEDRAWER*draw, SWFFONT*font, char*text);
+void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text);
+
+// swffont.c
+
+SWFFONT* swf_LoadTrueTypeFont(char*filename);
+SWFFONT* swf_LoadT1Font(char*filename);
 
 // swfdump.c
 
