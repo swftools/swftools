@@ -602,6 +602,7 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state)
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
+  logf("<debug> drawlink\n");
   double x1, y1, x2, y2, w;
   GfxRGB rgb;
   swfcoord points[5];
@@ -1371,6 +1372,7 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
+  logf("<debug> drawImageMask");
   drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1);
 }
 
@@ -1378,6 +1380,7 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
 			       GfxImageColorMap *colorMap, GBool inlineImg) 
 {
+  logf("<debug> drawImage");
   drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0);
 }
 
