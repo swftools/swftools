@@ -33,7 +33,7 @@
 
 struct {
     int quality;
-    int framerate;
+    float framerate;
     int max_image_width;
     int max_image_height;
     int force_width;
@@ -54,7 +54,7 @@ image_t image[MAX_INPUT_FILES];
 
 VIDEOSTREAM stream;
 
-TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
+TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 {
     TAG *t;
     RGBA rgb;
@@ -62,7 +62,7 @@ TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
     memset(swf, 0x00, sizeof(SWF));
 
     swf->fileVersion = 4;
-    swf->frameRate = (25600 / framerate);
+    swf->frameRate = (256.0 * framerate);
     swf->movieSize.xmax = dx * 20;
     swf->movieSize.ymax = dy * 20;
 
@@ -338,8 +338,8 @@ int args_callback_option(char *arg, char *val)
 
 	case 'r':
 	    if (val)
-		global.framerate = atoi(val);
-	    if ((global.framerate < 1) ||(global.framerate > 5000)) {
+		global.framerate = atof(val);
+	    if ((global.framerate < 1.0/256) || (global.framerate >= 256.0)) {
 		if (VERBOSE(1))
 		    fprintf(stderr,
 			    "Error: You must specify a valid framerate between 1 and 10000.\n");
@@ -402,6 +402,7 @@ struct options_t options[] = { {"q", "quality"},
 {"X", "width"},
 {"Y", "height"},
 {"V", "version"},
+{0, 0},
 };
 
 int args_callback_longoption(char *name, char *val)
@@ -442,7 +443,7 @@ void args_callback_usage(char *name)
     printf
 	("-q quality          --quality  Set compression quality (1-100, 1=worst, 100=best)\n");
     printf
-	("-r framerate        --rate     Set movie framerate (100/sec)\n");
+	("-r framerate        --rate     Set movie framerate (frames per second)\n");
     printf
 	("-o outputfile       --output   Set name for SWF output file\n");
     printf
@@ -454,7 +455,7 @@ void args_callback_usage(char *name)
     printf
 	("-V                  --version  Print version information and exit\n");
     printf
-	("The following options can be set independently for each image: -q -s\n");
+	("The following options can be set independently for each image: -q\n");
 }
 
 
@@ -466,7 +467,7 @@ int main(int argc, char **argv)
     memset(&global, 0x00, sizeof(global));
 
     global.quality = 60;
-    global.framerate = 100;
+    global.framerate = 1.0;
     global.verbose = 1;
 
     processargs(argc, argv);
