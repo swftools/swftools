@@ -1,10 +1,49 @@
+# De messed with this file on the night of Feb 11
+#	re-ordered some swfc objectives according to my own warped priorities :-)
+#	added a couple of items.
+#	added the doco TODO items at the end
+
 swfc:
 
+    * object rel coords, as in obj1.(x,y) and monkey.nose
+	"follow me" feature:  default, or should it be explicitly specified?
+
     * .replace command
-    * output filename (name.sc -> name.swf)
+	.crossfade command????
+
+    * .sound file.wav ?  
+	syntax for single sound hits, looping, synch sound stream.
+
+    * text:  newlines
+
+    * dump format for ingestion into swifty?
+
+    --------- imaginary dividing line between "high priority" and "lower priority" ------------
+    --------- in my opinion the stuff above is useful/necessary for basic          ------------
+    --------- animations -- the minimal tool kit w/which cool demos can be         ------------
+    --------- produced and swifty can be taught to do really neat things.	   ------------
+    --------- from here on down we are also looking at useful good stuff, but      ------------
+    --------- decent animations can be made without these extra nice features      ------------
+    --------- you may disagree about where to draw this line :-)                   ------------
+
+    * textinput box object?
+
+    * default output filename (name.sc -> name.swf) if unspecified
+
+    * change .swf to .flash ?  
+	import swfs with .swf instead of .movie?
+
+    * more colour names?  X11 colour names?  (we are Linux after all...)
+
     * .hide/.show?
+
     * .rotate
+	wasn't this going to be called .orbit?
+
     * store instance coordinates for .put with same name after .del?
+
+    * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
+
 
 pdf2swf:
 
@@ -17,7 +56,7 @@ pdf2swf:
 
 font2swf:
     
-    * implement support for truetype fonts.
+    * implement support for truetype fonts.  [yes please :-)]
 
 swfcombine:
 
@@ -45,3 +84,20 @@ other:
 
     * swfcrop
     * swf2fig
+
+swfpreview:
+
+    * extract preview of specific frame N
+
+doco:
+
+    * basic command set 
+ 
+    * example set illustrating basics
+
+    * cook book:  how to get familiar effects 
+	(fade/wipe/titles/scrolling/false perspective etc)
+
+    * complete list of all required packages and libs and how to get/build them
+
+
