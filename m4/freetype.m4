@@ -30,11 +30,20 @@ fi
 fi
 fi
 
-AC_CHECK_LIB(freetype, FT_Init_FreeType,HAVE_LIB_FREETYPE=1,)
-AC_CHECK_HEADERS(freetype/freetype.h,HAVE_FREETYPE_FREETYPE_H=1)
-AC_CHECK_HEADERS(ft2build.h,HAVE_FT2BUILD_H=1)
+if test "x${FREETYPE_CONFIG}" '=' "x";then
+    # if we didn't find the freetype-config program, we won't
+    # know where the libs are expected to be. So just blindly
+    # try to link against them.
+    AC_CHECK_LIB(freetype, FT_Init_FreeType,HAVE_LIB_FREETYPE=1,)
+fi
 
-if test "x${HAVE_LIB_FREETYPE}" '!=' "x";then
+AC_CHECK_HEADERS(ft2build.h,HAVE_FT2BUILD_H=1)
+if test "x${HAVE_FT2BUILD_H}" '=' "x";then
+    AC_CHECK_HEADERS(freetype/freetype.h,HAVE_FREETYPE_FREETYPE_H=1)
+fi
+
+if test "x${HAVE_LIB_FREETYPE}" '!=' "x" -o \
+        "x${FREETYPE_CONFIG}" '!=' "x";then
     if test "x${HAVE_FREETYPE_FREETYPE_H}" '!=' "x";then
 	HAVE_FREETYPE=1
     fi
@@ -44,15 +53,15 @@ if test "x${HAVE_LIB_FREETYPE}" '!=' "x";then
 fi
 
 if test "x${HAVE_FREETYPE}" = "x1"; then 
-    if test "x{$FREETYPE_CONFIG}" '!=' "x"; then
+    if test "x${FREETYPE_CONFIG}" '!=' "x"; then
 	LIBS="$LIBS "`freetype-config --libs`
     else
 	LIBS="$LIBS -lfreetype"
     fi
 
-if test "x${HAVE_FT2BUILD_H}" = "x1"; then
-    HAVE_FT2BUILD_H_DEFINE='#define HAVE_FT2BUILD_H'
-fi
+    if test "x${HAVE_FT2BUILD_H}" = "x1"; then
+	HAVE_FT2BUILD_H_DEFINE='#define HAVE_FT2BUILD_H'
+    fi
 
     AC_MSG_CHECKING([whether we can compile the freetype test program])
 
