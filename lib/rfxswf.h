@@ -119,6 +119,8 @@ typedef struct _CXFORM
   S16           b0, b1;
 } CXFORM, * LPCXFORM;
 
+#define GRADIENT_LINEAR 0x10
+#define GRADIENT_RADIAL 0x12
 typedef struct _GRADIENT
 {
     int num;
@@ -353,7 +355,7 @@ typedef struct _FILLSTYLE
   RGBA	    color;
   MATRIX    m; 
   U16	    id_bitmap;
-  GRADIENT* gradient;
+  GRADIENT  gradient;
 } FILLSTYLE, * LPFILLSTYLE;
      
 typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
@@ -412,6 +414,7 @@ int   swf_SetSimpleShape(TAG * t,SHAPE * s);   // without Linestyle/Fillstyle Re
 int   swf_ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color);
 int   swf_ShapeAddSolidFillStyle(SHAPE * s,RGBA * color);
 int   swf_ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip);
+int   swf_ShapeAddGradientFillStyle(SHAPE * s,MATRIX * m,GRADIENT* gradient,int radial);
 
 int   swf_SetShapeStyles(TAG * t,SHAPE * s);
 int   swf_ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits);
@@ -435,6 +438,7 @@ void	   swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
 SRECT	   swf_GetShapeBoundingBox(SHAPE2*shape);
 void	    swf_SetShape2(TAG*tag, SHAPE2*shape);
 void	   swf_Shape2Free(SHAPE2 * s);
+void	swf_DumpShape(SHAPE2*shape2);
 
 // swfdraw.c
 
@@ -449,14 +453,22 @@ typedef struct _SWFSHAPEDRAWER
     SHAPE*shape;
     TAG*tag;
     int tagfree;
+    int lastx;
+    int lasty;
+    SRECT bbox;
+    char isfinished;
 } SWFSHAPEDRAWER;
 
-void swf_DrawerInit(SWFSHAPEDRAWER*draw);
+void swf_DrawerInit(SWFSHAPEDRAWER*draw, TAG*tag);
 void swf_DrawerMoveTo(SWFSHAPEDRAWER*draw, FPOINT * to);
 void swf_DrawerLineTo(SWFSHAPEDRAWER*draw, FPOINT * to);
 void swf_DrawerSplineTo(SWFSHAPEDRAWER*draw, FPOINT *  control1, FPOINT*  to);
 void swf_DrawerCubicTo(SWFSHAPEDRAWER*draw, FPOINT*  control1, FPOINT* control2, FPOINT*  to);
 void swf_DrawerConicTo(SWFSHAPEDRAWER*draw, FPOINT*  control, FPOINT*  to);
+void swf_DrawerFinish(SWFSHAPEDRAWER*draw);
+SHAPE* swf_DrawerToShape(SWFSHAPEDRAWER*draw);
+
+void swf_DrawString(SWFSHAPEDRAWER*draw, const char*source);
 
 // swffont.c
 
@@ -584,6 +596,8 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
 SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
+
+void swf_DrawText(SWFSHAPEDRAWER*draw, SWFFONT*font, char*text);
 
 // swfdump.c
 

@@ -182,6 +182,11 @@ int swf_SetFillStyle(TAG * t,FILLSTYLE * f)
       swf_SetU16(t,f->id_bitmap);
       swf_SetMatrix(t,&f->m);
       break;
+    case FILL_LINEAR:
+    case FILL_RADIAL:
+      swf_SetMatrix(t,&f->m);
+      swf_SetGradient(t,&f->gradient,/*alpha?*/t->id==ST_DEFINESHAPE3?1:0);
+      break;
   }
   
   return 0;
@@ -252,63 +257,10 @@ int swf_SetShapeHeader(TAG * t,SHAPE * s)
   return res;
 }
 
-int swf_ShapeExport(int handle,SHAPE * s)  // without Linestyle/Fillstyle Record
-{ int l;
-  if (!s) return 0;
-
-  l = sizeof(SHAPE);
-
-  if (handle>=0)
-    if (write(handle,s,sizeof(SHAPE))!=sizeof(SHAPE)) return -1;
-
-  // Fillstyle, Linestyle ...
-
-  if (s->data)
-  { int ll = (s->bitlen+7)/8;
-    l+=ll;
-    if (handle>=0)
-      if (write(handle,s->data,ll)!=ll) return -1;
-  }
-
-  return l;
-}
-
-int swf_ShapeImport(int handle,SHAPE * * shape)
-{ SHAPE * s;
-
-  if (handle<0) return -1;
-
-  s = (SHAPE *)malloc(sizeof(SHAPE)); shape[0] = s;
-  if (!s) return -1;
-
-  if (read(handle,s,sizeof(SHAPE))!=sizeof(SHAPE))
-  { shape[0] = NULL;
-    free(s);
-    return -1;
-  }
-
-  if (s->data)
-  { int ll = (s->bitlen+7)/8;
-    s->data = (U8*)malloc(ll);
-    if (!s->data)
-    { shape[0] = NULL;
-      free(s);
-      return -1;
-    }
-    if (read(handle,s->data,ll)!=ll)
-    { free(s->data);
-      free(s);
-      shape[0] = NULL;
-      return -1;
-    }
-  }
-
-  return 0;
-}
-
-int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap)
+int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap, GRADIENT*gradient)
 { RGBA def_c;
   MATRIX def_m;    
+  GRADIENT def_g;
 
   // handle defaults
   
@@ -321,6 +273,11 @@ int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitma
   if (!m)
   { m = &def_m;
     swf_GetMatrix(NULL,m);
+  }
+  if(!gradient)
+  {
+    gradient = &def_g;
+    swf_GetGradient(NULL, gradient, 1);
   }
 
   // handle memory
@@ -342,16 +299,21 @@ int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitma
   s->fillstyle.data[s->fillstyle.n].id_bitmap = id_bitmap;
   memcpy(&s->fillstyle.data[s->fillstyle.n].m,m,sizeof(MATRIX));
   memcpy(&s->fillstyle.data[s->fillstyle.n].color,color,sizeof(RGBA));
+  memcpy(&s->fillstyle.data[s->fillstyle.n].gradient,gradient,sizeof(GRADIENT));
           
   return (++s->fillstyle.n);
 }
 
 int swf_ShapeAddSolidFillStyle(SHAPE * s,RGBA * color)
-{ return swf_ShapeAddFillStyle(s,FILL_SOLID,NULL,color,0);
+{ return swf_ShapeAddFillStyle(s,FILL_SOLID,NULL,color,0,0);
 }
 
 int swf_ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip)
-{ return swf_ShapeAddFillStyle(s,clip?FILL_CLIPPED:FILL_TILED,m,NULL,id_bitmap);
+{ return swf_ShapeAddFillStyle(s,clip?FILL_CLIPPED:FILL_TILED,m,NULL,id_bitmap,0);
+}
+
+int swf_ShapeAddGradientFillStyle(SHAPE * s,MATRIX * m,GRADIENT* gradient,int radial)
+{ return swf_ShapeAddFillStyle(s,radial?FILL_RADIAL:FILL_LINEAR,m,NULL,0,gradient);
 }
 
 int swf_ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color)
@@ -730,7 +692,7 @@ void swf_ShapeSetBitmapRect(TAG*tag, U16 gfxid, int width, int height)
     RGBA rgb;
     SRECT r;
     int lines = 0;
-    int ls,fs;
+    int ls=0,fs;
     swf_ShapeNew(&shape);
     rgb.b = rgb.g = rgb.r = 0xff;
     if(lines)

@@ -293,6 +293,10 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
 {
     GRADIENT dummy;
     int t;
+    if(!tag) {
+      memset(gradient, 0, sizeof(GRADIENT));
+      return;
+    }
     if(!gradient)
 	gradient = &dummy;
     gradient->num = swf_GetU8(tag);
@@ -306,6 +310,24 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
 	    swf_GetRGB(tag, &gradient->rgba[t]);
 	else
 	    swf_GetRGBA(tag, &gradient->rgba[t]);
+    }
+}
+
+void swf_SetGradient(TAG * tag, GRADIENT * gradient, char alpha)
+{
+    int t;
+    if(!tag) {
+      memset(gradient, 0, sizeof(GRADIENT));
+      return;
+    }
+    swf_SetU8(tag, gradient->num);
+    for(t=0; t<8 && t<gradient->num; t++)
+    {
+	swf_SetU8(tag, gradient->ratios[t]);
+	if(!alpha)
+	    swf_SetRGB(tag, &gradient->rgba[t]);
+	else
+	    swf_SetRGBA(tag, &gradient->rgba[t]);
     }
 }
 
@@ -1329,3 +1351,4 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfbits.c"
 #include "modules/swfaction.c"
 #include "modules/swfsound.c"
+#include "modules/swfdraw.c"
