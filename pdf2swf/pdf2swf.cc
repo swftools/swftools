@@ -341,56 +341,6 @@ void args_callback_usage(char*name)
     printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
 }
 
-#ifdef HAVE_DIRENT_H
-static void addfontdir(char* dirname, int*numfonts)
-{
-    if(!numfonts)
-	msg("<verbose> Adding %s to search path\n", dirname);
-
-    DIR*dir = opendir(dirname);
-    if(!dir) {
-	msg("<warning> Couldn't open directory %s\n", dirname);
-	return;
-    }
-    struct dirent*ent;
-    while(1) {
-	ent = readdir (dir);
-	if (!ent) 
-	    break;
-	int l;
-	char*name = ent->d_name;
-	char type = 0;
-	if(!name) continue;
-	l=strlen(name);
-	if(l<4)
-	    continue;
-	if(!strncasecmp(&name[l-4], ".pfa", 4)) 
-	    type=1;
-	if(!strncasecmp(&name[l-4], ".pfb", 4)) 
-	    type=3;
-	if(!strncasecmp(&name[l-4], ".ttf", 4)) 
-	    type=2;
-	if(type)
-	{
-	    char*fontname = (char*)malloc(strlen(dirname)+strlen(name)+2);
-	    strcpy(fontname, dirname);
-#ifdef WIN32
-		strcat(fontname, "\\");
-#else
-		strcat(fontname, "/");
-#endif
-	    strcat(fontname, name);
-	    if(!numfonts)
-		msg("<debug> Adding %s to fonts", fontname);
-	    pdfswf_addfont(fontname);
-	    if(numfonts)
-		(*numfonts)++;
-	}
-    }
-    closedir(dir);
-}
-#endif
-
 static char* stripfilename(char*filename, char*newext)
 {
     char*last1 = strrchr(filename, '/');
@@ -466,20 +416,11 @@ int main(int argn, char *argv[])
 	exit(0);
     }
 
-#ifdef HAVE_DIRENT_H
-    // pass 1
-    addfontdir(FONTDIR, &numfonts);
+    /* add fonts */
+    pdfswf_addfontdir(FONTDIR);
     for(t=0;t<fontpathpos;t++) {
-	addfontdir(fontpaths[t], &numfonts);
+	pdfswf_addfontdir(fontpaths[t]);
     }
-    // pass 2
-    addfontdir(FONTDIR, 0);
-    for(t=0;t<fontpathpos;t++) {
-	addfontdir(fontpaths[t], 0);
-    }
-#else
-    msg("<error> Couldn't find any fonts!");
-#endif
 
     pdf_doc_t* pdf = pdf_init(filename, password);
     if(!pdf) {
