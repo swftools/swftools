@@ -72,25 +72,28 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
 #include "../lame/lame.h"
 
 /* TODO: find a way to set these from the outside */
-int swf_mp3_samplerate = 44100;
+int swf_mp3_in_samplerate = 44100;
+int swf_mp3_out_samplerate = 11025;
 int swf_mp3_channels = 1;
 int swf_mp3_bitrate = 32;
 
 static lame_global_flags*lame_flags;
 
-static void initlame(unsigned char*buf, int bufsize)
+static void initlame()
 {
+    unsigned char buf[4096];
+    int bufsize = 1152*2;
+
     lame_flags = lame_init();
 
-    lame_set_in_samplerate(lame_flags, swf_mp3_samplerate);
+    lame_set_in_samplerate(lame_flags, swf_mp3_in_samplerate);
     lame_set_num_channels(lame_flags, swf_mp3_channels);
     lame_set_scale(lame_flags, 0);
 
     // MPEG1    32, 44.1,   48khz
     // MPEG2    16, 22.05,  24
     // MPEG2.5   8, 11.025, 12
-    // (not used by decoding routines)
-    lame_set_out_samplerate(lame_flags, 11025);
+    lame_set_out_samplerate(lame_flags, swf_mp3_out_samplerate);
 
     lame_set_quality(lame_flags, 0);
     lame_set_mode(lame_flags, MONO/*3*/);
@@ -111,10 +114,7 @@ static void initlame(unsigned char*buf, int bufsize)
 
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
 {
-    unsigned char buf[4096];
-    int bufsize = 1152*2;
     int len;
-    short int samples[1152*2];
 
     U8 playbackrate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
     U8 playbacksize = 1; // 0 = 8 bit, 1 = 16 bit
@@ -123,10 +123,14 @@ void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
     U8 rate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
     U8 size = 1; // 0 = 8 bit, 1 = 16 bit
     U8 type = 0; // 0 = mono, 1 = stereo
-    
-    memset(samples,0,sizeof(samples));
 
-    initlame(buf, bufsize);
+    if(swf_mp3_out_samplerate == 5512) playbackrate = rate = 0; // lame doesn't support this
+    else if(swf_mp3_out_samplerate == 11025) playbackrate = rate = 1;
+    else if(swf_mp3_out_samplerate == 22050) playbackrate = rate = 2;
+    else if(swf_mp3_out_samplerate == 44100) playbackrate = rate = 3;
+    else fprintf(stderr, "Invalid samplerate: %d\n", swf_mp3_out_samplerate);
+    
+    initlame();
 
     swf_SetU8(tag,(playbackrate<<2)|(playbacksize<<1)|playbacktype);
     swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
@@ -136,34 +140,31 @@ void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
 void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
 {
     char*buf;
-    int oldlen=0,len = 0;
+    int len = 0;
     int bufsize = 16384;
-    int numsamples = 1152*2;
+    int numsamples = 576*(swf_mp3_in_samplerate/swf_mp3_out_samplerate);
+    int fs;
 
     buf = malloc(bufsize);
     if(!buf)
 	return;
 
     if(first) {
-	int fs = lame_get_framesize(lame_flags);
-	//printf("framesize:%d\n", fs);
+	fs = lame_get_framesize(lame_flags);
 	swf_SetU16(tag, fs * first); // samples per mp3 frame
 	swf_SetU16(tag, seek); // seek
     }
 
     len += lame_encode_buffer(lame_flags, samples, samples, numsamples, &buf[len], bufsize-len);
-    //printf("block: %d (+%d)\n", len, len-oldlen);
-    oldlen = len;
-
     len += lame_encode_flush_nogap(lame_flags, &buf[len], bufsize-len);
-    //printf("flush: %d (+%d)\n", len, len-oldlen);
-    oldlen = len;
-    
     swf_SetBlock(tag, buf, len);
-
-   /* len += lame_encode_flush(lame_flags, &buf[len], bufsize-len);
-    printf("flush! %d (+%d)\n", len, len-oldlen);*/
-
+    if(len == 0) {
+	fprintf(stderr, "error: mp3 empty block, %d samples, first:%d, framesize:%d\n",
+		numsamples, first, fs);
+    }/* else {
+	fprintf(stderr, "ok: mp3 nonempty block, %d samples, first:%d, framesize:%d\n",
+		numsamples, first, fs);
+    }*/
     free(buf);
 }
 
@@ -172,12 +173,18 @@ void swf_SetSoundStreamEnd(TAG*tag)
     lame_close (lame_flags);
 }
 
+void swf_SetSoundDefineRaw(TAG*tag, S16*samples, int num, int samplerate)
+{
+    //swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
+    //swf_SetU32(tag, numsamples); // 44100 -> 11025
+    //swf_SetBlock(tag, wav2.data, numsamples*2);
+}
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 {
     char*buf;
     int oldlen=0,len = 0;
     int bufsize = 16384;
-    int blocksize = 1152*2;
+    int blocksize = 576*(swf_mp3_in_samplerate/swf_mp3_out_samplerate);
     int t;
     int blocks;
 
@@ -185,18 +192,26 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
     U8 rate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
     U8 size = 1; // 0 = 8 bit, 1 = 16 bit
     U8 type = 0; // 0 = mono, 1 = stereo
+    
+    if(swf_mp3_out_samplerate == 5512) rate = 0;
+    else if(swf_mp3_out_samplerate == 11025) rate = 1;
+    else if(swf_mp3_out_samplerate == 22050) rate = 2;
+    else if(swf_mp3_out_samplerate == 44100) rate = 3;
+    else fprintf(stderr, "Invalid samplerate: %d\n", swf_mp3_out_samplerate);
 
     blocks = num / (blocksize);
 
     swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
 
-    swf_SetU32(tag,blocks*blocksize / 4); // 44100 -> 11025
+    swf_SetU32(tag,blocks*blocksize / 
+	    (swf_mp3_in_samplerate/swf_mp3_out_samplerate) // account for resampling
+	    );
 
     buf = malloc(bufsize);
     if(!buf)
 	return;
 
-    initlame(buf, bufsize);
+    initlame();
 
     swf_SetU16(tag, 0); //delayseek
     for(t=0;t<blocks;t++) {
