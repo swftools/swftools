@@ -487,8 +487,9 @@ void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // swfaction.c
 
-ActionTAG* swf_GetActions(TAG*tag);
-void swf_SetActions(TAG*tag, ActionTAG*actions);
+ActionTAG* swf_ActionGet(TAG*tag);
+void swf_ActionFree(ActionTAG*tag);
+void swf_ActionsSet(TAG*tag, ActionTAG*actions);
 void swf_DumpActions(ActionTAG*atag, char*prefix);
 void swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*));
 void swf_ActionEnumerateTargets(ActionTAG*atag, char*(*callback)(char*));
