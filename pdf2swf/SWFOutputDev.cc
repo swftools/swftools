@@ -1314,6 +1314,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	   font directories */
 	int newt1id = searchT1Font(fontname);
 	if(newt1id<0) {
+	    msg("<error> Couldn't find any suitable replacement for %s",fontname);
 	    showFontError(gfxFont,0);
 	    fontname = substituteFont(gfxFont, fontname);
 	} else
@@ -1335,7 +1336,8 @@ void SWFOutputDev::updateFont(GfxState *state)
   }
 
   if(t1id<0) {
-      showFontError(gfxFont,0);
+      msg("<error> Current font's t1id is %d", t1id);
+      //showFontError(gfxFont,0);
       return;
   }
  
