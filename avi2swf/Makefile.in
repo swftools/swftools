@@ -26,3 +26,7 @@ uninstall:
 clean: 
 	rm -f *.o *.lo *.a *.la avi2swf gmon.out
 
+doc:
+	perl ../parsedoc.pl avi2swf.doc
+
+.PHONY: all doc clean install uninstall

@@ -81,3 +81,14 @@ clean:
 	@rm -f swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
 	@rm -f swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)
 
+doc:
+	perl ../parsedoc.pl wav2swf.doc
+	perl ../parsedoc.pl png2swf.doc
+	perl ../parsedoc.pl swfbbox.doc
+	perl ../parsedoc.pl font2swf.doc
+	perl ../parsedoc.pl jpeg2swf.doc
+	perl ../parsedoc.pl swfcombine.doc
+	perl ../parsedoc.pl swfdump.doc
+	perl ../parsedoc.pl swfc.doc
+
+.PHONY: clean doc 
