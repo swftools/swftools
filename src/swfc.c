@@ -699,7 +699,7 @@ void s_close()
 
 int s_getframe()
 {
-    return currentframe;
+    return currentframe+1;
 }
 
 void s_frame(int nr, int cut, char*name)
@@ -707,13 +707,9 @@ void s_frame(int nr, int cut, char*name)
     int t;
     TAG*now = tag;
 
-    /* // enabling the following code will make the frame
-       handling much more intuitive, but also break old
-	code:
-       
-       if(nr<1) 
-	syntaxerror("Frame number need to be at least 1");
-    nr--;*/
+    if(nr<1) 
+	syntaxerror("Illegal frame number");
+    nr--; // internally, frame 1 is frame 0
 
     for(t=currentframe;t<nr;t++) {
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
@@ -2230,7 +2226,7 @@ static int c_frame(map_t*args)
     else {
 	frame = parseInt(framestr);
 	if(s_getframe() >= frame
-		&& !(frame==0 && s_getframe()==frame)) // equality is o.k. for frame 0
+		&& !(frame==1 && s_getframe()==frame)) // equality is o.k. for frame 0
 	    syntaxerror("frame expression must be >%d (is:%s)", s_getframe(), framestr);
     }
     s_frame(frame, cut, name);
