@@ -486,17 +486,21 @@ void changedepth(TAG*tag, int add)
 	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
 }
 
-void matrix_adjust(MATRIX*m, int movex, int movey, float scalex, float scaley)
+void matrix_adjust(MATRIX*m, int movex, int movey, float scalex, float scaley, int scalepos)
 {
     m->sx = (int)(m->sx*scalex);
     m->sy = (int)(m->sy*scaley);
     m->r1 = (int)(m->r1*scalex);
     m->r0 = (int)(m->r0*scaley);
+    if(scalepos) {
+	m->tx *= scalex;
+	m->ty *= scaley;
+    }
     m->tx += movex;
     m->ty += movey;
 }
 
-void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, float scaley)
+void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, float scaley, int scalepos)
 {
     if(movex || movey || scalex != 1 || scaley != 1)
     {
@@ -522,7 +526,7 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
 		} else {
 		    swf_GetMatrix(0, &m);
 		}
-		matrix_adjust(&m, movex, movey, scalex, scaley);
+		matrix_adjust(&m, movex, movey, scalex, scaley, scalepos);
 		swf_SetMatrix(output, &m);
 
 		//swf_ResetReadBits(tag);
@@ -535,7 +539,7 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
 		swf_SetU16(output, swf_GetU16(tag)); //depth
 		
 		swf_GetMatrix(tag, &m);
-		matrix_adjust(&m, movex, movey, scalex, scaley);
+		matrix_adjust(&m, movex, movey, scalex, scaley, scalepos);
 		swf_SetMatrix(output, &m);
 		
 		//swf_ResetReadBits(tag);
@@ -589,7 +593,7 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
 	    logf("<debug> [sprite main] write tag %02x (%d bytes in body)", 
 		    rtag->id, rtag->len);
 	    tag = swf_InsertTag(tag, rtag->id);
-	    write_changepos(tag, rtag, config.movex, config.movey, config.scalex, config.scaley);
+	    write_changepos(tag, rtag, config.movex, config.movey, config.scalex, config.scaley, 0);
 	
 	    changedepth(tag, +2);
 
@@ -724,7 +728,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		logf("<debug> [master] write tag %02x (%d bytes in body)", 
 			rtag->id, rtag->len);
 		tag = swf_InsertTag(tag, rtag->id);
-		write_changepos(tag, rtag, config.mastermovex, config.mastermovey, config.masterscalex, config.masterscaley);
+		write_changepos(tag, rtag, config.mastermovex, config.mastermovey, config.masterscalex, config.masterscaley, 1);
 	    }
 	}
 	rtag = rtag->next;
