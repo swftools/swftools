@@ -14,8 +14,6 @@ Takes a wav file and converts it to a swf movie.
     Set file framerate to <fps> frames per second.
 -s , --samplerate <sps>
     Set samplerate to <sps> frames per second (default: 11025).
--b, --bitrate bps
-    Set mp3 bitrate to <bps>.
 -d, --definesound
     Generate a DefineSound tag instead of streaming sound.
     Store the sound as DEFINESOUND tag, not as streaming sound. Allows for
