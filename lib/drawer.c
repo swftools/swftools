@@ -168,6 +168,7 @@ static int approximate3(const struct cspline*s, struct qspline*q, int size, doub
 	char left = 0,recurse=0;
 	int t;
 	int probes = 15;
+	double dx,dy;
 
 	/* create simple approximation: a qspline which run's through the
 	   qspline point at 0.5 */
@@ -202,8 +203,9 @@ static int approximate3(const struct cspline*s, struct qspline*q, int size, doub
 	    test.control.y += test.end.y;
 	}
 
+#define PROBES
+#ifdef PROBES
 	/* measure the spline's accurancy, by taking a number of probes */
-
 	for(t=0;t<probes;t++) {
 	    struct SPLINEPOINT qr1,qr2,cr1,cr2;
 	    double pos = 0.5/(probes*2)*(t*2+1);
@@ -230,6 +232,19 @@ static int approximate3(const struct cspline*s, struct qspline*q, int size, doub
 		recurse=1;break;
 	    }
 	}
+#else // quadratic error: *much* faster!
+
+	/* convert control point representation to 
+	   d*x^3 + c*x^2 + b*x + a */
+	dx= s->end.x  - s->control2.x*3 + s->control1.x*3 - s->start.x;
+	dy= s->end.y  - s->control2.y*3 + s->control1.y*3 - s->start.y;
+	
+	/* use the integral over (f(x)-g(x))^2 between 0 and 1
+	   to measure the approximation quality. 
+	   (it boils down to const*d^2)
+	 */
+	recurse = (dx*dx + dy*dy > quality2);
+#endif
 
 	if(recurse && istep>1 && size-level > num) {
 	    istep >>= 1;
