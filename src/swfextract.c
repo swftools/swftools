@@ -384,80 +384,104 @@ void extractTag(SWF*swf, char*filename)
     swf_FreeTags(&newswf);                       // cleanup
 }
 
+int isOfType(int t, TAG*tag)
+{
+    int show = 0;
+    if(t == 0 && (tag->id == ST_DEFINESHAPE ||
+	tag->id == ST_DEFINESHAPE2 ||
+	tag->id == ST_DEFINESHAPE3)) {
+	show = 1;
+    }
+    if(t==1 && tag->id == ST_DEFINESPRITE) {
+	show = 1;
+    }
+    if(t == 2 && (tag->id == ST_DEFINEBITS ||
+	tag->id == ST_DEFINEBITSJPEG2 ||
+	tag->id == ST_DEFINEBITSJPEG3)) {
+	show = 1;
+    }
+    if(t == 3 && (tag->id == ST_DEFINEBITSLOSSLESS ||
+	tag->id == ST_DEFINEBITSLOSSLESS2)) {
+	show = 1;
+    }
+    if(t == 4 && (tag->id == ST_DEFINESOUND)) {
+	show = 1;
+    }
+    if(t == 5 && (tag->id == ST_DEFINEFONT || tag->id == ST_DEFINEFONT2)) {
+	show = 1;
+    }
+    return show;
+}
+
 void listObjects(SWF*swf)
 {
     TAG*tag;
     char first;
     int t;
     int frame = 0;
-    char*names[] = {"Shapes","MovieClips","JPEGs","PNGs","Sounds","Fonts"};
+    char*names[] = {"Shape", "MovieClip", "JPEG", "PNG", "Sound", "Font"};
     printf("Objects in file %s:\n",filename);
+    swf_FoldAll(swf);
     for(t=0;t<sizeof(names)/sizeof(names[0]);t++) {
+	int nr=0;
+	int lastid = -2, lastprint=-1;
+	int follow=0;
 	tag = swf->firstTag;
 	first = 1;
 	while(tag) {
-	    char show = 0;
+	    if(isOfType(t,tag))
+		nr++;
+	    tag = tag->next;
+	}
+	if(!nr)
+	    continue;
+	
+	printf(" %d %s%s: ID(s) ", nr, names[t], nr>1?"s":"");
+
+	tag = swf->firstTag;
+	while(tag) {
 	    char text[80];
-	    if(t == 0 &&
-	       (tag->id == ST_DEFINESHAPE ||
-		tag->id == ST_DEFINESHAPE2 ||
-		tag->id == ST_DEFINESHAPE3)) {
-		show = 1;
-	        sprintf(text,"%d", swf_GetDefineID(tag));
+	    char show = isOfType(t,tag);
+	    int id;
+	    if(!show) {
+		tag = tag->next;
+		continue;
 	    }
+	    id = swf_GetDefineID(tag);
 
-	    if(tag->id == ST_DEFINESPRITE) {
-		if (t == 1)  {
-		    show = 1;
-		    sprintf(text,"%d", swf_GetDefineID(tag));
+	    if(id == lastid+1) {
+		follow=1;
+	    } else {
+		if(first || !follow) {
+		    if(!first)
+			printf(", ");
+		    printf("%d", id);
+		} else {
+		    if(lastprint + 1 == lastid) 
+			printf(", %d, %d", lastid, id);
+		    else
+			printf("-%d, %d", lastid, id);
 		}
-
-		while(tag->id != ST_END)
-		    tag = tag->next;
-	    }
-
-	    if(t == 2 && (tag->id == ST_DEFINEBITS ||
-		tag->id == ST_DEFINEBITSJPEG2 ||
-		tag->id == ST_DEFINEBITSJPEG3)) {
-		show = 1;
-		sprintf(text,"%d", swf_GetDefineID(tag));
-	    }
-
-	    if(t == 3 && (tag->id == ST_DEFINEBITSLOSSLESS ||
-		tag->id == ST_DEFINEBITSLOSSLESS2)) {
-		show = 1;
-		sprintf(text,"%d", swf_GetDefineID(tag));
-	    }
-
-
-	    if(t == 4 && (tag->id == ST_DEFINESOUND)) {
-		show = 1;
-		sprintf(text,"%d", swf_GetDefineID(tag));
-	    }
-	    
-	    if(t == 5 && (tag->id == ST_DEFINEFONT || tag->id == ST_DEFINEFONT2)) {
-		show = 1;
-		sprintf(text,"%d", swf_GetDefineID(tag));
-	    }
-	    
-	    if(show) {
-		if(!first)
-		    printf(", ");
-		else
-		    printf("%s: ", names[t]);
-		printf("%s", text);
+		lastprint = id;
 		first = 0;
+		follow = 0;
 	    }
+	    lastid = id;
 	    tag=tag->next;
 	}
-	if(!first)
-	    printf("\n");
+	if(follow) {
+	    if(lastprint + 1 == lastid)
+		printf(", %d", lastid);
+	    else
+		printf("-%d", lastid);
+	}
+	printf("\n");
     }
 
     if(frame)
-	printf("Frames: 0-%d\n", frame);
+	printf(" %d Frames: ID(s) 0-%d\n", frame, frame);
     else
-	printf("Frames: 0\n");
+	printf(" 1 Frame: ID(s) 0\n");
 }
 
 void handlefont(SWF*swf, TAG*tag)
