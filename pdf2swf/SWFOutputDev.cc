@@ -229,8 +229,9 @@ public:
 
   int setT1Font(char*name,FontEncoding*enc);
   int t1id;
-  int jpeginfo; // did we write "Page contains jpegs" yet?
-  int pbminfo; // did we write "Page contains jpegs" yet?
+  int jpeginfo; // did we write "File contains jpegs" yet?
+  int pbminfo; // did we write "File contains jpegs" yet?
+  int linkinfo; // did we write "File contains links" yet?
 
   GfxState *laststate;
 };
@@ -429,6 +430,7 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
 SWFOutputDev::SWFOutputDev() 
 {
     jpeginfo = 0;
+    linkinfo = 0;
     pbminfo = 0;
     clippos = 0;
     clipping[clippos] = 0;
@@ -575,7 +577,7 @@ GBool SWFOutputDev::useDrawChar()
 void SWFOutputDev::beginString(GfxState *state, GString *s) 
 { 
     double m11,m21,m12,m22;
-    logf("<debug> beginstring \"%s\"\n", s->getCString());
+//    logf("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
@@ -745,6 +747,11 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 	    break;
 	}
     }
+    if(!linkinfo && (page || url))
+    {
+	logf("<notice> File contains links");
+	linkinfo = 1;
+    }
     if(page>0)
     {
 	int t;
@@ -908,6 +915,8 @@ void SWFOutputDev::updateFont(GfxState *state)
   char * fontname = 0;
   GfxFont*gfxFont = state->getFont();
   char * fileName = 0;
+    
+//  logf("<debug> %s updateFont\n", gfxstate2str(state));
 
   if (!gfxFont) {
     return;
