@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 //xpdf header files
+#include "gfile.h"
 #include "GString.h"
 #include "gmem.h"
 #include "Object.h"
@@ -408,7 +409,7 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
 {
     int num = path->getNumSubpaths();
     int s,t;
-    bezierpathsegment*start,*last;
+    bezierpathsegment*start,*last=0;
     bezierpathsegment*outline = start = new bezierpathsegment();
     int cpos = 0;
     double lastx=0,lasty=0;
@@ -860,14 +861,14 @@ char*SWFOutputDev::writeEmbeddedFontToFile(GfxFont*font)
 	      ttfinfo = 1;
 	  }
 	  char name2[80];
-	  int r1 = lrand48();
-	  int r2 = lrand48();
-	  sprintf(name2,"%04x%04x",r1,r2);
+	  char*tmp;
+	  tmp = strdup(mktmpname((char*)name2));
+	  sprintf(name2, "%s", tmp);
 	  char*a[] = {"./ttf2pt1","-pttf","-b", tmpFileName, name2};
 	  logf("<verbose> Invoking ttf2pt1...");
 	  ttf2pt1_main(5,a);
 	  unlink(tmpFileName);
-	  sprintf(name2,"%04x%04x.pfb",r1,r2);
+	  sprintf(name2,"%s.pfb",tmp);
 	  tmpFileName = strdup(name2);
       }
 
@@ -1138,7 +1139,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   if (str->getKind() == strDCT &&
       (colorMap->getNumPixelComps() == 3 || !mask) )
   {
-    sprintf(fileName, "/tmp/tmp%08x.jpg",lrand48());
+    sprintf(fileName, "%s.jpg",mktmpname(0));
     logf("<verbose> Found jpeg. Temporary storage is %s", fileName);
     if(!jpeginfo)
     {
@@ -1195,7 +1196,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
     if(mask) {
 	imgStr = new ImageStream(str, width, 1, 1);
 	imgStr->reset();
-	return;
+	//return;
 	int yes=0,i,j;
 	unsigned char buf[8];
 	int xid = 0;
