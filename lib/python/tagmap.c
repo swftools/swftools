@@ -90,6 +90,27 @@ int tagmap_getFreeID(PyObject*self)
     return -1;
 }
 //----------------------------------------------------------------------------
+static void tagmap_add_mapping(PyObject*self, int id, PyObject* obj)
+{
+    TagMapObject*tagmap = (TagMapObject*)self;
+    PyList_Append(tagmap->objlist, obj);//Py_INCREF(obj); done by PyList_Append
+    PyObject*id_obj = PyLong_FromLong(id);
+    PyDict_SetItem(tagmap->obj2id, obj, id_obj);//Py_INCREF(id_obj);Py_INCREF(obj); done by PyDict_SetItem
+    PyDict_SetItem(tagmap->id2obj, id_obj, obj);//Py_INCREF(id_obj);Py_INCREF(obj); done by PyDict_SetItem
+    Py_DECREF(id_obj);
+}
+//----------------------------------------------------------------------------
+void tagmap_addMapping(PyObject*self, int id, PyObject* obj)
+{
+    TagMapObject*tagmap = (TagMapObject*)self;
+    int id2 = tagmap_obj2id(self, obj);
+    if(id2>=0) {
+	assert(id==id2);
+	return;
+    }
+    tagmap_add_mapping(self, id, obj);
+}
+//----------------------------------------------------------------------------
 int tagmap_add(PyObject* self, PyObject* obj)
 {
     TagMapObject*tagmap = (TagMapObject*)self;
@@ -99,11 +120,9 @@ int tagmap_add(PyObject* self, PyObject* obj)
 	return id;
     }
     id = tagmap_getFreeID(self);
-    PyList_Append(tagmap->objlist, obj);//Py_INCREF(obj); done by PyList_Append
-    PyObject*id_obj = PyLong_FromLong(id);
-    PyDict_SetItem(tagmap->obj2id, obj, id_obj);//Py_INCREF(id_obj);Py_INCREF(obj); done by PyDict_SetItem
-    PyDict_SetItem(tagmap->id2obj, id_obj, obj);//Py_INCREF(id_obj);Py_INCREF(obj); done by PyDict_SetItem
-    Py_DECREF(id_obj);
+    
+    tagmap_add_mapping(self, id, obj);
+
     mylog(" %08x(%d) tagmap_add %08x->%d", (int)self, self->ob_refcnt, (int)obj, id);
     return id;
 }

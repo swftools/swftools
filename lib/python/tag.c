@@ -136,15 +136,29 @@ PyObject* tag_new()
     tag->tagmap = tagmap_new();
     return (PyObject*)tag;
 }
-PyObject* tag_new2(TAG*_tag)
+PyObject* tag_new2(TAG*t, PyObject* tagmap)
 {
     TagObject*tag = PyObject_New(TagObject, &TagClass);
     mylog("+%08x(%d) tag_new\n", (int)tag, tag->ob_refcnt);
     tag->font = 0;
     tag->character = 0;
     tag->placeobject = 0;
-    tag->tag = _tag;
+    tag->tag = t;
     tag->tagmap = tagmap_new();
+    
+    int num = swf_GetNumUsedIDs(t);
+    int * positions = malloc(num*sizeof(int));
+    swf_GetUsedIDs(t, positions);
+    int i;
+    for(i=0;i<num;i++) {
+	int id = GET16(&t->data[positions[i]]);
+	PyObject*obj = tagmap_id2obj(tagmap, id);
+	if(obj==NULL) {
+	    PyErr_SetString(PyExc_Exception, setError("TagID %d not defined", id));
+	    return NULL;
+	}
+	tagmap_addMapping(tag->tagmap, id, obj);
+    }
     return (PyObject*)tag;
 }
 

@@ -29,8 +29,7 @@
 
 extern PyTypeObject TagClass;
 
-PyObject* tag_new();
-PyObject* tag_new2(TAG*tag);
+PyObject* tag_new2(TAG*_tag, PyObject* tagmap);
 TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap);
 PyObject* tag_getDependencies(PyObject*self);
 

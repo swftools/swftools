@@ -103,6 +103,8 @@ static PyObject* f_load(PyObject* self, PyObject* args)
 	return NULL;
 
     swf = PyObject_New(SWFObject, &SWFClass);
+    mylog("+%08x(%d) f_load\n", (int)swf, swf->ob_refcnt);
+
     memset(&swf->swf, 0, sizeof(SWF));
     swf->filename = strdup(filename);
 
@@ -121,11 +123,10 @@ static PyObject* f_load(PyObject* self, PyObject* args)
 	return 0;
     }
     close(fi);
-    swf->swf.firstTag = 0;
 
     swf->taglist = taglist_new2(swf->swf.firstTag);
+    swf->swf.firstTag = 0;
     
-    mylog("+%08x(%d) load\n", (int)self, self->ob_refcnt);
     return (PyObject*)swf;
 }
 //----------------------------------------------------------------------------
@@ -148,6 +149,8 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|si", kwlist, &filename, &compress))
 	return NULL;
+    
+    mylog(" %08x(%d) f_save filename=%s compress=%d\n", (int)self, self->ob_refcnt, filename, compress);
 
     // keyword arg compress (=1) forces compression
     if(compress)

@@ -19,7 +19,7 @@ typedef struct {
 PyObject * taglist_new()
 {
     TagListObject* taglist = PyObject_New(TagListObject, &TagListClass);
-    mylog("+%08x(%d) taglist_new2", (int)taglist, taglist->ob_refcnt);
+    mylog("+%08x(%d) taglist_new", (int)taglist, taglist->ob_refcnt);
     taglist->tagmap = tagmap_new();
     taglist->taglist = PyList_New(0);
     return (PyObject*)taglist;
@@ -28,18 +28,20 @@ PyObject * taglist_new()
 PyObject * taglist_new2(TAG*tag)
 {
     TagListObject* taglist = PyObject_New(TagListObject, &TagListClass);
-    mylog("+%08x(%d) taglist_new2", (int)taglist, taglist->ob_refcnt);
+    mylog("+%08x(%d) taglist_new2 tag=%08x", (int)taglist, taglist->ob_refcnt, tag);
     taglist->tagmap = tagmap_new();
 
     int nr=0;
     TAG*t = tag;
     while(t) {nr++;t=t->next;}
     taglist->taglist = PyList_New(nr);
+    
+    mylog("+%08x(%d) taglist_new2: %d items", (int)taglist, taglist->ob_refcnt, nr);
 
     nr = 0;
     t = tag;
     while(t) {
-	PyObject*newtag = tag_new(tag);
+	PyObject*newtag = tag_new2(tag, taglist->tagmap);
 	PyList_SET_ITEM(taglist->taglist,nr,newtag);Py_INCREF(newtag);
 	if(swf_isDefiningTag(t)) {
 	    tagmap_add(taglist->tagmap, newtag);

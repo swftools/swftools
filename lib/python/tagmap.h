@@ -31,6 +31,7 @@ extern PyTypeObject TagMapClass;
 int tagmap_obj2id(PyObject* self, PyObject* obj);
 PyObject* tagmap_id2obj(PyObject* self, int _id);
 int tagmap_add(PyObject* self, PyObject* obj);
+void tagmap_addMapping(PyObject*self, int id, PyObject*obj);
 PyObject* tagmap_getObjectList(PyObject* self);
 
 PyObject* tagmap_new();
