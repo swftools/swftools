@@ -159,6 +159,8 @@ char* swf_TagGetName(TAG*tag)
             return "REFLEX";
         case ST_DOINITACTION:
             return "DOINITACTION";
+        case ST_DEFINEMOVIE:
+            return "DEFINEMOVIE";
         case ST_DEFINEVIDEOSTREAM:
             return "DEFINEVIDEOSTREAM";
         case ST_VIDEOFRAME:
