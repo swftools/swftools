@@ -23,6 +23,12 @@
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_FONTCONFIG_H
 #include <fontconfig.h>
 #endif
@@ -1908,6 +1914,8 @@ void pdfswf_setparameter(char*name, char*value)
 	caplinewidth = atof(value);
     } else if(!strcmp(name, "zoom")) {
 	zoom = atoi(value);
+    } else if(!strcmp(name, "fontdir")) {
+        pdfswf_addfontdir(value);
     } else {
 	swfoutput_setparameter(name, value);
     }
@@ -1923,6 +1931,54 @@ void pdfswf_addfont(char*filename)
         msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
     }
 }
+
+void pdfswf_addfontdir(char*dirname)
+{
+#ifdef HAVE_DIRENT_H
+    msg("<notice> Adding %s to font directories", dirname);
+    DIR*dir = opendir(dirname);
+    if(!dir) {
+	msg("<warning> Couldn't open directory %s\n", dirname);
+	return;
+    }
+    struct dirent*ent;
+    while(1) {
+	ent = readdir (dir);
+	if (!ent) 
+	    break;
+	int l;
+	char*name = ent->d_name;
+	char type = 0;
+	if(!name) continue;
+	l=strlen(name);
+	if(l<4)
+	    continue;
+	if(!strncasecmp(&name[l-4], ".pfa", 4)) 
+	    type=1;
+	if(!strncasecmp(&name[l-4], ".pfb", 4)) 
+	    type=3;
+	if(!strncasecmp(&name[l-4], ".ttf", 4)) 
+	    type=2;
+	if(type)
+	{
+	    char*fontname = (char*)malloc(strlen(dirname)+strlen(name)+2);
+	    strcpy(fontname, dirname);
+#ifdef WIN32
+		strcat(fontname, "\\");
+#else
+		strcat(fontname, "/");
+#endif
+	    strcat(fontname, name);
+	    msg("<verbose> Adding %s to fonts", fontname);
+	    pdfswf_addfont(fontname);
+	}
+    }
+    closedir(dir);
+#else
+    msg("<warning> No dirent.h- unable to add font dir %s");
+#endif
+}
+
 
 typedef struct _pdf_doc_internal
 {
