@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-programs = wav2swf @PNG2SWF@ swfcombine swfstrings swfextract swfdump swfc @JPEG2SWF@
+programs = wav2swf @PNG2SWF@ swfcombine swfstrings swfextract swfdump @JPEG2SWF@
 
 all: $(programs)
 
@@ -23,10 +23,6 @@ swfstrings.o: swfstrings.c
 	$(C) swfstrings.c -o $@
 jpeg2swf.o: jpeg2swf.c
 	$(C) jpeg2swf.c -o $@
-swfc.o: swfc.c parser.h q.h
-	$(C) swfc.c -o $@
-parser.o: parser.yy.c parser.h q.h
-	$(C) parser.yy.c -o $@
 q.o: q.c q.h
 	$(C) q.c -o $@
 
@@ -55,9 +51,6 @@ swfstrings: swfstrings.o
 jpeg2swf: jpeg2swf.o
 	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) jpeg2swf
-swfc: parser.o swfc.o q.o wav.o
-	$(L) parser.o swfc.o q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
-	$(STRIP) swfc
 
 install:
 	$(mkinstalldirs) $(bindir)
