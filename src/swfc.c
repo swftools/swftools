@@ -552,10 +552,24 @@ void s_buttonaction(int flags, char*action)
     swf_ActionFree(a);
 }
 
+static void setactionend(TAG*tag)
+{
+    if(!mybutton.nr_actions) {
+	/* no actions means we didn't have an actionoffset,
+	   which means we can't signal the end of the
+	   buttonaction records, so, *sigh*, we have
+	   to insert a dummy record */
+	swf_SetU16(tag, 0); //offset
+	swf_SetU16(tag, 0); //condition
+	swf_SetU8(tag, 0); //action
+    }
+}
+
 static void s_endButton()
 {
     SRECT r;
     setbuttonrecords(stack[stackpos-1].tag);
+    setactionend(stack[stackpos-1].tag);
     stackpos--;
       
     swf_ButtonPostProcess(stack[stackpos].tag, mybutton.nr_actions);
