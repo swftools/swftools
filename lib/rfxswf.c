@@ -660,6 +660,11 @@ int RFXSWF_WriteTag(int handle,TAG * t)
   return t->len+(short_tag?2:6);
 }
 
+int swf_WriteTag(int handle,TAG * t)
+{
+    return RFXSWF_WriteTag(handle, t);
+}
+
 int RFXSWF_DefineSprite_GetRealSize(TAG * t)
 // Sprite Handling: Helper function to pack DefineSprite-Tag
 { U32 len = t->len;
@@ -672,9 +677,42 @@ int RFXSWF_DefineSprite_GetRealSize(TAG * t)
 }
 
 #define swf_ReadTag(a,b)  RFXSWF_ReadTag(a,b)
-#define swf_WriteTag(a,b) RFXSWF_WriteTag(a,b)
+#define swf_WriteTag(a,b)  RFXSWF_WriteTag(a,b)
 
 // Movie Functions
+
+int swf_InitSWF(void*data, int length, SWF * swf) /* copy a swf in memory into SWF struct */
+{
+  TAG reader;
+    /* 
+	unfinished!
+     */
+  *(int*)0=0xDEAD;
+  if (!swf) return -1;
+  memset(swf,0x00,sizeof(SWF));
+  memset(&reader,0x00,sizeof(TAG));
+  reader.data = data;
+  reader.len = reader.memsize = length;
+
+  { char b[32];                         // read Header
+    TAG * t;
+    
+    if (swf_GetU8(&reader)!=(U8)'F') return -1;
+    if (swf_GetU8(&reader)!=(U8)'W') return -1;
+    if (swf_GetU8(&reader)!=(U8)'S') return -1;
+
+    swf->fileVersion = swf_GetU8(&reader);
+    swf->fileSize    = swf_GetU32(&reader);
+    swf_GetRect(&reader,&swf->movieSize);
+    swf->frameRate   = swf_GetU16(&reader);
+    swf->frameCount  = swf_GetU16(&reader);
+
+    /*t = &t1;
+    while (t) t = swf_ReadTag(handle,t);
+    swf->firstTag = t1.next;
+    t1.next->prev = NULL;*/
+  }
+}
 
 int swf_ReadSWF(int handle,SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 {     
@@ -712,6 +750,7 @@ int swf_ReadSWF(int handle,SWF * swf)   // Reads SWF to memory (malloc'ed), retu
   
   return 0;
 }
+
 int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
@@ -722,7 +761,7 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
 
 #ifdef INSERT_RFX_TAG
 
-  if (swf_NextTag(swf->firstTag))
+  if (swf->firstTag && swf_NextTag(swf->firstTag))
     if (swf_GetTagID(swf_NextTag(swf->firstTag))!=ST_REFLEX)
       swf_SetBlock(swf_InsertTag(swf->firstTag,ST_REFLEX),"rfx",3);
 
@@ -753,15 +792,17 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
     swf_SetU8(&t1,'S');
     swf_SetU8(&t1,swf->fileVersion);
     
-    swf_SetU32(&t1,0);                      // Keep space for filesize
+    swf_SetU32(&t1,swf->fileSize);         // Keep space for filesize
     swf_SetRect(&t1,&swf->movieSize);
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
 
     l = swf_GetTagLen(&t1);
     swf->fileSize = l+len;
-    t1.len = 4;                         // bad & ugly trick !
-    swf_SetU32(&t1,swf->fileSize);
+    if(swf->firstTag) {
+	t1.len = 4;                         // bad & ugly trick !
+	swf_SetU32(&t1,swf->fileSize);
+    }
 
     if (handle>=0)
     { 
@@ -784,6 +825,14 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
     }
   }
   return (int)swf->fileSize;
+}
+
+int swf_WriteHeader(int handle,SWF * swf)
+{
+    SWF myswf;
+    memcpy(&myswf,swf,sizeof(SWF));
+    myswf.firstTag = 0;
+    swf_WriteSWF(handle, &myswf);
 }
 
 int swf_WriteCGI(SWF * swf)
