@@ -5,3 +5,5 @@ all:
 	gcc -c ttf2pt1.c
 	gcc -c t1asm.c
 	ar cru ttf2pt1.a ft.o ttf.o pt1.o ttf2pt1.o t1asm.o
+install:
+
