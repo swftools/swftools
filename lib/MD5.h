@@ -23,6 +23,6 @@
 
 #ifndef __MD5_h__
 #define __MD5_h__
-/* WARNING: crypt_md5 is not reentrant */
 char * crypt_md5(const char *pw, const char *salt);
+void hash_md5(const unsigned char*buf, int len, unsigned char*dest); //dest needs to be 16 bytes wide
 #endif
