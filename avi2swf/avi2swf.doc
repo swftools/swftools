@@ -31,6 +31,7 @@ from AVI files.
     Enable some \fIvery\fR expensive compression strategies. You may
     want to let this run overnight.
 -T , --flashversion <n>
+    Set output flash version to <n>.
     Set output flash version to <n>. Notice: H.263 compression will only be
     used for n >= 6.
 -V , --version
