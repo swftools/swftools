@@ -70,7 +70,8 @@ UNCOMPRESS = @UNCOMPRESS@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
 noinst_LIBRARIES = libpdf.a
-libpdf_a_SOURCES = Array.cc Catalog.cc Decrypt.cc Dict.cc Error.cc FontEncoding.cc FontFile.cc FormWidget.cc GString.cc Gfx.cc GfxFont.cc GfxState.cc Lexer.cc Link.cc Object.cc OutputDev.cc PDFDoc.cc Page.cc Params.cc Parser.cc Stream.cc XRef.cc gfile.cc gmem.cc ##parseargs.cc 
+libpdf_a_SOURCES =  Array.cc BuiltinFont.cc BuiltinFontTables.cc CMap.cc Catalog.cc CharCodeToUnicode.cc Decrypt.cc Dict.cc Error.cc FontEncodingTables.cc FontFile.cc Function.cc GHash.cc GList.cc GString.cc Gfx.cc GfxFont.cc GfxState.cc GlobalParams.cc Lexer.cc Link.cc NameToCharCode.cc Object.cc OutputDev.cc PDFDoc.cc PSTokenizer.cc Page.cc Parser.cc Stream.cc UnicodeMap.cc XRef.cc gfile.cc gmem.c
+
 
 COMPILE = $(CC)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -84,15 +85,20 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 libpdf_a_LIBADD = 
-libpdf_a_OBJECTS =  Array.o Catalog.o Decrypt.o Dict.o Error.o \
-FontEncoding.o FontFile.o FormWidget.o GString.o Gfx.o GfxFont.o \
-GfxState.o Lexer.o Link.o Object.o OutputDev.o PDFDoc.o Page.o Params.o \
-Parser.o Stream.o XRef.o gfile.o gmem.o
+libpdf_a_OBJECTS =  Array.o BuiltinFont.o BuiltinFontTables.o CMap.o \
+Catalog.o CharCodeToUnicode.o Decrypt.o Dict.o Error.o \
+FontEncodingTables.o FontFile.o Function.o GHash.o GList.o GString.o \
+Gfx.o GfxFont.o GfxState.o GlobalParams.o Lexer.o Link.o \
+NameToCharCode.o Object.o OutputDev.o PDFDoc.o PSTokenizer.o Page.o \
+Parser.o Stream.o UnicodeMap.o XRef.o gfile.o gmem.o
 AR = ar
 CXXFLAGS = @CXXFLAGS@
 CXXCOMPILE = $(CXX) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+CFLAGS = @CFLAGS@
+CCLD = $(CC)
+LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
 DIST_COMMON =  Makefile.in
 
 
