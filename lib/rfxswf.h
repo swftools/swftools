@@ -29,12 +29,18 @@
 #define FALSE (0)
 #endif
 
+//#define SWAP16(s) ((U16) ((U8*)&s)[0] | ((U16) ((U8*)&s)[1] << 8))
+//#define SWAP32(s) ((U32) ((U8*)&s)[0] | ((U32) ((U8*)&s)[1] << 8) | ((U32) ((U8*)&s)[2] << 16) | ((U32) ((U8*)&s)[3] << 24))
 #ifdef WORDS_BIGENDIAN
-#define SWAP16(s) ((U16) ((U8*)&s)[0] | ((U16) ((U8*)&s)[1] << 8))
-#define SWAP32(s) ((U32) ((U8*)&s)[0] | ((U32) ((U8*)&s)[1] << 8) | ((U32) ((U8*)&s)[2] << 16) | ((U32) ((U8*)&s)[3] << 24))
+#define SWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
+#define SWAP32(s) (SWAP16(((s)>>16)&0x0000ffff)|((SWAP16(s)<<16)&0xffff0000))
+#define REVERSESWAP16(x) (x)
+#define REVERSESWAP32(x) (x)
 #else
-#define SWAP16(x) x
-#define SWAP32(x) x
+#define SWAP16(x) (x)
+#define SWAP32(x) (x)
+#define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
+#define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
 #endif
 
 // SWF Types
