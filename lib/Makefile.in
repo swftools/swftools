@@ -124,9 +124,13 @@ install-am: all-am
 install: install-am
 uninstall-am:
 uninstall: uninstall-am
-all-am: Makefile rfxswf.c log.c
+
+rfxswf.o: rfxswf.c
 	$(COMPILE) -c rfxswf.c
+log.o: log.c
 	$(COMPILE) -c log.c
+all-am: Makefile rfxswf.o log.o
+
 all-redirect: all-am
 install-strip:
 	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
