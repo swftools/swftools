@@ -43,6 +43,7 @@ ${name}/lib/action/swf4compiler.tab.h \
 ${name}/lib/action/swf5compiler.tab.h \
 ${name}/src/parser.lex \
 ${name}/src/parser.h \
+${name}/lib/art/Makefile.in \
 ${name}/src/Makefile.in \
 ${name}/lib/Makefile.in \
 ${name}/avi2swf/Makefile.in \
@@ -133,6 +134,9 @@ ${name}/lib/log.c \
 ${name}/lib/log.h \
 ${name}/lib/os.c \
 ${name}/lib/os.h \
+${name}/lib/gfxdevice.h \
+${name}/lib/gfxtools.h \
+${name}/lib/gfxtools.c \
 ${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/pdf2swf/swfoutput.h \
 ${name}/pdf2swf/swfoutput.cc \
@@ -180,6 +184,8 @@ ${name}/pdf2swf/xpdf/GfxFont.cc \
 ${name}/pdf2swf/xpdf/GfxFont.h \
 ${name}/pdf2swf/xpdf/GfxState.cc \
 ${name}/pdf2swf/xpdf/GfxState.h \
+${name}/pdf2swf/xpdf/cmyk.cc \
+${name}/pdf2swf/xpdf/cmyk.h \
 ${name}/pdf2swf/xpdf/GlobalParams.cc \
 ${name}/pdf2swf/xpdf/GlobalParams.h \
 ${name}/pdf2swf/xpdf/Lexer.cc \
@@ -212,6 +218,8 @@ ${name}/pdf2swf/xpdf/XRef.cc \
 ${name}/pdf2swf/xpdf/XRef.h \
 ${name}/pdf2swf/xpdf/aconf.h \
 ${name}/pdf2swf/xpdf/config.h \
+${name}/lib/art/art_config.h \
+${name}/lib/art/config.h \
 ${name}/pdf2swf/xpdf/gfile.cc \
 ${name}/pdf2swf/xpdf/gfile.h \
 ${name}/pdf2swf/xpdf/gmem.c \
@@ -286,7 +294,90 @@ ${name}/swfs/tessel_loader.swf \
 ${name}/m4/byteorder.m4 \
 ${name}/m4/backticks.m4 \
 ${name}/m4/Makefile \
-${name}/m4/avi2swf.m4
+${name}/m4/avi2swf.m4 \
+${name}/lib/art/art_affine.h \
+${name}/lib/art/art_alphagamma.h \
+${name}/lib/art/art_bpath.h \
+${name}/lib/art/art_filterlevel.h \
+${name}/lib/art/art_gray_svp.h \
+${name}/lib/art/art_misc.h \
+${name}/lib/art/art_pathcode.h \
+${name}/lib/art/art_pixbuf.h \
+${name}/lib/art/art_point.h \
+${name}/lib/art/art_rect.h \
+${name}/lib/art/art_rect_svp.h \
+${name}/lib/art/art_rect_uta.h \
+${name}/lib/art/art_render.h \
+${name}/lib/art/art_render_gradient.h \
+${name}/lib/art/art_render_mask.h \
+${name}/lib/art/art_render_svp.h \
+${name}/lib/art/art_rgb.h \
+${name}/lib/art/art_rgb_a_affine.h \
+${name}/lib/art/art_rgb_affine.h \
+${name}/lib/art/art_rgb_affine_private.h \
+${name}/lib/art/art_rgb_bitmap_affine.h \
+${name}/lib/art/art_rgb_pixbuf_affine.h \
+${name}/lib/art/art_rgb_rgba_affine.h \
+${name}/lib/art/art_rgb_svp.h \
+${name}/lib/art/art_rgba.h \
+${name}/lib/art/art_svp.h \
+${name}/lib/art/art_svp_intersect.h \
+${name}/lib/art/art_svp_ops.h \
+${name}/lib/art/art_svp_point.h \
+${name}/lib/art/art_svp_render_aa.h \
+${name}/lib/art/art_svp_vpath.h \
+${name}/lib/art/art_svp_vpath_stroke.h \
+${name}/lib/art/art_svp_wind.h \
+${name}/lib/art/art_uta.h \
+${name}/lib/art/art_uta_ops.h \
+${name}/lib/art/art_uta_rect.h \
+${name}/lib/art/art_uta_svp.h \
+${name}/lib/art/art_uta_vpath.h \
+${name}/lib/art/art_vpath.h \
+${name}/lib/art/art_vpath_bpath.h \
+${name}/lib/art/art_vpath_dash.h \
+${name}/lib/art/art_vpath_svp.h \
+${name}/lib/art/libart.h \
+${name}/lib/art/art_affine.c \
+${name}/lib/art/art_alphagamma.c \
+${name}/lib/art/art_bpath.c \
+${name}/lib/art/art_gray_svp.c \
+${name}/lib/art/art_misc.c \
+${name}/lib/art/art_pixbuf.c \
+${name}/lib/art/art_rect.c \
+${name}/lib/art/art_rect_svp.c \
+${name}/lib/art/art_rect_uta.c \
+${name}/lib/art/art_render.c \
+${name}/lib/art/art_render_gradient.c \
+${name}/lib/art/art_render_mask.c \
+${name}/lib/art/art_render_svp.c \
+${name}/lib/art/art_rgb.c \
+${name}/lib/art/art_rgb_affine.c \
+${name}/lib/art/art_rgb_a_affine.c \
+${name}/lib/art/art_rgb_affine_private.c \
+${name}/lib/art/art_rgb_bitmap_affine.c \
+${name}/lib/art/art_rgb_pixbuf_affine.c \
+${name}/lib/art/art_rgb_rgba_affine.c \
+${name}/lib/art/art_rgb_svp.c \
+${name}/lib/art/art_rgba.c \
+${name}/lib/art/art_svp.c \
+${name}/lib/art/art_svp_intersect.c \
+${name}/lib/art/art_svp_ops.c \
+${name}/lib/art/art_svp_point.c \
+${name}/lib/art/art_svp_render_aa.c \
+${name}/lib/art/art_svp_vpath.c \
+${name}/lib/art/art_svp_vpath_stroke.c \
+${name}/lib/art/art_svp_wind.c \
+${name}/lib/art/art_uta.c \
+${name}/lib/art/art_uta_ops.c \
+${name}/lib/art/art_uta_rect.c \
+${name}/lib/art/art_uta_svp.c \
+${name}/lib/art/art_uta_vpath.c \
+${name}/lib/art/art_vpath.c \
+${name}/lib/art/art_vpath_bpath.c \
+${name}/lib/art/art_vpath_dash.c \
+${name}/lib/art/art_vpath_svp.c
+
 gzip -9 ${name}.tar
 rm -f ${name}
 
@@ -350,3 +441,5 @@ rm -f ${name}
 #${name}/pdf2swf/ttf2pt1/ttf2pt1.h \
 #${name}/pdf2swf/ttf2pt1/version.h \
 #${name}/pdf2swf/ttf2pt1/win_missing.h \
+
+
