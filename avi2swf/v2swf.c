@@ -91,7 +91,7 @@ typedef struct _v2swf_internal_t
 static int verbose = 0;
 static int filelog = 0;
 
-static void logf(char*format, ...)
+static void msg(char*format, ...)
 {
     char buf[1024];
     int l;
@@ -203,7 +203,7 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     int pos = 0;
     S16 block1[576*4 * 2];
 
-    logf("writeAudioForOneFrame()");
+    msg("writeAudioForOneFrame()");
 
     if(i->video->channels<=0 || i->video->rate<=0)
 	return; /* no sound in video */
@@ -218,7 +218,7 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     samplesperframe = (blocksize * blockspersecond) / framespersecond; /* 11khz-samples per frame */
     samplesperblock = samplesperframe * framesperblock;
 
-    logf("samplesperblock: %f", samplesperblock);
+    msg("samplesperblock: %f", samplesperblock);
 
     if(!i->soundstreamhead) {
 	/* first run - initialize */
@@ -226,9 +226,9 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
 	swf_mp3_bitrate = i->bitrate;
 	swf_ResetTag(i->tag, ST_SOUNDSTREAMHEAD);
 	/* samplesperframe overrides the movie framerate: */
-	logf("swf_SetSoundStreamHead(): %08x %d", i->tag, samplesperframe);
+	msg("swf_SetSoundStreamHead(): %08x %d", i->tag, samplesperframe);
 	swf_SetSoundStreamHead(i->tag, samplesperframe);
-	logf("swf_SetSoundStreamHead() done");
+	msg("swf_SetSoundStreamHead() done");
 	i->filesize += swf_WriteTag2(&i->out, i->tag);
 	i->soundstreamhead = 1;
     }
@@ -236,7 +236,9 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     /* for framerates greater than 19.14, every now and then a frame
        hasn't a soundstreamblock. Determine whether this is the case.
     */
+    msg("SOUND: frame:%d soundframepos:%f samplewritepos:%d samplepos:%f\n", i->frames, i->soundframepos, i->samplewritepos, i->samplepos);
     if(i->frames < i->soundframepos) {
+	msg("SOUND: block skipped\n");
 	i->samplepos += samplesperframe;
 	return;
     }
@@ -244,26 +246,21 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     seek = i->seek;
 
     //while(i->samplewritepos + num * blocksize < i->samplepos + blocksize) {
-    while(i->samplewritepos < i->samplepos + blocksize) {
+    do {
 	i->samplewritepos += blocksize;
 	i->soundframepos += framesperblock;
 	num++;
     }
-    if(!num) {
-	logf("num is zero");
-	printf(" num is zero\n");
-	fprintf(stderr, "  num is zero\n");
-    }
-    logf("num: %d", num);
+    while(i->samplewritepos < i->samplepos);
+
+    msg("SOUND: number of blocks: %d", num);
 
     /* write num frames, max 1 block */
     for(pos=0;pos<num;pos++) {
-	logf("pos: %d- getsamples", pos);
 	if(!getSamples(i->video, block1, 576*4, speedup)) { /* 4 = 44100/11025 */
 	    i->video->rate = i->video->channels = 0; //end of soundtrack
 	    return;
 	}
-	logf("pos: %d- encode mp3", pos);
 	if(!pos) {
 	    swf_ResetTag(i->tag, ST_SOUNDSTREAMBLOCK);
 	    swf_SetSoundStreamBlock(i->tag, block1, seek, num);
@@ -273,9 +270,8 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     }
     i->filesize += swf_WriteTag2(&i->out, i->tag);
 
-    i->seek = i->samplewritepos - (i->samplepos + blocksize);
+    i->seek = blocksize - (i->samplewritepos - i->samplepos);
     i->samplepos += samplesperframe;
-    logf("writeSamplesForOneFrame(): done");
 }
 
 static void writeShowFrame(v2swf_internal_t* i)
@@ -391,9 +387,9 @@ static void writehead(v2swf_internal_t*i)
 
 static void finish(v2swf_internal_t*i)
 {
-    logf("finish(): i->finished=%d\n", i->finished);
+    msg("finish(): i->finished=%d\n", i->finished);
     if(!i->finished) {
-	logf("write endtag\n", i->finished);
+	msg("write endtag\n", i->finished);
 
 	swf_ResetTag(i->tag, ST_END);
 	i->filesize += swf_WriteTag2(&i->out, i->tag);
@@ -413,12 +409,12 @@ static void finish(v2swf_internal_t*i)
 	}
 
 	/* FIXME: we shouldn't be doing this. the caller should */
-	logf("call videoreader_close(%08x)\n", i->video);
+	msg("call videoreader_close(%08x)\n", i->video);
 	videoreader_close(i->video);
 
 	i->finished = 1;
     }
-    logf("finishing done\n");
+    msg("finishing done\n");
 }
 static void cleanup(v2swf_internal_t*i)
 {
@@ -573,7 +569,7 @@ static int encodeoneframe(v2swf_internal_t*i)
 
     if(videoreader_eof(i->video) || !videoreader_getimage(i->video, i->vrbuffer)) 
     {
-	logf("videoreader returned eof\n");
+	msg("videoreader returned eof\n");
 	finish(i);
 	return 0;
     }
@@ -585,16 +581,16 @@ static int encodeoneframe(v2swf_internal_t*i)
 	return 0;
     }
     
-    logf("encoding image for frame %d\n", i->frames);
+    msg("encoding image for frame %d\n", i->frames);
 
     if(i->showframe)
 	writeShowFrame(i);
 
-    logf("scaling\n");
+    msg("scaling\n");
 
     scaleimage(i);
 
-    logf("version is %d\n", i->version);
+    msg("version is %d\n", i->version);
 
     if(i->version <= 4) {
 
@@ -633,7 +629,7 @@ static int encodeoneframe(v2swf_internal_t*i)
 	    cleanup(i);
 
 	    if(!i->lastbitmap) {
-		logf("Creating bitmap buffer for %dx%d (%dx%d), (%dx%d)\n", i->width, i->height, width2, i->height, width8, height8);
+		msg("Creating bitmap buffer for %dx%d (%dx%d), (%dx%d)\n", i->width, i->height, width2, i->height, width8, height8);
 		i->lastbitmap = (U8*)malloc(width2*i->height);
 	    }
 	    memcpy(i->lastbitmap, i->buffer, width2*i->height);
@@ -748,11 +744,11 @@ static int encodeoneframe(v2swf_internal_t*i)
 	swf_ResetTag(i->tag, ST_VIDEOFRAME);
 	swf_SetU16(i->tag, 99);
 	if(!(--i->keyframe)) {
-	    logf("setting video I-frame, ratio=%d\n", i->stream.frame);
+	    msg("setting video I-frame, ratio=%d\n", i->stream.frame);
 	    swf_SetVideoStreamIFrame(i->tag, &i->stream, (RGBA*)i->buffer, quant);
 	    i->keyframe = i->keyframe_interval;
 	} else {
-	    logf("setting video P-frame, ratio=%d\n", i->stream.frame);
+	    msg("setting video P-frame, ratio=%d\n", i->stream.frame);
 	    swf_SetVideoStreamPFrame(i->tag, &i->stream, (RGBA*)i->buffer, quant);
 	}
 	i->filesize += swf_WriteTag2(&i->out, i->tag);
@@ -770,7 +766,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     int ret = 0;
     int t=0;
     v2swf_internal_t* i;
-    logf("v2swf_init()\n");
+    msg("v2swf_init()\n");
     memset(v2swf, 0, sizeof(v2swf_t));
     i = (v2swf_internal_t*)malloc(sizeof(v2swf_internal_t));
     memset(i, 0, sizeof(v2swf_internal_t));
@@ -778,7 +774,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
 
     ringbuffer_init(&i->r);
 
-    logf("video: %dx%d, fps %f\n", video->width, video->height, video->fps);
+    msg("video: %dx%d, fps %f\n", video->width, video->height, video->fps);
 
     i->video = video;
     i->blockdiff = 64;
@@ -813,7 +809,7 @@ int v2swf_read(v2swf_t*v2swf, void*buffer, int len)
 {
     v2swf_internal_t* i;
     int l;
-    logf("v2swf_read(%d)\n", len);
+    msg("v2swf_read(%d)\n", len);
     i = (v2swf_internal_t*)v2swf->internal;
 
     while(!i->finished && i->r.available < len) {
@@ -821,7 +817,7 @@ int v2swf_read(v2swf_t*v2swf, void*buffer, int len)
 	    break;
 	}
     }
-    logf("v2swf_read() done: %d bytes available in ringbuffer\n", i->r.available);
+    msg("v2swf_read() done: %d bytes available in ringbuffer\n", i->r.available);
     l = ringbuffer_read(&i->r, buffer, len);
 
     return l;
@@ -829,15 +825,15 @@ int v2swf_read(v2swf_t*v2swf, void*buffer, int len)
 void v2swf_close(v2swf_t*v2swf)
 {
     v2swf_internal_t* i = (v2swf_internal_t*)v2swf->internal;
-    logf("close(): i->finished=%d\n", i->finished);
+    msg("close(): i->finished=%d\n", i->finished);
 
     /* needed only if aborting: */
     finish(i);
 
-    logf("freeing memory\n");
+    msg("freeing memory\n");
     free(v2swf->internal);
     memset(v2swf, 0, sizeof(v2swf_t));
-    logf("close() done\n");
+    msg("close() done\n");
 }
 
 static int mp3_bitrates[] =
@@ -847,11 +843,11 @@ void v2swf_setparameter(v2swf_t*v2swf, char*name, char*value)
 {
     v2swf_internal_t* i;
 
-    logf("set parameters %s to %s\n", name, value);
+    msg("set parameters %s to %s\n", name, value);
 
     if(!strcmp(name, "verbose")) {
 	verbose = 1;
-	logf("set parameters %s to %s\n", name, value);
+	msg("set parameters %s to %s\n", name, value);
 	return;
     }
 
@@ -895,7 +891,7 @@ void v2swf_setparameter(v2swf_t*v2swf, char*name, char*value)
 	    }
 	    t++;
 	}
-	logf("bitrate %d requested, setting to %d", o, i->bitrate);
+	msg("bitrate %d requested, setting to %d", o, i->bitrate);
     }
     else if(!strcmp(name, "blockdiff_mode")) {
 	if(!strcmp(value, "max")) i->diffmode = DIFFMODE_MAX;
@@ -922,7 +918,7 @@ void v2swf_backpatch(v2swf_t*v2swf, char*filename)
     FILE* fi;
     unsigned char f;
     v2swf_internal_t* i = (v2swf_internal_t*)v2swf->internal;
-    logf("v2swf_backpatch %s\n", filename);
+    msg("v2swf_backpatch %s\n", filename);
     if(!i) {
 	printf("call backpatch before close\n");fflush(stdout);
     }
@@ -946,7 +942,7 @@ void v2swf_backpatch(v2swf_t*v2swf, char*filename)
     if(i->fixheader) {
 	SWF tmp;
 	int fi;
-	logf("v2swf_backpatch %s - fix header\n", filename);
+	msg("v2swf_backpatch %s - fix header\n", filename);
 	memset(&tmp, 0, sizeof(tmp));
 	fi = open(filename, O_RDONLY|O_BINARY);
 	if(fi>=0) {
@@ -956,7 +952,7 @@ void v2swf_backpatch(v2swf_t*v2swf, char*filename)
 		if(fi>=0) {
 		    swf_WriteSWC(fi, &tmp);
 		    close(fi);
-		    logf("v2swf_backpatch %s - fix header: success\n", filename);
+		    msg("v2swf_backpatch %s - fix header: success\n", filename);
 		}
 	    }
 	}
@@ -967,7 +963,7 @@ float v2swf_getprogress(v2swf_t*v2swf)
 {
     float* p;
     v2swf_internal_t* i;
-    logf("v2swf_getprogress()");
+    msg("v2swf_getprogress()");
     if(!v2swf || !v2swf->internal) {
 	return 0.0;
     }
@@ -988,6 +984,6 @@ float v2swf_getprogress(v2swf_t*v2swf)
 
 void v2swf_setvideoparameter(videoreader_t*v, char*name, char*value)
 {
-    logf("v2swf_setvideoparameter()");
+    msg("v2swf_setvideoparameter()");
     videoreader_setparameter(v, name, value);
 }
