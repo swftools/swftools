@@ -1206,6 +1206,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
   int frameCount=0;
   struct writer_t zwriter;
   int fileSize = 0;
+  int inSprite = 0;
     
   if (!swf) return -1;
 
@@ -1225,10 +1226,12 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
   t = swf->firstTag;
   frameCount = 0;
 
-  while(t)
-  { len += swf_WriteTag(-1, t);
-    if (t->id==ST_SHOWFRAME) frameCount++;
-    t = swf_NextTag(t);
+  while(t) {
+      len += swf_WriteTag(-1,t);
+      if(t->id == ST_DEFINESPRITE) inSprite++;
+      else if(t->id == ST_END && inSprite) inSprite--;
+      else if(t->id == ST_SHOWFRAME && !inSprite) frameCount++;
+      t = swf_NextTag(t);
   }
   
   { TAG t1;
