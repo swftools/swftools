@@ -327,7 +327,7 @@ void args_callback_usage(char*name)
     printf("-s caplinewidth=value      Set the minimum line width to trigger cap style handling to value. (3)\n");
     printf("-s splinequality=value     Set the quality of spline convertion to value (0-100, default: 100).\n");
     printf("-s fontquality=value       Set the quality of font convertion to value (0-100, default: 100).\n");
-    printf("-s ignoredraworder         Ignore draw order (makes the SWF file smaller, but may produce\n"
+    printf("-s ignoredraworder         Ignore draw order (makes the SWF file smaller and faster, but may produce\n"
 	   "                           graphic errors)\n");
     printf("-s filloverlap             Make intersecting shapes overlap, instead of canceling each\n"
 	   "                           other out. (Needed for some Powerpoint PDFs)\n");
