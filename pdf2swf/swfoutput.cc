@@ -48,7 +48,7 @@ int flashversion=5;
 int splinemaxerror=1;
 int fontsplinemaxerror=1;
 int filloverlap=0;
-float minlinewidth=0.1;
+float minlinewidth=0.05;
 
 static char storefont = 0;
 static int flag_protected = 0;
@@ -94,7 +94,7 @@ SRECT bboxrect;
 
 static void startshape(struct swfoutput* obj);
 static void starttext(struct swfoutput* obj);
-static void endshape(int clip);
+static void endshape(struct swfoutput* obj,int clip);
 static void endtext(struct swfoutput* obj);
 
 // matrix multiplication. changes p0
@@ -287,7 +287,7 @@ void drawpath(struct swfoutput*output, SWF_OUTLINE*outline, struct swfmatrix*m, 
 		   On SWF side, we need to start a new shape for each
 		   closed polygon, because SWF only knows EOFILL.
 		*/
-		endshape(0);
+		endshape(output,0);
 		startshape(output);
 		startFill();
 	    }
@@ -512,7 +512,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
     int back = 0;
 
     if(line_cap == LINE_CAP_BUTT || line_cap == LINE_CAP_SQUARE) {
-	endshape(0);
+	endshape(output,0);
 	startshape(output);
 	SWF_OUTLINE *last, *tmp=outline;
 	plotxy s,e,p0,p1,p2,p3,m0,m1,m2,m3;
@@ -591,7 +591,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
 
 	    if(line_cap == LINE_CAP_BUTT) {
 		lineto(tag, q0);
-		endshape(depth+2-nr);
+		endshape(output, depth+2-nr);
 		startshape(output);
 	    }
 	    p0 = m0;
@@ -606,7 +606,7 @@ void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct s
     drawShortPath(output,x,y,m,outline);
 
     if(line_cap == LINE_CAP_BUTT) {
-	endshape(0);
+	endshape(output,0);
 	startshape(output);
     }
 }
@@ -668,7 +668,7 @@ void drawShortPathWithStraightEnds(struct swfoutput*output, double x, double y, 
 	       need to draw) are very likely to overlap. To avoid that
 	       they cancel each other out at the end points, start a new
 	       shape for the second one */
-	    endshape(0);startshape(output);
+	    endshape(output,0);startshape(output);
 	    startFill();
 	}
 
@@ -1021,7 +1021,7 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     }
 
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid<0)
 	starttext(obj);
 
@@ -1109,7 +1109,7 @@ void swfoutput_drawpath(swfoutput*output, SWF_OUTLINE*outline,
        so we better start a new shape here if the polygon is filled
      */
     if(shapeid>=0 && fill && !ignoredraworder) {
-	endshape(0);
+	endshape(output,0);
     }
 
     if(shapeid<0)
@@ -1128,7 +1128,7 @@ void swfoutput_drawpath2poly(struct swfoutput*output, SWF_OUTLINE*outline, struc
     if(textid>=0)
         endtext(output);
     if(shapeid>=0)
-	endshape(0);
+	endshape(output,0);
     assert(shapeid<0);
     startshape(output);
     stopFill();
@@ -1424,7 +1424,7 @@ static void startshape(struct swfoutput*obj)
 static void starttext(struct swfoutput*obj)
 {
   if(shapeid>=0)
-      endshape(0);
+      endshape(obj,0);
     
   textid = ++currentswfid;
 
@@ -1454,54 +1454,68 @@ void changeRect(TAG*tag, int pos, SRECT*newrect)
     tag->pos = tag->readBit = 0;
 }
 
-void fixAreas()
+void cancelshape(swfoutput*obj)
+{
+    /* delete old shape tag */
+    TAG*todel = tag;
+    tag = tag->prev;
+    swf_DeleteTag(todel);
+    shapeid = -1;
+    bboxrectpos = -1;
+}
+
+void fixAreas(swfoutput*obj)
 {
     if(!shapeisempty && fill &&
        (bboxrect.xmin == bboxrect.xmax ||
         bboxrect.ymin == bboxrect.ymax) &&
         minlinewidth >= 0.001
        ) {
-	SRECT r = bboxrect;
-	msg("<debug> Shape has size 0");
+	msg("<debug> Shape has size 0: width=%.2f height=%.2f",
+		(bboxrect.xmax-bboxrect.xmin)/20.0,
+		(bboxrect.ymax-bboxrect.ymin)/20.0
+		);
     
+	SRECT r = bboxrect;
+	
 	if(r.xmin == r.xmax && r.ymin == r.ymax) {
 	    /* this thing comes down to a single dot- nothing to fix here */
 	    return;
 	}
 
-	double x=0,y=0;
-	if(r.xmin == r.xmax) {
-	    x = minlinewidth;
-	} else {
-	    y = minlinewidth;
-	}
-	/* warning: doing this inside endshape() is dangerous */
-	moveto(tag, r.xmin/20.0    , r.ymin/20.0);
-	lineto(tag, r.xmax/20.0 + x, r.ymin/20.0);
-	lineto(tag, r.xmax/20.0 + x, r.ymax/20.0 + y);
-	lineto(tag, r.xmin/20.0    , r.ymax/20.0 + y);
-	lineto(tag, r.xmin/20.0    , r.ymin/20.0);
+	cancelshape(obj);
+
+	RGBA save_col = obj->strokergb;
+	int  save_width = linewidth;
+
+	obj->strokergb = obj->fillrgb;
+	linewidth = (int)(minlinewidth*20);
+	if(linewidth==0) linewidth = 1;
+	
+	startshape(obj);
+
+	moveto(tag, r.xmin/20.0,r.ymin/20.0);
+	lineto(tag, r.xmax/20.0,r.ymax/20.0);
+
+	obj->strokergb = save_col;
+	linewidth = save_width;
     }
     
 }
 
-static void endshape(int clipdepth)
+static void endshape(swfoutput*obj, int clipdepth)
 {
     if(shapeid<0) 
         return;
 
     if(!clipdepth)
-	fixAreas();
+	fixAreas(obj);
 	
     if(shapeisempty ||
        (bboxrect.xmin == bboxrect.xmax && bboxrect.ymin == bboxrect.ymax)) 
     {
-	// delete the tag again, we didn't do anything
-	TAG*todel = tag;
-	tag = tag->prev;
-	swf_DeleteTag(todel);
-	shapeid = -1;
-	bboxrectpos = -1;
+	// delete the shape again, we didn't do anything
+	cancelshape(obj);
 	return;
     }
     
@@ -1522,7 +1536,7 @@ static void endshape(int clipdepth)
 static void endpage(struct swfoutput*obj)
 {
     if(shapeid>=0)
-      endshape(0);
+      endshape(obj,0);
     if(textid>=0)
       endtext(obj);
     while(clippos)
@@ -1619,7 +1633,7 @@ void swfoutput_setfillcolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
        obj->fillrgb.b == b &&
        obj->fillrgb.a == a) return;
     if(shapeid>=0)
-     endshape(0);
+     endshape(obj,0);
 
     obj->fillrgb.r = r;
     obj->fillrgb.g = g;
@@ -1635,7 +1649,7 @@ void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
        obj->strokergb.a == a) return;
 
     if(shapeid>=0)
-     endshape(0);
+     endshape(obj,0);
     obj->strokergb.r = r;
     obj->strokergb.g = g;
     obj->strokergb.b = b;
@@ -1648,7 +1662,7 @@ void swfoutput_setlinewidth(struct swfoutput*obj, double _linewidth)
         return;
 
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     linewidth = (u16)(_linewidth*20);
 }
 
@@ -1658,7 +1672,7 @@ void swfoutput_startclip(swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m)
     if(textid>=0)
      endtext(obj);
     if(shapeid>=0)
-     endshape(0);
+     endshape(obj,0);
 
     if(clippos >= 127)
     {
@@ -1686,7 +1700,7 @@ void swfoutput_endclip(swfoutput*obj)
     if(textid>=0)
 	endtext(obj);
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
 
     if(!clippos) {
         msg("<error> Invalid end of clipping region");
@@ -1712,7 +1726,7 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     }
     
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
     
@@ -1729,7 +1743,7 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
     ActionTAG* actions;
 
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
    
@@ -1749,7 +1763,7 @@ void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
     char mouseover = 1;
 
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
 
@@ -2016,7 +2030,7 @@ int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,i
 {
     TAG*oldtag;
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
 
@@ -2044,7 +2058,7 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey,
     JPEGBITS*jpeg;
 
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
 
@@ -2065,7 +2079,7 @@ int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int si
 {
     TAG*oldtag;
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
 
@@ -2092,7 +2106,7 @@ int swfoutput_drawimagelosslessN(struct swfoutput*obj, U8*mem, RGBA*pal, int siz
     TAG*oldtag;
     U8*mem2 = 0;
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
 
@@ -2136,7 +2150,7 @@ void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey,
 {
     if(id<0) return;
     if(shapeid>=0)
-	endshape(0);
+	endshape(obj,0);
     if(textid>=0)
 	endtext(obj);
 
