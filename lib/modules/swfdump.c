@@ -65,6 +65,8 @@ char* swf_TagGetName(TAG*tag)
             return "DEFINEFONT";
         case ST_DEFINETEXT:
             return "DEFINETEXT";
+        case ST_DEFINEEDITTEXT:
+            return "DEFINEEDITTEXT";
         case ST_DOACTION:
             return "DOACTION";
         case ST_DEFINEFONTINFO:
