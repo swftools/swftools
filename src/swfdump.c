@@ -474,6 +474,11 @@ int main (int argc,char ** argv)
             continue;
         }
         printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
+	
+	if(tag->id == ST_FREECHARACTER) {
+	    U16 id = swf_GetU16(tag);
+	    idtab[id] = 0;
+	}
 
         if(swf_isDefiningTag(tag)) {
             U16 id = swf_GetDefineID(tag);
