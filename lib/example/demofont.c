@@ -115,6 +115,7 @@ SWFFONT * Font_Demo_Font(U16 id)
   f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*6);
   f->glyph2ascii = (U16*)malloc(sizeof(U16)*6);
   f->ascii2glyph = (int*)malloc(sizeof(int)*256);
+  memset(f->ascii2glyph, -1, sizeof(int)*256);
 
   addGlyph(f, 0, 102,  64, &Glyphs_Demo_Font[0x0000], 872); // f
   addGlyph(f, 1, 108,  53, &Glyphs_Demo_Font[0x006d], 452); // l
