@@ -63,6 +63,7 @@ ${name}/lib/drawer.c \
 ${name}/lib/drawer.h \
 ${name}/lib/example/Makefile \
 ${name}/lib/example/box.c \
+${name}/lib/example/protect.c \
 ${name}/lib/example/dumpfont.c \
 ${name}/lib/example/demofont.c \
 ${name}/lib/example/text.c \
