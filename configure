@@ -1388,14 +1388,14 @@ echo "Error: The zlib compression library is required."
  
 fi
 
- echo $ac_n "checking for jpeg_write_raw_data in -ljpeg""... $ac_c" 1>&6
-echo "configure:1393: checking for jpeg_write_raw_data in -ljpeg" >&5
-ac_lib_var=`echo jpeg'_'jpeg_write_raw_data | sed 'y%./+-%__p_%'`
+ echo $ac_n "checking for jpeg_write_raw_data in -lxjpeg""... $ac_c" 1>&6
+echo "configure:1393: checking for jpeg_write_raw_data in -lxjpeg" >&5
+ac_lib_var=`echo xjpeg'_'jpeg_write_raw_data | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_save_LIBS="$LIBS"
-LIBS="-ljpeg  $LIBS"
+LIBS="-lxjpeg  $LIBS"
 cat > conftest.$ac_ext <<EOF
 #line 1401 "configure"
 #include "confdefs.h"
@@ -1423,13 +1423,13 @@ LIBS="$ac_save_LIBS"
 fi
 if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
   echo "$ac_t""yes" 1>&6
-    ac_tr_lib=HAVE_LIB`echo jpeg | sed -e 's/[^a-zA-Z0-9_]/_/g' \
+    ac_tr_lib=HAVE_LIB`echo xjpeg | sed -e 's/[^a-zA-Z0-9_]/_/g' \
     -e 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/'`
   cat >> confdefs.h <<EOF
 #define $ac_tr_lib 1
 EOF
 
-  LIBS="-ljpeg $LIBS"
+  LIBS="-lxjpeg $LIBS"
 
 else
   echo "$ac_t""no" 1>&6
@@ -2793,20 +2793,24 @@ fi
 done
 
 
+export JPEG2SWF='jpeg2swf$(EXEEXT)'
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
   echo "Disabling pdf2swf tool..."
   rm pdf2swf/Makefile
   echo all: > pdf2swf/Makefile
+  echo install: >> pdf2swf/Makefile
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
     echo "Disabling jpeg2swf tool..."
-      fi
+    export JPEG2SWF=
+  fi
   echo "***************************************************"
   FILES="./release Makefile lib/Makefile src/Makefile"
 else
   FILES="./release Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/fonts/Makefile"
 fi
+
 
 trap '' 1 2 15
 cat > confcache <<\EOF
@@ -2956,6 +2960,7 @@ s%@PACKAGE@%$PACKAGE%g
 s%@VERSION@%$VERSION%g
 s%@HAVE_UNISTD_H@%$HAVE_UNISTD_H%g
 s%@LIBOBJS@%$LIBOBJS%g
+s%@JPEG2SWF@%$JPEG2SWF%g
 
 CEOF
 EOF
