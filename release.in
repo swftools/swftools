@@ -1,7 +1,6 @@
 #!/bin/sh
-echo @INSTALL@
-echo @CPPFLAGS@
 name=@PACKAGE@-@VERSION@
+echo creating $name.tar.gz
 rm -f ${name}
 rm -f ${name}.tar
 rm -f ${name}.tar.gz
