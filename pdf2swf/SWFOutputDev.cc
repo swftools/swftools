@@ -741,7 +741,7 @@ int SWFOutputDev::setT1Font(char*name, FontEncoding*encoding)
 
 void SWFOutputDev::updateLineWidth(GfxState *state)
 {
-    double width = state->getLineWidth();
+    double width = state->getTransformedLineWidth();
     swfoutput_setlinewidth(&output, width);
 }
 
