@@ -171,8 +171,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     U8*data;
     U8*imagedata;
     unsigned long int imagedatalen;
-    U8*palette;
-    int palettelen;
+    U8*palette = 0;
+    int palettelen = 0;
     struct png_header header;
     int bypp;
 
@@ -249,6 +249,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	U8*data2 = malloc((header.width+4)*header.height);
 	int i,x,y;
 	int pos=0;
+	if(!palette) {
+	    fprintf(stderr, "Error: No palette found!\n");
+	    exit(1);
+	}
 	/* 24->32 bit conversion */
 	for(i=0;i<palettelen;i++) {
 	    rgba[i].r = palette[i*3+0];
@@ -464,7 +468,6 @@ void args_callback_usage(char *name)
     printf("-Y pixel              (height) Force movie height to pixel (default: autodetect)\n");
     printf("-v level              (verbose) Set verbose level (0=quiet, 1=default, 2=debug)\n");
     printf("-V                    (version) Print version information and exit\n");
-    printf("The following options can be set independently for each image: -q -s\n");
 }
 
 

@@ -121,7 +121,7 @@ int main (int argc,char ** argv)
       tag = swf_InsertTag(tag, ST_SOUNDSTREAMBLOCK);
       logf("<notice> Writing block %d", t);
       block1 = &samples[t*2*blocksize];
-      swf_SetSoundStreamBlock(tag, block1, blocksize*2,1);
+      swf_SetSoundStreamBlock(tag, block1, 1);
       tag = swf_InsertTag(tag, ST_SHOWFRAME);
   }
 

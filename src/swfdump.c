@@ -402,7 +402,8 @@ void dumperror(const char* format, ...)
     vsprintf(buf, format, arglist);
     va_end(arglist);
 
-    printf("==== Error: %s ====\n", buf);
+    if(!html && !xy)
+	printf("==== Error: %s ====\n", buf);
 }
 
 int main (int argc,char ** argv)
