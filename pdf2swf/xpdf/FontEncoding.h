@@ -43,7 +43,7 @@ public:
   void addChar(int code, char *name);
 
   // Return the character name associated with <code>.
-  char *getCharName(int code) { return encoding[code]; }
+  char *getCharName(int code) { return code>=size?0:encoding[code]; }
 
   // Return the code associated with <name>.
   int getCharCode(char *name);
