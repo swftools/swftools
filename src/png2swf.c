@@ -50,7 +50,7 @@ TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
-    rgb.g = 0xff;
+    //rgb.g = 0xff; <--- handy for testing alpha conversion
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -349,7 +349,7 @@ void applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
 	    lastr = dest[1];
 	    lastg = dest[2];
 	    lastb = dest[3];
-	    upperlastr = old[0];
+	    upperlasta = old[0];
 	    upperlastr = old[1];
 	    upperlastg = old[2];
 	    upperlastb = old[3];
