@@ -372,7 +372,7 @@ void handleEditText(TAG*tag)
    //  printf(" text \"%s\"\n", &tag->data[tag->pos])
 	;
 }
-void printhandlerflags(U16 handlerflags) 
+void printhandlerflags(U32 handlerflags) 
 {
     if(handlerflags&1) printf("[on load]");
     if(handlerflags&2) printf("[enter frame]");
@@ -382,8 +382,20 @@ void printhandlerflags(U16 handlerflags)
     if(handlerflags&32) printf("[mouse up]");
     if(handlerflags&64) printf("[key down]");
     if(handlerflags&128) printf("[key up]");
+
     if(handlerflags&256) printf("[data]");
-    if(handlerflags&0xfe00) printf("[???]");
+    if(handlerflags&512) printf("[initialize]");
+    if(handlerflags&1024) printf("[mouse press]");
+    if(handlerflags&2048) printf("[mouse release]");
+    if(handlerflags&4096) printf("[mouse release outside]");
+    if(handlerflags&8192) printf("[mouse rollover]");
+    if(handlerflags&16384) printf("[mouse rollout]");
+    if(handlerflags&32768) printf("[mouse drag over]");
+
+    if(handlerflags&0x10000) printf("[mouse drag out]");
+    if(handlerflags&0x20000) printf("[key press]");
+    if(handlerflags&0x40000) printf("[construct even]");
+    if(handlerflags&0xfff80000) printf("[???]");
 }
 void handleVideoStream(TAG*tag, char*prefix)
 {
@@ -492,19 +504,20 @@ void handlePlaceObject2(TAG*tag, char*prefix)
     }
     if(flags&128) {
       if (action) {
-	U16 unknown;
+	U16 reserved;
 	U32 globalflags;
 	U32 handlerflags;
 	char is32 = 0;
 	printf("\n");
-	unknown = swf_GetU16(tag);
-	globalflags = swf_GetU16(tag);
-	if(unknown) {
-	    printf("Unknown parameter field not zero: %04x\n", unknown);
+	reserved = swf_GetU16(tag); // must be 0
+	globalflags = swf_GetU16(tag); //TODO: 32 if version>=6
+	if(reserved) {
+	    printf("Unknown parameter field not zero: %04x\n", reserved);
 	    return;
 	}
 	printf("global flags: %04x\n", globalflags);
-	handlerflags = swf_GetU16(tag);
+
+	handlerflags = swf_GetU16(tag); //TODO: 32 if version>=6
 	if(!handlerflags) {
 	    handlerflags = swf_GetU32(tag);
 	    is32 = 1;
@@ -523,7 +536,7 @@ void handlePlaceObject2(TAG*tag, char*prefix)
 	    swf_DumpActions(a,prefix);
 	    swf_ActionFree(a);
 
-	    handlerflags = is32?swf_GetU32(tag):swf_GetU16(tag);
+	    handlerflags = is32?swf_GetU32(tag):swf_GetU16(tag); //TODO: 32 if version>=6
 	}
 	if(globalflags) // should go to sterr.
 	    printf("ERROR: unsatisfied handlerflags: %02x\n", globalflags);
