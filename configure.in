@@ -3,10 +3,6 @@ AC_INIT(pdf2swf/swfoutput.h)
 AM_INIT_AUTOMAKE(swftools, 0.0.2)
 AC_ARG_PROGRAM
 
-dnl Checks for system services
- AC_CYGWIN
- AC_EXEEXT
-
 export CFLAGS
 CFLAGS="-O2 -fomit-frame-pointer"
 export CXXFLAGS
@@ -20,6 +16,10 @@ dnl Checks for programs.
  AC_PROG_MAKE_SET
  AC_PROG_INSTALL
  AC_PROG_LN_S
+
+dnl Checks for system services
+ AC_CYGWIN
+ AC_EXEEXT
 
 dnl Checks for libraries.
  AC_CHECK_LIB(m, sin,, echo "Error: Math library not found.";exit)
