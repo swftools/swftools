@@ -450,7 +450,7 @@ int   swf_ShapeSetEnd(TAG * t);
 
 void  swf_ShapeSetBitmapRect(TAG * t, U16 gfxid, int width, int height);
 
-SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
+//SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
 SHAPE2*	   swf_ShapeToShape2(SHAPE*shape);
 void	   swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
 SRECT	   swf_GetShapeBoundingBox(SHAPE2*shape);
