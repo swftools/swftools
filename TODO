@@ -24,9 +24,16 @@ swfextract:
     * mp3 extraction should also work for movieclips and definesound.
     * improve placeobject handling
 
+swfdump:
+    
+    * write out dependencies between objects
+
+lib/examples:
+
+    * make an example for edittext fields
+
 rfxswf-lib:
    
-    * swf_WriteFont() should write definefont2 tags for more complex fonts
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
     * (s/GetFrameNo/GetTagFrameNo/g ?)

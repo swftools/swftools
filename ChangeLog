@@ -72,4 +72,8 @@
 	* src/swfdump: Bugfixes, ids and depths are now in decimal
 	* src/swfcombine: Bugfixes.
 	* configure.in: Cleaned up.
+0.2.4:
+	* pdf2swf: The --ignore option now actually makes the pdf files smaller.
+	* rfxswf: Can now write DefineFont2 tags
+	* swfextract: Bugfixes (DefineEditText)
 
