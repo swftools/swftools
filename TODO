@@ -25,6 +25,7 @@ General Improvements:
     * fix memory leaks
     * rfxswf: modules/swfshape doesn't allow changing to fillstyle 0
     * consistent output handling if -o is missing. (out.swf/stdout)
+    * swfcombine: Allow substituting frames (which have a name), too?
 
 Cleanups in rfxswf-lib:
     
