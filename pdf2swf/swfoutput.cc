@@ -519,7 +519,9 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     
     outline = (T1_OUTLINE**)malloc(t*sizeof(T1_OUTLINE*));
     charname = (char**)malloc(t*sizeof(char*));
-    memset(charname, t*sizeof(char*), 0);
+    width = (int*)malloc(t*sizeof(int));
+    memset(width, 0, t*sizeof(int));
+    memset(charname, 0, t*sizeof(char*));
     used = (char*)malloc(t*sizeof(char));
     char2swfcharid = (U16*)malloc(t*2);
     swfcharid2char = (U16*)malloc(t*2);
@@ -554,6 +556,7 @@ SWFFont::SWFFont(char*name, int id, char*filename)
             for(s=0;s<t;s++)
             {
                 this->outline[outlinepos] = T1_CopyOutline(T1_GetCharOutline(id, s, 100.0, 0));
+		this->width[outlinepos] = T1_GetCharWidth(id, s);
                 this->charname[outlinepos] = strdup(T1_GetCharName(id, s));
                 outlinepos++;
             }
@@ -645,6 +648,7 @@ SWFFont::~SWFFont()
     for(t=0;t<charnum;t++)
         free(charname[t]);
     free(charname);
+    free(width);
     free(used);
     free(swfcharid2char);
     free(char2swfcharid);
