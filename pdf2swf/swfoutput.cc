@@ -97,8 +97,8 @@ typedef struct _swfoutput_internal
     int lastwasfill;
     int shapeisempty;
     char fill;
-    int max_x;
-    int max_y;
+    int min_x,max_x;
+    int min_y,max_y;
     TAG* cliptags[128];
     int clipshapes[128];
     U32 clipdepths[128];
@@ -1507,6 +1507,8 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
         swf_PlaceObjectFree(&obj);
     }
 
+    i->min_x = x1;
+    i->min_y = y1;
     i->max_x = x2;
     i->max_y = y2;
     
@@ -1718,8 +1720,15 @@ static void endshape(swfoutput*obj, int clipdepth)
 	fixAreas(obj);
 	
     if(i->shapeisempty ||
+       /*bbox empty?*/
        (i->bboxrect.xmin == i->bboxrect.xmax && 
-        i->bboxrect.ymin == i->bboxrect.ymax)) 
+        i->bboxrect.ymin == i->bboxrect.ymax) ||
+       /*bbox outside page?*/
+       (i->bboxrect.xmax <= i->min_x ||
+	i->bboxrect.ymax <= i->min_y ||
+	i->bboxrect.xmin >= i->max_x ||
+	i->bboxrect.ymin >= i->max_y)
+       ) 
     {
 	// delete the shape again, we didn't do anything
 	cancelshape(obj);
