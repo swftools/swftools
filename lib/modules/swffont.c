@@ -51,6 +51,11 @@ void swf_SetLoadFontParameters(int _scale, int _skip_unused, int _full_unicode)
 #include <freetype/ftoutln.h>
 #endif
 
+/* Setting subpixels to 64 also means that the "point size" of the
+   font outlines will be 64. So the font, when rendered at original
+   size (i.e., the swf fontsize is 1024) will have the same size as
+   if it was rendered at 64pt */
+
 #define FT_SCALE 1
 #define FT_SUBPIXELS 64
 
