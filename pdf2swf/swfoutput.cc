@@ -206,8 +206,10 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
     T1_OUTLINE*outline = font->getOutline(character);
     char* charname = character;
 
-    if(!outline)
+    if(!outline) {
+     logf("Didn't find %s in current charset", character);
      return;
+    }
     
     swfmatrix m2=*m;    
     m2.m11/=100;
@@ -251,7 +253,7 @@ SWFFont::SWFFont(char*name, int id, char*filename)
 	T1_LoadFont(id);
 
     this->name = strdup(T1_GetFontFileName(id));
-    this->fontid = name;
+    this->fontid = strdup(name);
     this->t1id = id;
 
     char**a= T1_GetAllCharNames(id);
