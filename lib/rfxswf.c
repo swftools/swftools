@@ -1229,7 +1229,10 @@ void swf_OptimizeTagOrder(SWF*swf)
 	  tag->next = level0;
 	  tag->prev = level0->prev;
 	  level0->prev = tag;
-	  tag->prev->next = tag;
+          if(tag->prev)
+	    tag->prev->next = tag;
+          else
+            swf->firstTag = tag;
 	  changes = 1;
 	}
       }
