@@ -20,7 +20,7 @@ swfcombine:
 
 swfextract:
     
-    * add support for extraction of sounds into mp3
+    * mp3 extraction should also work for movieclips and definesound.
     * improve placeobject handling
 
 rfxswf-lib:

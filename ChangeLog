@@ -58,9 +58,10 @@
 0.2.2:	
 	* swfs/: Added/Wrote sources for some of the swf files 
 	* swfdump: Major bugfix in placeobject2, hex output function
-	* swfextract: Can now extract png and jpeg.
+	* swfextract: Can now extract png, jpeg and mp3.
 	* swfcombine: big endian fixes
 	* swfextract: big endian fixes
-	* lib/example/avi2swf.cc: Can now handle big files. Better compression ratio.
 	* pdf2swf: Changed from 100dpi to 72dpi conversion
+	* lib/: Added Bladeenc 0.94.1 for mp3 compression
+	* lib/example/avi2swf.cc: Can now handle big files. Better compression ratio. Sound.
 
