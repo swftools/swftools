@@ -957,7 +957,8 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     }
 
     swf_Relocate (slave, masterbitmap);
-    swf_RelocateDepth (slave, depthbitmap);
+    if(config.merge)
+	swf_RelocateDepth (slave, depthbitmap);
     jpeg_assert(slave, master);
     
     if (config.overlay)
