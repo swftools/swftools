@@ -338,7 +338,6 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors)
 { RGBA * pal = palette;
   int bps = BYTES_PER_SCANLINE(width);
-  U8 * data;
   int res = 0;
     
   if (!pal)     // create default palette for grayscale images
@@ -413,12 +412,9 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
 
         deflateEnd(&zs);
 
-        if (zs.next_out>data) swf_SetBlock(t,data,zs.next_out-data);
-
         free(zpal);
       } else res = -2; // memory error
     } else res = -3; // zlib error
-    free(data);
   }
   
   if (!palette) free(pal);
