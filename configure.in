@@ -23,8 +23,8 @@ dnl Checks for programs.
 
 dnl Checks for libraries.
  AC_CHECK_LIB(m, sin,, echo "Error: Math library not found.";exit)
- AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, echo "Error: The jpeg library jpeglib is required.";exit)
- AC_CHECK_LIB(z, crc32,, echo "Error: The zlib compressiong handling library is required.";exit)
+ AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, echo "Error: The jpeg library 'jpeglib' is required.";exit)
+ AC_CHECK_LIB(z, crc32,, echo "Error: The zlib compression library is required.";exit)
  AC_CHECK_LIB(t1, T1_LoadFont,,echo "Error: the T1lib truetype handling library is required.";exit)
 dnl do we need those?
  AC_CHECK_LIB(pthread, pthread_create)
