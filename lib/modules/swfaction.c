@@ -238,7 +238,7 @@ int OpAdvance(char c, char*data)
     return 0;
 }
 
-/* TODO: this should be in swfdump.c */
+/* TODO: * this should be in swfdump.c */
 void swf_DumpActions(ActionTAG*atag, char*prefix) 
 {
     int t;
@@ -277,7 +277,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 	    switch(*cp)
 	    {
 		case 'f': {
-		    printf(" %d", *(U16*)data); //FIXME: le/be
+		    printf(" %d", SWAP16(*(U16*)data));
 		} break;
 		case 'u': {
 		    printf(" URL:\"%s\"", data);
@@ -316,7 +316,8 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    if(type == 0) {
 			printf(" String:\"%s\"", value);
 		    } else if (type == 1) {
-			printf(" Float:%f", *(float*)value);
+			U32 v = SWAP32(*(U32*)value);
+			printf(" Float:%f", *(float*)&v);
 		    } else if (type == 2) {
 			printf(" NULL");
 		    } else if (type == 4) {
@@ -324,9 +325,17 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    } else if (type == 5) {
 			printf(" bool:%s", *value?"true":"false");
 		    } else if (type == 6) {
-			printf(" float:%f", *(double*)value);
+#ifdef WORDS_BIGENDIAN
+			U8 a[8];
+			int t;
+			for(t=0;t<8;t++)
+			    a[7-t]=value[t];
+			printf(" double:%f", *(double*)a);
+#else
+			printf(" double:%f", *(double*)value);
+#endif
 		    } else if (type == 7) {
-			printf(" int:%d", *(int*)value);
+			printf(" int:%d", SWAP32(*(int*)value));
 		    } else if (type == 8) {
 			printf(" Lookup:%d", *value);
 #ifdef MAX_LOOKUP
@@ -650,7 +659,7 @@ void action_fixjump(ActionMarker m1, ActionMarker m2)
 
     if (a1->op == ACTION_IF || a1->op == ACTION_JUMP) 
     {
-	*(U16*)(a1->data) = len;
+	*(U16*)(a1->data) = SWAP16(len);
     }
     else if(a1->op == ACTION_WAITFORFRAME)
     {
@@ -740,17 +749,17 @@ void action_Call() {swf_AddActionTAG(ACTION_CALL, 0, 0);}
 void action_End() {swf_AddActionTAG(ACTION_END, 0, 0);}
 void action_GotoFrame(U16 frame) 
 {
-    *(U16*)currentatag->tmp = frame;
+    *(U16*)currentatag->tmp = SWAP16(frame);
     swf_AddActionTAG(ACTION_GOTOFRAME, (U8*)currentatag->tmp, 2);
 }
 void action_Jump(U16 branch) 
 {
-    *(U16*)currentatag->tmp = branch;
+    *(U16*)currentatag->tmp = SWAP16(branch);
     swf_AddActionTAG(ACTION_JUMP, (U8*)currentatag->tmp, 2);
 }
 void action_If(U16 branch) 
 {
-    *(U16*)currentatag->tmp = branch;
+    *(U16*)currentatag->tmp = SWAP16(branch);
     swf_AddActionTAG(ACTION_IF, (U8*)currentatag->tmp, 2);
 }
 void action_StoreRegister(U8 reg) 
@@ -775,7 +784,7 @@ void action_WaitForFrame2(U8 skip)
 }
 void action_WaitForFrame(U16 frame, U8 skip) 
 {
-    *(U16*)currentatag->tmp = frame;
+    *(U16*)currentatag->tmp = SWAP16(frame);
     *(U8*)&currentatag->tmp[2] = skip;
     swf_AddActionTAG(ACTION_WAITFORFRAME, (U8*)currentatag->tmp, 3);
 }
@@ -818,21 +827,39 @@ void action_PushString(char*str)
 void action_PushFloat(float f)
 {
     char*ptr = (char*)malloc(5);
+    U32 fd = *(U32*)&f;
     ptr[0] = 1; //float
-    *(float*)&ptr[1]  = f;
+    ptr[1]  = fd;
+    ptr[2]  = fd>>8;
+    ptr[3]  = fd>>16;
+    ptr[4]  = fd>>24;
     swf_AddActionTAG(ACTION_PUSH, (U8*)ptr, 5);
 }
 void action_PushDouble(double d) 
 {
     char*ptr = (char*)malloc(9);
+    U8*dd = (U8*)&d;
     ptr[0] = 6; //double
-    *(double*)&ptr[1]  = d;
+#ifdef WORDS_BIGENDIAN
+    ptr[1] = dd[7];ptr[2] = dd[6];
+    ptr[3] = dd[5];ptr[4] = dd[4];
+    ptr[5] = dd[3];ptr[6] = dd[2];
+    ptr[7] = dd[1];ptr[8] = dd[0];
+#else
+    ptr[1] = dd[0];ptr[2] = dd[1];
+    ptr[3] = dd[2];ptr[4] = dd[3];
+    ptr[5] = dd[4];ptr[6] = dd[5];
+    ptr[7] = dd[6];ptr[8] = dd[7];
+#endif
     swf_AddActionTAG(ACTION_PUSH, (U8*)ptr, 9);
 }
 void action_PushInt(int i)
 {
     *(U8*)currentatag->tmp = 7; //int
-    *(U32*)&currentatag->tmp[1] = i;
+    currentatag->tmp[1] = i;
+    currentatag->tmp[2] = i>>8;
+    currentatag->tmp[3] = i>>16;
+    currentatag->tmp[4] = i>>24;
     swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 5);
 }
 void action_GotoLabel(char* label)
