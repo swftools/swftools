@@ -28,6 +28,7 @@
 #include "depack.h"
 
 #include "../config.h" //for swftools version
+#include "../lib/os.h" //for registry functions
 
 extern char*crndata;
 
@@ -37,6 +38,8 @@ static int do_abort = 0;
 
 static HWND wnd_progress = 0;
 static HWND wnd_params = 0;
+
+static HBITMAP logo;
 
 #define USER_SETMESSAGE 0x7f01
 
@@ -108,6 +111,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		data.bar_posx = (data.width -data.bar_width)/2;
 		data.bar_posy = 56;
 		data.range = 50;
+
 		data.hwndButton = CreateWindow (
 			PROGRESS_CLASS,
 			"Progress",
@@ -123,9 +127,9 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			);
 
 		data.wnd_text3 = CreateWindow (
-			WC_EDIT,
+			WC_STATIC,
 			"text3",
-			WS_CHILD | WS_VISIBLE | ES_READONLY | ES_CENTER,
+			WS_CHILD | WS_VISIBLE,
 			data.bar_posx,
 			72,
 			(rc.right - rc.left - data.bar_posx*2), 
@@ -158,8 +162,16 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 GetTextMetrics(hdc, &tm);
                 ReleaseDC(hwnd, hdc);
 
-
 		hdc = BeginPaint (hwnd, &ps);
+
+		/*
+		// draw logo 
+		HDC memDc=CreateCompatibleDC(hdc);
+		SelectObject(memDc,logo);
+		BitBlt(hdc,0,0,406,93,memDc,0,0,SRCCOPY);
+		DeleteDC(memDc);
+		// /
+		*/
 
 		SetBkMode(hdc, TRANSPARENT);
 		
@@ -210,7 +222,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			data.width-32*2, 
 			20,
 			hwnd,  /* Parent */
-			(HMENU)1,
+			0,
 			cs->hInstance,
 			NULL
 			);
@@ -231,7 +243,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		
 		data.explore = CreateWindow (
 			WC_BUTTON,
-			"Explore",
+			"Browse",
 			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 			data.width-32-64,
 			48,
@@ -371,27 +383,10 @@ void myarchivestatus(int type, char*text)
     }
 }
 
-static int regEnter(char*key,char*value)
-{
-    HKEY hkey;
-    int ret = 0;
-    ret = RegCreateKey(HKEY_LOCAL_MACHINE, key, &hkey);
-    if(ret != ERROR_SUCCESS) {
-	fprintf(stderr, "registry: CreateKey %s failed\n", key);
-	return 0;
-    }
-    ret = RegSetValue(hkey, NULL, REG_SZ, value, strlen(value)+1);
-    if(ret != ERROR_SUCCESS) {
-	fprintf(stderr, "registry: SetValue %s failed\n", key);
-	return 0;
-    }
-    return 1;
-}
-
 int addRegistryEntries(char*install_dir)
 {
     int ret;
-    ret = regEnter("Software\\quiss.org\\swftools\\InstallPath", install_dir);
+    ret = setRegistryEntry("Software\\quiss.org\\swftools\\InstallPath", install_dir);
     if(!ret) return 0;
     return 1;
 }
@@ -412,13 +407,19 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     wcl.cbWndExtra   = 0;
     //wcl.hbrBackground= (HBRUSH) GetStockObject(DKGRAY_BRUSH);
     //wcl.hbrBackground= (HBRUSH) GetStockObject (WHITE_BRUSH);
-    wcl.hbrBackground= (HBRUSH) GetStockObject (LTGRAY_BRUSH);
+    wcl.hbrBackground= (HBRUSH) GetStockObject(LTGRAY_BRUSH);
     //wcl.hbrBackground= (HBRUSH) GetStockObject (GRAY_BRUSH);
     wcl.cbSize       = sizeof(WNDCLASSEX);
 
-    if(!RegisterClassEx (&wcl)) {
+    if(!RegisterClassEx(&wcl)) {
 	return 0;
     }
+    
+    logo = LoadBitmap(me, "SWFTOOLS");
+    
+    install_path = getRegistryEntry("Software\\quiss.org\\swftools\\InstallPath");
+    if(!install_path || !install_path[0])
+	install_path = "c:\\swftools\\";
 
     CoInitialize(0);
     InitCommonControls();
@@ -473,7 +474,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     ShowWindow (wnd_progress, nWinMode);
     UpdateWindow (wnd_progress);
     
-    int success = unpack_archive(crndata, "C:\\swftools\\", myarchivestatus);
+    int success = unpack_archive(crndata, install_path, myarchivestatus);
    
     DestroyWindow(wnd_progress);
 
