@@ -18,7 +18,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2004-11-23-2234
+VERSION=2005-01-09-1739
 
 
 # ------------------------------------------------------------------
@@ -172,6 +172,7 @@ dnl Checks for libraries.
  AC_CHECK_LIB(z, deflate,, ZLIBMISSING=true)
  AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
  AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
+ AC_CHECK_LIB(ungif, EGifOpenFileName,, UNGIFMISSING=true)
 
 RFX_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
@@ -184,7 +185,7 @@ dnl Checks for header files.
  AC_CONFIG_HEADER(config.h)
  AC_HEADER_DIRENT
  AC_HEADER_STDC
- AC_CHECK_HEADERS(zlib.h jpeglib.h t1lib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h)
+ AC_CHECK_HEADERS(zlib.h gif_lib.h jpeglib.h t1lib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h)
 
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE")
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
@@ -304,6 +305,10 @@ fi
 if test "x$T1LIBMISSING" = "xtrue";then
     MISSINGLIBS="${MISSINGLIBS} t1lib"
 fi
+if test "x$UNGIFMISSING" = "xtrue";then
+    DISABLEGIF2SWF=true
+    MISSINGLIBS="${MISSINGLIBS} ungif"
+fi
 
 if test "x${ac_cv_header_jpeglib_h}" '!=' "xyes"; then
     DISABLEPDF2SWF=true;
@@ -318,6 +323,11 @@ if test "x$HAVE_FREETYPE" '!=' "x1"; then
 fi
 if test "x${ac_cv_header_t1lib_h}" '!=' "xyes"; then
     MISSINGLIBS="${MISSINGLIBS} t1lib.h"
+fi
+if test "x${ac_cv_header_gif_lib_h}" '!=' "xyes"; then
+    DISABLEGIF2SWF=true
+    MISSINGLIBS="${MISSINGLIBS} gif_lib.h"
+    PARTIAL=true
 fi
 if test "x${ac_cv_header_zlib_h}" '!=' "xyes"; then
     DISABLEPNG2SWF=true;
@@ -366,6 +376,14 @@ if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
 fi
 export JPEG2SWF
 AC_SUBST(JPEG2SWF)
+
+GIF2SWF='gif2swf$(E)'
+if test "x${DISABLEGIF2SWF}" = "xtrue"; then
+  echo "* Disabling gif2swf tool..."
+  GIF2SWF=
+fi
+export GIF2SWF
+AC_SUBST(GIF2SWF)
 
 PNG2SWF='png2swf$(E)'
 if test "x${DISABLEPNG2SWF}" = "xtrue"; then
