@@ -46,10 +46,9 @@
 #include "GlobalParams.h"
 //swftools header files
 #include "swfoutput.h"
-extern "C" {
 #include "../lib/log.h"
+
 #include "ttf2pt1.h"
-}
 
 #define logf logarithmf // logf is also used by ../lib/log.h
 #include <math.h>
@@ -1058,7 +1057,13 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	  char*tmp;
 	  tmp = strdup(mktmpname((char*)name2));
 	  sprintf(name2, "%s", tmp);
-	  char*a[] = {"./ttf2pt1","-pttf","-b", tmpFileName, name2};
+	  char*a[] = {"./ttf2pt1",
+#ifndef USE_FREETYPE
+	      "-pttf",
+#else
+	      "-pft",
+#endif
+	      "-b", tmpFileName, name2};
 	  logf("<verbose> Invoking ttf2pt1...");
 	  ttf2pt1_main(5,a);
 	  unlink(tmpFileName);
