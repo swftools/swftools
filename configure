@@ -1517,7 +1517,7 @@ if test "${enable_lame+set}" = set; then
 fi;
 
 PACKAGE=swftools
-VERSION=2005-01-24-2220
+VERSION=0.6.3
 
 
 # ------------------------------------------------------------------
@@ -8675,9 +8675,9 @@ else
 fi
 
 
-echo "$as_me:$LINENO: checking for EGifOpenFileName in -lungif" >&5
-echo $ECHO_N "checking for EGifOpenFileName in -lungif... $ECHO_C" >&6
-if test "${ac_cv_lib_ungif_EGifOpenFileName+set}" = set; then
+echo "$as_me:$LINENO: checking for DGifOpen in -lungif" >&5
+echo $ECHO_N "checking for DGifOpen in -lungif... $ECHO_C" >&6
+if test "${ac_cv_lib_ungif_DGifOpen+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -8695,11 +8695,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char EGifOpenFileName ();
+char DGifOpen ();
 int
 main ()
 {
-EGifOpenFileName ();
+DGifOpen ();
   ;
   return 0;
 }
@@ -8726,20 +8726,20 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_ungif_EGifOpenFileName=yes
+  ac_cv_lib_ungif_DGifOpen=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_lib_ungif_EGifOpenFileName=no
+ac_cv_lib_ungif_DGifOpen=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_ungif_EGifOpenFileName" >&5
-echo "${ECHO_T}$ac_cv_lib_ungif_EGifOpenFileName" >&6
-if test $ac_cv_lib_ungif_EGifOpenFileName = yes; then
+echo "$as_me:$LINENO: result: $ac_cv_lib_ungif_DGifOpen" >&5
+echo "${ECHO_T}$ac_cv_lib_ungif_DGifOpen" >&6
+if test $ac_cv_lib_ungif_DGifOpen = yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBUNGIF 1
 _ACEOF
@@ -12999,6 +12999,9 @@ if test "$no_create" != yes; then
 fi
 
 
+#
+# On development trees, create snapshots of config.status
+#
 if test -f snapshot -a "x$CHECKMEM" = "x" -a "x$PROFILING" = "x";then
     if test "x${MINGW}" = "xyes"; then
 	echo cp config.status config.status.win32
