@@ -18,7 +18,7 @@ VERSION=0.5.1
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
-    WARNINGS="-Wall -Wno-unused -Wno-format"
+    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls"
 fi
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -216,6 +216,13 @@ JPEG2SWF='jpeg2swf$(E)'
 export JPEG2SWF
 PNG2SWF='png2swf$(E)'
 export PNG2SWF
+
+if test "x" = "x"; then
+    pythonrfxswf="lib/python/Makefile"
+else
+    echo all install uninstall clean: > lib/python/Makefile
+fi
+
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
@@ -240,9 +247,9 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
     echo "or write compressed Flash MX files!"
   fi
   echo "***************************************************"
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf}"
 else
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf}"
 fi
 AC_SUBST(JPEG2SWF)
 AC_SUBST(PNG2SWF)
