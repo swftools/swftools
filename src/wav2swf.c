@@ -29,6 +29,7 @@
 char * filename = 0;
 char * outputname = "output.swf";
 int verbose = 2;
+int stopframe0 = 0;
 
 #define DEFINESOUND_MP3 1 //define sound uses mp3?- undefine for raw sound.
 
@@ -43,6 +44,7 @@ struct options_t options[] =
  {"b","bitrate"},
  {"C","cgi"},
  {"V","version"},
+ {"S","stop"},
  {0,0}
 };
 
@@ -77,6 +79,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "v")) {
 	verbose ++;
+	return 0;
+    }
+    else if(!strcmp(name, "S")) {
+	stopframe0 = 1;
 	return 0;
     }
     else if(!strcmp(name, "C")) {
@@ -151,6 +157,8 @@ void args_callback_usage(char*name)
     printf("\t-b , --bitrate bps\t\t Set mp3 bitrate (default: 32)\n");
     printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
     printf("\t-C , --cgi\t\t\t For use as CGI- prepend http header, write to stdout\n");
+    printf("\t-S , --stop\t\t\t Stop the movie at frame 0\n");
+    printf("\t           \t\t\t (For use with flashsound.js)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -248,6 +256,17 @@ int main (int argc,char ** argv)
     rgb.g = 0xff;
     rgb.b = 0xff;
     swf_SetRGB(tag,&rgb);
+
+    if(stopframe0) {
+	ActionTAG*action = 0;
+	tag = swf_InsertTag(tag, ST_DOACTION);
+	action = action_Stop(action);
+	action = action_End(action);
+	swf_ActionSet(tag, action);
+	swf_ActionFree(action);
+
+	tag = swf_InsertTag(tag, ST_SHOWFRAME);
+    }
 	
     swf_mp3_bitrate = bitrate;
     swf_mp3_out_samplerate = samplerate;
