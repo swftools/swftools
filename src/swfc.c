@@ -389,7 +389,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     swf->firstTag = tag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
     swf->compressed = compress;
     swf_SetRGB(tag,&background);
-    
+
     if(stackpos==sizeof(stack)/sizeof(stack[0]))
 	syntaxerror("too many levels of recursion");
     
@@ -640,7 +640,7 @@ static void s_endSWF()
 	tag = removeFromTo(stack[stackpos].cut, tag);
 
     stackpos--;
-
+   
     swf = stack[stackpos].swf;
     filename = stack[stackpos].filename;
   
@@ -663,8 +663,9 @@ static void s_endSWF()
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize.xmax += 20; /* 1 by 1 pixels */
 	swf->movieSize.ymax += 20;
+	warning("Empty bounding box for movie");
     }
-
+    
     fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
     if(fi<0) {
 	syntaxerror("couldn't create output file %s", filename);
@@ -1821,15 +1822,27 @@ static char* lu(map_t* args, char*name)
 
 static int c_flash(map_t*args) 
 {
-    char* name = lu(args, "name");
+    char* filename = map_lookup(args, "filename");
     char* compressstr = lu(args, "compress");
     SRECT bbox = parseBox(lu(args, "bbox"));
     int version = parseInt(lu(args, "version"));
     int fps = (int)(parseFloat(lu(args, "fps"))*256);
     int compress = 0;
     RGBA color = parseColor(lu(args, "background"));
-    if(!strcmp(name, "!default!") || override_outputname)
-	name = outputname;
+
+    if(!filename || !*filename) {
+	/* for compatibility */
+	filename = map_lookup(args, "name");
+	if(!filename || !*filename) {
+	    filename = 0;
+	} else {
+	    //msg("<warning> line %d: .flash name=... is deprecated, use .flash filename=...", line);
+	    msg("<notice> line %d: .flash name=... is deprecated, use .flash filename=...", line);
+	}
+    }
+
+    if(!filename || override_outputname)
+	filename = outputname;
     
     if(!strcmp(compressstr, "default"))
 	compress = version==6;
@@ -1839,7 +1852,7 @@ static int c_flash(map_t*args)
 	compress = 0;
     else syntaxerror("value \"%s\" not supported for the compress argument", compressstr);
 
-    s_swf(name, bbox, version, fps, compress, color);
+    s_swf(filename, bbox, version, fps, compress, color);
     return 0;
 }
 int isRelative(char*str)
@@ -2543,12 +2556,29 @@ static int c_texture(map_t*args) {return 0;}
 
 static int c_action(map_t*args) 
 {
-    readToken();
-    if(type != RAWDATA) {
-	syntaxerror("colon (:) expected");
-    }
+    char* filename  = map_lookup(args, "filename");
+    if(!filename ||!*filename) {
+	readToken();
+	if(type != RAWDATA) {
+	    syntaxerror("colon (:) expected");
+	}
+	s_action(text);
+    } else {
+	FILE*fi = fopen(filename, "rb");
+	if(!fi) 
+	    syntaxerror("Couldn't find file %s: %s", filename, strerror(errno));
+	int l;
+	char*text;
+	fseek(fi, 0, SEEK_END);
+	l = ftell(fi);
+	fseek(fi, 0, SEEK_SET);
+	text = rfx_alloc(l+1);
+	fread(text, l, 1, fi);
+	text[l]=0;
+	fclose(fi);
 
-    s_action(text);
+	s_action(text);
+    }
    
     return 0;
 }
@@ -2558,7 +2588,7 @@ static struct {
     command_func_t* func;
     char*arguments;
 } arguments[] =
-{{"flash", c_flash, "bbox=autocrop background=black version=5 fps=50 name=!default! @compress=default"},
+{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default"},
  {"frame", c_frame, "n=<plus>1 name= @cut=no"},
  // "import" type stuff
  {"swf", c_swf, "name filename"},
@@ -2615,7 +2645,7 @@ static struct {
     // commands which start a block
 //startclip (see above)
  {"sprite", c_sprite, "name"},
- {"action", c_action, ""},
+ {"action", c_action, "filename="},
 
  {"end", c_end, ""}
 };
