@@ -1,19 +1,15 @@
-.TH png2swf "1" "January 2005" "png2swf" "swftools"
+.TH gif2swf "1" "January 2005" "gif2swf" "swftools"
 .SH NAME
-png2swf - Takes a number of gif files and converts them to a swf movie, one
+gif2swf - Takes a number of gif  files and converts them to a swf movie, one
 picture per frame.
 
 .SH Synopsis
-.B png2swf [-X width] [-Y height] [-o file.swf] [-r rate] file1.png [file2.png...]
+.B gif2swf [-X width] [-Y height] [-o file.swf] [-r rate] file1.gif [file2.gif ...]
 
 .SH DESCRIPTION
-This tools converts png image files into an SWF animation. It takes any
+This tools converts gif image files into an SWF animation. It takes any
 number of input pictures, and converts them to SWF one-by-one, where every
 converted picture is a seperate frame in the target SWF. 
-.PP
-The way the
-images are encoded in SWF is very similar to PNG (in that a zlib-based, lossless
-compression algorithm is used).
 
 .SH OPTIONS
 .TP
