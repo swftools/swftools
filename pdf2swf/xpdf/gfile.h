@@ -135,4 +135,7 @@ private:
 #endif
 };
 
+/* create a temporary filename */
+char* mktmpname(char*ptr);
+
 #endif

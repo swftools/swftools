@@ -9,6 +9,7 @@
 //========================================================================
 
 #include <aconf.h>
+#include "../../config.h"
 
 #ifdef WIN32
    extern "C" {
@@ -441,6 +442,23 @@ time_t getModTime(char *fileName) {
   }
   return statBuf.st_mtime;
 #endif
+}
+ 
+static char tmpbuf[128];
+
+char* mktmpname(char*ptr) {
+ //   used to be mktemp. This does remove the warnings, but
+ //   It's not exactly an improvement.
+#ifdef HAVE_LRAND48
+    sprintf(tmpbuf, "/tmp/%08x%08x",lrand48(),lrand48());
+#else
+#   ifdef HAVE_RAND
+	sprintf(tmpbuf, "/tmp/%08x%08x",rand(),rand());
+#   else
+	sprintf(tmpbuf, "/tmp/%08x%08x",time(0),(unsigned int)tmpbuf);
+#   endif
+#endif
+     return tmpbuf;
 }
 
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
