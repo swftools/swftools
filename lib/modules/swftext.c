@@ -344,7 +344,7 @@ int swf_FontExport(int handle,SWFFONT * f)
   return l;
 }
 
-int FontImport(int handle,SWFFONT * * font)
+int swf_FontImport(int handle,SWFFONT * * font)
 { SWFFONT * f;
   int layout;
   int i = 0;
