@@ -18,6 +18,7 @@ while(<stdin>)
 	print stderr "swfc tmp.sc ($name)\n";
 	system("../src/swfc tmp.sc >&2");
 	($embed = `swfdump -e $name`) =~ /WIDTH="([^"]*)"/;
+	system("cp $name data");
 	$width = $1;
 	print "<td bgcolor=\"#ffffff\" width=\"$width\">";
 	print $embed;
