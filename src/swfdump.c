@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include "../lib/rfxswf.h"
-#include "args.h"
+#include "../lib/args.h"
 
 char * filename = 0;
 
@@ -19,16 +19,27 @@ char * filename = 0;
    once */
 char idtab[65536];
 
+struct options_t options[] =
+{
+ {"v","verbose"},
+ {"V","version"},
+ {0,0}
+};
+
+
 int args_callback_option(char*name,char*val)
 {
+    if(!strcmp(name, "V")) {
+	printf("swfdump - part of %s %s\n", PACKAGE, VERSION);
+    }
 }
 int args_callback_longoption(char*name,char*val)
 {
+    return args_long2shortoption(options, name, val);
 }
 void args_callback_usage(char*name)
 {    
     printf("Usage: %s file.swf\n", name);
-    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {
