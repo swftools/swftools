@@ -392,7 +392,7 @@ static int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int job
 	      printf("%c",code);
 	  }
           if (jobs&FEDTJ_MODIFY)
-	    f->glyph[glyph].advance = adv;
+	    f->glyph[glyph].advance = adv*20; //?
         } else {
             if (jobs&FEDTJ_PRINT) {
 		printf("?");
@@ -800,7 +800,7 @@ int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits)
 	glyph = font->ascii2glyph[s[0]];
     if(glyph>=0) {
        g = swf_CountUBits(glyph,g);
-       a = swf_CountBits((((U32)font->glyph[glyph].advance)*scale)/100,a);
+       a = swf_CountBits(((((U32)font->glyph[glyph].advance)*scale)/20)/100,a);
     }
     s++;
   }
@@ -826,7 +826,7 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
 	g = font->ascii2glyph[s[i]];
     if(g>=0) {
       swf_SetBits(t,g,gbits);
-      swf_SetBits(t,(((U32)font->glyph[g].advance)*scale)/100,abits);
+      swf_SetBits(t,((((U32)font->glyph[g].advance)*scale)/20)/100,abits);
       l++;
       if(l==0x7f)
 	  break;
@@ -849,7 +849,7 @@ U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale)
       if(*s < font->maxascii) 
 	  g = font->ascii2glyph[*s];
       if(g>=0)
-        res += font->glyph[g].advance;
+        res += font->glyph[g].advance/20;
       s++;
     }
     if (scale) res = (res*scale)/100;
@@ -949,8 +949,8 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	{
 	    int g = font->ascii2glyph[s];
 	    if(g>=0) {
-	       if(font->glyph[g].advance*textscale/64 > xmax) {
-		   xmax = font->glyph[g].advance*textscale/64;
+	       if((font->glyph[g].advance*textscale/20)/64 > xmax) {
+		   xmax = (font->glyph[g].advance*textscale/20)/64;
 	       }
 	       c++;
 	    }
@@ -1011,8 +1011,8 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 			}
 			swf_SetU8(t,1);
 			swf_SetBits(t, g, gbits);
-		        swf_SetBits(t, font->glyph[g].advance, abits);
-			lastx = x*xmax+font->glyph[g].advance;
+		        swf_SetBits(t, font->glyph[g].advance/20, abits);
+			lastx = x*xmax+(font->glyph[g].advance/20);
 			swf_ResetWriteBits(t);
 		      }
 		  }
@@ -1095,7 +1095,7 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 		    rn.ymin = (rn.ymin * scale)/100;
 		    rn.ymax = (rn.ymax * scale)/100;
 		    swf_ExpandRect2(&r, &rn);
-		    pos += (font->glyph[g].advance*scale*20)/100;
+		    pos += (font->glyph[g].advance*scale)/100;
 		}
 	    }
 	    c++;
@@ -1158,9 +1158,8 @@ void swf_FontCreateLayout(SWFFONT*f)
 	bbox = swf_GetShapeBoundingBox(shape2);
 	swf_Shape2Free(shape2);
 	f->layout->bounds[t] = bbox;
-	/* FIXME */
-	//width = (bbox.xmax - bbox.xmin)/20;
-	width = (bbox.xmax)/20;
+	
+	width = (bbox.xmax);
 
 	/* The following is a heuristic- it may be that extractfont_DefineText
 	   has already found out some widths for individual characters (from the way
@@ -1256,7 +1255,7 @@ void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text)
 	    l = l->next;
 	}
 	swf_Shape2Free(shape2);
-	advance += font->glyph[g].advance;
+	advance += font->glyph[g].advance/20.0;
     }
 }
 
