@@ -22,6 +22,7 @@
 #include "../lib/args.h"
 #include "q.h"
 #include "parser.h"
+#include "wav.h"
 
 //#define DEBUG
 
@@ -177,6 +178,7 @@ static SRECT currentrect; //current bounding box in current level
 static U16 currentdepth;
 static dictionary_t instances;
 static dictionary_t fonts;
+static dictionary_t sounds;
 
 typedef struct _parameters {
     int x,y; 
@@ -348,6 +350,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress)
     dictionary_init(&characters);
     dictionary_init(&instances);
     dictionary_init(&fonts);
+    dictionary_init(&sounds);
 
     memset(&stack[stackpos], 0, sizeof(stack[0]));
     stack[stackpos].type = 0;
@@ -432,6 +435,11 @@ static void s_endSWF()
 
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin))
 	swf->movieSize = currentrect; /* "autocrop" */
+    
+    if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
+	swf->movieSize.xmax += 20; /* 1 by 1 pixels */
+	swf->movieSize.ymax += 20;
+    }
 
     fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
     if(fi<0) {
@@ -447,6 +455,7 @@ static void s_endSWF()
     dictionary_clear(&instances);
     dictionary_clear(&characters);
     dictionary_clear(&fonts);
+    dictionary_clear(&sounds);
 
     swf_FreeTags(swf);
     free(swf);
@@ -647,6 +656,64 @@ void s_font(char*name, char*filename)
     if(dictionary_lookup(&fonts, name))
 	syntaxerror("font %s defined twice", name);
     dictionary_put2(&fonts, name, font);
+}
+
+typedef struct _sound_t
+{
+    U16 id;
+    TAG*tag;
+} sound_t;
+
+void s_sound(char*name, char*filename)
+{
+    struct WAV wav, wav2;
+    sound_t* sound;
+    U16*samples;
+    int numsamples;
+
+    if(!readWAV(filename, &wav)) {
+	warning("Couldn't read wav file \"%s\"", filename);
+	samples = 0;
+	numsamples = 0;
+    } else {
+	convertWAV2mono(&wav, &wav2, 44100);
+	samples = (U16*)wav2.data;
+	numsamples = wav2.size/2;
+	free(wav.data);
+    }
+
+    tag = swf_InsertTag(tag, ST_DEFINESOUND);
+    swf_SetU16(tag, id); //id
+    swf_SetSoundDefine(tag, samples, numsamples);
+   
+    sound = (sound_t*)malloc(sizeof(sound_t)); /* mem leak */
+    sound->tag = tag;
+    sound->id = id;
+
+    if(dictionary_lookup(&sounds, name))
+	syntaxerror("sound %s defined twice", name);
+    dictionary_put2(&sounds, name, sound);
+    
+    incrementid();
+
+    if(samples)
+	free(samples);
+}
+
+void s_playsound(char*name, int loops, int nomultiple, int stop)
+{
+    sound_t* sound = dictionary_lookup(&sounds, name);
+    SOUNDINFO info;
+    if(!sound)
+	syntaxerror("Don't know anything about sound \"%s\"", name);
+
+    tag = swf_InsertTag(tag, ST_STARTSOUND);
+    swf_SetU16(tag, sound->id); //id
+    memset(&info, 0, sizeof(info));
+    info.stop = stop;
+    info.loops = loops;
+    info.multiple = !nomultiple;
+    swf_SetSoundInfo(tag, &info);
 }
 
 void s_shape(char*name, char*filename)
@@ -1168,6 +1235,7 @@ static char* lu(map_t* args, char*name)
 {
     char* value = map_lookup(args, name);
     if(!value) {
+	map_dump(args, stdout, "");
 	syntaxerror("internal error 2: value %s should be set", name);
     }
     return value;
@@ -1259,6 +1327,23 @@ static int c_point(map_t*args)
     dictionary_put(&points, s1, (void*)pos);
     return 0;
 }
+static int c_play(map_t*args) 
+{
+    char*name = lu(args, "sound");
+    char*loop = lu(args, "loop");
+    char*nomultiple = lu(args, "nomultiple");
+
+    s_playsound(name, parseInt(loop), parseInt(nomultiple), 0);
+    return 0;
+}
+
+static int c_stop(map_t*args) 
+{
+    char*name = lu(args, "sound");
+    s_playsound(name, 0,0,1);
+    return 0;
+}
+
 static int c_placement(map_t*args, int type)
 {
     char*instance = lu(args, (type==0||type==4)?"instance":"name");
@@ -1572,6 +1657,14 @@ static int c_font(map_t*args)
     return 0;
 }
 
+static int c_sound(map_t*args) 
+{
+    char*name = lu(args, "name");
+    char*filename = lu(args, "filename");
+    s_sound(name, filename);
+    return 0;
+}
+
 static int c_text(map_t*args) 
 {
     char*name = lu(args, "name");
@@ -1583,13 +1676,17 @@ static int c_text(map_t*args)
     return 0;
 }
 
+static int c_soundtrack(map_t*args) 
+{
+    return 0;
+}
+
 int fakechar(map_t*args)
 {
     char*name = lu(args, "name");
     s_box(name, 0, 0, black, 20, black, 0);
     return 0;
 }
-static int c_circle(map_t*args) {return fakechar(args);}
 
 static int c_egon(map_t*args) {return fakechar(args);}
 static int c_button(map_t*args) {return fakechar(args);}
@@ -1598,12 +1695,7 @@ static int c_edittext(map_t*args) {return fakechar(args);}
 static int c_morphshape(map_t*args) {return fakechar(args);}
 static int c_image(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
-static int c_sound(map_t*args) {return fakechar(args);}
 
-static int c_play(map_t*args) {return 0;}
-static int c_stop(map_t*args) {return 0;}
-
-static int c_soundtrack(map_t*args) {return 0;}
 static int c_buttonsounds(map_t*args) {return 0;}
 static int c_buttonput(map_t*args) {return 0;}
 static int c_texture(map_t*args) {return 0;}
