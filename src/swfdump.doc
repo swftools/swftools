@@ -20,6 +20,8 @@ display placement information about objects.
     Disassemble action tags
 -t, --text
     Show text fields (like swfstrings).
+-s, --shapes
+    Show shape coordinates/styles
 -p, --placements
     Show placement information
 -X, --width
