@@ -15,6 +15,11 @@ extern "C" {
 #include "../lib/rfxswf.h"
 }
 
+
+extern int ignoredraworder; //default:0
+extern int drawonlyshapes; //default:0
+extern int jpegquality; //default:100;
+
 typedef long int twip;
 
 struct swfmatrix {
@@ -35,6 +40,10 @@ class SWFFont
     char*name;
     int charnum;
 
+    U16*char2swfcharid;
+    U16*swfcharid2char;
+    int swfcharpos;
+
     public:
     
     int t1id;
@@ -44,6 +53,7 @@ class SWFFont
     SWFFont(char*name, int t1id, char*filename);
     SWFFont::~SWFFont();
     T1_OUTLINE*getOutline(char*charname);
+    int getSWFCharID(char*name);
     char*getName();
     char*getCharName(int t);
 };
