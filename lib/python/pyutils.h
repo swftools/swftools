@@ -10,4 +10,5 @@ char* setError(char*format, ...);
 void mylog(char*format, ...);
 PyObject* FindMethodMore(PyObject*ret, PyMethodDef f[], PyObject*self, char* a);
 void dummy_dealloc(PyObject* self);
+PyMethodDef* addMethods(PyMethodDef*obj1, PyMethodDef*obj2);
 #endif

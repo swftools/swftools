@@ -27,24 +27,27 @@
 #include "./pyutils.h"
 #include "action.h"
 
+
+typedef struct {
+    PyObject_HEAD
+    ActionTAG*action;
+} ActionObject;
+
 PyObject* f_Action(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    static char *kwlist[] = {"r", "g", "b", "a", NULL};
+    static char *kwlist[] = {"code", NULL};
     ActionObject* action;
-    int r=0,g=0,b=0,a=255;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii|i", kwlist, &r,&g,&b,&a))
+    char*code = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s", kwlist, &code))
 	return NULL;
     action = PyObject_New(ActionObject, &ActionClass);
-    action->rgba.r = r;
-    action->rgba.g = g;
-    action->rgba.b = b;
-    action->rgba.a = a;
+    action->action = 0;
     return (PyObject*)action;
 }
 static PyObject* action_getattr(PyObject * self, char* a)
 {
     ActionObject*action = (ActionObject*)self;
-    if(!strcmp(a, "r")) {
+/*    if(!strcmp(a, "r")) {
 	return Py_BuildValue("r", action->rgba.r);
     } else if(!strcmp(a, "g")) {
 	return Py_BuildValue("g", action->rgba.g);
@@ -52,13 +55,13 @@ static PyObject* action_getattr(PyObject * self, char* a)
 	return Py_BuildValue("b", action->rgba.b);
     } else if(!strcmp(a, "a")) {
 	return Py_BuildValue("a", action->rgba.a);
-    }
+    }*/
     return NULL;
 }
 static int action_setattr(PyObject * self, char* attr, PyObject* o)
 {
     ActionObject*action = (ActionObject*)self;
-    if(!strcmp(attr, "r")) {
+/*    if(!strcmp(attr, "r")) {
 	if (!PyArg_Parse(o, "d", &action->rgba.r)) goto err;
 	return 0;
     } else if(!strcmp(attr, "g")) {
@@ -72,8 +75,17 @@ static int action_setattr(PyObject * self, char* attr, PyObject* o)
 	return 0;
     } 
 err:
-    mylog("swf_setattr %08x(%d) %s = ? (%08x)\n", (int)self, self->ob_refcnt, attr, o);
+    mylog("swf_setattr %08x(%d) %s = ? (%08x)\n", (int)self, self->ob_refcnt, attr, o);*/
     return 1;
+}
+
+ActionTAG* action_getAction(PyObject*self)
+{
+    ActionObject*action= 0;
+    if (!PyArg_Parse(self, "O!", &ActionClass, &action)) {
+	return 0;
+    }
+    return action->action;
 }
 
 PyTypeObject ActionClass = 
@@ -88,3 +100,16 @@ PyTypeObject ActionClass =
     tp_getattr: action_getattr,
     tp_setattr: action_setattr,
 };
+
+static PyMethodDef action_methods[] = 
+{
+    {"Action", (PyCFunction)f_Action, METH_KEYWORDS, "Create a new action object."},
+    {NULL, NULL, 0, NULL}
+};
+
+PyMethodDef* action_getMethods()
+{
+    ActionClass.ob_type = &PyType_Type;
+    return action_methods;
+}
+

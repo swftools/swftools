@@ -26,40 +26,25 @@
 #undef HAVE_STAT
 #include <Python.h>
 
+/* exported to allow casting to this type */
 extern PyTypeObject ColorClass;
 extern PyTypeObject BBoxClass;
 extern PyTypeObject CXFormClass;
 extern PyTypeObject GradientClass;
 extern PyTypeObject MatrixClass;
 
-typedef struct {
-    PyObject_HEAD
-    RGBA rgba;
-} ColorObject;
-
-typedef struct {
-    PyObject_HEAD
-    SRECT bbox;
-} BBoxObject;
-
-typedef struct {
-    PyObject_HEAD
-    MATRIX matrix;
-} MatrixObject;
-
-typedef struct {
-    PyObject_HEAD
-    CXFORM cxform;
-} CXFormObject;
-
-typedef struct {
-    PyObject_HEAD
-    GRADIENT gradient;
-} GradientObject;
-
 PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_ColorTransform(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_Gradient(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs);
+
+RGBA color_getRGBA(PyObject*self);
+CXFORM colortransform_getCXForm(PyObject*self);
+GRADIENT gradient_getGradient(PyObject*self);
+SRECT bbox_getBBox(PyObject*self);
+MATRIX matrix_getMatrix(PyObject*self);
+
+extern PyMethodDef* primitive_getMethods();
+
 #endif

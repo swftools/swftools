@@ -1,17 +1,32 @@
 all: mypython SWF.so
 
+LIB=-L/usr/lib/python2.2/config/ -lpython2.2
+
 primitives.o: primitives.c primitives.h
 	gcc -g -O2 -Wall -Wno-unused -fPIC -I/usr/include/python2.2 -c primitives.c -o primitives.o
+taglist.o: taglist.c taglist.h
+	gcc -g -O2 -Wall -Wno-unused -fPIC -I/usr/include/python2.2 -c taglist.c -o taglist.o
+tag.o: tag.c tag.h
+	gcc -g -O2 -Wall -Wno-unused -fPIC -I/usr/include/python2.2 -c tag.c -o tag.o
+action.o: action.c action.h
+	gcc -g -O2 -Wall -Wno-unused -fPIC -I/usr/include/python2.2 -c action.c -o action.o
 pyutils.o: pyutils.c pyutils.h
 	gcc -g -O2 -Wall -Wno-unused -fPIC -I/usr/include/python2.2 -c pyutils.c -o pyutils.o
+
 SWF.o: SWF.c pyutils.h primitives.h
 	gcc -g -O2 -Wall -Wno-unused -fPIC -I/usr/include/python2.2 -c SWF.c -o SWF.o
 
-SWF.so: primitives.o pyutils.o SWF.o
-	gcc -shared primitives.o SWF.o pyutils.o -o SWF.so -lpython2.2 ../librfxswf.a -ljpeg -lz
+SWF.so: SWF.o taglist.o tag.o action.o primitives.o pyutils.o ../librfxswf.a
+	gcc -shared SWF.o taglist.o tag.o action.o primitives.o pyutils.o  -o SWF.so $(LIB) ../librfxswf.a -ljpeg -lz -lt1 -lfreetype
+	cp SWF.so test
 
 mypython: mypython.c
-	gcc -I/usr/include/python2.2 mypython.c -o mypython -lpython2.2
+	gcc -g -I/usr/include/python2.2 mypython.c -o mypython $(LIB) -ldl -lm -lpthread -lutil
 
 test: SWF.so
-	python fonts.py
+	cd test;./test_create.py
+	#python fonts.py
+clean:
+	rm *.o *.so mypython
+
+.PHONY: test

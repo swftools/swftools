@@ -64,3 +64,14 @@ void dummy_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
+PyMethodDef* addMethods(PyMethodDef*obj1, PyMethodDef*obj2) 
+{
+    int num1=0,num2=0;
+    if(obj1) for(num1=0;obj1[num1].ml_name;num1++);
+    if(obj2) for(num2=0;obj2[num2].ml_name;num2++);
+    PyMethodDef* result = malloc(sizeof(PyMethodDef)*(num1+num2+1));
+    memcpy(result, obj1, num1*sizeof(PyMethodDef));
+    memcpy(&result[num1], obj2, (num2+1)*sizeof(PyMethodDef));
+    //free(obj1)?
+    return result;
+}

@@ -27,6 +27,12 @@
 #include "./pyutils.h"
 #include "primitives.h"
 
+//----------------------------------------------------------------------------
+typedef struct {
+    PyObject_HEAD
+    RGBA rgba;
+} ColorObject;
+
 PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"r", "g", "b", "a", NULL};
@@ -75,7 +81,35 @@ err:
     mylog("swf_setattr %08x(%d) %s = ? (%08x)\n", (int)self, self->ob_refcnt, attr, o);
     return 1;
 }
+RGBA color_getRGBA(PyObject*self)
+{
+    ColorObject*color = 0;
+    if (!PyArg_Parse(self, "O!", &ColorClass, &color)) {
+	RGBA dummy;
+	memset(&dummy, 0, sizeof(dummy));
+	mylog("Error: wrong type for function color_getRGBA");
+	return dummy;
+    }
+    return color->rgba;
+}
+PyTypeObject ColorClass = 
+{
+    PyObject_HEAD_INIT(NULL)
+    0,
+    tp_name: "Color",
+    tp_basicsize: sizeof(ColorObject),
+    tp_itemsize: 0,
+    tp_dealloc: dummy_dealloc,
+    tp_print: 0,
+    tp_getattr: color_getattr,
+    tp_setattr: color_setattr,
+};
 //----------------------------------------------------------------------------
+typedef struct {
+    PyObject_HEAD
+    SRECT bbox;
+} BBoxObject;
+
 PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"xmin", "ymin", "xmax", "ymax", NULL};
@@ -125,59 +159,17 @@ err:
     mylog("swf_setattr %08x(%d) %s = ? (%08x)\n", (int)self, self->ob_refcnt, a, o);
     return 1;
 }
-//----------------------------------------------------------------------------
-PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs)
+SRECT bbox_getBBox(PyObject*self)
 {
-    return NULL;
+    BBoxObject*bbox= 0;
+    if (!PyArg_Parse(self, "O!", &BBoxClass, &bbox)) {
+	SRECT dummy;
+	memset(&dummy, 0, sizeof(dummy));
+	mylog("Error: wrong type for function color_getRGBA");
+	return dummy;
+    }
+    return bbox->bbox;
 }
-static PyObject* matrix_getattr(PyObject * self, char* a)
-{
-    return NULL;
-}
-static int matrix_setattr(PyObject * self, char* a, PyObject* o)
-{
-    return 0;
-}
-//----------------------------------------------------------------------------
-PyObject* f_ColorTransform(PyObject* self, PyObject* args, PyObject* kwargs)
-{
-    return NULL;
-}
-static PyObject* colortransform_getattr(PyObject * self, char* a)
-{
-    return NULL;
-}
-static int colortransform_setattr(PyObject * self, char* a, PyObject* o)
-{
-    return 0;
-}
-//----------------------------------------------------------------------------
-PyObject* f_Gradient(PyObject* self, PyObject* args, PyObject* kwargs)
-{
-    return NULL;
-}
-static PyObject* gradient_getattr(PyObject * self, char* a)
-{
-    return NULL;
-}
-static int gradient_setattr(PyObject * self, char* a, PyObject* o)
-{
-    return 0;
-}
-//----------------------------------------------------------------------------
-
-PyTypeObject ColorClass = 
-{
-    PyObject_HEAD_INIT(NULL)
-    0,
-    tp_name: "Color",
-    tp_basicsize: sizeof(ColorObject),
-    tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
-    tp_print: 0,
-    tp_getattr: color_getattr,
-    tp_setattr: color_setattr,
-};
 PyTypeObject BBoxClass = 
 {
     PyObject_HEAD_INIT(NULL)
@@ -190,30 +182,36 @@ PyTypeObject BBoxClass =
     tp_getattr: bbox_getattr,
     tp_setattr: bbox_setattr,
 };
-PyTypeObject GradientClass = 
+SRECT bbox_getBBox(PyObject*self);
+//----------------------------------------------------------------------------
+typedef struct {
+    PyObject_HEAD
+    MATRIX matrix;
+} MatrixObject;
+
+PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    PyObject_HEAD_INIT(NULL)
-    0,
-    tp_name: "Gradient",
-    tp_basicsize: sizeof(GradientObject),
-    tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
-    tp_print: 0,
-    tp_getattr: gradient_getattr,
-    tp_setattr: gradient_setattr,
-};
-PyTypeObject CXFormClass = 
+    return NULL;
+}
+static PyObject* matrix_getattr(PyObject * self, char* a)
 {
-    PyObject_HEAD_INIT(NULL)
-    0,
-    tp_name: "ColorTransform",
-    tp_basicsize: sizeof(CXFormObject),
-    tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
-    tp_print: 0,
-    tp_getattr: colortransform_getattr,
-    tp_setattr: colortransform_setattr,
-};
+    return NULL;
+}
+static int matrix_setattr(PyObject * self, char* a, PyObject* o)
+{
+    return 0;
+}
+MATRIX matrix_getMatrix(PyObject*self)
+{
+    MatrixObject*matrix= 0;
+    if (!PyArg_Parse(self, "O!", &MatrixClass, &matrix)) {
+	MATRIX dummy;
+	memset(&dummy, 0, sizeof(dummy));
+	mylog("Error: wrong type for function color_getRGBA");
+	return dummy;
+    }
+    return matrix->matrix;
+}
 PyTypeObject MatrixClass = 
 {
     PyObject_HEAD_INIT(NULL)
@@ -234,3 +232,107 @@ PyTypeObject MatrixClass =
     tp_call: 0,     // x()
     tp_str: 0	    // str(x)
 };
+//----------------------------------------------------------------------------
+typedef struct {
+    PyObject_HEAD
+    CXFORM cxform;
+} CXFormObject;
+
+PyObject* f_ColorTransform(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    return NULL;
+}
+static PyObject* colortransform_getattr(PyObject * self, char* a)
+{
+    return NULL;
+}
+static int colortransform_setattr(PyObject * self, char* a, PyObject* o)
+{
+    return 0;
+}
+CXFORM colortransform_getCXForm(PyObject*self)
+{
+    CXFormObject*cxform= 0;
+    if (!PyArg_Parse(self, "O!", &CXFormClass, &cxform)) {
+	CXFORM dummy;
+	memset(&dummy, 0, sizeof(dummy));
+	mylog("Error: wrong type for function color_getRGBA");
+	return dummy;
+    }
+    return cxform->cxform;
+}
+PyTypeObject CXFormClass = 
+{
+    PyObject_HEAD_INIT(NULL)
+    0,
+    tp_name: "ColorTransform",
+    tp_basicsize: sizeof(CXFormObject),
+    tp_itemsize: 0,
+    tp_dealloc: dummy_dealloc,
+    tp_print: 0,
+    tp_getattr: colortransform_getattr,
+    tp_setattr: colortransform_setattr,
+};
+//----------------------------------------------------------------------------
+typedef struct {
+    PyObject_HEAD
+    GRADIENT gradient;
+} GradientObject;
+
+PyObject* f_Gradient(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    return NULL;
+}
+static PyObject* gradient_getattr(PyObject * self, char* a)
+{
+    return NULL;
+}
+static int gradient_setattr(PyObject * self, char* a, PyObject* o)
+{
+    return 0;
+}
+GRADIENT colortransform_getGradient(PyObject*self)
+{
+    GradientObject*gradient = 0;
+    if (!PyArg_Parse(self, "O!", &gradient, &gradient)) {
+	GRADIENT dummy;
+	memset(&dummy, 0, sizeof(dummy));
+	mylog("Error: wrong type for function color_getRGBA");
+	return dummy;
+    }
+    return gradient->gradient;
+}
+PyTypeObject GradientClass = 
+{
+    PyObject_HEAD_INIT(NULL)
+    0,
+    tp_name: "Gradient",
+    tp_basicsize: sizeof(GradientObject),
+    tp_itemsize: 0,
+    tp_dealloc: dummy_dealloc,
+    tp_print: 0,
+    tp_getattr: gradient_getattr,
+    tp_setattr: gradient_setattr,
+};
+//----------------------------------------------------------------------------
+
+static PyMethodDef primitive_methods[] = 
+{
+    {"Color", (PyCFunction)f_Color, METH_KEYWORDS, "Create a new color object."},
+    {"Gradient", (PyCFunction)f_Gradient, METH_KEYWORDS, "Create a new gradient object."},
+    {"ColorTransform", (PyCFunction)f_ColorTransform, METH_KEYWORDS, "Create a new colortransform object."},
+    {"Matrix", (PyCFunction)f_Matrix, METH_KEYWORDS, "Create a new matrix object."},
+    {"BBox", (PyCFunction)f_BBox, METH_KEYWORDS, "Create a new bounding box object."},
+    {NULL, NULL, 0, NULL}
+};
+
+PyMethodDef* primitive_getMethods()
+{
+    GradientClass.ob_type = &PyType_Type;
+    CXFormClass.ob_type = &PyType_Type;
+    BBoxClass.ob_type = &PyType_Type;
+    MatrixClass.ob_type = &PyType_Type;
+    return primitive_methods;
+}
+
+
