@@ -44,6 +44,7 @@ int main(int argc, char ** argv)
   SRECT r;
   RGBA rgb;
   U8 abits, gbits;
+  int definefont2 = 1;
 
   int f;
   int width = 170;
@@ -56,6 +57,13 @@ int main(int argc, char ** argv)
   
   FONTUSAGE use;
   SWFFONT * font = Font_Demo_Font(ID_FONT); // change font name here
+
+  /* adding layout to a font has the side effect that the 
+     advance information is stored in the font itself, not
+     in accompanying textfields- this is needed e.g. for
+     edittext tags */
+  if(definefont2)
+      swf_FontAddLayout(font,0,0,0);
 
   swf_FontInitUsage(&use);
   swf_FontUse(&use,BANNER_TEXT);        // SWF reduces font information to the used glyphs
@@ -75,14 +83,16 @@ int main(int argc, char ** argv)
         rgb.g = 0xff;
         rgb.b = 0xff;
         swf_SetRGB(t,&rgb);
-       
-  t = swf_InsertTag(t,ST_DEFINEFONT);
-
-        swf_FontSetDefine(t,font);
-
-  t = swf_InsertTag(t,ST_DEFINEFONTINFO);
-
-        swf_FontSetInfo(t,font);
+  
+  if(definefont2) {
+      t = swf_InsertTag(t,ST_DEFINEFONT2);
+	    swf_FontSetDefine2(t, font);
+  } else {
+      t = swf_InsertTag(t,ST_DEFINEFONT);
+	    swf_FontSetDefine(t, font);
+      t = swf_InsertTag(t,ST_DEFINEFONTINFO);
+            swf_FontSetInfo(t, font);
+  }
 
   t = swf_InsertTag(t,ST_DEFINETEXT);
 
