@@ -46,7 +46,6 @@ uninstall:
 clean: 
 	rm -f *.o *.obj *.lo *.a *.la gmon.out
 	cd lame && $(MAKE) clean && cd .. || true
-	cd h.263 && $(MAKE) clean && cd ..
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
 
