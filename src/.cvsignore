@@ -1,1 +1,1 @@
-*.sc swfcombine swfextract swfdump wav2swf png2swf jpeg2swf swfstrings swfc parser.yy.c test.html Makefile output
+*.sc swfcombine swfextract swfdump wav2swf png2swf jpeg2swf swfstrings swfc parser.yy.c test.html Makefile output swfbbox
