@@ -29,6 +29,7 @@ ${name}/lib/args.h \
 ${name}/lib/example/box.c \
 ${name}/lib/example/jpegtest.c \
 ${name}/lib/example/shape1.c \
+${name}/lib/example/sprites.c \
 ${name}/lib/example/transtest.c \
 ${name}/lib/example/zlibtest.c \
 ${name}/lib/example/Makefile \
