@@ -56,7 +56,7 @@ int main (int argc, char*argv[])
 ], OK=OK,,CROSSCOMPILE=1)
 
 if test "x${OK}" = "xOK";then
-    test -e config.tmp2 || OK=
+    test -f config.tmp2 || OK=
 fi
 
 if test "x${CROSSCOMPILE}" = "x1";then
