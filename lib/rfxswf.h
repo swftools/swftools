@@ -319,7 +319,6 @@ typedef struct _SWFLAYOUT
 
 typedef struct
 { S16         advance;
-  U16         gid;            // Glyph-ID after DefineFont
   SHAPE *     shape;
 } SWFGLYPH;
 
@@ -329,8 +328,10 @@ typedef struct _SWFFONT
   U8 *          name;
   SWFLAYOUT *   layout;
   U16		numchars;
+  U16		maxascii; // highest mapped ascii value
   U8            flags; // bold/italic/unicode/ansi ...
-  U16	*	codes;
+  U16	*	glyph2ascii;
+  int	*	ascii2glyph;
   SWFGLYPH *	glyph;
 } SWFFONT, * LPSWFFONT;
 
