@@ -152,8 +152,8 @@ int png_read_header(FILE*fi, struct png_header*header)
 		fprintf(stderr, "Image mode %d not supported!\n", b);
 		exit(1);
 	    }
-	    if(a!=8) {
-		fprintf(stderr, "Bpp %d not supported!\n", a);
+	    if(a!=8 && b==2) {
+		fprintf(stderr, "Bpp %d in mode %d not supported!\n", a);
 		exit(1);
 	    }
 	    if(c!=0) {
@@ -388,7 +388,6 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	if(data)
 	    free(data);
     }
-
     t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
     swf_SetU16(t, id);		// id
     if(header.mode == 2) {
@@ -399,10 +398,21 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	/* 24->32 bit conversion */
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
-
-	    U8*src = &imagedata[pos];
-	    U8*dest = &data2[(y*header.width)*4];
+	    U8*src;
+	    U8*dest;
 	    U8*old;
+	    dest = &data2[(y*header.width)*4];
+
+	    if(header.bpp == 8)
+	    {
+		/* one byte per pixel */
+		src = &imagedata[pos];
+		pos+=header.width*3;
+	    } else {
+		/* not implemented yet */
+		exit(1);
+	    }
+
 	    if(!y) {
 		memset(data2,0,header.width*4);
 		old = &data2[y*header.width*4];
@@ -410,7 +420,6 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		old = &data2[(y-1)*header.width*4];
 	    }
 	    applyfilter(mode, src, old, dest, header.width);
-	    pos+=header.width*3;
 	}
 	swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
 	free(data2);
@@ -419,6 +428,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	RGBA*rgba = (RGBA*)malloc(palettelen*sizeof(RGBA));
 	int swf_width = BYTES_PER_SCANLINE(header.width);
 	U8*data2 = malloc(swf_width*header.height);
+	U8*tmpline = malloc(header.width);
 	int i,x,y;
 	int pos=0;
 	if(!palette) {
@@ -434,9 +444,27 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	}
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
-	    U8*src = &imagedata[pos];
-	    U8*dest = &data2[y*swf_width];
 	    U8*old;
+	    U8*dest = &data2[y*swf_width];
+	    U8*src;
+	    src = &imagedata[pos];
+	    if(header.bpp == 8) {
+		pos+=header.width;
+	    } else {
+		int x,s=0;
+		int bitpos = 0;
+		U32 v = (1<<header.bpp)-1;
+		for(x=0;x<header.width;x++) {
+		    U32 r = src[s/8]<<8 | 
+			    src[s/8+1];
+		    int t;
+		    tmpline[x] = (r>>(16-header.bpp-(s&7)))&v;
+		    s+=header.bpp;
+		}
+		src = tmpline;
+		pos+=(header.width*header.bpp+7)/8;
+	    }
+
 	    if(!y) {
 		memset(data2,0,swf_width);
 		old = &data2[y*swf_width];
@@ -444,9 +472,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		old = &data2[(y-1)*swf_width];
 	    }
 	    applyfilter1(mode, src, old, dest, header.width);
-	    pos+=header.width;
 	}
 	swf_SetLosslessBitsIndexed(t, header.width, header.height, data2, rgba, palettelen);
+	free(tmpline);
 	free(rgba);
 	free(data2);
     }
@@ -653,6 +681,9 @@ int main(int argc, char **argv)
     global.verbose = 1;
 
     processargs(argc, argv);
+
+    if(global.nfiles<=0)
+	return 1;
 
     if (VERBOSE(2))
 	fprintf(stderr, "Processing %i file(s)...\n", global.nfiles);
