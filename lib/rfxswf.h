@@ -364,6 +364,12 @@ typedef struct
   SHAPE *     shape;
 } SWFGLYPH;
 
+#define FONT_STYLE_BOLD 1
+#define FONT_STYLE_ITALIC 2
+#define FONT_ENCODING_UNICODE 1
+#define FONT_ENCODING_ANSI 2 
+#define FONT_ENCODING_SHIFTJIS 4
+
 typedef struct _SWFFONT
 { int		id; // -1 = not set
   U8		version; // 0 = not set, 1 = definefont, 2 = definefont2
@@ -371,7 +377,10 @@ typedef struct _SWFFONT
   SWFLAYOUT *   layout;
   U16		numchars;
   U16		maxascii; // highest mapped ascii value
-  U8            flags; // bold/italic/unicode/ansi ...
+  
+  U8		style;
+  U8		encoding;
+
   U16	*	glyph2ascii;
   int	*	ascii2glyph;
   SWFGLYPH *	glyph;
@@ -424,7 +433,10 @@ int swf_FontInitUsage(FONTUSAGE * use);
 int swf_FontUse(FONTUSAGE * use,U8 * s);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
+int swf_FontSetDefine2(TAG * t,SWFFONT * f);
 int swf_FontSetInfo(TAG * t,SWFFONT * f);
+
+void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
 
 int swf_FontExtract_DefineTextCallback(int id,SWFFONT * f,TAG * t,int jobs, 
 	void(*callback)(int*chars, int nr, int id));
@@ -447,6 +459,7 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
 int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 // Prints text defined in tag t with font f to stdout
 
+/* notice: if you set the fontid, make sure the corresponding font has layout information */
 void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
