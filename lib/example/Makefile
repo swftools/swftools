@@ -11,6 +11,16 @@ DBFLAGS	= -g2
 
 all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
 
+movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
+		./jpegtest
+		./box
+		./shape1
+		./transtest
+		./zlibtest
+		./sprites
+		./buttontest
+		./text
+
 box: $(RFXSWF) box.o
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
