@@ -354,6 +354,10 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
   { swf_SetBits(t,1,1);
     nbits = swf_CountBits(m->sx,0);
     nbits = swf_CountBits(m->sy,nbits);
+    if(nbits>=32) {
+	fprintf(stderr,"rfxswf: Error: matrix values too large\n");
+	nbits = 31;
+    }
     swf_SetBits(t,nbits,5);
     swf_SetBits(t,m->sx,nbits);
     swf_SetBits(t,m->sy,nbits);
@@ -364,6 +368,10 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
   { swf_SetBits(t,1,1);
     nbits = swf_CountBits(m->r0,0);
     nbits = swf_CountBits(m->r1,nbits);
+    if(nbits>=32) {
+	fprintf(stderr,"rfxswf: Error: matrix values too large\n");
+	nbits = 31;
+    }
     swf_SetBits(t,nbits,5);
     swf_SetBits(t,m->r0,nbits);
     swf_SetBits(t,m->r1,nbits);
@@ -371,6 +379,10 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
 
   nbits = swf_CountBits(m->tx,0);
   nbits = swf_CountBits(m->ty,nbits);
+  if(nbits>=32) {
+      fprintf(stderr,"rfxswf: Error: matrix values too large\n");
+      nbits = 31;
+  }
   swf_SetBits(t,nbits,5);
   swf_SetBits(t,m->tx,nbits);
   swf_SetBits(t,m->ty,nbits);
