@@ -155,36 +155,46 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 	swf_GetCXForm(0, &obj->cxform, 1);
 	return;
     }
+    swf_SetTagPos(tag, 0);
     
-    flags = swf_GetU8(tag);
-    memset(obj,0,sizeof(SWFPLACEOBJECT));
-	
-    swf_GetMatrix(0,&obj->matrix);
-    swf_GetCXForm(0,&obj->cxform,1);
+    if(tag->id == ST_PLACEOBJECT) {
+	obj->id = swf_GetU16(tag);
+	obj->depth = swf_GetU16(tag);
+	swf_GetMatrix(tag, &obj->matrix);
+	swf_GetCXForm(tag, &obj->cxform, 0);
+    } else if(tag->id == ST_PLACEOBJECT2) {
+        flags = swf_GetU8(tag);
+        memset(obj,0,sizeof(SWFPLACEOBJECT));
+            
+        swf_GetMatrix(0,&obj->matrix);
+        swf_GetCXForm(0,&obj->cxform,1);
 
-    obj->depth = swf_GetU16(tag);
-    //flags&1: move
-    if(flags&2) obj->id = swf_GetU16(tag);
-    if(flags&4) swf_GetMatrix(tag, &obj->matrix);
-    if(flags&8) swf_GetCXForm(tag, &obj->cxform,1);
-    if(flags&16) obj->ratio = swf_GetU16(tag);
-    /* if you modify the order of these operations, also
-       modify it in ../src/swfcombine.c */
-    if(flags&64) 
-	obj->clipdepth = swf_GetU16(tag); //clip
-    if(flags&32) {
-	int l,t;
-	U8*data;
-	swf_ResetReadBits(tag);
-	l = strlen(&tag->data[tag->pos]);
-	t = 0;
-	data = malloc(l+1);
-	obj->name = data;
-	while((data[t++] = swf_GetU8(tag))); 
+        obj->depth = swf_GetU16(tag);
+        //flags&1: move
+        if(flags&2) obj->id = swf_GetU16(tag);
+        if(flags&4) swf_GetMatrix(tag, &obj->matrix);
+        if(flags&8) swf_GetCXForm(tag, &obj->cxform,1);
+        if(flags&16) obj->ratio = swf_GetU16(tag);
+        /* if you modify the order of these operations, also
+           modify it in ../src/swfcombine.c */
+        if(flags&64) 
+            obj->clipdepth = swf_GetU16(tag); //clip
+        if(flags&32) {
+            int l,t;
+            U8*data;
+            swf_ResetReadBits(tag);
+            l = strlen(&tag->data[tag->pos]);
+            t = 0;
+            data = malloc(l+1);
+            obj->name = data;
+            while((data[t++] = swf_GetU8(tag))); 
+        }
+
+        /* Actionscript ignored (for now) */
+        obj->actions = 0;
+    } else {
+        fprintf(stderr, "rfxswf: Bad Tag: %d not a placeobject\n", tag->id);
     }
-
-    /* Actionscript ignored (for now) */
-    obj->actions = 0;
 }
 
 void swf_PlaceObjectFree(SWFPLACEOBJECT* obj)
