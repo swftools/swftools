@@ -4,7 +4,7 @@
  * Based on ttf2pfa by Andrew Weeks <ccsaw@bath.ac.uk> 
  * With help from Frank M. Siegert <fms@this.net> 
  *
- * see COPYRIGHT
+ * see COPYRIGHT for full copyright notice
  *
 ***********************************************************************
  *
@@ -89,11 +89,13 @@
 /* table of front-ends */
 
 extern struct frontsw ttf_sw;
+extern struct frontsw bdf_sw;
 #if defined(USE_FREETYPE)
 	extern struct frontsw freetype_sw;
 #endif
 
 struct frontsw *frontswtab[] = {
+	&bdf_sw,
 #if defined(USE_FREETYPE) && defined(PREFER_FREETYPE)
 	&freetype_sw,
 #endif
@@ -114,7 +116,7 @@ int      wantafm=0;	/* want to see .afm instead of .t1a on stdout */
 int      correctvsize=0;	/* try to correct the vertical size of characters */
 int      wantuid = 0;	/* user wants UniqueID entry in the font */
 int      allglyphs = 0;	/* convert all glyphs, not only 256 of them */
-int      warnlevel = -1;	/* the level of permitted warnings */
+int      warnlevel = 3;	/* the level of permitted warnings */
 int      forcemap = 0; /* do mapping even on non-Unicode fonts */
 /* options - maximal limits */
 int      max_stemdepth = 128;	/* maximal depth of stem stack in interpreter (128 - limit from X11) */
@@ -129,31 +131,31 @@ int      hints;	/* enables autogeneration of hints */
 int      subhints;	/* enables autogeneration of substituted hints */
 int      trybold;	/* try to guess whether the font is bold */
 int      correctwidth;	/* try to correct the character width */
+int      vectorize;	/* vectorize the bitmaps */
+int      use_autotrace;	/* use the autotrace library on bitmap */
+/* options - suboptions of File Generation, defaults are set in table */
+int      gen_pfa;	/* generate the font file */
+int      gen_afm;	/* generate the metrics file */
+int      gen_dvienc;	/* generate the dvips encoding file */
 
 /* not quite options to select a particular source encoding */
 int      force_pid = -1; /* specific platform id */
 int      force_eid = -1; /* specific encoding id */
 
-/* table of Outline Processing (may think also as Optimization) options */
-static struct {
+/* structure to define the sub-option lists controlled by the
+ * case: uppercase enables them, lowercase disables
+ */
+struct subo_case {
 	char disbl; /* character to disable - enforced lowercase */
 	char enbl;  /* character to enable - auto-set as toupper(disbl) */
 	int *valp; /* pointer to the actual variable containing value */
 	int  dflt; /* default value */
 	char *descr; /* description */
-} opotbl[] = {
-	{ 'b', 0/*auto-set*/, &trybold, 1, "guessing of the ForceBold hint" },
-	{ 'h', 0/*auto-set*/, &hints, 1, "autogeneration of hints" },
-	{ 'u', 0/*auto-set*/, &subhints, 1, "hint substitution technique" },
-	{ 'o', 0/*auto-set*/, &optimize, 1, "space optimization of font files" },
-	{ 's', 0/*auto-set*/, &smooth, 1, "smoothing and repair of outlines" },
-	{ 't', 0/*auto-set*/, &transform, 1, "auto-scaling to the standard matrix 1000x1000" },
-	{ 'w', 0/*auto-set*/, &correctwidth, 0, "correct the glyph widths (use only for buggy fonts)" },
 };
 
 int      debug = DEBUG;	/* debugging flag */
 
-FILE    *pfa_file, *afm_file;
+FILE    *null_file, *pfa_file, *afm_file, *dvienc_file;
 int      numglyphs;
 struct font_metrics fontm;
 
@@ -1139,6 +1141,36 @@ unicode_prepare_buckets(
 }
 
 /*
+ * When we print errors about bad names we want to print these names in
+ * some decent-looking form
+ */
+
+static char *
+nametoprint(
+	unsigned char *s
+)
+{
+	static char res[50];
+	int c, i;
+
+	for(i=0; ( c =* s )!=0 && i<sizeof(res)-8; s++) {
+		if(c < ' ' || c > 126) {
+			sprintf(res+i, "\\x%02X", c);
+			i+=4;
+		} else {
+			res[i++] = c;
+		}
+	}
+	if(*s != 0) {
+		res[i++] = '.';
+		res[i++] = '.';
+		res[i++] = '.';
+	}
+	res[i++] = 0;
+	return res;
+}
+
+/*
  * Scale the values according to the scale_factor
  */
 
@@ -1259,8 +1291,6 @@ convert_glyf(
 		if (smooth) {
 			smoothjoints(g);
 			assertpath(g->entries, __FILE__, __LINE__, g->name);
-
-			flattencurves(g);
 		}
 
 		ncurves = 0;
@@ -1269,8 +1299,8 @@ convert_glyf(
 			for(ge = g->entries; ge; ge = ge->next)
 				ncurves++;
 		}
-		if (ncurves > 100) {
-			WARNING_2 fprintf(stderr,
+		if (ncurves > 200) {
+			WARNING_3 fprintf(stderr,
 			"** Glyph %s is too long, may display incorrectly\n",
 				g->name);
 		}
@@ -1292,14 +1322,14 @@ handle_gnames(void)
 	for (n = 0; n < numglyphs; n++) {
 		int             c;
 		for (i = 0; (c = glyph_list[n].name[i]) != 0; i++) {
-			if (!(isalnum(c) || c == '.' || c == '_' ) 
+			if (!(isalnum(c) || c == '.' || c == '_' || c == '-') 
 			|| i==0 && isdigit(c)) { /* must not start with a digit */
 				WARNING_3 fprintf(stderr, "Glyph %d %s (%s), ",
 					n, isdigit(c) ? "name starts with a digit" : 
 						"has bad characters in name",
-					glyph_list[n].name);
-				glyph_list[n].name = malloc(10);
-				sprintf(glyph_list[n].name, "_%d", n);
+					nametoprint(glyph_list[n].name));
+				glyph_list[n].name = malloc(16);
+				sprintf(glyph_list[n].name, "_b_%d", n);
 				WARNING_3 fprintf(stderr, "changing to %s\n", glyph_list[n].name);
 				break;
 			}
@@ -1312,13 +1342,23 @@ handle_gnames(void)
 			found = 0;
 			for (i = 0; i < n && !found; i++) {
 				if (strcmp(glyph_list[i].name, glyph_list[n].name) == 0) {
-					glyph_list[n].name = malloc(10);
-					sprintf(glyph_list[n].name, "_%d", n);
-					WARNING_3 fprintf(stderr,
-						"Glyph %d has the same name as %d: (%s), changing to %s\n",
-						n, i,
-						glyph_list[i].name,
-						glyph_list[n].name);
+					if (( glyph_list[n].name = malloc(16) )==0) {
+						fprintf (stderr, "****malloc failed %s line %d\n", __FILE__, __LINE__);
+						exit(255);
+					}
+					sprintf(glyph_list[n].name, "_d_%d", n);
+
+					/* if the font has no names in it (what the native parser
+					 * recognises as ps_fmt_3), FreeType returns all the 
+					 * names as .notdef, so don't complain in this case
+					 */
+					if(strcmp(glyph_list[i].name, ".notdef")) {
+						WARNING_3 fprintf(stderr,
+							"Glyph %d has the same name as %d: (%s), changing to %s\n",
+							n, i,
+							glyph_list[i].name,
+							glyph_list[n].name);
+					}
 					found = 1;
 				}
 			}
@@ -1348,7 +1388,8 @@ handle_gnames(void)
 				unicode_map[n] = -1;
 			uni_lang_selected->init[i](uni_lang_arg);
 			unicode_prepare_buckets();
-			if( cursw->glenc(glyph_list, encoding, unicode_map) == 0 )
+			type = cursw->glenc(glyph_list, encoding, unicode_map);
+			if( type == 0 )
 				/* if we have an 8-bit encoding we don't need more tries */
 				break;
 		}
@@ -1361,16 +1402,42 @@ handle_gnames(void)
 				unicode_map[n] = -1;
 			uni_lang[i].init[0](uni_lang_arg);
 			unicode_prepare_buckets();
-			if( cursw->glenc(glyph_list, encoding, unicode_map) == 0 )
+			type = cursw->glenc(glyph_list, encoding, unicode_map);
+			if( type == 0 )
 				/* if we have an 8-bit encoding we don't need more tries */
 				break;
 		}
 	}
 
 	if (ps_fmt_3) {
-		for (i = 0; i < 256; i++) { /* here 256, not ENCTABSZ */
-			if (encoding[i] > 0) {
-				glyph_list[encoding[i]].name = Fmt3Encoding[i];
+		/* get rid of the old names, they are all "UNKNOWN" anyawy */
+		for (i = 0; i < numglyphs; i++) {
+			glyph_list[i].name = 0;
+		}
+		if(type == 0) { 
+			/* 8-bit - give 8859/1 names to the first 256 glyphs */
+			for (i = 0; i < 256; i++) { /* here 256, not ENCTABSZ */
+				if (encoding[i] > 0) {
+					glyph_list[encoding[i]].name = Fmt3Encoding[i];
+				}
+			}
+		} else if(type == 1) {
+			/* Unicode - give 8859/1 names to the first 256 glyphs of Unicode */
+			for (n = 0; n < 256; n++) { /* here 256, not ENCTABSZ */
+				i = unicode_rev_lookup(n);
+				if (i>=0 && encoding[i] > 0) {
+					glyph_list[encoding[i]].name = Fmt3Encoding[i];
+				}
+			}
+		} /* for other types of encodings just give generated names */
+		/* assign unique names to the rest of the glyphs */
+		for (i = 0; i < numglyphs; i++) {
+			if (glyph_list[i].name == 0) {
+				if (( glyph_list[i].name = malloc(16) )==0) {
+					fprintf (stderr, "****malloc failed %s line %d\n", __FILE__, __LINE__);
+					exit(255);
+				}
+				sprintf(glyph_list[i].name, "_d_%d", i);
 			}
 		}
 	}
@@ -1387,8 +1454,21 @@ handle_gnames(void)
 	/* all the encoding things are done */
 
 	for (i = 0; i < ENCTABSZ; i++)
-		if(encoding[i] == -1) /* defaults to .notdef */
-			encoding[i] = 0;
+		if(encoding[i] == -1) {
+			/* check whether this character might be a duplicate 
+			 * (in which case it would be missed by unicode_rev_lookup())
+			 */
+			c = unicode_map[i];
+			if((type != 0 || forcemap) && c != -1) {
+				for(n = 0; n < i; n++) {
+					if(unicode_map[n] == c) {
+						encoding[i] = encoding[n];
+					}
+				}
+			}
+			if(encoding[i] == -1) /* still not found, defaults to .notdef */
+				encoding[i] = 0;
+		}
 
 	for (i = 0; i < 256; i++) /* here 256, not ENCTABSZ */
 		glyph_list[encoding[i]].char_no = i;
@@ -1428,8 +1508,6 @@ usage(void)
 	fplop("This build supports both short and long option names,\n");
 	fplop("the long options are listed before corresponding short ones\n");
 
-	fplop(" --afm\n");
-	fputs("  -A - write the .afm file to STDOUT instead of the font itself\n", stderr);
 	fplop(" --all-glyphs\n");
 	fputs("  -a - include all glyphs, even those not in the encoding table\n", stderr);
 	fplop(" --pfb\n");
@@ -1440,6 +1518,8 @@ usage(void)
 	fputs("  -e - produce a fully encoded .pfa file\n", stderr);
 	fplop(" --force-unicode\n");
 	fputs("  -F - force use of Unicode encoding even if other MS encoding detected\n", stderr); 
+	fplop(" --generate suboptions\n");
+	fputs("  -G suboptions - control the file generation, run ttf2pt1 -G? for help\n", stderr);
 	fplop(" --language language\n");
 	fputs("  -l language - convert Unicode to specified language, run ttf2pt1 -l? for list\n", stderr);
 	fplop(" --language-map file\n");
@@ -1459,14 +1539,16 @@ usage(void)
 	fputs("  -V - print ttf2pt1 version number\n", stderr);
 	fplop(" --warning number\n");
 	fputs("  -W number - set the level of permitted warnings (0 - disable)\n", stderr);
-	fputs("Obsolete options (will be removed in future releases, use -O? instead):\n", stderr);
-	fputs("  -f - don't try to guess the value of the ForceBold hint\n", stderr);
-	fputs("  -h - disable autogeneration of hints\n", stderr);
-	fputs("  -H - disable hint substitution\n", stderr);
-	fputs("  -o - disable outline optimization\n", stderr);
-	fputs("  -s - disable outline smoothing\n", stderr);
-	fputs("  -t - disable auto-scaling to 1000x1000 standard matrix\n", stderr);
-	fputs("  -w - correct the glyph widths (use only for buggy fonts)\n", stderr);
+	fputs("Obsolete options (will be removed in future releases):\n", stderr);
+	fplop(" --afm\n");
+	fputs("  -A - write the .afm file to STDOUT instead of the font, now -GA\n", stderr);
+	fputs("  -f - don't try to guess the value of the ForceBold hint, now -Ob\n", stderr);
+	fputs("  -h - disable autogeneration of hints, now -Oh\n", stderr);
+	fputs("  -H - disable hint substitution, now -Ou\n", stderr);
+	fputs("  -o - disable outline optimization, now -Oo\n", stderr);
+	fputs("  -s - disable outline smoothing, now -Os\n", stderr);
+	fputs("  -t - disable auto-scaling to 1000x1000 standard matrix, now -Ot\n", stderr);
+	fputs("  -w - correct the glyph widths (use only for buggy fonts), now -OW\n", stderr);
 	fputs("With no <fontname>, write to <ttf-file> with suffix replaced.\n", stderr);
 	fputs("The last '-' means 'use STDOUT'.\n", stderr);
 
@@ -1479,6 +1561,80 @@ printversion(void)
 {
   fprintf(stderr, "ttf2pt1 %s\n", TTF2PT1_VERSION);
 }
+
+/* initialize a table of suboptions */
+static void
+init_subo_tbl(
+	struct subo_case *tbl
+)
+{
+	int i;
+
+	for(i=0; tbl[i].disbl != 0; i++) {
+		tbl[i].disbl = tolower(tbl[i].disbl);
+		tbl[i].enbl = toupper(tbl[i].disbl);
+		*(tbl[i].valp) = tbl[i].dflt;
+	}
+}
+  
+/* print the default value of the suboptions */
+static void
+print_subo_dflt(
+	FILE *f,
+	struct subo_case *tbl
+)
+{
+	int i;
+
+	for(i=0; tbl[i].disbl != 0; i++) {
+		if(tbl[i].dflt)
+			putc(tbl[i].enbl, f);
+		else
+			putc(tbl[i].disbl, f);
+	}
+}
+  
+/* print the usage message for the suboptions */
+static void
+print_subo_usage(
+	FILE *f,
+	struct subo_case *tbl
+)
+{
+	int i;
+
+	fprintf(f,"The lowercase suboptions disable features, corresponding\n");
+	fprintf(f,"uppercase suboptions enable them. The supported suboptions,\n");
+	fprintf(f,"their default states and the features they control are:\n");
+	for(i=0; tbl[i].disbl != 0; i++) {
+		fprintf(f,"   %c/%c - [%s] %s\n", tbl[i].disbl, tbl[i].enbl,
+			tbl[i].dflt ? "enabled" : "disabled", tbl[i].descr);
+	}
+}
+
+/* find and set the entry according to suboption,
+ * return the found entry (or if not found return NULL)
+ */
+struct subo_case *
+set_subo(
+	struct subo_case *tbl,
+	int subopt
+)
+{
+	int i;
+
+	for(i=0; tbl[i].disbl != 0; i++) {
+		if(subopt == tbl[i].disbl) {
+			*(tbl[i].valp) = 0;
+			return &tbl[i];
+		} else if(subopt == tbl[i].enbl) {
+			*(tbl[i].valp) = 1;
+			return &tbl[i];
+		} 
+	}
+	return NULL;
+}
+
   
 int
 ttf2pt1_main(
@@ -1488,13 +1644,14 @@ ttf2pt1_main(
 {
 	int             i, j;
 	time_t          now;
-	char            filename[256];
+	char            filename[4096];
 	int             c,nchars,nmetrics;
 	int             ws;
 	int             forcebold= -1; /* -1 means "don't know" */
 	char           *lang;
 	int             oc;
 	int             subid;
+	char           *cmdline;
 #ifdef _GNU_SOURCE
 #	define ttf2pt1_getopt(a, b, c, d, e)	getopt_long(a, b, c, d, e)
 	static struct option longopts[] = {
@@ -1504,6 +1661,7 @@ ttf2pt1_main(
 		{ "debug", 1, NULL, 'd' },
 		{ "encode", 0, NULL, 'e' },
 		{ "force-unicode", 0, NULL, 'F' },
+		{ "generate", 1, NULL, 'G' },
 		{ "language", 1, NULL, 'l' },
 		{ "language-map", 1, NULL, 'L' },
 		{ "limit", 1, NULL, 'm' },
@@ -1518,17 +1676,65 @@ ttf2pt1_main(
 #else
 #	define ttf2pt1_getopt(a, b, c, d, e)	getopt(a, b, c)
 #endif
+	/* table of Outline Processing (may think also as Optimization) options */
+	static struct subo_case opotbl[] = {
+		{ 'b', 0/*auto-set*/, &trybold, 1, "guessing of the ForceBold hint" },
+		{ 'h', 0/*auto-set*/, &hints, 1, "autogeneration of hints" },
+		{ 'u', 0/*auto-set*/, &subhints, 1, "hint substitution technique" },
+		{ 'o', 0/*auto-set*/, &optimize, 1, "space optimization of font files" },
+		{ 's', 0/*auto-set*/, &smooth, 1, "smoothing and repair of outlines" },
+		{ 't', 0/*auto-set*/, &transform, 1, "auto-scaling to the standard matrix 1000x1000" },
+		{ 'w', 0/*auto-set*/, &correctwidth, 0, "correct the glyph widths (use only for buggy fonts)" },
+		{ 'v', 0/*auto-set*/, &vectorize, 0, "vectorize (trace) the bitmaps" },
+#ifdef USE_AUTOTRACE
+		{ 'z', 0/*auto-set*/, &use_autotrace, 0, "use the autotrace library on bitmaps (works badly)" },
+#endif /*USE_AUTOTRACE*/
+		{ 0, 0, 0, 0, 0} /* terminator */
+	};
+	/* table of the File Generation options */
+	static struct subo_case fgotbl[] = {
+		{ 'f', 0/*auto-set*/, &gen_pfa, 1, "generate the font file (.t1a, .pfa or .pfb)" },
+		{ 'a', 0/*auto-set*/, &gen_afm, 1, "generate the Adobe metrics file (.afm)" },
+		{ 'e', 0/*auto-set*/, &gen_dvienc, 0, "generate the dvips encoding file (.enc)" },
+		{ 0, 0, 0, 0, 0} /* terminator */
+	};
+	int *genlast = NULL;
 
-	/* initialize sub-options of -O */
-	for(i=0; i< (sizeof opotbl)/(sizeof opotbl[0]); i++) {
-		opotbl[i].disbl = tolower(opotbl[i].disbl);
-		opotbl[i].enbl = toupper(opotbl[i].disbl);
-		*(opotbl[i].valp) = opotbl[i].dflt;
+
+	init_subo_tbl(opotbl); /* initialize sub-options of -O */
+	init_subo_tbl(fgotbl); /* initialize sub-options of -G */
+
+	/* save the command line for the record 
+	 * (we don't bother about escaping the shell special characters)
+	 */
+
+	j = 0;
+	for(i=1; i<argc; i++) {
+		j += strlen(argv[i])+1;
 	}
+	if ((cmdline = malloc(j+1)) == NULL) {
+		fprintf (stderr, "****malloc failed %s line %d\n", __FILE__, __LINE__);
+		exit(255);
+	}
+	cmdline[0] = 0;
+	for(i=1; i<argc; i++) {
+		strcat(cmdline, argv[i]);
+		strcat(cmdline, " ");
+	}
+	for(i=0; (j=cmdline[i])!=0; i++)
+		if(j == '\n')
+			cmdline[i] = ' ';
 
-	while(( oc=ttf2pt1_getopt(argc, argv, "FaoebAsthHfwVv:p:l:d:u:L:m:W:O:",
+
+	while(( oc=ttf2pt1_getopt(argc, argv, "FaoebAsthHfwVv:p:l:d:u:L:m:W:O:G:",
 			longopts, NULL) )!= -1) {
 		switch(oc) {
+		case 'W':
+			if(sscanf(optarg, "%d", &warnlevel) < 1 || warnlevel < 0) {
+				fprintf(stderr, "**** warning level must be a positive number\n");
+				exit(1);
+			}
+			break;
 		case 'F':
 			forcemap = 1;
 			break;
@@ -1543,6 +1749,7 @@ ttf2pt1_main(
 			encode = pfbflag = 1;
 			break;
 		case 'A':
+			fputs("Warning: option -A is obsolete, use -GA instead\n", stderr);
 			wantafm = 1;
 			break;
 		case 'a':
@@ -1604,41 +1811,44 @@ ttf2pt1_main(
 		}
 		case 'O':
 		{
-			char subopt;
 			char *p;
-			char dflt[20]; /* should be big enough */
-			for(p=optarg; (subopt = *p) != 0; p++) {
-				for(i=0; i< (sizeof opotbl)/(sizeof opotbl[0]); i++) {
-					if(subopt == opotbl[i].disbl) {
-						*(opotbl[i].valp) = 0;
-						break;
-					} else if(subopt == opotbl[i].enbl) {
-						*(opotbl[i].valp) = 1;
-						break;
-					} 
-				}
-				if( i == (sizeof opotbl)/(sizeof opotbl[0]) ) { /* found no match */
-					if (subopt != '?')
-						fprintf(stderr, "**** Unknown outline processing suboption '%c' ****\n", subopt);
+			for(p=optarg; *p != 0; p++) {
+				if(set_subo(opotbl, *p) == NULL) { /* found no match */
+					if (*p != '?')
+						fprintf(stderr, "**** Unknown outline processing suboption '%c' ****\n", *p);
 					fprintf(stderr,"The general form of the outline processing option is:\n");
 					fprintf(stderr,"   -O suboptions\n");
 					fprintf(stderr,"(To remember easily -O may be also thought of as \"optimization\").\n");
-					fprintf(stderr,"The lowercase suboptions disable features, corresponding\n");
-					fprintf(stderr,"uppercase suboptions enable them. The supported suboptions,\n");
-					fprintf(stderr,"their default states and the features they control are:\n");
-					p = dflt;
-					for(i=0; i< (sizeof opotbl)/(sizeof opotbl[0]); i++) {
-						fprintf(stderr,"   %c/%c - [%s] %s\n", opotbl[i].disbl, opotbl[i].enbl,
-							opotbl[i].dflt ? "enabled" : "disabled", opotbl[i].descr);
-						if(opotbl[i].dflt)
-							*p++ = opotbl[i].enbl;
-						else
-							*p++ = opotbl[i].disbl;
-					}
-					*p = 0;
-					fprintf(stderr, "The default state corresponds to the option -O %s\n", dflt);
+					print_subo_usage(stderr, opotbl);
+					fprintf(stderr, "The default state corresponds to the option -O ");
+					print_subo_dflt(stderr, opotbl);
+					fprintf(stderr, "\n");
 					exit(1);
 				}
+			}
+			break;
+		}
+		case 'G':
+		{
+			char *p;
+			struct subo_case *s;
+
+			for(p=optarg; *p != 0; p++) {
+				if(( s = set_subo(fgotbl, *p) )==NULL) { /* found no match */
+					if (*p != '?')
+						fprintf(stderr, "**** Unknown outline processing suboption '%c' ****\n", *p);
+					fprintf(stderr,"The general form of the file generation option is:\n");
+					fprintf(stderr,"   -G suboptions\n");
+					print_subo_usage(stderr, fgotbl);
+					fprintf(stderr, "The default state corresponds to the option -G ");
+					print_subo_dflt(stderr, fgotbl);
+					fprintf(stderr, "\n");
+					fprintf(stderr, "If the result is written to STDOUT, the last specified enabling suboption of -G\n");
+					fprintf(stderr, "selects the file to be written to STDOUT (the font file by default).\n");
+					exit(1);
+				}
+				if( *(s->valp) )
+					genlast = s->valp;
 			}
 			break;
 		}
@@ -1842,65 +2052,83 @@ ttf2pt1_main(
 	/* open the input file */
 	cursw->open(argv[1], front_arg);
 
-        /* Get base name of output file (if not specified)
+	/* Get base name of output file (if not specified)
 	 * by removing (known) suffixes
 	 */
-        if (argc == 2) {
-	        char *p;
-                argv[2] = strdup (argv[1]);
+	if (argc == 2) {
+		char *p;
+		argv[2] = strdup (argv[1]);
 		p = strrchr(argv[2], '.');
-	        if (p != NULL)
-		  for (j = 0; (j < MAXSUFFIX) && (cursw->suffix[j]); j++)
- 		    if (!strcmp(p+1, cursw->suffix[j])) {
-		      *p = '\0';
-		      break;
-		    }
+		if (p != NULL)
+			for (j = 0; (j < MAXSUFFIX) && (cursw->suffix[j]); j++)
+				if (!strcmp(p+1, cursw->suffix[j])) {
+					*p = '\0';
+					break;
+				}
+	}
+
+	if ((null_file = fopen(BITBUCKET, "w")) == NULL) {
+		fprintf(stderr, "**** Cannot open %s ****\n",
+			BITBUCKET);
+		exit(1);
 	}
 
 	if (argv[2][0] == '-' && argv[2][1] == 0) {
-		pfa_file = stdout;
 #ifdef WIN32
 		if(encode) {
 			fprintf(stderr, "**** can't write encoded file to stdout ***\n");
 			exit(1);
 		}
-#endif /* WINDOWS */
-		if ((afm_file = fopen(BITBUCKET, "w+")) == NULL) {
-			fprintf(stderr, "**** Cannot open %s ****\n",
-				BITBUCKET);
-			exit(1);
-		}
-		if(wantafm) { /* print .afm instead of .pfa */
-			FILE *n;
-			n=pfa_file;
-			pfa_file=afm_file;
-			afm_file=n;
+#endif /* WIN32 */
+		pfa_file = afm_file = dvienc_file = null_file;
+
+		if(wantafm || genlast == &gen_afm) { /* print .afm instead of .pfa */
+			afm_file=stdout;
+		} else if(genlast == &gen_dvienc) { /* print .enc instead of .pfa */
+			dvienc_file=stdout;
+		} else {
+			pfa_file=stdout;
 		}
 	} else {
 #ifndef WIN32
-		sprintf(filename, "%s.%s", argv[2], encode ? (pfbflag ? "pfb" : "pfa") : "t1a" );
-#else /* WINDOWS */
-		sprintf(filename, "%s.t1a", argv[2]);
-#endif /* WINDOWS */
-		if ((pfa_file = fopen(filename, "w+b")) == NULL) {
-			fprintf(stderr, "**** Cannot create %s ****\n", filename);
-			exit(1);
-		} else {
-			WARNING_2 fprintf(stderr, "Creating file %s\n", filename);
-		}
+		snprintf(filename, sizeof filename, "%s.%s", argv[2], encode ? (pfbflag ? "pfb" : "pfa") : "t1a" );
+#else /* WIN32 */
+		snprintf(filename, sizeof filename, "%s.t1a", argv[2]);
+#endif /* WIN32 */
+		if(gen_pfa) {
+			if ((pfa_file = fopen(filename, "w+b")) == NULL) {
+				fprintf(stderr, "**** Cannot create %s ****\n", filename);
+				exit(1);
+			} else {
+				WARNING_2 fprintf(stderr, "Creating file %s\n", filename);
+			}
+		} else
+			pfa_file = null_file;
 
-		sprintf(filename, "%s.afm", argv[2]) ;
-		if ((afm_file = fopen(filename, "w+")) == NULL) {
-			fprintf(stderr, "**** Cannot create %s ****\n", filename);
-			exit(1);
-		}
+		if(gen_afm) {
+			snprintf(filename, sizeof filename, "%s.afm", argv[2]) ;
+			if ((afm_file = fopen(filename, "w+")) == NULL) {
+				fprintf(stderr, "**** Cannot create %s ****\n", filename);
+				exit(1);
+			}
+		} else
+			afm_file = null_file;
+
+		if(gen_dvienc) {
+			snprintf(filename, sizeof filename, "%s.enc", argv[2]) ;
+			if ((dvienc_file = fopen(filename, "w+")) == NULL) {
+				fprintf(stderr, "**** Cannot create %s ****\n", filename);
+				exit(1);
+			}
+		} else
+			dvienc_file = null_file;
 	}
 
 	/*
 	 * Now check whether we want a fully encoded .pfa file
 	 */
 #ifndef WIN32
-	if (encode) {
+	if (encode && pfa_file != null_file) {
 		int             p[2];
 		extern FILE    *ifp, *ofp;	/* from t1asm.c */
 
@@ -1933,7 +2161,7 @@ ttf2pt1_main(
 			fclose(ifp); fclose(ofp);
 		}
 	}
-#endif /* WINDOWS */
+#endif /* WIN32 */
 
 	numglyphs = cursw->nglyphs();
 
@@ -2056,7 +2284,8 @@ ttf2pt1_main(
 	fprintf(pfa_file, "%%!PS-AdobeFont-1.0: %s %s\n", fontm.name_ps, fontm.name_copyright);
 	time(&now);
 	fprintf(pfa_file, "%%%%CreationDate: %s", ctime(&now));
-	fprintf(pfa_file, "%% Converted from TrueType font %s by ttf2pt1 %s/%s\n%%\n", argv[1], TTF2PT1_VERSION, cursw->name);
+	fprintf(pfa_file, "%% Converted by ttf2pt1 %s/%s\n", TTF2PT1_VERSION, cursw->name);
+	fprintf(pfa_file, "%% Args: %s\n", cmdline);
 	fprintf(pfa_file, "%%%%EndComments\n");
 	fprintf(pfa_file, "12 dict begin\n/FontInfo 9 dict dup begin\n");
 
@@ -2160,12 +2389,19 @@ ttf2pt1_main(
 	}
 	fprintf(afm_file, "StartCharMetrics %d\n", nmetrics);
 
+	fprintf(dvienc_file, "/%s%sEncoding [\n",
+		fontm.name_ps, uni_font_name_suffix);
+
  	for (i = 0; i < 256; i++) { /* here 256, not ENCTABSZ */
 		fprintf(pfa_file,
 			"dup %d /%s put\n", i, glyph_list[encoding[i]].name);
 		if( glyph_list[encoding[i]].flags & GF_USED )  {
 			print_glyph_metrics(i, encoding[i]);
 		}
+		if (encoding[i])
+			fprintf (dvienc_file, "/index0x%04X\n", encoding[i]);
+		else
+			fprintf (dvienc_file, "/.notdef\n");
 	}
 
 	/* print the metrics for glyphs not in encoding table */
@@ -2188,7 +2424,8 @@ ttf2pt1_main(
 		if(strUID)
 			fprintf(pfa_file, "/UniqueID %s def\n", strUID);
 		else
-			fprintf(pfa_file, "/UniqueID %lu def\n", numUID);
+			/* the range for private UIDs is 4 000 000 - 4 999 999 */
+			fprintf(pfa_file, "/UniqueID %lu def\n", numUID%1000000+4000000);
 	}
 
 	if(forcebold==0)
@@ -2241,21 +2478,23 @@ ttf2pt1_main(
 	/* our sub to make the hint substitution code shorter */
 	fprintf(pfa_file, "dup 4 {\n\t1 3 callothersubr pop callsubr return\n\t} NP\n");
 
-	/* print the hinting subroutines */
-	subid=5;
-	for (i = 0; i < numglyphs; i++) {
-		if (glyph_list[i].flags & GF_USED) {
-			subid+=print_glyph_subs(i, subid);
+	if(pfa_file != null_file) { /* save time if the output would be wasted */
+		/* print the hinting subroutines */
+		subid=5;
+		for (i = 0; i < numglyphs; i++) {
+			if (glyph_list[i].flags & GF_USED) {
+				subid+=print_glyph_subs(i, subid);
+			}
 		}
-	}
 
-	fprintf(pfa_file, "ND\n");
+		fprintf(pfa_file, "ND\n");
 
-	fprintf(pfa_file, "2 index /CharStrings %d dict dup begin\n", nchars);
+		fprintf(pfa_file, "2 index /CharStrings %d dict dup begin\n", nchars);
 
-	for (i = 0; i < numglyphs; i++) {
-		if (glyph_list[i].flags & GF_USED) {
-			print_glyph(i);
+		for (i = 0; i < numglyphs; i++) {
+			if (glyph_list[i].flags & GF_USED) {
+				print_glyph(i);
+			}
 		}
 	}
 
@@ -2265,16 +2504,24 @@ ttf2pt1_main(
 	fprintf(pfa_file, "dup/FontName get exch definefont pop\n");
 	fprintf(pfa_file, "mark currentfile closefile\n");
 	fprintf(pfa_file, "cleartomark\n");
-	fclose(pfa_file);
+	if(pfa_file != null_file)
+		fclose(pfa_file);
 
     fprintf(afm_file, "EndCharMetrics\n");
 
-	/* print the kerning data if present */
-	cursw->kerning(glyph_list);
-	print_kerning(afm_file);
+	if(afm_file != null_file) { /* save time if the output would be wasted */
+		/* print the kerning data if present */
+		cursw->kerning(glyph_list);
+		print_kerning(afm_file);
+	}
 
     fprintf(afm_file, "EndFontMetrics\n");
-    fclose(afm_file);
+	if(afm_file != null_file)
+		fclose(afm_file);
+
+	fprintf(dvienc_file, "] def\n");
+	if(dvienc_file != null_file)
+		fclose(dvienc_file);
 
 	WARNING_1 fprintf(stderr, "Finished - font files created\n");
 
@@ -2284,10 +2531,10 @@ ttf2pt1_main(
 	while (wait(&ws) > 0) {
 	}
 #else 
-	if (encode) {
+	if (encode && pfa_file != null_file) {
 		extern FILE    *ifp, *ofp;	/* from t1asm.c */
 
-		sprintf(filename, "%s.%s", argv[2], pfbflag ? "pfb" : "pfa" );
+		snprintf(filename, sizeof filename, "%s.%s", argv[2], pfbflag ? "pfb" : "pfa" );
 
 		if ((ofp = fopen(filename, "w+b")) == NULL) {
 			fprintf(stderr, "**** Cannot create %s ****\n", filename);
@@ -2296,7 +2543,7 @@ ttf2pt1_main(
 			WARNING_2 fprintf(stderr, "Creating file %s\n", filename);
 		}
 
-		sprintf(filename, "%s.t1a", argv[2]);
+		snprintf(filename, sizeof filename, "%s.t1a", argv[2]);
 
 		if ((ifp = fopen(filename, "rb")) == NULL) {
 			fprintf(stderr, "**** Cannot read %s ****\n", filename);
@@ -2311,7 +2558,8 @@ ttf2pt1_main(
 		if(unlink(filename) < 0) 
 			WARNING_1 fprintf(stderr, "Unable to remove file %s\n", filename);
 	}
-#endif /* WINDOWS */
+#endif /* WIN32 */
 
+	fclose(null_file);
 	return 0;
 }

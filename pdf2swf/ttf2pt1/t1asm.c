@@ -54,10 +54,10 @@ static char portnotice[] =
 #include <ctype.h>
 #include <limits.h>
 
-#ifdef WINDOWS
+#ifdef WIN32
 #	ifdef STANDALONE
 #		define WINDOWS_FUNCTIONS
-#		include "windows.h"
+#		include "win_missing.h"
 #	endif
 #endif
 

@@ -26,13 +26,19 @@ extern int      hints;	/* enables autogeneration of hints */
 extern int      subhints;	/* enables autogeneration of substituted hints */
 extern int      trybold;	/* try to guess whether the font is bold */
 extern int      correctwidth;	/* try to correct the character width */
+extern int      vectorize;	/* vectorize the bitmaps */
+extern int      use_autotrace;	/* use the autotrace library on bitmap */
+/* options - suboptions of File Generation */
+extern int      gen_pfa;	/* generate the font file */
+extern int      gen_afm;	/* generate the metrics file */
+extern int      gen_dvienc;	/* generate the dvips encoding file */
 
 /* not quite options to select a particular source encoding */
 extern int      force_pid; /* specific platform id */
 extern int      force_eid; /* specific encoding id */
 
 /* other globals */
-extern FILE    *pfa_file, *afm_file;
+extern FILE    *null_file, *pfa_file, *afm_file, *dvienc_file;
 extern int      numglyphs;
 
 /* warnings */
@@ -106,6 +112,10 @@ extern int      numglyphs;
 int iscale( int val);
 double fscale( double val);
 int unicode_rev_lookup( int unival);
+void bmp_outline( GLYPH *g, int scale, char *bmap,
+	int xsz, int ysz, int xoff, int yoff);
+int isign( int x);
+int fsign( double x);
 
 /* global metrics for a font */
 

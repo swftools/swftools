@@ -14,7 +14,7 @@
 #include <sys/types.h>
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
-#include <freetype/ftnames.h>
+#include <freetype/ftsnames.h>
 #include <freetype/ttnameid.h>
 #include <freetype/ftoutln.h>
 #include "pt1.h"
@@ -51,7 +51,7 @@ struct frontsw freetype_sw = {
 
 /* statics */
 
-static char * dupcnstring( char *s, int len);
+static char * dupcnstring( unsigned char *s, int len);
 
 static FT_Library library;
 static FT_Face face;
@@ -153,10 +153,9 @@ glnames(
 
 	for(i=0; i < face->num_glyphs; i++) {
 		if( FT_Get_Glyph_Name(face, i, bf, MAX_NAMELEN) || bf[0]==0 ) {
-			sprintf(bf, "_%d", i);
+			sprintf(bf, "_g_%d", i);
 			WARNING_2 fprintf(stderr,
-				"**** Glyph No. %d has no postscript name, becomes %s ****\n",
-				i, bf);
+				"Glyph No. %d has no postscript name, becomes %s\n", i, bf);
 		}
 		glyph_list[i].name = strdup(bf);
 		if(ISDBG(FT)) fprintf(stderr, "%d has name %s\n", i, bf);
@@ -338,19 +337,29 @@ populate_map:
 /* duplicate a string with counter to a 0-terminated string */
 static char *
 dupcnstring(
-	char *s,
+	unsigned char *s,
 	int len
 )
 {
-	char *res;
+	char *res, *out;
+	int i, c;
+	static int warned=0;
 
 	if(( res = malloc(len+1) )==NULL) {
 		fprintf (stderr, "****malloc failed %s line %d\n", __FILE__, __LINE__);
 		exit(255);
 	}
 
-	memcpy(res, s, len);
-	res[len] = 0;
+	out = res;
+	for(i=0; i<len; i++) {
+		if(( c=s[i] )>=' ' && c!=127)
+			*out++ = c;
+		else if(!warned) {
+			warned=1;
+			WARNING_1 fprintf(stderr, "Some font name strings are in Unicode, may not show properly\n");
+		}
+	}
+	*out = 0;
 	return res;
 }
 
@@ -441,6 +450,9 @@ fnmetrics(
 	} else
 		fm->name_ps = dupcnstring(sn.string, sn.string_len);
 #endif /* ENABLE_SFNT */
+	for(i=0; fm->name_ps[i]!=0; i++)
+		if(fm->name_ps[i] == ' ')
+			fm->name_ps[i] = '_'; /* no spaces in the Postscript name *m
 
 	/* guess the boldness from the font names */
 	fm->force_bold=0;

@@ -21,7 +21,7 @@
 #	include <unistd.h>
 #	include <netinet/in.h>
 #else
-#	include "win_missing.h"
+#	include "windows.h"
 #endif
 
 #include "ttf.h"
@@ -397,9 +397,9 @@ draw_composite_glyf(
 		} else if (flagbyte & WE_HAVE_A_TWO_BY_TWO) {
 			matrix[0] = f2dot14(*sptr);
 			sptr++;
-			matrix[1] = f2dot14(*sptr);
-			sptr++;
 			matrix[2] = f2dot14(*sptr);
+			sptr++;
+			matrix[1] = f2dot14(*sptr);
 			sptr++;
 			matrix[3] = f2dot14(*sptr);
 			sptr++;
@@ -1035,24 +1035,24 @@ glnames(
                         } else if (n < 258 + n_ps_names) {
                                 glyph_list[i].name = ps_name_ptr[n - 258];
                         } else {
-                                glyph_list[i].name = malloc(10);
-                                sprintf(glyph_list[i].name, "_%d", n);
+                                glyph_list[i].name = malloc(16);
+                                sprintf(glyph_list[i].name, "_g_%d", i);
                                 WARNING_2 fprintf(stderr,
-                                        "**** Glyph No. %d has no postscript name, becomes %s ****\n",
+                                        "Glyph No. %d has no postscript name, becomes %s\n",
                                         i, glyph_list[i].name);
                         }
                 }
                 /* Now fake postscript names for all those beyond the end of the table */
                 if (npost < ttf_nglyphs) {
                     for (i=npost; i<ttf_nglyphs; i++) {
-                        if ((glyph_list[i].name = malloc(10)) == NULL)
+                        if ((glyph_list[i].name = malloc(16)) == NULL)
                         {
                             fprintf (stderr, "****malloc failed %s line %d\n", __FILE__, __LINE__);
                             exit(255);
                         }
-                        sprintf(glyph_list[i].name, "_%d", i);
+                        sprintf(glyph_list[i].name, "_g_%d", i);
                         WARNING_2 fprintf(stderr,
-                                "** Glyph No. %d has no postscript name, becomes %s **\n",
+                                "Glyph No. %d has no postscript name, becomes %s\n",
                                 i, glyph_list[i].name);
                     }
                 }
@@ -1366,7 +1366,7 @@ fnmetrics(
 {
 	char *str;
 	static int fieldstocheck[]= {2,4,6};
-	int i;
+	int i, j, len;
 
 	fm->italic_angle = (short) (ntohs(post_table->italicAngle.upper)) +
 		((short) ntohs(post_table->italicAngle.lower) / 65536.0);
@@ -1395,14 +1395,15 @@ fnmetrics(
 	fm->force_bold=0;
 
 	for(i=0; !fm->force_bold && i<sizeof fieldstocheck /sizeof(int); i++) {
-		str=name_fields[fieldstocheck[i]];
-		for(i=0; str[i]!=0; i++) {
-			if( (str[i]=='B'
-				|| str[i]=='b' 
-					&& ( i==0 || !isalpha(str[i-1]) )
+		str = name_fields[fieldstocheck[i]];
+		len = strlen(str);
+		for(j=0; j<len; j++) {
+			if( (str[j]=='B'
+				|| str[j]=='b' 
+					&& ( j==0 || !isalpha(str[j-1]) )
 				)
-			&& !strncmp("old",&str[i+1],3)
-			&& !islower(str[i+4])
+			&& !strncmp("old",&str[j+1],3)
+			&& (j+4 >= len || !islower(str[j+4]))
 			) {
 				fm->force_bold=1;
 				break;
