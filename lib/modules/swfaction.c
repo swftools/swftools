@@ -35,7 +35,7 @@ m: method (byte) swf_GetUrl2:(0=none, 1=get, 2=post)/GotoFrame2:(1=play)
 b: branch (word) (number of bytes)
 p (push): type(byte), type=0:string, type=1:double
 {: define function (name (string), num (word), params (num strings), codesize (word)
-o: object (string)
+o: codesize (word) object (string)
 r: register (byte)
  */
 {3,"End", 0x00, ""},
@@ -126,7 +126,8 @@ r: register (byte)
 {5,"ToString", 0x4b,""}, //?
 {5,"TypeOf", 0x44,""},
 {5,"Add2", 0x47,""},
-{5,"Less2", 0x48,""}
+{5,"Less2", 0x48,""},
+{5/*6?*/,"Less3", 0x67,""}
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 
@@ -191,7 +192,7 @@ void swf_ActionSet(TAG*tag, ActionTAG*action)
     }
 }
 
-int OpAdvance(char c, char*data)
+int OpAdvance(char c, U8*data)
 {
     switch (c)
     {
@@ -234,10 +235,28 @@ int OpAdvance(char c, char*data)
 	    } else return 1;
 	    break;
 	}
+	case 'o': {
+	    return 2;
+	}
+	case '{': {
+	    U16 num;
+	    U16 codesize;
+	    U8* odata = data;
+	    int t;
+	    while(*data++); //name
+	    num = (*data++)*256; //num
+	    num += (*data++);
+	    for(t=0;t<num;t++)
+		while(*data++); //param
+	    codesize = (*data++)*256; //num
+	    codesize += (*data++);
+	    return data-odata;
+	}
     }
     return 0;
 }
-
+#define ATAG_FULLLENGTH(atag) ((atag)->len + 1 + ((atag)->op&0x80?2:0))
+#define MAX_LEVELS 16
 /* TODO: * this should be in swfdump.c */
 void swf_DumpActions(ActionTAG*atag, char*prefix) 
 {
@@ -245,119 +264,173 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
     U8*data;
     char* cp;
     int entry = 0;
-
+    char spaces[MAX_LEVELS*4+1];
+    struct {
+	char*text;
+	int count;
+    } counter[MAX_LEVELS];
+    int countpos = 0;
 #ifdef MAX_LOOKUP
-
     char * lookup[MAX_LOOKUP];
     memset(lookup,0x00,sizeof(lookup));
-
 #endif
+    memset(spaces, 32, sizeof(spaces));
+    spaces[sizeof(spaces)-1] = 0;
 
    if (!prefix)
         prefix="";
 
     while(atag)
     {
+	char*indent = &spaces[sizeof(spaces)-1-countpos*4];
 	U8 poollen = 0;
 	for(t=0;t<definedactions;t++)
 	    if(actions[t].op == atag->op)
 		break;
 
 	if(t==definedactions) {
-	    printf("%s (%5d bytes) action: %02x\n", prefix, atag->len, atag->op);
-	    atag = atag->next;
-	    continue;
+	    printf("%s (%5d bytes) action:%s unknown[%02x]", prefix, atag->len, indent, atag->op);
+	} else {
+	    printf("%s (%5d bytes) action:%s %s", prefix, atag->len, indent, actions[t].name);
 	}
-	printf("%s (%5d bytes) action: %s", prefix, atag->len, actions[t].name);
-	cp = actions[t].flags;
 	data = atag->data;
-	if(atag->len) //TODO: check for consistency: should we have a length?
-	while(*cp)
+	if(atag->len && t!=definedactions) //TODO: check for consistency: should we have a length?
 	{
-	    switch(*cp)
-	    {
-		case 'f': { //frame
-		    printf(" %d", data[0]+256*data[1]);
-		} break;
-		case 'u': {
-		    printf(" URL:\"%s\"", data);
-		} break;
-		case 't': {
-		    printf(" Target:\"%s\"", data);
-		} break;
-		case 'l': {
-		    printf(" Label:\"%s\"", data);
-		} break;
-		case 'c': {
-		    printf(" String:\"%s\"", data);
+	  cp = actions[t].flags;
+	  while(*cp)
+	  {
+	      switch(*cp)
+	      {
+		  case 'f': { //frame
+		      printf(" %d", data[0]+256*data[1]);
+		  } break;
+		  case 'u': {
+		      printf(" URL:\"%s\"", data);
+		  } break;
+		  case 't': {
+		      printf(" Target:\"%s\"", data);
+		  } break;
+		  case 'l': {
+		      printf(" Label:\"%s\"", data);
+		  } break;
+		  case 'c': {
+		      printf(" String:\"%s\"", data);
 #ifdef MAX_LOOKUP
-                    if (entry<MAX_LOOKUP)
-		      lookup[entry++] = strdup(data);
+		      if (entry<MAX_LOOKUP)
+			lookup[entry++] = strdup(data);
 #endif
-	        } break;
-		case 'C': {
-		    poollen = *data;
-                    entry = 0;
-		    printf("(%d entries)", poollen);
-	    	} break;
-		case 's': {
-		    printf(" +%d", *data);
-		} break;
-		case 'm': {
-		    //m: method (byte) url:(0=none, 1=get, 2=datat)/gf2:(1=play)
-		    printf(" %d", *data);
-		} break;
-		case 'b': {
-		    printf(" %d", data[0]+256*(signed char)data[1]);
-		} break;
-		case 'p': {
-		    U8 type = *data;
-		    unsigned char*value = data+1;
-		    if(type == 0) {
-			printf(" String:\"%s\"", value);
-		    } else if (type == 1) {
-			U32 f = value[0]+(value[1]<<8)+
-				(value[2]<<16)+(value[3]<<24);
-			printf(" Float:%f", *(float*)&f);
-		    } else if (type == 2) {
-			printf(" NULL");
-		    } else if (type == 4) {
-			printf(" register:%d", *value);
-		    } else if (type == 5) {
-			printf(" bool:%s", *value?"true":"false");
-		    } else if (type == 6) {
-			U8 a[8];
-			int t;
-			memcpy(&a[4],value,4);
-			memcpy(a,&value[4],4);
+		  } break;
+		  case 'C': {
+		      poollen = *data;
+		      entry = 0;
+		      printf("(%d entries)", poollen);
+		  } break;
+		  case 's': {
+		      printf(" +%d", *data);
+		  } break;
+		  case 'm': {
+		      //m: method (byte) url:(0=none, 1=get, 2=datat)/gf2:(1=play)
+		      printf(" %d", *data);
+		  } break;
+		  case '{': {
+		      U16 num;
+		      U16 codesize;
+		      int t;
+		      printf(" %s(", data);
+		      while(*data++); //name
+		      num = (*data++); //num
+		      num += (*data++)*256;
+		      for(t=0;t<num;t++) {
+			  printf("%s",data);
+			  if(t<num-1)
+			      printf(", ");
+			  while(*data++); //param
+		      }
+		      printf(")");
+		      codesize = (*data++); //num
+		      codesize += (*data++)*256;
+		      printf(" codesize:%d ",codesize);
+		      printf("\n%s                       %s{", prefix, indent);
+		      if(countpos>=15) {
+			  printf("Error: nested too deep\n");
+			  continue;
+		      }
+		      counter[countpos].text = "}";
+		      counter[countpos].count = codesize + ATAG_FULLLENGTH(atag);
+		      countpos++;
+		  } break;
+		  case 'o': {
+		      int t;
+		      U16 codesize = data[0]+256*data[1];
+		      printf(" codesize:%d ", codesize);
+
+		      /* the following tries to find the "string"
+			 the flash documentation speaks of- I've
+			 never actually seen one yet. -mk */
+		      for(t=2;t<atag->len;t++)
+			  printf("[%02x]", atag->data[t]);
+
+		      printf("\n%s                       %s{", prefix, indent);
+		      if(countpos>=15) {
+			  printf("Error: nested too deep\n");
+			  continue;
+		      }
+		      counter[countpos].text = "}";
+		      counter[countpos].count = codesize + ATAG_FULLLENGTH(atag);
+		      countpos++;
+		  } break;
+		  case 'b': {
+		      printf(" %d", data[0]+256*(signed char)data[1]);
+		  } break;
+		  case 'p': {
+		      U8 type = *data;
+		      unsigned char*value = data+1;
+		      if(type == 0) {
+			  printf(" String:\"%s\"", value);
+		      } else if (type == 1) {
+			  U32 f = value[0]+(value[1]<<8)+
+				  (value[2]<<16)+(value[3]<<24);
+			  printf(" Float:%f", *(float*)&f);
+		      } else if (type == 2) {
+			  printf(" NULL");
+		      } else if (type == 4) {
+			  printf(" register:%d", *value);
+		      } else if (type == 5) {
+			  printf(" bool:%s", *value?"true":"false");
+		      } else if (type == 6) {
+			  U8 a[8];
+			  int t;
+			  memcpy(&a[4],value,4);
+			  memcpy(a,&value[4],4);
 #ifdef WORDS_BIGENDIAN
-			for(t=0;t<4;t++) {
-			    U8 tmp = a[t];
-			    a[t]=a[7-t];
-			    a[7-t] = tmp;
-			}
+			  for(t=0;t<4;t++) {
+			      U8 tmp = a[t];
+			      a[t]=a[7-t];
+			      a[7-t] = tmp;
+			  }
 #endif
-			printf(" double:%f", *(double*)a);
-		    } else if (type == 7) {
-			printf(" int:%d", value[0]+(value[1]<<8)+
-					  (value[2]<<16)+(value[3]<<24));
-		    } else if (type == 8) {
-			printf(" Lookup:%d", *value);
+			  printf(" double:%f", *(double*)a);
+		      } else if (type == 7) {
+			  printf(" int:%d", value[0]+(value[1]<<8)+
+					    (value[2]<<16)+(value[3]<<24));
+		      } else if (type == 8) {
+			  printf(" Lookup:%d", *value);
 #ifdef MAX_LOOKUP
-			if (lookup[*value])
-			  printf(" (\"%s\")",lookup[*value]);
+			  if (lookup[*value])
+			    printf(" (\"%s\")",lookup[*value]);
 #endif
-		    } else {
-			printf(" UNKNOWN[%02x]",type);
-		    }
-		} break;
-	    }
-	    data += OpAdvance(*cp, data);
-	    if((*cp!='c' || !poollen) &&
-	       (*cp!='p' || !(data<&atag->data[atag->len])))
-		cp++;
-	    if(poollen)
-		poollen--;
+		      } else {
+			  printf(" UNKNOWN[%02x]",type);
+		      }
+		  } break;
+	      }
+	      data += OpAdvance(*cp, data);
+	      if((*cp!='c' || !poollen) &&
+		 (*cp!='p' || !(data<&atag->data[atag->len])))
+		  cp++;
+	      if(poollen)
+		  poollen--;
+	  }
 	}
 
 	if(data < atag->data + atag->len)
@@ -374,6 +447,24 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 	    printf("\")");
 	}
 	printf("\n");
+
+	for(t=0;t<countpos;t++) {
+	    counter[t].count -= ATAG_FULLLENGTH(atag);
+	    if(counter[t].count < 0) {
+		printf("===== Error: Oplength errors =====\n");
+		countpos = 0;
+		break;
+	    }
+	}
+
+	while(countpos && !counter[countpos-1].count)
+	{
+	    printf("%s                   %s%s\n", 
+		prefix, indent, counter[countpos-1].text);
+	    indent += 4;
+	    countpos--;
+	}
+
 	atag = atag->next;
     }
 
