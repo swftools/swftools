@@ -43,6 +43,7 @@ void swf_DumpFont(SWFFONT * font)
     printf("Version: %d\n", font->version);
     printf("name: %s\n", font->name);
     printf("characters: %d\n", font->numchars);
+    printf("biggest mapped ascii value: %d\n", font->maxascii);
     printf("layout: %s\n", font->layout?"yes":"no");
     if(font->layout)
     {
@@ -53,6 +54,9 @@ void swf_DumpFont(SWFFONT * font)
 	printf(" kerning records:%d\n", font->layout->kerningcount);
 	printf(" kerning records: (not shown)\n");
     }
+    printf("style: %d\n", font->style);
+    printf("encoding: %d\n", font->encoding);
+    printf("language: %d\n", font->language);
 }
 
 char* swf_TagGetName(TAG*tag)
