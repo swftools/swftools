@@ -119,6 +119,12 @@ static void msg(char*format, ...)
     fflush(stdout);
 }
 
+extern int swf_mp3_in_samplerate;
+extern int swf_mp3_out_samplerate;
+extern int swf_mp3_channels;
+extern int swf_mp3_bitrate;
+
+
 static void writeShape(v2swf_internal_t*i, int id, int gfxid, int width, int height)
 {
     RGBA rgb;
@@ -188,11 +194,6 @@ static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
     }
     return 1;
 }
-
-extern int swf_mp3_channels;
-extern int swf_mp3_bitrate;
-extern int swf_mp3_out_samplerate;
-extern int swf_mp3_in_samplerate;
 
 static void writeAudioForOneFrame(v2swf_internal_t* i)
 {
