@@ -21,8 +21,12 @@ rfxswf.o: rfxswf.c rfxswf.h bitio.h log.h $(rfxswf_modules)
 $(lame_objects):
 	cd lame;make all;cd ..
 
-$(h263_objects):
-	cd h.263;make objects;cd ..
+h.263/dct.o:
+	$(C) h.263/dct.c -o h.263/dct.o
+h.263/h263tables.o:
+	$(C) h.263/h263tables.c -o h.263/h263tables.o
+h.263/swfvideo.o:
+	$(C) h.263/swfvideo.c -o h.263/swfvideo.o
 
 librfxswf.a: rfxswf.o bitio.o log.o $(lame_objects) $(h263_objects)
 	$(AR) r librfxswf.a rfxswf.o bitio.o log.o $(lame_objects) $(h263_objects)
