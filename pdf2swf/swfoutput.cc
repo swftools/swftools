@@ -1352,15 +1352,15 @@ void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, 
 }
 
 /* initialize the swf writer */
-void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _sizey) 
+void swfoutput_init(struct swfoutput* obj, char*_filename, int x1, int y1, int x2, int y2)
 {
   GLYPH *glyph;
   RGBA rgb;
   SRECT r;
   memset(obj, 0, sizeof(struct swfoutput));
   filename = _filename;
-  sizex = _sizex;
-  sizey = _sizey;
+  sizex = x2;
+  sizey = y2;
 
   msg("<verbose> initializing swf output for size %d*%d\n", sizex,sizey);
 
@@ -1370,8 +1370,10 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
 
   swf.fileVersion    = flashversion;
   swf.frameRate      = 0x0040; // 1 frame per 4 seconds
-  swf.movieSize.xmax = 20*sizex;
-  swf.movieSize.ymax = 20*sizey;
+  swf.movieSize.xmin = 20*x1;
+  swf.movieSize.ymin = 20*y1;
+  swf.movieSize.xmax = 20*x2;
+  swf.movieSize.ymax = 20*y2;
   
   swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
   tag = swf.firstTag;
@@ -1379,8 +1381,10 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
   rgb.g = 0xff;
   rgb.b = 0xff;
   swf_SetRGB(tag,&rgb);
-  if(flag_protected)  // good practice! /r
+
+  if(flag_protected)
     tag = swf_InsertTag(tag, ST_PROTECT);
+
   depth = 1;
   startdepth = depth;
 }

@@ -102,7 +102,7 @@ struct swfoutput
 #define DRAWMODE_CLIP 4
 #define DRAWMODE_EOCLIP 5
 
-void swfoutput_init(struct swfoutput*, char*filename, int sizex, int sizey);
+void swfoutput_init(struct swfoutput*, char*filename, int x1, int y1, int x2, int y2);
 void swfoutput_setprotected(); //write PROTECT tag
 
 void swfoutput_newpage(struct swfoutput*);
