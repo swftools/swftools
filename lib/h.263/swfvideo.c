@@ -816,6 +816,9 @@ static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
 
 static inline int mvd2index(int px, int py, int x, int y, int xy)
 {
+
+    if((x<-32 && x>31) || (y<-32 && y>31)) 
+	fprintf(stderr, "(%d,%d)\n", x,y);
     assert((x>=-32 && x<=31) && (y>=-32 && y<=31));
     //assert((x&1)==0 && (y&1)==0);//for now
     //assert((x&2)==0 && (y&2)==0);//for now(2)
@@ -1281,20 +1284,26 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
     {
 	for(bx=0;bx<s->bbx;bx++)
 	{
-	    if(!(by==31)) {
-		/* mvd (0,0) block (mode=0) */
-		int t;
-		int mode = 0;
-		int has_dc = 0;
-		int cbpybits=0,cbpcbits=0;
-		int predictmvdx, predictmvdy;
-		int mvx=movex[by*s->bbx+bx];
-		int mvy=movey[by*s->bbx+bx];
+	    /* mvd (0,0) block (mode=0) */
+	    int mode = 0;
+	    int has_dc = 0;
+	    int cbpybits=0,cbpcbits=0;
+	    int predictmvdx=0, predictmvdy=0;
+	    int mvx=movex[by*s->bbx+bx];
+	    int mvy=movey[by*s->bbx+bx];
+    
+	    if(mvx<-32) mvx=-32;
+	    if(mvx>31) mvx=31;
+	    if(mvy<-32) mvy=-32;
+	    if(mvy>31) mvy=31;
 
+	    if(mvx == 0 && mvy == 0) {
+		swf_SetBits(tag,1,1); // COD skip
+	    } else {
 		swf_SetBits(tag,0,1); // COD
 		codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
 		codehuffman(tag, cbpy, cbpybits^15);
-
+	
 		/* vector */
 		predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
 		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 0));
@@ -1304,6 +1313,7 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
 	    }
 	}
     }
+    s->frame++;
 }
 
 #define TESTS
@@ -1365,7 +1375,8 @@ int main(int argn, char*argv[])
     int frames = 10;
     int framerate = 29;
     unsigned char*data;
-    char* fname = "/home/kramm/pics/peppers.png";
+    char* fname = "/home/kramm/pics/peppers_fromjpg.png";
+    //char* fname = "/home/kramm/pics/baboon.png";
     VIDEOSTREAM stream;
     double d = 1.0;
 
@@ -1389,17 +1400,19 @@ int main(int argn, char*argv[])
     swf.fileVersion    = 6;
     swf.frameRate      = framerate*256;
     swf.movieSize.xmax = 20*width*2;
-    swf.movieSize.ymax = 20*height-20*64;
+    swf.movieSize.ymax = 20*height;
 
     swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     tag = swf.firstTag;
-    rgb.r = 0x00;rgb.g = 0x00;rgb.b = 0x00;
+    rgb.r = 0x00;rgb.g = 0x30;rgb.b = 0xff;
     swf_SetRGB(tag,&rgb);
 
     tag = swf_InsertTag(tag, ST_DEFINEVIDEOSTREAM);
     swf_SetU16(tag, 33);
     swf_SetVideoStreamDefine(tag, &stream, frames, width, height);
     stream.do_motion = 0;
+
+    srand48(time(0));
 
     for(t=0;t<frames;t++)
     {
@@ -1408,17 +1421,45 @@ int main(int argn, char*argv[])
 	for(y=0,yy=0;y<height;y++,yy+=d)  {
 	    RGBA*line = &pic[((int)yy)*width];
 	    for(x=0,xx=0;x<width;x++,xx+=d) {
-		pic2[y*width+x] = line[((int)xx)];
+		int dx = x/16;
+		int dy = y/16;
+		if(dx==0 && dy==0) {
+		    pic2[y*width+x] = line[((int)xx)];
+		    pic2[y*width+x].r+=2;
+		    pic2[y*width+x].g+=2;
+		    pic2[y*width+x].b+=2;
+		} else {
+		    pic2[y*width+x] = line[((int)xx)];
+		}
+		/*if(dx==16 && dy==16) 
+		    pic2[y*width+x] = pic[(y-16*16)*width+(x-16*16)];*/
+		/*if(dx<=0 && dy<=0) {
+		    pic2[y*width+x] = line[((int)xx)];*/
+		/*if(x==0 && y==0) {
+		    RGBA color;
+		    memset(&color, 0, sizeof(RGBA));
+		    pic2[y*width+x] = color;*/
+		/*} else  {
+		    RGBA color;
+		    color.r = lrand48();
+		    color.g = lrand48();
+		    color.b = lrand48();
+		    color.a = 0;
+		    pic2[y*width+x] = color;
+		}*/
 	    }
 	}
 	printf("frame:%d\n", t);fflush(stdout);
 
+	if(t==1)
+	    break;
+
 	tag = swf_InsertTag(tag, ST_VIDEOFRAME);
 	swf_SetU16(tag, 33);
 	if(t==0)
-	    swf_SetVideoStreamIFrame(tag, &stream, pic2, 9);
+	    swf_SetVideoStreamIFrame(tag, &stream, pic2, 7);
 	else {
-	    swf_SetVideoStreamPFrame(tag, &stream, pic2, 9);
+	    swf_SetVideoStreamPFrame(tag, &stream, pic2, 7);
 	}
 
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
