@@ -1,3 +1,8 @@
-Matthias Kramm <kramm@quiss.org>
-Rainer Böhme <rainer@reflex-studio.de>
-De Clarke <de@ucolick.org>
+Maintainer, librfxswf, pdf2swf, avi2swf, png2swf, swfcombine, swfextract, swfdump:
+    Matthias Kramm <kramm@quiss.org>
+
+librfxswf, jpeg2swf, swfstrings:
+    Rainer Böhme <rainer@reflex-studio.de>
+
+swifty, help with swfc, swfc documentation:
+    De Clarke <de@ucolick.org>
