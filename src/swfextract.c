@@ -354,8 +354,34 @@ void extractTag(SWF*swf, char*filename)
     }
     if(!extractframes && !hollow) {
 	if(!originalplaceobjects && (extractids||extractname_id>=0)) {
+            int number = 0;
+            int id = 0;
+            TAG* objtag = 0;
+            SRECT bbox;
+            memset(&bbox, 0, sizeof(SRECT));
+	    for(t=0;t<65536;t++) {
+	        if(is_in_range(t, extractids)) {
+                    id = t;
+                    number++;
+                }
+            }
+            if(number>=2)
+		printf("warning! You should use the -P when extracting multiple objects\n");
+            if(number == 1) {
+                /* if there is only one object, we will scale it.
+                   So let's figure out it's bounding box */
+                TAG*tag = swf->firstTag;
+                while(tag) {
+                    if(swf_isDefiningTag(tag) && tag->id != ST_DEFINESPRITE) {
+                        if(swf_GetDefineID(tag) == id)
+                            bbox = swf_GetDefineBBox(tag);
+                        objtag = tag;
+                    }
+                    tag = tag->next;
+                }
+            }
+
 	    int t;
-	    int s=0;
 	    if((objectbbox.xmin|objectbbox.ymin|objectbbox.xmax|objectbbox.ymax)!=0)
 		newswf.movieSize = objectbbox;
 	    if(extractname_id>=0) {
@@ -364,11 +390,22 @@ void extractTag(SWF*swf, char*filename)
 	    } else {
 		for(t=0;t<65536;t++) {
 		    if(is_in_range(t, extractids)) {
+                        MATRIX m;
 			desttag = swf_InsertTag(desttag, ST_PLACEOBJECT2);
-			swf_ObjectPlace(desttag, t, t, 0,0,0);
-			s++;
-			if(s==2)
-			    printf("warning! You should use the -P when extracting multiple objects\n");
+                        swf_GetMatrix(0, &m);
+                        if(objtag) {
+                            int width = bbox.xmax - bbox.xmin;
+                            int height = bbox.ymax - bbox.ymin;
+                            int max = width>height?width:height;
+                            m.tx = -bbox.xmin;
+                            m.ty = -bbox.ymin;
+                            if(max) {
+                                m.sx = (512*20*65536)/max;
+                                m.sy = (512*20*65536)/max;
+                            }
+                            newswf.movieSize = swf_TurnRect(newswf.movieSize, &m);
+                        }
+			swf_ObjectPlace(desttag, t, t, &m,0,0);
 		    }
 		}
 	    }
