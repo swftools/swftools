@@ -104,6 +104,7 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
     case ST_DEFINESPRITE:
+    case ST_DEFINEMOVIE:
     case ST_DEFINEVIDEOSTREAM:
     case ST_VIDEOFRAME: //pseudodefine
     case ST_NAMECHARACTER: //pseudodefine
