@@ -15,6 +15,7 @@ pdf2swf:
 
 swfcombine:
 
+    * Handle Bounding boxes
     * Relocate  SetTarget "/content"  stuff, too?
     * allow "combining" Actionscript and SWF.
 
@@ -22,10 +23,6 @@ swfextract:
     
     * add support for extraction of sounds into mp3
     * improve placeobject handling
-
-swfdump:
-
-    * Make the output shorter.
 
 rfxswf-lib:
    

@@ -58,3 +58,7 @@
 0.2.2:	
 	* swfs/: Added/Wrote sources for some of the swf files 
 	* swfdump: Major bugfix in placeobject2, hex output function
+	* swfextract: Can now extract png and jpeg.
+	* swfcombine: big endian fixes
+	* lib/example/avi2swf.cc: Can now handle big files. Better compression ratio.
+
