@@ -480,13 +480,19 @@ TAG* write_sprite_defines(TAG*tag, SWF*sprite)
 		    case ST_SETBACKGROUNDCOLOR:
 		       msg("<debug> deliberately ignoring BACKGROUNDCOLOR tag");
 		       break;
+		    case ST_SHOWFRAME:
+		       msg("<debug> deliberately ignoring SHOWFRAME tag");
+		       break;
+		    case ST_REFLEX:
+		       msg("<debug> deliberately ignoring REFLEX tag");
+		       break;
 		    case 40:
 		    case 49:
 		    case 51:
-		       msg("<notice> found tag %d. This is a Generator template, isn't it?", tag->id);
+		       msg("<notice> found tag %d. This is a Generator template, isn't it?", rtag->id);
 		       break;
 		    default:
-		       msg("<notice> funny tag: %d is neither defining nor sprite", tag->id);
+		       msg("<notice> funny tag: %d is neither defining nor sprite", rtag->id);
 		}
 	    }
 	}
@@ -729,7 +735,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    if((flags&FLAGS_WRITESPRITE) && !slavewritten)
 	    {
 		int id = get_free_id(masterbitmap);
-		int depth = 0;
+		int depth = 65535;
 		if(config.clip) {
 		    msg("<fatal> Can't combine --clip and --frame");
 		}
