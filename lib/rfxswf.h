@@ -590,7 +590,7 @@ int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
-SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale, MATRIX* m);
+SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
 
 void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, char*text);
 

@@ -111,7 +111,7 @@ int main (int argc,char ** argv)
 
   tag = swf_InsertTag(tag,ST_DEFINETEXT);
     swf_SetU16(tag, 33); //id
-    swf_SetDefineText(tag, font, &rgb, "Password:", 20, 0);
+    swf_SetDefineText(tag, font, &rgb, "Password:", 20);
    
   tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
   m.tx = width/2*20;

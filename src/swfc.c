@@ -889,7 +889,7 @@ void s_textshape(char*name, char*fontname, float size, char*_text)
 void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 {
     SRECT r;
-
+    MATRIX _m,*m=0;
     SWFFONT*font;
     font = dictionary_lookup(&fonts, fontname);
     if(!font)
@@ -901,7 +901,7 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
-    r = swf_SetDefineText(tag, font, &color, text, size, 0);
+    r = swf_SetDefineText(tag, font, &color, text, size);
    
     s_addcharacter(name, id, tag, r);
     incrementid();

@@ -1184,7 +1184,7 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 	swf_SetString(tag,text);
 }
 
-SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale, MATRIX* m)
+SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 {
     SRECT r;
     U8 gbits, abits;
@@ -1204,7 +1204,15 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale, M
     }
 
     swf_SetRect(tag,&r);
-    swf_SetMatrix(tag,m);
+
+    /* The text matrix is pretty boring, as it doesn't apply to
+       individual characters, but rather whole text objects (or
+       at least whole char records- haven't tested).
+       So it can't do anything which we can't already do with
+       the placeobject tag we use for placing the text on the scene.
+    */
+    swf_SetMatrix(tag,0);
+
     swf_TextCountBitsUTF8(font,text,scale*20,&gbits,&abits);
     swf_SetU8(tag,gbits);
     swf_SetU8(tag,abits);

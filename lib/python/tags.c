@@ -426,7 +426,7 @@ static int text_fillTAG(tag_internals_t*self)
     text_internal_t*ti = (text_internal_t*)self->data;
     self->tag= swf_InsertTag(0, ST_DEFINETEXT2);
     swf_SetU16(self->tag, /*ID*/0);
-    ti->bbox = swf_SetDefineText(self->tag, ti->swffont, &ti->rgba, ti->text, ti->size, 0);
+    ti->bbox = swf_SetDefineText(self->tag, ti->swffont, &ti->rgba, ti->text, ti->size);
     return 1;
 }
 static PyObject* text_getattr(tag_internals_t*self,char*a)
