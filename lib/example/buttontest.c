@@ -1,4 +1,4 @@
-/* shape1.c
+/* buttontest.c
 
    Example implementation for creating a button with rfxswf
    
@@ -17,8 +17,10 @@
 
 TAG* t;
 
+#define ID_BUTTON 31
+
 int useDefineButton2 = 0; // set this to 1 to use DefineButton2 Tags
-			  // instead of DefineButton1
+                          // instead of DefineButton1
                
 int main (int argc,char ** argv)
 { SWF swf;
@@ -46,7 +48,7 @@ int main (int argc,char ** argv)
   rgb.b = 0xff;
   swf_SetRGB(t,&rgb);
 
-  for(count=0;count<4;count++)
+  for(count=1;count<4;count++)
   {
       t = swf_InsertTag(t,ST_DEFINESHAPE);
       swf_ShapeNew(&s);               // create new shape instance
@@ -92,45 +94,38 @@ int main (int argc,char ** argv)
   {
       t = swf_InsertTag(t,ST_DEFINEBUTTON);
       swf_SetU16(t,31); //id
-      swf_ButtonSetFlags(t, 0); //menu=no
-      swf_ButtonSetRecord(t,0x01,33,1,0,0);
-      swf_ButtonSetRecord(t,0x02,34,1,0,0);
-      swf_ButtonSetRecord(t,0x04,35,1,0,0);
-      swf_ButtonSetRecord(t,0x08,36,1,0,0);
-      swf_SetU8(t,0);
+      swf_ButtonSetRecord(t,BS_UP|BS_HIT,34,1,NULL,NULL);
+      swf_ButtonSetRecord(t,BS_OVER,35,1,NULL,NULL);
+      swf_ButtonSetRecord(t,BS_DOWN,36,1,NULL,NULL);
+      swf_SetU8(t,0); // end of button records
+      
       swf_SetActions(t,actiontoset);
-      swf_SetU8(t,0);
   }
   else
   {
       t = swf_InsertTag(t,ST_DEFINEBUTTON2);
-      swf_SetU16(t,31); //id
+      swf_SetU16(t,ID_BUTTON); //id
       swf_ButtonSetFlags(t, 0); //menu=no
-      swf_ButtonSetRecord(t,0x01,33,1,0,0);
-      swf_ButtonSetRecord(t,0x02,34,1,0,0);
-      swf_ButtonSetRecord(t,0x04,35,1,0,0);
-      swf_ButtonSetRecord(t,0x08,36,1,0,0);
-      swf_SetU8(t,0);
+      swf_ButtonSetRecord(t,BS_UP|BS_HIT,34,1,NULL,NULL);
+      swf_ButtonSetRecord(t,BS_OVER,35,1,NULL,NULL);
+      swf_ButtonSetRecord(t,BS_DOWN,36,1,NULL,NULL);
+      swf_SetU8(t,0); // end of button records
 
-      swf_ButtonSetCondition(t, 4);
+      swf_ButtonSetCondition(t, BC_OVERDOWN_OVERUP);
        swf_SetActions(t,actiontoset);
-       swf_SetU8(t,0);
-
-      swf_ButtonSetCondition(t, 0);
-       swf_SetU8(t,0);
-
-      swf_SetU8(t,0);
-
-      swf_ButtonPostProcess(t, 2);
+       
+      swf_ButtonPostProcess(t, 1); // don't forget!
   }
 
+  // FIXME: Free Action Tag lists
+
   t = swf_InsertTag(t,ST_PLACEOBJECT2);
-  swf_ObjectPlace(t, 31, 2,0,0,0);
+  swf_ObjectPlace(t, ID_BUTTON, 2,0,0,0);
 
   t = swf_InsertTag(t,ST_SHOWFRAME);
   t = swf_InsertTag(t,ST_END);
 
-  f = open("button.swf",O_WRONLY|O_CREAT, 0644);
+  f = open("buttontest.swf",O_WRONLY|O_CREAT, 0644);
   if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 

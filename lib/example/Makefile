@@ -9,10 +9,13 @@ DBFLAGS	= -g2
 .c.o:
 		$(CC) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: jpegtest box shape1 transtest zlibtest sprites
+all: jpegtest box shape1 transtest zlibtest sprites buttontest
 
 box: $(RFXSWF) box.o
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+buttontest: $(RFXSWF) buttontest.o
+		$(CC) -o buttontest buttontest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 jpegtest: $(RFXSWF) jpegtest.o
 		$(CC) -o jpegtest jpegtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
@@ -31,7 +34,8 @@ zlibtest: $(RFXSWF) zlibtest.o
 
 clean:
 		rm -f jpegtest.o box.o shape1.o trastest.o zlibtest.o sprites.o\
+		buttontest.o \
 		jpegtest.swf box.swf shape1.swf trastest.swf zlibtest.swf \
-                sprites.swf
+                sprites.swf buttontest.swf
 
 

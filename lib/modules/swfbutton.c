@@ -17,7 +17,7 @@ int swf_ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx
   swf_SetU16(t,id);
   swf_SetU16(t,layer);
   swf_SetMatrix(t,m);
-//  SetCXForm(t,cx,0);
+  if (swf_GetTagID(t)==ST_DEFINEBUTTON2) swf_SetCXForm(t,cx,0);
   return 0;
 }
 
@@ -63,7 +63,7 @@ int swf_ButtonPostProcess(TAG * t,int anz_action)
     { swf_GetU16(t);          // id
       swf_GetU16(t);          // layer
       swf_GetMatrix(t,NULL);  // matrix
-      // evtl.: CXForm
+      swf_GetCXForm(t,NULL,0);// CXForm
     }
 
     swf_SetButtonOffset(t,offsetpos);
