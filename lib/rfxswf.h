@@ -453,6 +453,7 @@ SHAPE2*	   swf_ShapeToShape2(SHAPE*shape);
 void	   swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
 SRECT	   swf_GetShapeBoundingBox(SHAPE2*shape);
 void	    swf_SetShape2(TAG*tag, SHAPE2*shape);
+SHAPE2*    swf_Shape2Clone(SHAPE2 * s);
 void	   swf_Shape2Free(SHAPE2 * s);
 void	swf_DumpShape(SHAPE2*shape2);
 
