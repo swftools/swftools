@@ -468,7 +468,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP RANLIB ac_ct_RANLIB SET_MAKE INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN_S ECHO STRIP ac_ct_STRIP EGREP LIBTOOL UNCOMPRESS AR SLEXT FREETYPE_CONFIG target target_cpu target_vendor target_os WORDS_BIGENDIAN SYSTEM_BACKTICKS PACKAGE VERSION HAVE_UNISTD_H lame_objects AVIFILE_CONFIG USE_GZIP PYTHON_LIB PYTHON_INCLUDES JPEG2SWF PNG2SWF LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP RANLIB ac_ct_RANLIB SET_MAKE INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN_S ECHO STRIP ac_ct_STRIP EGREP LIBTOOL UNCOMPRESS AR SLEXT target target_cpu target_vendor target_os WORDS_BIGENDIAN SYSTEM_BACKTICKS PACKAGE VERSION HAVE_UNISTD_H FREETYPE_CONFIG lame_objects AVIFILE_CONFIG USE_GZIP PYTHON_LIB PYTHON_INCLUDES JPEG2SWF PNG2SWF LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1513,7 +1513,12 @@ fi;
 PACKAGE=swftools
 VERSION=0.6.0
 
+# ------------------------------------------------------------------
 
+if test "x${srcdir}" != "x."; then
+    echo "--srcdir is not supported"
+    exit 1
+fi
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
@@ -4788,7 +4793,7 @@ test "x$enable_libtool_lock" != xno && enable_libtool_lock=yes
 case $host in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 4791 "configure"' > conftest.$ac_ext
+  echo '#line 4796 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -5364,7 +5369,7 @@ chmod -w .
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -o out/conftest2.$ac_objext"
 compiler_c_o=no
-if { (eval echo configure:5367: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
+if { (eval echo configure:5372: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
   # The compiler can only warn and ignore the option if not recognized
   # So say no if there are warnings
   if test -s out/conftest.err; then
@@ -6597,7 +6602,7 @@ linux-gnu*)
   libsuff=
   case "$host_cpu" in
   x86_64*)
-    echo '#line 6600 "configure"' > conftest.$ac_ext
+    echo '#line 6605 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7345,7 +7350,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7348 "configure"
+#line 7353 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -7443,7 +7448,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7446 "configure"
+#line 7451 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -8477,10 +8482,7 @@ _ACEOF
   LIBS="-lz $LIBS"
 
 else
-  DISABLEPNG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} zlib"
- ZLIBMISSING=true;
-
+  ZLIBMISSING=true
 fi
 
 
@@ -8556,10 +8558,7 @@ _ACEOF
   LIBS="-ljpeg $LIBS"
 
 else
-  DISABLEPDF2SWF=true;
- DISABLEJPEG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} jpeglib"
-
+  JPEGLIBMISSING=true
 fi
 
 
@@ -8635,367 +8634,7 @@ _ACEOF
   LIBS="-lt1 $LIBS"
 
 else
-  DISABLEPDF2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} t1lib"
-
-fi
-
-
-
-for ac_prog in freetype-config
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
-if test "${ac_cv_prog_FREETYPE_CONFIG+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  if test -n "$FREETYPE_CONFIG"; then
-  ac_cv_prog_FREETYPE_CONFIG="$FREETYPE_CONFIG" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_FREETYPE_CONFIG="$ac_prog"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-
-fi
-fi
-FREETYPE_CONFIG=$ac_cv_prog_FREETYPE_CONFIG
-if test -n "$FREETYPE_CONFIG"; then
-  echo "$as_me:$LINENO: result: $FREETYPE_CONFIG" >&5
-echo "${ECHO_T}$FREETYPE_CONFIG" >&6
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-
-  test -n "$FREETYPE_CONFIG" && break
-done
-
-OLDCPPFLAGS="${CPPFLAGS}"
-OLDLIBS="${LIBS}"
-if test "x${FREETYPE_CONFIG}" != "x"; then
-    CPPFLAGS="$CPPFLAGS "`freetype-config --cflags`
-else if test -d /usr/include/freetype2; then
-    CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
-else if test -d /usr/local/include/freetype2; then
-    CPPFLAGS="$CPPFLAGS -I/usr/local/include/freetype2"
-fi
-fi
-fi
-echo "$as_me:$LINENO: checking for FT_Init_FreeType in -lfreetype" >&5
-echo $ECHO_N "checking for FT_Init_FreeType in -lfreetype... $ECHO_C" >&6
-if test "${ac_cv_lib_freetype_FT_Init_FreeType+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lfreetype  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char FT_Init_FreeType ();
-int
-main ()
-{
-FT_Init_FreeType ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_freetype_FT_Init_FreeType=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_freetype_FT_Init_FreeType=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_freetype_FT_Init_FreeType" >&5
-echo "${ECHO_T}$ac_cv_lib_freetype_FT_Init_FreeType" >&6
-if test $ac_cv_lib_freetype_FT_Init_FreeType = yes; then
-  HAVE_LIB_FREETYPE=1
-fi
-
-
-for ac_header in freetype/freetype.h
-do
-as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo "$as_me:$LINENO: checking for $ac_header" >&5
-echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-else
-  # Is the header compilable?
-echo "$as_me:$LINENO: checking $ac_header usability" >&5
-echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-$ac_includes_default
-#include <$ac_header>
-_ACEOF
-rm -f conftest.$ac_objext
-if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
-  (eval $ac_compile) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_header_compiler=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_header_compiler=no
-fi
-rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
-echo "${ECHO_T}$ac_header_compiler" >&6
-
-# Is the header present?
-echo "$as_me:$LINENO: checking $ac_header presence" >&5
-echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-#include <$ac_header>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  ac_header_preproc=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-  ac_header_preproc=no
-fi
-rm -f conftest.err conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
-echo "${ECHO_T}$ac_header_preproc" >&6
-
-# So?  What about this header?
-case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
-  yes:no: )
-    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
-echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the compiler's result" >&5
-echo "$as_me: WARNING: $ac_header: proceeding with the compiler's result" >&2;}
-    ac_header_preproc=yes
-    ;;
-  no:yes:* )
-    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
-echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header:     check for missing prerequisite headers?" >&5
-echo "$as_me: WARNING: $ac_header:     check for missing prerequisite headers?" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: see the Autoconf documentation" >&5
-echo "$as_me: WARNING: $ac_header: see the Autoconf documentation" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&5
-echo "$as_me: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: in the future, the compiler will take precedence" >&5
-echo "$as_me: WARNING: $ac_header: in the future, the compiler will take precedence" >&2;}
-    (
-      cat <<\_ASBOX
-## ------------------------------------------ ##
-## Report this to the AC_PACKAGE_NAME lists.  ##
-## ------------------------------------------ ##
-_ASBOX
-    ) |
-      sed "s/^/$as_me: WARNING:     /" >&2
-    ;;
-esac
-echo "$as_me:$LINENO: checking for $ac_header" >&5
-echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  eval "$as_ac_Header=\$ac_header_preproc"
-fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-
-fi
-if test `eval echo '${'$as_ac_Header'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
- HAVE_FREETYPE_FREETYPE_H=1
-fi
-
-done
-
-if test "x${HAVE_LIB_FREETYPE}" != "x";then
-if test "x${HAVE_FREETYPE_FREETYPE_H}" != "x";then
-    HAVE_FREETYPE=1
-fi
-fi
-
-if test "x${HAVE_FREETYPE}" = "x1"; then
-    if test "x{$FREETYPE_CONFIG}" != "x"; then
-	LIBS="$LIBS "`freetype-config --libs`
-    else
-	LIBS="$LIBS -lfreetype"
-    fi
-
-    echo "$as_me:$LINENO: checking whether we can compile the freetype test program" >&5
-echo $ECHO_N "checking whether we can compile the freetype test program... $ECHO_C" >&6
-
-    cat > conftest.c << EOF
-#include <freetype/freetype.h>
-#include <freetype/ftglyph.h>
-#include <freetype/ftsnames.h>
-#include <freetype/ttnameid.h>
-#include <freetype/ftoutln.h>
-
-int main()
-{
-    FT_Library ftlibrary;
-    FT_Face face;
-    FT_Error error;
-    FT_ULong charcode;
-    FT_UInt gindex;
-    FT_Glyph glyph;
-    FT_BBox bbox;
-    FT_Matrix matrix;
-    FT_UInt i;
-    char* name = 0;
-    char italic, bold;
-
-    FT_Init_FreeType(&ftlibrary);
-    FT_New_Face(ftlibrary, "filename", 0, &face);
-    i = face->num_glyphs - 1;
-    italic = face->style_flags&FT_STYLE_FLAG_ITALIC;
-    bold = face->style_flags&FT_STYLE_FLAG_BOLD;
-    FT_Get_Postscript_Name(face);
-    FT_Get_Char_Index(face, 33);
-    FT_Get_First_Char(face, &i);
-    FT_Get_Next_Char(face, 33, &i);
-    if(FT_HAS_GLYPH_NAMES(face)) {
-	FT_Get_Glyph_Name(face, 33, name, 127);
-    }
-    FT_Load_Glyph(face, 33, FT_LOAD_NO_BITMAP|FT_LOAD_NO_SCALE);
-    FT_Get_Glyph(face->glyph, &glyph);
-    FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
-    FT_Done_Glyph(glyph);
-    FT_Done_Face(face);
-    FT_Done_FreeType(ftlibrary);
-    return 0;
-}
-EOF
-
-    ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LDFLAGS $LIBS -o conftest${ac_exeext}'
-    if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-	echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
-	cat >>confdefs.h <<_ACEOF
-#define HAVE_FREETYPE 1
-_ACEOF
-
-	cat >>confdefs.h <<_ACEOF
-#define USE_FREETYPE 1
-_ACEOF
-  # for ttf2tp1
-    else
-	echo "configure: failed program was:" >&5
-	cat conftest.c >&5
-	HAVE_FREETYPE=0
-	echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-    fi
-    rm -f conftest*
-fi
-
-# if the above didn't work out, reset all changes to the compiler variables.
-if test "x${HAVE_FREETYPE}" "!=" "x1"; then
-    CPPFLAGS=$OLDCPPFLAGS
-    LIBS=$OLDLIBS
+  T1LIBMISSING=true
 fi
 
 
@@ -9853,21 +9492,6 @@ fi
 done
 
 
-if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
- DISABLEPDF2SWF=true;
- DISABLEJPEG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} jpeglib.h"
-fi
-if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
- DISABLEPDF2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} t1lib.h"
-fi
-if test "x${ac_cv_header_zlib_h}" != "xyes"; then
- DISABLEPNG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} zlib.h"
- ZLIBMISSING=true;
-fi
-
 cat >>confdefs.h <<_ACEOF
 #define PACKAGE "$PACKAGE"
 _ACEOF
@@ -10502,6 +10126,366 @@ done
 
 # ------------------------------------------------------------------
 
+
+for ac_prog in freetype-config
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_prog_FREETYPE_CONFIG+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$FREETYPE_CONFIG"; then
+  ac_cv_prog_FREETYPE_CONFIG="$FREETYPE_CONFIG" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_FREETYPE_CONFIG="$ac_prog"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+fi
+fi
+FREETYPE_CONFIG=$ac_cv_prog_FREETYPE_CONFIG
+if test -n "$FREETYPE_CONFIG"; then
+  echo "$as_me:$LINENO: result: $FREETYPE_CONFIG" >&5
+echo "${ECHO_T}$FREETYPE_CONFIG" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+  test -n "$FREETYPE_CONFIG" && break
+done
+
+OLDCPPFLAGS="${CPPFLAGS}"
+OLDLIBS="${LIBS}"
+if test "x${FREETYPE_CONFIG}" != "x"; then
+    CPPFLAGS="$CPPFLAGS "`freetype-config --cflags`
+else if test -d /usr/include/freetype2; then
+    CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
+else if test -d /usr/local/include/freetype2; then
+    CPPFLAGS="$CPPFLAGS -I/usr/local/include/freetype2"
+fi
+fi
+fi
+echo "$as_me:$LINENO: checking for FT_Init_FreeType in -lfreetype" >&5
+echo $ECHO_N "checking for FT_Init_FreeType in -lfreetype... $ECHO_C" >&6
+if test "${ac_cv_lib_freetype_FT_Init_FreeType+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lfreetype  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char FT_Init_FreeType ();
+int
+main ()
+{
+FT_Init_FreeType ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_freetype_FT_Init_FreeType=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_freetype_FT_Init_FreeType=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_freetype_FT_Init_FreeType" >&5
+echo "${ECHO_T}$ac_cv_lib_freetype_FT_Init_FreeType" >&6
+if test $ac_cv_lib_freetype_FT_Init_FreeType = yes; then
+  HAVE_LIB_FREETYPE=1
+fi
+
+
+for ac_header in freetype/freetype.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_header_compiler=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: $ac_header: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: $ac_header: in the future, the compiler will take precedence" >&2;}
+    (
+      cat <<\_ASBOX
+## ------------------------------------------ ##
+## Report this to the AC_PACKAGE_NAME lists.  ##
+## ------------------------------------------ ##
+_ASBOX
+    ) |
+      sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=\$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ HAVE_FREETYPE_FREETYPE_H=1
+fi
+
+done
+
+if test "x${HAVE_LIB_FREETYPE}" != "x";then
+if test "x${HAVE_FREETYPE_FREETYPE_H}" != "x";then
+    HAVE_FREETYPE=1
+fi
+fi
+
+if test "x${HAVE_FREETYPE}" = "x1"; then
+    if test "x{$FREETYPE_CONFIG}" != "x"; then
+	LIBS="$LIBS "`freetype-config --libs`
+    else
+	LIBS="$LIBS -lfreetype"
+    fi
+
+    echo "$as_me:$LINENO: checking whether we can compile the freetype test program" >&5
+echo $ECHO_N "checking whether we can compile the freetype test program... $ECHO_C" >&6
+
+    cat > conftest.c << EOF
+#include <freetype/freetype.h>
+#include <freetype/ftglyph.h>
+#include <freetype/ftsnames.h>
+#include <freetype/ttnameid.h>
+#include <freetype/ftoutln.h>
+
+int main()
+{
+    FT_Library ftlibrary;
+    FT_Face face;
+    FT_Error error;
+    FT_ULong charcode;
+    FT_UInt gindex;
+    FT_Glyph glyph;
+    FT_BBox bbox;
+    FT_Matrix matrix;
+    FT_UInt i;
+    char* name = 0;
+    char italic, bold;
+
+    FT_Init_FreeType(&ftlibrary);
+    FT_New_Face(ftlibrary, "filename", 0, &face);
+    i = face->num_glyphs - 1;
+    italic = face->style_flags&FT_STYLE_FLAG_ITALIC;
+    bold = face->style_flags&FT_STYLE_FLAG_BOLD;
+    FT_Get_Postscript_Name(face);
+    FT_Get_Char_Index(face, 33);
+    FT_Get_First_Char(face, &i);
+    FT_Get_Next_Char(face, 33, &i);
+    if(FT_HAS_GLYPH_NAMES(face)) {
+	FT_Get_Glyph_Name(face, 33, name, 127);
+    }
+    FT_Load_Glyph(face, 33, FT_LOAD_NO_BITMAP|FT_LOAD_NO_SCALE);
+    FT_Get_Glyph(face->glyph, &glyph);
+    FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
+    FT_Done_Glyph(glyph);
+    FT_Done_Face(face);
+    FT_Done_FreeType(ftlibrary);
+    return 0;
+}
+EOF
+
+    ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LDFLAGS $LIBS -o conftest${ac_exeext}'
+    if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+	echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+	cat >>confdefs.h <<_ACEOF
+#define HAVE_FREETYPE 1
+_ACEOF
+
+	cat >>confdefs.h <<_ACEOF
+#define USE_FREETYPE 1
+_ACEOF
+  # for ttf2tp1
+    else
+	echo "configure: failed program was:" >&5
+	cat conftest.c >&5
+	HAVE_FREETYPE=0
+	echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+    fi
+    rm -f conftest*
+fi
+
+# if the above didn't work out, reset all changes to the compiler variables.
+if test "x${HAVE_FREETYPE}" "!=" "x1"; then
+    CPPFLAGS=$OLDCPPFLAGS
+    LIBS=$OLDLIBS
+fi
+
+
+# ------------------------------------------------------------------
+
 lame_objects=
 lame_makefile=
 if test "x${DISABLE_LAME}" = "xtrue"; then
@@ -11079,14 +11063,6 @@ fi
 rm -f conftest*
 
 
-avi2swf="avi2swf/Makefile"
-if test "x${AVIFILE}" != "xtrue"; then
- echo "* Couldn't compile the avifile test program."
- echo "* Disabling avi2swf tool..."
- echo all install uninstall clean: > avi2swf/Makefile
- avi2swf=
-fi
-
 # ------------------------------------------------------------------
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
@@ -11158,47 +11134,104 @@ fi
 
 if test "x$PYTHON_OK" '!=' "xyes";then
     echo all install uninstall clean: > lib/python/Makefile
-    echo "* No usable python installation found"
-    echo "* Not compiling the python interface"
+    # fail silently- the most users won't have any need for the
+    # python interface anyway
 fi
 
 # ------------------------------------------------------------------
 
-JPEG2SWF='jpeg2swf$(E)'
-export JPEG2SWF
-PNG2SWF='png2swf$(E)'
-export PNG2SWF
+echo "$as_me:$LINENO: checking for missing libraries" >&5
+echo $ECHO_N "checking for missing libraries... $ECHO_C" >&6
 
-if test "x${DISABLEPDF2SWF}" = "xtrue"; then
-  echo "***************************************************"
-  echo "The following headers/libraries are missing: " ${MISSINGLIBS}
-  if test "x${DISABLEPDF2SWF}" = "xtrue"; then
-    echo "Disabling pdf2swf tool..."
-    rm -f pdf2swf/Makefile
-    echo all install uninstall clean: > pdf2swf/Makefile
-  fi
-  if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
-    echo "Disabling jpeg2swf tool..."
-    JPEG2SWF=
-    export JPEG2SWF
-  fi
-  if test "x${DISABLEPNG2SWF}" = "xtrue"; then
-    echo "Disabling png2swf tool..."
-    PNG2SWF=
-    export PNG2SWF
-  fi
-  if test "x${ZLIBMISSING}" = "xtrue"; then
-    echo
-    echo "Warning! Without zlib, you will not be able to read"
-    echo "or write compressed Flash MX files!"
-  fi
-  echo "***************************************************"
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
-else
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
+if test "x$ZLIBMISSING" = "xtrue";then
+    MISSINGLIBS="${MISSINGLIBS} zlib"
+    DISABLEPNG2SWF=true;
+fi
+if test "x$JPEGLIBMISSING" = "xtrue";then
+    MISSINGLIBS="${MISSINGLIBS} jpeglib"
+    DISABLEPDF2SWF=true;
+    DISABLEJPEG2SWF=true;
+fi
+#if test "x$T1LIBMISSING" = "xtrue";then
+#    MISSINGLIBS="${MISSINGLIBS} t1lib"
+#    DISABLEPDF2SWF=true;
+#fi
+
+if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
+ DISABLEPDF2SWF=true;
+ DISABLEJPEG2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} jpeglib.h"
+fi
+if test "x$HAVE_FREETYPE" != "x1"; then
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} freetype"
+fi
+if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} t1lib.h"
+fi
+if test "x${ac_cv_header_zlib_h}" != "xyes"; then
+ DISABLEPNG2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} zlib.h"
+fi
+if test "x${AVIFILE}" != "xtrue"; then
+ MISSINGLIBS="${MISSINGLIBS} avifile"
 fi
 
+echo "$as_me:$LINENO: result: ${MISSINGLIBS}" >&5
+echo "${ECHO_T}${MISSINGLIBS}" >&6
 
+# ------------------------------------------------------------------
+
+if test "x${MISSINGLIBS}" '!=' "x"; then
+  echo "***************************************************"
+  echo "* The following headers/libraries are missing: " ${MISSINGLIBS}
+fi
+
+avi2swf="avi2swf/Makefile"
+if test "x${AVIFILE}" != "xtrue"; then
+ echo "* Disabling avi2swf tool..."
+ echo all install uninstall clean: > avi2swf/Makefile
+ avi2swf=
+fi
+
+pdf2swf_makefile="pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile"
+if test "x${DISABLEPDF2SWF}" = "xtrue"; then
+  echo "* Disabling pdf2swf tool..."
+  rm -f pdf2swf/Makefile
+  echo all install uninstall clean: > pdf2swf/Makefile
+  pdf2swf_makefile=""
+fi
+
+if test "x${ZLIBMISSING}" = "xtrue"; then
+  echo
+  echo "* Warning! Without zlib, you will not be able to read"
+  echo "* or write compressed Flash MX files!"
+fi
+
+JPEG2SWF='jpeg2swf$(E)'
+if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
+  echo "* Disabling jpeg2swf tool..."
+  JPEG2SWF=
+fi
+export JPEG2SWF
+
+
+PNG2SWF='png2swf$(E)'
+if test "x${DISABLEPNG2SWF}" = "xtrue"; then
+  echo "* Disabling png2swf tool..."
+  PNG2SWF=
+fi
+export PNG2SWF
+
+
+if test "x${MISSINGLIBS}" '!=' "x"; then
+  echo "***************************************************"
+fi
+
+# ------------------------------------------------------------------
+
+FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
 
           ac_config_files="$ac_config_files ${FILES}"
 
@@ -11847,7 +11880,6 @@ s,@LIBTOOL@,$LIBTOOL,;t t
 s,@UNCOMPRESS@,$UNCOMPRESS,;t t
 s,@AR@,$AR,;t t
 s,@SLEXT@,$SLEXT,;t t
-s,@FREETYPE_CONFIG@,$FREETYPE_CONFIG,;t t
 s,@target@,$target,;t t
 s,@target_cpu@,$target_cpu,;t t
 s,@target_vendor@,$target_vendor,;t t
@@ -11857,6 +11889,7 @@ s,@SYSTEM_BACKTICKS@,$SYSTEM_BACKTICKS,;t t
 s,@PACKAGE@,$PACKAGE,;t t
 s,@VERSION@,$VERSION,;t t
 s,@HAVE_UNISTD_H@,$HAVE_UNISTD_H,;t t
+s,@FREETYPE_CONFIG@,$FREETYPE_CONFIG,;t t
 s,@lame_objects@,$lame_objects,;t t
 s,@AVIFILE_CONFIG@,$AVIFILE_CONFIG,;t t
 s,@USE_GZIP@,$USE_GZIP,;t t
@@ -12358,6 +12391,3 @@ if test "$no_create" != yes; then
 fi
 
 
-if test "x${srcdir}" != "x."; then
-    echo "Warning: --srcdir is not supported"
-fi
