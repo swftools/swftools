@@ -24,7 +24,7 @@
 3.) Is there a pdf2swf for Windows?
 
     No. pdf2swf only runs on Unix platforms, like Linux, *BSD, MacOS X, etc.
-    There have been some successes reported on compling pdf2swf on Win32 using
+    There have been some reports on more or less successfully compling pdf2swf on Win32 using
     Cygwin (http://sources.redhat.com/cygwin), however, there's no working version
     yet.
     If you want to use pdf2swf, find a Unix machine.
@@ -35,27 +35,60 @@
 
 5.) Can png2swf handle transparency?
 
-    Yes.
+    It supports PNG mode 2 transparency (alpha palettes) since version 0.4.2. 
+    Mode 6 (32 bit RGBA truecolor) is also supported since version 0.4.3, however
+    it seems most Flash players don't handle the alpha channel in the resulting 
+    32 bit images correctly.
 
 6.) How to get Flash MX compression with SWFTools?
 
     Most tools support the -z flag for outputting compressed SWF.
     Furthermore you can compress/uncompress SWF files using swfcombine:
 
-    swfcombine -dz file.swf -o file_new.swf
+	swfcombine -dz file.swf -o file_new.swf
 
     compresses, while
 
-    swfcombine -d file.swf -o file_new.swf
+	swfcombine -d file.swf -o file_new.swf
 
     decompresses.
 
-7.) Is there a mailing list for SWFTools?
+7.) avi2swf converts my avi files upside down!
+
+    Try using the -p (--flip) switch.
+
+8.) How to extract images/sounds from myfile.swf using swfextract?
+
+    First list all extractable items:
+
+	swfextract myfile.swf
+    
+    The result is something like:
+
+	Objects in file myfile.swf:
+	Shapes: 1, 2, 3
+	MovieClips: 4, 5, 8, 10, 12
+	JPEGs: 69, 116, 447
+	PNGs: 318
+	Sounds: 28, 29, 30
+	Frames: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+
+    Not you can extract a shape using
+
+	swfextract -i 2 myfile.swf -o shape.swf
+
+    a sound using
+	
+	swfextract -s 28 myfile.swf -o sound.wav
+
+    a PNG image file using
+	
+	swfextract -p 318 myfile.swf -o file.png
+
+    etc.
+
+9.) Is there a mailing list for SWFTools?
 
     There used to be, however it was shut down due to lack of traffic. The archive
     is available as raw INBOX file on http://www.quiss.org/swftools/list.tar.gz.
-
-8.) avi2swf converts my avi files upside down!
-
-    Try using the -p (--flip) switch.
 
