@@ -560,7 +560,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		if(id == ST_END)
 		    break;
 		tag2->len = tag2->memsize = len;
-		tag2->data = malloc(len);
+		tag2->data = rfx_alloc(len);
 		memcpy(tag2->data, &tag->data[tag->pos], len);
 		/* I never saw recursive sprites, but they are (theoretically) 
 		   possible, so better add base here again */
@@ -844,17 +844,19 @@ void swf_Relocate (SWF*swf, char*bitmap)
 	} 
 	
 	num = swf_GetNumUsedIDs(tag);
-	ptr = malloc(sizeof(int)*num);
-	swf_GetUsedIDs(tag, ptr);
+	if(num) {
+	    ptr = rfx_alloc(sizeof(int)*num);
+	    swf_GetUsedIDs(tag, ptr);
 
-	for(t=0;t<num;t++) {
-	    int id = GET16(&tag->data[ptr[t]]);
-	    if(slaveids[id]<0) {
-		fprintf(stderr, "swf_Relocate: Mapping id never encountered before: %d\n", id);
-		return ;
+	    for(t=0;t<num;t++) {
+		int id = GET16(&tag->data[ptr[t]]);
+		if(slaveids[id]<0) {
+		    fprintf(stderr, "swf_Relocate: Mapping id never encountered before: %d\n", id);
+		    return ;
+		}
+		id = slaveids[id];
+		PUT16(&tag->data[ptr[t]], id);
 	    }
-	    id = slaveids[id];
-	    PUT16(&tag->data[ptr[t]], id);
 	}
 	tag=tag->next;
     }
@@ -970,14 +972,11 @@ static int tagHash(TAG*tag)
 void swf_Optimize(SWF*swf)
 {
     const int hash_size = 131072;
-    char* dontremap = malloc(sizeof(char)*65536);
-    U16* remap = malloc(sizeof(U16)*65536);
-    TAG* id2tag = malloc(sizeof(TAG*)*65536);
-    TAG** hashmap = malloc(sizeof(TAG*)*hash_size);
+    char* dontremap = rfx_calloc(sizeof(char)*65536);
+    U16* remap = rfx_alloc(sizeof(U16)*65536);
+    TAG* id2tag = rfx_calloc(sizeof(TAG*)*65536);
+    TAG** hashmap = rfx_calloc(sizeof(TAG*)*hash_size);
     TAG* tag;
-    memset(dontremap, 0, sizeof(char)*65536);
-    memset(hashmap, 0, sizeof(TAG*)*hash_size);
-    memset(id2tag, 0, sizeof(TAG*)*65536);
     int t;
     for(t=0;t<65536;t++) {
         remap[t] = t;
@@ -1054,7 +1053,7 @@ void swf_Optimize(SWF*swf)
         if(doremap)
         {
             int num = swf_GetNumUsedIDs(tag);
-            int*positions = malloc(sizeof(int)*num);
+            int*positions = rfx_alloc(sizeof(int)*num);
             int t;
             swf_GetUsedIDs(tag, positions);
             for(t=0;t<num;t++) {
@@ -1062,14 +1061,14 @@ void swf_Optimize(SWF*swf)
                 id = remap[id];
                 PUT16(&tag->data[positions[t]], id);
             }
-            free(positions);
+            rfx_free(positions);
             tag = tag->next;
         }
 
         tag = next;
     }
-    free(dontremap);
-    free(remap);
-    free(id2tag);
-    free(hashmap);
+    rfx_free(dontremap);
+    rfx_free(remap);
+    rfx_free(id2tag);
+    rfx_free(hashmap);
 }
