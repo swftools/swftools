@@ -107,7 +107,7 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   FILES="./release Makefile lib/Makefile src/Makefile"
 else
-  FILES="./release Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/fonts/Makefile"
+  FILES="./release Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile"
 fi
 AC_SUBST(JPEG2SWF)
 
