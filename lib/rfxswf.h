@@ -697,14 +697,6 @@ int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);
 #define BMF_16BIT       4
 #define BMF_32BIT       5
 
-#define BM16_BLUE       0xf800          // Bitmasks for 16 Bit Color
-#define BM16_RED        0x00f0
-#define BM16_GREEN      0x000f
-
-#define BM32_BLUE       0xff000000      // Bitmasks for 32 Bit Color
-#define BM32_GREEN      0x00ff0000
-#define BM32_RED        0x0000ff00
-
 int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
 int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
