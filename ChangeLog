@@ -32,3 +32,5 @@
 0.1.2:
 	* swfdump: can dump all actionscript flavours (button, button2, standalone) now
 	* rfxswf-lib: improved font handling
+	* lib/example/makefonts.cc: new file, converts the standard fonts to swf
+	* lib/example/glyphshape.c: new file, demonstrates using font characters as shapes
