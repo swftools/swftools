@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../config.h"
+#include "old_rfxswf.h"
 
 #define DEBUG_RFXSWF
 
