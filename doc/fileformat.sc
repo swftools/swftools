@@ -1,3 +1,12 @@
+# ===========================================================================
+#
+# swfc(1) File format specification
+#
+# Warning: not all of this is actually implemented yet- if there's a
+# "TODO" behind a command, it has yet to be integrated into swfc.
+#
+# ===========================================================================
+
 # File header
 # -----------
 
@@ -123,7 +132,7 @@
 # interpolation between crude manual animation frames
 # ---------------------------------------------------
 
-.shape ball "ball.xml" # TODO #The ball should be white or violet to make the cxforms below work
+.circle ball r=50 color=blue fill=violet
 
 # now draw two balls, which fly around each other.
 
@@ -216,7 +225,7 @@
 # clipping an animation inside a star-shaped sprite:
 
 .swf mystar1 "star.swf"
-.movie anim1 "penguins.swf"
+.swf anim1 "penguins.swf"
 
 .sprite cspr1
     .startclip mystar1
