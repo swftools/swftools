@@ -1,6 +1,6 @@
 /* makefonts.cc
 
-   Utility for generating the standard fonts (arial, courier, etc.) in swf-format. 
+   Utility for converting Type 1 fonts to SWF.
    
    Part of the swftools package.
 
@@ -12,11 +12,75 @@
 
 
 #include <stdio.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <math.h>
 #include "../lib/rfxswf.h"
+#include "../lib/args.h"
 #include "swfoutput.h"
 #include "spline.h"
+
+static char * filenames[256];
+static int filenum;
+static char * destfilename = "output.swf";
+int all=0;
+int verbose=0;
+
+struct options_t options[] =
+{
+ {"o","output"},
+ {"v","verbose"},
+ {"V","version"},
+ {0,0}
+};
+int args_callback_option(char*name,char*val)
+{
+    if(!strcmp(name, "V")) {
+        printf("font2swf - part of %s %s\n", PACKAGE, VERSION);
+        exit(0);
+    }
+    else if(!strcmp(name, "o")) {
+	destfilename = val;
+	return 1;
+    }
+    else if(!strcmp(name, "v")) {
+	verbose ++;
+	return 0;
+    }
+    else {
+        printf("Unknown option: -%s\n", name);
+	exit(1);
+    }
+    return 0;
+}
+int args_callback_longoption(char*name,char*val)
+{
+    return args_long2shortoption(options, name, val);
+}
+void args_callback_usage(char*name)
+{    
+    printf("Usage: %s file.afm [...]\n", name);
+    printf("   OR: %s all\n", name);
+    printf("\n");
+    printf("\tIf \"all\" is given instead of font names, all standard fonts\n");
+    printf("\t(Courier, Arial etc.) will be created\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("\n");
+    printf("\t-h , --help\t\t Print help and exit\n");
+    printf("\t-o , --output filename\t set output filename\n");
+    printf("\t-V , --version\t\t Print program version and exit\n");
+}
+int args_callback_command(char*name,char*val)
+{
+    if(!strcmp(name, "all"))
+	all = 1;
+    else {
+	filenames[filenum++] = strdup(name);
+    }
+    return 0;
+}
+
 
 #define standardEncodingSize 256
 #define symbolEncodingSize 256
@@ -184,26 +248,24 @@ SWFFONT * t1font2swffont(int i)
 
 int main(int argc, char ** argv)
 {
-  int all=0;
-  if(argc<=1) {
-      printf("Usage: %s font.afm\n", argv[0]);
-      printf("OR:    %s all\n", argv[0]);
-      printf("\n");
-      printf("\tIf \"all\" is given instead of font names, all standard fonts\n");
-      printf("\t(Courier, Arial etc.) will be created\n");
-      return 0;
-  } else {
-      if(!strcmp(argv[1],"all"))
-	  all=1;
-  }
+  char cwd[128];
+  getcwd(cwd, 128);
+  processargs(argc, argv);
   //TODO: use tempnam here. Check if environment already contains a
   //T1LIB_CONFIG.
   putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
   FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
-  fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n", SWFTOOLS_DATADIR);
-  fprintf(fi, "ENCODING=%s/fonts:.\n", SWFTOOLS_DATADIR);
-  fprintf(fi, "AFM=%s/fonts:.\n", SWFTOOLS_DATADIR);
-  fprintf(fi, "TYPE1=%s/fonts:.\n", SWFTOOLS_DATADIR);
+  if(all) {
+      fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n");
+      fprintf(fi, "ENCODING=%s/fonts:.\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "AFM=%s/fonts:.\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "TYPE1=%s/fonts:.\n", SWFTOOLS_DATADIR);
+  } else {
+      fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n");
+      fprintf(fi, "ENCODING=%s:.\n", cwd);
+      fprintf(fi, "AFM=%s:.\n", cwd);
+      fprintf(fi, "TYPE1=%s:.\n", cwd);
+  }
   fclose(fi);
   fi = fopen("/tmp/FontDataBase", "wb");
   if(all) {
@@ -223,10 +285,10 @@ int main(int argc, char ** argv)
       fprintf(fi, "%s/fonts/s050000l.afm\n", SWFTOOLS_DATADIR);
       fprintf(fi, "%s/fonts/d050000l.afm\n", SWFTOOLS_DATADIR);
   } else {
-    fprintf(fi, "%d\n",argc-1);
+    fprintf(fi, "%d\n", filenum);
     int t;
-    for(t=1;t<argc;t++) {
-	fprintf(fi, "%s\n",argv[t]);
+    for(t=0;t<filenum;t++) {
+	fprintf(fi, "%s/%s\n", cwd, filenames[t]);
     }
   }
   fclose(fi);
