@@ -98,6 +98,17 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
  AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand)
+ SWF_CHECK_AVI2SWF
+
+avi2swf="avi2swf/Makefile"
+if test "x${AVIFILE}" != "xtrue"; then
+ echo "* Couldn't compile the avifile test program."
+ echo "* Disabling avi2swf tool..."
+ echo all: > avi2swf/Makefile
+ echo install: >> avi2swf/Makefile
+ echo clean: >> avi2swf/Makefile
+ avi2swf=
+fi
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
     AC_DEFINE_UNQUOTED(USE_GZIP, 1)
@@ -120,9 +131,9 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
     export JPEG2SWF
   fi
   echo "***************************************************"
-  FILES="./release Makefile lib/bladeenc/Makefile lib/Makefile src/Makefile swfs/Makefile"
+  FILES="./release ${avi2swf} Makefile lib/bladeenc/Makefile lib/Makefile src/Makefile swfs/Makefile"
 else
-  FILES="./release Makefile lib/bladeenc/Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
+  FILES="./release ${avi2swf} Makefile lib/bladeenc/Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
 fi
 AC_SUBST(JPEG2SWF)
 
