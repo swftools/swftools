@@ -200,7 +200,10 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
  AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand bcopy bzero time)
- RFX_CHECK_AVI2SWF
+
+# ------------------------------------------------------------------
+ 
+RFX_CHECK_AVI2SWF
 
 avi2swf="avi2swf/Makefile"
 if test "x${AVIFILE}" != "xtrue"; then
@@ -209,6 +212,15 @@ if test "x${AVIFILE}" != "xtrue"; then
  echo all install uninstall clean: > avi2swf/Makefile
  avi2swf=
 fi
+
+# ------------------------------------------------------------------
+
+if test "x${UNCOMPRESS}" = "xgzip"; then
+    AC_DEFINE_UNQUOTED(USE_GZIP, 1)
+fi
+AC_SUBST(USE_GZIP)
+
+# ------------------------------------------------------------------
 
 if test "x${DISABLE_LAME}" = "xtrue"; then
     echo "*" Disabling lame support...
@@ -219,50 +231,22 @@ else
 fi
 AC_SUBST(lame_objects)
 
-if test "x${UNCOMPRESS}" = "xgzip"; then
-    AC_DEFINE_UNQUOTED(USE_GZIP, 1)
-fi
-AC_SUBST(USE_GZIP)
-
-JPEG2SWF='jpeg2swf$(E)'
-export JPEG2SWF
-PNG2SWF='png2swf$(E)'
-export PNG2SWF
-
 # ------------------------------------------------------------------
 
-AC_MSG_CHECKING([for Python.h and PIL])
-# should we support python versions below 2.2?
-if test -f "/usr/lib/python2.2/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.2/Python.h";then
-    PY_VERSION=2.2
-fi
-if test -f "/usr/lib/python2.3/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.3/Python.h";then
-    PY_VERSION=2.3
-fi
-if test -f "/usr/lib/python2.4/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.4/Python.h";then
-    PY_VERSION=2.4
-fi
+RFX_CHECK_PYTHON
 
-if test "x$PY_VERSION" "!=" "x"; then
-    pythonrfxswf="lib/python/Makefile"
-    if test "x$PYTHON_LIB" = "x";then
-	PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
-    fi
-    if test "x$PYTHON_INCLUDES" = "x";then
-	PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
-    fi
-    export PYTHON_INCLUDES PYTHON_LIB
-    AC_SUBST(PYTHON_LIB)
-    AC_SUBST(PYTHON_INCLUDES)
-    AC_MSG_RESULT(yes)
-else
+if test "x$PYTHON_OK" '!=' "xyes";then
     echo all install uninstall clean: > lib/python/Makefile
-    AC_MSG_RESULT(nope)
     echo "* No usable python installation found"
     echo "* Not compiling the python interface"
 fi
 
 # ------------------------------------------------------------------
+
+JPEG2SWF='jpeg2swf$(E)'
+export JPEG2SWF
+PNG2SWF='png2swf$(E)'
+export PNG2SWF
 
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
