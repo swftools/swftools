@@ -190,7 +190,8 @@ int main (int argc,char ** argv)
 
     processargs(argc, argv);
 
-    blocksize = 576;
+    blocksize = (samplerate > 22050) ? 1152 : 576;
+
     blockspersecond = (float)samplerate/blocksize;
 
     framespersecond = blockspersecond;
