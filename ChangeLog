@@ -99,7 +99,7 @@
 	* configure: Didn't create all Makefiles when t1lib or jpeglib were absent. Fixed.
 	* swfs/Makefile: FreeBSD fixes.
 
-0.4.0: (not released yet)
+0.4.0:
 	* pdf2swf/xpdf: Upgraded PDF Parser to Version 1.01.
 	* pdf2swf: Can now handle Type 3 Fonts. (As Bitmaps)
 	* src/swfcombine: Completely rewritten, using the rfxswf routines

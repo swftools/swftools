@@ -14,6 +14,6 @@ swfcombine:
 
 swfextract:
     
-    * mp3 extraction should also work for movieclips and definesound.
+    * mp3 extraction should also work for movieclips.
     * improve placeobject handling
 
