@@ -257,9 +257,9 @@ if test "x$PY_VERSION" "!=" "x"; then
     AC_MSG_RESULT(yes)
 else
     echo all install uninstall clean: > lib/python/Makefile
+    AC_MSG_RESULT(nope)
     echo "* No usable python installation found"
     echo "* Not compiling the python interface"
-    AC_MSG_RESULT(nope)
 fi
 
 # ------------------------------------------------------------------
