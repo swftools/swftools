@@ -13,7 +13,7 @@
 #include <assert.h>
 #include "../rfxswf.h"
 #include "../args.h"
-#include "h263tables.c"
+#include "h263tables.h"
 
 static char * filename = 0;
 static char * indent = "                ";
