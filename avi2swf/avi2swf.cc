@@ -719,9 +719,9 @@ int main (int argc,char ** argv)
 	int c=0;
 	if(first) { //first run
 	      tag = swf_InsertTag(NULL, ST_SOUNDSTREAMBLOCK);
-	      swf_SetSoundStreamBlock(tag, samples, 1);
+	      swf_SetSoundStreamBlock(tag, samples, 0, 1);
 	} else {
-	      swf_SetSoundStreamBlock(tag, samples, 0);
+	      swf_SetSoundStreamBlock(tag, samples, 0, 0);
 	}
 	
 	mp3_sound_pos += mp3_block_size;
