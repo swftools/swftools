@@ -22209,11 +22209,11 @@ else
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
         fi
         # Mac OS X
-        if test -f "/Library/Python/2.$v/_imaging.so" \
+        if test -f "/Library/Python/2.$v/PIL/_imaging.so" \
                 -a "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
-            PYTHON_LIB="-lpython$PY_VERSION /Library/Python/2.3/_imaging.so"
-            PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.3/include/python$PY_VERSION/"
+            PYTHON_LIB="-lpython$PY_VERSION /Library/Python/2.$v/PIL/_imaging.so"
+            PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
         fi
     done
 fi
