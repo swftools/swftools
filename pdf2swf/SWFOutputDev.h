@@ -25,14 +25,12 @@ void pdfswf_init(char*filename, char*userPassword) ;
 
 void pdfswf_setparameter(char*name, char*value);
 void pdfswf_addfont(char*filename);
-
 void pdfswf_setoutputfilename(char*filename);
 
-void pdfswf_setversion(int);
-void pdfswf_jpegquality(int);
 void pdfswf_performconversion();
 
 int pdfswf_numpages();
 void pdfswf_convertpage(int page) ;
 void pdfswf_close();
+
 #endif //__pdf_h__
