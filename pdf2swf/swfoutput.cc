@@ -71,6 +71,8 @@ int clippos = 0;
 int CHARMIDX = 0;
 int CHARMIDY = 0;
 
+char fillstylechanged = 0;
+
 static void startshape(struct swfoutput* obj);
 static void starttext(struct swfoutput* obj);
 static void endshape();
@@ -91,8 +93,9 @@ static void moveto(TAG*tag, plotxy p0)
 {
     int rx = (int)(p0.x*20);
     int ry = (int)(p0.y*20);
-    if(rx!=swflastx || ry!=swflasty) {
+    if(rx!=swflastx || ry!=swflasty || fillstylechanged) {
       swf_ShapeSetMove (tag, shape, rx,ry);
+      fillstylechanged = 0;
     }
     swflastx=rx;
     swflasty=ry;
@@ -466,8 +469,10 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
         if(shapeid<0)
             startshape(obj);
 
-        if(!lastwasfill)
+        if(!lastwasfill) {
          swf_ShapeSetStyle(tag,shape,0x8000,fillstyleid,0);
+	 fillstylechanged = 1;
+	}
         lastwasfill = 1;
 
         int lf = fill;
@@ -483,17 +488,27 @@ void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline,
 {
     if(textid>=0)
         endtext();
+
+    /* XXX the following is needed due to a bug in the SWF player.
+       Filled shapes consisting solely of curves don't get
+       filled correctly if they are in the same shape */
+    if(shapeid>=0 && fill) {
+	endshape();
+    }
+
     if(shapeid<0)
         startshape(output);
 
     if(lastwasfill && !fill)
     {
      swf_ShapeSetStyle(tag,shape,linestyleid,0x8000,0);
+     fillstylechanged = 1;
      lastwasfill = 0;
     }
     if(!lastwasfill && fill)
     {
      swf_ShapeSetStyle(tag,shape,0x8000,fillstyleid,0);
+     fillstylechanged = 1;
      lastwasfill = 1;
     }
 
@@ -635,6 +650,7 @@ SWFFont::~SWFFont()
             s.bits.fill = 1;
             s.bits.line = 0;
             swf_ShapeSetStyle(ftag,&s,0,1,0);
+	    fillstylechanged = 1;
             int lastfill = fill;
             fill = 1;
             storefont = 1;
@@ -1025,9 +1041,9 @@ void swfoutput_setfillcolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
        obj->fillrgb.g == g &&
        obj->fillrgb.b == b &&
        obj->fillrgb.a == a) return;
-
     if(shapeid>=0)
      endshape();
+
     obj->fillrgb.r = r;
     obj->fillrgb.g = g;
     obj->fillrgb.b = b;
