@@ -253,9 +253,9 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
     echo "or write compressed Flash MX files!"
   fi
   echo "***************************************************"
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile"
 else
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile"
+  FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile"
 fi
 AC_SUBST(JPEG2SWF)
 AC_SUBST(PNG2SWF)
