@@ -23,12 +23,10 @@ swfstrings.o: swfstrings.c
 	$(C) swfstrings.c -o $@
 jpeg2swf.o: jpeg2swf.c
 	$(C) jpeg2swf.c -o $@
-swfc.o: swfc.c parser.h q.h
+swfc.o: swfc.c parser.h ../lib/q.h
 	$(C) swfc.c -o $@
-parser.o: parser.yy.c parser.h q.h
+parser.o: parser.yy.c parser.h ../lib/q.h
 	$(C) parser.yy.c -o $@
-q.o: q.c q.h
-	$(C) q.c -o $@
 
 # TODO: include the following rule only if lex is available
 parser.yy.c: parser.lex
@@ -55,8 +53,8 @@ swfstrings: swfstrings.o
 jpeg2swf: jpeg2swf.o
 	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) jpeg2swf
-swfc: parser.o swfc.o q.o wav.o
-	$(L) parser.o swfc.o q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfc: parser.o swfc.o ../lib/q.o wav.o
+	$(L) parser.o swfc.o ../lib/q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
 	$(STRIP) swfc
 
 install:

@@ -20,7 +20,7 @@
 #include "../lib/rfxswf.h"
 #include "../lib/log.h"
 #include "../lib/args.h"
-#include "q.h"
+#include "../lib/q.h"
 #include "parser.h"
 #include "wav.h"
 

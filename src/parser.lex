@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "q.h"
+#include "../lib/q.h"
 #include "parser.h"
 
 //RVALUE	 {NUMBER}|{PERCENT}|{NAME}|\"{STRING}\"|{DIM}
