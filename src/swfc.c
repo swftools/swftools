@@ -1213,7 +1213,7 @@ int points_initialized = 0;
 
 SPOINT getPoint(SRECT r, char*name)
 {
-    int l;
+    int l=0;
     if(!strcmp(name, "center")) {
 	SPOINT p;
 	p.x = (r.xmin + r.xmax)/2;
@@ -1221,9 +1221,10 @@ SPOINT getPoint(SRECT r, char*name)
 	return p;
     }
 
-    l = (int)dictionary_lookup(&points, name);
+    if(points_initialized)
+	l = (int)dictionary_lookup(&points, name);
     if(l==0) {
-	syntaxerror("Couldn't find point \"%s\".", name);
+	syntaxerror("Invalid point: \"%s\".", name);
     }
     l--;
     return *(SPOINT*)&mpoints.buffer[l];
