@@ -101,6 +101,13 @@ typedef struct _CXFORM
   S16           b0, b1;
 } CXFORM, * LPCXFORM;
 
+typedef struct _GRADIENT
+{
+    int num;
+    U8 ratios[8];
+    RGBA rgba[8];
+} GRADIENT;
+
 typedef struct _TAG             // NEVER access a Tag-Struct directly !
 { U16           id;
   U8 *          data;
@@ -185,6 +192,9 @@ int   swf_SetBlock(TAG * t,U8 * b,int l);
 U8    swf_GetU8(TAG * t);                   // resets Bitcount
 U16   swf_GetU16(TAG * t);
 U32   swf_GetU32(TAG * t);
+void  swf_GetRGB(TAG * t, RGBA * col);
+void  swf_GetRGBA(TAG * t, RGBA * col);
+void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
 
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
@@ -594,7 +604,8 @@ char* swf_GetName(TAG * t); //PLACEOBJECT2, FRAMELABEL
 MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2);
 MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
                     int x0,int y0,int x1,int y1,int x2,int y2);
-
+int swf_GetNumUsedIDs(TAG * t);
+void swf_GetUsedIDs(TAG * t, int * positions);
 
 // swfcgi.c
 
