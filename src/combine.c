@@ -303,6 +303,30 @@ void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags
     while(master.tags[pos++].id != 0);
 }
 
+void writeheader(struct writer_t*w, u8*data, int length)
+{
+    if(config.hassizex || config.hassizey || config.framerate)
+    {
+	struct flash_header head;
+	swf_init(data-3, length+3);
+	head = swf_read_header();
+	if(config.hassizex)
+	{
+	    head.boundingBox.x2 = head.boundingBox.x1 + config.sizex;
+	}
+	if(config.hassizey)
+	{
+	    head.boundingBox.y2 = head.boundingBox.y1 + config.sizey;
+	}
+	if(config.framerate)
+	{
+	    head.rate = config.framerate;
+	}
+	swf_write_header(w, &head);
+    }
+    else
+    writer_write(w, data, length);
+}
 
 uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slavedata, int slavelength, int*newlength)
 {
@@ -402,7 +426,7 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 
 	writer_write(&w, "FWS",3);
 	headlength = (u32*)(writer_getpos(&w) + 1);
-	writer_write(&w, master.header.headerdata, master.header.headerlength);
+	writeheader(&w, master.header.headerdata, master.header.headerlength);
 
 	if(config.antistream) {
 	    write_sprite_defines(&w);
