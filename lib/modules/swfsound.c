@@ -87,9 +87,14 @@ int swf_mp3_bitrate = 32;
 #ifdef HAVE_LAME
 #define HAVE_SOUND
 
+#include <stdarg.h>
 #include "../lame/lame.h"
 
 static lame_global_flags*lame_flags;
+
+void null_errorf(const char *format, va_list ap)
+{
+}
 
 static void initlame()
 {
@@ -116,12 +121,14 @@ static void initlame()
     lame_init_params(lame_flags);
     lame_init_bitstream(lame_flags);
 
+    lame_set_errorf(lame_flags, null_errorf);
     /* The first two flush calls to lame always fail, for
        some reason. Do them here where they cause no damage. */
     lame_encode_flush_nogap(lame_flags, buf, bufsize);
     //printf("init:flush_nogap():%d\n", len);
     lame_encode_flush(lame_flags, buf, bufsize);
     //printf("init:flush():%d\n", len);
+    lame_set_errorf(lame_flags, 0);
 }
 
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
