@@ -114,7 +114,7 @@ SWFFONT * t1font2swffont(int i)
 		wfont->glyph2ascii[num] = s;
 		swf_ShapeNew(&wfont->glyph[num].shape);
 		SHAPE*shape = wfont->glyph[num].shape;
-		wfont->glyph[num].advance = width/8;
+		wfont->glyph[num].advance = width/2;
 		
 		TAG*tag = swf_InsertTag(0,ST_DEFINESHAPE);
 
@@ -135,7 +135,7 @@ SWFFONT * t1font2swffont(int i)
 		drawpath(tag, outline, &m, log);
 		
 		/*uncomment this to mark the glyph sizes:
-		*/   plotxy p1,p2;
+		plotxy p1,p2;
 		p1.x=0;
 		p1.y=0;
 		p2.x=width/8;
@@ -147,7 +147,7 @@ SWFFONT * t1font2swffont(int i)
 		lineto(tag, p2);
 		lineto(tag, p1);
 		p1.x -= 2;
-		lineto(tag, p1);//*/
+		lineto(tag, p1);// */
 
 		swf_ShapeSetEnd(tag);
 

@@ -764,8 +764,8 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	    int g = font->ascii2glyph[s];
 	    text[s] = s;
 	    if(g>=0) {
-	       if(font->glyph[g].advance*textscale/50 > xmax)
-		   xmax = font->glyph[g].advance*textscale/50;
+	       if(font->glyph[g].advance*textscale/200 > xmax)
+		   xmax = font->glyph[g].advance*textscale/200;
 	    }
 	}
 	swf.movieSize.xmax = xmax*20;
