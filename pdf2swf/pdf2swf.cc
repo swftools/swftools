@@ -132,40 +132,41 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "S"))
     {
-	pdfswf_drawonlyshapes();
+	pdfswf_setparameter("drawonlyshapes", "1");
 	return 0;
     }
     else if (!strcmp(name, "i"))
     {
-	pdfswf_ignoredraworder();
+	pdfswf_setparameter("ignoredraworder", "1");
 	return 0;
     }
     else if (!strcmp(name, "z"))
     {
-	pdfswf_enablezlib();
+	pdfswf_setparameter("enablezlib", "1");
 	return 0;
     }
     else if (!strcmp(name, "n"))
     {
-	pdfswf_linksopennewwindow();
+	pdfswf_setparameter("opennewwindow", "1");
 	return 0;
     }
     else if (!strcmp(name, "t"))
     {
-	pdfswf_insertstop();
+	pdfswf_setparameter("insertstop", "1");
 	return 0;
     }
     else if (!strcmp(name, "T"))
     {
-	int i = atoi(val);
 	if(!strcasecmp(val, "mx"))
-	    i = 6;
-	pdfswf_setversion(i);
+	    pdfswf_setparameter("flashversion", "6");
+	else
+	    pdfswf_setparameter("flashversion", val);
+
 	return 1;
     }
     else if (!strcmp(name, "f"))
     {
-	pdfswf_storeallcharacters();
+	pdfswf_setparameter("storeallcharacters", "1");
 	return 0;
     }
     else if (!strcmp(name, "F"))
@@ -226,10 +227,10 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "j"))
     {
 	if(name[1]) {
-	    pdfswf_jpegquality(atoi(&name[1]));
+	    pdfswf_setparameter("jpegquality", &name[1]);
 	    return 0;
 	} else {
-	    pdfswf_jpegquality(atoi(val));
+	    pdfswf_setparameter("jpegquality", val);
 	    return 1;
 	}
     }
