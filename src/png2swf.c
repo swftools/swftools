@@ -87,7 +87,6 @@ int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
     if(!fread(head, 4, 1, fi))
 	return 0;
     len = REVERSESWAP32(len);
-    printf("id: %.4s len: %d\n", head, len);
     if(destlen) *destlen = len;
     if(destdata) {
 	if(len)
@@ -135,7 +134,8 @@ int png_read_header(FILE*fi, struct png_header*header)
    
     while(png_read_chunk(&id, &len, &data, fi))
     {
-	printf("%c%c%c%c %d\n", id[0],id[1],id[2],id[3],len);
+	if(VERBOSE(2))
+	    printf("%c%c%c%c %d\n", id[0],id[1],id[2],id[3],len);
 	if(!strncasecmp(id, "IHDR", 4)) {
 	    char a,b,c,f,i;
 	    if(len < 8) exit(1);
@@ -147,6 +147,15 @@ int png_read_header(FILE*fi, struct png_header*header)
 	    c = data[10];     // compression mode (0)
 	    f = data[11];     // filter mode (0)
 	    i = data[12];     // interlace mode (0)
+
+	    if(b!=2 && b!=3) {
+		fprintf(stderr, "Image mode %d not supported!\n", b);
+		exit(1);
+	    }
+	    if(a!=8) {
+		fprintf(stderr, "Bpp %d not supported!\n", a);
+		exit(1);
+	    }
 	    if(c!=0) {
 		fprintf(stderr, "Compression mode %d not supported!\n", c);
 		exit(1);
@@ -159,7 +168,8 @@ int png_read_header(FILE*fi, struct png_header*header)
 		fprintf(stderr, "Interlace mode %d not supported!\n", i);
 		exit(1);
 	    }
-	    printf("%dx%d %d %d %d %d %d\n",header->width, header->height, a,b,c,f,i);
+	    if(VERBOSE(2))
+		printf("%dx%d %d %d %d %d %d\n",header->width, header->height, a,b,c,f,i);
 	    header->bpp = a;
 	    header->mode = b;
 	    return 1;
@@ -267,6 +277,56 @@ void applyfilter(int mode, U8*src, U8*old, U8*dest, int width)
 
 }
 
+void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
+{
+    int x;
+    unsigned char last=0;
+    unsigned char upperlast=0;
+
+    if(mode==0) {
+	for(x=0;x<width;x++) {
+	    *dest = *src;
+	    dest++;
+	    src++;
+	}
+    }
+    else if(mode==1) {
+	for(x=0;x<width;x++) {
+	    *dest = *src+last;
+	    last = *dest;
+	    dest++;
+	    src++;
+	}
+    }
+    else if(mode==2) {
+	for(x=0;x<width;x++) {
+	    *dest = *src+*old;
+	    dest++;
+	    old++;
+	    src++;
+	}
+    }
+    else if(mode==3) {
+	for(x=0;x<width;x++) {
+	    *dest = *src+(*old+last)/2;
+	    dest++;
+	    old++;
+	    src++;
+	}
+    }
+    else if(mode==4) {
+	for(x=0;x<width;x++) {
+	    *dest = *src+PaethPredictor(last,*old,upperlast);
+	    last = *dest;
+	    upperlast = *old;
+	    dest++;
+	    old++;
+	    src++;
+	}
+    }    
+
+}
+
 TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 {
     SHAPE *s;
@@ -316,14 +376,14 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    palette = data;
 	    palettelen = len/3;
 	    data = 0;
-	    printf("%d palette\n", len);
+	    if(VERBOSE(2))
+		printf("%d colors in palette\n", palettelen);
 	}
 	if(!strncmp(tagid, "IDAT", 4)) {
 	    if(uncompress(imagedata, &imagedatalen, data, len) != Z_OK) {
 		fprintf(stderr, "Couldn't uncompress %s!\n", sname);
 		return 0;
 	    }
-	    printf("IDAT %d -> %d\n", len, imagedatalen);
 	}
 	if(data)
 	    free(data);
@@ -357,7 +417,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     }
     else {
 	RGBA*rgba = (RGBA*)malloc(palettelen*sizeof(RGBA));
-	U8*data2 = malloc((header.width+4)*header.height);
+	int swf_width = BYTES_PER_SCANLINE(header.width);
+	U8*data2 = malloc(swf_width*header.height);
 	int i,x,y;
 	int pos=0;
 	if(!palette) {
@@ -372,15 +433,18 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    rgba[i].a = 255;
 	}
 	for(y=0;y<header.height;y++) {
-	    int mode = imagedata[pos];
-	    if(mode!=0) {
-		fprintf(stderr, "Warning: Filter mode %d\n", mode);
+	    int mode = imagedata[pos++]; //filter mode
+	    U8*src = &imagedata[pos];
+	    U8*dest = &data2[y*swf_width];
+	    U8*old;
+	    if(!y) {
+		memset(data2,0,swf_width);
+		old = &data2[y*swf_width];
+	    } else {
+		old = &data2[(y-1)*swf_width];
 	    }
-	    pos++; //filter mode
-	    for(x=0;x<header.width;x++) {
-		data2[y*header.width+x] = 
-		    imagedata[pos++];
-	    }
+	    applyfilter1(mode, src, old, dest, header.width);
+	    pos+=header.width;
 	}
 	swf_SetLosslessBitsIndexed(t, header.width, header.height, data2, rgba, palettelen);
 	free(rgba);
@@ -458,14 +522,6 @@ int CheckInputFile(char *fname, char **realname)
 
     if(!png_read_header(fi, &head)) {
 	fprintf(stderr, "%s is not a PNG file!\n", fname);
-	return -1;
-    }
-    if(head.mode!=2 && head.mode!=3) {
-	fprintf(stderr, "%s has unsupported mode %d\n", head.mode);
-	return -1;
-    }
-    if(head.bpp!=8) {
-	fprintf(stderr, "%s has unsupported bpp %d\n", head.bpp);
 	return -1;
     }
 
