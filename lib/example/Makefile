@@ -12,9 +12,9 @@ DBFLAGS	= -g2
 %.o: %.cc
 		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape
+all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape edittext
 
-movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape
+movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape edittext
 		./sound
 		./jpegtest
 		./box
@@ -26,6 +26,7 @@ movies: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont
 		./buttontest
 		./text
 		./makefonts
+		./edittext
 
 sound: $(RFXSWF) sound.o
 		$(CC) -o sound sound.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
@@ -56,6 +57,9 @@ transtest: $(RFXSWF) transtest.o
 
 text: $(RFXSWF) text.o
 		$(CC) -o text text.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+edittext: $(RFXSWF) edittext.o
+		$(CC) -o edittext edittext.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 zlibtest: $(RFXSWF) zlibtest.o
 		$(CC) -o zlibtest zlibtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
