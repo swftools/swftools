@@ -1,3 +1,11 @@
+swfc:
+
+    * .replace command
+    * output filename (name.sc -> name.swf)
+    * .hide/.show?
+    * .rotate
+    * store instance coordinates for .put with same name after .del?
+
 pdf2swf:
 
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
@@ -5,6 +13,11 @@ pdf2swf:
     * fix memory leaks
     * some bounding boxes are too big
     * support for ttf fonts in --fontdirs
+    * upgrade ttf2pt1
+
+font2swf:
+    
+    * implement support for truetype fonts.
 
 swfcombine:
 
@@ -13,12 +26,22 @@ swfcombine:
     * allow "combining" Actionscript and SWF.
     * "swfcombine -m" (e.g. "swfcombine -mT test.swf") duplicates depths:
 	relocate depth in normalcombine()
+    * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
 
 swfextract:
     
     * mp3 extraction should also work for movieclips.
-    * improve placeobject handling
 
 wav2swf:
     
     * -r flag doesn't work without -d option.
+
+librfxswf:
+
+    * Actionscript has memory leaks
+    * Font routines still need a little more work (shape alignment)
+
+other:
+
+    * swfcrop
+    * swf2fig

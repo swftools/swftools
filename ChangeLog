@@ -142,3 +142,12 @@
 	           e.g.: http://pdf2swf:call:_root.myFunction:parameter
 	* ./*/Makefile: all Makefiles rewritten.
 
+0.4.4: (not yet released)
+	* src/swfextract: output file name handling fix
+	* lib/rfxswf: better sprite fold/unfold support
+	* src/swfdump: new option -p (--placements), support for exportassets, namecharacter
+	* src/swfextract: support for font extraction
+	* pdf2swf/font2swf: new tool, for converting Type1 fonts to SWF
+	* lib/rfxswf: font routines fixed
+	* lib/rfxswf: support for definejpegbits3
+	* src/png2swf: better support for 32 bit images with transparency
