@@ -25,18 +25,6 @@
 extern "C" {
 #include "../lib/rfxswf.h"
 }
-
-extern int enablezlib; //default:0
-extern int opennewwindow; //default:0
-extern int ignoredraworder; //default:0
-extern int drawonlyshapes; //default:0
-extern int jpegquality; //default:100;
-extern int storeallcharacters; // default:0
-extern int insertstoptag; //default:0
-extern int flashversion; //default:4
-extern int splinemaxerror; //default:1
-extern int fontsplinemaxerror; //default:1
-
 typedef long int twip;
 
 struct swfmatrix {
@@ -106,6 +94,8 @@ typedef SWF_PATHSEGMENT  SWF_OUTLINE;
 #define DRAWMODE_EOCLIP 5
 
 void swfoutput_init(struct swfoutput*, char*filename, int x1, int y1, int x2, int y2);
+void swfoutput_setparameter(char*name, char*value);
+
 void swfoutput_setprotected(); //write PROTECT tag
 
 void swfoutput_newpage(struct swfoutput*);
