@@ -29,22 +29,19 @@ PyObject * taglist_new2(TAG*tag)
     mylog("+%08x(%d) taglist_new2 tag=%08x", (int)taglist, taglist->ob_refcnt, tag);
     PyObject* tagmap = tagmap_new();
 
-    swf_FoldAllTags(tag);
-
-    int nr=0;
+    int nr=0, len=0;
     TAG*t = tag;
     TAG*last = t;
-    while(t) {nr++;last=t;t=t->next;}
+    while(t) {len++;last=t;t=t->next;}
 
     if(last && last->id==ST_END) {
-	swf_DeleteTag(last);
-	nr--;
+	swf_DeleteTag(last); last = 0;
+	len--;
+	if(len==0) tag = 0;
     }
 
-    taglist->taglist = PyList_New(nr);
+    taglist->taglist = PyList_New(len);
     
-    mylog("+%08x(%d) taglist_new2: %d items", (int)taglist, taglist->ob_refcnt, nr);
-
     nr = 0;
     t = tag;
     while(t) {
