@@ -666,6 +666,13 @@ int main (int argc,char ** argv)
 	    if(!issprite) {mainframe++; framelabel = 0;}
 	}
 
+	if(tag->id == ST_SETBACKGROUNDCOLOR) {
+	    U8 r = swf_GetU8(tag);
+	    U8 g = swf_GetU8(tag);
+	    U8 b = swf_GetU8(tag);
+	    printf(" (%02x/%02x/%02x)",r,g,b);
+	}
+
 	if(tag->id == ST_DEFINEBITSLOSSLESS ||
 	   tag->id == ST_DEFINEBITSLOSSLESS2) {
 	    handleDefineBits(tag);
