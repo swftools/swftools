@@ -299,10 +299,11 @@ int main(int argn, char *argv[])
 	printf("\n");
     }
     if(preloader && viewer) {
-	systemf("swfcombine %s viewport=%s -o %s",
+	systemf("swfcombine %s viewport=%s -o __tmp__.swf",
 		viewer, outputname, outputname);
-	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
-		outputname, preloader, DATADIR, preloader, outputname, outputname);
+	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o %s",
+		outputname, preloader, DATADIR, preloader, outputname);
+	systemf("rm __tmp__.swf");
     }
 
     return 0;
