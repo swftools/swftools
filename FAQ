@@ -48,11 +48,11 @@
 
 5.) Is there a pdf2swf for Windows?
 
-    No. pdf2swf only runs on Unix platforms, like Linux, *BSD, MacOS X, etc.
-    There have been some reports on more or less successfully compling pdf2swf on Win32 using
-    Cygwin (http://sources.redhat.com/cygwin), however, there's no working version yet.
-
-    If you want to use pdf2swf, find a Unix machine.
+    Windows versions of all SWF utilities can be downloaded at
+	http://www.quiss.org/swftools/swftools-win32.zip
+    .
+    You need to unzip the Archive to C:\SWFTOOLS to make it work though-
+    otherwise pdf2swf won't be able to find it's fonts.
 
 6.) Is there *going to* be a pdf2swf for Windows?
 
