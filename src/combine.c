@@ -12,6 +12,7 @@
 #include <string.h>
 #include <memory.h>
 #include "../lib/log.h"
+#include "../lib/rfxswf.h"
 #include "./flash.h"
 #include "./reloc.h"
 #include "./settings.h"
@@ -68,6 +69,49 @@ void changedepth(struct swf_tag*tag, int add)
     if(tag->id == TAGID_REMOVEOBJECT2)
 	(*(u16*)&tag->data[0]) =
 	SWAP16(SWAP16(*(u16*)&tag->data[0]) + add);
+}
+
+void jpeg_assert()
+{
+    /* TODO: if there's a jpegtable found, store it
+       and handle it together with the flash file
+       headers */
+    /* check that master and slave don't have both
+       jpegtables (which would be fatal) */
+    int pos;
+    int mpos=-1, spos=-1;
+    pos = 0;
+    while(master.tags[pos].id != 0)
+    {
+	if(master.tags[pos].id == TAGID_JPEGTABLES)
+	    mpos = pos;
+	pos++;
+    }
+    pos = 0;
+    while(master.tags[pos].id != 0)
+    {
+	if(slave.tags[pos].id == TAGID_JPEGTABLES)
+	    spos = pos;
+	pos++;
+    }
+    if(spos>=0 && mpos>=0)
+    {
+	if(slave.tags[pos].length ==
+	   master.tags[pos].length &&
+	!memcmp(slave.tags[pos].data, master.tags[pos].data,
+	    master.tags[pos].length))
+	{
+	    // ok, both have jpegtables, but they're identical.
+	    // delete one and don't make an error
+	    for(;spos<slave.tagnum-1;spos++)
+		slave.tags[spos] =
+		    slave.tags[spos+1];
+	    spos = -1;
+	}
+    }
+    if(spos>=0 && mpos>=0) {
+	logf("<error> Master and slave have incompatible JPEGTABLES.");
+    }
 }
 
 /* applies the config move and scale parameters to
@@ -165,9 +209,9 @@ void write_sprite_defines(struct writer_t*w)
 			break;
 		    }
 		 case TAGID_JPEGTABLES:
-			/* according to the flash specs, there may only 
-			   be one JPEGTABLES tag per swf. This is maybe
-			   a big FIXME */
+			/* if we get here, jpeg_assert has already run,
+			   ensuring this is the only one of it's kind,
+			   so we may safely write it out */
 			writer_write(w, tag->fulldata, tag->fulllength);
 		    break;
 		 case TAGID_EXPORTASSETS:
@@ -456,6 +500,7 @@ uchar * catcombine(uchar*masterdata, int masterlength, char*_slavename, uchar*sl
 	
 	swf_relocate (slavedata, slavelength, masterids);
 	read_swf(&slave, slavedata, slavelength);
+	jpeg_assert();
 	
 	writer_write(&w, "FWS",3);
 	headlength = (u32*)(writer_getpos(&w) + 1);
@@ -602,8 +647,8 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 	}
 
 	swf_relocate (slavedata, slavelength, masterids);
-
 	read_swf(&slave, slavedata, slavelength);
+	jpeg_assert();
 	
 	if (config.overlay)
 	    replaceddefine = get_free_id();

@@ -11,6 +11,7 @@
 #define __flash_h__
 
 #include "types.h"
+#include "../lib/rfxswf.h"
 
 #define TAGID_END 0
 #define TAGID_SHOWFRAME 1

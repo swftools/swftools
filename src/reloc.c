@@ -9,6 +9,7 @@
    This file is distributed under the GPL, see file COPYING for details */
 
 #include "flash.h"
+#include "../lib/rfxswf.h"
 
 static struct swffile file;
 
