@@ -817,10 +817,12 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     static char *kwlist[] = {"image", "quant", "type", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|is", kwlist, &image, &quant, &type))
 	return NULL;
-    if(fi->stream->width != image_getWidth(image)) {
+    if(fi->stream->width != image_getWidth(image) &&
+       fi->stream->owidth != image_getWidth(image)) {
 	PyErr_SetString(PyExc_Exception, setError("bad image width %d!=%d", image_getWidth(image), fi->stream->width));return 0;
     }
-    if(fi->stream->height != image_getHeight(image)) {
+    if(fi->stream->height != image_getHeight(image) &&
+       fi->stream->oheight != image_getHeight(image)) {
 	PyErr_SetString(PyExc_Exception, setError("bad image width %d!=%d", image_getHeight(image), fi->stream->height));return 0;
     }
     PyObject*tag = tag_new(&videoframe_tag);
