@@ -27,6 +27,8 @@ extern int jpegquality; //default:100;
 extern int storeallcharacters; // default:0
 extern int insertstoptag; //default:0
 extern int flashversion; //default:4
+extern int splinemaxerror; //default:1
+extern int fontsplinemaxerror; //default:1
 
 typedef long int twip;
 
@@ -103,6 +105,13 @@ void swfoutput_setlinewidth(struct swfoutput*, double linewidth);
 
 void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr);
 void swfoutput_drawpath(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
+#define LINE_CAP_BUTT 0
+#define LINE_CAP_ROUND 1 
+#define LINE_CAP_SQUARE 2
+#define LINE_JOIN_MITER 0 
+#define LINE_JOIN_ROUND 1
+#define LINE_JOIN_BEVEL 2
+void swfoutput_drawpath2poly(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m, int line_join, int line_cap, double line_width, double miter_limit);
 void swfoutput_startclip(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_endclip(struct swfoutput*);
 int swfoutput_drawimagejpeg(struct swfoutput*, RGBA*pic, int sizex,int sizey, 
