@@ -240,8 +240,8 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
 	SRECT newglyphbbox, glyphbbox = font->layout->bounds[chars[t]];
 	MATRIX m = bounds->m;
 	
-	if(ch < font->numchars && font->glyph2ascii) {
-	    ch = font->glyph2ascii[ch];
+	if(chars[t] < font->numchars && font->glyph2ascii) {
+	    ch = font->glyph2ascii[chars[t]];
 	}
 
 	m.sx = (m.sx * fontsize) / 1024;
