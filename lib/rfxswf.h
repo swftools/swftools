@@ -351,6 +351,12 @@ typedef struct _LINESTYLE
   RGBA          color;
 } LINESTYLE, * LPLINESTYLE;
 
+#define FILL_SOLID      0x00
+#define FILL_LINEAR     0x10  // Gradient
+#define FILL_RADIAL     0x12
+#define FILL_TILED      0x40  // Bitmap
+#define FILL_CLIPPED    0x41
+
 typedef struct _FILLSTYLE
 { U8	    type;
   RGBA	    color;
