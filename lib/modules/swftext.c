@@ -625,7 +625,7 @@ int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
 	flags |= 4; //wide codecs
     if(fontSize(f)>65535)
 	flags |= 8; //wide offsets
-    flags |= 8; //FIXME: the above check doesn't work
+    flags |= 8|4; //FIXME: the above check doesn't work
 
     if(f->encoding & FONT_ENCODING_ANSI)
 	flags |= 16; // ansi
@@ -805,7 +805,8 @@ void swf_FontFree(SWFFONT * f)
     if(f->glyphnames) {
       int t;
       for(t=0;t<f->numchars;t++) {
-	free(f->glyphnames[t]);
+        if(f->glyphnames[t])
+	    free(f->glyphnames[t]);
       }
       free(f->glyphnames);
     }
@@ -1028,7 +1029,10 @@ void swf_WriteFont(SWFFONT*font, char* filename)
     swf_SetU16(t, WRITEFONTID);
     swf_SetU16(t, font->numchars);
     for(c=0;c<font->numchars;c++) {
-	swf_SetString(t, font->glyphnames[c]);
+	if(font->glyphnames[c])
+	    swf_SetString(t, font->glyphnames[c]);
+	else
+	    swf_SetString(t, "");
     }
   }
 
