@@ -1,0 +1,55 @@
+top_builddir = ../..
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+include ../../Makefile.common
+
+#LIB=-L/usr/lib/python2.2/config/ -lpython2.2
+PYTHON_LIB=-lpython2.3
+PYTHON_INCLUDES=-I/usr/include/python2.3
+
+all: mypython swfpython SWF.so testmem
+
+primitives.o: primitives.c primitives.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c primitives.c -o primitives.o
+tagmap.o: tagmap.c tagmap.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tagmap.c -o tagmap.o
+taglist.o: taglist.c taglist.h tagmap.h tag.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c taglist.c -o taglist.o
+tag.o: tag.c tag.h tagmap.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tag.c -o tag.o
+action.o: action.c action.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c action.c -o action.o
+pyutils.o: pyutils.c pyutils.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c pyutils.c -o pyutils.o
+
+SWF.o: SWF.c pyutils.h primitives.h taglist.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.o
+
+SWF.so: SWF.o taglist.o tag.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
+	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o action.o primitives.o pyutils.o  -o SWF.so ../librfxswf.a $(PYTHON_LIB) -ljpeg -lz -lt1 -lfreetype 
+
+mypython: mypython.c Makefile
+	$(L) -g $(PYTHON_INCLUDES) mypython.c -o mypython $(PYTHON_LIB) -ldl -lm -lpthread -lutil
+
+swfpython: swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o action.o pyutils.o SWF.o
+	$(L) -g $(PYTHON_INCLUDES) swfpython.c -o swfpython $(PYTHON_LIB) -ldl -lm -lpthread -lutil ../librfxswf.a $(PYTHON_LIB) -ljpeg -lz -lt1 -lfreetype 
+
+testmem: testmem.c Makefile
+	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem $(PYTHON_LIB) -ldl -lm -lpthread -lutil
+
+test: test3
+
+test1: SWF.so
+	./test_create.py
+	swfdump -p tmp/test.swf
+
+test2: SWF.so
+	./test_combine.py
+	swfdump -u -p tmp/combined.swf
+
+test3: SWF.so
+	./test_simple.py
+clean:
+	rm -f *.o *.so mypython swfpython
+
+.PHONY: test,test1,test2
