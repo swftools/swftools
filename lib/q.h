@@ -3,7 +3,7 @@
 
    Part of the swftools package.
    
-   Copyright (c) 2001,2002,2003 Matthias Kramm <kramm@quiss.org>
+   Copyright (c) 2001,2002,2003,2004 Matthias Kramm <kramm@quiss.org>
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ typedef struct _mem_t {
     int pos;
 } mem_t;
 
+/* fifo buffered growing mem region */
 typedef struct _ringbuffer_t
 {
     void*internal;
@@ -63,6 +64,17 @@ typedef struct _stringarray_t
 {
     void*internal;
 } stringarray_t;
+
+/* heap */
+typedef struct _heap
+{
+    void**elements;
+    char*data;
+    int elem_size;
+    int size;
+    int max_size;
+    int(*compare)(const void *, const void *);
+} heap_t;
 
 void mem_init(mem_t*mem);
 int mem_put(mem_t*m, void*data, int length);
@@ -104,6 +116,15 @@ void dictionary_dump(dictionary_t*dict, FILE*fi, const char*prefix);
 void dictionary_del(dictionary_t*dict, const char* name);
 void dictionary_clear(dictionary_t*dict);
 void dictionary_destroy(dictionary_t*dict);
+
+void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *));
+void heap_clear(heap_t*h);
+void heap_put(heap_t*h, void*e);
+int heap_size(heap_t*h);
+void* heap_max(heap_t*h);
+void* heap_chopmax(heap_t*h);
+void heap_dump(heap_t*h, FILE*fi);
+void** heap_flatten(heap_t*h);
 
 char* strdup_n(const char*str, int size);
 

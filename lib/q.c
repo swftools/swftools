@@ -2,7 +2,7 @@
 
    Part of the swftools package.
    
-   Copyright (c) 2001 Matthias Kramm <kramm@quiss.org>
+   Copyright (c) 2001,2002,2003,2004 Matthias Kramm <kramm@quiss.org>
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -453,3 +453,103 @@ void dictionary_destroy(dictionary_t*dict)
     dictionary_clear(dict);
     free(dict);
 }
+
+// ------------------------------- heap_t -------------------------------
+
+void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *))
+{
+    memset(h, 0, sizeof(heap_t));
+    h->max_size = n;
+    h->size = 0;
+    h->elem_size = elem_size;
+    h->compare = compare;
+    h->elements = (void**)malloc(n*sizeof(void*));memset(h->elements, 0, n*sizeof(void*));
+    h->data = (char*)malloc(h->max_size*h->elem_size);memset(h->data, 0, h->max_size*h->elem_size);
+}
+void heap_clear(heap_t*h)
+{
+    free(h->elements);
+    free(h->data);
+}
+
+#define HEAP_NODE_SMALLER(h,node1,node2) ((h)->compare((node1),(node2))>0)
+
+static void up(heap_t*h, int node)
+{
+    void*node_p = h->elements[node];
+    int parent = node;
+    do {
+	node = parent;
+	if(!node) break;
+	parent = (node-1)/2;
+	h->elements[node] = h->elements[parent];
+    } while(HEAP_NODE_SMALLER(h,h->elements[parent], node_p));
+
+    h->elements[node] = node_p;
+}
+static void down(heap_t*h, int node)
+{
+    void*node_p = h->elements[node];
+    int child = node;
+    do {
+	node = child;
+
+	/* determine new child's position */
+	child = node<<1|1;
+	if(child >= h->size) 
+            break;
+        if(child+1 < h->size && HEAP_NODE_SMALLER(h,h->elements[child],h->elements[child+1])) // search for bigger child
+	    child++;
+
+	h->elements[node] = h->elements[child];
+    } while(HEAP_NODE_SMALLER(h,node_p, h->elements[child]));
+    
+    h->elements[node] = node_p;
+}
+void heap_put(heap_t*h, void*e) 
+{
+    int pos = h->size++;
+    memcpy(&h->data[pos*h->elem_size],e,h->elem_size);
+    h->elements[pos] = &h->data[pos];
+    up(h, pos);
+}
+int heap_size(heap_t*h)
+{
+    return h->size;
+}
+void* heap_max(heap_t*h)
+{
+    return h->elements[0];
+}
+void* heap_chopmax(heap_t*h)
+{
+    void*p = h->elements[0];
+    h->elements[0] = h->elements[--h->size];
+    down(h,0);
+    return p;
+}
+void heap_dump(heap_t*h, FILE*fi)
+{
+    int t;
+    for(t=0;t<h->size;t++) {
+	int s;
+	for(s=0;s<=t;s=(s+1)*2-1) {
+	    if(s==t) fprintf(fi,"\n");
+	}
+	//fprintf(fi,"%d ", h->elements[t]->x); //?
+    }
+}
+void** heap_flatten(heap_t*h)
+{
+    void**nodes = (void**)malloc(h->size*sizeof(void*));
+    void**p = nodes;
+   
+    while(h->size) {
+	/*printf("Heap Size: %d\n", h->size);
+	heap_print(stdout, h);
+	printf("\n");*/
+	*p++ = heap_chopmax(h);
+    }
+    return nodes;
+}
+
