@@ -32,7 +32,7 @@ dnl Checks for libraries.
  MISSINGLIBS="${MISSINGLIBS} zlib"
  exit;
  )
- AC_CHECK_LIB(xjpeg, jpeg_write_raw_data,, 
+ AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, 
  DISABLEPDF2SWF=true;
  DISABLEJPEG2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} jpeglib"
@@ -95,7 +95,7 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
   echo "Disabling pdf2swf tool..."
-  rm pdf2swf/Makefile
+  rm -f pdf2swf/Makefile
   echo all: > pdf2swf/Makefile
   echo install: >> pdf2swf/Makefile
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
