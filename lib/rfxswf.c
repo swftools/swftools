@@ -456,7 +456,7 @@ void swf_ExpandRect3(SRECT*src, SPOINT center, int radius)
 	src->ymin = center.y-radius;
 	src->xmax = center.x+radius;
 	src->ymax = center.y+radius;
-	if((center.x|cetner.y|radius) == 0) src->xmax++; //make sure the bbox is not NULL anymore
+	if((center.x|center.y|radius) == 0) src->xmax++; //make sure the bbox is not NULL anymore
 	return;
     }
     if(center.x - radius < src->xmin)
