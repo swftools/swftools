@@ -20,7 +20,7 @@ char* setError(char*format, ...)
     return strdup(buf);
 }
 
-static int verbose = 1;
+int verbose = 1;
 void mylog(char*format, ...)
 {
     char buf[1024];

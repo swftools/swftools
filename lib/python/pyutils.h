@@ -4,6 +4,8 @@
 
 #define PY_NONE Py_BuildValue("s", 0)
 
+extern int verbose;
+
 char* setError(char*format, ...);
 void mylog(char*format, ...);
 PyObject* FindMethodMore(PyObject*ret, PyMethodDef f[], PyObject*self, char* a);
