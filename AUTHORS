@@ -1,8 +1,24 @@
-Maintainer, librfxswf, pdf2swf, avi2swf, png2swf, swfcombine, swfextract, swfdump:
-    Matthias Kramm <kramm@quiss.org>
+SWFTools authors
+----------------
+
+Maintainer, librfxswf(-python), pdf2swf, avi2swf, png2swf, swfcombine, swfextract, swfdump, swfc:
+    Matthias Kramm
 
 librfxswf, jpeg2swf, swfstrings:
-    Rainer Böhme <rainer@reflex-studio.de>
+    Rainer Böhme
 
 swifty, help with swfc, swfc documentation:
-    De Clarke <de@ucolick.org>
+    De Clarke
+
+Contact
+-------
+
+There's a mailing-list, swftools-common@nongnu.org, which is the right place
+for anything related to SWFTools (questions, bug reports, feature requests, etc.).
+
+Go to 
+
+ http://mail.nongnu.org/mailman/listinfo/swftools-common 
+
+to subscribe.
+
