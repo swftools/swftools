@@ -41,6 +41,10 @@
 #endif
 #endif
 
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+
 #include "./bitio.h"
 #include "./MD5.h"
 
@@ -657,7 +661,23 @@ int swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
 void  swf_SetPassword(TAG * t, const char * password)
 {
     /* WARNING: crypt_md5 is not reentrant */
-    char* md5string = crypt_md5(password, "salt"); /* FIXME- get random salt */
+    char salt[3];
+    char* md5string;
+
+#if defined(HAVE_LRAND48) && defined(HAVE_SRAND48) && defined(HAVE_TIME_H) && defined(HAVE_TIME)
+    srand48(time(0));
+    salt[0] = "abcdefghijklmnopqrstuvwxyz0123456789"[lrand48()%36];
+    salt[1] = "abcdefghijklmnopqrstuvwxyz0123456789"[lrand48()%36];
+#else
+    salt[0] = 'l';
+    salt[1] = '8';
+    fprintf(stderr, "rfxswf: Warning- no usable random generator found\n");
+    fprintf(stderr, "Your password will be vulnerable to dictionary attacks\n");
+#endif
+    
+    md5string = crypt_md5(password, salt);
+
+    swf_SetU16(t,0);
     swf_SetString(t, md5string);
 }
 
@@ -668,14 +688,25 @@ int swf_VerifyPassword(TAG * t, const char * password)
     char*md5, *salt;
     int n;
 
+    if(t->len >= 5 && t->pos==0 && 
+       t->data[0] == 0 &&
+       t->data[1] == 0) {
+      swf_GetU16(t);
+    } else {
+      printf("%d %d %d %d\n", t->len, t->pos, t->data[0], t->data[1]);
+    }
+
     md5string1 = swf_GetString(t);
 
-    if(!strncmp(md5string1, "$1$",3 )) {
+    if(strncmp(md5string1, "$1$",3 )) {
+        fprintf(stderr, "rfxswf: no salt in pw string\n");
 	return 0;
     }
     x = strchr(md5string1+3, '$');
-    if(!x)
+    if(!x) {
+        fprintf(stderr, "rfxswf: invalid salt format in pw string\n");
 	return 0;
+    }
     n = x-(md5string1+3);
     salt = (char*)malloc(n+1);
     memcpy(salt, md5string1+3, n);
