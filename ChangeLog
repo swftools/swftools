@@ -34,3 +34,5 @@
 	* rfxswf-lib: improved font handling
 	* lib/example/makefonts.cc: new file, converts the standard fonts to swf
 	* lib/example/glyphshape.c: new file, demonstrates using font characters as shapes
+	* pdfswf: many bugfixes. The "pdfscreen" manual now get's converted correctly
+	* rfxswf-lib: bugfix: Couldn't handle jpeg grayscale images
