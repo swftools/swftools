@@ -433,6 +433,28 @@ SRECT	   swf_GetShapeBoundingBox(SHAPE2*shape);
 void	    swf_SetShape2(TAG*tag, SHAPE2*shape);
 void	   swf_Shape2Free(SHAPE2 * s);
 
+// swfdraw.c
+
+typedef struct _FPOINT
+{
+    float x,y;
+} FPOINT;
+
+typedef struct _SWFSHAPEDRAWER
+{
+    FPOINT pos;
+    SHAPE*shape;
+    TAG*tag;
+    int tagfree;
+} SWFSHAPEDRAWER;
+
+void swf_DrawerInit(SWFSHAPEDRAWER*draw);
+void swf_DrawerMoveTo(SWFSHAPEDRAWER*draw, FPOINT * to);
+void swf_DrawerLineTo(SWFSHAPEDRAWER*draw, FPOINT * to);
+void swf_DrawerSplineTo(SWFSHAPEDRAWER*draw, FPOINT *  control1, FPOINT*  to);
+void swf_DrawerCubicTo(SWFSHAPEDRAWER*draw, FPOINT*  control1, FPOINT* control2, FPOINT*  to);
+void swf_DrawerConicTo(SWFSHAPEDRAWER*draw, FPOINT*  control, FPOINT*  to);
+
 // swffont.c
 
 // does not support wide characters !
