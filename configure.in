@@ -88,6 +88,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
  AC_TYPE_SIZE_T
  AC_STRUCT_TM
  AC_CHECK_TYPE(boolean,int)
+ AC_CHECK_TYPE(bool,char)
  dnl AC_CHECK_TYPE(uchar,unsigned char)
  dnl AC_CHECK_TYPE(schar,signed char)
  dnl AC_CHECK_TYPE(word,unsigned short int)
