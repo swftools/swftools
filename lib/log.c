@@ -175,7 +175,7 @@ static inline void log(const char* logString)
    {
        if (logFile != NULL)
        {
-	  fprintf(logFile, "%s\n", logBuffer); 
+	  fprintf(logFile, "%s\r\n", logBuffer); 
 	  fflush(logFile);
        }
    }
