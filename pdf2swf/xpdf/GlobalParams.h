@@ -198,10 +198,10 @@ public:
   void setMapNumericCharNames(GBool map);
   void setPrintCommands(GBool printCommandsA);
   void setErrQuiet(GBool errQuietA);
+  void parseFile(GString *fileName, FILE *f);
 
 private:
 
-  void parseFile(GString *fileName, FILE *f);
   void parseNameToUnicode(GList *tokens, GString *fileName, int line);
   void parseCIDToUnicode(GList *tokens, GString *fileName, int line);
   void parseUnicodeToUnicode(GList *tokens, GString *fileName, int line);
