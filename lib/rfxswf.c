@@ -42,8 +42,8 @@ LPTAG PrevTag(LPTAG t) { return t->prev; }
 int   GetFrameNo(LPTAG t)  { return t->frame; }
 U16   GetTagID(LPTAG t)    { return t->id; }
 U32   GetDataSize(LPTAG t) { return t->len; }
+U8*   GetDataSizePtr(LPTAG t) { return &(t->data[t->len]); }
 U32   GetTagPos(LPTAG t)   { return t->pos; }
-U8*   GetTagPosPtr(LPTAG t)   { return &t->data[t->pos]; }
 
 // Basic Data Access Functions
 
@@ -487,6 +487,7 @@ LPTAG InsertTag(LPTAG after,U16 id)     // updates frames, if nescessary
   if (t)
   { memset(t,0x00,sizeof(TAG));
     t->id = id;
+    t->bitcount = 0x80;
     
     if (after)
     { t->frame = after->frame;
@@ -759,10 +760,10 @@ int WriteCGI(LPSWF swf)
 
   if (len<0) return -1;
 
-  sprintf(s,"Content-type: application/x-shockwave-flash\n"\
-            "Accept-Ranges: bytes\n"\
-            "Content-Length: %lu\n"\
-            "Expires: Thu, 13 Apr 2000 23:59:59 GMT\n"\
+  sprintf(s,"Content-type: application/x-shockwave-flash\n"
+            "Accept-Ranges: bytes\n"
+            "Content-Length: %lu\n"
+            "Expires: Thu, 13 Apr 2000 23:59:59 GMT\n"
             "\n",len);
             
   write(fileno(stdout),s,strlen(s));
