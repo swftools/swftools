@@ -497,7 +497,7 @@ void SWFOutputDev::stroke(GfxState *state)
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m21 = 0; m.m13 = 0; m.m23 = 0;
+    m.m12 = 0; m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_setdrawmode(&output, DRAWMODE_STROKE);
     swfoutput_drawpath(&output, outline, &m);
@@ -508,7 +508,7 @@ void SWFOutputDev::fill(GfxState *state)
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m21 = 0; m.m13 = 0; m.m23 = 0;
+    m.m12 = 0; m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_setdrawmode(&output, DRAWMODE_FILL);
     swfoutput_drawpath(&output, outline, &m);
@@ -519,7 +519,7 @@ void SWFOutputDev::eoFill(GfxState *state)
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m21 = 0; m.m13 = 0; m.m23 = 0;
+    m.m12 = 0; m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_setdrawmode(&output, DRAWMODE_EOFILL);
     swfoutput_drawpath(&output, outline, &m);
@@ -529,8 +529,9 @@ void SWFOutputDev::clip(GfxState *state)
     logf("<debug> clip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
-    m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m21 = 0; m.m13 = 0; m.m23 = 0;
+    m.m11 = 1; m.m22 = 1;
+    m.m12 = 0; m.m21 = 0; 
+    m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_startclip(&output, outline, &m);
     clipping[clippos] = 1;
@@ -541,7 +542,7 @@ void SWFOutputDev::eoClip(GfxState *state)
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
-    m.m21 = 0; m.m13 = 0; m.m23 = 0;
+    m.m12 = 0; m.m13 = 0; m.m23 = 0;
     T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
     swfoutput_startclip(&output, outline, &m);
     clipping[clippos] = 1;
