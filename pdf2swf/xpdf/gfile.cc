@@ -4,11 +4,12 @@
 //
 // Miscellaneous file and directory name manipulation.
 //
-// Copyright 1996 Derek B. Noonburg
+// Copyright 1996-2002 Glyph & Cog, LLC
 //
 //========================================================================
 
-#include "../../config.h"
+#include <aconf.h>
+
 #ifdef WIN32
    extern "C" {
 #  ifndef _MSC_VER
@@ -441,23 +442,28 @@ time_t getModTime(char *fileName) {
   return statBuf.st_mtime;
 #endif
 }
-static char tmpbuf[128];
-char* mktmpname(char*ptr) {
-//   used to be mktemp. This does remove the warnings, but
-//   It's not exactly an improvement.
-#ifdef HAVE_LRAND48
-    sprintf(tmpbuf, "/tmp/%08x%08x",lrand48(),lrand48());
-#else
-#   ifdef HAVE_RAND
-	sprintf(tmpbuf, "/tmp/%08x%08x",rand(),rand());
-#   else
-	sprintf(tmpbuf, "/tmp/%08x%08x",time(0),(unsigned int)tmpbuf);
-#   endif
-#endif
-    return tmpbuf;
-}
+
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
-#if defined(VMS) || defined(__EMX__) || defined(WIN32) || defined(ACORN) || defined(MACOS)
+#if defined(WIN32)
+  //---------- Win32 ----------
+  char *s;
+  char buf[_MAX_PATH];
+  char *fp;
+
+  if (!(s = _tempnam(getenv("TEMP"), NULL))) {
+    return gFalse;
+  }
+  *name = new GString(s);
+  free(s);
+  if (ext) {
+    (*name)->append(ext);
+  }
+  if (!(*f = fopen((*name)->getCString(), mode))) {
+    delete (*name);
+    return gFalse;
+  }
+  return gTrue;
+#elif defined(VMS) || defined(__EMX__) || defined(ACORN) || defined(MACOS)
   //---------- non-Unix ----------
   char *s;
 
@@ -465,7 +471,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   // with this file name after the tmpnam call and before the fopen
   // call.  I will happily accept fixes to this function for non-Unix
   // OSs.
-  if (!(s = mktmpname(NULL))) {
+  if (!(s = tmpnam(NULL))) {
     return gFalse;
   }
   *name = new GString(s);
@@ -479,20 +485,26 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   return gTrue;
 #else
   //---------- Unix ----------
-  char *s, *p;
+  char *s;
   int fd;
 
   if (ext) {
-    if (!(s = mktmpname(NULL))) {
+#if HAVE_MKSTEMPS
+    if ((s = getenv("TMPDIR"))) {
+      *name = new GString(s);
+    } else {
+      *name = new GString("/tmp");
+    }
+    (*name)->append("/XXXXXX")->append(ext);
+    fd = mkstemps((*name)->getCString(), strlen(ext));
+#else
+    if (!(s = tmpnam(NULL))) {
       return gFalse;
     }
     *name = new GString(s);
-    s = (*name)->getCString();
-    if ((p = strrchr(s, '.'))) {
-      (*name)->del(p - s, (*name)->getLength() - (p - s));
-    }
     (*name)->append(ext);
     fd = open((*name)->getCString(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+#endif
   } else {
 #if HAVE_MKSTEMP
     if ((s = getenv("TMPDIR"))) {
@@ -503,7 +515,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX");
     fd = mkstemp((*name)->getCString());
 #else // HAVE_MKSTEMP
-    if (!(s = mktmpname(NULL))) {
+    if (!(s = tmpnam(NULL))) {
       return gFalse;
     }
     *name = new GString(s);
@@ -518,11 +530,48 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
 #endif
 }
 
+GBool executeCommand(char *cmd) {
+#ifdef VMS
+  return system(cmd) ? gTrue : gFalse;
+#else
+  return system(cmd) ? gFalse : gTrue;
+#endif
+}
+
+char *getLine(char *buf, int size, FILE *f) {
+  int c, i;
+
+  i = 0;
+  while (i < size - 1) {
+    if ((c = fgetc(f)) == EOF) {
+      break;
+    }
+    buf[i++] = (char)c;
+    if (c == '\x0a') {
+      break;
+    }
+    if (c == '\x0d') {
+      c = fgetc(f);
+      if (c == '\x0a' && i < size - 1) {
+	buf[i++] = (char)c;
+      } else if (c != EOF) {
+	ungetc(c, f);
+      }
+      break;
+    }
+  }
+  buf[i] = '\0';
+  if (i == 0) {
+    return NULL;
+  }
+  return buf;
+}
+
 //------------------------------------------------------------------------
 // GDir and GDirEntry
 //------------------------------------------------------------------------
 
-GDirEntry::GDirEntry(char *dirPath, char *name1, GBool doStat) {
+GDirEntry::GDirEntry(char *dirPath, char *nameA, GBool doStat) {
 #ifdef VMS
   char *p;
 #elif defined(WIN32)
@@ -534,17 +583,17 @@ GDirEntry::GDirEntry(char *dirPath, char *name1, GBool doStat) {
   GString *s;
 #endif
 
-  name = new GString(name1);
+  name = new GString(nameA);
   dir = gFalse;
   if (doStat) {
 #ifdef VMS
-    if (!strcmp(name1, "-") ||
-	((p = strrchr(name1, '.')) && !strncmp(p, ".DIR;", 5)))
+    if (!strcmp(nameA, "-") ||
+	((p = strrchr(nameA, '.')) && !strncmp(p, ".DIR;", 5)))
       dir = gTrue;
 #elif defined(ACORN)
 #else
     s = new GString(dirPath);
-    appendToPath(s, name1);
+    appendToPath(s, nameA);
 #ifdef WIN32
     fa = GetFileAttributes(s->getCString());
     dir = (fa != 0xFFFFFFFF && (fa & FILE_ATTRIBUTE_DIRECTORY));
@@ -561,9 +610,9 @@ GDirEntry::~GDirEntry() {
   delete name;
 }
 
-GDir::GDir(char *name, GBool doStat1) {
+GDir::GDir(char *name, GBool doStatA) {
   path = new GString(name);
-  doStat = doStat1;
+  doStat = doStatA;
 #if defined(WIN32)
   GString *tmp;
 

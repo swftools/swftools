@@ -3,14 +3,13 @@
  *
  * Memory routines with out-of-memory checking.
  *
- * Copyright 1996 Derek B. Noonburg
+ * Copyright 1996-2002 Glyph & Cog, LLC
  */
 
 #ifndef GMEM_H
 #define GMEM_H
 
 #include <stdio.h>
-#include "../../config.h"
 
 #ifdef __cplusplus
 extern "C" {
