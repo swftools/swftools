@@ -101,7 +101,7 @@ int swf_FontIsBold(SWFFONT * f)
 
 static const int WRITEFONTID = 0x4e46;	// font id for WriteFont and ReadFont
 
-int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *, void*self), void*self)
+int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *), void*self)
 {
     int n;
     TAG *t;
@@ -129,7 +129,7 @@ int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *, void*se
 		    s[l] = 0;
 		}
 
-		(FontCallback) (self, id, s, self);
+		(FontCallback) (self, id, s);
 
 		swf_RestoreTagPos(t);
 	    }
