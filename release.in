@@ -221,6 +221,7 @@ ${name}/pdf2swf/fonts/d050000l.afm \
 ${name}/swfs/simple_viewer.swf \
 ${name}/swfs/PreLoaderTemplate.swf \
 ${name}/swfs/swft_loader.swf \
-${name}/swfs/tessel_loader.swf
+${name}/swfs/tessel_loader.swf \
+${name}/aclocal.m4
 gzip -9 ${name}.tar
 rm -f ${name}
