@@ -5,11 +5,10 @@ AC_CHECK_PROGS(AVIFILE_CONFIG, avifile-config)
 
 if test "x$AVIFILE_CONFIG" '!=' "x";then
     OLDCPPFLAGS="$CPPFLAGS"
-    #OLDLDFLAGS="$LDFLAGS"
+    # temporarily add avifile paths to CPPFLAGS...
     CPPFLAGS="$CPPFLAGS $CXXFLAGS "`$AVIFILE_CONFIG --cflags`
-    #LDFLAGS="$LDFLAGS `$AVIFILE_CONFIG --libs`"
     AC_CHECK_HEADERS(avifile/version.h version.h)
-    #LDFLAGS="$OLDLDFLAGS"
+    # ... and reset
     CPPFLAGS="$OLDCPPFLAGS"
 fi
 
@@ -103,8 +102,10 @@ int main (int argc, char*argv[])
 EOF
 
 if test "x$AVIFILE_CONFIG" '!=' "x";then
-    ac_link='$CXX $CPPFLAGS $CXXFLAGS `$AVIFILE_CONFIG --cflags` conftest.cpp `$AVIFILE_CONFIG --libs` -o conftest${ac_exeext}'
-    if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
+    AVIFILE_LIBS=`$AVIFILE_CONFIG --libs`
+    AVIFILE_CFLAGS=`$AVIFILE_CONFIG --cflags`
+    avifile_link='$CXX $CPPFLAGS $CXXFLAGS $AVIFILE_CFLAGS conftest.cpp $AVIFILE_LIBS -o conftest${ac_exeext}'
+    if { (eval echo avi2swf.m4:71: \"$avifile_link\") 1>&5; (eval $avifile_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
       AC_MSG_RESULT(yes)
       AVIFILE=true
       export AVIFILE
