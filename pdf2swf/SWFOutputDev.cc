@@ -39,6 +39,8 @@
 #include "OutputDev.h"
 #include "GfxState.h"
 #include "GfxFont.h"
+#include "CharCodeToUnicode.h"
+#include "NameToUnicodeTable.h"
 #include "FontFile.h"
 #include "GlobalParams.h"
 //swftools header files
@@ -578,41 +580,60 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
 }
 
 int charcounter = 0;
-int ciderror = 0;
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
-			CharCode c, Unicode *u, int uLen)
+			CharCode c, Unicode *_u, int uLen)
 {
     logf("<debug> drawChar(%f,%f,%f,%f,'%c')\n",x,y,dx,dy,c);
+    
     // check for invisible text -- this is used by Acrobat Capture
-    if ((state->getRender() & 3) != 3)
-    {
-       GfxFont*font = state->getFont();
-       Gfx8BitFont*font8;
-       if(font->isCIDFont()) {
-	   if(!ciderror)
-	    logf("<error> Not drawing CID Font characters!");
-	   ciderror++;
-	   return;
-       }
-       if(font->getType() == fontType3) {
-	   /* type 3 chars are passed primarily as graphics */
-	   return;
-       }
-       font8 = (Gfx8BitFont*)font;
+    if ((state->getRender() & 3) == 3)
+	return;
 
-       char**enc=font8->getEncoding();
+    GfxFont*font = state->getFont();
 
-       double x1,y1;
-       x1 = x;
-       y1 = y;
-       state->transform(x, y, &x1, &y1);
+    if(font->getType() == fontType3) {
+	/* type 3 chars are passed primarily as graphics */
+	return;
+    }
+    double x1,y1;
+    x1 = x;
+    y1 = y;
+    state->transform(x, y, &x1, &y1);
 
-       if(enc[c])
-	  swfoutput_drawchar(&output, x1, y1, enc[c], c);
-       else
-	  logf("<warning> couldn't get name for character %02x from Encoding", c);
+    if(font->isCIDFont()) {
+	GfxCIDFont*cfont = (GfxCIDFont*)font;
+	Unicode u=0;
+	char*name=0;
+	if(_u) 
+	    u = *_u;
+	if(u) {
+	    int t;
+	    for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++)
+		/* todo: should be precomputed */
+		if(nameToUnicodeTab[t].u == u) {
+		    name = nameToUnicodeTab[t].name;
+		    break;
+		}
+	}
+/*	   printf("%02x %04x/%04x-%d \"%s\" %s %d\n", c,u, *_u, uLen, name, cfont->getName()->getCString(),
+		cfont->getType());*/
+
+	if(name)
+	   swfoutput_drawchar(&output, x1, y1, name, c);
+	else
+	   logf("<warning> couldn't get name for CID character %02x from Encoding", c);
+    } else {
+	Gfx8BitFont*font8;
+	font8 = (Gfx8BitFont*)font;
+	char**enc=font8->getEncoding();
+
+	if(enc && enc[c])
+	   swfoutput_drawchar(&output, x1, y1, enc[c], c);
+	else {
+	   logf("<warning> couldn't get name for character %02x from Encoding", c);
+	}
     }
 }
 
@@ -825,10 +846,6 @@ int SWFOutputDev::searchT1Font(char*name)
     int i;
     int mapid=-1;
     char*filename=0;
-    
-    char*name2 = 0;
-    if(name) name2 = strchr(name,'+');
-    if(name2) name2++;
 
     for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
     {
@@ -859,19 +876,15 @@ int SWFOutputDev::searchT1Font(char*name)
 								  FIXNULL(T1_GetFontFileName(i)));
 	    }
 
-	    if(fontname) {
-		if((!strcmp(name, fontname)) || 
-		   (name2 && !strcmp(name2, fontname)))
-		   {
-		    logf("<notice> Extra font %s is being used.\n", fontname);
-		    return i;
-		}
+	    if(fontname && !strcmp(name, fontname)) {
+		logf("<notice> Extra font %s is being used.\n", fontname);
+		return i;
 	    }
 	    fontname = T1_GetFontFileName(i);
 	    if(strrchr(fontname,'/'))
 		    fontname = strrchr(fontname,'/')+1;
  
-	    if(strstr(fontname, name) || (name2 && strstr(fontname,name2))) {
+	    if(strstr(fontname, name)) {
 		logf("<notice> Extra font %s is being used.\n", fontname);
 		return i;
 	    }
@@ -921,6 +934,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 
       ret = font->getEmbeddedFontID(&embRef);
       if(!ret) {
+	  logf("<verbose> Didn't get embedded font id");
 	  /* not embedded- the caller should now search the font
 	     directories for this font */
 	  return 0;
@@ -955,7 +969,8 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
       }
       fclose(f);
 
-      if(font->getType() == fontTrueType)
+      if(font->getType() == fontTrueType ||
+	 font->getType() == fontCIDType2)
       {
 	  if(!ttfinfo) {
 	      logf("<notice> File contains TrueType fonts");
@@ -1178,11 +1193,11 @@ void SWFOutputDev::updateFont(GfxState *state)
   Ref embRef;
   GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
   if(embedded) {
-    if (!gfxFont->isCIDFont() &&
-	(gfxFont->getType() == fontType1 ||
-	 gfxFont->getType() == fontType1C ||
-	 gfxFont->getType() == fontTrueType)) {
-	
+    if (gfxFont->getType() == fontType1 ||
+	gfxFont->getType() == fontType1C ||
+	gfxFont->getType() == fontTrueType ||
+	gfxFont->getType() == fontCIDType2) 
+    {
 	fileName = writeEmbeddedFontToFile(xref, gfxFont);
 	if(!fileName) {
 	  logf("<error> Couldn't write font to file");
@@ -1198,6 +1213,9 @@ void SWFOutputDev::updateFont(GfxState *state)
 	}
     }
     else {
+	/* in case the font is embedded, but has an
+	   unsupported format, we just look through the
+	   font directories */
 	int newt1id = searchT1Font(fontname);
 	if(newt1id<0) {
 	    showFontError(gfxFont,0);
