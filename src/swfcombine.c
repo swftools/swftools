@@ -666,7 +666,7 @@ static char tag_ok_for_slave(int id)
 TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefine, int flags)
 {
     int outputslave = 0;
-    int frame = 0;
+    int frame = 1;
     int sframe = 0;
     int slavewritten = 0;
     int deletedepth = -1;
@@ -694,6 +694,14 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	if(rtag->id == ST_SHOWFRAME)
 	{
 	    frame ++;
+	    tag = swf_InsertTag(tag, ST_SHOWFRAME);
+            if(deletedepth>=0) {
+                tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+                swf_SetU16(tag, deletedepth);
+                deletedepth=-1;
+            }
+	    rtag = rtag->next;
+            continue;
 	}
 
 	if(swf_isDefiningTag(rtag) && (flags&FLAGS_WRITEDEFINES))
@@ -737,7 +745,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    {
 		int id = get_free_id(masterbitmap);
 		int depth = 65535;
-		deletedepth = 65536;
+		deletedepth = 65535;
 		if(config.clip) {
 		    msg("<fatal> Can't combine --clip and --frame");
 		}
@@ -779,11 +787,6 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		tag = swf_InsertTag(tag, rtag->id);
 		write_changepos(tag, rtag, config.mastermovex, config.mastermovey, config.masterscalex, config.masterscaley, 1);
 		
-		if(rtag->id == ST_SHOWFRAME && deletedepth) {
-		    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
-		    swf_SetU16(tag, deletedepth);
-		    deletedepth = -1;
-		}
 	    }
 	}
 	rtag = rtag->next;
