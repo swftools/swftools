@@ -362,7 +362,7 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f);
 int swf_FontExport(int handle,SWFFONT * f);
 int swf_FontImport(int handle,SWFFONT * * f);
 
-void swf_WriteFont(SWFFONT* font, char* filename, int useDefineFont2);
+void swf_WriteFont(SWFFONT* font, char* filename);
 SWFFONT* swf_ReadFont(char* filename);
 
 void swf_FontFree(SWFFONT * f);
