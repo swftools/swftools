@@ -31,4 +31,6 @@ extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPo
 extern void logf(const char* logFormat, ...);
 extern void exitLog(void);
 
+#define FIXNULL(a) ((int)(a)?(a):"NULL")
+
 #endif  // __log_h__
