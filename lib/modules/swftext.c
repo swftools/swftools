@@ -158,9 +158,15 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 {
     int t, glyphcount;
     int maxcode;
+    int fid;
     U8 flags1,flags2,namelen;
+    swf_SaveTagPos(tag);
+    swf_SetTagPos(tag,0);
     font->version=2;
-    font->id = swf_GetU16(tag);
+    fid = swf_GetU16(tag);
+    if(id && id!=fid)
+	return;
+    font->id = fid;
     flags1 = swf_GetU8(tag);
     flags2 = swf_GetU8(tag); //reserved flags
     namelen = swf_GetU8(tag);
@@ -238,13 +244,14 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 		    font->layout->kerning[t].char1 = swf_GetU16(tag);
 		    font->layout->kerning[t].char2 = swf_GetU16(tag);
 		} else {
-		    font->layout->kerning[t].char1 = swf_GetU16(tag);
-		    font->layout->kerning[t].char2 = swf_GetU16(tag);
+		    font->layout->kerning[t].char1 = swf_GetU8(tag);
+		    font->layout->kerning[t].char2 = swf_GetU8(tag);
 		}
 		font->layout->kerning[t].adjustment = swf_GetS16(tag);
 	    }
 	}
     }
+    swf_RestoreTagPos(t);
     return font->id;
 }
 
