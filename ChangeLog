@@ -72,7 +72,7 @@
 	* src/swfdump: Bugfixes, ids and depths are now in decimal
 	* src/swfcombine: Bugfixes.
 	* configure.in: Cleaned up.
-0.2.4:
+0.3.0:
 	* pdf2swf: The --ignore option now actually makes the pdf files smaller.
 	* rfxswf: Can now write DefineFont2 tags
 	* swfextract/swfcombine: Bugfixes (DefineEditText)
@@ -81,4 +81,9 @@
 	* pdf2swf: Added compression flag (-z)
 	* swfcombine: Added compression flag (-z)
 	* configure.in: zlib is now required.
+	* src/png2swf: New tool.
+	* swfdump: Prints some image infos now.
+	* pdf2swf: Fixed Image handling
+	* avi2swf/: Is part of the main distribution now
+	* src/wav2swf: New tool.
 

@@ -11,7 +11,7 @@ pdf2swf:
     * some bounding boxes are too big
     * support for ttf fonts in --fontdirs
     * implement -q (--quiet) option, especially for -b and -l
-    * upgrade to xpdf 1.0?
+    * upgrade to xpdf 1.01
 
 swfcombine:
 
@@ -32,5 +32,4 @@ rfxswf-lib:
    
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
-    * (s/GetFrameNo/GetTagFrameNo/g ?)
- 
+
