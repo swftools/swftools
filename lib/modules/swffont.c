@@ -130,9 +130,9 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	font->glyphnames = malloc(face->num_glyphs*sizeof(char*));
     }
 
-    font->layout->ascent = face->ascender; //face->bbox.xMin;
-    font->layout->descent = abs(face->descender); //face->bbox.xMax;
-    font->layout->leading = -face->bbox.xMin;
+    font->layout->ascent = face->ascender*20/FT_SUBPIXELS; //face->bbox.xMin;
+    font->layout->descent = abs(face->descender)*20/FT_SUBPIXELS; //face->bbox.xMax;
+    font->layout->leading = -face->bbox.xMin*20/FT_SUBPIXELS;
     font->layout->kerningcount = 0;
     
     name = FT_Get_Postscript_Name(face);
