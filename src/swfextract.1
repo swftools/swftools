@@ -37,6 +37,17 @@ Set the name of the object to extract to \fIname\fR.
 .TP
 \fB\-w\fR, \fB\-\-hollow\fR
 Copy empty frames to the output file, too.
+.TP
+\fB\-j\fR, \fB\-\-jpegs\fR \fIrange\fR
+Extract jpeg pictures in \fIrange\fR
+.TP
+\fB\-p\fR, \fB\-\-pngs\fR \fIrange\fR
+Extract png pictures in \fIrange\fR
+.TP
+\fB\-m\fR, \fB\-\-mp3\fR
+Extract main mp3 stream (There may be substreams in the
+Movieclips, as well. To extract these, first extract the 
+Movieclips with \fB-i\fR and then use \fB-m\fR)
 
 .SH AUTHOR
 
