@@ -16,8 +16,11 @@ Make pdf2swf cope with more complex pdfs:
 
     The following pdf properties are not yet dealt with:
     * Links
+    * lossless image file formats
     * dashed lines
     * (type 3 and truetype fonts)
+    Bugs:
+    * big jpegs sometimes have wrong colors
 
 Make pdf2swf faster:
 
@@ -35,7 +38,6 @@ General Improvements:
     * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
     * rfxswf: modules/swfshape doesn't allow changing to fillstyle 0
-    * big jpegs sometimes have wrong colors
     * write manpages for swfstrings and swfdump
     * --version should work in all tools.
 
