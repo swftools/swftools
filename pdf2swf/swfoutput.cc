@@ -1131,9 +1131,6 @@ void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
     lineto(tag, p1);
     swf_ShapeSetEnd(tag);
 
-    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(tag, buttonid, depth ++, 0,0,0);
-   
     tag = swf_InsertTag(tag,ST_DEFINEBUTTON);
     swf_SetU16(tag,buttonid); //id
     swf_ButtonSetFlags(tag, 0); //menu=no
@@ -1144,7 +1141,7 @@ void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
     swf_SetU8(tag,0);
     swf_SetActions(tag,actions);
     swf_SetU8(tag,0);
-
+    
     tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
     swf_ObjectPlace(tag, buttonid, depth++,0,0,0);
 }
