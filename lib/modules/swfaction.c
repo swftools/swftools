@@ -12,7 +12,6 @@
 */
 
 #include "../rfxswf.h"
-#include "../args.h"
 
 struct Action
 {
