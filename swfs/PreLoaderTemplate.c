@@ -103,6 +103,10 @@ int main (int argc,char ** argv)
   close(f);
 
   swf_FreeTags(&swf);                       // cleanup
+
+  swf_ActionFree(a1);
+  swf_ActionFree(a2);
+
   return 0;
 }
 
