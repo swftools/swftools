@@ -96,9 +96,8 @@ typedef SWF_PATHSEGMENT  SWF_OUTLINE;
 
 void swfoutput_setparameter(char*name, char*value);
 
-void swfoutput_init(struct swfoutput*);
-void swfoutput_save(struct swfoutput*, char*filename);
-void swfoutput_newpage(struct swfoutput*, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2);
+void swfoutput_init(struct swfoutput*, char*filename);
+void swfoutput_newpage(struct swfoutput*, int pageNum, int x1, int y1, int x2, int y2);
 void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
 int swfoutput_queryfont(struct swfoutput*, char*fontid);
 int getCharID(SWFFONT *font, int charnr, char *charname, int u);
