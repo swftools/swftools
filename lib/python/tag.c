@@ -24,7 +24,7 @@ typedef struct {
 static void tag_dealloc(PyObject * self)
 {
     TagObject*tag = (TagObject*)self;
-    mylog(" %08x(%d) tag_dealoc\n", (int)self, self->ob_refcnt);
+    mylog("-%08x(%d) tag_dealoc\n", (int)self, self->ob_refcnt);
     if(tag->placeobject) {
 	swf_PlaceObjectFree(tag->placeobject);
 	tag->placeobject = 0;
@@ -368,7 +368,7 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 
 PyObject* tag_getDependencies(PyObject*self)
 {
-    mylog("+%08x(%d) tag_getDependencies\n", (int)self, self->ob_refcnt);
+    mylog(" %08x(%d) tag_getDependencies\n", (int)self, self->ob_refcnt);
     TagObject*tag = (TagObject*)self;
     return tagmap_getObjectList(tag->tagmap);
 }
