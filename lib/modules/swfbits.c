@@ -110,6 +110,24 @@ int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits)
   return 0;
 }
 
+void swf_SetJPEGBits2(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality)
+{
+  JPEGBITS* jpeg;
+  int y;
+  jpeg = swf_SetJPEGBitsStart(tag,width,height,quality);
+  for (y=0;y<height;y++)
+  { U8 scanline[3*width];
+    int x,p = 0;
+    for (x=0;x<width;x++) 
+    { scanline[p++] = bitmap[width*y+x].r;
+      scanline[p++] = bitmap[width*y+x].g;
+      scanline[p++] = bitmap[width*y+x].b;
+    }
+    swf_SetJPEGBitsLine(jpeg,scanline);
+  }
+  swf_SetJPEGBitsFinish(jpeg);
+}
+
 int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 { struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
