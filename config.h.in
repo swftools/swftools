@@ -109,6 +109,9 @@
 /* use libfreetype */
 #undef USE_FREETYPE
 
+/* use internal l.a.m.e. mp3 library */
+#undef USE_MP3
+
 /* system() can handle command substitution */
 #undef SYSTEM_BACKTICKS
 
