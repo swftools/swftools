@@ -23,7 +23,6 @@ pdf2swf:
 
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
-    * several bounding boxes are too big
     * upgrade xpdf
 
 avi2swf:
@@ -57,6 +56,7 @@ wav2swf:
 librfxswf:
 
     * logging
+    * fix font parsing- code offsets should be used
 
 png2swf:
 
