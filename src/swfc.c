@@ -2313,6 +2313,7 @@ static void parseArgumentsForCommand(char*command)
     map_t args;
     int nr = -1;
     msg("<verbose> parse Command: %s (line %d)", command, line);
+
     for(t=0;t<sizeof(arguments)/sizeof(arguments[0]);t++) {
 	if(!strcmp(arguments[t].command, command)) {
 
@@ -2331,6 +2332,12 @@ static void parseArgumentsForCommand(char*command)
     }
     if(nr<0)
 	syntaxerror("command %s not known", command);
+   
+    // catch missing .flash directives at the beginning of a file
+    if(strcmp(command, "flash") && !stackpos)
+    {
+	syntaxerror("No movie defined- use .flash first");
+    }
 
 #ifdef DEBUG
     printf(".%s\n", command);fflush(stdout);
@@ -2375,7 +2382,6 @@ int main (int argc,char ** argv)
 	return 1;
     }
     pos=0;
-
     t=0;
 
     while(!noMoreTokens()) {
