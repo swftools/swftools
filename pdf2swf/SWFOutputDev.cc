@@ -393,9 +393,12 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
      logf("%sType: TrueType\n",loglevel);
     break;
   }
+  
+  Ref embRef;
+  GBool embedded = font->getEmbeddedFontID(&embRef);
   name = font->getEmbeddedFontName();
-  if(name)
-   logf("%sEmbedded name: %s\n",loglevel, name);
+  if(embedded)
+   logf("%sEmbedded name: %s id: %d\n",loglevel, name, embRef.num);
 
   gstr = font->getExtFontFile();
   if(gstr)
@@ -722,6 +725,10 @@ int SWFOutputDev::setT1Font(char*name, FontEncoding*encoding)
     if(id<0)
      return 0;
 
+    /* T1 allows us to recode only once. Therefore, remove
+       and reload the font to reset it */
+    T1_DeleteFont(id);
+    T1_LoadFont(id);
     initT1Font(id, encoding);
 }
 
@@ -730,8 +737,10 @@ int SWFOutputDev::initT1Font(int id, FontEncoding*encoding)
     int encStrSize;
     char *encPtr;
     int i;
-    T1_DeleteFont(id);
-    T1_LoadFont(id);
+
+    if(!T1_GetFontName(id))
+	T1_LoadFont(id);
+
     /* reencode the font: 
      * This is the only way to get the unmapped characters
      * from t1lib
@@ -789,58 +798,37 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 	                              (char)(rgb.b*255), (char)(opaq*255));
 }
 
-void SWFOutputDev::updateFont(GfxState *state) 
+char*writeEmbeddedFontToFile(GfxFont*font)
 {
-  double m11, m12, m21, m22;
-  char * fontname = 0;
-  GfxFont*gfxFont = state->getFont();
-  char * filename;
-
-  if (!gfxFont) {
-    return;
-  }  
-  // look for Type 3 font
-  if (!type3Warning && gfxFont->getType() == fontType3) {
-    type3Warning = gTrue;
-    showFontError(gfxFont, 2);
-  }
-  //dumpFontInfo (gfxFont);
-  
-
-  Ref embRef;
-  GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
-  if(embedded) {
-    char*tmpFileName = NULL;
-    char*fileName = NULL;
-    FILE *f;
-    char *fontBuf;
-    int fontLen;
-    Type1CFontConverter *cvt;
-    Ref embRef;
-    Object refObj, strObj;
-    int c;
-    if (!gfxFont->is16Bit() &&
-	(gfxFont->getType() == fontType1 ||
-	 gfxFont->getType() == fontType1C) &&
-	gfxFont->getEmbeddedFontID(&embRef)) {
+      char*tmpFileName = NULL;
+      char*fileName = NULL;
+      FILE *f;
+      int c;
+      char *fontBuf;
+      int fontLen;
+      Type1CFontConverter *cvt;
+      Ref embRef;
+      Object refObj, strObj;
       tmpFileName = "tmpfont";
+      font->getEmbeddedFontID(&embRef);
+
       f = fopen(tmpFileName, "wb");
       if (!f) {
 	logf("<error> Couldn't create temporary Type 1 font file");
-	return;
+	return 0;
       }
-      if (gfxFont->getType() == fontType1C) {
-	if (!(fontBuf = gfxFont->readEmbFontFile(&fontLen))) {
+      if (font->getType() == fontType1C) {
+	if (!(fontBuf = font->readEmbFontFile(&fontLen))) {
 	  fclose(f);
 	  logf("<error> Couldn't read embedded font file");
-	  return ;
+	  return 0;
 	}
 	cvt = new Type1CFontConverter(fontBuf, fontLen, f);
 	cvt->convert();
 	delete cvt;
 	gfree(fontBuf);
       } else {
-	gfxFont->getEmbeddedFontID(&embRef);
+	font->getEmbeddedFontID(&embRef);
 	refObj.initRef(embRef.num, embRef.gen);
 	refObj.fetch(&strObj);
 	refObj.free();
@@ -855,14 +843,71 @@ void SWFOutputDev::updateFont(GfxState *state)
       fileName = tmpFileName;
       if(!fileName) {
 	  logf("<error> Embedded font writer didn't create a file");
-	  return ;
+	  return 0;
       }
+      return fileName;
+}
+
+int embeddedids[128];
+int embeddedt1ids[128];
+int embedded_mappos = 0;
+int embedded_maxpos = 128;
+
+void SWFOutputDev::updateFont(GfxState *state) 
+{
+  double m11, m12, m21, m22;
+  char * fontname = 0;
+  GfxFont*gfxFont = state->getFont();
+
+  if (!gfxFont) {
+    return;
+  }  
+
+  if(swfoutput_queryfont(&output, gfxFont->getID().num))
+  {
+      swfoutput_setfont(&output, gfxFont->getID().num, -1);
+      return;
+  }
+
+  // look for Type 3 font
+  if (!type3Warning && gfxFont->getType() == fontType3) {
+    type3Warning = gTrue;
+    showFontError(gfxFont, 2);
+  }
+  //dumpFontInfo ("<notice>", gfxFont);
+
+  Ref embRef;
+  GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
+  if(embedded) {
+    int t;
+    for(t=0;t<embedded_mappos;t++)
+	if(embeddedids[t] == embRef.num)
+	    break;
+    if(t==embedded_mappos)
+    {
+	char*fileName;
+	if (!gfxFont->is16Bit() &&
+	    (gfxFont->getType() == fontType1 ||
+	     gfxFont->getType() == fontType1C)) {
+	    
+	    fileName = writeEmbeddedFontToFile(gfxFont);
+	    if(!fileName)
+	      return ;
+	}
+	else {
+	    showFontError(gfxFont,0);
+	    return ;
+	}
+	t1id = T1_AddFont(fileName);
+	embeddedids[embedded_mappos] = embRef.num;
+	embeddedt1ids[embedded_mappos] = t1id;
+	if(embedded_mappos < embedded_maxpos-1)
+	    embedded_mappos++;
     }
-    else {
-	showFontError(gfxFont,0);
-	return ;
+    else 
+    {
+	t1id = embeddedt1ids[t];
     }
-    t1id = T1_AddFont(fileName);
     initT1Font(t1id, gfxFont->getEncoding());
   } else {
     fontname = NULL;

@@ -195,28 +195,26 @@ void drawpath(T1_OUTLINE*outline, struct swfmatrix*m, char*namehint)
 	outline = outline->link;
     }
 }
+    //logf("<debug> Font name is %s", T1_GetFontFileName(t1fontindex));
+    //logf("<debug> char 0x%02x is named %s\n",character,charname);
+    //logf("<debug> bbox: %d %d %d %d\n",bbox.llx,bbox.lly,bbox.urx,bbox.ury);
+    //char*charname = T1_GetCharName(t1fontindex, character);
 
 /* process a character. */
-void drawchar(struct swfoutput*obj, int t1fontindex, char character, swfmatrix*m)
+void drawchar(struct swfoutput*obj, SWFFont*font, char character, swfmatrix*m)
 {
+    T1_OUTLINE*outline = font->getOutline(character);
+    char* charname = font->getCharName(character);
 
-    /* <T1 stuff> */
-    T1_OUTLINE*outline;
-    int width = T1_GetCharWidth(t1fontindex, character);
-    BBox bbox = T1_GetCharBBox(t1fontindex, character);
-    char*charname= T1_GetCharName(t1fontindex, character);
-    logf("<debug> Font name is %s", T1_GetFontFileName(t1fontindex));
-    logf("<debug> char 0x%02x is named %s\n",character,charname);
-    logf("<debug> bbox: %d %d %d %d\n",bbox.llx,bbox.lly,bbox.urx,bbox.ury);
-    if(!charname || charname[0] == '.') 
+    if(!outline)
     {
      /* for newline, we don't print an error. FIXME: We shouldn't get newlines here
 	in the first place
       */
      if(character != '\n') {
 	 logf("<error> Char to set is not defined!");
-	 logf("<error> -  font file is %s\n", T1_GetFontFileName(t1fontindex));
-	 logf("<error> -  char 0x%02x is named %s\n",character,charname);
+	 logf("<error> -  font file is %s\n", font->getName());
+	 logf("<error> -  char 0x%02x is named %s\n",character, charname);
      }
      return;
     }
@@ -225,9 +223,6 @@ void drawchar(struct swfoutput*obj, int t1fontindex, char character, swfmatrix*m
     m2.m21/=100;
     m2.m12/=100;
     m2.m22/=100;
-    outline =  T1_GetCharOutline( t1fontindex, character, 100.0, 0);
-
-    /** </T1 stuff> **/
 
     if(shapeid<0)
 	startshape(obj);
@@ -259,11 +254,96 @@ void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline, struct swfmatrix*m
     drawpath(outline,m, 0); 
 }
 
+SWFFont::SWFFont(int t1fontindex)
+{
+    int t;
+    for(t=0;t<256;t++)
+    {
+	int width = T1_GetCharWidth(t1fontindex, t);
+	BBox bbox = T1_GetCharBBox(t1fontindex, t);
+	T1_OUTLINE*outline = T1_GetCharOutline(t1fontindex,t,100.0,0);
+
+	char*name;
+	this->outline[t] =  T1_CopyOutline(outline);
+
+	name = T1_GetCharName(t1fontindex, t);
+	if(!name || name[0]=='.')
+	{
+	    this->charname[t] = 0;
+	    this->outline[t] = 0;
+	}
+	else
+	    this->charname[t] = strdup(name);
+    }
+    this->name = strdup(T1_GetFontFileName(t1fontindex));
+}
+
+T1_OUTLINE*SWFFont::getOutline(unsigned char nr)
+{
+    return outline[nr];
+}
+
+char*SWFFont::getCharName(int t)
+{
+    return this->charname[t];
+}
+
+char*SWFFont::getName()
+{
+    return this->name;
+}
+
+struct fontlist_t 
+{
+    SWFFont * font;
+    fontlist_t*next;
+} *fontlist = 0;
 
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
-int swfoutput_setfont(struct swfoutput*obj, int fontid, int t1id)
+void swfoutput_setfont(struct swfoutput*obj, int fontid, int t1id)
 {
-    obj->t1font = t1id;
+    fontlist_t*last=0,*iterator;
+    if(obj->font && obj->font->id == fontid)
+	return;
+
+    iterator = fontlist;
+    while(iterator) {
+	if(iterator->font->id == fontid)
+	    break;
+	last = iterator;
+	iterator = iterator->next;
+    }
+    if(iterator) 
+    {
+	obj->font = iterator->font;
+	return ;
+    }
+
+    if(t1id<0) {
+	logf("<error> internal error: t1id:%d, fontid:%d\n", t1id,fontid);
+    }
+    
+    SWFFont*font = new SWFFont(t1id);
+    iterator = new fontlist_t;
+    iterator->font = font;
+    iterator->next = 0;
+
+    if(last) 
+	last->next = iterator;
+    else 
+	fontlist = iterator;
+    obj->font = font;
+}
+
+int swfoutput_queryfont(struct swfoutput*obj, int fontid)
+{
+    fontlist_t *iterator = fontlist;
+    while(iterator) {
+	if(iterator->font->id == fontid)
+	    return 1;
+	iterator = iterator->next;
+    }
+    return 0;
 }
 
 /* set's the matrix which is to be applied to characters drawn by
@@ -287,7 +367,7 @@ void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char character)
     m.m22 = obj->fontm22;
     m.m13 = x;
     m.m23 = y;
-    drawchar(obj, obj->t1font, character, &m);
+    drawchar(obj, obj->font, character, &m);
 }
 
 /* initialize the swf writer */
@@ -303,7 +383,7 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
 
   logf("<verbose> initializing swf output for size %d*%d\n", sizex,sizey);
 
-  obj->t1font = 0;
+  obj->font = 0;
   
   memset(&swf,0x00,sizeof(SWF));
 

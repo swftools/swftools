@@ -26,11 +26,28 @@ struct swfcoord {
     twip y;
 };
 
+class SWFFont
+{
+    T1_OUTLINE*(outline[256]);
+    char*(charname[256]);
+    char*name;
+
+    public:
+    
+    int id;
+
+    SWFFont(int t1id);
+    T1_OUTLINE*getOutline(unsigned char nr);
+    char*getName();
+    char*getCharName(int t);
+};
+
 struct swfoutput 
 {
-    int t1font;
+    //int t1font;
     double fontm11,fontm12,fontm21,fontm22;
     unsigned short int linewidth;
+    SWFFont*font;
     RGBA strokergb;
     RGBA fillrgb;
 };
@@ -46,7 +63,8 @@ void swfoutput_setprotected(); //write PROTECT tag
 
 void swfoutput_newpage(struct swfoutput*);
 
- int swfoutput_setfont(struct swfoutput*, int fontid, int t1font);
+void swfoutput_setfont(struct swfoutput*, int fontid, int t1font);
+int swfoutput_queryfont(struct swfoutput*, int fontid);
 void swfoutput_setdrawmode(struct swfoutput*, int drawmode);
 void swfoutput_setfillcolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void swfoutput_setstrokecolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
