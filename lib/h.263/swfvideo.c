@@ -1243,11 +1243,11 @@ void swf_SetVideoStreamBlackFrame(TAG*tag, VIDEOSTREAM*s)
 {
     int bx, by;
     int quant = 31;
+    int x,y;
     s->quant = quant;
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_IFRAME);
 
-    int x,y;
     for(y=0;y<s->height;y++)
     for(x=0;x<s->width;x++) {
 	s->current[y*s->width+x].y = 0;
