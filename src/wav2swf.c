@@ -238,6 +238,13 @@ int main (int argc,char ** argv)
     samples = (U16*)wav2.data;
     numsamples = wav2.size/2;
 
+#ifdef WORDS_BIGENDIAN
+    /* swap bytes */
+    for(t=0;t<numsamples;t++) {
+        samples[t] = (samples[t]>>8)&0xff | (samples[t]<<8)&0xff00;
+    }
+#endif
+
     if(numsamples%blocksize != 0)
     {
 	// apply padding, so that block is a multiple of blocksize
