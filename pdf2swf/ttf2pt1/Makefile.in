@@ -1,0 +1,7 @@
+all:
+	gcc -c ft.c
+	gcc -c ttf.c
+	gcc -c pt1.c
+	gcc -c ttf2pt1.c
+	gcc -c t1asm.c
+	ar cru ttf2pt1.a ft.o ttf.o pt1.o ttf2pt1.o t1asm.o
