@@ -956,10 +956,10 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
     /* apply user clip box */
     if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
-        if(user_clipx1 > x1) x1 = user_clipx1;
-        if(user_clipx2 < x2) x2 = user_clipx2;
-        if(user_clipy1 > y1) y1 = user_clipy1;
-        if(user_clipy2 < y2) y2 = user_clipy2;
+        /*if(user_clipx1 > x1)*/ x1 = user_clipx1;
+        /*if(user_clipx2 < x2)*/ x2 = user_clipx2;
+        /*if(user_clipy1 > y1)*/ y1 = user_clipy1;
+        /*if(user_clipy2 < y2)*/ y2 = user_clipy2;
     }
 
     if(!outputstarted) {
