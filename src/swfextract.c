@@ -13,7 +13,12 @@
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "reloc.h"
+#ifdef HAVE_ZLIB_H
+#ifdef HAVE_LIBZ
 #include "zlib.h"
+#define _ZLIB_INCLUDED_
+#endif
+#endif
 
 char * filename = 0;
 char * destfilename = "output.swf";
@@ -80,6 +85,7 @@ int args_callback_option(char*name,char*val)
 	extractjpegids = val;
 	return 1;
     } 
+#ifdef _ZLIB_INCLUDED_
     else if(!strcmp(name, "p")) {
 	if(extractpngids) {
 	    fprintf(stderr, "Only one --pngs argument is allowed. (Try to use a range, e.g. -p 1,2,3)\n");
@@ -88,6 +94,7 @@ int args_callback_option(char*name,char*val)
 	extractpngids = val;
 	return 1;
     } 
+#endif
     else if(!strcmp(name, "f")) {
 	extractframes = val;
 	return 1;
@@ -115,7 +122,9 @@ void args_callback_usage(char*name)
     printf("\t-n , --name name\t\t instance name of the object to extract\n");
     printf("\t-i , --id IDs\t\t\t ID of the object to extract\n");
     printf("\t-j , --jpeg IDs\t\t\t IDs of the JPEG pictures to extract\n");
+#ifdef _ZLIB_INCLUDED_
     printf("\t-p , --pngs IDs\t\t\t IDs of the PNG pictures to extract\n");
+#endif
     printf("\t-f , --frame frames\t\t frame numbers to extract\n");
     printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames (use with -f)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
@@ -417,6 +426,7 @@ void handlejpeg(TAG*tag)
     }
 }
 
+#ifdef _ZLIB_INCLUDED_
 static U32 mycrc32;
 
 static U32*crc32_table = 0;
@@ -633,6 +643,7 @@ void handlelossless(TAG*tag)
     free(data2);
     free(data3);
 }
+#endif
 
 int main (int argc,char ** argv)
 { 
@@ -732,9 +743,11 @@ int main (int argc,char ** argv)
 	    if(extractjpegids && is_in_range(id, extractjpegids)) {
 		handlejpeg(tag);
 	    }
+#ifdef _ZLIB_INCLUDED_
 	    if(extractpngids && is_in_range(id, extractpngids)) {
 		handlelossless(tag);
 	    }
+#endif
 	}
 	else if (tag->id == ST_SETBACKGROUNDCOLOR) {
 	    mainr = tag->data[0];
