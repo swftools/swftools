@@ -17,4 +17,5 @@
 	* rfxswf-lib: lossless image formats
 	* pdf2swf: likewise
 	* pdf2swf: picture cache to prevent images getting stored more than once
+	* pdf2swf: conversion of (hyper)links
 	* examples/zlibtest: new file, demonstrates using lossless images with rfxswf-lib
