@@ -1184,7 +1184,7 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 	swf_SetString(tag,text);
 }
 
-SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
+SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale, MATRIX* m)
 {
     SRECT r;
     U8 gbits, abits;
@@ -1204,7 +1204,7 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
     }
 
     swf_SetRect(tag,&r);
-    swf_SetMatrix(tag,NULL);
+    swf_SetMatrix(tag,m);
     swf_TextCountBitsUTF8(font,text,scale*20,&gbits,&abits);
     swf_SetU8(tag,gbits);
     swf_SetU8(tag,abits);

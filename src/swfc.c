@@ -901,7 +901,7 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
-    r = swf_SetDefineText(tag, font, &color, text, size);
+    r = swf_SetDefineText(tag, font, &color, text, size, 0);
    
     s_addcharacter(name, id, tag, r);
     incrementid();
