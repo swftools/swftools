@@ -84,7 +84,7 @@ void jpeg_assert()
 	pos++;
     }
     pos = 0;
-    while(master.tags[pos].id != 0)
+    while(slave.tags[pos].id != 0)
     {
 	if(slave.tags[pos].id == TAGID_JPEGTABLES)
 	    spos = pos;
