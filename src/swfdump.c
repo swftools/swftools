@@ -662,7 +662,9 @@ int main (int argc,char ** argv)
 
     if (f<0)
     { 
-        perror("Couldn't open file: ");
+	char buffer[256];
+	sprintf(buffer, "Couldn't open %s", filename);
+        perror(buffer);
         exit(1);
     }
     if FAILED(swf_ReadSWF(f,&swf))
