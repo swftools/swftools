@@ -1996,7 +1996,7 @@ fi
 echo "$ac_t""$ac_cv_type_boolean" 1>&6
 if test $ac_cv_type_boolean = no; then
   cat >> confdefs.h <<\EOF
-#define boolean unsigned char
+#define boolean int
 EOF
 
 fi
