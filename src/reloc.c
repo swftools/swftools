@@ -17,12 +17,12 @@ int slaveids[65536];
 void maponeid(void*idpos)
 {
     u16*idptr = (u16*)idpos;
-    if(slaveids[*idptr]<0) {
+    if(slaveids[SWAP16(*idptr)]<0) {
 	logf("<error> Trying to map id never encountered before: id=%d", *idptr);
 	return ;
     }
-    logf("<debug> mapping %d to %d", *idptr, slaveids[*idptr]);
-    *idptr =  slaveids[*idptr];
+    logf("<debug> mapping %d to %d", SWAP16(*idptr), slaveids[*idptr]);
+    *idptr =  SWAP16(slaveids[*idptr]);
 }
 
 

@@ -344,7 +344,7 @@ void placeobject_write (struct PlaceObject*obj, struct writer_t*w)
     }
     writer_resetbits(w);
     
-    *(u32*)lenpos = (u8*)writer_getpos(w) - pos;
+    *(u32*)lenpos = SWAP32((u8*)writer_getpos(w) - pos);
 }
 
 void placeobject2_init (struct PlaceObject2*obj,struct swf_tag*tag)
@@ -389,7 +389,7 @@ void placeobject2_write (struct PlaceObject2*obj, struct writer_t*w)
 {
     u8 flags = obj->reserved<<7 | obj->hasclipactions<<6 | obj->hasname<<5 | obj->hasratio<<4 |
 	       obj->hascolortransform<<3 | obj->hasmatrix<<2 | obj->hascharacter<<1 | obj->hasmove;
-    u16 taghead = 0x3f | TAGID_PLACEOBJECT2<<6;
+    u16 taghead = SWAP16(0x3f | TAGID_PLACEOBJECT2<<6);
     u8*pos;
     u8*lenpos;
     writer_resetbits(w);
@@ -416,7 +416,7 @@ void placeobject2_write (struct PlaceObject2*obj, struct writer_t*w)
     if(obj->hasclipactions)
 	writer_writeu16(w, obj->clipactions);
     writer_resetbits(w);
-    *(u32*)lenpos = (u8*)writer_getpos(w) - pos;
+    *(u32*)lenpos = SWAP32((u8*)writer_getpos(w) - pos);
 }
 
 void read_swf(struct swffile*swf, uchar*data, int length)
@@ -526,12 +526,11 @@ int getidfromtag(struct swf_tag* tag)
 
 void setidintag(struct swf_tag* tag, int id)
 {
-    *(u16*)tag->data = id;
+    *(u16*)tag->data = SWAP16(id);
 }
 
 char is_sprite_tag (int id)
 {
-
     int t=0;
     while(spritetagids[t]>=0)
     {
@@ -544,7 +543,6 @@ char is_sprite_tag (int id)
 
 char is_defining_tag (int id)
 {
-
     int t=0;
     while(definingtagids[t]>=0)
     {
