@@ -308,7 +308,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    printf(" %d", *data);
 		} break;
 		case 'b': {
-		    printf(" %d", data[0]+256*data[1]);
+		    printf(" %d", data[0]+256*(signed char)data[1]);
 		} break;
 		case 'p': {
 		    U8 type = *data;
