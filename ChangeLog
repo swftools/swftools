@@ -218,13 +218,13 @@
 	* avi2swf: Is now ported to Win32, too.
 	* pdf2swf: Upgraded to xpdf 3.00
 
-0.6.3:
+0.6.3 (not released yet):
 	* lib/modules/swfrender.c: New module, for shape->bitmap conversion
 	* lib/rfxswf.c: Several small bugfixes
 	* lib/modules/swftools.c: New function swf_Optimize()
 	* src/swfc.c: .outline and .textshape support line drawings now, too
 	* src/swfc.c: added -O option
-	* src/swfc.c: added support for including actionscript
+	* src/swfc.c: added support for including actionscript (.action filename=)
 	* src/swfc.c: frames now start at 1
 	* src/swfextract.c: Objects extracted with -i are now scaled to width 512
 	* src/swfextract.c: Fixed jpeg extraction bug
