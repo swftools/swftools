@@ -24,7 +24,10 @@ typedef struct {
 static void tag_dealloc(PyObject * self)
 {
     TagObject*tag = (TagObject*)self;
-    mylog("-%08x(%d) tag_dealoc\n", (int)self, self->ob_refcnt);
+    if(tag->tag)
+	mylog("-%08x(%d) tag_dealoc [%s]\n", (int)self, self->ob_refcnt, swf_TagGetName(tag->tag));
+    else
+	mylog("-%08x(%d) tag_dealoc [?]\n", (int)self, self->ob_refcnt);
     if(tag->placeobject) {
 	swf_PlaceObjectFree(tag->placeobject);
 	tag->placeobject = 0;
@@ -188,7 +191,7 @@ static PyObject* f_SetBackgroundColor(PyObject* self, PyObject* args, PyObject* 
     swf_SetU8(tag->tag, rgba.r);
     swf_SetU8(tag->tag, rgba.g);
     swf_SetU8(tag->tag, rgba.b);
-    mylog(" %08x(%d) SetBackgroundColor(%02x,%02x,%02x)\n", (int)tag, tag->ob_refcnt, rgba.r, rgba.g, rgba.b);
+    mylog(" %08x(%d) SetBackgroundColor(%02x,%02x,%02x) (colorobj=%08x(%d))\n", (int)tag, tag->ob_refcnt, rgba.r, rgba.g, rgba.b, color, color->ob_refcnt);
     return (PyObject*)tag;
 }
 //----------------------------------------------------------------------------
@@ -203,7 +206,6 @@ static PyObject* f_DefineFont(PyObject* self, PyObject* args, PyObject* kwargs)
 	return NULL;
 
     font = swf_LoadFont(filename);
-    mylog("font=%08x",font);
     if(!font) {
 	PyErr_SetString(PyExc_Exception, setError("Could not load %s", filename));
 	return NULL;
@@ -216,6 +218,12 @@ static PyObject* f_DefineFont(PyObject* self, PyObject* args, PyObject* kwargs)
     swf_FontSetDefine2(tag->tag, tag->font);
     mylog("+%08x(%d) DefineFont\n", (int)tag, tag->ob_refcnt);
     return (PyObject*)tag;
+}
+static SWFFONT* fonttag_getSWFFONT(PyObject*self)
+{
+    PY_ASSERT_TYPE(self, &TagClass);
+    TagObject*font = (TagObject*)self;
+    return font->font;
 }
 //----------------------------------------------------------------------------
 static PyObject* f_Protect(PyObject* self, PyObject* args, PyObject* kwargs)
@@ -247,7 +255,7 @@ static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
     int size = 0;
     RGBA rgba = {255,0,0,0};
     PyObject*color = 0;
-    TagObject*font = 0;
+    PyObject*font = 0;
     SRECT r;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!u#i|O!", kwlist, &TagClass, &font, &text, &textlen, &size, &ColorClass, &color))
@@ -264,14 +272,18 @@ static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
     
     tag = (TagObject*)tag_new();
 
-    /* notice: we do modify the (passed) font object here, 
-       for the swf_SetDefineText call, who will write out the font id. */
-    font->font->id = tagmap_add(tag->tagmap,(PyObject*)font); // add dependency on font
+    int font_id = tagmap_add(tag->tagmap, font); // add dependency on font
+
+    fonttag_getSWFFONT(font)->id = font_id;
 
     tag ->tag= swf_InsertTag(0, ST_DEFINETEXT2);
     swf_SetU16(tag->tag, /*ID*/0);
-    r = swf_SetDefineText(tag->tag, font->font, &rgba, text, size);
-    mylog("+%08x(%d) DefineText %08x -> %08x\n", (int)tag, tag->ob_refcnt);
+    r = swf_SetDefineText(tag->tag, fonttag_getSWFFONT(font), &rgba, text, size);
+    mylog("+%08x(%d) DefineText tag=%08x \n", (int)tag, tag->ob_refcnt);
+    
+    //Py_DECREF(unicode16);
+    //Py_DECREF(unicode8);
+    //free(text);
 
     return (PyObject*)tag;
 }
@@ -303,7 +315,7 @@ static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
 		&ratio,
 		&name,
 		&clipdepth,
-		&action
+		&ActionClass, &action
 		))
 	return NULL;
     po->depth = depth;
@@ -325,7 +337,8 @@ static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
     po->id = tagmap_add(tag->tagmap,(PyObject*)character);
 
     swf_SetPlaceObject(tag->tag, po);
-    mylog("+%08x(%d) PlaceObject %08x\n", (int)tag, tag->ob_refcnt, character);
+    mylog("+%08x(%d) PlaceObject %08x(%d)\n", (int)tag, tag->ob_refcnt, character, character->ob_refcnt);
+
     return (PyObject*)tag;
 }
 
@@ -334,11 +347,11 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 {
     TagObject*tag = (TagObject*)self;
     
+    mylog(" %08x(%d) tag_getTAG: tag=%08x id=%d (%s)", (int)self, self->ob_refcnt, tag->tag, tag->tag->id, swf_TagGetName(tag->tag));
+
     TAG* t = swf_InsertTag(prevTag, tag->tag->id);
     swf_SetBlock(t, tag->tag->data, tag->tag->len);
-
-    mylog(" %08x(%d) tag_getTAG tagmap=%08x tag=%08x/%08x\n", (int)self, self->ob_refcnt, tagmap, tag->tag, t);
-
+    
     if(swf_isDefiningTag(t)) {
 	int newid = tagmap_add(tagmap, self);
 	swf_SetDefineID(t, newid);
@@ -353,19 +366,27 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 	PyObject* obj =  tagmap_id2obj(tag->tagmap, id);
 	if(obj==NULL) {
 	    PyErr_SetString(PyExc_Exception, setError("Internal error: id %d not known in taglist:"));
+	    free(positions);
 	    return 0;
 	}
 	int newid = tagmap_obj2id(tagmap, obj);
 	PUT16(&t->data[positions[i]], newid);
     }
+    free(positions);
     return t;
 }
 
 PyObject* tag_getDependencies(PyObject*self)
 {
-    mylog(" %08x(%d) tag_getDependencies\n", (int)self, self->ob_refcnt);
     TagObject*tag = (TagObject*)self;
+    mylog(" %08x(%d) tag_getDependencies id=%d tag=%s\n", (int)self, self->ob_refcnt, tag->tag->id, swf_TagGetName(tag->tag));
     return tagmap_getObjectList(tag->tagmap);
+}
+
+int tag_print (PyObject * self, FILE * fi, int flags)
+{
+    mylog(" %08x(%d) tag_print flags=%08x\n", (int)self, self->ob_refcnt, flags);
+    return 0;
 }
 
 PyTypeObject TagClass = 
@@ -376,7 +397,7 @@ PyTypeObject TagClass =
     tp_basicsize: sizeof(TagObject),
     tp_itemsize: 0,
     tp_dealloc: tag_dealloc,
-    tp_print: 0,
+    tp_print: tag_print,
     tp_getattr: tag_getattr,
 };
 static PyMethodDef TagMethods[] = 

@@ -36,8 +36,8 @@ void mylog(char*format, ...)
 	buf[l-1] = 0;
 	l--;
     }
-    fprintf(stdout, "[SWF] %s\n", buf);
-    fflush(stdout);
+    fprintf(stderr, "[SWF] %s\n", buf);
+    fflush(stderr);
 }
 
 #define PY_NONE Py_BuildValue("s", 0)
@@ -70,9 +70,12 @@ PyMethodDef* addMethods(PyMethodDef*obj1, PyMethodDef*obj2)
     if(obj1) for(num1=0;obj1[num1].ml_name;num1++);
     if(obj2) for(num2=0;obj2[num2].ml_name;num2++);
     PyMethodDef* result = malloc(sizeof(PyMethodDef)*(num1+num2+1));
-    memcpy(result, obj1, num1*sizeof(PyMethodDef));
-    memcpy(&result[num1], obj2, (num2+1)*sizeof(PyMethodDef));
-    //free(obj1)?
+    if(obj1)
+	memcpy(result, obj1, num1*sizeof(PyMethodDef));
+    if(obj2)
+	memcpy(&result[num1], obj2, (num2+1)*sizeof(PyMethodDef));
+    if(obj1)
+	free(obj1);
     return result;
 }
 void setVerbosity(int _verbose)

@@ -49,7 +49,6 @@ PyObject* tagmap_new()
 //----------------------------------------------------------------------------
 int tagmap_obj2id(PyObject* self, PyObject* obj)
 {
-    mylog(" %08x(%d) tagmap_obj2id %08x", (int)self, self->ob_refcnt, obj);
     TagMapObject*tagmap = (TagMapObject*)self;
     PyObject*id = PyDict_GetItem(tagmap->obj2id, obj);
     if(id == 0)
@@ -65,14 +64,12 @@ PyObject* tagmap_id2obj(PyObject* self, int _id)
     TagMapObject*tagmap = (TagMapObject*)self;
     PyObject*id = PyLong_FromLong(_id);
     PyObject*obj = PyDict_GetItem(tagmap->id2obj, id);
-    mylog(" %08x(%d) tagmap_id2obj %d->%08x", (int)self, self->ob_refcnt, _id, obj);
     Py_DECREF(id);
     return obj;
 }
 //----------------------------------------------------------------------------
 int tagmap_getFreeID(PyObject*self)
 {
-    mylog(" %08x(%d) tagmap_getFreeID", (int)self, self->ob_refcnt);
     TagMapObject*tagmap = (TagMapObject*)self;
     int last = tagmap->currentID;
     do {
@@ -130,8 +127,12 @@ int tagmap_add(PyObject* self, PyObject* obj)
 //----------------------------------------------------------------------------
 void tagmap_dealloc(PyObject* self)
 {
-    mylog("-%08x(%d) tagmap_dealloc", (int)self, self->ob_refcnt);
     TagMapObject*tagmap = (TagMapObject*)self;
+    mylog("-%08x(%d) tagmap_dealloc %08x(%d) %08x(%d), %08x(%d)", (int)self, self->ob_refcnt,
+	    tagmap->obj2id, tagmap->obj2id->ob_refcnt ,
+	    tagmap->id2obj, tagmap->id2obj->ob_refcnt ,
+	    tagmap->objlist, tagmap->objlist->ob_refcnt);
+
     Py_DECREF(tagmap->obj2id);
     tagmap->obj2id = 0;
     Py_DECREF(tagmap->id2obj);
@@ -145,7 +146,6 @@ PyObject* tagmap_getObjectList(PyObject* self)
 {
     mylog(" %08x(%d) tagmap_getObjectList", (int)self, self->ob_refcnt);
     TagMapObject*tagmap = (TagMapObject*)self;
-    Py_INCREF(tagmap->objlist);
     return tagmap->objlist;
 }
 //----------------------------------------------------------------------------

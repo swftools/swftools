@@ -106,12 +106,12 @@ static PyObject* f_load(PyObject* self, PyObject* args)
     mylog("+%08x(%d) f_load\n", (int)swf, swf->ob_refcnt);
 
     memset(&swf->swf, 0, sizeof(SWF));
-    swf->filename = strdup(filename);
 
     if(!filename) {
 	PyErr_SetString(PyExc_Exception, setError("Couldn't open file %s", filename));
         return 0;
     }
+    swf->filename = strdup(filename);
     fi = open(filename,O_RDONLY|O_BINARY);
     if (fi<0) { 
         PyErr_SetString(PyExc_Exception, setError("Couldn't open file %s", filename));
@@ -143,7 +143,7 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
     int fi;
     char*filename = 0;
     int compress = 0;
-
+    
     if(!self)
 	return NULL;
 
@@ -198,9 +198,23 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
     }
     close(fi);
 
-    /* TODO: why is this segfaulting?? */
-   /* swf_FreeTags(swf);
-    swf->firstTag = 0;*/
+    //swf_FreeTags(swf);
+    /*{ TAG * t = swf->firstTag;
+      while (t)
+      { 
+	mylog("tag: %08x\n",t);
+	mylog("  id: %d (%s)\n", t->id, swf_TagGetName(t));
+	mylog("  data: %08x (%d bytes)\n", t->data, t->len);
+	mylog("  next: %08x\n", t->next);
+	TAG * tnew = t->next;
+	mylog("->free data\n");
+	if (t->data) free(t->data);
+	mylog("->free tag\n");
+	free(t);
+	t = tnew;
+      }
+    }*/
+    swf->firstTag = 0;
     
     return PY_NONE;
 }
@@ -214,6 +228,7 @@ static PyObject * swf_writeCGI(PyObject* self, PyObject* args)
     if(!swf->swf.firstTag)
 	return NULL;
     swf_WriteCGI(&swf->swf);
+    swf_FreeTags(&swf->swf);
     swf->swf.firstTag = 0;
     return PY_NONE;
 }
@@ -330,10 +345,8 @@ static int swf_setattr(PyObject * self, char* a, PyObject * o)
 	return 0;
     } else if(!strcmp(a, "tags")) {
 	PyObject* taglist;
-	/*if (!PyArg_Parse(o, "O!", &TagListClass, &taglist));
-	    goto err;*/
-	// TODO: check if it's really a taglist
 	taglist = o;
+	PY_ASSERT_TYPE(taglist,&TagListClass);
 	Py_DECREF(swf->taglist);
 	swf->taglist = taglist;
 	Py_INCREF(swf->taglist);
@@ -398,7 +411,7 @@ static PyMethodDef LoggingMethods[] =
     {"verbose", (PyCFunction)module_verbose, METH_KEYWORDS, "Set the module verbosity"},
     {0,0,0,0}
 };
-    
+
 void initSWF(void)
 {
     PyObject*module;
@@ -416,4 +429,9 @@ void initSWF(void)
     all_methods = addMethods(all_methods, LoggingMethods);
 
     module = Py_InitModule("SWF", all_methods);
+
+    /* Python doesn't copy the PyMethodDef struct, so we need
+       to keep it around */
+    // free(all_methods) 
 }
+

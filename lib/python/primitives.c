@@ -41,6 +41,7 @@ PyObject* f_Color(PyObject* self, PyObject* args, PyObject* kwargs)
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii|i", kwlist, &r,&g,&b,&a))
 	return NULL;
     color = PyObject_New(ColorObject, &ColorClass);
+    mylog("+%08x(%d) color_new(%d,%d,%d,%d)\n", (int)color, color->ob_refcnt, r,g,b,a);
     color->rgba.r = r;
     color->rgba.g = g;
     color->rgba.b = b;
@@ -92,6 +93,11 @@ RGBA color_getRGBA(PyObject*self)
     }
     return color->rgba;
 }
+void color_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) color_dealloc\n", (int)self, self->ob_refcnt);
+    PyObject_Del(self);
+}
 PyTypeObject ColorClass = 
 {
     PyObject_HEAD_INIT(NULL)
@@ -99,7 +105,7 @@ PyTypeObject ColorClass =
     tp_name: "Color",
     tp_basicsize: sizeof(ColorObject),
     tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
+    tp_dealloc: color_dealloc,
     tp_print: 0,
     tp_getattr: color_getattr,
     tp_setattr: color_setattr,
@@ -121,6 +127,7 @@ PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs)
 		&box.xmax,
 		&box.ymax));
 	return NULL;
+    mylog("+%08x(%d) bbox_new(%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, box.xmin, box.ymin, box.xmax,box.ymax);
     bbox = PyObject_New(BBoxObject, &BBoxClass);
     bbox->bbox = box;
     return (PyObject*)bbox;
@@ -159,6 +166,11 @@ err:
     mylog("swf_setattr %08x(%d) %s = ? (%08x)\n", (int)self, self->ob_refcnt, a, o);
     return 1;
 }
+void bbox_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) bbox_dealloc\n", (int)self, self->ob_refcnt);
+    PyObject_Del(self);
+}
 SRECT bbox_getBBox(PyObject*self)
 {
     BBoxObject*bbox= 0;
@@ -177,7 +189,7 @@ PyTypeObject BBoxClass =
     tp_name: "BBox",
     tp_basicsize: sizeof(BBoxObject),
     tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
+    tp_dealloc: bbox_dealloc,
     tp_print: 0,
     tp_getattr: bbox_getattr,
     tp_setattr: bbox_setattr,
@@ -224,6 +236,11 @@ MATRIX matrix_getMatrix(PyObject*self)
     MatrixObject*matrix = (MatrixObject*)self;
     return matrix->matrix;
 }
+void matrix_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) matrix_dealloc", self, self->ob_refcnt);
+    PyObject_Del(self);
+}
 PyTypeObject MatrixClass = 
 {
     PyObject_HEAD_INIT(NULL)
@@ -231,7 +248,7 @@ PyTypeObject MatrixClass =
     tp_name: "Matrix",
     tp_basicsize: sizeof(MatrixObject),
     tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
+    tp_dealloc: matrix_dealloc,
     tp_print: 0,
     tp_getattr: matrix_getattr,
     tp_setattr: matrix_setattr,
@@ -273,6 +290,11 @@ CXFORM colortransform_getCXForm(PyObject*self)
     }
     return cxform->cxform;
 }
+void colortransform_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) colortransform_dealloc", self, self->ob_refcnt);
+    PyObject_Del(self);
+}
 PyTypeObject CXFormClass = 
 {
     PyObject_HEAD_INIT(NULL)
@@ -280,7 +302,7 @@ PyTypeObject CXFormClass =
     tp_name: "ColorTransform",
     tp_basicsize: sizeof(CXFormObject),
     tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
+    tp_dealloc: colortransform_dealloc,
     tp_print: 0,
     tp_getattr: colortransform_getattr,
     tp_setattr: colortransform_setattr,
@@ -303,7 +325,7 @@ static int gradient_setattr(PyObject * self, char* a, PyObject* o)
 {
     return 0;
 }
-GRADIENT colortransform_getGradient(PyObject*self)
+GRADIENT gradient_getGradient(PyObject*self)
 {
     GradientObject*gradient = 0;
     if (!PyArg_Parse(self, "O!", &gradient, &gradient)) {
@@ -314,6 +336,11 @@ GRADIENT colortransform_getGradient(PyObject*self)
     }
     return gradient->gradient;
 }
+void gradient_dealloc(PyObject* self)
+{
+    mylog("-%08x(%d) gradient_dealloc", self, self->ob_refcnt);
+    PyObject_Del(self);
+}
 PyTypeObject GradientClass = 
 {
     PyObject_HEAD_INIT(NULL)
@@ -321,7 +348,7 @@ PyTypeObject GradientClass =
     tp_name: "Gradient",
     tp_basicsize: sizeof(GradientObject),
     tp_itemsize: 0,
-    tp_dealloc: dummy_dealloc,
+    tp_dealloc: gradient_dealloc,
     tp_print: 0,
     tp_getattr: gradient_getattr,
     tp_setattr: gradient_setattr,

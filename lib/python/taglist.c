@@ -92,7 +92,6 @@ TAG* taglist_getTAGs(PyObject*self)
 	}
 	if(!firstTag)
 	    firstTag = tag;
-	mylog(" %08x(%d) taglist_getTAGs: added tag %08x", (int)self, self->ob_refcnt, tag);
     }
     Py_DECREF(tagmap);
     return firstTag;
@@ -143,7 +142,7 @@ static PyObject * taglist_optimizeOrder(PyObject* self, PyObject* args)
 static void taglist_dealloc(PyObject* self)
 {
     TagListObject*taglist = (TagListObject*)self;
-    mylog("-%08x(%d) taglist_dealloc\n", (int)self, self->ob_refcnt);
+    mylog("-%08x(%d) taglist_dealloc list=%08x(%d)\n", (int)self, self->ob_refcnt, taglist->taglist, taglist->taglist->ob_refcnt);
     Py_DECREF(taglist->taglist);
     taglist->taglist = 0;
     PyObject_Del(self);
@@ -191,14 +190,12 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
     PyObject*tag = 0;
     PY_ASSERT_TYPE(self, &TagListClass);
     TagListObject*taglist = (TagListObject*)self;
-    mylog(" %08x(%d) taglist_concat %08x", (int)self, self->ob_refcnt, list);
+    mylog(" %08x(%d) taglist_concat %08x(%d)", (int)self, self->ob_refcnt, list, list->ob_refcnt);
 
     if (PyArg_Parse(list, "O!", &TagClass, &tag)) {
-	mylog(" %08x(%d) taglist_concat: Tag %08x", (int)self, self->ob_refcnt, tag);
 	list = tag_getDependencies(tag);
 	int l = PyList_Size(list);
 	int t;
-	mylog(" %08x(%d) taglist_concat: Tag: %d dependencies", (int)self, self->ob_refcnt, l);
 	for(t=0;t<l;t++) {
 	    PyObject*item = PyList_GetItem(list, t);
 	    PyObject*_self = taglist_concat(self, item);
@@ -206,10 +203,11 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
 	    self = _self;
 	}
 	if(!taglist_contains(self, tag)) {
-	    mylog(" %08x(%d) taglist_concat: Adding Tag %08x", (int)self, self->ob_refcnt, tag);
+	    mylog(" %08x(%d) taglist_concat: Adding Tag %08x(%d)", (int)self, self->ob_refcnt, tag, tag->ob_refcnt);
 	    PyList_Append(taglist->taglist, tag);
+	} else {
+	    mylog(" %08x(%d) taglist_concat: Already contains Tag %08x(%d)", (int)self, self->ob_refcnt, tag, tag->ob_refcnt);
 	}
-	mylog(" %08x(%d) taglist_concat: done", (int)self, self->ob_refcnt);
 	Py_INCREF(self);
 	return self;
 	/* copy tag, so we don't have to do INCREF(tag) (and don't
@@ -239,7 +237,6 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
     if (PyList_Check(list)) {
 	int l = PyList_Size(list);
 	int t;
-	mylog(" %08x(%d) taglist_concat: List", (int)self, self->ob_refcnt);
 	for(t=0;t<l;t++) {
 	    PyObject*item = PyList_GetItem(list, t);
 	    if(!PY_CHECK_TYPE(item, &TagClass)) {
@@ -257,7 +254,6 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
     }
     PyErr_Clear();
     if (PY_CHECK_TYPE(list, &TagListClass)) {
-	mylog(" %08x(%d) taglist_concat: TagList", (int)self, self->ob_refcnt);
 	TagListObject*taglist2 = (TagListObject*)list;
 	return taglist_concat(self, taglist2->taglist);
 
@@ -295,7 +291,7 @@ static PySequenceMethods taglist_as_sequence =
     sq_ass_slice: 0,         // x[i:j] = v intintobjargproc
     sq_contains: taglist_contains,   //???
 };
-static PyTypeObject TagListClass = 
+PyTypeObject TagListClass = 
 {
     PyObject_HEAD_INIT(NULL)
     0,
