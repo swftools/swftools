@@ -65,6 +65,23 @@ int args_callback_option(char*name,char*val) {
 	config.movey = atoi(val);
 	return 1;
     }
+    else if (!strcmp(name, "r"))
+    {
+	config.framerate = atoi(val)*256/100;
+	return 1;
+    }
+    else if (!strcmp(name, "X"))
+    {
+	config.sizex = atoi(val)*20;
+	config.hassizex = 1;
+	return 1;
+    }
+    else if (!strcmp(name, "Y"))
+    {
+	config.sizey = atoi(val)*20;
+	config.hassizey = 1;
+	return 1;
+    }
     else if (!strcmp(name, "s"))
     {
 	config.scalex = config.scaley = atoi(val)/100.0;
@@ -97,6 +114,9 @@ struct options_t options[] =
  {"s","scale"},
  {"x","xpos"},
  {"y","ypos"},
+ {"X","width"},
+ {"Y","height"},
+ {"r","rate"},
  {"l","overlay"},
  {"t","stack"},
  {"v","verbose"},
@@ -151,7 +171,7 @@ void args_callback_usage(char*name)
 {
     printf("Usage: %s [-l][-t] [-o outputfile] [[name=]masterfile] [-x xpos] [-y ypos] [-s scale] [name1=]slavefile1 .. [-x xpos] [-y ypos] [-s scale] [nameN=]slavefileN\n", name);
     printf("\n");
-    printf("-o outputfile       explicitly specify output file. (otherwise, output.swf will be used)\n");
+    printf("-o outputfile       (output) explicitly specify output file. (otherwise, output.swf will be used)\n");
     printf("-t                  (stack) place each slave into a seperate frame (no master movie)\n");
     printf("-l                  (overlay) Don't remove any master objects, only overlay new objects\n");
     printf("-c                  (clip) Clip the slave objects by the corresponding master objects\n");
@@ -159,6 +179,9 @@ void args_callback_usage(char*name)
     printf("-x xpos             (move x) Adjust position of slave by xpos twips (1/20 pixel)\n");
     printf("-y ypos             (move y) Adjust position of slave by ypos twips (1/20 pixel)\n");
     printf("-s scale            (scale) Adjust size of slave by scale%\n");
+    printf("-r framerate        (rate) Set movie framerate (100 frames/sec)\n");
+    printf("-X width            (width) Force movie width to scale (default: use master width) (not with -t)\n");
+    printf("-Y height           (height) Force movie height to scale (default: use master height) (not with -t)\n");
 }
 
 /* read a whole file in memory */
@@ -322,6 +345,11 @@ int main(int argn, char *argv[])
     config.movey = 0;
     config.scalex = 1.0;
     config.scaley = 1.0;
+    config.sizex = 0;
+    config.sizey = 0;
+    config.hassizex = 0;
+    config.hassizey = 0;
+    config.framerate = 0;
     config.stack = 0;
 
     processargs(argn, argv);
