@@ -1511,7 +1511,7 @@ if test "${enable_lame+set}" = set; then
 fi;
 
 PACKAGE=swftools
-VERSION=2004-05-18-1254
+VERSION=0.6.0
 
 
 
