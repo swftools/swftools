@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 //xpdf header files
 #include "gfile.h"
 #include "GString.h"
