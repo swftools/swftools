@@ -1952,14 +1952,14 @@ void pdfswf_addlanguagedir(char*dir)
 
     int l;
     FILE*fi = 0;
-    char* config_file = (char*)malloc(strlen(dir)+256);
+    char* config_file = (char*)malloc(strlen(dir) + 1 + sizeof("add-to-xpdfrc"));
     strcpy(config_file, dir);
     strcat(config_file, dirseparator());
     strcat(config_file, "add-to-xpdfrc");
 
     fi = fopen(config_file, "rb");
     if(!fi) {
-        msg("<error> Could not open %s");
+        msg("<error> Could not open %s", config_file);
         return;
     }
     globalParams->parseFile(new GString(config_file), fi);
@@ -2005,7 +2005,7 @@ void pdfswf_addfontdir(char*dirname)
     }
     closedir(dir);
 #else
-    msg("<warning> No dirent.h- unable to add font dir %s");
+    msg("<warning> No dirent.h- unable to add font dir %s", dir);
 #endif
 }
 
