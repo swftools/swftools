@@ -230,13 +230,6 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 
 // Advanced Funtions
 
-// swfdump.c
-
-void swf_DumpHeader(FILE * f,SWF * swf);
-void swf_DumpMatrix(FILE * f,MATRIX * m);
-void swf_DumpTag(FILE * f,TAG * t); 
-char* swf_TagGetName(TAG*tag);
-
 // swfshape.c
 
 typedef struct _LINESTYLE
@@ -306,33 +299,39 @@ int   swf_ShapeSetEnd(TAG * t);
 
 // does not support wide characters !
 
-#define MAX_CHAR_PER_FONT 256
+#define MAX_CHAR_PER_FONT 512
+
+typedef struct _KERNING
+{
+  U16	      char1;
+  U16	      char2;
+  U16	      adjustment;
+} SWFKERNING;
 
 typedef struct _SWFLAYOUT
-{ S16         ascent;
-  S16         descent;
-  S16         leading;
-  SRECT       bounds[MAX_CHAR_PER_FONT];
-  struct
-  { U16       count;
-    U8 *      data;  // size = count*4 bytes
-  } kerning;
+{ S16          ascent;
+  S16          descent;
+  S16          leading;
+  SRECT      * bounds;
+  U16	       kerningcount;
+  SWFKERNING * kerning;
 } SWFLAYOUT, * LPSWFLAYOUT;
 
+typedef struct
+{ S16         advance;
+  U16         gid;            // Glyph-ID after DefineFont
+  SHAPE *     shape;
+} SWFGLYPH;
+
 typedef struct _SWFFONT
-{ U16           id;
+{ int		id; // -1 = not set
+  U8		version; // 0 = not set, 1 = definefont, 2 = definefont2
   U8 *          name;
   SWFLAYOUT *   layout;
-
+  U16		numchars;
   U8            flags; // bold/italic/unicode/ansi ...
-
-  U16           codes[MAX_CHAR_PER_FONT];
-  
-  struct
-  { U16         advance;
-    U16         gid;            // Glyph-ID after DefineFont
-    SHAPE *     shape;
-  }             glyph[MAX_CHAR_PER_FONT];
+  U16	*	codes;
+  SWFGLYPH *	glyph;
 } SWFFONT, * LPSWFFONT;
 
 typedef struct _FONTUSAGE
@@ -375,6 +374,13 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
 int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 // Prints text defined in tag t with font f to stdout
 
+// swfdump.c
+
+void swf_DumpHeader(FILE * f,SWF * swf);
+void swf_DumpMatrix(FILE * f,MATRIX * m);
+void swf_DumpTag(FILE * f,TAG * t); 
+char* swf_TagGetName(TAG*tag);
+void swf_DumpFont(SWFFONT * font);
 
 // swfobject.c
 
