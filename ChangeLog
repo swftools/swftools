@@ -182,7 +182,7 @@
 	* lib/rfxswf.h: fixed a bug- could previously only be compiled with either t1lib or freetype
 	* configure: newer avifile versions (>= 0.7.38) now also work.
 
-0.5.2 (not yet released):
+0.6.0:
 	* configure: added check for broken freetype- disable freetype in some cases
 	* swfbbox: Added support for text boxes
 	* png2swf: Fixed alpha conversion (removed definejpeg3 workaround)
@@ -190,3 +190,9 @@
 	* rfxswf: fixed font advance parameters (editboxes with custom font now work)
 	* swfextract: Is able to extract alpha channels out of DEFINEBITS2 now.
 	* pdf2swf: Made MingW compatible. There's now a Win32 version.
+	* pdf2swf: Reworked font routines
+	* swfcombine: Some fixes for clipping depths
+	* swfextract: Reworked object listing output
+	* lib/rfxswf: New method swf_FontPrepareForEditText()
+	* lib/lame: Removed lame library source, it's now linked dynamically
+	* lib/python: Added python interface
