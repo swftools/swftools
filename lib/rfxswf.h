@@ -764,6 +764,9 @@ void swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*));
 void swf_ActionEnumerateTargets(ActionTAG*atag, char*(*callback)(char*));
 void swf_ActionEnumerateStrings(ActionTAG*atag, char*(*callback)(char*));
 
+// using action/actioncompiler.h:
+ActionTAG* swf_ActionCompile(const char* source, int version);
+
 ActionTAG* action_End(ActionTAG*atag);
 ActionTAG* action_NextFrame(ActionTAG*atag);
 ActionTAG* action_PreviousFrame(ActionTAG*atag);

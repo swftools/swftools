@@ -155,8 +155,10 @@ ActionTAG* swf_ActionGet(TAG*tag)
     while(op)
     {
 	action->next = (ActionTAG*)malloc(sizeof(ActionTAG));
+	memset(action->next, 0, sizeof(ActionTAG));
 	action->next->prev = action;
 	action->next->next = 0;
+	action->next->parent = tmp.next;
 	action = action->next;
 
 	op = swf_GetU8(tag);
@@ -180,6 +182,16 @@ ActionTAG* swf_ActionGet(TAG*tag)
 
 void swf_ActionFree(ActionTAG*action)
 {
+    if(!action) {
+	fprintf(stderr, "Warning: freeing zero action");
+	return;
+    }
+    action = action->parent;
+    if(!action) {
+	fprintf(stderr, "Warning: freeing zero action (no parent)");
+	return;
+    }
+
     while(action)
     {
 	ActionTAG*tmp;
@@ -1038,6 +1050,32 @@ ActionTAG* action_GetUrl(ActionTAG*atag, char* url, char* label)
 ActionTAG* action_DefineFunction(ActionTAG*atag, U8*data, int len) {return atag;}
 ActionTAG* action_Constantpool(ActionTAG*atag, char* constantpool) {return atag;}
 ActionTAG*  action_With(ActionTAG*atag, char*object) {return atag;}
+
+#include "../action/actioncompiler.h"
+
+ActionTAG* swf_ActionCompile(const char* source, int version)
+{
+    TAG* tag;
+    ActionTAG* a = 0;
+    void*buffer = 0;
+    int len = 0;
+    int ret;
+    
+    tag = swf_InsertTag(NULL, ST_DOACTION);
+    ret = compileSWFActionCode(source, version, &buffer, &len);
+    if(!ret || buffer==0 || len == 0)
+	return 0;
+
+    swf_SetBlock(tag, buffer, len);
+    swf_SetU8(tag, 0);
+
+    free(buffer);
+
+    a = swf_ActionGet(tag);
+    swf_DeleteTag(tag);
+    return a;
+}
+
 
 /*
   Properties:
