@@ -285,7 +285,8 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 #define ST_MX0			59 /*(?) Components/InitClip */
 #define ST_MX1			60 /*(?) Sorensen Video*/
 #define ST_MX2			61 /*(?) Sorensen Video*/
-#define ST_MX3			62 /*(?) */
+#define ST_MX3			62 /*(?) fontinfo2? */
+#define ST_MX4			63 /*(?) */
 
 #define ST_REFLEX              777 /* to identify generator software */
 

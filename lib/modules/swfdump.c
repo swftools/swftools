@@ -161,6 +161,8 @@ char* swf_TagGetName(TAG*tag)
             return "MX2";
         case ST_MX3:
             return "MX3";
+        case ST_MX4:
+            return "MX4";
     }
     return 0;
 }
