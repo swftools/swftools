@@ -43,6 +43,7 @@ PyObject* f_Gradient(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_BBox2(SRECT bbox);
 PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs);
+PyObject* f_Matrix2(MATRIX* m);
 PyObject* f_FillStyle2(FILLSTYLE fs);
 PyObject* f_SolidFillstyle(PyObject* self, PyObject* args, PyObject* kwargs);
 PyObject* f_SolidFillstyle2(RGBA color);
