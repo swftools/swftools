@@ -7,7 +7,7 @@
 
    This file is distributed under the GPL, see file COPYING for details */
 
-#define HAVE_STAT
+#include "../config.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -415,9 +415,9 @@ int main (int argc,char ** argv)
 
 #ifdef HAVE_STAT
     fstat(f, &statbuf);
-    if(statbuf.st_size != swf.FileSize)
+    if(statbuf.st_size != swf.fileSize)
         dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
-                statbuf.st_size, swf.FileSize);
+                statbuf.st_size, swf.fileSize);
 #endif
 
     close(f);
