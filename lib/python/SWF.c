@@ -27,6 +27,7 @@
 #include "./pyutils.h"
 #include "./tags.h"
 #include "./taglist.h"
+#include "./primitives.h"
 
 /*
 TODO:
@@ -72,8 +73,12 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
 		&obbox, filename))
 	return NULL;
 
-    if (!PyArg_Parse(obbox, "(iiii)", &bbox.xmin, &bbox.ymin, &bbox.xmax, &bbox.ymax))
-	return NULL;
+    if (!PY_CHECK_TYPE(obbox, &BBoxClass)) {
+	obbox = f_BBox(0, obbox, 0);
+	if(!obbox)
+	    return NULL;
+    }
+    bbox = bbox_getSRECT(obbox);
 
     memset(&swf->swf, 0, sizeof(SWF));
     if(filename)
@@ -216,6 +221,8 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
       }
     }*/
     swf->firstTag = 0;
+    
+    mylog(" %08x(%d) f_save filename=%s done\n", (int)self, self->ob_refcnt, filename);
     
     return PY_NONE;
 }
