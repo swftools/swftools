@@ -88,7 +88,10 @@ RFX_CHECK_MING
 
 SLEXT="so"
 if test "x${MINGW}" != "xyes"; then
+    # no mingW
     AC_DEFINE_UNQUOTED(O_BINARY, 0)
+else
+    # mingW
     SLEXT="dll"
 fi
 export SLEXT
