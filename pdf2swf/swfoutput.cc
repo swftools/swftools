@@ -71,13 +71,13 @@ int clippos = 0;
 int CHARMIDX = 0;
 int CHARMIDY = 0;
 
-void startshape(struct swfoutput* obj);
-void starttext(struct swfoutput* obj);
-void endshape();
-void endtext();
+static void startshape(struct swfoutput* obj);
+static void starttext(struct swfoutput* obj);
+static void endshape();
+static void endtext();
 
 // matrix multiplication. changes p0
-void transform (plotxy*p0,struct swfmatrix*m)
+static void transform (plotxy*p0,struct swfmatrix*m)
 {
     double x,y;
     x = m->m11*p0->x+m->m12*p0->y;
@@ -87,7 +87,7 @@ void transform (plotxy*p0,struct swfmatrix*m)
 }
 
 // write a move-to command into the swf
-void moveto(TAG*tag, plotxy p0)
+static void moveto(TAG*tag, plotxy p0)
 {
     int rx = (int)(p0.x*20);
     int ry = (int)(p0.y*20);
@@ -99,7 +99,7 @@ void moveto(TAG*tag, plotxy p0)
 }
 
 // write a line-to command into the swf
-void lineto(TAG*tag, plotxy p0)
+static void lineto(TAG*tag, plotxy p0)
 {
     int rx = ((int)(p0.x*20)-swflastx);
     int ry = ((int)(p0.y*20)-swflasty);
@@ -111,7 +111,7 @@ void lineto(TAG*tag, plotxy p0)
 }
 
 // write a spline-to command into the swf
-void splineto(TAG*tag, plotxy control,plotxy end)
+static void splineto(TAG*tag, plotxy control,plotxy end)
 {
     int cx = ((int)(control.x*20)-swflastx);
     int cy = ((int)(control.y*20)-swflasty);
@@ -126,7 +126,7 @@ void splineto(TAG*tag, plotxy control,plotxy end)
 
 /* write a line, given two points and the transformation
    matrix. */
-void line(TAG*tag, plotxy p0, plotxy p1, struct swfmatrix*m)
+static void line(TAG*tag, plotxy p0, plotxy p1, struct swfmatrix*m)
 {
     transform(&p0,m);
     transform(&p1,m);
@@ -136,7 +136,7 @@ void line(TAG*tag, plotxy p0, plotxy p1, struct swfmatrix*m)
 
 /* write a cubic (!) spline. This involves calling the approximate()
    function out of spline.cc to convert it to a quadratic spline.  */
-void spline(TAG*tag,plotxy p0,plotxy p1,plotxy p2,plotxy p3,struct swfmatrix*m)
+static void spline(TAG*tag,plotxy p0,plotxy p1,plotxy p2,plotxy p3,struct swfmatrix*m)
 {
     double d;
     struct qspline q[16];
@@ -251,7 +251,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m, int log)
     }
 }
 
-int colorcompare(RGBA*a,RGBA*b)
+static inline int colorcompare(RGBA*a,RGBA*b)
 {
 
     if(a->r!=b->r ||
@@ -274,7 +274,7 @@ struct chardata {
 } chardata[CHARDATAMAX];
 int chardatapos = 0;
 
-void putcharacters(TAG*tag)
+static void putcharacters(TAG*tag)
 {
     int t;
     SWFFONT font;
@@ -406,7 +406,7 @@ void putcharacters(TAG*tag)
     chardatapos = 0;
 }
 
-void putcharacter(struct swfoutput*obj, int fontid, int charid, 
+static void putcharacter(struct swfoutput*obj, int fontid, int charid, 
                     int x,int y, int size)
 {
     if(chardatapos == CHARDATAMAX)
@@ -425,7 +425,7 @@ void putcharacter(struct swfoutput*obj, int fontid, int charid,
 
 
 /* process a character. */
-void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int charnr, swfmatrix*m)
+static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int charnr, swfmatrix*m)
 {
     int usefonts=1;
     if(m->m12!=0 || m->m21!=0)
@@ -858,7 +858,7 @@ void swfoutput_setprotected() //write PROTECT tag
   flag_protected = 1;
 }
 
-void startshape(struct swfoutput*obj)
+static void startshape(struct swfoutput*obj)
 {
   RGBA rgb;
   SRECT r;
@@ -894,7 +894,7 @@ void startshape(struct swfoutput*obj)
   lastwasfill = 0;
 }
 
-void starttext(struct swfoutput*obj)
+static void starttext(struct swfoutput*obj)
 {
   SRECT r;
   MATRIX m;
@@ -922,7 +922,7 @@ void starttext(struct swfoutput*obj)
   swflastx=swflasty=0;
 }
 
-void endshape()
+static void endshape()
 {
     if(shapeid<0) 
         return;
@@ -932,7 +932,7 @@ void endshape()
     shapeid = -1;
 }
 
-void endtext()
+static void endtext()
 {
     if(textid<0)
         return;
@@ -943,7 +943,7 @@ void endtext()
     textid = -1;
 }
 
-void endpage(struct swfoutput*obj)
+static void endpage(struct swfoutput*obj)
 {
     if(shapeid>=0)
       endshape();
@@ -1102,7 +1102,7 @@ void swfoutput_endclip(swfoutput*obj)
     swf_ObjectPlaceClip(cliptags[clippos],clipshapes[clippos],clipdepths[clippos],NULL,NULL,NULL,depth++);
 }
 
-void drawlink(struct swfoutput*obj, ActionTAG*, swfcoord*points);
+static void drawlink(struct swfoutput*obj, ActionTAG*,ActionTAG*, swfcoord*points, char mouseover);
 
 void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
 {
@@ -1121,7 +1121,7 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
       action_End();
     swf_ActionEnd();
     
-    drawlink(obj, actions, points);
+    drawlink(obj, actions, 0, points,0);
 }
 void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
 {
@@ -1137,10 +1137,38 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
       action_End();
     swf_ActionEnd();
 
-    drawlink(obj, actions, points);
+    drawlink(obj, actions, 0, points,0);
+}
+void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
+{
+    ActionTAG *actions1,*actions2;
+
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+   
+    actions1 = swf_ActionStart();
+      action_PushString("/:subtitle");
+      action_PushString(name);
+      action_SetVariable();
+      action_End();
+    swf_ActionEnd();
+
+    actions2 = swf_ActionStart();
+      action_PushString("/:subtitle");
+      action_PushString("");
+      action_SetVariable();
+      action_End();
+    swf_ActionEnd();
+
+    drawlink(obj, actions1, actions2, points,1);
+
+    swf_ActionFree(actions1);
+    swf_ActionFree(actions2);
 }
 
-void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
+static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions2, swfcoord*points, char mouseover)
 {
     RGBA rgb;
     SRECT r;
@@ -1212,22 +1240,47 @@ void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
     lineto(tag, p1);
     swf_ShapeSetEnd(tag);
 
-    tag = swf_InsertTag(tag,ST_DEFINEBUTTON);
-    swf_SetU16(tag,buttonid); //id
-    swf_ButtonSetFlags(tag, 0); //menu=no
-    swf_ButtonSetRecord(tag,0x01,myshapeid,depth,0,0);
-    swf_ButtonSetRecord(tag,0x02,myshapeid2,depth,0,0);
-    swf_ButtonSetRecord(tag,0x04,myshapeid2,depth,0,0);
-    swf_ButtonSetRecord(tag,0x08,myshapeid,depth,0,0);
-    swf_SetU8(tag,0);
-    swf_ActionSet(tag,actions);
-    swf_SetU8(tag,0);
+    if(!mouseover)
+    {
+	tag = swf_InsertTag(tag,ST_DEFINEBUTTON);
+	swf_SetU16(tag,buttonid); //id
+	swf_ButtonSetFlags(tag, 0); //menu=no
+	swf_ButtonSetRecord(tag,0x01,myshapeid,depth,0,0);
+	swf_ButtonSetRecord(tag,0x02,myshapeid2,depth,0,0);
+	swf_ButtonSetRecord(tag,0x04,myshapeid2,depth,0,0);
+	swf_ButtonSetRecord(tag,0x08,myshapeid,depth,0,0);
+	swf_SetU8(tag,0);
+	swf_ActionSet(tag,actions1);
+	swf_SetU8(tag,0);
+    }
+    else
+    {
+	tag = swf_InsertTag(tag,ST_DEFINEBUTTON2);
+	swf_SetU16(tag,buttonid); //id
+	swf_ButtonSetFlags(tag, 0); //menu=no
+	swf_ButtonSetRecord(tag,0x01,myshapeid,depth,0,0);
+	swf_ButtonSetRecord(tag,0x02,myshapeid2,depth,0,0);
+	swf_ButtonSetRecord(tag,0x04,myshapeid2,depth,0,0);
+	swf_ButtonSetRecord(tag,0x08,myshapeid,depth,0,0);
+	swf_SetU8(tag,0); // end of button records
+        swf_ButtonSetCondition(tag, BC_IDLE_OVERUP);
+	swf_ActionSet(tag,actions1);
+	if(actions2) {
+	    swf_ButtonSetCondition(tag, BC_OVERUP_IDLE);
+	    swf_ActionSet(tag,actions2);
+	    swf_SetU8(tag,0);
+	    swf_ButtonPostProcess(tag, 2);
+	} else {
+	    swf_SetU8(tag,0);
+            swf_ButtonPostProcess(tag, 1);
+	}
+    }
     
     tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
     swf_ObjectPlace(tag, buttonid, depth++,0,0,0);
 }
 
-void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
+static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,

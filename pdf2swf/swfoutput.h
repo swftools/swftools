@@ -121,6 +121,7 @@ void swfoutput_drawimageagain(struct swfoutput*, int id, int sizex, int sizey,
 
 void swfoutput_linktopage(struct swfoutput*, int page, swfcoord*points);
 void swfoutput_linktourl(struct swfoutput*, char*url, swfcoord*points);
+void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points);
 
 void swfoutput_destroy(struct swfoutput*);
 
