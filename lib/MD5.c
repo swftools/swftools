@@ -120,6 +120,20 @@ do {				\
  * UNIX password
  */
 
+#ifndef HAVE_BCOPY
+void bcopy(void*src, void*dest, int len) 
+{
+    memcpy(dest, src, len);
+}
+#endif
+
+#ifndef HAVE_BZERO
+void bzero(void*mem, int len) 
+{
+    memset(mem, 0, len);
+}
+#endif
+
 #define MD4_SIZE 16
 #define MD5_SIZE 16
 

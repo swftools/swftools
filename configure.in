@@ -11,7 +11,8 @@ AC_ARG_ENABLE(mp3,
 [  --disable-mp3           don't compile any mp3 code in], NO_MP3=true)
 
 PACKAGE=swftools
-VERSION=2003-08-02-1416
+VERSION=2004-02-01-1614
+
 
 
 
@@ -34,6 +35,13 @@ else if test "x$OPTIMIZE" '!=' "x"; then
 	CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CXXFLAGS"
      fi
 fi
+#OLDGCC=1
+#if test "x$OLDGCC" '!=' "x";then
+#     #CFLAGS="$CFLAGS --std=c89 -ansi -pendantic"
+#     #CXXFLAGS="$CXXFLAGS --std=c89 -ansi -pendantic"
+#     CFLAGS="$CFLAGS -ansi -pendantic"
+#     CXXFLAGS="$CXXFLAGS -ansi -pendantic"
+#fi
 
 export PACKAGE VERSION CFLAGS CXXFLAGS
 
@@ -68,7 +76,7 @@ fi
  AC_PROG_LN_S
  AC_PROG_LIBTOOL
  AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
- AC_CHECK_PROGS(FREETYPE_CONFIG, freetype-config, )
+ AC_CHECK_PROGS(FREETYPE_CONFIG, freetype-config, ) # TODO: use this
 
 dnl Checks for system services
  AC_EXEEXT
@@ -177,7 +185,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
  dnl AC_CHECK_TYPE(uint,unsigned long int)
 
 dnl Checks for library functions.
- AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand)
+ AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand bcopy bzero)
  RFX_CHECK_AVI2SWF
 
 avi2swf="avi2swf/Makefile"

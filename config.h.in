@@ -28,6 +28,12 @@
 /* Define if you have the popen function.  */
 #undef HAVE_POPEN
 
+/* Define if you have the bcopy function.  */
+#undef HAVE_BCOPY
+
+/* Define if you have the bzero function.  */
+#undef HAVE_BZERO
+
 /* Define if you have the rand function.  */
 #undef HAVE_RAND
 
