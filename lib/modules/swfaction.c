@@ -28,9 +28,9 @@ t: target (string)
 l: label (string)
 c: constant pool (string)
 s: skip (byte) (number of actions)
-m: method (byte) url:(0=none, 1=get, 2=post)/gf2:(1=play)
+m: method (byte) GetUrl2:(0=none, 1=get, 2=post)/GotoFrame2:(1=play)
 b: branch (word) (number of bytes)
-p: type(byte), type=0:string, type=1:double
+p (push): type(byte), type=0:string, type=1:double
 {: define function (name (string), num (word), params (num strings), codesize (word)
 o: object (string)
 r: register (byte)
@@ -178,6 +178,49 @@ void SetActions(TAG*tag, ActionTAG*action)
     }
 }
 
+int OpAdvance(char c, char*data)
+{
+    switch (c)
+    {
+	case 'f':
+	    return 2;
+	case 'u':
+	    return strlen(data)+1;
+	case 't':
+	    return strlen(data)+1;
+	case 'l': 
+	    return strlen(data)+1;
+	case 'c': 
+	    return strlen(data)+1;
+	case 's':
+	    return 1;
+	case 'm':
+	    return 1;
+	case 'b':
+	    return 2;
+	case 'p': {
+	    U8 type = *data++;
+	    if(type == 0) {
+		return 1+strlen(data)+1; //string
+	    } else if (type == 1) {
+		return 1+4; //float
+	    } else if (type == 2) {
+		return 1+0; //NULL
+	    } else if (type == 4) {
+		return 1+1; //register
+	    } else if (type == 5) {
+		return 1+1; //bool
+	    } else if (type == 6) {
+		return 1+8; //double
+	    } else if (type == 7) {
+		return 1+4; //int
+	    } else if (type == 8) {
+		return 1+1; //lookup
+	    }
+	}
+    }
+}
+
 /* TODO: this should be in swfdump.c */
 void DumpActions(ActionTAG*atag, char*prefix) 
 {
@@ -207,52 +250,53 @@ void DumpActions(ActionTAG*atag, char*prefix)
 	    switch(*cp)
 	    {
 		case 'f': {
-		    printf(" %d", *(U16*)data);data+=2; //FIXME: le/be
+		    printf(" %d", *(U16*)data); //FIXME: le/be
 		} break;
 		case 'u': {
-		    printf(" URL:\"%s\"", data);data+=strlen(data)+1;
+		    printf(" URL:\"%s\"", data);
 		} break;
 		case 't': {
-		    printf(" Target:\"%s\"", data);data+=strlen(data)+1;
+		    printf(" Target:\"%s\"", data);
 		} break;
 		case 'l': {
-		    printf(" Label:\"%s\"", data);data+=strlen(data)+1;
+		    printf(" Label:\"%s\"", data);
 		} break;
 		case 'c': {
-		    printf(" Constant Pool:\"%s\"", data);data+=strlen(data)+1;
+		    printf(" Constant Pool:\"%s\"", data);
 	    	} break;
 		case 's': {
-		    printf(" +%d", data);data++;
+		    printf(" +%d", data);
 		} break;
 		case 'm': {
 //m: method (byte) url:(0=none, 1=get, 2=datat)/gf2:(1=play)
-		    printf(" %d", data);data++;
+		    printf(" %d", data);
 		} break;
 		case 'b': {
-		    printf(" %d", *(U16*)data);data+=2;
+		    printf(" %d", *(U16*)data);
 		} break;
 		case 'p': {
-		    U8 type = *data++;
+		    U8 type = *data;
+		    char*value = data+1;
 		    if(type == 0) {
-			printf(" String:\"%s\"", data);data+=strlen(data)+1;
+			printf(" String:\"%s\"", value);
 		    } else if (type == 1) {
-			printf(" Double:\"%f\"", *(float*)data);data+=4;
+			printf(" Float:\"%f\"", *(float*)value);
 		    } else if (type == 2) {
 			printf(" NULL");
 		    } else if (type == 4) {
-			printf(" register:%d", data++);
+			printf(" register:%d", value);
 		    } else if (type == 5) {
-			printf(" %s", data++?"true":"false");
+			printf(" %s", *value?"true":"false");
 		    } else if (type == 6) {
-			printf(" %f", *(double*)data);  data+=8;
+			printf(" %f", *(double*)value);
 		    } else if (type == 7) {
-			printf(" %d", *(int*)data); data+=4;
+			printf(" %d", *(int*)value);
 		    } else if (type == 8) {
-			printf(" Lookup:%d", data++);
+			printf(" Lookup:%d", *value);
 		    }
 		} break;
-	    
 	    }
+	    data += OpAdvance(*cp, data);
 	    cp++;
 	}
 
@@ -270,6 +314,71 @@ void DumpActions(ActionTAG*atag, char*prefix)
 	    printf("\"");
 	}
 	printf("\n");
+	atag = atag->next;
+    }
+}
+
+int ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
+{
+    U8 op;
+    int t;
+    U8*data;
+    char* cp;
+    
+    while(atag)
+    {
+
+	for(t=0;t<definedactions;t++)
+	    if(actions[t].op == atag->op)
+		break;
+
+	if(t==definedactions) {
+	    // unknown actiontag
+	    atag = atag->next;
+	    continue;
+	}
+	cp = actions[t].flags;
+	data = atag->data;
+	if(atag->len) 
+	{
+	    while(*cp)
+	    {
+		char * replacepos = 0;
+		int replacelen = 0;
+		char * replacement;
+		switch(*cp)
+		{
+		    case 'u': {
+			replacelen = strlen(data);
+			replacepos = data;
+			replacement = callback(data); // may be null
+		    } break;
+		    /* everything below may very well
+		       contain an URL, too. However, to extract 
+		       these, we would have to call callback also for
+		       strings which might not contain an url.
+			TODO: should we check for Strings which start 
+			with "http://"?
+		     */
+		    case 'c': {
+		    } break;
+		    case 'o': {
+		    } break;
+		    case 'p': {
+			U8 type = *data;
+			char*value = &data[1];
+			if(type == 0) { //string
+			} else if (type == 8) { //lookup
+			}
+		    } break;
+		}
+		data += OpAdvance(*cp, data);
+		cp++;
+
+		//TODO: apply replacement here.
+	    }
+	}
+
 	atag = atag->next;
     }
 }
