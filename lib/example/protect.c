@@ -37,7 +37,7 @@ int main(int argn,char ** argv)
 	return 0;
     }
 	
-    fi = open(argv[1],O_RDONLY);
+    fi = open(argv[1],O_RDONLY|O_BINARY);
 	
     if (fi<=0)
     { 
