@@ -353,8 +353,10 @@ int main (int argc,char ** argv)
     swf_FoldAll(&swf);
     tag = swf.firstTag;
 
-    if(swifty)
+    if(swifty) {
+	printf("{\n");
 	printf("{frame %d}\n", frame++);
+    }
 
     while (tag) {
 	if (tag->id == ST_DEFINESHAPE ||
@@ -400,12 +402,15 @@ int main (int argc,char ** argv)
 		if(!name) {
 		    sprintf(buf, "ID%d", id);name = buf;
 		}
-		printf("{%s {%f %f %f %f %f %f %f %f}}\n", name, 
+		printf("{%s {%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f}}\n", name, 
 			p1.x/20.0, p1.y/20.0, p2.x/20.0, p2.y/20.0,
 			p3.x/20.0, p3.y/20.0, p4.x/20.0, p4.y/20.0);
 	    }
 	}
 	tag = tag->next;
+    }
+    if(swifty) {
+	printf("}\n");
     }
 
     if(optimize) {
