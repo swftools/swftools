@@ -884,6 +884,11 @@ int main (int argc,char ** argv)
 	    U8 b = swf_GetU8(tag);
 	    printf(" (%02x/%02x/%02x)\n",r,g,b);
 	}
+	else if(tag->id == ST_PROTECT) {
+	    if(tag->len>0) {
+		printf(" %s\n", swf_GetString(tag));
+	    }
+	}
 	else if(tag->id == ST_DEFINEBITSLOSSLESS ||
 	   tag->id == ST_DEFINEBITSLOSSLESS2) {
 	    handleDefineBits(tag);
