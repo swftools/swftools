@@ -489,10 +489,10 @@ void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline,
     if(textid>=0)
         endtext();
 
-    /* XXX the following is needed due to a bug in the SWF player.
-       Filled shapes consisting solely of curves don't get
-       filled correctly if they are in the same shape */
-    if(shapeid>=0 && fill) {
+    /* Multiple polygons in one shape don't overlap correctly, 
+       so we better start a new shape here if the polygon is filled
+     */
+    if(shapeid>=0 && fill && !ignoredraworder) {
 	endshape();
     }
 
