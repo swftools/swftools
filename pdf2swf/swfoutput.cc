@@ -48,6 +48,7 @@ int flashversion=5;
 int splinemaxerror=1;
 int fontsplinemaxerror=1;
 int filloverlap=0;
+float minlinewidth=0.1;
 
 static char storefont = 0;
 static int flag_protected = 0;
@@ -774,7 +775,7 @@ static inline int colorcompare(RGBA*a,RGBA*b)
 static const int CHARDATAMAX = 8192;
 struct chardata {
     int charid;
-    int fontid;
+    int fontid; /* TODO: use a SWFFONT instead */
     int x;
     int y;
     int size;
@@ -1457,7 +1458,9 @@ void fixAreas()
 {
     if(!shapeisempty && fill &&
        (bboxrect.xmin == bboxrect.xmax ||
-        bboxrect.ymin == bboxrect.ymax)) {
+        bboxrect.ymin == bboxrect.ymax) &&
+        minlinewidth >= 0.001
+       ) {
 	msg("<debug> Shape has size 0");
     
 	if(bboxrect.xmin == bboxrect.xmax && bboxrect.ymin == bboxrect.ymax) {
@@ -1467,16 +1470,16 @@ void fixAreas()
 
 	float x=0,y=0;
 	if(bboxrect.xmin == bboxrect.xmax) {
-	    x = 0.05;
+	    x = minlinewidth;
 	} else {
-	    y = 0.05;
+	    y = minlinewidth;
 	}
 	/* warning: doing this inside endshape() is dangerous */
-	moveto(tag, bboxrect.xmin/20.0, bboxrect.ymin/20.0);
+	moveto(tag, bboxrect.xmin/20.0    , bboxrect.ymin/20.0);
 	lineto(tag, bboxrect.xmax/20.0 + x, bboxrect.ymin/20.0);
 	lineto(tag, bboxrect.xmax/20.0 + x, bboxrect.ymax/20.0 + y);
-	lineto(tag, bboxrect.xmin/20.0, bboxrect.ymax/20.0 + y);
-	lineto(tag, bboxrect.xmin/20.0, bboxrect.ymin/20.0);
+	lineto(tag, bboxrect.xmin/20.0    , bboxrect.ymax/20.0 + y);
+	lineto(tag, bboxrect.xmin/20.0    , bboxrect.ymin/20.0);
     }
     
 }
@@ -2159,6 +2162,8 @@ void swfoutput_setparameter(char*name, char*value)
 	insertstoptag = atoi(value);
     } else if(!strcmp(name, "flashversion")) {
 	flashversion = atoi(value);
+    } else if(!strcmp(name, "minlinewidth")) {
+	minlinewidth = atof(value);
     } else if(!strcmp(name, "jpegquality")) {
 	int val = atoi(value);
 	if(val<0) val=0;
