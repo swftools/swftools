@@ -889,7 +889,7 @@ int SWFOutputDev::searchT1Font(char*name)
 	    }
 
 	    if(fontname && !strcmp(name, fontname)) {
-		logf("<notice> Extra font %s is being used.\n", fontname);
+		logf("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
 		return i;
 	    }
 	    fontname = T1_GetFontFileName(i);
@@ -897,7 +897,7 @@ int SWFOutputDev::searchT1Font(char*name)
 		    fontname = strrchr(fontname,'/')+1;
  
 	    if(strstr(fontname, name)) {
-		logf("<notice> Extra font %s is being used.\n", fontname);
+		logf("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
 		return i;
 	    }
 	}
@@ -1049,6 +1049,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 /* ------------------------------ V1 */
 
     char*fontname = "Times-Roman";
+    logf("<verbose> substituteFont(,%s)", FIXNULL(oldname));
     this->t1id = searchT1Font(fontname);
     if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
 	logf("<fatal> Too many fonts in file.");
@@ -1261,12 +1262,15 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(fontname) {
 	int newt1id = searchT1Font(fontname);
 	if(newt1id<0) {
+	    showFontError(gfxFont,1);
 	    fontname = substituteFont(gfxFont, fontname);
 	} else
 	    this->t1id = newt1id;
     }
-    else
+    else {
+	showFontError(gfxFont,1);
 	fontname = substituteFont(gfxFont, fontname);
+    }
   }
 
   if(t1id<0) {
