@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/)
 
 export PACKAGE=swftools
-export VERSION=0.2.0
+export VERSION=0.2.1
 
 export CFLAGS="-O2 -fomit-frame-pointer"
 export CXXFLAGS="-O2 -fomit-frame-pointer"
