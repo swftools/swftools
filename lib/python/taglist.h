@@ -27,6 +27,8 @@
 #undef HAVE_STAT
 #include "../rfxswf.h"
 
+#include "./tagmap.h"
+
 extern PyTypeObject TagListClass;
 
 PyObject * taglist_new();
@@ -35,6 +37,8 @@ PyObject * taglist_new();
 PyObject * taglist_new2(TAG*tag);
 
 TAG* taglist_getTAGs(PyObject*);
+/* for sprites: */
+TAG* taglist_getTAGs2(PyObject*self, PyObject*tagmap, int addDependencies);
 
 PyMethodDef* taglist_getMethods();
 #endif
