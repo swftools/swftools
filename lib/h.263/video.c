@@ -5,13 +5,13 @@
    
    Copyright (c) 2003 Matthias Kramm <kramm@quiss.org> */
 
-#include "../config.h"
+#include "../../config.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include "../lib/rfxswf.h"
-#include "../lib/args.h"
+#include "../rfxswf.h"
+#include "../args.h"
 #include "h263tables.c"
 
 static char * filename = 0;
@@ -400,7 +400,7 @@ void handleVideoFrame(TAG*tag, char*prefix)
     sizeflags = swf_GetBits(tag, 3);
     switch(sizeflags)
     {
-	case 0: width = swf_GetU8(tag); height = swf_GetU8(tag); break;
+	case 0: width = swf_GetBits(tag,8); height = swf_GetBits(tag,8); break;
 	case 1: width = swf_GetBits(tag, 16); height = swf_GetBits(tag, 16); break;
 	case 2: width = 352; height = 288; break;
 	case 3: width = 176; height = 144; break;
