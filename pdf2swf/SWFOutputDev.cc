@@ -636,7 +636,6 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
     swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
 }
 
-int charcounter = 0;
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
@@ -649,7 +648,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     GfxFont*font = state->getFont();
 
     if(font->getType() == fontType3) {
-	/* type 3 chars are passed primarily as graphics */
+	/* type 3 chars are passed as graphics */
 	return;
     }
     double x1,y1;
@@ -661,37 +660,29 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(_u) 
 	u = *_u;
     
-    msg("<debug> drawChar(%f,%f,%f,%f,c='%c' (%d),u=%d) CID=%d\n",x,y,dx,dy,c,c,u, font->isCIDFont());
+    msg("<debug> drawChar(%f,%f,%f,%f,c='%c' (%d),u=%d <%d>) CID=%d\n",x,y,dx,dy,c,c,u, uLen, font->isCIDFont());
 
-    if(font->isCIDFont()) {
+    /* find out the character name */
+    char*name=0;
+    if(font->isCIDFont() && u) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
-	char*name=0;
-	if(u) {
-	    int t;
-	    for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++)
-		/* todo: should be precomputed */
-		if(nameToUnicodeTab[t].u == u) {
-		    name = nameToUnicodeTab[t].name;
-		    break;
-		}
-	}
-
-	if(name)
-	   swfoutput_drawchar(&output, x1, y1, name, c, u);
-	else {
-	   swfoutput_drawchar(&output, x1, y1, 0, c, u);
+	int t;
+	for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++) {
+	    /* todo: should be precomputed */
+	    if(nameToUnicodeTab[t].u == u) {
+		name = nameToUnicodeTab[t].name;
+		break;
+	    }
 	}
     } else {
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
 	char**enc=font8->getEncoding();
-
 	if(enc && enc[c])
-	   swfoutput_drawchar(&output, x1, y1, enc[c], c, u);
-	else {
-	   swfoutput_drawchar(&output, x1, y1, 0, c, u);
-	}
+	   name = enc[c];
     }
+
+    int ret = swfoutput_drawchar(&output, x1, y1, name, c, u);
 }
 
 void SWFOutputDev::endString(GfxState *state) 

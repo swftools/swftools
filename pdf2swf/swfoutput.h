@@ -119,7 +119,7 @@ void swfoutput_setstrokecolor(struct swfoutput*, unsigned char r, unsigned char 
 void swfoutput_setfontmatrix(struct swfoutput*,double,double,double,double);
 void swfoutput_setlinewidth(struct swfoutput*, double linewidth);
 
-void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr, int u);
+int swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr, int u);
 void swfoutput_drawpath(struct swfoutput*, SWF_OUTLINE*outline, struct swfmatrix*m);
 #define LINE_CAP_BUTT 0
 #define LINE_CAP_ROUND 1 

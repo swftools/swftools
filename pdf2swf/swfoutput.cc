@@ -887,7 +887,7 @@ static void putcharacter(struct swfoutput*obj, int fontid, int charid,
 
 
 /* process a character. */
-static void drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
+static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
 {
     int usefonts=1;
     if(m->m12!=0 || m->m21!=0)
@@ -905,9 +905,9 @@ static void drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int
         int charid = getCharID(swffont, charnr, character, u); 
         
 	if(charid<0) {
-	    msg("<warning> Didn't find character '%s' (%d) in current charset (%s, %d characters)", 
-		    FIXNULL(character),charnr, FIXNULL((char*)swffont->name), swffont->numchars);
-	    return;
+	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
+		    FIXNULL(character),charnr, u, FIXNULL((char*)swffont->name), swffont->numchars);
+	    return 0;
 	}
         if(shapeid>=0)
             endshape();
@@ -916,6 +916,7 @@ static void drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int
          
         putcharacter(obj, swffont->id, charid,(int)(m->m13*20),(int)(m->m23*20),
                 (int)(m->m11+0.5));
+	return 1;
     }
     /*else
     {
@@ -1121,7 +1122,7 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
 }
 
 /* draws a character at x,y. */
-void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, int charnr, int u) 
+int swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, int charnr, int u) 
 {
     swfmatrix m;
     m.m11 = obj->fontm11;
@@ -1130,7 +1131,7 @@ void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, 
     m.m22 = obj->fontm22;
     m.m13 = x;
     m.m23 = y;
-    drawchar(obj, obj->swffont, character, charnr, u, &m);
+    return drawchar(obj, obj->swffont, character, charnr, u, &m);
 }
 
 /* initialize the swf writer */
