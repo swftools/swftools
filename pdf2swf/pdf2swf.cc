@@ -51,6 +51,7 @@ static char * password = 0;
 
 static char * preloader = 0;
 static char * viewer = 0;
+static int nup = 0;
 
 char* fontpaths[256];
 int fontpathpos = 0;
@@ -88,6 +89,16 @@ int args_callback_option(char*name,char*val) {
     {
 	loglevel ++;
         setConsoleLogging(loglevel);
+	return 0;
+    }
+    else if (!strcmp(name, "2"))
+    {
+        nup = 2;
+	return 0;
+    }
+    else if (!strcmp(name, "4"))
+    {
+        nup = 4;
 	return 0;
     }
     else if (!strcmp(name, "q"))
@@ -333,6 +344,8 @@ void args_callback_usage(char*name)
 	   "                           graphic errors)\n");
     printf("-s filloverlap             Make intersecting shapes overlap, instead of canceling each\n"
 	   "                           other out. (Needed for some Powerpoint PDFs)\n");
+    printf("-2                         Put 2 pages into each frame.\n");
+    printf("-4                         Put 4 pages into each frame.\n");
     printf("Postprocessing options:\n");
 #ifndef SYSTEM_BACKTICKS
     printf("(They might not work because your system call doesn't support command substitution)\n");
@@ -369,6 +382,8 @@ int main(int argn, char *argv[])
     int numfonts = 0;
     int t;
     char t1searchpath[1024];
+    int nup_pos = 0;
+    int x,y;
     
     initLog(0,-1,0,0,-1,loglevel);
 
@@ -440,10 +455,31 @@ int main(int argn, char *argv[])
         }
 	if(is_in_range(t, pagerange)) {
             pdf_page_t*page = pdf_getpage(pdf, t);
-	    pdf_page_render(page, swf);
-            swf_output_pagefeed(swf);
+            if(nup) {
+                pdf_page_info_t* info = pdf_page_getinfo(page);
+                if(nup_pos%nup == 0) {
+                    pdf_page_render(page, swf);
+                    x = info->xMax;
+                    y = info->yMax;
+                } else if(nup_pos%nup == 1) {
+                    pdf_page_rendersection(page, swf, x, 0, info->xMin+x, info->yMin, info->xMax+x, info->yMax);
+                } else if(nup_pos%nup == 2) {
+                    pdf_page_rendersection(page, swf, 0, y, info->xMin, info->yMin+y, info->xMax, info->yMax+y);
+                } else if(nup_pos%nup == 3) {
+                    pdf_page_rendersection(page, swf, x, y, info->xMin+x, info->yMin+y, info->xMax+x, info->yMax+y);
+                }
+                if(nup_pos % nup == nup-1)
+                    swf_output_pagefeed(swf);
+
+                pdf_page_info_destroy(info);
+            } else {
+                pdf_page_render(page, swf);
+                swf_output_pagefeed(swf);
+            }
+
             pdf_page_destroy(page);
         }
+        nup_pos++;
     }
     if(!swf_output_save(swf, outputname))
         exit(1);
