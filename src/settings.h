@@ -19,6 +19,7 @@ struct config_t
    char stack1;
    char antistream;
    char dummy;
+   char zlib;
    char cat;
    char merge;
    char isframe;

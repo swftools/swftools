@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <zlib.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "../lib/log.h"
@@ -89,6 +90,11 @@ int args_callback_option(char*name,char*val) {
 	config.dummy = 1;
 	return 0;
     }
+    else if (!strcmp(name, "z"))
+    {
+	config.zlib = 1;
+	return 0;
+    }
     else if (!strcmp(name, "r"))
     {
 	config.framerate = atoi(val)*256/100;
@@ -153,6 +159,7 @@ struct options_t options[] =
  {"V","version"},
  {"c","clip"},
  {"a","cat"},
+ {"z","zlib"},
  {0,0}
 };
 
@@ -222,19 +229,89 @@ void args_callback_usage(char*name)
     printf("-r framerate        --rate      Set movie framerate (100 frames/sec\n");
     printf("-X width            --width     Force movie width to scale (default: use master width (not with -t\n");
     printf("-Y height           --height    Force movie height to scale (default: use master height (not with -t\n");
+    printf("-z zlib             --zlib      Enable Flash 6 (MX) Zlib Compression\n");
+}
+
+static void zlib_error(int ret, char* msg, z_stream*zs)
+{
+    fprintf(stderr, "%s: zlib error (%d): last zlib error: %s\n",
+	  msg,
+	  ret,
+	  zs->msg?zs->msg:"unknown");
+    perror("errno:");
+    exit(1);
+}
+
+static char* fi_depack(FILE* fi, unsigned int * setlength) {
+    char * mem;
+    z_stream zs;
+    int ret;
+    char buffer1[8192], *buffer2;
+    int memsize = 8192;
+    int mempos = 0;
+    memset(&zs,0,sizeof(z_stream));
+    zs.zalloc = Z_NULL;
+    zs.zfree  = Z_NULL;
+    zs.opaque = Z_NULL;
+    buffer2 = malloc(8192);
+
+    ret = inflateInit(&zs);
+    if (ret != Z_OK) zlib_error(ret, "inflate_init", &zs);
+
+    fread(buffer2, 8, 1, fi);
+    buffer2[0] = 'F';
+    
+    zs.next_out         = &buffer2[8];
+    zs.avail_out        = 8192-8;
+    zs.avail_in		= 0;
+
+    while(1)
+    {
+	if(!zs.avail_in) {
+	    zs.avail_in = fread(buffer1, 1, 8192, fi);
+	    zs.next_in = buffer1;
+	}
+	if(zs.avail_in)
+	    ret = inflate(&zs, Z_NO_FLUSH);
+	else
+	    ret = inflate(&zs, Z_FINISH);
+
+	if (ret == Z_STREAM_END)
+	    break;
+	if (ret != Z_OK) zlib_error(ret, "inflate_init", &zs);
+	
+	if (zs.avail_out == 0)
+	{	
+	    buffer2 = realloc(buffer2, memsize + 8192);
+	    zs.avail_out = 8192;
+	    zs.next_out = &buffer2[memsize];
+	    memsize += 8192;
+	}
+    }
+    *setlength = (zs.next_out - (Bytef*)buffer2);
+    ret = inflateEnd(&zs);
+    if(ret != Z_OK) zlib_error(ret, "inflate_init", &zs);
+    return buffer2;
 }
 
 /* read a whole file in memory */
-char* fi_slurp(FILE*fi, unsigned int * setlength)
+static char* fi_slurp(FILE*fi, unsigned int * setlength)
 {
     char * mem;
     long long int length; //;)  
     long long int pos = 0;
+    unsigned char id[3];
     fseek(fi,0,SEEK_END);
     length = ftell(fi);
     fseek(fi,0,SEEK_SET);
-    if(!length)
+    if(length<3)
 	return 0;
+    fread(id, 3, 1, fi);
+    fseek(fi, 0, SEEK_SET);
+    if(!strncmp(id, "CWS", 3)) {
+	return fi_depack(fi, setlength);
+    }
+
     mem = malloc(length);
     if(!mem)
 	return 0;
@@ -247,7 +324,54 @@ char* fi_slurp(FILE*fi, unsigned int * setlength)
     return mem;
 }
 
-void fi_dump(FILE*fi, void*_mem, int length)
+static void fi_pack(FILE*fi, void*_mem, int length)
+{
+    z_stream zs;
+    int ret;
+    char*mem = (char*)_mem;
+    char buffer[8192];
+    memset(&zs,0,sizeof(z_stream));
+    zs.zalloc = Z_NULL;
+    zs.zfree  = Z_NULL;
+    zs.opaque = Z_NULL;
+
+    ret = deflateInit(&zs, 9);
+    if (ret != Z_OK) zlib_error(ret, "deflate_init", &zs);
+
+    mem[0] = 'C';
+    fwrite(mem, 8, 1, fi);
+    
+    zs.avail_in         = length-8;
+    zs.next_in          = mem+8;
+    zs.avail_out        = 8192;
+    zs.next_out         = buffer;
+
+    while(1)
+    {
+	if(zs.avail_in)
+	    ret = deflate(&zs, Z_NO_FLUSH);
+	else
+	    ret = deflate(&zs, Z_FINISH);
+
+	if (ret == Z_STREAM_END)
+	    break;
+
+	if (ret != Z_OK) zlib_error(ret, "deflate_sync", &zs);
+	
+	if (zs.avail_out == 0)
+	{	
+	    fwrite(buffer, 8192, 1, fi);
+	    zs.next_out = buffer;
+	    zs.avail_out = 8192;
+	}
+    }
+    fwrite(buffer, zs.next_out - (Bytef*)buffer, 1, fi);
+    
+    ret = deflateEnd(&zs);
+    if (ret != Z_OK) zlib_error(ret, "deflate_end", &zs);
+}
+
+static void fi_dump(FILE*fi, void*_mem, int length)
 {
     char*mem = (char*)_mem;
     int pos = 0;
@@ -261,7 +385,7 @@ void fi_dump(FILE*fi, void*_mem, int length)
 }
 
 /* todo: use rfxswf */
-void makestackmaster(u8**masterdata, int*masterlength)
+static void makestackmaster(u8**masterdata, int*masterlength)
 {
     u8 head[] = {'F','W','S'};
     u8 *pos;
@@ -399,6 +523,7 @@ int main(int argn, char *argv[])
     config.stack = 0;
     config.stack1 = 0;
     config.dummy = 0;
+    config.zlib = 0;
 
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,config.loglevel);
@@ -428,13 +553,13 @@ int main(int argn, char *argv[])
 	logf("<verbose> master entity %s (named \"%s\")\n", master_filename, master_name);
 	fi = fopen(master_filename, "rb");
 	if(!fi) {
-	    fprintf(stderr, "Failed to open %s\n", master_filename);
-	    return 1;
+	    logf("<fatal> Failed to open %s\n", master_filename);
+	    exit(1);
 	}
 	masterdata = fi_slurp(fi, &masterlength);
 	if(!masterdata) {
-	    fprintf(stderr, "Failed to read from %s\n", master_filename);
-	    return 1;
+	    logf("<fatal> Failed to read from %s\n", master_filename);
+	    exit(1);
 	}
 	logf("<debug> Read %d bytes from masterfile\n", masterlength);
 	fclose(fi);
@@ -489,13 +614,13 @@ int main(int argn, char *argv[])
 	    {
 		fi = fopen(slave_filename[t], "rb");
 		if(!fi) {
-		    fprintf(stderr, "Failed to open %s\n", slave_filename[t]);
-		    return 1;
+		    logf("<fatal> Failed to open %s\n", slave_filename[t]);
+		    exit(1);
 		}
 		slavedata = fi_slurp(fi, &slavelength);
 		if(!slavedata) {
-		    fprintf(stderr, "Failed to read from %s\n", slave_filename[t]);
-		    return 1;
+		    logf("<fatal> Failed to read from %s\n", slave_filename[t]);
+		    exit(1);
 		}
 		logf("<debug> Read %d bytes from slavefile\n", slavelength);
 		fclose(fi);
@@ -530,7 +655,10 @@ int main(int argn, char *argv[])
     logf("<debug> New File is %d bytes \n", newlength);
     if(newdata && newlength) {
 	FILE*fi = fopen(outputname, "wb");
-	fi_dump(fi, newdata, newlength);
+	if(config.zlib)
+	    fi_pack(fi, newdata, newlength);
+	else
+	    fi_dump(fi, newdata, newlength);
 	fclose(fi);
     }
     return 0;

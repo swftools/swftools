@@ -581,7 +581,7 @@ uchar * normalcombine(uchar*masterdata, int masterlength, char*_slavename, uchar
 	int spriteid = -1;
 	int replaceddefine = -1;
 	struct writer_t w;
-	int frame;
+	int frame = 0;
 	char*framelabel;
 	
 	length = masterlength + slavelength*2 + 128; // this is a guess, but a good guess.
