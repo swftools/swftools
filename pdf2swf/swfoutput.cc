@@ -31,34 +31,34 @@ extern "C" {
 int ignoredraworder=0;
 int drawonlyshapes=0;
 int jpegquality=85;
+static int flag_protected = 0;
 
 typedef unsigned char u8;
 typedef unsigned short int u16;
 typedef unsigned long int u32;
 
-static int drawmode;
 static int fi;
-static int flag_protected;
+static char* filename = 0;
 static SWF swf;
 static TAG *tag;
 static int currentswfid = 0;
+static int depth = 1;
+static int startdepth = 1;
 
 static SHAPE* shape;
 static int shapeid = -1;
 static int textid = -1;
 
+static int drawmode = -1;
+static char storefont = 0;
 static int fillstyleid;
 static int linestyleid;
 static int swflastx=0;
 static int swflasty=0;
 static int lastwasfill = 0;
-static char* filename = 0;
+static char fill = 0;
 static int sizex;
 static int sizey;
-static char fill = 0;
-static char storefont = 0;
-static int depth = 1;
-static int startdepth = 1;
 TAG* cliptags[128];
 int clipshapes[128];
 u32 clipdepths[128];
@@ -267,7 +267,6 @@ struct chardata {
 } chardata[CHARDATAMAX];
 int chardatapos = 0;
 
-int once=0;
 void putcharacters(TAG*tag)
 {
     int t;
@@ -293,6 +292,9 @@ void putcharacters(TAG*tag)
 	logf("<error> internal error: putcharacters needs an text tag, not %d\n",tag->id);
 	exit(1);
     }
+    if(!chardatapos) {
+	logf("<warning> putcharacters called with zero characters");
+    }
 
     for(pass = 0; pass < 2; pass++)
     {
@@ -304,7 +306,7 @@ void putcharacters(TAG*tag)
 
 	if(pass==1)
 	{
-	    advancebits++;
+	    advancebits++; // add sign bit
 	    SetU8(tag, glyphbits);
 	    SetU8(tag, advancebits);
         }
@@ -334,7 +336,7 @@ void putcharacters(TAG*tag)
 		{
 		    tag->bitcount = 0;
 		    SetBits(tag, 0, 1); // GLYPH Record
-		    SetBits(tag, charstorepos, 7); // one glyph
+		    SetBits(tag, charstorepos, 7); // number of glyphs
 		    int s;
 		    for(s=0;s<charstorepos;s++)
 		    {
@@ -397,7 +399,8 @@ void putcharacters(TAG*tag)
     chardatapos = 0;
 }
 
-void putcharacter(struct swfoutput*obj, int fontid, int charid, int x,int y, int size)
+void putcharacter(struct swfoutput*obj, int fontid, int charid, 
+		    int x,int y, int size)
 {
     if(chardatapos == CHARDATAMAX)
     {
@@ -430,7 +433,7 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 	    endshape();
 	if(textid<0)
 	    starttext(obj);
-	putcharacter(obj, font->swfid, charid, (int)(m->m13*20),(int)(m->m23*20),
+	putcharacter(obj, font->swfid, charid,(int)(m->m13*20),(int)(m->m23*20),
 		(int)(m->m11*20/2+0.5)); //where does the /2 come from?
     }
     else
@@ -439,7 +442,8 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 	char* charname = character;
 
 	if(!outline) {
-	 logf("Didn't find %s in current charset (%s)", character,font->getName());
+	 logf("Didn't find %s in current charset (%s)", 
+		 character,font->getName());
 	 return;
 	}
 	
@@ -466,7 +470,8 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 }
 
 /* draw a curved polygon. */
-void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline, struct swfmatrix*m)
+void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline, 
+			    struct swfmatrix*m)
 {
     if(textid>=0)
 	endtext();
@@ -613,7 +618,6 @@ T1_OUTLINE*SWFFont::getOutline(char*name)
     int t;
     for(t=0;t<this->charnum;t++) {
 	if(!strcmp(this->charname[t],name)) {
-
 	    if(!used[t])
 	    {
 		swfcharid2char[swfcharpos] = t;
@@ -632,7 +636,6 @@ int SWFFont::getSWFCharID(char*name)
     int t;
     for(t=0;t<this->charnum;t++) {
 	if(!strcmp(this->charname[t],name)) {
-	   
 	    if(!used[t])
 	    {
 		swfcharid2char[swfcharpos] = t;
@@ -642,6 +645,7 @@ int SWFFont::getSWFCharID(char*name)
 	    return char2swfcharid[t];
 	}
     }
+    logf("<warning> Didn't find character '%s' in font '%s'", name, this->name);
     return 0;
 }
 
@@ -752,7 +756,6 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
   memset(&swf,0x00,sizeof(SWF));
 
   swf.FileVersion    = 4;
-//  swf.FrameRate      = 0x1900;
   swf.FrameRate      = 0x0040; // 1 frame per 4 seconds
   swf.MovieSize.xmax = 20*sizex;
   swf.MovieSize.ymax = 20*sizey;
