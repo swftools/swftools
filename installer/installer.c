@@ -66,7 +66,7 @@ struct params_data {
 
 LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    printf("%08x, %d %08x %08x\n", hwnd, message, wParam, lParam);
+    //printf("%08x, %d %08x %08x\n", hwnd, message, wParam, lParam);
    
     /* in order for the delegation below to also work for
        WM_CREATE, we need to assign our window pointers *before* the
