@@ -19,6 +19,8 @@
 // TODO:
 // * readers should be object-oriented
 
+static char* slavename;
+
 static char* tag_placeobject2_name (struct swf_tag* tag)
 {
     struct PlaceObject2 plo2;
@@ -131,10 +133,182 @@ void write_changepos(struct swf_tag*tag, struct writer_t*w)
     }
 }
 
-uchar * combine(uchar*masterdata, int masterlength, char*slavename, uchar*slavedata, int slavelength, int*newlength)
+void write_sprite_defines(struct writer_t*w)
+{
+    int pos = 0;
+    while(slave.tags[pos].id != 0) {
+	struct swf_tag * tag = &slave.tags[pos];
+	if(!is_sprite_tag(tag->id)) {
+	    logf("<debug> processing sprite tag %02x", slave.tags[pos].id);
+	    if(is_defining_tag(tag->id))
+	    {
+		logf("<debug> [sprite defs] write tag %02x (%d bytes in body)", 
+			tag->id, tag->length);
+		writer_write(w, tag->fulldata, tag->fulllength);
+	    }
+	    else
+	    {
+		switch(tag->id)
+		{case TAGID_DEFINEFONTINFO:
+		    {
+			/* define font info is not a defining tag, in that
+			 * it doesn't define a new id, but rather extends
+			 * an existing one. It also isn't a sprite tag. 
+			 * Anyway we can't throw it out, so we just pass it
+			 * through.
+			 */
+			break;
+		    }
+		 case TAGID_EXPORTASSETS:
+		    logf("<debug> deliberately ignoring EXPORTASSETS tag");
+		    break;
+		 case TAGID_ENABLEDEBUGGER:
+		    logf("<debug> deliberately ignoring ENABLEDEBUGGER tag");
+		    break;
+		 case TAGID_BACKGROUNDCOLOR:
+		    logf("<debug> deliberately ignoring BACKGROUNDCOLOR tag");
+		    break;
+		 case 40:
+		 case 49:
+		 case 51:
+		    logf("<notice> found tag %d. This is a Generator template, isn't it?", slave.tags[pos].id);
+		    break;
+		 default:
+		    logf("<notice> funny tag: %d is neither defining nor sprite", slave.tags[pos].id);
+		}
+	    }
+	}
+	pos++;
+    }
+}
+
+
+void write_sprite(struct writer_t*w, int spriteid, int replaceddefine)
+{
+    u16 tmp;
+    u32 tmp32;
+    u32*tagidpos;
+    u8*startpos;
+    int pos = 0;
+    // write slave(2) (header)
+    tmp = 0x3f + (TAGID_DEFINESPRITE << 6);
+    writer_write(w, &tmp, 2);
+    tagidpos = (u32*)writer_getpos(w);
+    writer_write(w, &tmp32, 4);
+    
+    startpos = (u8*)writer_getpos(w);
+
+    if (spriteid<0)
+    {
+	logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
+	spriteid = get_free_id();
+    }
+
+    logf ("<notice> sprite id is %d", spriteid);
+    tmp = spriteid;
+    writer_write(w, &tmp, 2);
+    tmp = slave.header.count;
+    writer_write(w, &tmp, 2);
+
+
+    // write slave(2) (body)
+    tmp = slave.header.count;
+    logf("<debug> %d frames to go",tmp);
+
+    if(config.clip) {
+	tmp = 7 + (TAGID_PLACEOBJECT2 << 6);
+	writer_write(w, &tmp, 2);
+	tmp = 2+64; //flags: character + clipaction
+	writer_write(w, &tmp, 1);
+	tmp = 0; //depth
+	writer_write(w, &tmp,2);
+	tmp = replaceddefine; //id
+	writer_write(w, &tmp,2);
+	tmp = 65535; //clipdepth
+	writer_write(w, &tmp,2);
+    }
+
+    if(config.overlay) {
+	tmp = 5 + (TAGID_PLACEOBJECT2 << 6);
+	writer_write(w, &tmp, 2);
+	tmp = 2; //flags: character
+	writer_write(w, &tmp, 1);
+	tmp = 0; //depth
+	writer_write(w, &tmp,2);
+	tmp = replaceddefine; //id
+	writer_write(w, &tmp,2);
+    }
+
+    do {
+	struct swf_tag * tag = &slave.tags[pos];
+	if (is_sprite_tag(tag->id)) {
+
+	    changedepth(tag, +1);
+	    logf("<debug> [sprite main] write tag %02x (%d bytes in body)", 
+		    slave.tags[pos].id, slave.tags[pos].length);
+	    write_changepos(tag, w);
+
+	    if(tag->id == TAGID_SHOWFRAME)
+	    {
+		tmp--;
+		logf("<debug> %d frames to go",tmp);
+	    }
+	}
+    }
+    while(slave.tags[pos++].id != TAGID_END);
+
+    *tagidpos = (u8*)writer_getpos(w) - startpos; // set length of sprite (in header)
+    logf("<verbose> sprite length is %d",*tagidpos);
+}
+
+#define FLAGS_WRITEDEFINES 1
+#define FLAGS_WRITENONDEFINES 2
+#define FLAGS_WRITESPRITE 4
+void write_master(struct writer_t*w, int spriteid, int replaceddefine, int flags)
+{
+    int pos = 0;
+    do {
+	if(is_defining_tag(master.tags[pos].id) && (flags&1))
+	{
+	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
+		    master.tags[pos].id, master.tags[pos].length);
+	    if( getidfromtag(&master.tags[pos]) == spriteid) 
+	    {
+		if(config.overlay)
+		{
+		    *(u16*)master.tags[pos].data = replaceddefine;
+		    writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
+		} else {
+		    /* don't write this tag */
+		    logf("<verbose> replacing tag %d id %d with sprite", master.tags[pos].id
+			    ,spriteid);
+		}
+
+		if(flags&4)
+		{
+		    write_sprite_defines(w);
+		    write_sprite(w, spriteid, replaceddefine);
+		}
+	    } else { 
+		writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
+	    }
+	}
+	if(!is_defining_tag(master.tags[pos].id) && (flags&2))
+	{
+	    logf("<debug> [master] write tag %02x (%d bytes in body)", 
+		    master.tags[pos].id, master.tags[pos].length);
+	    writer_write(w, master.tags[pos].fulldata, master.tags[pos].fulllength);
+	}
+    }
+    while(master.tags[pos++].id != 0);
+}
+
+
+uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slavedata, int slavelength, int*newlength)
 {
     char master_flash = 0;
     char slave_flash = 0;
+    slavename = _slavename;
 
     logf("<debug> move x (%d)", config.movex);
     logf("<debug> move y (%d)", config.movey);
@@ -172,10 +346,7 @@ uchar * combine(uchar*masterdata, int masterlength, char*slavename, uchar*slaved
     {
 	int length;
 	int pos=0;
-	u16 tmp;
 	u32 tmp32;
-	u32*tagidpos;
-	u8*startpos;
 	u32*headlength;
 	uchar*newdata;
 	int spriteid = -1;
@@ -223,168 +394,25 @@ uchar * combine(uchar*masterdata, int masterlength, char*slavename, uchar*slaved
 	swf_relocate (slavedata, slavelength, masterids);
 
 	read_swf(&slave, slavedata, slavelength);
-
-	// write header
+	
+	if(config.overlay)
+	    replaceddefine = get_free_id();
+	
+	// write file 
 
 	writer_write(&w, "FWS",3);
 	headlength = (u32*)(writer_getpos(&w) + 1);
 	writer_write(&w, master.header.headerdata, master.header.headerlength);
 
-	// write sprite(1)
-	
-	pos = 0;
-	while(slave.tags[pos].id != 0) {
-	    struct swf_tag * tag = &slave.tags[pos];
-	    if(!is_sprite_tag(tag->id)) {
-		logf("<debug> processing sprite tag %02x", slave.tags[pos].id);
-		if(is_defining_tag(tag->id))
-		{
-		    logf("<debug> [sprite defs] write tag %02x (%d bytes in body)", 
-			    tag->id, tag->length);
-		    writer_write(&w, tag->fulldata, tag->fulllength);
-		}
-		else
-		{
-		    switch(tag->id)
-		    {case TAGID_DEFINEFONTINFO:
-			{
-			    /* define font info is not a defining tag, in that
-			     * it doesn't define a new id, but rather extends
-			     * an existing one. It also isn't a sprite tag. 
-			     * Anyway we can't throw it out, so we just pass it
-			     * through.
-			     */
-			    break;
-			}
-		     case TAGID_EXPORTASSETS:
-			logf("<debug> deliberately ignoring EXPORTASSETS tag");
-			break;
-		     case TAGID_ENABLEDEBUGGER:
-			logf("<debug> deliberately ignoring ENABLEDEBUGGER tag");
-			break;
-		     case TAGID_BACKGROUNDCOLOR:
-			logf("<debug> deliberately ignoring BACKGROUNDCOLOR tag");
-			break;
-		     case 40:
-		     case 49:
-		     case 51:
-			logf("<notice> found tag %d. This is a Generator template, isn't it?", slave.tags[pos].id);
-			break;
-		     default:
-			logf("<notice> funny tag: %d is neither defining nor sprite", slave.tags[pos].id);
-		    }
-		}
-	    }
-	    pos++;
+	if(config.antistream) {
+	    write_sprite_defines(&w);
+	    write_sprite(&w, spriteid, replaceddefine);
+	    write_master(&w, spriteid, replaceddefine, FLAGS_WRITEDEFINES);
+	    write_master(&w, spriteid, replaceddefine, FLAGS_WRITENONDEFINES);
+	} else {
+	    write_master(&w, spriteid, replaceddefine, 
+		    FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|FLAGS_WRITESPRITE);
 	}
-	
-	// write master (1)
-	pos = 0;
-        do {
-	    if(is_defining_tag(master.tags[pos].id))
-	    {
-		logf("<debug> [master] write tag %02x (%d bytes in body)", 
-		        master.tags[pos].id, master.tags[pos].length);
-		if( getidfromtag(&master.tags[pos]) == spriteid) 
-		{
-		    if(config.overlay)
-		    {
-			*(u16*)master.tags[pos].data = replaceddefine = get_free_id();
-			writer_write(&w, master.tags[pos].fulldata, master.tags[pos].fulllength);
-		    } else {
-			/* don't write this tag */
-			logf("<verbose> replacing tag %d id %d with sprite", master.tags[pos].id
-				,spriteid);
-		    }
-		} else { 
-		    writer_write(&w, master.tags[pos].fulldata, master.tags[pos].fulllength);
-		}
-	    }
-	}
-	while(master.tags[pos++].id != 0);
-
-	// write slave(2) (header)
-	tmp = 0x3f + (TAGID_DEFINESPRITE << 6);
-	writer_write(&w, &tmp, 2);
-	tagidpos = (u32*)writer_getpos(&w);
-	writer_write(&w, &tmp32, 4);
-	
-	startpos = (u8*)writer_getpos(&w);
-
-	if (spriteid<0)
-	{
-	    logf("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
-	    spriteid = get_free_id();
-	}
-
-	logf ("<notice> sprite id is %d", spriteid);
-	tmp = spriteid;
-	writer_write(&w, &tmp, 2);
-	tmp = slave.header.count;
-	writer_write(&w, &tmp, 2);
-
-
-	// write slave(2) (body)
-	pos = 0;
-	tmp = slave.header.count;
-	logf("<debug> %d frames to go",tmp);
-
-	if(config.clip) {
-	    tmp = 7 + (TAGID_PLACEOBJECT2 << 6);
-	    writer_write(&w, &tmp, 2);
-	    tmp = 2+64; //flags: character + clipaction
-	    writer_write(&w, &tmp, 1);
-	    tmp = 0; //depth
-	    writer_write(&w, &tmp,2);
-	    tmp = replaceddefine; //id
-	    writer_write(&w, &tmp,2);
-	    tmp = 65535; //clipdepth
-	    writer_write(&w, &tmp,2);
-	}
-
-	if(config.overlay) {
-	    tmp = 5 + (TAGID_PLACEOBJECT2 << 6);
-	    writer_write(&w, &tmp, 2);
-	    tmp = 2; //flags: character
-	    writer_write(&w, &tmp, 1);
-	    tmp = 0; //depth
-	    writer_write(&w, &tmp,2);
-	    tmp = replaceddefine; //id
-	    writer_write(&w, &tmp,2);
-	}
-
-	do {
-	    struct swf_tag * tag = &slave.tags[pos];
-	    if (is_sprite_tag(tag->id)) {
-
-		changedepth(tag, +1);
-		logf("<debug> [sprite main] write tag %02x (%d bytes in body)", 
-			slave.tags[pos].id, slave.tags[pos].length);
-		write_changepos(tag, &w);
-
-		if(tag->id == TAGID_SHOWFRAME)
-		{
-		    tmp--;
-		    logf("<debug> %d frames to go",tmp);
-		}
-	    }
-	}
-	while(slave.tags[pos++].id != TAGID_END);
-
-	*tagidpos = (u8*)writer_getpos(&w) - startpos; // set length of sprite (in header)
-	logf("<verbose> sprite length is %d",*tagidpos);
-
-	// write master (2)
-	pos = 0;
-        do {
-	    if(!is_defining_tag(master.tags[pos].id))
-	    {
-		logf("<debug> [master] write tag %02x (%d bytes in body)", 
-			master.tags[pos].id, master.tags[pos].length);
-		writer_write(&w, master.tags[pos].fulldata, master.tags[pos].fulllength);
-	    }
-	}
-	while(master.tags[pos++].id != 0);
 
 	tmp32 = (u8*)writer_getpos(&w) - (u8*)newdata; //length
 	*newlength = tmp32;
