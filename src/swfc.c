@@ -760,7 +760,7 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     r2.ymin = 0;
     r2.xmax = width;
     r2.ymax = height;
-    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+    tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
     ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
 
@@ -798,7 +798,7 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
     }
     r2 = outline->bbox;
 
-    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+    tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
     ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
     if(texture)
@@ -830,7 +830,7 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
     r2.xmax = 2*r;
     r2.ymax = 2*r;
 
-    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+    tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
     swf_ShapeNew(&s);
     ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
     if(texture)
