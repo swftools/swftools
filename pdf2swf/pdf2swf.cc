@@ -500,7 +500,8 @@ int main(int argn, char *argv[])
             pdf_page_destroy(page);
         }
     }
-    swf_output_save(swf, outputname);
+    if(!swf_output_save(swf, outputname))
+        exit(1);
     swf_output_destroy(swf);
 
     pdf_destroy(pdf);
