@@ -74,10 +74,10 @@ void setFileLogging(char*filename, int level, char append)
     }
 }
 /* deprecated */
-void initLog(char* filename, int fileloglevel, char* s00, char* s01, int s02, int screenlevel)
+void initLog(char* filename, int filelevel, char* s00, char* s01, int s02, int screenlevel)
 {
-    setFileLogging(filename, fileloglevel, 0);
-    setConsoleLogging(screenloglevel);
+    setFileLogging(filename, filelevel, 0);
+    setConsoleLogging(screenlevel);
 }
 
 void exitLog()
