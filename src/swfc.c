@@ -1042,10 +1042,23 @@ int parseColor2(char*str, RGBA*color)
     int l = strlen(str);
     int r,g,b,a;
     int t;
-    char*names[8] = {"black", "blue", "green", "cyan",
-	             "red", "magenta", "yellow", "white"};
-    a=255;
-    r=g=b=0;
+
+    struct {unsigned char r,g,b;char*name;} colors[] =
+    {{255,250,250,"snow"},{220,220,220,"gainsboro"},{250,240,230,"linen"},{255,228,196,"bisque"},
+    {255,228,181,"moccasin"},{255,248,220,"cornsilk"},{255,255,240,"ivory"},{255,245,238,"seashell"},
+    {240,255,240,"honeydew"},{240,255,255,"azure"},{230,230,250,"lavender"},{255,255,255,"white"},
+    {0,0,0,"black"},{190,190,190,"gray"},{190,190,190,"grey"},{0,0,128,"navy"},{0,0,255,"blue"},
+    {64,224,208,"turquoise"},{0,255,255,"cyan"},{127,255,212,"aquamarine"}, {0,255,0,"green"},
+    {127,255,0,"chartreuse"},{240,230,140,"khaki"},{255,255,0,"yellow"},
+    {255,215,0,"gold"},{218,165,32,"goldenrod"},{160,82,45,"sienna"},{205,133,63,"peru"},
+    {222,184,135,"burlywood"},{245,245,220,"beige"},{245,222,179,"wheat"},{210,180,140,"tan"},
+    {210,105,30,"chocolate"},{178,34,34,"firebrick"},{165,42,42,"brown"},{250,128,114,"salmon"},
+    {255,165,0,"orange"},{255,127,80,"coral"},{255,99,71,"tomato"},{255,0,0,"red"},
+    {255,192,203,"pink"},{176,48,96,"maroon"},{255,0,255,"magenta"},{238,130,238,"violet"},
+    {221,160,221,"plum"},{218,112,214,"orchid"},{160,32,240,"purple"},{216,191,216,"thistle"}};
+
+    a=255;r=g=b=0;
+
     if(str[0]=='#' && (l==7 || l==9)) {
 	if(l == 7 && !(sscanf(str, "#%02x%02x%02x", &r, &g, &b)))
 	    return 0;
@@ -1054,14 +1067,12 @@ int parseColor2(char*str, RGBA*color)
 	color->r = r; color->g = g; color->b = b; color->a = a;
 	return 1;
     }
-    for(t=0;t<8;t++)
-	if(!strcmp(str, names[t])) {
-	    if(t&1)
-		b = 255;
-	    if(t&2)
-		g = 255;
-	    if(t&4)
-		r = 255;
+    for(t=0;t<sizeof(colors)/sizeof(colors[0]);t++)
+	if(!strcmp(str, colors[t].name)) {
+	    r = colors[t].r;
+	    g = colors[t].g;
+	    b = colors[t].b;
+	    a = 255;
 	    color->r = r; color->g = g; color->b = b; color->a = a;
 	    return 1;
 	}
