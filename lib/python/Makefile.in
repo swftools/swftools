@@ -4,7 +4,7 @@ top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
 #LIB=-L/usr/lib/python2.2/config/ -lpython2.2
-PYTHON_LIB=-lpython2.3
+PYTHON_LIB=-lpython2.3 /usr/lib/python2.3/site-packages/PIL/_imaging.so
 PYTHON_INCLUDES=-I/usr/include/python2.3
 
 all: mypython swfpython SWF.so testmem
@@ -41,20 +41,20 @@ swfpython: swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o tags.o act
 testmem: testmem.c Makefile
 	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem $(PYTHON_LIB) -ldl -lm -lpthread -lutil
 
-test: test3
+test: test5
 
 test1: SWF.so
 	./test_create.py
 	swfdump -p tmp/test.swf
-
 test2: SWF.so
 	./test_combine.py
 	swfdump -u -p tmp/combined.swf
-
 test3: SWF.so
 	./test_simple.py
 test4: SWF.so
 	./test_movie.py
+test5: SWF.so
+	./test_image.py
 clean:
 	rm -f *.o *.so mypython swfpython
 
