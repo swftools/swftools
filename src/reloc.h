@@ -9,6 +9,7 @@
 
 #ifndef __swf_reallocate__
 #define __swf_reallocate__
-void swf_relocate (u8*data, int length, int*bitmap);
+void map_ids_mem(unsigned char*mem, int length, void(*callback)(void*));
+void swf_relocate (unsigned char*data, int length, int*bitmap);
 #endif // __swf_reallocate__
 
