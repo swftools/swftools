@@ -507,8 +507,8 @@ void changedepth(TAG*tag, int add)
 	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
     if(tag->id == ST_PLACEOBJECT2) {
 	SWFPLACEOBJECT obj;
-	swf_SetTagPos(tag, 0);
 	U8 flags;
+	swf_SetTagPos(tag, 0);
 	flags = swf_GetU8(tag);
 	if(flags&2) swf_GetU16(tag); //id
 	if(flags&4) swf_GetMatrix(tag, 0);
