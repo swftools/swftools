@@ -238,13 +238,13 @@ void log(char* logString)
    free (logBuffer);
 }
 
-void logf(const char* pszFormat, ...)
+void logf(const char* format, ...)
 {
     char buf[1024];
 	va_list arglist;
-	va_start(arglist, pszFormat);
+	va_start(arglist, format);
     buf[0] = 0;
-    vsprintf(&buf[strlen(buf)], pszFormat, arglist);
+    vsprintf(&buf[strlen(buf)], format, arglist);
 	va_end(arglist);
     strcat(buf, "\n");
     log(buf);
