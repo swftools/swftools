@@ -624,7 +624,9 @@ SWFFont::~SWFFont()
         }
         for(t=0;t<swfcharpos;t++)
         {
-            *(U16*)&ftag->data[ptr[t]] = swf_GetTagLen(ftag)-initpos;
+            *(U16*)&ftag->data[ptr[t]] = 
+		SWAP16(swf_GetTagLen(ftag)-initpos);
+
             swflastx=0;
             swflasty=0;
             swf_SetU8(ftag,0x10); //0 fill bits, 0 linestyle bits
