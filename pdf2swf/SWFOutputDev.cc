@@ -22,7 +22,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
-#include <math.h>
 //xpdf header files
 #include "gfile.h"
 #include "GString.h"
@@ -48,6 +47,10 @@ extern "C" {
 #include "../lib/log.h"
 #include "ttf2pt1.h"
 }
+
+#define logf logarithmf // logf is also used by ../lib/log.h
+#include <math.h>
+#undef logf
 
 static PDFDoc*doc = 0;
 static char* swffilename = 0;
@@ -819,6 +822,11 @@ int SWFOutputDev::searchT1Font(char*name)
     int i;
     int mapid=-1;
     char*filename=0;
+    
+    char*name2 = 0;
+    if(name) name2 = strchr(name,'+');
+    if(name2) name2++;
+
     for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
     {
 	if(!strcmp(name, pdf2t1map[i].pdffont))
@@ -847,15 +855,20 @@ int SWFOutputDev::searchT1Font(char*name)
 		logf("<verbose> Loading extra font %s from %s\n", FIXNULL(fontname), 
 								  FIXNULL(T1_GetFontFileName(i)));
 	    }
-	    if(fontname && !strcmp(name, fontname)) {
-		logf("<notice> Extra font %s is being used.\n", fontname);
-		return i;
+
+	    if(fontname) {
+		if((!strcmp(name, fontname)) || 
+		   (name2 && !strcmp(name2, fontname)))
+		   {
+		    logf("<notice> Extra font %s is being used.\n", fontname);
+		    return i;
+		}
 	    }
 	    fontname = T1_GetFontFileName(i);
 	    if(strrchr(fontname,'/'))
 		    fontname = strrchr(fontname,'/')+1;
  
-	    if(strstr(fontname, name)) {
+	    if(strstr(fontname, name) || (name2 && strstr(fontname,name2))) {
 		logf("<notice> Extra font %s is being used.\n", fontname);
 		return i;
 	    }
