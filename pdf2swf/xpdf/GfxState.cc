@@ -1664,7 +1664,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
     colorSpace2 = indexedCS->getBase();
     indexHigh = indexedCS->getIndexHigh();
     nComps2 = colorSpace2->getNComps();
-    lookup = (double *)gmalloc((indexHigh + 1) * nComps2 * sizeof(double));
+    lookup = (double *)gmalloc((maxPixel + 1) * nComps2 * sizeof(double));
     lookup2 = indexedCS->getLookup();
     for (i = 0; i <= indexHigh; ++i) {
       j = (int)(decodeLow[0] +(i * decodeRange[0]) / maxPixel + 0.5);
@@ -1728,6 +1728,7 @@ void GfxImageColorMap::getGray(Guchar *x, double *gray) {
 }
 
 void GfxImageColorMap::getRGB(Guchar *x, GfxRGB *rgb) {
+
   GfxColor color;
   double *p;
   int i;
