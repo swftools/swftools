@@ -147,7 +147,13 @@ void args_callback_usage(char*name)
 
 int main(int argn, char *argv[])
 {
+#ifdef HAVE_SRAND48
     srand48(time(0));
+#else
+#ifdef HAVE_SRAND
+    srand(time(0));
+#endif
+#endif
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,loglevel);
     if(!outputname)
