@@ -355,13 +355,13 @@ void showFontError(GfxFont*font, int nr)
     if(lastdumppos<sizeof(lastdumps)/sizeof(int))
     lastdumps[lastdumppos++] = r.num;
     if(nr == 0)
-      logf("<error> The following font caused problems:");
+      logf("<warning> The following font caused problems:");
     else if(nr == 1)
-      logf("<error> The following font caused problems (substituting):");
+      logf("<warning> The following font caused problems (substituting):");
     else if(nr == 2)
-      logf("<error> This document contains Type 3 Fonts: (some text may be incorrectly displayed)");
+      logf("<warning> This document contains Type 3 Fonts: (some text may be incorrectly displayed)");
 
-    dumpFontInfo("<error>", font);
+    dumpFontInfo("<warning>", font);
 }
 
 void dumpFontInfo(char*loglevel, GfxFont*font)
