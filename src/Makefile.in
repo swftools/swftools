@@ -71,5 +71,5 @@ uninstall:
 	@for file in $(programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
 clean: 
-	rm -f *.o *.lo *.a *.la wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf *~
+	rm -f *.o *.lo *.a *.la swfbbox swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf *~
 
