@@ -298,29 +298,6 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
     }
 }
 
-void swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2)
-{
-    GRADIENT dummy1;
-    GRADIENT dummy2;
-    int t;
-    if(!gradient1)
-	gradient1 = &dummy1;
-    if(!gradient2)
-	gradient2 = &dummy2;
-    gradient1->num = 
-    gradient2->num = swf_GetU8(tag);
-    for(t=0;t<gradient1->num;t++)
-    {
-	int s=t;
-	if(s>=8) //FIXME
-	    s=7;
-	gradient1->ratios[t] = swf_GetU8(tag);
-	swf_GetRGBA(tag, &gradient1->rgba[t]);
-	gradient2->ratios[t] = swf_GetU8(tag);
-	swf_GetRGBA(tag, &gradient2->rgba[t]);
-    }
-}
-
 int swf_CountBits(U32 v,int nbits)
 { int n = 33;
   U32 m = 0x80000000;
@@ -373,6 +350,10 @@ int swf_SetRect(TAG * t,SRECT * r)
   nbits = swf_CountBits(r->xmax,nbits);
   nbits = swf_CountBits(r->ymin,nbits);
   nbits = swf_CountBits(r->ymax,nbits);
+  if(nbits>=32) {
+    fprintf(stderr, "rfxswf: Warning: num_bits overflow in swf_SetRect\n");
+    nbits=31;
+  }
 
   swf_SetBits(t,nbits,5);
   swf_SetBits(t,r->xmin,nbits);
