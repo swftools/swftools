@@ -250,7 +250,7 @@ int swf_SetRGB(TAG * t,RGBA * col)
 void swf_GetRGB(TAG * t, RGBA * col)
 {
     RGBA dummy;
-    if(!col);
+    if(!col)
 	col = &dummy;
     col->r = swf_GetU8(t);
     col->g = swf_GetU8(t);
@@ -299,22 +299,35 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
     }
 }
 
+int swf_CountUBits(U32 v,int nbits)
+{ int n = 32;
+  U32 m = 0x80000000;
+  if(v == 0x00000000) n = 0; 
+  else
+    while (!(v&m))
+    { n--;
+      m>>=1;
+    } 
+  return (n>nbits)?n:nbits;
+}
+
 int swf_CountBits(U32 v,int nbits)
 { int n = 33;
   U32 m = 0x80000000;
-  if (!v) n = 0; else
   if (v&m)
-  { while (v&m)
+  { if(v == 0xffffffff) n = 1;
+    else 
+    while (v&m)
     { n--;
       m>>=1;
-      if (!m) break;
     } 
   }
   else
-  { while (!(v&m))
+  { if(v == 0x00000000) n = 0; 
+    else
+    while (!(v&m))
     { n--;
       m>>=1;
-      if (!m) break;
     } 
   }
   return (n>nbits)?n:nbits;
