@@ -11,6 +11,10 @@
 #define __pdf_h__
 void pdfswf_init(char*filename, char*userPassword) ;
 void pdfswf_setoutputfilename(char*filename);
+void pdfswf_drawonlyshapes();
+void pdfswf_ignoredraworder();
+void pdfswf_jpegquality(int);
+
 int pdfswf_numpages();
 void pdfswf_convertpage(int page) ;
 void pdfswf_close();
