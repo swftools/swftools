@@ -27,6 +27,10 @@ ${name}/src/reloc.h \
 ${name}/src/Makefile.in \
 ${name}/lib/args.h \
 ${name}/lib/example/box.c \
+${name}/lib/example/dumpfont.c \
+${name}/lib/example/demofont.c \
+${name}/lib/example/buttontest.c \
+${name}/lib/example/text.c \
 ${name}/lib/example/jpegtest.c \
 ${name}/lib/example/shape1.c \
 ${name}/lib/example/sprites.c \
