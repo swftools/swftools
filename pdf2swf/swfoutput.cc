@@ -1001,8 +1001,10 @@ struct fontlist_t
     fontlist_t*next;
 } *fontlist = 0;
 
-/* TODO: why don't higher values (64, 1024) work here? */
-#define FONT_INTERNAL_SIZE 16
+/* Notice: we can only put chars in the range -1639,1638 (-32768/20,32768/20).
+   So if we set this value to high, the char coordinates will overflow.
+   If we set it to low, however, the char positions will be inaccurate */
+#define FONT_INTERNAL_SIZE 4
 
 /* process a character. */
 static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m)
