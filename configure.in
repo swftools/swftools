@@ -233,6 +233,8 @@ if test "x$PYTHON_OK" '!=' "xyes";then
     echo all install uninstall clean: > lib/python/Makefile
     # fail silently- the most users won't have any need for the
     # python interface anyway
+else
+    pythonrfxswf="lib/python/Makefile"
 fi
 
 # ------------------------------------------------------------------
