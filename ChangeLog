@@ -62,6 +62,8 @@
 	* swfcombine: big endian fixes
 	* swfextract: big endian fixes
 	* pdf2swf: Changed from 100dpi to 72dpi conversion
+	* pdf2swf: Some optimizations, fix the zero string problem.
 	* lib/: Added Bladeenc 0.94.1 for mp3 compression
-	* lib/example/avi2swf.cc: Can now handle big files. Better compression ratio. Sound.
+	* lib/example/avi2swf.cc: Can now handle big files. Slightly better compression ratio. Sound.
+	* lib/example/sound.c: New file, demonstrates use of the sound module in librfxswf.
 
