@@ -189,7 +189,6 @@ static int reader_zlibinflate(struct reader_t*reader, void* data, int len)
     struct zlibinflate_t*z = (struct zlibinflate_t*)reader->internal;
     int ret;
     if(!z) {
-	fprintf(stderr, "zlib not initialized!\n");
 	return 0;
     }
     if(!len)
