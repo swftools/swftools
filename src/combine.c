@@ -249,9 +249,9 @@ void write_sprite(struct writer_t*w, int spriteid, int replaceddefine)
     startpos = (u8*)writer_getpos(w);
 
     logf ("<notice> sprite id is %d", spriteid);
-    tmp = spriteid;
+    tmp = SWAP16(spriteid);
     writer_write(w, &tmp, 2);
-    tmp = slave.header.count;
+    tmp = SWAP16(slave.header.count);
     writer_write(w, &tmp, 2);
 
 
@@ -701,8 +701,8 @@ uchar * combine(uchar*masterdata, int masterlength, char*_slavename, uchar*slave
 
     logf("<debug> move x (%d)", config.movex);
     logf("<debug> move y (%d)", config.movey);
-    logf("<debug> scale x (%d)", config.scalex);
-    logf("<debug> scale y (%d)", config.scaley);
+    logf("<debug> scale x (%f)", config.scalex);
+    logf("<debug> scale y (%f)", config.scaley);
     logf("<debug> is frame (%d)", config.isframe);
     
     memset(masterids, -1, sizeof(masterids));
