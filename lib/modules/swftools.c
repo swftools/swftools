@@ -966,7 +966,7 @@ static int tagHash(TAG*tag)
         a >>= 8;
         a += tag->data[t]*0xefbc35a5*b*(t+1);
     }
-    return a&0x7fffffff; //always return unsigned
+    return a&0x7fffffff; //always return positive number
 }
 
 void swf_Optimize(SWF*swf)
@@ -991,8 +991,9 @@ void swf_Optimize(SWF*swf)
            FIXME: a better way would be to compare
                   the helper tags, too.
          */
-        if(swf_isPseudoDefiningTag(tag)) {
-            //dontremap[swf_GetDefineID(tag)] = 1; //FIXME
+        if(swf_isPseudoDefiningTag(tag) &&
+           tag->id != ST_NAMECHARACTER) {
+            dontremap[swf_GetDefineID(tag)] = 1;
         }
         tag=tag->next;
     }
@@ -1001,7 +1002,22 @@ void swf_Optimize(SWF*swf)
         int doremap=1;
         
         TAG*next = tag->next;
-        
+
+        /* remap the tag */
+        int num = swf_GetNumUsedIDs(tag);
+        int*positions = rfx_alloc(sizeof(int)*num);
+        int t;
+        swf_GetUsedIDs(tag, positions);
+        for(t=0;t<num;t++) {
+            int id = GET16(&tag->data[positions[t]]);
+            id = remap[id];
+            PUT16(&tag->data[positions[t]], id);
+        }
+        rfx_free(positions);
+        tag = tag->next;
+
+        /* now look for previous tags with the same
+           content */
         if(swf_isDefiningTag(tag)) {
             TAG*tag2;
             int id = swf_GetDefineID(tag);
@@ -1048,21 +1064,6 @@ void swf_Optimize(SWF*swf)
                     swf->firstTag = next;
                 doremap = 0;
             }
-        }
-
-        if(doremap)
-        {
-            int num = swf_GetNumUsedIDs(tag);
-            int*positions = rfx_alloc(sizeof(int)*num);
-            int t;
-            swf_GetUsedIDs(tag, positions);
-            for(t=0;t<num;t++) {
-                int id = GET16(&tag->data[positions[t]]);
-                id = remap[id];
-                PUT16(&tag->data[positions[t]], id);
-            }
-            rfx_free(positions);
-            tag = tag->next;
         }
 
         tag = next;
