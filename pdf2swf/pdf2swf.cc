@@ -147,14 +147,14 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "l"))
     {
 	char buf[256];
-	sprintf(buf, "%s/swfs/default_loader.swf", DATADIR);
+	sprintf(buf, "%s/swfs/default_loader.swf", SWFTOOLS_DATADIR);
 	preloader = strdup(buf);
 	return 0;
     }
     else if (!strcmp(name, "b"))
     {
 	char buf[256];
-	sprintf(buf, "%s/swfs/default_viewer.swf", DATADIR);
+	sprintf(buf, "%s/swfs/default_viewer.swf", SWFTOOLS_DATADIR);
 	viewer = strdup(buf);
 	return 0;
     }
@@ -166,7 +166,7 @@ int args_callback_option(char*name,char*val) {
 	}
 	else
 	{
-	    systemf("ls %s/swfs/*_loader.swf", DATADIR);
+	    systemf("ls %s/swfs/*_loader.swf", SWFTOOLS_DATADIR);
 	    if(!system_quiet)
 		printf("\n");
 	    exit(1);
@@ -181,7 +181,7 @@ int args_callback_option(char*name,char*val) {
 	}
 	else
 	{
-	    systemf("ls %s/swfs/*_viewer.swf", DATADIR);
+	    systemf("ls %s/swfs/*_viewer.swf", SWFTOOLS_DATADIR);
 	    if(!system_quiet)
 		printf("\n");
 	    exit(1);
@@ -292,8 +292,8 @@ void args_callback_usage(char*name)
 #ifndef SYSTEM_BACKTICKS
     printf("The following might not work because your system call doesn't support command substitution:\n");
 #endif
-    printf("-b  --defaultviewer        Link default viewer to the pdf (%s/swfs/default_viewer.swf)\n", DATADIR);
-    printf("-l  --defaultpreloader     Link default preloader the pdf (%s/swfs/default_loader.swf)\n", DATADIR);
+    printf("-b  --defaultviewer        Link default viewer to the pdf (%s/swfs/default_viewer.swf)\n", SWFTOOLS_DATADIR);
+    printf("-l  --defaultpreloader     Link default preloader the pdf (%s/swfs/default_loader.swf)\n", SWFTOOLS_DATADIR);
     printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
     printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
 }
@@ -380,7 +380,7 @@ int main(int argn, char *argv[])
 	exit(0);
     }
 
-    logf("<verbose> reading font files from %s/fonts\n", DATADIR);
+    logf("<verbose> reading font files from %s/fonts\n", SWFTOOLS_DATADIR);
     //TODO: use tempnam here. Check if environment already contains a
     //T1LIB_CONFIG.
     putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
@@ -392,7 +392,7 @@ int main(int argn, char *argv[])
     }
     t1searchpath[0] = 0;
 #ifdef HAVE_DIRENT_H
-    sprintf(buf, "%s/fonts",DATADIR);
+    sprintf(buf, "%s/fonts",SWFTOOLS_DATADIR);
     // pass 1
     addfontdir(0, buf, &numfonts, 0);
     for(t=0;t<fontpathpos;t++) {
@@ -408,7 +408,7 @@ int main(int argn, char *argv[])
 /* This is a workaround. The correct way would be to
    get directory listings working on all systems.
 */
-    strcpy(t1searchpath, DATADIR);
+    strcpy(t1searchpath, SWFTOOLS_DATADIR);
     strcat(t1searchpath, "/fonts");
     fprintf(db, "14\n");
     fprintf(db, "n021003l.afm\n");
@@ -472,7 +472,7 @@ int main(int argn, char *argv[])
     if(preloader && !viewer) {
 	logf("<warning> --preloader option without --viewer option doesn't make very much sense.");
 	ret = systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
-		preloader, DATADIR, preloader, outputname, outputname);
+		preloader, SWFTOOLS_DATADIR, preloader, outputname, outputname);
 	if(!system_quiet)
 	    printf("\n");
     }
@@ -480,7 +480,7 @@ int main(int argn, char *argv[])
 	systemf("swfcombine %s viewport=%s -o __tmp__.swf",
 		viewer, outputname, outputname);
 	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o %s",
-		outputname, preloader, DATADIR, preloader, outputname);
+		outputname, preloader, SWFTOOLS_DATADIR, preloader, outputname);
 	systemf("rm __tmp__.swf");
     }
 

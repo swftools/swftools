@@ -17,11 +17,11 @@
 #include <ctype.h>
 #include <math.h>
 
-#ifndef WINDOWS
+#ifndef WIN32
 #	include <unistd.h>
 #	include <netinet/in.h>
 #else
-#	include "windows.h"
+#	include "win_missing.h"
 #endif
 
 #include "ttf.h"

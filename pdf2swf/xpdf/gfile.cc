@@ -13,9 +13,9 @@
 
 #ifdef WIN32
    extern "C" {
-#  ifndef _MSC_VER
-#    include <kpathsea/win32lib.h>
-#  endif
+//#  ifndef _MSC_VER
+//#    include <kpathsea/win32lib.h>
+//#  endif
    }
 #else // !WIN32
 #  if defined(MACOS)

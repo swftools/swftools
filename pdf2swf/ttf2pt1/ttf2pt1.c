@@ -69,14 +69,14 @@
 #include <getopt.h>
 #endif
 
-#ifndef WINDOWS
+#ifndef WIN32
 #	include <unistd.h>
 #	include <netinet/in.h>
 #	define BITBUCKET "/dev/null"
 #	include <sys/wait.h>
 #else
 #	define WINDOWS_FUNCTIONS /* ask to define functions - in one file only */
-#	include "windows.h"
+#	include "win_missing.h"
 #	define BITBUCKET "NUL"
 #endif
 
@@ -1859,7 +1859,7 @@ ttf2pt1_main(
 
 	if (argv[2][0] == '-' && argv[2][1] == 0) {
 		pfa_file = stdout;
-#ifdef WINDOWS
+#ifdef WIN32
 		if(encode) {
 			fprintf(stderr, "**** can't write encoded file to stdout ***\n");
 			exit(1);
@@ -1877,7 +1877,7 @@ ttf2pt1_main(
 			afm_file=n;
 		}
 	} else {
-#ifndef WINDOWS
+#ifndef WIN32
 		sprintf(filename, "%s.%s", argv[2], encode ? (pfbflag ? "pfb" : "pfa") : "t1a" );
 #else /* WINDOWS */
 		sprintf(filename, "%s.t1a", argv[2]);
@@ -1899,7 +1899,7 @@ ttf2pt1_main(
 	/*
 	 * Now check whether we want a fully encoded .pfa file
 	 */
-#ifndef WINDOWS
+#ifndef WIN32
 	if (encode) {
 		int             p[2];
 		extern FILE    *ifp, *ofp;	/* from t1asm.c */
@@ -2280,7 +2280,7 @@ ttf2pt1_main(
 
 	cursw->close();
 
-#ifndef WINDOWS
+#ifndef WIN32
 	while (wait(&ws) > 0) {
 	}
 #else 

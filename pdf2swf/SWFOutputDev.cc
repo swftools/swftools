@@ -22,7 +22,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
+#include "../config.h"
 //xpdf header files
+#include "config.h"
 #include "gfile.h"
 #include "GString.h"
 #include "gmem.h"
@@ -35,7 +37,6 @@
 #include "Page.h"
 #include "PDFDoc.h"
 #include "Error.h"
-#include "config.h"
 #include "OutputDev.h"
 #include "GfxState.h"
 #include "GfxFont.h"

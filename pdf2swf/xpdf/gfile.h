@@ -21,6 +21,7 @@
 #    include <win32lib.h>
 #  else
 #    include <windows.h>
+#    include <winbase.h>
 #  endif
 #elif defined(ACORN)
 #elif defined(MACOS)

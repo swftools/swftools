@@ -193,10 +193,10 @@ int main(int argc, char ** argv)
   //T1LIB_CONFIG.
   putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
   FILE*fi = fopen("/tmp/t1lib.config.tmp", "wb");
-  fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n", DATADIR);
-  fprintf(fi, "ENCODING=%s/fonts:.\n", DATADIR);
-  fprintf(fi, "AFM=%s/fonts:.\n", DATADIR);
-  fprintf(fi, "TYPE1=%s/fonts:.\n", DATADIR);
+  fprintf(fi, "FONTDATABASE=/tmp/FontDataBase\n", SWFTOOLS_DATADIR);
+  fprintf(fi, "ENCODING=%s/fonts:.\n", SWFTOOLS_DATADIR);
+  fprintf(fi, "AFM=%s/fonts:.\n", SWFTOOLS_DATADIR);
+  fprintf(fi, "TYPE1=%s/fonts:.\n", SWFTOOLS_DATADIR);
   fclose(fi);
   fi = fopen("/tmp/FontDataBase", "wb");
   if(all) {
