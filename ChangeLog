@@ -29,3 +29,6 @@
 	* swfdump: new: -r option
 	* pdf2swf: small bugfixes
 	* HOWTO_pdf2swf: added section about correcting size and framerate
+0.1.2:
+	* swfdump: can dump all actionscript flavours (button, button2, standalone) now
+	* rfxswf-lib: improved font handling
