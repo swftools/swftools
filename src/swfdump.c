@@ -56,6 +56,7 @@ static int showtext = 0;
 static int showshapes = 0;
 static int hex = 0;
 static int used = 0;
+static int bbox = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -70,6 +71,7 @@ static struct options_t options[] = {
 {"Y", "height"},
 {"r", "rate"},
 {"f", "frames"},
+{"b", "bbox"},
 {"d", "hex"},
 {"u", "used"},
 {0,0}
@@ -123,6 +125,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(name[0]=='u') {
 	used = 1;
+	return 0;
+    }
+    else if(name[0]=='b') {
+	bbox = 1;
 	return 0;
     }
     else if(name[0]=='D') {
@@ -1034,6 +1040,15 @@ int main (int argc,char ** argv)
 	}
 	else {
 	    printf("\n");
+	}
+
+	if(bbox && swf_isDefiningTag(tag) && tag->id != ST_DEFINESPRITE) {
+	    SRECT r = swf_GetDefineBBox(tag);
+	    printf("                %s bbox [%.2f, %.2f, %.2f, %.2f]\n", prefix,
+		    r.xmin/20.0,
+		    r.ymin/20.0,
+		    r.xmax/20.0,
+		    r.ymax/20.0);
 	}
         
         sprintf(myprefix, "                %s", prefix);
