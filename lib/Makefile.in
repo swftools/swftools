@@ -1,4 +1,4 @@
-# Makefile.in generated automatically by automake 1.4a from Makefile.am
+# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
 
 # Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
@@ -46,10 +46,9 @@ top_builddir = ..
 
 
 INSTALL = @INSTALL@
-INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
-INSTALL_STRIP_FLAG =
 transform = @program_transform_name@
 
 NORMAL_INSTALL = :
@@ -70,10 +69,15 @@ SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
 UNCOMPRESS = @UNCOMPRESS@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-SUBDIRS = bladeenc
+SUBDIRS = lame
 noinst_LIBRARIES = librfxswf.a
-librfxswf_a_SOURCES = rfxswf.c rfxswf.h log.c log.h
-librfxswf_a_LIBADD = bladeenc/codec.o 	        bladeenc/common.o bladeenc/encode.o bladeenc/formatbitstream2.o 		bladeenc/l3bitstream.o bladeenc/l3psy.o bladeenc/loop.o bladeenc/mdct.o 		bladeenc/reservoir.o bladeenc/subs.o bladeenc/tables.o
+
+librfxswf_a_SOURCES = rfxswf.c rfxswf.h log.c log.h rfxswf.o
+librfxswf_a_DEPENDENCIES = rfxswf.o rfxswf.h log.c log.h modules/swfbits.c 		      modules/swfaction.c modules/swfdump.c modules/swfcgi.c 		      modules/swfbutton.c modules/swftext.c modules/swftools.c 		      modules/swfsound.c 		lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o 		lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o 		lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
+
+
+librfxswf_a_LIBADD = lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o 		lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o 		lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
+
 
 COMPILE = $(CC) $(CFLAGS) $(CPPFLAGS)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -86,10 +90,6 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-librfxswf_a_DEPENDENCIES =  bladeenc/codec.o bladeenc/common.o \
-bladeenc/encode.o bladeenc/formatbitstream2.o bladeenc/l3bitstream.o \
-bladeenc/l3psy.o bladeenc/loop.o bladeenc/mdct.o bladeenc/reservoir.o \
-bladeenc/subs.o bladeenc/tables.o
 librfxswf_a_OBJECTS =  rfxswf.o log.o
 AR = ar
 CFLAGS = @CFLAGS@
@@ -103,7 +103,7 @@ VERSION = @VERSION@
 
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
-TAR = gtar
+TAR = tar
 GZIP_ENV = --best
 SOURCES = $(librfxswf_a_SOURCES)
 OBJECTS = $(librfxswf_a_OBJECTS)
@@ -288,7 +288,7 @@ uninstall: uninstall-recursive
 all-am: Makefile $(LIBRARIES)
 all-redirect: all-recursive
 install-strip:
-	$(MAKE) $(AM_MAKEFLAGS) INSTALL_STRIP_FLAG=-s install
+	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs: installdirs-recursive
 installdirs-am:
 
@@ -341,6 +341,11 @@ uninstall-am uninstall all-redirect all-am all installdirs-am \
 installdirs mostlyclean-generic distclean-generic clean-generic \
 maintainer-clean-generic clean mostlyclean distclean maintainer-clean
 
+rfxswf.o: rfxswf.c rfxswf.h modules/swfbits.c \
+		      modules/swfaction.c modules/swfdump.c modules/swfcgi.c \
+		      modules/swfbutton.c modules/swftext.c modules/swftools.c \
+		      modules/swfsound.c
+	$(COMPILE) -c $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

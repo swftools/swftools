@@ -1,4 +1,4 @@
-# Makefile.in generated automatically by automake 1.4a from Makefile.am
+# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
 
 # Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
@@ -46,10 +46,9 @@ top_builddir = ..
 
 
 INSTALL = @INSTALL@
-INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
-INSTALL_STRIP_FLAG =
 transform = @program_transform_name@
 
 NORMAL_INSTALL = :
@@ -70,27 +69,34 @@ SYSTEM_BACKTICKS = @SYSTEM_BACKTICKS@
 UNCOMPRESS = @UNCOMPRESS@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
-bin_PROGRAMS = swfcombine swfstrings swfextract swfdump @JPEG2SWF@
+bin_PROGRAMS = wav2swf png2swf swfcombine swfstrings swfextract swfdump @JPEG2SWF@
+wav2swf_SOURCES = wav2swf.c wav.c wav.h
+png2swf_SOURCES = png2swf.c
 swfextract_SOURCES = swfextract.c reloc.c bitio.c flash.c
 swfdump_SOURCES = swfdump.c
 swfcombine_SOURCES = bitio.c bitio.h reloc.c reloc.h combine.c combine.h flash.c flash.h swfcombine.c types.h
 swfstrings_SOURCES = swfstrings.c
 jpeg2swf_SOURCES = jpeg2swf.c
+png2swf_LINK = $(CCLD) ../lib/librfxswf.a -o $@
+wav2swf_LINK = $(CCLD) ../lib/librfxswf.a -o $@
 swfextract_LINK = $(CCLD) -o $@
 swfdump_LINK = $(CCLD) ../lib/librfxswf.a -o $@
 swfcombine_LINK = $(CCLD) ../lib/log.o -o $@
 swfstrings_LINK = $(CCLD) ../lib/librfxswf.a -o $@
 jpeg2swf_LINK = $(CCLD) -o $@
+wav2swf_LDADD = ../lib/librfxswf.a
+png2swf_LDADD = ../lib/librfxswf.a
 swfstrings_LDADD = ../lib/librfxswf.a
 swfdump_LDADD = ../lib/librfxswf.a
 swfextract_LDADD = ../lib/librfxswf.a
 jpeg2swf_LDADD = ../lib/librfxswf.a
-man_MANS = swfcombine.1 swfstrings.1 swfextract.1 swfdump.1 jpeg2swf.1
+man_MANS = png2swf.1 wav2swf.1 swfcombine.1 swfstrings.1 swfextract.1 swfdump.1 jpeg2swf.1
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  swfcombine$(EXEEXT) swfstrings$(EXEEXT) \
-swfextract$(EXEEXT) swfdump$(EXEEXT)  @JPEG2SWF@
+bin_PROGRAMS =  wav2swf$(EXEEXT) png2swf$(EXEEXT) swfcombine$(EXEEXT) \
+swfstrings$(EXEEXT) swfextract$(EXEEXT) swfdump$(EXEEXT) \
+ @JPEG2SWF@
 PROGRAMS =  $(bin_PROGRAMS)
 
 
@@ -98,6 +104,12 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
+wav2swf_OBJECTS =  wav2swf.o wav.o
+wav2swf_DEPENDENCIES =  ../lib/librfxswf.a
+wav2swf_LDFLAGS = 
+png2swf_OBJECTS =  png2swf.o
+png2swf_DEPENDENCIES =  ../lib/librfxswf.a
+png2swf_LDFLAGS = 
 swfcombine_OBJECTS =  bitio.o reloc.o combine.o flash.o swfcombine.o
 swfcombine_LDADD = $(LDADD)
 swfcombine_DEPENDENCIES = 
@@ -130,10 +142,10 @@ VERSION = @VERSION@
 
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
-TAR = gtar
+TAR = tar
 GZIP_ENV = --best
-SOURCES = $(swfcombine_SOURCES) $(swfstrings_SOURCES) $(swfextract_SOURCES) $(swfdump_SOURCES) $(jpeg2swf_SOURCES)
-OBJECTS = $(swfcombine_OBJECTS) $(swfstrings_OBJECTS) $(swfextract_OBJECTS) $(swfdump_OBJECTS) $(jpeg2swf_OBJECTS)
+SOURCES = $(wav2swf_SOURCES) $(png2swf_SOURCES) $(swfcombine_SOURCES) $(swfstrings_SOURCES) $(swfextract_SOURCES) $(swfdump_SOURCES) $(jpeg2swf_SOURCES)
+OBJECTS = $(wav2swf_OBJECTS) $(png2swf_OBJECTS) $(swfcombine_OBJECTS) $(swfstrings_OBJECTS) $(swfextract_OBJECTS) $(swfdump_OBJECTS) $(jpeg2swf_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -160,8 +172,8 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	$(mkinstalldirs) $(DESTDIR)$(bindir)
 	@list='$(bin_PROGRAMS)'; for p in $$list; do \
 	  if test -f $$p; then \
-	    echo "  $(INSTALL_PROGRAM) $(INSTALL_STRIP_FLAG) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
-	     $(INSTALL_PROGRAM) $(INSTALL_STRIP_FLAG) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	    echo "  $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
+	     $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	  else :; fi; \
 	done
 
@@ -189,6 +201,14 @@ distclean-compile:
 	-rm -f *.tab.c
 
 maintainer-clean-compile:
+
+wav2swf$(EXEEXT): $(wav2swf_OBJECTS) $(wav2swf_DEPENDENCIES)
+	@rm -f wav2swf$(EXEEXT)
+	$(wav2swf_LINK) $(wav2swf_LDFLAGS) $(wav2swf_OBJECTS) $(wav2swf_LDADD) $(LIBS)
+
+png2swf$(EXEEXT): $(png2swf_OBJECTS) $(png2swf_DEPENDENCIES)
+	@rm -f png2swf$(EXEEXT)
+	$(png2swf_LINK) $(png2swf_LDFLAGS) $(png2swf_OBJECTS) $(png2swf_LDADD) $(LIBS)
 
 swfcombine$(EXEEXT): $(swfcombine_OBJECTS) $(swfcombine_DEPENDENCIES)
 	@rm -f swfcombine$(EXEEXT)
@@ -315,7 +335,7 @@ uninstall: uninstall-am
 all-am: Makefile $(PROGRAMS) $(MANS)
 all-redirect: all-am
 install-strip:
-	$(MAKE) $(AM_MAKEFLAGS) INSTALL_STRIP_FLAG=-s install
+	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs:
 	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(mandir)/man1
 
