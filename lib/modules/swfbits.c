@@ -124,8 +124,6 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 
   jpeg_stdio_src(&cinfo,f);
   jpeg_read_header(&cinfo, TRUE);
-  if(JPEG_LIB_VERSION>=62) /* jpeglib Version 6b is required for grayscale-> color conversion */
-    cinfo.out_color_space = JCS_RGB; //automatically convert grayscale images
   jpeg_start_decompress(&cinfo);
 
   out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
@@ -135,8 +133,6 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
   { int y;
     U8 * js = scanline;
     if(cinfo.out_color_space == JCS_GRAYSCALE) {
-	/* happens only if JPEG_LIB_VERSION above
-	   was too small - let's do the conversion ourselves */
 	for (y=0;y<cinfo.output_height;y++)
 	{ int x;
 	  jpeg_read_scanlines(&cinfo,&js,1);
@@ -146,9 +142,41 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 	  swf_SetJPEGBitsLines(out,(U8**)&js,1);
 	}
     }
-    else {
+    else if(cinfo.out_color_space == JCS_RGB) 
+    {
 	for (y=0;y<cinfo.output_height;y++)
 	{ jpeg_read_scanlines(&cinfo,&js,1);
+	  swf_SetJPEGBitsLines(out,(U8**)&js,1);
+	}
+    }
+    else if(cinfo.out_color_space == JCS_YCCK) 
+    {
+	//FIXME
+	fprintf(stderr, "Error: Can't convert YCCK to RGB.\n");
+	return -1;
+    }
+    else if(cinfo.out_color_space == JCS_YCbCr) 
+    {
+	//FIXME
+	fprintf(stderr, "Error: Can't convert YCbCr(YUV) to RGB.\n");
+	return -1;
+    }
+    else if(cinfo.out_color_space == JCS_CMYK) 
+    { 
+	for (y=0;y<cinfo.output_height;y++)
+	{ int x;
+	  jpeg_read_scanlines(&cinfo,&js,1);
+	  /* This routine seems to work for now-
+	     It's a mixture of 3 different
+	     CMYK->RGB conversion routines I found in the
+	     web. (which all produced garbage)
+	     I'm happily accepting suggestions. (mk)*/
+	  for(x=0;x<cinfo.output_width;x++) {
+		int white = 255 - js[x*4+3];
+		js[x*3+0] = white - ((js[x*4]*white)>>8);
+		js[x*3+1] = white - ((js[x*4+1]*white)>>8);
+		js[x*3+2] = white - ((js[x*4+2]*white)>>8);
+	  }
 	  swf_SetJPEGBitsLines(out,(U8**)&js,1);
 	}
     }
