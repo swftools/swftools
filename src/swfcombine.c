@@ -298,7 +298,7 @@ static void makestackmaster(SWF*swf)
 
     memset(swf, 0, sizeof(SWF));
 
-    swf->firstTag = swf_InsertTag(tag, ST_SETBACKGROUNDCOLOR);
+    swf->firstTag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
     tag = swf->firstTag;
     swf_SetU8(tag, 0);
     swf_SetU8(tag, 0);
@@ -328,6 +328,7 @@ static void makestackmaster(SWF*swf)
 	}
     }
     tag = swf_InsertTag(tag, ST_END);
+    logf("<verbose> temporary SWF created");
 }
 
 static char* slavename = 0;
@@ -715,6 +716,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    logf("<warning> Frame \"%s\" doesn't exist in file. No substitution will occur",
 		    slavename);
     }
+    tag = swf_InsertTag(tag, ST_END);
     return tag;
 }
 
@@ -737,6 +739,7 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	    logf("<debug> tagid %02x defines object %d", tag->id, defineid);
 	    masterbitmap[defineid] = 1;
 	}
+	tag = tag->next;
     }
     
     swf_Relocate(slave, masterbitmap);
@@ -752,7 +755,7 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     }
     memset(depths, 0, 65536);
     mtag = master->firstTag;
-    while(mtag)
+    while(mtag && mtag->id!=ST_END)
     {
 	int num=1;
 	U16 depth;
@@ -779,6 +782,8 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	}
 	tag = swf_InsertTag(tag, mtag->id);
 	swf_SetBlock(tag, mtag->data, mtag->len);
+
+	mtag = mtag->next;
     }
 
     for(t=0;t<65536;t++) 
@@ -792,7 +797,7 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     free(depths);
 
     stag = slave->firstTag;
-    while(stag)
+    while(stag && stag->id!=ST_END)
     {
 	logf("<debug> [slave] write tag %02x (%d bytes in body)", 
 		stag->id, stag->len);
@@ -800,6 +805,7 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	swf_SetBlock(tag, stag->data, stag->len);
 	stag = stag->next;
     }
+    tag = swf_InsertTag(tag, ST_END);
 }
 
 void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
@@ -1085,7 +1091,7 @@ int main(int argn, char *argv[])
 	}
     }
 
-    fi = open(outputname, O_RDWR|O_TRUNC|O_CREAT);
+    fi = open(outputname, O_RDWR|O_TRUNC|O_CREAT, 0777);
 
     if(config.zlib)
 	swf_WriteSWC(fi, &newswf);
