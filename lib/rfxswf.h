@@ -18,6 +18,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include "../config.h"
 #include "bladeenc/codec.h"
 
