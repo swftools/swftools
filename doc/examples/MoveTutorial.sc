@@ -22,22 +22,22 @@
 #
 .text mesg1 text="(1) This tutorial demonstrates object motions." font=helv color=yellow size=25%
 .text mesg2 text="(2) Every object can be animated in coordinate space." font=helv color=red size=25%
-.text mesg3 text="(3) Let's examine each type of motion." font=helv color=yellow size=25%
+.text mesg3 text="(3) Let's examine each type of motion." font=helv color=magenta size=25%
 #
-.text mesg4 text="(4) It can translate in x..." font=helv color=yellow size=25%
-.text mesg5 text="(5) ... it can translate in y ..." font=helv color=green size=25%
-.text mesg6 text="(6) or both." font=helv color=blue size=25%
-.text mesg7 text="(7) It can rotate." font=helv color=yellow size=25%
+.text mesg4 text="(4) It can translate in x..." font=helv color=green size=25%
+.text mesg5 text="(5) ... it can translate in y ..." font=helv color=cyan size=25%
+.text mesg6 text="(6) or both." font=helv color=yellow size=25%
+.text mesg7 text="(7) It can rotate." font=helv color=magenta size=25%
 #
-.text mesg8 text="(8) It can scale in x ..." font=helv color=yellow size=25%
+.text mesg8 text="(8) It can scale in x ..." font=helv color=blue size=25%
 .text mesg9 text="(9) ... it can scale in y ..." font=helv color=red size=25%
-.text mesg10 text="(10)... or both." font=helv color=red size=25%
-.text mesg11 text="(11) It can shear positively ..." font=helv color=red size=25%
-.text mesg12 text="(12) ... or negatively." font=helv color=red size=25%
-.text mesg13 text="(13) By combining these motions ..." font=helv color=red size=25%
+.text mesg10 text="(10)... or both." font=helv color=cyan size=25%
+.text mesg11 text="(11) It can shear positively ..." font=helv color=green size=25%
+.text mesg12 text="(12) ... or negatively." font=helv color=yellow size=25%
+.text mesg13 text="(13) By combining these motions ..." font=helv color=blue size=25%
 #
 .text mesg14 text="(14) ... you can produce various illusions ..." font=helv color=red size=25%
-.text mesg15 text="(15) ... of depth and velocity." font=helv color=red size=25%
+.text mesg15 text="(15) ... of depth and velocity." font=helv color=magenta size=25%
 # .text mesg13 text="(16) and it will rotate in place." font=helv color=red size=25%
 # .text mesg13 text="(17) and it will rotate in place." font=helv color=red size=25%
 # .text mesg13 text="(18) and it will rotate in place." font=helv color=red size=25%
