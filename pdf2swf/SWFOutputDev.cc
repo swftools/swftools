@@ -2117,7 +2117,7 @@ void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, 
     if((x1|y1|x2|y2)==0) x2++;
     si->outputDev->setClip(x1,y1,x2,y2);
 
-    pdf_page_render(page, output);
+    pdf_page_render2(page, output);
 }
 void pdf_page_render(pdf_page_t*page, swf_output_t*output)
 {
@@ -2127,7 +2127,7 @@ void pdf_page_render(pdf_page_t*page, swf_output_t*output)
     si->outputDev->setMove(0,0);
     si->outputDev->setClip(0,0,0,0);
     
-    pdf_page_render(page, output);
+    pdf_page_render2(page, output);
 }
 
 
