@@ -154,6 +154,11 @@ void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for sw
 // for streaming:
 int  swf_WriteHeader(int handle,SWF * swf);    // Writes Header of swf to file
 int  swf_WriteTag(int handle,TAG * tag);    // Writes TAG to file
+
+// folding/unfolding:
+
+void swf_FoldAll(SWF*swf);
+void swf_FoldSprite(TAG*tag);
     
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
 int   swf_DeleteTag(TAG * t);

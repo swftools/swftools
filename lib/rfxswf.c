@@ -668,12 +668,76 @@ int swf_WriteTag(int handle,TAG * t)
 int RFXSWF_DefineSprite_GetRealSize(TAG * t)
 // Sprite Handling: Helper function to pack DefineSprite-Tag
 { U32 len = t->len;
+  if(len>4) { // folded sprite
+      return t->len;
+  }
   do
   { t = swf_NextTag(t);
     if (t->id!=ST_DEFINESPRITE) len += RFXSWF_WriteTag(-1,t);
     else t = NULL;
   } while (t&&(t->id!=ST_END));
   return len;
+}
+
+void swf_FoldSprite(TAG * t)
+{
+  TAG*sprtag=t,*tmp;
+  U16 id,frames,tmpid;
+  if(t->id!=ST_DEFINESPRITE)
+      return;
+  if(!t->len) {
+      fprintf(stderr, "Error: Sprite has no ID!");
+      return;
+  }
+
+  t->pos = 0;
+  id = swf_GetU16(t);
+  //frames = swf_GetU16(t);
+  free(t->data);
+  t->len = t->pos = t->memsize = 0;
+  t->data = 0;
+
+  frames = 0;
+
+  do 
+  { 
+    if(t->id==ST_SHOWFRAME) frames++;
+    t = swf_NextTag(t);
+  } while(t&&t!=ST_END);
+
+  t = swf_NextTag(sprtag);
+  swf_SetU16(sprtag, id);
+  swf_SetU16(sprtag, frames);
+
+  do
+  { 
+    tmpid= t->id;
+    if(t->len<0x3f) {
+	swf_SetU16(sprtag,t->len|(t->id<<6));
+    } else {
+	swf_SetU16(sprtag,0x3f|(t->id<<6));
+	swf_SetU32(sprtag,t->len);
+    }
+    if(t->len)
+	swf_SetBlock(sprtag,t->data, t->len);
+    tmp = t;
+    t = swf_NextTag(t);
+    swf_DeleteTag(tmp);
+  } 
+  while (t&&(tmpid!=ST_END));
+
+//  sprtag->next = t;
+//  t->prev = sprtag;
+}
+
+void swf_FoldAll(SWF*swf)
+{
+    TAG*tag = swf->firstTag;
+    while(tag) {
+	if(tag->id == ST_DEFINESPRITE)
+	    swf_FoldSprite(tag);
+	tag = swf_NextTag(tag);
+    }
 }
 
 #define swf_ReadTag(a,b)  RFXSWF_ReadTag(a,b)
