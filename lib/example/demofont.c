@@ -109,7 +109,8 @@ SWFFONT * Font_Demo_Font(U16 id)
   f->id       = id;
   f->version  = 1;
   f->name     = strdup("Demo Font");
-  f->flags    = 0x00;
+  f->style    = 0x00;
+  f->encoding = 0x00;
   f->numchars = 6;
   f->maxascii = 256;
   f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*6);
