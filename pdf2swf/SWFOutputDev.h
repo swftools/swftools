@@ -21,16 +21,52 @@
 
 #ifndef __pdf_h__
 #define __pdf_h__
-void pdfswf_init(char*filename, char*userPassword) ;
 
 void pdfswf_setparameter(char*name, char*value);
 void pdfswf_addfont(char*filename);
-void pdfswf_setoutputfilename(char*filename);
+void pdfswf_preparepage(int page);
 
-void pdfswf_performconversion();
+typedef struct _pdf_doc
+{
+    char*info;
+    char*title;
+    int num_pages;
+    void*internal;
+} pdf_doc_t;
 
-int pdfswf_numpages();
-void pdfswf_convertpage(int page) ;
-void pdfswf_close();
+pdf_doc_t*  pdf_init(char*filename, char*userPassword);
+void pdf_destroy(pdf_doc_t*doc);
+
+typedef struct _swf_output
+{
+    int num_pages;
+    void*internal;
+} swf_output_t;
+
+swf_output_t* swf_output_init();
+void swf_output_setparameter(swf_output_t*, char*name, char*value);
+void swf_output_save(swf_output_t*, char*filename);
+
+typedef struct _pdf_page
+{
+    pdf_doc_t*parent;
+    int nr;
+    void*internal;
+} pdf_page_t;
+
+pdf_page_t* pdf_getpage(pdf_doc_t*doc, int page);
+void pdf_page_render(pdf_page_t*page, swf_output_t*output);
+void pdf_page_destroy(pdf_page_t*page);
+void swf_output_destroy(swf_output_t*page);
+
+typedef struct _pdf_page_info
+{
+    int xMin, yMin, xMax, yMax;
+    int number_of_images;
+    int number_of_links;
+    int number_of_fonts;
+} pdf_page_info_t;
+
+pdf_page_info_t* pdf_getpageinfo(pdf_page_info_t*info);
 
 #endif //__pdf_h__
