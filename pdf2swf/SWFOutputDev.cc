@@ -77,6 +77,8 @@ typedef struct _fontfile
 static fontfile_t fonts[2048];
 static int fontnum = 0;
 
+static int config_use_fontconfig = 1;
+
 // swf <-> pdf pages
 // TODO: move into pdf_doc_t
 static int*pages = 0;
@@ -1308,6 +1310,9 @@ char* searchForSuitableFont(GfxFont*gfxFont)
     char*name = getFontName(gfxFont);
     char*fontname = 0;
     char*filename = 0;
+
+    if(!config_use_fontconfig)
+        return 0;
     
 #ifdef HAVE_FONTCONFIG
     FcPattern *pattern, *match;
@@ -1315,25 +1320,38 @@ char* searchForSuitableFont(GfxFont*gfxFont)
     FcChar8 *v;
 
     static int fcinitcalled = false; 
+        
+    msg("<debug> searchForSuitableFont(%s)", name);
     
     // call init ony once
     if (!fcinitcalled) {
+        msg("<debug> Initializing FontConfig...");
         fcinitcalled = true;
-	FcInit(); //leaks
+	if(FcInit()) {
+            msg("<debug> FontConfig Initialization failed. Disabling.");
+            config_use_fontconfig = 0;
+            return 0;
+        }
+        msg("<debug> ...initialized FontConfig");
     }
    
+    msg("<debug> FontConfig: Create \"%s\" Family Pattern", name);
     pattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString, name, NULL);
     if (gfxFont->isItalic()) // check for italic
+        msg("<debug> FontConfig: Adding Italic Slant");
 	FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
     if (gfxFont->isBold()) // check for bold
+        msg("<debug> FontConfig: Adding Bold Weight");
         FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
 
+    msg("<debug> FontConfig: Try to match...");
     // configure and match using the original font name 
     FcConfigSubstitute(0, pattern, FcMatchPattern); 
     FcDefaultSubstitute(pattern);
     match = FcFontMatch(0, pattern, &result);
     
     if (FcPatternGetString(match, "family", 0, &v) == FcResultMatch) {
+        msg("<debug> FontConfig: family=%s", (char*)v);
         // if we get an exact match
         if (strcmp((char *)v, name) == 0) {
 	    if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
@@ -1342,6 +1360,7 @@ char* searchForSuitableFont(GfxFont*gfxFont)
 		if(nfn) fontname = strdup(nfn+1);
 		else    fontname = filename;
             }
+            msg("<debug> FontConfig: Returning \"%s\"", fontname);
         } else {
             // initialize patterns
             FcPatternDestroy(pattern);
@@ -1349,22 +1368,28 @@ char* searchForSuitableFont(GfxFont*gfxFont)
 
             // now match against serif etc.
 	    if (gfxFont->isSerif()) {
+                msg("<debug> FontConfig: Create Serif Family Pattern");
                 pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "serif", NULL);
             } else if (gfxFont->isFixedWidth()) {
+                msg("<debug> FontConfig: Create Monospace Family Pattern");
                 pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "monospace", NULL);
             } else {
+                msg("<debug> FontConfig: Create Sans Family Pattern");
                 pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "sans", NULL);
             }
 
             // check for italic
             if (gfxFont->isItalic()) {
+                msg("<debug> FontConfig: Adding Italic Slant");
                 int bb = FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
             }
             // check for bold
             if (gfxFont->isBold()) {
+                msg("<debug> FontConfig: Adding Bold Weight");
                 int bb = FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
             }
 
+            msg("<debug> FontConfig: Try to match... (2)");
             // configure and match using serif etc
     	    FcConfigSubstitute (0, pattern, FcMatchPattern);
             FcDefaultSubstitute (pattern);
@@ -1376,6 +1401,7 @@ char* searchForSuitableFont(GfxFont*gfxFont)
 		if(nfn) fontname = strdup(nfn+1);
 		else    fontname = filename;
     	    }
+            msg("<debug> FontConfig: Returning \"%s\"", fontname);
         }        
     }
 
@@ -1918,6 +1944,8 @@ void pdfswf_setparameter(char*name, char*value)
         pdfswf_addfontdir(value);
     } else if(!strcmp(name, "languagedir")) {
         pdfswf_addlanguagedir(value);
+    } else if(!strcmp(name, "fontconfig")) {
+        config_use_fontconfig = atoi(value);
     } else {
 	swfoutput_setparameter(name, value);
     }
