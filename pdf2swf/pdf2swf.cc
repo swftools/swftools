@@ -33,9 +33,7 @@
 #endif
 #include "../lib/args.h"
 #include "SWFOutputDev.h"
-extern "C" {
 #include "log.h"
-}
 
 #ifndef WIN32
 #define FONTDIR SWFTOOLS_DATADIR "/fonts"
@@ -344,7 +342,7 @@ void args_callback_usage(char*name)
 }
 
 #ifdef HAVE_DIRENT_H
-void addfontdir(char* dirname, int*numfonts)
+static void addfontdir(char* dirname, int*numfonts)
 {
     if(!numfonts)
 	msg("<verbose> Adding %s to search path\n", dirname);
@@ -354,7 +352,7 @@ void addfontdir(char* dirname, int*numfonts)
 	msg("<warning> Couldn't open directory %s\n", dirname);
 	return;
     }
-    dirent*ent;
+    struct dirent*ent;
     while(1) {
 	ent = readdir (dir);
 	if (!ent) 
@@ -393,7 +391,7 @@ void addfontdir(char* dirname, int*numfonts)
 }
 #endif
 
-char* stripfilename(char*filename, char*newext)
+static char* stripfilename(char*filename, char*newext)
 {
     char*last1 = strrchr(filename, '/');
     char*last2 = strrchr(filename, '\\');
@@ -539,5 +537,4 @@ int main(int argn, char *argv[])
 
     return 0;
 }
-
 
