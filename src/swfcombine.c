@@ -720,6 +720,20 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
     return tag;
 }
 
+void adjustheader(SWF*swf)
+{
+    if(config.framerate)
+	swf->frameRate = config.framerate;
+    if(config.hassizex) {
+	swf->movieSize.xmax = 
+	swf->movieSize.xmin + config.sizex;
+    }
+    if(config.hassizey) {
+	swf->movieSize.ymax = 
+	swf->movieSize.ymin + config.sizey;
+    }
+}
+
 void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 {
     char* depths;
@@ -746,6 +760,8 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     jpeg_assert(master, slave);
     
     memcpy(newswf, master, sizeof(SWF));
+    adjustheader(newswf);
+
     tag = newswf->firstTag = swf_InsertTag(0, ST_REFLEX); // to be removed later
 
     depths = malloc(65536);
@@ -877,6 +893,8 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     // write file 
 
     memcpy(newswf, master, sizeof(SWF));
+    adjustheader(newswf);
+
     newswf->firstTag = tag = swf_InsertTag(0, ST_REFLEX); // to be removed later
 
     if (config.antistream) {
