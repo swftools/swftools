@@ -5,18 +5,21 @@ Creating browseable SWFs from PDFs
    you have downloaded [1]SimpleViewer.swf into the directory where
    document.pdf lies.
    Now call:
-   $ pdf2swf -o tmp.swf document.pdf
-   $ swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
+   pdf2swf -o tmp.swf document.pdf
+   swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
    Now, flashfile.swf should be a browseable flash representation of
    document.pdf which can be embedded into your web page.
    If you don't know how to embed SWFs into html pages, it's explained at
    [2]http://www.macromedia.com/support/flash/ts/documents/tn4150.html .
+   (Also, you can simply type
+   swfdump --html flashfile.swf 
+   and insert the output into your html document)
    
 Creating JPEG Slideshows
 
    You can do the same thing described above with jpeg files. Simply use
-   $ jpeg2swf -o tmp.swf pic1.jpeg pic2.jpeg ...
-   $ swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
+   jpeg2swf -o tmp.swf pic1.jpeg pic2.jpeg ...
+   swfcombine -o flashfile.swf SimpleViewer.swf viewport=tmp.swf 
    
 Linking a Preloader
 
@@ -27,8 +30,8 @@ Linking a Preloader
    loading animation of your choice. (To get started, try [4]loading.swf,
    or just convert a "Loading" JPEG picture to swf (jpeg2swf -o
    loading.swf picture.jpg)) Now use
-   $ swfcombine -o flashfilewithloader.swf PreLoader.swf
-   loader=loading.swf movie=flashfile.swf 
+   swfcombine -o flashfilewithloader.swf PreLoader.swf loader=loading.swf
+   movie=flashfile.swf 
    
 Creating your own Viewers
 
@@ -46,6 +49,8 @@ Creating your own Viewers
      
    to set the frame in the to-be-replaced rectangle. (It will be replaced
    with a MovieClip, therefore a SetTarget is neccessary)
+   It's important that the Target Name ist "viewport", not "/viewport",
+   as the Movie will get inserted into a Movieclip.
      _________________________________________________________________
    
    [5]Back to the SWFTools Project page
