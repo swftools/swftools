@@ -288,7 +288,7 @@ if test "x${AVIFILE}" != "xtrue"; then
  avi2swf=
 fi
 
-pdf2swf_makefile="pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile"
+pdf2swf_makefile="pdf2swf/Makefile pdf2swf/xpdf/Makefile"
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "* Disabling pdf2swf tool..."
   rm -f pdf2swf/Makefile
