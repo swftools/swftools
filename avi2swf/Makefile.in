@@ -3,10 +3,15 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
+VIDEO_LIBS=@VIDEO_LIBS@
+VIDEO_CFLAGS=@VIDEO_CFLAGS@
+
 all: avi2swf
 
 videoreader_avifile.o: videoreader_avifile.cc
-	$(CC) `avifile-config --cflags` $< -o $@
+	$(CC) $(VIDEO_CFLAGS) $< -o $@
+videoreader_vfw.o: videoreader_v2w.cc
+	$(CC) $< -o $@
 
 avi2swf.o: avi2swf.cc
 	$(CC) $< -o $@
@@ -14,8 +19,8 @@ avi2swf.o: avi2swf.cc
 v2swf.o: v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
-avi2swf: avi2swf.o v2swf.o videoreader_avifile.o ../lib/q.o
-	$(LL) avi2swf.o v2swf.o videoreader_avifile.o ../lib/q.o -o avi2swf ../lib/librfxswf.a $(LIBS) `avifile-config --libs`
+avi2swf: avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o
+	$(LL) avi2swf.o v2swf.o videoreader_avifile.o ../lib/q.o -o avi2swf ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
 	$(STRIP) avi2swf
 
 install:
