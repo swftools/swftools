@@ -241,10 +241,11 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
     }
 }
 	    
-void readMVD(TAG*tag)
+int readMVD(TAG*tag)
 {
     int index = gethuffvalue(tag, mvd);
     DEBUG printf("mvd index:%d\n", index);
+    return index;
 }
 
 char has_quant[] = {0,1,0,0,1};
@@ -332,8 +333,11 @@ void decode_block(TAG*tag, int pictype)
     }
 
     if(has_mvd[mb_type]&1) {
-	readMVD(tag); //horizontal
-	readMVD(tag); //vertical
+	int x,y;
+	x = readMVD(tag); //horizontal
+	y = readMVD(tag); //vertical
+	if(x==32 && y==32)
+	    printf("0");
     }
     if(has_mvd[mb_type]&2) {
 	/* only in advanced prediction mode */
