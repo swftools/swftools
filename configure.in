@@ -5,9 +5,16 @@ AC_ARG_ENABLE(checkmem,
 [  --enable-checkmem       turn on ccmalloc debugging], CHECKMEM=true)
 AC_ARG_ENABLE(debug,
 [  --enable-debug          turn on debugging], DEBUG=true)
+AC_ARG_ENABLE(optimizations,
+[  --enable-optimizations  turn on compiler optimizations (recommended for avi2swf)], OPTIMIZE=true)
+AC_ARG_ENABLE(mp3,
+[  --disable-mp3           don't compile any mp3 code in], NO_MP3=true)
 
 PACKAGE=swftools
-VERSION=0.5.0-pre8
+VERSION=2003-08-02-1416
+
+
+
 # -Winline?
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -19,9 +26,13 @@ if test "x$DEBUG" '!=' "x";then
     STRIP="@echo debug enabled, not stripping "
     export STRIP
     AC_SUBST(STRIP)
-else
-    CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CFLAGS"
-    CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CXXFLAGS"
+else if test "x$OPTIMIZE" '!=' "x"; then
+	CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -Winline -O3 -fomit-frame-pointer $CFLAGS"
+	CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -Winline -O3 -fomit-frame-pointer $CXXFLAGS"
+     else
+	CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CFLAGS"
+	CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CXXFLAGS"
+     fi
 fi
 
 export PACKAGE VERSION CFLAGS CXXFLAGS
@@ -58,10 +69,6 @@ fi
  AC_PROG_LIBTOOL
  AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
  AC_CHECK_PROGS(FREETYPE_CONFIG, freetype-config, )
-
-if test "x$FREETYPE_CONFIG" != "x";then
-    USE_FREETYPE=yes
-fi
 
 dnl Checks for system services
  AC_EXEEXT
@@ -144,7 +151,9 @@ if test "x${ac_cv_header_zlib_h}" != "xyes"; then
  ZLIBMISSING=true;
 fi
 
-AC_DEFINE_UNQUOTED(USE_FREETYPE, "$USE_FREETYPE")
+if test "x$USE_FREETYPE" != "x"; then
+    AC_DEFINE_UNQUOTED(USE_FREETYPE, "$USE_FREETYPE")
+fi
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE")
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 AC_SUBST(PACKAGE)
@@ -179,6 +188,10 @@ if test "x${AVIFILE}" != "xtrue"; then
  avi2swf=
 fi
 
+if test "x${NO_MP3}" == "x"; then
+    AC_DEFINE_UNQUOTED(USE_MP3, 1)
+fi
+
 if test "x${USE_FREETYPE}" == "xtrue"; then
     if test "x{$FREETYPE_CONFIG}" != "x"; then
 	ftinclude=`freetype-config --cflags`
@@ -204,9 +217,9 @@ if test "x${UNCOMPRESS}" = "xgzip"; then
 fi
 AC_SUBST(USE_GZIP)
 
-JPEG2SWF='jpeg2swf' #$(EXEEXT)
+JPEG2SWF='jpeg2swf$(E)'
 export JPEG2SWF
-PNG2SWF='png2swf' #$(EXEEXT)
+PNG2SWF='png2swf$(E)'
 export PNG2SWF
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
