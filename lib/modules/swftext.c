@@ -842,3 +842,40 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 }
 
 
+void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
+	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable)
+{
+    swf_SetRect(tag,&r);
+    swf_ResetWriteBits(tag);
+
+    flags &= ~(ET_HASTEXT|ET_HASTEXTCOLOR|ET_HASMAXLENGTH|ET_HASFONT|ET_HASLAYOUT);
+    if(text) flags |= ET_HASTEXT;
+    if(color) flags |= ET_HASTEXTCOLOR;
+    if(maxlength) flags |= ET_HASMAXLENGTH;
+    if(font) flags |= ET_HASFONT;
+    if(layout) flags |= ET_HASLAYOUT;
+
+    swf_SetBits(tag, flags, 16);
+
+    if(flags & ET_HASFONT) {
+	swf_SetU16(tag, font); //font
+	swf_SetU16(tag, height); //fontheight
+    }
+    if(flags & ET_HASTEXTCOLOR) {
+	swf_SetRGBA(tag, color);
+    }
+    if(flags & ET_HASMAXLENGTH) {
+	swf_SetU16(tag, maxlength); //maxlength
+    }
+    if(flags & ET_HASLAYOUT) {
+	swf_SetU8(tag,layout->align); //align
+	swf_SetU16(tag,layout->leftmargin); //left margin
+	swf_SetU16(tag,layout->rightmargin); //right margin
+	swf_SetU16(tag,layout->indent); //indent
+	swf_SetU16(tag,layout->leading); //leading
+    }
+    swf_SetString(tag, variable);
+    if(flags & ET_HASTEXT)
+	swf_SetString(tag,text);
+}
+

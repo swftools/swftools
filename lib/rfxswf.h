@@ -355,6 +355,32 @@ typedef struct _FONTUSAGE
 { U8 code[MAX_CHAR_PER_FONT];
 } FONTUSAGE, * LPFONTUSAGE;
 
+#define ET_HASTEXT 32768
+#define ET_WORDWRAP 16384
+#define ET_MULTILINE 8192
+#define ET_PASSWORD 4096
+#define ET_READONLY 2048
+#define ET_HASTEXTCOLOR 1024
+#define ET_HASMAXLENGTH 512
+#define ET_HASFONT 256
+#define ET_X3 128
+#define ET_X2 64
+#define ET_HASLAYOUT 32
+#define ET_NOSELECT 16
+#define ET_BORDER 8
+#define ET_X1 4
+#define ET_X0 2
+#define ET_USEOUTLINES 1
+
+typedef struct _EditTextLayout
+{
+    U8 align; // 0=left, 1=right, 2=center, 3=justify
+    U16 leftmargin;
+    U16 rightmargin;
+    U16 indent;
+    U16 leading;
+} EditTextLayout;
+
 int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*));
 // -> void fontcallback(U16 id,U8 * name); returns number of defined fonts
 
@@ -394,6 +420,9 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
 
 int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 // Prints text defined in tag t with font f to stdout
+
+void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
+	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
 // swfdump.c
 
