@@ -17,11 +17,13 @@
 
 AC_DEFUN(RFX_CHECK_FREETYPE,
 [
-AC_CHECK_PROGS(FREETYPE_CONFIG, freetype-config,)
+
+AC_PATH_PROG(FREETYPE_CONFIG, freetype-config,, "$PATH:/usr/local/bin:/sw/bin:/opt/local/bin")
+
 OLDCPPFLAGS="${CPPFLAGS}"
 OLDLIBS="${LIBS}"
 if test "x${FREETYPE_CONFIG}" '!=' "x"; then
-    CPPFLAGS="$CPPFLAGS "`freetype-config --cflags`
+    CPPFLAGS="$CPPFLAGS "`$FREETYPE_CONFIG --cflags`
 else if test -d /usr/include/freetype2; then
     CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
 else if test -d /usr/local/include/freetype2; then
@@ -54,7 +56,7 @@ fi
 
 if test "x${HAVE_FREETYPE}" = "x1"; then 
     if test "x${FREETYPE_CONFIG}" '!=' "x"; then
-	LIBS="$LIBS "`freetype-config --libs`
+	LIBS="$LIBS "`$FREETYPE_CONFIG --libs`
     else
 	LIBS="$LIBS -lfreetype"
     fi
