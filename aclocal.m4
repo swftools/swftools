@@ -12,11 +12,9 @@ export CROSSCOMPILE
 
 if test "x${CROSSCOMPILE}" = "x1"; then
  AC_MSG_RESULT(we are cross compiling- trying to guess from system type)
- AC_MSG_CHECKING(for system type)
- systemguess=`./config.guess`
- AC_MSG_RESULT(${systemguess})
+ AC_CANONICAL_SYSTEM
  AC_MSG_CHECKING([for byte order, try 2])
- case "${systemguess}" in
+ case "${target}" in
   *86* | *-pc-* )
      LITTLEENDIAN=1
      ;;
