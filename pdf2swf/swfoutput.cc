@@ -808,12 +808,18 @@ void drawpath2poly(struct swfoutput *obj, SWF_OUTLINE*outline, struct swfmatrix*
     tmp->last = 0;
 
     while(1) {
+	double previousx = x, previousy = y;
 	if(tmp) {
 	    x += (tmp->dest.x/(float)0xffff);
 	    y += (tmp->dest.y/(float)0xffff);
 	}
         if(!tmp || tmp->type == SWF_PATHTYPE_MOVE) {
 	    if(valid && last) {
+		if(fabs(lastx-previousx)<0.001 && fabs(lasty-previousy)<0.001) {
+		    /* endpoints match- the path is closed.
+		       Don't bother to draw endings */
+		    drawShortPath(obj, lastx, lasty, m, last);
+		}
 		if(last->type == SWF_PATHTYPE_LINE && t1linelen(obj,last)>line_width*2 &&
 		   lastwasline && line_cap != LINE_CAP_ROUND)
 		    drawShortPathWithStraightEnds(obj, lastx, lasty, m, last, valid, line_cap, line_join, line_width);
@@ -828,7 +834,7 @@ void drawpath2poly(struct swfoutput *obj, SWF_OUTLINE*outline, struct swfmatrix*
 	    lasty = y;
 	} else {
 	    if(!last)
-		last = tmp;
+		last = tmp; //remember last stroke start (first segment after moveto)
 	    valid++;
 	}
 
@@ -1724,11 +1730,11 @@ static void endshape(swfoutput*obj, int clipdepth)
        (i->bboxrect.xmin == i->bboxrect.xmax && 
         i->bboxrect.ymin == i->bboxrect.ymax) ||
        /*bbox outside page?*/
-       (i->bboxrect.xmax <= i->min_x ||
-	i->bboxrect.ymax <= i->min_y ||
-	i->bboxrect.xmin >= i->max_x ||
-	i->bboxrect.ymin >= i->max_y)
-       ) 
+       (i->bboxrect.xmax <= i->min_x*20 ||
+	i->bboxrect.ymax <= i->min_y*20 ||
+	i->bboxrect.xmin >= i->max_x*20 ||
+	i->bboxrect.ymin >= i->max_y*20)
+       )
     {
 	// delete the shape again, we didn't do anything
 	cancelshape(obj);
