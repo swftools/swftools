@@ -40,10 +40,10 @@ typedef struct _SPOINT
 } SPOINT, * LPSPOINT;
 
 typedef struct _RGBA
-{ U8    r;
+{ U8    a;
+  U8    r;
   U8    g;
   U8    b;
-  U8    a;
 } RGBA, * LPRGBA;
 
 typedef struct _SRECT
@@ -419,6 +419,24 @@ int SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data);
 int SetJPEGBitsFinish(JPEGBITS * jpegbits);
 
 int SetJPEGBits(TAG * t,char * fname,int quality); // paste jpg file into swf stream
+
+#define BYTES_PER_SCANLINE(width) ((width+3)&0xfffffffc)
+
+#define BMF_8BIT        3               // Bitmap formats
+#define BMF_16BIT       4
+#define BMF_32BIT       5
+
+#define BM16_BLUE       0xf800          // Bitmasks for 16 Bit Color
+#define BM16_RED        0x00f0
+#define BM16_GREEN      0x000f
+
+#define BM32_BLUE       0xff000000      // Bitmasks for 32 Bit Color
+#define BM32_GREEN      0x00ff0000
+#define BM32_RED        0x0000ff00
+
+int SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
+int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
+int SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 
 // swftools.c
 

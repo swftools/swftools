@@ -18,8 +18,15 @@
 #ifdef HAVE_JPEGLIB_H
 #include <jpeglib.h>
 #define _JPEGLIB_INCLUDED_
-#endif //HAVE_JPEGLIB_H
-#endif //HAVE_LIBJPEG
+#endif // HAVE_JPEGLIB_H
+#endif // HAVE_LIBJPEG
+
+#ifdef HAVE_LIBZ
+#ifdef HAVE_ZLIB_H
+#include <zlib.h>
+#define _ZLIB_INCLUDED_
+#endif // HAVE_ZLIB_H
+#endif // HAVE_LIBZ
 
 // Win32 support may be broken since it was only tested in an older version for Watcom C
 #ifdef __NT__
@@ -651,7 +658,7 @@ int ReadSWF(int handle,SWF * swf)       // Reads SWF to memory (malloc'ed), retu
   if (!swf) return -1;
   memset(swf,0x00,sizeof(SWF));
 
-  { char b[32];                         // Header lesen
+  { char b[32];                         // read Header
     TAG t1;
     TAG * t;
     
@@ -673,7 +680,7 @@ int ReadSWF(int handle,SWF * swf)       // Reads SWF to memory (malloc'ed), retu
     GetU8(&t1);
     lseek(handle,GetTagPos(&t1)-1,SEEK_SET);
   
-                                        // Tags lesen und verketten
+                                        // reda tags and connect to list
     t = &t1;
     while (t) t = ReadTag(handle,t);
     swf->FirstTag = t1.next;
@@ -739,8 +746,8 @@ int  WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or
       if (ret!=l)
       {
         #ifdef DEBUG_RFXSWF
-	  printf("ret:%d (fd:%d)\n",ret, handle);
-	  perror("write:");
+          printf("ret:%d (fd:%d)\n",ret, handle);
+          perror("write:");
           fprintf(stderr,"WriteSWF() failed: Header.\n");
         #endif
         return -1;
