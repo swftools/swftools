@@ -676,20 +676,112 @@ SHAPE2* swf_ShapeToShape2(SHAPE*shape) {
     return shape2;
 };
 
-SHAPE2* parseDefineShape(TAG*tag)
+/*LINESTYLE* parseFillStyleArray(TAG*tag)
 {
-    int num = 0;
+    U16 count;
+    int t;
+    int num=0;
     if(tag->id == ST_DEFINESHAPE)
 	num = 1;
     else if(tag->id == ST_DEFINESHAPE2)
 	num = 2;
     else if(tag->id == ST_DEFINESHAPE3)
 	num = 3;
-    /* todo */
-    fprintf(stderr, "Not implemented yet!\n");
-    exit(1);
+    else return 0;
+
+    count = swf_GetU8(tag);
+    if(count == 0xff && num>1) // defineshape2,3 only
+	count = swf_GetU16(tag);
+
+    for(t=0;t<count;t++)
+    {
+	int type;
+	U8*pos;
+	swf_ResetReadBits(tag);
+	type = swf_GetU8(tag); //type
+	if(type == 0) {
+	    if(num == 3)
+		swf_GetRGBA(tag, NULL);
+	    else 
+		swf_GetRGB(tag, NULL);
+	}
+	else if(type == 0x10 || type == 0x12)
+	{
+	    swf_ResetReadBits(tag);
+	    swf_GetMatrix(tag, NULL);
+	    swf_ResetReadBits(tag);
+	    swf_GetGradient(tag, NULL, alpha num>=3?1:0);
+	}
+	else if(type == 0x40 || type == 0x41)
+	{
+	    swf_ResetReadBits(tag);
+	    // we made it.
+	    if(tag->data[tag->pos] != 0xff ||
+	       tag->data[tag->pos+1] != 0xff)
+	    //(callback)(tag, tag->pos, callback_data);
+
+	    swf_GetU16(tag);
+	    swf_ResetReadBits(tag);
+	    swf_GetMatrix(tag, NULL);
+	    swf_GetMatrix(tag, NULL);
+	}
+	else {
+	    fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x\n",type);
+	}
+    }
+    swf_ResetReadBits(tag);
+    count = swf_GetU8(tag); // line style array
+    if(count == 0xff)
+	count = swf_GetU16(tag);
+    for(t=0;t<count;t++) 
+    {
+	swf_GetU16(tag);
+	swf_GetU16(tag);
+	if(num == 3)
+	    swf_GetRGBA(tag, NULL);
+	else
+	    swf_GetRGB(tag, NULL);
+    }
+}*/
+
+/*SHAPE2* parseDefineShape(TAG*tag)
+{
+    int num = 0;
+    SHAPE2*shape;
+    U16 fill,line;
+    if(tag->id == ST_DEFINESHAPE)
+	num = 1;
+    else if(tag->id == ST_DEFINESHAPE2)
+	num = 2;
+    else if(tag->id == ST_DEFINESHAPE3)
+	num = 3;
+    else return 0;
+
+    swf_GetU16();
+
+    shape = (SHAPE2*)malloc(sizeof(SHAPE2));
+
+//    LINESTYLE * linestyles;
+//    int numlinestyles;
+//    FILLSTYLE* fillstyles;
+//    int numfillstyles;
+//    struct _SHAPELINE * lines;
+//    SRECT* bbox; // may be NULL 
+
+    swf_GetRect();
+    swf_ResetReadBits(t); 
+    fill = (U16)swf_GetBits(t,4);
+    line = (U16)swf_GetBits(t,4);
+
+    swf_Get
+
+    
+
+
+
+
     return 0;
-}
+}*/
 
 
 SHAPE*	   swf_Shape2ToShape(SHAPE2*shape)
