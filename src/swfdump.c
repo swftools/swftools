@@ -653,7 +653,23 @@ int main (int argc,char ** argv)
             printf(" frees object %04d", swf_GetPlaceID(tag));
         }
 	else if(tag->id == ST_STARTSOUND) {
-	    printf(" starts id %04d", swf_GetPlaceID(tag));
+	    U8 flags;
+	    U16 id;
+	    id = swf_GetU16(tag);
+	    flags = swf_GetU8(tag);
+	    if(flags & 32)
+		printf(" stops sound with id %04d", id);
+	    else
+		printf(" starts sound with id %04d", id);
+	    if(flags & 16)
+		printf(" (if not already playing)");
+	    if(flags & 1)
+		swf_GetU32(tag);
+	    if(flags & 2)
+		swf_GetU32(tag);
+	    if(flags & 4) {
+		printf(" looping %d times", swf_GetU16(tag));
+	    }
 	}
 	else if(tag->id == ST_FRAMELABEL) {
 	    int l = strlen(tag->data);
