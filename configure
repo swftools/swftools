@@ -2452,9 +2452,9 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
     export JPEG2SWF
   fi
   echo "***************************************************"
-  FILES="./release ${avi2swf} Makefile lib/bladeenc/Makefile lib/Makefile src/Makefile swfs/Makefile"
+  FILES="./release ${avi2swf} Makefile lib/Makefile src/Makefile swfs/Makefile"
 else
-  FILES="./release ${avi2swf} Makefile lib/bladeenc/Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
+  FILES="./release ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile pdf2swf/fonts/Makefile swfs/Makefile"
 fi
 
 
