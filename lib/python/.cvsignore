@@ -1,1 +1,1 @@
-m Makefile mypython swfpython
+m Makefile mypython swfpython test_*
