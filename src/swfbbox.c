@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/log.h"
 
 static char * filename = 0;
 static char * outfilename = "output.swf";
@@ -79,11 +80,12 @@ int args_callback_longoption(char*name,char*val)
 }
 void args_callback_usage(char*name)
 {    
-    printf("Usage: %s [-at] file.swf\n", name);
+    printf("Usage: %s [-OS] file.swf\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
     printf("\t-O , --optimize\t\t Recalculate bounding boxes\n");
     printf("\t-S , --swifty\t\t Print out transformed bounding boxes\n");
     printf("\t-o , --output\t\t Set output filename (for -O)\n");
+    printf("\t-v , --verbose\t\t Be more verbose\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -331,16 +333,81 @@ MATRIX getmatrix(TAG*tag)
     return o.matrix;
 }
 
+static void swf_OptimizeBoundingBoxes(SWF*swf)
+{
+    TAG* tag = swf->firstTag;
+    while (tag) {
+	if (tag->id == ST_DEFINESHAPE ||
+	    tag->id == ST_DEFINESHAPE2 ||
+	    tag->id == ST_DEFINESHAPE3) {
+	    SHAPE2 s;
+	    if(verbose) printf("%s\n", swf_TagGetName(tag));
+	    swf_ParseDefineShape(tag, &s);
+	    swf_Shape2Optimize(&s);
+	    tag->len = 2;
+	    tag->pos = 0;
+	    swf_SetShape2(tag, &s);
+	}
+    }
+}
+
+static void showSwiftyOutput(SWF*swf) 
+{
+    TAG*tag = swf->firstTag;
+    int frame=0;
+    printf("{\n\t{frame %d}\n", frame++);
+
+    while (tag) {
+	if (tag->id == ST_SHOWFRAME) {
+	    printf("}\n{\n\t{frame %d}\n", frame++);
+	}
+	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	    if(hasid(tag)) {
+		depth2id[swf_GetDepth(tag)] = swf_GetPlaceID(tag);
+	    }
+	    if(hasname(tag)) {
+		depth2name[swf_GetDepth(tag)] = getname(tag);
+	    }
+	}
+	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	    MATRIX m = getmatrix(tag);
+	    U16 id = depth2id[swf_GetDepth(tag)];
+	    char*name = depth2name[swf_GetDepth(tag)];
+	    char buf[40];
+	    SRECT bbox = bboxes[id];
+	    SPOINT p1,p2,p3,p4;
+	    p1.x = bbox.xmin; p1.y = bbox.ymin;
+	    p2.x = bbox.xmax; p2.y = bbox.ymin;
+	    p3.x = bbox.xmin; p3.y = bbox.ymax;
+	    p4.x = bbox.xmax; p4.y = bbox.ymax;
+	    p1 = swf_TurnPoint(p1, &m);
+	    p2 = swf_TurnPoint(p2, &m);
+	    p3 = swf_TurnPoint(p3, &m);
+	    p4 = swf_TurnPoint(p4, &m);
+	    if(!name) {
+		sprintf(buf, "ID%d", id);name = buf;
+	    }
+	    //printf("\t#%.4f %.4f %.4f %.4f | %.4f %.4f\n", m.sx/65536.0, m.r1/65536.0, m.r0/65536.0, m.sy/65536.0, m.tx/20.0, m.ty/20.0);
+	    printf("\t{%s {%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f}}\n", name, 
+		    p1.x/20.0, p1.y/20.0, p2.x/20.0, p2.y/20.0,
+		    p3.x/20.0, p3.y/20.0, p4.x/20.0, p4.y/20.0);
+	}
+	tag = tag->next;
+    }
+    printf("}\n");
+}
+
+    
 int main (int argc,char ** argv)
 { 
     TAG*tag;
     SWF swf;
     int fi;
-    int frame=0;
     memset(bboxes, 0, sizeof(bboxes));
     memset(depth2name, 0, sizeof(depth2name));
 
     processargs(argc, argv);
+    initLog(0,0,0,0,0,verbose?LOGLEVEL_DEBUG:LOGLEVEL_WARNING);
 
     if(!filename) {
         fprintf(stderr, "You must supply a filename.\n");
@@ -362,67 +429,26 @@ int main (int argc,char ** argv)
     }
     close(fi);
 
+    swf_OptimizeTagOrder(&swf);
     swf_FoldAll(&swf);
-    tag = swf.firstTag;
 
-    if(swifty) {
-	printf("{\n\t{frame %d}\n", frame++);
+    /* Optimize bounding boxes in case -O flag was set */
+    if(optimize) {
+	swf_OptimizeBoundingBoxes(&swf);
     }
-
+    
+    /* Create an ID to Bounding Box table */
+    tag = swf.firstTag;
     while (tag) {
-	if (tag->id == ST_DEFINESHAPE ||
-	    tag->id == ST_DEFINESHAPE2 ||
-	    tag->id == ST_DEFINESHAPE3) {
-	    SHAPE2 s;
-	    if(verbose) printf("%s\n", swf_TagGetName(tag));
-	    swf_ParseDefineShape(tag, &s);
-	    swf_Shape2Optimize(&s);
-	    tag->len = 2;
-	    swf_SetShape2(tag, &s);
-	}
 	if(swf_isDefiningTag(tag) && tag->id != ST_DEFINESPRITE) {
 	    bboxes[swf_GetDefineID(tag)] = swf_GetDefineBBox(tag);
 	}
-	if(swifty) {
-	    if (tag->id == ST_SHOWFRAME) {
-		printf("}\n{\n\t{frame %d}\n", frame++);
-	    }
-	    if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
-		if(hasid(tag)) {
-		    depth2id[swf_GetDepth(tag)] = swf_GetPlaceID(tag);
-		}
-		if(hasname(tag)) {
-		    depth2name[swf_GetDepth(tag)] = getname(tag);
-		}
-	    }
-	    if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
-		MATRIX m = getmatrix(tag);
-		U16 id = depth2id[swf_GetDepth(tag)];
-		char*name = depth2name[swf_GetDepth(tag)];
-		char buf[40];
-		SRECT bbox = bboxes[id];
-		SPOINT p1,p2,p3,p4;
-		p1.x = bbox.xmin; p1.y = bbox.ymin;
-		p2.x = bbox.xmax; p2.y = bbox.ymin;
-		p3.x = bbox.xmin; p3.y = bbox.ymax;
-		p4.x = bbox.xmax; p4.y = bbox.ymax;
-		p1 = swf_TurnPoint(p1, &m);
-		p2 = swf_TurnPoint(p2, &m);
-		p3 = swf_TurnPoint(p3, &m);
-		p4 = swf_TurnPoint(p4, &m);
-		if(!name) {
-		    sprintf(buf, "ID%d", id);name = buf;
-		}
-		//printf("\t#%.4f %.4f %.4f %.4f | %.4f %.4f\n", m.sx/65536.0, m.r1/65536.0, m.r0/65536.0, m.sy/65536.0, m.tx/20.0, m.ty/20.0);
-		printf("\t{%s {%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f}}\n", name, 
-			p1.x/20.0, p1.y/20.0, p2.x/20.0, p2.y/20.0,
-			p3.x/20.0, p3.y/20.0, p4.x/20.0, p4.y/20.0);
-	    }
-	}
 	tag = tag->next;
     }
+    
+    /* Create an ID->Bounding Box table for all bounding boxes */
     if(swifty) {
-	printf("}\n");
+	showSwiftyOutput(&swf);
     }
 
     if(optimize) {
