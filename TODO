@@ -49,6 +49,7 @@ swfextract:
 swfbbox:
 
     * support for MorphShape?
+    * support for clipping when doing -e.
 
 wav2swf:
 
@@ -65,6 +66,13 @@ png2swf:
 
     * Image mode 4
     * Interlace mode 1
+    * filtering: is alpha 255 or 0 in non-existant surrounding pixels?
+
+swfrender:
+
+    * Does a move-type PLACEOBJECT2 reset matrix etc. if it isn't set?
+    * If an actionscript in frame 2 sets a sprite (set in frame 1) to frame 3, what
+      does happen if we jump to frame 3 directly?
 
 Makefiles/configure/installation:
 
