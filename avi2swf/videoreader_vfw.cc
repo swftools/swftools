@@ -89,14 +89,14 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     int linex = ((bytesperpixel/8)+3)&~3;
     memset(dest, 255, dest_width*dest_height*4);//pre-fill alpha channel
 
-    int starty = flip? 0 : dest_height-1;
-    int endy   = flip? dest_height-1 : 0;
-    int yinc   = flip? 1 : -1;
+    const int starty = flip? 0 : dest_height-1;
+    const int endy   = flip? dest_height : -1;
+    const int yinc   = flip? 1 : -1;
 
     if(bi->biBitCount==1) {
 	UCHAR*img = data;
 	int y;
-	for(y=starty;y<=endy;y+=yinc) {
+	for(y=starty;y!=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -107,7 +107,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
 	UCHAR*img = &data[bi->biClrUsed*4];
 	UCHAR*pal = data;
 	int y;
-	for(y=starty;y<=endy;y+=yinc) {
+	for(y=starty;y!=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width/2;x++) {
@@ -120,7 +120,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
 	UCHAR*img = &data[bi->biClrUsed*4];
 	UCHAR*pal = data;
 	int y;
-	for(y=starty;y<=endy;y+=yinc) {
+	for(y=starty;y!=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -131,7 +131,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     } else if(bi->biBitCount==24) {
 	UCHAR*img = data;
 	int y;
-	for(y=starty;y<=endy;y+=yinc) {
+	for(y=starty;y!=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -142,7 +142,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     } else if(bi->biBitCount==32) {
 	UCHAR*img = data;
 	int y;
-	for(y=starty;y<=endy;y+=yinc) {
+	for(y=starty;y!=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
