@@ -342,9 +342,9 @@ installdirs mostlyclean-generic distclean-generic clean-generic \
 maintainer-clean-generic clean mostlyclean distclean maintainer-clean
 
 rfxswf.o: rfxswf.c rfxswf.h bitio.c bitio.h modules/swfbits.c \
-		      modules/swfaction.c modules/swfdump.c modules/swfcgi.c \
-		      modules/swfbutton.c modules/swftext.c modules/swftools.c \
-		      modules/swfsound.c modules/swfshape.c
+modules/swfaction.c modules/swfdump.c modules/swfcgi.c \
+modules/swfbutton.c modules/swftext.c modules/swftools.c \
+modules/swfsound.c modules/swfshape.c
 	$(COMPILE) -c $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
