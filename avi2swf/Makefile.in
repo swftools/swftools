@@ -33,7 +33,7 @@ uninstall:
 	@file=avi2swf;$(UNINSTALL_BIN);$(UNINSTALL_MAN1)
 
 clean: 
-	rm -f *.o *.obj *.lo *.a *.la avi2swf gmon.out
+	rm -f *.o *.obj *.lo *.a *.la avi2swf avi2swf.exe gmon.out
 
 doc:
 	perl ../parsedoc.pl avi2swf.doc
