@@ -4,6 +4,15 @@ swfcombine - a tool for combining swf (flash) files
 .SH Synopsis
 .B swfcombine
 [\fIoptions\fR] [\fImasterfile.swf\fR] [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
+
+.B swfcombine
+[\fIoptions\fR] [\fImasterfile.swf\fR] [\fI#id1=\fR][\fIslavefile1.swf\fR] ... [\fI#idN=\fR][\fIslavefileN.swf\fR]
+
+.B swfcombine
+[\fIoptions\fR] --stack [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
+
+.B swfcombine
+[\fIoptions\fR] --dummy [\fIfile.swf\fR]
 .SH DESCRIPTION
 Take two or more SWF files, and combine them into a new SWF. SWFs can either
 be stacked (no masterfile is present) or inserted (into the masterfile).
@@ -12,7 +21,7 @@ SWF files are animation files which can be displayed in Web Browsers using
 the Flash Plugin.
 .LP
 For template mechanisms, it's often convenient to separate the processes
-of generating small animation fragments, and merging them all into a big
+of generating small animation fragments and merging them into a big
 movie. swfcombine can be used to perform the latter.
 .SH OPTIONS
 .TP
@@ -72,6 +81,8 @@ their exact position inside the master file.
 The slave files will then be converted into sprites, inserted into the
 master file, and all PlaceObject tags in the master file which match the
 name of the slave file will be updated to correctly display the slave sprite.
+The slave name may also be the object id, preceded by '#', in which case 
+the object to be replaced is referenced by id and not by instance name.
 .SH Combining (stacking) one or more .swf files without a master
 The flash files will be inserted in seperate frames. They will still be
 packed into Movieclips, therefore the outputfile will have exactly as many
