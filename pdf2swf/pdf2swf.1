@@ -11,9 +11,9 @@ files.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Print short help message and exit
-.\".TP
-.\" \fB\-\-version\fR
-.\" Print version info and exit
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version info and exit
 .TP
 \fB\-p\fR, \fB\-\-pages\fR \fIrange\fR
 Convert only pages in \fIrange\fR with \fIrange\fR e.g. 1-20 or 1,4,6,9-11 or
@@ -21,6 +21,13 @@ Convert only pages in \fIrange\fR with \fIrange\fR e.g. 1-20 or 1,4,6,9-11 or
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Be verbose. Use more than one -v for greater effect.
+.TP
+\fB\-i\fR, \fB\-\-ignore\fR
+Allows pdf2swf to change the draw order of the pdf. This may make the generated
+SWF files a little bit smaller.
+.TP
+\fB\-j\fR, \fB\-\-jpegquality\fR
+Set quality of embedded jpeg pictures. 0 is worst (small), 100 is best (big). (default:85)
 .SH NOTES
 Every page in the PDF will be a frame in the SWF. This means the generated
 SWF must be inserted into some wrapper SWF if the SWF needs to be 
