@@ -50,15 +50,16 @@
 
 // memory allocation
 
-void* rfxalloc(int size)
+void* rfx_alloc(int size)
 {
   void*ptr;
-#ifdef HAVE_CALLOC
-  ptr = calloc(size);
-#else
+  if(size == 0) {
+    *(int*)0 = 0xdead;
+    fprintf(stderr, "Warning: Zero alloc\n");
+    return 0;
+  }
+
   ptr = malloc(size);
-  memset(ptr, 0, size);
-#endif
   if(!ptr) {
     fprintf(stderr, "FATAL: Out of memory\n");
     /* TODO: we should send a signal, so that the debugger kicks in */
@@ -66,9 +67,56 @@ void* rfxalloc(int size)
   }
   return ptr;
 }
-
-void rfxdealloc(void*ptr)
+void* rfx_realloc(void*data, int size)
 {
+  void*ptr;
+  if(size == 0) {
+    *(int*)0 = 0xdead;
+    fprintf(stderr, "Warning: Zero realloc\n");
+    rfx_free(data);
+    return 0;
+  }
+  if(!data) {
+    ptr = malloc(size);
+  } else {
+    ptr = realloc(data, size);
+  }
+
+  if(!ptr) {
+    fprintf(stderr, "FATAL: Out of memory\n");
+    /* TODO: we should send a signal, so that the debugger kicks in */
+    exit(1);
+  }
+  return ptr;
+}
+void* rfx_calloc(int size)
+{
+  void*ptr;
+  if(size == 0) {
+    *(int*)0 = 0xdead;
+    fprintf(stderr, "Warning: Zero alloc\n");
+    return 0;
+  }
+#ifdef HAVE_CALLOC
+  ptr = calloc(size);
+#else
+  ptr = malloc(size);
+#endif
+  if(!ptr) {
+    fprintf(stderr, "FATAL: Out of memory\n");
+    /* TODO: we should send a signal, so that the debugger kicks in */
+    exit(1);
+  }
+#ifndef HAVE_CALLOC
+  memset(ptr, 0, size);
+#endif
+  return ptr;
+}
+
+void rfx_free(void*ptr)
+{
+  if(!ptr)
+    return;
   free(ptr);
 }
 
@@ -833,6 +881,13 @@ void swf_ResetTag(TAG*tag, U16 id)
 {
     tag->len = tag->pos = tag->readBit = tag->writeBit = 0;
     tag->id = id;
+}
+
+TAG* swf_CopyTag(TAG*tag, TAG*to_copy)
+{
+    tag = swf_InsertTag(tag, to_copy->id);
+    swf_SetBlock(tag, to_copy->data, to_copy->len);
+    return tag;
 }
 
 int swf_DeleteTag(TAG * t)
