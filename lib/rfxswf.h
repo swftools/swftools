@@ -358,6 +358,7 @@ int swf_FontUse(FONTUSAGE * use,U8 * s);
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetInfo(TAG * t,SWFFONT * f);
 
+// the following two functions are obsolete and will be removed soon
 int swf_FontExport(int handle,SWFFONT * f);
 int swf_FontImport(int handle,SWFFONT * * f);
 

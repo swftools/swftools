@@ -128,6 +128,7 @@ int main(int argc, char ** argv)
   close(f);
 
   swf_FreeTags(&swf);
+//  swf_FontFree(font);
 
 #ifdef __NT__
   system("start ..\\text.swf");

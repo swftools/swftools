@@ -372,9 +372,9 @@ int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
       }
       else
       { swf_ShapeFree(f->glyph[i].shape);
-	f->ascii2glyph[f->glyph2ascii[i]] = -1;
+        f->ascii2glyph[f->glyph2ascii[i]] = -1;
 	f->glyph2ascii[i] = 0;
-        f->glyph[i].shape   = 0;
+        f->glyph[i].shape   = NULL;
         f->glyph[i].advance = 0;
       }
     } else f->ascii2glyph[f->glyph2ascii[i]] = -1;
@@ -700,10 +700,10 @@ void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
   {
       t = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
       swf.firstTag = t;
-	    rgb.r = 0xff;
-	    rgb.g = 0xff;
-	    rgb.b = 0xff;
-	    swf_SetRGB(t,&rgb);
+            rgb.r = 0xff;
+            rgb.g = 0xff;
+            rgb.b = 0xff;
+            swf_SetRGB(t,&rgb);
       t = swf_InsertTag(t,ST_DEFINEFONT);
   }
   else
@@ -718,8 +718,7 @@ void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
         swf_FontSetInfo(t,font);
 
   if(!useDefineFont2)
-  {
-	int textscale = 400;
+  {     int textscale = 400;
 	int s;
 	int xmax = 0;
 	int ymax = textscale * 20;
@@ -791,12 +790,13 @@ void swf_WriteFont(SWFFONT*font, char* filename, int useDefineFont2)
 		} 
 	    }
 	    swf_SetU8(t,0);
-        
-	t = swf_InsertTag(t,ST_PLACEOBJECT2);
 
-	    swf_ObjectPlace(t,font->id+1,1,NULL,NULL,NULL);
+        
+        t = swf_InsertTag(t,ST_PLACEOBJECT2);
+
+            swf_ObjectPlace(t,font->id+1,1,NULL,NULL,NULL);
      
-	t = swf_InsertTag(t,ST_SHOWFRAME);
+        t = swf_InsertTag(t,ST_SHOWFRAME);
   }
   
   t = swf_InsertTag(t,ST_END);

@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include "../rfxswf.h"
 
-#define PRINTABLE(a) ((a>='A')&&(a<='Z'))||((a>='a')&&(a<='z'))||((a>='0')&&(a<='9'))
+#define PRINTABLE(a) (((a>0x20)&&(a<0xff)&&(a!='\\'))?a:0x20)
 
 SWF swf;
 
@@ -74,7 +74,7 @@ void DumpFont(SWFFONT * f,char * name)
     if (f->glyph[i].shape)
     { printf("  addGlyph(f,%3i, 0x%02x,%4i, &Glyphs_%s[0x%04x],%4i); // %c\n",
              i, f->glyph2ascii[i], f->glyph[i].advance, name, gpos[i],
-             f->glyph[i].shape->bitlen,(i!='\\')?i:0x20);
+             f->glyph[i].shape->bitlen,PRINTABLE(f->glyph2ascii[i]));
     }
 
   printf("  return f;\n}\n\n");
