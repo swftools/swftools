@@ -160,6 +160,8 @@ static void swf_ShapeDrawerSplineTo(drawer_t*draw, FPOINT * c1, FPOINT*  to)
 static void swf_ShapeDrawerFinish(drawer_t*draw)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
+    if(sdraw->isfinished)
+	return;
 	
     fixEndPoint(draw);
 

@@ -266,8 +266,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    continue;
 	}
 
-	draw.finish(&draw);
-
 #if 0
 	if(bbox.xMin > 0) {
 	    font->glyph[font->numchars].advance = (bbox.xMax*FT_SCALE)/FT_SUBPIXELS;

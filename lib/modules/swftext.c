@@ -312,6 +312,8 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	if (glyphcount)		/* this _if_ is not in the specs */
 	    swf_GetU16(tag);	// fontcodeoffset
     }
+    /* TODO: we should use the offset positions, not just
+             blindly read in shapes */
     for (t = 0; t < glyphcount; t++)
 	swf_GetSimpleShape(tag, &(font->glyph[t].shape));
 
@@ -835,7 +837,7 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
 	swf_SetBlock(tag, f->name, strlen(f->name));
     } else {
 	/* font name (="") */
-	swf_SetU8(tag, 0);	/*placeholder */
+	swf_SetU8(tag, 0);
     }
     /* number of glyphs */
     swf_SetU16(tag, f->numchars);
@@ -866,8 +868,7 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
 	    if(f->glyph[t].shape) {
 		swf_SetSimpleShape(tag, f->glyph[t].shape);
 	    } else {
-		swf_SetU8(tag, 0);
-		swf_SetU8(tag, 0);
+		swf_SetU8(tag, 0); //non-edge(1) + edge flags(5)
 	    }
 	}
     }
