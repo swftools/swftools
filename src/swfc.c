@@ -337,10 +337,9 @@ static MATRIX s_instancepos(instance_t*i, parameters_t*p)
     return m;
 }
 
-void s_swf(char*name, SRECT r, int version, int fps, int compress)
+void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA background)
 {
     SWF*swf = (SWF*)malloc(sizeof(SWF));
-    RGBA rgb;
 
     if(stackpos)
 	syntaxerror(".swf blocks can't be nested");
@@ -351,8 +350,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress)
     swf->frameRate = fps;
     swf->firstTag = tag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
     swf->compressed = compress;
-    rgb.r = 0x00;rgb.g = 0x00;rgb.b = 0x00;
-    swf_SetRGB(tag,&rgb);
+    swf_SetRGB(tag,&background);
     
     if(stackpos==sizeof(stack)/sizeof(stack[0]))
 	syntaxerror("too many levels of recursion");
@@ -1266,6 +1264,7 @@ static int c_swf(map_t*args)
     int version = parseInt(lu(args, "version"));
     int fps = (int)(parseFloat(lu(args, "fps"))*256);
     int compress = 0;
+    RGBA color = parseColor(lu(args, "background"));
     if(!strcmp(name, "!default!") || override_outputname)
 	name = outputname;
     
@@ -1277,7 +1276,7 @@ static int c_swf(map_t*args)
 	compress = 0;
     else syntaxerror("value \"%s\" not supported for the compress argument", compressstr);
 
-    s_swf(name, bbox, version, fps, compress);
+    s_swf(name, bbox, version, fps, compress, color);
     return 0;
 }
 int isRelative(char*str)
@@ -1732,7 +1731,7 @@ static struct {
     command_func_t* func;
     char*arguments;
 } arguments[] =
-{{"swf", c_swf, "bbox=autocrop version=5 fps=50 name=!default! @compress=default"},
+{{"swf", c_swf, "bbox=autocrop background=black version=5 fps=50 name=!default! @compress=default"},
  {"frame", c_frame, "n=<plus>1"},
 
     // "import" type stuff
