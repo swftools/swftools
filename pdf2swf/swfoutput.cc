@@ -888,6 +888,10 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
     if(m->m11 != m->m22)
         usefonts=0;
 
+    if(!font) {
+	msg("<warning> Font is NULL");
+    }
+
     if(usefonts && ! drawonlyshapes)
     {
         int charid = font->getSWFCharID(character, charnr);

@@ -1,4 +1,4 @@
-/*  v2swf.c 
+/*  v2swf.h 
     header file for v2swf.h - part of SWFTools
 
     Copyright (C) 2003 Matthias Kramm <kramm@quiss.org>
@@ -16,6 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
+
 #ifndef __video_h__
 #define __video_h__
 
