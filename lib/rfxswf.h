@@ -451,6 +451,10 @@ void	    swf_SetShape2(TAG*tag, SHAPE2*shape);
 void	   swf_Shape2Free(SHAPE2 * s);
 void	swf_DumpShape(SHAPE2*shape2);
 
+void swf_ParseDefineShape(TAG*tag, SHAPE2*shape);
+void swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
+void swf_SetShape2(TAG*tag, SHAPE2*shape2);
+
 // swfdraw.c
 
 void swf_Shape10DrawerInit(drawer_t*draw, TAG*tag);
@@ -914,6 +918,7 @@ typedef struct _VIDEOSTREAM
 void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width, U16 height);
 void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant/* 1-31, 1=best quality, 31=best compression*/);
 void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant/* 1-31, 1=best quality, 31=best compression*/);
+void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, int quant);
 void swf_VideoStreamClear(VIDEOSTREAM*stream);
 
 #ifdef __cplusplus
