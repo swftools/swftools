@@ -23,5 +23,6 @@
 
 #ifndef __MD5_h__
 #define __MD5_h__
+/* WARNING: crypt_md5 is not reentrant */
 char * crypt_md5(const char *pw, const char *salt);
 #endif

@@ -30,6 +30,8 @@
  * SUCH DAMAGE.
  */
 
+#include <string.h>
+
 #ifndef _NETINET6_MD5_H_
 #define _NETINET6_MD5_H_
 
@@ -65,10 +67,10 @@ typedef struct {
 	u_int8_t	md5_buf[MD5_BUFLEN];
 } md5_ctxt;
 
-extern void md5_init(md5_ctxt *);
-extern void md5_loop(md5_ctxt *, const u_int8_t *, u_int);
-extern void md5_pad(md5_ctxt *);
-extern void md5_result(u_int8_t *, md5_ctxt *);
+static void md5_init(md5_ctxt *);
+static void md5_loop(md5_ctxt *, const u_int8_t *, u_int);
+static void md5_pad(md5_ctxt *);
+static void md5_result(u_int8_t *, md5_ctxt *);
 
 /* compatibility */
 #define MD5_CTX		md5_ctxt
@@ -124,7 +126,7 @@ do {				\
 static char itoa64[] =          /* 0 ... 63 => ascii - 64 */
         "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-void
+static void
 _crypt_to64(char *s, u_long v, int n)
 {
         while (--n >= 0) {
@@ -366,7 +368,7 @@ static const u_int8_t md5_paddat[MD5_BUFLEN] = {
 
 static void md5_calc(u_int8_t *, md5_ctxt *);
 
-void md5_init(ctxt)
+static void md5_init(ctxt)
 	md5_ctxt *ctxt;
 {
 	ctxt->md5_n = 0;
@@ -378,7 +380,7 @@ void md5_init(ctxt)
 	bzero(ctxt->md5_buf, sizeof(ctxt->md5_buf));
 }
 
-void md5_loop(ctxt, input, len)
+static void md5_loop(ctxt, input, len)
 	md5_ctxt *ctxt;
 	const u_int8_t *input;
 	u_int len; /* number of bytes */
@@ -406,7 +408,7 @@ void md5_loop(ctxt, input, len)
 	}
 }
 
-void md5_pad(ctxt)
+static void md5_pad(ctxt)
 	md5_ctxt *ctxt;
 {
 	u_int gap;
@@ -445,7 +447,7 @@ void md5_pad(ctxt)
 	md5_calc(ctxt->md5_buf, ctxt);
 }
 
-void md5_result(digest, ctxt)
+static void md5_result(digest, ctxt)
 	u_int8_t *digest;
 	md5_ctxt *ctxt;
 {
