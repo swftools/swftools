@@ -1,9 +1,8 @@
 swfc:
 
-    * .texture
     * .editbox
-    * simple actionscript commands
     * .buttons
+    * .texture
     * .orbit
     * plugins?
     * .lock/.unlock
@@ -16,6 +15,7 @@ swfc:
     * .egon  (stub is there, never really implemented)... folding edges?
     * .importassets
     * default output filename (name.sc -> name.swf) if unspecified
+    * SWF 3 actionscript commands shortcut
     * .hide/.show?
     * store instance coordinates for .put with same name after .del?
     * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
@@ -29,10 +29,6 @@ pdf2swf:
     * add support for FreeType
     * upgrade xpdf
 
-font2swf:
-    
-    * implement support for truetype fonts.
-
 avi2swf:
 
     * update manpage
@@ -40,14 +36,11 @@ avi2swf:
 
 swfcombine:
 
-    * Handle Bounding boxes
-    * Relocate  SetTarget "/content"  stuff, too?
     * allow "combining" Actionscript and SWF.
-    * "swfcombine -m" (e.g. "swfcombine -mT test.swf") duplicates depths:
-	relocate depth in normalcombine()
     * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
     * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
     * "swfcombine file.swf -x 200 -y 200 -s 200 box1=file1.swf" doesn't work?
+    * Handle Bounding boxes
     * support for centering (remove need to set -x,-y parameters manually when linking
       preloaders)
 
@@ -66,8 +59,7 @@ wav2swf:
 
 librfxswf:
 
-    * Actionscript has memory leaks
-    * Font routines still need a little more work (shape alignment)
+    * logging
 
 png2swf:
 
@@ -76,12 +68,13 @@ png2swf:
 
 Makefiles/configure/installation:
 
-    * check for vsnprintf, strndup etc. and supply replacements
+    * check for vsnprintf, bcopy, bzero, strndup etc. and supply replacements
 
 other:
 
     * swf2fig
     * swfrender
+    * update man pages
 
 documentation:
 
