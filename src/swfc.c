@@ -847,7 +847,7 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
     incrementid();
 }
 
-void s_textshape(char*name, char*fontname, char*_text)
+void s_textshape(char*name, char*fontname, float size, char*_text)
 {
     int g;
     U8*text = (U8*)_text;
@@ -873,7 +873,7 @@ void s_textshape(char*name, char*fontname, char*_text)
     {
 	drawer_t draw;
 	swf_Shape11DrawerInit(&draw, 0);
-	swf_DrawText(&draw, font, _text);
+	swf_DrawText(&draw, font, (int)(size*100), _text);
 	draw.finish(&draw);
 	outline->shape = swf_ShapeDrawerToShape(&draw);
 	outline->bbox = swf_ShapeDrawerGetBBox(&draw);
@@ -2217,8 +2217,9 @@ static int c_textshape(map_t*args)
     char*name = lu(args, "name");
     char*text = lu(args, "text");
     char*font = lu(args, "font");
+    float size = parsePercent(lu(args, "size"));
 
-    s_textshape(name, font, text);
+    s_textshape(name, font, size, text);
     return 0;
 }
 
@@ -2494,7 +2495,7 @@ static struct {
  {"point", c_point, "name x=0 y=0"},
  {"gradient", c_gradient, "name @radial=0"},
  {"outline", c_outline, "name format=simple"},
- {"textshape", c_textshape, "name text font"},
+ {"textshape", c_textshape, "name font size=100% text"},
 
     // character generators
  {"box", c_primitive, "name width height color=white line=1 @fill=none"},
