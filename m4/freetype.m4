@@ -21,11 +21,11 @@ AC_CHECK_PROGS(FREETYPE_CONFIG, freetype-config,)
 OLDCPPFLAGS="${CPPFLAGS}"
 OLDLIBS="${LIBS}"
 if test "x${FREETYPE_CONFIG}" != "x"; then
-    CPPFLAGS="$CFLAGS "`freetype-config --cflags`
+    CPPFLAGS="$CPPFLAGS "`freetype-config --cflags`
 else if test -d /usr/include/freetype2; then
-    CPPFLAGS="$CFLAGS -I/usr/include/freetype2"
+    CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
 else if test -d /usr/local/include/freetype2; then
-    CPPFLAGS="$CFLAGS -I/usr/local/include/freetype2"
+    CPPFLAGS="$CPPFLAGS -I/usr/local/include/freetype2"
 fi 
 fi
 fi
@@ -89,7 +89,7 @@ int main()
 }
 EOF
 
-    ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LIBS -o conftest${ac_exeext}'
+    ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LDFLAGS $LIBS -o conftest${ac_exeext}'
     if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
 	AC_MSG_RESULT(yes)
 	AC_DEFINE_UNQUOTED(HAVE_FREETYPE, 1)
