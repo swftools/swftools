@@ -288,7 +288,7 @@ static void makestackmaster(SWF*swf)
     TAG*tag;
     int t;
     SRECT box;
-    int fileversion = 1;
+    int fileversion = config.zlib?6:3;
     int frameRate = 256;
     RGBA rgb;
     rgb.r=rgb.b=rgb.g=0;
@@ -1218,9 +1218,11 @@ int main(int argn, char *argv[])
 
     fi = open(outputname, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
 
-    if(config.zlib)
+    if(config.zlib) {
+	if(newswf.fileVersion < 6)
+	    newswf.fileVersion = 6;
 	swf_WriteSWC(fi, &newswf);
-    else {
+    } else {
 	newswf.compressed = 0;
 	swf_WriteSWF(fi, &newswf);
     }
