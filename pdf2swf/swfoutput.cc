@@ -65,6 +65,7 @@ static int currentswfid = 0;
 static int depth = 1;
 static int startdepth = 1;
 static int linewidth = 0;
+static SRECT lastpagesize;
 
 static SHAPE* shape;
 static int shapeid = -1;
@@ -1316,15 +1317,100 @@ int swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, i
     return drawchar(obj, obj->swffont, character, charnr, u, &m);
 }
 
-/* initialize the swf writer */
-void swfoutput_init(struct swfoutput* obj, char*_filename, int x1, int y1, int x2, int y2)
+static void endpage(struct swfoutput*obj)
 {
-  RGBA rgb;
+    if(shapeid>=0)
+      endshape(obj,0);
+    if(textid>=0)
+      endtext(obj);
+    while(clippos)
+        swfoutput_endclip(obj);
+
+    if(insertstoptag) {
+	ActionTAG*atag=0;
+	atag = action_Stop(atag);
+	atag = action_End(atag);
+	tag = swf_InsertTag(tag,ST_DOACTION);
+	swf_ActionSet(tag,atag);
+    }
+    tag = swf_InsertTag(tag,ST_SHOWFRAME);
+}
+
+static int firstpage = 1;
+void swfoutput_newpage(struct swfoutput*obj, int pageNum, int x1, int y1, int x2, int y2)
+{
+    endpage(obj);
+
+    for(depth--;depth>=startdepth;depth--) {
+        tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
+        swf_SetU16(tag,depth);
+    }
+    depth = startdepth = 3; /* leave room for clip and background rectangle */
+
+    if(lastpagesize.xmin != x1 ||
+       lastpagesize.xmax != x2 ||
+       lastpagesize.ymin != y1 ||
+       lastpagesize.ymax != y2)
+    {/* add white clipping rectangle */
+	sizex = x2;
+	sizey = y2;
+	msg("<notice> processing page %d (%dx%d)", pageNum,sizex,sizey);
+
+	if(!firstpage) {
+	    msg("<notice> Page has a different size than previous ones");
+	    tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
+	    swf_SetU16(tag,1);
+	    tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
+	    swf_SetU16(tag,2);
+	}
+
+	RGBA rgb;
+	rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
+	SRECT r;
+	SHAPE* s;
+	int ls1=0,fs1=0;
+	int shapeid = ++currentswfid;
+	r.xmin = x1*20;
+	r.ymin = y1*20;
+	r.xmax = x2*20;
+	r.ymax = y2*20;
+	tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+	swf_ShapeNew(&s);
+	fs1 = swf_ShapeAddSolidFillStyle(s, &rgb);
+	swf_SetU16(tag,shapeid);
+	swf_SetRect(tag,&r);
+	swf_SetShapeHeader(tag,s);
+	swf_ShapeSetAll(tag,s,x1*20,y1*20,ls1,fs1,0);
+	swf_ShapeSetLine(tag,s,20*(x2-x1),0);
+	swf_ShapeSetLine(tag,s,0,20*(y2-y1));
+	swf_ShapeSetLine(tag,s,20*(x1-x2),0);
+	swf_ShapeSetLine(tag,s,0,20*(y1-y2));
+	swf_ShapeSetEnd(tag);
+	swf_ShapeFree(s);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag,shapeid,/*depth*/1,0,0,0);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlaceClip(tag,shapeid,/*depth*/2,0,0,0,65535);
+    } else {
+	msg("<notice> processing page %d", pageNum);
+    }
+
+    lastpagesize.xmin = x1;
+    lastpagesize.xmax = x2;
+    lastpagesize.ymin = y1;
+    lastpagesize.ymax = y2;
+    swf_ExpandRect2(&swf.movieSize, &lastpagesize);
+
+    firstpage = 0;
+}
+
+/* initialize the swf writer */
+void swfoutput_init(struct swfoutput* obj, char*_filename)
+{
   SRECT r;
+  RGBA rgb;
   memset(obj, 0, sizeof(struct swfoutput));
   filename = _filename;
-  sizex = x2;
-  sizey = y2;
 
   msg("<verbose> initializing swf output for size %d*%d\n", sizex,sizey);
 
@@ -1332,54 +1418,24 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int x1, int y1, int x
   obj->drawmode = -1;
   
   memset(&swf,0x00,sizeof(SWF));
+  memset(&lastpagesize,0x00,sizeof(SRECT));
 
   swf.fileVersion    = flashversion;
   swf.frameRate      = 0x0040; // 1 frame per 4 seconds
-  swf.movieSize.xmin = 20*x1;
-  swf.movieSize.ymin = 20*y1;
-  swf.movieSize.xmax = 20*x2;
-  swf.movieSize.ymax = 20*y2;
-  
-  depth = 1;
+  swf.movieSize.xmin = 0;
+  swf.movieSize.ymin = 0;
+  swf.movieSize.xmax = 0;
+  swf.movieSize.ymax = 0;
   
   swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
   tag = swf.firstTag;
   rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
   swf_SetRGB(tag,&rgb);
 
-  if(1)/* add white rectangle */
-  {
-      SRECT r;
-      SHAPE* s;
-      int ls1=0,fs1=0;
-      int shapeid = ++currentswfid;
-      r.xmin = x1*20;
-      r.ymin = y1*20;
-      r.xmax = x2*20;
-      r.ymax = y2*20;
-      tag = swf_InsertTag(tag, ST_DEFINESHAPE);
-      swf_ShapeNew(&s);
-      fs1 = swf_ShapeAddSolidFillStyle(s, &rgb);
-      swf_SetU16(tag,shapeid);
-      swf_SetRect(tag,&r);
-      swf_SetShapeHeader(tag,s);
-      swf_ShapeSetAll(tag,s,x1*20,y1*20,ls1,fs1,0);
-      swf_ShapeSetLine(tag,s,20*(x2-x1),0);
-      swf_ShapeSetLine(tag,s,0,20*(y2-y1));
-      swf_ShapeSetLine(tag,s,20*(x1-x2),0);
-      swf_ShapeSetLine(tag,s,0,20*(y1-y2));
-      swf_ShapeSetEnd(tag);
-      swf_ShapeFree(s);
-      tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-      swf_ObjectPlace(tag,shapeid,depth++,0,0,0);
-      tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-      swf_ObjectPlaceClip(tag,shapeid,depth++,0,0,0,65535);
-  }
-
   if(flag_protected)
     tag = swf_InsertTag(tag, ST_PROTECT);
   
-  startdepth = depth;
+  startdepth = depth = 0;
 }
 
 void swfoutput_setprotected() //write PROTECT tag
@@ -1537,37 +1593,6 @@ static void endshape(swfoutput*obj, int clipdepth)
 
     shapeid = -1;
     bboxrectpos = -1;
-}
-
-static void endpage(struct swfoutput*obj)
-{
-    if(shapeid>=0)
-      endshape(obj,0);
-    if(textid>=0)
-      endtext(obj);
-    while(clippos)
-        swfoutput_endclip(obj);
-
-    if(insertstoptag) {
-	ActionTAG*atag=0;
-	atag = action_Stop(atag);
-	atag = action_End(atag);
-	tag = swf_InsertTag(tag,ST_DOACTION);
-	swf_ActionSet(tag,atag);
-    }
-    tag = swf_InsertTag(tag,ST_SHOWFRAME);
-}
-
-void swfoutput_newpage(struct swfoutput*obj)
-{
-    endpage(obj);
-
-    for(depth--;depth>=startdepth;depth--) {
-        tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
-        swf_SetU16(tag,depth);
-    }
-
-    depth = startdepth;
 }
 
 /* Perform cleaning up, complete the swf, and write it out. */

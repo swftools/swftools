@@ -740,8 +740,6 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
   if(rot!=0)
     msg("<verbose> page is rotated %d degrees\n", rot);
 
-  msg("<notice> processing page %d", pageNum);
-
   /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
   Use CropBox, not MediaBox, as page size
@@ -759,11 +757,11 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
   if(!outputstarted) {
     msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
-    swfoutput_init(&output, swffilename,(int)x1,(int)y1,(int)x2,(int)y2);
+    swfoutput_init(&output, swffilename);
     outputstarted = 1;
   }
-  else
-    swfoutput_newpage(&output);
+    
+  swfoutput_newpage(&output, pageNum, (int)x1, (int)y1, (int)x2, (int)y2);
 }
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 

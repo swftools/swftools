@@ -93,12 +93,12 @@ typedef SWF_PATHSEGMENT  SWF_OUTLINE;
 #define DRAWMODE_CLIP 4
 #define DRAWMODE_EOCLIP 5
 
-void swfoutput_init(struct swfoutput*, char*filename, int x1, int y1, int x2, int y2);
+void swfoutput_init(struct swfoutput*, char*filename);
 void swfoutput_setparameter(char*name, char*value);
 
 void swfoutput_setprotected(); //write PROTECT tag
 
-void swfoutput_newpage(struct swfoutput*);
+void swfoutput_newpage(struct swfoutput*, int pageNum, int x1, int y1, int x2, int y2);
 
 void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
 int swfoutput_queryfont(struct swfoutput*, char*fontid);
