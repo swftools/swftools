@@ -105,7 +105,7 @@ static int po_fillTAG(tag_internals_t*self)
     swf_SetPlaceObject(self->tag, pi->po);
     return 1;
 }
-static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
+static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char move)
 {
     static char *kwlist[] = {"character", "depth", "matrix", "colortransform", "ratio", "name", "clipdepth", "action", NULL};
     
@@ -139,6 +139,7 @@ static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
     po->clipdepth = clipdepth;
     po->ratio = ratio;
     po->name = name;
+    po->move = move;
     if(clipdepth) po->clipdepth = clipdepth;
     if(matrix) po->matrix = matrix_getMatrix(matrix);
     if(cxform) po->cxform = colortransform_getCXForm(cxform);
@@ -154,6 +155,14 @@ static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
     mylog("+%08x(%d) PlaceObject %08x(%d)\n", (int)tag, tag->ob_refcnt, character, character->ob_refcnt);
 
     return (PyObject*)tag;
+}
+static PyObject* f_PlaceObject(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    return po_create(self, args, kwargs, 0);
+}
+static PyObject* f_MoveObject(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    return po_create(self, args, kwargs, 1);
 }
 static tag_internals_t placeobject_tag =
 {
@@ -234,6 +243,29 @@ static PyObject* f_Protect(PyObject* self, PyObject* args, PyObject* kwargs)
     return (PyObject*)tag;
 }
 static tag_internals_t protect_tag =
+{
+    parse: 0,
+    fillTAG: 0,
+    dealloc: 0,
+    tagfunctions: 0,
+    datasize: 0,
+};
+//----------------------------------------------------------------------------
+staticforward tag_internals_t showframe_tag;
+static PyObject* f_ShowFrame(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"name", NULL};
+    char*name= 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s", kwlist, &name))
+	return NULL;
+
+    PyObject*tag = tag_new(&showframe_tag);
+    tag_internals_t*itag = tag_getinternals(tag);
+    itag->tag = swf_InsertTag(0, ST_SHOWFRAME);
+    mylog("+%08x(%d) f_ShowFrame", (int)tag, tag->ob_refcnt);
+    return (PyObject*)tag;
+}
+static tag_internals_t showframe_tag =
 {
     parse: 0,
     fillTAG: 0,
@@ -479,9 +511,8 @@ static int videostream_fillTAG(tag_internals_t*self)
     videostream_internal_t*fi = (videostream_internal_t*)self->data;
     if(self->tag)
 	return 1;
-    /* TODO */
-    PyErr_SetString(PyExc_Exception, setError("videostream filling not implemented yet"));return 0;
-    return 1;
+    PyErr_SetString(PyExc_Exception, setError("videostream filling not implemented"));
+    return 0;
 }
 static PyObject* f_DefineVideoStream(PyObject* self, PyObject* args, PyObject* kwargs)
 {
@@ -489,8 +520,10 @@ static PyObject* f_DefineVideoStream(PyObject* self, PyObject* args, PyObject* k
    
     int width=0,height=0,frames=65535;
     static char *kwlist[] = {"width", "height", "frames", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|i", kwlist, &TagClass, &width, &height, &frames))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|i", kwlist, &width, &height, &frames))
 	return NULL;
+
+    printf(": %d %d\n", width, height);
     
     tag_internals_t*itag = tag_getinternals(tag);
     videostream_internal_t*fi = (videostream_internal_t*)itag->data;
@@ -498,7 +531,9 @@ static PyObject* f_DefineVideoStream(PyObject* self, PyObject* args, PyObject* k
     memset(fi->stream, 0, sizeof(VIDEOSTREAM));
 
     TAG*t = swf_InsertTag(0, ST_DEFINEVIDEOSTREAM);
+    swf_SetU16(t, 0); /* id */
     swf_SetVideoStreamDefine(t, fi->stream, frames, width, height);
+    itag->tag = t;
     fi->lastiframe = -65536;
     return (PyObject*)tag;
 }
@@ -544,6 +579,8 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     tag_internals_t*itag = tag_getinternals(tag);
 
     RGBA*pic = image_toRGBA(image);
+    if(!pic)
+	return 0;
     TAG* t = swf_InsertTag(0, ST_VIDEOFRAME);
     if((type && (type[0]=='I' || type[0]=='i')) || (type==0 && fi->lastiframe+64 < fi->stream->frame)) {
 	swf_SetU16(t,0);
@@ -556,15 +593,20 @@ static PyObject* videostream_addFrame(PyObject*self, PyObject*args, PyObject*kwa
     itag->tag = t;
     tagmap_addMapping(itag->tagmap, 0, self);
     free(pic);
-    return Py_BuildValue("s", 0);
+    return tag;
 }
 static PyObject* videostream_addDistortionFrame(PyObject*self, PyObject*args)
 {
-    tag_internals_t*itag = tag_getinternals(self);
-    videostream_internal_t*fi = (videostream_internal_t*)itag->data;
+    tag_internals_t*_itag = tag_getinternals(self);
+    videostream_internal_t*fi = (videostream_internal_t*)_itag->data;
     
-    /* TODO */
-    return Py_BuildValue("s", 0);
+    PyObject*tag = tag_new(&videoframe_tag);
+    tag_internals_t*itag = tag_getinternals(tag);
+    /* DUMMY */
+    TAG* t = swf_InsertTag(0, ST_REFLEX);
+    itag->tag = t;
+
+    return tag;
 }
 static PyMethodDef videostream_methods[] = 
 {{"xblocks", videostream_getbwidth, METH_VARARGS, "get's the number of horizontal blocks"},
@@ -604,9 +646,11 @@ static PyMethodDef TagMethods[] =
     {"Font", (PyCFunction)f_DefineFont, METH_KEYWORDS, "Create a DefineFont Tag."},
     {"Text", (PyCFunction)f_DefineText, METH_KEYWORDS, "Create a DefineText Tag."},
     {"PlaceObject", (PyCFunction)f_PlaceObject, METH_KEYWORDS, "Create a PlaceObject Tag."},
+    {"MoveObject", (PyCFunction)f_MoveObject, METH_KEYWORDS, "Create a PlaceObject Move Tag."},
     {"VideoStream", (PyCFunction)f_DefineVideoStream, METH_KEYWORDS, "Create a Videostream."},
     {"Image", (PyCFunction)f_DefineImage, METH_KEYWORDS, "Create an SWF Image Tag."},
     {"ImageShape", (PyCFunction)f_DefineImageShape, METH_KEYWORDS, "Create an SWF Image Shape Tag."},
+    {"ShowFrame", (PyCFunction)f_ShowFrame, METH_KEYWORDS, "Create an SWF Show Frame Tag."},
     {NULL, NULL, 0, NULL}
 };
 PyMethodDef* tags_getMethods()
