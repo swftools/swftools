@@ -41,6 +41,7 @@ extern "C" {
 #define LOGLEVEL_NOTICE 3
 #define LOGLEVEL_VERBOSE 4
 #define LOGLEVEL_DEBUG 5
+#define LOGLEVEL_TRACE 6
 
 extern int screenloglevel;
 

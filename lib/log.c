@@ -23,7 +23,6 @@
 #ifdef __NT__
 #include "stdafx.h"
 #include <string.h>
-#include <winsock2.h>
 #include <stdlib.h>
 #include <malloc.h>
 #if _MSC_VER > 1000
@@ -41,122 +40,35 @@
 
 int screenloglevel = 1;
 static int fileloglevel = -1;
-static int socketloglevel = -1;
 static int maxloglevel = 1;
 static FILE *logFile = 0;
-#ifdef __NT__
-static SOCKET logSocket;
-#else
-static int logSocket = 0;
-#endif
 
-static char bLogToSock = 0;
-
-static void initlogSocket(char* servAddr, char* logPort);
-
-void initLog(char* pLogName, int fileloglevel, char* servAddr, char* logPort, int serverlevel, int screenlevel)
+void initLog(char* pLogName, int fileloglevel, char* s00, char* s01, int s02, int screenlevel)
 {
    screenloglevel = screenlevel;
    fileloglevel = fileloglevel;
-   socketloglevel = screenlevel;
 
    maxloglevel=screenloglevel;
    if(fileloglevel>maxloglevel && pLogName)
        maxloglevel=fileloglevel;
-   if(serverlevel>maxloglevel && servAddr)
-       maxloglevel=serverlevel;
-
-   if(!servAddr)
-       serverlevel = -1;
-   if(!pLogName)
-       fileloglevel = -1;
 
    logFile = NULL;
-   bLogToSock = 0;
 
    if (pLogName && fileloglevel>=0)
-   logFile = fopen(pLogName, "a+");
-   bLogToSock = (servAddr && logPort && (serverlevel>=0));
-   if(bLogToSock)
-       initlogSocket(servAddr, logPort);
-}
-
-static void initlogSocket(char* servAddr, char* logPort)
-{
-#ifndef __NT__
-   bLogToSock = 0;
-#else
-   // init winsock
-   // check and prepare WinSock DLL
-   WORD wVersionRequested = MAKEWORD( 2, 2 );
-   WSADATA wsaData;
-   if ( WSAStartup(wVersionRequested, &wsaData) != 0 )
-   {
-      bLogToSock = false;
-      return;
-   }
-   // Confirm that the WinSock DLL supports 2.2.
-   // Note that if the DLL supports versions greater
-   // than 2.2 in addition to 2.2, it will still return
-   // 2.2 in wVersion since that is the version we
-   // requested.
-
-   if ( LOBYTE( wsaData.wVersion ) != 2 || HIBYTE( wsaData.wVersion ) != 2 )
-   {
-      bLogToSock = false;
-      return;
-   }
-
-   struct hostent *hp;
-   hp = gethostbyname(servAddr);
-   if (hp == NULL) // we don't know who this host is
-   {
-      bLogToSock = false;
-      return;
-   }
-
-   // connect socket
-   sockaddr_in SocketAddress;
-
-   memset(&SocketAddress, 0, sizeof(SocketAddress));
-   memcpy((char*)&SocketAddress.sin_addr, hp->h_addr, hp->h_length); // set address
-   SocketAddress.sin_family = hp->h_addrtype;
-   SocketAddress.sin_port = htons((u_short)atoi(logPort));
-
-   logSocket = socket(hp->h_addrtype, SOCK_STREAM, 0);
-   if (logSocket == INVALID_SOCKET)
-   {
-      bLogToSock = false;
-      return;
-   }
-
-   // try to connect to the specified socket
-   if ( connect(logSocket, (struct sockaddr*)&SocketAddress, sizeof (SocketAddress)) == SOCKET_ERROR) {
-      bLogToSock = false;
-      return;
-   }
-   bLogToSock = true;
-#endif
+    logFile = fopen(pLogName, "a+");
 }
 
 void exitLog()
 {
-   // close socket communication
-   if(bLogToSock)
-#ifndef __NT__
-     close(logSocket);
-#else
-     closesocket(logSocket);
-#endif
    // close file
    if(logFile != NULL)
      fclose(logFile);
 }
 
+static char * logimportance[]= {"Fatal","Error","Warning","Notice","Verbose","Debug","Trace"};
+static int loglevels=7;
+static char * logimportance2[]= {"       ","FATAL  ","ERROR  ","WARNING","NOTICE ","VERBOSE","DEBUG  ", "TRACE  "};
 
-static char * logimportance[]= {"Fatal","Error","Warning","Notice","Verbose","Debug"};
-static int loglevels=6;
-static char * logimportance2[]= {"       ","FATAL  ","ERROR  ","WARNING","NOTICE ","VERBOSE","DEBUG  "};
 static inline void log(char* logString)
 {
    char timebuffer[32];
@@ -241,18 +153,6 @@ static inline void log(char* logString)
        }
    }
 
-   if (level <= socketloglevel)
-   {
-       if (bLogToSock)
-       {
-	  // send data
-#ifndef __NT__
-	  write(logSocket, logBuffer, strlen(logBuffer));
-#else
-	  send(logSocket, logBuffer, strlen(logBuffer), 0);
-#endif
-       }
-   }
    free (logBuffer);
 }
 
@@ -264,7 +164,7 @@ void msg(const char* format, ...)
     
     /* speed up hack */
     if(format[0]=='<') {
-	char*z = "fewnvd";
+	char*z = "fewnvdt";
 	char*x = strchr(z,format[1]);
 	if(x && (x-z)>maxloglevel)
 		return;
