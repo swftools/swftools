@@ -162,6 +162,7 @@ int videoreader_vfw_getimage(videoreader_t* vr, void*buffer)
     bi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(i->getframe, i->video_pos);
 	
     i->video_pos++;
+    vr->frame++;
 
     if(!bi) {
 	fprintf(stderr, "AVIStreamGetFrame failed\n");
@@ -330,6 +331,7 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
     
     i->getframe = AVIStreamGetFrameOpen(i->vs, 0);
     if(!i->getframe) {
+	fprintf(stderr, "Couldn't initialize AVIStream for %s- codec missing?\n", filename);
 	return -1;
     }
     
