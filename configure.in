@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/)
 
 PACKAGE=swftools
-VERSION=0.4.3-rc1
+VERSION=0.4.3
 # -Winline?
 CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer $CFLAGS"
 CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer $CXXFLAGS"
@@ -37,11 +37,13 @@ dnl Checks for system services
 # things (MingW, cross-compiling etc.) in the same way as -I/usr/include, 
 # especially on systems which link /usr/local to /usr, so it has yet
 # to be seen how useful this is.
-if test -d /usr/local/include; then
-    CPPFLAGS="$CPPFLAGS -I/usr/local/include"
-fi
 if test -d /usr/local/lib; then
     LDFLAGS="$LDFLAGS -L/usr/local/lib"
+fi
+if test -d /usr/local/include; then
+# Leave that alone. It's causing trouble e.g. with gcc 3.2 on gentoo.
+#   CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+    echo > /dev/null
 fi
 
 dnl Checks for libraries.
