@@ -77,6 +77,7 @@ ${name}/pdf2swf/fonts/n022024l.afm \
 ${name}/pdf2swf/fonts/s050000l.afm \
 ${name}/pdf2swf/fonts/d050000l.afm \
 ${name}/pdf2swf/fonts/FontDataBase \
+${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/pdf2swf/swfoutput.h \
 ${name}/pdf2swf/swfoutput.cc \
 ${name}/pdf2swf/swfoutput_x11.cc \
