@@ -158,7 +158,9 @@ int  swf_ReadHeader(struct reader_t*reader, SWF * swf);   // Reads SWF Header vi
 // folding/unfolding:
 
 void swf_FoldAll(SWF*swf);
+void swf_UnFoldAll(SWF*swf);
 void swf_FoldSprite(TAG*tag);
+void swf_UnFoldSprite(TAG*tag);
 
 // basic routines:
     
@@ -766,7 +768,7 @@ void action_fixjump(ActionMarker m1, ActionMarker m2);
 
 // swfobject.c
 
-// The following routines only use placeobject2:
+// The following 3 routines only use placeobject2:
 
 int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
 int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);

@@ -744,6 +744,51 @@ int swf_DefineSprite_GetRealSize(TAG * t)
   return len;
 }
 
+void swf_UnFoldSprite(TAG * t)
+{
+  U16 id,tmp;
+  U32 len;
+  TAG*next = t;
+  U16 spriteid,spriteframes;
+  if(t->id!=ST_DEFINESPRITE)
+    return;
+  if(t->len<=4) // not folded
+    return;
+
+  swf_SetTagPos(t,0);
+
+  spriteid = swf_GetU16(t); //id
+  spriteframes = swf_GetU16(t); //frames
+
+  tmp = swf_GetU16(t);
+  len = tmp&0x3f;
+  id  = tmp>>6;
+  while(id)
+  {
+    TAG*it = 0;
+    if (len==0x3f)
+	len = swf_GetU32(t);
+    it = swf_InsertTag(next, id);
+    next = it;
+    it->len = len;
+    it->id  = id;
+    if (it->len)
+    { it->data = (U8*)malloc(t->len);
+      it->memsize = it->len;
+      swf_GetBlock(t, it->data, it->len);
+    }
+    tmp = swf_GetU16(t);
+    len = tmp&0x3f;
+    id  = tmp>>6;
+  }
+  
+  free(t->data); t->data = 0;
+  t->memsize = t->len = t->pos = 0;
+
+  swf_SetU16(t, spriteid);
+  swf_SetU16(t, spriteframes);
+}
+
 void swf_FoldSprite(TAG * t)
 {
   TAG*sprtag=t,*tmp;
@@ -806,6 +851,17 @@ void swf_FoldAll(SWF*swf)
 	if(tag->id == ST_DEFINESPRITE)
 	    swf_FoldSprite(tag);
 	tag = swf_NextTag(tag);
+    }
+}
+
+void swf_UnFoldAll(SWF*swf)
+{
+    TAG*tag = swf->firstTag;
+    while(tag) {
+        TAG*next = swf_NextTag(tag);
+	if(tag->id == ST_DEFINESPRITE)
+	    swf_UnFoldSprite(tag);
+	tag = next;
     }
 }
 
