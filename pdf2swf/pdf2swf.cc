@@ -37,7 +37,7 @@ int systemf(const char* format, ...)
     vsprintf(buf, format, arglist);
     va_end(arglist);
 
-    printf("%s:\n\n", buf);
+    printf("%s:\n", buf);
     fflush(stdout);
     return system(buf);
 }
@@ -251,14 +251,19 @@ int main(int argn, char *argv[])
 
     pdfswf_close();
 
+    if(!viewer && preloader)
+	logf("<warning> --preloader option without --viewer option doesn't make very much sense.");
+    if(viewer || preloader)
+	printf("\n");
+
     if(viewer) {
-	systemf("swfcombine %s viewport=%s -o %s",
-		viewer, outputname, outputname);
+	systemf("swfcombine `swfdump -XY %s` %s viewport=%s -o %s",
+		outputname, viewer, outputname, outputname);
 	printf("\n");
     }
     if(preloader) {
-	systemf("swfcombine %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
-		DATADIR, preloader, outputname, outputname);
+	systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
+		preloader, DATADIR, preloader, outputname, outputname);
 	printf("\n");
     }
 
