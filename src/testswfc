@@ -35,7 +35,7 @@ swfc() {
     rm -f test.s test.s2 2>&6
 }
 
-swfc=../swfc
+swfc=./swfc
 
 starttest sprite1
 rm -f output.swf
