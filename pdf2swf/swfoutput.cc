@@ -119,11 +119,17 @@ static int moveto(TAG*tag, plotxy p0)
 // write a line-to command into the swf
 static void lineto(TAG*tag, plotxy p0)
 {
-    int rx = ((int)(p0.x*20)-swflastx);
-    int ry = ((int)(p0.y*20)-swflasty);
+    int px = (int)(p0.x*20);
+    int py = (int)(p0.y*20);
+    int rx = (px-swflastx);
+    int ry = (py-swflasty);
     /* we can't skip this for rx=0,ry=0, those
        are plots */
     swf_ShapeSetLine (tag, shape, rx,ry);
+
+    //swf_ExpandRect3(boundingBox, px, py, linewidth);
+    //swf_ExpandRect3(boundingBox, swflastx, swflasty, linewidth);
+
     shapeisempty = 0;
     swflastx+=rx;
     swflasty+=ry;
@@ -1032,11 +1038,6 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
     }
 
     if(u>0) {
-	if(u>=font->maxascii)
-	    msg("<debug> u=%d, font->maxascii=%d",u,font->maxascii);
-	else
-	    msg("<debug> u=%d, font->maxascii=%d ascci2glyph[%d]=%d",u,font->maxascii,u,font->ascii2glyph[u]);
-
 	/* try to use the unicode id */
 	if(u>=0 && u<font->maxascii && font->ascii2glyph[u]>=0) {
 	    return font->ascii2glyph[u];
@@ -1106,7 +1107,12 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	msg("<debug> |   Style: %d", swffont->style);
 	msg("<debug> |   Encoding: %d", swffont->encoding);
 	for(int iii=0; iii<swffont->numchars;iii++) {
-	    msg("<debug> |   Glyph %d) name=%s, unicode=%d\n", iii, swffont->glyphnames[iii], swffont->glyph2ascii[iii]);
+	    msg("<debug> |   Glyph %d) name=%s, unicode=%d size=%d bbox=(%.2f,%.2f,%.2f,%.2f)\n", iii, swffont->glyphnames[iii], swffont->glyph2ascii[iii], swffont->glyph[iii].shape->bitlen, 
+		    swffont->layout->bounds[iii].xmin/20.0,
+		    swffont->layout->bounds[iii].ymin/20.0,
+		    swffont->layout->bounds[iii].xmax/20.0,
+		    swffont->layout->bounds[iii].ymax/20.0
+		    );
 	}
     }
 
