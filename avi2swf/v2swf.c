@@ -22,7 +22,7 @@
 #include <stdarg.h>
 #include "v2swf.h"
 #include "../lib/rfxswf.h"
-#include "ringbuffer.c"
+#include "../lib/q.h"
 
 typedef struct _v2swf_internal_t
 {
