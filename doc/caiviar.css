@@ -1,0 +1,343 @@
+BODY {
+	color: black; 
+	font-family: Verdana, Arial, Helvetica; 
+	font-size: 1.0em;
+}
+
+.dochead {
+	margin-top: 1.5em;
+	font-size: 1.7em;
+	font-weight: bold;
+	color: #000000;
+}
+
+.chaphead { 
+/*	margin: 1.2em 14% 0.5em 3%;  */
+	font-size: 1.3em; 
+	font-weight: bold; 
+	color: #0000ff;
+}
+
+.chapnum {
+	font-size: 0.8em;
+	font-weight: bold; 
+	color: #0000ff;
+}
+
+.secthead {
+/*	margin: 1.0em 14% 0.2em 4%;*/
+/*	My suggested new color and size, to take the new subsections (level 3) into account.
+	color: #2545ee;
+	font-size: 1.1em;*/
+	color: #2020ff;
+	font-size: 1.4em;
+	font-weight: bold;
+	font-family: Verdana, Arial, Helvetica;
+	/*text-decoration: underline;*/
+}
+
+.subsecthead {
+/*	margin: 1.0em 14% 0.2em 4%;*/
+	color: #6c6cff;
+	font-size: 1.2em;
+	font-weight: bold;
+	font-family: Verdana, Arial, Helvetica;
+/*	text-decoration: underline; */
+}
+
+.subsubsecthead {
+/*	margin: 1.0em 14% 0.2em 4%;*/
+	color: #303030;
+	font-size: 1.0em;
+	font-weight: bold;
+	font-family: Verdana, Arial, Helvetica;
+/*	text-decoration: underline; */
+}
+
+a.highlight:link { color: #00ff00; text-decoration: none; }
+a.highlight:visited { color: #00ff00; text-decoration: none; }
+a.highlight:hover { color: #00ff00; text-decoration: underline; }
+a.highlight:active { color: #00ff00; text-decoration: underline; }
+
+a.menulink:link { color: #a0a0d0; text-decoration: none; }
+a.menulink:visited { color: #a0a0d0; text-decoration: none; }
+a.menulink:hover { color: #00ff00; text-decoration: underline; }
+a.menulink:active { color: #00ff00; text-decoration: underline; }
+
+a.oldlink:link { color: #9090c0; text-decoration: none; }
+a.oldlink:visited { color: #9090c0; text-decoration: none; }
+a.oldlink:hover { color: #00ff00; text-decoration: underline; }
+a.oldlink:active { color: #00ff00; text-decoration: underline; }
+
+a.altlink:link { color: #7a5ada; text-decoration: none; }
+a.altlink:visited { color: #5a3aba; text-decoration: none; }
+a.altlink:hover { color: #7a5ada; text-decoration: underline; }
+a.altlink:active { color: #7a5ada; text-decoration: underline; }
+
+
+.menu {
+	font-size: 0.75em;
+	font-weight: bold;
+	font-family: Verdana, Arial, Helvetica;
+	color: #cccccc;
+	padding-left: 1.0em;
+	padding-right: 1.0em;
+	padding-top: 0.5em;
+	padding-bottom: 0.75em;
+}
+
+.altmenu {
+	font-size: 0.65em;
+	font-weight: bold;
+	font-family: Verdana, Arial, Helvetica;
+	color: #000000;
+	padding-left: 1.0em;
+	padding-right: 1.0em;
+}
+
+.alttext {
+	font-size: 0.65em;
+	font-family: Verdana, Arial, Helvetica;
+	color: #000000;
+/*	padding-left: 1.0em;
+	padding-right: 1.0em;*/
+}
+
+.infotab {
+	padding: 0.5em;
+	margin-top: 1.0em;
+	margin-left: 1.0em;
+	margin-bottom: 1.0em; 
+}
+
+.infohead {
+	font-size: 0.7em;	
+	font-family: Verdana, Arial, Helvetica;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+	padding-left: 1.0em;
+	margin-left: 1.0em;
+	color: #ffffff;
+	font-weight: bold;
+}
+
+.infosub {
+	margin-top: 0.25em;
+	margin-bottom: 0.15em;
+	margin-left: 0em;
+	margin-right: 0.5em;
+	padding: 0em;
+	font-weight: bold;
+}
+
+.infolist {
+	margin-top: 0.05em;
+	margin-bottom: 0.05em;
+	margin-left: 1.0em;
+	margin-right: 0.5em;
+	padding: 0em;
+	padding-top: 0.3em;
+}
+
+.infogfx {
+	padding: 0em;
+}
+
+.infotext {
+	font-size: 0.7em;	
+	font-family: Verdana, Arial, Helvetica;
+	color: #320f61;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+}
+/*
+.chaphead {
+        margin: 1.2em 14% 0.5em 3%;
+        font-size: 1.6em;
+        font-weight: bold;
+}
+*/
+.copyright {
+        padding-left: 1.0em;
+        padding-right: 1.0em;
+        margin: 0em 0% 0.2em 0%;
+        font-size: 0.7em;
+        font-family: Verdana, Arial, Helvetica;
+	text-align: right;
+	color: #808080;
+}
+
+.copyright:link {
+	text-decoration: underline;
+	color: #808080;
+}
+
+.copyright:visited {
+	text-decoration: underline;
+	color: #808080;
+}
+
+.copyright:hover { 
+	text-decoration: underline;
+	color: #0000ff;
+	
+}
+
+.subhead {
+	font-family: Verdana, Arial, Helvetica;
+	font-size: 1.2em;
+	font-weight: bold;
+	/*margin: 0.5em 0% 0.5em 0%;*/
+}
+
+.content {
+	/*padding: 3em;*/
+	padding-top: 0em;
+	padding-left: 1.0em;
+	padding-right: 1.0em; 
+	font-family: Verdana, Arial, Helvetica;
+	font-size: 0.8em;
+}
+
+.ntable {
+	padding: 0em;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.itable {
+	padding: 0em;
+	margin-top: 0.0em;
+	margin-bottom: 0.0em;
+}
+
+.ncontent {
+	/*content with no padding, for an ugly Netscape 4.7 compatibility hack*/
+	padding: 0em;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+	font-family: Verdana, Arial, Helvetica;
+	font-size: 0.8em;
+}
+
+PRE {
+	padding: 0.5em;
+	font-family: Lucida Console, Courier;
+	color: #000000;
+	font-size: 0.75em;
+}
+
+.input {
+	color: #0000ff;
+}
+
+.comment {
+	color: #ff0000; 
+}
+
+.code {
+	font-family: Lucida Console, Courier;
+	color: #0000ff;
+	font-size: 0.9em;
+}
+
+.path {
+	font-family: Lucida Console, Courier;
+	/*color: #008060; */
+	font-size: 0.9em;
+	font-weight: bold;
+}
+
+.emphasis {
+	font-style: italic;
+}
+
+.brite {
+	color: #ff0000;
+}
+
+P.note {
+	padding: 0.5em;
+}
+
+P.impo {
+	padding: 0.5em;
+}
+
+P.warn {
+	padding: 0.5em;
+}
+
+.contentbox {
+	margin-left: 5%;
+	margin-right: 5%;
+	margin-top: 2%;
+	margin-bottom: 2%;
+	padding: 0.8em;
+}
+
+.logobg {
+	background: #45347b;
+}
+
+.top {
+	background: black;
+	font-family: Verdana, Arial, Helvetica;
+	font-size: 0.8em;
+	color: #c0c0c0;
+	padding: 0em;
+	margin: 0em;
+}
+
+.topnews {
+	background: #5f4e4e;
+	color: white;
+}
+
+.tophead {
+	color: #a7f3fe;
+	font-weight: bold;
+	margin: 0em;
+}
+
+.tableinfo {
+	padding-left: 1.0em;
+	padding-right: 1.0em;
+	font-size: 0.7em; 
+	background: #dddddd;
+	font-weight: bold; 
+	font-family: Verdana, Arial, Helvetica;
+}
+
+.toptext {
+	color: #ffffff;
+	margin-bottom: 7px;
+}
+.toptext a:hover {
+        color: #00ff00;
+}
+
+.toptext a:link {
+	font-style: normal;
+        color: #00dd00;
+}
+
+.bartext {
+	color: #6c6cff;
+	font-family: Verdana, Arial, Helvetica;
+	font-size: 0.8em;
+	padding: 0em;
+}
+.docs-index {
+	margin: 0em;
+	margin-left: 20px;
+        font-family: Verdana, Arial, Helvetica;
+	line-height: 1.25em; 
+	border: 3px white solid;
+}
+/*this works fine in IE, but not in any other browser!, yet it's perfectly valid */
+.docs-index .emphasis {
+        font-style: normal;
+        font-weight: bold;
+}
+
