@@ -20,7 +20,7 @@ avi2swf.o: avi2swf.cc
 v2swf.o: v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
-avi2swf: avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o
+avi2swf$(E): avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o
 	$(LL) avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o -o avi2swf ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
 	$(STRIP) avi2swf
 
