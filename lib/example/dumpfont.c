@@ -30,16 +30,16 @@
 SWF swf;
 
 void DumpFont(SWFFONT * f,char * name)
-{ int gpos[MAX_CHAR_PER_FONT];
-  int n,i;
+{ int n,i;
+  int*gpos = malloc(sizeof(int*)*f->numchars);
+  memset(gpos,0,sizeof(int*)*f->numchars);
 
   // Glyph Shapes Data
 
   n = 0;
   printf("U8 Glyphs_%s[] = {\n\t  ",name);
-  memset(&gpos,0x00,sizeof(gpos));
   
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
     { SHAPE * s = f->glyph[i].shape;
       int j,l = (s->bitlen+7)/8;
@@ -60,10 +60,14 @@ void DumpFont(SWFFONT * f,char * name)
   printf("  if (!(f=malloc(sizeof(SWFFONT)))) return NULL;\n");
   printf("  memset(f,0x00,sizeof(SWFFONT));\n");
   printf("  f->id       = id;\n");
+  printf("  f->version  = %d;\n", f->version);
   printf("  f->name     = strdup(\"%s\");\n",f->name);
-  printf("  f->flags    = 0x%02x;\n\n",f->flags);
+  printf("  f->flags    = 0x%02x;\n",f->flags);
+  printf("  f->numchars = %d;\n",f->numchars);
+  printf("  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*%d);\n\n",f->numchars);
+  printf("  f->codes    = (U16*)malloc(sizeof(U16)*%d);\n\n",f->numchars);
 
-  for (i=0;i<MAX_CHAR_PER_FONT;i++)
+  for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
     { printf("  addGlyph(f,%3i, 0x%02x,%4i,%3i, &Glyphs_%s[0x%04x],%4i); // %c\n",
              i, f->codes[i], f->glyph[i].advance, f->glyph[i].gid, name, gpos[i],
@@ -71,6 +75,7 @@ void DumpFont(SWFFONT * f,char * name)
     }
 
   printf("  return f;\n}\n\n");
+  free(gpos);
 }
 
 void DumpGlobal(char * funcname)
@@ -99,8 +104,13 @@ void fontcallback(U16 id,U8 * name)
   sprintf(s,"%s%s%s",name,swf_FontIsBold(font)?"_bold":"",swf_FontIsItalic(font)?"_italic":"");
   
   ss = s;
-  while(ss[0])
-  { if ((*ss)==0x20) (*ss)='_';
+  while(*ss)
+  { 
+    if(!((*ss>='a' && *ss<='z') ||
+         (*ss>='A' && *ss<='Z') ||
+         (*ss>='0' && *ss<='9' && ss!=s) ||
+         (*ss=='_')))
+		*ss = '_';
     ss++;
   }
 
