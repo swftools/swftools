@@ -362,21 +362,23 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
     }
 
     int num = swf_GetNumUsedIDs(t);
-    int * positions = malloc(num*sizeof(int));
-    swf_GetUsedIDs(t, positions);
-    int i;
-    for(i=0;i<num;i++) {
-	int id = GET16(&t->data[positions[i]]);
-	PyObject* obj =  tagmap_id2obj(tag->tagmap, id);
-	if(obj==NULL) {
-	    PyErr_SetString(PyExc_Exception, setError("Internal error: id %d not known in taglist:"));
-	    free(positions);
-	    return 0;
+    if(num) { // tag has dependencies
+	int * positions = malloc(num*sizeof(int));
+	swf_GetUsedIDs(t, positions);
+	int i;
+	for(i=0;i<num;i++) {
+	    int id = GET16(&t->data[positions[i]]);
+	    PyObject* obj =  tagmap_id2obj(tag->tagmap, id);
+	    if(obj==NULL) {
+		PyErr_SetString(PyExc_Exception, setError("Internal error: id %d not known in taglist:"));
+		free(positions);
+		return 0;
+	    }
+	    int newid = tagmap_obj2id(tagmap, obj);
+	    PUT16(&t->data[positions[i]], newid);
 	}
-	int newid = tagmap_obj2id(tagmap, obj);
-	PUT16(&t->data[positions[i]], newid);
+	free(positions);
     }
-    free(positions);
     return t;
 }
 
