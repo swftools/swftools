@@ -206,10 +206,10 @@
 	* pdf2swf: Fixed another variant of "Didn't find glyph xxx in font" bug
 
 0.6.2:
-	* swfbbox: Calculates the complete movie's bounding box now. New -e option.
+	* swfbbox: Calculates the complete movie's bounding box now. New -e,-b,-B options.
 	* pdf2swf: New "-s minlinewidth" option
 	* swfdump: Fixed handling of PLACEOBJECT
-	* configure: Improved freetype and python detection
+	* configure: Improved freetype and python detection, added fontconfig detection
 	* swfdump: Support for shapes added
 	* swfdump: several bugfixes from simon-swf@munton.demon.co.uk
 	* pdf2swf: Added fontconfig font replacement
