@@ -120,14 +120,20 @@ PyObject* f_BBox(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"xmin", "ymin", "xmax", "ymax", NULL};
     BBoxObject* bbox;
+    float xmin,ymin,xmax,ymax;
+    if(!kwargs) {
+	if (!PyArg_ParseTuple(args, "ffff", &xmin, &ymin, &xmax, &ymax))
+	    return NULL;
+    } else {
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ffff", kwlist, &xmin, &ymin, &xmax, &ymax))
+	    return NULL;
+    }
     SRECT box;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iiii", kwlist, 
-		&box.xmin,
-		&box.ymin,
-		&box.xmax,
-		&box.ymax));
-	return NULL;
-    mylog("+%08x(%d) bbox_new(%d,%d,%d,%d)\n", (int)self, self->ob_refcnt, box.xmin, box.ymin, box.xmax,box.ymax);
+    box.xmin = (int)(xmin*20);
+    box.ymin = (int)(ymin*20);
+    box.xmax = (int)(xmax*20);
+    box.ymax = (int)(ymax*20);
+    mylog("+%08x(%d) bbox_new(%d,%d,%d,%d)\n", (int)self, self?self->ob_refcnt:0, box.xmin, box.ymin, box.xmax,box.ymax);
     bbox = PyObject_New(BBoxObject, &BBoxClass);
     bbox->bbox = box;
     return (PyObject*)bbox;
@@ -136,13 +142,13 @@ static PyObject* bbox_getattr(PyObject * self, char* a)
 {
     BBoxObject*bbox = (BBoxObject*)self;
     if(!strcmp(a, "xmin")) {
-	return Py_BuildValue("i", bbox->bbox.xmin);
+	return Py_BuildValue("f", bbox->bbox.xmin/20.0);
     } else if(!strcmp(a, "ymin")) {
-	return Py_BuildValue("i", bbox->bbox.ymin);
+	return Py_BuildValue("f", bbox->bbox.ymin/20.0);
     } else if(!strcmp(a, "xmax")) {
-	return Py_BuildValue("i", bbox->bbox.xmax);
+	return Py_BuildValue("f", bbox->bbox.xmax/20.0);
     } else if(!strcmp(a, "ymax")) {
-	return Py_BuildValue("i", bbox->bbox.ymax);
+	return Py_BuildValue("f", bbox->bbox.ymax/20.0);
     }
     return NULL;
 }
@@ -150,16 +156,24 @@ static int bbox_setattr(PyObject * self, char* a, PyObject* o)
 {
     BBoxObject*bbox= (BBoxObject*)self;
     if(!strcmp(a, "xmin")) {
-	if (!PyArg_Parse(o, "i", &bbox->bbox.xmin)) goto err;
+	float xmin;
+	if (!PyArg_Parse(o, "i", &xmin)) goto err;
+	bbox->bbox.xmin = (int)(xmin*20);
 	return 0;
     } else if(!strcmp(a, "ymin")) {
-	if (!PyArg_Parse(o, "i", &bbox->bbox.ymin)) goto err;
+	float ymin;
+	if (!PyArg_Parse(o, "i", &ymin)) goto err;
+	bbox->bbox.ymin = (int)(ymin*20);
 	return 0;
     } else if(!strcmp(a, "xmax")) {
-	if (!PyArg_Parse(o, "i", &bbox->bbox.xmax)) goto err;
+	float xmax;
+	if (!PyArg_Parse(o, "i", &xmax)) goto err;
+	bbox->bbox.xmax = (int)(xmax*20);
 	return 0;
     } else if(!strcmp(a, "ymax")) {
-	if (!PyArg_Parse(o, "i", &bbox->bbox.ymax)) goto err;
+	float ymax;
+	if (!PyArg_Parse(o, "i", &ymax)) goto err;
+	bbox->bbox.ymax = (int)(ymax*20);
 	return 0;
     } 
 err:
@@ -171,7 +185,7 @@ void bbox_dealloc(PyObject* self)
     mylog("-%08x(%d) bbox_dealloc\n", (int)self, self->ob_refcnt);
     PyObject_Del(self);
 }
-SRECT bbox_getBBox(PyObject*self)
+SRECT bbox_getSRECT(PyObject*self)
 {
     BBoxObject*bbox= 0;
     if (!PyArg_Parse(self, "O!", &BBoxClass, &bbox)) {
