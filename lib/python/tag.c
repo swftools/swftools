@@ -251,6 +251,9 @@ TAG* tag_getTAG(PyObject*self, TAG*prevTag, PyObject*tagmap)
 	    }
 	    //int newid = tagmap_obj2id(tag->internals.tagmap, obj);
 	    int newid = tagmap_obj2id(tagmap, obj);
+	    if(newid<0) {
+		PyErr_SetString(PyExc_Exception, setError("Unknown object %08x", obj));return 0;
+	    }
 	    mylog(" %08x(%d) tag_getTAG: dependency %d) %d->%08x -> assigning(%08x) id %d", (int)self, self->ob_refcnt, i, id, obj, tagmap, newid);
 	    PUT16(&t->data[positions[i]], newid);
 	}
