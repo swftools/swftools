@@ -152,7 +152,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
     char*buf;
     int len = 0;
     int bufsize = 16384;
-    int numsamples = ((swf_mp3_out_samplerate > 22050) ? 1152 : 576) * (swf_mp3_in_samplerate/swf_mp3_out_samplerate);
+    int numsamples = (int)(((swf_mp3_out_samplerate > 22050) ? 1152 : 576) * ((double)swf_mp3_in_samplerate/swf_mp3_out_samplerate));
     int fs = 0;
 
     buf = malloc(bufsize);
@@ -194,7 +194,7 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
     char*buf;
     int oldlen=0,len = 0;
     int bufsize = 16384;
-    int blocksize = ((swf_mp3_out_samplerate > 22050) ? 1152 : 576) * (swf_mp3_in_samplerate/swf_mp3_out_samplerate);
+    int blocksize = (int)(((swf_mp3_out_samplerate > 22050) ? 1152 : 576) * ((double)swf_mp3_in_samplerate/swf_mp3_out_samplerate));
     int t;
     int blocks;
 
@@ -213,8 +213,8 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 
     swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
 
-    swf_SetU32(tag,blocks*blocksize / 
-	    (swf_mp3_in_samplerate/swf_mp3_out_samplerate) // account for resampling
+    swf_SetU32(tag, (int)(tag,blocks*blocksize / 
+	    ((double)swf_mp3_in_samplerate/swf_mp3_out_samplerate)) // account for resampling
 	    );
 
     buf = malloc(bufsize);
