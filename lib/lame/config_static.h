@@ -1,3 +1,5 @@
+#include "../../config.h"
+
 /* Define if you have alloca, as a function or macro.  */
 #define HAVE_ALLOCA 1
 
