@@ -1093,6 +1093,27 @@ void s_action(const char*text)
     swf_ActionFree(a);
 }
 
+int s_swf3action(char*name, char*action)
+{
+    ActionTAG* a = 0;
+    instance_t* object = dictionary_lookup(&instances, name);
+    if(!object) {
+	return 0;
+    }
+    a = action_SetTarget(0, name);
+    if(!strcmp(action, "nextframe")) a = action_NextFrame(a);
+    else if(!strcmp(action, "previousframe")) a = action_PreviousFrame(a);
+    else if(!strcmp(action, "stop")) a = action_Stop(a);
+    else if(!strcmp(action, "play")) a = action_Play(a);
+    a = action_SetTarget(a, "");
+    a = action_End(a);
+
+    tag = swf_InsertTag(tag, ST_DOACTION);
+    swf_ActionSet(tag, a);
+    swf_ActionFree(a);
+    return 1;
+}
+
 void s_outline(char*name, char*format, char*source)
 {
     outline_t* outline;
@@ -1122,12 +1143,12 @@ void s_outline(char*name, char*format, char*source)
     dictionary_put2(&outlines, name, outline);
 }
 
-void s_playsound(char*name, int loops, int nomultiple, int stop)
+int s_playsound(char*name, int loops, int nomultiple, int stop)
 {
     sound_t* sound = dictionary_lookup(&sounds, name);
     SOUNDINFO info;
     if(!sound)
-	syntaxerror("Don't know anything about sound \"%s\"", name);
+	return 0;
 
     tag = swf_InsertTag(tag, ST_STARTSOUND);
     swf_SetU16(tag, sound->id); //id
@@ -1136,6 +1157,7 @@ void s_playsound(char*name, int loops, int nomultiple, int stop)
     info.loops = loops;
     info.nomultiple = nomultiple;
     swf_SetSoundInfo(tag, &info);
+    return 1;
 }
 
 void s_includeswf(char*name, char*filename)
@@ -1773,7 +1795,7 @@ static int c_point(map_t*args)
 }
 static int c_play(map_t*args) 
 {
-    char*name = lu(args, "sound");
+    char*name = lu(args, "name");
     char*loop = lu(args, "loop");
     char*nomultiple = lu(args, "nomultiple");
     int nm = 0;
@@ -1782,14 +1804,46 @@ static int c_play(map_t*args)
     else
 	nm = parseInt(nomultiple);
 
-    s_playsound(name, parseInt(loop), nm, 0);
+    if(s_playsound(name, parseInt(loop), nm, 0)) {
+	return 0;
+    } else if(s_swf3action(name, "play")) {
+	return 0;
+    }
     return 0;
 }
 
 static int c_stop(map_t*args) 
 {
-    char*name = lu(args, "sound");
-    s_playsound(name, 0,0,1);
+    char*name = lu(args, "name");
+
+    if(s_playsound(name, 0,0,1)) {
+	return 0;
+    } else if(s_swf3action(name, "stop")) {
+	return 0;
+    }
+    syntaxerror("I don't know anything about sound/movie \"%s\"", name);
+    return 0;
+}
+
+static int c_nextframe(map_t*args) 
+{
+    char*name = lu(args, "name");
+
+    if(s_swf3action(name, "nextframe")) {
+	return 0;
+    }
+    syntaxerror("I don't know anything about movie \"%s\"", name);
+    return 0;
+}
+
+static int c_previousframe(map_t*args) 
+{
+    char*name = lu(args, "name");
+
+    if(s_swf3action(name, "previousframe")) {
+	return 0;
+    }
+    syntaxerror("I don't know anything about movie \"%s\"", name);
     return 0;
 }
 
@@ -2374,8 +2428,10 @@ static struct {
     {"on_key", c_on_key, "key=any"},
  
     // control tags
- {"play", c_play, "sound loop=0 @nomultiple=0"},
- {"stop", c_stop, "sound"},
+ {"play", c_play, "name loop=0 @nomultiple=0"},
+ {"stop", c_stop, "name"},
+ {"nextframe", c_nextframe, "name"},
+ {"previousframe", c_previousframe, "name"},
 
     // object placement tags
  {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
