@@ -7,9 +7,20 @@
 
    This file is distributed under the GPL, see file COPYING for details */
 
+#define HAVE_STAT
+
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#else
+#undef HAVE_STAT
 #endif
+
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#else
+#undef HAVE_STAT
+#endif
+
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -60,7 +71,7 @@ int main (int argc,char ** argv)
 { 
     SWF swf;
     TAG*tag;
-#ifdef HAVE_SYS_STAT_H
+#ifdef HAVE_STAT
     struct stat statbuf;
 #endif
     int f;
@@ -84,7 +95,7 @@ int main (int argc,char ** argv)
 	exit(1);
     }
 
-#ifdef HAVE_SYS_STAT_H
+#ifdef HAVE_STAT
     fstat(f, &statbuf);
     if(statbuf.st_size != swf.FileSize)
 	fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
