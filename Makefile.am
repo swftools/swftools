@@ -1,1 +1,1 @@
-SUBDIRS = lib src pdf2swf pdf2swf
+SUBDIRS = lib src pdf2swf
