@@ -23,3 +23,9 @@
 	* lib/example/zlibtest: new file, demonstrates using lossless images with rfxswf-lib
 	* lib/example/dumpfont: utility for dumping fonts out of swf (and generate c sourcecode for creating them)
 	* lib/example/demofont: example font, generated with lib/example/dumpfont.
+0.1.1:  
+	* swfcombine: Wasn't able to handle converted pdfs with links. Fixed.
+	* swfcombine: Introduce --dump, -X,-Y,-r options
+	* swfdump: new: -r option
+	* pdf2swf: small bugfixes
+	* HOWTO_pdf2swf: added section about correcting size and framerate
