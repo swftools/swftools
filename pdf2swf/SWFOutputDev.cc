@@ -113,6 +113,9 @@ public:
 
   // Destructor.
   virtual ~SWFOutputDev() ;
+
+  void setMove(int x,int y);
+  void setClip(int x1,int y1,int x2,int y2);
   
   void save(char*filename);
 
@@ -230,6 +233,9 @@ public:
   char* substitutetarget[256];
   char* substitutesource[256];
   int substitutepos;
+
+  int user_movex,user_movey;
+  int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
 };
 
 static char*getFontID(GfxFont*font);
@@ -238,15 +244,19 @@ class InfoOutputDev:  public OutputDev
 {
   public:
   int x1,y1,x2,y2;
-  int has_links;
-  int has_images;
+  int num_links;
+  int num_images;
+  int num_fonts;
 
   InfoOutputDev() 
   {
-      has_links = 0;
-      has_images = 0;
+      num_links = 0;
+      num_images = 0;
+      num_fonts = 0;
   }
-  virtual ~InfoOutputDev() {}
+  virtual ~InfoOutputDev() 
+  {
+  }
   virtual GBool upsideDown() {return gTrue;}
   virtual GBool useDrawChar() {return gTrue;}
   virtual GBool useGradients() {return gTrue;}
@@ -265,23 +275,28 @@ class InfoOutputDev:  public OutputDev
   }
   virtual void drawLink(Link *link, Catalog *catalog) 
   {
-      has_links = 1;
+      num_links++;
   }
   virtual void updateFont(GfxState *state) 
   {
-      char*id = getFontID(state->getFont());
+      GfxFont*font = state->getFont();
+      if(!font)
+          return;
+      char*id = getFontID(font);
+      /* FIXME*/
+      num_fonts++;
   }
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			     int width, int height, GBool invert,
 			     GBool inlineImg) 
   {
-      has_images = 1;
+      num_images++;
   }
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
   {
-      has_images = 1;
+      num_images++;
   }
 };
 
@@ -300,8 +315,32 @@ SWFOutputDev::SWFOutputDev()
     pic_id = 0;
     substitutepos = 0;
     type3Warning = 0;
+    user_movex = 0;
+    user_movey = 0;
+    user_clipx1 = 0;
+    user_clipy1 = 0;
+    user_clipx2 = 0;
+    user_clipy2 = 0;
+    memset(&output, 0, sizeof(output));
 //    printf("SWFOutputDev::SWFOutputDev() \n");
 };
+  
+void SWFOutputDev::setMove(int x,int y)
+{
+    this->user_movex = x;
+    this->user_movey = y;
+}
+
+void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
+{
+    if(x2<x1) {int x3=x1;x1=x2;x2=x3;}
+    if(y2<y1) {int y3=y1;y1=y2;y2=y3;}
+
+    this->user_clipx1 = x1;
+    this->user_clipy1 = y1;
+    this->user_clipx2 = x2;
+    this->user_clipy2 = y2;
+}
 
 static char*getFontID(GfxFont*font)
 {
@@ -879,13 +918,21 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
 
+    /* apply user clip box */
+    if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
+        if(user_clipx1 > x1) x1 = user_clipx1;
+        if(user_clipx2 < x2) x2 = user_clipx2;
+        if(user_clipy1 > y1) y1 = user_clipy1;
+        if(user_clipy2 < y2) y2 = user_clipy2;
+    }
+
     if(!outputstarted) {
         msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
         swfoutput_init(&output);
         outputstarted = 1;
     }
       
-    swfoutput_newpage(&output, pageNum, (int)x1, (int)y1, (int)x2, (int)y2);
+    swfoutput_newpage(&output, pageNum, user_movex, user_movey, (int)x1, (int)y1, (int)x2, (int)y2);
 }
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
@@ -1992,6 +2039,9 @@ void pdf_destroy(pdf_doc_t*pdf_doc)
 pdf_page_t* pdf_getpage(pdf_doc_t*pdf_doc, int page)
 {
     pdf_doc_internal_t*di= (pdf_doc_internal_t*)pdf_doc->internal;
+
+    if(page < 1 || page > pdf_doc->num_pages)
+        return 0;
     
     pdf_page_t* pdf_page = (pdf_page_t*)malloc(sizeof(pdf_page_t));
     pdf_page_internal_t*pi= (pdf_page_internal_t*)malloc(sizeof(pdf_page_internal_t));
@@ -2042,8 +2092,7 @@ void swf_output_destroy(swf_output_t*output)
     free(output);
 }
 
-
-void pdf_page_render(pdf_page_t*page, swf_output_t*output)
+void pdf_page_render2(pdf_page_t*page, swf_output_t*output)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
     swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
@@ -2059,11 +2108,58 @@ void pdf_page_render(pdf_page_t*page, swf_output_t*output)
 #endif
 }
 
+void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
+{
+    pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
+    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
+
+    si->outputDev->setMove(x,y);
+    if((x1|y1|x2|y2)==0) x2++;
+    si->outputDev->setClip(x1,y1,x2,y2);
+
+    pdf_page_render(page, output);
+}
+void pdf_page_render(pdf_page_t*page, swf_output_t*output)
+{
+    pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
+    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
+    
+    si->outputDev->setMove(0,0);
+    si->outputDev->setClip(0,0,0,0);
+    
+    pdf_page_render(page, output);
+}
+
+
 pdf_page_info_t* pdf_page_getinfo(pdf_page_t*page)
 {
+    pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
     pdf_page_internal_t*i= (pdf_page_internal_t*)page->internal;
     pdf_page_info_t*info = (pdf_page_info_t*)malloc(sizeof(pdf_page_info_t));
     memset(info, 0, sizeof(pdf_page_info_t));
+
+    InfoOutputDev*output = new InfoOutputDev;
+    
+#ifdef XPDF_101
+    pi->doc->displayPage((OutputDev*)output, page->nr, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
+#else
+    pi->doc->displayPage((OutputDev*)output, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
+#endif
+
+    info->xMin = output->x1;
+    info->yMin = output->y1;
+    info->xMax = output->x2;
+    info->yMax = output->y2;
+    info->number_of_images = output->num_images;
+    info->number_of_links = output->num_links;
+    info->number_of_fonts = output->num_fonts;
+
+    delete output;
+
     return info;
 }
 
+void pdf_page_info_destroy(pdf_page_info_t*info)
+{
+    free(info);
+}
