@@ -86,34 +86,6 @@ static int zoom = 72; /* xpdf: 86 */
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
-static double fontsizes[] = 
-{
- 0.833,0.833,0.889,0.889,
- 0.788,0.722,0.833,0.778,
- 0.600,0.600,0.600,0.600,
- 0.576,0.576,0.576,0.576,
- 0.733 //?
-};
-static char*fontnames[]={
-"Helvetica",             
-"Helvetica-Bold",        
-"Helvetica-BoldOblique", 
-"Helvetica-Oblique",     
-"Times-Roman",           
-"Times-Bold",            
-"Times-BoldItalic",      
-"Times-Italic",          
-"Courier",               
-"Courier-Bold",          
-"Courier-BoldOblique",   
-"Courier-Oblique",       
-"Symbol",                
-"Symbol",                
-"Symbol",                
-"Symbol",
-"ZapfDingBats"
-};
-
 struct mapping {
     char*pdffont;
     char*filename;
@@ -133,9 +105,6 @@ struct mapping {
 {"Courier-BoldOblique",   "n022024l"},
 {"Symbol",                "s050000l"},
 {"ZapfDingbats",          "d050000l"}};
-
-class GfxState;
-class GfxImageColorMap;
 
 class SWFOutputDev:  public OutputDev {
   struct swfoutput output;
@@ -246,6 +215,37 @@ public:
   int type3active; // are we between beginType3()/endType3()?
 
   GfxState *laststate;
+
+  int pic_xids[1024];
+  int pic_yids[1024];
+  int pic_ids[1024];
+  int pic_width[1024];
+  int pic_height[1024];
+  int picpos;
+  int pic_id;
+  char type3Warning;
+
+  char* substitutetarget[256];
+  char* substitutesource[256];
+  int substitutepos;
+};
+
+SWFOutputDev::SWFOutputDev()
+{
+    jpeginfo = 0;
+    ttfinfo = 0;
+    linkinfo = 0;
+    pbminfo = 0;
+    type3active = 0;
+    clippos = 0;
+    clipping[clippos] = 0;
+    outputstarted = 0;
+    xref = 0;
+    picpos = 0;
+    pic_id = 0;
+    substitutepos = 0;
+    type3Warning = 0;
+//    printf("SWFOutputDev::SWFOutputDev() \n");
 };
 
 static char*getFontID(GfxFont*font)
@@ -270,8 +270,8 @@ static char*getFontName(GfxFont*font)
     return fontname;
 }
 
-char mybuf[1024];
-char* gfxstate2str(GfxState *state)
+static char mybuf[1024];
+static char* gfxstate2str(GfxState *state)
 {
   char*bufpos = mybuf;
   GfxRGB rgb;
@@ -377,16 +377,14 @@ char* gfxstate2str(GfxState *state)
   return mybuf;
 }
 
-
-
-void dumpFontInfo(char*loglevel, GfxFont*font);
-int lastdumps[1024];
-int lastdumppos = 0;
+static void dumpFontInfo(char*loglevel, GfxFont*font);
+static int lastdumps[1024];
+static int lastdumppos = 0;
 /* nr = 0  unknown
    nr = 1  substituting
    nr = 2  type 3
  */
-void showFontError(GfxFont*font, int nr) 
+static void showFontError(GfxFont*font, int nr) 
 {  
     Ref*r=font->getID();
     int t;
@@ -406,7 +404,7 @@ void showFontError(GfxFont*font, int nr)
     dumpFontInfo("<warning>", font);
 }
 
-void dumpFontInfo(char*loglevel, GfxFont*font)
+static void dumpFontInfo(char*loglevel, GfxFont*font)
 {
   char* name = getFontID(font);
   Ref* r=font->getID();
@@ -467,20 +465,6 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
 
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
 //void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) {printf("void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) \n");}
-
-SWFOutputDev::SWFOutputDev() 
-{
-    jpeginfo = 0;
-    ttfinfo = 0;
-    linkinfo = 0;
-    pbminfo = 0;
-    type3active = 0;
-    clippos = 0;
-    clipping[clippos] = 0;
-    outputstarted = 0;
-    xref = 0;
-//    printf("SWFOutputDev::SWFOutputDev() \n");
-};
 
 SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 {
@@ -947,8 +931,6 @@ void SWFOutputDev::restoreState(GfxState *state) {
   clippos--;
 }
 
-char type3Warning=0;
-
 char* SWFOutputDev::searchFont(char*name) 
 {	
     int i;
@@ -1130,11 +1112,6 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 
     return strdup(tmpFileName);
 }
-
-
-char* substitutetarget[256];
-char* substitutesource[256];
-int substitutepos = 0;
 
 char* searchForSuitableFont(GfxFont*gfxFont)
 {
@@ -1368,14 +1345,6 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(fileName && del)
 	unlinkfont(fileName);
 }
-
-int pic_xids[1024];
-int pic_yids[1024];
-int pic_ids[1024];
-int pic_width[1024];
-int pic_height[1024];
-int picpos = 0;
-int pic_id = 0;
 
 #define SQR(x) ((x)*(x))
 
@@ -1746,66 +1715,70 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
 
 void pdfswf_init(char*filename, char*userPassword) 
 {
-  GString *fileName = new GString(filename);
-  GString *userPW;
-  Object info;
+    GString *fileName = new GString(filename);
+    GString *userPW;
+    Object info;
 
-  // read config file
-  globalParams = new GlobalParams("");
+    // read config file
+    globalParams = new GlobalParams("");
 
-  // open PDF file
-  if (userPassword && userPassword[0]) {
-    userPW = new GString(userPassword);
-  } else {
-    userPW = NULL;
-  }
-  doc = new PDFDoc(fileName, userPW);
-  if (userPW) {
-    delete userPW;
-  }
-  if (!doc->isOk()) {
-    exit(1);
-  }
-
-  // print doc info
-  doc->getDocInfo(&info);
-  if (info.isDict() &&
-    (screenloglevel>=LOGLEVEL_NOTICE)) {
-    printInfoString(info.getDict(), "Title",        "Title:        %s\n");
-    printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
-    printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
-    printInfoString(info.getDict(), "Author",       "Author:       %s\n");
-    printInfoString(info.getDict(), "Creator",      "Creator:      %s\n");
-    printInfoString(info.getDict(), "Producer",     "Producer:     %s\n");
-    printInfoDate(info.getDict(),   "CreationDate", "CreationDate: %s\n");
-    printInfoDate(info.getDict(),   "ModDate",      "ModDate:      %s\n");
-    printf("Pages:        %d\n", doc->getNumPages());
-    printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
-    printf("Encrypted:    ");
-    if (doc->isEncrypted()) {
-      printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
-	     doc->okToPrint() ? "yes" : "no",
-	     doc->okToCopy() ? "yes" : "no",
-	     doc->okToChange() ? "yes" : "no",
-	     doc->okToAddNotes() ? "yes" : "no");
+    // open PDF file
+    if (userPassword && userPassword[0]) {
+      userPW = new GString(userPassword);
     } else {
-      printf("no\n");
+      userPW = NULL;
     }
-  }
-  info.free();
-		 
-  numpages = doc->getNumPages();
-  if (doc->isEncrypted()) {
-	if(!doc->okToCopy()) {
-	    printf("PDF disallows copying. Bailing out.\n");
-	    exit(1); //bail out
-	}
-	if(!doc->okToChange() || !doc->okToAddNotes())
-	    swfoutput_setprotected();
-  }
+    doc = new PDFDoc(fileName, userPW);
+    if (userPW) {
+      delete userPW;
+    }
+    if (!doc->isOk()) {
+      exit(1);
+    }
 
-  output = new SWFOutputDev();
-  output->startDoc(doc->getXRef());
+    // print doc info
+    doc->getDocInfo(&info);
+    if (info.isDict() &&
+      (screenloglevel>=LOGLEVEL_NOTICE)) {
+      printInfoString(info.getDict(), "Title",        "Title:        %s\n");
+      printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
+      printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
+      printInfoString(info.getDict(), "Author",       "Author:       %s\n");
+      printInfoString(info.getDict(), "Creator",      "Creator:      %s\n");
+      printInfoString(info.getDict(), "Producer",     "Producer:     %s\n");
+      printInfoDate(info.getDict(),   "CreationDate", "CreationDate: %s\n");
+      printInfoDate(info.getDict(),   "ModDate",      "ModDate:      %s\n");
+      printf("Pages:        %d\n", doc->getNumPages());
+      printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
+      printf("Encrypted:    ");
+      if (doc->isEncrypted()) {
+        printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
+               doc->okToPrint() ? "yes" : "no",
+               doc->okToCopy() ? "yes" : "no",
+               doc->okToChange() ? "yes" : "no",
+               doc->okToAddNotes() ? "yes" : "no");
+      } else {
+        printf("no\n");
+      }
+    }
+    info.free();
+                   
+    numpages = doc->getNumPages();
+    int protect = 0;
+    if (doc->isEncrypted()) {
+          if(!doc->okToCopy()) {
+              printf("PDF disallows copying. Terminating.\n");
+              exit(1); //bail out
+          }
+          if(!doc->okToChange() || !doc->okToAddNotes())
+              protect = 1;
+    }
+   
+    if(protect)
+        swfoutput_setparameter("protect", "1");
+
+    output = new SWFOutputDev();
+    output->startDoc(doc->getXRef());
 }
 
 void pdfswf_setparameter(char*name, char*value)
@@ -1864,7 +1837,6 @@ int pdfswf_numpages()
 {
   return doc->getNumPages();
 }
-int closed=0;
 void pdfswf_close()
 {
     msg("<debug> pdfswf.cc: pdfswf_close()");
