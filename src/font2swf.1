@@ -1,0 +1,29 @@
+.TH font2swf "1" "February 2004" "font2swf" "swftools"
+.SH NAME
+font2swf - Converts a font to SWF.
+
+.SH Synopsis
+.B font2swf <fontfile>
+
+.SH DESCRIPTION
+Takes a font file (.ttf, .afm, .pfa, .pfb and all other types
+supported by FreeType) and converts it into a SWF file.
+.PP
+The SWF will contain the Font in SWF format (that is, a
+DefineFont2 Tag) as well as a textfield containing all the
+characters the font has. This means the resulting SWF will
+be viewable.
+
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR 
+    Print short help message and exit
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR 
+    Be verbose. Use more than one -v for greater effect.
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
+    Write output to file \fIfilename\fR.
+.TP
+\fB\-V\fR, \fB\-\-version\fR 
+    Print version info and exit
