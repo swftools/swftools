@@ -431,6 +431,7 @@ int   swf_ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color);
 int   swf_ShapeAddSolidFillStyle(SHAPE * s,RGBA * color);
 int   swf_ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip);
 int   swf_ShapeAddGradientFillStyle(SHAPE * s,MATRIX * m,GRADIENT* gradient,int radial);
+int   swf_ShapeAddFillStyle2(SHAPE * s,FILLSTYLE*fs);
 
 int   swf_SetShapeStyles(TAG * t,SHAPE * s);
 int   swf_ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits);

@@ -297,6 +297,10 @@ int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitma
           
   return (++s->fillstyle.n);
 }
+int swf_ShapeAddFillStyle2(SHAPE * s,FILLSTYLE*fs)
+{
+    return swf_ShapeAddFillStyle(s, fs->type, &fs->m, &fs->color, fs->id_bitmap, &fs->gradient);
+}
 
 int swf_ShapeAddSolidFillStyle(SHAPE * s,RGBA * color)
 { return swf_ShapeAddFillStyle(s,FILL_SOLID,NULL,color,0,0);
