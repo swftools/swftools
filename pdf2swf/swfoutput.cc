@@ -92,16 +92,18 @@ static void transform (plotxy*p0,struct swfmatrix*m)
 }
 
 // write a move-to command into the swf
-static void moveto(TAG*tag, plotxy p0)
+static int moveto(TAG*tag, plotxy p0)
 {
     int rx = (int)(p0.x*20);
     int ry = (int)(p0.y*20);
     if(rx!=swflastx || ry!=swflasty || fillstylechanged) {
       swf_ShapeSetMove (tag, shape, rx,ry);
       fillstylechanged = 0;
+      swflastx=rx;
+      swflasty=ry;
+      return 1;
     }
-    swflastx=rx;
-    swflasty=ry;
+    return 0;
 }
 
 // write a line-to command into the swf
@@ -146,17 +148,29 @@ static void line(TAG*tag, plotxy p0, plotxy p1, struct swfmatrix*m)
 static void spline(TAG*tag,plotxy p0,plotxy p1,plotxy p2,plotxy p3,struct swfmatrix*m)
 {
     double d;
-    struct qspline q[16];
+    struct qspline q[128];
     int num;
     int t;
     transform(&p0,m);
     transform(&p1,m);
     transform(&p2,m);
     transform(&p3,m);
+    cspline c;
+    c.start = p3;
+    c.control1 = p2;
+    c.control2 = p1;
+    c.end = p0;
 
-    num = approximate(p0,p1,p2,p3,q);
+    if(storefont) {
+	/* fonts use a different approximation than shapes */
+	num = cspline_approximate(&c, q, 10.0, APPROXIMATE_RECURSIVE_BINARY);
+	//num = cspline_approximate(&c, q, 10.0, APPROXIMATE_INFLECTION);
+    } else {
+	num = cspline_approximate(&c, q, 1.0, APPROXIMATE_RECURSIVE_BINARY);
+    }
     for(t=0;t<num;t++) {
-        moveto(tag,q[t].start);
+	if(!t) 
+	    moveto(tag,q[t].start);
         splineto(tag,q[t].control, q[t].end);
     }
 }
@@ -1038,7 +1052,7 @@ void swfoutput_destroy(struct swfoutput* obj)
     if(!filename) 
         return;
     if(filename)
-     fi = open(filename, O_CREAT|O_TRUNC|O_WRONLY, 0777);
+     fi = open(filename, O_BINARY|O_CREAT|O_TRUNC|O_WRONLY, 0777);
     else
      fi = 1; // stdout
     
