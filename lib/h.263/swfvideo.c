@@ -1058,9 +1058,9 @@ void prepareMVDBlock(VIDEOSTREAM*s, mvdblockdata_t*data, int bx, int by, block_t
 int writeMVDBlock(VIDEOSTREAM*s, TAG*tag, mvdblockdata_t*data)
 {
     int c = 0, y = 0;
-    /* mvd (0,0) block (mode=0) */
     int t;
     int has_dc=0; // mvd w/o mvd24
+    /* mvd (0,0) block (mode=0) */
     int mode = 0;
     int bx = data->bx;
     int by = data->by;
@@ -1268,12 +1268,13 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 #endif
 }
 
-void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, int quant)
+void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, void**picture, int quant)
 {
     int bx, by;
 
     if(quant<1) quant=1;
     if(quant>31) quant=31;
+    s->quant = quant;
 
     writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
 
@@ -1284,10 +1285,6 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
     {
 	for(bx=0;bx<s->bbx;bx++)
 	{
-	    /* mvd (0,0) block (mode=0) */
-	    int mode = 0;
-	    int has_dc = 0;
-	    int cbpybits=0,cbpcbits=0;
 	    int predictmvdx=0, predictmvdy=0;
 	    int mvx=movex[by*s->bbx+bx];
 	    int mvy=movey[by*s->bbx+bx];
@@ -1297,19 +1294,50 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed 
 	    if(mvy<-32) mvy=-32;
 	    if(mvy>31) mvy=31;
 
-	    if(mvx == 0 && mvy == 0) {
+	    if(mvx == 0 && mvy == 0 && picture == 0) {
 		swf_SetBits(tag,1,1); // COD skip
 	    } else {
+		int mode = 0;
+		int has_dc=0;
+		int y=0,c=0;
+		block_t b;
+		block_t b2;
+		
 		swf_SetBits(tag,0,1); // COD
-		codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
-		codehuffman(tag, cbpy, cbpybits^15);
-	
-		/* vector */
-		predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
-		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 0));
-		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 1));
-		s->mvdx[by*s->bbx+bx] = mvx;
-		s->mvdy[by*s->bbx+bx] = mvy;
+
+		if(mvx==0 && mvy==0) { // only picture
+		    mode = 3;
+		    has_dc = 1;
+		}
+
+		if(picture) {
+		    /* todo: store picture in b */
+		    dodctandquant(&b, &b2, 1, s->quant);
+		    getblockpatterns(&b2, &y, &c, 1);
+		} else {
+		    y=0;c=0;
+		}
+
+		codehuffman(tag, mcbpc_inter, mode*4+c);
+		codehuffman(tag, cbpy, y^15);
+		
+		if(mode < 3) {
+		    /* has motion vector */
+		    predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
+		    codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 0));
+		    codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 1));
+		    s->mvdx[by*s->bbx+bx] = mvx;
+		    s->mvdy[by*s->bbx+bx] = mvy;
+		}
+
+		if(picture) {
+		    encode8x8(tag, b2.y1, has_dc, y&8);
+		    encode8x8(tag, b2.y2, has_dc, y&4);
+		    encode8x8(tag, b2.y3, has_dc, y&2);
+		    encode8x8(tag, b2.y4, has_dc, y&1);
+		    encode8x8(tag, b2.u, has_dc, c&2);
+		    encode8x8(tag, b2.v, has_dc, c&1);
+		}
 	    }
 	}
     }
