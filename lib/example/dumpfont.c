@@ -133,7 +133,7 @@ void DumpGlobal(char * funcname)
 }
 
 
-void fontcallback(U16 id,U8 * name,0)
+void fontcallback(U16 id,U8 * name,void*data)
 { SWFFONT * font;
 
   int f;
