@@ -26,7 +26,9 @@ General Improvements:
     * rfxswf: modules/swfshape doesn't allow changing to fillstyle 0
     * consistent output handling if -o is missing. (out.swf/stdout)
     * swfcombine: Allow substituting frames (which have a name), too?
+    * swfcombine: Allow ids instead of names
     * make more stuff dependent on the information in config.h
+    * autoconf: rfxswf and pdfswf are build always when running "make install"
 
 Cleanups in rfxswf-lib:
     
