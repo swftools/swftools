@@ -12,4 +12,6 @@
 	* configure: Now works without automake, automatically disables 
 			jpeg2swf and pdf2swf if jpeglib is not found (disable
 			both) or t1lib is not found (disable pdf2swf)
-	* swfcombine: bugfixes
+	* swfcombine: bugfixes, no longer builds "unstreamable" SWFs
+	* rfxswf-lib: lossless image formats
+	* pdf2swf: likewise
