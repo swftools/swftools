@@ -74,12 +74,14 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
 		&obbox, &filename))
 	return NULL;
 
-    if (!PY_CHECK_TYPE(obbox, &BBoxClass)) {
-	obbox = f_BBox(0, obbox, 0);
-	if(!obbox)
-	    return NULL;
+    if(obbox) {
+	if (!PY_CHECK_TYPE(obbox, &BBoxClass)) {
+	    obbox = f_BBox(0, obbox, 0);
+	    if(!obbox)
+		return NULL;
+	}
+	bbox = bbox_getSRECT(obbox);
     }
-    bbox = bbox_getSRECT(obbox);
 
     memset(&swf->swf, 0, sizeof(SWF));
     if(filename)
@@ -169,8 +171,9 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 	swf->compressed = 1;
     
     swf->firstTag = taglist_getTAGs(swfo->taglist);
-    if(!swf->firstTag)
-	return NULL;
+
+    /*if(!swf->firstTag)
+	return NULL;*/
 
     // fix the file, in case it is empty or not terminated properly
     {
@@ -280,7 +283,7 @@ static int swf_print(PyObject * self, FILE *fi, int flags) //flags&Py_PRINT_RAW
 static PyObject* swf_getattr(PyObject * self, char* a)
 {
     SWFObject*swf = (SWFObject*)self;
-    PyObject* ret;
+    PyObject* ret = 0;
 
     if(!strcmp(a, "fps")) {
 	double fps = swf->swf.frameRate/256.0;
