@@ -2243,16 +2243,49 @@ EOF
 
 fi
 
+ echo $ac_n "checking for bool""... $ac_c" 1>&6
+echo "configure:2248: checking for bool" >&5
+if eval "test \"`echo '$''{'ac_cv_type_bool'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 2253 "configure"
+#include "confdefs.h"
+#include <sys/types.h>
+#if STDC_HEADERS
+#include <stdlib.h>
+#include <stddef.h>
+#endif
+EOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  egrep "(^|[^a-zA-Z_0-9])bool[^a-zA-Z_0-9]" >/dev/null 2>&1; then
+  rm -rf conftest*
+  ac_cv_type_bool=yes
+else
+  rm -rf conftest*
+  ac_cv_type_bool=no
+fi
+rm -f conftest*
+
+fi
+echo "$ac_t""$ac_cv_type_bool" 1>&6
+if test $ac_cv_type_bool = no; then
+  cat >> confdefs.h <<\EOF
+#define bool char
+EOF
+
+fi
+
      
  for ac_func in popen mkstemp stat lrand48 rand srand48 srand
 do
 echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
-echo "configure:2251: checking for $ac_func" >&5
+echo "configure:2284: checking for $ac_func" >&5
 if eval "test \"`echo '$''{'ac_cv_func_$ac_func'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2256 "configure"
+#line 2289 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char $ac_func(); below.  */
@@ -2275,7 +2308,7 @@ $ac_func();
 
 ; return 0; }
 EOF
-if { (eval echo configure:2279: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2312: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_func_$ac_func=yes"
 else
