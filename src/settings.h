@@ -20,6 +20,11 @@ struct config_t
    int loglevel;
    int movex;
    int movey;
+   int sizex;
+   char hassizex;
+   int sizey;
+   char hassizey;
+   int framerate;
    float scalex;
    float scaley;
 };
