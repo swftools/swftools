@@ -42,6 +42,7 @@ struct {
     int verbose;
     char *outfile;
     int mx;
+    int version;
 } global;
 
 typedef struct _image {
@@ -61,7 +62,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 
     memset(swf, 0x00, sizeof(SWF));
 
-    swf->fileVersion = 4;
+    swf->fileVersion = global.version;
     swf->frameRate = (int)(256.0 * framerate);
     swf->movieSize.xmax = dx * 20;
     swf->movieSize.ymax = dy * 20;
@@ -368,6 +369,7 @@ int args_callback_option(char *arg, char *val)
 
 	case 'm':
 	    global.mx = 1;
+	    global.version = 6;
 	    return 0;
 
 	case 'Y':
@@ -459,6 +461,7 @@ int main(int argc, char **argv)
     global.quality = 60;
     global.framerate = 1.0;
     global.verbose = 1;
+    global.version = 4;
 
     processargs(argc, argv);
 
