@@ -414,7 +414,7 @@ static int isSWF(const char*filename)
     char a[8];
     if(!fi) {
 	perror(filename);
-	return 0;
+	return -1;
     }
     memset(a, 0, sizeof(a));
     fread(a, 4, 1, fi);
@@ -428,7 +428,10 @@ static int isSWF(const char*filename)
 
 SWFFONT* swf_LoadFont(char*filename)
 {
-    if(isSWF(filename)) {
+    int is_swf = isSWF(filename);
+    if(is_swf<0)
+	return 0;
+    if(is_swf) {
 	return swf_ReadFont(filename);
     }
 #if defined(HAVE_FREETYPE)
