@@ -36,7 +36,6 @@
 extern "C" {
 #include "log.h"
 }
-#include "xpdf/gfile.h"
 
 #ifndef WIN32
 #define FONTDIR SWFTOOLS_DATADIR "/fonts"
