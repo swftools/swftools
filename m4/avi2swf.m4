@@ -21,7 +21,7 @@ cat > conftest.cpp << EOF
    #define Bpp bpp
 #endif
 
-int main (int argc, char*argv[])
+int test()
 {
   IAviReadFile* player;
   IAviReadStream* astream;
@@ -64,11 +64,15 @@ int main (int argc, char*argv[])
   uint_t a,b;
   astream->ReadFrames(0,0,0,a,b);
 }
+int main (int argc, char*argv[])
+{
+    return 0;
+}
 EOF
 
 ac_link='$CXX $CPPFLAGS $CXXFLAGS `avifile-config --cflags` `avifile-config --libs` conftest.cpp -o conftest${ac_exeext}'
 ##if {(eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
   AC_MSG_RESULT(yes)
   AVIFILE=true
   export AVIFILE
