@@ -33,7 +33,14 @@ PyObject * taglist_new2(TAG*tag)
 
     int nr=0;
     TAG*t = tag;
-    while(t) {nr++;t=t->next;}
+    TAG*last = t;
+    while(t) {nr++;last=t;t=t->next;}
+
+    if(last && last->id==ST_END) {
+	swf_DeleteTag(last);
+	nr--;
+    }
+
     taglist->taglist = PyList_New(nr);
     
     mylog("+%08x(%d) taglist_new2: %d items", (int)taglist, taglist->ob_refcnt, nr);
@@ -158,7 +165,7 @@ static int taglist_length(PyObject * self)
 //----------------------------------------------------------------------------
 static int taglist_contains(PyObject * self, PyObject * tag)
 {
-    mylog(" %08x(%d) taglist_contains %08x", (int)self, self->ob_refcnt, tag);
+    /* TODO: optimize! */
     TagListObject*taglist = (TagListObject*)self;
     PyObject*list = taglist->taglist;
     int l = PyList_Size(list);
@@ -166,11 +173,9 @@ static int taglist_contains(PyObject * self, PyObject * tag)
     for(t=0;t<l;t++) {
 	PyObject*item = PyList_GetItem(list, t);
 	if(item == tag) {
-	    mylog(" %08x(%d) taglist_contains: yes", (int)self, self->ob_refcnt);
 	    return 1;
 	}
     }
-    mylog(" %08x(%d) taglist_contains: no", (int)self, self->ob_refcnt);
     return 0;
 }
 //----------------------------------------------------------------------------
@@ -269,7 +274,7 @@ static PyObject * taglist_item(PyObject * self, int index)
     PyObject*tag;
     mylog(" %08x(%d) taglist_item(%d)", (int)self, self->ob_refcnt, index);
     tag = PyList_GetItem(taglist->taglist, index);
-    Py_INCREF(tag); //TODO-REF
+    Py_INCREF(tag);
     return tag;
 }
 static PySequenceMethods taglist_as_sequence =
