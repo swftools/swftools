@@ -205,8 +205,6 @@ void makestackmaster(u8**masterdata, int*masterlength)
     int strlength = 0;
     int fileversion = 1;
 
-    logf("<error> stacking doesn't work yet. Prepare for problems.");
-
     /* scan all slaves for bounding box */
     for(t=0;t<numslaves;t++)
     {
