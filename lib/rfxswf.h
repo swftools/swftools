@@ -202,6 +202,7 @@ int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns lengt
 int  swf_WriteSWC(int handle, SWF * swf);   // for convenience, equal to swf->compressed=1;swf_WriteSWF(..)
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
 void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
+SWF* swf_CopySWF(SWF*swf);
 
 // for streaming:
 int  swf_WriteHeader(int handle,SWF * swf);    // Writes Header of swf to file

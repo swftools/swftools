@@ -1488,6 +1488,21 @@ int swf_WriteCGI(SWF * swf)
   return swf_WriteSWF(fileno(stdout),swf);
 }
 
+SWF* swf_CopySWF(SWF*swf)
+{
+    SWF*nswf = rfx_alloc(sizeof(SWF));
+    memcpy(nswf, swf, sizeof(SWF));
+    nswf->firstTag = 0;
+    TAG*tag = swf->firstTag;
+    TAG*ntag = 0;
+    while(tag) {
+        ntag = swf_CopyTag(ntag, tag);
+        if(!nswf->firstTag)
+            nswf->firstTag = ntag;
+    }
+    return nswf;
+}
+
 void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for tags
 { TAG * t = swf->firstTag;
 
