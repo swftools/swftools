@@ -32,6 +32,9 @@ RGBA button_colors[6]=
 int useDefineButton2 = 0; // set this to 1 to use DefineButton2 Tags
                           // instead of DefineButton1
 #define SUBTITLES 1
+//#define USE_WATERMARK 1   // set this flag to print-protect your swfs
+
+#define ID_WATERMARK 64
 
 int main (int argc,char ** argv)
 { SWF swf;
@@ -82,6 +85,31 @@ int main (int argc,char ** argv)
   m.tx = 0; //move
   m.ty = 0;
   swf_ObjectPlace(tag, 23, 1,&m,0,"viewport");
+    
+#ifdef USE_WATERMARK
+
+  // Insert Alpha watermark to avoid printing
+
+  tag = swf_InsertTag(tag,ST_DEFINESHAPE3);
+  swf_ShapeNew(&s);
+  rgb.r = rgb.g = rgb.b = 0xff;
+  rgb.a = 0x08;
+  fs1 = swf_ShapeAddSolidFillStyle(s,&rgb);
+  swf_SetU16(tag,ID_WATERMARK);
+  r.xmin = r.ymin = 0;
+  r.xmax = 20*width;
+  r.ymax = 20*height;
+  swf_SetRect(tag,&r); // cover whole viewport
+  swf_SetShapeHeader(tag,s);
+  swf_ShapeSetAll(tag,s,0,0,0,fs1,0);
+  swf_ShapeSetLine(tag,s,20*width,0);
+  swf_ShapeSetLine(tag,s,0,20*height);
+  swf_ShapeSetLine(tag,s,-20*width,0);
+  swf_ShapeSetLine(tag,s,0,-20*height);
+  swf_ShapeSetEnd(tag);
+  swf_ShapeFree(s);  
+
+#endif // USE_WATERMARK
 
   for(count=0;count<6;count++)
   {
@@ -179,10 +207,19 @@ int main (int argc,char ** argv)
   m.tx = 0; //move
   m.ty = 0;
   tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-  swf_ObjectPlace(tag, 30, 2,&m,0,0);
+  swf_ObjectPlace(tag, 30, 3,&m,0,0);
   m.tx = button_sizex*30;
   tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-  swf_ObjectPlace(tag, 31, 3,&m,0,0);
+  swf_ObjectPlace(tag, 31, 4,&m,0,0);
+
+#ifdef USE_WATERMARK
+
+  // place watermark
+
+  tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+  swf_ObjectPlace(tag, ID_WATERMARK, 2, &m, 0,0);
+
+#endif // USE_WATERMARK
   
   swf_ActionFree(a1);
   swf_ActionFree(a2);
@@ -216,7 +253,7 @@ int main (int argc,char ** argv)
       m.tx = m.ty = 0;
   }
   tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-  swf_ObjectPlace(tag, 0x77, 4,&m,0,0);
+  swf_ObjectPlace(tag, 0x77, 5,&m,0,0);
 #endif
 
   tag = swf_InsertTag(tag,ST_SHOWFRAME);
