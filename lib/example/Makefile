@@ -9,13 +9,16 @@ DBFLAGS	= -g2
 .c.o:
 		$(CC) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: jpegtest box shape1 transtest zlibtest sprites buttontest
+all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
 
 box: $(RFXSWF) box.o
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 buttontest: $(RFXSWF) buttontest.o
 		$(CC) -o buttontest buttontest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+dumpfont: $(RFXSWF) dumpfont.o
+		$(CC) -o dumpfont dumpfont.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 jpegtest: $(RFXSWF) jpegtest.o
 		$(CC) -o jpegtest jpegtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
@@ -29,13 +32,16 @@ sprites: $(RFXSWF) sprites.o
 transtest: $(RFXSWF) transtest.o
 		$(CC) -o transtest transtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
+text: $(RFXSWF) text.o
+		$(CC) -o text text.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
 zlibtest: $(RFXSWF) zlibtest.o
 		$(CC) -o zlibtest zlibtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 clean:
 		rm -f jpegtest.o box.o shape1.o trastest.o zlibtest.o sprites.o\
-		buttontest.o \
+		buttontest.o dumpfont.o text.o\
 		jpegtest.swf box.swf shape1.swf trastest.swf zlibtest.swf \
-                sprites.swf buttontest.swf
+                sprites.swf buttontest.swf text.swf
 
 
