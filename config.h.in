@@ -109,4 +109,10 @@
 #endif
 #endif
 
+#ifdef HAVE_JPEGLIB_H
+#ifdef HAVE_LIBJPEG
+#define HAVE_JPEGLIB
+#endif
+#endif
+
 #endif
