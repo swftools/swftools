@@ -32,7 +32,7 @@ fi
 
 AC_CHECK_LIB(freetype, FT_Init_FreeType,HAVE_LIB_FREETYPE=1,)
 AC_CHECK_HEADERS(freetype/freetype.h,HAVE_FREETYPE_FREETYPE_H=1)
-AC_CHECK_HEADERS(freetype/ft2build.h,HAVE_FREETYPE_FT2BUILD_H=1)
+AC_CHECK_HEADERS(ft2build.h,HAVE_FT2BUILD_H=1)
 
 if test "x${HAVE_LIB_FREETYPE}" != "x";then
 if test "x${HAVE_FREETYPE_FREETYPE_H}" != "x";then
@@ -47,18 +47,23 @@ if test "x${HAVE_FREETYPE}" = "x1"; then
 	LIBS="$LIBS -lfreetype"
     fi
 
-if test "x${HAVE_FREETYPE_FT2BUILD_H}" = "x1"; then
-    HAVE_FREETYPE_FT2BUILD_H_DEFINE='#define HAVE_FREETYPE_FT2BUILD_H'
+if test "x${HAVE_FT2BUILD_H}" = "x1"; then
+    HAVE_FT2BUILD_H_DEFINE='#define HAVE_FT2BUILD_H'
 fi
 
     AC_MSG_CHECKING([whether we can compile the freetype test program])
 
     cat > conftest.c << EOF
-$HAVE_FREETYPE_FT2BUILD_H_DEFINE
+$HAVE_FT2BUILD_H_DEFINE
 
-#ifdef HAVE_FREETYPE_FT2BUILD_H
-#include <freetype/ft2build.h>
+#ifdef HAVE_FT2BUILD_H
+#include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include FT_SIZES_H
+#include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_IDS_H
+#include FT_OUTLINE_H
 #else
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
