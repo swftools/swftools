@@ -65,12 +65,21 @@
 
 6.) How do I compile swftools on Mac OS X?
 
-    First, you need to install all the required libs (jpeg, t1lib, freetype, lame) via Fink.
+    You need to get fink (http://fink.sourceforge.net), and install it.
+    After this, you need to install all the required libs (jpeg, freetype, lame):
+   
+    fink install libjpeg libjpeg-shlibs freetype2 freetype2-shlibs lame lame-shlibs
+
     Then, you have to inform configure of where they are:
 
-    ( setenv LDFLAGS "-L/sw/lib" ; setenv CPPFLAGS "-I/sw/include -I/sw/include/lame" ; ./configure )
+    LDFLAGS="-L/sw/lib" CPPFLAGS="-I/sw/include -I/sw/include/lame" ./configure
     make
     sudo make install
+
+    If this doesn't work, especially if you want to use the python library and
+    get weird exceptions, try to remove all versions of jpeglib, freetype and 
+    lame from /usr/lib and /usr/local/lib, and then run configure/make/make install
+    again.
 
 7.) Is there a pdf2swf/avi2swf for Windows?
 
