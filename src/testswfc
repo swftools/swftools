@@ -5,9 +5,9 @@ testswffile() {
     test -f $1 || (touch failed;echo -n "not there" >&5;return;)
     echo
     echo -n "testing $1 for wellformedness..."
-    swfdump $1 | tail -n 1 | grep '\b0 END\b' >&6 2>&6 || (touch failed;echo -n "wrong end";return;)
-    swfdump $1 | grep 'rfxswf|warning|error|bounds' >&6 2>&6 && (touch failed;echo -n "error";return;)
-    swfdump $1 2>&1 >&6 | grep '^.*$' >&6 2>&6 && (touch failed;echo -n "swfdump stderr";swfdump $1 >&6 2>&5;return;)
+    ./swfdump $1 | tail -n 1 | grep '\b0 END\b' >&6 2>&6 || (touch failed;echo -n "wrong end";return;)
+    ./swfdump $1 | grep 'rfxswf|warning|error|bounds' >&6 2>&6 && (touch failed;echo -n "error";return;)
+    ./swfdump $1 2>&1 >&6 | grep '^.*$' >&6 2>&6 && (touch failed;echo -n "swfdump stderr";./swfdump $1 >&6 2>&5;return;)
     echo
 }
 showresult() {
@@ -103,7 +103,7 @@ swfc test.sc
 test -f output.swf && touch failed
 showresult
 
-starttest swc
+starttest cws
 rm -f output.swf
 cat > test.sc <<EOF
 .swf compress
@@ -114,7 +114,7 @@ EOF
 showfile test.sc
 swfc test.sc
 testswffile output.swf
-swfdump output.swf | grep 'File is zlib compressed' >&6 2>&6 || touch failed
+./swfdump output.swf | grep 'File is zlib compressed' >&6 2>&6 || touch failed
 showresult
 
 starttest nostart2
