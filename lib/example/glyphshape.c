@@ -91,7 +91,7 @@ int main(int argc, char ** argv)
   SWFFONT * font = Font_Demo_Font(ID_FONT); // change font name here
 
   swf_FontInitUsage(font,&use);
-  swf_FontUse(&use,s);        
+  swf_FontUse(font,&use,s);        
   swf_FontReduce(font,&use);            // make sure that gid's point to the specific glyphs
   
   memset(&swf,0x00,sizeof(SWF));
