@@ -38,6 +38,7 @@ int action = 0;
 int html = 0;
 int xy = 0;
 int showtext = 0;
+int hex = 0;
 
 struct options_t options[] =
 {
@@ -49,6 +50,7 @@ struct options_t options[] =
  {"e","html"},
  {"v","verbose"},
  {"V","version"},
+ {"d","hex"},
  {0,0}
 };
 
@@ -83,6 +85,10 @@ int args_callback_option(char*name,char*val)
 	xy |= 4;
 	return 0;
     }
+    else if(name[0]=='d') {
+	hex = 1;
+	return 0;
+    }
     else {
         printf("Unknown option: -%s\n", name);
     }
@@ -103,6 +109,7 @@ void args_callback_usage(char*name)
     printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");
     printf("\t-a , --action\t\t Disassemble action tags\n");
     printf("\t-t , --text\t\t Show text data\n");
+    printf("\t-d , --hex\t\t Print hex output of tag data, too\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
@@ -299,6 +306,8 @@ void printhandlerflags(U16 handlerflags)
 void handlePlaceObject2(TAG*tag, char*prefix)
 {
     U8 flags = swf_GetU8(tag);
+    swf_GetU16(tag); //depth
+    //flags&1: move
     if(flags&2) swf_GetU16(tag); //id
     if(flags&4) swf_GetMatrix(tag,0);
     if(flags&8) swf_GetCXForm(tag,0,0);
@@ -310,12 +319,12 @@ void handlePlaceObject2(TAG*tag, char*prefix)
     if(flags&128) {
       if (action) {
 	U16 globalflags;
+	U16 unknown;
 	printf("\n");
-	swf_GetU16(tag);
+	unknown = swf_GetU16(tag);
 	globalflags = swf_GetU16(tag);
-//	printf("%s global flags:%04x ",prefix, handlerflags);
-//	printhandlerflags(globalflags);
-//	printf("\n");
+	if(unknown)
+	    printf("Unknown parameter field not zero: %04x\n", unknown);
 	while(1)  {
 	    int length;
 	    int t;
@@ -335,7 +344,7 @@ void handlePlaceObject2(TAG*tag, char*prefix)
 	    swf_ActionFree(a);
 	}
 	if(globalflags) // should go to sterr.
-	    printf("ERROR: unsatisfied handlerflags: %02x", globalflags);
+	    printf("ERROR: unsatisfied handlerflags: %02x\n", globalflags);
     } else {
       printf(" has action code\n");
     }
@@ -571,6 +580,20 @@ int main (int argc,char ** argv)
 		handlePlaceObject2(tag, myprefix);
 	    else
 		printf("\n");
+	}
+	if(tag->len && hex) {
+	    int t;
+	    printf("                %s-=> ",prefix);
+	    for(t=0;t<tag->len;t++) {
+		printf("%02x ", tag->data[t]);
+		if((t && !(t&15)) || (t==tag->len-1))
+		{
+		    if(t==tag->len-1)
+			printf("\n");
+		    else
+			printf("\n                %s-=> ",prefix);
+		}
+	    }
 	}
         tag = tag->next;
     }
