@@ -14,14 +14,23 @@ the Flash Plugin.
 \fB\-h\fR, \fB\-\-help\fR
 Print short help message and exit
 .TP
+\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
+Write output to file \fIfilename\fR
+.TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version info and exit
 .TP
-\fB\-i\fR, \fB\-\-id\fR \fIid\fR
-Set the ID of the object to extract to \fIid\fR.
+\fB\-i\fR, \fB\-\-id\fR \fIids\fR
+\fIids\fR is a range of IDs to extract. E.g. 1-10,14
+.TP
+\fB\-f\fR, \fB\-\-frame\fR \fIframes\fR
+\fIframes\fR is a range of frames to extract. E.g. 1-10,20-30,40-
 .TP
 \fB\-n\fR, \fB\-\-name\fR \fIname\fR
 Set the name of the object to extract to \fIname\fR.
+.TP
+\fB\-w\fR, \fB\-\-hollow\fR
+Copy empty frames to the output file, too.
 
 .SH AUTHOR
 
