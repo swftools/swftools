@@ -450,7 +450,7 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
 
         if(!outline) {
          logf("<warning> Didn't find %s in current charset (%s)", 
-                 character,font->getName());
+                 FIXNULL(character),FIXNULL(font->getName()));
          return;
         }
         
@@ -521,7 +521,7 @@ SWFFont::SWFFont(char*name, int id, char*filename)
 
     if(!charnum) 
         return;
-    logf("<verbose> Font %s(%d): Storing %d outlines.\n", name, id, charnum);
+    logf("<verbose> Font %s(%d): Storing %d outlines.\n", FIXNULL(name), id, charnum);
 
     this->standardtablesize = 256;
     if(this->charnum < this->standardtablesize)
@@ -607,7 +607,7 @@ SWFFont::~SWFFont()
 
     if(usednum && !drawonlyshapes)
     {
-        logf("<verbose> Font %s has %d used characters",fontid, usednum);
+        logf("<verbose> Font %s has %d used characters",FIXNULL(fontid), usednum);
         TAG*ftag = swf_InsertTag(swf.firstTag,ST_DEFINEFONT);
         swf_SetU16(ftag, this->swfid);
         int initpos = swf_GetTagLen(ftag);
@@ -726,7 +726,7 @@ int SWFFont::getSWFCharID(char*name, int charnr)
     if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
 	return getSWFCharID(this->standardtable[charnr], -1);
     }
-    logf("<warning> Didn't find character '%s' in font '%s'", name, this->name);
+    logf("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
     return 0;
 }
 
@@ -762,7 +762,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
     }
 
     if(t1id<0) {
-        logf("<error> internal error: t1id:%d, fontid:%s\n", t1id,fontid);
+        logf("<error> internal error: t1id:%d, fontid:%s\n", t1id,FIXNULL(fontid));
     }
     
     SWFFont*font = new SWFFont(fontid, t1id, filename);
@@ -990,7 +990,7 @@ void swfoutput_destroy(struct swfoutput* obj)
      fi = 1; // stdout
     
     if(fi<=0) {
-     logf("<fatal> Could not create \"%s\". ", filename);
+     logf("<fatal> Could not create \"%s\". ", FIXNULL(filename));
      exit(1);
     }
  

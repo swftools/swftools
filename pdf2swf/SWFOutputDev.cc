@@ -343,11 +343,11 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   char*name;
   gstr = font->getName();
   Ref r=font->getID();
-  logf("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?gstr->getCString():"(unknown font)", r.num,r.gen);
+  logf("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?FIXNULL(gstr->getCString()):"(unknown font)", r.num,r.gen);
 
   gstr  = font->getTag();
   if(gstr) 
-   logf("%sTag: %s\n", loglevel, gstr->getCString());
+   logf("%sTag: %s\n", loglevel, FIXNULL(gstr->getCString()));
   if(font->is16Bit()) logf("%sis 16 bit\n", loglevel);
 
   GfxFontType type=font->getType();
@@ -376,11 +376,11 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   GBool embedded = font->getEmbeddedFontID(&embRef);
   name = font->getEmbeddedFontName();
   if(embedded)
-   logf("%sEmbedded name: %s id: %d\n",loglevel, name, embRef.num);
+   logf("%sEmbedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
 
   gstr = font->getExtFontFile();
   if(gstr)
-   logf("%sExternal Font file: %s\n", loglevel, gstr->getCString());
+   logf("%sExternal Font file: %s\n", loglevel, FIXNULL(gstr->getCString()));
 
   // Get font descriptor flags.
   if(font->isFixedWidth()) logf("%sis fixed width\n", loglevel);
@@ -738,7 +738,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     {
 	swfoutput_namedlink(&output, named, points);
     }
-    logf("<verbose> \"%s\" link to \"%s\" (%d)\n", type, s, page);
+    logf("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
   }
 }
 
@@ -983,7 +983,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
       if(oldname) {
 	  substitutesource[substitutepos] = oldname;
 	  substitutetarget[substitutepos] = fontname;
-	  logf("<verbose> substituting %s -> %s", oldname, fontname);
+	  logf("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	  substitutepos ++;
       }
       return fontname;
@@ -1100,7 +1100,7 @@ void SWFOutputDev::updateFont(GfxState *state)
       return;
   }
 
-  logf("<verbose> Creating new SWF font: t1id: %d, filename: %s name:%s", this->t1id, fileName, fontname);
+  logf("<verbose> Creating new SWF font: t1id: %d, filename: %s name:%s", this->t1id, FIXNULL(fileName), FIXNULL(fontname));
   swfoutput_setfont(&output, fontname, this->t1id, fileName);
   if(fileName)
       unlinkfont(fileName);
