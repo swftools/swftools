@@ -32,15 +32,29 @@ Set quality of embedded jpeg pictures. 0 is worst (small), 100 is best (big). (d
 \fB\-w\fR, \fB\-\-samewindow\fR
 When converting pdf hyperlinks, don't make the links open a new window when clicked on,
 but open the page they point to in the window the SWF is displayed.
-.SH NOTES
-Every page in the PDF will be a frame in the SWF. This means the generated
-SWF must be inserted into some wrapper SWF if the SWF needs to be 
-browsed. 
-See \fIhttp://www.quiss.org/swftools/pdf2swf_usage.html\fR for more information
-about this.
+.TP
+\fB\-b\fR, \fB\-\-defaultviewer\fR 
+Link a standard viewer to the swf file. Therefore the swf file will be "browseable", i.e.
+display some buttons for turning pages.
+The viewer swf to be used is determined by a symlink named "default_viewer.swf" in
+the swftools data directory.
+.TP
+\fB\-l\fR, \fB\-\-defaultloader\fR
+Link a standard preloader to the swf file which will be displayed while the main swf is
+loading.
+The loader swf to be used is determined by a symlink named "default_loader.swf" in
+the swftools data directory.
+.TP
+\fB\-B\fR, \fB\-\-viewer\fR \fIfilename\fR
+Link viewer \fIfilename\fR to the swf file. See http://www.quiss.org/swftools/pdf2swf_usage.html
+for information on how to create your own viewers.
+.TP
+\fB\-L\fR, \fB\-\-loader\fR \fIfilename\fR
+Link preloader \fIfilename\fR to the swf file, where \fIfilename\fR
+is an arbitrary swf animation.
 .SH BUGS
 .PP
-type 3 and some truetype fonts don't work yet
+type 3 fonts don't work yet
 
 .SH AUTHOR
 
