@@ -19,4 +19,5 @@
 #define DataSize dataWritePos
 #define bitcount bitWritePos
 #define bitmask bitWritePos
+
 */

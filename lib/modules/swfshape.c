@@ -23,7 +23,7 @@
 #define FILL_TILED      0x40  // Bitmap
 #define FILL_CLIPPED    0x41
 
-void ShapeFree(SHAPE * s)
+void swf_ShapeFree(SHAPE * s)
 { if (s)
   { if (s->linestyle.data) free(s->linestyle.data);
     s->linestyle.data = NULL;
@@ -37,7 +37,7 @@ void ShapeFree(SHAPE * s)
   free(s);
 }
 
-int NewShape(SHAPE * * s)
+int swf_ShapeNew(SHAPE * * s)
 { SHAPE * sh;
   if (!s) return -1;
   sh = (SHAPE *)malloc(sizeof(SHAPE)); s[0] = sh;
@@ -45,84 +45,84 @@ int NewShape(SHAPE * * s)
   return sh?0:-1;
 }
 
-int GetSimpleShape(TAG * t,SHAPE * * s) // without Linestyle/Fillstyle Record
+int swf_GetSimpleShape(TAG * t,SHAPE * * s) // without Linestyle/Fillstyle Record
 { SHAPE * sh;
   int bitl, len;
   int end;
   U32 pos;
   
-  if (FAILED(NewShape(s))) return -1;
+  if (FAILED(swf_ShapeNew(s))) return -1;
   sh = s[0];
 
-  ResetBitmask(t); 
-  sh->bits.fill = (U16)GetBits(t,4);
-  sh->bits.line = (U16)GetBits(t,4);
-  bitl = 0; end = 0; pos = GetTagPos(t);
+  swf_ResetBitmask(t); 
+  sh->bits.fill = (U16)swf_GetBits(t,4);
+  sh->bits.line = (U16)swf_GetBits(t,4);
+  bitl = 0; end = 0; pos = swf_GetTagPos(t);
 
   while (!end)
-  { int edge = GetBits(t,1); bitl+=1;
+  { int edge = swf_GetBits(t,1); bitl+=1;
     if (edge)
     { bitl+=1;
-      if (GetBits(t,1))                 // Line
-      { U16 nbits = GetBits(t,4)+2;
+      if (swf_GetBits(t,1))                 // Line
+      { U16 nbits = swf_GetBits(t,4)+2;
         bitl+=5;
 
-        if (GetBits(t,1))               // x/y Line
-        { GetBits(t,nbits);
-          GetBits(t,nbits);
+        if (swf_GetBits(t,1))               // x/y Line
+        { swf_GetBits(t,nbits);
+          swf_GetBits(t,nbits);
           bitl+=nbits*2;
         }
         else                            // hline/vline
-        { GetBits(t,nbits+1);
+        { swf_GetBits(t,nbits+1);
           bitl+=nbits+1;
         }
       }
       else                              // Curve
-      { U16 nbits = GetBits(t,4)+2;
+      { U16 nbits = swf_GetBits(t,4)+2;
         bitl+=4;
 
-        GetBits(t,nbits);
-        GetBits(t,nbits);
-        GetBits(t,nbits);
-        GetBits(t,nbits);
+        swf_GetBits(t,nbits);
+        swf_GetBits(t,nbits);
+        swf_GetBits(t,nbits);
+        swf_GetBits(t,nbits);
 
         bitl+=4*nbits;
       }
     }
     else
-    { U16 flags = GetBits(t,5); bitl+=5;
+    { U16 flags = swf_GetBits(t,5); bitl+=5;
       if (flags)
       {
         if (flags&SF_MOVETO)
-        { U16 nbits = GetBits(t,5); bitl+=5;
-          GetBits(t,nbits);
-          GetBits(t,nbits);
+        { U16 nbits = swf_GetBits(t,5); bitl+=5;
+          swf_GetBits(t,nbits);
+          swf_GetBits(t,nbits);
           bitl+=2*nbits;
         }
         
         if (flags&SF_FILL0)
-        { GetBits(t,sh->bits.fill);
+        { swf_GetBits(t,sh->bits.fill);
           bitl+=sh->bits.fill;
         }
         
         if (flags&SF_FILL1)
-        { GetBits(t,sh->bits.fill);
+        { swf_GetBits(t,sh->bits.fill);
           bitl+=sh->bits.fill;
         }
 
         if (flags&SF_LINE)
-        { GetBits(t,sh->bits.line);
+        { swf_GetBits(t,sh->bits.line);
           bitl+=sh->bits.line;
         }
 
         if (flags&SF_NEWSTYLE)
-        { fprintf(stderr,"Can't process extended styles in shape.\n");
+        { fprintf(stderr,"RFXSWF: Can't process extended styles in shape.\n");
         }
       }
       else end = 1;
     }
   }
-  SetTagPos(t,pos);
+  swf_SetTagPos(t,pos);
   len = (bitl+7)/8;
   
   if (sh->data) free(sh->data);
@@ -130,98 +130,98 @@ int GetSimpleShape(TAG * t,SHAPE * * s) // without Linestyle/Fillstyle Record
   
   if (sh->data)
   { sh->bitlen = bitl;
-    GetBlock(t,sh->data,len);
+    swf_GetBlock(t,sh->data,len);
   }
   else return -1;
   
   return len;
 }
 
-int SetSimpleShape(TAG * t,SHAPE * s) // without Linestyle/Fillstyle Record
+int swf_SetSimpleShape(TAG * t,SHAPE * s) // without Linestyle/Fillstyle Record
 { int l;
 
   if (!s) return -1;
   l = (s->bitlen+7)/8;
 
   if (t)
-  { ResetBitcount(t);
+  { swf_ResetBitcount(t);
 
-    SetBits(t,s->bits.fill,4);
-    SetBits(t,s->bits.line,4);
-    SetBlock(t,s->data,l);
+    swf_SetBits(t,s->bits.fill,4);
+    swf_SetBits(t,s->bits.line,4);
+    swf_SetBlock(t,s->data,l);
 
-    ResetBitcount(t);
+    swf_ResetBitcount(t);
   }
   return l+1;
 }
 
-int SetFillStyle(TAG * t,FILLSTYLE * f)
+int swf_SetFillStyle(TAG * t,FILLSTYLE * f)
 { if ((!t)||(!f)) return -1;
-  SetU8(t,f->type);
+  swf_SetU8(t,f->type);
   
   // no gradients yet!
   
   switch (f->type)
   { case FILL_SOLID:
-      if (GetTagID(t)!=ST_DEFINESHAPE3) SetRGB(t,&f->color);
-      else SetRGBA(t,&f->color);
+      if (swf_GetTagID(t)!=ST_DEFINESHAPE3) swf_SetRGB(t,&f->color);
+      else swf_SetRGBA(t,&f->color);
       break;
 
     case FILL_TILED:
     case FILL_CLIPPED:
-      SetU16(t,f->id_bitmap);
-      SetMatrix(t,&f->m);
+      swf_SetU16(t,f->id_bitmap);
+      swf_SetMatrix(t,&f->m);
       break;
   }
   
   return 0;
 }
 
-int SetLineStyle(TAG * t,LINESTYLE * l)
+int swf_SetLineStyle(TAG * t,LINESTYLE * l)
 { if ((!l)||(!t)) return -1;
-  SetU16(t,l->width);
+  swf_SetU16(t,l->width);
 
-  if (GetTagID(t)!=ST_DEFINESHAPE3) SetRGB(t,&l->color);
-  else SetRGBA(t,&l->color);
+  if (swf_GetTagID(t)!=ST_DEFINESHAPE3) swf_SetRGB(t,&l->color);
+  else swf_SetRGBA(t,&l->color);
   
   return 0;
 }
 
-int SetShapeStyleCount(TAG * t,U16 n)
+int swf_SetShapeStyleCount(TAG * t,U16 n)
 { if (n>254)
-  { SetU8(t,0xff);
-    SetU16(t,n);
+  { swf_SetU8(t,0xff);
+    swf_SetU16(t,n);
     return 3;
   }
   else
-  { SetU8(t,n);
+  { swf_SetU8(t,n);
     return 1;
   }
 }
 
-int SetShapeStyles(TAG * t,SHAPE * s)
+int swf_SetShapeStyles(TAG * t,SHAPE * s)
 { int i,l;
   if (!s) return -1;
 
   l = 0;
-  l += SetShapeStyleCount(t,s->fillstyle.n);
+  l += swf_SetShapeStyleCount(t,s->fillstyle.n);
 
   for (i=0;i<s->fillstyle.n;i++)
-    l+=SetFillStyle(t,&s->fillstyle.data[i]);
+    l+=swf_SetFillStyle(t,&s->fillstyle.data[i]);
 
-  l += SetShapeStyleCount(t,s->linestyle.n);
+  l += swf_SetShapeStyleCount(t,s->linestyle.n);
 
   for (i=0;i<s->linestyle.n;i++)
-    l+=SetLineStyle(t,&s->linestyle.data[i]);
+    l+=swf_SetLineStyle(t,&s->linestyle.data[i]);
 
   return l;
 }
 
-int ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits)
+int swf_ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits)
 { if (!s) return -1;
     
-  s->bits.fill = CountBits(s->fillstyle.n,0);
-  s->bits.line = CountBits(s->linestyle.n,0);
+  s->bits.fill = swf_CountBits(s->fillstyle.n,0);
+  s->bits.line = swf_CountBits(s->linestyle.n,0);
 
   if (fbits) fbits[0] = s->bits.fill;
   if (lbits) lbits[0] = s->bits.line;
@@ -229,23 +229,23 @@ int ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits)
   return 0;    
 }
 
-int SetShapeBits(TAG * t,SHAPE * s)
+int swf_SetShapeBits(TAG * t,SHAPE * s)
 { if ((!t)||(!s)) return -1;
-  ResetBitcount(t);
-  SetBits(t,s->bits.fill,4);
-  SetBits(t,s->bits.line,4);
+  swf_ResetBitcount(t);
+  swf_SetBits(t,s->bits.fill,4);
+  swf_SetBits(t,s->bits.line,4);
   return 0;
 }
 
-int SetShapeHeader(TAG * t,SHAPE * s)
+int swf_SetShapeHeader(TAG * t,SHAPE * s)
 { int res;
-  res = SetShapeStyles(t,s);
-  if (res>=0) res = ShapeCountBits(s,NULL,NULL);
-  if (res>=0) res = SetShapeBits(t,s);
+  res = swf_SetShapeStyles(t,s);
+  if (res>=0) res = swf_ShapeCountBits(s,NULL,NULL);
+  if (res>=0) res = swf_SetShapeBits(t,s);
   return res;
 }
 
-int ShapeExport(int handle,SHAPE * s)  // without Linestyle/Fillstyle Record
+int swf_ShapeExport(int handle,SHAPE * s)  // without Linestyle/Fillstyle Record
 { int l;
   if (!s) return 0;
 
@@ -266,7 +266,7 @@ int ShapeExport(int handle,SHAPE * s)  // without Linestyle/Fillstyle Record
   return l;
 }
 
-int ShapeImport(int handle,SHAPE * * shape)
+int swf_ShapeImport(int handle,SHAPE * * shape)
 { SHAPE * s;
 
   if (handle<0) return -1;
@@ -299,7 +299,7 @@ int ShapeImport(int handle,SHAPE * * shape)
   return 0;
 }
 
-int ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap)
+int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap)
 { RGBA def_c;
   MATRIX def_m;    
 
@@ -313,7 +313,7 @@ int ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap)
   }
   if (!m)
   { m = &def_m;
-    GetMatrix(NULL,m);
+    swf_GetMatrix(NULL,m);
   }
 
   // handle memory
@@ -339,15 +339,15 @@ int ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitmap)
   return (++s->fillstyle.n);
 }
 
-int ShapeAddSolidFillStyle(SHAPE * s,RGBA * color)
-{ return ShapeAddFillStyle(s,FILL_SOLID,NULL,color,0);
+int swf_ShapeAddSolidFillStyle(SHAPE * s,RGBA * color)
+{ return swf_ShapeAddFillStyle(s,FILL_SOLID,NULL,color,0);
 }
 
-int ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip)
-{ return ShapeAddFillStyle(s,clip?FILL_CLIPPED:FILL_TILED,m,NULL,id_bitmap);
+int swf_ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip)
+{ return swf_ShapeAddFillStyle(s,clip?FILL_CLIPPED:FILL_TILED,m,NULL,id_bitmap);
 }
 
-int ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color)
+int swf_ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color)
 { RGBA def;
   if (!s) return -1;
   if (!color)
@@ -372,18 +372,18 @@ int ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color)
   return (++s->linestyle.n);
 }
 
-int ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
+int swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
 { U8 b;
   if (!t) return -1;
-  SetBits(t,0,1);
-  SetBits(t,SF_MOVETO,5);
+  swf_SetBits(t,0,1);
+  swf_SetBits(t,SF_MOVETO,5);
   
-  b = CountBits(x,0);
-  b = CountBits(y,b);
+  b = swf_CountBits(x,0);
+  b = swf_CountBits(y,b);
   
-  SetBits(t,b,5);
-  SetBits(t,x,b);
-  SetBits(t,y,b);
+  swf_SetBits(t,b,5);
+  swf_SetBits(t,x,b);
+  swf_SetBits(t,y,b);
 
   if (s)
   { s->px = x;
@@ -392,15 +392,15 @@ int ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
   return 0;
 }
 
-int ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
+int swf_ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
 { if ((!t)||(!s)) return -1;
     
-  SetBits(t,0,1);
-  SetBits(t,(line?SF_LINE:0)|(fill0?SF_FILL0:0)|(fill1?SF_FILL1:0),5);
+  swf_SetBits(t,0,1);
+  swf_SetBits(t,(line?SF_LINE:0)|(fill0?SF_FILL0:0)|(fill1?SF_FILL1:0),5);
 
-  if (fill0) SetBits(t,fill0,s->bits.fill);
-  if (fill1) SetBits(t,fill1,s->bits.fill);
-  if (line)  SetBits(t,line ,s->bits.line);
+  if (fill0) swf_SetBits(t,fill0,s->bits.fill);
+  if (fill1) swf_SetBits(t,fill1,s->bits.fill);
+  if (line)  swf_SetBits(t,line ,s->bits.line);
   
   return 0;
 }
@@ -413,49 +413,49 @@ int ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
  */
 #define FILL_RESET 0x8000
 #define LINE_RESET 0x8000
-int ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
+
+int swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
 { U8 b;
   if ((!t)||(!s)) return -1;
 
-  SetBits(t,0,1);
-  SetBits(t,SF_MOVETO|(line?SF_LINE:0)|(fill0?SF_FILL0:0)|(fill1?SF_FILL1:0),5);
+  swf_SetBits(t,0,1);
+  swf_SetBits(t,SF_MOVETO|(line?SF_LINE:0)|(fill0?SF_FILL0:0)|(fill1?SF_FILL1:0),5);
 
-  b = CountBits(x,0);
-  b = CountBits(y,b);
-  SetBits(t,b,5);
-  SetBits(t,x,b);
-  SetBits(t,y,b);
+  b = swf_CountBits(x,0);
+  b = swf_CountBits(y,b);
+  swf_SetBits(t,b,5);
+  swf_SetBits(t,x,b);
+  swf_SetBits(t,y,b);
   s->px = x;
   s->py = y;
 
-  if (fill0) SetBits(t,fill0,s->bits.fill);
-  if (fill1) SetBits(t,fill1,s->bits.fill);
-  if (line)  SetBits(t,line ,s->bits.line);
+  if (fill0) swf_SetBits(t,fill0,s->bits.fill);
+  if (fill1) swf_SetBits(t,fill1,s->bits.fill);
+  if (line)  swf_SetBits(t,line ,s->bits.line);
   
   return 0;
 }
 
-int ShapeSetEnd(TAG * t)
+int swf_ShapeSetEnd(TAG * t)
 { if (!t) return -1;
-  SetBits(t,0,6);
-  ResetBitcount(t);
+  swf_SetBits(t,0,6);
+  swf_ResetBitcount(t);
   return 0;
 }
 
-int ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
+int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
 { U8 b;
   if (!t) return -1;
-  SetBits(t,3,2); // Straight Edge
+  swf_SetBits(t,3,2); // Straight Edge
 
   if ((!s)||((x!=0)&&(y!=0)))
-  { b = CountBits(x,2);
-    b = CountBits(y,b);
-    if(b<2) 
-	b=2;
-    SetBits(t, b-2, 4);
-    SetBits(t,1,1);
-    SetBits(t,x,b);
-    SetBits(t,y,b);
+  { b = swf_CountBits(x,2);
+    b = swf_CountBits(y,b);
+    if (b<2) b=2;
+    swf_SetBits(t, b-2, 4);
+    swf_SetBits(t,1,1);
+    swf_SetBits(t,x,b);
+    swf_SetBits(t,y,b);
     if (s)
     { s->px += x;
       s->py += y;
@@ -464,42 +464,42 @@ int ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
   }
 
   if (x==0)
-  { b = CountBits(y,2);
+  { b = swf_CountBits(y,2);
     if(b<2) 
-	b=2;
-    SetBits(t, b-2, 4);
-    SetBits(t,1,2);
-    SetBits(t,y,b);
+        b=2;
+    swf_SetBits(t, b-2, 4);
+    swf_SetBits(t,1,2);
+    swf_SetBits(t,y,b);
     s->py += y;
   }
   else
-  { b = CountBits(x,2);
+  { b = swf_CountBits(x,2);
     if(b<2) 
-	b=2;
-    SetBits(t, b-2, 4);
-    SetBits(t,0,2);
-    SetBits(t,x,b);
+        b=2;
+    swf_SetBits(t, b-2, 4);
+    swf_SetBits(t,0,2);
+    swf_SetBits(t,x,b);
     s->px += x;
   }
   return 0;
 }
 
-int ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
+int swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
 { U8 b;
   if (!t) return -1;
 
-  SetBits(t,2,2);
+  swf_SetBits(t,2,2);
 
-  b = CountBits(ax,2);
-  b = CountBits(ay,b);
-  b = CountBits(x,b);
-  b = CountBits(y,b);
+  b = swf_CountBits(ax,2);
+  b = swf_CountBits(ay,b);
+  b = swf_CountBits(x,b);
+  b = swf_CountBits(y,b);
 
-  SetBits(t,b-2,4);
-  SetBits(t,x,b);
-  SetBits(t,y,b);
-  SetBits(t,ax,b);
-  SetBits(t,ay,b);
+  swf_SetBits(t,b-2,4);
+  swf_SetBits(t,x,b);
+  swf_SetBits(t,y,b);
+  swf_SetBits(t,ax,b);
+  swf_SetBits(t,ay,b);
 
   if (s)
   { s->px += x+ax;
@@ -508,22 +508,22 @@ int ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
   return 0;
 }
 
-int ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry)
+int swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry)
 { double C1 = 0.2930;    
   double C2 = 0.4140;   
   double begin = 0.7070; 
 
   if (!t) return -1;
   
-  ShapeSetMove(t,s,x+begin*rx,y+begin*ry);
-  ShapeSetCurve(t,s, -C1*rx,  C1*ry, -C2*rx,      0);
-  ShapeSetCurve(t,s, -C2*rx,      0, -C1*rx, -C1*ry);
-  ShapeSetCurve(t,s, -C1*rx, -C1*ry,      0, -C2*ry);
-  ShapeSetCurve(t,s,      0, -C2*ry,  C1*rx, -C1*ry);
-  ShapeSetCurve(t,s,  C1*rx, -C1*ry,  C2*rx,      0);
-  ShapeSetCurve(t,s,  C2*rx,      0,  C1*rx,  C1*ry);
-  ShapeSetCurve(t,s,  C1*rx,  C1*ry,      0,  C2*ry);
-  ShapeSetCurve(t,s,      0,  C2*ry, -C1*rx,  C1*ry);
+  swf_ShapeSetMove(t,s,x+begin*rx,y+begin*ry);
+  swf_ShapeSetCurve(t,s, -C1*rx,  C1*ry, -C2*rx,      0);
+  swf_ShapeSetCurve(t,s, -C2*rx,      0, -C1*rx, -C1*ry);
+  swf_ShapeSetCurve(t,s, -C1*rx, -C1*ry,      0, -C2*ry);
+  swf_ShapeSetCurve(t,s,      0, -C2*ry,  C1*rx, -C1*ry);
+  swf_ShapeSetCurve(t,s,  C1*rx, -C1*ry,  C2*rx,      0);
+  swf_ShapeSetCurve(t,s,  C2*rx,      0,  C1*rx,  C1*ry);
+  swf_ShapeSetCurve(t,s,  C1*rx,  C1*ry,      0,  C2*ry);
+  swf_ShapeSetCurve(t,s,      0,  C2*ry, -C1*rx,  C1*ry);
   
   return 0;
 }

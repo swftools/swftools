@@ -47,15 +47,15 @@ struct options_t options[] =
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
-	printf("swfdump - part of %s %s\n", PACKAGE, VERSION);
-	exit(0);
+        printf("swfdump - part of %s %s\n", PACKAGE, VERSION);
+        exit(0);
     } 
     else if(name[0]=='a') {
-	action = 1;
-	return 0;
+        action = 1;
+        return 0;
     }
     else {
-	printf("Unknown option: -%s\n", name);
+        printf("Unknown option: -%s\n", name);
     }
 
     return 0;
@@ -74,8 +74,8 @@ void args_callback_usage(char*name)
 int args_callback_command(char*name,char*val)
 {
     if(filename) {
-	fprintf(stderr, "Only one file allowed. You supplied at least two. (%s and %s)\n",
-		 filename, name);
+        fprintf(stderr, "Only one file allowed. You supplied at least two. (%s and %s)\n",
+                 filename, name);
     }
     filename = name;
     return 0;
@@ -97,92 +97,92 @@ int main (int argc,char ** argv)
 
     if(!filename)
     {
-	fprintf(stderr, "You must supply a filename.\n");
-	return 1;
+        fprintf(stderr, "You must supply a filename.\n");
+        return 1;
     }
 
     f = open(filename,O_RDONLY);
 
     if (f<0)
     { 
-	perror("Couldn't open file: ");
-	exit(1);
+        perror("Couldn't open file: ");
+        exit(1);
     }
-    if FAILED(ReadSWF(f,&swf))
+    if FAILED(swf_ReadSWF(f,&swf))
     { 
-	fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
+        fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
         close(f);
-	exit(1);
+        exit(1);
     }
 
 #ifdef HAVE_STAT
     fstat(f, &statbuf);
-    if(statbuf.st_size != swf.FileSize)
-	fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
-		statbuf.st_size, swf.FileSize);
+    if(statbuf.st_size != swf.fileSize)
+        fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
+                statbuf.st_size, swf.fileSize);
 #endif
 
     close(f);
 
-    printf("[HEADER]        File version: %d\n", swf.FileVersion);
-    printf("[HEADER]        File size: %ld\n", swf.FileSize);
-    printf("[HEADER]        Frame rate: %f\n",swf.FrameRate/256.0);
-    printf("[HEADER]        Frame count: %d\n",swf.FrameCount);
-    printf("[HEADER]        Movie width: %.3f\n",(swf.MovieSize.xmax-swf.MovieSize.xmin)/20.0);
-    printf("[HEADER]        Movie height: %.3f\n",(swf.MovieSize.ymax-swf.MovieSize.ymin)/20.0);
+    printf("[HEADER]        File version: %d\n", swf.fileVersion);
+    printf("[HEADER]        File size: %ld\n", swf.fileSize);
+    printf("[HEADER]        Frame rate: %f\n",swf.frameRate/256.0);
+    printf("[HEADER]        Frame count: %d\n",swf.frameCount);
+    printf("[HEADER]        Movie width: %.3f\n",(swf.movieSize.xmax-swf.movieSize.xmin)/20.0);
+    printf("[HEADER]        Movie height: %.3f\n",(swf.movieSize.ymax-swf.movieSize.ymin)/20.0);
 
-    tag = swf.FirstTag;
+    tag = swf.firstTag;
 
     while(tag) {
-	char*name = getTagName(tag);
-	if(!name) {
-	    fprintf(stderr, "Error: Unknown tag:0x%03x\n", tag->id);
-	    tag = tag->next;
-	    continue;
-	}
-	printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, getTagName(tag));
-
-	if(isDefiningTag(tag)) {
-	    U16 id = GetDefineID(tag);
-	    printf(" defines id %04x", id);
-	    if(idtab[id])
-		fprintf(stderr, "Error: Id %04x is defined more than once.\n", id);
-	    idtab[id] = 1;
-	}
-	else if(tag->id == ST_PLACEOBJECT || 
-		tag->id == ST_PLACEOBJECT2) {
-	    printf(" places id %04x at depth %04x", GetPlaceID(tag), GetDepth(tag));
-	    if(GetName(tag))
-		printf(" name \"%s\"",GetName(tag));
+        char*name = swf_TagGetName(tag);
+        if(!name) {
+            fprintf(stderr, "Error: Unknown tag:0x%03x\n", tag->id);
+            tag = tag->next;
+            continue;
         }
-	else if(tag->id == ST_REMOVEOBJECT) {
-	    printf(" removes id %04x from depth %04x", GetPlaceID(tag), GetDepth(tag));
-	}
-	else if(tag->id == ST_REMOVEOBJECT2) {
-	    printf(" removes object from depth %04x", GetDepth(tag));
-	}
-	
-	printf("\n");
+        printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
 
-	if(tag->id == ST_DEFINESPRITE) {
-	    sprintf(prefix, "         ");
-	}
-	else if(tag->id == ST_END) {
-	    *prefix = 0;
-	}
-	else if(tag->id == ST_DOACTION && action) {
-	    char myprefix[128];
-	    ActionTAG*actions;
-	    sprintf(myprefix, "                %s", prefix);
-	    
-	    actions = GetActions(tag);
+        if(swf_isDefiningTag(tag)) {
+            U16 id = swf_GetDefineID(tag);
+            printf(" defines id %04x", id);
+            if(idtab[id])
+                fprintf(stderr, "Error: Id %04x is defined more than once.\n", id);
+            idtab[id] = 1;
+        }
+        else if(tag->id == ST_PLACEOBJECT || 
+                tag->id == ST_PLACEOBJECT2) {
+            printf(" places id %04x at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
+            if(swf_TagGetName(tag))
+                printf(" name \"%s\"",swf_TagGetName(tag));
+        }
+        else if(tag->id == ST_REMOVEOBJECT) {
+            printf(" removes id %04x from depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
+        }
+        else if(tag->id == ST_REMOVEOBJECT2) {
+            printf(" removes object from depth %04x", swf_GetDepth(tag));
+        }
+        
+        printf("\n");
 
-	    DumpActions(actions, myprefix);
-	}
-	tag = tag->next;
+        if(tag->id == ST_DEFINESPRITE) {
+            sprintf(prefix, "         ");
+        }
+        else if(tag->id == ST_END) {
+            *prefix = 0;
+        }
+        else if(tag->id == ST_DOACTION && action) {
+            char myprefix[128];
+            ActionTAG*actions;
+            sprintf(myprefix, "                %s", prefix);
+            
+            actions = swf_GetActions(tag);
+
+            swf_DumpActions(actions, myprefix);
+        }
+        tag = tag->next;
     }
 
-    FreeTags(&swf);
+    swf_FreeTags(&swf);
     return 0;
 }
 

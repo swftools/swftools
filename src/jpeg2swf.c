@@ -39,32 +39,32 @@ TAG * MovieStart(SWF * swf,int framerate,int dx,int dy)
 
   memset(swf,0x00,sizeof(SWF));
 
-  swf->FileVersion       = 4;
-  swf->FrameRate         = (25600/framerate);
-  swf->MovieSize.xmax    = dx*20;
-  swf->MovieSize.ymax    = dy*20;
+  swf->fileVersion       = 4;
+  swf->frameRate         = (25600/framerate);
+  swf->movieSize.xmax    = dx*20;
+  swf->movieSize.ymax    = dy*20;
 
-  t = swf->FirstTag = InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+  t = swf->firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
 
   rgb.r = rgb.g = rgb.b = rgb.a  = 0x00;
-  SetRGB(t,&rgb);
+  swf_SetRGB(t,&rgb);
 
   return t;
 }
 
 int MovieFinish(SWF * swf,TAG * t,char * sname)
 {  int handle, so = fileno(stdout);
-   t = InsertTag(t,ST_END);
+   t = swf_InsertTag(t,ST_END);
 
    if ((!isatty(so))&&(!sname)) handle = so;
    else
    { if (!sname) sname = "out.swf";
      handle = open(sname,O_RDWR|O_CREAT|O_TRUNC,0666);
    }
-   if FAILED(WriteSWF(handle,swf)) if (VERBOSE(1)) fprintf(stderr,"Unable to write output file: %s\n",sname);
+   if FAILED(swf_WriteSWF(handle,swf)) if (VERBOSE(1)) fprintf(stderr,"Unable to write output file: %s\n",sname);
    if (handle!=so) close(handle);
    
-   FreeTags(swf);
+   swf_FreeTags(swf);
    return 0;
 }
 
@@ -91,11 +91,11 @@ TAG * MovieAddFrame(SWF * swf,TAG * t,char * sname,int quality,int id)
   jpeg_read_header(&cinfo, TRUE);
   jpeg_start_decompress(&cinfo);
 
-  t = InsertTag(t,ST_DEFINEBITSJPEG2);
+  t = swf_InsertTag(t,ST_DEFINEBITSJPEG2);
 
-        SetU16(t,id);  // id
+        swf_SetU16(t,id);  // id
   
-        out = SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
+        out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
         scanline = (U8*)malloc(4*cinfo.output_width);
   
         if (scanline)
@@ -103,50 +103,50 @@ TAG * MovieAddFrame(SWF * swf,TAG * t,char * sname,int quality,int id)
           U8 * js = scanline;
           for (y=0;y<cinfo.output_height;y++)
           { jpeg_read_scanlines(&cinfo,&js,1);
-            SetJPEGBitsLines(out,(U8**)&js,1);
+            swf_SetJPEGBitsLines(out,(U8**)&js,1);
           }
           free(scanline);
         }
         
-        SetJPEGBitsFinish(out);
+        swf_SetJPEGBitsFinish(out);
     
-  t = InsertTag(t,ST_DEFINESHAPE);
+  t = swf_InsertTag(t,ST_DEFINESHAPE);
 
-        NewShape(&s);
-        GetMatrix(NULL,&m);
+        swf_ShapeNew(&s);
+        swf_GetMatrix(NULL,&m);
         m.sx = 20*0x10000;
         m.sy = 20*0x10000;
-        fs = ShapeAddBitmapFillStyle(s,&m,id,0);
+        fs = swf_ShapeAddBitmapFillStyle(s,&m,id,0);
         
-        SetU16(t,id+1); // id
+        swf_SetU16(t,id+1); // id
 
 
         r.xmin = r.ymin = 0;
         r.xmax = cinfo.output_width*20;
         r.ymax = cinfo.output_height*20;
-        SetRect(t,&r);
+        swf_SetRect(t,&r);
         
-        SetShapeHeader(t,s);
+        swf_SetShapeHeader(t,s);
 
-        ShapeSetAll(t,s,0,0,0,fs,0);
-        ShapeSetLine(t,s,r.xmax,0);
-        ShapeSetLine(t,s,0,r.ymax);
-        ShapeSetLine(t,s,-r.xmax,0);
-        ShapeSetLine(t,s,0,-r.ymax);
+        swf_ShapeSetAll(t,s,0,0,0,fs,0);
+        swf_ShapeSetLine(t,s,r.xmax,0);
+        swf_ShapeSetLine(t,s,0,r.ymax);
+        swf_ShapeSetLine(t,s,-r.xmax,0);
+        swf_ShapeSetLine(t,s,0,-r.ymax);
         
-        ShapeSetEnd(t);
+        swf_ShapeSetEnd(t);
         
-  t = InsertTag(t,ST_REMOVEOBJECT2);
-        SetU16(t,1); // depth
+  t = swf_InsertTag(t,ST_REMOVEOBJECT2);
+        swf_SetU16(t,1); // depth
 
-  t = InsertTag(t,ST_PLACEOBJECT2);
+  t = swf_InsertTag(t,ST_PLACEOBJECT2);
 
-        GetMatrix(NULL,&m);
-        m.tx = (swf->MovieSize.xmax-(int)cinfo.output_width*20)/2;
-        m.ty = (swf->MovieSize.ymax-(int)cinfo.output_height*20)/2;
-        ObjectPlace(t,id+1,1,&m,NULL,NULL);
+        swf_GetMatrix(NULL,&m);
+        m.tx = (swf->movieSize.xmax-(int)cinfo.output_width*20)/2;
+        m.ty = (swf->movieSize.ymax-(int)cinfo.output_height*20)/2;
+        swf_ObjectPlace(t,id+1,1,&m,NULL,NULL);
 
-  t = InsertTag(t,ST_SHOWFRAME);
+  t = swf_InsertTag(t,ST_SHOWFRAME);
 
   jpeg_finish_decompress(&cinfo);
   fclose(f);

@@ -14,19 +14,19 @@
 // Matrix & Math tools for SWF files
 
 #define S64 long long
-SFIXED SP(SFIXED a1,SFIXED a2,SFIXED b1,SFIXED b2)
+SFIXED RFXSWF_SP(SFIXED a1,SFIXED a2,SFIXED b1,SFIXED b2)
 { S64 a;
   a = (S64)a1*(S64)b1+(S64)a2*(S64)b2;
   return (SFIXED)(a>>16);
 }
-SFIXED QFIX(int zaehler,int nenner) // bildet Quotient von zwei INTs in SFIXED
+SFIXED RFXSWF_QFIX(int zaehler,int nenner) // bildet Quotient von zwei INTs in SFIXED
 { S64 z = zaehler<<16;
   S64 a = z/(S64)nenner;
   return (SFIXED)a;
 }
 #undef S64
 
-MATRIX * MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2)
+MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2)
 {        
   if (!d) return NULL;
   if (!s1) return (s2)?(MATRIX *)memcpy(d,s2,sizeof(MATRIX)):NULL;
@@ -35,17 +35,17 @@ MATRIX * MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2)
   d->tx = s1->tx + s2->tx;
   d->ty = s1->ty + s2->ty;
   
-  d->sx = SP(s1->sx,s1->r1,s2->sx,s2->r0);
-  d->sy = SP(s1->r0,s1->sy,s2->r1,s2->sy);
-  d->r0 = SP(s1->r0,s1->sy,s2->sx,s2->r0);
-  d->r1 = SP(s1->sx,s1->r1,s2->r1,s2->sy);
+  d->sx = RFXSWF_SP(s1->sx,s1->r1,s2->sx,s2->r0);
+  d->sy = RFXSWF_SP(s1->r0,s1->sy,s2->r1,s2->sy);
+  d->r0 = RFXSWF_SP(s1->r0,s1->sy,s2->sx,s2->r0);
+  d->r1 = RFXSWF_SP(s1->sx,s1->r1,s2->r1,s2->sy);
 
   //DumpMatrix(NULL,d);
   
   return d;
 }
 
-MATRIX * MatrixMapTriangle(MATRIX * m,int dx,int dy,int x0,int y0,
+MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,int x0,int y0,
                                int x1,int y1,int x2,int y2)
 { int dx1 = x1 - x0;
   int dy1 = y1 - y0;
@@ -57,23 +57,23 @@ MATRIX * MatrixMapTriangle(MATRIX * m,int dx,int dy,int x0,int y0,
 
   m->tx = x0;
   m->ty = y0;
-  m->sx = QFIX(dx1,dx);
-  m->sy = QFIX(dy2,dy);
-  m->r0 = QFIX(dy1,dx);
-  m->r1 = QFIX(dx2,dy);
+  m->sx = RFXSWF_QFIX(dx1,dx);
+  m->sy = RFXSWF_QFIX(dy2,dy);
+  m->r0 = RFXSWF_QFIX(dy1,dx);
+  m->r1 = RFXSWF_QFIX(dx2,dy);
   
   return m;
 }
 
-U16 GetDefineID(TAG * t)
+U16 swf_GetDefineID(TAG * t)
 // up to SWF 4.0
 { U32 oldTagPos;
   U16 id = 0;
 
-  oldTagPos = GetTagPos(t);
-  SetTagPos(t,0);
+  oldTagPos = swf_GetTagPos(t);
+  swf_SetTagPos(t,0);
 
-  switch (GetTagID(t))
+  switch (swf_GetTagID(t))
   { case ST_DEFINESHAPE:
     case ST_DEFINESHAPE2:
     case ST_DEFINESHAPE3:
@@ -94,39 +94,39 @@ U16 GetDefineID(TAG * t)
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
     case ST_DEFINESPRITE:
-      id = GetU16(t);
+      id = swf_GetU16(t);
       break;
   }
 
-  SetTagPos(t,oldTagPos);
+  swf_SetTagPos(t,oldTagPos);
 
   return id;
 }
 
-U16 GetPlaceID(TAG * t)
+U16 swf_GetPlaceID(TAG * t)
 // up to SWF 4.0
 { U32 oldTagPos;
   U16 id = 0;
 
-  oldTagPos = GetTagPos(t);
-  SetTagPos(t,0);
+  oldTagPos = swf_GetTagPos(t);
+  swf_SetTagPos(t,0);
 
-  switch (GetTagID(t))
+  switch (swf_GetTagID(t))
   { case ST_PLACEOBJECT:
     case ST_REMOVEOBJECT:
     case ST_STARTSOUND:
-      id = GetU16(t);
+      id = swf_GetU16(t);
       break;
 
     case ST_PLACEOBJECT2:
-    { U8 flags = GetU8(t);
-      U16 d = GetU16(t);
-      id = (flags&PF_CHAR)?GetU16(t):id;
+    { U8 flags = swf_GetU8(t);
+      U16 d = swf_GetU16(t);
+      id = (flags&PF_CHAR)?swf_GetU16(t):id;
     } break;
 
   }
 
-  SetTagPos(t,oldTagPos);
+  swf_SetTagPos(t,oldTagPos);
 
   return id;
 }
@@ -171,90 +171,90 @@ int spritetagids[] =
  -1
 };
 
-char isAllowedSpriteTag (TAG*tag)
+U8 swf_isAllowedSpriteTag(TAG * tag)
 {
     int id = tag->id;
     int t=0;
     while(spritetagids[t]>=0)
     {
-	if(spritetagids[t] == id) 
-	    return 1;
-	t++;
+        if(spritetagids[t] == id) 
+            return 1;
+        t++;
     }
     return 0; 
 }
 
-char isDefiningTag (TAG*tag)
+U8 swf_isDefiningTag(TAG * tag)
 {
     int id = tag->id;
     int t=0;
     while(definingtagids[t]>=0)
     {
-	if(definingtagids[t] == id) 
-	    return 1;
-	t++;
+        if(definingtagids[t] == id) 
+            return 1;
+        t++;
     }
     return 0; 
 }
 
-U16 GetDepth(TAG * t)
+U16 swf_GetDepth(TAG * t)
 // up to SWF 4.0
 { 
   U16 depth = 0;
   U32 oldTagPos;
-  oldTagPos = GetTagPos(t);
-  SetTagPos(t,0);
+  oldTagPos = swf_GetTagPos(t);
+  swf_SetTagPos(t,0);
 
-  switch (GetTagID(t))
+  switch (swf_GetTagID(t))
   { case ST_PLACEOBJECT:
     case ST_REMOVEOBJECT:
-      GetU16(t); //id
-      depth = GetU16(t);
+      swf_GetU16(t); //id
+      depth = swf_GetU16(t);
       break;
     case ST_REMOVEOBJECT2:
-      depth = GetU16(t);
+      depth = swf_GetU16(t);
       break;
     case ST_PLACEOBJECT2:
-    { U8 flags = GetU8(t);
-      depth = GetU16(t);
+    { U8 flags = swf_GetU8(t);
+      depth = swf_GetU16(t);
     } break;
   }
-  SetTagPos(t,oldTagPos);
+  swf_SetTagPos(t,oldTagPos);
   return depth;
 }
 
-char* GetName(TAG * t)
+char* swf_GetTagName(TAG * t)
 {
     char* name = 0;
     U32 oldTagPos;
     MATRIX m;
     CXFORM c;
-    oldTagPos = GetTagPos(t);
-    SetTagPos(t,0);
-    switch(GetTagID(t))
+    oldTagPos = swf_GetTagPos(t);
+    swf_SetTagPos(t,0);
+    switch(swf_GetTagID(t))
     {
         case ST_FRAMELABEL:
-	    name = &t->data[GetTagPos(t)];
+            name = &t->data[swf_GetTagPos(t)];
         break;
         case ST_PLACEOBJECT2: {   
-            U8 flags = GetU8(t);
-            GetU16(t); //depth;
-	    if(flags&PF_CHAR) 
-	      GetU16(t); //id
-	    if(flags&PF_MATRIX)
-	      GetMatrix(t, &m);
-	    if(flags&PF_CXFORM)
-	      GetCXForm(t, &c, 1);
-	    if(flags&PF_RATIO)
-	      GetU16(t);
-	    if(flags&PF_NAME) {
-	      ResetBitmask(t);
-	      name = &t->data[GetTagPos(t)];
-	    }
+            U8 flags = swf_GetU8(t);
+            swf_GetU16(t); //depth;
+            if(flags&PF_CHAR) 
+              swf_GetU16(t); //id
+            if(flags&PF_MATRIX)
+              swf_GetMatrix(t, &m);
+            if(flags&PF_CXFORM)
+              swf_GetCXForm(t, &c, 1);
+            if(flags&PF_RATIO)
+              swf_GetU16(t);
+            if(flags&PF_NAME) {
+              swf_ResetBitmask(t);
+              name = &t->data[swf_GetTagPos(t)];
+            }
         }
         break;
     }
-    SetTagPos(t,oldTagPos);
+    swf_SetTagPos(t,oldTagPos);
     return name;
 }
 

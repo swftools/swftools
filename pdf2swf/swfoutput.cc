@@ -88,7 +88,7 @@ void moveto(TAG*tag, plotxy p0)
     int rx = (int)(p0.x*20);
     int ry = (int)(p0.y*20);
     if(rx!=swflastx || ry!=swflasty) {
-      ShapeSetMove (tag, shape, rx,ry);
+      swf_ShapeSetMove (tag, shape, rx,ry);
     }
     swflastx=rx;
     swflasty=ry;
@@ -101,7 +101,7 @@ void lineto(TAG*tag, plotxy p0)
     int ry = ((int)(p0.y*20)-swflasty);
     /* we can't skip this for rx=0,ry=0, those
        are plots */
-    ShapeSetLine (tag, shape, rx,ry);
+    swf_ShapeSetLine (tag, shape, rx,ry);
     swflastx+=rx;
     swflasty+=ry;
 }
@@ -117,7 +117,7 @@ void splineto(TAG*tag, plotxy control,plotxy end)
     int ey = ((int)(end.y*20)-swflasty);
     swflastx += ex;
     swflasty += ey;
-    ShapeSetCurve(tag, shape, cx,cy,ex,ey);
+    swf_ShapeSetCurve(tag, shape, cx,cy,ex,ey);
 }
 
 /* write a line, given two points and the transformation
@@ -145,8 +145,8 @@ void spline(TAG*tag,plotxy p0,plotxy p1,plotxy p2,plotxy p3,struct swfmatrix*m)
 
     num = approximate(p0,p1,p2,p3,q);
     for(t=0;t<num;t++) {
-	moveto(tag,q[t].start);
-	splineto(tag,q[t].control, q[t].end);
+        moveto(tag,q[t].start);
+        splineto(tag,q[t].control, q[t].end);
     }
 }
 
@@ -155,12 +155,12 @@ void spline(TAG*tag,plotxy p0,plotxy p1,plotxy p2,plotxy p3,struct swfmatrix*m)
 void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m)
 {
     if(tag->id != ST_DEFINEFONT &&
-	tag->id != ST_DEFINESHAPE &&
-	tag->id != ST_DEFINESHAPE2 &&
-	tag->id != ST_DEFINESHAPE3)
+        tag->id != ST_DEFINESHAPE &&
+        tag->id != ST_DEFINESHAPE2 &&
+        tag->id != ST_DEFINESHAPE3)
     {
-	logf("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
-	exit(1);
+        logf("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
+        exit(1);
     }
     int log = 0;
 
@@ -171,75 +171,75 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m)
 
     while (outline)
     {
-	x += (outline->dest.x/(float)0xffff);
-	y += (outline->dest.y/(float)0xffff);
-	if(outline->type == T1_PATHTYPE_MOVE)
-	{
-	    if(((int)(lastx*20) != (int)(firstx*20) ||
-		(int)(lasty*20) != (int)(firsty*20)) &&
-		     fill && !init)
-	    {
-		plotxy p0;
-		plotxy p1;
-		p0.x=lastx;
-		p0.y=lasty;
-		p1.x=firstx;
-		p1.y=firsty;
-		if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
-		line(tag, p0, p1, m);
-	    }
-	    firstx=x;
-	    firsty=y;
-	    init = 0;
-	}
-	else if(outline->type == T1_PATHTYPE_LINE) 
-	{
-	    plotxy p0;
-	    plotxy p1;
-	    p0.x=lastx;
-	    p0.y=lasty;
-	    p1.x=x;
-	    p1.y=y;
-	    if(log) printf("line: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
-	    line(tag, p0,p1,m);
-	}
-	else if(outline->type == T1_PATHTYPE_BEZIER)
-	{
-	    plotxy p0;
-	    plotxy p1;
-	    plotxy p2;
-	    plotxy p3;
-	    T1_BEZIERSEGMENT*o2 = (T1_BEZIERSEGMENT*)outline;
-	    p0.x=x; 
-	    p0.y=y;
-	    p1.x=o2->C.x/(float)0xffff+lastx;
-	    p1.y=o2->C.y/(float)0xffff+lasty;
-	    p2.x=o2->B.x/(float)0xffff+lastx;
-	    p2.y=o2->B.y/(float)0xffff+lasty;
-	    p3.x=lastx;
-	    p3.y=lasty;
-	    if(log) printf("spline: %f,%f -> %f,%f\n",p3.x,p3.y,p0.x,p0.y);
-	    spline(tag,p0,p1,p2,p3,m);
-	} 
-	else {
-	 logf("<error> drawpath: unknown outline type:%d\n", outline->type);
-	}
-	lastx=x;
-	lasty=y;
-	outline = outline->link;
+        x += (outline->dest.x/(float)0xffff);
+        y += (outline->dest.y/(float)0xffff);
+        if(outline->type == T1_PATHTYPE_MOVE)
+        {
+            if(((int)(lastx*20) != (int)(firstx*20) ||
+                (int)(lasty*20) != (int)(firsty*20)) &&
+                     fill && !init)
+            {
+                plotxy p0;
+                plotxy p1;
+                p0.x=lastx;
+                p0.y=lasty;
+                p1.x=firstx;
+                p1.y=firsty;
+                if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
+                line(tag, p0, p1, m);
+            }
+            firstx=x;
+            firsty=y;
+            init = 0;
+        }
+        else if(outline->type == T1_PATHTYPE_LINE) 
+        {
+            plotxy p0;
+            plotxy p1;
+            p0.x=lastx;
+            p0.y=lasty;
+            p1.x=x;
+            p1.y=y;
+            if(log) printf("line: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
+            line(tag, p0,p1,m);
+        }
+        else if(outline->type == T1_PATHTYPE_BEZIER)
+        {
+            plotxy p0;
+            plotxy p1;
+            plotxy p2;
+            plotxy p3;
+            T1_BEZIERSEGMENT*o2 = (T1_BEZIERSEGMENT*)outline;
+            p0.x=x; 
+            p0.y=y;
+            p1.x=o2->C.x/(float)0xffff+lastx;
+            p1.y=o2->C.y/(float)0xffff+lasty;
+            p2.x=o2->B.x/(float)0xffff+lastx;
+            p2.y=o2->B.y/(float)0xffff+lasty;
+            p3.x=lastx;
+            p3.y=lasty;
+            if(log) printf("spline: %f,%f -> %f,%f\n",p3.x,p3.y,p0.x,p0.y);
+            spline(tag,p0,p1,p2,p3,m);
+        } 
+        else {
+         logf("<error> drawpath: unknown outline type:%d\n", outline->type);
+        }
+        lastx=x;
+        lasty=y;
+        outline = outline->link;
     }
     if(((int)(lastx*20) != (int)(firstx*20) ||
-	(int)(lasty*20) != (int)(firsty*20)) &&
-	     fill)
+        (int)(lasty*20) != (int)(firsty*20)) &&
+             fill)
     {
-	plotxy p0;
-	plotxy p1;
-	p0.x=lastx;
-	p0.y=lasty;
-	p1.x=firstx;
-	p1.y=firsty;
-	if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
-	line(tag, p0, p1, m);
+        plotxy p0;
+        plotxy p1;
+        p0.x=lastx;
+        p0.y=lasty;
+        p1.x=firstx;
+        p1.y=firsty;
+        if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
+        line(tag, p0, p1, m);
     }
 }
 
@@ -250,7 +250,7 @@ int colorcompare(RGBA*a,RGBA*b)
        a->g!=b->g ||
        a->b!=b->b ||
        a->a!=b->a) {
-	return 0;
+        return 0;
     }
     return 1;
 }
@@ -287,124 +287,124 @@ void putcharacters(TAG*tag)
     int advancebits=1;
 
     if(tag->id != ST_DEFINETEXT &&
-	tag->id != ST_DEFINETEXT2) {
-	logf("<error> internal error: putcharacters needs an text tag, not %d\n",tag->id);
-	exit(1);
+        tag->id != ST_DEFINETEXT2) {
+        logf("<error> internal error: putcharacters needs an text tag, not %d\n",tag->id);
+        exit(1);
     }
     if(!chardatapos) {
-	logf("<warning> putcharacters called with zero characters");
+        logf("<warning> putcharacters called with zero characters");
     }
 
     for(pass = 0; pass < 2; pass++)
     {
-	charstorepos = 0;
-	lastfontid = -1;
-	lastx = CHARMIDX;
-	lasty = CHARMIDY;
-	lastsize = -1;
+        charstorepos = 0;
+        lastfontid = -1;
+        lastx = CHARMIDX;
+        lasty = CHARMIDY;
+        lastsize = -1;
 
-	if(pass==1)
-	{
-	    advancebits++; // add sign bit
-	    SetU8(tag, glyphbits);
-	    SetU8(tag, advancebits);
+        if(pass==1)
+        {
+            advancebits++; // add sign bit
+            swf_SetU8(tag, glyphbits);
+            swf_SetU8(tag, advancebits);
         }
 
-	for(t=0;t<=chardatapos;t++)
-	{
-	    if(lastfontid != chardata[t].fontid || 
-		    lastx!=chardata[t].x ||
-		    lasty!=chardata[t].y ||
-		    !colorcompare(&color, &chardata[t].color) ||
-		    charstorepos==127 ||
-		    lastsize != chardata[t].size ||
-		    t == chardatapos)
-	    {
-		if(charstorepos && pass==0)
-		{
-		    int s;
-		    for(s=0;s<charstorepos;s++)
-		    {
-			while(charids[s]>=(1<<glyphbits))
-			    glyphbits++;
-			while(charadvance[s]>=(1<<advancebits))
-			    advancebits++;
-		    }
-		}
-		if(charstorepos && pass==1)
-		{
-		    tag->bitcount = 0;
-		    SetBits(tag, 0, 1); // GLYPH Record
-		    SetBits(tag, charstorepos, 7); // number of glyphs
-		    int s;
-		    for(s=0;s<charstorepos;s++)
-		    {
-			SetBits(tag, charids[s], glyphbits);
-			SetBits(tag, charadvance[s], advancebits);
-		    }
-		}
-		charstorepos = 0;
+        for(t=0;t<=chardatapos;t++)
+        {
+            if(lastfontid != chardata[t].fontid || 
+                    lastx!=chardata[t].x ||
+                    lasty!=chardata[t].y ||
+                    !colorcompare(&color, &chardata[t].color) ||
+                    charstorepos==127 ||
+                    lastsize != chardata[t].size ||
+                    t == chardatapos)
+            {
+                if(charstorepos && pass==0)
+                {
+                    int s;
+                    for(s=0;s<charstorepos;s++)
+                    {
+                        while(charids[s]>=(1<<glyphbits))
+                            glyphbits++;
+                        while(charadvance[s]>=(1<<advancebits))
+                            advancebits++;
+                    }
+                }
+                if(charstorepos && pass==1)
+                {
+                    tag->bitcount = 0;
+                    swf_SetBits(tag, 0, 1); // GLYPH Record
+                    swf_SetBits(tag, charstorepos, 7); // number of glyphs
+                    int s;
+                    for(s=0;s<charstorepos;s++)
+                    {
+                        swf_SetBits(tag, charids[s], glyphbits);
+                        swf_SetBits(tag, charadvance[s], advancebits);
+                    }
+                }
+                charstorepos = 0;
 
-		if(pass == 1 && t<chardatapos)
-		{
-		    RGBA*newcolor=0;
-		    SWFFONT*newfont=0;
-		    int newx = 0;
-		    int newy = 0;
-		    if(lastx != chardata[t].x ||
-		       lasty != chardata[t].y)
-		    {
-			newx=chardata[t].x;
-			newy=chardata[t].y;
-		    }
-		    if(!colorcompare(&color, &chardata[t].color)) 
-		    {
-			color = chardata[t].color;
-			newcolor = &color;
-		    }
-		    font.id = chardata[t].fontid;
-		    if(lastfontid != chardata[t].fontid || lastsize != chardata[t].size)
-			newfont = &font;
+                if(pass == 1 && t<chardatapos)
+                {
+                    RGBA*newcolor=0;
+                    SWFFONT*newfont=0;
+                    int newx = 0;
+                    int newy = 0;
+                    if(lastx != chardata[t].x ||
+                       lasty != chardata[t].y)
+                    {
+                        newx=chardata[t].x;
+                        newy=chardata[t].y;
+                    }
+                    if(!colorcompare(&color, &chardata[t].color)) 
+                    {
+                        color = chardata[t].color;
+                        newcolor = &color;
+                    }
+                    font.id = chardata[t].fontid;
+                    if(lastfontid != chardata[t].fontid || lastsize != chardata[t].size)
+                        newfont = &font;
 
-		    tag->bitcount = 0;
-		    TextSetInfoRecord(tag, newfont, chardata[t].size, newcolor, newx,newy);
-		}
+                    tag->bitcount = 0;
+                    swf_TextSetInfoRecord(tag, newfont, chardata[t].size, newcolor, newx,newy);
+                }
 
-		lastfontid = chardata[t].fontid;
-		lastx = chardata[t].x;
-		lasty = chardata[t].y;
-		lastsize = chardata[t].size;
-	    }
+                lastfontid = chardata[t].fontid;
+                lastx = chardata[t].x;
+                lasty = chardata[t].y;
+                lastsize = chardata[t].size;
+            }
 
-	    if(t==chardatapos)
-		    break;
+            if(t==chardatapos)
+                    break;
 
-	    int advance;
-	    int nextt = t==chardatapos-1?t:t+1;
-	    int rel = chardata[nextt].x-chardata[t].x;
-	    if(rel>=0 && (rel<(1<<(advancebits-1)) || pass==0)) {
-	       advance = rel;
-	       lastx=chardata[nextt].x;
-	    }
-	    else {
-	       advance = 0;
-	       lastx=chardata[t].x;
-	    }
-	    charids[charstorepos] = chardata[t].charid;
-	    charadvance[charstorepos] = advance;
-	    charstorepos ++;
-	}
+            int advance;
+            int nextt = t==chardatapos-1?t:t+1;
+            int rel = chardata[nextt].x-chardata[t].x;
+            if(rel>=0 && (rel<(1<<(advancebits-1)) || pass==0)) {
+               advance = rel;
+               lastx=chardata[nextt].x;
+            }
+            else {
+               advance = 0;
+               lastx=chardata[t].x;
+            }
+            charids[charstorepos] = chardata[t].charid;
+            charadvance[charstorepos] = advance;
+            charstorepos ++;
+        }
     }
     chardatapos = 0;
 }
 
 void putcharacter(struct swfoutput*obj, int fontid, int charid, 
-		    int x,int y, int size)
+                    int x,int y, int size)
 {
     if(chardatapos == CHARDATAMAX)
     {
-	endtext();
-	starttext(obj);
+        endtext();
+        starttext(obj);
     }
     chardata[chardatapos].fontid = fontid;
     chardata[chardatapos].charid = charid;
@@ -421,70 +421,70 @@ void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 {
     int usefonts=1;
     if(m->m12!=0 || m->m21!=0)
-	usefonts=0;
+        usefonts=0;
     if(m->m11 != m->m22)
-	usefonts=0;
+        usefonts=0;
 
     if(usefonts && ! drawonlyshapes)
     {
-	int charid = font->getSWFCharID(character);
-	if(shapeid>=0)
-	    endshape();
-	if(textid<0)
-	    starttext(obj);
-	putcharacter(obj, font->swfid, charid,(int)(m->m13*20),(int)(m->m23*20),
-		(int)(m->m11*20/2+0.5)); //where does the /2 come from?
+        int charid = font->getSWFCharID(character);
+        if(shapeid>=0)
+            endshape();
+        if(textid<0)
+            starttext(obj);
+        putcharacter(obj, font->swfid, charid,(int)(m->m13*20),(int)(m->m23*20),
+                (int)(m->m11*20/2+0.5)); //where does the /2 come from?
     }
     else
     {
-	T1_OUTLINE*outline = font->getOutline(character);
-	char* charname = character;
+        T1_OUTLINE*outline = font->getOutline(character);
+        char* charname = character;
 
-	if(!outline) {
-	 logf("<warning> Didn't find %s in current charset (%s)", 
-		 character,font->getName());
-	 return;
-	}
-	
-	swfmatrix m2=*m;    
-	m2.m11/=100;
-	m2.m21/=100;
-	m2.m12/=100;
-	m2.m22/=100;
+        if(!outline) {
+         logf("<warning> Didn't find %s in current charset (%s)", 
+                 character,font->getName());
+         return;
+        }
+        
+        swfmatrix m2=*m;    
+        m2.m11/=100;
+        m2.m21/=100;
+        m2.m12/=100;
+        m2.m22/=100;
 
-	if(textid>=0)
-	    endtext();
-	if(shapeid<0)
-	    startshape(obj);
+        if(textid>=0)
+            endtext();
+        if(shapeid<0)
+            startshape(obj);
 
-	if(!lastwasfill)
-	 ShapeSetStyle(tag,shape,0x8000,fillstyleid,0);
-	lastwasfill = 1;
+        if(!lastwasfill)
+         swf_ShapeSetStyle(tag,shape,0x8000,fillstyleid,0);
+        lastwasfill = 1;
 
-	int lf = fill;
-	fill = 1;
-	drawpath(tag, outline, &m2);
-	fill = lf;
+        int lf = fill;
+        fill = 1;
+        drawpath(tag, outline, &m2);
+        fill = lf;
     }
 }
 
 /* draw a curved polygon. */
 void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline, 
-			    struct swfmatrix*m)
+                            struct swfmatrix*m)
 {
     if(textid>=0)
-	endtext();
+        endtext();
     if(shapeid<0)
-	startshape(output);
+        startshape(output);
 
     if(lastwasfill && !fill)
     {
-     ShapeSetStyle(tag,shape,linestyleid,0x8000,0);
+     swf_ShapeSetStyle(tag,shape,linestyleid,0x8000,0);
      lastwasfill = 0;
     }
     if(!lastwasfill && fill)
     {
-     ShapeSetStyle(tag,shape,0x8000,fillstyleid,0);
+     swf_ShapeSetStyle(tag,shape,0x8000,fillstyleid,0);
      lastwasfill = 1;
     }
 
@@ -496,7 +496,7 @@ void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline,
 SWFFont::SWFFont(char*name, int id, char*filename)
 {
     if(!T1_GetFontName(id))
-	T1_LoadFont(id);
+        T1_LoadFont(id);
 
     this->name = strdup(T1_GetFontFileName(id));
     this->fontid = strdup(name);
@@ -506,11 +506,11 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     int t=0, outlinepos=0;
     char*map[256];
     while(a[t])
-	t++;
+        t++;
  
     this->charnum = t;
     if(!t) 
-	return;
+        return;
     logf("<verbose> Font %s(%d): Storing %d outlines.\n", name, id, t);
     
     outline = (T1_OUTLINE**)malloc(t*sizeof(T1_OUTLINE*));
@@ -528,32 +528,32 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     t=0;
     while(*a)
     {
-	map[t] = *a;
-	a++;
-	t++;
-	if(t==256 || !*a) {
-	    int s;
-	    for(s=t;s<256;s++)
-		map[s] = ".notdef";
+        map[t] = *a;
+        a++;
+        t++;
+        if(t==256 || !*a) {
+            int s;
+            for(s=t;s<256;s++)
+                map[s] = ".notdef";
 
-	    int ret = T1_ReencodeFont(id, map);
-	    if(ret) {
-	     T1_DeleteFont(id);
-	     T1_LoadFont(id);
-	     int ret = T1_ReencodeFont(id, map);
-	     if(ret)
-	       fprintf(stderr,"Can't reencode font: (%s) ret:%d\n",filename, ret);
-	    }
+            int ret = T1_ReencodeFont(id, map);
+            if(ret) {
+             T1_DeleteFont(id);
+             T1_LoadFont(id);
+             int ret = T1_ReencodeFont(id, map);
+             if(ret)
+               fprintf(stderr,"Can't reencode font: (%s) ret:%d\n",filename, ret);
+            }
 
-	    // parsecharacters
-	    for(s=0;s<t;s++)
-	    {
-		this->outline[outlinepos] = T1_CopyOutline(T1_GetCharOutline(id, s, 100.0, 0));
-		this->charname[outlinepos] = strdup(T1_GetCharName(id, s));
-		outlinepos++;
-	    }
-	    t=0;
-	}
+            // parsecharacters
+            for(s=0;s<t;s++)
+            {
+                this->outline[outlinepos] = T1_CopyOutline(T1_GetCharOutline(id, s, 100.0, 0));
+                this->charname[outlinepos] = strdup(T1_GetCharName(id, s));
+                outlinepos++;
+            }
+            t=0;
+        }
     }
 }
 
@@ -564,48 +564,48 @@ SWFFont::~SWFFont()
     int*ptr = (int*)malloc(swfcharpos*sizeof(int));
 
     for(t=0;t<charnum;t++)
-	if(used[t]) usednum++;
+        if(used[t]) usednum++;
 
     if(usednum && !drawonlyshapes)
     {
-	logf("<verbose> Font %s has %d used characters",fontid, usednum);
-	TAG*ftag = InsertTag(swf.FirstTag,ST_DEFINEFONT);
-	SetU16(ftag, this->swfid);
-	int initpos = GetDataSize(ftag);
-	swfmatrix m;
-	m.m11 = m.m22 = 1;
-	m.m21 = m.m12 = 0;
-	m.m13 = CHARMIDX;
-	m.m23 = CHARMIDY;
-	for(t=0;t<swfcharpos;t++) 
-	{
-	    ptr[t] = GetDataSize(ftag);
-	    SetU16(ftag, 0x1234);
-	}
-	for(t=0;t<swfcharpos;t++)
-	{
-	    *(U16*)&ftag->data[ptr[t]] = GetDataSize(ftag)-initpos;
-	    swflastx=0;
-	    swflasty=0;
-	    SetU8(ftag,0x10); //0 fill bits, 0 linestyle bits
-	    SHAPE s;
-	    s.bits.fill = 1;
-	    s.bits.line = 0;
-	    ShapeSetStyle(ftag,&s,0,1,0);
-	    int lastfill = fill;
-	    fill = 1;
-	    storefont = 1;
-	    drawpath(ftag, outline[swfcharid2char[t]],&m);
-	    storefont = 0;
-	    fill = lastfill;
-	    ShapeSetEnd(ftag);
-	}
+        logf("<verbose> Font %s has %d used characters",fontid, usednum);
+        TAG*ftag = swf_InsertTag(swf.firstTag,ST_DEFINEFONT);
+        swf_SetU16(ftag, this->swfid);
+        int initpos = swf_GetDataSize(ftag);
+        swfmatrix m;
+        m.m11 = m.m22 = 1;
+        m.m21 = m.m12 = 0;
+        m.m13 = CHARMIDX;
+        m.m23 = CHARMIDY;
+        for(t=0;t<swfcharpos;t++) 
+        {
+            ptr[t] = swf_GetDataSize(ftag);
+            swf_SetU16(ftag, 0x1234);
+        }
+        for(t=0;t<swfcharpos;t++)
+        {
+            *(U16*)&ftag->data[ptr[t]] = swf_GetDataSize(ftag)-initpos;
+            swflastx=0;
+            swflasty=0;
+            swf_SetU8(ftag,0x10); //0 fill bits, 0 linestyle bits
+            SHAPE s;
+            s.bits.fill = 1;
+            s.bits.line = 0;
+            swf_ShapeSetStyle(ftag,&s,0,1,0);
+            int lastfill = fill;
+            fill = 1;
+            storefont = 1;
+            drawpath(ftag, outline[swfcharid2char[t]],&m);
+            storefont = 0;
+            fill = lastfill;
+            swf_ShapeSetEnd(ftag);
+        }
     }
 
     free(ptr);
     free(outline);
     for(t=0;t<charnum;t++)
-	free(charname[t]);
+        free(charname[t]);
     free(charname);
     free(used);
     free(swfcharid2char);
@@ -616,16 +616,16 @@ T1_OUTLINE*SWFFont::getOutline(char*name)
 {
     int t;
     for(t=0;t<this->charnum;t++) {
-	if(!strcmp(this->charname[t],name)) {
-	    if(!used[t])
-	    {
-		swfcharid2char[swfcharpos] = t;
-		char2swfcharid[t] = swfcharpos;
-		swfcharpos++;
-		used[t] = 1;
-	    }
-	    return outline[t];
-	}
+        if(!strcmp(this->charname[t],name)) {
+            if(!used[t])
+            {
+                swfcharid2char[swfcharpos] = t;
+                char2swfcharid[t] = swfcharpos;
+                swfcharpos++;
+                used[t] = 1;
+            }
+            return outline[t];
+        }
     }
     return 0;
 }
@@ -634,15 +634,15 @@ int SWFFont::getSWFCharID(char*name)
 {
     int t;
     for(t=0;t<this->charnum;t++) {
-	if(!strcmp(this->charname[t],name)) {
-	    if(!used[t])
-	    {
-		swfcharid2char[swfcharpos] = t;
-		char2swfcharid[t] = swfcharpos++;
-		used[t] = 1;
-	    }
-	    return char2swfcharid[t];
-	}
+        if(!strcmp(this->charname[t],name)) {
+            if(!used[t])
+            {
+                swfcharid2char[swfcharpos] = t;
+                char2swfcharid[t] = swfcharpos++;
+                used[t] = 1;
+            }
+            return char2swfcharid[t];
+        }
     }
     logf("<warning> Didn't find character '%s' in font '%s'", name, this->name);
     return 0;
@@ -664,23 +664,23 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
 {
     fontlist_t*last=0,*iterator;
     if(obj->font && !strcmp(obj->font->fontid,fontid))
-	return;
+        return;
 
     iterator = fontlist;
     while(iterator) {
-	if(!strcmp(iterator->font->fontid,fontid))
-	    break;
-	last = iterator;
-	iterator = iterator->next;
+        if(!strcmp(iterator->font->fontid,fontid))
+            break;
+        last = iterator;
+        iterator = iterator->next;
     }
     if(iterator) 
     {
-	obj->font = iterator->font;
-	return ;
+        obj->font = iterator->font;
+        return ;
     }
 
     if(t1id<0) {
-	logf("<error> internal error: t1id:%d, fontid:%s\n", t1id,fontid);
+        logf("<error> internal error: t1id:%d, fontid:%s\n", t1id,fontid);
     }
     
     SWFFont*font = new SWFFont(fontid, t1id, filename);
@@ -689,9 +689,9 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
     iterator->next = 0;
 
     if(last) 
-	last->next = iterator;
+        last->next = iterator;
     else 
-	fontlist = iterator;
+        fontlist = iterator;
     obj->font = font;
 }
 
@@ -699,9 +699,9 @@ int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
 {
     fontlist_t *iterator = fontlist;
     while(iterator) {
-	if(!strcmp(iterator->font->fontid,fontid))
-	    return 1;
-	iterator = iterator->next;
+        if(!strcmp(iterator->font->fontid,fontid))
+            return 1;
+        iterator = iterator->next;
     }
     return 0;
 }
@@ -715,9 +715,9 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
        obj->fontm12 == m12 &&
        obj->fontm21 == m21 &&
        obj->fontm22 == m22)
-	return;
+        return;
 //    if(textid>=0)
-//	endtext();
+//      endtext();
     obj->fontm11 = m11;
     obj->fontm12 = m12;
     obj->fontm21 = m21;
@@ -754,19 +754,19 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
   
   memset(&swf,0x00,sizeof(SWF));
 
-  swf.FileVersion    = 4;
-  swf.FrameRate      = 0x0040; // 1 frame per 4 seconds
-  swf.MovieSize.xmax = 20*sizex;
-  swf.MovieSize.ymax = 20*sizey;
+  swf.fileVersion    = 4;
+  swf.frameRate      = 0x0040; // 1 frame per 4 seconds
+  swf.movieSize.xmax = 20*sizex;
+  swf.movieSize.ymax = 20*sizey;
   
-  swf.FirstTag = InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-  tag = swf.FirstTag;
+  swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+  tag = swf.firstTag;
   rgb.r = 0xff;
   rgb.g = 0xff;
   rgb.b = 0xff;
-  SetRGB(tag,&rgb);
-  if(flag_protected)
-    tag = InsertTag(tag, ST_PROTECT);
+  swf_SetRGB(tag,&rgb);
+  if(flag_protected)  // good practice! /r
+    tag = swf_InsertTag(tag, ST_PROTECT);
   depth = 1;
   startdepth = depth;
 }
@@ -784,30 +784,30 @@ void startshape(struct swfoutput*obj)
   if(textid>=0)
       endtext();
 
-  tag = InsertTag(tag,ST_DEFINESHAPE);
+  tag = swf_InsertTag(tag,ST_DEFINESHAPE);
 
-  NewShape(&shape);
-  linestyleid = ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
+  swf_ShapeNew(&shape);
+  linestyleid = swf_ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
   rgb.r = obj->fillrgb.r;
   rgb.g = obj->fillrgb.g;
   rgb.b = obj->fillrgb.b;
-  fillstyleid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
+  fillstyleid = swf_ShapeAddSolidFillStyle(shape,&obj->fillrgb);
 
   shapeid = ++currentswfid;
-  SetU16(tag,shapeid);  // ID
+  swf_SetU16(tag,shapeid);  // ID
 
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = 20*sizex;
   r.ymax = 20*sizey;
   
-  SetRect(tag,&r);
+  swf_SetRect(tag,&r);
 
-  SetShapeStyles(tag,shape);
-  ShapeCountBits(shape,NULL,NULL);
-  SetShapeBits(tag,shape);
+  swf_SetShapeStyles(tag,shape);
+  swf_ShapeCountBits(shape,NULL,NULL);
+  swf_SetShapeBits(tag,shape);
 
-  ShapeSetAll(tag,shape,/*x*/0,/*y*/0,linestyleid,0,0);
+  swf_ShapeSetAll(tag,shape,/*x*/0,/*y*/0,linestyleid,0,0);
   swflastx=swflasty=0;
   lastwasfill = 0;
 }
@@ -818,16 +818,16 @@ void starttext(struct swfoutput*obj)
   MATRIX m;
   if(shapeid>=0)
       endshape();
-  tag = InsertTag(tag,ST_DEFINETEXT);
+  tag = swf_InsertTag(tag,ST_DEFINETEXT);
   textid = ++currentswfid;
-  SetU16(tag, textid);
+  swf_SetU16(tag, textid);
 
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = 20*sizex;
   r.ymax = 20*sizey;
   
-  SetRect(tag,&r);
+  swf_SetRect(tag,&r);
 
   m.sx = 65536;
   m.sy = 65536;
@@ -836,28 +836,28 @@ void starttext(struct swfoutput*obj)
   m.tx = 0;
   m.ty = 0;
  
-  SetMatrix(tag,&m);
+  swf_SetMatrix(tag,&m);
   swflastx=swflasty=0;
 }
 
 void endshape()
 {
     if(shapeid<0) 
-	return;
-    ShapeSetEnd(tag);
-    tag = InsertTag(tag,ST_PLACEOBJECT2);
-    ObjectPlace(tag,shapeid,/*depth*/depth++,NULL,NULL,NULL);
+        return;
+    swf_ShapeSetEnd(tag);
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(tag,shapeid,/*depth*/depth++,NULL,NULL,NULL);
     shapeid = -1;
 }
 
 void endtext()
 {
     if(textid<0)
-	return;
+        return;
     putcharacters(tag);
-    SetU8(tag,0);
-    tag = InsertTag(tag,ST_PLACEOBJECT2);
-    ObjectPlace(tag,textid,/*depth*/depth++,NULL,NULL,NULL);
+    swf_SetU8(tag,0);
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(tag,textid,/*depth*/depth++,NULL,NULL,NULL);
     textid = -1;
 }
 
@@ -868,8 +868,8 @@ void endpage(struct swfoutput*obj)
     if(textid>=0)
       endtext();
     while(clippos)
-	swfoutput_endclip(obj);
-    tag = InsertTag(tag,ST_SHOWFRAME);
+        swfoutput_endclip(obj);
+    tag = swf_InsertTag(tag,ST_SHOWFRAME);
 }
 
 void swfoutput_newpage(struct swfoutput*obj)
@@ -877,8 +877,8 @@ void swfoutput_newpage(struct swfoutput*obj)
     endpage(obj);
 
     for(depth--;depth>=startdepth;depth--) {
-	tag = InsertTag(tag,ST_REMOVEOBJECT2);
-	SetU16(tag,depth);
+        tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
+        swf_SetU16(tag,depth);
     }
 
     depth = 1;
@@ -892,16 +892,16 @@ void swfoutput_destroy(struct swfoutput* obj)
     endpage(obj);
     fontlist_t *tmp,*iterator = fontlist;
     while(iterator) {
-	delete iterator->font;
-	iterator->font = 0;
-	tmp = iterator;
-	iterator = iterator->next;
-	delete tmp;
+        delete iterator->font;
+        iterator->font = 0;
+        tmp = iterator;
+        iterator = iterator->next;
+        delete tmp;
     }
 
     T1_CloseLib();
     if(!filename) 
-	return;
+        return;
     if(filename)
      fi = open(filename, O_CREAT|O_TRUNC|O_WRONLY, 0777);
     else
@@ -912,9 +912,9 @@ void swfoutput_destroy(struct swfoutput* obj)
      exit(1);
     }
  
-    tag = InsertTag(tag,ST_END);
+    tag = swf_InsertTag(tag,ST_END);
 
-    if FAILED(WriteSWF(fi,&swf)) 
+    if FAILED(swf_WriteSWF(fi,&swf)) 
      logf("<error> WriteSWF() failed.\n");
     if(filename)
      close(fi);
@@ -969,7 +969,7 @@ void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
 void swfoutput_setlinewidth(struct swfoutput*obj, double linewidth)
 {
     if(obj->linewidth == (u16)(linewidth*20))
-	return;
+        return;
 
     if(shapeid>=0)
      endshape();
@@ -986,18 +986,18 @@ void swfoutput_startclip(swfoutput*obj, T1_OUTLINE*outline, struct swfmatrix*m)
 
     if(clippos >= 127)
     {
-	logf("<warning> Too many clip levels.");
-	clippos --;
+        logf("<warning> Too many clip levels.");
+        clippos --;
     } 
     
     startshape(obj);
     int olddrawmode = drawmode;
     swfoutput_setdrawmode(obj, DRAWMODE_CLIP);
     swfoutput_drawpath(obj, outline, m);
-    ShapeSetEnd(tag);
+    swf_ShapeSetEnd(tag);
     swfoutput_setdrawmode(obj, olddrawmode);
 
-    tag = InsertTag(tag,ST_PLACEOBJECT2);
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
     cliptags[clippos] = tag;
     clipshapes[clippos] = shapeid;
     clipdepths[clippos] = depth++;
@@ -1013,19 +1013,19 @@ void swfoutput_endclip(swfoutput*obj)
      endshape();
 
     if(!clippos) {
-	logf("<error> Invalid end of clipping region");
-	return;
+        logf("<error> Invalid end of clipping region");
+        return;
     }
     clippos--;
-    PlaceObject(cliptags[clippos],clipshapes[clippos],clipdepths[clippos],NULL,NULL,NULL,depth++);
+    swf_ObjectPlaceClip(cliptags[clippos],clipshapes[clippos],clipdepths[clippos],NULL,NULL,NULL,depth++);
 }
 
 
 void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4)
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4)
 {
     RGBA rgb;
     SRECT r;
@@ -1066,21 +1066,21 @@ void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
   
     /* shape */
     myshapeid = ++currentswfid;
-    tag = InsertTag(tag,ST_DEFINESHAPE);
-    NewShape(&shape);
+    tag = swf_InsertTag(tag,ST_DEFINESHAPE);
+    swf_ShapeNew(&shape);
     //lsid = ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
     //fsid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
-    fsid = ShapeAddBitmapFillStyle(shape,&m,bitid,0);
-    SetU16(tag, myshapeid);
+    fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,0);
+    swf_SetU16(tag, myshapeid);
     r.xmin = (int)(xmin*20);
     r.ymin = (int)(ymin*20);
     r.xmax = (int)(xmax*20);
     r.ymax = (int)(ymax*20);
-    SetRect(tag,&r);
-    SetShapeStyles(tag,shape);
-    ShapeCountBits(shape,NULL,NULL);
-    SetShapeBits(tag,shape);
-    ShapeSetAll(tag,shape,/*x*/0,/*y*/0,lsid,fsid,0);
+    swf_SetRect(tag,&r);
+    swf_SetShapeStyles(tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(tag,shape);
+    swf_ShapeSetAll(tag,shape,/*x*/0,/*y*/0,lsid,fsid,0);
     swflastx = swflasty = 0;
     moveto(tag, p1);
     lineto(tag, p2);
@@ -1093,18 +1093,18 @@ void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     ShapeSetLine (tag, shape, x*20,0);
     ShapeSetLine (tag, shape, 0,-y*20);
     ShapeSetLine (tag, shape, -x*20,0);*/
-    ShapeSetEnd(tag);
+    swf_ShapeSetEnd(tag);
 
     /* instance */
-    tag = InsertTag(tag,ST_PLACEOBJECT2);
-    ObjectPlace(tag,myshapeid,/*depth*/depth++,NULL,NULL,NULL);
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(tag,myshapeid,/*depth*/depth++,NULL,NULL,NULL);
 }
 
 int swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int sizey, 
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4)
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4)
 {
     if(shapeid>=0)
      endshape();
@@ -1112,19 +1112,19 @@ int swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int s
      endtext();
 
     int bitid = ++currentswfid;
-    tag = InsertTag(tag,ST_DEFINEBITSJPEG2);
-    SetU16(tag, bitid);
-    SetJPEGBits(tag, filename, jpegquality);
+    tag = swf_InsertTag(tag,ST_DEFINEBITSJPEG2);
+    swf_SetU16(tag, bitid);
+    swf_SetJPEGBits(tag, filename, jpegquality);
 
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
 }
 
 int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4)
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4)
 {
     if(shapeid>=0)
      endshape();
@@ -1132,19 +1132,19 @@ int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int si
      endtext();
 
     int bitid = ++currentswfid;
-    tag = InsertTag(tag,ST_DEFINEBITSLOSSLESS);
-    SetU16(tag, bitid);
-    SetLosslessBits(tag,sizex,sizey,mem, BMF_32BIT);
+    tag = swf_InsertTag(tag,ST_DEFINEBITSLOSSLESS);
+    swf_SetU16(tag, bitid);
+    swf_SetLosslessBits(tag,sizex,sizey,mem, BMF_32BIT);
     
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
 }
 
 int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4)
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4)
 {
     if(shapeid>=0)
      endshape();
@@ -1152,19 +1152,19 @@ int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int s
      endtext();
 
     int bitid = ++currentswfid;
-    tag = InsertTag(tag,ST_DEFINEBITSLOSSLESS2);
-    SetU16(tag, bitid);
-    SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256);
+    tag = swf_InsertTag(tag,ST_DEFINEBITSLOSSLESS2);
+    swf_SetU16(tag, bitid);
+    swf_SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256);
   
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
     return bitid;
 }
 
 void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey, 
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4)
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4)
 {
     if(shapeid>=0)
      endshape();

@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../config.h"
-#include "old_rfxswf.h"
 
 #define DEBUG_RFXSWF
 
@@ -98,76 +97,76 @@ typedef struct _ActionTAG
 
 
 typedef struct _SWF
-{ U8            FileVersion;
-  U32           FileSize;       // valid after load and save
-  SRECT         MovieSize;
-  U16           FrameRate;
-  U16           FrameCount;     // valid after load and save
-  TAG *         FirstTag;
+{ U8            fileVersion;
+  U32           fileSize;       // valid after load and save
+  SRECT         movieSize;
+  U16           frameRate;
+  U16           frameCount;     // valid after load and save
+  TAG *         firstTag;
 } SWF, * LPSWF;
 
 // Basic Functions
 
-int  ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
-int  WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
-int  WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
-void FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
+int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
+int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
+void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
     
-TAG * InsertTag(TAG * after,U16 id);    // updates frames, if necessary
-int   DeleteTag(TAG * t);
+TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
+int   swf_DeleteTag(TAG * t);
 
-void  SetTagPos(TAG * t,U32 pos);       // resets Bitcount
-U32   GetTagPos(TAG * t);
+void  swf_SetTagPos(TAG * t,U32 pos);       // resets Bitcount
+U32   swf_GetTagPos(TAG * t);
 
-TAG * NextTag(TAG * t);
-TAG * PrevTag(TAG * t);
+TAG * swf_NextTag(TAG * t);
+TAG * swf_PrevTag(TAG * t);
 
-int   GetFrameNo(TAG * t);              // should be renamed to TagGetFrame
-U16   GetTagID(TAG * t);                // ... TagGetID
-U32   GetDataSize(TAG * t);             // ... TagGetDataSize
-U8*   GetDataSizePtr(TAG * t);
+int   swf_GetFrameNo(TAG * t);              // should be renamed to TagGetFrame
+U16   swf_GetTagID(TAG * t);                // ... TagGetID
+U32   swf_GetDataSize(TAG * t);             // ... TagGetDataSize
+U8*   swf_GetDataSizePtr(TAG * t);
 
-U32   GetBits(TAG * t,int nbits);
-S32   GetSBits(TAG * t,int nbits);
-int   SetBits(TAG * t,U32 v,int nbits);
+U32   swf_GetBits(TAG * t,int nbits);
+S32   swf_GetSBits(TAG * t,int nbits);
+int   swf_SetBits(TAG * t,U32 v,int nbits);
 
-int   GetBlock(TAG * t,U8 * b,int l);   // resets Bitcount
-int   SetBlock(TAG * t,U8 * b,int l);
+int   swf_GetBlock(TAG * t,U8 * b,int l);   // resets Bitcount
+int   swf_SetBlock(TAG * t,U8 * b,int l);
 
-U8    GetU8(TAG * t);                   // resets Bitcount
-U16   GetU16(TAG * t);
-U32   GetU32(TAG * t);
+U8    swf_GetU8(TAG * t);                   // resets Bitcount
+U16   swf_GetU16(TAG * t);
+U32   swf_GetU32(TAG * t);
 
-int   SetU8(TAG * t,U8 v);              // resets Bitcount
-int   SetU16(TAG * t,U16 v);
-int   SetU32(TAG * t,U32 v);
+int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
+int   swf_SetU16(TAG * t,U16 v);
+int   swf_SetU32(TAG * t,U32 v);
 
-int   GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
-int   GetRect(TAG * t,SRECT * r);
-int   GetMatrix(TAG * t,MATRIX * m);
-int   GetCXForm(TAG * t,CXFORM * cx,U8 alpha);
+int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
+int   swf_GetRect(TAG * t,SRECT * r);
+int   swf_GetMatrix(TAG * t,MATRIX * m);
+int   swf_GetCXForm(TAG * t,CXFORM * cx,U8 alpha);
 
-int   SetPoint(TAG * t,SPOINT * p);     // resets Bitcount
-int   SetRect(TAG * t,SRECT * r);
-int   SetMatrix(TAG * t,MATRIX * m);
-int   SetCXForm(TAG * t,CXFORM * cx,U8 alpha);
-int   SetRGB(TAG * t,RGBA * col);
-int   SetRGBA(TAG * t,RGBA * col);
+int   swf_SetPoint(TAG * t,SPOINT * p);     // resets Bitcount
+int   swf_SetRect(TAG * t,SRECT * r);
+int   swf_SetMatrix(TAG * t,MATRIX * m);
+int   swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha);
+int   swf_SetRGB(TAG * t,RGBA * col);
+int   swf_SetRGBA(TAG * t,RGBA * col);
 
 // Function Macros
 
-#define GetS8(tag)      ((S8)GetU8(tag))
-#define GetS16(tag)     ((S16)GetU16(tag))
-#define GetS32(tag)     ((S32)GetU32(tag))
-#define GetCoord(tag)   ((SCOORD)GetU32(tag))
-#define GetFixed(tag)   ((SFIXED)GetU32(tag))
+#define swf_GetS8(tag)      ((S8)swf_GetU8(tag))
+#define swf_GetS16(tag)     ((S16)swf_GetU16(tag))
+#define swf_GetS32(tag)     ((S32)swf_GetU32(tag))
+#define swf_GetCoord(tag)   ((SCOORD)swf_GetU32(tag))
+#define swf_GetFixed(tag)   ((SFIXED)swf_GetU32(tag))
 
-#define SetS8(tag,v)    SetU8(tag,(U8)v)
-#define SetS16(tag,v)   SetU16(tag,(U16)v)
-#define SetS32(tag,v)   SetU32(tag,(U32)v)
-#define SetCoord(tag,v) SetU32(tag,(U32)v)
-#define SetFixed(tag,v) SetU32(tag,(U32)v)
-#define SetString(t,s)  SetBlock(t,s,strlen(s)+1)
+#define swf_SetS8(tag,v)    swf_SetU8(tag,(U8)v)
+#define swf_SetS16(tag,v)   swf_SetU16(tag,(U16)v)
+#define swf_SetS32(tag,v)   swf_SetU32(tag,(U32)v)
+#define swf_SetCoord(tag,v) swf_SetU32(tag,(U32)v)
+#define swf_SetFixed(tag,v) swf_SetU32(tag,(U32)v)
+#define swf_SetString(t,s)  swf_SetBlock(t,s,strlen(s)+1)
 
 #define FAILED(b)       ((b)<0)
 #define SUCCEDED(b)     ((b)>=0)
@@ -225,10 +224,10 @@ int   SetRGBA(TAG * t,RGBA * col);
 
 // swfdump.c
 
-void DumpHeader(FILE * f,SWF * swf);
-void DumpMatrix(FILE * f,MATRIX * m);
-void DumpTag(FILE * f,TAG * t); 
-char* getTagName(TAG*tag);
+void swf_DumpHeader(FILE * f,SWF * swf);
+void swf_DumpMatrix(FILE * f,MATRIX * m);
+void swf_DumpTag(FILE * f,TAG * t); 
+char* swf_TagGetName(TAG*tag);
 
 // swfshape.c
 
@@ -270,29 +269,29 @@ typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
 
 // Shapes
 
-int   NewShape(SHAPE ** s);
-void  ShapeFree(SHAPE * s);
+int   swf_ShapeNew(SHAPE ** s);
+void  swf_ShapeFree(SHAPE * s);
 
-int   GetSimpleShape(TAG * t,SHAPE ** s); // without Linestyle/Fillstyle Record
-int   SetSimpleShape(TAG * t,SHAPE * s);   // without Linestyle/Fillstyle Record
+int   swf_GetSimpleShape(TAG * t,SHAPE ** s); // without Linestyle/Fillstyle Record
+int   swf_SetSimpleShape(TAG * t,SHAPE * s);   // without Linestyle/Fillstyle Record
 
-int   ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color);
-int   ShapeAddSolidFillStyle(SHAPE * s,RGBA * color);
-int   ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip);
+int   swf_ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color);
+int   swf_ShapeAddSolidFillStyle(SHAPE * s,RGBA * color);
+int   swf_ShapeAddBitmapFillStyle(SHAPE * s,MATRIX * m,U16 id_bitmap,int clip);
 
-int   SetShapeStyles(TAG * t,SHAPE * s);
-int   ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits);
-int   SetShapeBits(TAG * t,SHAPE * s);
-int   SetShapeHeader(TAG * t,SHAPE * s); // one call for upper three functions
+int   swf_SetShapeStyles(TAG * t,SHAPE * s);
+int   swf_ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits);
+int   swf_SetShapeBits(TAG * t,SHAPE * s);
+int   swf_SetShapeHeader(TAG * t,SHAPE * s); // one call for upper three functions
 
-int   ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y);
-int   ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1);
-int   ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1);
+int   swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y);
+int   swf_ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1);
+int   swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1);
 
-int   ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y);
-int   ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
-int   ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
-int   ShapeSetEnd(TAG * t);
+int   swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y);
+int   swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
+int   swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
+int   swf_ShapeSetEnd(TAG * t);
 
 
 // swffont.c
@@ -332,37 +331,37 @@ typedef struct _FONTUSAGE
 { U8 code[MAX_CHAR_PER_FONT];
 } FONTUSAGE, * LPFONTUSAGE;
 
-int FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*));
+int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*));
 // -> void fontcallback(U16 id,U8 * name); returns number of defined fonts
 
-int FontExtract(SWF * swf,int id,SWFFONT ** f);
+int swf_FontExtract(SWF * swf,int id,SWFFONT ** f);
 // Fetches all available information from DefineFont, DefineFontInfo, DefineText, ...
 // id = FontID, id=0 -> Extract first Font
 
-int FontIsItalic(SWFFONT * f);
-int FontIsBold(SWFFONT * f);
+int swf_FontIsItalic(SWFFONT * f);
+int swf_FontIsBold(SWFFONT * f);
 
-int FontSetID(SWFFONT * f,U16 id);
-int FontReduce(SWFFONT * f,FONTUSAGE * use);
+int swf_FontSetID(SWFFONT * f,U16 id);
+int swf_FontReduce(SWFFONT * f,FONTUSAGE * use);
 
-int FontInitUsage(FONTUSAGE * use);
-int FontUse(FONTUSAGE * use,U8 * s);
+int swf_FontInitUsage(FONTUSAGE * use);
+int swf_FontUse(FONTUSAGE * use,U8 * s);
 
-int FontSetDefine(TAG * t,SWFFONT * f);
-int FontSetInfo(TAG * t,SWFFONT * f);
+int swf_FontSetDefine(TAG * t,SWFFONT * f);
+int swf_FontSetInfo(TAG * t,SWFFONT * f);
 
-int FontExport(int handle,SWFFONT * f);
-int FontImport(int handle,SWFFONT * * f);
+int swf_FontExport(int handle,SWFFONT * f);
+int swf_FontImport(int handle,SWFFONT * * f);
 
-void FontFree(SWFFONT * f);
+void swf_FontFree(SWFFONT * f);
 
-U32 TextGetWidth(SWFFONT * font,U8 * s,int scale);
-int TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits);
+U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale);
+int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits);
 
-int TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,S16 dx,S16 dy);
-int TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits);
+int swf_TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,S16 dx,S16 dy);
+int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits);
 
-int TextPrintDefineText(TAG * t,SWFFONT * f);
+int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 // Prints text defined in tag t with font f to stdout
 
 
@@ -370,9 +369,9 @@ int TextPrintDefineText(TAG * t,SWFFONT * f);
 
 // Always use ST_PLACEOBJECT2 !!!
 
-int ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
-int PlaceObject(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
-int ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
+int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
+int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
+int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 
 // swfbutton.c
 
@@ -416,21 +415,21 @@ int ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 
 #define BF_TRACKMENU            0x01
 
-int ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx);
-int ButtonSetCondition(TAG * t,U16 condition); // for DefineButton2
-int ButtonSetFlags(TAG * t,U8 flags);  // necessary for DefineButton2
-int ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineButton2-Tags (how many conditions to process)
+int swf_ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx);
+int swf_ButtonSetCondition(TAG * t,U16 condition); // for DefineButton2
+int swf_ButtonSetFlags(TAG * t,U8 flags);  // necessary for DefineButton2
+int swf_ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineButton2-Tags (how many conditions to process)
 
 // swfbits.c
 
 typedef int JPEGBITS,* LPJPEGBITS; // cover libjpeg structures
 
-JPEGBITS * SetJPEGBitsStart(TAG * t,int width,int height,int quality);
-int SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n);
-int SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data);
-int SetJPEGBitsFinish(JPEGBITS * jpegbits);
+JPEGBITS * swf_SetJPEGBitsStart(TAG * t,int width,int height,int quality);
+int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n);
+int swf_SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data);
+int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits);
 
-int SetJPEGBits(TAG * t,char * fname,int quality); // paste jpg file into swf stream
+int swf_SetJPEGBits(TAG * t,char * fname,int quality); // paste jpg file into swf stream
 
 #define BYTES_PER_SCANLINE(width) ((width+3)&0xfffffffc)
 
@@ -446,30 +445,30 @@ int SetJPEGBits(TAG * t,char * fname,int quality); // paste jpg file into swf st
 #define BM32_GREEN      0x00ff0000
 #define BM32_RED        0x0000ff00
 
-int SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
-int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
-int SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
+int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags);
+int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
+int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 
 // swftools.c
 
-char isDefiningTag(TAG * t);
-char isAllowedSpriteTag(TAG * t);
-U16 GetDefineID(TAG * t);
-U16 GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
-U16 GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
-char* GetName(TAG * t); //PLACEOBJECT2, FRAMELABEL
-MATRIX * MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2);
-MATRIX * MatrixMapTriangle(MATRIX * m,int dx,int dy,
+U8 swf_isDefiningTag(TAG * t);
+U8 swf_isAllowedSpriteTag(TAG * t);
+U16 swf_GetDefineID(TAG * t);
+U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
+U16 swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
+char* swf_GetTagName(TAG * t); //PLACEOBJECT2, FRAMELABEL
+MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2);
+MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
                     int x0,int y0,int x1,int y1,int x2,int y2);
 
 
 // swfcgi.c
 
-void uncgi();  // same behaviour as Steven Grimm's uncgi-library
+void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // swfaction.c
 
-ActionTAG* GetActions(TAG*tag);
-void DumpActions(ActionTAG*atag, char*prefix);
+ActionTAG* swf_GetActions(TAG*tag);
+void swf_DumpActions(ActionTAG*atag, char*prefix);
 
 #endif

@@ -24,8 +24,8 @@ struct options_t options[] =
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
-	printf("swfstrings - part of %s %s\n", PACKAGE, VERSION);
-	exit(0);
+        printf("swfstrings - part of %s %s\n", PACKAGE, VERSION);
+        exit(0);
     }
 }
 int args_callback_longoption(char*name,char*val)
@@ -40,8 +40,8 @@ void args_callback_usage(char*name)
 int args_callback_command(char*name,char*val)
 {
     if(filename) {
-	fprintf(stderr, "Only one file allowed. You supplied at least two. (%s and %s)\n",
-		 filename, name);
+        fprintf(stderr, "Only one file allowed. You supplied at least two. (%s and %s)\n",
+                 filename, name);
     }
     filename = name;
     return 0;
@@ -53,17 +53,17 @@ void fontcallback(U16 id,U8 * name)
 { LPSWFFONT font;
   LPTAG t;
   
-  FontExtract(&swf,id,&font);
-  printf("#< %s %s %s>\n",name,FontIsBold(font)?"bold":"",FontIsItalic(font)?"italic":"");
+  swf_FontExtract(&swf,id,&font);
+  printf("#< %s %s %s>\n",name,swf_FontIsBold(font)?"bold":"",swf_FontIsItalic(font)?"italic":"");
 
-  t = swf.FirstTag;
+  t = swf.firstTag;
 
   while (t)
-  { TextPrintDefineText(t,font);
-    t = NextTag(t);
+  { swf_TextPrintDefineText(t,font);
+    t = swf_NextTag(t);
   }
   
-  FontFree(font);
+  swf_FontFree(font);
 }
 
 int main (int argc,char ** argv)
@@ -75,14 +75,14 @@ int main (int argc,char ** argv)
 
   f = open(filename,O_RDONLY);
   if (f>=0)
-  { if FAILED(ReadSWF(f,&swf))
+  { if FAILED(swf_ReadSWF(f,&swf))
     { fprintf(stderr,"%s is not a valid SWF file or contains errors.\n",filename);
       close(f);
     }
     else
     { close(f);
-      FontEnumerate(&swf,&fontcallback);
-      FreeTags(&swf);
+      swf_FontEnumerate(&swf,&fontcallback);
+      swf_FreeTags(&swf);
     }
   } else {
       fprintf(stderr,"File not found: %s\n",argv[1]);

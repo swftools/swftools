@@ -48,34 +48,34 @@
 
 // inline wrapper functions
 
-TAG * NextTag(TAG * t) { return t->next; }
-TAG * PrevTag(TAG * t) { return t->prev; }
-int   GetFrameNo(TAG * t)  { return t->frame; }
-U16   GetTagID(TAG * t)    { return t->id; }
-U32   GetDataSize(TAG * t) { return t->len; }
-U8*   GetDataSizePtr(TAG * t) { return &(t->data[t->len]); }
-U32   GetTagPos(TAG * t)   { return t->pos; }
+TAG * swf_NextTag(TAG * t) { return t->next; }
+TAG * swf_PrevTag(TAG * t) { return t->prev; }
+int   swf_GetFrameNo(TAG * t)  { return t->frame; }
+U16   swf_GetTagID(TAG * t)    { return t->id; }
+U32   swf_GetDataSize(TAG * t) { return t->len; }
+U8*   swf_GetDataSizePtr(TAG * t) { return &(t->data[t->len]); }
+U32   swf_GetTagPos(TAG * t)   { return t->pos; }
 
 // Basic Data Access Functions
 
-#define ResetBitmask(tag)   if (tag->bitmask)  { tag->pos++; tag->bitmask = 0; }
-#define ResetBitcount(tag)  if (tag->bitcount) { tag->bitcount = 0; }
+#define swf_ResetBitmask(tag)   if (tag->bitmask)  { tag->pos++; tag->bitmask = 0; }
+#define swf_ResetBitcount(tag)  if (tag->bitcount) { tag->bitcount = 0; }
 
 // for future purpose: avoid high level lib functions to change tagpos/bitcount
 
-#define SaveTagPos(tag)
-#define RestoreTagPos(tag)
+#define swf_SaveTagPos(tag)
+#define swf_RestoreTagPos(tag)
 
-void SetTagPos(TAG * t,U32 pos)
-{ ResetBitmask(t);
+void swf_SetTagPos(TAG * t,U32 pos)
+{ swf_ResetBitmask(t);
   if (pos<=t->len) t->pos = pos;
   #ifdef DEBUG_RFXSWF
   else fprintf(stderr,"SetTagPos() out of bounds: TagID = %i\n",t->id);
   #endif
 }
 
-U8 GetU8(TAG * t)
-{ ResetBitmask(t);
+U8 swf_GetU8(TAG * t)
+{ swf_ResetBitmask(t);
   #ifdef DEBUG_RFXSWF
     if (t->pos>=t->len) 
     { fprintf(stderr,"GetU8() out of bounds: TagID = %i\n",t->id);
@@ -85,9 +85,9 @@ U8 GetU8(TAG * t)
   return t->data[t->pos++];
 }
 
-U16 GetU16(TAG * t)
+U16 swf_GetU16(TAG * t)
 { U16 res;
-  ResetBitmask(t);
+  swf_ResetBitmask(t);
   #ifdef DEBUG_RFXSWF
     if (t->pos>(t->len-2)) 
     { fprintf(stderr,"GetU16() out of bounds: TagID = %i\n",t->id);
@@ -99,9 +99,9 @@ U16 GetU16(TAG * t)
   return res;
 }
 
-U32 GetU32(TAG * t)
+U32 swf_GetU32(TAG * t)
 { U32 res;
-  ResetBitmask(t);
+  swf_ResetBitmask(t);
   #ifdef DEBUG_RFXSWF
     if (t->pos>(t->len-4)) 
     { fprintf(stderr,"GetU32() out of bounds: TagID = %i\n",t->id);
@@ -114,20 +114,20 @@ U32 GetU32(TAG * t)
   return res;
 }
 
-int GetBlock(TAG * t,U8 * b,int l)
+int swf_GetBlock(TAG * t,U8 * b,int l)
 // returns number of bytes written (<=l)
 // b = NULL -> skip data
-{ ResetBitmask(t);
+{ swf_ResetBitmask(t);
   if ((t->len-t->pos)<l) l=t->len-t->pos;
   if (b && l) memcpy(b,&t->data[t->pos],l);
   t->pos+=l;
   return l;
 }
 
-int SetBlock(TAG * t,U8 * b,int l)
+int swf_SetBlock(TAG * t,U8 * b,int l)
 // Appends Block to the end of Tagdata, returns size
 { U32 newlen = t->len + l;
-  ResetBitcount(t);
+  swf_ResetBitcount(t);
   if (newlen>t->memsize)
   { U32  newmem  = MEMSIZE(newlen);  
     U8 * newdata = (U8*)((t->data)?realloc(t->data,newmem):malloc(newmem));
@@ -147,34 +147,34 @@ int SetBlock(TAG * t,U8 * b,int l)
   return l;
 }
 
-int SetU8(TAG * t,U8 v)
-{ ResetBitcount(t);
-  if ((t->len+1)>t->memsize) return (SetBlock(t,&v,1)==1)?0:-1;
+int swf_SetU8(TAG * t,U8 v)
+{ swf_ResetBitcount(t);
+  if ((t->len+1)>t->memsize) return (swf_SetBlock(t,&v,1)==1)?0:-1;
   t->data[t->len++] = v;
   return 0;
 }
 
-int SetU16(TAG * t,U16 v)
+int swf_SetU16(TAG * t,U16 v)
 { U8 a[2];
   a[0] = v&0xff;
   a[1] = v>>8;
   
-  ResetBitcount(t);
-  if ((t->len+2)>t->memsize) return (SetBlock(t,a,2)==2)?0:-1;
+  swf_ResetBitcount(t);
+  if ((t->len+2)>t->memsize) return (swf_SetBlock(t,a,2)==2)?0:-1;
   t->data[t->len++] = a[0];
   t->data[t->len++] = a[1];
   return 0;
 }
 
-int SetU32(TAG * t,U32 v)
+int swf_SetU32(TAG * t,U32 v)
 { U8 a[4];
   a[0] = v&0xff;        // to ensure correct handling of non-intel byteorder
   a[1] = (v>>8)&0xff;
   a[2] = (v>>16)&0xff;
   a[3] = (v>>24)&0xff;
   
-  ResetBitcount(t);
-  if ((t->len+4)>t->memsize) return (SetBlock(t,a,4)==4)?0:-1;
+  swf_ResetBitcount(t);
+  if ((t->len+4)>t->memsize) return (swf_SetBlock(t,a,4)==4)?0:-1;
   t->data[t->len++] = a[0];
   t->data[t->len++] = a[1];
   t->data[t->len++] = a[2];
@@ -182,7 +182,7 @@ int SetU32(TAG * t,U32 v)
   return 0;
 }
 
-U32 GetBits(TAG * t,int nbits)
+U32 swf_GetBits(TAG * t,int nbits)
 { U32 res = 0;
   if (!nbits) return 0;
   if (!t->bitmask) t->bitmask = 0x80;
@@ -205,18 +205,18 @@ U32 GetBits(TAG * t,int nbits)
   return res;
 }
 
-S32 GetSBits(TAG * t,int nbits)
-{ U32 res = GetBits(t,nbits);
+S32 swf_GetSBits(TAG * t,int nbits)
+{ U32 res = swf_GetBits(t,nbits);
   if (res&(1<<(nbits-1))) res|=(0xffffffff<<nbits);  
   return (S32)res;
 }
 
-int SetBits(TAG * t,U32 v,int nbits)
+int swf_SetBits(TAG * t,U32 v,int nbits)
 { U32 bm = 1<<(nbits-1);
 
   while (nbits)
   { if (!t->bitcount)
-    { if (FAILED(SetU8(t,0))) return -1;
+    { if (FAILED(swf_SetU8(t,0))) return -1;
       t->bitcount = 0x80;
     }
     if (v&bm) t->data[t->len-1] |= t->bitcount;
@@ -229,28 +229,28 @@ int SetBits(TAG * t,U32 v,int nbits)
 
 // Advanced Data Access Functions
 
-int SetRGB(TAG * t,RGBA * col)
+int swf_SetRGB(TAG * t,RGBA * col)
 { if (!t) return -1;
   if (col)
-  { SetU8(t,col->r);
-    SetU8(t,col->g);
-    SetU8(t,col->b);
-  } else SetBlock(t,NULL,3);
+  { swf_SetU8(t,col->r);
+    swf_SetU8(t,col->g);
+    swf_SetU8(t,col->b);
+  } else swf_SetBlock(t,NULL,3);
   return 0;
 }
 
-int SetRGBA(TAG * t,RGBA * col)
+int swf_SetRGBA(TAG * t,RGBA * col)
 { if (!t) return -1;
   if (col)
-  { SetU8(t,col->r);
-    SetU8(t,col->g);
-    SetU8(t,col->b);
-    SetU8(t,col->a);
-  } else SetBlock(t,NULL,4);
+  { swf_SetU8(t,col->r);
+    swf_SetU8(t,col->g);
+    swf_SetU8(t,col->b);
+    swf_SetU8(t,col->a);
+  } else swf_SetBlock(t,NULL,4);
   return 0;
 }
 
-int CountBits(U32 v,int nbits)
+int swf_CountBits(U32 v,int nbits)
 { int n = 33;
   U32 m = 0x80000000;
   if (!v) n = 0; else
@@ -271,36 +271,36 @@ int CountBits(U32 v,int nbits)
   return (n>nbits)?n:nbits;
 }
 
-int GetRect(TAG * t,SRECT * r)
+int swf_GetRect(TAG * t,SRECT * r)
 { int nbits;
   SRECT dummy;
   if (!r) r = &dummy;
-  nbits = (int) GetBits(t,5);
-  r->xmin = GetSBits(t,nbits);
-  r->xmax = GetSBits(t,nbits);
-  r->ymin = GetSBits(t,nbits);
-  r->ymax = GetSBits(t,nbits);
+  nbits = (int) swf_GetBits(t,5);
+  r->xmin = swf_GetSBits(t,nbits);
+  r->xmax = swf_GetSBits(t,nbits);
+  r->ymin = swf_GetSBits(t,nbits);
+  r->ymax = swf_GetSBits(t,nbits);
   return 0;
 }
 
-int SetRect(TAG * t,SRECT * r)
+int swf_SetRect(TAG * t,SRECT * r)
 { int nbits;
     
-  nbits = CountBits(r->xmin,0);
-  nbits = CountBits(r->xmax,nbits);
-  nbits = CountBits(r->ymin,nbits);
-  nbits = CountBits(r->ymax,nbits);
+  nbits = swf_CountBits(r->xmin,0);
+  nbits = swf_CountBits(r->xmax,nbits);
+  nbits = swf_CountBits(r->ymin,nbits);
+  nbits = swf_CountBits(r->ymax,nbits);
 
-  SetBits(t,nbits,5);
-  SetBits(t,r->xmin,nbits);
-  SetBits(t,r->xmax,nbits);
-  SetBits(t,r->ymin,nbits);
-  SetBits(t,r->ymax,nbits);
+  swf_SetBits(t,nbits,5);
+  swf_SetBits(t,r->xmin,nbits);
+  swf_SetBits(t,r->xmax,nbits);
+  swf_SetBits(t,r->ymin,nbits);
+  swf_SetBits(t,r->ymax,nbits);
 
   return 0;
 }
 
-int GetMatrix(TAG * t,MATRIX * m)
+int swf_GetMatrix(TAG * t,MATRIX * m)
 { MATRIX dummy;
   int nbits;
     
@@ -313,30 +313,30 @@ int GetMatrix(TAG * t,MATRIX * m)
     return -1;
   }
 
-  ResetBitmask(t);
+  swf_ResetBitmask(t);
   
-  if (GetBits(t,1))
-  { nbits = GetBits(t,5);
-    m->sx = GetSBits(t,nbits);
-    m->sy = GetSBits(t,nbits);
+  if (swf_GetBits(t,1))
+  { nbits = swf_GetBits(t,5);
+    m->sx = swf_GetSBits(t,nbits);
+    m->sy = swf_GetSBits(t,nbits);
   }
   else m->sx = m->sy = 0x10000;
   
-  if (GetBits(t,1))
-  { nbits = GetBits(t,5);
-    m->r0 = GetSBits(t,nbits);
-    m->r1 = GetSBits(t,nbits);
+  if (swf_GetBits(t,1))
+  { nbits = swf_GetBits(t,5);
+    m->r0 = swf_GetSBits(t,nbits);
+    m->r1 = swf_GetSBits(t,nbits);
   }
   else m->r0 = m->r1 = 0x0;
 
-  nbits = GetBits(t,5);
-  m->tx = GetSBits(t,nbits);
-  m->ty = GetSBits(t,nbits);
+  nbits = swf_GetBits(t,5);
+  m->tx = swf_GetSBits(t,nbits);
+  m->ty = swf_GetSBits(t,nbits);
   
   return 0;
 }
 
-int SetMatrix(TAG * t,MATRIX * m)
+int swf_SetMatrix(TAG * t,MATRIX * m)
 { int nbits;
   MATRIX ma;
 
@@ -347,38 +347,38 @@ int SetMatrix(TAG * t,MATRIX * m)
     ma.tx = ma.ty = 0;
   }
 
-  ResetBitcount(t);
+  swf_ResetBitcount(t);
 
-  if ((m->sx==0x10000)&&(m->sy==0x10000)) SetBits(t,0,1);
+  if ((m->sx==0x10000)&&(m->sy==0x10000)) swf_SetBits(t,0,1);
   else
-  { SetBits(t,1,1);
-    nbits = CountBits(m->sx,0);
-    nbits = CountBits(m->sy,nbits);
-    SetBits(t,nbits,5);
-    SetBits(t,m->sx,nbits);
-    SetBits(t,m->sy,nbits);
+  { swf_SetBits(t,1,1);
+    nbits = swf_CountBits(m->sx,0);
+    nbits = swf_CountBits(m->sy,nbits);
+    swf_SetBits(t,nbits,5);
+    swf_SetBits(t,m->sx,nbits);
+    swf_SetBits(t,m->sy,nbits);
   }
 
-  if ((!m->r0)&&(!m->r1)) SetBits(t,0,1);
+  if ((!m->r0)&&(!m->r1)) swf_SetBits(t,0,1);
   else
-  { SetBits(t,1,1);
-    nbits = CountBits(m->r0,0);
-    nbits = CountBits(m->r1,nbits);
-    SetBits(t,nbits,5);
-    SetBits(t,m->r0,nbits);
-    SetBits(t,m->r1,nbits);
+  { swf_SetBits(t,1,1);
+    nbits = swf_CountBits(m->r0,0);
+    nbits = swf_CountBits(m->r1,nbits);
+    swf_SetBits(t,nbits,5);
+    swf_SetBits(t,m->r0,nbits);
+    swf_SetBits(t,m->r1,nbits);
   }
 
-  nbits = CountBits(m->tx,0);
-  nbits = CountBits(m->ty,nbits);
-  SetBits(t,nbits,5);
-  SetBits(t,m->tx,nbits);
-  SetBits(t,m->ty,nbits);
+  nbits = swf_CountBits(m->tx,0);
+  nbits = swf_CountBits(m->ty,nbits);
+  swf_SetBits(t,nbits,5);
+  swf_SetBits(t,m->tx,nbits);
+  swf_SetBits(t,m->ty,nbits);
 
   return 0;
 }
 
-int GetCXForm(TAG * t,CXFORM * cx,U8 alpha) //FIXME: alpha should be type bool
+int swf_GetCXForm(TAG * t,CXFORM * cx,U8 alpha) //FIXME: alpha should be type bool
 { CXFORM cxf;
   int hasadd;
   int hasmul;
@@ -391,31 +391,31 @@ int GetCXForm(TAG * t,CXFORM * cx,U8 alpha) //FIXME: alpha should be type bool
 
   if (!t) return 0;
   
-  ResetBitmask(t);
-  hasadd = GetBits(t,1);
-  hasmul = GetBits(t,1);
-  nbits  = GetBits(t,4);
+  swf_ResetBitmask(t);
+  hasadd = swf_GetBits(t,1);
+  hasmul = swf_GetBits(t,1);
+  nbits  = swf_GetBits(t,4);
 
   if (hasmul)
-  { cx->r0 = (S16)GetSBits(t,nbits);
-    cx->g0 = (S16)GetSBits(t,nbits);
-    cx->b0 = (S16)GetSBits(t,nbits);
+  { cx->r0 = (S16)swf_GetSBits(t,nbits);
+    cx->g0 = (S16)swf_GetSBits(t,nbits);
+    cx->b0 = (S16)swf_GetSBits(t,nbits);
     if (alpha)
-      cx->a0 = (S16)GetSBits(t,nbits);
+      cx->a0 = (S16)swf_GetSBits(t,nbits);
   }
 
   if (hasadd)
-  { cx->r1 = (S16)GetSBits(t,nbits);
-    cx->g1 = (S16)GetSBits(t,nbits);
-    cx->b1 = (S16)GetSBits(t,nbits);
+  { cx->r1 = (S16)swf_GetSBits(t,nbits);
+    cx->g1 = (S16)swf_GetSBits(t,nbits);
+    cx->b1 = (S16)swf_GetSBits(t,nbits);
     if (alpha)
-      cx->a1 = (S16)GetSBits(t,nbits);
+      cx->a1 = (S16)swf_GetSBits(t,nbits);
   }
   
   return 0;
 }
 
-int SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
+int swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
 { CXFORM cxf;
   int hasadd;
   int hasmul;
@@ -438,43 +438,43 @@ int SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
   hasadd = cx->a1|cx->r1|cx->g1|cx->b1;
 
   if (hasmul)
-  { if (alpha) nbits = CountBits((S32)cx->a0,nbits);
-    nbits = CountBits((S32)cx->r0,nbits);
-    nbits = CountBits((S32)cx->g0,nbits);
-    nbits = CountBits((S32)cx->b0,nbits);
+  { if (alpha) nbits = swf_CountBits((S32)cx->a0,nbits);
+    nbits = swf_CountBits((S32)cx->r0,nbits);
+    nbits = swf_CountBits((S32)cx->g0,nbits);
+    nbits = swf_CountBits((S32)cx->b0,nbits);
   }
 
   if (hasadd)
-  { if (alpha) nbits = CountBits((S32)cx->a1,nbits);
-    nbits = CountBits((S32)cx->r1,nbits);
-    nbits = CountBits((S32)cx->g1,nbits);
-    nbits = CountBits((S32)cx->b1,nbits);
+  { if (alpha) nbits = swf_CountBits((S32)cx->a1,nbits);
+    nbits = swf_CountBits((S32)cx->r1,nbits);
+    nbits = swf_CountBits((S32)cx->g1,nbits);
+    nbits = swf_CountBits((S32)cx->b1,nbits);
   }
   
-  ResetBitcount(t);
-  SetBits(t,hasadd?1:0,1);
-  SetBits(t,hasmul?1:0,1);
-  SetBits(t,nbits,4);
+  swf_ResetBitcount(t);
+  swf_SetBits(t,hasadd?1:0,1);
+  swf_SetBits(t,hasmul?1:0,1);
+  swf_SetBits(t,nbits,4);
 
   if (hasmul)
-  { SetBits(t,cx->r0,nbits);
-    SetBits(t,cx->g0,nbits);
-    SetBits(t,cx->b0,nbits);
-    if (alpha) SetBits(t,cx->a0,nbits);
+  { swf_SetBits(t,cx->r0,nbits);
+    swf_SetBits(t,cx->g0,nbits);
+    swf_SetBits(t,cx->b0,nbits);
+    if (alpha) swf_SetBits(t,cx->a0,nbits);
   }
 
   if (hasadd)
-  { SetBits(t,cx->r1,nbits);
-    SetBits(t,cx->g1,nbits);
-    SetBits(t,cx->b1,nbits);
-    if (alpha) SetBits(t,cx->a1,nbits);
+  { swf_SetBits(t,cx->r1,nbits);
+    swf_SetBits(t,cx->g1,nbits);
+    swf_SetBits(t,cx->b1,nbits);
+    if (alpha) swf_SetBits(t,cx->a1,nbits);
   }
   
   return 0;
 }
 
-int GetPoint(TAG * t,SPOINT * p) { return 0; }
-int SetPoint(TAG * t,SPOINT * p) { return 0; }
+int swf_GetPoint(TAG * t,SPOINT * p) { return 0; }
+int swf_SetPoint(TAG * t,SPOINT * p) { return 0; }
 
 // Tag List Manipulating Functions
 
@@ -489,9 +489,9 @@ int RFXSWF_UpdateFrame(TAG * t,S8 delta)
   return res;
 }
 
-#define UpdateFrame(a,b) RFXSWF_UpdateFrame(a,b)
+#define swf_UpdateFrame(a,b) RFXSWF_UpdateFrame(a,b)
 
-TAG * InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
+TAG * swf_InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
 { TAG * t;
 
   t = (TAG *)malloc(sizeof(TAG));
@@ -507,16 +507,16 @@ TAG * InsertTag(TAG * after,U16 id)     // updates frames, if nescessary
       after->next = t;
       if (t->next) t->next->prev = t;
       
-      if (id==ST_SHOWFRAME) UpdateFrame(t->next,+1);
+      if (id==ST_SHOWFRAME) swf_UpdateFrame(t->next,+1);
     }
   }
   return t;
 }
 
-int DeleteTag(TAG * t)
+int swf_DeleteTag(TAG * t)
 { if (!t) return -1;
 
-  if (t->id==ST_SHOWFRAME) UpdateFrame(t->next,-1);
+  if (t->id==ST_SHOWFRAME) swf_UpdateFrame(t->next,-1);
     
   if (t->prev) t->prev->next = t->next;
   if (t->next) t->next->prev = t->prev;
@@ -581,7 +581,7 @@ TAG * RFXSWF_ReadTag(int handle,TAG * prev)
   return t;
 }
 
-int DefineSprite_GetRealSize(TAG * t);
+int RFXSWF_DefineSprite_GetRealSize(TAG * t);
 
 int RFXSWF_WriteTag(int handle,TAG * t)
 // returns tag length in bytes (incl. Header), -1 = Error
@@ -592,7 +592,7 @@ int RFXSWF_WriteTag(int handle,TAG * t)
 
   if (!t) return -1;
 
-  len = (t->id==ST_DEFINESPRITE)?DefineSprite_GetRealSize(t):t->len;
+  len = (t->id==ST_DEFINESPRITE)?RFXSWF_DefineSprite_GetRealSize(t):t->len;
 
   short_tag = len<0x3f;
 
@@ -637,23 +637,23 @@ int RFXSWF_WriteTag(int handle,TAG * t)
   return t->len+(short_tag?2:6);
 }
 
-int DefineSprite_GetRealSize(TAG * t)
+int RFXSWF_DefineSprite_GetRealSize(TAG * t)
 // Sprite Handling: Helper function to pack DefineSprite-Tag
 { U32 len = t->len;
   do
-  { t = NextTag(t);
+  { t = swf_NextTag(t);
     if (t->id!=ST_DEFINESPRITE) len += RFXSWF_WriteTag(-1,t);
     else t = NULL;
   } while (t&&(t->id!=ST_END));
   return len;
 }
 
-#define ReadTag(a,b)  RFXSWF_ReadTag(a,b)
-#define WriteTag(a,b) RFXSWF_WriteTag(a,b)
+#define swf_ReadTag(a,b)  RFXSWF_ReadTag(a,b)
+#define swf_WriteTag(a,b) RFXSWF_WriteTag(a,b)
 
 // Movie Functions
 
-int ReadSWF(int handle,SWF * swf)       // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int swf_ReadSWF(int handle,SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 {     
   if (!swf) return -1;
   memset(swf,0x00,sizeof(SWF));
@@ -667,29 +667,29 @@ int ReadSWF(int handle,SWF * swf)       // Reads SWF to memory (malloc'ed), retu
     if ((t1.len=read(handle,b,32))<21) return -1;
     t1.data = (U8*)b;
 
-    if (GetU8(&t1)!=(U8)'F') return -1;
-    if (GetU8(&t1)!=(U8)'W') return -1;
-    if (GetU8(&t1)!=(U8)'S') return -1;
+    if (swf_GetU8(&t1)!=(U8)'F') return -1;
+    if (swf_GetU8(&t1)!=(U8)'W') return -1;
+    if (swf_GetU8(&t1)!=(U8)'S') return -1;
 
-    swf->FileVersion = GetU8(&t1);
-    swf->FileSize    = GetU32(&t1);
-    GetRect(&t1,&swf->MovieSize);
-    swf->FrameRate   = GetU16(&t1);
-    swf->FrameCount  = GetU16(&t1);
+    swf->fileVersion = swf_GetU8(&t1);
+    swf->fileSize    = swf_GetU32(&t1);
+    swf_GetRect(&t1,&swf->movieSize);
+    swf->frameRate   = swf_GetU16(&t1);
+    swf->frameCount  = swf_GetU16(&t1);
 
-    GetU8(&t1);
-    lseek(handle,GetTagPos(&t1)-1,SEEK_SET);
+    swf_GetU8(&t1);
+    lseek(handle,swf_GetTagPos(&t1)-1,SEEK_SET);
   
                                         // reda tags and connect to list
     t = &t1;
-    while (t) t = ReadTag(handle,t);
-    swf->FirstTag = t1.next;
+    while (t) t = swf_ReadTag(handle,t);
+    swf->firstTag = t1.next;
     t1.next->prev = NULL;
   }
   
   return 0;
 }
-int  WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or <0 if fails
+int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
     
@@ -699,22 +699,22 @@ int  WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or
 
 #ifdef INSERT_RFX_TAG
 
-  if (NextTag(swf->FirstTag))
-    if (GetTagID(NextTag(swf->FirstTag))!=ST_REFLEX)
-      SetBlock(InsertTag(swf->FirstTag,ST_REFLEX),"rfx",3);
+  if (swf_NextTag(swf->firstTag))
+    if (swf_GetTagID(swf_NextTag(swf->firstTag))!=ST_REFLEX)
+      swf_SetBlock(swf_InsertTag(swf->firstTag,ST_REFLEX),"rfx",3);
 
 #endif // INSERT_RFX_TAG
 
   // Count Frames + File Size
 
   len = 0;
-  t = swf->FirstTag;
-  swf->FrameCount = 0;
+  t = swf->firstTag;
+  swf->frameCount = 0;
 
   while(t)
-  { len += WriteTag(-1,t);
-    if (t->id==ST_SHOWFRAME) swf->FrameCount++;
-    t = NextTag(t);
+  { len += swf_WriteTag(-1,t);
+    if (t->id==ST_SHOWFRAME) swf->frameCount++;
+    t = swf_NextTag(t);
   }
   
   { TAG t1;
@@ -725,20 +725,20 @@ int  WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or
     t1.data    = (U8*)b;
     t1.memsize = 64;
     
-    SetU8(&t1,'F');      
-    SetU8(&t1,'W');      
-    SetU8(&t1,'S');
-    SetU8(&t1,swf->FileVersion);
+    swf_SetU8(&t1,'F');      
+    swf_SetU8(&t1,'W');      
+    swf_SetU8(&t1,'S');
+    swf_SetU8(&t1,swf->fileVersion);
     
-    SetU32(&t1,0);                      // Keep space for filesize
-    SetRect(&t1,&swf->MovieSize);
-    SetU16(&t1,swf->FrameRate);
-    SetU16(&t1,swf->FrameCount);
+    swf_SetU32(&t1,0);                      // Keep space for filesize
+    swf_SetRect(&t1,&swf->movieSize);
+    swf_SetU16(&t1,swf->frameRate);
+    swf_SetU16(&t1,swf->frameCount);
 
-    l = GetDataSize(&t1);
-    swf->FileSize = l+len;
+    l = swf_GetDataSize(&t1);
+    swf->fileSize = l+len;
     t1.len = 4;                         // bad & ugly trick !
-    SetU32(&t1,swf->FileSize);
+    swf_SetU32(&t1,swf->fileSize);
 
     if (handle>=0)
     { 
@@ -753,21 +753,21 @@ int  WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns length or
         return -1;
       }
 
-      t = swf->FirstTag;
+      t = swf->firstTag;
       while (t)
-      { if (WriteTag(handle,t)<0) return -1;
-        t = NextTag(t);
+      { if (swf_WriteTag(handle,t)<0) return -1;
+        t = swf_NextTag(t);
       }
     }
   }
-  return (int)swf->FileSize;
+  return (int)swf->fileSize;
 }
 
 int WriteCGI(SWF * swf)
 { int len;
   char s[1024];
     
-  len = WriteSWF(-1,swf);
+  len = swf_WriteSWF(-1,swf);
 
   if (len<0) return -1;
 
@@ -778,11 +778,11 @@ int WriteCGI(SWF * swf)
             "\n",len);
             
   write(fileno(stdout),s,strlen(s));
-  return WriteSWF(fileno(stdout),swf);
+  return swf_WriteSWF(fileno(stdout),swf);
 }
 
-void FreeTags(SWF * swf)                 // Frees all malloc'ed memory for tags
-{ TAG * t = swf->FirstTag;
+void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for tags
+{ TAG * t = swf->firstTag;
 
   while (t)
   { TAG * tnew = t->next;

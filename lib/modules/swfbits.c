@@ -25,29 +25,29 @@ typedef struct _JPEGDESTMGR
 
 // Destination manager callbacks
 
-void swf_init_destination(j_compress_ptr cinfo) 
+void RFXSWF_init_destination(j_compress_ptr cinfo) 
 { JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
   dmgr->buffer = (JOCTET*)malloc(OUTBUFFER_SIZE);
   dmgr->mgr.next_output_byte = dmgr->buffer;
   dmgr->mgr.free_in_buffer = OUTBUFFER_SIZE;
 }
 
-boolean swf_empty_output_buffer(j_compress_ptr cinfo)
+boolean RFXSWF_empty_output_buffer(j_compress_ptr cinfo)
 { JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
-  SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE);
+  swf_SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE);
   dmgr->mgr.next_output_byte = dmgr->buffer;
   dmgr->mgr.free_in_buffer = OUTBUFFER_SIZE;
   return TRUE;
 }
 
-void swf_term_destination(j_compress_ptr cinfo) 
+void RFXSWF_term_destination(j_compress_ptr cinfo) 
 { JPEGDESTMGR * dmgr = (JPEGDESTMGR *)cinfo->dest;
-  SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE-dmgr->mgr.free_in_buffer);
+  swf_SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE-dmgr->mgr.free_in_buffer);
   free(dmgr->buffer);
   dmgr->mgr.free_in_buffer = 0;
 }
 
-JPEGBITS * SetJPEGBitsStart(TAG * t,int width,int height,int quality)
+JPEGBITS * swf_SetJPEGBitsStart(TAG * t,int width,int height,int quality)
 {
   JPEGDESTMGR * jpeg;
         
@@ -61,9 +61,9 @@ JPEGBITS * SetJPEGBitsStart(TAG * t,int width,int height,int quality)
 
   jpeg_create_compress(&jpeg->cinfo);
 
-  jpeg->mgr.init_destination =  swf_init_destination;
-  jpeg->mgr.empty_output_buffer =       swf_empty_output_buffer;
-  jpeg->mgr.term_destination =  swf_term_destination;
+  jpeg->mgr.init_destination = RFXSWF_init_destination;
+  jpeg->mgr.empty_output_buffer = RFXSWF_empty_output_buffer;
+  jpeg->mgr.term_destination = RFXSWF_term_destination;
       
   jpeg->t = t;
 
@@ -91,18 +91,18 @@ JPEGBITS * SetJPEGBitsStart(TAG * t,int width,int height,int quality)
   return (JPEGBITS *)jpeg;
 }
 
-int SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n)
+int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n)
 { JPEGDESTMGR * jpeg = (JPEGDESTMGR *)jpegbits;
   if (!jpeg) return -1;
   jpeg_write_scanlines(&jpeg->cinfo,data,n);
   return 0;
 }
 
-int SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data)
-{ return SetJPEGBitsLines(jpegbits,&data,1);
+int swf_SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data)
+{ return swf_SetJPEGBitsLines(jpegbits,&data,1);
 }
 
-int SetJPEGBitsFinish(JPEGBITS * jpegbits)
+int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits)
 { JPEGDESTMGR * jpeg = (JPEGDESTMGR *)jpegbits;
   if (!jpeg) return -1;
   jpeg_finish_compress(&jpeg->cinfo);
@@ -110,7 +110,7 @@ int SetJPEGBitsFinish(JPEGBITS * jpegbits)
   return 0;
 }
 
-int SetJPEGBits(TAG * t,char * fname,int quality)
+int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 { struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
   JPEGBITS * out;
@@ -127,7 +127,7 @@ int SetJPEGBits(TAG * t,char * fname,int quality)
   jpeg_read_header(&cinfo, TRUE);
   jpeg_start_decompress(&cinfo);
 
-  out = SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
+  out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
   scanline = (U8*)malloc(4*cinfo.output_width);
   
   if (scanline)
@@ -135,11 +135,11 @@ int SetJPEGBits(TAG * t,char * fname,int quality)
     U8 * js = scanline;
     for (y=0;y<cinfo.output_height;y++)
     { jpeg_read_scanlines(&cinfo,&js,1);
-      SetJPEGBitsLines(out,(U8**)&js,1);
+      swf_SetJPEGBitsLines(out,(U8**)&js,1);
     }
   }
 
-  SetJPEGBitsFinish(out);
+  swf_SetJPEGBitsFinish(out);
   jpeg_finish_decompress(&cinfo);
   fclose(f);
   
@@ -152,12 +152,12 @@ int SetJPEGBits(TAG * t,char * fname,int quality)
 
 #ifdef _ZLIB_INCLUDED_
 
-int swf_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
+int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
 { while (1)
   { int status = deflate(zs,Z_SYNC_FLUSH);
 
     if (zs->avail_out == 0)
-    { SetBlock(t,data,zs->next_out-data);
+    { swf_SetBlock(t,data,zs->next_out-data);
       zs->next_out = data;
       zs->avail_out = OUTBUFFER_SIZE;
     }
@@ -174,19 +174,18 @@ int swf_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
 #endif
       return status;
     }
-
   }
   return 0;
 }
 
-int SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
+int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
 { int res = 0;
   int bps;
   U8 * data;
   
   switch (bitmap_flags)
   { case BMF_8BIT:
-      return SetLosslessBitsIndexed(t,width,height,bitmap,NULL,256);
+      return swf_SetLosslessBitsIndexed(t,width,height,bitmap,NULL,256);
     case BMF_16BIT:
       bps = BYTES_PER_SCANLINE(sizeof(U16)*width);
       break;
@@ -197,9 +196,9 @@ int SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
       return -1;
   }
   
-  SetU8(t,bitmap_flags);
-  SetU16(t,width);
-  SetU16(t,height);
+  swf_SetU8(t,bitmap_flags);
+  swf_SetU16(t,width);
+  swf_SetU16(t,height);
 
   if (data=malloc(OUTBUFFER_SIZE))
   { z_stream zs;
@@ -214,8 +213,8 @@ int SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
       zs.next_out         = data;
       zs.avail_out        = OUTBUFFER_SIZE;
 
-      if (swf_deflate_wraper(t,&zs,data,TRUE)<0) res = -3;
-      if (zs.next_out>data) SetBlock(t,data,zs.next_out-data);
+      if (RFXSWF_deflate_wraper(t,&zs,data,TRUE)<0) res = -3;
+      if (zs.next_out>data) swf_SetBlock(t,data,zs.next_out-data);
 
       deflateEnd(&zs);
       
@@ -227,7 +226,7 @@ int SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
   return res;
 }
 
-int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors)
+int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors)
 { RGBA * pal = palette;
   int bps = BYTES_PER_SCANLINE(width);
   U8 * data;
@@ -242,10 +241,10 @@ int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palet
   
   if ((ncolors<2)||(ncolors>256)||(!t)) return -1; // parameter error
 
-  SetU8(t,BMF_8BIT);
-  SetU16(t,width);
-  SetU16(t,height);
-  SetU8(t,ncolors-1); // number of pal entries
+  swf_SetU8(t,BMF_8BIT);
+  swf_SetU16(t,width);
+  swf_SetU16(t,height);
+  swf_SetU8(t,ncolors-1); // number of pal entries
 
   if (data=malloc(OUTBUFFER_SIZE))
   { z_stream zs;
@@ -271,7 +270,7 @@ int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palet
        alpha values different from 0 and 0xff in lossless bitmaps...
     */
 
-        if (GetTagID(t)==ST_DEFINEBITSLOSSLESS2)  // have alpha channel?
+        if (swf_GetTagID(t)==ST_DEFINEBITSLOSSLESS2)  // have alpha channel?
         { for (i=0;i<ncolors;i++)         
           { pp[0] = pal[i].r;
             pp[1] = pal[i].g;
@@ -295,17 +294,17 @@ int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palet
         zs.next_out         = data;
         zs.avail_out        = OUTBUFFER_SIZE;
 
-        if (swf_deflate_wraper(t,&zs,data,FALSE)<0) res = -3;
+        if (RFXSWF_deflate_wraper(t,&zs,data,FALSE)<0) res = -3;
 
                                     // compress bitmap
         zs.next_in = bitmap;
         zs.avail_in = (bps*height*sizeof(U8));
 
-        if (swf_deflate_wraper(t,&zs,data,TRUE)<0) res = -3;
+        if (RFXSWF_deflate_wraper(t,&zs,data,TRUE)<0) res = -3;
 
         deflateEnd(&zs);
 
-        if (zs.next_out>data) SetBlock(t,data,zs.next_out-data);
+        if (zs.next_out>data) swf_SetBlock(t,data,zs.next_out-data);
 
         free(zpal);
       } else res = -2; // memory error
@@ -318,8 +317,8 @@ int SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palet
   return res;
 }
 
-int SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap)
-{ return SetLosslessBitsIndexed(t,width,height,bitmap,NULL,256);
+int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap)
+{ return swf_SetLosslessBitsIndexed(t,width,height,bitmap,NULL,256);
 }
 
 

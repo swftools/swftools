@@ -18,7 +18,7 @@
 
 #define PREFIX "WWW_"
 
-static int htoi(unsigned char * s)
+static int swf_htoi(unsigned char * s)
 { int     value;
   char    c;
 
@@ -33,14 +33,14 @@ static int htoi(unsigned char * s)
   return (value);
 }
 
-static void url_unescape(unsigned char * s)
+static void swf_url_unescape(unsigned char * s)
 { unsigned char  *dest = s;
 
   while (s[0])
   { if (s[0] == '+') dest[0] = ' ';
     else
     { if (s[0] == '%' && ishex(s[1]) && ishex(s[2]))
-      { dest[0] = (unsigned char) htoi(s + 1);
+      { dest[0] = (unsigned char) swf_htoi(s + 1);
         s += 2;
       }
       else dest[0] = s[0];
@@ -50,12 +50,12 @@ static void url_unescape(unsigned char * s)
   dest[0] = 0;
 }
 
-static void cgienv(unsigned char * var)
+static void swf_cgienv(unsigned char * var)
 { unsigned char *buf, *c, *s, *t, *oldval = NULL, *newval;
   int despace = 0, got_cr = 0;
 
   // fprintf(stderr,"%s\n",var);
-  url_unescape(var);
+  swf_url_unescape(var);
   // fprintf(stderr,"%s\n",var);
 
   
@@ -119,14 +119,14 @@ static void cgienv(unsigned char * var)
   }
 }
 
-static void scanquery(char * q)
+static void swf_scanquery(char * q)
 { char *next = q;
   if (!q) return;
 
   while (next)
   { next = strchr(q, '&');
     if (next) next[0] = 0;
-    cgienv(q);
+    swf_cgienv(q);
     if (next)
     { next[0] = '&';
       q = next+1;
@@ -134,7 +134,7 @@ static void scanquery(char * q)
   } 
 }
 
-char * postread()
+char * swf_postread()
 { char * buf = NULL;
   int size = 0, sofar = 0, got;
 
@@ -157,23 +157,24 @@ char * postread()
   return buf;
 }
 
-void uncgi()
+void swf_uncgi()
 { char *query, *dupquery, *method;
 
   query = getenv("QUERY_STRING");
   if ((query) && strlen(query))
   { dupquery = strdup(query);
-    scanquery(dupquery);
+    swf_scanquery(dupquery);
     free(dupquery);
   }
 
   method = getenv("REQUEST_METHOD");
   if ((method) && ! strcmp(method, "POST"))
-  { query = postread();
-    if ((query)&&(query[0]!=0)) scanquery(query);
+  { query = swf_postread();
+    if ((query)&&(query[0]!=0)) swf_scanquery(query);
     free(query);
   }
   
 }
       
 #undef ishex
+#undef PREFIX

@@ -11,82 +11,82 @@
 
 */
 
-int ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx)
+int swf_ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx)
 
-{ SetU8(t,state);
-  SetU16(t,id);
-  SetU16(t,layer);
-  SetMatrix(t,m);
+{ swf_SetU8(t,state);
+  swf_SetU16(t,id);
+  swf_SetU16(t,layer);
+  swf_SetMatrix(t,m);
 //  SetCXForm(t,cx,0);
   return 0;
 }
 
-int ButtonSetCondition(TAG * t,U16 condition)
-{ SetU16(t,0); // dummy for Action Offset -> later set by ButtonPostProcess
-  SetU16(t,condition);
+int swf_ButtonSetCondition(TAG * t,U16 condition)
+{ swf_SetU16(t,0); // dummy for Action Offset -> later set by ButtonPostProcess
+  swf_SetU16(t,condition);
   return 0;
 }
 
-int ButtonSetFlags(TAG * t,U8 flags)
-{ if (GetTagID(t)==ST_DEFINEBUTTON2)
-  { SetU8(t,flags);
-    SetU16(t,0); // dummy for Action Offset -> later set by ButtonPostProcess
+int swf_ButtonSetFlags(TAG * t,U8 flags)
+{ if (swf_GetTagID(t)==ST_DEFINEBUTTON2)
+  { swf_SetU8(t,flags);
+    swf_SetU16(t,0); // dummy for Action Offset -> later set by ButtonPostProcess
   }
   return 0;
 }
 
-void SetButtonOffset(TAG * t,U32 offsetpos)
-{ U32 now = GetTagPos(t);
+void swf_SetButtonOffset(TAG * t,U32 offsetpos)
+{ U32 now = swf_GetTagPos(t);
   U16 diff = now-offsetpos;
-  SetTagPos(t,offsetpos);
+  swf_SetTagPos(t,offsetpos);
   t->data[t->pos++] = (U8)(diff&0xff);
   t->data[t->pos++] = (U8)(diff>>8);
-  SetTagPos(t,now);
+  swf_SetTagPos(t,now);
 }
 
-int ButtonPostProcess(TAG * t,int anz_action)
-{ if (GetTagID(t)==ST_DEFINEBUTTON2)
+int swf_ButtonPostProcess(TAG * t,int anz_action)
+{ if (swf_GetTagID(t)==ST_DEFINEBUTTON2)
   { U32 oldTagPos;
     U32 offsetpos;
 
-    oldTagPos = GetTagPos(t);
+    oldTagPos = swf_GetTagPos(t);
 
     // scan DefineButton2 Record
     
-    GetU16(t);          // Character ID
-    GetU8(t);           // Flags;
+    swf_GetU16(t);          // Character ID
+    swf_GetU8(t);           // Flags;
 
-    offsetpos = GetTagPos(t);  // first offset
-    GetU16(t);
+    offsetpos = swf_GetTagPos(t);  // first offset
+    swf_GetU16(t);
 
-    while (GetU8(t))      // state  -> parse ButtonRecord
-    { GetU16(t);          // id
-      GetU16(t);          // layer
-      GetMatrix(t,NULL);  // matrix
+    while (swf_GetU8(t))      // state  -> parse ButtonRecord
+    { swf_GetU16(t);          // id
+      swf_GetU16(t);          // layer
+      swf_GetMatrix(t,NULL);  // matrix
       // evtl.: CXForm
     }
 
-    SetButtonOffset(t,offsetpos);
+    swf_SetButtonOffset(t,offsetpos);
 
     while(anz_action)
     { U8 a;
         
-      offsetpos = GetTagPos(t); // offset
-      GetU16(t);
+      offsetpos = swf_GetTagPos(t); // offset
+      swf_GetU16(t);
 
-      GetU16(t);                // condition
+      swf_GetU16(t);                // condition
       
-      while (a=GetU8(t))        // skip action records
+      while (a=swf_GetU8(t))        // skip action records
       { if (a&0x80)
-        { U16 l = GetU16(t);
-          GetBlock(t,NULL,l);
+        { U16 l = swf_GetU16(t);
+          swf_GetBlock(t,NULL,l);
         }
       }
       
-      if (--anz_action) SetButtonOffset(t,offsetpos);
+      if (--anz_action) swf_SetButtonOffset(t,offsetpos);
     }
     
-    SetTagPos(t,oldTagPos);
+    swf_SetTagPos(t,oldTagPos);
   }
   return 0;
 }
