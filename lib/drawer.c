@@ -84,6 +84,14 @@ void draw_string(drawer_t*draw, const char*string)
 	    to.y = atoi(getToken(&p));
 	    draw->splineTo(draw, &mid, &to);
 	}
+	else if(!strncmp(token, "conicTo", 5)) {
+	    FPOINT mid,to;
+	    mid.x = atoi(getToken(&p));
+	    mid.y = atoi(getToken(&p));
+	    to.x = atoi(getToken(&p));
+	    to.y = atoi(getToken(&p));
+	    draw_conicTo(draw, &mid, &to);
+	}
 	else if(!strncmp(token, "cubicTo", 5)) {
 	    FPOINT mid1,mid2,to;
 	    mid1.x = atoi(getToken(&p));
