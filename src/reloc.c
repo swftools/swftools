@@ -46,6 +46,37 @@ void map_ids_mem(u8*mem, int length)
 
     switch(newtag->id)
     {
+	case TAGID_DEFINEBUTTONCXFORM: {
+	    int t;
+	    maponeid(&newtag->data[0]); //button id
+	    reader_init (newtag->data, newtag->length);
+	    for(t=0;t<4;t++) {
+		int flags;
+		maponeid(&newtag->data[0]);
+		readu16(); //sound id
+		flags = readu8();
+		if(flags&1)
+		    readu32(); // in point
+		if(flags&2)
+		    readu32(); // out points
+		if(flags&4)
+		    readu16(); // loop count
+		if(flags&8)
+		{
+		    int npoints = readu8();
+		    int s;
+		    for(s=0;s<npoints;s++)
+		    {
+			readu32();
+			readu16();
+			readu16();
+		    }
+		}
+	    }
+        } break;
+	case TAGID_DEFINEBUTTONSOUND:
+	    maponeid(&newtag->data[0]); //button id
+	break;
 	case TAGID_PLACEOBJECT:
 	    maponeid(&newtag->data[0]);
         break;
