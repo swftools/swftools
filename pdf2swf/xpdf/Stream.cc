@@ -1044,7 +1044,11 @@ void LZWStream::reset() {
   fclose(f);
 
   //----- execute uncompress / gzip
+#ifdef WIN32
+  zCmd = new GString("c:\\swftools\\gzip.exe");
+#else
   zCmd = new GString(uncompressCmd);
+#endif
   zCmd->append(' ');
   zCmd->append(zName);
 #if defined(MACOS)
