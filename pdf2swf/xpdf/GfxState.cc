@@ -21,6 +21,7 @@
 #include "Array.h"
 #include "Page.h"
 #include "GfxState.h"
+#include "cmyk.h"
 
 //------------------------------------------------------------------------
 
@@ -445,7 +446,7 @@ void GfxDeviceCMYKColorSpace::getGray(GfxColor *color, double *gray) {
     rgb->g = white - (m*white);
     rgb->b = white - (y*white);
 }*/
-void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   double c, m, y, aw, ac, am, ay, ar, ag, ab;
 
   c = clip01(color->c[0] + color->c[3]);
@@ -460,8 +461,18 @@ void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   ab = c * m * (1-y);
   rgb->r = clip01(aw + 0.9137*am + 0.9961*ay + 0.9882*ar);
   rgb->g = clip01(aw + 0.6196*ac + ay + 0.5176*ag);
-  rgb->b = clip01(aw + 0.7804*ac + 0.5412*am + 0.0667*ar + 0.2118*ag +
-		  0.4863*ab);
+  rgb->b = clip01(aw + 0.7804*ac + 0.5412*am + 0.0667*ar + 0.2118*ag + 0.4863*ab);
+}*/
+void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+    unsigned char r,g,b;
+    float c = color->c[0];
+    float m = color->c[1];
+    float y = color->c[2];
+    float k = color->c[3];
+    convert_cmyk2rgb(c,m,y,k, &r,&g,&b);
+    rgb->r = r/255.0;
+    rgb->g = g/255.0;
+    rgb->b = b/255.0;
 }
 
 void GfxDeviceCMYKColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
