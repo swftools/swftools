@@ -930,6 +930,31 @@ U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale)
   return res;
 }
 
+SRECT swf_TextCalculateBBoxUTF8(SWFFONT * font,U8 * s,int scale)
+{
+    int pos=0;
+    SRECT r;
+    swf_GetRect(0, &r);
+    while(*s) {
+	int c = readUTF8char(&s);
+	if(c < font->maxascii) {
+	    int g = font->ascii2glyph[c];
+	    if(g>=0) {
+		SRECT rn = font->layout->bounds[g];
+		rn.xmin = (rn.xmin * scale)/20/100 + pos;
+		rn.xmax = (rn.xmax * scale)/20/100 + pos;
+		rn.ymin = (rn.ymin * scale)/20/100;
+		rn.ymax = (rn.ymax * scale)/20/100;
+		swf_ExpandRect2(&r, &rn);
+		pos += (font->glyph[g].advance*scale)/20/100;
+	    }
+	}
+	c++;
+    }
+    return r;
+}
+
+
 SWFFONT* swf_ReadFont(char* filename)
 {
   int f;
@@ -1161,24 +1186,10 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
     U8 gbits, abits;
     U8*c = (U8*)text;
     int pos = 0;
-    swf_GetRect(0, &r);
     if(font->layout) {
-	while(*c) {
-	    if(*c < font->maxascii) {
-		int g = font->ascii2glyph[*c];
-		if(g>=0) {
-		    SRECT rn = font->layout->bounds[g];
-		    rn.xmin = (rn.xmin * scale)/100 + pos;
-		    rn.xmax = (rn.xmax * scale)/100 + pos;
-		    rn.ymin = (rn.ymin * scale)/100;
-		    rn.ymax = (rn.ymax * scale)/100;
-		    swf_ExpandRect2(&r, &rn);
-		    pos += (font->glyph[g].advance*scale)/100;
-		}
-	    }
-	    c++;
-	}
+	r = swf_TextCalculateBBoxUTF8(font,text,scale*20);
     } else {
+	fprintf(stderr, "No layout information- can't compute text bbox accurately");
 	/* Hm, without layout information, we can't compute a bounding
 	   box. We could call swf_FontCreateLayout to create a layout,
 	   but the caller probably doesn't want us to mess up his font
