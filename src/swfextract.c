@@ -841,25 +841,40 @@ void handledefinesound(TAG*tag)
     char buf[128];
     char*filename = buf;
     FILE*fi;
+    char*extension = 0;
+    int format;
     U16 id;
+    int rate,bits,stereo;
+    char*rates[] = {"5500","11025","22050","44100"};
     id = swf_GetU16(tag); //id
-    sprintf(buf, "sound%d.mp3", id);
+    
+    flags = swf_GetU8(tag);
+    format = flags>>4;
+    rate = (flags>>2)&3;
+    bits = flags&2?16:8;
+    stereo = flags&1;
+    
+    samples = swf_GetU32(tag);
 
+    if(format == 2) { // mp3
+	swf_GetU16(tag); //numsamples_seek
+	extension = "mp3";
+    } else if(format == 0) { // raw
+	printf("Sound is RAW, format: %s samples/sec, %d bit, %s\n", rates[rate], bits, stereo?"stereo":"mono");
+	// TODO: convert to WAV
+	extension = "raw";
+    } else if(format == 1) { // adpcm
+	printf("Sound is ADPCM, format: %s samples/sec, %d bit, %s\n", rates[rate], bits, stereo?"stereo":"mono");
+	extension = "adpcm";
+    }
+    sprintf(buf, "sound%d.%s", id, extension);
     if(numextracts==1) {
 	filename = destfilename;
-	if(!strcmp(filename,"output.swf"))
-	    filename = "output.mp3";
+	if(!strcmp(filename,"output.swf")) {
+	    sprintf(buf, "output.%s", extension);
+	    filename = buf;
+	}
     }
-    flags = swf_GetU8(tag);
-    if((flags>>4)!=2) {
-	printf("Sorry, can only extract MP3 sounds. Sound %d is ADPCM or RAW.\n", id);
-	/* not mp3 */
-	return;
-    }
-    samples = swf_GetU32(tag);
-    
-    swf_GetU16(tag); //(only for mp3) numsamples_seek
-
     fi = save_fopen(filename, "wb");
     fwrite(&tag->data[tag->pos], tag->len - tag->pos, 1, fi);
     fclose(fi);
