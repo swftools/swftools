@@ -57,6 +57,7 @@ static int jpeg_quality = 20;
 
 static char zlib = 0;
 static double scale = 1.0;
+static int flip = 0;
 
 #ifndef ST_DEFINEBITSJPEG
 #define ST_DEFINEBITSJPEG       6 
@@ -69,6 +70,7 @@ struct options_t options[] =
  {"v","verbose"},
  {"o","output"},
  {"n","num"},
+ {"p","flip"},
  {"s","start"},
  {"z","zlib"},
  {"V","version"},
@@ -92,6 +94,10 @@ int args_callback_option(char*name,char*val)
     else if(!strcmp(name, "s")) {
 	firstframe = atoi(val);
 	return 1;
+    }
+    else if(!strcmp(name, "p")) {
+	flip = 1;
+	return 0;
     }
     else if(!strcmp(name, "d")) {
 	scale = atoi(val)/100.0;
@@ -120,6 +126,7 @@ void args_callback_usage(char*name)
     printf("\t-n , --num frames\t Number of frames to encode\n");
     printf("\t-s , --start frame\t First frame to encode\n");
     printf("\t-d , --scale factor\t Scale to factor percent\n");
+    printf("\t-f , --flip\t\t Turn movie upside down\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
     exit(0);
 }
@@ -754,12 +761,14 @@ int main (int argc,char ** argv)
     {
 	int x,y;
 	for(y=0;y<yblocksize;y++) {
-	    /* avifile 0.6 returns images upside down. versoins 5 and >=7 don't */
-#if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION==6) 
-	    U8*mydata = img->At(oldheight-(int)((yy*yblocksize+y)*reziscale));
-#else
-	    U8*mydata = img->At((int)((yy*yblocksize+y)*reziscale));
-#endif
+	    /* some avifile versions flip the image some don't. Maybe this is
+	       even movie dependent. We just let the user decide which side's up. */
+	    U8*mydata;
+	    if(flip)
+		mydata = img->At(oldheight-(int)((yy*yblocksize+y)*reziscale));
+	    else
+		mydata = img->At((int)((yy*yblocksize+y)*reziscale));
+
 	    for(x=0;x<xblocksize;x++) {
 		blockbuffer[(y*xblocksize+x)*3+2] = mydata[((int)(((xx*xblocksize+x)*reziscale)))*3+0];
 		blockbuffer[(y*xblocksize+x)*3+1] = mydata[((int)(((xx*xblocksize+x)*reziscale)))*3+1];
