@@ -72,8 +72,8 @@ WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 SUBDIRS = lame
 noinst_LIBRARIES = librfxswf.a
 
-librfxswf_a_SOURCES = rfxswf.c rfxswf.h log.c log.h rfxswf.o
-librfxswf_a_DEPENDENCIES = rfxswf.o rfxswf.h log.c log.h modules/swfbits.c 		      modules/swfaction.c modules/swfdump.c modules/swfcgi.c 		      modules/swfbutton.c modules/swftext.c modules/swftools.c 		      modules/swfsound.c 		lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o 		lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o 		lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
+librfxswf_a_SOURCES = bitio.c bitio.h rfxswf.c rfxswf.h log.c log.h rfxswf.o
+librfxswf_a_DEPENDENCIES = bitio.c bitio.h rfxswf.o rfxswf.h log.c log.h modules/swfbits.c 		      modules/swfaction.c modules/swfdump.c modules/swfcgi.c 		      modules/swfbutton.c modules/swftext.c modules/swftools.c 		      modules/swfsound.c 		lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o 		lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o 		lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
 
 
 librfxswf_a_LIBADD = lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o 		lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o 		lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
@@ -90,7 +90,7 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-librfxswf_a_OBJECTS =  rfxswf.o log.o
+librfxswf_a_OBJECTS =  bitio.o rfxswf.o log.o
 AR = ar
 CFLAGS = @CFLAGS@
 CCLD = $(CC)
@@ -341,7 +341,7 @@ uninstall-am uninstall all-redirect all-am all installdirs-am \
 installdirs mostlyclean-generic distclean-generic clean-generic \
 maintainer-clean-generic clean mostlyclean distclean maintainer-clean
 
-rfxswf.o: rfxswf.c rfxswf.h modules/swfbits.c \
+rfxswf.o: rfxswf.c rfxswf.h bitio.c bitio.h modules/swfbits.c \
 		      modules/swfaction.c modules/swfdump.c modules/swfcgi.c \
 		      modules/swfbutton.c modules/swftext.c modules/swftools.c \
 		      modules/swfsound.c

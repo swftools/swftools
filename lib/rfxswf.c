@@ -31,6 +31,8 @@
 #endif // HAVE_ZLIB_H
 #endif // HAVE_LIBZ
 
+#include "./bitio.h"
+
 // internal constants
 
 #define MALLOC_SIZE     128
@@ -128,6 +130,7 @@ int swf_SetBlock(TAG * t,U8 * b,int l)
     {
       #ifdef DEBUG_RFXSWF
         fprintf(stderr,"Fatal Error: malloc()/realloc() failed (1). (%d bytes)\n", newmem);
+	*(int*)0=0;
       #endif
       return 0;
     }
@@ -197,9 +200,6 @@ U32 swf_GetBits(TAG * t,int nbits)
   }
   return res;
 }
-
-/* reader/writer stuff - from ../src/bitio.c */
-#include "./bitio.c"
 
 S32 swf_GetSBits(TAG * t,int nbits)
 { U32 res = swf_GetBits(t,nbits);
@@ -848,7 +848,7 @@ int swf_ReadSWF(int handle, SWF * swf)
   return swf_ReadSWF2(&reader, swf);
 }
 
-int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writes SWF to file, returns length or <0 if fails
+int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
   int frameCount=0;
@@ -903,7 +903,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writ
 	swf->frameCount = frameCount;
     }
    
-    if(compress) {
+    if(swf->compressed) {
       char*id = "CWS";
       writer->write(writer, id, 3);
     }
@@ -916,7 +916,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writ
     PUT32(b4, swf->fileSize);
     writer->write(writer, b4, 4);
 
-    if(compress) {
+    if(swf->compressed) {
       writer_init_zlibdeflate(&zwriter, writer);
       writer = &zwriter;
     }
@@ -952,21 +952,30 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf, bool compress)     // Writ
 int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 {
   struct writer_t writer;
+  swf->compressed = 0;
   if(handle<0)
-    return swf_WriteSWF2(&writer, swf, FALSE);
+    return swf_WriteSWF2(&writer, swf);
   writer_init_filewriter(&writer, handle);
-  return swf_WriteSWF2(&writer, swf, FALSE);
+  return swf_WriteSWF2(&writer, swf);
 }
 
 int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 {
   struct writer_t writer;
+  swf->compressed = 1;
   if(handle<0)
-    return swf_WriteSWF2(&writer, swf, TRUE);
+    return swf_WriteSWF2(&writer, swf);
   writer_init_filewriter(&writer, handle);
-  return swf_WriteSWF2(&writer, swf, TRUE);
+  return swf_WriteSWF2(&writer, swf);
 }
 
+int swf_WriteHeader2(struct writer_t*writer,SWF * swf)
+{
+  SWF myswf;
+  memcpy(&myswf,swf,sizeof(SWF));
+  myswf.firstTag = 0;
+  return swf_WriteSWF2(writer, &myswf);
+}
 
 int swf_WriteHeader(int handle,SWF * swf)
 {

@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include "../config.h"
+#include "./bitio.h"
 
 #define LAME
 #include "lame/lame.h"
@@ -157,15 +158,21 @@ typedef struct _SWF
 
 // Basic Functions
 
+int  swf_ReadSWF2(struct reader_t*reader, SWF * swf);   // Reads SWF via callback
 int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int  swf_WriteSWF2(struct writer_t*writer, SWF * swf);     // Writes SWF via callback, returns length or <0 if fails
 int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
-int  swf_WriteSWC(int handle, SWF * swf);   // Write Compressed SWF to file, returns length or <0 if fails
+int  swf_WriteSWC(int handle, SWF * swf);   // for convenience, equal to swf->compressed=1;swf_WriteSWF(..)
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
 void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
 
 // for streaming:
 int  swf_WriteHeader(int handle,SWF * swf);    // Writes Header of swf to file
+int  swf_WriteHeader2(struct writer_t*writer,SWF * swf);    // Writes Header of swf to file
 int  swf_WriteTag(int handle,TAG * tag);    // Writes TAG to file
+int  swf_WriteTag2(struct writer_t*writer, TAG * t); //Write TAG via callback
+
+int  swf_ReadHeader(struct reader_t*reader, SWF * swf);   // Reads SWF Header via callback
 
 // folding/unfolding:
 
@@ -613,6 +620,7 @@ U8 swf_isDefiningTag(TAG * t);
 U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
 U16 swf_GetDefineID(TAG * t);
+void swf_SetDefineID(TAG * t, U16 newid);
 U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
 U16 swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2
 char* swf_GetName(TAG * t); //PLACEOBJECT2, FRAMELABEL
@@ -621,6 +629,7 @@ MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
                     int x0,int y0,int x1,int y1,int x2,int y2);
 int swf_GetNumUsedIDs(TAG * t);
 void swf_GetUsedIDs(TAG * t, int * positions);
+void swf_Relocate(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[a]==0 means id a is free
 
 // swfcgi.c
 
