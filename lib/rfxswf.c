@@ -54,8 +54,8 @@ void* rfx_alloc(int size)
 {
   void*ptr;
   if(size == 0) {
-    *(int*)0 = 0xdead;
-    fprintf(stderr, "Warning: Zero alloc\n");
+    //*(int*)0 = 0xdead;
+    //fprintf(stderr, "Warning: Zero alloc\n");
     return 0;
   }
 
@@ -71,8 +71,8 @@ void* rfx_realloc(void*data, int size)
 {
   void*ptr;
   if(size == 0) {
-    *(int*)0 = 0xdead;
-    fprintf(stderr, "Warning: Zero realloc\n");
+    //*(int*)0 = 0xdead;
+    //fprintf(stderr, "Warning: Zero realloc\n");
     rfx_free(data);
     return 0;
   }
@@ -93,8 +93,8 @@ void* rfx_calloc(int size)
 {
   void*ptr;
   if(size == 0) {
-    *(int*)0 = 0xdead;
-    fprintf(stderr, "Warning: Zero alloc\n");
+    //*(int*)0 = 0xdead;
+    //fprintf(stderr, "Warning: Zero alloc\n");
     return 0;
   }
 #ifdef HAVE_CALLOC
