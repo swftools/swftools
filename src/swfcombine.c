@@ -343,7 +343,7 @@ static char masterbitmap[65536];
 int get_free_id(char*bitmap)
 {
     int t;
-    for(t=1;t<65537;t++)
+    for(t=1;t<65536;t++)
 	if(!bitmap[t]) {
 	    bitmap[t] = 1;
 	    return t;
@@ -351,15 +351,52 @@ int get_free_id(char*bitmap)
     return -1;
 }
 
-void jpeg_assert()
+void jpeg_assert(SWF*master, SWF*slave)
 {
+    /* TODO: if there's a jpegtable found, store it
+       and handle it together with the flash file
+       headers */
+
+    /* check that master and slave don't have both
+       jpegtables (which would be fatal) */
+    int pos;
+    TAG *mpos=0, *spos=0;
+    TAG *mtag,*stag;
+    pos = 0;
+    mtag = master->firstTag;
+    stag = slave->firstTag;
+    while(mtag)
+    {
+	if(mtag->id  == ST_JPEGTABLES)
+	    mpos = mtag;
+	mtag = mtag->next;
+    }
+    while(stag)
+    {
+	if(stag->id == ST_JPEGTABLES)
+	    spos = stag;
+	stag = stag->next;
+    }
+    if(!mtag && !stag)
+    {
+	if(stag->len == mtag->len &&
+	!memcmp(stag->data, mtag->data, mtag->len))
+	{
+	    // ok, both have jpegtables, but they're identical.
+	    // delete one and don't throw an error
+	    swf_DeleteTag(stag);
+	    spos = 0;
+	}
+    }
+    if(spos>=0 && mpos>=0) {
+	logf("<error> Master and slave have incompatible JPEGTABLES.");
+    }
 }
 
 TAG* write_sprite_defines(TAG*tag, SWF*sprite)
 {
-    int pos = 0;
     TAG*rtag = sprite->firstTag;
-    while(rtag) {
+    while(rtag && rtag->id!=ST_END) {
 	if(!swf_isAllowedSpriteTag(rtag)) {
 	    logf("<debug> processing sprite tag %02x", tag->id);
 	    if(swf_isDefiningTag(rtag))
@@ -405,7 +442,7 @@ TAG* write_sprite_defines(TAG*tag, SWF*sprite)
 		}
 	    }
 	}
-	pos++;
+	rtag = rtag->next;
     }
     return tag;
 }
@@ -451,11 +488,12 @@ void write_changepos(TAG*output, TAG*tag)
 		if(flags&2) {
 		    swf_SetU16(output, swf_GetU16(tag)); //id
 		}
-		if(flags&4) {
-		    swf_GetMatrix(tag, &m);
-		    matrix_adjust(&m);
-		    swf_SetMatrix(tag, &m);
-		}
+		// flags & 4
+		swf_GetMatrix(tag, &m);
+		matrix_adjust(&m);
+		swf_SetMatrix(output, &m);
+
+		//swf_ResetReadBits(tag);
 		swf_SetBlock(output, &tag->data[tag->pos], tag->len - tag->pos);
 		break;
 	    }
@@ -463,9 +501,12 @@ void write_changepos(TAG*output, TAG*tag)
 		MATRIX m;
 		swf_SetU16(output, swf_GetU16(tag)); //id
 		swf_SetU16(output, swf_GetU16(tag)); //depth
+		
 		swf_GetMatrix(tag, &m);
 		matrix_adjust(&m);
-		swf_SetMatrix(tag, &m);
+		swf_SetMatrix(output, &m);
+		
+		//swf_ResetReadBits(tag);
 		swf_SetBlock(output, &tag->data[tag->pos], tag->len - tag->pos);
 		break;
 	    }
@@ -481,7 +522,6 @@ void write_changepos(TAG*output, TAG*tag)
 
 TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
 {
-    int pos = 0;
     TAG* definespritetag;
     TAG* rtag;
     int tmp;
@@ -491,7 +531,6 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
     swf_SetU16(tag, sprite->frameCount);
     logf ("<notice> sprite id is %d", spriteid);
 
-    // write slave(2) (body)
     tmp = sprite->frameCount;
     logf("<debug> %d frames to go",tmp);
 
@@ -511,7 +550,7 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
     }
 
     rtag = sprite->firstTag;
-    while(rtag)
+    while(rtag && rtag->id!=ST_END)
     {
 	if (swf_isAllowedSpriteTag(rtag)) {
 
@@ -528,7 +567,9 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
 		logf("<debug> %d frames to go",tmp);
 	    }
 	}
+	rtag = rtag->next;
     }
+    tag = swf_InsertTag(tag, ST_END);
     return tag;
 }
 
@@ -549,11 +590,11 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
     TAG* rtag = master->firstTag;
     TAG* stag = slave->firstTag;
 
-    while(rtag)
+    while(rtag && rtag->id!=ST_END)
     {
 	if(rtag->id == ST_SHOWFRAME && outputslave)
 	{
-	    while(stag) {
+	    while(stag && stag->id!=ST_END) {
 		if(stag->id == ST_SHOWFRAME) {
 		    stag = stag->next;
 		    sframe++;
@@ -579,9 +620,9 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    {
 		if(config.overlay)
 		{
-		    PUT16(rtag->data, replaceddefine);
 		    tag = swf_InsertTag(tag, rtag->id);
 		    swf_SetBlock(tag, rtag->data, rtag->len);
+		    swf_SetDefineID(tag, replaceddefine);
 		} else {
 		    /* don't write this tag */
 		    logf("<verbose> replacing tag %d id %d with sprite", rtag->id
@@ -657,7 +698,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
     }
    
     if(outputslave) 
-    while(stag)
+    while(stag && stag->id!=ST_END)
     {
 	    if(tag_ok_for_slave(stag->id)) {
 		tag = swf_InsertTag(tag, stag->id);
@@ -679,13 +720,90 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 
 void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 {
-    printf("--cat not implemented yet. Please use the swfcombine from swftools 0.3.1 or 0.2.3.\n");
-    exit(1);
+    char* depths;
+    int t;
+    TAG*tag;
+    TAG*mtag,*stag;
+    if(config.isframe) {
+	logf("<fatal> Can't combine --cat and --frame");
+	exit(1);
+    }
+   
+    tag = master->firstTag;
+    while(tag)
+    {
+	if(swf_isDefiningTag(tag)) {
+	    int defineid = swf_GetDefineID(tag);
+	    logf("<debug> tagid %02x defines object %d", tag->id, defineid);
+	    masterbitmap[defineid] = 1;
+	}
+    }
+    
+    swf_Relocate(slave, masterbitmap);
+    jpeg_assert(master, slave);
+    
+    memcpy(newswf, master, sizeof(SWF));
+    tag = newswf->firstTag = swf_InsertTag(0, ST_REFLEX);
+
+    depths = malloc(65536);
+    if(!depths) {
+	logf("<fatal> Couldn't allocate %d bytes of memory", 65536);
+	return;
+    }
+    memset(depths, 0, 65536);
+    mtag = master->firstTag;
+    while(mtag)
+    {
+	int num=1;
+	U16 depth;
+	logf("<debug> [master] write tag %02x (%d bytes in body)", 
+		mtag->id, mtag->len);
+	switch(mtag->id) {
+	    case ST_PLACEOBJECT2:
+		num++;
+	    case ST_PLACEOBJECT: {
+	       depth = swf_GetDepth(mtag);
+	       depths[depth] = 1;
+	    }
+	    break;
+	    case ST_REMOVEOBJECT: {
+	       depth = swf_GetDepth(mtag);
+	       depths[depth] = 0;
+	    }
+	    break;
+	    case ST_REMOVEOBJECT2: {
+	       depth = swf_GetDepth(mtag);
+	       depths[depth] = 0;
+	    }
+	    break;
+	}
+	tag = swf_InsertTag(tag, mtag->id);
+	swf_SetBlock(tag, mtag->data, mtag->len);
+    }
+
+    for(t=0;t<65536;t++) 
+    if(depths[t])
+    {
+	char data[16];
+	int len;
+	tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+	swf_SetU16(tag, t);
+    }
+    free(depths);
+
+    stag = slave->firstTag;
+    while(stag)
+    {
+	logf("<debug> [slave] write tag %02x (%d bytes in body)", 
+		stag->id, stag->len);
+	tag = swf_InsertTag(tag, stag->id);
+	swf_SetBlock(tag, stag->data, stag->len);
+	stag = stag->next;
+    }
 }
 
 void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 {
-    int pos=0;
     int spriteid = -1;
     int replaceddefine = -1;
     int frame = 0;
@@ -693,8 +811,6 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     TAG * tag = master->firstTag;
     
     // set the idtab
-    pos = 0;
-
     while(tag)
     {
 	if(swf_isDefiningTag(tag)) {
@@ -729,6 +845,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		logf("<notice> Slave file attached to frame %d (%s).", frame, name);
 	    }
 	}
+	tag = tag->next;
     };
 
     if (spriteid<0 && !config.isframe) {
@@ -742,7 +859,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     }
 
     swf_Relocate (slave, masterbitmap);
-    jpeg_assert();
+    jpeg_assert(slave, master);
     
     if (config.overlay)
 	replaceddefine = get_free_id(masterbitmap);
