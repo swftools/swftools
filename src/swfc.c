@@ -1021,6 +1021,8 @@ void s_font(char*name, char*filename)
 	font->layout = 0;
 	swf_FontCreateLayout(font);
     }
+    /* just in case this thing is used in .edittext later on */
+    swf_FontPrepareForEditText(font);
 
     font->id = id;
     tag = swf_InsertTag(tag, ST_DEFINEFONT2);
