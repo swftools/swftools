@@ -37,10 +37,12 @@ char idtab[65536];
 int action = 0;
 int html = 0;
 int xy = 0;
+int showtext = 0;
 
 struct options_t options[] =
 {
  {"a","action"},
+ {"t","text"},
  {"X","width"},
  {"Y","height"},
  {"r","rate"},
@@ -59,6 +61,10 @@ int args_callback_option(char*name,char*val)
     } 
     else if(name[0]=='a') {
         action = 1;
+        return 0;
+    }
+    else if(name[0]=='t') {
+        showtext = 1;
         return 0;
     }
     else if(name[0]=='e') {
@@ -89,14 +95,15 @@ int args_callback_longoption(char*name,char*val)
 }
 void args_callback_usage(char*name)
 {    
-    printf("Usage: %s [-a] file.swf\n", name);
-    printf("-h , --help\t\t\t Print help and exit\n");
-    printf("-e , --html\t\t\t Create a html embedding the file (simple, but useful)\n");
-    printf("-X , --width\t\t\t Prints out a string of the form \"-X width\"\n");
-    printf("-Y , --height\t\t\t Prints out a string of the form \"-Y height\"\n");
-    printf("-r , --rate\t\t\t Prints out a string of the form \"-r rate\"\n");
-    printf("-a , --action\t\t\t Disassemble action tags\n");
-    printf("-V , --version\t\t\t Print program version and exit\n");
+    printf("Usage: %s [-at] file.swf\n", name);
+    printf("\t-h , --help\t\t\t Print help and exit\n");
+    printf("\t-e , --html\t\t\t Create a html embedding the file (simple, but useful)\n");
+    printf("\t-X , --width\t\t\t Prints out a string of the form \"-X width\"\n");
+    printf("\t-Y , --height\t\t\t Prints out a string of the form \"-Y height\"\n");
+    printf("\t-r , --rate\t\t\t Prints out a string of the form \"-r rate\"\n");
+    printf("\t-a , --action\t\t\t Disassemble action tags\n");
+    printf("\t-t , --text\t\t\t Show text data\n");
+    printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
 {
@@ -135,7 +142,7 @@ void dumpButton2Actions(TAG*tag, char*prefix)
     { swf_GetU16(tag);          // id
       swf_GetU16(tag);          // layer
       swf_GetMatrix(tag,NULL);  // matrix
-      swf_GetCXForm(tag,NULL,0);  // matrix
+      swf_GetCXForm(tag,NULL,1);  // matrix
     }
 
     while(offsetpos)
@@ -183,6 +190,46 @@ void dumpButtonActions(TAG*tag, char*prefix)
 #define ET_X1 4
 #define ET_X0 2
 #define ET_USEOUTLINES 1
+
+SWF swf;
+int fontnum = 0;
+SWFFONT**fonts;
+
+void textcallback(int*glyphs, int nr, int fontid) 
+{
+    int font=-1,t;
+    printf("                <%2d glyphs in font %2d> ",nr, fontid);
+    for(t=0;t<fontnum;t++)
+    {
+	if(fonts[t]->id == fontid) {
+	    font = t;
+	    break;
+	}
+    }
+    if(font<0) {
+	printf("\n");
+	return; // todo: should we report this? (may only be that it's a definefont without fontinfo)
+    }
+
+    for(t=0;t<nr;t++)
+    {
+	unsigned char a; 
+	if(glyphs[t] >= fonts[font]->numchars)
+	    continue;
+	a = fonts[font]->glyph2ascii[glyphs[t]];
+	if(a>=32)
+	    printf("%c", a);
+	else
+	    printf("\\x%x", (int)a);
+    }
+    printf("\n");
+}
+
+void handleText(TAG*tag) 
+{
+  printf("\n");
+  swf_FontExtract_DefineTextCallback(-1,0,tag,4, textcallback);
+}
 
 void handleEditText(TAG*tag)
 {
@@ -233,16 +280,29 @@ void handleEditText(TAG*tag)
    //  printf(" text \"%s\"\n", &tag->data[tag->pos])
 	;
 }
+    
+void fontcallback1(U16 id,U8 * name)
+{ fontnum++;
+}
+
+void fontcallback2(U16 id,U8 * name)
+{ swf_FontExtract(&swf,id,&fonts[fontnum]);
+  fontnum++;
+}
 
 int main (int argc,char ** argv)
 { 
-    SWF swf;
     TAG*tag;
 #ifdef HAVE_STAT
     struct stat statbuf;
 #endif
     int f;
     int xsize,ysize;
+    char issprite = 0; // are we inside a sprite definition?
+    int spriteframe;
+    int mainframe=0;
+    char* spriteframelabel;
+    char* framelabel = 0;
     char prefix[128];
     prefix[0] = 0;
     memset(idtab,0,65536);
@@ -326,6 +386,14 @@ int main (int argc,char ** argv)
     printf("[HEADER]        Movie height: %.3f\n",(swf.movieSize.ymax-swf.movieSize.ymin)/20.0);
 
     tag = swf.firstTag;
+   
+    if(showtext) {
+	fontnum = 0;
+	swf_FontEnumerate(&swf,&fontcallback1);
+	fonts = (SWFFONT**)malloc(fontnum*sizeof(SWFFONT*));
+	fontnum = 0;
+	swf_FontEnumerate(&swf,&fontcallback2);
+    }
 
     while(tag) {
         char*name = swf_TagGetName(tag);
@@ -358,19 +426,47 @@ int main (int argc,char ** argv)
         }
 	else if(tag->id == ST_FRAMELABEL) {
 	    printf(" \"%s\"", tag->data);
+	    if(framelabel) {
+		fprintf(stderr, "Error: Frame %d has more than one label\n", 
+			issprite?spriteframe:mainframe);
+	    }
+	    if(issprite) spriteframelabel = tag->data;
+	    else framelabel = tag->data;
 	}
+	else if(tag->id == ST_SHOWFRAME) {
+	    char*label = issprite?spriteframelabel:framelabel;
+	    printf(" %d", issprite?spriteframe:mainframe);
+	    if(label)
+		printf(" (label \"%s\")", label);
+	    if(issprite) {spriteframe++; spriteframelabel = 0;}
+	    if(!issprite) {mainframe++; framelabel = 0;}
+	}
+
 	if(tag->id == ST_DEFINEEDITTEXT) {
 	    handleEditText(tag);
+	    printf("\n");
+	}
+	else if(tag->id == ST_DEFINETEXT || tag->id == ST_DEFINETEXT2) {
+	    handleText(tag);
+	}
+	else {
+	    printf("\n");
 	}
         
-        printf("\n");
         sprintf(myprefix, "                %s", prefix);
 
         if(tag->id == ST_DEFINESPRITE) {
             sprintf(prefix, "         ");
+	    if(issprite) {
+		fprintf(stderr, "Error: Sprite definition inside a sprite definition");
+	    }
+	    issprite = 1;
+	    spriteframe = 0;
+	    spriteframelabel = 0;
         }
         else if(tag->id == ST_END) {
             *prefix = 0;
+	    issprite = 0;
 	    if(tag->len)
 		fprintf(stderr, "Error: End Tag not empty");
         }
