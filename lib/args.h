@@ -79,7 +79,9 @@ int args_long2shortoption(struct options_t*options, char*name, char*val)
 			+(equal?strlen(equal)+2:2));
 		strcpy(tmp, options->shortoption);
 		if(equal) {
-		    strcpy(&tmp[strlen(tmp)], equal);
+		    //strcpy(&tmp[strlen(tmp)], equal);
+		    int ret = args_callback_option(tmp, equal);
+		    return 0;
 		}
 		return args_callback_option(tmp,val);
 	}
