@@ -87,11 +87,13 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "v"))
     {
 	loglevel ++;
+        setConsoleLogging(loglevel);
 	return 0;
     }
     else if (!strcmp(name, "q"))
     {
 	loglevel --;
+        setConsoleLogging(loglevel);
 	system_quiet = 1;
 	return 0;
     }
@@ -367,6 +369,8 @@ int main(int argn, char *argv[])
     int numfonts = 0;
     int t;
     char t1searchpath[1024];
+    
+    initLog(0,-1,0,0,-1,loglevel);
 
 #if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
     FILE*test = fopen(FONTDIR "\\d050000l.afm", "rb");
@@ -386,7 +390,6 @@ int main(int argn, char *argv[])
 #endif
 #endif
     processargs(argn, argv);
-    initLog(0,-1,0,0,-1,loglevel);
 
     if(!filename)
     {
