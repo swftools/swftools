@@ -33,12 +33,12 @@ void reader_input1(struct reader_t*r, void*target)
 }
 void reader_input2(struct reader_t*r, void*target)
 {
-    *(unsigned short int*)target = *(unsigned short int*)&r->data[r->datapos];
+    memcpy(target,&r->data[r->datapos],2);
     r->datapos += 2;
 }
 void reader_input4(struct reader_t*r, void*target)
 {
-    *(unsigned int*)target = *(unsigned int*)&r->data[r->datapos];
+    memcpy(target,&r->data[r->datapos],4);
     r->datapos += 4;
 }
 uchar*reader_getinputpos(struct reader_t*r)

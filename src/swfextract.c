@@ -165,13 +165,16 @@ void enumerateIDs(TAG*tag, void(*callback)(void*))
     if(tag->len>=64) {
 	len += 6;
 	data = (U8*)malloc(len);
-	*(U16*)data = (tag->id<<6)+63;
-	*(U32*)&data[2] = tag->len;
+	*(U16*)data = SWAP16((tag->id<<6)+63);
+	*(U8*)&data[2] = tag->len;
+	*(U8*)&data[3] = tag->len>>8;
+	*(U8*)&data[4] = tag->len>>16;
+	*(U8*)&data[5] = tag->len>>24;
 	memcpy(&data[6], tag->data, tag->len);
     } else {
 	len += 2;
 	data = (U8*)malloc(len);
-	*(U16*)data = (tag->id<<6)+tag->len;
+	*(U16*)data = SWAP16((tag->id<<6)+tag->len);
 	memcpy(&data[2], tag->data, tag->len);
     }
     map_ids_mem(data, len, callback);
