@@ -14,10 +14,12 @@
 
 #include "rfxswf.h"
 
+#ifdef HAVE_LIBJPEG
 #ifdef HAVE_JPEGLIB_H
 #include <jpeglib.h>
 #define _JPEGLIB_INCLUDED_
-#endif
+#endif //HAVE_JPEGLIB_H
+#endif //HAVE_LIBJPEG
 
 // Win32 support may be broken since it was only tested in an older version for Watcom C
 #ifdef __NT__
