@@ -10,11 +10,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "args.h"
+#include "../lib/args.h"
 #include "combine.h"
 #include "settings.h"
 #include "types.h"
 #include "flash.h"
+#include "../config.h"
 
 char * master_filename = 0;
 char * master_name = 0;
@@ -81,7 +82,7 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "V"))
     {	
-	printf("swfcombine - part of swftools 0.0.1\n");
+	printf("swfcombine - part of %s %s\n", PACKAGE, VERSION);
 	exit(0);
     }
     else 
@@ -91,11 +92,7 @@ int args_callback_option(char*name,char*val) {
     }
 }
 
-struct options_t
-{
-    char*shortoption;
-    char*longoption;
-} options[] =
+struct options_t options[] =
 {{"o","output"},
  {"s","scale"},
  {"x","xpos"},
@@ -104,15 +101,11 @@ struct options_t
  {"v","verbose"},
  {"V","version"},
  {"c","clip"},
+ {0,0}
 };
 
 int args_callback_longoption(char*name,char*val) {
-    int t;
-    for(t=0;t<sizeof(options)/sizeof(struct options_t);t++)
-        if(!strcmp(options[t].longoption, name))
-            return args_callback_option(options[t].shortoption,val);
-    fprintf(stderr, "Unknown option: --%s\n", name);
-    exit(1);
+    return args_long2shortoption(options, name, val);
 }
 
 int args_callback_command(char*name, char*val) {
@@ -164,7 +157,6 @@ void args_callback_usage(char*name)
     printf("-x xpos             (move x) Adjust position of slave by xpos twips (1/20 pixel)\n");
     printf("-y ypos             (move y) Adjust position of slave by ypos twips (1/20 pixel)\n");
     printf("-s scale            (scale) Adjust size of slave by scale%\n");
-    printf("\n");
 }
 
 /* read a whole file in memory */
