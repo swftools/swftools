@@ -56,7 +56,6 @@ host_alias = @host_alias@
 host_triplet = @host@
 target_alias = @target_alias@
 target_triplet = @target@
-CC = @CC@
 CPP = @CPP@
 CXX = @CXX@
 EXEEXT = @EXEEXT@
@@ -97,8 +96,8 @@ PreLoaderTemplate_OBJECTS =  PreLoaderTemplate.o
 PreLoaderTemplate_DEPENDENCIES =  ../lib/librfxswf.a
 PreLoaderTemplate_LDFLAGS = 
 CFLAGS = @CFLAGS@
-COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-CCLD = $(CC)
+CC = @CC@ $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = @CC@
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
 DATA =  $(pkgdata_DATA)
 
@@ -124,8 +123,6 @@ clean-binPROGRAMS:
 
 distclean-binPROGRAMS:
 
-maintainer-clean-binPROGRAMS:
-
 simple_viewer.swf: simple_viewer
 	echo Calling ./simple_viewer to create simple_viewer.swf
 	./simple_viewer
@@ -134,10 +131,10 @@ PreLoaderTemplate.swf: PreLoaderTemplate
 	./PreLoaderTemplate
 
 .s.o:
-	$(COMPILE) -c $<
+	$(CC) -c $<
 
 .S.o:
-	$(COMPILE) -c $<
+	$(CC) -c $<
 
 mostlyclean-compile:
 	-rm -f *.o core *.core
@@ -146,8 +143,6 @@ clean-compile:
 
 distclean-compile:
 	-rm -f *.tab.c
-
-maintainer-clean-compile:
 
 simple_viewer$(EXEEXT): $(simple_viewer_OBJECTS) $(simple_viewer_DEPENDENCIES)
 	@rm -f simple_viewer$(EXEEXT)
@@ -209,8 +204,6 @@ clean-tags:
 distclean-tags:
 	-rm -f TAGS ID
 
-maintainer-clean-tags:
-
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
 subdir = swfs
@@ -232,8 +225,6 @@ distdir: $(DISTFILES)
 
 DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 
--include $(DEP_FILES)
-
 mostlyclean-depend:
 
 clean-depend:
@@ -241,26 +232,15 @@ clean-depend:
 distclean-depend:
 	-rm -rf .deps
 
-maintainer-clean-depend:
-
 %.o: %.c
-	@echo '$(COMPILE) -c $<'; \
-	$(COMPILE) -Wp,-MD,.deps/$(*F).pp -c $<
+	@echo '$(CC) -c $<'; \
+	$(CC) -Wp,-MD,.deps/$(*F).pp -c $<
 	@-cp .deps/$(*F).pp .deps/$(*F).P; \
 	tr ' ' '\012' < .deps/$(*F).pp \
 	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
 	    >> .deps/$(*F).P; \
 	rm .deps/$(*F).pp
 
-%.lo: %.c
-	@echo '$(LTCOMPILE) -c $<'; \
-	$(LTCOMPILE) -Wp,-MD,.deps/$(*F).pp -c $<
-	@-sed -e 's/^\([^:]*\)\.o[ 	]*:/\1.lo \1.o :/' \
-	  < .deps/$(*F).pp > .deps/$(*F).P; \
-	tr ' ' '\012' < .deps/$(*F).pp \
-	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
-	    >> .deps/$(*F).P; \
-	rm -f .deps/$(*F).pp
 info-am:
 info: info-am
 dvi-am:
@@ -294,7 +274,6 @@ distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
 	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
 
-maintainer-clean-generic:
 mostlyclean-am:  mostlyclean-binPROGRAMS mostlyclean-compile \
 		mostlyclean-tags mostlyclean-depend mostlyclean-generic
 
@@ -309,15 +288,6 @@ distclean-am:  distclean-binPROGRAMS distclean-compile distclean-tags \
 		distclean-depend distclean-generic clean-am
 
 distclean: distclean-am
-
-maintainer-clean-am:  maintainer-clean-binPROGRAMS \
-		maintainer-clean-compile maintainer-clean-tags \
-		maintainer-clean-depend maintainer-clean-generic \
-		distclean-am
-	@echo "This command is intended for maintainers to use;"
-	@echo "it deletes files that may require special tools to rebuild."
-
-maintainer-clean: maintainer-clean-am
 
 .PHONY: mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
 maintainer-clean-binPROGRAMS \
