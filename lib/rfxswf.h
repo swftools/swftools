@@ -151,6 +151,9 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   
 } TAG, * LPTAG;
 
+#define swf_ResetReadBits(tag)   if (tag->readBit)  { tag->pos++; tag->readBit = 0; }
+#define swf_ResetWriteBits(tag)  if (tag->writeBit) { tag->writeBit = 0; }
+
 typedef struct _SOUNDINFO 
 {
     U8 stop;

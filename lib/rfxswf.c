@@ -65,11 +65,6 @@ U32   swf_GetTagLen(TAG * t) { return t->len; }
 U8*   swf_GetTagLenPtr(TAG * t) { return &(t->data[t->len]); }
 U32   swf_GetTagPos(TAG * t)   { return t->pos; }
 
-// Basic Data Access Functions
-
-#define swf_ResetReadBits(tag)   if (tag->readBit)  { tag->pos++; tag->readBit = 0; }
-#define swf_ResetWriteBits(tag)  if (tag->writeBit) { tag->writeBit = 0; }
-
 // for future purpose: avoid high level lib functions to change tagpos/bitpos
 
 #define swf_SaveTagPos(tag)
