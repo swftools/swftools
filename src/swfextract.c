@@ -152,9 +152,9 @@ char * tagused;
 
 void idcallback(void*data)
 {
-    if(!(used[*(U16*)data]&1)) {
+    if(!(used[SWAP16(*(U16*)data)]&1)) {
 	changed = 1;
-	used[*(U16*)data] |= 1;
+	used[SWAP16(*(U16*)data)] |= 1;
     }
 }
 
@@ -395,7 +395,7 @@ void handlejpeg(TAG*tag)
 {
     char name[80];
     FILE*fi;
-    sprintf(name, "pic%d.jpeg", *(U16*)tag->data);
+    sprintf(name, "pic%d.jpeg", SWAP16(*(U16*)tag->data));
     /* swf jpeg images have two streams, which both start with ff d8 and
        end with ff d9. The following code handles sorting the middle
        <ff d9 ff d8> bytes out, so that one stream remains */
@@ -417,7 +417,7 @@ void handlejpeg(TAG*tag)
 	fclose(fi);
     }
     if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
-	U32 end = *(U32*)&tag->data[2]+6;
+	U32 end = SWAP32(*(U32*)&tag->data[2])+6;
 	int pos = findjpegboundary(&tag->data[6], tag->len-6);
 	if(pos<0)
 	    return;
