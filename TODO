@@ -24,8 +24,6 @@ pdf2swf:
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
     * several bounding boxes are too big
-    * support for ttf fonts in --fontdirs
-    * add support for FreeType
     * upgrade xpdf
 
 avi2swf:
