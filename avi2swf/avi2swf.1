@@ -1,42 +1,52 @@
-.TH avi2swf "1" "January 2003" "avi2swf" "swftools"
+.TH avi2swf "1" "February 2004" "avi2swf" "swftools"
 .SH NAME
-avi2swf - convert AVI files into SWF
+avi2swf - Converts an avi video file to SWF.
+
 .SH Synopsis
-.B avi2swf
-[\fIoptions\fR] \fIfile.avi\fR [-o \fIfile.swf\fR]
+.B avi2swf file.avi [-o output.swf]
+
 .SH DESCRIPTION
-This tools converts AVI Video files into Flash SWF Animation
-files.
+Converts an AVI video file to SWF.
+.PP
+From Version 6 on, SWF supports h.263 video rendering. This tool generates,
+among some other formats (see below), SWF movies which contain such h.263 video 
+from AVI files.
+
 .SH OPTIONS
 .TP
-\fB\-h\fR, \fB\-\-help\fR
-Print short help message and exit
+\fB\-h\fR, \fB\-\-help\fR 
+    Print help and exit
 .TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version info and exit
+\fB\-o\fR, \fB\-\-output\fR filename
+    Specify output filename
 .TP
-\fB\-v\fR, \fB\-\-verbose\fR
-Be verbose. Use more than one -v for greater effect.
+\fB\-A\fR, \fB\-\-adjust\fR seconds
+    Audio adjust: Shift sound -seconds to the future or +seconds into the past.
 .TP
-\fB\-o\fR \fIfilename\fR, \fB\-\-output\fR \fIfilename\fR
-Set output filename to \fIfilename\fR.
+\fB\-n\fR, \fB\-\-num\fR frames
+    Number of frames to encode
 .TP
-\fB\-p\fR, \fB\-\-flip\fR
-Turn the movie upside down.
+\fB\-m\fR, \fB\-\-mp3-bitrate\fR \fIrate\fR (kbps)
+    Set the mp3 bitrate to encode audio with
 .TP
-\fB\-x\fR, \fB\-\-extragood\fR
-Enable highest-quality encoding. Warning: This is slow!
+\fB\-r\fR, \fB\-\-mp3-samplerate\fR \fIrate\fR (Hz)
+    Set the mp3 samplerate to encode audio with (default: 11025)
 .TP
-\fB\-S\fR \fIn\fR, \fB\-\-skip \fIn\fR\fR
-Skip \fIn\fR frames before starting to encode.
+\fB\-d\fR, \fB\-\-scale\fR \fIval\fR
+    Scale down to factor \fIval\fR. (in %%, e.g. 100 = original size)
 .TP
-\fB\-s\fR \fIfactor\fR, \fB\-\-scale \fIfactor\fR\fR
-Scale movie by factor%. factor must be in the range 1-100.
+\fB\-p\fR, \fB\-\-flip\fR 
+    Turn movie upside down
 .TP
-\fB\-q\fR \fIq\fR, \fB\-\-quality\fR \fIq\fR
-Set the compression quality to \fIq\fR. \fIq\fR must be
-in the range 1-100. (1=worst, 100=best).
-
-.SH AUTHOR
-
-Matthias Kramm <kramm@quiss.org>
+\fB\-q\fR, \fB\-\-quality\fR \fIval\fR
+    Set the quality to \fIval\fR. (0-100, 0=worst, 100=best, default:80)
+.TP
+\fB\-x\fR, \fB\-\-extragood\fR 
+    Enable some \fIvery\fR expensive compression strategies. You may
+    want to let this run overnight.
+.TP
+\fB\-T\fR, \fB\-\-flashversion\fR \fIn\fR
+    used for n >= 6.
+.TP
+\fB\-V\fR, \fB\-\-version\fR 
+    Print program version and exit

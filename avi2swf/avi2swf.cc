@@ -74,21 +74,20 @@ static float audio_adjust = 0;
 static int mp3_bitrate = 32;
 static int samplerate = 11025;
 
-struct options_t options[] =
-{
- {"v","verbose"},
- {"A","adjust"},
- {"o","output"},
- {"p","flip"},
- {"m","mp3-bitrate"},
- {"r","mp3-samplerate"},
- {"q","quality"},
- {"s","scale"},
- {"S","skip"},
- {"x","extragood"},
- {"T","flashversion"},
- {"V","version"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"o", "output"},
+{"A", "adjust"},
+{"n", "num"},
+{"m", "mp3-bitrate"},
+{"r", "mp3-samplerate"},
+{"d", "scale"},
+{"p", "flip"},
+{"q", "quality"},
+{"x", "extragood"},
+{"T", "flashversion"},
+{"V", "version"},
+{0,0}
 };
 
 int args_callback_option(char*name,char*val)
@@ -167,24 +166,24 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
-{    
-    printf("\nUsage: %s file.avi\n", name);
-    printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-o , --output filename\t Specify output filename\n"); 
-    printf("\t-A , --adjust seconds\t Audio adjust: Shift sound -seconds to the future or +seconds into the past.\n"); 
-    printf("\t-n , --num frames\t Number of frames to encode\n");
-    printf("\t-m , --mp3-bitrate <rate> (kbps)\t Set the mp3 bitrate to encode audio with\n");
-    printf("\t-r , --mp3-samplerate <rate> (Hz)\t Set the mp3 samplerate to encode audio with (default: 11025)\n");
-    printf("\t-d , --scale <val>\t Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
-    printf("\t-p , --flip\t\t Turn movie upside down\n");
-    printf("\t-q , --quality <val>\t Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
-    printf("\t-x , --extragood\t Enable some *very* expensive compression strategies. You may\n");
-    printf("\t                \t want to let this run overnight.\n");
-    printf("\t-T , --flashversion <n>\t Set output flash version to <n>. Notice: H.263 compression will only be\n");
-    printf("\t                       \t used for n >= 6.\n");
-    printf("\t-V , --version\t\t Print program version and exit\n");
-    exit(0);
+void args_callback_usage(char *name)
+{
+    printf("\n");
+    printf("Usage: %s file.avi [-o output.swf]\n", name);
+    printf("\n");
+    printf("-h , --help                    Print help and exit\n");
+    printf("-o , --output filename         Specify output filename\n");
+    printf("-A , --adjust seconds          Audio adjust: Shift sound -seconds to the future or +seconds into the past.\n");
+    printf("-n , --num frames              Number of frames to encode\n");
+    printf("-m , --mp3-bitrate <rate> (kbps)    Set the mp3 bitrate to encode audio with\n");
+    printf("-r , --mp3-samplerate <rate> (Hz)    Set the mp3 samplerate to encode audio with (default: 11025)\n");
+    printf("-d , --scale <val>             Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
+    printf("-p , --flip                    Turn movie upside down\n");
+    printf("-q , --quality <val>           Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
+    printf("-x , --extragood               Enable some *very* expensive compression strategies.\n");
+    printf("-T , --flashversion <n>        Set output flash version to <n>. Notice: H.263 compression will only be\n");
+    printf("-V , --version                 Print program version and exit\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {
