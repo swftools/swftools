@@ -354,8 +354,7 @@ int main (int argc,char ** argv)
     tag = swf.firstTag;
 
     if(swifty) {
-	printf("{\n");
-	printf("{frame %d}\n", frame++);
+	printf("{\n\t{frame %d}\n", frame++);
     }
 
     while (tag) {
@@ -374,7 +373,7 @@ int main (int argc,char ** argv)
 	}
 	if(swifty) {
 	    if (tag->id == ST_SHOWFRAME) {
-		printf("{frame %d}\n", frame++);
+		printf("}\n{\n\t{frame %d}\n", frame++);
 	    }
 	    if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
 		if(hasid(tag)) {
@@ -402,7 +401,8 @@ int main (int argc,char ** argv)
 		if(!name) {
 		    sprintf(buf, "ID%d", id);name = buf;
 		}
-		printf("{%s {%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f}}\n", name, 
+		//printf("\t#%.4f %.4f %.4f %.4f | %.4f %.4f\n", m.sx/65536.0, m.r1/65536.0, m.r0/65536.0, m.sy/65536.0, m.tx/20.0, m.ty/20.0);
+		printf("\t{%s {%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f}}\n", name, 
 			p1.x/20.0, p1.y/20.0, p2.x/20.0, p2.y/20.0,
 			p3.x/20.0, p3.y/20.0, p4.x/20.0, p4.y/20.0);
 	    }
