@@ -2,7 +2,7 @@
 #
 # test shear
 
-.swf bbox=autocrop version=6 fps=50 name="multiMove.swf"  
+.flash bbox=autocrop version=6 fps=50 name="multiMove.swf"  
 #
 .font helv "HelveticaBold.swf"
 #

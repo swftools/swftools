@@ -2,7 +2,7 @@
 #
 # Do things with rectangles.
 
-.swf bbox=autocrop version=6 fps=50 name="boxes.swf" compress
+.flash bbox=autocrop version=6 fps=50 name="boxes.swf" compress
 
     .box box1 width=100 height=100 color=red fill #filled red box
     .box box2 width=100 height=100 color=white    #white hollow frame

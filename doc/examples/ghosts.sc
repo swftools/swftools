@@ -1,6 +1,6 @@
 # Shearing
 
-.swf bbox=autocrop name="ghosts.swf" fps=25
+.flash bbox=autocrop name="ghosts.swf" fps=25
 
 .font helvetica "Helvetica.swf"
 .text text text="swfc" font=helvetica size=100% color=yellow

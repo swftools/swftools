@@ -2,7 +2,7 @@
 #
 # Test clipping
 
-.swf name="clip.swf" fps=25
+.flash name="clip.swf" fps=25
     .sprite s1 # this just constructs a colorful object "s1"
         .box b1 40 40 color=red fill=violet line=10
         .box b2 40 40 color=blue fill=green line=10

@@ -1,7 +1,7 @@
 # Pins.sc
 # tutorial on Pins for the user.
 
-.swf bbox=autocrop version=4 fps=25 name="Pins.swf"
+.flash bbox=autocrop version=4 fps=25 name="Pins.swf"
 
 .sprite reticle
 	.box box width=5 height=5 color=yellow
@@ -15,28 +15,28 @@
 #
 .font helv "HelveticaBold.swf"
 #
-.text mesg1 text="(1) This tutorial explains \"pins\" . . ." font=helv color=yellow size=25%
-.text mesg2 text="(2) Every object such as this simple box ..." font=helv color=red size=25%
-.text mesg3 text="(3) ... is \"pinned\" to a screen x,y." font=helv color=yellow size=25%
+.text mesg1 text="(1) This tutorial explains \"pins\" . . ." font=helv color=yellow size=100%
+.text mesg2 text="(2) Every object such as this simple box ..." font=helv color=red size=100%
+.text mesg3 text="(3) ... is \"pinned\" to a screen x,y." font=helv color=yellow size=100%
 #
-.text mesg4 text="(4) The yellow reticle is at 100,100..." font=helv color=yellow size=25%
-.text mesg5 text="(5) The box's \"pin\" is at (relative to the box) 0,0." font=helv color=green size=25%
-.text mesg6 text="(6) When we .put the box at 100,100, its pin lands..." font=helv color=blue size=25%
-.text mesg7 text="(7) ... on 100,100." font=helv color=yellow size=25%
+.text mesg4 text="(4) The yellow reticle is at 100,100..." font=helv color=yellow size=100%
+.text mesg5 text="(5) The box's \"pin\" is at (relative to the box) 0,0." font=helv color=green size=100%
+.text mesg6 text="(6) When we .put the box at 100,100, its pin lands..." font=helv color=blue size=100%
+.text mesg7 text="(7) ... on 100,100." font=helv color=yellow size=100%
 #
-.text mesg8 text="(8) Relative 0,0 is the default pin." font=helv color=yellow size=25%
-.text mesg9 text="(9) If we rotate the box..." font=helv color=red size=25%
-.text mesg10 text="(10)... it rotates around its default pin" font=helv color=red size=25%
-.text mesg11 text="(11) If we specify a special pin called \"center\"" font=helv color=red size=25%
-.text mesg12 text="(12) the box center will be at 100,100..." font=helv color=red size=25%
-.text mesg13 text="(13) and it will rotate in place." font=helv color=red size=25%
+.text mesg8 text="(8) Relative 0,0 is the default pin." font=helv color=yellow size=100%
+.text mesg9 text="(9) If we rotate the box..." font=helv color=red size=100%
+.text mesg10 text="(10)... it rotates around its default pin" font=helv color=red size=100%
+.text mesg11 text="(11) If we specify a special pin called \"center\"" font=helv color=red size=100%
+.text mesg12 text="(12) the box center will be at 100,100..." font=helv color=red size=100%
+.text mesg13 text="(13) and it will rotate in place." font=helv color=red size=100%
 #
-.text mesg14 text="(14) Interesting things will happen..." font=helv color=red size=25%
-.text mesg15 text="(15) ... if a .change command moves the pin!" font=helv color=red size=25%
-# .text mesg13 text="(16) and it will rotate in place." font=helv color=red size=25%
-# .text mesg13 text="(17) and it will rotate in place." font=helv color=red size=25%
-# .text mesg13 text="(18) and it will rotate in place." font=helv color=red size=25%
-# .text mesg13 text="(19) and it will rotate in place." font=helv color=red size=25%
+.text mesg14 text="(14) Interesting things will happen..." font=helv color=red size=100%
+.text mesg15 text="(15) ... if a .change command moves the pin!" font=helv color=red size=100%
+# .text mesg13 text="(16) and it will rotate in place." font=helv color=red size=100%
+# .text mesg13 text="(17) and it will rotate in place." font=helv color=red size=100%
+# .text mesg13 text="(18) and it will rotate in place." font=helv color=red size=100%
+# .text mesg13 text="(19) and it will rotate in place." font=helv color=red size=100%
 
 #
 # oh no, we have to make zillions of these sprites... sigh...

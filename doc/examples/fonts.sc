@@ -2,7 +2,7 @@
 #
 # fonts&text
 
-.swf name="fonts.swf"
+.flash name="fonts.swf"
     .font courier "Courier.swf"
     .font helvetica "Helvetica.swf"
     .text abc text="abcdefghijklmnopqrstuvwxyz" font=courier size=100% color=blue

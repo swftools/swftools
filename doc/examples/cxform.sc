@@ -2,9 +2,9 @@
 #
 # Try color transforms
 
-.swf name="cxform.swf" version=5
+.flash name="cxform.swf" version=5
     
-    .shape s1 "photo.swf"
+    .swf s1 "photo.swf"
 
     .put s1 x=50 y=50 scalex=110 scaley=110
     .frame 100

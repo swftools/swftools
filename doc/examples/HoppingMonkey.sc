@@ -1,10 +1,10 @@
 # monkey.sc
 #
 
-.swf bbox=autocrop version=4 fps=50 name="HoppingMonkey.swf"
+.flash bbox=autocrop version=4 fps=50 name="HoppingMonkey.swf"
 
-    .shape island "island.swf"
-    .shape monkey "monkey4.swf"
+    .swf island "island.swf"
+    .swf monkey "monkey4.swf"
     .put island
     .point leftfoot 45 177
     .point rightfoot 138 177

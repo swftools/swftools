@@ -1,7 +1,7 @@
 # Moves.sc
 # tutorial on types of Moves for the user.
 
-.swf bbox=autocrop version=4 fps=25 name="MoveTutorial.swf"
+.flash bbox=autocrop version=4 fps=25 name="MoveTutorial.swf"
 
 # SPRITES
 
@@ -15,7 +15,7 @@
 #
 # CHARACTERS
 #
-.shape axes axesClip.swf
+.swf axes axesClip.swf
 .circle pin 8 color=blue fill=blue
 #
 .font helv "HelveticaBold.swf"

@@ -1,7 +1,7 @@
 # Pins.sc
 # tutorial on Pins for the user.
 
-.swf bbox=autocrop version=4 fps=25 name="PinsTutorial.swf"
+.flash bbox=autocrop version=4 fps=25 name="PinsTutorial.swf"
 
 # SPRITES
 

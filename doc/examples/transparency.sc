@@ -2,7 +2,7 @@
 #
 # Test transparency
 
-.swf bbox=200x200 version=5 fps=25 name="transparency.swf"
+.flash bbox=200x200 version=5 fps=25 name="transparency.swf"
 
 .box box1 90 90 color=yellow fill=blue line=5
 .box box2 90 90 color=white fill=red line=5
