@@ -18,6 +18,8 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <memory.h>
+
 int zigzagtable[64] = {
     0, 1, 5, 6, 14, 15, 27, 28,
     2, 4, 7, 13, 16, 26, 29, 42,
