@@ -1927,7 +1927,7 @@ EOF
 
 fi
 
- for ac_hdr in zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h dirent.h sys/ndir.h sys/dir.h ndir.h
+ for ac_hdr in zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h
 do
 ac_safe=`echo "$ac_hdr" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for $ac_hdr""... $ac_c" 1>&6
