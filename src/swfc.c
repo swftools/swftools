@@ -441,7 +441,7 @@ static void s_endSWF()
 	swf->movieSize.ymax += 20;
     }
 
-    fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
     if(fi<0) {
 	syntaxerror("couldn't create output file %s", filename);
     }
@@ -712,7 +712,7 @@ void s_playsound(char*name, int loops, int nomultiple, int stop)
     memset(&info, 0, sizeof(info));
     info.stop = stop;
     info.loops = loops;
-    info.multiple = !nomultiple;
+    info.nomultiple = nomultiple;
     swf_SetSoundInfo(tag, &info);
 }
 
