@@ -234,7 +234,7 @@ char* GetName(LPTAG t)
     switch(GetTagID(t))
     {
         case ST_FRAMELABEL:
-	    name = GetTagPosPtr(t);
+	    name = &t->data[GetTagPos(t)];
         break;
         case ST_PLACEOBJECT2: {   
             U8 flags = GetU8(t);
@@ -249,7 +249,7 @@ char* GetName(LPTAG t)
 	      GetU16(t);
 	    if(flags&PF_NAME) {
 	      ResetBitmask(t);
-	      name = GetTagPosPtr(t);
+	      name = &t->data[GetTagPos(t)];
 	    }
         }
         break;
