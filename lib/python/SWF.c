@@ -62,6 +62,9 @@ typedef struct {
     TAG*firstTag;
     TAG*searchTag;
     TAG*lastTag;
+    PyDictObject* char2id;
+    PyDictObject* id2char;
+    U16 currentID;
 } TagListObject;
 
 typedef struct {
@@ -104,6 +107,9 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
     swf->taglist->firstTag = 0;
     swf->taglist->searchTag = 0;
     swf->taglist->lastTag = 0;
+    swf->taglist->currentID = 1;
+    swf->taglist->char2id = (PyDictObject*)PyDict_New();
+    swf->taglist->id2char = (PyDictObject*)PyDict_New();
 
     if(swf->swf.fileVersion>=6)
 	swf->swf.compressed = 1;
@@ -145,6 +151,9 @@ static PyObject* f_load(PyObject* self, PyObject* args)
     swf->taglist->firstTag = swf->swf.firstTag;
     swf->taglist->searchTag = swf->swf.firstTag;
     swf->taglist->lastTag = swf->swf.firstTag;
+    swf->taglist->currentID = 1;
+    swf->taglist->char2id = (PyDictObject*)PyDict_New();
+    swf->taglist->id2char = (PyDictObject*)PyDict_New();
     swf->swf.firstTag = 0;
 
     mylog("load %08x -> %08x\n", (int)self, (int)swf);
@@ -439,7 +448,7 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
 {
     TagObject*tag;
     TagListObject*taglist = (TagListObject*)self;
-    mylog("taglist_concat %08x(%d)", (int)self, self->ob_refcnt);
+    mylog("taglist_concat %08x(%d) %08x", (int)self, self->ob_refcnt, list);
 	
     if (PyArg_Parse(list, "O!", &TagClass, &tag)) {
 	/* copy tag, so we don't have to do INCREF(tag) (and don't
@@ -452,21 +461,31 @@ static PyObject * taglist_concat(PyObject * self, PyObject* list)
 	if(!taglist->firstTag) {
 	    taglist->firstTag = taglist->searchTag = taglist->lastTag;
 	}
+	if(swf_isDefiningTag(tag->tag)) {
+	    PyObject*id = PyLong_FromLong(taglist->currentID);
+	    PyDict_SetItem((PyObject*)(taglist->char2id), list, id);
+	    Py_INCREF(id);
+	    PyDict_SetItem((PyObject*)(taglist->id2char), id, list);
+	    Py_INCREF(id);
+	}
 	Py_INCREF(self);
 	return self;
     }
     PyErr_Clear();
     if (PyList_Check(list)) {
+	int l = PyList_Size(list);
+	int t;
 	mylog("taglist_concat: PythonList", (int)self, self->ob_refcnt);
+	for(t=0;t<l;t++) {
+	    PyObject*item = PyList_GetItem(list, t);
+	    self = taglist_concat(self, item);
+	    if(!self)
+		return 0;
+	}
 	Py_INCREF(self);
 	return self;
     }
-    return 0;
-}
-//----------------------------------------------------------------------------
-static int taglist_contains(PyObject * self, PyObject* other)
-{
-    mylog("taglist_contains %08x(%d)", (int)self, self->ob_refcnt);
+    PyErr_SetString(PyExc_Exception, setError("taglist concatenation only works with tags and lists (%08x).", list));
     return 0;
 }
 //----------------------------------------------------------------------------
@@ -741,7 +760,7 @@ static PySequenceMethods taglist_as_sequence =
     sq_slice: 0,             // x[i:j] intintargfunc
     sq_ass_item: 0,          // x[i] = y intobjargproc
     sq_ass_slice: 0,         // x[i:j] = v intintobjargproc
-    sq_contains: taglist_contains, //???
+    sq_contains: 0,          //???
 };
 static PyTypeObject TagListClass = 
 {
