@@ -153,6 +153,14 @@ char* swf_TagGetName(TAG*tag)
 	    return "ENABLEDEBUGGER";
         case ST_REFLEX:
             return "REFLEX";
+        case ST_MX0:
+            return "MX0";
+        case ST_MX1:
+            return "MX1";
+        case ST_MX2:
+            return "MX2";
+        case ST_MX3:
+            return "MX3";
     }
     return 0;
 }
