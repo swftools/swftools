@@ -410,14 +410,14 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
            important for texture and gradient fill */
         for(t=0;t<s2->numfillstyles;t++) {
             MATRIX nm;
-            swf_MatrixJoin(&nm, &s2->fillstyles[t].m, m); //TODO: is this the right order?
+            swf_MatrixJoin(&nm, &s2->fillstyles[t].m, &mat); //TODO: is this the right order?
             nm.sx *= i->multiply;
             nm.sy *= i->multiply;
             nm.r0 *= i->multiply;
             nm.r1 *= i->multiply;
             nm.tx *= i->multiply;
             nm.ty *= i->multiply;
-            s2->fillstyles[t].m = nm;
+            s2->fillstyles[t].m = nm; //!!!!!!!!!!!!!!!!
         }
 
         /* add this shape to the global shape list, for deallocing */
