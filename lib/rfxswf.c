@@ -1254,7 +1254,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
 
   while(t) {
       len += swf_WriteTag(-1,t);
-      if(t->id == ST_DEFINESPRITE) inSprite++;
+      if(t->id == ST_DEFINESPRITE && !swf_IsFolded(t)) inSprite++;
       else if(t->id == ST_END && inSprite) inSprite--;
       else if(t->id == ST_SHOWFRAME && !inSprite) frameCount++;
       t = swf_NextTag(t);
