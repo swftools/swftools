@@ -54,7 +54,7 @@ typedef struct _fblock_t
     double v[64];
 } fblock_t;
 
-void fzigzag(double*src) 
+static void fzigzag(double*src) 
 {
     int table[64] = {
 	0, 1, 5, 6, 14, 15, 27, 28, 
@@ -78,7 +78,7 @@ void fzigzag(double*src)
 #define SQRT2 1.414214
 #define RSQRT2 (1.0/1.414214)
 
-double table[8][8] =
+static double table[8][8] =
 {
 {0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548,0.707106781186548},
 {0.980785280403230,0.831469612302545,0.555570233019602,0.195090322016128,-0.195090322016128,-0.555570233019602,-0.831469612302545,-0.980785280403230},
@@ -90,7 +90,7 @@ double table[8][8] =
 {0.195090322016128,-0.555570233019602,0.831469612302545,-0.980785280403231,0.980785280403230,-0.831469612302545,0.555570233019602,-0.195090322016129}
 };
 
-void dct(double*src)
+static void dct(double*src)
 {
     double tmp[64];
     int x,y,u,v,t;
@@ -117,7 +117,7 @@ void dct(double*src)
     }
 }
 
-void idct(double*src)
+static void idct(double*src)
 {
     double tmp[64];
     int x,y,u,v;
@@ -143,7 +143,7 @@ void idct(double*src)
     }
 }
 
-void getregion(fblock_t* bb, RGBA*pic, int bx, int by, int width, int height)
+static void getregion(fblock_t* bb, RGBA*pic, int bx, int by, int width, int height)
 {
     RGBA*p1 = &pic[by*width*16+bx*16];
     RGBA*p2 = p1;
@@ -174,7 +174,7 @@ void getregion(fblock_t* bb, RGBA*pic, int bx, int by, int width, int height)
     }
 }
 
-int valtodc(int val)
+static int valtodc(int val)
 {
     assert(val>=0);
 
@@ -192,7 +192,7 @@ int valtodc(int val)
     return val;
 }
 
-void codehuffman(TAG*tag, struct huffcode*table, int index)
+static void codehuffman(TAG*tag, struct huffcode*table, int index)
 {
     /* TODO: !optimize! */
     int i=0;
@@ -205,7 +205,7 @@ void codehuffman(TAG*tag, struct huffcode*table, int index)
     }
 }
 
-void quantize8x8(double*src, int*dest, int has_dc, int quant)
+static void quantize8x8(double*src, int*dest, int has_dc, int quant)
 {
     int t,pos=0;
     if(has_dc) {
@@ -226,7 +226,7 @@ void quantize8x8(double*src, int*dest, int has_dc, int quant)
     }
 }
 
-int hascoef(int*b, int has_dc)
+static int hascoef(int*b, int has_dc)
 {
     int t;
     int pos=0;
@@ -240,7 +240,7 @@ int hascoef(int*b, int has_dc)
     return 0;
 }
 
-void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
+static void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
 {
     int t;
     int pos=0;
@@ -259,9 +259,10 @@ void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
 	    if(bb[last])
 		break;
 	}
-	assert(bb[last]);
 	/* blocks without coefficients should not be included
-	   in the cbpy/cbpc patterns */
+	   in the cbpy/cbpc patterns: */
+	assert(bb[last]);
+
 	while(1) {
 	    int run=0;
 	    int level=0;
@@ -312,7 +313,7 @@ void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
     }
 }
 
-void dodct(fblock_t*fb)
+static void dodct(fblock_t*fb)
 {
     dct(fb->y1); dct(fb->y2); dct(fb->y3); dct(fb->y4); 
     dct(fb->u);  dct(fb->v);  
@@ -324,7 +325,7 @@ void dodct(fblock_t*fb)
     fzigzag(fb->v); 
 }
 
-void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
+static void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
 {
     quantize8x8(fb->y1,b->y1,has_dc,quant); 
     quantize8x8(fb->y2,b->y2,has_dc,quant); 
@@ -334,7 +335,7 @@ void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
     quantize8x8(fb->v,b->v,has_dc,quant);   
 }
 
-void getblockpatterns(block_t*b, int*cbpybits,int*cbpcbits, int has_dc)
+static void getblockpatterns(block_t*b, int*cbpybits,int*cbpcbits, int has_dc)
 {
     *cbpybits = 0;
     *cbpcbits = 0;
@@ -348,7 +349,7 @@ void getblockpatterns(block_t*b, int*cbpybits,int*cbpcbits, int has_dc)
     *cbpcbits|=hascoef(b->v, has_dc)*1;
 }
 
-void setQuant(TAG*tag, int dquant)
+static void setQuant(TAG*tag, int dquant)
 {
     int code = 0;
     /* 00 01 10 11
@@ -367,7 +368,7 @@ void setQuant(TAG*tag, int dquant)
     }
 }
 
-void change_quant(int quant, int*dquant)
+static void change_quant(int quant, int*dquant)
 {
     /* TODO */
     *dquant = 0;
