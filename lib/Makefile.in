@@ -9,7 +9,7 @@ lame_objects = @lame_objects@
 
 h263_objects = h.263/dct.o h.263/h263tables.o h.263/swfvideo.o
 actioncompiler_objects = action/assembler.o action/compile.o action/lex.swf4.o action/lex.swf5.o action/libming.o action/swf4compiler.tab.o action/swf5compiler.tab.o action/actioncompiler.o
-rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c h.263/swfvideo.c
+rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swfrender.c h.263/swfvideo.c
 
 bitio.o: bitio.c bitio.h
 	$(C) bitio.c -o $@
