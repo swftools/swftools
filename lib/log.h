@@ -28,7 +28,6 @@
 #define LOGLEVEL_DEBUG 5
 
 extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPort, int serverloglevel, int screenloglevel);
-extern void log(char* logString);
 extern void logf(const char* logFormat, ...);
 extern void exitLog(void);
 

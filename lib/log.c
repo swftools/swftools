@@ -145,7 +145,7 @@ void exitLog()
 static char * logimportance[]= {"Fatal","Error","Warning","Notice","Verbose","Debug"};
 static int loglevels=6;
 static char * logimportance2[]= {"       ","FATAL  ","ERROR  ","WARNING","NOTICE ","VERBOSE","DEBUG  "};
-void log(char* logString)
+static inline void log(char* logString)
 {
    char timebuffer[32];
    char* logBuffer;
