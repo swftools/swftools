@@ -13,14 +13,19 @@
 #include "h263tables.c"
 #include "swfvideo.h"
 
+#ifdef MAIN
+U16 totalframes = 0;
+#endif
 void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width, U16 height)
 {
-    width=width&~15; height=height&~15;
     swf_SetU16(tag, frames);
     swf_SetU16(tag, width);
     swf_SetU16(tag, height);
-    swf_SetU8(tag, 1); /* smoothing on */
+    //swf_SetU8(tag, 1); /* smoothing on */
+    swf_SetU8(tag, 0); /* smoothing off */
     swf_SetU8(tag, 2); /* codec = h.263 sorenson spark */
+
+    totalframes = frames;
 
     memset(stream, 0, sizeof(VIDEOSTREAM));
     stream->olinex = width;
@@ -117,7 +122,7 @@ static void dct(int*src)
 	{
 	    c+=table[v][y]*tmp[y*8+u];
 	}
-	src[v*8+u] = (int)(c*0.25);
+	src[v*8+u] = (int)(c*0.25+0.5);
     }
 }
 
@@ -143,7 +148,7 @@ static void idct(int*src)
 	{
 	    c+=table[v][y]*tmp[v*8+x];
 	}
-	src[y*8+x] = (int)(c*0.25);
+	src[y*8+x] = (int)(c*0.25+0.5);
     }
 }
 
@@ -251,41 +256,144 @@ static void getregion(block_t* bb, YUV*pic, int posx, int posy, int linex)
     int y1=0, y2=0, y3=0, y4=0;
     int u=0,v=0;
     int x,y;
-    int hp = (posy&1)<<1|(posx&1);
-    posx>>=1;
-    posy>>=1;
+    posx*=16;
+    posy*=16;
     p1 = &pic[posy*linex+posx];
     p2 = p1;
-    if(hp==0x0) {
-	for(y=0;y<8;y++) {
-	    for(x=0;x<8;x++) {
-		bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
-		bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
-		bb->y1[y1++] = p1[x].y;
-		bb->y2[y2++] = p1[x+8].y;
-		bb->y3[y3++] = p1[linex*8+x].y;
-		bb->y4[y4++] = p1[linex*8+x+8].y;
-	    }
-	    p1+=linex;
-	    p2+=linex*2;
+    for(y=0;y<8;y++) {
+	for(x=0;x<8;x++) {
+	    bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
+	    bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
+	    bb->y1[y1++] = p1[x].y;
+	    bb->y2[y2++] = p1[x+8].y;
+	    bb->y3[y3++] = p1[linex*8+x].y;
+	    bb->y4[y4++] = p1[linex*8+x+8].y;
 	}
-    } else if(hp==0x1) {
+	p1+=linex;
+	p2+=linex*2;
+    }
+}
+
+static void getmvdregion(block_t* bb, YUV*pic, int posx, int posy, int mvdx, int mvdy, int linex)
+{
+    YUV*p1;
+    YUV*p2;
+    int yy=0,uv=0;
+    int x,y;
+    int yhp = 0, uvhp=0;
+    int uvposx, uvposy;
+    posx = posx*16 + ((mvdx&~1)/2);
+    posy = posy*16 + ((mvdy&~1)/2);
+    p1 = &pic[posy*linex+posx];
+    p2 = &pic[(posy&~1)*linex+(posx&~1)];
+    uvhp = ((mvdx&1)|((mvdx>>1)&1))|((mvdy&2)|((mvdy&1)<<1));
+    yhp = ((mvdy&1)<<1|(mvdx&1));
+
+    /* y */
+    if(yhp==0 || yhp==2) {
 	for(y=0;y<8;y++) {
 	    for(x=0;x<8;x++) {
-		bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
-		bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
-		bb->y1[y1++] = (p1[x].y + p1[x+1].y)/2;
-		bb->y2[y2++] = (p1[x+8].y + p1[x+8+1].y)/2;
-		bb->y3[y3++] = (p1[linex*8+x].y + p1[linex*8+x+1].y)/2;
-		bb->y4[y4++] = (p1[linex*8+x+8].y + p1[linex*8+x+8+1].y)/2;
+		bb->y1[yy] = p1[x].y;
+		bb->y2[yy] = p1[x+8].y;
+		bb->y3[yy] = p1[linex*8+x].y;
+		bb->y4[yy] = p1[linex*8+x+8].y;
+		yy++;
 	    }
 	    p1+=linex;
+
+	    if(yhp==2) {
+		yy-=8;
+		for(x=0;x<8;x++) {
+		    bb->y1[yy] += p1[x].y; bb->y1[yy] /= 2;
+		    bb->y2[yy] += p1[x+8].y; bb->y2[yy] /= 2;
+		    bb->y3[yy] += p1[linex*8+x].y; bb->y3[yy] /= 2;
+		    bb->y4[yy] += p1[linex*8+x+8].y; bb->y4[yy] /= 2;
+		    yy++;
+		}
+	    }
+	}
+	// todo: yhp==2
+    } else if(yhp==1 || yhp==3) {
+	for(y=0;y<8;y++) {
+	    for(x=0;x<8;x++) {
+		bb->y1[yy] = (p1[x].y + p1[x+1].y);
+		bb->y2[yy] = (p1[x+8].y + p1[x+8+1].y);
+		bb->y3[yy] = (p1[linex*8+x].y + p1[linex*8+x+1].y);
+		bb->y4[yy] = (p1[linex*8+x+8].y + p1[linex*8+x+8+1].y);
+		yy++;
+	    }
+	    yy-=8;
+	    p1+=linex;
+	    if(yhp==3) {
+		for(x=0;x<8;x++) {
+		    bb->y1[yy] += (p1[x].y + p1[x+1].y); bb->y1[yy]/=4;
+		    bb->y2[yy] += (p1[x+8].y + p1[x+8+1].y); bb->y2[yy]/=4;
+		    bb->y3[yy] += (p1[linex*8+x].y + p1[linex*8+x+1].y); bb->y3[yy]/=4;
+		    bb->y4[yy] += (p1[linex*8+x+8].y + p1[linex*8+x+8+1].y); bb->y4[yy]/=4;
+		    yy++;
+		}
+	    } else {
+		for(x=0;x<8;x++) {
+		    bb->y1[yy]/=2; bb->y2[yy]/=2; bb->y3[yy]/=2; bb->y4[yy]/=2;
+		    yy++;
+		}
+	    }
+	}
+	// todo: yhp==3
+    }
+
+    /* u,v */
+    if(uvhp==0 || uvhp==2) {
+	for(y=0;y<8;y++) {
+	    for(x=0;x<8;x++) {
+		bb->u[uv] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
+		bb->v[uv] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
+		uv++;
+	    }
 	    p2+=linex*2;
+	    if(uvhp==2) {
+		uv-=8;
+		for(x=0;x<8;x++) {
+		    bb->u[uv] += (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
+		    bb->v[uv] += (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
+		    bb->u[uv] /= 2;
+		    bb->v[uv] /= 2;
+		    uv++;
+		}
+	    }
+	}
+    } else /* uvhp==1 || uvhp==3 */ {
+	for(y=0;y<8;y++) {
+	    for(x=0;x<8;x++) {
+		bb->u[uv] = ((p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4+
+		             (p2[x*2+2].u + p2[x*2+1+2].u + p2[linex+x*2+2].u + p2[linex+x*2+1+2].u)/4);
+		bb->v[uv] = ((p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4+
+			     (p2[x*2+2].v + p2[x*2+1+2].v + p2[linex+x*2+2].v + p2[linex+x*2+1+2].v)/4);
+		uv++;
+	    }
+	    uv-=8;
+	    p2+=linex*2;
+	    if(uvhp==3) {
+		for(x=0;x<8;x++) {
+		    bb->u[uv] += ((p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4+
+			 	  (p2[x*2+2].u + p2[x*2+1+2].u + p2[linex+x*2+2].u + p2[linex+x*2+1+2].u)/4);
+		    bb->v[uv] += ((p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4+
+				  (p2[x*2+2].v + p2[x*2+1+2].v + p2[linex+x*2+2].v + p2[linex+x*2+1+2].v)/4);
+		    bb->u[uv] /= 4;
+		    bb->v[uv] /= 4;
+		    uv++;
+		}
+	    } else {
+		for(x=0;x<8;x++) {
+		    bb->u[uv] /= 2;
+		    bb->v[uv] /= 2;
+		    uv++;
+		}
+	    }
 	}
     }
-    else
-	assert(0);
 }
+
 static void rgb2yuv(YUV*dest, RGBA*src, int dlinex, int slinex, int width, int height)
 {
     int x,y;
@@ -298,6 +406,8 @@ static void rgb2yuv(YUV*dest, RGBA*src, int dlinex, int slinex, int width, int h
 	    /*dest[y*dlinex+x].y = (r*0.299 + g*0.587 + b*0.114);
 	    dest[y*dlinex+x].u = (r*-0.169 + g*-0.332 + b*0.500 + 128.0);
 	    dest[y*dlinex+x].v = (r*0.500 + g*-0.419 + b*-0.0813 + 128.0);*/
+
+	    //dest[y*dlinex+x].y = 128;//(r*((int)( 0.299*256)) + g*((int)( 0.587*256)) + b*((int)( 0.114 *256)))>>8;
 	    dest[y*dlinex+x].y = (r*((int)( 0.299*256)) + g*((int)( 0.587*256)) + b*((int)( 0.114 *256)))>>8;
 	    dest[y*dlinex+x].u = (r*((int)(-0.169*256)) + g*((int)(-0.332*256)) + b*((int)( 0.500 *256))+ 128*256)>>8;
 	    dest[y*dlinex+x].v = (r*((int)( 0.500*256)) + g*((int)(-0.419*256)) + b*((int)(-0.0813*256))+ 128*256)>>8;
@@ -731,7 +841,7 @@ static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int dquant=0;
     int cbpcbits = 0, cbpybits=0;
 
-    getregion(&fb, s->current, bx*2*16, by*2*16, s->width);
+    getregion(&fb, s->current, bx, by, s->width);
     
     change_quant(*quant, &dquant);
     *quant+=dquant;
@@ -835,8 +945,8 @@ static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
 static inline int mvd2index(int px, int py, int x, int y, int xy)
 {
     assert((x>=-32 && x<=31) && (y>=-32 && y<=31));
-    assert((x&1)==0 && (y&1)==0);//for now
-    assert((x&2)==0 && (y&2)==0);//for now(2)
+    //assert((x&1)==0 && (y&1)==0);//for now
+    //assert((x&2)==0 && (y&2)==0);//for now(2)
     
     x-=px;
     y-=py;
@@ -887,7 +997,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     }
 
     predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
-    getregion(&fb, s->current, bx*2*16, by*2*16, s->width);
+    getregion(&fb, s->current, bx, by, s->width);
 
     { /* consider I-block */
 	block_t fb_i;
@@ -917,22 +1027,22 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	if(s->do_motion) {
 	    int hx,hy;
 	    int bestx=0,besty=0,bestbits=65536;
-	    int startx=-8,endx=8;
-	    int starty=-8,endy=8;
+	    int startx=-2,endx=2;
+	    int starty=-2,endy=2;
 
 	    if(!bx) startx=0;
 	    if(!by) starty=0;
 	    if(bx==s->bbx-1) endx=0;
 	    if(by==s->bby-1) endy=0;
 
-	    for(hx=startx;hx<=endx;hx+=4)
-	    for(hy=starty;hy<=endy;hy+=4)
+	    for(hx=startx;hx<=endx;hx+=1)
+	    for(hy=starty;hy<=endy;hy+=1)
 	    {
 		block_t b;
 		block_t fbold;
 		int bits = 0;
 		memcpy(&fbdiff, &fb, sizeof(block_t));
-		getregion(&fbold, s->oldpic, bx*2*16+hx, by*2*16+hy, s->linex);
+		getmvdregion(&fbold, s->oldpic, bx, by, hx, hy, s->linex);
 		yuvdiff(&fbdiff, &fbold);
 		dodctandquant(&fbdiff, &b, 0, *quant);
 		//quantize(&fbdiff, &b, 0, *quant);
@@ -953,7 +1063,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	}
 
 	memcpy(&fbdiff, &fb, sizeof(block_t));
-	getregion(&fbold_v00, s->oldpic, bx*2*16+x_v00, by*2*16+y_v00, s->linex);
+	getmvdregion(&fbold_v00, s->oldpic, bx, by, x_v00, y_v00, s->linex);
 	yuvdiff(&fbdiff, &fbold_v00);
 	dodctandquant(&fbdiff, &b_v00, 0, *quant);
 	//quantize(&fbdiff, &b_v00, 0, *quant);
@@ -1084,6 +1194,31 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 #endif
 }
 
+static int bmid = 0;
+void setdbgpic(TAG*tag, RGBA*pic, int width, int height)
+{
+    MATRIX m;
+    tag = tag->prev;
+    
+    tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
+    swf_SetU16(tag, 133);
+
+    tag = swf_InsertTag(tag, ST_DEFINEBITSLOSSLESS);
+    swf_SetU16(tag, 1000+bmid);
+    swf_SetLosslessBits(tag, width, height, (void*)pic, BMF_32BIT);
+
+    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+    swf_SetU16(tag, 2000+bmid);
+    swf_ShapeSetBitmapRect(tag, 1000+bmid, width, height);
+
+    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
+    swf_GetMatrix(0,&m);
+    m.tx = width*20;
+    swf_ObjectPlace(tag, 2000+bmid, 133, &m, 0, 0);
+
+    bmid++;
+}
+
 #define TYPE_IFRAME 0
 #define TYPE_PFRAME 1
 
@@ -1123,6 +1258,7 @@ static void writeHeader(TAG*tag, int width, int height, int frame, int quant, in
     swf_SetBits(tag, quant, 5); /* quantizer (1-31), may be updated later on*/
     swf_SetBits(tag, 0, 1); /* No extra info */
 }
+
 void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 {
     int bx, by;
@@ -1169,11 +1305,17 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
     }
     s->frame++;
     memcpy(s->oldpic, s->current, s->width*s->height*sizeof(YUV));
+
+//#define PNG
 #ifdef MAIN
+#ifdef PNG
+    yuv2rgb(pic, s->current, s->linex, s->width, s->height);
+    setdbgpic(tag, pic, s->width, s->height);
+#endif
+    if(s->frame == (int)totalframes-1)
     {
 	int t;
 	FILE*fi = fopen("test.ppm", "wb");
-	yuv2rgb(pic, s->current, s->linex, s->width, s->height);
 	fprintf(fi, "P6\n%d %d\n255\n", s->width, s->height);
 	for(t=0;t<s->width*s->height;t++)
 	{
@@ -1184,6 +1326,77 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 	fclose(fi);
     }
 #endif
+}
+
+int uline[64],vline[64],yline[64];
+void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
+{
+    int bx, by;
+
+    if(quant<1) quant=1;
+    if(quant>31) quant=31;
+
+    writeHeader(tag, s->width, s->height, s->frame, quant, TYPE_PFRAME);
+
+    memset(s->mvdx, 0, s->bbx*s->bby*sizeof(int));
+    memset(s->mvdy, 0, s->bbx*s->bby*sizeof(int));
+
+    for(by=0;by<s->bby;by++)
+    {
+	for(bx=0;bx<s->bbx;bx++)
+	{
+	    //if((lrand48()&255) || !(bx>8 && bx<24 && by>8 && by<24)) {
+	    if(!(by==31)) {
+		/* mvd (0,0) block (mode=0) */
+		int t;
+		int mode = 0; // mvd w/o mvd24
+		int has_dc = 0;
+		int cbpybits=0,cbpcbits=0;
+		int predictmvdx, predictmvdy;
+		//int mvx=-1+(2*(s->frame&1));
+		//int mvy=-1+((s->frame&2));
+		int mvx=(lrand48()%4)-2;
+		int mvy=3;
+
+		swf_SetBits(tag,0,1); // COD
+		codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
+		codehuffman(tag, cbpy, cbpybits^15);
+
+		/* vector */
+		predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
+		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 0));
+		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 1)); 
+		s->mvdx[by*s->bbx+bx] = mvx;
+		s->mvdy[by*s->bbx+bx] = mvy;
+	    } else {
+		/* i block (mode=3) */
+		int mode = 3;
+		int has_dc = 1;
+		int cbpybits,cbpcbits;
+		int t;
+		block_t b;
+		memset(&b, 0, sizeof(block_t));
+		b.y1[0] = b.y2[0] = b.y3[0] = b.y4[0] = yline[bx];
+		b.u[0] = uline[bx];
+		b.v[0] = vline[bx];
+
+		getblockpatterns(&b, &cbpybits, &cbpcbits, has_dc);
+		swf_SetBits(tag,0,1); // COD
+		codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
+		codehuffman(tag, cbpy, cbpybits);
+
+		/* luminance */
+		encode8x8(tag, b.y1, has_dc, cbpybits&8);
+		encode8x8(tag, b.y2, has_dc, cbpybits&4);
+		encode8x8(tag, b.y3, has_dc, cbpybits&2);
+		encode8x8(tag, b.y4, has_dc, cbpybits&1);
+
+		/* chrominance */
+		encode8x8(tag, b.u, has_dc, cbpcbits&2);
+		encode8x8(tag, b.v, has_dc, cbpcbits&1);
+	    }
+	}
+    }
 }
 
 #ifdef MAIN
@@ -1198,7 +1411,7 @@ int main(int argn, char*argv[])
     SWFPLACEOBJECT obj;
     int width = 0;
     int height = 0;
-    int frames = 5;
+    int frames = 20;
     int framerate = 29;
     unsigned char*data;
     char* fname = "/home/kramm/pics/peppers.png";
@@ -1220,8 +1433,8 @@ int main(int argn, char*argv[])
 
     swf.fileVersion    = 6;
     swf.frameRate      = framerate*256;
-    swf.movieSize.xmax = 20*width;
-    swf.movieSize.ymax = 20*height;
+    swf.movieSize.xmax = 20*width*2;
+    swf.movieSize.ymax = 20*height-20*64;
 
     swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     tag = swf.firstTag;
@@ -1232,7 +1445,7 @@ int main(int argn, char*argv[])
     swf_SetU16(tag, 33);
     swf_SetVideoStreamDefine(tag, &stream, frames, width, height);
     stream.do_motion = 1;
-    
+
     for(t=0;t<frames;t++)
     {
 	int x,y;
@@ -1249,8 +1462,9 @@ int main(int argn, char*argv[])
 	swf_SetU16(tag, 33);
 	if(t==0)
 	    swf_SetVideoStreamIFrame(tag, &stream, pic2, 9);
-	else
+	else {
 	    swf_SetVideoStreamPFrame(tag, &stream, pic2, 9);
+	}
 
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
 	swf_GetPlaceObject(0, &obj);
@@ -1265,9 +1479,8 @@ int main(int argn, char*argv[])
 	swf_SetPlaceObject(tag,&obj);
 
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
-	d-=0.005;
+	d-=0.015;
     }
-
     swf_VideoStreamClear(&stream);
    
     tag = swf_InsertTag(tag, ST_END);
