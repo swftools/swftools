@@ -44,7 +44,7 @@ PyObject* f_Matrix(PyObject* self, PyObject* args, PyObject* kwargs);
 RGBA color_getRGBA(PyObject*self);
 CXFORM colortransform_getCXForm(PyObject*self);
 GRADIENT gradient_getGradient(PyObject*self);
-SRECT bbox_getBBox(PyObject*self);
+SRECT bbox_getSRECT(PyObject*self);
 MATRIX matrix_getMatrix(PyObject*self);
 
 extern PyMethodDef* primitive_getMethods();
