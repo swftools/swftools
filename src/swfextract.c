@@ -121,7 +121,7 @@ void enumerateIDs(TAG*tag, void(*callback)(void*))
     map_ids_mem(data, len, callback);
 }
 
-void extractTag(SWF*swf, TAG*maintag, char*filename)
+void extractTag(SWF*swf, int defineid, char*filename)
 {
     SWF newswf;
     TAG*desttag;
@@ -131,7 +131,6 @@ void extractTag(SWF*swf, TAG*maintag, char*filename)
     int f;
     int t;
     int copy = 0;
-    int defineid = swf_GetDefineID(maintag);
     memset(&newswf,0x00,sizeof(SWF));        // set global movie parameters
     memset(used, 0,65536);
 
@@ -169,6 +168,7 @@ void extractTag(SWF*swf, TAG*maintag, char*filename)
 
     srctag = swf->firstTag;
     while(srctag && (srctag->id || sprite)) {
+	int reset = 0;
 	if(!sprite) {
 	    copy = 0;
 	}
@@ -182,22 +182,29 @@ void extractTag(SWF*swf, TAG*maintag, char*filename)
 	    if(used[id]) 
 		copy = 1;
 	} else 
-	if(srctag->id == ST_PLACEOBJECT ||
-	    srctag->id == ST_PLACEOBJECT2) {
-	    if(swf_GetPlaceID(srctag) == defineid)
+	if (((srctag->id == ST_PLACEOBJECT ||
+	      srctag->id == ST_PLACEOBJECT2) && swf_GetPlaceID(srctag) == defineid) ||
+	      (swf_isPseudoDefiningTag(srctag) && used[swf_GetDefineID(srctag)])) 
+	{
+		if(copy == 0)
+		    reset = 1;
 		copy = 1;
-	}
+	} 
+
 	if(copy) {
 	    TAG*ttag = (TAG*)malloc(sizeof(TAG));
 	    desttag = swf_InsertTag(desttag, srctag->id);
 	    desttag->len = desttag->memsize = srctag->len;
 	    desttag->data = malloc(srctag->len);
 	    memcpy(desttag->data, srctag->data, srctag->len);
+	    if(reset)
+	        copy = 0;
 	}
 	
 	srctag = srctag->next;
     }
     desttag = swf_InsertTag(desttag,ST_SHOWFRAME);
+    desttag = swf_InsertTag(desttag,ST_END);
     
     f = open(filename, O_TRUNC|O_WRONLY|O_CREAT, 0644);
     if FAILED(swf_WriteSWF(f,&newswf)) fprintf(stderr,"WriteSWF() failed.\n");
@@ -248,7 +255,7 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_PLACEOBJECT2) {
 	    char*name = swf_GetName(tag);
-	    if(name && !strcmp(name, extractname)) {
+	    if(name && extractname && !strcmp(name, extractname)) {
 		int id = swf_GetPlaceID(tag); 
 		if(extractid>=0 && id != extractid) {
 		    fprintf(stderr, "Error: More than one instance with name \"%s\"", name);
@@ -260,7 +267,7 @@ int main (int argc,char ** argv)
 	tag = tag->next;
     }
     if(tags[extractid])
-	extractTag(&swf, tags[extractid], destfilename);
+	extractTag(&swf, extractid, destfilename);
 
     swf_FreeTags(&swf);
     return 0;
