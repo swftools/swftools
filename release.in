@@ -13,6 +13,7 @@ ${name}/src/swfextract.1 \
 ${name}/src/jpeg2swf.1 \
 ${name}/src/png2swf.1 \
 ${name}/src/wav2swf.1 \
+${name}/src/swfc.1 \
 ${name}/avi2swf/avi2swf.1 \
 ${name}/pdf2swf/pdf2swf.1 \
 ${name}/pdf2swf/font2swf.1 \
@@ -27,6 +28,8 @@ ${name}/src/wav.c \
 ${name}/src/wav.h \
 ${name}/src/q.c \
 ${name}/src/q.h \
+${name}/src/swfc.c \
+${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
 ${name}/src/parser.lex \
 ${name}/src/parser.h \
