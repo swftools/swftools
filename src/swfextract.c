@@ -22,16 +22,19 @@
 
 char * filename = 0;
 char * destfilename = "output.swf";
-int verbose = 2;
+int verbose = 3;
 
 char* extractids = 0;
 char* extractframes = 0;
 char* extractjpegids = 0;
 char* extractpngids = 0;
+char extractmp3 = 0;
 
 char* extractname = 0;
 
 char hollow = 0;
+
+int numextracts = 0;
 
 struct options_t options[] =
 {
@@ -47,6 +50,7 @@ struct options_t options[] =
  {0,0}
 };
 
+
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
@@ -59,6 +63,7 @@ int args_callback_option(char*name,char*val)
     } 
     else if(!strcmp(name, "i")) {
 	extractids = val;
+	numextracts++;
 	if(extractname) {
 	    fprintf(stderr, "You can only supply either name or id\n");
 	    exit(1);
@@ -67,6 +72,7 @@ int args_callback_option(char*name,char*val)
     } 
     else if(!strcmp(name, "n")) {
 	extractname = val;
+	numextracts++;
 	if(extractids) {
 	    fprintf(stderr, "You can only supply either name or id\n");
 	    exit(1);
@@ -77,11 +83,17 @@ int args_callback_option(char*name,char*val)
 	verbose ++;
 	return 0;
     } 
+    else if(!strcmp(name, "m")) {
+	extractmp3 = 1;
+	numextracts++;
+	return 0;
+    }
     else if(!strcmp(name, "j")) {
 	if(extractjpegids) {
 	    fprintf(stderr, "Only one --jpegs argument is allowed. (Try to use a range, e.g. -j 1,2,3)\n");
 	    exit(1);
 	}
+	numextracts++;
 	extractjpegids = val;
 	return 1;
     } 
@@ -91,11 +103,13 @@ int args_callback_option(char*name,char*val)
 	    fprintf(stderr, "Only one --pngs argument is allowed. (Try to use a range, e.g. -p 1,2,3)\n");
 	    exit(1);
 	}
+	numextracts++;
 	extractpngids = val;
 	return 1;
     } 
 #endif
     else if(!strcmp(name, "f")) {
+	numextracts++;
 	extractframes = val;
 	return 1;
     }
@@ -125,6 +139,7 @@ void args_callback_usage(char*name)
 #ifdef _ZLIB_INCLUDED_
     printf("\t-p , --pngs IDs\t\t\t IDs of the PNG pictures to extract\n");
 #endif
+    printf("\t-m , --mp3\t\t\t Extract main mp3 stream\n");
     printf("\t-f , --frame frames\t\t frame numbers to extract\n");
     printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames (use with -f)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
@@ -648,6 +663,39 @@ void handlelossless(TAG*tag)
 }
 #endif
 
+FILE*mp3file;
+void handlesoundstream(TAG*tag)
+{
+    char*filename = "output.mp3";
+    if(numextracts==1) {
+	filename = destfilename;
+	if(!strcmp(filename,"output.swf"))
+	    filename = "output.mp3";
+    }
+    switch(tag->id) {
+	case ST_SOUNDSTREAMHEAD:
+	    if((tag->data[1]&0x30) == 0x20) { //mp3 compression
+		mp3file = fopen(filename, "wb");
+		logf("<notice> Writing mp3 data to %s",filename);
+	    }
+	    else
+		logf("<error> Soundstream is not mp3");
+	break;
+	case ST_SOUNDSTREAMHEAD2:
+	    if((tag->data[1]&0x30) == 0x20) {//mp3 compression
+		mp3file = fopen("mainstream.mp3", "wb");
+		logf("<notice> Writing mp3 data to %s",filename);
+	    }
+	    else
+		logf("<error> Soundstream is not mp3 (2)");
+	break;
+	case ST_SOUNDSTREAMBLOCK:
+	    if(mp3file)
+		fwrite(&tag->data[4],tag->len-4,1,mp3file);
+	break;
+    }
+}
+
 int main (int argc,char ** argv)
 { 
     TAG*tag;
@@ -660,7 +708,8 @@ int main (int argc,char ** argv)
     char listavailable = 0;
     processargs(argc, argv);
 
-    if(!extractframes && !extractids && ! extractname && !extractjpegids && !extractpngids)
+    if(!extractframes && !extractids && ! extractname && !extractjpegids && !extractpngids
+	&& !extractmp3)
 	listavailable = 1;
 
     if(!filename)
@@ -733,6 +782,12 @@ int main (int argc,char ** argv)
 	    }
 	}
 
+	if(tag->id == ST_SOUNDSTREAMHEAD ||
+	   tag->id == ST_SOUNDSTREAMHEAD2 ||
+	   tag->id == ST_SOUNDSTREAMBLOCK) {
+	    handlesoundstream(tag);
+	}
+
 	if(tag->id == ST_JPEGTABLES)
 	    handlejpegtables(tag);
 
@@ -786,6 +841,9 @@ int main (int argc,char ** argv)
     }
     if (found)
 	extractTag(&swf, destfilename);
+
+    if(mp3file)
+	fclose(mp3file);
 
     swf_FreeTags(&swf);
     return 0;
