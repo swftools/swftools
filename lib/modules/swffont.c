@@ -22,10 +22,13 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 static int loadfont_scale = 1;
+static int skip_unused = 1;
 
-int swf_SetLoadFontScale(int scale)
+// TODO: should be named "setLoadFontParameters"
+void swf_SetLoadFontParameters(int _scale, int _skip_unused)
 {
-    loadfont_scale = scale;
+    loadfont_scale = _scale;
+    skip_unused = _skip_unused;
 }
 
 #ifdef HAVE_FREETYPE
@@ -101,7 +104,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     FT_UInt gindex;
     SWFFONT* font;
     int t;
-    int skipunused = 1;
     int*glyph2glyph;
    
     if(ftlibrary == 0) {
@@ -209,7 +211,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 		hasname = 1;
 	    }
 	}
-	if(!font->glyph2ascii[t] && !hasname && skipunused) {
+	if(!font->glyph2ascii[t] && !hasname && skip_unused) {
 	    continue;
 	}
 	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP|FT_LOAD_NO_SCALE);
@@ -265,7 +267,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	glyph2glyph[t] = font->numchars;
 	font->numchars++;
     }
-    /* notice: if skipunused is true, font->glyph2ascii, font->glyphnames and font->layout->bounds will 
+    /* notice: if skip_unused is true, font->glyph2ascii, font->glyphnames and font->layout->bounds will 
 	       have more memory allocated than just font->numchars, but only the first font->numchars 
 	       are used/valid */
 

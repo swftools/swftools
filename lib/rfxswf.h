@@ -600,7 +600,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename);
 SWFFONT* swf_LoadT1Font(char*filename);
 SWFFONT* swf_LoadFont(char*filename);
 
-int swf_SetLoadFontScale(int scale);
+void swf_SetLoadFontParameters(int scale, int skip_unused);
 
 // swfdump.c
 
