@@ -542,11 +542,11 @@ void swf_ExpandRect3(SRECT*src, SPOINT center, int radius)
     if(center.x - radius < src->xmin)
 	src->xmin = center.x - radius;
     if(center.x + radius > src->xmax)
-	src->xmax = center.x - radius;
+	src->xmax = center.x + radius;
     if(center.y - radius < src->ymin)
 	src->ymin = center.y - radius;
     if(center.y + radius > src->ymax)
-	src->ymax = center.y - radius;
+	src->ymax = center.y + radius;
 }
 SPOINT swf_TurnPoint(SPOINT p, MATRIX* m)
 {
@@ -1514,3 +1514,4 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfaction.c"
 #include "modules/swfsound.c"
 #include "modules/swfdraw.c"
+#include "modules/swfrender.c"
