@@ -24,6 +24,8 @@
 #include <memory.h>
 #include "../config.h"
 
+#ifdef HAVE_AVIFILE
+
 #undef HAVE_CONFIG_H
 
 #ifdef HAVE_VERSION_H
@@ -210,6 +212,10 @@ static void videoreader_avifile_setparameter(videoreader_t*v, char*name, char*va
 
 int videoreader_avifile_open(videoreader_t* v, char* filename)
 {
+    if(!filename) {
+	/* codec query */
+	return 0;
+    }
     videoreader_avifile_internal* i;
     i = (videoreader_avifile_internal*)malloc(sizeof(videoreader_avifile_internal));
     memset(i, 0, sizeof(videoreader_avifile_internal));
@@ -252,7 +258,7 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
 
     if(!i->do_video && !i->do_audio) {
 	printf("File has neither audio nor video streams.(?)\n");
-	return 0;
+	return -1;
     }
 
 #ifndef VERSION6
@@ -323,6 +329,15 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
 #endif
     }
 
-    return 1;
+    return 0;
 }
 
+#else  //HAVE_AVIFILE
+
+
+int videoreader_avifile_open(videoreader_t* v, char* filename)
+{
+    return -1;
+}
+
+#endif //HAVE_AVIFILE
