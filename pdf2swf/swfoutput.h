@@ -91,7 +91,17 @@ void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a);
 void swfoutput_drawpath(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_startclip(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_endclip(struct swfoutput*);
-void swfoutput_drawimagefile(struct swfoutput*, char*filename, int sizex,int sizey, 
+void swfoutput_drawimagejpeg(struct swfoutput*, char*filename, int sizex,int sizey, 
+	double x1,double y1,
+	double x2,double y2,
+	double x3,double y3,
+	double x4,double y4);
+void swfoutput_drawimagelossless(struct swfoutput*, RGBA*pic, int sizex, int sizey,
+	double x1,double y1,
+	double x2,double y2,
+	double x3,double y3,
+	double x4,double y4);
+void swfoutput_drawimagelossless256(struct swfoutput*, U8*pic,RGBA*pal, int sizex, int sizey,
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,

@@ -422,6 +422,8 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
 
 SWFOutputDev::SWFOutputDev() 
 {
+    jpeginfo = 0;
+    pbminfo = 0;
     clippos = 0;
     clipping[clippos] = 0;
     outputstarted = 0;
@@ -608,8 +610,6 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state)
   double x1,y1,x2,y2;
   logf("<debug> startPage %d\n", pageNum);
   logf("<notice> processing page %d", pageNum);
-  jpeginfo = 0;
-  pbminfo = 0;
 
   state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
@@ -952,6 +952,10 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   int c;
   char fileName[128];
   double x1,y1,x2,y2,x3,y3,x4,y4;
+  ImageStream *imgStr;
+  Guchar pixBuf[4];
+  GfxRGB rgb;
+
   state->transform(0, 1, &x1, &y1);
   state->transform(0, 0, &x2, &y2);
   state->transform(1, 0, &x3, &y3);
@@ -964,7 +968,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
     logf("<verbose> Found jpeg. Temporary storage is %s", fileName);
     if(!jpeginfo)
     {
-	logf("<notice> Page contains jpeg pictures");
+	logf("<notice> file contains jpeg pictures");
 	jpeginfo = 1;
     }
     if (!(fi = fopen(fileName, "wb"))) {
@@ -976,14 +980,78 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
     while ((c = str->getChar()) != EOF)
       fputc(c, fi);
     fclose(fi);
-    swfoutput_drawimagefile(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+    swfoutput_drawimagejpeg(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
     unlink(fileName);
   } else {
-      if(!pbminfo)
-      {
-	  logf("<notice> Page contains pbm pictures");
-	  pbminfo = 1;
-      }
+
+    if(!pbminfo) {
+	logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
+	if(mask)
+	logf("<verbose> ignoring %d by %d masked picture\n", width, height);
+	pbminfo = 1;
+    }
+
+    if(mask) {
+	str->reset();
+	int yes=0;
+	while ((c = str->getChar()) != EOF)
+	{
+	    if((c<32 || c>'z') && yes && (c!=13) && (c!=10)) {
+		printf("no ascii: %02x\n", c);
+		yes = 1;
+	   }
+	}
+    } else {
+	int x,y;
+	int width2 = (width+3)&(~3);
+	imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
+				 colorMap->getBits());
+	imgStr->reset();
+
+	if(colorMap->getNumPixelComps()!=1)
+	{
+	    RGBA*pic=new RGBA[width*height];
+	    for (y = 0; y < height; ++y) {
+	      for (x = 0; x < width; ++x) {
+		imgStr->getPixel(pixBuf);
+		colorMap->getRGB(pixBuf, &rgb);
+		pic[width*y+x].r = (U8)(rgb.r * 255 + 0.5);
+		pic[width*y+x].g = (U8)(rgb.g * 255 + 0.5);
+		pic[width*y+x].b = (U8)(rgb.b * 255 + 0.5);
+		pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
+	      }
+	    }
+	    swfoutput_drawimagelossless(&output, pic, width, height, 
+		    x1,y1,x2,y2,x3,y3,x4,y4);
+	    delete pic;
+	}
+	else
+	{
+	    U8*pic = new U8[width2*height];
+	    RGBA pal[256];
+	    int t;
+	    for(t=0;t<256;t++)
+	    {
+		pixBuf[0] = t;
+		colorMap->getRGB(pixBuf, &rgb);
+		pal[t].r = (U8)(rgb.r * 255 + 0.5);
+		pal[t].g = (U8)(rgb.g * 255 + 0.5);
+		pal[t].b = (U8)(rgb.b * 255 + 0.5);
+		pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
+	    }
+	    for (y = 0; y < height; ++y) {
+	      for (x = 0; x < width; ++x) {
+		imgStr->getPixel(pixBuf);
+		pic[width2*y+x] = pixBuf[0];
+	      }
+	    }
+	    swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
+		    x1,y1,x2,y2,x3,y3,x4,y4);
+	    delete pic;
+	}
+	delete imgStr;
+    }
+
   }
 }
 

@@ -1020,22 +1020,17 @@ void swfoutput_endclip(swfoutput*obj)
     PlaceObject(cliptags[clippos],clipshapes[clippos],clipdepths[clippos],NULL,NULL,NULL,depth++);
 }
 
-void swfoutput_drawimagefile(struct swfoutput*, char*filename, int sizex,int sizey, 
+
+void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
 	double x4,double y4)
 {
-    if(shapeid>=0)
-     endshape();
-    if(textid>=0)
-     endtext();
-
     RGBA rgb;
     SRECT r;
     int lsid=0;
     int fsid;
-    int bitid;
     struct plotxy p1,p2,p3,p4;
     int myshapeid;
     double xmax=x1,ymax=y1,xmin=x1,ymin=y1;
@@ -1068,14 +1063,7 @@ void swfoutput_drawimagefile(struct swfoutput*, char*filename, int sizex,int siz
 
     m.tx = (int)(x1*20);
     m.ty = (int)(y1*20);
-
-    bitid = ++currentswfid;
   
-    /* bitmap */
-    tag = InsertTag(tag,ST_DEFINEBITSJPEG2);
-    SetU16(tag, bitid);
-    SetJPEGBits(tag, filename, jpegquality);
-
     /* shape */
     myshapeid = ++currentswfid;
     tag = InsertTag(tag,ST_DEFINESHAPE);
@@ -1110,5 +1098,62 @@ void swfoutput_drawimagefile(struct swfoutput*, char*filename, int sizex,int siz
     /* instance */
     tag = InsertTag(tag,ST_PLACEOBJECT2);
     ObjectPlace(tag,myshapeid,/*depth*/depth++,NULL,NULL,NULL);
+}
+
+void swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int sizey, 
+	double x1,double y1,
+	double x2,double y2,
+	double x3,double y3,
+	double x4,double y4)
+{
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+
+    int bitid = ++currentswfid;
+    tag = InsertTag(tag,ST_DEFINEBITSJPEG2);
+    SetU16(tag, bitid);
+    SetJPEGBits(tag, filename, jpegquality);
+
+    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+}
+
+void swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
+	double x1,double y1,
+	double x2,double y2,
+	double x3,double y3,
+	double x4,double y4)
+{
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+
+    int bitid = ++currentswfid;
+    tag = InsertTag(tag,ST_DEFINEBITSLOSSLESS);
+    SetU16(tag, bitid);
+    SetLosslessBits(tag,sizex,sizey,mem, BMF_32BIT);
+    
+    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+}
+
+void swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
+	double x1,double y1,
+	double x2,double y2,
+	double x3,double y3,
+	double x4,double y4)
+{
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+
+    int bitid = ++currentswfid;
+    tag = InsertTag(tag,ST_DEFINEBITSLOSSLESS2);
+    SetU16(tag, bitid);
+    SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256);
+  
+    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
 }
 
