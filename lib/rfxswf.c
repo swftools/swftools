@@ -747,6 +747,10 @@ void swf_FoldSprite(TAG * t)
       fprintf(stderr, "Error: Sprite has no ID!");
       return;
   }
+  if(t->len>4) {
+    /* sprite is already folded */
+      return;
+  }
 
   t->pos = 0;
   id = swf_GetU16(t);
