@@ -30,6 +30,8 @@
  * SUCH DAMAGE.
  */
 
+#include "../config.h"
+
 #include <string.h>
 
 #ifndef _NETINET6_MD5_H_
@@ -121,7 +123,7 @@ do {				\
  */
 
 #ifndef HAVE_BCOPY
-void bcopy(void*src, void*dest, int len) 
+void bcopy(const void*src, void*dest, int len) 
 {
     memcpy(dest, src, len);
 }
