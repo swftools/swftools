@@ -1316,7 +1316,7 @@ void s_includeswf(char*name, char*filename)
     
     s = tag = swf_InsertTag(tag, ST_DEFINESPRITE);
     swf_SetU16(tag, id);
-    swf_SetU16(tag, 0);
+    swf_SetU16(tag, swf.frameCount);
 
     swf_Relocate(&swf, idmap);
 
