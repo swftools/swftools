@@ -423,7 +423,6 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     if(b-2 >= 16) {
 	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(1)- %d\n", b);
 	fflush(stdout);
-	*(int*)0 = 0xdead;
 	b = 17;
     }
     swf_SetBits(t, b-2, 4);
