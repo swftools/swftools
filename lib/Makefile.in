@@ -5,7 +5,9 @@ include ../Makefile.common
 
 all: librfxswf.a q.o
 
-lame_objects =  lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
+lame_objects_2 =  lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
+lame_objects = @lame_objects@
+
 h263_objects = h.263/dct.o h.263/h263tables.o h.263/swfvideo.o
 actioncompiler_objects = action/assembler.o action/compile.o action/lex.swf4.o action/lex.swf5.o action/libming.o action/swf4compiler.tab.o action/swf5compiler.tab.o action/actioncompiler.o
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c h.263/swfvideo.c
