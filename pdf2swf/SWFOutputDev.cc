@@ -55,7 +55,13 @@ static char* swffilename = 0;
 static int numpages;
 static int currentpage;
 
-static char*fonts[2048];
+typedef struct _fontfile
+{
+    char*filename;
+    int used;
+} fontfile_t;
+
+static fontfile_t fonts[2048];
 static int fontnum = 0;
 
 // swf <-> pdf pages
@@ -388,7 +394,7 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
 {
   char* name = getFontID(font);
   Ref* r=font->getID();
-  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, name, r->num,r->gen);
+  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, getFontName(font), r->num,r->gen);
 
   GString*gstr  = font->getTag();
    
@@ -917,8 +923,9 @@ char* SWFOutputDev::searchFont(char*name)
 {	
     int i;
     char*filename=0;
+    int is_standard_font = 0;
 	
-    msg("<verbose> SearchT1Font(%s)", name);
+    msg("<verbose> SearchFont(%s)", name);
 
     /* see if it is a pdf standard font */
     for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
@@ -926,15 +933,22 @@ char* SWFOutputDev::searchFont(char*name)
 	if(!strcmp(name, pdf2t1map[i].pdffont))
 	{
 	    name = pdf2t1map[i].filename;
+	    is_standard_font = 1;
 	    break;
 	}
     }
     /* look in all font files */
     for(i=0;i<fontnum;i++) 
     {
-	if(strstr(fonts[i], name))
+	if(strstr(fonts[i].filename, name))
 	{
-	    return fonts[i];
+	    if(!fonts[i].used) {
+
+		fonts[i].used = 1;
+		if(!is_standard_font)
+		    msg("<notice> Using %s for %s", fonts[i].filename, name);
+	    }
+	    return fonts[i].filename;
 	}
     }
     return 0;
@@ -1691,7 +1705,10 @@ void pdfswf_setparameter(char*name, char*value)
 
 void pdfswf_addfont(char*filename)
 {
-    fonts[fontnum++] = filename;
+    fontfile_t f;
+    memset(&f, 0, sizeof(fontfile_t));
+    f.filename = filename;
+    fonts[fontnum++] = f;
 }
 
 void pdfswf_drawonlyshapes()
