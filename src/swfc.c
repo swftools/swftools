@@ -924,6 +924,21 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
     incrementid();
 }
 
+void s_quicktime(char*name, char*url)
+{
+    SRECT r;
+    MATRIX _m,*m=0;
+
+    memset(&r, 0, sizeof(r));
+    
+    tag = swf_InsertTag(tag, ST_DEFINEMOVIE);
+    swf_SetU16(tag, id);
+    swf_SetString(tag, url);
+    
+    s_addcharacter(name, id, tag, r);
+    incrementid();
+}
+
 void s_edittext(char*name, char*fontname, int size, int width, int height, char*text, RGBA*color, int maxlength, char*variable, int flags)
 {
     SWFFONT*font;
@@ -2290,6 +2305,14 @@ static int c_soundtrack(map_t*args)
     return 0;
 }
 
+static int c_quicktime(map_t*args) 
+{
+    char*name = lu(args, "name");
+    char*url = lu(args, "url");
+    s_quicktime(name, url);
+    return 0;
+}
+
 static int c_image(map_t*args) 
 {
     char*command = lu(args, "commandname");
@@ -2513,6 +2536,7 @@ static struct {
  {"sound", c_sound, "name filename"},
  {"font", c_font, "name filename"},
  {"soundtrack", c_soundtrack, "filename"},
+ {"quicktime", c_quicktime, "url"},
 
     // generators of primitives
 
