@@ -1,31 +1,29 @@
-Priorities:
-1. Make pdf2swf cope with more complex pdfs
-2. General improvements, Autoconf
-3. Cleanups in rfxswf-lib.
+General:
 
-Make pdf2swf cope with more complex pdfs:
+    * make more stuff dependent on the information in config.h
+    * consistent output handling if -o is missing. (out.swf/stdout)
 
-    The following pdf properties are not yet dealt with:
-    * Links
-    * dashed lines (maybe by using fillstyle to keep Shapes small, maybe
-	    optional- use another color for dashed lines)
-    * (type 3 and truetype fonts)
+pdf2swf:
+
+    * The following pdf properties are not yet dealt with:
+      o Links
+      o dashed lines (maybe by using fillstyle to keep Shapes small, maybe
+	      optional- use another color for dashed lines)
+      o (type 3 and truetype fonts)
     * write DEFINE_FONTINFO-Tags to give results for swfstrings 
       (suppress them as option)
-
-General Improvements:
-
     * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
-    * rfxswf: modules/swfshape doesn't allow changing to fillstyle 0
-    * consistent output handling if -o is missing. (out.swf/stdout)
-    * swfcombine: Allow substituting frames (which have a name), too?
-    * swfcombine: Allow ids instead of names
-    * swfcombine: Relocate  SetTarget "/content"  stuff
-    * make more stuff dependent on the information in config.h
 
-Cleanups in rfxswf-lib:
+swfcombine:
+
+    * Allow substituting frames (which have a name), too?
+    * Allow ids instead of names
+    * Relocate  SetTarget "/content"  stuff
+
+rfxswf-lib:
     
+    * modules/swfshape doesn't allow changing to fillstyle 0
     * function names should have a prefix (rfxswf_ or swflib_ or sth.)
     * element names should be lowercase
     * DataPos should be named DataReadPos, DataSize DataWritePos.
