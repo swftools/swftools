@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/log.h"
 #include "reloc.h"
 #ifdef HAVE_ZLIB_H
 #ifdef HAVE_LIBZ

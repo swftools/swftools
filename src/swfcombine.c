@@ -12,10 +12,12 @@
 #include <string.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/log.h"
 #include "combine.h"
 #include "settings.h"
 #include "types.h"
 #include "flash.h"
+#include "reloc.h"
 #include "../config.h"
 
 char * master_filename = 0;

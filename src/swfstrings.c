@@ -27,6 +27,7 @@ int args_callback_option(char*name,char*val)
         printf("swfstrings - part of %s %s\n", PACKAGE, VERSION);
         exit(0);
     }
+    return 0;
 }
 int args_callback_longoption(char*name,char*val)
 {

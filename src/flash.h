@@ -12,6 +12,7 @@
 
 #include "types.h"
 #include "../lib/rfxswf.h"
+#include "../lib/log.h"
 
 #define TAGID_END 0
 #define TAGID_SHOWFRAME 1
@@ -121,6 +122,8 @@ struct CLIPACTIONS readCLIPACTIONS();
 void writeRECT(u8**pos, struct RECT*r);
 
 void swf_init(struct reader_t*,uchar*newdata, int newlength);
+void MATRIX_init(struct MATRIX*m);
+
 struct flash_header
 {
     int version;
@@ -186,6 +189,7 @@ void placeobject_init (struct PlaceObject*obj, struct swf_tag*tag);
 void placeobject_write (struct PlaceObject*obj, struct writer_t*w);
 
 void placeobject2_init (struct PlaceObject2*obj, struct swf_tag*tag);
+void placeobject2_write (struct PlaceObject2*obj, struct writer_t*w);
 
 void read_swf(struct swffile*swf, uchar*data, int length);
 
@@ -194,5 +198,7 @@ void setidintag(struct swf_tag* tag, int id);
 char is_sprite_tag (int id);
 char is_defining_tag (int id);
 struct swf_tag* duptag(struct swf_tag*tag);
+
+void swf_write_header(struct writer_t*w, struct flash_header*head);
 
 #endif //__flash_h__

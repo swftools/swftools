@@ -89,6 +89,7 @@ struct GRADIENT readGRADIENT(struct reader_t*r, int shape)
 	else
 	    gradient.rgba[t] = readRGBA(r);
     }
+    return gradient;
 }
 
 struct RECT readRECT(struct reader_t*reader)
