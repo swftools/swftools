@@ -12,7 +12,7 @@
 
 #define addGlyph fn3711
 
-void fn3711(SWFFONT * f,int i,U16 code,U16 advance,U16 gid,U8 * data,U32 bitlen)
+void fn3711(SWFFONT * f,int i,U16 ascii,U16 advance,U8 * data,U32 bitlen)
 { SHAPE * s;
   U32 l = (bitlen+7)/8;
 
@@ -20,12 +20,12 @@ void fn3711(SWFFONT * f,int i,U16 code,U16 advance,U16 gid,U8 * data,U32 bitlen)
   s->data = malloc(l);
   if (!s->data) { swf_ShapeFree(s); return; }
 
-  f->codes[i]         = code;
-  f->glyph[i].advance = advance;
-  f->glyph[i].gid     = gid;
-  f->glyph[i].shape   = s;
-  s->bitlen           = bitlen;
-  s->bits.fill	      = 1;
+  f->glyph2ascii[i]     = ascii;
+  f->ascii2glyph[ascii] = i;
+  f->glyph[i].advance   = advance;
+  f->glyph[i].shape     = s;
+  s->bitlen             = bitlen;
+  s->bits.fill          = 1;
   memcpy(s->data,data,l);
 }
 
@@ -111,15 +111,17 @@ SWFFONT * Font_Demo_Font(U16 id)
   f->name     = strdup("Demo Font");
   f->flags    = 0x00;
   f->numchars = 6;
-  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*208);
+  f->maxascii = 256;
+  f->glyph    = (SWFGLYPH*)malloc(sizeof(SWFGLYPH)*6);
+  f->glyph2ascii = (U16*)malloc(sizeof(U16)*6);
+  f->ascii2glyph = (int*)malloc(sizeof(int)*256);
 
-
-  addGlyph(f,102, 0x00,  64,  0, &Glyphs_Demo_Font[0x0000], 872); // f
-  addGlyph(f,108, 0x00,  53,  1, &Glyphs_Demo_Font[0x006d], 452); // l
-  addGlyph(f,111, 0x00,  96,  2, &Glyphs_Demo_Font[0x00a6], 743); // o
-  addGlyph(f,115, 0x00,  74,  3, &Glyphs_Demo_Font[0x0103], 951); // s
-  addGlyph(f,116, 0x00,  53,  4, &Glyphs_Demo_Font[0x017a], 570); // t
-  addGlyph(f,119, 0x00, 138,  5, &Glyphs_Demo_Font[0x01c2], 806); // w
+  addGlyph(f, 0, 102,  64, &Glyphs_Demo_Font[0x0000], 872); // f
+  addGlyph(f, 1, 108,  53, &Glyphs_Demo_Font[0x006d], 452); // l
+  addGlyph(f, 2, 111,  96, &Glyphs_Demo_Font[0x00a6], 743); // o
+  addGlyph(f, 3, 115,  74, &Glyphs_Demo_Font[0x0103], 951); // s
+  addGlyph(f, 4, 116,  53, &Glyphs_Demo_Font[0x017a], 570); // t
+  addGlyph(f, 5, 119, 138, &Glyphs_Demo_Font[0x01c2], 806); // w
   return f;
 }
 
