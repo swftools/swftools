@@ -104,7 +104,8 @@ void map_ids_mem(u8*mem, int length)
 		readu16(); //char
 		readu16(); //layer
 		readMATRIX();
-		readCXFORM();
+		if(num>1)
+		  readCXFORM();
 	    }
 	    // ...
 	break;
@@ -189,7 +190,7 @@ void map_ids_mem(u8*mem, int length)
 //	    printf("%d shape bounds: %d %d %d %d\n",newtag->id,r.x1,r.y1,r.x2,r.y2);
 	    resetbits();
 	    count = readu8();
-	    if(count == 0xff && num>1)
+	    if(count == 0xff && num>1) // defineshape2,3 only
 		count = readu16();
 //	    printf("%d fillstyles\n", count);
 	    for(t=0;t<count;t++)
@@ -199,6 +200,7 @@ void map_ids_mem(u8*mem, int length)
 		pos=getinputpos();
 //		printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", 
 //			pos[0],pos[1],pos[2],pos[3],pos[4],pos[5],pos[6],pos[7]);
+		resetbits();
 		type = readu8(); //type
 //		printf("fillstyle %d is type 0x%02x\n", t, type);
 		if(type == 0) {
@@ -259,6 +261,7 @@ void swf_relocate (u8*data, int length, int*_bitmap)
     while(file.tags[pos].id != 0) {
 	struct swf_tag*tag = &file.tags[pos];
         
+	logf("<debug> relocator: processing tag %02x", tag->id);
 	map_ids(&file.tags[pos]);
 
 	if(is_defining_tag(tag->id))
@@ -277,11 +280,11 @@ void swf_relocate (u8*data, int length, int*_bitmap)
 	    bitmap[newid] = 1;
 	    slaveids[id] = newid;
 
-	    logf("<debug> sprite id %d mapped to %d",id, newid);
+	    logf("<debug> relocator: id %d mapped to %d",id, newid);
 	    
 	    setidintag(tag, newid);
 
-	    logf("<debug> [sprite defs] write tag %02x (%d bytes in body)", 
+	    logf("<debug> [reloc] write tag %02x (%d bytes in body)", 
 		    tag->id, tag->length);
 	} 
         pos++;
