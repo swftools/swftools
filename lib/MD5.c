@@ -39,6 +39,20 @@
 
 #define MD5_BUFLEN	64
 
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN 1
+#endif
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN 2
+#endif
+#ifndef BYTE_ORDER
+#ifdef WORDS_BIGENDIAN
+#define BYTE_ORDER BIG_ENDIAN
+#else
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
+#endif
+
 typedef long unsigned int u_int32_t;
 typedef long long unsigned int u_int64_t;
 typedef unsigned char u_int8_t;
@@ -149,6 +163,16 @@ _crypt_to64(char *s, u_long v, int n)
                 *s++ = itoa64[v&0x3f];
                 v >>= 6;
         }
+}
+
+void hash_md5(const unsigned char*buf, int len, unsigned char*dest)
+{
+    u_char final[MD5_SIZE];
+
+    MD5_CTX ctx;
+    MD5Init(&ctx);
+    MD5Update(&ctx, buf, len);
+    MD5Final(dest, &ctx);
 }
 
 char * crypt_md5(const char *pw, const char *salt)
@@ -483,10 +507,6 @@ static void md5_result(digest, ctxt)
 #endif
 }
 
-#if BYTE_ORDER == BIG_ENDIAN
-u_int32_t X[16];
-#endif
-
 static void md5_calc(b64, ctxt)
 	u_int8_t *b64;
 	md5_ctxt *ctxt;
@@ -499,6 +519,7 @@ static void md5_calc(b64, ctxt)
 	u_int32_t *X = (u_int32_t *)b64;
 #endif	
 #if BYTE_ORDER == BIG_ENDIAN
+	u_int32_t X[16];
 	/* 4 byte words */
 	/* what a brute force but fast! */
 	u_int8_t *y = (u_int8_t *)X;
