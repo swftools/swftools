@@ -131,6 +131,9 @@
 /* have/use freetype library */
 #undef HAVE_FREETYPE
 
+#undef HAVE_FONTCONFIG_H
+#undef HAVE_FONTCONFIG
+
 /* have/use internal l.a.m.e. mp3 library */
 #undef HAVE_LAME 
 
