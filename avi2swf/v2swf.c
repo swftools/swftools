@@ -60,6 +60,7 @@ typedef struct _v2swf_internal_t
     float fpspos;
 
     int bitrate;
+    int samplerate;
 
     int finished;
     int keyframe;
@@ -161,7 +162,7 @@ static void writeShape(v2swf_internal_t*i, int id, int gfxid, int width, int hei
 static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
 {
     double pos = 0;
-    double ratio = video->rate * speedup / 44100.0;
+    double ratio = (double) video->rate * speedup / swf_mp3_in_samplerate;
     int rlen = (int)(len * ratio);
     int t;
     S16 tmp[576*32];
@@ -180,7 +181,7 @@ static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
 	tmp[t] = a/video->channels;
     }
 
-    /* down/up-sample to 44khz */
+    /* down/up-sample to the desired input samplerate (swf_mp3_in_samplerate) */
     for(t=0;t<len;t++) {
 	data[t] = tmp[(int)pos];
 	pos+=ratio;
@@ -190,7 +191,9 @@ static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
 
 extern int swf_mp3_channels;
 extern int swf_mp3_bitrate;
-extern int swf_mp3_samplerate;
+extern int swf_mp3_out_samplerate;
+extern int swf_mp3_in_samplerate;
+
 static void writeAudioForOneFrame(v2swf_internal_t* i)
 {
     int blocksize; 
@@ -208,8 +211,8 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     if(i->video->channels<=0 || i->video->rate<=0)
 	return; /* no sound in video */
 
-    blocksize = 576; /* 11khz samples per mp3 block */
-    blockspersecond = 11025.0/blocksize;
+    blocksize = (i->samplerate > 22050) ? 1152 : 576;
+    blockspersecond = ((double)i->samplerate)/blocksize;
 
     /* notice: for framerates greater than about 35, audio starts getting choppy. */
     framespersecond = i->framerate;
@@ -221,6 +224,12 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
     msg("samplesperblock: %f", samplesperblock);
 
     if(!i->soundstreamhead) {
+	swf_mp3_out_samplerate = i->samplerate;
+	/* The pre-processing of sound samples in getSamples(..) above
+	   re-samples the sound to swf_mp3_in_samplerate. It is best to
+	   simply make it the original samplerate:  */
+	swf_mp3_in_samplerate = i->video->rate;
+
 	/* first run - initialize */
 	swf_mp3_channels = 1;//i->video->channels;
 	swf_mp3_bitrate = i->bitrate;
@@ -257,7 +266,7 @@ static void writeAudioForOneFrame(v2swf_internal_t* i)
 
     /* write num frames, max 1 block */
     for(pos=0;pos<num;pos++) {
-	if(!getSamples(i->video, block1, 576*4, speedup)) { /* 4 = 44100/11025 */
+        if(!getSamples(i->video, block1, blocksize * (double)swf_mp3_in_samplerate/swf_mp3_out_samplerate, speedup)) {
 	    i->video->rate = i->video->channels = 0; //end of soundtrack
 	    return;
 	}
@@ -781,6 +790,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     i->keyframe_interval = 8;
     i->quality = 20;
     i->scale = 65536;
+    i->samplerate = 11025;
     i->prescale = 0;
     i->head_done = 0;
     i->diffmode = DIFFMODE_QMEAN;
@@ -875,6 +885,8 @@ void v2swf_setparameter(v2swf_t*v2swf, char*name, char*value)
 	i->blockdiff = atoi(value);
     } else if(!strcmp(name, "fixheader")) {
 	i->fixheader = atoi(value);
+    } else if(!strcmp(name, "samplerate")) {
+	i->samplerate = atoi(value);
     } else if(!strcmp(name, "framerate")) {
 	i->framerate = atof(value);
 	i->fpsratio = i->framerate / i->video->fps;
