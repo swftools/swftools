@@ -589,7 +589,7 @@ void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 
 SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
 
-void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text);
+void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, char*text);
 
 // swffont.c
 
