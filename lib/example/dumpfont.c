@@ -81,9 +81,20 @@ void DumpFont(SWFFONT * f,char * name)
 
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
-    { printf("  addGlyph(f,%3i, 0x%03x,%4i, &Glyphs_%s[0x%04x],%4i); // %c\n",
-             i, f->glyph2ascii[i], f->glyph[i].advance, name, gpos[i],
-             f->glyph[i].shape->bitlen,PRINTABLE(f->glyph2ascii[i]));
+    { 
+	printf("  addGlyph(f,%3i, 0x%03x,%4i, &Glyphs_%s[0x%04x], %4i, ",
+	       i, f->glyph2ascii[i], f->glyph[i].advance, name, gpos[i],
+	       f->glyph[i].shape->bitlen);
+	if(f->layout && f->layout->bounds) {
+	    printf("%d, %d, %d, %d);",
+		    f->layout->bounds[i].xmin,
+		    f->layout->bounds[i].ymin,
+		    f->layout->bounds[i].xmax,
+		    f->layout->bounds[i].ymax);
+        } else {
+	    printf("/* bbox not set */ 0, 0, 0, 0);");
+	}
+	printf(" // %c\n", PRINTABLE(f->glyph2ascii[i]));
     }
 
   printf("  return f;\n}\n\n");
@@ -91,7 +102,7 @@ void DumpFont(SWFFONT * f,char * name)
 }
 
 void DumpGlobal(char * funcname)
-{ printf("\nvoid %s(SWFFONT * f,int i,U16 ascii,U16 advance,U8 * data,U32 bitlen)\n",funcname);
+{ printf("\nvoid %s(SWFFONT * f,int i,U16 ascii,U16 advance,U8 * data,U32 bitlen,int xmin,int ymin,int xmax, int ymax)\n",funcname);
   printf("{ SHAPE * s;\n  U32 l = (bitlen+7)/8;\n\n");
   printf("  if (FAILED(swf_ShapeNew(&s))) return;\n");
   printf("  s->data = malloc(l);\n");
@@ -102,6 +113,12 @@ void DumpGlobal(char * funcname)
   printf("  f->glyph[i].shape     = s;\n");
   printf("  s->bitlen             = bitlen;\n");
   printf("  s->bits.fill          = 1;\n");
+  printf("  if(f->layout && f->layout->bounds)\n");
+  printf("  {  f->layout->bounds[i].xmin = xmin;\n");
+  printf("     f->layout->bounds[i].ymin = ymin;\n");
+  printf("     f->layout->bounds[i].xmax = xmax;\n");
+  printf("     f->layout->bounds[i].ymax = ymax;\n");
+  printf("  }\n");
   printf("  memcpy(s->data,data,l);\n}\n\n");
 }
 
