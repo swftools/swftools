@@ -36,6 +36,8 @@ typedef struct _tag_internals
     void (*dealloc)(struct _tag_internals*);
     int datasize;
     void*data;
+    PyObject* (*getattr)(struct _tag_internals*, char* a);
+    int (*setattr)(struct _tag_internals*, char* a, PyObject*val);
     PyMethodDef* tagfunctions;
     TAG*tag;
     PyObject* tagmap;
