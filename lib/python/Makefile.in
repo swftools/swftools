@@ -3,7 +3,8 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: mypython swfpython SWF.$(SLEXT) testmem
+all: SWF.$(SLEXT)
+exe: mypython$(E) swfpython$(E) testmem$(E)
 
 primitives.o: primitives.c primitives.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c primitives.c -o primitives.o
@@ -28,14 +29,16 @@ SWF.o: SWF.c pyutils.h primitives.h taglist.h
 SWF.$(SLEXT): SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
 	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 
-mypython: mypython.c Makefile
-	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython $(PYTHON_LIB)
+#TODO:
+install:
 
-swfpython: swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o tags.o action.o pyutils.o SWF.o
-	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) swfpython.c -o swfpython $(PYTHON_LIB) ../librfxswf.a $(LIBS)
-
-testmem: testmem.c Makefile
-	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem $(PYTHON_LIB) $(LIBS)
+# for debugging:
+mypython$(E): mypython.c Makefile
+	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython$(E) $(PYTHON_LIB)
+swfpython$(E): swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o tags.o action.o pyutils.o SWF.o
+	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) swfpython.c -o swfpython$(E) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
+testmem$(E): testmem.c Makefile
+	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem$(E) $(PYTHON_LIB) $(LIBS)
 
 test: test6
 
