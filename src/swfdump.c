@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 
@@ -216,19 +217,19 @@ void textcallback(int*glyphs, int nr, int fontid)
 	    break;
 	}
     }
-    if(font<0) {
-	printf("\n");
-	return; // todo: should we report this? (may only be that it's a definefont without fontinfo)
-    }
 
     for(t=0;t<nr;t++)
     {
 	unsigned char a; 
-	if(glyphs[t] >= fonts[font]->numchars)
-	    continue;
-	a = fonts[font]->glyph2ascii[glyphs[t]];
+	if(font>=0) {
+	    if(glyphs[t] >= fonts[font]->numchars)
+		continue;
+	    a = fonts[font]->glyph2ascii[glyphs[t]];
+	} else {
+	    a = glyphs[t];
+	}
 	if(a>=32)
-	    printf("%c", a);
+	    printf("%c", a,a);
 	else
 	    printf("\\x%x", (int)a);
     }
@@ -356,8 +357,21 @@ void fontcallback1(U16 id,U8 * name)
 }
 
 void fontcallback2(U16 id,U8 * name)
-{ swf_FontExtract(&swf,id,&fonts[fontnum]);
+{ 
+  swf_FontExtract(&swf,id,&fonts[fontnum]);
   fontnum++;
+}
+
+void dumperror(const char* format, ...)
+{
+    char buf[1024];
+    va_list arglist;
+
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+
+    printf("==== Error: %s ====\n", buf);
 }
 
 int main (int argc,char ** argv)
@@ -402,7 +416,7 @@ int main (int argc,char ** argv)
 #ifdef HAVE_STAT
     fstat(f, &statbuf);
     if(statbuf.st_size != swf.FileSize)
-        fprintf(stderr, "Error: Real Filesize (%d) doesn't match header Filesize (%d)",
+        dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
                 statbuf.st_size, swf.FileSize);
 #endif
 
@@ -469,7 +483,7 @@ int main (int argc,char ** argv)
         char*name = swf_TagGetName(tag);
         char myprefix[128];
         if(!name) {
-            fprintf(stderr, "Error: Unknown tag:0x%03x\n", tag->id);
+            dumperror("Unknown tag:0x%03x", tag->id);
             tag = tag->next;
             continue;
         }
@@ -482,33 +496,51 @@ int main (int argc,char ** argv)
 
         if(swf_isDefiningTag(tag)) {
             U16 id = swf_GetDefineID(tag);
-            printf(" defines id %04x", id);
+            printf(" defines id %04d", id);
             if(idtab[id])
-                fprintf(stderr, "Error: Id %04x is defined more than once.\n", id);
+                dumperror("Id %04d is defined more than once.", id);
             idtab[id] = 1;
         }
 	else if(swf_isPseudoDefiningTag(tag)) {
             U16 id = swf_GetDefineID(tag);
-            printf(" adds information to id %04x", id);
+            printf(" adds information to id %04d", id);
             if(!idtab[id])
-                fprintf(stderr, "Error: Id %04x is not yet defined.\n", id);
+                dumperror("Id %04d is not yet defined.\n", id);
 	}
-        else if(tag->id == ST_PLACEOBJECT || 
-                tag->id == ST_PLACEOBJECT2) {
-            printf(" places id %04x at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
+        else if(tag->id == ST_PLACEOBJECT) {
+            printf(" places id %04d at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
             if(swf_GetName(tag))
                 printf(" name \"%s\"",swf_GetName(tag));
         }
+	else if(tag->id == ST_PLACEOBJECT2) {
+	    if(tag->data[0]&1)
+		printf(" moves");
+	    else
+		printf(" places");
+	    
+	    if(tag->data[0]&2)
+		printf(" id %04d",swf_GetPlaceID(tag));
+	    else
+		printf(" object");
+
+            printf(" at depth %04d", swf_GetDepth(tag));
+            if(swf_GetName(tag))
+                printf(" name \"%s\"",swf_GetName(tag));
+	}
         else if(tag->id == ST_REMOVEOBJECT) {
-            printf(" removes id %04x from depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
+            printf(" removes id %04d from depth %04d", swf_GetPlaceID(tag), swf_GetDepth(tag));
         }
         else if(tag->id == ST_REMOVEOBJECT2) {
-            printf(" removes object from depth %04x", swf_GetDepth(tag));
+            printf(" removes object from depth %04d", swf_GetDepth(tag));
         }
+	else if(tag->id == ST_STARTSOUND) {
+	    printf(" starts id %04d", swf_GetPlaceID(tag));
+	}
 	else if(tag->id == ST_FRAMELABEL) {
 	    printf(" \"%s\"", tag->data);
-	    if(framelabel) {
-		fprintf(stderr, "Error: Frame %d has more than one label\n", 
+	    if((framelabel && !issprite) ||
+	       (spriteframelabel && issprite)) {
+		dumperror("Frame %d has more than one label", 
 			issprite?spriteframe:mainframe);
 	    }
 	    if(issprite) spriteframelabel = tag->data;
@@ -557,7 +589,7 @@ int main (int argc,char ** argv)
         if(tag->id == ST_DEFINESPRITE) {
             sprintf(prefix, "         ");
 	    if(issprite) {
-		fprintf(stderr, "Error: Sprite definition inside a sprite definition");
+		dumperror("Sprite definition inside a sprite definition");
 	    }
 	    issprite = 1;
 	    spriteframe = 0;
@@ -566,8 +598,9 @@ int main (int argc,char ** argv)
         else if(tag->id == ST_END) {
             *prefix = 0;
 	    issprite = 0;
+	    spriteframelabel = 0;
 	    if(tag->len)
-		fprintf(stderr, "Error: End Tag not empty");
+		dumperror("End Tag not empty");
         }
         else if(tag->id == ST_DOACTION && action) {
             ActionTAG*actions;
@@ -601,6 +634,7 @@ int main (int argc,char ** argv)
 	    }
 	}
         tag = tag->next;
+	fflush(stdout);
     }
 
     swf_FreeTags(&swf);
