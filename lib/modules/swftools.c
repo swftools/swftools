@@ -1074,3 +1074,41 @@ void swf_Optimize(SWF*swf)
     rfx_free(id2tag);
     rfx_free(hashmap);
 }
+
+void swf_SetDefineBBox(TAG * tag, SRECT newbbox)
+{
+    U16 id = 0;
+    SRECT b1;
+    swf_SetTagPos(tag,0);
+
+    switch (swf_GetTagID(tag))
+    { 
+	case ST_DEFINESHAPE:
+	case ST_DEFINESHAPE2:
+	case ST_DEFINESHAPE3:
+	case ST_DEFINEEDITTEXT:
+	case ST_DEFINETEXT:
+	case ST_DEFINETEXT2:
+	case ST_DEFINEVIDEOSTREAM: {
+	      U32 after_bbox_offset = 0, len;
+	      U8*data;
+	      id = swf_GetU16(tag);
+	      swf_GetRect(tag, &b1);
+	      swf_ResetReadBits(tag);
+	      after_bbox_offset = tag->pos;
+	      len = tag->len - after_bbox_offset;
+	      data = malloc(len);
+	      memcpy(data, &tag->data[after_bbox_offset], len);
+	      tag->writeBit = 0;
+	      tag->len = 2;
+	      swf_SetRect(tag, &newbbox);
+	      swf_SetBlock(tag, data, len);
+	      free(data);
+	      tag->pos = tag->readBit = 0;
+
+	} break;
+	default:
+	    fprintf(stderr, "rfxswf: Tag %d (%s) has no bbox\n", tag->id, swf_TagGetName(tag));
+    }
+}
+
