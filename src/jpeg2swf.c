@@ -109,14 +109,30 @@ TAG * MovieAddFrame(SWF * swf,TAG * t,char * sname,int quality,int scale,int id)
   
         out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
         scanline = (U8*)malloc(4*cinfo.output_width);
-  
+ 
+	// the following code is a duplication of swf_SetJPEGBits in ../lib/modules/swfbits.c
         if (scanline)
         { int y;
           U8 * js = scanline;
-          for (y=0;y<cinfo.output_height;y++)
-          { jpeg_read_scanlines(&cinfo,&js,1);
-            swf_SetJPEGBitsLines(out,(U8**)&js,1);
-          }
+
+	  if(cinfo.out_color_space == JCS_GRAYSCALE) 
+	  {
+	      for (y=0;y<cinfo.output_height;y++)
+	      { int x;
+		jpeg_read_scanlines(&cinfo,&js,1);
+		for(x=cinfo.output_width-1;x>=0;x--) {
+		    js[x*3] = js[x*3+1] = js[x*3+2] = js[x];
+		}
+		swf_SetJPEGBitsLines(out,(U8**)&js,1);
+	      }
+	  }
+	  else if(cinfo.out_color_space == JCS_RGB) 
+	  {
+	      for (y=0;y<cinfo.output_height;y++)
+	      { jpeg_read_scanlines(&cinfo,&js,1);
+		swf_SetJPEGBitsLines(out,(U8**)&js,1);
+	      }
+	  }
           free(scanline);
         }
         
