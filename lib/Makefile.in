@@ -7,6 +7,7 @@ all: librfxswf.a q.o
 
 lame_objects =  lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
 h263_objects = h.263/dct.o h.263/h263tables.o h.263/swfvideo.o
+actioncompiler_objects = action/assembler.o action/compile.o action/lex.swf4.o action/lex.swf5.o action/libming.o action/swf4compiler.tab.o action/swf5compiler.tab.o action/actioncompiler.o
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c h.263/swfvideo.c
 
 bitio.o: bitio.c bitio.h
@@ -24,6 +25,8 @@ rfxswf.o: rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules)
 
 $(lame_objects):
 	cd lame;make all;cd ..
+$(actioncompiler_objects):
+	cd action;make all;cd ..
 
 h.263/dct.o:
 	$(C) h.263/dct.c -o h.263/dct.o
@@ -32,8 +35,8 @@ h.263/h263tables.o:
 h.263/swfvideo.o:
 	$(C) h.263/swfvideo.c -o h.263/swfvideo.o
 
-librfxswf.a: rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects)
-	$(AR) r librfxswf.a rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects)
+librfxswf.a: rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+	$(AR) r librfxswf.a rfxswf.o drawer.o bitio.o log.o MD5.o $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(RANLIB) librfxswf.a
 
 install:
@@ -43,4 +46,5 @@ clean:
 	rm -f *.o *.lo *.a *.la gmon.out
 	cd lame;$(MAKE) clean;cd ..
 	cd h.263;$(MAKE) clean;cd ..
+	cd action;$(MAKE) clean;cd ..
 
