@@ -745,8 +745,8 @@ void action_GetUrl(char* url, char* label)
     int l2= strlen(label);
     char*ptr = malloc(l1+l2+2);
     strcpy(ptr, url);
-    strcat(&ptr[l2+1], label);
-    swf_AddActionTAG(ACTION_GETURL, ptr, strlen(ptr));
+    strcpy(&ptr[l1+1], label);
+    swf_AddActionTAG(ACTION_GETURL, ptr, l1+l2+2);
 }
 //TODO:
 void action_DefineFunction(U8*data, int len) {}
