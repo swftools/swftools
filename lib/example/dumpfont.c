@@ -71,14 +71,14 @@ void DumpFont(SWFFONT * f,char * name)
   printf("  f->ascii2glyph = (int*)malloc(sizeof(int)*%d);\n",f->maxascii);
   printf("  memset(f->ascii2glyph, -1, sizeof(int)*%d);\n\n", f->maxascii);
   if(f->layout) {
-      printf("  f->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));");
-      printf("  f->layout->ascent = %d;", f->layout->ascent);
-      printf("  f->layout->descent = %d;", f->layout->descent);
-      printf("  f->layout->leading = %d;", f->layout->leading);
-      printf("  f->layout->kerningcount = 0;");
-      printf("  f->layout->kerning = 0;");
-      printf("  f->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*%d);", f->numchars);
-      printf("  memset(f->layout->bounds, 0, malloc(sizeof(SRECT)*%d));", f->numchars);
+      printf("  f->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));\n");
+      printf("  f->layout->ascent = %d;\n", f->layout->ascent);
+      printf("  f->layout->descent = %d;\n", f->layout->descent);
+      printf("  f->layout->leading = %d;\n", f->layout->leading);
+      printf("  f->layout->kerningcount = 0;\n");
+      printf("  f->layout->kerning = 0;\n");
+      printf("  f->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*%d);\n", f->numchars);
+      printf("  memset(f->layout->bounds, 0, sizeof(SRECT)*%d);\n\n", f->numchars);
   }
 
   for (i=0;i<f->numchars;i++)
