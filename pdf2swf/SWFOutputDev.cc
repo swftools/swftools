@@ -217,11 +217,16 @@ public:
 			 GBool inlineImg);
 
   private:
+  void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
+				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
+				   GBool inlineImg, int mask);
   int clipping[32];
   int clippos;
 
   int setT1Font(char*name,FontEncoding*enc);
   int t1id;
+  int jpeginfo; // did we write "Page contains jpegs" yet?
+  int pbminfo; // did we write "Page contains jpegs" yet?
 };
 
 char mybuf[1024];
@@ -488,7 +493,7 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
 
 void SWFOutputDev::stroke(GfxState *state) 
 {
-    logf("<debug> %s stroke\n",gfxstate2str(state));
+    logf("<debug> stroke\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -499,7 +504,7 @@ void SWFOutputDev::stroke(GfxState *state)
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
-    logf("<debug> %s fill\n",gfxstate2str(state));
+    logf("<debug> fill\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -510,7 +515,7 @@ void SWFOutputDev::fill(GfxState *state)
 }
 void SWFOutputDev::eoFill(GfxState *state) 
 {
-    logf("<debug> %s eofill\n",gfxstate2str(state));
+    logf("<debug> eofill\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -521,7 +526,7 @@ void SWFOutputDev::eoFill(GfxState *state)
 }
 void SWFOutputDev::clip(GfxState *state) 
 {
-    logf("<debug> %s clip\n",gfxstate2str(state));
+    logf("<debug> clip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -532,7 +537,7 @@ void SWFOutputDev::clip(GfxState *state)
 }
 void SWFOutputDev::eoClip(GfxState *state) 
 {
-    logf("<debug> %s eoclip\n",gfxstate2str(state));
+    logf("<debug> eoclip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -561,7 +566,7 @@ GBool SWFOutputDev::useDrawChar()
 void SWFOutputDev::beginString(GfxState *state, GString *s) 
 { 
     double m11,m21,m12,m22;
-    logf("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
+    logf("<debug> beginstring \"%s\"\n", s->getCString());
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
@@ -571,7 +576,7 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
 int charcounter = 0;
 void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, double dy, Guchar c) 
 {
-    logf("<debug> %s drawChar(%f,%f,%f,%f,'%c')\n",gfxstate2str(state), x,y,dx,dy,c);
+    logf("<debug> drawChar(%f,%f,%f,%f,'%c')\n",x,y,dx,dy,c);
     // check for invisible text -- this is used by Acrobat Capture
     if ((state->getRender() & 3) != 3)
     {
@@ -588,20 +593,22 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, doub
 
 void SWFOutputDev::drawChar16(GfxState *state, double x, double y, double dx, double dy, int c) 
 {
-    printf("<error> %s drawChar16(%f,%f,%f,%f,%08x)\n",gfxstate2str(state), x,y,dx,dy,c);
+    printf("<error> drawChar16(%f,%f,%f,%f,%08x)\n",x,y,dx,dy,c);
     exit(1);
 }
 
 void SWFOutputDev::endString(GfxState *state) 
 { 
-    logf("<debug> %s endstring\n", gfxstate2str(state));
+    logf("<debug> endstring\n");
 }    
 
 void SWFOutputDev::startPage(int pageNum, GfxState *state) 
 {
   double x1,y1,x2,y2;
-  logf("<debug> %s, startPage %d\n", gfxstate2str(state), pageNum);
+  logf("<debug> startPage %d\n", pageNum);
   logf("<notice> processing page %d", pageNum);
+  jpeginfo = 0;
+  pbminfo = 0;
 
   state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
@@ -681,14 +688,14 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 }
 
 void SWFOutputDev::saveState(GfxState *state) {
-  logf("<debug> %s saveState\n", gfxstate2str(state));
+  logf("<debug> saveState\n");
   updateAll(state);
   clippos ++;
   clipping[clippos] = 0;
 };
 
 void SWFOutputDev::restoreState(GfxState *state) {
-  logf("<debug> %s restoreState\n", gfxstate2str(state));
+  logf("<debug> restoreState\n");
   updateAll(state);
   if(clipping[clippos])
       swfoutput_endclip(&output);
@@ -936,9 +943,10 @@ void SWFOutputDev::updateFont(GfxState *state)
       unlink(fileName);
 }
 
-void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-				   int width, int height, GBool invert,
-				   GBool inlineImg) {
+void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
+				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
+				   GBool inlineImg, int mask)
+{
   FILE *fi;
   int c;
   char fileName[128];
@@ -948,9 +956,16 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   state->transform(1, 0, &x3, &y3);
   state->transform(1, 1, &x4, &y4);
 
-  if (str->getKind() == strDCT) {
+  if (str->getKind() == strDCT &&
+      (colorMap->getNumPixelComps() == 3 || !mask) )
+  {
     sprintf(fileName, "/tmp/tmp%08x.jpg",lrand48());
-    logf("<notice> Found picture. Temporary storage is %s", fileName);
+    logf("<verbose> Found jpeg. Temporary storage is %s", fileName);
+    if(!jpeginfo)
+    {
+	logf("<notice> Page contains jpeg pictures");
+	jpeginfo = 1;
+    }
     if (!(fi = fopen(fileName, "wb"))) {
       logf("<error> Couldn't open temporary image file '%s'", fileName);
       return;
@@ -963,40 +978,26 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     swfoutput_drawimagefile(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
     unlink(fileName);
   } else {
-      logf("<notice> File contains pbm pictures.");
+      if(!pbminfo)
+      {
+	  logf("<notice> Page contains pbm pictures");
+	  pbminfo = 1;
+      }
   }
+}
+
+void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
+				   int width, int height, GBool invert,
+				   GBool inlineImg) 
+{
+  drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1);
 }
 
 void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap, GBool inlineImg) {
-  FILE *fi;
-  int c;
-  char fileName[128];
-  double x1,y1,x2,y2,x3,y3,x4,y4;
-  state->transform(0, 1, &x1, &y1);
-  state->transform(0, 0, &x2, &y2);
-  state->transform(1, 0, &x3, &y3);
-  state->transform(1, 1, &x4, &y4);
-
-  if (str->getKind() == strDCT &&
-      colorMap->getNumPixelComps() == 3) {
-    sprintf(fileName, "/tmp/tmp%08x.jpg", lrand48());
-    logf("<notice> Found picture. Temporary storage is %s", fileName);
-    if (!(fi = fopen(fileName, "wb"))) {
-      error(-1, "Couldn't open temporary image file '%s'", fileName);
-      return;
-    }
-    str = ((DCTStream *)str)->getRawStream();
-    str->reset();
-    while ((c = str->getChar()) != EOF)
-      fputc(c, fi);
-    fclose(fi);
-    swfoutput_drawimagefile(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
-    unlink(fileName);
-  } else {
-      logf("<notice> File contains pbm pictures.");
-  }
+			       GfxImageColorMap *colorMap, GBool inlineImg) 
+{
+  drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0);
 }
 
 PDFDoc*doc = 0;
@@ -1077,6 +1078,23 @@ void pdfswf_init(char*filename, char*userPassword)
   output = new SWFOutputDev();
 }
 
+void pdfswf_drawonlyshapes()
+{
+    drawonlyshapes = 1;
+}
+
+void pdfswf_ignoredraworder()
+{
+    ignoredraworder = 1;
+}
+
+void pdfswf_jpegquality(int val)
+{
+    if(val<0) val=0;
+    if(val>100) val=100;
+    jpegquality = val;
+}
+
 void pdfswf_setoutputfilename(char*_filename)
 {
     swffilename = _filename;
@@ -1092,11 +1110,12 @@ int pdfswf_numpages()
   return doc->getNumPages();
 }
 
+int closed=0;
 void pdfswf_close()
 {
-    delete doc;
+    logf("<debug> pdfswf.cc: pdfswf_close()");
     delete output;
-    
+    delete doc;
     freeParams();
     // check for memory leaks
     Object::memCheck(stderr);
