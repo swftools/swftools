@@ -189,7 +189,6 @@ U32   swf_GetU32(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
 void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
-void  swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2);
 
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
@@ -320,8 +319,19 @@ typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
   U32           bitlen;         // length of data in bits
 } SHAPE, * LPSHAPE;
 
-/* data/bitlen can be expanded into a SHAPELINE record using
-   parseShapeData: */
+/* SHAPE can be converted into SHAPE2: */
+
+struct _SHAPELINE;
+typedef struct _SHAPE2
+{
+    LINESTYLE * linestyles;
+    int numlinestyles;
+    FILLSTYLE* fillstyles;
+    int numfillstyles;
+    struct _SHAPELINE * lines;
+    SRECT* bbox; // may be NULL
+} SHAPE2;
+
 typedef struct _SHAPELINE
 {
     enum {moveTo, lineTo, splineTo} type;
@@ -330,7 +340,7 @@ typedef struct _SHAPELINE
     int fillstyle0;
     int fillstyle1;
     int linestyle;
-    struct _SHAPELINE*next;
+    struct _SHAPELINE * next;
 } SHAPELINE;
 
 // Shapes
@@ -360,7 +370,11 @@ int   swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
 int   swf_ShapeSetEnd(TAG * t);
 
 SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
-SRECT	   swf_GetBoundingBox(SHAPELINE*shape);
+SHAPE2*	   swf_ShapeToShape2(SHAPE*shape);
+SHAPE*	   swf_Shape2ToShape(SHAPE2*shape);
+SRECT	   swf_GetShapeBoundingBox(SHAPELINE*shape);
+int	   swf_SetShape2(TAG*tag, SHAPE2*shape);
+void	   swf_Shape2Free(SHAPE2 * s);
 
 // swffont.c
 
