@@ -27,12 +27,6 @@
 #define SF_LINE         0x08
 #define SF_NEWSTYLE     0x10
 
-#define FILL_SOLID      0x00
-#define FILL_LINEAR     0x10  // Gradient
-#define FILL_RADIAL     0x12
-#define FILL_TILED      0x40  // Bitmap
-#define FILL_CLIPPED    0x41
-
 void swf_ShapeFree(SHAPE * s)
 { 
     if(!s)
