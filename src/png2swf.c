@@ -315,11 +315,11 @@ void applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
     unsigned char lastr=0;
     unsigned char lastg=0;
     unsigned char lastb=0;
-    unsigned char lasta=0;
+    unsigned char lasta=0; //TODO: 255?
     unsigned char upperlastr=0;
     unsigned char upperlastg=0;
     unsigned char upperlastb=0;
-    unsigned char upperlasta=0;
+    unsigned char upperlasta=0; //TODO: 255?
 
     if(mode==0) {
 	for(x=0;x<width;x++) {
@@ -570,7 +570,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 
 	    if(!y) {
 		old = firstline;
-		memset(old, 0, header.width*4);
+		memset(old, 0, header.width*4); //TODO: fill alpha with 255?
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
