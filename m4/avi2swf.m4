@@ -1,10 +1,41 @@
 AC_DEFUN(RFX_CHECK_AVI2SWF,
 [
+
 AC_CHECK_PROGS(AVIFILE_CONFIG, avifile-config)
+
+if test "x$AVIFILE_CONFIG" '!=' "x";then
+    OLDCPPFLAGS="$CPPFLAGS"
+    #OLDLDFLAGS="$LDFLAGS"
+    CPPFLAGS="$CPPFLAGS $CXXFLAGS "`$AVIFILE_CONFIG --cflags`
+    #LDFLAGS="$LDFLAGS `$AVIFILE_CONFIG --libs`"
+    AC_CHECK_HEADERS(avifile/version.h version.h)
+    #LDFLAGS="$OLDLDFLAGS"
+    CPPFLAGS="$OLDCPPFLAGS"
+fi
+
 AC_MSG_CHECKING([whether we can compile the avifile test program])
 
+if test "x${ac_cv_header_version_h}" '=' "xyes";then
+    HAVE_VERSION_H_DEFINE='#define HAVE_VERSION_H'
+fi
+if test "x${ac_cv_header_avifile_version_h}" '=' "xyes";then
+    HAVE_AVIFILE_VERSION_H_DEFINE='#define HAVE_AVIFILE_VERSION_H'
+fi
+
 cat > conftest.cpp << EOF
-#include <avifile/version.h>
+
+// hack- we can't yet access the variables in config.h (because it hasn't been generated yet),
+// so we have to introduce them this way
+$HAVE_VERSION_H_DEFINE
+$HAVE_AVIFILE_VERSION_H_DEFINE
+
+#ifdef HAVE_VERSION_H
+  #include <version.h>
+#endif
+#ifdef HAVE_AVIFILE_VERSION_H
+  #include <avifile/version.h>
+#endif
+
 #if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
    #include <aviplay.h>
@@ -22,7 +53,7 @@ cat > conftest.cpp << EOF
    #define Bpp bpp
 #endif
 
-int test()
+void test()
 {
   IAviReadFile* player;
   IAviReadStream* astream;

@@ -91,6 +91,13 @@
 /* Define if you have the <zlib.h> header file.  */
 #undef HAVE_ZLIB_H
 
+/* Define if you have the <avifile/version.h> header file.  */
+#undef HAVE_AVIFILE_VERSION_H
+
+/* Define if you have the <version.h> header file.  */
+#undef HAVE_VERSION_H
+
+/* Define if you have the jpeg library (-ljpeg).  */
 /* Define if you have the jpeg library (-ljpeg).  */
 #undef HAVE_LIBJPEG
 

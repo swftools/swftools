@@ -41,7 +41,14 @@ extern "C" {
 #include "../lib/q.h"
 
 #undef HAVE_CONFIG_H
-#include <avifile/version.h>
+
+#ifdef HAVE_VERSION_H
+  #include <version.h>
+#endif
+#ifdef HAVE_AVIFILE_VERSION_H
+  #include <avifile/version.h>
+#endif
+
 #if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
    #include <aviplay.h>
