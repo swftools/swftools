@@ -1,0 +1,37 @@
+Usage: %s file.avi [-o output.swf]
+
+Converts an avi video file to SWF.
+
+Converts an AVI video file to SWF.
+.PP
+From Version 6 on, SWF supports h.263 video rendering. This tool generates,
+among some other formats (see below), SWF movies which contain such h.263 video 
+from AVI files.
+
+-h , --help
+    Print help and exit
+-o , --output filename
+    Specify output filename
+-A , --adjust seconds
+    Audio adjust: Shift sound -seconds to the future or +seconds into the past.
+-n , --num frames
+    Number of frames to encode
+-m , --mp3-bitrate <rate> (kbps)
+    Set the mp3 bitrate to encode audio with
+-r , --mp3-samplerate <rate> (Hz)
+    Set the mp3 samplerate to encode audio with (default: 11025)
+-d , --scale <val>
+    Scale down to factor <val>. (in %, e.g. 100 = original size)
+-p , --flip
+    Turn movie upside down
+-q , --quality <val>
+    Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)
+-x , --extragood
+    Enable some *very* expensive compression strategies.
+    Enable some \fIvery\fR expensive compression strategies. You may
+    want to let this run overnight.
+-T , --flashversion <n>
+    Set output flash version to <n>. Notice: H.263 compression will only be
+    used for n >= 6.
+-V , --version
+    Print program version and exit
