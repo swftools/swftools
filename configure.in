@@ -92,7 +92,7 @@ dnl Checks for library functions.
  AC_FUNC_MEMCMP
  AC_FUNC_MMAP
  AC_FUNC_VPRINTF
- AC_CHECK_FUNCS(getcwd putenv socket strcspn strdup strerror strstr)
+ AC_CHECK_FUNCS(getcwd putenv socket strcspn strdup strerror strstr lrand48 rand srand48 srand)
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
     AC_DEFINE_UNQUOTED(USE_GZIP, 1)
