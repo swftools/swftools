@@ -395,6 +395,7 @@ void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input)
     reader_resetbits(r);
 #else
     fprintf(stderr, "Error: swftools was compiled without zlib support");
+    exit(1);
 #endif
 }
 
