@@ -22,10 +22,10 @@ pdf2swf$(E): pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o xpdf/libp
 	$(LL) pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o -o pdf2swf$(E) ../lib/librfxswf.a ttf2pt1/ttf2pt1.a xpdf/libpdf.a $(LIBS) 
 	$(STRIP) pdf2swf$(E)
 
-xpdf/libpdf.a:
+xpdf/libpdf.a: xpdf/gfile.cc
 	cd xpdf;$(MAKE)
 
-ttf2pt1/ttf2pt1.a:
+ttf2pt1/ttf2pt1.a: ttf2pt1/ttf2pt1.c
 	cd ttf2pt1;$(MAKE)
 
 install:
