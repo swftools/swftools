@@ -2,7 +2,7 @@
    Create a video file.
 
    Part of the swftools package.
-   
+
    Copyright (c) 2003 Matthias Kramm <kramm@quiss.org> */
 
 #include <stdlib.h>
@@ -64,16 +64,16 @@ typedef struct _block_t
 } block_t;
 
 static int zigzagtable[64] = {
-    0, 1, 5, 6, 14, 15, 27, 28, 
-    2, 4, 7, 13, 16, 26, 29, 42, 
-    3, 8, 12, 17, 25, 30, 41, 43, 
-    9, 11, 18, 24, 31, 40, 44, 53, 
-    10, 19, 23, 32, 39, 45, 52, 54, 
-    20, 22, 33, 38, 46, 51, 55, 60, 
-    21, 34, 37, 47, 50, 56, 59, 61, 
+    0, 1, 5, 6, 14, 15, 27, 28,
+    2, 4, 7, 13, 16, 26, 29, 42,
+    3, 8, 12, 17, 25, 30, 41, 43,
+    9, 11, 18, 24, 31, 40, 44, 53,
+    10, 19, 23, 32, 39, 45, 52, 54,
+    20, 22, 33, 38, 46, 51, 55, 60,
+    21, 34, 37, 47, 50, 56, 59, 61,
     35, 36, 48, 49, 57, 58, 62, 63};
 
-static void zigzag(int*src) 
+static void zigzag(int*src)
 {
     int tmp[64];
     int t;
@@ -312,7 +312,6 @@ static void getmvdregion(block_t* bb, YUV*pic, int posx, int posy, int mvdx, int
 		}
 	    }
 	}
-	// todo: yhp==2
     } else if(yhp==1 || yhp==3) {
 	for(y=0;y<8;y++) {
 	    for(x=0;x<8;x++) {
@@ -339,7 +338,6 @@ static void getmvdregion(block_t* bb, YUV*pic, int posx, int posy, int mvdx, int
 		}
 	    }
 	}
-	// todo: yhp==3
     }
 
     /* u,v */
@@ -449,16 +447,16 @@ static void copyblock(VIDEOSTREAM*s, YUV*dest, block_t*b, int bx, int by)
 	for(x=0;x<8;x++) {
 	    int u,v,yy;
 	    p1[x+0].u = b->u[(y/2)*8+(x/2)];
-	    p1[x+0].v = b->v[(y/2)*8+(x/2)]; 
+	    p1[x+0].v = b->v[(y/2)*8+(x/2)];
 	    p1[x+0].y = b->y1[y*8+x];
 	    p1[x+8].u = b->u[(y/2)*8+(x/2)+4];
-	    p1[x+8].v = b->v[(y/2)*8+(x/2)+4]; 
+	    p1[x+8].v = b->v[(y/2)*8+(x/2)+4];
 	    p1[x+8].y = b->y2[y*8+x];
 	    p2[x+0].u = b->u[(y/2+4)*8+(x/2)];
-	    p2[x+0].v = b->v[(y/2+4)*8+(x/2)]; 
+	    p2[x+0].v = b->v[(y/2+4)*8+(x/2)];
 	    p2[x+0].y = b->y3[y*8+x];
 	    p2[x+8].u = b->u[(y/2+4)*8+(x/2)+4];
-	    p2[x+8].v = b->v[(y/2+4)*8+(x/2)+4]; 
+	    p2[x+8].v = b->v[(y/2+4)*8+(x/2)+4];
 	    p2[x+8].y = b->y4[y*8+x];
 	}
 	p1+=s->linex;
@@ -717,24 +715,24 @@ static void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
 
 static void quantize(block_t*fb, block_t*b, int has_dc, int quant)
 {
-    quantize8x8(fb->y1, b->y1, has_dc, quant); 
-    quantize8x8(fb->y2, b->y2, has_dc, quant); 
-    quantize8x8(fb->y3, b->y3, has_dc, quant); 
-    quantize8x8(fb->y4, b->y4, has_dc, quant); 
-    quantize8x8(fb->u, b->u, has_dc, quant);   
-    quantize8x8(fb->v, b->v, has_dc, quant);   
+    quantize8x8(fb->y1, b->y1, has_dc, quant);
+    quantize8x8(fb->y2, b->y2, has_dc, quant);
+    quantize8x8(fb->y3, b->y3, has_dc, quant);
+    quantize8x8(fb->y4, b->y4, has_dc, quant);
+    quantize8x8(fb->u, b->u, has_dc, quant);
+    quantize8x8(fb->v, b->v, has_dc, quant);
 }
 
 static void dodct(block_t*fb)
 {
-    dct(fb->y1); dct(fb->y2); dct(fb->y3); dct(fb->y4); 
-    dct(fb->u);  dct(fb->v);  
+    dct(fb->y1); dct(fb->y2); dct(fb->y3); dct(fb->y4);
+    dct(fb->u);  dct(fb->v);
     zigzag(fb->y1);
     zigzag(fb->y2);
     zigzag(fb->y3);
     zigzag(fb->y4);
     zigzag(fb->u);
-    zigzag(fb->v); 
+    zigzag(fb->v);
 }
 static void dodctandquant(block_t*fb, block_t*b, int has_dc, int quant)
 {
@@ -745,8 +743,8 @@ static void dodctandquant(block_t*fb, block_t*b, int has_dc, int quant)
 	return;
     }
     preparequant(quant);
-    dct2(fb->y1,b->y1); dct2(fb->y2,b->y2); dct2(fb->y3,b->y3); dct2(fb->y4,b->y4); 
-    dct2(fb->u,b->u);  dct2(fb->v,b->v);  
+    dct2(fb->y1,b->y1); dct2(fb->y2,b->y2); dct2(fb->y3,b->y3); dct2(fb->y4,b->y4);
+    dct2(fb->u,b->u);  dct2(fb->v,b->v);
 }
 
 static void doidct(block_t*b)
@@ -761,8 +759,8 @@ static void doidct(block_t*b)
 	fb.u[t] = b->u[zigzagtable[t]];
 	fb.v[t] = b->v[zigzagtable[t]];
     }
-    idct(fb.y1); idct(fb.y2); idct(fb.y3); idct(fb.y4); 
-    idct(fb.u);  idct(fb.v);  
+    idct(fb.y1); idct(fb.y2); idct(fb.y3); idct(fb.y4);
+    idct(fb.u);  idct(fb.v);
     for(t=0;t<64;t++) {
 	b->y1[t] = fb.y1[t];
 	b->y2[t] = fb.y2[t];
@@ -787,12 +785,12 @@ static void truncateblock(block_t*b)
 
 static void dequantize(block_t*b, int has_dc, int quant)
 {
-    dequantize8x8(b->y1, has_dc, quant); 
-    dequantize8x8(b->y2, has_dc, quant); 
-    dequantize8x8(b->y3, has_dc, quant); 
-    dequantize8x8(b->y4, has_dc, quant); 
-    dequantize8x8(b->u, has_dc, quant);   
-    dequantize8x8(b->v, has_dc, quant);   
+    dequantize8x8(b->y1, has_dc, quant);
+    dequantize8x8(b->y2, has_dc, quant);
+    dequantize8x8(b->y3, has_dc, quant);
+    dequantize8x8(b->y4, has_dc, quant);
+    dequantize8x8(b->u, has_dc, quant);
+    dequantize8x8(b->v, has_dc, quant);
 }
 
 static void getblockpatterns(block_t*b, int*cbpybits,int*cbpcbits, int has_dc)
@@ -842,7 +840,7 @@ static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int cbpcbits = 0, cbpybits=0;
 
     getregion(&fb, s->current, bx, by, s->width);
-    
+
     change_quant(*quant, &dquant);
     *quant+=dquant;
 
@@ -908,14 +906,14 @@ static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
 	    y2=s->mvdy[(by-1)*s->bbx+bx];
 	    if(bx<s->bbx-1) {
 		x3=s->mvdx[(by-1)*s->bbx+bx+1];
-		y3=s->mvdy[(by-1)*s->bbx+bx+1];		
+		y3=s->mvdy[(by-1)*s->bbx+bx+1];
 	    } else {
 		x3=y3=0;
 	    }
            }
     else   {x2=x3=x1;y2=y3=y1;}
 
-	   if((x1 <= x2 && x2 <= x3) || 
+	   if((x1 <= x2 && x2 <= x3) ||
 	      (x3 <= x2 && x2 <= x1)) {
 	x4=x2;
     } else if((x2 <= x1 && x1 <= x3) ||
@@ -926,7 +924,7 @@ static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
 	x4=x3;
     }
 
-	   if((y1 <= y2 && y2 <= y3) || 
+	   if((y1 <= y2 && y2 <= y3) ||
 	      (y3 <= y2 && y2 <= y1)) {
 	y4=y2;
     } else if((y2 <= y1 && y1 <= y3) ||
@@ -947,7 +945,7 @@ static inline int mvd2index(int px, int py, int x, int y, int xy)
     assert((x>=-32 && x<=31) && (y>=-32 && y<=31));
     //assert((x&1)==0 && (y&1)==0);//for now
     //assert((x&2)==0 && (y&2)==0);//for now(2)
-    
+
     x-=px;
     y-=py;
 
@@ -989,7 +987,10 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     int y_v00=0;
 
     diff = compareregions(s, bx, by);
+
     if(diff < 20 /*TODO: should be a parameter- good values are between 32 and 48 */) {
+	/* TODO: measure the error an I-block encoding would do, and base the decision
+	   on that */
 	swf_SetBits(tag, 1,1); /* cod=1, block skipped */
 	/* copy the region from the last frame so that we have a complete reconstruction */
 	copyregion(s, s->current, s->oldpic, bx, by);
@@ -1083,7 +1084,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     }
 
     if(bits_i > bits_v00)
-    { 
+    {
 	/* mvd (0,0) block (mode=0) */
 	int t;
 	mode = 0; // mvd w/o mvd24
@@ -1097,7 +1098,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 
 	/* vector */
 	codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 0));
-	codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 1)); 
+	codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, x_v00, y_v00, 1));
 	s->mvdx[by*s->bbx+bx] = x_v00;
 	s->mvdy[by*s->bbx+bx] = y_v00;
 
@@ -1110,7 +1111,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	/* chrominance */
 	encode8x8(tag, b.u, has_dc, cbpcbits&2);
 	encode8x8(tag, b.v, has_dc, cbpcbits&1);
-	
+
 	/* -- reconstruction -- */
 	dequantize(&b, 0, *quant);
 	doidct(&b);
@@ -1166,7 +1167,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     else exit(1);
 
     swf_SetBits(tag,0,1); /* cod - 1 if we're not going to code this block*/
-	
+
     codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
     codehuffman(tag, cbpy, (mode==3 || mode==4)?cbpybits:cbpybits^15);
 
@@ -1199,7 +1200,7 @@ void setdbgpic(TAG*tag, RGBA*pic, int width, int height)
 {
     MATRIX m;
     tag = tag->prev;
-    
+
     tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
     swf_SetU16(tag, 133);
 
@@ -1365,7 +1366,7 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
 		/* vector */
 		predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
 		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 0));
-		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 1)); 
+		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 1));
 		s->mvdx[by*s->bbx+bx] = mvx;
 		s->mvdy[by*s->bbx+bx] = mvy;
 	    } else {
@@ -1482,7 +1483,7 @@ int main(int argn, char*argv[])
 	d-=0.015;
     }
     swf_VideoStreamClear(&stream);
-   
+
     tag = swf_InsertTag(tag, ST_END);
 
     fi = open("video3.swf", O_WRONLY|O_CREAT|O_TRUNC, 0644);
