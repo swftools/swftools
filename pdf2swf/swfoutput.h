@@ -38,12 +38,14 @@ struct swfcoord {
 
 struct swfoutput 
 {
+    SWF swf;
     MATRIX fontmatrix;
     double fontm11,fontm12,fontm21,fontm22;
     SWFFONT *swffont;
     RGBA strokergb;
     RGBA fillrgb;
     int drawmode;
+    int x1,y1,x2,y2;
     void*internal;
 };
 
@@ -96,8 +98,9 @@ typedef SWF_PATHSEGMENT  SWF_OUTLINE;
 
 void swfoutput_setparameter(char*name, char*value);
 
-void swfoutput_init(struct swfoutput*, char*filename);
-void swfoutput_newpage(struct swfoutput*, int pageNum, int x1, int y1, int x2, int y2);
+void swfoutput_init(struct swfoutput*);
+int swfoutput_save(struct swfoutput*, char*filename);
+void swfoutput_newpage(struct swfoutput*, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2);
 void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
 int swfoutput_queryfont(struct swfoutput*, char*fontid);
 int getCharID(SWFFONT *font, int charnr, char *charname, int u);
