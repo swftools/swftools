@@ -305,9 +305,7 @@ int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
     img->ToYUV();
     img->ToRGB();
     if(img->Bpp() != 3) {
-	/* TODO: this doesn't work yet */
-	if(verbose) printf("Can't handle Bpp %d, shutting down...\n", img->Bpp());
-	return 0;
+	if(verbose) printf("Warning: converthing from bpp %d to bpp 3, this fails on older avifile versions...\n", img->Bpp());
 	BitmapInfo tmp(v->width, v->height, 24);
 	img2 = new CImage(img, &tmp);
 	img = img2;
