@@ -412,76 +412,73 @@ int swf_ShapeSetEnd(TAG * t)
 }
 
 int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
-{ U8 b;
-  if (!t) return -1;
-  swf_SetBits(t,3,2); // Straight Edge
-
-  if ((!s)||((x!=0)&&(y!=0)))
-  { b = swf_CountBits(x,2);
+{ 
+    U8 b;
+    if (!t) return -1;
+   
+    b = swf_CountBits(x,2);
     b = swf_CountBits(y,b);
     if (b<2) b=2;
-    if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(1)- %d (%d,%d)\n", b, x,y);
-	fflush(stdout);
-	b = 17;
+    if(b >= 18) {
+        if(b >= 18 + 4) {
+            /* do not split into more than 16 segments. If the line is *that* long, something's broken */
+            fprintf(stderr, "Warning: Line to %.2f,%.2f is too long", (double)x,(double)y);
+            return -1;
+        } else {
+            /* split line */
+            int x1,y1,x2,y2;
+            if(x>=0) { x1 = x/2;x2 = (x+1)/2;} 
+            else     { x1 = x/2;x2 = (x-1)/2;}
+            if(y>=0) { y1 = y/2;y2 = (y+1)/2;} 
+            else     { y1 = y/2;y2 = (y-1)/2;}
+            swf_ShapeSetLine(t, s, x1,y1);
+            swf_ShapeSetLine(t, s, x2,y2);
+            return 0;
+        }
     }
-    swf_SetBits(t, b-2, 4);
-    swf_SetBits(t,1,1);
-    swf_SetBits(t,x,b);
-    swf_SetBits(t,y,b);
-    return 0;
-  }
 
-  if (x==0)
-  { b = swf_CountBits(y,2);
-    if(b<2) 
-        b=2;
-    if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(2)- %d (%d)\n", b, y);
-	b = 17;
+    if(x!=0 && y!=0) { //(!s)||((x!=0)&&(y!=0)))
+        swf_SetBits(t,3,2); // Straight Edge
+        swf_SetBits(t, b-2, 4); //Number of Bits in x/y
+        swf_SetBits(t,1,1); // Diagonal
+        swf_SetBits(t,x,b);
+        swf_SetBits(t,y,b);
+    } else if (x==0) {
+        swf_SetBits(t,3,2); // Straight Edge
+        swf_SetBits(t, b-2, 4); //Number of Bits in y
+        swf_SetBits(t,1,2); // Vertical
+        swf_SetBits(t,y,b);
+    } else {
+        swf_SetBits(t,3,2); // Straight Edge
+        swf_SetBits(t, b-2, 4); //Number of Bits in x
+        swf_SetBits(t,0,2); // Horizontal
+        swf_SetBits(t,x,b);
     }
-    swf_SetBits(t, b-2, 4);
-    swf_SetBits(t,1,2);
-    swf_SetBits(t,y,b);
-  } 
-  else
-  { b = swf_CountBits(x,2);
-    if(b<2) 
-        b=2;
-    if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(3)- %d (%d)\n", b, x);
-	b = 17;
-    }
-    swf_SetBits(t, b-2, 4);
-    swf_SetBits(t,0,2);
-    swf_SetBits(t,x,b);
-  }
-  return 0;
+    return 0;
 }
 
 int swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
-{ U8 b;
-  if (!t) return -1;
+{ 
+    U8 b;
+    if (!t) return -1;
 
-  swf_SetBits(t,2,2);
+    b = swf_CountBits(ax,2);
+    b = swf_CountBits(ay,b);
+    b = swf_CountBits(x,b);
+    b = swf_CountBits(y,b);
 
-  b = swf_CountBits(ax,2);
-  b = swf_CountBits(ay,b);
-  b = swf_CountBits(x,b);
-  b = swf_CountBits(y,b);
+    if(b >= 18) {
+          fprintf(stderr, "Bit overflow in swf_ShapeSetCurve- %d (%d,%d,%d,%d)\n", b, ax,ay,x,y);
+          b = 17;
+    }
 
-  if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetCurve- %d (%d,%d,%d,%d)\n", b, ax,ay,x,y);
-	b = 17;
-  }
-
-  swf_SetBits(t,b-2,4);
-  swf_SetBits(t,x,b);
-  swf_SetBits(t,y,b);
-  swf_SetBits(t,ax,b);
-  swf_SetBits(t,ay,b);
-
-  return 0;
+    swf_SetBits(t,2,2);
+    swf_SetBits(t,b-2,4);
+    swf_SetBits(t,x,b);
+    swf_SetBits(t,y,b);
+    swf_SetBits(t,ax,b);
+    swf_SetBits(t,ay,b);
+    return 0;
 }
 
 int swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry)
