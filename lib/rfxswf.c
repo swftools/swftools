@@ -179,6 +179,13 @@ int swf_SetU16(TAG * t,U16 v)
   t->data[t->len++] = a[1];
   return 0;
 }
+void swf_SetS16(TAG * t,int v)
+{
+    if(v>32767 || v<-32768) {
+	fprintf(stderr, "Warning: S16 overflow: %d\n", v);
+    }
+    swf_SetU16(t, (S16)v);
+}
 
 int swf_SetU32(TAG * t,U32 v)
 { U8 a[4];
