@@ -91,7 +91,7 @@ SWFFONT * t1font2swffont(int i)
     for(s=0;s<encodingsize;s++)
     {
 	if(encoding[s]) {
-	    T1_OUTLINE*outline = font->getOutline(encoding[s]);
+	    T1_OUTLINE*outline = font->getOutline(encoding[s], 0);
 	    if(outline && outline->link)
 		num++;
 	}
@@ -122,7 +122,7 @@ SWFFONT * t1font2swffont(int i)
     for(s=0;s<encodingsize;s++)
     {
 	if(encoding[s]) {
-	    T1_OUTLINE*outline = font->getOutline(encoding[s]);
+	    T1_OUTLINE*outline = font->getOutline(encoding[s],0);
 	    int width = font->getWidth(encoding[s]);
 	    if(outline && outline->link) {
 		int log = 0;
