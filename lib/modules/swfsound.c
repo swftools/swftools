@@ -54,6 +54,8 @@ void swf_SetSoundStreamBlock(TAG*tag, U16*samples, int numsamples)
     len += codecFlush (&buf[len]);
     len += codecExit(&buf[len]);
 
+    swf_SetU16(tag, numsamples); // number of samples
+    swf_SetU16(tag, 0); // seek
     swf_SetBlock(tag, buf, len);
     free(buf);
 }
