@@ -1,0 +1,93 @@
+top_builddir = ../..
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+include ../../Makefile.common
+
+# in case we need to get more information out of bison
+#BISONDEBUG = --debug
+# In case we need to get more information out of flex
+#FLEXDEBUG = -d
+
+OBJECTS = compile.o listaction.o \
+          lex.swf4.o lex.swf5.o swf5compiler.tab.o swf4compiler.tab.o \
+          assembler.o libming.o actioncompiler.o
+
+COMPILER_FILES = action.h assembler.c assembler.h compile.c compile.h \
+		 listaction.c swf4compiler.flex swf4compiler.y swf5compiler.flex swf5compiler.y
+
+GENERATED = lex.swf4.c lex.swf5.c swf5compiler.tab.c swf4compiler.tab.c
+
+all: $(OBJECTS) test main
+
+# === GENERATED FILES ===
+
+swf5compiler.tab.c: swf5compiler.y
+	bison -p swf5 swf5compiler.y
+
+swf5compiler.tab.h: swf5compiler.y
+	bison --defines $(BISONDEBUG) -p swf5 swf5compiler.y
+
+swf4compiler.tab.c: swf4compiler.y
+	bison -p swf4 swf4compiler.y
+
+swf4compiler.tab.h: swf4compiler.y
+	bison --defines $(BISONDEBUG) -p swf4 swf4compiler.y
+
+lex.swf4.c: swf4compiler.flex swf4compiler.tab.h
+	flex $(FLEXDEBUG) -i -Pswf4 swf4compiler.flex
+
+lex.swf5.c: swf5compiler.flex swf5compiler.tab.h
+	flex $(FLEXDEBUG) -i -Pswf5 swf5compiler.flex
+
+# === OBJECTS ===
+
+lex.swf4.o: lex.swf4.c
+	$(C) lex.swf4.c -o lex.swf4.o
+
+lex.swf5.o: lex.swf5.c
+	$(C) lex.swf5.c -o lex.swf5.o
+
+compile.o: compile.c compile.h libming.h action.h blocks/error.h
+	$(C) compile.c -o compile.o
+
+listaction.o: listaction.c action.h compile.h
+	$(C) listaction.c -o listaction.o
+
+actioncompiler.o: actioncompiler.c compile.h action.h libming.h
+	$(C) actioncompiler.c -o actioncompiler.o
+
+assembler.o: assembler.c compile.h action.h assembler.h
+	$(C) assembler.c -o assembler.o
+
+swf4compiler.tab.o: swf4compiler.tab.c compile.h action.h assembler.h
+	$(C) swf4compiler.tab.c -o swf4compiler.tab.o
+
+swf5compiler.tab.o: swf5compiler.tab.c compile.h action.h assembler.h
+	$(C) swf5compiler.tab.c -o swf5compiler.tab.o
+
+libming.o: libming.c libming.h
+	$(C) libming.c -o libming.o
+
+# === TESTING ===
+
+test.o: test.c actioncompiler.h
+	$(C) test.c -o test.o
+
+main.o: main.c
+	$(C) main.c -o main.o
+
+O = compile.o listaction.o lex.swf4.o lex.swf5.o swf5compiler.tab.o swf4compiler.tab.o assembler.o actioncompiler.o
+main: main.o $(O)
+	$(L) -o main main.o $(O) $(LIBS)
+
+test: test.o $(OBJECTS)
+	$(L) -o test $(OBJECTS) test.o ../librfxswf.a -lm -ljpeg -lz -lt1 -lfreetype
+
+# === CLEANING ===
+
+clean:
+	rm -f $(OBJECTS) compiler compiler.exe core test main main.o *~ gmon.out
+
+distclean: clean
+	rm -f $(GENERATED) swf*compiler.tab.* lex*.c 
+
