@@ -47,6 +47,12 @@ typedef struct _bitmap {
     struct _bitmap*next;
 } bitmap_t;
 
+typedef struct _dummyshape
+{
+    SHAPE2*shape;
+    struct _dummyshape*next;
+} dummyshape_t;
+
 typedef struct _renderbuf_internal
 {
     renderline_t*lines;
@@ -54,6 +60,8 @@ typedef struct _renderbuf_internal
     char antialize;
     int multiply;
     int width2,height2;
+    dummyshape_t*dshapes;
+    dummyshape_t*dshapes_next;
 } renderbuf_internal;
 
 #define DEBUG 0
@@ -268,12 +276,22 @@ void swf_Render_Delete(RENDERBUF*dest)
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     int y;
     bitmap_t*b = i->bitmaps;
+    dummyshape_t*d = i->dshapes;
 
     /* delete line buffers */
     for(y=0;y<i->height2;y++) {
         swf_DeleteTag(i->lines[y].points);
         i->lines[y].points = 0;
     }
+
+    while(d) {
+        dummyshape_t*next = d->next;
+        swf_Shape2Free(d->shape);
+        free(d->shape);d->shape=0;
+        free(d);
+        d=next;
+    }
+    i->dshapes = 0;
     
     /* delete bitmaps */
     while(b) {
@@ -307,7 +325,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     mat.ty -= dest->posy*20;
 
     if(shape->numlinestyles) {
-        /* TODO: free this again */
+        dummyshape_t*dshape = rfx_calloc(sizeof(dummyshape_t));
         lshape = rfx_calloc(sizeof(SHAPE2));
         int t;
         lshape->numfillstyles = shape->numlinestyles;
@@ -321,6 +339,13 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
         lp.type = fill_type;
         lp.shape = lshape;
         lp.depth = p.depth+1;
+
+        /* add this shape to the global shape list, for deallocing */
+        dshape->shape = lshape;
+        i->dshapes_next = dshape;
+        if(!i->dshapes) {
+            i->dshapes = dshape;
+        }
     }
 
     if(p.clipdepth) {
@@ -454,16 +479,21 @@ static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, 
 	return;
     }
     det = 20.0/det;
-    
+ 
+    if(!b->width || !b->height) {
+        fill_plain(line, x1, x2, color_red);
+        return;
+    }
+
     do {
         int xx = (int)((  (x - rx) * m22 - (y - ry) * m21)*det);
         int yy = (int)((- (x - rx) * m12 + (y - ry) * m11)*det);
         
         if(clip) {
-            if(xx<0 || xx>=b->width || yy<0 || yy>=b->height) {
-                //line[x] = color_red;
-                continue;
-            }
+            if(xx<0) xx=0;
+            if(xx>=b->width) xx = b->width-1;
+            if(yy<0) yy=0;
+            if(yy>=b->height) yy = b->height-1;
         } else {
             xx %= b->width;
             yy %= b->height;
