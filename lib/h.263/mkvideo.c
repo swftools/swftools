@@ -58,16 +58,6 @@ typedef struct _block_t
     int v[64];
 } block_t;
 
-typedef struct _fblock_t
-{
-    double y1[64];
-    double y2[64];
-    double y3[64];
-    double y4[64];
-    double u[64];
-    double v[64];
-} fblock_t;
-
 static int zigzagtable[64] = {
     0, 1, 5, 6, 14, 15, 27, 28, 
     2, 4, 7, 13, 16, 26, 29, 42, 
@@ -78,15 +68,14 @@ static int zigzagtable[64] = {
     21, 34, 37, 47, 50, 56, 59, 61, 
     35, 36, 48, 49, 57, 58, 62, 63};
 
-static void fzigzag(double*src) 
+static void zigzag(int*src) 
 {
-    double tmp[64];
+    int tmp[64];
     int t;
     for(t=0;t<64;t++) {
-	((int*)&tmp[zigzagtable[t]])[0] = ((int*)&src[t])[0];
-	((int*)&tmp[zigzagtable[t]])[1] = ((int*)&src[t])[1];
+	tmp[zigzagtable[t]] = src[t];
     }
-    memcpy(src, tmp, sizeof(double)*64);
+    memcpy(src, tmp, sizeof(int)*64);
 }
 
 #define PI 3.14159265358979
@@ -105,7 +94,7 @@ static double table[8][8] =
 {0.195090322016128,-0.555570233019602,0.831469612302545,-0.980785280403231,0.980785280403230,-0.831469612302545,0.555570233019602,-0.195090322016129}
 };
 
-static void dct(double*src)
+static void dct(int*src)
 {
     double tmp[64];
     int x,y,u,v,t;
@@ -128,11 +117,11 @@ static void dct(double*src)
 	{
 	    c+=table[v][y]*tmp[y*8+u];
 	}
-	src[v*8+u] = c*0.25;
+	src[v*8+u] = (int)(c*0.25);
     }
 }
 
-static void idct(double*src)
+static void idct(int*src)
 {
     double tmp[64];
     int x,y,u,v;
@@ -154,7 +143,7 @@ static void idct(double*src)
 	{
 	    c+=table[v][y]*tmp[v*8+x];
 	}
-	src[y*8+x] = c*0.25;
+	src[y*8+x] = (int)(c*0.25);
     }
 }
 
@@ -221,15 +210,18 @@ inline static void innerdct(double*a,double*b, double*c)
     b[7*8] = b0*c[7] - b1*c[5] + b2*c[3] - b3*c[1];
 }
 
-static void dct2(double*src, int*dest)
+static void dct2(int*src, int*dest)
 {
     double tmp[64], tmp2[64];
     double*p;
     int u,x,v,t;
 
+    for(t=0;t<64;t++)
+	tmp2[t] = src[t];
+
     for(v=0;v<8;v++)
     {
-	double* a=&src[v*8];
+	double* a=&tmp2[v*8];
 	double* b=&tmp[v];
 	innerdct(a,b,c);
     }
@@ -252,25 +244,47 @@ static inline int truncate256(int a)
     return a;
 }
 
-static void getregion(fblock_t* bb, YUV*pic, int posx, int posy, int linex)
+static void getregion(block_t* bb, YUV*pic, int posx, int posy, int linex)
 {
-    YUV*p1 = &pic[posy*linex+posx];
-    YUV*p2 = p1;
+    YUV*p1;
+    YUV*p2;
     int y1=0, y2=0, y3=0, y4=0;
     int u=0,v=0;
     int x,y;
-    for(y=0;y<8;y++) {
-	for(x=0;x<8;x++) {
-	    bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
-	    bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
-	    bb->y1[y1++] = p1[x].y;
-	    bb->y2[y2++] = p1[x+8].y;
-	    bb->y3[y3++] = p1[linex*8+x].y;
-	    bb->y4[y4++] = p1[linex*8+x+8].y;
+    int hp = (posy&1)<<1|(posx&1);
+    posx>>=1;
+    posy>>=1;
+    p1 = &pic[posy*linex+posx];
+    p2 = p1;
+    if(hp==0x0) {
+	for(y=0;y<8;y++) {
+	    for(x=0;x<8;x++) {
+		bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
+		bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
+		bb->y1[y1++] = p1[x].y;
+		bb->y2[y2++] = p1[x+8].y;
+		bb->y3[y3++] = p1[linex*8+x].y;
+		bb->y4[y4++] = p1[linex*8+x+8].y;
+	    }
+	    p1+=linex;
+	    p2+=linex*2;
 	}
-	p1+=linex;
-	p2+=linex*2;
+    } else if(hp==0x1) {
+	for(y=0;y<8;y++) {
+	    for(x=0;x<8;x++) {
+		bb->u[u++] = (p2[x*2].u + p2[x*2+1].u + p2[linex+x*2].u + p2[linex+x*2+1].u)/4;
+		bb->v[v++] = (p2[x*2].v + p2[x*2+1].v + p2[linex+x*2].v + p2[linex+x*2+1].v)/4;
+		bb->y1[y1++] = (p1[x].y + p1[x+1].y)/2;
+		bb->y2[y2++] = (p1[x+8].y + p1[x+8+1].y)/2;
+		bb->y3[y3++] = (p1[linex*8+x].y + p1[linex*8+x+1].y)/2;
+		bb->y4[y4++] = (p1[linex*8+x+8].y + p1[linex*8+x+8+1].y)/2;
+	    }
+	    p1+=linex;
+	    p2+=linex*2;
+	}
     }
+    else
+	assert(0);
 }
 static void rgb2yuv(YUV*dest, RGBA*src, int dlinex, int slinex, int width, int height)
 {
@@ -408,7 +422,7 @@ static int codehuffman(TAG*tag, struct huffcode*table, int index)
     return i;
 }
 
-static void quantize8x8(double*src, int*dest, int has_dc, int quant)
+static void quantize8x8(int*src, int*dest, int has_dc, int quant)
 {
     int t,pos=0;
     double q = 1.0/(quant*2);
@@ -591,7 +605,7 @@ static void encode8x8(TAG*tag, int*bb, int has_dc, int has_tcoef)
     }
 }
 
-static void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
+static void quantize(block_t*fb, block_t*b, int has_dc, int quant)
 {
     quantize8x8(fb->y1, b->y1, has_dc, quant); 
     quantize8x8(fb->y2, b->y2, has_dc, quant); 
@@ -601,18 +615,18 @@ static void quantize(fblock_t*fb, block_t*b, int has_dc, int quant)
     quantize8x8(fb->v, b->v, has_dc, quant);   
 }
 
-static void dodct(fblock_t*fb)
+static void dodct(block_t*fb)
 {
     dct(fb->y1); dct(fb->y2); dct(fb->y3); dct(fb->y4); 
     dct(fb->u);  dct(fb->v);  
-    fzigzag(fb->y1);
-    fzigzag(fb->y2);
-    fzigzag(fb->y3);
-    fzigzag(fb->y4);
-    fzigzag(fb->u);
-    fzigzag(fb->v); 
+    zigzag(fb->y1);
+    zigzag(fb->y2);
+    zigzag(fb->y3);
+    zigzag(fb->y4);
+    zigzag(fb->u);
+    zigzag(fb->v); 
 }
-static void dodctandquant(fblock_t*fb, block_t*b, int has_dc, int quant)
+static void dodctandquant(block_t*fb, block_t*b, int has_dc, int quant)
 {
     int t;
     if(has_dc) {
@@ -627,7 +641,7 @@ static void dodctandquant(fblock_t*fb, block_t*b, int has_dc, int quant)
 
 static void doidct(block_t*b)
 {
-    fblock_t fb;
+    block_t fb;
     int t;
     for(t=0;t<64;t++) {
 	fb.y1[t] = b->y1[zigzagtable[t]];
@@ -712,12 +726,12 @@ static void change_quant(int quant, int*dquant)
 
 static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 {
-    fblock_t fb;
+    block_t fb;
     block_t b;
     int dquant=0;
     int cbpcbits = 0, cbpybits=0;
 
-    getregion(&fb, s->current, bx*16, by*16, s->width);
+    getregion(&fb, s->current, bx*2*16, by*2*16, s->width);
     
     change_quant(*quant, &dquant);
     *quant+=dquant;
@@ -758,7 +772,7 @@ static void encode_blockI(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     copyblock(s, s->current, &b, bx, by);
 }
 
-static void yuvdiff(fblock_t*a, fblock_t*b)
+static void yuvdiff(block_t*a, block_t*b)
 {
     int t;
     for(t=0;t<64;t++) {
@@ -843,7 +857,7 @@ static inline int mvd2index(int px, int py, int x, int y, int xy)
 
 static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 {
-    fblock_t fb;
+    block_t fb;
     block_t b;
     int dquant=0;
     int has_mvd=0;
@@ -858,7 +872,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     block_t b_i;
     int bits_i;
 
-    fblock_t fbold_v00;
+    block_t fbold_v00;
     block_t b_v00;
     int bits_v00 = 65535;
     int x_v00=0;
@@ -873,12 +887,12 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     }
 
     predictmvd(s,bx,by,&predictmvdx,&predictmvdy);
-    getregion(&fb, s->current, bx*16, by*16, s->width);
+    getregion(&fb, s->current, bx*2*16, by*2*16, s->width);
 
     { /* consider I-block */
-	fblock_t fb_i;
+	block_t fb_i;
 	int y,c;
-	memcpy(&fb_i, &fb, sizeof(fblock_t));
+	memcpy(&fb_i, &fb, sizeof(block_t));
 	dodctandquant(&fb_i, &b_i, 1, *quant);
 	//quantize(&fb_i, &b_i, 1, *quant);
 	getblockpatterns(&b_i, &y, &c, 1);
@@ -894,7 +908,7 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
     }
 
     { /* consider mvd(x,y)-block */
-	fblock_t fbdiff;
+	block_t fbdiff;
 	int y,c;
 
 	x_v00=0;
@@ -915,10 +929,10 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	    for(hy=starty;hy<=endy;hy+=4)
 	    {
 		block_t b;
-		fblock_t fbold;
+		block_t fbold;
 		int bits = 0;
-		memcpy(&fbdiff, &fb, sizeof(fblock_t));
-		getregion(&fbold, s->oldpic, bx*16+hx/2, by*16+hy/2, s->linex);
+		memcpy(&fbdiff, &fb, sizeof(block_t));
+		getregion(&fbold, s->oldpic, bx*2*16+hx, by*2*16+hy, s->linex);
 		yuvdiff(&fbdiff, &fbold);
 		dodctandquant(&fbdiff, &b, 0, *quant);
 		//quantize(&fbdiff, &b, 0, *quant);
@@ -938,8 +952,8 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	    y_v00 = besty;
 	}
 
-	memcpy(&fbdiff, &fb, sizeof(fblock_t));
-	getregion(&fbold_v00, s->oldpic, bx*16+x_v00/2, by*16+y_v00/2, s->linex);
+	memcpy(&fbdiff, &fb, sizeof(block_t));
+	getregion(&fbold_v00, s->oldpic, bx*2*16+x_v00, by*2*16+y_v00, s->linex);
 	yuvdiff(&fbdiff, &fbold_v00);
 	dodctandquant(&fbdiff, &b_v00, 0, *quant);
 	//quantize(&fbdiff, &b_v00, 0, *quant);
@@ -1109,201 +1123,6 @@ static void writeHeader(TAG*tag, int width, int height, int frame, int quant, in
     swf_SetBits(tag, quant, 5); /* quantizer (1-31), may be updated later on*/
     swf_SetBits(tag, 0, 1); /* No extra info */
 }
-
-int stat_qdiff(double*b1, double*b2)
-{
-    int x;
-    double diff=0;
-    for(x=0;x<64;x++) {
-	double y1 = b1[x] - b2[x];
-	diff += y1*y1;
-    }
-    return (int)(diff/64);
-}
-
-int stat_absdiff(double*b1, double*b2)
-{
-    int x;
-    double diff=0;
-    for(x=0;x<64;x++) {
-	double y1 = b1[x] - b2[x];
-	diff += fabs(y1);
-    }
-    return (int)(diff/64);
-}
-
-int stat_absfreq(double*b1, double*b2)
-{
-    int x;
-    double diff=0;
-    double d1[64],d2[64];
-    memcpy(&d1, b1, 64*sizeof(double));
-    dct(d1);
-    memcpy(&d2, b2, 64*sizeof(double));
-    dct(d2);
-    for(x=0;x<64;x++) {
-	double y1 = d1[x] - d2[x];
-	diff += fabs(y1);
-    }
-    return (int)(diff/64);
-}
-
-int stat_qfreq(double*b1, double*b2)
-{
-    int x;
-    double diff=0;
-    double d1[64],d2[64];
-    memcpy(&d1, b1, 64*sizeof(double));
-    dct(d1);
-    memcpy(&d2, b2, 64*sizeof(double));
-    dct(d2);
-    for(x=0;x<64;x++) {
-	double y1 = d1[x] - d2[x];
-	diff += y1*y1;
-    }
-    return (int)(diff/64);
-}
-
-int stat_nonnull(double*b1, double*b2)
-{
-    int x;
-    int diff=0;
-    double d1[64],d2[64];
-    memcpy(&d1, b1, 64*sizeof(double));
-    dct(d1);
-    memcpy(&d2, b2, 64*sizeof(double));
-    dct(d2);
-    for(x=0;x<64;x++) {
-	int y1 = (int)((d1[x] - d2[x])/9);
-	if(y1)
-	    diff++;
-    }
-    return diff;
-}
-
-void stat_filter(FILE*fi, double*d1, double*d2)
-{
-    int x,y,xx,yy,b;
-    for(b=3;b>=0;b--) {
-	int d = 1<<b;
-	double diff=0;
-	for(x=0;x<8;x+=d)
-	for(y=0;y<8;y+=d)
-	{
-	    double add1=0,add2=0;
-	    for(xx=x;xx<x+d;xx++)
-	    for(yy=y;yy<y+d;yy++)
-	    {
-		add1 += d1[yy*8+xx];
-		add2 += d2[yy*8+xx];
-	    }
-	    diff += fabs(add1-add2);
-	}
-	fprintf(fi, "\t%d",(int)(diff/64));
-    }
-}
-
-void qstat_filter(FILE*fi, double*d1, double*d2)
-{
-    int x,y,xx,yy,b;
-    for(b=3;b>=0;b--) {
-	int d = 1<<b;
-	double diff=0;
-	for(x=0;x<8;x+=d)
-	for(y=0;y<8;y+=d)
-	{
-	    double add1=0,add2=0;
-	    for(xx=x;xx<x+d;xx++)
-	    for(yy=y;yy<y+d;yy++)
-	    {
-		add1 += d1[yy*8+xx];
-		add2 += d2[yy*8+xx];
-	    }
-	    diff += (add1-add2)*(add1-add2);
-	}
-	fprintf(fi, "\t%d",(int)(diff/64));
-    }
-}
-
-void qqstat_filter(FILE*fi, double*d1, double*d2)
-{
-    int x,y,xx,yy,b;
-    for(b=3;b>=0;b--) {
-	int d = 1<<b;
-	double diff=0;
-	for(x=0;x<8;x+=d)
-	for(y=0;y<8;y+=d)
-	{
-	    double add1=0,add2=0;
-	    for(xx=x;xx<x+d;xx++)
-	    for(yy=y;yy<y+d;yy++)
-	    {
-		add1 += d1[yy*8+xx]*d1[yy*8+xx];
-		add2 += d2[yy*8+xx]*d2[yy*8+xx];
-	    }
-	    diff += fabs(add1-add2);
-	}
-	fprintf(fi, "\t%d",(int)(diff/64));
-    }
-}
-
-void stat(FILE*fi, int*vals, double*yold, double*ynew)
-{
-    int t;
-    int bits = coefbits8x8(vals, 0);
-    fprintf(fi, "%d\t%d\t%d\t%d\t%d\t%d", bits, 
-	     stat_nonnull(ynew, yold),
-	     stat_qdiff(ynew,yold), 
-	     stat_absdiff(ynew,yold),
-	     stat_absfreq(ynew,yold),
-	     stat_qfreq(ynew,yold));
-    stat_filter(fi, ynew, yold);
-    qqstat_filter(fi, ynew, yold);
-    fprintf(fi, "\n");
-}
-
-void dostat(VIDEOSTREAM*s)
-{
-    int bx,by,bx2,by2;
-    int quant = 9;
-    int num = 0;
-    FILE*fi = fopen("mvd.dat", "wb");
-    fprintf(fi, "bits\tnonnull\tqdiff\tabsdiff\tabsfreq\tqfreq\tf1\tf2\tf4\tf8\tqf1\tqf2\tqf4\tqf8\n");
-    for(by=0;by<s->bby;by++)
-    for(bx=0;bx<s->bbx;bx++)
-    {
-	for(by2=0;by2<s->bby;by2++)
-	for(bx2=0;bx2<bx;bx2++)
-	{
-	    fblock_t fbnew,fbdiff,fbold;
-	    block_t b;
-	    int t, y,c,bits;
-	    getregion(&fbnew, s->current, bx*16, by*16, s->linex);
-	    memcpy(&fbdiff, &fbnew, sizeof(fblock_t));
-	    getregion(&fbold, s->current, bx2*16, by2*16, s->linex);
-	    yuvdiff(&fbdiff, &fbold);
-	    dodctandquant(&fbdiff, &b, 0, quant);
-	    //quantize(&fbdiff, &b, 0, quant);
-
-	    stat(fi, b.y1, fbnew.y1, fbold.y1);
-	    stat(fi, b.y2, fbnew.y2, fbold.y2);
-	    stat(fi, b.y3, fbnew.y3, fbold.y3);
-	    stat(fi, b.y4, fbnew.y4, fbold.y4);
-	    stat(fi, b.u, fbnew.u, fbold.u);
-	    stat(fi, b.v, fbnew.v, fbold.v);
-
-	    num++;
-	    if(num==1000) {
-		fclose(fi);
-		exit(7);
-	    }
-	}
-	printf("%d\n", num);fflush(stdout);
-    }
-    fclose(fi);
-    exit(7);
-}
-
 void swf_SetVideoStreamIFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 {
     int bx, by;
@@ -1379,7 +1198,7 @@ int main(int argn, char*argv[])
     SWFPLACEOBJECT obj;
     int width = 0;
     int height = 0;
-    int frames = 50;
+    int frames = 5;
     int framerate = 29;
     unsigned char*data;
     char* fname = "/home/kramm/pics/peppers.png";
