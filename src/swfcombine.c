@@ -137,7 +137,7 @@ int args_callback_option(char*name,char*val) {
     {
 
 	float rate = atof(val);
-	if ((rate < 1.0/256) ||(rate >= 256.0)) {
+	if ((rate < 0) ||(rate >= 256.0)) {
 	    fprintf(stderr, "Error: You must specify a valid framerate between 1/256 and 255.\n");
 	    exit(1);
 	}
