@@ -164,6 +164,22 @@ ${name}/COPYING \
 ${name}/AUTHORS \
 ${name}/ChangeLog \
 ${name}/release.in \
-${name}/TODO
+${name}/TODO \
+${name}/pdf2swf/ttf2pt1/COPYRIGHT \
+${name}/pdf2swf/ttf2pt1/Makefile.in \
+${name}/pdf2swf/ttf2pt1/byteorder.h \
+${name}/pdf2swf/ttf2pt1/ft.c \
+${name}/pdf2swf/ttf2pt1/global.h \
+${name}/pdf2swf/ttf2pt1/pt1.c \
+${name}/pdf2swf/ttf2pt1/pt1.h \
+${name}/pdf2swf/ttf2pt1/runt1asm.c \
+${name}/pdf2swf/ttf2pt1/t1asm.c \
+${name}/pdf2swf/ttf2pt1/ttf.c \
+${name}/pdf2swf/ttf2pt1/ttf.h \
+${name}/pdf2swf/ttf2pt1/ttf2pt1 \
+${name}/pdf2swf/ttf2pt1/ttf2pt1.c \
+${name}/pdf2swf/ttf2pt1/ttf2pt1.h \
+${name}/pdf2swf/ttf2pt1/version.h \
+${name}/pdf2swf/ttf2pt1/windows.h
 gzip ${name}.tar
 rm -f ${name}
