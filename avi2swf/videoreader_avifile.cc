@@ -63,7 +63,6 @@
 
 static int shutdown_avi2swf = 0;
 static int verbose = 0;
-static int flip = 0;
 
 typedef struct _videoreader_avifile_internal
 {
@@ -73,6 +72,7 @@ typedef struct _videoreader_avifile_internal
     int do_audio;
     int do_video;
     int eof;
+    int flip;
     int frame;
     int soundbits;
     ringbuffer_t audio_buffer;
@@ -157,7 +157,7 @@ static int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
 	for(y=0;y<v->height;y++) {
 	    unsigned char*from,*to;
 	    to = &((unsigned char*)buffer)[y*v->width*4];
-	    if(flip)
+	    if(i->flip)
 		from = img->At(v->height-y-1);
 	    else
 		from = img->At(y);
@@ -196,6 +196,13 @@ static void videoreader_avifile_close(videoreader_t* v)
 }
 static void videoreader_avifile_setparameter(videoreader_t*v, char*name, char*value)
 {
+    videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
+    if(!strcmp(name, "verbose")) {
+	verbose = atoi(value);
+    }
+    if(!strcmp(name, "flip")) {
+	i->flip = atoi(value);
+    }
     if(verbose) {
 	printf("videoreader_setparameter(%s, %s)\n", name, value);fflush(stdout);
     }

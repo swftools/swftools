@@ -256,6 +256,10 @@ int main (int argc,char ** argv)
     v2swf_setparameter(&v2swf, "keyframe_interval", itoa(keyframe_interval));
     if(expensive)
 	v2swf_setparameter(&v2swf, "motioncompensation", "1");
+    if(flip)
+	video.setparameter(&video, "flip", "1");
+    if(verbose)
+	video.setparameter(&video, "verbose", "1");
 
     if(!verbose)
 	printf("\n");
