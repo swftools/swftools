@@ -70,15 +70,19 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
 #ifdef LAME
 
 #include "../lame/lame.h"
-    
+
+/* TODO: find a way to set these from the outside */
+int swf_mp3_samplerate = 44100;
+int swf_mp3_channels = 1;
+
 static lame_global_flags*lame_flags;
 
 static void initlame(unsigned char*buf, int bufsize)
 {
     lame_flags = lame_init();
 
-    lame_set_in_samplerate(lame_flags, 44100);
-    lame_set_num_channels(lame_flags, 1);
+    lame_set_in_samplerate(lame_flags, swf_mp3_samplerate);
+    lame_set_num_channels(lame_flags, swf_mp3_channels);
     lame_set_scale(lame_flags, 0);
 
     // MPEG1    32, 44.1,   48khz
