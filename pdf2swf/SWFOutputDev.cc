@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <unistd.h>
 //xpdf header files
 #include "GString.h"
 #include "gmem.h"
@@ -45,7 +46,7 @@ extern "C" {
 #include "../lib/log.h"
 }
 
-static char* filename = 0;
+static char* swffilename = 0;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
@@ -220,7 +221,6 @@ public:
   int clippos;
 
   int setT1Font(char*name,FontEncoding*enc);
-  int initT1Font(int id, FontEncoding*encoding);
   int t1id;
 };
 
@@ -365,7 +365,7 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   char*name;
   gstr = font->getName();
   Ref r=font->getID();
-  logf("%s=========== %s (ID:%d) ==========\n", loglevel, gstr?gstr->getCString():"(unknown font)", r.num);
+  logf("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?gstr->getCString():"(unknown font)", r.num,r.gen);
 
   gstr  = font->getTag();
   if(gstr) 
@@ -582,7 +582,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, doub
        y1 = y;
        state->transform(x, y, &x1, &y1);
 
-       swfoutput_drawchar(&output, x1, y1, c);
+       swfoutput_drawchar(&output, x1, y1, enc->getCharName(c));
     }
 }
 
@@ -606,7 +606,7 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state)
   state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
   if(!outputstarted) {
-    swfoutput_init(&output, filename, abs((int)(x2-x1)),abs((int)(y2-y1)));
+    swfoutput_init(&output, swffilename, abs((int)(x2-x1)),abs((int)(y2-y1)));
     outputstarted = 1;
   }
   else
@@ -725,51 +725,7 @@ int SWFOutputDev::setT1Font(char*name, FontEncoding*encoding)
     if(id<0)
      return 0;
 
-    /* T1 allows us to recode only once. Therefore, remove
-       and reload the font to reset it */
-    T1_DeleteFont(id);
-    T1_LoadFont(id);
-    initT1Font(id, encoding);
-}
-
-int SWFOutputDev::initT1Font(int id, FontEncoding*encoding)
-{
-    int encStrSize;
-    char *encPtr;
-    int i;
-
-    if(!T1_GetFontName(id))
-	T1_LoadFont(id);
-
-    /* reencode the font: 
-     * This is the only way to get the unmapped characters
-     * from t1lib
-     */
-    encStrSize = 0;
-    for (i = 0; i < 256 && i < encoding->getSize(); ++i) {
-      if (encoding->getCharName(i)) {
-	encStrSize += strlen(encoding->getCharName(i)) + 1;
-      }
-    }
-    char**enc = (char **)gmalloc(257 * sizeof(char *));
-    char*encStr = (char *)gmalloc(encStrSize * sizeof(char));
-    encPtr = encStr;
-    for (i = 0; i < 256 && i < encoding->getSize(); ++i) {
-      if (encoding->getCharName(i)) {
-	strcpy(encPtr, encoding->getCharName(i));
-	enc[i] = encPtr;
-	encPtr += strlen(encPtr) + 1;
-      } else {
-	enc[i] = ".notdef";
-      }
-    }
-    for (; i < 256; ++i) {
-      enc[i] = ".notdef";
-    }
-    enc[256] = "custom";
-    int ret=T1_ReencodeFont(id, enc);
-    t1id = id;
-    return 1;
+    this->t1id = id;
 }
 
 void SWFOutputDev::updateLineWidth(GfxState *state)
@@ -853,19 +809,35 @@ int embeddedt1ids[128];
 int embedded_mappos = 0;
 int embedded_maxpos = 128;
 
+char* gfxFontName(GfxFont* gfxFont)
+{
+      GString *gstr;
+      gstr = gfxFont->getName();
+      if(gstr) {
+	  return gstr->getCString();
+      }
+      else {
+	  char buf[32];
+	  Ref r=gfxFont->getID();
+	  sprintf(buf, "UFONT%d", r.num);
+	  return strdup(buf);
+      }
+}
+
 void SWFOutputDev::updateFont(GfxState *state) 
 {
   double m11, m12, m21, m22;
   char * fontname = 0;
   GfxFont*gfxFont = state->getFont();
+  char * fileName = 0;
 
   if (!gfxFont) {
     return;
   }  
 
-  if(swfoutput_queryfont(&output, gfxFont->getID().num))
+  if(swfoutput_queryfont(&output, gfxFontName(gfxFont)))
   {
-      swfoutput_setfont(&output, gfxFont->getID().num, -1);
+      swfoutput_setfont(&output, gfxFontName(gfxFont), -1, 0);
       return;
   }
 
@@ -883,9 +855,8 @@ void SWFOutputDev::updateFont(GfxState *state)
     for(t=0;t<embedded_mappos;t++)
 	if(embeddedids[t] == embRef.num)
 	    break;
-    if(t==embedded_mappos)
+    if(t==embedded_mappos || 1)
     {
-	char*fileName;
 	if (!gfxFont->is16Bit() &&
 	    (gfxFont->getType() == fontType1 ||
 	     gfxFont->getType() == fontType1C)) {
@@ -898,6 +869,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	    showFontError(gfxFont,0);
 	    return ;
 	}
+	
 	t1id = T1_AddFont(fileName);
 	embeddedids[embedded_mappos] = embRef.num;
 	embeddedt1ids[embedded_mappos] = t1id;
@@ -908,7 +880,6 @@ void SWFOutputDev::updateFont(GfxState *state)
     {
 	t1id = embeddedt1ids[t];
     }
-    initT1Font(t1id, gfxFont->getEncoding());
   } else {
     fontname = NULL;
     if(gfxFont->getName()) {
@@ -980,7 +951,9 @@ void SWFOutputDev::updateFont(GfxState *state)
     }
   }
 
-  swfoutput_setfont(&output,gfxFont->getID().num,t1id);
+  swfoutput_setfont(&output,gfxFontName(gfxFont),t1id, fileName);
+  if(fileName)
+      unlink(fileName);
 }
 
 void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
@@ -1008,6 +981,7 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
       fputc(c, fi);
     fclose(fi);
     swfoutput_drawimagefile(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+    unlink(fileName);
   } else {
       logf("<notice> File contains pbm pictures.");
   }
@@ -1039,6 +1013,7 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       fputc(c, fi);
     fclose(fi);
     swfoutput_drawimagefile(&output, fileName, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+    unlink(fileName);
   } else {
       logf("<notice> File contains pbm pictures.");
   }
@@ -1124,7 +1099,7 @@ void pdfswf_init(char*filename, char*userPassword)
 
 void pdfswf_setoutputfilename(char*_filename)
 {
-    filename = _filename;
+    swffilename = _filename;
 }
 
 void pdfswf_convertpage(int page)

@@ -201,23 +201,14 @@ void drawpath(T1_OUTLINE*outline, struct swfmatrix*m, char*namehint)
     //char*charname = T1_GetCharName(t1fontindex, character);
 
 /* process a character. */
-void drawchar(struct swfoutput*obj, SWFFont*font, char character, swfmatrix*m)
+void drawchar(struct swfoutput*obj, SWFFont*font, char*character, swfmatrix*m)
 {
     T1_OUTLINE*outline = font->getOutline(character);
-    char* charname = font->getCharName(character);
+    char* charname = character;
 
     if(!outline)
-    {
-     /* for newline, we don't print an error. FIXME: We shouldn't get newlines here
-	in the first place
-      */
-     if(character != '\n') {
-	 logf("<error> Char to set is not defined!");
-	 logf("<error> -  font file is %s\n", font->getName());
-	 logf("<error> -  char 0x%02x is named %s\n",character, charname);
-     }
      return;
-    }
+    
     swfmatrix m2=*m;    
     m2.m11/=100;
     m2.m21/=100;
@@ -254,38 +245,69 @@ void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline, struct swfmatrix*m
     drawpath(outline,m, 0); 
 }
 
-SWFFont::SWFFont(int t1fontindex)
+SWFFont::SWFFont(char*name, int id, char*filename)
+{
+    if(!T1_GetFontName(id))
+	T1_LoadFont(id);
+
+    this->name = strdup(T1_GetFontFileName(id));
+    this->fontid = name;
+    this->t1id = id;
+
+    char**a= T1_GetAllCharNames(id);
+    int t=0, outlinepos=0;
+    char*map[256];
+    while(a[t])
+	t++;
+ 
+    this->charnum = t;
+    if(!t) 
+	return;
+    logf("<notice> Font %s(%d): Storing %d outlines.\n", name, id, t);
+    
+    outline = (T1_OUTLINE**)malloc(t*sizeof(T1_OUTLINE*));
+    charname = (char**)malloc(t*sizeof(char*));
+    
+    t=0;
+    while(*a)
+    {
+	map[t] = *a;
+	a++;
+	t++;
+	if(t==256 || !*a) {
+	    int s;
+	    for(s=t;s<256;s++)
+		map[s] = ".notdef";
+
+	    int ret = T1_ReencodeFont(id, map);
+	    if(ret) {
+	     T1_DeleteFont(id);
+	     T1_LoadFont(id);
+	     int ret = T1_ReencodeFont(id, map);
+	     if(ret)
+	       fprintf(stderr,"Can't reencode font: (%s) ret:%d\n",filename, ret);
+	    }
+
+	    // parsecharacters
+	    for(s=0;s<t;s++)
+	    {
+		this->outline[outlinepos] = T1_CopyOutline(T1_GetCharOutline(id, s, 100.0, 0));
+		this->charname[outlinepos] = strdup(T1_GetCharName(id, s));
+		outlinepos++;
+	    }
+	    t=0;
+	}
+    }
+}
+
+T1_OUTLINE*SWFFont::getOutline(char*name)
 {
     int t;
-    for(t=0;t<256;t++)
-    {
-	int width = T1_GetCharWidth(t1fontindex, t);
-	BBox bbox = T1_GetCharBBox(t1fontindex, t);
-	T1_OUTLINE*outline = T1_GetCharOutline(t1fontindex,t,100.0,0);
-
-	char*name;
-	this->outline[t] =  T1_CopyOutline(outline);
-
-	name = T1_GetCharName(t1fontindex, t);
-	if(!name || name[0]=='.')
-	{
-	    this->charname[t] = 0;
-	    this->outline[t] = 0;
-	}
-	else
-	    this->charname[t] = strdup(name);
+    for(t=0;t<this->charnum;t++) {
+	if(!strcmp(this->charname[t],name))
+	    return outline[t];
     }
-    this->name = strdup(T1_GetFontFileName(t1fontindex));
-}
-
-T1_OUTLINE*SWFFont::getOutline(unsigned char nr)
-{
-    return outline[nr];
-}
-
-char*SWFFont::getCharName(int t)
-{
-    return this->charname[t];
+    return 0;
 }
 
 char*SWFFont::getName()
@@ -300,15 +322,15 @@ struct fontlist_t
 } *fontlist = 0;
 
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
-void swfoutput_setfont(struct swfoutput*obj, int fontid, int t1id)
+void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filename)
 {
     fontlist_t*last=0,*iterator;
-    if(obj->font && obj->font->id == fontid)
+    if(obj->font && !strcmp(obj->font->fontid,fontid))
 	return;
 
     iterator = fontlist;
     while(iterator) {
-	if(iterator->font->id == fontid)
+	if(!strcmp(iterator->font->fontid,fontid))
 	    break;
 	last = iterator;
 	iterator = iterator->next;
@@ -320,10 +342,10 @@ void swfoutput_setfont(struct swfoutput*obj, int fontid, int t1id)
     }
 
     if(t1id<0) {
-	logf("<error> internal error: t1id:%d, fontid:%d\n", t1id,fontid);
+	logf("<error> internal error: t1id:%d, fontid:%s\n", t1id,fontid);
     }
     
-    SWFFont*font = new SWFFont(t1id);
+    SWFFont*font = new SWFFont(fontid, t1id, filename);
     iterator = new fontlist_t;
     iterator->font = font;
     iterator->next = 0;
@@ -335,11 +357,11 @@ void swfoutput_setfont(struct swfoutput*obj, int fontid, int t1id)
     obj->font = font;
 }
 
-int swfoutput_queryfont(struct swfoutput*obj, int fontid)
+int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
 {
     fontlist_t *iterator = fontlist;
     while(iterator) {
-	if(iterator->font->id == fontid)
+	if(!strcmp(iterator->font->fontid,fontid))
 	    return 1;
 	iterator = iterator->next;
     }
@@ -358,7 +380,7 @@ void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
 }
 
 /* draws a character at x,y. */
-void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char character) 
+void swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character) 
 {
     swfmatrix m;
     m.m11 = obj->fontm11;

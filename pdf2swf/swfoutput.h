@@ -28,16 +28,18 @@ struct swfcoord {
 
 class SWFFont
 {
-    T1_OUTLINE*(outline[256]);
-    char*(charname[256]);
+    T1_OUTLINE**outline;
+    char**charname;
     char*name;
+    int charnum;
 
     public:
     
-    int id;
+    int t1id;
+    char*fontid;
 
-    SWFFont(int t1id);
-    T1_OUTLINE*getOutline(unsigned char nr);
+    SWFFont(char*name, int t1id, char*filename);
+    T1_OUTLINE*getOutline(char*charname);
     char*getName();
     char*getCharName(int t);
 };
@@ -63,15 +65,15 @@ void swfoutput_setprotected(); //write PROTECT tag
 
 void swfoutput_newpage(struct swfoutput*);
 
-void swfoutput_setfont(struct swfoutput*, int fontid, int t1font);
-int swfoutput_queryfont(struct swfoutput*, int fontid);
+void swfoutput_setfont(struct swfoutput*, char*fontid, int t1font, char*filename);
+int swfoutput_queryfont(struct swfoutput*, char*fontid);
 void swfoutput_setdrawmode(struct swfoutput*, int drawmode);
 void swfoutput_setfillcolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void swfoutput_setstrokecolor(struct swfoutput*, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void swfoutput_setfontmatrix(struct swfoutput*,double,double,double,double);
 void swfoutput_setlinewidth(struct swfoutput*, double linewidth);
 
-void swfoutput_drawchar(struct swfoutput*,double x,double y,char a);
+void swfoutput_drawchar(struct swfoutput*,double x,double y,char*a);
 void swfoutput_drawpath(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_startclip(struct swfoutput*, T1_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_endclip(struct swfoutput*);
