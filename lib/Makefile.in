@@ -49,4 +49,5 @@ clean:
 	cd lame;$(MAKE) clean;cd ..
 	cd h.263;$(MAKE) clean;cd ..
 	cd action;$(MAKE) clean;cd ..
+	cd python;$(MAKE) clean;cd ..
 
