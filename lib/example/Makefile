@@ -12,7 +12,7 @@ DBFLAGS	= -g2
 %.o: %.cc
 		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape
+all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape avi2swf
 
 movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape
 		./jpegtest
@@ -25,6 +25,12 @@ movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text 
 		./buttontest
 		./text
 		./makefonts
+
+avi2swf.o: avi2swf.cc
+		$(CXX) -o avi2swf.o -c avi2swf.cc `avifile-config --cflags`
+
+avi2swf: $(RFXSWF) avi2swf.o
+		$(CXX) -o avi2swf avi2swf.o  $(RFXSWF) $(LDLIBS) `avifile-config --libs`
 
 box: $(RFXSWF) box.o
 		$(CC) -o box box.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
