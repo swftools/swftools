@@ -12,6 +12,7 @@
 void pdfswf_init(char*filename, char*userPassword) ;
 void pdfswf_setoutputfilename(char*filename);
 void pdfswf_drawonlyshapes();
+void pdfswf_enablezlib();
 void pdfswf_ignoredraworder();
 void pdfswf_linksopennewwindow();
 void pdfswf_jpegquality(int);

@@ -15,6 +15,7 @@ extern "C" {
 #include "../lib/rfxswf.h"
 }
 
+extern int enablezlib; //default:0
 extern int opennewwindow; //default:0
 extern int ignoredraworder; //default:0
 extern int drawonlyshapes; //default:0

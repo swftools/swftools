@@ -35,6 +35,7 @@ int ignoredraworder=0;
 int drawonlyshapes=0;
 int jpegquality=85;
 int storeallcharacters=0;
+int enablezlib=0;
 static int flag_protected = 0;
 
 typedef unsigned char u8;
@@ -1013,8 +1014,14 @@ void swfoutput_destroy(struct swfoutput* obj)
  
     tag = swf_InsertTag(tag,ST_END);
 
-    if FAILED(swf_WriteSWF(fi,&swf)) 
-     logf("<error> WriteSWF() failed.\n");
+    if(enablezlib) {
+      if FAILED(swf_WriteSWC(fi,&swf)) 
+       logf("<error> WriteSWC() failed.\n");
+    } else {
+      if FAILED(swf_WriteSWF(fi,&swf)) 
+       logf("<error> WriteSWF() failed.\n");
+    }
+
     if(filename)
      close(fi);
     logf("<notice> SWF written\n");

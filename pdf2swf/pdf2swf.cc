@@ -95,6 +95,11 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_ignoredraworder();
 	return 0;
     }
+    else if (!strcmp(name, "z"))
+    {
+	pdfswf_enablezlib();
+	return 0;
+    }
     else if (!strcmp(name, "n"))
     {
 	pdfswf_linksopennewwindow();
@@ -185,6 +190,7 @@ struct options_t options[] =
 {{"o","output"},
  {"V","version"},
  {"i","ignore"},
+ {"z","zlib"},
  {"s","shapes"},
  {"j","jpegquality"},
  {"p","pages"},
@@ -226,6 +232,7 @@ void args_callback_usage(char*name)
     printf("-s  --shapes               Don't use SWF Fonts, but store everything as shape\n");
     printf("-i  --ignore               Ignore draw order (makes the SWF file smaller, but may produce\n");
     printf("                           graphic errors)\n");
+    printf("-z  --zlib                 Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)\n");
     printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
