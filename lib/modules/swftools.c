@@ -852,7 +852,8 @@ void swf_Relocate (SWF*swf, char*bitmap)
 	    for(t=0;t<num;t++) {
 		int id = GET16(&tag->data[ptr[t]]);
 		if(slaveids[id]<0) {
-		    fprintf(stderr, "swf_Relocate: Mapping id never encountered before: %d\n", id);
+		    fprintf(stderr, "swf_Relocate: Mapping id (%d) never encountered before in %s\n", id,
+			    swf_TagGetName(tag));
 		    return ;
 		}
 		id = slaveids[id];
