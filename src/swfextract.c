@@ -27,6 +27,7 @@ int verbose = 3;
 char* extractids = 0;
 char* extractframes = 0;
 char* extractjpegids = 0;
+char* extractfontids = 0;
 char* extractpngids = 0;
 char* extractsoundids = 0;
 char extractmp3 = 0;
@@ -34,6 +35,7 @@ char extractmp3 = 0;
 char* extractname = 0;
 
 char hollow = 0;
+char originalplaceobjects = 0;
 
 int numextracts = 0;
 
@@ -45,10 +47,12 @@ struct options_t options[] =
  {"i","id"},
  {"j","jpegs"},
  {"p","pngs"},
+ {"P","placeobject"},
  {"m","mp3"},
  {"s","sound"},
  {"n","name"},
  {"f","frame"},
+ {"F","font"},
  {"V","version"},
  {0,0}
 };
@@ -100,6 +104,15 @@ int args_callback_option(char*name,char*val)
 	extractjpegids = val;
 	return 1;
     } 
+    else if(!strcmp(name, "F")) {
+	if(extractfontids) {
+	    fprintf(stderr, "Only one --font argument is allowed. (Try to use a range, e.g. -s 1,2,3)\n");
+	    exit(1);
+	}
+	numextracts++;
+	extractfontids = val;
+	return 1;
+    } 
     else if(!strcmp(name, "s")) {
 	if(extractsoundids) {
 	    fprintf(stderr, "Only one --sound argument is allowed. (Try to use a range, e.g. -s 1,2,3)\n");
@@ -112,7 +125,7 @@ int args_callback_option(char*name,char*val)
 #ifdef _ZLIB_INCLUDED_
     else if(!strcmp(name, "p")) {
 	if(extractpngids) {
-	    fprintf(stderr, "Only one --pngs argument is allowed. (Try to use a range, e.g. -p 1,2,3)\n");
+	    fprintf(stderr, "Only one --png argument is allowed. (Try to use a range, e.g. -p 1,2,3)\n");
 	    exit(1);
 	}
 	numextracts++;
@@ -125,13 +138,17 @@ int args_callback_option(char*name,char*val)
 	extractframes = val;
 	return 1;
     }
+    else if(!strcmp(name, "P")) {
+	originalplaceobjects = 1;
+	return 0;
+    }
     else if(!strcmp(name, "w")) {
 	hollow = 1;
 	return 0;
     }
     else {
         printf("Unknown option: -%s\n", name);
-	return 0;
+	exit(1);
     }
 
     return 0;
@@ -148,10 +165,14 @@ void args_callback_usage(char*name)
     printf("\t-V , --version\t\t\t Print program version and exit\n\n");
     printf("SWF Subelement extraction:\n");
     printf("\t-n , --name name\t\t instance name of the object (SWF Define) to extract\n");
-    printf("\t-i , --id ID\t\t\t ID of the object (SWF Define) to extract\n");
+    printf("\t-i , --id ID\t\t\t ID of the object, shape or movieclip to extract\n");
     printf("\t-f , --frame frames\t\t frame numbers to extract\n");
     printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames\n"); 
     printf("\t             \t\t\t (use with -f)\n");
+    printf("\t-P , --placeobject\t\t\t Insert original placeobject into output file\n"); 
+    printf("\t             \t\t\t (use with -i)\n");
+    printf("SWF Font/Text extraction:\n");
+    printf("\t-F , --font ID\t\t\t Extract font(s)\n");
     printf("Picture extraction:\n");
     printf("\t-j , --jpeg ID\t\t\t Extract JPEG picture(s)\n");
 #ifdef _ZLIB_INCLUDED_
@@ -182,6 +203,7 @@ char used[65536];
 TAG*tags[65536];
 int changed;
 char * tagused;
+int extractname_id = -1;
 
 void idcallback(void*data)
 {
@@ -226,6 +248,7 @@ void extractTag(SWF*swf, char*filename)
     TAG*desttag;
     TAG*srctag;
     RGBA rgb;
+    SRECT objectbbox;
     char sprite;
     int f;
     int t;
@@ -243,6 +266,8 @@ void extractTag(SWF*swf, char*filename)
     rgb.g = maing;
     rgb.b = mainb;
     swf_SetRGB(desttag,&rgb);
+
+    swf_GetRect(0, &objectbbox);
 
     do {
        changed = 0;
@@ -279,12 +304,15 @@ void extractTag(SWF*swf, char*filename)
 	    sprite = 1;
 	if(swf_isDefiningTag(srctag)) {
 	    int id = swf_GetDefineID(srctag);
-	    if(used[id]) 
+	    if(used[id])  {
+		SRECT b;
 		copy = 1;
+		b = swf_GetDefineBBox(srctag);
+		swf_ExpandRect2(&objectbbox, &b);
+	    }
 	} else 
-	if (((srctag->id == ST_PLACEOBJECT ||
-	      srctag->id == ST_PLACEOBJECT2 ||
-	      srctag->id == ST_STARTSOUND) && (used[swf_GetPlaceID(srctag)]&4) ) ||
+	if (((((srctag->id == ST_PLACEOBJECT || srctag->id == ST_PLACEOBJECT2) && originalplaceobjects)
+	      || srctag->id == ST_STARTSOUND) && (used[swf_GetPlaceID(srctag)]&4) ) ||
 	      (swf_isPseudoDefiningTag(srctag) && used[swf_GetDefineID(srctag)]) ||
 	      (tagused[tagnum])) 
 	{
@@ -310,9 +338,29 @@ void extractTag(SWF*swf, char*filename)
 	srctag = srctag->next;
 	tagnum ++;
     }
-    if(!extractframes && !hollow)
+    if(!extractframes && !hollow) {
+	if(!originalplaceobjects && (extractids||extractname_id>=0)) {
+	    int t;
+	    int s=0;
+	    if((objectbbox.xmin|objectbbox.ymin|objectbbox.xmax|objectbbox.ymax)!=0)
+		newswf.movieSize = objectbbox;
+	    if(extractname_id>=0) {
+		desttag = swf_InsertTag(desttag, ST_PLACEOBJECT2);
+		swf_ObjectPlace(desttag, extractname_id, extractname_id, 0,0,extractname);
+	    } else {
+		for(t=0;t<65536;t++) {
+		    if(is_in_range(t, extractids)) {
+			desttag = swf_InsertTag(desttag, ST_PLACEOBJECT2);
+			swf_ObjectPlace(desttag, t, t, 0,0,0);
+			s++;
+			if(s==2)
+			    printf("warning! You should use the -P when extracting multiple objects\n");
+		    }
+		}
+	    }
+	}
 	desttag = swf_InsertTag(desttag,ST_SHOWFRAME);
-
+    }
     desttag = swf_InsertTag(desttag,ST_END);
     
     f = open(filename, O_TRUNC|O_WRONLY|O_CREAT, 0644);
@@ -328,9 +376,9 @@ void listObjects(SWF*swf)
     char first;
     int t;
     int frame = 0;
-    char*names[] = {"Shapes","MovieClips","JPEGs","PNGs","Sounds","Frames"};
+    char*names[] = {"Shapes","MovieClips","JPEGs","PNGs","Sounds","Fonts"};
     printf("Objects in file %s:\n",filename);
-    for(t=0;t<6;t++) {
+    for(t=0;t<sizeof(names)/sizeof(names[0]);t++) {
 	tag = swf->firstTag;
 	first = 1;
 	while(tag) {
@@ -373,12 +421,11 @@ void listObjects(SWF*swf)
 		sprintf(text,"%d", swf_GetDefineID(tag));
 	    }
 	    
-	    if(t == 5 && (tag->id == ST_SHOWFRAME)) {
+	    if(t == 5 && (tag->id == ST_DEFINEFONT || tag->id == ST_DEFINEFONT2)) {
 		show = 1;
-		sprintf(text,"%d", frame);
-		frame ++;
+		sprintf(text,"%d", swf_GetDefineID(tag));
 	    }
-
+	    
 	    if(show) {
 		if(!first)
 		    printf(", ");
@@ -392,6 +439,37 @@ void listObjects(SWF*swf)
 	if(!first)
 	    printf("\n");
     }
+
+    if(frame)
+	printf("Frames: 0-%d\n", frame);
+    else
+	printf("Frames: 0\n");
+}
+
+void handlefont(SWF*swf, TAG*tag)
+{
+    SWFFONT* f=0;
+    U16 id;
+    char name[80];
+    char*filename = name;
+    int t;
+
+    id = swf_GetDefineID(tag);
+    sprintf(name, "font%d.swf", id);
+    if(numextracts==1) {
+	filename = destfilename;
+    }
+
+    swf_FontExtract(swf, id, &f);
+    if(!f) {
+	printf("Couldn't extract font %d\n", id);
+	return;
+    }
+    if(!f->layout)
+	swf_FontCreateLayout(f);
+
+    swf_WriteFont(f, filename);
+    swf_FontFree(f);
 }
 
 U8*jpegtables = 0;
@@ -786,7 +864,7 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     if(!extractframes && !extractids && ! extractname && !extractjpegids && !extractpngids
-	&& !extractmp3 && !extractsoundids)
+	&& !extractmp3 && !extractsoundids && !extractfontids)
 	listavailable = 1;
 
     if(!filename)
@@ -876,6 +954,9 @@ int main (int argc,char ** argv)
 		used[id] = 5;
 		found = 1;
 	    }
+	    if(extractfontids && is_in_range(id, extractfontids)) {
+		handlefont(&swf, tag);
+	    }
 	    if(extractjpegids && is_in_range(id, extractjpegids)) {
 		handlejpeg(tag);
 	    }
@@ -901,6 +982,7 @@ int main (int argc,char ** argv)
 		found = 1;
 		tagused[tagnum] = 1;
 		depths[swf_GetDepth(tag)] = 1;
+		extractname_id = id;
 	    }
 	}
 	else if(tag->id == ST_SHOWFRAME) {
