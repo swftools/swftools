@@ -1,0 +1,29 @@
+Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.gif [file2.gif ...]
+
+Takes a number of gif  files and converts them to a swf movie, one
+picture per frame.
+
+This tools converts gif image files into an SWF animation. It takes any
+number of input pictures, and converts them to SWF one-by-one, where every
+converted picture is a seperate frame in the target SWF. 
+
+-r, --rate <framerate>
+    Set movie framerate (frames per second)
+-o, --output <filename>
+    Set name for SWF output file.
+    Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+-z  --zlib    <zlib>        
+    Enable Flash 6 (MX) Zlib Compression
+    Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
+    smaller, but not playable in Flash Plugins of Version 5 and below.
+-X, --pixel <width>
+    Force movie width to <width> (default: autodetect)
+-Y, --pixel <height>
+    Force movie height to <height> (default: autodetect)
+-v, --verbose <level>
+    Set verbose level (0=quiet, 1=default, 2=debug)
+-C, --cgi
+    For use as CGI- prepend http header, write to stdout
+-V, --version
+    Print version information and exit
+
