@@ -18,14 +18,29 @@ dnl Checks for programs.
  AC_PROG_LN_S
 
 dnl Checks for system services
- AC_CYGWIN
  AC_EXEEXT
 
 dnl Checks for libraries.
- AC_CHECK_LIB(m, sin,, echo "Error: Math library not found.";exit)
- AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, echo "Error: The jpeg library 'jpeglib' is required.";exit)
- AC_CHECK_LIB(z, crc32,, echo "Error: The zlib compression library is required.";exit)
- AC_CHECK_LIB(t1, T1_LoadFont,,echo "Error: the T1lib truetype handling library is required.";exit)
+ AC_CHECK_LIB(m, sin,, 
+ echo "Error: Math library not found.";
+ exit;
+ )
+ AC_CHECK_LIB(z, crc32,, 
+ echo "Error: The zlib compression library is required."
+ DISABLEPDF2SWF=true; 
+ MISSINGLIBS="${MISSINGLIBS} zlib"
+ exit;
+ )
+ AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, 
+ DISABLEPDF2SWF=true;
+ DISABLEJPEG2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} jpeglib"
+ )
+ AC_CHECK_LIB(t1, T1_LoadFont,,
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} T1lib"
+ )
+
 dnl do we need those?
  AC_CHECK_LIB(pthread, pthread_create)
  AC_CHECK_LIB(X11, XFlush)
@@ -59,4 +74,20 @@ dnl Checks for library functions.
  AC_FUNC_VPRINTF
  AC_CHECK_FUNCS(getcwd putenv socket strcspn strdup strerror strstr)
 
-AC_OUTPUT(./release Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/fonts/Makefile)
+
+if test "x${DISABLEPDF2SWF}" = "xtrue"; then
+  echo "***************************************************"
+  echo "The following libraries are missing: " ${MISSINGLIBS}
+  echo "Disabling pdf2swf tool..."
+  rm pdf2swf/Makefile
+  echo all: > pdf2swf/Makefile
+  if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
+    echo "Disabling jpeg2swf tool..."
+    dnl FIXME: Do something here
+  fi
+  echo "***************************************************"
+  AC_OUTPUT(./release Makefile lib/Makefile src/Makefile)
+else
+  AC_OUTPUT(./release Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/fonts/Makefile)
+fi
+
