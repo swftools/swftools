@@ -1100,7 +1100,7 @@ void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     ObjectPlace(tag,myshapeid,/*depth*/depth++,NULL,NULL,NULL);
 }
 
-void swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int sizey, 
+int swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int sizey, 
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
@@ -1117,9 +1117,10 @@ void swfoutput_drawimagejpeg(struct swfoutput*obj, char*filename, int sizex,int 
     SetJPEGBits(tag, filename, jpegquality);
 
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+    return bitid;
 }
 
-void swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
+int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
@@ -1136,9 +1137,10 @@ void swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int s
     SetLosslessBits(tag,sizex,sizey,mem, BMF_32BIT);
     
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+    return bitid;
 }
 
-void swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
+int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
@@ -1155,5 +1157,20 @@ void swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int 
     SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256);
   
     drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+    return bitid;
+}
+
+void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey, 
+	double x1,double y1,
+	double x2,double y2,
+	double x3,double y3,
+	double x4,double y4)
+{
+    if(shapeid>=0)
+     endshape();
+    if(textid>=0)
+     endtext();
+
+    drawimage(obj, id, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
 }
 
