@@ -125,6 +125,7 @@ int png_read_header(FILE*fi, struct png_header*header)
 {
     char id[4];
     int len;
+    int ok=0;
     U8 head[8] = {137,80,78,71,13,10,26,10};
     U8 head2[8];
     U8*data;
@@ -172,13 +173,12 @@ int png_read_header(FILE*fi, struct png_header*header)
 		printf("%dx%d %d %d %d %d %d\n",header->width, header->height, a,b,c,f,i);
 	    header->bpp = a;
 	    header->mode = b;
-	    return 1;
-	} else {
-	    fseek(fi, len, SEEK_CUR);
-	}
+	    ok = 1;
+	} 
+	
 	free(data);
     }
-    return 0;
+    return ok;
 }
 
 typedef unsigned char byte;
@@ -338,7 +338,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     int len;
     U8*data;
     U8*imagedata;
+    U8*zimagedata=0;
     unsigned long int imagedatalen;
+    unsigned long int zimagedatalen=0;
     U8*palette = 0;
     int palettelen = 0;
     struct png_header header;
@@ -380,14 +382,28 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		printf("%d colors in palette\n", palettelen);
 	}
 	if(!strncmp(tagid, "IDAT", 4)) {
-	    if(uncompress(imagedata, &imagedatalen, data, len) != Z_OK) {
-		fprintf(stderr, "Couldn't uncompress %s!\n", sname);
-		return 0;
+	    if(!zimagedata) {
+		zimagedatalen = len;
+		zimagedata = malloc(len);
+		memcpy(zimagedata,data,len);
+	    } else {
+		zimagedata = realloc(zimagedata, zimagedatalen+len);
+		memcpy(&zimagedata[zimagedatalen], data, len);
+		zimagedatalen += len;
 	    }
 	}
 	if(data)
 	    free(data);
     }
+    
+    if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
+	fprintf(stderr, "Couldn't uncompress %s!\n", sname);
+	if(zimagedata)
+	    free(zimagedata);
+	return 0;
+    }
+    free(zimagedata);
+
     t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
     swf_SetU16(t, id);		// id
     if(header.mode == 2) {
