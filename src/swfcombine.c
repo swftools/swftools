@@ -497,6 +497,8 @@ void write_changepos(TAG*output, TAG*tag)
 		MATRIX m;
 		U8 flags;
 		swf_GetMatrix(0, &m);
+		tag->pos = 0;
+		tag->readBit = 0;
 
 		flags = swf_GetU8(tag);
 		swf_SetU8(output, flags|4);
