@@ -32,7 +32,10 @@ extern char *macRomanEncodingNames[macRomanEncodingSize];
 
 char*DATADIR = "/usr/local/share/swftools";
 
-extern void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m);
+extern void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m, int log);
+extern void resetdrawer();
+extern void moveto(TAG*tag, plotxy p0);
+extern void lineto(TAG*tag, plotxy p0);
 
 SWFFONT * t1font2swffont(int i)
 {
@@ -63,7 +66,7 @@ SWFFONT * t1font2swffont(int i)
     SWFFont * font = new SWFFont("", i, "");
 
     wfont->version = 2;
-    wfont->name = (U8*)fontname;
+    wfont->name = (U8*)strdup(fontname);
     wfont->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
 
     int s,num;
@@ -79,7 +82,7 @@ SWFFONT * t1font2swffont(int i)
 
     wfont->maxascii = encodingsize;
     wfont->numchars = num;
-    wfont->flags = /*layout*/0x80 + /*bold*/0?0:1 + /*italic*/(angle>0.05)?2:0;
+    wfont->flags = /*layout*/0x80 + /*bold*/0?1:0 + /*italic*/(angle>0.05)?2:0;
     wfont->glyph = (SWFGLYPH*)malloc(num*sizeof(SWFGLYPH));
     memset(wfont->glyph, 0, num*sizeof(SWFGLYPH));
     wfont->glyph2ascii = (U16*)malloc(num*sizeof(U16));
@@ -104,18 +107,20 @@ SWFFONT * t1font2swffont(int i)
     {
 	if(encoding[s]) {
 	    T1_OUTLINE*outline = font->getOutline(encoding[s]);
+	    int width = font->getWidth(encoding[s]);
 	    if(outline && outline->link) {
+		int log = 0;
 		wfont->ascii2glyph[s] = num;
 		wfont->glyph2ascii[num] = s;
 		swf_ShapeNew(&wfont->glyph[num].shape);
 		SHAPE*shape = wfont->glyph[num].shape;
-		wfont->glyph[num].advance = font->getCharWidth(num)/8;
+		wfont->glyph[num].advance = width/8;
 		
 		TAG*tag = swf_InsertTag(0,ST_DEFINESHAPE);
 
 		swfmatrix m;
-		m.m11 = 1;
-		m.m22 = 1;
+		m.m11 = 1.0;
+		m.m22 = 1.0;
 		m.m21 = 0;
 		m.m12 = 0;
 		m.m13 = 0;
@@ -126,16 +131,30 @@ SWFFONT * t1font2swffont(int i)
 		shape->bits.fill = 1;
 		shape->bits.line = 0;
 		swf_ShapeSetStyle(tag,shape,0,1,0);
-		drawpath(tag, outline, &m);
+		resetdrawer();
+		drawpath(tag, outline, &m, log);
+		
+		/*uncomment this to mark the glyph sizes:
+		*/   plotxy p1,p2;
+		p1.x=0;
+		p1.y=0;
+		p2.x=width/8;
+		p2.y=-width/8;
+		moveto(tag, p1);
+		lineto(tag, p2);
+		p1.x += 2;
+		p2.x += 2;
+		lineto(tag, p2);
+		lineto(tag, p1);
+		p1.x -= 2;
+		lineto(tag, p1);//*/
+
 		swf_ShapeSetEnd(tag);
 
-		wfont->glyph[num].shape->data = &tag->data[1];
-		int t;
-		for(t=0;t<8;t++)
-		    if(tag->writeBit == (0x80>>t)) break;
-		if(tag->writeBit == 0)
-		    t = 8;
 		wfont->glyph[num].shape->bitlen = (tag->len-1)*8;
+		wfont->glyph[num].shape->data = (U8*)malloc(tag->len-1);
+		memcpy(wfont->glyph[num].shape->data, &tag->data[1], tag->len-1);
+		swf_DeleteTag(tag);
 		num++;
 	    }
 	}
@@ -164,14 +183,14 @@ int main(int argc, char ** argv)
 
   int i,num;
   for( i=0; i<T1_Get_no_fonts(); i++)
-//      i = 0;
+//      i = 4;
   {
     SWFFONT * font = t1font2swffont(i);
     
     char filename[128];
     sprintf(filename, "%s.swf", font->name);
     swf_WriteFont(font, filename);
-    free(font);
+    swf_FontFree(font);
   }
 }
 
