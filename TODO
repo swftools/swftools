@@ -9,8 +9,10 @@ Make pdf2swf cope with more complex pdfs:
     The following pdf properties are not yet dealt with:
     * Links
     * lossless image file formats
-    * dashed lines
+    * dashed lines (maybe by using fillstyle to keep Shapes small)
     * (type 3 and truetype fonts)
+    * write DEFINE_FONTINFO-Tags to give results for swfstrings 
+      (suppress them as option)
 
 Do some sample swfs for swfcombine:
 
