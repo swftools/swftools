@@ -120,7 +120,13 @@ static int moveto(TAG*tag, plotxy p0)
     }
     return 0;
 }
-
+static int moveto(TAG*tag, float x, float y)
+{
+    plotxy p;
+    p.x = x;
+    p.y = y;
+    return moveto(tag, p);
+}
 static void addPointToBBox(int px, int py) 
 {
     SPOINT p;
@@ -151,6 +157,14 @@ static void lineto(TAG*tag, plotxy p0)
     swflastx+=rx;
     swflasty+=ry;
 }
+static void lineto(TAG*tag, float x, float y)
+{
+    plotxy p;
+    p.x = x;
+    p.y = y;
+    lineto(tag, p);
+}
+
 
 // write a spline-to command into the swf
 static void splineto(TAG*tag, plotxy control,plotxy end)
@@ -1150,12 +1164,14 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	return charnr;
     }
 
-    /* the following is technically wrong, and only works if the font encoding
-       is US-ASCII based. It's needed for fonts which return broken unicode
-       indices */
-/*    if(charnr>=0 && charnr<font->maxascii && font->ascii2glyph[charnr]>=0) {
-	return font->ascii2glyph[charnr];
-    }*/
+    if(font->encoding != FONT_ENCODING_UNICODE) {
+	/* the following only works if the font encoding
+	   is US-ASCII based. It's needed for fonts which return broken unicode
+	   indices */
+	if(charnr>=0 && charnr<font->maxascii && font->ascii2glyph[charnr]>=0) {
+	    return font->ascii2glyph[charnr];
+	}
+    }
 
     return -1;
 }
@@ -1219,6 +1235,11 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 		    swffont->layout->bounds[iii].xmax/20.0,
 		    swffont->layout->bounds[iii].ymax/20.0
 		    );
+	    int t;
+	    for(t=0;t<swffont->maxascii;t++) {
+		if(swffont->ascii2glyph[t] == iii)
+		    msg("<debug> | - maps to %d",t);
+	    }
 	}
     }
 
@@ -1432,13 +1453,45 @@ void changeRect(TAG*tag, int pos, SRECT*newrect)
     tag->pos = tag->readBit = 0;
 }
 
+void fixAreas()
+{
+    if(!shapeisempty && fill &&
+       (bboxrect.xmin == bboxrect.xmax ||
+        bboxrect.ymin == bboxrect.ymax)) {
+	msg("<debug> Shape has size 0");
+    
+	if(bboxrect.xmin == bboxrect.xmax && bboxrect.ymin == bboxrect.ymax) {
+	    /* this thing comes down to a single dot- nothing to fix here */
+	    return;
+	}
+
+	float x=0,y=0;
+	if(bboxrect.xmin == bboxrect.xmax) {
+	    x = 0.05;
+	} else {
+	    y = 0.05;
+	}
+	/* warning: doing this inside endshape() is dangerous */
+	moveto(tag, bboxrect.xmin/20.0, bboxrect.ymin/20.0);
+	lineto(tag, bboxrect.xmax/20.0 + x, bboxrect.ymin/20.0);
+	lineto(tag, bboxrect.xmax/20.0 + x, bboxrect.ymax/20.0 + y);
+	lineto(tag, bboxrect.xmin/20.0, bboxrect.ymax/20.0 + y);
+	lineto(tag, bboxrect.xmin/20.0, bboxrect.ymin/20.0);
+    }
+    
+}
+
 static void endshape(int clipdepth)
 {
     if(shapeid<0) 
         return;
-    swf_ShapeSetEnd(tag);
 
-    if(shapeisempty) {
+    if(!clipdepth)
+	fixAreas();
+	
+    if(shapeisempty ||
+       (bboxrect.xmin == bboxrect.xmax && bboxrect.ymin == bboxrect.ymax)) 
+    {
 	// delete the tag again, we didn't do anything
 	TAG*todel = tag;
 	tag = tag->prev;
@@ -1447,6 +1500,8 @@ static void endshape(int clipdepth)
 	bboxrectpos = -1;
 	return;
     }
+    
+    swf_ShapeSetEnd(tag);
 
     changeRect(tag, bboxrectpos, &bboxrect);
 
