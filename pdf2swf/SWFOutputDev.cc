@@ -74,6 +74,7 @@ static int pagebuflen = 0;
 static int pagepos = 0;
 
 static double caplinewidth = 3.0;
+static int zoom = 72; /* xpdf: 86 */
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
@@ -673,7 +674,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     x1 = x;
     y1 = y;
     state->transform(x, y, &x1, &y1);
-	
+    
     Unicode u=0;
     if(_u) 
 	u = *_u;
@@ -700,9 +701,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     
     msg("<debug> drawChar(%f,%f,c='%c' (%d),u=%d <%d>) CID=%d name=\"%s\"\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
 
-    x1 = (int)(x1+0.5);
-    y1 = (int)(y1+0.5);
-
+    /*x1 = (int)(x1+0.5);
+    y1 = (int)(y1+0.5);*/
+    
     int ret = swfoutput_drawchar(&output, x1, y1, name, c, u);
 }
 
@@ -1779,6 +1780,8 @@ void pdfswf_setparameter(char*name, char*value)
 	swffilename = value;
     } else if(!strcmp(name, "caplinewidth")) {
 	caplinewidth = atof(value);
+    } else if(!strcmp(name, "zoom")) {
+	zoom = atoi(value);
     } else {
 	swfoutput_setparameter(name, value);
     }
@@ -1800,6 +1803,7 @@ void pdfswf_storeallcharacters() { pdfswf_setparameter("storeallcharacters", "1"
 void pdfswf_enablezlib() { pdfswf_setparameter("enablezlib", "1"); }
 void pdfswf_setoutputfilename(char*_filename) { swffilename = _filename; }
 void pdfswf_insertstop() { pdfswf_setparameter("insertstoptag", "1"); }
+
 void pdfswf_jpegquality(int val) {
     char tmp[32];
     sprintf(tmp, "%d", val);
@@ -1835,7 +1839,7 @@ void pdfswf_performconversion()
     for(t=0;t<pagepos;t++)
     {
        currentpage = pages[t];
-       doc->displayPage((OutputDev*)output, currentpage, /*dpi*/72, /*rotate*/0, /*doLinks*/(int)1);
+       doc->displayPage((OutputDev*)output, currentpage, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
     }
 }
 int pdfswf_numpages()
