@@ -234,7 +234,7 @@ void args_callback_usage(char*name)
     printf("OR:    %s [-rXYov] --cat [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYomlcv] --dummy [-xys] [file]\n", name);
     printf("\n");
-    printf("-o outputfile       --output    explicitly specify output file. (otherwise, output.swf will be used\n");
+    printf("-o outputfile       --output    explicitly specify output file. (otherwise, output.swf will be used)\n");
     printf("-t                  --stack     place each slave in a seperate frame (no master movie)\n");
     printf("-T                  --stack1    place each slave in the first frame (no master movie)\n");
     printf("-m                  --merge     Don't store the slaves in Sprites/MovieClips\n");
