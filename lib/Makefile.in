@@ -140,6 +140,7 @@ installdirs:
 mostlyclean-generic:
 
 clean-generic:
+	rm -f rfxswf.o log.o
 
 distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
