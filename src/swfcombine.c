@@ -133,7 +133,13 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "r"))
     {
-	config.framerate = atoi(val)*256/100;
+
+	float rate = atof(val);
+	if ((rate < 1.0/256) ||(rate >= 256.0)) {
+	    fprintf(stderr, "Error: You must specify a valid framerate between 1/256 and 255.\n");
+	    exit(1);
+	}
+	config.framerate = (int)(rate*256);
 	return 1;
     }
     else if (!strcmp(name, "X"))
@@ -268,7 +274,7 @@ void args_callback_usage(char*name)
     printf("-x xpos             --movex     x Adjust position of slave by xpos twips (1/20 pixel)\n");
     printf("-y ypos             --movey     y Adjust position of slave by ypos twips (1/20 pixel)\n");
     printf("-s scale            --scale     Adjust size of slave by scale%\n");
-    printf("-r framerate        --rate      Set movie framerate (100 frames/sec)\n");
+    printf("-r framerate        --rate      Set movie framerate (frames/sec)\n");
     printf("-X width            --width     Force movie width to scale (default: use master width (not with -t))\n");
     printf("-Y height           --height    Force movie height to scale (default: use master height (not with -t))\n");
     printf("-z zlib             --zlib      Enable Flash 6 (MX) Zlib Compression\n");
