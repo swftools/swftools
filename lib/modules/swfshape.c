@@ -611,8 +611,6 @@ SRECT swf_GetShapeBoundingBox(SHAPE2*shape2)
 {
     SRECT r;
     SHAPELINE*l = shape2->lines;
-    int SCOORD_MAX = 0x7fffffff;
-    int SCOORD_MIN = -0x80000000;
     int lastx=0,lasty=0;
     int valid = 0;
     r.xmin = r.ymin = SCOORD_MAX;
