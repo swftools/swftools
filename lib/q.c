@@ -14,7 +14,7 @@
 // ------------------------------- malloc, alloc routines ---------------------
 
 #ifndef STRNDUP
-char* strndup(const char*str, int size)
+char* strdup_n(const char*str, int size)
 {
     char*m = (char*)malloc(size+1);
     memcpy(m, str, size);
@@ -52,7 +52,7 @@ char*qstrdup(const char*string)
 }
 char*qstrndup(const char*string, int len)
 {
-    return strndup(string, len);
+    return strdup_n(string, len);
 }
 
 // ------------------------------- mem_t --------------------------------------
@@ -196,7 +196,7 @@ void string_set(string_t*str, char*text)
 void string_dup2(string_t*str, const char*text, int len)
 {
     str->len = len;
-    str->str = strndup(text, len);
+    str->str = strdup_n(text, len);
 }
 void string_dup(string_t*str, const char*text)
 {
@@ -218,7 +218,7 @@ int string_equals2(string_t*str, string_t*str2)
 }
 char* string_cstr(string_t*str)
 {
-    return strndup(str->str, str->len);
+    return strdup_n(str->str, str->len);
 }
 
 // ------------------------------- stringarray_t ------------------------------

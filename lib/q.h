@@ -11,6 +11,7 @@
 #define __q_h__
 
 #include <stdio.h>
+#include "../config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,7 +93,7 @@ void dictionary_del(dictionary_t*dict, const char* name);
 void dictionary_clear(dictionary_t*dict);
 void dictionary_destroy(dictionary_t*dict);
 
-char* strndup(const char*str, int size);
+char* strdup_n(const char*str, int size);
 
 void* qmalloc_internal(int len);
 void* qrealloc_internal(void*old, int len);
