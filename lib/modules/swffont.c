@@ -94,6 +94,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     FT_UInt gindex;
     SWFFONT* font;
     int t;
+    int skipunused = 1;
+    int*glyph2glyph;
    
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
@@ -116,7 +118,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     font->layout = malloc(sizeof(SWFLAYOUT));
     memset(font->layout, 0, sizeof(SWFLAYOUT));
     font->layout->bounds = malloc(face->num_glyphs*sizeof(SRECT));
-    font->numchars = face->num_glyphs;
     font->style =  ((face->style_flags&FT_STYLE_FLAG_ITALIC)?FONT_STYLE_ITALIC:0)
 	          |((face->style_flags&FT_STYLE_FLAG_BOLD)?FONT_STYLE_BOLD:0);
     font->encoding = FONT_ENCODING_UNICODE;
@@ -124,9 +125,10 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     memset(font->glyph2ascii, 0, face->num_glyphs*sizeof(U16));
     font->maxascii = 0;
     font->glyph = malloc(face->num_glyphs*sizeof(SWFGLYPH));
-    memset(font->glyph, 0, face->num_glyphs*sizeof(U16));
+    memset(font->glyph, 0, face->num_glyphs*sizeof(SWFGLYPH));
     if(FT_HAS_GLYPH_NAMES(face)) {
 	font->glyphnames = malloc(face->num_glyphs*sizeof(char*));
+	memset(font->glyphnames,0,face->num_glyphs*sizeof(char*));
     }
 
     font->layout->ascent = face->ascender*20/FT_SUBPIXELS; //face->bbox.xMin;
@@ -169,10 +171,20 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     font->ascii2glyph = malloc(font->maxascii*sizeof(int));
     
     for(t=0;t<font->maxascii;t++) {
-	font->ascii2glyph[t] = FT_Get_Char_Index(face, t);
-	if(!font->ascii2glyph[t])
-	    font->ascii2glyph[t] = -1;
+	int g = FT_Get_Char_Index(face, t);
+	if(!g || g>=face->num_glyphs)
+	    g = -1;
+	font->ascii2glyph[t] = g;
+	if(g>=0) {
+	    if(!font->glyph2ascii[g]) {
+		font->glyph2ascii[g] = t;
+	    }
+	}
     }
+
+    font->numchars = 0;
+
+    glyph2glyph = (int*)malloc(face->num_glyphs*sizeof(int));
 
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
@@ -181,11 +193,17 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	char name[128];
 	drawer_t draw;
 	int ret;
+	char hasname = 0;
 	name[0]=0;
 	if(FT_HAS_GLYPH_NAMES(face)) {
 	    error = FT_Get_Glyph_Name(face, t, name, 127);
-	    if(!error) 
-		font->glyphnames[t] = strdup(name);
+	    if(!error && name[0] && !strstr(name, "notdef")) {
+		font->glyphnames[font->numchars] = strdup(name);
+		hasname = 1;
+	    }
+	}
+	if(!font->glyph2ascii[t] && !hasname && skipunused) {
+	    continue;
 	}
 	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP|FT_LOAD_NO_SCALE);
 	if(error) return 0;
@@ -218,25 +236,40 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
 #if 0
 	if(bbox.xMin > 0) {
-	    font->glyph[t].advance = (bbox.xMax*FT_SCALE)/FT_SUBPIXELS;
+	    font->glyph[font->numchars].advance = (bbox.xMax*FT_SCALE)/FT_SUBPIXELS;
 	} else {
-	    font->glyph[t].advance = ((bbox.xMax - bbox.xMin)*FT_SCALE)/FT_SUBPIXELS;
+	    font->glyph[font->numchars].advance = ((bbox.xMax - bbox.xMin)*FT_SCALE)/FT_SUBPIXELS;
 	}
 #else
-	font->glyph[t].advance = glyph->advance.x*20/65536;
+	font->glyph[font->numchars].advance = glyph->advance.x*20/65536;
 #endif
 	
-	font->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
+	font->glyph[font->numchars].shape = swf_ShapeDrawerToShape(&draw);
 	
-	font->layout->bounds[t].xmin = (bbox.xMin*FT_SCALE*20)/FT_SUBPIXELS;
-	font->layout->bounds[t].ymin = (bbox.yMin*FT_SCALE*20)/FT_SUBPIXELS;
-	font->layout->bounds[t].xmax = (bbox.xMax*FT_SCALE*20)/FT_SUBPIXELS;
-	font->layout->bounds[t].ymax = (bbox.yMax*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[font->numchars].xmin = (bbox.xMin*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[font->numchars].ymin = (bbox.yMin*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[font->numchars].xmax = (bbox.xMax*FT_SCALE*20)/FT_SUBPIXELS;
+	font->layout->bounds[font->numchars].ymax = (bbox.yMax*FT_SCALE*20)/FT_SUBPIXELS;
 
 	draw.dealloc(&draw);
 
 	FT_Done_Glyph(glyph);
+	font->glyph2ascii[font->numchars] = font->glyph2ascii[t];
+	glyph2glyph[t] = font->numchars;
+	printf("%d %d\n", t, glyph2glyph[t]);
+	font->numchars++;
     }
+    /* notice: if skipunused is true, font->glyph2ascii, font->glyphnames and font->layout->bounds will 
+	       have more memory allocated than just font->numchars, but only the first font->numchars 
+	       are used/valid */
+
+    for(t=0;t<font->maxascii;t++) {
+	if(font->ascii2glyph[t]>=0) {
+	    font->ascii2glyph[t] = glyph2glyph[font->ascii2glyph[t]];
+	    printf("ascii %d -> glyph %d\n", t, font->ascii2glyph[t]);
+	}
+    }
+    free(glyph2glyph);
 
     FT_Done_Face(face);
     FT_Done_FreeType(ftlibrary);ftlibrary=0;
