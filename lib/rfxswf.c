@@ -1077,6 +1077,14 @@ void swf_FoldAll(SWF*swf)
     }
 }
 
+void swf_FoldAllTags(TAG*tag)
+{
+    SWF swf;
+    memset(&swf, 0, sizeof(swf));
+    swf.firstTag = tag;
+    swf_FoldAll(&swf);
+}
+
 void swf_UnFoldAll(SWF*swf)
 {
     TAG*tag = swf->firstTag;
