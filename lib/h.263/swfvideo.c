@@ -38,8 +38,9 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
     swf_SetU8(tag, 0); /* smoothing off */
     swf_SetU8(tag, 2); /* codec = h.263 sorenson spark */
 
+#ifdef MAIN
     totalframes = frames;
-
+#endif
     memset(stream, 0, sizeof(VIDEOSTREAM));
     stream->olinex = width;
     width+=15;width&=~15;
