@@ -14,11 +14,11 @@ keyboard_viewer.o: keyboard_viewer.c
 PreLoaderTemplate.o: PreLoaderTemplate.c
 	$(C) -I../lib PreLoaderTemplate.c -o $@
 
-simple_viewer: simple_viewer.o
+simple_viewer: simple_viewer.o ../lib/librfxswf.a
 	$(L) simple_viewer.o -o $@ ../lib/librfxswf.a $(LIBS) 
-keyboard_viewer: keyboard_viewer.o
+keyboard_viewer: keyboard_viewer.o ../lib/librfxswf.a
 	$(L) keyboard_viewer.o -o $@ ../lib/librfxswf.a $(LIBS) 
-PreLoaderTemplate: PreLoaderTemplate.o
+PreLoaderTemplate: PreLoaderTemplate.o ../lib/librfxswf.a
 	$(L) PreLoaderTemplate.o -o $@ ../lib/librfxswf.a $(LIBS) 
 
 simple_viewer.swf: $(programs)
