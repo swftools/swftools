@@ -88,6 +88,7 @@ static int pagepos = 0;
 /* config */
 static double caplinewidth = 3.0;
 static int zoom = 72; /* xpdf: 86 */
+static int forceType0Fonts = 0;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
@@ -1547,7 +1548,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(embedded &&
        (gfxFont->getType() == fontType1 ||
 	gfxFont->getType() == fontType1C ||
-	//gfxFont->getType() == fontCIDType0C ||
+       (gfxFont->getType() == fontCIDType0C && forceType0Fonts) ||
 	gfxFont->getType() == fontTrueType ||
 	gfxFont->getType() == fontCIDType2
        ))
@@ -1959,6 +1960,8 @@ void pdfswf_setparameter(char*name, char*value)
 	caplinewidth = atof(value);
     } else if(!strcmp(name, "zoom")) {
 	zoom = atoi(value);
+    } else if(!strcmp(name, "forceType0Fonts")) {
+	forceType0Fonts = atoi(value);
     } else if(!strcmp(name, "fontdir")) {
         pdfswf_addfontdir(value);
     } else if(!strcmp(name, "languagedir")) {
