@@ -1110,6 +1110,12 @@ void s_sound(char*name, char*filename)
 	samples = (U16*)wav2.data;
 	numsamples = wav2.size/2;
 	free(wav.data);
+#ifdef WORDS_BIGENDIAN
+	/* swap bytes */
+	for(t=0;t<numsamples;t++) {
+	    samples[t] = (samples[t]>>8)&0xff | (samples[t]<<8)&0xff00;
+	}
+#endif
     }
 
     tag = swf_InsertTag(tag, ST_DEFINESOUND);
