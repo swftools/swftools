@@ -8261,10 +8261,13 @@ fi
 
 SLEXT="so"
 if test "x${MINGW}" != "xyes"; then
+    # no mingW
     cat >>confdefs.h <<_ACEOF
 #define O_BINARY 0
 _ACEOF
 
+else
+    # mingW
     SLEXT="dll"
 fi
 export SLEXT
