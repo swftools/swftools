@@ -97,6 +97,19 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "s"))
     {
+	char*s = strdup(val);
+	char*c = strchr(s, '=');
+	if(c && *c && c[1])  {
+	    *c = 0;
+	    c++;
+	    pdfswf_setparameter(s,c);
+	}
+	else
+	    pdfswf_setparameter(s,"1");
+	return 1;
+    }
+    else if (!strcmp(name, "S"))
+    {
 	pdfswf_drawonlyshapes();
 	return 0;
     }
@@ -234,7 +247,8 @@ struct options_t options[] =
  {"V","version"},
  {"i","ignore"},
  {"z","zlib"},
- {"s","shapes"},
+ {"s","set"},
+ {"S","shapes"},
  {"j","jpegquality"},
  {"p","pages"},
  {"w","samewindow"},
@@ -270,27 +284,32 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-si] [-j quality] [-p range] [-P password] input.pdf [-o output.swf]\n", name);
-    printf("\n");
+    printf("Usage: %s [Options] input.pdf [-o output.swf]\n", name);
+    printf("\nBasic options:\n");
     printf("-p  --pages=range          Convert only pages in range\n");
     printf("-P  --password=password    Use password for deciphering the pdf\n");
-    printf("-s  --shapes               Don't use SWF Fonts, but store everything as shape\n");
-    printf("-i  --ignore               Ignore draw order (makes the SWF file smaller, but may produce\n");
-    printf("                           graphic errors)\n");
-    printf("-z  --zlib                 Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)\n");
-    printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-q  --quiet                Suppress normal messages. Use -qq to suppress warnings, also.\n");
-    printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
 #ifdef HAVE_DIRENT_H
     printf("-F  --fontdir directory    Add directory to font search path\n");
 #endif
-    printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-V  --version              Print program version\n");
+    printf("\nEnhanced conversion options:\n");
     printf("-t  --stop                 Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
+    printf("-S  --shapes               Don't use SWF Fonts, but store everything as shape\n");
+    printf("-z  --zlib                 Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)\n");
+    printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
+    printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
+    printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-T  --flashversion=num     Set the flash version in the header to num (default: 4)\n");
+    printf("-s caplinewidth=value      Set the minimum line width to trigger cap style handling to value. (3)\n");
+    printf("-s splinequality=value     Set the quality of spline convertion to value (0-100, default: 100).\n");
+    printf("-s fontquality=value       Set the quality of font convertion to value (0-100, default: 100).\n");
+    printf("-s ignoredraworder         Ignore draw order (makes the SWF file smaller, but may produce\n"
+	   "                           graphic errors)\n");
+    printf("Postprocessing options:\n");
 #ifndef SYSTEM_BACKTICKS
-    printf("The following might not work because your system call doesn't support command substitution:\n");
+    printf("(They might not work because your system call doesn't support command substitution)\n");
 #endif
     printf("-b  --defaultviewer        Link default viewer to the pdf (%s/swfs/default_viewer.swf)\n", SWFTOOLS_DATADIR);
     printf("-l  --defaultpreloader     Link default preloader the pdf (%s/swfs/default_loader.swf)\n", SWFTOOLS_DATADIR);
@@ -386,6 +405,13 @@ int main(int argn, char *argv[])
 #endif
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,loglevel);
+
+    if(!filename)
+    {
+	fprintf(stderr, "Please specify an input file\n");
+	exit(1);
+    }
+
     if(!outputname)
     {
 	if(filename) {
