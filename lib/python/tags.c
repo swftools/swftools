@@ -1,6 +1,7 @@
 #include "pyutils.h"
 #include "primitives.h"
 #include "action.h"
+#include "taglist.h"
 #include "tag.h"
 #include "tags.h"
 #include "image.h"
@@ -72,6 +73,8 @@ static tag_internals_t font_tag =
     parse: font_parse,
     fillTAG: font_fillTAG,
     dealloc: font_dealloc,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(font_internal_t),
 };
@@ -172,6 +175,8 @@ static tag_internals_t placeobject_tag =
     parse: po_parse,
     fillTAG: po_fillTAG,
     dealloc: po_dealloc,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(placeobject_internal_t),
 };
@@ -223,6 +228,8 @@ static tag_internals_t bgcolor_tag =
     parse: 0,
     fillTAG: 0,
     dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: setbgcolor_methods,
     datasize: 0,
 };
@@ -250,6 +257,8 @@ static tag_internals_t protect_tag =
     parse: 0,
     fillTAG: 0,
     dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: 0,
 };
@@ -273,8 +282,93 @@ static tag_internals_t showframe_tag =
     parse: 0,
     fillTAG: 0,
     dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: 0,
+};
+//----------------------------------------------------------------------------
+staticforward tag_internals_t sprite_tag;
+typedef struct _sprite_internal
+{
+    PyObject* taglist;
+} sprite_internal_t;
+    
+static int sprite_fillTAG(tag_internals_t*self)
+{
+    mylog("+%08x(?) sprite_fillTAG", (int)self);
+
+    sprite_internal_t*si = (sprite_internal_t*)self->data;
+
+    TAG*sprite = swf_InsertTag(0, ST_DEFINESPRITE);
+    swf_SetU16(sprite, 0); //id
+    swf_SetU16(sprite, 0); //frames
+
+    TAG*tag = taglist_getTAGs2(si->taglist, self->tagmap, 0);
+    if(!tag) {
+	/* pass through exception */
+	return 0;
+    }
+    TAG*tag2 = tag;
+    while(tag2->next) tag2 = tag2->next;
+    swf_InsertTag(tag2, ST_END);
+
+    sprite->next = tag;
+    tag->prev = sprite;
+
+    swf_FoldSprite(sprite);
+    self->tag = sprite;
+    return 1;
+}
+
+static PyObject* f_Sprite(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"name", NULL};
+    char*name= 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s", kwlist, &name))
+	return NULL;
+
+    PyObject*tag = tag_new(&sprite_tag);
+    tag_internals_t*itag = tag_getinternals(tag);
+    sprite_internal_t*si = (sprite_internal_t*)itag->data;
+    si->taglist = taglist_new();
+    mylog("+%08x(%d) f_DefineSprite", (int)tag, tag->ob_refcnt);
+    return (PyObject*)tag;
+}
+static PyObject* sprite_getattr(tag_internals_t*self,char*a)
+{
+    sprite_internal_t*si = (sprite_internal_t*)self->data;
+    if(!strcmp(a, "tags")) {
+	Py_INCREF(si->taglist);
+	return si->taglist;
+    }
+    return 0;
+}
+static int sprite_setattr(tag_internals_t*self,char*a, PyObject*obj)
+{
+    sprite_internal_t*si = (sprite_internal_t*)self->data;
+    if(self->tag) {
+	swf_DeleteTag(self->tag);
+	self->tag = 0;
+    }
+    if(!strcmp(a, "tags")) {
+	PY_ASSERT_TYPE(obj,&TagListClass);
+	Py_DECREF(si->taglist);
+	si->taglist = obj;
+	Py_INCREF(si->taglist);
+	return 0;
+    }
+    return 1;
+}
+static tag_internals_t sprite_tag =
+{
+    parse: 0,
+    fillTAG: sprite_fillTAG,
+    dealloc: 0,
+    getattr: sprite_getattr, 
+    setattr: sprite_setattr,
+    tagfunctions: 0,
+    datasize: sizeof(sprite_internal_t),
 };
 //----------------------------------------------------------------------------
 staticforward tag_internals_t end_tag;
@@ -283,6 +377,8 @@ static tag_internals_t end_tag =
     parse: 0,
     fillTAG: 0,
     dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: 0,
 };
@@ -310,21 +406,16 @@ static PyObject* f_DefineText(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"font", "text", "size", "color", NULL};
     PyObject*tag = 0;
+    PyObject*otext;
     char*text = 0;
-    int textlen = 0;
-    PyObject*unicode16;
-    PyObject*unicode8;
     int size = 0;
     RGBA rgba = {255,0,0,0};
     PyObject*color = 0;
     PyObject*font = 0;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!u#i|O!", kwlist, &TagClass, &font, &text, &textlen, &size, &ColorClass, &color))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!Oi|O!", kwlist, &TagClass, &font, &otext, &size, &ColorClass, &color))
 	return NULL;
-    
-    unicode16 = PyUnicode_DecodeUTF16(text, textlen*2, NULL, NULL);
-    unicode8 = PyUnicode_AsUTF8String(unicode16);
-    text = PyString_AS_STRING(unicode8);
+    text = PyString_AS_STRING(PyUnicode_AsUTF8String(otext));
 
     if(color)
 	rgba = color_getRGBA(color);
@@ -349,6 +440,8 @@ static tag_internals_t text_tag =
     parse: 0,
     fillTAG: text_fillTAG,
     dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(text_internal_t),
 };
@@ -424,6 +517,8 @@ static tag_internals_t image_tag =
     parse: 0,
     fillTAG: image_fillTAG,
     dealloc: image_dealloc,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(image_internal_t),
 };
@@ -480,6 +575,8 @@ static tag_internals_t shape_tag =
     parse: 0,
     fillTAG: shape_fillTAG,
     dealloc: shape_dealloc,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(shape_internal_t),
 };
@@ -691,6 +788,8 @@ static tag_internals_t videostream_tag =
     parse: videostream_parse,
     fillTAG: videostream_fillTAG,
     dealloc: videostream_dealloc,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: videostream_methods,
     datasize: sizeof(videostream_internal_t),
 };
@@ -702,6 +801,8 @@ static tag_internals_t videoframe_tag =
     parse: 0,
     fillTAG: 0,
     dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
     tagfunctions: 0,
     datasize: 0
 };
@@ -721,6 +822,7 @@ static PyMethodDef TagMethods[] =
     {"Image", (PyCFunction)f_DefineImage, METH_KEYWORDS, "Create an SWF Image Tag."},
     {"ImageShape", (PyCFunction)f_DefineImageShape, METH_KEYWORDS, "Create an SWF Image Shape Tag."},
     {"ShowFrame", (PyCFunction)f_ShowFrame, METH_KEYWORDS, "Create an SWF Show Frame Tag."},
+    {"Sprite", (PyCFunction)f_Sprite, METH_KEYWORDS, "Create an SWF Sprite Tag."},
     {NULL, NULL, 0, NULL}
 };
 PyMethodDef* tags_getMethods()
@@ -738,6 +840,10 @@ PyMethodDef* tags_getMethods()
     register_tag(ST_DEFINEBITSJPEG3,&image_tag);
     register_tag(ST_DEFINEBITSLOSSLESS,&image_tag);
     register_tag(ST_DEFINEBITSLOSSLESS2,&image_tag);
+    register_tag(ST_SHOWFRAME,&showframe_tag);
+    register_tag(ST_DEFINEVIDEOSTREAM,&videostream_tag);
+    register_tag(ST_VIDEOFRAME,&videoframe_tag);
+    register_tag(ST_DEFINESPRITE,&sprite_tag);
     register_tag(ST_END,&end_tag);
 
     return TagMethods;
