@@ -859,8 +859,8 @@ void swf_Relocate (SWF*swf, char*bitmap)
 void swf_RelocateDepth(SWF*swf, char*bitmap)
 {
     TAG*tag;
-    tag = swf->firstTag;
     int nr;
+    tag = swf->firstTag;
     for(nr=65535;nr>=0;nr--) {
 	if(bitmap[nr] != 0) 
 	    break;

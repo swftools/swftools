@@ -926,13 +926,15 @@ GRADIENT parseGradient(const char*str)
     memset(&gradient, 0, sizeof(GRADIENT));
     while(*p) {
 	char*posstr,*colorstr;
+	float pos;
+	RGBA color;
 	posstr = gradient_getToken(&p);
 	if(!*posstr)
 	    break;
-	float pos = parsePercent(posstr);
+	pos = parsePercent(posstr);
 	if(!*p) syntaxerror("Error in shape data: Color expected after %s", posstr);
 	colorstr = gradient_getToken(&p);
-	RGBA color = parseColor(colorstr);
+	color = parseColor(colorstr);
 	if(gradient.num == sizeof(gradient.ratios)/sizeof(gradient.ratios[0])) {
 	    warning("gradient record too big- max size is 8, rest ignored");
 	    break;

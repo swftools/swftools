@@ -1201,11 +1201,12 @@ void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text)
     while(*s) {
 	SHAPE*shape;
 	SHAPE2*shape2;
+	SHAPELINE*l;
 	U32 c = readUTF8char(&s);
 	int g = font->ascii2glyph[c];
 	shape = font->glyph[g].shape;
 	shape2 = swf_ShapeToShape2(shape);
-	SHAPELINE*l = shape2->lines;
+	l = shape2->lines;
 	while(l) {
 	    if(l->type == moveTo) {
 		FPOINT to;

@@ -242,6 +242,12 @@ void draw_cubicTo(drawer_t*draw, FPOINT*  control1, FPOINT* control2, FPOINT*  t
 {
     struct qspline q[128];
     struct cspline c;
+    double quality = 80;
+    double maxerror = (500-(quality*5)>1?500-(quality*5):1)/20.0;
+
+    int num = approximate3(&c, q, 128, maxerror*maxerror);
+    int t;
+
     c.start.x = draw->pos.x;
     c.start.y = draw->pos.y;
     c.control1.x = control1->x;
@@ -250,11 +256,7 @@ void draw_cubicTo(drawer_t*draw, FPOINT*  control1, FPOINT* control2, FPOINT*  t
     c.control2.y = control2->y;
     c.end.x = to->x;
     c.end.y = to->y;
-    double quality = 80;
-    double maxerror = (500-(quality*5)>1?500-(quality*5):1)/20.0;
 
-    int num = approximate3(&c, q, 128, maxerror*maxerror);
-    int t;
     for(t=0;t<num;t++) {
 	FPOINT mid;
 	FPOINT to;
