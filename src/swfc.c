@@ -192,6 +192,7 @@ static int stackpos = 0;
 
 static dictionary_t characters;
 static dictionary_t images;
+static dictionary_t textures;
 static dictionary_t outlines;
 static dictionary_t gradients;
 static char idmap[65536];
@@ -239,6 +240,10 @@ typedef struct _gradient {
     char radial;
     int rotate;
 } gradient_t;
+
+typedef struct _texture {
+    FILLSTYLE fs;
+} texture_t;
 
 static void character_init(character_t*c)
 {
@@ -395,6 +400,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     
     dictionary_init(&characters);
     dictionary_init(&images);
+    dictionary_init(&textures);
     dictionary_init(&outlines);
     dictionary_init(&gradients);
     dictionary_init(&instances);
@@ -680,6 +686,7 @@ static void s_endSWF()
     dictionary_clear(&instances);
     dictionary_clear(&characters);
     dictionary_clear(&images);
+    dictionary_clear(&textures);
     dictionary_clear(&outlines);
     dictionary_clear(&gradients);
     dictionary_clear(&fonts);
@@ -740,15 +747,18 @@ void s_frame(int nr, int cut, char*name)
 
 int parseColor2(char*str, RGBA*color);
 
-int addFillStyle(SHAPE*s, SRECT*r, char*texture)
+int addFillStyle(SHAPE*s, SRECT*r, char*name)
 {
     RGBA color;
     character_t*image;
     gradient_t*gradient;
-    if(texture[0] == '#') {
-	parseColor2(texture, &color);
+    texture_t*texture;
+    if(name[0] == '#') {
+	parseColor2(name, &color);
 	return swf_ShapeAddSolidFillStyle(s, &color);
-    } else if((image = dictionary_lookup(&images, texture))) {
+    } else if ((texture = dictionary_lookup(&textures, name))) {
+	return swf_ShapeAddFillStyle2(s, &texture->fs);
+    } else if((image = dictionary_lookup(&images, name))) {
 	MATRIX m;
 	swf_GetMatrix(0, &m);
 	m.sx = 65536.0*20.0*(r->xmax - r->xmin)/image->size.xmax;
@@ -756,8 +766,7 @@ int addFillStyle(SHAPE*s, SRECT*r, char*texture)
 	m.tx = r->xmin;
 	m.ty = r->ymin;
 	return swf_ShapeAddBitmapFillStyle(s, &m, image->id, 0);
-    } /*else if ((texture = dictionary_lookup(&textures, texture))) {
-    } */ else if ((gradient = dictionary_lookup(&gradients, texture))) {
+    }  else if ((gradient = dictionary_lookup(&gradients, name))) {
 	SRECT r2;
 	MATRIX rot,m;
 	double ccos,csin;
@@ -777,10 +786,10 @@ int addFillStyle(SHAPE*s, SRECT*r, char*texture)
 	m.tx = r->xmin + (r->xmax - r->xmin)/2;
 	m.ty = r->ymin + (r->ymax - r->ymin)/2;
 	return swf_ShapeAddGradientFillStyle(s, &m, &gradient->gradient, gradient->radial);
-    }  else if (parseColor2(texture, &color)) {
+    }  else if (parseColor2(name, &color)) {
 	return swf_ShapeAddSolidFillStyle(s, &color);
     } else {
-	syntaxerror("not a color/fillstyle: %s", texture);
+	syntaxerror("not a color/fillstyle: %s", name);
 	return 0;
     }
 }
@@ -1045,6 +1054,63 @@ void s_image(char*name, char*type, char*filename, int quality)
     incrementid();
 }
 
+void s_getBitmapSize(char*name, int*width, int*height)
+{
+    character_t* image = dictionary_lookup(&images, name);
+    gradient_t* gradient = dictionary_lookup(&gradients,name);
+    if(image) {
+	*width = image->size.xmax;
+	*height = image->size.ymax;
+	return;
+    }
+    if(gradient) {
+	/* internal SWF gradient size */
+	if(gradient->radial) {
+	    *width = 16384;
+	    *height = 16384;
+	} else {
+	    *width = 32768;
+	    *height = 32768;
+	}
+	return;
+    }
+    syntaxerror("No such bitmap/gradient: %s", name);
+}
+
+void s_texture(char*name, char*object, int x, int y, float scalex, float scaley, float rotate, float shear)
+{
+    gradient_t* gradient = dictionary_lookup(&gradients, object);
+    character_t* bitmap = dictionary_lookup(&images, object);
+    texture_t* texture = (texture_t*)rfx_calloc(sizeof(texture_t));
+    parameters_t p;
+    FILLSTYLE*fs = &texture->fs;
+
+    if(bitmap) {
+	fs->type = FILL_TILED;
+	fs->id_bitmap = bitmap->id;
+    } else if(gradient) {
+	fs->type = gradient->radial?FILL_RADIAL:FILL_LINEAR;
+	fs->gradient = gradient->gradient;
+    }
+    p.x = x;p.y = y;p.scalex = scalex;p.scaley = scaley;p.rotate=rotate;p.shear=shear;
+    makeMatrix(&fs->m, &p);
+    if(gradient && !gradient->radial) {
+	MATRIX m = fs->m;
+	SPOINT p1,p2;
+	m.tx = 0;
+	m.ty = 0;
+	p1.x = 16384;
+	p1.y = 16384;
+	p2 = swf_TurnPoint(p1, &m);
+	fs->m.tx += p2.x;
+	fs->m.ty += p2.y;
+    }
+
+    if(dictionary_lookup(&textures, name))
+	syntaxerror("texture %s defined twice", name);
+    dictionary_put2(&textures, name, texture);
+}
+
 void dumpSWF(SWF*swf)
 {
     TAG* tag = swf->firstTag;
@@ -1166,16 +1232,19 @@ RGBA parseColor(char*str);
 GRADIENT parseGradient(const char*str)
 {
     GRADIENT gradient;
+    int lastpos = -1;
     const char* p = str;
     memset(&gradient, 0, sizeof(GRADIENT));
     while(*p) {
 	char*posstr,*colorstr;
-	float pos;
+	int pos;
 	RGBA color;
 	posstr = gradient_getToken(&p);
 	if(!*posstr)
 	    break;
-	pos = parsePercent(posstr);
+	pos = (int)(parsePercent(posstr)*255.0);
+	if(pos == lastpos)
+	    pos++;
 	if(!*p) syntaxerror("Error in shape data: Color expected after %s", posstr);
 	colorstr = gradient_getToken(&p);
 	color = parseColor(colorstr);
@@ -1183,11 +1252,12 @@ GRADIENT parseGradient(const char*str)
 	    warning("gradient record too big- max size is 8, rest ignored");
 	    break;
 	}
-	gradient.ratios[gradient.num] = (int)(pos*255.0);
+	gradient.ratios[gradient.num] = pos;
 	gradient.rgba[gradient.num] = color;
 	gradient.num++;
 	free(posstr);
 	free(colorstr);
+	lastpos = pos;
     }
     return gradient;
 }
@@ -1918,6 +1988,76 @@ SPOINT getPoint(SRECT r, char*name)
     l--;
     return *(SPOINT*)&mpoints.buffer[l];
 }
+
+static int texture2(char*name, char*object, map_t*args, int errors) 
+{
+    SPOINT pos,size;
+    char*xstr = map_lookup(args, "x");
+    char*ystr = map_lookup(args, "y");
+    char*widthstr = map_lookup(args, "width");
+    char*heightstr = map_lookup(args, "height");
+    char*scalestr = map_lookup(args, "scale");
+    char*scalexstr = map_lookup(args, "scalex");
+    char*scaleystr = map_lookup(args, "scaley");
+    char*rotatestr = map_lookup(args, "rotate");
+    char* shearstr = map_lookup(args, "shear");
+    char* radiusstr = map_lookup(args, "r");
+    float x=0,y=0;
+    float scalex = 1.0, scaley = 1.0;
+    float rotate=0, shear=0;
+    float r = 0;
+    if(!*xstr && !*ystr) {
+	if(errors)
+	    syntaxerror("x and y must be set");
+	return 0;
+    }
+    if(*scalestr && (*scalexstr || *scaleystr)) {
+	syntaxerror("scale and scalex/scaley can't both be set");
+	return 0;
+    }
+    if((*widthstr || *heightstr) && *radiusstr) {
+	syntaxerror("width/height and radius can't both be set");
+    }
+    if(*radiusstr) {
+	widthstr = radiusstr;
+	heightstr = radiusstr;
+    }
+    if(!*xstr) xstr="0";
+    if(!*ystr) ystr="0";
+    if(!*rotatestr) rotatestr="0";
+    if(!*shearstr) shearstr="0";
+
+    if(*scalestr) {
+	scalex = scaley = parsePercent(scalestr);
+    } else if(*scalexstr || *scaleystr) {
+	if(scalexstr) scalex = parsePercent(scalexstr);
+	if(scaleystr) scaley = parsePercent(scaleystr);
+    } else if(*widthstr || *heightstr) {
+	int width=0;
+	int height=0;
+	s_getBitmapSize(object, &width, &height);
+	if(*widthstr)
+	    scalex = (float)parseTwip(widthstr)/(float)width;
+	if(*heightstr)
+	    scaley = (float)parseTwip(heightstr)/(float)height;
+    }
+    x = parseTwip(xstr);
+    y = parseTwip(ystr);
+    rotate = parseFloat(rotatestr);
+    shear = parseFloat(shearstr);
+
+    s_texture(name, object, x,y,scalex,scaley,rotate, shear);
+
+    return 0;
+}
+
+static int c_texture(map_t*args) 
+{
+    char*name = lu(args, "instance");
+    char*object = lu(args, "character");
+    return texture2(name, object, args, 1);
+}
+
 static int c_gradient(map_t*args) 
 {
     char*name = lu(args, "name");
@@ -1928,7 +2068,14 @@ static int c_gradient(map_t*args)
     if(type != RAWDATA)
 	syntaxerror("colon (:) expected");
 
-    s_gradient(name, text, radial,rotate);
+    s_gradient(name, text, radial, rotate);
+
+    /* check whether we also have placement information,
+       which would make this a positioned gradient.
+       If there is placement information, texture2() will
+       add a texture, which has priority over the gradient.
+     */
+    texture2(name, name, args, 0);
     return 0;
 }
 static int c_point(map_t*args) 
@@ -2570,8 +2717,6 @@ static int c_edittext(map_t*args)
 static int c_morphshape(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
 
-static int c_texture(map_t*args) {return 0;}
-
 static int c_action(map_t*args) 
 {
     char* filename  = map_lookup(args, "filename");
@@ -2622,7 +2767,7 @@ static struct {
     // generators of primitives
 
  {"point", c_point, "name x=0 y=0"},
- {"gradient", c_gradient, "name @radial=0 rotate=0"},
+ {"gradient", c_gradient, "name @radial=0 rotate=0 scale= scalex= scaley= x= y= width= height= r= shear="}, //extra parameters like .texture
  {"outline", c_outline, "name format=simple"},
  {"textshape", c_textshape, "name font size=100% text"},
 
@@ -2658,7 +2803,7 @@ static struct {
  {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
- {"texture", c_texture, "<i> x=0 y=0 scale= scalex=100% scaley=100% shear=0 rotate=0"},
+ {"texture", c_texture, "<i> x=0 y=0 width= height= scale= scalex= scaley= r= shear= rotate="},
 
     // commands which start a block
 //startclip (see above)
