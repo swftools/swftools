@@ -30,6 +30,7 @@ char * filename = 0;
 char * outputname = "output.swf";
 int verbose = 2;
 int stopframe0 = 0;
+int stopframe1 = 0;
 
 #define DEFINESOUND_MP3 1 //define sound uses mp3?- undefine for raw sound.
 
@@ -44,6 +45,7 @@ static struct options_t options[] = {
 {"l", "loop"},
 {"C", "cgi"},
 {"S", "stop"},
+{"E", "end"},
 {"b", "bitrate"},
 {"v", "verbose"},
 {0,0}
@@ -84,6 +86,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "S")) {
 	stopframe0 = 1;
+	return 0;
+    }
+    else if(!strcmp(name, "E")) {
+	stopframe1 = 1;
 	return 0;
     }
     else if(!strcmp(name, "C")) {
@@ -162,6 +168,7 @@ void args_callback_usage(char *name)
     printf("-l , --loop n                  (Only used with -d)\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout.\n");
     printf("-S , --stop                    Stop the movie at frame 0\n");
+    printf("-E , --end                     Stop the movie at the end frame\n");
     printf("-b , --bitrate <bps>           Set mp3 bitrate to <bps> (default: 32)\n");
     printf("-v , --verbose                 Be more verbose\n");
     printf("\n");
@@ -337,6 +344,15 @@ int main (int argc,char ** argv)
 	info.loops = loop;
 	swf_SetSoundInfo(tag, &info);
 	tag = swf_InsertTag(tag, ST_SHOWFRAME);
+        if(stopframe1) {
+	    ActionTAG*action = 0;
+	    tag = swf_InsertTag(tag, ST_DOACTION);
+	    action = action_Stop(action);
+	    action = action_End(action);
+	    swf_ActionSet(tag, action);
+	    swf_ActionFree(action);
+	    tag = swf_InsertTag(tag, ST_SHOWFRAME);
+        }
 	tag = swf_InsertTag(tag, ST_END);
     }
 
