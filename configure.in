@@ -18,7 +18,12 @@ AC_ARG_ENABLE(lame,
 PACKAGE=swftools
 VERSION=0.6.0
 
+# ------------------------------------------------------------------
 
+if test "x${srcdir}" != "x."; then
+    echo "--srcdir is not supported"
+    exit 1
+fi
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
@@ -131,22 +136,9 @@ dnl Checks for libraries.
  echo "Error: Math library not found.";
  exit;
  )
- AC_CHECK_LIB(z, deflate,, 
- DISABLEPNG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} zlib"
- ZLIBMISSING=true;
- )
- AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, 
- DISABLEPDF2SWF=true;
- DISABLEJPEG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} jpeglib"
- )
- AC_CHECK_LIB(t1, T1_LoadFont,,
- DISABLEPDF2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} t1lib"
- )
-
-RFX_CHECK_FREETYPE
+ AC_CHECK_LIB(z, deflate,, ZLIBMISSING=true)
+ AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
+ AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
 
 RFX_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
@@ -160,21 +152,6 @@ dnl Checks for header files.
  AC_HEADER_DIRENT
  AC_HEADER_STDC
  AC_CHECK_HEADERS(zlib.h jpeglib.h t1lib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h)
-
-if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
- DISABLEPDF2SWF=true;
- DISABLEJPEG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} jpeglib.h"
-fi
-if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
- DISABLEPDF2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} t1lib.h"
-fi
-if test "x${ac_cv_header_zlib_h}" != "xyes"; then
- DISABLEPNG2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} zlib.h"
- ZLIBMISSING=true;
-fi
 
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE")
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
@@ -200,6 +177,10 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
  AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand bcopy bzero time)
+
+# ------------------------------------------------------------------
+
+RFX_CHECK_FREETYPE
 
 # ------------------------------------------------------------------
  
@@ -235,14 +216,6 @@ AC_SUBST(lame_objects)
  
 RFX_CHECK_AVI2SWF
 
-avi2swf="avi2swf/Makefile"
-if test "x${AVIFILE}" != "xtrue"; then
- echo "* Couldn't compile the avifile test program."
- echo "* Disabling avi2swf tool..."
- echo all install uninstall clean: > avi2swf/Makefile
- avi2swf=
-fi
-
 # ------------------------------------------------------------------
 
 if test "x${UNCOMPRESS}" = "xgzip"; then
@@ -256,52 +229,104 @@ RFX_CHECK_PYTHON
 
 if test "x$PYTHON_OK" '!=' "xyes";then
     echo all install uninstall clean: > lib/python/Makefile
-    echo "* No usable python installation found"
-    echo "* Not compiling the python interface"
+    # fail silently- the most users won't have any need for the
+    # python interface anyway
 fi
 
 # ------------------------------------------------------------------
 
-JPEG2SWF='jpeg2swf$(E)'
-export JPEG2SWF
-PNG2SWF='png2swf$(E)'
-export PNG2SWF
-
-if test "x${DISABLEPDF2SWF}" = "xtrue"; then
-  echo "***************************************************"
-  echo "The following headers/libraries are missing: " ${MISSINGLIBS}
-  if test "x${DISABLEPDF2SWF}" = "xtrue"; then
-    echo "Disabling pdf2swf tool..."
-    rm -f pdf2swf/Makefile
-    echo all install uninstall clean: > pdf2swf/Makefile
-  fi
-  if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
-    echo "Disabling jpeg2swf tool..."
-    JPEG2SWF=
-    export JPEG2SWF
-  fi
-  if test "x${DISABLEPNG2SWF}" = "xtrue"; then
-    echo "Disabling png2swf tool..."
-    PNG2SWF=
-    export PNG2SWF
-  fi
-  if test "x${ZLIBMISSING}" = "xtrue"; then
-    echo
-    echo "Warning! Without zlib, you will not be able to read"
-    echo "or write compressed Flash MX files!"
-  fi
-  echo "***************************************************"
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
-else
-  FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
+AC_MSG_CHECKING([for missing libraries])
+ 
+if test "x$ZLIBMISSING" = "xtrue";then
+    MISSINGLIBS="${MISSINGLIBS} zlib"
+    DISABLEPNG2SWF=true;
 fi
+if test "x$JPEGLIBMISSING" = "xtrue";then
+    MISSINGLIBS="${MISSINGLIBS} jpeglib"
+    DISABLEPDF2SWF=true;
+    DISABLEJPEG2SWF=true;
+fi
+#if test "x$T1LIBMISSING" = "xtrue";then
+#    MISSINGLIBS="${MISSINGLIBS} t1lib"
+#    DISABLEPDF2SWF=true;
+#fi
+
+if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
+ DISABLEPDF2SWF=true;
+ DISABLEJPEG2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} jpeglib.h"
+fi
+if test "x$HAVE_FREETYPE" != "x1"; then
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} freetype"
+fi
+if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} t1lib.h"
+fi
+if test "x${ac_cv_header_zlib_h}" != "xyes"; then
+ DISABLEPNG2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} zlib.h"
+fi
+if test "x${AVIFILE}" != "xtrue"; then
+ MISSINGLIBS="${MISSINGLIBS} avifile"
+fi
+
+AC_MSG_RESULT(${MISSINGLIBS})
+
+# ------------------------------------------------------------------
+
+if test "x${MISSINGLIBS}" '!=' "x"; then
+  echo "***************************************************"
+  echo "* The following headers/libraries are missing: " ${MISSINGLIBS}
+fi
+
+avi2swf="avi2swf/Makefile"
+if test "x${AVIFILE}" != "xtrue"; then
+ echo "* Disabling avi2swf tool..."
+ echo all install uninstall clean: > avi2swf/Makefile
+ avi2swf=
+fi
+
+pdf2swf_makefile="pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile"
+if test "x${DISABLEPDF2SWF}" = "xtrue"; then
+  echo "* Disabling pdf2swf tool..."
+  rm -f pdf2swf/Makefile
+  echo all install uninstall clean: > pdf2swf/Makefile
+  pdf2swf_makefile=""
+fi
+
+if test "x${ZLIBMISSING}" = "xtrue"; then
+  echo
+  echo "* Warning! Without zlib, you will not be able to read"
+  echo "* or write compressed Flash MX files!"
+fi
+
+JPEG2SWF='jpeg2swf$(E)'
+if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
+  echo "* Disabling jpeg2swf tool..."
+  JPEG2SWF=
+fi
+export JPEG2SWF
 AC_SUBST(JPEG2SWF)
+
+PNG2SWF='png2swf$(E)'
+if test "x${DISABLEPNG2SWF}" = "xtrue"; then
+  echo "* Disabling png2swf tool..."
+  PNG2SWF=
+fi
+export PNG2SWF
 AC_SUBST(PNG2SWF)
+
+if test "x${MISSINGLIBS}" '!=' "x"; then
+  echo "***************************************************"
+fi
+
+# ------------------------------------------------------------------
+
+FILES="./release Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile ${pythonrfxswf} ${lame_makefile}"
 
 dnl AC_OUTPUT(${FILES}) old autoconf
 AC_CONFIG_FILES([${FILES}])
 AC_OUTPUT
 
-if test "x${srcdir}" != "x."; then
-    echo "Warning: --srcdir is not supported"
-fi
