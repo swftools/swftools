@@ -40,6 +40,7 @@
 	* pdf2swf: TrueType support added. (using ttf2pt1)
 	* rfxswf-lib: performs conversion of jpeg colorspaces now. (Makes pdf2swf cope
 	               with more types of jpegs)
-	* swfextract: new tool, allows to extract single objects from movieclips
+	* swfextract: new tool, allows to extract single objects, frames etc. from movieclips
 	* swfcombine: allows ids instead of names, now, too.
-	* swfdump: added text extracting functionality.
+	* swfdump: added text displaying functionality. (like swfstrings)
+	* swfdump: now dumps also the undocumented placeobject2 actioncode.

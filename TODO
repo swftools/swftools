@@ -21,7 +21,7 @@ swfcombine:
 swfextract:
     
     * add support for extraction of bitmaps and sounds into 'native' formats (mp3, jpg, png)
-    * Support for extracting frames?
+    * improve placeobject handling
 
 swfdump:
 
