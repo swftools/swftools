@@ -3,15 +3,15 @@
  *
  * Memory routines with out-of-memory checking.
  *
- * Copyright 1996-2002 Glyph & Cog, LLC
+ * Copyright 1996-2003 Glyph & Cog, LLC
  */
 
+#include <aconf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include "./aconf.h"
-#include "./gmem.h"
+#include "gmem.h"
 
 #ifdef DEBUG_MEM
 
