@@ -99,7 +99,7 @@ int main (int argc,char ** argv)
       swf_ButtonSetRecord(t,BS_DOWN,36,1,NULL,NULL);
       swf_SetU8(t,0); // end of button records
       
-      swf_SetActions(t,actiontoset);
+      swf_ActionSet(t,actiontoset);
   }
   else
   {
@@ -112,12 +112,14 @@ int main (int argc,char ** argv)
       swf_SetU8(t,0); // end of button records
 
       swf_ButtonSetCondition(t, BC_OVERDOWN_OVERUP);
-       swf_SetActions(t,actiontoset);
+       swf_ActionSet(t,actiontoset);
        
       swf_ButtonPostProcess(t, 1); // don't forget!
   }
 
-  // FIXME: Free Action Tag lists
+  swf_ActionFree(a1);
+  swf_ActionFree(a2);
+  swf_ActionFree(a3);
 
   t = swf_InsertTag(t,ST_PLACEOBJECT2);
   swf_ObjectPlace(t, ID_BUTTON, 2,0,0,0);
