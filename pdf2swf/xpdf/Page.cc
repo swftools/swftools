@@ -78,6 +78,19 @@ PageAttrs::PageAttrs(PageAttrs *attrs, Dict *dict) {
     }
   }
 
+  /* if the crop box is larger than the media box, cut it down to 
+     media box size */
+  if(haveCropBox &&
+     mediaBox.x1 <= cropBox.x2 &&
+     mediaBox.y1 <= cropBox.y2 &&
+     cropBox.x1 <= mediaBox.x2 &&
+     cropBox.y1 <= mediaBox.y2) {
+      if(mediaBox.x1 >= cropBox.x1) cropBox.x1 = mediaBox.x1;
+      if(mediaBox.y1 >= cropBox.y1) cropBox.y1 = mediaBox.y1;
+      if(mediaBox.x2 <= cropBox.x2) cropBox.x2 = mediaBox.x2;
+      if(mediaBox.y2 <= cropBox.y2) cropBox.y2 = mediaBox.y2;
+  }
+
   // other boxes
   bleedBox = cropBox;
   readBox(dict, "BleedBox", &bleedBox);
