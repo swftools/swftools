@@ -1,7 +1,7 @@
 Priorities:
 1. Do some sample swfs for swfcombine 
 2. Make pdf2swf cope with more complex pdfs
-3. General improvements
+3. General improvements, Autoconf
 4. Cleanups in rfxswf-lib.
 
 Make pdf2swf cope with more complex pdfs:
@@ -31,8 +31,11 @@ Cleanups in rfxswf-lib:
     * LPTAGs etc. should be TAG*s
     * function names should have a prefix (rfxswf_ or swflib_ or sth.)
     * GetMatrix should be named GetMATRIX, as it gets a MATRIX datatype. Same for CXFORM etc.
-    [ ^ I do not agree /rainer - Why not? /matthias ]
     * element names should be lowercase
     * DataPos should be named DataReadPos, DataSize DataWritePos.
     * bitcount should be named BitWritePos, bitmask BitReadPos
-   
+  
+Autoconf:
+    * ljpeg should be optional, so should t1lib (disable the jpeg2swf/pdf2swf package if 
+	    the required libs are not there)
+
