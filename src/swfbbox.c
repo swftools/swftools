@@ -69,7 +69,7 @@ void args_callback_usage(char*name)
 {    
     printf("Usage: %s [-at] file.swf\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-O , --optimize\t\t Print help and exit\n");
+    printf("\t-O , --optimize\t\t Recalculate bounding boxes\n");
     printf("\t-S , --swifty\t\t Print out transformed bounding boxes\n");
     printf("\t-o , --output\t\t Set output filename (for -O)\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
