@@ -62,7 +62,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
     memset(swf, 0x00, sizeof(SWF));
 
     swf->fileVersion = 4;
-    swf->frameRate = (256.0 * framerate);
+    swf->frameRate = (int)(256.0 * framerate);
     swf->movieSize.xmax = dx * 20;
     swf->movieSize.ymax = dy * 20;
 

@@ -31,7 +31,7 @@
 #define VERBOSE(x) (global.verbose>=x)
 
 struct {
-    int framerate;
+    float framerate;
     int max_image_width;
     int max_image_height;
     int force_width;
@@ -45,7 +45,7 @@ struct {
     char *filename;
 } image[MAX_INPUT_FILES];
 
-TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
+TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 {
     TAG *t;
     RGBA rgb;
@@ -53,7 +53,7 @@ TAG *MovieStart(SWF * swf, int framerate, int dx, int dy)
     memset(swf, 0x00, sizeof(SWF));
 
     swf->fileVersion = 5;
-    swf->frameRate = (25600 / framerate);
+    swf->frameRate = (int)(256.0 * framerate);
     swf->movieSize.xmax = dx * 20;
     swf->movieSize.ymax = dy * 20;
 
@@ -766,11 +766,11 @@ int args_callback_option(char *arg, char *val)
 	switch (arg[0]) {
 	case 'r':
 	    if (val)
-		global.framerate = atoi(val);
-	    if ((global.framerate < 1) ||(global.framerate > 5000)) {
+		global.framerate = atof(val);
+	    if ((global.framerate < 1.0/256) ||(global.framerate >= 256.0)) {
 		if (VERBOSE(1))
 		    fprintf(stderr,
-			    "Error: You must specify a valid framerate between 1 and 10000.\n");
+			    "Error: You must specify a valid framerate between 1/256 and 255.\n");
 		exit(1);
 	    }
 	    res = 1;
@@ -857,7 +857,7 @@ int args_callback_command(char *arg, char *next)	// actually used as filename
 void args_callback_usage(char *name)
 {
     printf("Usage: %s  [-options [value]] imagefiles[.png] [...]\n", name);
-    printf("-r framerate          (rate) Set movie framerate (100/sec)\n");
+    printf("-r framerate          (rate) Set movie framerate (frames per second)\n");
     printf("-o outputfile         (output) Set name for SWF output file\n");
     printf("-X pixel              (width) Force movie width to pixel (default: autodetect)\n");
     printf("-Y pixel              (height) Force movie height to pixel (default: autodetect)\n");
@@ -873,7 +873,7 @@ int main(int argc, char **argv)
 
     memset(&global, 0x00, sizeof(global));
 
-    global.framerate = 100;
+    global.framerate = 1.0;
     global.verbose = 1;
 
     processargs(argc, argv);
