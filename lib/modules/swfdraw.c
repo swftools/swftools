@@ -5,6 +5,8 @@ typedef struct _SWFSHAPEDRAWER
     SHAPE*shape;
     TAG*tag;
     int tagfree;
+    SCOORD firstx;
+    SCOORD firsty;
     SCOORD lastx;
     SCOORD lasty;
     SRECT bbox;
@@ -73,15 +75,31 @@ static void swf_ShapeDrawerSetFillStyle(drawer_t*draw, void*style)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
 }
+static void fixEndPoint(drawer_t*draw)
+{
+    SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
+    if(   sdraw->firstx != sdraw->lastx 
+       || sdraw->firsty != sdraw->lasty) {
+	/* fix non-closing shapes */
+	/* TODO: do this only if the shape is filled */
+	FPOINT to;
+	to.x = sdraw->firstx/20.0;
+	to.y = sdraw->firsty/20.0;
+	draw->lineTo(draw, &to);
+    }
+}
 static void swf_ShapeDrawerMoveTo(drawer_t*draw, FPOINT * to)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
     int x = to->x*20;
     int y = to->y*20;
-    swf_ShapeSetMove(sdraw->tag,sdraw->shape,x,y);
-    sdraw->lastx = x;
-    sdraw->lasty = y;
-    draw->pos = *to;
+    if(sdraw->lastx != x || sdraw->lasty != y) {
+	fixEndPoint(draw);
+	swf_ShapeSetMove(sdraw->tag,sdraw->shape,x,y);
+	sdraw->firstx = sdraw->lastx = x;
+	sdraw->firsty = sdraw->lasty = y;
+	draw->pos = *to;
+    }
 }
 static void swf_ShapeDrawerLineTo(drawer_t*draw, FPOINT * to)
 {
@@ -128,6 +146,9 @@ static void swf_ShapeDrawerSplineTo(drawer_t*draw, FPOINT * c1, FPOINT*  to)
 static void swf_ShapeDrawerFinish(drawer_t*draw)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
+	
+    fixEndPoint(draw);
+
     if(sdraw->bbox.xmin == SCOORD_MAX) {
 	/* no points at all -> empty bounding box */
 	sdraw->bbox.xmin = sdraw->bbox.ymin = 
