@@ -62,6 +62,10 @@ if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
  DISABLEPDF2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} t1lib.h"
 fi
+if test "x${ac_cv_header_zlib_h}" != "xyes"; then
+ DISABLEPDF2SWF=true;
+ MISSINGLIBS="${MISSINGLIBS} zlib.h"
+fi
 
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE")
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
