@@ -976,6 +976,19 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 	                              (char)(rgb.b*255), (char)(opaq*255));
 }
 
+static char* tempFile(char*filename)
+{
+    char*dir = getenv("TMP");
+    if(!dir) dir = getenv("TEMP");
+    if(!dir) dir = getenv("tmp");
+    if(!dir) dir = getenv("temp");
+    if(!dir) dir = "C:\\";
+    static char buf[512];
+    strcpy(buf, dir);
+    strcat(buf, filename);
+    return buf;
+}
+
 char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 {
       char*tmpFileName = NULL;
@@ -986,7 +999,11 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
       Type1CFontFile *cvt;
       Ref embRef;
       Object refObj, strObj;
+#ifdef WIN32
+      tmpFileName = tempFile("tmpfont");
+#else
       tmpFileName = "/tmp/tmpfont";
+#endif
       int ret;
 
       ret = font->getEmbeddedFontID(&embRef);
@@ -1292,7 +1309,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	}
 	this->t1id = T1_AddFont(fileName);
 	if(this->t1id<0) {
-	  msg("<error> Couldn't load font from file");
+	  msg("<error> Couldn't load font from file %s", fileName);
 	  showFontError(gfxFont,0);
 	  unlinkfont(fileName);
 	  return ;
