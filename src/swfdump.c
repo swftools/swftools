@@ -142,12 +142,15 @@ void dumpButton2Actions(TAG*tag, char*prefix)
     { swf_GetU16(tag);          // id
       swf_GetU16(tag);          // layer
       swf_GetMatrix(tag,NULL);  // matrix
-      swf_GetCXForm(tag,NULL,1);  // matrix
+      swf_GetCXForm(tag,NULL,1);  // cxform
     }
 
     while(offsetpos)
     { U8 a;
       ActionTAG*actions;
+
+      if(tag->pos >= tag->len)
+	  break;
         
       offsetpos = swf_GetU16(tag);
       condition = swf_GetU16(tag);                // condition
@@ -279,6 +282,56 @@ void handleEditText(TAG*tag)
     if(flags & ET_HASTEXT)
    //  printf(" text \"%s\"\n", &tag->data[tag->pos])
 	;
+}
+void printhandlerflags(U16 handlerflags) 
+{
+    if(handlerflags&1) printf("[on load]");
+    if(handlerflags&2) printf("[enter frame]");
+    if(handlerflags&4) printf("[unload]");
+    if(handlerflags&8) printf("[mouse move]");
+    if(handlerflags&16) printf("[mouse down]");
+    if(handlerflags&32) printf("[mouse up]");
+    if(handlerflags&64) printf("[key down]");
+    if(handlerflags&128) printf("[key up]");
+    if(handlerflags&256) printf("[data]");
+    if(handlerflags&0xfe00) printf("[???]");
+}
+void handlePlaceObject2(TAG*tag, char*prefix)
+{
+    U8 flags = swf_GetU8(tag);
+    if(flags&2) swf_GetU16(tag); //id
+    if(flags&4) swf_GetMatrix(tag,0);
+    if(flags&8) swf_GetCXForm(tag,0,0);
+    if(flags&16) swf_GetU16(tag); //ratio
+    if(flags&32) { 
+	while(swf_GetU8(tag));
+    }
+    if(flags&64) swf_GetU16(tag); //clip
+    if(flags&128) {
+	U8 handlerflags;
+	swf_GetU16(tag);
+	handlerflags = swf_GetU16(tag);
+	printf("%s global flags:%04x ",prefix, handlerflags);
+	printhandlerflags(handlerflags);
+	printf("\n");
+	while(1) {
+	    int length;
+	    int t;
+	    ActionTAG*a;
+	    handlerflags = swf_GetU16(tag);
+	    if(!handlerflags)
+		break;
+	    printf("%s flags:%04x ",prefix, handlerflags);
+	    printhandlerflags(handlerflags);
+
+	    printf("\n");
+	    length = swf_GetU32(tag);
+	    printf("%s %d bytes actioncode\n",prefix);
+	    a = swf_ActionGet(tag);
+	    swf_DumpActions(a,prefix);
+	    swf_ActionFree(a);
+	}
+    }
 }
     
 void fontcallback1(U16 id,U8 * name)
@@ -490,10 +543,15 @@ int main (int argc,char ** argv)
 	else if(tag->id == ST_DEFINEBUTTON2 && action) {
 	    dumpButton2Actions(tag, myprefix);
 	}
+	else if(tag->id == ST_PLACEOBJECT2) {
+	    if((*(U8*)tag->data)&0x80) 
+	    handlePlaceObject2(tag, myprefix);
+	}
         tag = tag->next;
     }
 
     swf_FreeTags(&swf);
     return 0;
 }
+
 
