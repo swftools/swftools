@@ -44,7 +44,7 @@ int jpegquality=85;
 int storeallcharacters=0;
 int enablezlib=0;
 int insertstoptag=0;
-int flashversion=4;
+int flashversion=5;
 int splinemaxerror=1;
 int fontsplinemaxerror=1;
 
@@ -941,6 +941,7 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
 
         putcharacter(obj, swffont->id, charid,(int)(m->m13*20),(int)(m->m23*20),
                 (int)(m->m11+0.5));
+	swf_FontUseGlyph(swffont, charid);
 	return 1;
     }
     /*else
@@ -1364,8 +1365,7 @@ void swfoutput_newpage(struct swfoutput*obj)
     depth = startdepth;
 }
 
-/* "destroy" like in (oo-terminology) "destructor". Perform cleaning
-   up, complete the swf, and write it out. */
+/* Perform cleaning up, complete the swf, and write it out. */
 void swfoutput_destroy(struct swfoutput* obj) 
 {
     endpage(obj);
@@ -1374,6 +1374,8 @@ void swfoutput_destroy(struct swfoutput* obj)
 	TAG*mtag = swf.firstTag;
 	if(iterator->swffont) {
 	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
+	    /*if(!storeallcharacters)
+		swf_FontReduce(iterator->swffont);*/
 	    swf_FontSetDefine2(mtag, iterator->swffont);
 	    swf_FontFree(iterator->swffont);
 	}
@@ -1397,7 +1399,7 @@ void swfoutput_destroy(struct swfoutput* obj)
  
     tag = swf_InsertTag(tag,ST_END);
 
-    if(enablezlib) {
+    if(enablezlib || flashversion>=6) {
       if FAILED(swf_WriteSWC(fi,&swf)) 
        msg("<error> WriteSWC() failed.\n");
     } else {
