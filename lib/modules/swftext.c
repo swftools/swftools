@@ -33,8 +33,8 @@
 #define FF2_SHIFTJIS     0x40
 #define FF2_LAYOUT	 0x80
 
-int swf_FontIsItalic(SWFFONT * f) { return f->version==2?f->flags&FF2_ITALIC:f->flags&FF_ITALIC; }
-int swf_FontIsBold(SWFFONT * f)   { return f->version==2?f->flags&FF2_BOLD:f->flags&FF_BOLD; }
+int swf_FontIsItalic(SWFFONT * f) { return f->style&FONT_STYLE_ITALIC;}
+int swf_FontIsBold(SWFFONT * f)   { return f->style&FONT_STYLE_BOLD;}
 
 static const int WRITEFONTID = 0x4e46; // font id for WriteFont and ReadFont
 
@@ -104,9 +104,9 @@ int swf_FontExtract_DefineFont(int id,SWFFONT * f,TAG * t)
 int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
 { U16 fid;
   U16 maxcode;
+  U8 flags;
   swf_SaveTagPos(t);
   swf_SetTagPos(t,0);
-
 
   fid = swf_GetU16(t);
   if (fid==id)
@@ -131,12 +131,22 @@ int swf_FontExtract_DefineFontInfo(int id,SWFFONT * f,TAG * t)
         return -1;
       }
     }
-    f->flags = swf_GetU8(t);
+    flags = swf_GetU8(t);
+    if(flags & 2)
+	f->style |= FONT_STYLE_BOLD;
+    if(flags & 4)
+	f->style |= FONT_STYLE_ITALIC;
+    if(flags & 8)
+	f->encoding |= FONT_ENCODING_ANSI;
+    if(flags & 16)
+	f->encoding |= FONT_ENCODING_SHIFTJIS;
+    if(flags & 32)
+	f->encoding |= FONT_ENCODING_UNICODE;
 
     f->glyph2ascii = (U16*)malloc(sizeof(U16)*f->numchars);
     maxcode = 0;
     for(i=0; i < f->numchars; i++) {
-      f->glyph2ascii[i] = ((f->flags&FF_WIDECODES)?swf_GetU16(t):swf_GetU8(t));
+      f->glyph2ascii[i] = ((flags&FF_WIDECODES)?swf_GetU16(t):swf_GetU8(t));
       if(f->glyph2ascii[i] > maxcode)
 	  maxcode = f->glyph2ascii[i];
     }
@@ -170,8 +180,19 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
     font->id = fid;
     flags1 = swf_GetU8(tag);
     flags2 = swf_GetU8(tag); //reserved flags
+
+    if(flags1 & 1)
+	font->style |= FONT_STYLE_BOLD;
+    if(flags1 & 2)
+	font->style |= FONT_STYLE_ITALIC;
+    if(flags1 & 16)
+	font->encoding |= FONT_ENCODING_ANSI;
+    if(flags1 & 32)
+	font->encoding |= FONT_ENCODING_UNICODE;
+    if(flags1 & 64)
+	font->encoding |= FONT_ENCODING_SHIFTJIS;
+
     namelen = swf_GetU8(tag);
-    font->flags = flags1;
     font->name = (U8*)malloc(namelen+1);
     font->name[namelen]=0;
     swf_GetBlock(tag, font->name, namelen);
@@ -439,9 +460,108 @@ int swf_FontSetDefine(TAG * t,SWFFONT * f)
   return 0;
 }
 
+int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
+{
+    U8 flags = 0;
+    int t;
+    int pos;
+    int pos2;
+    swf_SetU16(tag, f->id);
+    if(f->layout) 
+	flags |= 128; // haslayout
+    if(f->numchars>256)
+	flags |= 4; // widecodes
+    if(f->style & FONT_STYLE_BOLD)
+	flags |= 1; // bold
+    if(f->style & FONT_STYLE_ITALIC)
+	flags |= 2; // italic
+    /* wideoffs 8 */
+    if(f->encoding & FONT_ENCODING_ANSI)
+	flags |= 16; // ansi
+    if(f->encoding & FONT_ENCODING_UNICODE)
+	flags |= 32; // unicode
+    if(f->encoding & FONT_ENCODING_SHIFTJIS)
+	flags |= 64; // shiftjis
+
+    swf_SetU8(tag, flags);
+    swf_SetU8(tag, 0); //reserved flags
+    if(f->name) {
+	/* font name */
+	swf_SetU8(tag, strlen(f->name));
+	swf_SetBlock(tag, f->name, strlen(f->name));
+    } else {
+	/* font name (="") */
+	swf_SetU8(tag, 0); /*placeholder*/
+    }
+    /* number of glyphs */
+    swf_SetU16(tag, f->numchars);
+    /* font offset table */
+    pos = tag->len;
+    for(t=0;t<f->numchars;t++)
+    {
+	swf_SetU16(tag, /* fontoffset */ 0); /*placeholder*/
+    }
+    pos2 = tag->len;
+    swf_SetU16(tag, 0); //fontcode-fontoffset
+    for(t=0;t<f->numchars;t++) {
+	tag->data[pos + t*2] = (tag->len-pos);
+	tag->data[pos + t*2 + 1] = (tag->len-pos) >> 8;
+	swf_SetSimpleShape(tag, f->glyph[t].shape);
+    }
+
+    tag->data[pos2] = tag->len - pos;
+    tag->data[pos2 + 1] = (tag->len - pos) >> 8;
+    
+    /* font code table */
+    if(flags & 4) /* wide codes */ {
+	for(t=0;t<f->numchars;t++)
+	    swf_SetU16(tag,f->glyph2ascii[t]);
+    } else {
+	for(t=0;t<f->numchars;t++)
+	    swf_SetU8(tag,f->glyph2ascii[t]);
+    }
+    if(f->layout) 
+    {
+	swf_SetU16(tag,f->layout->ascent);
+	swf_SetU16(tag,f->layout->descent);
+	swf_SetU16(tag,f->layout->leading);
+	for(t=0;t<f->numchars;t++)
+	    swf_SetU16(tag,f->glyph[t].advance);
+	for(t=0;t<f->numchars;t++) {
+	    swf_ResetWriteBits(tag);
+	    swf_SetRect(tag,&f->layout->bounds[t]);
+	}
+	swf_SetU16(tag, f->layout->kerningcount);
+	for(t=0;t<f->layout->kerningcount;t++) {
+	    if(flags & 4) /* wide codes */ {
+		swf_SetU8(tag,f->layout->kerning[t].char1);
+		swf_SetU8(tag,f->layout->kerning[t].char2);
+	    } else {
+		swf_SetU16(tag,f->layout->kerning[t].char1);
+		swf_SetU16(tag,f->layout->kerning[t].char2);
+	    }
+	    swf_SetU16(tag,f->layout->kerning[t].adjustment);
+	}
+    }
+    return 0;
+}
+    
+void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading)
+{
+    f->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
+    f->layout->ascent = ascent;
+    f->layout->descent = descent;
+    f->layout->leading = leading;
+    f->layout->kerningcount = 0;
+    f->layout->kerning = 0;
+    f->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*f->numchars);
+    memset(f->layout->bounds, 0, sizeof(SRECT)*f->numchars);
+}
+
 int swf_FontSetInfo(TAG * t,SWFFONT * f)
 { int l,i;
   U8 wide=0;
+  U8 flags = 0;
   if ((!t)||(!f)) return -1;
   swf_ResetWriteBits(t);
   swf_SetU16(t,f->id);
@@ -450,7 +570,19 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f)
   swf_SetBlock(t,f->name,l);
   if(f->numchars>=256)
       wide=1;
-  swf_SetU8(t,(f->flags&0xfe)|wide);
+
+  if(f->style & FONT_STYLE_BOLD)
+      flags |= 2;
+  if(f->style & FONT_STYLE_ITALIC)
+      flags |= 4;
+  if(f->style & FONT_ENCODING_ANSI)
+      flags |= 8;
+  if(f->style & FONT_ENCODING_SHIFTJIS)
+      flags |= 16;
+  if(f->style & FONT_ENCODING_UNICODE)
+      flags |= 32;
+    
+  swf_SetU8(t,(flags&0xfe)|wide);
 
   for (i=0;i<f->numchars;i++) {
     if (f->glyph[i].shape)
@@ -714,12 +846,11 @@ void swf_WriteFont(SWFFONT*font, char* filename)
   SRECT r;
   RGBA rgb;
   int f;
-  int useDefineFont2 = 1;
+  int useDefineFont2 = 0;
 
-  if(useDefineFont2) {
-      //fprintf(stderr, "DefineFont2 is not yet supported!\n");
-      useDefineFont2 = 0;
-  }
+  if(font->layout)
+      useDefineFont2 = 1; /* the only thing new in definefont2 
+			     is layout information. */
 
   font->id = WRITEFONTID; //"FN"
 
@@ -728,32 +859,30 @@ void swf_WriteFont(SWFFONT*font, char* filename)
   swf.fileVersion    = 4;
   swf.frameRate      = 0x4000;
 
-  if(!useDefineFont2)
   /* if we use DefineFont1 to store the characters,
      we have to build a textfield to store the
      advance values. While at it, we can also
      make the whole .swf viewable */
-  {
-      t = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-      swf.firstTag = t;
-            rgb.r = 0xff;
-            rgb.g = 0xff;
-            rgb.b = 0xff;
-            swf_SetRGB(t,&rgb);
-      t = swf_InsertTag(t,ST_DEFINEFONT);
-  }
-  else
-  {
-      t = swf_InsertTag(NULL,ST_DEFINEFONT);
-      swf.firstTag = t;
+
+  /* we now always create viewable swfs, even if we
+     did use definefont2 -mk*/
+  t = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+  swf.firstTag = t;
+	rgb.r = 0xff;
+	rgb.g = 0xff;
+	rgb.b = 0xff;
+	swf_SetRGB(t,&rgb);
+  if(!useDefineFont2) {
+    t = swf_InsertTag(t,ST_DEFINEFONT);
+    swf_FontSetDefine(t,font);
+    t = swf_InsertTag(t,ST_DEFINEFONTINFO);
+    swf_FontSetInfo(t,font);
+  } else {
+    t = swf_InsertTag(t,ST_DEFINEFONT2);
+    swf_FontSetDefine2(t,font);
   }
 
-        swf_FontSetDefine(t,font);
-  
-  t = swf_InsertTag(t,ST_DEFINEFONTINFO);
-        swf_FontSetInfo(t,font);
-
-  if(!useDefineFont2)
+  if(1) //useDefineFont2
   {     int textscale = 400;
 	int s;
 	int xmax = 0;
