@@ -314,6 +314,7 @@ int main(int argn, char *argv[])
     int t;
 
     config.overlay = 0; 
+    config.antistream = 0; 
     config.alloctest = 0;
     config.clip = 0;
     config.loglevel = 2; 
