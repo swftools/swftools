@@ -590,7 +590,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y, double dx, doub
        y1 = y;
        state->transform(x, y, &x1, &y1);
 
-       swfoutput_drawchar(&output, x1, y1, enc->getCharName(c));
+       if(enc->getCharName(c))
+	  swfoutput_drawchar(&output, x1, y1, enc->getCharName(c));
+       else
+	  logf("<warning> couldn't get name for character %02x from Encoding", c);
     }
 }
 
