@@ -31,16 +31,20 @@ typedef struct _dummyshape
     struct _dummyshape*next;
 } dummyshape_t;
 
+#define clip_type 0
+#define fill_type 1
+
 typedef struct _renderpoint
 {
-    enum {clip_type, fill_type} type;
-    float fx; //for sorting
-    int x;
+    float x;
     U32 depth;
-    U32 clipdepth;
+
     SHAPELINE*shapeline;
-   
+    
+    U32 clipdepth;
     dummyshape_t*s;
+    
+    char type;
 } renderpoint_t;
 
 /* 
@@ -93,13 +97,50 @@ typedef struct _renderbuf_internal
 
 #define DEBUG 0
 
+static void renderpoint_write(TAG*tag, renderpoint_t*p)
+{
+    if(tag->len == 0) {
+	swf_SetU32(tag, 1);
+    } else {
+	PUT32(tag->data, GET32(tag->data)+1);
+    }
+    //swf_SetU8(tag, 0);
+    swf_SetBlock(tag, (U8*)p, sizeof(renderpoint_t));
+}
+static renderpoint_t renderpoint_read(TAG*tag)
+{
+    renderpoint_t p;
+    //swf_GetU8(tag);
+    swf_GetBlock(tag, (U8*)&p, sizeof(renderpoint_t));
+    return p;
+}
+
+static int renderpoint_num(TAG*tag)
+{
+    if(tag->len == 0)
+	return 0;
+    return GET32(tag->data);
+}
+
+static renderpoint_t* renderpoint_readall(TAG*tag)
+{
+    int num;
+    int t;
+    renderpoint_t*p;
+    swf_SetTagPos(tag, 0);
+    num = swf_GetU32(tag);
+    p = (renderpoint_t*)rfx_alloc(num*sizeof(renderpoint_t));
+    for(t=0;t<num;t++)
+	p[t] = renderpoint_read(tag);
+    return p;
+}
+
 static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     if(x >= i->width2 || y >= i->height2 || y<0) return;
-    p->x = (int)x;
-    p->fx = x;
-    swf_SetBlock(i->lines[y].points, (U8*)p, sizeof(renderpoint_t));
+    p->x = x;
+    renderpoint_write(i->lines[y].points, p);
 }
 
 /* set this to 0.777777 or something if the "both fillstyles set while not inside shape"
@@ -265,8 +306,8 @@ static int compare_renderpoints(const void * _a, const void * _b)
 {
     renderpoint_t*a = (renderpoint_t*)_a;
     renderpoint_t*b = (renderpoint_t*)_b;
-    if(a->fx < b->fx) return -1;
-    if(a->fx > b->fx) return 1;
+    if(a->x < b->x) return -1;
+    if(a->x > b->x) return 1;
     return 0;
 }
 
@@ -621,22 +662,41 @@ static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, 
     } while(++x<x2);
 }
 
-static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*state)
+static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*clipstate, state_t*fillstate)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     U32 clipdepth;
 
-    layer_t*l = state->layers;
+    layer_t*lc = clipstate->layers;
+    layer_t*lf = fillstate->layers;
+    layer_t*l = 0;
 
     if(x1>=x2) //zero width? nothing to do.
         return;
-
+    
     clipdepth = 0;
-    while(l) {
+    while(lf) {
+	if(lc && (!lf || lc->p->depth < lf->p->depth)) {
+	    l = lc;
+	    lc = lc->next;
+	} else if(lf && (!lc || lf->p->depth < lc->p->depth)) {
+	    l = lf;
+	    lf = lf->next;
+	} else if(lf && lc && lf->p->depth == lc->p->depth) {
+	    /* A clipshape and a fillshape at the same depth. Yuck.
+	       Bug in the SWF file */
+	    fprintf(stderr, "Error: Multiple use of depth %d in SWF\n", lf->p->depth);
+	    l = lc;
+	    lc = lc->next;
+	} else {
+	    fprintf(stderr, "Internal error: %08x %08x\n", lc, lf);
+	    if(lc) fprintf(stderr, "                lc->depth = %08x\n", lc->p->depth);
+	    if(lf) fprintf(stderr, "                lf->depth = %08x\n", lf->p->depth);
+	}
+
         if(l->p->depth < clipdepth) {
             if(DEBUG&2) printf("(clipped)");
-            l = l->next;
-            continue;
+	    continue;
         }
         if(l->fillid < 0 /*clip*/) {
             if(DEBUG&2) printf("(add clip %d)", l->clipdepth);
@@ -682,7 +742,6 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*state
                 }
             }
         }
-        l = l->next;
     }
 }
 
@@ -814,14 +873,19 @@ RGBA* swf_Render(RENDERBUF*dest)
     RGBA * line1 = rfx_alloc(sizeof(RGBA)*i->width2);
     RGBA * line2 = rfx_alloc(sizeof(RGBA)*i->width2);
 
+    printf("%d\n", sizeof(renderpoint_t));
+
     for(y=0;y<i->height2;y++) {
         TAG*tag = i->lines[y].points;
         int n;
         int size = sizeof(renderpoint_t);
-        int num = tag->len / size;
+        int num = renderpoint_num(tag);
+	renderpoint_t*points = renderpoint_readall(tag);
         RGBA*line = line1;
-	state_t state;
-        memset(&state, 0, sizeof(state_t));
+	state_t clipstate;
+	state_t fillstate;
+        memset(&clipstate, 0, sizeof(state_t));
+        memset(&fillstate, 0, sizeof(state_t));
 
         if((y&1) && i->antialize)
             line = line2;
@@ -838,10 +902,10 @@ RGBA* swf_Render(RENDERBUF*dest)
 	    }
 	}
         memory += tag->memsize;
-        qsort(tag->data, num, size, compare_renderpoints);
+        qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
         for(n=0;n<num;n++) {
-            renderpoint_t*p = (renderpoint_t*)&tag->data[size*n];
-            renderpoint_t*next= n<num-1?(renderpoint_t*)&tag->data[size*(n+1)]:0;
+            renderpoint_t*p = &points[n];
+            renderpoint_t*next= n<num-1?&points[n+1]:0;
             int startx = p->x;
             int endx = next?next->x:i->width2;
             if(endx > i->width2)
@@ -849,13 +913,17 @@ RGBA* swf_Render(RENDERBUF*dest)
             if(startx < 0)
                 startx = 0;
 
-            change_state(y, &state, p);
+	    if(p->type == clip_type)
+		change_state(y, &clipstate, p);
+	    else
+		change_state(y, &fillstate, p);
 
-            fill(dest, line, y, startx, endx, &state);
+            fill(dest, line, y, startx, endx, &clipstate, &fillstate);
             if(endx == i->width2)
                 break;
         }
-        free_layers(&state);
+        free_layers(&clipstate);
+        free_layers(&fillstate);
         if(DEBUG&2) printf("\n");
 
         if(!i->antialize) {
