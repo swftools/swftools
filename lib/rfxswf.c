@@ -915,10 +915,13 @@ int swf_WriteTag2(struct writer_t*writer, TAG * t)
 int swf_WriteTag(int handle, TAG * t)
 {
   struct writer_t writer;
+  int len = 0;
   if(handle<0)
     return swf_WriteTag2(0, t);
   writer_init_filewriter(&writer, handle);
-  return swf_WriteTag2(&writer, t);
+  len = swf_WriteTag2(&writer, t);
+  writer.finish(&writer);
+  return len;
 }
 
 int swf_DefineSprite_GetRealSize(TAG * t)
@@ -1207,8 +1210,12 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
   struct writer_t zwriter;
   int fileSize = 0;
   int inSprite = 0;
+  int writer_lastpos = 0;
     
   if (!swf) return -1;
+  if (!writer) return -1; // the caller should provide a nullwriter, not 0, for querying SWF size
+
+  if(writer) writer_lastpos = writer->pos;
 
   // Insert REFLEX Tag
 
@@ -1266,7 +1273,10 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
     if(swf->compressed != 8) {
     /* compressed flag set to 8 means "skip first 8 
        header bytes". This is necessary if the caller wants to
-       create compressed SWFs himself */
+       create compressed SWFs himself .
+       It also means that we don't initialize our own zlib
+       writer, but assume the caller provided one.
+     */
       if(swf->compressed) {
 	char*id = "CWS";
 	writer->write(writer, id, 3);
@@ -1290,53 +1300,64 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
 
-    if (writer)
-    { 
-      int ret = writer->write(writer,b,swf_GetTagLen(&t1));
-      if (ret!=swf_GetTagLen(&t1))
-      {
-        #ifdef DEBUG_RFXSWF
-          fprintf(stderr, "ret:%d\n",ret);
-          perror("write:");
-          fprintf(stderr,"WriteSWF() failed: Header.\n");
-        #endif
-        return -1;
-      }
+    int ret = writer->write(writer,b,swf_GetTagLen(&t1));
+    if (ret!=swf_GetTagLen(&t1))
+    {
+      #ifdef DEBUG_RFXSWF
+	fprintf(stderr, "ret:%d\n",ret);
+	perror("write:");
+	fprintf(stderr,"WriteSWF() failed: Header.\n");
+      #endif
+      return -1;
+    }
 
-      t = swf->firstTag;
-      while (t)
-      { if (swf_WriteTag2(writer, t)<0) return -1;
-        t = swf_NextTag(t);
+    t = swf->firstTag;
+    while (t)
+    { if (swf_WriteTag2(writer, t)<0) return -1;
+      t = swf_NextTag(t);
+    }
+    if(swf->compressed) {
+      if(swf->compressed != 8) {
+	zwriter.finish(&zwriter);
+	return writer->pos - writer_lastpos;
       }
-      if(swf->compressed != 8)
-	writer->finish(writer); // flush zlib buffers - only if _we_ initialized that writer.
+      return (int)fileSize;
+    } else {
+      return (int)fileSize;
     }
   }
-  return (int)fileSize;
 }
 
 int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 {
   struct writer_t writer;
+  int len = 0;
   swf->compressed = 0;
+  
   if(handle<0) {
     writer_init_nullwriter(&writer);
-    return swf_WriteSWF2(&writer, swf);
+    len = swf_WriteSWF2(&writer, swf);
   }
   writer_init_filewriter(&writer, handle);
-  return swf_WriteSWF2(&writer, swf);
+  len = swf_WriteSWF2(&writer, swf);
+  writer.finish(&writer);
+  return len;
 }
 
 int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 {
   struct writer_t writer;
+  int len = 0;
   swf->compressed = 1;
+
   if(handle<0) {
     writer_init_nullwriter(&writer);
-    return swf_WriteSWF2(&writer, swf);
+    len = swf_WriteSWF2(&writer, swf);
   }
   writer_init_filewriter(&writer, handle);
-  return swf_WriteSWF2(&writer, swf);
+  len = swf_WriteSWF2(&writer, swf);
+  writer.finish(&writer);
+  return len;
 }
 
 int swf_WriteHeader2(struct writer_t*writer,SWF * swf)
