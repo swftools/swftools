@@ -256,7 +256,7 @@ int swf_FontExtract_DefineFont2(int id,SWFFONT * font,TAG * tag)
 	font->layout->bounds = malloc(glyphcount*sizeof(SRECT));
 	for(t=0;t<glyphcount;t++) {
 	    swf_ResetReadBits(tag);
-	    swf_GetRect(tag, font->layout->bounds);
+	    swf_GetRect(tag, &font->layout->bounds[t]);
 	}
 
 	kerningcount = swf_GetU16(tag);
