@@ -184,7 +184,6 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
     double xx,yy;
   
     /* Make sure the line is always at least one pixel wide */
-#define LINEMODE1
 #ifdef LINEMODE1
     /* That's what Macromedia's Player does at least at zoom level >= 1.  */
     width += 20;
