@@ -22,6 +22,50 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+static U32 readUTF8char(U8**text)
+{
+    U32 c = 0;
+    if(!(*(*text) & 0x80))
+	return *((*text)++);
+
+    /* 0000 0080-0000 07FF   110xxxxx 10xxxxxx */
+    if(((*text)[0] & 0xe0) == 0xc0 && (*text)[1])  
+    {
+	c = ((*text)[0] & 0x1f) << 6 | ((*text)[1] & 0x3f);
+	(*text) += 2;
+	return c;
+    }
+    /* 0000 0800-0000 FFFF   1110xxxx 10xxxxxx 10xxxxxx */
+    if(((*text)[0] & 0xf0) == 0xe0 && (*text)[1] && (*text)[2])
+    {
+	c = ((*text)[0] & 0x0f) << 12 | ((*text)[1] & 0x3f) << 6 | ((*text)[2] & 0x3f);
+	(*text) += 3;
+	return c;
+    }
+    /* 0001 0000-001F FFFF   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
+    if(((*text)[0] & 0xf8) == 0xf0 && (*text)[1] && (*text)[2] && (*text)[3] )  
+    {
+	c = ((*text)[0] & 0x07) << 18 | ((*text)[1] & 0x3f) << 12 | ((*text)[2] & 0x3f)<<6 | ((*text)[3] & 0x3f);
+	(*text) += 4;
+	return c;
+    }
+    /* 0020 0000-03FF FFFF   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
+    if(((*text)[0] & 0xfc) == 0xf8 && (*text)[1] && (*text)[2] && (*text)[3] && (*text)[4])  
+    {
+	c = ((*text)[0] & 0x03) << 24 | ((*text)[1] & 0x3f) << 18 | ((*text)[2] & 0x3f)<<12 | ((*text)[3] & 0x3f) << 6 | ((*text)[4] & 0x3f);
+	(*text) += 5;
+	return c;
+    }
+    /* 0400 0000-7FFF FFFF   1111110x 10xxxxxx ... 10xxxxxx */
+    if(((*text)[0] & 0xfe) == 0xfc && (*text)[1] && (*text)[2] && (*text)[3] && (*text)[4] && (*text)[5])  
+    {
+	c = ((*text)[0] & 0x01) << 30 | ((*text)[1] & 0x3f) << 24 | ((*text)[2] & 0x3f)<<18 | ((*text)[3] & 0x3f) << 12 | ((*text)[4] & 0x3f) << 6  | ((*text)[5] & 0x3f) << 6;
+	(*text) += 6;
+	return c;
+    }
+    return *((*text)++);
+}
+
 #define TF_TEXTCONTROL  0x80
 #define TF_HASFONT      0x08
 #define TF_HASCOLOR     0x04
@@ -788,42 +832,58 @@ int swf_TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,int dx,in
   return 0;
 }
 
-int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits)
+static int swf_TextCountBits2(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits, char*encoding)
 { U16 g,a;
+  char utf8=0;
   if ((!s)||(!font)||((!gbits)&&(!abits))||(!font->ascii2glyph)) return -1;
   g = a = 0;
 
-  while(s[0])
+  if(!strcmp(encoding, "UTF8")) utf8=1;
+  else if(!strcmp(encoding, "iso-8859-1")) utf8=0;
+  else fprintf(stderr, "Unknown encoding: %s", encoding);
+
+  while(*s)
   { 
-    int glyph = -1;
-    if(s[0] < font->maxascii)
-	glyph = font->ascii2glyph[s[0]];
+    int glyph = -1,c;
+    
+    if(!utf8) c = *s++;
+    else c = readUTF8char(&s);
+
+    if(c < font->maxascii)
+	glyph = font->ascii2glyph[c];
     if(glyph>=0) {
        g = swf_CountUBits(glyph,g);
        a = swf_CountBits(((((U32)font->glyph[glyph].advance)*scale)/20)/100,a);
     }
-    s++;
   }
 
   if (gbits) gbits[0] = (U8)g;
   if (abits) abits[0] = (U8)a;
-
   return 0;
 }
 
-int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits)
-{ int l=0,i,pos;
+static int swf_TextSetCharRecord2(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits, char*encoding)
+{ int l=0,pos;
+  char utf8=0;
     
   if ((!t)||(!font)||(!s)||(!font->ascii2glyph)) return -1;
+  
+  if(!strcmp(encoding, "UTF8")) utf8=1;
+  else if(!strcmp(encoding, "iso-8859-1")) utf8=0;
+  else fprintf(stderr, "Unknown encoding: %s", encoding);
 
   pos = t->len;
   swf_SetU8(t, l); //placeholder
 
-  for (i=0;s[i];i++)
+  while(*s)
   { 
-    int g = -1;
-    if(s[i] < font->maxascii) 
-	g = font->ascii2glyph[s[i]];
+    int g = -1,c;
+    
+    if(!utf8) c = *s++;
+    else c = readUTF8char(&s);
+
+    if(c < font->maxascii) 
+	g = font->ascii2glyph[c];
     if(g>=0) {
       swf_SetBits(t,g,gbits);
       swf_SetBits(t,((((U32)font->glyph[g].advance)*scale)/20)/100,abits);
@@ -837,6 +897,19 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
 
   swf_ResetWriteBits(t);
   return 0;
+}
+
+int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits) {
+    return swf_TextCountBits2(font,s,scale,gbits,abits,"iso-8859-1");
+}
+int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits) {
+    return swf_TextSetCharRecord2(t,font,s,scale,gbits,abits,"iso-8859-1");
+}
+int swf_TextCountBitsUTF8(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits) {
+    return swf_TextCountBits2(font,s,scale,gbits,abits,"UTF8");
+}
+int swf_TextSetCharRecordUTF8(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits) {
+    return swf_TextSetCharRecord2(t,font,s,scale,gbits,abits,"UTF8");
 }
 
 U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale)
@@ -1117,7 +1190,7 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 
     swf_SetRect(tag,&r);
     swf_SetMatrix(tag,NULL);
-    swf_TextCountBits(font,text,scale*20,&gbits,&abits);
+    swf_TextCountBitsUTF8(font,text,scale*20,&gbits,&abits);
     swf_SetU8(tag,gbits);
     swf_SetU8(tag,abits);
 
@@ -1131,7 +1204,7 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
     /* set the actual text- notice that we just pass our scale
        parameter over, as TextSetCharRecord calculates with 
        percent, too */
-    swf_TextSetCharRecord(tag,font,text,scale*20,gbits,abits);
+    swf_TextSetCharRecordUTF8(tag,font,text,scale*20,gbits,abits);
 
     swf_SetU8(tag,0);
     return r;
@@ -1181,53 +1254,9 @@ void swf_FontCreateLayout(SWFFONT*f)
     }
 }
 	
-static U32 readUTF8char(char**text)
-{
-    U32 c = 0;
-    if(!(*(*text) & 0x80))
-	return *((*text)++);
-
-    /* 0000 0080-0000 07FF   110xxxxx 10xxxxxx */
-    if(((*text)[0] & 0xe0) == 0xc0 && (*text)[1])  
-    {
-	c = ((*text)[0] & 0x1f) << 6 | ((*text)[1] & 0x3f);
-	(*text) += 2;
-	return c;
-    }
-    /* 0000 0800-0000 FFFF   1110xxxx 10xxxxxx 10xxxxxx */
-    if(((*text)[0] & 0xf0) == 0xe0 && (*text)[1] && (*text)[2])
-    {
-	c = ((*text)[0] & 0x0f) << 12 | ((*text)[1] & 0x3f) << 6 | ((*text)[2] & 0x3f);
-	(*text) += 3;
-	return c;
-    }
-    /* 0001 0000-001F FFFF   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
-    if(((*text)[0] & 0xf8) == 0xf0 && (*text)[1] && (*text)[2] && (*text)[3] )  
-    {
-	c = ((*text)[0] & 0x07) << 18 | ((*text)[1] & 0x3f) << 12 | ((*text)[2] & 0x3f)<<6 | ((*text)[3] & 0x3f);
-	(*text) += 4;
-	return c;
-    }
-    /* 0020 0000-03FF FFFF   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-    if(((*text)[0] & 0xfc) == 0xf8 && (*text)[1] && (*text)[2] && (*text)[3] && (*text)[4])  
-    {
-	c = ((*text)[0] & 0x03) << 24 | ((*text)[1] & 0x3f) << 18 | ((*text)[2] & 0x3f)<<12 | ((*text)[3] & 0x3f) << 6 | ((*text)[4] & 0x3f);
-	(*text) += 5;
-	return c;
-    }
-    /* 0400 0000-7FFF FFFF   1111110x 10xxxxxx ... 10xxxxxx */
-    if(((*text)[0] & 0xfe) == 0xfc && (*text)[1] && (*text)[2] && (*text)[3] && (*text)[4] && (*text)[5])  
-    {
-	c = ((*text)[0] & 0x01) << 30 | ((*text)[1] & 0x3f) << 24 | ((*text)[2] & 0x3f)<<18 | ((*text)[3] & 0x3f) << 12 | ((*text)[4] & 0x3f) << 6  | ((*text)[5] & 0x3f) << 6;
-	(*text) += 6;
-	return c;
-    }
-    return *((*text)++);
-}
-
 void swf_DrawText(drawer_t*draw, SWFFONT*font, char*text)
 {
-    char*s = text;
+    U8*s = (U8*)text;
     int advance = 0;
     while(*s) {
 	SHAPE*shape;
