@@ -45,11 +45,18 @@
 #include "GfxFont.h"
 #include "CharCodeToUnicode.h"
 #include "NameToUnicodeTable.h"
-#include "FontFile.h"
 #include "GlobalParams.h"
+//#define XPDF_101
+#ifdef XPDF_101
+#include "FontFile.h"
+#else
+#include "FoFiType1C.h"
+#include "FoFiTrueType.h"
+#endif
+#include "SWFOutputDev.h"
+
 //swftools header files
 #include "swfoutput.h"
-#include "SWFOutputDev.h"
 #include "../lib/log.h"
 
 #include <math.h>
@@ -770,7 +777,11 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
   swfcoord points[5];
   int x, y;
 
+#ifdef XPDF_101
   link->getBorder(&x1, &y1, &x2, &y2, &w);
+#else
+  link->getRect(&x1, &y1, &x2, &y2);
+#endif
 //  if (w > 0) 
   {
     rgb.r = 0;
@@ -1001,6 +1012,11 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 	                              (char)(rgb.b*255), (char)(opaq*255));
 }
 
+void FoFiWrite(void *stream, char *data, int len)
+{
+   fwrite(data, len, 1, (FILE*)stream);
+}
+
 char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 {
     char*tmpFileName = NULL;
@@ -1041,8 +1057,13 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<error> Couldn't read embedded font file");
 	return 0;
       }
+#ifdef XPDF_101
       Type1CFontFile *cvt = new Type1CFontFile(fontBuf, fontLen);
       cvt->convertToType1(f);
+#else
+      FoFiType1C *cvt = FoFiType1C::make(fontBuf, fontLen);
+      cvt->convertToType1(NULL, gTrue, FoFiWrite, f);
+#endif
       //cvt->convertToCIDType0("test", f);
       //cvt->convertToType0("test", f);
       delete cvt;
@@ -1054,8 +1075,13 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<error> Couldn't read embedded font file");
 	return 0;
       }
+#ifdef XPDF_101
       TrueTypeFontFile *cvt = new TrueTypeFontFile(fontBuf, fontLen);
       cvt->writeTTF(f);
+#else
+      FoFiTrueType *cvt = FoFiTrueType::make(fontBuf, fontLen);
+      cvt->writeTTF(FoFiWrite, f);
+#endif
       delete cvt;
       gfree(fontBuf);
     } else {
@@ -1819,7 +1845,11 @@ void pdfswf_performconversion()
     for(t=0;t<pagepos;t++)
     {
        currentpage = pages[t];
+#ifdef XPDF_101
        doc->displayPage((OutputDev*)output, currentpage, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
+#else
+       doc->displayPage((OutputDev*)output, currentpage, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
+#endif
     }
 }
 int pdfswf_numpages()
