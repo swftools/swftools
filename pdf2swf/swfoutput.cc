@@ -1295,7 +1295,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 
     swf_FontSetID(swffont, ++i->currentswfid);
     
-    if(screenloglevel >= LOGLEVEL_DEBUG)  {
+    if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
 	// print font information
 	msg("<debug> Font %s (%s)",swffont->name, filename);
 	msg("<debug> |   ID: %d", swffont->id);
@@ -1415,8 +1415,8 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
         endpage(obj);
 
     swf_GetMatrix(0, &i->page_matrix);
-    i->page_matrix.tx = movex;
-    i->page_matrix.ty = movey;
+    i->page_matrix.tx = movex*20;
+    i->page_matrix.ty = movey*20;
 
     for(i->depth--;i->depth>=i->startdepth;i->depth--) {
         i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
