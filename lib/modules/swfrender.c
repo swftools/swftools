@@ -73,6 +73,7 @@ typedef struct _renderpoint
 typedef struct _renderline
 {
     TAG*points; //incremented in 128 byte steps
+    int num;
 } renderline_t;
 
 typedef struct _bitmap {
@@ -92,113 +93,25 @@ typedef struct _renderbuf_internal
     int width2,height2;
     dummyshape_t*dshapes;
     dummyshape_t*dshapes_next;
-    RGBA*background;
-    int background_width, background_height;
+    int shapes;
+    int ymin, ymax;
+    
+    RGBA* img;
+    int* zbuf; 
 } renderbuf_internal;
 
 #define DEBUG 0
-
-static void renderpoint_write(TAG*tag, renderpoint_t*p)
-{
-    if(tag->len == 0) {
-	swf_SetU32(tag, 1);
-    } else {
-	int num = GET32(tag->data);
-	PUT32(tag->data, num+1);
-    }
-
-    swf_SetBits(tag, p->type, 1);
-    swf_SetBits(tag, *(U32*)&p->x, 32);
-    if(p->depth & 0xffff) {
-	swf_SetBits(tag, 1, 1);
-	swf_SetBits(tag, p->depth, 32);
-    } else {
-	swf_SetBits(tag, 0, 1);
-	swf_SetBits(tag, p->depth >> 16, 16);
-    }
-    if(p->shapeline) {
-	swf_SetBits(tag, 1, 1);
-	swf_SetBits(tag, *(U32*)&p->shapeline, 32);
-    } else {
-	swf_SetBits(tag, 0, 1);
-    }
-
-    if(p->type == clip_type) {
-	//printf("type=%d x=%f, depth=%08x, shapeline=%08x, clipdepth=%08x\n", p->type, p->x, p->depth, p->shapeline, p->clipdepth);
-	assert((p->clipdepth & 0xffff) == 0xffff);
-	swf_SetBits(tag, p->clipdepth >> 16, 16);
-	/* don't set s */
-    } else {
-	//printf("type=%d x=%f, depth=%08x, shapeline=%08x, s=%08x\n", p->type, p->x, p->depth, p->shapeline, p->s);
-	swf_SetBits(tag, *(U32*)&p->s, 32);
-	/* don't set clipdepth */
-    }
-}
-static renderpoint_t renderpoint_read(TAG*tag, int num)
-{
-    renderpoint_t p;
-    U8 flag = 0;
-    U32 dummy = 0;
-
-    p.type = swf_GetBits(tag, 1);
-    
-    dummy = swf_GetBits(tag, 32);p.x = *(float*)&dummy;
-    flag = swf_GetBits(tag, 1);
-    if(flag) {
-	p.depth = swf_GetBits(tag, 32);
-    } else {
-	p.depth = swf_GetBits(tag, 16) << 16;
-    }
-    flag = swf_GetBits(tag, 1);
-    if(flag) {
-	dummy = swf_GetBits(tag, 32);p.shapeline = *(SHAPELINE**)&dummy;
-    } else {
-	p.shapeline = 0;
-    }
-
-    if(p.type == clip_type) {
-	p.clipdepth = swf_GetBits(tag, 16) << 16 | 0xffff;
-	p.s = 0;
-    } else {
-	dummy = swf_GetBits(tag, 32);p.s = *(dummyshape_t**)&dummy;
-	p.clipdepth = 0;
-    }
-
-    return p;
-}
-
-static int renderpoint_num(TAG*tag)
-{
-    if(tag->len == 0)
-	return 0;
-    return GET32(tag->data);
-}
-
-static renderpoint_t* renderpoint_readall(TAG*tag)
-{
-    int num;
-    int t;
-    renderpoint_t*p;
-    swf_SetTagPos(tag, 0);
-    if(tag->len == 0)
-	num = 0;
-    else
-	num = swf_GetU32(tag);
-    p = (renderpoint_t*)rfx_alloc(num*sizeof(renderpoint_t));
-    for(t=0;t<num;t++)
-	p[t] = renderpoint_read(tag,t);
-    return p;
-}
 
 static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     if(x >= i->width2 || y >= i->height2 || y<0) return;
     p->x = x;
-    if(y<10)
-	renderpoint_write(i->lines[y].points, p);
-    else
-	renderpoint_write(i->lines[y].points, p);
+    if(y<i->ymin) i->ymin = y;
+    if(y>i->ymax) i->ymax = y;
+
+    i->lines[y].num++;
+    swf_SetBlock(i->lines[y].points, (U8*)p, sizeof(renderpoint_t));
 }
 
 /* set this to 0.777777 or something if the "both fillstyles set while not inside shape"
@@ -387,16 +300,30 @@ void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, c
     i->lines = (renderline_t*)rfx_alloc(i->height2*sizeof(renderline_t));
     for(y=0;y<i->height2;y++) {
         i->lines[y].points = swf_InsertTag(0, 0);
+        i->lines[y].num = 0;
     }
+    i->zbuf = (int*)rfx_calloc(sizeof(int)*i->width2*i->height2);
+    i->img = (RGBA*)rfx_calloc(sizeof(RGBA)*i->width2*i->height2);
+    i->shapes = 0;
+    i->ymin = 0x7fffffff;
+    i->ymax = -0x80000000;
 }
 void swf_Render_SetBackground(RENDERBUF*buf, RGBA*img, int width, int height)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
-    RGBA*bck = (RGBA*)rfx_alloc(sizeof(RGBA)*width*height);
-    memcpy(bck, img, sizeof(RGBA)*width*height);
-    i->background = bck;
-    i->background_width = width;
-    i->background_height = height;
+    if(i->shapes) {
+	fprintf(stderr, "rfxswf: Warning: swf_Render_SetBackground() called after drawing shapes\n");
+    }
+    int x,xx,y,yy;
+    int xstep=width*65536/i->width2;
+    int ystep=height*65536/i->height2;
+    for(y=0,yy=0;y<i->height2;y++,yy+=ystep) {
+	RGBA*src = &img[(yy>>16) * width];
+	RGBA*line = &i->img[y * i->width2];
+	for(x=0,xx=0;x<i->width2;x++,xx+=xstep) {
+	    line[x] = src[xx>>16];
+	}
+    }
 }
 void swf_Render_SetBackgroundColor(RENDERBUF*buf, RGBA color)
 {
@@ -423,6 +350,8 @@ void swf_Render_ClearCanvas(RENDERBUF*dest)
     for(y=0;y<i->height2;y++) {
         swf_ClearTag(i->lines[y].points);
     }
+    memset(i->zbuf, 0, sizeof(int)*i->width2*i->height2);
+    memset(i->img, 0, sizeof(RGBA)*i->width2*i->height2);
 }
 void swf_Render_Delete(RENDERBUF*dest)
 {
@@ -431,9 +360,9 @@ void swf_Render_Delete(RENDERBUF*dest)
     bitmap_t*b = i->bitmaps;
     dummyshape_t*d = i->dshapes;
 
-    if(i->background) {
-	free(i->background);i->background=0;
-    }
+    /* delete canvas */
+    rfx_free(i->zbuf);
+    rfx_free(i->img);
 
     /* delete line buffers */
     for(y=0;y<i->height2;y++) {
@@ -490,6 +419,8 @@ static SHAPE2* linestyle2fillstyle(SHAPE2*shape)
     return s;
 }
 
+void swf_Process(RENDERBUF*dest);
+
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _depth,U16 _clipdepth)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
@@ -498,6 +429,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     int x=0,y=0;
     MATRIX mat = *m;
     SHAPE2* lshape = 0;
+    renderpoint_t p, lp;
 
     SHAPE2* s2 = swf_Shape2Clone(shape);
     /* add this shape to the global shape list, for deallocing */
@@ -507,7 +439,6 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
 
     line = s2->lines;
 
-    renderpoint_t p, lp;
     memset(&p, 0, sizeof(renderpoint_t));
     memset(&lp, 0, sizeof(renderpoint_t));
     
@@ -638,24 +569,23 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
         y = line->y;
         line = line->next;
     }
+    swf_Process(dest);
 }
-
-typedef struct _layer {
-    int fillid;
-    U32 clipdepth;
-    renderpoint_t*p;
-    struct _layer*next;
-    struct _layer*prev;
-} layer_t;
-
-typedef struct {
-    layer_t*layers;
-} state_t;
 
 static RGBA color_red = {255,255,0,0};
 static RGBA color_white = {255,255,255,255};
 
-static void fill_plain(RGBA*line, int x1, int x2, RGBA col)
+static void fill_clip(RGBA*line, int*z, int x1, int x2, int depth)
+{
+    int x = x1;
+    do {
+	if(depth > z[x]) {
+	    z[x] = depth;
+	}
+    } while(++x<x2);
+}
+
+static void fill_plain(RGBA*line, int*z, int x1, int x2, RGBA col, int depth)
 {
     int x = x1;
     if(col.a!=255) {
@@ -665,19 +595,25 @@ static void fill_plain(RGBA*line, int x1, int x2, RGBA col)
         col.b = (col.b*col.a)>>8;
         col.a = 255;
         do {
-            line[x].r = ((line[x].r*ainv)>>8)+col.r;
-            line[x].g = ((line[x].g*ainv)>>8)+col.g;
-            line[x].b = ((line[x].b*ainv)>>8)+col.b;
-            line[x].a = 255;
+	    if(depth > z[x]) {
+		line[x].r = ((line[x].r*ainv)>>8)+col.r;
+		line[x].g = ((line[x].g*ainv)>>8)+col.g;
+		line[x].b = ((line[x].b*ainv)>>8)+col.b;
+		line[x].a = 255;
+		z[x] = depth;
+	    }
         } while(++x<x2);
     } else {
         do {
-            line[x] = col;
+	    if(depth > z[x]) {
+		line[x] = col;
+		z[x] = depth;
+	    }
         } while(++x<x2);
     }
 }
 
-static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clip)
+static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clipbitmap, int depth)
 {
     int x = x1;
     double m11=m->sx/65536.0, m21=m->r1/65536.0;
@@ -692,37 +628,53 @@ static void fill_bitmap(RGBA*line, int y, int x1, int x2, MATRIX*m, bitmap_t*b, 
     det = 20.0/det;
  
     if(!b->width || !b->height) {
-        fill_plain(line, x1, x2, color_red);
+        fill_plain(line, z, x1, x2, color_red, depth);
         return;
     }
 
     do {
-	RGBA col;
-        int xx = (int)((  (x - rx) * m22 - (y - ry) * m21)*det);
-        int yy = (int)((- (x - rx) * m12 + (y - ry) * m11)*det);
-	int ainv;
-        
-        if(clip) {
-            if(xx<0) xx=0;
-            if(xx>=b->width) xx = b->width-1;
-            if(yy<0) yy=0;
-            if(yy>=b->height) yy = b->height-1;
-        } else {
-            xx %= b->width;
-            yy %= b->height;
-        }
+	if(depth > z[x]) {
+	    RGBA col;
+	    int xx = (int)((  (x - rx) * m22 - (y - ry) * m21)*det);
+	    int yy = (int)((- (x - rx) * m12 + (y - ry) * m11)*det);
+	    int ainv;
+	    
+	    if(clipbitmap) {
+		if(xx<0) xx=0;
+		if(xx>=b->width) xx = b->width-1;
+		if(yy<0) yy=0;
+		if(yy>=b->height) yy = b->height-1;
+	    } else {
+		xx %= b->width;
+		yy %= b->height;
+	    }
 
-        col = b->data[yy*b->width+xx];
-        ainv = 255-col.a;
+	    col = b->data[yy*b->width+xx];
+	    ainv = 255-col.a;
 
-        line[x].r = ((line[x].r*ainv)>>8)+col.r;
-        line[x].g = ((line[x].g*ainv)>>8)+col.g;
-        line[x].b = ((line[x].b*ainv)>>8)+col.b;
-        line[x].a = 255;
+	    line[x].r = ((line[x].r*ainv)>>8)+col.r;
+	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
+	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
+	    line[x].a = 255;
+	    z[x] = depth;
+	}
     } while(++x<x2);
 }
 
-static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*clipstate, state_t*fillstate)
+typedef struct _layer {
+    int fillid;
+    U32 clipdepth;
+    renderpoint_t*p;
+    struct _layer*next;
+    struct _layer*prev;
+} layer_t;
+
+typedef struct {
+    layer_t*layers;
+} state_t;
+
+
+static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, state_t*clipstate, state_t*fillstate)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     U32 clipdepth;
@@ -775,9 +727,11 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*clips
 
             f = &l->p->s->shape->fillstyles[l->fillid-1];
 
-            if(f->type == FILL_SOLID) {
+	    if(l->p->clipdepth) {
+		fill_clip(line, zline, x1, x2, l->p->clipdepth);
+	    } else if(f->type == FILL_SOLID) {
                 /* plain color fill */
-                fill_plain(line, x1, x2, f->color);
+                fill_plain(line, zline, x1, x2, f->color, l->p->depth);
             } else if(f->type == FILL_TILED || f->type == FILL_CLIPPED) {
                 /* TODO: optimize (do this in add_pixel()?) */
                 bitmap_t* b = i->bitmaps;
@@ -786,7 +740,7 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*clips
                 }
                 if(!b) {
                     fprintf(stderr, "Shape references unknown bitmap %d\n", f->id_bitmap);
-                    fill_plain(line, x1, x2, color_red);
+                    fill_plain(line, zline, x1, x2, color_red, l->p->depth);
                 } else {
                     //done in swf_RenderShape now
                     //MATRIX m = f->m;
@@ -798,7 +752,7 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*clips
                     //m.r1 *= i->multiply;
                     //m.tx *= i->multiply;
                     //m.ty *= i->multiply;
-                    fill_bitmap(line, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0);
+                    fill_bitmap(line, zline, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0, l->p->depth);
                 }
             }
         }
@@ -924,41 +878,24 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
     }
 }
 
-RGBA* swf_Render(RENDERBUF*dest)
+void swf_Process(RENDERBUF*dest)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
-    RGBA* img = (RGBA*)rfx_alloc(sizeof(RGBA)*dest->width*dest->height);
     int y;
-    long memory = 0;
-    RGBA * line1 = rfx_alloc(sizeof(RGBA)*i->width2);
-    RGBA * line2 = rfx_alloc(sizeof(RGBA)*i->width2);
 
-    for(y=0;y<i->height2;y++) {
-        TAG*tag = i->lines[y].points;
+    for(y=i->ymin;y<i->ymax;y++) {
         int n;
-        int num = renderpoint_num(tag);
-	renderpoint_t*points = renderpoint_readall(tag);
-        RGBA*line = line1;
+        TAG*tag = i->lines[y].points;
+        int num = i->lines[y].num;
+	renderpoint_t*points = (renderpoint_t*)tag->data;
+        RGBA*line = &i->img[i->width2*y];
+        int*zline = &i->zbuf[i->width2*y];
 	state_t clipstate;
 	state_t fillstate;
         memset(&clipstate, 0, sizeof(state_t));
         memset(&fillstate, 0, sizeof(state_t));
-
-        if((y&1) && i->antialize)
-            line = line2;
-
-	if(!i->background) {
-	    memset(line, 0, sizeof(RGBA)*i->width2);
-	} else {
-	    int x,xx;
-	    int xstep=i->background_width*65536/i->width2;
-	    RGBA*src = &i->background[(i->background_height*y/i->height2)*i->background_width];
-	    for(x=0,xx=0;x<i->width2;x++,xx+=xstep) {
-		line[x] = src[xx>>16];
-	    }
-	}
-        memory += tag->memsize;
         qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
+
         for(n=0;n<num;n++) {
             renderpoint_t*p = &points[n];
             renderpoint_t*next= n<num-1?&points[n+1]:0;
@@ -974,19 +911,41 @@ RGBA* swf_Render(RENDERBUF*dest)
 	    else
 		change_state(y, &fillstate, p);
 
-            fill(dest, line, y, startx, endx, &clipstate, &fillstate);
+            fill(dest, line, zline, y, startx, endx, &clipstate, &fillstate);
             if(endx == i->width2)
                 break;
         }
         free_layers(&clipstate);
         free_layers(&fillstate);
-        if(DEBUG&2) printf("\n");
+	
+	i->lines[y].num = 0;
+	swf_ClearTag(i->lines[y].points);
+    }
+    i->ymin = 0x7fffffff;
+    i->ymax = -0x80000000;
+}
+
+RGBA* swf_Render(RENDERBUF*dest)
+{
+    renderbuf_internal*i = (renderbuf_internal*)dest->internal;
+    RGBA* img = (RGBA*)rfx_alloc(sizeof(RGBA)*dest->width*dest->height);
+    int y;
+    RGBA*line2=0;
+    
+    swf_Process(dest);
+
+    for(y=0;y<i->height2;y++) {
+        int n;
+        RGBA*line = &i->img[y*i->width2];
 
         if(!i->antialize) {
             memcpy(&img[y*dest->width], line, sizeof(RGBA)*dest->width);
         } else {
             if(y&1) {
                 int x;
+		RGBA*line1=line;
+		if(!line2)
+		    line2=line1;
                 RGBA* p = &img[(y/2)*dest->width];
                 for(x=0;x<dest->width;x++) {
                     RGBA*p1 = &line1[x*2];
@@ -1000,19 +959,8 @@ RGBA* swf_Render(RENDERBUF*dest)
                 }
             }
         }
-	free(points);
+	line2=line;
     }
-    free(line1);
-    free(line2);
-
-#define MEMORY
-    
-    if(DEBUG) printf("\nMemory used: %d\n", memory);
-#ifdef STATISTICS
-    if(DEBUG) printf("Statistics:\n");
-    if(DEBUG) printf("Average layer depth: %f\n", (double)layers/layernum);
-#endif
-
 
     return img;
 }
@@ -1025,16 +973,68 @@ typedef struct
     union {
         SHAPE2*shape;
         SWFFONT*font;
-    };
+    } obj;
 } character_t;
+
+int compare_placements(const void *v1, const void *v2)
+{
+    SWFPLACEOBJECT*p1 = (SWFPLACEOBJECT*)v1;
+    SWFPLACEOBJECT*p2 = (SWFPLACEOBJECT*)v2;
+    if(p1->depth != p2->depth)
+	(int)p1->depth - (int)p2->depth;
+    else 
+	if(p2->clipdepth)
+	    return 1; // do the clip first
+	else
+	    return -1;
+
+/*    if(!p1->clipdepth) {
+	if(!p2->clipdepth) {
+	    // !p1->clipdepth && !p2->clipdepth
+	    return (int)p1->depth - (int)p2->depth;
+	} else {
+	    // !p1->clipdepth && p2->clipdepth
+	    if(p1->depth != p2->clipdepth)
+		return (int)p1->depth - (int)p2->clipdepth;
+	    else
+		return 1; // do the clip first
+	}
+    } else {
+	if(!p2->clipdepth) {
+	    // p1->clipdepth && !p2->clipdepth
+	    if(p1->clipdepth != p2->depth)
+		return (int)p1->clipdepth - (int)p2->depth;
+	    else
+		return -1;// do the clip first
+	} else {
+	    if(p1->clipdepth != p2->clipdepth)
+		return (int)p1->clipdepth - (int)p2->clipdepth;
+	    else
+		return (int)p1->depth - (int)p2->depth;
+	}
+    }*/
+}
 
 void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 {
     TAG*tag;
     int t;
-
+    int numplacements;
+    
     character_t* idtable = rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
     SWFPLACEOBJECT** depthtable = rfx_calloc(sizeof(SWFPLACEOBJECT*)*65536); // depth to placeobject mapping
+    
+    tag = swf->firstTag;
+    numplacements = 0;
+    while(tag) {
+        if(tag->id == ST_PLACEOBJECT || 
+           tag->id == ST_PLACEOBJECT2) {
+	    numplacements++;
+	}
+	tag = tag->next;
+    }
+    SWFPLACEOBJECT* placements = rfx_calloc(sizeof(SWFPLACEOBJECT)*numplacements);
+    numplacements = 0;
 
     /* set background color */
     RGBA color = swf_GetSWFBackgroundColor(swf);
@@ -1053,7 +1053,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
                 SHAPE2* shape = rfx_calloc(sizeof(SHAPE2));
                 swf_ParseDefineShape(tag, shape);
                 idtable[id].type = shape_type;
-                idtable[id].shape = shape;
+                idtable[id].obj.shape = shape;
             } else if(swf_isImageTag(tag)) {
 		int width,height;
                 RGBA*data = swf_ExtractImage(tag, &width, &height);
@@ -1063,7 +1063,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             } else if(tag->id == ST_DEFINEFONT ||
                       tag->id == ST_DEFINEFONT2) {
                 //swf_FontExtract(swf,id,&idtable[id].font);
-                idtable[id].font = 0;
+                idtable[id].obj.font = 0;
             } else if(tag->id == ST_DEFINEFONTINFO ||
                       tag->id == ST_DEFINEFONTINFO2) {
                 idtable[id].type = font_type;
@@ -1073,16 +1073,18 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             }
         } else if(tag->id == ST_PLACEOBJECT || 
                   tag->id == ST_PLACEOBJECT2) {
-            SWFPLACEOBJECT* p = rfx_calloc(sizeof(SWFPLACEOBJECT));
-            swf_GetPlaceObject(tag, p);
+            SWFPLACEOBJECT p;
+            swf_GetPlaceObject(tag, &p);
             /* TODO: add move and deletion */
-            depthtable[p->depth] = p;
+            placements[numplacements++] = p;
         }
         tag = tag->next;
     }
+
+    qsort(placements, numplacements, sizeof(SWFPLACEOBJECT), compare_placements);
       
-    for(t=65535;t>=0;t--) if(depthtable[t]) {
-        SWFPLACEOBJECT*p = depthtable[t];
+    for(t=0;t<numplacements;t++) {
+        SWFPLACEOBJECT*p = &placements[t];
         int id = p->id;
             
         if(!idtable[id].tag) { 
@@ -1092,7 +1094,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 
         if(idtable[id].type == shape_type) {
             SRECT sbbox = swf_TurnRect(*idtable[id].bbox, &p->matrix);
-            swf_RenderShape(buf, idtable[id].shape, &p->matrix, &p->cxform, p->depth, p->clipdepth);
+            swf_RenderShape(buf, idtable[id].obj.shape, &p->matrix, &p->cxform, p->depth, p->clipdepth);
         } else if(idtable[id].type == text_type) {
 	    /* TODO */
         } else {
@@ -1107,15 +1109,11 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             idtable[t].bbox=0;
         }
         if(idtable[t].type == shape_type) {
-            SHAPE2* shape = idtable[t].shape;
+            SHAPE2* shape = idtable[t].obj.shape;
             if(shape) {
                 swf_Shape2Free(shape); // FIXME
-                free(idtable[t].shape);idtable[t].shape = 0;
+                free(idtable[t].obj.shape);idtable[t].obj.shape = 0;
             }
-        }
-        if(depthtable[t]) {
-            swf_PlaceObjectFree(depthtable[t]);
-            free(depthtable[t]);depthtable[t] = 0;
         }
     }
     free(idtable);
