@@ -20,11 +20,15 @@ extern "C" {
 
 char * filename = 0;
 char * outputfilename = "output.swf";
+unsigned int lastframe = 0xffffffff;
+
+int jpeg_quality = 40;
 
 struct options_t options[] =
 {
  {"v","verbose"},
  {"o","output"},
+ {"e","end"},
  {"V","version"},
  {0,0}
 };
@@ -34,9 +38,13 @@ int args_callback_option(char*name,char*val)
     if(!strcmp(name, "V")) {
         printf("avi2swf - part of %s %s\n", PACKAGE, VERSION);
         exit(0);
-    } else 
-    if(!strcmp(name, "o")) {
+    } 
+    else if(!strcmp(name, "o")) {
 	outputfilename = val;
+	return 1;
+    }
+    else if(!strcmp(name, "e")) {
+	lastframe = atoi(val);
 	return 1;
     }
 }
@@ -49,6 +57,7 @@ void args_callback_usage(char*name)
     printf("\nUsage: %s file.swf\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
     printf("\t-o , --output=filename\t Specify output filename\n"); 
+    printf("\t-e , --end=frame\t\t Last frame to encode\n");
     printf("\t-V , --version\t\t Print program version and exit\n");
     exit(0);
 }
@@ -66,13 +75,12 @@ SWF swf;
 TAG*tag;
 
 int main (int argc,char ** argv)
-{ int f;
+{ int file;
   IAviReadFile* player;
   IAviReadStream* astream;
   IAviReadStream* vstream;
   MainAVIHeader head;
   SRECT r;
-  memset(&swf, 0, sizeof(swf));
 
   processargs(argc, argv);
   if(!filename)
@@ -92,18 +100,26 @@ int main (int argc,char ** argv)
 
   vstream -> StartStreaming();
   
+  file = open(outputfilename,O_WRONLY|O_CREAT|O_TRUNC, 0644);
+  
+  memset(&swf, 0, sizeof(swf));
   swf.frameRate = (int)(1000000.0/head.dwMicroSecPerFrame*256);
   swf.fileVersion = 4;
+  swf.fileSize = 0x0fffffff;
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = head.dwWidth*20;
   r.ymax = head.dwHeight*20;
   swf.movieSize = r;
+
+  swf_WriteHeader(file, &swf);
+
   tag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
-  swf.firstTag = tag;
   swf_SetU8(tag,0); //black
   swf_SetU8(tag,0);
   swf_SetU8(tag,0);
+  swf_WriteTag(file, tag);
+  swf_DeleteTag(tag);
 
   U8*newdata = (U8*)malloc((head.dwWidth+3) * head.dwHeight * 4);
 
@@ -136,21 +152,23 @@ int main (int argc,char ** argv)
     RGBA rgb;
 
     if(frame!=0) {
-	tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+	tag = swf_InsertTag(NULL, ST_REMOVEOBJECT2);
 	swf_SetU16(tag, 1); //depth
+	swf_WriteTag(file, tag);
+	swf_DeleteTag(tag);
     }
 
     /* todo: dynamically decide whether to generate jpeg/lossless
        bitmaps, (using transparency to modify the previous 
        picture), and which jpeg compression depth to use.
        (btw: Are there video frame transitions which can
-        reasonably approximated by shapes?)
+        reasonably be approximated by shapes?)
      */
 
     int type = 1;
     int rel = 0;
     if(type == 0) {
-	tag = swf_InsertTag(tag, ST_DEFINEBITSLOSSLESS);
+	tag = swf_InsertTag(NULL, ST_DEFINEBITSLOSSLESS);
 	swf_SetU16(tag, frame*2);
 	U8*mylastdata = lastdata;
 	for(y=0;y<height;y++) {
@@ -194,11 +212,13 @@ int main (int argc,char ** argv)
 	    }
 	}
 	swf_SetLosslessBits(tag,width,height,newdata,BMF_32BIT);
+	swf_WriteTag(file, tag);
+	swf_DeleteTag(tag);
     } else 
     if(type == 1) {
-	tag = swf_InsertTag(tag, ST_DEFINEBITSJPEG2);
+	tag = swf_InsertTag(NULL, ST_DEFINEBITSJPEG2);
 	swf_SetU16(tag, frame*2);
-	JPEGBITS * jb = swf_SetJPEGBitsStart(tag,width,height,1);
+	JPEGBITS * jb = swf_SetJPEGBitsStart(tag,width,height,jpeg_quality);
 	U8*mylastdata = lastdata;
 	for(y=0;y<height;y++) {
 	    U8*nd = newdata;
@@ -222,54 +242,61 @@ int main (int argc,char ** argv)
 	    swf_SetJPEGBitsLine(jb,newdata);
 	}
 	swf_SetJPEGBitsFinish(jb);
+	swf_WriteTag(file, tag);
+	swf_DeleteTag(tag);
     }
 
-    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
-    swf_ShapeNew(&s);
-    rgb.b = rgb.g = rgb.r = 0xff;
-    ls = swf_ShapeAddLineStyle(s,20,&rgb);  
-    swf_GetMatrix(NULL,&m);
-    m.sx = 20*65536;
-    m.sy = 20*65536;
+    tag = swf_InsertTag(NULL, ST_DEFINESHAPE);
+      swf_ShapeNew(&s);
+      rgb.b = rgb.g = rgb.r = 0xff;
+      ls = swf_ShapeAddLineStyle(s,20,&rgb);  
+      swf_GetMatrix(NULL,&m);
+      m.sx = 20*65536;
+      m.sy = 20*65536;
 
-    fs = swf_ShapeAddBitmapFillStyle(s,&m,frame*2,0);
-    swf_SetU16(tag ,frame*2+1);   // ID   
-    r.xmin = 0;
-    r.ymin = 0;
-    r.xmax = width*20;
-    r.ymax = height*20;
-    swf_SetRect(tag,&r);
+      fs = swf_ShapeAddBitmapFillStyle(s,&m,frame*2,0);
+      swf_SetU16(tag ,frame*2+1);   // ID   
+      r.xmin = 0;
+      r.ymin = 0;
+      r.xmax = width*20;
+      r.ymax = height*20;
+      swf_SetRect(tag,&r);
 
-    swf_SetShapeStyles(tag,s);
-    swf_ShapeCountBits(s,NULL,NULL);
-    swf_SetShapeBits(tag,s);
+      swf_SetShapeStyles(tag,s);
+      swf_ShapeCountBits(s,NULL,NULL);
+      swf_SetShapeBits(tag,s);
 
-    swf_ShapeSetAll(tag,s,0,0,ls,fs,0);
+      swf_ShapeSetAll(tag,s,0,0,ls,fs,0);
 
-    swf_ShapeSetLine(tag,s,width*20,0);
-    swf_ShapeSetLine(tag,s,0,height*20);
-    swf_ShapeSetLine(tag,s,-width*20,0);
-    swf_ShapeSetLine(tag,s,0,-height*20);
-    swf_ShapeSetEnd(tag);
+      swf_ShapeSetLine(tag,s,width*20,0);
+      swf_ShapeSetLine(tag,s,0,height*20);
+      swf_ShapeSetLine(tag,s,-width*20,0);
+      swf_ShapeSetLine(tag,s,0,-height*20);
+      swf_ShapeSetEnd(tag);
+    swf_WriteTag(file, tag);
+    swf_DeleteTag(tag);
 
-    tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-	swf_ObjectPlace(tag,frame*2+1,1,0,0,0);
+    tag = swf_InsertTag(NULL,ST_PLACEOBJECT2);
+      swf_ObjectPlace(tag,frame*2+1,1,0,0,0);
+    swf_WriteTag(file, tag);
+    swf_DeleteTag(tag);
 
-    tag = swf_InsertTag(tag, ST_SHOWFRAME);
+    tag = swf_InsertTag(NULL, ST_SHOWFRAME);
+    swf_WriteTag(file, tag);
+    swf_DeleteTag(tag);
 
-/*    frame++;
-    if(frame == 200)
-	break;*/
+    frame++;
+    if(frame == lastframe)
+	break;
   }
   free(newdata);
+  printf("\n");
   
-  tag = swf_InsertTag(tag, ST_END);
+  tag = swf_InsertTag(NULL, ST_END);
+  swf_WriteTag(file, tag);
+  swf_DeleteTag(tag);
 
-  f = open(outputfilename,O_WRONLY|O_CREAT|O_TRUNC, 0644);
-  if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
-  close(f);
-
-  swf_FreeTags(&swf);                       // cleanup
+  close(file);
 
   return 0;
 }
