@@ -1032,7 +1032,7 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     if(textid>=0)
      endtext();
     
-    actions = swf_ActionStart(tag);
+    actions = swf_ActionStart();
     if(opennewwindow)
       action_GetUrl(url, "_parent");
     else
@@ -1051,7 +1051,7 @@ void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
     if(textid>=0)
      endtext();
    
-    actions = swf_ActionStart(tag);
+    actions = swf_ActionStart();
       action_GotoFrame(page);
       action_End();
     swf_ActionEnd();
@@ -1074,10 +1074,10 @@ void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
     int buttonid = ++currentswfid;
     for(t=1;t<4;t++)
     {
-	if(points[t].x>xmax) xmax=points[t].x;
-	if(points[t].y>ymax) ymax=points[t].y;
-	if(points[t].x<xmin) xmin=points[t].x;
-	if(points[t].y<ymin) ymin=points[t].y;
+        if(points[t].x>xmax) xmax=points[t].x;
+        if(points[t].y>ymax) ymax=points[t].y;
+        if(points[t].x<xmin) xmin=points[t].x;
+        if(points[t].y<ymin) ymin=points[t].y;
     }
     p1.x=points[0].x; p1.y=points[0].y; p2.x=points[1].x; p2.y=points[1].y; 
     p3.x=points[2].x; p3.y=points[2].y; p4.x=points[3].x; p4.y=points[3].y;
