@@ -1449,6 +1449,10 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 	fontname = "Times-Roman";
     }
     filename = searchFont(fontname);
+    if(!filename) {
+	msg("<error> Couldn't find font %s- did you install the default fonts?");
+	return 0;
+    }
 
     if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
 	msg("<fatal> Too many fonts in file.");
