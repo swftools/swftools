@@ -66,17 +66,19 @@ VERSION = @VERSION@
 
 jpeg2swf_SOURCES = jpeg2swf.c
 swfdump_SOURCES = swfdump.c
+swfextract_SOURCES = swfextract.c
 swfcombine_SOURCES = bitio.c bitio.h reloc.c reloc.h combine.c combine.h flash.c flash.h swfcombine.c types.h
 swfstrings_SOURCES = swfstrings.c
 jpeg2swf_LINK = $(CCLD) ../lib/rfxswf.o -o $@
 swfdump_LINK = $(CCLD) ../lib/rfxswf.o -o $@
+swfextract_LINK = $(CCLD) ../lib/log.o ../lib/rfxswf.o -o $@
 swfcombine_LINK = $(CCLD) ../lib/log.o -o $@
 swfstrings_LINK = $(CCLD) ../lib/log.o ../lib/rfxswf.o -o $@
-man_MANS = swfcombine.1 swfstrings.1 swfdump.1 jpeg2swf.1
+man_MANS = swfcombine.1 swfstrings.1 swfextract.1 swfextract.1 swfdump.1 jpeg2swf.1
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
-bin_PROGRAMS =  swfcombine$(EXEEXT) swfstrings$(EXEEXT) swfdump$(EXEEXT) @JPEG2SWF@
+bin_PROGRAMS =  swfcombine$(EXEEXT) swfstrings$(EXEEXT) swfextract$(EXEEXT) swfdump$(EXEEXT) @JPEG2SWF@
 PROGRAMS =  $(bin_PROGRAMS)
 
 
@@ -96,6 +98,10 @@ swfdump_OBJECTS =  swfdump.o
 swfdump_LDADD = $(LDADD)
 swfdump_DEPENDENCIES = 
 swfdump_LDFLAGS = 
+swfextract_OBJECTS =  swfextract.o reloc.o bitio.o flash.o
+swfextract_LDADD = $(LDADD)
+swfextract_DEPENDENCIES = 
+swfextract_LDFLAGS = 
 jpeg2swf_OBJECTS =  jpeg2swf.o
 jpeg2swf_LDADD = $(LDADD)
 jpeg2swf_DEPENDENCIES = 
@@ -116,10 +122,10 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/bitio.P .deps/combine.P .deps/flash.P \
-.deps/jpeg2swf.P .deps/reloc.P .deps/swfcombine.P .deps/swfdump.P \
+.deps/jpeg2swf.P .deps/reloc.P .deps/swfcombine.P .deps/swfextract.P .deps/swfdump.P \
 .deps/swfstrings.P
-SOURCES = $(swfcombine_SOURCES) $(swfstrings_SOURCES) $(swfdump_SOURCES) $(jpeg2swf_SOURCES)
-OBJECTS = $(swfcombine_OBJECTS) $(swfstrings_OBJECTS) $(swfdump_OBJECTS) $(jpeg2swf_OBJECTS)
+SOURCES = $(swfcombine_SOURCES) $(swfstrings_SOURCES) $(swfextract_SOURCES) $(swfdump_SOURCES) $(jpeg2swf_SOURCES)
+OBJECTS = $(swfcombine_OBJECTS) $(swfstrings_OBJECTS) $(swfextract_SOURCES) $(swfdump_OBJECTS) $(jpeg2swf_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -170,7 +176,7 @@ swfcombine$(EXEEXT): $(swfcombine_OBJECTS) $(swfcombine_DEPENDENCIES)
 	@rm -f swfcombine$(EXEEXT)
 	$(swfcombine_LINK) $(swfcombine_LDFLAGS) $(swfcombine_OBJECTS) $(swfcombine_LDADD) $(LIBS)
 
-swfstrings$(EXEEXT): $(swfstrings_OBJECTS) $(swfstrings_DEPENDENCIES)
+swfstrings$(EXEEXT): $(swfstrings_OBJECTS) $(swfstrings_DEPENDENCIES) ../lib/rfxswf.o
 	@rm -f swfstrings$(EXEEXT)
 	$(swfstrings_LINK) $(swfstrings_LDFLAGS) $(swfstrings_OBJECTS) $(swfstrings_LDADD) $(LIBS)
 
@@ -178,7 +184,11 @@ swfdump$(EXEEXT): $(swfdump_OBJECTS) $(swfdump_DEPENDENCIES) ../lib/rfxswf.o
 	@rm -f swfdump$(EXEEXT)
 	$(swfdump_LINK) $(swfdump_LDFLAGS) $(swfdump_OBJECTS) $(swfdump_LDADD) $(LIBS)
 
-jpeg2swf$(EXEEXT): $(jpeg2swf_OBJECTS) $(jpeg2swf_DEPENDENCIES)
+swfextract$(EXEEXT): $(swfextract_OBJECTS) $(swfextract_DEPENDENCIES) ../lib/rfxswf.o
+	@rm -f swfextract$(EXEEXT)
+	$(swfextract_LINK) $(swfextract_LDFLAGS) $(swfextract_OBJECTS) $(swfextract_LDADD) $(LIBS)
+
+jpeg2swf$(EXEEXT): $(jpeg2swf_OBJECTS) $(jpeg2swf_DEPENDENCIES) ../lib/rfxswf.o
 	@rm -f jpeg2swf$(EXEEXT)
 	$(jpeg2swf_LINK) $(jpeg2swf_LDFLAGS) $(jpeg2swf_OBJECTS) $(jpeg2swf_LDADD) $(LIBS)
 
