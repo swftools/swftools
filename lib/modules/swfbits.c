@@ -977,7 +977,7 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
 
 RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight)
 {
-    if(newwidth<2 || newheight<2)
+    if(newwidth<1 || newheight<1)
 	return 0;
     int x,y;
     RGBA* newdata= (RGBA*)malloc(newwidth*newheight*sizeof(RGBA));
