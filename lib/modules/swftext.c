@@ -157,8 +157,7 @@ int swf_FontExtract_DefineFont(int id, SWFFONT * f, TAG * t)
 	of = swf_GetU16(t);
 	n = of / 2;
 	f->numchars = n;
-	f->glyph = malloc(sizeof(SWFGLYPH) * n);
-	memset(f->glyph, 0, sizeof(SWFGLYPH) * n);
+	f->glyph = rfx_calloc(sizeof(SWFGLYPH) * n);
 
 	for (i = 1; i < n; i++)
 	    swf_GetU16(t);
@@ -191,9 +190,9 @@ int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t)
 	}
 
 	if (f->name)
-	    free(f->name);
+	    rfx_free(f->name);
 
-	f->name = (U8 *) malloc(l + 1);
+	f->name = (U8 *) rfx_alloc(l + 1);
 	swf_GetBlock(t, f->name, l);
 	f->name[l] = 0;
 
@@ -213,7 +212,7 @@ int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t)
 	    f->language = swf_GetU8(t);
 	}
 
-	f->glyph2ascii = (U16 *) malloc(sizeof(U16) * f->numchars);
+	f->glyph2ascii = (U16 *) rfx_alloc(sizeof(U16) * f->numchars);
 	maxcode = 0;
 	for (i = 0; i < f->numchars; i++) {
 	    f->glyph2ascii[i] = ((flags & FF_WIDECODES) ? swf_GetU16(t) : swf_GetU8(t));
@@ -224,7 +223,7 @@ int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t)
 	if (maxcode < 256)
 	    maxcode = 256;
 	f->maxascii = maxcode;
-	f->ascii2glyph = (int *) malloc(sizeof(int) * maxcode);
+	f->ascii2glyph = (int *) rfx_alloc(sizeof(int) * maxcode);
 	memset(f->ascii2glyph, -1, sizeof(int) * maxcode);
 
 	for (i = 0; i < f->numchars; i++)
@@ -248,7 +247,7 @@ int swf_FontExtract_GlyphNames(int id, SWFFONT * f, TAG * tag)
     if (fid == id) {
 	int num = swf_GetU16(tag);
 	int t;
-	f->glyphnames = malloc(sizeof(char *) * num);
+	f->glyphnames = rfx_alloc(sizeof(char *) * num);
 	for (t = 0; t < num; t++) {
 	    f->glyphnames[t] = strdup(swf_GetString(tag));
 	}
@@ -287,17 +286,15 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	font->encoding |= FONT_ENCODING_SHIFTJIS;
 
     namelen = swf_GetU8(tag);
-    font->name = (U8 *) malloc(namelen + 1);
+    font->name = (U8 *) rfx_alloc(namelen + 1);
     font->name[namelen] = 0;
     swf_GetBlock(tag, font->name, namelen);
     font->version = 2;
     glyphcount = swf_GetU16(tag);
     font->numchars = glyphcount;
 
-    font->glyph = (SWFGLYPH *) malloc(sizeof(SWFGLYPH) * glyphcount);
-    memset(font->glyph, 0, sizeof(SWFGLYPH) * glyphcount);
-    font->glyph2ascii = (U16 *) malloc(sizeof(U16) * glyphcount);
-    memset(font->glyph2ascii, 0, sizeof(U16) * glyphcount);
+    font->glyph = (SWFGLYPH *) rfx_calloc(sizeof(SWFGLYPH) * glyphcount);
+    font->glyph2ascii = (U16 *) rfx_calloc(sizeof(U16) * glyphcount);
 
     if (flags1 & 8) {		// wide offsets
 	for (t = 0; t < glyphcount; t++)
@@ -332,7 +329,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     if (maxcode < 256)
 	maxcode = 256;
     font->maxascii = maxcode;
-    font->ascii2glyph = (int *) malloc(sizeof(int) * maxcode);
+    font->ascii2glyph = (int *) rfx_alloc(sizeof(int) * maxcode);
     memset(font->ascii2glyph, -1, sizeof(int) * maxcode);
     for (t = 0; t < glyphcount; t++) {
 	font->ascii2glyph[font->glyph2ascii[t]] = t;
@@ -340,7 +337,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 
     if (flags1 & 128) {		// has layout
 	U16 kerningcount;
-	font->layout = (SWFLAYOUT *) malloc(sizeof(SWFLAYOUT));
+	font->layout = (SWFLAYOUT *) rfx_alloc(sizeof(SWFLAYOUT));
 	font->layout->ascent = swf_GetU16(tag);
 	font->layout->descent = swf_GetU16(tag);
 	font->layout->leading = swf_GetU16(tag);
@@ -348,7 +345,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	    S16 advance = swf_GetS16(tag);
 	    font->glyph[t].advance = advance;
 	}
-	font->layout->bounds = malloc(glyphcount * sizeof(SRECT));
+	font->layout->bounds = rfx_alloc(glyphcount * sizeof(SRECT));
 	for (t = 0; t < glyphcount; t++) {
 	    swf_ResetReadBits(tag);
 	    swf_GetRect(tag, &font->layout->bounds[t]);
@@ -357,9 +354,9 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	kerningcount = swf_GetU16(tag);
 	font->layout->kerningcount = kerningcount;
 
-	font->layout->kerning = (SWFKERNING *) malloc(sizeof(SWFKERNING) * kerningcount);
+	font->layout->kerning = (SWFKERNING *) rfx_alloc(sizeof(SWFKERNING) * kerningcount);
 	if (kerningcount) {
-	    font->layout->kerning = malloc(sizeof(*font->layout->kerning) * kerningcount);
+	    font->layout->kerning = rfx_alloc(sizeof(*font->layout->kerning) * kerningcount);
 	    for (t = 0; t < kerningcount; t++) {
 		if (flags1 & 4) {	// wide codes
 		    font->layout->kerning[t].char1 = swf_GetU16(tag);
@@ -495,8 +492,7 @@ int swf_FontExtract(SWF * swf, int id, SWFFONT * *font)
     if ((!swf) || (!font))
 	return -1;
 
-    f = (SWFFONT *) malloc(sizeof(SWFFONT));
-    memset(f, 0x00, sizeof(SWFFONT));
+    f = (SWFFONT *) rfx_calloc(sizeof(SWFFONT));
 
     t = swf->firstTag;
 
@@ -530,7 +526,7 @@ int swf_FontExtract(SWF * swf, int id, SWFFONT * *font)
 	t = swf_NextTag(t);
     }
     if (f->id != id) {
-	free(f);
+	rfx_free(f);
 	f = 0;
     }
     font[0] = f;
@@ -549,13 +545,13 @@ void swf_LayoutFree(SWFLAYOUT * l)
 {
     if (l) {
 	if (l->kerning)
-	    free(l->kerning);
+	    rfx_free(l->kerning);
 	l->kerning = NULL;
 	if (l->bounds)
-	    free(l->bounds);
+	    rfx_free(l->bounds);
 	l->bounds = NULL;
     }
-    free(l);
+    rfx_free(l);
 }
 
 
@@ -565,9 +561,9 @@ static void font_freeglyphnames(SWFFONT*f)
 	int t;
 	for (t = 0; t < f->numchars; t++) {
 	    if (f->glyphnames[t])
-		free(f->glyphnames[t]);
+		rfx_free(f->glyphnames[t]);
 	}
-	free(f->glyphnames);
+	rfx_free(f->glyphnames);
 	f->glyphnames = 0;
     }
 
@@ -576,9 +572,9 @@ static void font_freeusage(SWFFONT*f)
 {
     if (f->use) {
 	if(f->use->chars) {
-	    free(f->use->chars);f->use->chars = 0;
+	    rfx_free(f->use->chars);f->use->chars = 0;
 	}
-	free(f->use); f->use = 0;
+	rfx_free(f->use); f->use = 0;
     }
 }
 static void font_freelayout(SWFFONT*f)
@@ -591,7 +587,7 @@ static void font_freelayout(SWFFONT*f)
 static void font_freename(SWFFONT*f)
 {
     if (f->name) {
-	free(f->name);
+	rfx_free(f->name);
 	f->name = 0;
     }
 }
@@ -647,7 +643,7 @@ void swf_FontSort(SWFFONT * font)
     if (!font)
 	return;
     
-    newplace = malloc(sizeof(int) * font->numchars);
+    newplace = rfx_alloc(sizeof(int) * font->numchars);
 
     for (i = 0; i < font->numchars; i++) {
 	newplace[i] = i;
@@ -685,7 +681,7 @@ void swf_FontSort(SWFFONT * font)
 		}
 	    }
 	}
-    newpos = malloc(sizeof(int) * font->numchars);
+    newpos = rfx_alloc(sizeof(int) * font->numchars);
     for (i = 0; i < font->numchars; i++) {
 	newpos[newplace[i]] = i;
     }
@@ -694,8 +690,8 @@ void swf_FontSort(SWFFONT * font)
 	    font->ascii2glyph[i] = newpos[font->ascii2glyph[i]];
     }
 
-    free(newpos);
-    free(newplace);
+    rfx_free(newpos);
+    rfx_free(newplace);
 }
 
 void swf_FontPrepareForEditText(SWFFONT * font)
@@ -713,10 +709,9 @@ int swf_FontInitUsage(SWFFONT * f)
 	fprintf(stderr, "Usage initialized twice");
 	return -1;
     }
-    f->use = malloc(sizeof(FONTUSAGE));
+    f->use = rfx_alloc(sizeof(FONTUSAGE));
     f->use->is_reduced = 0;
-    f->use->chars = malloc(sizeof(f->use->chars[0]) * f->numchars);
-    memset(f->use->chars, 0, sizeof(f->use->chars[0]) * f->numchars);
+    f->use->chars = rfx_calloc(sizeof(f->use->chars[0]) * f->numchars);
     return 0;
 }
 
@@ -724,8 +719,8 @@ void swf_FontClearUsage(SWFFONT * f)
 {
     if (!f || !f->use)
 	return;
-    free(f->use->chars); f->use->chars = 0;
-    free(f->use); f->use = 0;
+    rfx_free(f->use->chars); f->use->chars = 0;
+    rfx_free(f->use); f->use = 0;
 }
 
 int swf_FontUse(SWFFONT * f, U8 * s)
@@ -754,7 +749,7 @@ int swf_FontUseGlyph(SWFFONT * f, int glyph)
 
 int swf_FontSetDefine(TAG * t, SWFFONT * f)
 {
-    U16 *ofs = (U16 *) malloc(f->numchars * 2);
+    U16 *ofs = (U16 *) rfx_alloc(f->numchars * 2);
     int p, i, j;
 
     if ((!t) || (!f))
@@ -782,7 +777,7 @@ int swf_FontSetDefine(TAG * t, SWFFONT * f)
 	    swf_SetSimpleShape(t, f->glyph[i].shape);
 
     swf_ResetWriteBits(t);
-    free(ofs);
+    rfx_free(ofs);
     return 0;
 }
 
@@ -910,14 +905,13 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
 
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading)
 {
-    f->layout = (SWFLAYOUT *) malloc(sizeof(SWFLAYOUT));
+    f->layout = (SWFLAYOUT *) rfx_alloc(sizeof(SWFLAYOUT));
     f->layout->ascent = ascent;
     f->layout->descent = descent;
     f->layout->leading = leading;
     f->layout->kerningcount = 0;
     f->layout->kerning = 0;
-    f->layout->bounds = (SRECT *) malloc(sizeof(SRECT) * f->numchars);
-    memset(f->layout->bounds, 0, sizeof(SRECT) * f->numchars);
+    f->layout->bounds = (SRECT *) rfx_calloc(sizeof(SRECT) * f->numchars);
 }
 
 int swf_FontSetInfo(TAG * t, SWFFONT * f)
@@ -983,15 +977,15 @@ void swf_FontFree(SWFFONT * f)
 		swf_ShapeFree(f->glyph[i].shape);
 		f->glyph[i].shape = NULL;
 	    }
-	free(f->glyph);
+	rfx_free(f->glyph);
 	f->glyph = NULL;
     }
     if (f->ascii2glyph) {
-	free(f->ascii2glyph);
+	rfx_free(f->ascii2glyph);
 	f->ascii2glyph = NULL;
     }
     if (f->glyph2ascii) {
-	free(f->glyph2ascii);
+	rfx_free(f->glyph2ascii);
 	f->glyph2ascii = NULL;
     }
     font_freename(f);
@@ -999,7 +993,7 @@ void swf_FontFree(SWFFONT * f)
     font_freeglyphnames(f);
     font_freeusage(f);
 
-    free(f);
+    rfx_free(f);
 }
 
 int swf_TextSetInfoRecord(TAG * t, SWFFONT * font, U16 size, RGBA * color, int dx, int dy)
@@ -1468,9 +1462,8 @@ void swf_FontCreateLayout(SWFFONT * f)
     if (!f->numchars)
 	return;
 
-    f->layout = (SWFLAYOUT *) malloc(sizeof(SWFLAYOUT));
-    memset(f->layout, 0, sizeof(SWFLAYOUT));
-    f->layout->bounds = (SRECT *) malloc(f->numchars * sizeof(SRECT));
+    f->layout = (SWFLAYOUT *) rfx_calloc(sizeof(SWFLAYOUT));
+    f->layout->bounds = (SRECT *) rfx_alloc(f->numchars * sizeof(SRECT));
     f->layout->ascent = -32767;
     f->layout->descent = -32767;
 

@@ -51,14 +51,11 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
     stream->height = height;
     stream->bbx = width/16;
     stream->bby = height/16;
-    stream->current = (YUV*)malloc(width*height*sizeof(YUV));
-    stream->oldpic = (YUV*)malloc(width*height*sizeof(YUV));
-    stream->mvdx = (int*)malloc(stream->bbx*stream->bby*sizeof(int));
-    stream->mvdy = (int*)malloc(stream->bbx*stream->bby*sizeof(int));
+    stream->current = (YUV*)rfx_calloc(width*height*sizeof(YUV));
+    stream->oldpic = (YUV*)rfx_calloc(width*height*sizeof(YUV));
+    stream->mvdx = (int*)rfx_alloc(stream->bbx*stream->bby*sizeof(int));
+    stream->mvdy = (int*)rfx_alloc(stream->bbx*stream->bby*sizeof(int));
     stream->do_motion = 0;
-
-    memset(stream->oldpic, 0, width*height*sizeof(YUV));
-    memset(stream->current, 0, width*height*sizeof(YUV));
 
     assert((stream->width&15) == 0);
     assert((stream->height&15) == 0);
@@ -75,10 +72,10 @@ void swf_SetVideoStreamDefine(TAG*tag, VIDEOSTREAM*stream, U16 frames, U16 width
 }
 void swf_VideoStreamClear(VIDEOSTREAM*stream)
 {
-    free(stream->oldpic);stream->oldpic = 0;
-    free(stream->current);stream->current = 0;
-    free(stream->mvdx);stream->mvdx=0;
-    free(stream->mvdy);stream->mvdy=0;
+    rfx_free(stream->oldpic);stream->oldpic = 0;
+    rfx_free(stream->current);stream->current = 0;
+    rfx_free(stream->mvdx);stream->mvdx=0;
+    rfx_free(stream->mvdy);stream->mvdy=0;
 }
 
 typedef struct _block_t
@@ -1396,7 +1393,7 @@ void test_copy_diff()
     VIDEOSTREAM stream;
     VIDEOSTREAM* s = &stream;
     TAG*tag;
-    RGBA*pic = malloc(256*256*sizeof(RGBA));
+    RGBA*pic = rfx_alloc(256*256*sizeof(RGBA));
     block_t fb;
     int x,y;
     int bx,by;
@@ -1451,8 +1448,7 @@ void mkblack()
     RGBA* pic = 0;
     VIDEOSTREAM stream;
    
-    pic = malloc(width*height*4);
-    memset(pic, 0, width*height*4);
+    pic = rfx_calloc(width*height*4);
 
     memset(&swf,0,sizeof(SWF));
     memset(&obj,0,sizeof(obj));
@@ -1537,10 +1533,10 @@ int main(int argn, char*argv[])
     memset(&stream, 0, sizeof(stream));
 
     getPNG(fname, &width, &height, &data);
-    pic = (RGBA*)malloc(width*height*sizeof(RGBA));
-    pic2 = (RGBA*)malloc(width*height*sizeof(RGBA));
+    pic = (RGBA*)rfx_alloc(width*height*sizeof(RGBA));
+    pic2 = (RGBA*)rfx_alloc(width*height*sizeof(RGBA));
     memcpy(pic, data, width*height*sizeof(RGBA));
-    free(data);
+    rfx_free(data);
 
     printf("Compressing %s, size %dx%d\n", fname, width, height);
 

@@ -154,8 +154,7 @@ ActionTAG* swf_ActionGet(TAG*tag)
     U8*data;
     while(op)
     {
-	action->next = (ActionTAG*)malloc(sizeof(ActionTAG));
-	memset(action->next, 0, sizeof(ActionTAG));
+	action->next = (ActionTAG*)rfx_calloc(sizeof(ActionTAG));
 	action->next->prev = action;
 	action->next->next = 0;
 	action->next->parent = tmp.next;
@@ -168,7 +167,7 @@ ActionTAG* swf_ActionGet(TAG*tag)
 	    length = swf_GetU16(tag);
 
 	if(length) {
-	    data = malloc(length);
+	    data = rfx_alloc(length);
 	    swf_GetBlock(tag, data, length);
 	} else {
 	  data = 0;
@@ -196,11 +195,11 @@ void swf_ActionFree(ActionTAG*action)
     {
 	ActionTAG*tmp;
 	if(action->data && action->data != action->tmp)
-	    free(action->data);
+	    rfx_free(action->data);
 	
 	tmp = action;
 	action=action->next;
-	free(tmp);
+	rfx_free(tmp);
     }
 }
 
@@ -515,7 +514,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
     }
 
 #ifdef MAX_LOOKUP
-  for (t=0;t<MAX_LOOKUP;t++) if (lookup[t]) free(lookup[t]);
+  for (t=0;t<MAX_LOOKUP;t++) if (lookup[t]) rfx_free(lookup[t]);
 #endif
 }
 
@@ -603,13 +602,13 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 		if(replacement)
 		{
 		    int newlen = strlen(replacement);
-		    char * newdata = malloc(atag->len - replacelen + newlen);
+		    char * newdata = rfx_alloc(atag->len - replacelen + newlen);
 		    int rpos = replacepos - atag->data;
 		    memcpy(newdata, atag->data, rpos);
 		    memcpy(&newdata[rpos], replacement, newlen);
 		    memcpy(&newdata[rpos+newlen], &replacepos[replacelen],
 			    &data[atag->len] - &replacepos[replacelen]);
-		    free(atag->data);
+		    rfx_free(atag->data);
 		    atag->data = newdata;
 		    data = &atag->data[rpos+newlen+1];
 		}
@@ -637,7 +636,7 @@ void swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
 /*static ActionTAG* swf_ActionStart()
 {
     ActionTAG*atag;
-    atag = (ActionTAG*)malloc(sizeof(ActionTAG));
+    atag = (ActionTAG*)rfx_alloc(sizeof(ActionTAG));
     atag->prev = 0;
     atag->next = 0;
     atag->parent = 0;
@@ -655,7 +654,7 @@ void swf_ActionEnd(ActionTAG* atag)
     } 
 
     last->prev->next = 0;
-    free(last);
+    rfx_free(last);
 }*/
 
 static ActionTAG*lastATAG(ActionTAG*atag)
@@ -671,7 +670,7 @@ static ActionTAG*lastATAG(ActionTAG*atag)
 ActionTAG* swf_AddActionTAG(ActionTAG*atag, U8 op, U8*data, U16 len)
 {
     ActionTAG*tmp;
-    tmp = (ActionTAG*)malloc(sizeof(ActionTAG));
+    tmp = (ActionTAG*)rfx_alloc(sizeof(ActionTAG));
     tmp->next = 0;
     if(atag) {
 	tmp->prev = atag;
@@ -1015,14 +1014,14 @@ ActionTAG* action_PushLookup16(ActionTAG*atag, U16 index)
 ActionTAG* action_PushString(ActionTAG*atag, char*str) 
 {
     int l = strlen(str);
-    char*ptr = (char*)malloc(l+2);
+    char*ptr = (char*)rfx_alloc(l+2);
     ptr[0] = 0; // string
     strcpy(&ptr[1], str);
     return swf_AddActionTAG(atag, ACTION_PUSH, (U8*)ptr, l+2);
 }
 ActionTAG* action_PushFloat(ActionTAG*atag, float f)
 {
-    char*ptr = (char*)malloc(5);
+    char*ptr = (char*)rfx_alloc(5);
     U32 fd = *(U32*)&f;
     ptr[0] = 1; //float
     ptr[1]  = fd;
@@ -1033,7 +1032,7 @@ ActionTAG* action_PushFloat(ActionTAG*atag, float f)
 }
 ActionTAG* action_PushDouble(ActionTAG*atag, double d) 
 {
-    char*ptr = (char*)malloc(9);
+    char*ptr = (char*)rfx_alloc(9);
     U8*dd = (U8*)&d;
     ptr[0] = 6; //double
 #ifdef WORDS_BIGENDIAN
@@ -1068,7 +1067,7 @@ ActionTAG* action_GetUrl(ActionTAG*atag, char* url, char* label)
 {
     int l1= strlen(url);
     int l2= strlen(label);
-    char*ptr = malloc(l1+l2+2);
+    char*ptr = rfx_alloc(l1+l2+2);
     strcpy(ptr, url);
     strcpy(&ptr[l1+1], label);
     return swf_AddActionTAG(atag, ACTION_GETURL, ptr, l1+l2+2);
@@ -1096,7 +1095,7 @@ ActionTAG* swf_ActionCompile(const char* source, int version)
     swf_SetBlock(tag, buffer, len);
     swf_SetU8(tag, 0);
 
-    free(buffer);
+    rfx_free(buffer);
 
     a = swf_ActionGet(tag);
     swf_DeleteTag(tag);

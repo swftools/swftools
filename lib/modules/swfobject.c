@@ -185,7 +185,7 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
             swf_ResetReadBits(tag);
             l = strlen(&tag->data[tag->pos]);
             t = 0;
-            data = malloc(l+1);
+            data = rfx_alloc(l+1);
             obj->name = data;
             while((data[t++] = swf_GetU8(tag))); 
         }
@@ -200,7 +200,6 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 void swf_PlaceObjectFree(SWFPLACEOBJECT* obj)
 {
     if(obj->name)
-	free(obj->name);
-    free(obj);
+	rfx_free(obj->name);
 }
 

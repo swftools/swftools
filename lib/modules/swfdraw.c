@@ -23,8 +23,7 @@ static void swf_ShapeDrawerClear(drawer_t*draw);
 
 static void swf_ShapeDrawerInit(drawer_t*draw, TAG*tag, int fillstylebits, int linestylebits)
 {
-    SWFSHAPEDRAWER*sdraw = malloc(sizeof(SWFSHAPEDRAWER));
-    memset(sdraw, 0, sizeof(SWFSHAPEDRAWER));
+    SWFSHAPEDRAWER*sdraw = rfx_calloc(sizeof(SWFSHAPEDRAWER));
     draw->internal = sdraw;
 
     draw->setLineStyle = swf_ShapeDrawerSetLineStyle;
@@ -184,7 +183,7 @@ static void swf_ShapeDrawerClear(drawer_t*draw)
     swf_ShapeFree(sdraw->shape);
     sdraw->shape = 0;
 
-    free(draw->internal);
+    rfx_free(draw->internal);
     draw->internal = 0;
 }
 
@@ -197,14 +196,14 @@ SRECT swf_ShapeDrawerGetBBox(drawer_t*draw)
 SHAPE* swf_ShapeDrawerToShape(drawer_t*draw)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
-    SHAPE* shape = malloc(sizeof(SHAPE));
+    SHAPE* shape = rfx_alloc(sizeof(SHAPE));
     if(!sdraw->isfinished) {
 	fprintf(stderr, "Warning: you should Finish() your drawer before calling DrawerToShape");
 	swf_ShapeDrawerFinish(draw);
     }
     memcpy(shape, sdraw->shape, sizeof(SHAPE));
     shape->bitlen = (sdraw->tag->len-1)*8;
-    shape->data = (U8*)malloc(sdraw->tag->len-1);
+    shape->data = (U8*)rfx_alloc(sdraw->tag->len-1);
     memcpy(shape->data, &sdraw->tag->data[1], sdraw->tag->len-1);
     return shape;
 }

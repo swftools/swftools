@@ -60,7 +60,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
     char*buf;
     int len = 0;
 
-    buf = malloc(init->bufferSize);
+    buf = rfx_alloc(init->bufferSize);
     if(!buf)
 	return;
     
@@ -73,7 +73,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
 	swf_SetU16(tag, 0); // seek
     }
     swf_SetBlock(tag, buf, len);
-    free(buf);
+    rfx_free(buf);
 }
 #endif
 
@@ -164,7 +164,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
     int numsamples = (int)(((swf_mp3_out_samplerate > 22050) ? 1152 : 576) * ((double)swf_mp3_in_samplerate/swf_mp3_out_samplerate));
     int fs = 0;
 
-    buf = malloc(bufsize);
+    buf = rfx_alloc(bufsize);
     if(!buf)
 	return;
 
@@ -184,7 +184,7 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
 	fprintf(stderr, "ok: mp3 nonempty block, %d samples, first:%d, framesize:%d\n",
 		numsamples, first, fs);
     }*/
-    free(buf);
+    rfx_free(buf);
 }
 
 void swf_SetSoundStreamEnd(TAG*tag)
@@ -226,7 +226,7 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 	    ((double)swf_mp3_in_samplerate/swf_mp3_out_samplerate)) // account for resampling
 	    );
 
-    buf = malloc(bufsize);
+    buf = rfx_alloc(bufsize);
     if(!buf)
 	return;
 
@@ -243,7 +243,7 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 	len = 0;
     }
 
-    free(buf);
+    rfx_free(buf);
 }
 
 #endif

@@ -139,24 +139,19 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	return 0;
     }
 
-    font = malloc(sizeof(SWFFONT));
-    memset(font, 0, sizeof(SWFFONT));
+    font = rfx_calloc(sizeof(SWFFONT));
     font->id = -1;
     font->version = 2;
-    font->layout = malloc(sizeof(SWFLAYOUT));
-    memset(font->layout, 0, sizeof(SWFLAYOUT));
-    font->layout->bounds = malloc(face->num_glyphs*sizeof(SRECT));
+    font->layout = rfx_calloc(sizeof(SWFLAYOUT));
+    font->layout->bounds = rfx_calloc(face->num_glyphs*sizeof(SRECT));
     font->style =  ((face->style_flags&FT_STYLE_FLAG_ITALIC)?FONT_STYLE_ITALIC:0)
 	          |((face->style_flags&FT_STYLE_FLAG_BOLD)?FONT_STYLE_BOLD:0);
     font->encoding = FONT_ENCODING_UNICODE;
-    font->glyph2ascii = malloc(face->num_glyphs*sizeof(U16));
-    memset(font->glyph2ascii, 0, face->num_glyphs*sizeof(U16));
+    font->glyph2ascii = rfx_calloc(face->num_glyphs*sizeof(U16));
     font->maxascii = 0;
-    font->glyph = malloc(face->num_glyphs*sizeof(SWFGLYPH));
-    memset(font->glyph, 0, face->num_glyphs*sizeof(SWFGLYPH));
+    font->glyph = rfx_calloc(face->num_glyphs*sizeof(SWFGLYPH));
     if(FT_HAS_GLYPH_NAMES(face)) {
-	font->glyphnames = malloc(face->num_glyphs*sizeof(char*));
-	memset(font->glyphnames,0,face->num_glyphs*sizeof(char*));
+	font->glyphnames = rfx_calloc(face->num_glyphs*sizeof(char*));
     }
 
     font->layout->ascent = abs(face->ascender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMin;
@@ -214,7 +209,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     if(full_unicode)
 	font->maxascii = 65535;
     
-    font->ascii2glyph = malloc(font->maxascii*sizeof(int));
+    font->ascii2glyph = rfx_calloc(font->maxascii*sizeof(int));
     
     for(t=0;t<font->maxascii;t++) {
 	int g = FT_Get_Char_Index(face, t);
@@ -232,7 +227,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
     font->numchars = 0;
 
-    glyph2glyph = (int*)malloc(face->num_glyphs*sizeof(int));
+    glyph2glyph = (int*)rfx_calloc(face->num_glyphs*sizeof(int));
 
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
@@ -325,7 +320,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    font->ascii2glyph[t] = glyph2glyph[font->ascii2glyph[t]];
 	}
     }
-    free(glyph2glyph);
+    rfx_free(glyph2glyph);
 
     FT_Done_Face(face);
     FT_Done_FreeType(ftlibrary);ftlibrary=0;
@@ -388,16 +383,14 @@ SWFFONT* swf_LoadT1Font(char*filename)
     underline = T1_GetUnderlinePosition(nr);
     bbox = T1_GetFontBBox(nr);
 
-    font = (SWFFONT*)malloc(sizeof(SWFFONT));
-    memset(font, 0, sizeof(SWFFONT));
+    font = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
 
     font->version = 2;
     if(fontname) 
 	font->name = (U8*)strdup(fontname);
     else 
 	font->name = 0;
-    font->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
-    memset(font->layout, 0, sizeof(SWFLAYOUT));
+    font->layout = (SWFLAYOUT*)rfx_calloc(sizeof(SWFLAYOUT));
 
     num = 0;
     charname = charnames;
@@ -419,23 +412,18 @@ SWFFONT* swf_LoadT1Font(char*filename)
     
     font->style = (/*bold*/0?FONT_STYLE_BOLD:0) + (angle>0.05?FONT_STYLE_ITALIC:0);
 
-    font->glyph = (SWFGLYPH*)malloc(num*sizeof(SWFGLYPH));
-    memset(font->glyph, 0, num*sizeof(SWFGLYPH));
-    font->glyph2ascii = (U16*)malloc(num*sizeof(U16));
-    memset(font->glyph2ascii, 0, num*sizeof(U16));
-    font->ascii2glyph = (int*)malloc(font->maxascii*sizeof(int));
-    memset(font->ascii2glyph, -1, font->maxascii*sizeof(int));
+    font->glyph = (SWFGLYPH*)rfx_calloc(num*sizeof(SWFGLYPH));
+    font->glyph2ascii = (U16*)rfx_calloc(num*sizeof(U16));
+    font->ascii2glyph = (int*)rfx_calloc(font->maxascii*sizeof(int));
     font->layout->ascent = (U16)(underline - bbox.lly);
     font->layout->descent = (U16)(bbox.ury - underline);
     font->layout->leading = (U16)(font->layout->ascent - 
 	                     font->layout->descent -
 			     (bbox.lly - bbox.ury));
-    font->layout->bounds = (SRECT*)malloc(sizeof(SRECT)*num);
-    memset(font->layout->bounds, 0, sizeof(SRECT)*num);
+    font->layout->bounds = (SRECT*)rfx_calloc(sizeof(SRECT)*num);
     font->layout->kerningcount = 0;
     font->layout->kerning = 0;
-    font->glyphnames = malloc(num*sizeof(char*));
-    memset(font->glyphnames, 0, num*sizeof(char*));
+    font->glyphnames = rfx_calloc(num*sizeof(char*));
   
     num = 0;
 
@@ -503,7 +491,7 @@ SWFFONT* swf_LoadT1Font(char*filename)
     T1_DeleteFont(nr);
 
     for(t=0;t<256;t++)
-	free(encoding[t]);
+	rfx_free(encoding[t]);
     return font;
 }
 
@@ -519,8 +507,7 @@ SWFFONT* swf_LoadT1Font(char*filename)
 
 SWFFONT* swf_DummyFont()
 {
-    SWFFONT*font = (SWFFONT*)malloc(sizeof(SWFFONT));
-    memset(font, 0, sizeof(SWFFONT));
+    SWFFONT*font = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
     return font;
 }
 

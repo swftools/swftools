@@ -69,7 +69,7 @@ static void swf_cgienv(unsigned char * var)
   // fprintf(stderr,"%s\n",var);
 
   
-  buf = (unsigned char*)malloc(strlen(var) + sizeof(PREFIX) + 2);
+  buf = (unsigned char*)rfx_alloc(strlen(var) + sizeof(PREFIX) + 2);
   if (!buf) return;
 
   strcpy(buf, PREFIX);
@@ -107,7 +107,7 @@ static void swf_cgienv(unsigned char * var)
   }
 
   if ((oldval = getenv(buf)))
-  { newval = (unsigned char*)malloc(strlen(oldval) + strlen(buf) + strlen(&c[1]) + 3);
+  { newval = (unsigned char*)rfx_alloc(strlen(oldval) + strlen(buf) + strlen(&c[1]) + 3);
     if (!newval) return;
 
     c[0] = '=';
@@ -124,8 +124,8 @@ static void swf_cgienv(unsigned char * var)
   putenv(newval);
         
   if (oldval)
-  { free(oldval);
-    free(buf);
+  { rfx_free(oldval);
+    rfx_free(buf);
   }
 }
 
@@ -155,7 +155,7 @@ char * swf_postread()
   if (!buf) return NULL;
         
   size = atoi(buf);
-  buf = (unsigned char*)malloc(size + 1);
+  buf = (unsigned char*)rfx_alloc(size + 1);
   if (buf)
   { do
     { got = fread(buf + sofar, 1, size - sofar, stdin);
@@ -174,14 +174,14 @@ void swf_uncgi()
   if ((query) && strlen(query))
   { dupquery = strdup(query);
     swf_scanquery(dupquery);
-    free(dupquery);
+    rfx_free(dupquery);
   }
 
   method = getenv("REQUEST_METHOD");
   if ((method) && ! strcmp(method, "POST"))
   { query = swf_postread();
     if ((query)&&(query[0]!=0)) swf_scanquery(query);
-    free(query);
+    rfx_free(query);
   }
   
 }
