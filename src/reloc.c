@@ -14,14 +14,6 @@ static struct swffile file;
 
 int slaveids[65536];
 
-
-void map_ids_mem(u8*mem, int length);
-static struct swf_tag* map_ids(struct swf_tag*tag)
-{
-    map_ids_mem(tag->fulldata, tag->fulllength);
-    return tag;
-}
-
 void maponeid(void*idpos)
 {
     u16*idptr = (u16*)idpos;
@@ -34,9 +26,75 @@ void maponeid(void*idpos)
 }
 
 
+void mapstyles(int num, void(*callback)(void*))
+{
+    u16 count;
+    int t;
+    resetbits();
+    count = readu8();
+    if(count == 0xff && num>1) // defineshape2,3 only
+	count = readu16();
+
+//	    printf("%d fillstyles\n", count);
+    for(t=0;t<count;t++)
+    {
+	int type;
+	u8*pos;
+	pos=getinputpos();
+//		printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", 
+//			pos[0],pos[1],pos[2],pos[3],pos[4],pos[5],pos[6],pos[7]);
+	resetbits();
+	type = readu8(); //type
+//		printf("fillstyle %d is type 0x%02x\n", t, type);
+	if(type == 0) {
+//	    printf("solid fill\n");
+	    if(num == 3)
+		readRGBA();
+	    else 
+		readRGB();
+	}
+	else if(type == 0x10 || type == 0x12)
+	{
+//	    printf("gradient fill\n");
+	    resetbits();
+	    readMATRIX();
+	    resetbits();
+	    readGRADIENT(num);
+	}
+	else if(type == 0x40 || type == 0x41)
+	{
+	    resetbits();
+	    // we made it.
+//	    printf("bitmap fill:%04x\n", *(u16*)getinputpos());
+	    if(*(u16*)getinputpos() != 65535)
+		(callback)(getinputpos());
+
+	    readu16();
+	    resetbits();
+	    readMATRIX();
+	}
+	else {
+	    logf("<error> Unknown fillstyle:0x%02x\n",type);
+	}
+    }
+    resetbits();
+    count = readu8(); // line style array
+//	    printf("%d linestyles\n", count);
+    if(count == 0xff)
+	count = readu16();
+    for(t=0;t<count;t++) 
+    {
+	readu16();
+	if(num == 3)
+	    readRGBA();
+	else
+	    readRGB();
+    }
+}
+
 // take a memory region which contains a tag, and
 // map the ids inside this tag to new values
-void map_ids_mem(u8*mem, int length)
+void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 {
     int num=1;
     struct swf_tag newtag_instance;
@@ -48,11 +106,11 @@ void map_ids_mem(u8*mem, int length)
     {
 	case TAGID_DEFINEBUTTONCXFORM: {
 	    int t;
-	    maponeid(&newtag->data[0]); //button id
+	    callback(&newtag->data[0]); //button id
 	    reader_init (newtag->data, newtag->length);
 	    for(t=0;t<4;t++) {
 		int flags;
-		maponeid(&newtag->data[0]);
+		callback(&newtag->data[0]);
 		readu16(); //sound id
 		flags = readu8();
 		if(flags&1)
@@ -75,22 +133,22 @@ void map_ids_mem(u8*mem, int length)
 	    }
         } break;
 	case TAGID_DEFINEBUTTONSOUND:
-	    maponeid(&newtag->data[0]); //button id
+	    callback(&newtag->data[0]); //button id
 	break;
 	case TAGID_PLACEOBJECT:
-	    maponeid(&newtag->data[0]);
+	    callback(&newtag->data[0]);
         break;
 	case TAGID_PLACEOBJECT2:
 	    // only if placeflaghascharacter
 	    if(!(newtag->data[0]&2))
 		break;
-	    maponeid(&newtag->data[3]);
+	    callback(&newtag->data[3]);
         break;
 	case TAGID_REMOVEOBJECT:
-	    maponeid(&newtag->data[0]);
+	    callback(&newtag->data[0]);
 	break;
 	case TAGID_STARTSOUND:
-	    maponeid(&newtag->data[0]);
+	    callback(&newtag->data[0]);
 	break;
 	case TAGID_DEFINESPRITE: {
 	    u8*mem = &newtag->data[4];
@@ -110,7 +168,7 @@ void map_ids_mem(u8*mem, int length)
 		if(sprtag.id == TAGID_END)
 		    break;
 
-		map_ids_mem (fmem,flen);
+		map_ids_mem (fmem,flen,callback);
 	    }
 	} 
 	break;
@@ -122,8 +180,9 @@ void map_ids_mem(u8*mem, int length)
 	    readu16(); //button id
 	    if(num>1)
 	    { 
+		int offset;
 		readu8(); //flag
-		readu16(); //offset
+		offset = readu16(); //offset
 	    }
 	    while(1)
 	    {
@@ -131,12 +190,15 @@ void map_ids_mem(u8*mem, int length)
 		if(!readu8()) //flags
 		    break; 
 		charid = *(u16*)getinputpos();
-		maponeid(getinputpos());
+		callback(getinputpos());
 		readu16(); //char
 		readu16(); //layer
+		resetbits();
 		readMATRIX();
-		if(num>1)
-		  readCXFORM();
+		if(num>1) {
+		  resetbits();
+		  readCXFORM(1);
+		}
 	    }
 	    // ...
 	break;
@@ -149,7 +211,7 @@ void map_ids_mem(u8*mem, int length)
 	    flags1 = readu8();
 	    flags2 = readu8();
 	    if(flags1 & 128)
-		maponeid(getinputpos());
+		callback(getinputpos());
 	}
 	break;
 	case TAGID_DEFINETEXT2:
@@ -174,7 +236,7 @@ void map_ids_mem(u8*mem, int length)
 		{
 		    resetbits();
 		    if(flags & 8) { // hasfont
-			maponeid(getinputpos());
+			callback(getinputpos());
 			id = readu16();
 		    }
 		    if(flags & 4) { // hascolor
@@ -205,7 +267,7 @@ void map_ids_mem(u8*mem, int length)
 	    break;
 	}
 	case TAGID_DEFINEFONTINFO:
-	    maponeid(&newtag->data[0]);
+	    callback(&newtag->data[0]);
 	break;
 
 	case TAGID_DEFINESHAPE3: // these thingies might have bitmap ids in their fillstyles
@@ -213,52 +275,74 @@ void map_ids_mem(u8*mem, int length)
 	case TAGID_DEFINESHAPE2:
 	num++; //fallthrough
 	case TAGID_DEFINESHAPE: {
-	    u16 count;
-	    int t;
+	    int fillbits;
+	    int linebits;
 	    struct RECT r;
+	    //printf("defineshape%d\n", num);
 	    reader_init (newtag->data, newtag->length);
 	    readu16(); // id;
 	    r = readRECT(); // bounds
 //	    printf("%d shape bounds: %d %d %d %d\n",newtag->id,r.x1,r.y1,r.x2,r.y2);
-	    resetbits();
-	    count = readu8();
-	    if(count == 0xff && num>1) // defineshape2,3 only
-		count = readu16();
-//	    printf("%d fillstyles\n", count);
-	    for(t=0;t<count;t++)
-	    {
-		int type;
-		u8*pos;
-		pos=getinputpos();
-//		printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", 
-//			pos[0],pos[1],pos[2],pos[3],pos[4],pos[5],pos[6],pos[7]);
-		resetbits();
-		type = readu8(); //type
-//		printf("fillstyle %d is type 0x%02x\n", t, type);
-		if(type == 0) {
-		    if(num == 3)
-			readRGBA();
-		    else 
-			readRGB();
-		}
-		if(type == 0x10 || type == 0x12)
-		{
-		    resetbits();
-		    readMATRIX();
-		    resetbits();
-		    readGRADIENT(num);
-		}
-		if(type == 0x40 || type == 0x41)
-		{
-		    resetbits();
-		    // we made it.
-		    if(*(u16*)getinputpos() != 65535)
-			maponeid(getinputpos());
 
-		    readu16();
-		    readMATRIX();
+	    mapstyles(num, callback);
+	    fillbits = getbits(4);
+	    linebits = getbits(4);
+	    resetbits();
+	    //printf("%d %d\n", fillbits, linebits);
+	    while(1) {
+		int flags;
+		/*printf("data: %02x %02x >%02x< %02x %02x\n",
+		    ((u8*)getinputpos())[-2],
+		    ((u8*)getinputpos())[-1],
+		    ((u8*)getinputpos())[0],
+		    ((u8*)getinputpos())[1],
+		    ((u8*)getinputpos())[2]);*/
+		flags = getbits(1);
+		if(!flags) { //style change
+		    flags = getbits(5);
+		    //printf("style flags:%02x\n",flags);
+		    if(!flags)
+			break;
+		    if(flags&1) { //move
+			int n = getbits(5); 
+			//printf("n:%d\n",n);
+			getbits(n); //x
+			getbits(n); //y
+		    }
+		    if(flags&2) { //fill0
+			getbits(fillbits); 
+		    }
+		    if(flags&4) { //fill1
+			getbits(fillbits); 
+		    }
+		    if(flags&8) { //linestyle
+			getbits(linebits); 
+		    }
+		    if(flags&16) {
+			mapstyles(num, callback);
+			fillbits = getbits(4);
+			linebits = getbits(4);
+		    }
+		} else {
+		    flags = getbits(1);
+		    //printf("edge:%d\n", flags);
+		    if(flags) { //straight edge
+			int n = getbits(4) + 2;
+			if(getbits(1)) { //line flag
+			    getbits(n); //delta x
+			    getbits(n); //delta y
+			} else {
+			    int v=getbits(1);
+			    getbits(n); //vert/horz
+			}
+		    } else { //curved edge
+			int n = getbits(4) + 2;
+			getbits(n);
+			getbits(n);
+			getbits(n);
+			getbits(n);
+		    }
 		}
-		//...
 	    }
 	}
 	break;
@@ -281,6 +365,12 @@ static int get_free_id()
 	}
     }
     return -1;
+}
+
+static struct swf_tag* map_ids(struct swf_tag*tag)
+{
+    map_ids_mem(tag->fulldata, tag->fulllength, maponeid);
+    return tag;
 }
 
 void swf_relocate (u8*data, int length, int*_bitmap)
