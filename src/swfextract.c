@@ -13,7 +13,6 @@
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "../lib/log.h"
-#include "reloc.h"
 #ifdef HAVE_ZLIB_H
 #ifdef HAVE_LIBZ
 #include "zlib.h"
@@ -178,7 +177,7 @@ void idcallback(void*data)
 
 void enumerateIDs(TAG*tag, void(*callback)(void*))
 {
-    U8*data;
+/*    U8*data;
     int len = tag->len;
     if(tag->len>=64) {
 	len += 6;
@@ -196,6 +195,13 @@ void enumerateIDs(TAG*tag, void(*callback)(void*))
 	memcpy(&data[2], tag->data, tag->len);
     }
     map_ids_mem(data, len, callback);
+ */
+    int num = swf_GetNumUsedIDs(tag);
+    int *ptr = malloc(sizeof(int)*num);
+    int t;
+    swf_GetUsedIDs(tag, ptr);
+    for(t=0;t<num;t++)
+	callback(&tag->data[ptr[t]]);
 }
 
 void extractTag(SWF*swf, char*filename)
