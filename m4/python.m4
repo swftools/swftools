@@ -16,10 +16,15 @@ else
 	    PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
         # Mac OS X
-        elif test -f "/Library/Python/2.$v/PIL/_imaging.so" \
-               -a -f "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
+        elif test -f "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
+            #TODO: test for /System/Library/Frameworks/Python.framework/Versions/2.3/Python ?
             PY_VERSION=2.$v
-            PYTHON_LIB="-framework Python /Library/Python/2.$v/PIL/_imaging.so"
+            PYTHON_LIB="-framework Python" 
+            if test -f "/Library/Python/2.$v/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /Library/Python/2.$v/PIL/_imaging.so"
+            else
+                PYTHON_LIB2="$PYTHON_LIB"
+            fi
             PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
 	# Mac OS X [Fink]:
         elif test "(" -f "/sw/lib/python2.$v/config/libpython2.$v.dylib" \
@@ -59,9 +64,16 @@ EOF
 	AC_MSG_RESULT(yes)
 	PYTHON_OK=yes
     else
-	echo "configure: failed program was:" >&5
-	cat conftest.c >&5
-	AC_MSG_RESULT(no)
+        ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
+        if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+            AC_MSG_RESULT(yes)
+            PYTHON_LIB="${PYTHON_LIB2}"
+            PYTHON_OK=yes
+        else
+            echo "configure: failed program was:" >&5
+            cat conftest.c >&5
+            AC_MSG_RESULT(no)
+        fi
     fi
     rm -f conftest*
 else
