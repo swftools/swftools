@@ -680,7 +680,9 @@ int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits)
 
   while(s[0])
   { 
-    int glyph = font->ascii2glyph[s[0]];
+    int glyph = -1;
+    if(s[0] < font->maxascii)
+	glyph = font->ascii2glyph[s[0]];
     if(glyph>=0) {
        g = swf_CountBits(glyph,g);
        a = swf_CountBits((((U32)font->glyph[glyph].advance)*scale)/100,a);
@@ -695,22 +697,28 @@ int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits)
 }
 
 int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 abits)
-{ int l,i;
+{ int l=0,i,pos;
     
   if ((!t)||(!font)||(!s)||(!font->ascii2glyph)) return -1;
 
-  l = strlen(s);
-  if (l>0x7f) l = 0x7f;
-  swf_SetU8(t,l);
+  pos = t->len;
+  swf_SetU8(t, l); //placeholder
 
-  for (i=0;i<l;i++)
+  for (i=0;s[i];i++)
   { 
-    int g = font->ascii2glyph[s[i]];
+    int g = -1;
+    if(s[i] < font->maxascii) 
+	g = font->ascii2glyph[s[i]];
     if(g>=0) {
       swf_SetBits(t,g,gbits);
       swf_SetBits(t,(((U32)font->glyph[g].advance)*scale)/100,abits);
+      l++;
+      if(l==0x7f)
+	  break;
     }
   }
+
+  PUT8(&t->data[pos], l);
 
   swf_ResetWriteBits(t);
   return 0;
@@ -722,7 +730,9 @@ U32 swf_TextGetWidth(SWFFONT * font,U8 * s,int scale)
   if (font&&s)
   { while (s[0])
     { 
-      int g = font->ascii2glyph[*s];
+      int g = -1;
+      if(*s < font->maxascii) 
+	  g = font->ascii2glyph[*s];
       if(g>=0)
         res += font->glyph[g].advance;
       s++;
@@ -803,7 +813,7 @@ void swf_WriteFont(SWFFONT*font, char* filename)
 	int xmax = 0;
 	int ymax = textscale * 2 * (font->maxascii/16+1);
 	U8 gbits,abits;
-	char text[MAX_CHAR_PER_FONT+1];
+	U8 text[MAX_CHAR_PER_FONT+1];
 	int x,y;
 	text[MAX_CHAR_PER_FONT]=0;
 	for(s=0;s<font->maxascii;s++)
@@ -938,13 +948,15 @@ SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale)
 	while(*c) {
 	    if(*c < font->maxascii) {
 		int g = font->ascii2glyph[*c];
-		SRECT rn = font->layout->bounds[g];
-		rn.xmin = (rn.xmin * scale)/100 + pos;
-		rn.xmax = (rn.xmax * scale)/100 + pos;
-		rn.ymin = (rn.ymin * scale)/100;
-		rn.ymax = (rn.ymax * scale)/100;
-		swf_ExpandRect2(&r, &rn);
-		pos += (font->glyph[g].advance*scale*20)/100;
+		if(g>=0) {
+		    SRECT rn = font->layout->bounds[g];
+		    rn.xmin = (rn.xmin * scale)/100 + pos;
+		    rn.xmax = (rn.xmax * scale)/100 + pos;
+		    rn.ymin = (rn.ymin * scale)/100;
+		    rn.ymax = (rn.ymax * scale)/100;
+		    swf_ExpandRect2(&r, &rn);
+		    pos += (font->glyph[g].advance*scale*20)/100;
+		}
 	    }
 	    c++;
 	}
