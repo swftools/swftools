@@ -249,22 +249,34 @@ static void addPointToBBox(struct swfoutput*obj, int px, int py)
     }
 }
 
-static void plot(struct swfoutput*obj, int x, int y, TAG*tag)
+/*static void plot(struct swfoutput*obj, int x, int y, TAG*tag)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    int width = 3;
-    swf_ShapeSetLine(tag, i->shape,-width,-width);
-    swf_ShapeSetLine(tag, i->shape,width*2,0);
-    swf_ShapeSetLine(tag, i->shape,0,width*2);
-    swf_ShapeSetLine(tag, i->shape,-width*2,0);
-    swf_ShapeSetLine(tag, i->shape,0,-width*2);
+    int width = i->linewidth/4;
+    if(width > 5)
+	width = 5;
+    ////square
+    //swf_ShapeSetLine(tag, i->shape,-width,-width);
+    //swf_ShapeSetLine(tag, i->shape,width*2,0);
+    //swf_ShapeSetLine(tag, i->shape,0,width*2);
+    //swf_ShapeSetLine(tag, i->shape,-width*2,0);
+    //swf_ShapeSetLine(tag, i->shape,0,-width*2);
+    //swf_ShapeSetLine(tag, i->shape,width,width);
+   
+    // diamond
+    swf_ShapeSetLine(tag, i->shape,-width,0);
+    swf_ShapeSetLine(tag, i->shape,width,-width);
     swf_ShapeSetLine(tag, i->shape,width,width);
-    addPointToBBox(obj, x   ,y   );
-    addPointToBBox(obj, x+1 ,y+1 );
-}
+    swf_ShapeSetLine(tag, i->shape,-width,width);
+    swf_ShapeSetLine(tag, i->shape,-width,-width);
+    swf_ShapeSetLine(tag, i->shape,width,0);
+
+    addPointToBBox(obj, x-width ,y-width);
+    addPointToBBox(obj, x+width ,y+width);
+}*/
 
 // write a line-to command into the swf
-static void lineto(struct swfoutput*obj, TAG*tag, plotxy p0, char issolesegment)
+static void lineto(struct swfoutput*obj, TAG*tag, plotxy p0)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
     int px = (int)(p0.x*20);
@@ -275,26 +287,26 @@ static void lineto(struct swfoutput*obj, TAG*tag, plotxy p0, char issolesegment)
 	swf_ShapeSetLine (tag, i->shape, rx,ry);
 	addPointToBBox(obj, i->swflastx,i->swflasty);
 	addPointToBBox(obj, px,py);
-    } else if(issolesegment && !i->fill) {
-       /* treat lines of length 0 as plots, making them
-	  at least 1 twip wide so Flash will display them */
+    }/* else if(!i->fill) {
+       // treat lines of length 0 as plots, making them
+       // at least 1 twip wide so Flash will display them
 	plot(obj, i->swflastx, i->swflasty, tag);
-    }
+    }*/
 
     i->shapeisempty = 0;
     i->swflastx+=rx;
     i->swflasty+=ry;
 }
-static void lineto(struct swfoutput*obj, TAG*tag, double x, double y, char issolesegment)
+static void lineto(struct swfoutput*obj, TAG*tag, double x, double y)
 {
     plotxy p;
     p.x = x;
     p.y = y;
-    lineto(obj,tag, p, issolesegment);
+    lineto(obj,tag, p);
 }
 
 // write a spline-to command into the swf
-static void splineto(struct swfoutput*obj, TAG*tag, plotxy control,plotxy end, char issolesegment)
+static void splineto(struct swfoutput*obj, TAG*tag, plotxy control,plotxy end)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
     int lastlastx = i->swflastx;
@@ -314,10 +326,10 @@ static void splineto(struct swfoutput*obj, TAG*tag, plotxy control,plotxy end, c
 	addPointToBBox(obj, lastlastx   ,lastlasty   );
 	addPointToBBox(obj, lastlastx+cx,lastlasty+cy);
 	addPointToBBox(obj, lastlastx+cx+ex,lastlasty+cy+ey);
-    } else if(issolesegment && !i->fill) {
-	/* treat splines of length 0 as plots */
+    }/* else if(!i->fill) {
+	// treat splines of length 0 as plots
 	plot(obj, lastlastx, lastlasty, tag);
-    }
+    }*/
     i->shapeisempty = 0;
 }
 
@@ -326,7 +338,7 @@ static void splineto(struct swfoutput*obj, TAG*tag, plotxy control,plotxy end, c
 /*static void line(struct swfoutput*obj, TAG*tag, plotxy p0, plotxy p1)
 {
     moveto(obj, tag, p0);
-    lineto(obj, tag, p1, 0);
+    lineto(obj, tag, p1);
 }*/
 
 void resetdrawer(struct swfoutput*obj)
@@ -1249,7 +1261,7 @@ void fixAreas(swfoutput*obj)
 	startshape(obj);
 
 	moveto(obj, i->tag, r.xmin/20.0,r.ymin/20.0);
-	lineto(obj, i->tag, r.xmax/20.0,r.ymax/20.0, 0);
+	lineto(obj, i->tag, r.xmax/20.0,r.ymax/20.0);
 
 	obj->strokergb = save_col;
 	i->linewidth = save_width;
@@ -1629,10 +1641,10 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,0,fsid,0);
     i->swflastx = i->swflasty = 0;
     moveto(obj, i->tag, p1);
-    lineto(obj, i->tag, p2, 0);
-    lineto(obj, i->tag, p3, 0);
-    lineto(obj, i->tag, p4, 0);
-    lineto(obj, i->tag, p1, 0);
+    lineto(obj, i->tag, p2);
+    lineto(obj, i->tag, p3);
+    lineto(obj, i->tag, p4);
+    lineto(obj, i->tag, p1);
     swf_ShapeSetEnd(i->tag);
 
     /* shape2 */
@@ -1654,10 +1666,10 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,0,fsid,0);
     i->swflastx = i->swflasty = 0;
     moveto(obj, i->tag, p1);
-    lineto(obj, i->tag, p2, 0);
-    lineto(obj, i->tag, p3, 0);
-    lineto(obj, i->tag, p4, 0);
-    lineto(obj, i->tag, p1, 0);
+    lineto(obj, i->tag, p2);
+    lineto(obj, i->tag, p3);
+    lineto(obj, i->tag, p4);
+    lineto(obj, i->tag, p1);
     swf_ShapeSetEnd(i->tag);
 
     if(!mouseover)
@@ -1765,16 +1777,6 @@ static void drawgfxline(struct swfoutput*obj, gfxline_t*line)
 	if(!line)
 	    break;
 	/* check whether the next segment is zero */
-	char issolesegment = 0;
-	if(lastwasmoveto)
-	    if(!line->next ||
-	       (line->next->type == gfx_moveTo) ||
-	       (line->next->type == gfx_lineTo   && fabs(line->next->x - line->x) + fabs(line->next->y - line->y) < 0.01) ||
-	       (line->next->type == gfx_splineTo && fabs(line->next->x - line->x) + fabs(line->next->y - line->y) + fabs(line->next->sx - line->x) + fabs(line->next->sy - line->y) < 0.01)
-	       ) { 
-		   issolesegment = 1;
-		   msg("<trace> is sole segment!");
-	    }
 	if(line->type == gfx_moveTo) {
 	    msg("<trace> ======== moveTo %.2f %.2f", line->x, line->y);
 	    moveto(obj, i->tag, line->x, line->y);
@@ -1783,7 +1785,7 @@ static void drawgfxline(struct swfoutput*obj, gfxline_t*line)
 	    lastwasmoveto = 1;
 	} if(line->type == gfx_lineTo) {
 	    msg("<trace> ======== lineTo %.2f %.2f", line->x, line->y);
-	    lineto(obj, i->tag, line->x, line->y, issolesegment);
+	    lineto(obj, i->tag, line->x, line->y);
 	    px = line->x;
 	    py = line->y;
 	    lastwasmoveto = 0;
@@ -1792,7 +1794,7 @@ static void drawgfxline(struct swfoutput*obj, gfxline_t*line)
 	    plotxy s,p;
 	    s.x = line->sx;p.x = line->x;
 	    s.y = line->sy;p.y = line->y;
-	    splineto(obj, i->tag, s, p, issolesegment);
+	    splineto(obj, i->tag, s, p);
 	    px = line->x;
 	    py = line->y;
 	    lastwasmoveto = 0;
@@ -2316,6 +2318,58 @@ int gfxline_type(gfxline_t*line)
     else return 4;
 }
 
+int gfxline_has_dots(gfxline_t*line)
+{
+    int tmplines=0;
+    double x,y;
+    double dist = 0;
+    int isline = 0;
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    if(isline && dist < 1) {
+		return 1;
+	    }
+	    dist = 0;
+	    isline = 0;
+	} else if(line->type == gfx_lineTo) {
+	    dist += fabs(line->x - x) + fabs(line->y - y);
+	    isline = 1;
+	} else if(line->type == gfx_splineTo) {
+	    dist += fabs(line->sx - x) + fabs(line->sy - y) + 
+		    fabs(line->x - line->sx) + fabs(line->y - line->sy);
+	    isline = 1;
+	}
+	x = line->x;
+	y = line->y;
+	line = line->next;
+    }
+    if(isline && dist < 1) {
+	return 1;
+    }
+    return 0;
+}
+
+int gfxline_fix_short_edges(gfxline_t*line)
+{
+    double x,y;
+    while(line) {
+	if(line->type == gfx_lineTo) {
+	    if(fabs(line->x - x) + fabs(line->y - y) < 0.01) {
+		line->x += 0.01;
+	    }
+	} else if(line->type == gfx_splineTo) {
+	    if(fabs(line->sx - x) + fabs(line->sy - y) + 
+	       fabs(line->x - line->sx) + fabs(line->y - line->sy) < 0.01) {
+		line->x += 0.01;
+	    }
+	}
+	x = line->x;
+	y = line->y;
+	line = line->next;
+    }
+    return 0;
+}
+
 int shapenr = 0;
 
 void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
@@ -2323,26 +2377,24 @@ void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*co
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     swfoutput*obj = i->obj;
     int type = gfxline_type(line);
+    int has_dots = gfxline_has_dots(line);
 
     /* TODO: * split line into segments, and perform this check for all segments */
-    if(width <= config_caplinewidth 
-       || (cap_style == gfx_capRound && joint_style == gfx_joinRound)
-       || (cap_style == gfx_capRound && type<=2)) {
-	msg("<trace> draw as stroke, type=%d", type);
+    if(!has_dots &&
+       (width <= config_caplinewidth 
+        || (cap_style == gfx_capRound && joint_style == gfx_joinRound)
+        || (cap_style == gfx_capRound && type<=2))) {
+	msg("<trace> draw as stroke, type=%d dots=%d", type, has_dots);
 	endtext(obj);
 	swfoutput_setstrokecolor(obj, color->r, color->g, color->b, color->a);
 	swfoutput_setlinewidth(obj, width);
 	startshape(obj);
 	stopFill(obj);
 	drawgfxline(obj, line);
-	msg("<trace > shape bbox is (%f,%f,%f,%f)",
-		i->bboxrect.xmin /20.0,
-		i->bboxrect.ymin /20.0,
-		i->bboxrect.xmax /20.0,
-		i->bboxrect.ymax /20.0
-		);
     } else {
-	msg("<trace> draw as polygon, type=%d", type);
+	msg("<trace> draw as polygon, type=%d dots=%d", type, has_dots);
+	if(has_dots)
+	    gfxline_fix_short_edges(line);
 	/* we need to convert the line into a polygon */
 	ArtSVP* svp = gfxstrokeToSVP(line, width, cap_style, joint_style, miterLimit);
 	gfxline_t*gfxline = SVPtogfxline(svp);
