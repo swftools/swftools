@@ -1786,6 +1786,19 @@ MULADD mergeMulAdd(MULADD m1, MULADD m2)
     return r;
 }
 
+float parsePxOrPercent(char*fontname, char*str)
+{
+    int l = strlen(str);
+    if(strchr(str, '%'))
+	return parsePercent(str);
+    if(l>2 && str[l-2]=='p' && str[l-1]=='t') {
+	float p = atof(str);
+	return p/64.0; /*64 = FT_SUBPIXELS- see ../lib/modules/swffont.c */
+    }
+    syntaxerror("Expression '%s' is neither a point size (?pt) nor a percentage (?%)", str);
+    return 0;
+}
+
 float parsePercent(char*str)
 {
     int l = strlen(str);
@@ -2307,7 +2320,7 @@ static int c_textshape(map_t*args)
     char*name = lu(args, "name");
     char*text = lu(args, "text");
     char*font = lu(args, "font");
-    float size = parsePercent(lu(args, "size"));
+    float size = parsePxOrPercent(font, lu(args, "size"));
 
     s_textshape(name, font, size, text);
     return 0;
@@ -2345,7 +2358,7 @@ static int c_text(map_t*args)
     char*name = lu(args, "name");
     char*text = lu(args, "text");
     char*font = lu(args, "font");
-    float size = parsePercent(lu(args, "size"));
+    float size = parsePxOrPercent(font, lu(args, "size"));
     RGBA color = parseColor(lu(args, "color"));
     s_text(name, font, text, (int)(size*100), color);
     return 0;
@@ -2526,7 +2539,7 @@ static int c_edittext(map_t*args)
  //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
     char*name = lu(args, "name");
     char*font = lu(args, "font");
-    int size = (int)(1024*parsePercent(lu(args, "size")));
+    int size = (int)(1024*parsePxOrPercent(font, lu(args, "size")));
     int width = parseTwip(lu(args, "width"));
     int height = parseTwip(lu(args, "height"));
     char*text  = lu(args, "text");
