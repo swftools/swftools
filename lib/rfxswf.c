@@ -651,6 +651,12 @@ void swf_ClearTag(TAG * t)
   t->memsize = 0;
 }
 
+void swf_ResetTag(TAG*tag, U16 id)
+{
+    tag->len = tag->pos = tag->readBit = tag->writeBit = 0;
+    tag->id = id;
+}
+
 int swf_DeleteTag(TAG * t)
 { if (!t) return -1;
 
@@ -1119,25 +1125,29 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
 	swf->fileSize = fileSize;
 	swf->frameCount = frameCount;
     }
-   
-    if(swf->compressed) {
-      char*id = "CWS";
-      writer->write(writer, id, 3);
-    }
-    else {
-      char*id = "FWS";
-      writer->write(writer, id, 3);
-    }
 
-    writer->write(writer, &swf->fileVersion, 1);
-    PUT32(b4, swf->fileSize);
-    writer->write(writer, b4, 4);
+    if(swf->compressed != 8) {
+    /* compressed flag set to 8 means "skip first 8 
+       header bytes". This is necessary if the caller wants to
+       create compressed SWFs himself */
+      if(swf->compressed) {
+	char*id = "CWS";
+	writer->write(writer, id, 3);
+      }
+      else {
+	char*id = "FWS";
+	writer->write(writer, id, 3);
+      }
 
-    if(swf->compressed) {
-      writer_init_zlibdeflate(&zwriter, writer);
-      writer = &zwriter;
+      writer->write(writer, &swf->fileVersion, 1);
+      PUT32(b4, swf->fileSize);
+      writer->write(writer, b4, 4);
+      
+      if(swf->compressed) {
+	writer_init_zlibdeflate(&zwriter, writer);
+	writer = &zwriter;
+      }
     }
-
     swf_SetRect(&t1,&swf->movieSize);
     swf_SetU16(&t1,swf->frameRate);
     swf_SetU16(&t1,swf->frameCount);
@@ -1160,7 +1170,8 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
       { if (swf_WriteTag2(writer, t)<0) return -1;
         t = swf_NextTag(t);
       }
-      writer->finish(writer); //e.g. flush zlib buffers
+      if(swf->compressed != 8)
+	writer->finish(writer); // flush zlib buffers - only if _we_ initialized that writer.
     }
   }
   return (int)fileSize;

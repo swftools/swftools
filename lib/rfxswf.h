@@ -191,7 +191,8 @@ TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
 int   swf_DeleteTag(TAG * t);
 
 void  swf_ClearTag(TAG * t);                //frees tag data
-
+void  swf_ResetTag(TAG*tag, U16 id);        //set's tag position and length to 0, without freeing it
+    
 void  swf_SetTagPos(TAG * t,U32 pos);       // resets Bitcount
 U32   swf_GetTagPos(TAG * t);
 
