@@ -77,6 +77,8 @@ SWFFONT * t1font2swffont(int i)
     SWFFONT * wfont = (SWFFONT*)malloc(sizeof(SWFFONT));
     SWFFont * font = new SWFFont("", i, "");
 
+    memset(wfont, 0, sizeof(SWFFONT));
+
     wfont->version = 2;
     wfont->name = (U8*)strdup(fontname);
     wfont->layout = (SWFLAYOUT*)malloc(sizeof(SWFLAYOUT));
@@ -88,8 +90,7 @@ SWFFONT * t1font2swffont(int i)
     {
 	if(encoding[s]) {
 	    T1_OUTLINE*outline = font->getOutline(encoding[s], 0);
-	    if(outline && outline->link)
-		num++;
+	    if(outline) num++;
 	}
     }
 
@@ -120,12 +121,14 @@ SWFFONT * t1font2swffont(int i)
 	if(encoding[s]) {
 	    T1_OUTLINE*outline = font->getOutline(encoding[s],0);
 	    int width = font->getWidth(encoding[s]);
-	    if(outline && outline->link) {
+
+	    if(outline) {
 		int log = 0;
 		wfont->ascii2glyph[s] = num;
 		wfont->glyph2ascii[num] = s;
 		swf_ShapeNew(&wfont->glyph[num].shape);
 		SHAPE*shape = wfont->glyph[num].shape;
+		int firstx = outline->dest.x/0xffff;
 		
 		TAG*tag = swf_InsertTag(0,ST_DEFINESHAPE);
 
@@ -143,8 +146,9 @@ SWFFONT * t1font2swffont(int i)
 		shape->bits.line = 0;
 		swf_ShapeSetStyle(tag,shape,0,1,0);
 		resetdrawer();
+
 		drawpath(tag, outline, &m, log);
-		
+
 		/*uncomment this to mark the glyph sizes:
 		plotxy p1,p2; p1.x=0; p1.y=0; p2.x=width/8; p2.y=-width/8;
 		moveto(tag, p1); lineto(tag, p2); p1.x += 2; p2.x += 2;
@@ -156,7 +160,7 @@ SWFFONT * t1font2swffont(int i)
 		wfont->glyph[num].shape->data = (U8*)malloc(tag->len-1);
 		memcpy(wfont->glyph[num].shape->data, &tag->data[1], tag->len-1);
 		swf_DeleteTag(tag);
-		    
+
 		/* fix bounding box */
 		SHAPE2*shape2;
 		SRECT bbox;
@@ -167,6 +171,9 @@ SWFFONT * t1font2swffont(int i)
 		wfont->layout->bounds[num] = bbox;
 		//wfont->glyph[num].advance = (int)(width/6.4); // 128/20
 		wfont->glyph[num].advance = bbox.xmax/20;
+		if(!wfont->glyph[num].advance) {
+		    wfont->glyph[num].advance = firstx;
+		}
 		
 		num++;
 	    }
@@ -201,20 +208,20 @@ int main(int argc, char ** argv)
   fi = fopen("/tmp/FontDataBase", "wb");
   if(all) {
       fprintf(fi, "14\n");             
-      fprintf(fi, "n021003l.afm\n"); //fixme
-      fprintf(fi, "n021023l.afm\n");
-      fprintf(fi, "n021004l.afm\n");
-      fprintf(fi, "n021024l.afm\n");
-      fprintf(fi, "n019003l.afm\n");
-      fprintf(fi, "n019023l.afm\n");
-      fprintf(fi, "n019004l.afm\n");
-      fprintf(fi, "n019024l.afm\n");
-      fprintf(fi, "n022003l.afm\n");
-      fprintf(fi, "n022023l.afm\n");
-      fprintf(fi, "n022004l.afm\n");
-      fprintf(fi, "n022024l.afm\n");
-      fprintf(fi, "s050000l.afm\n");
-      fprintf(fi, "d050000l.afm\n");
+      fprintf(fi, "%s/fonts/n021003l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n021023l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n021004l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n021024l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n019003l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n019023l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n019004l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n019024l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n022003l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n022023l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n022004l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/n022024l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/s050000l.afm\n", SWFTOOLS_DATADIR);
+      fprintf(fi, "%s/fonts/d050000l.afm\n", SWFTOOLS_DATADIR);
   } else {
     fprintf(fi, "%d\n",argc-1);
     int t;
@@ -233,7 +240,6 @@ int main(int argc, char ** argv)
 
   int i,num;
   for( i=0; i<T1_Get_no_fonts(); i++)
-//      i = 4;
   {
     SWFFONT * font = t1font2swffont(i);
     
@@ -242,6 +248,7 @@ int main(int argc, char ** argv)
     swf_WriteFont(font, filename);
     swf_FontFree(font);
   }
+  unlink("/tmp/FontDataBase");
 }
 
 
