@@ -57,6 +57,11 @@ static void swf_ShapeDrawerInit(drawer_t*draw, TAG*tag, int fillstylebits, int l
     swf_ShapeSetStyle(sdraw->tag,sdraw->shape,linestylebits?1:0,fillstylebits?1:0,0/*?*/);
 }
 
+void swf_Shape10DrawerInit(drawer_t*draw, TAG*tag)
+{
+    swf_ShapeDrawerInit(draw, tag, 0, 1);
+}
+
 void swf_Shape01DrawerInit(drawer_t*draw, TAG*tag)
 {
     swf_ShapeDrawerInit(draw, tag, 1, 0);
@@ -81,11 +86,11 @@ static void fixEndPoint(drawer_t*draw)
     if(   sdraw->firstx != sdraw->lastx 
        || sdraw->firsty != sdraw->lasty) {
 	/* fix non-closing shapes */
-	/* TODO: do this only if the shape is filled */
 	FPOINT to;
 	to.x = sdraw->firstx/20.0;
 	to.y = sdraw->firsty/20.0;
-	draw->lineTo(draw, &to);
+	if(sdraw->shape->bits.fill) // do this only if the shape is filled
+	    draw->lineTo(draw, &to);
     }
 }
 static void swf_ShapeDrawerMoveTo(drawer_t*draw, FPOINT * to)

@@ -453,6 +453,7 @@ void	swf_DumpShape(SHAPE2*shape2);
 
 // swfdraw.c
 
+void swf_Shape10DrawerInit(drawer_t*draw, TAG*tag);
 void swf_Shape01DrawerInit(drawer_t*draw, TAG*tag);
 void swf_Shape11DrawerInit(drawer_t*draw, TAG*tag);
 SHAPE* swf_ShapeDrawerToShape(drawer_t*draw);
@@ -613,6 +614,10 @@ void swf_DumpFont(SWFFONT * font);
 
 // Button Conditions
 
+/* missing: IDLE_OUTDOWN 
+            OUTDOWN_OVERUP
+	    OVERUP_OUTDOWN
+*/
 #define BC_OVERDOWN_IDLE        0x0100
 #define BC_IDLE_OVERDOWN        0x0080
 #define BC_OUTDOWN_IDLE         0x0040
