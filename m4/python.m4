@@ -31,9 +31,11 @@ if test "x$PY_VERSION" "!=" "x"; then
 
 int main(int argn, char*argv[])
 {
-    return Py_Main(argn, argv);
+    int ret;
+    ret = Py_Main(argn, argv);
+    int x; // check also for gcc 2.95.x incompatibilities
+    return ret;
 }
-bli bla blo
 EOF
     ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
     if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
