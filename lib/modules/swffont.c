@@ -294,9 +294,9 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
 #if 0
 	if(bbox.xMin > 0) {
-	    font->glyph[font->numchars].advance = (bbox.xMax*FT_SCALE)/FT_SUBPIXELS;
+	    font->glyph[font->numchars].advance = (bbox.xMax*20*FT_SCALE)/FT_SUBPIXELS;
 	} else {
-	    font->glyph[font->numchars].advance = ((bbox.xMax - bbox.xMin)*FT_SCALE)/FT_SUBPIXELS;
+	    font->glyph[font->numchars].advance = ((bbox.xMax - bbox.xMin)*20*FT_SCALE)/FT_SUBPIXELS;
 	}
 #else
 	font->glyph[font->numchars].advance = glyph->advance.x*20/65536;
