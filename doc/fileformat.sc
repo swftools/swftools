@@ -106,6 +106,10 @@
 # Sound effects on user pressing or releasing a button 
 
 .button playbutton shape=obj1
+    onMouseDown: {
+    }
+    onMouseUp: {
+    }
 #    ...
 .end
 .buttonsounds playbutton press=sound1 release=sound2 enter=sound3 leave=sound4
@@ -345,14 +349,14 @@
 
 #simplified:
 
-.action
+.action:
     stop spr1
     setproperty spr1._visible 1  #TODO: spr1._visible=1?
 .end
 
 #full:
 
-.action opcodes
+.action opcodes:
     settarget "spr1"
     stop
     settarget ""
@@ -365,14 +369,14 @@
 
 #simplified:
 
-.button playbutton2 shape=obj1 opcodes
+.button playbutton2 shape=obj1 opcodes:
     press:   play spr1
     release: stop spr1
 .end
 
 #full:
 
-.button playbutton3 shape=obj1 opcodes
+.button playbutton3 shape=obj1 opcodes:
     press:
 	settarget "spr1"
 	play
@@ -776,5 +780,75 @@
     .play whistle loop=20
 .frame 200
     .stop whistle
+.end
+
+
+# outline.sc
+#
+# Outlines /Fillings
+
+.flash name="outline.swf"
+
+    .outline box:
+	moveTo 0,0
+	lineTo 100,0
+	lineTo 100,100
+	lineTo 0,100
+	lineTo 0,0
+    .end
+
+    .font arial "Arial.swf"
+
+    .textshape abc font="arial" text="Hello World"
+
+#   .gradient bluegreen:
+#	0% blue
+#       50% green
+#       100% red
+#   .end
+
+    .filled fabc outline=box fill=#ff6633 line=5 color=#7799ff
+    .filled fbox outline=abc fill=#ff6633 line=5 color=#7799ff
+
+    .put fabc
+    .put fbox y=200
+.end
+
+# gradients
+.flash name="gradient.swf"
+    
+    .font arial "Arial.swf"
+    .textshape abc font="arial" text="Hello World"
+
+    .gradient bluegreen:
+	0% blue
+	50% green
+	100% red
+    .end
+    
+    .gradient sunshine radial:
+	0% white
+	50% yellow
+	100% red
+    .end
+
+    .filled fbox outline=abc fill=bluegreen line=1 color=#7799ff
+    .filled fbox2 outline=abc fill=sunshine line=1 color=#7799ff
+
+    .put fbox
+    .put fbox2 y=200
+.end
+
+# actions
+.flash name="action.swf"
+
+    .box mybox width=100 height=100 fill=green
+
+    .action:
+	{
+	    _root.stop(); 
+	}
+    .end
+
 .end
 
