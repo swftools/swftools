@@ -1795,27 +1795,7 @@ void pdfswf_addfont(char*filename)
     fonts[fontnum++] = f;
 }
 
-/* TODO: get rid of this */
-void pdfswf_drawonlyshapes() { pdfswf_setparameter("drawonlyshapes", "1"); }
-void pdfswf_ignoredraworder() { pdfswf_setparameter("ignoredraworder", "1"); }
-void pdfswf_linksopennewwindow() { pdfswf_setparameter("opennewwindow", "1"); }
-void pdfswf_storeallcharacters() { pdfswf_setparameter("storeallcharacters", "1"); }
-void pdfswf_enablezlib() { pdfswf_setparameter("enablezlib", "1"); }
 void pdfswf_setoutputfilename(char*_filename) { swffilename = _filename; }
-void pdfswf_insertstop() { pdfswf_setparameter("insertstoptag", "1"); }
-
-void pdfswf_jpegquality(int val) {
-    char tmp[32];
-    sprintf(tmp, "%d", val);
-    pdfswf_setparameter("jpegquality", tmp);
-}
-void pdfswf_setversion(int n) {
-    char tmp[32];
-    sprintf(tmp, "%d", n);
-    pdfswf_setparameter("flashversion", tmp);
-}
-
-
 
 void pdfswf_convertpage(int page)
 {

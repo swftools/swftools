@@ -27,16 +27,10 @@ void pdfswf_setparameter(char*name, char*value);
 void pdfswf_addfont(char*filename);
 
 void pdfswf_setoutputfilename(char*filename);
-void pdfswf_drawonlyshapes();
-void pdfswf_enablezlib();
-void pdfswf_ignoredraworder();
-void pdfswf_linksopennewwindow();
+
+void pdfswf_setversion(int);
 void pdfswf_jpegquality(int);
 void pdfswf_performconversion();
-void pdfswf_storeallcharacters();
-void pdfswf_insertstop();
-void pdfswf_setversion(int);
-
 
 int pdfswf_numpages();
 void pdfswf_convertpage(int page) ;
