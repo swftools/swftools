@@ -328,11 +328,14 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    } else if (type == 6) {
 			U8 a[8];
 			int t;
+			memcpy(&a[4],value,4);
+			memcpy(a,&value[4],4);
 #ifdef WORDS_BIGENDIAN
-			for(t=0;t<8;t++)
-			    a[7-t]=value[t];
-#else
-			memcpy(a,value,8);
+			for(t=0;t<4;t++) {
+			    U8 tmp = a[t];
+			    a[t]=a[7-t];
+			    a[7-t] = tmp;
+			}
 #endif
 			printf(" double:%f", *(double*)a);
 		    } else if (type == 7) {
