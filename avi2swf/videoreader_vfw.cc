@@ -57,12 +57,6 @@ static int verbose;
 
 #define _TRACE_ {printf("vfw: %s: %d (%s)\n",__FILE__,__LINE__,__func__);fflush(stdout);}
 
-static bool videoreader_vfw_eof(videoreader_t* vr)
-{
-    videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
-    return (i->video_pos >= i->video_end);
-}
-
 static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width, const int dest_height, int flip)
 {
     UCHAR*data = (UCHAR*)(bi+1); // actual bitmap data starts after the header
@@ -178,7 +172,10 @@ static int videoreader_vfw_getimage(videoreader_t* vr, void*buffer)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
 
-    if(videoreader_vfw_eof(vr))
+    if (i->video_pos >= i->video_end)
+	i->video_eof = 1;
+
+    if(i->video_eof)
 	return 0;
 
     LPBITMAPINFOHEADER bi;
@@ -211,6 +208,9 @@ static int readAudioBlock(videoreader_vfw_internal_t* i, void*buf, int len)
 static int videoreader_vfw_getsamples(videoreader_t* vr, void*buf, int num)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
+
+    if(i->audio_eof)
+	return 0;
    
     switch(i->waveformat.wBitsPerSample) {
 	case 1: {
@@ -219,6 +219,7 @@ static int videoreader_vfw_getsamples(videoreader_t* vr, void*buf, int num)
 	    do {
 		((SHORT*)buf)[t] = ((((BYTE*)buf)[t>>3])>>(t&7))<<15;
 	    } while(--t>=0);
+	    if(!len) i->audio_eof = 1;
 	    return len*8;
 	}
 	case 8: {
@@ -227,10 +228,13 @@ static int videoreader_vfw_getsamples(videoreader_t* vr, void*buf, int num)
 	    do {
 		((SHORT*)buf)[t] = (((BYTE*)buf)[t]<<8)^0x8000;
 	    } while(--t>=0);
+	    if(!len) i->audio_eof = 1;
 	    return len*2;
 	}
 	case 16: {
-	    return readAudioBlock(i, buf, num);
+	    int len = readAudioBlock(i, buf, num);
+	    if(!len) i->audio_eof = 1;
+	    return len;
 	}
 	default: {
 	    return 0;
@@ -278,7 +282,6 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
     memset(i, 0, sizeof(videoreader_vfw_internal_t));
 
     vr->internal = i;
-    vr->eof = videoreader_vfw_eof;
     vr->getimage = videoreader_vfw_getimage;
     vr->getsamples = videoreader_vfw_getsamples;
     vr->close = videoreader_vfw_close;

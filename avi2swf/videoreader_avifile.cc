@@ -63,7 +63,6 @@
 
 #include "../lib/q.h"
 
-static int shutdown_avi2swf = 0;
 static int verbose = 0;
 
 typedef struct _videoreader_avifile_internal
@@ -73,45 +72,54 @@ typedef struct _videoreader_avifile_internal
     IAviReadStream* vstream;
     int do_audio;
     int do_video;
-    int eof;
+    int video_eof;
+    int audio_eof;
     int flip;
     int frame;
     int soundbits;
     ringbuffer_t audio_buffer;
 } videoreader_avifile_internal;
 
-static void readSamples(videoreader_avifile_internal*i, void*buffer, int buffer_size, int numsamples)
+static int readSamples(videoreader_avifile_internal*i, void*buffer, int buffer_size, int numsamples)
 {
     int ret;
     while(i->audio_buffer.available < buffer_size) {
 	unsigned int samples_read = 0, bytes_read = 0;
 	ret = i->astream->ReadFrames(buffer, buffer_size, numsamples, samples_read, bytes_read);
-	if(samples_read<=0)
-	    return;
+	if(samples_read<=0) {
+	    int l = i->audio_buffer.available; 
+	    ringbuffer_read(&i->audio_buffer, buffer, l);
+	    return l;
+	}
 	ringbuffer_put(&i->audio_buffer, buffer, bytes_read);
     }
     ringbuffer_read(&i->audio_buffer, buffer, buffer_size);
+    return buffer_size;
 }
 static int videoreader_avifile_getsamples(videoreader_t* v, void*buffer, int num)
 {
+    videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
     if(verbose) {
 	printf("videoreader_getsamples(%d)\n", num);fflush(stdout);
     }
-    videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
+    if(i->audio_eof)
+	return 0;
     if(i->soundbits == 8) {
-	readSamples(i, buffer, num/2, num/(v->channels*2));
+	int num_read = readSamples(i, buffer, num/2, num/(v->channels*2))*2;
 	unsigned char*b = (unsigned char*)buffer;
 	int t;
-	for(t=num-2;t>=0;t-=2) {
+	for(t=num_read-2;t>=0;t-=2) {
 	    unsigned char x = b[t/2];
 	    b[t] = 0;
 	    b[t+1] = x-128;
 	}
-	return num;
+	if(!num_read) i->audio_eof=1;
+	return num_read;
     }
     if(i->soundbits == 16) {
-	readSamples(i, buffer, num, num/(v->channels*2));
-	return num;
+	int num_read = readSamples(i, buffer, num, num/(v->channels*2));
+	if(!num_read) i->audio_eof=1;
+	return num_read;
     }
     return 0;
 }
@@ -122,22 +130,19 @@ static int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
 	printf("videoreader_getimage()\n");fflush(stdout);
     }
 
-    if(shutdown_avi2swf)
-	i->eof = 1;
-    
-    if(i->eof)
+    if(i->video_eof)
 	return 0;
 
     if(i->vstream->ReadFrame() < 0) {
 	if(verbose) printf("vstream->ReadFrame() returned value < 0, shutting down...\n");
-	i->eof = 1;
+	i->video_eof = 1;
 	return 0;
     }
     CImage*img2 = 0;
     CImage*img = i->vstream->GetFrame();
     if(!img) {
 	if(verbose) printf("vstream->GetFrame() returned NULL, shutting down...\n");
-	i->eof = 1;
+	i->video_eof = 1;
 	return 0;
     }
     /* we convert the image to YUV first, because we can convert to RGB from YUV only */
@@ -175,16 +180,9 @@ static int videoreader_avifile_getimage(videoreader_t* v, void*buffer)
     } else {
 	if(img2) delete img2;
 	if(verbose) printf("Can't handle bpp %d, shutting down...\n", bpp);
+	i->video_eof = 1;
 	return 0;
     }
-}
-static bool videoreader_avifile_eof(videoreader_t* v)
-{
-    videoreader_avifile_internal*i = (videoreader_avifile_internal*)v->internal;
-    if(verbose) {
-	printf("videoreader_eof()\n");fflush(stdout);
-    }
-    return i->eof;
 }
 static void videoreader_avifile_close(videoreader_t* v)
 {
@@ -222,7 +220,6 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     memset(v, 0, sizeof(videoreader_t));
     v->getsamples = videoreader_avifile_getsamples;
     v->close = videoreader_avifile_close;
-    v->eof = videoreader_avifile_eof;
     v->getimage = videoreader_avifile_getimage;
     v->getsamples = videoreader_avifile_getsamples;
     v->setparameter = videoreader_avifile_setparameter;
