@@ -347,6 +347,18 @@ static void image_dealloc(tag_internals_t*self)
 	free(pi->rgba);pi->rgba = 0;
     }
 }
+static int imagetag_getWidth(PyObject* self)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    image_internal_t*pi = (image_internal_t*)itag->data;
+    return pi->width;
+}
+static int imagetag_getHeight(PyObject* self)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    image_internal_t*pi = (image_internal_t*)itag->data;
+    return pi->height;
+}
 static PyObject* f_DefineImage(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"image"};
@@ -420,8 +432,8 @@ static PyObject* f_DefineImageShape(PyObject* self, PyObject* args, PyObject* kw
     shape_internal_t*ti = (shape_internal_t*)itag->data;
     ti->shape = 0; /*HACK*/
 
-    int width = image_getWidth(image);
-    int height = image_getHeight(image);
+    int width = imagetag_getWidth(image);
+    int height = imagetag_getHeight(image);
     int id = tagmap_add(itag->tagmap, image);
     itag->tag= swf_InsertTag(0, ST_DEFINESHAPE3);
     swf_SetU16(itag->tag, 0);
