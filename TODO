@@ -59,6 +59,11 @@ swfbbox:
     * add manpage
     * support for text boxes
 
+wav2swf:
+
+    * support for 44100khz
+    * pad blocks for mp3 compression
+
 librfxswf:
 
     * Actionscript has memory leaks
