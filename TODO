@@ -22,13 +22,14 @@ General Improvements:
     * temporary file name generation is broken: pdf2swf/pdf2swf.cc, pdf2swf/xpdf/gfile.cc
     * fix memory leaks
     * rfxswf: modules/swfshape doesn't allow changing to fillstyle 0
+    * consistent output handling if -o is missing. (out.swf/stdout)
 
 Cleanups in rfxswf-lib:
     
     * LPTAGs etc. should be TAG*s
     * function names should have a prefix (rfxswf_ or swflib_ or sth.)
     * GetMatrix should be named GetMATRIX, as it gets a MATRIX datatype. Same for CXFORM etc.
-      ^ I do not agree /rainer
+    [ ^ I do not agree /rainer - Why not? /matthias ]
     * element names should be lowercase
     * DataPos should be named DataReadPos, DataSize DataWritePos.
     * bitcount should be named BitWritePos, bitmask BitReadPos
