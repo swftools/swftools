@@ -72,6 +72,7 @@ static int keyframe_interval = -1;
 static int skip = 0;
 static float audio_adjust = 0;
 static int mp3_bitrate = 32;
+static int samplerate = 11025;
 
 struct options_t options[] =
 {
@@ -80,6 +81,7 @@ struct options_t options[] =
  {"o","output"},
  {"p","flip"},
  {"m","mp3-bitrate"},
+ {"r","mp3-samplerate"},
  {"q","quality"},
  {"s","scale"},
  {"S","skip"},
@@ -131,6 +133,21 @@ int args_callback_option(char*name,char*val)
 	mp3_bitrate = atoi(val);
 	return 0;
     }
+    else if(!strcmp(name, "r")) {
+        samplerate = atoi(val);
+        if(samplerate >= 11000 && samplerate <= 12000)
+            samplerate = 11025;
+        else if(samplerate >= 22000 && samplerate <= 23000)
+            samplerate = 22050;
+        else if(samplerate >= 44000 && samplerate <= 45000)
+            samplerate = 44100;
+        else {
+            fprintf(stderr, "Invalid samplerate: %d\n", samplerate);
+            fprintf(stderr, "Allowed values: 11025, 22050, 44100\n", samplerate);
+            exit(1);
+        }
+        return 1;
+    }
     else if(!strcmp(name, "S")) {
 	skip = atoi(val);
 	return 1;
@@ -157,7 +174,8 @@ void args_callback_usage(char*name)
     printf("\t-o , --output filename\t Specify output filename\n"); 
     printf("\t-A , --adjust seconds\t Audio adjust: Shift sound -seconds to the future or +seconds into the past.\n"); 
     printf("\t-n , --num frames\t Number of frames to encode\n");
-    printf("\t-m , --mp3-bitrate <rate>\t Set the mp3 bitrate to encode audio with\n");
+    printf("\t-m , --mp3-bitrate <rate> (kbps)\t Set the mp3 bitrate to encode audio with\n");
+    printf("\t-r , --mp3-samplerate <rate> (Hz)\t Set the mp3 samplerate to encode audio with (default: 11025)\n");
     printf("\t-d , --scale <val>\t Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
     printf("\t-p , --flip\t\t Turn movie upside down\n");
     printf("\t-q , --quality <val>\t Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
@@ -517,6 +535,7 @@ int main (int argc,char ** argv)
     v2swf_setparameter(&v2swf, "blockdiff", "0");
     v2swf_setparameter(&v2swf, "blockdiff_mode", "exact");
     v2swf_setparameter(&v2swf, "mp3_bitrate", itoa(mp3_bitrate));
+    v2swf_setparameter(&v2swf, "samplerate", itoa(samplerate));
     //v2swf_setparameter(&v2swf, "fixheader", "1");
     //v2swf_setparameter(&v2swf, "framerate", "15");
     v2swf_setparameter(&v2swf, "scale", ftoa(scale));
