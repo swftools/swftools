@@ -11,9 +11,13 @@ swfcombine:
     * Handle Bounding boxes
     * Relocate  SetTarget "/content"  stuff, too?
     * allow "combining" Actionscript and SWF.
+    * "swfcombine -d -x 300 test.swf" doesn't work
 
 swfextract:
     
     * mp3 extraction should also work for movieclips.
     * improve placeobject handling
 
+png2swf:
+    * type 2 (truecolor) transparency
+    * type 6 images

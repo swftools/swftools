@@ -109,4 +109,12 @@
 	* lib/examples/makefonts: Fonts: Bounding boxes are now handled correctly
 	* png2swf: Support for more image types
 	* pdf2swf: New option -t (--stop)
+0.4.1:
+	* src/swfcombine: Bugfix with -x option
+	* lib/Makefile: MacOSX fixes
+	* pdf2swf/SWFOutput.cc: fixed undefined sqrt()
+	* src/png2swf: Support for transparency
+	* pdf2swf: Support for CID Fonts
+	* src/swfcombine: Bugfixes
+	* lib/rfxswf: Added Sprite Unfolding routines
 
