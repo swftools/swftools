@@ -297,7 +297,7 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 		run = swf_GetBits(tag, 6);
 		level = swf_GetBits(tag, 8);
 		if(run)
-		    DEBUG printf("(%d) E%d", run, level);
+		    DEBUG printf(" (%d) E%d", run, level);
 		else
 		    DEBUG printf("E");
 		if(level == 0 || level == 128) {
@@ -307,12 +307,14 @@ void get_DC_TCOEF(TAG*tag, int t, int has_dc, int has_tcoef)
 		level = (int)((signed char)level);
 	    } else {
 		int sign = swf_GetBits(tag, 1);
-		if(sign)
+		if(sign) {
 		    level = -level;
-		if(run)
-		    DEBUG printf("(%d) %s%d", run, level>0?"+":"",level);
-		else
-		    DEBUG printf("%s%d", level>0?"+":"",level);
+		}
+		if(run) {
+		    DEBUG printf(" (%d) %s%d", run, level>0?"+":"",level);
+		} else {
+		    DEBUG printf(" %s%d", level>0?"+":"",level);
+		}
 	    }
 	    pos += run+1;
 	    //DEBUG printf("run:%d level:%d\n", run, level);
@@ -423,8 +425,9 @@ void decode_block(TAG*tag, int pictype)
 	int x,y;
 	x = readMVD(tag); //horizontal
 	y = readMVD(tag); //vertical
-	if(x==32 && y==32)
-	    printf("0");
+	/*if(x==32 && y==32)
+	    printf("0"); // prediction was 100% match
+	 */
     }
     if(has_mvd[mb_type]&2) {
 	/* only in advanced prediction mode */
