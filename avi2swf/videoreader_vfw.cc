@@ -167,7 +167,6 @@ int videoreader_vfw_getimage(videoreader_t* vr, void*buffer)
 	fprintf(stderr, "AVIStreamGetFrame failed\n");
 	return 0;
     }
-    printf("%dx%d:%d\n", bi->biWidth, bi->biHeight, bi->biBitCount);
     
     if(!bitmap_to_rgba(bi, buffer, i->width, i->height)) {
 	fprintf(stderr, "couldn't convert bitmap to RGBA.\n");
@@ -279,28 +278,37 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
 	    /* video stream */
 
 	    BITMAPINFOHEADER bitmap;
-	    LONG size = sizeof(i->bitmap);
+	    LONG size = sizeof(bitmap);
 	    AVIStreamReadFormat(stream, 0, &bitmap, &size);
 
-	    if(i->bitmap.biCompression == 0/*RGB*/) {
+	    if(1) {
 		i->bitmap = bitmap;
 		i->vs = stream;
 		i->width = bitmap.biWidth;
 		i->height = bitmap.biHeight;
+	    } else {
+		fprintf(stderr, "Ignoring video stream: %dx%d compression=%d planes=%d\n", 
+			bitmap.biWidth, bitmap.biHeight,
+			bitmap.biCompression,bitmap.biPlanes);
 	    }
         }
         else if (streaminfo.fccType == streamtypeAUDIO) {
 	    /* audio stream */
 
 	    WAVEFORMATEX waveformat;
-	    LONG size = sizeof(i->waveformat);
+	    LONG size = sizeof(waveformat);
 	    AVIStreamReadFormat(stream, 0, &waveformat, &size);
 
-	    if(i->waveformat.wBitsPerSample == 16 || i->waveformat.wBitsPerSample == 8) {
+	    if(waveformat.wBitsPerSample == 16 || 
+	       waveformat.wBitsPerSample == 8 ||
+	       waveformat.wBitsPerSample == 1
+	       ) {
 		i->waveformat = waveformat;
 		i->as = stream;
-		i->channels = i->waveformat.nChannels;
-		i->samplerate = i->waveformat.nSamplesPerSec;
+		i->channels = waveformat.nChannels;
+		i->samplerate = waveformat.nSamplesPerSec;
+	    } else {
+		fprintf(stderr, "Ignoring audio stream: bitspersample=%d\n", waveformat.wBitsPerSample);
 	    }
         }
 	t++;
