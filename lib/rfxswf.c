@@ -1496,10 +1496,11 @@ int swf_WriteCGI(SWF * swf)
 SWF* swf_CopySWF(SWF*swf)
 {
     SWF*nswf = rfx_alloc(sizeof(SWF));
+    TAG*tag, *ntag;
     memcpy(nswf, swf, sizeof(SWF));
     nswf->firstTag = 0;
-    TAG*tag = swf->firstTag;
-    TAG*ntag = 0;
+    tag = swf->firstTag;
+    ntag = 0;
     while(tag) {
         ntag = swf_CopyTag(ntag, tag);
         if(!nswf->firstTag)
