@@ -131,7 +131,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     }
 
     font->layout->ascent = face->ascender; //face->bbox.xMin;
-    font->layout->descent = face->descender; //face->bbox.xMax;
+    font->layout->descent = abs(face->descender); //face->bbox.xMax;
     font->layout->leading = -face->bbox.xMin;
     font->layout->kerningcount = 0;
     
@@ -224,7 +224,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    font->glyph[t].advance = ((bbox.xMax - bbox.xMin)*FT_SCALE)/FT_SUBPIXELS;
 	}
 #else
-	font->glyph[t].advance = glyph->advance.x/65536;
+	font->glyph[t].advance = glyph->advance.x*20/65536;
 #endif
 	
 	font->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
@@ -392,7 +392,7 @@ SWFFONT* swf_LoadT1Font(char*filename)
 	draw.dealloc(&draw);
 	    
 	font->layout->bounds[c] = bbox;
-	font->glyph[c].advance = bbox.xmax/20;
+	font->glyph[c].advance = bbox.xmax;
 	if(!font->glyph[c].advance) {
 	    font->glyph[c].advance = firstx;
 	}
