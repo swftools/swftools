@@ -81,6 +81,9 @@ int args_long2shortoption(struct options_t*options, char*name, char*val)
 		if(equal) {
 		    //strcpy(&tmp[strlen(tmp)], equal);
 		    int ret = args_callback_option(tmp, equal);
+		    if(!ret) {
+			fprintf(stderr, "Warning: Option --%s takes no parameter.\n", name);
+		    }
 		    return 0;
 		}
 		return args_callback_option(tmp,val);
