@@ -1,6 +1,6 @@
 # Makefile
 
-RFXSWF	= ../librfxswf$(A)
+RFXSWF	= ../librfxswf.a
 LDLIBS	= -L/usr/X11R6/lib -ljpeg -lm -lz -lX11 -lfreetype -lt1
 #CFLAGS	= -funsigned-char
 CC	= gcc
