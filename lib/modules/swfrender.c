@@ -66,7 +66,12 @@ static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
     p->fx = x;
     swf_SetBlock(i->lines[y].points, (U8*)p, sizeof(renderpoint_t));
 }
-static void add_line(RENDERBUF*buf, double x1, int y1, double x2, int y2, renderpoint_t*p, char thin)
+
+/* set this to 0.777777 or something if the "both fillstyles set while not inside shape"
+   problem appears to often */
+#define CUT 0.5
+
+static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, renderpoint_t*p, char thin)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
 /*    if(DEBUG&4) {
@@ -74,63 +79,52 @@ static void add_line(RENDERBUF*buf, double x1, int y1, double x2, int y2, render
         printf(" l[%d - %.2f/%.2f -> %.2f/%.2f]", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
     }*/
 
-    /* SCALE DOWN */ 
-    y1*=i->multiply;
-    y2*=i->multiply;
-    x1*=i->multiply;
-    x2*=i->multiply;
-
-    y1/=20; 
-    y2/=20;
+    y1=y1*i->multiply;
+    y2=y2*i->multiply;
+    x1=x1*i->multiply;
+    x2=x2*i->multiply;
     
-    int diffy = y2 - y1;
-    int starty = y1;
-    int posy=0;
+    y1 = y1/20.0;
+    y2 = y2/20.0;
+    x1 = x1/20.0;
+    x2 = x2/20.0;
+
+    if(y2 < y1) {
+        double x = x1;x1 = x2;x2=x;
+        double y = y1;y1 = y2;y2=y;
+    }
+    
     double diffx = x2 - x1;
-    double stepx;
-    double startx = x1;
-    double posx=0;
-
-    if(diffy<0) {
-        startx = x2;
-        starty = y2;
-        diffx = -diffx;
-        diffy = -diffy;
-    }
-
-    if(diffy == 0) {
-        if(thin) {
-            stepx = diffx;
-        } else {
-            return;
-        }
-    } else {
-        stepx = diffx / diffy;
-    }
+    double diffy = y2 - y1;
     
-    if(thin)
-        diffy++;
+    double ny1 = (int)(y1)+CUT;
+    double ny2 = (int)(y2)+CUT;
 
-    while(posy<diffy) {
-        float xx = (float)((startx + posx)/20.0);
-        int yy = starty + posy;
+    if(ny1 < y1) {
+        ny1 = (int)(y1) + 1.0 + CUT;
+    }
+    if(ny2 >= y2) {
+        ny2 = (int)(y2) - 1.0 + CUT;
+    }
 
-        add_pixel(buf, xx ,yy, p);
+    if(ny1 > ny2)
+        return;
+
+    double stepx = diffx/diffy;
+    x1 = x1 + (ny1-y1)*stepx;
+    x2 = x2 + (ny2-y2)*stepx;
+
+    int posy=(int)ny1;
+    int endy=(int)ny2;
+    double posx=0;
+    double startx = x1;
+
+    while(posy<=endy) {
+        float xx = (float)(startx + posx);
+        add_pixel(buf, xx ,posy, p);
         posx+=stepx;
-        if(thin) {
-            float x2 = (float)((startx + posx)/20.0);
-            if(xx==x2) {
-                if(stepx<0) {
-                    x2 = xx-1;
-                } else {
-                    x2 = xx+1;
-                }
-            }
-            add_pixel(buf, x2, yy, p);
-        }
         posy++;
     }
-    return;
 }
 #define PI 3.14159265358979
 static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double y2, int width, renderpoint_t*p)
@@ -144,21 +138,13 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
 
     int t;
     int segments;
-    double lastx;
+    double lastx,lasty;
     double vx,vy;
-    double xx;
-    
-    int lasty;
-    int yy;
+    double xx,yy;
    
     /* The Flash Player does this, too. This means every line is always at least
        one pixel wide */
     width += 20;
-
-    /*if(width<=20) {
-        add_line(buf, x1, y1, x2, y2, p, 1);
-        return;
-    }*/
 
     sd = (double)dx*(double)dx+(double)dy*(double)dy;
     d = sqrt(sd);
@@ -181,27 +167,27 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
     vy=vy*width*0.5;
 
     xx = x2+vx;
-    yy = (int)(y2+vy);
-    add_line(buf, x1+vx, (int)(y1+vy), xx, yy, p, 0);
+    yy = y2+vy;
+    add_line(buf, x1+vx, y1+vy, xx, yy, p, 0);
     lastx = xx;
     lasty = yy;
     for(t=1;t<segments;t++) {
         double s = sin(t*PI/segments);
         double c = cos(t*PI/segments);
         xx = (x2 + vx*c - vy*s);
-        yy = (int)(y2 + vx*s + vy*c);
+        yy = (y2 + vx*s + vy*c);
         add_line(buf, lastx, lasty, xx, yy, p, 0);
         lastx = xx;
         lasty = yy;
     }
     
     xx = (x2-vx);
-    yy = (int)(y2-vy);
+    yy = (y2-vy);
     add_line(buf, lastx, lasty, xx, yy, p, 0);
     lastx = xx;
     lasty = yy;
     xx = (x1-vx);
-    yy = (int)(y1-vy);
+    yy = (y1-vy);
     add_line(buf, lastx, lasty, xx, yy, p, 0);
     lastx = xx;
     lasty = yy;
@@ -209,12 +195,12 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
         double s = sin(t*PI/segments);
         double c = cos(t*PI/segments);
         xx = (x1 - vx*c + vy*s);
-        yy = (int)(y1 - vx*s - vy*c);
+        yy = (y1 - vx*s - vy*c);
         add_line(buf, lastx, lasty, xx, yy, p, 0);
         lastx = xx;
         lasty = yy;
     }
-    add_line(buf, lastx, lasty, (x1+vx), (int)(y1+vy), p, 0);
+    add_line(buf, lastx, lasty, (x1+vx), (y1+vy), p, 0);
 }
 
 static inline void transform_point(MATRIX*m, int x, int y, int*dx, int*dy)
@@ -383,7 +369,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             int t;
             double xx=x1,yy=y1;
 
-            parts = (int)(sqrt(c)/2);
+            parts = (int)(sqrt(c)/3);
             if(!parts) parts = 1;
 
             if(DEBUG&4)
@@ -739,12 +725,13 @@ RGBA* swf_Render(RENDERBUF*dest)
     }
     free(line1);
     free(line2);
-
+    
     if(DEBUG) printf("\nMemory used: %d\n", memory);
 #ifdef STATISTICS
     if(DEBUG) printf("Statistics:\n");
     if(DEBUG) printf("Average layer depth: %f\n", (double)layers/layernum);
 #endif
+
 
     return img;
 }
