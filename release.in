@@ -48,6 +48,8 @@ ${name}/lib/bitio.c \
 ${name}/lib/bitio.h \
 ${name}/lib/q.c \
 ${name}/lib/q.h \
+${name}/lib/MD5.h \
+${name}/lib/MD5.c \
 ${name}/lib/example/Makefile \
 ${name}/lib/example/box.c \
 ${name}/lib/example/dumpfont.c \
