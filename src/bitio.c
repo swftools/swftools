@@ -158,6 +158,12 @@ void writer_writeu16(struct writer_t*w, u16 value)
     writer_write(w, &value, 2);
 }
 
+void writer_writeu32(struct writer_t*w, u32 value)
+{
+    writer_resetbits(w);
+    writer_write(w, &value, 4);
+}
+
 void* writer_getpos(struct writer_t*w)
 {
     return &w->data[w->pos];

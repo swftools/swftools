@@ -47,6 +47,7 @@ void writer_writebit(struct writer_t*w, int bit);
 void writer_writebits(struct writer_t*w, u32 data, int bits);
 void writer_writeu8(struct writer_t*w, u8 value);
 void writer_writeu16(struct writer_t*w, u16 value);
+void writer_writeu32(struct writer_t*w, u32 value);
 void writer_resetbits(struct writer_t*w);
 
 #endif //__bitio_h__
