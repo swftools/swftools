@@ -90,7 +90,7 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINEBUTTONSOUND:
     case ST_DEFINEFONT:
     case ST_DEFINEFONT2:
-    case ST_DEFINEFONTINFO:
+    case ST_DEFINEFONTINFO: //psedodefine
     case ST_DEFINETEXT:
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
@@ -172,6 +172,12 @@ static int swf_spritetagids[] =
  -1
 };
 
+static int swf_pseudodefiningtagids[] = 
+{
+ ST_DEFINEFONTINFO,
+ -1
+};
+
 U8 swf_isAllowedSpriteTag(TAG * tag)
 {
     int id = tag->id;
@@ -192,6 +198,19 @@ U8 swf_isDefiningTag(TAG * tag)
     while(swf_definingtagids[t]>=0)
     {
         if(swf_definingtagids[t] == id) 
+            return 1;
+        t++;
+    }
+    return 0; 
+}
+
+U8 swf_isPseudoDefiningTag(TAG * tag)
+{
+    int id = tag->id;
+    int t=0;
+    while(swf_pseudodefiningtagids[t]>=0)
+    {
+        if(swf_pseudodefiningtagids[t] == id) 
             return 1;
         t++;
     }

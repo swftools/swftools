@@ -498,6 +498,7 @@ int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 // swftools.c
 
 U8 swf_isDefiningTag(TAG * t);
+U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
 U16 swf_GetDefineID(TAG * t);
 U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
