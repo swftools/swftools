@@ -899,6 +899,11 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
     if(usefonts && ! drawonlyshapes)
     {
         int charid = font->getSWFCharID(character, charnr);
+	if(charid<0) {
+	    msg("<warning> Didn't find %s in current charset (%s)", 
+		    FIXNULL(character),FIXNULL(font->getName()));
+	    return;
+	}
         if(shapeid>=0)
             endshape();
         if(textid<0)
@@ -1228,7 +1233,7 @@ int SWFFont::getSWFCharID(char*name, int charnr)
 	return getSWFCharID(this->standardtable[charnr], -1);
     }
     msg("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
-    return 0;
+    return -1;
 }
 
 int SWFFont::getWidth(char*name)
