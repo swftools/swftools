@@ -622,7 +622,7 @@ int main (int argc,char ** argv)
         return 1;
     }
 
-    f = open(filename,O_RDONLY);
+    f = open(filename,O_RDONLY|O_BINARY);
 
     if (f<0)
     { 
@@ -877,6 +877,11 @@ int main (int argc,char ** argv)
 	else if(tag->id == ST_DEFINEEDITTEXT) {
 	    handleEditText(tag);
 	    printf("\n");
+	}
+	else if(tag->id == ST_DEFINEMOVIE) {
+	    U16 id = swf_GetU16(tag);
+	    char*s = swf_GetString(tag);
+	    printf(" URL: %s\n", s);
 	}
 	else if(tag->id == ST_DEFINETEXT || tag->id == ST_DEFINETEXT2) {
 	    if(showtext)
