@@ -214,4 +214,6 @@
 	* swfdump: several bugfixes from simon-swf@munton.demon.co.uk
 	* pdf2swf: Added fontconfig font replacement
 	* lib/h.263: added better support for custom frames
+	* avi2swf: Is now ported to Win32, too.
+	* pdf2swf: Upgraded to xpdf 3.00
 
