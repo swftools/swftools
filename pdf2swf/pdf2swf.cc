@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
-#include "args.h"
+#include "../lib/args.h"
 #include "pdfswf.h"
 #include "t1lib.h"
 extern "C" {
@@ -89,39 +89,18 @@ int args_callback_option(char*name,char*val) {
     return 0;
 }
 
-struct options_t
-{
-    char shortoption;
-    char*longoption;
-} options[] =
-{{'o',"output"},
- {'V',"version"},
- {'i',"ignore"},
- {'s',"shapes"},
- {'j',"jpegquality"},
- {'p',"pages"}
+struct options_t options[] =
+{{"o","output"},
+ {"V","version"},
+ {"i","ignore"},
+ {"s","shapes"},
+ {"j","jpegquality"},
+ {"p","pages"},
+ {0,0}
 };
 
 int args_callback_longoption(char*name,char*val) {
-    int t;
-    char*equal = strchr(name,'=');
-    if (equal) {
-	*equal = 0;
-	equal++;
-    }
-    for(t=0;t<sizeof(options)/sizeof(struct options_t);t++) {
-        if(!strcmp(options[t].longoption, name)) {
-		char*tmp = (char*)malloc(strlen(name)+(equal?strlen(equal)+2:2));
-		tmp[0] = options[t].shortoption;
-		tmp[1] = 0;
-		if(equal) {
-		    strcpy(&tmp[1], equal);
-		}
-		return args_callback_option(tmp,val);
-	}
-    }
-    fprintf(stderr, "Unknown option: --%s\n", name);
-    exit(1);
+    return args_long2shortoption(options, name, val);
 }
 
 int args_callback_command(char*name, char*val) {
