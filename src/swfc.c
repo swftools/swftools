@@ -957,6 +957,9 @@ void s_action(const char*text)
 {
     ActionTAG* a = 0;
     a = swf_ActionCompile(text, stack[0].swf->fileVersion);
+    if(!a) {
+	syntaxerror("Couldn't compile ActionScript");
+    }
 
     tag = swf_InsertTag(tag, ST_DOACTION);
 
@@ -2068,8 +2071,9 @@ static int c_texture(map_t*args) {return 0;}
 static int c_action(map_t*args) 
 {
     readToken();
-    if(type != RAWDATA)
+    if(type != RAWDATA) {
 	syntaxerror("colon (:) expected");
+    }
 
     s_action(text);
    
@@ -2118,15 +2122,15 @@ static struct {
  {"stop", c_stop, "sound"},
 
     // object placement tags
- {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
- {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
- {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
- {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
- {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
- {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
+ {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
+ {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
+ {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
+ {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
+ {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
+ {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
- {"buttonput", c_buttonput, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex=100% scaley=100% shear=0 rotate=0 above= below="},
+ {"buttonput", c_buttonput, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex=100% scaley=100% shear=0 rotate=0 above= below="}, //TODO: ratio???
  {"texture", c_texture, "<i> x=0 y=0 scale= scalex=100% scaley=100% shear=0 rotate=0"},
 
     // commands which start a block
