@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include "./aconf.h"
 #if defined(WIN32)
 #  include <sys/stat.h>
 #  ifdef FPTEX
