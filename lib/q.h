@@ -12,6 +12,10 @@
 
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* dynamically growing mem section */
 typedef struct _mem_t {
     char*buffer;
@@ -97,5 +101,9 @@ void qfree_internal(void*old);
 #define qmalloc(len) qmalloc_internal(len)
 #define qrealloc(old, len) qmalloc_internal(old, len)
 #define qfree(old) qmalloc_internal(old)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__q_h__
