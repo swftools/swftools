@@ -18,7 +18,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2005-01-21-2006
+VERSION=0.6.3
 
 
 # ------------------------------------------------------------------
@@ -41,8 +41,8 @@ if test "x$PROFILING" '!=' "x";then
 fi
 if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
-        CFLAGS="$WARNINGS -g $CFLAGS"
-        CXXFLAGS="$WARNINGS -g $CXXFLAGS"
+        CFLAGS="$WARNINGS -O2 -g $CFLAGS"
+        CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
     else
         CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
@@ -410,3 +410,25 @@ dnl AC_OUTPUT(${FILES}) old autoconf
 AC_CONFIG_FILES([${FILES}])
 AC_OUTPUT
 
+#
+# On development trees, create snapshots of config.status
+#
+if test -f snapshot -a "x$CHECKMEM" = "x" -a "x$PROFILING" = "x";then
+    if test "x${MINGW}" = "xyes"; then
+	echo cp config.status config.status.win32
+	cp config.status config.status.win32
+    else
+	if test "x$DEBUG" '=' "x" -a "x$OPTIMIZE"  '=' "x";then
+	    echo cp config.status config.status.linux
+	    cp config.status config.status.linux
+	fi
+	if test "x$DEBUG" '!=' "x" -a "x$OPTIMIZE"  '=' "x";then
+	    echo cp config.status config.status.debug
+	    cp config.status config.status.debug
+	fi
+	if test "x$DEBUG"    = "x" -a "x$OPTIMIZE" '!=' "x"; then
+	    echo cp config.status config.status.optimize
+	    cp config.status config.status.optimize
+	fi
+    fi
+fi
