@@ -8,7 +8,6 @@ General:
 pdf2swf:
 
     * The following pdf properties are not yet dealt with:
-      o Links
       o dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
       o (type 3 and truetype fonts)
@@ -26,5 +25,8 @@ swfcombine:
 rfxswf-lib:
     
     * modules/swfshape doesn't allow changing to fillstyle 0
+    * s/GetDataSize/GetTagLen/g
+      s/GetDataSizePtr/GetTagLenPtr/g
+      s/GetFrameNo/GetTagFrameNo/g ?
     
   
