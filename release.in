@@ -110,7 +110,6 @@ ${name}/lib/rfxswf.h \
 ${name}/lib/old_rfxswf.h \
 ${name}/lib/log.c \
 ${name}/lib/log.h \
-${name}/avi2swf/avi2swf.cc \
 ${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/pdf2swf/swfoutput.h \
 ${name}/pdf2swf/swfoutput.cc \
