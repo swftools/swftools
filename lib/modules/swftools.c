@@ -143,8 +143,6 @@ SRECT swf_GetDefineBBox(TAG * t)
     case ST_DEFINESHAPE2:
     case ST_DEFINESHAPE3:
     case ST_DEFINEEDITTEXT:
-    case ST_DEFINEBUTTON:
-    case ST_DEFINEBUTTON2:
     case ST_DEFINETEXT:
     case ST_DEFINETEXT2:
     case ST_DEFINEVIDEOSTREAM:
