@@ -503,7 +503,140 @@ seen previously with <c>.textshape</c>:
 
 </section>
 
+<section title="Some more words about gradients">
+
+<p>
+The previous example demonstrated how to fill an outline with
+a gradient.
+</p>
+
+<p>
+There are two types of gradients: radial and linear. radial gradients
+have a center point and a radius (and are immune to rotations), and
+linear gradients have a start point and a width (or height) and can
+be rotated.
+</p>
+
+gradients can be freely positioned inside the object
+you want to fill, by passing the <c>x</c>, <c>y</c> and <c>width</c> and <c>height</c> (or <c>r</c>) parameters
+to <c>.gradient</c>.
+
+<code lang="swfc">
+.flash filename="gradients2.swf"
+
+    .outline o:
+	moveTo -50,-50
+
+	lineTo 0,-45
+	lineTo 50,-50
+
+	lineTo 45,0
+	lineTo 50,50
+
+	lineTo 0,45
+	lineTo -50,50
+
+	lineTo -45,0
+	lineTo -50,-50
+    .end
+
+    .gradient horizon1 radial x=-50 y=-50 r=100:
+        0% cyan
+        49% blue
+        50% green
+        100% cyan
+    .end
+    
+    .gradient horizon2 radial x=0 y=0 r=50:
+        0% cyan
+        49% blue
+        50% green
+        100% cyan
+    .end
+
+    .filled o1 outline=o fill=horizon1 line=0
+    .filled o2 outline=o fill=horizon2 line=0
+
+    .put o1 x=50 y=50
+    .put o2 x=150 y=50
+
+.end
+</code>
+
+If you want to use a given gradient several times
+with different <c>x</c> and <c>y</c> values, you can also first
+define the gradient itself, and then position it with .texture:
+
+<code lang="swfc">
+.flash filename="gradients3.swf"
+
+    # same outline as above, only in more terse notation
+    .outline o:
+	M -50,-50
+	L 0,-45 L 50,-50
+	L 45,0  L 50,50
+	L 0,45  L -50,50
+	L -45,0 L -50,-50
+    .end
+
+    .gradient horizon radial:
+        0% cyan
+        50% blue
+        50% green
+        100% cyan
+    .end
+    
+    .texture horizon1=horizon x=-50 y=-50 r=100
+    .filled o1 outline=o fill=horizon1 line=0
+    .put o1 x=50 y=50
+
+    .texture horizon2=horizon x=0 y=0 r=50
+    .filled o2 outline=o fill=horizon2 line=0
+    .put o2 x=150 y=50
+
+    .texture horizon3=horizon x=0 y=50 r=10
+    .filled o3 outline=o fill=horizon3 line=0
+    .put o3 x=50 y=150
+
+    .texture horizon4=horizon x=50 y=50 r=200
+    .filled o4 outline=o fill=horizon4 line=0
+    .put o4 x=150 y=150
+    
+    .gradient bunt:
+        0% black
+        20% blue
+        40% magenta
+        60% orange
+        80% cyan 
+        100% white
+    .end
+    
+    .texture bunt1=bunt x=-50 y=-50 width=100
+    .filled oo1 outline=o fill=bunt1 line=0
+    .put oo1 x=50 y=250
+
+    .texture bunt2=bunt x=-50 y=-50 width=141 height=141 rotate=45
+    .filled oo2 outline=o fill=bunt2 line=0
+    .put oo2 x=150 y=250
+
+    .texture bunt3=bunt x=-50 y=50 width=141 height=141 rotate=-45
+    .filled oo3 outline=o fill=bunt3 line=0
+    .put oo3 x=50 y=350
+
+    .texture bunt4=bunt x=50 y=50 width=100 rotate=180
+    .filled oo4 outline=o fill=bunt4 line=0
+    .put oo4 x=150 y=350
+
+.end
+</code>
+
+
+<!-- TODO: bitmap filling -->
+
+</section>
+
 </chapter>
+
 
 <chapter title="ActionScript">
 
