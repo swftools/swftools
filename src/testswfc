@@ -40,7 +40,7 @@ swfc=./swfc
 starttest sprite1
 rm -f output.swf
 cat > test.sc <<EOF
-.swf
+.flash
     .sprite s1
 	.sprite s2
 	.end
@@ -56,7 +56,7 @@ showresult
 starttest sprite2
 rm -f file1.swf file2.swf
 cat > test.sc <<EOF
-.swf name="file2.swf"
+.flash name="file2.swf"
 .sprite spr1
 .end
 .end
@@ -73,7 +73,7 @@ showresult
 starttest args
 rm -f file.swf output.swf
 cat > test.sc <<EOF
-.swf
+.flash
 .box mybox 100 100
 .put mybox end #should cause an error
 .end
@@ -86,7 +86,7 @@ showresult
 starttest noend
 rm -f file.swf output.swf
 cat > test.sc <<EOF
-.swf
+.flash
 EOF
 showfile test.sc
 swfc test.sc
@@ -106,7 +106,7 @@ showresult
 starttest cws
 rm -f output.swf
 cat > test.sc <<EOF
-.swf compress
+.flash compress
     .box mybox1 100 100
     .box mybox2 100 100
 .end
@@ -131,13 +131,27 @@ showresult
 starttest nobrackets
 rm -f output.swf
 cat > test.sc <<EOF
-.swf
+.flash
 .box box 100 100
 .put box pin=0,0
 .end
 EOF
 showfile test.sc
 swfc test.sc
+test -f output.swf && touch failed
+showresult
+
+starttest nofont
+rm -f output.swf
+cat > test.sc <<EOF
+.flash
+    .font f1 "not_there.swf"
+    .text t1 font=f1 text="test"
+.end
+EOF
+showfile test.sc
+swfc test.sc
+ls -l output.swf >&5
 test -f output.swf && touch failed
 showresult
 
