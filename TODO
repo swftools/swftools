@@ -21,6 +21,3 @@ swfextract:
 png2swf:
     * type 2 (truecolor) transparency
     * type 6 images
-
-avi2swf:
-    * some movies are upside down

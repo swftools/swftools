@@ -694,7 +694,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=0.4.1
+VERSION=0.4.2
 # -Winline?
 CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
 CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
