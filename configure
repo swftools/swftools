@@ -9882,6 +9882,72 @@ _ACEOF
 
 fi
 
+ echo "$as_me:$LINENO: checking for boolean" >&5
+echo $ECHO_N "checking for boolean... $ECHO_C" >&6
+if test "${ac_cv_type_boolean+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+int
+main ()
+{
+if ((boolean *) 0)
+  return 0;
+if (sizeof (boolean))
+  return 0;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_type_boolean=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_type_boolean=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_type_boolean" >&5
+echo "${ECHO_T}$ac_cv_type_boolean" >&6
+if test $ac_cv_type_boolean = yes; then
+  :
+else
+
+cat >>confdefs.h <<_ACEOF
+#define boolean int
+_ACEOF
+
+fi
+ #needed for jpeglib
 
 
 
@@ -10269,7 +10335,7 @@ fi
 done
 
 
-for ac_header in freetype/ft2build.h
+for ac_header in ft2build.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if eval "test \"\${$as_ac_Header+set}\" = set"; then
@@ -10413,7 +10479,7 @@ if test `eval echo '${'$as_ac_Header'}'` = yes; then
   cat >>confdefs.h <<_ACEOF
 #define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
- HAVE_FREETYPE_FT2BUILD_H=1
+ HAVE_FT2BUILD_H=1
 fi
 
 done
@@ -10432,19 +10498,24 @@ if test "x${HAVE_FREETYPE}" = "x1"; then
 	LIBS="$LIBS -lfreetype"
     fi
 
-if test "x${HAVE_FREETYPE_FT2BUILD_H}" = "x1"; then
-    HAVE_FREETYPE_FT2BUILD_H_DEFINE='#define HAVE_FREETYPE_FT2BUILD_H'
+if test "x${HAVE_FT2BUILD_H}" = "x1"; then
+    HAVE_FT2BUILD_H_DEFINE='#define HAVE_FT2BUILD_H'
 fi
 
     echo "$as_me:$LINENO: checking whether we can compile the freetype test program" >&5
 echo $ECHO_N "checking whether we can compile the freetype test program... $ECHO_C" >&6
 
     cat > conftest.c << EOF
-$HAVE_FREETYPE_FT2BUILD_H_DEFINE
+$HAVE_FT2BUILD_H_DEFINE
 
-#ifdef HAVE_FREETYPE_FT2BUILD_H
-#include <freetype/ft2build.h>
+#ifdef HAVE_FT2BUILD_H
+#include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include FT_SIZES_H
+#include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_IDS_H
+#include FT_OUTLINE_H
 #else
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
