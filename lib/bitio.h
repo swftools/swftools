@@ -24,22 +24,25 @@
 #ifndef __rfxswf_bitio_h__
 #define __rfxswf_bitio_h__
 
-#define READER_TYPE_FILE 0
-#define READER_TYPE_MEM  1
-#define READER_TYPE_ZLIB_U 2
-#define READER_TYPE_ZLIB_C 3
+#define READER_TYPE_FILE 1
+#define READER_TYPE_MEM  2
+#define READER_TYPE_ZLIB_U 3
+#define READER_TYPE_ZLIB_C 4
 #define READER_TYPE_ZLIB READER_TYPE_ZLIB_U
+#define READER_TYPE_NULL 5
 
-#define WRITER_TYPE_FILE 0
-#define WRITER_TYPE_MEM  1
-#define WRITER_TYPE_ZLIB_C 2
-#define WRITER_TYPE_ZLIB_U 3
-#define WRITER_TYPE_NULL 4
+#define WRITER_TYPE_FILE 1
+#define WRITER_TYPE_MEM  2
+#define WRITER_TYPE_ZLIB_C 3
+#define WRITER_TYPE_ZLIB_U 4
+#define WRITER_TYPE_NULL 5
+#define WRITER_TYPE_GROWING_MEM  6
 #define WRITER_TYPE_ZLIB WRITER_TYPE_ZLIB_C
 
 struct reader_t
 {
     int (*read)(struct reader_t*, void*data, int len);
+    void (*dealloc)(struct reader_t*);
 
     void *internal;
     int type;
@@ -73,11 +76,15 @@ void writer_writebits(struct writer_t*w, unsigned int data, int bits);
 void reader_init_filereader(struct reader_t*r, int handle);
 void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input);
 void reader_init_memreader(struct reader_t*r, void*data, int length);
+void reader_init_nullreader(struct reader_t*r);
 
 void writer_init_filewriter(struct writer_t*w, int handle);
 void writer_init_filewriter2(struct writer_t*w, char*filename);
 void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output);
 void writer_init_memwriter(struct writer_t*r, void*data, int length);
 void writer_init_nullwriter(struct writer_t*w);
+
+void writer_init_growingmemwriter(struct writer_t*r);
+void* writer_growmemwrite_getmem(struct writer_t*w);
 
 #endif //__rfxswf_bitio_h__
