@@ -22,17 +22,48 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <assert.h>
+
+typedef struct _dummyshape
+{
+    SHAPE2*shape;
+    //CXFORM //TODO
+    struct _dummyshape*next;
+} dummyshape_t;
+
 typedef struct _renderpoint
 {
     enum {clip_type, fill_type} type;
+    float fx; //for sorting
+    int x;
+    U32 depth;
+    U32 clipdepth;
+    SHAPELINE*shapeline;
+   
+    dummyshape_t*s;
+} renderpoint_t;
+
+/* 
+    enum {clip_type, solidfill_type, texturefill_type, gradientfill_type} type;
     float fx;
     int x;
     U32 depth;
     U32 clipdepth;
-    SHAPE2*shape;
-    SHAPELINE*shapeline;
-    //CXFORM?
-} renderpoint_t;
+
+    // solidfill;
+    RGBA color; 
+    
+    // texturefill
+    bitmap_t* bitmap;
+
+    // gradientfill
+    gradient_t* gradient;
+
+    // texture- & gradientfill;
+    U32 x,y;
+    U32 dx,dy;
+
+*/
 
 typedef struct _renderline
 {
@@ -46,12 +77,6 @@ typedef struct _bitmap {
     int id;
     struct _bitmap*next;
 } bitmap_t;
-
-typedef struct _dummyshape
-{
-    SHAPE2*shape;
-    struct _dummyshape*next;
-} dummyshape_t;
 
 typedef struct _renderbuf_internal
 {
@@ -81,7 +106,7 @@ static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
    problem appears to often */
 #define CUT 0.5
 
-static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, renderpoint_t*p, char thin)
+static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, renderpoint_t*p)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
 /*    if(DEBUG&4) {
@@ -178,7 +203,7 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
 
     xx = x2+vx;
     yy = y2+vy;
-    add_line(buf, x1+vx, y1+vy, xx, yy, p, 0);
+    add_line(buf, x1+vx, y1+vy, xx, yy, p);
     lastx = xx;
     lasty = yy;
     for(t=1;t<segments;t++) {
@@ -186,19 +211,19 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
         double c = cos(t*PI/segments);
         xx = (x2 + vx*c - vy*s);
         yy = (y2 + vx*s + vy*c);
-        add_line(buf, lastx, lasty, xx, yy, p, 0);
+        add_line(buf, lastx, lasty, xx, yy, p);
         lastx = xx;
         lasty = yy;
     }
     
     xx = (x2-vx);
     yy = (y2-vy);
-    add_line(buf, lastx, lasty, xx, yy, p, 0);
+    add_line(buf, lastx, lasty, xx, yy, p);
     lastx = xx;
     lasty = yy;
     xx = (x1-vx);
     yy = (y1-vy);
-    add_line(buf, lastx, lasty, xx, yy, p, 0);
+    add_line(buf, lastx, lasty, xx, yy, p);
     lastx = xx;
     lasty = yy;
     for(t=1;t<segments;t++) {
@@ -206,11 +231,11 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
         double c = cos(t*PI/segments);
         xx = (x1 - vx*c + vy*s);
         yy = (y1 - vx*s - vy*c);
-        add_line(buf, lastx, lasty, xx, yy, p, 0);
+        add_line(buf, lastx, lasty, xx, yy, p);
         lastx = xx;
         lasty = yy;
     }
-    add_line(buf, lastx, lasty, (x1+vx), (y1+vy), p, 0);
+    add_line(buf, lastx, lasty, (x1+vx), (y1+vy), p);
 }
 
 static inline void transform_point(MATRIX*m, int x, int y, int*dx, int*dy)
@@ -324,6 +349,34 @@ void swf_Render_Delete(RENDERBUF*dest)
     rfx_free(dest->internal); dest->internal = 0;
 }
 
+static void swf_Render_AddShape(RENDERBUF*dest,dummyshape_t*s)
+{
+    renderbuf_internal*i = (renderbuf_internal*)dest->internal;
+
+    s->next = 0;
+    if(i->dshapes_next)
+        i->dshapes_next->next = s;
+    i->dshapes_next = s;
+    if(!i->dshapes) {
+        i->dshapes = s;
+    }
+}
+
+static SHAPE2* linestyle2fillstyle(SHAPE2*shape)
+{
+    SHAPE2*s = rfx_calloc(sizeof(SHAPE2));
+    int t;
+    s->numfillstyles = shape->numlinestyles;
+    s->fillstyles = (FILLSTYLE*)rfx_calloc(sizeof(FILLSTYLE)*shape->numlinestyles);
+    s->lines = (SHAPELINE*)rfx_calloc(sizeof(SHAPELINE)*shape->numlinestyles);
+    for(t=0;t<shape->numlinestyles;t++) {
+        s->lines[t].fillstyle0 = t+1;
+        s->fillstyles[t].type = FILL_SOLID;
+        s->fillstyles[t].color = shape->linestyles[t].color;
+    }
+    return s;
+}
+
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _depth,U16 _clipdepth)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
@@ -336,41 +389,60 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     renderpoint_t p, lp;
     memset(&p, 0, sizeof(renderpoint_t));
     memset(&lp, 0, sizeof(renderpoint_t));
+    
     p.type = _clipdepth?clip_type:fill_type;
-    p.shape = shape;
     p.depth = _depth << 16;
     p.clipdepth = _clipdepth << 16;
+
     mat.tx -= dest->posx*20;
     mat.ty -= dest->posy*20;
 
-    if(shape->numlinestyles) {
-        dummyshape_t*dshape = rfx_calloc(sizeof(dummyshape_t));
-        lshape = rfx_calloc(sizeof(SHAPE2));
+    if(shape->numfillstyles) {
+        dummyshape_t*fshape = rfx_calloc(sizeof(dummyshape_t));
         int t;
-        lshape->numfillstyles = shape->numlinestyles;
-        lshape->fillstyles = (FILLSTYLE*)rfx_calloc(sizeof(FILLSTYLE)*shape->numlinestyles);
-        lshape->lines = (SHAPELINE*)rfx_calloc(sizeof(SHAPELINE)*shape->numlinestyles);
-        for(t=0;t<shape->numlinestyles;t++) {
-            lshape->lines[t].fillstyle0 = t+1;
-            lshape->fillstyles[t].type = FILL_SOLID;
-            lshape->fillstyles[t].color = shape->linestyles[t].color;
+        SHAPE2* s2 = swf_Shape2Clone(shape);
+       
+        fshape->shape = s2;
+
+        p.s = fshape;
+
+        /* multiply fillstyles matrices with placement matrix-
+           important for texture and gradient fill */
+        for(t=0;t<s2->numfillstyles;t++) {
+            MATRIX nm;
+            swf_MatrixJoin(&nm, &s2->fillstyles[t].m, m); //TODO: is this the right order?
+            nm.sx *= i->multiply;
+            nm.sy *= i->multiply;
+            nm.r0 *= i->multiply;
+            nm.r1 *= i->multiply;
+            nm.tx *= i->multiply;
+            nm.ty *= i->multiply;
+            s2->fillstyles[t].m = nm;
         }
-        lp.type = fill_type;
-        lp.shape = lshape;
-        lp.depth = p.depth+1;
 
         /* add this shape to the global shape list, for deallocing */
+        swf_Render_AddShape(dest, fshape);
+    }
+
+    if(shape->numlinestyles) {
+        dummyshape_t*dshape = rfx_calloc(sizeof(dummyshape_t));
+        
+        lshape = linestyle2fillstyle(shape);
+            
+        lp.type = fill_type;
+        lp.s = dshape;
+        lp.depth = (_depth << 16)+1;
+
         dshape->shape = lshape;
-        i->dshapes_next = dshape;
-        if(!i->dshapes) {
-            i->dshapes = dshape;
-        }
+
+        /* add this shape to the global shape list, for deallocing */
+        swf_Render_AddShape(dest, dshape);
     }
 
     if(p.clipdepth) {
         /* reverse shape */
         p.shapeline = 0;
-        add_line(dest, -20, 0, -20, i->height2*20, &p, 0);
+        add_line(dest, -20, 0, -20, i->height2*20, &p);
     }
 
     while(line)
@@ -398,8 +470,10 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
                 add_solidline(dest, x1, y1, x3, y3, shape->linestyles[line->linestyle-1].width, &lp);
                 lp.depth++;
             }
-            if(line->fillstyle0 || line->fillstyle1)
-                add_line(dest, x1, y1, x3, y3, &p, 0);
+            if(line->fillstyle0 || line->fillstyle1) {
+                assert(shape->numfillstyles);
+                add_line(dest, x1, y1, x3, y3, &p);
+            }
             
             if(DEBUG&4) printf("\n");
         } else if(line->type == splineTo) {
@@ -433,8 +507,10 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
                     add_solidline(dest, xx, yy, nx, ny, shape->linestyles[line->linestyle-1].width, &lp);
                     lp.depth++;
                 }
-                if(line->fillstyle0 || line->fillstyle1)
-                    add_line(dest, (int)xx, (int)yy, (int)nx, (int)ny, &p, 0);
+                if(line->fillstyle0 || line->fillstyle1) {
+                    assert(shape->numfillstyles);
+                    add_line(dest, (int)xx, (int)yy, (int)nx, (int)ny, &p);
+                }
 
                 xx = nx;
                 yy = ny;
@@ -552,14 +628,14 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*state
             /* not filled. TODO: we should never add those in the first place */
             if(DEBUG&2)
                 printf("(not filled)");
-        } else if(l->fillid > l->p->shape->numfillstyles) {
-            fprintf(stderr, "Fill style out of bounds (%d>%d)", l->fillid, l->p->shape->numlinestyles);
+        } else if(l->fillid > l->p->s->shape->numfillstyles) {
+            fprintf(stderr, "Fill style out of bounds (%d>%d)", l->fillid, l->p->s->shape->numlinestyles);
         } else {
             FILLSTYLE*f;
             if(DEBUG&2) 
                 printf("(%d -> %d style %d)", x1, x2, l->fillid);
 
-            f = &l->p->shape->fillstyles[l->fillid-1];
+            f = &l->p->s->shape->fillstyles[l->fillid-1];
 
             if(f->type == FILL_SOLID) {
                 /* plain color fill */
@@ -574,16 +650,17 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*state
                     fprintf(stderr, "Shape references unknown bitmap %d\n", f->id_bitmap);
                     fill_plain(line, x1, x2, color_red);
                 } else {
-                    MATRIX m = f->m;
-                    m.tx -= dest->posx*20;
-                    m.ty -= dest->posy*20;
-                    m.sx *= i->multiply;
-                    m.sy *= i->multiply;
-                    m.r0 *= i->multiply;
-                    m.r1 *= i->multiply;
-                    m.tx *= i->multiply;
-                    m.ty *= i->multiply;
-                    fill_bitmap(line, y, x1, x2, &m, b, FILL_CLIPPED?1:0);
+                    //done in swf_RenderShape now
+                    //MATRIX m = f->m;
+                    //m.tx -= dest->posx*20;
+                    //m.ty -= dest->posy*20;
+                    //m.sx *= i->multiply;
+                    //m.sy *= i->multiply;
+                    //m.r0 *= i->multiply;
+                    //m.r1 *= i->multiply;
+                    //m.tx *= i->multiply;
+                    //m.ty *= i->multiply;
+                    fill_bitmap(line, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0);
                 }
             }
         }
