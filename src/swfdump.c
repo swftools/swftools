@@ -423,7 +423,7 @@ int main (int argc,char ** argv)
 
 #ifdef HAVE_STAT
     fstat(f, &statbuf);
-    if(statbuf.st_size != swf.fileSize)
+    if(statbuf.st_size != swf.fileSize && !swf.compressed)
         dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
                 statbuf.st_size, swf.fileSize);
 #endif
@@ -471,6 +471,8 @@ int main (int argc,char ** argv)
 	return 0;
     } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);
+    if(swf.compressed)
+    printf("[HEADER]        File is compressed.\n");
     printf("[HEADER]        File size: %ld\n", swf.fileSize);
     printf("[HEADER]        Frame rate: %f\n",swf.frameRate/256.0);
     printf("[HEADER]        Frame count: %d\n",swf.frameCount);
