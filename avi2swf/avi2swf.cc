@@ -150,8 +150,8 @@ void args_callback_usage(char *name)
     printf("-o , --output filename         Specify output filename\n");
     printf("-A , --adjust seconds          Audio adjust: Shift sound -seconds to the future or +seconds into the past.\n");
     printf("-n , --num frames              Number of frames to encode\n");
-    printf("-m , --mp3-bitrate <rate> (kbps)    Set the mp3 bitrate to encode audio with\n");
-    printf("-r , --mp3-samplerate <rate> (Hz)    Set the mp3 samplerate to encode audio with (default: 11025)\n");
+    printf("-m , --mp3-bitrate <kbps>      Set the mp3 bitrate to encode audio with\n");
+    printf("-r , --mp3-samplerate <hz>     Set the mp3 samplerate to encode audio with (default: 11025)\n");
     printf("-d , --scale <val>             Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
     printf("-p , --flip                    Turn movie upside down\n");
     printf("-q , --quality <val>           Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
@@ -214,8 +214,10 @@ int main (int argc,char ** argv)
 #endif
 
     processargs(argc, argv);
-    if(!filename)
+    if(!filename) {
+	fprintf(stderr, "You must supply a filename");
 	exit(0);
+    }
     if(keyframe_interval<0) {
 	if(flashversion>=6)
 	    keyframe_interval=200;
@@ -229,14 +231,14 @@ int main (int argc,char ** argv)
 	fprintf(stderr, "Couldn't open %s\n", outputfilename);
 	exit(1);
     }
-
+    
 #ifdef WIN32
     ret = videoreader_vfw_open(&video, filename);
 #else
     ret = videoreader_avifile_open(&video, filename);
 #endif
 
-    if(!ret) {
+    if(ret<0) {
 	printf("Error opening %s\n", filename);
 	exit(1);
     }
