@@ -196,3 +196,10 @@
 	* lib/rfxswf: New method swf_FontPrepareForEditText()
 	* lib/lame: Removed lame library source, it's now linked dynamically
 	* lib/python: Added python interface
+0.6.1:
+	* swfc: Fixed .(edit)text- this was broken due to rfxswf font changes
+	* pdf2swf: Fixed font matrix handling
+	* pdf2swf: Fixed "highest charcode not displayed" bug
+	* pdf2swf: Bounding boxes are now of the right size
+	* pdf2swf: Fixed Windows crash in 4 bit palette images
+	* pdf2swf: Fixed another variant of "Didn't find glyph xxx in font" bug
