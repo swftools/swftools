@@ -153,6 +153,7 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 	memset(obj, 0, sizeof(SWFPLACEOBJECT));
 	swf_GetMatrix(0, &obj->matrix);
 	swf_GetCXForm(0, &obj->cxform, 1);
+	//obj->internal = PF_CHAR|PF_MATRIX|PF_CXFORM;
 	return;
     }
     swf_SetTagPos(tag, 0);
@@ -162,6 +163,7 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 	obj->depth = swf_GetU16(tag);
 	swf_GetMatrix(tag, &obj->matrix);
 	swf_GetCXForm(tag, &obj->cxform, 0);
+	//obj->internal = PF_CHAR|PF_MATRIX|PF_CXFORM;
     } else if(tag->id == ST_PLACEOBJECT2) {
         flags = swf_GetU8(tag);
         memset(obj,0,sizeof(SWFPLACEOBJECT));
@@ -170,6 +172,7 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
         swf_GetCXForm(0,&obj->cxform,1);
 
         obj->depth = swf_GetU16(tag);
+	//obj->internal = flags;
         //flags&1: move
         if(flags&2) obj->id = swf_GetU16(tag);
         if(flags&4) swf_GetMatrix(tag, &obj->matrix);
