@@ -165,7 +165,7 @@ static int noMoreTokens()
 struct _character;
 static struct level
 {
-   int type; //0=swf, 1=sprite, 2=clip
+   int type; //0=swf, 1=sprite, 2=clip, 3=button
 
    /* for swf (0): */
    SWF*swf;
@@ -353,12 +353,13 @@ static void makeMatrix(MATRIX*m, parameters_t*p)
     m->ty = p->y - h.y;
 }
 
-static MATRIX s_instancepos(instance_t*i, parameters_t*p)
+static MATRIX s_instancepos(SRECT rect, parameters_t*p)
 {
     MATRIX m;
     SRECT r;
     makeMatrix(&m, p);
-    r = swf_TurnRect(i->character->size, &m);
+    r = swf_TurnRect(rect, &m);
+    printf("%f %f %f %f\n", r.xmin/20.0, r.ymin/20.0, r.xmax/20.0, r.ymax/20.0);
     if(currentrect.xmin == 0 && currentrect.ymin == 0 && 
        currentrect.xmax == 0 && currentrect.ymax == 0)
 	currentrect = r;
@@ -435,6 +436,90 @@ void s_sprite(char*name)
     incrementid();
 }
 
+typedef struct _button
+{
+    int endofshapes;
+    int shapes[4];
+    int nr_actions;
+} button_t;
+
+static button_t mybutton;
+
+void s_button(char*name)
+{
+    tag = swf_InsertTag(tag, ST_DEFINEBUTTON2);
+    swf_SetU16(tag, id); //id
+    swf_ButtonSetFlags(tag, 0); //menu=no
+
+    mybutton.endofshapes = 0;
+    mybutton.shapes[0] = mybutton.shapes[1] = mybutton.shapes[2] = mybutton.shapes[3] = 0;
+    mybutton.nr_actions = 0;
+
+    memset(&stack[stackpos], 0, sizeof(stack[0]));
+    stack[stackpos].type = 3;
+    stack[stackpos].tag = tag;
+    stack[stackpos].id = id;
+    stack[stackpos].name = strdup(name);
+
+    stackpos++;
+    incrementid();
+}
+void s_buttonput(char*character, char*as, parameters_t p)
+{
+    character_t* c = dictionary_lookup(&characters, character);
+    MATRIX m;
+    int flags = 0;
+    if(!c) {
+	syntaxerror("character %s not known (in .shape %s)", character, character);
+    }
+    if(strstr(as, "idle")) {flags |= BS_UP;mybutton.shapes[0]=c->id;}
+    if(strstr(as, "hover")) {flags |= BS_OVER;mybutton.shapes[1]=c->id;}
+    if(strstr(as, "pressed")) {flags |= BS_DOWN;mybutton.shapes[2]=c->id;}
+    if(strstr(as, "area")) {flags |= BS_HIT;mybutton.shapes[3]=c->id;}
+    
+    if(mybutton.endofshapes) {
+	syntaxerror("a .do may not precede a .show", character, character);
+    }
+   
+    m = s_instancepos(c->size, &p);
+
+    swf_ButtonSetRecord(stack[stackpos-1].tag,flags,c->id,1,&m,&p.cxform);
+}
+void s_buttonaction(int flags, char*action)
+{
+    ActionTAG* a = 0;
+    if(!mybutton.endofshapes) {
+	swf_SetU8(stack[stackpos-1].tag,0); // end of button records
+	mybutton.endofshapes = 1;
+    }
+    
+    a = swf_ActionCompile(text, stack[0].swf->fileVersion);
+    if(!a) {
+	syntaxerror("Couldn't compile ActionScript");
+    }
+
+    swf_ButtonSetCondition(stack[stackpos-1].tag, BC_OVERDOWN_OVERUP);
+    swf_ActionSet(stack[stackpos-1].tag, a);
+    mybutton.nr_actions++;
+
+    swf_ActionFree(a);
+}
+
+static void s_endButton()
+{
+    stackpos--;
+    if(!mybutton.endofshapes) {
+	swf_SetU8(stack[stackpos].tag,0); // end of button records
+	mybutton.endofshapes = 1;
+    }
+    /* end of actions */
+      
+    swf_ButtonPostProcess(stack[stackpos].tag, mybutton.nr_actions);
+
+    tag = stack[stackpos].tag;
+    free(stack[stackpos].name);
+}
+
 TAG* removeFromTo(TAG*from, TAG*to)
 {
     TAG*save = from->prev;
@@ -496,8 +581,9 @@ static void s_endSWF()
 
     swf_OptimizeTagOrder(swf);
 
-    if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin))
+    if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize = currentrect; /* "autocrop" */
+    }
     
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize.xmax += 20; /* 1 by 1 pixels */
@@ -1120,7 +1206,7 @@ void s_startclip(char*instance, char*character, parameters_t p)
     }
     i = s_addinstance(instance, c, currentdepth);
     i->parameters = p;
-    m = s_instancepos(i, &p);
+    m = s_instancepos(i->character->size, &p);
     
     tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     /* TODO: should be ObjectPlaceClip, with clipdepth backpatched */
@@ -1157,7 +1243,7 @@ void s_put(char*instance, char*character, parameters_t p)
     
     i = s_addinstance(instance, c, currentdepth);
     i->parameters = p;
-    m = s_instancepos(i, &p);
+    m = s_instancepos(i->character->size, &p);
     
     tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
@@ -1175,7 +1261,7 @@ void s_jump(char*instance, parameters_t p)
     }
 
     i->parameters = p;
-    m = s_instancepos(i, &p);
+    m = s_instancepos(i->character->size, &p);
 
     tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     swf_ObjectMove(tag, i->depth, &m, &p.cxform);
@@ -1233,7 +1319,7 @@ void s_change(char*instance, parameters_t p2)
 	return;
     }
     
-    m = s_instancepos(i, &p2);
+    m = s_instancepos(i->character->size, &p2);
     tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     swf_ObjectMove(tag, i->depth, &m, &p2.cxform);
     i->parameters = p2;
@@ -1251,7 +1337,7 @@ void s_change(char*instance, parameters_t p2)
 	    TAG*lt;
 	    frame ++;
 	    p = s_interpolate(&p1, &p2, frame, allframes);
-	    m = s_instancepos(i, &p); //needed?
+	    m = s_instancepos(i->character->size, &p); //needed?
 	    lt = swf_InsertTag(t, ST_PLACEOBJECT2);
 	    i->lastFrame = currentframe;
 	    swf_ObjectMove(lt, i->depth, &m, &p.cxform);
@@ -1290,6 +1376,8 @@ void s_end()
 	s_endSprite();
     else if(stack[stackpos-1].type == 2)
 	s_endClip();
+    else if(stack[stackpos-1].type == 3)
+	s_endButton();
     else syntaxerror("internal error 1");
 }
 
@@ -1694,6 +1782,7 @@ static int c_placement(map_t*args, int type)
     char* bstr = lu(args, "blue");
     char* astr = lu(args, "alpha");
     char* pinstr = lu(args, "pin");
+    char* as = map_lookup(args, "as");
     MULADD r,g,b,a;
     float oldwidth;
     float oldheight;
@@ -1701,7 +1790,7 @@ static int c_placement(map_t*args, int type)
     MULADD luminance;
     parameters_t p;
 
-    if(type==5) {
+    if(type==9) { // (?) .rotate  or .arcchange
 	pivotstr = lu(args, "pivot");
 	anglestr = lu(args, "angle");
     } else {
@@ -1725,6 +1814,10 @@ static int c_placement(map_t*args, int type)
 	// put or startclip
 	character = lu(args, "character");
 	parameters_clear(&p);
+    } else if (type == 5) {
+	character = lu(args, "name");
+	parameters_clear(&p);
+	// button's show
     } else {
 	p = s_getParameters(instance);
     }
@@ -1845,14 +1938,21 @@ static int c_placement(map_t*args, int type)
 
     if(type == 0)
 	s_put(instance, character, p);
-    if(type == 1)
+    else if(type == 1)
 	s_change(instance, p);
-    if(type == 2)
+    else if(type == 2)
 	s_qchange(instance, p);
-    if(type == 3)
+    else if(type == 3)
 	s_jump(instance, p);
-    if(type == 4)
+    else if(type == 4)
 	s_startclip(instance, character, p);
+    else if(type == 5) {
+	if(as && as[0]) {
+	    s_buttonput(character, as, p);
+	} else {
+	    s_buttonput(character, "shape", p);
+	}
+    }
     return 0;
 }
 static int c_put(map_t*args) 
@@ -1883,6 +1983,11 @@ static int c_jump(map_t*args)
 static int c_startclip(map_t*args) 
 {
     c_placement(args, 4);
+    return 0;
+}
+static int c_show(map_t*args) 
+{
+    c_placement(args, 5);
     return 0;
 }
 static int c_del(map_t*args) 
@@ -1977,8 +2082,6 @@ static int c_textshape(map_t*args)
     return 0;
 }
 
-
-
 static int c_swf(map_t*args) 
 {
     char*name = lu(args, "name");
@@ -2058,22 +2161,132 @@ int fakechar(map_t*args)
 
 static int c_egon(map_t*args) {return fakechar(args);}
 static int c_button(map_t*args) {
+    char*name = lu(args, "name");
+    s_button(name);
+    return 0;
+}
+static int current_button_flags = 0;
+static int c_on_press(map_t*args)
+{
+    char*position = lu(args, "position");
+    if(!strcmp(position, "inside")) {
+	current_button_flags |= BC_OVERUP_OVERDOWN;
+    } else if(!strcmp(position, "outside")) {
+	//current_button_flags |= BC_IDLE_OUTDOWN;
+	syntaxerror("IDLE_OVERDOWN not supported by SWF");
+    } else if(!strcmp(position, "anywhere")) {
+	current_button_flags |= /*BC_IDLE_OUTDOWN|*/BC_OVERUP_OVERDOWN|BC_IDLE_OVERDOWN;
+    }
     char*action = "";
     readToken();
-    if(type == RAWDATA)
+    if(type == RAWDATA) {
 	action = text;
+	s_buttonaction(current_button_flags, action);
+	current_button_flags = 0;
+    }
     else
 	pushBack();
-
-    return fakechar(args);
+    return 0;
 }
+static int c_on_release(map_t*args)
+{
+    char*position = lu(args, "position");
+    if(!strcmp(position, "inside")) {
+	current_button_flags |= BC_OVERDOWN_OVERUP;
+    } else if(!strcmp(position, "outside")) {
+	current_button_flags |= BC_OUTDOWN_IDLE;
+    } else if(!strcmp(position, "anywhere")) {
+	current_button_flags |= BC_OVERDOWN_OVERUP|BC_OUTDOWN_IDLE|BC_OVERDOWN_IDLE;
+    }
+    char*action = "";
+    readToken();
+    if(type == RAWDATA) {
+	action = text;
+	s_buttonaction(current_button_flags, action);
+	current_button_flags = 0;
+    }
+    else
+	pushBack();
+    return 0;
+}
+static int c_on_move_in(map_t*args)
+{
+    char*position = lu(args, "state");
+    if(!strcmp(position, "pressed")) {
+	current_button_flags |= BC_OUTDOWN_OVERDOWN;
+    } else if(!strcmp(position, "not_pressed")) {
+	current_button_flags |= BC_IDLE_OVERUP;
+    } else if(!strcmp(position, "any")) {
+	current_button_flags |= BC_OUTDOWN_OVERDOWN|BC_IDLE_OVERUP|BC_IDLE_OVERDOWN;
+    }
+    char*action = "";
+    readToken();
+    if(type == RAWDATA) {
+	action = text;
+	s_buttonaction(current_button_flags, action);
+	current_button_flags = 0;
+    }
+    else
+	pushBack();
+    return 0;
+}
+static int c_on_move_out(map_t*args)
+{
+    char*position = lu(args, "state");
+    if(!strcmp(position, "pressed")) {
+	current_button_flags |= BC_OVERDOWN_OUTDOWN;
+    } else if(!strcmp(position, "not_pressed")) {
+	current_button_flags |= BC_OVERUP_IDLE;
+    } else if(!strcmp(position, "any")) {
+	current_button_flags |= BC_OVERDOWN_OUTDOWN|BC_OVERUP_IDLE|BC_OVERDOWN_IDLE;
+    }
+    char*action = "";
+    readToken();
+    if(type == RAWDATA) {
+	action = text;
+	s_buttonaction(current_button_flags, action);
+	current_button_flags = 0;
+    }
+    else
+	pushBack();
+    return 0;
+}
+static int c_on_key(map_t*args)
+{
+    char*key = lu(args, "key");
+    if(strlen(key)==1) {
+	/* ascii */
+	if(key[0]>=32) {
+	    current_button_flags |= 0x4000 + (key[0]*0x200);
+	} else {
+	    syntaxerror("invalid character: %c"+key[0]);
+	    return 1;
+	}
+    } else {
+	/* TODO: 
+	   <ctrl-x> = 0x200*(x-'a')
+	   esc = = 0x3600
+	   space = = 0x4000;
+	*/
+	syntaxerror("invalid key: %s",key);
+    }
+    char*action = "";
+    readToken();
+    if(type == RAWDATA) {
+	action = text;
+	s_buttonaction(current_button_flags, action);
+	current_button_flags = 0;
+    }
+    else
+	pushBack();
+    return 0;
+}
+
 static int c_edittext(map_t*args) {return fakechar(args);}
 
 static int c_morphshape(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
 
-static int c_buttonsounds(map_t*args) {return 0;}
-static int c_buttonput(map_t*args) {return 0;}
 static int c_texture(map_t*args) {return 0;}
 
 static int c_action(map_t*args) 
@@ -2118,13 +2331,17 @@ static struct {
  {"filled", c_primitive, "name outline color=white line=1 @fill=none"},
 
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
- {"button", c_button, "name shape over=*shape press=*shape area=*shape"},
  {"text", c_text, "name text font size=100% color=white"},
  {"edittext", c_edittext, "name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
  {"morphshape", c_morphshape, "name start end"},
+ {"button", c_button, "name"},
+    {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
+    {"on_press", c_on_press, "position=inside"},
+    {"on_release", c_on_release, "position=anywhere"},
+    {"on_move_in", c_on_move_out, "state=not_pressed"},
+    {"on_move_out", c_on_move_out, "state=not_pressed"},
+    {"on_key", c_on_key, "key=any"},
  
- {"buttonsounds", c_buttonsounds, "name press=0 release=0 enter=0 leave=0"},
-
     // control tags
  {"play", c_play, "sound loop=0 @nomultiple=0"},
  {"stop", c_stop, "sound"},
@@ -2138,7 +2355,6 @@ static struct {
  {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
- {"buttonput", c_buttonput, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex=100% scaley=100% shear=0 rotate=0 above= below="}, //TODO: ratio???
  {"texture", c_texture, "<i> x=0 y=0 scale= scalex=100% scaley=100% shear=0 rotate=0"},
 
     // commands which start a block
