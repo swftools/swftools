@@ -98,7 +98,7 @@ static int po_parse(tag_internals_t*self)
 {
     placeobject_internal_t*pi = (placeobject_internal_t*)self->data;
     /* TODO */
-    PyErr_SetString(PyExc_Exception, setError("Font parsing not implemented yet"));
+    PyErr_SetString(PyExc_Exception, setError("Placeobject parsing not implemented yet"));
     return 0;
 }
 static int po_fillTAG(tag_internals_t*self)
@@ -107,6 +107,24 @@ static int po_fillTAG(tag_internals_t*self)
     self->tag = swf_InsertTag(0, ST_PLACEOBJECT2);
     swf_SetPlaceObject(self->tag, pi->po);
     return 1;
+}
+static PyObject* po_getattr(tag_internals_t*self,char*a)
+{
+    placeobject_internal_t*si = (placeobject_internal_t*)self->data;
+    if(!strcmp(a, "cxform")) {
+	/* TODO */
+	return 0;
+    }
+    return 0;
+}
+static int po_setattr(tag_internals_t*self,char*a, PyObject*obj)
+{
+    placeobject_internal_t*si = (placeobject_internal_t*)self->data;
+    if(!strcmp(a, "cxform")) {
+	/* TODO */
+	return 0;
+    }
+    return -1;
 }
 static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char move)
 {
@@ -177,8 +195,8 @@ static tag_internals_t placeobject_tag =
     parse: po_parse,
     fillTAG: po_fillTAG,
     dealloc: po_dealloc,
-    getattr: 0, 
-    setattr: 0,
+    getattr: po_getattr, 
+    setattr: po_setattr,
     tagfunctions: 0,
     datasize: sizeof(placeobject_internal_t),
 };
@@ -580,6 +598,19 @@ static int shape_fillTAG(tag_internals_t*self)
     swf_SetShape2(self->tag, ti->shape2);
     return 1;
 }
+static int shape_parse(tag_internals_t*self)
+{
+    shape_internal_t*i= (shape_internal_t*)self->data;
+    if(i->shape2)
+	return 1;
+    if(!self->tag)
+	return 0;
+    SHAPE2* shape2 = malloc(sizeof(SHAPE2));
+    swf_ParseDefineShape(self->tag, shape2);
+    i->shape2 = shape2;
+    swf_DeleteTag(self->tag);self->tag = 0;
+    return 1;
+}
 static void shape_dealloc(tag_internals_t*self)
 {
     shape_internal_t*pi = (shape_internal_t*)self->data;
@@ -685,6 +716,8 @@ static PyObject* f_DefineShape(PyObject* self, PyObject* args, PyObject* kwargs)
 static PyObject* shape_getfillstyles(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
+    if(!shape_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int num = fi->shape2->numfillstyles;
     return Py_BuildValue("i", num);
@@ -692,19 +725,89 @@ static PyObject* shape_getfillstyles(PyObject*self, PyObject*args)
 static PyObject* shape_getlinestyles(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
+    if(!shape_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
     shape_internal_t*fi = (shape_internal_t*)itag->data;
     int num = fi->shape2->numlinestyles;
     return Py_BuildValue("i", num);
 }
+static PyObject* shape_getfillstyle(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    if(!shape_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
+    shape_internal_t*fi = (shape_internal_t*)itag->data;
+    int nr = 0;
+    if(!PyArg_ParseTuple(args, "i", &nr))
+	return NULL;
+    
+    int num = fi->shape2->numfillstyles;
+    if(nr < 0 || nr >=num)
+	return PY_ERROR("fillstyle index out of range");
+    return f_FillStyle2(fi->shape2->fillstyles[nr]);
+}
+static PyObject* shape_getlinestyle(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    if(!shape_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
+    shape_internal_t*fi = (shape_internal_t*)itag->data;
+    int nr = 0;
+    if(!PyArg_ParseTuple(args, "i", &nr))
+	return NULL;
+    
+    int num = fi->shape2->numfillstyles;
+    if(nr < 0 || nr >=num)
+	return PY_ERROR("fillstyle index out of range");
+    return f_LineStyle3(fi->shape2->linestyles[nr]);
+}
+static PyObject* shape_setfillstyle(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    if(!shape_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
+    shape_internal_t*fi = (shape_internal_t*)itag->data;
+    int nr = 0;
+    PyObject*fs = 0;
+    if(!PyArg_ParseTuple(args, "iO!", &nr, &FillStyleClass, &fs))
+	return NULL;
+    
+    int num = fi->shape2->numfillstyles;
+    if(nr < 0 || nr >=num)
+	return PY_ERROR("fillstyle index out of range");
+    fi->shape2->fillstyles[nr] = fillstyle_getFillStyle(fs);
+    return PY_NONE;
+}
+static PyObject* shape_setlinestyle(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    if(!shape_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
+    shape_internal_t*fi = (shape_internal_t*)itag->data;
+    int nr = 0;
+    PyObject*ls = 0;
+    if(!PyArg_ParseTuple(args, "iO!", &nr, &LineStyleClass, &ls))
+	return NULL;
+    
+    int num = fi->shape2->numlinestyles;
+    if(nr < 0 || nr >=num)
+	return PY_ERROR("linestyle index out of range");
+    fi->shape2->linestyles[nr] = linestyle_getLineStyle(ls);
+    return PY_NONE;
+}
 static PyMethodDef shape_methods[] = 
-{{"fillstyles", shape_getfillstyles, METH_VARARGS, "get's the number of fillstyles"},
- {"linestyles", shape_getlinestyles, METH_VARARGS, "get's the number of linestyles"},
+{{"numfillstyles", shape_getfillstyles, METH_VARARGS, "get's the number of fillstyles"},
+ {"numlinestyles", shape_getlinestyles, METH_VARARGS, "get's the number of linestyles"},
+ {"getfillstyle", shape_getfillstyle, METH_VARARGS, "get's one fillstyle"},
+ {"getlinestyle", shape_getlinestyle, METH_VARARGS, "get's one linestyle"},
+ {"setfillstyle", shape_setfillstyle, METH_VARARGS, "set's one fillstyle"},
+ {"setlinestyle", shape_setlinestyle, METH_VARARGS, "set's one linestyle"},
  {NULL, NULL, 0, NULL}
 };
 
 static tag_internals_t shape_tag =
 {
-    parse: 0,
+    parse: shape_parse,
     fillTAG: shape_fillTAG,
     dealloc: shape_dealloc,
     getattr: 0, 
@@ -1001,7 +1104,6 @@ static tag_internals_t videoframe_tag =
 };
 
 //============================================================================
-
 static PyMethodDef TagMethods[] = 
 {
     /* TAGS */
@@ -1018,6 +1120,7 @@ static PyMethodDef TagMethods[] =
     {"Shape", (PyCFunction)f_DefineShape, METH_KEYWORDS, "Create an SWF Shape Tag."},
     {"ShowFrame", (PyCFunction)f_ShowFrame, METH_KEYWORDS, "Create an SWF Show Frame Tag."},
     {"Sprite", (PyCFunction)f_Sprite, METH_KEYWORDS, "Create an SWF Sprite Tag."},
+    
     {NULL, NULL, 0, NULL}
 };
 PyMethodDef* tags_getMethods()
