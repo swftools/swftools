@@ -1339,7 +1339,8 @@ static void endpage(struct swfoutput*obj)
 static int firstpage = 1;
 void swfoutput_newpage(struct swfoutput*obj, int pageNum, int x1, int y1, int x2, int y2)
 {
-    endpage(obj);
+    if(!firstpage)
+        endpage(obj);
 
     for(depth--;depth>=startdepth;depth--) {
         tag = swf_InsertTag(tag,ST_REMOVEOBJECT2);
