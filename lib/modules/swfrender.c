@@ -62,6 +62,8 @@ typedef struct _renderbuf_internal
     int width2,height2;
     dummyshape_t*dshapes;
     dummyshape_t*dshapes_next;
+    RGBA*background;
+    int background_width, background_height;
 } renderbuf_internal;
 
 #define DEBUG 0
@@ -241,7 +243,7 @@ void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, c
     buf->posy = posy;
     buf->internal = (renderbuf_internal*)rfx_calloc(sizeof(renderbuf_internal));
     i = (renderbuf_internal*)buf->internal;
-    i->antialize = antialize;
+    i->antialize = !!antialize;
     i->multiply = antialize?multiply*2:multiply;
     i->height2 = antialize?2*buf->height:buf->height;
     i->width2 = antialize?2*buf->width:buf->width;
@@ -249,6 +251,19 @@ void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, c
     for(y=0;y<i->height2;y++) {
         i->lines[y].points = swf_InsertTag(0, 0);
     }
+}
+void swf_Render_SetBackground(RENDERBUF*buf, RGBA*img, int width, int height)
+{
+    renderbuf_internal*i = (renderbuf_internal*)buf->internal;
+    RGBA*bck = (RGBA*)rfx_alloc(sizeof(RGBA)*width*height);
+    memcpy(bck, img, sizeof(RGBA)*width*height);
+    i->background = bck;
+    i->background_width = width;
+    i->background_height = height;
+}
+void swf_Render_SetBackgroundColor(RENDERBUF*buf, RGBA color)
+{
+    swf_Render_SetBackground(buf, &color, 1, 1);
 }
 void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height)
 {
@@ -277,6 +292,10 @@ void swf_Render_Delete(RENDERBUF*dest)
     int y;
     bitmap_t*b = i->bitmaps;
     dummyshape_t*d = i->dshapes;
+
+    if(i->background) {
+	free(i->background);i->background=0;
+    }
 
     /* delete line buffers */
     for(y=0;y<i->height2;y++) {
@@ -712,7 +731,16 @@ RGBA* swf_Render(RENDERBUF*dest)
         state_t state;
         memset(&state, 0, sizeof(state_t));
 
-        memset(line, 0, sizeof(RGBA)*i->width2);
+	if(!i->background) {
+	    memset(line, 0, sizeof(RGBA)*i->width2);
+	} else {
+	    int x,xx;
+	    int xstep=i->background_width*65536/i->width2;
+	    RGBA*src = &i->background[(i->background_height*y/i->height2)*i->background_width];
+	    for(x=0,xx=0;x<i->width2;x++,xx+=xstep) {
+		line[x] = src[xx>>16];
+	    }
+	}
         memory += tag->memsize;
         qsort(tag->data, num, size, compare_renderpoints);
         for(n=0;n<num;n++) {
