@@ -661,6 +661,35 @@ void swf_Shape2Free(SHAPE2 * s)
 	rfx_free(s->bbox);
 }
 
+SHAPE2* swf_Shape2Clone(SHAPE2 * s)
+{
+    SHAPELINE*line = s->lines;
+    SHAPELINE*prev = 0;
+    SHAPE2*s2 = rfx_alloc(sizeof(SHAPE2));
+    memcpy(s2,s,sizeof(SHAPE2));
+    s2->linestyles = rfx_alloc(sizeof(LINESTYLE)*s->numlinestyles);
+    memcpy(s2->linestyles, s->linestyles, sizeof(LINESTYLE)*s->numlinestyles);
+    s2->fillstyles = rfx_alloc(sizeof(FILLSTYLE)*s->numfillstyles);
+    memcpy(s2->fillstyles, s->fillstyles, sizeof(FILLSTYLE)*s->numfillstyles);
+
+    while(line) {
+	SHAPELINE*line2 = rfx_alloc(sizeof(SHAPELINE));
+        memcpy(line2, line, sizeof(SHAPELINE));
+        line2->next = 0;
+        if(prev)
+            prev->next = line2;
+        else
+            s2->lines = line2;
+        prev = line2;
+	line = line->next;
+    }
+    if(s->bbox) {
+        s2->bbox = rfx_alloc(sizeof(SRECT));
+        memcpy(s2->bbox, s->bbox, sizeof(SRECT));
+    }
+    return s2;
+}
+
 SHAPE2* swf_ShapeToShape2(SHAPE*shape) {
 
     SHAPE2*shape2 = (SHAPE2*)rfx_calloc(sizeof(SHAPE2));
