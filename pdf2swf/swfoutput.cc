@@ -81,7 +81,6 @@ typedef struct _swfoutput_internal
     char storefont;
     int flag_protected;
     
-    char* filename;
     SWF swf;
     TAG *tag;
     int currentswfid;
@@ -142,7 +141,6 @@ static swfoutput_internal* init_internal_struct()
 
     i->storefont = 0;
     i->flag_protected = 0;
-    i->filename = 0;
     i->currentswfid = 0;
     i->depth = 1;
     i->startdepth = 1;
@@ -1498,7 +1496,7 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int x1, int y1, int x2
 }
 
 /* initialize the swf writer */
-void swfoutput_init(struct swfoutput* obj, char*_filename)
+void swfoutput_init(struct swfoutput* obj)
 {
     memset(obj, 0, sizeof(struct swfoutput));
     obj->internal = init_internal_struct();
@@ -1507,7 +1505,6 @@ void swfoutput_init(struct swfoutput* obj, char*_filename)
 
     SRECT r;
     RGBA rgb;
-    i->filename = _filename;
 
     msg("<verbose> initializing swf output for size %d*%d\n", i->sizex,i->sizey);
 
@@ -1699,7 +1696,7 @@ static void endshape(swfoutput*obj, int clipdepth)
     i->bboxrectpos = -1;
 }
 
-void swfoutput_save(struct swfoutput* obj) 
+void swfoutput_save(struct swfoutput* obj, char*filename) 
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
     endpage(obj);
@@ -1717,15 +1714,13 @@ void swfoutput_save(struct swfoutput* obj)
     }
     int fi;
 
-    if(!i->filename) 
-        return;
-    if(i->filename)
-     fi = open(i->filename, O_BINARY|O_CREAT|O_TRUNC|O_WRONLY, 0777);
+    if(filename)
+     fi = open(filename, O_BINARY|O_CREAT|O_TRUNC|O_WRONLY, 0777);
     else
      fi = 1; // stdout
     
     if(fi<=0) {
-     msg("<fatal> Could not create \"%s\". ", FIXNULL(i->filename));
+     msg("<fatal> Could not create \"%s\". ", FIXNULL(filename));
      exit(1);
     }
  
@@ -1739,7 +1734,7 @@ void swfoutput_save(struct swfoutput* obj)
        msg("<error> WriteSWF() failed.\n");
     }
 
-    if(i->filename)
+    if(filename)
      close(fi);
     msg("<notice> SWF written\n");
 }
@@ -1748,8 +1743,6 @@ void swfoutput_save(struct swfoutput* obj)
 void swfoutput_destroy(struct swfoutput* obj) 
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-
-    swfoutput_save(obj);
 
     fontlist_t *tmp,*iterator = i->fontlist;
     while(iterator) {
