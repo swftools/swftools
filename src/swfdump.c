@@ -145,7 +145,7 @@ void dumpButton2Actions(TAG*tag, char*prefix)
       offsetpos = swf_GetU16(tag);
       condition = swf_GetU16(tag);                // condition
       
-      actions = swf_GetActions(tag);
+      actions = swf_ActionGet(tag);
       printf("%s condition %04x\n", prefix, condition);
       swf_DumpActions(actions, prefix);
     }
@@ -163,7 +163,7 @@ void dumpButtonActions(TAG*tag, char*prefix)
       swf_GetU16(tag);          // layer
       swf_GetMatrix(tag,NULL);  // matrix
     }
-    actions = swf_GetActions(tag);
+    actions = swf_ActionGet(tag);
     swf_DumpActions(actions, prefix);
 }
 
@@ -245,6 +245,7 @@ int main (int argc,char ** argv)
 	       "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
 	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n"
 	       "   PLAY=\"true\" LOOP=\"true\" QUALITY=\"high\"\n"
+	       "   TYPE=\"application/x-shockwave-flash\"\n"
 	       "   PLUGINSPAGE=\"http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash\">\n"
                "  </EMBED>\n" 
 	       "</OBJECT>\n", xsize, ysize, swf.fileVersion, filename, filename, xsize, ysize);
@@ -300,7 +301,7 @@ int main (int argc,char ** argv)
         }
         else if(tag->id == ST_DOACTION && action) {
             ActionTAG*actions;
-            actions = swf_GetActions(tag);
+            actions = swf_ActionGet(tag);
             swf_DumpActions(actions, myprefix);
         }
 	else if(tag->id == ST_DEFINEBUTTON && action) {
