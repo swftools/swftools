@@ -222,6 +222,9 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 #define ST_TEMPLATECOMMAND      49
 #define ST_GENERATOR3           51
 #define ST_EXTERNALFONT         52
+#define ST_EXPORTASSETS		56
+#define ST_IMPORTASSETS		57
+#define ST_ENABLEDEBUGGER	58
 
 #define ST_REFLEX              777 /* to identify generator software */
 

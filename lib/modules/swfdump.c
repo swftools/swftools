@@ -127,6 +127,12 @@ char* swf_TagGetName(TAG*tag)
             return "GENERATOR3";
         case ST_EXTERNALFONT:
             return "EXTERNALFONT";
+	case ST_EXPORTASSETS:
+	    return "EXPORTASSETS";
+	case ST_IMPORTASSETS:
+	    return "IMPORTASSETS";
+	case ST_ENABLEDEBUGGER:
+	    return "ENABLEDEBUGGER";
         case ST_REFLEX:
             return "REFLEX";
     }
