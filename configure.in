@@ -16,7 +16,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2004-10-24-1908
+VERSION=2004-11-03-1856
 
 
 # ------------------------------------------------------------------
@@ -56,15 +56,22 @@ fi
 export PACKAGE VERSION CFLAGS CXXFLAGS
 
 dnl Checks for programs.
- AC_CANONICAL_HOST
+
+AC_CANONICAL_HOST
+
+SHARED="-shared"
 MACOSX=
 case $host_os in
     *darwin* ) 
 	MACOSX=yes
 	CFLAGS="$CFLAGS -fno-rtti"
 	CXXFLAGS="$CXXFLAGS -fno-rtti"
+	SHARED="-bundle"
 	;;
 esac
+
+AC_SUBST(SHARED)
+
 dnl Checks for programs.
  AC_PROG_CC
  AC_PROG_CXX
