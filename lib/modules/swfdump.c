@@ -212,6 +212,10 @@ char* swf_TagGetName(TAG*tag)
             return "FREEALL";
         case ST_MX4:
             return "MX4";
+        case ST_SCRIPTLIMITS:
+            return "SCRIPTLIMITS";
+        case ST_SETTABINDEX:
+            return "SETTABINDEX";
     }
     return 0;
 }
