@@ -97,7 +97,7 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "Disabling pdf2swf tool..."
   rm pdf2swf/Makefile
   echo all: > pdf2swf/Makefile
-  echo install: > pdf2swf/Makefile
+  echo install: >> pdf2swf/Makefile
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
     echo "Disabling jpeg2swf tool..."
     export JPEG2SWF=
