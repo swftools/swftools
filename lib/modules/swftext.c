@@ -685,7 +685,7 @@ int swf_TextCountBits(SWFFONT * font,U8 * s,int scale,U8 * gbits,U8 * abits)
     if(s[0] < font->maxascii)
 	glyph = font->ascii2glyph[s[0]];
     if(glyph>=0) {
-       g = swf_CountBits(glyph,g);
+       g = swf_CountUBits(glyph,g);
        a = swf_CountBits((((U32)font->glyph[glyph].advance)*scale)/100,a);
     }
     s++;
@@ -1016,7 +1016,7 @@ void swf_FontCreateLayout(SWFFONT*f)
 	if(!shape2) { 
 	    fprintf(stderr, "Shape parse error\n");exit(1);
 	}
-	bbox = swf_GetShapeBoundingBox(shape2->lines);
+	bbox = swf_GetShapeBoundingBox(shape2);
 	swf_Shape2Free(shape2);
 	f->layout->bounds[t] = bbox;
 	/* FIXME */
