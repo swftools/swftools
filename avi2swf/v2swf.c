@@ -972,29 +972,6 @@ void v2swf_backpatch(v2swf_t*v2swf, char*filename)
     }
 }
 
-float v2swf_getprogress(v2swf_t*v2swf)
-{
-    float* p;
-    v2swf_internal_t* i;
-    msg("v2swf_getprogress()");
-    if(!v2swf || !v2swf->internal) {
-	return 0.0;
-    }
-    i = (v2swf_internal_t*)v2swf->internal;
-
-    p = (float*)videoreader_getinfo(i->video, "position");
-
-    if(p) {
-	return *p;
-    } else {
-	float f = i->frames/1500.0; /*fake*/
-	if(f>1.0)
-	    return 1.0;
-	else
-	    return f;
-    }
-}
-
 void v2swf_setvideoparameter(videoreader_t*v, char*name, char*value)
 {
     msg("v2swf_setvideoparameter()");
