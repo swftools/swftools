@@ -1362,6 +1362,81 @@ void test_copy_diff()
 
 #ifdef MAIN
 #include "png.h"
+
+int compileSWFActionCode(const char *script, int version, void**data, int*len) {return 0;}
+
+void mkblack()
+{
+    SWF swf;
+    SWFPLACEOBJECT obj;
+    int frames = 88;
+    int width = 160;
+    int height = 112;
+    int x,y;
+    TAG*tag = 0;
+    RGBA rgb;
+    RGBA* pic = 0;
+    VIDEOSTREAM stream;
+   
+    pic = malloc(width*height*4);
+    memset(pic, 0, width*height*4);
+
+    memset(&swf,0,sizeof(SWF));
+    memset(&obj,0,sizeof(obj));
+
+    swf.fileVersion    = 6;
+    swf.frameRate      = 15*256;
+    swf.movieSize.xmax = 20*width;
+    swf.movieSize.ymax = 20*height;
+
+    swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+    tag = swf.firstTag;
+    rgb.r = 0x00;rgb.g = 0x30;rgb.b = 0xff;
+    swf_SetRGB(tag,&rgb);
+
+    tag = swf_InsertTag(tag, ST_DEFINEVIDEOSTREAM);
+    swf_SetU16(tag, 1);
+    swf_SetVideoStreamDefine(tag, &stream, frames, width, height);
+    stream.do_motion = 0;
+
+    for(y=0;y<height;y++)  {
+	for(x=0;x<width;x++) {
+	    int dx = x/16;
+	    int dy = y/16;
+
+	    pic[y*width+x].r = 0;
+	    pic[y*width+x].g = 0;
+	    pic[y*width+x].b = 0;
+	    pic[y*width+x].a = 0;
+	}
+    }
+    tag = swf_InsertTag(tag, ST_VIDEOFRAME);
+    swf_SetU16(tag, 1);
+    
+    swf_SetVideoStreamIFrame(tag, &stream, pic, 7);
+
+    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+    swf_GetPlaceObject(0, &obj);
+    
+    obj.depth = 4;
+    obj.id = 1;
+    
+    swf_SetPlaceObject(tag,&obj);
+
+    tag = swf_InsertTag(tag, ST_SHOWFRAME);
+    
+    swf_VideoStreamClear(&stream);
+
+    tag = swf_InsertTag(tag, ST_END);
+
+    int fi = open("black.swf", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    if(swf_WriteSWC(fi,&swf)<0) {
+	fprintf(stderr,"WriteSWF() failed.\n");
+    }
+    close(fi);
+    swf_FreeTags(&swf);
+}
+
 int main(int argn, char*argv[])
 {
     int fi;
@@ -1383,6 +1458,8 @@ int main(int argn, char*argv[])
 #ifdef TESTS
     test_copy_diff();
 #endif
+
+    mkblack();
 
     memset(&stream, 0, sizeof(stream));
 
@@ -1412,7 +1489,7 @@ int main(int argn, char*argv[])
     swf_SetVideoStreamDefine(tag, &stream, frames, width, height);
     stream.do_motion = 0;
 
-    srand48(time(0));
+    //srand48(time(0));
 
     for(t=0;t<frames;t++)
     {
@@ -1429,7 +1506,13 @@ int main(int argn, char*argv[])
 		    pic2[y*width+x].g+=2;
 		    pic2[y*width+x].b+=2;
 		} else {
-		    pic2[y*width+x] = line[((int)xx)];
+		    //pic2[y*width+x] = line[((int)xx)];
+		    //pic2[y*width+x].r = lrand48();//line[((int)xx)];
+		    //pic2[y*width+x].g = lrand48();//line[((int)xx)];
+		    //pic2[y*width+x].b = lrand48();//line[((int)xx)];
+		    pic2[y*width+x].r = 0;
+		    pic2[y*width+x].g = 0;
+		    pic2[y*width+x].b = 0;
 		}
 		/*if(dx==16 && dy==16) 
 		    pic2[y*width+x] = pic[(y-16*16)*width+(x-16*16)];*/
