@@ -124,6 +124,7 @@ U16 swf_GetPlaceID(TAG * t)
   switch (swf_GetTagID(t))
   { case ST_PLACEOBJECT:
     case ST_REMOVEOBJECT:
+    case ST_FREECHARACTER:
     case ST_STARTSOUND:
       id = swf_GetU16(t);
       break;
@@ -289,6 +290,8 @@ char* swf_GetName(TAG * t)
     swf_SetTagPos(t,oldTagPos);
     return name;
 }
+
+#define DEBUG_ENUMERATE if(0)
 
 static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num)
 {
@@ -532,10 +535,14 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    int id; 
 	    id = swf_GetU16(tag); // id;
 	    swf_GetRect(tag, NULL); // bounds
+    
+	    DEBUG_ENUMERATE printf("Tag:%d Name:%s ID:%d\n", tag->id, swf_TagGetName(tag), id);
 
 	    enumerateUsedIDs_styles(tag, callback, callback_data, num);
+	    DEBUG_ENUMERATE printf("-------\n");
 	    fillbits = swf_GetBits(tag, 4);
 	    linebits = swf_GetBits(tag, 4);
+	    DEBUG_ENUMERATE printf("%d %d\n", fillbits, linebits);
 	    swf_ResetReadBits(tag);
 	    while(1) {
 		int flags;
@@ -546,19 +553,28 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 			break;
 		    if(flags&1) { //move
 			int n = swf_GetBits(tag, 5); 
-			swf_GetBits(tag, n); //x
-			swf_GetBits(tag, n); //y
+			int x,y;
+			x = swf_GetBits(tag, n); //x
+			y = swf_GetBits(tag, n); //y
+			DEBUG_ENUMERATE printf("move %f %f\n",x/20.0,y/20.0);
 		    }
 		    if(flags&2) { //fill0
-			swf_GetBits(tag, fillbits); 
+			int fill0;
+			fill0 = swf_GetBits(tag, fillbits); 
+			DEBUG_ENUMERATE printf("fill0 %d\n", fill0);
 		    }
 		    if(flags&4) { //fill1
-			swf_GetBits(tag, fillbits); 
+			int fill1;
+			fill1 = swf_GetBits(tag, fillbits); 
+			DEBUG_ENUMERATE printf("fill1 %d\n", fill1);
 		    }
 		    if(flags&8) { //linestyle
-			swf_GetBits(tag, linebits); 
+			int line;
+			line = swf_GetBits(tag, linebits); 
+			DEBUG_ENUMERATE printf("linestyle %d\n",line);
 		    }
 		    if(flags&16) {
+			DEBUG_ENUMERATE printf("more fillstyles\n");
 			enumerateUsedIDs_styles(tag, callback, callback_data, num);
 			fillbits = swf_GetBits(tag, 4);
 			linebits = swf_GetBits(tag, 4);
@@ -568,18 +584,24 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		    if(flags) { //straight edge
 			int n = swf_GetBits(tag, 4) + 2;
 			if(swf_GetBits(tag, 1)) { //line flag
-			    swf_GetBits(tag, n); //delta x
-			    swf_GetBits(tag, n); //delta y
+			    int x,y;
+			    x = swf_GetSBits(tag, n); //delta x
+			    y = swf_GetSBits(tag, n); //delta y
+			    DEBUG_ENUMERATE printf("line %f %f\n",x/20.0,y/20.0);
 			} else {
 			    int v=swf_GetBits(tag, 1);
-			    swf_GetBits(tag, n); //vert/horz
+			    int d;
+			    d = swf_GetSBits(tag, n); //vert/horz
+			    DEBUG_ENUMERATE printf("%s %f\n",v?"vertical":"horizontal", d/20.0);
 			}
 		    } else { //curved edge
 			int n = swf_GetBits(tag, 4) + 2;
-			swf_GetBits(tag, n);
-			swf_GetBits(tag, n);
-			swf_GetBits(tag, n);
-			swf_GetBits(tag, n);
+			int x1,y1,x2,y2;
+			x1 = swf_GetSBits(tag, n);
+			y1 = swf_GetSBits(tag, n);
+			x2 = swf_GetSBits(tag, n);
+			y2 = swf_GetSBits(tag, n);
+			DEBUG_ENUMERATE printf("curve %f %f %f %f\n", x1/20.0, y1/20.0, x2/20.0, y2/20.0);
 		    }
 		}
 	    }
@@ -593,12 +615,14 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 void callbackCount(TAG * t,int pos, void*ptr)
 {
     (*(int*)ptr)++;
+    DEBUG_ENUMERATE printf("callback(%d) %d\n", pos, *(U16*)&t->data[pos]);
 }
 
 void callbackFillin(TAG * t,int pos, void*ptr)
 {
     **(int**)ptr = pos;
     (*(int**)ptr)++;
+    DEBUG_ENUMERATE printf("callback(%d) %d\n", pos, *(U16*)&t->data[pos]);
 }
 
 int swf_GetNumUsedIDs(TAG * t)
