@@ -5,15 +5,15 @@ include ./Makefile.common
 
 all install uninstall clean:
 	@echo making $@ in lib...
-	cd lib;$(MAKE) $@;cd ..
+	cd lib;$(MAKE) $@
 	@echo making $@ in src...
-	cd src;$(MAKE) $@;cd ..
+	cd src;$(MAKE) $@
 	@echo making $@ in pdf2swf...
-	cd pdf2swf;$(MAKE) $@;cd ..
+	cd pdf2swf;$(MAKE) $@
 	@echo making $@ in avi2swf...
-	cd avi2swf;$(MAKE) $@;cd ..
+	cd avi2swf;$(MAKE) $@
 	@echo making $@ in swfs...
-	cd swfs;$(MAKE) $@;cd ..
+	cd swfs;$(MAKE) $@
 	@$(MAKE) $@-local
 
 clean-local:
