@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "wav.h"
 
 struct WAVBlock {
@@ -25,10 +26,10 @@ int getWAVBlock(FILE*fi, struct WAVBlock*block)
     if(fread(b,1,4,fi)<4)
 	return 0;
     block->size = b[0]|b[1]<<8|b[2]<<16|b[3]<<24;
-    printf("Chunk: [%c%c%c%c] (%d bytes)\n", 
+    /*printf("Chunk: [%c%c%c%c] (%d bytes)\n", 
 	    block->id[0],block->id[1],
 	    block->id[2],block->id[3],
-	    block->size);
+	    block->size);*/
     return 1;
 }
 
@@ -45,7 +46,7 @@ int readWAV(char* filename, struct WAV*wav)
     filesize = ftell(fi);
     fseek(fi, 0, SEEK_SET);
 
-    printf("Filesize: %d\n", filesize);
+    //printf("Filesize: %d\n", filesize);
 
     if(!getWAVBlock (fi, &block))
 	return 0;
