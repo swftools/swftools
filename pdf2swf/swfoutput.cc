@@ -85,7 +85,6 @@ typedef struct _swfoutput_internal
     int depth;
     int startdepth;
     int linewidth;
-    SRECT lastpagesize;
     
     SHAPE* shape;
     int shapeid;
@@ -98,17 +97,22 @@ typedef struct _swfoutput_internal
     int lastwasfill;
     int shapeisempty;
     char fill;
-    int sizex;
-    int sizey;
+    int max_x;
+    int max_y;
     TAG* cliptags[128];
     int clipshapes[128];
     U32 clipdepths[128];
     int clippos;
+
+    int frameno;
+    int lastframeno;
     
     char fillstylechanged;
     
     int bboxrectpos;
     SRECT bboxrect;
+
+    TAG*cliptag;
  
     chardata_t chardata[CHARDATAMAX];
     int chardatapos;
@@ -129,6 +133,8 @@ static swfoutput_internal* init_internal_struct()
     i->linewidth = 0;
     i->shapeid = -1;
     i->textid = -1;
+    i->frameno = 0;
+    i->lastframeno = 0;
 
     i->fillstyleid;
     i->linestyleid;
@@ -634,15 +640,15 @@ void drawShortPathWithEnds(struct swfoutput*obj, double x, double y, struct swfm
 		if(dir) {
                     /* FIXME: box should be smaller */
 		    q0.x = 0; q0.y = 0;
-		    q1.x = i->sizex; q1.y = 0;
-		    q2.x = i->sizex; q2.y = i->sizey;
-		    q3.x = 0; q3.y = i->sizey;
+		    q1.x = i->max_x; q1.y = 0;
+		    q2.x = i->max_x; q2.y = i->max_y;
+		    q3.x = 0; q3.y = i->max_y;
 		} else {
                     /* FIXME: box should be smaller */
-		    q0.x = i->sizex; q0.y = i->sizey;
-		    q1.x = 0; q1.y = i->sizey;
+		    q0.x = i->max_x; q0.y = i->max_y;
+		    q1.x = 0; q1.y = i->max_y;
 		    q2.x = 0; q2.y = 0;
-		    q3.x = i->sizex; q3.y = 0;
+		    q3.x = i->max_x; q3.y = 0;
 		}
 		q4.x = p0.x; 
 		q4.y = p0.y;
@@ -1440,6 +1446,46 @@ void swfoutput_pagefeed(struct swfoutput*obj)
 	swf_ActionSet(i->tag,atag);
     }
     i->tag = swf_InsertTag(i->tag,ST_SHOWFRAME);
+    i->frameno ++;
+    
+    for(i->depth--;i->depth>=i->startdepth;i->depth--) {
+        i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
+        swf_SetU16(i->tag,i->depth);
+    }
+    i->depth = i->startdepth;
+}
+
+static void setBackground(struct swfoutput*obj, int x1, int y1, int x2, int y2)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    RGBA rgb;
+    rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
+    SRECT r;
+    SHAPE* s;
+    int ls1=0,fs1=0;
+    int shapeid = ++i->currentswfid;
+    r.xmin = x1;
+    r.ymin = y1;
+    r.xmax = x2;
+    r.ymax = y2;
+    i->tag = swf_InsertTag(i->tag, ST_DEFINESHAPE);
+    swf_ShapeNew(&s);
+    fs1 = swf_ShapeAddSolidFillStyle(s, &rgb);
+    swf_SetU16(i->tag,shapeid);
+    swf_SetRect(i->tag,&r);
+    swf_SetShapeHeader(i->tag,s);
+    swf_ShapeSetAll(i->tag,s,x1,y1,ls1,fs1,0);
+    swf_ShapeSetLine(i->tag,s,(x2-x1),0);
+    swf_ShapeSetLine(i->tag,s,0,(y2-y1));
+    swf_ShapeSetLine(i->tag,s,(x1-x2),0);
+    swf_ShapeSetLine(i->tag,s,0,(y1-y2));
+    swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(s);
+    i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
+    swf_ObjectPlace(i->tag,shapeid,i->depth++,0,0,0);
+    i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
+    swf_ObjectPlaceClip(i->tag,shapeid,i->depth++,0,0,0,65535);
+    i->cliptag = i->tag;
 }
 
 void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2)
@@ -1452,70 +1498,35 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
     i->page_matrix.tx = movex*20;
     i->page_matrix.ty = movey*20;
 
-    for(i->depth--;i->depth>=i->startdepth;i->depth--) {
-        i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
-        swf_SetU16(i->tag,i->depth);
+    if(i->cliptag && i->frameno == i->lastframeno) {
+        SWFPLACEOBJECT obj;
+        swf_GetPlaceObject(i->cliptag, &obj);
+        obj.clipdepth = i->depth++;
+        swf_ResetTag(i->cliptag, i->cliptag->id);
+        swf_SetPlaceObject(i->cliptag, &obj);
+        swf_PlaceObjectFree(&obj);
     }
-    /* TODO: this should all be done in SWFOutputDev */
 
-    i->depth = i->startdepth = 3; /* leave room for clip and background rectangle */
+    i->max_x = x2;
+    i->max_y = y2;
+    
+    msg("<notice> processing page %d (%dx%d:%d:%d)", pageNum,x2-x1,y2-y1, x1, y1);
 
-    i->sizex = x2;
-    i->sizey = y2;
     x1*=20;y1*=20;x2*=20;y2*=20;
 
-    if(i->lastpagesize.xmin != x1 ||
-       i->lastpagesize.xmax != x2 ||
-       i->lastpagesize.ymin != y1 ||
-       i->lastpagesize.ymax != y2)
-    {/* add white clipping rectangle */
-	msg("<notice> processing page %d (%dx%d)", pageNum,i->sizex,i->sizey);
+    /* set clipping/background rectangle */
+    /* TODO: this should all be done in SWFOutputDev */
+    setBackground(obj, x1, y1, x2, y2);
 
-	if(!i->firstpage) {
-	    msg("<notice> Page has a different size than previous ones");
-	    i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
-	    swf_SetU16(i->tag,1);
-	    i->tag = swf_InsertTag(i->tag,ST_REMOVEOBJECT2);
-	    swf_SetU16(i->tag,2);
-	}
+    /* increase SWF's bounding box */
+    SRECT r;
+    r.xmin = x1;
+    r.ymin = y1;
+    r.xmax = x2;
+    r.ymax = y2;
+    swf_ExpandRect2(&i->swf.movieSize, &r);
 
-	RGBA rgb;
-	rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
-	SRECT r;
-	SHAPE* s;
-	int ls1=0,fs1=0;
-	int shapeid = ++i->currentswfid;
-	r.xmin = x1;
-	r.ymin = y1;
-	r.xmax = x2;
-	r.ymax = y2;
-	i->tag = swf_InsertTag(i->tag, ST_DEFINESHAPE);
-	swf_ShapeNew(&s);
-	fs1 = swf_ShapeAddSolidFillStyle(s, &rgb);
-	swf_SetU16(i->tag,shapeid);
-	swf_SetRect(i->tag,&r);
-	swf_SetShapeHeader(i->tag,s);
-	swf_ShapeSetAll(i->tag,s,x1,y1,ls1,fs1,0);
-	swf_ShapeSetLine(i->tag,s,(x2-x1),0);
-	swf_ShapeSetLine(i->tag,s,0,(y2-y1));
-	swf_ShapeSetLine(i->tag,s,(x1-x2),0);
-	swf_ShapeSetLine(i->tag,s,0,(y1-y2));
-	swf_ShapeSetEnd(i->tag);
-	swf_ShapeFree(s);
-	i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-	swf_ObjectPlace(i->tag,shapeid,/*depth*/1,0,0,0);
-	i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-	swf_ObjectPlaceClip(i->tag,shapeid,/*depth*/2,0,0,0,65535);
-    } else {
-	msg("<notice> processing page %d", pageNum);
-    }
-
-    i->lastpagesize.xmin = x1;
-    i->lastpagesize.xmax = x2;
-    i->lastpagesize.ymin = y1;
-    i->lastpagesize.ymax = y2;
-    swf_ExpandRect2(&i->swf.movieSize, &i->lastpagesize);
-
+    i->lastframeno = i->frameno;
     i->firstpage = 0;
     i->pagefinished = 0;
 }
@@ -1531,13 +1542,12 @@ void swfoutput_init(struct swfoutput* obj)
     SRECT r;
     RGBA rgb;
 
-    msg("<verbose> initializing swf output for size %d*%d\n", i->sizex,i->sizey);
+    msg("<verbose> initializing swf output for size %d*%d\n", i->max_x,i->max_y);
 
     obj->swffont = 0;
     obj->drawmode = -1;
     
     memset(&i->swf,0x00,sizeof(SWF));
-    memset(&i->lastpagesize,0x00,sizeof(SRECT));
 
     i->swf.fileVersion    = config_flashversion;
     i->swf.frameRate      = 0x0040; // 1 frame per 4 seconds
@@ -1551,7 +1561,7 @@ void swfoutput_init(struct swfoutput* obj)
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
     swf_SetRGB(i->tag,&rgb);
 
-    i->startdepth = i->depth = 0;
+    i->startdepth = i->depth = 3; /* leave room for clip and background rectangle */
     
     if(config_protect)
       i->tag = swf_InsertTag(i->tag, ST_PROTECT);
@@ -1581,8 +1591,8 @@ static void startshape(struct swfoutput*obj)
     i->bboxrectpos = i->tag->len;
     r.xmin = 0;
     r.ymin = 0;
-    r.xmax = 20*i->sizex;
-    r.ymax = 20*i->sizey;
+    r.xmax = 20*i->max_x;
+    r.ymax = 20*i->max_y;
     swf_SetRect(i->tag,&r);
    
     memset(&i->bboxrect, 0, sizeof(i->bboxrect));
@@ -1739,6 +1749,9 @@ void swfoutput_finalize(struct swfoutput*obj)
 
     if(i->tag && i->tag->id == ST_END)
         return; //already done
+       
+    if(i->frameno == i->lastframeno) // fix: add missing pagefeed
+        swfoutput_pagefeed(obj);
 
     endpage(obj);
     fontlist_t *tmp,*iterator = i->fontlist;
