@@ -442,7 +442,7 @@ SWFFONT* swf_LoadFont(char*filename)
 #elif defined(HAVE_T1LIB)
     return swf_LoadT1Font(filename);
 #else
-    fprintf(stderr, "Error: Neither T1lib nor FreeType support compiled in. Could not load %s\n", infile);
+    fprintf(stderr, "Error: Neither T1lib nor FreeType support compiled in. Could not load %s\n", filename);
     return 0;
 #endif
 }

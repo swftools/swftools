@@ -776,22 +776,30 @@ void s_image(char*name, char*type, char*filename, int quality)
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
-    tag = swf_InsertTag(tag, ST_DEFINEBITSJPEG2);
-    swf_SetU16(tag, imageID);
+    if(type=="jpeg") {
+#ifndef HAVE_LIBJPEG
+	warning("no jpeg support compiled in");
+	s_box(name, 0, 0, black, 20, 0);
+	return;
+#else
+	tag = swf_InsertTag(tag, ST_DEFINEBITSJPEG2);
+	swf_SetU16(tag, imageID);
 
-    if(swf_SetJPEGBits(tag, filename, quality) < 0) {
-	syntaxerror("Image \"%s\" not found, or contains errors", filename);
+	if(swf_SetJPEGBits(tag, filename, quality) < 0) {
+	    syntaxerror("Image \"%s\" not found, or contains errors", filename);
+	}
+
+	swf_GetJPEGSize(filename, &width, &height);
+
+	r.xmin = 0;
+	r.ymin = 0;
+	r.xmax = width*20;
+	r.ymax = height*20;
+
+	s_addimage(name, id, tag, r);
+	incrementid();
+#endif
     }
-
-    swf_GetJPEGSize(filename, &width, &height);
-
-    r.xmin = 0;
-    r.ymin = 0;
-    r.xmax = width*20;
-    r.ymax = height*20;
-
-    s_addimage(name, id, tag, r);
-    incrementid();
 
     /* step 2: the character */
     tag = swf_InsertTag(tag, ST_DEFINESHAPE); // todo: should be defineshape2/3 once images can be transparent.(?)

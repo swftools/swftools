@@ -37,6 +37,8 @@ ${name}/lib/action/lex.swf4.c \
 ${name}/lib/action/lex.swf5.c \
 ${name}/lib/action/swf4compiler.tab.c \
 ${name}/lib/action/swf5compiler.tab.c \
+${name}/lib/action/swf4compiler.tab.h \
+${name}/lib/action/swf5compiler.tab.h \
 ${name}/src/parser.lex \
 ${name}/src/parser.h \
 ${name}/src/Makefile.in \
