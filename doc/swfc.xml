@@ -310,11 +310,11 @@ them for clipping:
 .flash name="text5.swf"
 .font courier "Courier.swf"
 .text hithere text="HELLO" font=courier size=200%
-.swf scene Scenery50.swf
+.jpeg scenery "scenery.jpg"
 
 .frame 0
     .startclip hithere pin=center x=100 y=75 scale=50% #text clips...
-        .put scene # ...the image "scene"
+        .put scenery scale=50%
     .end
 .frame 100
      .change hithere rotate+=360 pin=center scale=100%
