@@ -116,6 +116,38 @@ static void store(enum type_t type, int line, int column, char*text, int length)
     prefix = 0;
 }
 
+#define MAX_INCLUDE_DEPTH 16
+YY_BUFFER_STATE include_stack[MAX_INCLUDE_DEPTH];
+int include_stack_ptr = 0;
+
+void handleInclude(char*text, int len)
+{
+    text+=9;len-=9;
+    while(len >=1 && (text[0] == ' ' || text[0] == '\t')) {
+	text++;len--;
+    }
+    while(len >= 1 && (text[len-1] == ' ' || text[len-1] == '\n')) {
+	len--;
+    }
+    if(len >= 2 && text[0] == '"' && text[len-1] == '"') {
+	text++; len-=2;
+    }
+    text[len] = 0;
+    if(include_stack_ptr >= MAX_INCLUDE_DEPTH) {
+    	fprintf( stderr, "Includes nested too deeply" );
+    	exit( 1 );
+    }
+    include_stack[include_stack_ptr++] = YY_CURRENT_BUFFER;
+    yyin = fopen(text, "rb");
+    if (!yyin) {
+	fprintf(stderr, "Couldn't open %s\n", text);
+	exit(1);
+    }
+    yy_switch_to_buffer(
+	yy_create_buffer( yyin, YY_BUF_SIZE ) );
+    BEGIN(INITIAL);
+}
+
 #define c() {count(yytext, yyleng, YY_START);}
 #define s(type) {store(type, line, column, yytext, yyleng);}
 %}
@@ -148,6 +180,7 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 <R>{ /* values which appear only on the right-hand side of assignments, like: x=50% */
     [^ \n\t\r]*		    {s(IDENTIFIER);c();BEGIN(0);}
 }
+\.include{S}.*\n		    {handleInclude(yytext, yyleng);}
 \.{NAME}	            {s(COMMAND);c();}
 {NAME}{S}*:                 {s(LABEL);c();}
 {NAME}                      {s(IDENTIFIER);c();}
@@ -167,7 +200,17 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 			     exit(1);
 		             yyterminate();
 		            }
-<<EOF>>		            {c();s(END);yyterminate();}
+<<EOF>>		            {c();
+			     if ( --include_stack_ptr < 0 ) {
+				s(END);
+				yyterminate();
+			     } else {
+				 yy_delete_buffer( YY_CURRENT_BUFFER );
+				 yy_switch_to_buffer(
+				      include_stack[include_stack_ptr] );
+			     }
+			    }
+
 %%
 
 int yywrap()
