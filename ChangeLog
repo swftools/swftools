@@ -14,8 +14,12 @@
 			both) or t1lib is not found (disable pdf2swf)
 	* swfcombine: bugfix: DEFINETEXT tags didn't get relocated right
 	* swfcombine: bugfix: no longer builds "unstreamable" SWFs
+	* rfxswf-lib: actionscript
 	* rfxswf-lib: lossless image formats
-	* pdf2swf: likewise
+	* pdf2swf: conversion of lossless image formats
 	* pdf2swf: picture cache to prevent images getting stored more than once
 	* pdf2swf: conversion of (hyper)links
-	* examples/zlibtest: new file, demonstrates using lossless images with rfxswf-lib
+	* swfdump: -a, -e and -XY options
+	* lib/example/zlibtest: new file, demonstrates using lossless images with rfxswf-lib
+	* lib/example/dumpfont: utility for dumping fonts out of swf (and generate c sourcecode for creating them)
+	* lib/example/demofont: example font, generated with lib/example/dumpfont.
