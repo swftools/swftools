@@ -133,7 +133,6 @@ void map_ids_mem(u8*mem, int length)
 	    advancebits = readu8(); //advancebits
 	    while(1) {
 		u16 flags = getbits(8);
-		printf("define text flags: %02x\n", flags);
 		if(!flags) break;
 		if(flags & 128) // text style record
 		{
