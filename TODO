@@ -7,9 +7,11 @@ swfc:
 	.crossfade command????
     * .sound file.wav ?  
 	syntax for single sound hits, looping, synch sound stream.
+    * .include
     * text:  newlines
     * dump format for ingestion into swifty?
     * .editbox
+    * .importassets, .import
     * default output filename (name.sc -> name.swf) if unspecified
     * change .swf to .flash ?  
 	import swfs with .swf instead of .movie?
@@ -58,6 +60,7 @@ other:
 
     * swfcrop
     * swf2fig
+    * swfrender
 
 documentation:
 
