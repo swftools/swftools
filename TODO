@@ -2,7 +2,6 @@ General:
 
     * make more stuff dependent on the information in config.h
     * consistent output handling if -o is missing. (out.swf/stdout)
-    * check for WORDS_BIGENDIAN in all routines handling SWF data.
 
 pdf2swf:
 
@@ -30,4 +29,4 @@ rfxswf-lib:
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
     * (s/GetFrameNo/GetTagFrameNo/g ?)
-  
+ 
