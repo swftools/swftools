@@ -181,7 +181,7 @@ void args_callback_usage(char *name)
     printf("-p , --flip                    Turn movie upside down\n");
     printf("-q , --quality <val>           Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
     printf("-x , --extragood               Enable some *very* expensive compression strategies.\n");
-    printf("-T , --flashversion <n>        Set output flash version to <n>. Notice: H.263 compression will only be\n");
+    printf("-T , --flashversion <n>        Set output flash version to <n>.\n");
     printf("-V , --version                 Print program version and exit\n");
     printf("\n");
 }
