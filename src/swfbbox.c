@@ -40,12 +40,12 @@ static int expand = 1;
 
 static struct options_t options[] = {
 {"h", "help"},
-{"O", "optimize"},
-{"S", "swifty"},
-{"o", "output"},
 {"b", "bbox"},
 {"B", "newbbox"},
 {"e", "expand"},
+{"O", "optimize"},
+{"S", "swifty"},
+{"o", "output"},
 {"v", "verbose"},
 {"V", "version"},
 {0,0}
@@ -106,13 +106,15 @@ int args_callback_longoption(char*name,char*val)
 void args_callback_usage(char *name)
 {
     printf("\n");
-    printf("Usage: %s [-OSe] file.swf\n", name);
+    printf("Usage: %s [-OS] file.swf\n", name);
     printf("\n");
     printf("-h , --help                    Print help and exit\n");
+    printf("-b , --bbox                    Show movie bounding box (default)\n");
+    printf("-B , --newbbox                 Show recalculated (optimized/expanded) bounding box\n");
+    printf("-e , --expand                  Write out a new file using the recalculated bounding box\n");
+    printf("-O , --optimize                Recalculate bounding boxes\n");
     printf("-S , --swifty                  Print out transformed bounding boxes\n");
-    printf("-O , --optimize                Recalculate bounding boxes and write new file\n");
-    printf("-e , --expand                  Recalculate main bounding box and write new file\n");
-    printf("-o , --output <filename>       Set output filename to <filename> (for -O/-e)\n");
+    printf("-o , --output <filename>       Set output filename to <filename> (for -O)\n");
     printf("-v , --verbose                 Be more verbose\n");
     printf("-V , --version                 Print program version and exit\n");
     printf("\n");
