@@ -325,11 +325,11 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 	    strcat(searchpath, ":");
 	strcat(searchpath, dirname);
     }
-    logf("<verbose> Adding %s to search path\n", dirname);
+    msg("<verbose> Adding %s to search path\n", dirname);
 
     DIR*dir = opendir(dirname);
     if(!dir) {
-	logf("<warning> Couldn't open directory %s\n", dirname);
+	msg("<warning> Couldn't open directory %s\n", dirname);
 	return;
     }
     dirent*ent;
@@ -356,10 +356,10 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 		sprintf(buf, "%s/%s", dirname,name);
 		fi = fopen(buf, "rb");
 		if(!fi || !fread(&a,1,1,fi)) {
-		    logf("<warning> Couldn't read from %s", buf);
+		    msg("<warning> Couldn't read from %s", buf);
 		}
 		fprintf(database, "%s\n", buf);
-		logf("<verbose> Found font %s\n", buf);
+		msg("<verbose> Found font %s\n", buf);
 		fclose(fi);
 	    } 
 	    if(numfonts)
@@ -416,7 +416,7 @@ int main(int argn, char *argv[])
     {
 	if(filename) {
 	    outputname = stripfilename(filename, ".swf");
-	    logf("<notice> Output filename not given. Writing to %s", outputname);
+	    msg("<notice> Output filename not given. Writing to %s", outputname);
 	} 
     }
 	
@@ -434,7 +434,7 @@ int main(int argn, char *argv[])
 	exit(0);
     }
 
-    logf("<verbose> reading font files from %s/fonts\n", SWFTOOLS_DATADIR);
+    msg("<verbose> reading font files from %s/fonts\n", SWFTOOLS_DATADIR);
     //TODO: use tempnam here. Check if environment already contains a
     //T1LIB_CONFIG.
     putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
@@ -510,8 +510,8 @@ int main(int argn, char *argv[])
 
     if(viewer || preloader) {
 #ifndef SYSTEM_BACKTICKS
-	logf("<warning> Not sure whether system() can handle command substitution");
-	logf("<warning> (According to config.h, it can't)");
+	msg("<warning> Not sure whether system() can handle command substitution");
+	msg("<warning> (According to config.h, it can't)");
 #endif
 	if(!system_quiet)
 	    printf("\n");
@@ -524,7 +524,7 @@ int main(int argn, char *argv[])
 	    printf("\n");
     }
     if(preloader && !viewer) {
-	logf("<warning> --preloader option without --viewer option doesn't make very much sense.");
+	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
 	ret = systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
 		preloader, SWFTOOLS_DATADIR, preloader, outputname, outputname);
 	if(!system_quiet)

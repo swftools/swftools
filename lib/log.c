@@ -244,7 +244,7 @@ static inline void log(char* logString)
    free (logBuffer);
 }
 
-void logf(const char* format, ...)
+void msg(const char* format, ...)
 {
     char buf[1024];
 	va_list arglist;

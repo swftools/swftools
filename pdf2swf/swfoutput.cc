@@ -29,9 +29,7 @@
 #else
 #define assert(a)
 #endif
-#define logf logarithmf // logf is also used by ../lib/log.h
 #include <math.h>
-#undef logf
 #include "swfoutput.h"
 #include "spline.h"
 extern "C" {
@@ -222,7 +220,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m, int log)
         tag->id != ST_DEFINESHAPE2 &&
         tag->id != ST_DEFINESHAPE3)
     {
-        logf("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
+        msg("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
         exit(1);
     }
     double x=0,y=0;
@@ -283,7 +281,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m, int log)
             spline(tag,p0,p1,p2,p3,m);
         } 
         else {
-	    logf("<error> drawpath: unknown outline type:%d\n", outline->type);
+	    msg("<error> drawpath: unknown outline type:%d\n", outline->type);
         }
         lastx=x;
         lasty=y;
@@ -661,7 +659,7 @@ void drawpath2poly(struct swfoutput *output, T1_OUTLINE*outline, struct swfmatri
         tag->id != ST_DEFINESHAPE &&
         tag->id != ST_DEFINESHAPE2 &&
         tag->id != ST_DEFINESHAPE3) {
-        logf("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
+        msg("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
         exit(1);
     }
     assert(shapeid>=0);
@@ -753,11 +751,11 @@ static void putcharacters(TAG*tag)
 
     if(tag->id != ST_DEFINETEXT &&
         tag->id != ST_DEFINETEXT2) {
-        logf("<error> internal error: putcharacters needs an text tag, not %d\n",tag->id);
+        msg("<error> internal error: putcharacters needs an text tag, not %d\n",tag->id);
         exit(1);
     }
     if(!chardatapos) {
-        logf("<warning> putcharacters called with zero characters");
+        msg("<warning> putcharacters called with zero characters");
     }
 
     for(pass = 0; pass < 2; pass++)
@@ -906,7 +904,7 @@ static void drawchar(struct swfoutput*obj, SWFFont*font, char*character, int cha
         char* charname = character;
 
         if(!outline) {
-         logf("<warning> Didn't find %s in current charset (%s)", 
+         msg("<warning> Didn't find %s in current charset (%s)", 
                  FIXNULL(character),FIXNULL(font->getName()));
          return;
         }
@@ -991,7 +989,7 @@ SWFFont::SWFFont(char*name, int id, char*filename)
 
     if(!charnum) 
         return;
-    logf("<verbose> Font %s(%d): Storing %d outlines.\n", FIXNULL(name), id, charnum);
+    msg("<verbose> Font %s(%d): Storing %d outlines.\n", FIXNULL(name), id, charnum);
 
     this->standardtablesize = 256;
     if(this->charnum < this->standardtablesize)
@@ -1077,7 +1075,7 @@ SWFFont::~SWFFont()
 
     if(usednum && !drawonlyshapes)
     {
-        logf("<verbose> Font %s has %d used characters",FIXNULL(fontid), usednum);
+        msg("<verbose> Font %s has %d used characters",FIXNULL(fontid), usednum);
         TAG*ftag = swf_InsertTag(swf.firstTag,ST_DEFINEFONT);
         swf_SetU16(ftag, this->swfid);
         int initpos = swf_GetTagLen(ftag);
@@ -1173,7 +1171,7 @@ T1_OUTLINE*SWFFont::getOutline(char*name, int charnr)
 	return getOutline(this->standardtable[charnr], -1);
     }
 
-    logf("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
+    msg("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
     return 0;
 }
 
@@ -1211,7 +1209,7 @@ int SWFFont::getSWFCharID(char*name, int charnr)
     if(this->standardtable && charnr>=0 && charnr < this->standardtablesize) {
 	return getSWFCharID(this->standardtable[charnr], -1);
     }
-    logf("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
+    msg("<warning> Didn't find character '%s' in font '%s'", FIXNULL(name), this->name);
     return 0;
 }
 
@@ -1258,7 +1256,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, int t1id, char*filenam
     }
 
     if(t1id<0) {
-        logf("<error> internal error: t1id:%d, fontid:%s\n", t1id,FIXNULL(fontid));
+        msg("<error> internal error: t1id:%d, fontid:%s\n", t1id,FIXNULL(fontid));
     }
     
     SWFFont*font = new SWFFont(fontid, t1id, filename);
@@ -1326,7 +1324,7 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int _sizex, int _size
   sizex = _sizex;
   sizey = _sizey;
 
-  logf("<verbose> initializing swf output for size %d*%d\n", sizex,sizey);
+  msg("<verbose> initializing swf output for size %d*%d\n", sizex,sizey);
 
   obj->font = 0;
   
@@ -1494,7 +1492,7 @@ void swfoutput_destroy(struct swfoutput* obj)
      fi = 1; // stdout
     
     if(fi<=0) {
-     logf("<fatal> Could not create \"%s\". ", FIXNULL(filename));
+     msg("<fatal> Could not create \"%s\". ", FIXNULL(filename));
      exit(1);
     }
  
@@ -1502,15 +1500,15 @@ void swfoutput_destroy(struct swfoutput* obj)
 
     if(enablezlib) {
       if FAILED(swf_WriteSWC(fi,&swf)) 
-       logf("<error> WriteSWC() failed.\n");
+       msg("<error> WriteSWC() failed.\n");
     } else {
       if FAILED(swf_WriteSWF(fi,&swf)) 
-       logf("<error> WriteSWF() failed.\n");
+       msg("<error> WriteSWF() failed.\n");
     }
 
     if(filename)
      close(fi);
-    logf("<notice> SWF written\n");
+    msg("<notice> SWF written\n");
 }
 
 void swfoutput_setdrawmode(swfoutput* obj, int mode)
@@ -1578,7 +1576,7 @@ void swfoutput_startclip(swfoutput*obj, T1_OUTLINE*outline, struct swfmatrix*m)
 
     if(clippos >= 127)
     {
-        logf("<warning> Too many clip levels.");
+        msg("<warning> Too many clip levels.");
         clippos --;
     } 
     
@@ -1605,7 +1603,7 @@ void swfoutput_endclip(swfoutput*obj)
      endshape();
 
     if(!clippos) {
-        logf("<error> Invalid end of clipping region");
+        msg("<error> Invalid end of clipping region");
         return;
     }
     clippos--;

@@ -9,6 +9,9 @@
 
 #ifndef __log_h__
 #define __log_h__
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __NT__
 #include "stdafx.h"
@@ -30,9 +33,12 @@
 extern int screenloglevel;
 
 extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPort, int serverloglevel, int screenloglevel);
-extern void logf(const char* logFormat, ...);
+extern void msg(const char* logFormat, ...);
 extern void exitLog(void);
 
 #define FIXNULL(a) ((int)(a)?(a):"NULL")
 
+#ifdef __cplusplus
+}
+#endif
 #endif  // __log_h__

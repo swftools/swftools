@@ -49,10 +49,7 @@
 #include "../lib/log.h"
 
 #include "ttf2pt1.h"
-
-#define logf logarithmf // logf is also used by ../lib/log.h
 #include <math.h>
-#undef logf
 
 static PDFDoc*doc = 0;
 static char* swffilename = 0;
@@ -353,11 +350,11 @@ void showFontError(GfxFont*font, int nr)
     if(lastdumppos<sizeof(lastdumps)/sizeof(int))
     lastdumps[lastdumppos++] = r->num;
     if(nr == 0)
-      logf("<warning> The following font caused problems:");
+      msg("<warning> The following font caused problems:");
     else if(nr == 1)
-      logf("<warning> The following font caused problems (substituting):");
+      msg("<warning> The following font caused problems (substituting):");
     else if(nr == 2)
-      logf("<warning> The following Type 3 Font will be rendered as bitmap:");
+      msg("<warning> The following Type 3 Font will be rendered as bitmap:");
     dumpFontInfo("<warning>", font);
 }
 
@@ -367,39 +364,39 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   char*name = 0;
   gstr = font->getName();
   Ref* r=font->getID();
-  logf("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?FIXNULL(gstr->getCString()):"(unknown font)", r->num,r->gen);
+  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?FIXNULL(gstr->getCString()):"(unknown font)", r->num,r->gen);
 
   gstr  = font->getTag();
   if(gstr) 
-   logf("%sTag: %s\n", loglevel, FIXNULL(gstr->getCString()));
+   msg("%sTag: %s\n", loglevel, FIXNULL(gstr->getCString()));
   
-  if(font->isCIDFont()) logf("%sis CID font\n", loglevel);
+  if(font->isCIDFont()) msg("%sis CID font\n", loglevel);
 
   GfxFontType type=font->getType();
   switch(type) {
     case fontUnknownType:
-     logf("%sType: unknown\n",loglevel);
+     msg("%sType: unknown\n",loglevel);
     break;
     case fontType1:
-     logf("%sType: 1\n",loglevel);
+     msg("%sType: 1\n",loglevel);
     break;
     case fontType1C:
-     logf("%sType: 1C\n",loglevel);
+     msg("%sType: 1C\n",loglevel);
     break;
     case fontType3:
-     logf("%sType: 3\n",loglevel);
+     msg("%sType: 3\n",loglevel);
     break;
     case fontTrueType:
-     logf("%sType: TrueType\n",loglevel);
+     msg("%sType: TrueType\n",loglevel);
     break;
     case fontCIDType0:
-     logf("%sType: CIDType0\n",loglevel);
+     msg("%sType: CIDType0\n",loglevel);
     break;
     case fontCIDType0C:
-     logf("%sType: CIDType0C\n",loglevel);
+     msg("%sType: CIDType0C\n",loglevel);
     break;
     case fontCIDType2:
-     logf("%sType: CIDType2\n",loglevel);
+     msg("%sType: CIDType2\n",loglevel);
     break;
   }
   
@@ -408,18 +405,18 @@ void dumpFontInfo(char*loglevel, GfxFont*font)
   if(font->getEmbeddedFontName())
     name = font->getEmbeddedFontName()->getCString();
   if(embedded)
-   logf("%sEmbedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
+   msg("%sEmbedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
 
   gstr = font->getExtFontFile();
   if(gstr)
-   logf("%sExternal Font file: %s\n", loglevel, FIXNULL(gstr->getCString()));
+   msg("%sExternal Font file: %s\n", loglevel, FIXNULL(gstr->getCString()));
 
   // Get font descriptor flags.
-  if(font->isFixedWidth()) logf("%sis fixed width\n", loglevel);
-  if(font->isSerif()) logf("%sis serif\n", loglevel);
-  if(font->isSymbolic()) logf("%sis symbolic\n", loglevel);
-  if(font->isItalic()) logf("%sis italic\n", loglevel);
-  if(font->isBold()) logf("%sis bold\n", loglevel);
+  if(font->isFixedWidth()) msg("%sis fixed width\n", loglevel);
+  if(font->isSerif()) msg("%sis serif\n", loglevel);
+  if(font->isSymbolic()) msg("%sis symbolic\n", loglevel);
+  if(font->isItalic()) msg("%sis italic\n", loglevel);
+  if(font->isBold()) msg("%sis bold\n", loglevel);
 }
 
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
@@ -448,7 +445,7 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
     int cpos = 0;
     double lastx=0,lasty=0;
     if(!num) {
-	logf("<warning> empty path");
+	msg("<warning> empty path");
 	outline->type = T1_PATHTYPE_MOVE;
 	outline->dest.x = 0;
 	outline->dest.y = 0;
@@ -512,7 +509,7 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
 
 void SWFOutputDev::stroke(GfxState *state) 
 {
-    logf("<debug> stroke\n");
+    msg("<debug> stroke\n");
     GfxPath * path = state->getPath();
     int lineCap = state->getLineCap(); // 0=butt, 1=round 2=square
     int lineJoin = state->getLineJoin(); // 0=miter, 1=round 2=bevel
@@ -551,7 +548,7 @@ void SWFOutputDev::stroke(GfxState *state)
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
-    logf("<debug> fill\n");
+    msg("<debug> fill\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -562,7 +559,7 @@ void SWFOutputDev::fill(GfxState *state)
 }
 void SWFOutputDev::eoFill(GfxState *state) 
 {
-    logf("<debug> eofill\n");
+    msg("<debug> eofill\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -573,7 +570,7 @@ void SWFOutputDev::eoFill(GfxState *state)
 }
 void SWFOutputDev::clip(GfxState *state) 
 {
-    logf("<debug> clip\n");
+    msg("<debug> clip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m22 = 1;
@@ -585,7 +582,7 @@ void SWFOutputDev::clip(GfxState *state)
 }
 void SWFOutputDev::eoClip(GfxState *state) 
 {
-    logf("<debug> eoclip\n");
+    msg("<debug> eoclip\n");
     GfxPath * path = state->getPath();
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
@@ -602,19 +599,19 @@ SWFOutputDev::~SWFOutputDev()
 };
 GBool SWFOutputDev::upsideDown() 
 {
-    logf("<debug> upsidedown?");
+    msg("<debug> upsidedown?");
     return gTrue;
 };
 GBool SWFOutputDev::useDrawChar() 
 {
-    logf("<debug> usedrawchar?");
+    msg("<debug> usedrawchar?");
     return gTrue;
 }
 
 void SWFOutputDev::beginString(GfxState *state, GString *s) 
 { 
     double m11,m21,m12,m22;
-//    logf("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
+//    msg("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
@@ -627,7 +624,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode c, Unicode *_u, int uLen)
 {
-    logf("<debug> drawChar(%f,%f,%f,%f,'%c')\n",x,y,dx,dy,c);
+    msg("<debug> drawChar(%f,%f,%f,%f,'%c')\n",x,y,dx,dy,c);
     
     // check for invisible text -- this is used by Acrobat Capture
     if ((state->getRender() & 3) == 3)
@@ -665,7 +662,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	if(name)
 	   swfoutput_drawchar(&output, x1, y1, name, c);
 	else
-	   logf("<warning> couldn't get name for CID character %02x from Encoding", c);
+	   msg("<warning> couldn't get name for CID character %02x from Encoding", c);
     } else {
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
@@ -674,21 +671,21 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	if(enc && enc[c])
 	   swfoutput_drawchar(&output, x1, y1, enc[c], c);
 	else {
-	   logf("<warning> couldn't get name for character %02x from Encoding", c);
+	   msg("<warning> couldn't get name for character %02x from Encoding", c);
 	}
     }
 }
 
 void SWFOutputDev::endString(GfxState *state) 
 { 
-    logf("<debug> endstring\n");
+    msg("<debug> endstring\n");
 }    
 
  
 GBool SWFOutputDev::beginType3Char(GfxState *state,
 			       CharCode code, Unicode *u, int uLen)
 {
-    logf("<debug> beginType3Char %d, %08x, %d", code, *u, uLen);
+    msg("<debug> beginType3Char %d, %08x, %d", code, *u, uLen);
     type3active = 1;
     /* the character itself is going to be passed using
        drawImageMask() */
@@ -698,15 +695,15 @@ GBool SWFOutputDev::beginType3Char(GfxState *state,
 void SWFOutputDev::endType3Char(GfxState *state)
 {
     type3active = 0;
-    logf("<debug> endType3Char");
+    msg("<debug> endType3Char");
 }
 
 void SWFOutputDev::startPage(int pageNum, GfxState *state) 
 {
   double x1,y1,x2,y2;
   laststate = state;
-  logf("<debug> startPage %d\n", pageNum);
-  logf("<notice> processing page %d", pageNum);
+  msg("<debug> startPage %d\n", pageNum);
+  msg("<notice> processing page %d", pageNum);
 
   state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
@@ -720,7 +717,7 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state)
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
-  logf("<debug> drawlink\n");
+  msg("<debug> drawlink\n");
   double x1, y1, x2, y2, w;
   GfxRGB rgb;
   swfcoord points[5];
@@ -834,13 +831,13 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 	}
         break;
 	default: {
-	    logf("<error> Unknown link type!\n");
+	    msg("<error> Unknown link type!\n");
 	    break;
 	}
     }
     if(!linkinfo && (page || url))
     {
-	logf("<notice> File contains links");
+	msg("<notice> File contains links");
 	linkinfo = 1;
     }
     if(page>0)
@@ -860,22 +857,22 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     {
 	swfoutput_namedlink(&output, named, points);
     }
-    logf("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
+    msg("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
   }
 }
 
 void SWFOutputDev::saveState(GfxState *state) {
-  logf("<debug> saveState\n");
+  msg("<debug> saveState\n");
   updateAll(state);
   if(clippos<64)
     clippos ++;
   else
-    logf("<error> Too many nested states in pdf.");
+    msg("<error> Too many nested states in pdf.");
   clipping[clippos] = 0;
 };
 
 void SWFOutputDev::restoreState(GfxState *state) {
-  logf("<debug> restoreState\n");
+  msg("<debug> restoreState\n");
   updateAll(state);
   while(clipping[clippos]) {
       swfoutput_endclip(&output);
@@ -917,12 +914,12 @@ int SWFOutputDev::searchT1Font(char*name)
 	    if(!fontname) {
 		T1_LoadFont(i);
 		fontname = T1_GetFontName (i);
-		logf("<verbose> Loading extra font %s from %s\n", FIXNULL(fontname), 
+		msg("<verbose> Loading extra font %s from %s\n", FIXNULL(fontname), 
 								  FIXNULL(T1_GetFontFileName(i)));
 	    }
 
 	    if(fontname && !strcmp(name, fontname)) {
-		logf("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
+		msg("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
 		return i;
 	    }
 	    fontname = T1_GetFontFileName(i);
@@ -930,7 +927,7 @@ int SWFOutputDev::searchT1Font(char*name)
 		    fontname = strrchr(fontname,'/')+1;
  
 	    if(strstr(fontname, name)) {
-		logf("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
+		msg("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
 		return i;
 	    }
 	}
@@ -989,7 +986,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 
       ret = font->getEmbeddedFontID(&embRef);
       if(!ret) {
-	  logf("<verbose> Didn't get embedded font id");
+	  msg("<verbose> Didn't get embedded font id");
 	  /* not embedded- the caller should now search the font
 	     directories for this font */
 	  return 0;
@@ -997,13 +994,13 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 
       f = fopen(tmpFileName, "wb");
       if (!f) {
-	logf("<error> Couldn't create temporary Type 1 font file");
+	msg("<error> Couldn't create temporary Type 1 font file");
 	  return 0;
       }
       if (font->getType() == fontType1C) {
 	if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
 	  fclose(f);
-	  logf("<error> Couldn't read embedded font file");
+	  msg("<error> Couldn't read embedded font file");
 	  return 0;
 	}
 	cvt = new Type1CFontFile(fontBuf, fontLen);
@@ -1050,22 +1047,22 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	 font->getType() == fontCIDType2)
       {
 	  if(!ttfinfo) {
-	      logf("<notice> File contains TrueType fonts");
+	      msg("<notice> File contains TrueType fonts");
 	      ttfinfo = 1;
 	  }
 	  char name2[80];
 	  char*tmp;
 	  tmp = strdup(mktmpname((char*)name2));
 	  sprintf(name2, "%s", tmp);
-	  char*a[] = {"./ttf2pt1",
+	  char*a[] = {"./ttf2pt1", "-W0",
 #ifndef USE_FREETYPE
 	      "-pttf",
 #else
 	      "-pft",
 #endif
 	      "-b", tmpFileName, name2};
-	  logf("<verbose> Invoking ttf2pt1...");
-	  ttf2pt1_main(5,a);
+	  msg("<verbose> Invoking ttf2pt1...");
+	  ttf2pt1_main(6,a);
 	  unlink(tmpFileName);
 	  sprintf(name2,"%s.pfb",tmp);
 	  tmpFileName = strdup(name2);
@@ -1098,16 +1095,16 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 /* ------------------------------ V1 */
 
     char*fontname = "Times-Roman";
-    logf("<verbose> substituteFont(,%s)", FIXNULL(oldname));
+    msg("<verbose> substituteFont(,%s)", FIXNULL(oldname));
     this->t1id = searchT1Font(fontname);
     if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
-	logf("<fatal> Too many fonts in file.");
+	msg("<fatal> Too many fonts in file.");
 	exit(1);
     }
     if(oldname) {
 	substitutesource[substitutepos] = oldname;
 	substitutetarget[substitutepos] = fontname;
-	logf("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
+	msg("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	substitutepos ++;
     }
     return fontname;
@@ -1189,13 +1186,13 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
         this->t1id = searchT1Font(fontname);
       }
       if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
-	  logf("<fatal> Too many fonts in file.");
+	  msg("<fatal> Too many fonts in file.");
 	  exit(1);
       }
       if(oldname) {
 	  substitutesource[substitutepos] = oldname;
 	  substitutetarget[substitutepos] = fontname;
-	  logf("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
+	  msg("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	  substitutepos ++;
       }
       return fontname;*/
@@ -1284,13 +1281,13 @@ void SWFOutputDev::updateFont(GfxState *state)
     {
 	fileName = writeEmbeddedFontToFile(xref, gfxFont);
 	if(!fileName) {
-	  logf("<error> Couldn't write font to file");
+	  msg("<error> Couldn't write font to file");
 	  showFontError(gfxFont,0);
 	  return ;
 	}
 	this->t1id = T1_AddFont(fileName);
 	if(this->t1id<0) {
-	  logf("<error> Couldn't load font from file");
+	  msg("<error> Couldn't load font from file");
 	  showFontError(gfxFont,0);
 	  unlinkfont(fileName);
 	  return ;
@@ -1335,7 +1332,7 @@ void SWFOutputDev::updateFont(GfxState *state)
       return;
   }
 
-  logf("<verbose> Creating new SWF font: t1id: %d, filename: %s name:%s", this->t1id, FIXNULL(fileName), FIXNULL(fontname));
+  msg("<verbose> Creating new SWF font: t1id: %d, filename: %s name:%s", this->t1id, FIXNULL(fileName), FIXNULL(fontname));
   swfoutput_setfont(&output, fontname, this->t1id, fileName);
   if(fileName)
       unlinkfont(fileName);
@@ -1422,7 +1419,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 
   if(!width || !height || (height<=1 && width<=1))
   {
-      logf("<verbose> Ignoring %d by %d image", width, height);
+      msg("<verbose> Ignoring %d by %d image", width, height);
       unsigned char buf[8];
       int x,y;
       for (y = 0; y < height; ++y)
@@ -1440,14 +1437,14 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
-	  logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
+	  msg("<notice> file contains pbm pictures %s",mask?"(masked)":"");
 	  pbminfo = 1;
       }
       if(mask)
-      logf("<verbose> drawing %d by %d masked picture\n", width, height);
+      msg("<verbose> drawing %d by %d masked picture\n", width, height);
   }
   if(!jpeginfo && (str->getKind()==strDCT)) {
-      logf("<notice> file contains jpeg pictures");
+      msg("<notice> file contains jpeg pictures");
       jpeginfo = 1;
   }
 
@@ -1654,7 +1651,7 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
-  logf("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
+  msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
   drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1);
 }
 
@@ -1662,12 +1659,12 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
 {
-  logf("<verbose> drawImage %dx%d, %s %s, inline=%d", width, height, 
+  msg("<verbose> drawImage %dx%d, %s %s, inline=%d", width, height, 
 	  colorMap?"colorMap":"no colorMap", 
 	  maskColors?"maskColors":"no maskColors",
 	  inlineImg);
   if(colorMap)
-      logf("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+      msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
 	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
   drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0);
 }
@@ -1907,7 +1904,7 @@ int pdfswf_numpages()
 int closed=0;
 void pdfswf_close()
 {
-    logf("<debug> pdfswf.cc: pdfswf_close()");
+    msg("<debug> pdfswf.cc: pdfswf_close()");
     delete output;
     delete doc;
     //freeParams();
