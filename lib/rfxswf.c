@@ -668,7 +668,7 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
   return 0;
 }
 
-int swf_GetCXForm(TAG * t,CXFORM * cx,U8 alpha) //FIXME: alpha should be type bool
+int swf_GetCXForm(TAG * t,CXFORM * cx,U8 alpha)
 { CXFORM cxf;
   int hasadd;
   int hasmul;
@@ -1437,6 +1437,7 @@ int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns leng
   if(handle<0) {
     writer_init_nullwriter(&writer);
     len = swf_WriteSWF2(&writer, swf);
+    return len;
   }
   writer_init_filewriter(&writer, handle);
   len = swf_WriteSWF2(&writer, swf);
