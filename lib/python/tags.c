@@ -288,6 +288,32 @@ static tag_internals_t showframe_tag =
     datasize: 0,
 };
 //----------------------------------------------------------------------------
+staticforward tag_internals_t removeobject_tag;
+static PyObject* f_RemoveObject(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"depth", NULL};
+    int depth;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &depth))
+	return NULL;
+
+    PyObject*tag = tag_new(&removeobject_tag);
+    tag_internals_t*itag = tag_getinternals(tag);
+    itag->tag = swf_InsertTag(0, ST_REMOVEOBJECT);
+    swf_SetU16(itag->tag, depth);
+    mylog("+%08x(%d) f_RemoveObject", (int)tag, tag->ob_refcnt);
+    return (PyObject*)tag;
+}
+static tag_internals_t removeobject_tag =
+{
+    parse: 0,
+    fillTAG: 0,
+    dealloc: 0,
+    getattr: 0, 
+    setattr: 0,
+    tagfunctions: 0,
+    datasize: 0,
+};
+//----------------------------------------------------------------------------
 staticforward tag_internals_t sprite_tag;
 typedef struct _sprite_internal
 {
@@ -817,6 +843,7 @@ static PyMethodDef TagMethods[] =
     {"Font", (PyCFunction)f_DefineFont, METH_KEYWORDS, "Create a DefineFont Tag."},
     {"Text", (PyCFunction)f_DefineText, METH_KEYWORDS, "Create a DefineText Tag."},
     {"PlaceObject", (PyCFunction)f_PlaceObject, METH_KEYWORDS, "Create a PlaceObject Tag."},
+    {"RemoveObject", (PyCFunction)f_RemoveObject, METH_KEYWORDS, "Create a RemoveObject Tag."},
     {"MoveObject", (PyCFunction)f_MoveObject, METH_KEYWORDS, "Create a PlaceObject Move Tag."},
     {"VideoStream", (PyCFunction)f_DefineVideoStream, METH_KEYWORDS, "Create a Videostream."},
     {"Image", (PyCFunction)f_DefineImage, METH_KEYWORDS, "Create an SWF Image Tag."},
@@ -831,6 +858,8 @@ PyMethodDef* tags_getMethods()
     
     register_tag(ST_PLACEOBJECT,&placeobject_tag);
     register_tag(ST_PLACEOBJECT2,&placeobject_tag);
+    register_tag(ST_REMOVEOBJECT,&removeobject_tag);
+    register_tag(ST_REMOVEOBJECT2,&removeobject_tag);
     register_tag(ST_SETBACKGROUNDCOLOR,&bgcolor_tag);
     register_tag(ST_DEFINEFONT,&font_tag);
     register_tag(ST_PROTECT,&protect_tag);
