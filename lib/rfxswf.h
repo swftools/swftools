@@ -95,7 +95,7 @@ typedef struct _MATRIX
 } MATRIX, * LPMATRIX;
 
 typedef struct _CXFORM
-{ S16           a0, a1;
+{ S16           a0, a1; /* mult, add */
   S16           r0, r1;
   S16           g0, g1;
   S16           b0, b1;
@@ -228,6 +228,13 @@ int   swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha);
 int   swf_SetRGB(TAG * t,RGBA * col);
 int   swf_SetRGBA(TAG * t,RGBA * col);
 
+// helper functions:
+
+void swf_ExpandRect(SRECT*src, SPOINT add);
+void swf_ExpandRect2(SRECT*src, SRECT*add);
+SPOINT swf_TurnPoint(SPOINT p, MATRIX* m);
+SRECT swf_TurnRect(SRECT r, MATRIX* m);
+
 // Function Macros
 
 #define swf_GetS8(tag)      ((S8)swf_GetU8(tag))
@@ -235,6 +242,7 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 #define swf_GetS32(tag)     ((S32)swf_GetU32(tag))
 #define swf_GetCoord(tag)   ((SCOORD)swf_GetU32(tag))
 #define swf_GetFixed(tag)   ((SFIXED)swf_GetU32(tag))
+#define swf_GetString(t)    ((char*)(&(t)->data[(t)->pos]))
 
 #define swf_SetS8(tag,v)    swf_SetU8(tag,(U8)v)
 #define swf_SetS16(tag,v)   swf_SetU16(tag,(U16)v)

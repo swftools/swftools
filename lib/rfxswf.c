@@ -322,6 +322,7 @@ int swf_CountBits(U32 v,int nbits)
 int swf_GetRect(TAG * t,SRECT * r)
 { int nbits;
   SRECT dummy;
+  if(!t) {r->xmin=r->xmax=r->ymin=r->ymax;return 0;}
   if (!r) r = &dummy;
   nbits = (int) swf_GetBits(t,5);
   r->xmin = swf_GetSBits(t,nbits);
@@ -363,6 +364,56 @@ int swf_SetRect(TAG * t,SRECT * r)
 
   return 0;
 }
+
+void swf_ExpandRect(SRECT*src, SPOINT add)
+{
+    if(add.x < src->xmin)
+	src->xmin = add.x;
+    if(add.x > src->xmax)
+	src->xmax = add.x;
+    if(add.y < src->ymin)
+	src->ymin = add.y;
+    if(add.y > src->ymax)
+	src->ymax = add.y;
+}
+void swf_ExpandRect2(SRECT*src, SRECT*add)
+{
+    if(add->xmin < src->xmin)
+	src->xmin = add->xmin;
+    if(add->ymin < src->ymin)
+	src->ymin = add->ymin;
+    if(add->xmax > src->xmax)
+	src->xmax = add->xmax;
+    if(add->ymax > src->ymax)
+	src->ymax = add->ymax;
+}
+SPOINT swf_TurnPoint(SPOINT p, MATRIX* m)
+{
+    SPOINT r;
+    r.x = (int)(m->sx*(1/65536.0)*p.x + m->r0*(1/65536.0)*p.y + 0.5) + m->tx;
+    r.y = (int)(m->r1*(1/65536.0)*p.x + m->sy*(1/65536.0)*p.y + 0.5) + m->ty;
+    return r;
+}
+SRECT swf_TurnRect(SRECT r, MATRIX* m)
+{
+    SRECT g;
+    SPOINT p1,p2,p3,p4,pp1,pp2,pp3,pp4;
+    p1.x = r.xmin;p1.y = r.ymin;
+    p2.x = r.xmax;p2.y = r.ymin;
+    p3.x = r.xmin;p3.y = r.ymax;
+    p4.x = r.xmax;p4.y = r.ymax;
+    pp1 = swf_TurnPoint(p1, m);
+    pp2 = swf_TurnPoint(p2, m);
+    pp3 = swf_TurnPoint(p3, m);
+    pp4 = swf_TurnPoint(p4, m);
+    g.xmin = g.xmax = pp1.x;
+    g.ymin = g.ymax = pp1.y;
+    swf_ExpandRect(&g, pp2);
+    swf_ExpandRect(&g, pp3);
+    swf_ExpandRect(&g, pp4);
+    return g;
+}
+	
 
 int swf_GetMatrix(TAG * t,MATRIX * m)
 { MATRIX dummy;
@@ -738,7 +789,7 @@ int swf_DefineSprite_GetRealSize(TAG * t)
   }
   do
   { t = swf_NextTag(t);
-    if (t->id!=ST_DEFINESPRITE) len += swf_WriteTag(-1, t);
+    if (t && t->id!=ST_DEFINESPRITE) len += swf_WriteTag(-1, t);
     else t = NULL;
   } while (t&&(t->id!=ST_END));
   return len;
@@ -750,6 +801,7 @@ void swf_UnFoldSprite(TAG * t)
   U32 len;
   TAG*next = t;
   U16 spriteid,spriteframes;
+  int level;
   if(t->id!=ST_DEFINESPRITE)
     return;
   if(t->len<=4) // not folded
@@ -760,12 +812,19 @@ void swf_UnFoldSprite(TAG * t)
   spriteid = swf_GetU16(t); //id
   spriteframes = swf_GetU16(t); //frames
 
-  tmp = swf_GetU16(t);
-  len = tmp&0x3f;
-  id  = tmp>>6;
-  while(id)
+  level = 1;
+
+  while(1)
   {
     TAG*it = 0;
+    tmp = swf_GetU16(t);
+    len = tmp&0x3f;
+    id  = tmp>>6;
+    if(id == ST_END)
+	level--;
+    if(id == ST_DEFINESPRITE && len<=4)
+	level++;
+
     if (len==0x3f)
 	len = swf_GetU32(t);
     it = swf_InsertTag(next, id);
@@ -773,13 +832,13 @@ void swf_UnFoldSprite(TAG * t)
     it->len = len;
     it->id  = id;
     if (it->len)
-    { it->data = (U8*)malloc(t->len);
+    { it->data = (U8*)malloc(it->len);
       it->memsize = it->len;
       swf_GetBlock(t, it->data, it->len);
     }
-    tmp = swf_GetU16(t);
-    len = tmp&0x3f;
-    id  = tmp>>6;
+
+    if(!level)
+	break;
   }
   
   free(t->data); t->data = 0;
@@ -793,6 +852,7 @@ void swf_FoldSprite(TAG * t)
 {
   TAG*sprtag=t,*tmp;
   U16 id,frames,tmpid;
+  int level;
   if(t->id!=ST_DEFINESPRITE)
       return;
   if(!t->len) {
@@ -806,26 +866,35 @@ void swf_FoldSprite(TAG * t)
 
   t->pos = 0;
   id = swf_GetU16(t);
-  //frames = swf_GetU16(t);
   free(t->data);
   t->len = t->pos = t->memsize = 0;
   t->data = 0;
 
   frames = 0;
 
+  t = swf_NextTag(sprtag);
+  level = 1;
+
   do 
   { 
     if(t->id==ST_SHOWFRAME) frames++;
+    if(t->id == ST_DEFINESPRITE && t->len<=4)
+	level++;
+    if(t->id == ST_END)
+	level--;
     t = swf_NextTag(t);
-  } while(t&&t!=ST_END);
+  } while(t && level);
+  if(level)
+    fprintf(stderr, "rfxswf error: sprite doesn't end(1)\n");
 
-  t = swf_NextTag(sprtag);
   swf_SetU16(sprtag, id);
   swf_SetU16(sprtag, frames);
 
+  t = swf_NextTag(sprtag);
+  level = 1;
+
   do
   { 
-    tmpid= t->id;
     if(t->len<0x3f) {
 	swf_SetU16(sprtag,t->len|(t->id<<6));
     } else {
@@ -835,10 +904,16 @@ void swf_FoldSprite(TAG * t)
     if(t->len)
 	swf_SetBlock(sprtag,t->data, t->len);
     tmp = t;
+    if(t->id == ST_DEFINESPRITE && t->len<=4)
+	level++;
+    if(t->id == ST_END)
+	level--;
     t = swf_NextTag(t);
     swf_DeleteTag(tmp);
   } 
-  while (t&&(tmpid!=ST_END));
+  while (t && level);
+  if(level)
+    fprintf(stderr, "rfxswf error: sprite doesn't end(2)\n");
 
 //  sprtag->next = t;
 //  t->prev = sprtag;
@@ -858,10 +933,9 @@ void swf_UnFoldAll(SWF*swf)
 {
     TAG*tag = swf->firstTag;
     while(tag) {
-        TAG*next = swf_NextTag(tag);
 	if(tag->id == ST_DEFINESPRITE)
 	    swf_UnFoldSprite(tag);
-	tag = next;
+	tag = tag->next;
     }
 }
 
@@ -884,6 +958,10 @@ void swf_OptimizeTagOrder(SWF*swf)
     while(tag) {
       next = tag->next;
       if(tag->id == ST_DEFINESPRITE) {
+	if(tag->len>4) {
+	  /* ??? all sprites are supposed to be unfolded */
+	  fprintf(stderr, "librfxswf error - internal error in OptimizeTagOrder/UnfoldAll\n");
+	}
 	level++;
 	if(level==1) {
 	  level0 = tag;
@@ -896,7 +974,8 @@ void swf_OptimizeTagOrder(SWF*swf)
 	if(!swf_isAllowedSpriteTag(tag) || level>=2) {
 	  /* remove tag from current position */
 	  tag->prev->next = tag->next;
-	  tag->next->prev = tag->prev;
+	  if(tag->next)
+	    tag->next->prev = tag->prev;
 
 	  /* insert before tag level0 */
 	  tag->next = level0;
@@ -1050,7 +1129,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
       if (ret!=swf_GetTagLen(&t1))
       {
         #ifdef DEBUG_RFXSWF
-          printf("ret:%d\n",ret);
+          fprintf(stderr, "ret:%d\n",ret);
           perror("write:");
           fprintf(stderr,"WriteSWF() failed: Header.\n");
         #endif
