@@ -46,7 +46,15 @@ extern "C" {
 #include "../lib/log.h"
 }
 
+static PDFDoc*doc = 0;
 static char* swffilename = 0;
+int numpages;
+int currentpage;
+
+// swf <-> pdf pages
+int*pages = 0;
+int pagebuflen = 0;
+int pagepos = 0;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
@@ -626,45 +634,91 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state)
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
-  logf("<debug> drawlink\n");
   double x1, y1, x2, y2, w;
   GfxRGB rgb;
   swfcoord points[5];
   int x, y;
 
   link->getBorder(&x1, &y1, &x2, &y2, &w);
-  if (w > 0) {
+//  if (w > 0) 
+  {
     rgb.r = 0;
     rgb.g = 0;
     rgb.b = 1;
-    cvtUserToDev(x1, y1, &x, &y);
-    points[0].x = points[4].x = x;
-    points[0].y = points[4].y = y;
-    cvtUserToDev(x2, y1, &x, &y);
-    points[1].x = x;
-    points[1].y = y;
-    cvtUserToDev(x2, y2, &x, &y);
-    points[2].x = x;
-    points[2].y = y;
-    cvtUserToDev(x1, y2, &x, &y);
-    points[3].x = x;
-    points[3].y = y;
-    //PDF: draw rect
+    cvtu2d(this, x1, y1, &x, &y);
+    points[0].x = points[4].x = (int)x;
+    points[0].y = points[4].y = (int)y;
+    cvtu2d(this, x2, y1, &x, &y);
+    points[1].x = (int)x;
+    points[1].y = (int)y;
+    cvtu2d(this, x2, y2, &x, &y);
+    points[2].x = (int)x;
+    points[2].y = (int)y;
+    cvtu2d(this, x1, y2, &x, &y);
+    points[3].x = (int)x;
+    points[3].y = (int)y;
+
     LinkAction*action=link->getAction();
-    char*s;
+    char buf[128];
+    char*s = "-?-";
+    char*type = "-?-";
+    char*url = 0;
+    int page = -1;
     switch(action->getKind())
     {
 	case actionGoTo: {
-	    LinkGoTo*l = (LinkGoTo*)action;
-	    s = l->getNamedDest()->getCString();
+	    type = "GoTo";
+	    LinkGoTo *ha=(LinkGoTo *)link->getAction();
+	    LinkDest *dest=NULL;
+	    if (ha->getDest()==NULL) 
+		dest=catalog->findDest(ha->getNamedDest());
+	    else dest=ha->getDest();
+	    if (dest){ 
+	      if (dest->isPageRef()){
+		Ref pageref=dest->getPageRef();
+		page=catalog->findPage(pageref.num,pageref.gen);
+	      }
+	      else  page=dest->getPageNum();
+	      sprintf(buf, "%d", page);
+	      s = buf;
+	    }
 	}
         break;
 	case actionGoToR: {
+	    type = "GoToR";
 	    LinkGoToR*l = (LinkGoToR*)action;
-	    s = l->getNamedDest()->getCString();
+	    GString*g = l->getNamedDest();
+	    if(g)
+	     s = g->getCString();
+	}
+        break;
+	case actionNamed: {
+	    type = "Named";
+	    LinkNamed*l = (LinkNamed*)action;
+	    GString*name = l->getName();
+	    if(name) {
+	      s = name->lowerCase()->getCString();
+	      if(strstr(s, "next") || strstr(s, "forward"))
+	      {
+		  page = currentpage + 1;
+	      }
+	      else if(strstr(s, "prev") || strstr(s, "back"))
+	      {
+		  page = currentpage - 1;
+	      }
+	      else if(strstr(s, "last") || strstr(s, "end"))
+	      {
+		  page = pages[pagepos-1]; //:)
+	      }
+	      else if(strstr(s, "first") || strstr(s, "top"))
+	      {
+		  page = 1;
+	      }
+	    }
 	}
         break;
 	case actionLaunch: {
+	    type = "Launch";
 	    LinkLaunch*l = (LinkLaunch*)action;
 	    GString * str = new GString(l->getFileName());
 	    str->append(l->getParams());
@@ -672,22 +726,40 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 	}
         break;
 	case actionURI: {
+	    type = "URI";
 	    LinkURI*l = (LinkURI*)action;
-	    s = l->getURI()->getCString();
-	}
-        break;
-	case actionNamed: {
-	    LinkNamed*l = (LinkNamed*)action;
-	    s = l->getName()->getCString();
+	    GString*g = l->getURI();
+	    if(g) {
+	     url = g->getCString();
+	     s = url;
+	    }
 	}
         break;
 	case actionUnknown: {
+	    type = "Unknown";
 	    LinkUnknown*l = (LinkUnknown*)action;
 	    s = "";
 	}
         break;
+	default: {
+	    logf("<error> Unknown link type!\n");
+	    break;
+	}
     }
-    logf("<verbose> link to \"%s\"\n", s);
+    if(page>0)
+    {
+	int t;
+	for(t=0;t<pagepos;t++)
+	    if(pages[t]==page)
+		break;
+	if(t!=pagepos)
+	swfoutput_linktopage(&output, t, points);
+    }
+    else if(url)
+    {
+	swfoutput_linktourl(&output, url, points);
+    }
+    logf("<notice> \"%s\" link to \"%s\" (%d)\n", type, s, page);
   }
 }
 
@@ -1152,7 +1224,6 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0);
 }
 
-PDFDoc*doc = 0;
 SWFOutputDev*output = 0; 
 
 void pdfswf_init(char*filename, char*userPassword) 
@@ -1197,6 +1268,7 @@ void pdfswf_init(char*filename, char*userPassword)
 
   // print page count
   printf("Pages:        %d\n", doc->getNumPages());
+  numpages = doc->getNumPages();
   
   // print linearization info
   printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
@@ -1240,6 +1312,11 @@ void pdfswf_ignoredraworder()
     ignoredraworder = 1;
 }
 
+void pdfswf_linksopennewwindow()
+{
+    opennewwindow = 1;
+}
+
 void pdfswf_jpegquality(int val)
 {
     if(val<0) val=0;
@@ -1252,9 +1329,31 @@ void pdfswf_setoutputfilename(char*_filename)
     swffilename = _filename;
 }
 
+
 void pdfswf_convertpage(int page)
 {
-    doc->displayPage((OutputDev*)output, page, /*zoom*/100, /*rotate*/0, /*doLinks*/(int)1);
+    if(!pages)
+    {
+	pages = (int*)malloc(1024*sizeof(int));
+	pagebuflen = 1024;
+    } else {
+	if(pagepos == pagebuflen)
+	{
+	    pagebuflen+=1024;
+	    pages = (int*)realloc(pages, pagebuflen);
+	}
+    }
+    pages[pagepos++] = page;
+}
+
+void pdfswf_performconversion()
+{
+    int t;
+    for(t=0;t<pagepos;t++)
+    {
+       currentpage = pages[t];
+       doc->displayPage((OutputDev*)output, currentpage, /*zoom*/100, /*rotate*/0, /*doLinks*/(int)1);
+    }
 }
 
 int pdfswf_numpages()
