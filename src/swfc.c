@@ -435,11 +435,19 @@ void s_sprite(char*name)
     incrementid();
 }
 
+typedef struct _buttonrecord
+{
+    U16 id;
+    MATRIX matrix;
+    CXFORM cxform;
+    char set;
+} buttonrecord_t;
+
 typedef struct _button
 {
     int endofshapes;
-    int shapes[4];
     int nr_actions;
+    buttonrecord_t records[4];
 } button_t;
 
 static button_t mybutton;
@@ -450,9 +458,7 @@ void s_button(char*name)
     swf_SetU16(tag, id); //id
     swf_ButtonSetFlags(tag, 0); //menu=no
 
-    mybutton.endofshapes = 0;
-    mybutton.shapes[0] = mybutton.shapes[1] = mybutton.shapes[2] = mybutton.shapes[3] = 0;
-    mybutton.nr_actions = 0;
+    memset(&mybutton, 0, sizeof(mybutton));
 
     memset(&stack[stackpos], 0, sizeof(stack[0]));
     stack[stackpos].type = 3;
@@ -473,32 +479,49 @@ void s_buttonput(char*character, char*as, parameters_t p)
     if(!c) {
 	syntaxerror("character %s not known (in .shape %s)", character, character);
     }
-    if(strstr(as, "idle")) {flags |= BS_UP;mybutton.shapes[0]=c->id;}
-    if(strstr(as, "hover")) {flags |= BS_OVER;mybutton.shapes[1]=c->id;}
-    if(strstr(as, "pressed")) {flags |= BS_DOWN;mybutton.shapes[2]=c->id;}
-    if(strstr(as, "area")) {flags |= BS_HIT;mybutton.shapes[3]=c->id;}
-    if(!flags)
-	flags = BS_HIT;
-    
     if(mybutton.endofshapes) {
 	syntaxerror("a .do may not precede a .show", character, character);
     }
    
     m = s_instancepos(c->size, &p);
 
-    swf_ButtonSetRecord(stack[stackpos-1].tag,flags,c->id,1,&m,&p.cxform);
+    buttonrecord_t r;
+    r.id = c->id;
+    r.matrix = m;
+    r.cxform = p.cxform;
+    r.set = 1;
+    
+    if(strstr(as, "idle")) mybutton.records[0]=r;
+    if(strstr(as, "hover")) mybutton.records[1]=r;
+    if(strstr(as, "pressed")) mybutton.records[2]=r;
+    if(strstr(as, "area")) mybutton.records[3]=r;
 }
+static void setbuttonrecords(TAG*tag)
+{
+    int flags[] = {BS_UP,BS_OVER,BS_DOWN,BS_HIT};
+    if(!mybutton.endofshapes) {
+	int t;
+	
+	if(!mybutton.records[3].set) {
+	    memcpy(&mybutton.records[3], &mybutton.records[0], sizeof(buttonrecord_t));
+	}
+
+	for(t=0;t<4;t++) {
+	    if(mybutton.records[t].set)
+		swf_ButtonSetRecord(tag,flags[t],mybutton.records[t].id,1,&mybutton.records[t].matrix,&mybutton.records[t].cxform);
+	}
+	swf_SetU8(tag,0); // end of button records
+	mybutton.endofshapes = 1;
+    }
+}
+
 void s_buttonaction(int flags, char*action)
 {
     ActionTAG* a = 0;
     if(flags==0) {
 	return;
     }
-    if(!mybutton.endofshapes) {
-	swf_SetU8(stack[stackpos-1].tag,0); // end of button records
-	mybutton.endofshapes = 1;
-    }
-
+    setbuttonrecords(stack[stackpos-1].tag);
     
     a = swf_ActionCompile(text, stack[0].swf->fileVersion);
     if(!a) {
@@ -514,12 +537,8 @@ void s_buttonaction(int flags, char*action)
 
 static void s_endButton()
 {
+    setbuttonrecords(stack[stackpos-1].tag);
     stackpos--;
-    if(!mybutton.endofshapes) {
-	swf_SetU8(stack[stackpos].tag,0); // end of button records
-	mybutton.endofshapes = 1;
-    }
-    /* end of actions */
       
     swf_ButtonPostProcess(stack[stackpos].tag, mybutton.nr_actions);
 
