@@ -618,6 +618,7 @@ static void s_endSprite()
     currentdepth = stack[stackpos].olddepth;
     instances = stack[stackpos].oldinstances;
 
+    tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_END);
 
     tag = stack[stackpos].tag;
