@@ -105,6 +105,7 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINESOUND:
     case ST_DEFINESPRITE:
     case ST_DEFINEVIDEOSTREAM:
+    case ST_VIDEOFRAME: //pseudodefine
     case ST_NAMECHARACTER: //pseudodefine
       id = swf_GetU16(t);
       break;
@@ -237,6 +238,7 @@ static int swf_pseudodefiningtagids[] =
  ST_DEFINEBUTTONSOUND,
  ST_NAMECHARACTER,
  ST_DOINITACTION,
+ ST_VIDEOFRAME,
  -1
 };
 
