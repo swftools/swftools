@@ -59,6 +59,7 @@ typedef struct _pdf_page
 
 pdf_page_t* pdf_getpage(pdf_doc_t*doc, int page);
 void pdf_page_render(pdf_page_t*page, swf_output_t*output);
+void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2);
 void pdf_page_destroy(pdf_page_t*page);
 void swf_output_destroy(swf_output_t*page);
 
@@ -70,7 +71,8 @@ typedef struct _pdf_page_info
     int number_of_fonts;
 } pdf_page_info_t;
 
-pdf_page_info_t* pdf_getpageinfo(pdf_page_info_t*info);
+pdf_page_info_t* pdf_page_getinfo(pdf_page_t*page);
+void pdf_page_info_destroy(pdf_page_info_t*info);
 
 #ifdef __cplusplus
 }
