@@ -53,6 +53,7 @@ static int action = 0;
 static int html = 0;
 static int xy = 0;
 static int showtext = 0;
+static int showshapes = 0;
 static int hex = 0;
 static int used = 0;
 
@@ -70,6 +71,7 @@ static struct options_t options[] = {
 {"f", "frames"},
 {"d", "hex"},
 {"u", "used"},
+{"s", "shapes"},
 {0,0}
 };
 
@@ -89,6 +91,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(name[0]=='t') {
         showtext = 1;
+        return 0;
+    }
+    else if(name[0]=='s') {
+        showshapes = 1;
         return 0;
     }
     else if(name[0]=='e') {
@@ -120,7 +126,7 @@ int args_callback_option(char*name,char*val)
 	return 0;
     }
     else if(name[0]=='D') {
-	action = placements = showtext = 1;
+	action = placements = showtext = showshapes = 1;
 	return 0;
     }
     else {
@@ -371,7 +377,7 @@ void handleEditText(TAG*tag)
     
     while(tag->data[tag->pos++]);
     if(flags & ET_HASTEXT)
-   //  printf(" text \"%s\"\n", &tag->data[tag->pos])
+   //  printf(" text \"%s\"\n", &tag->data[tag->pos]) //TODO
 	;
 }
 void printhandlerflags(U32 handlerflags) 
@@ -551,7 +557,28 @@ void handlePlaceObject2(TAG*tag, char*prefix)
 
 void handlePlaceObject(TAG*tag, char*prefix)
 {
-    /*TODO*/
+    TAG*tag2 = swf_InsertTag(0, ST_PLACEOBJECT2);
+
+    U16 id = swf_GetU16(tag);
+    U16 depth = swf_GetU16(tag);
+    MATRIX matrix; swf_GetMatrix(tag, &matrix);
+    CXFORM cxform; swf_GetCXForm(tag, &cxform, 0);
+
+    swf_SetU8(tag2, 14);
+    swf_SetU16(tag2, depth);
+    swf_SetMatrix(tag2, &matrix);
+    swf_SetCXForm(tag2, &cxform, 1);
+
+    handlePlaceObject2(tag2, prefix);
+}
+void handleShape(TAG*tag, char*prefix)
+{
+    /*TODO*/ return;
+
+    SHAPE2 shape;
+    tag->len = 0;
+    tag->readBit = 0;
+    swf_ParseDefineShape(tag, &shape);
 }
     
 void fontcallback1(U16 id,U8 * name)
@@ -810,7 +837,6 @@ int main (int argc,char ** argv)
             printf(" places id %04d at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
             if(swf_GetName(tag))
                 printf(" name \"%s\"",swf_GetName(tag));
-	    handlePlaceObject(tag, myprefix);
         }
 	else if(tag->id == ST_PLACEOBJECT2) {
 	    if(tag->data[0]&1)
@@ -981,8 +1007,17 @@ int main (int argc,char ** argv)
 	else if(tag->id == ST_DEFINEBUTTON2 && action) {
 	    dumpButton2Actions(tag, myprefix);
 	}
+	else if(tag->id == ST_PLACEOBJECT) {
+	    handlePlaceObject(tag, myprefix);
+	}
 	else if(tag->id == ST_PLACEOBJECT2) {
 	    handlePlaceObject2(tag, myprefix);
+	}
+	else if(tag->id == ST_DEFINESHAPE ||
+		tag->id == ST_DEFINESHAPE2 ||
+		tag->id == ST_DEFINESHAPE3) {
+	    if(showshapes)
+		handleShape(tag, myprefix);
 	}
 
 	if(tag->len && used) {
