@@ -29,6 +29,27 @@ static void count(char*text, int len, int condition)
 
 static char*prefix = 0;
 
+static void unescapeString(string_t * tmp)
+{
+    char *p, *p1;
+
+    for (p1=tmp->str; (p=strchr(p1, '\\')) != 0; p1 = p+1) 
+    {
+	switch(p[1])
+	{
+	    case '\\': p[1] = '\\'; break;
+	    case 'b': p[1] = '\b'; break;
+	    case 'f': p[1] = '\f'; break;
+	    case 'n': p[1] = '\n'; break;
+	    case 'r': p[1] = '\r'; break;
+	    case 't': p[1] = '\t'; break;
+	    default:
+		continue;
+	}
+	strcpy(p, p+1);
+    }
+}
+
 static void store(enum type_t type, int line, int column, char*text, int length)
 {
     struct token_t token;
@@ -46,6 +67,7 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 	break;
 	case STRING:
 	    string_set2(&tmp, text+1, length-2);
+	    unescapeString(&tmp);
 	    token.text = (char*)mem_putstring(&strings, tmp);
 	break;
 	case TWIP: 
