@@ -106,7 +106,7 @@ s32 getsbits(int num)
     return x;
 }
 
-u16 readu8()
+u8 readu8()
 {
     u8 a;
     input1(&a);
@@ -116,11 +116,19 @@ u16 readu8()
 u16 readu16()
 {
     u8 a,b;
-    // I'm not using input2(&a) here because our input is
-    // little endian.
     input1(&a);
     input1(&b);
     return ((u16)b)*256+a;
+}
+
+u32 readu32()
+{
+    u8 a,b,c,d;
+    input1(&a);
+    input1(&b);
+    input1(&c);
+    input1(&d);
+    return (((((u32)d)*256+(u32)c)*256+(u32)b)*256+(u32)a);
 }
 
 void writer_init(struct writer_t*w, u8*data, int maxlength)

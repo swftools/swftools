@@ -28,8 +28,9 @@ void readbits(u32*val,int num);
 void readsbits(s32*val,int num);
 u32 getbits(int num);
 s32 getsbits(int num);
-u16 readu8();
+u8 readu8();
 u16 readu16();
+u32 readu32();
 
 struct writer_t {
     u8* data;
