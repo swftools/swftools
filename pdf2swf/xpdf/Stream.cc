@@ -17,6 +17,8 @@
 #include <stddef.h>
 #ifndef WIN32
 #include <unistd.h>
+#else
+extern "C" int unlink(char *filename);
 #endif
 #include <string.h>
 #include <ctype.h>

@@ -14,12 +14,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include "./aconf.h"
 #if defined(WIN32)
 #  include <sys/stat.h>
 #  ifdef FPTEX
 #    include <win32lib.h>
 #  else
 #    include <windows.h>
+#    include <winbase.h>
 #  endif
 #elif defined(ACORN)
 #elif defined(MACOS)
@@ -57,6 +59,9 @@ extern GString *getHomeDir();
 
 // Get current directory.
 extern GString *getCurrentDir();
+
+/* create a temporary filename */
+char* mktmpname(char*ptr);
 
 // Append a file name to a path string.  <path> may be an empty
 // string, denoting the current directory).  Returns <path>.
