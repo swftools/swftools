@@ -126,22 +126,13 @@ void swfoutput_drawpath(struct swfoutput*, SWF_OUTLINE*outline, struct swfmatrix
 void swfoutput_drawpath2poly(struct swfoutput*, SWF_OUTLINE*outline, struct swfmatrix*m, int line_join, int line_cap, double line_width, double miter_limit);
 void swfoutput_startclip(struct swfoutput*, SWF_OUTLINE*outline, struct swfmatrix*m);
 void swfoutput_endclip(struct swfoutput*);
-int swfoutput_drawimagejpeg(struct swfoutput*, RGBA*pic, int sizex,int sizey, 
+
+void swfoutput_drawimagejpeg(struct swfoutput*, RGBA*pic, int sizex,int sizey, 
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
 	double x4,double y4);
-int swfoutput_drawimagelossless(struct swfoutput*, RGBA*pic, int sizex, int sizey,
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4);
-int swfoutput_drawimagelosslessN(struct swfoutput*, U8*pic, RGBA*pal, int sizex, int sizey,
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4, int n);
-void swfoutput_drawimageagain(struct swfoutput*, int id, int sizex, int sizey,
+void swfoutput_drawimagelossless(struct swfoutput*, RGBA*pic, int sizex, int sizey,
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
