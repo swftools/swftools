@@ -101,14 +101,14 @@ typedef         signed long     SCOORD;
 typedef struct _SPOINT
 { SCOORD        x;
   SCOORD        y;
-} SPOINT, * LPSPOINT;
+} SPOINT;
 
 typedef struct _RGBA
 { U8    a;
   U8    r;
   U8    g;
   U8    b;
-} RGBA, * LPRGBA;
+} RGBA;
 
 typedef struct _YUV
 {
@@ -120,23 +120,19 @@ typedef struct _SRECT
   SCOORD        ymin;
   SCOORD        xmax;
   SCOORD        ymax;
-} SRECT, * LPSRECT;
+} SRECT;
 
 typedef struct _MATRIX
-{ SFIXED        sx;     // factor x
-  SFIXED        sy;
-  SFIXED        r0;     // rotation
-  SFIXED        r1;
-  SCOORD        tx;     // delta x
-  SCOORD        ty;
-} MATRIX, * LPMATRIX;
+{ SFIXED        sx,r1, tx;
+  SFIXED        r0,sy, ty;
+} MATRIX;
 
 typedef struct _CXFORM
 { S16           a0, a1; /* mult, add */
   S16           r0, r1;
   S16           g0, g1;
   S16           b0, b1;
-} CXFORM, * LPCXFORM;
+} CXFORM;
 
 #define GRADIENT_LINEAR 0x10
 #define GRADIENT_RADIAL 0x12
@@ -161,7 +157,7 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
   U8            readBit;        // for Bit-Manipulating Functions [read]
   U8            writeBit;       // [write]
   
-} TAG, * LPTAG;
+} TAG;
 
 #define swf_ResetReadBits(tag)   if (tag->readBit)  { tag->pos++; tag->readBit = 0; }
 #define swf_ResetWriteBits(tag)  if (tag->writeBit) { tag->writeBit = 0; }
@@ -191,7 +187,7 @@ typedef struct _SWF
   U16           frameRate;
   U16           frameCount;     // valid after load and save
   TAG *         firstTag;
-} SWF, * LPSWF;
+} SWF;
 
 // Basic Functions
 
@@ -362,7 +358,7 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 typedef struct _LINESTYLE
 { U16           width;
   RGBA          color;
-} LINESTYLE, * LPLINESTYLE;
+} LINESTYLE;
 
 #define FILL_SOLID      0x00
 #define FILL_LINEAR     0x10  // Gradient
@@ -376,7 +372,7 @@ typedef struct _FILLSTYLE
   MATRIX    m; 
   U16	    id_bitmap;
   GRADIENT  gradient;
-} FILLSTYLE, * LPFILLSTYLE;
+} FILLSTYLE;
      
 typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
 {                 
@@ -397,7 +393,7 @@ typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
   				// used by Get/SetSimpleShape and glyph handling
   U8 *          data;
   U32           bitlen;         // length of data in bits
-} SHAPE, * LPSHAPE;
+} SHAPE;
 
 /* SHAPE can be converted into SHAPE2: */
 
@@ -493,7 +489,7 @@ typedef struct _SWFLAYOUT
   SRECT      * bounds;
   U16	       kerningcount;
   SWFKERNING * kerning;
-} SWFLAYOUT, * LPSWFLAYOUT;
+} SWFLAYOUT;
 
 typedef struct
 { S16         advance;
@@ -503,7 +499,7 @@ typedef struct
 typedef struct _FONTUSAGE
 { int* chars;
   char is_reduced;
-} FONTUSAGE, * LPFONTUSAGE;
+} FONTUSAGE;
 
 #define FONT_STYLE_BOLD 1
 #define FONT_STYLE_ITALIC 2
@@ -530,7 +526,7 @@ typedef struct _SWFFONT
 
   FONTUSAGE *   use;
 
-} SWFFONT, * LPSWFFONT;
+} SWFFONT;
 
 
 #define ET_HASTEXT 32768
@@ -703,7 +699,7 @@ int swf_ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineB
 
 // swfbits.c
 
-typedef int JPEGBITS,* LPJPEGBITS; // cover libjpeg structures
+typedef int JPEGBITS;
 
 JPEGBITS * swf_SetJPEGBitsStart(TAG * t,int width,int height,int quality);
 int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n);
