@@ -17,6 +17,7 @@ struct config_t
    char clip;
    char stack;
    char antistream;
+   char dummy;
    int loglevel;
    int movex;
    int movey;
