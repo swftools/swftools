@@ -16,13 +16,13 @@ bitio.o: bitio.c bitio.h
 	$(C) bitio.c -o $@
 drawer.o: drawer.c drawer.h
 	$(C) drawer.c -o $@
-q.o: q.c q.h
+q.o: q.c q.h $(top_builddir)/config.h
 	$(C) q.c -o $@
 MD5.o: MD5.c MD5.h
 	$(C) MD5.c -o $@
 log.o: log.c log.h
 	$(C) log.c -o $@
-rfxswf.o: rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules)
+rfxswf.o: rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules) $(top_builddir)/config.h
 	$(C) rfxswf.c -o $@
 
 $(lame_objects):
