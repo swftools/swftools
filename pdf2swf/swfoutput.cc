@@ -1142,7 +1142,7 @@ void swfoutput_drawpath2poly(struct swfoutput*output, SWF_OUTLINE*outline, struc
 int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 {
     int t;
-    if(charname) {
+    if(charname && font->glyphnames) {
 	for(t=0;t<font->numchars;t++) {
 	    if(font->glyphnames[t] && !strcmp(font->glyphnames[t],charname)) {
 		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, charname, u, t);
@@ -1238,7 +1238,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	msg("<debug> |   Style: %d", swffont->style);
 	msg("<debug> |   Encoding: %d", swffont->encoding);
 	for(int iii=0; iii<swffont->numchars;iii++) {
-	    msg("<debug> |   Glyph %d) name=%s, unicode=%d size=%d bbox=(%.2f,%.2f,%.2f,%.2f)\n", iii, swffont->glyphnames[iii], swffont->glyph2ascii[iii], swffont->glyph[iii].shape->bitlen, 
+	    msg("<debug> |   Glyph %d) name=%s, unicode=%d size=%d bbox=(%.2f,%.2f,%.2f,%.2f)\n", iii, swffont->glyphnames?swffont->glyphnames[iii]:"<nonames>", swffont->glyph2ascii[iii], swffont->glyph[iii].shape->bitlen, 
 		    swffont->layout->bounds[iii].xmin/20.0,
 		    swffont->layout->bounds[iii].ymin/20.0,
 		    swffont->layout->bounds[iii].xmax/20.0,
@@ -1347,13 +1347,15 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int x1, int y1, int x2
     }
     depth = startdepth = 3; /* leave room for clip and background rectangle */
 
+    sizex = x2;
+    sizey = y2;
+    x1*=20;y1*=20;x2*=20;y2*=20;
+
     if(lastpagesize.xmin != x1 ||
        lastpagesize.xmax != x2 ||
        lastpagesize.ymin != y1 ||
        lastpagesize.ymax != y2)
     {/* add white clipping rectangle */
-	sizex = x2;
-	sizey = y2;
 	msg("<notice> processing page %d (%dx%d)", pageNum,sizex,sizey);
 
 	if(!firstpage) {
@@ -1370,21 +1372,21 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int x1, int y1, int x2
 	SHAPE* s;
 	int ls1=0,fs1=0;
 	int shapeid = ++currentswfid;
-	r.xmin = x1*20;
-	r.ymin = y1*20;
-	r.xmax = x2*20;
-	r.ymax = y2*20;
+	r.xmin = x1;
+	r.ymin = y1;
+	r.xmax = x2;
+	r.ymax = y2;
 	tag = swf_InsertTag(tag, ST_DEFINESHAPE);
 	swf_ShapeNew(&s);
 	fs1 = swf_ShapeAddSolidFillStyle(s, &rgb);
 	swf_SetU16(tag,shapeid);
 	swf_SetRect(tag,&r);
 	swf_SetShapeHeader(tag,s);
-	swf_ShapeSetAll(tag,s,x1*20,y1*20,ls1,fs1,0);
-	swf_ShapeSetLine(tag,s,20*(x2-x1),0);
-	swf_ShapeSetLine(tag,s,0,20*(y2-y1));
-	swf_ShapeSetLine(tag,s,20*(x1-x2),0);
-	swf_ShapeSetLine(tag,s,0,20*(y1-y2));
+	swf_ShapeSetAll(tag,s,x1,y1,ls1,fs1,0);
+	swf_ShapeSetLine(tag,s,(x2-x1),0);
+	swf_ShapeSetLine(tag,s,0,(y2-y1));
+	swf_ShapeSetLine(tag,s,(x1-x2),0);
+	swf_ShapeSetLine(tag,s,0,(y1-y2));
 	swf_ShapeSetEnd(tag);
 	swf_ShapeFree(s);
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
