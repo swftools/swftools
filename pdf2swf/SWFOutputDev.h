@@ -24,6 +24,7 @@
 void pdfswf_init(char*filename, char*userPassword) ;
 
 void pdfswf_setparameter(char*name, char*value);
+void pdfswf_addfont(char*filename);
 
 void pdfswf_setoutputfilename(char*filename);
 void pdfswf_drawonlyshapes();

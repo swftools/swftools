@@ -48,25 +48,27 @@
 #include "swfoutput.h"
 #include "../lib/log.h"
 
-#include "ttf2pt1.h"
 #include <math.h>
 
 static PDFDoc*doc = 0;
 static char* swffilename = 0;
-int numpages;
-int currentpage;
+static int numpages;
+static int currentpage;
+
+static char*fonts[2048];
+static int fontnum = 0;
 
 // swf <-> pdf pages
-int*pages = 0;
-int pagebuflen = 0;
-int pagepos = 0;
+static int*pages = 0;
+static int pagebuflen = 0;
+static int pagepos = 0;
 
-double caplinewidth = 3.0;
+static double caplinewidth = 3.0;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
-double fontsizes[] = 
+static double fontsizes[] = 
 {
  0.833,0.833,0.889,0.889,
  0.788,0.722,0.833,0.778,
@@ -74,7 +76,7 @@ double fontsizes[] =
  0.576,0.576,0.576,0.576,
  0.733 //?
 };
-char*fontnames[]={
+static char*fontnames[]={
 "Helvetica",             
 "Helvetica-Bold",        
 "Helvetica-BoldOblique", 
@@ -99,20 +101,20 @@ struct mapping {
     char*filename;
     int id;
 } pdf2t1map[] ={
-{"Times-Roman",           "n021003l.pfb"},
-{"Times-Italic",          "n021023l.pfb"},
-{"Times-Bold",            "n021004l.pfb"},
-{"Times-BoldItalic",      "n021024l.pfb"},
-{"Helvetica",             "n019003l.pfb"},
-{"Helvetica-Oblique",     "n019023l.pfb"},
-{"Helvetica-Bold",        "n019004l.pfb"},
-{"Helvetica-BoldOblique", "n019024l.pfb"},
-{"Courier",               "n022003l.pfb"},
-{"Courier-Oblique",       "n022023l.pfb"},
-{"Courier-Bold",          "n022004l.pfb"},
-{"Courier-BoldOblique",   "n022024l.pfb"},
-{"Symbol",                "s050000l.pfb"},
-{"ZapfDingbats",          "d050000l.pfb"}};
+{"Times-Roman",           "n021003l"},
+{"Times-Italic",          "n021023l"},
+{"Times-Bold",            "n021004l"},
+{"Times-BoldItalic",      "n021024l"},
+{"Helvetica",             "n019003l"},
+{"Helvetica-Oblique",     "n019023l"},
+{"Helvetica-Bold",        "n019004l"},
+{"Helvetica-BoldOblique", "n019024l"},
+{"Courier",               "n022003l"},
+{"Courier-Oblique",       "n022023l"},
+{"Courier-Bold",          "n022004l"},
+{"Courier-BoldOblique",   "n022024l"},
+{"Symbol",                "s050000l"},
+{"ZapfDingbats",          "d050000l"}};
 
 class GfxState;
 class GfxImageColorMap;
@@ -210,7 +212,7 @@ public:
 
   XRef*xref;
 
-  int searchT1Font(char*name);
+  char* searchFont(char*name);
   char* substituteFont(GfxFont*gfxFont, char*oldname);
   char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
   int t1id;
@@ -452,7 +454,7 @@ SWFOutputDev::SWFOutputDev()
 //    printf("SWFOutputDev::SWFOutputDev() \n");
 };
 
-T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
+SWF_OUTLINE* gfxPath_to_SWF_OUTLINE(GfxState*state, GfxPath*path)
 {
     int num = path->getNumSubpaths();
     int s,t;
@@ -462,11 +464,11 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
     double lastx=0,lasty=0;
     if(!num) {
 	msg("<warning> empty path");
-	outline->type = T1_PATHTYPE_MOVE;
+	outline->type = SWF_PATHTYPE_MOVE;
 	outline->dest.x = 0;
 	outline->dest.y = 0;
 	outline->link = 0;
-	return (T1_OUTLINE*)outline;
+	return (SWF_OUTLINE*)outline;
     }
     for(t = 0; t < num; t++) {
 	GfxSubpath *subpath = path->getSubpath(t);
@@ -480,10 +482,10 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
 	   if(s==0) 
 	   {
 		last = outline;
-		outline->type = T1_PATHTYPE_MOVE;
+		outline->type = SWF_PATHTYPE_MOVE;
 		outline->dest.x = x;
 		outline->dest.y = y;
-		outline->link = (T1_OUTLINE*)new bezierpathsegment();
+		outline->link = (SWF_OUTLINE*)new bezierpathsegment();
 		outline = (bezierpathsegment*)outline->link;
 		cpos = 0;
 		lastx = nx;
@@ -506,9 +508,9 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
 		last = outline;
 		outline->dest.x = x;
 		outline->dest.y = y;
-		outline->type = cpos?T1_PATHTYPE_BEZIER:T1_PATHTYPE_LINE;
+		outline->type = cpos?SWF_PATHTYPE_BEZIER:SWF_PATHTYPE_LINE;
 		outline->link = 0;
-		outline->link = (T1_OUTLINE*)new bezierpathsegment();
+		outline->link = (SWF_OUTLINE*)new bezierpathsegment();
 		outline = (bezierpathsegment*)outline->link;
 		cpos = 0;
 		lastx = nx;
@@ -517,7 +519,7 @@ T1_OUTLINE* gfxPath_to_T1_OUTLINE(GfxState*state, GfxPath*path)
 	}
     }
     last->link = 0;
-    return (T1_OUTLINE*)start;
+    return (SWF_OUTLINE*)start;
 }
 /*----------------------------------------------------------------------------
  * Primitive Graphic routines
@@ -538,7 +540,7 @@ void SWFOutputDev::stroke(GfxState *state)
 
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
+    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
 
     lineJoin = 1; // other line joins are not yet supported by the swf encoder
                   // TODO: support bevel joints
@@ -569,7 +571,7 @@ void SWFOutputDev::fill(GfxState *state)
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
+    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
     swfoutput_setdrawmode(&output, DRAWMODE_FILL);
     swfoutput_drawpath(&output, outline, &m);
 }
@@ -580,7 +582,7 @@ void SWFOutputDev::eoFill(GfxState *state)
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
+    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
     swfoutput_setdrawmode(&output, DRAWMODE_EOFILL);
     swfoutput_drawpath(&output, outline, &m);
 }
@@ -592,7 +594,7 @@ void SWFOutputDev::clip(GfxState *state)
     m.m11 = 1; m.m22 = 1;
     m.m12 = 0; m.m21 = 0; 
     m.m13 = 0; m.m23 = 0;
-    T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
+    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
     swfoutput_startclip(&output, outline, &m);
     clipping[clippos] ++;
 }
@@ -603,7 +605,7 @@ void SWFOutputDev::eoClip(GfxState *state)
     struct swfmatrix m;
     m.m11 = 1; m.m21 = 0; m.m22 = 1;
     m.m12 = 0; m.m13 = 0; m.m23 = 0;
-    T1_OUTLINE*outline = gfxPath_to_T1_OUTLINE(state, path);
+    SWF_OUTLINE*outline = gfxPath_to_SWF_OUTLINE(state, path);
     swfoutput_startclip(&output, outline, &m);
     clipping[clippos] ++;
 }
@@ -659,7 +661,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(_u) 
 	u = *_u;
     
-    msg("<debug> drawChar(%f,%f,%f,%f,'%c',%d) CID=%d\n",x,y,dx,dy,c,u, font->isCIDFont());
+    msg("<debug> drawChar(%f,%f,%f,%f,c='%c' (%d),u=%d) CID=%d\n",x,y,dx,dy,c,c,u, font->isCIDFont());
 
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
@@ -677,8 +679,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	if(name)
 	   swfoutput_drawchar(&output, x1, y1, name, c, u);
 	else {
-	   msg("<warning> couldn't get name for CID character %02x from Encoding", c);
-	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c, u);
+	   swfoutput_drawchar(&output, x1, y1, 0, c, u);
 	}
     } else {
 	Gfx8BitFont*font8;
@@ -688,8 +689,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	if(enc && enc[c])
 	   swfoutput_drawchar(&output, x1, y1, enc[c], c, u);
 	else {
-	   msg("<warning> couldn't get name for character %02x from Encoding", c);
-	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c, u);
+	   swfoutput_drawchar(&output, x1, y1, 0, c, u);
 	}
     }
 }
@@ -912,58 +912,31 @@ void SWFOutputDev::restoreState(GfxState *state) {
 
 char type3Warning=0;
 
-int SWFOutputDev::searchT1Font(char*name) 
+char* SWFOutputDev::searchFont(char*name) 
 {	
     int i;
-    int mapid=-1;
     char*filename=0;
 	
     msg("<verbose> SearchT1Font(%s)", name);
 
+    /* see if it is a pdf standard font */
     for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
     {
 	if(!strcmp(name, pdf2t1map[i].pdffont))
 	{
-	    filename = pdf2t1map[i].filename;
-	    mapid = i;
+	    name = pdf2t1map[i].filename;
+	    break;
 	}
     }
-    if(filename) {
-	for(i=0; i<T1_Get_no_fonts(); i++)
+    /* look in all font files */
+    for(i=0;i<fontnum;i++) 
+    {
+	if(!strstr(fonts[i], name))
 	{
-	    char*fontfilename = T1_GetFontFileName (i);
-	    if(strstr(fontfilename, filename))
-	    {
-		    pdf2t1map[i].id = mapid;
-		    return i;
-	    }
-	}
-    } else {
-	for(i=0; i<T1_Get_no_fonts(); i++)
-	{
-	    char*fontname = T1_GetFontName (i);
-	    if(!fontname) {
-		T1_LoadFont(i);
-		fontname = T1_GetFontName (i);
-		msg("<verbose> Loading extra font %s from %s\n", FIXNULL(fontname), 
-								  FIXNULL(T1_GetFontFileName(i)));
-	    }
-
-	    if(fontname && !strcmp(name, fontname)) {
-		msg("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
-		return i;
-	    }
-	    fontname = T1_GetFontFileName(i);
-	    if(strrchr(fontname,'/'))
-		    fontname = strrchr(fontname,'/')+1;
- 
-	    if(strstr(fontname, name)) {
-		msg("<notice> Extra font %d, \"%s\" is being used.\n", i, fontname);
-		return i;
-	    }
+	    return fonts[i];
 	}
     }
-    return -1;
+    return 0;
 }
 
 void SWFOutputDev::updateLineWidth(GfxState *state)
@@ -1004,112 +977,87 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 
 char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 {
-      char*tmpFileName = NULL;
-      FILE *f;
-      int c;
-      char *fontBuf;
-      int fontLen;
-      Ref embRef;
-      Object refObj, strObj;
-      char namebuf[512];
-      tmpFileName = mktmpname(namebuf);
-      int ret;
+    char*tmpFileName = NULL;
+    FILE *f;
+    int c;
+    char *fontBuf;
+    int fontLen;
+    Ref embRef;
+    Object refObj, strObj;
+    char namebuf[512];
+    tmpFileName = mktmpname(namebuf);
+    int ret;
 
-      ret = font->getEmbeddedFontID(&embRef);
-      if(!ret) {
-	  msg("<verbose> Didn't get embedded font id");
-	  /* not embedded- the caller should now search the font
-	     directories for this font */
-	  return 0;
+    ret = font->getEmbeddedFontID(&embRef);
+    if(!ret) {
+	msg("<verbose> Didn't get embedded font id");
+	/* not embedded- the caller should now search the font
+	   directories for this font */
+	return 0;
+    }
+
+    f = fopen(tmpFileName, "wb");
+    if (!f) {
+      msg("<error> Couldn't create temporary Type 1 font file");
+	return 0;
+    }
+    if (font->getType() == fontType1C ||
+	font->getType() == fontCIDType0C) {
+      if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
+	fclose(f);
+	msg("<error> Couldn't read embedded font file");
+	return 0;
       }
-
-      f = fopen(tmpFileName, "wb");
-      if (!f) {
-	msg("<error> Couldn't create temporary Type 1 font file");
-	  return 0;
+      Type1CFontFile *cvt = new Type1CFontFile(fontBuf, fontLen);
+      cvt->convertToType1(f);
+      delete cvt;
+      gfree(fontBuf);
+    } else if(font->getType() == fontTrueType) {
+      msg("<verbose> writing font using TrueTypeFontFile::writeTTF");
+      if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
+	fclose(f);
+	msg("<error> Couldn't read embedded font file");
+	return 0;
       }
-      if (font->getType() == fontType1C ||
-	  font->getType() == fontCIDType0C) {
-	if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
-	  fclose(f);
-	  msg("<error> Couldn't read embedded font file");
-	  return 0;
-	}
-	Type1CFontFile *cvt = new Type1CFontFile(fontBuf, fontLen);
-	cvt->convertToType1(f);
-	delete cvt;
-	gfree(fontBuf);
-      } else if(font->getType() == fontTrueType) {
-	msg("<verbose> writing font using TrueTypeFontFile::writeTTF");
-	if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
-	  fclose(f);
-	  msg("<error> Couldn't read embedded font file");
-	  return 0;
-	}
-	TrueTypeFontFile *cvt = new TrueTypeFontFile(fontBuf, fontLen);
-	cvt->writeTTF(f);
-	delete cvt;
-	gfree(fontBuf);
-      } else {
-	font->getEmbeddedFontID(&embRef);
-	refObj.initRef(embRef.num, embRef.gen);
-	refObj.fetch(ref, &strObj);
-	refObj.free();
-	strObj.streamReset();
-	int f4[4];
-	char f4c[4];
-	int t;
-	for(t=0;t<4;t++) {
-	    f4[t] = strObj.streamGetChar();
-	    f4c[t] = (char)f4[t];
-	    if(f4[t] == EOF)
-		break;
-	}
-	if(t==4) {
-	    if(!strncmp(f4c, "true", 4)) {
-		/* some weird TTF fonts don't start with 0,1,0,0 but with "true".
-		   Change this on the fly */
-		f4[0] = f4[2] = f4[3] = 0;
-		f4[1] = 1;
-	    }
-	    fputc(f4[0], f);
-	    fputc(f4[1], f);
-	    fputc(f4[2], f);
-	    fputc(f4[3], f);
-
-	    while ((c = strObj.streamGetChar()) != EOF) {
-	      fputc(c, f);
-	    }
-	}
-	strObj.streamClose();
-	strObj.free();
+      TrueTypeFontFile *cvt = new TrueTypeFontFile(fontBuf, fontLen);
+      cvt->writeTTF(f);
+      delete cvt;
+      gfree(fontBuf);
+    } else {
+      font->getEmbeddedFontID(&embRef);
+      refObj.initRef(embRef.num, embRef.gen);
+      refObj.fetch(ref, &strObj);
+      refObj.free();
+      strObj.streamReset();
+      int f4[4];
+      char f4c[4];
+      int t;
+      for(t=0;t<4;t++) {
+	  f4[t] = strObj.streamGetChar();
+	  f4c[t] = (char)f4[t];
+	  if(f4[t] == EOF)
+	      break;
       }
-      fclose(f);
-
-      if(font->getType() == fontTrueType ||
-	 font->getType() == fontCIDType2)
-      {
-	  if(!ttfinfo) {
-	      msg("<notice> File contains TrueType fonts");
-	      ttfinfo = 1;
+      if(t==4) {
+	  if(!strncmp(f4c, "true", 4)) {
+	      /* some weird TTF fonts don't start with 0,1,0,0 but with "true".
+		 Change this on the fly */
+	      f4[0] = f4[2] = f4[3] = 0;
+	      f4[1] = 1;
 	  }
-	  char name2[512];
-	  char*tmp;
-	  tmp = strdup(mktmpname((char*)name2));
-	  sprintf(name2, "%s", tmp);
-	  char*a[] = {"./ttf2pt1", "-W", "0",
-#ifndef USE_FREETYPE
-	      "-p", "ttf",
-#else
-	      "-p", "ft",
-#endif
-	      "-b", tmpFileName, name2};
-	  msg("<verbose> Invoking %s %s %s %s %s %s %s %s",a[0],a[1],a[2],a[3],a[4],a[5],a[6],a[7]);
-	  ttf2pt1_main(8,a);
-	  unlink(tmpFileName);
-	  sprintf(name2,"%s.pfb",tmp);
-	  tmpFileName = strdup(name2);
+	  fputc(f4[0], f);
+	  fputc(f4[1], f);
+	  fputc(f4[2], f);
+	  fputc(f4[3], f);
+
+	  while ((c = strObj.streamGetChar()) != EOF) {
+	    fputc(c, f);
+	  }
       }
+      strObj.streamClose();
+      strObj.free();
+    }
+    fclose(f);
 
     return strdup(tmpFileName);
 }
@@ -1121,11 +1069,9 @@ int substitutepos = 0;
 
 char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 {
-/* ------------------------------ V1 */
-
     char*fontname = "Times-Roman";
     msg("<verbose> substituteFont(,%s)", FIXNULL(oldname));
-    this->t1id = searchT1Font(fontname);
+    char*filename = searchFont(fontname);
     if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
 	msg("<fatal> Too many fonts in file.");
 	exit(1);
@@ -1136,95 +1082,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 	msg("<notice> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	substitutepos ++;
     }
-    return fontname;
-
-/* ------------------------------ V2 */
-
-/*      //substitute font
-      char* fontname = 0;
-      double m11, m12, m21, m22;
-      int index;
-      int code;
-      double w,w1,w2;
-      double*fm;
-      double v;
-      if(gfxFont->getName()) {
-	fontname = gfxFont->getName()->getCString();
-      }
-
-//	  printf("%d %s\n", t, gfxFont->getCharName(t));
-      showFontError(gfxFont, 1);
-      if(1) { //if (!gfxFont->isCIDFont()) { FIXME: xpdf 1.01 does not have is16Bit()
-	if(gfxFont->isSymbolic()) {
-	  if(fontname && (strstr(fontname,"ing"))) //Dingbats, Wingdings etc.
-	   index = 16;
-	  else 
-	   index = 12;
-        } else if (gfxFont->isFixedWidth()) {
-	  index = 8;
-	} else if (gfxFont->isSerif()) {
-	  index = 4;
-	} else {
-	  index = 0;
-	}
-	if (gfxFont->isBold() && index!=16)
-	  index += 2;
-	if (gfxFont->isItalic() && index!=16)
-	  index += 1;
-	fontname = fontnames[index];
-	// get width of 'm' in real font and substituted font
-	if ((code = gfxFont->getCharCode("m")) >= 0)
-	  w1 = gfxFont->getWidth(code);
-	else
-	  w1 = 0;
-	w2 = fontsizes[index];
-	if (gfxFont->getType() == fontType3) {
-	  // This is a hack which makes it possible to substitute for some
-	  // Type 3 fonts.  The problem is that it's impossible to know what
-	  // the base coordinate system used in the font is without actually
-	  // rendering the font.  This code tries to guess by looking at the
-	  // width of the character 'm' (which breaks if the font is a
-	  // subset that doesn't contain 'm').
-	  if (w1 > 0 && (w1 > 1.1 * w2 || w1 < 0.9 * w2)) {
-	    w1 /= w2;
-	    m11 *= w1;
-	    m12 *= w1;
-	    m21 *= w1;
-	    m22 *= w1;
-	  }
-	  fm = gfxFont->getFontMatrix();
-	  v = (fm[0] == 0) ? 1 : (fm[3] / fm[0]);
-	  m21 *= v;
-	  m22 *= v;
-	} else if (!gfxFont->isSymbolic()) {
-	  // if real font is substantially narrower than substituted
-	  // font, reduce the font size accordingly
-	  if (w1 > 0.01 && w1 < 0.9 * w2) {
-	    w1 /= w2;
-	    if (w1 < 0.8) {
-	      w1 = 0.8;
-	    }
-	    m11 *= w1;
-	    m12 *= w1;
-	    m21 *= w1;
-	    m22 *= w1;
-	  }
-	}
-      }
-      if(fontname) {
-        this->t1id = searchT1Font(fontname);
-      }
-      if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
-	  msg("<fatal> Too many fonts in file.");
-	  exit(1);
-      }
-      if(oldname) {
-	  substitutesource[substitutepos] = oldname;
-	  substitutetarget[substitutepos] = fontname;
-	  msg("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
-	  substitutepos ++;
-      }
-      return fontname;*/
+    return filename;
 }
 
 void unlinkfont(char* filename)
@@ -1258,117 +1116,82 @@ void unlinkfont(char* filename)
 
 void SWFOutputDev::startDoc(XRef *xref) 
 {
-  this->xref = xref;
+    this->xref = xref;
 }
 
 
 void SWFOutputDev::updateFont(GfxState *state) 
 {
-  GfxFont*gfxFont = state->getFont();
-  char * fileName = 0;
+    GfxFont*gfxFont = state->getFont();
+      
+    if (!gfxFont) {
+	return;
+    }  
+    char * fontname = getFontName(gfxFont);
     
-  if (!gfxFont) {
-    return;
-  }  
-  char * fontname = getFontName(gfxFont);
- 
-  int t;
-  /* first, look if we substituted this font before-
-     this way, we don't initialize the T1 Fonts
-     too often */
-  for(t=0;t<substitutepos;t++) {
-      if(!strcmp(fontname, substitutesource[t])) {
-	  fontname = substitutetarget[t];
-	  break;
-      }
-  }
+    int t;
+    /* first, look if we substituted this font before-
+       this way, we don't initialize the T1 Fonts
+       too often */
+    for(t=0;t<substitutepos;t++) {
+	if(!strcmp(fontname, substitutesource[t])) {
+	    fontname = substitutetarget[t];
+	    break;
+	}
+    }
 
-  /* second, see if swfoutput already has this font
-     cached- if so, we are done */
+    /* second, see if swfoutput already has this font
+       cached- if so, we are done */
+    if(swfoutput_queryfont(&output, fontname))
+    {
+	swfoutput_setfont(&output, fontname, 0);
+	
+	msg("<debug> updateFont(%s) [cached]", fontname);
+	return;
+    }
 
-  if(swfoutput_queryfont(&output, fontname))
-  {
-      swfoutput_setfont(&output, fontname, -1, 0);
-      return;
-  }
+    // look for Type 3 font
+    if (!type3Warning && gfxFont->getType() == fontType3) {
+	type3Warning = gTrue;
+	showFontError(gfxFont, 2);
+    }
 
-  // look for Type 3 font
-  if (!type3Warning && gfxFont->getType() == fontType3) {
-    type3Warning = gTrue;
-    showFontError(gfxFont, 2);
-  }
+    /* now either load the font, or find a substitution */
 
-  /* now either load the font, or find a substitution */
+    Ref embRef;
+    GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
 
-  Ref embRef;
-  GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
-  if(embedded) {
-    if (gfxFont->getType() == fontType1 ||
+    char*fileName = 0;
+    int del = 0;
+    if(embedded &&
+       (gfxFont->getType() == fontType1 ||
 	gfxFont->getType() == fontCIDType0C ||
 	gfxFont->getType() == fontType1C ||
 	gfxFont->getType() == fontTrueType ||
 	gfxFont->getType() == fontCIDType2
-	)
+       ))
     {
-	fileName = writeEmbeddedFontToFile(xref, gfxFont);
-	if(!fileName) {
-	  msg("<error> Couldn't write font to file");
-	  showFontError(gfxFont,0);
-	  return ;
-	}
-	this->t1id = T1_AddFont(fileName);
-	if(this->t1id<0) {
-	  msg("<error> Couldn't load font from file %s", fileName);
-	  showFontError(gfxFont,0);
-	  unlinkfont(fileName);
-	  return ;
-	}
+      fileName = writeEmbeddedFontToFile(xref, gfxFont);
+      if(!fileName) showFontError(gfxFont,0);
+      else del = 1;
+    } else {
+      fileName = searchFont(fontname);
+      if(!fileName) showFontError(gfxFont,0);
     }
-    else {
-	/* in case the font is embedded, but has an
-	   unsupported format, we just look through the
-	   font directories */
-	int newt1id = searchT1Font(fontname);
-	if(newt1id<0) {
-	    msg("<error> Couldn't find any suitable replacement for %s",fontname);
-	    showFontError(gfxFont,0);
-	    fontname = substituteFont(gfxFont, fontname);
-	} else
-	    this->t1id = newt1id;
-    }
-  } else {
-    if(fontname) {
-	int newt1id = searchT1Font(fontname);
-	if(newt1id<0) {
-	    showFontError(gfxFont,1);
-	    fontname = substituteFont(gfxFont, fontname);
-	} else
-	    this->t1id = newt1id;
-    }
-    else {
-	showFontError(gfxFont,1);
-	fontname = substituteFont(gfxFont, fontname);
-    }
-  }
+    if(!fileName)
+	fileName = substituteFont(gfxFont, fontname);
 
-  if(t1id<0) {
-      msg("<error> Current font's t1id is %d", t1id);
-      //showFontError(gfxFont,0);
-      return;
-  }
- 
-  /* we may have done some substitutions here, so check
-     again if this font is cached. */
-  if(swfoutput_queryfont(&output, fontname))
-  {
-      swfoutput_setfont(&output, fontname, -1, 0);
-      return;
-  }
+    if(!fileName) {
+	msg("<error> Couldn't set font %s\n", fontname);
+	return;
+    }
+	
+    msg("<verbose> updateFont(%s) -> %s", fontname, fileName);
 
-  msg("<verbose> Creating new SWF font: t1id: %d, filename: %s name:%s", this->t1id, FIXNULL(fileName), FIXNULL(fontname));
-  swfoutput_setfont(&output, fontname, this->t1id, fileName);
-  if(fileName)
-      unlinkfont(fileName);
+    swfoutput_setfont(&output, fontname, fileName);
+    
+    if(fileName && del)
+	unlinkfont(fileName);
 }
 
 int pic_xids[1024];
@@ -1854,6 +1677,11 @@ void pdfswf_setparameter(char*name, char*value)
     } else {
 	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
     }
+}
+
+void pdfswf_addfont(char*filename)
+{
+    fonts[fontnum++] = filename;
 }
 
 void pdfswf_drawonlyshapes()

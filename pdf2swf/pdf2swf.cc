@@ -33,7 +33,6 @@
 #endif
 #include "../lib/args.h"
 #include "SWFOutputDev.h"
-#include "t1lib.h"
 extern "C" {
 #include "log.h"
 }
@@ -342,13 +341,8 @@ void args_callback_usage(char*name)
 }
 
 #ifdef HAVE_DIRENT_H
-void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath) 
+void addfontdir(char* dirname, int*numfonts)
 {
-    if(searchpath) {
-	if(searchpath[0])
-	    strcat(searchpath, ":");
-	strcat(searchpath, dirname);
-    }
     if(!numfonts)
 	msg("<verbose> Adding %s to search path\n", dirname);
 
@@ -369,36 +363,25 @@ void addfontdir(FILE*database, char* dirname, int*numfonts, char*searchpath)
 	l=strlen(name);
 	if(l<4)
 	    continue;
-	if(!strncasecmp(&name[l-4], ".afm", 4)) 
+	if(!strncasecmp(&name[l-4], ".pfa", 4)) 
 	    type=1;
+	if(!strncasecmp(&name[l-4], ".pfb", 4)) 
+	    type=3;
 	if(!strncasecmp(&name[l-4], ".ttf", 4)) 
 	    type=2;
 	if(type)
 	{
-	    if(database && type==1) {
-		char buf[256],a;
-		FILE*fi;
+	    char*fontname = (char*)malloc(strlen(dirname)+strlen(name)+2);
+	    strcpy(fontname, dirname);
 #ifdef WIN32
-		sprintf(buf, "%s\\%s", dirname,name);
+		strcat(fontname, "\\");
 #else
-		sprintf(buf, "%s/%s", dirname,name);
+		strcat(fontname, "/");
 #endif
-		fi = fopen(buf, "rb");
-		if(!fi || !fread(&a,1,1,fi)) {
-		    msg("<warning> Couldn't read from %s", buf);
-		}
-
-#ifdef WIN32
-/* might also work for all other systems, but we *need* it for win32 */
-		if(!strncmp(buf, FONTDIR, strlen(FONTDIR)))
-		    fprintf(database, "%s\n", buf+strlen(FONTDIR));
-		else
-#endif
-		    fprintf(database, "%s\n", buf);
-
-		msg("<verbose> Found font %s\n", buf);
-		fclose(fi);
-	    } 
+	    strcat(fontname, name);
+	    if(!numfonts)
+		msg("<debug> Adding %s to fonts", fontname);
+	    pdfswf_addfont(fontname);
 	    if(numfonts)
 		(*numfonts)++;
 	}
@@ -482,81 +465,20 @@ int main(int argn, char *argv[])
 	exit(0);
     }
 
-    msg("<verbose> reading font files from %s\n", FONTDIR);
-    //TODO: use tempnam here. Check if environment already contains a
-    //T1LIB_CONFIG.
-    char buf1[256],buf2[256],buf3[256];
-    char* t1lib_config = mktmpname(buf1);
-    char* fontdatabase = mktmpname(buf2);
-   
-    sprintf(buf3, "T1LIB_CONFIG=%s", t1lib_config);
-    putenv(buf3);
-
-    FILE*db = fopen(fontdatabase, "wb");
-    FILE*fi = fopen(t1lib_config, "wb");
-    if(!db || !fi) {
-	if(!db) fprintf(stderr, "Couldn't create temporary file %s\n",fontdatabase);
-	if(!fi) fprintf(stderr, "Couldn't create temporary file %s\n",t1lib_config);
-	exit(1);
-    }
-    t1searchpath[0] = 0;
 #ifdef HAVE_DIRENT_H
     // pass 1
-    addfontdir(0, FONTDIR, &numfonts, 0);
+    addfontdir(FONTDIR, &numfonts);
     for(t=0;t<fontpathpos;t++) {
-	addfontdir(0, fontpaths[t], &numfonts,0);
+	addfontdir(fontpaths[t], &numfonts);
     }
-    fprintf(db, "%d\n", numfonts);
     // pass 2
-    addfontdir(db, FONTDIR, 0, t1searchpath);
+    addfontdir(FONTDIR, 0);
     for(t=0;t<fontpathpos;t++) {
-	addfontdir(db, fontpaths[t], 0, t1searchpath);
+	addfontdir(fontpaths[t], 0);
     }
 #else
-#ifdef WIN32
-#error Win32 version requires dirent.h
+    msg("<error> Couldn't find any fonts!");
 #endif
-/* This is a workaround. The correct way would be to
-   get directory listings working on all systems.
-*/
-    strcpy(t1searchpath, SWFTOOLS_DATADIR);
-    strcat(t1searchpath, "/fonts");
-    fprintf(db, "14\n");
-    fprintf(db, "n021003l.afm\n");
-    fprintf(db, "n021023l.afm\n");
-    fprintf(db, "n021004l.afm\n");
-    fprintf(db, "n021024l.afm\n");
-    fprintf(db, "n019003l.afm\n");
-    fprintf(db, "n019023l.afm\n");
-    fprintf(db, "n019004l.afm\n");
-    fprintf(db, "n019024l.afm\n");
-    fprintf(db, "n022003l.afm\n");
-    fprintf(db, "n022023l.afm\n");
-    fprintf(db, "n022004l.afm\n");
-    fprintf(db, "n022024l.afm\n");
-    fprintf(db, "s050000l.afm\n");
-    fprintf(db, "d050000l.afm\n");
-#endif
-
-    fprintf(fi, "FONTDATABASE=%s\n",fontdatabase);
-#ifndef WIN32
-    fprintf(fi, "ENCODING=%s:.\n", t1searchpath);
-    fprintf(fi, "AFM=%s:.\n", t1searchpath);
-    fprintf(fi, "TYPE1=%s:.\n", t1searchpath);
-#else
-    fprintf(fi, "ENCODING=%s\n", FONTDIR);
-    fprintf(fi, "AFM=%s\n", FONTDIR);
-    fprintf(fi, "TYPE1=%s\n", FONTDIR);
-#endif
-    fclose(fi);
-    fclose(db);
-    /* initialize t1lib */
-    T1_SetBitmapPad( 16);
-    if ((T1_InitLib(LOGFILE)==NULL)){
-	fprintf(stderr, "Initialization of t1lib failed\n");
-	exit(1);
-    }
-    unlink(t1lib_config);
 
     pdfswf_init(filename, password);
     pdfswf_setoutputfilename(outputname);
@@ -601,7 +523,6 @@ int main(int argn, char *argv[])
 	systemf("rm __tmp__.swf");
     }
 
-    unlink(fontdatabase);
     return 0;
 }
 
