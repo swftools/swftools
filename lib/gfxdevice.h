@@ -71,10 +71,10 @@ typedef struct _gfxgradient
 
 typedef struct _gfxcxform
 {
-    float rr,rg,rb,ra;
-    float gr,gg,gb,ga;
-    float br,bg,bb,ba;
-    float ar,ag,ab,aa;
+    float rr,rg,rb,ra, tr;
+    float gr,gg,gb,ga, tg;
+    float br,bg,bb,ba, tb;
+    float ar,ag,ab,aa, ta;
     gfxcolor_t t;
 } gfxcxform_t;
 
@@ -87,23 +87,23 @@ typedef struct _gfxdevice
 {
     int (*setparameter)(struct _gfxdevice*dev, const char*key, const char*value);
 
-    int (*startpage)(struct _gfxdevice*dev, int xmin, int ymin, int xmax, int ymax); /*xmin/ymin?*/
+    void (*startpage)(struct _gfxdevice*dev, int xmin, int ymin, int xmax, int ymax); /*xmin/ymin?*/
 
     void (*startclip)(struct _gfxdevice*dev, gfxline_t*line);
     void (*endclip)(struct _gfxdevice*dev);
     void (*stroke)(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
     void (*fill)(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color);
     void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform); //cxform? tiling?
-    void (*fillgradient)(struct _gfxdevice*dev, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix); //?
+    void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix); //?
 
     void (*addfont)(struct _gfxdevice*dev, char*fontid, gfxfont_t*font, gfxmatrix_t*matrix);
     void (*drawchar)(struct _gfxdevice*dev, char*fontid, int glyph, int x, int y);
 
     void (*drawlink)(struct _gfxdevice*dev, int x1, int y1, int x2, int y2, char*action);
     
-    int (*endpage)(struct _gfxdevice*dev); //?
+    void (*endpage)(struct _gfxdevice*dev); //?
     
-    int (*finish)(struct _gfxdevice*dev);
+    void* (*finish)(struct _gfxdevice*dev);
 
     void* internal;
 } gfxdevice_t;
