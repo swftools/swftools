@@ -256,7 +256,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	FT_Done_Glyph(glyph);
 	font->glyph2ascii[font->numchars] = font->glyph2ascii[t];
 	glyph2glyph[t] = font->numchars;
-	printf("%d %d\n", t, glyph2glyph[t]);
 	font->numchars++;
     }
     /* notice: if skipunused is true, font->glyph2ascii, font->glyphnames and font->layout->bounds will 
@@ -266,7 +265,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     for(t=0;t<font->maxascii;t++) {
 	if(font->ascii2glyph[t]>=0) {
 	    font->ascii2glyph[t] = glyph2glyph[font->ascii2glyph[t]];
-	    printf("ascii %d -> glyph %d\n", t, font->ascii2glyph[t]);
 	}
     }
     free(glyph2glyph);
