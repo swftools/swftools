@@ -1,5 +1,6 @@
 swfc:
 
+    * color/line should be named linecolor/linewidth
     * .morph
     * .soundstream
     * text: newlines
