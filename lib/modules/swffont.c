@@ -299,6 +299,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
 static int t1lib_initialized = 0;
 
+static int counter = 0;
+
 SWFFONT* swf_LoadT1Font(char*filename)
 {
     SWFFONT * font;
@@ -450,6 +452,13 @@ SWFFONT* swf_LoadT1Font(char*filename)
 
 #endif
 
+SWFFONT* swf_DummyFont()
+{
+    SWFFONT*font = (SWFFONT*)malloc(sizeof(SWFFONT));
+    memset(font, 0, sizeof(SWFFONT));
+    return font;
+}
+
 static int isSWF(const char*filename)
 {
     FILE*fi = fopen(filename, "rb");
@@ -470,7 +479,10 @@ static int isSWF(const char*filename)
 
 SWFFONT* swf_LoadFont(char*filename)
 {
-    int is_swf = isSWF(filename);
+    int is_swf;
+    if(filename == 0)
+	return swf_DummyFont();
+    is_swf = isSWF(filename);
     if(is_swf<0)
 	return 0;
     if(is_swf) {
