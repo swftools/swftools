@@ -20,15 +20,15 @@ pdf2swf.o: pdf2swf.cc SWFOutputDev.h
 font2swf.o: font2swf.cc swfoutput.h spline.h
 	$(CC) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" -I../lib -Ittf2pt1 -Ixpdf font2swf.cc -o $@
 
-pdf2swf: pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o xpdf/pdflib.a ttf2pt1/ttf2pt1.a ../lib/librfxswf.a 
+pdf2swf: pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o xpdf/libpdf.a ttf2pt1/ttf2pt1.a ../lib/librfxswf.a 
 	$(LL) pdf2swf.o SWFOutputDev.o swfoutput.o encodings.o spline.o -o pdf2swf ../lib/librfxswf.a ttf2pt1/ttf2pt1.a xpdf/libpdf.a $(LIBS) 
 	$(STRIP) pdf2swf
 
-font2swf: font2swf.o swfoutput.o spline.o encodings.o xpdf/pdflib.a ../lib/librfxswf.a 
+font2swf: font2swf.o swfoutput.o spline.o encodings.o xpdf/libpdf.a ../lib/librfxswf.a 
 	$(LL) font2swf.o swfoutput.o spline.o encodings.o ../lib/librfxswf.a xpdf/libpdf.a -o font2swf $(LIBS)
 	$(STRIP) font2swf
 
-xpdf/pdflib.a:
+xpdf/libpdf.a:
 	cd xpdf;$(MAKE);cd ..
 
 ttf2pt1/ttf2pt1.a:
