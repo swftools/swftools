@@ -11,7 +11,7 @@ all: avi2swf
 videoreader_avifile.o: videoreader_avifile.cc
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
 
-videoreader_vfw.o: videoreader_v2w.cc
+videoreader_vfw.o: videoreader_vfw.cc
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
 
 avi2swf.o: avi2swf.cc
