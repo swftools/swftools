@@ -623,7 +623,7 @@ void handleShape(TAG*tag, char*prefix)
 	if(t < shape.numfillstyles) {
 	    printf(" | %-2d) %-18.18s", t+1, fillstyle2str(&shape.fillstyles[t]));
 	} else {
-	    printf("                    ");
+	    printf("                         ");
 	}
 	if(t < shape.numlinestyles) {
 	    printf("%-2d) %s", t+1, linestyle2str(&shape.linestyles[t]));
