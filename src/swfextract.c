@@ -285,7 +285,9 @@ void extractTag(SWF*swf, char*filename)
        changed = 0;
        for(t=0;t<65536;t++) {
 	   if(used[t] && !(used[t]&2)) {
-	     if(tags[t]->id==ST_DEFINESPRITE) {
+	     if(tags[t]==0) {
+		 msg("<warning> ID %d is referenced, but never defined.", t);
+	     } else if(tags[t]->id==ST_DEFINESPRITE) {
 		 TAG*tag = tags[t];
 		 while(tag->id != ST_END)
 		 {
