@@ -42,6 +42,8 @@ swfcombine:
       preloaders)
     * fix clipdepths
     * rotating
+    * allow to replace images
+    * allow to replace texts
 
 swfextract:
     
