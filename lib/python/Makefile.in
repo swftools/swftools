@@ -27,7 +27,7 @@ SWF.o: SWF.c pyutils.h primitives.h taglist.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.o
 
 SWF.$(SLEXT): SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
-	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
+	$(L) -g $(SHARED) SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf.a $(LIBS)
 
 #TODO:
 install:
