@@ -976,19 +976,6 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 	                              (char)(rgb.b*255), (char)(opaq*255));
 }
 
-static char* tempFile(char*filename)
-{
-    char*dir = getenv("TMP");
-    if(!dir) dir = getenv("TEMP");
-    if(!dir) dir = getenv("tmp");
-    if(!dir) dir = getenv("temp");
-    if(!dir) dir = "C:\\";
-    static char buf[512];
-    strcpy(buf, dir);
-    strcat(buf, filename);
-    return buf;
-}
-
 char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 {
       char*tmpFileName = NULL;
@@ -999,11 +986,8 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
       Type1CFontFile *cvt;
       Ref embRef;
       Object refObj, strObj;
-#ifdef WIN32
-      tmpFileName = tempFile("tmpfont");
-#else
-      tmpFileName = "/tmp/tmpfont";
-#endif
+      char namebuf[512];
+      tmpFileName = mktmpname(namebuf);
       int ret;
 
       ret = font->getEmbeddedFontID(&embRef);
@@ -1072,25 +1056,25 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	      msg("<notice> File contains TrueType fonts");
 	      ttfinfo = 1;
 	  }
-	  char name2[80];
+	  char name2[512];
 	  char*tmp;
 	  tmp = strdup(mktmpname((char*)name2));
 	  sprintf(name2, "%s", tmp);
-	  char*a[] = {"./ttf2pt1", "-W0",
+	  char*a[] = {"./ttf2pt1", "-W", "0",
 #ifndef USE_FREETYPE
-	      "-pttf",
+	      "-p", "ttf",
 #else
-	      "-pft",
+	      "-p", "ft",
 #endif
 	      "-b", tmpFileName, name2};
-	  msg("<verbose> Invoking %s %s %s %s %s %s",a[0],a[1],a[2],a[3],a[4],a[5]);
-	  ttf2pt1_main(6,a);
+	  msg("<verbose> Invoking %s %s %s %s %s %s %s %s",a[0],a[1],a[2],a[3],a[4],a[5],a[6],a[7]);
+	  ttf2pt1_main(8,a);
 	  unlink(tmpFileName);
 	  sprintf(name2,"%s.pfb",tmp);
 	  tmpFileName = strdup(name2);
       }
 
-    return tmpFileName;
+    return strdup(tmpFileName);
 }
 
 char* gfxFontName(GfxFont* gfxFont)
