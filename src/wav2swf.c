@@ -219,6 +219,20 @@ int main (int argc,char ** argv)
     samples = (U16*)wav2.data;
     numsamples = wav2.size/2;
 
+    if(numsamples%blocksize != 0)
+    {
+	// apply padding, so that block is a multiple of blocksize
+	int numblocks = (numsamples+blocksize-1)/blocksize;
+	int numsamples2;
+	U16* samples2;
+	numsamples2 = numblocks * blocksize;
+	samples2 = malloc(sizeof(U16)*numsamples2);
+	memcpy(samples2, samples, numsamples*sizeof(U16));
+	memset(&samples2[numsamples], 0, sizeof(U16)*(numsamples2 - numsamples));
+	numsamples = numsamples2;
+	samples = samples2;
+    }
+
     memset(&swf,0x00,sizeof(SWF));
 
     swf.fileVersion    = 5;
@@ -288,7 +302,7 @@ int main (int argc,char ** argv)
 #else
         swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
         swf_SetU32(tag, numsamples); // 44100 -> 11025
-        swf_SetBlock(tag, wav2.data, numsamples*2);
+        swf_SetBlock(tag, samples, numsamples*2);
 #endif
 
 
