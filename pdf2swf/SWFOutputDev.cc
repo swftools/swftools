@@ -1205,7 +1205,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     }
     if(!fileName) {
 	char * fontname = getFontName(gfxFont);
-	msg("<warning> Font %s could not be loaded.", fontname);
+	msg("<warning> Font %s %scould not be loaded.", fontname, embedded?"":"(not embedded) ");
 	msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into /swftools/fonts", fontname);
 	fileName = substituteFont(gfxFont, fontid);
     }
