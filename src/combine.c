@@ -157,8 +157,15 @@ void write_sprite_defines(struct writer_t*w)
 			 * Anyway we can't throw it out, so we just pass it
 			 * through.
 			 */
+			writer_write(w, tag->fulldata, tag->fulllength);
 			break;
 		    }
+		 case TAGID_JPEGTABLES:
+			/* according to the flash specs, there may only 
+			   be one JPEGTABLES tag per swf. This is maybe
+			   a big FIXME */
+			writer_write(w, tag->fulldata, tag->fulllength);
+		    break;
 		 case TAGID_EXPORTASSETS:
 		    logf("<debug> deliberately ignoring EXPORTASSETS tag");
 		    break;
