@@ -1,6 +1,6 @@
 # ==================================================================================
 #
-# File format specification (well, sort of)
+# swfc(1) File format specification (well, sort of)
 # Version: 0.1
 #
 # ==================================================================================
@@ -50,6 +50,15 @@
 # -------------------------------
 
 .texture text1=background scale=50% rotate=45
+
+# define a gradient
+# -----------------
+
+#.gradient mygradient:
+#    0.000 0 0 0
+#    0.500 255 255 255
+#    1.000 0 0 0
+#.end
 
 # load several pages:
 # -------------------
