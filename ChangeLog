@@ -159,7 +159,8 @@
 	* pdf2swf/pdf2swf: greatly improved spline conversion
 	* pdf2swf/: Fix for t1lib-5.0.0
 	* src/wav2swf: streaming sound now works for all framerates < 35.
-0.5.0: (not yet released)
+
+0.5.0:
 	* pdf2swf: added support for capline-styles
 	* avi2swf: added h.263 support
 	* avi2swf: improved sound support
@@ -171,4 +172,6 @@
 	* swfbbox: New Tool, allows several bounding box operations on SWFs
 	* wav2swf: added support for samplerate 44100 (Marcus Doemling)
 	* avi2swf: added -r (--mp3-samplerate) parameter (Marcus Doemling)
+	* lib/action: Integrated Ming Actioncompiler
+	* lib/modules/swffont.c: New module, allows creation of SWF fonts from Type1 and TTF
 
