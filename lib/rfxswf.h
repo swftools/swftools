@@ -712,6 +712,7 @@ void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info);
 
 // swftools.c
 
+void swf_Optimize(SWF*swf);
 U8 swf_isDefiningTag(TAG * t);
 U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
