@@ -814,7 +814,9 @@ void s_font(char*name, char*filename)
     int f;
     SWF swf;
     SWFFONT* font;
-    f = open(filename,O_RDONLY|O_BINARY);
+    font = swf_LoadFont(filename);
+    
+    /*f = open(filename,O_RDONLY|O_BINARY);
     if (f<0) { 
 	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
 	font = (SWFFONT*)malloc(sizeof(SWFFONT));
@@ -830,7 +832,7 @@ void s_font(char*name, char*filename)
     close(f);
     if (font==0) { 
 	syntaxerror("File \"%s\" isn't a valid rfxswf font file", filename);
-    }
+    }*/
 
     if(0)
     {
