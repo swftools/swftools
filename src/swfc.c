@@ -1178,6 +1178,7 @@ void s_sound(char*name, char*filename)
     U16*samples;
     int numsamples;
     int t;
+    int blocksize = 576;
 
     if(!readWAV(filename, &wav)) {
 	warning("Couldn't read wav file \"%s\"", filename);
@@ -1194,6 +1195,20 @@ void s_sound(char*name, char*filename)
 	    samples[t] = (samples[t]>>8)&0xff | (samples[t]<<8)&0xff00;
 	}
 #endif
+    }
+    
+    if(numsamples%blocksize != 0)
+    {
+	// apply padding, so that block is a multiple of blocksize
+	int numblocks = (numsamples+blocksize-1)/blocksize;
+	int numsamples2;
+	U16* samples2;
+	numsamples2 = numblocks * blocksize;
+	samples2 = malloc(sizeof(U16)*numsamples2);
+	memcpy(samples2, samples, numsamples*sizeof(U16));
+	memset(&samples2[numsamples], 0, sizeof(U16)*(numsamples2 - numsamples));
+	numsamples = numsamples2;
+	samples = samples2;
     }
 
     tag = swf_InsertTag(tag, ST_DEFINESOUND);
