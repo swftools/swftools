@@ -1113,3 +1113,22 @@ void swf_SetDefineBBox(TAG * tag, SRECT newbbox)
     }
 }
 
+RGBA swf_GetSWFBackgroundColor(SWF*swf)
+{
+    TAG*t=swf->firstTag;
+    RGBA color;
+    color.r = color.b = color.g = 0;
+    color.a = 255;
+    while(t) {
+	if(t->id == ST_SETBACKGROUNDCOLOR) {
+	    swf_SetTagPos(t, 0);
+	    color.r = swf_GetU8(t);
+	    color.g = swf_GetU8(t);
+	    color.b = swf_GetU8(t);
+	    break;
+	}
+	t=t->next;
+    }
+    return color;
+}
+
