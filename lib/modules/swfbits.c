@@ -760,3 +760,36 @@ RGBA* swf_ExtractImage(TAG*tag, int*dwidth, int*dheight)
 
 #undef OUTBUFFER_SIZE
 
+
+void swf_RemoveJPEGTables(SWF*swf)
+{
+    TAG* tag = swf->firstTag; 
+    TAG* tables_tag = 0;
+    while(tag) {
+	if(tag->id == ST_JPEGTABLES) {
+	    tables_tag = tag;
+	}
+	tag = tag->next;
+    }
+    
+    if(!tables_tag)
+	return;
+   
+    tag = swf->firstTag;
+    while(tag) {
+	if(tag->id == ST_DEFINEBITSJPEG) {
+	    void*data = rfx_alloc(tag->len);
+	    swf_GetBlock(tag, data, tag->len);
+	    swf_ResetTag(tag, ST_DEFINEBITSJPEG2);
+	    swf_SetBlock(tag, tables_tag->data, tables_tag->len);
+	    swf_SetBlock(tag, data, tag->len);
+	    free(data);
+	}
+	tag = tag->next;
+    }
+    if(swf->firstTag == tables_tag)
+	swf->firstTag = tables_tag->next;
+    swf_DeleteTag(tables_tag);
+}
+
+
