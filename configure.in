@@ -1,11 +1,26 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/)
 
+AC_ARG_ENABLE(checkmem,
+[  --enable-checkmem       turn on ccmalloc debugging], CHECKMEM=true)
+AC_ARG_ENABLE(debug,
+[  --enable-debug          turn on debugging], DEBUG=true)
+
 PACKAGE=swftools
-VERSION=0.4.3
+VERSION=0.4.4-pre6
 # -Winline?
-CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer $CFLAGS"
-CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer $CXXFLAGS"
+
+if test "x$CHECKMEM" '!=' "x";then
+    DEBUG=yes
+fi
+if test "x$DEBUG" '!=' "x";then
+    CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -g $CFLAGS"
+    CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -g $CXXFLAGS"
+else
+    CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CFLAGS"
+    CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O -fomit-frame-pointer $CXXFLAGS"
+fi
+
 export PACKAGE VERSION CFLAGS CXXFLAGS
 
 dnl Checks for programs.
@@ -20,8 +35,19 @@ case $host_os in
 esac
 dnl Checks for programs.
  AC_PROG_CC
- AC_PROG_CPP
  AC_PROG_CXX
+
+if test "x$CHECKMEM" '!=' "x";then
+    CC="ccmalloc $CC"
+    CXX="ccmalloc $CXX"
+    #echo running again
+    #unset ac_cv_prog_CC
+    #unset ac_cv_prog_CXX
+    #AC_PROG_CC
+    #AC_PROG_CXX
+fi
+ AC_PROG_CPP
+
  AC_PROG_RANLIB
  AC_PROG_MAKE_SET
  AC_PROG_INSTALL
@@ -31,6 +57,8 @@ dnl Checks for programs.
 
 dnl Checks for system services
  AC_EXEEXT
+
+RFX_CHECK_MING
 
 # The following tries to make use of includes and libraries in
 # /usr/local, too. Notice: A -I/usr/local/include might break
@@ -52,10 +80,9 @@ dnl Checks for libraries.
  exit;
  )
  AC_CHECK_LIB(z, deflate,, 
- echo "Error: The zlib compression library is required."
- DISABLEPDF2SWF=true; 
+ DISABLEPNG2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} zlib"
- exit;
+ ZLIBMISSING=true;
  )
  AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, 
  DISABLEPDF2SWF=true;
@@ -64,7 +91,7 @@ dnl Checks for libraries.
  )
  AC_CHECK_LIB(t1, T1_LoadFont,,
  DISABLEPDF2SWF=true;
- MISSINGLIBS="${MISSINGLIBS} T1lib"
+ MISSINGLIBS="${MISSINGLIBS} t1lib"
  )
 
 RFX_CHECK_BYTEORDER
@@ -90,8 +117,9 @@ if test "x${ac_cv_header_t1lib_h}" != "xyes"; then
  MISSINGLIBS="${MISSINGLIBS} t1lib.h"
 fi
 if test "x${ac_cv_header_zlib_h}" != "xyes"; then
- DISABLEPDF2SWF=true;
+ DISABLEPNG2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} zlib.h"
+ ZLIBMISSING=true;
 fi
 
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE")
@@ -133,18 +161,32 @@ if test "x${UNCOMPRESS}" = "xgzip"; then
 fi
 AC_SUBST(USE_GZIP)
 
-JPEG2SWF='jpeg2swf$(EXEEXT)'
+JPEG2SWF='jpeg2swf' #$(EXEEXT)
 export JPEG2SWF
+PNG2SWF='png2swf' #$(EXEEXT)
+export PNG2SWF
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "***************************************************"
   echo "The following headers/libraries are missing: " ${MISSINGLIBS}
-  echo "Disabling pdf2swf tool..."
-  rm -f pdf2swf/Makefile
-  echo all install uninstall clean: > pdf2swf/Makefile
+  if test "x${DISABLEPDF2SWF}" = "xtrue"; then
+    echo "Disabling pdf2swf tool..."
+    rm -f pdf2swf/Makefile
+    echo all install uninstall clean: > pdf2swf/Makefile
+  fi
   if test "x${DISABLEJPEG2SWF}" = "xtrue"; then
     echo "Disabling jpeg2swf tool..."
     JPEG2SWF=
     export JPEG2SWF
+  fi
+  if test "x${DISABLEPNG2SWF}" = "xtrue"; then
+    echo "Disabling png2swf tool..."
+    PNG2SWF=
+    export PNG2SWF
+  fi
+  if test "x${ZLIBMISSING}" = "xtrue"; then
+    echo
+    echo "Warning! Without zlib, you will not be able to read"
+    echo "or write compressed Flash MX files!"
   fi
   echo "***************************************************"
   FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile swfs/Makefile"
@@ -152,8 +194,10 @@ else
   FILES="./release Makefile.common ${avi2swf} Makefile lib/lame/Makefile lib/Makefile src/Makefile pdf2swf/Makefile pdf2swf/xpdf/Makefile pdf2swf/ttf2pt1/Makefile swfs/Makefile"
 fi
 AC_SUBST(JPEG2SWF)
-
-AR=ar
-AC_SUBST(AR)
+AC_SUBST(PNG2SWF)
 
 AC_OUTPUT(${FILES})
+
+if test "x${srcdir}" != "x."; then
+    echo "Warning: --srcdir is not supported"
+fi
