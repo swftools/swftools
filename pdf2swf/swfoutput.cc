@@ -1176,7 +1176,7 @@ void drawlink(struct swfoutput*obj, ActionTAG*actions, swfcoord*points)
     swf_ButtonSetRecord(tag,0x04,myshapeid2,depth,0,0);
     swf_ButtonSetRecord(tag,0x08,myshapeid,depth,0,0);
     swf_SetU8(tag,0);
-    swf_SetActions(tag,actions);
+    swf_ActionSet(tag,actions);
     swf_SetU8(tag,0);
     
     tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
