@@ -1146,17 +1146,26 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   ImageStream *imgStr;
   Guchar pixBuf[4];
   GfxRGB rgb;
+  int ncomps = 1;
+  int bits = 1;
+				 
+  if(colorMap) {
+    ncomps = colorMap->getNumPixelComps();
+    bits = colorMap->getBits();
+  }
+  imgStr = new ImageStream(str, width, ncomps,bits);
+  imgStr->reset();
+
   if(!width || !height || (height<=1 && width<=1))
   {
       logf("<verbose> Ignoring %d by %d image", width, height);
-      int i,j;
-      if (inlineImg) {
-	j = height * ((width + 7) / 8);
-	str->reset();
-	for (i = 0; i < j; ++i) {
-	  str->getChar();
-	}
+      unsigned char buf[8];
+      int x,y;
+      for (y = 0; y < height; ++y)
+      for (x = 0; x < width; ++x) {
+	  imgStr->getPixel(buf);
       }
+      delete imgStr;
       return;
   }
   
@@ -1165,206 +1174,161 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   state->transform(1, 0, &x3, &y3);
   state->transform(1, 1, &x4, &y4);
 
-  if (str->getKind() == strDCT &&
-      (colorMap->getNumPixelComps() == 3 || !mask) )
-  {
-    sprintf(fileName, "%s.jpg",mktmpname(0));
-    logf("<verbose> Found jpeg. Temporary storage is %s", fileName);
-    if(!jpeginfo)
-    {
-	logf("<notice> file contains jpeg pictures");
-	jpeginfo = 1;
-    }
-    if (!(fi = fopen(fileName, "wb"))) {
-      logf("<error> Couldn't open temporary image file '%s'", fileName);
+  if(!pbminfo && !(str->getKind()==strDCT)) {
+      logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
+      if(mask)
+      logf("<verbose> drawing %d by %d masked picture\n", width, height);
+      pbminfo = 1;
+  }
+  if(!jpeginfo && (str->getKind()==strDCT)) {
+      logf("<notice> file contains jpeg pictures");
+      jpeginfo = 1;
+  }
+
+  if(mask) {
+      int yes=0,i,j;
+      unsigned char buf[8];
+      int xid = 0;
+      int yid = 0;
+      int x,y;
+      int width2 = (width+3)&(~3);
+      unsigned char*pic = new unsigned char[width2*height];
+      RGBA pal[256];
+      GfxRGB rgb;
+      state->getFillRGB(&rgb);
+      pal[0].r = (int)(rgb.r*255); pal[0].g = (int)(rgb.g*255); 
+      pal[0].b = (int)(rgb.b*255); pal[0].a = 255;
+      pal[1].r = 0; pal[1].g = 0; pal[1].b = 0; pal[1].a = 0;
+      xid += pal[1].r*3 + pal[1].g*11 + pal[1].b*17;
+      yid += pal[1].r*7 + pal[1].g*5 + pal[1].b*23;
+      for (y = 0; y < height; ++y)
+      for (x = 0; x < width; ++x)
+      {
+	    imgStr->getPixel(buf);
+	    // if(invert) buf[0]=255-buf[0]?
+	    pic[width*y+x] = buf[0];
+	    xid+=x*buf[0]+1;
+	    yid+=y*buf[0]+1;
+      }
+      int t,found = -1;
+      for(t=0;t<picpos;t++)
+      {
+	  if(pic_xids[t] == xid &&
+	     pic_yids[t] == yid) {
+	      found = t;break;
+	  }
+      }
+      if(found<0) {
+	  pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
+		  x1,y1,x2,y2,x3,y3,x4,y4);
+	  pic_xids[picpos] = xid;
+	  pic_yids[picpos] = yid;
+	  if(picpos<1024)
+	      picpos++;
+      } else {
+	  swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+		  x1,y1,x2,y2,x3,y3,x4,y4);
+      }
+      free(pic);
+      delete imgStr;
       return;
-    }
-    str = ((DCTStream *)str)->getRawStream();
-    str->reset();
-    int xid = 0;
-    int yid = 0;
-    int count = 0;
-    while ((c = str->getChar()) != EOF)
-    {
-      fputc(c, fi);
-      xid += count*c;
-      yid += (~count)*c;
-      count++;
-    }
-    fclose(fi);
-    
-    int t,found = -1;
-    for(t=0;t<picpos;t++)
-    {
-	if(pic_xids[t] == xid &&
-	   pic_yids[t] == yid) {
-	    found = t;break;
-	}
-    }
-    if(found<0) {
-	pic_ids[picpos] = swfoutput_drawimagejpeg(&output, fileName, width, height, 
-		x1,y1,x2,y2,x3,y3,x4,y4);
-	pic_xids[picpos] = xid;
-	pic_yids[picpos] = yid;
-	if(picpos<1024)
-	    picpos++;
-    } else {
-	swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-		x1,y1,x2,y2,x3,y3,x4,y4);
-    }
-    unlink(fileName);
-  } else {
+  } 
 
-    if(!pbminfo) {
-	logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
-	if(mask)
-	logf("<verbose> drawing %d by %d masked picture\n", width, height);
-	pbminfo = 1;
-    }
-
-    if(mask) {
-	imgStr = new ImageStream(str, width, 1, 1);
-	imgStr->reset();
-	//return;
-	int yes=0,i,j;
-	unsigned char buf[8];
-	int xid = 0;
-	int yid = 0;
-	int x,y;
-	int width2 = (width+3)&(~3);
-	unsigned char*pic = new unsigned char[width2*height];
-	RGBA pal[256];
-	GfxRGB rgb;
-	state->getFillRGB(&rgb);
-	pal[0].r = (int)(rgb.r*255); pal[0].g = (int)(rgb.g*255); 
-	pal[0].b = (int)(rgb.b*255); pal[0].a = 255;
-	pal[1].r = 0; pal[1].g = 0; pal[1].b = 0; pal[1].a = 0;
-	xid += pal[1].r*3 + pal[1].g*11 + pal[1].b*17;
-	yid += pal[1].r*7 + pal[1].g*5 + pal[1].b*23;
-	for (y = 0; y < height; ++y)
-        for (x = 0; x < width; ++x)
-	{
-	      imgStr->getPixel(buf);
-              pic[width*y+x] = buf[0];
-	      xid+=x*buf[0]+1;
-	      yid+=y*buf[0]+1;
+  int x,y;
+  
+  if(colorMap->getNumPixelComps()!=1 || str->getKind()==strDCT)
+  {
+      RGBA*pic=new RGBA[width*height];
+      int xid = 0;
+      int yid = 0;
+      for (y = 0; y < height; ++y) {
+	for (x = 0; x < width; ++x) {
+	  int r,g,b,a;
+	  imgStr->getPixel(pixBuf);
+	  colorMap->getRGB(pixBuf, &rgb);
+	  pic[width*y+x].r = r = (U8)(rgb.r * 255 + 0.5);
+	  pic[width*y+x].g = g = (U8)(rgb.g * 255 + 0.5);
+	  pic[width*y+x].b = b = (U8)(rgb.b * 255 + 0.5);
+	  pic[width*y+x].a = a = 255;//(U8)(rgb.a * 255 + 0.5);
+	  xid += x*r+x*b*3+x*g*7+x*a*11;
+	  yid += y*r*3+y*b*17+y*g*19+y*a*11;
 	}
-	int t,found = -1;
-	for(t=0;t<picpos;t++)
-	{
-	    if(pic_xids[t] == xid &&
-	       pic_yids[t] == yid) {
-		found = t;break;
-	    }
+      }
+      int t,found = -1;
+      for(t=0;t<picpos;t++)
+      {
+	  if(pic_xids[t] == xid &&
+	     pic_yids[t] == yid) {
+	      found = t;break;
+	  }
+      }
+      if(found<0) {
+	  if(str->getKind()==strDCT)
+	      pic_ids[picpos] = swfoutput_drawimagejpeg(&output, pic, width, height, 
+		      x1,y1,x2,y2,x3,y3,x4,y4);
+	  else
+	      pic_ids[picpos] = swfoutput_drawimagelossless(&output, pic, width, height, 
+		      x1,y1,x2,y2,x3,y3,x4,y4);
+	  pic_xids[picpos] = xid;
+	  pic_yids[picpos] = yid;
+	  if(picpos<1024)
+	      picpos++;
+      } else {
+	  swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+		  x1,y1,x2,y2,x3,y3,x4,y4);
+      }
+      delete pic;
+      delete imgStr;
+      return;
+  }
+  else
+  {
+      U8*pic = new U8[width*height];
+      RGBA pal[256];
+      int t;
+      int xid=0,yid=0;
+      for(t=0;t<256;t++)
+      {
+	  int r,g,b,a;
+	  pixBuf[0] = t;
+	  colorMap->getRGB(pixBuf, &rgb);
+	  pal[t].r = r = (U8)(rgb.r * 255 + 0.5);
+	  pal[t].g = g = (U8)(rgb.g * 255 + 0.5);
+	  pal[t].b = b = (U8)(rgb.b * 255 + 0.5);
+	  pal[t].a = a = 255;//(U8)(rgb.b * 255 + 0.5);
+	  xid += t*r+t*b*3+t*g*7+t*a*11;
+	  xid += (~t)*r+t*b*3+t*g*7+t*a*11;
+      }
+      for (y = 0; y < height; ++y) {
+	for (x = 0; x < width; ++x) {
+	  imgStr->getPixel(pixBuf);
+	  pic[width*y+x] = pixBuf[0];
+	  xid += x*pixBuf[0]*7;
+	  yid += y*pixBuf[0]*3;
 	}
-	if(found<0) {
-	    pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
-		    x1,y1,x2,y2,x3,y3,x4,y4);
-	    pic_xids[picpos] = xid;
-	    pic_yids[picpos] = yid;
-	    if(picpos<1024)
-		picpos++;
-	} else {
-	    swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-		    x1,y1,x2,y2,x3,y3,x4,y4);
-	}
-	free(pic);
-    } else {
-	int x,y;
-	int width2 = (width+3)&(~3);
-	imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
-	        		   colorMap->getBits());
-	imgStr->reset();
-
-	if(colorMap->getNumPixelComps()!=1)
-	{
-	    RGBA*pic=new RGBA[width*height];
-	    int xid = 0;
-	    int yid = 0;
-	    for (y = 0; y < height; ++y) {
-	      for (x = 0; x < width; ++x) {
-		int r,g,b,a;
-		imgStr->getPixel(pixBuf);
-		colorMap->getRGB(pixBuf, &rgb);
-		pic[width*y+x].r = r = (U8)(rgb.r * 255 + 0.5);
-		pic[width*y+x].g = g = (U8)(rgb.g * 255 + 0.5);
-		pic[width*y+x].b = b = (U8)(rgb.b * 255 + 0.5);
-		pic[width*y+x].a = a = 255;//(U8)(rgb.a * 255 + 0.5);
-		xid += x*r+x*b*3+x*g*7+x*a*11;
-		yid += y*r*3+y*b*17+y*g*19+y*a*11;
-	      }
-	    }
-	    int t,found = -1;
-	    for(t=0;t<picpos;t++)
-	    {
-		if(pic_xids[t] == xid &&
-		   pic_yids[t] == yid) {
-		    found = t;break;
-		}
-	    }
-	    if(found<0) {
-		pic_ids[picpos] = swfoutput_drawimagelossless(&output, pic, width, height, 
-			x1,y1,x2,y2,x3,y3,x4,y4);
-		pic_xids[picpos] = xid;
-		pic_yids[picpos] = yid;
-		if(picpos<1024)
-		    picpos++;
-	    } else {
-		swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-			x1,y1,x2,y2,x3,y3,x4,y4);
-	    }
-	    delete pic;
-	}
-	else
-	{
-	    U8*pic = new U8[width2*height];
-	    RGBA pal[256];
-	    int t;
-	    int xid=0,yid=0;
-	    for(t=0;t<256;t++)
-	    {
-		int r,g,b,a;
-		pixBuf[0] = t;
-		colorMap->getRGB(pixBuf, &rgb);
-		pal[t].r = r = (U8)(rgb.r * 255 + 0.5);
-		pal[t].g = g = (U8)(rgb.g * 255 + 0.5);
-		pal[t].b = b = (U8)(rgb.b * 255 + 0.5);
-		pal[t].a = a = 255;//(U8)(rgb.b * 255 + 0.5);
-		xid += t*r+t*b*3+t*g*7+t*a*11;
-		xid += (~t)*r+t*b*3+t*g*7+t*a*11;
-	    }
-	    for (y = 0; y < height; ++y) {
-	      for (x = 0; x < width; ++x) {
-		imgStr->getPixel(pixBuf);
-		pic[width2*y+x] = pixBuf[0];
-		xid += x*pixBuf[0]*7;
-		yid += y*pixBuf[0]*3;
-	      }
-	    }
-	    int found = -1;
-	    for(t=0;t<picpos;t++)
-	    {
-		if(pic_xids[t] == xid &&
-		   pic_yids[t] == yid) {
-		    found = t;break;
-		}
-	    }
-	    if(found<0) {
-		pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
-			x1,y1,x2,y2,x3,y3,x4,y4);
-		pic_xids[picpos] = xid;
-		pic_yids[picpos] = yid;
-		if(picpos<1024)
-		    picpos++;
-	    } else {
-		swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-			x1,y1,x2,y2,x3,y3,x4,y4);
-	    }
-	    delete pic;
-	}
-	delete imgStr;
-    }
-
+      }
+      int found = -1;
+      for(t=0;t<picpos;t++)
+      {
+	  if(pic_xids[t] == xid &&
+	     pic_yids[t] == yid) {
+	      found = t;break;
+	  }
+      }
+      if(found<0) {
+	  pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
+		  x1,y1,x2,y2,x3,y3,x4,y4);
+	  pic_xids[picpos] = xid;
+	  pic_yids[picpos] = yid;
+	  if(picpos<1024)
+	      picpos++;
+      } else {
+	  swfoutput_drawimageagain(&output, pic_ids[found], width, height,
+		  x1,y1,x2,y2,x3,y3,x4,y4);
+      }
+      delete pic;
+      delete imgStr;
+      return;
   }
 }
 
@@ -1372,7 +1336,7 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
-  logf("<debug> drawImageMask");
+  logf("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
   drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1);
 }
 
@@ -1380,7 +1344,11 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
 			       GfxImageColorMap *colorMap, GBool inlineImg) 
 {
-  logf("<debug> drawImage");
+  logf("<verbose> drawImage %dx%d, %s, inline=%d", width, height, 
+	  colorMap?"colorMap":"no colorMap", inlineImg);
+  if(colorMap)
+      logf("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
   drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0);
 }
 
