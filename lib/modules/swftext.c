@@ -543,33 +543,97 @@ int swf_FontSetID(SWFFONT * f, U16 id)
     return 0;
 }
 
-int swf_FontReduce(SWFFONT * f, FONTUSAGE * use)
+void swf_LayoutFree(SWFLAYOUT * l)
+{
+    if (l) {
+	if (l->kerning)
+	    free(l->kerning);
+	l->kerning = NULL;
+	if (l->bounds)
+	    free(l->bounds);
+	l->bounds = NULL;
+    }
+    free(l);
+}
+
+
+static void font_freeglyphnames(SWFFONT*f)
+{
+    if (f->glyphnames) {
+	int t;
+	for (t = 0; t < f->numchars; t++) {
+	    if (f->glyphnames[t])
+		free(f->glyphnames[t]);
+	}
+	free(f->glyphnames);
+	f->glyphnames = 0;
+    }
+
+}
+static void font_freeusage(SWFFONT*f)
+{
+    if (f->use) {
+	if(f->use->chars) {
+	    free(f->use->chars);f->use->chars = 0;
+	}
+	free(f->use); f->use = 0;
+    }
+}
+static void font_freelayout(SWFFONT*f)
+{
+    if (f->layout) {
+	swf_LayoutFree(f->layout);
+	f->layout = 0;
+    }
+}
+static void font_freename(SWFFONT*f)
+{
+    if (f->name) {
+	free(f->name);
+	f->name = 0;
+    }
+}
+
+int swf_FontReduce(SWFFONT * f)
 {
     int i, j;
-    if ((!f) || (!use))
+    int max_unicode = 0;
+    if ((!f) || (!f->use) || f->use->is_reduced)
 	return -1;
 
-    /* TODO: layout, glyphnames */
     j = 0;
-    for (i = 0; i < f->numchars; i++)
-	if (f->glyph[i].shape) {
-	    if (f->glyph2ascii[i] < f->maxascii && use->code[f->glyph2ascii[i]]) {
-		f->ascii2glyph[f->glyph2ascii[i]] = j;
-		f->glyph2ascii[j] = f->glyph2ascii[i];
-		f->glyph[j] = f->glyph[i];
-		j++;
-	    } else {
+
+    for (i = 0; i < f->numchars; i++) {
+	if (f->glyph[i].shape && f->use->chars[i]) {
+	    f->glyph2ascii[j] = f->glyph2ascii[i];
+	    f->glyph[j] = f->glyph[i];
+	    f->use->chars[i] = j;
+	    j++;
+	} else {
+	    f->glyph2ascii[i] = 0;
+	    if(f->glyph[i].shape) {
 		swf_ShapeFree(f->glyph[i].shape);
-		f->ascii2glyph[f->glyph2ascii[i]] = -1;
-		f->glyph2ascii[i] = 0;
-		f->glyph[i].shape = NULL;
+		f->glyph[i].shape = 0;
 		f->glyph[i].advance = 0;
 	    }
-	} else
-	    f->ascii2glyph[f->glyph2ascii[i]] = -1;
-
+	    f->use->chars[i] = -1;
+	    j++; //TODO: remove
+	}
+    }
+    for (i = 0; i < f->maxascii; i++) {
+	if(f->use->chars[f->ascii2glyph[i]]<0) {
+	    f->ascii2glyph[i] = -1;
+	} else {
+	    f->ascii2glyph[i] = f->use->chars[f->ascii2glyph[i]];
+	    max_unicode = i;
+	}
+    }
+    f->maxascii = max_unicode;
+    f->use->is_reduced = 1;
     f->numchars = j;
-
+    font_freelayout(f);
+    font_freeglyphnames(f);
+    font_freename(f);
     return j;
 }
 
@@ -639,30 +703,50 @@ void swf_FontPrepareForEditText(SWFFONT * font)
     swf_FontSort(font);
 }
 
-int swf_FontInitUsage(SWFFONT * f, FONTUSAGE * use)
+int swf_FontInitUsage(SWFFONT * f)
 {
-    if (!use)
+    if (!f)
 	return -1;
-    use->code = malloc(sizeof(use->code[0]) * f->maxascii);
-    memset(use->code, 0, sizeof(use->code[0]) * f->maxascii);
+    if(f->use) {
+	fprintf(stderr, "Usage initialized twice");
+	return -1;
+    }
+    f->use = malloc(sizeof(FONTUSAGE));
+    f->use->is_reduced = 0;
+    f->use->chars = malloc(sizeof(f->use->chars[0]) * f->numchars);
+    memset(f->use->chars, 0, sizeof(f->use->chars[0]) * f->numchars);
     return 0;
 }
 
-void swf_FontClearUsage(SWFFONT * f, FONTUSAGE * use)
+void swf_FontClearUsage(SWFFONT * f)
 {
-    if (!use)
+    if (!f || !f->use)
 	return;
-    free(use->code);
+    free(f->use->chars); f->use->chars = 0;
+    free(f->use); f->use = 0;
 }
 
-int swf_FontUse(SWFFONT * f, FONTUSAGE * use, U8 * s)
+int swf_FontUse(SWFFONT * f, U8 * s)
 {
-    if ((!use) || (!s))
+    if (!f->use) 
+	swf_FontInitUsage(f);
+    if( (!s))
 	return -1;
-    while (s[0]) {
-	use->code[s[0]] = 1;
+    while (*s) {
+	if(*s < f->maxascii && f->ascii2glyph[*s]>=0)
+	    f->use->chars[f->ascii2glyph[*s]] = 1;
 	s++;
     }
+    return 0;
+}
+
+int swf_FontUseGlyph(SWFFONT * f, int glyph)
+{
+    if (!f->use) 
+	swf_FontInitUsage(f);
+    if(glyph < 0 || glyph > f->numchars)
+	return -1;
+    f->use->chars[glyph] = 1;
     return 0;
 }
 
@@ -705,7 +789,11 @@ static inline int fontSize(SWFFONT * font)
     int t;
     int size = 0;
     for (t = 0; t < font->numchars; t++) {
-	int l = (font->glyph[t].shape->bitlen + 7) / 8;
+	int l = 0;
+	if(font->glyph[t].shape) 
+	    l = (font->glyph[t].shape->bitlen + 7) / 8;
+	else
+	    l = 8;
 	size += l + 1;
     }
     return size + (font->numchars + 1) * 2;
@@ -774,8 +862,14 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
 	    tag->data[pos + t * 2] = (tag->len - pos);
 	    tag->data[pos + t * 2 + 1] = (tag->len - pos) >> 8;
 	}
-	if (t < f->numchars)
-	    swf_SetSimpleShape(tag, f->glyph[t].shape);
+	if (t < f->numchars) {
+	    if(f->glyph[t].shape) {
+		swf_SetSimpleShape(tag, f->glyph[t].shape);
+	    } else {
+		swf_SetU8(tag, 0);
+		swf_SetU8(tag, 0);
+	    }
+	}
     }
 
 
@@ -876,58 +970,34 @@ int swf_TextPrintDefineText(TAG * t, SWFFONT * f)
     return 0;
 }
 
-void swf_LayoutFree(SWFLAYOUT * l)
-{
-    if (l) {
-	if (l->kerning)
-	    free(l->kerning);
-	l->kerning = NULL;
-	if (l->bounds)
-	    free(l->bounds);
-	l->bounds = NULL;
-    }
-    free(l);
-}
-
 void swf_FontFree(SWFFONT * f)
 {
-    if (f) {
-	int i;
+    int i;
+    if (!f)
+	return;
 
-	if (f->name)
-	    free(f->name);
-	if (f->layout)
-	    swf_LayoutFree(f->layout);
-
-	f->name = NULL;
-	f->layout = NULL;
-
-	if (f->glyph) {
-	    for (i = 0; i < f->numchars; i++)
-		if (f->glyph[i].shape) {
-		    swf_ShapeFree(f->glyph[i].shape);
-		    f->glyph[i].shape = NULL;
-		}
-	    free(f->glyph);
-	    f->glyph = NULL;
-	}
-	if (f->ascii2glyph) {
-	    free(f->ascii2glyph);
-	    f->ascii2glyph = NULL;
-	}
-	if (f->glyph2ascii) {
-	    free(f->glyph2ascii);
-	    f->glyph2ascii = NULL;
-	}
-	if (f->glyphnames) {
-	    int t;
-	    for (t = 0; t < f->numchars; t++) {
-		if (f->glyphnames[t])
-		    free(f->glyphnames[t]);
+    if (f->glyph) {
+	for (i = 0; i < f->numchars; i++)
+	    if (f->glyph[i].shape) {
+		swf_ShapeFree(f->glyph[i].shape);
+		f->glyph[i].shape = NULL;
 	    }
-	    free(f->glyphnames);
-	}
+	free(f->glyph);
+	f->glyph = NULL;
     }
+    if (f->ascii2glyph) {
+	free(f->ascii2glyph);
+	f->ascii2glyph = NULL;
+    }
+    if (f->glyph2ascii) {
+	free(f->glyph2ascii);
+	f->glyph2ascii = NULL;
+    }
+    font_freename(f);
+    font_freelayout(f);
+    font_freeglyphnames(f);
+    font_freeusage(f);
+
     free(f);
 }
 
