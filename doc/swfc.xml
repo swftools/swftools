@@ -72,7 +72,7 @@ Boxes:
 
 -->
 
-<chapter><title>swfc Basics</title>
+<chapter title="Basic usage of swfc">
 
  <section><title>Calling swfc</title>
 
@@ -154,24 +154,24 @@ The following example demonstrates a few of the possible transforms:
 
 
   <code lang="swfc">
-.flash name="cxform.swf" version=5
+.flash name="cxform.swf" version=5 fps=25
     
     .jpeg s1 "photo.jpeg" quality=80%
 
     .put s1 x=50 y=50 scalex=110 scaley=110
-    .frame 100
+    .frame 50
     .change s1 x=0 y=0 scalex=210 scaley=210 red=-1+255 green=-1+255 blue=-1+255 #invert
-    .frame 200
+    .frame 100
     .change s1 x=100 y=50 scalex=110 scaley=110 red=0 green=+0 blue=+0 #remove red
-    .frame 300
+    .frame 150
     .change s1 x=0 y=0 scalex=210 scaley=210 red=+0 green=2 blue=-1+255 #amplify green, invert blue
-    .frame 400
+    .frame 200
     .change s1 x=50 y=100 scalex=110 scaley=110 red=2-128 green=-2+255 blue=+0.7+40 #alien glow
-    .frame 500
+    .frame 250
     .change s1 x=0 y=0 scalex=210 scaley=210 red=8-1024 green=8-1024 blue=8-1024 #palette reduce
-    .frame 600
+    .frame 300
     .change s1 x=0 y=0 scalex=210 scaley=210 red=+0 green=+0 blue=+0 #back to normal
-    .frame 700
+    .frame 350
     .change s1 x=105 y=105 scalex=0 scaley=0 luminance=0 #fadeout
 .end
   </code>
@@ -185,7 +185,7 @@ This is used in an example further below.
 
 </chapter>
 
-<chapter><title>Fonts</title>
+<chapter title="Fonts">
 
 <section>
 
@@ -375,7 +375,7 @@ You can generate this type of text with the <c>.edittext</c> command:
 
 </chapter>
 
-<chapter><title>ActionScript</title>
+<chapter title="ActionScript">
 
 <section>
     <c>swfc</c> has Actionscript support.
@@ -391,7 +391,7 @@ You can generate this type of text with the <c>.edittext</c> command:
 
 .frame 0
     .action:
-	_root.angle += 0.1;
+	_root.angle += 0.05;
 	mybox._x = 100*Math.cos(_root.angle)+100;
 	mybox._y = 100*Math.sin(_root.angle)+100;
     .end
@@ -417,7 +417,7 @@ of Jean-Michel Sarlat's
 
 </chapter>
 
-<chapter><title>Buttons</title>
+<chapter title="Buttons">
 <p>
 Actionscript comes in handy when dealing with SWF Buttons.
 </p>
