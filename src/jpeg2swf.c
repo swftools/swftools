@@ -211,7 +211,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality,
 	t = swf_InsertTag(t, ST_VIDEOFRAME);
 	swf_SetU16(t, 0xf00d);
 	quant = 1+(30-(30*quality)/100);
-	if(!(frame&127)) {
+	if(!(frame%20)) {
 	    swf_SetVideoStreamIFrame(t, &stream, pic2, quant);
 	} else {
 	    swf_SetVideoStreamPFrame(t, &stream, pic2, quant);
