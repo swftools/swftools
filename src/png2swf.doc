@@ -1,6 +1,6 @@
 Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.png [file2.png...]
 
-Takes a number of gif files and converts them to a swf movie, one
+Takes a number of png files and converts them to a swf movie, one
 picture per frame.
 
 This tools converts png image files into an SWF animation. It takes any
