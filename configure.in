@@ -7,7 +7,7 @@ AC_ARG_ENABLE(debug,
 [  --enable-debug          turn on debugging], DEBUG=true)
 
 PACKAGE=swftools
-VERSION=0.4.4-pre10
+VERSION=0.4.4-pre11
 # -Winline?
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -63,6 +63,9 @@ dnl Checks for system services
 
 RFX_CHECK_MING
 
+if test "x${MINGW}" != "xyes"; then
+    AC_DEFINE_UNQUOTED(O_BINARY, 0)
+fi
 # The following tries to make use of includes and libraries in
 # /usr/local, too. Notice: A -I/usr/local/include might break
 # things (MingW, cross-compiling etc.) in the same way as -I/usr/include, 

@@ -103,6 +103,9 @@
 /* Define to 1 if this machine has network byte order*/
 #undef WORDS_BIGENDIAN
 
+/* Define to 0 on non-windows systems */
+#undef O_BINARY
+
 #ifdef HAVE_ZLIB_H
 #ifdef HAVE_LIBZ
 #define HAVE_ZLIB
@@ -114,5 +117,6 @@
 #define HAVE_JPEGLIB
 #endif
 #endif
+
 
 #endif
