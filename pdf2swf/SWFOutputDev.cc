@@ -136,6 +136,8 @@ public:
 
   //----- initialization and control
 
+  void startDoc(XRef *xref);
+
   // Start a page.
   virtual void startPage(int pageNum, GfxState *state) ;
 
@@ -193,9 +195,11 @@ public:
   int clipping[64];
   int clippos;
 
+  XRef*xref;
+
   int searchT1Font(char*name);
   char* substituteFont(GfxFont*gfxFont, char*oldname);
-  char* writeEmbeddedFontToFile(GfxFont*font);
+  char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
   int t1id;
   int jpeginfo; // did we write "File contains jpegs" yet?
   int pbminfo; // did we write "File contains jpegs" yet?
@@ -859,38 +863,45 @@ void SWFOutputDev::updateStrokeColor(GfxState *state)
 	                              (char)(rgb.b*255), (char)(opaq*255));
 }
 
-char*SWFOutputDev::writeEmbeddedFontToFile(GfxFont*font)
+char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 {
-/*      char*tmpFileName = NULL;
+      char*tmpFileName = NULL;
       FILE *f;
       int c;
       char *fontBuf;
       int fontLen;
-//      Type1CFontConverter *cvt;
+      Type1CFontFile *cvt;
       Ref embRef;
       Object refObj, strObj;
       tmpFileName = "/tmp/tmpfont";
-      font->getEmbeddedFontID(&embRef);
+      int ret;
+
+      ret = font->getEmbeddedFontID(&embRef);
+      if(!ret) {
+	  /* not embedded- the caller should now search the font
+	     directories for this font */
+	  return 0;
+      }
 
       f = fopen(tmpFileName, "wb");
       if (!f) {
 	logf("<error> Couldn't create temporary Type 1 font file");
-	return 0;
+	  return 0;
       }
       if (font->getType() == fontType1C) {
-	if (!(fontBuf = font->readEmbFontFile(&fontLen))) {
+	if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
 	  fclose(f);
 	  logf("<error> Couldn't read embedded font file");
 	  return 0;
 	}
-	cvt = new Type1CFontConverter(fontBuf, fontLen, f);
-	cvt->convert();
+	cvt = new Type1CFontFile(fontBuf, fontLen);
+	cvt->convertToType1(f);
 	delete cvt;
 	gfree(fontBuf);
       } else {
 	font->getEmbeddedFontID(&embRef);
 	refObj.initRef(embRef.num, embRef.gen);
-	refObj.fetch(&strObj);
+	refObj.fetch(ref, &strObj);
 	refObj.free();
 	strObj.streamReset();
 	while ((c = strObj.streamGetChar()) != EOF) {
@@ -919,9 +930,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(GfxFont*font)
 	  tmpFileName = strdup(name2);
       }
 
-      return tmpFileName;*/
-
-    return 0;
+    return tmpFileName;
 }
 
 char* gfxFontName(GfxFont* gfxFont)
@@ -945,7 +954,24 @@ int substitutepos = 0;
 
 char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 {
-    return "Times-Roman";
+/* ------------------------------ V1 */
+
+    char*fontname = "Times-Roman";
+    this->t1id = searchT1Font(fontname);
+    if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
+	logf("<fatal> Too many fonts in file.");
+	exit(1);
+    }
+    if(oldname) {
+	substitutesource[substitutepos] = oldname;
+	substitutetarget[substitutepos] = fontname;
+	logf("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
+	substitutepos ++;
+    }
+    return fontname;
+
+/* ------------------------------ V2 */
+
 /*      //substitute font
       char* fontname = 0;
       double m11, m12, m21, m22;
@@ -960,7 +986,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 
 //	  printf("%d %s\n", t, gfxFont->getCharName(t));
       showFontError(gfxFont, 1);
-      if(1) { //if (!gfxFont->is16Bit()) { FIXME: xpdf 1.01 does not have is16Bit()
+      if(1) { //if (!gfxFont->isCIDFont()) { FIXME: xpdf 1.01 does not have is16Bit()
 	if(gfxFont->isSymbolic()) {
 	  if(fontname && (strstr(fontname,"ing"))) //Dingbats, Wingdings etc.
 	   index = 16;
@@ -1062,6 +1088,12 @@ void unlinkfont(char* filename)
     }
 }
 
+void SWFOutputDev::startDoc(XRef *xref) 
+{
+  this->xref = xref;
+}
+
+
 void SWFOutputDev::updateFont(GfxState *state) 
 {
   GfxFont*gfxFont = state->getFont();
@@ -1073,12 +1105,18 @@ void SWFOutputDev::updateFont(GfxState *state)
   char * fontname = gfxFontName(gfxFont);
  
   int t;
+  /* first, look if we substituted this font before-
+     this way, we don't initialize the T1 Fonts
+     too often */
   for(t=0;t<substitutepos;t++) {
       if(!strcmp(fontname, substitutesource[t])) {
 	  fontname = substitutetarget[t];
 	  break;
       }
   }
+
+  /* second, see if swfoutput already has this font
+     cached- if so, we are done */
 
   if(swfoutput_queryfont(&output, fontname))
   {
@@ -1091,7 +1129,8 @@ void SWFOutputDev::updateFont(GfxState *state)
     type3Warning = gTrue;
     showFontError(gfxFont, 2);
   }
-  //dumpFontInfo ("<notice>", gfxFont);
+
+  /* now either load the font, or find a substitution */
 
   Ref embRef;
   GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
@@ -1101,7 +1140,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	 gfxFont->getType() == fontType1C ||
 	 gfxFont->getType() == fontTrueType)) {
 	
-	fileName = writeEmbeddedFontToFile(gfxFont);
+	fileName = writeEmbeddedFontToFile(xref, gfxFont);
 	if(!fileName) {
 	  logf("<error> Couldn't write font to file");
 	  showFontError(gfxFont,0);
