@@ -124,18 +124,33 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 
   jpeg_stdio_src(&cinfo,f);
   jpeg_read_header(&cinfo, TRUE);
-  cinfo.out_color_space = JCS_RGB; //automatically convert grayscale images
+  if(JPEG_LIB_VERSION>=62) /* jpeglib Version 6b is required for grayscale-> color conversion */
+    cinfo.out_color_space = JCS_RGB; //automatically convert grayscale images
   jpeg_start_decompress(&cinfo);
 
   out = swf_SetJPEGBitsStart(t,cinfo.output_width,cinfo.output_height,quality);
   scanline = (U8*)malloc(4*cinfo.output_width);
   
-  if (scanline)
+  if (scanline) 
   { int y;
     U8 * js = scanline;
-    for (y=0;y<cinfo.output_height;y++)
-    { jpeg_read_scanlines(&cinfo,&js,1);
-      swf_SetJPEGBitsLines(out,(U8**)&js,1);
+    if(cinfo.out_color_space == JCS_GRAYSCALE) {
+	/* happens only if JPEG_LIB_VERSION above
+	   was too small - let's do the conversion ourselves */
+	for (y=0;y<cinfo.output_height;y++)
+	{ int x;
+	  jpeg_read_scanlines(&cinfo,&js,1);
+	  for(x=cinfo.output_width-1;x>=0;x--) {
+	      js[x*3] = js[x*3+1] = js[x*3+2] = js[x];
+	  }
+	  swf_SetJPEGBitsLines(out,(U8**)&js,1);
+	}
+    }
+    else {
+	for (y=0;y<cinfo.output_height;y++)
+	{ jpeg_read_scanlines(&cinfo,&js,1);
+	  swf_SetJPEGBitsLines(out,(U8**)&js,1);
+	}
     }
   }
 
