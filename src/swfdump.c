@@ -416,7 +416,7 @@ void handleVideoStream(TAG*tag, char*prefix)
 void handleVideoFrame(TAG*tag, char*prefix)
 {
     U32 code, version, reference, sizeflags;
-    U32 width, height;
+    U32 width=0, height=0;
     U8 type;
     U16 id = swf_GetU16(tag);
     U16 frame = swf_GetU16(tag);
