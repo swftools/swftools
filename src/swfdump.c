@@ -128,14 +128,14 @@ void args_callback_usage(char*name)
 {    
     printf("Usage: %s [-at] file.swf\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-D , --full\t\t Show everything. The same as -atp\n");
+    printf("\t-D , --full\t\t Show everything. The same as -atMp\n");
     printf("\t-e , --html\t\t Create html output embedding the file (simple, but useful)\n");
     printf("\t-X , --width\t\t Prints out a string of the form \"-X width\"\n");
     printf("\t-Y , --height\t\t Prints out a string of the form \"-Y height\"\n");
     printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");
     printf("\t-f , --frames\t\t Prints out a string of the form \"-f framenum\"\n");
     printf("\t-a , --action\t\t Disassemble action tags\n");
-    printf("\t-p , --placements\t\t Show extra placement information\n");
+    printf("\t-p , --placements\t Show extra placement information\n");
     printf("\t-t , --text\t\t Show text data\n");
     printf("\t-d , --hex\t\t Print hex output of tag data, too\n");
     printf("\t-u , --used\t\t Show referred IDs for each Tag\n");
@@ -374,6 +374,57 @@ void printhandlerflags(U16 handlerflags)
     if(handlerflags&256) printf("[data]");
     if(handlerflags&0xfe00) printf("[???]");
 }
+void handleVideoStream(TAG*tag, char*prefix)
+{
+    U16 id = swf_GetU16(tag);
+    U16 frames = swf_GetU16(tag);
+    U16 width = swf_GetU16(tag);
+    U16 height = swf_GetU16(tag);
+    U8 flags = swf_GetU8(tag); //5-2(videopacket 01=off 10=on)-1(smoothing 1=on)
+    U8 codec = swf_GetU8(tag);
+    printf(" (%d frames, %dx%d", frames, width, height);
+    if(flags&1)
+	printf(" smoothed");
+    if(codec == 2)
+	printf(" sorenson h.263)");
+    else
+	printf(" codec 0x%02x)", codec);
+}
+void handleVideoFrame(TAG*tag, char*prefix)
+{
+    U32 code, version, reference, sizeflags;
+    U32 width, height;
+    U8 type;
+    U16 id = swf_GetU16(tag);
+    U16 frame = swf_GetU16(tag);
+    U8 deblock,flags, tmp, bit;
+    U32 quantizer, extrainfo;
+    char*types[] = {"I-frame", "P-frame", "disposable P-frame", "<reserved>"};
+    printf(" (frame %d) ", frame);
+
+    /* video packet follows */
+    code = swf_GetBits(tag, 17);
+    version = swf_GetBits(tag, 5);
+    reference = swf_GetBits(tag, 8);
+
+    sizeflags = swf_GetBits(tag, 3);
+    switch(sizeflags)
+    {
+	case 0: width = swf_GetU8(tag); height = swf_GetU8(tag); break;
+	case 1: width = swf_GetBits(tag, 16); height = swf_GetBits(tag, 16); break;
+	case 2: width = 352; height = 288; break;
+	case 3: width = 176; height = 144; break;
+	case 4: width = 128; height = 96; break;
+	case 5: width = 320; height = 240; break;
+	case 6: width = 160; height = 120; break;
+	case 7: width = -1; height = -1;/*reserved*/ break;
+    }
+    printf("%dx%d ", width, height);
+    type = swf_GetBits(tag, 2);
+    printf("%s", types[type]);
+
+}
+
 void handlePlaceObject2(TAG*tag, char*prefix)
 {
     U8 flags = swf_GetU8(tag);
@@ -808,6 +859,14 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_DEFINESOUND) {
 	    handleDefineSound(tag);
+	    printf("\n");
+	}
+	else if(tag->id == ST_VIDEOFRAME) {
+	    handleVideoFrame(tag, myprefix);
+	    printf("\n");
+	}
+	else if(tag->id == ST_DEFINEVIDEOSTREAM) {
+	    handleVideoStream(tag, myprefix);
 	    printf("\n");
 	}
 	else if(tag->id == ST_DEFINEEDITTEXT) {
