@@ -46,8 +46,8 @@ static int ft_move_to(FT_Vector* _to, void* user)
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT to;
-    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
-    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
+    to.x = _to->x/(float)FT_SUBPIXELS;
+    to.y = -_to->y/(float)FT_SUBPIXELS;
     draw->moveTo(draw, &to);
     return 0;
 }
@@ -55,8 +55,8 @@ static int ft_line_to(FT_Vector* _to, void* user)
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT to;
-    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
-    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
+    to.x = _to->x/(float)FT_SUBPIXELS;
+    to.y = -_to->y/(float)FT_SUBPIXELS;
     draw->lineTo(draw, &to);
     return 0;
 }
@@ -64,12 +64,12 @@ static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* use
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT c1,c2,to;
-    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
-    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
-    c1.x = _c1->x*FT_SCALE/(float)FT_SUBPIXELS;
-    c1.y = -_c1->y*FT_SCALE/(float)FT_SUBPIXELS;
-    c2.x = _c2->x*FT_SCALE/(float)FT_SUBPIXELS;
-    c2.y = -_c2->y*FT_SCALE/(float)FT_SUBPIXELS;
+    to.x = _to->x/(float)FT_SUBPIXELS;
+    to.y = -_to->y/(float)FT_SUBPIXELS;
+    c1.x = _c1->x/(float)FT_SUBPIXELS;
+    c1.y = -_c1->y/(float)FT_SUBPIXELS;
+    c2.x = _c2->x/(float)FT_SUBPIXELS;
+    c2.y = -_c2->y/(float)FT_SUBPIXELS;
     draw_cubicTo(draw, &c1, &c2, &to);
     return 0;
 }
@@ -77,10 +77,10 @@ static int ft_conic_to(FT_Vector* _c, FT_Vector* _to, void* user)
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT c,to;
-    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
-    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
-    c.x = _c->x*FT_SCALE/(float)FT_SUBPIXELS;
-    c.y = -_c->y*FT_SCALE/(float)FT_SUBPIXELS;
+    to.x = _to->x/(float)FT_SUBPIXELS;
+    to.y = -_to->y/(float)FT_SUBPIXELS;
+    c.x = _c->x/(float)FT_SUBPIXELS;
+    c.y = -_c->y/(float)FT_SUBPIXELS;
     draw_conicTo(draw, &c, &to);
     return 0;
 }
@@ -114,7 +114,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	}
     }
     error = FT_New_Face(ftlibrary, filename, 0, &face);
-    FT_Set_Pixel_Sizes (face, 16, 16);
+    FT_Set_Pixel_Sizes (face, 16*FT_SCALE, 16*FT_SCALE);
 
     if(error) {
 	fprintf(stderr, "Couldn't load file %s- not a TTF file?\n", filename);
