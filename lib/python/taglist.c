@@ -48,7 +48,8 @@ PyObject * taglist_new2(TAG*tag)
 	}
 	PyList_SET_ITEM(taglist->taglist,nr,newtag);Py_INCREF(newtag);
 	if(swf_isDefiningTag(t)) {
-	    tagmap_add(taglist->tagmap, newtag);
+	    int id = swf_GetDefineID(t);
+	    tagmap_addMapping(taglist->tagmap, id, newtag);
 	}
 	nr++;
 	t=t->next;
