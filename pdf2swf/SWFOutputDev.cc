@@ -1175,9 +1175,12 @@ void SWFOutputDev::updateFont(GfxState *state)
     }
 
     // look for Type 3 font
-    if (!type3Warning && gfxFont->getType() == fontType3) {
-	type3Warning = gTrue;
-	showFontError(gfxFont, 2);
+    if (gfxFont->getType() == fontType3) {
+	if(!type3Warning) {
+	    type3Warning = gTrue;
+	    showFontError(gfxFont, 2);
+	}
+	return;
     }
 
     /* now either load the font, or find a substitution */
