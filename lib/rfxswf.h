@@ -559,7 +559,7 @@ typedef struct _EditTextLayout
     U16 leading;
 } EditTextLayout;
 
-int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*));
+int swf_FontEnumerate(SWF * swf,void (*FontCallback) (void*,U16,U8*), void*self);
 // -> void fontcallback(U16 id,U8 * name); returns number of defined fonts
 
 int swf_FontExtract(SWF * swf,int id,SWFFONT ** f);

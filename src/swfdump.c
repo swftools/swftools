@@ -655,11 +655,11 @@ void handleShape(TAG*tag, char*prefix)
     printf("%s |\n", prefix);
 }
     
-void fontcallback1(U16 id,U8 * name)
+void fontcallback1(void*self, U16 id,U8 * name)
 { fontnum++;
 }
 
-void fontcallback2(U16 id,U8 * name)
+void fontcallback2(void*self, U16 id,U8 * name)
 { 
   swf_FontExtract(&swf,id,&fonts[fontnum]);
   fontnum++;
@@ -869,10 +869,10 @@ int main (int argc,char ** argv)
    
     if(showtext) {
 	fontnum = 0;
-	swf_FontEnumerate(&swf,&fontcallback1);
+	swf_FontEnumerate(&swf,&fontcallback1, 0);
 	fonts = (SWFFONT**)malloc(fontnum*sizeof(SWFFONT*));
 	fontnum = 0;
-	swf_FontEnumerate(&swf,&fontcallback2);
+	swf_FontEnumerate(&swf,&fontcallback2, 0);
     }
 
     while(tag) {

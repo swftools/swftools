@@ -133,7 +133,7 @@ void DumpGlobal(char * funcname)
 }
 
 
-void fontcallback(U16 id,U8 * name)
+void fontcallback(U16 id,U8 * name,0)
 { SWFFONT * font;
 
   int f;
@@ -174,7 +174,7 @@ int main(int argc,char ** argv)
         sprintf(fn,"fn%04x",getpid()); // avoid name conflicts @ using multiple fonts
         printf("#define addGlyph %s\n",fn);
         DumpGlobal(fn);
-        swf_FontEnumerate(&swf,&fontcallback);
+        swf_FontEnumerate(&swf,&fontcallback,0);
         swf_FreeTags(&swf);
         printf("#undef addGlyph\n");
       }

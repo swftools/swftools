@@ -189,10 +189,10 @@ MATRIX getmatrix(TAG*tag)
 static int fontnum = -1;
 static SWFFONT**fonts;
 static SWF*c_swf;
-static void fontcallback1(U16 id,U8 * name)
+static void fontcallback1(void*self, U16 id,U8 * name)
 { fontnum++;
 }
-static void fontcallback2(U16 id,U8 * name)
+static void fontcallback2(void*self, U16 id,U8 * name)
 { 
     fonts[fontnum] = 0;
     swf_FontExtract(c_swf,id,&fonts[fontnum]);
@@ -296,11 +296,11 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 		if(verbose) printf("Extracting fonts...\n");
 		c_swf = swf;
 		fontnum = 0;
-		swf_FontEnumerate(swf,&fontcallback1);
+		swf_FontEnumerate(swf,&fontcallback1,0);
 		fonts = (SWFFONT**)malloc(fontnum*sizeof(SWFFONT*));
 		memset(fonts, 0, fontnum*sizeof(SWFFONT*));
 		fontnum = 0;
-		swf_FontEnumerate(swf,&fontcallback2);
+		swf_FontEnumerate(swf,&fontcallback2,0);
 	    }
 
 	    memset(&bounds, 0, sizeof(bounds));
