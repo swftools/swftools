@@ -132,7 +132,7 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar();
   
-  virtual GBool interpretType3Chars() {return gFalse;}
+  virtual GBool interpretType3Chars() {return gTrue;}
 
   //----- initialization and control
 
@@ -187,6 +187,10 @@ public:
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg);
+  
+  virtual GBool beginType3Char(GfxState *state,
+			       CharCode code, Unicode *u, int uLen);
+  virtual void endType3Char(GfxState *state);
 
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
@@ -205,6 +209,8 @@ public:
   int pbminfo; // did we write "File contains jpegs" yet?
   int linkinfo; // did we write "File contains links" yet?
   int ttfinfo; // did we write "File contains TrueType Fonts" yet?
+
+  int type3active; // are we between beginType3()/endType3()?
 
   GfxState *laststate;
 };
@@ -339,7 +345,7 @@ void showFontError(GfxFont*font, int nr)
     else if(nr == 1)
       logf("<warning> The following font caused problems (substituting):");
     else if(nr == 2)
-      logf("<warning> This document contains Type 3 Fonts: (some text may be incorrectly displayed)");
+      logf("<warning> The following Type 3 Font will be rendered as bitmap:");
     dumpFontInfo("<warning>", font);
 }
 
@@ -413,6 +419,7 @@ SWFOutputDev::SWFOutputDev()
     ttfinfo = 0;
     linkinfo = 0;
     pbminfo = 0;
+    type3active = 0;
     clippos = 0;
     clipping[clippos] = 0;
     outputstarted = 0;
@@ -582,6 +589,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	   logf("<error> CID Font");
 	   return;
        }
+       if(font->getType() == fontType3) {
+	   /* type 3 chars are passed primarily as graphics */
+	   return;
+       }
        font8 = (Gfx8BitFont*)font;
 
        char**enc=font8->getEncoding();
@@ -602,6 +613,23 @@ void SWFOutputDev::endString(GfxState *state)
 { 
     logf("<debug> endstring\n");
 }    
+
+ 
+GBool SWFOutputDev::beginType3Char(GfxState *state,
+			       CharCode code, Unicode *u, int uLen)
+{
+    logf("<debug> beginType3Char %d, %08x, %d", code, *u, uLen);
+    type3active = 1;
+    /* the character itself is going to be passed using
+       drawImageMask() */
+    return gFalse;
+}
+
+void SWFOutputDev::endType3Char(GfxState *state)
+{
+    type3active = 0;
+    logf("<debug> endType3Char");
+}
 
 void SWFOutputDev::startPage(int pageNum, GfxState *state) 
 {
@@ -1233,10 +1261,12 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   state->transform(1, 1, &x4, &y4);
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
-      logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
+      if(!type3active) {
+	  logf("<notice> file contains pbm pictures %s",mask?"(masked)":"");
+	  pbminfo = 1;
+      }
       if(mask)
       logf("<verbose> drawing %d by %d masked picture\n", width, height);
-      pbminfo = 1;
   }
   if(!jpeginfo && (str->getKind()==strDCT)) {
       logf("<notice> file contains jpeg pictures");
