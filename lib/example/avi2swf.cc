@@ -442,6 +442,9 @@ int main (int argc,char ** argv)
   IAviReadStream* vstream;
   MainAVIHeader head;
   SRECT r;
+  double samplesperframe;
+  int samplerate;
+  int samplefix;
 
   processargs(argc, argv);
   lastframe += firstframe;
@@ -463,16 +466,32 @@ int main (int argc,char ** argv)
   vstream = player->GetStream(0, AviStream::Video);
 
   vstream -> StartStreaming();
+  astream -> StartStreaming();
 
   width = head.dwWidth;
   height = head.dwHeight;
-  
+
+  printf("sound: %u samples (%f seconds)\n", astream->GetEndPos(),
+	  astream->GetEndTime());
+  samplesperframe = astream->GetEndPos()/astream->GetEndTime()*head.dwMicroSecPerFrame/1000000;
+  printf("%f samples/frame\n", samplesperframe);
+  samplerate = (int)(astream->GetEndPos()/astream->GetEndTime());
+  printf("%d samplerate\n", samplerate);
+  samplefix = 44100/samplerate;
+
+  if(!samplefix) {
+      printf("samplerate too high!\n");
+      return 0;
+  }
+  printf("%d mp3 samples per movie sample\n", samplefix);
+
   file = open(outputfilename,O_WRONLY|O_CREAT|O_TRUNC, 0644);
   
   memset(&swf, 0, sizeof(swf));
   swf.frameRate = (int)(1000000.0/head.dwMicroSecPerFrame*256);
   swf.fileVersion = 4;
-  swf.fileSize = 0x0fffffff;
+  swf.fileSize = 476549;//0x0fffffff;
+  swf.frameCount = lastframe - firstframe;
   r.xmin = 0;
   r.ymin = 0;
   r.xmax = width*20;
@@ -488,25 +507,102 @@ int main (int argc,char ** argv)
   swf_WriteTag(file, tag);
   swf_DeleteTag(tag);
 
+  tag = swf_InsertTag(NULL, ST_SOUNDSTREAMHEAD2);
+  swf_SetSoundStreamHead(tag, 1152);
+  swf_WriteTag(file, tag);
+  swf_DeleteTag(tag);
+
   int frame = 0;
   initdisplay(file);
 
-  while(frame<firstframe) {
-    if(vstream->ReadFrame()<0)
-	break;
-    printf("\rskipping frame %d",frame);
-    frame++;
-  }
-  if(firstframe)
-  printf("\n");
-  
+  int mp3_block_size = 1152;
+
+  int bufsize = mp3_block_size;
+  if(mp3_block_size < (int)(samplesperframe+1))
+	  bufsize = (int)(samplesperframe + 1);
+  unsigned char*buffer = (unsigned char*)malloc(bufsize);
+  short*block = (short*)malloc(bufsize*2*samplefix);
+
+  unsigned samples_read, bytes_read;
+
+  double movie_sound_pos = 0;
+  int mp3_sound_pos = 0;
+
+  WAVEFORMATEX wave;
+  astream->GetAudioFormatInfo(&wave,0);
+
+  printf("nChannels:%d\n", wave.nChannels);
+  printf("nSamplesPerSec:%d\n", wave.nChannels);
+  printf("nAvgBytesPerSec:%d\n", wave.nAvgBytesPerSec);
+  printf("nBlockAlign:%d\n", wave.nBlockAlign);
+  printf("wBitsPerSample:%d\n", wave.wBitsPerSample);
+  printf("cbSize:%d\n", wave.cbSize);
+
   while(1) {
     if(vstream->ReadFrame()<0) {
 	printf("\n");
 	break;
     }
+
+    if(frame < firstframe)
+    {
+	if(astream->ReadFrames(buffer, bufsize,
+		    (int)samplesperframe,
+		samples_read, bytes_read)<0) {
+	    printf("\n");
+	    break;
+	};
+	printf("\rskipping frame %d",frame);
+	fflush(stdout);
+	frame++;
+	if(frame == firstframe)
+	    printf("\n");
+	continue;
+    }
+
     printf("\rconvert frame %d",frame);
     fflush(stdout);
+
+    // audio
+    movie_sound_pos += samplesperframe;
+
+    int first=1;
+    while(mp3_sound_pos<movie_sound_pos) {
+	if(astream->ReadFrames(buffer, bufsize,
+		    mp3_block_size/samplefix,
+		samples_read, bytes_read)<0) {
+	    printf("couldn't read %d samples\n", mp3_block_size);
+	    break;
+	};
+	int t=0;
+	int s;
+	int c=0;
+	for(s=0;s<mp3_block_size;s++) {
+	    block[s] = ((int)buffer[t]-128)*256;
+	    c++;
+	    if(c==samplefix) {
+		t++;
+		c=0;
+	    }
+	}
+	if(first) { //first run
+	    tag = swf_InsertTag(NULL, ST_SOUNDSTREAMBLOCK);
+	      swf_SetSoundStreamBlock(tag, block, mp3_block_size,1);
+	} else {
+	      swf_SetSoundStreamBlock(tag, block, mp3_block_size,0);
+	}
+	
+	mp3_sound_pos += mp3_block_size/samplefix;
+
+	if(mp3_sound_pos>=movie_sound_pos) { // last run
+	    swf_WriteTag(file, tag);
+	    swf_DeleteTag(tag);
+	}
+	first = 0;
+    }
+ 
+    // video
+
     CImage*img = vstream->GetFrame();
     img->ToRGB();
     U8*data = img->data();
@@ -558,6 +654,9 @@ int main (int argc,char ** argv)
   }
   printf("\n");
   destroydisplay(file);
+
+  printf("mp3 samples read:%d\n", mp3_sound_pos);
+  printf("mp3 samples read:%d\n", mp3_sound_pos);
   
   tag = swf_InsertTag(NULL, ST_END);
   swf_WriteTag(file, tag);
