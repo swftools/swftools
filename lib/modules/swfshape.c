@@ -219,13 +219,10 @@ int swf_SetShapeStyles(TAG * t,SHAPE * s)
 
 int swf_ShapeCountBits(SHAPE * s,U8 * fbits,U8 * lbits)
 { if (!s) return -1;
-    
-  s->bits.fill = swf_CountBits(s->fillstyle.n,0);
-  s->bits.line = swf_CountBits(s->linestyle.n,0);
-
+  s->bits.fill = swf_CountUBits(s->fillstyle.n, 0);
+  s->bits.line = swf_CountUBits(s->linestyle.n, 0);
   if (fbits) fbits[0] = s->bits.fill;
   if (lbits) lbits[0] = s->bits.line;
-  
   return 0;    
 }
 
@@ -409,19 +406,26 @@ int swf_ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
  */
 #define FILL_RESET 0x8000
 #define LINE_RESET 0x8000
+#define UNDEFINED_COORD 0x7fffffff
 
 int swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
 { U8 b;
+  U8 hasmove = 0;
   if ((!t)||(!s)) return -1;
 
-  swf_SetBits(t,0,1);
-  swf_SetBits(t,SF_MOVETO|(line?SF_LINE:0)|(fill0?SF_FILL0:0)|(fill1?SF_FILL1:0),5);
+  if(x!=UNDEFINED_COORD || y!=UNDEFINED_COORD)
+      hasmove=1;
 
-  b = swf_CountBits(x,0);
-  b = swf_CountBits(y,b);
-  swf_SetBits(t,b,5);
-  swf_SetBits(t,x,b);
-  swf_SetBits(t,y,b);
+  swf_SetBits(t,0,1);
+  swf_SetBits(t,(hasmove?SF_MOVETO:0)|(line?SF_LINE:0)|(fill0?SF_FILL0:0)|(fill1?SF_FILL1:0),5);
+
+  if(hasmove) {
+    b = swf_CountBits(x,0);
+    b = swf_CountBits(y,b);
+    swf_SetBits(t,b,5);
+    swf_SetBits(t,x,b);
+    swf_SetBits(t,y,b);
+  }
 
   if (fill0) swf_SetBits(t,fill0,s->bits.fill);
   if (fill1) swf_SetBits(t,fill1,s->bits.fill);
@@ -552,6 +556,11 @@ SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits)
 	    flags = swf_GetBits(tag, 5);
 	    if(!flags)
 		break;
+	    if(flags&1) { //move
+		int n = swf_GetBits(tag, 5); 
+		x = swf_GetSBits(tag, n); //x
+		y = swf_GetSBits(tag, n); //y
+	    }
 	    if(flags&2)
 		fill0 = swf_GetBits(tag, fillbits); 
 	    if(flags&4)
@@ -559,16 +568,13 @@ SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits)
 	    if(flags&8)
 		line = swf_GetBits(tag, linebits); 
 	    if(flags&16) {
-		return 0;
+		fprintf(stderr, "Additional file styles style change not yet supported\n");
+		exit(1);
 		//enumerateUsedIDs_styles(tag, callback, callback_data, num);
 		fillbits = swf_GetBits(tag, 4);
 		linebits = swf_GetBits(tag, 4);
 	    }
 	    if(flags&1) { //move
-		int n = swf_GetBits(tag, 5); 
-		x = swf_GetSBits(tag, n); //x
-		y = swf_GetSBits(tag, n); //y
-
 		lines->next = (SHAPELINE*)malloc(sizeof(SHAPELINE));
 		lines = lines->next;
 		lines->type = moveTo;
@@ -631,30 +637,48 @@ SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits)
     return _lines.next;
 }
 
-SRECT swf_GetShapeBoundingBox(SHAPELINE*shape)
+SRECT swf_GetShapeBoundingBox(SHAPE2*shape2)
 {
     SRECT r;
+    SHAPELINE*l = shape2->lines;
     int SCOORD_MAX = 0x7fffffff;
     int SCOORD_MIN = -0x80000000;
+    int lastx=0,lasty=0;
+    int valid = 0;
     r.xmin = r.ymin = SCOORD_MAX;
     r.xmax = r.ymax = SCOORD_MIN;
-    if(!shape) {
-	memset(&r, 0, sizeof(SRECT));
-	return r;
-    }
-    while(shape) {
-	if(shape->x < r.xmin) r.xmin = shape->x;
-	if(shape->y < r.ymin) r.ymin = shape->y;
-	if(shape->x > r.xmax) r.xmax = shape->x;
-	if(shape->y > r.ymax) r.ymax = shape->y;
-	if(shape->type == splineTo) {
-	    if(shape->sx < r.xmin) r.xmin = shape->sx;
-	    if(shape->sy < r.ymin) r.ymin = shape->sy;
-	    if(shape->sx > r.xmax) r.xmax = shape->sx;
-	    if(shape->sy > r.ymax) r.ymax = shape->sy;
+
+    while(l) {
+	int t1;
+	if(l->linestyle>0) {
+	    t1 = shape2->linestyles[l->linestyle - 1].width*3/2;
+	} else {
+	    t1 = 0;
 	}
-	shape = shape->next;
+
+	if(l->type == lineTo || l->type == splineTo)
+	{
+	    valid = 1;
+	    if(lastx - t1 < r.xmin) r.xmin = lastx - t1;
+	    if(lasty - t1 < r.ymin) r.ymin = lasty - t1;
+	    if(lastx + t1 > r.xmax) r.xmax = lastx + t1;
+	    if(lasty + t1 > r.ymax) r.ymax = lasty + t1;
+	    if(l->x - t1 < r.xmin) r.xmin = l->x - t1;
+	    if(l->y - t1 < r.ymin) r.ymin = l->y - t1;
+	    if(l->x + t1 > r.xmax) r.xmax = l->x + t1;
+	    if(l->y + t1 > r.ymax) r.ymax = l->y + t1;
+	    if(l->type == splineTo) {
+		if(l->sx - t1 < r.xmin) r.xmin = l->sx - t1;
+		if(l->sy - t1 < r.ymin) r.ymin = l->sy - t1;
+		if(l->sx + t1 > r.xmax) r.xmax = l->sx + t1;
+		if(l->sy + t1 > r.ymax) r.ymax = l->sy + t1;
+	    }
+	}
+	lastx = l->x;
+	lasty = l->y;
+	l = l->next;
     }
+    if(!valid) memset(&r, 0, sizeof(SRECT));
     return r;
 }
 
@@ -690,130 +714,6 @@ SHAPE2* swf_ShapeToShape2(SHAPE*shape) {
     shape2->bbox = 0;
     return shape2;
 };
-
-/*LINESTYLE* parseFillStyleArray(TAG*tag)
-{
-    U16 count;
-    int t;
-    int num=0;
-    if(tag->id == ST_DEFINESHAPE)
-	num = 1;
-    else if(tag->id == ST_DEFINESHAPE2)
-	num = 2;
-    else if(tag->id == ST_DEFINESHAPE3)
-	num = 3;
-    else return 0;
-
-    count = swf_GetU8(tag);
-    if(count == 0xff && num>1) // defineshape2,3 only
-	count = swf_GetU16(tag);
-
-    for(t=0;t<count;t++)
-    {
-	int type;
-	U8*pos;
-	swf_ResetReadBits(tag);
-	type = swf_GetU8(tag); //type
-	if(type == 0) {
-	    if(num == 3)
-		swf_GetRGBA(tag, NULL);
-	    else 
-		swf_GetRGB(tag, NULL);
-	}
-	else if(type == 0x10 || type == 0x12)
-	{
-	    swf_ResetReadBits(tag);
-	    swf_GetMatrix(tag, NULL);
-	    swf_ResetReadBits(tag);
-	    swf_GetGradient(tag, NULL, alpha num>=3?1:0);
-	}
-	else if(type == 0x40 || type == 0x41)
-	{
-	    swf_ResetReadBits(tag);
-	    // we made it.
-	    if(tag->data[tag->pos] != 0xff ||
-	       tag->data[tag->pos+1] != 0xff)
-	    //(callback)(tag, tag->pos, callback_data);
-
-	    swf_GetU16(tag);
-	    swf_ResetReadBits(tag);
-	    swf_GetMatrix(tag, NULL);
-	    swf_GetMatrix(tag, NULL);
-	}
-	else {
-	    fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x\n",type);
-	}
-    }
-    swf_ResetReadBits(tag);
-    count = swf_GetU8(tag); // line style array
-    if(count == 0xff)
-	count = swf_GetU16(tag);
-    for(t=0;t<count;t++) 
-    {
-	swf_GetU16(tag);
-	swf_GetU16(tag);
-	if(num == 3)
-	    swf_GetRGBA(tag, NULL);
-	else
-	    swf_GetRGB(tag, NULL);
-    }
-}*/
-
-/*SHAPE2* parseDefineShape(TAG*tag)
-{
-    int num = 0;
-    SHAPE2*shape;
-    U16 fill,line;
-    if(tag->id == ST_DEFINESHAPE)
-	num = 1;
-    else if(tag->id == ST_DEFINESHAPE2)
-	num = 2;
-    else if(tag->id == ST_DEFINESHAPE3)
-	num = 3;
-    else return 0;
-
-    swf_GetU16();
-
-    shape = (SHAPE2*)malloc(sizeof(SHAPE2));
-
-//    LINESTYLE * linestyles;
-//    int numlinestyles;
-//    FILLSTYLE* fillstyles;
-//    int numfillstyles;
-//    struct _SHAPELINE * lines;
-//    SRECT* bbox; // may be NULL 
-
-    swf_GetRect();
-    swf_ResetReadBits(t); 
-    fill = (U16)swf_GetBits(t,4);
-    line = (U16)swf_GetBits(t,4);
-
-    swf_Get
-
-    
-
-
-
-
-    return 0;
-}*/
-
-
-SHAPE*	   swf_Shape2ToShape(SHAPE2*shape)
-{
-    /* todo */
-    fprintf(stderr, "Not implemented yet!\n");
-    exit(1);
-    return 0;
-}
-
-int	   swf_SetShape2(TAG*tag, SHAPE2*shape)
-{
-    /* todo */
-    fprintf(stderr, "Not implemented yet!\n");
-    exit(1);
-    return 0;
-}
 
 void swf_ShapeSetBitmapRect(TAG*tag, U16 gfxid, int width, int height)
 {
