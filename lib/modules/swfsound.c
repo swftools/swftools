@@ -15,6 +15,8 @@
 
 #include "../rfxswf.h"
 
+#ifdef BLADEENC
+fjokjklj
 CodecInitOut * init = 0;
 void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples)
 {
@@ -62,5 +64,101 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
     swf_SetBlock(tag, buf, len);
     free(buf);
 }
+#endif
+
+
+#ifdef LAME
+
+#include "../lame/lame.h"
+    
+static lame_global_flags*lame_flags;
+
+void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples)
+{
+    unsigned char buf[4096];
+    int bufsize = 4096;
+    int len;
+    short int samples[1152];
+
+    U8 playbackrate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
+    U8 playbacksize = 1; // 0 = 8 bit, 1 = 16 bit
+    U8 playbacktype = 0; // 0 = mono, 1 = stereo
+    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3
+    U8 rate = 1; // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
+    U8 size = 1; // 0 = 8 bit, 1 = 16 bit
+    U8 type = 0; // 0 = mono, 1 = stereo
+    
+    memset(samples,0,sizeof(samples));
+
+    lame_flags = lame_init();
+
+    lame_set_in_samplerate(lame_flags, 44100);
+    lame_set_num_channels(lame_flags, 1);
+    lame_set_scale(lame_flags, 0);
+
+    // MPEG1    32, 44.1,   48khz
+    // MPEG2    16, 22.05,  24
+    // MPEG2.5   8, 11.025, 12
+    // (not used by decoding routines)
+    lame_set_out_samplerate(lame_flags, 11025);
+
+    lame_set_quality(lame_flags, 0);
+    lame_set_mode(lame_flags, MONO/*3*/);
+    //lame_set_compression_ratio(lame_flags, 11.025);
+    lame_set_bWriteVbrTag(lame_flags, 0);
+
+    lame_init_params(lame_flags);
+    lame_init_bitstream(lame_flags);
+
+    swf_SetU8(tag,(playbackrate<<2)|(playbacksize<<1)|playbacktype);
+    swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
+    swf_SetU16(tag,avgnumsamples);
+   
+    /* The first two flush calls to lame always fail, for
+       some reason. Do them here where they cause no damage. */
+    len = lame_encode_flush_nogap(lame_flags, buf, bufsize);
+    //printf("init:flush_nogap():%d\n", len);
+    len = lame_encode_flush(lame_flags, buf, bufsize);
+    //printf("init:flush():%d\n", len);
+}
+
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
+{
+    char*buf;
+    int oldlen=0,len = 0;
+    int bufsize = 16384;
+
+    buf = malloc(bufsize);
+    if(!buf)
+	return;
+
+    if(first) {
+	int fs = lame_get_framesize(lame_flags);
+	//printf("framesize:%d\n", fs);
+	swf_SetU16(tag, fs); // samples per mp3 frame
+	swf_SetU16(tag, 0); // seek
+    }
+
+    len += lame_encode_buffer(lame_flags, samples, samples, numsamples, &buf[len], bufsize-len);
+    //printf("block: %d (+%d)\n", len, len-oldlen);
+    oldlen = len;
+
+    len += lame_encode_flush_nogap(lame_flags, &buf[len], bufsize-len);
+    //printf("flush: %d (+%d)\n", len, len-oldlen);
+    oldlen = len;
+    
+    swf_SetBlock(tag, buf, len);
+
+   /* len += lame_encode_flush(lame_flags, &buf[len], bufsize-len);
+    printf("flush! %d (+%d)\n", len, len-oldlen);*/
+
+    free(buf);
+}
+
+void swf_SetSoundStreamEnd(TAG*tag)
+{
+    lame_close (lame_flags);
+}
+#endif
 
 #endif // RFXSWF_DISABLESOUND
