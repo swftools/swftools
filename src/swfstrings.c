@@ -74,7 +74,7 @@ int main (int argc,char ** argv)
   if(!filename)
       exit(0);
 
-  f = open(filename,O_RDONLY);
+  f = open(filename,O_RDONLY|O_BINARY);
   if (f>=0)
   { if FAILED(swf_ReadSWF(f,&swf))
     { fprintf(stderr,"%s is not a valid SWF file or contains errors.\n",filename);

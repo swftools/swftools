@@ -619,7 +619,7 @@ void s_font(char*name, char*filename)
     int f;
     SWF swf;
     SWFFONT* font;
-    f = open(filename,O_RDONLY);
+    f = open(filename,O_RDONLY|O_BINARY);
     if (f<0) { 
 	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
 	font = (SWFFONT*)malloc(sizeof(SWFFONT));

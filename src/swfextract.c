@@ -874,7 +874,7 @@ int main (int argc,char ** argv)
     }
     initLog(0,-1,0,0,-1, verbose);
 
-    f = open(filename,O_RDONLY);
+    f = open(filename,O_RDONLY|O_BINARY);
 
     if (f<0)
     { 

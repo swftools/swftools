@@ -278,7 +278,7 @@ static void makestackmaster(SWF*swf)
     {
 	SWF head;
 	int ret;
-	int fi=open(slave_filename[t],O_RDONLY);
+	int fi=open(slave_filename[t],O_RDONLY|O_BINARY);
 	TAG*tag;
 	if(fi<0 || swf_ReadSWF(fi, &head)<0) {
 	    logf("<fatal> Couldn't open/read %s.", slave_filename[t]);
@@ -1074,7 +1074,7 @@ int main(int argn, char *argv[])
     else {
 	int ret;
 	logf("<verbose> master entity %s (named \"%s\")\n", master_filename, master_name);
-	fi = open(master_filename, O_RDONLY);
+	fi = open(master_filename, O_RDONLY|O_BINARY);
 	if(fi<0) {
 	    logf("<fatal> Failed to open %s\n", master_filename);
 	    exit(1);
@@ -1139,7 +1139,7 @@ int main(int argn, char *argv[])
 	    if(!config.dummy)
 	    {
 		int ret;
-		fi = open(slave_filename[t], O_RDONLY);
+		fi = open(slave_filename[t], O_RDONLY|O_BINARY);
 		if(!fi) {
 		    logf("<fatal> Failed to open %s\n", slave_filename[t]);
 		    exit(1);
