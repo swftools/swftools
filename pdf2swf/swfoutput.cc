@@ -1068,7 +1068,6 @@ SWFFont::SWFFont(char*name, int id, char*filename)
             t=0;
         }
     }
-    printf("done\n");
 }
 
 /* free all tables, write out definefont tags */
