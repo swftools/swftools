@@ -919,6 +919,11 @@ void swf_FoldSprite(TAG * t)
 //  t->prev = sprtag;
 }
 
+int swf_IsFolded(TAG * t)
+{
+    return (t->id == ST_DEFINESPRITE && t->len>4);
+}
+
 void swf_FoldAll(SWF*swf)
 {
     TAG*tag = swf->firstTag;

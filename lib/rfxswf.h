@@ -177,6 +177,7 @@ void swf_FoldAll(SWF*swf);
 void swf_UnFoldAll(SWF*swf);
 void swf_FoldSprite(TAG*tag);
 void swf_UnFoldSprite(TAG*tag);
+int swf_IsFolded(TAG*tag);
 
 // tag reordering:
 
