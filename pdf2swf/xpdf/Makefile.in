@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: libpdf.a test
+all: libpdf.a
 
 libpdf_objects =  GHash.o GList.o GString.o gmem.o gfile.o \
 		  FoFiTrueType.o FoFiType1.o FoFiType1C.o FoFiBase.o FoFiEncodings.o \
@@ -105,9 +105,6 @@ gmem.o: gmem.c
 libpdf.a: $(libpdf_objects)
 	$(AR) r libpdf.a $(libpdf_objects)
 	$(RANLIB) libpdf.a
-
-test: test.cc
-	g++ -I. test.cc libpdf.a
 
 install:
 uninstall:
