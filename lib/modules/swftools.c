@@ -397,6 +397,16 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    callback(tag, tag->pos + base, callback_data); //button id
 	break;
 
+	case ST_EXPORTASSETS: {
+	    int num =  swf_GetU16(tag);
+	    int t;
+	    for(t=0;t<num;t++) {
+		callback(tag, tag->pos + base, callback_data); //button id
+		swf_GetU16(tag); //id
+		while(swf_GetU8(tag)); //name
+	    }
+	} break;
+
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
 	case ST_GENERATORTEXT:
@@ -541,7 +551,8 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    callback(tag, tag->pos + base, callback_data);
 	break;
 
-	case ST_DEFINEMORPHSHAPE:
+	//case ST_DEFINEMORPHSHAPE: /* disabled for now (doesn't work) */
+
 	case ST_DEFINESHAPE3: // these thingies might have bitmap ids in their fillstyles
 	num++; //fallthrough
 	case ST_DEFINESHAPE2:
@@ -567,7 +578,6 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    DEBUG_ENUMERATE printf("-------\n");
 	    while(--morph>=0) /* morph shapes define two shapes */
 	    {
-		swf_ResetReadBits(tag); //?
 		fillbits = swf_GetBits(tag, 4);
 		linebits = swf_GetBits(tag, 4);
 		DEBUG_ENUMERATE printf("%d %d\n", fillbits, linebits);
