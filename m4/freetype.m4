@@ -29,8 +29,11 @@ else if test -d /usr/local/include/freetype2; then
 fi 
 fi
 fi
+
 AC_CHECK_LIB(freetype, FT_Init_FreeType,HAVE_LIB_FREETYPE=1,)
 AC_CHECK_HEADERS(freetype/freetype.h,HAVE_FREETYPE_FREETYPE_H=1)
+AC_CHECK_HEADERS(freetype/ft2build.h,HAVE_FREETYPE_FT2BUILD_H=1)
+
 if test "x${HAVE_LIB_FREETYPE}" != "x";then
 if test "x${HAVE_FREETYPE_FREETYPE_H}" != "x";then
     HAVE_FREETYPE=1
@@ -44,9 +47,18 @@ if test "x${HAVE_FREETYPE}" = "x1"; then
 	LIBS="$LIBS -lfreetype"
     fi
 
+if test "x${HAVE_FREETYPE_FT2BUILD_H}" = "x1"; then
+    HAVE_FREETYPE_FT2BUILD_H_DEFINE='#define HAVE_FREETYPE_FT2BUILD_H'
+fi
+
     AC_MSG_CHECKING([whether we can compile the freetype test program])
 
     cat > conftest.c << EOF
+$HAVE_FREETYPE_FT2BUILD_H_DEFINE
+
+#ifdef HAVE_FREETYPE_FT2BUILD_H
+#include <freetype/ft2build.h>
+#endif
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
 #include <freetype/ftsnames.h>
