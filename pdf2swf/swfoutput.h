@@ -11,6 +11,10 @@
 #define __swfoutput_h__
 
 #include <t1lib.h>
+#ifdef T1ERR_SCAN_ENCODING //t1lib 5.0.0
+#define T1_Get_no_fonts T1_GetNoFonts
+#endif
+
 extern "C" {
 #include "../lib/rfxswf.h"
 }
