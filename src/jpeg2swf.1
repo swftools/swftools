@@ -1,0 +1,43 @@
+.TH jpeg2swf "1" "October 2001" "jpeg2swf" "swftools"
+.SH NAME
+jpeg2swf - convert one or more pictures to swf
+.SH Synopsis
+.B jpeg2swf
+.SH DESCRIPTION
+Takes a number of jpeg files and converts them to a swf movie, one
+picture per frame.
+.PP
+(SWF files are animation files which can be displayed in Web Browsers using
+the Flash Plugin)
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print short help message and exit
+.TP
+\fR\-V\fR, \fB\-\-version\fR
+Print version info and exit
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
+Explicitly specify output file. (Otherwise, output will go to stdout)
+.TP
+\fB\-q\fR, \fB\-\-quality\fR \fIquality\fR
+Set JPEG compression quality (1-100)
+.TP
+\fB\-r\fR, \fB\-\-framerate\fR \fIrate\fR
+Set movie framerate (100/sec)
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
+Set verbosity level (0=quiet, 1=default, 2=debug)
+.TP
+\fB\-X\fR, \fB\-\-width\fR \fIscale\fR
+Force movie width to \fIscale\fR (default: autodetect)
+.TP
+\fB\-Y\fR, \fB\-\-height\fR \fIscale\fR
+Force movie height to \fIscale\fR (default: autodetect)
+
+.SH AUTHORS
+
+Rainer Böhme <rfxswf@reflex-studio.de>
+.TP
+Matthias Kramm <kramm@quiss.org>
+
