@@ -269,7 +269,7 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
     v->height = head.dwHeight;
     dwMicroSecPerFrame = head.dwMicroSecPerFrame;
     samplesperframe = astream->GetEndPos()/astream->GetEndTime()*head.dwMicroSecPerFrame/1000000;
-    v->rate = (int)(astream->GetEndPos()/astream->GetEndTime());
+    v->samplerate = (int)(astream->GetEndPos()/astream->GetEndTime());
     v->fps = 1000000.0/dwMicroSecPerFrame;
     i->soundbits = 16;
 #else
@@ -290,11 +290,11 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
 	audioinfo = i->astream->GetStreamInfo();
 
 	v->channels = wave.nChannels;
-	v->rate = wave.nSamplesPerSec;
+	v->samplerate = wave.nSamplesPerSec;
 	i->soundbits = wave.wBitsPerSample;
 
-	if(v->channels==0 || v->rate==0 || i->soundbits==0 || wave.wFormatTag!=1) {
-	    v->rate = audioinfo->GetAudioSamplesPerSec();
+	if(v->channels==0 || v->samplerate==0 || i->soundbits==0 || wave.wFormatTag!=1) {
+	    v->samplerate = audioinfo->GetAudioSamplesPerSec();
 	    v->channels = audioinfo->GetAudioChannels();
 	    i->soundbits = audioinfo->GetAudioBitsPerSample();
 	}
@@ -308,7 +308,7 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
 	    i->do_audio = 0;
 	    i->soundbits = 0;
 	    v->channels = 0;
-	    v->rate = 0;
+	    v->samplerate = 0;
 	}
     }
 #endif

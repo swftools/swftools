@@ -18,7 +18,7 @@ typedef struct _videoreader_t
 
     /* audio */
     int channels;
-    int rate;
+    int samplerate;
 
     /* progress */
     int frame;
