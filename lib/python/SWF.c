@@ -70,7 +70,7 @@ static PyObject* f_create(PyObject* self, PyObject* args, PyObject* kwargs)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|idOs", 
 		kwlist, &version, &framerate, 
-		&obbox, filename))
+		&obbox, &filename))
 	return NULL;
 
     if (!PY_CHECK_TYPE(obbox, &BBoxClass)) {
@@ -401,7 +401,7 @@ static PyObject* module_verbose(PyObject* self, PyObject* args, PyObject* kwargs
 {
     int _verbose = 0;
     static char *kwlist[] = {"verbosity", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &verbose))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &_verbose))
 	return NULL;
     setVerbosity(_verbose);
 
