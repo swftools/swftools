@@ -984,9 +984,9 @@ int main (int argc,char ** argv)
 		}
 	    }
 	    if(nframe == frame)
-		printf(" %d (%s)", frame, timestring(frame*(256.0/(swf.frameRate+0.1))));
+		printf(" %d (%s)", frame+1, timestring(frame*(256.0/(swf.frameRate+0.1))));
 	    else
-		printf(" %d-%d (%s-%s)", frame, nframe,
+		printf(" %d-%d (%s-%s)", frame+1, nframe+1,
 			timestring(frame*(256.0/(swf.frameRate+0.1))),
 			timestring(nframe*(256.0/(swf.frameRate+0.1)))
 			);
