@@ -244,7 +244,6 @@ NUMBER	 -?[0-9]+(\.[0-9]*)?
 PERCENT	 {NUMBER}%
 STRING   (\\.|[^\\"\n])*
 S	 [ \n\r\t]
-NS	 [^ \n\r\t]
 RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 
 %%
@@ -266,7 +265,7 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 }
 \.include{S}.*\n		    {handleInclude(yytext, yyleng);}
 \.{NAME}	            {s(COMMAND);c();}
-:({NS}|{S}[^.]|{S}\.[^e]|{S}\.e[^n]|{S}\.en[^d]|{S}\.end{NS})*{S}\.end	    {s(RAWDATA);c();}
+:([^.]|\.[^e]|\.e[^n]|\.en[^d]|\.end[^ \n\r\t]|[ \n\r\t])*\.end	    {s(RAWDATA);c();}
 {NAME}                      {s(IDENTIFIER);c();}
 "["		            {c();BEGIN(BINARY);}
 {S} 		            {c();}
