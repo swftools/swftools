@@ -22,7 +22,7 @@ swfcombine:
 
 swfdump:
 
-    * Support for actionscript in buttons. Make the output shorter.
+    * Make the output shorter.
 
 rfxswf-lib:
    
