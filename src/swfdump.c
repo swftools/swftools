@@ -315,42 +315,49 @@ void printhandlerflags(U16 handlerflags)
 void handlePlaceObject2(TAG*tag, char*prefix)
 {
     U8 flags = swf_GetU8(tag);
+    printf("flags: %02x", flags);
     swf_GetU16(tag); //depth
     //flags&1: move
     if(flags&2) swf_GetU16(tag); //id
     if(flags&4) swf_GetMatrix(tag,0);
-    if(flags&8) swf_GetCXForm(tag,0,0);
+    if(flags&8) swf_GetCXForm(tag,0,1);
     if(flags&16) swf_GetU16(tag); //ratio
-    if(flags&32) { 
-	while(swf_GetU8(tag));
-    }
+    if(flags&32) { while(swf_GetU8(tag)); }
     if(flags&64) swf_GetU16(tag); //clip
     if(flags&128) {
       if (action) {
-	U16 globalflags;
 	U16 unknown;
+	U32 globalflags;
+	U32 handlerflags;
+	char is32 = 0;
 	printf("\n");
 	unknown = swf_GetU16(tag);
 	globalflags = swf_GetU16(tag);
-	if(unknown)
+	if(unknown) {
 	    printf("Unknown parameter field not zero: %04x\n", unknown);
-	while(1)  {
+	    return;
+	}
+	printf("global flags: %04x\n", globalflags);
+	handlerflags = swf_GetU16(tag);
+	if(!handlerflags) {
+	    handlerflags = swf_GetU32(tag);
+	    is32 = 1;
+	}
+	while(handlerflags)  {
 	    int length;
 	    int t;
-	    U16 handlerflags;
 	    ActionTAG*a;
-	    handlerflags = swf_GetU16(tag);
-	    if(!handlerflags)
-		break;
-	    globalflags &= ~handlerflags;
-	    printf("%s flags %04x ",prefix, handlerflags);
-	    printhandlerflags(handlerflags);
 
+	    globalflags &= ~handlerflags;
+	    printf("%s flags %08x ",prefix, handlerflags);
+	    printhandlerflags(handlerflags);
 	    length = swf_GetU32(tag);
 	    printf(", %d bytes actioncode\n",length);
 	    a = swf_ActionGet(tag);
 	    swf_DumpActions(a,prefix);
 	    swf_ActionFree(a);
+
+	    handlerflags = is32?swf_GetU32(tag):swf_GetU16(tag);
 	}
 	if(globalflags) // should go to sterr.
 	    printf("ERROR: unsatisfied handlerflags: %02x\n", globalflags);
@@ -554,7 +561,13 @@ int main (int argc,char ** argv)
 	    printf(" starts id %04d", swf_GetPlaceID(tag));
 	}
 	else if(tag->id == ST_FRAMELABEL) {
+	    int l = strlen(tag->data);
 	    printf(" \"%s\"", tag->data);
+	    if(l < tag->len-1) {
+		printf(" has %d extra bytes", tag->len-1-l);
+		if(tag ->len-1-l == 1 && tag->data[tag->len-1] == 1)
+		    printf(" (ANCHOR)");
+	    }
 	    if((framelabel && !issprite) ||
 	       (spriteframelabel && issprite)) {
 		dumperror("Frame %d has more than one label", 
