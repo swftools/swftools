@@ -36,6 +36,7 @@ swfcombine:
     * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
     * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
     * "swfcombine file.swf -x 200 -y 200 -s 200 box1=file1.swf" doesn't work?
+    * swfcombine -f should allocate a proper depth, not just use 65535.
     * Handle Bounding boxes
     * support for centering (remove need to set -x,-y parameters manually when linking
       preloaders)
@@ -69,6 +70,7 @@ png2swf:
 Makefiles/configure/installation:
 
     * check for vsnprintf, bcopy, bzero, strndup etc. and supply replacements
+    * -shared is named -bundle on MacOSX
 
 other:
 
