@@ -377,18 +377,18 @@ void jpeg_assert(SWF*master, SWF*slave)
 	    spos = stag;
 	stag = stag->next;
     }
-    if(!mtag && !stag)
+    if(mpos && spos)
     {
-	if(stag->len == mtag->len &&
-	!memcmp(stag->data, mtag->data, mtag->len))
+	if(spos->len == mpos->len &&
+	!memcmp(spos->data, mpos->data, mpos->len))
 	{
 	    // ok, both have jpegtables, but they're identical.
 	    // delete one and don't throw an error
-	    swf_DeleteTag(stag);
+	    swf_DeleteTag(spos);
 	    spos = 0;
 	}
     }
-    if(spos>=0 && mpos>=0) {
+    if(spos && mpos) {
 	logf("<error> Master and slave have incompatible JPEGTABLES.");
     }
 }
@@ -554,12 +554,12 @@ TAG* write_sprite(TAG*tag, SWF*sprite, int spriteid, int replaceddefine)
     {
 	if (swf_isAllowedSpriteTag(rtag)) {
 
-	    changedepth(rtag, +1);
 	    logf("<debug> [sprite main] write tag %02x (%d bytes in body)", 
 		    rtag->id, rtag->len);
-
 	    tag = swf_InsertTag(tag, rtag->id);
-	    write_changepos(rtag, tag);
+	    write_changepos(tag, rtag);
+	  
+	    changedepth(tag, +1);
 
 	    if(tag->id == ST_SHOWFRAME)
 	    {
@@ -694,7 +694,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		swf_SetBlock(tag, rtag->data, rtag->len);
 	    }
 	}
-	tag = tag->next;
+	rtag = rtag->next;
     }
    
     if(outputslave) 
@@ -815,16 +815,16 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     {
 	if(swf_isDefiningTag(tag)) {
 	    int defineid = swf_GetDefineID(tag);
-	    logf("<debug> tagid %02x defines object %d", tag, defineid);
+	    logf("<debug> tagid %02x defines object %d", tag->id, defineid);
 	    masterbitmap[defineid] = 1;
 	} else if(tag->id == ST_PLACEOBJECT2) {
 	    char * name = swf_GetName(tag);
 	    int id = swf_GetPlaceID(tag);
 
 	    if(name)
-	      logf("<verbose> tagid %02x places object %d named \"%s\"", tag, id, name);
+	      logf("<verbose> tagid %02x places object %d named \"%s\"", tag->id, id, name);
 	    else
-	      logf("<verbose> tagid %02x places object %d (no name)", tag, id);
+	      logf("<verbose> tagid %02x places object %d (no name)", tag->id, id);
 
 	    if ((name && slavename && !strcmp(name,slavename)) || 
 		(!slavename && id==slaveid)) {
@@ -1086,10 +1086,13 @@ int main(int argn, char *argv[])
     }
 
     fi = open(outputname, O_RDWR|O_TRUNC|O_CREAT);
+
     if(config.zlib)
 	swf_WriteSWC(fi, &newswf);
-    else
+    else {
+	newswf.compressed = 0;
 	swf_WriteSWF(fi, &newswf);
+    }
     close(fi);
     return 0;
 }
