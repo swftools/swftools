@@ -291,6 +291,30 @@ char* swf_GetName(TAG * t)
     return name;
 }
 
+/* used in enumerateUsedIDs */
+void swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2)
+{
+    GRADIENT dummy1;
+    GRADIENT dummy2;
+    int t;
+    if(!gradient1)
+	gradient1 = &dummy1;
+    if(!gradient2)
+	gradient2 = &dummy2;
+    gradient1->num = 
+    gradient2->num = swf_GetU8(tag);
+    for(t=0;t<gradient1->num;t++)
+    {
+	int s=t;
+	if(s>=8) //FIXME
+	    s=7;
+	gradient1->ratios[t] = swf_GetU8(tag);
+	swf_GetRGBA(tag, &gradient1->rgba[t]);
+	gradient2->ratios[t] = swf_GetU8(tag);
+	swf_GetRGBA(tag, &gradient2->rgba[t]);
+    }
+}
+
 #define DEBUG_ENUMERATE if(0)
 
 static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph)
