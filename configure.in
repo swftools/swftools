@@ -9,7 +9,6 @@ export CFLAGS="-O2 -fomit-frame-pointer"
 export CXXFLAGS="-O2 -fomit-frame-pointer"
 
 dnl Checks for programs.
- AC_PROG_AWK
  AC_PROG_CC
  AC_PROG_CPP
  AC_PROG_CXX
@@ -47,7 +46,7 @@ dnl AC_CHECK_LIB(X11, XFlush)
 
 dnl Checks for header files.
  AC_CONFIG_HEADER(config.h)
- AC_PATH_X
+dnl AC_PATH_X
 dnl AC_PATH_XTRA
  AC_HEADER_DIRENT
  AC_HEADER_STDC
