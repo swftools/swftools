@@ -1407,6 +1407,8 @@ void swfoutput_init(struct swfoutput* obj, char*_filename, int x1, int y1, int x
       swf_ShapeFree(s);
       tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
       swf_ObjectPlace(tag,shapeid,depth++,0,0,0);
+      tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+      swf_ObjectPlaceClip(tag,shapeid,depth++,0,0,0,65535);
   }
 
   if(flag_protected)
