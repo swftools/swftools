@@ -49,13 +49,14 @@ typedef struct _videoreader_vfw_internal {
     int samplerate;
     int channels;
 
+    int flip;
 } videoreader_vfw_internal_t;
 
 static int avifile_initialized = 0;
 
 #define _TRACE_ {printf("%s: %d (%s)\n",__FILE__,__LINE__,__func__);fflush(stdout);}
 
-bool videoreader_vfw_eof(videoreader_t* vr)
+static bool videoreader_vfw_eof(videoreader_t* vr)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
     return (i->video_pos >= i->video_end);
@@ -87,10 +88,15 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     int bytesperpixel = ((bi->biWidth*bi->biBitCount)+7)&~7;
     int linex = ((bytesperpixel/8)+3)&~3;
     memset(dest, 255, dest_width*dest_height*4);//pre-fill alpha channel
+
+    int starty = i->flip? 0 : dest_height-1;
+    int endy   = i->flip? dest_height-1 : 0;
+    int yinc   = i->flip? 1 : -1;
+
     if(bi->biBitCount==1) {
-	int y;
 	UCHAR*img = data;
-	for(y=0;y<dest_height;y++) {
+	int y;
+	for(y=starty;y<=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -98,10 +104,10 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
 	    }
 	}
     } else if(bi->biBitCount==4) {
-	int y;
 	UCHAR*img = &data[bi->biClrUsed*4];
 	UCHAR*pal = data;
-	for(y=0;y<dest_height;y++) {
+	int y;
+	for(y=starty;y<=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width/2;x++) {
@@ -111,10 +117,10 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
 	    }
 	}
     } else if(bi->biBitCount==8) {
-	int y;
 	UCHAR*img = &data[bi->biClrUsed*4];
 	UCHAR*pal = data;
-	for(y=0;y<dest_height;y++) {
+	int y;
+	for(y=starty;y<=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -125,7 +131,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     } else if(bi->biBitCount==24) {
 	UCHAR*img = data;
 	int y;
-	for(y=0;y<dest_height;y++) {
+	for(y=starty;y<=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -136,7 +142,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     } else if(bi->biBitCount==32) {
 	UCHAR*img = data;
 	int y;
-	for(y=0;y<dest_height;y++) {
+	for(y=starty;y<=endy;y+=yinc) {
 	    UCHAR*line = &img[linex*y];
 	    int x;
 	    for(x=0;x<dest_width;x++) {
@@ -151,7 +157,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
     return 1;
 }
 
-int videoreader_vfw_getimage(videoreader_t* vr, void*buffer)
+static int videoreader_vfw_getimage(videoreader_t* vr, void*buffer)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
 
@@ -185,7 +191,7 @@ static int readAudioBlock(videoreader_vfw_internal_t* i, void*buf, int len)
     return bytes;
 }
 
-int videoreader_vfw_getsamples(videoreader_t* vr, void*buf, int num)
+static int videoreader_vfw_getsamples(videoreader_t* vr, void*buf, int num)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
    
@@ -215,7 +221,7 @@ int videoreader_vfw_getsamples(videoreader_t* vr, void*buf, int num)
     }
 }
 
-void videoreader_vfw_close(videoreader_t* vr)
+static void videoreader_vfw_close(videoreader_t* vr)
 {
     videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
 
@@ -233,7 +239,13 @@ void videoreader_vfw_close(videoreader_t* vr)
     free(vr->internal); vr->internal = 0;
 }
 
-void videoreader_vfw_setparameter(videoreader_t* vr, char*name, char*value) {}
+static void videoreader_vfw_setparameter(videoreader_t*vr, char*name, char*value)
+{
+    videoreader_vfw_internal_t* i = (videoreader_vfw_internal_t*)vr->internal;
+    if(!strcmp(name, "flip")) {
+	i->flip = atoi(value);
+    }
+}
 
 int videoreader_vfw_open(videoreader_t* vr, char* filename)
 {
