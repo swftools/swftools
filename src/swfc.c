@@ -1231,7 +1231,7 @@ void s_includeswf(char*name, char*filename)
     TAG* s;
     int level = 0;
     U16 cutout[] = {ST_SETBACKGROUNDCOLOR, ST_PROTECT, ST_FREEALL, ST_REFLEX};
-    f = open(filename,O_RDONLY);
+    f = open(filename,O_RDONLY|O_BINARY);
     if (f<0) { 
 	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
 	s_box(name, 0, 0, black, 20, 0);
