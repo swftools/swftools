@@ -1144,6 +1144,7 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
     if(charname) {
 	for(t=0;t<font->numchars;t++) {
 	    if(font->glyphnames[t] && !strcmp(font->glyphnames[t],charname)) {
+		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, charname, u, t);
 		return t;
 	    }
 	}
@@ -1151,6 +1152,7 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	   we can find the capitalized version */
 	for(t=0;t<font->numchars;t++) {
 	    if(font->glyphnames[t] && !strcasecmp(font->glyphnames[t],charname)) {
+		msg("<debug> Char [%d,>>%s<<,%d] maps to %d\n", charnr, charname, u, t);
 		return t;
 	    }
 	}
@@ -1159,11 +1161,13 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
     if(u>0) {
 	/* try to use the unicode id */
 	if(u>=0 && u<font->maxascii && font->ascii2glyph[u]>=0) {
+	    msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->ascii2glyph[u]);
 	    return font->ascii2glyph[u];
 	}
     }
 
     if(charnr>=0 && charnr<font->numchars) {
+	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
 	return charnr;
     }
 
@@ -1172,6 +1176,7 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 	   is US-ASCII based. It's needed for fonts which return broken unicode
 	   indices */
 	if(charnr>=0 && charnr<font->maxascii && font->ascii2glyph[charnr]>=0) {
+	    msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, font->ascii2glyph[charnr]);
 	    return font->ascii2glyph[charnr];
 	}
     }
