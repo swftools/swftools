@@ -12,13 +12,23 @@ case $host_os in
 esac
 
 AR=ar
-if test "x$CXX" == "xi586-mingw32msvc-g++"; then
-#fix for the debian distribution of mingw
+if test "x$MINGW" == "xyes"; then
+    #fix for the debian distribution of mingw
     if test -x "/usr/i586-mingw32msvc/bin/ar";then
 	AR="/usr/i586-mingw32msvc/bin/ar"
     fi
     if test -x "/usr/i586-mingw32msvc/bin/ranlib";then
 	RANLIB="/usr/i586-mingw32msvc/bin/ranlib"
+    fi
+    #fix for the gentoo distribution of mingw
+    if test -x "/opt/xmingw/bin/i386-mingw32msvc-ar";then
+	AR="/opt/xmingw/bin/i386-mingw32msvc-ar"
+    fi
+    if test -x "/opt/xmingw/bin/i386-mingw32msvc-ranlib";then
+	RANLIB="/opt/xmingw/bin/i386-mingw32msvc-ranlib"
+    fi
+    if test -x "/opt/xmingw/bin/i386-mingw32msvc-strip";then
+	STRIP="/opt/xmingw/bin/i386-mingw32msvc-strip"
     fi
 fi
 AC_SUBST(AR)
