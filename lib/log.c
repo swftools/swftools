@@ -47,6 +47,10 @@ int getScreenLogLevel()
 {
     return screenloglevel;
 }
+int getLogLevel()
+{
+    return maxloglevel;
+}
 
 void setConsoleLogging(int level)
 {

@@ -37,6 +37,7 @@ extern "C" {
 #define LOGLEVEL_DEBUG 5
 #define LOGLEVEL_TRACE 6
 
+extern int getLogLevel();
 extern int getScreenLogLevel();
 
 extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPort, int serverloglevel, int screenloglevel);
