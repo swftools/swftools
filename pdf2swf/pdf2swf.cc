@@ -211,6 +211,11 @@ int main(int argn, char *argv[])
     srand48(time(0));
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,loglevel);
+    if(!outputname)
+    {
+	fprintf(stderr, "Please use -o to specify an output file\n");
+	exit(1);
+    }
 
     // test if the page range is o.k.
     is_in_range(0x7fffffff, pagerange);
