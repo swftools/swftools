@@ -776,6 +776,7 @@ int swf_InitSWF(void*data, int length, SWF * swf) /* copy a swf in memory into S
     swf->firstTag = t1.next;
     t1.next->prev = NULL;*/
   }
+  return 0;
 }
 
 int swf_ReadSWF(int handle,SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
@@ -897,6 +898,7 @@ int swf_WriteHeader(int handle,SWF * swf)
     memcpy(&myswf,swf,sizeof(SWF));
     myswf.firstTag = 0;
     swf_WriteSWF(handle, &myswf);
+    return 0;
 }
 
 int swf_WriteCGI(SWF * swf)
