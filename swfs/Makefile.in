@@ -7,11 +7,19 @@ all: simple_viewer.swf keyboard_viewer.swf PreLoaderTemplate.swf
 
 programs = simple_viewer keyboard_viewer PreLoaderTemplate
 
-%.o: %.c
-	$(C) -I../lib $< -o $@
+simple_viewer.o: simple_viewer.c
+	$(C) -I../lib simple_viewer.c -o $@
+keyboard_viewer.o: keyboard_viewer.c
+	$(C) -I../lib keyboard_viewer.c -o $@
+PreLoaderTemplate.o: PreLoaderTemplate.c
+	$(C) -I../lib PreLoaderTemplate.c -o $@
 
-%: %.o
-	$(L) $< -o $@ ../lib/librfxswf.a $(LIBS) 
+simple_viewer: simple_viewer.o
+	$(L) simple_viewer.o -o $@ ../lib/librfxswf.a $(LIBS) 
+keyboard_viewer: keyboard_viewer.o
+	$(L) keyboard_viewer.o -o $@ ../lib/librfxswf.a $(LIBS) 
+PreLoaderTemplate: PreLoaderTemplate.o
+	$(L) PreLoaderTemplate.o -o $@ ../lib/librfxswf.a $(LIBS) 
 
 simple_viewer.swf: $(programs)
 	@echo Calling ./keybard_viewer to create keyboard_viewer.swf
@@ -34,9 +42,9 @@ install:
 	$(INSTALL_DATA) ./tessel_loader.swf $(pkgdatadir)/swfs/tessel_loader.swf
 	$(INSTALL_DATA) ./swft_loader.swf $(pkgdatadir)/swfs/swft_loader.swf
 	test -f $(pkgdatadir)/swfs/default_viewer.swf || \
-	    $(LN_S) $(pkgdatadir)/swfs/simple_viewer.swf $(pkgdatadir)/swfs/default_viewer.swf; \
+	    $(LN_S) $(pkgdatadir)/swfs/simple_viewer.swf $(pkgdatadir)/swfs/default_viewer.swf;
 	test -f $(pkgdatadir)/swfs/default_loader.swf || \
-	    $(LN_S) $(pkgdatadir)/swfs/tessel_loader.swf $(pkgdatadir)/swfs/default_loader.swf; \
+	    $(LN_S) $(pkgdatadir)/swfs/tessel_loader.swf $(pkgdatadir)/swfs/default_loader.swf;
 		
 uninstall:
 	$(UNINSTALL_DATA) $(pkgdatadir)/swfs/simple_viewer.swf

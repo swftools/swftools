@@ -5,10 +5,18 @@ include ../../Makefile.common
 
 all: libpdf.a
 
-%.o: %.c
-	$(C) -I./ -Wno-parentheses $< -o $@
-
 ttf2pt1_objects =  ft.o ttf.o pt1.o ttf2pt1.o t1asm.o
+
+ft.o: ft.c
+	$(C) -I./ -Wno-parentheses ft.c -o $@
+ttf.o: ttf.c
+	$(C) -I./ -Wno-parentheses ttf.c -o $@
+pt1.o: pt1.c
+	$(C) -I./ -Wno-parentheses pt1.c -o $@
+ttf2pt1.o: ttf2pt1.c
+	$(C) -I./ -Wno-parentheses ttf2pt1.c -o $@
+t1asm.o: t1asm.c
+	$(C) -I./ -Wno-parentheses t1asm.c -o $@
 
 libpdf.a: $(ttf2pt1_objects)
 	$(AR) r ttf2pt1.a $(ttf2pt1_objects)

@@ -7,8 +7,40 @@ lame_objects =  psymodel.o fft.o newmdct.o quantize.o takehiro.o reservoir.o qua
 
 all: $(lame_objects)
 
-%.o: %.c
-	$(C) $< -o $@
+psymodel.o: psymodel.c 
+	$(C) psymodel.c -o $@
+fft.o: fft.c 
+	$(C) fft.c -o $@
+newmdct.o: newmdct.c 
+	$(C) newmdct.c -o $@
+quantize.o: quantize.c 
+	$(C) quantize.c -o $@
+takehiro.o: takehiro.c 
+	$(C) takehiro.c -o $@
+reservoir.o: reservoir.c 
+	$(C) reservoir.c -o $@
+quantize_pvt.o: quantize_pvt.c 
+	$(C) quantize_pvt.c -o $@
+vbrquantize.o: vbrquantize.c 
+	$(C) vbrquantize.c -o $@
+encoder.o: encoder.c 
+	$(C) encoder.c -o $@
+id3tag.o: id3tag.c 
+	$(C) id3tag.c -o $@
+version.o: version.c 
+	$(C) version.c -o $@
+tables.o: tables.c 
+	$(C) tables.c -o $@
+util.o: util.c 
+	$(C) util.c -o $@
+bitstream.o: bitstream.c 
+	$(C) bitstream.c -o $@
+set_get.o: set_get.c 
+	$(C) set_get.c -o $@
+VbrTag.o: VbrTag.c 
+	$(C) VbrTag.c -o $@
+lame.o: lame.c
+	$(C) lame.c -o $@
 
 install:
 uninstall:

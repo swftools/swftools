@@ -7,28 +7,37 @@ programs = wav2swf png2swf swfcombine swfstrings swfextract swfdump @JPEG2SWF@
 
 all: $(programs)
 
-%.o: %.c
-	$(C) $< -o $@
-
 wav2swf.o: wav2swf.c wav.h
+	$(C) wav2swf.c -o $@
+wav.o: wav.c wav.h
+	$(C) wav.c -o $@
+png2swf.o: png2swf.c
+	$(C) png2swf.c -o $@
+swfcombine.o: swfcombine.c
+	$(C) swfcombine.c -o $@
+swfdump.o: swfdump.c
+	$(C) swfdump.c -o $@
+swfextract.o: swfextract.c
+	$(C) swfextract.c -o $@
+swfstrings.o: swfstrings.c
+	$(C) swfstrings.c -o $@
+jpeg2swf.o: jpeg2swf.c
+	$(C) jpeg2swf.c -o $@
 
 wav2swf: wav2swf.o wav.o
-	$(L) wav2swf.o wav.o -o wav2swf ../lib/librfxswf.a $(LIBS)
-
+	$(L) wav2swf.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
 png2swf: png2swf.o
-	$(L) png2swf.o -o png2swf ../lib/librfxswf.a $(LIBS) 
-
+	$(L) png2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
 swfcombine: swfcombine.o
-	$(L) swfcombine.o -o swfcombine ../lib/librfxswf.a $(LIBS) 
-
+	$(L) swfcombine.o -o $@ ../lib/librfxswf.a $(LIBS)
+swfdump: swfdump.o
+	$(L) swfdump.o -o $@ ../lib/librfxswf.a $(LIBS)
 swfextract: swfextract.o
-	$(L) swfextract.o -o swfextract ../lib/librfxswf.a $(LIBS) 
-
+	$(L) swfextract.o -o $@ ../lib/librfxswf.a $(LIBS)
 swfstrings: swfstrings.o
-	$(L) swfstrings.o -o swfstrings ../lib/librfxswf.a $(LIBS) 
-
+	$(L) swfstrings.o -o $@ ../lib/librfxswf.a $(LIBS)
 jpeg2swf: jpeg2swf.o
-	$(L) jpeg2swf.o -o jpeg2swf ../lib/librfxswf.a $(LIBS) 
+	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
 
 install:
 	$(mkinstalldirs) $(bindir)

@@ -8,10 +8,12 @@ all: librfxswf.a
 lame_objects =  lame/psymodel.o lame/fft.o lame/newmdct.o lame/quantize.o lame/takehiro.o lame/reservoir.o lame/quantize_pvt.o lame/vbrquantize.o lame/encoder.o lame/id3tag.o lame/version.o lame/tables.o lame/util.o lame/bitstream.o lame/set_get.o lame/VbrTag.o lame/lame.o
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c
 
-%.o: %.c
-	$(C) $< -o $@
-
+bitio.o: bitio.c bitio.h
+	$(C) bitio.c -o $@
+log.o: log.c log.h
+	$(C) log.c -o $@
 rfxswf.o: rfxswf.c rfxswf.h bitio.h log.h $(rfxswf_modules)
+	$(C) rfxswf.c -o $@
 
 $(lame_objects):
 	cd lame;make all;cd ..
