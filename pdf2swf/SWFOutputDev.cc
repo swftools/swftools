@@ -617,12 +617,11 @@ SWFOutputDev::~SWFOutputDev()
 };
 GBool SWFOutputDev::upsideDown() 
 {
-    msg("<debug> upsidedown?");
+    msg("<debug> upsidedown? yes");
     return gTrue;
 };
 GBool SWFOutputDev::useDrawChar() 
 {
-    msg("<debug> usedrawchar?");
     return gTrue;
 }
 
@@ -660,8 +659,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(_u) 
 	u = *_u;
     
-    msg("<debug> drawChar(%f,%f,%f,%f,c='%c' (%d),u=%d <%d>) CID=%d\n",x,y,dx,dy,c,c,u, uLen, font->isCIDFont());
-
     /* find out the character name */
     char*name=0;
     if(font->isCIDFont() && u) {
@@ -681,13 +678,13 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	if(enc && enc[c])
 	   name = enc[c];
     }
+    
+    msg("<debug> drawChar(%f,%f,c='%c' (%d),u=%d <%d>) CID=%d name=\"%s\"\n",x1,y1,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
 
     int ret = swfoutput_drawchar(&output, x1, y1, name, c, u);
 }
 
-void SWFOutputDev::endString(GfxState *state) 
-{ 
-    msg("<debug> endstring\n");
+void SWFOutputDev::endString(GfxState *state) { 
 }    
 
  
@@ -1180,7 +1177,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     msg("<verbose> updateFont(%s) -> %s", fontname, fileName);
 
     swfoutput_setfont(&output, fontname, fileName);
-    
+   
     if(fileName && del)
 	unlinkfont(fileName);
 }
