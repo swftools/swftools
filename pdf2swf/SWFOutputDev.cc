@@ -1198,8 +1198,12 @@ void SWFOutputDev::updateFont(GfxState *state)
 	}
     }
     else {
-	showFontError(gfxFont,0);
-	fontname = substituteFont(gfxFont, fontname);
+	int newt1id = searchT1Font(fontname);
+	if(newt1id<0) {
+	    showFontError(gfxFont,0);
+	    fontname = substituteFont(gfxFont, fontname);
+	} else
+	    this->t1id = newt1id;
     }
   } else {
     if(fontname) {
