@@ -259,12 +259,11 @@ void decode_block(TAG*tag, int pictype)
 {
     int t;
     int mb_type = -1, cbpc = -1;
-    int dbquant;
+    int dquant;
     int cbpy_index, cbpy_value;
     int intrablock = 0;
     int type;
     if(pictype == TYPE_INTER) /* non-intra pictures have a cod flag */
-    /* TODO: according to the flash spec, this field is always present */
     {
 	int cod = swf_GetBits(tag, 1);
 	DEBUG printf("cod=%d\n",cod);
@@ -302,8 +301,8 @@ void decode_block(TAG*tag, int pictype)
     {
 	intrablock = 1;
     }
-	
-    printf("%d", intrablock);
+
+    printf("%c", "vqVii"[mb_type]);
 
     DEBUG printf("mcbpc type: %d mb_type:%d cbpc:%d\n", type, mb_type, cbpc);
 
@@ -324,8 +323,12 @@ void decode_block(TAG*tag, int pictype)
 
     /* quantizer */
     if(has_quant[mb_type]) {
-	dbquant = swf_GetBits(tag, 2);
-	DEBUG printf("quantizer: %d\n", dbquant);
+	dquant = swf_GetBits(tag, 2);
+	if(dquant == 0) dquant = -1;
+	else if(dquant == 1) dquant = -2;
+	else if(dquant == 2) dquant = +1;
+	else if(dquant == 3) dquant = +2;
+	DEBUG printf("dquant: %d\n", dquant);
     }
 
     if(has_mvd[mb_type]&1) {
@@ -441,8 +444,8 @@ void handleVideoFrame(TAG*tag, char*prefix)
 
     /*if(pictype == TYPE_INTER)
 	return;*/
-    if(pictype == TYPE_INTRA)
-	return;
+    /*if(pictype == TYPE_INTRA)
+	return;*/
 
     /*tagnr++;
     if(tagnr!=2)
