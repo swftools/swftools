@@ -24,6 +24,8 @@ display placement information about objects.
     Show shape coordinates/styles
 -p, --placements
     Show placement information
+-b, --bbox
+    Print tag's bounding boxes
 -X, --width
     Prints out a string of the form "-X width".
     Print out the horizontal dimension of the movie, in a string of the form "-X width"
