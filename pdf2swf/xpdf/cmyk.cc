@@ -632,9 +632,9 @@ void convert_cmyk2rgb(float c,float m,float y,float k, unsigned char*r, unsigned
     if(g2<0)g2=0; if(g2>255)g2=255;
     if(b2<0)b2=0; if(b2>255)b2=255;
 
-    *r = r2;
-    *g = g2;
-    *b = b2;
+    *r = (unsigned char)r2;
+    *g = (unsigned char)g2;
+    *b = (unsigned char)b2;
 
     /*f(!check(c,m,y,k, *r/255.0, *g/255.0, *b/255.0)) {
         for(t=0;t<16;t++) {
