@@ -1196,6 +1196,8 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     int myshapeid2;
     double xmin,ymin;
     double xmax=xmin=points[0].x,ymax=ymin=points[0].y;
+    double posx = 0;
+    double posy = 0;
     int t;
     int buttonid = ++currentswfid;
     for(t=1;t<4;t++)
@@ -1205,8 +1207,18 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
         if(points[t].x<xmin) xmin=points[t].x;
         if(points[t].y<ymin) ymin=points[t].y;
     }
+   
     p1.x=points[0].x; p1.y=points[0].y; p2.x=points[1].x; p2.y=points[1].y; 
     p3.x=points[2].x; p3.y=points[2].y; p4.x=points[3].x; p4.y=points[3].y;
+   
+    /* the following code subtracts the upper left edge from all coordinates,
+       and set's posx,posy so that ST_PLACEOBJECT is used with a matrix.
+       Necessary for preprocessing with swfcombine. */
+    posx = xmin; posy = ymin;
+    p1.x-=posx;p2.x-=posx;p3.x-=posx;p4.x-=posx;
+    p1.y-=posy;p2.y-=posy;p3.y-=posy;p4.y-=posy;
+    xmin -= posx; ymin -= posy;
+    xmax -= posx; ymax -= posy;
     
     /* shape */
     myshapeid = ++currentswfid;
@@ -1294,7 +1306,17 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     }
     
     tag = swf_InsertTag(tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(tag, buttonid, depth++,0,0,0);
+
+    if(posx!=0 || posy!=0) {
+	MATRIX m;
+	swf_GetMatrix(0,&m);
+	m.tx = (int)(posx*20);
+	m.ty = (int)(posy*20);
+	swf_ObjectPlace(tag, buttonid, depth++,&m,0,0);
+    }
+    else {
+	swf_ObjectPlace(tag, buttonid, depth++,0,0,0);
+    }
 }
 
 static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
