@@ -261,7 +261,7 @@ void swfoutput_drawpath(swfoutput*output, T1_OUTLINE*outline, struct swfmatrix*m
 
 
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
-int swfoutput_setfont(struct swfoutput*obj, int t1id)
+int swfoutput_setfont(struct swfoutput*obj, int fontid, int t1id)
 {
     obj->t1font = t1id;
 }
@@ -438,6 +438,11 @@ void swfoutput_setdrawmode(swfoutput* obj, int mode)
 
 void swfoutput_setfillcolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
 {
+    if(obj->fillrgb.r == r &&
+       obj->fillrgb.g == g &&
+       obj->fillrgb.b == b &&
+       obj->fillrgb.a == a) return;
+
     if(shape>=0)
      endshape();
     obj->fillrgb.r = r;
@@ -448,6 +453,11 @@ void swfoutput_setfillcolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
 
 void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
 {
+    if(obj->strokergb.r == r &&
+       obj->strokergb.g == g &&
+       obj->strokergb.b == b &&
+       obj->strokergb.a == a) return;
+
     if(shape>=0)
      endshape();
     obj->strokergb.r = r;
@@ -458,6 +468,9 @@ void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
 
 void swfoutput_setlinewidth(struct swfoutput*obj, double linewidth)
 {
+    if(obj->linewidth == (u16)(linewidth*20))
+	return;
+
     if(shape>=0)
      endshape();
     obj->linewidth = (u16)(linewidth*20);
