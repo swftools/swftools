@@ -24,7 +24,6 @@ pdf2swf:
     * Implement dashed lines (maybe by using fillstyle to keep Shapes small, maybe
 	      optional- use another color for dashed lines)
     * upgrade xpdf
-    * why are SWF files roughly 20% smaller than the PDF files?
 
 avi2swf:
 
