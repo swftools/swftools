@@ -5,7 +5,7 @@ pdf2swf - convert PDF files into SWF
 .B pdf2swf
 [\fIoptions\fR] \fIfile.pdf\fR [\fIfile.swf\fR]
 .SH DESCRIPTION
-This tools attempts to convert Acrobat PDF files into Flash SWF Animation
+This tools converts Acrobat PDF files into Flash SWF Animation
 files.
 .SH OPTIONS
 .TP
@@ -28,16 +28,19 @@ SWF files a little bit smaller.
 .TP
 \fB\-j\fR, \fB\-\-jpegquality\fR
 Set quality of embedded jpeg pictures. 0 is worst (small), 100 is best (big). (default:85)
+.TP
+\fB\-w\fR, \fB\-\-samewindow\fR
+When converting pdf hyperlinks, don't make the links open a new window when clicked on,
+but open the page they point to in the window the SWF is displayed.
 .SH NOTES
 Every page in the PDF will be a frame in the SWF. This means the generated
 SWF must be inserted into some wrapper SWF if the SWF needs to be 
-browsed. See the documentation of
-\fIswfcombine\fR for information about how to insert SWFs into one another.
+browsed. 
+See \fIhttp://www.quiss.org/swftools/pdf2swf_usage.html\fR for more information
+about this.
 .SH BUGS
 .PP
 type 3 and some truetype fonts don't work yet
-.PP
-Output files tend to be a little big
 
 .SH AUTHOR
 
