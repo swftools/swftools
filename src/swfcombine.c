@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <zlib.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "../lib/log.h"
@@ -491,8 +490,8 @@ void matrix_adjust(MATRIX*m, int movex, int movey, float scalex, float scaley)
 {
     m->sx = (int)(m->sx*scalex);
     m->sy = (int)(m->sy*scaley);
-    m->r0 = (int)(m->r0*scalex);
-    m->r1 = (int)(m->r1*scaley);
+    m->r1 = (int)(m->r1*scalex);
+    m->r0 = (int)(m->r0*scaley);
     m->tx += movex;
     m->ty += movey;
 }
