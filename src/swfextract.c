@@ -143,7 +143,8 @@ void args_callback_usage(char*name)
 #endif
     printf("\t-m , --mp3\t\t\t Extract main mp3 stream\n");
     printf("\t-f , --frame frames\t\t frame numbers to extract\n");
-    printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames (use with -f)\n");
+    printf("\t-w , --hollow\t\t\t hollow mode: don't remove empty frames\n"); 
+    printf("\t             \t\t\t (use with -f)\n");
     printf("\t-V , --version\t\t\t Print program version and exit\n");
 }
 int args_callback_command(char*name,char*val)
