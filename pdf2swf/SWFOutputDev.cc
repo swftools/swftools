@@ -973,10 +973,12 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 	  logf("<fatal> Too many fonts in file.");
 	  exit(1);
       }
-      substitutesource[substitutepos] = oldname;
-      substitutetarget[substitutepos] = fontname;
-      logf("<verbose> substituting %s -> %s", oldname, fontname);
-      substitutepos ++;
+      if(oldname) {
+	  substitutesource[substitutepos] = oldname;
+	  substitutetarget[substitutepos] = fontname;
+	  logf("<verbose> substituting %s -> %s", oldname, fontname);
+	  substitutepos ++;
+      }
       return fontname;
 }
 
@@ -1080,6 +1082,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 
   if(t1id<0) {
       showFontError(gfxFont,0);
+      return;
   }
  
   /* we may have done some substitutions here, so check
