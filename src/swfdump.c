@@ -250,7 +250,9 @@ void textcallback(int*glyphs, int nr, int fontid)
     {
 	unsigned char a; 
 	if(font>=0) {
-	    if(glyphs[t] >= fonts[font]->numchars)
+	    if(glyphs[t] >= fonts[font]->numchars  /*glyph is in range*/
+		    || !fonts[font]->glyph2ascii /* font has ascii<->glyph mapping */
+	      )
 		continue;
 	    a = fonts[font]->glyph2ascii[glyphs[t]];
 	} else {
