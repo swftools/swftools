@@ -51,7 +51,7 @@ AC_TRY_RUN([
 #include "stdlib.h"
 int main (int argc, char*argv[])
 {
-    return system("echo `touch config.tmp2`");
+    return system("test `touch config.tmp2`");
 }
 ], OK=OK,,CROSSCOMPILE=1)
 
