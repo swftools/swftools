@@ -442,7 +442,7 @@ time_t getModTime(char *fileName) {
 #endif
 }
 static char tmpbuf[128];
-static char* mktmpname(char*ptr) {
+char* mktmpname(char*ptr) {
 //   used to be mktemp. This does remove the warnings, but
 //   It's not exactly an improvement.
 #ifdef HAVE_LRAND48

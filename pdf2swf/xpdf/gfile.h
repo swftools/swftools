@@ -86,6 +86,9 @@ time_t getModTime(char *fileName);
 // should be "w" or "wb".  Returns true on success.
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext);
 
+/* create a temporary filename */
+char* mktmpname(char*ptr);
+
 //------------------------------------------------------------------------
 // GDir and GDirEntry
 //------------------------------------------------------------------------
