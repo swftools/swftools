@@ -1048,4 +1048,86 @@ void swf_FontCreateLayout(SWFFONT*f)
     }
 }
 	
+static U32 readUTF8char(char**text)
+{
+    U32 c = 0;
+    if(!(*(*text) & 0x80))
+	return *((*text)++);
+
+    /* 0000 0080-0000 07FF   110xxxxx 10xxxxxx */
+    if(((*text)[0] & 0xe0) == 0xc0 && (*text)[1])  
+    {
+	c = ((*text)[0] & 0x1f) << 6 | ((*text)[1] & 0x3f);
+	(*text) += 2;
+	return c;
+    }
+    /* 0000 0800-0000 FFFF   1110xxxx 10xxxxxx 10xxxxxx */
+    if(((*text)[0] & 0xf0) == 0xe0 && (*text)[1] && (*text)[2])
+    {
+	c = ((*text)[0] & 0x0f) << 12 | ((*text)[1] & 0x3f) << 6 | ((*text)[2] & 0x3f);
+	(*text) += 3;
+	return c;
+    }
+    /* 0001 0000-001F FFFF   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
+    if(((*text)[0] & 0xf8) == 0xf0 && (*text)[1] && (*text)[2] && (*text)[3] )  
+    {
+	c = ((*text)[0] & 0x07) << 18 | ((*text)[1] & 0x3f) << 12 | ((*text)[2] & 0x3f)<<6 | ((*text)[3] & 0x3f);
+	(*text) += 4;
+	return c;
+    }
+    /* 0020 0000-03FF FFFF   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
+    if(((*text)[0] & 0xfc) == 0xf8 && (*text)[1] && (*text)[2] && (*text)[3] && (*text)[4])  
+    {
+	c = ((*text)[0] & 0x03) << 24 | ((*text)[1] & 0x3f) << 18 | ((*text)[2] & 0x3f)<<12 | ((*text)[3] & 0x3f) << 6 | ((*text)[4] & 0x3f);
+	(*text) += 5;
+	return c;
+    }
+    /* 0400 0000-7FFF FFFF   1111110x 10xxxxxx ... 10xxxxxx */
+    if(((*text)[0] & 0xfe) == 0xfc && (*text)[1] && (*text)[2] && (*text)[3] && (*text)[4] && (*text)[5])  
+    {
+	c = ((*text)[0] & 0x01) << 30 | ((*text)[1] & 0x3f) << 24 | ((*text)[2] & 0x3f)<<18 | ((*text)[3] & 0x3f) << 12 | ((*text)[4] & 0x3f) << 6  | ((*text)[5] & 0x3f) << 6;
+	(*text) += 6;
+	return c;
+    }
+    return *((*text)++);
+}
+
+void swf_DrawText(SWFSHAPEDRAWER*draw, SWFFONT*font, char*text)
+{
+    char*s = text;
+    int advance = 0;
+    while(*s) {
+	SHAPE*shape;
+	SHAPE2*shape2;
+	U32 c = readUTF8char(&s);
+	int g = font->ascii2glyph[c];
+	shape = font->glyph[g].shape;
+	shape2 = swf_ShapeToShape2(shape);
+	SHAPELINE*l = shape2->lines;
+	while(l) {
+	    if(l->type == moveTo) {
+		FPOINT to;
+		to.x = l->x/20.0+advance;
+		to.y = l->y/20.0;
+		swf_DrawerMoveTo(draw, &to);
+	    } else if(l->type == lineTo) {
+		FPOINT to;
+		to.x = l->x/20.0+advance;
+		to.y = l->y/20.0;
+		swf_DrawerLineTo(draw, &to);
+	    } else if(l->type == splineTo) {
+		FPOINT mid,to;
+		mid.x = l->sx/20.0+advance;
+		mid.y = l->sy/20.0;
+		to.x = l->x/20.0+advance;
+		to.y = l->y/20.0;
+		swf_DrawerSplineTo(draw, &mid, &to);
+	    }
+	    l = l->next;
+	}
+	swf_Shape2Free(shape2);
+	advance += font->glyph[g].advance;
+    }
+}
+
 
