@@ -199,7 +199,6 @@ int  swf_ReadHeader(struct reader_t*reader, SWF * swf);   // Reads SWF Header vi
 // folding/unfolding:
 
 void swf_FoldAll(SWF*swf);
-void swf_FoldAllTags(TAG*tag);
 void swf_UnFoldAll(SWF*swf);
 void swf_FoldSprite(TAG*tag);
 void swf_UnFoldSprite(TAG*tag);

@@ -1080,14 +1080,6 @@ void swf_FoldAll(SWF*swf)
     }
 }
 
-void swf_FoldAllTags(TAG*tag)
-{
-    SWF swf;
-    memset(&swf, 0, sizeof(swf));
-    swf.firstTag = tag;
-    swf_FoldAll(&swf);
-}
-
 void swf_UnFoldAll(SWF*swf)
 {
     TAG*tag = swf->firstTag;
@@ -1223,7 +1215,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
 
   if (swf->firstTag && swf_NextTag(swf->firstTag))
     if (swf_GetTagID(swf_NextTag(swf->firstTag))!=ST_REFLEX)
-      swf_SetBlock(swf_InsertTag(swf->firstTag,ST_REFLEX),"rfx",3);
+      swf_SetBlock(swf_InsertTagBefore(swf, swf->firstTag,ST_REFLEX),"rfx",3);
 
 #endif // INSERT_RFX_TAG
 
