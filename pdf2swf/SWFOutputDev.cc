@@ -663,6 +663,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	   swfoutput_drawchar(&output, x1, y1, name, c);
 	else
 	   msg("<warning> couldn't get name for CID character %02x from Encoding", c);
+	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c);
     } else {
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
@@ -672,6 +673,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	   swfoutput_drawchar(&output, x1, y1, enc[c], c);
 	else {
 	   msg("<warning> couldn't get name for character %02x from Encoding", c);
+	   swfoutput_drawchar(&output, x1, y1, "<unknown>", c);
 	}
     }
 }
@@ -708,6 +710,7 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state)
   state->transform(state->getX1(),state->getY1(),&x1,&y1);
   state->transform(state->getX2(),state->getY2(),&x2,&y2);
   if(!outputstarted) {
+    msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
     swfoutput_init(&output, swffilename, abs((int)(x2-x1)),abs((int)(y2-y1)));
     outputstarted = 1;
   }
@@ -888,6 +891,8 @@ int SWFOutputDev::searchT1Font(char*name)
     int i;
     int mapid=-1;
     char*filename=0;
+	
+    msg("<verbose> SearchT1Font(%s)", name);
 
     for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
     {
@@ -1277,7 +1282,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     if (gfxFont->getType() == fontType1 ||
 	gfxFont->getType() == fontType1C ||
 	gfxFont->getType() == fontTrueType ||
-	gfxFont->getType() == fontCIDType2) 
+	gfxFont->getType() == fontCIDType2)
     {
 	fileName = writeEmbeddedFontToFile(xref, gfxFont);
 	if(!fileName) {
