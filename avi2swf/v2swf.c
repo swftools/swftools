@@ -584,18 +584,16 @@ static int encodeoneframe(v2swf_internal_t*i)
 	return 0;
     }
 
-    i->fpspos += i->fpsratio;
-
-    /* skip frames */
-    if(i->fpspos<1.0) {
-	return 0;
+    msg("encoding image for frame %d\n", i->frames);
+    if(i->showframe) {
+	i->fpspos += i->fpsratio;
+	/* skip frames */
+	if(i->fpspos<1.0) {
+	    return 0;
+	}
+	writeShowFrame(i);
     }
     
-    msg("encoding image for frame %d\n", i->frames);
-
-    if(i->showframe)
-	writeShowFrame(i);
-
     msg("scaling\n");
 
     scaleimage(i);
@@ -798,7 +796,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     i->audio_fix = 1.0;
     i->fixheader = 0;
     i->framerate = video->fps;
-    i->fpsratio = 1.00000000;
+    i->fpsratio = 1.00000000000;
     i->fpspos = 0.0;
     i->bitrate = 32;
     i->version = 6;
