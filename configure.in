@@ -281,7 +281,6 @@ if test "x$HAVE_FREETYPE" '!=' "x1"; then
  MISSINGLIBS="${MISSINGLIBS} freetype"
 fi
 if test "x${ac_cv_header_t1lib_h}" '!=' "xyes"; then
- DISABLEPDF2SWF=true;
  MISSINGLIBS="${MISSINGLIBS} t1lib.h"
 fi
 if test "x${ac_cv_header_zlib_h}" '!=' "xyes"; then
