@@ -1,0 +1,145 @@
+#!/bin/sh
+exec 3>&2 4>&1 5>output 2>&5 >&5 6>/dev/null
+testswffile() {
+    echo -n "testing $1 for existence..."
+    test -f $1 || (touch failed;echo -n "not there" >&5;return;)
+    echo
+    echo -n "testing $1 for wellformedness..."
+    swfdump $1 | tail -n 1 | grep '\b0 END\b' >&6 2>&6 || (touch failed;echo -n "wrong end";return;)
+    swfdump $1 | grep 'rfxswf|warning|error|bounds' >&6 2>&6 && (touch failed;echo -n "error";return;)
+    swfdump $1 2>&1 >&6 | grep '^.*$' >&6 2>&6 && (touch failed;echo -n "swfdump stderr";swfdump $1 >&6 2>&5;return;)
+    echo
+}
+showresult() {
+    test -f failed || echo '[01;32m succeeded' >&4
+    test -f failed && echo '[01;31m failed' >&4
+}
+showfile() {
+    echo '===========================' >&5
+    cat $1 >&5
+    echo '===========================' >&5
+}
+starttest() {
+    test=$1
+    echo -n "[01;37mTest \"${test}\"..." >&4
+    echo "================== starting test ${test} ===================" >&5
+    rm -f failed
+}
+swfc() {
+    file=$1
+    echo "running ${swfc} ${file}...">&5
+    shift
+    catchsegv ${swfc} $file $@ >test.s 2>test.s2
+    test -s test.s2 && (touch failed;cat test.s2 >&5)
+    grep 'Segmentation fault' test.s && (touch failed)
+    rm -f test.s test.s2 2>&6
+}
+
+swfc=../swfc
+
+starttest sprite1
+rm -f output.swf
+cat > test.sc <<EOF
+.swf
+    .sprite s1
+	.sprite s2
+	.end
+    .end
+    .put s1
+.end
+EOF
+showfile test.sc
+swfc test.sc
+testswffile output.swf
+showresult
+
+starttest sprite2
+rm -f file1.swf file2.swf
+cat > test.sc <<EOF
+.swf name="file2.swf"
+.sprite spr1
+.end
+.end
+.swf name="file1.swf"
+.shape monkey "file2.swf"
+.end
+EOF
+showfile test.sc
+swfc test.sc
+testswffile file1.swf
+testswffile file2.swf
+showresult
+
+starttest args
+rm -f file.swf output.swf
+cat > test.sc <<EOF
+.swf
+.box mybox 100 100
+.put mybox end #should cause an error
+.end
+EOF
+showfile test.sc
+swfc test.sc
+test -f output.swf && touch failed
+showresult
+
+starttest noend
+rm -f file.swf output.swf
+cat > test.sc <<EOF
+.swf
+EOF
+showfile test.sc
+swfc test.sc
+test -f output.swf && touch failed
+showresult
+
+starttest nostart
+rm -f file.swf output.swf
+cat > test.sc <<EOF
+.end
+EOF
+showfile test.sc
+swfc test.sc
+test -f output.swf && touch failed
+showresult
+
+starttest swc
+rm -f output.swf
+cat > test.sc <<EOF
+.swf compress
+    .box mybox1 100 100
+    .box mybox2 100 100
+.end
+EOF
+showfile test.sc
+swfc test.sc
+testswffile output.swf
+swfdump output.swf | grep 'File is zlib compressed' >&6 2>&6 || touch failed
+showresult
+
+starttest nostart2
+rm -f output.swf
+cat > test.sc <<EOF
+.box b 100 100
+.end
+EOF
+showfile test.sc
+swfc test.sc
+test -f output.swf && touch failed
+showresult
+
+starttest nobrackets
+rm -f output.swf
+cat > test.sc <<EOF
+.swf
+.box box 100 100
+.put box pin=0,0
+.end
+EOF
+showfile test.sc
+swfc test.sc
+test -f output.swf && touch failed
+showresult
+
+echo -n '[00m' >&4
+rm -f test.sc failed file1.swf file2.swf output.swf
