@@ -140,7 +140,10 @@ ${name}/configure \
 ${name}/config.h.in \
 ${name}/INSTALL \
 ${name}/COPYING \
+${name}/lib/bladeenc/COPYING \
 ${name}/AUTHORS \
+${name}/lib/bladeenc/AUTHORS \
+${name}/lib/bladeenc/README \
 ${name}/ChangeLog \
 ${name}/release.in \
 ${name}/TODO \
