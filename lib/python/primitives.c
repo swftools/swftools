@@ -230,7 +230,7 @@ PyObject* f_Matrix(PyObject* _self, PyObject* args, PyObject* kwargs)
     MatrixObject*matrix = (MatrixObject*)self;
     mylog("+%08x(%d) f_Matrix", self, self->ob_refcnt);
     static char *kwlist[] = {"x", "y", "scale", "rotate", "pivotx", "pivoty", NULL};
-    float x=0,y=0,scale=1.0,rotate=0,pivotx,pivoty;
+    float x=0,y=0,scale=1.0,rotate=0,pivotx=0,pivoty=0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ffffff", kwlist, &x,&y,&scale,&rotate,&pivotx,&pivoty))
 	return NULL;
     mylog(" %08x(%d) f_Matrix: x=%f y=%f scale=%f rotate=%f", self, self->ob_refcnt, x,y,scale,rotate);
