@@ -95,7 +95,7 @@
 #undef HAVE_AVIFILE_VERSION_H
 
 /* Define if you have the <freetype/ft2build.h> header file.  */
-#undef HAVE_FREETYPE_FT2BUILD_H
+#undef HAVE_FT2BUILD_H
 
 /* Define if you have the <version.h> header file.  */
 #undef HAVE_VERSION_H
