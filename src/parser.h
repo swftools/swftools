@@ -26,7 +26,7 @@ enum type_t {
     STRING=3,
     ASSIGNMENT=4,
     IDENTIFIER=5,
-    LABEL=6,
+    RAWDATA=6,
     END=7
 };
 

@@ -181,6 +181,8 @@ static int stackpos = 0;
 
 static dictionary_t characters;
 static dictionary_t images;
+static dictionary_t outlines;
+static dictionary_t gradients;
 static char idmap[65536];
 static TAG*tag = 0; //current tag
 
@@ -215,6 +217,16 @@ typedef struct _instance {
     TAG* lastTag; //last tag which set the object
     U16 lastFrame; //frame lastTag is in
 } instance_t;
+
+typedef struct _outline {
+    SHAPE* shape;
+    SRECT bbox;
+} outline_t;
+
+typedef struct _gradient {
+    GRADIENT gradient;
+    char radial;
+} gradient_t;
 
 static void character_init(character_t*c)
 {
@@ -370,6 +382,8 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     
     dictionary_init(&characters);
     dictionary_init(&images);
+    dictionary_init(&outlines);
+    dictionary_init(&gradients);
     dictionary_init(&instances);
     dictionary_init(&fonts);
     dictionary_init(&sounds);
@@ -499,6 +513,8 @@ static void s_endSWF()
     dictionary_clear(&instances);
     dictionary_clear(&characters);
     dictionary_clear(&images);
+    dictionary_clear(&outlines);
+    dictionary_clear(&gradients);
     dictionary_clear(&fonts);
     dictionary_clear(&sounds);
 
@@ -511,7 +527,7 @@ void s_close()
 {
     if(stackpos) {
 	if(stack[stackpos-1].type == 0)
-	    syntaxerror("End of file encountered in .swf block");
+	    syntaxerror("End of file encountered in .flash block");
 	if(stack[stackpos-1].type == 1)
 	    syntaxerror("End of file encountered in .sprite block");
 	if(stack[stackpos-1].type == 2)
@@ -549,6 +565,7 @@ int addFillStyle(SHAPE*s, SRECT*r, char*texture)
 {
     RGBA color;
     character_t*image;
+    gradient_t*gradient;
     if(texture[0] == '#') {
 	parseColor2(texture, &color);
 	return swf_ShapeAddSolidFillStyle(s, &color);
@@ -561,8 +578,15 @@ int addFillStyle(SHAPE*s, SRECT*r, char*texture)
 	m.ty = r->ymin;
 	return swf_ShapeAddBitmapFillStyle(s, &m, image->id, 0);
     } /*else if ((texture = dictionary_lookup(&textures, texture))) {
-    } else if ((gradient = dictionary_lookup(&gradients, texture))) {
-    } */ else if (parseColor2(texture, &color)) {
+    } */ else if ((gradient = dictionary_lookup(&gradients, texture))) {
+	MATRIX m;
+	swf_GetMatrix(0, &m);
+	m.sx = (r->xmax - r->xmin)*2;
+	m.sy = (r->ymax - r->ymin)*2;
+	m.tx = r->xmin + (r->xmax - r->xmin)/2;
+	m.ty = r->ymin + (r->ymax - r->ymin)/2;
+	return swf_ShapeAddGradientFillStyle(s, &m, &gradient->gradient, gradient->radial);
+    }  else if (parseColor2(texture, &color)) {
 	return swf_ShapeAddSolidFillStyle(s, &color);
     } else {
 	syntaxerror("not a color/fillstyle: %s", texture);
@@ -606,6 +630,41 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     incrementid();
 }
 
+void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*texture)
+{
+    SRECT rect,r2;
+    SHAPE* s;
+    int ls1,fs1=0;
+    outline_t* outline;
+    outline = dictionary_lookup(&outlines, outlinename);
+    if(!outline) {
+	syntaxerror("outline %s not defined", outlinename);
+    }
+    r2 = outline->bbox;
+
+    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
+    swf_ShapeNew(&s);
+    ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
+    if(texture)
+	fs1 = addFillStyle(s, &r2, texture);
+    else 
+	syntaxerror("non filled outlines not yet supported- please supply a fill=<color/texture> argument");
+    swf_SetU16(tag,id);
+    rect.xmin = r2.xmin-linewidth-linewidth/2;
+    rect.ymin = r2.ymin-linewidth-linewidth/2;
+    rect.xmax = r2.xmax+linewidth+linewidth/2;
+    rect.ymax = r2.ymax+linewidth+linewidth/2;
+
+    swf_SetRect(tag,&rect);
+    swf_SetShapeStyles(tag, s);
+    swf_SetShapeBits(tag, outline->shape); //does not count bits!
+    swf_SetBlock(tag, outline->shape->data, (outline->shape->bitlen+7)/8);
+    swf_ShapeFree(s);
+
+    s_addcharacter(name, id, tag, rect);
+    incrementid();
+}
+
 void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
 {
     SRECT rect,r2;
@@ -637,54 +696,41 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
     incrementid();
 }
 
-void s_textshape(char*name, char*fontname, char*_text, RGBA color, int linewidth, char*texture)
+void s_textshape(char*name, char*fontname, char*_text)
 {
-    SRECT rect,r2;
-    SHAPE* s;
-    int ls1,fs1=0;
     int g;
     U8*text = (U8*)_text;
+    outline_t* outline;
 
     SWFFONT*font;
     font = dictionary_lookup(&fonts, fontname);
     if(!font)
 	syntaxerror("font \"%s\" not known!", fontname);
     
-    if(!texture)
-	/* the shape information we have implies exactly one fill style 
-	   This means to support outlines we'd have to rework the whole shape.
-	 */
-	syntaxerror("textshapes must be filled", fontname);
-
-    /* TODO: supporting more than once character would be nice... */
-
     if(text[0] >= font->maxascii || font->ascii2glyph[text[0]]<0) {
 	warning("no character 0x%02x (%c) in font \"%s\"", text[0], text[0], fontname);
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
     g = font->ascii2glyph[text[0]];
-    rect = font->layout->bounds[g];
 
-    swf_ShapeNew(&s);
-    ls1 = swf_ShapeAddLineStyle(s,linewidth,&color);
-    if(texture)
-	fs1 = addFillStyle(s, &rect, texture);
-
-    rect.xmin -= linewidth + linewidth/2;
-    rect.ymin -= linewidth + linewidth/2;
-    rect.xmin += linewidth + linewidth/2;
-    rect.ymin += linewidth + linewidth/2;
-     
-    tag = swf_InsertTag(tag, ST_DEFINESHAPE);
-    swf_SetU16(tag,id);
-    swf_SetRect(tag, &rect);
-    swf_SetShapeStyles(tag, s);
-    swf_SetSimpleShape(tag, font->glyph[g].shape);
-    swf_ShapeFree(s);
+    outline = malloc(sizeof(outline_t));
+    memset(outline, 0, sizeof(outline_t));
+    outline->shape = font->glyph[g].shape;
+    outline->bbox = font->layout->bounds[g];
     
-    s_addcharacter(name, id, tag, rect);
-    incrementid();
+    {
+	SWFSHAPEDRAWER draw;
+	swf_DrawerInit(&draw,0);
+	swf_DrawText(&draw, font, _text);
+	swf_DrawerFinish(&draw);
+	outline->shape = swf_DrawerToShape(&draw);
+	outline->bbox = draw.bbox;
+    }
+
+    if(dictionary_lookup(&outlines, name))
+	syntaxerror("outline %s defined twice", name);
+    dictionary_put2(&outlines, name, outline);
 }
 
 void s_text(char*name, char*fontname, char*text, int size, RGBA color)
@@ -805,6 +851,8 @@ void s_font(char*name, char*filename)
     dictionary_put2(&fonts, name, font);
 }
 
+
+
 typedef struct _sound_t
 {
     U16 id;
@@ -845,6 +893,93 @@ void s_sound(char*name, char*filename)
 
     if(samples)
 	free(samples);
+}
+
+static char* gradient_getToken(const char**p)
+{
+    const char*start;
+    char*result;
+    while(**p && strchr(" \t\n\r", **p)) {
+	(*p)++;
+    } 
+    start = *p;
+    while(**p && !strchr(" \t\n\r", **p)) {
+	(*p)++;
+    }
+    result = malloc((*p)-start+1);
+    memcpy(result,start,(*p)-start+1);
+    result[(*p)-start] = 0;
+    return result;
+}
+
+float parsePercent(char*str);
+RGBA parseColor(char*str);
+
+GRADIENT parseGradient(const char*str)
+{
+    GRADIENT gradient;
+    const char* p = str;
+    memset(&gradient, 0, sizeof(GRADIENT));
+    while(*p) {
+	char*posstr,*colorstr;
+	posstr = gradient_getToken(&p);
+	if(!*posstr)
+	    break;
+	float pos = parsePercent(posstr);
+	if(!*p) syntaxerror("Error in shape data: Color expected after %s", posstr);
+	colorstr = gradient_getToken(&p);
+	RGBA color = parseColor(colorstr);
+	if(gradient.num == sizeof(gradient.ratios)/sizeof(gradient.ratios[0])) {
+	    warning("gradient record too big- max size is 8, rest ignored");
+	    break;
+	}
+	gradient.ratios[gradient.num] = (int)(pos*255.0);
+	gradient.rgba[gradient.num] = color;
+	gradient.num++;
+	free(posstr);
+	free(colorstr);
+    }
+    return gradient;
+}
+
+void s_gradient(char*name, const char*text, int radial)
+{
+    gradient_t* gradient;
+    gradient = malloc(sizeof(gradient_t));
+    memset(gradient, 0, sizeof(gradient_t));
+    gradient->gradient = parseGradient(text);
+    gradient->radial = radial;
+
+    if(dictionary_lookup(&gradients, name))
+	syntaxerror("gradient %s defined twice", name);
+    dictionary_put2(&gradients, name, gradient);
+}
+
+void s_outline(char*name, char*format, char*source)
+{
+    outline_t* outline;
+
+    SWFSHAPEDRAWER draw;
+    SHAPE* shape;
+    SHAPE2* shape2;
+    SRECT bounds;
+    
+    swf_DrawerInit(&draw, 0);
+    swf_DrawString(&draw, source);
+    swf_DrawerFinish(&draw);
+    shape = swf_DrawerToShape(&draw);
+    shape2 = swf_ShapeToShape2(shape);
+    bounds = swf_GetShapeBoundingBox(shape2);
+    //swf_Shape2Free(shape2);
+    
+    outline = (outline_t*)malloc(sizeof(outline_t));
+    memset(outline, 0, sizeof(outline_t));
+    outline->shape = shape;
+    outline->bbox = bounds;
+    
+    if(dictionary_lookup(&outlines, name))
+	syntaxerror("outline %s defined twice", name);
+    dictionary_put2(&outlines, name, outline);
 }
 
 void s_playsound(char*name, int loops, int nomultiple, int stop)
@@ -1465,6 +1600,14 @@ SPOINT getPoint(SRECT r, char*name)
 }
 static int c_gradient(map_t*args) 
 {
+    char*name = lu(args, "name");
+    int radial= strcmp(lu(args, "radial"), "radial")?0:1;
+
+    readToken();
+    if(type != RAWDATA)
+	syntaxerror("colon (:) expected");
+
+    s_gradient(name, text, radial);
     return 0;
 }
 static int c_point(map_t*args) 
@@ -1772,10 +1915,11 @@ static int c_primitive(map_t*args)
     int type=0;
     char* font;
     char* text;
+    char* outline;
     RGBA fill;
     if(!strcmp(command, "circle"))
 	type = 1;
-    else if(!strcmp(command, "textshape"))
+    else if(!strcmp(command, "filled"))
 	type = 2;
    
     if(type==0) {
@@ -1784,8 +1928,7 @@ static int c_primitive(map_t*args)
     } else if (type==1) {
 	r = parseTwip(lu(args, "r"));
     } else if (type==2) {
-	text = lu(args, "text");
-	font = lu(args, "font");
+	outline = lu(args, "outline");
     }
 
     if(!strcmp(fillstr, "fill"))
@@ -1797,9 +1940,21 @@ static int c_primitive(map_t*args)
     
     if(type == 0) s_box(name, width, height, color, linewidth, fillstr);
     else if(type==1) s_circle(name, r, color, linewidth, fillstr);
-    else if(type==2) s_textshape(name, font, text, color, linewidth, fillstr);
+    else if(type==2) s_filled(name, outline, color, linewidth, fillstr);
     return 0;
 }
+
+static int c_textshape(map_t*args) 
+{
+    char*name = lu(args, "name");
+    char*text = lu(args, "text");
+    char*font = lu(args, "font");
+
+    s_textshape(name, font, text);
+    return 0;
+}
+
+
 
 static int c_swf(map_t*args) 
 {
@@ -1858,6 +2013,19 @@ static int c_image(map_t*args)
     return 0;
 }
 
+static int c_outline(map_t*args) 
+{
+    char*name = lu(args, "name");
+    char*format = lu(args, "format");
+
+    readToken();
+    if(type != RAWDATA)
+	syntaxerror("colon (:) expected");
+
+    s_outline(name, format, text);
+    return 0;
+}
+
 int fakechar(map_t*args)
 {
     char*name = lu(args, "name");
@@ -1887,7 +2055,6 @@ static struct {
  // "import" type stuff
  {"swf", c_swf, "name filename"},
  {"shape", c_swf, "name filename"},
- {"morphshape", c_morphshape, "name start end"},
  {"jpeg", c_image, "name filename quality=80%"},
  {"png", c_image, "name filename"},
  {"movie", c_movie, "name filename"},
@@ -1898,17 +2065,20 @@ static struct {
     // generators of primitives
 
  {"point", c_point, "name x=0 y=0"},
- {"gradient", c_gradient, "name"},
+ {"gradient", c_gradient, "name @radial=0"},
+ {"outline", c_outline, "name format=simple"},
+ {"textshape", c_textshape, "name text font"},
 
     // character generators
  {"box", c_primitive, "name width height color=white line=1 @fill=none"},
  {"circle", c_primitive, "name r color=white line=1 @fill=none"},
- {"textshape", c_primitive, "name text font color=white line=1 @fill=none"},
+ {"filled", c_primitive, "name outline color=white line=1 @fill=none"},
 
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
  {"button", c_button, "name shape over=*shape press=*shape area=*shape"},
  {"text", c_text, "name text font size=100% color=white"},
  {"edittext", c_edittext, "name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
+ {"morphshape", c_morphshape, "name start end"},
  
  {"buttonsounds", c_buttonsounds, "name press=0 release=0 enter=0 leave=0"},
 
@@ -1966,7 +2136,7 @@ static map_t parseArguments(char*command, char*pattern)
 
     if(!strncmp("<i> ", x, 3)) {
 	readToken();
-	if(type == COMMAND || type == LABEL) {
+	if(type == COMMAND || type == RAWDATA) {
 	    pushBack();
 	    syntaxerror("character name expected");
 	}
@@ -2026,7 +2196,7 @@ static map_t parseArguments(char*command, char*pattern)
 
     while(1) {
 	readToken();
-	if(type == LABEL || type == COMMAND) {
+	if(type == RAWDATA || type == COMMAND) {
 	    pushBack();
 	    break;
 	}

@@ -88,8 +88,8 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 	    }
 	    prefix = 0;
 	break;
-	case LABEL:
-	    string_set2(&tmp, text, length-1);
+	case RAWDATA:
+	    string_set2(&tmp, text+1/*:*/, length-5/*.end*/);
 	    token.text = (char*)mem_putstring(&strings, tmp);
 	break;
 	case COMMAND:
@@ -189,7 +189,7 @@ RVALUE	 \"{STRING}\"|([^ \n\r\t]+)
 }
 \.include{S}.*\n		    {handleInclude(yytext, yyleng);}
 \.{NAME}	            {s(COMMAND);c();}
-{NAME}{S}*:                 {s(LABEL);c();}
+:([^.]|\.[^e]|\.e[^n]|\.en[^d]|[ \n\r\t])*\.end	    {s(RAWDATA);c();}
 {NAME}                      {s(IDENTIFIER);c();}
 "["		            {c();BEGIN(BINARY);}
 {S} 		            {c();}
