@@ -837,15 +837,13 @@ int args_callback_option(char *arg, char *val)
     return res;
 }
 
-struct options_t options[] = 
-{ 
-{"h", "help"},
-{"o", "output"},
+static struct options_t options[] = {
 {"r", "rate"},
-{"C", "cgi"},
+{"o", "output"},
+{"X", "pixel"},
+{"Y", "pixel"},
 {"v", "verbose"},
-{"X", "width"},
-{"Y", "height"},
+{"C", "cgi"},
 {"V", "version"},
 {0,0}
 };
@@ -876,14 +874,17 @@ int args_callback_command(char *arg, char *next)	// actually used as filename
 
 void args_callback_usage(char *name)
 {
-    printf("Usage: %s  [-options [value]] imagefiles[.png] [...]\n", name);
-    printf("\t-r , --rate <framerate>\t\t\tSet movie framerate (frames per second)\n");
-    printf("\t-o , --output <filename>\t\t\tSet name for SWF output file\n");
-    printf("\t-X , --pixel <width>\t\t\tForce movie width to pixel (default: autodetect)\n");
-    printf("\t-Y , --pixel <height>\t\t\tForce movie height to pixel (default: autodetect)\n");
-    printf("\t-v , --verbose <level>\t\t\t Set verbose level (0=quiet, 1=default, 2=debug)\n");
-    printf("\t-C , --cgi\t\t\t For use as CGI- prepend http header, write to stdout\n");
-    printf("\t-V , --version\t\t\tPrint version information and exit\n");
+    printf("\n");
+    printf("Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.png [file2.png...]\n", name);
+    printf("\n");
+    printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
+    printf("-o , --output <filename>       Set name for SWF output file.\n");
+    printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
+    printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
+    printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");
+    printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout\n");
+    printf("-V , --version                 Print version information and exit\n");
+    printf("\n");
 }
 
 int main(int argc, char **argv)

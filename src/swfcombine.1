@@ -1,21 +1,16 @@
-.TH swfcombine "1" "January 2003" "swfcombine" "swftools"
+.TH swfcombine "1" "February 2004" "swfcombine" "swftools"
 .SH NAME
 swfcombine - a tool for combining swf (flash) files
+
 .SH Synopsis
-.B swfcombine
-[\fIoptions\fR] [\fImasterfile.swf\fR] [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
+.B swfcombine [-rXYomlcv] [-f] masterfile [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN
+.PP
+.B swfcombine [-rXYomv] --stack[1] [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN
+.PP
+.B swfcombine [-rXYov] --cat [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN
+.PP
+.B swfcombine [-rXYomlcv] --dummy [-xys] [file]
 
-.B swfcombine
-[\fIoptions\fR] [\fImasterfile.swf\fR] [\fI#id1=\fR][\fIslavefile1.swf\fR] ... [\fI#idN=\fR][\fIslavefileN.swf\fR]
-
-.B swfcombine
-[\fIoptions\fR] --stack [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
-
-.B swfcombine
-[\fIoptions\fR] --cat [\fIslavename1=\fR][\fIslavefile1.swf\fR] ... [\fIslavenameN=\fR][\fIslavefileN.swf\fR]
-
-.B swfcombine
-[\fIoptions\fR] --dummy [\fIfile.swf\fR]
 .SH DESCRIPTION
 Take two or more SWF files, and combine them into a new SWF. SWFs can either
 be stacked (no masterfile is present) or inserted (into the masterfile).
@@ -26,64 +21,62 @@ the Flash Plugin.
 For template mechanisms, it's often convenient to separate the processes
 of generating small animation fragments and merging them into a big
 movie. swfcombine can be used to perform the latter.
+
 .SH OPTIONS
 .TP
-\fB\-h\fR, \fB\-\-help\fR
-Print short help message and exit
+\fB\-o\fR, \fB\-\-output\fR \fIoutputfile\fR  
+    explicitly specify output file. (otherwise, output.swf will be used)
 .TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version info and exit
+\fB\-t\fR, \fB\-\-stack\fR 
+    Don't assume the first file is a master file. Instead, store each
+    file in a seperate frame.
 .TP
-\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
-Explicitly specify output file. (otherwise, output.swf will be used)
+\fB\-T\fR, \fB\-\-stack1\fR 
+    place each slave in the first frame (no master movie)
 .TP
-\fB\-z\fR, \fB\-\-zlib\fR
-Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
-smaller, but not playable in Flash Plugins of Version 5 and below.
+\fB\-m\fR, \fB\-\-merge\fR 
+    Do not store the slave files in a sprite/MovieClip. Instead, merge the files frame by frame.
 .TP
-\fB\-l\fR, \fB\-\-overlay\fR
-Don't remove any master objects, only overlay new objects.
+\fB\-a\fR, \fB\-\-cat\fR 
+    concatenate all slave files (no master movie)
 .TP
-\fB\-c\fR, \fB\-\-clip\fR
-Clip the slave objects by the corresponding master objects.
+\fB\-l\fR, \fB\-\-overlay\fR 
+    Don't remove any master objects, only overlay new objects
 .TP
-\fB\-m\fR, \fB\-\-merge\fR
-Do not store the slave files in a sprite/MovieClip. Instead, merge the files frame by frame.
+\fB\-c\fR, \fB\-\-clip\fR 
+    Clip the slave objects by the corresponding master objects
 .TP
-\fB\-d\fR, \fB\-\-dummy\fR
-Don't require the presence of slave objects. Usually used together with \fB\-X\fR, \fB\-Y\fR or \fB\-r\fR.
+\fB\-v\fR, \fB\-\-verbose\fR 
+    Be verbose. Use more than one -v for greater effect 
 .TP
-\fB\-v\fR, \fB\-\-verbose\fR
-Be verbose. Use more than one -v for greater effect.
+\fB\-d\fR, \fB\-\-dummy\fR 
+    Don't require the presence of slave objects. Usually used together with \fB\-X\fR, \fB\-Y\fR or \fB\-r\fR.
 .TP
-\fB\-t\fR, \fB\-\-stack\fR
-Don't assume the first file is a master file. Instead, store each
-file in a seperate frame.
+\fB\-f\fR, \fB\-\-frame\fR 
+    The next slave replaces a frame, not an object. Therefore the slave identifier is a
+    frame number (#frame=) or frame label (framelabel=).
 .TP
-\fB\-a\fR, \fB\-\-cat\fR
-Like -t, but concatenate the files.
+\fB\-x\fR, \fB\-\-movex\fR \fIxpos\fR        
+    x Adjust position of slave by \fIxpos\fR pixels
 .TP
-\fB\-X\fR, \fB\-\-width\fR \fIwidth\fR
-Force the output to width \fIwidth\fR. (Otherwise, the width of the master file will be used)
+\fB\-y\fR, \fB\-\-movey\fR \fIypos\fR        
+    y Adjust position of slave by \fIypos\fR pixels
 .TP
-\fB\-Y\fR, \fB\-\-height\fR \fIheight\fR
-Force the output to height \fIheight\fR. (Otherwise, the height of the master file will be used)
+\fB\-s\fR, \fB\-\-scale\fR \fIscale\fR       
+    Adjust size of slave by \fIscale\fR percent (e.g. 100%% = original size)
 .TP
-\fB\-r\fR, \fB\-\-rate\fR \fIrate\fR
-Force the output to have the framerate \fIrate\fR. (Otherwise, the framerate of the master file will be used)
+\fB\-r\fR, \fB\-\-rate\fR \fIfps\fR   
+    Force the output to have the framerate \fIfps\fR. (Otherwise, the framerate of the master file will be used)
 .TP
-\fB\-f\fR, \fB\-\-frame\fR
-The next slave replaces a frame, not an object. Therefore the slave identifier is a
-frame number (#frame=) or frame label (framelabel=).
+\fB\-X\fR, \fB\-\-width\fR \fIwidth\fR       
+    Force movie bbox width to \fIwidth\fR (default: use master width (not with -t))
 .TP
-\fB\-x\fR, \fB\-\-xpos\fR \fIxpos\fR
-(move x) Adjust position of slave by xpos twips (1/20 pixel).
+\fB\-Y\fR, \fB\-\-height\fR \fIheight\fR      
+    Force movie bbox height to \fIheight\fR (default: use master height (not with -t))
 .TP
-\fB\-y\fR, \fB\-\-ypos\fR \fIypos\fR
-(move y) Adjust position of slave by ypos twips (1/20 pixel).
-.TP
-\fB\-s\fR, \fB\-\-scale\fR \fIscale\fR
-(scale) Adjust size of slave by scale%
+\fB\-z\fR, \fB\-\-zlib\fR \fIzlib\fR        
+    Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
+    smaller, but not playable in Flash Plugins of Version 5 and below.
 .PP
 .SH Combining two or more .swf files using a master file
 Of the flash files to be combined, all except one will be packed into a sprite
@@ -116,8 +109,4 @@ swfcombine -o combined.swf master.swf foo=slave.swf
 
 As a result, the slave movie should be visible inside the master movie
 at the position where the rectangle used to be.
-
-.SH AUTHOR
-
-Matthias Kramm <kramm@quiss.org>
 

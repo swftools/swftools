@@ -42,12 +42,12 @@ static char * outputname = "output.swf";
 static int verbose = 2;
 static int override_outputname = 0;
 
-static struct options_t options[] =
-{
- {"o","output"},
- {"v","verbose"},
- {"V","version"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"V", "version"},
+{"v", "verbose"},
+{"o", "output"},
+{0,0}
 };
     
 int args_callback_option(char*name,char*val)
@@ -75,12 +75,16 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
+void args_callback_usage(char *name)
 {
-    printf("Usage: %s [-o filename] file.sc\n", name);
-    printf("\t-v , --verbose\t\t\t Be more verbose\n");
-    printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
-    printf("\t-V , --version\t\t\t Print program version and exit\n");
+    printf("\n");
+    printf("Usage: %s [-o file.swf] file.sc\n", name);
+    printf("\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-V , --version                 Print version info and exit\n");
+    printf("-v , --verbose                 Increase verbosity. \n");
+    printf("-o , --output <filename>       Set output file to <filename>.\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {
@@ -2360,6 +2364,7 @@ int main (int argc,char ** argv)
 	args_callback_usage(argv[0]);
 	exit(1);
     }
+    
     file = generateTokens(filename);
     if(!file) {
 	printf("parser returned error.\n");

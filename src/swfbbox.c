@@ -35,14 +35,14 @@ static int optimize = 0;
 static int swifty = 0;
 static int verbose = 0;
 
-struct options_t options[] =
-{
- {"V","version"},
- {"O","optimize"},
- {"o","output"},
- {"S","swifty"},
- {"v","verbose"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"O", "optimize"},
+{"S", "swifty"},
+{"o", "output"},
+{"v", "verbose"},
+{"V", "version"},
+{0,0}
 };
 
 int args_callback_option(char*name,char*val)
@@ -78,15 +78,18 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
-{    
+void args_callback_usage(char *name)
+{
+    printf("\n");
     printf("Usage: %s [-OS] file.swf\n", name);
-    printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-O , --optimize\t\t Recalculate bounding boxes\n");
-    printf("\t-S , --swifty\t\t Print out transformed bounding boxes\n");
-    printf("\t-o , --output\t\t Set output filename (for -O)\n");
-    printf("\t-v , --verbose\t\t Be more verbose\n");
-    printf("\t-V , --version\t\t Print program version and exit\n");
+    printf("\n");
+    printf("-h , --help                    Print help and exit\n");
+    printf("-O , --optimize                Recalculate bounding boxes\n");
+    printf("-S , --swifty                  Print out transformed bounding boxes\n");
+    printf("-o , --output <filename>       Set output filename to <filename> (for -O)\n");
+    printf("-v , --verbose                 Be more verbose\n");
+    printf("-V , --version                 Print program version and exit\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {

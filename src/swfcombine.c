@@ -185,26 +185,25 @@ int args_callback_option(char*name,char*val) {
     }
 }
 
-struct options_t options[] =
-{{"o","output"},
- {"s","scale"},
- {"d","dummy"},
- {"x","xpos"},
- {"y","ypos"},
- {"X","width"},
- {"Y","height"},
- {"r","rate"},
- {"f","frame"},
- {"l","overlay"},
- {"m","merge"},
- {"t","stack"},
- {"T","stack1"},
- {"v","verbose"},
- {"V","version"},
- {"c","clip"},
- {"a","cat"},
- {"z","zlib"},
- {0,0}
+static struct options_t options[] = {
+{"o", "output"},
+{"t", "stack"},
+{"T", "stack1"},
+{"m", "merge"},
+{"a", "cat"},
+{"l", "overlay"},
+{"c", "clip"},
+{"v", "verbose"},
+{"d", "dummy"},
+{"f", "frame"},
+{"x", "movex"},
+{"y", "movey"},
+{"s", "scale"},
+{"r", "rate"},
+{"X", "width"},
+{"Y", "height"},
+{"z", "zlib"},
+{0,0}
 };
 
 int args_callback_longoption(char*name,char*val) {
@@ -256,30 +255,32 @@ int args_callback_command(char*name, char*val) {
     return 0;
 }
 
-void args_callback_usage(char*name)
+void args_callback_usage(char *name)
 {
+    printf("\n");
     printf("Usage: %s [-rXYomlcv] [-f] masterfile [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYomv] --stack[1] [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYov] --cat [-xysf] [(name1|#id1)=]slavefile1 .. [-xysf] [(nameN|#idN)=]slavefileN\n", name);
     printf("OR:    %s [-rXYomlcv] --dummy [-xys] [file]\n", name);
     printf("\n");
-    printf("-o outputfile       --output    explicitly specify output file. (otherwise, output.swf will be used)\n");
-    printf("-t                  --stack     place each slave in a seperate frame (no master movie)\n");
-    printf("-T                  --stack1    place each slave in the first frame (no master movie)\n");
-    printf("-m                  --merge     Don't store the slaves in Sprites/MovieClips\n");
-    printf("-a                  --cat       concatenate all slave files (no master movie)\n");
-    printf("-l                  --overlay   Don't remove any master objects, only overlay new objects\n");
-    printf("-c                  --clip      Clip the slave objects by the corresponding master objects\n");
-    printf("-v                  --verbose   Be verbose. Use more than one -v for greater effect \n");
-    printf("-d                  --dummy     Don't require slave objects (for changing movie attributes)\n");
-    printf("-f                  --frame     The following identifier is a frame or framelabel, not an id or objectname\n");
-    printf("-x xpos             --movex     x Adjust position of slave by xpos pixels\n");
-    printf("-y ypos             --movey     y Adjust position of slave by ypos pixels\n");
-    printf("-s scale            --scale     Adjust size of slave by scale% (e.g. 100%% = original size)\n");
-    printf("-r framerate        --rate      Set movie framerate (frames/sec)\n");
-    printf("-X width            --width     Force movie bbox width to scale (default: use master width (not with -t))\n");
-    printf("-Y height           --height    Force movie bbox height to scale (default: use master height (not with -t))\n");
-    printf("-z zlib             --zlib      Enable Flash 6 (MX) Zlib Compression\n");
+    printf("-o , --output <outputfile>      explicitly specify output file. (otherwise, output.swf will be used)\n");
+    printf("-t , --stack                   place each slave in a seperate frame (no master movie)\n");
+    printf("-T , --stack1                  place each slave in the first frame (no master movie)\n");
+    printf("-m , --merge                   Don't store the slaves in Sprites/MovieClips\n");
+    printf("-a , --cat                     concatenate all slave files (no master movie)\n");
+    printf("-l , --overlay                 Don't remove any master objects, only overlay new objects\n");
+    printf("-c , --clip                    Clip the slave objects by the corresponding master objects\n");
+    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
+    printf("-d , --dummy                   Don't require slave objects (for changing movie attributes)\n");
+    printf("-f , --frame                   The following identifier is a frame or framelabel, not an id or objectname\n");
+    printf("-x , --movex <xpos>            x Adjust position of slave by <xpos> pixels\n");
+    printf("-y , --movey <ypos>            y Adjust position of slave by <ypos> pixels\n");
+    printf("-s , --scale <scale>           Adjust size of slave by <scale> percent (e.g. 100% = original size)\n");
+    printf("-r , --rate <fps>              Set movie framerate to <fps> (frames/sec)\n");
+    printf("-X , --width <width>           Force movie bbox width to <width> (default: use master width (not with -t))\n");
+    printf("-Y , --height <height>          Force movie bbox height to <height> (default: use master height (not with -t))\n");
+    printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
+    printf("\n");
 }
 
 static void makestackmaster(SWF*swf)

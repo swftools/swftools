@@ -56,23 +56,22 @@ static int showtext = 0;
 static int hex = 0;
 static int used = 0;
 
-struct options_t options[] =
-{
- {"D","full"},
- {"a","action"},
- {"t","text"},
- {"X","width"},
- {"Y","height"},
- {"f","frames"},
- {"r","rate"},
- {"e","html"},
- {"p","placements"},
- {"u","used"},
- {"V","version"},
- {"d","hex"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"D", "full"},
+{"V", "version"},
+{"e", "html"},
+{"a", "action"},
+{"t", "text"},
+{"p", "placements"},
+{"X", "width"},
+{"Y", "height"},
+{"r", "rate"},
+{"f", "frames"},
+{"d", "hex"},
+{"u", "used"},
+{0,0}
 };
-
 
 int args_callback_option(char*name,char*val)
 {
@@ -135,22 +134,25 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
-{    
-    printf("Usage: %s [-at] file.swf\n", name);
-    printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-D , --full\t\t Show everything. The same as -atMp\n");
-    printf("\t-e , --html\t\t Create html output embedding the file (simple, but useful)\n");
-    printf("\t-X , --width\t\t Prints out a string of the form \"-X width\"\n");
-    printf("\t-Y , --height\t\t Prints out a string of the form \"-Y height\"\n");
-    printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");
-    printf("\t-f , --frames\t\t Prints out a string of the form \"-f framenum\"\n");
-    printf("\t-a , --action\t\t Disassemble action tags\n");
-    printf("\t-p , --placements\t Show extra placement information\n");
-    printf("\t-t , --text\t\t Show text data\n");
-    printf("\t-d , --hex\t\t Print hex output of tag data, too\n");
-    printf("\t-u , --used\t\t Show referred IDs for each Tag\n");
-    printf("\t-V , --version\t\t Print program version and exit\n");
+void args_callback_usage(char *name)
+{
+    printf("\n");
+    printf("Usage: %s [-atpdu] file.swf\n", name);
+    printf("\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-D , --full                    Show everything. Same as -atp\n");
+    printf("-V , --version                 Print version info and exit\n");
+    printf("-e , --html                    Print out html code for embedding the file\n");
+    printf("-a , --action                  Disassemble action tags\n");
+    printf("-t , --text                    Show text fields (like swfstrings).\n");
+    printf("-p , --placements              Show placement information\n");
+    printf("-X , --width                   Prints out a string of the form \"-X width\".\n");
+    printf("-Y , --height                  Prints out a string of the form \"-Y height\".\n");
+    printf("-r , --rate                    Prints out a string of the form \"-r rate\".\n");
+    printf("-f , --frames                  Prints out a string of the form \"-f framenum\".\n");
+    printf("-d , --hex                     Print hex output of tag data, too.\n");
+    printf("-u , --used                    Show referred IDs for each Tag.\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {

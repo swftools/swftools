@@ -33,19 +33,20 @@ int stopframe0 = 0;
 
 #define DEFINESOUND_MP3 1 //define sound uses mp3?- undefine for raw sound.
 
-struct options_t options[] =
-{
- {"o","output"},
- {"v","verbose"},
- {"d","definesound"},
- {"l","loop"},
- {"r","framerate"},
- {"s","samplerate"},
- {"b","bitrate"},
- {"C","cgi"},
- {"V","version"},
- {"S","stop"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"V", "version"},
+{"o", "output"},
+{"r", "framerate"},
+{"s", "samplerate"},
+{"b", "bitrate"},
+{"d", "definesound"},
+{"l", "loop"},
+{"C", "cgi"},
+{"S", "stop"},
+{"b", "bitrate"},
+{"v", "verbose"},
+{0,0}
 };
 
 static int loop = 0;
@@ -146,20 +147,24 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
+void args_callback_usage(char *name)
 {
-    printf("Usage: %s [-o filename] file.wav\n", name);
-    printf("\t-v , --verbose\t\t\t Be more verbose\n");
-    printf("\t-d , --definesound\t\t Generate a DefineSound tag instead of streaming sound\n");
-    printf("\t-l , --loop n\t\t\t Loop sound n times (implies -d)\n");
-    printf("\t-r , --framerate fps\t\t Set framerate to fps frames per second\n");
-    printf("\t-s , --samplerate sps\t\t Set samplerate to sps frames per second (default: 11025)\n");
-    printf("\t-b , --bitrate bps\t\t Set mp3 bitrate (default: 32)\n");
-    printf("\t-o , --output filename\t\t set output filename (default: output.swf)\n");
-    printf("\t-C , --cgi\t\t\t For use as CGI- prepend http header, write to stdout\n");
-    printf("\t-S , --stop\t\t\t Stop the movie at frame 0\n");
-    printf("\t           \t\t\t (For use with flashsound.js)\n");
-    printf("\t-V , --version\t\t\t Print program version and exit\n");
+    printf("\n");
+    printf("Usage: %s [-o filename] file.wav\n\n", name);
+    printf("\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-V , --version                 Print version info and exit\n");
+    printf("-o , --output <filename>       Explicitly specify output file. (Otherwise, output will go to output.swf)\n");
+    printf("-r , --framerate <fps>         Set file framerate to <fps> frames per second.\n");
+    printf("-s , --samplerate <sps>        Set samplerate to <sps> frames per second (default: 11025).\n");
+    printf("-b , --bitrate bps             Set mp3 bitrate to <bps>.\n");
+    printf("-d , --definesound             Generate a DefineSound tag instead of streaming sound.\n");
+    printf("-l , --loop n                  (Only used with -d)\n");
+    printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout.\n");
+    printf("-S , --stop                    Stop the movie at frame 0\n");
+    printf("-b , --bitrate <bps>           Set mp3 bitrate to <bps> (default: 32)\n");
+    printf("-v , --verbose                 Be more verbose\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {

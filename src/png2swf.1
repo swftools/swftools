@@ -1,37 +1,41 @@
-.TH png2swf "1" "January 2003" "png2swf" "swftools"
+.TH png2swf "1" "February 2004" "png2swf" "swftools"
 .SH NAME
-png2swf - convert one or more PNG pictures to swf
+png2swf - Takes a number of png files and converts them to a swf movie, one
+picture per frame.
+
 .SH Synopsis
 .B png2swf [-X width] [-Y height] [-o file.swf] [-r rate] file1.png [file2.png...]
+
 .SH DESCRIPTION
-Takes a number of png files and converts them to a swf movie, one
-picture per frame.
+This tools converts png image files into an SWF animation. It takes any
+number of input pictures, and converts them to SWF one-by-one, where every
+converted picture is a seperate frame in the target SWF. 
 .PP
-(SWF files are animation files which can be displayed in Web Browsers using
-the Flash Plugin)
+The way the
+images are encoded in SWF is very similar to PNG (in that a zlib-based, lossless
+compression algorithm is used). Under special circumstances, when the image
+is 32 bpp with alpha information, it is converted to (lossy) jpeg compression
+though, to preserve the alpha, which can't be encoded in any other way in the SWF.
+
 .SH OPTIONS
 .TP
-\fB\-h\fR, \fB\-\-help\fR
-Print short help message and exit
-.TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version info and exit
-.TP
-\fB\-X\fR, \fB\-\-width\fR \fIscale\fR
-Force movie width to \fIscale\fR (default: autodetect)
-.TP
-\fB\-Y\fR, \fB\-\-height\fR \fIscale\fR
-Force movie height to \fIscale\fR (default: autodetect)
+\fB\-r\fR, \fB\-\-rate\fR \fIframerate\fR
+    Set movie framerate (frames per second)
 .TP
 \fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
-Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+    Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
 .TP
-\fB\-r\fR, \fB\-\-framerate\fR \fIrate\fR
-Set movie framerate (frames per second).
-
-.SH AUTHORS
-
-Matthias Kramm <kramm@quiss.org>
+\fB\-X\fR, \fB\-\-pixel\fR \fIwidth\fR
+    Force movie width to \fIwidth\fR (default: autodetect)
 .TP
-Rainer Böhme <rfxswf@reflex-studio.de>
-
+\fB\-Y\fR, \fB\-\-pixel\fR \fIheight\fR
+    Force movie height to \fIheight\fR (default: autodetect)
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
+    Set verbose level (0=quiet, 1=default, 2=debug)
+.TP
+\fB\-C\fR, \fB\-\-cgi\fR 
+    For use as CGI- prepend http header, write to stdout
+.TP
+\fB\-V\fR, \fB\-\-version\fR 
+    Print version information and exit

@@ -1,43 +1,43 @@
-.TH jpeg2swf "1" "October 2001" "jpeg2swf" "swftools"
+.TH jpeg2swf "1" "February 2004" "jpeg2swf" "swftools"
 .SH NAME
-jpeg2swf - convert one or more pictures to swf
+jpeg2swf - Converts jpeg images to SWF.
+
 .SH Synopsis
-.B jpeg2swf
+.B jpeg2swf [-options [value]] imagefiles[.jpg]|[.jpeg] [...]
+
 .SH DESCRIPTION
-Takes a number of jpeg files and converts them to a swf movie, one
-picture per frame.
-.PP
-(SWF files are animation files which can be displayed in Web Browsers using
-the Flash Plugin)
+This tools converts jpeg image files into an SWF animation. It takes any
+number of input pictures, and converts them to SWF one-by-one, where every
+converted picture is a seperate frame in the target SWF.
+
 .SH OPTIONS
 .TP
-\fB\-h\fR, \fB\-\-help\fR
-Print short help message and exit
+\fB\-o\fR, \fB\-\-output\fR \fIoutputfile\fR
+    Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
 .TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version info and exit
-.TP
-\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
-Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+\fB\-m\fR, \fB\-\-mx\fR 
+    Use Flash MX H.263 compression (use for correlated images)
 .TP
 \fB\-q\fR, \fB\-\-quality\fR \fIquality\fR
-Set JPEG compression quality (1-100)
+    Set compression quality (1-100, 1=worst, 100=best).
+    This option can be set independently for each image.
 .TP
-\fB\-r\fR, \fB\-\-framerate\fR \fIrate\fR
-Set movie framerate (100/sec)
+\fB\-r\fR, \fB\-\-rate\fR \fIframerate\fR     
+    Set movie framerate (frames per second)
 .TP
-\fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
-Set verbosity level (0=quiet, 1=default, 2=debug)
+\fB\-X\fR, \fB\-\-width\fR \fIwidth\fR   
+    Force movie width to \fIwidth\fR (default: autodetect)
 .TP
-\fB\-X\fR, \fB\-\-width\fR \fIscale\fR
-Force movie width to \fIscale\fR (default: autodetect)
+\fB\-Y\fR, \fB\-\-height\fR \fIheight\fR  
+    Force movie height to \fIheight\fR (default: autodetect)
 .TP
-\fB\-Y\fR, \fB\-\-height\fR \fIscale\fR
-Force movie height to \fIscale\fR (default: autodetect)
-
+\fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR 
+    Set verbose level to \fIlevel\fR (0=quiet, 1=default, 2=debug)
+.TP
+\fB\-V\fR, \fB\-\-version\fR 
+    Print version information and exit
 .SH AUTHORS
 
 Rainer Böhme <rfxswf@reflex-studio.de>
 .TP
-Matthias Kramm <kramm@quiss.org>
-
+Matthias Kramm

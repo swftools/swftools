@@ -1,0 +1,32 @@
+.TH swfbbox "1" "February 2004" "swfbbox" "swftools"
+.SH NAME
+swfbbox - Tool for playing around with SWF bounding boxes.
+
+.SH Synopsis
+.B swfbbox [-OS] file.swf
+
+.SH DESCRIPTION
+This tool can, among others, recalculate some bounding boxes of SWFs
+in order to speed them up or make them smaller.
+.PP
+It can also dump the corners of the bounding boxes of all frames of a movie.
+
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR 
+    Print help and exit
+.TP
+\fB\-O\fR, \fB\-\-optimize\fR 
+    Recalculate bounding boxes
+.TP
+\fB\-S\fR, \fB\-\-swifty\fR 
+    Print out transformed bounding boxes
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
+    Set output filename to \fIfilename\fR (for -O)
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR 
+    Be more verbose
+.TP
+\fB\-V\fR, \fB\-\-version\fR 
+    Print program version and exit

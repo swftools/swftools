@@ -31,14 +31,14 @@ static char * destfilename = "output.swf";
 static int all=0;
 static int verbose=0;
 
-static struct options_t options[] =
-{
- {"a","all"},
- {"o","output"},
- {"v","verbose"},
- {"V","version"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"v", "verbose"},
+{"o", "output"},
+{"V", "version"},
+{0,0}
 };
+
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
@@ -67,18 +67,15 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
-{    
+void args_callback_usage(char *name)
+{
     printf("\n");
-    printf("Usage: %s <font> [...]\n", name);
-    printf("   OR: %s --all\n", name);
+    printf("Usage: %s <fontfile>\n", name);
     printf("\n");
-    printf("Options:\n");
-    printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-o , --output filename\t set output filename\n");
-    printf("\t-a , --all\t\tGenerate a set of standard fonts into the current directory\n");
-    printf("\t-v , --verbose\t\t Be more verbose\n");
-    printf("\t-V , --version\t\t Print program version and exit\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");
+    printf("-o , --output <filename>       Write output to file <filename>.\n");
+    printf("-V , --version                 Print version info and exit\n");
     printf("\n");
 }
 int args_callback_command(char*name,char*val)

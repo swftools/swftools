@@ -394,15 +394,16 @@ int args_callback_option(char *arg, char *val)
     return res;
 }
 
-struct options_t options[] = { {"q", "quality"},
+static struct options_t options[] = {
 {"o", "output"},
 {"m", "mx"},
+{"q", "quality"},
 {"r", "rate"},
-{"v", "verbose"},
 {"X", "width"},
 {"Y", "height"},
+{"v", "verbose"},
 {"V", "version"},
-{0, 0},
+{0,0}
 };
 
 int args_callback_longoption(char *name, char *val)
@@ -433,29 +434,18 @@ int args_callback_command(char *arg, char *next)	// actually used as filename
 
 void args_callback_usage(char *name)
 {
-    printf
-	("Usage: %s  [-options [value]] imagefiles[.jpg]|[.jpeg] [...]\n",
-	 name);
-    printf
-	("-o outputfile       --output   explicitly specify output file. (otherwise, output.swf will be used)\n");
-    printf
-	("-m                  --mx  	 Use Flash MX H.263 compression (use for correlated images)\n");
-    printf
-	("-q quality          --quality  Set compression quality (1-100, 1=worst, 100=best)\n");
-    printf
-	("-r framerate        --rate     Set movie framerate (frames per second)\n");
-    printf
-	("-o outputfile       --output   Set name for SWF output file\n");
-    printf
-	("-X pixel            --width    Force movie width to pixel (default: autodetect)\n");
-    printf
-	("-Y pixel            --height   Force movie height to pixel (default: autodetect)\n");
-    printf
-	("-v level            --verbose  Set verbose level (0=quiet, 1=default, 2=debug)\n");
-    printf
-	("-V                  --version  Print version information and exit\n");
-    printf
-	("The following options can be set independently for each image: -q\n");
+    printf("\n");
+    printf("Usage: %s [-options [value]] imagefiles[.jpg]|[.jpeg] [...]\n", name);
+    printf("\n");
+    printf("-o , --output <outputfile>     Explicitly specify output file. (otherwise, output.swf will be used)\n");
+    printf("-m , --mx                      Use Flash MX H.263 compression (use for correlated images)\n");
+    printf("-q , --quality <quality>       Set compression quality (1-100, 1=worst, 100=best)\n");
+    printf("-r , --rate <framerate>         Set movie framerate (frames per second)\n");
+    printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
+    printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
+    printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
+    printf("-V , --version                 Print version information and exit\n");
+    printf("\n");
 }
 
 
