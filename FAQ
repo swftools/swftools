@@ -21,7 +21,22 @@
     make 
     make install
 
-3.) configure doesn't find my jpeglib / my t1lib!
+3.) What libraries do I need to compile swftools?
+
+    You need t1lib and jpeglib to compile pdf2swf.
+    Links:
+	t1lib: 
+	 ftp://sunsite.unc.edu/pub/linux/libs/graphics/t1lib-1.3.1.tar.gz
+	t1lib (mirrored here): 
+	 http://www.quiss.org/swftools/t1llib-1.3.1.tar.gz
+	jpeglib: 
+	 http://www.ijg.org/files/jpegsrc.v6b.tar.gz
+
+    Furthermore, if you want to compile avi2swf, you need the avifile library:
+        http://avifile.sourceforge.net
+    .
+
+4.) configure doesn't find my jpeglib / my t1lib!
 
     In case some of your libraries/include files are installed in /usr/local,
     try the following:
@@ -38,7 +53,7 @@
     If it still doesn't work, try removing the file "config.cache"
     before running configure again.
 
-4.) There are problems during compilation:
+5.) There are problems during compilation:
     Error messages complain about "undefined reference to `operator new(unsigned)'"
     as well as "undefined reference to `__gxx_personality_v0'".
 
@@ -46,7 +61,7 @@
 
     LDFLAGS=-lstdc++ ./configure
 
-5.) Is there a pdf2swf for Windows?
+6.) Is there a pdf2swf for Windows?
 
     Windows versions of all SWF utilities (except for avi2swf) are in
 	http://www.quiss.org/swftools/swftools-win32.zip
