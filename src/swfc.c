@@ -231,6 +231,7 @@ typedef struct _outline {
 typedef struct _gradient {
     GRADIENT gradient;
     char radial;
+    int rotate;
 } gradient_t;
 
 static void character_init(character_t*c)
@@ -735,10 +736,22 @@ int addFillStyle(SHAPE*s, SRECT*r, char*texture)
 	return swf_ShapeAddBitmapFillStyle(s, &m, image->id, 0);
     } /*else if ((texture = dictionary_lookup(&textures, texture))) {
     } */ else if ((gradient = dictionary_lookup(&gradients, texture))) {
-	MATRIX m;
+	SRECT r2;
+	MATRIX rot,m;
+	double ccos,csin;
+	swf_GetMatrix(0, &rot);
+	ccos = cos(-gradient->rotate*2*3.14159265358979/360);
+	csin = sin(-gradient->rotate*2*3.14159265358979/360);
+	rot.sx =  ccos*65536;
+	rot.r1 = -csin*65536;
+	rot.r0 =  csin*65536;
+	rot.sy =  ccos*65536;
+	r2 = swf_TurnRect(*r, &rot);
 	swf_GetMatrix(0, &m);
-	m.sx = (r->xmax - r->xmin)*2;
-	m.sy = (r->ymax - r->ymin)*2;
+	m.sx =  (r2.xmax - r2.xmin)*2*ccos;
+	m.r1 = -(r2.xmax - r2.xmin)*2*csin;
+	m.r0 =  (r2.ymax - r2.ymin)*2*csin;
+	m.sy =  (r2.ymax - r2.ymin)*2*ccos;
 	m.tx = r->xmin + (r->xmax - r->xmin)/2;
 	m.ty = r->ymin + (r->ymax - r->ymin)/2;
 	return swf_ShapeAddGradientFillStyle(s, &m, &gradient->gradient, gradient->radial);
@@ -1127,13 +1140,14 @@ GRADIENT parseGradient(const char*str)
     return gradient;
 }
 
-void s_gradient(char*name, const char*text, int radial)
+void s_gradient(char*name, const char*text, int radial, int rotate)
 {
     gradient_t* gradient;
     gradient = malloc(sizeof(gradient_t));
     memset(gradient, 0, sizeof(gradient_t));
     gradient->gradient = parseGradient(text);
     gradient->radial = radial;
+    gradient->rotate = rotate;
 
     if(dictionary_lookup(&gradients, name))
 	syntaxerror("gradient %s defined twice", name);
@@ -1829,12 +1843,13 @@ static int c_gradient(map_t*args)
 {
     char*name = lu(args, "name");
     int radial= strcmp(lu(args, "radial"), "radial")?0:1;
+    int rotate = parseInt(lu(args, "rotate"));
 
     readToken();
     if(type != RAWDATA)
 	syntaxerror("colon (:) expected");
 
-    s_gradient(name, text, radial);
+    s_gradient(name, text, radial,rotate);
     return 0;
 }
 static int c_point(map_t*args) 
@@ -2502,7 +2517,7 @@ static struct {
     // generators of primitives
 
  {"point", c_point, "name x=0 y=0"},
- {"gradient", c_gradient, "name @radial=0"},
+ {"gradient", c_gradient, "name @radial=0 rotate=0"},
  {"outline", c_outline, "name format=simple"},
  {"textshape", c_textshape, "name font size=100% text"},
 
