@@ -744,6 +744,8 @@ U8 swf_isShapeTag(TAG*tag);
 
 U16 swf_GetDefineID(TAG * t);
 SRECT swf_GetDefineBBox(TAG * t);
+void swf_SetDefineBBox(TAG * t, SRECT r);
+
 void swf_SetDefineID(TAG * t, U16 newid);
 U16 swf_GetPlaceID(TAG * t); //PLACEOBJECT, PLACEOBJECT2 (sometimes), REMOVEOBJECT
 int swf_GetDepth(TAG * t); //PLACEOBJECT,PLACEOBJECT2,REMOVEOBJECT,REMOVEOBJECT2,SETTABINDEX
