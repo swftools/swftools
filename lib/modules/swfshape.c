@@ -395,7 +395,7 @@ int swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
   return 0;
 }
 
-int swf_ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
+int swf_ShapeSetStyle(TAG * t,SHAPE * s,int line,int fill0,int fill1)
 { if ((!t)||(!s)) return -1;
     
   swf_SetBits(t,0,1);
@@ -414,11 +414,9 @@ int swf_ShapeSetStyle(TAG * t,SHAPE * s,U16 line,U16 fill0,U16 fill1)
    these defines are a workaround (they also reduce the maximal number of
    fill styles to 32768)
  */
-#define FILL_RESET 0x8000
-#define LINE_RESET 0x8000
 #define UNDEFINED_COORD 0x7fffffff
 
-int swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,U16 line,U16 fill0,U16 fill1)
+int swf_ShapeSetAll(TAG * t,SHAPE * s,S32 x,S32 y,int line,int fill0,int fill1)
 { U8 b;
   U8 hasmove = 0;
   if ((!t)||(!s)) return -1;

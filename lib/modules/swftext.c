@@ -665,7 +665,7 @@ void swf_FontFree(SWFFONT * f)
   free(f);
 }
 
-int swf_TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,S16 dx,S16 dy)
+int swf_TextSetInfoRecord(TAG * t,SWFFONT * font,U16 size,RGBA * color,int dx,int dy)
 { U8 flags;
   if (!t) return -1;
 
