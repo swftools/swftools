@@ -1,7 +1,7 @@
 # Makefile
 
 RFXSWF	= ../rfxswf.o
-LDLIBS	= -ljpeg -lm -lz
+LDLIBS	= -ljpeg -lm -lz 
 CFLAGS	= -funsigned-char
 CC	= gcc
 CXX	= g++
@@ -53,11 +53,13 @@ zlibtest: $(RFXSWF) zlibtest.o
 		$(CC) -o zlibtest zlibtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 makefonts: $(RFXSWF) makefonts.o ../../pdf2swf/swfoutput.o
-		$(CXX) -o makefonts makefonts.o ../../pdf2swf/swfoutput.o ../../pdf2swf/spline.o ../rfxswf.o ../log.o -lt1 -ljpeg -lz ../../pdf2swf/xpdf/libpdf.a 
+		$(CXX) -o makefonts makefonts.o ../../pdf2swf/swfoutput.o \
+                ../../pdf2swf/spline.o ../rfxswf.o ../log.o -lt1 $(LDLIBS) \
+                ../../pdf2swf/xpdf/libpdf.a $(DBFLAGS)
 
 clean:
-		rm -f jpegtest.o box.o shape1.o trastest.o zlibtest.o sprites.o\
-		buttontest.o dumpfont.o text.o\
+		rm -f jpegtest.o box.o shape1.o transtest.o zlibtest.o sprites.o\
+		buttontest.o dumpfont.o text.o makefonts.o\
 		jpegtest.swf box.swf shape1.swf trastest.swf zlibtest.swf \
                 sprites.swf buttontest.swf text.swf
 
