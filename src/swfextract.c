@@ -893,6 +893,8 @@ void handledefinesound(TAG*tag)
     
     samples = swf_GetU32(tag);
 
+    extension = "raw";
+
     if(format == 2) { // mp3
 	swf_GetU16(tag); //numsamples_seek
 	extension = "mp3";
