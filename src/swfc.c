@@ -2440,6 +2440,7 @@ static int c_edittext(map_t*args)
     char*htmlstr = lu(args, "html");
     char*noselectstr = lu(args, "noselect");
     char*readonlystr = lu(args, "readonly");
+    char*borderstr = lu(args, "border");
 
     int flags = 0;
     if(!strcmp(passwordstr, "password")) flags |= ET_PASSWORD;
@@ -2448,6 +2449,7 @@ static int c_edittext(map_t*args)
     if(!strcmp(readonlystr, "readonly")) flags |= ET_READONLY;
     if(!strcmp(htmlstr, "html")) flags |= ET_HTML;
     if(!strcmp(noselectstr, "noselect")) flags |= ET_NOSELECT;
+    if(!strcmp(borderstr, "border")) flags |= ET_BORDER;
 
     s_edittext(name, font, size, width, height, text, &color, maxlength, variable, flags);
     return 0;
@@ -2501,7 +2503,7 @@ static struct {
 
  {"egon", c_egon, "name vertices color=white line=1 @fill=none"},
  {"text", c_text, "name text font size=100% color=white"},
- {"edittext", c_edittext, "name font size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0"},
+ {"edittext", c_edittext, "name font size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0"},
  {"morphshape", c_morphshape, "name start end"},
  {"button", c_button, "name"},
     {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
