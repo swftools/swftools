@@ -151,3 +151,4 @@
 	* lib/rfxswf: font routines fixed
 	* lib/rfxswf: support for definejpegbits3
 	* src/png2swf: better support for 32 bit images with transparency
+	* pdf2swf/pdf2swf: slightly better TTF support, some fixes

@@ -5,8 +5,7 @@ swfc:
 	"follow me" feature:  default, or should it be explicitly specified?
     * .replace command
 	.crossfade command????
-    * .sound file.wav ?  
-	syntax for single sound hits, looping, synch sound stream.
+    * .soundstream
     * text:  newlines
     * .egon  (stub is there, never really implemented)... folding edges?
     * dump format for ingestion into swifty?
@@ -15,13 +14,10 @@ swfc:
     * default output filename (name.sc -> name.swf) if unspecified
     * change .swf to .flash ?  
 	import swfs with .swf instead of .movie?
-    * more colour names?  X11 colour names?  (we are Linux after all...)
     * .hide/.show?
     * .orbit
     * store instance coordinates for .put with same name after .del?
     * macros?  looping?  ways of reducing repetitive coding (and the length of sc files)?
-
-    + .include		[DONE Feb 22 2003]
 
 pdf2swf:
 
@@ -35,6 +31,7 @@ pdf2swf:
 font2swf:
     
     * implement support for truetype fonts.  [yes please :-)]
+    * command line option parsing
 
 swfcombine:
 
