@@ -61,7 +61,11 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
 double fontsizes[] = 
 {
- 0.833,0.833,0.889,0.889,0.788,0.722,0.833,0.778,0.600,0.600,0.600,0.600,0.576,0.576,0.576,0.576
+ 0.833,0.833,0.889,0.889,
+ 0.788,0.722,0.833,0.778,
+ 0.600,0.600,0.600,0.600,
+ 0.576,0.576,0.576,0.576,
+ 0.733 //?
 };
 char*fontnames[]={
 "Helvetica",             
@@ -186,6 +190,7 @@ public:
   int clippos;
 
   int setT1Font(char*name,FontEncoding*enc);
+  char* substitutefont(GfxFont*gfxFont);
   int t1id;
   int jpeginfo; // did we write "File contains jpegs" yet?
   int pbminfo; // did we write "File contains jpegs" yet?
@@ -867,74 +872,38 @@ char* gfxFontName(GfxFont* gfxFont)
       }
 }
 
-void SWFOutputDev::updateFont(GfxState *state) 
+char* SWFOutputDev::substitutefont(GfxFont*gfxFont)
 {
-  double m11, m12, m21, m22;
-  char * fontname = 0;
-  GfxFont*gfxFont = state->getFont();
-  char * fileName = 0;
-    
-//  logf("<debug> %s updateFont\n", gfxstate2str(state));
-
-  if (!gfxFont) {
-    return;
-  }  
-
-  if(swfoutput_queryfont(&output, gfxFontName(gfxFont)))
-  {
-      swfoutput_setfont(&output, gfxFontName(gfxFont), -1, 0);
-      return;
-  }
-
-  // look for Type 3 font
-  if (!type3Warning && gfxFont->getType() == fontType3) {
-    type3Warning = gTrue;
-    showFontError(gfxFont, 2);
-  }
-  //dumpFontInfo ("<notice>", gfxFont);
-
-  Ref embRef;
-  GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
-  if(embedded) {
-    if (!gfxFont->is16Bit() &&
-	(gfxFont->getType() == fontType1 ||
-	 gfxFont->getType() == fontType1C)) {
-	
-	fileName = writeEmbeddedFontToFile(gfxFont);
-	if(!fileName)
-	  return ;
-    }
-    else {
-	showFontError(gfxFont,0);
-	return ;
-    }
-    
-    t1id = T1_AddFont(fileName);
-  } else {
-    fontname = NULL;
-    if(gfxFont->getName()) {
-      fontname = gfxFont->getName()->getCString();
-      //logf("<notice> Processing font %s", fontname);
-    }
-    if(!fontname || !setT1Font(state->getFont()->getName()->getCString(), gfxFont->getEncoding()))
-    { //substitute font
+      //substitute font
+      char* fontname = 0;
+      double m11, m12, m21, m22;
       int index;
       int code;
       double w,w1,w2;
       double*fm;
       double v;
+      if(gfxFont->getName()) {
+	fontname = gfxFont->getName()->getCString();
+      }
+
+//	  printf("%d %s\n", t, gfxFont->getCharName(t));
       showFontError(gfxFont, 1);
       if (!gfxFont->is16Bit()) {
-	if (gfxFont->isFixedWidth()) {
+	if(gfxFont->isSymbolic()) {
+	  if(fontname && (strstr(fontname,"ing"))) //Dingbats, Wingdings etc.
+	   index = 16;
+	  else 
+	   index = 12;
+        } else if (gfxFont->isFixedWidth()) {
 	  index = 8;
 	} else if (gfxFont->isSerif()) {
 	  index = 4;
 	} else {
 	  index = 0;
 	}
-	if (gfxFont->isBold())
+	if (gfxFont->isBold() && index!=16)
 	  index += 2;
-	if (gfxFont->isItalic())
+	if (gfxFont->isItalic() && index!=16)
 	  index += 1;
 	fontname = fontnames[index];
 	// get width of 'm' in real font and substituted font
@@ -978,10 +947,58 @@ void SWFOutputDev::updateFont(GfxState *state)
       }
       if(fontname)
         setT1Font(fontname, gfxFont->getEncoding());
-    }
+      return fontname;
+}
+
+void SWFOutputDev::updateFont(GfxState *state) 
+{
+  char * fontname = 0;
+  GfxFont*gfxFont = state->getFont();
+  char * fileName = 0;
+    
+  if (!gfxFont) {
+    return;
+  }  
+  
+  if(gfxFont->getName()) {
+    fontname = gfxFont->getName()->getCString();
   }
 
-  swfoutput_setfont(&output,gfxFontName(gfxFont),t1id, fileName);
+  if(swfoutput_queryfont(&output, gfxFontName(gfxFont)))
+  {
+      swfoutput_setfont(&output, gfxFontName(gfxFont), -1, 0);
+      return;
+  }
+
+  // look for Type 3 font
+  if (!type3Warning && gfxFont->getType() == fontType3) {
+    type3Warning = gTrue;
+    showFontError(gfxFont, 2);
+  }
+  //dumpFontInfo ("<notice>", gfxFont);
+
+  Ref embRef;
+  GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
+  if(embedded) {
+    if (!gfxFont->is16Bit() &&
+	(gfxFont->getType() == fontType1 ||
+	 gfxFont->getType() == fontType1C)) {
+	
+	fileName = writeEmbeddedFontToFile(gfxFont);
+	if(!fileName)
+	  return ;
+	this->t1id = T1_AddFont(fileName);
+    }
+    else {
+	showFontError(gfxFont,0);
+	fontname = substitutefont(gfxFont);
+    }
+  } else {
+    if(!fontname || !setT1Font(state->getFont()->getName()->getCString(), gfxFont->getEncoding()))
+	fontname = substitutefont(gfxFont);
+  }
+
+  swfoutput_setfont(&output,gfxFontName(gfxFont),this->t1id, fileName);
   if(fileName)
       unlink(fileName);
 }
