@@ -26,6 +26,8 @@ from AVI files.
     Turn movie upside down
 -q , --quality <val>
     Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)
+-k , --keyframe
+    Set the number of intermediate frames between keyframes.
 -x , --extragood
     Enable some *very* expensive compression strategies.
     Enable some \fIvery\fR expensive compression strategies. You may
