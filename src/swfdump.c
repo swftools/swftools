@@ -31,6 +31,7 @@ int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
 	printf("swfdump - part of %s %s\n", PACKAGE, VERSION);
+	exit(0);
     }
 }
 int args_callback_longoption(char*name,char*val)
