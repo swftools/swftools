@@ -218,7 +218,7 @@ void map_ids_mem(u8*mem, int length, void(*callback)(void*))
 	    reader_resetbits(&reader);
 	    flags1 = reader_readu8(&reader);
 	    flags2 = reader_readu8(&reader);
-	    if(flags1 & 128)
+	    if(flags1 & 1)
 		callback(reader_getinputpos(&reader));
 	}
 	break;
