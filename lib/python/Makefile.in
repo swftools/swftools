@@ -41,7 +41,7 @@ swfpython: swfpython.c Makefile primitives.o tagmap.o taglist.o tag.o tags.o act
 testmem: testmem.c Makefile
 	$(L) $(PYTHON_INCLUDES) testmem.c -o testmem $(PYTHON_LIB) -ldl -lm -lpthread -lutil
 
-test: test5
+test: test6
 
 test1: SWF.so
 	./test_create.py
@@ -53,8 +53,12 @@ test3: SWF.so
 	./test_simple.py
 test4: SWF.so
 	./test_movie.py
+	swfdump -u -p tmp/test.swf
 test5: SWF.so
 	./test_image.py
+	swfdump -u -p tmp/test.swf
+test6: SWF.so
+	./test_sprite.py
 clean:
 	rm -f *.o *.so mypython swfpython
 
