@@ -625,7 +625,8 @@ SRECT swf_GetShapeBoundingBox(SHAPELINE*shape)
     r.xmin = r.ymin = SCOORD_MAX;
     r.xmax = r.ymax = SCOORD_MIN;
     if(!shape) {
-	fprintf(stderr, "rfxswf: Warning: empty Shape\n");
+	memset(&r, 0, sizeof(SRECT));
+	return r;
     }
     while(shape) {
 	if(shape->x < r.xmin) r.xmin = shape->x;
