@@ -8,7 +8,7 @@ include ../../Makefile.common
 # In case we need to get more information out of flex
 #FLEXDEBUG = -d
 
-OBJECTS = compile.o listaction.o \
+OBJECTS = compile.o \
           lex.swf4.o lex.swf5.o swf5compiler.tab.o swf4compiler.tab.o \
           assembler.o libming.o actioncompiler.o
 
@@ -24,7 +24,7 @@ all: $(OBJECTS) test main
 swf5compiler.tab.c: swf5compiler.y
 	bison -p swf5 swf5compiler.y
 
-swf5compiler.tab.h: swf5compiler.y
+swf5compiler.tab.h: swf5compiler.y 
 	bison --defines $(BISONDEBUG) -p swf5 swf5compiler.y
 
 swf4compiler.tab.c: swf4compiler.y
