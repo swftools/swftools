@@ -5,7 +5,8 @@
    
    Copyright (c) 2001 Matthias Kramm <kramm@quiss.org> 
 
-   This file is distributed under the GPL, see file COPYING for details */#include <stdio.h>
+   This file is distributed under the GPL, see file COPYING for details */
+#include <stdio.h>
 
 #include <stdlib.h>
 #include <unistd.h>
