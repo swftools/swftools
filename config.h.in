@@ -103,4 +103,10 @@
 /* Define to 1 if this machine has network byte order*/
 #undef WORDS_BIGENDIAN
 
+#ifdef HAVE_ZLIB_H
+#ifdef HAVE_LIBZ
+#define HAVE_ZLIB
+#endif
+#endif
+
 #endif
