@@ -335,7 +335,7 @@ static const char TYPE_URL = 1;
 static const char TYPE_TARGET = 2;
 static const char TYPE_STRING = 4;
 
-int ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
+int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 {
     U8 op;
     int t;
@@ -431,16 +431,16 @@ int ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
     }
 }
 
-void ActionEnumerateTargets(ActionTAG*atag, char*(*callback)(char*))
+void swf_ActionEnumerateTargets(ActionTAG*atag, char*(*callback)(char*))
 {
-    ActionEnumerate(atag, callback, TYPE_TARGET);
+    swf_ActionEnumerate(atag, callback, TYPE_TARGET);
 }
-void ActionEnumerateStrings(ActionTAG*atag, char*(*callback)(char*))
+void swf_ActionEnumerateStrings(ActionTAG*atag, char*(*callback)(char*))
 {
-    ActionEnumerate(atag, callback, TYPE_STRING);
+    swf_ActionEnumerate(atag, callback, TYPE_STRING);
 }
-void ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
+void swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
 {
-    ActionEnumerate(atag, callback, TYPE_URL);
+    swf_ActionEnumerate(atag, callback, TYPE_URL);
 }
 
