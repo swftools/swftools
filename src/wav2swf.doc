@@ -5,45 +5,34 @@ convert a WAV file to an SWF animation.
 Takes a wav file and converts it to a swf movie.
 
 -h, --help
-Print short help message and exit
-
+    Print short help message and exit
 -V, --version
-Print version info and exit
-
+    Print version info and exit
 -o, --output <filename>
-Explicitly specify output file. (Otherwise, output will go to output.swf)
-
--r, --framerate \fIfps
-Set file framerate to \fIfps frames per second.
-    
+    Explicitly specify output file. (Otherwise, output will go to output.swf)
+-r, --framerate <fps>
+    Set file framerate to <fps> frames per second.
 -s , --samplerate <sps>
-Set samplerate to sps frames per second (default: 11025).
-
--b, --bitrate \fIbps
-Set mp3 bitrate to \fIbps.
-
+    Set samplerate to <sps> frames per second (default: 11025).
+-b, --bitrate bps
+    Set mp3 bitrate to <bps>.
 -d, --definesound
-Generate a DefineSound tag instead of streaming sound.
-Store the sound as DEFINESOUND tag, not as streaming sound. Allows for
-looping.
-
--l, --loop \fIn
-(Only used with -d)
-Loop the sound n times.
-
+    Generate a DefineSound tag instead of streaming sound.
+    Store the sound as DEFINESOUND tag, not as streaming sound. Allows for
+    looping.
+-l, --loop n
+    (Only used with -d)
+    Loop the sound n times.
 -C --cgi
-For use as CGI- prepend http header, write to stdout.
-    
+    For use as CGI- prepend http header, write to stdout.
 -S, --stop 
-Stop the movie at frame 0
-Stop the movie at frame 0, and start the sound at 1, so that the
-sound will not play until a "GotoFrame(1)" is issued.
-(For use with flashsound.js).
-    
+    Stop the movie at frame 0
+    Stop the movie at frame 0, and start the sound at 1, so that the
+    sound will not play until a "GotoFrame(1)" is issued.
+    (For use with flashsound.js).
 -b --bitrate <bps>
-Set mp3 bitrate to <bps> (default: 32)
-    
+    Set mp3 bitrate to <bps> (default: 32)
 -v --verbose
-Be more verbose
-Be more verbose. (Use more than one -v for greater effect)
+    Be more verbose
+    Be more verbose. (Use more than one -v for greater effect)
 
