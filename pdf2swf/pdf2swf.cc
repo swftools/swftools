@@ -35,6 +35,8 @@ static char * viewer = 0;
 char* fontpaths[256];
 int fontpathpos = 0;
 
+static int system_quiet=0;
+
 int systemf(const char* format, ...)
 {
     char buf[1024];
@@ -44,8 +46,10 @@ int systemf(const char* format, ...)
     vsprintf(buf, format, arglist);
     va_end(arglist);
 
-    printf("%s\n", buf);
-    fflush(stdout);
+    if(!system_quiet) {
+	printf("%s\n", buf);
+	fflush(stdout);
+    }
     ret = system(buf);
     if(ret) {
 	fprintf(stderr, "system() returned %d\n", ret);
@@ -63,6 +67,12 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "v"))
     {
 	loglevel ++;
+	return 0;
+    }
+    else if (!strcmp(name, "q"))
+    {
+	loglevel --;
+	system_quiet = 1;
 	return 0;
     }
     else if (name[0]=='p')
@@ -144,7 +154,8 @@ int args_callback_option(char*name,char*val) {
 	else
 	{
 	    systemf("ls %s/swfs/*_loader.swf", DATADIR);
-	    printf("\n");
+	    if(!system_quiet)
+		printf("\n");
 	    exit(1);
 	}
 	return 1;
@@ -158,7 +169,8 @@ int args_callback_option(char*name,char*val) {
 	else
 	{
 	    systemf("ls %s/swfs/*_viewer.swf", DATADIR);
-	    printf("\n");
+	    if(!system_quiet)
+		printf("\n");
 	    exit(1);
 	}
 	return 1;
@@ -186,8 +198,26 @@ int args_callback_option(char*name,char*val) {
     return 0;
 }
 
+/*struct docoptions_t options[] =
+{{"o","output","filename::Specify output file"},
+ {"V","version","Print program version"},
+ {"i","ignore","Ignore draw order (makes the SWF file smaller, but may produce graphic errors)"},
+ {"z","zlib","Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)"},
+ {"s","shapes","Don't use SWF Fonts, but store everything as shape"},
+ {"j","jpegquality","Set quality of embedded jpeg pictures (default: 85)"},
+ {"p","pages","Convert only pages in range. (E.g. 3-85)"},
+ {"w","samewindow","Don't open a new browser window for links in the SWF"},
+ {"f","fonts","Stroe full fonts in SWF. (Don't reduce to used characters)"},
+ {"F","fontpath","path::Add directory to font search path"},
+ {"B","viewer","name::Link viewer \"name\" to the pdf"},
+ {"L","preloader","file.swf::Link preloader \"file.swf\" to the pdf"},
+ {"b","defaultviewer","Link default viewer to the pdf"},
+ {"l","defaultpreloader","Link default preloader to the pdf"}
+ {0,0}
+};*/
 struct options_t options[] =
 {{"o","output"},
+ {"q","quiet"},
  {"V","version"},
  {"i","ignore"},
  {"z","zlib"},
@@ -225,7 +255,7 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-si] [-j quality] [-p range] [-P password] input.pdf [output.swf]\n", name);
+    printf("Usage: %s [-si] [-j quality] [-p range] [-P password] input.pdf -o output.swf\n", name);
     printf("\n");
     printf("-p  --pages=range          Convert only pages in range\n");
     printf("-P  --password=password    Use password for deciphering the pdf\n");
@@ -235,6 +265,7 @@ void args_callback_usage(char*name)
     printf("-z  --zlib                 Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)\n");
     printf("-j  --jpegquality=quality  Set quality of embedded jpeg pictures (default:85)\n");
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
+    printf("-q  --quiet                Suppress normal messages. Use -qq to suppress warnings, also.\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
 #ifdef HAVE_DIRENT
     printf("-F  --fontdir directory    Add directory to font search path\n");
@@ -245,7 +276,7 @@ void args_callback_usage(char*name)
     printf("The following might not work because your system call doesn't support command substitution:\n");
 #endif
     printf("-b  --defaultviewer        Link default viewer to the pdf (%s/swfs/default_viewer.swf)\n", DATADIR);
-    printf("-l  --defaultpreloader     Link preloader \"name\" to the pdf (%s/swfs/default_loader.swf)\n", DATADIR);
+    printf("-l  --defaultpreloader     Link default preloader the pdf (%s/swfs/default_loader.swf)\n", DATADIR);
     printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
     printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
 }
@@ -411,19 +442,22 @@ int main(int argn, char *argv[])
 	logf("<warning> Not sure whether system() can handle command substitution");
 	logf("<warning> (According to config.h, it can't)");
 #endif
-	printf("\n");
+	if(!system_quiet)
+	    printf("\n");
     }
 
     if(viewer && !preloader) {
 	systemf("swfcombine `swfdump -XY %s` %s viewport=%s -o %s",
 		outputname, viewer, outputname, outputname);
-	printf("\n");
+	if(!system_quiet)
+	    printf("\n");
     }
     if(preloader && !viewer) {
 	logf("<warning> --preloader option without --viewer option doesn't make very much sense.");
 	ret = systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
 		preloader, DATADIR, preloader, outputname, outputname);
-	printf("\n");
+	if(!system_quiet)
+	    printf("\n");
     }
     if(preloader && viewer) {
 	systemf("swfcombine %s viewport=%s -o __tmp__.swf",

@@ -622,7 +622,7 @@ GBool SWFOutputDev::beginType3Char(GfxState *state,
     type3active = 1;
     /* the character itself is going to be passed using
        drawImageMask() */
-    return gFalse;
+    return gFalse; /* gTrue= is_in_cache? */
 }
 
 void SWFOutputDev::endType3Char(GfxState *state)
@@ -1511,7 +1511,8 @@ void pdfswf_init(char*filename, char*userPassword)
 
   // print doc info
   doc->getDocInfo(&info);
-  if (info.isDict()) {
+  if (info.isDict() &&
+    (screenloglevel>=LOGLEVEL_NOTICE)) {
     printInfoString(info.getDict(), "Title",        "Title:        %s\n");
     printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
     printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
@@ -1520,24 +1521,23 @@ void pdfswf_init(char*filename, char*userPassword)
     printInfoString(info.getDict(), "Producer",     "Producer:     %s\n");
     printInfoDate(info.getDict(),   "CreationDate", "CreationDate: %s\n");
     printInfoDate(info.getDict(),   "ModDate",      "ModDate:      %s\n");
+    printf("Pages:        %d\n", doc->getNumPages());
+    printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
+    printf("Encrypted:    ");
+    if (doc->isEncrypted()) {
+      printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
+	     doc->okToPrint() ? "yes" : "no",
+	     doc->okToCopy() ? "yes" : "no",
+	     doc->okToChange() ? "yes" : "no",
+	     doc->okToAddNotes() ? "yes" : "no");
+    } else {
+      printf("no\n");
+    }
   }
   info.free();
 
-  // print page count
-  printf("Pages:        %d\n", doc->getNumPages());
   numpages = doc->getNumPages();
-  
-  // print linearization info
-  printf("Linearized:   %s\n", doc->isLinearized() ? "yes" : "no");
-
-  // print encryption info
-  printf("Encrypted:    ");
   if (doc->isEncrypted()) {
-    printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
-	   doc->okToPrint() ? "yes" : "no",
-	   doc->okToCopy() ? "yes" : "no",
-	   doc->okToChange() ? "yes" : "no",
-	   doc->okToAddNotes() ? "yes" : "no");
 	/*ERROR: This pdf is encrypted, and disallows copying.
 	  Due to the DMCA, paragraph 1201, (2) A-C, circumventing
 	  a technological measure that efficively controls access to
@@ -1550,11 +1550,7 @@ void pdfswf_init(char*filename, char*userPassword)
 	}
 	if(!doc->okToChange() || !doc->okToAddNotes())
 	    swfoutput_setprotected();
-    }
-  else {
-    printf("no\n");
   }
-
 
   output = new SWFOutputDev();
   output->startDoc(doc->getXRef());
