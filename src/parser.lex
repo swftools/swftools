@@ -32,17 +32,20 @@ static char*prefix = 0;
 static void unescapeString(string_t * tmp)
 {
     char *p, *p1;
+    /* fixme - this routine expects the string to be
+       null-terminated */
 
-    for (p1=tmp->str; (p=strchr(p1, '\\')) != 0; p1 = p+1) 
+    for (p1=tmp->str; (p=strchr(p1, '\\')); p1 = p+1) 
     {
 	switch(p[1])
 	{
-	    case '\\': p[1] = '\\'; break;
-	    case 'b': p[1] = '\b'; break;
-	    case 'f': p[1] = '\f'; break;
-	    case 'n': p[1] = '\n'; break;
-	    case 'r': p[1] = '\r'; break;
-	    case 't': p[1] = '\t'; break;
+	    case '\\': p[1] = '\\'; tmp->len--; break;
+	    case '"': p[1] = '"'; tmp->len--; break;
+	    case 'b': p[1] = '\b'; tmp->len--; break;
+	    case 'f': p[1] = '\f'; tmp->len--; break;
+	    case 'n': p[1] = '\n'; tmp->len--; break;
+	    case 'r': p[1] = '\r'; tmp->len--; break;
+	    case 't': p[1] = '\t'; tmp->len--; break;
 	    default:
 		continue;
 	}
