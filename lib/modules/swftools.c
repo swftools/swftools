@@ -119,6 +119,7 @@ U16 swf_GetDefineID(TAG * t)
     case ST_GLYPHNAMES: //pseudodefine
     case ST_VIDEOFRAME: //pseudodefine
     case ST_NAMECHARACTER: //pseudodefine
+    case ST_DOINITACTION: //pseudodefine
       id = swf_GetU16(t);
       break;
   }
