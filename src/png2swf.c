@@ -147,7 +147,19 @@ int png_read_header(FILE*fi, struct png_header*header)
 	    c = data[10];     // compression mode (0)
 	    f = data[11];     // filter mode (0)
 	    i = data[12];     // interlace mode (0)
-	    printf("%08xx%08x %d %d %d %d %d\n",header->width, header->height, a,b,c,f,i);
+	    if(c!=0) {
+		fprintf(stderr, "Compression mode %d not supported!\n", c);
+		exit(1);
+	    }
+	    if(f!=0) {
+		fprintf(stderr, "Filter mode %d not supported!\n", f);
+		exit(1);
+	    }
+	    if(i!=0) {
+		fprintf(stderr, "Interlace mode %d not supported!\n", i);
+		exit(1);
+	    }
+	    printf("%dx%d %d %d %d %d %d\n",header->width, header->height, a,b,c,f,i);
 	    header->bpp = a;
 	    header->mode = b;
 	    return 1;
@@ -157,6 +169,102 @@ int png_read_header(FILE*fi, struct png_header*header)
 	free(data);
     }
     return 0;
+}
+
+typedef unsigned char byte;
+#define ABS(a) ((a)>0?(a):(-(a)))
+byte inline PaethPredictor (byte a,byte b,byte c)
+{
+        // a = left, b = above, c = upper left
+        int p = a + b - c;        // initial estimate
+        int pa = ABS(p - a);      // distances to a, b, c
+        int pb = ABS(p - b);
+        int pc = ABS(p - c);
+        // return nearest of a,b,c,
+        // breaking ties in order a,b,c.
+        if (pa <= pb && pa <= pc) 
+		return a;
+        else if (pb <= pc) 
+		return b;
+        else return c;
+}
+
+void applyfilter(int mode, U8*src, U8*old, U8*dest, int width)
+{
+    int x;
+    unsigned char lastr=0;
+    unsigned char lastg=0;
+    unsigned char lastb=0;
+    unsigned char upperlastr=0;
+    unsigned char upperlastg=0;
+    unsigned char upperlastb=0;
+
+    if(mode==0) {
+	for(x=0;x<width;x++) {
+	    dest[0] = 255;
+	    dest[1] = src[0];
+	    dest[2] = src[1];
+	    dest[3] = src[2];
+	    dest+=4;
+	    src+=3;
+	}
+    }
+    else if(mode==1) {
+	for(x=0;x<width;x++) {
+	    dest[0] = 255;
+	    dest[1] = src[0]+lastr;
+	    dest[2] = src[1]+lastg;
+	    dest[3] = src[2]+lastb;
+	    lastr = dest[1];
+	    lastg = dest[2];
+	    lastb = dest[3];
+	    dest+=4;
+	    src+=3;
+	}
+    }
+    else if(mode==2) {
+	for(x=0;x<width;x++) {
+	    dest[0] = 255;
+	    dest[1] = src[0]+old[1];
+	    dest[2] = src[1]+old[2];
+	    dest[3] = src[2]+old[3];
+	    dest+=4;
+	    old+=4;
+	    src+=3;
+	}
+    }
+    else if(mode==3) {
+	for(x=0;x<width;x++) {
+	    dest[0] = 255;
+	    dest[1] = src[0]+(old[1]+lastr)/2;
+	    dest[2] = src[1]+(old[2]+lastg)/2;
+	    dest[3] = src[2]+(old[3]+lastb)/2;
+	    lastr = dest[1];
+	    lastg = dest[2];
+	    lastb = dest[3];
+	    dest+=4;
+	    old+=4;
+	    src+=3;
+	}
+    }
+    else if(mode==4) {
+	for(x=0;x<width;x++) {
+	    dest[0] = 255;
+	    dest[1] = src[0]+PaethPredictor(lastr,old[1],upperlastr);
+	    dest[2] = src[1]+PaethPredictor(lastg,old[2],upperlastg);
+	    dest[3] = src[2]+PaethPredictor(lastb,old[3],upperlastb);
+	    lastr = dest[1];
+	    lastg = dest[2];
+	    lastb = dest[3];
+	    upperlastr = old[1];
+	    upperlastg = old[2];
+	    upperlastb = old[3];
+	    dest+=4;
+	    old+=4;
+	    src+=3;
+	}
+    }    
+
 }
 
 TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
@@ -230,16 +338,19 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	int pos=0;
 	/* 24->32 bit conversion */
 	for(y=0;y<header.height;y++) {
-	    pos++; // filter mode
-	    for(x=0;x<header.width;x++) {
-		U8*src  = &imagedata[pos];
-		U8*dest = &data2[(y*header.width+x)*4];
-		dest[0] = 255;
-		dest[1] = src[0];
-		dest[2] = src[1];
-		dest[3] = src[2];
-		pos+=3;
+	    int mode = imagedata[pos++]; //filter mode
+
+	    U8*src = &imagedata[pos];
+	    U8*dest = &data2[(y*header.width)*4];
+	    U8*old;
+	    if(!y) {
+		memset(data2,0,header.width*4);
+		old = &data2[y*header.width*4];
+	    } else {
+		old = &data2[(y-1)*header.width*4];
 	    }
+	    applyfilter(mode, src, old, dest, header.width);
+	    pos+=header.width*3;
 	}
 	swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
 	free(data2);
@@ -261,6 +372,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    rgba[i].a = 255;
 	}
 	for(y=0;y<header.height;y++) {
+	    int mode = imagedata[pos];
+	    if(mode!=0) {
+		fprintf(stderr, "Warning: Filter mode %d\n", mode);
+	    }
 	    pos++; //filter mode
 	    for(x=0;x<header.width;x++) {
 		data2[y*header.width+x] = 
