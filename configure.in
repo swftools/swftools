@@ -51,7 +51,7 @@ dnl Checks for header files.
 dnl AC_PATH_XTRA
  AC_HEADER_DIRENT
  AC_HEADER_STDC
- AC_CHECK_HEADERS(math.h fcntl.h limits.h malloc.h unistd.h memory.h zlib.h jpeglib.h t1lib.h sys/stat.h)
+ AC_CHECK_HEADERS(math.h fcntl.h limits.h malloc.h unistd.h memory.h zlib.h jpeglib.h t1lib.h sys/stat.h sys/types.h)
 
 if test "x${ac_cv_header_jpeglib_h}" != "xyes"; then
  DISABLEPDF2SWF=true;
