@@ -131,6 +131,8 @@ ${name}/lib/rfxswf.h \
 ${name}/lib/old_rfxswf.h \
 ${name}/lib/log.c \
 ${name}/lib/log.h \
+${name}/lib/os.c \
+${name}/lib/os.h \
 ${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/pdf2swf/swfoutput.h \
 ${name}/pdf2swf/swfoutput.cc \
