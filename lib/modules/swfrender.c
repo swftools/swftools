@@ -116,17 +116,20 @@ static void renderpoint_write(TAG*tag, renderpoint_t*p)
 	swf_SetBits(tag, 0, 1);
 	swf_SetBits(tag, p->depth >> 16, 16);
     }
-    swf_SetBits(tag, *(U32*)&p->shapeline, 32);
+    if(p->shapeline) {
+	swf_SetBits(tag, 1, 1);
+	swf_SetBits(tag, *(U32*)&p->shapeline, 32);
+    } else {
+	swf_SetBits(tag, 0, 1);
+    }
+
     if(p->type == clip_type) {
-	if(p->clipdepth & 0xffff) {
-	    swf_SetBits(tag, 1, 1);
-	    swf_SetBits(tag, p->clipdepth, 32);
-	} else {
-	    swf_SetBits(tag, 0, 1);
-	    swf_SetBits(tag, p->clipdepth >> 16, 16);
-	}
+	//printf("type=%d x=%f, depth=%08x, shapeline=%08x, clipdepth=%08x\n", p->type, p->x, p->depth, p->shapeline, p->clipdepth);
+	assert((p->clipdepth & 0xffff) == 0xffff);
+	swf_SetBits(tag, p->clipdepth >> 16, 16);
 	/* don't set s */
     } else {
+	//printf("type=%d x=%f, depth=%08x, shapeline=%08x, s=%08x\n", p->type, p->x, p->depth, p->shapeline, p->s);
 	swf_SetBits(tag, *(U32*)&p->s, 32);
 	/* don't set clipdepth */
     }
@@ -146,14 +149,15 @@ static renderpoint_t renderpoint_read(TAG*tag, int num)
     } else {
 	p.depth = swf_GetBits(tag, 16) << 16;
     }
-    dummy = swf_GetBits(tag, 32);p.shapeline = *(SHAPELINE**)&dummy;
+    flag = swf_GetBits(tag, 1);
+    if(flag) {
+	dummy = swf_GetBits(tag, 32);p.shapeline = *(SHAPELINE**)&dummy;
+    } else {
+	p.shapeline = 0;
+    }
+
     if(p.type == clip_type) {
-	flag = swf_GetBits(tag, 1);
-	if(flag) {
-	    p.clipdepth = swf_GetBits(tag, 32);
-	} else {
-	    p.clipdepth = swf_GetBits(tag, 16) << 16;
-	}
+	p.clipdepth = swf_GetBits(tag, 16) << 16 | 0xffff;
 	p.s = 0;
     } else {
 	dummy = swf_GetBits(tag, 32);p.s = *(dummyshape_t**)&dummy;
@@ -406,7 +410,8 @@ void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height)
     bm->id = id;
     bm->width = width;
     bm->height = height;
-    bm->data = img;
+    bm->data = rfx_alloc(width*height*4);
+    memcpy(bm->data, img, width*height*4);
 
     bm->next = i->bitmaps;
     i->bitmaps = bm;
@@ -448,7 +453,7 @@ void swf_Render_Delete(RENDERBUF*dest)
     /* delete bitmaps */
     while(b) {
         bitmap_t*next = b->next;
-        //free(b->data);b->data=0;
+        free(b->data);b->data=0;
         rfx_free(b);
         b = next;
     }
@@ -489,10 +494,18 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     
-    SHAPELINE*line = shape->lines;
+    SHAPELINE*line;
     int x=0,y=0;
     MATRIX mat = *m;
     SHAPE2* lshape = 0;
+
+    SHAPE2* s2 = swf_Shape2Clone(shape);
+    /* add this shape to the global shape list, for deallocing */
+    dummyshape_t*fshape = rfx_calloc(sizeof(dummyshape_t));
+    fshape->shape = s2;
+    swf_Render_AddShape(dest, fshape);
+
+    line = s2->lines;
 
     renderpoint_t p, lp;
     memset(&p, 0, sizeof(renderpoint_t));
@@ -500,20 +513,15 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     
     p.type = _clipdepth?clip_type:fill_type;
     p.depth = _depth << 16;
-    p.clipdepth = _clipdepth << 16;
+    p.clipdepth = _clipdepth? _clipdepth << 16 | 0xffff : 0;
 
     mat.tx -= dest->posx*20;
     mat.ty -= dest->posy*20;
+        
 
     if(shape->numfillstyles) {
-        dummyshape_t*fshape = rfx_calloc(sizeof(dummyshape_t));
         int t;
-        SHAPE2* s2 = swf_Shape2Clone(shape);
-       
-        fshape->shape = s2;
-
         p.s = fshape;
-
         /* multiply fillstyles matrices with placement matrix-
            important for texture and gradient fill */
         for(t=0;t<s2->numfillstyles;t++) {
@@ -528,8 +536,6 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             s2->fillstyles[t].m = nm;
         }
 
-        /* add this shape to the global shape list, for deallocing */
-        swf_Render_AddShape(dest, fshape);
     }
 
     if(shape->numlinestyles) {
@@ -548,7 +554,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     }
 
     if(p.clipdepth) {
-        /* reverse shape */
+        /* invert shape */
         p.shapeline = 0;
         add_line(dest, -20, 0, -20, i->height2*20, &p);
     }
@@ -748,7 +754,7 @@ static void fill(RENDERBUF*dest, RGBA*line, int y, int x1, int x2, state_t*clips
 	    if(lf) fprintf(stderr, "                lf->depth = %08x\n", lf->p->depth);
 	}
 
-        if(l->p->depth < clipdepth) {
+        if(l->p->depth <= clipdepth) {
             if(DEBUG&2) printf("(clipped)");
 	    continue;
         }
@@ -927,8 +933,6 @@ RGBA* swf_Render(RENDERBUF*dest)
     RGBA * line1 = rfx_alloc(sizeof(RGBA)*i->width2);
     RGBA * line2 = rfx_alloc(sizeof(RGBA)*i->width2);
 
-    printf("%d\n", sizeof(renderpoint_t));
-
     for(y=0;y<i->height2;y++) {
         TAG*tag = i->lines[y].points;
         int n;
@@ -1000,6 +1004,8 @@ RGBA* swf_Render(RENDERBUF*dest)
     }
     free(line1);
     free(line2);
+
+#define MEMORY
     
     if(DEBUG) printf("\nMemory used: %d\n", memory);
 #ifdef STATISTICS
@@ -1010,3 +1016,109 @@ RGBA* swf_Render(RENDERBUF*dest)
 
     return img;
 }
+
+typedef struct
+{
+    TAG*tag;
+    SRECT*bbox;
+    enum {none_type, shape_type, image_type, text_type, font_type} type;
+    union {
+        SHAPE2*shape;
+        SWFFONT*font;
+    };
+} character_t;
+
+void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
+{
+    TAG*tag;
+    int t;
+
+    character_t* idtable = rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
+    SWFPLACEOBJECT** depthtable = rfx_calloc(sizeof(SWFPLACEOBJECT*)*65536); // depth to placeobject mapping
+
+    /* set background color */
+    RGBA color = swf_GetSWFBackgroundColor(swf);
+    swf_Render_SetBackgroundColor(buf, color);
+
+    /* parse definitions */
+    tag = swf->firstTag;
+    while(tag) {
+        if(swf_isDefiningTag(tag)) {
+            int id = swf_GetDefineID(tag);
+            idtable[id].tag = tag;
+            idtable[id].bbox = rfx_alloc(sizeof(SRECT));
+            *idtable[id].bbox = swf_GetDefineBBox(tag);
+
+            if(swf_isShapeTag(tag)) {
+                SHAPE2* shape = rfx_calloc(sizeof(SHAPE2));
+                swf_ParseDefineShape(tag, shape);
+                idtable[id].type = shape_type;
+                idtable[id].shape = shape;
+            } else if(swf_isImageTag(tag)) {
+		int width,height;
+                RGBA*data = swf_ExtractImage(tag, &width, &height);
+                idtable[id].type = image_type;
+                swf_Render_AddImage(buf, id, data, width, height);
+		free(data);
+            } else if(tag->id == ST_DEFINEFONT ||
+                      tag->id == ST_DEFINEFONT2) {
+                //swf_FontExtract(swf,id,&idtable[id].font);
+                idtable[id].font = 0;
+            } else if(tag->id == ST_DEFINEFONTINFO ||
+                      tag->id == ST_DEFINEFONTINFO2) {
+                idtable[id].type = font_type;
+            } else if(tag->id == ST_DEFINETEXT ||
+                      tag->id == ST_DEFINETEXT2) {
+                idtable[id].type = text_type;
+            }
+        } else if(tag->id == ST_PLACEOBJECT || 
+                  tag->id == ST_PLACEOBJECT2) {
+            SWFPLACEOBJECT* p = rfx_calloc(sizeof(SWFPLACEOBJECT));
+            swf_GetPlaceObject(tag, p);
+            /* TODO: add move and deletion */
+            depthtable[p->depth] = p;
+        }
+        tag = tag->next;
+    }
+      
+    for(t=65535;t>=0;t--) if(depthtable[t]) {
+        SWFPLACEOBJECT*p = depthtable[t];
+        int id = p->id;
+            
+        if(!idtable[id].tag) { 
+            fprintf(stderr, "rfxswf: Id %d is unknown\n", id);
+            continue;
+        }
+
+        if(idtable[id].type == shape_type) {
+            SRECT sbbox = swf_TurnRect(*idtable[id].bbox, &p->matrix);
+            swf_RenderShape(buf, idtable[id].shape, &p->matrix, &p->cxform, p->depth, p->clipdepth);
+        } else if(idtable[id].type == text_type) {
+	    /* TODO */
+        } else {
+            fprintf(stderr, "Unknown/Unsupported Object Type for id %d: %s\n", id, swf_TagGetName(idtable[id].tag));
+        }
+    }
+
+    /* free id and depth tables again */
+    for(t=0;t<65536;t++) {
+        if(idtable[t].bbox) {
+            free(idtable[t].bbox);
+            idtable[t].bbox=0;
+        }
+        if(idtable[t].type == shape_type) {
+            SHAPE2* shape = idtable[t].shape;
+            if(shape) {
+                swf_Shape2Free(shape); // FIXME
+                free(idtable[t].shape);idtable[t].shape = 0;
+            }
+        }
+        if(depthtable[t]) {
+            swf_PlaceObjectFree(depthtable[t]);
+            free(depthtable[t]);depthtable[t] = 0;
+        }
+    }
+    free(idtable);
+    free(depthtable);
+}
+
