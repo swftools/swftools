@@ -838,7 +838,7 @@ int swf_ReadSWF2(struct reader_t*reader, SWF * swf)   // Reads SWF to memory (ma
     t1.next->prev = NULL;
   }
   
-  return 0;
+  return reader->pos;
 }
 
 int swf_ReadSWF(int handle, SWF * swf)

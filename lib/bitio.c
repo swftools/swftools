@@ -18,14 +18,12 @@
 struct memread_t
 {
     unsigned char*data;
-    int pos;
     int length;
 };
 
 struct memwrite_t
 {
     unsigned char*data;
-    int pos;
     int length;
 };
 
@@ -62,6 +60,7 @@ void reader_init_filereader(struct reader_t*r, int handle)
     r->type = READER_TYPE_FILE;
     r->mybyte = 0;
     r->bitpos = 8;
+    r->pos = 0;
 }
 
 void reader_init_memreader(struct reader_t*r, void*newdata, int newlength)
@@ -74,6 +73,7 @@ void reader_init_memreader(struct reader_t*r, void*newdata, int newlength)
     r->type = READER_TYPE_MEM;
     r->mybyte = 0;
     r->bitpos = 8;
+    r->pos = 0;
 }
 
 void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input)
@@ -86,6 +86,7 @@ void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input)
     r->internal = z;
     r->read = reader_zlibinflate;
     r->type = READER_TYPE_ZLIB;
+    r->pos = 0;
     z->input = input;
     memset(&z->zs,0,sizeof(z_stream));
     z->zs.zalloc = Z_NULL;
@@ -108,21 +109,24 @@ static void zlib_error(int ret, char* msg, z_stream*zs)
 
 static int reader_fileread(struct reader_t*reader, void* data, int len) 
 {
-    return read((int)reader->internal, data, len);
+    int ret = read((int)reader->internal, data, len);
+    if(ret>=0)
+	reader->pos += ret;
+    return ret;
 }
 
 static int reader_memread(struct reader_t*reader, void* data, int len) 
 {
     struct memread_t*mr = (struct memread_t*)reader->internal;
 
-    if(mr->length - mr->pos > len) {
-	memcpy(data, &mr->data[mr->pos], len);
-	mr->pos += len;
+    if(mr->length - reader->pos > len) {
+	memcpy(data, &mr->data[reader->pos], len);
+	reader->pos += len;
 	return len;
     } else {
-	memcpy(data, &mr->data[mr->pos], mr->length - mr->pos);
-	mr->pos = mr->length;
-	return mr->length - mr->pos;
+	memcpy(data, &mr->data[reader->pos], mr->length - reader->pos);
+	reader->pos = mr->length;
+	return mr->length - reader->pos;
     }
 }
 
@@ -155,12 +159,14 @@ static int reader_zlibinflate(struct reader_t*reader, void* data, int len)
 		if (ret != Z_OK) zlib_error(ret, "bitio:inflate_end", &z->zs);
 		free(reader->internal);
 		reader->internal = 0;
+		reader->pos += pos;
 		return pos;
 	}
 	if(!z->zs.avail_out) {
 	    break;
 	}
     }
+    reader->pos += len;
     return len;
 }
 unsigned int reader_readbit(struct reader_t*r)
@@ -200,14 +206,14 @@ static void writer_filewrite_finish(struct writer_t*w)
 static int writer_memwrite_write(struct writer_t*w, void* data, int len) 
 {
     struct memread_t*mw = (struct memread_t*)w->internal;
-    if(mw->length - mw->pos > len) {
-	memcpy(&mw->data[mw->pos], data, len);
-	mw->pos += len;
+    if(mw->length - w->pos > len) {
+	memcpy(&mw->data[w->pos], data, len);
+	w->pos += len;
 	return len;
     } else {
-	memcpy(&mw->data[mw->pos], data, mw->length - mw->pos);
-	mw->pos = mw->length;
-	return mw->length - mw->pos;
+	memcpy(&mw->data[w->pos], data, mw->length - w->pos);
+	w->pos = mw->length;
+	return mw->length - w->pos;
     }
 }
 static void writer_memwrite_finish(struct writer_t*w)
@@ -231,6 +237,7 @@ void writer_init_filewriter(struct writer_t*w, int handle)
     w->type = WRITER_TYPE_FILE;
     w->bitpos = 0;
     w->mybyte = 0;
+    w->pos = 0;
 }
 void writer_init_memwriter(struct writer_t*w, void*data, int len)
 {
@@ -245,6 +252,7 @@ void writer_init_memwriter(struct writer_t*w, void*data, int len)
     w->type = WRITER_TYPE_FILE;
     w->bitpos = 0;
     w->mybyte = 0;
+    w->pos = 0;
 }
 
 void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output)
@@ -258,6 +266,7 @@ void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output)
     w->write = writer_zlibdeflate_write;
     w->finish = writer_zlibdeflate_finish;
     w->type = WRITER_TYPE_ZLIB;
+    w->pos = 0;
     z->output = output;
     memset(&z->zs,0,sizeof(z_stream));
     z->zs.zalloc = Z_NULL;
@@ -295,6 +304,7 @@ static int writer_zlibdeflate_write(struct writer_t*writer, void* data, int len)
 	    break;
 	}
     }
+    writer->pos += len;
     return len;
 }
 static void writer_zlibdeflate_finish(struct writer_t*writer)
