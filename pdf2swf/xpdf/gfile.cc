@@ -445,7 +445,7 @@ static char tmpbuf[128];
 static char* mktmpname(char*ptr) {
 //   used to be mktemp. This does remove the warnings, but
 //   It's not exactly an improvement.
-    sprintf(tmpbuf, "%08x%08x",lrand48(),lrand48());
+    sprintf(tmpbuf, "/tmp/%08x%08x",lrand48(),lrand48());
     return tmpbuf;
 }
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {

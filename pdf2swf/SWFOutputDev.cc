@@ -765,7 +765,7 @@ char*writeEmbeddedFontToFile(GfxFont*font)
       Type1CFontConverter *cvt;
       Ref embRef;
       Object refObj, strObj;
-      tmpFileName = "tmpfont";
+      tmpFileName = "/tmp/tmpfont";
       font->getEmbeddedFontID(&embRef);
 
       f = fopen(tmpFileName, "wb");
