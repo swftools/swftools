@@ -1051,11 +1051,18 @@ int parseInt(char*str)
 }
 int parseTwip(char*str)
 {
-    char*dot = strchr(str, '.');
+    char*dot;
+    int sign=1;
+    if(str[0]=='+' || str[0]=='-') {
+	if(str[0]=='-')
+	    sign = -1;
+	str++;
+    }
+    dot = strchr(str, '.');
     if(!dot) {
 	int l=strlen(str);
 	int t;
-	return parseInt(str)*20;
+	return sign*parseInt(str)*20;
     } else {
 	int l=strlen(++dot);
 	char*s;
@@ -1072,11 +1079,11 @@ int parseTwip(char*str)
 	    l=2;
 	}
 	if(l==0)
-	    return atoi(str)*20;
+	    return sign*atoi(str)*20;
 	if(l==1)
-	    return atoi(str)*20+atoi(dot)*2;
+	    return sign*atoi(str)*20+atoi(dot)*2;
 	if(l==2)
-	    return atoi(str)*20+atoi(dot)/5;
+	    return sign*atoi(str)*20+atoi(dot)/5;
     }
     return 0;
 }

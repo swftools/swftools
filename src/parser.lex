@@ -163,8 +163,8 @@ void handleInclude(char*text, int len)
 %x BINARY
 
 NAME	 [a-zA-Z_./](-*[a-zA-Z0-9_./])*
-TWIP	 ([0-9]+(\.([0-9]([05])?)?)?)
-NUMBER	 [0-9]+(\.[0-9]*)?
+TWIP	 (-?[0-9]+(\.([0-9]([05])?)?)?)
+NUMBER	 -?[0-9]+(\.[0-9]*)?
 PERCENT	 {NUMBER}%
 STRING   (\\.|[^\\"\n])*
 S	 [ \n\r\t]
