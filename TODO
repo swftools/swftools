@@ -2,6 +2,8 @@ General:
 
     * make more stuff dependent on the information in config.h
     * consistent output handling if -o is missing. (out.swf/stdout)
+    * either implement -X,-Y options for every program, or do some kind
+      of swfresize/swffix tool
 
 pdf2swf:
 
