@@ -1293,7 +1293,7 @@ static void endshape()
     swf_ShapeSetEnd(tag);
 
     if(shapeisempty) {
-	msg("<warning> empty shape");
+	msg("<debug> empty shape");
 	// TODO: delete tag
     }
 
