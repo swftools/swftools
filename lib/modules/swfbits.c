@@ -37,7 +37,7 @@ int swf_ImageHasAlpha(RGBA*img, int width, int height)
     return hasalpha;
 }
 
-int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*palette)
+/*int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*palette)
 {
     int len = width*height;
     int t;
@@ -76,7 +76,71 @@ int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*pal
     if(palette)
 	memcpy(palette, pal, palsize*sizeof(RGBA));
     return palsize;
+}*/
+
+int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*palette)
+{
+    int len = width*height;
+    int t;
+    int palsize = 0;
+    U32* pal;
+    int size[256];
+    int palette_overflow = 0;
+    U32 lastcol32 = 0;
+
+    pal = malloc(65536*sizeof(U32));
+
+    memset(size, 0, sizeof(size));
+
+    if(sizeof(RGBA)!=sizeof(U32))
+	fprintf(stderr, "rfxswf: sizeof(RGBA)!=sizeof(U32))");
+
+    lastcol32 = (*(U32*)&img[0])^0xffffffff; // don't match
+
+    for(t=0;t<len;t++) {
+	RGBA col = img[t];
+	U32 col32 = *(U32*)&img[t];
+	int i;
+	U32 hash;
+	if(col32 == lastcol32)
+	    continue;
+	hash = (col32 >> 17) ^ col32;
+	hash ^= ((hash>>8) + 1) ^ hash;
+	hash &= 255;
+
+	int csize = size[hash];
+	U32* cpal = &pal[hash*256];
+	for(i=0;i<csize;i++) {
+	    if(col32 == cpal[i])
+		break;
+	}
+	if(i==csize) {
+	    if(palsize==256) {
+		palette_overflow = 1;
+		break;
+	    }
+	    cpal[size[hash]++] = col32;
+	    palsize++;
+	}
+	lastcol32 = col32;
+    }
+    if(palette_overflow)
+	return width*height;
+    if(palette) {
+	int i = 0;
+	for(t=0;t<256;t++) {
+	    int s;
+	    int csize = size[t];
+	    U32* cpal = &pal[t*256];
+	    for(s=0;s<csize;s++)
+		palette[i++] = *(RGBA*)(&cpal[s]);
+	}
+    }
+    free(pal);
+    return palsize;
 }
+
+
 
 #ifdef HAVE_JPEGLIB
 
@@ -949,8 +1013,9 @@ void swf_RemoveJPEGTables(SWF * swf)
 	    void *data = rfx_alloc(tag->len);
 	    swf_GetBlock(tag, data, tag->len);
 	    swf_ResetTag(tag, ST_DEFINEBITSJPEG2);
+	    swf_SetBlock(tag, &((U8*)data)[0], 2); //id
 	    swf_SetBlock(tag, tables_tag->data, tables_tag->len);
-	    swf_SetBlock(tag, data, tag->len);
+	    swf_SetBlock(tag, &((U8*)data)[2], tag->len-2);
 	    free(data);
 	}
 	tag = tag->next;
