@@ -883,4 +883,46 @@ void swf_RelocateDepth(SWF*swf, char*bitmap)
 	tag=tag->next;
     }
 }
-	
+
+TAG* swf_Concatenate (TAG*list1,TAG*list2)
+{
+    TAG*tag=0,*lasttag=0;
+    char bitmap[65536];
+    char depthmap[65536];
+    memset(bitmap, 0, sizeof(bitmap));
+    memset(depthmap, 0, sizeof(depthmap));
+    SWF swf1,swf2;
+    memset(&swf1, 0, sizeof(swf1));
+    memset(&swf2, 0, sizeof(swf2));
+
+    swf1.firstTag = list1;
+    swf_FoldAll(&swf1);
+    swf2.firstTag = list2;
+    swf_FoldAll(&swf2);
+
+    tag = list1;
+    while(tag) {
+	if(!swf_isDefiningTag(tag)) {
+	    int id = swf_GetDefineID(tag);
+	    bitmap[id] = 1;
+	}
+	if(tag->id == ST_PLACEOBJECT ||
+	   tag->id == ST_PLACEOBJECT2) {
+	    int depth = swf_GetDepth(tag);
+	    depthmap[depth] = 1;
+	}
+	if(tag->id == ST_REMOVEOBJECT ||
+	   tag->id == ST_REMOVEOBJECT2) {
+	    int depth = swf_GetDepth(tag);
+	    depthmap[depth] = 0;
+	}
+	tag = tag->next;
+	lasttag = tag;
+    }
+    swf_Relocate(&swf2, bitmap);
+    swf_RelocateDepth(&swf2, depthmap);
+    lasttag->next = swf2.firstTag;
+    swf2.firstTag->prev = lasttag;
+
+    return swf1.firstTag;
+}
