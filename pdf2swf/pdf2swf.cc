@@ -390,7 +390,7 @@ int main(int argn, char *argv[])
     {
 	if(filename) {
 	    outputname = stripfilename(filename, ".swf");
-	    logf("<notice> Output filename not giving. Writing to %s", outputname);
+	    logf("<notice> Output filename not given. Writing to %s", outputname);
 	} 
     }
 	
