@@ -483,18 +483,29 @@ int main(int argn, char *argv[])
     msg("<error> Couldn't find any fonts!");
 #endif
 
-    pdfswf_init(filename, password);
-    pdfswf_setoutputfilename(outputname);
-
-    int pages = pdfswf_numpages();
-    for(t = 1; t <= pages; t++) 
-    {
-	if(is_in_range(t, pagerange))
-	pdfswf_convertpage(t);
+    pdf_doc_t* pdf = pdf_init(filename, password);
+    if(!pdf) {
+        msg("<error> Couldn't open %s", filename);
+        exit(1);
     }
-    pdfswf_performconversion();
+    swf_output_t* swf = swf_output_init();
 
-    pdfswf_close();
+    for(t = 1; t <= pdf->num_pages; t++) 
+    {
+	if(is_in_range(t, pagerange)) {
+            /* for links: FIXME */
+            pdfswf_preparepage(t);
+        }
+	if(is_in_range(t, pagerange)) {
+            pdf_page_t*page = pdf_getpage(pdf, t);
+	    pdf_page_render(page, swf);
+            pdf_page_destroy(page);
+        }
+    }
+    swf_output_save(swf, outputname);
+    swf_output_destroy(swf);
+
+    pdf_destroy(pdf);
 
     if(viewer || preloader) {
 #ifndef SYSTEM_BACKTICKS
