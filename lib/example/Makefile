@@ -12,11 +12,12 @@ DBFLAGS	= -g2
 %.o: %.cc
 		$(CXX) -c $(CFLAGS) $(DBFLAGS) -o $@ $<
 
-all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts
+all: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text makefonts glyphshape
 
-movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text
+movies: jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape
 		./jpegtest
 		./box
+		./glyphshape
 		./shape1
 		./transtest
 		./zlibtest
@@ -33,6 +34,9 @@ buttontest: $(RFXSWF) buttontest.o
 
 dumpfont: $(RFXSWF) dumpfont.o
 		$(CC) -o dumpfont dumpfont.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+glyphshape: $(RFXSWF) glyphshape.o
+		$(CC) -o glyphshape glyphshape.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 jpegtest: $(RFXSWF) jpegtest.o
 		$(CC) -o jpegtest jpegtest.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
@@ -58,9 +62,10 @@ makefonts: $(RFXSWF) makefonts.o ../../pdf2swf/swfoutput.o
                 ../../pdf2swf/xpdf/libpdf.a $(DBFLAGS)
 
 clean:
-		rm -f jpegtest.o box.o shape1.o transtest.o zlibtest.o sprites.o\
+		rm -f jpegtest.o box.o shape1.o transtest.o zlibtest.o \
+                sprites.o glyphshape.o \
 		buttontest.o dumpfont.o text.o makefonts.o\
 		jpegtest.swf box.swf shape1.swf trastest.swf zlibtest.swf \
-                sprites.swf buttontest.swf text.swf
+                sprites.swf buttontest.swf text.swf glyphshape.swf
 
 
