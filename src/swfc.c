@@ -181,6 +181,7 @@ typedef struct _parameters {
     float scalex, scaley; 
     CXFORM cxform;
     float rotate;
+    float shear;
     SPOINT pivot;
     SPOINT pin;
 } parameters_t;
@@ -262,12 +263,13 @@ static instance_t* s_addinstance(char*name, character_t*c, U16 depth)
     return i;
 }
 
-static void parameters_set(parameters_t*p, int x,int y, float scalex, float scaley, float rotate, SPOINT pivot, SPOINT pin, CXFORM cxform)
+static void parameters_set(parameters_t*p, int x,int y, float scalex, float scaley, float rotate, float shear, SPOINT pivot, SPOINT pin, CXFORM cxform)
 {
     p->x = x; p->y = y; 
     p->scalex = scalex; p->scaley = scaley;
     p->pin    = pin; p->pivot = pivot;
     p->rotate = rotate; p->cxform = cxform;
+    p->shear = shear;
 }
 
 static void parameters_clear(parameters_t*p)
@@ -277,16 +279,29 @@ static void parameters_clear(parameters_t*p)
     p->pin.x = 1; p->pin.y = 0;
     p->pivot.x = 0; p->pivot.y = 0;
     p->rotate = 0; 
+    p->shear = 0; 
     swf_GetCXForm(0, &p->cxform, 1);
 }
 
 static void makeMatrix(MATRIX*m, parameters_t*p)
 {
     SPOINT h;
-    m->sx =  p->scalex*cos(p->rotate/360*2*3.14159265358979)*65535;
-    m->r1 = -p->scalex*sin(p->rotate/360*2*3.14159265358979)*65535;
-    m->r0 =  p->scaley*sin(p->rotate/360*2*3.14159265358979)*65535;
-    m->sy =  p->scaley*cos(p->rotate/360*2*3.14159265358979)*65535;
+    float sx,r1,r0,sy;
+
+    /*	      /sx r1\ /x\ 
+     *	      \r0 sy/ \y/
+     */
+
+    sx =  p->scalex*cos(p->rotate/360*2*3.14159265358979);
+    r1 = -p->scalex*sin(p->rotate/360*2*3.14159265358979)+sx*p->shear;
+    r0 =  p->scaley*sin(p->rotate/360*2*3.14159265358979);
+    sy =  p->scaley*cos(p->rotate/360*2*3.14159265358979)+r0*p->shear;
+
+    m->sx = (int)(sx*65536+0.5);
+    m->r1 = (int)(r1*65536+0.5);
+    m->r0 = (int)(r0*65536+0.5);
+    m->sy = (int)(sy*65536+0.5);
+
     m->tx = m->ty = 0;
 
     h = swf_TurnPoint(p->pin, m);
@@ -807,6 +822,7 @@ parameters_t s_interpolate(parameters_t*p1, parameters_t*p2, int pos, int num)
     p.scalex = (p2->scalex-p1->scalex)*ratio + p1->scalex;
     p.scaley = (p2->scaley-p1->scaley)*ratio + p1->scaley;
     p.rotate = (p2->rotate-p1->rotate)*ratio + p1->rotate;
+    p.shear = (p2->shear-p1->shear)*ratio + p1->shear;
 
     p.cxform.r0 = ((float)p2->cxform.r0-(float)p1->cxform.r0)*ratio + p1->cxform.r0;
     p.cxform.g0 = ((float)p2->cxform.g0-(float)p1->cxform.g0)*ratio + p1->cxform.g0;
@@ -1239,6 +1255,7 @@ static int c_placement(map_t*args, int type)
     char* scalexstr = lu(args, "scalex");
     char* scaleystr = lu(args, "scaley");
     char* rotatestr = lu(args, "rotate");
+    char* shearstr = lu(args, "shear");
     char* xstr="", *pivotstr="";
     char* ystr="", *anglestr="";
     char*above = lu(args, "above"); /*FIXME*/
@@ -1332,6 +1349,15 @@ static int c_placement(map_t*args, int type)
 	    p.rotate += parseFloat(getOffset(rotatestr))*getSign(rotatestr);
 	} else {
 	    p.rotate = parseFloat(rotatestr);
+	}
+    }
+
+    /* shearing */
+    if(shearstr[0]) {
+	if(isRelative(shearstr)) {
+	    p.shear += parseFloat(getOffset(shearstr))*getSign(shearstr);
+	} else {
+	    p.shear = parseFloat(shearstr);
 	}
     }
 
@@ -1601,16 +1627,16 @@ static struct {
  {"stop", c_stop, "sound"},
 
     // object placement tags
- {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= rotate= above= below="},
- {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= rotate= above= below="},
- {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= rotate= above= below="},
- {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= rotate= above= below="},
- {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= rotate= above= below="},
- {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= rotate= above= below="},
+ {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
+ {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
+ {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
+ {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
+ {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
+ {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
- {"buttonput", c_buttonput, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex=100% scaley=100% rotate=0 above= below="},
- {"texture", c_texture, "<i> x=0 y=0 scale= scalex=100% scaley=100% rotate=0"},
+ {"buttonput", c_buttonput, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex=100% scaley=100% shear=0 rotate=0 above= below="},
+ {"texture", c_texture, "<i> x=0 y=0 scale= scalex=100% scaley=100% shear=0 rotate=0"},
  {"point", c_point, "name x=0 y=0"},
 
     // commands which start a block
