@@ -149,11 +149,11 @@ int png_read_header(FILE*fi, struct png_header*header)
 	    f = data[11];     // filter mode (0)
 	    i = data[12];     // interlace mode (0)
 
-	    if(b!=2 && b!=3) {
+	    if(b!=2 && b!=3 && b!=6) {
 		fprintf(stderr, "Image mode %d not supported!\n", b);
 		exit(1);
 	    }
-	    if(a!=8 && b==2) {
+	    if(a!=8 && (b==2 || b==6)) {
 		fprintf(stderr, "Bpp %d in mode %d not supported!\n", a);
 		exit(1);
 	    }
@@ -199,7 +199,7 @@ byte inline PaethPredictor (byte a,byte b,byte c)
         else return c;
 }
 
-void applyfilter(int mode, U8*src, U8*old, U8*dest, int width)
+void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
 {
     int x;
     unsigned char lastr=0;
@@ -272,6 +272,89 @@ void applyfilter(int mode, U8*src, U8*old, U8*dest, int width)
 	    dest+=4;
 	    old+=4;
 	    src+=3;
+	}
+    }    
+
+}
+
+void applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
+{
+    int x;
+    unsigned char lastr=0;
+    unsigned char lastg=0;
+    unsigned char lastb=0;
+    unsigned char lasta=0;
+    unsigned char upperlastr=0;
+    unsigned char upperlastg=0;
+    unsigned char upperlastb=0;
+    unsigned char upperlasta=0;
+
+    if(mode==0) {
+	for(x=0;x<width;x++) {
+	    dest[0] = src[3];
+	    dest[1] = src[0];
+	    dest[2] = src[1];
+	    dest[3] = src[2];
+	    dest+=4;
+	    src+=4;
+	}
+    }
+    else if(mode==1) {
+	for(x=0;x<width;x++) {
+	    dest[0] = src[3]+lasta;
+	    dest[1] = src[0]+lastr;
+	    dest[2] = src[1]+lastg;
+	    dest[3] = src[2]+lastb;
+	    lasta = dest[0];
+	    lastr = dest[1];
+	    lastg = dest[2];
+	    lastb = dest[3];
+	    dest+=4;
+	    src+=4;
+	}
+    }
+    else if(mode==2) {
+	for(x=0;x<width;x++) {
+	    dest[0] = src[3]+old[0];
+	    dest[1] = src[0]+old[1];
+	    dest[2] = src[1]+old[2];
+	    dest[3] = src[2]+old[3];
+	    dest+=4;
+	    old+=4;
+	    src+=4;
+	}
+    }
+    else if(mode==3) {
+	for(x=0;x<width;x++) {
+	    dest[0] = src[3]+(old[0]+lasta)/2;
+	    dest[1] = src[0]+(old[1]+lastr)/2;
+	    dest[2] = src[1]+(old[2]+lastg)/2;
+	    dest[3] = src[2]+(old[3]+lastb)/2;
+	    lastr = dest[1];
+	    lastg = dest[2];
+	    lastb = dest[3];
+	    dest+=4;
+	    old+=4;
+	    src+=4;
+	}
+    }
+    else if(mode==4) {
+	for(x=0;x<width;x++) {
+	    dest[0] = src[3]+PaethPredictor(lasta,old[0],upperlasta);
+	    dest[1] = src[0]+PaethPredictor(lastr,old[1],upperlastr);
+	    dest[2] = src[1]+PaethPredictor(lastg,old[2],upperlastg);
+	    dest[3] = src[2]+PaethPredictor(lastb,old[3],upperlastb);
+	    lasta = dest[0];
+	    lastr = dest[1];
+	    lastg = dest[2];
+	    lastb = dest[3];
+	    upperlastr = old[0];
+	    upperlastr = old[1];
+	    upperlastg = old[2];
+	    upperlastb = old[3];
+	    dest+=4;
+	    old+=4;
+	    src+=4;
 	}
     }    
 
@@ -364,6 +447,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     else
     if(header.mode == 2) bypp = 3;
     else
+    if(header.mode == 6) bypp = 4;
+    else
 	return 0;
     imagedatalen = bypp * header.width * header.height + 65536;
     imagedata = malloc(imagedatalen);
@@ -421,12 +506,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
 
     swf_SetU16(t, id);		// id
-    if(header.mode == 2) {
+    if(header.mode == 2 || header.mode == 6) {
 	U8*data2 = malloc(header.width*header.height*4);
 	int i,s=0;
 	int x,y;
 	int pos=0;
-	/* 24->32 bit conversion */
+	/* in case for mode 2, the following also performs 24->32 bit conversion */
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
 	    U8*src;
@@ -438,7 +523,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    {
 		/* one byte per pixel */
 		src = &imagedata[pos];
-		pos+=header.width*3;
+		pos+=header.width*(header.mode==6?4:3);
 	    } else {
 		/* not implemented yet */
 		exit(1);
@@ -450,7 +535,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
-	    applyfilter(mode, src, old, dest, header.width);
+	    if(header.mode==6)
+		applyfilter4(mode, src, old, dest, header.width);
+	    else
+		applyfilter3(mode, src, old, dest, header.width);
 	}
 	swf_SetLosslessBits(t, header.width, header.height, data2, BMF_32BIT);
 	free(data2);
