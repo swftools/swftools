@@ -14,7 +14,6 @@ fi
 
 if test "x$PY_VERSION" "!=" "x"; then
     AC_MSG_RESULT(python$PY_VERSION)
-    pythonrfxswf="lib/python/Makefile"
     if test "x$PYTHON_LIB" = "x";then
 	PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
     fi
@@ -34,6 +33,7 @@ int main(int argn, char*argv[])
 {
     return Py_Main(argn, argv);
 }
+bli bla blo
 EOF
     ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
     if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
