@@ -73,7 +73,7 @@ for($nr=1;$nr<$num;$nr++) {
     } else {
 	$t2 =~ s/__prevlink__/&nbsp;/;
     }
-    if($nr < $num) {
+    if($nr < $num-1) {
 	$next= $names[$nr+1];
 	$anext = $basename.".".($nr+1).".".$extension;
 	
