@@ -225,29 +225,60 @@ int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 
 #ifdef HAVE_ZLIB
 
-int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
-{ while (1)
-  { int status = deflate(zs,Z_SYNC_FLUSH);
-
-    if (zs->avail_out == 0)
-    { swf_SetBlock(t,data,zs->next_out-data);
-      zs->next_out = data;
-      zs->avail_out = OUTBUFFER_SIZE;
-    }
-    
-    if (zs->avail_in==0)
-    { if (finish) deflate(zs,Z_FINISH);
-      break;
-    }
+int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,boolean finish)
+{ 
+  U8*data=malloc(OUTBUFFER_SIZE);
+  zs->next_out = data;
+  zs->avail_out = OUTBUFFER_SIZE;
+  while (1)
+  { int status = deflate(zs,Z_NO_FLUSH);
 
     if (status!=Z_OK)
     {
 #ifdef DEBUG_RFXSWF
       fprintf(stderr,"rfxswf: zlib compression error (%i)\n",status);
 #endif
+      free(data);
       return status;
     }
+
+    if (zs->next_out!=data)
+    { swf_SetBlock(t,data,zs->next_out - data);
+      zs->next_out = data;
+      zs->avail_out = OUTBUFFER_SIZE;
+    }
+    
+    if (zs->avail_in==0)
+      break;
   }
+
+  if(!finish) {
+      free(data);
+      return 0;
+  }
+
+  while(1) {
+    int status = deflate(zs,Z_FINISH);
+    if (status!=Z_OK && status!=Z_STREAM_END)
+    {
+#ifdef DEBUG_RFXSWF
+      fprintf(stderr,"rfxswf: zlib compression error (%i)\n",status);
+#endif
+      free(data);
+      return status;
+    }
+
+    if (zs->next_out!=data)
+    { 
+      swf_SetBlock(t,data,zs->next_out - data);
+      zs->next_out = data;
+      zs->avail_out = OUTBUFFER_SIZE;
+    }
+
+    if(status == Z_STREAM_END)
+	break;
+  }
+  free(data);
   return 0;
 }
 
@@ -255,7 +286,6 @@ int RFXSWF_deflate_wraper(TAG * t,z_stream * zs,U8 * data,boolean finish)
 int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_flags)
 { int res = 0;
   int bps;
-  U8 * data;
   
   switch (bitmap_flags)
   { case BMF_8BIT:
@@ -275,7 +305,19 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
   swf_SetU16(t,width);
   swf_SetU16(t,height);
 
-  if ((data=malloc(OUTBUFFER_SIZE)))
+
+  /* fix for buggy flash players which can't handle plain-color bitmaps 
+     TODO: is there a better solution?
+  */
+  { int s;
+    int l=32;
+    for(s=0;s<height*width*4;s+=4) {
+	((U8*)bitmap)[s+0] = s;
+	if(s>l)
+	    break;
+    }
+  }
+
   { z_stream zs;
       
     memset(&zs,0x00,sizeof(z_stream));
@@ -285,17 +327,12 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
     if (deflateInit(&zs,Z_DEFAULT_COMPRESSION)==Z_OK)
     { zs.avail_in         = bps*height;
       zs.next_in          = bitmap;
-      zs.next_out         = data;
-      zs.avail_out        = OUTBUFFER_SIZE;
 
-      if (RFXSWF_deflate_wraper(t,&zs,data,TRUE)<0) res = -3;
-      if (zs.next_out>data) swf_SetBlock(t,data,zs.next_out-data);
-
+      if (RFXSWF_deflate_wraper(t,&zs,TRUE)<0) res = -3;
       deflateEnd(&zs);
       
     } else res = -3; // zlib error
-    free(data);
-  } else res = -2; // memory error
+  }
   
   return res;
 }
@@ -323,7 +360,6 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
   swf_SetU16(t,height);
   swf_SetU8(t,ncolors-1); // number of pal entries
 
-  if ((data=malloc(OUTBUFFER_SIZE)))
   { z_stream zs;
 
     memset(&zs,0x00,sizeof(z_stream));
@@ -368,16 +404,14 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
         }
 
         zs.next_in          = zpal;
-        zs.next_out         = data;
-        zs.avail_out        = OUTBUFFER_SIZE;
 
-        if (RFXSWF_deflate_wraper(t,&zs,data,FALSE)<0) res = -3;
+        if (RFXSWF_deflate_wraper(t,&zs,FALSE)<0) res = -3;
 
                                     // compress bitmap
         zs.next_in = bitmap;
         zs.avail_in = (bps*height*sizeof(U8));
 
-        if (RFXSWF_deflate_wraper(t,&zs,data,TRUE)<0) res = -3;
+        if (RFXSWF_deflate_wraper(t,&zs,TRUE)<0) res = -3;
 
         deflateEnd(&zs);
 
@@ -387,7 +421,7 @@ int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * p
       } else res = -2; // memory error
     } else res = -3; // zlib error
     free(data);
-  } else res = -2;
+  }
   
   if (!palette) free(pal);
 
