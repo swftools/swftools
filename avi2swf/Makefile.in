@@ -6,7 +6,7 @@ include ../Makefile.common
 VIDEO_LIBS=@VIDEO_LIBS@
 VIDEO_CFLAGS=@VIDEO_CFLAGS@
 
-all: avi2swf
+all: avi2swf$(E)
 
 videoreader_avifile.o: videoreader_avifile.cc
 	$(CC) $(VIDEO_CFLAGS) $< -o $@
@@ -21,8 +21,8 @@ v2swf.o: v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
 avi2swf$(E): avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o
-	$(LL) avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o -o avi2swf ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
-	$(STRIP) avi2swf
+	$(LL) avi2swf.o v2swf.o videoreader_avifile.o videoreader_vfw.o ../lib/q.o -o avi2swf$(E) ../lib/librfxswf.a $(LIBS) $(VIDEO_LIBS)
+	$(STRIP) avi2swf$(E)
 
 install:
 	$(mkinstalldirs) $(bindir)
