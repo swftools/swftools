@@ -64,6 +64,7 @@ static struct options_t options[] = {
 {"e", "html"},
 {"a", "action"},
 {"t", "text"},
+{"s", "shapes"},
 {"p", "placements"},
 {"X", "width"},
 {"Y", "height"},
@@ -71,7 +72,6 @@ static struct options_t options[] = {
 {"f", "frames"},
 {"d", "hex"},
 {"u", "used"},
-{"s", "shapes"},
 {0,0}
 };
 
@@ -151,6 +151,7 @@ void args_callback_usage(char *name)
     printf("-e , --html                    Print out html code for embedding the file\n");
     printf("-a , --action                  Disassemble action tags\n");
     printf("-t , --text                    Show text fields (like swfstrings).\n");
+    printf("-s , --shapes                  Show shape coordinates/styles\n");
     printf("-p , --placements              Show placement information\n");
     printf("-X , --width                   Prints out a string of the form \"-X width\".\n");
     printf("-Y , --height                  Prints out a string of the form \"-Y height\".\n");
