@@ -494,7 +494,28 @@ int spritetagids[] =
 
 int getidfromtag(struct swf_tag* tag)
 {
-    // todo: check for more than one id
+    int num = 1;
+    switch(tag->id) {
+	case TAGID_PLACEOBJECT2:
+	    num++;
+	case TAGID_PLACEOBJECT:
+	   reader_init (tag->data, tag->length);
+	   if(num>=2) {
+		char b = readu8();
+		if(!(b&2))
+		    return -1;
+	   }
+	   readu16();
+	   return readu16();
+	break;
+	case TAGID_REMOVEOBJECT:
+	   return *(u16*)tag->data;
+	break;
+	case TAGID_REMOVEOBJECT2:
+	   return -1;
+	break;
+    }
+
     return *(u16*)tag->data;
 }
 
