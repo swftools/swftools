@@ -57,6 +57,32 @@ void draw_conicTo(drawer_t*draw, FPOINT*  c, FPOINT*  to)
     draw->pos = *to;
 }
 
+/* convenience routine */
+static void draw_conicTo2(drawer_t*draw, double x1, double y1, double  x2, double y2)
+{
+    FPOINT c1,c2;
+    c1.x = x1;
+    c1.y = y1;
+    c2.x = x2;
+    c2.y = y2;
+    draw_conicTo(draw, &c1, &c2);
+}
+/* convenience routine */
+static void draw_moveTo2(drawer_t*draw, double x, double y)
+{
+    FPOINT c;
+    c.x = x; c.y = y;
+    draw->moveTo(draw, &c);
+}
+/* convenience routine */
+static void draw_lineTo2(drawer_t*draw, double x, double y)
+{
+    FPOINT c;
+    c.x = x; c.y = y;
+    draw->lineTo(draw, &c);
+}
+
+
 void draw_string(drawer_t*draw, const char*string)
 {
     const char*p = string;
@@ -95,6 +121,30 @@ void draw_string(drawer_t*draw, const char*string)
 	    to.x = atoi(getToken(&p));
 	    to.y = atoi(getToken(&p));
 	    draw_conicTo(draw, &mid, &to);
+	}
+	else if(!strncmp(token, "circle", 6)) {
+	    int mx,my,r;
+	    double r2 = 0.70710678118654757*r;
+	    mx = atoi(getToken(&p));
+	    my = atoi(getToken(&p));
+	    r = atoi(getToken(&p));
+	    draw_moveTo2(draw, mx, my-r);
+	    draw_conicTo2(draw, mx+r2, my-r2, mx+r, my);
+	    draw_conicTo2(draw, mx+r2, my+r2, mx, my+r);
+	    draw_conicTo2(draw, mx-r2, my+r2, mx-r, my);
+	    draw_conicTo2(draw, mx-r2, my-r2, mx, my-r);
+	}
+	else if(!strncmp(token, "box", 3)) {
+	    int x1,y1,x2,y2;
+	    x1 = atoi(getToken(&p));
+	    y1 = atoi(getToken(&p));
+	    x2 = atoi(getToken(&p));
+	    y2 = atoi(getToken(&p));
+	    draw_moveTo2(draw, x1, y1);
+	    draw_lineTo2(draw, x1, y2);
+	    draw_lineTo2(draw, x2, y2);
+	    draw_lineTo2(draw, x2, y1);
+	    draw_lineTo2(draw, x1, y1);
 	}
 	else if(!strncmp(token, "cubicTo", 5) ||
 	        !strncmp(token, "C", 1) //svg
