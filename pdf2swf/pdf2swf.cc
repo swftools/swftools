@@ -323,6 +323,7 @@ void args_callback_usage(char*name)
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
     printf("-T  --flashversion=num     Set the flash version in the header to num (default: 4)\n");
     printf("-s insertstop              Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
+    printf("-s zoom=factor             Scale result, default: 100 (before 0.6.2: 72)\n");
     printf("-s jpegquality=quality     Set quality of embedded jpeg pictures (default:85)\n");
     printf("-s caplinewidth=value      Set the minimum line width to trigger cap style handling to value. (3)\n");
     printf("-s splinequality=value     Set the quality of spline convertion to value (0-100, default: 100).\n");
