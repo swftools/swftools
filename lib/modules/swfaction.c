@@ -26,7 +26,8 @@ f: frame (word)
 u: url (string)
 t: target (string)
 l: label (string)
-c: constant pool (string)
+C: constant pool header (byte)
+c: constant pool entry (string)
 s: skip (byte) (number of actions)
 m: method (byte) GetUrl2:(0=none, 1=get, 2=post)/GotoFrame2:(1=play)
 b: branch (word) (number of bytes)
@@ -106,7 +107,7 @@ r: register (byte)
 {5,"GetMember", 0x4e,""},
 {5,"SetMember", 0x4f,""},
 {5,"CallMethod", 0x52,""},
-{5,"Constantpool", 0x88, "c"},
+{5,"Constantpool", 0x88, "Cc"},
 {5,"DefineLocal", 0x3c,""},
 {5,"DefineLocal2", 0x41,""},
 {5,"Makehash", 0x43, ""}, //??
@@ -127,7 +128,7 @@ r: register (byte)
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 
-ActionTAG* swf_GetActions(TAG*tag) 
+ActionTAG* GetActions(TAG*tag) 
 {
     U8 op = 1;
     int length;
@@ -136,189 +137,205 @@ ActionTAG* swf_GetActions(TAG*tag)
     U8*data;
     while(op)
     {
-        int pos;
-        action->next = (ActionTAG*)malloc(sizeof(ActionTAG));
-        action->next->prev = action;
-        action->next->next = 0;
-        action = action->next;
+	int pos;
+	action->next = (ActionTAG*)malloc(sizeof(ActionTAG));
+	action->next->prev = action;
+	action->next->next = 0;
+	action = action->next;
 
-        op = swf_GetU8(tag);
-        if(op<0x80)
-            length = 0;
-        else
-            length = swf_GetU16(tag);
+	op = GetU8(tag);
+	if(op<0x80)
+	    length = 0;
+	else
+	    length = GetU16(tag);
 
-        if(length) {
-            int t;
-            data = malloc(length);
-            for(t=0;t<length;t++)
-                data[t] = swf_GetU8(tag);
-        } else {
-          data = 0;
-        }
-        action->op = op;
-        action->len = length;
-        action->data = data;
-        action->parent = tag;
+	if(length) {
+	    int t;
+	    data = malloc(length);
+	    for(t=0;t<length;t++)
+		data[t] = GetU8(tag);
+	} else {
+	  data = 0;
+	}
+	action->op = op;
+	action->len = length;
+	action->data = data;
+	action->parent = tag;
     }
     return tmp.next;
 }
 
-void swf_SetActions(TAG*tag, ActionTAG*action)
+void SetActions(TAG*tag, ActionTAG*action)
 {
     while(action)
     {
-        swf_SetU8(tag, action->op);
-        if(action->op & 128)
-          swf_SetU16(tag, action->len);
+	SetU8(tag, action->op);
+	if(action->op & 128)
+	  SetU16(tag, action->len);
 
-        swf_SetBlock(tag, action->data, action->len);
+	SetBlock(tag, action->data, action->len);
 
-        action = action->next;
+	action = action->next;
     }
 }
 
-int swf_OpAdvance(char c, char*data)
+int OpAdvance(char c, char*data)
 {
     switch (c)
     {
-        case 'f':
-            return 2;
-        case 'u':
-            return strlen(data)+1;
-        case 't':
-            return strlen(data)+1;
-        case 'l': 
-            return strlen(data)+1;
-        case 'c': 
-            return strlen(data)+1;
-        case 's':
-            return 1;
-        case 'm':
-            return 1;
-        case 'b':
-            return 2;
-        case 'p': {
-            U8 type = *data++;
-            if(type == 0) {
-                return 1+strlen(data)+1; //string
-            } else if (type == 1) {
-                return 1+4; //float
-            } else if (type == 2) {
-                return 1+0; //NULL
-            } else if (type == 4) {
-                return 1+1; //register
-            } else if (type == 5) {
-                return 1+1; //bool
-            } else if (type == 6) {
-                return 1+8; //double
-            } else if (type == 7) {
-                return 1+4; //int
-            } else if (type == 8) {
-                return 1+1; //lookup
-            }
-        }
+	case 'f':
+	    return 2;
+	case 'u':
+	    return strlen(data)+1;
+	case 't':
+	    return strlen(data)+1;
+	case 'l': 
+	    return strlen(data)+1;
+	case 'c': 
+	    return strlen(data)+1;
+	case 'C': 
+	    return 2;
+	case 's':
+	    return 1;
+	case 'm':
+	    return 1;
+	case 'b':
+	    return 2;
+	case 'p': {
+	    U8 type = *data++;
+	    if(type == 0) {
+		return 1+strlen(data)+1; //string
+	    } else if (type == 1) {
+		return 1+4; //float
+	    } else if (type == 2) {
+		return 1+0; //NULL
+	    } else if (type == 4) {
+		return 1+1; //register
+	    } else if (type == 5) {
+		return 1+1; //bool
+	    } else if (type == 6) {
+		return 1+8; //double
+	    } else if (type == 7) {
+		return 1+4; //int
+	    } else if (type == 8) {
+		return 1+1; //lookup
+	    }
+	    break;
+	}
     }
+    return 0;
 }
 
 /* TODO: this should be in swfdump.c */
-void swf_DumpActions(ActionTAG*atag, char*prefix) 
+void DumpActions(ActionTAG*atag, char*prefix) 
 {
     U8 op;
     int t;
     U8*data;
     char* cp;
     if(!prefix) 
-        prefix="";
+	prefix="";
     while(atag)
     {
-        for(t=0;t<definedactions;t++)
-            if(actions[t].op == atag->op)
-                break;
+	U8 poollen = 0;
+	for(t=0;t<definedactions;t++)
+	    if(actions[t].op == atag->op)
+		break;
 
-        if(t==definedactions) {
-            printf("%s (%5d bytes) action: %02x\n", prefix, atag->len, op);
-            atag = atag->next;
-            continue;
-        }
-        printf("%s (%5d bytes) action: %s", prefix, atag->len, actions[t].name);
-        cp = actions[t].flags;
-        data = atag->data;
-        if(atag->len) //TODO: check for consistency: should we have a length?
-        while(*cp)
-        {
-            switch(*cp)
-            {
-                case 'f': {
-                    printf(" %d", *(U16*)data); //FIXME: le/be
-                } break;
-                case 'u': {
-                    printf(" URL:\"%s\"", data);
-                } break;
-                case 't': {
-                    printf(" Target:\"%s\"", data);
-                } break;
-                case 'l': {
-                    printf(" Label:\"%s\"", data);
-                } break;
-                case 'c': {
-                    printf(" Constant Pool:\"%s\"", data);
-                } break;
-                case 's': {
-                    printf(" +%d", data);
-                } break;
-                case 'm': {
-//m: method (byte) url:(0=none, 1=get, 2=datat)/gf2:(1=play)
-                    printf(" %d", data);
-                } break;
-                case 'b': {
-                    printf(" %d", *(U16*)data);
-                } break;
-                case 'p': {
-                    U8 type = *data;
-                    char*value = data+1;
-                    if(type == 0) {
-                        printf(" String:\"%s\"", value);
-                    } else if (type == 1) {
-                        printf(" Float:\"%f\"", *(float*)value);
-                    } else if (type == 2) {
-                        printf(" NULL");
-                    } else if (type == 4) {
-                        printf(" register:%d", value);
-                    } else if (type == 5) {
-                        printf(" %s", *value?"true":"false");
-                    } else if (type == 6) {
-                        printf(" %f", *(double*)value);
-                    } else if (type == 7) {
-                        printf(" %d", *(int*)value);
-                    } else if (type == 8) {
-                        printf(" Lookup:%d", *value);
-                    }
-                } break;
-            }
-            data += swf_OpAdvance(*cp, data);
-            cp++;
-        }
+	if(t==definedactions) {
+	    printf("%s (%5d bytes) action: %02x\n", prefix, atag->len, op);
+	    atag = atag->next;
+	    continue;
+	}
+	printf("%s (%5d bytes) action: %s", prefix, atag->len, actions[t].name);
+	cp = actions[t].flags;
+	data = atag->data;
+	if(atag->len) //TODO: check for consistency: should we have a length?
+	while(*cp)
+	{
+	    switch(*cp)
+	    {
+		case 'f': {
+		    printf(" %d", *(U16*)data); //FIXME: le/be
+		} break;
+		case 'u': {
+		    printf(" URL:\"%s\"", data);
+		} break;
+		case 't': {
+		    printf(" Target:\"%s\"", data);
+		} break;
+		case 'l': {
+		    printf(" Label:\"%s\"", data);
+		} break;
+		case 'c': {
+		    printf(" String:\"%s\"", data);
+	        } break;
+		case 'C': {
+		    poollen = *data;
+		    printf("(%d entries)", poollen);
+	    	} break;
+		case 's': {
+		    printf(" +%d", data);
+		} break;
+		case 'm': {
+		    //m: method (byte) url:(0=none, 1=get, 2=datat)/gf2:(1=play)
+		    printf(" %d", data);
+		} break;
+		case 'b': {
+		    printf(" %d", *(U16*)data);
+		} break;
+		case 'p': {
+		    U8 type = *data;
+		    char*value = data+1;
+		    if(type == 0) {
+			printf(" String:\"%s\"", value);
+		    } else if (type == 1) {
+			printf(" Float:\"%f\"", *(float*)value);
+		    } else if (type == 2) {
+			printf(" NULL");
+		    } else if (type == 4) {
+			printf(" register:%d", value);
+		    } else if (type == 5) {
+			printf(" %s", *value?"true":"false");
+		    } else if (type == 6) {
+			printf(" %f", *(double*)value);
+		    } else if (type == 7) {
+			printf(" %d", *(int*)value);
+		    } else if (type == 8) {
+			printf(" Lookup:%d", *value);
+		    }
+		} break;
+	    }
+	    data += OpAdvance(*cp, data);
+	    if(*cp!='c' || !poollen)
+		cp++;
+	    if(poollen)
+		poollen--;
+	}
 
-        if(data < atag->data + atag->len)
-        {
-            int nl = ((atag->data+atag->len)-data);
-            int t;
-            printf(" remainder of %d bytes:\"", nl);
-            for(t=0;t<nl;t++) {
-                if(data[t]<32)
-                    printf("\\%d",data[t]);
-                else
-                    printf("%c", data[t]);
-            }
-            printf("\"");
-        }
-        printf("\n");
-        atag = atag->next;
+	if(data < atag->data + atag->len)
+	{
+	    int nl = ((atag->data+atag->len)-data);
+	    int t;
+	    printf(" remainder of %d bytes:\"", nl);
+	    for(t=0;t<nl;t++) {
+		if(data[t]<32)
+		    printf("\\%d",data[t]);
+		else
+		    printf("%c", data[t]);
+	    }
+	    printf("\"");
+	}
+	printf("\n");
+	atag = atag->next;
     }
 }
 
-int swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
+static const char TYPE_URL = 1;
+static const char TYPE_TARGET = 2;
+static const char TYPE_STRING = 4;
+
+int ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 {
     U8 op;
     int t;
@@ -327,60 +344,103 @@ int swf_ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
     
     while(atag)
     {
+	U8 poollen = 0;
+	for(t=0;t<definedactions;t++)
+	    if(actions[t].op == atag->op)
+		break;
 
-        for(t=0;t<definedactions;t++)
-            if(actions[t].op == atag->op)
-                break;
+	if(t==definedactions) {
+	    // unknown actiontag
+	    atag = atag->next;
+	    continue;
+	}
+	cp = actions[t].flags;
+	data = atag->data;
+	if(atag->len) {
+	    while(*cp) {
+		U8 * replacepos = 0;
+		int replacelen = 0;
+		U8 * replacement = 0;
+		switch(*cp)
+		{
+		    case 'u': {
+			if(type&TYPE_URL)
+			{
+			    replacelen = strlen(data);
+			    replacepos = data;
+			    replacement = callback(data); // may be null
+			}
+		    } break;
+	    	    case 't': {
+			if(type&TYPE_TARGET)
+			{
+			    replacelen = strlen(data);
+			    replacepos = data;
+			    replacement = callback(data); // may be null
+			}
+		    } break;
+		    case 'c': {
+		    	if(type&TYPE_STRING)
+			{
+			    replacelen = strlen(data);
+			    replacepos = data;
+			    replacement = callback(data); // may be null
+			}
+		    } break;
+		    case 'C': {
+			poollen = (*data);
+		    } break;
+		    case 'o': {
+		    } break;
+		    case 'p': {
+			U8 datatype = *data;
+			char*value = &data[1];
+			if(datatype == 0) { //string
+			    if(type&TYPE_STRING)
+			    {
+				replacelen = strlen(value);
+				replacepos = value;
+				replacement = callback(value); // may be null
+			    }
+			} else if (datatype == 8) { //lookup
+			}
+		    } break;
+		}
+		data += OpAdvance(*cp, data);
+		if(*cp!='c' || !poollen)
+		    cp++;
+		if(poollen)
+		    poollen--;
 
-        if(t==definedactions) {
-            // unknown actiontag
-            atag = atag->next;
-            continue;
-        }
-        cp = actions[t].flags;
-        data = atag->data;
-        if(atag->len) 
-        {
-            while(*cp)
-            {
-                char * replacepos = 0;
-                int replacelen = 0;
-                char * replacement;
-                switch(*cp)
-                {
-                    case 'u': {
-                        replacelen = strlen(data);
-                        replacepos = data;
-                        replacement = callback(data); // may be null
-                    } break;
-                    /* everything below may very well
-                       contain an URL, too. However, to extract 
-                       these, we would have to call callback also for
-                       strings which might not contain an url.
-                        TODO: should we check for Strings which start 
-                        with "http://"?
-                        Nope: user can force it by reg.ex. if he wants to /r
-                     */
-                    case 'c': {
-                    } break;
-                    case 'o': {
-                    } break;
-                    case 'p': {
-                        U8 type = *data;
-                        char*value = &data[1];
-                        if(type == 0) { //string
-                        } else if (type == 8) { //lookup
-                        }
-                    } break;
-                }
-                data += swf_OpAdvance(*cp, data);
-                cp++;
-
-                //TODO: apply replacement here.
-            }
-        }
-
-        atag = atag->next;
+		if(replacement)
+		{
+		    int newlen = strlen(replacement);
+		    char * newdata = malloc(atag->len - replacelen + newlen);
+		    int rpos = replacepos - atag->data;
+		    memcpy(newdata, atag->data, rpos);
+		    memcpy(&newdata[rpos], replacement, newlen);
+		    memcpy(&newdata[rpos+newlen], &replacepos[replacelen],
+			    &data[atag->len] - &replacepos[replacelen]);
+		    free(atag->data);
+		    atag->data = newdata;
+		    data = &atag->data[rpos+newlen+1];
+		}
+	    }
+	}
+	atag = atag->next;
     }
+}
+
+void ActionEnumerateTargets(ActionTAG*atag, char*(*callback)(char*))
+{
+    ActionEnumerate(atag, callback, TYPE_TARGET);
+}
+void ActionEnumerateStrings(ActionTAG*atag, char*(*callback)(char*))
+{
+    ActionEnumerate(atag, callback, TYPE_STRING);
+}
+void ActionEnumerateURLs(ActionTAG*atag, char*(*callback)(char*))
+{
+    ActionEnumerate(atag, callback, TYPE_URL);
 }
 
