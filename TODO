@@ -2,7 +2,6 @@ General:
 
     * make more stuff dependent on the information in config.h
     * consistent output handling if -o is missing. (out.swf/stdout)
-    * do some pf{a,b}->swf converter for the standard fonts
 
 pdf2swf:
 
@@ -17,6 +16,7 @@ swfcombine:
 
     * Allow substituting frames (which have a name), too?
     * Allow ids instead of names
+    * --cat option (concatenates the movies)?
     * Relocate  SetTarget "/content"  stuff
     * --merge mode? (Doesn't store everything in movieclips)
 
@@ -26,11 +26,14 @@ swfdump:
 
 rfxswf-lib:
    
-    * swf_WriteFont() should write definefont2 tags for more complex fonts.
+    * swf_WriteFont() should write definefont2 tags for more complex fonts,
+      example textfields don't show characters >256.
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
     * s/GetDataSize/GetTagLen/g
       s/GetDataSizePtr/GetTagLenPtr/g
+      s/ObjectPlace/ObjectSet/g
       (s/GetFrameNo/GetTagFrameNo/g ?)
-    
+    * swfshape.c: the shape parameter is mostly unused. so are px, py.
+    * swf_SetBits() crashes if the tag has no data allocated yet.
   
