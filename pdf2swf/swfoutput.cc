@@ -35,6 +35,7 @@
 extern "C" {
 #include "../lib/log.h"
 #include "../lib/rfxswf.h"
+#include "../lib/gfxdevice.h"
 }
 
 #define CHARDATAMAX 8192
@@ -56,6 +57,8 @@ struct fontlist_t
     fontlist_t*next;
 };
 
+double config_ppmsubpixels=0;
+double config_jpegsubpixels=0;
 int config_opennewwindow=0;
 int config_ignoredraworder=0;
 int config_drawonlyshapes=0;
@@ -72,6 +75,8 @@ float config_minlinewidth=0.05;
 
 typedef struct _swfoutput_internal
 {
+    swfoutput*obj; // the swfoutput object where this internal struct resides
+
     SWF swf;
 
     fontlist_t* fontlist;
@@ -104,10 +109,20 @@ typedef struct _swfoutput_internal
     U32 clipdepths[128];
     int clippos;
 
+    /* image cache */
+    int pic_xids[1024];
+    int pic_yids[1024];
+    int pic_ids[1024];
+    int pic_width[1024];
+    int pic_height[1024];
+    int picpos;
+
     int frameno;
     int lastframeno;
     
     char fillstylechanged;
+
+    int jpeg; //next image type
     
     int bboxrectpos;
     SRECT bboxrect;
@@ -118,13 +133,20 @@ typedef struct _swfoutput_internal
     int chardatapos;
     int firstpage;
     char pagefinished;
+
+    /* during the transition to the gfxdevice interface:
+       a device which uses this swfoutput as target */
+    gfxdevice_t device;
+
 } swfoutput_internal;
+    
+void swf_fillbitmap(struct _gfxdevice*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
+int swf_setparameter(struct _gfxdevice*driver, const char*key, const char*value);
 
 static swfoutput_internal* init_internal_struct()
 {
     swfoutput_internal*i = (swfoutput_internal*)malloc(sizeof(swfoutput_internal));
     memset(i, 0, sizeof(swfoutput_internal));
-   
 
     i->storefont = 0;
     i->currentswfid = 0;
@@ -151,6 +173,10 @@ static swfoutput_internal* init_internal_struct()
     i->chardatapos = 0;
     i->firstpage = 1;
     i->pagefinished = 1;
+
+    i->device.internal = (void*)i;
+    i->device.fillbitmap = swf_fillbitmap;
+    i->device.setparameter = swf_setparameter;
 
     return i;
 };
@@ -1325,7 +1351,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
             }
         }
         if(bad>5) {
-	    msg("<warning> Font %s has bad unicode mapping", swffont->name);
+	    msg("<warning> Font %s has bad unicode mapping", fontid);
             swffont->encoding = 255;
         }
     }
@@ -1544,6 +1570,7 @@ void swfoutput_init(struct swfoutput* obj)
 {
     memset(obj, 0, sizeof(struct swfoutput));
     obj->internal = init_internal_struct();
+    ((swfoutput_internal*)obj->internal)->obj = obj;
 
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
 
@@ -1578,7 +1605,6 @@ void swfoutput_init(struct swfoutput* obj)
 static void startshape(struct swfoutput*obj)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    RGBA rgb;
     SRECT r;
 
     if(i->textid>=0)
@@ -1588,15 +1614,13 @@ static void startshape(struct swfoutput*obj)
 
     swf_ShapeNew(&i->shape);
     i->linestyleid = swf_ShapeAddLineStyle(i->shape,i->linewidth,&obj->strokergb);
-    rgb.r = obj->fillrgb.r;
-    rgb.g = obj->fillrgb.g;
-    rgb.b = obj->fillrgb.b;
     i->fillstyleid = swf_ShapeAddSolidFillStyle(i->shape,&obj->fillrgb);
 
     i->shapeid = ++i->currentswfid;
     swf_SetU16(i->tag,i->shapeid);  // ID
 
     i->bboxrectpos = i->tag->len;
+    /* changed later */
     r.xmin = 0;
     r.ymin = 0;
     r.xmax = 20*i->max_x;
@@ -2085,7 +2109,7 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
         if(points[t].x<xmin) xmin=points[t].x;
         if(points[t].y<ymin) ymin=points[t].y;
     }
-   
+
     p1.x=points[0].x; p1.y=points[0].y; p2.x=points[1].x; p2.y=points[1].y; 
     p3.x=points[2].x; p3.y=points[2].y; p4.x=points[3].x; p4.y=points[3].y;
    
@@ -2201,36 +2225,295 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     }
 }
 
-static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey, 
+      
+///////////
+/*
+for(t=0;t<picpos;t++)
+      {
+	  if(pic_xids[t] == xid &&
+	     pic_yids[t] == yid) {
+	      width = pic_width[t];
+	      height = pic_height[t];
+	      found = t;break;
+	  }
+      }
+	  pic_ids[picpos] = swfoutput_drawimagelosslessN(&output, pic, pal, width, height, x1,y1,x2,y2,x3,y3,x4,y4, numpalette);
+	  pic_xids[picpos] = xid;
+	  pic_yids[picpos] = yid;
+	  pic_width[picpos] = width;
+	  pic_height[picpos] = height;
+	  if(picpos<1024)
+	      picpos++;
+	    pic[width*y+x] = buf[0];
+	    xid+=x*buf[0]+1;
+	    yid+=y*buf[0]*3+1;
+      
+	    xid += pal[1].r*3 + pal[1].g*11 + pal[1].b*17;
+      yid += pal[1].r*7 + pal[1].g*5 + pal[1].b*23;
+      
+      int xid = 0;
+      int yid = 0;
+	  xid += x*r+x*b*3+x*g*7+x*a*11;
+	  yid += y*r*3+y*b*17+y*g*19+y*a*11;
+      int t,found = -1;
+      for(t=0;t<picpos;t++)
+      {
+	  if(pic_xids[t] == xid &&
+	     pic_yids[t] == yid) {
+	      found = t;break;
+	  }
+      }
+      if(found<0) {
+*/
+///////////
+
+/* gfxtools.c */
+
+gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y)
+{
+    if(box.xmin==0 || box.ymin==0 || box.xmax==0 || box.ymax==0) {
+	box.xmin = x;
+	box.ymin = y;
+	box.xmax = x;
+	box.ymax = y;
+	if(x==0 && y==0) box.xmax = 0.0000001;
+	return box;
+    }
+    if(x < box.xmin)
+	box.xmin = x;
+    if(x > box.xmax)
+	box.xmax = x;
+    if(y < box.ymin)
+	box.ymin = y;
+    if(y > box.ymax)
+	box.ymax = y;
+    return box;
+}
+
+gfxbbox_t gfxline_getbbox(gfxline_t*line)
+{
+    gfxcoord_t x=0,y=0;
+    gfxbbox_t bbox = {0,0,0,0};
+    char last = 0;
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    last = 1;
+	} else if(line->type == gfx_lineTo) {
+	    if(last) bbox = gfxbbox_expand_to_point(bbox, x, y);
+	    bbox = gfxbbox_expand_to_point(bbox, line->x, line->y);
+	    last = 0;
+	} else if(line->type == gfx_splineTo) {
+	    if(last) bbox = gfxbbox_expand_to_point(bbox, x, y);
+	    bbox = gfxbbox_expand_to_point(bbox, line->sx, line->sy);
+	    bbox = gfxbbox_expand_to_point(bbox, line->x, line->y);
+	    last = 0;
+	}
+	x = line->x;
+	y = line->x;
+	line = line->next;
+    }
+    return bbox;
+}
+/* ---------- */
+
+static void drawgfxline(struct swfoutput*obj, gfxline_t*line)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    moveto(obj, i->tag, line->x, line->y);
+	} if(line->type == gfx_lineTo) {
+	    lineto(obj, i->tag, line->x, line->y);
+	} else if(line->type == gfx_splineTo) {
+	    plotxy s,p;
+	    s.x = line->sx;p.x = line->x;
+	    s.y = line->sy;p.y = line->y;
+	    splineto(obj, i->tag, s, p);
+	}
+	line = line->next;
+    }
+}
+static CXFORM gfxcxform_to_cxform(gfxcxform_t* c)
+{
+    CXFORM cx;
+    swf_GetCXForm(0, &cx, 1);
+    if(!c)
+	return cx;
+    if(c->rg!=0 || c->rb!=0 || c->ra!=0 ||
+       c->gr!=0 || c->gb!=0 || c->ga!=0 ||
+       c->br!=0 || c->bg!=0 || c->ba!=0 ||
+       c->ar!=0 || c->ag!=0 || c->ab!=0)
+	msg("<warning> CXForm not SWF-compatible");
+
+    cx.a0 = (S16)(c->aa*256);
+    cx.r0 = (S16)(c->rr*256);
+    cx.g0 = (S16)(c->gg*256);
+    cx.b0 = (S16)(c->bb*256);
+    cx.a1 = c->t.a;
+    cx.r1 = c->t.r;
+    cx.g1 = c->t.g;
+    cx.b1 = c->t.b;
+    return cx;
+}
+
+static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int targetheight, int* newwidth, int* newheight)
+{
+    RGBA*newpic = 0;
+    RGBA*mem = (RGBA*)img->data;
+    int bitid = ++i->currentswfid;
+    
+    int sizex = img->width;
+    int sizey = img->height;
+    int num_colors = swf_ImageGetNumberOfPaletteEntries(mem,sizex,sizey,0);
+    int has_alpha = swf_ImageHasAlpha(mem,sizex,sizey);
+    int is_jpeg = i->jpeg;
+    i->jpeg = 0;
+
+    int newsizex=sizex, newsizey=sizey;
+
+    /// {
+    if(is_jpeg && config_jpegsubpixels) {
+	newsizex = (int)(targetwidth*config_jpegsubpixels+0.5);
+	newsizey = (int)(targetheight*config_jpegsubpixels+0.5);
+    } else if(!is_jpeg && config_ppmsubpixels) {
+	newsizex = (int)(targetwidth*config_ppmsubpixels+0.5);
+	newsizey = (int)(targetheight*config_ppmsubpixels+0.5);
+    }
+    /// }
+
+    *newwidth = newsizex;
+    *newheight  = newsizey;
+
+
+    /* TODO: cache images */
+    
+    msg("<verbose> Drawing %dx%d %s%simage at size %dx%d (%dx%d), %s%d colors",
+	    sizex, sizey, 
+	    has_alpha?(has_alpha==2?"semi-transparent ":"transparent "):"", 
+	    is_jpeg?"jpeg-":"",
+	    newsizex, newsizey,
+	    targetwidth, targetheight,
+	    /*newsizex, newsizey,*/
+	    num_colors>256?">":"", num_colors>256?256:num_colors);
+
+    if(newsizex!=sizex || newsizey!=sizey) {
+	newpic = swf_ImageScale(mem, sizex, sizey, newsizex, newsizey);
+	sizex = newsizex;
+	sizey = newsizey;
+	mem = newpic;
+    }
+
+    if(has_alpha) {
+	if(num_colors<=256 || sizex<8 || sizey<8) {
+	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS2);
+	    swf_SetU16(i->tag, bitid);
+	    swf_SetLosslessImage(i->tag,mem,sizex,sizey);
+	} else {
+	    /*TODO: check what is smaller */
+	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG3);
+	    swf_SetU16(i->tag, bitid);
+	    swf_SetJPEGBits3(i->tag,sizex,sizey,mem,config_jpegquality);
+	    //swf_SetLosslessImage(i->tag,mem,sizex,sizey);
+	}
+    } else {
+	if(num_colors<=256 || sizex<8) {
+	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS);
+	    swf_SetU16(i->tag, bitid);
+	    swf_SetLosslessImage(i->tag,mem,sizex,sizey);
+	} else {
+	    /*TODO: check what is smaller */
+	    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG2);
+	    swf_SetU16(i->tag, bitid);
+	    swf_SetJPEGBits2(i->tag,sizex,sizey,mem,config_jpegquality);
+	    //swf_SetLosslessImage(i->tag,mem,sizex,sizey);
+	}
+    }
+    
+    if(newpic)
+	free(newpic);
+
+    return bitid;
+}
+
+void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput*obj = i->obj;
+
+    if(i->shapeid>=0)
+	endshape(obj,0);
+    if(i->textid>=0)
+	endtext(obj);
+
+    gfxbbox_t bbox = gfxline_getbbox(line);
+
+    int targetx = (int)(sqrt(matrix->m00*matrix->m00 + matrix->m01*matrix->m01)*img->width);
+    int targety = (int)(sqrt(matrix->m10*matrix->m10 + matrix->m11*matrix->m11)*img->height);
+
+    int newwidth=0,newheight=0;
+    int bitid = add_image(i, img, targetx, targety, &newwidth, &newheight);
+    double fx = (double)img->width / (double)newwidth;
+    double fy = (double)img->height / (double)newheight;
+
+    MATRIX m;
+    float m00,m10,tx;
+    float m01,m11,ty;
+    m.sx = (int)(65536*20*matrix->m00*fx);
+    m.r0 = (int)(65536*20*matrix->m01*fx);
+    m.r1 = (int)(65536*20*matrix->m10*fy);
+    m.sy = (int)(65536*20*matrix->m11*fy);
+    m.tx = (int)(matrix->tx*20);
+    m.ty = (int)(matrix->ty*20);
+  
+    /* shape */
+    int myshapeid = ++i->currentswfid;
+    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
+    SHAPE*shape;
+    swf_ShapeNew(&shape);
+    int fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
+    SRECT r;
+    swf_SetU16(i->tag, myshapeid);
+    r.xmin = (int)(bbox.xmin*20);
+    r.ymin = (int)(bbox.ymin*20);
+    r.xmax = (int)(bbox.xmax*20);
+    r.ymax = (int)(bbox.ymax*20);
+    swf_SetRect(i->tag,&r);
+    swf_SetShapeStyles(i->tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(i->tag,shape);
+    swf_ShapeSetAll(i->tag,shape,/*x*/0,/*y*/0,/*ls*/0,fsid,0);
+    i->swflastx = i->swflasty = 0;
+    drawgfxline(obj, line);
+    swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(shape);
+
+    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+    CXFORM cxform2 = gfxcxform_to_cxform(cxform);
+    swf_ObjectPlace(i->tag,myshapeid,/*depth*/i->depth++,&i->page_matrix,&cxform2,NULL);
+}
+
+#define IMAGE_TYPE_JPEG 0
+#define IMAGE_TYPE_LOSSLESS 1
+
+static void swfoutput_drawimage(struct swfoutput*obj, RGBA* data, int sizex,int sizey, 
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,
-        double x4,double y4)
+        double x4,double y4, int type)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    RGBA rgb;
-    SRECT r;
-    int lsid=0;
-    int fsid;
-    struct plotxy p1,p2,p3,p4;
-    int myshapeid;
-    double xmax=x1,ymax=y1,xmin=x1,ymin=y1;
-    if(x2>xmax) xmax=x2;
-    if(y2>ymax) ymax=y2;
-    if(x2<xmin) xmin=x2;
-    if(y2<ymin) ymin=y2;
-    if(x3>xmax) xmax=x3;
-    if(y3>ymax) ymax=y3;
-    if(x3<xmin) xmin=x3;
-    if(y3<ymin) ymin=y3;
-    if(x4>xmax) xmax=x4;
-    if(y4>ymax) ymax=y4;
-    if(x4<xmin) xmin=x4;
-    if(y4<ymin) ymin=y4;
-    p1.x=x1; p1.y=y1;
-    p2.x=x2; p2.y=y2;
-    p3.x=x3; p3.y=y3;
-    p4.x=x4; p4.y=y4;
+
+    RGBA*newpic=0;
+    
+    double l1 = sqrt((x4-x1)*(x4-x1) + (y4-y1)*(y4-y1));
+    double l2 = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+   
+    gfxline_t p1,p2,p3,p4,p5;
+    p1.type=gfx_moveTo;p1.x=x1; p1.y=y1;p1.next=&p2;
+    p2.type=gfx_lineTo;p2.x=x2; p2.y=y2;p2.next=&p3;
+    p3.type=gfx_lineTo;p3.x=x3; p3.y=y3;p3.next=&p4;
+    p4.type=gfx_lineTo;p4.x=x4; p4.y=y4;p4.next=&p5;
+    p5.type=gfx_lineTo;p5.x=x1; p5.y=y1;p5.next=0;
 
     {p1.x = (int)(p1.x*20)/20.0;
      p1.y = (int)(p1.y*20)/20.0;
@@ -2239,199 +2522,62 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
      p3.x = (int)(p3.x*20)/20.0;
      p3.y = (int)(p3.y*20)/20.0;
      p4.x = (int)(p4.x*20)/20.0;
-     p4.y = (int)(p4.y*20)/20.0;}
-    
-    MATRIX m;
-    m.sx = (int)(65536*20*(p4.x-p1.x)/sizex);
-    m.r1 = -(int)(65536*20*(p4.y-p1.y)/sizex);
-    m.r0 = (int)(65536*20*(p1.x-p2.x)/sizey);
-    m.sy = -(int)(65536*20*(p1.y-p2.y)/sizey);
-
-    m.tx = (int)(p1.x*20) - 10;
-    m.ty = (int)(p1.y*20) - 10;
-  
-    /* shape */
-    myshapeid = ++i->currentswfid;
-    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
-    SHAPE*shape;
-    swf_ShapeNew(&shape);
-    //lsid = ShapeAddLineStyle(shape,linewidth,&obj->strokergb);
-    //fsid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
-    fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
-    swf_SetU16(i->tag, myshapeid);
-    r.xmin = (int)(xmin*20);
-    r.ymin = (int)(ymin*20);
-    r.xmax = (int)(xmax*20);
-    r.ymax = (int)(ymax*20);
-    swf_SetRect(i->tag,&r);
-    swf_SetShapeStyles(i->tag,shape);
-    swf_ShapeCountBits(shape,NULL,NULL);
-    swf_SetShapeBits(i->tag,shape);
-    swf_ShapeSetAll(i->tag,shape,/*x*/0,/*y*/0,lsid,fsid,0);
-    i->swflastx = i->swflasty = 0;
-    moveto(obj, i->tag, p1);
-    lineto(obj, i->tag, p2);
-    lineto(obj, i->tag, p3);
-    lineto(obj, i->tag, p4);
-    lineto(obj, i->tag, p1);
-    /*
-    ShapeMoveTo  (tag, shape, (int)(x1*20),(int)(y1*20));
-    ShapeSetLine (tag, shape, (int)(x1*20);
-    ShapeSetLine (tag, shape, x*20,0);
-    ShapeSetLine (tag, shape, 0,-y*20);
-    ShapeSetLine (tag, shape, -x*20,0);*/
-    swf_ShapeSetEnd(i->tag);
-    swf_ShapeFree(shape);
-
-    /* instance */
-    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-
-    swf_ObjectPlace(i->tag,myshapeid,/*depth*/i->depth++,&i->page_matrix,NULL,NULL);
-}
-
-int swfoutput_drawimagejpeg_old(struct swfoutput*obj, char*filename, int sizex,int sizey, 
-        double x1,double y1,
-        double x2,double y2,
-        double x3,double y3,
-        double x4,double y4)
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    TAG*oldtag;
-    if(i->shapeid>=0)
-	endshape(obj,0);
-    if(i->textid>=0)
-	endtext(obj);
-
-    int bitid = ++i->currentswfid;
-    oldtag = i->tag;
-    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG2);
-    swf_SetU16(i->tag, bitid);
-    if(swf_SetJPEGBits(i->tag, filename, config_jpegquality)<0) {
-	swf_DeleteTag(i->tag);
-	i->tag = oldtag;
-	return -1;
-    }
-
-    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
-    return bitid;
-}
-
-int swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
-        double x1,double y1,
-        double x2,double y2,
-        double x3,double y3,
-        double x4,double y4)
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    TAG*oldtag;
-    JPEGBITS*jpeg;
-
-    if(i->shapeid>=0)
-	endshape(obj,0);
-    if(i->textid>=0)
-	endtext(obj);
-
-    int bitid = ++i->currentswfid;
-    oldtag = i->tag;
-    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSJPEG2);
-    swf_SetU16(i->tag, bitid);
-    swf_SetJPEGBits2(i->tag,sizex,sizey,mem,config_jpegquality);
-    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
-    return bitid;
-}
-
-int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
-        double x1,double y1,
-        double x2,double y2,
-        double x3,double y3,
-        double x4,double y4)
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    TAG*oldtag;
-    if(i->shapeid>=0)
-	endshape(obj,0);
-    if(i->textid>=0)
-	endtext(obj);
-
-    int bitid = ++i->currentswfid;
-    oldtag = i->tag;
-    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS);
-    swf_SetU16(i->tag, bitid);
-    if(swf_SetLosslessBits(i->tag,sizex,sizey,mem, BMF_32BIT)<0) {
-	swf_DeleteTag(i->tag);
-	i->tag = oldtag;
-	return -1;
+     p4.y = (int)(p4.y*20)/20.0;
+     p5.x = (int)(p5.x*20)/20.0;
+     p5.y = (int)(p5.y*20)/20.0;
     }
     
-    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
-    return bitid;
-}
+    float m00,m10,tx;
+    float m01,m11,ty;
+    
+    gfxmatrix_t m;
+    m.m00 = (p4.x-p1.x)/sizex;
+    m.m01 = (p1.x-p2.x)/sizey;
+    m.m10 = -(p4.y-p1.y)/sizex;
+    m.m11 = -(p1.y-p2.y)/sizey;
+    m.tx = p1.x - 0.5;
+    m.ty = p1.y - 0.5;
 
-int swfoutput_drawimagelosslessN(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
-        double x1,double y1,
-        double x2,double y2,
-        double x3,double y3,
-        double x4,double y4, int n)
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    TAG*oldtag;
-    U8*mem2 = 0;
-    if(i->shapeid>=0)
-	endshape(obj,0);
-    if(i->textid>=0)
-	endtext(obj);
-
-    if(sizex&3)
-    { 
-	/* SWF expects scanlines to be 4 byte aligned */
-	int x,y;
-	U8*ptr;
-	mem2 = (U8*)malloc(BYTES_PER_SCANLINE(sizex)*sizey);
-	ptr = mem2;
-	for(y=0;y<sizey;y++)
-	{
-	    for(x=0;x<sizex;x++)
-		*ptr++ = mem[y*sizex+x];
-	    ptr+= BYTES_PER_SCANLINE(sizex)-sizex;
-	}
-	mem = mem2;
-    }
-
-    int bitid = ++i->currentswfid;
-    oldtag = i->tag;
-    i->tag = swf_InsertTag(i->tag,ST_DEFINEBITSLOSSLESS2);
-    swf_SetU16(i->tag, bitid);
-    if(swf_SetLosslessBitsIndexed(i->tag,sizex,sizey,mem, pal, n)<0) {
-	swf_DeleteTag(i->tag);
-	i->tag = oldtag;
-	return -1;
-    }
-    if(mem2)
-	free(mem2);
+    gfximage_t img;
+    img.data = (gfxcolor_t*)data;
+    img.width = sizex;
+    img.height = sizey;
   
-    drawimage(obj, bitid, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
-    return bitid;
+    if(type == IMAGE_TYPE_JPEG)
+	/* TODO: pass image_dpi to device instead */
+	i->device.setparameter(&i->device, "next_bitmap_is_jpeg", "1");
+
+    i->device.fillbitmap(&i->device, &p1, &img, &m, 0);
 }
 
-void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey, 
-        double x1,double y1,
-        double x2,double y2,
-        double x3,double y3,
-        double x4,double y4)
+void swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    if(id<0) return;
-    if(i->shapeid>=0)
-	endshape(obj,0);
-    if(i->textid>=0)
-	endtext(obj);
+    swfoutput_drawimage(obj,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG);
+}
 
-    drawimage(obj, id, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+void swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
+{
+    swfoutput_drawimage(obj,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS);
+}
+
+int swf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
+{
+    if(!strcmp(key, "next_bitmap_is_jpeg")) {
+	((swfoutput_internal*)dev->internal)->jpeg = 1;
+	return 1;
+    }
+    return 0;
 }
 
 void swfoutput_setparameter(char*name, char*value)
 {
-    if(!strcmp(name, "drawonlyshapes")) {
+    if(!strcmp(name, "jpegsubpixels")) {
+	config_jpegsubpixels = atof(value);
+    } else if(!strcmp(name, "ppmsubpixels")) {
+	config_ppmsubpixels = atof(value);
+    } else if(!strcmp(name, "drawonlyshapes")) {
 	config_drawonlyshapes = atoi(value);
     } else if(!strcmp(name, "ignoredraworder")) {
 	config_ignoredraworder = atoi(value);

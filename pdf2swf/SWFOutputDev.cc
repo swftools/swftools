@@ -234,13 +234,6 @@ public:
 
   GfxState *laststate;
 
-  int pic_xids[1024];
-  int pic_yids[1024];
-  int pic_ids[1024];
-  int pic_width[1024];
-  int pic_height[1024];
-  int picpos;
-  int pic_id;
   char type3Warning;
 
   char* substitutetarget[256];
@@ -324,8 +317,6 @@ SWFOutputDev::SWFOutputDev()
     clipping[clippos] = 0;
     outputstarted = 0;
     xref = 0;
-    picpos = 0;
-    pic_id = 0;
     substitutepos = 0;
     type3Warning = 0;
     user_movex = 0;
@@ -1695,22 +1686,21 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   }
 
   if(mask) {
-      int yes=0,i,j;
+      int i,j;
       unsigned char buf[8];
-      int xid = 0;
-      int yid = 0;
       int x,y;
       unsigned char*pic = new unsigned char[width*height];
       RGBA pal[256];
       GfxRGB rgb;
       state->getFillRGB(&rgb);
+
       memset(pal,255,sizeof(pal));
-      pal[0].r = (int)(rgb.r*255); pal[0].g = (int)(rgb.g*255); 
-      pal[0].b = (int)(rgb.b*255); pal[0].a = 255;
-      pal[1].r = 0; pal[1].g = 0; pal[1].b = 0; pal[1].a = 0;
+      pal[0].r = (int)(rgb.r*255); pal[1].r = 0;
+      pal[0].g = (int)(rgb.g*255); pal[1].g = 0;
+      pal[0].b = (int)(rgb.b*255); pal[1].b = 0;
+      pal[0].a = 255;              pal[1].a = 0;
+
       int numpalette = 2;
-      xid += pal[1].r*3 + pal[1].g*11 + pal[1].b*17;
-      yid += pal[1].r*7 + pal[1].g*5 + pal[1].b*23;
       int realwidth = (int)sqrt(SQR(x2-x3) + SQR(y2-y3));
       int realheight = (int)sqrt(SQR(x1-x2) + SQR(y1-y2));
       for (y = 0; y < height; ++y)
@@ -1720,72 +1710,52 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	    if(invert) 
 		buf[0]=1-buf[0];
 	    pic[width*y+x] = buf[0];
-	    xid+=x*buf[0]+1;
-	    yid+=y*buf[0]*3+1;
       }
       
       /* the size of the drawn image is added to the identifier
 	 as the same image may require different bitmaps if displayed
 	 at different sizes (due to antialiasing): */
-      if(type3active) {
-	  xid += realwidth;
-	  yid += realheight;
-      }
       int t,found = -1;
-      for(t=0;t<picpos;t++)
-      {
-	  if(pic_xids[t] == xid &&
-	     pic_yids[t] == yid) {
-	      /* if the image was antialiased, the size has changed: */
-	      width = pic_width[t];
-	      height = pic_height[t];
-	      found = t;break;
+      if(type3active) {
+	  unsigned char*pic2 = 0;
+	  numpalette = 16;
+	  
+	  pic2 = antialize(pic,width,height,realwidth,realheight,numpalette);
+
+	  if(!pic2) {
+	    delete pic;
+	    delete imgStr;
+	    return;
+	  }
+
+	  width = realwidth;
+	  height = realheight;
+	  free(pic);
+	  pic = pic2;
+	  
+	  /* make a black/white palette */
+	  GfxRGB rgb2;
+	  rgb2.r = 1 - rgb.r;
+	  rgb2.g = 1 - rgb.g;
+	  rgb2.b = 1 - rgb.b;
+	  float r = 255/(numpalette-1);
+	  int t;
+	  for(t=0;t<numpalette;t++) {
+	      pal[t].r = (U8)(255*rgb.r);
+	      pal[t].g = (U8)(255*rgb.g);
+	      pal[t].b = (U8)(255*rgb.b);
+	      pal[t].a = (U8)(t*r);
 	  }
       }
-      if(found<0) {
-	  if(type3active) {
-	      numpalette = 16;
-	      unsigned char*pic2 = 0;
-	      
-	      pic2 = antialize(pic,width,height,realwidth,realheight, numpalette);
 
-	      if(pic2) {
-		  width = realwidth;
-		  height = realheight;
-		  free(pic);
-		  pic = pic2;
-		  /* make a black/white palette */
-		  int t;
-		  GfxRGB rgb2;
-		  rgb2.r = 1 - rgb.r;
-		  rgb2.g = 1 - rgb.g;
-		  rgb2.b = 1 - rgb.b;
-
-		  float r = 255/(numpalette-1);
-		  for(t=0;t<numpalette;t++) {
-		      /*pal[t].r = (U8)(t*r*rgb.r+(numpalette-1-t)*r*rgb2.r);
-		      pal[t].g = (U8)(t*r*rgb.g+(numpalette-1-t)*r*rgb2.g);
-		      pal[t].b = (U8)(t*r*rgb.b+(numpalette-1-t)*r*rgb2.b);
-		      pal[t].a = 255; */
-		      pal[t].r = (U8)(255*rgb.r);
-		      pal[t].g = (U8)(255*rgb.g);
-		      pal[t].b = (U8)(255*rgb.b);
-		      pal[t].a = (U8)(t*r);
-		  }
-	      }
-	  }
-	  pic_ids[picpos] = swfoutput_drawimagelosslessN(&output, pic, pal, width, height, 
-		  x1,y1,x2,y2,x3,y3,x4,y4, numpalette);
-	  pic_xids[picpos] = xid;
-	  pic_yids[picpos] = yid;
-	  pic_width[picpos] = width;
-	  pic_height[picpos] = height;
-	  if(picpos<1024)
-	      picpos++;
-      } else {
-	  swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-		  x1,y1,x2,y2,x3,y3,x4,y4);
+      RGBA*pic2 = new RGBA[width*height];
+      for (y = 0; y < height; ++y) {
+	for (x = 0; x < width; ++x) {
+	  pic2[width*y+x] = pal[pic[y*width+x]];
+	}
       }
+      swfoutput_drawimagelossless(&output, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+      free(pic2);
       free(pic);
       delete imgStr;
       return;
@@ -1793,100 +1763,45 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 
   int x,y;
   
-  if(colorMap->getNumPixelComps()!=1 || str->getKind()==strDCT)
-  {
+  if(colorMap->getNumPixelComps()!=1 || str->getKind()==strDCT) {
       RGBA*pic=new RGBA[width*height];
-      int xid = 0;
-      int yid = 0;
       for (y = 0; y < height; ++y) {
 	for (x = 0; x < width; ++x) {
-	  int r,g,b,a;
 	  imgStr->getPixel(pixBuf);
 	  colorMap->getRGB(pixBuf, &rgb);
-	  pic[width*y+x].r = r = (U8)(rgb.r * 255 + 0.5);
-	  pic[width*y+x].g = g = (U8)(rgb.g * 255 + 0.5);
-	  pic[width*y+x].b = b = (U8)(rgb.b * 255 + 0.5);
-	  pic[width*y+x].a = a = 255;//(U8)(rgb.a * 255 + 0.5);
-	  xid += x*r+x*b*3+x*g*7+x*a*11;
-	  yid += y*r*3+y*b*17+y*g*19+y*a*11;
+	  pic[width*y+x].r = (U8)(rgb.r * 255 + 0.5);
+	  pic[width*y+x].g = (U8)(rgb.g * 255 + 0.5);
+	  pic[width*y+x].b = (U8)(rgb.b * 255 + 0.5);
+	  pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
 	}
       }
-      int t,found = -1;
-      for(t=0;t<picpos;t++)
-      {
-	  if(pic_xids[t] == xid &&
-	     pic_yids[t] == yid) {
-	      found = t;break;
-	  }
-      }
-      if(found<0) {
-	  if(str->getKind()==strDCT)
-	      pic_ids[picpos] = swfoutput_drawimagejpeg(&output, pic, width, height, 
-		      x1,y1,x2,y2,x3,y3,x4,y4);
-	  else
-	      pic_ids[picpos] = swfoutput_drawimagelossless(&output, pic, width, height, 
-		      x1,y1,x2,y2,x3,y3,x4,y4);
-	  pic_xids[picpos] = xid;
-	  pic_yids[picpos] = yid;
-	  pic_width[picpos] = width;
-	  pic_height[picpos] = height;
-	  if(picpos<1024)
-	      picpos++;
-      } else {
-	  swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-		  x1,y1,x2,y2,x3,y3,x4,y4);
-      }
+      if(str->getKind()==strDCT)
+	  swfoutput_drawimagejpeg(&output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+      else
+	  swfoutput_drawimagelossless(&output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
       delete pic;
       delete imgStr;
       return;
-  }
-  else
-  {
-      U8*pic = new U8[width*height];
+  } else {
+      RGBA*pic=new RGBA[width*height];
       RGBA pal[256];
       int t;
-      int xid=0,yid=0;
-      for(t=0;t<256;t++)
-      {
-	  int r,g,b,a;
+      for(t=0;t<256;t++) {
 	  pixBuf[0] = t;
 	  colorMap->getRGB(pixBuf, &rgb);
-	  pal[t].r = r = (U8)(rgb.r * 255 + 0.5);
-	  pal[t].g = g = (U8)(rgb.g * 255 + 0.5);
-	  pal[t].b = b = (U8)(rgb.b * 255 + 0.5);
-	  pal[t].a = a = 255;//(U8)(rgb.b * 255 + 0.5);
-	  xid += t*r+t*b*3+t*g*7+t*a*11;
-	  xid += (~t)*r+t*b*3+t*g*7+t*a*11;
+	  pal[t].r = (U8)(rgb.r * 255 + 0.5);
+	  pal[t].g = (U8)(rgb.g * 255 + 0.5);
+	  pal[t].b = (U8)(rgb.b * 255 + 0.5);
+	  pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
       }
       for (y = 0; y < height; ++y) {
 	for (x = 0; x < width; ++x) {
 	  imgStr->getPixel(pixBuf);
-	  pic[width*y+x] = pixBuf[0];
-	  xid += x*pixBuf[0]*7;
-	  yid += y*pixBuf[0]*3;
+	  pic[width*y+x] = pal[pixBuf[0]];
 	}
       }
-      int found = -1;
-      for(t=0;t<picpos;t++)
-      {
-	  if(pic_xids[t] == xid &&
-	     pic_yids[t] == yid) {
-	      found = t;break;
-	  }
-      }
-      if(found<0) {
-	  pic_ids[picpos] = swfoutput_drawimagelosslessN(&output, pic, pal, width, height, 
-		  x1,y1,x2,y2,x3,y3,x4,y4,256);
-	  pic_xids[picpos] = xid;
-	  pic_yids[picpos] = yid;
-	  pic_width[picpos] = width;
-	  pic_height[picpos] = height;
-	  if(picpos<1024)
-	      picpos++;
-      } else {
-	  swfoutput_drawimageagain(&output, pic_ids[found], width, height,
-		  x1,y1,x2,y2,x3,y3,x4,y4);
-      }
+      swfoutput_drawimagelossless(&output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+
       delete pic;
       delete imgStr;
       return;
@@ -1959,13 +1874,31 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
   obj.free();
 }
 
+int jpeg_dpi = 0;
+int ppm_dpi = 0;
+
 void pdfswf_setparameter(char*name, char*value)
 {
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strcmp(name, "caplinewidth")) {
 	caplinewidth = atof(value);
     } else if(!strcmp(name, "zoom")) {
+	char buf[80];
 	zoom = atoi(value);
+	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
+	swfoutput_setparameter("jpegsubpixels", buf);
+	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
+	swfoutput_setparameter("ppmsubpixels", buf);
+    } else if(!strcmp(name, "jpegdpi")) {
+	char buf[80];
+	jpeg_dpi = atoi(value);
+	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
+	swfoutput_setparameter("jpegsubpixels", buf);
+    } else if(!strcmp(name, "ppmdpi")) {
+	char buf[80];
+	ppm_dpi = atoi(value);
+	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
+	swfoutput_setparameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "forceType0Fonts")) {
 	forceType0Fonts = atoi(value);
     } else if(!strcmp(name, "fontdir")) {
