@@ -986,7 +986,8 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     this->fontid = strdup(name);
     this->t1id = id;
     
-    char**a= T1_GetAllCharNames(id);
+    char**charnamebase= T1_GetAllCharNames(id);
+    char**a= charnamebase;
     int t, outlinepos=0;
     char*map[256];
 
@@ -1028,7 +1029,7 @@ SWFFont::SWFFont(char*name, int id, char*filename)
     t=0;
     while(*a)
     {
-        map[t] = *a;
+        map[t] = strdup(*a);
         a++;
         t++;
         if(t==256 || !*a) {
@@ -1043,6 +1044,12 @@ SWFFont::SWFFont(char*name, int id, char*filename)
              int ret = T1_ReencodeFont(id, map);
              if(ret)
                fprintf(stderr,"Can't reencode font: (%s) ret:%d\n",filename, ret);
+	     /* Deleting the font invalidates the charname array,
+		so we have to ask for it again now. 
+		We continue at the position we were, hoping the font
+		didn't shrink in the meantime or something.
+	      */
+	     a = T1_GetAllCharNames(id) + (a - charnamebase);
             }
 
             // parsecharacters
@@ -1055,9 +1062,13 @@ SWFFont::SWFFont(char*name, int id, char*filename)
                 this->charname[outlinepos] = strdup(name);
                 outlinepos++;
             }
+
+	    for(s=0;s<t;s++)
+		free(map[s]);
             t=0;
         }
     }
+    printf("done\n");
 }
 
 /* free all tables, write out definefont tags */
