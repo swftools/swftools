@@ -959,7 +959,7 @@ typedef struct RENDERBUF
     void*internal;
 } RENDERBUF;
 
-void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, char antialize);
+void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, char antialize, int scale);
 RGBA* swf_Render(RENDERBUF*dest);
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 depth,U16 clipdepth);
 void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
