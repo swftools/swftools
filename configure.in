@@ -41,6 +41,9 @@ dnl Checks for libraries.
  MISSINGLIBS="${MISSINGLIBS} T1lib"
  )
 
+SWF_CHECK_BYTEORDER
+AC_SUBST(WORDS_BIGENDIAN)
+
 dnl do we need those?
 dnl AC_CHECK_LIB(pthread, pthread_create)
 dnl AC_CHECK_LIB(X11, XFlush)
