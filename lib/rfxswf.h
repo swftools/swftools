@@ -669,6 +669,8 @@ int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n);
 int swf_SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data);
 int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits);
 
+void swf_GetJPEGSize(char * fname, int*width, int*height);
+
 int swf_SetJPEGBits(TAG * t,char * fname,int quality);
 void swf_SetJPEGBits2(TAG * t,U16 width,U16 height,RGBA * bitmap,int quality);
 int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);

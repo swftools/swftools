@@ -138,6 +138,26 @@ void swf_SetJPEGBits2(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality)
   swf_SetJPEGBitsFinish(jpeg);
 }
 
+void swf_GetJPEGSize(char * fname, int*width, int*height)
+{ struct jpeg_decompress_struct cinfo;
+  struct jpeg_error_mgr jerr;
+  FILE * fi;
+  *width = 0;
+  *height = 0;
+  cinfo.err = jpeg_std_error(&jerr);
+  jpeg_create_decompress(&cinfo); 
+  if ((fi=fopen(fname,"rb"))==NULL) {
+      fprintf(stderr, "rfxswf: file open error\n");
+      return;
+  }
+  jpeg_stdio_src(&cinfo, fi);
+  jpeg_read_header(&cinfo, TRUE);
+  *width = cinfo.image_width;
+  *height = cinfo.image_height;
+  jpeg_destroy_decompress(&cinfo);
+  fclose(fi);
+}
+
 int swf_SetJPEGBits(TAG * t,char * fname,int quality)
 { struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
