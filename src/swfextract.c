@@ -830,12 +830,21 @@ void handlelossless(TAG*tag)
 	     png_write_byte(fi,palette[t].b);
 	 }
 	png_end_chunk(fi);
+
+	if(alpha) {
+	    /* write alpha palette */
+	    png_start_chunk(fi, "tRNS", 256);
+	    for(t=0;t<256;t++) {
+		png_write_byte(fi,palette[t].a);
+	    }
+	    png_end_chunk(fi);
+	}
     }
     {
 	int pos2 = 0;
 	int x,y;
 	int srcwidth = width * (bpp/8);
-	datalen3 = width*height*4;
+	datalen3 = (width*4+5)*height;
 	data3 = (U8*)malloc(datalen3);
 	for(y=0;y<height;y++)
 	{
