@@ -3,8 +3,9 @@ AC_INIT(src/)
 
 PACKAGE=swftools
 VERSION=0.4.1
-CFLAGS="-Winline -Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
-CXXFLAGS="-Winline -Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
+# -Winline?
+CFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
+CXXFLAGS="-Wparentheses -Wimplicit -Wreturn-type -O2 -fomit-frame-pointer"
 export PACKAGE VERSION CFLAGS CXXFLAGS
 
 dnl Checks for programs.
