@@ -86,20 +86,20 @@ int videoreader_dummy_open(videoreader_t* v, char* filename)
     i = (my_internal*)malloc(sizeof(my_internal));
     memset(i, 0, sizeof(my_internal));
     v->internal = i;
-
-    i->len = 2000; //number of frames
-
-    v->width = 320;
-    v->height = 200;
-    v->channels = 2;
-    v->samplerate = 44100;
-    v->fps = 15;
-
     v->getsamples = my_getsamples;
     v->close = my_close;
     v->getimage = my_getimage;
     v->getsamples = my_getsamples;
     v->setparameter = my_setparameter;
 
+    i->len = 2000; //number of frames
+
+    v->width = 320; // video
+    v->height = 200;
+    v->fps = 15;
+    
+    v->channels = 0; // no audio
+    v->samplerate = 0;
+    
     return 0;
 }
