@@ -256,15 +256,24 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
 	if(error) {
 	    fprintf(stderr, "Couldn't load glyph %d, error:%d\n", t, error);
-	    continue;
-	}
-	error = FT_Get_Glyph(face->glyph, &glyph);
-	if(error) {
-	    fprintf(stderr, "Couldn't get glyph %d, error:%d\n", t, error);
-	    continue;
+	    glyph=0;
+	    if(skip_unused) 
+		continue;
+	} else {
+	    error = FT_Get_Glyph(face->glyph, &glyph);
+	    if(error) {
+		fprintf(stderr, "Couldn't get glyph %d, error:%d\n", t, error);
+		glyph=0;
+		if(skip_unused) 
+		    continue;
+	    }
 	}
 
-	FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
+	if(glyph)
+	    FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
+	else
+	    memset(&bbox, 0, sizeof(bbox));
+
 	bbox.yMin = -bbox.yMin;
 	bbox.yMax = -bbox.yMax;
 	if(bbox.xMax < bbox.xMin) {
@@ -283,7 +292,10 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	swf_Shape01DrawerInit(&draw, 0);
 
 	//error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
-	error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
+	if(glyph)
+	    error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
+	else
+	    error = 0;
 	draw.finish(&draw);
 	
 	if(error) {
@@ -299,7 +311,10 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    font->glyph[font->numchars].advance = ((bbox.xMax - bbox.xMin)*20*FT_SCALE)/FT_SUBPIXELS;
 	}
 #else
-	font->glyph[font->numchars].advance = glyph->advance.x*20/65536;
+	if(glyph)
+	    font->glyph[font->numchars].advance = glyph->advance.x*20/65536;
+	else
+	    font->glyph[font->numchars].advance = 0;
 #endif
 	
 	font->glyph[font->numchars].shape = swf_ShapeDrawerToShape(&draw);
@@ -311,7 +326,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 
 	draw.dealloc(&draw);
 
-	FT_Done_Glyph(glyph);
+	if(glyph)
+	    FT_Done_Glyph(glyph);
 	font->glyph2ascii[font->numchars] = font->glyph2ascii[t];
 	glyph2glyph[t] = font->numchars;
 	font->numchars++;
