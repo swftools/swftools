@@ -1,5 +1,6 @@
 AC_DEFUN(RFX_CHECK_AVI2SWF,
 [
+AC_CHECK_PROGS(AVIFILE_CONFIG, avifile-config)
 AC_MSG_CHECKING([whether we can compile the avifile test program])
 
 cat > conftest.cpp << EOF
@@ -70,17 +71,20 @@ int main (int argc, char*argv[])
 }
 EOF
 
-ac_link='$CXX $CPPFLAGS $CXXFLAGS `avifile-config --cflags` `avifile-config --libs` conftest.cpp -o conftest${ac_exeext}'
-##if {(eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
-  AC_MSG_RESULT(yes)
-  AVIFILE=true
-  export AVIFILE
-  AC_DEFINE_UNQUOTED(AVIFILE, true)
+if test "x$AVIFILE_CONFIG" '!=' "x";then
+    ac_link='$CXX $CPPFLAGS $CXXFLAGS `$AVIFILE_CONFIG --cflags` `$AVIFILE_CONFIG --libs` conftest.cpp -o conftest${ac_exeext}'
+    if { (eval echo avi2swf.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
+      AC_MSG_RESULT(yes)
+      AVIFILE=true
+      export AVIFILE
+      AC_DEFINE_UNQUOTED(AVIFILE, true)
+    else
+      echo "configure: failed program was:" >&5
+      cat conftest.cpp >&5
+      AC_MSG_RESULT(no)
+    fi
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  AC_MSG_RESULT(no)
+    AC_MSG_RESULT(no)
 fi
 rm -f conftest*
 ])
