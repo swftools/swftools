@@ -86,15 +86,16 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINEBITSLOSSLESS2:
     case ST_DEFINEBUTTON:
     case ST_DEFINEBUTTON2:
-    case ST_DEFINEBUTTONCXFORM:
-    case ST_DEFINEBUTTONSOUND:
+    case ST_DEFINEBUTTONCXFORM: //pseudodefine
+    case ST_DEFINEBUTTONSOUND: //pseudodefine
     case ST_DEFINEFONT:
     case ST_DEFINEFONT2:
-    case ST_DEFINEFONTINFO: //psedodefine
+    case ST_DEFINEFONTINFO: //pseudodefine
     case ST_DEFINETEXT:
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
     case ST_DEFINESPRITE:
+    case ST_NAMECHARACTER: //pseudodefine
       id = swf_GetU16(t);
       break;
   }
@@ -175,6 +176,9 @@ static int swf_spritetagids[] =
 static int swf_pseudodefiningtagids[] = 
 {
  ST_DEFINEFONTINFO,
+ ST_DEFINEBUTTONCXFORM,
+ ST_DEFINEBUTTONSOUND,
+ ST_NAMECHARACTER,
  -1
 };
 
