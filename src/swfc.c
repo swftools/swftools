@@ -476,7 +476,11 @@ void s_buttonput(char*character, char*as, parameters_t p)
     character_t* c = dictionary_lookup(&characters, character);
     MATRIX m;
     int flags = 0;
+    char*o = as,*s = as;
     buttonrecord_t r;
+    if(!stackpos || (stack[stackpos-1].type != 3))  {
+	syntaxerror(".show may only appear in .button");
+    }
     if(!c) {
 	syntaxerror("character %s not known (in .shape %s)", character, character);
     }
@@ -490,25 +494,38 @@ void s_buttonput(char*character, char*as, parameters_t p)
     r.matrix = m;
     r.cxform = p.cxform;
     r.set = 1;
+
+    while(1) {
+	if(*s==',' || *s==0) {
+	    if(!strncmp(o,"idle",s-o)) mybutton.records[0]=r;
+	    else if(!strncmp(o,"shape",s-o)) mybutton.records[0]=r;
+	    else if(!strncmp(o,"hover",s-o)) mybutton.records[1]=r;
+	    else if(!strncmp(o,"pressed",s-o)) mybutton.records[2]=r;
+	    else if(!strncmp(o,"area",s-o)) mybutton.records[3]=r;
+	    else syntaxerror("unknown \"as\" argument: \"%s\"", strdup_n(o,s-o));
+	}
+	if(!*s)
+	    break;
+	s++;
+    }
+    printf("%s\n", as);
+    swf_DumpMatrix(stdout,&mybutton.records[0].matrix);
     
-    if(strstr(as, "idle")) mybutton.records[0]=r;
-    if(strstr(as, "hover")) mybutton.records[1]=r;
-    if(strstr(as, "pressed")) mybutton.records[2]=r;
-    if(strstr(as, "area")) mybutton.records[3]=r;
 }
 static void setbuttonrecords(TAG*tag)
 {
     int flags[] = {BS_UP,BS_OVER,BS_DOWN,BS_HIT};
     if(!mybutton.endofshapes) {
 	int t;
-	
+		
 	if(!mybutton.records[3].set) {
 	    memcpy(&mybutton.records[3], &mybutton.records[0], sizeof(buttonrecord_t));
 	}
 
 	for(t=0;t<4;t++) {
-	    if(mybutton.records[t].set)
+	    if(mybutton.records[t].set) {
 		swf_ButtonSetRecord(tag,flags[t],mybutton.records[t].id,1,&mybutton.records[t].matrix,&mybutton.records[t].cxform);
+	    }
 	}
 	swf_SetU8(tag,0); // end of button records
 	mybutton.endofshapes = 1;
