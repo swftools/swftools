@@ -663,15 +663,19 @@ void swf_Shape2Free(SHAPE2 * s)
 
 SHAPE2* swf_ShapeToShape2(SHAPE*shape) {
 
-    SHAPE2*shape2 = (SHAPE2*)rfx_alloc(sizeof(SHAPE2));
+    SHAPE2*shape2 = (SHAPE2*)rfx_calloc(sizeof(SHAPE2));
     
     shape2->numlinestyles = shape->linestyle.n;
-    shape2->linestyles = (LINESTYLE*)rfx_alloc(sizeof(LINESTYLE)*shape->linestyle.n);
-    memcpy(shape2->linestyles, shape->linestyle.data, sizeof(LINESTYLE)*shape->linestyle.n);
+    if(shape2->numlinestyles) {
+        shape2->linestyles = (LINESTYLE*)rfx_alloc(sizeof(LINESTYLE)*shape->linestyle.n);
+        memcpy(shape2->linestyles, shape->linestyle.data, sizeof(LINESTYLE)*shape->linestyle.n);
+    }
     
     shape2->numfillstyles = shape->fillstyle.n;
-    shape2->fillstyles = (FILLSTYLE*)rfx_alloc(sizeof(FILLSTYLE)*shape->fillstyle.n);
-    memcpy(shape2->fillstyles, shape->fillstyle.data, sizeof(FILLSTYLE)*shape->fillstyle.n);
+    if(shape2->numfillstyles) {
+        shape2->fillstyles = (FILLSTYLE*)rfx_alloc(sizeof(FILLSTYLE)*shape->fillstyle.n);
+        memcpy(shape2->fillstyles, shape->fillstyle.data, sizeof(FILLSTYLE)*shape->fillstyle.n);
+    }
 
     shape2->lines = swf_ParseShapeData(shape->data, shape->bitlen, shape->bits.fill, shape->bits.line);
     shape2->bbox = 0;
@@ -776,7 +780,7 @@ void swf_SetShape2(TAG*tag, SHAPE2*shape2)
 
     swf_SetRect(tag,shape2->bbox);
     swf_SetShapeStyles(tag, &shape);
-    swf_ShapeCountBits(&shape,NULL,NULL);
+    //swf_ShapeCountBits(&shape,NULL,NULL); // done in swf_Shape2ToShape()
     swf_SetShapeBits(tag,&shape);
 
     swf_SetBlock(tag, shape.data, (shape.bitlen+7)/8);
@@ -895,5 +899,36 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
     shape->lines = swf_ParseShapeData(&tag->data[tag->pos], (tag->len - tag->pos)*8, fill, line);
 
     l = shape->lines;
+}
+
+void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line, 
+                         U8**destdata, U32*destbitlen, int out_bits_fill, int out_bits_line)
+{
+    SHAPE2 s2;
+    SHAPE s;
+    SHAPELINE*line;
+    memset(&s2, 0, sizeof(s2));
+    s2.lines = swf_ParseShapeData(data, bitlen, in_bits_fill, in_bits_line);
+    s2.numfillstyles = out_bits_fill?1<<(out_bits_fill-1):0;
+    s2.numlinestyles = out_bits_line?1<<(out_bits_line-1):0;
+    s2.fillstyles = rfx_calloc(sizeof(FILLSTYLE)*s2.numfillstyles);
+    s2.linestyles = rfx_calloc(sizeof(LINESTYLE)*s2.numlinestyles);
+
+    line = s2.lines;
+    while(line) {
+        if(line->fillstyle0 > s2.numfillstyles) line->fillstyle0 = 0;
+        if(line->fillstyle1 > s2.numfillstyles) line->fillstyle1 = 0;
+        if(line->linestyle > s2.numlinestyles) line->linestyle = 0;
+        line = line->next;
+    }
+
+    swf_Shape2ToShape(&s2,&s);
+
+    free(s2.fillstyles);
+    free(s2.linestyles);
+    free(s.fillstyle.data);
+    free(s.linestyle.data);
+    *destdata = s.data;
+    *destbitlen = s.bitlen;
 }
 

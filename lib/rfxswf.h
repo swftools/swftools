@@ -462,6 +462,9 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape);
 void swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
 void swf_SetShape2(TAG*tag, SHAPE2*shape2);
 
+void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line, 
+                         U8**destdata, U32*destbitlen, int out_bits_fill, int out_bits_line);
+
 // swfdraw.c
 
 void swf_Shape10DrawerInit(drawer_t*draw, TAG*tag);
