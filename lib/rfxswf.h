@@ -76,6 +76,10 @@ void* rfx_alloc(int size);
 void* rfx_calloc(int size);
 void* rfx_realloc(void*data, int size);
 void rfx_free(void*data);
+#ifdef MEMORY_INFO
+long rfx_memory_used();
+char* rfx_memory_used_str();
+#endif
 
 // SWF Types
 
@@ -952,7 +956,7 @@ typedef struct RENDERBUF
     void*internal;
 } RENDERBUF;
 
-void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height);
+void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, char antialize);
 RGBA* swf_Render(RENDERBUF*dest);
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 depth,U16 clipdepth);
 void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
