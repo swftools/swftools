@@ -807,7 +807,7 @@ void action_PushDouble(double d)
 void action_PushInt(int i)
 {
     *(U8*)currentatag->tmp = 7; //int
-    *(U8*)&currentatag->tmp[1] = i;
+    *(U32*)&currentatag->tmp[1] = i;
     swf_AddActionTAG(ACTION_PUSH, (U8*)currentatag->tmp, 5);
 }
 void action_GotoLabel(char* label)
@@ -828,3 +828,30 @@ void action_GetUrl(char* url, char* label)
 void action_DefineFunction(U8*data, int len) {}
 void action_Constantpool(char* constantpool) {}
 void action_With(char*object) {}
+
+/*
+  Properties:
+
+  _X 0
+  _Y 1
+  _xscale 2
+  _yscale 3
+  _currentframe 4
+  _totalframes 5
+  _alpha 6
+  _visible 7
+  _width 8
+  _height 9
+  _rotation 10
+  _target 11
+  _framesloaded 12
+  _name 13
+  _droptarget 14
+  _url 15
+  _highquality 16
+  _focusrect 17
+  _soundbuftime 18
+  _quality* 19
+  _xmouse* 20
+  _ymouse* 21
+*/
