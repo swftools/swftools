@@ -124,22 +124,25 @@ void map_ids_mem(u8*mem, int length)
 	    num ++;
 	case TAGID_DEFINETEXT: { 
 	    int glyphbits, advancebits;
+	    int id;
 	    reader_init (newtag->data, newtag->length);
-	    readu16(); //id
+	    id = readu16(); //id
 	    readRECT(); //bounding box
 	    readMATRIX(); //matrix
 	    resetbits();
 	    glyphbits = readu8(); //glyphbits
 	    advancebits = readu8(); //advancebits
 	    while(1) {
-		u16 flags = getbits(8);
+		u16 flags;
+		resetbits();
+		flags = getbits(8);
 		if(!flags) break;
 		if(flags & 128) // text style record
 		{
+		    resetbits();
 		    if(flags & 8) { // hasfont
 			maponeid(getinputpos());
-			resetbits();
-			readu16();
+			id = readu16();
 		    }
 		    if(flags & 4) { // hascolor
 			if(num==1) readRGB();
@@ -158,9 +161,12 @@ void map_ids_mem(u8*mem, int length)
 			readu16();
 		    }
 		} else { // glyph record
-		    getbits(glyphbits);
-		    getbits(advancebits);
-		    break;
+		    int t;
+		    resetbits();
+		    for(t=0;t<flags;t++) {
+			getbits(glyphbits);
+			getbits(advancebits);
+		    }
 		}
 	    }
 	    break;
