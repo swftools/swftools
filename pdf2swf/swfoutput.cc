@@ -47,6 +47,7 @@ int insertstoptag=0;
 int flashversion=5;
 int splinemaxerror=1;
 int fontsplinemaxerror=1;
+int filloverlap=0;
 
 static char storefont = 0;
 static int flag_protected = 0;
@@ -264,7 +265,8 @@ void drawpath(struct swfoutput*output, SWF_OUTLINE*outline, struct swfmatrix*m, 
         y += (outline->dest.y/(float)0xffff);
         if(outline->type == SWF_PATHTYPE_MOVE)
         {
-	    if(!init && fill && output->drawmode != DRAWMODE_EOFILL && !ignoredraworder) {
+	    //if(!init && fill && output->drawmode != DRAWMODE_EOFILL && !ignoredraworder) {
+	    if(filloverlap && !init && fill && output->drawmode != DRAWMODE_EOFILL) {
 		/* drawmode=FILL (not EOFILL) means that
 		   seperate shapes do not cancel each other out.
 		   On SWF side, we need to start a new shape for each
@@ -2080,5 +2082,45 @@ void swfoutput_drawimageagain(struct swfoutput*obj, int id, int sizex,int sizey,
 	endtext(obj);
 
     drawimage(obj, id, sizex, sizey, x1,y1,x2,y2,x3,y3,x4,y4);
+}
+
+void swfoutput_setparameter(char*name, char*value)
+{
+    if(!strcmp(name, "drawonlyshapes")) {
+	drawonlyshapes = atoi(value);
+    } else if(!strcmp(name, "ignoredraworder")) {
+	ignoredraworder = atoi(value);
+    } else if(!strcmp(name, "filloverlap")) {
+	filloverlap = atoi(value);
+    } else if(!strcmp(name, "linksopennewwindow")) {
+	opennewwindow = atoi(value);
+    } else if(!strcmp(name, "opennewwindow")) {
+	opennewwindow = atoi(value);
+    } else if(!strcmp(name, "storeallcharacters")) {
+	storeallcharacters = atoi(value);
+    } else if(!strcmp(name, "enablezlib")) {
+	enablezlib = atoi(value);
+    } else if(!strcmp(name, "insertstop")) {
+	insertstoptag = atoi(value);
+    } else if(!strcmp(name, "flashversion")) {
+	flashversion = atoi(value);
+    } else if(!strcmp(name, "jpegquality")) {
+	int val = atoi(value);
+	if(val<0) val=0;
+	if(val>100) val=100;
+	jpegquality = val;
+    } else if(!strcmp(name, "splinequality")) {
+	int v = atoi(value);
+	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
+	if(v<1) v = 1;
+	splinemaxerror = v;
+    } else if(!strcmp(name, "fontquality")) {
+	int v = atoi(value);
+	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
+	if(v<1) v = 1;
+	fontsplinemaxerror = v;
+    } else {
+	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
+    }
 }
 
