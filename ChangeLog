@@ -8,10 +8,13 @@
 	* swfstrings: New: Allows extraction of text from swf files
 	* swfdump: New: Dumps swf file information. (And does some error checking on the SWF)
 	* jpeg2swf: New: Converts one or more jpegs to a swf movie.
-0.0.3: 
+0.1.0: 
 	* configure: Now works without automake, automatically disables 
 			jpeg2swf and pdf2swf if jpeglib is not found (disable
 			both) or t1lib is not found (disable pdf2swf)
-	* swfcombine: bugfixes, no longer builds "unstreamable" SWFs
+	* swfcombine: bugfix: DEFINETEXT tags didn't get relocated right
+	* swfcombine: bugfix: no longer builds "unstreamable" SWFs
 	* rfxswf-lib: lossless image formats
 	* pdf2swf: likewise
+	* pdf2swf: picture cache to prevent images getting stored more than once
+	* examples/zlibtest: new file, demonstrates using lossless images with rfxswf-lib
