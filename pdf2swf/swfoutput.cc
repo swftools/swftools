@@ -18,9 +18,20 @@
    along with swftools; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include "../config.h"
 #include <fcntl.h>
 #include <unistd.h>
+#ifdef HAVE_ASSERT_H
+#include <assert.h>
+#else
+#define assert(a)
+#endif
+#define logf logarithmf // logf is also used by ../lib/log.h
+#include <math.h>
+#undef logf
 #include "swfoutput.h"
 #include "spline.h"
 extern "C" {
@@ -29,8 +40,6 @@ extern "C" {
 }
 #define standardEncodingSize 335
 extern char *standardEncodingNames[standardEncodingSize];
-
-#define assert(a) 
 
 int opennewwindow=0;
 int ignoredraworder=0;
@@ -274,7 +283,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m, int log)
             spline(tag,p0,p1,p2,p3,m);
         } 
         else {
-         logf("<error> drawpath: unknown outline type:%d\n", outline->type);
+	    logf("<error> drawpath: unknown outline type:%d\n", outline->type);
         }
         lastx=x;
         lasty=y;
@@ -295,7 +304,7 @@ void drawpath(TAG*tag, T1_OUTLINE*outline, struct swfmatrix*m, int log)
     }
 }
 
-plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end)
+plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end, int trytwo)
 {
     T1_PATHPOINT next, next2;
     double xv=0,yv=0, xv2=0, yv2=0;
@@ -315,7 +324,7 @@ plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end)
 	    }
 	}
 	next2 = next;
-	if(outline->last && outline->last->type != T1_PATHTYPE_MOVE) {
+	if(trytwo && outline->last && outline->last->type != T1_PATHTYPE_MOVE) {
 	    if(outline->type == T1_PATHTYPE_LINE) {
 		next2 = outline->last->dest;
 	    } else {
@@ -352,7 +361,7 @@ plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end)
 	    }
 	}
 	next2 = next;
-	if(outline->link && outline->link->type != T1_PATHTYPE_MOVE) {
+	if(trytwo && outline->link && outline->link->type != T1_PATHTYPE_MOVE) {
 	    if(outline->type == T1_PATHTYPE_LINE) {
 		next2 = outline->link->dest;
 	    } else {
@@ -376,7 +385,7 @@ plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end)
 	yv =  next.x/(float)0xffff;
     }
 
-    double r = line_width/sqrt(xv*xv+yv*yv);
+    double r = (line_width/2)/sqrt(xv*xv+yv*yv);
     xv*=r;
     yv*=r;
 
@@ -389,12 +398,12 @@ plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end)
 	    yv2 =  next2.x/(float)0xffff;
 	}
 
-	double r2 = line_width/sqrt(xv2*xv2+yv2*yv2);
+	double r2 = (line_width/2)/sqrt(xv2*xv2+yv2*yv2);
 	xv2*=r2;
 	yv2*=r2;
 	xv = (xv+xv2)/2;
 	yv = (yv+yv2)/2;
-	double r3 = line_width/sqrt(xv*xv+yv*yv);
+	double r3 = (line_width/2)/sqrt(xv*xv+yv*yv);
 	xv *= r3;
 	yv *= r3;
     }
@@ -404,9 +413,45 @@ plotxy getPivot(T1_OUTLINE*outline, int dir, double line_width, int end)
     return p;
 }
 
-void drawShortPath(struct swfoutput*output, double x, double y, struct swfmatrix* m, T1_OUTLINE*outline, int num, int line_cap, int line_join, double line_width)
+void drawShortPath(struct swfoutput*output, double x, double y, struct swfmatrix* m, T1_OUTLINE*outline)
 {
     double lastx=x, lasty=y;
+    while (outline && outline->type != T1_PATHTYPE_MOVE)
+    {
+        x += (outline->dest.x/(float)0xffff);
+        y += (outline->dest.y/(float)0xffff);
+
+        if(outline->type == T1_PATHTYPE_LINE)
+        {
+            plotxy p0, p1;
+            p0.x=lastx;
+	    p0.y=lasty;
+            p1.x= x; 
+	    p1.y= y;
+            line(tag, p0, p1, m);
+        }
+        else if(outline->type == T1_PATHTYPE_BEZIER)
+        {
+            plotxy p0,p1,p2,p3;
+            T1_BEZIERSEGMENT*o2 = (T1_BEZIERSEGMENT*)outline;
+            p3.x=lastx;
+	    p3.y=lasty;
+            p1.x=o2->C.x/(float)0xffff+lastx;
+            p1.y=o2->C.y/(float)0xffff+lasty;
+            p2.x=o2->B.x/(float)0xffff+lastx;
+            p2.y=o2->B.y/(float)0xffff+lasty;
+            p0.x=x; 
+	    p0.y=y;
+            spline(tag,p0,p1,p2,p3,m);
+        } 
+        lastx=x;
+        lasty=y;
+        outline = outline->link;
+    }
+}
+
+void drawShortPathWithEnds(struct swfoutput*output, double x, double y, struct swfmatrix* m, T1_OUTLINE*outline, int num, int line_cap, int line_join, double line_width)
+{
     plotxy d,d2;
     int back = 0;
 
@@ -418,6 +463,7 @@ void drawShortPath(struct swfoutput*output, double x, double y, struct swfmatrix
 	double x2 = x;
 	double y2 = y;
 	double lx=x,ly=y;
+	double ee = 1.0;
 	int nr;
 	while(tmp && tmp->type != T1_PATHTYPE_MOVE) {
 	    last = tmp;
@@ -425,30 +471,33 @@ void drawShortPath(struct swfoutput*output, double x, double y, struct swfmatrix
 	    ly += (tmp->dest.y/(float)0xffff);
 	    tmp = tmp->link;
 	}
-	s = getPivot(outline, 0, line_width, 0);
-	e = getPivot(last, 0, line_width, 1);
+	s = getPivot(outline, 0, line_width, 0, 0);
+	e = getPivot(last, 0, line_width, 1, 0);
 
-	s.x/=2;
-	s.y/=2;
-	e.x/=2;
-	e.y/=2;
+	if(line_cap == LINE_CAP_BUTT) {
+	    /* make the clipping rectangle slighly bigger
+	       than the line ending, so that it get's clipped
+	       propertly */
+	    //ee = 1.01;
+	    ee=1.0;
+	}
 
-	p0.x = x2 + s.x; 
-	p0.y = y2 + s.y;
-	p1.x = x2 - s.x; 
-	p1.y = y2 - s.y;
-	p2.x = x2 - s.y - s.x; 
-	p2.y = y2 + s.x - s.y;
-	p3.x = x2 - s.y + s.x; 
-	p3.y = y2 + s.x + s.y;
-	m0.x = lx + e.x; 
-	m0.y = ly + e.y;
-	m1.x = lx - e.x; 
-	m1.y = ly - e.y;
-	m2.x = lx + e.y - e.x; 
-	m2.y = ly - e.x - e.y;
-	m3.x = lx + e.y + e.x; 
-	m3.y = ly - e.x + e.y;
+	p0.x = x2 + s.x*ee; 
+	p0.y = y2 + s.y*ee;
+	p1.x = x2 - s.x*ee; 
+	p1.y = y2 - s.y*ee;
+	p2.x = x2 - s.y - s.x*ee; 
+	p2.y = y2 + s.x - s.y*ee;
+	p3.x = x2 - s.y + s.x*ee; 
+	p3.y = y2 + s.x + s.y*ee;
+	m0.x = lx + e.x*ee; 
+	m0.y = ly + e.y*ee;
+	m1.x = lx - e.x*ee; 
+	m1.y = ly - e.y*ee;
+	m2.x = lx + e.y - e.x*ee; 
+	m2.y = ly - e.x - e.y*ee;
+	m3.x = lx + e.y + e.x*ee; 
+	m3.y = ly - e.x + e.y*ee;
 
 	for(nr=0;nr<2;nr++) {
 	    int dir=0;
@@ -501,41 +550,109 @@ void drawShortPath(struct swfoutput*output, double x, double y, struct swfmatrix
 	stopFill();
     }
 
-    while (outline && outline->type != T1_PATHTYPE_MOVE)
-    {
-        x += (outline->dest.x/(float)0xffff);
-        y += (outline->dest.y/(float)0xffff);
+    drawShortPath(output,x,y,m,outline);
 
-        if(outline->type == T1_PATHTYPE_LINE)
-        {
-            plotxy p0, p1;
-            p0.x=lastx;
-	    p0.y=lasty;
-            p1.x= x; 
-	    p1.y= y;
-            line(tag, p0, p1, m);
-        }
-        else if(outline->type == T1_PATHTYPE_BEZIER)
-        {
-            plotxy p0,p1,p2,p3;
-            T1_BEZIERSEGMENT*o2 = (T1_BEZIERSEGMENT*)outline;
-            p3.x=lastx;
-	    p3.y=lasty;
-            p1.x=o2->C.x/(float)0xffff+lastx;
-            p1.y=o2->C.y/(float)0xffff+lasty;
-            p2.x=o2->B.x/(float)0xffff+lastx;
-            p2.y=o2->B.y/(float)0xffff+lasty;
-            p0.x=x; 
-	    p0.y=y;
-            spline(tag,p0,p1,p2,p3,m);
-        } 
-        lastx=x;
-        lasty=y;
-        outline = outline->link;
-    }
     if(line_cap == LINE_CAP_BUTT) {
 	endshape();
+	startshape(output);
     }
+}
+
+void drawT1toRect(struct swfoutput*output, double x, double y, struct swfmatrix* m, T1_OUTLINE*outline, int num, int line_cap, int line_join, double line_width)
+{
+    plotxy d1,d2,p1,p2,p3,p4;
+
+    d1.x = (outline->dest.x/(float)0xffff);
+    d1.y = (outline->dest.y/(float)0xffff);
+    d2 = getPivot(outline, 0, line_width, 0, 0);
+
+    assert(line_cap != LINE_CAP_ROUND);
+    if(line_cap == LINE_CAP_SQUARE) {
+	x -= +d2.y;
+	y -= -d2.x;
+	d1.x += +2*d2.y;
+	d1.y += -2*d2.x;
+    }
+
+    p1.x = x + d2.x;
+    p1.y = y + d2.y;
+    p2.x = x + d2.x + d1.x;
+    p2.y = y + d2.y + d1.y;
+    p3.x = x - d2.x + d1.x;
+    p3.y = y - d2.y + d1.y;
+    p4.x = x - d2.x;
+    p4.y = y - d2.y;
+
+    line(tag, p1,p2, m);
+    line(tag, p2,p3, m);
+    line(tag, p3,p4, m);
+    line(tag, p4,p1, m);
+}
+
+void drawShortPathWithStraightEnds(struct swfoutput*output, double x, double y, struct swfmatrix* m, T1_OUTLINE*outline, int num, int line_cap, int line_join, double line_width)
+{
+    T1_OUTLINE*tmp=outline;
+    double xx=x,yy=y;
+    int stop=0;
+    assert(shapeid>=0);
+
+    startFill();
+    drawT1toRect(output, x, y, m,outline, num, line_cap, line_join, line_width);
+
+    while(tmp->link && tmp->link->type!=T1_PATHTYPE_MOVE) {
+        xx += (tmp->dest.x/(float)0xffff);
+        yy += (tmp->dest.y/(float)0xffff);
+	tmp = tmp->link;
+    }
+    
+    assert(tmp->type == T1_PATHTYPE_LINE);
+    assert(outline->type == T1_PATHTYPE_LINE);
+    
+    if(tmp!=outline) {
+   
+	if(outline->link == tmp) {
+	    /* the two straight line segments (which are everything we
+	       need to draw) are very likely to overlap. To avoid that
+	       they cancel each other out at the end points, start a new
+	       shape for the second one */
+	    endshape();startshape(output);
+	    startFill();
+	}
+
+	drawT1toRect(output, xx, yy, m, tmp, num, line_cap, line_join, line_width);
+
+	if(outline->link != tmp)
+	{
+	    stopFill();stop=1;
+	    int save= tmp->type;
+	    tmp->type = T1_PATHTYPE_MOVE;
+	    x += (outline->dest.x/(float)0xffff);
+	    y += (outline->dest.y/(float)0xffff);
+	    outline = outline->link;
+	    drawShortPath(output, x, y, m, outline);
+	    tmp->type = save;
+	}
+    }
+    if(!stop)
+	stopFill();
+}
+
+static int t1len(T1_OUTLINE*line)
+{
+    int num=0;
+    while(line && line->type != T1_PATHTYPE_MOVE) {
+	num++;
+	line = line->link;
+    }
+    return num;
+}
+
+static float t1linelen(T1_OUTLINE*line)
+{
+    float x,y;
+    x = (line->dest.x/(float)0xffff);
+    y = (line->dest.y/(float)0xffff);
+    return sqrt(x*x+y*y);
 }
 
 void drawpath2poly(struct swfoutput *output, T1_OUTLINE*outline, struct swfmatrix*m, int log, int line_join, int line_cap, double line_width, double miter_limit)
@@ -547,19 +664,29 @@ void drawpath2poly(struct swfoutput *output, T1_OUTLINE*outline, struct swfmatri
         logf("<error> internal error: drawpath needs a shape tag, not %d\n",tag->id);
         exit(1);
     }
+    assert(shapeid>=0);
     double x=0,y=0;
     double lastx=0,lasty=0;
     int valid = 0;
+    int lastwasline = 0;
     T1_OUTLINE*tmp = outline, *last = 0;
     tmp->last = 0;
 
-    while(tmp) {
-        x += (tmp->dest.x/(float)0xffff);
-        y += (tmp->dest.y/(float)0xffff);
-        if(tmp->type == T1_PATHTYPE_MOVE) {
+    while(1) {
+	if(tmp) {
+	    x += (tmp->dest.x/(float)0xffff);
+	    y += (tmp->dest.y/(float)0xffff);
+	}
+        if(!tmp || tmp->type == T1_PATHTYPE_MOVE) {
 	    if(valid && last) {
-		drawShortPath(output, lastx, lasty, m, last, valid, line_cap, line_join, line_width);
+		if(last->type == T1_PATHTYPE_LINE && t1linelen(last)>line_width*2 &&
+		   lastwasline && line_cap != LINE_CAP_ROUND)
+		    drawShortPathWithStraightEnds(output, lastx, lasty, m, last, valid, line_cap, line_join, line_width);
+		else
+		    drawShortPathWithEnds(output, lastx, lasty, m, last, valid, line_cap, line_join, line_width);
 	    }
+	    if(!tmp)
+		break;
 	    valid = 0;
 	    last = 0;
 	    lastx = x;
@@ -569,12 +696,15 @@ void drawpath2poly(struct swfoutput *output, T1_OUTLINE*outline, struct swfmatri
 		last = tmp;
 	    valid++;
 	}
+
+	if(tmp && tmp->type == T1_PATHTYPE_LINE && t1linelen(tmp)>line_width*2)
+	    lastwasline = 1;
+	else
+	    lastwasline = 0;
+
 	if(tmp->link)
 	    tmp->link->last = tmp; // make sure list is properly linked in both directions
 	tmp = tmp->link;
-    }
-    if(valid && last) {
-	drawShortPath(output, lastx, lasty, m, last, valid, line_cap, line_join, line_width);
     }
 }
 
