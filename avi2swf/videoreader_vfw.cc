@@ -223,12 +223,15 @@ void videoreader_vfw_close(videoreader_t* vr)
 	AVIStreamRelease(i->as); i->vs = 0;
     }
     AVIFileRelease(i->avifile); i->avifile = 0;
-    AVIFileExit();
+    
+    AVIFileExit(); avifile_initialized=0;
 
     free(vr->internal); vr->internal = 0;
 }
 
 void videoreader_vfw_setparameter(videoreader_t* vr, char*name, char*value) {}
+
+static int avifile_initialized = 0;
 
 int videoreader_vfw_open(videoreader_t* vr, char* filename)
 {
@@ -248,7 +251,9 @@ int videoreader_vfw_open(videoreader_t* vr, char* filename)
     vr->close = videoreader_vfw_close;
     vr->setparameter = videoreader_vfw_setparameter;
 
-    AVIFileInit();
+    if(!avifile_initialized) {
+	AVIFileInit();
+    }
     if(AVIFileOpen(&i->avifile, filename, OF_SHARE_DENY_WRITE, 0)) {
         fprintf(stderr, "Couldn't open %s\n", filename);
         return -1;
