@@ -90,12 +90,15 @@ install-pkgdataDATA: $(pkgdata_DATA)
 	    $(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/$$p; \
 	  fi; fi; \
 	done
+	$(LN_S) -f $(DESTDIR)$(pkgdatadir)/simple_viewer.swf $(DESTDIR)$(pkgdatadir)/default_viewer.swf
+	$(LN_S) -f $(DESTDIR)$(pkgdatadir)/tessel_loader.swf $(DESTDIR)$(pkgdatadir)/default_loader.swf
 
 uninstall-pkgdataDATA:
 	@$(NORMAL_UNINSTALL)
 	list='$(pkgdata_DATA)'; for p in $$list; do \
 	  rm -f $(DESTDIR)$(pkgdatadir)/$$p; \
 	done
+	rm $(DESTDIR)$(pkgdatadir)/default_*.swf
 tags: TAGS
 TAGS:
 
