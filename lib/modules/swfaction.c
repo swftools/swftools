@@ -288,24 +288,27 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		    if(type == 0) {
 			printf(" String:\"%s\"", value);
 		    } else if (type == 1) {
-			printf(" Float:\"%f\"", *(float*)value);
+			printf(" Float:%f", *(float*)value);
 		    } else if (type == 2) {
 			printf(" NULL");
 		    } else if (type == 4) {
 			printf(" register:%d", *value);
 		    } else if (type == 5) {
-			printf(" %s", *value?"true":"false");
+			printf(" bool:%s", *value?"true":"false");
 		    } else if (type == 6) {
-			printf(" %f", *(double*)value);
+			printf(" float:%f", *(double*)value);
 		    } else if (type == 7) {
-			printf(" %d", *(int*)value);
+			printf(" int:%d", *(int*)value);
 		    } else if (type == 8) {
 			printf(" Lookup:%d", *value);
+		    } else {
+			printf(" UNKNOWN[%02x]",type);
 		    }
 		} break;
 	    }
 	    data += OpAdvance(*cp, data);
-	    if(*cp!='c' || !poollen)
+	    if((*cp!='c' || !poollen) &&
+	       (*cp!='p' || !(data<&atag->data[atag->len])))
 		cp++;
 	    if(poollen)
 		poollen--;
@@ -315,14 +318,14 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 	{
 	    int nl = ((atag->data+atag->len)-data);
 	    int t;
-	    printf(" remainder of %d bytes:\"", nl);
+	    printf(" (remainder of %d bytes:\"", nl);
 	    for(t=0;t<nl;t++) {
 		if(data[t]<32)
 		    printf("\\%d",data[t]);
 		else
 		    printf("%c", data[t]);
 	    }
-	    printf("\"");
+	    printf("\")");
 	}
 	printf("\n");
 	atag = atag->next;
