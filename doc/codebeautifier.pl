@@ -1,6 +1,7 @@
 while(<stdin>)
 {
-    if(/\[CALLPERL .*left\]/ ... /\[CALLPERL end\]/) {
+    if(/\[CALLPERL\s+(.*)\s+left\]/ ... /\[CALLPERL end\]/) {
+	$lang = $1 if($1);
 	$code .= $_ if(!/CALLPERL/);
 	$name = $1 if(/.flash.*name=([^&][^ ]*)/);
 	$name = $1 if(/.flash.*name=&quot;([^&]*)&quot;/);
@@ -9,13 +10,13 @@ while(<stdin>)
     elsif(/\[CALLPERL .*right\]/ ... /\[CALLPERL end\]/) {
 	$highlight .= $_ if(!/CALLPERL/);
     }
-    elsif ($code ne "") {
+    elsif ($code ne "" && ($lang eq "swfc" || $lang eq "sc")) {
 	$code =~ s/&quot;/"/g;
 
 #	    print stderr "Warning: ttf->swf\n" if($code =~ s/Arial.ttf/Arial.swf/g);
 
 	open(fi, ">tmp.sc");print fi $code;close(fi);
-	print stderr "swfc tmp.sc ($name)\n";
+	print stderr "[$lang] swfc tmp.sc ($name)\n";
 	system("../src/swfc tmp.sc >&2");
 	($embed = `swfdump -e $name`) =~ /WIDTH="([^"]*)"/;
 	system("cp $name data");
@@ -26,6 +27,9 @@ while(<stdin>)
 	$code="";
 	print;
 	unlink "tmp.sc";
+    }
+    elsif ($code ne "") {
+	$code="";
     }
     elsif ($highlight ne "") {
 	$highlight =~ s/^\n\s*//g;
