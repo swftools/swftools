@@ -912,14 +912,15 @@ GfxColorSpace *GfxSeparationColorSpace::parse(Array *arr) {
   obj1.free();
   func = Function::parse(arr->get(3, &obj1));
   obj1.free();
-  if (!func->isOk()) {
+  if (!func || !func->isOk()) {
     goto err4;
   }
   cs = new GfxSeparationColorSpace(name, alt, func);
   return cs;
 
  err4:
-  delete func;
+  if(func)
+    delete func;
   delete alt;
  err3:
   delete name;
