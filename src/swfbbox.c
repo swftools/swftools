@@ -35,6 +35,7 @@ static int optimize = 0;
 static int swifty = 0;
 static int verbose = 0;
 static int showbbox = 1;
+static int showorigbbox = 0;
 static int expand = 1;
 
 static struct options_t options[] = {
@@ -42,6 +43,8 @@ static struct options_t options[] = {
 {"O", "optimize"},
 {"S", "swifty"},
 {"o", "output"},
+{"b", "bbox"},
+{"B", "newbbox"},
 {"e", "expand"},
 {"v", "verbose"},
 {"V", "version"},
@@ -54,18 +57,31 @@ int args_callback_option(char*name,char*val)
         printf("swfbbox - part of %s %s\n", PACKAGE, VERSION);
         exit(0);
     } 
+    else if(!strcmp(name, "b")) {
+	showorigbbox = 1;
+	if(showbbox == 1) showbbox = 0;
+	return 0;
+    } 
+    else if(!strcmp(name, "B")) {
+	showbbox = 2;
+	return 0;
+    } 
     else if(!strcmp(name, "O")) {
 	optimize = 1;
-	showbbox = 0;
+	if(showbbox == 1) showbbox = 0;
 	return 0;
     } 
     else if(!strcmp(name, "S")) {
 	swifty = 1;
-	showbbox = 0;
+	if(showbbox == 1) showbbox = 0;
 	return 0;
     } 
     else if(!strcmp(name, "v")) {
 	verbose ++;
+	return 0;
+    } 
+    else if(!strcmp(name, "q")) {
+	verbose --;
 	return 0;
     } 
     else if(!strcmp(name, "e")) {
@@ -406,6 +422,7 @@ int main (int argc,char ** argv)
     TAG*tag;
     SWF swf;
     int fi;
+    SRECT oldMovieSize;
     SRECT newMovieSize;
     memset(bboxes, 0, sizeof(bboxes));
     memset(depth2name, 0, sizeof(depth2name));
@@ -467,6 +484,7 @@ int main (int argc,char ** argv)
 	showSwiftyOutput(&swf);
     }
 
+    oldMovieSize = swf.movieSize;
     newMovieSize = getSWFBBox(&swf);
 
     if(optimize || expand) {
@@ -484,11 +502,23 @@ int main (int argc,char ** argv)
     }
     
     if(showbbox) {
-	printf("Real Movie Size: %.2fx%.2f (:%.2f:%.2f)\n", 
+	if(verbose>=0)
+	    printf("Real Movie Size: ");
+	printf("%.2f x %.2f :%.2f :%.2f\n", 
 		(newMovieSize.xmax-newMovieSize.xmin)/20.0,
 		(newMovieSize.ymax-newMovieSize.ymin)/20.0,
 		(newMovieSize.xmin)/20.0,
 		(newMovieSize.ymin)/20.0
+		);
+    }
+    if(showorigbbox) {
+	if(verbose>=0)
+	    printf("Original Movie Size: ");
+	printf("%.2f x %.2f :%.2f :%.2f\n", 
+		(oldMovieSize.xmax-oldMovieSize.xmin)/20.0,
+		(oldMovieSize.ymax-oldMovieSize.ymin)/20.0,
+		(oldMovieSize.xmin)/20.0,
+		(oldMovieSize.ymin)/20.0
 		);
     }
 

@@ -9,6 +9,12 @@ It can also dump the corners of the bounding boxes of all frames of a movie.
 
 -h, --help 
     Print help and exit
+-b, --bbox
+    Show movie bounding box (default)
+-B, --newbbox
+    Show recalculated (optimized/expanded) bounding box
+-e, --expand
+    Write out a new file using the recalculated bounding box
 -O, --optimize 
     Recalculate bounding boxes
 -S, --swifty
