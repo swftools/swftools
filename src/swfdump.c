@@ -247,10 +247,10 @@ SWF swf;
 int fontnum = 0;
 SWFFONT**fonts;
 
-void textcallback(int*glyphs, int nr, int fontid) 
+void textcallback(void*self, int*glyphs, int*ypos, int nr, int fontid, int fontsize, int startx, int starty, RGBA*color) 
 {
     int font=-1,t;
-    printf("                <%2d glyphs in font %2d> ",nr, fontid);
+    printf("                <%2d glyphs in font %2d, color #%02x%02x%02x%02x> ",nr, fontid, color->r, color->g, color->b, color->a);
     for(t=0;t<fontnum;t++)
     {
 	if(fonts[t]->id == fontid) {
@@ -265,9 +265,9 @@ void textcallback(int*glyphs, int nr, int fontid)
 	if(font>=0) {
 	    if(glyphs[t] >= fonts[font]->numchars  /*glyph is in range*/
 		    || !fonts[font]->glyph2ascii /* font has ascii<->glyph mapping */
-	      )
-		continue;
-	    a = fonts[font]->glyph2ascii[glyphs[t]];
+	      ) a = glyphs[t];
+	    else
+		a = fonts[font]->glyph2ascii[glyphs[t]];
 	} else {
 	    a = glyphs[t];
 	}
@@ -282,7 +282,7 @@ void textcallback(int*glyphs, int nr, int fontid)
 void handleText(TAG*tag) 
 {
   printf("\n");
-  swf_FontExtract_DefineTextCallback(-1,0,tag,4, textcallback);
+  swf_ParseDefineText(tag,textcallback, 0);
 }
 	    
 void handleDefineSound(TAG*tag)
