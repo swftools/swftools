@@ -1,4 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
+
+dnl AC_INIT(src/) # old autoconf
 AC_INIT
 AC_CONFIG_SRCDIR([src/])
 
@@ -14,7 +16,8 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=0.5.1
+VERSION=2004-05-18-1254
+
 
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
@@ -255,6 +258,7 @@ fi
 AC_SUBST(JPEG2SWF)
 AC_SUBST(PNG2SWF)
 
+dnl AC_OUTPUT(${FILES}) old autoconf
 AC_CONFIG_FILES([${FILES}])
 AC_OUTPUT
 
