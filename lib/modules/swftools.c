@@ -293,7 +293,7 @@ char* swf_GetName(TAG * t)
 
 #define DEBUG_ENUMERATE if(0)
 
-static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num)
+static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph)
 {
     U16 count;
     int t;
@@ -309,16 +309,21 @@ static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*
 	type = swf_GetU8(tag); //type
 	if(type == 0) {
 	    if(num == 3)
-		swf_GetRGBA(tag, NULL);
+		{swf_GetRGBA(tag, NULL);if(morph) swf_GetRGBA(tag, NULL);}
 	    else 
-		swf_GetRGB(tag, NULL);
+		{swf_GetRGB(tag, NULL);if(morph) swf_GetRGB(tag, NULL);}
 	}
 	else if(type == 0x10 || type == 0x12)
 	{
 	    swf_ResetReadBits(tag);
 	    swf_GetMatrix(tag, NULL);
+	    if(morph)
+		swf_GetMatrix(tag, NULL);
 	    swf_ResetReadBits(tag);
-	    swf_GetGradient(tag, NULL, /*alpha*/ num>=3?1:0);
+	    if(morph)
+		swf_GetMorphGradient(tag, NULL, NULL);
+	    else
+		swf_GetGradient(tag, NULL, /*alpha*/ num>=3?1:0);
 	}
 	else if(type == 0x40 || type == 0x41)
 	{
@@ -331,6 +336,8 @@ static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*
 	    swf_GetU16(tag);
 	    swf_ResetReadBits(tag);
 	    swf_GetMatrix(tag, NULL);
+	    if(morph)
+		swf_GetMatrix(tag, NULL);
 	}
 	else {
 	    fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x\n",type);
@@ -343,10 +350,12 @@ static void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*
     for(t=0;t<count;t++) 
     {
 	swf_GetU16(tag);
+	if(morph)
+	    swf_GetU16(tag);
 	if(num == 3)
-	    swf_GetRGBA(tag, NULL);
+	    {swf_GetRGBA(tag, NULL);if(morph) swf_GetRGBA(tag, NULL);}
 	else
-	    swf_GetRGB(tag, NULL);
+	    {swf_GetRGB(tag, NULL);if(morph) swf_GetRGB(tag, NULL);}
     }
 }
 
@@ -387,6 +396,13 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	case ST_DEFINEBUTTONSOUND:
 	    callback(tag, tag->pos + base, callback_data); //button id
 	break;
+
+	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
+	case ST_NAMECHARACTER:
+	case ST_GENERATORTEXT:
+	case ST_MX3:
+	    callback(tag, tag->pos + base, callback_data);
+        break;
 	case ST_PLACEOBJECT:
 	    callback(tag, tag->pos + base, callback_data);
         break;
@@ -525,6 +541,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    callback(tag, tag->pos + base, callback_data);
 	break;
 
+	case ST_DEFINEMORPHSHAPE:
 	case ST_DEFINESHAPE3: // these thingies might have bitmap ids in their fillstyles
 	num++; //fallthrough
 	case ST_DEFINESHAPE2:
@@ -533,75 +550,87 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    int fillbits;
 	    int linebits;
 	    int id; 
+	    int morph = 0;
+	    if(tag->id == ST_DEFINEMORPHSHAPE)
+		morph = 1;
+
 	    id = swf_GetU16(tag); // id;
 	    swf_GetRect(tag, NULL); // bounds
+	    if(morph) {
+		swf_GetRect(tag, NULL); // bounds2
+		swf_GetU32(tag); //offset to endedges
+	    }
     
 	    DEBUG_ENUMERATE printf("Tag:%d Name:%s ID:%d\n", tag->id, swf_TagGetName(tag), id);
 
-	    enumerateUsedIDs_styles(tag, callback, callback_data, num);
+	    enumerateUsedIDs_styles(tag, callback, callback_data, num, morph);
 	    DEBUG_ENUMERATE printf("-------\n");
-	    fillbits = swf_GetBits(tag, 4);
-	    linebits = swf_GetBits(tag, 4);
-	    DEBUG_ENUMERATE printf("%d %d\n", fillbits, linebits);
-	    swf_ResetReadBits(tag);
-	    while(1) {
-		int flags;
-		flags = swf_GetBits(tag, 1);
-		if(!flags) { //style change
-		    flags = swf_GetBits(tag, 5);
-		    if(!flags)
-			break;
-		    if(flags&1) { //move
-			int n = swf_GetBits(tag, 5); 
-			int x,y;
-			x = swf_GetBits(tag, n); //x
-			y = swf_GetBits(tag, n); //y
-			DEBUG_ENUMERATE printf("move %f %f\n",x/20.0,y/20.0);
-		    }
-		    if(flags&2) { //fill0
-			int fill0;
-			fill0 = swf_GetBits(tag, fillbits); 
-			DEBUG_ENUMERATE printf("fill0 %d\n", fill0);
-		    }
-		    if(flags&4) { //fill1
-			int fill1;
-			fill1 = swf_GetBits(tag, fillbits); 
-			DEBUG_ENUMERATE printf("fill1 %d\n", fill1);
-		    }
-		    if(flags&8) { //linestyle
-			int line;
-			line = swf_GetBits(tag, linebits); 
-			DEBUG_ENUMERATE printf("linestyle %d\n",line);
-		    }
-		    if(flags&16) {
-			DEBUG_ENUMERATE printf("more fillstyles\n");
-			enumerateUsedIDs_styles(tag, callback, callback_data, num);
-			fillbits = swf_GetBits(tag, 4);
-			linebits = swf_GetBits(tag, 4);
-		    }
-		} else {
+	    while(--morph>=0) /* morph shapes define two shapes */
+	    {
+		swf_ResetReadBits(tag); //?
+		fillbits = swf_GetBits(tag, 4);
+		linebits = swf_GetBits(tag, 4);
+		DEBUG_ENUMERATE printf("%d %d\n", fillbits, linebits);
+		swf_ResetReadBits(tag);
+		while(1) {
+		    int flags;
 		    flags = swf_GetBits(tag, 1);
-		    if(flags) { //straight edge
-			int n = swf_GetBits(tag, 4) + 2;
-			if(swf_GetBits(tag, 1)) { //line flag
+		    if(!flags) { //style change
+			flags = swf_GetBits(tag, 5);
+			if(!flags)
+			    break;
+			if(flags&1) { //move
+			    int n = swf_GetBits(tag, 5); 
 			    int x,y;
-			    x = swf_GetSBits(tag, n); //delta x
-			    y = swf_GetSBits(tag, n); //delta y
-			    DEBUG_ENUMERATE printf("line %f %f\n",x/20.0,y/20.0);
-			} else {
-			    int v=swf_GetBits(tag, 1);
-			    int d;
-			    d = swf_GetSBits(tag, n); //vert/horz
-			    DEBUG_ENUMERATE printf("%s %f\n",v?"vertical":"horizontal", d/20.0);
+			    x = swf_GetBits(tag, n); //x
+			    y = swf_GetBits(tag, n); //y
+			    DEBUG_ENUMERATE printf("move %f %f\n",x/20.0,y/20.0);
 			}
-		    } else { //curved edge
-			int n = swf_GetBits(tag, 4) + 2;
-			int x1,y1,x2,y2;
-			x1 = swf_GetSBits(tag, n);
-			y1 = swf_GetSBits(tag, n);
-			x2 = swf_GetSBits(tag, n);
-			y2 = swf_GetSBits(tag, n);
-			DEBUG_ENUMERATE printf("curve %f %f %f %f\n", x1/20.0, y1/20.0, x2/20.0, y2/20.0);
+			if(flags&2) { //fill0
+			    int fill0;
+			    fill0 = swf_GetBits(tag, fillbits); 
+			    DEBUG_ENUMERATE printf("fill0 %d\n", fill0);
+			}
+			if(flags&4) { //fill1
+			    int fill1;
+			    fill1 = swf_GetBits(tag, fillbits); 
+			    DEBUG_ENUMERATE printf("fill1 %d\n", fill1);
+			}
+			if(flags&8) { //linestyle
+			    int line;
+			    line = swf_GetBits(tag, linebits); 
+			    DEBUG_ENUMERATE printf("linestyle %d\n",line);
+			}
+			if(flags&16) {
+			    DEBUG_ENUMERATE printf("more fillstyles\n");
+			    enumerateUsedIDs_styles(tag, callback, callback_data, num, 0);
+			    fillbits = swf_GetBits(tag, 4);
+			    linebits = swf_GetBits(tag, 4);
+			}
+		    } else {
+			flags = swf_GetBits(tag, 1);
+			if(flags) { //straight edge
+			    int n = swf_GetBits(tag, 4) + 2;
+			    if(swf_GetBits(tag, 1)) { //line flag
+				int x,y;
+				x = swf_GetSBits(tag, n); //delta x
+				y = swf_GetSBits(tag, n); //delta y
+				DEBUG_ENUMERATE printf("line %f %f\n",x/20.0,y/20.0);
+			    } else {
+				int v=swf_GetBits(tag, 1);
+				int d;
+				d = swf_GetSBits(tag, n); //vert/horz
+				DEBUG_ENUMERATE printf("%s %f\n",v?"vertical":"horizontal", d/20.0);
+			    }
+			} else { //curved edge
+			    int n = swf_GetBits(tag, 4) + 2;
+			    int x1,y1,x2,y2;
+			    x1 = swf_GetSBits(tag, n);
+			    y1 = swf_GetSBits(tag, n);
+			    x2 = swf_GetSBits(tag, n);
+			    y2 = swf_GetSBits(tag, n);
+			    DEBUG_ENUMERATE printf("curve %f %f %f %f\n", x1/20.0, y1/20.0, x2/20.0, y2/20.0);
+			}
 		    }
 		}
 	    }
