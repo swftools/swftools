@@ -2,8 +2,8 @@ while(<stdin>)
 {
     if(/\[CALLPERL .*left\]/ ... /\[CALLPERL end\]/) {
 	$code .= $_ if(!/CALLPERL/);
-	$name = $1 if(/.swf.*name=([^&][^ ]*)/);
-	$name = $1 if(/.swf.*name=&quot;([^&]*)&quot;/);
+	$name = $1 if(/.flash.*name=([^&][^ ]*)/);
+	$name = $1 if(/.flash.*name=&quot;([^&]*)&quot;/);
     } 
     elsif(/\[CALLPERL .*right\]/ ... /\[CALLPERL end\]/) {
 	$highlight .= $_ if(!/CALLPERL/);

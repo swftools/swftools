@@ -45,7 +45,7 @@ Shell scripts, commands to execute:
 Code:
     
     <code lang="sc">   (The lang= is optional)
-	.swf
+	.flash
 	    .box b1 100 100
 	.end
     </code>
@@ -103,7 +103,7 @@ Boxes:
   </p>
 
   <code lang="swfc">
-.swf name="box.swf"
+.flash name="box.swf"
     .box b1 100 100 color=yellow fill=red
     .put b1 pin=center scale=0%
     .frame 100
@@ -121,11 +121,11 @@ Boxes:
  <section><title>Text generation</title>
   
   <code lang="swfc">
-.swf name="text5.swf"
+.flash name="text5.swf"
 .font courier "Courier.swf"
 .font helvetica "Helvetica.swf"
 .text hithere text="HELLO" font=courier size=50% color=blue
-.shape scene Scenery50.swf
+.swf scene Scenery50.swf
 
 .frame 0
     .startclip hithere pin=center x=100 y=75 scale=50% #text clips...
@@ -138,7 +138,7 @@ Boxes:
   </code>
   
   <code lang="swfc">
-.swf name="text6.swf"
+.flash name="text6.swf"
 .font courier "Courier.swf"
 .font helvetica "Helvetica.swf"
 .text hello text="HELLO" font=helvetica size=50% color=blue
@@ -158,9 +158,9 @@ Boxes:
  <section><title>Color transforms</title>
 
   <code lang="swfc">
-.swf name="cxform.swf" version=5
+.flash name="cxform.swf" version=5
     
-    .shape s1 "photo.swf"
+    .jpeg s1 "photo.jpeg" quality=80%
 
     .put s1 x=50 y=50 scalex=110 scaley=110
     .frame 100
