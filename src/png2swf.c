@@ -38,6 +38,7 @@ struct {
     int force_height;
     int nfiles;
     int verbose;
+    int do_cgi;
     char *outfile;
 } global;
 
@@ -68,21 +69,24 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 
 int MovieFinish(SWF * swf, TAG * t, char *sname)
 {
-    int handle, so = fileno(stdout);
+    int f, so = fileno(stdout);
     t = swf_InsertTag(t, ST_END);
 
     if ((!isatty(so)) && (!sname))
-	handle = so;
+	f = so;
     else {
 	if (!sname)
 	    sname = "output.swf";
-	handle = open(sname, O_BINARY | O_RDWR | O_CREAT | O_TRUNC, 0666);
+	f = open(sname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
     }
-    if FAILED
-	(swf_WriteSWF(handle, swf)) if (VERBOSE(1))
-	    fprintf(stderr, "Unable to write output file: %s\n", sname);
-    if (handle != so)
-	close(handle);
+
+    if(global.do_cgi) {
+	if FAILED(swf_WriteCGI(swf)) fprintf(stderr,"WriteCGI() failed.\n");
+    } else {
+	if FAILED(swf_WriteSWF(f,swf)) fprintf(stderr,"WriteSWF() failed.\n");
+	if (f != so)
+	    close(f);
+    }
 
     swf_FreeTags(swf);
     return 0;
@@ -581,7 +585,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	if(header.mode == 6 && transparent != header.width*header.height
 		            && opaque != header.width*header.height) {
 	   
-	    printf("Image has transparency information. Storing as DefineBitsJpeg3 Tag (jpeg+alpha)\n");
+	    fprintf(stderr, "Image has transparency information. Storing as DefineBitsJpeg3 Tag (jpeg+alpha)\n");
 
 	    // we always use quality 100, since png2swf is expected to
 	    // use more or less lossless compression
@@ -782,6 +786,10 @@ int args_callback_option(char *arg, char *val)
 	    res = 1;
 	    break;
 
+	case 'C':
+	    global.do_cgi = 1;
+	    break;
+
 	case 'v':
 	    if (val)
 		global.verbose = atoi(val);
@@ -823,6 +831,7 @@ struct options_t options[] =
 {"h", "help"},
 {"o", "output"},
 {"r", "rate"},
+{"C", "cgi"},
 {"v", "verbose"},
 {"X", "width"},
 {"Y", "height"},
@@ -857,14 +866,14 @@ int args_callback_command(char *arg, char *next)	// actually used as filename
 void args_callback_usage(char *name)
 {
     printf("Usage: %s  [-options [value]] imagefiles[.png] [...]\n", name);
-    printf("-r framerate          (rate) Set movie framerate (frames per second)\n");
-    printf("-o outputfile         (output) Set name for SWF output file\n");
-    printf("-X pixel              (width) Force movie width to pixel (default: autodetect)\n");
-    printf("-Y pixel              (height) Force movie height to pixel (default: autodetect)\n");
-    printf("-v level              (verbose) Set verbose level (0=quiet, 1=default, 2=debug)\n");
-    printf("-V                    (version) Print version information and exit\n");
+    printf("\t-r , --rate <framerate>\t\t\tSet movie framerate (frames per second)\n");
+    printf("\t-o , --output <filename>\t\t\tSet name for SWF output file\n");
+    printf("\t-X , --pixel <width>\t\t\tForce movie width to pixel (default: autodetect)\n");
+    printf("\t-Y , --pixel <height>\t\t\tForce movie height to pixel (default: autodetect)\n");
+    printf("\t-v , --verbose <level>\t\t\t Set verbose level (0=quiet, 1=default, 2=debug)\n");
+    printf("\t-C , --cgi\t\t\t For use as CGI- prepend http header, write to stdout\n");
+    printf("\t-V , --version\t\t\tPrint version information and exit\n");
 }
-
 
 int main(int argc, char **argv)
 {
