@@ -1,6 +1,6 @@
-/* fontwrite.c
+/* makefonts.cc
 
-   Example for including and using fonts 
+   Utility for generating the standard fonts (arial, courier, etc.) in swf-format. 
    
    Part of the swftools package.
 
@@ -9,6 +9,7 @@
    This file is distributed under the GPL, see file COPYING for details 
 
 */
+
 
 #include <stdio.h>
 #include <fcntl.h>
