@@ -16,9 +16,9 @@ from AVI files.
     Audio adjust: Shift sound -seconds to the future or +seconds into the past.
 -n , --num frames
     Number of frames to encode
--m , --mp3-bitrate <rate> (kbps)
+-m , --mp3-bitrate <kbps>
     Set the mp3 bitrate to encode audio with
--r , --mp3-samplerate <rate> (Hz)
+-r , --mp3-samplerate <hz>
     Set the mp3 samplerate to encode audio with (default: 11025)
 -d , --scale <val>
     Scale down to factor <val>. (in %, e.g. 100 = original size)
