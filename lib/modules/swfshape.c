@@ -421,7 +421,7 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     b = swf_CountBits(y,b);
     if (b<2) b=2;
     if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(1)- %d\n", b);
+	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(1)- %d (%d,%d)\n", b, x,y);
 	fflush(stdout);
 	b = 17;
     }
@@ -437,7 +437,7 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     if(b<2) 
         b=2;
     if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(2)- %d\n", b);
+	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(2)- %d (%d)\n", b, y);
 	b = 17;
     }
     swf_SetBits(t, b-2, 4);
@@ -449,7 +449,7 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     if(b<2) 
         b=2;
     if(b-2 >= 16) {
-	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(3)- %d\n", b);
+	fprintf(stderr, "Bit overflow in swf_ShapeSetLine(3)- %d (%d)\n", b, x);
 	b = 17;
     }
     swf_SetBits(t, b-2, 4);
