@@ -1265,8 +1265,7 @@ void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant)
 #endif
 }
 
-static int uline[64],vline[64],yline[64];
-void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
+void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, int quant)
 {
     int bx, by;
 
@@ -1282,18 +1281,15 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
     {
 	for(bx=0;bx<s->bbx;bx++)
 	{
-	    //if((lrand48()&255) || !(bx>8 && bx<24 && by>8 && by<24)) {
 	    if(!(by==31)) {
 		/* mvd (0,0) block (mode=0) */
 		int t;
-		int mode = 0; // mvd w/o mvd24
+		int mode = 0;
 		int has_dc = 0;
 		int cbpybits=0,cbpcbits=0;
 		int predictmvdx, predictmvdy;
-		//int mvx=-1+(2*(s->frame&1));
-		//int mvy=-1+((s->frame&2));
-		int mvx=0;//(lrand48()%4)-2;
-		int mvy=3;
+		int mvx=movex[by*s->bbx+bx];
+		int mvy=movey[by*s->bbx+bx];
 
 		swf_SetBits(tag,0,1); // COD
 		codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
@@ -1305,32 +1301,6 @@ void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, int quant)
 		codehuffman(tag, mvd, mvd2index(predictmvdx, predictmvdy, mvx, mvy, 1));
 		s->mvdx[by*s->bbx+bx] = mvx;
 		s->mvdy[by*s->bbx+bx] = mvy;
-	    } else {
-		/* i block (mode=3) */
-		int mode = 3;
-		int has_dc = 1;
-		int cbpybits,cbpcbits;
-		int t;
-		block_t b;
-		memset(&b, 0, sizeof(block_t));
-		b.y1[0] = b.y2[0] = b.y3[0] = b.y4[0] = yline[bx];
-		b.u[0] = uline[bx];
-		b.v[0] = vline[bx];
-
-		getblockpatterns(&b, &cbpybits, &cbpcbits, has_dc);
-		swf_SetBits(tag,0,1); // COD
-		codehuffman(tag, mcbpc_inter, mode*4+cbpcbits);
-		codehuffman(tag, cbpy, cbpybits);
-
-		/* luminance */
-		encode8x8(tag, b.y1, has_dc, cbpybits&8);
-		encode8x8(tag, b.y2, has_dc, cbpybits&4);
-		encode8x8(tag, b.y3, has_dc, cbpybits&2);
-		encode8x8(tag, b.y4, has_dc, cbpybits&1);
-
-		/* chrominance */
-		encode8x8(tag, b.u, has_dc, cbpcbits&2);
-		encode8x8(tag, b.v, has_dc, cbpcbits&1);
 	    }
 	}
     }
