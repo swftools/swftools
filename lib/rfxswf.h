@@ -39,6 +39,9 @@ extern "C" {
 #include "./drawer.h"
 
 #define DEBUG_RFXSWF
+#ifdef RFXSWF_DISABLESOUND
+#define NO_MP3
+#endif
 
 #ifndef TRUE
 #define TRUE (1)
@@ -702,17 +705,11 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
 int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 
-#ifndef RFXSWF_DISABLESOUND
-
 // swfsound.c
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
 void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first); /* expects 2304 samples */
-
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num);
-
 void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info);
-
-#endif // RFXSWF_DISABLESOUND
 
 // swftools.c
 

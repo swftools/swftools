@@ -112,11 +112,14 @@
 /* use gzip/uncompress */
 #undef USE_GZIP
 
-/* use libfreetype */
+/* let ttf2pt1 use libfreetype */
 #undef USE_FREETYPE
 
-/* use internal l.a.m.e. mp3 library */
-#undef USE_MP3
+/* have/use freetype library */
+#undef HAVE_FREETYPE
+
+/* have/use internal l.a.m.e. mp3 library */
+#undef HAVE_LAME 
 
 /* system() can handle command substitution */
 #undef SYSTEM_BACKTICKS

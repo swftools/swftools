@@ -35,8 +35,11 @@
 #include <zlib.h>
 #endif // HAVE_ZLIB
 
-#define LAME
+#ifndef RFXSWF_DISABLESOUND
+#ifdef HAVE_LAME
 #include "lame/lame.h"
+#endif
+#endif
 
 #include "./bitio.h"
 #include "./MD5.h"

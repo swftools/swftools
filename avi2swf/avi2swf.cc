@@ -404,6 +404,12 @@ int videoreader_avifile_open(videoreader_t* v, char* filename)
 	printf("Couldn't open video stream\n");
 	i->do_audio = 0;
     }
+#ifdef NO_MP3
+    if(i->do_audio) {
+	printf(stderr, "MP3 support has been disabled at compile time, not converting soundtrack");
+	i->do_audio = 0;
+    }
+#endif
 
     if(!i->do_video && !i->do_audio) {
 	printf("File has neither audio nor video streams.(?)\n");

@@ -21,12 +21,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#ifndef RFXSWF_DISABLESOUND
+#ifndef NO_MP3
 
 #include "../rfxswf.h"
 
 #ifdef BLADEENC
-fjokjklj
+#define HAVE_SOUND
+
 CodecInitOut * init = 0;
 void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples)
 {
@@ -76,16 +77,17 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
 }
 #endif
 
+/* TODO: find a better way to set these from the outside */
 
-#ifdef LAME
-
-#include "../lame/lame.h"
-
-/* TODO: find a way to set these from the outside */
 int swf_mp3_in_samplerate = 44100;
 int swf_mp3_out_samplerate = 11025;
 int swf_mp3_channels = 1;
 int swf_mp3_bitrate = 32;
+
+#ifdef HAVE_LAME
+#define HAVE_SOUND
+
+#include "../lame/lame.h"
 
 static lame_global_flags*lame_flags;
 
@@ -237,12 +239,44 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
     free(buf);
 }
 
+#endif
+
+#endif
+
+#ifndef HAVE_SOUND
+
+// supply stubs
+
+void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
+{
+    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+}
+void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
+{
+    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+}
+void swf_SetSoundStreamEnd(TAG*tag)
+{
+    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+}
+void swf_SetSoundDefineRaw(TAG*tag, S16*samples, int num, int samplerate)
+{
+    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+}
+void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
+{
+    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+}
+
+#endif
+
 #define SOUNDINFO_STOP 32
 #define SOUNDINFO_NOMULTIPLE 16
 #define SOUNDINFO_HASENVELOPE 8
 #define SOUNDINFO_HASLOOPS 4
 #define SOUNDINFO_HASOUTPOINT 2
 #define SOUNDINFO_HASINPOINT 1
+
 
 void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info)
 {
@@ -270,6 +304,4 @@ void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info)
     }
 }
 
-#endif
 
-#endif // RFXSWF_DISABLESOUND
