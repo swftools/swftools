@@ -519,6 +519,7 @@ int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
 { int i,j;
   if ((!f)||(!use)) return -1;
 
+  /* TODO: layout, glyphnames */
   j = 0;
   for (i=0;i<f->numchars;i++)
     if (f->glyph[i].shape)
@@ -541,6 +542,68 @@ int swf_FontReduce(SWFFONT * f,FONTUSAGE * use)
   f->numchars = j;
     
   return j;
+}
+void swf_FontSort(SWFFONT * font)
+{
+    if(!font) return;
+    int i,j,k;
+    int* newplace = malloc(sizeof(int)*font->numchars);
+    int* newpos;
+    
+    for(i=0;i<font->numchars;i++) {
+	newplace[i] = i;
+    }
+    for(i=0;i<font->numchars;i++)
+    for(j=0;j<i;j++) {
+	if(font->glyph2ascii[i] < font->glyph2ascii[j]) {
+	    int n1,n2;
+	    char* c1,*c2;
+	    SWFGLYPH g1,g2;
+	    SRECT r1,r2;
+	    n1=newplace[i];
+	    n2=newplace[j];
+	    newplace[j] = n1;
+	    newplace[i] = n2;
+	    n1=font->glyph2ascii[i];
+	    n2=font->glyph2ascii[j];
+	    font->glyph2ascii[j] = n1;
+	    font->glyph2ascii[i] = n2;
+	    g1=font->glyph[i];
+	    g2=font->glyph[j];
+	    font->glyph[j] = g1;
+	    font->glyph[i] = g2;
+	    if(font->glyphnames) {
+		c1 = font->glyphnames[i];
+		c2 = font->glyphnames[j];
+		font->glyphnames[j] = c1;
+		font->glyphnames[i] = c2;
+	    }
+	    if(font->layout) {
+		r1 = font->layout->bounds[i];
+		r2 = font->layout->bounds[j];
+		font->layout->bounds[j] = r1;
+		font->layout->bounds[i] = r2;
+	    }
+	}
+    }
+    newpos = malloc(sizeof(int)*font->numchars);
+    for(i=0;i<font->numchars;i++) {
+	newpos[newplace[i]] = i;
+    }
+    for(i=0;i<font->maxascii;i++) {
+	if(font->ascii2glyph[i]>=0)
+	    font->ascii2glyph[i] = newpos[font->ascii2glyph[i]];
+    }
+
+    free(newpos);
+    free(newplace);
+}
+
+void swf_FontPrepareForEditText(SWFFONT * font)
+{
+    if(!font->layout)
+	swf_FontCreateLayout(font);
+    swf_FontSort(font);
 }
 
 int swf_FontInitUsage(SWFFONT* f, FONTUSAGE * use)
@@ -677,7 +740,7 @@ int swf_FontSetDefine2(TAG *tag, SWFFONT * f)
     
     /* font code table */
     if(flags & 4) /* wide codes */ {
-	for(t=0;t<f->numchars;t++) {
+	for(t=0;t<f->numchars;t++) { 
 	    swf_SetU16(tag,f->glyph2ascii[t]);
 	}
     } else {
@@ -750,9 +813,10 @@ int swf_FontSetInfo(TAG * t,SWFFONT * f)
   swf_SetU8(t,(flags&0xfe)|wide);
 
   for (i=0;i<f->numchars;i++) {
-    if (f->glyph[i].shape)
-      wide?swf_SetU16(t,f->glyph2ascii[i]):
-	   swf_SetU8(t,f->glyph2ascii[i]);
+    if (f->glyph[i].shape) {
+      int g2a = f->glyph2ascii[i];
+      wide?swf_SetU16(t,g2a):swf_SetU8(t,g2a);
+    }
   }
   
   return 0;
@@ -1267,7 +1331,7 @@ void swf_FontCreateLayout(SWFFONT*f)
 	   they are used)- we now have to guess whether that width might be possible,
 	   which is the case if it isn't either much too big or much too small */
 	if(width > f->glyph[t].advance*3/2 ||
-	   width*2 < f->glyph[t].advance)
+	   width < f->glyph[t].advance/2)
 	    f->glyph[t].advance = width;
 
 	if(-bbox.ymin > f->layout->ascent)

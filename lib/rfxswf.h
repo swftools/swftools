@@ -586,7 +586,9 @@ int swf_TextSetCharRecord(TAG * t,SWFFONT * font,U8 * s,int scale,U8 gbits,U8 ab
 int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 // Prints text defined in tag t with font f to stdout
 
-/* notice: if you set the fontid, make sure the corresponding font has layout information */
+void swf_FontPrepareForEditText(SWFFONT * f);
+
+/* notice: if you set the fontid, make sure you call swf_FontPrepareForEditText() for the font first */
 void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
