@@ -24,27 +24,17 @@
 
 #include <assert.h>
 
-typedef struct _dummyshape
-{
-    SHAPE2*shape;
-    //CXFORM //TODO
-    struct _dummyshape*next;
-} dummyshape_t;
-
 /* one bit flag: */
 #define clip_type 0
 #define fill_type 1
 
 typedef struct _renderpoint
 {
-    char type;
     float x;
     U32 depth;
 
     SHAPELINE*shapeline;
-    
-    U32 clipdepth;
-    dummyshape_t*s;
+    SHAPE2*s;
     
 } renderpoint_t;
 
@@ -74,6 +64,7 @@ typedef struct _renderline
 {
     TAG*points; //incremented in 128 byte steps
     int num;
+    U32 pending_clipdepth;
 } renderline_t;
 
 typedef struct _bitmap {
@@ -91,8 +82,6 @@ typedef struct _renderbuf_internal
     char antialize;
     int multiply;
     int width2,height2;
-    dummyshape_t*dshapes;
-    dummyshape_t*dshapes_next;
     int shapes;
     int ymin, ymax;
     
@@ -118,6 +107,8 @@ static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
    problem appears to often */
 #define CUT 0.5
 
+#define INT(x) ((int)((x)+16)-16)
+
 static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, renderpoint_t*p)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
@@ -127,6 +118,7 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
         int l = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
         printf(" l[%d - %.2f/%.2f -> %.2f/%.2f]", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
     }*/
+    assert(p->shapeline);
 
     y1=y1*i->multiply;
     y2=y2*i->multiply;
@@ -148,14 +140,14 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
     diffx = x2 - x1;
     diffy = y2 - y1;
     
-    ny1 = (int)(y1)+CUT;
-    ny2 = (int)(y2)+CUT;
+    ny1 = INT(y1)+CUT;
+    ny2 = INT(y2)+CUT;
 
     if(ny1 < y1) {
-        ny1 = (int)(y1) + 1.0 + CUT;
+        ny1 = INT(y1) + 1.0 + CUT;
     }
     if(ny2 >= y2) {
-        ny2 = (int)(y2) - 1.0 + CUT;
+        ny2 = INT(y2) - 1.0 + CUT;
     }
 
     if(ny1 > ny2)
@@ -166,8 +158,8 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
     x2 = x2 + (ny2-y2)*stepx;
 
     {
-	int posy=(int)ny1;
-	int endy=(int)ny2;
+	int posy=INT(ny1);
+	int endy=INT(ny2);
 	double posx=0;
 	double startx = x1;
 
@@ -299,6 +291,7 @@ void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, c
     i->width2 = antialize?2*buf->width:buf->width;
     i->lines = (renderline_t*)rfx_alloc(i->height2*sizeof(renderline_t));
     for(y=0;y<i->height2;y++) {
+	memset(&i->lines[y], 0, sizeof(renderline_t));
         i->lines[y].points = swf_InsertTag(0, 0);
         i->lines[y].num = 0;
     }
@@ -358,7 +351,6 @@ void swf_Render_Delete(RENDERBUF*dest)
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     int y;
     bitmap_t*b = i->bitmaps;
-    dummyshape_t*d = i->dshapes;
 
     /* delete canvas */
     rfx_free(i->zbuf);
@@ -370,15 +362,6 @@ void swf_Render_Delete(RENDERBUF*dest)
         i->lines[y].points = 0;
     }
 
-    while(d) {
-        dummyshape_t*next = d->next;
-        swf_Shape2Free(d->shape);
-        free(d->shape);d->shape=0;
-        free(d);
-        d=next;
-    }
-    i->dshapes = 0;
-    
     /* delete bitmaps */
     while(b) {
         bitmap_t*next = b->next;
@@ -389,19 +372,6 @@ void swf_Render_Delete(RENDERBUF*dest)
 
     rfx_free(i->lines); i->lines = 0;
     rfx_free(dest->internal); dest->internal = 0;
-}
-
-static void swf_Render_AddShape(RENDERBUF*dest,dummyshape_t*s)
-{
-    renderbuf_internal*i = (renderbuf_internal*)dest->internal;
-
-    s->next = 0;
-    if(i->dshapes_next)
-        i->dshapes_next->next = s;
-    i->dshapes_next = s;
-    if(!i->dshapes) {
-        i->dshapes = s;
-    }
 }
 
 static SHAPE2* linestyle2fillstyle(SHAPE2*shape)
@@ -419,7 +389,7 @@ static SHAPE2* linestyle2fillstyle(SHAPE2*shape)
     return s;
 }
 
-void swf_Process(RENDERBUF*dest);
+void swf_Process(RENDERBUF*dest, U32 clipdepth);
 
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _depth,U16 _clipdepth)
 {
@@ -428,31 +398,25 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     SHAPELINE*line;
     int x=0,y=0;
     MATRIX mat = *m;
+    SHAPE2* s2 = 0;
     SHAPE2* lshape = 0;
     renderpoint_t p, lp;
-
-    SHAPE2* s2 = swf_Shape2Clone(shape);
-    /* add this shape to the global shape list, for deallocing */
-    dummyshape_t*fshape = rfx_calloc(sizeof(dummyshape_t));
-    fshape->shape = s2;
-    swf_Render_AddShape(dest, fshape);
-
-    line = s2->lines;
+    U32 clipdepth;
 
     memset(&p, 0, sizeof(renderpoint_t));
     memset(&lp, 0, sizeof(renderpoint_t));
     
-    p.type = _clipdepth?clip_type:fill_type;
+    clipdepth = _clipdepth? _clipdepth << 16 | 0xffff : 0;
     p.depth = _depth << 16;
-    p.clipdepth = _clipdepth? _clipdepth << 16 | 0xffff : 0;
 
     mat.tx -= dest->posx*20;
     mat.ty -= dest->posy*20;
-        
 
+    s2 = swf_Shape2Clone(shape);
+    line = s2->lines;
     if(shape->numfillstyles) {
         int t;
-        p.s = fshape;
+        p.s = s2;
         /* multiply fillstyles matrices with placement matrix-
            important for texture and gradient fill */
         for(t=0;t<s2->numfillstyles;t++) {
@@ -466,62 +430,33 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             nm.ty *= i->multiply;
             s2->fillstyles[t].m = nm;
         }
-
     }
 
     if(shape->numlinestyles) {
-        dummyshape_t*dshape = rfx_calloc(sizeof(dummyshape_t));
-        
         lshape = linestyle2fillstyle(shape);
-            
-        lp.type = fill_type;
-        lp.s = dshape;
+        lp.s = lshape;
         lp.depth = (_depth << 16)+1;
-
-        dshape->shape = lshape;
-
-        /* add this shape to the global shape list, for deallocing */
-        swf_Render_AddShape(dest, dshape);
-    }
-
-    if(p.clipdepth) {
-        /* invert shape */
-        p.shapeline = 0;
-        add_line(dest, -20, 0, -20, i->height2*20, &p);
     }
 
     while(line)
     {
         int x1,y1,x2,y2,x3,y3;
 
-        p.shapeline = line;
-
         if(line->type == moveTo) {
         } else if(line->type == lineTo) {
-            if(DEBUG&4) {
-		int l;
-                x1 = x;
-                y1 = y;
-                x2 = line->x;
-                y2 = line->y;
-                l = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
-                printf("%d - %.2f/%.2f -> %.2f/%.2f ", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
-            }
-
             transform_point(&mat, x, y, &x1, &y1);
             transform_point(&mat, line->x, line->y, &x3, &y3);
             
-            if(line->linestyle && ! p.clipdepth) {
+            if(line->linestyle && ! clipdepth) {
                 lp.shapeline = &lshape->lines[line->linestyle-1];
                 add_solidline(dest, x1, y1, x3, y3, shape->linestyles[line->linestyle-1].width, &lp);
                 lp.depth++;
             }
             if(line->fillstyle0 || line->fillstyle1) {
                 assert(shape->numfillstyles);
+		p.shapeline = line;
                 add_line(dest, x1, y1, x3, y3, &p);
             }
-            
-            if(DEBUG&4) printf("\n");
         } else if(line->type == splineTo) {
 	    int c,t,parts,qparts;
 	    double xx,yy;
@@ -537,47 +472,49 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             parts = (int)(sqrt(c)/3);
             if(!parts) parts = 1;
 
-            if(DEBUG&4)
-            {
-                printf("spline %.2f/%.2f -(%.2f/%.2f)-> %.2f/%.2f (c=%d, %d parts)", 
-                        x1/20.0, y1/20.0, 
-                        x2/20.0, y2/20.0, 
-                        x3/20.0, y3/20.0, c, parts);
-            }
-
             for(t=1;t<=parts;t++) {
                 double nx = (double)(t*t*x3 + 2*t*(parts-t)*x2 + (parts-t)*(parts-t)*x1)/(double)(parts*parts);
                 double ny = (double)(t*t*y3 + 2*t*(parts-t)*y2 + (parts-t)*(parts-t)*y1)/(double)(parts*parts);
                 
-                if(line->linestyle && ! p.clipdepth) {
+                if(line->linestyle && ! clipdepth) {
                     lp.shapeline = &lshape->lines[line->linestyle-1];
                     add_solidline(dest, xx, yy, nx, ny, shape->linestyles[line->linestyle-1].width, &lp);
                     lp.depth++;
                 }
                 if(line->fillstyle0 || line->fillstyle1) {
                     assert(shape->numfillstyles);
-                    add_line(dest, (int)xx, (int)yy, (int)nx, (int)ny, &p);
+		    p.shapeline = line;
+                    add_line(dest, xx, yy, nx, ny, &p);
                 }
 
                 xx = nx;
                 yy = ny;
             }
-            if(DEBUG&4) 
-                printf("\n");
         }
         x = line->x;
         y = line->y;
         line = line->next;
     }
-    swf_Process(dest);
+    
+    swf_Process(dest, clipdepth);
+    
+    if(s2) {
+	swf_Shape2Free(s2);rfx_free(s2);s2=0;
+    }
+    if(lshape) {
+	swf_Shape2Free(lshape);rfx_free(lshape);lshape=0;
+    }
+
 }
 
 static RGBA color_red = {255,255,0,0};
 static RGBA color_white = {255,255,255,255};
 
-static void fill_clip(RGBA*line, int*z, int x1, int x2, int depth)
+static void fill_clip(RGBA*line, int*z, int y, int x1, int x2, U32 depth)
 {
     int x = x1;
+    if(x1>=x2)
+	return;
     do {
 	if(depth > z[x]) {
 	    z[x] = depth;
@@ -585,9 +522,10 @@ static void fill_clip(RGBA*line, int*z, int x1, int x2, int depth)
     } while(++x<x2);
 }
 
-static void fill_plain(RGBA*line, int*z, int x1, int x2, RGBA col, int depth)
+static void fill_solid(RGBA*line, int*z, int y, int x1, int x2, RGBA col, U32 depth)
 {
     int x = x1;
+
     if(col.a!=255) {
         int ainv = 255-col.a;
         col.r = (col.r*col.a)>>8;
@@ -595,7 +533,7 @@ static void fill_plain(RGBA*line, int*z, int x1, int x2, RGBA col, int depth)
         col.b = (col.b*col.a)>>8;
         col.a = 255;
         do {
-	    if(depth > z[x]) {
+	    if(depth >= z[x]) {
 		line[x].r = ((line[x].r*ainv)>>8)+col.r;
 		line[x].g = ((line[x].g*ainv)>>8)+col.g;
 		line[x].b = ((line[x].b*ainv)>>8)+col.b;
@@ -605,7 +543,7 @@ static void fill_plain(RGBA*line, int*z, int x1, int x2, RGBA col, int depth)
         } while(++x<x2);
     } else {
         do {
-	    if(depth > z[x]) {
+	    if(depth >= z[x]) {
 		line[x] = col;
 		z[x] = depth;
 	    }
@@ -613,7 +551,7 @@ static void fill_plain(RGBA*line, int*z, int x1, int x2, RGBA col, int depth)
     }
 }
 
-static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clipbitmap, int depth)
+static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clipbitmap, U32 depth)
 {
     int x = x1;
     double m11=m->sx/65536.0, m21=m->r1/65536.0;
@@ -626,19 +564,19 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
 	return;
     }
     det = 20.0/det;
- 
+    
     if(!b->width || !b->height) {
-        fill_plain(line, z, x1, x2, color_red, depth);
+        fill_solid(line, z, y, x1, x2, color_red, depth);
         return;
     }
 
     do {
-	if(depth > z[x]) {
+	if(depth >= z[x]) {
 	    RGBA col;
 	    int xx = (int)((  (x - rx) * m22 - (y - ry) * m21)*det);
 	    int yy = (int)((- (x - rx) * m12 + (y - ry) * m11)*det);
 	    int ainv;
-	    
+
 	    if(clipbitmap) {
 		if(xx<0) xx=0;
 		if(xx>=b->width) xx = b->width-1;
@@ -656,6 +594,7 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
 	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
 	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
 	    line[x].a = 255;
+	    
 	    z[x] = depth;
 	}
     } while(++x<x2);
@@ -663,7 +602,6 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
 
 typedef struct _layer {
     int fillid;
-    U32 clipdepth;
     renderpoint_t*p;
     struct _layer*next;
     struct _layer*prev;
@@ -674,64 +612,36 @@ typedef struct {
 } state_t;
 
 
-static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, state_t*clipstate, state_t*fillstate)
+static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, state_t*fillstate, U32 clipdepth)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
-    U32 clipdepth;
+    int clip=1;
 
-    layer_t*lc = clipstate->layers;
-    layer_t*lf = fillstate->layers;
-    layer_t*l = 0;
+    layer_t*l = fillstate->layers;
 
     if(x1>=x2) //zero width? nothing to do.
         return;
     
-    clipdepth = 0;
-    while(lf) {
-	if(lc && (!lf || lc->p->depth < lf->p->depth)) {
-	    l = lc;
-	    lc = lc->next;
-	} else if(lf && (!lc || lf->p->depth < lc->p->depth)) {
-	    l = lf;
-	    lf = lf->next;
-	} else if(lf && lc && lf->p->depth == lc->p->depth) {
-	    /* A clipshape and a fillshape at the same depth. Yuck.
-	       Bug in the SWF file */
-	    fprintf(stderr, "Error: Multiple use of depth %d in SWF\n", lf->p->depth);
-	    l = lc;
-	    lc = lc->next;
-	} else {
-	    fprintf(stderr, "Internal error: %08x %08x\n", lc, lf);
-	    if(lc) fprintf(stderr, "                lc->depth = %08x\n", lc->p->depth);
-	    if(lf) fprintf(stderr, "                lf->depth = %08x\n", lf->p->depth);
-	}
-
-        if(l->p->depth <= clipdepth) {
-            if(DEBUG&2) printf("(clipped)");
-	    continue;
-        }
-        if(l->fillid < 0 /*clip*/) {
-            if(DEBUG&2) printf("(add clip %d)", l->clipdepth);
-            if(l->clipdepth > clipdepth)
-                clipdepth = l->clipdepth;
-        } else if(l->fillid == 0) {
+    while(l) {
+        if(l->fillid == 0) {
             /* not filled. TODO: we should never add those in the first place */
             if(DEBUG&2)
                 printf("(not filled)");
-        } else if(l->fillid > l->p->s->shape->numfillstyles) {
-            fprintf(stderr, "Fill style out of bounds (%d>%d)", l->fillid, l->p->s->shape->numlinestyles);
-        } else {
+        } else if(l->fillid > l->p->s->numfillstyles) {
+            fprintf(stderr, "Fill style out of bounds (%d>%d)", l->fillid, l->p->s->numlinestyles);
+        } else if(clipdepth) {
+	    /* filled region- not used for clipping */
+	    clip = 0;
+	} else {
             FILLSTYLE*f;
             if(DEBUG&2) 
                 printf("(%d -> %d style %d)", x1, x2, l->fillid);
 
-            f = &l->p->s->shape->fillstyles[l->fillid-1];
+            f = &l->p->s->fillstyles[l->fillid-1];
 
-	    if(l->p->clipdepth) {
-		fill_clip(line, zline, x1, x2, l->p->clipdepth);
-	    } else if(f->type == FILL_SOLID) {
+	    if(f->type == FILL_SOLID) {
                 /* plain color fill */
-                fill_plain(line, zline, x1, x2, f->color, l->p->depth);
+                fill_solid(line, zline, y, x1, x2, f->color, l->p->depth);
             } else if(f->type == FILL_TILED || f->type == FILL_CLIPPED) {
                 /* TODO: optimize (do this in add_pixel()?) */
                 bitmap_t* b = i->bitmaps;
@@ -740,22 +650,18 @@ static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, st
                 }
                 if(!b) {
                     fprintf(stderr, "Shape references unknown bitmap %d\n", f->id_bitmap);
-                    fill_plain(line, zline, x1, x2, color_red, l->p->depth);
+                    fill_solid(line, zline, y, x1, x2, color_red, l->p->depth);
                 } else {
-                    //done in swf_RenderShape now
-                    //MATRIX m = f->m;
-                    //m.tx -= dest->posx*20;
-                    //m.ty -= dest->posy*20;
-                    //m.sx *= i->multiply;
-                    //m.sy *= i->multiply;
-                    //m.r0 *= i->multiply;
-                    //m.r1 *= i->multiply;
-                    //m.tx *= i->multiply;
-                    //m.ty *= i->multiply;
                     fill_bitmap(line, zline, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0, l->p->depth);
                 }
-            }
+            } else {
+                fprintf(stderr, "Undefined fillmode: %02x\n", f->type);
+	    }
         }
+	l = l->next;
+    }
+    if(clip && clipdepth) {
+	fill_clip(line, zline, y, x1, x2, clipdepth);
     }
 }
 
@@ -816,15 +722,15 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
     layer_t*before=0, *self=0, *after=0;
 
     if(DEBUG&2) { 
-        printf("[%s(%d,%d)/%d/%d-%d]", p->type==clip_type?"C":"F", p->x, y, p->depth, p->shapeline->fillstyle0, p->shapeline->fillstyle1);
+        printf("[(%d,%d)/%d/%d-%d]", p->x, y, p->depth, p->shapeline->fillstyle0, p->shapeline->fillstyle1);
     }
 
     search_layer(state, p->depth, &before, &self, &after);
 
     if(self) {
         /* shape update */
-        if(self->fillid<0 || !p->shapeline->fillstyle0 || !p->shapeline->fillstyle1) {
-            /* filling/clipping ends */
+        if(self->fillid<0/*??*/ || !p->shapeline->fillstyle0 || !p->shapeline->fillstyle1) {
+            /* filling ends */
             if(DEBUG&2) printf("<D>");
             
             delete_layer(state, self);
@@ -832,12 +738,10 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
             /*both fill0 and fill1 are set- exchange the two, updating the layer */
             if(self->fillid == p->shapeline->fillstyle0) {
                 self->fillid = p->shapeline->fillstyle1;
-                self->clipdepth = 0;
                 self->p = p;
                 if(DEBUG&2) printf("<X>");
             } else if(self->fillid == p->shapeline->fillstyle1) {
                 self->fillid = p->shapeline->fillstyle0;
-                self->clipdepth = 0;
                 self->p = p;
                 if(DEBUG&2) printf("<X>");
             } else {
@@ -863,38 +767,61 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
 
         if(DEBUG&2) printf("<+>");
 
-        if(p->type == clip_type) {
-            /* add clipping */
-            n->fillid = -1;
-            n->clipdepth = p->clipdepth;
-            n->p = p;
-        } else {
-            n->fillid = p->shapeline->fillstyle0 ? p->shapeline->fillstyle0 : p->shapeline->fillstyle1;
-            n->clipdepth = 0;
-            n->p = p;
-        }
+	n->fillid = p->shapeline->fillstyle0 ? p->shapeline->fillstyle0 : p->shapeline->fillstyle1;
+	n->p = p;
 
         add_layer(state, before, n);
     }
 }
 
-void swf_Process(RENDERBUF*dest)
+void swf_Process(RENDERBUF*dest, U32 clipdepth)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     int y;
+    
+    if(i->ymax < i->ymin) {
+	/* shape is empty. return. 
+	   only, if it's a clipshape, remember the clipdepth */
+	if(clipdepth) {
+	    for(y=0;y<i->height2;y++) {
+		if(clipdepth > i->lines[y].pending_clipdepth)
+		    i->lines[y].pending_clipdepth = clipdepth;
+	    }
+	}
+	return; //nothing (else) to do
+    }
 
-    for(y=i->ymin;y<i->ymax;y++) {
+    if(clipdepth) {
+	/* lines outside the clip shape are not filled
+	   immediately, only the highest clipdepth so far is
+	   stored there. They will be clipfilled once there's
+	   actually something about to happen in that line */
+	for(y=0;y<i->ymin;y++) {
+	    if(clipdepth > i->lines[y].pending_clipdepth)
+		i->lines[y].pending_clipdepth = clipdepth;
+	}
+	for(y=i->ymax+1;y<i->height2;y++) {
+	    if(clipdepth > i->lines[y].pending_clipdepth)
+		i->lines[y].pending_clipdepth = clipdepth;
+	}
+    }
+    
+    for(y=i->ymin;y<=i->ymax;y++) {
         int n;
         TAG*tag = i->lines[y].points;
         int num = i->lines[y].num;
 	renderpoint_t*points = (renderpoint_t*)tag->data;
         RGBA*line = &i->img[i->width2*y];
         int*zline = &i->zbuf[i->width2*y];
-	state_t clipstate;
+	int lastx = 0;
 	state_t fillstate;
-        memset(&clipstate, 0, sizeof(state_t));
         memset(&fillstate, 0, sizeof(state_t));
         qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
+
+	if(i->lines[y].pending_clipdepth && !clipdepth) {
+	    fill_clip(line, zline, y, 0, i->width2, i->lines[y].pending_clipdepth);
+	    i->lines[y].pending_clipdepth=0;
+	}
 
         for(n=0;n<num;n++) {
             renderpoint_t*p = &points[n];
@@ -906,16 +833,28 @@ void swf_Process(RENDERBUF*dest)
             if(startx < 0)
                 startx = 0;
 
-	    if(p->type == clip_type)
-		change_state(y, &clipstate, p);
-	    else
-		change_state(y, &fillstate, p);
+	    if(clipdepth) {
+		/* for clipping, the inverse is filled */
+		fill_clip(line, zline, y, lastx, startx, clipdepth);
+	    }
+	    change_state(y, &fillstate, p);
+	
+	    fill(dest, line, zline, y, startx, endx, &fillstate, clipdepth);
+/*	    if(y == 0 && startx == 232 && endx == 418) {
+		printf("ymin=%d ymax=%d\n", i->ymin, i->ymax);
+		for(n=0;n<num;n++) {
+		    renderpoint_t*p = &points[n];
+		    printf("x=%f depth=%08x\n", p->x, p->depth);
+		}
+	    }*/
 
-            fill(dest, line, zline, y, startx, endx, &clipstate, &fillstate);
+	    lastx = endx;
             if(endx == i->width2)
                 break;
         }
-        free_layers(&clipstate);
+	if(clipdepth) {
+	    fill_clip(line, zline, y, lastx, i->width2, clipdepth);
+	}
         free_layers(&fillstate);
 	
 	i->lines[y].num = 0;
@@ -932,8 +871,6 @@ RGBA* swf_Render(RENDERBUF*dest)
     int y;
     RGBA*line2=0;
     
-    swf_Process(dest);
-
     for(y=0;y<i->height2;y++) {
         int n;
         RGBA*line = &i->img[y*i->width2];
@@ -981,7 +918,7 @@ int compare_placements(const void *v1, const void *v2)
     SWFPLACEOBJECT*p1 = (SWFPLACEOBJECT*)v1;
     SWFPLACEOBJECT*p2 = (SWFPLACEOBJECT*)v2;
     if(p1->depth != p2->depth)
-	(int)p1->depth - (int)p2->depth;
+	return (int)p1->depth - (int)p2->depth;
     else 
 	if(p2->clipdepth)
 	    return 1; // do the clip first
