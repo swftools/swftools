@@ -16,6 +16,7 @@
 
 #ifdef HAVE_LIBJPEG
 #ifdef HAVE_JPEGLIB_H
+#define HAVE_BOOLEAN
 #include <jpeglib.h>
 #define _JPEGLIB_INCLUDED_
 #endif // HAVE_JPEGLIB_H
