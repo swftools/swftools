@@ -588,9 +588,13 @@ int swf_SetLosslessBits(TAG * t,U16 width,U16 height,void * bitmap,U8 bitmap_fla
 int swf_SetLosslessBitsIndexed(TAG * t,U16 width,U16 height,U8 * bitmap,RGBA * palette,U16 ncolors);
 int swf_SetLosslessBitsGrayscale(TAG * t,U16 width,U16 height,U8 * bitmap);
 
+#ifndef RFXSWF_DISABLESOUND
+
 // swfsound.c
 void swf_SetSoundStreamHead(TAG*tag, U16 avgnumsamples);
 void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first);
+
+#endif // RFXSWF_DISABLESOUND
 
 // swftools.c
 

@@ -11,6 +11,8 @@
 
 */
 
+#ifndef RFXSWF_DISABLESOUND
+
 #include "../rfxswf.h"
 
 CodecInitOut * init = 0;
@@ -62,3 +64,4 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
     free(buf);
 }
 
+#endif // RFXSWF_DISABLESOUND
