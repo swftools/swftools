@@ -645,6 +645,9 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
     swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
+    
+    msg("<debug> fontmatrix %7.3f %7.3f\n", m11,-m21);
+    msg("<debug> fontmatrix %7.3f %7.3f\n", m12,-m22);
 }
 
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
@@ -692,6 +695,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     }
     
     msg("<debug> drawChar(%f,%f,c='%c' (%d),u=%d <%d>) CID=%d name=\"%s\"\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
+
+    x1 = (int)(x1+0.5);
+    y1 = (int)(y1+0.5);
 
     int ret = swfoutput_drawchar(&output, x1, y1, name, c, u);
 }
