@@ -1,0 +1,22 @@
+top_builddir = ../..
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+include ../../Makefile.common
+
+libart_objects = art_affine.$(O) art_alphagamma.$(O) art_bpath.$(O) art_gray_svp.$(O) art_misc.$(O) art_pixbuf.$(O) art_rect.$(O) art_rect_svp.$(O) art_rect_uta.$(O) art_render.$(O) art_render_gradient.$(O) art_render_mask.$(O) art_render_svp.$(O) art_rgb.$(O) art_rgb_a_affine.$(O) art_rgb_affine.$(O) art_rgb_affine_private.$(O) art_rgb_bitmap_affine.$(O) art_rgb_pixbuf_affine.$(O) art_rgb_rgba_affine.$(O) art_rgb_svp.$(O) art_rgba.$(O) art_svp.$(O) art_svp_intersect.$(O) art_svp_ops.$(O) art_svp_point.$(O) art_svp_render_aa.$(O) art_svp_vpath.$(O) art_svp_vpath_stroke.$(O) art_svp_wind.$(O) art_uta.$(O) art_uta_ops.$(O) art_uta_rect.$(O) art_uta_svp.$(O) art_uta_vpath.$(O) art_vpath.$(O) art_vpath_bpath.$(O) art_vpath_dash.$(O) art_vpath_svp.$(O)
+
+all: libart$(A)
+	
+libart$(A): $(libart_objects)
+	$(AR) r libart$(A) $(libart_objects)
+	$(RANLIB) libart$(A)
+
+%.$(O): %.c 
+	$(C) $< -o $@
+
+install:
+uninstall:
+clean: 
+	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
+
+
