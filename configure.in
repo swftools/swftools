@@ -18,7 +18,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2004-11-13-2026
+VERSION=2004-11-23-2234
 
 
 # ------------------------------------------------------------------
@@ -107,11 +107,16 @@ fi
 
 dnl Checks for system services
 OBJEXT="o"
- AC_EXEEXT
+AREXT=".a"
+
+AC_EXEEXT
+
 if test "x$EXEEXT" = "x.exe";then
     OBJEXT="obj"
+    AREXT=".lib"
 fi
 AC_SUBST(OBJEXT)
+AC_SUBST(AREXT)
 
 RFX_CHECK_MING
 
@@ -147,6 +152,10 @@ if test "$prefix" != "NONE" -a "$prefix" != "/usr/local" -a "$prefix" != "/usr/l
     CPPFLAGS="$CPPFLAGS -I${includedir}"
     # TODO- test whether gcc still works after this
 fi
+
+#Mac OS:
+#LDFLAGS "-L/sw/lib" ; CPPFLAGS "-I/sw/include -I/sw/include/lame"
+
 
 # this must be done after (I believe) AC_PROG_MAKE_SET
 if test "x$DEBUG" '!=' "x";then
