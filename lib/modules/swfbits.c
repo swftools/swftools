@@ -12,7 +12,7 @@
 */
 
 #ifdef _JPEGLIB_INCLUDED_
-#define OUTBUFFER_SIZE 32768
+#define OUTBUFFER_SIZE 0x8000
 
 typedef struct _JPEGDESTMGR
 { struct jpeg_destination_mgr mgr;
@@ -33,16 +33,15 @@ void swf_init_destination(j_compress_ptr cinfo)
 
 boolean swf_empty_output_buffer(j_compress_ptr cinfo)
 { LPJPEGDESTMGR dmgr = (LPJPEGDESTMGR)cinfo->dest;
-  SetBlock(dmgr->t,
-           (U8*)dmgr->buffer,
-           OUTBUFFER_SIZE-dmgr->mgr.free_in_buffer);
+  SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE);
   dmgr->mgr.next_output_byte = dmgr->buffer;
   dmgr->mgr.free_in_buffer = OUTBUFFER_SIZE;
+  return TRUE;
 }
 
 void swf_term_destination(j_compress_ptr cinfo) 
 { LPJPEGDESTMGR dmgr = (LPJPEGDESTMGR)cinfo->dest;
-  swf_empty_output_buffer(cinfo);
+  SetBlock(dmgr->t,(U8*)dmgr->buffer,OUTBUFFER_SIZE-dmgr->mgr.free_in_buffer);
   free(dmgr->buffer);
   dmgr->mgr.free_in_buffer = 0;
 }
