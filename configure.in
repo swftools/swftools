@@ -16,7 +16,9 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=0.6.1
+VERSION=2004-08-24-2049
+
+
 
 # ------------------------------------------------------------------
 
@@ -167,8 +169,8 @@ dnl Checks for typedefs, structures, and compiler characteristics.
  AC_TYPE_OFF_T
  AC_TYPE_SIZE_T
  AC_STRUCT_TM
- AC_CHECK_TYPE(boolean,int)
- AC_CHECK_TYPE(bool,char)
+ dnl AC_CHECK_TYPE(boolean,int)
+ dnl AC_CHECK_TYPE(bool,char)
  dnl AC_CHECK_TYPE(uchar,unsigned char)
  dnl AC_CHECK_TYPE(schar,signed char)
  dnl AC_CHECK_TYPE(word,unsigned short int)
