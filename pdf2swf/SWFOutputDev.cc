@@ -224,6 +224,22 @@ public:
   GfxState *laststate;
 };
 
+char*getFontName(GfxFont*font)
+{
+    GString*gstr = font->getName();
+    char* fontname = gstr==0?0:gstr->getCString();
+    if(fontname==0) {
+	char buf[32];
+	Ref*r=font->getID();
+	sprintf(buf, "UFONT%d", r->num);
+	return strdup(buf);
+    }
+    char* plus = strchr(fontname, '+');
+    if(plus && plus < &fontname[strlen(fontname)-1])
+	fontname = plus+1;
+    return fontname;
+}
+
 char mybuf[1024];
 char* gfxstate2str(GfxState *state)
 {
@@ -303,8 +319,8 @@ char* gfxstate2str(GfxState *state)
   if(state->getLineJoin()!=0)
   bufpos+=sprintf(bufpos,"ML%d ", state->getMiterLimit());
 
-  if(state->getFont() && state->getFont()->getName() && state->getFont()->getName()->getCString())
-  bufpos+=sprintf(bufpos,"F\"%s\" ",((state->getFont())->getName())->getCString());
+  if(state->getFont() && getFontName(state->getFont()))
+  bufpos+=sprintf(bufpos,"F\"%s\" ",getFontName(state->getFont()));
   bufpos+=sprintf(bufpos,"FS%.1f ", state->getFontSize());
   bufpos+=sprintf(bufpos,"MAT[%.1f/%.1f/%.1f/%.1f/%.1f/%.1f] ", state->getTextMat()[0],state->getTextMat()[1],state->getTextMat()[2],
 	                           state->getTextMat()[3],state->getTextMat()[4],state->getTextMat()[5]);
@@ -330,6 +346,8 @@ char* gfxstate2str(GfxState *state)
   bufpos+=sprintf(bufpos," ");
   return mybuf;
 }
+
+
 
 void dumpFontInfo(char*loglevel, GfxFont*font);
 int lastdumps[1024];
@@ -360,15 +378,13 @@ void showFontError(GfxFont*font, int nr)
 
 void dumpFontInfo(char*loglevel, GfxFont*font)
 {
-  GString *gstr;
-  char*name = 0;
-  gstr = font->getName();
+  char* name = getFontName(font);
   Ref* r=font->getID();
-  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, gstr?FIXNULL(gstr->getCString()):"(unknown font)", r->num,r->gen);
+  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, name, r->num,r->gen);
 
-  gstr  = font->getTag();
-  if(gstr) 
-   msg("%sTag: %s\n", loglevel, FIXNULL(gstr->getCString()));
+  GString*gstr  = font->getTag();
+   
+  msg("%sTag: %s\n", loglevel, name);
   
   if(font->isCIDFont()) msg("%sis CID font\n", loglevel);
 
@@ -1098,20 +1114,6 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
     return strdup(tmpFileName);
 }
 
-char* gfxFontName(GfxFont* gfxFont)
-{
-      GString *gstr;
-      gstr = gfxFont->getName();
-      if(gstr) {
-	  return gstr->getCString();
-      }
-      else {
-	  char buf[32];
-	  Ref*r=gfxFont->getID();
-	  sprintf(buf, "UFONT%d", r->num);
-	  return strdup(buf);
-      }
-}
 
 char* substitutetarget[256];
 char* substitutesource[256];
@@ -1131,7 +1133,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
     if(oldname) {
 	substitutesource[substitutepos] = oldname;
 	substitutetarget[substitutepos] = fontname;
-	msg("<verbose> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
+	msg("<notice> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	substitutepos ++;
     }
     return fontname;
@@ -1268,7 +1270,7 @@ void SWFOutputDev::updateFont(GfxState *state)
   if (!gfxFont) {
     return;
   }  
-  char * fontname = gfxFontName(gfxFont);
+  char * fontname = getFontName(gfxFont);
  
   int t;
   /* first, look if we substituted this font before-
