@@ -141,7 +141,7 @@ static int bitmap_to_rgba(BITMAPINFOHEADER*bi, void*buffer, const int dest_width
 	    int x;
 	    for(x=0;x<dest_width;x++) {
 		USHORT c = line[0]|line[1]<<8;
-		*dest++ = 255|(c&0x1f)<<(8+3)|(c>>5&0x1f)<<(16+3)|(c>>10&0x1f)<<(24+3);
+		*dest++ = 255|(c&0x1f)<<(24+3)|(c>>5&0x1f)<<(16+3)|(c>>10&0x1f)<<(8+3);
 		line+=2;
 	    }
 	}
