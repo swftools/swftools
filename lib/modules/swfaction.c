@@ -127,7 +127,8 @@ r: register (byte)
 {5,"TypeOf", 0x44,""},
 {5,"Add2", 0x47,""},
 {5,"Less2", 0x48,""},
-{5/*6?*/,"Less3", 0x67,""}
+{5/*6?*/,"Less3?", 0x67,""},
+{5/*6?*/,"GetMembers?", 0x55,""}
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 
@@ -214,6 +215,8 @@ int OpAdvance(char c, U8*data)
 	    return 1;
 	case 'b':
 	    return 2;
+	case 'r':
+	    return 1;
 	case 'p': {
 	    U8 type = *data++;
 	    if(type == 0) {
@@ -335,20 +338,21 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		  case '{': {
 		      U16 num;
 		      U16 codesize;
+		      int s = 0;
 		      int t;
 		      printf(" %s(", data);
-		      while(*data++); //name
-		      num = (*data++); //num
-		      num += (*data++)*256;
+		      while(data[s++]); //name
+		      num = (data[s++]); //num
+		      num += (data[s++])*256;
 		      for(t=0;t<num;t++) {
 			  printf("%s",data);
 			  if(t<num-1)
 			      printf(", ");
-			  while(*data++); //param
+			  while(data[s++]); //param
 		      }
 		      printf(")");
-		      codesize = (*data++); //num
-		      codesize += (*data++)*256;
+		      codesize = (data[s++]); //num
+		      codesize += (data[s++])*256;
 		      printf(" codesize:%d ",codesize);
 		      printf("\n%s                       %s{", prefix, indent);
 		      if(countpos>=15) {
@@ -381,6 +385,9 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		  } break;
 		  case 'b': {
 		      printf(" %d", data[0]+256*(signed char)data[1]);
+		  } break;
+		  case 'r': {
+		      printf(" %d", data[0]);
 		  } break;
 		  case 'p': {
 		      U8 type = *data;
