@@ -21,10 +21,9 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-static int loadfont_scale = 1;
+static int loadfont_scale = 64;
 static int skip_unused = 1;
 
-// TODO: should be named "setLoadFontParameters"
 void swf_SetLoadFontParameters(int _scale, int _skip_unused)
 {
     loadfont_scale = _scale;
@@ -35,6 +34,7 @@ void swf_SetLoadFontParameters(int _scale, int _skip_unused)
 
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
+#include <freetype/ftsizes.h>
 #include <freetype/ftsnames.h>
 #include <freetype/ttnameid.h>
 #include <freetype/ftoutln.h>
@@ -105,6 +105,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     SWFFONT* font;
     int t;
     int*glyph2glyph;
+    FT_Size size;
    
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
@@ -113,6 +114,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	}
     }
     error = FT_New_Face(ftlibrary, filename, 0, &face);
+    FT_Set_Pixel_Sizes (face, 16, 16);
+
     if(error) {
 	fprintf(stderr, "Couldn't load file %s- not a TTF file?\n", filename);
 	return 0;
@@ -216,14 +219,14 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	if(!font->glyph2ascii[t] && !hasname && skip_unused) {
 	    continue;
 	}
-	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP|FT_LOAD_NO_SCALE);
+	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
 	if(error) {
-	    fprintf(stderr, "Couldn't load glyph %d\n", t);
+	    fprintf(stderr, "Couldn't load glyph %d, error:%d\n", t, error);
 	    continue;
 	}
 	error = FT_Get_Glyph(face->glyph, &glyph);
 	if(error) {
-	    fprintf(stderr, "Couldn't get glyph %d\n", t);
+	    fprintf(stderr, "Couldn't get glyph %d, error:%d\n", t, error);
 	    continue;
 	}
 
@@ -427,7 +430,6 @@ SWFFONT* swf_LoadT1Font(char*filename)
 	
 	swf_Shape01DrawerInit(&draw, 0);
 
-	printf("Char %d (%08x)", c, outline);
 	while(outline) {
 	    pos.x += (outline->dest.x/(float)0xffff);
 	    pos.y += (outline->dest.y/(float)0xffff);
@@ -519,9 +521,6 @@ SWFFONT* swf_LoadFont(char*filename)
     if(is_swf) {
 	return swf_ReadFont(filename);
     }
-
-
-    return swf_LoadT1Font(filename);
 
 #if defined(HAVE_FREETYPE)
     return swf_LoadTrueTypeFont(filename);
