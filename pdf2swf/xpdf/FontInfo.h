@@ -896,7 +896,7 @@ static FontEncoding zapfDingbatsEncoding(zapfDingbatsEncodingNames,
                                          zapfDingbatsEncodingSize);
 
 #define macRomanEncodingSize 256
-static char *macRomanEncodingNames[macRomanEncodingSize] = {
+char *macRomanEncodingNames[macRomanEncodingSize] = {
   NULL,
   NULL,
   NULL,
