@@ -85,10 +85,10 @@ int MovieFinish(SWF * swf, TAG * t, char *sname)
 	if FAILED(swf_WriteCGI(swf)) fprintf(stderr,"WriteCGI() failed.\n");
     } else {
 	if(global.version >= 6) {
-	    if (swf_WriteSWC(handle, swf)<0) 
+	    if (swf_WriteSWC(f, swf)<0) 
 		    fprintf(stderr, "Unable to write output file: %s\n", sname);
 	} else {
-	    if (swf_WriteSWF(handle, swf)<0) 
+	    if (swf_WriteSWF(f, swf)<0) 
 		    fprintf(stderr, "Unable to write output file: %s\n", sname);
 	}
 	if (f != so)
@@ -791,8 +791,8 @@ int args_callback_option(char *arg, char *val)
 	    break;
 
 	case 'z':
-	    global.version = 1;
-	    res = 1;
+	    global.version = 6;
+	    res = 0;
 	    break;
 
 	case 'C':
@@ -899,9 +899,11 @@ int main(int argc, char **argv)
     global.version = 4;
 
     processargs(argc, argv);
-
-    if(global.nfiles<=0)
+    
+    if(global.nfiles<=0) {
+	fprintf(stderr, "No png files found in arguments\n");
 	return 1;
+    }
 
     if (VERBOSE(2))
 	fprintf(stderr, "Processing %i file(s)...\n", global.nfiles);
