@@ -779,7 +779,9 @@ int args_callback_option(char *arg, char *val)
 	case 'r':
 	    if (val)
 		global.framerate = atof(val);
-	    if ((global.framerate < 1.0/256) ||(global.framerate >= 256.0)) {
+	    /* removed framerate>0 restriction in order to make
+	       Flash Communication Server compatible SWFs */
+	    if ((global.framerate < 0) ||(global.framerate >= 256.0)) {
 		if (VERBOSE(1))
 		    fprintf(stderr,
 			    "Error: You must specify a valid framerate between 1/256 and 255.\n");
