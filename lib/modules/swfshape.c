@@ -416,7 +416,7 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     if(b >= 18) {
         if(b >= 18 + 4) {
             /* do not split into more than 16 segments. If the line is *that* long, something's broken */
-            fprintf(stderr, "Warning: Line to %.2f,%.2f is too long", (double)x,(double)y);
+            fprintf(stderr, "Warning: Line to %.2f,%.2f is too long\n", (double)x,(double)y);
             return -1;
         } else {
             /* split line */
