@@ -98,6 +98,7 @@ struct options_t options[] =
  {"x","xpos"},
  {"y","ypos"},
  {"l","overlay"},
+ {"t","stack"},
  {"v","verbose"},
  {"V","version"},
  {"c","clip"},
@@ -148,9 +149,10 @@ int args_callback_command(char*name, char*val) {
 
 void args_callback_usage(char*name)
 {
-    printf("Usage: %s [-l] [-o outputfile] [name=]masterfile [-x xpos] [-y ypos] [-s scale] [name1=]slavefile1 .. [-x xpos] [-y ypos] [-s scale] [nameN=]slavefileN\n", name);
+    printf("Usage: %s [-l][-t] [-o outputfile] [[name=]masterfile] [-x xpos] [-y ypos] [-s scale] [name1=]slavefile1 .. [-x xpos] [-y ypos] [-s scale] [nameN=]slavefileN\n", name);
     printf("\n");
     printf("-o outputfile       explicitly specify output file. (otherwise, output.swf will be used)\n");
+    printf("-t                  (stack) place each slave into a seperate frame (no master movie)\n");
     printf("-l                  (overlay) Don't remove any master objects, only overlay new objects\n");
     printf("-c                  (clip) Clip the slave objects by the corresponding master objects\n");
     printf("-v                  (verbose) Use more than one -v for greater effect \n");
