@@ -1,4 +1,12 @@
 
+Notice
+
+   This documentation is a little outdated. As with swftools-0.2.1 and
+   above, you can simply do
+   pdf2swf -bl -o document.swf document.pdf 
+   to link viewer and preloader.
+   However, the Steps below are still valid for jpeg2swf. 
+
 Step 1: Converting the documents
 
    Suppose you have an arbitrary pdf file, "document.pdf".
