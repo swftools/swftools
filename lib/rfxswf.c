@@ -763,7 +763,7 @@ int  swf_WriteSWF(int handle,SWF * swf)     // Writes SWF to file, returns lengt
   return (int)swf->fileSize;
 }
 
-int WriteCGI(SWF * swf)
+int swf_WriteCGI(SWF * swf)
 { int len;
   char s[1024];
     
