@@ -548,7 +548,7 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
-    swfoutput_setfontmatrix(&output, m11, -m12, m21, -m22);
+    swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
 }
 
 int charcounter = 0;
