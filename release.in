@@ -5,6 +5,7 @@ rm -f ${name}
 rm -f ${name}.tar
 rm -f ${name}.tar.gz
 ln -s ./ ${name}
+cd lib/action;make generated >/dev/null 2>&1;cd ../..
 tar -chf ${name}.tar \
 ${name}/src/swfcombine.1 \
 ${name}/src/swfstrings.1 \
@@ -32,6 +33,10 @@ ${name}/src/wav.h \
 ${name}/src/swfc.c \
 ${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
+${name}/lib/action/lex.swf4.c \
+${name}/lib/action/lex.swf5.c \
+${name}/lib/action/swf4compiler.tab.c \
+${name}/lib/action/swf5compiler.tab.c \
 ${name}/src/parser.lex \
 ${name}/src/parser.h \
 ${name}/src/Makefile.in \
