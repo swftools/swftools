@@ -359,7 +359,6 @@ static MATRIX s_instancepos(SRECT rect, parameters_t*p)
     SRECT r;
     makeMatrix(&m, p);
     r = swf_TurnRect(rect, &m);
-    printf("%f %f %f %f\n", r.xmin/20.0, r.ymin/20.0, r.xmax/20.0, r.ymax/20.0);
     if(currentrect.xmin == 0 && currentrect.ymin == 0 && 
        currentrect.xmax == 0 && currentrect.ymax == 0)
 	currentrect = r;
@@ -460,6 +459,8 @@ void s_button(char*name)
     stack[stackpos].tag = tag;
     stack[stackpos].id = id;
     stack[stackpos].name = strdup(name);
+    stack[stackpos].oldrect = currentrect;
+    memset(&currentrect, 0, sizeof(currentrect));
 
     stackpos++;
     incrementid();
@@ -476,6 +477,8 @@ void s_buttonput(char*character, char*as, parameters_t p)
     if(strstr(as, "hover")) {flags |= BS_OVER;mybutton.shapes[1]=c->id;}
     if(strstr(as, "pressed")) {flags |= BS_DOWN;mybutton.shapes[2]=c->id;}
     if(strstr(as, "area")) {flags |= BS_HIT;mybutton.shapes[3]=c->id;}
+    if(!flags)
+	flags = BS_HIT;
     
     if(mybutton.endofshapes) {
 	syntaxerror("a .do may not precede a .show", character, character);
@@ -488,17 +491,21 @@ void s_buttonput(char*character, char*as, parameters_t p)
 void s_buttonaction(int flags, char*action)
 {
     ActionTAG* a = 0;
+    if(flags==0) {
+	return;
+    }
     if(!mybutton.endofshapes) {
 	swf_SetU8(stack[stackpos-1].tag,0); // end of button records
 	mybutton.endofshapes = 1;
     }
+
     
     a = swf_ActionCompile(text, stack[0].swf->fileVersion);
     if(!a) {
 	syntaxerror("Couldn't compile ActionScript");
     }
 
-    swf_ButtonSetCondition(stack[stackpos-1].tag, BC_OVERDOWN_OVERUP);
+    swf_ButtonSetCondition(stack[stackpos-1].tag, flags);
     swf_ActionSet(stack[stackpos-1].tag, a);
     mybutton.nr_actions++;
 
@@ -516,7 +523,12 @@ static void s_endButton()
       
     swf_ButtonPostProcess(stack[stackpos].tag, mybutton.nr_actions);
 
+    SRECT r = currentrect;
+
     tag = stack[stackpos].tag;
+    currentrect = stack[stackpos].oldrect;
+
+    s_addcharacter(stack[stackpos].name, stack[stackpos].id, stack[stackpos].tag, r);
     free(stack[stackpos].name);
 }
 
