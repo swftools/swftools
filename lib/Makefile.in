@@ -73,8 +73,10 @@ VERSION = @VERSION@
 WORDS_BIGENDIAN = @WORDS_BIGENDIAN@
 
 SUBDIRS = bladeenc
-noinst_LIBRARIES = libswf.a
-libswf_a_SOURCES = rfxswf.c rfxswf.h log.c log.h
+noinst_LIBRARIES = librfxswf.a
+librfxswf_a_SOURCES = rfxswf.c rfxswf.h log.c log.h
+librfxswf_a_LIBADD = bladeenc/codec.o 	        bladeenc/common.o bladeenc/encode.o bladeenc/formatbitstream2.o 		bladeenc/l3bitstream.o bladeenc/l3psy.o bladeenc/loop.o bladeenc/mdct.o 		bladeenc/reservoir.o bladeenc/subs.o bladeenc/tables.o
+
 COMPILE = $(CC)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
@@ -86,7 +88,11 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-libswf_a_OBJECTS =  rfxswf.o log.o
+librfxswf_a_DEPENDENCIES =  bladeenc/codec.o bladeenc/common.o \
+bladeenc/encode.o bladeenc/formatbitstream2.o bladeenc/l3bitstream.o \
+bladeenc/l3psy.o bladeenc/loop.o bladeenc/mdct.o bladeenc/reservoir.o \
+bladeenc/subs.o bladeenc/tables.o
+librfxswf_a_OBJECTS =  rfxswf.o log.o
 AR = ar
 CFLAGS = @CFLAGS@
 CCLD = $(CC)
@@ -99,8 +105,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/log.P .deps/rfxswf.P
-SOURCES = $(libswf_a_SOURCES)
-OBJECTS = $(libswf_a_OBJECTS)
+SOURCES = $(librfxswf_a_SOURCES)
+OBJECTS = $(librfxswf_a_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -138,13 +144,10 @@ distclean-compile:
 
 maintainer-clean-compile:
 
-libswf.a: $(libswf_a_OBJECTS) $(libswf_a_DEPENDENCIES) bladeenc/libbladeenc.a
-	-rm -f libswf.a
-	$(AR) cru libswf.a $(libswf_a_OBJECTS) bladeenc/codec.o \
-	        bladeenc/common.o bladeenc/encode.o bladeenc/formatbitstream2.o \
-		bladeenc/l3bitstream.o bladeenc/l3psy.o bladeenc/loop.o bladeenc/mdct.o \
-		bladeenc/reservoir.o bladeenc/subs.o bladeenc/tables.o
-	$(RANLIB) libswf.a
+librfxswf.a: $(librfxswf_a_OBJECTS) $(librfxswf_a_DEPENDENCIES)
+	-rm -f librfxswf.a
+	$(AR) cru librfxswf.a $(librfxswf_a_OBJECTS) $(librfxswf_a_LIBADD)
+	$(RANLIB) librfxswf.a
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.
@@ -244,7 +247,7 @@ distdir: $(DISTFILES)
 	top_distdir=`cd $(top_distdir) && pwd`; \
 	distdir=`cd $(distdir) && pwd`; \
 	cd $(top_srcdir) \
-	  && $(AUTOMAKE) --include-deps --build-dir=$$here --srcdir-name=$(top_srcdir) --output-dir=$$top_distdir --gnu lib/Makefile
+	&& echo
 	@for file in $(DISTFILES); do \
 	  d=$(srcdir); \
 	  if test -d $$d/$$file; then \
