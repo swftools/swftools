@@ -27,11 +27,17 @@ struct
   int max_image_height;
   int force_width;
   int force_height;
+  int prescale;
   int nfiles;
   int verbose;
-  char * files[MAX_INPUT_FILES];
   char * outfile;
 } global;
+
+struct
+{ char * filename;
+  int scale;
+  int quality;
+} image[MAX_INPUT_FILES];
 
 TAG * MovieStart(SWF * swf,int framerate,int dx,int dy)
 { TAG * t;
@@ -68,7 +74,7 @@ int MovieFinish(SWF * swf,TAG * t,char * sname)
    return 0;
 }
 
-TAG * MovieAddFrame(SWF * swf,TAG * t,char * sname,int quality,int id)
+TAG * MovieAddFrame(SWF * swf,TAG * t,char * sname,int quality,int scale,int id)
 { SHAPE * s;
   SRECT r;
   MATRIX m;
@@ -89,6 +95,12 @@ TAG * MovieAddFrame(SWF * swf,TAG * t,char * sname,int quality,int id)
   jpeg_create_decompress(&cinfo); 
   jpeg_stdio_src(&cinfo,f);
   jpeg_read_header(&cinfo, TRUE);
+  
+  if (scale>1)
+  { cinfo.scale_num = 1;
+    cinfo.scale_denom = scale;
+  }
+    
   jpeg_start_decompress(&cinfo);
 
   t = swf_InsertTag(t,ST_DEFINEBITSJPEG2);
@@ -159,6 +171,7 @@ int CheckInputFile(char * fname,char ** realname)
   struct jpeg_error_mgr jerr;
   FILE * f;
   char * s = malloc(strlen(fname)+5);
+  int width, height;
   
   if (!s) exit(2);
   (*realname) = s;
@@ -186,10 +199,26 @@ int CheckInputFile(char * fname,char ** realname)
   jpeg_stdio_src(&cinfo,f);
   jpeg_read_header(&cinfo, TRUE);
 
+  // Apply scaling (scale option can be used several times to set different scales)
+
+  if (global.prescale>1)
+  { cinfo.scale_num = 1;
+    cinfo.scale_denom = global.prescale;
+
+    jpeg_calc_output_dimensions(&cinfo);
+
+    width  = cinfo.output_width;
+    height = cinfo.output_height;
+  }
+  else
+  { width  = cinfo.image_width;
+    height = cinfo.image_height;
+  }
+
   // Get image dimensions
 
-  if (global.max_image_width<cinfo.image_width) global.max_image_width = cinfo.image_width;
-  if (global.max_image_height<cinfo.image_height) global.max_image_height = cinfo.image_height;
+  if (global.max_image_width<width) global.max_image_width = width;
+  if (global.max_image_height<height) global.max_image_height = height;
   
   jpeg_destroy_decompress(&cinfo);
   fclose(f);
@@ -214,6 +243,15 @@ int args_callback_option(char*arg,char*val)
       if (val) global.framerate = atoi(val);
       if ((global.framerate<1)||(global.framerate>5000))
       { if (VERBOSE(1)) fprintf(stderr,"Error: You must specify a valid framerate between 1 and 10000.\n");
+        exit(1);
+      }
+      res = 1;
+      break;
+
+    case 's':
+      if (val) global.prescale = atoi(val);
+      if (!((global.prescale==1)||(global.prescale==2)||(global.prescale==4)||(global.prescale==8)))
+      { if (VERBOSE(1)) fprintf(stderr,"Error: Prescale denominator is limited to 2, 4 or 8\n");
         exit(1);
       }
       res = 1;
@@ -253,8 +291,9 @@ struct options_t options[] =
  {"v","verbose"},
  {"X","width"},
  {"Y","height"},
- {"V","version"}
-};
+ {"V","version"},
+ {"s","scale"}
+ };
 
 int args_callback_longoption(char*name,char*val) {
     return args_long2shortoption(options, name, val);
@@ -262,12 +301,15 @@ int args_callback_longoption(char*name,char*val) {
 
 int args_callback_command(char*arg,char*next)  // actually used as filename
 { char * s;
+  int scale;
   if (CheckInputFile(arg,&s)<0)
   { if (VERBOSE(1)) fprintf(stderr, "Unable to open input file: %s\n",arg);
     free(s);
   }
   else
-  { global.files[global.nfiles] = s;
+  { image[global.nfiles].filename = s;
+    image[global.nfiles].scale   = global.prescale;
+    image[global.nfiles].quality = global.quality;
     global.nfiles++;
     if (global.nfiles>=MAX_INPUT_FILES)
     { if (VERBOSE(1)) fprintf(stderr, "Error: Too many input files.\n");
@@ -278,14 +320,16 @@ int args_callback_command(char*arg,char*next)  // actually used as filename
 }
 
 void args_callback_usage(char*name)
-{ fprintf(stderr,"Usage: %s imagefiles[.jpg]|[.jpeg] [...] [-options [value]]\n",name);
+{ fprintf(stderr,"Usage: %s  [-options [value]] imagefiles[.jpg]|[.jpeg] [...]\n",name);
   fprintf(stderr,"-q quality            (quality) Set JPEG compression quality (1-100)\n");
+  fprintf(stderr,"-s denominator        (scale) 2, 4 or 8: Reduce image size to 1/2, 1/4, 1/8\n");
   fprintf(stderr,"-r framerate          (rate) Set movie framerate (100/sec)\n");
   fprintf(stderr,"-o outputfile         (output) Set name for SWF output file\n");
-  fprintf(stderr,"-v level              (verbose) Set verbose level (0=quiet, 1=default, 2=debug)\n");
   fprintf(stderr,"-X pixel              (width) Force movie width to scale (default: autodetect)\n");
   fprintf(stderr,"-Y pixel              (height) Force movie height to scale (default: autodetect)\n");
+  fprintf(stderr,"-v level              (verbose) Set verbose level (0=quiet, 1=default, 2=debug)\n");
   fprintf(stderr,"-V                    (version) Print version information and exit\n");
+  fprintf(stderr,"The following options can be set independently for each image: -q -s\n");
 }
 
 
@@ -298,6 +342,7 @@ int main(int argc, char ** argv)
   global.quality                = 60;
   global.framerate              = 100;
   global.verbose                = 1;
+  global.prescale               = 1;
   
   processargs(argc, argv);
 
@@ -309,9 +354,11 @@ int main(int argc, char ** argv)
 
   { int i;
     for (i=0;i<global.nfiles;i++)
-    { if (VERBOSE(3)) fprintf(stderr,"[%03i] %s\n",i,global.files[i]);
-      t = MovieAddFrame(&swf,t,global.files[i],global.quality,(i*2)+1);
-      free(global.files[i]);
+    { if (VERBOSE(3)) fprintf(stderr,"[%03i] %s (%i%%, 1/%i)\n",i,image[i].filename,image[i].quality,image[i].scale);
+      t = MovieAddFrame(&swf,t,image[i].filename,
+                               image[i].quality,
+                               image[i].scale,(i*2)+1);
+      free(image[i].filename);
     }
   }
 
