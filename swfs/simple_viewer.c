@@ -135,9 +135,11 @@ int main (int argc,char ** argv)
     action_SetTarget("viewport");
     action_Stop();
     action_SetTarget("");
+#ifdef SUBTITLES
     action_PushString("/:subtitle");
-    action_PushString("...");
+    action_PushString(""); //reset variable
     action_SetVariable();
+#endif
     action_End();
   swf_ActionEnd();
 
