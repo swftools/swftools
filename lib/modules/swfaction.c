@@ -354,7 +354,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 #endif
 		  } break;
 		  case 'C': {
-		      poollen = *(U16*)data;
+		      poollen = data[0]+256*data[1];
 		      entry = 0;
 		      printf("(%d entries)", poollen);
 		  } break;
@@ -576,7 +576,7 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 			}
 		    } break;
 		    case 'C': {
-			poollen = (*(U16*)data);
+			poollen = (data[0]+256*data[1]);
 		    } break;
 		    case 'o': {
 		    } break;
