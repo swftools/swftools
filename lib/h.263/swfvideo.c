@@ -251,7 +251,10 @@ static void dct2(int*src, int*dest)
 	innerdct(a,b,cc);
     }
     for(t=0;t<64;t++) {
-	dest[zigzagtable[t]] = (int)(tmp2[t]);
+	int v = (int)(tmp2[t]);
+	if(v>127) v=127;
+	if(v<-127) v=-127;
+	dest[zigzagtable[t]] = v;
     }
 }
 
@@ -936,6 +939,9 @@ static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
     } else if((x1 <= x3 && x3 <= x2) ||
 	      (x2 <= x3 && x3 <= x1)) {
 	x4=x3;
+    } else {
+	x4=0;
+	assert(x4);
     }
 
 	   if((y1 <= y2 && y2 <= y3) ||
@@ -947,6 +953,9 @@ static void predictmvd(VIDEOSTREAM*s, int bx, int by, int*px, int*py)
     } else if((y1 <= y3 && y3 <= y2) ||
 	      (y2 <= y3 && y3 <= y1)) {
 	y4=y3;
+    } else {
+	y4=0;
+	assert(y4);
     }
 
     *px = x4;
@@ -1042,8 +1051,8 @@ static int encode_blockP(TAG*tag, VIDEOSTREAM*s, int bx, int by, int*quant)
 	if(s->do_motion) {
 	    int hx,hy;
 	    int bestx=0,besty=0,bestbits=65536;
-	    int startx=-2,endx=2;
-	    int starty=-2,endy=2;
+	    int startx=-31,endx=32;
+	    int starty=-31,endy=32;
 
 	    if(!bx) startx=0;
 	    if(!by) starty=0;
