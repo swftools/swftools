@@ -119,9 +119,6 @@
 /* Typedefs */
 #undef boolean 
 
-/* Typedefs */
-#undef bool
-
 /* use gzip/uncompress */
 #undef USE_GZIP
 
