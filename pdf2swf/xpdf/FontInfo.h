@@ -16,7 +16,7 @@
 //------------------------------------------------------------------------
 
 #define standardEncodingSize 335
-static char *standardEncodingNames[standardEncodingSize] = {
+char *standardEncodingNames[standardEncodingSize] = {
   NULL,
   NULL,
   NULL,
