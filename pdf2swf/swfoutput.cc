@@ -1583,14 +1583,14 @@ void swfoutput_setstrokecolor(swfoutput* obj, u8 r, u8 g, u8 b, u8 a)
     obj->strokergb.a = a;
 }
 
-void swfoutput_setlinewidth(struct swfoutput*obj, double linewidth)
+void swfoutput_setlinewidth(struct swfoutput*obj, double _linewidth)
 {
-    if(linewidth == (u16)(linewidth*20))
+    if(linewidth == (u16)(_linewidth*20))
         return;
 
     if(shapeid>=0)
 	endshape(0);
-    linewidth = (u16)(linewidth*20);
+    linewidth = (u16)(_linewidth*20);
 }
 
 
