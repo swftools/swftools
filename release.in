@@ -17,7 +17,6 @@ ${name}/src/jpeg2swf.1 \
 ${name}/src/bitio.c \
 ${name}/src/bitio.h \
 ${name}/src/types.h \
-${name}/src/args.h \
 ${name}/src/flash.c \
 ${name}/src/flash.h \
 ${name}/src/combine.c \
@@ -27,6 +26,7 @@ ${name}/src/reloc.c \
 ${name}/src/reloc.h \
 ${name}/src/Makefile.in \
 ${name}/src/Makefile.am \
+${name}/lib/args.h \
 ${name}/lib/example/box.c \
 ${name}/lib/example/jpegtest.c \
 ${name}/lib/example/shape1.c \
@@ -86,7 +86,6 @@ ${name}/pdf2swf/pdfswf.h \
 ${name}/pdf2swf/pdfswf.cc \
 ${name}/pdf2swf/spline.h \
 ${name}/pdf2swf/spline.cc \
-${name}/pdf2swf/args.h \
 ${name}/pdf2swf/pdf2swf.cc \
 ${name}/pdf2swf/Makefile.am \
 ${name}/pdf2swf/xpdf/Array.cc \
