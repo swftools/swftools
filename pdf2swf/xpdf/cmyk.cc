@@ -591,18 +591,21 @@ void convert_cmyk2rgb(float c,float m,float y,float k, unsigned char*r, unsigned
     int py = yy>=RY?pp:pp + PY;
     int pk = kk>=RK?pp:pp + PK;
 
-    int rr = (int)cmyk2rgb[pp].r + ((int)cmyk2rgb[pc].r - (int)cmyk2rgb[pp].r)*rc 
+    int rr = (int)((int)cmyk2rgb[pp].r 
+	                         + ((int)cmyk2rgb[pc].r - (int)cmyk2rgb[pp].r)*rc 
                                  + ((int)cmyk2rgb[pm].r - (int)cmyk2rgb[pp].r)*rm
                                  + ((int)cmyk2rgb[py].r - (int)cmyk2rgb[pp].r)*ry
-                                 + ((int)cmyk2rgb[pk].r - (int)cmyk2rgb[pp].r)*rk;
-    int gg = (int)cmyk2rgb[pp].g + ((int)cmyk2rgb[pc].g - (int)cmyk2rgb[pp].g)*rc 
+                                 + ((int)cmyk2rgb[pk].r - (int)cmyk2rgb[pp].r)*rk);
+    int gg = (int)((int)cmyk2rgb[pp].g 
+	                         + ((int)cmyk2rgb[pc].g - (int)cmyk2rgb[pp].g)*rc 
                                  + ((int)cmyk2rgb[pm].g - (int)cmyk2rgb[pp].g)*rm
                                  + ((int)cmyk2rgb[py].g - (int)cmyk2rgb[pp].g)*ry
-                                 + ((int)cmyk2rgb[pk].g - (int)cmyk2rgb[pp].g)*rk;
-    int bb = (int)cmyk2rgb[pp].b + ((int)cmyk2rgb[pc].b - (int)cmyk2rgb[pp].b)*rc 
+                                 + ((int)cmyk2rgb[pk].g - (int)cmyk2rgb[pp].g)*rk);
+    int bb = (int)((int)cmyk2rgb[pp].b 
+	                         + ((int)cmyk2rgb[pc].b - (int)cmyk2rgb[pp].b)*rc 
                                  + ((int)cmyk2rgb[pm].b - (int)cmyk2rgb[pp].b)*rm
                                  + ((int)cmyk2rgb[py].b - (int)cmyk2rgb[pp].b)*ry
-                                 + ((int)cmyk2rgb[pk].b - (int)cmyk2rgb[pp].b)*rk;
+                                 + ((int)cmyk2rgb[pk].b - (int)cmyk2rgb[pp].b)*rk);
     *r = rr<0?0:(rr>255?255:rr);
     *g = gg<0?0:(gg>255?255:gg);
     *b = bb<0?0:(bb>255?255:bb);
@@ -633,7 +636,7 @@ void convert_cmyk2rgb(float c,float m,float y,float k, unsigned char*r, unsigned
     *g = g2;
     *b = b2;
 
-    if(!check(c,m,y,k, *r/255.0, *g/255.0, *b/255.0)) {
+    /*f(!check(c,m,y,k, *r/255.0, *g/255.0, *b/255.0)) {
         for(t=0;t<16;t++) {
             int p2 = pp;
             if(t&1) p2+=(pc-pp); 
@@ -647,7 +650,7 @@ void convert_cmyk2rgb(float c,float m,float y,float k, unsigned char*r, unsigned
             float f = rrc*rrm*rry*rrk;
             //printf("%d%d%d%d %f %02x%02x%02x\n", !!(t&8),!!(t&4),!!(t&2),!!(t&1), f, cmyk2rgb[p2].r, cmyk2rgb[p2].g, cmyk2rgb[p2].b);
         }
-    }
+    }*/
 }
 
 // END
