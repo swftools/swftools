@@ -562,7 +562,7 @@ void handlejpeg(TAG*tag)
     /* swf jpeg images have two streams, which both start with ff d8 and
        end with ff d9. The following code handles sorting the middle
        <ff d9 ff d8> bytes out, so that one stream remains */
-    if(tag->id == ST_DEFINEBITS && tag->len>2 && jpegtables) {
+    if(tag->id == ST_DEFINEBITSJPEG && tag->len>2 && jpegtables) {
 	fi = save_fopen(filename, "wb");
 	fwrite(jpegtables, 1, jpegtablessize-2, fi); //don't write end tag (ff,d8)
 	fwrite(&tag->data[2+2], tag->len-2-2, 1, fi); //don't write start tag (ff,d9)
@@ -571,13 +571,17 @@ void handlejpeg(TAG*tag)
     else if(tag->id == ST_DEFINEBITSJPEG2 && tag->len>2) {
 	int end = tag->len;
 	int pos = findjpegboundary(&tag->data[2], tag->len-2);
-	if(pos<0)
-	    return;
-	pos+=2;
-	fi = save_fopen(filename, "wb");
-	fwrite(&tag->data[2], pos-2, 1, fi);
-	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
-	fclose(fi);
+	if(pos>=0) {
+            pos+=2;
+            fi = save_fopen(filename, "wb");
+            fwrite(&tag->data[2], pos-2, 1, fi);
+            fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
+            fclose(fi);
+        } else {
+            fi = save_fopen(filename, "wb");
+            fwrite(&tag->data[2], end-2, 1, fi);
+            fclose(fi);
+        }
     }
     else if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
 	U32 end = GET32(&tag->data[2])+6;
