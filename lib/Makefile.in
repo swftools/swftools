@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf$(A) q.$(O) os.$(O)
+all: librfxswf$(A) q.$(O) os.$(O) gfxtools.$(O) art/libart$(A)
 
 lame_objects = @lame_objects@
 
@@ -19,6 +19,8 @@ q.$(O): q.c q.h $(top_builddir)/config.h
 	$(C) q.c -o $@
 os.$(O): os.c os.h $(top_builddir)/config.h
 	$(C) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" os.c -o $@
+gfxtools.$(O): gfxtools.c gfxtools.h $(top_builddir)/config.h
+	$(C) gfxtools.c -o $@
 
 MD5.$(O): MD5.c MD5.h
 	$(C) MD5.c -o $@
@@ -31,6 +33,9 @@ $(lame_objects):
 	cd lame;make all;cd ..
 $(actioncompiler_objects):
 	cd action;make all;cd ..
+
+art/libart$(A):
+	cd art; $(MAKE) libart$(A);cd ..
 
 h.263/dct.$(O):  h.263/dct.c h.263/dct.h
 	$(C) h.263/dct.c -o h.263/dct.$(O)
@@ -51,4 +56,5 @@ clean:
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
+	cd libart && $(MAKE) clean && cd ..
 
