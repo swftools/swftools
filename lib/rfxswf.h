@@ -20,7 +20,9 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include "../config.h"
-#include "bladeenc/codec.h"
+
+#define LAME
+#include "lame/lame.h"
 
 #define DEBUG_RFXSWF
 
