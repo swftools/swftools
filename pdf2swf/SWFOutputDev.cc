@@ -846,7 +846,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     // check for invisible text -- this is used by Acrobat Capture
     if ((state->getRender() & 3) == 3)
 	return;
-
+    Gushort *CIDToGIDMap = 0;
     GfxFont*font = state->getFont();
 
     if(font->getType() == fontType3) {
@@ -859,20 +859,29 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     state->transform(x, y, &x1, &y1);
     
     Unicode u=0;
-    if(_u && uLen) 
-	u = *_u;
-
-    /* find out the character name */
     char*name=0;
-    if(font->isCIDFont() && u) {
-	GfxCIDFont*cfont = (GfxCIDFont*)font;
-	int t;
-	for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++) {
-	    /* todo: should be precomputed */
-	    if(nameToUnicodeTab[t].u == u) {
-		name = nameToUnicodeTab[t].name;
-		break;
+
+    if(_u && uLen) {
+	u = *_u;
+	if (u) {
+	    int t;
+	    /* find out char name from unicode index 
+	       TODO: should be precomputed
+	     */
+	    for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++) {
+		if(nameToUnicodeTab[t].u == u) {
+		    name = nameToUnicodeTab[t].name;
+		    break;
+		}
 	    }
+	}
+    }
+
+    if(font->isCIDFont()) {
+	GfxCIDFont*cfont = (GfxCIDFont*)font;
+
+	if(font->getType() == fontCIDType2) {
+	    CIDToGIDMap = cfont->getCIDToGID();
 	}
     } else {
 	Gfx8BitFont*font8;
@@ -881,13 +890,14 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	if(enc && enc[c])
 	   name = enc[c];
     }
-    
-    msg("<debug> drawChar(%f,%f,c='%c' (%d),u=%d <%d>) CID=%d name=\"%s\"\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
-
-    /*x1 = (int)(x1+0.5);
-    y1 = (int)(y1+0.5);*/
-    
-    int ret = swfoutput_drawchar(&output, x1, y1, name, c, u);
+ 
+    if (CIDToGIDMap) {
+	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\"\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name));
+	swfoutput_drawchar(&output, x1, y1, name, CIDToGIDMap[c], u);
+    } else {
+	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\"\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
+	swfoutput_drawchar(&output, x1, y1, name, c, u);
+    }
 }
 
 void SWFOutputDev::endString(GfxState *state) { 
