@@ -29,11 +29,9 @@ ${name}/lib/args.h \
 ${name}/lib/example/box.c \
 ${name}/lib/example/jpegtest.c \
 ${name}/lib/example/shape1.c \
-${name}/lib/example/texbox.c \
-${name}/lib/example/texbox_ac.c \
 ${name}/lib/example/transtest.c \
 ${name}/lib/example/zlibtest.c \
-${name}/lib/example/README \
+${name}/lib/example/Makefile \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/modules/swfdump.c \
 ${name}/lib/modules/swfobject.c \
