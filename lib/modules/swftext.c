@@ -1265,6 +1265,10 @@ void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, char*text)
 	U32 c = readUTF8char(&s);
 	int g = font->ascii2glyph[c];
 	shape = font->glyph[g].shape;
+	if(((int)g)<0) {
+	    fprintf(stderr, "No char %d in font %s\n", c, font->name?(char*)font->name:"?");
+	    continue;
+	}
 	shape2 = swf_ShapeToShape2(shape);
 	l = shape2->lines;
 	while(l) {
