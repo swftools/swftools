@@ -62,6 +62,7 @@ ${name}/lib/modules/swfbutton.c \
 ${name}/lib/modules/swfbits.c \
 ${name}/lib/modules/swftools.c \
 ${name}/lib/modules/swfcgi.c \
+${name}/lib/modules/swfsound.c \
 ${name}/lib/rfxswf.c \
 ${name}/lib/rfxswf.h \
 ${name}/lib/old_rfxswf.h \
