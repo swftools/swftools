@@ -28,6 +28,7 @@
 #include <math.h>
 #include "../config.h"
 #include "../lib/rfxswf.h"
+#include "../lib/drawer.h"
 #include "../lib/log.h"
 #include "../lib/args.h"
 #include "../lib/q.h"
@@ -720,12 +721,13 @@ void s_textshape(char*name, char*fontname, char*_text)
     outline->bbox = font->layout->bounds[g];
     
     {
-	SWFSHAPEDRAWER draw;
-	swf_DrawerInit(&draw,0);
+	drawer_t draw;
+	swf_Shape11DrawerInit(&draw, 0);
 	swf_DrawText(&draw, font, _text);
-	swf_DrawerFinish(&draw);
-	outline->shape = swf_DrawerToShape(&draw);
-	outline->bbox = draw.bbox;
+	draw.finish(&draw);
+	outline->shape = swf_ShapeDrawerToShape(&draw);
+	outline->bbox = swf_ShapeDrawerGetBBox(&draw);
+	draw.dealloc(&draw);
     }
 
     if(dictionary_lookup(&outlines, name))
@@ -959,18 +961,20 @@ void s_outline(char*name, char*format, char*source)
 {
     outline_t* outline;
 
-    SWFSHAPEDRAWER draw;
+    drawer_t draw;
     SHAPE* shape;
     SHAPE2* shape2;
     SRECT bounds;
     
-    swf_DrawerInit(&draw, 0);
-    swf_DrawString(&draw, source);
-    swf_DrawerFinish(&draw);
-    shape = swf_DrawerToShape(&draw);
-    shape2 = swf_ShapeToShape2(shape);
-    bounds = swf_GetShapeBoundingBox(shape2);
+    swf_Shape11DrawerInit(&draw, 0);
+    draw_string(&draw, source);
+    draw.finish(&draw);
+    shape = swf_ShapeDrawerToShape(&draw);
+    //shape2 = swf_ShapeToShape2(shape);
+    //bounds = swf_GetShapeBoundingBox(shape2);
     //swf_Shape2Free(shape2);
+    bounds = swf_ShapeDrawerGetBBox(&draw);
+    draw.dealloc(&draw);
     
     outline = (outline_t*)malloc(sizeof(outline_t));
     memset(outline, 0, sizeof(outline_t));
