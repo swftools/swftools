@@ -154,8 +154,6 @@ ${name}/config.h.in \
 ${name}/Makefile.in \
 ${name}/INSTALL \
 ${name}/COPYING \
-${name}/NEWS \
-${name}/README \
 ${name}/AUTHORS \
 ${name}/ChangeLog \
 ${name}/release.in \
