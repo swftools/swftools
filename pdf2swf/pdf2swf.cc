@@ -32,14 +32,20 @@ static char * viewer = 0;
 int systemf(const char* format, ...)
 {
     char buf[1024];
+    int ret;
     va_list arglist;
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
 
-    printf("%s:\n", buf);
+    printf("%s\n", buf);
     fflush(stdout);
-    return system(buf);
+    ret = system(buf);
+    if(ret) {
+	fprintf(stderr, "system() returned %d\n", ret);
+	exit(ret);
+    }
+    return ret;
 }
 
 int args_callback_option(char*name,char*val) {
@@ -95,6 +101,20 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "l"))
     {
+	char buf[256];
+	sprintf(buf, "%s/swfs/default_loader.swf", DATADIR);
+	preloader = strdup(buf);
+	return 0;
+    }
+    else if (!strcmp(name, "b"))
+    {
+	char buf[256];
+	sprintf(buf, "%s/swfs/default_viewer.swf", DATADIR);
+	viewer = strdup(buf);
+	return 0;
+    }
+    else if (!strcmp(name, "L"))
+    {
 	if(val)
 	{
 	    preloader = val;
@@ -107,7 +127,7 @@ int args_callback_option(char*name,char*val) {
 	}
 	return 1;
     }
-    else if (!strcmp(name, "b"))
+    else if (!strcmp(name, "B"))
     {
 	if(val)
 	{
@@ -153,8 +173,10 @@ struct options_t options[] =
  {"p","pages"},
  {"w","samewindow"},
  {"f","fonts"},
- {"b","viewer"},
- {"l","preloader"},
+ {"B","viewer"},
+ {"L","preloader"},
+ {"b","defaultviewer"},
+ {"l","defaultpreloader"},
  {0,0}
 };
 
@@ -189,13 +211,19 @@ void args_callback_usage(char*name)
     printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
     printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
     printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
-    printf("-b  --viewer name	       Link viewer \"name\" to the pdf (\"%s -b\" for list)\n");
-    printf("-l  --preloader name       Link preloader \"name\" to the pdf (\"%s -l\" for list)\n");
     printf("-V  --version              Print program version\n");
+#ifndef SYSTEM_BACKTICKS
+    printf("The following might not work because your system call doesn't support command substitution:\n");
+#endif
+    printf("-b  --defaultviewer        Link default viewer to the pdf (%s/swfs/default_viewer.swf)\n", DATADIR);
+    printf("-l  --defaultpreloader     Link preloader \"name\" to the pdf (%s/swfs/default_loader.swf)\n", DATADIR);
+    printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
+    printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
 }
 
 int main(int argn, char *argv[])
 {
+    int ret;
 #ifdef HAVE_SRAND48
     srand48(time(0));
 #else
@@ -219,7 +247,7 @@ int main(int argn, char *argv[])
 	exit(0);
     }
 
-    logf("<verbose> reading data files from %s\n", DATADIR);
+    logf("<verbose> reading font files from %s/fonts\n", DATADIR);
     //TODO: use tempnam here. Check if environment already contains a
     //T1LIB_CONFIG.
     putenv( "T1LIB_CONFIG=/tmp/t1lib.config.tmp");
@@ -251,20 +279,30 @@ int main(int argn, char *argv[])
 
     pdfswf_close();
 
-    if(!viewer && preloader)
-	logf("<warning> --preloader option without --viewer option doesn't make very much sense.");
-    if(viewer || preloader)
+    if(viewer || preloader) {
+#ifndef SYSTEM_BACKTICKS
+	logf("<warning> Not sure whether system() can handle command substitution");
+	logf("<warning> (According to config.h, it can't)");
+#endif
 	printf("\n");
+    }
 
-    if(viewer) {
+    if(viewer && !preloader) {
 	systemf("swfcombine `swfdump -XY %s` %s viewport=%s -o %s",
 		outputname, viewer, outputname, outputname);
 	printf("\n");
     }
-    if(preloader) {
-	systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
+    if(preloader && !viewer) {
+	logf("<warning> --preloader option without --viewer option doesn't make very much sense.");
+	ret = systemf("swfcombine `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
 		preloader, DATADIR, preloader, outputname, outputname);
 	printf("\n");
+    }
+    if(preloader && viewer) {
+	systemf("swfcombine %s viewport=%s -o %s",
+		viewer, outputname, outputname);
+	systemf("swfcombine `swfdump -XY %s` `swfdump -r %s` %s/swfs/PreLoaderTemplate.swf loader=%s movie=%s -o %s",
+		outputname, preloader, DATADIR, preloader, outputname, outputname);
     }
 
     return 0;
