@@ -206,6 +206,7 @@ ${name}/config.sub \
 ${name}/install-sh \
 ${name}/mkinstalldirs \
 ${name}/missing \
+${name}/ltmain.sh \
 ${name}/configure \
 ${name}/config.h.in \
 ${name}/INSTALL \
@@ -224,7 +225,6 @@ ${name}/pdf2swf/ttf2pt1/runt1asm.c \
 ${name}/pdf2swf/ttf2pt1/t1asm.c \
 ${name}/pdf2swf/ttf2pt1/ttf.c \
 ${name}/pdf2swf/ttf2pt1/ttf.h \
-${name}/pdf2swf/ttf2pt1/ttf2pt1 \
 ${name}/pdf2swf/ttf2pt1/ttf2pt1.c \
 ${name}/pdf2swf/ttf2pt1/ttf2pt1.h \
 ${name}/pdf2swf/ttf2pt1/version.h \
@@ -261,7 +261,7 @@ ${name}/swfs/simple_viewer.swf \
 ${name}/swfs/PreLoaderTemplate.swf \
 ${name}/swfs/swft_loader.swf \
 ${name}/swfs/tessel_loader.swf \
-${name}/aclocal.m4
+${name}/m4/swf.m4
 gzip -9 ${name}.tar
 rm -f ${name}
 
