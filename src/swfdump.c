@@ -28,23 +28,25 @@
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 
-char * filename = 0;
+static char * filename = 0;
 
 /* idtab stores the ids which are defined in the file. This allows us
    to detect errors in the file. (i.e. ids which are defined more than 
    once */
-char idtab[65536];
-char * indent = "                ";
+static char idtab[65536];
+static char * indent = "                ";
 
-int action = 0;
-int html = 0;
-int xy = 0;
-int showtext = 0;
-int hex = 0;
-int used = 0;
+static int placements = 0;
+static int action = 0;
+static int html = 0;
+static int xy = 0;
+static int showtext = 0;
+static int hex = 0;
+static int used = 0;
 
 struct options_t options[] =
 {
+ {"D","full"},
  {"a","action"},
  {"t","text"},
  {"X","width"},
@@ -52,6 +54,7 @@ struct options_t options[] =
  {"f","frames"},
  {"r","rate"},
  {"e","html"},
+ {"p","placements"},
  {"u","used"},
  {"v","verbose"},
  {"V","version"},
@@ -68,6 +71,10 @@ int args_callback_option(char*name,char*val)
     } 
     else if(name[0]=='a') {
         action = 1;
+        return 0;
+    }
+    else if(name[0]=='p') {
+        placements = 1;
         return 0;
     }
     else if(name[0]=='t') {
@@ -102,6 +109,10 @@ int args_callback_option(char*name,char*val)
 	used = 1;
 	return 0;
     }
+    else if(name[0]=='D') {
+	action = placements = showtext = 1;
+	return 0;
+    }
     else {
         printf("Unknown option: -%s\n", name);
 	exit(1);
@@ -117,12 +128,14 @@ void args_callback_usage(char*name)
 {    
     printf("Usage: %s [-at] file.swf\n", name);
     printf("\t-h , --help\t\t Print help and exit\n");
+    printf("\t-D , --full\t\t Show everything. The same as -atp\n");
     printf("\t-e , --html\t\t Create html output embedding the file (simple, but useful)\n");
     printf("\t-X , --width\t\t Prints out a string of the form \"-X width\"\n");
     printf("\t-Y , --height\t\t Prints out a string of the form \"-Y height\"\n");
     printf("\t-r , --rate\t\t Prints out a string of the form \"-r rate\"\n");
     printf("\t-f , --frames\t\t Prints out a string of the form \"-f framenum\"\n");
     printf("\t-a , --action\t\t Disassemble action tags\n");
+    printf("\t-p , --placements\t\t Show extra placement information\n");
     printf("\t-t , --text\t\t Show text data\n");
     printf("\t-d , --hex\t\t Print hex output of tag data, too\n");
     printf("\t-u , --used\t\t Show referred IDs for each Tag\n");
@@ -362,14 +375,52 @@ void printhandlerflags(U16 handlerflags)
 void handlePlaceObject2(TAG*tag, char*prefix)
 {
     U8 flags = swf_GetU8(tag);
+    MATRIX m;
+    CXFORM cx;
+    char pstr[3][160];
+    int ppos[3] = {0,0,0};
     swf_GetU16(tag); //depth
     //flags&1: move
     if(flags&2) swf_GetU16(tag); //id
-    if(flags&4) swf_GetMatrix(tag,0);
-    if(flags&8) swf_GetCXForm(tag,0,1);
-    if(flags&16) swf_GetU16(tag); //ratio
+    if(flags&4) {
+	swf_GetMatrix(tag,&m);
+	if(placements) {
+	    ppos[0] += sprintf(pstr[0], "| Matrix             ");
+	    ppos[1] += sprintf(pstr[1], "| %5.3f %5.3f %6.2f ", m.sx/65536.0, m.r1/65536.0, m.tx/20.0);
+	    ppos[2] += sprintf(pstr[2], "| %5.3f %5.3f %6.2f ", m.r0/65536.0, m.sy/65536.0, m.ty/20.0);
+	}
+    }
+    if(flags&8) {
+	swf_GetCXForm(tag, &cx, 1);
+	if(placements) {
+	    ppos[0] += sprintf(pstr[0]+ppos[0], "| CXForm    r    g    b    a ");
+	    ppos[1] += sprintf(pstr[1]+ppos[1], "| mul    %4.1f %4.1f %4.1f %4.1f ", cx.r0/256.0, cx.g0/256.0, cx.b0/256.0, cx.a0/256.0);
+	    ppos[2] += sprintf(pstr[2]+ppos[2], "| add    %4d %4d %4d %4d ", cx.r1, cx.g1, cx.b1, cx.a1);
+	}
+    }
+    if(flags&16) {
+	U16 ratio = swf_GetU16(tag); //ratio
+	if(placements) {
+	    ppos[0] += sprintf(pstr[0]+ppos[0], "| Ratio ");
+	    ppos[1] += sprintf(pstr[1]+ppos[1], "| %-5d ", ratio);
+	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
+	}
+    }
+    if(flags&64) {
+	U16 clip = swf_GetU16(tag); //clip
+	if(placements) {
+	    ppos[0] += sprintf(pstr[0]+ppos[0], "| Clip  ");
+	    ppos[1] += sprintf(pstr[1]+ppos[1], "| %-5d ", clip);
+	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
+	}
+    }
     if(flags&32) { while(swf_GetU8(tag)); }
-    if(flags&64) swf_GetU16(tag); //clip
+    if(placements && ppos[0]) {
+	printf("\n");
+	printf("%s %s\n", prefix, pstr[0]);
+	printf("%s %s\n", prefix, pstr[1]);
+	printf("%s %s", prefix, pstr[2]);
+    }
     if(flags&128) {
       if (action) {
 	U16 unknown;
@@ -412,6 +463,11 @@ void handlePlaceObject2(TAG*tag, char*prefix)
     }
     } else printf("\n");
 }
+
+void handlePlaceObject(TAG*tag, char*prefix)
+{
+    /*TODO*/
+}
     
 void fontcallback1(U16 id,U8 * name)
 { fontnum++;
@@ -436,6 +492,21 @@ void hexdumpTag(TAG*tag, char* prefix)
 	    else
 		printf("\n                %s-=> ",prefix);
 	}
+    }
+}
+
+void handleExportAssets(TAG*tag, char* prefix)
+{
+    int num;
+    U16 id;
+    char* name;
+    int t;
+    num = swf_GetU16(tag);
+    for(t=0;t<num;t++)
+    {
+	id = swf_GetU16(tag);
+	name = swf_GetString(tag);
+	printf("%sexports %04d as \"%s\"\n", prefix, id, name);
     }
 }
 
@@ -583,8 +654,16 @@ int main (int argc,char ** argv)
     printf("[HEADER]        File size: %ld%s\n", swf.fileSize, swf.compressed?" (Depacked)":"");
     printf("[HEADER]        Frame rate: %f\n",swf.frameRate/256.0);
     printf("[HEADER]        Frame count: %d\n",swf.frameCount);
-    printf("[HEADER]        Movie width: %.3f\n",(swf.movieSize.xmax-swf.movieSize.xmin)/20.0);
-    printf("[HEADER]        Movie height: %.3f\n",(swf.movieSize.ymax-swf.movieSize.ymin)/20.0);
+    printf("[HEADER]        Movie width: %.2f",(swf.movieSize.xmax-swf.movieSize.xmin)/20.0);
+    if(swf.movieSize.xmin)
+	printf(" (left offset: %.2f)\n", swf.movieSize.xmin/20.0);
+    else 
+	printf("\n");
+    printf("[HEADER]        Movie height: %.2f",(swf.movieSize.ymax-swf.movieSize.ymin)/20.0);
+    if(swf.movieSize.ymin)
+	printf(" (top offset: %.2f)\n", swf.movieSize.ymin/20.0);
+    else 
+	printf("\n");
 
     tag = swf.firstTag;
    
@@ -628,6 +707,7 @@ int main (int argc,char ** argv)
             printf(" places id %04d at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
             if(swf_GetName(tag))
                 printf(" name \"%s\"",swf_GetName(tag));
+	    handlePlaceObject(tag, myprefix);
         }
 	else if(tag->id == ST_PLACEOBJECT2) {
 	    if(tag->data[0]&1)
@@ -717,10 +797,9 @@ int main (int argc,char ** argv)
 	    U8 r = swf_GetU8(tag);
 	    U8 g = swf_GetU8(tag);
 	    U8 b = swf_GetU8(tag);
-	    printf(" (%02x/%02x/%02x)",r,g,b);
+	    printf(" (%02x/%02x/%02x)\n",r,g,b);
 	}
-
-	if(tag->id == ST_DEFINEBITSLOSSLESS ||
+	else if(tag->id == ST_DEFINEBITSLOSSLESS ||
 	   tag->id == ST_DEFINEBITSLOSSLESS2) {
 	    handleDefineBits(tag);
 	    printf("\n");
@@ -740,6 +819,10 @@ int main (int argc,char ** argv)
 		printf("\n");
 	}
 	else if(tag->id == ST_PLACEOBJECT2) {
+	}
+	else if(tag->id == ST_NAMECHARACTER) {
+	    swf_GetU16(tag);
+	    printf(" \"%s\"\n", swf_GetString(tag));
 	}
 	else {
 	    printf("\n");
@@ -763,6 +846,9 @@ int main (int argc,char ** argv)
 	    if(tag->len)
 		dumperror("End Tag not empty");
         }
+	else if(tag->id == ST_EXPORTASSETS) {
+	    handleExportAssets(tag, myprefix);
+	}
         else if(tag->id == ST_DOACTION && action) {
             ActionTAG*actions;
             actions = swf_ActionGet(tag);
@@ -775,10 +861,7 @@ int main (int argc,char ** argv)
 	    dumpButton2Actions(tag, myprefix);
 	}
 	else if(tag->id == ST_PLACEOBJECT2) {
-	    if((*(U8*)tag->data)&0x80)
-		handlePlaceObject2(tag, myprefix);
-	    else
-		printf("\n");
+	    handlePlaceObject2(tag, myprefix);
 	}
 
 	if(tag->len && used) {
