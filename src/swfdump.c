@@ -51,6 +51,7 @@ static char * indent = "                ";
 static int placements = 0;
 static int action = 0;
 static int html = 0;
+static int xhtml = 0;
 static int xy = 0;
 static int showtext = 0;
 static int showshapes = 0;
@@ -63,6 +64,7 @@ static struct options_t options[] = {
 {"D", "full"},
 {"V", "version"},
 {"e", "html"},
+{"E", "xhtml"},
 {"a", "action"},
 {"t", "text"},
 {"s", "shapes"},
@@ -101,6 +103,11 @@ int args_callback_option(char*name,char*val)
     }
     else if(name[0]=='e') {
         html = 1;
+        return 0;
+    }
+    else if(name[0]=='E') {
+        html = 1;
+        xhtml = 1;
         return 0;
     }
     else if(name[0]=='X') {
@@ -816,23 +823,34 @@ int main (int argc,char ** argv)
 	    fprintf(stderr, "Fileversion>9\n");
 	    exit(1);
 	}
- 	printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
-	       " WIDTH=\"%d\"\n"
-	       //" BGCOLOR=#ffffffff\n"?
-	       " HEIGHT=\"%d\"\n"
-	       //http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,23,0?
-	       " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=%s\">\n"
-               "  <PARAM NAME=\"MOVIE\" VALUE=\"%s\">\n"
-	       "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
-	       "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
-	       "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
-	       "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n" //bgcolor=#ffffff?
-	       "   PLAY=\"true\" ALIGN=\"\" LOOP=\"true\" QUALITY=\"high\"\n"
-	       "   TYPE=\"application/x-shockwave-flash\"\n"
-	       "   PLUGINSPAGE=\"http://www.macromedia.com/go/getflashplayer\">\n"
-               "  </EMBED>\n" 
-	       "</OBJECT>\n", xsize, ysize, fileversions[swf.fileVersion], 
-		              filename, filename, xsize, ysize);
+
+	if(xhtml) {
+	    printf("<object type=\"application/x-shockwave-flash\" data=\"%s\" width=\"%d\" height=\"%d\">\n"
+			    "<param name=\"movie\" value=\"%s\"/>\n"
+			    "<param name=\"play\" value=\"true\"/>\n"
+			    "<param name=\"loop\" value=\"false\"/>\n"
+			    "<param name=\"quality\" value=\"high\"/>\n"
+			    "<param name=\"loop\" value=\"false\"/>\n"
+			    "</object>\n\n", filename, xsize, ysize, filename);
+	} else {
+	    printf("<OBJECT CLASSID=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\"\n"
+		   " WIDTH=\"%d\"\n"
+		   //" BGCOLOR=#ffffffff\n"?
+		   " HEIGHT=\"%d\"\n"
+		   //http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,23,0?
+		   " CODEBASE=\"http://active.macromedia.com/flash5/cabs/swflash.cab#version=%s\">\n"
+		   "  <PARAM NAME=\"MOVIE\" VALUE=\"%s\">\n"
+		   "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
+		   "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
+		   "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
+		   "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n" //bgcolor=#ffffff?
+		   "   PLAY=\"true\" ALIGN=\"\" LOOP=\"true\" QUALITY=\"high\"\n"
+		   "   TYPE=\"application/x-shockwave-flash\"\n"
+		   "   PLUGINSPAGE=\"http://www.macromedia.com/go/getflashplayer\">\n"
+		   "  </EMBED>\n" 
+		   "</OBJECT>\n", xsize, ysize, fileversions[swf.fileVersion], 
+				  filename, filename, xsize, ysize);
+	}
 	return 0;
     } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);

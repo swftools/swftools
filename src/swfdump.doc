@@ -16,6 +16,8 @@ display placement information about objects.
     Print version info and exit
 -e, --html
     Print out html code for embedding the file
+-E, --xhtml
+    Print out xhtml code for embedding the file
 -a, --action
     Disassemble action tags
 -t, --text
