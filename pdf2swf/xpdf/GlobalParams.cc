@@ -315,7 +315,30 @@ void GlobalParams::parseFile(GString *fileName, FILE *f) {
   char *p1, *p2;
   char buf[512];
   FILE *f2;
-
+  
+  /* extract path */
+  if(fileName) {
+    char* cfgFileName = fileName->getCString();
+    char* pos1 = strrchr(cfgFileName, '/');
+    char* pos2 = strrchr(cfgFileName, '\\');
+    char* p = pos1>pos2?pos1:pos2;
+    int pos = p ? p-cfgFileName : -1;
+    GString*path = new GString(new GString(cfgFileName), 0, (pos < 0 ? strlen(cfgFileName): pos));
+    if(pos1>=0)
+	path->append('/');
+    else if(pos2>=0)
+	path->append('\\');
+    else
+#ifdef WIN32
+	path->append('\\');
+#else
+	path->append('/');
+#endif
+    this->path = path;
+  } else {
+    this->path = new GString();
+  }
+  
   line = 1;
   while (getLine(buf, sizeof(buf) - 1, f)) {
 
@@ -510,6 +533,32 @@ void GlobalParams::parseNameToUnicode(GList *tokens, GString *fileName,
   fclose(f);
 }
 
+static GString* qualify_filename(GString*path, GString*filename)
+{
+  GString*fullpath = 0;
+  char*prefix = "/usr/local/share/xpdf/";
+
+  if (filename->getChar(0) != '\\' && filename->getChar(0) != '/') {
+    /* relative path */
+    fullpath = path->copy();
+    fullpath->append(filename);
+  } else if (!strncmp(filename->getCString(), prefix, strlen(prefix))) {
+    /* xpdf default path */
+    char*s = strchr(filename->getCString()+strlen(prefix), '/');
+    if(s) {
+	fullpath = path->copy();
+	fullpath->append(s+1);
+    } else {
+	fullpath = filename->copy();
+    }
+  } else {
+    /* absolute path */
+    fullpath = filename->copy();
+  }
+  printf("%s -%s-> %s\n", filename->getCString(), path->getCString(), fullpath->getCString());
+  return fullpath;
+}
+
 void GlobalParams::parseCIDToUnicode(GList *tokens, GString *fileName,
 				     int line) {
   GString *collection, *name, *old;
@@ -521,10 +570,12 @@ void GlobalParams::parseCIDToUnicode(GList *tokens, GString *fileName,
   }
   collection = (GString *)tokens->get(1);
   name = (GString *)tokens->get(2);
+
   if ((old = (GString *)cidToUnicodes->remove(collection))) {
     delete old;
   }
-  cidToUnicodes->add(collection->copy(), name->copy());
+
+  cidToUnicodes->add(collection->copy(), qualify_filename(this->path, name));
 }
 
 void GlobalParams::parseUnicodeToUnicode(GList *tokens, GString *fileName,
@@ -541,7 +592,8 @@ void GlobalParams::parseUnicodeToUnicode(GList *tokens, GString *fileName,
   if ((old = (GString *)unicodeToUnicodes->remove(font))) {
     delete old;
   }
-  unicodeToUnicodes->add(font->copy(), file->copy());
+
+  unicodeToUnicodes->add(font->copy(), qualify_filename(this->path, file));
 }
 
 void GlobalParams::parseUnicodeMap(GList *tokens, GString *fileName,
@@ -558,7 +610,8 @@ void GlobalParams::parseUnicodeMap(GList *tokens, GString *fileName,
   if ((old = (GString *)unicodeMaps->remove(encodingName))) {
     delete old;
   }
-  unicodeMaps->add(encodingName->copy(), name->copy());
+
+  unicodeMaps->add(encodingName->copy(), qualify_filename(this->path, name));
 }
 
 void GlobalParams::parseCMapDir(GList *tokens, GString *fileName, int line) {
@@ -576,23 +629,30 @@ void GlobalParams::parseCMapDir(GList *tokens, GString *fileName, int line) {
     list = new GList();
     cMapDirs->add(collection->copy(), list);
   }
-  list->append(dir->copy());
+
+  list->append(qualify_filename(this->path, dir));
 }
 
 void GlobalParams::parseToUnicodeDir(GList *tokens, GString *fileName,
 				     int line) {
+  GString *dir;
+
   if (tokens->getLength() != 2) {
     error(-1, "Bad 'toUnicodeDir' config file command (%s:%d)",
 	  fileName->getCString(), line);
     return;
   }
-  toUnicodeDirs->append(((GString *)tokens->get(1))->copy());
+
+  dir = (GString *)tokens->get(1);
+
+  toUnicodeDirs->append(qualify_filename(this->path, dir));
 }
 
 void GlobalParams::parseDisplayFont(GList *tokens, GHash *fontHash,
 				    DisplayFontParamKind kind,
 				    GString *fileName, int line) {
   DisplayFontParam *param, *old;
+  GString *file;
 
   if (tokens->getLength() < 2) {
     goto err1;
@@ -604,13 +664,15 @@ void GlobalParams::parseDisplayFont(GList *tokens, GHash *fontHash,
     if (tokens->getLength() != 3) {
       goto err2;
     }
-    param->t1.fileName = ((GString *)tokens->get(2))->copy();
+    file = (GString *)tokens->get(2);
+    param->t1.fileName = qualify_filename(this->path, file);
     break;
   case displayFontTT:
     if (tokens->getLength() != 3) {
       goto err2;
     }
-    param->tt.fileName = ((GString *)tokens->get(2))->copy();
+    file = (GString *)tokens->get(2);
+    param->tt.fileName = qualify_filename(this->path, file);
     break;
   }
 

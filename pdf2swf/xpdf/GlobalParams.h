@@ -228,6 +228,10 @@ private:
 		  GList *tokens, GString *fileName, int line);
   GBool parseYesNo2(char *token, GBool *flag);
   UnicodeMap *getUnicodeMap2(GString *encodingName);
+  
+  //----- config file base path
+
+  GString*path;
 
   //----- static tables
 
