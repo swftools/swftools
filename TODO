@@ -13,6 +13,11 @@ pdf2swf:
     * implement -q (--quiet) option, especially for -b and -l
     * upgrade to xpdf 1.01
 
+png2swf:
+
+    * handle bit packing
+    * handle filter bytes, splitted IDAT chunks etc.
+
 swfcombine:
 
     * Handle Bounding boxes
@@ -32,4 +37,5 @@ rfxswf-lib:
    
     * modules/swfshape doesn't allow changing to fillstyle 0
     * modules/swffont:TextSetInfoRecord doesn't allow changing to coordinate 0
+    * swf_WriteHeader shouldn't modify fileSize and frameNum.
 
