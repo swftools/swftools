@@ -142,7 +142,7 @@ PyObject* tag_new()
 PyObject* tag_new2(TAG*t, PyObject* tagmap)
 {
     TagObject*tag = PyObject_New(TagObject, &TagClass);
-    mylog("+%08x(%d) tag_new tag=%08x\n", (int)tag, tag->ob_refcnt, t);
+    mylog("+%08x(%d) tag_new2 tag=%08x id=%d (%s)\n", (int)tag, tag->ob_refcnt, t, t->id, swf_TagGetName(t));
     tag->font = 0;
     tag->character = 0;
     tag->placeobject = 0;
@@ -153,19 +153,23 @@ PyObject* tag_new2(TAG*t, PyObject* tagmap)
     t = tag->tag;
     
     int num = swf_GetNumUsedIDs(t);
-    int * positions = malloc(num*sizeof(int));
-    swf_GetUsedIDs(t, positions);
-    int i;
-    for(i=0;i<num;i++) {
-	int id = GET16(&t->data[positions[i]]);
-	PyObject*obj = tagmap_id2obj(tagmap, id);
-	if(obj==NULL) {
-	    PyErr_SetString(PyExc_Exception, setError("TagID %d not defined", id));
-	    return NULL;
+    if(num) { // tag has dependencies
+	int * positions = malloc(num*sizeof(int));
+	swf_GetUsedIDs(t, positions);
+	int i;
+	for(i=0;i<num;i++) {
+	    int id = GET16(&t->data[positions[i]]);
+	    PyObject*obj = tagmap_id2obj(tagmap, id);
+	    if(obj==NULL) {
+		PyErr_SetString(PyExc_Exception, setError("TagID %d not defined", id));
+		return NULL;
+	    }
+	    //mylog("+%08x(%d) tag_new2 handling id %d at %d/%d\n", (int)tag, tag->ob_refcnt, id, positions[i], t->len);
+	    //mylog("+%08x(%d) tag_new2 add dependency %d to id %d, object %08x(%d)\n", (int)tag, tag->ob_refcnt, i, id, obj, obj->ob_refcnt);
+	    tagmap_addMapping(tag->tagmap, id, obj);
 	}
-	tagmap_addMapping(tag->tagmap, id, obj);
+	free(positions);
     }
-    free(positions);
     return (PyObject*)tag;
 }
 
