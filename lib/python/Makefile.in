@@ -19,6 +19,8 @@ tag.o: tag.c tag.h tagmap.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tag.c -o tag.o
 tags.o: tags.c tags.h tagmap.h tag.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c tags.c -o tags.o
+image.o: image.c image.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c image.c -o image.o
 action.o: action.c action.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c action.c -o action.o
 pyutils.o: pyutils.c pyutils.h
@@ -27,8 +29,8 @@ pyutils.o: pyutils.c pyutils.h
 SWF.o: SWF.c pyutils.h primitives.h taglist.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.o
 
-SWF.so: SWF.o taglist.o tag.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
-	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o tags.o action.o primitives.o pyutils.o  -o SWF.so ../librfxswf.a $(PYTHON_LIB) -ljpeg -lz -lt1 -lfreetype 
+SWF.so: SWF.o taglist.o tag.o image.o tags.o tagmap.o action.o primitives.o pyutils.o ../librfxswf.a Makefile
+	$(L) -g -shared SWF.o tagmap.o taglist.o tag.o image.o tags.o action.o primitives.o pyutils.o  -o SWF.so ../librfxswf.a $(PYTHON_LIB) -ljpeg -lz -lt1 -lfreetype 
 
 mypython: mypython.c Makefile
 	$(L) -Wno-redundant-decls -g $(PYTHON_INCLUDES) mypython.c -o mypython $(PYTHON_LIB) -ldl -lm -lpthread -lutil
