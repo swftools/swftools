@@ -109,11 +109,11 @@ int swfoutput_drawimagelossless(struct swfoutput*, RGBA*pic, int sizex, int size
 	double x2,double y2,
 	double x3,double y3,
 	double x4,double y4);
-int swfoutput_drawimagelossless256(struct swfoutput*, U8*pic, RGBA*pal, int sizex, int sizey,
+int swfoutput_drawimagelosslessN(struct swfoutput*, U8*pic, RGBA*pal, int sizex, int sizey,
 	double x1,double y1,
 	double x2,double y2,
 	double x3,double y3,
-	double x4,double y4);
+	double x4,double y4, int n);
 void swfoutput_drawimageagain(struct swfoutput*, int id, int sizex, int sizey,
 	double x1,double y1,
 	double x2,double y2,

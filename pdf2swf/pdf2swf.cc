@@ -175,7 +175,7 @@ int args_callback_option(char*name,char*val) {
 	}
 	return 1;
     }
-    else if (name[0]=='j')
+    else if (!strcmp(name, "j"))
     {
 	if(name[1]) {
 	    pdfswf_jpegquality(atoi(&name[1]));

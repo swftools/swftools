@@ -1218,8 +1218,60 @@ void SWFOutputDev::updateFont(GfxState *state)
 int pic_xids[1024];
 int pic_yids[1024];
 int pic_ids[1024];
+int pic_width[1024];
+int pic_height[1024];
 int picpos = 0;
 int pic_id = 0;
+
+#define SQR(x) ((x)*(x))
+
+unsigned char* antialize(unsigned char*data, int width, int height, int newwidth, int newheight, int palettesize)
+{
+    if((newwidth<2 || newheight<2) ||
+       (width<=newwidth || height<=newheight))
+	return 0;
+    unsigned char*newdata;
+    int x,y;
+    newdata= (unsigned char*)malloc(newwidth*newheight);
+    int t;
+    double fx = (double)(width)/newwidth;
+    double fy = (double)(height)/newheight;
+    double px = 0;
+    int blocksize = (int)(8192/(fx*fy));
+    int r = 8192*256/palettesize;
+    for(x=0;x<newwidth;x++) {
+	double ex = px + fx;
+	int fromx = (int)px;
+	int tox = (int)ex;
+	int xweight1 = (int)(((fromx+1)-px)*256);
+	int xweight2 = (int)((ex-tox)*256);
+	double py =0;
+	for(y=0;y<newheight;y++) {
+	    double ey = py + fy;
+	    int fromy = (int)py;
+	    int toy = (int)ey;
+	    int yweight1 = (int)(((fromy+1)-py)*256);
+	    int yweight2 = (int)((ey-toy)*256);
+	    int a = 0;
+	    int xx,yy;
+	    for(xx=fromx;xx<=tox;xx++)
+	    for(yy=fromy;yy<=toy;yy++) {
+		int b = 1-data[width*yy+xx];
+		int weight=256;
+		if(xx==fromx) weight = (weight*xweight1)/256;
+		if(xx==tox) weight = (weight*xweight2)/256;
+		if(yy==fromy) weight = (weight*yweight1)/256;
+		if(yy==toy) weight = (weight*yweight2)/256;
+		a+=b*weight;
+	    }
+	    //if(a) a=(palettesize-1)*r/blocksize;
+	    newdata[y*newwidth+x] = (a*blocksize)/r;
+	    py = ey;
+	}
+	px = ex;
+    }
+    return newdata;
+}
 
 void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
@@ -1279,38 +1331,86 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       int xid = 0;
       int yid = 0;
       int x,y;
-      int width2 = (width+3)&(~3);
-      unsigned char*pic = new unsigned char[width2*height];
+      unsigned char*pic = new unsigned char[width*height];
       RGBA pal[256];
       GfxRGB rgb;
       state->getFillRGB(&rgb);
+      memset(pal,255,sizeof(pal));
       pal[0].r = (int)(rgb.r*255); pal[0].g = (int)(rgb.g*255); 
       pal[0].b = (int)(rgb.b*255); pal[0].a = 255;
       pal[1].r = 0; pal[1].g = 0; pal[1].b = 0; pal[1].a = 0;
+      int numpalette = 2;
       xid += pal[1].r*3 + pal[1].g*11 + pal[1].b*17;
       yid += pal[1].r*7 + pal[1].g*5 + pal[1].b*23;
+      int realwidth = (int)sqrt(SQR(x2-x3) + SQR(y2-y3));
+      int realheight = (int)sqrt(SQR(x1-x2) + SQR(y1-y2));
       for (y = 0; y < height; ++y)
       for (x = 0; x < width; ++x)
       {
 	    imgStr->getPixel(buf);
-	    // if(invert) buf[0]=255-buf[0]?
+	    if(invert) 
+		buf[0]=1-buf[0];
 	    pic[width*y+x] = buf[0];
 	    xid+=x*buf[0]+1;
-	    yid+=y*buf[0]+1;
+	    yid+=y*buf[0]*3+1;
+      }
+      
+      /* the size of the drawn image is added to the identifier
+	 as the same image may require different bitmaps if displayed
+	 at different sizes (due to antialiasing): */
+      if(type3active) {
+	  xid += realwidth;
+	  yid += realheight;
       }
       int t,found = -1;
       for(t=0;t<picpos;t++)
       {
 	  if(pic_xids[t] == xid &&
 	     pic_yids[t] == yid) {
+	      /* if the image was antialiased, the size has changed: */
+	      width = pic_width[t];
+	      height = pic_height[t];
 	      found = t;break;
 	  }
       }
       if(found<0) {
-	  pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
-		  x1,y1,x2,y2,x3,y3,x4,y4);
+	  if(type3active) {
+	      numpalette = 16;
+	      unsigned char*pic2 = 0;
+	      
+	      pic2 = antialize(pic,width,height,realwidth,realheight, numpalette);
+
+	      if(pic2) {
+		  width = realwidth;
+		  height = realheight;
+		  free(pic);
+		  pic = pic2;
+		  /* make a black/white palette */
+		  int t;
+		  GfxRGB rgb2;
+		  rgb2.r = 1 - rgb.r;
+		  rgb2.g = 1 - rgb.g;
+		  rgb2.b = 1 - rgb.b;
+
+		  float r = 255/(numpalette-1);
+		  for(t=0;t<numpalette;t++) {
+		      /*pal[t].r = (U8)(t*r*rgb.r+(numpalette-1-t)*r*rgb2.r);
+		      pal[t].g = (U8)(t*r*rgb.g+(numpalette-1-t)*r*rgb2.g);
+		      pal[t].b = (U8)(t*r*rgb.b+(numpalette-1-t)*r*rgb2.b);
+		      pal[t].a = 255; */
+		      pal[t].r = (U8)(255*rgb.r);
+		      pal[t].g = (U8)(255*rgb.g);
+		      pal[t].b = (U8)(255*rgb.b);
+		      pal[t].a = (U8)(t*r);
+		  }
+	      }
+	  }
+	  pic_ids[picpos] = swfoutput_drawimagelosslessN(&output, pic, pal, width, height, 
+		  x1,y1,x2,y2,x3,y3,x4,y4, numpalette);
 	  pic_xids[picpos] = xid;
 	  pic_yids[picpos] = yid;
+	  pic_width[picpos] = width;
+	  pic_height[picpos] = height;
 	  if(picpos<1024)
 	      picpos++;
       } else {
@@ -1359,6 +1459,8 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 		      x1,y1,x2,y2,x3,y3,x4,y4);
 	  pic_xids[picpos] = xid;
 	  pic_yids[picpos] = yid;
+	  pic_width[picpos] = width;
+	  pic_height[picpos] = height;
 	  if(picpos<1024)
 	      picpos++;
       } else {
@@ -1404,10 +1506,12 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  }
       }
       if(found<0) {
-	  pic_ids[picpos] = swfoutput_drawimagelossless256(&output, pic, pal, width, height, 
-		  x1,y1,x2,y2,x3,y3,x4,y4);
+	  pic_ids[picpos] = swfoutput_drawimagelosslessN(&output, pic, pal, width, height, 
+		  x1,y1,x2,y2,x3,y3,x4,y4,256);
 	  pic_xids[picpos] = xid;
 	  pic_yids[picpos] = yid;
+	  pic_width[picpos] = width;
+	  pic_height[picpos] = height;
 	  if(picpos<1024)
 	      picpos++;
       } else {
@@ -1636,4 +1740,5 @@ void pdfswf_close()
     Object::memCheck(stderr);
     gMemReport(stderr);
 }
+
 

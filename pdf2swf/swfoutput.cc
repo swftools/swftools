@@ -646,7 +646,7 @@ SWFFont::~SWFFont()
 
             swflastx=0;
             swflasty=0;
-            swf_SetU8(ftag,0x10); //0 fill bits, 0 linestyle bits
+            swf_SetU8(ftag,0x10); //1 fill bits, 0 linestyle bits
             SHAPE s;
             s.bits.fill = 1;
             s.bits.line = 0;
@@ -1343,23 +1343,28 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     if(y4>ymax) ymax=y4;
     if(x4<xmin) xmin=x4;
     if(y4<ymin) ymin=y4;
-    p1.x=x1;
-    p1.y=y1;
-    p2.x=x2;
-    p2.y=y2;
-    p3.x=x3;
-    p3.y=y3;
-    p4.x=x4;
-    p4.y=y4;
+    p1.x=x1; p1.y=y1;
+    p2.x=x2; p2.y=y2;
+    p3.x=x3; p3.y=y3;
+    p4.x=x4; p4.y=y4;
+
+    {p1.x = (int)(p1.x*20)/20.0;
+     p1.y = (int)(p1.y*20)/20.0;
+     p2.x = (int)(p2.x*20)/20.0;
+     p2.y = (int)(p2.y*20)/20.0;
+     p3.x = (int)(p3.x*20)/20.0;
+     p3.y = (int)(p3.y*20)/20.0;
+     p4.x = (int)(p4.x*20)/20.0;
+     p4.y = (int)(p4.y*20)/20.0;}
     
     MATRIX m;
-    m.sx = (int)(65536*20*(x4-x1))/sizex;
-    m.r1 = -(int)(65536*20*(y4-y1))/sizex;
-    m.r0 = (int)(65536*20*(x1-x2))/sizey;
-    m.sy = -(int)(65536*20*(y1-y2))/sizey;
+    m.sx = (int)(65536*20*(p4.x-p1.x)/sizex);
+    m.r1 = -(int)(65536*20*(p4.y-p1.y)/sizex);
+    m.r0 = (int)(65536*20*(p1.x-p2.x)/sizey);
+    m.sy = -(int)(65536*20*(p1.y-p2.y)/sizey);
 
-    m.tx = (int)(x1*20);
-    m.ty = (int)(y1*20);
+    m.tx = (int)(p1.x*20);
+    m.ty = (int)(p1.y*20);
   
     /* shape */
     myshapeid = ++currentswfid;
@@ -1367,7 +1372,7 @@ static void drawimage(struct swfoutput*obj, int bitid, int sizex,int sizey,
     swf_ShapeNew(&shape);
     //lsid = ShapeAddLineStyle(shape,obj->linewidth,&obj->strokergb);
     //fsid = ShapeAddSolidFillStyle(shape,&obj->fillrgb);
-    fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,0);
+    fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
     swf_SetU16(tag, myshapeid);
     r.xmin = (int)(xmin*20);
     r.ymin = (int)(ymin*20);
@@ -1472,11 +1477,11 @@ int swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int si
     return bitid;
 }
 
-int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
+int swfoutput_drawimagelosslessN(struct swfoutput*obj, U8*mem, RGBA*pal, int sizex,int sizey, 
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,
-        double x4,double y4)
+        double x4,double y4, int n)
 {
     TAG*oldtag;
     U8*mem2 = 0;
@@ -1505,7 +1510,7 @@ int swfoutput_drawimagelossless256(struct swfoutput*obj, U8*mem, RGBA*pal, int s
     oldtag = tag;
     tag = swf_InsertTag(tag,ST_DEFINEBITSLOSSLESS2);
     swf_SetU16(tag, bitid);
-    if(swf_SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, 256)<0) {
+    if(swf_SetLosslessBitsIndexed(tag,sizex,sizey,mem, pal, n)<0) {
 	swf_DeleteTag(tag);
 	tag = oldtag;
 	return -1;
