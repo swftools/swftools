@@ -43,6 +43,5 @@ clean:
 	rm -f *.o *.lo *.a *.la pdf2swf font2swf gmon.out
 	@rm -f pdf2swf.exe font2swf.exe
 	@rm -f pdf2swf$(E) font2swf.exe$(E)
-	cd xpdf;$(MAKE) clean;cd ..
-	cd ttf2pt1;$(MAKE) clean;cd ..
+	cd xpdf && $(MAKE) clean && cd ..
 
