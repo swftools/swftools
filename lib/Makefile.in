@@ -56,5 +56,5 @@ clean:
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
-	cd libart && $(MAKE) clean && cd ..
+	cd art && $(MAKE) clean && cd ..
 
