@@ -46,7 +46,8 @@ int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
   n = 0;
 
   while (t)
-  { if (swf_GetTagID(t)==ST_DEFINEFONTINFO)
+  { if (swf_GetTagID(t)==ST_DEFINEFONTINFO ||
+	  swf_GetTagID(t)==ST_DEFINEFONT2)
     { n++;
       if (FontCallback)
       { U16 id;
@@ -54,8 +55,10 @@ int swf_FontEnumerate(SWF * swf,void (*FontCallback) (U16,U8*))
         U8 s[257];
         swf_SaveTagPos(t);
         swf_SetTagPos(t,0);
-
+	
         id  = swf_GetU16(t);
+	if(swf_GetTagID(t) == ST_DEFINEFONT2)
+	    swf_GetU16(t);
         l   = swf_GetU8(t);
         swf_GetBlock(t,s,l);
         s[l] = 0;
@@ -293,7 +296,7 @@ int swf_FontExtract_DefineText(int id,SWFFONT * f,TAG * t,int jobs)
         { int code = f->glyph2ascii[glyph];
           if (jobs&FEDTJ_PRINT) printf("%c",code);
           if (jobs&FEDTJ_MODIFY)
-            /*if (!f->glyph[code].advance)*/ f->glyph[code].advance = adv;
+            /*if (!f->glyph[code].advance)*/ f->glyph[glyph].advance = adv;
         }
       }
       if ((id==fid)&&(jobs&FEDTJ_PRINT)) printf("\n");
