@@ -20,6 +20,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <stdio.h>
 #include <memory.h>
 #include <math.h>
 #include <assert.h>
@@ -140,31 +141,61 @@ static void spline_get_controlpoint(qspline_abc_t*q, double t1, double t2, doubl
 
 static double get_spline_len(qspline_abc_t*s)
 {
-    //int parts = (int)(sqrt(abs(l2->x-2*l2->sx+x) + abs(l2->y-2*l2->sy+y)/3));
+    int parts = (int)(sqrt(fabs(s->ax) + fabs(s->ay))*3);
+    if(parts < 3) parts = 3;
     int i;
     double len = 0;
-    for(i=0;i<128;i++)
+    double r = 1.0/parts;
+    double r2 = 1.0/(parts*parts);
+    for(i=0;i<parts;i++)
     {
-	double t = i*(1/128.0);
-	double dx = 2*s->ax*t + s->bx;
-	double dy = 2*s->ay*t + s->by;
+	double dx = s->ax*(2*i+1)*r2 + s->bx*r;
+	double dy = s->ay*(2*i+1)*r2 + s->by*r;
 	len += sqrt(dx*dx+dy*dy);
     }
-    return len / 128;
+    /*printf("Spline from %f,%f to %f,%f has len %f (%f)\n", s->cx, s->cy, 
+	    s->cx + s->bx + s->ax,
+	    s->cy + s->by + s->ay, len,
+	    sqrt((s->bx + s->ax)*(s->bx + s->ax) + (s->by + s->ay)*(s->by + s->ay))
+	    );
+    assert(len+0.5 >= sqrt((s->bx + s->ax)*(s->bx + s->ax) + (s->by + s->ay)*(s->by + s->ay)));
+     */
+    return len;
 }
 
-void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r)
+void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phase)
 {
     double x=0,y=0;
-    int apos = 0;
-    double linepos = 0;
-    double nextpos = 0;
-    char on = 1;
+    double linepos,nextpos;
+    char on;
+    int apos;
+
+    if(line && line->type != gfx_moveTo) {
+	fprintf(stderr, "gfxtool: outline doesn't start with a moveTo");
+	return;
+    }
+    if(!r || r[0]<0 || phase<0) {
+	fprintf(stderr, "gfxtool: invalid dashes");
+	return;
+    }
+
     for(;line;line=line->next) {
 	if(line->type == gfx_moveTo) {
 	    d->moveTo(d, line->x, line->y);
-	    apos = 0; nextpos = 0; on = 1; linepos = 0;
+	    on = 1; nextpos = r[0]; apos = 0; linepos = 0;
 	    x = line->x; y = line->y;
+	    while(linepos < phase) {
+		//printf("[+] linepos: %f, phase: %f, on:%d, apos:%d nextpos:%f\n", linepos, phase, on, apos, nextpos);
+		linepos += r[apos];
+		if(linepos < phase) {
+		    on ^= 1;
+		    if(r[++apos]<0)
+			apos = 0;
+		    nextpos += r[apos];
+		}
+	    }
+	    linepos = phase;
+	    //printf("[k] linepos: %f, phase: %f, on:%d, apos:%d nextpos:%f \n", linepos, phase, on, apos, nextpos);
 	} else if(line->type == gfx_lineTo) {
 	    double dx = line->x - x;
 	    double dy = line->y - y;
@@ -175,20 +206,20 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r)
 	    double vy = dy/len;
 	    double lineend = linepos+len;
 	    assert(nextpos>=linepos);
-	    //printf("nextpos: %f, line end: %f\n", nextpos, linepos+len);
+	    //printf("(line) on:%d apos: %d nextpos: %f, line pos: %f, line end: %f\n", on, apos, nextpos, linepos, linepos+len);
 	    while(nextpos<lineend) {
 		double nx = x + vx*(nextpos-linepos);
 		double ny = y + vy*(nextpos-linepos);
-		if(on) d->lineTo(d, nx,ny);
-		else   d->moveTo(d, nx,ny);
+		if(on) {d->lineTo(d, nx,ny);/*printf("lineTo %f\n", nextpos);*/}
+		else   {d->moveTo(d, nx,ny);/*printf("moveTo %f\n", nextpos);*/}
 		on^=1;
+		if(r[++apos]<0)
+		    apos = 0;
 		nextpos+=r[apos];
-		apos++;
-		if(r[apos]==0)
-		    apos = 1;
 	    }
 	    linepos = lineend;
 	    if(on) {
+		//printf("lineTo %f\n", 1.0);
 		d->lineTo(d, line->x,line->y);
 	    }
 	    x = line->x; y = line->y;
@@ -205,40 +236,44 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r)
 	    if(nextpos<linepos)
 		printf("%f !< %f\n", nextpos, linepos);
 	    assert(nextpos>=linepos);
+	    //printf("(spline) on:%d apos: %d nextpos: %f, line pos: %f, line end: %f\n", on, apos, nextpos, linepos, linepos+len);
 	    while(nextpos<lineend) {
 		double t = (nextpos-linepos)/len;
+		//printf("%f (%f-%f) apos=%d r[apos]=%f\n", t, nextpos, linepos, apos, r[apos]);
 		double nx = q.ax*t*t+q.bx*t+q.cx;
 		double ny = q.ay*t*t+q.by*t+q.cy;
 		if(on) {
 		    double sx,sy;
 		    spline_get_controlpoint(&q, lastt, t, &sx, &sy);
 		    d->splineTo(d, sx, sy, nx,ny);
+		    //printf("splineTo %f\n", nextpos);
 		} else  {
 		    d->moveTo(d, nx,ny);
+		    //printf("moveTo %f\n", nextpos);
 		}
 		lastt =  t;
 		on^=1;
+		if(r[++apos]<0)
+		    apos = 0;
 		nextpos+=r[apos];
-		apos++;
-		if(r[apos]==0)
-		    apos = 1;
 	    }
 	    linepos = lineend;
 	    if(on) {
 		double sx,sy;
 		spline_get_controlpoint(&q, lastt, 1, &sx, &sy);
 		d->splineTo(d, sx, sy, line->x,line->y);
+		//printf("splineTo %f\n", 1.0);
 	    }
 	    x = line->x; y = line->y;
 	}
     }
 }
 
-gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes)
+gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase)
 {
     gfxdrawer_t d;
     gfxdrawer_target_gfxline(&d);
-    gfxtool_draw_dashed_line(&d, line, dashes);
+    gfxtool_draw_dashed_line(&d, line, dashes, phase);
     gfxline_t*result= (gfxline_t*)d.result(&d);
     return result;
 }
@@ -265,7 +300,7 @@ void gfxline_free(gfxline_t*l)
     while(l) {
 	next = l->next;
 	l->next = 0;
-	free(l);
+	rfx_free(l);
 	l = next;
     }
 }
@@ -480,5 +515,19 @@ gfxbbox_t gfxline_getbbox(gfxline_t*line)
 	line = line->next;
     }
     return bbox;
+}
+
+void gfxline_dump(gfxline_t*line, FILE*fi)
+{
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    fprintf(fi, "moveTo %.2f %.2f\n", line->x, line->y);
+	} else if(line->type == gfx_lineTo) {
+	    fprintf(fi, "lineTo %.2f %.2f\n", line->x, line->y);
+	} else if(line->type == gfx_splineTo) {
+	    fprintf(fi, "splineTo (%.2f %.2f) %.2f %.2f\n", line->sx, line->sy, line->x, line->y);
+	}
+	line = line->next;
+    }
 }
 
