@@ -1066,7 +1066,7 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	      "-pft",
 #endif
 	      "-b", tmpFileName, name2};
-	  msg("<verbose> Invoking ttf2pt1...");
+	  msg("<verbose> Invoking %s %s %s %s %s %s",a[0],a[1],a[2],a[3],a[4],a[5]);
 	  ttf2pt1_main(6,a);
 	  unlink(tmpFileName);
 	  sprintf(name2,"%s.pfb",tmp);
