@@ -15,8 +15,7 @@
 #include <fcntl.h>
 #include <jpeglib.h>
 #include "../lib/rfxswf.h"
-
-#include "args.h" // not really a header ;-)
+#include "../lib/args.h" // not really a header ;-)
 
 #define MAX_INPUT_FILES 1024
 #define VERBOSE(x) (global.verbose>=x)
@@ -233,7 +232,7 @@ int args_callback_option(char*arg,char*val)
       if (val) global.force_height = atoi(val); res = 1; break;
 
     case 'V':
-      printf("jpeg2swf - part of swftools 0.0.1\n");exit(0);
+      printf("jpeg2swf - part of %s %s\n", PACKAGE, VERSION);exit(0);
       
     default:
       res = -1;
