@@ -37,12 +37,15 @@ typedef struct {
 PyObject* tagmap_new()
 {
     PyObject* self = (PyObject*)PyObject_New(TagMapObject, &TagMapClass);
-    mylog("+%08x(%d) tagmap_new", (int)self, self->ob_refcnt);
     TagMapObject*tagmap = (TagMapObject*)self;
     tagmap->obj2id = PyDict_New();
     tagmap->id2obj = PyDict_New();
     tagmap->objlist = PyList_New(0);
     tagmap->currentID = 0; //IDs start at 1
+    mylog("+%08x(%d) tagmap_new %08x(%d) %08x(%d), %08x(%d)", (int)self, self->ob_refcnt,
+	    tagmap->obj2id, tagmap->obj2id->ob_refcnt ,
+	    tagmap->id2obj, tagmap->id2obj->ob_refcnt ,
+	    tagmap->objlist, tagmap->objlist->ob_refcnt);
     return self;
 }
 
@@ -54,7 +57,6 @@ int tagmap_obj2id(PyObject* self, PyObject* obj)
     if(id == 0)
 	return -1;
     int _id = PyLong_AsLong(id);
-    Py_DECREF(id);
     return _id;
 }
 
