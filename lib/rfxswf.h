@@ -29,8 +29,17 @@
 #define FALSE (0)
 #endif
 
+
+/* little/big endian stuff */
+
 //#define SWAP16(s) ((U16) ((U8*)&s)[0] | ((U16) ((U8*)&s)[1] << 8))
 //#define SWAP32(s) ((U32) ((U8*)&s)[0] | ((U32) ((U8*)&s)[1] << 8) | ((U32) ((U8*)&s)[2] << 16) | ((U32) ((U8*)&s)[3] << 24))
+
+#define PUT16(ptr,x) ((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)(x>>8);
+#define PUT32(ptr,x) ((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)(x>>8);((U8*)(ptr))[2]=(U8)(x>>16);((U8*)(ptr))[3]=(U8)(x>>24);
+#define GET16(ptr) ((U16)(((U8*)(ptr))[0]))+(((U16)(((U8*)(ptr))[0]))<<8)
+#define GET32(ptr) ((U16)(((U8*)(ptr))[0]))+(((U16)(((U8*)(ptr))[1]))<<8)+(((U16)(((U8*)(ptr))[2]))<<16)+(((U16)(((U8*)(ptr))[3]))<<24)
+
 #ifdef WORDS_BIGENDIAN
 #define SWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
 #define SWAP32(s) (SWAP16(((s)>>16)&0x0000ffff)|((SWAP16(s)<<16)&0xffff0000))
@@ -42,7 +51,6 @@
 #define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
 #define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
 #endif
-
 // SWF Types
 
 typedef         unsigned long   U32;
@@ -214,6 +222,7 @@ int   swf_SetRGBA(TAG * t,RGBA * col);
 #define ST_PLACEOBJECT          4
 #define ST_REMOVEOBJECT         5
 #define ST_DEFINEBITS           6
+#define ST_DEFINEBITSJPEG       6 
 #define ST_DEFINEBUTTON         7
 #define ST_JPEGTABLES           8
 #define ST_SETBACKGROUNDCOLOR   9
