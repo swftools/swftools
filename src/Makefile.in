@@ -1,4 +1,3 @@
-src = i3847
 top_builddir = ..
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -37,20 +36,28 @@ parser.yy.c: parser.lex
 
 wav2swf: wav2swf.o wav.o
 	$(L) wav2swf.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) wav2swf
 png2swf: png2swf.o
 	$(L) png2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) png2swf
 swfcombine: swfcombine.o
 	$(L) swfcombine.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) swfcombine
 swfdump: swfdump.o
 	$(L) swfdump.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) swfdump
 swfextract: swfextract.o
 	$(L) swfextract.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) swfextract
 swfstrings: swfstrings.o
 	$(L) swfstrings.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) swfstrings
 jpeg2swf: jpeg2swf.o
 	$(L) jpeg2swf.o -o $@ ../lib/librfxswf.a $(LIBS)
-swfc: parser.o swfc.o q.o
-	$(L) parser.o swfc.o q.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) jpeg2swf
+swfc: parser.o swfc.o q.o wav.o
+	$(L) parser.o swfc.o q.o wav.o -o $@ ../lib/librfxswf.a $(LIBS)
+	$(STRIP) swfc
 
 install:
 	$(mkinstalldirs) $(bindir)
