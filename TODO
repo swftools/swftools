@@ -18,3 +18,7 @@ swfextract:
     
     * mp3 extraction should also work for movieclips.
     * improve placeobject handling
+
+wav2swf:
+    
+    * -r flag doesn't work without -d option.

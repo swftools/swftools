@@ -55,6 +55,15 @@ UNINSTALL_BIN = ff=`echo $$file|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/
 INSTALL_MAN1 = ff=$(srcdir)/$$file.1; inst=`echo $$file | sed '$(transform)'`.1; echo "$(INSTALL_DATA) $$ff $(man1dir)/$$inst"; $(INSTALL_DATA) $$ff $(man1dir)/$$inst
 UNINSTALL_MAN1 = ff=$(srcdir)/$$file.1; inst=`echo $$file | sed '$(transform)'`.1; echo "rm -f $(man1dir)/$$inst"; rm -f $(man1dir)/$$inst
 
+#%.o: %.c
+#	$(C) $< -o $@
+
+#%: %.o
+#	$(L) $< -o $@ ../lib/librfxswf.a $(LIBS) 
+
+#%.o: %.cc
+#	$(CC) -DDATADIR=\"$(pkgdatadir)\" -I../lib -Ittf2pt1 -Ixpdf $< -o $@
+
 # GNU Makefile stuff
 
 .SUFFIXES:

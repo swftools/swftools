@@ -625,7 +625,7 @@ void swf_ActionEnd(ActionTAG* atag)
 
 static ActionTAG*lastATAG(ActionTAG*atag)
 {
-    ActionTAG*last;
+    ActionTAG*last = 0;
     while(atag) {
 	last = atag;
 	atag=atag->next;

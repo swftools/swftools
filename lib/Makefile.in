@@ -27,5 +27,5 @@ uninstall:
 
 clean: 
 	rm -f *.o *.lo *.a *.la
-	cd lame;make clean;cd ..
+	cd lame;$(MAKE) clean;cd ..
 

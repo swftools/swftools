@@ -113,6 +113,10 @@ int main (int argc,char ** argv)
 
     processargs(argc, argv);
 
+    if(!definesound && framerate) {
+	printf("Warning! The -r option is experimental and won't work without -d\n");
+    }
+
     blocksize = 1152;
     blockspersecond = 11025.0/blocksize;
     framespersecond = blockspersecond;
