@@ -402,7 +402,11 @@ int swf_SetJPEGBits(TAG * t, char *fname, int quality)
 static void tag_init_source(struct jpeg_decompress_struct *cinfo)
 {
     TAG *tag = (TAG *) cinfo->client_data;
-    swf_SetTagPos(tag, 2);
+    if (tag->id == ST_DEFINEBITSJPEG3) {
+	swf_SetTagPos(tag, 6);
+    } else {
+	swf_SetTagPos(tag, 2);
+    }
     cinfo->src->bytes_in_buffer = 0;
 }
 static boolean tag_fill_input_buffer(struct jpeg_decompress_struct *cinfo)
@@ -448,16 +452,22 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
     int y;
     *width = 0;
     *height = 0;
+    int offset = 0;
+    int oldtaglen = 0;
 
     if (tag->id == ST_DEFINEBITSJPEG) {
-	fprintf(stderr,
-		"rfxswf: extracting from definebitsjpeg not yet supported");
+	fprintf(stderr, "rfxswf: extracting from definebitsjpeg not yet supported\n");
 	return 0;
     }
     if (tag->id == ST_DEFINEBITSJPEG3) {
-	fprintf(stderr,
-		"rfxswf: extracting from definebitsjpeg3 not yet supported");
+#ifdef HAVE_ZLIB
+	offset = swf_GetU32(tag);
+	oldtaglen = tag->len;
+	tag->len = offset+6;
+#else
+	fprintf(stderr, "rfxswf: extracting from definebitsjpeg3 not possible: no zlib\n");
 	return 0;
+#endif
     }
 
     cinfo.err = jpeg_std_error(&jerr);
@@ -498,6 +508,30 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
     jpeg_finish_decompress(&cinfo);
 
     jpeg_destroy_decompress(&cinfo);
+
+#ifdef HAVE_ZLIB
+    if(offset) {
+	U32 datalen = cinfo.output_width*cinfo.output_height;
+	U8* alphadata = (U8*)rfx_alloc(datalen);
+	int error;
+	tag->len = oldtaglen;
+	swf_SetTagPos(tag, 6+offset);
+	error = uncompress(alphadata, &datalen, &tag->data[tag->pos], tag->len - tag->pos);
+	if (error != Z_OK) {
+	    fprintf(stderr, "rfxswf: Zlib error %d while extracting definejpeg3\n", error);
+	    return 0;
+	}
+	for(y=0;y<cinfo.output_height;y++) {
+	    RGBA*line = &dest[y*cinfo.output_width];
+	    U8*aline = &alphadata[y*cinfo.output_width];
+	    int x;
+	    for(x=0;x<cinfo.output_width;x++) {
+		line[x].a = aline[x];
+	    }
+	}
+	free(alphadata);
+    }
+#endif
     return dest;
 }
 
@@ -1010,6 +1044,9 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
 RGBA *swf_ExtractImage(TAG * tag, int *dwidth, int *dheight)
 {
     RGBA *img;
+    
+    swf_SetTagPos(tag, 2); // id is 2 bytes
+
     if (tag->id == ST_DEFINEBITSJPEG ||
 	tag->id == ST_DEFINEBITSJPEG2 || tag->id == ST_DEFINEBITSJPEG3) {
 #ifdef HAVE_JPEGLIB
