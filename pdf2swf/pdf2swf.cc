@@ -463,6 +463,7 @@ int main(int argn, char *argv[])
     }
     if(!swf_output_save(swf, outputname))
         exit(1);
+    msg("<notice> SWF written");
     swf_output_destroy(swf);
 
     pdf_destroy(pdf);
