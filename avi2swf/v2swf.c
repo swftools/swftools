@@ -39,6 +39,7 @@ typedef struct _v2swf_internal_t
 
     ringbuffer_t r;
     videoreader_t* video;
+    double video_fps;
 
     int width;
     int height;
@@ -829,6 +830,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     msg("video: %dx%d, fps %f\n", video->width, video->height, video->fps);
 
     i->video = video;
+    i->video_fps = ((int)(video->fps*256))/256.0;
     i->blockdiff = 64;
     i->keyframe_interval = 8;
     i->quality = 20;
@@ -839,7 +841,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     i->diffmode = DIFFMODE_QMEAN;
     i->audio_fix = 1.0;
     i->fixheader = 0;
-    i->framerate = video->fps;
+    i->framerate = i->video_fps;
     i->fpsratio = 1.00000000000;
     i->fpspos = 0.0;
     i->bitrate = 32;
@@ -932,7 +934,7 @@ void v2swf_setparameter(v2swf_t*v2swf, char*name, char*value)
 	i->samplerate = atoi(value);
     } else if(!strcmp(name, "framerate")) {
 	i->framerate = atof(value);
-	i->fpsratio = i->framerate / i->video->fps;
+	i->fpsratio = i->framerate / i->video_fps;
     }
     else if(!strcmp(name, "mp3_bitrate")) {
 	int t=0,o;
