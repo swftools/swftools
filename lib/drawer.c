@@ -330,8 +330,8 @@ void draw_cubicTo(drawer_t*draw, FPOINT*  control1, FPOINT* control2, FPOINT*  t
 {
     struct qspline q[128];
     struct cspline c;
-    double quality = 80;
-    double maxerror = (500-(quality*5)>1?500-(quality*5):1)/20.0;
+    //double quality = 80;
+    double maxerror = 1;//(500-(quality*5)>1?500-(quality*5):1)/20.0;
     int t,num;
 
     c.start.x = draw->pos.x;
