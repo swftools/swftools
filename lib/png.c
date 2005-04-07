@@ -107,12 +107,8 @@ int png_read_header(FILE*fi, struct png_header*header)
 	    f = data[11];     // filter mode (0)
 	    i = data[12];     // interlace mode (0)
 
-	    if(b!=0 && b!=2 && b!=3 && b!=6) {
+	    if(b!=0 && b!=4 && b!=2 && b!=3 && b!=6) {
 		fprintf(stderr, "Image mode %d not supported!\n", b);
-		if(b == 4) {
-		    fprintf(stderr, "(This is a grayscale image with alpha channel-\n");
-		    fprintf(stderr, " try converting it into an RGB image with alpha channel)\n");
-		}
 		return 0;
 	    }
 	    if(a!=8 && (b==2 || b==6)) {
@@ -467,6 +463,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
     int alphapalettelen = 0;
     struct png_header header;
     int bypp;
+    U8*data2 = 0;
 
     FILE *fi;
     U8 *scanline;
@@ -482,10 +479,9 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
     }
 
     if(header.mode == 3 || header.mode == 0) bypp = 1;
-    else
-    if(header.mode == 2) bypp = 3;
-    else
-    if(header.mode == 6) bypp = 4;
+    else if(header.mode == 4) bypp = 2;
+    else if(header.mode == 2) bypp = 3;
+    else if(header.mode == 6) bypp = 4;
     else {
 	printf("ERROR: mode:%d\n", header.mode);
 	return 0;
@@ -553,10 +549,49 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 
     *destwidth = header.width;
     *destheight = header.height;
+	
+    data2 = (U8*)malloc(header.width*header.height*4);
 
-    if(header.mode == 6 || header.mode == 2)
+    if(header.mode == 4)
     {
-	U8*data2 = (U8*)malloc(header.width*header.height*4);
+	int i,s=0;
+	int x,y;
+	int pos=0;
+	U8* old= (U8*)malloc(header.width*2);
+	memset(old, 0, header.width*2);
+	*destdata = data2;
+	for(y=0;y<header.height;y++) {
+	    int mode = imagedata[pos++]; //filter mode
+	    U8*src;
+	    U8*dest;
+	    int x;
+	    dest = &data2[(y*header.width)*4];
+
+	    if(header.bpp == 8) {
+		/* one byte per pixel */
+		src = &imagedata[pos];
+		pos+=header.width*2;
+	    } else {
+		/* not implemented yet */
+		fprintf(stderr, "ERROR: mode=4 bpp:%d\n", header.bpp);
+		free(data2);
+		return 0;
+	    }
+
+	    applyfilter2(mode, src, old, dest, header.width);
+	    memcpy(old, dest, header.width*2);
+
+	    for(x=header.width-1;x>=0;x--) {
+		U8 gray = dest[x*2+0];
+		U8 alpha = dest[x*2+1];
+		dest[x*4+0] = alpha;
+		dest[x*4+1] = gray;
+		dest[x*4+2] = gray;
+		dest[x*4+3] = gray;
+	    }
+	}
+	free(old);
+    } else if(header.mode == 6 || header.mode == 2) {
 	int i,s=0;
 	int x,y;
 	int pos=0;
@@ -575,7 +610,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 		pos+=header.width*(header.mode==6?4:3);
 	    } else {
 		/* not implemented yet */
-		printf("ERROR: bpp:%d\n", header.bpp);
+		fprintf(stderr, "ERROR: bpp:%d\n", header.bpp);
 		free(data2);
 		return 0;
 	    }
@@ -593,7 +628,6 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	}
     } else if(header.mode == 0 || header.mode == 3) {
 	COL*rgba = 0;
-	U8*data2 = (U8*)malloc(header.width*header.height*4);
 	U8*tmpline = (U8*)malloc(header.width+1);
 	U8*destline = (U8*)malloc(header.width+1);
 	int i,x,y;
