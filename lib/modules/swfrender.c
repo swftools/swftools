@@ -1014,6 +1014,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             swf_GetPlaceObject(tag, &p);
             /* TODO: add move and deletion */
             placements[numplacements++] = p;
+	    swf_PlaceObjectFree(&p); //dirty! but it only removes items we don't need
         }
         tag = tag->next;
     }
@@ -1053,6 +1054,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             }
         }
     }
+    free(placements);
     free(idtable);
     free(depthtable);
 }
