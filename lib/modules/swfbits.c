@@ -707,6 +707,17 @@ int swf_SetLosslessBitsGrayscale(TAG * t, U16 width, U16 height, U8 * bitmap)
     return swf_SetLosslessBitsIndexed(t, width, height, bitmap, NULL, 256);
 }
 
+void swf_PreMultiplyAlpha(RGBA*data, int width, int height)
+{
+    int num = width*height;
+    int t;
+    for(t=0;t<num;t++) {
+	data[t].r = ((int)data[t].r*data[t].a)/255;
+	data[t].g = ((int)data[t].g*data[t].a)/255;
+	data[t].b = ((int)data[t].b*data[t].a)/255;
+    }
+}
+
 void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height)
 {
     int hasalpha = swf_ImageHasAlpha(data, width, height);
@@ -715,7 +726,7 @@ void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height)
 	tag->id = ST_DEFINEBITSLOSSLESS;
     } else {
 	tag->id = ST_DEFINEBITSLOSSLESS2;
-	/* TODO: premultiply alpha? */
+	swf_PreMultiplyAlpha(data, width, height);
     }
     num = swf_ImageGetNumberOfPaletteEntries(data, width, height, 0);
     if(num>1 && num<=256) {
@@ -846,14 +857,13 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 		}
 	    } else {
 		for (x = 0; x < width; x++) {
-		    /* TODO: premultiply alpha? 
-		    dest[pos2].r = (data[pos + 1]*255)/data[pos+0];
-		    dest[pos2].g = (data[pos + 2]*255)/data[pos+0];
-		    dest[pos2].b = (data[pos + 3]*255)/data[pos+0];
-		    */
-		    dest[pos2].r = data[pos + 1];
-		    dest[pos2].g = data[pos + 2];
-		    dest[pos2].b = data[pos + 3];
+		    /* TODO: is un-premultiplying alpha the right thing to do?
+		       dest[pos2].r = data[pos + 1];
+		       dest[pos2].g = data[pos + 2];
+		       dest[pos2].b = data[pos + 3];*/
+		    dest[pos2].r = ((int)data[pos + 1]*255)/(int)data[pos+0];
+		    dest[pos2].g = ((int)data[pos + 2]*255)/(int)data[pos+0];
+		    dest[pos2].b = ((int)data[pos + 3]*255)/(int)data[pos+0];
 		    dest[pos2].a = data[pos + 0];	//alpha
 		    pos2++;
 		    pos += 4;
