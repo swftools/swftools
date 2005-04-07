@@ -114,6 +114,16 @@ struct mapping {
 {"Symbol",                "s050000l"},
 {"ZapfDingbats",          "d050000l"}};
 
+class SWFOutputState {
+    public:
+    int clipping;
+    int textRender;
+    SWFOutputState() {
+	this->clipping = 0;
+	this->textRender = 0;
+    }
+};
+
 class SWFOutputDev:  public OutputDev {
   int outputstarted;
   struct swfoutput output;
@@ -193,6 +203,7 @@ public:
   //----- text drawing
   virtual void beginString(GfxState *state, GString *s) ;
   virtual void endString(GfxState *state) ;
+  virtual void endTextObject(GfxState *state);
   virtual void drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
@@ -216,8 +227,8 @@ public:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int *maskColors);
-  int clipping[64];
-  int clippos;
+  SWFOutputState states[64];
+  int statepos;
 
   int currentpage;
 
@@ -317,8 +328,7 @@ SWFOutputDev::SWFOutputDev()
     linkinfo = 0;
     pbminfo = 0;
     type3active = 0;
-    clippos = 0;
-    clipping[clippos] = 0;
+    statepos = 0;
     outputstarted = 0;
     xref = 0;
     substitutepos = 0;
@@ -787,7 +797,7 @@ void SWFOutputDev::clip(GfxState *state)
     }
 
     swfoutput_startclip(&output, line);
-    clipping[clippos] ++;
+    states[statepos].clipping++;
     gfxline_free(line);
 }
 void SWFOutputDev::eoClip(GfxState *state) 
@@ -801,7 +811,7 @@ void SWFOutputDev::eoClip(GfxState *state)
     }
 
     swfoutput_startclip(&output, line);
-    clipping[clippos] ++;
+    states[statepos].clipping++;
     gfxline_free(line);
 }
 
@@ -843,24 +853,41 @@ GBool SWFOutputDev::useGradients()
     return gTrue;
 }
 
+char*renderModeDesc[]= {"fill", "stroke", "fill+stroke", "invisible",
+                      "clip+fill", "stroke+clip", "fill+stroke+clip", "clip"};
+
 void SWFOutputDev::beginString(GfxState *state, GString *s) 
 { 
+    int render = state->getRender();
+    msg("<trace> beginString(%s) render=%d", s->getCString(), render);
     double m11,m21,m12,m22;
 //    msg("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
     swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
+    if(render != 3 && render != 0)
+	msg("<warning> Text rendering mode %d (%s) not fully supported yet (for text \"%s\")", render, renderModeDesc[render&7], s->getCString());
+    states[statepos].textRender = render;
 }
+
+static int textCount = 0;
 
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
 			CharCode c, Unicode *_u, int uLen)
 {
+    textCount++;
+
+    int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
-    if ((state->getRender() & 3) == 3)
+    if (render == 3)
 	return;
+
+    if(states[statepos].textRender != render)
+	msg("<error> Internal error: drawChar.render!=beginString.render");
+
     GfxRGB rgb;
     double opaq = state->getFillOpacity();
     state->getFillRGB(&rgb);
@@ -875,6 +902,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 
     if(font->getType() == fontType3) {
 	/* type 3 chars are passed as graphics */
+	msg("<debug> type3 char at %f/%f", x, y);
 	return;
     }
     double x1,y1;
@@ -916,16 +944,23 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     }
  
     if (CIDToGIDMap) {
-	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\"\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name));
+	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\" render=%d\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name), render);
 	swfoutput_drawchar(&output, x1, y1, name, CIDToGIDMap[c], u, &col);
     } else {
-	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\"\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name));
+	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\" render=%d\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name), render);
 	swfoutput_drawchar(&output, x1, y1, name, c, u, &col);
     }
 }
 
-void SWFOutputDev::endString(GfxState *state) { 
+void SWFOutputDev::endString(GfxState *state) 
+{ 
+    msg("<trace> endString()");
 }    
+
+void SWFOutputDev::endTextObject(GfxState *state)
+{
+    msg("<trace> endTextObject()");
+}
 
 /* the logic seems to be as following:
    first, beginType3Char is called, with the charcode and the coordinates.
@@ -1154,23 +1189,25 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 }
 
 void SWFOutputDev::saveState(GfxState *state) {
-  msg("<debug> saveState\n");
+  msg("<trace> saveState\n");
   updateAll(state);
-  if(clippos<64)
-    clippos ++;
-  else
+  if(statepos>=64) {
     msg("<error> Too many nested states in pdf.");
-  clipping[clippos] = 0;
+    return;
+  }
+  statepos ++;
+  states[statepos].clipping = 0; //? shouldn't this be the current value?
+  states[statepos].textRender = states[statepos-1].textRender;
 };
 
 void SWFOutputDev::restoreState(GfxState *state) {
-  msg("<debug> restoreState\n");
+  msg("<trace> restoreState\n");
   updateAll(state);
-  while(clipping[clippos]) {
+  while(states[statepos].clipping) {
       swfoutput_endclip(&output);
-      clipping[clippos]--;
+      states[statepos].clipping--;
   }
-  clippos--;
+  statepos--;
 }
 
 char* SWFOutputDev::searchFont(char*name) 
@@ -1869,6 +1906,8 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
+  if(states[statepos].textRender & 4) //clipped
+      return;
   msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
   drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0);
 }
@@ -1877,6 +1916,9 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
 {
+  if(states[statepos].textRender & 4) //clipped
+      return;
+
   msg("<verbose> drawImage %dx%d, %s %s, inline=%d", width, height, 
 	  colorMap?"colorMap":"no colorMap", 
 	  maskColors?"maskColors":"no maskColors",
