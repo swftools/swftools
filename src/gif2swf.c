@@ -1,9 +1,11 @@
-/* -*- mode: c; tab-width: 4; -*- [for (x)emacs]
-   gif2swf.c
+/* -*- mode: c; tab-width: 4; -*- ---------------------------[for (x)emacs]--
 
+   $Id: gif2swf.c,v 1.3 2005/04/17 17:35:07 dseg Exp $
    GIF to SWF converter tool
 
-   Copyleft (c) 2005 Daichi Shinozaki <dseg@shield.jp>
+   Part of the swftools package.
+
+   Copyright (c) 2005 Daichi Shinozaki <dseg@shield.jp>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,21 +19,20 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307, USA.
 
-*/
+   This file is derived from png2swf.c */
 
 #include <stdio.h>
 #include <fcntl.h>
-#include <zlib.h>
 #include <gif_lib.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 
 #define MAX_INPUT_FILES 1024
 #define VERBOSE(x) (global.verbose>=x)
-
-#define PROGRAM_NAME "gif2swf" 
+#define AS_FIRSTFRAME "if(n<1) n=1;"
+#define AS_LASTFRAME "if(n<=%d-1){n=n+1;gotoAndPlay(1);}else stop();"
 
 struct {
     float framerate;
@@ -45,6 +46,7 @@ struct {
     int version;
     char *outfile;
     int imagecount;
+    int loopcount;
 } global;
 
 struct {
@@ -56,21 +58,82 @@ struct gif_header {
    int height;
 };
 
-// Get transparency color from graphic extension block
-//
-// Return: transparency color or -1
+enum disposal_method {
+    NONE,
+    DO_NOT_DISPOSE,
+    RESTORE_TO_BGCOLOR,
+    RESTORE_TO_PREVIOUS
+}; 
 
-int getTransparentColor(GifFileType * gft)
+
+void SetFrameAction(TAG** t, const char *src, int ver)
+{
+   ActionTAG* as;
+   
+   as = swf_ActionCompile(src, ver);
+   if(!as)
+      fprintf(stderr, "Couldn't compile ActionScript\n");
+   else {
+      *t = swf_InsertTag(*t, ST_DOACTION);
+      swf_ActionSet(*t, as);
+      swf_ActionFree(as);
+   }
+}
+
+int getGifDisposalMethod(GifFileType * gft, int framenum) 
+{
+   int i;
+   ExtensionBlock* ext = gft->SavedImages[0].ExtensionBlocks;
+
+   for (i=0; i < gft->SavedImages[framenum].ExtensionBlockCount; i++, ext++)
+     if (ext->Function == GRAPHICS_EXT_FUNC_CODE) 
+       return  ((ext->Bytes[0] & 0x1C) >> 2);
+   
+   return -1;
+}
+
+U16 getGifLoopCount(GifFileType * gft) {
+   int i;
+   char sig[11];
+   ExtensionBlock* ext = gft->SavedImages[0].ExtensionBlocks;
+
+   // info:  http://members.aol.com/royalef/gifabout.htm#net-extension
+   for (i=0; i < gft->SavedImages[0].ExtensionBlockCount; i++, ext++)
+     if (ext->Function == APPLICATION_EXT_FUNC_CODE) {
+//	 fprintf(stderr, "extension size: %d\n", ext->ByteCount);
+	 memcpy(sig, &ext->Bytes[0], 11);
+//	 if(memcmp(sig, "NETSCAPE2.0", 11) == 0)
+//	      fprintf(stderr, "NETSCAPE2.0\n");
+//	fprintf(stderr, "data: %d %d\n", ext->Bytes[13], ext->Bytes[14]);
+     }
+   
+   return 0;
+}
+
+U16 getGifDelayTime(GifFileType * gft, int framenum)
+{  
+   int i;
+   ExtensionBlock* ext = gft->SavedImages[framenum].ExtensionBlocks;
+
+   for (i=0; i < gft->SavedImages[framenum].ExtensionBlockCount; i++, ext++)
+       if (ext->Function == GRAPHICS_EXT_FUNC_CODE)
+           return GET16(&ext->Bytes[1]);
+
+   return 0;
+}
+
+int getTransparentColor(GifFileType * gft, int framenum)
 {
     int i;
-    ExtensionBlock* ext = gft->SavedImages[0].ExtensionBlocks;
+    ExtensionBlock* ext = gft->SavedImages[framenum].ExtensionBlocks;
 
-    for (i=0; i < gft->SavedImages[0].ExtensionBlockCount; i++, ext++)
+    // Get transparency color from graphic extension block
+    for (i=0; i < gft->SavedImages[framenum].ExtensionBlockCount; i++, ext++)
         if ((ext->Function == GRAPHICS_EXT_FUNC_CODE) &&
             (ext->Bytes[0] & 1)) { // there is a transparent color
-            return ext->Bytes[3] == 0 ?
-            255 :                  // exception
-            ext->Bytes[3];
+	   return ext->Bytes[3] == 0 ?
+	    255 :                  // exception
+	    (U8)ext->Bytes[3];     // transparency color
         }
 
     return -1;
@@ -137,11 +200,13 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     int fs;
 
     U8 *imagedata, *from, *to;
+    GifImageDesc *img;
     RGBA* pal;
 
     struct gif_header header;
 
-    int i, j, bgcolor, numcolors = 0, alphapalette = 0;
+    int i, j, numcolors = 0, alphapalette = 0;
+    U8 bgcolor;
     int bpp; // byte per pixel
     int swf_width, padlen;
 
@@ -149,42 +214,49 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     GifColorType c;
     int interlacedOffset[] = { 0, 4, 2, 1 };// The way Interlaced image should
     int interlacedJumps[] = { 8, 8, 4, 2 }; // be read - offsets and jumps...
-
-    FILE *fi;
+    U16 delay, depth;
+    int disposal;
+    char framename[8] = { 0, 0, 0, 0, 0, 0, 0, '\0' };
+    char *as_lastframe;
+   
     GifFileType* gft;
+    FILE *fi;
 
     if ((fi = fopen(sname, "rb")) == NULL) {
         if (VERBOSE(1))
             fprintf(stderr, "Read access failed: %s\n", sname);
         return t;
     }
+    fclose(fi);
 
     if ((gft = DGifOpenFileName(sname)) == NULL) {
         fprintf(stderr, "%s is not a GIF file!\n", sname);
         return t;
     }
     if (DGifSlurp(gft) != GIF_OK) {
-        PrintGifError();
+        PrintGifError(); 
         return t;
     }
 
     header.width  = gft->SWidth;
     header.height = gft->SHeight;
 
-    pal = (RGBA*)malloc(256*sizeof(RGBA));
-    memset(pal, 0, 256*sizeof(RGBA));
+    pal = (RGBA*)malloc(256 * sizeof(RGBA));
+    memset(pal, 0, 256 * sizeof(RGBA));
 
+    img = &gft->SavedImages[imgidx].ImageDesc;
+   
     // Local colormap has precedence over Global colormap
-    colormap = gft->Image.ColorMap ? gft->Image.ColorMap : gft->SColorMap;
+    colormap = img->ColorMap ? img->ColorMap : gft->SColorMap;
     numcolors = colormap->ColorCount;
-    alphapalette = getTransparentColor(gft);
+    alphapalette = getTransparentColor(gft, imgidx);
     bpp = (alphapalette >= 0 ? 4 : 3);
 
     // bgcolor is the background color to fill the bitmap
     // if DWORD-aligned imagebuffer is bigger than the actual image
-    if (gft->SColorMap) {               // There is a GlobalColorMap
-        bgcolor = gft->SBackGroundColor;// The BackGroundColor is meaningful
-    } else
+    if (gft->SColorMap)                     // There is a GlobalColorMap
+        bgcolor = (U8)gft->SBackGroundColor;// The SBGColor is meaningful
+    else
         if (alphapalette >= 0)          // There is a transparency color
             bgcolor = alphapalette;     // set the bgColor to tranparent
         else
@@ -196,6 +268,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
                                         // colors, in which case either we
                                         // give up, or move to 16-bits palette
 
+    if(VERBOSE(3))
+        fprintf(stderr, "BG palette index => %u\n", bgcolor);
+   
     for (i=0; i<numcolors; i++) {
         c = colormap->Colors[i];
         if (i == alphapalette)
@@ -208,11 +283,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
         }
     }
 
-    if (alphapalette >= 0) // There is a transparency color
-        t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS2);
-    else
-        t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
-
+    t = swf_InsertTag(t, bpp == 4 ? 
+		      ST_DEFINEBITSLOSSLESS2 : ST_DEFINEBITSLOSSLESS);
     swf_SetU16(t, id); // id
 
     // Ah! The Flash specs says scanlines must be DWORD ALIGNED!
@@ -223,14 +295,26 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
         fprintf(stderr, "Failed to allocate memory required, aborted.");
         exit(2);
     }
+
     to = imagedata;
     from = (U8 *)gft->SavedImages[imgidx].RasterBits;
 
     if (swf_width == header.width) {
         // we are all nicely aligned and don't need to move the bitmap around.
         // Just copy the bits into the image buffer.
-        if (!gft->Image.Interlace)
-            memcpy(to, from, header.width*header.height);
+        if (! gft->Image.Interlace)
+	    if (header.width == img->Width && header.height == img->Height)
+	        memcpy(to, from, header.width*header.height);
+            else { //small screen
+	       for (i = 0; i < header.height; i++, to += header.width) {
+		  memset(to, bgcolor, header.width);
+		  if (i >= img->Top && i < img->Top + img->Height) {
+		     memcpy(to + img->Left, from, img->Width);
+		     from += img->Width;
+		  }
+	       }
+	    }
+       
         else // Need to perform 4 passes on the interlaced images
             for (i = 0; i < 4; i++)
                 for (j = interlacedOffset[i]; j < header.height;
@@ -240,11 +324,22 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
         padlen = swf_width - header.width;
 
         // here we need to pad the scanline
-        if (!gft->Image.Interlace) {
-            for (i=0; i < header.height; i++, from+=header.width, to+=swf_width) {
-                memcpy(to, from, header.width);
-                memset(to + header.width, bgcolor, padlen);
-            }
+        if (! gft->Image.Interlace) {
+	   if (header.width == img->Width &&
+	       header.height == img->Height) {
+	      for (i=0; i < header.height; i++, from+=header.width, to+=swf_width) {
+		 memcpy(to, from, header.width);
+		 memset(to + header.width, bgcolor, padlen);
+	      }
+	   } else {  //small screen
+	      for (i=0; i < header.height; i++, to += swf_width) {
+		 memset(to, bgcolor, swf_width);
+		 if (i >= img->Top && i < img->Top + img->Height) {
+		    memcpy(to + img->Left, from, img->Width);
+		    from += img->Width;
+		 }
+	      }
+	   }
         } else { // Need to perform 4 passes on the interlaced images
             for (i = 0; i < 4; i++)
                 for (j = interlacedOffset[i]; j < header.height;
@@ -280,20 +375,75 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     swf_ShapeSetLine(t, s, 0, -r.ymax);
 
     swf_ShapeSetEnd(t);
-
-    t = swf_InsertTag(t, ST_REMOVEOBJECT2);
-    swf_SetU16(t, 1); // depth
-
+   
+    depth = imgidx + 1;
+    if ((imgidx > 0) && // REMOVEOBJECT2 not needed at frame 1(imgidx==0)
+	(global.imagecount > 1))
+     {
+	// check last frame's disposal method
+	if ((disposal = getGifDisposalMethod(gft, imgidx-1)) >= 0)
+	  {
+	     switch(disposal) {
+	      case NONE:
+		//fprintf(stdout, "  [none]\n");
+		swf_SetU16(t, depth-1);
+		t = swf_InsertTag(t, ST_REMOVEOBJECT2);
+		break;		
+	      case DO_NOT_DISPOSE:
+		//fprintf(stdout, "  [don't dispose]\n");
+		break;
+	      case RESTORE_TO_BGCOLOR:
+		swf_SetU16(t, depth-1);
+		t = swf_InsertTag(t, ST_REMOVEOBJECT2);
+		//fprintf(stdout, "  [restore to bg color]\n");
+		break;
+	      case RESTORE_TO_PREVIOUS:
+		swf_SetU16(t, depth-1);
+		t = swf_InsertTag(t, ST_REMOVEOBJECT2);
+		//fprintf(stdout, "  [restore to previous]\n");
+		break;
+	     }
+	  }
+     }
+   
+    swf_SetU16(t, depth);
     t = swf_InsertTag(t, ST_PLACEOBJECT2);
 
     swf_GetMatrix(NULL, &m);
     m.tx = (swf->movieSize.xmax - (int) header.width * 20) / 2;
     m.ty = (swf->movieSize.ymax - (int) header.height * 20) / 2;
-    swf_ObjectPlace(t, id + 1, 1, &m, NULL, NULL);
+    swf_ObjectPlace(t, id + 1, depth, &m, NULL, NULL);
 
+    if ((global.imagecount > 1) &&
+	(global.loopcount > 0)) { // 0 means "infinite loop"
+        if (imgidx == 0)
+            SetFrameAction(&t, AS_FIRSTFRAME, global.version);
+    }
+   
     t = swf_InsertTag(t, ST_SHOWFRAME);
+   
+    if (global.imagecount > 1) { // multi-frame GIF?
+       int framecnt;
+       delay = getGifDelayTime(gft, imgidx); // delay in 1/100 sec
+       framecnt = (int)(global.framerate * (delay/100.0));
+       if (framecnt > 1) {
+	    if (VERBOSE(2))
+	       fprintf(stderr, "at frame %d: pad %d frames(%.3f sec)\n",
+		       imgidx + 1, framecnt, delay/100.0);
 
-    fclose(fi);
+	    framecnt -= 1; // already inserted a frame
+	    while (framecnt--)
+	        t = swf_InsertTag(t, ST_SHOWFRAME);
+       }
+       if (imgidx == global.imagecount-1) {
+           as_lastframe = malloc(strlen(AS_LASTFRAME) + 5); // 0-99999
+	   sprintf(as_lastframe, AS_LASTFRAME, global.loopcount);
+           SetFrameAction(&t, as_lastframe, global.version);
+	   if (as_lastframe) 
+	       free(as_lastframe);
+       }
+    }
+
     free(pal);
     free(imagedata);
     DGifCloseFile(gft);
@@ -301,13 +451,22 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     return t;
 }
 
+GifFileType * GifOpen(char *sname) {
+   GifFileType *gft = NULL;
+   
+   return gft;
+}
 
 int CheckInputFile(char *fname, char **realname)
 {
     FILE *fi;
     char *s = malloc(strlen(fname) + 5);
     GifFileType* gft;
-
+    GifRecordType rt;
+    GifByteType *extdata;
+    SavedImage tmp;
+    U8 buf[16];
+   
     if (!s)
         exit(2);
     (*realname) = s;
@@ -334,17 +493,30 @@ int CheckInputFile(char *fname, char **realname)
         fprintf(stderr, "%s is not a GIF file!\n", fname);
         return -1;
     }
-    if (DGifSlurp(gft) != GIF_OK) {
-        PrintGifError();
-        return -1;
-    }
-
     if (global.max_image_width < gft->SWidth)
         global.max_image_width = gft->SWidth;
     if (global.max_image_height < gft->SHeight)
         global.max_image_height = gft->SHeight;
+   
+   if (DGifSlurp(gft) != GIF_OK) { //gft->ImageCount be set
+        PrintGifError();
+        return -1;
+    }
 
     global.imagecount = gft->ImageCount;
+    if(VERBOSE(3))
+        if(global.imagecount > 1)
+            fprintf(stderr, "Loops => %u\n", getGifLoopCount(gft));
+   
+    if(VERBOSE(2)) {
+        U8 i;
+        fprintf(stderr, "%d x %d, %d images total\n", 
+		gft->SWidth, gft->SHeight, gft->ImageCount);
+       
+        for(i=0; i < gft->ImageCount; i++)
+            fprintf(stderr, "frame: %u, delay: %.3f sec\n",
+		    i+1, getGifDelayTime(gft, i) / 100.0);
+    }
 
     DGifCloseFile(gft);
 
@@ -358,6 +530,12 @@ int args_callback_option(char *arg, char *val)
         res = -1;
     else
         switch (arg[0]) {
+        case 'l':
+	   if (val)
+	     global.loopcount = atoi(val);
+	   res = 1;
+	   break;
+	   
         case 'r':
             if (val)
                 global.framerate = atof(val);
@@ -422,6 +600,7 @@ int args_callback_option(char *arg, char *val)
 }
 
 static struct options_t options[] = {
+{"l", "loop"},
 {"r", "rate"},
 {"o", "output"},
 {"z", "zlib"},
@@ -464,6 +643,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.gif [file2.gif...]\n", name);
     printf("\n");
+    printf("-l , --loop <loop count>       Set loop count. (default: 0 [= infinite loop])\n");
     printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
     printf("-o , --output <filename>       Set name for SWF output file.\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
@@ -484,9 +664,13 @@ int main(int argc, char **argv)
 
     global.framerate = 1.0;
     global.verbose = 1;
-    global.version = 4;
-
+    global.version = 5;
+    global.loopcount = 0;
+   
     processargs(argc, argv);
+
+    if (VERBOSE(2)) 
+        fprintf(stderr, "loop count => %d\n", global.loopcount);
 
     if (global.nfiles<=0) {
         fprintf(stderr, "No gif files found in arguments\n");
@@ -496,8 +680,9 @@ int main(int argc, char **argv)
     if (VERBOSE(2))
         fprintf(stderr, "Processing %i file(s)...\n", global.nfiles);
 
-    if (global.imagecount > 1)   // multi-image GIF?
-        global.framerate = 12.0; // default value(1.0) is not handy for animation GIFs
+    if (global.imagecount > 1)       // multi-frame GIF?
+        if(global.framerate == 1.0)  // user not specified '-r' option?
+            global.framerate = 10.0;
 
     t = MovieStart(&swf, global.framerate,
                    global.force_width  ? global.force_width  : global.max_image_width,
@@ -516,6 +701,7 @@ int main(int argc, char **argv)
     }
 
     MovieFinish(&swf, t, global.outfile);
-
+   
     return 0;
 }
+
