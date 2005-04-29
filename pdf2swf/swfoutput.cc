@@ -137,6 +137,8 @@ typedef struct _swfoutput_internal
     int firstpage;
     char pagefinished;
 
+    char overflow;
+
     /* during the transition to the gfxdevice interface:
        a device which uses this swfoutput as target */
     gfxdevice_t device;
@@ -161,6 +163,7 @@ static swfoutput_internal* init_internal_struct()
     i->storefont = 0;
     i->currentswfid = 0;
     i->depth = 0;
+    i->overflow = 0;
     i->startdepth = 0;
     i->linewidth = 0;
     i->shapeid = -1;
@@ -206,8 +209,20 @@ static U16 getNewID(struct swfoutput* obj)
 	if(!id_error)
 	    msg("<error> ID Table overflow");
 	id_error=1;
+	i->overflow = 1;
     }
     return ++i->currentswfid;
+}
+static U16 getNewDepth(struct swfoutput* obj)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    if(i->depth == 65535) {
+	if(!id_error)
+	    msg("<error> Depth Table overflow");
+	id_error=1;
+	i->overflow = 1;
+    }
+    return ++i->depth;
 }
 
 static void startshape(struct swfoutput* obj);
@@ -798,11 +813,10 @@ static void endtext(swfoutput*obj)
     putcharacters(obj, i->tag);
     swf_SetU8(i->tag,0);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    //swf_ObjectPlace(i->tag,i->textid,/*depth*/i->depth++,&i->page_matrix,NULL,NULL);
     MATRIX m2;
     swf_MatrixJoin(&m2,&obj->fontmatrix, &i->page_matrix);
 
-    swf_ObjectPlace(i->tag,i->textid,/*depth*/++i->depth,&m2,NULL,NULL);
+    swf_ObjectPlace(i->tag,i->textid,getNewDepth(obj),&m2,NULL,NULL);
     i->textid = -1;
 }
 
@@ -1072,9 +1086,9 @@ static void setBackground(struct swfoutput*obj, int x1, int y1, int x2, int y2)
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(s);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,shapeid,++i->depth,0,0,0);
+    swf_ObjectPlace(i->tag,shapeid,getNewDepth(obj),0,0,0);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-    swf_ObjectPlaceClip(i->tag,shapeid,++i->depth,0,0,0,65535);
+    swf_ObjectPlaceClip(i->tag,shapeid,getNewDepth(obj),0,0,0,65535);
     i->cliptag = i->tag;
 }
 
@@ -1335,7 +1349,7 @@ static void endshape(swfoutput*obj)
     msg("<trace> Placing shape id %d", i->shapeid);
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,i->shapeid,/*depth*/++i->depth,&i->page_matrix,NULL,NULL);
+    swf_ObjectPlace(i->tag,i->shapeid,getNewDepth(obj),&i->page_matrix,NULL,NULL);
 
     swf_ShapeFree(i->shape);
     i->shape = 0;
@@ -1393,6 +1407,10 @@ void swfoutput_finalize(struct swfoutput*obj)
         swf_DeleteTag(tag);
         tag = prev;
     }
+    
+    if(i->overflow) {
+	wipeSWF(&i->swf);
+    }
 }
 
 SWF* swfoutput_get(struct swfoutput*obj)
@@ -1411,6 +1429,20 @@ void swfoutput_getdimensions(struct swfoutput*obj, int*x1, int*y1, int*x2, int*y
     if(y1) *y1 = i->swf.movieSize.ymin/20;
     if(x2) *x2 = i->swf.movieSize.xmax/20;
     if(y2) *y2 = i->swf.movieSize.ymax/20;
+}
+
+void wipeSWF(SWF*swf)
+{
+    TAG*tag = swf->firstTag;
+    while(tag) {
+	TAG*next = tag->next;
+	if(tag->id != ST_SETBACKGROUNDCOLOR &&
+	   tag->id != ST_END &&
+	   tag->id != ST_SHOWFRAME) {
+	    swf_DeleteTag(tag);
+	}
+	tag = next;
+    }
 }
 
 int swfoutput_save(struct swfoutput* obj, char*filename) 
@@ -1739,9 +1771,9 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
         m = i->page_matrix;
         m.tx = p.x;
         m.ty = p.y;
-	swf_ObjectPlace(i->tag, buttonid, ++i->depth,&m,0,0);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(obj),&m,0,0);
     } else {
-	swf_ObjectPlace(i->tag, buttonid, ++i->depth,&i->page_matrix,0,0);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(obj),&i->page_matrix,0,0);
     }
 }
 
@@ -2241,7 +2273,7 @@ void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     CXFORM cxform2 = gfxcxform_to_cxform(cxform);
-    swf_ObjectPlace(i->tag,myshapeid,/*depth*/++i->depth,&i->page_matrix,&cxform2,NULL);
+    swf_ObjectPlace(i->tag,myshapeid,getNewDepth(obj),&i->page_matrix,&cxform2,NULL);
 }
 
 void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
@@ -2282,7 +2314,7 @@ void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     i->cliptags[i->clippos] = i->tag;
     i->clipshapes[i->clippos] = myshapeid;
-    i->clipdepths[i->clippos] = ++i->depth;
+    i->clipdepths[i->clippos] = getNewDepth(obj);
     i->clippos++;
 }
 
