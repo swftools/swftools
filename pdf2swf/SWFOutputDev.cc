@@ -303,7 +303,7 @@ class InfoOutputDev:  public OutputDev
       GfxFont*font = state->getFont();
       if(!font)
           return;
-      char*id = getFontID(font);
+      /*char*id = getFontID(font);*/
       /* FIXME*/
       num_fonts++;
   }
