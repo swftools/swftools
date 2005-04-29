@@ -178,6 +178,11 @@ int args_callback_option(char*name,char*val) {
 	pdfswf_setparameter("storeallcharacters", "1");
 	return 0;
     }
+    else if (!strcmp(name, "w"))
+    {
+	pdfswf_setparameter("linksopennewwindow", "0");
+	return 0;
+    }
     else if (!strcmp(name, "F"))
     {
 	char *s = strdup(val);
