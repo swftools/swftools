@@ -832,6 +832,8 @@ void swf_Process(RENDERBUF*dest, U32 clipdepth)
                 endx = i->width2;
             if(startx < 0)
                 startx = 0;
+            if(endx < 0)
+                endx = 0;
 
 	    if(clipdepth) {
 		/* for clipping, the inverse is filled */
