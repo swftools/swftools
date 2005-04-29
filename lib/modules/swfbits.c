@@ -150,8 +150,10 @@ int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*pal
 	}
 	lastcol32 = col32;
     }
-    if(palette_overflow)
+    if(palette_overflow) {
+	free(pal);
 	return width*height;
+    }
     if(palette) {
 	int i = 0;
 	for(t=0;t<256;t++) {
@@ -895,9 +897,16 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 		       dest[pos2].r = data[pos + 1];
 		       dest[pos2].g = data[pos + 2];
 		       dest[pos2].b = data[pos + 3];*/
-		    dest[pos2].r = ((int)data[pos + 1]*255)/(int)data[pos+0];
-		    dest[pos2].g = ((int)data[pos + 2]*255)/(int)data[pos+0];
-		    dest[pos2].b = ((int)data[pos + 3]*255)/(int)data[pos+0];
+		    int alpha = data[pos+0];
+		    if(alpha) {
+			dest[pos2].r = ((int)data[pos + 1]*255)/alpha;
+			dest[pos2].g = ((int)data[pos + 2]*255)/alpha;
+			dest[pos2].b = ((int)data[pos + 3]*255)/alpha;
+		    } else {
+			dest[pos2].r = data[pos + 1];
+			dest[pos2].g = data[pos + 2];
+			dest[pos2].b = data[pos + 3];
+		    }
 		    dest[pos2].a = data[pos + 0];	//alpha
 		    pos2++;
 		    pos += 4;
