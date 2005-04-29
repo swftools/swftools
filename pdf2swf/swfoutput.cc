@@ -61,7 +61,7 @@ struct fontlist_t
 
 double config_ppmsubpixels=0;
 double config_jpegsubpixels=0;
-int config_opennewwindow=0;
+int config_opennewwindow=1;
 int config_ignoredraworder=0;
 int config_drawonlyshapes=0;
 int config_jpegquality=85;
@@ -793,6 +793,8 @@ static void endtext(swfoutput*obj)
     swf_GetMatrix(0, &m); /* set unit matrix- the real matrix is in the placeobject */
     swf_SetMatrix(i->tag,&m);
 
+    msg("<trace> Placing text (%d characters) as ID %d", i->chardatapos, i->textid);
+
     putcharacters(obj, i->tag);
     swf_SetU8(i->tag,0);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
@@ -916,10 +918,10 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     
     if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
 	// print font information
-	msg("<debug> Font %s (%s)",swffont->name, filename);
+	msg("<debug> Font %s (%s)",fontid, filename);
 	msg("<debug> |   ID: %d", swffont->id);
 	msg("<debug> |   Version: %d", swffont->version);
-	msg("<debug> |   Name: %s", fontid);
+	msg("<debug> |   Name: %s", swffont->name);
 	msg("<debug> |   Numchars: %d", swffont->numchars);
 	msg("<debug> |   Maxascii: %d", swffont->maxascii);
 	msg("<debug> |   Style: %d", swffont->style);
@@ -1437,7 +1439,6 @@ int swfoutput_save(struct swfoutput* obj, char*filename)
 
     if(filename)
      close(fi);
-    msg("<notice> SWF written\n");
     return 1;
 }
 
@@ -1530,7 +1531,7 @@ void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
     if(i->textid>=0)
 	endtext(obj);
     
-    if(config_opennewwindow)
+    if(!config_opennewwindow)
       actions = action_GetUrl(0, url, "_parent");
     else
       actions = action_GetUrl(0, url, "_this");
@@ -2407,6 +2408,8 @@ void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*co
 	ArtSVP* svp = gfxstrokeToSVP(line, width, cap_style, joint_style, miterLimit);
 	gfxline_t*gfxline = SVPtogfxline(svp);
 	dev->fill(dev, gfxline, color);
+	free(gfxline);
+	art_svp_free(svp);
     }
 }
 void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
