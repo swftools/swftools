@@ -527,13 +527,14 @@ static void showFontError(GfxFont*font, int nr)
 
 static void dumpFontInfo(char*loglevel, GfxFont*font)
 {
-  char* name = getFontID(font);
+  char* id = getFontID(font);
+  char* name = getFontName(font);
   Ref* r=font->getID();
-  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, getFontName(font), r->num,r->gen);
+  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, name, r->num,r->gen);
 
   GString*gstr  = font->getTag();
    
-  msg("%s| Tag: %s\n", loglevel, name);
+  msg("%s| Tag: %s\n", loglevel, id);
   
   if(font->isCIDFont()) msg("%s| is CID font\n", loglevel);
 
@@ -567,10 +568,12 @@ static void dumpFontInfo(char*loglevel, GfxFont*font)
   
   Ref embRef;
   GBool embedded = font->getEmbeddedFontID(&embRef);
-  if(font->getEmbeddedFontName())
-    name = font->getEmbeddedFontName()->getCString();
+  char*embeddedName=0;
+  if(font->getEmbeddedFontName()) {
+    embeddedName = font->getEmbeddedFontName()->getCString();
+  }
   if(embedded)
-   msg("%s| Embedded name: %s id: %d\n",loglevel, FIXNULL(name), embRef.num);
+   msg("%s| Embedded id: %s id: %d\n",loglevel, FIXNULL(embeddedName), embRef.num);
 
   gstr = font->getExtFontFile();
   if(gstr)
@@ -582,6 +585,9 @@ static void dumpFontInfo(char*loglevel, GfxFont*font)
   if(font->isSymbolic()) msg("%s| is symbolic\n", loglevel);
   if(font->isItalic()) msg("%s| is italic\n", loglevel);
   if(font->isBold()) msg("%s| is bold\n", loglevel);
+
+  free(id);
+  free(name);
 }
 
 //void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
@@ -932,9 +938,8 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
 
-	if(font->getType() == fontCIDType2) {
+	if(font->getType() == fontCIDType2)
 	    CIDToGIDMap = cfont->getCIDToGID();
-	}
     } else {
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
@@ -1412,7 +1417,7 @@ char* searchForSuitableFont(GfxFont*gfxFont)
     if (!fcinitcalled) {
         msg("<debug> Initializing FontConfig...");
         fcinitcalled = true;
-	if(FcInit()) {
+	if(!FcInit()) {
             msg("<debug> FontConfig Initialization failed. Disabling.");
             config_use_fontconfig = 0;
             return 0;
@@ -1440,7 +1445,7 @@ char* searchForSuitableFont(GfxFont*gfxFont)
         // if we get an exact match
         if (strcmp((char *)v, name) == 0) {
 	    if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
-		filename = strdup((char*)v);
+		filename = strdup((char*)v); // mem leak
 		char *nfn = strrchr(filename, '/');
 		if(nfn) fontname = strdup(nfn+1);
 		else    fontname = filename;
@@ -1481,7 +1486,7 @@ char* searchForSuitableFont(GfxFont*gfxFont)
             match = FcFontMatch (0, pattern, &result);
             
             if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
-		filename = strdup((char*)v);
+		filename = strdup((char*)v); // mem leak
 		char *nfn = strrchr(filename, '/');
 		if(nfn) fontname = strdup(nfn+1);
 		else    fontname = filename;
@@ -1515,7 +1520,7 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
     }
     filename = searchFont(fontname);
     if(!filename) {
-	msg("<error> Couldn't find font %s- did you install the default fonts?");
+	msg("<error> Couldn't find font %s- did you install the default fonts?", fontname);
 	return 0;
     }
 
@@ -1524,12 +1529,12 @@ char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 	exit(1);
     }
     if(oldname) {
-	substitutesource[substitutepos] = oldname;
+	substitutesource[substitutepos] = strdup(oldname); //mem leak
 	substitutetarget[substitutepos] = fontname;
 	msg("<notice> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
 	substitutepos ++;
     }
-    return strdup(filename);
+    return strdup(filename); //mem leak
 }
 
 void unlinkfont(char* filename)
@@ -1583,7 +1588,8 @@ void SWFOutputDev::updateFont(GfxState *state)
        too often */
     for(t=0;t<substitutepos;t++) {
 	if(!strcmp(fontid, substitutesource[t])) {
-	    fontid = substitutetarget[t];
+	    free(fontid);fontid=0;
+	    fontid = strdup(substitutetarget[t]);
 	    break;
 	}
     }
@@ -1595,6 +1601,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	swfoutput_setfont(&output, fontid, 0);
 	
 	msg("<debug> updateFont(%s) [cached]", fontid);
+	free(fontid);
 	return;
     }
 
@@ -1604,6 +1611,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	    type3Warning = gTrue;
 	    showFontError(gfxFont, 2);
 	}
+	free(fontid);
 	return;
     }
 
@@ -1635,12 +1643,13 @@ void SWFOutputDev::updateFont(GfxState *state)
 	msg("<warning> Font %s %scould not be loaded.", fontname, embedded?"":"(not embedded) ");
 	msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into /swftools/fonts", fontname);
 	fileName = substituteFont(gfxFont, fontid);
-	if(fontid) { fontid = substitutetarget[substitutepos-1]; /*ugly hack*/};
+	if(fontid) { free(fontid);fontid = strdup(substitutetarget[substitutepos-1]); /*ugly hack*/};
 	msg("<notice> Font is now %s (%s)", fontid, fileName);
     }
 
     if(!fileName) {
 	msg("<error> Couldn't set font %s\n", fontid);
+	free(fontid);
 	return;
     }
 	
@@ -1649,10 +1658,11 @@ void SWFOutputDev::updateFont(GfxState *state)
 
     swfoutput_setfont(&output, fontid, fileName);
    
-    if(fileName && del)
-	unlinkfont(fileName);
+    /*if(fileName && del)
+	unlinkfont(fileName);*/
     if(fileName)
         free(fileName);
+    free(fontid);
 }
 
 #define SQR(x) ((x)*(x))
