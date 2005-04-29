@@ -2097,12 +2097,20 @@ gfxline_t* SVPtogfxline(ArtSVP*svp)
     }
 }
 
+/* TODO */
+static int imageInCache(swfoutput*obj, void*data, int width, int height)
+{
+    return -1;
+}
+static void addImageToCache(swfoutput*obj, void*data, int width, int height)
+{
+}
+    
 static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int targetheight, int* newwidth, int* newheight)
 {
     swfoutput*obj = i->obj;
     RGBA*newpic = 0;
     RGBA*mem = (RGBA*)img->data;
-    int bitid = getNewID(obj);
     
     int sizex = img->width;
     int sizey = img->height;
@@ -2160,11 +2168,19 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     }
     printf("\n");*/
 
-    i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, config_jpegquality);
+    int bitid = -1;
+    int cacheid = imageInCache(obj, mem, sizex, sizey);
+
+    if(cacheid<=0) {
+	bitid = getNewID(obj);
+	i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, config_jpegquality);
+	addImageToCache(obj, mem, sizex, sizey);
+    } else {
+	bitid = cacheid;
+    }
 
     if(newpic)
 	free(newpic);
-
     return bitid;
 }
 
