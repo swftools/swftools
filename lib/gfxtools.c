@@ -473,8 +473,8 @@ void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, doubl
     num = approximate3(&c, q, 128, maxerror*maxerror);
 
     for(t=0;t<num;t++) {
-	FPOINT mid;
-	FPOINT to;
+	gfxpoint_t mid;
+	gfxpoint_t to;
 	mid.x = q[t].control.x;
 	mid.y = q[t].control.y;
 	to.x = q[t].end.x;
@@ -485,7 +485,7 @@ void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, doubl
 
 gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y)
 {
-    if(box.xmin==0 || box.ymin==0 || box.xmax==0 || box.ymax==0) {
+    if(box.xmin==0 && box.ymin==0 && box.xmax==0 && box.ymax==0) {
 	box.xmin = x;
 	box.ymin = y;
 	box.xmax = x;
@@ -523,7 +523,7 @@ gfxbbox_t gfxline_getbbox(gfxline_t*line)
 	    last = 0;
 	}
 	x = line->x;
-	y = line->x;
+	y = line->y;
 	line = line->next;
     }
     return bbox;
