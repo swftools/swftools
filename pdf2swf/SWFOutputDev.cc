@@ -862,6 +862,32 @@ GBool SWFOutputDev::useGradients()
 char*renderModeDesc[]= {"fill", "stroke", "fill+stroke", "invisible",
                       "clip+fill", "stroke+clip", "fill+stroke+clip", "clip"};
 
+static char tmp_printstr[4096];
+char* makeStringPrintable(char*str)
+{
+    int len = strlen(str);
+    int dots = 0;
+    if(len>=80) {
+	len = 80;
+	dots = 1;
+    }
+    int t;
+    for(t=0;t<len;t++) {
+	char c = str[t];
+	if(c<32 || c>124) {
+	    c = '.';
+	}
+	tmp_printstr[t] = c;
+    }
+    if(dots) {
+	tmp_printstr[len++] = '.';
+	tmp_printstr[len++] = '.';
+	tmp_printstr[len++] = '.';
+    }
+    tmp_printstr[len] = 0;
+    return tmp_printstr;
+}
+
 void SWFOutputDev::beginString(GfxState *state, GString *s) 
 { 
     int render = state->getRender();
@@ -873,7 +899,7 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
     m21 *= state->getHorizScaling();
     swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
     if(render != 3 && render != 0)
-	msg("<warning> Text rendering mode %d (%s) not fully supported yet (for text \"%s\")", render, renderModeDesc[render&7], s->getCString());
+	msg("<warning> Text rendering mode %d (%s) not fully supported yet (for text \"%s\")", render, renderModeDesc[render&7], makeStringPrintable(s->getCString()));
     states[statepos].textRender = render;
 }
 
@@ -1658,8 +1684,8 @@ void SWFOutputDev::updateFont(GfxState *state)
 
     swfoutput_setfont(&output, fontid, fileName);
    
-    /*if(fileName && del)
-	unlinkfont(fileName);*/
+    if(fileName && del)
+	unlinkfont(fileName);
     if(fileName)
         free(fileName);
     free(fontid);
