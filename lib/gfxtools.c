@@ -454,6 +454,16 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
     return num;
 }
 
+void gfxdraw_conicTo(gfxdrawer_t*draw, double cx, double cy, double tox, double toy)
+{
+    double c1x = (draw->x + 2 * cx) / 3;
+    double c1y = (draw->y + 2 * cy) / 3;
+    double c2x = (2 * cx + tox) / 3;
+    double c2y = (2 * cy + toy) / 3;
+    gfxdraw_cubicTo(draw, c1x, c1y, c2x, c2y, tox, toy);
+}
+
+
 void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, double c2y, double x, double y)
 {
     qspline_t q[128];

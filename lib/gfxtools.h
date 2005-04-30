@@ -55,6 +55,7 @@ void gfxline_dump(gfxline_t*l, FILE*fi, char*prefix);
 void gfxline_free(gfxline_t*l);
 
 void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, double c2y, double x, double y);
+void gfxdraw_conicTo(gfxdrawer_t*draw, double cx, double cy, double tox, double toy);
 
 gfxbbox_t gfxline_getbbox(gfxline_t*line);
 gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y);
