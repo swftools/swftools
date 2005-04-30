@@ -60,6 +60,8 @@ ${name}/lib/q.c \
 ${name}/lib/q.h \
 ${name}/lib/MD5.h \
 ${name}/lib/MD5.c \
+${name}/lib/png.h \
+${name}/lib/png.c \
 ${name}/lib/drawer.c \
 ${name}/lib/drawer.h \
 ${name}/avi2swf/avi2swf.cc \
@@ -79,6 +81,8 @@ ${name}/lib/modules/swfobject.c \
 ${name}/lib/modules/swfshape.c \
 ${name}/lib/modules/swftext.c \
 ${name}/lib/modules/swffont.c \
+${name}/lib/gfxfont.h \
+${name}/lib/gfxfont.c \
 ${name}/lib/modules/swfbutton.c \
 ${name}/lib/modules/swfbits.c \
 ${name}/lib/modules/swftools.c \
