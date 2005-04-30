@@ -90,7 +90,7 @@ static int pagepos = 0;
 /* config */
 static double caplinewidth = 3.0;
 static int zoom = 72; /* xpdf: 86 */
-static int forceType0Fonts = 0;
+static int forceType0Fonts = 1;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
