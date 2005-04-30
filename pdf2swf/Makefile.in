@@ -26,6 +26,10 @@ pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) ../li
 	$(LL) pdf2swf.$(O) pdf2swf$(A) ../lib/librfxswf$(A) ../lib/art/libart$(A) xpdf/libpdf$(A) $(LIBS) -o pdf2swf$(E) 
 	$(STRIP) pdf2swf$(E)
 
+pdf2swf.dll:  pdf2swf$(A)
+	$(L) -O -shared -o encoder.dll encoder.5.def pdf2swf$(A) \
+		-Wl,-v,--output-def,pdf2swf.tmp.def,--out-implib,pdf2swf_dll.a 
+
 xpdf/libpdf$(A): Makefile xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
 	cd xpdf;$(MAKE)
 
