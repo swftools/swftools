@@ -588,9 +588,15 @@ char* fillstyle2str(FILLSTYLE*style)
 	case 0x10: case 0x12:
 	    sprintf(stylebuf, "GRADIENT (%d steps)", style->gradient.num);
 	    break;
-	case 0x40: case 0x41:
+	case 0x40: 
 	    /* TODO: display information about that bitmap */
-	    sprintf(stylebuf, "BITMAP %d", style->id_bitmap);
+	    sprintf(stylebuf, "BITMAPt %d", style->id_bitmap);
+	    /* TODO: show matrix */
+	    break;
+	case 0x41:
+	    /* TODO: display information about that bitmap */
+	    sprintf(stylebuf, "BITMAPc %d", style->id_bitmap);
+	    /* TODO: show matrix */
 	    break;
 	default:
 	    sprintf(stylebuf, "UNKNOWN[%02x]",style->type);
