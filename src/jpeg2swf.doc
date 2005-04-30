@@ -21,6 +21,10 @@ converted picture is a seperate frame in the target SWF.
     Enable Flash 6 (MX) Zlib Compression
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
     smaller, but not playable in Flash Plugins of Version 5 and below.
+-x --xoffset <offset>  
+    horizontally offset images by <offset>
+-y --yoffset <offset>  
+    vertically offset images by <offset>
 -X --width <width>   
     Force movie width to <width> (default: autodetect)
 -Y --height <height>  
@@ -29,9 +33,14 @@ converted picture is a seperate frame in the target SWF.
     Set verbose level to <level> (0=quiet, 1=default, 2=debug)
 -V --version  
     Print version information and exit
+-f --fit-to-movie           
+    Fit images to movie size
+-e --export <assetname>      
+    Make importable as asset with <assetname>
 
 .SH AUTHORS
 
 Rainer Böhme <rfxswf@reflex-studio.de>
 .TP
 Matthias Kramm
+
