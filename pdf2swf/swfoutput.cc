@@ -59,6 +59,7 @@ struct fontlist_t
     fontlist_t*next;
 };
 
+double config_dumpfonts=0;
 double config_ppmsubpixels=0;
 double config_jpegsubpixels=0;
 int config_opennewwindow=1;
@@ -713,6 +714,9 @@ static void putcharacter(struct swfoutput*obj, int fontid, int charid, int x,int
    If we set it to low, however, the char positions will be inaccurate */
 #define FONT_INTERNAL_SIZE 4
 
+static int font_active = 0;
+static char* font_active_filename = 0;
+
 /* process a character. */
 static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m, gfxcolor_t*col)
 {
@@ -723,6 +727,16 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     }
 
     int charid = getCharID(swffont, charnr, character, u); 
+    if(font_active) {
+	char buf[1024];
+	sprintf(buf, "%s.usage", font_active_filename);
+	FILE*fi = fopen(buf, "ab+");
+	if(fi) {
+	     fprintf(fi, "%d %d %d %s\n", charnr, u, charid, character);
+	     fclose(fi);
+	} else 
+	    msg("<error> Couldn't write to %s", buf);
+    }
     
     if(charid<0) {
 	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
@@ -866,11 +880,11 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
     return -1;
 }
 
-
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
 void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    font_active = 0;
     fontlist_t*last=0,*iterator;
     if(!fontid) {
 	msg("<error> No fontid");
@@ -902,6 +916,11 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     swf_SetLoadFontParameters(64,/*skip unused*/0,/*full unicode*/1);
     SWFFONT*swffont = swf_LoadFont(filename);
 
+    if(config_dumpfonts) {
+	font_active = 1;
+	font_active_filename = strdup(filename);
+    }
+
     if(swffont == 0) {
 	msg("<warning> Couldn't load font %s (%s)", fontid, filename);
 	swffont = swf_LoadFont(0);
@@ -926,6 +945,10 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	    msg("<warning> Font %s has bad unicode mapping", fontid);
             swffont->encoding = 255;
         }
+    }
+    
+    if(swffont->encoding != FONT_ENCODING_UNICODE && swffont->encoding != 255) {
+	msg("<warning> Non-unicode mapping for font %s (%s)", fontid, filename);
     }
 
     swf_FontSetID(swffont, getNewID(obj));
@@ -1374,6 +1397,21 @@ static void endshape(swfoutput*obj)
     }*/
 }
 
+void wipeSWF(SWF*swf)
+{
+    TAG*tag = swf->firstTag;
+    while(tag) {
+	TAG*next = tag->next;
+	if(tag->id != ST_SETBACKGROUNDCOLOR &&
+	   tag->id != ST_END &&
+	   tag->id != ST_SHOWFRAME) {
+	    swf_DeleteTag(tag);
+	}
+	tag = next;
+    }
+}
+
+
 void swfoutput_finalize(struct swfoutput*obj)
 {
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
@@ -1429,20 +1467,6 @@ void swfoutput_getdimensions(struct swfoutput*obj, int*x1, int*y1, int*x2, int*y
     if(y1) *y1 = i->swf.movieSize.ymin/20;
     if(x2) *x2 = i->swf.movieSize.xmax/20;
     if(y2) *y2 = i->swf.movieSize.ymax/20;
-}
-
-void wipeSWF(SWF*swf)
-{
-    TAG*tag = swf->firstTag;
-    while(tag) {
-	TAG*next = tag->next;
-	if(tag->id != ST_SETBACKGROUNDCOLOR &&
-	   tag->id != ST_END &&
-	   tag->id != ST_SHOWFRAME) {
-	    swf_DeleteTag(tag);
-	}
-	tag = next;
-    }
 }
 
 int swfoutput_save(struct swfoutput* obj, char*filename) 
@@ -1977,6 +2001,8 @@ void swfoutput_setparameter(char*name, char*value)
 	config_minlinewidth = atof(value);
     } else if(!strcmp(name, "caplinewidth")) {
 	config_caplinewidth = atof(value);
+    } else if(!strcmp(name, "dumpfonts")) {
+	config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "jpegquality")) {
 	int val = atoi(value);
 	if(val<0) val=0;
