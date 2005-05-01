@@ -18,8 +18,8 @@ pdf2swf.$(O): pdf2swf.cc SWFOutputDev.h
 swfoutput.$(O): swfoutput.cc swfoutput.h spline.h
 	$(CC) -I../lib swfoutput.cc -o $@
 
-pdf2swf$(A): Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O) ../lib/gfxtools.$(O)
-	$(AR) r pdf2swf$(A) SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O) ../lib/gfxtools.$(O)
+pdf2swf$(A): Makefile SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O)
+	$(AR) r pdf2swf$(A) SWFOutputDev.$(O) swfoutput.$(O) encodings.$(O) spline.$(O) ../lib/os.$(O) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O)
 	$(RANLIB) pdf2swf$(A)
 
 pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) ../lib/art/libart$(A)
@@ -27,7 +27,7 @@ pdf2swf$(E): pdf2swf.$(O) pdf2swf$(A) xpdf/libpdf$(A) ../lib/librfxswf$(A) ../li
 	$(STRIP) pdf2swf$(E)
 
 pdf2swf.dll:  pdf2swf$(A)
-	$(L) -O -shared -o encoder.dll encoder.5.def pdf2swf$(A) \
+	$(L) -O -shared -o pdf2swf.dll encoder.5.def pdf2swf$(A) \
 		-Wl,-v,--output-def,pdf2swf.tmp.def,--out-implib,pdf2swf_dll.a 
 
 xpdf/libpdf$(A): Makefile xpdf/gfile.cc xpdf/GfxState.cc xpdf/GlobalParams.cc
