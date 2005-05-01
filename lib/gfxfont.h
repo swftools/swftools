@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 gfxfont_t* gfxfont_load(char*filename);
-void gfxfont_free();
+void gfxfont_free(gfxfont_t*font);
 
 #ifdef __cplusplus
 }
