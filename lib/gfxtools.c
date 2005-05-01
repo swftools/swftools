@@ -553,3 +553,10 @@ void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
     }
 }
 
+void gfxline_append(gfxline_t*line1, gfxline_t*line2)
+{
+    while(line1) {
+	line1 = line1->next;
+    }
+    line1->next = line2;
+}
