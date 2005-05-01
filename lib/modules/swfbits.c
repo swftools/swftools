@@ -452,10 +452,10 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
     struct jpeg_source_mgr mgr;
     RGBA *dest;
     int y;
-    *width = 0;
-    *height = 0;
     int offset = 0;
     int oldtaglen = 0;
+    *width = 0;
+    *height = 0;
 
     if (tag->id == ST_DEFINEBITSJPEG) {
 	fprintf(stderr, "rfxswf: extracting from definebitsjpeg not yet supported\n");

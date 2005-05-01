@@ -304,12 +304,12 @@ void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, c
 void swf_Render_SetBackground(RENDERBUF*buf, RGBA*img, int width, int height)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
-    if(i->shapes) {
-	fprintf(stderr, "rfxswf: Warning: swf_Render_SetBackground() called after drawing shapes\n");
-    }
     int x,xx,y,yy;
     int xstep=width*65536/i->width2;
     int ystep=height*65536/i->height2;
+    if(i->shapes) {
+	fprintf(stderr, "rfxswf: Warning: swf_Render_SetBackground() called after drawing shapes\n");
+    }
     for(y=0,yy=0;y<i->height2;y++,yy+=ystep) {
 	RGBA*src = &img[(yy>>16) * width];
 	RGBA*line = &i->img[y * i->width2];
@@ -883,9 +883,10 @@ RGBA* swf_Render(RENDERBUF*dest)
             if(y&1) {
                 int x;
 		RGBA*line1=line;
+		RGBA* p;
 		if(!line2)
 		    line2=line1;
-                RGBA* p = &img[(y/2)*dest->width];
+                p = &img[(y/2)*dest->width];
                 for(x=0;x<dest->width;x++) {
                     RGBA*p1 = &line1[x*2];
                     RGBA*p2 = &line1[x*2+1];
@@ -959,6 +960,8 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
     TAG*tag;
     int t;
     int numplacements;
+    RGBA color;
+    SWFPLACEOBJECT* placements;
     
     character_t* idtable = rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
     SWFPLACEOBJECT** depthtable = rfx_calloc(sizeof(SWFPLACEOBJECT*)*65536); // depth to placeobject mapping
@@ -972,11 +975,11 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 	}
 	tag = tag->next;
     }
-    SWFPLACEOBJECT* placements = rfx_calloc(sizeof(SWFPLACEOBJECT)*numplacements);
+    placements = rfx_calloc(sizeof(SWFPLACEOBJECT)*numplacements);
     numplacements = 0;
 
     /* set background color */
-    RGBA color = swf_GetSWFBackgroundColor(swf);
+    color = swf_GetSWFBackgroundColor(swf);
     swf_Render_SetBackgroundColor(buf, color);
 
     /* parse definitions */
