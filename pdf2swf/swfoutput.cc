@@ -74,6 +74,7 @@ int config_splinemaxerror=1;
 int config_fontsplinemaxerror=1;
 int config_filloverlap=0;
 int config_protect=0;
+int config_bboxvars=0;
 float config_minlinewidth=0.05;
 double config_caplinewidth=1;
 
@@ -1404,6 +1405,7 @@ void wipeSWF(SWF*swf)
 	TAG*next = tag->next;
 	if(tag->id != ST_SETBACKGROUNDCOLOR &&
 	   tag->id != ST_END &&
+	   tag->id != ST_DOACTION &&
 	   tag->id != ST_SHOWFRAME) {
 	    swf_DeleteTag(tag);
 	}
@@ -1418,6 +1420,32 @@ void swfoutput_finalize(struct swfoutput*obj)
 
     if(i->tag && i->tag->id == ST_END)
         return; //already done
+
+    if(config_bboxvars) {
+	TAG* tag = swf_InsertTag(i->swf.firstTag, ST_DOACTION);
+	ActionTAG*a = 0;
+	a = action_PushString(a, "xmin");
+	a = action_PushFloat(a, i->swf.movieSize.xmin / 20.0);
+	a = action_SetVariable(a);
+	a = action_PushString(a, "ymin");
+	a = action_PushFloat(a, i->swf.movieSize.ymin / 20.0);
+	a = action_SetVariable(a);
+	a = action_PushString(a, "xmax");
+	a = action_PushFloat(a, i->swf.movieSize.xmax / 20.0);
+	a = action_SetVariable(a);
+	a = action_PushString(a, "ymax");
+	a = action_PushFloat(a, i->swf.movieSize.ymax / 20.0);
+	a = action_SetVariable(a);
+	a = action_PushString(a, "width");
+	a = action_PushFloat(a, (i->swf.movieSize.xmax - i->swf.movieSize.xmin) / 20.0);
+	a = action_SetVariable(a);
+	a = action_PushString(a, "height");
+	a = action_PushFloat(a, (i->swf.movieSize.ymax - i->swf.movieSize.ymin) / 20.0);
+	a = action_SetVariable(a);
+	a = action_End(a);
+	swf_ActionSet(tag, a);
+	swf_ActionFree(a);
+    }
 
     if(i->frameno == i->lastframeno) // fix: add missing pagefeed
         swfoutput_pagefeed(obj);
@@ -1991,6 +2019,8 @@ void swfoutput_setparameter(char*name, char*value)
 	config_storeallcharacters = atoi(value);
     } else if(!strcmp(name, "enablezlib")) {
 	config_enablezlib = atoi(value);
+    } else if(!strcmp(name, "bboxvars")) {
+	config_bboxvars = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
 	config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protected")) {
