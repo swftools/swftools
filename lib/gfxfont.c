@@ -141,7 +141,26 @@ static void glyph_clear(gfxglyph_t*g)
     if(g->name) {
 	free(g->name); g->name = 0;
     }
-    gfxline_free(g->line);
+    gfxline_free(g->line);g->line = 0;
+}
+
+void gfxfont_free(gfxfont_t*font)
+{
+    int t;
+    for(t=0;t<font->num_glyphs;t++) {
+	glyph_clear(&font->glyphs[t]);
+    }
+    if(font->glyphs) {
+	free(font->glyphs);font->glyphs = 0;
+    }
+    font->num_glyphs = 0;
+    if(font->unicode2glyph) {
+	free(font->unicode2glyph);font->unicode2glyph = 0;
+    }
+    if(font->name) {
+	free(font->name);font->name = 0;
+    }
+    free(font);
 }
 
 gfxfont_t* gfxfont_load(char*filename)
@@ -235,7 +254,6 @@ gfxfont_t* gfxfont_load(char*filename)
 	font->max_unicode = 65535;
     
     font->unicode2glyph = rfx_calloc(font->max_unicode*sizeof(int));
-    glyph2unicode = (int*)rfx_calloc(face->num_glyphs*sizeof(int));
     
     for(t=0;t<font->max_unicode;t++) {
 	int g = FT_Get_Char_Index(face, t);
@@ -252,8 +270,6 @@ gfxfont_t* gfxfont_load(char*filename)
     font->max_unicode = max_unicode;
 
     font->num_glyphs = 0;
-
-    glyph2glyph = (int*)rfx_calloc(face->num_glyphs*sizeof(int));
 
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
