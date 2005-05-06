@@ -1,6 +1,6 @@
 /* -*- mode: c; tab-width: 4; -*- ---------------------------[for (x)emacs]--
 
-   $Id: gif2swf.c,v 1.3 2005/04/17 17:35:07 dseg Exp $
+   $Id: gif2swf.c,v 1.4 2005/05/06 16:34:59 dseg Exp $
    GIF to SWF converter tool
 
    Part of the swftools package.
@@ -71,7 +71,7 @@ void SetFrameAction(TAG** t, const char *src, int ver)
    ActionTAG* as;
    
    as = swf_ActionCompile(src, ver);
-   if(!as)
+   if (!as)
       fprintf(stderr, "Couldn't compile ActionScript\n");
    else {
       *t = swf_InsertTag(*t, ST_DOACTION);
@@ -83,7 +83,7 @@ void SetFrameAction(TAG** t, const char *src, int ver)
 int getGifDisposalMethod(GifFileType * gft, int framenum) 
 {
    int i;
-   ExtensionBlock* ext = gft->SavedImages[0].ExtensionBlocks;
+   ExtensionBlock* ext = gft->SavedImages[framenum].ExtensionBlocks;
 
    for (i=0; i < gft->SavedImages[framenum].ExtensionBlockCount; i++, ext++)
      if (ext->Function == GRAPHICS_EXT_FUNC_CODE) 
@@ -91,6 +91,11 @@ int getGifDisposalMethod(GifFileType * gft, int framenum)
    
    return -1;
 }
+
+// [FIX ME]
+// I couldn't get the loop count of animated GIF which is defined in the 
+// application extension block of header using lib(un)gif.
+// Ask the author of lib(un)gif it's really impossible.
 
 U16 getGifLoopCount(GifFileType * gft) {
    int i;
@@ -132,7 +137,7 @@ int getTransparentColor(GifFileType * gft, int framenum)
         if ((ext->Function == GRAPHICS_EXT_FUNC_CODE) &&
             (ext->Bytes[0] & 1)) { // there is a transparent color
 	   return ext->Bytes[3] == 0 ?
-	    255 :                  // exception
+	    0 :                    // exception
 	    (U8)ext->Bytes[3];     // transparency color
         }
 
@@ -205,7 +210,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 
     struct gif_header header;
 
-    int i, j, numcolors = 0, alphapalette = 0;
+    int i, j, numcolors, alphapalette;
     U8 bgcolor;
     int bpp; // byte per pixel
     int swf_width, padlen;
@@ -237,7 +242,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
         PrintGifError(); 
         return t;
     }
-
+   
     header.width  = gft->SWidth;
     header.height = gft->SHeight;
 
@@ -250,32 +255,34 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     colormap = img->ColorMap ? img->ColorMap : gft->SColorMap;
     numcolors = colormap->ColorCount;
     alphapalette = getTransparentColor(gft, imgidx);
+    if (VERBOSE(3))
+        fprintf(stderr, "transparent palette index => %d\n", alphapalette);
     bpp = (alphapalette >= 0 ? 4 : 3);
 
     // bgcolor is the background color to fill the bitmap
-    // if DWORD-aligned imagebuffer is bigger than the actual image
-    if (gft->SColorMap)                     // There is a GlobalColorMap
+    if (gft->SColorMap)             // There is a GlobalColorMap
         bgcolor = (U8)gft->SBackGroundColor;// The SBGColor is meaningful
     else
-        if (alphapalette >= 0)          // There is a transparency color
-            bgcolor = alphapalette;     // set the bgColor to tranparent
+        if (alphapalette >= 0)      // There is a transparency color
+            bgcolor = alphapalette; // set the bgcolor to tranparent
         else
-            bgcolor = 0;                // Don't know what to do here.
-                                        // If this doesn't work, we could
-                                        // create a new color and set the
-                                        // alpha-channel to transparent
-                                        // (unless we are using all the 256
-                                        // colors, in which case either we
-                                        // give up, or move to 16-bits palette
-
-    if(VERBOSE(3))
+            bgcolor = 0;            // Don't know what to do here.
+                                    // If this doesn't work, we could
+                                    // create a new color and set the
+                                    // alpha-channel to transparent
+                                    // (unless we are using all the 256
+                                    // colors, in which case either we
+                                    // give up, or move to 16-bits palette
+    if (VERBOSE(3))
         fprintf(stderr, "BG palette index => %u\n", bgcolor);
    
     for (i=0; i<numcolors; i++) {
         c = colormap->Colors[i];
-        if (i == alphapalette)
+        if (i == bgcolor)
             pal[i].r = pal[i].g = pal[i].b = pal[i].a = 0;// Fully transparent
-        else {
+        else if (i == alphapalette)
+            pal[i].r = pal[i].g = pal[i].b = pal[i].a = 0;// Fully transparent
+	else {
             pal[i].r = c.Red;
             pal[i].g = c.Green;
             pal[i].b = c.Blue;
@@ -283,7 +290,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
         }
     }
 
-    t = swf_InsertTag(t, bpp == 4 ? 
+    t = swf_InsertTag(t, bpp == 4 ?
 		      ST_DEFINEBITSLOSSLESS2 : ST_DEFINEBITSLOSSLESS);
     swf_SetU16(t, id); // id
 
@@ -385,22 +392,26 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 	  {
 	     switch(disposal) {
 	      case NONE:
-		//fprintf(stdout, "  [none]\n");
 		swf_SetU16(t, depth-1);
 		t = swf_InsertTag(t, ST_REMOVEOBJECT2);
+		if (VERBOSE(3))
+		    fprintf(stdout, "  [none]\n");
 		break;		
 	      case DO_NOT_DISPOSE:
-		//fprintf(stdout, "  [don't dispose]\n");
+		if (VERBOSE(3))	
+        	    fprintf(stdout, "  [don't dispose]\n");
 		break;
 	      case RESTORE_TO_BGCOLOR:
 		swf_SetU16(t, depth-1);
 		t = swf_InsertTag(t, ST_REMOVEOBJECT2);
-		//fprintf(stdout, "  [restore to bg color]\n");
+                if (VERBOSE(3))
+  		    fprintf(stdout, "  [restore to bg color]\n");
 		break;
 	      case RESTORE_TO_PREVIOUS:
 		swf_SetU16(t, depth-1);
 		t = swf_InsertTag(t, ST_REMOVEOBJECT2);
-		//fprintf(stdout, "  [restore to previous]\n");
+		if (VERBOSE(3))
+		    fprintf(stdout, "  [restore to previous]\n");
 		break;
 	     }
 	  }
@@ -435,8 +446,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 	    while (framecnt--)
 	        t = swf_InsertTag(t, ST_SHOWFRAME);
        }
-       if (imgidx == global.imagecount-1) {
-           as_lastframe = malloc(strlen(AS_LASTFRAME) + 5); // 0-99999
+       if ((imgidx == global.imagecount-1) &&
+	   (global.loopcount > 0)) { // 0 means "infinite loop"
+	   as_lastframe = malloc(strlen(AS_LASTFRAME) + 5); // 0-99999
 	   sprintf(as_lastframe, AS_LASTFRAME, global.loopcount);
            SetFrameAction(&t, as_lastframe, global.version);
 	   if (as_lastframe) 
@@ -498,22 +510,22 @@ int CheckInputFile(char *fname, char **realname)
     if (global.max_image_height < gft->SHeight)
         global.max_image_height = gft->SHeight;
    
-   if (DGifSlurp(gft) != GIF_OK) { //gft->ImageCount be set
+    if (DGifSlurp(gft) != GIF_OK) { //gft->ImageCount be set
         PrintGifError();
         return -1;
     }
 
-    global.imagecount = gft->ImageCount;
-    if(VERBOSE(3))
-        if(global.imagecount > 1)
-            fprintf(stderr, "Loops => %u\n", getGifLoopCount(gft));
-   
-    if(VERBOSE(2)) {
+    if ((global.imagecount = gft->ImageCount) > 1) {
+        global.loopcount = getGifLoopCount(gft);
+        if (VERBOSE(3))
+            fprintf(stderr, "Loops => %u\n", global.loopcount);
+    }
+    if (VERBOSE(2)) {
         U8 i;
         fprintf(stderr, "%d x %d, %d images total\n", 
 		gft->SWidth, gft->SHeight, gft->ImageCount);
        
-        for(i=0; i < gft->ImageCount; i++)
+        for (i=0; i < gft->ImageCount; i++)
             fprintf(stderr, "frame: %u, delay: %.3f sec\n",
 		    i+1, getGifDelayTime(gft, i) / 100.0);
     }
@@ -681,7 +693,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "Processing %i file(s)...\n", global.nfiles);
 
     if (global.imagecount > 1)       // multi-frame GIF?
-        if(global.framerate == 1.0)  // user not specified '-r' option?
+        if (global.framerate == 1.0)  // user not specified '-r' option?
             global.framerate = 10.0;
 
     t = MovieStart(&swf, global.framerate,
