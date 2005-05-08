@@ -249,4 +249,8 @@
 	* pdf2swf: Images are now stored as either jpeg or zlib, whatever is smaller.
 	* pdf2swf: Fixed Type0C handling
 	* swfcombine: Fixed jpeg table conversion
+	* lib/rfxswf.c: added support for definejpeg3 extraction
+	* pdf2swf: fix for non-closed shapes
+	* pdf2swf: New option -s bboxvars
+	* pdf2swf: Added support for stroke/clip text rendering
 
