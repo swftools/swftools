@@ -156,6 +156,10 @@ void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*co
 void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
 void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
 void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
+void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font);
+
+int getCharID(SWFFONT *font, int charnr, char *charname, int u);
 
 static swfoutput_internal* init_internal_struct()
 {
@@ -198,6 +202,8 @@ static swfoutput_internal* init_internal_struct()
     i->device.fill = swf_fill;
     i->device.fillbitmap = swf_fillbitmap;
     i->device.fillgradient = swf_fillgradient;
+    i->device.addfont = swf_addfont;
+    i->device.drawchar = swf_drawchar;
 
     return i;
 };
@@ -238,8 +244,8 @@ static void transform (plotxy*p0,struct swfmatrix*m)
     double x,y;
     x = m->m11*p0->x+m->m12*p0->y;
     y = m->m21*p0->x+m->m22*p0->y;
-    p0->x = x + m->m13;
-    p0->y = y + m->m23;
+    p0->x = x + m->m31;
+    p0->y = y + m->m32;
 }
 
 // write a move-to command into the swf
@@ -756,8 +762,8 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     if(i->textid<0)
 	starttext(obj);
 
-    float x = m->m13;
-    float y = m->m23;
+    float x = m->m31;
+    float y = m->m32;
     float det = ((m->m11*m->m22)-(m->m21*m->m12));
     if(fabs(det) < 0.0005) { 
 	/* x direction equals y direction- the text is invisible */
@@ -1009,9 +1015,13 @@ int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
 
 /* set's the matrix which is to be applied to characters drawn by
    swfoutput_drawchar() */
-void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m12,
-                                                  double m21,double m22)
+void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m21,
+                                                  double m12,double m22)
 {
+    m11 *= 1024;
+    m12 *= 1024;
+    m21 *= 1024;
+    m22 *= 1024;
     swfoutput_internal*i = (swfoutput_internal*)obj->internal;
     if(obj->fontm11 == m11 &&
        obj->fontm12 == m12 &&
@@ -1042,8 +1052,8 @@ int swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, i
     m.m12 = obj->fontm12;
     m.m21 = obj->fontm21;
     m.m22 = obj->fontm22;
-    m.m13 = x;
-    m.m23 = y;
+    m.m31 = x;
+    m.m32 = y;
     return drawchar(obj, obj->swffont, character, charnr, u, &m, color);
 }
 
@@ -1456,8 +1466,8 @@ void swfoutput_finalize(struct swfoutput*obj)
 	TAG*mtag = i->swf.firstTag;
 	if(iterator->swffont) {
 	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
-	    /*if(!storeallcharacters)
-		swf_FontReduce(iterator->swffont);*/
+	    if(!config_storeallcharacters)
+		swf_FontReduce(iterator->swffont);
 	    swf_FontSetDefine2(mtag, iterator->swffont);
 	}
 
@@ -1930,6 +1940,18 @@ void swfoutput_endclip(struct swfoutput*obj)
     gfxdevice_t*dev = &i->device;
     dev->endclip(dev);
 }
+void swfoutput_gfxaddfont(struct swfoutput*obj, char*fontid, gfxfont_t*font)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    gfxdevice_t*dev = &i->device;
+    dev->addfont(dev, fontid, font);
+}
+void swfoutput_gfxdrawchar(struct swfoutput*obj, char*fontid, int glyph, gfxcolor_t*c, gfxmatrix_t*m)
+{
+    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    gfxdevice_t*dev = &i->device;
+    dev->drawchar(dev, fontid, glyph, c, m);
+}
 
 #define IMAGE_TYPE_JPEG 0
 #define IMAGE_TYPE_LOSSLESS 1
@@ -2225,7 +2247,7 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     *newheight  = sizey;
     
     if(newsizex<sizex || newsizey<sizey) {
-	msg("<notice> Scaling %dx%d image to %dx%d", sizex, sizey, newsizex, newsizey);
+	msg("<verbose> Scaling %dx%d image to %dx%d", sizex, sizey, newsizex, newsizey);
 	newpic = swf_ImageScale(mem, sizex, sizey, newsizex, newsizey);
 	*newwidth = sizex = newsizex;
 	*newheight  = sizey = newsizey;
@@ -2533,4 +2555,155 @@ void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     msg("<error> Gradient filling not implemented yet");
+}
+
+static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
+{
+    SWFFONT*swffont = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
+    int t;
+    swffont->id = -1;
+    swffont->version = 2;
+    swffont->name = (U8*)strdup(id);
+    swffont->layout = (SWFLAYOUT*)rfx_calloc(sizeof(SWFLAYOUT));
+    swffont->layout->ascent = 0; /* ? */
+    swffont->layout->descent = 0;
+    swffont->layout->leading = 0;
+    swffont->layout->bounds = (SRECT*)rfx_calloc(sizeof(SRECT)*font->num_glyphs);
+    swffont->encoding = FONT_ENCODING_UNICODE;
+    swffont->numchars = font->num_glyphs;
+    swffont->maxascii = font->max_unicode;
+    swffont->ascii2glyph = (int*)rfx_calloc(sizeof(int)*swffont->maxascii);
+    swffont->glyph2ascii = (U16*)rfx_calloc(sizeof(U16)*swffont->numchars);
+    swffont->glyph = (SWFGLYPH*)rfx_calloc(sizeof(SWFGLYPH)*swffont->numchars);
+    swffont->glyphnames = (char**)rfx_calloc(sizeof(char*)*swffont->numchars);
+    for(t=0;t<font->max_unicode;t++) {
+	swffont->ascii2glyph[t] = font->unicode2glyph[t];
+    }
+    for(t=0;t<font->num_glyphs;t++) {
+	drawer_t draw;
+	gfxline_t*line;
+	swffont->glyph2ascii[t] = font->glyphs[t].unicode;
+	if(font->glyphs[t].name) {
+	    swffont->glyphnames[t] = strdup(font->glyphs[t].name);
+	} else {
+	    swffont->glyphnames[t] = 0;
+	}
+	swffont->glyph[t].advance = (int)(font->glyphs[t].advance * 20);
+
+	swf_Shape01DrawerInit(&draw, 0);
+	line = font->glyphs[t].line;
+	while(line) {
+	    FPOINT c,to;
+	    c.x = line->sx; c.y = line->sy;
+	    to.x = line->x; to.y = line->y;
+	    if(line->type == gfx_moveTo) {
+		draw.moveTo(&draw, &to);
+	    } else if(line->type == gfx_lineTo) {
+		draw.lineTo(&draw, &to);
+	    } else if(line->type == gfx_splineTo) {
+		draw.splineTo(&draw, &c, &to);
+	    }
+	    line = line->next;
+	}
+	draw.finish(&draw);
+	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
+	draw.dealloc(&draw);
+    }
+    return swffont;
+}
+
+void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+
+    if(i->obj->swffont && i->obj->swffont->name && !strcmp((char*)i->obj->swffont->name,fontid))
+	return; // the requested font is the current font
+    
+    fontlist_t*last=0,*l = i->fontlist;
+    while(l) {
+	last = l;
+	if(!strcmp((char*)l->swffont->name, fontid)) {
+	    return; // we already know this font
+	}
+	l = l->next;
+    }
+    l = (fontlist_t*)rfx_calloc(sizeof(fontlist_t));
+    l->swffont = gfxfont_to_swffont(font, fontid);
+    l->next = 0;
+    if(last) {
+	last->next = l;
+    } else {
+	i->fontlist = l;
+    }
+    swf_FontSetID(l->swffont, getNewID(i->obj));
+
+    if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
+	// print font information
+	msg("<debug> Font %s",fontid);
+	msg("<debug> |   ID: %d", l->swffont->id);
+	msg("<debug> |   Version: %d", l->swffont->version);
+	msg("<debug> |   Name: %s", l->swffont->name);
+	msg("<debug> |   Numchars: %d", l->swffont->numchars);
+	msg("<debug> |   Maxascii: %d", l->swffont->maxascii);
+	msg("<debug> |   Style: %d", l->swffont->style);
+	msg("<debug> |   Encoding: %d", l->swffont->encoding);
+	for(int iii=0; iii<l->swffont->numchars;iii++) {
+	    msg("<debug> |   Glyph %d) name=%s, unicode=%d size=%d bbox=(%.2f,%.2f,%.2f,%.2f)\n", iii, l->swffont->glyphnames?l->swffont->glyphnames[iii]:"<nonames>", l->swffont->glyph2ascii[iii], l->swffont->glyph[iii].shape->bitlen, 
+		    l->swffont->layout->bounds[iii].xmin/20.0,
+		    l->swffont->layout->bounds[iii].ymin/20.0,
+		    l->swffont->layout->bounds[iii].xmax/20.0,
+		    l->swffont->layout->bounds[iii].ymax/20.0
+		    );
+	    int t;
+	    for(t=0;t<l->swffont->maxascii;t++) {
+		if(l->swffont->ascii2glyph[t] == iii)
+		    msg("<debug> | - maps to %d",t);
+	    }
+	}
+    }
+}
+
+static void swf_switchfont(gfxdevice_t*dev, char*fontid)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput*obj = i->obj;
+
+    if(obj->swffont && obj->swffont->name && !strcmp((char*)obj->swffont->name,fontid))
+	return; // the requested font is the current font
+    
+    fontlist_t*l = i->fontlist;
+    while(l) {
+	if(!strcmp((char*)l->swffont->name, fontid)) {
+	    obj->swffont = l->swffont;
+	    return; //done!
+	}
+	l = l->next;
+    }
+    msg("<error> Unknown font id: %s", fontid);
+    return;
+}
+
+void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput*obj = i->obj;
+	
+    if(!obj->swffont || !obj->swffont->name || strcmp((char*)obj->swffont->name,fontid)) // not equal to current font
+    {
+	/* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
+		 with multiple fonts */
+	endtext(obj);
+
+	swf_switchfont(dev, fontid); // set the current font
+    }
+    swfoutput_setfontmatrix(obj, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
+   
+    swfmatrix m;
+    m.m11 = obj->fontm11;
+    m.m12 = obj->fontm12;
+    m.m21 = obj->fontm21;
+    m.m22 = obj->fontm22;
+    m.m31 = matrix->tx;
+    m.m32 = matrix->ty;
+    drawchar(obj, obj->swffont, 0, glyph, -1, &m, color);
 }
