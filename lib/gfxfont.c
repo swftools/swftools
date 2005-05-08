@@ -104,25 +104,6 @@ static FT_Outline_Funcs outline_functions =
 
 static FT_Library ftlibrary = 0;
 
-gfxline_t * clonePath(gfxline_t*line)
-{
-    gfxline_t*dest = 0;
-    gfxline_t*pos = 0;
-    while(line) {
-	gfxline_t*n = rfx_calloc(sizeof(gfxline_t));
-	*n = *line;
-	n->next = 0;
-	if(!pos) {
-	    dest = pos = n;
-	} else {
-	    pos->next = n;
-	    pos = n;
-	}
-	line = line->next;
-    }
-    return dest;
-}
-
 static gfxglyph_t cloneGlyph(gfxglyph_t*src)
 {
     gfxglyph_t dest;
@@ -131,7 +112,7 @@ static gfxglyph_t cloneGlyph(gfxglyph_t*src)
 	dest.name = strdup(src->name);
     dest.advance = src->advance;
     dest.unicode = src->unicode;
-    dest.line = clonePath(src->line);
+    dest.line = gfxline_clone(src->line);
     return dest;
 }
 
@@ -156,9 +137,6 @@ void gfxfont_free(gfxfont_t*font)
     font->num_glyphs = 0;
     if(font->unicode2glyph) {
 	free(font->unicode2glyph);font->unicode2glyph = 0;
-    }
-    if(font->name) {
-	free(font->name);font->name = 0;
     }
     free(font);
 }
@@ -213,9 +191,9 @@ gfxfont_t* gfxfont_load(char*filename)
 	//font->glyphnames = rfx_calloc(face->num_glyphs*sizeof(char*));
     }
 
-    name = FT_Get_Postscript_Name(face);
+    /*name = FT_Get_Postscript_Name(face);
     if(name && *name)
-	font->name = strdup(name);
+	font->name = strdup(name);*/
 
     while(1) 
     {
@@ -364,7 +342,7 @@ gfxfont_t* gfxfont_load(char*filename)
 
     FT_Done_Face(face);
     FT_Done_FreeType(ftlibrary);ftlibrary=0;
-   
+  
     if(!isunicode && font->num_glyphs>0) {
 	/* if the encoding isn't unicode, remap the font
 	   so that the encoding equals the char position, and
