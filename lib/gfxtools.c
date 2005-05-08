@@ -280,6 +280,25 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
     }
 }
 
+gfxline_t * gfxline_clone(gfxline_t*line)
+{
+    gfxline_t*dest = 0;
+    gfxline_t*pos = 0;
+    while(line) {
+	gfxline_t*n = rfx_calloc(sizeof(gfxline_t));
+	*n = *line;
+	n->next = 0;
+	if(!pos) {
+	    dest = pos = n;
+	} else {
+	    pos->next = n;
+	    pos = n;
+	}
+	line = line->next;
+    }
+    return dest;
+}
+
 gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase)
 {
     gfxdrawer_t d;
@@ -468,7 +487,7 @@ void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, doubl
 {
     qspline_t q[128];
     cspline_t c;
-    double maxerror = 0.04;
+    double maxerror = 0.01;
     int t,num;
 
     c.start.x = draw->x;
@@ -480,7 +499,7 @@ void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, doubl
     c.end.x = x;
     c.end.y = y;
     
-    num = approximate3(&c, q, 128, maxerror*maxerror);
+    num = approximate3(&c, q, 128, maxerror);
 
     for(t=0;t<num;t++) {
 	gfxpoint_t mid;
@@ -553,10 +572,37 @@ void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
     }
 }
 
-void gfxline_append(gfxline_t*line1, gfxline_t*line2)
+gfxline_t* gfxline_append(gfxline_t*line1, gfxline_t*line2)
 {
-    while(line1) {
-	line1 = line1->next;
+    gfxline_t*l = line1;;
+    if(!l)
+	return line2;
+    while(l->next) {
+	l = l->next;
     }
-    line1->next = line2;
+    l->next = line2;
+    return line1;
+}
+
+void gfxline_transform(gfxline_t*line, gfxmatrix_t*matrix)
+{
+    while(line) {
+	double x = matrix->m00*line->x + matrix->m10*line->y + matrix->tx;
+	double y = matrix->m01*line->x + matrix->m11*line->y + matrix->ty;
+	line->x = x;
+	line->y = y;
+	if(line->type == gfx_splineTo) {
+	    double sx = matrix->m00*line->sx + matrix->m10*line->sy + matrix->tx;
+	    double sy = matrix->m01*line->sx + matrix->m11*line->sy + matrix->ty;
+	    line->sx = sx;
+	    line->sy = sy;
+	}
+	line = line->next;
+    }
+}
+
+void gfxmatrix_dump(gfxmatrix_t*m, FILE*fi, char*prefix)
+{
+    fprintf(fi, "%f %f | %f\n", m->m00, m->m10, m->tx);
+    fprintf(fi, "%f %f | %f\n", m->m01, m->m11, m->ty);
 }
