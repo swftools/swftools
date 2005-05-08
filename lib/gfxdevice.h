@@ -32,7 +32,6 @@ typedef struct _gfxglyph
 
 typedef struct _gfxfont
 {
-    char*name;
     int num_glyphs;
     int max_unicode;
     gfxglyph_t*glyphs;
@@ -96,8 +95,8 @@ typedef struct _gfxdevice
     void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform); //cxform? tiling?
     void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix); //?
 
-    void (*addfont)(struct _gfxdevice*dev, char*fontid, gfxfont_t*font, gfxmatrix_t*matrix);
-    void (*drawchar)(struct _gfxdevice*dev, char*fontid, int glyph, int x, int y);
+    void (*addfont)(struct _gfxdevice*dev, char*fontid, gfxfont_t*font);
+    void (*drawchar)(struct _gfxdevice*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 
     void (*drawlink)(struct _gfxdevice*dev, int x1, int y1, int x2, int y2, char*action);
     
