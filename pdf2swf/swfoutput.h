@@ -28,7 +28,7 @@
 typedef long int twip;
 
 struct swfmatrix {
-    double m11,m12,m21,m22,m13,m23;
+    double m11,m12,m21,m22,m31,m32;
 };
 
 struct swfcoord {
@@ -66,7 +66,12 @@ void swfoutput_newpage(struct swfoutput*, int pageNum, int movex, int movey, int
 
 void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
 int swfoutput_queryfont(struct swfoutput*, char*fontid);
-int getCharID(SWFFONT *font, int charnr, char *charname, int u);
+
+void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
+
+void swfoutput_gfxaddfont(struct swfoutput*, char*fontid, gfxfont_t*font);
+void swfoutput_gfxdrawchar(struct swfoutput*, char*fontid, int glyph, gfxcolor_t*c, gfxmatrix_t*m);
+
 void swfoutput_setfontmatrix(struct swfoutput*,double,double,double,double);
 int swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr, int u, gfxcolor_t* col);
 
