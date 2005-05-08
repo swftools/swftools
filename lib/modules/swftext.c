@@ -592,7 +592,7 @@ static void font_freename(SWFFONT*f)
     }
 }
 
-int swf_FontReduce(SWFFONT * f)
+int swf_FontReduce_old(SWFFONT * f)
 {
     int i, j;
     int max_unicode = 0;
@@ -633,6 +633,41 @@ int swf_FontReduce(SWFFONT * f)
     font_freeglyphnames(f);
     font_freename(f);
     return j;
+}
+
+int swf_FontReduce(SWFFONT * f)
+{
+    int i;
+    int max_unicode = 0;
+    int max_glyph = 0;
+    if ((!f) || (!f->use) || f->use->is_reduced)
+	return -1;
+
+    for (i = 0; i < f->numchars; i++) {
+	if(!f->use->chars[i]) {
+	    f->glyph2ascii[i] = 0;
+	    if(f->glyph[i].shape) {
+		swf_ShapeFree(f->glyph[i].shape);
+		f->glyph[i].shape = 0;
+		f->glyph[i].advance = 0;
+	    }
+	} else {
+	    max_glyph = i+1;
+	}
+    }
+    for (i = 0; i < f->maxascii; i++) {
+	if(!f->use->chars[f->ascii2glyph[i]]) {
+	    f->ascii2glyph[i] = -1;
+	} else {
+	    max_unicode = i+1;
+	}
+    }
+    f->maxascii = max_unicode;
+    f->numchars = max_glyph;
+    font_freelayout(f);
+    font_freeglyphnames(f);
+    font_freename(f);
+    return 0;
 }
 
 void swf_FontSort(SWFFONT * font)
@@ -741,7 +776,7 @@ int swf_FontUseGlyph(SWFFONT * f, int glyph)
 {
     if (!f->use) 
 	swf_FontInitUsage(f);
-    if(glyph < 0 || glyph > f->numchars)
+    if(glyph < 0 || glyph >= f->numchars)
 	return -1;
     f->use->chars[glyph] = 1;
     return 0;
