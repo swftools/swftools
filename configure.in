@@ -75,9 +75,14 @@ MACOSX=
 case $host_os in
     *darwin* ) 
 	MACOSX=yes
-	CFLAGS="$CFLAGS -fno-rtti"
+	CFLAGS="$CFLAGS"
 	CXXFLAGS="$CXXFLAGS -fno-rtti"
 	SHARED="-bundle"
+	# Use fink packages if available.
+	#if test -d /sw/include && test -d /sw/lib; then
+	#    CPPFLAGS="${CPPFLAGS} -I/sw/include"
+	#    LDFLAGS="${LDFLAGS} -L/sw/lib"
+	#fi
 	;;
 esac
 
