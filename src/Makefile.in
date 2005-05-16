@@ -74,7 +74,7 @@ jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
 swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/librfxswf$(A)
-	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/png.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
 
 install:
