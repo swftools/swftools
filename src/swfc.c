@@ -34,6 +34,7 @@
 #include "../lib/q.h"
 #include "parser.h"
 #include "wav.h"
+#include "../lib/png.h"
 
 //#define DEBUG
 
@@ -1022,12 +1023,7 @@ void s_image(char*name, char*type, char*filename, int quality)
     SRECT r;
     int imageID = id;
     int width, height;
-    if(type=="png") {
-	warning("image type \"png\" not supported yet!");
-	s_box(name, 0, 0, black, 20, 0);
-	return;
-    }
-    if(type=="jpeg") {
+    if(!strcmp(type,"jpeg")) {
 #ifndef HAVE_LIBJPEG
 	warning("no jpeg support compiled in");
 	s_box(name, 0, 0, black, 20, 0);
@@ -1050,6 +1046,31 @@ void s_image(char*name, char*type, char*filename, int quality)
 	s_addimage(name, id, tag, r);
 	incrementid();
 #endif
+    } else if(!strcmp(type,"png")) {
+	RGBA*data = 0;
+	swf_SetU16(tag, imageID);
+
+	getPNG(filename, &width, &height, (unsigned char**)&data);
+
+	if(!data) {
+	    syntaxerror("Image \"%s\" not found, or contains errors", filename);
+	}
+
+	/*tag = swf_AddImage(tag, imageID, data, width, height, quality)*/
+	tag = swf_InsertTag(tag, ST_DEFINEBITSLOSSLESS);
+	swf_SetU16(tag, imageID);
+	swf_SetLosslessImage(tag, data, width, height);
+
+	r.xmin = 0;
+	r.ymin = 0;
+	r.xmax = width*20;
+	r.ymax = height*20;
+	s_addimage(name, id, tag, r);
+	incrementid();
+    } else {
+	warning("image type \"%s\" not supported yet!", type);
+	s_box(name, 0, 0, black, 20, 0);
+	return;
     }
 
     /* step 2: the character */
