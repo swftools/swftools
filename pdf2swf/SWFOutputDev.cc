@@ -90,7 +90,7 @@ static int pagepos = 0;
 
 /* config */
 static double caplinewidth = 3.0;
-static int zoom = 72; /* xpdf: 86 */
+static double zoom = 72; /* xpdf: 86 */
 static int forceType0Fonts = 1;
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
@@ -2210,7 +2210,7 @@ void pdfswf_setparameter(char*name, char*value)
 	caplinewidth = atof(value);
     } else if(!strcmp(name, "zoom")) {
 	char buf[80];
-	zoom = atoi(value);
+	zoom = atof(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
 	swfoutput_setparameter("jpegsubpixels", buf);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
