@@ -237,6 +237,9 @@ public:
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int *maskColors);
   int SWFOutputDev::setGfxFont(char*id, char*filename);
+  void strokeGfxline(GfxState *state, gfxline_t*line);
+  void clipToGfxLine(GfxState *state, gfxline_t*line);
+  void fillGfxLine(GfxState *state, gfxline_t*line);
 
   SWFOutputState states[64];
   int statepos;
@@ -270,8 +273,11 @@ public:
   int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
 
   gfxline_t* current_text_stroke;
+  gfxline_t* current_text_clip;
   char* current_font_id;
   gfxfont_t* current_gfxfont;
+  gfxmatrix_t current_font_matrix;
+
   fontlist_t* fontlist;
 };
 
@@ -356,6 +362,7 @@ SWFOutputDev::SWFOutputDev()
     user_clipx2 = 0;
     user_clipy2 = 0;
     current_text_stroke = 0;
+    current_text_clip = 0;
     fontlist = 0;
     memset(&output, 0, sizeof(output));
 //    printf("SWFOutputDev::SWFOutputDev() \n");
@@ -693,6 +700,13 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
 void SWFOutputDev::stroke(GfxState *state) 
 {
     GfxPath * path = state->getPath();
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
+    strokeGfxline(state, line);
+    gfxline_free(line);
+}
+
+void SWFOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
+{
     int lineCap = state->getLineCap(); // 0=butt, 1=round 2=square
     int lineJoin = state->getLineJoin(); // 0=miter, 1=round 2=bevel
     double miterLimit = state->getMiterLimit();
@@ -720,12 +734,12 @@ void SWFOutputDev::stroke(GfxState *state)
     else if(lineJoin == 1) joinType = gfx_joinRound;
     else if(lineJoin == 2) joinType = gfx_joinBevel;
 
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
-    
     int dashnum = 0;
     double dashphase = 0;
     double * ldash = 0;
     state->getLineDash(&ldash, &dashnum, &dashphase);
+
+    gfxline_t*line2 = 0;
 
     if(dashnum && ldash) {
 	float * dash = (float*)malloc(sizeof(float)*(dashnum+1));
@@ -743,8 +757,7 @@ void SWFOutputDev::stroke(GfxState *state)
 	    dump_outline(line);
 	}
 
-	gfxline_t*line2 = gfxtool_dash_line(line, dash, dashphase);
-	gfxline_free(line);
+	line2 = gfxtool_dash_line(line, dash, dashphase);
 	line = line2;
 	msg("<trace> After dashing:");
     }
@@ -764,41 +777,45 @@ void SWFOutputDev::stroke(GfxState *state)
     }
    
     swfoutput_drawgfxline(&output, line, width, &col, capType, joinType, miterLimit);
-    gfxline_free(line);
+    
+    if(line2)
+	gfxline_free(line2);
 }
-void SWFOutputDev::fill(GfxState *state) 
+
+gfxcolor_t getFillColor(GfxState * state)
 {
-    GfxPath * path = state->getPath();
-    double opaq = state->getFillOpacity();
     GfxRGB rgb;
+    double opaq = state->getFillOpacity();
     state->getFillRGB(&rgb);
     gfxcolor_t col;
     col.r = (unsigned char)(rgb.r*255);
     col.g = (unsigned char)(rgb.g*255);
     col.b = (unsigned char)(rgb.b*255);
     col.a = (unsigned char)(opaq*255);
+    return col;
+}
 
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
+void SWFOutputDev::fillGfxLine(GfxState *state, gfxline_t*line) 
+{
+    gfxcolor_t col = getFillColor(state);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
-
     swfoutput_fillgfxline(&output, line, &col);
+}
+void SWFOutputDev::fill(GfxState *state) 
+{
+    GfxPath * path = state->getPath();
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
+    fillGfxLine(state, line);
     gfxline_free(line);
 }
 void SWFOutputDev::eoFill(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    double opaq = state->getFillOpacity();
-    GfxRGB rgb;
-    state->getFillRGB(&rgb);
-    gfxcolor_t col;
-    col.r = (unsigned char)(rgb.r*255);
-    col.g = (unsigned char)(rgb.g*255);
-    col.b = (unsigned char)(rgb.b*255);
-    col.a = (unsigned char)(opaq*255);
+    gfxcolor_t col = getFillColor(state);
 
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
 
@@ -810,11 +827,17 @@ void SWFOutputDev::eoFill(GfxState *state)
     swfoutput_fillgfxline(&output, line, &col);
     gfxline_free(line);
 }
+
 void SWFOutputDev::clip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
+    clipToGfxLine(state, line);
+    gfxline_free(line);
+}
 
+void SWFOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line) 
+{
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> clip\n");
         dump_outline(line);
@@ -822,7 +845,6 @@ void SWFOutputDev::clip(GfxState *state)
 
     swfoutput_startclip(&output, line);
     states[statepos].clipping++;
-    gfxline_free(line);
 }
 void SWFOutputDev::eoClip(GfxState *state) 
 {
@@ -891,6 +913,12 @@ GBool SWFOutputDev::useGradients()
 char*renderModeDesc[]= {"fill", "stroke", "fill+stroke", "invisible",
                       "clip+fill", "stroke+clip", "fill+stroke+clip", "clip"};
 
+#define RENDER_FILL 0
+#define RENDER_STROKE 1
+#define RENDER_FILLSTROKE 2
+#define RENDER_INVISIBLE 3
+#define RENDER_CLIP 4
+
 static char tmp_printstr[4096];
 char* makeStringPrintable(char*str)
 {
@@ -917,30 +945,75 @@ char* makeStringPrintable(char*str)
     return tmp_printstr;
 }
 
+
+int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
+{
+    int t;
+    if(charname) {
+	for(t=0;t<font->num_glyphs;t++) {
+	    if(font->glyphs[t].name && !strcmp(font->glyphs[t].name,charname)) {
+		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, charname, u, t);
+		return t;
+	    }
+	}
+	/* if we didn't find the character, maybe
+	   we can find the capitalized version */
+	for(t=0;t<font->num_glyphs;t++) {
+	    if(font->glyphs[t].name && !strcasecmp(font->glyphs[t].name,charname)) {
+		msg("<debug> Char [%d,>>%s<<,%d] maps to %d\n", charnr, charname, u, t);
+		return t;
+	    }
+	}
+    }
+
+    /* try to use the unicode id */
+    if(u>=0 && u<font->max_unicode && font->unicode2glyph[u]>=0) {
+	msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->unicode2glyph[u]);
+	return font->unicode2glyph[u];
+    }
+
+    if(charnr>=0 && charnr<font->num_glyphs) {
+	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
+	return charnr;
+    }
+    
+    return -1;
+}
+
+
 void SWFOutputDev::beginString(GfxState *state, GString *s) 
 { 
     int render = state->getRender();
-    msg("<trace> beginString(%s) render=%d", s->getCString(), render);
+    if(current_text_stroke) {
+	msg("<error> Error: Incompatible change of text rendering to %d while inside cliptext", render);
+    }
+
+    msg("<trace> beginString(%s) render=%d", makeStringPrintable(s->getCString()), render);
     double m11,m21,m12,m22;
 //    msg("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
-    swfoutput_setfontmatrix(&output, m11, -m21, m12, -m22);
-    if(render != 3 && render != 0)
-	msg("<warning> Text rendering mode %d (%s) not fully supported yet (for text \"%s\")", render, renderModeDesc[render&7], makeStringPrintable(s->getCString()));
+
+    this->current_font_matrix.m00 = m11 / 1024.0;
+    this->current_font_matrix.m01 = m12 / 1024.0;
+    this->current_font_matrix.m10 = -m21 / 1024.0;
+    this->current_font_matrix.m11 = -m22 / 1024.0;
+    this->current_font_matrix.tx = 0;
+    this->current_font_matrix.ty = 0;
+
+    gfxmatrix_t m = this->current_font_matrix;
+
+    /*if(render != 3 && render != 0)
+	msg("<warning> Text rendering mode %d (%s) not fully supported yet (for text \"%s\")", render, renderModeDesc[render&7], makeStringPrintable(s->getCString()));*/
     states[statepos].textRender = render;
 }
-
-static int textCount = 0;
 
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
 			CharCode c, Unicode *_u, int uLen)
 {
-    textCount++;
-
     int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
     if (render == 3)
@@ -949,14 +1022,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(states[statepos].textRender != render)
 	msg("<error> Internal error: drawChar.render!=beginString.render");
 
-    GfxRGB rgb;
-    double opaq = state->getFillOpacity();
-    state->getFillRGB(&rgb);
-    gfxcolor_t col;
-    col.r = (unsigned char)(rgb.r*255);
-    col.g = (unsigned char)(rgb.g*255);
-    col.b = (unsigned char)(rgb.b*255);
-    col.a = (unsigned char)(opaq*255);
+    gfxcolor_t col = getFillColor(state);
 
     Gushort *CIDToGIDMap = 0;
     GfxFont*font = state->getFont();
@@ -966,10 +1032,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<debug> type3 char at %f/%f", x, y);
 	return;
     }
-    double x1,y1;
-    x1 = x;
-    y1 = y;
-    state->transform(x, y, &x1, &y1);
     
     Unicode u=0;
     char*name=0;
@@ -1009,19 +1071,76 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\" render=%d\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name), render);
     }
 
-    swfoutput_drawchar(&output, x1, y1, name, c, u, &col);
+    int charid = getGfxCharID(current_gfxfont, c, name, u);
+    if(charid<0) {
+	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
+		FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
+	return;
+    }
+
+    gfxmatrix_t m = this->current_font_matrix;
+    state->transform(x, y, &m.tx, &m.ty);
+
+    if(render == RENDER_FILL) {
+	swfoutput_gfxdrawchar(&output, current_font_id, charid, &col, &m);
+    } else {
+	msg("<debug> Drawing glyph %d as shape", charid);
+	gfxline_t*glyph = current_gfxfont->glyphs[charid].line;
+	gfxline_t*tglyph = gfxline_clone(glyph);
+	gfxline_transform(tglyph, &m);
+	if((render&3) != RENDER_INVISIBLE) {
+	    gfxline_t*add = gfxline_clone(tglyph);
+	    current_text_stroke = gfxline_append(current_text_stroke, add);
+	}
+	if(render&RENDER_CLIP) {
+	    gfxline_t*add = gfxline_clone(tglyph);
+	    current_text_clip = gfxline_append(current_text_clip, add);
+	}
+	gfxline_free(tglyph);
+    }
 }
 
 void SWFOutputDev::endString(GfxState *state) 
 { 
-    msg("<trace> endString()");
+    int render = state->getRender();
+    msg("<trace> endString() render=%d textstroke=%08x", render, current_text_stroke);
+    if(states[statepos].textRender != render)
+	msg("<error> Internal error: drawChar.render!=beginString.render");
+    
+    if(current_text_stroke) {
+	/* fillstroke and stroke text rendering objects we can process right
+	   now (as there may be texts of other rendering modes in this
+	   text object)- clipping objects have to wait until endTextObject,
+	   however */
+	if((render&3) == RENDER_FILL) {
+	    fillGfxLine(state, current_text_stroke);
+	    gfxline_free(current_text_stroke);
+	    current_text_stroke = 0;
+	} else if((render&3) == RENDER_FILLSTROKE) {
+	    fillGfxLine(state, current_text_stroke);
+	    strokeGfxline(state, current_text_stroke);
+	    gfxline_free(current_text_stroke);
+	    current_text_stroke = 0;
+	} else if((render&3) == RENDER_STROKE) {
+	    strokeGfxline(state, current_text_stroke);
+	    gfxline_free(current_text_stroke);
+	    current_text_stroke = 0;
+	}
+    }
 }    
 
 void SWFOutputDev::endTextObject(GfxState *state)
 {
-    if(states[statepos].textRender != state->getRender())
+    int render = state->getRender();
+    msg("<trace> endTextObject() render=%d textstroke=%08x clipstroke=%08x", render, current_text_stroke, current_text_clip);
+    if(states[statepos].textRender != render)
 	msg("<error> Internal error: drawChar.render!=beginString.render");
-    msg("<trace> endTextObject()");
+    
+    if(current_text_clip) {
+	clipToGfxLine(state, current_text_clip);
+	gfxline_free(current_text_clip);
+	current_text_clip = 0;
+    }
 }
 
 /* the logic seems to be as following:
@@ -1378,7 +1497,8 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<notice> Collection: %s", c.getCString());
     }*/
 
-    if (font->getType() == fontType1C) {
+    //if (font->getType() == fontType1C) {
+    if (0) { //font->getType() == fontType1C) {
       if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
 	fclose(f);
 	msg("<error> Couldn't read embedded font file");
@@ -1641,6 +1761,7 @@ int SWFOutputDev::setGfxFont(char*id, char*filename)
 	    current_font_id = l->id;
 	    current_gfxfont = l->font;
 	    font = l->font;
+	    swfoutput_gfxaddfont(&this->output, id, current_gfxfont);
 	    return 1;
 	}
 	l = l->next;
@@ -1659,6 +1780,7 @@ int SWFOutputDev::setGfxFont(char*id, char*filename)
     } else {
 	this->fontlist = l;
     }
+    swfoutput_gfxaddfont(&this->output, id, current_gfxfont);
     return 1;
 }
 
@@ -1683,17 +1805,18 @@ void SWFOutputDev::updateFont(GfxState *state)
 	}
     }
 
-    /* second, see if swfoutput already has this font
-       cached- if so, we are done */
-    setGfxFont(fontid, 0);
-    if(swfoutput_queryfont(&output, fontid))
-    {
-	swfoutput_setfont(&output, fontid, 0);
-	
-	msg("<debug> updateFont(%s) [cached]", fontid);
+    /* second, see if this is a font which was used before-
+       if so, we are done */
+    if(setGfxFont(fontid, 0)) {
 	free(fontid);
 	return;
     }
+/*    if(swfoutput_queryfont(&output, fontid))
+	swfoutput_setfont(&output, fontid, 0);
+	
+	msg("<debug> updateFont(%s) [cached]", fontid);
+	return;
+    }*/
 
     // look for Type 3 font
     if (gfxFont->getType() == fontType3) {
@@ -1746,7 +1869,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     msg("<verbose> updateFont(%s) -> %s", fontid, fileName);
     dumpFontInfo("<verbose>", gfxFont);
 
-    swfoutput_setfont(&output, fontid, fileName);
+    //swfoutput_setfont(&output, fontid, fileName);
     
     if(!setGfxFont(fontid, 0)) {
 	setGfxFont(fontid, fileName);
