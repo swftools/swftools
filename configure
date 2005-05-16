@@ -1517,7 +1517,7 @@ if test "${enable_lame+set}" = set; then
 fi;
 
 PACKAGE=swftools
-VERSION=2005-02-27-1544
+VERSION=2005-05-16-1446
 
 
 # ------------------------------------------------------------------
@@ -1651,9 +1651,14 @@ MACOSX=
 case $host_os in
     *darwin* )
 	MACOSX=yes
-	CFLAGS="$CFLAGS -fno-rtti"
+	CFLAGS="$CFLAGS"
 	CXXFLAGS="$CXXFLAGS -fno-rtti"
 	SHARED="-bundle"
+	# Use fink packages if available.
+	#if test -d /sw/include && test -d /sw/lib; then
+	#    CPPFLAGS="${CPPFLAGS} -I/sw/include"
+	#    LDFLAGS="${LDFLAGS} -L/sw/lib"
+	#fi
 	;;
 esac
 
@@ -4816,7 +4821,7 @@ test "x$enable_libtool_lock" != xno && enable_libtool_lock=yes
 case $host in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 4819 "configure"' > conftest.$ac_ext
+  echo '#line 4824 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -5392,7 +5397,7 @@ chmod -w .
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -o out/conftest2.$ac_objext"
 compiler_c_o=no
-if { (eval echo configure:5395: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
+if { (eval echo configure:5400: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
   # The compiler can only warn and ignore the option if not recognized
   # So say no if there are warnings
   if test -s out/conftest.err; then
@@ -6625,7 +6630,7 @@ linux-gnu*)
   libsuff=
   case "$host_cpu" in
   x86_64*)
-    echo '#line 6628 "configure"' > conftest.$ac_ext
+    echo '#line 6633 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7373,7 +7378,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7376 "configure"
+#line 7381 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -7471,7 +7476,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7474 "configure"
+#line 7479 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
