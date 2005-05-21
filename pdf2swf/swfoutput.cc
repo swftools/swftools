@@ -158,6 +158,7 @@ void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
 void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
 void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font);
+void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action);
 
 int getCharID(SWFFONT *font, int charnr, char *charname, int u);
 
@@ -204,6 +205,7 @@ static swfoutput_internal* init_internal_struct()
     i->device.fillgradient = swf_fillgradient;
     i->device.addfont = swf_addfont;
     i->device.drawchar = swf_drawchar;
+    i->device.drawlink = swf_drawlink;
 
     return i;
 };
@@ -2555,6 +2557,38 @@ void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     msg("<error> Gradient filling not implemented yet");
+}
+
+void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput*obj = i->obj;
+
+    endshape(obj);
+    endtext(obj);
+
+    /* shape */
+    int myshapeid = getNewID(obj);
+    RGBA black;
+    black.r = black.g = black.b = black.a = 0;
+    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
+    SHAPE*shape;
+    swf_ShapeNew(&shape);
+    int fsid = swf_ShapeAddSolidFillStyle(shape,&black);
+    swf_SetU16(i->tag, myshapeid);
+    SRECT r = gfxline_getSWFbbox(line);
+    swf_SetRect(i->tag,&r);
+    swf_SetShapeStyles(i->tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(i->tag,shape);
+    swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
+    i->swflastx = i->swflasty = UNDEFINED_COORD;
+    drawgfxline(obj, line);
+    swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(shape);
+
+    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(i->tag,myshapeid,getNewDepth(obj),&i->page_matrix,0,NULL);
 }
 
 static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
