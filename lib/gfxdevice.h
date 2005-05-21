@@ -98,7 +98,7 @@ typedef struct _gfxdevice
     void (*addfont)(struct _gfxdevice*dev, char*fontid, gfxfont_t*font);
     void (*drawchar)(struct _gfxdevice*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 
-    void (*drawlink)(struct _gfxdevice*dev, int x1, int y1, int x2, int y2, char*action);
+    void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, char*action);
     
     void (*endpage)(struct _gfxdevice*dev); //?
     
