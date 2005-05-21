@@ -263,6 +263,8 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     int t, glyphcount;
     int maxcode;
     int fid;
+    U32 offset_start;
+    U32 *offset;
     U8 flags1, flags2, namelen;
     swf_SaveTagPos(tag);
     swf_SetTagPos(tag, 0);
@@ -296,23 +298,34 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     font->glyph = (SWFGLYPH *) rfx_calloc(sizeof(SWFGLYPH) * glyphcount);
     font->glyph2ascii = (U16 *) rfx_calloc(sizeof(U16) * glyphcount);
 
+    offset = rfx_calloc(sizeof(U32)*(glyphcount+1));
+    offset_start = tag->pos;
+
     if (flags1 & 8) {		// wide offsets
 	for (t = 0; t < glyphcount; t++)
-	    swf_GetU32(tag);	//offset[t]
+	    offset[t] = swf_GetU32(tag);	//offset[t]
 
 	if (glyphcount)		/* this _if_ is not in the specs */
-	    swf_GetU32(tag);	// fontcodeoffset
+	    offset[glyphcount] = swf_GetU32(tag);	// fontcodeoffset
+	else
+	    offset[glyphcount] = tag->pos;
     } else {
 	for (t = 0; t < glyphcount; t++)
-	    swf_GetU16(tag);	//offset[t]
+	    offset[t] = swf_GetU16(tag);	//offset[t]
 
 	if (glyphcount)		/* this _if_ is not in the specs */
-	    swf_GetU16(tag);	// fontcodeoffset
+	    offset[glyphcount] = swf_GetU16(tag);	// fontcodeoffset
+	else
+	    offset[glyphcount] = tag->pos;
     }
-    /* TODO: we should use the offset positions, not just
-             blindly read in shapes */
-    for (t = 0; t < glyphcount; t++)
+    for (t = 0; t < glyphcount; t++) {
+	swf_SetTagPos(tag, offset[t]+offset_start);
 	swf_GetSimpleShape(tag, &(font->glyph[t].shape));
+    }
+
+    swf_SetTagPos(tag, offset[glyphcount]+offset_start);
+
+    free(offset);
 
     maxcode = 0;
     for (t = 0; t < glyphcount; t++) {
