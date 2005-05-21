@@ -1234,6 +1234,12 @@ int main(int argn, char *argv[])
 	    combine(&master, slave_name[t], &slave, &newswf);
 	    master = newswf;
 	}
+	if(config.dummy && !config.hassizex && !config.hassizey && !config.mastermovex && !config.mastermovey) {
+	    newswf.movieSize.xmin = newswf.movieSize.xmin*config.masterscalex;
+	    newswf.movieSize.ymin = newswf.movieSize.ymin*config.masterscaley;
+	    newswf.movieSize.xmax = newswf.movieSize.xmax*config.masterscalex;
+	    newswf.movieSize.ymax = newswf.movieSize.ymax*config.masterscaley;
+	}
     }
 
     fi = open(outputname, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
