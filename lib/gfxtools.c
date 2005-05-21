@@ -411,7 +411,7 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
 	    test.control.y += test.end.y;
 	}
 
-#define PROBES
+//#define PROBES
 #ifdef PROBES
 	/* measure the spline's accurancy, by taking a number of probes */
 	for(t=0;t<probes;t++) {
@@ -444,16 +444,21 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
 
 	/* convert control point representation to 
 	   d*x^3 + c*x^2 + b*x + a */
-
-	/* FIXME: we need to do this for the subspline between [start,end],
-	   not [0,1] */
 	dx= s->end.x  - s->control2.x*3 + s->control1.x*3 - s->start.x;
 	dy= s->end.y  - s->control2.y*3 + s->control1.y*3 - s->start.y;
 	
+	/* we need to do this for the subspline between [start,end], not [0,1] 
+	   as a transformation of t->a*t+b does nothing to highest coefficient
+	   of the spline except multiply it with a^3, we just need to modify
+	   d here. */
+	{double m = end-start;
+	 dx*=m*m*m;
+	 dy*=m*m*m;
+	}
+	
 	/* use the integral over (f(x)-g(x))^2 between 0 and 1
 	   to measure the approximation quality. 
-	   (it boils down to const*d^2)
-	 */
+	   (it boils down to const*d^2) */
 	recurse = (dx*dx + dy*dy > quality2);
 #endif
 
