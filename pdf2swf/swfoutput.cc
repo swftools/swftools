@@ -524,10 +524,11 @@ static SRECT getcharacterbbox(struct swfoutput*obj, SWFFONT*font)
 	b.ymin *= i->chardata[t].size;
 	b.xmax *= i->chardata[t].size;
 	b.ymax *= i->chardata[t].size;
-	b.xmin /= 1024;
-	b.ymin /= 1024;
-	b.xmax /= 1024;
-	b.ymax /= 1024;
+
+	/* divide by 1024, rounding up */
+	b.xmin += 1023; b.ymin += 1023; b.xmax += 1023; b.ymax += 1023;
+	b.xmin /= 1024; b.ymin /= 1024; b.xmax /= 1024; b.ymax /= 1024;
+
 	b.xmin += i->chardata[t].x;
 	b.ymin += i->chardata[t].y;
 	b.xmax += i->chardata[t].x;
@@ -2641,6 +2642,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	}
 	draw.finish(&draw);
 	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
+	swffont->layout->bounds[t] = swf_ShapeDrawerGetBBox(&draw);
 	draw.dealloc(&draw);
     }
     return swffont;
