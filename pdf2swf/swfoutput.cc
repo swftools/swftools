@@ -525,9 +525,8 @@ static SRECT getcharacterbbox(struct swfoutput*obj, SWFFONT*font)
 	b.xmax *= i->chardata[t].size;
 	b.ymax *= i->chardata[t].size;
 
-	/* divide by 1024, rounding up */
-	b.xmin += 1023; b.ymin += 1023; b.xmax += 1023; b.ymax += 1023;
-	b.xmin /= 1024; b.ymin /= 1024; b.xmax /= 1024; b.ymax /= 1024;
+	/* divide by 1024, rounding xmax/ymax up */
+	b.xmax += 1023; b.ymax += 1023; b.xmin /= 1024; b.ymin /= 1024; b.xmax /= 1024; b.ymax /= 1024;
 
 	b.xmin += i->chardata[t].x;
 	b.ymin += i->chardata[t].y;
