@@ -51,7 +51,6 @@ struct rle_params
 extern struct huffcode mcbpc_intra[];
 extern struct mcbpc_intra_params mcbpc_intra_params[];
 extern struct mcbpc_inter_params mcbpc_inter_params[];
-extern struct mvd_params mvd_params[];
 extern struct rle_params rle_params[];
 
 extern struct huffcode mcbpc_inter[];
