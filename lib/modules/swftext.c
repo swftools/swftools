@@ -431,6 +431,8 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 		color.b = swf_GetU8(t);
 		if (swf_GetTagID(t) == ST_DEFINETEXT2)
 		    color.a = swf_GetU8(t);
+		else
+		    color.a = 255;
 	    }
 	    if (flags & TF_HASXOFFSET)
 		x = swf_GetS16(t);
