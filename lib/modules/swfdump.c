@@ -86,15 +86,15 @@ void swf_DumpShape(SHAPE2*shape2)
     while(l) {
 	if(l->type == moveTo) {
 	    //printf("fill %d/%d line %d\n", l->fillstyle0, l->fillstyle1, l->linestyle);
-	    printf("moveTo %.2f,%.2f\n", l->x/20.0, l->y/20.0);
+	    printf("moveTo %.2f,%.2f (fill0:%d fill1:%d line:%d)\n", l->x/20.0, l->y/20.0, l->fillstyle0, l->fillstyle1, l->linestyle);
 	}
 	if(l->type == lineTo) {
 	    //printf("fill %d/%d line %d\n", l->fillstyle0,  l->fillstyle1, l->linestyle);
-	    printf("lineTo %.2f,%.2f\n", l->x/20.0, l->y/20.0);
+	    printf("lineTo %.2f,%.2f (fill0:%d fill1:%d line:%d)\n", l->x/20.0, l->y/20.0, l->fillstyle0, l->fillstyle1, l->linestyle);
 	}
 	if(l->type == splineTo) {
 	    //printf("fill %d/%d line %d\n", l->fillstyle0, l->fillstyle1, l->linestyle);
-	    printf("splineTo %.2f,%.2f %.2f,%.2f\n", l->sx/20.0, l->sy/20.0, l->x/20.0, l->y/20.0);
+	    printf("splineTo %.2f,%.2f %.2f,%.2f (fill0:%d fill1:%d line:%d)\n", l->sx/20.0, l->sy/20.0, l->x/20.0, l->y/20.0, l->fillstyle0, l->fillstyle1, l->linestyle);
 	}
 	l = l->next;
     }
