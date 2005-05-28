@@ -116,7 +116,7 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
     double ny1, ny2, stepx;
 /*    if(DEBUG&4) {
         int l = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
-        printf(" l[%d - %.2f/%.2f -> %.2f/%.2f]", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
+        printf(" l[%d - %.2f/%.2f -> %.2f/%.2f]\n", l, x1/20.0, y1/20.0, x2/20.0, y2/20.0);
     }*/
     assert(p->shapeline);
 
@@ -509,6 +509,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
 
 static RGBA color_red = {255,255,0,0};
 static RGBA color_white = {255,255,255,255};
+static RGBA color_black = {255,0,0,0};
 
 static void fill_clip(RGBA*line, int*z, int y, int x1, int x2, U32 depth)
 {
@@ -907,12 +908,18 @@ RGBA* swf_Render(RENDERBUF*dest)
 
 typedef struct
 {
+    int numchars;
+    SHAPE2**glyphs;
+} font_t;
+
+typedef struct
+{
     TAG*tag;
     SRECT*bbox;
     enum {none_type, shape_type, image_type, text_type, font_type} type;
     union {
         SHAPE2*shape;
-        SWFFONT*font;
+        font_t*font;
     } obj;
 } character_t;
 
@@ -953,6 +960,58 @@ int compare_placements(const void *v1, const void *v2)
 		return (int)p1->depth - (int)p2->depth;
 	}
     }*/
+}
+
+typedef struct textcallbackblock
+{
+    character_t*idtable;
+    U16 depth;
+    U16 clipdepth;
+    CXFORM* cxform;
+    MATRIX m;
+    RENDERBUF*buf;
+} textcallbackblock_t;
+
+static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, 
+		    int xstart, int ystart, RGBA* color)
+{
+    textcallbackblock_t * info = (textcallbackblock_t*)self;
+    font_t*font = 0;
+    int t;
+    if(!info->idtable[fontid].obj.font) {
+	fprintf(stderr, "Font %d unknown\n", fontid);
+	return;
+    } else {
+	font  = info->idtable[fontid].obj.font;
+    }
+    for(t=0;t<nr;t++) {
+	int x = xstart + xpos[t];
+	int y = ystart;
+	MATRIX m = info->m;
+	SPOINT p;
+	
+	p.x = x; p.y = y; 
+	p = swf_TurnPoint(p, &m);
+	
+	m.sx = (m.sx * fontsize) / 1024;
+	m.sy = (m.sy * fontsize) / 1024;
+	m.r0 = (m.r0 * fontsize) / 1024;
+	m.r1 = (m.r1 * fontsize) / 1024;
+	m.tx += p.x;
+	m.ty += p.y;
+
+	if(chars[t]<0 || chars[t]>= font->numchars) {
+	    fprintf(stderr, "Character out of range: %d\n", chars[t]);
+	} else {
+	    SHAPE2*shape = font->glyphs[chars[t]];
+	    shape->fillstyles[0].color = *color; //q&d
+	    printf("Rendering char %d (size %d, x:%d, y:%d) color:%02x%02x%02x%02x\n", chars[t], fontsize, x, y,
+		    color->a, color->r, color->g, color->b);
+	    swf_DumpMatrix(stdout, &m);
+	    swf_DumpShape(shape);
+	    swf_RenderShape(info->buf, shape, &m, info->cxform, info->depth, info->clipdepth);
+	}
+    }
 }
 
 void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
@@ -1004,8 +1063,23 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 		free(data);
             } else if(tag->id == ST_DEFINEFONT ||
                       tag->id == ST_DEFINEFONT2) {
-                //swf_FontExtract(swf,id,&idtable[id].font);
-                idtable[id].obj.font = 0;
+		int t;
+		SWFFONT*swffont;
+		font_t*font = rfx_calloc(sizeof(font_t));
+		idtable[id].obj.font = font;
+                swf_FontExtract(swf,id,&swffont);
+		font->numchars = swffont->numchars;
+		font->glyphs = rfx_calloc(sizeof(SHAPE2*)*font->numchars);
+		for(t=0;t<font->numchars;t++) {
+		    if(!swffont->glyph[t].shape->fillstyle.n) {
+			/* the actual fill color will be overwritten while rendering */
+			swf_ShapeAddSolidFillStyle(swffont->glyph[t].shape, &color_white);
+		    }
+		    font->glyphs[t] = swf_ShapeToShape2(swffont->glyph[t].shape);
+		}
+		swf_FontFree(swffont);
+                idtable[id].type = font_type;
+
             } else if(tag->id == ST_DEFINEFONTINFO ||
                       tag->id == ST_DEFINEFONTINFO2) {
                 idtable[id].type = font_type;
@@ -1036,10 +1110,30 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
         }
 
         if(idtable[id].type == shape_type) {
-            SRECT sbbox = swf_TurnRect(*idtable[id].bbox, &p->matrix);
+            //SRECT sbbox = swf_TurnRect(*idtable[id].bbox, &p->matrix);
             swf_RenderShape(buf, idtable[id].obj.shape, &p->matrix, &p->cxform, p->depth, p->clipdepth);
         } else if(idtable[id].type == text_type) {
-	    /* TODO */
+	    TAG* tag = idtable[id].tag;
+	    textcallbackblock_t info;
+	    MATRIX m;
+
+	    swf_SetTagPos(tag, 0);
+	    swf_GetU16(tag);
+	    swf_GetRect(tag,0);
+  	    swf_GetMatrix(tag,&m);
+	    swf_MatrixJoin(&info.m, &m, &p->matrix);
+	    /*printf("Text matrix:\n");
+	    swf_DumpMatrix(stdout, &m);
+	    printf("Placement matrix:\n");
+	    swf_DumpMatrix(stdout, &p->matrix);*/
+
+	    info.idtable = idtable;
+	    info.depth = p->depth;
+	    info.cxform = &p->cxform;
+	    info.clipdepth = p->clipdepth;
+	    info.buf = buf;
+	    
+	    swf_ParseDefineText(tag, textcallback, &info);
         } else {
             fprintf(stderr, "Unknown/Unsupported Object Type for id %d: %s\n", id, swf_TagGetName(idtable[id].tag));
         }
@@ -1057,7 +1151,22 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
                 swf_Shape2Free(shape); // FIXME
                 free(idtable[t].obj.shape);idtable[t].obj.shape = 0;
             }
-        }
+        } else if(idtable[t].type == font_type) {
+	    font_t* font = idtable[t].obj.font;
+	    if(font) {
+		if(font->glyphs) {
+		    int t;
+		    for(t=0;t<font->numchars;t++) {
+			swf_Shape2Free(font->glyphs[t]);
+			free(font->glyphs[t]); font->glyphs[t] = 0;
+		    }
+		    free(font->glyphs);
+		    font->glyphs = 0;
+		}
+		free(idtable[t].obj.font); idtable[t].obj.font = 0;
+		font = 0;
+	    }
+	}
     }
     free(placements);
     free(idtable);
