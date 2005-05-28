@@ -22,79 +22,15 @@
 #ifndef __swfoutput_h__
 #define __swfoutput_h__
 
-#include "../lib/rfxswf.h"
 #include "../lib/gfxdevice.h"
 
-typedef long int twip;
+void gfxdevice_swf_init(gfxdevice_t*);
 
-struct swfmatrix {
-    double m11,m12,m21,m22,m31,m32;
-};
+void* gfxdevice_swf_get(gfxdevice_t*);
+int gfxdevice_swf_save(gfxdevice_t*, char*filename);
 
-struct swfcoord {
-    twip x;
-    twip y;
-};
-
-struct swfoutput 
-{
-    MATRIX fontmatrix;
-    double fontm11,fontm12,fontm21,fontm22;
-    SWFFONT *swffont;
-    RGBA strokergb;
-    RGBA fillrgb;
-    int drawmode;
-    int x1,y1,x2,y2;
-    void*internal;
-};
-
-#define DRAWMODE_STROKE 1
-#define DRAWMODE_FILL 2
-#define DRAWMODE_EOFILL 3
-#define DRAWMODE_CLIP 4
-#define DRAWMODE_EOCLIP 5
-
-void swfoutput_setparameter(char*name, char*value);
-
-void swfoutput_init(struct swfoutput*);
-int swfoutput_save(struct swfoutput*, char*filename);
-SWF* swfoutput_get(struct swfoutput*);
-void swfoutput_getdimensions(struct swfoutput*, int*x1, int*y1, int*x2, int*y2);
-    
-void swfoutput_pagefeed(struct swfoutput*obj);
-void swfoutput_newpage(struct swfoutput*, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2);
-
-void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
-int swfoutput_queryfont(struct swfoutput*, char*fontid);
-
-void swfoutput_setfont(struct swfoutput*, char*fontid, char*filename);
-
-void swfoutput_gfxaddfont(struct swfoutput*, char*fontid, gfxfont_t*font);
-void swfoutput_gfxdrawchar(struct swfoutput*, char*fontid, int glyph, gfxcolor_t*c, gfxmatrix_t*m);
-
-void swfoutput_setfontmatrix(struct swfoutput*,double,double,double,double);
-int swfoutput_drawchar(struct swfoutput*,double x,double y,char*a, int charnr, int u, gfxcolor_t* col);
-
-void swfoutput_drawgfxline(struct swfoutput*, gfxline_t*line, gfxcoord_t width, gfxcolor_t*col, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
-void swfoutput_fillgfxline(struct swfoutput*, gfxline_t*line, gfxcolor_t*col);
-void swfoutput_startclip(struct swfoutput*, gfxline_t*line);
-void swfoutput_endclip(struct swfoutput*);
-
-void swfoutput_drawimagejpeg(struct swfoutput*, RGBA*pic, int sizex,int sizey, 
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4);
-void swfoutput_drawimagelossless(struct swfoutput*, RGBA*pic, int sizex, int sizey,
-	double x1,double y1,
-	double x2,double y2,
-	double x3,double y3,
-	double x4,double y4);
-
-void swfoutput_linktopage(struct swfoutput*, int page, swfcoord*points);
-void swfoutput_linktourl(struct swfoutput*, char*url, swfcoord*points);
-void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points);
-
-void swfoutput_destroy(struct swfoutput*);
+void swfoutput_pagefeed(gfxdevice_t*obj);
+void swfoutput_newpage(gfxdevice_t*, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2);
+void gfxdevice_swf_getdimensions(gfxdevice_t*, int*x1, int*y1, int*x2, int*y2);
 
 #endif //__swfoutput_h__

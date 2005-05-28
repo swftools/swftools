@@ -59,28 +59,34 @@ struct fontlist_t
     fontlist_t*next;
 };
 
-double config_dumpfonts=0;
-double config_ppmsubpixels=0;
-double config_jpegsubpixels=0;
-int config_opennewwindow=1;
-int config_ignoredraworder=0;
-int config_drawonlyshapes=0;
-int config_jpegquality=85;
-int config_storeallcharacters=0;
-int config_enablezlib=0;
-int config_insertstoptag=0;
-int config_flashversion=5;
-int config_splinemaxerror=1;
-int config_fontsplinemaxerror=1;
-int config_filloverlap=0;
-int config_protect=0;
-int config_bboxvars=0;
-float config_minlinewidth=0.05;
-double config_caplinewidth=1;
+typedef long int twip;
+
+struct swfmatrix {
+    double m11,m12,m21,m22,m31,m32;
+};
 
 typedef struct _swfoutput_internal
 {
-    swfoutput*obj; // the swfoutput object where this internal struct resides
+    gfxdevice_t*dev; // the gfxdevice object where this internal struct resides
+
+    double config_dumpfonts;
+    double config_ppmsubpixels;
+    double config_jpegsubpixels;
+    int config_opennewwindow;
+    int config_ignoredraworder;
+    int config_drawonlyshapes;
+    int config_jpegquality;
+    int config_storeallcharacters;
+    int config_enablezlib;
+    int config_insertstoptag;
+    int config_flashversion;
+    int config_splinemaxerror;
+    int config_fontsplinemaxerror;
+    int config_filloverlap;
+    int config_protect;
+    int config_bboxvars;
+    float config_minlinewidth;
+    double config_caplinewidth;
 
     SWF swf;
 
@@ -141,24 +147,29 @@ typedef struct _swfoutput_internal
 
     char overflow;
 
-    /* during the transition to the gfxdevice interface:
-       a device which uses this swfoutput as target */
-    gfxdevice_t device;
+    MATRIX fontmatrix;
+    double fontm11,fontm12,fontm21,fontm22;
+    SWFFONT *swffont;
+    RGBA strokergb;
+    RGBA fillrgb;
+    int drawmode;
+    int x1,y1,x2,y2;
 
 } swfoutput_internal;
     
-void swf_fillbitmap(gfxdevice_t*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
-int  swf_setparameter(gfxdevice_t*driver, const char*key, const char*value);
-void swf_drawstroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
-void swf_startclip(gfxdevice_t*dev, gfxline_t*line);
-void swf_endclip(gfxdevice_t*dev);
-void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
-void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
-void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
-void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
-void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
-void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font);
-void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action);
+static void* swf_finish(gfxdevice_t*driver);
+static void swf_fillbitmap(gfxdevice_t*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
+static int  swf_setparameter(gfxdevice_t*driver, const char*key, const char*value);
+static void swf_drawstroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
+static void swf_startclip(gfxdevice_t*dev, gfxline_t*line);
+static void swf_endclip(gfxdevice_t*dev);
+static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
+static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
+static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
+static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
+static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+static void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font);
+static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action);
 
 int getCharID(SWFFONT *font, int charnr, char *charname, int u);
 
@@ -194,27 +205,33 @@ static swfoutput_internal* init_internal_struct()
     i->firstpage = 1;
     i->pagefinished = 1;
 
-    i->device.internal = (void*)i;
-    i->device.fillbitmap = swf_fillbitmap;
-    i->device.setparameter = swf_setparameter;
-    i->device.stroke = swf_stroke;
-    i->device.startclip = swf_startclip;
-    i->device.endclip = swf_endclip;
-    i->device.fill = swf_fill;
-    i->device.fillbitmap = swf_fillbitmap;
-    i->device.fillgradient = swf_fillgradient;
-    i->device.addfont = swf_addfont;
-    i->device.drawchar = swf_drawchar;
-    i->device.drawlink = swf_drawlink;
+    i->config_dumpfonts=0;
+    i->config_ppmsubpixels=0;
+    i->config_jpegsubpixels=0;
+    i->config_opennewwindow=1;
+    i->config_ignoredraworder=0;
+    i->config_drawonlyshapes=0;
+    i->config_jpegquality=85;
+    i->config_storeallcharacters=0;
+    i->config_enablezlib=0;
+    i->config_insertstoptag=0;
+    i->config_flashversion=5;
+    i->config_splinemaxerror=1;
+    i->config_fontsplinemaxerror=1;
+    i->config_filloverlap=0;
+    i->config_protect=0;
+    i->config_bboxvars=0;
+    i->config_minlinewidth=0.05;
+    i->config_caplinewidth=1;
 
     return i;
 };
 
 static int id_error = 0;
 
-static U16 getNewID(struct swfoutput* obj)
+static U16 getNewID(gfxdevice_t* dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->currentswfid == 65535) {
 	if(!id_error)
 	    msg("<error> ID Table overflow");
@@ -223,9 +240,9 @@ static U16 getNewID(struct swfoutput* obj)
     }
     return ++i->currentswfid;
 }
-static U16 getNewDepth(struct swfoutput* obj)
+static U16 getNewDepth(gfxdevice_t* dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->depth == 65535) {
 	if(!id_error)
 	    msg("<error> Depth Table overflow");
@@ -235,10 +252,10 @@ static U16 getNewDepth(struct swfoutput* obj)
     return ++i->depth;
 }
 
-static void startshape(struct swfoutput* obj);
-static void starttext(struct swfoutput* obj);
-static void endshape(struct swfoutput* obj);
-static void endtext(struct swfoutput* obj);
+static void startshape(gfxdevice_t* dev);
+static void starttext(gfxdevice_t* dev);
+static void endshape(gfxdevice_t* dev);
+static void endtext(gfxdevice_t* dev);
 
 // matrix multiplication. changes p0
 static void transform (plotxy*p0,struct swfmatrix*m)
@@ -251,9 +268,9 @@ static void transform (plotxy*p0,struct swfmatrix*m)
 }
 
 // write a move-to command into the swf
-static int moveto(struct swfoutput*obj, TAG*tag, plotxy p0)
+static int moveto(gfxdevice_t*dev, TAG*tag, plotxy p0)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     int rx = (int)(p0.x*20);
     int ry = (int)(p0.y*20);
     if(rx!=i->swflastx || ry!=i->swflasty || i->fillstylechanged) {
@@ -265,17 +282,17 @@ static int moveto(struct swfoutput*obj, TAG*tag, plotxy p0)
     }
     return 0;
 }
-static int moveto(struct swfoutput*obj, TAG*tag, double  x, double y)
+static int moveto(gfxdevice_t*dev, TAG*tag, double  x, double y)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     plotxy p;
     p.x = x;
     p.y = y;
-    return moveto(obj, tag, p);
+    return moveto(dev, tag, p);
 }
-static void addPointToBBox(struct swfoutput*obj, int px, int py) 
+static void addPointToBBox(gfxdevice_t*dev, int px, int py) 
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
     SPOINT p;
     p.x = px;
@@ -287,9 +304,9 @@ static void addPointToBBox(struct swfoutput*obj, int px, int py)
     }
 }
 
-/*static void plot(struct swfoutput*obj, int x, int y, TAG*tag)
+/*static void plot(gfxdevice_t*dev, int x, int y, TAG*tag)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     int width = i->linewidth/4;
     if(width > 5)
 	width = 5;
@@ -309,44 +326,44 @@ static void addPointToBBox(struct swfoutput*obj, int px, int py)
     swf_ShapeSetLine(tag, i->shape,-width,-width);
     swf_ShapeSetLine(tag, i->shape,width,0);
 
-    addPointToBBox(obj, x-width ,y-width);
-    addPointToBBox(obj, x+width ,y+width);
+    addPointToBBox(dev, x-width ,y-width);
+    addPointToBBox(dev, x+width ,y+width);
 }*/
 
 // write a line-to command into the swf
-static void lineto(struct swfoutput*obj, TAG*tag, plotxy p0)
+static void lineto(gfxdevice_t*dev, TAG*tag, plotxy p0)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     int px = (int)(p0.x*20);
     int py = (int)(p0.y*20);
     int rx = (px-i->swflastx);
     int ry = (py-i->swflasty);
     if(rx|ry) {
 	swf_ShapeSetLine (tag, i->shape, rx,ry);
-	addPointToBBox(obj, i->swflastx,i->swflasty);
-	addPointToBBox(obj, px,py);
+	addPointToBBox(dev, i->swflastx,i->swflasty);
+	addPointToBBox(dev, px,py);
     }/* else if(!i->fill) {
        // treat lines of length 0 as plots, making them
        // at least 1 twip wide so Flash will display them
-	plot(obj, i->swflastx, i->swflasty, tag);
+	plot(dev, i->swflastx, i->swflasty, tag);
     }*/
 
     i->shapeisempty = 0;
     i->swflastx+=rx;
     i->swflasty+=ry;
 }
-static void lineto(struct swfoutput*obj, TAG*tag, double x, double y)
+static void lineto(gfxdevice_t*dev, TAG*tag, double x, double y)
 {
     plotxy p;
     p.x = x;
     p.y = y;
-    lineto(obj,tag, p);
+    lineto(dev,tag, p);
 }
 
 // write a spline-to command into the swf
-static void splineto(struct swfoutput*obj, TAG*tag, plotxy control,plotxy end)
+static void splineto(gfxdevice_t*dev, TAG*tag, plotxy control,plotxy end)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     int lastlastx = i->swflastx;
     int lastlasty = i->swflasty;
 
@@ -361,34 +378,34 @@ static void splineto(struct swfoutput*obj, TAG*tag, plotxy control,plotxy end)
     
     if(cx || cy || ex || ey) {
 	swf_ShapeSetCurve(tag, i->shape, cx,cy,ex,ey);
-	addPointToBBox(obj, lastlastx   ,lastlasty   );
-	addPointToBBox(obj, lastlastx+cx,lastlasty+cy);
-	addPointToBBox(obj, lastlastx+cx+ex,lastlasty+cy+ey);
+	addPointToBBox(dev, lastlastx   ,lastlasty   );
+	addPointToBBox(dev, lastlastx+cx,lastlasty+cy);
+	addPointToBBox(dev, lastlastx+cx+ex,lastlasty+cy+ey);
     }/* else if(!i->fill) {
 	// treat splines of length 0 as plots
-	plot(obj, lastlastx, lastlasty, tag);
+	plot(dev, lastlastx, lastlasty, tag);
     }*/
     i->shapeisempty = 0;
 }
 
 /* write a line, given two points and the transformation
    matrix. */
-/*static void line(struct swfoutput*obj, TAG*tag, plotxy p0, plotxy p1)
+/*static void line(gfxdevice_t*dev, TAG*tag, plotxy p0, plotxy p1)
 {
-    moveto(obj, tag, p0);
-    lineto(obj, tag, p1);
+    moveto(dev, tag, p0);
+    lineto(dev, tag, p1);
 }*/
 
-void resetdrawer(struct swfoutput*obj)
+void resetdrawer(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     i->swflastx = 0;
     i->swflasty = 0;
 }
 
-static void stopFill(struct swfoutput*obj)
+static void stopFill(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->lastwasfill)
     {
 	swf_ShapeSetStyle(i->tag,i->shape,i->linestyleid,0x8000,0);
@@ -396,9 +413,9 @@ static void stopFill(struct swfoutput*obj)
 	i->lastwasfill = 0;
     }
 }
-static void startFill(struct swfoutput*obj)
+static void startFill(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!i->lastwasfill)
     {
 	swf_ShapeSetStyle(i->tag,i->shape,0x8000,i->fillstyleid,0);
@@ -409,9 +426,9 @@ static void startFill(struct swfoutput*obj)
 
 /* draw an outline. These are generated by pdf2swf and by t1lib
    (representing characters). */
-/*void drawpath(struct swfoutput*obj, SWF_OUTLINE*outline, struct swfmatrix*m, int log)
+/*void drawpath(gfxdevice_t*dev, SWF_OUTLINE*outline, struct swfmatrix*m, int log)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if( i->tag->id != ST_DEFINESHAPE &&
         i->tag->id != ST_DEFINESHAPE2 &&
         i->tag->id != ST_DEFINESHAPE3)
@@ -430,16 +447,16 @@ static void startFill(struct swfoutput*obj)
         y += (outline->dest.y/(float)0xffff);
         if(outline->type == SWF_PATHTYPE_MOVE)
         {
-	    //if(!init && fill && obj->drawmode != DRAWMODE_EOFILL && !ignoredraworder)
-	    if(config_filloverlap && !init && i->fill && obj->drawmode != DRAWMODE_EOFILL) {
+	    //if(!init && fill && dev->drawmode != DRAWMODE_EOFILL && !ignoredraworder)
+	    if(i->config_filloverlap && !init && i->fill && dev->drawmode != DRAWMODE_EOFILL) {
 		// drawmode=FILL (not EOFILL) means that
 		// seperate shapes do not cancel each other out.
 		// On SWF side, we need to start a new shape for each
 		// closed polygon, because SWF only knows EOFILL.
 		//
-		endshape(obj);
-		startshape(obj);
-		startFill(obj);
+		endshape(dev);
+		startshape(dev);
+		startFill(dev);
 	    }
 
             if(((int)(lastx*20) != (int)(firstx*20) ||
@@ -453,7 +470,7 @@ static void startFill(struct swfoutput*obj)
                 p1.x=firstx;
                 p1.y=firsty;
                 if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
-                line(obj,i->tag, p0, p1);
+                line(dev,i->tag, p0, p1);
             }
             firstx=x;
             firsty=y;
@@ -468,7 +485,7 @@ static void startFill(struct swfoutput*obj)
             p1.x=x;
             p1.y=y;
             if(log) printf("line: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
-            line(obj,i->tag, p0,p1);
+            line(dev,i->tag, p0,p1);
         }
         else {
 	    msg("<error> drawpath: unknown outline type:%d\n", outline->type);
@@ -488,11 +505,11 @@ static void startFill(struct swfoutput*obj)
         p1.x=firstx;
         p1.y=firsty;
         if(log) printf("fix: %f,%f -> %f,%f\n",p0.x,p0.y,p1.x,p1.y);
-        line(obj, i->tag, p0, p1);
+        line(dev, i->tag, p0, p1);
     }
 }*/
 
-static inline int colorcompare(struct swfoutput*obj, RGBA*a,RGBA*b)
+static inline int colorcompare(gfxdevice_t*dev, RGBA*a,RGBA*b)
 {
 
     if(a->r!=b->r ||
@@ -504,9 +521,9 @@ static inline int colorcompare(struct swfoutput*obj, RGBA*a,RGBA*b)
     return 1;
 }
 
-static SRECT getcharacterbbox(struct swfoutput*obj, SWFFONT*font)
+static SRECT getcharacterbbox(gfxdevice_t*dev, SWFFONT*font)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     SRECT r;
     char debug = 0;
     memset(&r, 0, sizeof(r));
@@ -563,9 +580,9 @@ static SRECT getcharacterbbox(struct swfoutput*obj, SWFFONT*font)
     return r;
 }
 
-static void putcharacters(struct swfoutput*obj, TAG*tag)
+static void putcharacters(gfxdevice_t*dev, TAG*tag)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     int t;
     SWFFONT font;
     RGBA color;
@@ -613,7 +630,7 @@ static void putcharacters(struct swfoutput*obj, TAG*tag)
             if(lastfontid != i->chardata[t].fontid || 
                     lastx!=i->chardata[t].x ||
                     lasty!=i->chardata[t].y ||
-                    !colorcompare(obj,&color, &i->chardata[t].color) ||
+                    !colorcompare(dev,&color, &i->chardata[t].color) ||
                     charstorepos==127 ||
                     lastsize != i->chardata[t].size ||
                     t == i->chardatapos)
@@ -659,7 +676,7 @@ static void putcharacters(struct swfoutput*obj, TAG*tag)
 			if(newy == 0)
 			    newy = SET_TO_ZERO;
                     }
-                    if(!colorcompare(obj,&color, &i->chardata[t].color)) 
+                    if(!colorcompare(dev,&color, &i->chardata[t].color)) 
                     {
                         color = i->chardata[t].color;
                         newcolor = &color;
@@ -700,14 +717,14 @@ static void putcharacters(struct swfoutput*obj, TAG*tag)
     i->chardatapos = 0;
 }
 
-static void putcharacter(struct swfoutput*obj, int fontid, int charid, int x,int y, int size, RGBA color)
+static void putcharacter(gfxdevice_t*dev, int fontid, int charid, int x,int y, int size, RGBA color)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->chardatapos == CHARDATAMAX)
     {
 	msg("<warning> Character buffer too small. SWF will be slightly bigger");
-        endtext(obj);
-        starttext(obj);
+        endtext(dev);
+        starttext(dev);
     }
     i->chardata[i->chardatapos].fontid = fontid;
     i->chardata[i->chardatapos].charid = charid;
@@ -727,9 +744,9 @@ static int font_active = 0;
 static char* font_active_filename = 0;
 
 /* process a character. */
-static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m, gfxcolor_t*col)
+static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m, gfxcolor_t*col)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!swffont) {
 	msg("<warning> Font is NULL");
 	return 0;
@@ -760,9 +777,9 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
 
 
     if(i->shapeid>=0)
-	endshape(obj);
+	endshape(dev);
     if(i->textid<0)
-	starttext(obj);
+	starttext(dev);
 
     float x = m->m31;
     float y = m->m32;
@@ -778,7 +795,7 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     p.y = (SCOORD)((- x * m->m21 + y * m->m11)*det);
 
     RGBA rgba = *(RGBA*)col;
-    putcharacter(obj, swffont->id, charid,p.x,p.y,FONT_INTERNAL_SIZE, rgba);
+    putcharacter(dev, swffont->id, charid,p.x,p.y,FONT_INTERNAL_SIZE, rgba);
     swf_FontUseGlyph(swffont, charid);
     return 1;
 
@@ -800,11 +817,11 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
         m2.m22/=100;
 
         if(textid>=0)
-            endtext(obj);
+            endtext(dev);
         if(shapeid<0)
-            startshape(obj);
+            startshape(dev);
 
-	startFill(obj);
+	startFill(dev);
 
         int lf = fill;
         fill = 1;
@@ -813,9 +830,9 @@ static int drawchar(struct swfoutput*obj, SWFFONT *swffont, char*character, int 
     }*/
 }
 
-static void endtext(swfoutput*obj)
+static void endtext(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->textid<0)
         return;
 
@@ -823,7 +840,7 @@ static void endtext(swfoutput*obj)
     swf_SetU16(i->tag, i->textid);
 
     SRECT r;
-    r = getcharacterbbox(obj, obj->swffont);
+    r = getcharacterbbox(dev, i->swffont);
     
     swf_SetRect(i->tag,&r);
 
@@ -833,13 +850,13 @@ static void endtext(swfoutput*obj)
 
     msg("<trace> Placing text (%d characters) as ID %d", i->chardatapos, i->textid);
 
-    putcharacters(obj, i->tag);
+    putcharacters(dev, i->tag);
     swf_SetU8(i->tag,0);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     MATRIX m2;
-    swf_MatrixJoin(&m2,&obj->fontmatrix, &i->page_matrix);
+    swf_MatrixJoin(&m2,&i->fontmatrix, &i->page_matrix);
 
-    swf_ObjectPlace(i->tag,i->textid,getNewDepth(obj),&m2,NULL,NULL);
+    swf_ObjectPlace(i->tag,i->textid,getNewDepth(dev),&m2,NULL,NULL);
     i->textid = -1;
 }
 
@@ -890,9 +907,9 @@ int getCharID(SWFFONT *font, int charnr, char *charname, int u)
 }
 
 /* set's the t1 font index of the font to use for swfoutput_drawchar(). */
-void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
+static void swfoutput_setfont(gfxdevice_t*dev, char*fontid, char*filename)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     font_active = 0;
     fontlist_t*last=0,*iterator;
     if(!fontid) {
@@ -900,17 +917,17 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	return;
     }
 
-    if(obj->swffont && obj->swffont->name && !strcmp((char*)obj->swffont->name,fontid))
+    if(i->swffont && i->swffont->name && !strcmp((char*)i->swffont->name,fontid))
         return;
 
     /* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
              with multiple fonts */
-    endtext(obj);
+    endtext(dev);
 
     iterator = i->fontlist;
     while(iterator) {
         if(!strcmp((char*)iterator->swffont->name,fontid)) {
-	    obj->swffont = iterator->swffont; 
+	    i->swffont = iterator->swffont; 
 	    return;
 	}
         last = iterator;
@@ -925,7 +942,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     swf_SetLoadFontParameters(64,/*skip unused*/0,/*full unicode*/1);
     SWFFONT*swffont = swf_LoadFont(filename);
 
-    if(config_dumpfonts) {
+    if(i->config_dumpfonts) {
 	font_active = 1;
 	font_active_filename = strdup(filename);
     }
@@ -960,7 +977,7 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
 	msg("<warning> Non-unicode mapping for font %s (%s)", fontid, filename);
     }
 
-    swf_FontSetID(swffont, getNewID(obj));
+    swf_FontSetID(swffont, getNewID(dev));
     
     if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
 	// print font information
@@ -1000,12 +1017,12 @@ void swfoutput_setfont(struct swfoutput*obj, char*fontid, char*filename)
     else 
         i->fontlist = iterator;
 
-    obj->swffont = swffont; 
+    i->swffont = swffont; 
 }
 
-int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
+static int swfoutput_queryfont(gfxdevice_t*dev, char*fontid)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     fontlist_t *iterator = i->fontlist;
     while(iterator) {
         if(!strcmp((char*)iterator->swffont->name,fontid))
@@ -1017,68 +1034,68 @@ int swfoutput_queryfont(struct swfoutput*obj, char*fontid)
 
 /* set's the matrix which is to be applied to characters drawn by
    swfoutput_drawchar() */
-void swfoutput_setfontmatrix(struct swfoutput*obj,double m11,double m21,
+static void swfoutput_setfontmatrix(gfxdevice_t*dev,double m11,double m21,
                                                   double m12,double m22)
 {
     m11 *= 1024;
     m12 *= 1024;
     m21 *= 1024;
     m22 *= 1024;
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    if(obj->fontm11 == m11 &&
-       obj->fontm12 == m12 &&
-       obj->fontm21 == m21 &&
-       obj->fontm22 == m22)
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->fontm11 == m11 &&
+       i->fontm12 == m12 &&
+       i->fontm21 == m21 &&
+       i->fontm22 == m22)
         return;
    if(i->textid>=0)
-	endtext(obj);
-    obj->fontm11 = m11;
-    obj->fontm12 = m12;
-    obj->fontm21 = m21;
-    obj->fontm22 = m22;
+	endtext(dev);
+    i->fontm11 = m11;
+    i->fontm12 = m12;
+    i->fontm21 = m21;
+    i->fontm22 = m22;
     
     MATRIX m;
-    m.sx = (U32)(((obj->fontm11)*65536)/FONT_INTERNAL_SIZE); m.r1 = (U32)(((obj->fontm12)*65536)/FONT_INTERNAL_SIZE);
-    m.r0 = (U32)(((obj->fontm21)*65536)/FONT_INTERNAL_SIZE); m.sy = (U32)(((obj->fontm22)*65536)/FONT_INTERNAL_SIZE); 
+    m.sx = (U32)(((i->fontm11)*65536)/FONT_INTERNAL_SIZE); m.r1 = (U32)(((i->fontm12)*65536)/FONT_INTERNAL_SIZE);
+    m.r0 = (U32)(((i->fontm21)*65536)/FONT_INTERNAL_SIZE); m.sy = (U32)(((i->fontm22)*65536)/FONT_INTERNAL_SIZE); 
     m.tx = 0;
     m.ty = 0;
-    obj->fontmatrix = m;
+    i->fontmatrix = m;
 }
 
 /* draws a character at x,y. */
-int swfoutput_drawchar(struct swfoutput* obj,double x,double y,char*character, int charnr, int u, gfxcolor_t* color) 
+int swfoutput_drawchar(gfxdevice_t* dev,double x,double y,char*character, int charnr, int u, gfxcolor_t* color) 
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     swfmatrix m;
-    m.m11 = obj->fontm11;
-    m.m12 = obj->fontm12;
-    m.m21 = obj->fontm21;
-    m.m22 = obj->fontm22;
+    m.m11 = i->fontm11;
+    m.m12 = i->fontm12;
+    m.m21 = i->fontm21;
+    m.m22 = i->fontm22;
     m.m31 = x;
     m.m32 = y;
-    return drawchar(obj, obj->swffont, character, charnr, u, &m, color);
+    return drawchar(dev, i->swffont, character, charnr, u, &m, color);
 }
 
-static void endpage(struct swfoutput*obj)
+static void endpage(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid>=0)
-      endshape(obj);
+      endshape(dev);
     if(i->textid>=0)
-      endtext(obj);
+      endtext(dev);
     while(i->clippos)
-        swfoutput_endclip(obj);
+        dev->endclip(dev);
     i->pagefinished = 1;
 }
 
-void swfoutput_pagefeed(struct swfoutput*obj)
+void swfoutput_pagefeed(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     
     if(!i->pagefinished)
-        endpage(obj);
+        endpage(dev);
 
-    if(config_insertstoptag) {
+    if(i->config_insertstoptag) {
 	ActionTAG*atag=0;
 	atag = action_Stop(atag);
 	atag = action_End(atag);
@@ -1095,15 +1112,15 @@ void swfoutput_pagefeed(struct swfoutput*obj)
     i->depth = i->startdepth;
 }
 
-static void setBackground(struct swfoutput*obj, int x1, int y1, int x2, int y2)
+static void setBackground(gfxdevice_t*dev, int x1, int y1, int x2, int y2)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     RGBA rgb;
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
     SRECT r;
     SHAPE* s;
     int ls1=0,fs1=0;
-    int shapeid = getNewID(obj);
+    int shapeid = getNewID(dev);
     r.xmin = x1;
     r.ymin = y1;
     r.xmax = x2;
@@ -1122,29 +1139,29 @@ static void setBackground(struct swfoutput*obj, int x1, int y1, int x2, int y2)
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(s);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,shapeid,getNewDepth(obj),0,0,0);
+    swf_ObjectPlace(i->tag,shapeid,getNewDepth(dev),0,0,0);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
-    swf_ObjectPlaceClip(i->tag,shapeid,getNewDepth(obj),0,0,0,65535);
+    swf_ObjectPlaceClip(i->tag,shapeid,getNewDepth(dev),0,0,0,65535);
     i->cliptag = i->tag;
 }
 
-void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2)
+void swfoutput_newpage(gfxdevice_t*dev, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!i->firstpage && !i->pagefinished)
-        endpage(obj);
+        endpage(dev);
 
     swf_GetMatrix(0, &i->page_matrix);
     i->page_matrix.tx = movex*20;
     i->page_matrix.ty = movey*20;
 
     if(i->cliptag && i->frameno == i->lastframeno) {
-        SWFPLACEOBJECT obj;
-        swf_GetPlaceObject(i->cliptag, &obj);
-        obj.clipdepth = i->depth;
+        SWFPLACEOBJECT dev;
+        swf_GetPlaceObject(i->cliptag, &dev);
+        dev.clipdepth = i->depth;
         swf_ResetTag(i->cliptag, i->cliptag->id);
-        swf_SetPlaceObject(i->cliptag, &obj);
-        swf_PlaceObjectFree(&obj);
+        swf_SetPlaceObject(i->cliptag, &dev);
+        swf_PlaceObjectFree(&dev);
     }
 
     i->min_x = x1;
@@ -1158,7 +1175,7 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
 
     /* set clipping/background rectangle */
     /* TODO: this should all be done in SWFOutputDev */
-    setBackground(obj, x1, y1, x2, y2);
+    setBackground(dev, x1, y1, x2, y2);
 
     /* increase SWF's bounding box */
     SRECT r;
@@ -1174,24 +1191,39 @@ void swfoutput_newpage(struct swfoutput*obj, int pageNum, int movex, int movey, 
 }
 
 /* initialize the swf writer */
-void swfoutput_init(struct swfoutput* obj)
+void gfxdevice_swf_init(gfxdevice_t* dev)
 {
-    memset(obj, 0, sizeof(struct swfoutput));
-    obj->internal = init_internal_struct();
-    ((swfoutput_internal*)obj->internal)->obj = obj;
+    memset(dev, 0, sizeof(gfxdevice_t));
+    dev->internal = init_internal_struct();
 
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    dev->startpage = 0;
+    dev->endpage = 0;
+    dev->finish = swf_finish;
+    dev->fillbitmap = swf_fillbitmap;
+    dev->setparameter = swf_setparameter;
+    dev->stroke = swf_stroke;
+    dev->startclip = swf_startclip;
+    dev->endclip = swf_endclip;
+    dev->fill = swf_fill;
+    dev->fillbitmap = swf_fillbitmap;
+    dev->fillgradient = swf_fillgradient;
+    dev->addfont = swf_addfont;
+    dev->drawchar = swf_drawchar;
+    dev->drawlink = swf_drawlink;
+
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    i->dev = dev;
 
     SRECT r;
     RGBA rgb;
 
     msg("<verbose> initializing swf output for size %d*%d\n", i->max_x,i->max_y);
 
-    obj->swffont = 0;
+    i->swffont = 0;
     
     memset(&i->swf,0x00,sizeof(SWF));
 
-    i->swf.fileVersion    = config_flashversion;
+    i->swf.fileVersion    = i->config_flashversion;
     i->swf.frameRate      = 0x0040; // 1 frame per 4 seconds
     i->swf.movieSize.xmin = 0;
     i->swf.movieSize.ymin = 0;
@@ -1205,28 +1237,28 @@ void swfoutput_init(struct swfoutput* obj)
 
     i->startdepth = i->depth = 0;
     
-    if(config_protect)
+    if(i->config_protect)
       i->tag = swf_InsertTag(i->tag, ST_PROTECT);
 }
 
-static void startshape(struct swfoutput*obj)
+static void startshape(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     SRECT r;
 
     if(i->shapeid>=0)
 	return;
 
     if(i->textid>=0)
-        endtext(obj);
+        endtext(dev);
 
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
 
     swf_ShapeNew(&i->shape);
-    i->linestyleid = swf_ShapeAddLineStyle(i->shape,i->linewidth,&obj->strokergb);
-    i->fillstyleid = swf_ShapeAddSolidFillStyle(i->shape,&obj->fillrgb);
+    i->linestyleid = swf_ShapeAddLineStyle(i->shape,i->linewidth,&i->strokergb);
+    i->fillstyleid = swf_ShapeAddSolidFillStyle(i->shape,&i->fillrgb);
 
-    i->shapeid = getNewID(obj);
+    i->shapeid = getNewID(dev);
     
     msg("<debug> Using shape id %d", i->shapeid);
 
@@ -1253,22 +1285,22 @@ static void startshape(struct swfoutput*obj)
     i->shapeisempty = 1;
 }
 
-static void starttext(struct swfoutput*obj)
+static void starttext(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid>=0)
-        endshape(obj);
+        endshape(dev);
       
-    i->textid = getNewID(obj);
+    i->textid = getNewID(dev);
 
     i->swflastx=i->swflasty=0;
 }
 	    
 
 /* TODO: move to ../lib/rfxswf */
-void changeRect(struct swfoutput*obj, TAG*tag, int pos, SRECT*newrect)
+void changeRect(gfxdevice_t*dev, TAG*tag, int pos, SRECT*newrect)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     /* determine length of old rect */
     tag->pos = pos;
     tag->readBit = 0;
@@ -1288,9 +1320,9 @@ void changeRect(struct swfoutput*obj, TAG*tag, int pos, SRECT*newrect)
     tag->pos = tag->readBit = 0;
 }
 
-void cancelshape(swfoutput*obj)
+void cancelshape(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     /* delete old shape tag */
     TAG*todel = i->tag;
     i->tag = i->tag->prev;
@@ -1300,13 +1332,13 @@ void cancelshape(swfoutput*obj)
     i->bboxrectpos = -1;
 }
 
-void fixAreas(swfoutput*obj)
+void fixAreas(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!i->shapeisempty && i->fill &&
        (i->bboxrect.xmin == i->bboxrect.xmax ||
         i->bboxrect.ymin == i->bboxrect.ymax) &&
-        config_minlinewidth >= 0.001
+        i->config_minlinewidth >= 0.001
        ) {
 	msg("<debug> Shape has size 0: width=%.2f height=%.2f",
 		(i->bboxrect.xmax-i->bboxrect.xmin)/20.0,
@@ -1320,32 +1352,32 @@ void fixAreas(swfoutput*obj)
 	    return;
 	}
 
-	cancelshape(obj);
+	cancelshape(dev);
 
-	RGBA save_col = obj->strokergb;
+	RGBA save_col = i->strokergb;
 	int  save_width = i->linewidth;
 
-	obj->strokergb = obj->fillrgb;
-	i->linewidth = (int)(config_minlinewidth*20);
+	i->strokergb = i->fillrgb;
+	i->linewidth = (int)(i->config_minlinewidth*20);
 	if(i->linewidth==0) i->linewidth = 1;
 	
-	startshape(obj);
+	startshape(dev);
 
-	moveto(obj, i->tag, r.xmin/20.0,r.ymin/20.0);
-	lineto(obj, i->tag, r.xmax/20.0,r.ymax/20.0);
+	moveto(dev, i->tag, r.xmin/20.0,r.ymin/20.0);
+	lineto(dev, i->tag, r.xmax/20.0,r.ymax/20.0);
 
-	obj->strokergb = save_col;
+	i->strokergb = save_col;
 	i->linewidth = save_width;
     }
     
 }
 
-static void endshape_noput(swfoutput*obj)
+static void endshape_noput(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid<0) 
         return;
-    //changeRect(obj, i->tag, i->bboxrectpos, &i->bboxrect);
+    //changeRect(dev, i->tag, i->bboxrectpos, &i->bboxrect);
     i->shapeid = -1;
     if(i->shape) {
         swf_ShapeFree(i->shape);
@@ -1354,13 +1386,13 @@ static void endshape_noput(swfoutput*obj)
     i->fill=0;
 }
 
-static void endshape(swfoutput*obj)
+static void endshape(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid<0) 
         return;
 
-    fixAreas(obj);
+    fixAreas(dev);
 	
     if(i->shapeisempty ||
        /*bbox empty?*/
@@ -1374,18 +1406,18 @@ static void endshape(swfoutput*obj)
 		i->bboxrect.xmax /20.0,
 		i->bboxrect.ymax /20.0
 		);
-	cancelshape(obj);
+	cancelshape(dev);
 	return;
     }
     
     swf_ShapeSetEnd(i->tag);
 
-    changeRect(obj, i->tag, i->bboxrectpos, &i->bboxrect);
+    changeRect(dev, i->tag, i->bboxrectpos, &i->bboxrect);
 
     msg("<trace> Placing shape id %d", i->shapeid);
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,i->shapeid,getNewDepth(obj),&i->page_matrix,NULL,NULL);
+    swf_ObjectPlace(i->tag,i->shapeid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
 
     swf_ShapeFree(i->shape);
     i->shape = 0;
@@ -1393,21 +1425,6 @@ static void endshape(swfoutput*obj)
     i->bboxrectpos = -1;
     i->fill=0;
 
-    /*int debug = 1;
-    if(debug) {
-	char text[80];
-	sprintf(text, "id%d", i->shapeid);
-	swfcoord points[4];
-	points[0].x = i->bboxrect.xmin;
-	points[0].y = i->bboxrect.ymin;
-	points[1].x = i->bboxrect.xmax;
-	points[1].y = i->bboxrect.ymin;
-	points[2].x = i->bboxrect.xmax;
-	points[2].y = i->bboxrect.ymax;
-	points[3].x = i->bboxrect.xmin;
-	points[3].y = i->bboxrect.ymax;
-	swfoutput_namedlink(obj,text,points);
-    }*/
 }
 
 void wipeSWF(SWF*swf)
@@ -1426,14 +1443,14 @@ void wipeSWF(SWF*swf)
 }
 
 
-void swfoutput_finalize(struct swfoutput*obj)
+void swfoutput_finalize(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
     if(i->tag && i->tag->id == ST_END)
         return; //already done
 
-    if(config_bboxvars) {
+    if(i->config_bboxvars) {
 	TAG* tag = swf_InsertTag(i->swf.firstTag, ST_DOACTION);
 	ActionTAG*a = 0;
 	a = action_PushString(a, "xmin");
@@ -1460,15 +1477,15 @@ void swfoutput_finalize(struct swfoutput*obj)
     }
 
     if(i->frameno == i->lastframeno) // fix: add missing pagefeed
-        swfoutput_pagefeed(obj);
+        swfoutput_pagefeed(dev);
 
-    endpage(obj);
+    endpage(dev);
     fontlist_t *tmp,*iterator = i->fontlist;
     while(iterator) {
 	TAG*mtag = i->swf.firstTag;
 	if(iterator->swffont) {
 	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
-	    if(!config_storeallcharacters)
+	    if(!i->config_storeallcharacters)
 		swf_FontReduce(iterator->swffont);
 	    swf_FontSetDefine2(mtag, iterator->swffont);
 	}
@@ -1491,28 +1508,30 @@ void swfoutput_finalize(struct swfoutput*obj)
     }
 }
 
-SWF* swfoutput_get(struct swfoutput*obj)
+void gfxdevice_swf_getdimensions(gfxdevice_t*dev, int*x1, int*y1, int*x2, int*y2)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-
-    swfoutput_finalize(obj);
-
-    return swf_CopySWF(&i->swf);
-}
-
-void swfoutput_getdimensions(struct swfoutput*obj, int*x1, int*y1, int*x2, int*y2)
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(x1) *x1 = i->swf.movieSize.xmin/20;
     if(y1) *y1 = i->swf.movieSize.ymin/20;
     if(x2) *x2 = i->swf.movieSize.xmax/20;
     if(y2) *y2 = i->swf.movieSize.ymax/20;
 }
 
-int swfoutput_save(struct swfoutput* obj, char*filename) 
+static void swfoutput_destroy(gfxdevice_t* dev);
+
+void* swf_finish(gfxdevice_t* dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    swfoutput_finalize(obj);
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput_finalize(dev);
+    SWF* swf = swf_CopySWF(&i->swf);
+    swfoutput_destroy(dev);
+    return swf;
+}
+
+int gfxdevice_swf_save(gfxdevice_t* dev, char*filename) 
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput_finalize(dev);
 
     int fi;
     if(filename)
@@ -1525,7 +1544,7 @@ int swfoutput_save(struct swfoutput* obj, char*filename)
      return 0;
     }
     
-    if(config_enablezlib || config_flashversion>=6) {
+    if(i->config_enablezlib || i->config_flashversion>=6) {
       if FAILED(swf_WriteSWC(fi,&i->swf)) 
        msg("<error> WriteSWC() failed.\n");
     } else {
@@ -1538,10 +1557,17 @@ int swfoutput_save(struct swfoutput* obj, char*filename)
     return 1;
 }
 
-/* Perform cleaning up, complete the swf, and write it out. */
-void swfoutput_destroy(struct swfoutput* obj) 
+void* gfxdevice_swf_get(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    swfoutput_finalize(dev);
+    return (void*)swf_CopySWF(&i->swf);
+}
+
+/* Perform cleaning up */
+static void swfoutput_destroy(gfxdevice_t* dev) 
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!i) {
         /* not initialized yet- nothing to destroy */
         return;
@@ -1559,112 +1585,136 @@ void swfoutput_destroy(struct swfoutput* obj)
     swf_FreeTags(&i->swf);
 
     free(i);i=0;
-    memset(obj, 0, sizeof(swfoutput));
+    memset(dev, 0, sizeof(gfxdevice_t));
 }
 
-static void swfoutput_setfillcolor(swfoutput* obj, U8 r, U8 g, U8 b, U8 a)
+static void swfoutput_setfillcolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    if(obj->fillrgb.r == r &&
-       obj->fillrgb.g == g &&
-       obj->fillrgb.b == b &&
-       obj->fillrgb.a == a) return;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->fillrgb.r == r &&
+       i->fillrgb.g == g &&
+       i->fillrgb.b == b &&
+       i->fillrgb.a == a) return;
     if(i->shapeid>=0)
-     endshape(obj);
+     endshape(dev);
 
-    obj->fillrgb.r = r;
-    obj->fillrgb.g = g;
-    obj->fillrgb.b = b;
-    obj->fillrgb.a = a;
+    i->fillrgb.r = r;
+    i->fillrgb.g = g;
+    i->fillrgb.b = b;
+    i->fillrgb.a = a;
 }
 
-static void swfoutput_setstrokecolor(swfoutput* obj, U8 r, U8 g, U8 b, U8 a)
+static void swfoutput_setstrokecolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    if(obj->strokergb.r == r &&
-       obj->strokergb.g == g &&
-       obj->strokergb.b == b &&
-       obj->strokergb.a == a) return;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->strokergb.r == r &&
+       i->strokergb.g == g &&
+       i->strokergb.b == b &&
+       i->strokergb.a == a) return;
 
     if(i->shapeid>=0)
-     endshape(obj);
-    obj->strokergb.r = r;
-    obj->strokergb.g = g;
-    obj->strokergb.b = b;
-    obj->strokergb.a = a;
+     endshape(dev);
+    i->strokergb.r = r;
+    i->strokergb.g = g;
+    i->strokergb.b = b;
+    i->strokergb.a = a;
 }
 
-static void swfoutput_setlinewidth(struct swfoutput*obj, double _linewidth)
+static void swfoutput_setlinewidth(gfxdevice_t*dev, double _linewidth)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->linewidth == (U16)(_linewidth*20))
         return;
 
     if(i->shapeid>=0)
-	endshape(obj);
+	endshape(dev);
     i->linewidth = (U16)(_linewidth*20);
 }
 
 
-static void drawlink(struct swfoutput*obj, ActionTAG*,ActionTAG*, swfcoord*points, char mouseover);
+static void drawlink(gfxdevice_t*dev, ActionTAG*,ActionTAG*, gfxline_t*points, char mouseover);
+static void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points);
+static void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points);
+static void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points);
 
-void swfoutput_linktourl(struct swfoutput*obj, char*url, swfcoord*points)
+void swfoutput_drawlink(gfxdevice_t*dev, char*url, gfxline_t*points)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    ActionTAG* actions;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    dev->drawlink(dev, points, url);
+}
+
+void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, char*url)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+
     if(!strncmp("http://pdf2swf:", url, 15)) {
-     char*tmp = strdup(url);
-     int l = strlen(tmp);
-     if(tmp[l-1] == '/')
-        tmp[l-1] = 0;
-     swfoutput_namedlink(obj, tmp+15, points);
-     free(tmp);
-     return;
+	char*tmp = strdup(url);
+	int l = strlen(tmp);
+	if(tmp[l-1] == '/')
+	   tmp[l-1] = 0;
+	swfoutput_namedlink(dev, tmp+15, points);
+	free(tmp);
+	return;
+    } else if(!strncmp("page", url, 4)) {
+	int t, nodigit=0;
+	for(t=4;url[t];t++)
+	    if(url[t]<'0' || url[t]>'9')
+		nodigit = 1;
+	if(!nodigit) {
+	    int page = atoi(&url[4]);
+	    swfoutput_linktopage(dev, page, points);
+	}
+    } else {
+	swfoutput_linktourl(dev, url, points);
     }
-    
+}
+void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points)
+{
+    ActionTAG* actions;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid>=0)
-	endshape(obj);
+	endshape(dev);
     if(i->textid>=0)
-	endtext(obj);
+	endtext(dev);
     
-    if(!config_opennewwindow)
+    if(!i->config_opennewwindow)
       actions = action_GetUrl(0, url, "_parent");
     else
       actions = action_GetUrl(0, url, "_this");
     actions = action_End(actions);
     
-    drawlink(obj, actions, 0, points,0);
+    drawlink(dev, actions, 0, points,0);
 }
-void swfoutput_linktopage(struct swfoutput*obj, int page, swfcoord*points)
+void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     ActionTAG* actions;
 
     if(i->shapeid>=0)
-	endshape(obj);
+	endshape(dev);
     if(i->textid>=0)
-	endtext(obj);
+	endtext(dev);
    
       actions = action_GotoFrame(0, page);
       actions = action_End(actions);
 
-    drawlink(obj, actions, 0, points,0);
+    drawlink(dev, actions, 0, points,0);
 }
 
 /* Named Links (a.k.a. Acrobatmenu) are used to implement various gadgets
    of the viewer objects, like subtitles, index elements etc.
 */
-void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
+void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     ActionTAG *actions1,*actions2;
     char*tmp = strdup(name);
     char mouseover = 1;
 
     if(i->shapeid>=0)
-	endshape(obj);
+	endshape(dev);
     if(i->textid>=0)
-	endtext(obj);
+	endtext(dev);
 
     if(!strncmp(tmp, "call:", 5))
     {
@@ -1696,16 +1746,52 @@ void swfoutput_namedlink(struct swfoutput*obj, char*name, swfcoord*points)
 	actions2 = action_End(actions2);
     }
 
-    drawlink(obj, actions1, actions2, points,mouseover);
+    drawlink(dev, actions1, actions2, points,mouseover);
 
     swf_ActionFree(actions1);
     swf_ActionFree(actions2);
     free(tmp);
 }
 
-static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions2, swfcoord*points, char mouseover)
+static void drawgfxline(gfxdevice_t*dev, gfxline_t*line)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    gfxcoord_t lastx=0,lasty=0,px=0,py=0;
+    char lastwasmoveto;
+    while(1) {
+	if(!line)
+	    break;
+	/* check whether the next segment is zero */
+	if(line->type == gfx_moveTo) {
+	    msg("<trace> ======== moveTo %.2f %.2f", line->x, line->y);
+	    moveto(dev, i->tag, line->x, line->y);
+	    px = lastx = line->x;
+	    py = lasty = line->y;
+	    lastwasmoveto = 1;
+	} if(line->type == gfx_lineTo) {
+	    msg("<trace> ======== lineTo %.2f %.2f", line->x, line->y);
+	    lineto(dev, i->tag, line->x, line->y);
+	    px = line->x;
+	    py = line->y;
+	    lastwasmoveto = 0;
+	} else if(line->type == gfx_splineTo) {
+	    msg("<trace> ======== splineTo  %.2f %.2f", line->x, line->y);
+	    plotxy s,p;
+	    s.x = line->sx;p.x = line->x;
+	    s.y = line->sy;p.y = line->y;
+	    splineto(dev, i->tag, s, p);
+	    px = line->x;
+	    py = line->y;
+	    lastwasmoveto = 0;
+	}
+	line = line->next;
+    }
+}
+
+
+static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gfxline_t*points, char mouseover)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     RGBA rgb;
     SRECT r;
     int lsid=0;
@@ -1713,79 +1799,51 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
     struct plotxy p1,p2,p3,p4;
     int myshapeid;
     int myshapeid2;
-    double xmin,ymin;
-    double xmax=xmin=points[0].x,ymax=ymin=points[0].y;
     double posx = 0;
     double posy = 0;
     int t;
-    int buttonid = getNewID(obj);
-    for(t=1;t<4;t++)
-    {
-        if(points[t].x>xmax) xmax=points[t].x;
-        if(points[t].y>ymax) ymax=points[t].y;
-        if(points[t].x<xmin) xmin=points[t].x;
-        if(points[t].y<ymin) ymin=points[t].y;
-    }
+    int buttonid = getNewID(dev);
+    gfxbbox_t bbox = gfxline_getbbox(points);
 
-    p1.x=points[0].x; p1.y=points[0].y; p2.x=points[1].x; p2.y=points[1].y; 
-    p3.x=points[2].x; p3.y=points[2].y; p4.x=points[3].x; p4.y=points[3].y;
-   
-    /* the following code subtracts the upper left edge from all coordinates,
-       and set's posx,posy so that ST_PLACEOBJECT is used with a matrix.
-       Necessary for preprocessing with swfcombine. */
-    posx = xmin; posy = ymin;
-    p1.x-=posx;p2.x-=posx;p3.x-=posx;p4.x-=posx;
-    p1.y-=posy;p2.y-=posy;p3.y-=posy;p4.y-=posy;
-    xmin -= posx; ymin -= posy;
-    xmax -= posx; ymax -= posy;
-    
     /* shape */
-    myshapeid = getNewID(obj);
+    myshapeid = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     swf_ShapeNew(&i->shape);
     rgb.r = rgb.b = rgb.a = rgb.g = 0; 
     fsid = swf_ShapeAddSolidFillStyle(i->shape,&rgb);
     swf_SetU16(i->tag, myshapeid);
-    r.xmin = (int)(xmin*20);
-    r.ymin = (int)(ymin*20);
-    r.xmax = (int)(xmax*20);
-    r.ymax = (int)(ymax*20);
+    r.xmin = (int)(bbox.xmin*20);
+    r.ymin = (int)(bbox.ymin*20);
+    r.xmax = (int)(bbox.xmax*20);
+    r.ymax = (int)(bbox.ymax*20);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,i->shape);
     swf_ShapeCountBits(i->shape,NULL,NULL);
     swf_SetShapeBits(i->tag,i->shape);
     swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,0,fsid,0);
     i->swflastx = i->swflasty = 0;
-    moveto(obj, i->tag, p1);
-    lineto(obj, i->tag, p2);
-    lineto(obj, i->tag, p3);
-    lineto(obj, i->tag, p4);
-    lineto(obj, i->tag, p1);
+    drawgfxline(dev, points);
     swf_ShapeSetEnd(i->tag);
 
     /* shape2 */
-    myshapeid2 = getNewID(obj);
+    myshapeid2 = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     swf_ShapeNew(&i->shape);
     rgb.r = rgb.b = rgb.a = rgb.g = 255;
     rgb.a = 40;
     fsid = swf_ShapeAddSolidFillStyle(i->shape,&rgb);
     swf_SetU16(i->tag, myshapeid2);
-    r.xmin = (int)(xmin*20);
-    r.ymin = (int)(ymin*20);
-    r.xmax = (int)(xmax*20);
-    r.ymax = (int)(ymax*20);
+    r.xmin = (int)(bbox.xmin*20);
+    r.ymin = (int)(bbox.ymin*20);
+    r.xmax = (int)(bbox.xmax*20);
+    r.ymax = (int)(bbox.ymax*20);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,i->shape);
     swf_ShapeCountBits(i->shape,NULL,NULL);
     swf_SetShapeBits(i->tag,i->shape);
     swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,0,fsid,0);
     i->swflastx = i->swflasty = 0;
-    moveto(obj, i->tag, p1);
-    lineto(obj, i->tag, p2);
-    lineto(obj, i->tag, p3);
-    lineto(obj, i->tag, p4);
-    lineto(obj, i->tag, p1);
+    drawgfxline(dev, points);
     swf_ShapeSetEnd(i->tag);
 
     if(!mouseover)
@@ -1835,9 +1893,9 @@ static void drawlink(struct swfoutput*obj, ActionTAG*actions1, ActionTAG*actions
         m = i->page_matrix;
         m.tx = p.x;
         m.ty = p.y;
-	swf_ObjectPlace(i->tag, buttonid, getNewDepth(obj),&m,0,0);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&m,0,0);
     } else {
-	swf_ObjectPlace(i->tag, buttonid, getNewDepth(obj),&i->page_matrix,0,0);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&i->page_matrix,0,0);
     }
 }
 
@@ -1883,195 +1941,88 @@ for(t=0;t<picpos;t++)
 */
 ///////////
 
-static void drawgfxline(struct swfoutput*obj, gfxline_t*line)
+void swfoutput_drawgfxline(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*col, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxcoord_t lastx=0,lasty=0,px=0,py=0;
-    char lastwasmoveto;
-    while(1) {
-	if(!line)
-	    break;
-	/* check whether the next segment is zero */
-	if(line->type == gfx_moveTo) {
-	    msg("<trace> ======== moveTo %.2f %.2f", line->x, line->y);
-	    moveto(obj, i->tag, line->x, line->y);
-	    px = lastx = line->x;
-	    py = lasty = line->y;
-	    lastwasmoveto = 1;
-	} if(line->type == gfx_lineTo) {
-	    msg("<trace> ======== lineTo %.2f %.2f", line->x, line->y);
-	    lineto(obj, i->tag, line->x, line->y);
-	    px = line->x;
-	    py = line->y;
-	    lastwasmoveto = 0;
-	} else if(line->type == gfx_splineTo) {
-	    msg("<trace> ======== splineTo  %.2f %.2f", line->x, line->y);
-	    plotxy s,p;
-	    s.x = line->sx;p.x = line->x;
-	    s.y = line->sy;p.y = line->y;
-	    splineto(obj, i->tag, s, p);
-	    px = line->x;
-	    py = line->y;
-	    lastwasmoveto = 0;
-	}
-	line = line->next;
-    }
-}
-
-void swfoutput_drawgfxline(struct swfoutput*obj, gfxline_t*line, gfxcoord_t width, gfxcolor_t*col, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
-{
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxdevice_t*dev = &i->device;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->stroke(dev, line, width, col, cap_style, joint_style, miterLimit);
 }
-void swfoutput_fillgfxline(struct swfoutput*obj, gfxline_t*line, gfxcolor_t*col)
+void swfoutput_fillgfxline(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*col)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxdevice_t*dev = &i->device;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->fill(dev, line, col);
 }
-void swfoutput_startclip(struct swfoutput*obj, gfxline_t*line)
+void swfoutput_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxdevice_t*dev = &i->device;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->startclip(dev, line);
 }
-void swfoutput_endclip(struct swfoutput*obj)
+void swfoutput_endclip(gfxdevice_t*dev)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxdevice_t*dev = &i->device;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->endclip(dev);
 }
-void swfoutput_gfxaddfont(struct swfoutput*obj, char*fontid, gfxfont_t*font)
+void swfoutput_gfxaddfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxdevice_t*dev = &i->device;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->addfont(dev, fontid, font);
 }
-void swfoutput_gfxdrawchar(struct swfoutput*obj, char*fontid, int glyph, gfxcolor_t*c, gfxmatrix_t*m)
+void swfoutput_gfxdrawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*c, gfxmatrix_t*m)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
-    gfxdevice_t*dev = &i->device;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->drawchar(dev, fontid, glyph, c, m);
 }
 
-#define IMAGE_TYPE_JPEG 0
-#define IMAGE_TYPE_LOSSLESS 1
-
-static void swfoutput_drawimage(struct swfoutput*obj, RGBA* data, int sizex,int sizey, 
-        double x1,double y1,
-        double x2,double y2,
-        double x3,double y3,
-        double x4,double y4, int type)
+void swfoutput_setparameter(gfxdevice_t*dev, char*name, char*value)
 {
-    swfoutput_internal*i = (swfoutput_internal*)obj->internal;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
-    RGBA*newpic=0;
-    
-    double l1 = sqrt((x4-x1)*(x4-x1) + (y4-y1)*(y4-y1));
-    double l2 = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
-   
-    gfxline_t p1,p2,p3,p4,p5;
-    p1.type=gfx_moveTo;p1.x=x1; p1.y=y1;p1.next=&p2;
-    p2.type=gfx_lineTo;p2.x=x2; p2.y=y2;p2.next=&p3;
-    p3.type=gfx_lineTo;p3.x=x3; p3.y=y3;p3.next=&p4;
-    p4.type=gfx_lineTo;p4.x=x4; p4.y=y4;p4.next=&p5;
-    p5.type=gfx_lineTo;p5.x=x1; p5.y=y1;p5.next=0;
-
-    {p1.x = (int)(p1.x*20)/20.0;
-     p1.y = (int)(p1.y*20)/20.0;
-     p2.x = (int)(p2.x*20)/20.0;
-     p2.y = (int)(p2.y*20)/20.0;
-     p3.x = (int)(p3.x*20)/20.0;
-     p3.y = (int)(p3.y*20)/20.0;
-     p4.x = (int)(p4.x*20)/20.0;
-     p4.y = (int)(p4.y*20)/20.0;
-     p5.x = (int)(p5.x*20)/20.0;
-     p5.y = (int)(p5.y*20)/20.0;
-    }
-    
-    float m00,m10,tx;
-    float m01,m11,ty;
-    
-    gfxmatrix_t m;
-    m.m00 = (p4.x-p1.x)/sizex; m.m10 = (p2.x-p1.x)/sizey;
-    m.m01 = (p4.y-p1.y)/sizex; m.m11 = (p2.y-p1.y)/sizey;
-    m.tx = p1.x - 0.5;
-    m.ty = p1.y - 0.5;
-
-    gfximage_t img;
-    img.data = (gfxcolor_t*)data;
-    img.width = sizex;
-    img.height = sizey;
-  
-    if(type == IMAGE_TYPE_JPEG)
-	/* TODO: pass image_dpi to device instead */
-	i->device.setparameter(&i->device, "next_bitmap_is_jpeg", "1");
-
-    i->device.fillbitmap(&i->device, &p1, &img, &m, 0);
-}
-
-void swfoutput_drawimagejpeg(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
-        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
-{
-    swfoutput_drawimage(obj,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG);
-}
-
-void swfoutput_drawimagelossless(struct swfoutput*obj, RGBA*mem, int sizex,int sizey, 
-        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
-{
-    swfoutput_drawimage(obj,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS);
-}
-
-void swfoutput_setparameter(char*name, char*value)
-{
     if(!strcmp(name, "jpegsubpixels")) {
-	config_jpegsubpixels = atof(value);
+	i->config_jpegsubpixels = atof(value);
     } else if(!strcmp(name, "ppmsubpixels")) {
-	config_ppmsubpixels = atof(value);
+	i->config_ppmsubpixels = atof(value);
     } else if(!strcmp(name, "drawonlyshapes")) {
-	config_drawonlyshapes = atoi(value);
+	i->config_drawonlyshapes = atoi(value);
     } else if(!strcmp(name, "ignoredraworder")) {
-	config_ignoredraworder = atoi(value);
+	i->config_ignoredraworder = atoi(value);
     } else if(!strcmp(name, "filloverlap")) {
-	config_filloverlap = atoi(value);
+	i->config_filloverlap = atoi(value);
     } else if(!strcmp(name, "linksopennewwindow")) {
-	config_opennewwindow = atoi(value);
+	i->config_opennewwindow = atoi(value);
     } else if(!strcmp(name, "opennewwindow")) {
-	config_opennewwindow = atoi(value);
+	i->config_opennewwindow = atoi(value);
     } else if(!strcmp(name, "storeallcharacters")) {
-	config_storeallcharacters = atoi(value);
+	i->config_storeallcharacters = atoi(value);
     } else if(!strcmp(name, "enablezlib")) {
-	config_enablezlib = atoi(value);
+	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
-	config_bboxvars = atoi(value);
+	i->config_bboxvars = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
-	config_insertstoptag = atoi(value);
+	i->config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protected")) {
-	config_protect = atoi(value);
+	i->config_protect = atoi(value);
     } else if(!strcmp(name, "flashversion")) {
-	config_flashversion = atoi(value);
+	i->config_flashversion = atoi(value);
     } else if(!strcmp(name, "minlinewidth")) {
-	config_minlinewidth = atof(value);
+	i->config_minlinewidth = atof(value);
     } else if(!strcmp(name, "caplinewidth")) {
-	config_caplinewidth = atof(value);
+	i->config_caplinewidth = atof(value);
     } else if(!strcmp(name, "dumpfonts")) {
-	config_dumpfonts = atoi(value);
+	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "jpegquality")) {
 	int val = atoi(value);
 	if(val<0) val=0;
 	if(val>100) val=100;
-	config_jpegquality = val;
+	i->config_jpegquality = val;
     } else if(!strcmp(name, "splinequality")) {
 	int v = atoi(value);
 	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
 	if(v<1) v = 1;
-	config_splinemaxerror = v;
+	i->config_splinemaxerror = v;
     } else if(!strcmp(name, "fontquality")) {
 	int v = atoi(value);
 	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
 	if(v<1) v = 1;
-	config_fontsplinemaxerror = v;
+	i->config_fontsplinemaxerror = v;
     } else {
 	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
     }
@@ -2102,7 +2053,7 @@ static CXFORM gfxcxform_to_cxform(gfxcxform_t* c)
     return cx;
 }
 
-ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
+static ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
 {
     ArtVpath *vec = NULL;
     ArtSVP *svp = NULL;
@@ -2179,7 +2130,7 @@ ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, 
     return svp;
 }
 
-gfxline_t* SVPtogfxline(ArtSVP*svp)
+static gfxline_t* SVPtogfxline(ArtSVP*svp)
 {
     int size = 0;
     int t;
@@ -2210,17 +2161,17 @@ gfxline_t* SVPtogfxline(ArtSVP*svp)
 }
 
 /* TODO */
-static int imageInCache(swfoutput*obj, void*data, int width, int height)
+static int imageInCache(gfxdevice_t*dev, void*data, int width, int height)
 {
     return -1;
 }
-static void addImageToCache(swfoutput*obj, void*data, int width, int height)
+static void addImageToCache(gfxdevice_t*dev, void*data, int width, int height)
 {
 }
     
 static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int targetheight, int* newwidth, int* newheight)
 {
-    swfoutput*obj = i->obj;
+    gfxdevice_t*dev = i->dev;
     RGBA*newpic = 0;
     RGBA*mem = (RGBA*)img->data;
     
@@ -2232,12 +2183,12 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     int newsizex=sizex, newsizey=sizey;
 
     /// {
-    if(is_jpeg && config_jpegsubpixels) {
-	newsizex = (int)(targetwidth*config_jpegsubpixels+0.5);
-	newsizey = (int)(targetheight*config_jpegsubpixels+0.5);
-    } else if(!is_jpeg && config_ppmsubpixels) {
-	newsizex = (int)(targetwidth*config_ppmsubpixels+0.5);
-	newsizey = (int)(targetheight*config_ppmsubpixels+0.5);
+    if(is_jpeg && i->config_jpegsubpixels) {
+	newsizex = (int)(targetwidth*i->config_jpegsubpixels+0.5);
+	newsizey = (int)(targetheight*i->config_jpegsubpixels+0.5);
+    } else if(!is_jpeg && i->config_ppmsubpixels) {
+	newsizex = (int)(targetwidth*i->config_ppmsubpixels+0.5);
+	newsizey = (int)(targetheight*i->config_ppmsubpixels+0.5);
     }
     /// }
 
@@ -2281,12 +2232,12 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     printf("\n");*/
 
     int bitid = -1;
-    int cacheid = imageInCache(obj, mem, sizex, sizey);
+    int cacheid = imageInCache(dev, mem, sizex, sizey);
 
     if(cacheid<=0) {
-	bitid = getNewID(obj);
-	i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, config_jpegquality);
-	addImageToCache(obj, mem, sizex, sizey);
+	bitid = getNewID(dev);
+	i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, i->config_jpegquality);
+	addImageToCache(dev, mem, sizex, sizey);
     } else {
 	bitid = cacheid;
     }
@@ -2307,13 +2258,12 @@ static SRECT gfxline_getSWFbbox(gfxline_t*line)
     return r;
 }
 
-void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
+static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
 
-    endshape(obj);
-    endtext(obj);
+    endshape(dev);
+    endtext(dev);
 
     int targetx = (int)(sqrt(matrix->m00*matrix->m00 + matrix->m01*matrix->m01)*img->width);
     int targety = (int)(sqrt(matrix->m10*matrix->m10 + matrix->m11*matrix->m11)*img->height);
@@ -2334,7 +2284,7 @@ void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     m.ty = (int)(matrix->ty*20);
   
     /* shape */
-    int myshapeid = getNewID(obj);
+    int myshapeid = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
     SHAPE*shape;
     swf_ShapeNew(&shape);
@@ -2347,22 +2297,21 @@ void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     swf_SetShapeBits(i->tag,shape);
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
-    drawgfxline(obj, line);
+    drawgfxline(dev, line);
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     CXFORM cxform2 = gfxcxform_to_cxform(cxform);
-    swf_ObjectPlace(i->tag,myshapeid,getNewDepth(obj),&i->page_matrix,&cxform2,NULL);
+    swf_ObjectPlace(i->tag,myshapeid,getNewDepth(dev),&i->page_matrix,&cxform2,NULL);
 }
 
-void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
+static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
 
-    endtext(obj);
-    endshape(obj);
+    endtext(dev);
+    endshape(dev);
 
     if(i->clippos >= 127)
     {
@@ -2370,7 +2319,7 @@ void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
         i->clippos --;
     } 
 
-    int myshapeid = getNewID(obj);
+    int myshapeid = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
     RGBA col;
     memset(&col, 0, sizeof(RGBA));
@@ -2385,7 +2334,7 @@ void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     swf_SetShapeBits(i->tag,shape);
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
-    drawgfxline(obj, line);
+    drawgfxline(dev, line);
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
@@ -2394,18 +2343,17 @@ void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     i->cliptags[i->clippos] = i->tag;
     i->clipshapes[i->clippos] = myshapeid;
-    i->clipdepths[i->clippos] = getNewDepth(obj);
+    i->clipdepths[i->clippos] = getNewDepth(dev);
     i->clippos++;
 }
 
-void swf_endclip(gfxdevice_t*dev)
+static void swf_endclip(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
     if(i->textid>=0)
-	endtext(obj);
+	endtext(dev);
     if(i->shapeid>=0)
-	endshape(obj);
+	endshape(dev);
 
     if(!i->clippos) {
         msg("<error> Invalid end of clipping region");
@@ -2417,7 +2365,7 @@ void swf_endclip(gfxdevice_t*dev)
     i->depth ++;*/
     swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],&i->page_matrix,NULL,NULL,i->depth);
 }
-int swf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
+static int swf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     if(!strcmp(key, "next_bitmap_is_jpeg")) {
 	((swfoutput_internal*)dev->internal)->jpeg = 1;
@@ -2426,7 +2374,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
     return 0;
 }
 
-int gfxline_type(gfxline_t*line)
+static int gfxline_type(gfxline_t*line)
 {
     int tmplines=0;
     int tmpsplines=0;
@@ -2455,7 +2403,7 @@ int gfxline_type(gfxline_t*line)
     else return 4;
 }
 
-int gfxline_has_dots(gfxline_t*line)
+static int gfxline_has_dots(gfxline_t*line)
 {
     int tmplines=0;
     double x,y;
@@ -2486,7 +2434,7 @@ int gfxline_has_dots(gfxline_t*line)
     return 0;
 }
 
-int gfxline_fix_short_edges(gfxline_t*line)
+static int gfxline_fix_short_edges(gfxline_t*line)
 {
     double x,y;
     while(line) {
@@ -2507,27 +2455,24 @@ int gfxline_fix_short_edges(gfxline_t*line)
     return 0;
 }
 
-int shapenr = 0;
-
-void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
+static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
     int type = gfxline_type(line);
     int has_dots = gfxline_has_dots(line);
 
     /* TODO: * split line into segments, and perform this check for all segments */
     if(!has_dots &&
-       (width <= config_caplinewidth 
+       (width <= i->config_caplinewidth 
         || (cap_style == gfx_capRound && joint_style == gfx_joinRound)
         || (cap_style == gfx_capRound && type<=2))) {
 	msg("<trace> draw as stroke, type=%d dots=%d", type, has_dots);
-	endtext(obj);
-	swfoutput_setstrokecolor(obj, color->r, color->g, color->b, color->a);
-	swfoutput_setlinewidth(obj, width);
-	startshape(obj);
-	stopFill(obj);
-	drawgfxline(obj, line);
+	endtext(dev);
+	swfoutput_setstrokecolor(dev, color->r, color->g, color->b, color->a);
+	swfoutput_setlinewidth(dev, width);
+	startshape(dev);
+	stopFill(dev);
+	drawgfxline(dev, line);
     } else {
 	msg("<trace> draw as polygon, type=%d dots=%d", type, has_dots);
 	if(has_dots)
@@ -2540,55 +2485,22 @@ void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*co
 	art_svp_free(svp);
     }
 }
-void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
+static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
-    endtext(obj);
-    if(!config_ignoredraworder)
-	endshape(obj);
-    swfoutput_setfillcolor(obj, color->r, color->g, color->b, color->a);
-    startshape(obj);
-    startFill(obj);
+    endtext(dev);
+    if(!i->config_ignoredraworder)
+	endshape(dev);
+    swfoutput_setfillcolor(dev, color->r, color->g, color->b, color->a);
+    startshape(dev);
+    startFill(dev);
     i->fill=1;
-    drawgfxline(obj, line);
+    drawgfxline(dev, line);
     msg("<trace> end of swf_fill (shapeid=%d)", i->shapeid);
 }
-void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
+static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     msg("<error> Gradient filling not implemented yet");
-}
-
-void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
-{
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
-
-    endshape(obj);
-    endtext(obj);
-
-    /* shape */
-    int myshapeid = getNewID(obj);
-    RGBA black;
-    black.r = black.g = black.b = black.a = 0;
-    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
-    SHAPE*shape;
-    swf_ShapeNew(&shape);
-    int fsid = swf_ShapeAddSolidFillStyle(shape,&black);
-    swf_SetU16(i->tag, myshapeid);
-    SRECT r = gfxline_getSWFbbox(line);
-    swf_SetRect(i->tag,&r);
-    swf_SetShapeStyles(i->tag,shape);
-    swf_ShapeCountBits(shape,NULL,NULL);
-    swf_SetShapeBits(i->tag,shape);
-    swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
-    i->swflastx = i->swflasty = UNDEFINED_COORD;
-    drawgfxline(obj, line);
-    swf_ShapeSetEnd(i->tag);
-    swf_ShapeFree(shape);
-
-    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,myshapeid,getNewDepth(obj),&i->page_matrix,0,NULL);
 }
 
 static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
@@ -2647,11 +2559,11 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
     return swffont;
 }
 
-void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
+static void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
-    if(i->obj->swffont && i->obj->swffont->name && !strcmp((char*)i->obj->swffont->name,fontid))
+    if(i->swffont && i->swffont->name && !strcmp((char*)i->swffont->name,fontid))
 	return; // the requested font is the current font
     
     fontlist_t*last=0,*l = i->fontlist;
@@ -2670,7 +2582,7 @@ void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
     } else {
 	i->fontlist = l;
     }
-    swf_FontSetID(l->swffont, getNewID(i->obj));
+    swf_FontSetID(l->swffont, getNewID(i->dev));
 
     if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
 	// print font information
@@ -2701,15 +2613,14 @@ void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
 static void swf_switchfont(gfxdevice_t*dev, char*fontid)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
 
-    if(obj->swffont && obj->swffont->name && !strcmp((char*)obj->swffont->name,fontid))
+    if(i->swffont && i->swffont->name && !strcmp((char*)i->swffont->name,fontid))
 	return; // the requested font is the current font
     
     fontlist_t*l = i->fontlist;
     while(l) {
 	if(!strcmp((char*)l->swffont->name, fontid)) {
-	    obj->swffont = l->swffont;
+	    i->swffont = l->swffont;
 	    return; //done!
 	}
 	l = l->next;
@@ -2718,27 +2629,26 @@ static void swf_switchfont(gfxdevice_t*dev, char*fontid)
     return;
 }
 
-void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput*obj = i->obj;
 	
-    if(!obj->swffont || !obj->swffont->name || strcmp((char*)obj->swffont->name,fontid)) // not equal to current font
+    if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,fontid)) // not equal to current font
     {
 	/* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
 		 with multiple fonts */
-	endtext(obj);
+	endtext(dev);
 
 	swf_switchfont(dev, fontid); // set the current font
     }
-    swfoutput_setfontmatrix(obj, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
+    swfoutput_setfontmatrix(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
    
     swfmatrix m;
-    m.m11 = obj->fontm11;
-    m.m12 = obj->fontm12;
-    m.m21 = obj->fontm21;
-    m.m22 = obj->fontm22;
+    m.m11 = i->fontm11;
+    m.m12 = i->fontm12;
+    m.m21 = i->fontm21;
+    m.m22 = i->fontm22;
     m.m31 = matrix->tx;
     m.m32 = matrix->ty;
-    drawchar(obj, obj->swffont, 0, glyph, -1, &m, color);
+    drawchar(dev, i->swffont, 0, glyph, -1, &m, color);
 }

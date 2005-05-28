@@ -76,6 +76,16 @@ typedef struct _fontfile
     int used;
 } fontfile_t;
 
+typedef struct _parameter
+{
+    char*name;
+    char*value;
+    struct _parameter*next;
+} parameter_t;
+
+static parameter_t* device_config = 0;
+static parameter_t* device_config_next = 0;
+
 // for pdfswf_addfont
 static fontfile_t fonts[2048];
 static int fontnum = 0;
@@ -135,8 +145,8 @@ typedef struct _fontlist
 
 class SWFOutputDev:  public OutputDev {
   int outputstarted;
-  struct swfoutput output;
 public:
+  gfxdevice_t* output;
 
   // Constructor.
   SWFOutputDev();
@@ -240,6 +250,10 @@ public:
   void strokeGfxline(GfxState *state, gfxline_t*line);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
+
+  void finish();
+
+  SWF*swf; //filled upon completion
 
   SWFOutputState states[64];
   int statepos;
@@ -364,8 +378,9 @@ SWFOutputDev::SWFOutputDev()
     current_text_stroke = 0;
     current_text_clip = 0;
     fontlist = 0;
-    memset(&output, 0, sizeof(output));
-//    printf("SWFOutputDev::SWFOutputDev() \n");
+    swf = 0;
+    output = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
+    memset(output, 0, sizeof(output));
 };
   
 void SWFOutputDev::setMove(int x,int y)
@@ -386,7 +401,7 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
 }
 void SWFOutputDev::getDimensions(int*x1,int*y1,int*x2,int*y2)
 {
-    return swfoutput_getdimensions(&output, x1,y1,x2,y2);
+    return gfxdevice_swf_getdimensions(output, x1,y1,x2,y2);
 }
 
 static char*getFontID(GfxFont*font)
@@ -776,7 +791,8 @@ void SWFOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
         dump_outline(line);
     }
    
-    swfoutput_drawgfxline(&output, line, width, &col, capType, joinType, miterLimit);
+    //swfoutput_drawgfxline(output, line, width, &col, capType, joinType, miterLimit);
+    output->stroke(output, line, width, &col, capType, joinType, miterLimit);
     
     if(line2)
 	gfxline_free(line2);
@@ -803,7 +819,7 @@ void SWFOutputDev::fillGfxLine(GfxState *state, gfxline_t*line)
         msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
-    swfoutput_fillgfxline(&output, line, &col);
+    output->fill(output, line, &col);
 }
 void SWFOutputDev::fill(GfxState *state) 
 {
@@ -824,7 +840,7 @@ void SWFOutputDev::eoFill(GfxState *state)
         dump_outline(line);
     }
 
-    swfoutput_fillgfxline(&output, line, &col);
+    output->fill(output, line, &col);
     gfxline_free(line);
 }
 
@@ -843,7 +859,7 @@ void SWFOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line)
         dump_outline(line);
     }
 
-    swfoutput_startclip(&output, line);
+    output->startclip(output, line);
     states[statepos].clipping++;
 }
 void SWFOutputDev::eoClip(GfxState *state) 
@@ -856,7 +872,7 @@ void SWFOutputDev::eoClip(GfxState *state)
         dump_outline(line);
     }
 
-    swfoutput_startclip(&output, line);
+    output->startclip(output, line);
     states[statepos].clipping++;
     gfxline_free(line);
 }
@@ -864,21 +880,35 @@ void SWFOutputDev::eoClip(GfxState *state)
 /* pass through functions for swf_output */
 int SWFOutputDev::save(char*filename)
 {
-    return swfoutput_save(&output, filename);
+    return gfxdevice_swf_save(output, filename);
 }
 void SWFOutputDev::pagefeed()
 {
-    swfoutput_pagefeed(&output);
+    swfoutput_pagefeed(output);
 }
 void* SWFOutputDev::getSWF()
 {
-    return (void*)swfoutput_get(&output);
+    return (void*)gfxdevice_swf_get(output);
+}
+
+void SWFOutputDev::finish()
+{
+    if(output) {
+	this->swf = (SWF*)output->finish(output);
+	free(output);output=0;
+    }
 }
 
 SWFOutputDev::~SWFOutputDev() 
 {
-    swfoutput_destroy(&output);
+    finish();
     outputstarted = 0;
+
+    if(this->swf) {
+	swf_FreeTags(this->swf);
+	free(this->swf);
+	this->swf = 0;
+    }
 
     fontlist_t*l = this->fontlist;
     while(l) {
@@ -1082,7 +1112,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     state->transform(x, y, &m.tx, &m.ty);
 
     if(render == RENDER_FILL) {
-	swfoutput_gfxdrawchar(&output, current_font_id, charid, &col, &m);
+	output->drawchar(output, current_font_id, charid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
 	gfxline_t*glyph = current_gfxfont->glyphs[charid].line;
@@ -1211,11 +1241,20 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
     if(!outputstarted) {
         msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
-        swfoutput_init(&output);
-        outputstarted = 1;
+
+        gfxdevice_swf_init(output);
+	
+	/* configure device */
+	parameter_t*p = device_config;
+	while(p) {
+	    output->setparameter(output, p->name, p->value);
+	    p = p->next;
+	}
+        
+	outputstarted = 1;
     }
       
-    swfoutput_newpage(&output, pageNum, user_movex, user_movey, (int)x1, (int)y1, (int)x2, (int)y2);
+    swfoutput_newpage(output, pageNum, user_movex, user_movey, (int)x1, (int)y1, (int)x2, (int)y2);
 }
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
@@ -1223,7 +1262,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     msg("<debug> drawlink\n");
     double x1, y1, x2, y2, w;
     GfxRGB rgb;
-    swfcoord points[5];
+    gfxline_t points[5];
     int x, y;
 
 #ifdef XPDF_101
@@ -1235,17 +1274,30 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     rgb.g = 0;
     rgb.b = 1;
     cvtUserToDev(x1, y1, &x, &y);
+    points[0].type = gfx_moveTo;
     points[0].x = points[4].x = (int)x;
     points[0].y = points[4].y = (int)y;
+    points[0].next = &points[1];
     cvtUserToDev(x2, y1, &x, &y);
+    points[1].type = gfx_lineTo;
     points[1].x = (int)x;
     points[1].y = (int)y;
+    points[1].next = &points[2];
     cvtUserToDev(x2, y2, &x, &y);
+    points[2].type = gfx_lineTo;
     points[2].x = (int)x;
     points[2].y = (int)y;
+    points[2].next = &points[3];
     cvtUserToDev(x1, y2, &x, &y);
+    points[3].type = gfx_lineTo;
     points[3].x = (int)x;
     points[3].y = (int)y;
+    points[3].next = &points[4];
+    cvtUserToDev(x1, y1, &x, &y);
+    points[4].type = gfx_lineTo;
+    points[4].x = (int)x;
+    points[4].y = (int)y;
+    points[4].next = 0;
 
     LinkAction*action=link->getAction();
     char buf[128];
@@ -1348,23 +1400,24 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
         msg("<notice> File contains links");
         linkinfo = 1;
     }
+    
     if(page>0)
     {
         int t;
         for(t=0;t<pagepos;t++)
             if(pages[t]==page)
                 break;
-        if(t!=pagepos)
-            swfoutput_linktopage(&output, t, points);
+        if(t!=pagepos) {
+	    char buf[80];
+	    sprintf(buf, "page%d", t);
+            output->drawlink(output, points, buf);
+	}
     }
     else if(url)
     {
-        swfoutput_linktourl(&output, url, points);
+        output->drawlink(output, points, url);
     }
-    else if(named)
-    {
-        swfoutput_namedlink(&output, named, points);
-    }
+
     msg("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
     free(s);s=0;
 }
@@ -1385,7 +1438,7 @@ void SWFOutputDev::restoreState(GfxState *state) {
   msg("<trace> restoreState\n");
   updateAll(state);
   while(states[statepos].clipping) {
-      swfoutput_endclip(&output);
+      output->endclip(output);
       states[statepos].clipping--;
   }
   statepos--;
@@ -1761,7 +1814,7 @@ int SWFOutputDev::setGfxFont(char*id, char*filename)
 	    current_font_id = l->id;
 	    current_gfxfont = l->font;
 	    font = l->font;
-	    swfoutput_gfxaddfont(&this->output, id, current_gfxfont);
+	    output->addfont(output, id, current_gfxfont);
 	    return 1;
 	}
 	l = l->next;
@@ -1780,7 +1833,7 @@ int SWFOutputDev::setGfxFont(char*id, char*filename)
     } else {
 	this->fontlist = l;
     }
-    swfoutput_gfxaddfont(&this->output, id, current_gfxfont);
+    output->addfont(output, id, current_gfxfont);
     return 1;
 }
 
@@ -1932,6 +1985,73 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
     return newdata;
 }
 
+#define IMAGE_TYPE_JPEG 0
+#define IMAGE_TYPE_LOSSLESS 1
+
+static void drawimage(gfxdevice_t*dev, RGBA* data, int sizex,int sizey, 
+        double x1,double y1,
+        double x2,double y2,
+        double x3,double y3,
+        double x4,double y4, int type)
+{
+    RGBA*newpic=0;
+    
+    double l1 = sqrt((x4-x1)*(x4-x1) + (y4-y1)*(y4-y1));
+    double l2 = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+   
+    gfxline_t p1,p2,p3,p4,p5;
+    p1.type=gfx_moveTo;p1.x=x1; p1.y=y1;p1.next=&p2;
+    p2.type=gfx_lineTo;p2.x=x2; p2.y=y2;p2.next=&p3;
+    p3.type=gfx_lineTo;p3.x=x3; p3.y=y3;p3.next=&p4;
+    p4.type=gfx_lineTo;p4.x=x4; p4.y=y4;p4.next=&p5;
+    p5.type=gfx_lineTo;p5.x=x1; p5.y=y1;p5.next=0;
+
+    {p1.x = (int)(p1.x*20)/20.0;
+     p1.y = (int)(p1.y*20)/20.0;
+     p2.x = (int)(p2.x*20)/20.0;
+     p2.y = (int)(p2.y*20)/20.0;
+     p3.x = (int)(p3.x*20)/20.0;
+     p3.y = (int)(p3.y*20)/20.0;
+     p4.x = (int)(p4.x*20)/20.0;
+     p4.y = (int)(p4.y*20)/20.0;
+     p5.x = (int)(p5.x*20)/20.0;
+     p5.y = (int)(p5.y*20)/20.0;
+    }
+    
+    float m00,m10,tx;
+    float m01,m11,ty;
+    
+    gfxmatrix_t m;
+    m.m00 = (p4.x-p1.x)/sizex; m.m10 = (p2.x-p1.x)/sizey;
+    m.m01 = (p4.y-p1.y)/sizex; m.m11 = (p2.y-p1.y)/sizey;
+    m.tx = p1.x - 0.5;
+    m.ty = p1.y - 0.5;
+
+    gfximage_t img;
+    img.data = (gfxcolor_t*)data;
+    img.width = sizex;
+    img.height = sizey;
+  
+    if(type == IMAGE_TYPE_JPEG)
+	/* TODO: pass image_dpi to device instead */
+	dev->setparameter(dev, "next_bitmap_is_jpeg", "1");
+
+    dev->fillbitmap(dev, &p1, &img, &m, 0);
+}
+
+void drawimagejpeg(gfxdevice_t*dev, RGBA*mem, int sizex,int sizey, 
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
+{
+    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG);
+}
+
+void drawimagelossless(gfxdevice_t*dev, RGBA*mem, int sizex,int sizey, 
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
+{
+    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS);
+}
+
+
 void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int*maskColors)
@@ -2053,7 +2173,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic2[width*y+x] = pal[pic[y*width+x]];
 	}
       }
-      swfoutput_drawimagelossless(&output, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+      drawimagelossless(output, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
       free(pic2);
       free(pic);
       delete imgStr;
@@ -2075,9 +2195,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	}
       }
       if(str->getKind()==strDCT)
-	  swfoutput_drawimagejpeg(&output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+	  drawimagejpeg(output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
       else
-	  swfoutput_drawimagelossless(&output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+	  drawimagelossless(output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
       delete pic;
       delete imgStr;
       return;
@@ -2121,7 +2241,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic[width*y+x] = pal[pixBuf[0]];
 	}
       }
-      swfoutput_drawimagelossless(&output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+      drawimagelossless(output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
 
       delete pic;
       delete imgStr;
@@ -2156,7 +2276,7 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0,maskColors);
 }
 
-SWFOutputDev*output = 0; 
+//SWFOutputDev*output = 0; 
 
 static void printInfoString(Dict *infoDict, char *key, char *fmt) {
   Object obj;
@@ -2203,6 +2323,21 @@ static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
 int jpeg_dpi = 0;
 int ppm_dpi = 0;
 
+void storeDeviceParameter(char*name, char*value)
+{
+    parameter_t*p = new parameter_t();
+    p->name = strdup(name);
+    p->value = strdup(value);
+    p->next = 0;
+    if(device_config_next) {
+	device_config_next->next = p;
+	device_config_next = p;
+    } else {
+	device_config = p;
+	device_config_next = p;
+    }
+}
+
 void pdfswf_setparameter(char*name, char*value)
 {
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
@@ -2212,19 +2347,19 @@ void pdfswf_setparameter(char*name, char*value)
 	char buf[80];
 	zoom = atof(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	swfoutput_setparameter("jpegsubpixels", buf);
+	storeDeviceParameter("jpegsubpixels", buf);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	swfoutput_setparameter("ppmsubpixels", buf);
+	storeDeviceParameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "jpegdpi")) {
 	char buf[80];
 	jpeg_dpi = atoi(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	swfoutput_setparameter("jpegsubpixels", buf);
+	storeDeviceParameter("jpegsubpixels", buf);
     } else if(!strcmp(name, "ppmdpi")) {
 	char buf[80];
 	ppm_dpi = atoi(value);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	swfoutput_setparameter("ppmsubpixels", buf);
+	storeDeviceParameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "forceType0Fonts")) {
 	forceType0Fonts = atoi(value);
     } else if(!strcmp(name, "fontdir")) {
@@ -2234,7 +2369,7 @@ void pdfswf_setparameter(char*name, char*value)
     } else if(!strcmp(name, "fontconfig")) {
         config_use_fontconfig = atoi(value);
     } else {
-	swfoutput_setparameter(name, value);
+	storeDeviceParameter(name,value);
     }
 }
 void pdfswf_addfont(char*filename)
@@ -2527,7 +2662,8 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
     swf_output_internal_t*si = (swf_output_internal_t*)swf->internal;
 
     if(pi->protect) {
-        swfoutput_setparameter("protect", "1");
+	gfxdevice_t*dev = si->outputDev->output;
+        dev->setparameter(dev, "protect", "1");
     }
     si->outputDev->setXRef(pi->doc, pi->doc->getXRef());
 #ifdef XPDF_101
