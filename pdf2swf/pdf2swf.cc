@@ -466,8 +466,9 @@ int main(int argn, char *argv[])
         }
         nup_pos++;
     }
-    if(!swf_output_save(swf, outputname))
+    if(swf_output_save(swf, outputname) < 0) {
         exit(1);
+    }
     msg("<notice> SWF written");
     swf_output_destroy(swf);
 
