@@ -87,12 +87,11 @@ int main(int argc, char ** argv)
   int height = 400;
   char * s = BANNER_TEXT;
 
-  FONTUSAGE use;
   SWFFONT * font = Font_Demo_Font(ID_FONT); // change font name here
 
-  swf_FontInitUsage(font,&use);
-  swf_FontUse(font,&use,s);        
-  swf_FontReduce(font,&use);            // make sure that gid's point to the specific glyphs
+  swf_FontInitUsage(font);
+  swf_FontUse(font,s);        
+  swf_FontReduce(font);            // make sure that gid's point to the specific glyphs
   
   memset(&swf,0x00,sizeof(SWF));
 

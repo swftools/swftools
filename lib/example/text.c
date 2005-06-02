@@ -65,7 +65,6 @@ int main(int argc, char ** argv)
   int textsize = points*20;   // adjust height
   int textscale = points*10;  // adjust spacing
   
-  FONTUSAGE use;
   SWFFONT * font = Font_Demo_Font(ID_FONT); // change font name here
 
   /* adding layout to a font has the side effect that the 
@@ -75,9 +74,9 @@ int main(int argc, char ** argv)
   if(definefont2)
       swf_FontAddLayout(font,0,0,0);
 
-  swf_FontInitUsage(font,&use);
-  swf_FontUse(font,&use,BANNER_TEXT);        // SWF reduces font information to the used glyphs
-  swf_FontReduce(font,&use);  
+  swf_FontInitUsage(font);
+  swf_FontUse(font,BANNER_TEXT);        // SWF reduces font information to the used glyphs
+  swf_FontReduce(font);  
     
   memset(&swf,0x00,sizeof(SWF));
 
