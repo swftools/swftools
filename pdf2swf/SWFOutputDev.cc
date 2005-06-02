@@ -144,7 +144,6 @@ typedef struct _fontlist
 } fontlist_t;
 
 class SWFOutputDev:  public OutputDev {
-  int outputstarted;
 public:
   gfxdevice_t* output;
 
@@ -367,7 +366,6 @@ SWFOutputDev::SWFOutputDev()
     pbminfo = 0;
     type3active = 0;
     statepos = 0;
-    outputstarted = 0;
     xref = 0;
     substitutepos = 0;
     type3Warning = 0;
@@ -383,7 +381,13 @@ SWFOutputDev::SWFOutputDev()
     result = 0;
     outer_clip_box = 0;
     output = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
-    memset(output, 0, sizeof(output));
+    gfxdevice_swf_init(output);
+    /* configure device */
+    parameter_t*p = device_config;
+    while(p) {
+	output->setparameter(output, p->name, p->value);
+	p = p->next;
+    }
 };
   
 void SWFOutputDev::setMove(int x,int y)
@@ -789,6 +793,7 @@ void SWFOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
 
 	line2 = gfxtool_dash_line(line, dash, dashphase);
 	line = line2;
+	free(dash);
 	msg("<trace> After dashing:");
     }
     
@@ -892,12 +897,6 @@ void SWFOutputDev::eoClip(GfxState *state)
     gfxline_free(line);
 }
 
-/* pass through functions for swf_output */
-int SWFOutputDev::save(char*filename)
-{
-    finish();
-    return result->save(result, filename);
-}
 void SWFOutputDev::pagefeed()
 {
     if(outer_clip_box) {
@@ -907,16 +906,13 @@ void SWFOutputDev::pagefeed()
 
     swfoutput_pagefeed(output);
 }
-void* SWFOutputDev::getSWF()
-{
-    finish();
-    return result->get(result, "swf");
-}
 
 void SWFOutputDev::finish()
 {
     if(outer_clip_box) {
-	output->endclip(output);
+	if(output) {
+	    output->endclip(output);
+	}
 	outer_clip_box = 0;
     }
     if(output) {
@@ -925,10 +921,20 @@ void SWFOutputDev::finish()
     }
 }
 
+int SWFOutputDev::save(char*filename)
+{
+    finish();
+    return result->save(result, filename);
+}
+void* SWFOutputDev::getSWF()
+{
+    finish();
+    return result->get(result, "swf");
+}
+
 SWFOutputDev::~SWFOutputDev() 
 {
     finish();
-    outputstarted = 0;
 
     if(this->result) {
 	this->result->destroy(this->result);
@@ -945,10 +951,10 @@ SWFOutputDev::~SWFOutputDev()
 	free(l);
 	l = next;
     }
+    this->fontlist = 0;
 };
 GBool SWFOutputDev::upsideDown() 
 {
-    msg("<debug> upsidedown? yes");
     return gTrue;
 };
 GBool SWFOutputDev::useDrawChar() 
@@ -1271,21 +1277,8 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
         /*if(user_clipy2 < y2)*/ y2 = user_clipy2;
     }
 
-    if(!outputstarted) {
-        msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
-
-        gfxdevice_swf_init(output);
-	
-	/* configure device */
-	parameter_t*p = device_config;
-	while(p) {
-	    output->setparameter(output, p->name, p->value);
-	    p = p->next;
-	}
-        
-	outputstarted = 1;
-    }
-
+    msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
+    
     if(outer_clip_box) {
 	output->endclip(output);
 	outer_clip_box = 0;
@@ -1950,6 +1943,7 @@ void SWFOutputDev::updateFont(GfxState *state)
       char * fontname = getFontName(gfxFont);
       fileName = searchFont(fontname);
       if(!fileName) showFontError(gfxFont,0);
+      free(fontname);
     }
     if(!fileName) {
 	char * fontname = getFontName(gfxFont);
