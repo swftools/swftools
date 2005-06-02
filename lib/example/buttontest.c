@@ -37,7 +37,7 @@ int main (int argc,char ** argv)
 { SWF swf;
   RGBA rgb;
   SRECT r;
-  LPSHAPE s;
+  SHAPE* s;
   ActionTAG*a1,*a2,*a3, *actiontoset;
   S32 width=300,height = 300;
   

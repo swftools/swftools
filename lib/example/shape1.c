@@ -28,10 +28,10 @@
                
 int main (int argc,char ** argv)
 { SWF swf;
-  LPTAG t;
+  TAG* t;
   RGBA rgb;
   SRECT r;
-  LPSHAPE s;
+  SHAPE* s;
   S32 width=300,height = 300;
   
   int f,i,ls1,ls2;

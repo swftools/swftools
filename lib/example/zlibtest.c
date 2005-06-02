@@ -36,12 +36,12 @@
 
 int main ( int argc, char ** argv)
 { SWF swf;
-  LPTAG t;
+  TAG* t;
   RGBA rgb;
-  LPSHAPE s;
+  SHAPE* s;
   MATRIX m;
   SRECT r;
-  LPJPEGBITS jpeg;
+  JPEGBITS* jpeg;
   int i,f;
   
   int ls; // line style

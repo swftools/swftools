@@ -53,8 +53,8 @@ int main(int argc, char ** argv)
 { SWF swf;
   RGBA rgb;
 
-  LPTAG t;
-  LPSHAPE s;
+  TAG* t;
+  SHAPE* s;
   SRECT r;
 
   U16 id_circle;

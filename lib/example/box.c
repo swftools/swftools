@@ -52,7 +52,7 @@ void calcTables()
   }
 }
 
-void ShapeSquare(LPTAG t,LPSHAPE s,int p1,int p2,int p3,int p4,int dx,int dy)
+void ShapeSquare(TAG* t,SHAPE* s,int p1,int p2,int p3,int p4,int dx,int dy)
 { 
   // Hidden-Line-Check
     if (((dX[p2]-dX[p1])*(dY[p3]-dY[p1])-(dX[p3]-dX[p1])*(dY[p2]-dY[p1]))<0) return;
@@ -99,10 +99,10 @@ void mapBox(int xw,int yw,int zw)
                
 int main (int argc,char ** argv)
 { SWF swf;
-  LPTAG t;
+  TAG* t;
   RGBA rgb;
   SRECT r;
-  LPSHAPE s;
+  SHAPE* s;
   S32 width = 800,height = 800;
   U8 gbits,abits;
   CXFORM cx1,cx2;

@@ -32,13 +32,13 @@
   
 int main (int argc,char ** argv)
 { SWF swf;
-  LPTAG t;
+  TAG* t;
   RGBA rgb;
   SRECT r;
-  LPSHAPE s;
+  SHAPE* s;
   S32 width = 800,height = 800;
   int fs,ls; // line & fillstyle
-  LPJPEGBITS jpeg;
+  JPEGBITS* jpeg;
   MATRIX m;  
   
   int f,i,j,frame;
