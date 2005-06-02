@@ -121,7 +121,7 @@ int main (int argc,char ** argv)
   tag = swf_InsertTag(tag,ST_SHOWFRAME);
   tag = swf_InsertTag(tag,ST_END);
 
-  f = open("edittext.swf",O_WRONLY|O_CREAT|O_TRUNC, 0644);
+  f = open("edittext.swf",O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
   if(swf_WriteSWF(f,&swf)<0) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 

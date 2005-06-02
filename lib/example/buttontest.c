@@ -132,7 +132,7 @@ int main (int argc,char ** argv)
   t = swf_InsertTag(t,ST_SHOWFRAME);
   t = swf_InsertTag(t,ST_END);
 
-  f = open("buttontest.swf",O_WRONLY|O_CREAT, 0644);
+  f = open("buttontest.swf",O_WRONLY|O_CREAT|O_BINARY, 0644);
   if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
 

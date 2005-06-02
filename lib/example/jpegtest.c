@@ -148,7 +148,7 @@ int main( int argc, char ** argv)
 
 //  swf_WriteCGI(&swf);
 
-  f = open("jpegtest.swf",O_WRONLY|O_CREAT, 0644);
+  f = open("jpegtest.swf",O_WRONLY|O_CREAT||O_BINARY, 0644);
   if FAILED(swf_WriteSWF(f,&swf)) fprintf(stderr,"WriteSWF() failed.\n");
   close(f);
   
