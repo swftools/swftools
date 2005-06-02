@@ -253,7 +253,9 @@ public:
 
   void finish();
 
-  SWF*swf; //filled upon completion
+  gfxresult_t*result; //filled when complete
+
+  char outer_clip_box; //whether the page clip box is still on
 
   SWFOutputState states[64];
   int statepos;
@@ -378,7 +380,8 @@ SWFOutputDev::SWFOutputDev()
     current_text_stroke = 0;
     current_text_clip = 0;
     fontlist = 0;
-    swf = 0;
+    result = 0;
+    outer_clip_box = 0;
     output = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     memset(output, 0, sizeof(output));
 };
@@ -399,9 +402,17 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
     this->user_clipx2 = x2;
     this->user_clipy2 = y2;
 }
+
 void SWFOutputDev::getDimensions(int*x1,int*y1,int*x2,int*y2)
 {
-    return gfxdevice_swf_getdimensions(output, x1,y1,x2,y2);
+    if(result) {
+	*x1 = (int)result->get(result, "xmin");
+	*y1 = (int)result->get(result, "ymin");
+	*x2 = (int)result->get(result, "xmax");
+	*y2 = (int)result->get(result, "ymax");
+    } else {
+	*x1 = *y1 = *x2 = *y2 = 0;
+    }
 }
 
 static char*getFontID(GfxFont*font)
@@ -648,7 +659,7 @@ void dump_outline(gfxline_t*line)
     }
 }
 
-gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
+gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey)
 {
     int num = path->getNumSubpaths();
     int s,t;
@@ -669,7 +680,11 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
 
 	for(s=0;s<subnum;s++) {
 	   double x,y;
+	   
 	   state->transform(subpath->getX(s),subpath->getY(s),&x,&y);
+	   x += user_movex;
+	   y += user_movey;
+
 	   if(s==0) {
 		if(closed && needsfix && (fabs(posx-lastx)+fabs(posy-lasty))>0.001) {
 		    draw.lineTo(&draw, lastx, lasty);
@@ -715,7 +730,7 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
 void SWFOutputDev::stroke(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex, user_movey);
     strokeGfxline(state, line);
     gfxline_free(line);
 }
@@ -824,7 +839,7 @@ void SWFOutputDev::fillGfxLine(GfxState *state, gfxline_t*line)
 void SWFOutputDev::fill(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
     fillGfxLine(state, line);
     gfxline_free(line);
 }
@@ -833,7 +848,7 @@ void SWFOutputDev::eoFill(GfxState *state)
     GfxPath * path = state->getPath();
     gfxcolor_t col = getFillColor(state);
 
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eofill\n");
@@ -847,7 +862,7 @@ void SWFOutputDev::eoFill(GfxState *state)
 void SWFOutputDev::clip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
     clipToGfxLine(state, line);
     gfxline_free(line);
 }
@@ -865,7 +880,7 @@ void SWFOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line)
 void SWFOutputDev::eoClip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eoclip\n");
@@ -880,21 +895,32 @@ void SWFOutputDev::eoClip(GfxState *state)
 /* pass through functions for swf_output */
 int SWFOutputDev::save(char*filename)
 {
-    return gfxdevice_swf_save(output, filename);
+    finish();
+    return result->save(result, filename);
 }
 void SWFOutputDev::pagefeed()
 {
+    if(outer_clip_box) {
+	output->endclip(output);
+	outer_clip_box = 0;
+    }
+
     swfoutput_pagefeed(output);
 }
 void* SWFOutputDev::getSWF()
 {
-    return (void*)gfxdevice_swf_get(output);
+    finish();
+    return result->get(result, "swf");
 }
 
 void SWFOutputDev::finish()
 {
+    if(outer_clip_box) {
+	output->endclip(output);
+	outer_clip_box = 0;
+    }
     if(output) {
-	this->swf = (SWF*)output->finish(output);
+	this->result = output->finish(output);
 	free(output);output=0;
     }
 }
@@ -904,10 +930,9 @@ SWFOutputDev::~SWFOutputDev()
     finish();
     outputstarted = 0;
 
-    if(this->swf) {
-	swf_FreeTags(this->swf);
-	free(this->swf);
-	this->swf = 0;
+    if(this->result) {
+	this->result->destroy(this->result);
+	this->result = 0;
     }
 
     fontlist_t*l = this->fontlist;
@@ -1110,6 +1135,8 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 
     gfxmatrix_t m = this->current_font_matrix;
     state->transform(x, y, &m.tx, &m.ty);
+    m.tx += user_movex;
+    m.ty += user_movey;
 
     if(render == RENDER_FILL) {
 	output->drawchar(output, current_font_id, charid, &col, &m);
@@ -1211,7 +1238,12 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     this->currentpage = pageNum;
     double x1,y1,x2,y2;
     int rot = doc->getPageRotate(1);
+    gfxcolor_t white;
     laststate = state;
+    gfxline_t clippath[5];
+
+    white.r = white.g = white.b = white.a = 255;
+
     msg("<verbose> startPage %d (%f,%f,%f,%f)\n", pageNum, crop_x1, crop_y1, crop_x2, crop_y2);
     if(rot!=0)
         msg("<verbose> page is rotated %d degrees\n", rot);
@@ -1253,8 +1285,23 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
         
 	outputstarted = 1;
     }
-      
-    swfoutput_newpage(output, pageNum, user_movex, user_movey, (int)x1, (int)y1, (int)x2, (int)y2);
+
+    if(outer_clip_box) {
+	output->endclip(output);
+	outer_clip_box = 0;
+    }
+
+    msg("<notice> processing page %d (%dx%d:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1);
+
+    swfoutput_newpage(output, (int)x1, (int)y1, (int)x2, (int)y2);
+
+    clippath[0].type = gfx_moveTo;clippath[0].x = x1; clippath[0].y = y1; clippath[0].next = &clippath[1];
+    clippath[1].type = gfx_lineTo;clippath[1].x = x2; clippath[1].y = y1; clippath[1].next = &clippath[2];
+    clippath[2].type = gfx_lineTo;clippath[2].x = x2; clippath[2].y = y2; clippath[2].next = &clippath[3];
+    clippath[3].type = gfx_lineTo;clippath[3].x = x1; clippath[3].y = y2; clippath[3].next = &clippath[4];
+    clippath[4].type = gfx_lineTo;clippath[4].x = x1; clippath[4].y = y1; clippath[4].next = 0;
+    output->startclip(output, clippath); outer_clip_box = 1;
+    output->fill(output, clippath, &white);
 }
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
@@ -1275,28 +1322,28 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     rgb.b = 1;
     cvtUserToDev(x1, y1, &x, &y);
     points[0].type = gfx_moveTo;
-    points[0].x = points[4].x = (int)x;
-    points[0].y = points[4].y = (int)y;
+    points[0].x = points[4].x = x + user_movex;
+    points[0].y = points[4].y = y + user_movey;
     points[0].next = &points[1];
     cvtUserToDev(x2, y1, &x, &y);
     points[1].type = gfx_lineTo;
-    points[1].x = (int)x;
-    points[1].y = (int)y;
+    points[1].x = x + user_movex;
+    points[1].y = y + user_movey;
     points[1].next = &points[2];
     cvtUserToDev(x2, y2, &x, &y);
     points[2].type = gfx_lineTo;
-    points[2].x = (int)x;
-    points[2].y = (int)y;
+    points[2].x = x + user_movex;
+    points[2].y = y + user_movey;
     points[2].next = &points[3];
     cvtUserToDev(x1, y2, &x, &y);
     points[3].type = gfx_lineTo;
-    points[3].x = (int)x;
-    points[3].y = (int)y;
+    points[3].x = x + user_movex;
+    points[3].y = y + user_movey;
     points[3].next = &points[4];
     cvtUserToDev(x1, y1, &x, &y);
     points[4].type = gfx_lineTo;
-    points[4].x = (int)x;
-    points[4].y = (int)y;
+    points[4].x = x + user_movex;
+    points[4].y = y + user_movey;
     points[4].next = 0;
 
     LinkAction*action=link->getAction();
@@ -2086,10 +2133,10 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       return;
   }
   
-  state->transform(0, 1, &x1, &y1);
-  state->transform(0, 0, &x2, &y2);
-  state->transform(1, 0, &x3, &y3);
-  state->transform(1, 1, &x4, &y4);
+  state->transform(0, 1, &x1, &y1); x1 += user_movex; y1+= user_movey;
+  state->transform(0, 0, &x2, &y2); x2 += user_movex; y2+= user_movey;
+  state->transform(1, 0, &x3, &y3); x3 += user_movex; y3+= user_movey;
+  state->transform(1, 1, &x4, &y4); x4 += user_movex; y4+= user_movey;
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {

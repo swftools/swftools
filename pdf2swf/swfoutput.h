@@ -26,11 +26,7 @@
 
 void gfxdevice_swf_init(gfxdevice_t*);
 
-void* gfxdevice_swf_get(gfxdevice_t*);
-int gfxdevice_swf_save(gfxdevice_t*, char*filename);
-
+void swfoutput_newpage(gfxdevice_t*, int x1, int y1, int x2, int y2);
 void swfoutput_pagefeed(gfxdevice_t*obj);
-void swfoutput_newpage(gfxdevice_t*, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2);
-void gfxdevice_swf_getdimensions(gfxdevice_t*, int*x1, int*y1, int*x2, int*y2);
 
 #endif //__swfoutput_h__

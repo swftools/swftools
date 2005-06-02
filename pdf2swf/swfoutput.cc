@@ -88,7 +88,7 @@ typedef struct _swfoutput_internal
     float config_minlinewidth;
     double config_caplinewidth;
 
-    SWF swf;
+    SWF* swf;
 
     fontlist_t* fontlist;
 
@@ -138,8 +138,6 @@ typedef struct _swfoutput_internal
     int bboxrectpos;
     SRECT bboxrect;
 
-    TAG*cliptag;
- 
     chardata_t chardata[CHARDATAMAX];
     int chardatapos;
     int firstpage;
@@ -157,7 +155,6 @@ typedef struct _swfoutput_internal
 
 } swfoutput_internal;
     
-static void* swf_finish(gfxdevice_t*driver);
 static void swf_fillbitmap(gfxdevice_t*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
 static int  swf_setparameter(gfxdevice_t*driver, const char*key, const char*value);
 static void swf_drawstroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
@@ -170,6 +167,7 @@ static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*grad
 static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 static void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font);
 static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action);
+static gfxresult_t* swf_finish(gfxdevice_t*driver);
 
 int getCharID(SWFFONT *font, int charnr, char *charname, int u);
 
@@ -1142,40 +1140,27 @@ static void setBackground(gfxdevice_t*dev, int x1, int y1, int x2, int y2)
     swf_ObjectPlace(i->tag,shapeid,getNewDepth(dev),0,0,0);
     i->tag = swf_InsertTag(i->tag, ST_PLACEOBJECT2);
     swf_ObjectPlaceClip(i->tag,shapeid,getNewDepth(dev),0,0,0,65535);
-    i->cliptag = i->tag;
 }
 
-void swfoutput_newpage(gfxdevice_t*dev, int pageNum, int movex, int movey, int x1, int y1, int x2, int y2)
+void swfoutput_newpage(gfxdevice_t*dev, int x1, int y1, int x2, int y2)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!i->firstpage && !i->pagefinished)
         endpage(dev);
 
     swf_GetMatrix(0, &i->page_matrix);
-    i->page_matrix.tx = movex*20;
-    i->page_matrix.ty = movey*20;
-
-    if(i->cliptag && i->frameno == i->lastframeno) {
-        SWFPLACEOBJECT dev;
-        swf_GetPlaceObject(i->cliptag, &dev);
-        dev.clipdepth = i->depth;
-        swf_ResetTag(i->cliptag, i->cliptag->id);
-        swf_SetPlaceObject(i->cliptag, &dev);
-        swf_PlaceObjectFree(&dev);
-    }
-
+    i->page_matrix.tx = 0;
+    i->page_matrix.ty = 0;
     i->min_x = x1;
     i->min_y = y1;
     i->max_x = x2;
     i->max_y = y2;
     
-    msg("<notice> processing page %d (%dx%d:%d:%d)", pageNum,x2-x1,y2-y1, x1, y1);
-
     x1*=20;y1*=20;x2*=20;y2*=20;
 
     /* set clipping/background rectangle */
     /* TODO: this should all be done in SWFOutputDev */
-    setBackground(dev, x1, y1, x2, y2);
+    //setBackground(dev, x1, y1, x2, y2);
 
     /* increase SWF's bounding box */
     SRECT r;
@@ -1183,7 +1168,7 @@ void swfoutput_newpage(gfxdevice_t*dev, int pageNum, int movex, int movey, int x
     r.ymin = y1;
     r.xmax = x2;
     r.ymax = y2;
-    swf_ExpandRect2(&i->swf.movieSize, &r);
+    swf_ExpandRect2(&i->swf->movieSize, &r);
 
     i->lastframeno = i->frameno;
     i->firstpage = 0;
@@ -1220,18 +1205,17 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     msg("<verbose> initializing swf output for size %d*%d\n", i->max_x,i->max_y);
 
     i->swffont = 0;
+   
+    i->swf = (SWF*)rfx_calloc(sizeof(SWF));
+    i->swf->fileVersion    = i->config_flashversion;
+    i->swf->frameRate      = 0x0040; // 1 frame per 4 seconds
+    i->swf->movieSize.xmin = 0;
+    i->swf->movieSize.ymin = 0;
+    i->swf->movieSize.xmax = 0;
+    i->swf->movieSize.ymax = 0;
     
-    memset(&i->swf,0x00,sizeof(SWF));
-
-    i->swf.fileVersion    = i->config_flashversion;
-    i->swf.frameRate      = 0x0040; // 1 frame per 4 seconds
-    i->swf.movieSize.xmin = 0;
-    i->swf.movieSize.ymin = 0;
-    i->swf.movieSize.xmax = 0;
-    i->swf.movieSize.ymax = 0;
-    
-    i->swf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
-    i->tag = i->swf.firstTag;
+    i->swf->firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
+    i->tag = i->swf->firstTag;
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
     swf_SetRGB(i->tag,&rgb);
 
@@ -1451,25 +1435,25 @@ void swfoutput_finalize(gfxdevice_t*dev)
         return; //already done
 
     if(i->config_bboxvars) {
-	TAG* tag = swf_InsertTag(i->swf.firstTag, ST_DOACTION);
+	TAG* tag = swf_InsertTag(i->swf->firstTag, ST_DOACTION);
 	ActionTAG*a = 0;
 	a = action_PushString(a, "xmin");
-	a = action_PushFloat(a, i->swf.movieSize.xmin / 20.0);
+	a = action_PushFloat(a, i->swf->movieSize.xmin / 20.0);
 	a = action_SetVariable(a);
 	a = action_PushString(a, "ymin");
-	a = action_PushFloat(a, i->swf.movieSize.ymin / 20.0);
+	a = action_PushFloat(a, i->swf->movieSize.ymin / 20.0);
 	a = action_SetVariable(a);
 	a = action_PushString(a, "xmax");
-	a = action_PushFloat(a, i->swf.movieSize.xmax / 20.0);
+	a = action_PushFloat(a, i->swf->movieSize.xmax / 20.0);
 	a = action_SetVariable(a);
 	a = action_PushString(a, "ymax");
-	a = action_PushFloat(a, i->swf.movieSize.ymax / 20.0);
+	a = action_PushFloat(a, i->swf->movieSize.ymax / 20.0);
 	a = action_SetVariable(a);
 	a = action_PushString(a, "width");
-	a = action_PushFloat(a, (i->swf.movieSize.xmax - i->swf.movieSize.xmin) / 20.0);
+	a = action_PushFloat(a, (i->swf->movieSize.xmax - i->swf->movieSize.xmin) / 20.0);
 	a = action_SetVariable(a);
 	a = action_PushString(a, "height");
-	a = action_PushFloat(a, (i->swf.movieSize.ymax - i->swf.movieSize.ymin) / 20.0);
+	a = action_PushFloat(a, (i->swf->movieSize.ymax - i->swf->movieSize.ymin) / 20.0);
 	a = action_SetVariable(a);
 	a = action_End(a);
 	swf_ActionSet(tag, a);
@@ -1482,7 +1466,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
     endpage(dev);
     fontlist_t *tmp,*iterator = i->fontlist;
     while(iterator) {
-	TAG*mtag = i->swf.firstTag;
+	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
 	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
 	    if(!i->config_storeallcharacters)
@@ -1504,35 +1488,16 @@ void swfoutput_finalize(gfxdevice_t*dev)
     }
     
     if(i->overflow) {
-	wipeSWF(&i->swf);
+	wipeSWF(i->swf);
+    }
+    if(i->config_enablezlib || i->config_flashversion>=6) {
+	i->swf->compressed = 1;
     }
 }
 
-void gfxdevice_swf_getdimensions(gfxdevice_t*dev, int*x1, int*y1, int*x2, int*y2)
+int swfresult_save(gfxresult_t*gfx, char*filename)
 {
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(x1) *x1 = i->swf.movieSize.xmin/20;
-    if(y1) *y1 = i->swf.movieSize.ymin/20;
-    if(x2) *x2 = i->swf.movieSize.xmax/20;
-    if(y2) *y2 = i->swf.movieSize.ymax/20;
-}
-
-static void swfoutput_destroy(gfxdevice_t* dev);
-
-void* swf_finish(gfxdevice_t* dev)
-{
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput_finalize(dev);
-    SWF* swf = swf_CopySWF(&i->swf);
-    swfoutput_destroy(dev);
-    return swf;
-}
-
-int gfxdevice_swf_save(gfxdevice_t* dev, char*filename) 
-{
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    swfoutput_finalize(dev);
-
+    SWF*swf = (SWF*)gfx->internal;
     int fi;
     if(filename)
      fi = open(filename, O_BINARY|O_CREAT|O_TRUNC|O_WRONLY, 0777);
@@ -1540,28 +1505,66 @@ int gfxdevice_swf_save(gfxdevice_t* dev, char*filename)
      fi = 1; // stdout
     
     if(fi<=0) {
-     msg("<fatal> Could not create \"%s\". ", FIXNULL(filename));
-     return 0;
+	msg("<fatal> Could not create \"%s\". ", FIXNULL(filename));
+	return -1;
     }
     
-    if(i->config_enablezlib || i->config_flashversion>=6) {
-      if FAILED(swf_WriteSWC(fi,&i->swf)) 
-       msg("<error> WriteSWC() failed.\n");
+    if(swf->compressed) {
+	if FAILED(swf_WriteSWC(fi,swf)) 
+	    msg("<error> WriteSWC() failed.\n");
     } else {
-      if FAILED(swf_WriteSWF(fi,&i->swf)) 
-       msg("<error> WriteSWF() failed.\n");
+	if FAILED(swf_WriteSWF(fi,swf)) 
+	    msg("<error> WriteSWF() failed.\n");
     }
 
     if(filename)
      close(fi);
-    return 1;
+    return 0;
+}
+void* swfresult_get(gfxresult_t*gfx, char*name)
+{
+    SWF*swf = (SWF*)gfx->internal;
+    if(!strcmp(name, "swf")) {
+	return (void*)swf_CopySWF(swf);
+    } else if(!strcmp(name, "xmin")) {
+	return (void*)(swf->movieSize.xmin/20);
+    } else if(!strcmp(name, "ymin")) {
+	return (void*)(swf->movieSize.ymin/20);
+    } else if(!strcmp(name, "xmax")) {
+	return (void*)(swf->movieSize.xmax/20);
+    } else if(!strcmp(name, "ymax")) {
+	return (void*)(swf->movieSize.ymax/20);
+    }
+    return 0;
+}
+void swfresult_destroy(gfxresult_t*gfx)
+{
+    if(gfx->internal) {
+	swf_FreeTags((SWF*)gfx->internal);
+	free(gfx->internal);
+	gfx->internal = 0;
+    }
+    memset(gfx, 0, sizeof(gfxresult_t));
 }
 
-void* gfxdevice_swf_get(gfxdevice_t*dev)
+static void swfoutput_destroy(gfxdevice_t* dev);
+
+gfxresult_t* swf_finish(gfxdevice_t* dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    gfxresult_t*result;
+
     swfoutput_finalize(dev);
-    return (void*)swf_CopySWF(&i->swf);
+    SWF* swf = i->swf;i->swf = 0;
+    swfoutput_destroy(dev);
+
+    result = (gfxresult_t*)rfx_calloc(sizeof(gfxresult_t));
+    result->internal = swf;
+    result->save = swfresult_save;
+    result->write = 0;
+    result->get = swfresult_get;
+    result->destroy = swfresult_destroy;
+    return result;
 }
 
 /* Perform cleaning up */
@@ -1582,7 +1585,7 @@ static void swfoutput_destroy(gfxdevice_t* dev)
         iterator = iterator->next;
         delete tmp;
     }
-    swf_FreeTags(&i->swf);
+    if(i->swf) {swf_FreeTags(i->swf);free(i->swf);i->swf = 0;}
 
     free(i);i=0;
     memset(dev, 0, sizeof(gfxdevice_t));
