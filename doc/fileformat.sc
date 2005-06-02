@@ -143,7 +143,13 @@
 # morphing
 # --------
 
-.morphshape morphthing start="start.fig" end="end.fig" #TODO
+.outline shape1:
+    #define shape 1
+.end
+.outline shape2:
+    #define shape 2
+.end
+.morphshape morphthing start=shape1 end=shape2
 .frame 250
     .put morphthing ratio=0%
 .frame 270
