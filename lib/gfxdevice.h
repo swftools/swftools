@@ -82,6 +82,16 @@ typedef struct _gfxbbox
     gfxcoord_t xmin, ymin, xmax, ymax;
 } gfxbbox_t;
 
+typedef struct _gfxresult
+{
+    void (*write)(struct _gfxresult*gfx, int filedesc);
+    int (*save)(struct _gfxresult*gfx, char*filename);
+    void* (*get)(struct _gfxresult*gfx, char*name);
+    void (*destroy)(struct _gfxresult*gfx);
+
+    void*internal;
+} gfxresult_t;
+
 typedef struct _gfxdevice
 {
     int (*setparameter)(struct _gfxdevice*dev, const char*key, const char*value);
@@ -102,7 +112,7 @@ typedef struct _gfxdevice
     
     void (*endpage)(struct _gfxdevice*dev); //?
     
-    void* (*finish)(struct _gfxdevice*dev);
+    gfxresult_t* (*finish)(struct _gfxdevice*dev);
 
     void* internal;
 } gfxdevice_t;
