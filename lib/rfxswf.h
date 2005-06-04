@@ -460,7 +460,6 @@ void	   swf_Shape2Free(SHAPE2 * s);
 void	swf_DumpShape(SHAPE2*shape2);
 
 void swf_ParseDefineShape(TAG*tag, SHAPE2*shape);
-void swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape);
 void swf_SetShape2(TAG*tag, SHAPE2*shape2);
 
 void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line, 
