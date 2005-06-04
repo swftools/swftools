@@ -1545,6 +1545,7 @@ void swfresult_destroy(gfxresult_t*gfx)
 	gfx->internal = 0;
     }
     memset(gfx, 0, sizeof(gfxresult_t));
+    free(gfx);
 }
 
 static void swfoutput_destroy(gfxdevice_t* dev);
