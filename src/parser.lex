@@ -99,10 +99,13 @@ static void unescapeString(string_t * tmp)
 	    case 'n': p[0] = '\n'; break;
 	    case 'r': p[0] = '\r'; break;
 	    case 't': p[0] = '\t'; break;
-	    case 'x':  {
+	    case 'x':  case 'u': {
+		int max=2;
 		int num=0;
 		char*utf8;
-		while(strchr("0123456789abcdefABCDEF", p[nr])) {
+		if(p[1] == 'u')
+		    max = 4;
+		while(strchr("0123456789abcdefABCDEF", p[nr]) && nr < max+2) {
 		    num <<= 4;
 		    if(p[nr]>='0' && p[nr]<='9') num |= p[nr] - '0';
 		    if(p[nr]>='a' && p[nr]<='f') num |= p[nr] - 'a' + 10;
@@ -111,7 +114,6 @@ static void unescapeString(string_t * tmp)
 		}
 		utf8 = getUTF8(num);
 		new = strlen(utf8);
-
 		memcpy(p, utf8, new); // do not copy the terminating zero
 		break;
 	    }
