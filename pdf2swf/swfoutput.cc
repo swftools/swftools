@@ -1976,7 +1976,7 @@ void swfoutput_gfxdrawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*c
     dev->drawchar(dev, fontid, glyph, c, m);
 }
 
-void swfoutput_setparameter(gfxdevice_t*dev, char*name, char*value)
+int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
@@ -2012,6 +2012,8 @@ void swfoutput_setparameter(gfxdevice_t*dev, char*name, char*value)
 	i->config_caplinewidth = atof(value);
     } else if(!strcmp(name, "dumpfonts")) {
 	i->config_dumpfonts = atoi(value);
+    } else if(!strcmp(name, "next_bitmap_is_jpeg")) {
+	i->jpeg = 1;
     } else if(!strcmp(name, "jpegquality")) {
 	int val = atoi(value);
 	if(val<0) val=0;
@@ -2029,7 +2031,9 @@ void swfoutput_setparameter(gfxdevice_t*dev, char*name, char*value)
 	i->config_fontsplinemaxerror = v;
     } else {
 	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
+	return 0;
     }
+    return 1;
 }
 
 // --------------------------------------------------------------------
@@ -2369,15 +2373,6 @@ static void swf_endclip(gfxdevice_t*dev)
     i->depth ++;*/
     swf_ObjectPlaceClip(i->cliptags[i->clippos],i->clipshapes[i->clippos],i->clipdepths[i->clippos],&i->page_matrix,NULL,NULL,i->depth);
 }
-static int swf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
-{
-    if(!strcmp(key, "next_bitmap_is_jpeg")) {
-	((swfoutput_internal*)dev->internal)->jpeg = 1;
-	return 1;
-    }
-    return 0;
-}
-
 static int gfxline_type(gfxline_t*line)
 {
     int tmplines=0;
