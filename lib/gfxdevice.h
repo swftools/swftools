@@ -96,7 +96,7 @@ typedef struct _gfxdevice
 {
     int (*setparameter)(struct _gfxdevice*dev, const char*key, const char*value);
 
-    void (*startpage)(struct _gfxdevice*dev, int xmin, int ymin, int xmax, int ymax); /*xmin/ymin?*/
+    void (*startpage)(struct _gfxdevice*dev, int width, int height);
 
     void (*startclip)(struct _gfxdevice*dev, gfxline_t*line);
     void (*endclip)(struct _gfxdevice*dev);
@@ -110,7 +110,7 @@ typedef struct _gfxdevice
 
     void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, char*action);
     
-    void (*endpage)(struct _gfxdevice*dev); //?
+    void (*endpage)(struct _gfxdevice*dev);
     
     gfxresult_t* (*finish)(struct _gfxdevice*dev);
 
