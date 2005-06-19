@@ -1005,10 +1005,10 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
 	} else {
 	    SHAPE2*shape = font->glyphs[chars[t]];
 	    shape->fillstyles[0].color = *color; //q&d
-	    printf("Rendering char %d (size %d, x:%d, y:%d) color:%02x%02x%02x%02x\n", chars[t], fontsize, x, y,
+	    /*printf("Rendering char %d (size %d, x:%d, y:%d) color:%02x%02x%02x%02x\n", chars[t], fontsize, x, y,
 		    color->a, color->r, color->g, color->b);
 	    swf_DumpMatrix(stdout, &m);
-	    swf_DumpShape(shape);
+	    swf_DumpShape(shape);*/
 	    swf_RenderShape(info->buf, shape, &m, info->cxform, info->depth, info->clipdepth);
 	}
     }
