@@ -48,7 +48,8 @@ static int zlib = 0;
 
 static char * preloader = 0;
 static char * viewer = 0;
-static int nup = 0;
+static int xnup = 1;
+static int ynup = 1;
 
 char* fontpaths[256];
 int fontpathpos = 0;
@@ -90,12 +91,20 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "2"))
     {
-        nup = 2;
+        xnup = 2;
+        ynup = 1;
 	return 0;
     }
     else if (!strcmp(name, "4"))
     {
-        nup = 4;
+        xnup = 2;
+        ynup = 2;
+	return 0;
+    }
+    else if (!strcmp(name, "9"))
+    {
+        xnup = 3;
+        ynup = 3;
 	return 0;
     }
     else if (!strcmp(name, "q"))
@@ -430,41 +439,83 @@ int main(int argn, char *argv[])
         msg("<error> Couldn't open %s", filename);
         exit(1);
     }
+
     swf_output_t* swf = swf_output_init();
 
-    for(t = 1; t <= pdf->num_pages; t++) 
+    struct mypage_t {
+	int x;
+	int y;
+	pdf_page_t*page;
+	pdf_page_info_t*info;
+    } pages[4];
+    int pagenum=0;
+
+    for(int pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
     {
-	if(is_in_range(t, pagerange)) {
-            /* for links: FIXME */
-            pdfswf_preparepage(t);
-        }
-	if(is_in_range(t, pagerange)) {
-            pdf_page_t*page = pdf_getpage(pdf, t);
-            if(nup) {
-                pdf_page_info_t* info = pdf_page_getinfo(page);
-                if(nup_pos%nup == 0) {
-                    pdf_page_render(page, swf);
-                    x = info->xMax;
-                    y = info->yMax;
-                } else if(nup_pos%nup == 1) {
-                    pdf_page_rendersection(page, swf, x, 0, info->xMin+x, info->yMin, info->xMax+x, info->yMax);
-                } else if(nup_pos%nup == 2) {
-                    pdf_page_rendersection(page, swf, 0, y, info->xMin, info->yMin+y, info->xMax, info->yMax+y);
-                } else if(nup_pos%nup == 3) {
-                    pdf_page_rendersection(page, swf, x, y, info->xMin+x, info->yMin+y, info->xMax+x, info->yMax+y);
-                }
-                if(nup_pos % nup == nup-1)
-                    swf_output_pagefeed(swf);
+	if(is_in_range(pagenr, pagerange)) {
+	    pdf_page_t* page = pages[pagenum].page = pdf_getpage(pdf, pagenr);
+            pdf_page_info_t* info = pdf_page_getinfo(page);
+	    pages[pagenum].x = 0;
+	    pages[pagenum].y = 0;
+	    pages[pagenum].info = info;
+	    pages[pagenum].page = page;
+	    pagenum++;
+	}
+	if(pagenum == xnup*ynup || (pagenr == pdf->num_pages && pagenum>1)) {
 
-                pdf_page_info_destroy(info);
-            } else {
-                pdf_page_render(page, swf);
-                swf_output_pagefeed(swf);
-            }
+	    int t;
+	    int xmax[xnup], ymax[xnup];
+	    int x,y;
+	    int width=0, height=0;
 
-            pdf_page_destroy(page);
-        }
-        nup_pos++;
+	    memset(xmax, 0, xnup*sizeof(int));
+	    memset(ymax, 0, ynup*sizeof(int));
+
+	    for(y=0;y<ynup;y++)
+	    for(x=0;x<xnup;x++) {
+		int t = y*xnup + x;
+
+		if(pages[t].info->xMax-pages[t].info->xMin > xmax[x])
+		    xmax[x] = pages[t].info->xMax-pages[t].info->xMin;
+		if(pages[t].info->yMax-pages[t].info->yMin > ymax[y])
+		    ymax[y] = pages[t].info->yMax-pages[t].info->yMin;
+	    }
+	    for(x=0;x<xnup;x++) {
+		width += xmax[x];
+		xmax[x] = width;
+	    }
+	    for(y=0;y<ynup;y++) {
+		height += ymax[y];
+		ymax[y] = height;
+	    }
+	    swf_output_startframe(swf, width, height);
+	    for(t=0;t<pagenum;t++) {
+		int x = t%xnup;
+		int y = t/xnup;
+		int xpos = x>0?xmax[x-1]:0;
+		int ypos = y>0?ymax[y-1]:0;
+		pdf_page_info_t*info = pages[t].info;
+		xpos -= info->xMin;
+		ypos -= info->yMin;
+		msg("<verbose> Render (%d,%d)-(%d,%d) move:%d/%d\n",
+			info->xMin + xpos,
+			info->yMin + ypos,
+			info->xMax + xpos,
+			info->yMax + ypos, xpos, ypos);
+		pdf_page_rendersection(pages[t].page, swf, xpos, 
+			                                   ypos,
+							   info->xMin + xpos, 
+							   info->yMin + ypos, 
+							   info->xMax + xpos, 
+							   info->yMax + ypos);
+	    }
+	    swf_output_endframe(swf);
+	    for(t=0;t<pagenum;t++)  {
+                pdf_page_info_destroy(pages[t].info);
+		pdf_page_destroy(pages[t].page);
+	    }
+	    pagenum = 0;
+	}
     }
     if(swf_output_save(swf, outputname) < 0) {
         exit(1);
