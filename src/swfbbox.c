@@ -36,7 +36,8 @@ static int swifty = 0;
 static int verbose = 0;
 static int showbbox = 0;
 static int showorigbbox = 1;
-static int expand = 1;
+static int expand = 0;
+static int clip = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -47,6 +48,7 @@ static struct options_t options[] = {
 {"S", "swifty"},
 {"o", "output"},
 {"v", "verbose"},
+{"c", "clip"},
 {"V", "version"},
 {0,0}
 };
@@ -58,7 +60,7 @@ int args_callback_option(char*name,char*val)
         exit(0);
     } 
     else if(!strcmp(name, "b")) {
-	showorigbbox = 1;
+	showorigbbox = 2;
 	if(showbbox == 1) showbbox = 0;
 	return 0;
     } 
@@ -68,12 +70,18 @@ int args_callback_option(char*name,char*val)
     } 
     else if(!strcmp(name, "O")) {
 	optimize = 1;
-	if(showbbox == 1) showbbox = 0;
+	if(showorigbbox == 1) showorigbbox = 0;
 	return 0;
     } 
     else if(!strcmp(name, "S")) {
 	swifty = 1;
-	if(showbbox == 1) showbbox = 0;
+	if(showorigbbox == 1) showorigbbox = 0;
+	return 0;
+    } 
+    else if(!strcmp(name, "c")) {
+	if(showorigbbox == 1) showorigbbox = 0;
+	optimize = 1;
+	clip = 1;
 	return 0;
     } 
     else if(!strcmp(name, "v")) {
@@ -209,6 +217,114 @@ typedef struct _textbounds
     MATRIX m; // character transform matrix
 } textbounds_t;
 
+typedef struct _placement
+{
+    SWFPLACEOBJECT* po;
+    int num;
+} placement_t;
+
+static placement_t* placements;
+
+static placement_t* readPlacements(SWF*swf)
+{
+    placement_t* p = (placement_t*)rfx_calloc(sizeof(placement_t)*65536);
+    TAG*tag = swf->firstTag;
+    while(tag) {
+	if(tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	    SWFPLACEOBJECT*po = rfx_alloc(sizeof(SWFPLACEOBJECT));
+	    swf_GetPlaceObject(tag, po);
+	    int id = po->id;
+	    if(po->move) {
+		fprintf(stderr, "MOVE tags not supported with -c");
+	    }
+	    p[id].po = po;
+	    p[id].num++;
+	}
+	tag = tag->next;
+    }
+
+    return p;
+}
+
+static void freePlacements(placement_t*p)
+{
+    int t;
+    for(t=0;t<65536;t++) {
+	if(p[t].po) {
+	    swf_PlaceObjectFree(p[t].po); p[t].po = 0;
+	}
+    }
+    rfx_free(p);
+}
+
+SRECT swf_ClipRect(SRECT border, SRECT r)
+{
+    if(r.xmax > border.xmax) r.xmax = border.xmax;
+    if(r.ymax > border.ymax) r.ymax = border.ymax;
+    if(r.xmax < border.xmin) r.xmax = border.xmin;
+    if(r.ymax < border.ymin) r.ymax = border.ymin;
+    
+    if(r.xmin > border.xmax) r.xmin = border.xmax;
+    if(r.ymin > border.ymax) r.ymin = border.ymax;
+    if(r.xmin < border.xmin) r.xmin = border.xmin;
+    if(r.ymin < border.ymin) r.ymin = border.ymin;
+    return r;
+}
+
+static SRECT clipBBox(TAG*tag, SRECT mbbox, SRECT r)
+{
+    int id = swf_GetDefineID(tag);
+    MATRIX m;
+    if(!placements[id].po) {
+	if(verbose)
+	    printf("Id %d is never set\n", id);
+	return r;
+    }
+    if(placements[id].num>1) {
+	if(verbose)
+	    printf("Id %d is set more than once\n", id);
+	return r;
+    }
+    m = placements[id].po->matrix;
+    if(m.r0 || m.r1)  {
+	fprintf(stderr, "Rotating PLACEOBJECTS are not supported with -c\n");
+	return r;
+    }
+
+    printf("ID %d\n", id);
+    swf_DumpMatrix(stdout, &m);
+    mbbox.xmin -= m.tx;
+    mbbox.ymin -= m.ty;
+    mbbox.xmax -= m.tx;
+    mbbox.ymax -= m.ty;
+    mbbox.xmin *= 65536.0/m.sx;
+    mbbox.xmax *= 65536.0/m.sx;
+    mbbox.ymin *= 65536.0/m.sy;
+    mbbox.ymax *= 65536.0/m.sy;
+    
+    printf("border: %f/%f/%f/%f - rect: %f/%f/%f/%f\n",
+	    mbbox.xmin /20.0,
+	    mbbox.ymin /20.0,
+	    mbbox.xmax /20.0,
+	    mbbox.ymax /20.0,
+	    r.xmin /20.0,
+	    r.ymin /20.0,
+	    r.xmax /20.0,
+	    r.ymax /20.0);
+    
+
+    r = swf_ClipRect(mbbox, r);
+    
+    printf("new rect: %f/%f/%f/%f\n",
+	    r.xmin /20.0,
+	    r.ymin /20.0,
+	    r.xmax /20.0,
+	    r.ymax /20.0);
+
+    return r;
+}
+
+
 static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, 
 		    int xstart, int ystart, RGBA* color)
 {
@@ -287,6 +403,13 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 	    swf_Shape2Optimize(&s);
 	    tag->len = 2;
 	    tag->pos = 0;
+	    if(!s.bbox) {
+		fprintf(stderr, "Internal error (5)\n");
+		exit(1);
+	    }
+	    if(clip) {
+		*s.bbox = clipBBox(tag, swf->movieSize, *s.bbox);
+	    }
 	    swf_SetShape2(tag, &s);
 	}
 	if (tag->id == ST_DEFINETEXT || tag->id == ST_DEFINETEXT2) {
@@ -321,6 +444,9 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 		swf_DumpMatrix(stdout, &bounds.m);
 	    	printf("old: %d %d %d %d\n", oldbox.xmin, oldbox.ymin, oldbox.xmax, oldbox.ymax);
 	    	printf("new: %d %d %d %d\n", bounds.r.xmin, bounds.r.ymin, bounds.r.xmax, bounds.r.ymax);
+	    }
+	    if(clip) {
+		bounds.r = clipBBox(tag, swf->movieSize, bounds.r);
 	    }
 	    
 	    /* now comes the tricky part: 
@@ -457,6 +583,11 @@ int main (int argc,char ** argv)
     close(fi);
 
     swf_OptimizeTagOrder(&swf);
+
+    if(clip) {
+	placements = readPlacements(&swf);
+    }
+
     swf_FoldAll(&swf);
 
     /* Optimize bounding boxes in case -O flag was set */
@@ -529,5 +660,9 @@ int main (int argc,char ** argv)
     }
 
     swf_FreeTags(&swf);
+
+    if(placements) {
+	freePlacements(placements);
+    }
     return 0;
 }
