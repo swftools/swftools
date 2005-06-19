@@ -124,10 +124,11 @@ void draw_string(drawer_t*draw, const char*string)
 	}
 	else if(!strncmp(token, "circle", 6)) {
 	    int mx,my,r;
-	    double r2 = 0.70710678118654757*r;
+	    double r2;
 	    mx = atof(getToken(&p));
 	    my = atof(getToken(&p));
 	    r = atof(getToken(&p));
+	    r2 = 0.70710678118654757*r;
 	    draw_moveTo2(draw, mx, my-r);
 	    draw_conicTo2(draw, mx+r2, my-r2, mx+r, my);
 	    draw_conicTo2(draw, mx+r2, my+r2, mx, my+r);
