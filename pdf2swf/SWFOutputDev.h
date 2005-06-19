@@ -31,8 +31,6 @@ void pdfswf_addlanguagedir(char*dir);
 
 void pdfswf_setparameter(char*name, char*value);
 
-void pdfswf_preparepage(int page);
-
 typedef struct _pdf_doc
 {
     char*info;
@@ -52,7 +50,8 @@ typedef struct _swf_output
 } swf_output_t;
 
 swf_output_t* swf_output_init();
-void swf_output_pagefeed(swf_output_t*);
+void swf_output_startframe(swf_output_t*, int width, int height);
+void swf_output_endframe(swf_output_t*);
 void swf_output_setparameter(swf_output_t*, char*name, char*value);
 int swf_output_save(swf_output_t*, char*filename);
 void* swf_output_get(swf_output_t*);
