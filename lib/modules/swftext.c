@@ -575,8 +575,10 @@ static void font_freeglyphnames(SWFFONT*f)
     if (f->glyphnames) {
 	int t;
 	for (t = 0; t < f->numchars; t++) {
-	    if (f->glyphnames[t])
+	    if (f->glyphnames[t]) {
 		rfx_free(f->glyphnames[t]);
+		f->glyphnames[t] = 0;
+	    }
 	}
 	rfx_free(f->glyphnames);
 	f->glyphnames = 0;
@@ -657,6 +659,9 @@ int swf_FontReduce(SWFFONT * f)
     int max_glyph = 0;
     if ((!f) || (!f->use) || f->use->is_reduced)
 	return -1;
+    
+    font_freelayout(f);
+    font_freeglyphnames(f);
 
     for (i = 0; i < f->numchars; i++) {
 	if(!f->use->chars[i]) {
@@ -679,8 +684,6 @@ int swf_FontReduce(SWFFONT * f)
     }
     f->maxascii = max_unicode;
     f->numchars = max_glyph;
-    font_freelayout(f);
-    font_freeglyphnames(f);
     font_freename(f);
     return 0;
 }
