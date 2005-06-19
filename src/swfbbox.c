@@ -241,18 +241,22 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
 	int ch;
 	SRECT newglyphbbox, glyphbbox = font->layout->bounds[chars[t]];
 	MATRIX m = bounds->m;
-	
+	SPOINT p;
+
 	if(chars[t] < font->numchars && font->glyph2ascii) {
 	    ch = font->glyph2ascii[chars[t]];
 	}
+
+	p.x = x; p.y = y;
+	p = swf_TurnPoint(p, &m);
 
 	m.sx = (m.sx * fontsize) / 1024;
 	m.sy = (m.sy * fontsize) / 1024;
 	m.r0 = (m.r0 * fontsize) / 1024;
 	m.r1 = (m.r1 * fontsize) / 1024;
 
-	m.tx += x;
-	m.ty += y;
+	m.tx += p.x;
+	m.ty += p.y;
 	newglyphbbox = swf_TurnRect(glyphbbox, &m);
 
 	if(ch<32) ch='?';
