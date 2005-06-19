@@ -34,8 +34,8 @@ static char * outfilename = "output.swf";
 static int optimize = 0;
 static int swifty = 0;
 static int verbose = 0;
-static int showbbox = 1;
-static int showorigbbox = 0;
+static int showbbox = 0;
+static int showorigbbox = 1;
 static int expand = 1;
 
 static struct options_t options[] = {
