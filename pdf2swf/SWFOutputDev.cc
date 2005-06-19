@@ -157,7 +157,13 @@ public:
   void setClip(int x1,int y1,int x2,int y2);
   
   int save(char*filename);
-  void  pagefeed();
+    
+  // Start a page.
+  void startFrame(int width, int height);
+
+  virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
+
+  void endframe();
   void* getSWF();
 
   void getDimensions(int*x1,int*y1,int*x2,int*y2);
@@ -179,9 +185,6 @@ public:
   //----- initialization and control
 
   void setXRef(PDFDoc*doc, XRef *xref);
-
-  // Start a page.
-  virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
 
   //----- link borders
   virtual void drawLink(Link *link, Catalog *catalog) ;
@@ -897,14 +900,14 @@ void SWFOutputDev::eoClip(GfxState *state)
     gfxline_free(line);
 }
 
-void SWFOutputDev::pagefeed()
+void SWFOutputDev::endframe()
 {
     if(outer_clip_box) {
 	output->endclip(output);
 	outer_clip_box = 0;
     }
 
-    swfoutput_pagefeed(output);
+    output->endpage(output);
 }
 
 void SWFOutputDev::finish()
@@ -1239,6 +1242,11 @@ void SWFOutputDev::endType3Char(GfxState *state)
     msg("<debug> endType3Char");
 }
 
+void SWFOutputDev::startFrame(int width, int height) 
+{
+    output->startpage(output, width, height);
+}
+
 void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
 {
     this->currentpage = pageNum;
@@ -1250,10 +1258,6 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
     white.r = white.g = white.b = white.a = 255;
 
-    msg("<verbose> startPage %d (%f,%f,%f,%f)\n", pageNum, crop_x1, crop_y1, crop_x2, crop_y2);
-    if(rot!=0)
-        msg("<verbose> page is rotated %d degrees\n", rot);
-
     /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
     state->transform(state->getX2(),state->getY2(),&x2,&y2);
     Use CropBox, not MediaBox, as page size
@@ -1263,11 +1267,12 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     y1 = crop_y1;
     x2 = crop_x2;
     y2 = crop_y2;*/
-    state->transform(crop_x1,crop_y1,&x1,&y1);
-    state->transform(crop_x2,crop_y2,&x2,&y2);
+    state->transform(crop_x1,crop_y1,&x1,&y1); //x1 += user_movex; y1 += user_movey;
+    state->transform(crop_x2,crop_y2,&x2,&y2); //x2 += user_movex; y2 += user_movey;
 
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
+
 
     /* apply user clip box */
     if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
@@ -1277,16 +1282,16 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
         /*if(user_clipy2 < y2)*/ y2 = user_clipy2;
     }
 
-    msg("<verbose> Bounding box is (%f,%f)-(%f,%f)", x1,y1,x2,y2);
+    //msg("<verbose> Bounding box is (%f,%f)-(%f,%f) [shifted by %d/%d]", x1,y1,x2,y2, user_movex, user_movey);
     
     if(outer_clip_box) {
 	output->endclip(output);
 	outer_clip_box = 0;
     }
 
-    msg("<notice> processing page %d (%dx%d:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1);
-
-    swfoutput_newpage(output, (int)x1, (int)y1, (int)x2, (int)y2);
+    msg("<notice> processing PDF page %d (%dx%d:%d:%d) (move:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1, user_movex, user_movey);
+    if(rot!=0)
+        msg("<verbose> page is rotated %d degrees\n", rot);
 
     clippath[0].type = gfx_moveTo;clippath[0].x = x1; clippath[0].y = y1; clippath[0].next = &clippath[1];
     clippath[1].type = gfx_lineTo;clippath[1].x = x2; clippath[1].y = y1; clippath[1].next = &clippath[2];
@@ -2585,7 +2590,7 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
     return pdf_doc;
 }
 
-void pdfswf_preparepage(int page)
+static void pdfswf_preparepage(int page)
 {
     /*FIXME*/
     if(!pages) {
@@ -2615,7 +2620,6 @@ void pdf_destroy(pdf_doc_t*pdf_doc)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)pdf_doc->internal;
 
-    msg("<debug> pdfswf.cc: pdfswf_close()");
     delete i->doc; i->doc=0;
     
     free(pages); pages = 0; //FIXME
@@ -2660,16 +2664,22 @@ swf_output_t* swf_output_init()
     return swf_output;
 }
 
-void swf_output_setparameter(swf_output_t*swf_output, char*name, char*value)
+void swf_output_setparameter(swf_output_t*swf, char*name, char*value)
 {
-    /* FIXME */
     pdfswf_setparameter(name, value);
 }
 
-void swf_output_pagefeed(swf_output_t*swf)
+void swf_output_startframe(swf_output_t*swf, int width, int height)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
-    i->outputDev->pagefeed();
+    i->outputDev->startFrame(width, height);
+    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
+}
+
+void swf_output_endframe(swf_output_t*swf)
+{
+    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    i->outputDev->endframe();
     i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
 }
 
