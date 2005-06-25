@@ -565,7 +565,7 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
 	return;
     }
     det = 20.0/det;
-    
+
     if(!b->width || !b->height) {
         fill_solid(line, z, y, x1, x2, color_red, depth);
         return;
@@ -586,6 +586,8 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
 	    } else {
 		xx %= b->width;
 		yy %= b->height;
+		if(xx<0) xx += b->width;
+		if(yy<0) yy += b->height;
 	    }
 
 	    col = b->data[yy*b->width+xx];
