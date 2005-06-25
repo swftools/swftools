@@ -170,8 +170,6 @@ static void swf_startframe(gfxdevice_t*dev, int width, int height);
 static void swf_endframe(gfxdevice_t*dev);
 static gfxresult_t* swf_finish(gfxdevice_t*driver);
 
-int getCharID(SWFFONT *font, int charnr, char *charname, int u);
-
 static swfoutput_internal* init_internal_struct()
 {
     swfoutput_internal*i = (swfoutput_internal*)malloc(sizeof(swfoutput_internal));
@@ -713,52 +711,6 @@ static void endtext(gfxdevice_t*dev)
 
     swf_ObjectPlace(i->tag,i->textid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
     i->textid = -1;
-}
-
-int getCharID(SWFFONT *font, int charnr, char *charname, int u)
-{
-    int t;
-    if(charname && font->glyphnames) {
-	for(t=0;t<font->numchars;t++) {
-	    if(font->glyphnames[t] && !strcmp(font->glyphnames[t],charname)) {
-		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, charname, u, t);
-		return t;
-	    }
-	}
-	/* if we didn't find the character, maybe
-	   we can find the capitalized version */
-	for(t=0;t<font->numchars;t++) {
-	    if(font->glyphnames[t] && !strcasecmp(font->glyphnames[t],charname)) {
-		msg("<debug> Char [%d,>>%s<<,%d] maps to %d\n", charnr, charname, u, t);
-		return t;
-	    }
-	}
-    }
-
-    if(u>0 && font->encoding != 255) {
-	/* try to use the unicode id */
-	if(u>=0 && u<font->maxascii && font->ascii2glyph[u]>=0) {
-	    msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->ascii2glyph[u]);
-	    return font->ascii2glyph[u];
-	}
-    }
-
-    if(font->encoding != FONT_ENCODING_UNICODE) {
-	/* the following only works if the font encoding
-	   is US-ASCII based. It's needed for fonts which return broken unicode
-	   indices */
-	if(charnr>=0 && charnr<font->maxascii && font->ascii2glyph[charnr]>=0) {
-	    msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, font->ascii2glyph[charnr]);
-	    return font->ascii2glyph[charnr];
-	}
-    } 
-    
-    if(charnr>=0 && charnr<font->numchars) {
-	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
-	return charnr;
-    }
-    
-    return -1;
 }
 
 /* set's the matrix which is to be applied to characters drawn by swfoutput_drawchar() */
