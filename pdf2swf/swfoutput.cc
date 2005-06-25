@@ -646,11 +646,8 @@ static void putcharacter(gfxdevice_t*dev, int fontid, int charid, int x,int y, i
    If we set it to low, however, the char positions will be inaccurate */
 #define FONT_INTERNAL_SIZE 4
 
-static int font_active = 0;
-static char* font_active_filename = 0;
-
 /* process a character. */
-static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, char*character, int charnr, int u, swfmatrix*m, gfxcolor_t*col)
+static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, swfmatrix*m, gfxcolor_t*col)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!swffont) {
@@ -658,21 +655,8 @@ static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, char*character, int charn
 	return 0;
     }
 
-    int charid = getCharID(swffont, charnr, character, u); 
-    if(font_active) {
-	char buf[1024];
-	sprintf(buf, "%s.usage", font_active_filename);
-	FILE*fi = fopen(buf, "ab+");
-	if(fi) {
-	     fprintf(fi, "%d %d %d %s\n", charnr, u, charid, character);
-	     fclose(fi);
-	} else 
-	    msg("<error> Couldn't write to %s", buf);
-    }
-    
-    if(charid<0) {
-	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
-		FIXNULL(character),charnr, u, FIXNULL((char*)swffont->name), swffont->numchars);
+    if(charid<0 || charid>=swffont->numchars) {
+	msg("<warning> No character %d in font %s ", charid, FIXNULL((char*)swffont->name));
 	return 0;
     }
     /*if(swffont->glyph[charid].shape->bitlen <= 16) {
@@ -680,7 +664,6 @@ static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, char*character, int charn
 		FIXNULL(character),charnr, u, charid, FIXNULL((char*)swffont->name), swffont->numchars);
 	return 0;
     }*/
-
 
     if(i->shapeid>=0)
 	endshape(dev);
@@ -2400,5 +2383,5 @@ static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*col
     m.m22 = i->fontm22;
     m.m31 = matrix->tx;
     m.m32 = matrix->ty;
-    drawchar(dev, i->swffont, 0, glyph, -1, &m, color);
+    drawchar(dev, i->swffont, glyph, &m, color);
 }
