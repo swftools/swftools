@@ -920,6 +920,15 @@ U8 swf_isTextTag(TAG*tag)
     return 0;
 }
 
+U8 swf_isFontTag(TAG*tag)
+{
+    if(tag->id == ST_DEFINEFONT ||
+       tag->id == ST_DEFINEFONT2 ||
+       tag->id == ST_DEFINEFONTINFO)
+        return 1;
+    return 0;
+}
+
 U8  swf_isImageTag(TAG*tag)
 {
     if(tag->id == ST_DEFINEBITSJPEG || 
