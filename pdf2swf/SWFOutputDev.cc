@@ -166,8 +166,6 @@ public:
   void endframe();
   void* getSWF();
 
-  void getDimensions(int*x1,int*y1,int*x2,int*y2);
-
   //----- get info about output device
 
   // Does this device use upside-down coordinates?
@@ -271,6 +269,7 @@ public:
   char* substituteFont(GfxFont*gfxFont, char*oldname);
   char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
   int t1id;
+  int textmodeinfo; // did we write "Text will be rendered as polygon" yet?
   int jpeginfo; // did we write "File contains jpegs" yet?
   int pbminfo; // did we write "File contains jpegs" yet?
   int linkinfo; // did we write "File contains links" yet?
@@ -364,6 +363,7 @@ class InfoOutputDev:  public OutputDev
 SWFOutputDev::SWFOutputDev()
 {
     jpeginfo = 0;
+    textmodeinfo = 0;
     ttfinfo = 0;
     linkinfo = 0;
     pbminfo = 0;
@@ -408,18 +408,6 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
     this->user_clipy1 = y1;
     this->user_clipx2 = x2;
     this->user_clipy2 = y2;
-}
-
-void SWFOutputDev::getDimensions(int*x1,int*y1,int*x2,int*y2)
-{
-    if(result) {
-	*x1 = (int)result->get(result, "xmin");
-	*y1 = (int)result->get(result, "ymin");
-	*x2 = (int)result->get(result, "xmax");
-	*y2 = (int)result->get(result, "ymax");
-    } else {
-	*x1 = *y1 = *x2 = *y2 = 0;
-    }
 }
 
 static char*getFontID(GfxFont*font)
@@ -1036,6 +1024,11 @@ int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 	return font->unicode2glyph[u];
     }
 
+    /* we don't need to "draw" space characters, so don't overdo the search
+       for a matching glyph */
+    if(charname && !strcasecmp(charname, "space"))
+	return -1;
+
     if(charnr>=0 && charnr<font->num_glyphs) {
 	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
 	return charnr;
@@ -1137,8 +1130,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 
     int charid = getGfxCharID(current_gfxfont, c, name, u);
     if(charid<0) {
-	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
-		FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
+	if(strcasecmp(name, "space")) {
+	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
+		    FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
+	}
 	return;
     }
 
@@ -1151,6 +1146,10 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	output->drawchar(output, current_font_id, charid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
+	if(!textmodeinfo) {
+	    msg("<notice> Some texts will be rendered as shape");
+	    textmodeinfo = 1;
+	}
 	gfxline_t*glyph = current_gfxfont->glyphs[charid].line;
 	gfxline_t*tglyph = gfxline_clone(glyph);
 	gfxline_transform(tglyph, &m);
@@ -2673,21 +2672,18 @@ void swf_output_startframe(swf_output_t*swf, int width, int height)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     i->outputDev->startFrame(width, height);
-    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
 }
 
 void swf_output_endframe(swf_output_t*swf)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     i->outputDev->endframe();
-    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
 }
 
 int swf_output_save(swf_output_t*swf, char*filename)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     int ret = i->outputDev->save(filename);
-    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
     return ret;
 }
 
@@ -2695,7 +2691,6 @@ void* swf_output_get(swf_output_t*swf)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     void* ret = i->outputDev->getSWF();
-    i->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
     return ret;
 }
 
@@ -2722,7 +2717,6 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
 #else
     pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
 #endif
-    si->outputDev->getDimensions(&swf->x1, &swf->y1, &swf->x2, &swf->y2);
 }
 
 void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
