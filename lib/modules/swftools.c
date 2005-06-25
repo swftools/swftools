@@ -904,6 +904,14 @@ U8 swf_isShapeTag(TAG*tag)
     return 0;
 }
 
+U8 swf_isPlaceTag(TAG*tag)
+{
+    if(tag->id == ST_PLACEOBJECT ||
+       tag->id == ST_PLACEOBJECT2)
+        return 1;
+    return 0;
+}
+
 U8  swf_isImageTag(TAG*tag)
 {
     if(tag->id == ST_DEFINEBITSJPEG || 

@@ -754,6 +754,7 @@ U8 swf_isPseudoDefiningTag(TAG * t);
 U8 swf_isAllowedSpriteTag(TAG * t);
 U8 swf_isImageTag(TAG*tag);
 U8 swf_isShapeTag(TAG*tag);
+U8 swf_isPlaceTag(TAG*tag);
 
 U16 swf_GetDefineID(TAG * t);
 SRECT swf_GetDefineBBox(TAG * t);
