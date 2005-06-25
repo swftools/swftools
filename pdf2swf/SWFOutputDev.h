@@ -45,7 +45,6 @@ void pdf_destroy(pdf_doc_t*doc);
 typedef struct _swf_output
 {
     int num_pages;
-    int x1,y1,x2,y2;
     void*internal;
 } swf_output_t;
 
