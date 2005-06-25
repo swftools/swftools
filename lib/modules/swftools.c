@@ -42,13 +42,14 @@ MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2)
   if (!s1) return (s2)?(MATRIX *)memcpy(d,s2,sizeof(MATRIX)):NULL;
   if (!s2) return (MATRIX *)memcpy(d,s1,sizeof(MATRIX));
   
-  d->tx = s1->tx + s2->tx;
-  d->ty = s1->ty + s2->ty;
+  d->tx = RFXSWF_SP(s1->sx,s1->r1,s2->tx,s2->ty);
+  d->ty = RFXSWF_SP(s1->r0,s1->sy,s2->tx,s2->ty);
   
   d->sx = RFXSWF_SP(s1->sx,s1->r1,s2->sx,s2->r0);
-  d->sy = RFXSWF_SP(s1->r0,s1->sy,s2->r1,s2->sy);
   d->r0 = RFXSWF_SP(s1->r0,s1->sy,s2->sx,s2->r0);
+
   d->r1 = RFXSWF_SP(s1->sx,s1->r1,s2->r1,s2->sy);
+  d->sy = RFXSWF_SP(s1->r0,s1->sy,s2->r1,s2->sy);
 
   //DumpMatrix(NULL,d);
   
@@ -908,6 +909,13 @@ U8 swf_isPlaceTag(TAG*tag)
 {
     if(tag->id == ST_PLACEOBJECT ||
        tag->id == ST_PLACEOBJECT2)
+        return 1;
+    return 0;
+}
+U8 swf_isTextTag(TAG*tag)
+{
+    if(tag->id == ST_DEFINETEXT ||
+       tag->id == ST_DEFINETEXT2)
         return 1;
     return 0;
 }
