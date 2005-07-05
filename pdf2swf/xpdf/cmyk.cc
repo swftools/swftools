@@ -575,6 +575,11 @@ int check(float c, float m, float y, float k, float r, float g, float b)
 }
 void convert_cmyk2rgb(float c,float m,float y,float k, unsigned char*r, unsigned char*g, unsigned char*b)
 {
+    c = c<0?0:(c>1?1:c<=1?c:0.5);
+    m = m<0?0:(m>1?1:m<=1?m:0.5);
+    y = y<0?0:(y>1?1:y<=1?y:0.5);
+    k = k<0?0:(k>1?1:k<=1?k:0.5);
+
     int cc = (int)(c*7.0);
     int mm = (int)(m*15.0);
     int yy = (int)(y*15.0);
