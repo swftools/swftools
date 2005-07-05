@@ -42,8 +42,8 @@ MATRIX * swf_MatrixJoin(MATRIX * d,MATRIX * s1,MATRIX * s2)
   if (!s1) return (s2)?(MATRIX *)memcpy(d,s2,sizeof(MATRIX)):NULL;
   if (!s2) return (MATRIX *)memcpy(d,s1,sizeof(MATRIX));
   
-  d->tx = RFXSWF_SP(s1->sx,s1->r1,s2->tx,s2->ty);
-  d->ty = RFXSWF_SP(s1->r0,s1->sy,s2->tx,s2->ty);
+  d->tx = s1->tx + RFXSWF_SP(s1->sx,s1->r1,s2->tx,s2->ty);
+  d->ty = s1->ty + RFXSWF_SP(s1->r0,s1->sy,s2->tx,s2->ty);
   
   d->sx = RFXSWF_SP(s1->sx,s1->r1,s2->sx,s2->r0);
   d->r0 = RFXSWF_SP(s1->r0,s1->sy,s2->sx,s2->r0);
