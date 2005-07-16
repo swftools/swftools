@@ -1706,7 +1706,7 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
     double x=0,y=0;
 
     /* factor which determines into how many line fragments a spline is converted */
-    double subfraction = 1.2;//0.3
+    double subfraction = 2.4;//0.3
 
     l2 = line;
     while(l2) {
@@ -1857,8 +1857,6 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 	return -1;
 
     /* TODO: cache images */
-    *newwidth = sizex;
-    *newheight  = sizey;
     
     if(newsizex<sizex || newsizey<sizey) {
 	msg("<verbose> Scaling %dx%d image to %dx%d", sizex, sizey, newsizex, newsizey);
@@ -1866,7 +1864,9 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 	*newwidth = sizex = newsizex;
 	*newheight  = sizey = newsizey;
 	mem = newpic;
-    
+    } else {
+	*newwidth = newsizex = sizex;
+	*newheight = newsizey  = sizey;
     }
 
     int num_colors = swf_ImageGetNumberOfPaletteEntries(mem,sizex,sizey,0);
