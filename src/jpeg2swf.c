@@ -406,10 +406,16 @@ int args_callback_option(char *arg, char *val)
 	    break;
 
 	case 'v':
-	    if (val)
-		global.verbose = atoi(val);
-	    res = 1;
+	    global.verbose++;
+	    res = 0;
 	    break;
+
+/*	case 'q':
+	    global.verbose--;
+	    if(global.verbose<0)
+		global.verbose = 0;
+	    res = 0;
+	    break;*/
 
 	case 'X':
 	    if (val)
@@ -534,7 +540,8 @@ void args_callback_usage(char *name)
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
     printf("-f , --fit-to-movie            Fit images to movie size\n");
     printf("-e , --export <assetname>      Make importable as asset with <assetname>\n");
-    printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
+    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
+    //printf("-q , --quiet                   Omit normal log messages, only log errors\n");
     printf("-V , --version                 Print version information and exit\n");
     printf("\n");
 }
