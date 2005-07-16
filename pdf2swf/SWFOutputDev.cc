@@ -58,6 +58,7 @@
 #else
 #include "FoFiType1C.h"
 #include "FoFiTrueType.h"
+#include "GHash.h"
 #endif
 #include "SWFOutputDev.h"
 
@@ -143,6 +144,8 @@ typedef struct _fontlist
     _fontlist*next;
 } fontlist_t;
 
+class InfoOutputDev;
+
 class SWFOutputDev:  public OutputDev {
 public:
   gfxdevice_t* output;
@@ -155,6 +158,8 @@ public:
 
   void setMove(int x,int y);
   void setClip(int x1,int y1,int x2,int y2);
+
+  void setInfo(InfoOutputDev*info) {this->info = info;}
   
   int save(char*filename);
     
@@ -246,7 +251,7 @@ public:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int *maskColors);
-  int SWFOutputDev::setGfxFont(char*id, char*filename);
+  int SWFOutputDev::setGfxFont(char*id, char*filename, double quality);
   void strokeGfxline(GfxState *state, gfxline_t*line);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
@@ -257,6 +262,7 @@ public:
 
   char outer_clip_box; //whether the page clip box is still on
 
+  InfoOutputDev*info;
   SWFOutputState states[64];
   int statepos;
 
@@ -300,8 +306,16 @@ public:
 
 static char*getFontID(GfxFont*font);
 
+struct FontInfo
+{
+    GfxFont*font;
+    double max_size;
+};
+
 class InfoOutputDev:  public OutputDev 
 {
+  GHash* id2font;
+  FontInfo* currentfont;
   public:
   int x1,y1,x2,y2;
   int num_links;
@@ -313,9 +327,11 @@ class InfoOutputDev:  public OutputDev
       num_links = 0;
       num_images = 0;
       num_fonts = 0;
+      id2font = new GHash();
   }
   virtual ~InfoOutputDev() 
   {
+      delete id2font;
   }
   virtual GBool upsideDown() {return gTrue;}
   virtual GBool useDrawChar() {return gTrue;}
@@ -337,14 +353,53 @@ class InfoOutputDev:  public OutputDev
   {
       num_links++;
   }
+  virtual double getMaximumFontSize(char*id)
+  {
+      FontInfo*info = (FontInfo*)id2font->lookup(id);
+      if(!info) {
+	  msg("<error> Unknown font id: %s", id);
+	  return 0.0;
+      }
+      return info->max_size;
+  }
+
   virtual void updateFont(GfxState *state) 
   {
       GfxFont*font = state->getFont();
       if(!font)
           return;
-      /*char*id = getFontID(font);*/
-      /* FIXME*/
-      num_fonts++;
+      char*id = getFontID(font);
+      
+      FontInfo*info = (FontInfo*)id2font->lookup(id);
+      if(!info) {
+	GString* idStr = new GString(id);
+	info = new FontInfo;
+	info->font = font;
+	info->max_size = 0;
+	id2font->add(idStr, (void*)info);
+	free(id);
+	num_fonts++;
+      }
+      currentfont = info;
+  }
+  virtual void drawChar(GfxState *state, double x, double y,
+			double dx, double dy,
+			double originX, double originY,
+			CharCode code, Unicode *u, int uLen)
+  {
+      int render = state->getRender();
+      if (render == 3)
+	  return;
+      double m11,m21,m12,m22;
+      state->getFontTransMat(&m11, &m12, &m21, &m22);
+      m11 *= state->getHorizScaling();
+      m21 *= state->getHorizScaling();
+      double lenx = sqrt(m11*m11 + m12*m12);
+      double leny = sqrt(m21*m21 + m22*m22);
+      double len = lenx>leny?lenx:leny;
+      if(currentfont && currentfont->max_size < len) {
+	  currentfont->max_size = len;
+      }
   }
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			     int width, int height, GBool invert,
@@ -703,7 +758,7 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
 	        if(cpos==0) {
 		    draw.lineTo(&draw, x,y);
 		} else {
-		    gfxdraw_cubicTo(&draw, bx,by, cx,cy, x,y);
+		    gfxdraw_cubicTo(&draw, bx,by, cx,cy, x,y, 0.05);
 		}
 		needsfix = 1;
 		cpos = 0;
@@ -1846,7 +1901,7 @@ void SWFOutputDev::setXRef(PDFDoc*doc, XRef *xref)
     this->xref = xref;
 }
 
-int SWFOutputDev::setGfxFont(char*id, char*filename)
+int SWFOutputDev::setGfxFont(char*id, char*filename, double maxSize)
 {
     gfxfont_t*font = 0;
     fontlist_t*last=0,*l = this->fontlist;
@@ -1864,7 +1919,14 @@ int SWFOutputDev::setGfxFont(char*id, char*filename)
 	l = l->next;
     }
     if(!filename) return 0;
-    font = gfxfont_load(filename);
+
+    /* A font size of e.g. 9 means the font will be scaled down by
+       1024 and scaled up by 9. So to have a maximum error of 1/20px,
+       we have to divide 0.05 by (fontsize/1024)
+     */
+    double quality = (1024 * 0.05) / maxSize;
+    
+    font = gfxfont_load(filename, quality);
     l = new fontlist_t;
     l->font = font;
     l->filename = strdup(filename);
@@ -1889,6 +1951,11 @@ void SWFOutputDev::updateFont(GfxState *state)
 	return;
     }  
     char * fontid = getFontID(gfxFont);
+    double maxSize = 1.0;
+
+    if(this->info) {
+	maxSize = this->info->getMaximumFontSize(fontid);
+    }
     
     int t;
     /* first, look if we substituted this font before-
@@ -1904,7 +1971,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 
     /* second, see if this is a font which was used before-
        if so, we are done */
-    if(setGfxFont(fontid, 0)) {
+    if(setGfxFont(fontid, 0, 0)) {
 	free(fontid);
 	return;
     }
@@ -1964,13 +2031,13 @@ void SWFOutputDev::updateFont(GfxState *state)
 	return;
     }
 	
-    msg("<verbose> updateFont(%s) -> %s", fontid, fileName);
+    msg("<verbose> updateFont(%s) -> %s (max size: %f)", fontid, fileName, maxSize);
     dumpFontInfo("<verbose>", gfxFont);
 
     //swfoutput_setfont(&output, fontid, fileName);
     
-    if(!setGfxFont(fontid, 0)) {
-	setGfxFont(fontid, fileName);
+    if(!setGfxFont(fontid, 0, 0)) {
+	setGfxFont(fontid, fileName, maxSize);
     }
    
     if(fileName && del)
@@ -2509,6 +2576,7 @@ typedef struct _pdf_doc_internal
 {
     int protect;
     PDFDoc*doc;
+    InfoOutputDev*info;
 } pdf_doc_internal_t;
 typedef struct _pdf_page_internal
 {
@@ -2585,7 +2653,18 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
           if(!i->doc->okToChange() || !i->doc->okToAddNotes())
               i->protect = 1;
     }
-   
+
+    InfoOutputDev*io = new InfoOutputDev();
+    int t;
+    for(t=1;t<=pdf_doc->num_pages;t++) {
+#ifdef XPDF_101
+	i->doc->displayPage((OutputDev*)io, t, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
+#else
+	i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
+#endif
+    }
+    i->info = io;
+
     return pdf_doc;
 }
 
@@ -2622,6 +2701,10 @@ void pdf_destroy(pdf_doc_t*pdf_doc)
     delete i->doc; i->doc=0;
     
     free(pages); pages = 0; //FIXME
+
+    if(i->info) {
+	delete i->info;i->info=0;
+    }
 
     free(pdf_doc->internal);pdf_doc->internal=0;
     free(pdf_doc);pdf_doc=0;
@@ -2707,10 +2790,16 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
     swf_output_internal_t*si = (swf_output_internal_t*)swf->internal;
 
+    if(!pi) {
+	msg("<fatal> pdf_page_render: Parent PDF this page belongs to doesn't exist yet/anymore");
+	return;
+    }
+
     if(pi->protect) {
 	gfxdevice_t*dev = si->outputDev->output;
         dev->setparameter(dev, "protect", "1");
     }
+    si->outputDev->setInfo(pi->info);
     si->outputDev->setXRef(pi->doc, pi->doc->getXRef());
 #ifdef XPDF_101
     pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
@@ -2773,4 +2862,5 @@ pdf_page_info_t* pdf_page_getinfo(pdf_page_t*page)
 void pdf_page_info_destroy(pdf_page_info_t*info)
 {
     free(info);
+
 }
