@@ -448,7 +448,23 @@ int main(int argn, char *argv[])
 	pdf_page_t*page;
 	pdf_page_info_t*info;
     } pages[4];
-    int pagenum=0;
+
+    int pagenum = 0;
+    int frame = 1;
+    
+    for(int pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
+    {
+	if(is_in_range(pagenr, pagerange)) {
+	    swf_output_preparepage(swf, pagenr, frame);
+	    pagenum++;
+	}
+	if(pagenum == xnup*ynup || (pagenr == pdf->num_pages && pagenum>1)) {
+	    pagenum = 0;
+	    frame++;
+	}
+    }
+
+    pagenum = 0;
 
     for(int pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
     {
