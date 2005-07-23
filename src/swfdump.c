@@ -58,6 +58,7 @@ static int showshapes = 0;
 static int hex = 0;
 static int used = 0;
 static int bbox = 0;
+static int cumulative = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -103,6 +104,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(name[0]=='e') {
         html = 1;
+        return 0;
+    }
+    else if(name[0]=='c') {
+        cumulative = 1;
         return 0;
     }
     else if(name[0]=='E') {
@@ -761,6 +766,7 @@ int main (int argc,char ** argv)
     char* framelabel = 0;
     char prefix[128];
     int filesize = 0;
+    int filepos = 0;
     prefix[0] = 0;
     memset(idtab,0,65536);
 
@@ -904,10 +910,14 @@ int main (int argc,char ** argv)
             //tag = tag->next;
             //continue;
         }
-	if(swf_TagGetName(tag)) {
-	    printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
+	if(!name) {
+	    name = "UNKNOWN TAG";
+	}
+	if(cumulative) {
+	    filepos += tag->len;
+	    printf("[%03x] %9ld %9ld %s%s", tag->id, tag->len, filepos, prefix, swf_TagGetName(tag));
 	} else {
-	    printf("[%03x] %9ld %sUNKNOWN TAG %03x", tag->id, tag->len, prefix, tag->id);
+	    printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
 	}
 	
 	if(tag->id == ST_FREECHARACTER) {
