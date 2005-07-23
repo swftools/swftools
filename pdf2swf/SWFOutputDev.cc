@@ -1513,7 +1513,6 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
         int t;
 	int lpage = -1;
         for(t=1;t<=pagepos;t++) {
-	    printf("%d) %d (%d?)\n", t, pages[t], page);
             if(pages[t]==page) {
 		lpage = t;
                 break;
