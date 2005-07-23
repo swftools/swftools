@@ -232,8 +232,9 @@ static placement_t* readPlacements(SWF*swf)
     while(tag) {
 	if(tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
 	    SWFPLACEOBJECT*po = rfx_alloc(sizeof(SWFPLACEOBJECT));
+	    int id;
 	    swf_GetPlaceObject(tag, po);
-	    int id = po->id;
+	    id = po->id;
 	    if(po->move) {
 		fprintf(stderr, "MOVE tags not supported with -c");
 	    }
@@ -354,7 +355,7 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
 	/* not tested yet- the matrix/fontsize calculation is probably all wrong */
 	int x = xstart + xpos[t];
 	int y = ystart;
-	int ch;
+	int ch = 0;
 	SRECT newglyphbbox, glyphbbox = font->layout->bounds[chars[t]];
 	MATRIX m = bounds->m;
 	SPOINT p;
