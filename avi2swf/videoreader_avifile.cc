@@ -86,6 +86,11 @@ static int readSamples(videoreader_avifile_internal*i, void*buffer, int buffer_s
     while(i->audio_buffer.available < buffer_size) {
 	unsigned int samples_read = 0, bytes_read = 0;
 	ret = i->astream->ReadFrames(buffer, buffer_size, numsamples, samples_read, bytes_read);
+	if(ret!=0) {
+	    if(verbose) {
+		printf("ReadFrames() returns %d\n", ret);fflush(stdout);
+	    }
+	}
 	if(samples_read<=0) {
 	    int l = i->audio_buffer.available; 
 	    ringbuffer_read(&i->audio_buffer, buffer, l);
@@ -113,12 +118,22 @@ static int videoreader_avifile_getsamples(videoreader_t* v, void*buffer, int num
 	    b[t] = 0;
 	    b[t+1] = x-128;
 	}
-	if(!num_read) i->audio_eof=1;
+	if(!num_read) {
+	    if(verbose) {
+		printf("end of audio\n");fflush(stdout);
+	    }
+	    i->audio_eof=1;
+	}
 	return num_read;
     }
     if(i->soundbits == 16) {
 	int num_read = readSamples(i, buffer, num, num/(v->channels*2));
-	if(!num_read) i->audio_eof=1;
+	if(!num_read)  {
+	    if(verbose) {
+		printf("end of audio\n");fflush(stdout);
+	    }
+	    i->audio_eof=1;
+	}
 	return num_read;
     }
     return 0;
