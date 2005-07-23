@@ -54,6 +54,8 @@ void swf_output_endframe(swf_output_t*);
 void swf_output_setparameter(swf_output_t*, char*name, char*value);
 int swf_output_save(swf_output_t*, char*filename);
 void* swf_output_get(swf_output_t*);
+void swf_output_preparepage(swf_output_t*, int pdfpage, int outputpage);
+void swf_output_destroy(swf_output_t*page);
 
 typedef struct _pdf_page
 {
@@ -66,7 +68,6 @@ pdf_page_t* pdf_getpage(pdf_doc_t*doc, int page);
 void pdf_page_render(pdf_page_t*page, swf_output_t*output);
 void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2);
 void pdf_page_destroy(pdf_page_t*page);
-void swf_output_destroy(swf_output_t*page);
 
 typedef struct _pdf_page_info
 {
