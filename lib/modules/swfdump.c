@@ -32,9 +32,12 @@ void swf_DumpHeader(FILE * f,SWF * swf)
 
 void swf_DumpMatrix(FILE * f,MATRIX * m)
 { if (!f) f = stderr;
-  fprintf(f,"[%08x][%08x]\n",m->sx,m->r1);
+  /*fprintf(f,"[%08x][%08x]\n",m->sx,m->r1);
   fprintf(f,"[%08x][%08x]\n",m->r0,m->sy);
-  fprintf(f," %08x, %08x\n",m->tx,m->ty);
+  fprintf(f," %08x, %08x\n",m->tx,m->ty);*/
+  fprintf(f,"[%08x][%08x] %5.2f %5.2f %5.2f\n",m->sx,m->r1, m->sx/65536.0,m->r1/65536.0, m->tx/20.0);
+  fprintf(f,"[%08x][%08x] %5.2f %5.2f %5.2f\n",m->r0,m->sy, m->r0/65536.0,m->sy/65536.0, m->ty/20.0 );
+  fprintf(f," %08x, %08x \n",m->tx,m->ty);
 }
 
 void swf_DumpTag(FILE * f,TAG * t)
