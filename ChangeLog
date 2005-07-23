@@ -253,4 +253,6 @@
 	* pdf2swf: fix for non-closed shapes
 	* pdf2swf: New option -s bboxvars
 	* pdf2swf: Added support for stroke/clip text rendering
+	* swfbbox: Default behaviour has been fixed
+	* pdf2swf: Font quality is now determined by the used font sizes
 

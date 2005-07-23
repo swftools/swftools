@@ -27,6 +27,7 @@ pdf2swf:
 
 avi2swf:
 
+    * fix -n option
     * speed up h.263 routines (MMX?)
     * support for all-black I-Frames
     * do a flash player test suite to find out which h.263 movies work where
@@ -64,9 +65,8 @@ librfxswf:
 
     * logging
     * fix font parsing- code offsets should be used
-    * add automatical size optimization by re-using tags with identical data
+    * add automatical size optimization by re-using tags and images with identical data
     * fix font reduce code
-    * add support for definejpeg3 in image extraction
 
 png2swf:
 
