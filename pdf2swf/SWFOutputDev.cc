@@ -93,12 +93,6 @@ static int fontnum = 0;
 
 static int config_use_fontconfig = 1;
 
-// swf <-> pdf pages
-// TODO: move into pdf_doc_t
-static int*pages = 0;
-static int pagebuflen = 0;
-static int pagepos = 0;
-
 /* config */
 static double caplinewidth = 3.0;
 static double zoom = 72; /* xpdf: 86 */
@@ -302,6 +296,12 @@ public:
   gfxmatrix_t current_font_matrix;
 
   fontlist_t* fontlist;
+
+  int*pages;
+  int pagebuflen;
+  int pagepos;
+
+  friend void swf_output_preparepage(swf_output_t*swf, int pdfpage, int outputpage);
 };
 
 static char*getFontID(GfxFont*font);
@@ -438,6 +438,9 @@ SWFOutputDev::SWFOutputDev()
     fontlist = 0;
     result = 0;
     outer_clip_box = 0;
+    pages = 0;
+    pagebuflen = 0;
+    pagepos = 0;
     output = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     gfxdevice_swf_init(output);
     /* configure device */
@@ -986,6 +989,10 @@ SWFOutputDev::~SWFOutputDev()
 	this->result->destroy(this->result);
 	this->result = 0;
     }
+    
+    if(this->pages) {
+	free(this->pages); this->pages = 0;
+    }
 
     fontlist_t*l = this->fontlist;
     while(l) {
@@ -1452,7 +1459,8 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
                     }
                     else if(strstr(s, "last") || strstr(s, "end"))
                     {
-                        page = pagepos>0?pages[pagepos-1]:0;
+			if(pages && pagepos>0)
+			    page = pages[pagepos-1];
                     }
                     else if(strstr(s, "first") || strstr(s, "top"))
                     {
@@ -1503,13 +1511,20 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     if(page>0)
     {
         int t;
-        for(t=0;t<pagepos;t++)
-            if(pages[t]==page)
+	int lpage = -1;
+        for(t=1;t<=pagepos;t++) {
+	    printf("%d) %d (%d?)\n", t, pages[t], page);
+            if(pages[t]==page) {
+		lpage = t;
                 break;
-        if(t!=pagepos) {
+	    }
+	}
+        if(lpage>=0) {
 	    char buf[80];
 	    sprintf(buf, "page%d", t);
             output->drawlink(output, points, buf);
+	} else {
+	    msg("<warning> Invalid link to page %d", page);
 	}
     }
     else if(url)
@@ -2668,22 +2683,6 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
     return pdf_doc;
 }
 
-static void pdfswf_preparepage(int page)
-{
-    /*FIXME*/
-    if(!pages) {
-	pages = (int*)malloc(1024*sizeof(int));
-	pagebuflen = 1024;
-    } else {
-	if(pagepos == pagebuflen)
-	{
-	    pagebuflen+=1024;
-	    pages = (int*)realloc(pages, pagebuflen);
-	}
-    }
-    pages[pagepos++] = page;
-}
-
 class MemCheck
 {
     public: ~MemCheck()
@@ -2700,8 +2699,6 @@ void pdf_destroy(pdf_doc_t*pdf_doc)
 
     delete i->doc; i->doc=0;
     
-    free(pages); pages = 0; //FIXME
-
     if(i->info) {
 	delete i->info;i->info=0;
     }
@@ -2761,6 +2758,32 @@ void swf_output_endframe(swf_output_t*swf)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
     i->outputDev->endframe();
+}
+
+void swf_output_preparepage(swf_output_t*swf, int pdfpage, int outputpage)
+{
+    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    SWFOutputDev*o = i->outputDev;
+
+    if(pdfpage < 0)
+	return;
+
+    if(!o->pages) {
+	o->pagebuflen = 1024;
+	o->pages = (int*)malloc(o->pagebuflen*sizeof(int));
+	memset(o->pages, -1, o->pagebuflen*sizeof(int));
+    } else {
+	while(pdfpage >= o->pagebuflen)
+	{
+	    int oldlen = o->pagebuflen;
+	    o->pagebuflen+=1024;
+	    o->pages = (int*)realloc(o->pages, o->pagebuflen*sizeof(int));
+	    memset(&o->pages[oldlen], -1, (o->pagebuflen-oldlen)*sizeof(int));
+	}
+    }
+    o->pages[pdfpage] = outputpage;
+    if(pdfpage>o->pagepos)
+	o->pagepos = pdfpage;
 }
 
 int swf_output_save(swf_output_t*swf, char*filename)
