@@ -34,9 +34,9 @@ rfxswf.$(O): rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules) $(
 	$(C) rfxswf.c -o $@
 
 $(lame_objects):
-	cd lame;make all;cd ..
+	cd lame;$(MAKE) all;cd ..
 $(actioncompiler_objects):
-	cd action;make all;cd ..
+	cd action;$(MAKE) all;cd ..
 
 art/libart$(A):
 	cd art; $(MAKE) libart$(A);cd ..
