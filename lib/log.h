@@ -48,7 +48,7 @@ extern void msg(const char* logFormat, ...);
 extern void msg_str(const char* log);
 extern void exitLog(void);
 
-#define FIXNULL(a) ((int)(a)?(a):"NULL")
+#define FIXNULL(a) ((a)?(a):"NULL")
 
 #ifdef __cplusplus
 }
