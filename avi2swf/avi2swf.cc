@@ -48,6 +48,7 @@ static int skip = 0;
 static float audio_adjust = 0;
 static int mp3_bitrate = 32;
 static int samplerate = 11025;
+static int numframes = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -74,6 +75,10 @@ int args_callback_option(char*name,char*val)
     } 
     else if(!strcmp(name, "o")) {
 	outputfilename = val;
+	return 1;
+    }
+    else if(!strcmp(name, "n")) {
+	numframes = atoi(val);
 	return 1;
     }
     else if(!strcmp(name, "q")) {
@@ -258,6 +263,8 @@ int main (int argc,char ** argv)
     ret = v2swf_init(&v2swf, &video);
     if(verbose)
 	v2swf_setparameter(&v2swf, "verbose", "1");
+    if(numframes)
+	v2swf_setparameter(&v2swf, "numframes", itoa(numframes));
     v2swf_setparameter(&v2swf, "quality", itoa(quality));
     v2swf_setparameter(&v2swf, "blockdiff", "0");
     v2swf_setparameter(&v2swf, "blockdiff_mode", "exact");
