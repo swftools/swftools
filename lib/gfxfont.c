@@ -55,9 +55,15 @@ static int full_unicode = 1;
 #define FT_SCALE 1
 #define FT_SUBPIXELS 64
 
+typedef struct _gfxdrawinfo_t {
+    gfxdrawer_t* draw;
+    double quality;
+} gfxdrawinfo_t;
+
 static int ft_move_to(FT_Vector* _to, void* user) 
 {
-    gfxdrawer_t* draw = (gfxdrawer_t*)user;
+    gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
+    gfxdrawer_t* draw = info->draw;
     double x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
     double y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw->moveTo(draw, x,y);
@@ -65,7 +71,8 @@ static int ft_move_to(FT_Vector* _to, void* user)
 }
 static int ft_line_to(FT_Vector* _to, void* user) 
 {
-    gfxdrawer_t* draw = (gfxdrawer_t*)user;
+    gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
+    gfxdrawer_t* draw = info->draw;
     double x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
     double y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw->lineTo(draw, x,y);
@@ -73,24 +80,26 @@ static int ft_line_to(FT_Vector* _to, void* user)
 }
 static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* user)
 {
-    gfxdrawer_t* draw = (gfxdrawer_t*)user;
+    gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
+    gfxdrawer_t* draw = info->draw;
     double tox = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
     double toy = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
     double c1x = _c1->x*FT_SCALE/(float)FT_SUBPIXELS;
     double c1y = -_c1->y*FT_SCALE/(float)FT_SUBPIXELS;
     double c2x = _c2->x*FT_SCALE/(float)FT_SUBPIXELS;
     double c2y = -_c2->y*FT_SCALE/(float)FT_SUBPIXELS;
-    gfxdraw_cubicTo(draw, c1x, c1y, c2x, c2y, tox, toy);
+    gfxdraw_cubicTo(draw, c1x, c1y, c2x, c2y, tox, toy, info->quality);
     return 0;
 }
 static int ft_conic_to(FT_Vector* _c, FT_Vector* _to, void* user) 
 {
-    gfxdrawer_t* draw = (gfxdrawer_t*)user;
+    gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
+    gfxdrawer_t* draw = info->draw;
     double tox = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
     double toy = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
     double cx = _c->x*FT_SCALE/(float)FT_SUBPIXELS;
     double cy = -_c->y*FT_SCALE/(float)FT_SUBPIXELS;
-    gfxdraw_conicTo(draw, cx,cy, tox,toy);
+    gfxdraw_conicTo(draw, cx,cy, tox,toy, info->quality);
     return 0;
 }
 static FT_Outline_Funcs outline_functions =
@@ -141,7 +150,7 @@ void gfxfont_free(gfxfont_t*font)
     free(font);
 }
 
-gfxfont_t* gfxfont_load(char*filename)
+gfxfont_t* gfxfont_load(char*filename, double quality)
 {
     FT_Face face;
     FT_Error error;
@@ -255,6 +264,7 @@ gfxfont_t* gfxfont_load(char*filename)
 	FT_Matrix matrix;
 	char name[128];
 	gfxdrawer_t draw;
+	gfxdrawinfo_t info;
 	int ret;
 	char hasname = 0;
 	name[0]=0;
@@ -296,9 +306,11 @@ gfxfont_t* gfxfont_load(char*filename)
 	}
 
 	gfxdrawer_target_gfxline(&draw);
+	info.draw = &draw;
+	info.quality = quality;
 
-	//error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
-	error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &draw);
+	//error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &info);
+	error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &info);
 	
 	if(error) {
 	    fprintf(stderr, "Couldn't decompose glyph %d\n", t);
