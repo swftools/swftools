@@ -25,8 +25,10 @@ swfstrings.$(O): swfstrings.c
 	$(C) swfstrings.c -o $@
 swfbbox.$(O): swfbbox.c
 	$(C) swfbbox.c -o $@
-#swfedit.$(O): swfedit.c
-#	$(C) swfedit.c -o $@
+swfedit.$(O): swfedit.c
+	$(C) swfedit.c -o $@
+swf2png.$(O): swf2png.c
+	$(C) swf2png.c -o $@
 jpeg2swf.$(O): jpeg2swf.c
 	$(C) jpeg2swf.c -o $@
 font2swf.$(O): font2swf.c
@@ -35,6 +37,9 @@ swfc.$(O): swfc.c parser.h ../lib/q.h
 	$(C) swfc.c -o $@
 parser.$(O): parser.yy.c parser.h ../lib/q.h
 	$(C) parser.yy.c -o $@
+
+../lib/librfxswf$(A): ../lib/modules/swfrender.c ../lib/modules/swfshape.c ../lib/modules/swfbits.c ../lib/rfxswf.c
+	cd ../lib;$(MAKE) librfxswf$(A);cd -
 
 # TODO: include the following rule only if lex is available
 parser.yy.c: parser.lex
@@ -55,9 +60,12 @@ swfcombine$(E): swfcombine.$(O) ../lib/librfxswf$(A)
 swfdump$(E): swfdump.$(O) ../lib/librfxswf$(A)
 	$(L) swfdump.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-#swfedit$(E): swfedit.$(O) ../lib/librfxswf$(A)
-#	$(L) swfedit.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
-#	$(STRIP) $@
+swfedit$(E): swfedit.$(O) ../lib/librfxswf$(A)
+	$(L) swfedit.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+	$(STRIP) $@
+swf2png$(E): swf2png.$(O) ../lib/librfxswf$(A) ../lib/png.$(O)
+	$(L) swf2png.$(O) -o $@ ../lib/librfxswf$(A) ../lib/png.$(O) $(LIBS)
+	$(STRIP) $@
 swfextract$(E): swfextract.$(O) ../lib/librfxswf$(A)
 	$(L) swfextract.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
