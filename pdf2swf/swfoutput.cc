@@ -1332,7 +1332,8 @@ void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, char*url)
 	    if(url[t]<'0' || url[t]>'9')
 		nodigit = 1;
 	if(!nodigit) {
-	    int page = atoi(&url[4]);
+	    int page = atoi(&url[4]) - 1;
+	    if(page<0) page = 0;
 	    swfoutput_linktopage(dev, page, points);
 	}
     } else {
