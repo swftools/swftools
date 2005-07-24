@@ -255,4 +255,8 @@
 	* pdf2swf: Added support for stroke/clip text rendering
 	* swfbbox: Default behaviour has been fixed
 	* pdf2swf: Font quality is now determined by the used font sizes
+	* pdf2swf: Shapes are now all starting at (0,0), and then explizitly placed at their
+	           actual starting positions (useful with zlib)
+	* pdf2swf: Default Flash version is now 6
+
 
