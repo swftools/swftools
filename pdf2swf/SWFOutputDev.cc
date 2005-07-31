@@ -304,6 +304,51 @@ public:
   friend void swf_output_preparepage(swf_output_t*swf, int pdfpage, int outputpage);
 };
 
+typedef struct _drawnchar
+{
+    gfxcoord_t x,y;
+    int charid;
+    gfxcolor_t color;
+} drawnchar_t;
+
+class CharBuffer
+{
+    drawnchar_t * chars;
+    int buf_size;
+    int num_chars;
+
+public:
+
+    CharBuffer()
+    {
+	buf_size = 32;
+	chars = (drawnchar_t*)malloc(sizeof(drawnchar_t)*buf_size);
+	memset(chars, 0, sizeof(drawnchar_t)*buf_size);
+	num_chars = 0;
+    }
+    ~CharBuffer()
+    {
+	free(chars);chars = 0;
+    }
+
+    void grow(int size)
+    {
+	if(size>=buf_size) {
+	    buf_size += 32;
+	    chars = (drawnchar_t*)realloc(chars, sizeof(drawnchar_t)*buf_size);
+	}
+    }
+
+    void addChar(int charid, gfxcoord_t x, gfxcoord_t y, gfxcolor_t color)
+    {
+	grow(num_chars);
+	chars[num_chars].x = x;
+	chars[num_chars].y = y;
+	chars[num_chars].color = color;
+	chars[num_chars].charid = charid;
+    }
+};
+
 static char*getFontID(GfxFont*font);
 
 struct FontInfo
@@ -1133,10 +1178,13 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode c, Unicode *_u, int uLen)
 {
+    msg("<debug> drawChar(%f,%f,%d)", x,y,c);
     int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
-    if (render == 3)
+    if (render == 3) {
+	msg("<debug> Ignoring invisible text: char %d at %f,%f", c, x, y);
 	return;
+    }
 
     if(states[statepos].textRender != render)
 	msg("<error> Internal error: drawChar.render!=beginString.render");
@@ -1190,7 +1238,25 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\" render=%d\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name), render);
     }
 
-    int charid = getGfxCharID(current_gfxfont, c, name, u);
+    int charid = -1;
+   
+    if(uLen<=1) {
+	charid = getGfxCharID(current_gfxfont, c, name, u);
+    } else {
+	charid = getGfxCharID(current_gfxfont, c, 0, -1);
+	if(charid < 0) {
+	    /* multiple unicodes- should usually map to a ligature.
+	       if the ligature doesn't exist, we need to draw
+	       the characters one-by-one. */
+	    int t;
+	    msg("<warning> ligature %d missing in font %s\n", c, current_font_id);
+	    for(t=0;t<uLen;t++) {
+		drawChar(state, x, y, dx, dy, originX, originY, c, _u+t, 1);
+	    }
+	    return;
+	}
+    }
+
     if(charid<0) {
 	if(strcasecmp(name, "space")) {
 	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
