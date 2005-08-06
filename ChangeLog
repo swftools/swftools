@@ -237,7 +237,7 @@
 	* m4/python.m4: Python MacOS X fixes
 	* src/gif2swf.c: New tool, for converting (animated) gifs to swf (Daichi Shinozaki)
 
-0.7.0 (not yet released):
+0.7.0:
 	* swfdump: Fixed bit overflow bug
 	* lib/gfxdevice.h: Started implementation of graphic layer abstraction
 	* pdf2swf: Fixed Type 3 color bug

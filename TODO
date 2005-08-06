@@ -80,6 +80,7 @@ swfrender:
 Makefiles/configure/installation:
 
     * check for vsnprintf, bcopy, bzero, strndup etc. and supply replacements
+    * jpeglib test program (for Solaris)
 
 Win32 Installation:
 
