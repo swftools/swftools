@@ -237,7 +237,7 @@
 	* m4/python.m4: Python MacOS X fixes
 	* src/gif2swf.c: New tool, for converting (animated) gifs to swf (Daichi Shinozaki)
 
-0.7.0:
+0.7.0 (not yet released):
 	* swfdump: Fixed bit overflow bug
 	* lib/gfxdevice.h: Started implementation of graphic layer abstraction
 	* pdf2swf: Fixed Type 3 color bug
@@ -250,10 +250,10 @@
 	* pdf2swf: Fixed Type0C handling
 	* swfcombine: Fixed jpeg table conversion
 	* lib/rfxswf.c: added support for definejpeg3 extraction
-	* pdf2swf: fix for non-closed shapes
 	* pdf2swf: New option -s bboxvars
 	* pdf2swf: Added support for stroke/clip text rendering
 	* swfbbox: Default behaviour has been fixed
+	* pdf2swf: fix for non-closed shapes
 	* pdf2swf: Font quality is now determined by the used font sizes
 	* pdf2swf: Shapes are now all starting at (0,0), and then explizitly placed at their
 	           actual starting positions (useful with zlib)

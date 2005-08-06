@@ -22,8 +22,6 @@ swfc:
 
 pdf2swf:
 
-    * store shapes relatively to the origin, so zlib works better
-      on the files
 
 avi2swf:
 
@@ -72,8 +70,6 @@ png2swf:
 
     * Image mode 4
     * Interlace mode 1
-    * filtering: is alpha 255 or 0 in non-existant surrounding pixels?
-    * move png parsing code to lib/
 
 swfrender:
 
