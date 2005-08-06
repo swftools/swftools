@@ -77,6 +77,7 @@ typedef struct _swfoutput_internal
     int config_drawonlyshapes;
     int config_jpegquality;
     int config_storeallcharacters;
+    int config_generate_fake_tags;
     int config_enablezlib;
     int config_insertstoptag;
     int config_flashversion;
@@ -214,6 +215,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_jpegquality=85;
     i->config_storeallcharacters=0;
     i->config_enablezlib=0;
+    i->config_generate_fake_tags=0;
     i->config_insertstoptag=0;
     i->config_flashversion=6;
     i->config_splinemaxerror=1;
@@ -661,9 +663,9 @@ static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, swfmatrix*m, 
 	return 0;
     }
     /*if(swffont->glyph[charid].shape->bitlen <= 16) {
-	msg("<warning> Character '%s' (c=%d,u=%d), glyph %d in current charset (%s, %d characters) is empty", 
-		FIXNULL(character),charnr, u, charid, FIXNULL((char*)swffont->name), swffont->numchars);
-	return 0;
+	msg("<warning> Glyph %d in current charset (%s, %d characters) is empty", 
+		charid, FIXNULL((char*)swffont->name), swffont->numchars);
+	return 1;
     }*/
 
     if(i->shapeid>=0)
@@ -1652,6 +1654,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protected")) {
 	i->config_protect = atoi(value);
+    } else if(!strcmp(name, "faketags")) {
+	i->config_generate_fake_tags = atoi(value);
     } else if(!strcmp(name, "flashversion")) {
 	i->config_flashversion = atoi(value);
     } else if(!strcmp(name, "minlinewidth")) {
