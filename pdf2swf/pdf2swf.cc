@@ -362,7 +362,7 @@ void args_callback_usage(char*name)
     printf("Postprocessing options:\n");
 #ifndef SYSTEM_BACKTICKS
     printf("(They might not work because your system call doesn't support command substitution)\n");
-#endif
+#endif  
     printf("-b  --defaultviewer        Link default viewer to the pdf (%s)\n", concatPaths(SWFDIR, "default_viewer.swf"));
     printf("-l  --defaultpreloader     Link default preloader the pdf (%s)\n", concatPaths(SWFDIR, "default_loader.swf"));
     printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
@@ -554,25 +554,60 @@ int main(int argn, char *argv[])
     if(zlib)
 	zip = "-z";
 
+#ifdef _WIN32
+    char*batchname = "_pdf2swf.bat";
+#endif
+
     if(viewer && !preloader) {
+#ifdef _WIN32
+	system_quiet=1;
+	systemf("echo swfcombine %s \"%s\" viewport=\"%s\" -o \"%s\" ^^>%s",zip,
+		viewer, outputname, outputname, batchname);
+	systemf("swfdump -XY \"%s\">>%s", outputname, batchname);
+	systemf("call %s", batchname);
+	systemf("del %s", batchname);
+#else
 	systemf("swfcombine %s `swfdump -XY \"%s\"` \"%s\" viewport=\"%s\" -o \"%s\"",zip,
 		outputname, viewer, outputname, outputname);
+#endif
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && !viewer) {
 	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-	ret = systemf("swfcombine %s `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,
+#ifdef _WIN32
+	system_quiet=1;
+	systemf("echo @SET RATE=^^>%s", batchname);
+	systemf("swfdump -r \"%s\">>%s", preloader, batchname);
+	systemf("echo swfcombine %s %s\\PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\" %%RATE%%>>%s",zip,
+		SWFDIR, preloader, outputname, outputname, batchname);
+	systemf("call %s", batchname);
+	systemf("del %s", batchname);
+#else
+	systemf("swfcombine %s `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,
 		preloader, SWFDIR, preloader, outputname, outputname);
+#endif
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && viewer) {
 	systemf("swfcombine \"%s\" viewport=%s -o __tmp__.swf",
-		viewer, outputname, outputname);
+		viewer, outputname);
+#ifdef _WIN32
+	system_quiet=1;
+	systemf("echo @SET X_AND_Y=^^>%s", batchname);
+	systemf("swfdump -XY \"%s\">>%s", outputname, batchname);
+	systemf("echo @SET RATE=^^>>%s", batchname);
+	systemf("swfdump -r \"%s\">>%s", preloader, batchname);
+	systemf("echo swfcombine %s %%X_AND_Y%% %%RATE%% %s\\PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\">>%s",zip,
+		SWFDIR, preloader, outputname, batchname);
+	systemf("call %s", batchname);
+	systemf("del __tmp__.swf %s", batchname);
+#else
 	systemf("swfcombine %s `swfdump -XY \"%s\"` `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,
 		outputname, preloader, SWFDIR, preloader, outputname);
 	systemf("rm __tmp__.swf");
+#endif
     }
 
     return 0;
