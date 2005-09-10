@@ -1178,6 +1178,7 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
     lblockx[newwidth] = p_x;
     return lblockx;
 }
+static int monochrome_warning = 0;
 RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight)
 {
     int x,y;
@@ -1191,8 +1192,12 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
     /* this is bad because this scaler doesn't yet handle monochrome
        images with 2 colors in a way that the final image hasn't more
        than 256 colors */
-    if(swf_ImageGetNumberOfPaletteEntries2(data, width, height) == 2)
-	fprintf(stderr, "Warning: scaling monochrome image\n");
+    if(swf_ImageGetNumberOfPaletteEntries2(data, width, height) == 2) {
+	if(!monochrome_warning) {
+	    fprintf(stderr, "Warning: scaling monochrome image\n");
+	    monochrome_warning = 1;
+	}
+    }
 
     tmpline = (rgba_int_t*)malloc(width*sizeof(rgba_int_t));
     newdata = (RGBA*)malloc(newwidth*newheight*sizeof(RGBA));
