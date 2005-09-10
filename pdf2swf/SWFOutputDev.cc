@@ -163,7 +163,7 @@ public:
   virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
 
   void endframe();
-  void* getSWF();
+  void* get(char*name);
 
   //----- get info about output device
 
@@ -1020,10 +1020,10 @@ int SWFOutputDev::save(char*filename)
     finish();
     return result->save(result, filename);
 }
-void* SWFOutputDev::getSWF()
+void* SWFOutputDev::get(char*name)
 {
     finish();
-    return result->get(result, "swf");
+    return result->get(result, name);
 }
 
 SWFOutputDev::~SWFOutputDev() 
@@ -2858,10 +2858,10 @@ int swf_output_save(swf_output_t*swf, char*filename)
     return ret;
 }
 
-void* swf_output_get(swf_output_t*swf)
+void* swf_output_get(swf_output_t*swf,char*name)
 {
     swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
-    void* ret = i->outputDev->getSWF();
+    void* ret = i->outputDev->get(name);
     return ret;
 }
 

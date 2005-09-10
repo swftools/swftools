@@ -53,7 +53,7 @@ void swf_output_startframe(swf_output_t*, int width, int height);
 void swf_output_endframe(swf_output_t*);
 void swf_output_setparameter(swf_output_t*, char*name, char*value);
 int swf_output_save(swf_output_t*, char*filename);
-void* swf_output_get(swf_output_t*);
+void* swf_output_get(swf_output_t*, char*name);
 void swf_output_preparepage(swf_output_t*, int pdfpage, int outputpage);
 void swf_output_destroy(swf_output_t*page);
 
