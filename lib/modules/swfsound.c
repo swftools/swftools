@@ -88,7 +88,7 @@ int swf_mp3_bitrate = 32;
 #define HAVE_SOUND
 
 #include <stdarg.h>
-#include "../lame/lame.h"
+#include <lame.h>
 
 static lame_global_flags*lame_flags;
 
