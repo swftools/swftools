@@ -26,8 +26,11 @@
 #define S64 long long
 SFIXED RFXSWF_SP(SFIXED a1,SFIXED a2,SFIXED b1,SFIXED b2)
 { S64 a;
-  a = (S64)a1*(S64)b1+(S64)a2*(S64)b2;
-  return (SFIXED)(a>>16);
+  a = ((S64)a1*(S64)b1+(S64)a2*(S64)b2)>>16;
+  SFIXED result = (SFIXED)(a);
+  if(a!=result) 
+      fprintf(stderr, "Warning: overflow in matrix multiplication");
+  return result;
 }
 SFIXED RFXSWF_QFIX(int zaehler,int nenner) // bildet Quotient von zwei INTs in SFIXED
 { S64 z = zaehler<<16;
