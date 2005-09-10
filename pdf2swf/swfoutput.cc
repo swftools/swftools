@@ -1148,8 +1148,10 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
 	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
-	    if(!i->config_storeallcharacters)
+	    if(!i->config_storeallcharacters) {
+		msg("<debug> Reducing font %s", iterator->swffont->name);
 		swf_FontReduce(iterator->swffont);
+	    }
 	    swf_FontSetDefine2(mtag, iterator->swffont);
 	}
 
@@ -1306,12 +1308,11 @@ static void swfoutput_setstrokecolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
 static void swfoutput_setlinewidth(gfxdevice_t*dev, double _linewidth)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->linewidth == (U16)(_linewidth*20))
+    if(i->linewidth == (U16)(_linewidth*20+19))
         return;
-
     if(i->shapeid>=0)
 	endshape(dev);
-    i->linewidth = (U16)(_linewidth*20);
+    i->linewidth = (U16)(_linewidth*20+19);
 }
 
 
@@ -1652,12 +1653,18 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_bboxvars = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
 	i->config_insertstoptag = atoi(value);
-    } else if(!strcmp(name, "protected")) {
+    } else if(!strcmp(name, "protect")) {
 	i->config_protect = atoi(value);
+	if(i->config_protect && i->tag) {
+	    i->tag = swf_InsertTag(i->tag, ST_PROTECT);
+	}
     } else if(!strcmp(name, "faketags")) {
 	i->config_generate_fake_tags = atoi(value);
     } else if(!strcmp(name, "flashversion")) {
 	i->config_flashversion = atoi(value);
+	if(i->swf) {
+	    i->swf->fileVersion = i->config_flashversion;
+	}
     } else if(!strcmp(name, "minlinewidth")) {
 	i->config_minlinewidth = atof(value);
     } else if(!strcmp(name, "caplinewidth")) {
@@ -2162,7 +2169,7 @@ gfxline_t* gfxline_move(gfxline_t*line, double x, double y)
     return line;
 }
 
-#define NORMALIZE_POLYGON_POSITIONS
+//#define NORMALIZE_POLYGON_POSITIONS
 
 static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
@@ -2403,5 +2410,16 @@ static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*col
     m.m22 = i->fontm22;
     m.m31 = matrix->tx;
     m.m32 = matrix->ty;
+  
+/*    printf("%f %f\n", m.m31,  m.m32);
+    {
+    static int xpos = 40;
+    static int ypos = 200;
+    m.m31 = xpos;
+    m.m32 = ypos;
+    xpos += 10;
+    }*/
+
+
     drawchar(dev, i->swffont, glyph, &m, color);
 }
