@@ -1257,7 +1257,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	}
     }
 
-    if(charid<0) {
+    if(charid<0 && name) {
 	if(strcasecmp(name, "space")) {
 	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
 		    FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
