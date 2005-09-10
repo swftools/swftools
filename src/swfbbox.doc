@@ -19,6 +19,8 @@ It can also dump the corners of the bounding boxes of all frames of a movie.
     Recalculate bounding boxes
 -S, --swifty
     Print out transformed bounding boxes
+-c, --clip                    
+    Clip bounding boxes to movie size
 -o, --output <filename>
     Set output filename to <filename> (for -O)
 -v, --verbose
