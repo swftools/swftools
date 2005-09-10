@@ -361,9 +361,6 @@ void args_callback_usage(char*name)
     //printf("-2                         Put 2 pages into each frame.\n");
     //printf("-4                         Put 4 pages into each frame.\n");
     printf("Postprocessing options:\n");
-#ifndef SYSTEM_BACKTICKS
-    printf("(They might not work because your system call doesn't support command substitution)\n");
-#endif
     printf("-b  --defaultviewer        Link default viewer to the pdf (%s)\n", concatPaths(SWFDIR, "default_viewer.swf"));
     printf("-l  --defaultpreloader     Link default preloader the pdf (%s)\n", concatPaths(SWFDIR, "default_loader.swf"));
     printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
