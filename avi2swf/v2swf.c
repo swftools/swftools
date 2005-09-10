@@ -82,6 +82,8 @@ typedef struct _v2swf_internal_t
     int prescale;
 
     int scale;
+
+    int add_cut;
     
     int domotion;
 
@@ -414,8 +416,22 @@ static void finish(v2swf_internal_t*i)
     if(!i->finished) {
 	msg("write endtag\n", i->finished);
 
+	if(i->add_cut) {
+	    swf_ResetTag(i->tag, ST_SHOWFRAME);
+	    i->filesize += swf_WriteTag2(&i->out, i->tag);
+
+	    swf_ResetTag(i->tag, ST_REMOVEOBJECT2);
+	    swf_SetU16(i->tag, 1); //depth
+	    i->filesize += swf_WriteTag2(&i->out, i->tag);
+
+	    swf_ResetTag(i->tag, ST_DOACTION);
+	    swf_SetU16(i->tag, 0x0007);
+	    i->filesize += swf_WriteTag2(&i->out, i->tag);
+	}
+
 	swf_ResetTag(i->tag, ST_END);
 	i->filesize += swf_WriteTag2(&i->out, i->tag);
+
 	i->out.finish(&i->out);
 
 	if(i->version>=6) {
@@ -835,6 +851,7 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     i->keyframe_interval = 8;
     i->quality = 20;
     i->scale = 65536;
+    i->add_cut = 1;
     i->samplerate = 11025;
     i->prescale = 0;
     i->head_done = 0;
@@ -916,6 +933,8 @@ void v2swf_setparameter(v2swf_t*v2swf, char*name, char*value)
 	i->version = atoi(value);
     } else if(!strcmp(name, "audiosync")) {
 	i->audio_fix = (int)(atof(value));
+    } else if(!strcmp(name, "addcut")) {
+	i->add_cut = atoi(value);
     } else if(!strcmp(name, "scale")) {
 	i->scale = (int)(atof(value)*65536);
     } else if(!strcmp(name, "scale65536")) {
