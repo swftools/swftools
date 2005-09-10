@@ -1125,6 +1125,11 @@ int main(int argn, char *argv[])
 	msg("<error> Can't combine --cat and --merge");
 	exit(1);
     }
+    
+    if(config.stack && config.cat) {
+	msg("<error> Can't combine --cat and --stack");
+	exit(1);
+    }
 
     if(config.stack) {
 	if(config.overlay) {
