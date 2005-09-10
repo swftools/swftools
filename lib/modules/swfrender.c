@@ -79,7 +79,7 @@ typedef struct _renderbuf_internal
 {
     renderline_t*lines;
     bitmap_t*bitmaps;
-    char antialize;
+    int antialize;
     int multiply;
     int width2,height2;
     int shapes;
@@ -274,7 +274,7 @@ static int compare_renderpoints(const void * _a, const void * _b)
     return 0;
 }
 
-void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, char antialize, int multiply)
+void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, int antialize, int multiply)
 {
     renderbuf_internal*i;
     int y;
@@ -285,10 +285,12 @@ void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, c
     buf->posy = posy;
     buf->internal = (renderbuf_internal*)rfx_calloc(sizeof(renderbuf_internal));
     i = (renderbuf_internal*)buf->internal;
-    i->antialize = !!antialize;
-    i->multiply = antialize?multiply*2:multiply;
-    i->height2 = antialize?2*buf->height:buf->height;
-    i->width2 = antialize?2*buf->width:buf->width;
+    if(antialize < 1)
+	antialize = 1;
+    i->antialize = antialize;
+    i->multiply = multiply*antialize;
+    i->height2 = antialize*buf->height;
+    i->width2 = antialize*buf->width;
     i->lines = (renderline_t*)rfx_alloc(i->height2*sizeof(renderline_t));
     for(y=0;y<i->height2;y++) {
 	memset(&i->lines[y], 0, sizeof(renderline_t));
@@ -422,12 +424,12 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
         for(t=0;t<s2->numfillstyles;t++) {
             MATRIX nm;
             swf_MatrixJoin(&nm, &s2->fillstyles[t].m, &mat); //TODO: is this the right order?
-            nm.sx *= i->multiply;
+            /*nm.sx *= i->multiply;
             nm.sy *= i->multiply;
             nm.r0 *= i->multiply;
             nm.r1 *= i->multiply;
             nm.tx *= i->multiply;
-            nm.ty *= i->multiply;
+            nm.ty *= i->multiply;*/
             s2->fillstyles[t].m = nm;
         }
     }
@@ -552,13 +554,15 @@ static void fill_solid(RGBA*line, int*z, int y, int x1, int x2, RGBA col, U32 de
     }
 }
 
-static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clipbitmap, U32 depth)
+static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clipbitmap, U32 depth, double fmultiply)
 {
     int x = x1;
-    double m11=m->sx/65536.0, m21=m->r1/65536.0;
-    double m12=m->r0/65536.0, m22=m->sy/65536.0;
-    double rx = m->tx/20.0;
-    double ry = m->ty/20.0;
+    
+    double m11= m->sx*fmultiply/65536.0, m21= m->r1*fmultiply/65536.0;
+    double m12= m->r0*fmultiply/65536.0, m22= m->sy*fmultiply/65536.0;
+    double rx = m->tx*fmultiply/20.0;
+    double ry = m->ty*fmultiply/20.0;
+
     double det = m11*m22 - m12*m21;
     if(fabs(det) < 0.0005) { 
 	/* x direction equals y direction- the image is invisible */
@@ -655,7 +659,7 @@ static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, st
                     fprintf(stderr, "Shape references unknown bitmap %d\n", f->id_bitmap);
                     fill_solid(line, zline, y, x1, x2, color_red, l->p->depth);
                 } else {
-                    fill_bitmap(line, zline, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0, l->p->depth);
+                    fill_bitmap(line, zline, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0, l->p->depth, i->multiply);
                 }
             } else {
                 fprintf(stderr, "Undefined fillmode: %02x\n", f->type);
@@ -874,37 +878,49 @@ RGBA* swf_Render(RENDERBUF*dest)
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
     RGBA* img = (RGBA*)rfx_alloc(sizeof(RGBA)*dest->width*dest->height);
     int y;
-    RGBA*line2=0;
-    
-    for(y=0;y<i->height2;y++) {
-        int n;
-        RGBA*line = &i->img[y*i->width2];
-
-        if(!i->antialize) {
-            memcpy(&img[y*dest->width], line, sizeof(RGBA)*dest->width);
-        } else {
-            if(y&1) {
-                int x;
-		RGBA*line1=line;
-		RGBA* p;
-		if(!line2)
-		    line2=line1;
-                p = &img[(y/2)*dest->width];
-                for(x=0;x<dest->width;x++) {
-                    RGBA*p1 = &line1[x*2];
-                    RGBA*p2 = &line1[x*2+1];
-                    RGBA*p3 = &line2[x*2];
-                    RGBA*p4 = &line2[x*2+1];
-                    p[x].r = (p1->r + p2->r + p3->r + p4->r)/4;
-                    p[x].g = (p1->g + p2->g + p3->g + p4->g)/4;
-                    p[x].b = (p1->b + p2->b + p3->b + p4->b)/4;
-                    p[x].a = (p1->a + p2->a + p3->a + p4->a)/4;
-                }
-            }
-        }
-	line2=line;
+    int antialize = i->antialize;
+   
+    if(antialize <= 1) /* no antializing */ {
+	for(y=0;y<i->height2;y++) {
+	    RGBA*line = &i->img[y*i->width2];
+	    memcpy(&img[y*dest->width], line, sizeof(RGBA)*dest->width);
+	}
+    } else {
+	RGBA**lines = (RGBA**)rfx_calloc(sizeof(RGBA*)*antialize);
+	int q = antialize*antialize;
+	int ypos = 0;
+	for(y=0;y<i->height2;y++) {
+	    int n;
+	    ypos = y % antialize;
+	    lines[ypos] = &i->img[y*i->width2];
+	    if(ypos == antialize-1) {
+		RGBA*out = &img[(y / antialize)*dest->width];
+		int x;
+		int r,g,b,a;
+		for(x=0;x<dest->width;x++) {
+		    int xpos = x*antialize;
+		    int yp;
+		    U32 r=0,g=0,b=0,a=0;
+		    for(yp=0;yp<antialize;yp++) {
+			RGBA*lp = &lines[yp][xpos];
+			int xp;
+			for(xp=0;xp<antialize;xp++) {
+			    RGBA*p = &lp[xp];
+			    r += p->r;
+			    g += p->g;
+			    b += p->b;
+			    a += p->a;
+			}
+		    }
+		    out[x].r = r / q;
+		    out[x].g = g / q;
+		    out[x].b = b / q;
+		    out[x].a = a / q;
+		}
+	    }
+	}
+	rfx_free(lines);
     }
-
     return img;
 }
 
