@@ -352,9 +352,25 @@ typedef struct {
     CXFORM cxform;
 } CXFormObject;
 
-PyObject* f_ColorTransform(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* f_ColorTransform(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
-    return NULL;
+    int r0=256,g0=256,b0=256,a0=256,r1=0,g1=0,b1=0,a1=0;
+    static char *kwlist[] = {"r_mul", "g_mul", "b_mul", "a_mul", "r_add", "g_add", "b_add", "a_add", NULL};
+    PyObject*color;
+    if(!kwargs) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iiiiiiii", kwlist,
+		&r0,&g0,&b0,&a0,
+		&r1,&g1,&b1,&a1))
+	    return NULL;
+    }
+
+    CXFORM c;
+    c.r0 = r0; c.g0 = g0; c.b0 = b0; c.a0 = a0;
+    c.r1 = r1; c.g1 = g1; c.b1 = b1; c.a1 = a1;
+
+    CXFormObject*self = PyObject_New(CXFormObject, &CXFormClass);
+    self->cxform = c;
+    return (PyObject*)self;
 }
 static PyObject* colortransform_getattr(PyObject * self, char* a)
 {
