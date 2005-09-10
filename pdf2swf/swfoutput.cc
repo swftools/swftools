@@ -1215,6 +1215,10 @@ void* swfresult_get(gfxresult_t*gfx, char*name)
 	return (void*)(swf->movieSize.xmax/20);
     } else if(!strcmp(name, "ymax")) {
 	return (void*)(swf->movieSize.ymax/20);
+    } else if(!strcmp(name, "width")) {
+	return (void*)((swf->movieSize.xmax - swf->movieSize.xmin)/20);
+    } else if(!strcmp(name, "height")) {
+	return (void*)((swf->movieSize.ymax - swf->movieSize.ymin)/20);
     }
     return 0;
 }
