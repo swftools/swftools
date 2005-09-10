@@ -88,6 +88,7 @@ typedef struct _swfoutput_internal
     int config_bboxvars;
     float config_minlinewidth;
     double config_caplinewidth;
+    char* config_linktarget;
 
     SWF* swf;
 
@@ -225,6 +226,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_bboxvars=0;
     i->config_minlinewidth=0.05;
     i->config_caplinewidth=1;
+    i->config_linktarget=0;
 
     return i;
 };
@@ -1240,6 +1242,11 @@ gfxresult_t* swf_finish(gfxdevice_t* dev)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     gfxresult_t*result;
 
+    if(i->config_linktarget) {
+	free(i->config_linktarget);
+	i->config_linktarget = 0;
+    }
+
     swfoutput_finalize(dev);
     SWF* swf = i->swf;i->swf = 0;
     swfoutput_destroy(dev);
@@ -1365,11 +1372,15 @@ void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points)
 	endshape(dev);
     if(i->textid>=0)
 	endtext(dev);
-    
-    if(!i->config_opennewwindow)
-      actions = action_GetUrl(0, url, "_parent");
-    else
-      actions = action_GetUrl(0, url, "_this");
+   
+    if(!i->config_linktarget) {
+	if(!i->config_opennewwindow)
+	  actions = action_GetUrl(0, url, "_parent");
+	else
+	  actions = action_GetUrl(0, url, "_this");
+    } else {
+	actions = action_GetUrl(0, url, i->config_linktarget);
+    }
     actions = action_End(actions);
     
     drawlink(dev, actions, 0, points,0);
@@ -1673,6 +1684,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_minlinewidth = atof(value);
     } else if(!strcmp(name, "caplinewidth")) {
 	i->config_caplinewidth = atof(value);
+    } else if(!strcmp(name, "linktarget")) {
+	i->config_linktarget = strdup(value);
     } else if(!strcmp(name, "dumpfonts")) {
 	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "next_bitmap_is_jpeg")) {
