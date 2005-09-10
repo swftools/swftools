@@ -978,7 +978,7 @@ typedef struct RENDERBUF
     void*internal;
 } RENDERBUF;
 
-void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, char antialize, int scale);
+void swf_Render_Init(RENDERBUF*buf, int posx, int posy, int width, int height, int antialize, int multiply);
 void swf_Render_SetBackground(RENDERBUF*buf, RGBA*img, int width, int height);
 void swf_Render_SetBackgroundColor(RENDERBUF*buf, RGBA color);
 RGBA* swf_Render(RENDERBUF*dest);
