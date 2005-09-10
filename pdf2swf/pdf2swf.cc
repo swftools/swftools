@@ -33,6 +33,7 @@
 #endif
 #include "../lib/args.h"
 #include "../lib/os.h"
+#include "../lib/rfxswf.h"
 #include "SWFOutputDev.h"
 #include "log.h"
 
@@ -362,11 +363,32 @@ void args_callback_usage(char*name)
     printf("Postprocessing options:\n");
 #ifndef SYSTEM_BACKTICKS
     printf("(They might not work because your system call doesn't support command substitution)\n");
-#endif  
+#endif
     printf("-b  --defaultviewer        Link default viewer to the pdf (%s)\n", concatPaths(SWFDIR, "default_viewer.swf"));
     printf("-l  --defaultpreloader     Link default preloader the pdf (%s)\n", concatPaths(SWFDIR, "default_loader.swf"));
     printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
     printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
+}
+
+float getRate(char*filename)
+{
+    int fi;
+    SWF swf;
+    fi = open(filename,O_RDONLY|O_BINARY);
+    if(fi<0) { 
+	char buffer[256];
+	sprintf(buffer, "Couldn't open %s", filename);
+        perror(buffer);
+        exit(1);
+    }
+    if(swf_ReadSWF(fi,&swf) < 0)
+    { 
+        fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
+        close(fi);
+        exit(1);
+    }
+    swf_FreeTags(&swf);
+    return swf.frameRate / 256.0;
 }
 
 int main(int argn, char *argv[])
@@ -536,78 +558,52 @@ int main(int argn, char *argv[])
     if(swf_output_save(swf, outputname) < 0) {
         exit(1);
     }
+    int width = (int)swf_output_get(swf, "width");
+    int height = (int)swf_output_get(swf, "height");
     msg("<notice> SWF written");
     swf_output_destroy(swf);
 
     pdf_destroy(pdf);
 
-    if(viewer || preloader) {
-#ifndef SYSTEM_BACKTICKS
-	msg("<warning> Not sure whether system() can handle command substitution");
-	msg("<warning> (According to config.h, it can't)");
-#endif
-	if(!system_quiet)
-	    printf("\n");
-    }
-
     char*zip = "";
     if(zlib)
 	zip = "-z";
-
-#ifdef _WIN32
-    char*batchname = "_pdf2swf.bat";
-#endif
-
+#undef SYSTEM_BACKTICKS
     if(viewer && !preloader) {
-#ifdef _WIN32
-	system_quiet=1;
-	systemf("echo swfcombine %s \"%s\" viewport=\"%s\" -o \"%s\" ^^>%s",zip,
-		viewer, outputname, outputname, batchname);
-	systemf("swfdump -XY \"%s\">>%s", outputname, batchname);
-	systemf("call %s", batchname);
-	systemf("del %s", batchname);
-#else
+#ifdef SYSTEM_BACKTICKS
 	systemf("swfcombine %s `swfdump -XY \"%s\"` \"%s\" viewport=\"%s\" -o \"%s\"",zip,
-		outputname, viewer, outputname, outputname);
+		viewer, outputname, outputname);
+#else
+	systemf("swfcombine %s -X %d -Y %d \"%s\" viewport=\"%s\" -o \"%s\"",zip,width,height,
+		viewer, outputname, outputname);
 #endif
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && !viewer) {
 	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-#ifdef _WIN32
-	system_quiet=1;
-	systemf("echo @SET RATE=^^>%s", batchname);
-	systemf("swfdump -r \"%s\">>%s", preloader, batchname);
-	systemf("echo swfcombine %s %s\\PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\" %%RATE%%>>%s",zip,
-		SWFDIR, preloader, outputname, outputname, batchname);
-	systemf("call %s", batchname);
-	systemf("del %s", batchname);
-#else
-	systemf("swfcombine %s `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,
+#ifdef SYSTEM_BACKTICKS
+	ret = systemf("swfcombine %s `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,
 		preloader, SWFDIR, preloader, outputname, outputname);
+#else
+	ret = systemf("swfcombine %s -Y %d -X %d %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,width,height,
+		SWFDIR, preloader, outputname, outputname);
 #endif
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && viewer) {
 	systemf("swfcombine \"%s\" viewport=%s -o __tmp__.swf",
-		viewer, outputname);
-#ifdef _WIN32
-	system_quiet=1;
-	systemf("echo @SET X_AND_Y=^^>%s", batchname);
-	systemf("swfdump -XY \"%s\">>%s", outputname, batchname);
-	systemf("echo @SET RATE=^^>>%s", batchname);
-	systemf("swfdump -r \"%s\">>%s", preloader, batchname);
-	systemf("echo swfcombine %s %%X_AND_Y%% %%RATE%% %s\\PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\">>%s",zip,
-		SWFDIR, preloader, outputname, batchname);
-	systemf("call %s", batchname);
-	systemf("del __tmp__.swf %s", batchname);
-#else
+		viewer, outputname, outputname);
+#ifdef SYSTEM_BACKTICKS
 	systemf("swfcombine %s `swfdump -XY \"%s\"` `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,
 		outputname, preloader, SWFDIR, preloader, outputname);
-	systemf("rm __tmp__.swf");
+#else
+	/* TODO: read out rate */
+	systemf("swfcombine %s -X %d -Y %d -r %f %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,width,height,
+		getRate(preloader), preloader, SWFDIR, preloader, outputname);
 #endif
+	systemf("rm __tmp__.swf");
     }
 
     return 0;
