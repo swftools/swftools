@@ -14,7 +14,7 @@ if test "x${OK}" = "xOK";then
 fi
 
 if test "x${CROSSCOMPILE}" = "x1";then
-    OK=OK;
+    OK=no;
 fi
 if test "x${OK}" = "xOK";then
 rm -f config.tmp2
