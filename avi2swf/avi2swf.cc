@@ -81,6 +81,10 @@ int args_callback_option(char*name,char*val)
 	numframes = atoi(val);
 	return 1;
     }
+    else if(!strcmp(name, "d")) {
+	scale = atof(val);
+	return 1;
+    }
     else if(!strcmp(name, "q")) {
 	quality = atoi(val);
 	if(quality<0)
