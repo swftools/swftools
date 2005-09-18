@@ -87,11 +87,6 @@ Boxes:
 
  </p>
 
- <note>
-  Though swfc is a command-line utility, there also exists a nice graphical
-  frontend for it, called Swifty.
- </note>
-
  </section>
 
  <section><title>A simple swfc example</title>
