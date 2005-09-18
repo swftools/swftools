@@ -400,6 +400,119 @@ int swf_SetJPEGBits(TAG * t, char *fname, int quality)
     return 0;
 }
 
+typedef struct _JPEGFILEMGR {
+    struct jpeg_destination_mgr mgr;
+    JOCTET *buffer;
+    struct jpeg_compress_struct* cinfo;
+    struct jpeg_error_mgr* jerr;
+    FILE*fi;
+} JPEGFILEMGR;
+
+static void file_init_destination(j_compress_ptr cinfo) 
+{ 
+    JPEGFILEMGR*fmgr = (JPEGFILEMGR*)(cinfo->dest);
+    struct jpeg_destination_mgr*dmgr = &fmgr->mgr;
+
+    fmgr->buffer = (JOCTET*)rfx_alloc(OUTBUFFER_SIZE);
+    if(!fmgr->buffer) {
+	perror("malloc");
+	fprintf(stderr, "Out of memory!\n");
+	exit(1);
+    }
+
+    dmgr->next_output_byte = fmgr->buffer;
+    dmgr->free_in_buffer = OUTBUFFER_SIZE;
+}
+
+static boolean file_empty_output_buffer(j_compress_ptr cinfo)
+{ 
+    JPEGFILEMGR*fmgr = (JPEGFILEMGR*)(cinfo->dest);
+    struct jpeg_destination_mgr*dmgr = &fmgr->mgr;
+
+    if(fmgr->fi)
+	fwrite(fmgr->buffer, OUTBUFFER_SIZE, 1, fmgr->fi);
+
+    dmgr->next_output_byte = fmgr->buffer;
+    dmgr->free_in_buffer = OUTBUFFER_SIZE;
+    return 1;
+}
+
+static void file_term_destination(j_compress_ptr cinfo) 
+{ 
+    JPEGFILEMGR*fmgr = (JPEGFILEMGR*)(cinfo->dest);
+    struct jpeg_destination_mgr*dmgr = &fmgr->mgr;
+
+    if(fmgr->fi)
+        fwrite(fmgr->buffer, OUTBUFFER_SIZE-dmgr->free_in_buffer, 1, fmgr->fi);
+
+    rfx_free(fmgr->buffer);
+    fmgr->buffer = 0;
+    dmgr->free_in_buffer = 0;
+    dmgr->next_output_byte = 0;
+}
+
+void swf_SaveJPEG(char*filename, RGBA*pixels, int width, int height, int quality)
+{
+    JPEGFILEMGR fmgr;
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    unsigned char*data2 = 0;
+    int y;
+
+    FILE*fi = fopen(filename, "wb");
+    if(!fi) {
+	char buf[256];
+	sprintf(buf, "rfxswf: Couldn't create %s", filename);
+	perror(buf);
+	return;
+    }
+    data2 = rfx_calloc(width*3);
+
+    memset(&cinfo, 0, sizeof(cinfo));
+    memset(&jerr, 0, sizeof(jerr));
+    memset(&fmgr, 0, sizeof(fmgr));
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+
+    fmgr.mgr.init_destination = file_init_destination;
+    fmgr.mgr.empty_output_buffer = file_empty_output_buffer;
+    fmgr.mgr.term_destination = file_term_destination;
+    fmgr.fi = fi;
+    fmgr.cinfo = &cinfo;
+    fmgr.jerr = &jerr;
+    cinfo.dest = (struct jpeg_destination_mgr*)&fmgr;
+
+    // init compression
+
+    cinfo.image_width  = width;
+    cinfo.image_height = height;
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+    jpeg_set_defaults(&cinfo);
+    cinfo.dct_method = JDCT_IFAST;
+    jpeg_set_quality(&cinfo,quality,TRUE);
+
+    //jpeg_write_tables(&cinfo);
+    //jpeg_suppress_tables(&cinfo, TRUE);
+    jpeg_start_compress(&cinfo, FALSE);
+
+    for(y=0;y<height;y++) {
+	int x;
+	RGBA*src = &pixels[y*width];
+	for(x=0;x<width;x++) {
+	    data2[x*3+0] = src[x].r;
+	    data2[x*3+1] = src[x].g;
+	    data2[x*3+2] = src[x].b;
+	}
+        jpeg_write_scanlines(&cinfo, &data2, 1);
+    }
+    rfx_free(data2);
+    jpeg_finish_compress(&cinfo);
+    jpeg_destroy_compress(&cinfo);
+
+    fclose(fi);
+}
+
 /*  jpeg_source_mgr functions */
 static void tag_init_source(struct jpeg_decompress_struct *cinfo)
 {
@@ -1257,4 +1370,5 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
     free(lblocky);
     return newdata;
 }
+
 

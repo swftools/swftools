@@ -723,6 +723,8 @@ int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);
 RGBA* swf_JPEG2TagToImage(TAG*tag, int*width, int*height);
 void swf_RemoveJPEGTables(SWF*swf);
 
+void swf_SaveJPEG(char*filename, RGBA*pixels, int width, int height, int quality);
+
 #define BYTES_PER_SCANLINE(width) ((width+3)&0xfffffffc)
 
 #define BMF_8BIT        3               // Bitmap formats
