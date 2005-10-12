@@ -1209,7 +1209,7 @@ void s_sound(char*name, char*filename)
     unsigned blocksize = 1152;
     int is_mp3 = 0;
 
-    if(wav_read(&wav, filename)) {
+    if(wav_read(filename, &wav)) {
         int t;
 	wav_convert2mono(&wav, &wav2, 44100);
 	samples = (U16*)wav2.data;
