@@ -45,7 +45,7 @@ int getWAVBlock(FILE*fi, struct WAVBlock*block)
     return 1;
 }
 
-int readWAV(char* filename, struct WAV*wav)
+int wav_read(char* filename, struct WAV*wav)
 {
     FILE*fi = fopen(filename, "rb");
     unsigned char b[16];
@@ -63,20 +63,20 @@ int readWAV(char* filename, struct WAV*wav)
     if(!getWAVBlock (fi, &block))
 	return 0;
     if(strncmp(block.id,"RIFF",4)) {
-	fprintf(stderr, "readWAV: not a WAV file\n");
+	fprintf(stderr, "wav_read: not a WAV file\n");
 	return 0;
     }
     if(block.size + 8 < filesize)
-	fprintf(stderr, "readWAV: warning - more tags (%d extra bytes)\n",
+	fprintf(stderr, "wav_read: warning - more tags (%d extra bytes)\n",
 		filesize - block.size - 8);
     if(block.size + 8 > filesize)
-	fprintf(stderr, "readWAV: warning - short file (%d bytes missing)\n",
+	fprintf(stderr, "wav_read: warning - short file (%d bytes missing)\n",
 		block.size + 8 -  filesize);
     if(fread(b, 1, 4, fi) < 4) {
 	return 0;
     }
     if(strncmp(b, "WAVE", 4)) {
-	fprintf(stderr, "readWAV: not a WAV file (2)\n");
+	fprintf(stderr, "wav_read: not a WAV file (2)\n");
 	return 0;
     }
  
@@ -113,7 +113,7 @@ int readWAV(char* filename, struct WAV*wav)
     return 1;
 }
 
-int writeWAV(char*filename, struct WAV*wav)
+int wav_write(char*filename, struct WAV*wav)
 {
     FILE*fi = fopen(filename, "wb");
     char*b="RIFFWAVEfmt \x10\0\0\0data";
@@ -158,14 +158,14 @@ int writeWAV(char*filename, struct WAV*wav)
     return 1;
 }
 
-void printWAVInfo(struct WAV*wav)
+void wav_print(struct WAV*wav)
 {
     printf("tag:%04x channels:%d samples/sec:%d bytes/sec:%d align:%d bits/sample:%d size:%d\n",
 	    wav->tag, wav->channels, wav->sampsPerSec, wav->bytesPerSec, 
 	    wav->align, wav->bps, wav->size);
 }
 
-int convertWAV2mono(struct WAV*src, struct WAV*dest, int rate)
+int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
 {
     int samplelen=src->size/src->align;
     int bps=src->bps;

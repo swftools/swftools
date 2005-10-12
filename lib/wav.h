@@ -19,8 +19,8 @@ struct WAV {
     unsigned int size;
 };
 
-int readWAV(char* filename, struct WAV*wav);
-int writeWAV(char*filename, struct WAV*wav);
-void printWAVInfo(struct WAV*wav);
-int convertWAV2mono(struct WAV*src, struct WAV*dest, int rate);
+int wav_read(char* filename, struct WAV*wav);
+int wav_write(char*filename, struct WAV*wav);
+void wav_print(struct WAV*wav);
+int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate);
 
