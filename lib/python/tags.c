@@ -559,6 +559,22 @@ static void image_dealloc(tag_internals_t*self)
 	free(pi->rgba);pi->rgba = 0;
     }
 }
+static int image_parse(tag_internals_t*self)
+{
+    image_internal_t*i= (image_internal_t*)self->data;
+    if(i->rgba)
+	return 1;
+    if(!self->tag)
+	return 0;
+   
+    i->rgba = swf_ExtractImage(self->tag, &i->width, &i->height);
+    i->bpp = 32;
+    i->isindexed = 0;
+    i->islossless = 1;
+
+    swf_DeleteTag(self->tag);self->tag = 0;
+    return 1;
+}
 static int imagetag_getWidth(PyObject* self)
 {
     tag_internals_t*itag = tag_getinternals(self);
@@ -596,12 +612,24 @@ static PyObject* f_DefineImage(PyObject* self, PyObject* args, PyObject* kwargs)
 
     return (PyObject*)tag;
 }
+static PyObject* image_getattr(tag_internals_t*self,char*a)
+{
+    image_internal_t*i = (image_internal_t*)self->data;
+    if(!strcmp(a, "image")) {
+	if(!i->rgba) {
+	    image_parse(self);
+	}
+	PyObject* image = rgba_to_image(i->rgba, i->width, i->height);
+	return image;
+    }
+    return 0;
+}
 static tag_internals_t image_tag =
 {
-    parse: 0,
+    parse: image_parse,
     fillTAG: image_fillTAG,
     dealloc: image_dealloc,
-    getattr: 0, 
+    getattr: image_getattr, 
     setattr: 0,
     tagfunctions: 0,
     datasize: sizeof(image_internal_t),
