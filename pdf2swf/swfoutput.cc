@@ -1316,14 +1316,17 @@ static void swfoutput_setstrokecolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
     i->strokergb.a = a;
 }
 
+//#define ROUND_UP 19
+//#define ROUND_UP 10
+
 static void swfoutput_setlinewidth(gfxdevice_t*dev, double _linewidth)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->linewidth == (U16)(_linewidth*20+19))
+    if(i->linewidth == (U16)(_linewidth*20+19.0/20.0))
         return;
     if(i->shapeid>=0)
 	endshape(dev);
-    i->linewidth = (U16)(_linewidth*20+19);
+    i->linewidth = (U16)(_linewidth*20+19.0/20.0);
 }
 
 
