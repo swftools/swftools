@@ -1178,7 +1178,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode c, Unicode *_u, int uLen)
 {
-    msg("<debug> drawChar(%f,%f,%d)", x,y,c);
     int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
     if (render == 3) {
@@ -1228,8 +1227,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
 	char**enc=font8->getEncoding();
-	if(enc && enc[c])
+	if(enc && enc[c] && strcasecmp(enc[c], "space")) {
 	   name = enc[c];
+	}
     }
     if (CIDToGIDMap) {
 	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\" render=%d\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name), render);
