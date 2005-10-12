@@ -172,7 +172,7 @@ static void add_line(RENDERBUF*buf, double x1, double y1, double x2, double y2, 
     }
 }
 #define PI 3.14159265358979
-static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double y2, int width, renderpoint_t*p)
+static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double y2, double width, renderpoint_t*p)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
 
@@ -194,8 +194,10 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
 #else
     /* That's what Macromedia's Player seems to do at zoom level 0.  */
     /* TODO: needs testing */
-    if(width<20)
-	width = 20;
+
+    /* TODO: how does this interact with scaling? */
+    if(width * i->multiply < 20)
+	width = 20 / i->multiply;
 #endif
 
     sd = (double)dx*(double)dx+(double)dy*(double)dy;
@@ -393,6 +395,13 @@ static SHAPE2* linestyle2fillstyle(SHAPE2*shape)
 
 void swf_Process(RENDERBUF*dest, U32 clipdepth);
 
+double matrixsize(MATRIX*m)
+{
+    double l1 = sqrt((m->sx /65536.0) * (m->sx /65536.0) + (m->r0 /65536.0) * (m->r0/65536.0) );
+    double l2 = sqrt((m->r1 /65536.0) * (m->r1 /65536.0) + (m->sy /65536.0) * (m->sy/65536.0) );
+    return sqrt(l1*l2);
+}
+
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _depth,U16 _clipdepth)
 {
     renderbuf_internal*i = (renderbuf_internal*)dest->internal;
@@ -404,6 +413,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
     SHAPE2* lshape = 0;
     renderpoint_t p, lp;
     U32 clipdepth;
+    double widthmultiply = matrixsize(m);
 
     memset(&p, 0, sizeof(renderpoint_t));
     memset(&lp, 0, sizeof(renderpoint_t));
@@ -440,6 +450,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
         lp.depth = (_depth << 16)+1;
     }
 
+
     while(line)
     {
         int x1,y1,x2,y2,x3,y3;
@@ -451,7 +462,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             
             if(line->linestyle && ! clipdepth) {
                 lp.shapeline = &lshape->lines[line->linestyle-1];
-                add_solidline(dest, x1, y1, x3, y3, shape->linestyles[line->linestyle-1].width, &lp);
+                add_solidline(dest, x1, y1, x3, y3, shape->linestyles[line->linestyle-1].width * widthmultiply, &lp);
                 lp.depth++;
             }
             if(line->fillstyle0 || line->fillstyle1) {
@@ -480,7 +491,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
                 
                 if(line->linestyle && ! clipdepth) {
                     lp.shapeline = &lshape->lines[line->linestyle-1];
-                    add_solidline(dest, xx, yy, nx, ny, shape->linestyles[line->linestyle-1].width, &lp);
+                    add_solidline(dest, xx, yy, nx, ny, shape->linestyles[line->linestyle-1].width * widthmultiply, &lp);
                     lp.depth++;
                 }
                 if(line->fillstyle0 || line->fillstyle1) {
