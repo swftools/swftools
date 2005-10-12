@@ -1045,16 +1045,19 @@ void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 
     if(config.isframe)
     {
-	int tmp;
-	if(slavename && slavename[0]!='#' && (sscanf(slavename, "%d", &tmp) ==
-		strlen(slavename))) {
-	/* if the name the slave should replace 
-	   consists only of digits and the -f
-	   option is given, it probably is not
-	   a frame name but a frame number.
-	 */
-	    slaveid = tmp;
-	    slavename = 0;
+	if(slavename && slavename[0]!='#') {
+	    int tmp;
+	    int len;
+	    sscanf(slavename, "%d%n", &tmp, &len);
+	    if(len == strlen(slavename)) {
+	    /* if the name the slave should replace 
+	       consists only of digits and the -f
+	       option is given, it probably is not
+	       a frame name but a frame number.
+	     */
+		slaveid = tmp;
+		slavename = 0;
+	    }
 	}
 
 	if(slaveid>=0) {
