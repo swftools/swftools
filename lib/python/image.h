@@ -31,5 +31,6 @@ int image_getWidth(PyObject*image);
 int image_getHeight(PyObject*image);
 int image_getBPP(PyObject*image);
 RGBA* image_toRGBA(PyObject*image);
+PyObject* rgba_to_image(RGBA*rgba, int width, int height);
 
 #endif
