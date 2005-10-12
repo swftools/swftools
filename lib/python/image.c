@@ -94,3 +94,33 @@ RGBA* image_toRGBA(PyObject*_image)
     PyErr_SetString(PyExc_Exception, setError("Unsupported image format: %s (try .convert(\"RGBA\")", image->image->mode));
     return 0;
 }
+
+extern PyObject*PyImagingNew(Imaging imOut);
+
+PyObject* rgba_to_image(RGBA*rgba, int width, int height)
+{
+#ifndef WIN32
+    Imaging img = ImagingNew("RGBA", width, height);
+    int y;
+    if(!img->image32) {
+	fprintf(stderr, "No array allocated!\n");
+	return 0;
+    }
+    for(y=0;y<height;y++) {
+	U8* dest = (U8*)(img->image32[y]);
+	RGBA* src = &rgba[width*y];
+	int x;
+	for(x=0;x<width;x++) {
+	    dest[x+0] = src[x].r;
+	    dest[x+1] = src[x].g;
+	    dest[x+2] = src[x].b;
+	    dest[x+3] = src[x].a;
+	}
+    }
+
+    return PyImagingNew(img);
+#else
+    fprintf(stderr, "This image extraction is not yet supported on non-linux systems\n");
+    return 0;
+#endif
+}
