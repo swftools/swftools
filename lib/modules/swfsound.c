@@ -312,3 +312,25 @@ void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info)
 }
 
 
+void swf_SetSoundDefineMP3(TAG*tag, U8* data, unsigned length,
+                           unsigned SampRate,
+                           unsigned Channels,
+                           unsigned NumFrames)
+{
+    U8 compression = 2; // 0 = raw, 1 = ADPCM, 2 = mp3, 3 = raw le, 6 = nellymoser
+    U8 rate;     // 0 = 5.5 Khz, 1 = 11 Khz, 2 = 22 Khz, 3 = 44 Khz
+    U8 size = 1; // 0 = 8 bit, 1 = 16 bit
+    U8 type = Channels==2; // 0=mono, 1=stereo
+    
+    rate = (SampRate >= 40000) ? 3
+         : (SampRate >= 19000) ? 2
+         : (SampRate >= 8000) ? 1
+         : 0;
+
+    swf_SetU8(tag,(compression<<4)|(rate<<2)|(size<<1)|type);
+
+    swf_SetU32(tag, NumFrames * 576);
+
+    swf_SetU16(tag, 0); //delayseek
+    swf_SetBlock(tag, data, length);
+}

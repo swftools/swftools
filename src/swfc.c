@@ -32,8 +32,9 @@
 #include "../lib/log.h"
 #include "../lib/args.h"
 #include "../lib/q.h"
+#include "../lib/mp3.h"
+#include "../lib/wav.h"
 #include "parser.h"
-#include "wav.h"
 #include "../lib/png.h"
 
 //#define DEBUG
@@ -1201,17 +1202,15 @@ typedef struct _sound_t
 void s_sound(char*name, char*filename)
 {
     struct WAV wav, wav2;
+    struct MP3 mp3;
     sound_t* sound;
-    U16*samples;
-    int numsamples;
-    int t;
-    int blocksize = 1152;
+    U16*samples = NULL;
+    unsigned numsamples;
+    unsigned blocksize = 1152;
+    int is_mp3 = 0;
 
-    if(!readWAV(filename, &wav)) {
-	warning("Couldn't read wav file \"%s\"", filename);
-	samples = 0;
-	numsamples = 0;
-    } else {
+    if(readWAV(filename, &wav)) {
+        int t;
 	convertWAV2mono(&wav, &wav2, 44100);
 	samples = (U16*)wav2.data;
 	numsamples = wav2.size/2;
@@ -1222,6 +1221,16 @@ void s_sound(char*name, char*filename)
 	    samples[t] = (samples[t]>>8)&0xff | (samples[t]<<8)&0xff00;
 	}
 #endif
+    } else if(mp3_read(&mp3, filename)) {
+        fprintf(stderr, "\"%s\" seems to work as a MP3 file...\n", filename);
+        blocksize = 1;
+        is_mp3 = 1;
+    }
+    else
+    {
+	warning("Couldn't read WAV/MP3 file \"%s\"", filename);
+	samples = 0;
+	numsamples = 0;
     }
     
     if(numsamples%blocksize != 0)
@@ -1240,7 +1249,19 @@ void s_sound(char*name, char*filename)
 
     tag = swf_InsertTag(tag, ST_DEFINESOUND);
     swf_SetU16(tag, id); //id
-    swf_SetSoundDefine(tag, samples, numsamples);
+    if(is_mp3)
+    {
+        swf_SetSoundDefineMP3(
+                tag, mp3.data, mp3.size,
+                mp3.SampRate,
+                mp3.Channels,
+                mp3.NumFrames);
+	mp3_clear(&mp3);
+    }
+    else
+    {
+        swf_SetSoundDefine(tag, samples, numsamples);
+    }
    
     sound = (sound_t*)malloc(sizeof(sound_t)); /* mem leak */
     sound->tag = tag;

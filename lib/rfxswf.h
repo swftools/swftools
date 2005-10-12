@@ -746,6 +746,10 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples);
 void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first); /* expects 2304 samples */
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num);
+void swf_SetSoundDefineMP3(TAG*tag, U8* data, unsigned length,
+                           unsigned SampRate,
+                           unsigned Channels,
+                           unsigned NumFrames);
 void swf_SetSoundInfo(TAG*tag, SOUNDINFO*info);
 
 // swftools.c
