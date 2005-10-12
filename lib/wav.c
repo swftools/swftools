@@ -45,7 +45,7 @@ int getWAVBlock(FILE*fi, struct WAVBlock*block)
     return 1;
 }
 
-int wav_read(char* filename, struct WAV*wav)
+int wav_read(struct WAV*wav, char* filename)
 {
     FILE*fi = fopen(filename, "rb");
     unsigned char b[16];
@@ -113,7 +113,7 @@ int wav_read(char* filename, struct WAV*wav)
     return 1;
 }
 
-int wav_write(char*filename, struct WAV*wav)
+int wav_write(struct WAV*wav, char*filename)
 {
     FILE*fi = fopen(filename, "wb");
     char*b="RIFFWAVEfmt \x10\0\0\0data";

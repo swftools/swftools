@@ -24,7 +24,7 @@
 #include "../lib/rfxswf.h"
 #include "../lib/log.h"
 #include "../lib/args.h"
-#include "wav.h"
+#include "../lib/wav.h"
 
 char * filename = 0;
 char * outputname = "output.swf";
@@ -227,14 +227,14 @@ int main (int argc,char ** argv)
 	exit(1);
     }
 
-    if(!readWAV(filename, &wav))
+    if(!wav_read(&wav, filename))
     {
 	msg("<fatal> Error reading %s", filename);
 	exit(1);
     }
-    convertWAV2mono(&wav,&wav2, samplerate);
-    //printWAVInfo(&wav);
-    //printWAVInfo(&wav2);
+    wav_convert2mono(&wav,&wav2, samplerate);
+    //wav_print(&wav);
+    //wav_print(&wav2);
     samples = (U16*)wav2.data;
     numsamples = wav2.size/2;
 
