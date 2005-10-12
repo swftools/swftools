@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf$(A) q.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O)
+all: librfxswf$(A) q.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O) mp3.$(O) wav.$(O)
 
 lame_objects = @lame_objects@
 
@@ -19,6 +19,10 @@ q.$(O): q.c q.h $(top_builddir)/config.h
 	$(C) q.c -o $@
 png.$(O): png.c png.h $(top_builddir)/config.h
 	$(C) png.c -o $@
+mp3.$(O): mp3.c mp3.h $(top_builddir)/config.h
+	$(C) mp3.c -o $@
+wav.$(O): wav.c wav.h $(top_builddir)/config.h
+	$(C) wav.c -o $@
 os.$(O): os.c os.h $(top_builddir)/config.h
 	$(C) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" os.c -o $@
 gfxtools.$(O): gfxtools.c gfxtools.h $(top_builddir)/config.h
