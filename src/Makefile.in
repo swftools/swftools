@@ -7,10 +7,8 @@ programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) sw
 
 all: $(programs)
 
-wav2swf.$(O): wav2swf.c wav.h
+wav2swf.$(O): wav2swf.c ../lib/wav.h
 	$(C) wav2swf.c -o $@
-wav.$(O): wav.c wav.h
-	$(C) wav.c -o $@
 png2swf.$(O): png2swf.c
 	$(C) png2swf.c -o $@
 gif2swf.$(O): gif2swf.c
@@ -45,8 +43,8 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 parser.yy.c: parser.lex
 	flex -Bs -oparser.yy.c parser.lex
 
-wav2swf$(E): wav2swf.$(O) wav.$(O) ../lib/librfxswf$(A)
-	$(L) wav2swf.$(O) wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+wav2swf$(E): wav2swf.$(O) ../lib/wav.$(O) ../lib/librfxswf$(A)
+	$(L) wav2swf.$(O) ../lib/wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
 png2swf$(E): png2swf.$(O) ../lib/librfxswf$(A)
 	$(L) png2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
@@ -81,8 +79,8 @@ font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A)
 jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
-swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/png.$(O) ../lib/librfxswf$(A)
-	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) wav.$(O) ../lib/png.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) ../lib/librfxswf$(A)
+	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
 
 install:
