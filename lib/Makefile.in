@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-DEVICES = devices/gfxdevice_file.$(O) devices/gfxdevice_swf.$(O)
+DEVICES = devices/file.$(O) devices/swf.$(O)
 
 all: librfxswf$(A) q.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O) mp3.$(O) wav.$(O) $(DEVICES)
 
@@ -55,10 +55,10 @@ h.263/h263tables.$(O): h.263/h263tables.c h.263/h263tables.h
 h.263/swfvideo.$(O): h.263/swfvideo.c h.263/h263tables.h h.263/dct.h
 	$(C) h.263/swfvideo.c -o h.263/swfvideo.$(O)
 
-devices/gfxdevice_swf.$(O):  devices/gfxdevice_swf.c devices/gfxdevice_swf.h
-	$(C) devices/gfxdevice_swf.c -o devices/gfxdevice_swf.$(O)
-devices/gfxdevice_file.$(O):  devices/gfxdevice_file.c devices/gfxdevice_file.h
-	$(C) devices/gfxdevice_file.c -o devices/gfxdevice_file.$(O)
+devices/swf.$(O):  devices/swf.c devices/swf.h
+	$(C) devices/swf.c -o devices/swf.$(O)
+devices/file.$(O):  devices/file.c devices/file.h
+	$(C) devices/file.c -o devices/file.$(O)
 
 librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
