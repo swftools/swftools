@@ -63,7 +63,7 @@
 #include "SWFOutputDev.h"
 
 //swftools header files
-#include "swfoutput.h"
+#include "../lib/devices/swf.h"
 #include "../lib/log.h"
 #include "../lib/gfxdevice.h"
 #include "../lib/gfxtools.h"
