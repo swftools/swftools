@@ -72,14 +72,20 @@ librfxswf:
     * drawer paths should be closer to the SVG syntax (no space between M and coord)
 
 pdf2swf:
-    
+
+    * upgrade xpdf
     * Make a new viewer (with pageflipping)
     * Fix even-odd/clockwise-anticlockwise fill problems
+    * fix monochrome image handling (don't convert to 24 bit)
 
 png2swf:
 
     * Image mode 4
     * Interlace mode 1
+
+swfdump:
+
+    * Flash 7 action codes
 
 swfrender:
 
