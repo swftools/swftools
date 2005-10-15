@@ -30,8 +30,6 @@ ${name}/src/jpeg2swf.c \
 ${name}/src/png2swf.c \
 ${name}/src/gif2swf.c \
 ${name}/src/wav2swf.c \
-${name}/src/wav.c \
-${name}/src/wav.h \
 ${name}/src/swfc.c \
 ${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
@@ -88,6 +86,10 @@ ${name}/lib/modules/swfbits.c \
 ${name}/lib/modules/swftools.c \
 ${name}/lib/modules/swfcgi.c \
 ${name}/lib/modules/swfsound.c \
+${name}/lib/mp3.c \
+${name}/lib/wav.c \
+${name}/lib/wav.h \
+${name}/lib/mp3.h \
 ${name}/lib/modules/swfdraw.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/action/action.h \
@@ -141,9 +143,11 @@ ${name}/lib/os.h \
 ${name}/lib/gfxdevice.h \
 ${name}/lib/gfxtools.h \
 ${name}/lib/gfxtools.c \
+${name}/lib/devices/swf.h \
+${name}/lib/devices/swf.c \
+${name}/lib/devices/file.h \
+${name}/lib/devices/file.c \
 ${name}/pdf2swf/HOWTO_pdf2swf \
-${name}/pdf2swf/swfoutput.h \
-${name}/pdf2swf/swfoutput.cc \
 ${name}/pdf2swf/encodings.cc \
 ${name}/pdf2swf/SWFOutputDev.h \
 ${name}/pdf2swf/SWFOutputDev.cc \
