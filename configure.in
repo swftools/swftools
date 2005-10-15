@@ -1,8 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 
-dnl AC_INIT(src/) # old autoconf
-AC_INIT
-AC_CONFIG_SRCDIR([src/])
+dnl old autoconf
+AC_INIT(src/)
+
+dnl new autoconf
+dnl AC_INIT
+dnl AC_CONFIG_SRCDIR([src/])
 
 AC_ARG_ENABLE(checkmem,
 [  --enable-checkmem       turn on ccmalloc debugging], CHECKMEM=true)
@@ -18,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=0.7.0
+VERSION=2005-09-25-1334
 
 
 # ------------------------------------------------------------------
@@ -411,9 +414,12 @@ fi
 if test -f "release.in"; then release_in="./release"; fi
 FILES="$release_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile"
 
-dnl AC_OUTPUT(${FILES}) old autoconf
-AC_CONFIG_FILES([${FILES}])
-AC_OUTPUT
+dnl old autoconf
+AC_OUTPUT(${FILES})
+
+dnl new autoconf
+dnl AC_CONFIG_FILES([${FILES}])
+dnl AC_OUTPUT
 
 #
 # On development trees, create snapshots of config.status
