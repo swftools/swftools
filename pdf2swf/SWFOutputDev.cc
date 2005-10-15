@@ -101,6 +101,8 @@ static int forceType0Fonts = 1;
 static void printInfoString(Dict *infoDict, char *key, char *fmt);
 static void printInfoDate(Dict *infoDict, char *key, char *fmt);
 
+static char* lastfontdir = 0;
+
 struct mapping {
     char*pdffont;
     char*filename;
@@ -1922,7 +1924,7 @@ char* searchForSuitableFont(GfxFont*gfxFont)
 char* SWFOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 {
     char*fontname = 0, *filename = 0;
-    msg("<notice> subsituteFont(%s)", oldname);
+    msg("<notice> substituteFont(%s)", oldname);
 
     if(!(fontname = searchForSuitableFont(gfxFont))) {
 	fontname = "Times-Roman";
@@ -2099,7 +2101,12 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(!fileName) {
 	char * fontname = getFontName(gfxFont);
 	msg("<warning> Font %s %scould not be loaded.", fontname, embedded?"":"(not embedded) ");
-	msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into /swftools/fonts", fontname);
+	
+	if(lastfontdir)
+	    msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into %s/swftools/fonts", fontname, lastfontdir);
+	else
+	    msg("<warning> Try specifying one or more font directories");
+
 	fileName = substituteFont(gfxFont, fontid);
 	if(fontid) { free(fontid);fontid = strdup(substitutetarget[substitutepos-1]); /*ugly hack*/};
 	msg("<notice> Font is now %s (%s)", fontid, fileName);
@@ -2612,6 +2619,7 @@ void pdfswf_addfontdir(char*dirname)
 {
 #ifdef HAVE_DIRENT_H
     msg("<notice> Adding %s to font directories", dirname);
+    lastfontdir = strdup(dirname);
     DIR*dir = opendir(dirname);
     if(!dir) {
 	msg("<warning> Couldn't open directory %s\n", dirname);
