@@ -5,7 +5,7 @@ include ../Makefile.common
 
 DEVICES = devices/file.$(O) devices/swf.$(O)
 
-all: librfxswf$(A) q.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O) mp3.$(O) wav.$(O) $(DEVICES)
+all: librfxswf$(A) q.$(O) mem.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O) mp3.$(O) wav.$(O) $(DEVICES)
 
 
 lame_objects = @lame_objects@
@@ -20,6 +20,8 @@ drawer.$(O): drawer.c drawer.h
 	$(C) drawer.c -o $@
 q.$(O): q.c q.h $(top_builddir)/config.h
 	$(C) q.c -o $@
+mem.$(O): mem.c mem.h $(top_builddir)/config.h
+	$(C) mem.c -o $@
 png.$(O): png.c png.h $(top_builddir)/config.h
 	$(C) png.c -o $@
 mp3.$(O): mp3.c mp3.h $(top_builddir)/config.h
@@ -60,8 +62,8 @@ devices/swf.$(O):  devices/swf.c devices/swf.h
 devices/file.$(O):  devices/file.c devices/file.h
 	$(C) devices/file.c -o devices/file.$(O)
 
-librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
-	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) mem.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) mem.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(RANLIB) librfxswf$(A)
 
 install:
