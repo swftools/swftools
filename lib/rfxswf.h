@@ -38,6 +38,7 @@ extern "C" {
 #include "../config.h"
 #include "./bitio.h"
 #include "./drawer.h"
+#include "./mem.h"
 
 #define DEBUG_RFXSWF
 #ifdef RFXSWF_DISABLESOUND
@@ -70,16 +71,6 @@ extern "C" {
 #define SWAP32(x) (x)
 #define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
 #define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
-#endif
-
-#define ALLOC_ARRAY(type, num) (((type)*)rfxalloc(sizeof(type)*(num)))
-void* rfx_alloc(int size);
-void* rfx_calloc(int size);
-void* rfx_realloc(void*data, int size);
-void rfx_free(void*data);
-#ifdef MEMORY_INFO
-long rfx_memory_used();
-char* rfx_memory_used_str();
 #endif
 
 // SWF Types

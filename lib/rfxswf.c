@@ -24,6 +24,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include "mem.h"
 #include "rfxswf.h"
 
 #ifdef HAVE_JPEGLIB
@@ -47,88 +48,6 @@
 
 #include "./bitio.h"
 #include "./MD5.h"
-
-// memory allocation
-
-void* rfx_alloc(int size)
-{
-  void*ptr;
-  if(size == 0) {
-    //*(int*)0 = 0xdead;
-    //fprintf(stderr, "Warning: Zero alloc\n");
-    return 0;
-  }
-
-  ptr = malloc(size);
-  if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
-    /* TODO: we should send a signal, so that the debugger kicks in? */
-    exit(1);
-  }
-  return ptr;
-}
-void* rfx_realloc(void*data, int size)
-{
-  void*ptr;
-  if(size == 0) {
-    //*(int*)0 = 0xdead;
-    //fprintf(stderr, "Warning: Zero realloc\n");
-    rfx_free(data);
-    return 0;
-  }
-  if(!data) {
-    ptr = malloc(size);
-  } else {
-    ptr = realloc(data, size);
-  }
-
-  if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
-    /* TODO: we should send a signal, so that the debugger kicks in? */
-    exit(1);
-  }
-  return ptr;
-}
-void* rfx_calloc(int size)
-{
-  void*ptr;
-  if(size == 0) {
-    //*(int*)0 = 0xdead;
-    //fprintf(stderr, "Warning: Zero alloc\n");
-    return 0;
-  }
-#ifdef HAVE_CALLOC
-  ptr = calloc(size);
-#else
-  ptr = malloc(size);
-#endif
-  if(!ptr) {
-    fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
-    /* TODO: we should send a signal, so that the debugger kicks in? */
-    exit(1);
-  }
-#ifndef HAVE_CALLOC
-  memset(ptr, 0, size);
-#endif
-  return ptr;
-}
-
-void rfx_free(void*ptr)
-{
-  if(!ptr)
-    return;
-  free(ptr);
-}
-
-#ifdef MEMORY_INFO
-long rfx_memory_used()
-{
-}
-
-char* rfx_memory_used_str()
-{
-}
-#endif
 
 // internal constants
 
@@ -633,6 +552,7 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
     nbits = swf_CountBits(m->sx,0);
     nbits = swf_CountBits(m->sy,nbits);
     if(nbits>=32) {
+        /* TODO: happens on AMD64 systems for normal values? */
 	fprintf(stderr,"rfxswf: Error: matrix values too large\n");
 	nbits = 31;
     }
