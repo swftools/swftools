@@ -1291,25 +1291,61 @@ static scale_lookup_t**make_scale_lookup(int width, int newwidth)
     lblockx[newwidth] = p_x;
     return lblockx;
 }
-static int monochrome_warning = 0;
+
+static void encodeMonochromeImage(RGBA*data, int width, int height, RGBA*colors)
+{
+    int t;
+    int len = width*height;
+
+    U32* img = (U32*)data;
+    U32 color1 = img[0];
+    U32 color2 = 0;
+    for(t=1;t<len;t++) {
+	if(img[t] != color1) {
+	    color2 = img[t];
+	    break;
+	}
+    }
+    *(U32*)&colors[0] = color1;
+    *(U32*)&colors[1] = color2;
+    for(t=0;t<len;t++) {
+	if(img[t] == color1) {
+	    img[t] = 0;
+	} else {
+	    img[t] = 0xffffffff;
+	}
+    }
+}
+
+static void decodeMonochromeImage(RGBA*data, int width, int height, RGBA*colors)
+{
+    int t;
+    int len = width*height;
+
+    for(t=0;t<len;t++) {
+	U32 m = data[t].r;
+	data[t].r = (colors[0].r * (255-m) + colors[1].r * m) >> 8;
+	data[t].g = (colors[0].g * (255-m) + colors[1].g * m) >> 8;
+	data[t].b = (colors[0].b * (255-m) + colors[1].b * m) >> 8;
+	data[t].a = (colors[0].a * (255-m) + colors[1].a * m) >> 8;
+    }
+}
+
 RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight)
 {
     int x,y;
     RGBA* newdata; 
     scale_lookup_t *p, **lblockx,**lblocky;
     rgba_int_t*tmpline;
+    int monochrome = 0;
+    RGBA monochrome_colors[2];
     
     if(newwidth<1 || newheight<1)
 	return 0;
 
-    /* this is bad because this scaler doesn't yet handle monochrome
-       images with 2 colors in a way that the final image hasn't more
-       than 256 colors */
     if(swf_ImageGetNumberOfPaletteEntries2(data, width, height) == 2) {
-	if(!monochrome_warning) {
-	    fprintf(stderr, "Warning: scaling monochrome image\n");
-	    monochrome_warning = 1;
-	}
+	monochrome=1;
+	encodeMonochromeImage(data, width, height, monochrome_colors);
     }
 
     tmpline = (rgba_int_t*)malloc(width*sizeof(rgba_int_t));
@@ -1363,6 +1399,10 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
 	    destline++;
 	}
     }
+
+    if(monochrome)
+	decodeMonochromeImage(newdata, newwidth, newheight, monochrome_colors);
+
     free(tmpline);
     free(*lblockx);
     free(lblockx);
