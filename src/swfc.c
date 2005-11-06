@@ -1114,6 +1114,8 @@ void s_texture(char*name, char*object, int x, int y, float scalex, float scaley,
     parameters_t p;
     FILLSTYLE*fs = &texture->fs;
 
+    memset(&p, 0, sizeof(parameters_t));
+
     if(bitmap) {
 	fs->type = FILL_TILED;
 	fs->id_bitmap = bitmap->id;
@@ -1209,7 +1211,7 @@ void s_sound(char*name, char*filename)
     unsigned blocksize = 1152;
     int is_mp3 = 0;
 
-    if(wav_read(filename, &wav)) {
+    if(wav_read(&wav, filename)) {
         int t;
 	wav_convert2mono(&wav, &wav2, 44100);
 	samples = (U16*)wav2.data;
@@ -1382,7 +1384,7 @@ int s_swf3action(char*name, char*action)
     ActionTAG* a = 0;
     instance_t* object = 0;
     if(name) 
-	dictionary_lookup(&instances, name);
+	object = (instance_t*)dictionary_lookup(&instances, name);
     if(!object && name && *name) {
 	/* we have a name, but couldn't find it. Abort. */
 	return 0;
