@@ -62,6 +62,8 @@ ${name}/lib/png.h \
 ${name}/lib/png.c \
 ${name}/lib/drawer.c \
 ${name}/lib/drawer.h \
+${name}/lib/mem.c \
+${name}/lib/mem.h \
 ${name}/avi2swf/avi2swf.cc \
 ${name}/avi2swf/videoreader.h \
 ${name}/avi2swf/videoreader_avifile.hh \
@@ -148,11 +150,8 @@ ${name}/lib/devices/swf.c \
 ${name}/lib/devices/file.h \
 ${name}/lib/devices/file.c \
 ${name}/pdf2swf/HOWTO_pdf2swf \
-${name}/pdf2swf/encodings.cc \
 ${name}/pdf2swf/SWFOutputDev.h \
 ${name}/pdf2swf/SWFOutputDev.cc \
-${name}/pdf2swf/spline.h \
-${name}/pdf2swf/spline.cc \
 ${name}/pdf2swf/pdf2swf.cc \
 ${name}/pdf2swf/xpdf/Annot.cc \
 ${name}/pdf2swf/xpdf/Annot.h \
