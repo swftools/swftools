@@ -21,11 +21,11 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include "../config.h"
 #include "gfxdevice.h"
 #include "gfxtools.h"
 
 static int loadfont_scale = 64;
-static int skip_unused = 0;
 static int full_unicode = 1;
 
 #ifdef HAVE_FREETYPE
@@ -134,27 +134,13 @@ static void glyph_clear(gfxglyph_t*g)
     gfxline_free(g->line);g->line = 0;
 }
 
-void gfxfont_free(gfxfont_t*font)
-{
-    int t;
-    for(t=0;t<font->num_glyphs;t++) {
-	glyph_clear(&font->glyphs[t]);
-    }
-    if(font->glyphs) {
-	free(font->glyphs);font->glyphs = 0;
-    }
-    font->num_glyphs = 0;
-    if(font->unicode2glyph) {
-	free(font->unicode2glyph);font->unicode2glyph = 0;
-    }
-    free(font);
-}
+static int errorno = 0;
 
 gfxfont_t* gfxfont_load(char*filename, double quality)
 {
     FT_Face face;
     FT_Error error;
-    const char* name = 0;
+    const char* fontname = 0;
     FT_ULong charcode;
     FT_UInt gindex;
     gfxfont_t* font;
@@ -165,7 +151,8 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
     int max_unicode = 0;
     int charmap = -1;
     int isunicode = 1;
-   
+    int has_had_errors = 0;
+
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
 	    fprintf(stderr, "Couldn't init freetype library!\n");
@@ -200,9 +187,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	//font->glyphnames = rfx_calloc(face->num_glyphs*sizeof(char*));
     }
 
-    /*name = FT_Get_Postscript_Name(face);
-    if(name && *name)
-	font->name = strdup(name);*/
+    fontname = FT_Get_Postscript_Name(face);
 
     while(1) 
     {
@@ -267,7 +252,14 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	gfxdrawinfo_t info;
 	int ret;
 	char hasname = 0;
+	int omit = 0;
 	name[0]=0;
+	
+	font->glyphs[font->num_glyphs].advance = 0;
+	font->glyphs[font->num_glyphs].line = 0;
+	font->glyphs[font->num_glyphs].unicode = glyph2unicode[t];
+	font->glyphs[font->num_glyphs].name = 0;
+
 	if(FT_HAS_GLYPH_NAMES(face)) {
 	    error = FT_Get_Glyph_Name(face, t, name, 127);
 	    if(!error && name[0] && !strstr(name, "notdef")) {
@@ -275,71 +267,72 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		hasname = 1;
 	    }
 	}
-	if(!glyph2unicode[t] && !hasname && skip_unused) {
-	    continue;
+	if(has_had_errors && (isunicode && !glyph2unicode[t]) && !hasname) {
+	    /* some freetype versions crash or corrupt memory if we try to load
+	       characters (without unicode index or name) above 256 for some fonts.
+	       So skip those characters once the first error occured */
+	    omit = 1;
 	}
-	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
-	if(error) {
-	    fprintf(stderr, "Couldn't load glyph %d, error:%d\n", t, error);
-	    continue;
-	}
-	error = FT_Get_Glyph(face->glyph, &glyph);
-	if(error) {
-	    fprintf(stderr, "Couldn't get glyph %d, error:%d\n", t, error);
-	    continue;
-	}
-
-	FT_Glyph_Get_CBox(glyph, ft_glyph_bbox_unscaled, &bbox);
-	bbox.yMin = -bbox.yMin;
-	bbox.yMax = -bbox.yMax;
-	if(bbox.xMax < bbox.xMin) {
-	    // swap
-	    bbox.xMax ^= bbox.xMin;
-	    bbox.xMin ^= bbox.xMax;
-	    bbox.xMax ^= bbox.xMin;
-	}
-	if(bbox.yMax < bbox.yMin) {
-	    // swap
-	    bbox.yMax ^= bbox.yMin;
-	    bbox.yMin ^= bbox.yMax;
-	    bbox.yMax ^= bbox.yMin;
-	}
-
-	gfxdrawer_target_gfxline(&draw);
-	info.draw = &draw;
-	info.quality = quality;
-
-	//error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &info);
-	error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &info);
-	
-	if(error) {
-	    fprintf(stderr, "Couldn't decompose glyph %d\n", t);
-	    gfxline_free((gfxline_t*)draw.result(&draw));
-	    continue;
-	}
+	if(!omit) {
+	    error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
+	    if(error) {
+		if(hasname)
+		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d, name %s) has return code %d\n", t, face->num_glyphs, glyph2unicode[t], name, error);
+		else
+		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d) has return code %d\n", t, face->num_glyphs, glyph2unicode[t], error);
+		omit = 1;
 
 #if 0
-	if(bbox.xMin > 0) {
-	    font->glyph[font->num_glyphs].advance = (bbox.xMax*20*FT_SCALE)/FT_SUBPIXELS;
-	} else {
-	    font->glyph[font->num_glyphs].advance = ((bbox.xMax - bbox.xMin)*20*FT_SCALE)/FT_SUBPIXELS;
-	}
-#else
-	font->glyphs[font->num_glyphs].advance = glyph->advance.x*20/65536;
+		if(!has_had_errors) {
+		    char buf[256];
+		    if(fontname && *fontname) {
+			fprintf(stderr, "font has been copied to %s.ttf\n", fontname);
+			sprintf(buf, "cp %s %s.ttf", filename, fontname);
+		    } else {
+			fprintf(stderr, "font has been copied to badfont%d.ttf\n", errorno);
+			sprintf(buf, "cp %s badfont%d.ttf", filename, errorno);
+			errorno++;
+		    }
+		    system(buf);
+		}
 #endif
-	
-	font->glyphs[font->num_glyphs].line = (gfxline_t*)draw.result(&draw);
-	
-	/*font->glyphs[font->num_glyphs].bbox.xmin = (bbox.xMin*FT_SCALE*20)/FT_SUBPIXELS;
-	font->glyphs[font->num_glyphs].bbox.ymin = (bbox.yMin*FT_SCALE*20)/FT_SUBPIXELS;
-	font->glyphs[font->num_glyphs].bbox.xmax = (bbox.xMax*FT_SCALE*20)/FT_SUBPIXELS;
-	font->glyphs[font->num_glyphs].bbox.ymax = (bbox.yMax*FT_SCALE*20)/FT_SUBPIXELS;*/
+		has_had_errors = 1;
+	    }
+	}
+	if(!omit) {
+	    error = FT_Get_Glyph(face->glyph, &glyph);
+	    if(error) {
+		fprintf(stderr, "Couldn't get glyph %d/%d, error:%d\n", t, face->num_glyphs, error);
+		omit = 1;
+	    }
+	}
 
-	FT_Done_Glyph(glyph);
-	font->glyphs[font->num_glyphs].unicode = glyph2unicode[t];
+	if(!omit) {
+	    gfxdrawer_target_gfxline(&draw);
+	    info.draw = &draw;
+	    info.quality = quality;
+
+	    //error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &info);
+	    error = FT_Outline_Decompose(&face->glyph->outline, &outline_functions, &info);
+	    
+	    if(error) {
+		fprintf(stderr, "Couldn't decompose glyph %d\n", t);
+		gfxline_free((gfxline_t*)draw.result(&draw));
+		FT_Done_Glyph(glyph);
+		omit = 1;
+	    } else {
+		font->glyphs[font->num_glyphs].advance = glyph->advance.x*20/65536;
+		font->glyphs[font->num_glyphs].line = (gfxline_t*)draw.result(&draw);
+	    }
+	}
+
+	if(!omit) {
+	    FT_Done_Glyph(glyph);
+	}
 	glyph2glyph[t] = font->num_glyphs;
 	font->num_glyphs++;
     }
+
     /* notice: if skip_unused is true, font->glyph2unicode, font->glyphnames and font->layout->bounds will 
 	       have more memory allocated than just font->num_glyphs, but only the first font->numchars 
 	       are used/valid */
@@ -415,4 +408,20 @@ gfxfont_t* gfxfont_load(char*filename)
 }
 
 #endif
+
+void gfxfont_free(gfxfont_t*font)
+{
+    int t;
+    for(t=0;t<font->num_glyphs;t++) {
+	glyph_clear(&font->glyphs[t]);
+    }
+    if(font->glyphs) {
+	free(font->glyphs);font->glyphs = 0;
+    }
+    font->num_glyphs = 0;
+    if(font->unicode2glyph) {
+	free(font->unicode2glyph);font->unicode2glyph = 0;
+    }
+    free(font);
+}
 
