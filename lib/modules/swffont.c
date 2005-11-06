@@ -125,7 +125,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     FT_Size size;
     int max_unicode = 0;
     int charmap = -1;
-   
+
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
 	    fprintf(stderr, "Couldn't init freetype library!\n");
@@ -133,12 +133,14 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	}
     }
     error = FT_New_Face(ftlibrary, filename, 0, &face);
-    FT_Set_Pixel_Sizes (face, 16*loadfont_scale, 16*loadfont_scale);
 
-    if(error) {
+    if(error || !face) {
 	fprintf(stderr, "Couldn't load file %s- not a TTF file?\n", filename);
 	return 0;
     }
+    
+    FT_Set_Pixel_Sizes (face, 16*loadfont_scale, 16*loadfont_scale);
+
     if(face->num_glyphs <= 0) {
 	fprintf(stderr, "File %s contains %d glyphs\n", face->num_glyphs);
 	return 0;
@@ -255,7 +257,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	}
 	error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
 	if(error) {
-	    fprintf(stderr, "Couldn't load glyph %d, error:%d\n", t, error);
+	    //tends to happen with some pdfs
+	    fprintf(stderr, "Warning: Glyph %d has return code %d\n", t, error);
 	    glyph=0;
 	    if(skip_unused) 
 		continue;
