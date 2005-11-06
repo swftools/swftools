@@ -486,7 +486,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
     tag->pos = 0;
     switch(tag->id)
     {
-	case ST_DEFINEBUTTONCXFORM: {
+	case ST_DEFINEBUTTONSOUND: {
 	    int t;
 	    callback(tag, tag->pos + base, callback_data);
 	    for(t=0;t<4;t++) {
@@ -513,7 +513,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		}
 	    }
         } break;
-	case ST_DEFINEBUTTONSOUND:
+	case ST_DEFINEBUTTONCXFORM:
 	    callback(tag, tag->pos + base, callback_data); //button id
 	break;
 
