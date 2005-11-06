@@ -312,13 +312,13 @@ gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase)
 void gfxline_show(gfxline_t*l, FILE*fi)
 {
     while(l) {
-	if(l->type == moveTo) {
+	if(l->type == gfx_moveTo) {
 	    fprintf(fi, "moveTo %.2f,%.2f\n", l->x, l->y);
 	}
-	if(l->type == lineTo) {
+	if(l->type == gfx_lineTo) {
 	    fprintf(fi, "lineTo %.2f,%.2f\n", l->x, l->y);
 	}
-	if(l->type == splineTo) {
+	if(l->type == gfx_splineTo) {
 	    fprintf(fi, "splineTo %.2f,%.2f %.2f,%.2f\n", l->sx, l->sy, l->x, l->y);
 	}
 	l = l->next;
