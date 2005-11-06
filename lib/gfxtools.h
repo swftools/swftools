@@ -27,8 +27,8 @@
 extern "C" {
 #endif
 
-//#include "../lib/mem.h"
-#include "../lib/rfxswf.h"
+#include <stdio.h>
+#include "../lib/mem.h"
 #include "../lib/gfxdevice.h"
 
 typedef struct _gfxdrawer
