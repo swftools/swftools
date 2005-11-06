@@ -536,6 +536,7 @@ static void fill_clip(RGBA*line, int*z, int y, int x1, int x2, U32 depth)
     } while(++x<x2);
 }
 
+
 static void fill_solid(RGBA*line, int*z, int y, int x1, int x2, RGBA col, U32 depth)
 {
     int x = x1;
@@ -854,11 +855,14 @@ void swf_Process(RENDERBUF*dest, U32 clipdepth)
                 endx = 0;
 
 	    if(clipdepth) {
-		/* for clipping, the inverse is filled */
+		/* for clipping, the inverse is filled 
+		   TODO: lastx!=startx only at the start of the loop, 
+		         so this might be moved up
+		 */
 		fill_clip(line, zline, y, lastx, startx, clipdepth);
 	    }
 	    change_state(y, &fillstate, p);
-	
+
 	    fill(dest, line, zline, y, startx, endx, &fillstate, clipdepth);
 /*	    if(y == 0 && startx == 232 && endx == 418) {
 		printf("ymin=%d ymax=%d\n", i->ymin, i->ymax);
@@ -873,6 +877,7 @@ void swf_Process(RENDERBUF*dest, U32 clipdepth)
                 break;
         }
 	if(clipdepth) {
+	    /* TODO: is lastx *ever* != i->width2 here? */
 	    fill_clip(line, zline, y, lastx, i->width2, clipdepth);
 	}
         free_layers(&fillstate);
