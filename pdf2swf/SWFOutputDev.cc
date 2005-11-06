@@ -1259,8 +1259,8 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	}
     }
 
-    if(charid<0 && name) {
-	if(strcasecmp(name, "space")) {
+    if(charid<0) {
+	if(!name || strcasecmp(name, "space")) {
 	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
 		    FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
 	}
@@ -2007,8 +2007,11 @@ int SWFOutputDev::setGfxFont(char*id, char*filename, double maxSize)
        we have to divide 0.05 by (fontsize/1024)
      */
     double quality = (1024 * 0.05) / maxSize;
-    
+   
+    msg("<verbose> Loading %s...", filename);
     font = gfxfont_load(filename, quality);
+    msg("<verbose> Font %s loaded successfully", filename);
+
     l = new fontlist_t;
     l->font = font;
     l->filename = strdup(filename);
@@ -2103,7 +2106,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	msg("<warning> Font %s %scould not be loaded.", fontname, embedded?"":"(not embedded) ");
 	
 	if(lastfontdir)
-	    msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into %s/swftools/fonts", fontname, lastfontdir);
+	    msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into %s", fontname, lastfontdir);
 	else
 	    msg("<warning> Try specifying one or more font directories");
 
@@ -2132,6 +2135,8 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(fileName)
         free(fileName);
     free(fontid);
+
+    msg("<verbose> |");
 }
 
 #define SQR(x) ((x)*(x))
@@ -2187,13 +2192,13 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
 #define IMAGE_TYPE_JPEG 0
 #define IMAGE_TYPE_LOSSLESS 1
 
-static void drawimage(gfxdevice_t*dev, RGBA* data, int sizex,int sizey, 
+static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey, 
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,
         double x4,double y4, int type)
 {
-    RGBA*newpic=0;
+    gfxcolor_t*newpic=0;
     
     double l1 = sqrt((x4-x1)*(x4-x1) + (y4-y1)*(y4-y1));
     double l2 = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
@@ -2238,13 +2243,13 @@ static void drawimage(gfxdevice_t*dev, RGBA* data, int sizex,int sizey,
     dev->fillbitmap(dev, &p1, &img, &m, 0);
 }
 
-void drawimagejpeg(gfxdevice_t*dev, RGBA*mem, int sizex,int sizey, 
+void drawimagejpeg(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey, 
         double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
 {
     drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG);
 }
 
-void drawimagelossless(gfxdevice_t*dev, RGBA*mem, int sizex,int sizey, 
+void drawimagelossless(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey, 
         double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
 {
     drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS);
@@ -2308,7 +2313,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       unsigned char buf[8];
       int x,y;
       unsigned char*pic = new unsigned char[width*height];
-      RGBA pal[256];
+      gfxcolor_t pal[256];
       GfxRGB rgb;
       state->getFillRGB(&rgb);
 
@@ -2359,14 +2364,14 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  float r = 255/(numpalette-1);
 	  int t;
 	  for(t=0;t<numpalette;t++) {
-	      pal[t].r = (U8)(255*rgb.r);
-	      pal[t].g = (U8)(255*rgb.g);
-	      pal[t].b = (U8)(255*rgb.b);
-	      pal[t].a = (U8)(t*r);
+	      pal[t].r = (unsigned char)(255*rgb.r);
+	      pal[t].g = (unsigned char)(255*rgb.g);
+	      pal[t].b = (unsigned char)(255*rgb.b);
+	      pal[t].a = (unsigned char)(t*r);
 	  }
       }
 
-      RGBA*pic2 = new RGBA[width*height];
+      gfxcolor_t*pic2 = new gfxcolor_t[width*height];
       for (y = 0; y < height; ++y) {
 	for (x = 0; x < width; ++x) {
 	  pic2[width*y+x] = pal[pic[y*width+x]];
@@ -2382,14 +2387,14 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   int x,y;
 
   if(colorMap->getNumPixelComps()!=1 || str->getKind()==strDCT) {
-      RGBA*pic=new RGBA[width*height];
+      gfxcolor_t*pic=new gfxcolor_t[width*height];
       for (y = 0; y < height; ++y) {
 	for (x = 0; x < width; ++x) {
 	  imgStr->getPixel(pixBuf);
 	  colorMap->getRGB(pixBuf, &rgb);
-	  pic[width*y+x].r = (U8)(rgb.r * 255 + 0.5);
-	  pic[width*y+x].g = (U8)(rgb.g * 255 + 0.5);
-	  pic[width*y+x].b = (U8)(rgb.b * 255 + 0.5);
+	  pic[width*y+x].r = (unsigned char)(rgb.r * 255 + 0.5);
+	  pic[width*y+x].g = (unsigned char)(rgb.g * 255 + 0.5);
+	  pic[width*y+x].b = (unsigned char)(rgb.b * 255 + 0.5);
 	  pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
 	}
       }
@@ -2401,8 +2406,8 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       delete imgStr;
       return;
   } else {
-      RGBA*pic=new RGBA[width*height];
-      RGBA pal[256];
+      gfxcolor_t*pic=new gfxcolor_t[width*height];
+      gfxcolor_t pal[256];
       int t;
       for(t=0;t<256;t++) {
 	  pixBuf[0] = t;
@@ -2428,9 +2433,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 		    pal[t].a = 0;
 	      }
 	  } else*/ {
-	      pal[t].r = (U8)(rgb.r * 255 + 0.5);
-	      pal[t].g = (U8)(rgb.g * 255 + 0.5);
-	      pal[t].b = (U8)(rgb.b * 255 + 0.5);
+	      pal[t].r = (unsigned char)(rgb.r * 255 + 0.5);
+	      pal[t].g = (unsigned char)(rgb.g * 255 + 0.5);
+	      pal[t].b = (unsigned char)(rgb.b * 255 + 0.5);
 	      pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
 	  }
       }
