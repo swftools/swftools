@@ -62,11 +62,11 @@ int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name)
 { U8 flags;
   if (!t) return -1;
 
-  if(cx && cx->r1==0 && cx->g1==0 && cx->b1==0 && cx->a1==0
-	&& cx->r0==256 && cx->g0==256 && cx->b0==256 && cx->a0==256)
+  if(cx && id && cx->r1==0 && cx->g1==0 && cx->b1==0 && cx->a1==0
+	      && cx->r0==256 && cx->g0==256 && cx->b0==256 && cx->a0==256)
       cx = 0;
 
-  if(m && isUnitMatrix(m)) 
+  if(m && id && isUnitMatrix(m)) 
       m = 0;
 
   flags = (id?PF_CHAR:0)|(m?PF_MATRIX:0)|(cx?PF_CXFORM:0)|(name?PF_NAME:0)|((m||cx)&&(!id)?PF_MOVE:0);
