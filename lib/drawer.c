@@ -25,6 +25,7 @@
 #include <string.h>
 #include <memory.h>
 #include <math.h>
+#include <ctype.h>
 #include "drawer.h"
 
 static char* getToken(const char**p)
@@ -35,7 +36,18 @@ static char* getToken(const char**p)
 	(*p)++;
     } 
     start = *p;
-    while(**p && !strchr(" ,()\t\n\r", **p)) {
+
+     /*
+        SVF pathdata can exclude whitespace after L and M commands.
+        Ref:  http://www.w3.org/TR/SVG11/paths.html#PathDataGeneralInformation
+        This allows us to use svg files output from gnuplot.
+        Also checks for relative MoveTo and LineTo (m and l).
+        051106 Magnus Lundin, lundin@mlu.mine.nu
+     */
+    if (strchr("LMlm", **p) && (isdigit(*(*p+1))||strchr("+-", *(*p+1)))) {
+	(*p)++;
+    }
+    else while(**p && !strchr(" ,()\t\n\r", **p)) {
 	(*p)++;
     }
     result = malloc((*p)-start+1);
