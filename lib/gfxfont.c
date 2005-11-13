@@ -152,6 +152,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
     int charmap = -1;
     int isunicode = 1;
     int has_had_errors = 0;
+    int num_names = 0;
 
     if(ftlibrary == 0) {
 	if(FT_Init_FreeType(&ftlibrary)) {
@@ -243,6 +244,18 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 
     font->num_glyphs = 0;
 
+
+    for(t=0; t < face->num_glyphs; t++) {
+	if(FT_HAS_GLYPH_NAMES(face)) {
+	    char name[128];
+	    error = FT_Get_Glyph_Name(face, t, name, 127);
+	    if(!error && name[0] && !strstr(name, "notdef")) {
+		num_names++;
+	    }
+	}
+    }
+
+
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
 	FT_BBox bbox;
@@ -260,7 +273,8 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	font->glyphs[font->num_glyphs].unicode = glyph2unicode[t];
 	font->glyphs[font->num_glyphs].name = 0;
 
-	if(FT_HAS_GLYPH_NAMES(face)) {
+	if(FT_HAS_GLYPH_NAMES(face) && (num_names >= face->num_glyphs/10 || num_names > 2)) {
+	    name[0] = 0;
 	    error = FT_Get_Glyph_Name(face, t, name, 127);
 	    if(!error && name[0] && !strstr(name, "notdef")) {
 		font->glyphs[font->num_glyphs].name = strdup(name);
@@ -308,6 +322,8 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	}
 
 	if(!omit) {
+	    gfxline_t*l;
+	    int ok=0;
 	    gfxdrawer_target_gfxline(&draw);
 	    info.draw = &draw;
 	    info.quality = quality;
@@ -324,11 +340,40 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		font->glyphs[font->num_glyphs].advance = glyph->advance.x*20/65536;
 		font->glyphs[font->num_glyphs].line = (gfxline_t*)draw.result(&draw);
 	    }
+	    l = font->glyphs[font->num_glyphs].line;
+	    while(l) {
+		if(l->type != gfx_moveTo) {
+		    ok = 1;
+		}
+		l = l->next;
+	    }
+	    if(!ok) {
+		gfxline_free(font->glyphs[font->num_glyphs].line);
+		font->glyphs[font->num_glyphs].line = 0;
+		font->glyphs[font->num_glyphs].advance = 0;
+
+		/* Some PDFs created e.g. by InDesign tend to create
+		   fonts with reduced (empty) characters, which still
+		   have unicode indices attached to them.
+		   Remove that information, in order to not confuse
+		   any converter applications.
+
+		    TODO: what about space characters? */
+		font->glyphs[font->num_glyphs].unicode = 0;
+		if(font->glyphs[font->num_glyphs].name) {
+		    free(font->glyphs[font->num_glyphs].name);
+		    font->glyphs[font->num_glyphs].name = 0;
+		}
+		FT_Done_Glyph(glyph);
+		omit = 1;
+	    }
 	}
 
 	if(!omit) {
 	    FT_Done_Glyph(glyph);
+	    font->glyphs[font->num_glyphs].unicode = glyph2unicode[t];
 	}
+
 	glyph2glyph[t] = font->num_glyphs;
 	font->num_glyphs++;
     }
