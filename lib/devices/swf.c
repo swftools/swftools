@@ -82,6 +82,7 @@ typedef struct _swfoutput_internal
     int config_filloverlap;
     int config_protect;
     int config_bboxvars;
+    RGBA config_linkcolor;
     float config_minlinewidth;
     double config_caplinewidth;
     char* config_linktarget;
@@ -223,6 +224,9 @@ static swfoutput_internal* init_internal_struct()
     i->config_minlinewidth=0.05;
     i->config_caplinewidth=1;
     i->config_linktarget=0;
+
+    i->config_linkcolor.r = i->config_linkcolor.g = i->config_linkcolor.b = 255;
+    i->config_linkcolor.a = 0x40;
 
     return i;
 };
@@ -1533,8 +1537,9 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     myshapeid2 = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     swf_ShapeNew(&i->shape);
-    rgb.r = rgb.b = rgb.a = rgb.g = 255;
-    rgb.a = 40;
+    
+    rgb = i->config_linkcolor;
+
     fsid = swf_ShapeAddSolidFillStyle(i->shape,&rgb);
     swf_SetU16(i->tag, myshapeid2);
     r.xmin = (int)(bbox.xmin*20);
@@ -1654,6 +1659,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_jpegsubpixels = atof(value);
     } else if(!strcmp(name, "ppmsubpixels")) {
 	i->config_ppmsubpixels = atof(value);
+    } else if(!strcmp(name, "subpixels")) {
+	i->config_ppmsubpixels = i->config_jpegsubpixels = atof(value);
     } else if(!strcmp(name, "drawonlyshapes")) {
 	i->config_drawonlyshapes = atoi(value);
     } else if(!strcmp(name, "ignoredraworder")) {
@@ -1709,6 +1716,22 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	v = 500-(v*5); // 100% = 0.25 pixel, 0% = 25 pixel
 	if(v<1) v = 1;
 	i->config_fontsplinemaxerror = v;
+    } else if(!strcmp(name, "linkcolor")) {
+	if(strlen(value)!=8) {
+	    fprintf(stderr, "Unknown format for option 'linkcolor'. (%s <-> RRGGBBAA)\n", value);
+	    return 1;
+	}
+#	define NIBBLE(s) (((s)>='0' && (s)<='9')?((s)-'0'):((s)&0x0f)+9)
+	i->config_linkcolor.r = NIBBLE(value[0])<<4 | NIBBLE(value[1]);
+	i->config_linkcolor.g = NIBBLE(value[2])<<4 | NIBBLE(value[3]);
+	i->config_linkcolor.b = NIBBLE(value[4])<<4 | NIBBLE(value[5]);
+	i->config_linkcolor.a = NIBBLE(value[6])<<4 | NIBBLE(value[7]);
+	printf("%02x%02x%02x%02x\n", 
+	    i->config_linkcolor.r,
+	    i->config_linkcolor.g,
+	    i->config_linkcolor.b,
+	    i->config_linkcolor.a);
+
     } else {
 	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
 	return 0;
