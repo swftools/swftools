@@ -629,39 +629,39 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    advancebits = swf_GetU8(tag); //advancebits
 	    while(1) {
 		U16 flags;
+		int t;
 		swf_ResetReadBits(tag);
 		flags = swf_GetBits(tag, 8);
 		if(!flags) break;
-		if(flags & 128) // text style record
-		{
+		
+		swf_ResetReadBits(tag);
+		if(flags & 8) { // hasfont
+		    callback(tag, tag->pos + base, callback_data);
+		    id = swf_GetU16(tag);
+		}
+		if(flags & 4) { // hascolor
+		    if(num==1) swf_GetRGB(tag, NULL);
+		    else       swf_GetRGBA(tag, NULL);
+		}
+		if(flags & 2) { //has x offset
 		    swf_ResetReadBits(tag);
-		    if(flags & 8) { // hasfont
-			callback(tag, tag->pos + base, callback_data);
-			id = swf_GetU16(tag);
-		    }
-		    if(flags & 4) { // hascolor
-			if(num==1) swf_GetRGB(tag, NULL);
-			else       swf_GetRGBA(tag, NULL);
-		    }
-		    if(flags & 2) { //has x offset
-			swf_ResetReadBits(tag);
-			swf_GetU16(tag);
-		    }
-		    if(flags & 1) { //has y offset
-			swf_ResetReadBits(tag);
-			swf_GetU16(tag);
-		    }
-		    if(flags & 8) { //has height
-			swf_ResetReadBits(tag);
-			swf_GetU16(tag);
-		    }
-		} else { // glyph record
-		    int t;
+		    swf_GetU16(tag);
+		}
+		if(flags & 1) { //has y offset
 		    swf_ResetReadBits(tag);
-		    for(t=0;t<flags;t++) {
-			swf_GetBits(tag, glyphbits);
-			swf_GetBits(tag, advancebits);
-		    }
+		    swf_GetU16(tag);
+		}
+		if(flags & 8) { //has height
+		    swf_ResetReadBits(tag);
+		    swf_GetU16(tag);
+		}
+		
+		flags = swf_GetBits(tag, 8);
+		if(!flags) break;
+		swf_ResetReadBits(tag);
+		for(t=0;t<flags;t++) {
+		    swf_GetBits(tag, glyphbits);
+		    swf_GetBits(tag, advancebits);
 		}
 	    }
 	    break;
