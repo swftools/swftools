@@ -5,6 +5,7 @@
 #include "tag.h"
 #include "tags.h"
 #include "image.h"
+#include "../png.h"
 
 //----------------------------------------------------------------------------
 
@@ -624,6 +625,28 @@ static PyObject* image_getattr(tag_internals_t*self,char*a)
     }
     return 0;
 }
+
+static PyObject* image_save(PyObject*self, PyObject*args)
+{
+    tag_internals_t*itag = tag_getinternals(self);
+    if(!image_parse(itag))
+	return PY_ERROR("Couldn't parse shape");
+    image_internal_t*fi = (image_internal_t*)itag->data;
+   
+    char*filename = 0;
+    if(!PyArg_ParseTuple(args, "s", &filename))
+	return NULL;
+
+    writePNG(filename, fi->rgba ,fi->width, fi->height);
+    
+    return PY_NONE;
+}
+
+static PyMethodDef image_methods[] = 
+{{"save", image_save, METH_VARARGS, "saves an image as PNG"},
+ {NULL, NULL, 0, NULL}
+};
+
 static tag_internals_t image_tag =
 {
     parse: image_parse,
@@ -631,7 +654,7 @@ static tag_internals_t image_tag =
     dealloc: image_dealloc,
     getattr: image_getattr, 
     setattr: 0,
-    tagfunctions: 0,
+    tagfunctions: image_methods,
     datasize: sizeof(image_internal_t),
 };
 //----------------------------------------------------------------------------
