@@ -86,6 +86,7 @@ typedef struct _swfoutput_internal
     float config_minlinewidth;
     double config_caplinewidth;
     char* config_linktarget;
+    char*config_internallinkfunction;
 
     SWF* swf;
 
@@ -224,6 +225,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_minlinewidth=0.05;
     i->config_caplinewidth=1;
     i->config_linktarget=0;
+    i->config_internallinkfunction=0;
 
     i->config_linkcolor.r = i->config_linkcolor.g = i->config_linkcolor.b = 255;
     i->config_linkcolor.a = 0x40;
@@ -1396,15 +1398,22 @@ void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points)
 void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    ActionTAG* actions;
+    ActionTAG* actions = 0;
 
     if(i->shapeid>=0)
 	endshape(dev);
     if(i->textid>=0)
 	endtext(dev);
-   
-      actions = action_GotoFrame(0, page);
-      actions = action_End(actions);
+  
+    if(!i->config_internallinkfunction) {
+	actions = action_GotoFrame(actions, page);
+	actions = action_End(actions);
+    } else {
+	actions = action_PushInt(actions, page); //parameter
+	actions = action_PushInt(actions, 1); //number of parameters (1)
+	actions = action_PushString(actions, i->config_internallinkfunction); //function name
+	actions = action_CallFunction(actions);
+    }
 
     drawlink(dev, actions, 0, points,0);
 }
@@ -1677,6 +1686,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
 	i->config_bboxvars = atoi(value);
+    } else if(!strcmp(name, "internallinkfunction")) {
+	i->config_internallinkfunction = strdup(value);
     } else if(!strcmp(name, "insertstop")) {
 	i->config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protect")) {
