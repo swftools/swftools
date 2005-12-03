@@ -1161,6 +1161,11 @@ static int swf_TextSetCharRecord2(TAG * t, SWFFONT * font, U8 * s, int scale, U8
 	    swf_SetBits(t, g, gbits);
 	    swf_SetBits(t, ((((U32) font->glyph[g].advance) * scale) / 20) / 100, abits);
 	    l++;
+	    /* We split into 127 characters per text field.
+	       We could do 255, by the (formerly wrong) flash specification,
+	       but some SWF parsing code out there still assumes that char blocks
+	       are at max 127 characters, and it would save only a few bits.
+	    */
 	    if (l == 0x7f)
 		break;
 	}
@@ -1219,6 +1224,14 @@ SRECT swf_TextCalculateBBoxUTF8(SWFFONT * font, U8 * s, int scale)
     swf_GetRect(0, &r);
     while (*s) {
 	int c = readUTF8char(&s);
+	if(c==13 || c==10) {
+	    if(s[0] == 10) {
+		s++;
+	    }
+	    xpos=0;
+	    ypos+=font->layout->leading;
+	    continue;
+	}
 	if (c < font->maxascii) {
 	    int g = font->ascii2glyph[c];
 	    if (g >= 0) {
@@ -1231,7 +1244,6 @@ SRECT swf_TextCalculateBBoxUTF8(SWFFONT * font, U8 * s, int scale)
 		xpos += (font->glyph[g].advance * scale) / 20 / 100;
 	    }
 	}
-	c++;
     }
     return r;
 }
@@ -1470,10 +1482,14 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
 {
     SRECT r;
     U8 gbits, abits;
-    U8 *c = (U8 *) text;
+    U8 *utext = (U8 *) strdup(text);
+    U8 *upos = utext;
+    int x = 0, y = 0;
     int pos = 0;
+    int ystep = 0;
     if (font->layout) {
 	r = swf_TextCalculateBBoxUTF8(font, text, scale * 20);
+	ystep = font->layout->leading;
     } else {
 	fprintf(stderr, "No layout information- can't compute text bbox accurately");
 	/* Hm, without layout information, we can't compute a bounding
@@ -1483,6 +1499,7 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
 	 */
 	r.xmin = r.ymin = 0;
 	r.xmax = r.ymax = 1024 * 20;
+	ystep = 100;
     }
 
     swf_SetRect(tag, &r);
@@ -1499,17 +1516,45 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
     swf_SetU8(tag, gbits);
     swf_SetU8(tag, abits);
 
-    /* now set the text params- notice that a font size of
-       1024 means that the glyphs will be displayed exactly
-       as they would be in/with a defineshape. (Try to find
-       *that* in the flash specs)
-     */
-    swf_TextSetInfoRecord(tag, font, (scale * 1024) / 100, rgb, 0, 0);	//scale
+    while(*upos) {
+	U8*next = upos;
+	int count = 0;
+	
+	swf_TextSetInfoRecord(tag, font, (scale * 1024) / 100, rgb, x, y);	//scale
+	x = 0;
 
-    /* set the actual text- notice that we just pass our scale
-       parameter over, as TextSetCharRecord calculates with 
-       percent, too */
-    swf_TextSetCharRecordUTF8(tag, font, text, scale * 20, gbits, abits);
+	while(*next && *next!=13 && *next!=10 && count<127) {
+	    readUTF8char(&next);
+	    count++;
+	}
+	if(next[0] == 13 || next[0] == 10) {
+	    x = SET_TO_ZERO;
+	    y += ystep;
+	}
+
+	if(next[0] == 13 && next[1] == 10)
+	    next++;
+	
+	if(next[0] == 13 || next[0] == 10) {
+	    *next = 0;
+	    next++;
+	}
+
+	/* now set the text params- notice that a font size of
+	   1024 means that the glyphs will be displayed exactly
+	   as they would be in/with a defineshape. (Try to find
+	   *that* in the flash specs)
+	 */
+	/* set the actual text- notice that we just pass our scale
+	   parameter over, as TextSetCharRecord calculates with 
+	   percent, too */
+	swf_TextSetCharRecordUTF8(tag, font, upos, scale * 20, gbits, abits);
+
+	upos= next;
+
+	printf("%s\n", upos);
+    }
+    free(utext);
 
     swf_SetU8(tag, 0);
     return r;
