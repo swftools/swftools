@@ -630,7 +630,7 @@ static PyObject* image_save(PyObject*self, PyObject*args)
 {
     tag_internals_t*itag = tag_getinternals(self);
     if(!image_parse(itag))
-	return PY_ERROR("Couldn't parse shape");
+	return PY_ERROR("Couldn't parse image");
     image_internal_t*fi = (image_internal_t*)itag->data;
    
     char*filename = 0;
