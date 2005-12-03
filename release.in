@@ -163,6 +163,8 @@ ${name}/pdf2swf/xpdf/BuiltinFontTables.cc \
 ${name}/pdf2swf/xpdf/BuiltinFontTables.h \
 ${name}/pdf2swf/xpdf/CMap.cc \
 ${name}/pdf2swf/xpdf/CMap.h \
+${name}/pdf2swf/xpdf/SecurityHandler.cc \
+${name}/pdf2swf/xpdf/SecurityHandler.h \
 ${name}/pdf2swf/xpdf/Catalog.cc \
 ${name}/pdf2swf/xpdf/Catalog.h \
 ${name}/pdf2swf/xpdf/CharCodeToUnicode.cc \
