@@ -46,20 +46,16 @@
 #include "Page.h"
 #include "PDFDoc.h"
 #include "Error.h"
+#include "Link.h"
 #include "OutputDev.h"
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "CharCodeToUnicode.h"
 #include "NameToUnicodeTable.h"
 #include "GlobalParams.h"
-//#define XPDF_101
-#ifdef XPDF_101
-#include "FontFile.h"
-#else
 #include "FoFiType1C.h"
 #include "FoFiTrueType.h"
 #include "GHash.h"
-#endif
 #include "SWFOutputDev.h"
 
 //swftools header files
@@ -227,7 +223,7 @@ public:
   virtual void drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
-			CharCode code, Unicode *u, int uLen);
+			CharCode code, int nBytes, Unicode *u, int uLen);
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
@@ -429,10 +425,11 @@ class InfoOutputDev:  public OutputDev
       }
       currentfont = info;
   }
+  
   virtual void drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
-			CharCode code, Unicode *u, int uLen)
+			CharCode code, int nBytes, Unicode *u, int uLen)
   {
       int render = state->getRender();
       if (render == 3)
@@ -849,9 +846,9 @@ void SWFOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
     else
 	state->getStrokeRGB(&rgb);
     gfxcolor_t col;
-    col.r = (unsigned char)(rgb.r*255);
-    col.g = (unsigned char)(rgb.g*255);
-    col.b = (unsigned char)(rgb.b*255);
+    col.r = colToByte(rgb.r);
+    col.g = colToByte(rgb.g);
+    col.b = colToByte(rgb.b);
     col.a = (unsigned char)(opaq*255);
    
     gfx_capType capType = gfx_capRound;
@@ -894,15 +891,12 @@ void SWFOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
     }
     
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-	double gray;
-	state->getStrokeGray(&gray);
-        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d color=%02x%02x%02x%02x gray=%f\n",
+        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d color=%02x%02x%02x%02x\n",
 		width,
 		lineJoin==0?"miter": (lineJoin==1?"round":"bevel"),
 		lineCap==0?"butt": (lineJoin==1?"round":"square"),
 		dashnum,
-		col.r,col.g,col.b,col.a,
-		gray
+		col.r,col.g,col.b,col.a
 		);
         dump_outline(line);
     }
@@ -914,16 +908,20 @@ void SWFOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
 	gfxline_free(line2);
 }
 
+void convertRGB()
+{
+}
+
 gfxcolor_t getFillColor(GfxState * state)
 {
     GfxRGB rgb;
     double opaq = state->getFillOpacity();
     state->getFillRGB(&rgb);
     gfxcolor_t col;
-    col.r = (unsigned char)(rgb.r*255);
-    col.g = (unsigned char)(rgb.g*255);
-    col.b = (unsigned char)(rgb.b*255);
-    col.a = (unsigned char)(opaq*255);
+    col.r = colToByte(rgb.r);
+    col.g = colToByte(rgb.g);
+    col.b = colToByte(rgb.b);
+    col.a = (unsigned char)(rgb.r*255);
     return col;
 }
 
@@ -1178,7 +1176,7 @@ void SWFOutputDev::beginString(GfxState *state, GString *s)
 void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
-			CharCode c, Unicode *_u, int uLen)
+			CharCode c, int nBytes, Unicode *_u, int uLen)
 {
     int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
@@ -1253,7 +1251,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	    int t;
 	    msg("<warning> ligature %d missing in font %s\n", c, current_font_id);
 	    for(t=0;t<uLen;t++) {
-		drawChar(state, x, y, dx, dy, originX, originY, c, _u+t, 1);
+		drawChar(state, x, y, dx, dy, originX, originY, c, nBytes, _u+t, 1);
 	    }
 	    return;
 	}
@@ -1435,18 +1433,10 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 {
     msg("<debug> drawlink\n");
     double x1, y1, x2, y2, w;
-    GfxRGB rgb;
     gfxline_t points[5];
     int x, y;
 
-#ifdef XPDF_101
-    link->getBorder(&x1, &y1, &x2, &y2, &w);
-#else
     link->getRect(&x1, &y1, &x2, &y2);
-#endif
-    rgb.r = 0;
-    rgb.g = 0;
-    rgb.b = 1;
     cvtUserToDev(x1, y1, &x, &y);
     points[0].type = gfx_moveTo;
     points[0].x = points[4].x = x + user_movex;
@@ -1738,15 +1728,9 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<error> Couldn't read embedded font file");
 	return 0;
       }
-#ifdef XPDF_101
-      Type1CFontFile *cvt = new Type1CFontFile(fontBuf, fontLen);
-      if(!cvt) return 0;
-      cvt->convertToType1(f);
-#else
       FoFiType1C *cvt = FoFiType1C::make(fontBuf, fontLen);
       if(!cvt) return 0;
       cvt->convertToType1(NULL, gTrue, FoFiWrite, f);
-#endif
       //cvt->convertToCIDType0("test", f);
       //cvt->convertToType0("test", f);
       delete cvt;
@@ -1758,13 +1742,8 @@ char*SWFOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
 	msg("<error> Couldn't read embedded font file");
 	return 0;
       }
-#ifdef XPDF_101
-      TrueTypeFontFile *cvt = new TrueTypeFontFile(fontBuf, fontLen);
-      cvt->writeTTF(f);
-#else
       FoFiTrueType *cvt = FoFiTrueType::make(fontBuf, fontLen);
       cvt->writeTTF(FoFiWrite, f);
-#endif
       delete cvt;
       gfree(fontBuf);
     } else {
@@ -2318,11 +2297,11 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       state->getFillRGB(&rgb);
 
       memset(pal,255,sizeof(pal));
-      pal[0].r = (int)(rgb.r*255); pal[1].r = 0;
-      pal[0].g = (int)(rgb.g*255); pal[1].g = 0;
-      pal[0].b = (int)(rgb.b*255); pal[1].b = 0;
+      pal[0].r = (int)(colToByte(rgb.r)); pal[1].r = 0;
+      pal[0].g = (int)(colToByte(rgb.g)); pal[1].g = 0;
+      pal[0].b = (int)(colToByte(rgb.b)); pal[1].b = 0;
       pal[0].a = 255;              pal[1].a = 0;
-
+    
       int numpalette = 2;
       int realwidth = (int)sqrt(SQR(x2-x3) + SQR(y2-y3));
       int realheight = (int)sqrt(SQR(x1-x2) + SQR(y1-y2));
@@ -2357,16 +2336,13 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic = pic2;
 	  
 	  /* make a black/white palette */
-	  GfxRGB rgb2;
-	  rgb2.r = 1 - rgb.r;
-	  rgb2.g = 1 - rgb.g;
-	  rgb2.b = 1 - rgb.b;
+
 	  float r = 255/(numpalette-1);
 	  int t;
 	  for(t=0;t<numpalette;t++) {
-	      pal[t].r = (unsigned char)(255*rgb.r);
-	      pal[t].g = (unsigned char)(255*rgb.g);
-	      pal[t].b = (unsigned char)(255*rgb.b);
+	      pal[t].r = colToByte(rgb.r);
+	      pal[t].g = colToByte(rgb.g);
+	      pal[t].b = colToByte(rgb.b);
 	      pal[t].a = (unsigned char)(t*r);
 	  }
       }
@@ -2392,9 +2368,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	for (x = 0; x < width; ++x) {
 	  imgStr->getPixel(pixBuf);
 	  colorMap->getRGB(pixBuf, &rgb);
-	  pic[width*y+x].r = (unsigned char)(rgb.r * 255 + 0.5);
-	  pic[width*y+x].g = (unsigned char)(rgb.g * 255 + 0.5);
-	  pic[width*y+x].b = (unsigned char)(rgb.b * 255 + 0.5);
+	  pic[width*y+x].r = (unsigned char)(colToByte(rgb.r));
+	  pic[width*y+x].g = (unsigned char)(colToByte(rgb.g));
+	  pic[width*y+x].b = (unsigned char)(colToByte(rgb.b));
 	  pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
 	}
       }
@@ -2750,11 +2726,7 @@ pdf_doc_t* pdf_init(char*filename, char*userPassword)
     InfoOutputDev*io = new InfoOutputDev();
     int t;
     for(t=1;t<=pdf_doc->num_pages;t++) {
-#ifdef XPDF_101
-	i->doc->displayPage((OutputDev*)io, t, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
-#else
-	i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
-#endif
+	i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
     }
     i->info = io;
 
@@ -2902,11 +2874,7 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
     }
     si->outputDev->setInfo(pi->info);
     si->outputDev->setXRef(pi->doc, pi->doc->getXRef());
-#ifdef XPDF_101
-    pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
-#else
-    pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
-#endif
+    pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, true, /*doLinks*/(int)1);
 }
 
 void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
@@ -2941,11 +2909,7 @@ pdf_page_info_t* pdf_page_getinfo(pdf_page_t*page)
 
     InfoOutputDev*output = new InfoOutputDev;
     
-#ifdef XPDF_101
-    pi->doc->displayPage((OutputDev*)output, page->nr, /*zoom*/zoom, /*rotate*/0, /*doLinks*/(int)1);
-#else
-    pi->doc->displayPage((OutputDev*)output, page->nr, zoom, zoom, /*rotate*/0, true, /*doLinks*/(int)1);
-#endif
+    pi->doc->displayPage((OutputDev*)output, page->nr, zoom, zoom, /*rotate*/0, true, true, /*doLinks*/(int)1);
 
     info->xMin = output->x1;
     info->yMin = output->y1;
