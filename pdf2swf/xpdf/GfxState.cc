@@ -469,7 +469,7 @@ void GfxDeviceCMYKColorSpace::getGray(GfxColor *color, GfxGray *gray) {
 				- 0.11 * color->c[2] + 0.5));
 }
 
-void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
     unsigned char r,g,b;
     float c = color->c[0];
     float m = color->c[1];
@@ -479,9 +479,9 @@ void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
     rgb->r = r/255.0;
     rgb->g = g/255.0;
     rgb->b = b/255.0;
-}
+}*/
 
-/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   double c, m, y, k, c1, m1, y1, k1, r, g, b, x;
 
   c = colToDbl(color->c[0]);
@@ -541,7 +541,7 @@ void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   rgb->r = clip01(dblToCol(r));
   rgb->g = clip01(dblToCol(g));
   rgb->b = clip01(dblToCol(b));
-}*/
+}
 
 void GfxDeviceCMYKColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
   cmyk->c = clip01(color->c[0]);
