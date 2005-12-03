@@ -58,9 +58,6 @@ extern GString *getHomeDir();
 // Get current directory.
 extern GString *getCurrentDir();
 
-/* create a temporary filename */
-char* mktmpname(char*ptr);
-
 // Append a file name to a path string.  <path> may be an empty
 // string, denoting the current directory).  Returns <path>.
 extern GString *appendToPath(GString *path, char *fileName);

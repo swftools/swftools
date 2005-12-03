@@ -437,52 +437,6 @@ time_t getModTime(char *fileName) {
 #endif
 }
 
-static char* getTempDir()
-{
-#ifdef WIN32
-    char*dir = getenv("TMP");
-    if(!dir) dir = getenv("TEMP");
-    if(!dir) dir = getenv("tmp");
-    if(!dir) dir = getenv("temp");
-    if(!dir) dir = "C:\\";
-#else
-    char* dir = "/tmp/";
-#endif
-    return dir;
-}
-
-char* mktmpname(char*ptr) {
-    static char tmpbuf[128];
-    char*dir = getTempDir();
-    int l = strlen(dir);
-    char*sep = "";
-    if(!ptr)
-	ptr = tmpbuf;
-    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
-#ifdef WIN32
-	sep = "\\";
-#else
-	sep = "/";
-#endif
-    }
-
- //   used to be mktemp. This does remove the warnings, but
- //   It's not exactly an improvement.
-#ifdef HAVE_LRAND48
-    sprintf(ptr, "%s%s%08x%08x",dir,sep,lrand48(),lrand48());
-#else
-#   ifdef HAVE_RAND
-	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
-#   else
-	static int count = 1;
-	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
-	count ++;
-#   endif
-#endif
-     return ptr;
-}
-
-
 GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
 #if defined(WIN32)
   //---------- Win32 ----------
@@ -509,7 +463,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
   // with this file name after the tmpnam call and before the fopen
   // call.  I will happily accept fixes to this function for non-Unix
   // OSs.
-  if (!(s = mktmpname(NULL))) {
+  if (!(s = tmpnam(NULL))) {
     return gFalse;
   }
   *name = new GString(s);
@@ -536,7 +490,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX")->append(ext);
     fd = mkstemps((*name)->getCString(), strlen(ext));
 #else
-    if (!(s = mktmpname(NULL))) {
+    if (!(s = tmpnam(NULL))) {
       return gFalse;
     }
     *name = new GString(s);
@@ -553,7 +507,7 @@ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
     (*name)->append("/XXXXXX");
     fd = mkstemp((*name)->getCString());
 #else // HAVE_MKSTEMP
-    if (!(s = mktmpname(NULL))) {
+    if (!(s = tmpnam(NULL))) {
       return gFalse;
     }
     *name = new GString(s);

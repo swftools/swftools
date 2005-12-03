@@ -53,18 +53,18 @@
 
 // user config file name, relative to the user's home directory
 #if defined(VMS) || (defined(WIN32) && !defined(__CYGWIN32__))
-#define xpdfUserConfigFile "pdf2swf.conf"
+#define xpdfUserConfigFile "xpdfrc"
 #else
-#define xpdfUserConfigFile ".pdf2swf.conf"
+#define xpdfUserConfigFile ".xpdfrc"
 #endif
 
 // system config file name (set via the configure script)
-#ifndef WIN32
-#define xpdfSysConfigFile "/etc/pdf2swf.conf"
+#ifdef SYSTEM_XPDFRC
+#define xpdfSysConfigFile SYSTEM_XPDFRC
 #else
 // under Windows, we get the directory with the executable and then
 // append this file name
-#define xpdfSysConfigFile "pdf2swf.conf"
+#define xpdfSysConfigFile "xpdfrc"
 #endif
 
 //------------------------------------------------------------------------

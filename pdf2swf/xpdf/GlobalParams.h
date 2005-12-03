@@ -212,10 +212,10 @@ public:
 
   void addSecurityHandler(XpdfSecurityHandler *handler);
   XpdfSecurityHandler *getSecurityHandler(char *name);
-  void parseFile(GString *fileName, FILE *f);
 
 private:
 
+  void parseFile(GString *fileName, FILE *f);
   void parseNameToUnicode(GList *tokens, GString *fileName, int line);
   void parseCIDToUnicode(GList *tokens, GString *fileName, int line);
   void parseUnicodeToUnicode(GList *tokens, GString *fileName, int line);
@@ -245,10 +245,6 @@ private:
 #ifdef ENABLE_PLUGINS
   GBool loadPlugin(char *type, char *name);
 #endif
-
-  //----- config file base path
-
-  GString*path;
 
   //----- static tables
 

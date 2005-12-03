@@ -61,9 +61,6 @@ public:
   // will be reduced to a series of other drawing operations.
   virtual GBool useShadedFills() { return gFalse; }
 
-  // Is this device able to draw gradients?
-  virtual GBool useGradients() = 0;
-
   // Does this device use beginType3Char/endType3Char?  Otherwise,
   // text in Type 3 fonts will be drawn with drawChar/drawString.
   virtual GBool interpretType3Chars() = 0;
@@ -77,7 +74,7 @@ public:
   virtual void setDefaultCTM(double *ctm);
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {}
+  virtual void startPage(int pageNum, GfxState *state) {}
 
   // End a page.
   virtual void endPage() {}
