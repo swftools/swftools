@@ -2311,6 +2311,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 {
     SWFFONT*swffont = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
     int t;
+    SRECT bounds = {0,0,0,0};
     swffont->id = -1;
     swffont->version = 2;
     swffont->name = (U8*)strdup(id);
@@ -2359,7 +2360,19 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
 	swffont->layout->bounds[t] = swf_ShapeDrawerGetBBox(&draw);
 	draw.dealloc(&draw);
+
+	swf_ExpandRect2(&bounds, &swffont->layout->bounds[t]);
     }
+    if(bounds.ymin < 0 && bounds.ymax > 0) {
+	swffont->layout->ascent = -bounds.ymin;
+	swffont->layout->descent = bounds.ymax;
+	swffont->layout->leading = bounds.ymax - bounds.ymin;
+    } else {
+	swffont->layout->ascent = (bounds.ymax - bounds.ymin)/2;
+	swffont->layout->descent = (bounds.ymax - bounds.ymin)/2;
+	swffont->layout->leading = bounds.ymax - bounds.ymin;
+    }
+
     return swffont;
 }
 
