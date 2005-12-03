@@ -7,7 +7,6 @@ swfc:
     * .qchance, .cchange
     * .morph
     * .soundstream
-    * text: newlines
     * .texture
     * .orbit
     * plugins?
@@ -71,12 +70,18 @@ librfxswf:
     * fix font reduce code
     * drawer paths should be closer to the SVG syntax (no space between M and coord)
 
+librfxswf/python:
+
+    * get MacPython (http://undefined.org/python/) to work
+
 pdf2swf:
 
-    * upgrade xpdf
     * Make a new viewer (with pageflipping)
     * Fix even-odd/clockwise-anticlockwise fill problems
-    * fix monochrome image handling (don't convert to 24 bit)
+    * optimize monochrome image handling?
+    * send converted links to a actionscript function instead of opening a new browser 
+      window with getURL() as it is done today?
+      Like: pdf2swf.exe -uf _root.sendURL 1.pdf -o 1.swf
 
 png2swf:
 
