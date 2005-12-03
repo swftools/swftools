@@ -21,6 +21,7 @@
 #include "Array.h"
 #include "Page.h"
 #include "GfxState.h"
+#include "cmyk.h"
 
 //------------------------------------------------------------------------
 
@@ -469,6 +470,18 @@ void GfxDeviceCMYKColorSpace::getGray(GfxColor *color, GfxGray *gray) {
 }
 
 void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+    unsigned char r,g,b;
+    float c = color->c[0];
+    float m = color->c[1];
+    float y = color->c[2];
+    float k = color->c[3];
+    convert_cmyk2rgb(c,m,y,k, &r,&g,&b);
+    rgb->r = r/255.0;
+    rgb->g = g/255.0;
+    rgb->b = b/255.0;
+}
+
+/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   double c, m, y, k, c1, m1, y1, k1, r, g, b, x;
 
   c = colToDbl(color->c[0]);
@@ -528,7 +541,7 @@ void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
   rgb->r = clip01(dblToCol(r));
   rgb->g = clip01(dblToCol(g));
   rgb->b = clip01(dblToCol(b));
-}
+}*/
 
 void GfxDeviceCMYKColorSpace::getCMYK(GfxColor *color, GfxCMYK *cmyk) {
   cmyk->c = clip01(color->c[0]);
@@ -3099,6 +3112,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
   GfxIndexedColorSpace *indexedCS;
   GfxSeparationColorSpace *sepCS;
   int maxPixel, indexHigh;
+  int maxPixelForAlloc;
   Guchar *lookup2;
   Function *sepFunc;
   Object obj;
@@ -3111,6 +3125,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
   // bits per component and color space
   bits = bitsA;
   maxPixel = (1 << bits) - 1;
+  maxPixelForAlloc = (1 << (bits>8?bits:8));
   colorSpace = colorSpaceA;
 
   // get decode map
@@ -3163,7 +3178,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
     lookup2 = indexedCS->getLookup();
     colorSpace2->getDefaultRanges(x, y, indexHigh);
     for (k = 0; k < nComps2; ++k) {
-      lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
+      lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
 					   sizeof(GfxColorComp));
       for (i = 0; i <= maxPixel; ++i) {
 	j = (int)(decodeLow[0] + (i * decodeRange[0]) / maxPixel + 0.5);
@@ -3182,7 +3197,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
     nComps2 = colorSpace2->getNComps();
     sepFunc = sepCS->getFunc();
     for (k = 0; k < nComps2; ++k) {
-      lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
+      lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
 					   sizeof(GfxColorComp));
       for (i = 0; i <= maxPixel; ++i) {
 	x[0] = decodeLow[0] + (i * decodeRange[0]) / maxPixel;
@@ -3192,7 +3207,7 @@ GfxImageColorMap::GfxImageColorMap(int bitsA, Object *decode,
     }
   } else {
     for (k = 0; k < nComps; ++k) {
-      lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
+      lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
 					   sizeof(GfxColorComp));
       for (i = 0; i <= maxPixel; ++i) {
 	lookup[k][i] = dblToCol(decodeLow[k] +
