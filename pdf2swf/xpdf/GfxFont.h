@@ -207,7 +207,7 @@ public:
   CharCodeToUnicode *getToUnicode();
 
   // Return the character name associated with <code>.
-  char *getCharName(int code) { return enc[code]; }
+  char *getCharName(int code) { return code>=256?0:enc[code]; }
 
   // Returns true if the PDF font specified an encoding.
   GBool getHasEncoding() { return hasEncoding; }

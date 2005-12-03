@@ -14,14 +14,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include "./aconf.h"
 #if defined(WIN32)
 #  include <sys/stat.h>
 #  ifdef FPTEX
 #    include <win32lib.h>
 #  else
 #    include <windows.h>
-#    include <winbase.h>
 #  endif
 #elif defined(ACORN)
 #elif defined(MACOS)
