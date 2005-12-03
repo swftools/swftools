@@ -64,8 +64,8 @@ Catalog::Catalog(XRef *xrefA) {
   }
   pagesSize = numPages0 = (int)obj.getNum();
   obj.free();
-  pages = (Page **)gmalloc(pagesSize * sizeof(Page *));
-  pageRefs = (Ref *)gmalloc(pagesSize * sizeof(Ref));
+  pages = (Page **)gmallocn(pagesSize, sizeof(Page *));
+  pageRefs = (Ref *)gmallocn(pagesSize, sizeof(Ref));
   for (i = 0; i < pagesSize; ++i) {
     pages[i] = NULL;
     pageRefs[i].num = -1;
@@ -105,6 +105,9 @@ Catalog::Catalog(XRef *xrefA) {
   // get the outline dictionary
   catDict.dictLookup("Outlines", &outline);
 
+  // get the AcroForm dictionary
+  catDict.dictLookup("AcroForm", &acroForm);
+
   catDict.free();
   return;
 
@@ -139,6 +142,7 @@ Catalog::~Catalog() {
   metadata.free();
   structTreeRoot.free();
   outline.free();
+  acroForm.free();
 }
 
 GString *Catalog::readMetadata() {
@@ -191,8 +195,8 @@ int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
       }
       if (start >= pagesSize) {
 	pagesSize += 32;
-	pages = (Page **)grealloc(pages, pagesSize * sizeof(Page *));
-	pageRefs = (Ref *)grealloc(pageRefs, pagesSize * sizeof(Ref));
+	pages = (Page **)greallocn(pages, pagesSize, sizeof(Page *));
+	pageRefs = (Ref *)greallocn(pageRefs, pagesSize, sizeof(Ref));
 	for (j = pagesSize - 32; j < pagesSize; ++j) {
 	  pages[j] = NULL;
 	  pageRefs[j].num = -1;
@@ -216,7 +220,6 @@ int Catalog::readPageTree(Dict *pagesDict, PageAttrs *attrs, int start) {
     } else {
       error(-1, "Kid object (page %d) is wrong type (%s)",
 	    start+1, kid.getTypeName());
-      goto err2;
     }
     kid.free();
   }

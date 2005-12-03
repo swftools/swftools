@@ -95,7 +95,7 @@ private:
   UnicodeMapExt *eMaps;		// (user)
   int eMapsLen;			// (user)
   int refCnt;
-#ifdef MULTITHREADED
+#if MULTITHREADED
   GMutex mutex;
 #endif
 };

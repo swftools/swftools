@@ -55,8 +55,15 @@ void OutputDev::updateAll(GfxState *state) {
   updateLineCap(state);
   updateMiterLimit(state);
   updateLineWidth(state);
+  updateFillColorSpace(state);
   updateFillColor(state);
+  updateStrokeColorSpace(state);
   updateStrokeColor(state);
+  updateBlendMode(state);
+  updateFillOpacity(state);
+  updateStrokeOpacity(state);
+  updateFillOverprint(state);
+  updateStrokeOverprint(state);
   updateFont(state);
 }
 
@@ -93,6 +100,24 @@ void OutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       str->getChar();
     str->close();
   }
+}
+
+void OutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
+				int width, int height,
+				GfxImageColorMap *colorMap,
+				Stream *maskStr,
+				int maskWidth, int maskHeight,
+				GBool maskInvert) {
+  drawImage(state, ref, str, width, height, colorMap, NULL, gFalse);
+}
+
+void OutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
+				    int width, int height,
+				    GfxImageColorMap *colorMap,
+				    Stream *maskStr,
+				    int maskWidth, int maskHeight,
+				    GfxImageColorMap *maskColorMap) {
+  drawImage(state, ref, str, width, height, colorMap, NULL, gFalse);
 }
 
 #if OPI_SUPPORT
