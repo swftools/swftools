@@ -1576,13 +1576,12 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
                 break;
 	    }
 	}
-        if(lpage>=0) {
-	    char buf[80];
-	    sprintf(buf, "page%d", t);
-            output->drawlink(output, points, buf);
-	} else {
-	    msg("<warning> Invalid link to page %d", page);
+        if(lpage<0) {
+	    lpage = page;
 	}
+	char buf[80];
+	sprintf(buf, "page%d", lpage);
+	output->drawlink(output, points, buf);
     }
     else if(url)
     {
@@ -2542,9 +2541,9 @@ void pdfswf_setparameter(char*name, char*value)
 	storeDeviceParameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "forceType0Fonts")) {
 	forceType0Fonts = atoi(value);
-    } else if(!strcmp(name, "fontdir")) {
+    } else if(!strncmp(name, "fontdir", strlen("fontdir"))) {
         pdfswf_addfontdir(value);
-    } else if(!strcmp(name, "languagedir")) {
+    } else if(!strncmp(name, "languagedir", strlen("languagedir"))) {
         pdfswf_addlanguagedir(value);
     } else if(!strcmp(name, "fontconfig")) {
         config_use_fontconfig = atoi(value);
