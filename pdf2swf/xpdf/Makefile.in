@@ -13,7 +13,8 @@ libpdf_objects =  GHash.$(O) GList.$(O) GString.$(O) gmem.$(O) gfile.$(O) \
 		  Link.$(O) GlobalParams.$(O) JBIG2Stream.$(O) Page.$(O) JPXStream.$(O) \
 		  JArithmeticDecoder.$(O) Gfx.$(O) GfxFont.$(O) CMap.$(O) CharCodeToUnicode.$(O) \
 		  PSTokenizer.$(O) FontEncodingTables.$(O) BuiltinFont.$(O) BuiltinFontTables.$(O) \
-		  GfxState.$(O) Function.$(O) Annot.$(O) NameToCharCode.$(O) UnicodeMap.$(O) cmyk.$(O)
+		  GfxState.$(O) Function.$(O) Annot.$(O) NameToCharCode.$(O) UnicodeMap.$(O) cmyk.$(O) \
+		  SecurityHandler.$(O)
 
 cmyk.$(O): cmyk.cc
 	$(CC) -I./ cmyk.cc -o $@
@@ -81,6 +82,8 @@ Stream.$(O): Stream.cc
 	$(CC) -I./ Stream.cc -o $@
 PDFDoc.$(O): PDFDoc.cc
 	$(CC) -I./ PDFDoc.cc -o $@
+SecurityHandler.$(O): SecurityHandler.cc SecurityHandler.h
+	$(CC) -I./ SecurityHandler.cc -o $@
 OutputDev.$(O): OutputDev.cc GfxState.h Stream.h Object.h OutputDev.h gtypes.h CharTypes.h
 	$(CC) -I./ OutputDev.cc -o $@
 FoFiBase.$(O): FoFiBase.cc
