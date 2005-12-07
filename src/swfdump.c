@@ -275,8 +275,12 @@ void textcallback(void*self, int*glyphs, int*ypos, int nr, int fontid, int fonts
 	    if(glyphs[t] >= fonts[font]->numchars  /*glyph is in range*/
 		    || !fonts[font]->glyph2ascii /* font has ascii<->glyph mapping */
 	      ) a = glyphs[t];
-	    else
-		a = fonts[font]->glyph2ascii[glyphs[t]];
+	    else {
+		if(fonts[font]->glyph2ascii[glyphs[t]])
+		    a = fonts[font]->glyph2ascii[glyphs[t]];
+		else
+		    a = glyphs[t];
+	    }
 	} else {
 	    a = glyphs[t];
 	}
