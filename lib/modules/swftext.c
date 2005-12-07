@@ -665,7 +665,9 @@ int swf_FontReduce(SWFFONT * f)
 
     for (i = 0; i < f->numchars; i++) {
 	if(!f->use->chars[i]) {
-	    f->glyph2ascii[i] = 0;
+	    if(f->glyph2ascii) {
+		f->glyph2ascii[i] = 0;
+	    }
 	    if(f->glyph[i].shape) {
 		swf_ShapeFree(f->glyph[i].shape);
 		f->glyph[i].shape = 0;
@@ -677,7 +679,9 @@ int swf_FontReduce(SWFFONT * f)
     }
     for (i = 0; i < f->maxascii; i++) {
 	if(!f->use->chars[f->ascii2glyph[i]]) {
-	    f->ascii2glyph[i] = -1;
+	    if(f->ascii2glyph) {
+		f->ascii2glyph[i] = -1;
+	    }
 	} else {
 	    max_unicode = i+1;
 	}
@@ -923,14 +927,22 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
 
 
     /* font code table */
-    if (flags & 4) {		/* wide codes */
-	for (t = 0; t < f->numchars; t++) {
-	    swf_SetU16(tag, f->glyph2ascii[t]);
+    for (t = 0; t < f->numchars; t++) {
+	if (flags & 4) {		/* wide codes */
+	    if(f->glyph2ascii[t]) {
+		swf_SetU16(tag, f->glyph2ascii[t]);
+	    } else {
+		swf_SetU16(tag, 0);
+	    }
+	} else {
+	    if(f->glyph2ascii[t]) {
+		swf_SetU8(tag, f->glyph2ascii[t]);
+	    } else {
+		swf_SetU8(tag, 0);
+	    }
 	}
-    } else {
-	for (t = 0; t < f->numchars; t++)
-	    swf_SetU8(tag, f->glyph2ascii[t]);
     }
+
     if (f->layout) {
 	swf_SetU16(tag, f->layout->ascent);
 	swf_SetU16(tag, f->layout->descent);
@@ -1000,7 +1012,7 @@ int swf_FontSetInfo(TAG * t, SWFFONT * f)
 
     for (i = 0; i < f->numchars; i++) {
 	if (f->glyph[i].shape) {
-	    int g2a = f->glyph2ascii[i];
+	    int g2a = f->glyph2ascii?f->glyph2ascii[i]:0;
 	    wide ? swf_SetU16(t, g2a) : swf_SetU8(t, g2a);
 	}
     }
