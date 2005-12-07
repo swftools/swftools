@@ -214,7 +214,6 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	if(font->max_unicode == 0 && charmap < face->num_charmaps - 1) {
 	    charmap++;
 	    FT_Set_Charmap(face, face->charmaps[charmap]);
-	    //font->encoding = 0;//anything but unicode FIXME
 	    isunicode = 0;
 	} else 
 	    break;
@@ -294,7 +293,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d, name %s) has return code %d\n", t, face->num_glyphs, glyph2unicode[t], name, error);
 		else
 		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d) has return code %d\n", t, face->num_glyphs, glyph2unicode[t], error);
-		omit = 1;
+		omit = 2;
 
 #if 0
 		if(!has_had_errors) {
@@ -317,7 +316,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	    error = FT_Get_Glyph(face->glyph, &glyph);
 	    if(error) {
 		fprintf(stderr, "Couldn't get glyph %d/%d, error:%d\n", t, face->num_glyphs, error);
-		omit = 1;
+		omit = 3;
 	    }
 	}
 
@@ -335,7 +334,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		fprintf(stderr, "Couldn't decompose glyph %d\n", t);
 		gfxline_free((gfxline_t*)draw.result(&draw));
 		FT_Done_Glyph(glyph);
-		omit = 1;
+		omit = 4;
 	    } else {
 		font->glyphs[font->num_glyphs].advance = glyph->advance.x*20/65536;
 		font->glyphs[font->num_glyphs].line = (gfxline_t*)draw.result(&draw);
@@ -347,7 +346,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		}
 		l = l->next;
 	    }
-	    if(!ok && !(name)) {
+	    if(!ok && !name) {
 		gfxline_free(font->glyphs[font->num_glyphs].line);
 		font->glyphs[font->num_glyphs].line = 0;
 		font->glyphs[font->num_glyphs].advance = 0;
@@ -364,7 +363,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		    font->glyphs[font->num_glyphs].name = 0;
 		}
 		FT_Done_Glyph(glyph);
-		omit = 1;
+		omit = 5;
 	    }
 	}
 
@@ -391,8 +390,8 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 
     FT_Done_Face(face);
     FT_Done_FreeType(ftlibrary);ftlibrary=0;
-  
-    if(!isunicode && font->num_glyphs>0) {
+ 
+    if(!isunicode && font->num_glyphs>0 && font->max_unicode) {
 	/* if the encoding isn't unicode, remap the font
 	   so that the encoding equals the char position, and
 	   remove the unicode table */
