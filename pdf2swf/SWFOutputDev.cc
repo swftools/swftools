@@ -232,6 +232,17 @@ public:
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg);
+  virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
+			       int width, int height,
+			       GfxImageColorMap *colorMap,
+			       Stream *maskStr, int maskWidth, int maskHeight,
+			       GBool maskInvert);
+  virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
+				   int width, int height,
+				   GfxImageColorMap *colorMap,
+				   Stream *maskStr,
+				   int maskWidth, int maskHeight,
+				   GfxImageColorMap *maskColorMap);
   
   virtual GBool beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen);
   virtual void endType3Char(GfxState *state);
@@ -242,7 +253,8 @@ public:
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
-				   GBool inlineImg, int mask, int *maskColors);
+				   GBool inlineImg, int mask, int *maskColors,
+				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap);
   int SWFOutputDev::setGfxFont(char*id, char*filename, double quality);
   void strokeGfxline(GfxState *state, gfxline_t*line);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
@@ -921,7 +933,7 @@ gfxcolor_t getFillColor(GfxState * state)
     col.r = colToByte(rgb.r);
     col.g = colToByte(rgb.g);
     col.b = colToByte(rgb.b);
-    col.a = (unsigned char)(rgb.r*255);
+    col.a = (unsigned char)(opaq*255);
     return col;
 }
 
@@ -2236,22 +2248,59 @@ void drawimagelossless(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey,
 
 void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
-				   GBool inlineImg, int mask, int*maskColors)
+				   GBool inlineImg, int mask, int*maskColors,
+				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap)
 {
-  FILE *fi;
-  int c;
-  char fileName[128];
   double x1,y1,x2,y2,x3,y3,x4,y4;
   ImageStream *imgStr;
   Guchar pixBuf[4];
   GfxRGB rgb;
   int ncomps = 1;
   int bits = 1;
+  unsigned char* maskbitmap = 0;
 				 
   if(colorMap) {
     ncomps = colorMap->getNumPixelComps();
     bits = colorMap->getBits();
   }
+  
+  if(maskStr) {
+      int x,y;
+      unsigned char buf[8];
+      maskbitmap = (unsigned char*)malloc(maskHeight*maskWidth);
+      if(maskColorMap) {
+	  ImageStream*imgMaskStr = new ImageStream(maskStr, maskWidth, maskColorMap->getNumPixelComps(), maskColorMap->getBits());
+      	  imgMaskStr->reset();
+	  unsigned char pal[256];
+	  int n = 1 << colorMap->getBits();
+	  int t;
+	  for(t=0;t<n;t++) {
+	      GfxGray gray;
+	      pixBuf[0] = t;
+	      maskColorMap->getGray(pixBuf, &gray);
+	      pal[t] = colToByte(gray);
+	  }
+	  for (y = 0; y < maskHeight; y++) {
+	      for (x = 0; x < maskWidth; x++) {
+		  imgMaskStr->getPixel(buf);
+		  maskbitmap[y*maskWidth+x] = pal[buf[0]];
+	      }
+	  }
+	  delete imgMaskStr;
+      } else {
+	  ImageStream*imgMaskStr = new ImageStream(maskStr, maskWidth, 1, 1);
+      	  imgMaskStr->reset();
+	  for (y = 0; y < maskHeight; y++) {
+	      for (x = 0; x < maskWidth; x++) {
+		  imgMaskStr->getPixel(buf);
+		  buf[0]^=maskInvert;
+		  maskbitmap[y*maskWidth+x] = (buf[0]^1)*255;
+	      }
+	  }
+	  delete imgMaskStr;
+      }
+  }
+      
   imgStr = new ImageStream(str, width, ncomps,bits);
   imgStr->reset();
 
@@ -2265,13 +2314,15 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  imgStr->getPixel(buf);
       }
       delete imgStr;
+      if(maskbitmap)
+	  free(maskbitmap);
       return;
   }
-  
-  state->transform(0, 1, &x1, &y1); x1 += user_movex; y1+= user_movey;
-  state->transform(0, 0, &x2, &y2); x2 += user_movex; y2+= user_movey;
-  state->transform(1, 0, &x3, &y3); x3 += user_movex; y3+= user_movey;
-  state->transform(1, 1, &x4, &y4); x4 += user_movex; y4+= user_movey;
+
+  state->transform(0, 1, &x1, &y1); x1 += user_movex; y1 += user_movey;
+  state->transform(0, 0, &x2, &y2); x2 += user_movex; y2 += user_movey;
+  state->transform(1, 0, &x3, &y3); x3 += user_movex; y3 += user_movey;
+  state->transform(1, 1, &x4, &y4); x4 += user_movex; y4 += user_movey;
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
@@ -2356,8 +2407,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       free(pic2);
       free(pic);
       delete imgStr;
+      if(maskbitmap) free(maskbitmap);
       return;
-  } 
+  }
 
   int x,y;
 
@@ -2371,6 +2423,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic[width*y+x].g = (unsigned char)(colToByte(rgb.g));
 	  pic[width*y+x].b = (unsigned char)(colToByte(rgb.b));
 	  pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
+	  if(maskbitmap) {
+	      pic[width*y+x].a = maskbitmap[(y*maskHeight/height)*maskWidth+(x*maskWidth/width)];
+	  }
 	}
       }
       if(str->getKind()==strDCT)
@@ -2379,15 +2434,18 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  drawimagelossless(output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
       delete pic;
       delete imgStr;
+      if(maskbitmap) free(maskbitmap);
       return;
   } else {
       gfxcolor_t*pic=new gfxcolor_t[width*height];
       gfxcolor_t pal[256];
+      int n = 1 << colorMap->getBits();
       int t;
       for(t=0;t<256;t++) {
 	  pixBuf[0] = t;
 	  colorMap->getRGB(pixBuf, &rgb);
-	  /*if(maskColors && *maskColors==t) {
+
+	  {/*if(maskColors && *maskColors==t) {
 	      msg("<notice> Color %d is transparent", t);
 	      if (imgData->maskColors) {
 		*alpha = 0;
@@ -2407,10 +2465,10 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 		    pal[t].b = 0;
 		    pal[t].a = 0;
 	      }
-	  } else*/ {
-	      pal[t].r = (unsigned char)(rgb.r * 255 + 0.5);
-	      pal[t].g = (unsigned char)(rgb.g * 255 + 0.5);
-	      pal[t].b = (unsigned char)(rgb.b * 255 + 0.5);
+	  } else {*/
+	      pal[t].r = (unsigned char)(colToByte(rgb.r));
+	      pal[t].g = (unsigned char)(colToByte(rgb.g));
+	      pal[t].b = (unsigned char)(colToByte(rgb.b));
 	      pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
 	  }
       }
@@ -2418,12 +2476,16 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	for (x = 0; x < width; ++x) {
 	  imgStr->getPixel(pixBuf);
 	  pic[width*y+x] = pal[pixBuf[0]];
+	  if(maskbitmap) {
+	      pic[width*y+x].a = maskbitmap[(y*maskHeight/height)*maskWidth+(x*maskWidth/width)];
+	  }
 	}
       }
       drawimagelossless(output, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
 
       delete pic;
       delete imgStr;
+      if(maskbitmap) free(maskbitmap);
       return;
   }
 }
@@ -2435,7 +2497,7 @@ void SWFOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   if(states[statepos].textRender & 4) //clipped
       return;
   msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
-  drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0);
+  drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0, 0,0,0,0, 0);
 }
 
 void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
@@ -2445,14 +2507,51 @@ void SWFOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   if(states[statepos].textRender & 4) //clipped
       return;
 
-  msg("<verbose> drawImage %dx%d, %s %s, inline=%d", width, height, 
+  msg("<verbose> drawImage %dx%d, %s, %s, inline=%d", width, height, 
 	  colorMap?"colorMap":"no colorMap", 
 	  maskColors?"maskColors":"no maskColors",
 	  inlineImg);
   if(colorMap)
       msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
 	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
-  drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0,maskColors);
+  drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0,maskColors, 0,0,0,0, 0);
+}
+  
+void SWFOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
+			       int width, int height,
+			       GfxImageColorMap *colorMap,
+			       Stream *maskStr, int maskWidth, int maskHeight,
+			       GBool maskInvert)
+{
+  if(states[statepos].textRender & 4) //clipped
+      return;
+
+  msg("<verbose> drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
+	  colorMap?"colorMap":"no colorMap", 
+	  maskWidth, maskHeight);
+  if(colorMap)
+      msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
+  drawGeneralImage(state,ref,str,width,height,colorMap,0,0,0,0, maskStr, maskWidth, maskHeight, maskInvert, 0);
+}
+
+void SWFOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
+				   int width, int height,
+				   GfxImageColorMap *colorMap,
+				   Stream *maskStr,
+				   int maskWidth, int maskHeight,
+				   GfxImageColorMap *maskColorMap)
+{
+  if(states[statepos].textRender & 4) //clipped
+      return;
+
+  msg("<verbose> drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 
+	  colorMap?"colorMap":"no colorMap", 
+	  maskWidth, maskHeight);
+  if(colorMap)
+      msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+	      colorMap->getBits(),colorMap->getColorSpace()->getMode());
+  drawGeneralImage(state,ref,str,width,height,colorMap,0,0,0,0, maskStr, maskWidth, maskHeight, 0, maskColorMap);
 }
 
 //SWFOutputDev*output = 0; 
