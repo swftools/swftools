@@ -347,7 +347,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		}
 		l = l->next;
 	    }
-	    if(!ok) {
+	    if(!ok && !(name)) {
 		gfxline_free(font->glyphs[font->num_glyphs].line);
 		font->glyphs[font->num_glyphs].line = 0;
 		font->glyphs[font->num_glyphs].advance = 0;
@@ -357,8 +357,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		   have unicode indices attached to them.
 		   Remove that information, in order to not confuse
 		   any converter applications.
-
-		    TODO: what about space characters? */
+		    */
 		font->glyphs[font->num_glyphs].unicode = 0;
 		if(font->glyphs[font->num_glyphs].name) {
 		    free(font->glyphs[font->num_glyphs].name);
