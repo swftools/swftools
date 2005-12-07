@@ -77,6 +77,13 @@ void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int numsamples, char first)
 }
 #endif
 
+void swf_SetSoundDefineRaw(TAG*tag, S16*samples, int numsamples)
+{
+    swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
+    swf_SetU32(tag, numsamples); // 44100 -> 11025
+    swf_SetBlock(tag, (U8*)samples, numsamples*2);
+}
+
 /* TODO: find a better way to set these from the outside */
 
 int swf_mp3_in_samplerate = 44100;
@@ -192,12 +199,6 @@ void swf_SetSoundStreamEnd(TAG*tag)
     lame_close (lame_flags);
 }
 
-void swf_SetSoundDefineRaw(TAG*tag, S16*samples, int num, int samplerate)
-{
-    //swf_SetU8(tag,(/*compression*/0<<4)|(/*rate*/3<<2)|(/*size*/1<<1)|/*mono*/0);
-    //swf_SetU32(tag, numsamples); // 44100 -> 11025
-    //swf_SetBlock(tag, wav2.data, numsamples*2);
-}
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 {
     char*buf;
@@ -266,13 +267,9 @@ void swf_SetSoundStreamEnd(TAG*tag)
 {
     fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
 }
-void swf_SetSoundDefineRaw(TAG*tag, S16*samples, int num, int samplerate)
-{
-    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
-}
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 {
-    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+    swf_SetSoundDefineRaw(tag, samples,num);
 }
 
 #endif
