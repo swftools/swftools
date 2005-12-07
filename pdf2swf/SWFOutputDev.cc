@@ -255,7 +255,7 @@ public:
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int *maskColors,
 				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap);
-  int SWFOutputDev::setGfxFont(char*id, char*filename, double quality);
+  int SWFOutputDev::setGfxFont(char*id, char*name, char*filename, double quality);
   void strokeGfxline(GfxState *state, gfxline_t*line);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
@@ -526,20 +526,31 @@ void SWFOutputDev::setClip(int x1,int y1,int x2,int y2)
 
 static char*getFontID(GfxFont*font)
 {
+    Ref*ref = font->getID();
     GString*gstr = font->getName();
-    char* fontname = gstr==0?0:gstr->getCString();
-    if(fontname==0) {
-	char buf[32];
-	Ref*r=font->getID();
-	sprintf(buf, "UFONT%d", r->num);
-	return strdup(buf);
+    char* fname = gstr==0?0:gstr->getCString();
+    char buf[128];
+    if(fname==0) {
+	sprintf(buf, "font-%d-%d", ref->num, ref->gen);
+    } else {
+	sprintf(buf, "%s-%d-%d", fname, ref->num, ref->gen);
     }
-    return strdup(fontname);
+    return strdup(buf);
 }
 
 static char*getFontName(GfxFont*font)
 {
-    char*fontid = getFontID(font);
+    char*fontid;
+    GString*gstr = font->getName();
+    char* fname = gstr==0?0:gstr->getCString();
+    if(fname==0) {
+	char buf[32];
+	Ref*r=font->getID();
+	sprintf(buf, "UFONT%d", r->num);
+	fontid = strdup(buf);
+    }
+    fontid = strdup(fname);
+
     char*fontname= 0;
     char* plus = strchr(fontid, '+');
     if(plus && plus < &fontid[strlen(fontid)-1]) {
@@ -1278,12 +1289,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	    return;
 	}
     }
-
     if(charid<0) {
-	if(!name) {
-	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
-		    FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
-	}
+	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
+		FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
 	return;
     }
 
@@ -1983,7 +1991,7 @@ void SWFOutputDev::setXRef(PDFDoc*doc, XRef *xref)
     this->xref = xref;
 }
 
-int SWFOutputDev::setGfxFont(char*id, char*filename, double maxSize)
+int SWFOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize)
 {
     gfxfont_t*font = 0;
     fontlist_t*last=0,*l = this->fontlist;
@@ -2035,7 +2043,10 @@ void SWFOutputDev::updateFont(GfxState *state)
     if (!gfxFont) {
 	return;
     }  
+    
     char * fontid = getFontID(gfxFont);
+    char * fontname = getFontName(gfxFont);
+
     double maxSize = 1.0;
 
     if(this->info) {
@@ -2056,8 +2067,9 @@ void SWFOutputDev::updateFont(GfxState *state)
 
     /* second, see if this is a font which was used before-
        if so, we are done */
-    if(setGfxFont(fontid, 0, 0)) {
+    if(setGfxFont(fontid, fontname, 0, 0)) {
 	free(fontid);
+	free(fontname);
 	return;
     }
 /*    if(swfoutput_queryfont(&output, fontid))
@@ -2074,6 +2086,7 @@ void SWFOutputDev::updateFont(GfxState *state)
 	    showFontError(gfxFont, 2);
 	}
 	free(fontid);
+	free(fontname);
 	return;
     }
 
@@ -2096,10 +2109,8 @@ void SWFOutputDev::updateFont(GfxState *state)
       if(!fileName) showFontError(gfxFont,0);
       else del = 1;
     } else {
-      char * fontname = getFontName(gfxFont);
       fileName = searchFont(fontname);
       if(!fileName) showFontError(gfxFont,0);
-      free(fontname);
     }
     if(!fileName) {
 	char * fontname = getFontName(gfxFont);
@@ -2118,6 +2129,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(!fileName) {
 	msg("<error> Couldn't set font %s\n", fontid);
 	free(fontid);
+	free(fontname);
 	return;
     }
 	
@@ -2126,8 +2138,8 @@ void SWFOutputDev::updateFont(GfxState *state)
 
     //swfoutput_setfont(&output, fontid, fileName);
     
-    if(!setGfxFont(fontid, 0, 0)) {
-	setGfxFont(fontid, fileName, maxSize);
+    if(!setGfxFont(fontid, fontname, 0, 0)) {
+	setGfxFont(fontid, fontname, fileName, maxSize);
     }
    
     if(fileName && del)
@@ -2136,6 +2148,7 @@ void SWFOutputDev::updateFont(GfxState *state)
     if(fileName)
         free(fileName);
     free(fontid);
+    free(fontname);
 
     msg("<verbose> |");
 }
