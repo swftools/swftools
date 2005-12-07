@@ -1119,8 +1119,22 @@ char* makeStringPrintable(char*str)
 
 int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 {
-    int t;
+    char*uniname = 0;
+    if(u>0) {
+	int t;
+	/* find out char name from unicode index 
+	   TODO: should be precomputed
+	 */
+	for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++) {
+	    if(nameToUnicodeTab[t].u == u) {
+		uniname = nameToUnicodeTab[t].name;
+		break;
+	    }
+	}
+    }
+
     if(charname) {
+	int t;
 	for(t=0;t<font->num_glyphs;t++) {
 	    if(font->glyphs[t].name && !strcmp(font->glyphs[t].name,charname)) {
 		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, charname, u, t);
@@ -1137,16 +1151,29 @@ int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 	}
     }
 
+    if(uniname) {
+	int t;
+	for(t=0;t<font->num_glyphs;t++) {
+	    if(font->glyphs[t].name && !strcmp(font->glyphs[t].name,uniname)) {
+		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, uniname, u, t);
+		return t;
+	    }
+	}
+	/* if we didn't find the character, maybe
+	   we can find the capitalized version */
+	for(t=0;t<font->num_glyphs;t++) {
+	    if(font->glyphs[t].name && !strcasecmp(font->glyphs[t].name,uniname)) {
+		msg("<debug> Char [%d,>>%s<<,%d] maps to %d\n", charnr, uniname, u, t);
+		return t;
+	    }
+	}
+    }
+
     /* try to use the unicode id */
     if(u>=0 && u<font->max_unicode && font->unicode2glyph[u]>=0) {
 	msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->unicode2glyph[u]);
 	return font->unicode2glyph[u];
     }
-
-    /* we don't need to "draw" space characters, so don't overdo the search
-       for a matching glyph */
-    if(charname && !strcasecmp(charname, "space"))
-	return -1;
 
     if(charnr>=0 && charnr<font->num_glyphs) {
 	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
@@ -1214,22 +1241,6 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     Unicode u=0;
     char*name=0;
 
-    if(_u && uLen) {
-	u = *_u;
-	if (u) {
-	    int t;
-	    /* find out char name from unicode index 
-	       TODO: should be precomputed
-	     */
-	    for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++) {
-		if(nameToUnicodeTab[t].u == u) {
-		    name = nameToUnicodeTab[t].name;
-		    break;
-		}
-	    }
-	}
-    }
-
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
 
@@ -1239,9 +1250,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
 	Gfx8BitFont*font8;
 	font8 = (Gfx8BitFont*)font;
 	char**enc=font8->getEncoding();
-	if(enc && enc[c] && strcasecmp(enc[c], "space")) {
-	   name = enc[c];
-	}
+	name = enc[c];
     }
     if (CIDToGIDMap) {
 	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\" render=%d\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name), render);
@@ -1255,7 +1264,8 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     if(uLen<=1) {
 	charid = getGfxCharID(current_gfxfont, c, name, u);
     } else {
-	charid = getGfxCharID(current_gfxfont, c, 0, -1);
+	charid = getGfxCharID(current_gfxfont, c, name, -1);
+
 	if(charid < 0) {
 	    /* multiple unicodes- should usually map to a ligature.
 	       if the ligature doesn't exist, we need to draw
@@ -1270,7 +1280,7 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     }
 
     if(charid<0) {
-	if(!name || strcasecmp(name, "space")) {
+	if(!name) {
 	    msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
 		    FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
 	}
