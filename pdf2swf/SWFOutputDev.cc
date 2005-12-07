@@ -1155,7 +1155,7 @@ int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 	int t;
 	for(t=0;t<font->num_glyphs;t++) {
 	    if(font->glyphs[t].name && !strcmp(font->glyphs[t].name,uniname)) {
-		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, uniname, u, t);
+		msg("<debug> Char [%d,%s,>%d(%s)<] maps to %d\n", charnr, charname, u, uniname, t);
 		return t;
 	    }
 	}
@@ -1163,7 +1163,7 @@ int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 	   we can find the capitalized version */
 	for(t=0;t<font->num_glyphs;t++) {
 	    if(font->glyphs[t].name && !strcasecmp(font->glyphs[t].name,uniname)) {
-		msg("<debug> Char [%d,>>%s<<,%d] maps to %d\n", charnr, uniname, u, t);
+		msg("<debug> Char [%d,%s,>>%d(%s)<<] maps to %d\n", charnr, charname, u, uniname, t);
 		return t;
 	    }
 	}
@@ -2132,6 +2132,7 @@ void SWFOutputDev::updateFont(GfxState *state)
    
     if(fileName && del)
 	unlinkfont(fileName);
+
     if(fileName)
         free(fileName);
     free(fontid);
