@@ -105,7 +105,6 @@ ${name}/lib/action/compile.h \
 ${name}/lib/action/libming.c \
 ${name}/lib/action/libming.h \
 ${name}/lib/action/listaction.c \
-${name}/lib/action/listaction.o \
 ${name}/lib/action/ming.h \
 ${name}/lib/action/swf4compiler.flex \
 ${name}/lib/action/swf4compiler.y \
