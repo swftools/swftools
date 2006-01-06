@@ -1034,6 +1034,9 @@ void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     slaveid = -1;
     slaveframe = -1;
 
+    if(!master->fileVersion && slave)
+	master->fileVersion = slave->fileVersion;
+
     swf_FoldAll(master);
     swf_FoldAll(slave);
 
@@ -1235,7 +1238,7 @@ int main(int argn, char *argv[])
 		memset(&slave, 0, sizeof(slave));
 		slave.firstTag = swf_InsertTag(0, ST_END);
 		slave.frameRate = 0;
-		slave.fileVersion = 4;
+		slave.fileVersion = 0;
 		slave.frameCount = 0;
 	    }
 
@@ -1249,6 +1252,9 @@ int main(int argn, char *argv[])
 	    newswf.movieSize.ymax = newswf.movieSize.ymax*config.masterscaley;
 	}
     }
+
+    if(!newswf.fileVersion)
+	newswf.fileVersion = 4;
 
     fi = open(outputname, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
 
