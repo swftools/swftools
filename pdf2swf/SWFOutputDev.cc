@@ -143,7 +143,7 @@ public:
   gfxdevice_t* output;
 
   // Constructor.
-  SWFOutputDev();
+  SWFOutputDev(gfxdevice_t*output);
 
   // Destructor.
   virtual ~SWFOutputDev() ;
@@ -153,15 +153,12 @@ public:
 
   void setInfo(InfoOutputDev*info) {this->info = info;}
   
-  int save(char*filename);
-    
   // Start a page.
   void startFrame(int width, int height);
 
   virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
 
   void endframe();
-  void* get(char*name);
 
   //----- get info about output device
 
@@ -250,6 +247,8 @@ public:
   virtual void type3D0(GfxState *state, double wx, double wy);
   virtual void type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury);
 
+  void finish();
+
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
@@ -259,10 +258,6 @@ public:
   void strokeGfxline(GfxState *state, gfxline_t*line);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
-
-  void finish();
-
-  gfxresult_t*result; //filled when complete
 
   char outer_clip_box; //whether the page clip box is still on
 
@@ -311,7 +306,7 @@ public:
   int pagebuflen;
   int pagepos;
 
-  friend void swf_output_preparepage(swf_output_t*swf, int pdfpage, int outputpage);
+  friend void dev_output_preparepage(dev_output_t*swf, int pdfpage, int outputpage);
 };
 
 typedef struct _drawnchar
@@ -471,34 +466,33 @@ class InfoOutputDev:  public OutputDev
   }
 };
 
-SWFOutputDev::SWFOutputDev()
+SWFOutputDev::SWFOutputDev(gfxdevice_t*output)
 {
-    jpeginfo = 0;
-    textmodeinfo = 0;
-    ttfinfo = 0;
-    linkinfo = 0;
-    pbminfo = 0;
-    type3active = 0;
-    statepos = 0;
-    xref = 0;
-    substitutepos = 0;
-    type3Warning = 0;
-    user_movex = 0;
-    user_movey = 0;
-    user_clipx1 = 0;
-    user_clipy1 = 0;
-    user_clipx2 = 0;
-    user_clipy2 = 0;
-    current_text_stroke = 0;
-    current_text_clip = 0;
-    fontlist = 0;
-    result = 0;
-    outer_clip_box = 0;
-    pages = 0;
-    pagebuflen = 0;
-    pagepos = 0;
-    output = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
-    gfxdevice_swf_init(output);
+    this->output = output;
+    this->jpeginfo = 0;
+    this->textmodeinfo = 0;
+    this->ttfinfo = 0;
+    this->linkinfo = 0;
+    this->pbminfo = 0;
+    this->type3active = 0;
+    this->statepos = 0;
+    this->xref = 0;
+    this->substitutepos = 0;
+    this->type3Warning = 0;
+    this->user_movex = 0;
+    this->user_movey = 0;
+    this->user_clipx1 = 0;
+    this->user_clipy1 = 0;
+    this->user_clipx2 = 0;
+    this->user_clipy2 = 0;
+    this->current_text_stroke = 0;
+    this->current_text_clip = 0;
+    this->fontlist = 0;
+    this->outer_clip_box = 0;
+    this->pages = 0;
+    this->pagebuflen = 0;
+    this->pagepos = 0;
+
     /* configure device */
     parameter_t*p = device_config;
     while(p) {
@@ -1032,32 +1026,12 @@ void SWFOutputDev::finish()
 	}
 	outer_clip_box = 0;
     }
-    if(output) {
-	this->result = output->finish(output);
-	free(output);output=0;
-    }
-}
-
-int SWFOutputDev::save(char*filename)
-{
-    finish();
-    return result->save(result, filename);
-}
-void* SWFOutputDev::get(char*name)
-{
-    finish();
-    return result->get(result, name);
 }
 
 SWFOutputDev::~SWFOutputDev() 
 {
     finish();
 
-    if(this->result) {
-	this->result->destroy(this->result);
-	this->result = 0;
-    }
-    
     if(this->pages) {
 	free(this->pages); this->pages = 0;
     }
@@ -1067,8 +1041,8 @@ SWFOutputDev::~SWFOutputDev()
 	fontlist_t*next = l->next;
 	l->next = 0;
 	gfxfont_free(l->font);
-	free(l->id);
-	free(l->filename);
+	free(l->id);l->id=0;
+	free(l->filename);l->filename=0;
 	free(l);
 	l = next;
     }
@@ -1335,6 +1309,7 @@ void SWFOutputDev::endString(GfxState *state)
 	   now (as there may be texts of other rendering modes in this
 	   text object)- clipping objects have to wait until endTextObject,
 	   however */
+	output->setparameter(output, "mark","TXT");
 	if((render&3) == RENDER_FILL) {
 	    fillGfxLine(state, current_text_stroke);
 	    gfxline_free(current_text_stroke);
@@ -1349,6 +1324,7 @@ void SWFOutputDev::endString(GfxState *state)
 	    gfxline_free(current_text_stroke);
 	    current_text_stroke = 0;
 	}
+	output->setparameter(output, "mark","");
     }
 }    
 
@@ -1360,7 +1336,9 @@ void SWFOutputDev::endTextObject(GfxState *state)
 	msg("<error> Internal error: drawChar.render!=beginString.render");
     
     if(current_text_clip) {
+	output->setparameter(output, "mark","TXT");
 	clipToGfxLine(state, current_text_clip);
+	output->setparameter(output, "mark","");
 	gfxline_free(current_text_clip);
 	current_text_clip = 0;
     }
@@ -2126,6 +2104,8 @@ void SWFOutputDev::updateFont(GfxState *state)
 	    msg("<warning> Try specifying one or more font directories");
 
 	fileName = substituteFont(gfxFont, fontid);
+	if(!fileName)
+	    exit(1);
 	if(fontid) { free(fontid);fontid = strdup(substitutetarget[substitutepos-1]); /*ugly hack*/};
 	msg("<notice> Font is now %s (%s)", fontid, fileName);
     }
@@ -2776,10 +2756,10 @@ typedef struct _pdf_doc_internal
 typedef struct _pdf_page_internal
 {
 } pdf_page_internal_t;
-typedef struct _swf_output_internal
+typedef struct _dev_output_internal
 {
     SWFOutputDev*outputDev;
-} swf_output_internal_t;
+} dev_output_internal_t;
 
 pdf_doc_t* pdf_init(char*filename, char*userPassword)
 {
@@ -2907,38 +2887,44 @@ void pdf_page_destroy(pdf_page_t*pdf_page)
     free(pdf_page);pdf_page=0;
 }
 
-swf_output_t* swf_output_init() 
+dev_output_t* dev_output_init(gfxdevice_t*dev) 
 {
-    swf_output_t*swf_output = (swf_output_t*)malloc(sizeof(swf_output_t));
-    memset(swf_output, 0, sizeof(swf_output_t));
-    swf_output_internal_t*i= (swf_output_internal_t*)malloc(sizeof(swf_output_internal_t));
-    memset(i, 0, sizeof(swf_output_internal_t));
-    swf_output->internal = i;
+    dev_output_t*dev_output = (dev_output_t*)malloc(sizeof(dev_output_t));
+    memset(dev_output, 0, sizeof(dev_output_t));
+    dev_output_internal_t*i= (dev_output_internal_t*)malloc(sizeof(dev_output_internal_t));
+    memset(i, 0, sizeof(dev_output_internal_t));
+    dev_output->internal = i;
 
-    i->outputDev = new SWFOutputDev();
-    return swf_output;
+    i->outputDev = new SWFOutputDev(dev);
+    return dev_output;
 }
 
-void swf_output_setparameter(swf_output_t*swf, char*name, char*value)
+void dev_output_setparameter(dev_output_t*swf, char*name, char*value)
 {
     pdfswf_setparameter(name, value);
 }
 
-void swf_output_startframe(swf_output_t*swf, int width, int height)
+void dev_output_startframe(dev_output_t*swf, int width, int height)
 {
-    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    dev_output_internal_t*i= (dev_output_internal_t*)swf->internal;
     i->outputDev->startFrame(width, height);
 }
 
-void swf_output_endframe(swf_output_t*swf)
+void dev_output_endframe(dev_output_t*swf)
 {
-    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    dev_output_internal_t*i= (dev_output_internal_t*)swf->internal;
     i->outputDev->endframe();
 }
 
-void swf_output_preparepage(swf_output_t*swf, int pdfpage, int outputpage)
+void dev_output_finish(dev_output_t*swf)
 {
-    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
+    dev_output_internal_t*i= (dev_output_internal_t*)swf->internal;
+    i->outputDev->finish();
+}
+
+void dev_output_preparepage(dev_output_t*swf, int pdfpage, int outputpage)
+{
+    dev_output_internal_t*i= (dev_output_internal_t*)swf->internal;
     SWFOutputDev*o = i->outputDev;
 
     if(pdfpage < 0)
@@ -2962,32 +2948,18 @@ void swf_output_preparepage(swf_output_t*swf, int pdfpage, int outputpage)
 	o->pagepos = pdfpage;
 }
 
-int swf_output_save(swf_output_t*swf, char*filename)
+void dev_output_destroy(dev_output_t*output)
 {
-    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
-    int ret = i->outputDev->save(filename);
-    return ret;
-}
-
-void* swf_output_get(swf_output_t*swf,char*name)
-{
-    swf_output_internal_t*i= (swf_output_internal_t*)swf->internal;
-    void* ret = i->outputDev->get(name);
-    return ret;
-}
-
-void swf_output_destroy(swf_output_t*output)
-{
-    swf_output_internal_t*i = (swf_output_internal_t*)output->internal;
+    dev_output_internal_t*i = (dev_output_internal_t*)output->internal;
     delete i->outputDev; i->outputDev=0;
     free(output->internal);output->internal=0;
     free(output);
 }
 
-void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
+void pdf_page_render2(pdf_page_t*page, dev_output_t*swf)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    swf_output_internal_t*si = (swf_output_internal_t*)swf->internal;
+    dev_output_internal_t*si = (dev_output_internal_t*)swf->internal;
 
     if(!pi) {
 	msg("<fatal> pdf_page_render: Parent PDF this page belongs to doesn't exist yet/anymore");
@@ -3003,10 +2975,10 @@ void pdf_page_render2(pdf_page_t*page, swf_output_t*swf)
     pi->doc->displayPage((OutputDev*)si->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, true, /*doLinks*/(int)1);
 }
 
-void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
+void pdf_page_rendersection(pdf_page_t*page, dev_output_t*output, int x, int y, int x1, int y1, int x2, int y2)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
+    dev_output_internal_t*si = (dev_output_internal_t*)output->internal;
 
     si->outputDev->setMove(x,y);
     if((x1|y1|x2|y2)==0) x2++;
@@ -3014,10 +2986,10 @@ void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, 
 
     pdf_page_render2(page, output);
 }
-void pdf_page_render(pdf_page_t*page, swf_output_t*output)
+void pdf_page_render(pdf_page_t*page, dev_output_t*output)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    swf_output_internal_t*si = (swf_output_internal_t*)output->internal;
+    dev_output_internal_t*si = (dev_output_internal_t*)output->internal;
     
     si->outputDev->setMove(0,0);
     si->outputDev->setClip(0,0,0,0);

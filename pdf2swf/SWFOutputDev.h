@@ -21,6 +21,9 @@
 
 #ifndef __pdf_h__
 #define __pdf_h__
+
+#include "../lib/gfxdevice.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,20 +45,19 @@ typedef struct _pdf_doc
 pdf_doc_t*  pdf_init(char*filename, char*userPassword);
 void pdf_destroy(pdf_doc_t*doc);
 
-typedef struct _swf_output
+typedef struct _dev_output
 {
     int num_pages;
     void*internal;
-} swf_output_t;
+} dev_output_t;
 
-swf_output_t* swf_output_init();
-void swf_output_startframe(swf_output_t*, int width, int height);
-void swf_output_endframe(swf_output_t*);
-void swf_output_setparameter(swf_output_t*, char*name, char*value);
-int swf_output_save(swf_output_t*, char*filename);
-void* swf_output_get(swf_output_t*, char*name);
-void swf_output_preparepage(swf_output_t*, int pdfpage, int outputpage);
-void swf_output_destroy(swf_output_t*page);
+dev_output_t* dev_output_init(gfxdevice_t*dev);
+void dev_output_startframe(dev_output_t*, int width, int height);
+void dev_output_endframe(dev_output_t*);
+void dev_output_setparameter(dev_output_t*, char*name, char*value);
+void dev_output_finish(dev_output_t*);
+void dev_output_preparepage(dev_output_t*, int pdfpage, int outputpage);
+void dev_output_destroy(dev_output_t*);
 
 typedef struct _pdf_page
 {
@@ -65,8 +67,8 @@ typedef struct _pdf_page
 } pdf_page_t;
 
 pdf_page_t* pdf_getpage(pdf_doc_t*doc, int page);
-void pdf_page_render(pdf_page_t*page, swf_output_t*output);
-void pdf_page_rendersection(pdf_page_t*page, swf_output_t*output, int x, int y, int x1, int y1, int x2, int y2);
+void pdf_page_render(pdf_page_t*page, dev_output_t*output);
+void pdf_page_rendersection(pdf_page_t*page, dev_output_t*output, int x, int y, int x1, int y1, int x2, int y2);
 void pdf_page_destroy(pdf_page_t*page);
 
 typedef struct _pdf_page_info
