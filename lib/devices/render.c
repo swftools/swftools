@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <memory.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
@@ -707,6 +708,7 @@ int  render_result_save(gfxresult_t*r, char*filename)
     } else {
 	writePNG(filename, (unsigned char*)i->img, i->width, i->height);
     }
+    return 1;
 }
 void*render_result_get(gfxresult_t*r, char*name)
 {
