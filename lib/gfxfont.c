@@ -336,7 +336,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 		FT_Done_Glyph(glyph);
 		omit = 4;
 	    } else {
-		font->glyphs[font->num_glyphs].advance = glyph->advance.x*20/65536;
+		font->glyphs[font->num_glyphs].advance = (glyph->advance.x*20)/65536;
 		font->glyphs[font->num_glyphs].line = (gfxline_t*)draw.result(&draw);
 	    }
 	    l = font->glyphs[font->num_glyphs].line;
