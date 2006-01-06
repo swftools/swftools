@@ -47,6 +47,12 @@ struct {
     char *filename;
 } image[MAX_INPUT_FILES];
 
+static int custom_move=0;
+static int move_x=0;
+static int move_y=0;
+static int clip_x1=0,clip_y1=0,clip_x2=0,clip_y2=0;
+static int custom_clip = 0;
+
 TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 {
     TAG *t;
@@ -56,8 +62,15 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 
     swf->fileVersion = global.version;
     swf->frameRate = (int)(256.0 * framerate);
-    swf->movieSize.xmax = dx * 20;
-    swf->movieSize.ymax = dy * 20;
+    if(custom_clip) {
+	swf->movieSize.xmin = clip_x1 * 20;
+	swf->movieSize.ymin = clip_y1 * 20;
+	swf->movieSize.xmax = clip_x2 * 20;
+	swf->movieSize.ymax = clip_y2 * 20;
+    } else {
+	swf->movieSize.xmax = dx * 20;
+	swf->movieSize.ymax = dy * 20;
+    }
 
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
@@ -715,8 +728,13 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     t = swf_InsertTag(t, ST_PLACEOBJECT2);
 
     swf_GetMatrix(NULL, &m);
-    m.tx = (swf->movieSize.xmax - (int) header.width * 20) / 2;
-    m.ty = (swf->movieSize.ymax - (int) header.height * 20) / 2;
+    if(custom_move) {
+	m.tx = move_x*20;
+	m.ty = move_y*20;
+    } else {
+	m.tx = (swf->movieSize.xmax - (int) header.width * 20) / 2;
+	m.ty = (swf->movieSize.ymax - (int) header.height * 20) / 2;
+    }
     swf_ObjectPlace(t, id + 1, 50, &m, NULL, NULL);
 
     t = swf_InsertTag(t, ST_SHOWFRAME);
@@ -801,6 +819,11 @@ int args_callback_option(char *arg, char *val)
 	    res = 0;
 	    break;
 
+	case 'T':
+	    global.version = atoi(val);
+	    res = 1;
+	    break;
+
 	case 'C':
 	    global.do_cgi = 1;
 	    break;
@@ -832,6 +855,44 @@ int args_callback_option(char *arg, char *val)
 	case 'V':
 	    printf("png2swf - part of %s %s\n", PACKAGE, VERSION);
 	    exit(0);
+   
+	case 'c': {
+	    char*s = strdup(val);
+	    char*x1 = strtok(s, ":");
+	    char*y1 = strtok(0, ":");
+	    char*x2 = strtok(0, ":");
+	    char*y2 = strtok(0, ":");
+	    if(!(x1 && y1 && x2 && y2)) {
+		fprintf(stderr, "-m option requires four arguments, <x1>:<y1>:<x2>:<y2>\n");
+		exit(1);
+	    }
+	    custom_clip = 1;
+	    clip_x1 = atoi(x1);
+	    clip_y1 = atoi(y1);
+	    clip_x2 = atoi(x2);
+	    clip_y2 = atoi(y2);
+	    free(s);
+
+	    res = 1;
+	    break;
+	}
+
+	case 'm': {
+	    char*s = strdup(val);
+	    char*c = strchr(s, ':');
+	    if(!c) {
+		fprintf(stderr, "-m option requires two arguments, <x>:<y>\n");
+		exit(1);
+	    }
+	    *c = 0;
+	    custom_move = 1;
+	    move_x = atoi(val);
+	    move_y = atoi(c+1);
+	    free(s);
+
+	    res = 1;
+	    break;
+	}
 
 	default:
 	    res = -1;
