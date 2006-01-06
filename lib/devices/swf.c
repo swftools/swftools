@@ -155,6 +155,8 @@ typedef struct _swfoutput_internal
     int shapeposx;
     int shapeposy;
 
+    char* mark;
+
 } swfoutput_internal;
     
 static void swf_fillbitmap(gfxdevice_t*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
@@ -188,6 +190,8 @@ static swfoutput_internal* init_internal_struct()
     i->textid = -1;
     i->frameno = 0;
     i->lastframeno = 0;
+
+    i->mark = 0;
 
     i->fillstyleid;
     i->linestyleid;
@@ -243,6 +247,7 @@ static U16 getNewID(gfxdevice_t* dev)
 	    msg("<error> ID Table overflow");
 	id_error=1;
 	i->overflow = 1;
+	exit(1);
     }
     return ++i->currentswfid;
 }
@@ -254,6 +259,7 @@ static U16 getNewDepth(gfxdevice_t* dev)
 	    msg("<error> Depth Table overflow");
 	id_error=1;
 	i->overflow = 1;
+	exit(1);
     }
     return ++i->depth;
 }
@@ -917,11 +923,15 @@ static void startshape(gfxdevice_t*dev)
     if(i->textid>=0)
         endtext(dev);
 
-    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
+    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
 
     swf_ShapeNew(&i->shape);
     i->linestyleid = swf_ShapeAddLineStyle(i->shape,i->linewidth,&i->strokergb);
     i->fillstyleid = swf_ShapeAddSolidFillStyle(i->shape,&i->fillrgb);
+    if(i->mark) {
+	RGBA markcol = {0,i->mark[0],i->mark[1],i->mark[2]};
+	swf_ShapeAddSolidFillStyle(i->shape,&markcol);
+    }
 
     i->shapeid = getNewID(dev);
     
@@ -1150,6 +1160,10 @@ void swfoutput_finalize(gfxdevice_t*dev)
 
     if(i->frameno == i->lastframeno) // fix: add missing pagefeed
         dev->endpage(dev);
+
+    if(i->mark) {
+	free(i->mark);i->mark = 0;
+    }
 
     endpage(dev);
     fontlist_t *tmp,*iterator = i->fontlist;
@@ -1674,6 +1688,15 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_drawonlyshapes = atoi(value);
     } else if(!strcmp(name, "ignoredraworder")) {
 	i->config_ignoredraworder = atoi(value);
+    } else if(!strcmp(name, "mark")) {
+	if(!value || !value[0]) {
+	    if(i->mark) free(i->mark);
+	    i->mark = 0;
+	} else {
+	    int t;
+	    i->mark = strdup("...");
+	    for(t=0;t<3;t++) if(value[t]) i->mark[t] = value[t];
+	}
     } else if(!strcmp(name, "filloverlap")) {
 	i->config_filloverlap = atoi(value);
     } else if(!strcmp(name, "linksopennewwindow")) {
@@ -2058,12 +2081,16 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     } 
 
     int myshapeid = getNewID(dev);
-    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE);
+    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     RGBA col;
     memset(&col, 0, sizeof(RGBA));
     SHAPE*shape;
     swf_ShapeNew(&shape);
     int fsid = swf_ShapeAddSolidFillStyle(shape,&col);
+    if(i->mark) {
+	RGBA markcol = {0,i->mark[0],i->mark[1],i->mark[2]};
+	swf_ShapeAddSolidFillStyle(shape,&markcol);
+    }
     swf_SetU16(i->tag,myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
     swf_SetRect(i->tag,&r);
@@ -2351,7 +2378,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	} else {
 	    swffont->glyphnames[t] = 0;
 	}
-	advance = (int)(font->glyphs[t].advance * 20);
+	advance = (int)(font->glyphs[t].advance);
 
 	swf_Shape01DrawerInit(&draw, 0);
 	line = font->glyphs[t].line;
@@ -2372,8 +2399,8 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
 	swffont->layout->bounds[t] = swf_ShapeDrawerGetBBox(&draw);
 
-	if(swffont->layout->bounds[t].xmax*2 < advance) {
-	    printf("fix bad advance value\n");
+	if(swffont->layout->bounds[t].xmax && swffont->layout->bounds[t].xmax*2 < advance) {
+	    printf("fix bad advance value: bbox=%d, advance=%d (%f)\n", swffont->layout->bounds[t].xmax, advance, font->glyphs[t].advance);
 	    advance = swffont->layout->bounds[t].xmax;
 	}
 	    
