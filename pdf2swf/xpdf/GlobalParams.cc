@@ -704,7 +704,7 @@ static GString* qualify_filename(GString*path, GString*filename)
     /* absolute path */
     fullpath = filename->copy();
   }
-  printf("%s -%s-> %s\n", filename->getCString(), path->getCString(), fullpath->getCString());
+  //printf("%s -%s-> %s\n", filename->getCString(), path->getCString(), fullpath->getCString());
   return fullpath;
 }
 
