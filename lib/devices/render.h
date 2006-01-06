@@ -19,11 +19,20 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#ifndef __swfoutput_h__
-#define __swfoutput_h__
+#ifndef __render_h__
+#define __render_h__
 
 #include "../gfxdevice.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void gfxdevice_render_init(gfxdevice_t*);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__swfoutput_h__
