@@ -1461,10 +1461,11 @@ void SWFOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
 void SWFOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
-    msg("<debug> drawlink\n");
     double x1, y1, x2, y2, w;
     gfxline_t points[5];
     int x, y;
+    
+    msg("<debug> drawlink\n");
 
     link->getRect(&x1, &y1, &x2, &y2);
     cvtUserToDev(x1, y1, &x, &y);
@@ -1562,7 +1563,9 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
             type = "Launch";
             LinkLaunch*l = (LinkLaunch*)action;
             GString * str = new GString(l->getFileName());
-            str->append(l->getParams());
+	    GString * params = l->getParams();
+	    if(params)
+		str->append(params);
             s = strdup(str->getCString());
             delete str;
         }
@@ -1588,6 +1591,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
             break;
         }
     }
+
     if(!s) s = strdup("-?-");
 
     if(!linkinfo && (page || url))
