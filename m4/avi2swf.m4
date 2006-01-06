@@ -38,8 +38,8 @@ $HAVE_AVIFILE_VERSION_H_DEFINE
 #if (AVIFILE_MAJOR_VERSION == 0) && (AVIFILE_MINOR_VERSION>=6) 
    #include <avifile.h>
    #include <aviplay.h>
-   #include <fourcc.h>
-   #include <creators.h>
+   #include <avm_fourcc.h>
+   #include <avm_creators.h>
    #include <StreamInfo.h>
    #define VERSION6
 #else
