@@ -274,7 +274,7 @@
     .show play as=idle
     .show play as=area
     .show play_pressed as=pressed
-    .show play_pressed as=hower
+    .show play_pressed as=hover
 .end
 
 .button playbutton2
