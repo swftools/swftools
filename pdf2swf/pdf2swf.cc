@@ -34,6 +34,8 @@
 #include "../lib/args.h"
 #include "../lib/os.h"
 #include "../lib/rfxswf.h"
+#include "../lib/devices/swf.h"
+//#include "../lib/devices/render.h"
 #include "SWFOutputDev.h"
 #include "log.h"
 
@@ -54,6 +56,12 @@ static int ynup = 1;
 
 char* fontpaths[256];
 int fontpathpos = 0;
+
+int move_x=0;
+int move_y=0;
+int custom_move = 0;
+int clip_x1=0,clip_y1=0,clip_x2=0,clip_y2=0;
+int custom_clip = 0;
 
 static int system_quiet=0;
 
@@ -133,6 +141,40 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "P"))
     {
 	password = val;
+	return 1;
+    }
+    else if (!strcmp(name, "c"))
+    {
+	char*s = strdup(val);
+	char*x1 = strtok(s, ":");
+	char*y1 = strtok(0, ":");
+	char*x2 = strtok(0, ":");
+	char*y2 = strtok(0, ":");
+	if(!(x1 && y1 && x2 && y2)) {
+	    fprintf(stderr, "-m option requires four arguments, <x1>:<y1>:<x2>:<y2>\n");
+	    exit(1);
+	}
+	custom_clip = 1;
+	clip_x1 = atoi(x1);
+	clip_y1 = atoi(y1);
+	clip_x2 = atoi(x2);
+	clip_y2 = atoi(y2);
+	free(s);
+	return 1;
+    }
+    else if (!strcmp(name, "m"))
+    {
+	char*s = strdup(val);
+	char*c = strchr(s, ':');
+	if(!c) {
+	    fprintf(stderr, "-m option requires two arguments, <x>:<y>\n");
+	    exit(1);
+	}
+	*c = 0;
+	custom_move = 1;
+	move_x = atoi(val);
+	move_y = atoi(c+1);
+	free(s);
 	return 1;
     }
     else if (!strcmp(name, "s"))
@@ -459,7 +501,10 @@ int main(int argn, char *argv[])
         exit(1);
     }
 
-    swf_output_t* swf = swf_output_init();
+    gfxdevice_t swfdev;
+    gfxdevice_swf_init(&swfdev);
+    //gfxdevice_render_init(&swfdev);
+    dev_output_t* swf = dev_output_init(&swfdev);
 
     struct mypage_t {
 	int x;
@@ -474,7 +519,7 @@ int main(int argn, char *argv[])
     for(int pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
     {
 	if(is_in_range(pagenr, pagerange)) {
-	    swf_output_preparepage(swf, pagenr, frame);
+	    dev_output_preparepage(swf, pagenr, frame);
 	    pagenum++;
 	}
 	if(pagenum == xnup*ynup || (pagenr == pdf->num_pages && pagenum>1)) {
@@ -523,7 +568,7 @@ int main(int argn, char *argv[])
 		height += ymax[y];
 		ymax[y] = height;
 	    }
-	    swf_output_startframe(swf, width, height);
+	    dev_output_startframe(swf, width, height);
 	    for(t=0;t<pagenum;t++) {
 		int x = t%xnup;
 		int y = t/xnup;
@@ -537,14 +582,14 @@ int main(int argn, char *argv[])
 			info->yMin + ypos,
 			info->xMax + xpos,
 			info->yMax + ypos, xpos, ypos);
-		pdf_page_rendersection(pages[t].page, swf, xpos, 
-			                                   ypos,
-							   info->xMin + xpos, 
-							   info->yMin + ypos, 
-							   info->xMax + xpos, 
-							   info->yMax + ypos);
+		pdf_page_rendersection(pages[t].page, swf, custom_move? move_x : xpos, 
+			                                   custom_move? move_y : ypos,
+							   custom_clip? clip_x1 : info->xMin + xpos, 
+							   custom_clip? clip_y1 : info->yMin + ypos, 
+							   custom_clip? clip_x2 : info->xMax + xpos, 
+							   custom_clip? clip_y2 : info->yMax + ypos);
 	    }
-	    swf_output_endframe(swf);
+	    dev_output_endframe(swf);
 	    for(t=0;t<pagenum;t++)  {
                 pdf_page_info_destroy(pages[t].info);
 		pdf_page_destroy(pages[t].page);
@@ -552,13 +597,20 @@ int main(int argn, char *argv[])
 	    pagenum = 0;
 	}
     }
-    if(swf_output_save(swf, outputname) < 0) {
+    dev_output_finish(swf);
+
+    gfxresult_t*result = swfdev.finish(&swfdev);
+    if(result->save(result, outputname) < 0) {
         exit(1);
     }
-    int width = (int)swf_output_get(swf, "width");
-    int height = (int)swf_output_get(swf, "height");
+
+    int width = (int)result->get(result, "width");
+    int height = (int)result->get(result, "height");
     msg("<notice> SWF written");
-    swf_output_destroy(swf);
+    
+    result->destroy(result);
+
+    dev_output_destroy(swf);
 
     pdf_destroy(pdf);
 
