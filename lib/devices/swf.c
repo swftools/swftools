@@ -2344,13 +2344,14 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
     for(t=0;t<font->num_glyphs;t++) {
 	drawer_t draw;
 	gfxline_t*line;
+	int advance = 0;
 	swffont->glyph2ascii[t] = font->glyphs[t].unicode;
 	if(font->glyphs[t].name) {
 	    swffont->glyphnames[t] = strdup(font->glyphs[t].name);
 	} else {
 	    swffont->glyphnames[t] = 0;
 	}
-	swffont->glyph[t].advance = (int)(font->glyphs[t].advance * 20);
+	advance = (int)(font->glyphs[t].advance * 20);
 
 	swf_Shape01DrawerInit(&draw, 0);
 	line = font->glyphs[t].line;
@@ -2370,6 +2371,18 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	draw.finish(&draw);
 	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
 	swffont->layout->bounds[t] = swf_ShapeDrawerGetBBox(&draw);
+
+	if(swffont->layout->bounds[t].xmax*2 < advance) {
+	    printf("fix bad advance value\n");
+	    advance = swffont->layout->bounds[t].xmax;
+	}
+	    
+	if(advance<32768) {
+	    swffont->glyph[t].advance = advance;
+	} else {
+	    swffont->glyph[t].advance = 32767;
+	}
+
 	draw.dealloc(&draw);
 
 	swf_ExpandRect2(&bounds, &swffont->layout->bounds[t]);
