@@ -41,6 +41,7 @@ struct {
     int do_cgi;
     int version;
     char *outfile;
+    float scale;
 } global;
 
 struct {
@@ -699,8 +700,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 
     swf_ShapeNew(&s);
     swf_GetMatrix(NULL, &m);
-    m.sx = 20 * 0x10000;
-    m.sy = 20 * 0x10000;
+    m.sx = (int)(20 * 0x10000);
+    m.sy = (int)(20 * 0x10000);
     m.tx = -10;
     m.ty = -10;
     fs = swf_ShapeAddBitmapFillStyle(s, &m, id, 1);
@@ -728,12 +729,15 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     t = swf_InsertTag(t, ST_PLACEOBJECT2);
 
     swf_GetMatrix(NULL, &m);
+    m.sx = (int)(0x10000 * global.scale);
+    m.sy = (int)(0x10000 * global.scale);
+
     if(custom_move) {
 	m.tx = move_x*20;
 	m.ty = move_y*20;
     } else {
-	m.tx = (swf->movieSize.xmax - (int) header.width * 20) / 2;
-	m.ty = (swf->movieSize.ymax - (int) header.height * 20) / 2;
+	m.tx = (swf->movieSize.xmax - (int) (header.width * global.scale * 20)) / 2;
+	m.ty = (swf->movieSize.ymax - (int) (header.height * global.scale * 20)) / 2;
     }
     swf_ObjectPlace(t, id + 1, 50, &m, NULL, NULL);
 
@@ -811,6 +815,11 @@ int args_callback_option(char *arg, char *val)
 	case 'o':
 	    if (val)
 		global.outfile = val;
+	    res = 1;
+	    break;
+
+	case 's':
+	    global.scale = atof(val)/100;
 	    res = 1;
 	    break;
 
@@ -918,6 +927,7 @@ static struct options_t options[] = {
 {"q", "quiet"},
 {"C", "cgi"},
 {"V", "version"},
+{"s", "scale"},
 {0,0}
 };
 
@@ -955,10 +965,11 @@ void args_callback_usage(char *name)
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
-    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
+    printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");
     printf("-q , --quiet                   Omit normal log messages, only log errors\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout\n");
     printf("-V , --version                 Print version information and exit\n");
+    printf("-s , --scale <percent>         Scale image to <percent>% size.\n");
     printf("\n");
 }
 
@@ -972,6 +983,7 @@ int main(int argc, char **argv)
     global.framerate = 1.0;
     global.verbose = 1;
     global.version = 4;
+    global.scale = 1.0;
 
     processargs(argc, argv);
     
@@ -984,10 +996,8 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Processing %i file(s)...\n", global.nfiles);
 
     t = MovieStart(&swf, global.framerate,
-		   global.force_width ? global.force_width : global.
-		   max_image_width,
-		   global.force_height ? global.force_height : global.
-		   max_image_height);
+		   global.force_width ? global.force_width : (int)(global.max_image_width*global.scale),
+		   global.force_height ? global.force_height : (int)(global.max_image_height*global.scale));
 
     {
 	int i;

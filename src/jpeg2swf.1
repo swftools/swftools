@@ -1,4 +1,4 @@
-.TH jpeg2swf "1" "January 2005" "jpeg2swf" "swftools"
+.TH jpeg2swf "1" "January 2006" "jpeg2swf" "swftools"
 .SH NAME
 jpeg2swf - Converts jpeg images to SWF.
 
@@ -29,6 +29,12 @@ converted picture is a seperate frame in the target SWF.
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
     smaller, but not playable in Flash Plugins of Version 5 and below.
 .TP
+\fB\-x\fR, \fB\-\-xoffset\fR \fIoffset\fR  
+    horizontally offset images by \fIoffset\fR
+.TP
+\fB\-y\fR, \fB\-\-yoffset\fR \fIoffset\fR  
+    vertically offset images by \fIoffset\fR
+.TP
 \fB\-X\fR, \fB\-\-width\fR \fIwidth\fR   
     Force movie width to \fIwidth\fR (default: autodetect)
 .TP
@@ -40,8 +46,15 @@ converted picture is a seperate frame in the target SWF.
 .TP
 \fB\-V\fR, \fB\-\-version\fR 
     Print version information and exit
+.TP
+\fB\-f\fR, \fB\-\-fit-to-movie\fR 
+    Fit images to movie size
+.TP
+\fB\-e\fR, \fB\-\-export\fR \fIassetname\fR      
+    Make importable as asset with \fIassetname\fR
 .SH AUTHORS
 
 Rainer Böhme <rfxswf@reflex-studio.de>
 .TP
 Matthias Kramm
+

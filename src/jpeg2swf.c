@@ -487,14 +487,14 @@ static struct options_t options[] = {
 {"q", "quality"},
 {"r", "rate"},
 {"z", "zlib"},
-{"X", "width"},
-{"Y", "height"},
 {"x", "xoffset"},
 {"y", "yoffset"},
-{"e", "export"},
-{"f", "fit-to-movie"},
+{"X", "width"},
+{"Y", "height"},
 {"v", "verbose"},
 {"V", "version"},
+{"f", "fit-to-movie"},
+{"e", "export"},
 {0,0}
 };
 
@@ -538,11 +538,10 @@ void args_callback_usage(char *name)
     printf("-y , --yoffset <offset>        vertically offset images by <offset>\n");
     printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
-    printf("-f , --fit-to-movie            Fit images to movie size\n");
-    printf("-e , --export <assetname>      Make importable as asset with <assetname>\n");
-    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
-    //printf("-q , --quiet                   Omit normal log messages, only log errors\n");
+    printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
     printf("-V , --version                 Print version information and exit\n");
+    printf("-f , --fit-to-movie            Fit images to movie size\n");
+    printf("-e , --export <assetname>          Make importable as asset with <assetname>\n");
     printf("\n");
 }
 
