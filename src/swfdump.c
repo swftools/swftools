@@ -167,6 +167,7 @@ void args_callback_usage(char *name)
     printf("-D , --full                    Show everything. Same as -atp\n");
     printf("-V , --version                 Print version info and exit\n");
     printf("-e , --html                    Print out html code for embedding the file\n");
+    printf("-E , --xhtml                   Print out xhtml code for embedding the file\n");
     printf("-a , --action                  Disassemble action tags\n");
     printf("-t , --text                    Show text fields (like swfstrings).\n");
     printf("-s , --shapes                  Show shape coordinates/styles\n");
