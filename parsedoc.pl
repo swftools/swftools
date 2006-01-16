@@ -21,7 +21,7 @@ sub add_option_to_manpage
     $shortopt =~ s|-|\\-|; 
     $params =~ s|<(.*)>|\\fI\1\\fR|;
     $longdoc =~ s/<([a-zA-Z0-9_-]+)>/\\fI\1\\fR/;
-    $longdoc =~ s/%/%%$1/g;
+    #$longdoc =~ s/%/%%$1/g;
     print manpage << "EOF"
 .TP
 \\fB\\-$shortopt\\fR, \\fB\\-\\-$longopt\\fR $params
