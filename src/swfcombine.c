@@ -687,7 +687,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		}
 		if(tag_ok_for_slave(stag->id)) {
 		    tag = swf_InsertTag(tag, stag->id);
-		    swf_SetBlock(tag, stag->data, stag->len);
+		    write_changepos(tag, stag, config.movex, config.movey, config.scalex, config.scaley, 0);
 		}
 		stag = stag->next;
 	    }
@@ -718,17 +718,19 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 		    swf_SetDefineID(tag, replaceddefine);
 		} else {
 		    /* don't write this tag */
-		    msg("<verbose> replacing tag %d id %d with sprite", rtag->id
-			    ,spriteid);
+		    msg("<verbose> replacing tag %d ID %d with sprite", rtag->id ,spriteid);
 		}
 
 		if(flags&FLAGS_WRITESPRITE)
 		{
+		    msg("<debug> writing sprite defines");
 		    tag = write_sprite_defines(tag, slave);
+		    msg("<debug> writing sprite");
 		    tag = write_sprite(tag, slave, spriteid, replaceddefine);
 		}
 		if(flags&FLAGS_WRITESLAVE)
 		{
+		    msg("<debug> writing slave");
 		    outputslave = 1;
 		}
 	    } else { 
@@ -797,8 +799,9 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
     while(stag && stag->id!=ST_END)
     {
 	    if(tag_ok_for_slave(stag->id)) {
+		msg("<debug> [slave] write tag %02x (%d bytes in body), %.2f %.2f", rtag->id, rtag->len, config.movex /20.0, config.movey /20.0);
 		tag = swf_InsertTag(tag, stag->id);
-		swf_SetBlock(tag, stag->data, stag->len);
+		write_changepos(tag, stag, config.movex, config.movey, config.scalex, config.scaley, 0);
 	    }
 	    stag = stag->next;
     }
@@ -954,6 +957,15 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	} else if(tag->id == ST_PLACEOBJECT2) {
 	    char * name = swf_GetName(tag);
 	    int id = swf_GetPlaceID(tag);
+
+	    {
+		SWFPLACEOBJECT obj;
+		swf_GetPlaceObject(tag, &obj);
+		swf_PlaceObjectFree(&obj);
+		if(obj.clipdepth) {
+		    depthbitmap[obj.clipdepth] = 1;
+		}
+	    }
 
 	    if(name)
 	      msg("<verbose> tagid %02x places object %d named \"%s\"", tag->id, id, name);
