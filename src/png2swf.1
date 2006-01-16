@@ -1,6 +1,6 @@
-.TH png2swf "1" "January 2005" "png2swf" "swftools"
+.TH png2swf "1" "January 2006" "png2swf" "swftools"
 .SH NAME
-png2swf - Takes a number of gif files and converts them to a swf movie, one
+png2swf - Takes a number of png files and converts them to a swf movie, one
 picture per frame.
 
 .SH Synopsis
@@ -36,8 +36,14 @@ compression algorithm is used).
 \fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
     Set verbose level (0=quiet, 1=default, 2=debug)
 .TP
+\fB\-q\fR, \fB\-\-quiet\fR 
+    Omit normal log messages, only log errors
+.TP
 \fB\-C\fR, \fB\-\-cgi\fR 
     For use as CGI- prepend http header, write to stdout
 .TP
 \fB\-V\fR, \fB\-\-version\fR 
     Print version information and exit
+.TP
+\fB\-s\fR, \fB\-\-scale\fR \fIpercent\fR
+    Scale image to \fIpercent\fR% size.
