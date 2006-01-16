@@ -865,7 +865,6 @@ void writePNG(char*filename, unsigned char*data, int width, int height)
     png_start_chunk(fi, "IEND", 0);
     png_end_chunk(fi);
 
-    free(data);
     free(data2);
     free(data3);
 }
