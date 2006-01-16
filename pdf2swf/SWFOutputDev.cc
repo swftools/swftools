@@ -1226,6 +1226,9 @@ void SWFOutputDev::drawChar(GfxState *state, double x, double y,
     Unicode u=0;
     char*name=0;
 
+    if(uLen)
+	u = _u[0];
+
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
 
