@@ -601,7 +601,7 @@ art_svp_intersect_add_horiz (ArtIntersectCtx *ctx, ArtActiveSeg *seg)
 #ifdef CHEAP_SANITYCHECK
   if (seg->flags & ART_ACTIVE_FLAGS_IN_HORIZ)
     {
-      art_warn ("*** attempt to put segment in horiz list twice\n");
+      //art_warn ("*** attempt to put segment in horiz list twice\n");
       return;
     }
   seg->flags |= ART_ACTIVE_FLAGS_IN_HORIZ;
