@@ -433,7 +433,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
            important for texture and gradient fill */
         for(t=0;t<s2->numfillstyles;t++) {
             MATRIX nm;
-            swf_MatrixJoin(&nm, &s2->fillstyles[t].m, &mat); //TODO: is this the right order?
+            swf_MatrixJoin(&nm, &mat, &s2->fillstyles[t].m);
             /*nm.sx *= i->multiply;
             nm.sy *= i->multiply;
             nm.r0 *= i->multiply;
@@ -1127,7 +1127,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             swf_GetPlaceObject(tag, &p);
             /* TODO: add move and deletion */
             placements[numplacements++] = p;
-	    swf_PlaceObjectFree(&p); //dirty! but it only removes items we don't need
+	    swf_PlaceObjectFree(&p); //dirty! but it only frees fields we don't use
         }
         tag = tag->next;
     }
