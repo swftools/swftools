@@ -26,8 +26,12 @@ compression algorithm is used).
     Force movie height to <height> (default: autodetect)
 -v, --verbose <level>
     Set verbose level (0=quiet, 1=default, 2=debug)
+-q, --quiet
+    Omit normal log messages, only log errors
 -C, --cgi
     For use as CGI- prepend http header, write to stdout
 -V, --version
     Print version information and exit
+-s, --scale <percent>
+    Scale image to <percent>% size.
 
