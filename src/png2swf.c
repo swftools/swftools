@@ -927,7 +927,6 @@ static struct options_t options[] = {
 {"q", "quiet"},
 {"C", "cgi"},
 {"V", "version"},
-{"s", "scale"},
 {0,0}
 };
 
@@ -965,11 +964,10 @@ void args_callback_usage(char *name)
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
-    printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");
+    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
     printf("-q , --quiet                   Omit normal log messages, only log errors\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout\n");
     printf("-V , --version                 Print version information and exit\n");
-    printf("-s , --scale <percent>         Scale image to <percent>% size.\n");
     printf("\n");
 }
 
