@@ -46,9 +46,9 @@ static struct options_t options[] = {
 {"e", "expand"},
 {"O", "optimize"},
 {"S", "swifty"},
+{"c", "clip"},
 {"o", "output"},
 {"v", "verbose"},
-{"c", "clip"},
 {"V", "version"},
 {0,0}
 };
@@ -122,6 +122,7 @@ void args_callback_usage(char *name)
     printf("-e , --expand                  Write out a new file using the recalculated bounding box\n");
     printf("-O , --optimize                Recalculate bounding boxes\n");
     printf("-S , --swifty                  Print out transformed bounding boxes\n");
+    printf("-c , --clip                    Clip bounding boxes to movie size\n");
     printf("-o , --output <filename>       Set output filename to <filename> (for -O)\n");
     printf("-v , --verbose                 Be more verbose\n");
     printf("-V , --version                 Print program version and exit\n");
