@@ -886,6 +886,22 @@ void swf_RelocateDepth(SWF*swf, char*bitmap)
 	/* TODO * clip depths 
 	        * sprites
 	 */
+	if(tag->id == ST_PLACEOBJECT2) {
+	    SWFPLACEOBJECT obj;
+	    swf_GetPlaceObject(tag, &obj);
+	    if(obj.clipdepth) {
+		int newdepth = obj.clipdepth+nr;
+		if(newdepth>65535) {
+		    fprintf(stderr, "Couldn't relocate depths: too large values\n");
+		    newdepth = 65535;
+		}
+		obj.clipdepth = newdepth;
+		swf_ResetTag(tag, ST_PLACEOBJECT2);
+		swf_SetPlaceObject(tag, &obj);
+	    }
+	    swf_PlaceObjectFree(&obj);
+	}
+
 	int depth = swf_GetDepth(tag);
 	if(depth>=0) {
 	    int newdepth = depth+nr;
