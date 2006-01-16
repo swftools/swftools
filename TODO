@@ -34,7 +34,6 @@ avi2swf:
 
 swfcombine:
 
-    * "swfcombine -mT file.swf -x 300 file2.swf" doesn't work
     * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
     * "swfcombine file.swf -x 200 -y 200 -s 200 box1=file1.swf" doesn't work?
     * swfcombine -f should allocate a proper depth, not just use 65535.
@@ -45,7 +44,6 @@ swfcombine:
     * rotating
     * allow to replace images
     * allow to replace texts
-    * swfcombine -Tm picture.swf -x 100 -y 100 banner.swf -o final.swf doesn't work
 
 swfextract:
     
