@@ -2274,7 +2274,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
     ncomps = colorMap->getNumPixelComps();
     bits = colorMap->getBits();
   }
-  
+      
   if(maskStr) {
       int x,y;
       unsigned char buf[8];
@@ -2310,8 +2310,9 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  }
 	  delete imgMaskStr;
       }
+      maskStr->close();
   }
-      
+  
   imgStr = new ImageStream(str, width, ncomps,bits);
   imgStr->reset();
 
@@ -2334,6 +2335,7 @@ void SWFOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   state->transform(0, 0, &x2, &y2); x2 += user_movex; y2 += user_movey;
   state->transform(1, 0, &x3, &y3); x3 += user_movex; y3 += user_movey;
   state->transform(1, 1, &x4, &y4); x4 += user_movex; y4 += user_movey;
+
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
