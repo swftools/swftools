@@ -56,9 +56,17 @@ static void linedraw_lineTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
     gfxline_t*l = rfx_alloc(sizeof(gfxline_t));
+
+    if(!i->start) {
+	/* starts with a line, not with a moveto. That needs we first
+	   need an explicit moveto to (0,0) */
+	linedraw_moveTo(d, 0, 0);
+    }
+
     l->type = gfx_lineTo;
     d->x = l->x = x;
     d->y = l->y = y;
+
     l->next = 0;
     if(i->next)
 	i->next->next = l;
@@ -70,6 +78,13 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
     gfxline_t*l = rfx_alloc(sizeof(gfxline_t));
+
+    if(!i->start) {
+	/* starts with a line, not with a moveto. That needs we first
+	   need an explicit moveto to (0,0) */
+	linedraw_moveTo(d, 0, 0);
+    }
+
     l->type = gfx_splineTo;
     d->x = l->x = x; 
     d->y = l->y = y;
@@ -94,6 +109,8 @@ static void* linedraw_result(gfxdrawer_t*d)
 void gfxdrawer_target_gfxline(gfxdrawer_t*d)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)rfx_calloc(sizeof(linedraw_internal_t));
+    d->x = 0x7fffffff;
+    d->y = 0x7fffffff;
     d->internal = i;
     d->moveTo = linedraw_moveTo;
     d->lineTo = linedraw_lineTo;
