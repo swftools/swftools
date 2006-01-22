@@ -89,7 +89,8 @@ int args_callback_option(char*name,char*val)
 	return 0;
     } 
     else if(!strcmp(name, "q")) {
-	verbose --;
+	if(verbose)
+	    verbose --;
 	return 0;
     } 
     else if(!strcmp(name, "e")) {
@@ -293,8 +294,10 @@ static SRECT clipBBox(TAG*tag, SRECT mbbox, SRECT r)
 	return r;
     }
 
-    printf("ID %d\n", id);
-    swf_DumpMatrix(stdout, &m);
+    if(verbose) {
+	printf("ID %d\n", id);
+	swf_DumpMatrix(stdout, &m);
+    }
     mbbox.xmin -= m.tx;
     mbbox.ymin -= m.ty;
     mbbox.xmax -= m.tx;
@@ -303,25 +306,29 @@ static SRECT clipBBox(TAG*tag, SRECT mbbox, SRECT r)
     mbbox.xmax *= 65536.0/m.sx;
     mbbox.ymin *= 65536.0/m.sy;
     mbbox.ymax *= 65536.0/m.sy;
-    
-    printf("border: %f/%f/%f/%f - rect: %f/%f/%f/%f\n",
-	    mbbox.xmin /20.0,
-	    mbbox.ymin /20.0,
-	    mbbox.xmax /20.0,
-	    mbbox.ymax /20.0,
-	    r.xmin /20.0,
-	    r.ymin /20.0,
-	    r.xmax /20.0,
-	    r.ymax /20.0);
+   
+    if(verbose) {
+	printf("border: %f/%f/%f/%f - rect: %f/%f/%f/%f\n",
+		mbbox.xmin /20.0,
+		mbbox.ymin /20.0,
+		mbbox.xmax /20.0,
+		mbbox.ymax /20.0,
+		r.xmin /20.0,
+		r.ymin /20.0,
+		r.xmax /20.0,
+		r.ymax /20.0);
+    }
     
 
     r = swf_ClipRect(mbbox, r);
-    
-    printf("new rect: %f/%f/%f/%f\n",
-	    r.xmin /20.0,
-	    r.ymin /20.0,
-	    r.xmax /20.0,
-	    r.ymax /20.0);
+   
+    if(verbose) {
+	printf("new rect: %f/%f/%f/%f\n",
+		r.xmin /20.0,
+		r.ymin /20.0,
+		r.xmax /20.0,
+		r.ymax /20.0);
+    }
 
     return r;
 }
