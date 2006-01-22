@@ -715,7 +715,7 @@ int s_getframe()
     return currentframe+1;
 }
 
-void s_frame(int nr, int cut, char*name)
+void s_frame(int nr, int cut, char*name, char anchor)
 {
     int t;
     TAG*now = tag;
@@ -729,13 +729,15 @@ void s_frame(int nr, int cut, char*name)
 	if(t==nr-1 && name && *name) {
 	    tag = swf_InsertTag(tag, ST_FRAMELABEL);
 	    swf_SetString(tag, name);
-	    swf_SetU8(tag, 1); //make this an anchor
+	    if(anchor)
+		swf_SetU8(tag, 1); //make this an anchor
 	}
     }
-    if(nr == 0 && currentframe == 0 && name) {
+    if(nr == 0 && currentframe == 0 && name && *name) {
         tag = swf_InsertTag(tag, ST_FRAMELABEL);
         swf_SetString(tag, name);
-	swf_SetU8(tag, 1); //make this an anchor
+	if(anchor)
+	    swf_SetU8(tag, 1); //make this an anchor
     }
 
     if(cut) {
@@ -1801,8 +1803,10 @@ int parseTwip(char*str)
 	int t;
 	return sign*parseInt(str)*20;
     } else {
-	int l=strlen(++dot);
+	char* old = strdup(str);
+	int l=strlen(dot+1);
 	char*s;
+	*dot++ = 0;
 	for(s=str;s<dot-1;s++)
 	    if(*s<'0' || *s>'9')
 		syntaxerror("Not a coordinate: \"%s\"", str);
@@ -1811,10 +1815,12 @@ int parseTwip(char*str)
 		syntaxerror("Not a coordinate: \"%s\"", str);
 	}
 	if(l>2 || (l==2 && (dot[1]!='0' && dot[1]!='5'))) {
-	    warning("precision loss: %s converted to twip: %s", str, dot);
+	    dot[1] = ((dot[1]-0x30)/5)*5 + 0x30;
 	    dot[2] = 0;
 	    l=2;
+	    warning("precision loss: %s converted to twip: %s.%s", old, str, dot);
 	}
+	free(old);
 	if(l==0)
 	    return sign*atoi(str)*20;
 	if(l==1)
@@ -2490,7 +2496,14 @@ static int c_frame(map_t*args)
 {
     char*framestr = lu(args, "n");
     char*cutstr = lu(args, "cut");
+    
     char*name = lu(args, "name");
+    char*anchor = lu(args, "anchor");
+    char buf[40];
+
+    if(!strcmp(anchor, "anchor") && !*name)
+	name = framestr;
+
     int frame;
     int cut = 0;
     if(strcmp(cutstr, "no"))
@@ -2507,7 +2520,7 @@ static int c_frame(map_t*args)
 		&& !(frame==1 && s_getframe()==frame)) // equality is o.k. for frame 0
 	    syntaxerror("frame expression must be >%d (is:%s)", s_getframe(), framestr);
     }
-    s_frame(frame, cut, name);
+    s_frame(frame, cut, name, !strcmp(anchor, "anchor"));
     return 0;
 }
 static int c_primitive(map_t*args) 
@@ -2872,7 +2885,7 @@ static struct {
     char*arguments;
 } arguments[] =
 {{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default"},
- {"frame", c_frame, "n=<plus>1 name= @cut=no"},
+ {"frame", c_frame, "n=<plus>1 name= @cut=no @anchor=no"},
  // "import" type stuff
  {"swf", c_swf, "name filename"},
  {"shape", c_swf, "name filename"},
