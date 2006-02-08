@@ -148,6 +148,8 @@ ${name}/lib/devices/swf.h \
 ${name}/lib/devices/swf.c \
 ${name}/lib/devices/file.h \
 ${name}/lib/devices/file.c \
+${name}/lib/devices/render.c \
+${name}/lib/devices/render.h \
 ${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/pdf2swf/SWFOutputDev.h \
 ${name}/pdf2swf/SWFOutputDev.cc \
