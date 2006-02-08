@@ -48,8 +48,8 @@
 #include "Error.h"
 #include "Link.h"
 #include "OutputDev.h"
-#include "GfxState.h"
 #include "GfxFont.h"
+#include "GfxState.h"
 #include "CharCodeToUnicode.h"
 #include "NameToUnicodeTable.h"
 #include "GlobalParams.h"
@@ -169,10 +169,9 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar();
   
-  // Can this device draw gradients?
-  virtual GBool useGradients();
-  
   virtual GBool interpretType3Chars() {return gTrue;}
+  
+  //virtual GBool useShadedFills() { return gTrue; }
 
   //----- initialization and control
 
@@ -385,7 +384,6 @@ class InfoOutputDev:  public OutputDev
   }
   virtual GBool upsideDown() {return gTrue;}
   virtual GBool useDrawChar() {return gTrue;}
-  virtual GBool useGradients() {return gTrue;}
   virtual GBool interpretType3Chars() {return gTrue;}
   virtual void startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
   {
@@ -1054,15 +1052,6 @@ GBool SWFOutputDev::upsideDown()
 };
 GBool SWFOutputDev::useDrawChar() 
 {
-    return gTrue;
-}
-GBool SWFOutputDev::useGradients()
-{
-    if(!gradientinfo)
-    {
-	msg("<notice> File contains gradients");
-	gradientinfo = 1;
-    }
     return gTrue;
 }
 
