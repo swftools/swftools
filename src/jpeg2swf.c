@@ -48,7 +48,14 @@ struct {
     int xoffset;
     int yoffset;
     int fit_to_movie;
+    float scale;
 } global;
+
+static int custom_move=0;
+static int move_x=0;
+static int move_y=0;
+static int clip_x1=0,clip_y1=0,clip_x2=0,clip_y2=0;
+static int custom_clip = 0;
 
 typedef struct _image {
     char *filename;
@@ -69,10 +76,18 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 
     swf->fileVersion = global.version;
     swf->frameRate = (int)(256.0 * framerate);
-    swf->movieSize.xmin = global.xoffset * 20;
-    swf->movieSize.ymin = global.yoffset * 20;
-    swf->movieSize.xmax = swf->movieSize.xmin + dx * 20;
-    swf->movieSize.ymax = swf->movieSize.ymin + dy * 20;
+
+    if(custom_clip) {
+	swf->movieSize.xmin = clip_x1 * 20;
+	swf->movieSize.ymin = clip_y1 * 20;
+	swf->movieSize.xmax = clip_x2 * 20;
+	swf->movieSize.ymax = clip_y2 * 20;
+    } else {
+	swf->movieSize.xmin = global.xoffset * 20;
+	swf->movieSize.ymin = global.yoffset * 20;
+	swf->movieSize.xmax = swf->movieSize.xmin + dx * 20;
+	swf->movieSize.ymax = swf->movieSize.ymin + dy * 20;
+    }
 
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
@@ -303,8 +318,16 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality,
 
 	t = swf_InsertTag(t, ST_PLACEOBJECT2);
 	swf_GetMatrix(NULL, &m);
-	m.tx = (movie_width - width * 20) / 2;
-	m.ty = (movie_height - height * 20) / 2;
+	m.sx = (int)(0x10000 * global.scale);
+	m.sy = (int)(0x10000 * global.scale);
+
+	if(custom_move) {
+	    m.tx = move_x*20;
+	    m.ty = move_y*20;
+	} else {
+	    m.tx = (movie_width - (width * global.scale * 20)) / 2;
+	    m.ty = (movie_height - (height * global.scale * 20)) / 2;
+	}
 	swf_ObjectPlace(t, global.next_id, 1, &m, NULL, NULL);
 	global.next_id++;
 	t = swf_InsertTag(t, ST_SHOWFRAME);
@@ -423,11 +446,6 @@ int args_callback_option(char *arg, char *val)
 	    res = 1;
 	    break;
 
-	case 'm':
-	    global.mx = 1;
-	    global.version = 6;
-	    return 0;
-
 	case 'z':
 	    global.version = 6;
 	    return 0;
@@ -466,6 +484,50 @@ int args_callback_option(char *arg, char *val)
 	    global.fit_to_movie = 1;
 	    res = 0;
 	    break;
+	
+	case 'c': {
+	    char*s = strdup(val);
+	    char*x1 = strtok(s, ":");
+	    char*y1 = strtok(0, ":");
+	    char*x2 = strtok(0, ":");
+	    char*y2 = strtok(0, ":");
+	    if(!(x1 && y1 && x2 && y2)) {
+		fprintf(stderr, "-m option requires four arguments, <x1>:<y1>:<x2>:<y2>\n");
+		exit(1);
+	    }
+	    custom_clip = 1;
+	    clip_x1 = atoi(x1);
+	    clip_y1 = atoi(y1);
+	    clip_x2 = atoi(x2);
+	    clip_y2 = atoi(y2);
+	    free(s);
+
+	    res = 1;
+	    break;
+	}
+
+	case 'm': {
+	    char*s = strdup(val);
+	    char*c = strchr(s, ':');
+	    if(!c) {
+		fprintf(stderr, "-m option requires two arguments, <x>:<y>\n");
+		exit(1);
+	    }
+	    *c = 0;
+	    custom_move = 1;
+	    move_x = atoi(val);
+	    move_y = atoi(c+1);
+	    free(s);
+
+	    res = 1;
+	    break;
+	}
+	
+	case 's': {
+	    global.scale = atof(val)/100;
+	    res = 1;
+	    break;
+	}
 
 	default:
 	    res = -1;
@@ -483,7 +545,6 @@ int args_callback_option(char *arg, char *val)
 
 static struct options_t options[] = {
 {"o", "output"},
-{"m", "mx"},
 {"q", "quality"},
 {"r", "rate"},
 {"z", "zlib"},
@@ -530,7 +591,6 @@ void args_callback_usage(char *name)
     printf("Usage: %s [-options [value]] imagefiles[.jpg]|[.jpeg] [...]\n", name);
     printf("\n");
     printf("-o , --output <outputfile>     Explicitly specify output file. (otherwise, output.swf will be used)\n");
-    printf("-m , --mx                      Use Flash MX H.263 compression (use for correlated images)\n");
     printf("-q , --quality <quality>       Set compression quality (1-100, 1=worst, 100=best)\n");
     printf("-r , --rate <framerate>         Set movie framerate (frames per second)\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
@@ -562,6 +622,7 @@ int main(int argc, char **argv)
     global.xoffset = 0;
     global.yoffset = 0;
     global.fit_to_movie = 0;
+    global.scale = 1.0;
 	
     processargs(argc, argv);
 
@@ -569,10 +630,8 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Processing %i file(s)...\n", global.nfiles);
 
     t = MovieStart(&swf, global.framerate,
-		   global.force_width ? global.force_width : global.
-		   max_image_width,
-		   global.force_height ? global.force_height : global.
-		   max_image_height);
+		   global.force_width ? global.force_width : (int)(global.max_image_width*global.scale),
+		   global.force_height ? global.force_height : (int)(global.max_image_height*global.scale));
 
     {
 	int i;
