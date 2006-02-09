@@ -19,7 +19,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: quantize_pvt.c,v 1.1 2002/04/28 17:30:26 kramm Exp $ */
+/* $Id: quantize_pvt.c,v 1.2 2006/02/09 16:55:31 kramm Exp $ */
+#include <stdlib.h>
 #include "config_static.h"
 
 #include <assert.h>

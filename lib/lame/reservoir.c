@@ -19,8 +19,9 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: reservoir.c,v 1.1 2002/04/28 17:30:27 kramm Exp $ */
+/* $Id: reservoir.c,v 1.2 2006/02/09 16:55:45 kramm Exp $ */
 
+#include <stdlib.h>
 #include "config_static.h"
 
 #include <assert.h>

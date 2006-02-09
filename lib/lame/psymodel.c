@@ -19,7 +19,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: psymodel.c,v 1.1 2002/04/28 17:30:23 kramm Exp $ */
+/* $Id: psymodel.c,v 1.2 2006/02/09 16:54:55 kramm Exp $ */
 
 
 /*
@@ -139,6 +139,7 @@ blocktype_d[2]        block type to use for previous granule
 
 
 
+#include <stdlib.h>
 #include "config_static.h"
 
 #include "util.h"

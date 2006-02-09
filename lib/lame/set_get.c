@@ -20,8 +20,9 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: set_get.c,v 1.1 2002/04/28 17:30:28 kramm Exp $ */
+/* $Id: set_get.c,v 1.2 2006/02/09 16:56:00 kramm Exp $ */
 
+#include <stdlib.h>
 #include "config_static.h"
 
 #include <assert.h>

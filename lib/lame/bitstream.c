@@ -18,10 +18,11 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  *
- * $Id: bitstream.c,v 1.2 2002/05/19 18:09:36 kramm Exp $
+ * $Id: bitstream.c,v 1.3 2006/02/09 16:53:21 kramm Exp $
  */
 
 
+#include <stdlib.h>
 #include "config_static.h"
 
 #include <stdlib.h>

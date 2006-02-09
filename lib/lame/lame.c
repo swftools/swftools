@@ -20,8 +20,9 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: lame.c,v 1.1 2002/04/28 17:30:20 kramm Exp $ */
+/* $Id: lame.c,v 1.2 2006/02/09 16:54:20 kramm Exp $ */
 
+#include <stdlib.h>
 #include "config_static.h"
 
 

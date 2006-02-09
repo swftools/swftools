@@ -19,8 +19,9 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: takehiro.c,v 1.1 2002/04/28 17:30:29 kramm Exp $ */
+/* $Id: takehiro.c,v 1.2 2006/02/09 16:56:29 kramm Exp $ */
 
+#include <stdlib.h>
 #include "config_static.h"
 
 #include <assert.h>

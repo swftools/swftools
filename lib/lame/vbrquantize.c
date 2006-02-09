@@ -19,8 +19,9 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: vbrquantize.c,v 1.1 2002/04/28 17:30:30 kramm Exp $ */
+/* $Id: vbrquantize.c,v 1.2 2006/02/09 16:57:00 kramm Exp $ */
 
+#include <stdlib.h>
 #include "config_static.h"
 
 #include <assert.h>

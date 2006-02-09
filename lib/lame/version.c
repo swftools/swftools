@@ -26,11 +26,12 @@
   Contains functions which describe the version of LAME.
 
   \author A.L. Faber
-  \version \$Id: version.c,v 1.1 2002/04/28 17:30:31 kramm Exp $
+  \version \$Id: version.c,v 1.2 2006/02/09 16:57:15 kramm Exp $
   \ingroup libmp3lame
 */
 
 
+#include <stdlib.h>
 #include "config_static.h"
 
 
