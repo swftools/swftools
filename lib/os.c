@@ -101,7 +101,7 @@ char* getInstallationPath()
     if(path)
 	return path;
     else
-	return "C:\\swftools";
+	return 0;
 #elif defined(CYGWIN)
     return SWFTOOLS_DATADIR;
 #else
