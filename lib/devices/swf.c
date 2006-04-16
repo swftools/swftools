@@ -88,6 +88,7 @@ typedef struct _swfoutput_internal
     double config_caplinewidth;
     char* config_linktarget;
     char*config_internallinkfunction;
+    char*config_externallinkfunction;
 
     SWF* swf;
 
@@ -231,6 +232,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_caplinewidth=1;
     i->config_linktarget=0;
     i->config_internallinkfunction=0;
+    i->config_externallinkfunction=0;
 
     i->config_linkcolor.r = i->config_linkcolor.g = i->config_linkcolor.b = 255;
     i->config_linkcolor.a = 0x40;
@@ -1398,20 +1400,25 @@ void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, char*url)
 }
 void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points)
 {
-    ActionTAG* actions;
+    ActionTAG* actions = 0;
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid>=0)
 	endshape(dev);
     if(i->textid>=0)
 	endtext(dev);
-   
-    if(!i->config_linktarget) {
+    
+    if(i->config_externallinkfunction) {
+	actions = action_PushString(actions, url); //parameter
+	actions = action_PushInt(actions, 1); //number of parameters (1)
+	actions = action_PushString(actions, i->config_externallinkfunction); //function name
+	actions = action_CallFunction(actions);
+    } else if(!i->config_linktarget) {
 	if(!i->config_opennewwindow)
-	  actions = action_GetUrl(0, url, "_parent");
+	  actions = action_GetUrl(actions, url, "_parent");
 	else
-	  actions = action_GetUrl(0, url, "_this");
+	  actions = action_GetUrl(actions, url, "_this");
     } else {
-	actions = action_GetUrl(0, url, i->config_linktarget);
+	actions = action_GetUrl(actions, url, i->config_linktarget);
     }
     actions = action_End(actions);
     
@@ -1719,6 +1726,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_bboxvars = atoi(value);
     } else if(!strcmp(name, "internallinkfunction")) {
 	i->config_internallinkfunction = strdup(value);
+    } else if(!strcmp(name, "externallinkfunction")) {
+	i->config_externallinkfunction = strdup(value);
     } else if(!strcmp(name, "disable_polygon_conversion")) {
 	i->config_disable_polygon_conversion = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
