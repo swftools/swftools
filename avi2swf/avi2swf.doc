@@ -20,8 +20,10 @@ from AVI files.
     Set the mp3 bitrate to encode audio with
 -r , --mp3-samplerate <hz>
     Set the mp3 samplerate to encode audio with (default: 11025)
--d , --scale <val>
+-s , --scale <val>
     Scale down to factor <val>. (in %, e.g. 100 = original size)
+-S , --skipframes <num>
+    Skip <num> frames before starting the conversion.
 -p , --flip
     Turn movie upside down
 -q , --quality <val>
