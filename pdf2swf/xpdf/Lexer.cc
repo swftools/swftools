@@ -74,6 +74,7 @@ Lexer::Lexer(XRef *xref, Object *obj) {
     curStr.streamReset();
   }
 }
+static int illegalChars = 0;
 
 Lexer::~Lexer() {
   if (!curStr.isNone()) {
@@ -83,6 +84,9 @@ Lexer::~Lexer() {
   if (freeArray) {
     delete streams;
   }
+  if(illegalChars)
+      error(0, "Illegal characters in hex string (%d)", illegalChars);
+  illegalChars = 0;
 }
 
 int Lexer::getChar() {
@@ -330,7 +334,8 @@ Object *Lexer::getObj(Object *obj) {
 	} else if (c2 >= 'a' && c2 <= 'f') {
 	  c += c2 - 'a' + 10;
 	} else {
-	  error(getPos(), "Illegal digit in hex char in name");
+	  illegalChars++;
+	  //error(getPos(), "Illegal digit in hex char in name");
 	}
       }
      notEscChar:
@@ -384,8 +389,10 @@ Object *Lexer::getObj(Object *obj) {
 	    c2 += c - 'A' + 10;
 	  else if (c >= 'a' && c <= 'f')
 	    c2 += c - 'a' + 10;
-	  else
-	    error(getPos(), "Illegal character <%02x> in hex string", c);
+	  else {
+	    illegalChars++;
+	    //error(getPos(), "Illegal character <%02x> in hex string", c);
+	  }
 	  if (++m == 2) {
 	    if (n == tokBufSize) {
 	      if (!s)
@@ -421,7 +428,8 @@ Object *Lexer::getObj(Object *obj) {
       tokBuf[2] = '\0';
       obj->initCmd(tokBuf);
     } else {
-      error(getPos(), "Illegal character '>'");
+      illegalChars++;
+      //error(getPos(), "Illegal character '>'");
       obj->initError();
     }
     break;
@@ -430,7 +438,8 @@ Object *Lexer::getObj(Object *obj) {
   case ')':
   case '{':
   case '}':
-    error(getPos(), "Illegal character '%c'", c);
+    //error(getPos(), "Illegal character '%c'", c);
+    illegalChars++;
     obj->initError();
     break;
 
@@ -459,7 +468,6 @@ Object *Lexer::getObj(Object *obj) {
     }
     break;
   }
-
   return obj;
 }
 
