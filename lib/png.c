@@ -30,21 +30,19 @@ typedef struct _COL {
     U8 a,r,g,b;
 } COL;
 
-#define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
-#define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
-
 int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 {
     unsigned int len;
+    unsigned char blen;
     if(destlen) *destlen=0;
     if(destdata) *destdata=0;
-    if(!fread(&len, 4, 1, fi)) {
+    if(!fread(&blen, 4, 1, fi)) {
 	return 0;
     }
     if(!fread(head, 4, 1, fi)) {
 	return 0;
     }
-    len = REVERSESWAP32(len);
+    len = blen[0]<<24|blen[1]<<16|blen[2]<<8|blen[3];
     if(destlen) *destlen = len;
     if(destdata) {
 	if(!len) {
@@ -68,8 +66,9 @@ int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 unsigned int png_get_dword(FILE*fi)
 {
     unsigned int a;
-    fread(&a,4,1,fi);
-    return REVERSESWAP32(a);
+    unsigned char b;
+    fread(&b,4,1,fi);
+    return b[0]<<24|b[1]<<16|b[2]<<8|b[3];
 }
 
 struct png_header
@@ -98,8 +97,8 @@ int png_read_header(FILE*fi, struct png_header*header)
 	if(!strncasecmp(id, "IHDR", 4)) {
 	    char a,b,c,f,i;
 	    if(len < 8) exit(1);
-	    header->width = REVERSESWAP32(*(U32*)&data[0]);
-	    header->height = REVERSESWAP32(*(U32*)&data[4]);
+	    header->width = data[0]<<24|data[1]<<16|data[2]<<8|data[3];
+	    header->height = data[4]<<24|data[5]<<16|data[6]<<8|data[7];
 	    a = data[8];      // should be 8
 	    b = data[9];      // should be 3(indexed) or 2(rgb)
 
@@ -740,7 +739,11 @@ static inline void png_write_byte(FILE*fi, U8 byte)
 static void png_start_chunk(FILE*fi, char*type, int len)
 {
     U8 mytype[4]={0,0,0,0};
-    U32 mylen = REVERSESWAP32(len);
+    U8 mylen[4];
+    mylen[0] = len>>24;
+    mylen[1] = len>>16;
+    mylen[2] = len>>8;
+    mylen[3] = len;
     memcpy(mytype,type,strlen(type));
     fwrite(&mylen, 4, 1, fi);
     mycrc32=0xffffffff;
@@ -764,8 +767,13 @@ static void png_write_dword(FILE*fi, U32 dword)
 }
 static void png_end_chunk(FILE*fi)
 {
-    U32 tmp = REVERSESWAP32((mycrc32^0xffffffff));
-    fwrite(&tmp,4,1,fi);
+    U32 tmp = mycrc32^0xffffffff;
+    U8 tmp2[4];
+    tmp2[0] = tmp>>24;
+    tmp2[1] = tmp>>16;
+    tmp2[2] = tmp>>8;
+    tmp2[3] = tmp;
+    fwrite(&tmp2,4,1,fi);
 }
 
 void writePNG(char*filename, unsigned char*data, int width, int height)
