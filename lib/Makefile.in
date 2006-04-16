@@ -72,7 +72,7 @@ install:
 uninstall:
 
 clean: 
-	rm -f *.o *.obj *.lo *.a *.la gmon.out
+	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
