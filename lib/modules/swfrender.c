@@ -1012,7 +1012,10 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
     textcallbackblock_t * info = (textcallbackblock_t*)self;
     font_t*font = 0;
     int t;
-    if(!info->idtable[fontid].obj.font) {
+    if(info->idtable[fontid].type != font_type) {
+	fprintf(stderr, "ID %d is not a font\n", fontid);
+	return;
+    } else if(!info->idtable[fontid].obj.font) {
 	fprintf(stderr, "Font %d unknown\n", fontid);
 	return;
     } else {
