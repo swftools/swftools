@@ -1442,6 +1442,7 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 	actions = action_PushInt(actions, 1); //number of parameters (1)
 	actions = action_PushString(actions, i->config_internallinkfunction); //function name
 	actions = action_CallFunction(actions);
+	actions = action_End(actions);
     }
 
     drawlink(dev, actions, 0, points,0);
@@ -1469,12 +1470,14 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
 	    actions1 = action_PushInt(0, 0); //number of parameters (0)
 	    actions1 = action_PushString(actions1, &tmp[5]); //function name
 	    actions1 = action_CallFunction(actions1);
+	    actions1 = action_End(actions1);
 	} else {
 	    *x = 0;
 	    actions1 = action_PushString(0, x+1); //parameter
 	    actions1 = action_PushInt(actions1, 1); //number of parameters (1)
 	    actions1 = action_PushString(actions1, &tmp[5]); //function name
 	    actions1 = action_CallFunction(actions1);
+	    actions1 = action_End(actions1);
 	}
 	actions2 = action_End(0);
 	mouseover = 0;
