@@ -33,7 +33,7 @@ typedef struct _COL {
 int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 {
     unsigned int len;
-    unsigned char blen;
+    unsigned char blen[4];
     if(destlen) *destlen=0;
     if(destdata) *destdata=0;
     if(!fread(&blen, 4, 1, fi)) {
@@ -66,7 +66,7 @@ int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 unsigned int png_get_dword(FILE*fi)
 {
     unsigned int a;
-    unsigned char b;
+    unsigned char b[4];
     fread(&b,4,1,fi);
     return b[0]<<24|b[1]<<16|b[2]<<8|b[3];
 }
