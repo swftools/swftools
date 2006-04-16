@@ -1005,6 +1005,8 @@ void cancelshape(gfxdevice_t*dev)
     if(i->shape) {swf_ShapeFree(i->shape);i->shape=0;}
     i->shapeid = -1;
     i->bboxrectpos = -1;
+
+    i->currentswfid--;
 }
 
 void fixAreas(gfxdevice_t*dev)
