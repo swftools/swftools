@@ -430,10 +430,9 @@ LinkGoTo::LinkGoTo(Object *destObj) {
       delete dest;
       dest = NULL;
     }
-
   // error
   } else {
-    error(-1, "Illegal annotation destination");
+    error(-1, "Illegal annotation destination %d", destObj->getType());
   }
 }
 
@@ -468,10 +467,9 @@ LinkGoToR::LinkGoToR(Object *fileSpecObj, Object *destObj) {
       delete dest;
       dest = NULL;
     }
-
   // error
   } else {
-    error(-1, "Illegal annotation destination");
+    error(-1, "Illegal annotation destination %d", destObj->getType());
   }
 }
 
