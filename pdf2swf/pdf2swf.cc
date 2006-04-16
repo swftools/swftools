@@ -39,7 +39,6 @@
 #include "SWFOutputDev.h"
 #include "log.h"
 
-#define FONTDIR concatPaths(getInstallationPath(), "fonts")
 #define SWFDIR concatPaths(getInstallationPath(), "swfs")
 
 static char * outputname = 0;
@@ -439,17 +438,22 @@ int main(int argn, char *argv[])
     char t1searchpath[1024];
     int nup_pos = 0;
     int x,y;
+    char* installPath = getInstallationPath();
+    char* fontdir = 0;
     
     initLog(0,-1,0,0,-1,loglevel);
 
 #if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
-    FILE*test = fopen(concatPaths(FONTDIR,"\\d050000l.afm"), "rb");
-    if(!test) {
-	fprintf(stderr, "Couldn't find file %s - pdf2swf not installed properly? OS says:\n", concatPaths(FONTDIR, "\\d050000l.afm"));
-	perror("open");
-	exit(1);
+    if(installPath) {
+	fontdir = concatPaths(getInstallationPath(), "fonts");
+	FILE*test = fopen(concatPaths(fontdir,"\\d050000l.afm"), "rb");
+	if(!test) {
+	    fprintf(stderr, "Couldn't find file %s - pdf2swf not installed properly? OS says:\n", concatPaths(fontdir, "\\d050000l.afm"));
+	    perror("open");
+	    exit(1);
+	}
+	fclose(test);
     }
-    fclose(test);
 #endif
 
 #ifdef HAVE_SRAND48
@@ -490,7 +494,9 @@ int main(int argn, char *argv[])
     }
 
     /* add fonts */
-    pdfswf_addfontdir(FONTDIR);
+    if(fontdir) {
+	pdfswf_addfontdir(fontdir);
+    }
     for(t=0;t<fontpathpos;t++) {
 	pdfswf_addfontdir(fontpaths[t]);
     }
