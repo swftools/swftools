@@ -9,8 +9,6 @@ converted picture is a seperate frame in the target SWF.
 -o --output <outputfile>
     Explicitly specify output file. (otherwise, output.swf will be used)
     Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
--m --mx  	 
-    Use Flash MX H.263 compression (use for correlated images)
 -q --quality <quality>
     Set compression quality (1-100, 1=worst, 100=best)
     Set compression quality (1-100, 1=worst, 100=best).
