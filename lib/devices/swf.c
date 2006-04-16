@@ -417,7 +417,7 @@ void resetdrawer(gfxdevice_t*dev)
 static void stopFill(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->lastwasfill)
+    if(i->lastwasfill!=0)
     {
 	swf_ShapeSetStyle(i->tag,i->shape,i->linestyleid,0x8000,0);
 	i->fillstylechanged = 1;
@@ -427,7 +427,7 @@ static void stopFill(gfxdevice_t*dev)
 static void startFill(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(!i->lastwasfill)
+    if(i->lastwasfill!=1)
     {
 	swf_ShapeSetStyle(i->tag,i->shape,0x8000,i->fillstyleid,0);
 	i->fillstylechanged = 1;
@@ -958,9 +958,10 @@ static void startshape(gfxdevice_t*dev)
     swf_SetShapeBits(i->tag,i->shape);
 
     /* TODO: do we really need this? */
-    swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,i->linestyleid,0,0);
-    i->swflastx=i->swflasty=0;
-    i->lastwasfill = 0;
+    //swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,i->linestyleid,0,0);
+    //swf_ShapeSetAll(i->tag,i->shape,/*x*/UNDEFINED_COORD,/*y*/UNDEFINED_COORD,i->linestyleid,0,0);
+    i->swflastx=i->swflasty=UNDEFINED_COORD;
+    i->lastwasfill = -1;
     i->shapeisempty = 1;
 }
 
@@ -1043,6 +1044,7 @@ void fixAreas(gfxdevice_t*dev)
 	if(i->linewidth==0) i->linewidth = 1;
 	
 	startshape(dev);
+	stopFill(dev);
 
 	moveto(dev, i->tag, r.xmin/20.0,r.ymin/20.0);
 	lineto(dev, i->tag, r.xmax/20.0,r.ymax/20.0);
