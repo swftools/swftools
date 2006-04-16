@@ -1031,8 +1031,8 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
 	m.sy = (m.sy * fontsize) / 1024;
 	m.r0 = (m.r0 * fontsize) / 1024;
 	m.r1 = (m.r1 * fontsize) / 1024;
-	m.tx += p.x;
-	m.ty += p.y;
+	m.tx = p.x;
+	m.ty = p.y;
 
 	if(chars[t]<0 || chars[t]>= font->numchars) {
 	    fprintf(stderr, "Character out of range: %d\n", chars[t]);
@@ -1155,11 +1155,13 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 	    swf_GetU16(tag);
 	    swf_GetRect(tag,0);
   	    swf_GetMatrix(tag,&m);
-	    swf_MatrixJoin(&info.m, &m, &p->matrix);
+	    swf_MatrixJoin(&info.m, &p->matrix, &m);
 	    /*printf("Text matrix:\n");
 	    swf_DumpMatrix(stdout, &m);
 	    printf("Placement matrix:\n");
-	    swf_DumpMatrix(stdout, &p->matrix);*/
+	    swf_DumpMatrix(stdout, &p->matrix);
+	    printf("Final matrix:\n");
+	    swf_DumpMatrix(stdout, &info.m);*/
 
 	    info.idtable = idtable;
 	    info.depth = p->depth;
