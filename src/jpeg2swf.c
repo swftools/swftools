@@ -45,8 +45,6 @@ struct {
     int next_id;
     char *asset_name;
     int version;
-    int xoffset;
-    int yoffset;
     int fit_to_movie;
     float scale;
 } global;
@@ -83,8 +81,8 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
 	swf->movieSize.xmax = clip_x2 * 20;
 	swf->movieSize.ymax = clip_y2 * 20;
     } else {
-	swf->movieSize.xmin = global.xoffset * 20;
-	swf->movieSize.ymin = global.yoffset * 20;
+	swf->movieSize.xmin = 0;
+	swf->movieSize.ymin = 0;
 	swf->movieSize.xmax = swf->movieSize.xmin + dx * 20;
 	swf->movieSize.ymax = swf->movieSize.ymin + dy * 20;
     }
@@ -290,16 +288,16 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int quality,
 	    width = movie_width / 20;
 	    height = movie_height / 20;
 	} else {
-		m.sx = 20 * 0x10000;
-		m.sy = 20 * 0x10000;
+	    m.sx = 20 * 0x10000;
+	    m.sy = 20 * 0x10000;
 	}
-	m.tx = global.xoffset * 20;
-	m.ty = global.yoffset * 20;
+	m.tx = 0;
+	m.ty = 0;
 	fs = swf_ShapeAddBitmapFillStyle(s, &m, global.next_id, 1);
 	global.next_id++;
 	swf_SetU16(t, global.next_id);	// id
-	r.xmin = global.xoffset * 20;
-	r.ymin = global.yoffset * 20;
+	r.xmin = 0;
+	r.ymin = 0;
 	r.xmax = r.xmin + width * 20;
 	r.ymax = r.ymin + height * 20;
 	swf_SetRect(t, &r);
@@ -465,18 +463,9 @@ int args_callback_option(char *arg, char *val)
 		global.asset_name = val;
 	    res = 1;
 	    break;
-
-	case 'x':
-	    if (val) {
-		global.xoffset = atoi(val);
-	    }
-	    res = 1;
-	    break;
-
-	case 'y':
-	    if (val) {
-		global.yoffset = atoi(val);
-	    }
+	
+	case 'T':
+	    global.version = atoi(val);
 	    res = 1;
 	    break;
 
@@ -548,8 +537,6 @@ static struct options_t options[] = {
 {"q", "quality"},
 {"r", "rate"},
 {"z", "zlib"},
-{"x", "xoffset"},
-{"y", "yoffset"},
 {"X", "width"},
 {"Y", "height"},
 {"v", "verbose"},
@@ -594,8 +581,6 @@ void args_callback_usage(char *name)
     printf("-q , --quality <quality>       Set compression quality (1-100, 1=worst, 100=best)\n");
     printf("-r , --rate <framerate>         Set movie framerate (frames per second)\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
-    printf("-x , --xoffset <offset>        horizontally offset images by <offset>\n");
-    printf("-y , --yoffset <offset>        vertically offset images by <offset>\n");
     printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
     printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
@@ -619,8 +604,6 @@ int main(int argc, char **argv)
     global.version = 4;
     global.asset_name = NULL;
     global.next_id = 1;
-    global.xoffset = 0;
-    global.yoffset = 0;
     global.fit_to_movie = 0;
     global.scale = 1.0;
 	
