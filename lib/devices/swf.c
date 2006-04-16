@@ -384,15 +384,18 @@ static void splineto(gfxdevice_t*dev, TAG*tag, plotxy_t control,plotxy_t end)
     i->swflastx += ex;
     i->swflasty += ey;
     
-    if(cx || cy || ex || ey) {
-	swf_ShapeSetCurve(tag, i->shape, cx,cy,ex,ey);
-	addPointToBBox(dev, lastlastx   ,lastlasty   );
-	addPointToBBox(dev, lastlastx+cx,lastlasty+cy);
-	addPointToBBox(dev, lastlastx+cx+ex,lastlasty+cy+ey);
-    }/* else if(!i->fill) {
-	// treat splines of length 0 as plots
-	plot(dev, lastlastx, lastlasty, tag);
-    }*/
+    if((cx || cy) && (ex || ey)) {
+        swf_ShapeSetCurve(tag, i->shape, cx,cy,ex,ey);
+        addPointToBBox(dev, lastlastx   ,lastlasty   );
+        addPointToBBox(dev, lastlastx+cx,lastlasty+cy);
+        addPointToBBox(dev, lastlastx+cx+ex,lastlasty+cy+ey);
+    } else if(cx || cy || ex || ey) {
+        swf_ShapeSetLine(tag, i->shape, cx+ex,cy+ey);
+        addPointToBBox(dev, lastlastx   ,lastlasty   );
+        addPointToBBox(dev, lastlastx+cx,lastlasty+cy);
+        addPointToBBox(dev, lastlastx+cx+ex,lastlasty+cy+ey);
+    }
+
     i->shapeisempty = 0;
 }
 
