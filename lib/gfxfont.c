@@ -211,11 +211,13 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
 	   the encoding is no longer unicode. 
 	   TODO: find a way to convert the encoding to unicode
 	 */
-	if(font->max_unicode == 0 && charmap < face->num_charmaps - 1) {
+	if(font->max_unicode == 0 && charmap < face->num_charmaps-1 && 
+		face->charmaps[charmap+1]->encoding != 0x41444243 /* custom */)
+		{
 	    charmap++;
 	    FT_Set_Charmap(face, face->charmaps[charmap]);
 	    isunicode = 0;
-	} else 
+	} else
 	    break;
     }
 
