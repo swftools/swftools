@@ -568,7 +568,11 @@ int main(int argn, char *argv[])
 		height += ymax[y];
 		ymax[y] = height;
 	    }
-	    dev_output_startframe(swf, width, height);
+	    if(custom_clip) {
+		dev_output_startframe(swf, clip_x2 - clip_x1, clip_y2 - clip_y1);
+	    } else {
+		dev_output_startframe(swf, width, height);
+	    }
 	    for(t=0;t<pagenum;t++) {
 		int x = t%xnup;
 		int y = t/xnup;
