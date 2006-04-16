@@ -57,10 +57,11 @@ static struct options_t options[] = {
 {"n", "num"},
 {"m", "mp3-bitrate"},
 {"r", "mp3-samplerate"},
-{"d", "scale"},
-{"k", "keyframe"},
+{"s", "scale"},
+{"S", "skipframes"},
 {"p", "flip"},
 {"q", "quality"},
+{"k", "keyframe"},
 {"x", "extragood"},
 {"T", "flashversion"},
 {"V", "version"},
@@ -119,7 +120,7 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "m")) {
 	mp3_bitrate = atoi(val);
-	return 0;
+	return 1;
     }
     else if(!strcmp(name, "r")) {
         samplerate = atoi(val);
@@ -166,9 +167,11 @@ void args_callback_usage(char *name)
     printf("-n , --num frames              Number of frames to encode\n");
     printf("-m , --mp3-bitrate <kbps>      Set the mp3 bitrate to encode audio with\n");
     printf("-r , --mp3-samplerate <hz>     Set the mp3 samplerate to encode audio with (default: 11025)\n");
-    printf("-d , --scale <val>             Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
+    printf("-s , --scale <val>             Scale down to factor <val>. (in %, e.g. 100 = original size)\n");
+    printf("-S , --skipframes <num>        Skip <num> frames before starting the conversion.\n");
     printf("-p , --flip                    Turn movie upside down\n");
     printf("-q , --quality <val>           Set the quality to <val>. (0-100, 0=worst, 100=best, default:80)\n");
+    printf("-k , --keyframe                Set the number of intermediate frames between keyframes.\n");
     printf("-x , --extragood               Enable some *very* expensive compression strategies.\n");
     printf("-T , --flashversion <n>        Set output flash version to <n>.\n");
     printf("-V , --version                 Print program version and exit\n");
