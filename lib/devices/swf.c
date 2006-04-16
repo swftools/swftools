@@ -82,6 +82,7 @@ typedef struct _swfoutput_internal
     int config_filloverlap;
     int config_protect;
     int config_bboxvars;
+    int config_disable_polygon_conversion;
     RGBA config_linkcolor;
     float config_minlinewidth;
     double config_caplinewidth;
@@ -1006,7 +1007,7 @@ void cancelshape(gfxdevice_t*dev)
     i->shapeid = -1;
     i->bboxrectpos = -1;
 
-    i->currentswfid--;
+//    i->currentswfid--; // this was an *exceptionally* bad idea
 }
 
 void fixAreas(gfxdevice_t*dev)
@@ -1713,6 +1714,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_bboxvars = atoi(value);
     } else if(!strcmp(name, "internallinkfunction")) {
 	i->config_internallinkfunction = strdup(value);
+    } else if(!strcmp(name, "disable_polygon_conversion")) {
+	i->config_disable_polygon_conversion = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
 	i->config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protect")) {
@@ -2164,12 +2167,24 @@ static int gfxline_type(gfxline_t*line)
 static int gfxline_has_dots(gfxline_t*line)
 {
     int tmplines=0;
-    double x,y;
+    double x=0,y=0;
     double dist = 0;
     int isline = 0;
+    int short_gap = 0;
     while(line) {
 	if(line->type == gfx_moveTo) {
-	    if(isline && dist < 1) {
+	    /* test the length of the preceding line, and assume it is a dot if
+	       it's length is less than 1.0. But *only* if there's a noticable 
+	       gap between the previous line and the next moveTo. (I've come
+	       across a PDF where thousands of "dots" were stringed together,
+	       forming a line) */
+	    int last_short_gap = short_gap;
+	    if((fabs(line->x - x) + fabs(line->y - y)) < 1.0) {
+		short_gap = 1;
+	    } else {
+		short_gap = 0;
+	    }
+	    if(isline && dist < 1 && !short_gap && !last_short_gap) {
 		return 1;
 	    }
 	    dist = 0;
@@ -2186,7 +2201,7 @@ static int gfxline_has_dots(gfxline_t*line)
 	y = line->y;
 	line = line->next;
     }
-    if(isline && dist < 1) {
+    if(isline && dist < 1 && !short_gap) {
 	return 1;
     }
     return 0;
@@ -2265,10 +2280,11 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 
     /* TODO: * split line into segments, and perform this check for all segments */
 
-    if(!has_dots && 
-       (width <= i->config_caplinewidth 
+    if(i->config_disable_polygon_conversion ||
+       (!has_dots &&
+        (width <= i->config_caplinewidth 
         || (cap_style == gfx_capRound && joint_style == gfx_joinRound)
-        || (cap_style == gfx_capRound && type<=2))) {} else 
+        || (cap_style == gfx_capRound && type<=2)))) {} else 
     {
 	/* convert line to polygon */
 	msg("<trace> draw as polygon, type=%d dots=%d", type, has_dots);
