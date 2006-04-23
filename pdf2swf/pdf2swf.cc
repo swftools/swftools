@@ -445,7 +445,7 @@ int main(int argn, char *argv[])
 
 #if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
     if(installPath) {
-	fontdir = concatPaths(getInstallationPath(), "fonts");
+	fontdir = concatPaths(installPath, "fonts");
 	FILE*test = fopen(concatPaths(fontdir,"\\d050000l.afm"), "rb");
 	if(!test) {
 	    fprintf(stderr, "Couldn't find file %s - pdf2swf not installed properly? OS says:\n", concatPaths(fontdir, "\\d050000l.afm"));
@@ -455,7 +455,7 @@ int main(int argn, char *argv[])
 	fclose(test);
     }
 #else
-    fontdir = concatPaths(getInstallationPath(), "fonts");
+    fontdir = concatPaths(installPath, "fonts");
 #endif
 
 #ifdef HAVE_SRAND48
