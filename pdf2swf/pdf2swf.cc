@@ -454,6 +454,8 @@ int main(int argn, char *argv[])
 	}
 	fclose(test);
     }
+#else
+    fontdir = concatPaths(getInstallationPath(), "fonts");
 #endif
 
 #ifdef HAVE_SRAND48
