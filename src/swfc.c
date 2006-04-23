@@ -1266,7 +1266,15 @@ void s_sound(char*name, char*filename)
     {
         swf_SetSoundDefine(tag, samples, numsamples);
     }
-   
+    
+    tag = swf_InsertTag(tag, ST_NAMECHARACTER);
+    swf_SetU16(tag, id);
+    swf_SetString(tag, name);
+    tag = swf_InsertTag(tag, ST_EXPORTASSETS);
+    swf_SetU16(tag, 1);
+    swf_SetU16(tag, id);
+    swf_SetString(tag, name);
+
     sound = (sound_t*)malloc(sizeof(sound_t)); /* mem leak */
     sound->tag = tag;
     sound->id = id;
