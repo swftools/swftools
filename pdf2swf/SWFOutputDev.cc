@@ -1463,14 +1463,20 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     points[4].x = x + user_movex;
     points[4].y = y + user_movey;
     points[4].next = 0;
+    
+    msg("<trace> drawlink %.2f/%.2f %.2f/%.2f %.2f/%.2f %.2f/%.2f\n",
+	    points[0].x, points[0].y,
+	    points[1].x, points[1].y,
+	    points[2].x, points[2].y,
+	    points[3].x, points[3].y); 
 
     LinkAction*action=link->getAction();
     char buf[128];
     char*s = 0;
     char*type = "-?-";
-    char*url = 0;
     char*named = 0;
     int page = -1;
+    msg("<trace> drawlink action=%d\n", action->getKind());
     switch(action->getKind())
     {
         case actionGoTo: {
@@ -1541,6 +1547,7 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
         }
         break;
         case actionURI: {
+	    char*url = 0;
             type = "URI";
             LinkURI*l = (LinkURI*)action;
             GString*g = l->getURI();
@@ -1563,8 +1570,10 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
     }
 
     if(!s) s = strdup("-?-");
+    
+    msg("<trace> drawlink s=%s\n", s);
 
-    if(!linkinfo && (page || url))
+    if(!linkinfo && (page || s))
     {
         msg("<notice> File contains links");
         linkinfo = 1;
@@ -1587,9 +1596,9 @@ void SWFOutputDev::drawLink(Link *link, Catalog *catalog)
 	sprintf(buf, "page%d", lpage);
 	output->drawlink(output, points, buf);
     }
-    else if(url)
+    else if(s)
     {
-        output->drawlink(output, points, url);
+        output->drawlink(output, points, s);
     }
 
     msg("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
