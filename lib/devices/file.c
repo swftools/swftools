@@ -20,10 +20,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <memory.h>
 #include "../gfxdevice.h"
 
 typedef struct _internal {
+    char*filename;
     FILE*fi;
 } internal_t;
 
@@ -50,6 +52,7 @@ static void dumpline(FILE*fi, gfxline_t*line)
 	} else if(line->type == gfx_splineTo) {
 	    fprintf(fi, "\tsplineTo %f %f %f %f\n", line->sx, line->sy, line->x, line->y);
 	}
+	line = line->next;
     }
 }
 
@@ -122,14 +125,76 @@ void file_endpage(struct _gfxdevice*dev)
     fprintf(i->fi, "endpage\n");
 }
 
+typedef struct gfxresult_internal
+{
+    FILE*fi;
+    char*filename;
+} gfxresult_internal_t;
+    
+void fileresult_destroy(struct _gfxresult*gfx)
+{
+    gfxresult_internal_t*i = (gfxresult_internal_t*)gfx->internal;
+    unlink(i->filename);
+    free(i->filename);i->filename = 0;
+}
+
+int fileresult_save(struct _gfxresult*gfx, char*filename)
+{
+    gfxresult_internal_t*i = (gfxresult_internal_t*)gfx->internal;
+    FILE*fi,*fo;
+    fi = fopen(i->filename, "rb");
+    if(!fi) {
+	perror(i->filename);
+	return 0;
+    }
+    fo = fopen(filename, "wb");
+    if(!fo) {
+	perror(filename);
+	return 0;
+    }
+
+    char buf[4096];
+    while(!feof(fi)) {
+	int l = fread(buf, 1, 4096, fi);
+	if(l>0) {
+	    fwrite(buf, 1, l, fo);
+	} else {
+	    break;
+	}
+    }
+
+    fclose(fi);
+    fclose(fo);
+    return 0;
+}
+
+void* fileresult_get(struct _gfxresult*gfx, char*name)
+{
+    return 0; 
+}
+
 gfxresult_t* file_finish(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
+    char*filename = strdup(i->filename);
+    gfxresult_t*result = (gfxresult_t*)malloc(sizeof(gfxresult_t));
     fclose(i->fi);
     i->fi = 0;
+    if(i->filename) {
+	free(i->filename);
+	i->filename = 0;
+    }
     free(dev->internal);
     dev->internal = 0;
-    return 0;
+
+    memset(result, 0, sizeof(gfxresult_t));
+    result->save = fileresult_save;
+    result->get = fileresult_get;
+    result->destroy = fileresult_destroy;
+    result->internal = malloc(sizeof(gfxresult_internal_t));
+    ((gfxresult_internal_t*)result->internal)->filename = filename;
+
+    return result;
 }
 
 void gfxdevice_file_init(gfxdevice_t*dev, char*filename)
@@ -153,6 +218,7 @@ void gfxdevice_file_init(gfxdevice_t*dev, char*filename)
     dev->finish = file_finish;
 
     i->fi = fopen(filename, "wb");
+    i->filename = strdup(filename);
     if(!i->fi) {
 	fprintf(stderr, "Couldn't open file %s\n", filename);
 	exit(1);
