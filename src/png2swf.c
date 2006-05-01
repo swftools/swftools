@@ -76,7 +76,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
-    //rgb.g = 0xff; //<--- handy for testing alpha conversion
+    rgb.g = 0xff; //<--- handy for testing alpha conversion
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -478,6 +478,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     int alphapalettelen = 0;
     struct png_header header;
     int bypp;
+    U8 alphacolor[3];
+    int hasalphacolor=0;
 
     FILE *fi;
     U8 *scanline;
@@ -511,7 +513,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	}
 	if(!strncmp(tagid, "PLTE", 4)) {
 	    palette = data;
-	    palettelen = len/3;
+	    palettelen = len/bypp;
 	    data = 0; //don't free data
 	    if(VERBOSE(2))
 		printf("%d colors in palette\n", palettelen);
@@ -523,6 +525,21 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		data = 0; //don't free data
 		if(VERBOSE(2))
 		    printf("found %d alpha colors\n", alphapalettelen);
+	    } else if(header.mode == 0) {
+		int t;
+		if(header.mode == 3) { // palette or grayscale?
+		    alphacolor[0] = data[1];
+		    alphacolor[1] = data[3];
+		    alphacolor[2] = data[5];
+		} else {
+		    alphacolor[0] = alphacolor[1] = alphacolor[2] = data[1];
+		}
+		if(VERBOSE(2))
+		    printf("found alpha color: %02x%02x%02x\n", alphacolor[0], alphacolor[1], alphacolor[2]);
+		hasalphacolor = 1;
+	    } else {
+		if(VERBOSE(2))
+		    printf("ignoring tRNS %d entry (%d bytes)\n", header.mode, len);
 	    }
 	}
 	if(!strncmp(tagid, "IDAT", 4)) {
@@ -548,7 +565,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     }
     free(zimagedata);
 
-    if(alphapalette)
+    if(alphapalette || hasalphacolor)
 	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS2);
     else
 	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
@@ -647,6 +664,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		} else {
 		    rgba[i].a = 255;
 		}
+		if(hasalphacolor) {
+		    if(rgba[i].r == alphacolor[0] &&
+		       rgba[i].g == alphacolor[1] &&
+		       rgba[i].b == alphacolor[2])
+			rgba[i].a = 0;
+		}
 	    }
 	} else {
             int mult = (0x1ff>>header.bpp);
@@ -656,6 +679,11 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		rgba[i].r = i*mult;
 		rgba[i].g = i*mult;
 		rgba[i].b = i*mult;
+		rgba[i].a = 255;
+		if(hasalphacolor) {
+		    if(rgba[i].r == alphacolor[0])
+			rgba[i].a = 0;
+		}
 	    }
 	}
 
@@ -927,6 +955,7 @@ static struct options_t options[] = {
 {"q", "quiet"},
 {"C", "cgi"},
 {"V", "version"},
+{"s", "scale"},
 {0,0}
 };
 
@@ -964,10 +993,11 @@ void args_callback_usage(char *name)
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
-    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
+    printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");
     printf("-q , --quiet                   Omit normal log messages, only log errors\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout\n");
     printf("-V , --version                 Print version information and exit\n");
+    printf("-s , --scale <percent>         Scale image to <percent>% size.\n");
     printf("\n");
 }
 
