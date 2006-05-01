@@ -76,7 +76,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
-    rgb.g = 0xff; //<--- handy for testing alpha conversion
+    //rgb.g = 0xff; //<--- handy for testing alpha conversion
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -667,8 +667,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		if(hasalphacolor) {
 		    if(rgba[i].r == alphacolor[0] &&
 		       rgba[i].g == alphacolor[1] &&
-		       rgba[i].b == alphacolor[2])
+		       rgba[i].b == alphacolor[2]) {
+			rgba[i].r = 0;
+			rgba[i].g = 0;
+			rgba[i].b = 0;
 			rgba[i].a = 0;
+		    }
 		}
 	    }
 	} else {
@@ -681,8 +685,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		rgba[i].b = i*mult;
 		rgba[i].a = 255;
 		if(hasalphacolor) {
-		    if(rgba[i].r == alphacolor[0])
+		    if(rgba[i].r == alphacolor[0]) {
+			rgba[i].r = 0;
+			rgba[i].g = 0;
+			rgba[i].b = 0;
 			rgba[i].a = 0;
+		    }
 		}
 	    }
 	}
