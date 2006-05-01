@@ -649,6 +649,7 @@ void render_addfont(struct _gfxdevice*dev, char*fontid, gfxfont_t*font)
     }
     l = (fontlist_t*)rfx_calloc(sizeof(fontlist_t));
     l->font = font;
+    l->id = strdup(fontid);
     l->next = 0;
     if(last) {
 	last->next = l;
@@ -668,7 +669,7 @@ void render_drawchar(struct _gfxdevice*dev, char*fontid, int glyphnr, gfxcolor_t
 	i->font = 0;
 	i->fontid = 0;
 	while(l) {
-	    if(!strcmp((char*)l->id, i->fontid)) {
+	    if(!strcmp((char*)l->id, fontid)) {
 		i->font = l->font;
 		i->fontid = l->id;
 		break;
@@ -735,6 +736,9 @@ gfxresult_t* render_finish(struct _gfxdevice*dev)
     res->destroy = render_result_destroy;
 
     free(dev->internal); dev->internal = 0; i = 0;
+
+    /* TODO: free fonts */
+
     return res;
 }
 
