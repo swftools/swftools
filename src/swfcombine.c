@@ -161,6 +161,16 @@ int args_callback_option(char*name,char*val) {
 	config.scalex = config.scaley = atoi(val)/100.0;
 	return 1;
     }
+    else if (!strcmp(name, "w"))
+    {
+	config.scalex = atoi(val)/100.0;
+	return 1;
+    }
+    else if (!strcmp(name, "h"))
+    {
+	config.scaley = atoi(val)/100.0;
+	return 1;
+    }
     else if (!strcmp(name, "t") || !strcmp(name, "T"))
     {
 	if(master_filename) {
