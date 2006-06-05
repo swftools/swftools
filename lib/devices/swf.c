@@ -1390,7 +1390,7 @@ void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, char*url)
 	    if(url[t]<'0' || url[t]>'9')
 		nodigit = 1;
 	if(!nodigit) {
-	    int page = atoi(&url[4]) - 1;
+	    int page = atoi(&url[4]);
 	    if(page<0) page = 0;
 	    swfoutput_linktopage(dev, page, points);
 	}
@@ -1435,7 +1435,7 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 	endtext(dev);
   
     if(!i->config_internallinkfunction) {
-	actions = action_GotoFrame(actions, page);
+	actions = action_GotoFrame(actions, page-1);
 	actions = action_End(actions);
     } else {
 	actions = action_PushInt(actions, page); //parameter
