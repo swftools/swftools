@@ -21,6 +21,7 @@ typedef struct _internal {
     gfxfont_t*font;
     char*fontid;
     fontlist_t* fontlist;
+    int width, height;
 } internal_t;
 
 int opengl_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
@@ -28,47 +29,11 @@ int opengl_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
     return 0;
 }
 
-jmp_buf env;
-//jmp_buf env2;
-
-void display()
-{
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    /*if(!setjmp(env2))
-	longjmp(env, 1);*/
-    longjmp(env, 1);
-}
-
 void opengl_startpage(struct _gfxdevice*dev, int width, int height)
 {
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(width,height);
-    glutInitWindowPosition(100,100);
-    glutCreateWindow("gfxdevice_opengl");
-    glutDisplayFunc(display);
-
-    glClearColor(1.0,0.0,0.0,0.0);
-    glShadeModel(GL_FLAT);
-    glEnable(GL_DEPTH_TEST);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    
-    glViewport(0,0, width, height);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    //gluPerspective(/*angle*/60.0, (GLfloat)width/(GLfloat)height, /*nearclip*/1.0, /*farclip*/30.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glScalef(1.0/width,1.0/height,1.0);
-    
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   
-    int ret=0;
-    ret = setjmp(env);
-    if(!ret) {
-	glutMainLoop();
-    }
+    internal_t*i = (internal_t*)dev->internal;
+    i->width = width;
+    i->height = height;
 }
 
 void opengl_startclip(struct _gfxdevice*dev, gfxline_t*line)
@@ -120,9 +85,6 @@ void opengl_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
 
 void opengl_endpage(struct _gfxdevice*dev)
 {
-    glFlush();
-    //longjmp(env2, 1);
-    glutMainLoop();
 }
 
 
@@ -153,10 +115,6 @@ gfxresult_t*opengl_finish(struct _gfxdevice*dev)
 void gfxdevice_opengl_init(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
-    int argc=1;
-    char*argv[]={"gfxdevice_opengl", 0};
-    glutInit(&argc, argv);
-    
     memset(dev, 0, sizeof(gfxdevice_t));
 
     dev->internal = i;
