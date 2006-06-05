@@ -194,8 +194,11 @@ void swf_ActionFree(ActionTAG*action)
     while(action)
     {
 	ActionTAG*tmp;
-	if(action->data && action->data != action->tmp)
+	if(action->data && action->data != action->tmp) {
 	    rfx_free(action->data);
+	    action->data = 0;
+	}
+	action->len = 0;
 	
 	tmp = action;
 	action=action->next;
@@ -680,10 +683,11 @@ ActionTAG* swf_AddActionTAG(ActionTAG*atag, U8 op, U8*data, U16 len)
 	tmp->prev = 0;
 	tmp->parent = tmp;
     }
-    if(data || !len)
+    if(data || !len) {
 	tmp->data = data;
-    else
+    } else {
 	tmp->data = tmp->tmp;
+    }
 
     tmp->len = len;
     tmp->op = op;
@@ -1051,7 +1055,7 @@ ActionTAG* action_PushDouble(ActionTAG*atag, double d)
 ActionTAG* action_PushInt(ActionTAG*atag, int i)
 {
     atag = swf_AddActionTAG(atag, ACTION_PUSH, 0, 5);
-    *(U8*)atag->tmp = 7; //int
+    atag->tmp[0] = 7; //int
     atag->tmp[1] = i;
     atag->tmp[2] = i>>8;
     atag->tmp[3] = i>>16;
