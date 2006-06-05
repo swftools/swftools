@@ -25,8 +25,7 @@
 
 #define S64 long long
 SFIXED RFXSWF_SP(SFIXED a1,SFIXED a2,SFIXED b1,SFIXED b2)
-{ S64 a;
-  a = ((S64)a1*(S64)b1+(S64)a2*(S64)b2)>>16;
+{ S64 a = ((S64)a1*(S64)b1+(S64)a2*(S64)b2)>>16;
   SFIXED result = (SFIXED)(a);
   if(a!=result) 
       fprintf(stderr, "Warning: overflow in matrix multiplication");
@@ -883,6 +882,7 @@ void swf_RelocateDepth(SWF*swf, char*bitmap)
 
     while(tag)
     {
+	int depth;
 	/* TODO * clip depths 
 	        * sprites
 	 */
@@ -902,7 +902,7 @@ void swf_RelocateDepth(SWF*swf, char*bitmap)
 	    swf_PlaceObjectFree(&obj);
 	}
 
-	int depth = swf_GetDepth(tag);
+	depth = swf_GetDepth(tag);
 	if(depth>=0) {
 	    int newdepth = depth+nr;
 	    if(newdepth>65535) {
