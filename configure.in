@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2005-09-25-1334
+VERSION=2006-05-01-1103
 
 
 # ------------------------------------------------------------------
@@ -94,6 +94,22 @@ AC_SUBST(SHARED)
 dnl Checks for programs.
  AC_PROG_CC
  AC_PROG_CXX
+
+
+RFX_CHECK_OLDGCC
+
+if test "x$GCC_IS_OK" '=' "x";then
+    echo "***************************************************"
+    echo "* Your gcc is too old to compile this!"
+    echo "* "
+    echo "* The last version compilable by this compiler is "
+    echo "* swftools 0.7.0, which you can download from "
+    echo "* http://www.swftools.org/swftools-0.7.0.tar.gz "
+    echo "* ."
+    echo "* Newer versions require at least gcc 3.0.0 "
+    echo "***************************************************"
+    exit 1
+fi
     
 if test "x$CHECKMEM" '!=' "x";then
     CC="ccmalloc $CC"
@@ -116,12 +132,14 @@ fi
 dnl Checks for system services
 OBJEXT="o"
 AREXT=".a"
+CXXLIBS="-lstdc++"
 
 AC_EXEEXT
 
 if test "x$EXEEXT" = "x.exe";then
     OBJEXT="obj"
     AREXT=".lib"
+    CXXLIBS=""
 fi
 AC_SUBST(OBJEXT)
 AC_SUBST(AREXT)
@@ -135,9 +153,11 @@ if test "x${MINGW}" != "xyes"; then
 else
     # mingW
     SLEXT="dll"
+    CXXLIBS=""
 fi
 export SLEXT
 AC_SUBST(SLEXT)
+AC_SUBST(CXXLIBS)
 
 # The following tries to make use of includes and libraries in
 # /usr/local, too. Notice: A -I/usr/local/include might break
@@ -224,7 +244,7 @@ dnl Checks for library functions.
 
 RFX_CHECK_FREETYPE
 
-RFX_CHECK_FONTCONFIG
+#RFX_CHECK_FONTCONFIG
 
 # ------------------------------------------------------------------
  
@@ -365,12 +385,19 @@ if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
 fi
 
 pdf2swf_makefile="pdf2swf/Makefile pdf2swf/xpdf/Makefile"
+PDF2SWF='pdf2swf$(E)'
+LIBPDF='libpdf$(A)'
+
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "* Disabling pdf2swf tool..."
   rm -f pdf2swf/Makefile
   echo all install uninstall clean: > pdf2swf/Makefile
   pdf2swf_makefile=""
+  PDF2SWF=
+  LIBPDF=
 fi
+AC_SUBST(PDF2SWF)
+AC_SUBST(LIBPDF)
 
 if test "x${ZLIBMISSING}" = "xtrue"; then
   echo
