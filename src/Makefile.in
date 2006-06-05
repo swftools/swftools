@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E)
+programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) @PDF2SWF@
 
 all: $(programs)
 
@@ -11,6 +11,8 @@ wav2swf.$(O): wav2swf.c ../lib/wav.h
 	$(C) wav2swf.c -o $@
 png2swf.$(O): png2swf.c
 	$(C) png2swf.c -o $@
+pdf2swf.$(O): pdf2swf.c
+	$(C) pdf2swf.c -o $@
 gif2swf.$(O): gif2swf.c
 	$(C) gif2swf.c -o $@
 swfcombine.$(O): swfcombine.c
@@ -79,6 +81,9 @@ font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A)
 jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
+pdf2swf$(E): pdf2swf.$(O) ../lib/librfxswf$(A) ../lib/libpdf$(A)
+	$(L) pdf2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O) ../lib/os.$(O) ../lib/devices/swf.$(O) ../lib/art/libart$(A) $(LIBS) $(CXXLIBS)
+	$(STRIP) $@
 swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) ../lib/librfxswf$(A)
 	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
@@ -93,9 +98,9 @@ uninstall:
 
 clean: 
 	rm -f *.o *.obj *.lo *.la *~ gmon.out
-	rm -f gif2swf swfbbox swfedit swfdump wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf
-	@rm -f gif2swf.exe swfedit.exe swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
-	@rm -f gif2swf$(E) swfedit$(E) swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)
+	rm -f gif2swf swfbbox swfedit swfdump pdf2swf wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf
+	@rm -f gif2swf.exe swfedit.exe pdf2swf.exe swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
+	@rm -f gif2swf$(E) pdf2swf$(E) swfedit$(E) swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)
 
 doc:
 	perl ../parsedoc.pl wav2swf.doc
@@ -107,6 +112,7 @@ doc:
 	perl ../parsedoc.pl swfcombine.doc
 	perl ../parsedoc.pl swfdump.doc
 	perl ../parsedoc.pl swfc.doc
+	perl ../parsedoc.pl pdf2swf.doc
 	#perl ../parsedoc.pl swfedit.doc
 
 .PHONY: clean doc 
