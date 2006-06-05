@@ -8,6 +8,8 @@ Compiles a file written in sc (SWF Script) into a number of SWF files.
     Print short help message and exit
 -V, --version
     Print version info and exit
+-C, --cgi
+    Output to stdout (for use in CGI environments)
 -v, --verbose
     Increase verbosity. 
     Increase verbosity. Use more than one \fB-v\fR for greater effect.

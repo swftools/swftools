@@ -44,6 +44,7 @@ static char * outputname = "output.swf";
 static int verbose = 2;
 static int optimize = 0;
 static int override_outputname = 0;
+static int do_cgi = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -66,6 +67,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "O")) {
 	optimize = 1;
+	return 0;
+    }
+    else if(!strcmp(name, "C")) {
+	do_cgi = 1;
 	return 0;
     }
     else if(!strcmp(name, "v")) {
@@ -119,7 +124,7 @@ static void syntaxerror(char*format, ...)
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
-    printf("\"%s\", line %d column %d: error- %s\n", filename, line, column, buf);
+    fprintf(stderr, "\"%s\", line %d column %d: error- %s\n", filename, line, column, buf);
     exit(1);
 }
 
@@ -130,7 +135,7 @@ static void warning(char*format, ...)
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
-    printf("\"%s\", line %d column %d: warning- %s\n", filename, line, column, buf);
+    fprintf(stderr, "\"%s\", line %d column %d: warning- %s\n", filename, line, column, buf);
 }
 
 static void readToken()
@@ -673,11 +678,16 @@ static void s_endSWF()
 	warning("Empty bounding box for movie");
     }
     
-    fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
+    if(do_cgi)
+	fi = fileno(stdout);
+    else
+	fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
     if(fi<0) {
 	syntaxerror("couldn't create output file %s", filename);
     }
-    if(swf->compressed) 
+    if(do_cgi)
+	{if(swf_WriteCGI(swf)<0) syntaxerror("WriteCGI() failed.\n");}
+    else if(swf->compressed) 
 	{if(swf_WriteSWC(fi, swf)<0) syntaxerror("WriteSWC() failed.\n");}
     else
 	{if(swf_WriteSWF(fi, swf)<0) syntaxerror("WriteSWF() failed.\n");}
@@ -3192,7 +3202,7 @@ int main (int argc,char ** argv)
     
     file = generateTokens(filename);
     if(!file) {
-	printf("parser returned error.\n");
+	fprintf(stderr, "parser returned error.\n");
 	return 1;
     }
     pos=0;
