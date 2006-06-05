@@ -112,7 +112,6 @@ doc:
 	perl ../parsedoc.pl swfcombine.doc
 	perl ../parsedoc.pl swfdump.doc
 	perl ../parsedoc.pl swfc.doc
-	perl ../parsedoc.pl pdf2swf.doc
 	#perl ../parsedoc.pl swfedit.doc
 
 .PHONY: clean doc 
