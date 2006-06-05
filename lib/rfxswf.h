@@ -790,7 +790,7 @@ typedef struct _ActionTAG
   struct _ActionTAG * prev;
 
   struct _ActionTAG * parent;
-  U8 tmp[4]; // store small operands here.
+  U8 tmp[8]; // store small operands here.
 } ActionTAG;
 
 typedef struct _ActionMarker
