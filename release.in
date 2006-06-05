@@ -115,7 +115,6 @@ ${name}/lib/h.263/h263tables.c \
 ${name}/lib/h.263/h263tables.h \
 ${name}/lib/h.263/dct.c \
 ${name}/lib/h.263/dct.h \
-${name}/lib/h.263/Makefile \
 ${name}/lib/python/Makefile.in \
 ${name}/lib/python/SWF.c \
 ${name}/lib/python/image.c \
