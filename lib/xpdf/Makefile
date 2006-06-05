@@ -1,0 +1,126 @@
+# Generated automatically from Makefile.in by configure.
+top_builddir = ../..
+srcdir = .
+top_srcdir = ../..
+include ../../Makefile.common
+
+all: ../libpdf$(A)
+
+libpdf_objects =  GHash.$(O) GList.$(O) GString.$(O) gmem.$(O) gfile.$(O) \
+		  FoFiTrueType.$(O) FoFiType1.$(O) FoFiType1C.$(O) FoFiBase.$(O) FoFiEncodings.$(O) \
+		  OutputDev.$(O) PDFDoc.$(O) Error.$(O) Stream.$(O) Object.$(O) \
+		  Decrypt.$(O) Array.$(O) XRef.$(O) Dict.$(O) Parser.$(O) \
+		  Lexer.$(O) Outline.$(O) PDFDocEncoding.$(O) Catalog.$(O) \
+		  Link.$(O) GlobalParams.$(O) JBIG2Stream.$(O) Page.$(O) JPXStream.$(O) \
+		  JArithmeticDecoder.$(O) Gfx.$(O) GfxFont.$(O) CMap.$(O) CharCodeToUnicode.$(O) \
+		  PSTokenizer.$(O) FontEncodingTables.$(O) BuiltinFont.$(O) BuiltinFontTables.$(O) \
+		  GfxState.$(O) Function.$(O) Annot.$(O) NameToCharCode.$(O) UnicodeMap.$(O) cmyk.$(O) \
+		  SecurityHandler.$(O) GFXOutputDev.$(O) InfoOutputDev.$(O) pdf.$(O)
+
+pdf.$(O): pdf.cc
+	$(CC) -I./ pdf.cc -o $@
+cmyk.$(O): cmyk.cc
+	$(CC) -I./ cmyk.cc -o $@
+UnicodeMap.$(O): UnicodeMap.cc
+	$(CC) -I./ UnicodeMap.cc -o $@
+InfoOutputDev.$(O): InfoOutputDev.cc
+	$(CC) -I./ InfoOutputDev.cc -o $@
+GFXOutputDev.$(O): GFXOutputDev.cc
+	$(CC) -I./ GFXOutputDev.cc -o $@
+NameToCharCode.$(O): NameToCharCode.cc
+	$(CC) -I./ NameToCharCode.cc -o $@
+Annot.$(O): Annot.cc
+	$(CC) -I./ Annot.cc -o $@
+Function.$(O): Function.cc
+	$(CC) -I./ Function.cc -o $@
+BuiltinFontTables.$(O): BuiltinFontTables.cc
+	$(CC) -I./ BuiltinFontTables.cc -o $@
+BuiltinFont.$(O): BuiltinFont.cc
+	$(CC) -I./ BuiltinFont.cc -o $@
+FontEncodingTables.$(O): FontEncodingTables.cc
+	$(CC) -I./ FontEncodingTables.cc -o $@
+PSTokenizer.$(O): PSTokenizer.cc
+	$(CC) -I./ PSTokenizer.cc -o $@
+CharCodeToUnicode.$(O): CharCodeToUnicode.cc
+	$(CC) -I./ CharCodeToUnicode.cc -o $@
+CMap.$(O): CMap.cc
+	$(CC) -I./ CMap.cc -o $@
+GfxFont.$(O): GfxFont.cc
+	$(CC) -I./ GfxFont.cc -o $@
+Gfx.$(O): Gfx.cc
+	$(CC) -I./ Gfx.cc -o $@
+GfxState.$(O): GfxState.cc
+	$(CC) -I./ GfxState.cc -o $@
+JArithmeticDecoder.$(O): JArithmeticDecoder.cc
+	$(CC) -I./ JArithmeticDecoder.cc -o $@
+JPXStream.$(O): JPXStream.cc
+	$(CC) -I./ JPXStream.cc -o $@
+GlobalParams.$(O): GlobalParams.cc GlobalParams.h
+	$(CC) -I./ GlobalParams.cc -o $@
+JBIG2Stream.$(O): JBIG2Stream.cc
+	$(CC) -I./ JBIG2Stream.cc -o $@
+Page.$(O): Page.cc
+	$(CC) -I./ Page.cc -o $@
+Link.$(O): Link.cc
+	$(CC) -I./ Link.cc -o $@
+Catalog.$(O): Catalog.cc
+	$(CC) -I./ Catalog.cc -o $@
+PDFDocEncoding.$(O): PDFDocEncoding.cc
+	$(CC) -I./ PDFDocEncoding.cc -o $@
+Outline.$(O): Outline.cc
+	$(CC) -I./ Outline.cc -o $@
+Lexer.$(O): Lexer.cc
+	$(CC) -I./ Lexer.cc -o $@
+Parser.$(O): Parser.cc
+	$(CC) -I./ Parser.cc -o $@
+XRef.$(O): XRef.cc
+	$(CC) -I./ XRef.cc -o $@
+Array.$(O): Array.cc
+	$(CC) -I./ Array.cc -o $@
+Dict.$(O): Dict.cc
+	$(CC) -I./ Dict.cc -o $@
+Decrypt.$(O): Decrypt.cc
+	$(CC) -I./ Decrypt.cc -o $@
+Object.$(O): Object.cc
+	$(CC) -I./ Object.cc -o $@
+Error.$(O): Error.cc aconf.h
+	$(CC) -I./ Error.cc -o $@
+Stream.$(O): Stream.cc
+	$(CC) -I./ Stream.cc -o $@
+PDFDoc.$(O): PDFDoc.cc
+	$(CC) -I./ PDFDoc.cc -o $@
+SecurityHandler.$(O): SecurityHandler.cc SecurityHandler.h
+	$(CC) -I./ SecurityHandler.cc -o $@
+OutputDev.$(O): OutputDev.cc GfxState.h Stream.h Object.h OutputDev.h gtypes.h CharTypes.h
+	$(CC) -I./ OutputDev.cc -o $@
+FoFiBase.$(O): FoFiBase.cc
+	$(CC) -I./ FoFiBase.cc -o $@
+FoFiTrueType.$(O): FoFiTrueType.cc FoFiBase.h
+	$(CC) -I./ FoFiTrueType.cc -o $@
+FoFiEncodings.$(O): FoFiEncodings.cc FoFiEncodings.h
+	$(CC) -I./ FoFiEncodings.cc -o $@
+FoFiType1C.$(O): FoFiType1C.cc FoFiBase.h
+	$(CC) -I./ FoFiType1C.cc -o $@
+FoFiType1.$(O): FoFiType1.cc FoFiBase.h
+	$(CC) -I./ FoFiType1.cc -o $@
+GList.$(O): GList.cc
+	$(CC) -I./ GList.cc -o $@
+GString.$(O): GString.cc
+	$(CC) -I./ GString.cc -o $@
+GHash.$(O): GHash.cc
+	$(CC) -I./ GHash.cc -o $@
+gfile.$(O): gfile.cc
+	$(CC) -I./ gfile.cc -o $@
+gmem.$(O): gmem.c
+	$(C) -I./ gmem.c -o $@
+
+../libpdf$(A): $(libpdf_objects)
+	$(AR) r ../libpdf$(A) $(libpdf_objects)
+	$(RANLIB) ../libpdf$(A)
+
+install:
+uninstall:
+
+clean: 
+	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
+
