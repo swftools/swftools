@@ -463,6 +463,8 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
     struct png_header header;
     int bypp;
     U8*data2 = 0;
+    U8 alphacolor[3];
+    int hasalphacolor=0;
 
     FILE *fi;
     U8 *scanline;
@@ -509,6 +511,16 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 		alphapalettelen = len;
 		data = 0; //don't free data
 		//printf("found %d alpha colors\n", alphapalettelen);
+	    } else if(header.mode == 0 || header.mode == 2) {
+		int t;
+		if(header.mode == 2) {
+		    alphacolor[0] = data[1];
+		    alphacolor[1] = data[3];
+		    alphacolor[2] = data[5];
+		} else {
+		    alphacolor[0] = alphacolor[1] = alphacolor[2] = data[1];
+		}
+		hasalphacolor = 1;
 	    }
 	}
 	if(!strncmp(tagid, "IDAT", 4)) {
@@ -643,6 +655,10 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 		rgba[i].r = i*mult;
 		rgba[i].g = i*mult;
 		rgba[i].b = i*mult;
+		if(hasalphacolor) {
+		    if(rgba[i].r == alphacolor[0])
+			rgba[i].a = 0;
+		}
 	    }
 	} else {
 	    if(!palette) {
@@ -662,6 +678,12 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 		    rgba[i].b = ((int)rgba[i].b*rgba[i].a)/255;*/
 		} else {
 		    rgba[i].a = 255;
+		}
+		if(hasalphacolor) {
+		    if(rgba[i].r == alphacolor[0] &&
+		       rgba[i].g == alphacolor[1] &&
+		       rgba[i].b == alphacolor[2])
+			rgba[i].a = 0;
 		}
 	    }
 	}
