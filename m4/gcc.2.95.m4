@@ -11,7 +11,7 @@ int main (int argc, char*argv[])
     int a,b;
     b=3;
     int c;
-    c=4
+    c=4;
     return 0;
 }
 EOF
