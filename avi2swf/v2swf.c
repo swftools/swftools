@@ -182,9 +182,10 @@ static int getSamples(videoreader_t*video, S16*data, int len, double speedup)
     int r = /*resampled len */ rlen * 
 	          /* s16_le */ 2 * 
 		               video->channels;
-    int l;
+    int l = 0;
     memset(tmp, 0, sizeof(tmp));
-    l = videoreader_getsamples(video, tmp, r);
+    if(r>0)
+	l = videoreader_getsamples(video, tmp, r);
     if(l <= 0) {
 	return 0;
     }
