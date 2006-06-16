@@ -136,7 +136,7 @@ static void glyph_clear(gfxglyph_t*g)
 
 static int errorno = 0;
 
-gfxfont_t* gfxfont_load(char*filename, double quality)
+gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 {
     FT_Face face;
     FT_Error error;
@@ -179,6 +179,7 @@ gfxfont_t* gfxfont_load(char*filename, double quality)
     //font->leading = font->layout->ascent + font->layout->descent;
     //font->encoding = FONT_ENCODING_UNICODE;
     font->max_unicode = 0;
+    font->id = strdup(id);
     
     font->glyphs = rfx_calloc(face->num_glyphs*sizeof(gfxglyph_t));
     glyph2unicode = rfx_calloc(face->num_glyphs*sizeof(int));
