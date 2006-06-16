@@ -185,14 +185,14 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->forceType0Fonts=1;
     this->config_use_fontconfig=1;
 
+    this->parameters = p;
+
     /* configure device */
     while(p) {
 	if(!strcmp(p->name,"forceType0Fonts")) {
 	    this->forceType0Fonts = atoi(p->value);
 	} else if(!strcmp(p->name,"fontconfig")) {
 	    this->config_use_fontconfig = atoi(p->value);
-	} else {
-	    msg("<warning> Ignored Paramter %s=%s", p->name, p->value);
 	}
 	p = p->next;
     }
@@ -200,7 +200,16 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
   
 void GFXOutputDev::setDevice(gfxdevice_t*dev)
 {
+    parameter_t*p = this->parameters;
+
+    /* TODO: get rid of this */
     this->device = dev;
+    if(this->device) {
+	while(p) {
+	    this->device->setparameter(this->device, p->name, p->value);
+	    p = p->next;
+	}
+    }
 }
   
 void GFXOutputDev::setMove(int x,int y)
@@ -647,11 +656,12 @@ gfxcolor_t getFillColor(GfxState * state)
 void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line) 
 {
     gfxcolor_t col = getFillColor(state);
-
+    
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
+
     device->fill(device, line, &col);
 }
 void GFXOutputDev::fill(GfxState *state) 
@@ -743,7 +753,6 @@ GFXOutputDev::~GFXOutputDev()
 	fontlist_t*next = l->next;
 	l->next = 0;
 	gfxfont_free(l->font);
-	free(l->id);l->id=0;
 	free(l->filename);l->filename=0;
 	free(l);
 	l = next;
@@ -952,7 +961,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	       if the ligature doesn't exist, we need to draw
 	       the characters one-by-one. */
 	    int t;
-	    msg("<warning> ligature %d missing in font %s\n", c, current_font_id);
+	    msg("<warning> ligature %d missing in font %s\n", c, current_gfxfont->id);
 	    for(t=0;t<uLen;t++) {
 		drawChar(state, x, y, dx, dy, originX, originY, c, nBytes, _u+t, 1);
 	    }
@@ -961,7 +970,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     }
     if(charid<0) {
 	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
-		FIXNULL(name),c, u, FIXNULL((char*)current_font_id), current_gfxfont->num_glyphs);
+		FIXNULL(name),c, u, FIXNULL((char*)current_gfxfont->id), current_gfxfont->num_glyphs);
 	return;
     }
 
@@ -971,7 +980,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     m.ty += user_movey;
 
     if(render == RENDER_FILL) {
-	device->drawchar(device, current_font_id, charid, &col, &m);
+	device->drawchar(device, current_gfxfont, charid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
 	if(!textmodeinfo) {
@@ -1683,14 +1692,16 @@ int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize)
     gfxfont_t*font = 0;
     fontlist_t*last=0,*l = this->fontlist;
 
+    if(!id)
+	msg("<error> Internal Error: FontID is null");
+
     /* TODO: should this be part of the state? */
     while(l) {
 	last = l;
-	if(!strcmp(l->id, id)) {
-	    current_font_id = l->id;
+	if(!strcmp(l->font->id, id)) {
 	    current_gfxfont = l->font;
 	    font = l->font;
-	    device->addfont(device, id, current_gfxfont);
+	    device->addfont(device, current_gfxfont);
 	    return 1;
 	}
 	l = l->next;
@@ -1704,22 +1715,20 @@ int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize)
     double quality = (1024 * 0.05) / maxSize;
    
     msg("<verbose> Loading %s...", filename);
-    font = gfxfont_load(filename, quality);
-    msg("<verbose> Font %s loaded successfully", filename);
+    font = gfxfont_load(id, filename, quality);
+    msg("<verbose> Font %s (%s) loaded successfully", filename, id);
 
     l = new fontlist_t;
     l->font = font;
     l->filename = strdup(filename);
-    l->id = strdup(id);
     l->next = 0;
-    current_font_id = l->id;
     current_gfxfont = l->font;
     if(last) {
 	last->next = l;
     } else {
 	this->fontlist = l;
     }
-    device->addfont(device, id, current_gfxfont);
+    device->addfont(device, current_gfxfont);
     return 1;
 }
 

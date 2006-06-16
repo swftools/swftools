@@ -9,7 +9,6 @@
 
 typedef struct _fontlist
 {
-    char*id;
     char*filename;
     gfxfont_t*font;
     _fontlist*next;
@@ -208,6 +207,8 @@ public:
   /* config */
   int forceType0Fonts;
   int config_use_fontconfig;
+    
+  parameter_t*parameters;
 };
 
 #endif //__gfxoutputdev_h__
