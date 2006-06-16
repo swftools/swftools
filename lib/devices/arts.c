@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <memory.h>
 #include "../mem.h"
@@ -38,20 +39,43 @@ typedef struct _internal {
     clip_t*clip;
 } internal_t;
 
+static int verbose = 1;
+static void dbg(char*format, ...)
+{
+    if(!verbose)
+	return;
+    char buf[1024];
+    int l;
+    va_list arglist;
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+    l = strlen(buf);
+    while(l && buf[l-1]=='\n') {
+	buf[l-1] = 0;
+	l--;
+    }
+    printf("(device-arts) %s\n", buf);
+    fflush(stdout);
+}
+
 int arts_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
+    dbg("arts_setparameter");
     internal_t*i = (internal_t*)dev->internal;
     return i->out->setparameter(i->out,key,value);
 }
 
 void arts_startpage(struct _gfxdevice*dev, int width, int height)
 {
+    dbg("arts_startpage");
     internal_t*i = (internal_t*)dev->internal;
     i->out->startpage(i->out,width,height);
 }
 
 void arts_startclip(struct _gfxdevice*dev, gfxline_t*line)
 {
+    dbg("arts_startclip");
     internal_t*i = (internal_t*)dev->internal;
     ArtSVP* svp = gfxfillToSVP(line, 1);
 
@@ -72,6 +96,7 @@ void arts_startclip(struct _gfxdevice*dev, gfxline_t*line)
 
 void arts_endclip(struct _gfxdevice*dev)
 {
+    dbg("arts_endclip");
     internal_t*i = (internal_t*)dev->internal;
 
     if(i->clip) {
@@ -86,6 +111,7 @@ void arts_endclip(struct _gfxdevice*dev)
 
 void arts_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
+    dbg("arts_stroke");
     internal_t*i = (internal_t*)dev->internal;
     //i->out->stroke(i->out, line, width, color, cap_style, joint_style, miterLimit);
     ArtSVP* svp = gfxstrokeToSVP(line, width, cap_style, joint_style, miterLimit);
@@ -102,6 +128,7 @@ void arts_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 
 void arts_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 {
+    dbg("arts_fill");
     internal_t*i = (internal_t*)dev->internal;
     ArtSVP* svp = gfxfillToSVP(line, 1);
     
@@ -120,6 +147,7 @@ void arts_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 
 void arts_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
+    dbg("arts_fillbitmap");
     internal_t*i = (internal_t*)dev->internal;
     ArtSVP* svp = gfxfillToSVP(line, 1);
     if(i->clip) {
@@ -135,6 +163,7 @@ void arts_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxm
 
 void arts_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
+    dbg("arts_fillgradient");
     internal_t*i = (internal_t*)dev->internal;
     ArtSVP* svp = gfxfillToSVP(line, 1);
     if(i->clip) {
@@ -150,12 +179,14 @@ void arts_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*grad
 
 void arts_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
+    dbg("arts_addfont");
     internal_t*i = (internal_t*)dev->internal;
     i->out->addfont(i->out, font);
 }
 
 void arts_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
+    dbg("arts_drawchar");
     internal_t*i = (internal_t*)dev->internal;
     gfxline_t*glyph = gfxline_clone(font->glyphs[glyphnr].line);
     gfxline_transform(glyph, matrix);
@@ -187,24 +218,28 @@ void arts_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_
 
 void arts_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
 {
+    dbg("arts_drawlink");
     internal_t*i = (internal_t*)dev->internal;
     i->out->drawlink(i->out, line, action);
 }
 
 void arts_endpage(struct _gfxdevice*dev)
 {
+    dbg("arts_endpage");
     internal_t*i = (internal_t*)dev->internal;
     i->out->endpage(i->out);
 }
 
 gfxresult_t* arts_finish(struct _gfxdevice*dev)
 {
+    dbg("arts_finish");
     internal_t*i = (internal_t*)dev->internal;
     return i->out->finish(i->out);
 }
 
 void gfxdevice_arts_init(gfxdevice_t*dev, gfxdevice_t*out)
 {
+    dbg("gfxdevice_arts_init");
     internal_t*i = rfx_calloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
     dev->internal = i;
