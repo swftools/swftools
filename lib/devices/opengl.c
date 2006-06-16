@@ -29,8 +29,7 @@ typedef struct _internal {
     GLUtesselator *tesselator_tex;
 } internal_t;
 
-int verbose = 1;
-
+static int verbose = 1;
 static void dbg(char*format, ...)
 {
     char buf[1024];
@@ -122,6 +121,7 @@ void opengl_endclip(struct _gfxdevice*dev)
 
 void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
+    dbg("stroke");
     internal_t*i = (internal_t*)dev->internal;
     char running = 0;
     gfxline_t*l=0;
@@ -153,6 +153,7 @@ void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 
 void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 {
+    dbg("fill");
     internal_t*i = (internal_t*)dev->internal;
     char running = 0;
     int len = 0;
@@ -202,6 +203,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 
 void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
+    dbg("fillbitmap");
     internal_t*i = (internal_t*)dev->internal;
     char running = 0;
     int len = 0;
@@ -252,6 +254,7 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     
+    
     gluTessBeginPolygon(i->tesselator_tex, NULL);
     l = line;
     len = 0;
@@ -286,6 +289,7 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 
 	l=l->next;
     }
+
     if(running) {
 	running = 0;
 	gluTessEndContour(i->tesselator_tex);
