@@ -35,6 +35,7 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../art/libart.h"
+#include "artsutils.c"
 
 #define CHARDATAMAX 8192
 #define CHARMIDX 0
@@ -170,8 +171,8 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
 static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
-static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
-static void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font);
+static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font);
 static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action);
 static void swf_startframe(gfxdevice_t*dev, int width, int height);
 static void swf_endframe(gfxdevice_t*dev);
@@ -1180,12 +1181,15 @@ void swfoutput_finalize(gfxdevice_t*dev)
     while(iterator) {
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
-	    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
 	    if(!i->config_storeallcharacters) {
 		msg("<debug> Reducing font %s", iterator->swffont->name);
 		swf_FontReduce(iterator->swffont);
 	    }
-	    swf_FontSetDefine2(mtag, iterator->swffont);
+	    int used = iterator->swffont->use && iterator->swffont->use->used_glyphs;
+	    if(i->config_storeallcharacters || used) {
+		mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
+		swf_FontSetDefine2(mtag, iterator->swffont);
+	    }
 	}
 
         iterator = iterator->next;
@@ -1696,6 +1700,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
+    msg("<trace> swfdevice: %s=%s", name, value);
     if(!strcmp(name, "jpegsubpixels")) {
 	i->config_jpegsubpixels = atof(value);
     } else if(!strcmp(name, "ppmsubpixels")) {
@@ -1820,129 +1825,6 @@ static CXFORM gfxcxform_to_cxform(gfxcxform_t* c)
     return cx;
 }
 
-static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
-{
-    ArtVpath *vec = NULL;
-    int pos=0,len=0;
-    gfxline_t*l2;
-    double x=0,y=0;
-
-    /* factor which determines into how many line fragments a spline is converted */
-    double subfraction = 2.4;//0.3
-
-    l2 = line;
-    while(l2) {
-	if(l2->type == gfx_moveTo) {
-	    pos ++;
-	} if(l2->type == gfx_lineTo) {
-	    pos ++;
-	} if(l2->type == gfx_splineTo) {
-            int parts = (int)(sqrt(fabs(l2->x-2*l2->sx+x) + fabs(l2->y-2*l2->sy+y))*subfraction);
-            if(!parts) parts = 1;
-            pos += parts + 1;
-	}
-	x = l2->x;
-	y = l2->y;
-	l2 = l2->next;
-    }
-    pos++;
-    len = pos;
-
-    vec = art_new (ArtVpath, len);
-
-    pos = 0;
-    l2 = line;
-    while(l2) {
-	if(l2->type == gfx_moveTo) {
-	    vec[pos].code = ART_MOVETO;
-	    vec[pos].x = l2->x;
-	    vec[pos].y = l2->y;
-	    pos++; 
-	    assert(pos<=len);
-	} else if(l2->type == gfx_lineTo) {
-	    vec[pos].code = ART_LINETO;
-	    vec[pos].x = l2->x;
-	    vec[pos].y = l2->y;
-	    pos++; 
-	    assert(pos<=len);
-	} else if(l2->type == gfx_splineTo) {
-	    int i;
-            int parts = (int)(sqrt(fabs(l2->x-2*l2->sx+x) + fabs(l2->y-2*l2->sy+y))*subfraction);
-            if(!parts) parts = 1;
-	    for(i=0;i<=parts;i++) {
-		double t = (double)i/(double)parts;
-		vec[pos].code = ART_LINETO;
-		vec[pos].x = l2->x*t*t + 2*l2->sx*t*(1-t) + x*(1-t)*(1-t);
-		vec[pos].y = l2->y*t*t + 2*l2->sy*t*(1-t) + y*(1-t)*(1-t);
-		pos++;
-		assert(pos<=len);
-	    }
-	}
-	x = l2->x;
-	y = l2->y;
-	l2 = l2->next;
-    }
-    vec[pos].code = ART_END;
-
-    return vec;
-}
-
-static ArtSVP* gfxfillToSVP(gfxline_t*line)
-{
-    ArtVpath* vec = gfxline_to_ArtVpath(line);
-    ArtSVP *svp = art_svp_from_vpath(vec);
-    free(vec);
-    return svp;
-}
-
-static ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
-{
-    ArtVpath* vec = gfxline_to_ArtVpath(line);
-    ArtSVP *svp = art_svp_vpath_stroke (vec,
-			(joint_style==gfx_joinMiter)?ART_PATH_STROKE_JOIN_MITER:
-			((joint_style==gfx_joinRound)?ART_PATH_STROKE_JOIN_ROUND:
-			 ((joint_style==gfx_joinBevel)?ART_PATH_STROKE_JOIN_BEVEL:ART_PATH_STROKE_JOIN_BEVEL)),
-			(cap_style==gfx_capButt)?ART_PATH_STROKE_CAP_BUTT:
-			((cap_style==gfx_capRound)?ART_PATH_STROKE_CAP_ROUND:
-			 ((cap_style==gfx_capSquare)?ART_PATH_STROKE_CAP_SQUARE:ART_PATH_STROKE_CAP_SQUARE)),
-			width, //line_width
-			miterLimit, //miter_limit
-			0.05 //flatness
-			);
-    free(vec);
-    return svp;
-}
-
-static gfxline_t* SVPtogfxline(ArtSVP*svp)
-{
-    int size = 0;
-    int t;
-    int pos = 0;
-    for(t=0;t<svp->n_segs;t++) {
-	size += svp->segs[t].n_points + 1;
-    }
-    gfxline_t* lines = (gfxline_t*)rfx_alloc(sizeof(gfxline_t)*size);
-
-    for(t=0;t<svp->n_segs;t++) {
-	ArtSVPSeg* seg = &svp->segs[t];
-	int p;
-	for(p=0;p<seg->n_points;p++) {
-	    lines[pos].type = p==0?gfx_moveTo:gfx_lineTo;
-	    ArtPoint* point = &seg->points[p];
-	    lines[pos].x = point->x;
-	    lines[pos].y = point->y;
-	    lines[pos].next = &lines[pos+1];
-	    pos++;
-	}
-    }
-    if(pos) {
-	lines[pos-1].next = 0;
-	return lines;
-    } else {
-	return 0;
-    }
-}
-
 /* TODO */
 static int imageInCache(gfxdevice_t*dev, void*data, int width, int height)
 {
@@ -2041,9 +1923,22 @@ static SRECT gfxline_getSWFbbox(gfxline_t*line)
     return r;
 }
 
+int line_is_empty(gfxline_t*line)
+{
+    while(line) {
+	if(line->type != gfx_moveTo)
+	    return 0;
+	line = line->next;
+    }
+    return 1;
+}
+
 static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    
+    if(line_is_empty(line))
+	return;
 
     endshape(dev);
     endtext(dev);
@@ -2159,6 +2054,7 @@ static int gfxline_type(gfxline_t*line)
     int lines=0;
     int splines=0;
     int haszerosegments=0;
+    int length=0;
     while(line) {
 	if(line->type == gfx_moveTo) {
 	    tmplines=0;
@@ -2172,8 +2068,11 @@ static int gfxline_type(gfxline_t*line)
 	    if(tmpsplines>lines)
 		splines=tmpsplines;
 	}
+	length++;
 	line = line->next;
     }
+    if(length>400)
+	return 5;
     if(lines==0 && splines==0) return 0;
     else if(lines==1 && splines==0) return 1;
     else if(lines==0 && splines==1) return 2;
@@ -2253,24 +2152,6 @@ static char is_inside_page(gfxdevice_t*dev, gfxcoord_t x, gfxcoord_t y)
     return 1;
 }
 
-static void show_path(ArtSVP*path)
-{
-    int t;
-    printf("Segments: %d\n", path->n_segs);
-    for(t=0;t<path->n_segs;t++) {
-	ArtSVPSeg* seg = &path->segs[t];
-	printf("Segment %d: %d points, %s, BBox: (%f,%f,%f,%f)\n", 
-		t, seg->n_points, seg->dir==0?"UP  ":"DOWN",
-		seg->bbox.x0, seg->bbox.y0, seg->bbox.x1, seg->bbox.y1);
-	int p;
-	for(p=0;p<seg->n_points;p++) {
-	    ArtPoint* point = &seg->points[p];
-	    printf("        (%f,%f)\n", point->x, point->y);
-	}
-    }
-    printf("\n");
-}
-
 gfxline_t* gfxline_move(gfxline_t*line, double x, double y)
 {
     gfxline_t*l = line = gfxline_clone(line);
@@ -2290,6 +2171,8 @@ gfxline_t* gfxline_move(gfxline_t*line, double x, double y)
 static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(line_is_empty(line))
+	return;
     int type = gfxline_type(line);
     int has_dots = gfxline_has_dots(line);
     gfxbbox_t r = gfxline_getbbox(line);
@@ -2297,7 +2180,7 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 
     /* TODO: * split line into segments, and perform this check for all segments */
 
-    if(i->config_disable_polygon_conversion ||
+    if(i->config_disable_polygon_conversion || type>=5 ||
        (!has_dots &&
         (width <= i->config_caplinewidth 
         || (cap_style == gfx_capRound && joint_style == gfx_joinRound)
@@ -2345,6 +2228,8 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(line_is_empty(line))
+	return;
     gfxbbox_t r = gfxline_getbbox(line);
     int is_outside_page = !is_inside_page(dev, r.xmin, r.ymin) || !is_inside_page(dev, r.xmax, r.ymax);
 
@@ -2377,6 +2262,8 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 }
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
+    if(line_is_empty(line))
+	return;
     msg("<error> Gradient filling not implemented yet");
 }
 
@@ -2462,23 +2349,23 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
     return swffont;
 }
 
-static void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
+static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
-    if(i->swffont && i->swffont->name && !strcmp((char*)i->swffont->name,fontid))
+    if(i->swffont && i->swffont->name && !strcmp((char*)i->swffont->name,font->id))
 	return; // the requested font is the current font
     
     fontlist_t*last=0,*l = i->fontlist;
     while(l) {
 	last = l;
-	if(!strcmp((char*)l->swffont->name, fontid)) {
+	if(!strcmp((char*)l->swffont->name, font->id)) {
 	    return; // we already know this font
 	}
 	l = l->next;
     }
     l = (fontlist_t*)rfx_calloc(sizeof(fontlist_t));
-    l->swffont = gfxfont_to_swffont(font, fontid);
+    l->swffont = gfxfont_to_swffont(font, font->id);
     l->next = 0;
     if(last) {
 	last->next = l;
@@ -2490,7 +2377,7 @@ static void swf_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
     if(getScreenLogLevel() >= LOGLEVEL_DEBUG)  {
 	int iii;
 	// print font information
-	msg("<debug> Font %s",fontid);
+	msg("<debug> Font %s",font->id);
 	msg("<debug> |   ID: %d", l->swffont->id);
 	msg("<debug> |   Version: %d", l->swffont->version);
 	msg("<debug> |   Name: %s", l->swffont->name);
@@ -2533,17 +2420,17 @@ static void swf_switchfont(gfxdevice_t*dev, char*fontid)
     return;
 }
 
-static void swf_drawchar(gfxdevice_t*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 	
-    if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,fontid)) // not equal to current font
+    if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,font->id)) // not equal to current font
     {
 	/* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
 		 with multiple fonts */
 	endtext(dev);
 
-	swf_switchfont(dev, fontid); // set the current font
+	swf_switchfont(dev, font->id); // set the current font
     }
     swfoutput_setfontmatrix(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
    
