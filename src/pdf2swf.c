@@ -35,6 +35,7 @@
 #include "../lib/os.h"
 #include "../lib/rfxswf.h"
 #include "../lib/devices/swf.h"
+#include "../lib/devices/arts.h"
 #include "../lib/xpdf/pdf.h"
 #include "../lib/log.h"
 
@@ -53,6 +54,8 @@ static char * preloader = 0;
 static char * viewer = 0;
 static int xnup = 1;
 static int ynup = 1;
+
+static int flatten = 0;
 
 char* fontpaths[256];
 int fontpathpos = 0;
@@ -235,6 +238,11 @@ int args_callback_option(char*name,char*val) {
 	driver->set_parameter("linksopennewwindow", "0");
 	return 0;
     }
+    else if (!strcmp(name, "G"))
+    {
+	flatten = 1;
+	return 0;
+    }
     else if (!strcmp(name, "F"))
     {
 	char *s = strdup(val);
@@ -344,6 +352,7 @@ struct options_t options[] =
  {"f","fonts"},
  {"F","fontdir"},
  {"B","viewer"},
+ {"G","flatten"},
  {"L","preloader"},
  {"b","defaultviewer"},
  {"l","defaultpreloader"},
@@ -518,9 +527,16 @@ int main(int argn, char *argv[])
         exit(1);
     }
 
-    gfxdevice_t swf;
+    gfxdevice_t swf,wrap;
     gfxdevice_swf_init(&swf);
-    //gfxdevice_render_init(&swf);
+    gfxdevice_t*out;
+    
+    if(flatten) {
+	gfxdevice_arts_init(&wrap, &swf);
+	out = &wrap;
+    } else {
+	out = &swf;
+    }
 
     struct mypage_t {
 	int x;
@@ -585,9 +601,9 @@ int main(int argn, char *argv[])
 		ymax[y] = height;
 	    }
 	    if(custom_clip) {
-		swf.startpage(&swf,clip_x2 - clip_x1, clip_y2 - clip_y1);
+		out->startpage(out,clip_x2 - clip_x1, clip_y2 - clip_y1);
 	    } else {
-		swf.startpage(&swf,width,height);
+		out->startpage(out,width,height);
 	    }
 	    for(t=0;t<pagenum;t++) {
 		int x = t%xnup;
@@ -597,14 +613,14 @@ int main(int argn, char *argv[])
 		msg("<verbose> Render (%d,%d) move:%d/%d\n",
 			(int)(pages[t].page->width + xpos),
 			(int)(pages[t].page->height + ypos), xpos, ypos);
-		pages[t].page->rendersection(pages[t].page, &swf, custom_move? move_x : xpos, 
+		pages[t].page->rendersection(pages[t].page, out, custom_move? move_x : xpos, 
 			                                   custom_move? move_y : ypos,
 							   custom_clip? clip_x1 : 0 + xpos, 
 							   custom_clip? clip_y1 : 0 + ypos, 
 							   custom_clip? clip_x2 : pages[t].page->width + xpos, 
 							   custom_clip? clip_y2 : pages[t].page->height + ypos);
 	    }
-	    swf.endpage(&swf);
+	    out->endpage(out);
 	    for(t=0;t<pagenum;t++)  {
 		pages[t].page->destroy(pages[t].page);
 	    }
@@ -612,7 +628,7 @@ int main(int argn, char *argv[])
 	}
     }
     
-    gfxresult_t*result = swf.finish(&swf);
+    gfxresult_t*result = out->finish(out);
     if(result->save(result, outputname) < 0) {
         exit(1);
     }
