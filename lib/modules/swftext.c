@@ -663,6 +663,7 @@ int swf_FontReduce(SWFFONT * f)
     font_freelayout(f);
     font_freeglyphnames(f);
 
+    f->use->used_glyphs= 0;
     for (i = 0; i < f->numchars; i++) {
 	if(!f->use->chars[i]) {
 	    if(f->glyph2ascii) {
@@ -673,6 +674,7 @@ int swf_FontReduce(SWFFONT * f)
 		f->glyph[i].shape = 0;
 		f->glyph[i].advance = 0;
 	    }
+	    f->use->used_glyphs++;
 	} else {
 	    max_glyph = i+1;
 	}
@@ -782,13 +784,11 @@ void swf_FontClearUsage(SWFFONT * f)
 
 int swf_FontUse(SWFFONT * f, U8 * s)
 {
-    if (!f->use) 
-	swf_FontInitUsage(f);
     if( (!s))
 	return -1;
     while (*s) {
 	if(*s < f->maxascii && f->ascii2glyph[*s]>=0)
-	    f->use->chars[f->ascii2glyph[*s]] = 1;
+	    swf_FontUseGlyph(f, f->ascii2glyph[*s]);
 	s++;
     }
     return 0;
@@ -800,6 +800,8 @@ int swf_FontUseGlyph(SWFFONT * f, int glyph)
 	swf_FontInitUsage(f);
     if(glyph < 0 || glyph >= f->numchars)
 	return -1;
+    if(!f->use->chars[glyph])
+	f->use->used_glyphs++;
     f->use->chars[glyph] = 1;
     return 0;
 }

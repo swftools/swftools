@@ -492,6 +492,7 @@ typedef struct
 typedef struct _FONTUSAGE
 { int* chars;
   char is_reduced;
+  int used_glyphs;
 } FONTUSAGE;
 
 #define FONT_STYLE_BOLD 1
