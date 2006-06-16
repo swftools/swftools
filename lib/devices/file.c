@@ -102,12 +102,12 @@ void file_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*grad
     dumpline(i->fi, line);
 }
 
-void file_addfont(struct _gfxdevice*dev, char*fontid, gfxfont_t*font)
+void file_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
 }
 
-void file_drawchar(struct _gfxdevice*dev, char*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+void file_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
 }

@@ -57,13 +57,6 @@ typedef struct _clipbuffer {
     struct _clipbuffer*prev;
 } clipbuffer_t;
 
-typedef struct _fontlist
-{
-    gfxfont_t*font;
-    char*id;
-    struct _fontlist*next;
-} fontlist_t;
-
 typedef struct _internal {
     int width;
     int height;
@@ -81,8 +74,6 @@ typedef struct _internal {
     gfxfont_t*font;
     char*fontid;
     
-    fontlist_t* fontlist;
-
     clipbuffer_t*clipbufs;
     clipbuffer_t*clipbuf;
 
@@ -635,55 +626,15 @@ void render_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gr
     fill_solid(dev, &black);
 }
 
-void render_addfont(struct _gfxdevice*dev, char*fontid, gfxfont_t*font)
+void render_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
-    internal_t*i = (internal_t*)dev->internal;
-    
-    fontlist_t*last=0,*l = i->fontlist;
-    while(l) {
-	last = l;
-	if(!strcmp((char*)l->id, fontid)) {
-	    return; // we already know this font
-	}
-	l = l->next;
-    }
-    l = (fontlist_t*)rfx_calloc(sizeof(fontlist_t));
-    l->font = font;
-    l->id = strdup(fontid);
-    l->next = 0;
-    if(last) {
-	last->next = l;
-    } else {
-	i->fontlist = l;
-    }
 }
 
-void render_drawchar(struct _gfxdevice*dev, char*fontid, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
+void render_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    if(i->font && i->fontid && !strcmp(fontid, i->fontid)) {
-	// current font is correct
-    } else {
-	fontlist_t*l = i->fontlist;
-	i->font = 0;
-	i->fontid = 0;
-	while(l) {
-	    if(!strcmp((char*)l->id, fontid)) {
-		i->font = l->font;
-		i->fontid = l->id;
-		break;
-	    }
-	    l = l->next;
-	}
-	if(i->font == 0) {
-	    fprintf(stderr, "Unknown font id: %s", fontid);
-	    return;
-	}
-    }
-
-    gfxglyph_t*glyph = &i->font->glyphs[glyphnr];
-    
+    gfxglyph_t*glyph = &font->glyphs[glyphnr];
     gfxline_t*line2 = gfxline_clone(glyph->line);
     gfxline_transform(line2, matrix);
     draw_line(dev, line2);
