@@ -15,7 +15,6 @@
 
 typedef struct _fontlist {
     gfxfont_t*font;
-    char*id;
     struct _fontlist*next;
 } fontlist_t;
 
@@ -303,21 +302,20 @@ void opengl_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gr
     dbg("fillgradient");
 }
 
-void opengl_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
+void opengl_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
     
     fontlist_t*last=0,*l = i->fontlist;
     while(l) {
 	last = l;
-	if(!strcmp((char*)l->id, fontid)) {
+	if(!strcmp((char*)l->font->id, font->id)) {
 	    return; // we already know this font
 	}
 	l = l->next;
     }
     l = (fontlist_t*)rfx_calloc(sizeof(fontlist_t));
     l->font = font;
-    l->id = strdup(fontid);
     l->next = 0;
     if(last) {
 	last->next = l;
@@ -326,26 +324,24 @@ void opengl_addfont(gfxdevice_t*dev, char*fontid, gfxfont_t*font)
     }
 }
 
-void opengl_drawchar(gfxdevice_t*dev, char*fontid, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
+void opengl_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    if(i->font && i->fontid && !strcmp(fontid, i->fontid)) {
+    if(i->font && i->font->id && !strcmp(font->id, i->font->id)) {
 	// current font is correct
     } else {
 	fontlist_t*l = i->fontlist;
 	i->font = 0;
-	i->fontid = 0;
 	while(l) {
-	    if(!strcmp((char*)l->id, fontid)) {
+	    if(!strcmp((char*)l->font->id, font->id)) {
 		i->font = l->font;
-		i->fontid = l->id;
 		break;
 	    }
 	    l = l->next;
 	}
 	if(i->font == 0) {
-	    fprintf(stderr, "Unknown font id: %s", fontid);
+	    fprintf(stderr, "Unknown font id: %s", font->id);
 	    return;
 	}
     }
