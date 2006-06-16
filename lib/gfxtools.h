@@ -65,6 +65,8 @@ gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y);
 void gfxline_transform(gfxline_t*line, gfxmatrix_t*matrix);
 
 void gfxmatrix_dump(gfxmatrix_t*l, FILE*fi, char*prefix);
+void gfxmatrix_transform(gfxmatrix_t*m, gfxcoord_t* v1, gfxcoord_t*dest);
+void gfxmatrix_invert(gfxmatrix_t*src, gfxmatrix_t*dest);
 
 #ifdef __cplusplus
 }

@@ -628,3 +628,24 @@ void gfxmatrix_dump(gfxmatrix_t*m, FILE*fi, char*prefix)
     fprintf(fi, "%f %f | %f\n", m->m00, m->m10, m->tx);
     fprintf(fi, "%f %f | %f\n", m->m01, m->m11, m->ty);
 }
+
+void gfxmatrix_transform(gfxmatrix_t*m, double* v, double*dest)
+{
+    dest[0] = m->m00*v[0] + m->m10*v[1] + m->tx;
+    dest[1] = m->m01*v[0] + m->m11*v[1] + m->ty;
+}
+void gfxmatrix_invert(gfxmatrix_t*m, gfxmatrix_t*dest)
+{
+    double det = m->m00 * m->m11 - m->m10 * m->m01;
+    if(!det) {
+	memset(dest, 0, sizeof(gfxmatrix_t));
+	return;
+    }
+    det = 1/det;
+    dest->m00 = m->m11 * det;
+    dest->m01 = -m->m01 * det;
+    dest->m10 = -m->m10 * det;
+    dest->m11 = m->m00 * det;
+    dest->tx = -(dest->m00 * m->tx + dest->m10 * m->ty);
+    dest->ty = -(dest->m01 * m->tx + dest->m11 * m->ty);
+}
