@@ -249,7 +249,7 @@ gfxdocument_t*pdf_open(char*filename)
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
     memset(i, 0, sizeof(pdf_doc_internal_t));
     pdf_doc->internal = i;
-    char*userPassword;
+    char*userPassword=0;
     
     filename = strdup(filename);
 
