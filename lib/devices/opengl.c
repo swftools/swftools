@@ -75,6 +75,15 @@ void CALLBACK vertexCallback(GLvoid *vertex)
    double*xyz = (GLdouble*)vertex;
    glVertex3d(xyz[0],xyz[1],xyz[2]);
 }
+void CALLBACK combineCallback(GLdouble coords[3], GLdouble *data[4], GLfloat w[4], GLdouble **out)
+{
+   GLdouble *vertex;
+   vertex = (GLdouble *) malloc(6 * sizeof(GLdouble));
+   vertex[0] = coords[0];
+   vertex[1] = coords[1];
+   vertex[2] = coords[2];
+   *out = vertex;
+}
 void CALLBACK vertexCallbackTex(GLvoid *vertex)
 {
    double*v = (GLdouble*)vertex;
@@ -158,6 +167,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     char running = 0;
     int len = 0;
     double*xyz=0;
+    double lastx=0,lasty=0;
     gfxline_t*l=0;
     dbg("fill");
     glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
@@ -166,9 +176,18 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     l = line;
     len = 0;
     while(l) {
-	len++;
+	if(l->type == gfx_splineTo) {
+            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->x-2*l->sy+lasty))/2;
+	    int steps = (int)c;
+	    if(steps<1) steps = 1;
+	    len += steps;
+	} else {
+	    len++;
+	}
 	l = l->next;
     }
+    //printf("full len:%d\n", len);
+    double z = (i->currentz*ZSTEP);
     xyz = malloc(sizeof(double)*3*len);
     l = line;
     len = 0;
@@ -184,11 +203,33 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 	    gluTessBeginContour(i->tesselator);
 	}
 
-	xyz[len*3+0] = l->x;
-	xyz[len*3+1] = l->y;
-	xyz[len*3+2] = (i->currentz*ZSTEP);
-	gluTessVertex(i->tesselator, &xyz[len*3], &xyz[len*3]);
-	len++;
+	if(l->type == gfx_splineTo) {
+	    int j;
+            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->x-2*l->sy+lasty))/2;
+	    int steps = (int)c;
+	    if(steps<1) steps = 1;
+	    //printf("c=%f d1=%f (%f/%f) d2=%f (%f/%f)\n", c,d1,l->x-l->sx,l->y-l->sy,d2,lastx-l->sx,lasty-l->sy);
+	    //printf("%f %f %f\n", lastx, l->sx, l->x);
+	    //printf("%f %f %f\n", lasty, l->sy, l->y);
+	    for(j=1;j<=steps;j++) {
+		//printf("%d\n", j);
+		double t = (double)j / (double)steps;
+		xyz[len*3+0] = lastx*(1-t)*(1-t) + 2*l->sx*(1-t)*t + l->x*t*t;
+		xyz[len*3+1] = lasty*(1-t)*(1-t) + 2*l->sy*(1-t)*t + l->y*t*t;
+		xyz[len*3+2] = z;
+		gluTessVertex(i->tesselator, &xyz[len*3], &xyz[len*3]);
+		len++;
+	    }
+	    //printf("%d\n", len);
+	} else {
+	    xyz[len*3+0] = l->x;
+	    xyz[len*3+1] = l->y;
+	    xyz[len*3+2] = z;
+	    gluTessVertex(i->tesselator, &xyz[len*3], &xyz[len*3]);
+	    len++;
+	}
+	lastx = l->x;
+	lasty = l->y;
 
 	l=l->next;
     }
@@ -429,6 +470,7 @@ void gfxdevice_opengl_init(gfxdevice_t*dev)
     gluTessCallback(i->tesselator, GLU_TESS_VERTEX, (callbackfunction_t)vertexCallback);
     gluTessCallback(i->tesselator, GLU_TESS_BEGIN, (callbackfunction_t)beginCallback);
     gluTessCallback(i->tesselator, GLU_TESS_END, (callbackfunction_t)endCallback);
+    //gluTessCallback(i->tesselator, GLU_TESS_END, (callbackfunction_t)combineCallback);
     
     i->tesselator_tex = gluNewTess();
     gluTessCallback(i->tesselator_tex, GLU_TESS_ERROR, (callbackfunction_t)errorCallback);
