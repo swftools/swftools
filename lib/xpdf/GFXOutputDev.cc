@@ -253,8 +253,9 @@ static char*getFontName(GfxFont*font)
 	Ref*r=font->getID();
 	sprintf(buf, "UFONT%d", r->num);
 	fontid = strdup(buf);
+    } else {
+	fontid = strdup(fname);
     }
-    fontid = strdup(fname);
 
     char*fontname= 0;
     char* plus = strchr(fontid, '+');
