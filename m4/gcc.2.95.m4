@@ -17,7 +17,7 @@ int main (int argc, char*argv[])
 EOF
 
 testprog_link='$CC $CPPFLAGS $CFLAGS conftest.cpp -o conftest${ac_exeext}'
-if { (eval echo gcc.2.95.m4:19: \"$testprog_link\") 1>&5; (eval $testprog_link) 2>&5; } && test -s conftest${ac_exeext} && ./conftest${ac_exeext}; then
+if { (eval echo gcc.2.95.m4:19: \"$testprog_link\") 1>&5; (eval $testprog_link) 2>&5; } && test -s conftest${ac_exeext}; then
   AC_MSG_RESULT(yes)
   GCC_IS_OK=true
   export GCC_IS_OK
