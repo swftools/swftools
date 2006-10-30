@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2006-05-01-1103
+VERSION=2006-10-28-2033
 
 
 # ------------------------------------------------------------------
@@ -44,8 +44,8 @@ if test "x$PROFILING" '!=' "x";then
 fi
 if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
-        CFLAGS="$WARNINGS -O2 -g $CFLAGS"
-        CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
+        CFLAGS="$WARNINGS -O2 -g -D_FORTIFY_SOURCE=2 $CFLAGS"
+        CXXFLAGS="$WARNINGS -O2 -g -D_FORTIFY_SOURCE=2 $CXXFLAGS"
     else
         CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
@@ -199,7 +199,7 @@ dnl Checks for libraries.
  )
  AC_CHECK_LIB(z, deflate,, ZLIBMISSING=true)
  AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
- AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
+ #AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
  AC_CHECK_LIB(ungif, DGifOpen,, UNGIFMISSING=true)
 
 RFX_CHECK_BYTEORDER
