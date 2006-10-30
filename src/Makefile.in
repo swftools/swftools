@@ -43,7 +43,7 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 
 # TODO: include the following rule only if lex is available
 parser.yy.c: parser.lex
-	flex -Bs -oparser.yy.c parser.lex
+	flex -B -s -oparser.yy.c parser.lex
 
 wav2swf$(E): wav2swf.$(O) ../lib/wav.$(O) ../lib/librfxswf$(A)
 	$(L) wav2swf.$(O) ../lib/wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
@@ -82,7 +82,7 @@ jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
 	$(STRIP) $@
 pdf2swf$(E): pdf2swf.$(O) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/devices/arts.$(O) ../lib/devices/swf.$(O)
-	$(L) pdf2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O) ../lib/os.$(O) ../lib/devices/swf.$(O) ../lib/devices/arts.$(O) ../lib/art/libart$(A) $(LIBS) $(CXXLIBS)
+	$(LL) pdf2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O) ../lib/os.$(O) ../lib/devices/swf.$(O) ../lib/devices/arts.$(O) ../lib/art/libart$(A) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
 swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) ../lib/librfxswf$(A)
 	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
