@@ -25,7 +25,7 @@
 #include "wav.h"
 
 struct WAVBlock {
-    char id[4];
+    char id[5];
     unsigned int size;
 };
 
@@ -35,6 +35,7 @@ int getWAVBlock(FILE*fi, struct WAVBlock*block)
     unsigned char b[4];
     if(fread(block->id,1,4,fi)<4)
 	return 0;
+    block->id[4] = 0;
     if(fread(b,1,4,fi)<4)
 	return 0;
     block->size = b[0]|b[1]<<8|b[2]<<16|b[3]<<24;
@@ -69,6 +70,12 @@ int wav_read(struct WAV*wav, char* filename)
     if(block.size + 8 < filesize)
 	fprintf(stderr, "wav_read: warning - more tags (%d extra bytes)\n",
 		filesize - block.size - 8);
+
+    if(block.size == filesize) {
+	/* some buggy software doesn't generate the right tag length */
+	block.size = filesize - 8;
+    }
+
     if(block.size + 8 > filesize)
 	fprintf(stderr, "wav_read: warning - short file (%d bytes missing)\n",
 		block.size + 8 -  filesize);
@@ -96,13 +103,17 @@ int wav_read(struct WAV*wav, char* filename)
 	} else if (!strncmp(block.id, "LIST", 4)) {
 	    // subchunk ICMT (comment) may exist
 	} else if (!strncmp(block.id, "data", 4)) {
+	    int l;
 	    wav->data = malloc(block.size);
 	    if(!wav->data) {
 		fprintf(stderr, "Out of memory (%d bytes needed)", block.size);
 		return 0;
 	    }
-	    if(fread(wav->data, 1, block.size, fi) < block.size)
+	    l = fread(wav->data, 1, block.size, fi);
+	    if(l < block.size) {
+		fprintf(stderr, "Error while reading data block of size %d (%d bytes missing)", block.size, block.size-l);
 		return 0;
+	    }
 	    wav->size = block.size;
 	}
 	pos+=block.size;
@@ -248,6 +259,8 @@ int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
 		pos += ratio;
 	    }
 	}
+    } else {
+	fprintf(stderr, "Unsupported bitspersample value: %d\n", bps);
     }
     return 1;
 }
