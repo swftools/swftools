@@ -1037,7 +1037,7 @@ void s_image(char*name, char*type, char*filename, int quality)
     int imageID = id;
     int width, height;
     if(!strcmp(type,"jpeg")) {
-#ifndef HAVE_LIBJPEG
+#ifndef HAVE_JPEGLIB
 	warning("no jpeg support compiled in");
 	s_box(name, 0, 0, black, 20, 0);
 	return;
