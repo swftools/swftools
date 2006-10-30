@@ -55,6 +55,8 @@ static char * viewer = 0;
 static int xnup = 1;
 static int ynup = 1;
 
+static int info_only = 0;
+
 static int flatten = 0;
 
 char* fontpaths[256];
@@ -214,6 +216,11 @@ int args_callback_option(char*name,char*val) {
 	driver->set_parameter("opennewwindow", "1");
 	return 0;
     }
+    else if (!strcmp(name, "I"))
+    {
+	info_only = 1;
+	return 0;
+    }
     else if (!strcmp(name, "t"))
     {
 	driver->set_parameter("insertstop", "1");
@@ -343,6 +350,7 @@ struct options_t options[] =
  {"q","quiet"},
  {"V","version"},
  {"i","ignore"},
+ {"I","info"},
  {"z","zlib"},
  {"s","set"},
  {"S","shapes"},
@@ -439,6 +447,34 @@ float getRate(char*filename)
     return swf.frameRate / 256.0;
 }
 
+void show_info(gfxsource_t*driver, char*filename)
+{
+    gfxdocument_t* pdf = driver->open(filename);
+    int pagenr;
+    FILE*fo=0;
+    if(!pdf) {
+	msg("<error> Couldn't open %s", filename);
+	exit(1);
+    }
+    if(outputname) {
+	fo = fopen(outputname, "wb");
+	if(!fo) {
+	    perror(outputname);exit(1);;
+	}
+    } else {
+	fo = stdout;
+    }
+
+    for(pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
+    {
+	gfxpage_t*page = pdf->getpage(pdf,pagenr);
+	if(is_in_range(pagenr, pagerange)) {
+	    fprintf(fo, "page=%d width=%.2f height=%.2f\n", pagenr, page->width, page->height);
+	}
+    }
+    pdf->destroy(pdf);
+}
+
 int main(int argn, char *argv[])
 {
     int ret;
@@ -483,6 +519,11 @@ int main(int argn, char *argv[])
     {
 	fprintf(stderr, "Please specify an input file\n");
 	exit(1);
+    }
+
+    if(info_only) {
+	show_info(driver, filename);
+	return 0;
     }
 
     if(!outputname)
