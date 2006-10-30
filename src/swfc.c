@@ -1520,13 +1520,17 @@ void s_includeswf(char*name, char*filename)
 	    level--;
 	if(!level)
 	    break;
-	/* We simply dump all tags right after the sprite
-	   header, relying on the fact that swf_OptimizeTagOrder() will
-	   sort things out for us later. 
-	   We also rely on the fact that the imported SWF is well-formed.
-	 */
-	tag = swf_InsertTag(tag, ftag->id);
-	swf_SetBlock(tag, ftag->data, ftag->len);
+
+	if(ftag->id != ST_SETBACKGROUNDCOLOR) {
+	    /* We simply dump all tags right after the sprite
+	       header, relying on the fact that swf_OptimizeTagOrder() will
+	       sort things out for us later. 
+	       We also rely on the fact that the imported SWF is well-formed.
+	     */
+	    tag = swf_InsertTag(tag, ftag->id);
+	    swf_SetBlock(tag, ftag->data, ftag->len);
+	}
+
 	ftag = ftag->next;
     }
     if(!ftag)
