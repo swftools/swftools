@@ -1511,24 +1511,23 @@ static void drawgfxline(gfxdevice_t*dev, gfxline_t*line)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     gfxcoord_t lastx=0,lasty=0,px=0,py=0;
     char lastwasmoveto;
+    int lines= 0, splines=0;
     while(1) {
 	if(!line)
 	    break;
 	/* check whether the next segment is zero */
 	if(line->type == gfx_moveTo) {
-	    msg("<trace> ======== moveTo %.2f %.2f", line->x, line->y);
 	    moveto(dev, i->tag, line->x, line->y);
 	    px = lastx = line->x;
 	    py = lasty = line->y;
 	    lastwasmoveto = 1;
 	} if(line->type == gfx_lineTo) {
-	    msg("<trace> ======== lineTo %.2f %.2f", line->x, line->y);
 	    lineto(dev, i->tag, line->x, line->y);
 	    px = line->x;
 	    py = line->y;
 	    lastwasmoveto = 0;
+	    lines++;
 	} else if(line->type == gfx_splineTo) {
-	    msg("<trace> ======== splineTo  %.2f %.2f", line->x, line->y);
 	    plotxy_t s,p;
 	    s.x = line->sx;p.x = line->x;
 	    s.y = line->sy;p.y = line->y;
@@ -1536,9 +1535,11 @@ static void drawgfxline(gfxdevice_t*dev, gfxline_t*line)
 	    px = line->x;
 	    py = line->y;
 	    lastwasmoveto = 0;
+	    splines++;
 	}
 	line = line->next;
     }
+    msg("<trace> drawgfxline, %d lines, %d splines", lines, splines);
 }
 
 
