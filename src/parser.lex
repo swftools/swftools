@@ -100,16 +100,24 @@ static void unescapeString(string_t * tmp)
 	    case 'r': p[0] = '\r'; break;
 	    case 't': p[0] = '\t'; break;
 	    case 'x':  case 'u': {
-		int max=2;
+		int max=4;
 		int num=0;
 		char*utf8;
+		char bracket = 0;
 		if(p[1] == 'u')
-		    max = 4;
-		while(strchr("0123456789abcdefABCDEF", p[nr]) && nr < max+2) {
+		    max = 6;
+		if(p[2] == '{')  {
+		    bracket = 1;nr++;max++;
+		}
+		while(strchr("0123456789abcdefABCDEF", p[nr]) && (bracket || nr < max)) {
 		    num <<= 4;
 		    if(p[nr]>='0' && p[nr]<='9') num |= p[nr] - '0';
 		    if(p[nr]>='a' && p[nr]<='f') num |= p[nr] - 'a' + 10;
 		    if(p[nr]>='A' && p[nr]<='F') num |= p[nr] - 'A' + 10;
+		    nr++;
+		}
+		if(bracket && p[nr]=='}') {
+		    bracket = 0;
 		    nr++;
 		}
 		utf8 = getUTF8(num);
@@ -228,9 +236,14 @@ void handleInclude(char*text, int len)
 	fprintf(stderr, "Couldn't open %s\n", text);
 	exit(1);
     }
-    yy_switch_to_buffer(
-	yy_create_buffer( yyin, YY_BUF_SIZE ) );
+    yy_switch_to_buffer(yy_create_buffer( yyin, YY_BUF_SIZE ) );
+
+#ifdef INITIAL
     BEGIN(INITIAL);
+#else
+    // best guess
+    BEGIN(0);
+#endif
 }
 
 #define c() {count(yytext, yyleng, YY_START);}
@@ -331,7 +344,12 @@ struct token_t* generateTokens(char*filename)
     column=1;
 
     yylex();
+#ifdef YY_CURRENT_BUFFER
+    // some newer flex versions require it like this:
+    yy_delete_buffer(YY_CURRENT_BUFFER);
+#else
     yy_delete_buffer(yy_current_buffer);
+#endif
 
     result = (struct token_t*)tokens.buffer;
     num = tokens.pos/sizeof(struct token_t);
