@@ -257,15 +257,15 @@ void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 
 void swf_SetSoundStreamHead(TAG*tag, int avgnumsamples)
 {
-    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+    fprintf(stderr, "Error: no mp3 soundstream support compiled in.\n");exit(1);
 }
 void swf_SetSoundStreamBlock(TAG*tag, S16*samples, int seek, char first)
 {
-    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+    fprintf(stderr, "Error: no mp3 soundstream support compiled in.\n");exit(1);
 }
 void swf_SetSoundStreamEnd(TAG*tag)
 {
-    fprintf(stderr, "Error: no sound support compiled in.\n");exit(1);
+    fprintf(stderr, "Error: no mp3 soundstream support compiled in.\n");exit(1);
 }
 void swf_SetSoundDefine(TAG*tag, S16*samples, int num)
 {
