@@ -170,6 +170,8 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->type3Warning = 0;
     this->user_movex = 0;
     this->user_movey = 0;
+    this->clipmovex = 0;
+    this->clipmovey = 0;
     this->user_clipx1 = 0;
     this->user_clipy1 = 0;
     this->user_clipx2 = 0;
@@ -556,7 +558,7 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
 void GFXOutputDev::stroke(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex, user_movey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
     strokeGfxline(state, line);
     gfxline_free(line);
 }
@@ -668,7 +670,7 @@ void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line)
 void GFXOutputDev::fill(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
     fillGfxLine(state, line);
     gfxline_free(line);
 }
@@ -677,7 +679,7 @@ void GFXOutputDev::eoFill(GfxState *state)
     GfxPath * path = state->getPath();
     gfxcolor_t col = getFillColor(state);
 
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eofill\n");
@@ -691,7 +693,7 @@ void GFXOutputDev::eoFill(GfxState *state)
 void GFXOutputDev::clip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
     clipToGfxLine(state, line);
     gfxline_free(line);
 }
@@ -709,7 +711,7 @@ void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line)
 void GFXOutputDev::eoClip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex, user_movey);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> eoclip\n");
@@ -977,8 +979,8 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 
     gfxmatrix_t m = this->current_font_matrix;
     state->transform(x, y, &m.tx, &m.ty);
-    m.tx += user_movex;
-    m.ty += user_movey;
+    m.tx += user_movex + clipmovex;
+    m.ty += user_movey + clipmovey;
 
     if(render == RENDER_FILL) {
 	device->drawchar(device, current_gfxfont, charid, &col, &m);
@@ -1085,6 +1087,11 @@ void GFXOutputDev::endType3Char(GfxState *state)
 
 void GFXOutputDev::startFrame(int width, int height) 
 {
+    if(outer_clip_box) {
+	device->endclip(device);
+	outer_clip_box = 0;
+    }
+
     device->startpage(device, width, height);
 }
 
@@ -1114,23 +1121,21 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
 
-
+    this->clipmovex = -(int)x1;
+    this->clipmovey = -(int)y1;
+    
     /* apply user clip box */
     if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
         /*if(user_clipx1 > x1)*/ x1 = user_clipx1;
         /*if(user_clipx2 < x2)*/ x2 = user_clipx2;
         /*if(user_clipy1 > y1)*/ y1 = user_clipy1;
         /*if(user_clipy2 < y2)*/ y2 = user_clipy2;
+	msg("<verbose> Using user clip box %f/%f/%f/%f",x1,y1,x2,y2);
     }
 
     //msg("<verbose> Bounding box is (%f,%f)-(%f,%f) [shifted by %d/%d]", x1,y1,x2,y2, user_movex, user_movey);
     
-    if(outer_clip_box) {
-	device->endclip(device);
-	outer_clip_box = 0;
-    }
-
-    msg("<notice> processing PDF page %d (%dx%d:%d:%d) (move:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1, user_movex, user_movey);
+    msg("<notice> processing PDF page %d (%dx%d:%d:%d) (move:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1, user_movex + clipmovex, user_movey + clipmovey);
     if(rot!=0)
         msg("<verbose> page is rotated %d degrees\n", rot);
 
@@ -1154,28 +1159,28 @@ void GFXOutputDev::drawLink(Link *link, Catalog *catalog)
     link->getRect(&x1, &y1, &x2, &y2);
     cvtUserToDev(x1, y1, &x, &y);
     points[0].type = gfx_moveTo;
-    points[0].x = points[4].x = x + user_movex;
-    points[0].y = points[4].y = y + user_movey;
+    points[0].x = points[4].x = x + user_movex + clipmovex;
+    points[0].y = points[4].y = y + user_movey + clipmovey;
     points[0].next = &points[1];
     cvtUserToDev(x2, y1, &x, &y);
     points[1].type = gfx_lineTo;
-    points[1].x = x + user_movex;
-    points[1].y = y + user_movey;
+    points[1].x = x + user_movex + clipmovex;
+    points[1].y = y + user_movey + clipmovey;
     points[1].next = &points[2];
     cvtUserToDev(x2, y2, &x, &y);
     points[2].type = gfx_lineTo;
-    points[2].x = x + user_movex;
-    points[2].y = y + user_movey;
+    points[2].x = x + user_movex + clipmovex;
+    points[2].y = y + user_movey + clipmovey;
     points[2].next = &points[3];
     cvtUserToDev(x1, y2, &x, &y);
     points[3].type = gfx_lineTo;
-    points[3].x = x + user_movex;
-    points[3].y = y + user_movey;
+    points[3].x = x + user_movex + clipmovex;
+    points[3].y = y + user_movey + clipmovey;
     points[3].next = &points[4];
     cvtUserToDev(x1, y1, &x, &y);
     points[4].type = gfx_lineTo;
-    points[4].x = x + user_movex;
-    points[4].y = y + user_movey;
+    points[4].x = x + user_movex + clipmovex;
+    points[4].y = y + user_movey + clipmovey;
     points[4].next = 0;
     
     msg("<trace> drawlink %.2f/%.2f %.2f/%.2f %.2f/%.2f %.2f/%.2f\n",
@@ -1214,9 +1219,17 @@ void GFXOutputDev::drawLink(Link *link, Catalog *catalog)
         case actionGoToR: {
             type = "GoToR";
             LinkGoToR*l = (LinkGoToR*)action;
-            GString*g = l->getNamedDest();
-            if(g)
+	    GString*g = l->getFileName();
+	    if(g)
              s = strdup(g->getCString());
+	    if(!s) {
+		/* if the GoToR link has no filename, then
+		   try to find a refernce in the *local*
+		   file */
+		GString*g = l->getNamedDest();
+		if(g)
+		 s = strdup(g->getCString());
+	    }
         }
         break;
         case actionNamed: {
@@ -1411,7 +1424,7 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
 
 void FoFiWrite(void *stream, char *data, int len)
 {
-   fwrite(data, len, 1, (FILE*)stream);
+   int ret = fwrite(data, len, 1, (FILE*)stream);
 }
 
 char*GFXOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
@@ -2047,10 +2060,10 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       return;
   }
 
-  state->transform(0, 1, &x1, &y1); x1 += user_movex; y1 += user_movey;
-  state->transform(0, 0, &x2, &y2); x2 += user_movex; y2 += user_movey;
-  state->transform(1, 0, &x3, &y3); x3 += user_movex; y3 += user_movey;
-  state->transform(1, 1, &x4, &y4); x4 += user_movex; y4 += user_movey;
+  state->transform(0, 1, &x1, &y1); x1 += user_movex + clipmovex; y1 += user_movey + clipmovey;
+  state->transform(0, 0, &x2, &y2); x2 += user_movex + clipmovex; y2 += user_movey + clipmovey;
+  state->transform(1, 0, &x3, &y3); x3 += user_movex + clipmovex; y3 += user_movey + clipmovey;
+  state->transform(1, 1, &x4, &y4); x4 += user_movex + clipmovex; y4 += user_movey + clipmovey;
 
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
