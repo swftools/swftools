@@ -463,7 +463,7 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 		if (id == fid) {
 		    if (jobs & FEDTJ_PRINT) {
 			int code = f->glyph2ascii[glyph];
-			printf("%c", code);
+			printf("%lc", code);
 		    }
 		    if (jobs & FEDTJ_MODIFY)
 			f->glyph[glyph].advance = adv * 20;	//?
