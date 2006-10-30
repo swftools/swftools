@@ -37,7 +37,7 @@ public:
   gfxdevice_t* device;
 
   // Constructor.
-  GFXOutputDev::GFXOutputDev(parameter_t*p);
+  GFXOutputDev(parameter_t*p);
   void setDevice(gfxdevice_t*dev);
 
   // Destructor.
@@ -188,6 +188,11 @@ public:
   char* substitutetarget[256];
   char* substitutesource[256];
   int substitutepos;
+
+  /* upper left corner of clipping rectangle (cropbox)- needs to be
+     added to all drawing coordinates to give the impression that all
+     pages start at (0,0)*/
+  int clipmovex,clipmovey;
 
   int user_movex,user_movey;
   int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
