@@ -164,7 +164,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
     FT_Set_Pixel_Sizes (face, 16*loadfont_scale, 16*loadfont_scale);
 
     if(error) {
-	fprintf(stderr, "Couldn't load file %s- not a TTF file?\n", filename);
+	fprintf(stderr, "Couldn't load file %s- not a TTF file? (error=%02x)\n", filename, error);
 	return 0;
     }
     if(face->num_glyphs <= 0) {
