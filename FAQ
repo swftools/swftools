@@ -88,8 +88,6 @@
     .
     (There's a self-extracting .exe version of all versions since 0.6.1, 
      and a .zip or .rar archive of the newest development snapshot)
-    Notice: For now, the utilities need to be installed to C:\SWFTOOLS to make pdf2swf work-
-    otherwise it won't be able to find its fonts.
 
 8.) Where's the source code of the Windows version?
 

@@ -1,9 +1,12 @@
 swfc:
 
+    * input from stdin
     * .movie feature
+    * button sounds
     * bounding box parsing: remove : syntax, add ; or +- syntax
     * color/line should be named linecolor/linewidth
     * open paths in .outline
+    * create ActionScript arrays out of outlines?
     * .qchance, .cchange
     * .morph
     * .soundstream
@@ -50,6 +53,10 @@ swfextract:
     * mp3 extraction should also work for movieclips.
     * frame extraction should also extract not yet deleted characters from the previous frames.
 
+swfstrings:
+    
+    * UTF8 output?
+
 swfbbox:
 
     * support for MorphShape?
@@ -59,6 +66,7 @@ wav2swf:
 
     * pad blocks for mp3 compression
     * stereo support?
+    * -E option doesn't work (as documented)
 
 librfxswf:
 
@@ -85,10 +93,12 @@ png2swf:
 
     * Image mode 4
     * Interlace mode 1
+    * add jpeg compression
 
 swfdump:
 
     * Flash 7 action codes
+    * gradients
 
 swfrender:
 
