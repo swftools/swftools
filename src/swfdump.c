@@ -303,7 +303,7 @@ void handleDefineSound(TAG*tag)
 {
     U16 id = swf_GetU16(tag);
     U8 flags = swf_GetU8(tag);
-    int compression = (flags>>4)&3;
+    int compression = (flags>>4)&7;
     int rate = (flags>>2)&3;
     int bits = flags&2?16:8;
     int stereo = flags&1;
@@ -311,6 +311,8 @@ void handleDefineSound(TAG*tag)
     if(compression == 0) printf("Raw ");
     else if(compression == 1) printf("ADPCM ");
     else if(compression == 2) printf("MP3 ");
+    else if(compression == 3) printf("Raw little-endian ");
+    else if(compression == 6) printf("ASAO ");
     else printf("? ");
     if(rate == 0) printf("5.5Khz ");
     if(rate == 1) printf("11Khz ");
