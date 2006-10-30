@@ -1717,6 +1717,10 @@ int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize)
    
     msg("<verbose> Loading %s...", filename);
     font = gfxfont_load(id, filename, quality);
+    if(!font) {
+	msg("<verbose> Couldn't load Font %s (%s)", filename, id);
+	return 0;
+    }
     msg("<verbose> Font %s (%s) loaded successfully", filename, id);
 
     l = new fontlist_t;
@@ -2219,8 +2223,6 @@ void GFXOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
-  if(states[statepos].textRender & 4) //clipped
-      return;
   msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
   drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0, 0,0,0,0, 0);
 }
@@ -2229,9 +2231,6 @@ void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
 {
-  if(states[statepos].textRender & 4) //clipped
-      return;
-
   msg("<verbose> drawImage %dx%d, %s, %s, inline=%d", width, height, 
 	  colorMap?"colorMap":"no colorMap", 
 	  maskColors?"maskColors":"no maskColors",
@@ -2248,9 +2247,6 @@ void GFXOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       Stream *maskStr, int maskWidth, int maskHeight,
 			       GBool maskInvert)
 {
-  if(states[statepos].textRender & 4) //clipped
-      return;
-
   msg("<verbose> drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	  colorMap?"colorMap":"no colorMap", 
 	  maskWidth, maskHeight);
@@ -2267,9 +2263,6 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 				   int maskWidth, int maskHeight,
 				   GfxImageColorMap *maskColorMap)
 {
-  if(states[statepos].textRender & 4) //clipped
-      return;
-
   msg("<verbose> drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	  colorMap?"colorMap":"no colorMap", 
 	  maskWidth, maskHeight);
