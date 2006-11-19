@@ -15,7 +15,7 @@ actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.sw
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swfrender.c h.263/swfvideo.c
 
 libpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
-	cd pdf;$(MAKE);cd ..
+	cd pdf;$(MAKE) ../pdflib$(A);cd ..
 
 bitio.$(O): bitio.c bitio.h
 	$(C) bitio.c -o $@
