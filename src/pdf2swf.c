@@ -36,7 +36,7 @@
 #include "../lib/rfxswf.h"
 #include "../lib/devices/swf.h"
 #include "../lib/devices/arts.h"
-#include "../lib/xpdf/pdf.h"
+#include "../lib/pdf/pdf.h"
 #include "../lib/log.h"
 
 #define SWFDIR concatPaths(getInstallationPath(), "swfs")
@@ -629,9 +629,9 @@ int main(int argn, char *argv[])
 		int t = y*xnup + x;
 
 		if(pages[t].page->width > xmax[x])
-		    xmax[x] = pages[t].page->width;
+		    xmax[x] = (int)pages[t].page->width;
 		if(pages[t].page->height > ymax[y])
-		    ymax[y] = pages[t].page->height;
+		    ymax[y] = (int)pages[t].page->height;
 	    }
 	    for(x=0;x<xnup;x++) {
 		width += xmax[x];
