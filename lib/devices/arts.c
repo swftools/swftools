@@ -89,7 +89,7 @@ void arts_startclip(struct _gfxdevice*dev, gfxline_t*line)
 	i->clip->svp = art_svp_intersect(svp, old);
 	art_svp_free(svp);
     } else {
-	i->clip = rfx_calloc(sizeof(clip_t));
+	i->clip = (clip_t*)rfx_calloc(sizeof(clip_t));
 	i->clip->svp = svp;
     }
 }
@@ -240,7 +240,7 @@ gfxresult_t* arts_finish(struct _gfxdevice*dev)
 void gfxdevice_arts_init(gfxdevice_t*dev, gfxdevice_t*out)
 {
     dbg("gfxdevice_arts_init");
-    internal_t*i = rfx_calloc(sizeof(internal_t));
+    internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
     dev->internal = i;
 
