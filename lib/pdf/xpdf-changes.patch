@@ -54,7 +54,7 @@ diff -u -r1.9 -r1.10
      state->clearPath();
 -  }
 +  }
-+#endif XPDFEXE
++#endif
  }
  
  Gfx::Gfx(XRef *xrefA, OutputDev *outA, Dict *resDict,
