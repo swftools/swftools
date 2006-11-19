@@ -100,9 +100,33 @@ struct mapping {
 {"Symbol",                "s050000l"},
 {"ZapfDingbats",          "d050000l"}};
 
+typedef struct _feature
+{
+    char*string;
+    struct _feature*next;
+} feature_t;
+feature_t*featurewarnings = 0;
+
+static void warnfeature(char*feature,char fully)
+{
+    feature_t*f = featurewarnings;
+    while(f) {
+	if(!strcmp(feature, f->string))
+	    return;
+	f = f->next;
+    }
+    f = (feature_t*)malloc(sizeof(feature_t));
+    f->string = strdup(feature);
+    f->next = featurewarnings;
+    featurewarnings = f;
+    msg("<warning> %s not yet %ssupported!",feature,fully?"fully ":"");
+}
+
 GFXOutputState::GFXOutputState() {
     this->clipping = 0;
     this->textRender = 0;
+    this->createsoftmask = 0;
+    this->transparencygroup = 0;
 }
 
 GBool GFXOutputDev::interpretType3Chars() 
@@ -184,7 +208,6 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->pages = 0;
     this->pagebuflen = 0;
     this->pagepos = 0;
-    this->transparencyGroup = 0;
   
     this->forceType0Fonts=1;
     this->config_use_fontconfig=1;
@@ -649,21 +672,15 @@ gfxcolor_t getFillColor(GfxState * state)
 void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line) 
 {
     gfxcolor_t col = getFillColor(state);
-    
+
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
+    if(states[statepos].transparencygroup && col.a != 255)
+	return;
 
     device->fill(device, line, &col);
-}
-
-void GFXOutputDev::clip(GfxState *state) 
-{
-    GfxPath * path = state->getPath();
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-    clipToGfxLine(state, line);
-    gfxline_free(line);
 }
 
 void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line) 
@@ -676,6 +693,18 @@ void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line)
     device->startclip(device, line);
     states[statepos].clipping++;
 }
+
+void GFXOutputDev::clip(GfxState *state) 
+{
+    if(states[statepos].createsoftmask)
+	return;
+
+    GfxPath * path = state->getPath();
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    clipToGfxLine(state, line);
+    gfxline_free(line);
+}
+
 void GFXOutputDev::eoClip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
@@ -875,8 +904,9 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode c, int nBytes, Unicode *_u, int uLen)
 {
-    if(createsoftmask)
+    if(states[statepos].createsoftmask)
 	return;
+
     int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
     if (render == 3) {
@@ -1310,12 +1340,18 @@ void GFXOutputDev::saveState(GfxState *state) {
     return;
   }
   statepos ++;
-  states[statepos].clipping = 0; //? shouldn't this be the current value?
   states[statepos].textRender = states[statepos-1].textRender;
+  states[statepos].createsoftmask = states[statepos-1].createsoftmask;
+  states[statepos].transparencygroup = states[statepos-1].transparencygroup;
+  states[statepos].clipping = 0;
 };
 
 void GFXOutputDev::restoreState(GfxState *state) {
-  msg("<trace> restoreState\n");
+  if(statepos==0) {
+      msg("<error> Invalid restoreState");
+      return;
+  }
+  msg("<trace> restoreState");
   updateAll(state);
   while(states[statepos].clipping) {
       device->endclip(device);
@@ -2209,7 +2245,7 @@ void GFXOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
-    if(createsoftmask)
+    if(states[statepos].createsoftmask)
 	return;
     msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
     drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0, 0,0,0,0, 0);
@@ -2219,7 +2255,7 @@ void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
 {
-    if(createsoftmask)
+    if(states[statepos].createsoftmask)
 	return;
     msg("<verbose> drawImage %dx%d, %s, %s, inline=%d", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
@@ -2237,7 +2273,7 @@ void GFXOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       Stream *maskStr, int maskWidth, int maskHeight,
 			       GBool maskInvert)
 {
-    if(createsoftmask)
+    if(states[statepos].createsoftmask)
 	return;
     msg("<verbose> drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
@@ -2255,7 +2291,7 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 				   int maskWidth, int maskHeight,
 				   GfxImageColorMap *maskColorMap)
 {
-    if(createsoftmask)
+    if(states[statepos].createsoftmask)
 	return;
     msg("<verbose> drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
@@ -2268,7 +2304,7 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 
 void GFXOutputDev::stroke(GfxState *state) 
 {
-    if(createsoftmask)
+    if(states[statepos].createsoftmask)
         return;
 
     GfxPath * path = state->getPath();
@@ -2279,6 +2315,9 @@ void GFXOutputDev::stroke(GfxState *state)
 
 void GFXOutputDev::fill(GfxState *state) 
 {
+    if(states[statepos].createsoftmask)
+	return;
+
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
     fillGfxLine(state, line);
@@ -2287,6 +2326,9 @@ void GFXOutputDev::fill(GfxState *state)
 
 void GFXOutputDev::eoFill(GfxState *state) 
 {
+    if(states[statepos].createsoftmask)
+	return;
+
     GfxPath * path = state->getPath();
     gfxcolor_t col = getFillColor(state);
 
@@ -2413,45 +2455,47 @@ void GFXOutputDev::preparePage(int pdfpage, int outputpage)
 	this->pagepos = pdfpage;
 }
   
+#if xpdfUpdateVersion >= 16
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GfxColorSpace *blendingColorSpace,
 				      GBool isolated, GBool knockout,
 				      GBool forSoftMask)
 {
     char*colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
-    msg("<verbose> beginTransparencyGroup %f/%f/%f/%f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
-    createsoftmask = forSoftMask;
-    transparencyGroup = !forSoftMask;
-
-    if(transparencyGroup) {
+    msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
+    states[statepos].createsoftmask = forSoftMask;
+    states[statepos].transparencygroup = !forSoftMask;
+    
+    if(!forSoftMask) {
 	state->setFillOpacity(0.0);
-	clip(state);
     }
+    warnfeature("transparency groups",1);
 }
 
 void GFXOutputDev::endTransparencyGroup(GfxState *state)
 {
     msg("<verbose> endTransparencyGroup");
-    createsoftmask = 0;
-    transparencyGroup = 0;
+    states[statepos].createsoftmask = 0;
+    states[statepos].transparencygroup = 0;
 }
 
 void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 {
     msg("<verbose> paintTransparencyGroup");
-    createsoftmask = 0;
 }
 
 void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *rgb)
 {
-    msg("<verbose> setSoftMask %f/%f/%f/%f alpha=%d backdrop=%02x%02x%02x",
+    msg("<verbose> setSoftMask %.1f/%.1f/%.1f/%.1f alpha=%d backdrop=%02x%02x%02x",
 	    bbox[0], bbox[1], bbox[2], bbox[3], alpha, colToByte(rgb->c[0]), colToByte(rgb->c[1]), colToByte(rgb->c[2]));
+    warnfeature("soft masks",0);
 }
 
 void GFXOutputDev::clearSoftMask(GfxState *state)
 {
     msg("<verbose> clearSoftMask");
 }
+#endif
 
 /*class MemCheck
 {
