@@ -25,7 +25,7 @@ GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h
 	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
-pdf.$(O): pdf.cc
+pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
 
 xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc
