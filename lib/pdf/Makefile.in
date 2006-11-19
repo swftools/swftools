@@ -1,0 +1,136 @@
+# Generated automatically from Makefile.in by configure.
+top_builddir = ../..
+srcdir = .
+top_srcdir = ../..
+include ../../Makefile.common
+
+all: ../libpdf$(A) pdf2swf
+
+libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) pdf.$(O)
+
+xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O) xpdf/gfile.$(O) \
+		  xpdf/FoFiTrueType.$(O) xpdf/FoFiType1.$(O) xpdf/FoFiType1C.$(O) xpdf/FoFiBase.$(O) xpdf/FoFiEncodings.$(O) \
+		  xpdf/OutputDev.$(O) xpdf/PDFDoc.$(O) xpdf/Error.$(O) xpdf/Stream.$(O) xpdf/Object.$(O) \
+		  xpdf/Decrypt.$(O) xpdf/Array.$(O) xpdf/XRef.$(O) xpdf/Dict.$(O) xpdf/Parser.$(O) \
+		  xpdf/Lexer.$(O) xpdf/Outline.$(O) xpdf/PDFDocEncoding.$(O) xpdf/Catalog.$(O) \
+		  xpdf/Link.$(O) xpdf/GlobalParams.$(O) xpdf/JBIG2Stream.$(O) xpdf/Page.$(O) xpdf/JPXStream.$(O) \
+		  xpdf/JArithmeticDecoder.$(O) xpdf/Gfx.$(O) xpdf/GfxFont.$(O) xpdf/CMap.$(O) xpdf/CharCodeToUnicode.$(O) \
+		  xpdf/PSTokenizer.$(O) xpdf/FontEncodingTables.$(O) xpdf/BuiltinFont.$(O) xpdf/BuiltinFontTables.$(O) \
+		  xpdf/GfxState.$(O) xpdf/Function.$(O) xpdf/Annot.$(O) xpdf/NameToCharCode.$(O) xpdf/UnicodeMap.$(O) \
+		  xpdf/SecurityHandler.$(O)
+
+cmyk.$(O): cmyk.cc
+	$(CC) -I ./ -I xpdf cmyk.cc -o $@
+GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h
+	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
+InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
+	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
+pdf.$(O): pdf.cc
+	$(CC) -I ./ -I xpdf pdf.cc -o $@
+
+xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc
+	$(CC) -I ./ -I xpdf xpdf/UnicodeMap.cc -o $@
+xpdf/NameToCharCode.$(O): xpdf/NameToCharCode.cc
+	$(CC) -I ./ -I xpdf xpdf/NameToCharCode.cc -o $@
+xpdf/Annot.$(O): xpdf/Annot.cc
+	$(CC) -I ./ -I xpdf xpdf/Annot.cc -o $@
+xpdf/Function.$(O): xpdf/Function.cc
+	$(CC) -I ./ -I xpdf xpdf/Function.cc -o $@
+xpdf/BuiltinFontTables.$(O): xpdf/BuiltinFontTables.cc
+	$(CC) -I ./ -I xpdf xpdf/BuiltinFontTables.cc -o $@
+xpdf/BuiltinFont.$(O): xpdf/BuiltinFont.cc
+	$(CC) -I ./ -I xpdf xpdf/BuiltinFont.cc -o $@
+xpdf/FontEncodingTables.$(O): xpdf/FontEncodingTables.cc
+	$(CC) -I ./ -I xpdf xpdf/FontEncodingTables.cc -o $@
+xpdf/PSTokenizer.$(O): xpdf/PSTokenizer.cc
+	$(CC) -I ./ -I xpdf xpdf/PSTokenizer.cc -o $@
+xpdf/CharCodeToUnicode.$(O): xpdf/CharCodeToUnicode.cc
+	$(CC) -I ./ -I xpdf xpdf/CharCodeToUnicode.cc -o $@
+xpdf/CMap.$(O): xpdf/CMap.cc
+	$(CC) -I ./ -I xpdf xpdf/CMap.cc -o $@
+xpdf/GfxFont.$(O): xpdf/GfxFont.cc
+	$(CC) -I ./ -I xpdf xpdf/GfxFont.cc -o $@
+xpdf/Gfx.$(O): xpdf/Gfx.cc
+	$(CC) -I ./ -I xpdf xpdf/Gfx.cc -o $@
+xpdf/GfxState.$(O): xpdf/GfxState.cc
+	$(CC) -I ./ -I xpdf xpdf/GfxState.cc -o $@
+xpdf/JArithmeticDecoder.$(O): xpdf/JArithmeticDecoder.cc
+	$(CC) -I ./ -I xpdf xpdf/JArithmeticDecoder.cc -o $@
+xpdf/JPXStream.$(O): xpdf/JPXStream.cc
+	$(CC) -I ./ -I xpdf xpdf/JPXStream.cc -o $@
+xpdf/GlobalParams.$(O): xpdf/GlobalParams.cc xpdf/GlobalParams.h
+	$(CC) -I ./ -I xpdf xpdf/GlobalParams.cc -o $@
+xpdf/JBIG2Stream.$(O): xpdf/JBIG2Stream.cc
+	$(CC) -I ./ -I xpdf xpdf/JBIG2Stream.cc -o $@
+xpdf/Page.$(O): xpdf/Page.cc
+	$(CC) -I ./ -I xpdf xpdf/Page.cc -o $@
+xpdf/Link.$(O): xpdf/Link.cc
+	$(CC) -I ./ -I xpdf xpdf/Link.cc -o $@
+xpdf/Catalog.$(O): xpdf/Catalog.cc
+	$(CC) -I ./ -I xpdf xpdf/Catalog.cc -o $@
+xpdf/PDFDocEncoding.$(O): xpdf/PDFDocEncoding.cc
+	$(CC) -I ./ -I xpdf xpdf/PDFDocEncoding.cc -o $@
+xpdf/Outline.$(O): xpdf/Outline.cc
+	$(CC) -I ./ -I xpdf xpdf/Outline.cc -o $@
+xpdf/Lexer.$(O): xpdf/Lexer.cc
+	$(CC) -I ./ -I xpdf xpdf/Lexer.cc -o $@
+xpdf/Parser.$(O): xpdf/Parser.cc
+	$(CC) -I ./ -I xpdf xpdf/Parser.cc -o $@
+xpdf/XRef.$(O): xpdf/XRef.cc
+	$(CC) -I ./ -I xpdf xpdf/XRef.cc -o $@
+xpdf/Array.$(O): xpdf/Array.cc
+	$(CC) -I ./ -I xpdf xpdf/Array.cc -o $@
+xpdf/Dict.$(O): xpdf/Dict.cc
+	$(CC) -I ./ -I xpdf xpdf/Dict.cc -o $@
+xpdf/Decrypt.$(O): xpdf/Decrypt.cc
+	$(CC) -I ./ -I xpdf xpdf/Decrypt.cc -o $@
+xpdf/Object.$(O): xpdf/Object.cc
+	$(CC) -I ./ -I xpdf xpdf/Object.cc -o $@
+xpdf/Error.$(O): xpdf/Error.cc aconf.h
+	$(CC) -I ./ -I xpdf xpdf/Error.cc -o $@
+xpdf/Stream.$(O): xpdf/Stream.cc
+	$(CC) -I ./ -I xpdf xpdf/Stream.cc -o $@
+xpdf/PDFDoc.$(O): xpdf/PDFDoc.cc
+	$(CC) -I ./ -I xpdf xpdf/PDFDoc.cc -o $@
+xpdf/SecurityHandler.$(O): xpdf/SecurityHandler.cc xpdf/SecurityHandler.h
+	$(CC) -I ./ -I xpdf xpdf/SecurityHandler.cc -o $@
+xpdf/OutputDev.$(O): xpdf/OutputDev.cc xpdf/GfxState.h xpdf/Stream.h xpdf/Object.h xpdf/OutputDev.h xpdf/gtypes.h xpdf/CharTypes.h
+	$(CC) -I ./ -I xpdf xpdf/OutputDev.cc -o $@
+xpdf/FoFiBase.$(O): xpdf/FoFiBase.cc
+	$(CC) -I ./ -I xpdf xpdf/FoFiBase.cc -o $@
+xpdf/FoFiTrueType.$(O): xpdf/FoFiTrueType.cc xpdf/FoFiBase.h
+	$(CC) -I ./ -I xpdf xpdf/FoFiTrueType.cc -o $@
+xpdf/FoFiEncodings.$(O): xpdf/FoFiEncodings.cc xpdf/FoFiEncodings.h
+	$(CC) -I ./ -I xpdf xpdf/FoFiEncodings.cc -o $@
+xpdf/FoFiType1C.$(O): xpdf/FoFiType1C.cc xpdf/FoFiBase.h
+	$(CC) -I ./ -I xpdf xpdf/FoFiType1C.cc -o $@
+xpdf/FoFiType1.$(O): xpdf/FoFiType1.cc xpdf/FoFiBase.h
+	$(CC) -I ./ -I xpdf xpdf/FoFiType1.cc -o $@
+xpdf/GList.$(O): xpdf/GList.cc
+	$(CC) -I ./ -I xpdf xpdf/GList.cc -o $@
+xpdf/GString.$(O): xpdf/GString.cc
+	$(CC) -I ./ -I xpdf xpdf/GString.cc -o $@
+xpdf/GHash.$(O): xpdf/GHash.cc
+	$(CC) -I ./ -I xpdf xpdf/GHash.cc -o $@
+xpdf/gfile.$(O): xpdf/gfile.cc
+	$(CC) -I ./ -I xpdf xpdf/gfile.cc -o $@
+xpdf/gmem.$(O): xpdf/gmem.c
+	$(C) -I ./ -I xpdf xpdf/gmem.c -o $@
+
+../libpdf$(A): $(libpdf_objects) $(xpdf_objects)
+	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_objects)
+	$(RANLIB) ../libpdf$(A)
+
+pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o pdftoppm$(E) $(LIBS) -lt1
+pdftotext$(E): $(xpdf_objects)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS) -lt1
+pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) ../../src/pdf2swf.c
+	$(LL) $(CPPFLAGS) ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) ../devices/swf.$(O) ../devices/arts.$(O) ../librfxswf$(A) ../art/libart.a ../os.$(O) ../gfxtools.$(O) ../gfxfont.$(O) -o pdf2swf$(E) $(LIBS)
+
+install:
+uninstall:
+
+clean: 
+	rm -f xpdf/*.o xpdf/*.obj *.o pdf2swf pdftoppm pdftotext pdf2swf.exe pdftoppm.exe pdftotext.exe *.obj *.lo *.a *.lib *.la gmon.out
+
