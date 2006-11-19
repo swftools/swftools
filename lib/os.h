@@ -38,6 +38,8 @@ char* getInstallationPath();
 char* concatPaths(char*base, char*add);
 char* stripFilename(char*filename, char*newext);
 
+char* mktempname(char*);
+
 #ifdef __cplusplus
 }
 #endif
