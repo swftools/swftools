@@ -38,7 +38,7 @@ diff -u -r1.9 -r1.10
    out->setDefaultCTM(state->getCTM());
    out->updateAll(state);
    for (i = 0; i < 6; ++i) {
-@@ -450,7 +450,9 @@
+@@ -450,7 +450,8 @@
    abortCheckCbkData = abortCheckCbkDataA;
  
    // set crop box
@@ -48,7 +48,7 @@ diff -u -r1.9 -r1.10
      state->moveTo(cropBox->x1, cropBox->y1);
      state->lineTo(cropBox->x2, cropBox->y1);
      state->lineTo(cropBox->x2, cropBox->y2);
-@@ -459,7 +459,7 @@
+@@ -459,7 +460,8 @@
      state->clip();
      out->clip(state);
      state->clearPath();
@@ -318,28 +318,6 @@ diff -u -r1.4 -r1.7
      break;
    }
  
-Index: GlobalParams.h
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.h,v
-retrieving revision 1.5
-retrieving revision 1.6
-diff -u -r1.5 -r1.6
---- GlobalParams.h	2006-10-10 19:54:29.000000000 +0200
-+++ GlobalParams.h	2006-11-12 11:19:40.000000000 +0100
-@@ -357,6 +357,10 @@
-   GBool loadPlugin(char *type, char *name);
- #endif
- 
-+  //----- config file base path
-+
-+  GString*path;
-+
-   //----- static tables
- 
-   NameToCharCode *		// mapping from char name to
-j@@ -318,1 +318,1 @@
--  void parseFile(GString *fileName, FILE *f);
-+public: void parseFile(GString *fileName, FILE *f); private:
 Index: Lexer.cc
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Lexer.cc,v
@@ -649,17 +627,28 @@ diff -u -r1.9 -r1.10
  // Append a file name to a path string.  <path> may be an empty
  // string, denoting the current directory).  Returns <path>.
  extern GString *appendToPath(GString *path, char *fileName);
---- pdf/xpdf-3.01.16/GlobalParams.h	2006-11-12 11:20:54.000000000 +0100
-+++ j	2006-11-12 11:19:40.000000000 +0100
-@@ -315,7 +315,7 @@
- private:
- 
-   void createDefaultKeyBindings();
+Index: GlobalParams.h
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.h,v
+retrieving revision 1.5
+retrieving revision 1.6
+diff -u -r1.5 -r1.6
+--- GlobalParams.h	2006-10-10 19:54:29.000000000 +0200
++++ GlobalParams.h	2006-11-12 11:19:40.000000000 +0100
+@@ -218,1 +218,1 @@
 -  void parseFile(GString *fileName, FILE *f);
 +public: void parseFile(GString *fileName, FILE *f); private:
-   void parseNameToUnicode(GList *tokens, GString *fileName, int line);
-   void parseCIDToUnicode(GList *tokens, GString *fileName, int line);
-   void parseUnicodeToUnicode(GList *tokens, GString *fileName, int line);
+@@ -246,6 +246,10 @@
+   GBool loadPlugin(char *type, char *name);
+ #endif
+ 
++  //----- config file base path
++
++  GString*path;
++
+   //----- static tables
+ 
+   NameToCharCode *		// mapping from char name to
 --- SplashOutputDev.h.orig	2006-11-12 12:07:22.000000000 +0100
 +++ SplashOutputDev.h	2006-11-12 12:08:48.000000000 +0100
 @@ -70,7 +70,7 @@
