@@ -43,7 +43,7 @@ else
 	AC_DEFINE_UNQUOTED(MINGW, 1)
 	WIN32=1
 	AC_DEFINE_UNQUOTED(WIN32, 1)
-	LIBS="$LIBS -lws2_32"
+	LIBS="$LIBS -lws2_32 -lgdi32"
 	AC_MSG_RESULT(mingw)
     else
 	LINUX=1
