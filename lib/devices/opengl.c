@@ -177,7 +177,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     len = 0;
     while(l) {
 	if(l->type == gfx_splineTo) {
-            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->x-2*l->sy+lasty))/2;
+            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->y-2*l->sy+lasty))/2;
 	    int steps = (int)c;
 	    if(steps<1) steps = 1;
 	    len += steps;
@@ -205,7 +205,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 
 	if(l->type == gfx_splineTo) {
 	    int j;
-            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->x-2*l->sy+lasty))/2;
+            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->y-2*l->sy+lasty))/2;
 	    int steps = (int)c;
 	    if(steps<1) steps = 1;
 	    //printf("c=%f d1=%f (%f/%f) d2=%f (%f/%f)\n", c,d1,l->x-l->sx,l->y-l->sy,d2,lastx-l->sx,lasty-l->sy);
