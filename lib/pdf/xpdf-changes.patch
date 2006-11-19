@@ -1,0 +1,715 @@
+Index: FoFiType1C.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/FoFiType1C.cc,v
+retrieving revision 1.3
+retrieving revision 1.4
+diff -u -r1.3 -r1.4
+--- FoFiType1C.cc	3 Dec 2005 10:11:33 -0000	1.3
++++ FoFiType1C.cc	3 Dec 2005 10:30:41 -0000	1.4
+@@ -231,8 +231,11 @@
+     (*outputFunc)(outputStream,
+ 		  "0 1 255 {1 index exch /.notdef put} for\n", 40);
+     enc = newEncoding ? newEncoding : encoding;
++    if(!enc) {
++	fprintf(stderr, "convertToType1: Warning: No Encoding\n");
++    }
+     for (i = 0; i < 256; ++i) {
+-      if (enc[i]) {
++      if (enc && enc[i]) {
+ 	sprintf(buf, "dup %d /%s put\n", i, enc[i]);
+ 	(*outputFunc)(outputStream, buf, strlen(buf));
+       }
+Index: Gfx.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Gfx.cc,v
+retrieving revision 1.9
+retrieving revision 1.10
+diff -u -r1.9 -r1.10
+--- Gfx.cc	3 Dec 2005 10:11:33 -0000	1.9
++++ Gfx.cc	3 Dec 2005 10:30:41 -0000	1.10
+@@ -439,7 +439,9 @@
+   fontChanged = gFalse;
+   clip = clipNone;
+   ignoreUndef = 0;
+-  out->startPage(pageNum, state);
++  if(cropBox) {
++      out->startPage(pageNum, state, cropBox->x1,cropBox->y1,cropBox->x2,cropBox->y2);
++  }
+   out->setDefaultCTM(state->getCTM());
+   out->updateAll(state);
+   for (i = 0; i < 6; ++i) {
+@@ -450,7 +450,9 @@
+   abortCheckCbkData = abortCheckCbkDataA;
+ 
+   // set crop box
+-  if (cropBox) {
++#ifdef XPDFEXE
++  if (cropBox) {
+     state->moveTo(cropBox->x1, cropBox->y1);
+     state->lineTo(cropBox->x2, cropBox->y1);
+     state->lineTo(cropBox->x2, cropBox->y2);
+@@ -459,7 +459,7 @@
+     state->clip();
+     out->clip(state);
+     state->clearPath();
+-  }
++  }
++#endif XPDFEXE
+ }
+ 
+ Gfx::Gfx(XRef *xrefA, OutputDev *outA, Dict *resDict,
+Index: GfxFont.h
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GfxFont.h,v
+retrieving revision 1.6
+retrieving revision 1.7
+diff -u -r1.6 -r1.7
+--- GfxFont.h	3 Dec 2005 10:11:33 -0000	1.6
++++ GfxFont.h	3 Dec 2005 10:30:41 -0000	1.7
+@@ -207,7 +207,7 @@
+   CharCodeToUnicode *getToUnicode();
+ 
+   // Return the character name associated with <code>.
+-  char *getCharName(int code) { return enc[code]; }
++  char *getCharName(int code) { return code>=256?0:enc[code]; }
+ 
+   // Returns true if the PDF font specified an encoding.
+   GBool getHasEncoding() { return hasEncoding; }
+Index: GfxState.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GfxState.cc,v
+retrieving revision 1.10
+retrieving revision 1.12
+diff -u -r1.10 -r1.12
+--- GfxState.cc	3 Dec 2005 10:11:33 -0000	1.10
++++ GfxState.cc	3 Dec 2005 12:41:32 -0000	1.12
+@@ -21,6 +21,7 @@
+ #include "Array.h"
+ #include "Page.h"
+ #include "GfxState.h"
++#include "cmyk.h"
+ 
+ //------------------------------------------------------------------------
+ 
+@@ -468,6 +469,18 @@
+ 				- 0.11 * color->c[2] + 0.5));
+ }
+ 
++/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
++    unsigned char r,g,b;
++    float c = color->c[0];
++    float m = color->c[1];
++    float y = color->c[2];
++    float k = color->c[3];
++    convert_cmyk2rgb(c,m,y,k, &r,&g,&b);
++    rgb->r = r/255.0;
++    rgb->g = g/255.0;
++    rgb->b = b/255.0;
++}*/
++
+ void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+   double c, m, y, k, c1, m1, y1, k1, r, g, b, x;
+ 
+@@ -3099,6 +3112,7 @@
+   GfxIndexedColorSpace *indexedCS;
+   GfxSeparationColorSpace *sepCS;
+   int maxPixel, indexHigh;
++  int maxPixelForAlloc;
+   Guchar *lookup2;
+   Function *sepFunc;
+   Object obj;
+@@ -3111,6 +3125,7 @@
+   // bits per component and color space
+   bits = bitsA;
+   maxPixel = (1 << bits) - 1;
++  maxPixelForAlloc = (1 << (bits>8?bits:8));
+   colorSpace = colorSpaceA;
+ 
+   // get decode map
+@@ -3163,7 +3178,7 @@
+     lookup2 = indexedCS->getLookup();
+     colorSpace2->getDefaultRanges(x, y, indexHigh);
+     for (k = 0; k < nComps2; ++k) {
+-      lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
++      lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
+ 					   sizeof(GfxColorComp));
+       for (i = 0; i <= maxPixel; ++i) {
+ 	j = (int)(decodeLow[0] + (i * decodeRange[0]) / maxPixel + 0.5);
+@@ -3182,7 +3197,7 @@
+     nComps2 = colorSpace2->getNComps();
+     sepFunc = sepCS->getFunc();
+     for (k = 0; k < nComps2; ++k) {
+-      lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
++      lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
+ 					   sizeof(GfxColorComp));
+       for (i = 0; i <= maxPixel; ++i) {
+ 	x[0] = decodeLow[0] + (i * decodeRange[0]) / maxPixel;
+@@ -3192,7 +3207,7 @@
+     }
+   } else {
+     for (k = 0; k < nComps; ++k) {
+-      lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
++      lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
+ 					   sizeof(GfxColorComp));
+       for (i = 0; i <= maxPixel; ++i) {
+ 	lookup[k][i] = dblToCol(decodeLow[k] +
+Index: GlobalParams.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.cc,v
+retrieving revision 1.4
+retrieving revision 1.7
+diff -u -r1.4 -r1.7
+--- GlobalParams.cc	3 Dec 2005 10:11:33 -0000	1.4
++++ GlobalParams.cc	18 Dec 2005 08:31:22 -0000	1.7
+@@ -498,6 +498,29 @@
+   char buf[512];
+   FILE *f2;
+ 
++  /* extract path */
++  if(fileName) {
++    char* cfgFileName = fileName->getCString();
++    char* pos1 = strrchr(cfgFileName, '/');
++    char* pos2 = strrchr(cfgFileName, '\\');
++    char* p = pos1>pos2?pos1:pos2;
++    int pos = p ? p-cfgFileName : -1;
++    GString*path = new GString(new GString(cfgFileName), 0, (pos < 0 ? strlen(cfgFileName): pos));
++    if(pos1>=0)
++	path->append('/');
++    else if(pos2>=0)
++	path->append('\\');
++    else
++#ifdef WIN32
++	path->append('\\');
++#else
++	path->append('/');
++#endif
++    this->path = path;
++  } else {
++    this->path = new GString();
++  }
++  
+   line = 1;
+   while (getLine(buf, sizeof(buf) - 1, f)) {
+ 
+@@ -659,6 +682,32 @@
+   }
+ }
+ 
++static GString* qualify_filename(GString*path, GString*filename)
++{
++  GString*fullpath = 0;
++  char*prefix = "/usr/local/share/xpdf/";
++
++  if (filename->getChar(0) != '\\' && filename->getChar(0) != '/') {
++    /* relative path */
++    fullpath = path->copy();
++    fullpath->append(filename);
++  } else if (!strncmp(filename->getCString(), prefix, strlen(prefix))) {
++    /* xpdf default path */
++    char*s = strchr(filename->getCString()+strlen(prefix), '/');
++    if(s) {
++	fullpath = path->copy();
++	fullpath->append(s+1);
++    } else {
++	fullpath = filename->copy();
++    }
++  } else {
++    /* absolute path */
++    fullpath = filename->copy();
++  }
++  //printf("%s -%s-> %s\n", filename->getCString(), path->getCString(), fullpath->getCString());
++  return fullpath;
++}
++
+ void GlobalParams::parseNameToUnicode(GList *tokens, GString *fileName,
+ 					 int line) {
+   GString *name;
+@@ -673,7 +722,7 @@
+ 	  fileName->getCString(), line);
+     return;
+   }
+-  name = (GString *)tokens->get(1);
++  name = qualify_filename(this->path, (GString *)tokens->get(1));
+   if (!(f = fopen(name->getCString(), "r"))) {
+     error(-1, "Couldn't open 'nameToUnicode' file '%s'",
+ 	  name->getCString());
+@@ -705,10 +754,12 @@
+   }
+   collection = (GString *)tokens->get(1);
+   name = (GString *)tokens->get(2);
++
+   if ((old = (GString *)cidToUnicodes->remove(collection))) {
+     delete old;
+   }
+-  cidToUnicodes->add(collection->copy(), name->copy());
++
++  cidToUnicodes->add(collection->copy(), qualify_filename(this->path, name));
+ }
+ 
+ void GlobalParams::parseUnicodeToUnicode(GList *tokens, GString *fileName,
+@@ -725,7 +776,8 @@
+   if ((old = (GString *)unicodeToUnicodes->remove(font))) {
+     delete old;
+   }
+-  unicodeToUnicodes->add(font->copy(), file->copy());
++
++  unicodeToUnicodes->add(font->copy(), qualify_filename(this->path, file));
+ }
+ 
+ void GlobalParams::parseUnicodeMap(GList *tokens, GString *fileName,
+@@ -742,7 +794,8 @@
+   if ((old = (GString *)unicodeMaps->remove(encodingName))) {
+     delete old;
+   }
+-  unicodeMaps->add(encodingName->copy(), name->copy());
++
++  unicodeMaps->add(encodingName->copy(), qualify_filename(this->path, name));
+ }
+ 
+ void GlobalParams::parseCMapDir(GList *tokens, GString *fileName, int line) {
+@@ -760,23 +813,30 @@
+     list = new GList();
+     cMapDirs->add(collection->copy(), list);
+   }
+-  list->append(dir->copy());
++
++  list->append(qualify_filename(this->path, dir));
+ }
+ 
+ void GlobalParams::parseToUnicodeDir(GList *tokens, GString *fileName,
+ 				     int line) {
++  GString *dir;
++
+   if (tokens->getLength() != 2) {
+     error(-1, "Bad 'toUnicodeDir' config file command (%s:%d)",
+ 	  fileName->getCString(), line);
+     return;
+   }
+-  toUnicodeDirs->append(((GString *)tokens->get(1))->copy());
++
++  dir = (GString *)tokens->get(1);
++
++  toUnicodeDirs->append(qualify_filename(this->path, dir));
+ }
+ 
+ void GlobalParams::parseDisplayFont(GList *tokens, GHash *fontHash,
+ 				    DisplayFontParamKind kind,
+ 				    GString *fileName, int line) {
+   DisplayFontParam *param, *old;
++  GString *file;
+ 
+   if (tokens->getLength() < 2) {
+     goto err1;
+@@ -788,13 +848,15 @@
+     if (tokens->getLength() != 3) {
+       goto err2;
+     }
+-    param->t1.fileName = ((GString *)tokens->get(2))->copy();
++    file = (GString *)tokens->get(2);
++    param->t1.fileName = qualify_filename(this->path, file);
+     break;
+   case displayFontTT:
+     if (tokens->getLength() != 3) {
+       goto err2;
+     }
+-    param->tt.fileName = ((GString *)tokens->get(2))->copy();
++    file = (GString *)tokens->get(2);
++    param->tt.fileName = qualify_filename(this->path, file);
+     break;
+   }
+ 
+Index: GlobalParams.h
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.h,v
+retrieving revision 1.5
+retrieving revision 1.6
+diff -u -r1.5 -r1.6
+--- GlobalParams.h	2006-10-10 19:54:29.000000000 +0200
++++ GlobalParams.h	2006-11-12 11:19:40.000000000 +0100
+@@ -357,6 +357,10 @@
+   GBool loadPlugin(char *type, char *name);
+ #endif
+ 
++  //----- config file base path
++
++  GString*path;
++
+   //----- static tables
+ 
+   NameToCharCode *		// mapping from char name to
+j@@ -318,1 +318,1 @@
+-  void parseFile(GString *fileName, FILE *f);
++public: void parseFile(GString *fileName, FILE *f); private:
+Index: Lexer.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Lexer.cc,v
+retrieving revision 1.4
+retrieving revision 1.5
+diff -u -r1.4 -r1.5
+--- Lexer.cc	3 Dec 2005 10:11:33 -0000	1.4
++++ Lexer.cc	14 Mar 2006 12:43:23 -0000	1.5
+@@ -74,6 +74,7 @@
+     curStr.streamReset();
+   }
+ }
++static int illegalChars = 0;
+ 
+ Lexer::~Lexer() {
+   if (!curStr.isNone()) {
+@@ -83,6 +84,9 @@
+   if (freeArray) {
+     delete streams;
+   }
++  if(illegalChars)
++      error(0, "Illegal characters in hex string (%d)", illegalChars);
++  illegalChars = 0;
+ }
+ 
+ int Lexer::getChar() {
+@@ -330,7 +334,8 @@
+ 	} else if (c2 >= 'a' && c2 <= 'f') {
+ 	  c += c2 - 'a' + 10;
+ 	} else {
+-	  error(getPos(), "Illegal digit in hex char in name");
++	  illegalChars++;
++	  //error(getPos(), "Illegal digit in hex char in name");
+ 	}
+       }
+      notEscChar:
+@@ -384,8 +389,10 @@
+ 	    c2 += c - 'A' + 10;
+ 	  else if (c >= 'a' && c <= 'f')
+ 	    c2 += c - 'a' + 10;
+-	  else
+-	    error(getPos(), "Illegal character <%02x> in hex string", c);
++	  else {
++	    illegalChars++;
++	    //error(getPos(), "Illegal character <%02x> in hex string", c);
++	  }
+ 	  if (++m == 2) {
+ 	    if (n == tokBufSize) {
+ 	      if (!s)
+@@ -421,7 +428,8 @@
+       tokBuf[2] = '\0';
+       obj->initCmd(tokBuf);
+     } else {
+-      error(getPos(), "Illegal character '>'");
++      illegalChars++;
++      //error(getPos(), "Illegal character '>'");
+       obj->initError();
+     }
+     break;
+@@ -430,7 +438,8 @@
+   case ')':
+   case '{':
+   case '}':
+-    error(getPos(), "Illegal character '%c'", c);
++    //error(getPos(), "Illegal character '%c'", c);
++    illegalChars++;
+     obj->initError();
+     break;
+ 
+@@ -459,7 +468,6 @@
+     }
+     break;
+   }
+-
+   return obj;
+ }
+ 
+Index: Link.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Link.cc,v
+retrieving revision 1.5
+retrieving revision 1.6
+diff -u -r1.5 -r1.6
+--- Link.cc	3 Dec 2005 10:11:33 -0000	1.5
++++ Link.cc	26 Mar 2006 08:26:59 -0000	1.6
+@@ -430,10 +430,9 @@
+       delete dest;
+       dest = NULL;
+     }
+-
+   // error
+   } else {
+-    error(-1, "Illegal annotation destination");
++    error(-1, "Illegal annotation destination %d", destObj->getType());
+   }
+ }
+ 
+@@ -468,10 +467,9 @@
+       delete dest;
+       dest = NULL;
+     }
+-
+   // error
+   } else {
+-    error(-1, "Illegal annotation destination");
++    error(-1, "Illegal annotation destination %d", destObj->getType());
+   }
+ }
+ 
+Index: OutputDev.h
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/OutputDev.h,v
+retrieving revision 1.7
+retrieving revision 1.9
+diff -u -r1.7 -r1.9
+--- OutputDev.h	3 Dec 2005 10:11:33 -0000	1.7
++++ OutputDev.h	3 Dec 2005 10:31:47 -0000	1.9
+@@ -74,7 +74,7 @@
+   virtual void setDefaultCTM(double *ctm);
+ 
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state) {}
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {}
+ 
+   // End a page.
+   virtual void endPage() {}
+Index: Page.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Page.cc,v
+retrieving revision 1.5
+retrieving revision 1.6
+diff -u -r1.5 -r1.6
+--- Page.cc	3 Dec 2005 10:11:33 -0000	1.5
++++ Page.cc	3 Dec 2005 10:30:41 -0000	1.6
+@@ -66,6 +66,19 @@
+     cropBox = mediaBox;
+   }
+ 
++  /* if the crop box is larger than the media box, cut it down to 
++     media box size */
++  if(haveCropBox &&
++     mediaBox.x1 <= cropBox.x2 &&
++     mediaBox.y1 <= cropBox.y2 &&
++     cropBox.x1 <= mediaBox.x2 &&
++     cropBox.y1 <= mediaBox.y2) {
++      if(mediaBox.x1 >= cropBox.x1) cropBox.x1 = mediaBox.x1;
++      if(mediaBox.y1 >= cropBox.y1) cropBox.y1 = mediaBox.y1;
++      if(mediaBox.x2 <= cropBox.x2) cropBox.x2 = mediaBox.x2;
++      if(mediaBox.y2 <= cropBox.y2) cropBox.y2 = mediaBox.y2;
++  }
++
+   // other boxes
+   bleedBox = cropBox;
+   readBox(dict, "BleedBox", &bleedBox);
+Index: Stream.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Stream.cc,v
+retrieving revision 1.7
+retrieving revision 1.8
+diff -u -r1.7 -r1.8
+--- Stream.cc	3 Dec 2005 10:11:33 -0000	1.7
++++ Stream.cc	3 Dec 2005 10:30:41 -0000	1.8
+@@ -17,6 +17,8 @@
+ #include <stddef.h>
+ #ifndef WIN32
+ #include <unistd.h>
++#else
++extern "C" int unlink(char *filename);
+ #endif
+ #include <string.h>
+ #include <ctype.h>
+Index: config.h
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/config.h,v
+retrieving revision 1.5
+retrieving revision 1.6
+diff -u -r1.5 -r1.6
+--- config.h	3 Dec 2005 10:11:33 -0000	1.5
++++ config.h	3 Dec 2005 10:30:41 -0000	1.6
+@@ -53,18 +53,18 @@
+ 
+ // user config file name, relative to the user's home directory
+ #if defined(VMS) || (defined(WIN32) && !defined(__CYGWIN32__))
+-#define xpdfUserConfigFile "xpdfrc"
++#define xpdfUserConfigFile "pdf2swf.conf"
+ #else
+-#define xpdfUserConfigFile ".xpdfrc"
++#define xpdfUserConfigFile ".pdf2swf.conf"
+ #endif
+ 
+ // system config file name (set via the configure script)
+-#ifdef SYSTEM_XPDFRC
+-#define xpdfSysConfigFile SYSTEM_XPDFRC
++#ifndef WIN32
++#define xpdfSysConfigFile "/etc/pdf2swf.conf"
+ #else
+ // under Windows, we get the directory with the executable and then
+ // append this file name
+-#define xpdfSysConfigFile "xpdfrc"
++#define xpdfSysConfigFile "pdf2swf.conf"
+ #endif
+ 
+ //------------------------------------------------------------------------
+Index: gfile.cc
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/gfile.cc,v
+retrieving revision 1.12
+retrieving revision 1.13
+diff -u -r1.12 -r1.13
+--- gfile.cc	3 Dec 2005 10:11:33 -0000	1.12
++++ gfile.cc	3 Dec 2005 10:30:41 -0000	1.13
+@@ -437,6 +437,52 @@
+ #endif
+ }
+ 
++static char* getTempDir()
++{
++#ifdef WIN32
++    char*dir = getenv("TMP");
++    if(!dir) dir = getenv("TEMP");
++    if(!dir) dir = getenv("tmp");
++    if(!dir) dir = getenv("temp");
++    if(!dir) dir = "C:\\";
++#else
++    char* dir = "/tmp/";
++#endif
++    return dir;
++}
++
++char* mktmpname(char*ptr) {
++    static char tmpbuf[128];
++    char*dir = getTempDir();
++    int l = strlen(dir);
++    char*sep = "";
++    if(!ptr)
++	ptr = tmpbuf;
++    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
++#ifdef WIN32
++	sep = "\\";
++#else
++	sep = "/";
++#endif
++    }
++
++ //   used to be mktemp. This does remove the warnings, but
++ //   It's not exactly an improvement.
++#ifdef HAVE_LRAND48
++    sprintf(ptr, "%s%s%08x%08x",dir,sep,lrand48(),lrand48());
++#else
++#   ifdef HAVE_RAND
++	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
++#   else
++	static int count = 1;
++	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
++	count ++;
++#   endif
++#endif
++     return ptr;
++}
++
++
+ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
+ #if defined(WIN32)
+   //---------- Win32 ----------
+@@ -463,7 +509,7 @@
+   // with this file name after the tmpnam call and before the fopen
+   // call.  I will happily accept fixes to this function for non-Unix
+   // OSs.
+-  if (!(s = tmpnam(NULL))) {
++  if (!(s = mktmpname(NULL))) {
+     return gFalse;
+   }
+   *name = new GString(s);
+@@ -490,7 +536,7 @@
+     (*name)->append("/XXXXXX")->append(ext);
+     fd = mkstemps((*name)->getCString(), strlen(ext));
+ #else
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
+@@ -507,7 +553,7 @@
+     (*name)->append("/XXXXXX");
+     fd = mkstemp((*name)->getCString());
+ #else // HAVE_MKSTEMP
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
+Index: gfile.h
+===================================================================
+RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/gfile.h,v
+retrieving revision 1.9
+retrieving revision 1.10
+diff -u -r1.9 -r1.10
+--- gfile.h	3 Dec 2005 10:11:33 -0000	1.9
++++ gfile.h	3 Dec 2005 10:30:41 -0000	1.10
+@@ -58,6 +58,9 @@
+ // Get current directory.
+ extern GString *getCurrentDir();
+ 
++/* create a temporary filename */
++char* mktmpname(char*ptr);
++
+ // Append a file name to a path string.  <path> may be an empty
+ // string, denoting the current directory).  Returns <path>.
+ extern GString *appendToPath(GString *path, char *fileName);
+--- pdf/xpdf-3.01.16/GlobalParams.h	2006-11-12 11:20:54.000000000 +0100
++++ j	2006-11-12 11:19:40.000000000 +0100
+@@ -315,7 +315,7 @@
+ private:
+ 
+   void createDefaultKeyBindings();
+-  void parseFile(GString *fileName, FILE *f);
++public: void parseFile(GString *fileName, FILE *f); private:
+   void parseNameToUnicode(GList *tokens, GString *fileName, int line);
+   void parseCIDToUnicode(GList *tokens, GString *fileName, int line);
+   void parseUnicodeToUnicode(GList *tokens, GString *fileName, int line);
+--- SplashOutputDev.h.orig	2006-11-12 12:07:22.000000000 +0100
++++ SplashOutputDev.h	2006-11-12 12:08:48.000000000 +0100
+@@ -70,7 +70,7 @@
+   //----- initialization and control
+ 
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state);
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+ 
+   // End a page.
+   virtual void endPage();
+--- SplashOutputDev.cc.orig	2006-11-12 12:07:06.000000000 +0100
++++ SplashOutputDev.cc	2006-11-12 12:09:36.000000000 +0100
+@@ -696,7 +696,7 @@
+   nT3Fonts = 0;
+ }
+ 
+-void SplashOutputDev::startPage(int pageNum, GfxState *state) {
++void SplashOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
+   int w, h;
+   double *ctm;
+   SplashCoord mat[6];
+--- TextOutputDev.h.orig	2006-11-12 12:23:01.000000000 +0100
++++ TextOutputDev.h	2006-11-12 12:25:31.000000000 +0100
+@@ -578,7 +578,7 @@
+   //----- initialization and control
+ 
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state);
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+ 
+   // End a page.
+   virtual void endPage();
+--- TextOutputDev.cc.orig	2006-11-12 12:22:53.000000000 +0100
++++ TextOutputDev.cc	2006-11-12 12:25:03.000000000 +0100
+@@ -3805,7 +3805,7 @@
+   }
+ }
+ 
+-void TextOutputDev::startPage(int pageNum, GfxState *state) {
++void TextOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
+   text->startPage(state);
+ }
+ 
+--- CoreOutputDev.cc.orig	2006-11-12 12:21:59.000000000 +0100
++++ CoreOutputDev.cc	2006-11-12 12:23:29.000000000 +0100
+@@ -57,5 +57,5 @@
+ 
+ void CoreOutputDev::clear() {
+   startDoc(NULL);
+-  startPage(0, NULL);
++  startPage(0, NULL, 0,0,0,0);
+ }
