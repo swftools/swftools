@@ -127,6 +127,7 @@ EOF
     if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
 	AC_MSG_RESULT(yes)
 	AC_DEFINE_UNQUOTED(HAVE_FREETYPE, 1)
+	AC_DEFINE_UNQUOTED(HAVE_FREETYPE_FREETYPE_H, 1)
 	AC_DEFINE_UNQUOTED(USE_FREETYPE, 1)  # for ttf2tp1
     else
 	echo "configure: failed program was:" >&5
