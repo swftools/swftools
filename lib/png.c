@@ -883,7 +883,7 @@ void writePNG(char*filename, unsigned char*data, int width, int height)
     }
 
     datalen2 = datalen3;
-    data2 = malloc(datalen2);
+    data2 = (U8*)malloc(datalen2);
 
     if((ret = compress (data2, &datalen2, data3, datalen3)) != Z_OK) {
 	fprintf(stderr, "zlib error in pic %d\n", ret);
