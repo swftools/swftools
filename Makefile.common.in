@@ -23,6 +23,7 @@ CXXLIBS=@CXXLIBS@
 transform = @program_transform_name@
 PYTHON_LIB=@PYTHON_LIB@
 PYTHON_INCLUDES=@PYTHON_INCLUDES@
+CPPFLAGS=@CPPFLAGS@
 
 # libtool stuff
 OBJEXT=@OBJEXT@
