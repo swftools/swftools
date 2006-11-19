@@ -130,6 +130,7 @@
 
 /* have/use freetype library */
 #undef HAVE_FREETYPE
+#undef HAVE_FREETYPE_FREETYPE_H
 
 /* have/use freetype library */
 #undef HAVE_AVIFILE
