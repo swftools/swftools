@@ -22,6 +22,8 @@
 #ifndef __args_h__
 #define __args_h__
 
+#ifndef NO_ARGPARSER
+
 extern int args_callback_option(char*,char*);
 extern int args_callback_longoption(char*,char*);
 extern int args_callback_command(char*,char*);
@@ -30,7 +32,7 @@ extern void args_callback_usage(char*name);
 //int argn;
 //char**argv;
 
-void processargs(int argn2,char**argv2)
+static void processargs(int argn2,char**argv2)
 {
     int t;
     if(argn2==1)
@@ -99,7 +101,7 @@ struct options_t
     char*longoption;
 };
 
-int args_long2shortoption(struct options_t*options, char*name, char*val)
+static int args_long2shortoption(struct options_t*options, char*name, char*val)
 {
     char*equal = strchr(name,'=');
     if (equal) {
@@ -127,12 +129,14 @@ int args_long2shortoption(struct options_t*options, char*name, char*val)
     exit(1);
 }
 
+#endif
+
 /* check whether the value t is in a given range.
   examples: 3 is in range 1-10: true
             7 is in range 2-4,6,8-10: false
 	    9 is in range 1,2,3-12: true
 */
-char is_in_range(int t, char*irange)
+static char is_in_range(int t, char*irange)
 {
     char*pos = irange;
     char*digits;
