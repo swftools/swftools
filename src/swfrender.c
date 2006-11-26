@@ -5,72 +5,71 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "../lib/rfxswf.h"
+#include "../lib/png.h"
+#include "../lib/args.h"
 
-// swfrender.c
-
-typedef struct RENDERBUF 
-{
-    int width;
-    int height;
-    void*internal;
-} RENDERBUF;
-
-typedef struct heap_t
-{
+static struct options_t options[] = {
+{"h", "help"},
+{"o", "output"},
+{"V", "version"},
+{0,0}
 };
 
-typedef struct _renderbuf_internal
+static char*filename = 0;
+static char*outputname = "output.png";
+
+int args_callback_option(char*name,char*val)
 {
-    heap_t* lines;
-} renderbuf_internal;
-
-
-void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape)
-{
-    renderbuf_internal*i = (renderbuf_internal)dest->internal;
-
-    SHAPELINE*line = shape->lines;
-    int x=0,y=0;
-
-    while(line)
-    {
-        if(line->type == moveTo) {
-            /* max 31 bits + sign */
-            x = line->x;
-            y = line->y;
-        } else if(line->type == lineTo) {
-            /* max 17 bits + sign */
-            int diffx = line->x - x;
-            int diffy = line->y - y;
-            int stepx,posx=0,posy=0;
-            if(diffy<0) {
-                x = line->x;
-                y = line->y;
-                diffx = -diffx;
-                diffy = -diffy;
-            }
-            stepx = (diffx*0x1000) / diffy;
-
-            while(posy<diffy) {
-                int xx = x + ((posx)/0x1000);
-                int yy = posy;
-                // TODO: add pixel to dest
-                posx+=stepx;
-                posy++;
-            }
-
-            x = line->x;
-            y = line->y;
-        } else if(line->type == splineTo) {
-        }
-
-        line = line->next;
+    if(!strcmp(name, "V")) {
+        printf("swfrender - part of %s %s\n", PACKAGE, VERSION);
+        exit(0);
+    } else if(!strcmp(name, "o")) {
+	outputname = strdup(val);
+	return 1;
+    } else {
+        printf("Unknown option: -%s\n", name);
+	exit(1);
     }
+
+    return 0;
+}
+int args_callback_longoption(char*name,char*val)
+{
+    return args_long2shortoption(options, name, val);
+}
+void args_callback_usage(char *name)
+{
+    printf("\n");
+    printf("Usage: %s file.swf [-o output.png]\n", name);
+    printf("\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-o , --output		   Output file (default: output.png)\n");
+    printf("\n");
+}
+int args_callback_command(char*name,char*val)
+{
+    if(filename) {
+        fprintf(stderr, "Only one file allowed. You supplied at least two. (%s and %s)\n",
+                 filename, name);
+    }
+    filename = name;
+    return 0;
 }
 
-int main()
+
+
+int main(int argn, char*argv[])
 {
-    char*filename = "output.swf";
+    SWF swf;
+    int fi;
+
+    processargs(argn, argv);
+
+    if(!filename) {
+        fprintf(stderr, "You must supply a filename.\n");
+        return 1;
+    }
+
     fi = open(filename, O_RDONLY|O_BINARY);
     if (fi<=0) { 
 	fprintf(stderr,"Couldn't open %s\n", filename);
@@ -83,12 +82,17 @@ int main()
 	close(fi);
     }
 
-    tag = swf.firstTag;
-    while(tag) {
-        if(tag.id == ST_DEFINESHAPE3) {
-            SHAPE2 shape;
-            swf_ParseDefineShape(tag, &shape);
-            swf_RenderShape(tag, MATRIX m);
-        }
-    }
+    RENDERBUF buf;
+    swf_Render_Init(&buf, 0,0, (swf.movieSize.xmax - swf.movieSize.xmin) / 20,
+	                       (swf.movieSize.ymax - swf.movieSize.ymin) / 20, 2, 1);
+
+    swf_RenderSWF(&buf, &swf);
+
+    RGBA* img = swf_Render(&buf);
+
+    writePNG(outputname, (unsigned char*)img, buf.width, buf.height);
+
+    swf_Render_Delete(&buf);
+    return 0;
 }
+
