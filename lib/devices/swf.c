@@ -247,8 +247,10 @@ static U16 getNewID(gfxdevice_t* dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->currentswfid == 65535) {
-	if(!id_error)
+	if(!id_error) {
 	    msg("<error> ID Table overflow");
+	    msg("<error> This file is too complex to render- SWF only supports 65536 shapes at once");
+	}
 	id_error=1;
 	i->overflow = 1;
 	exit(1);
@@ -259,8 +261,10 @@ static U16 getNewDepth(gfxdevice_t* dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->depth == 65535) {
-	if(!id_error)
+	if(!id_error) {
 	    msg("<error> Depth Table overflow");
+	    msg("<error> This file is too complex to render- SWF only supports 65536 shapes at once");
+	}
 	id_error=1;
 	i->overflow = 1;
 	exit(1);
