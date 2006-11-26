@@ -40,6 +40,18 @@ class InfoOutputDev: public OutputDev
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg);
+  virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
+				int width, int height,
+				GfxImageColorMap *colorMap,
+				Stream *maskStr,
+				int maskWidth, int maskHeight,
+				GBool maskInvert);
+  virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
+				    int width, int height,
+				    GfxImageColorMap *colorMap,
+				    Stream *maskStr,
+				    int maskWidth, int maskHeight,
+				    GfxImageColorMap *maskColorMap);
 };
 
 #endif //__infooutputdev_h__

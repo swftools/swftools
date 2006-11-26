@@ -28,6 +28,7 @@ void InfoOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doub
     this->y1 = (int)y1;
     this->x2 = (int)x2;
     this->y2 = (int)y2;
+    msg("<verbose> Generating info structure for page %d", pageNum);
 }
 void InfoOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
@@ -102,11 +103,31 @@ void InfoOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   GBool inlineImg) 
 {
     num_images++;
+    OutputDev::drawImageMask(state,ref,str,width,height,invert,inlineImg);
 }
 void InfoOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
 		       int *maskColors, GBool inlineImg)
 {
     num_images++;
+    OutputDev::drawImage(state,ref,str,width,height,colorMap,maskColors,inlineImg);
+}
+void InfoOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
+				int width, int height,
+				GfxImageColorMap *colorMap,
+				Stream *maskStr,
+				int maskWidth, int maskHeight,
+				GBool maskInvert) 
+{
+    OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskInvert);
 }
 
+void InfoOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
+				    int width, int height,
+				    GfxImageColorMap *colorMap,
+				    Stream *maskStr,
+				    int maskWidth, int maskHeight,
+				    GfxImageColorMap *maskColorMap) 
+{
+    OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskColorMap);
+}
