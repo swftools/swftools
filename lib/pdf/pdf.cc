@@ -6,6 +6,8 @@
 #include "GFXOutputDev.h"
 #include "../mem.h"
 #include "pdf.h"
+#define NO_ARGPARSER
+#include "../args.h"
 
 static parameter_t* device_config = 0;
 static parameter_t* device_config_next = 0;
@@ -15,6 +17,8 @@ int ppm_dpi = 0;
 
 static double zoom = 72; /* xpdf: 86 */
 
+static char* global_page_range = 0;
+
 typedef struct _pdf_page_info
 {
     int xMin, yMin, xMax, yMax;
@@ -22,6 +26,7 @@ typedef struct _pdf_page_info
     int number_of_images;
     int number_of_links;
     int number_of_fonts;
+    char has_info;
 } pdf_page_info_t;
 
 typedef struct _pdf_doc_internal
@@ -66,6 +71,11 @@ void render2(gfxpage_t*page, gfxdevice_t*output)
 
     if(!pi) {
 	msg("<fatal> pdf_page_render: Parent PDF this page belongs to doesn't exist yet/anymore");
+	return;
+    }
+
+    if(!pi->pages[page->nr-1].has_info) {
+	msg("<fatal> pdf_page_render: page %d was previously set as not-to-render via the \"pages\" option", page->nr);
 	return;
     }
 
@@ -114,6 +124,11 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 
     free(gfx->internal);gfx->internal=0;
     free(gfx);gfx=0;
+
+    if(global_page_range) {
+	free(global_page_range);
+	global_page_range = 0;
+    }
 }
 
 void pdf_doc_set_parameter(gfxdocument_t*gfx, char*name, char*value)
@@ -172,6 +187,8 @@ void pdf_set_parameter(char*name, char*value)
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strncmp(name, "fontdir", strlen("fontdir"))) {
         addGlobalFontDir(value);
+    } else if(!strcmp(name, "pages")) {
+	global_page_range = strdup(value);
     } else if(!strncmp(name, "font", strlen("font"))) {
 	addGlobalFont(value);
     } else if(!strncmp(name, "languagedir", strlen("languagedir"))) {
@@ -322,17 +339,21 @@ gfxdocument_t*pdf_open(char*filename)
     InfoOutputDev*io = new InfoOutputDev();
     int t;
     i->pages = (pdf_page_info_t*)malloc(sizeof(pdf_page_info_t)*pdf_doc->num_pages);
+    memset(i->pages,0,sizeof(pdf_page_info_t)*pdf_doc->num_pages);
     for(t=1;t<=pdf_doc->num_pages;t++) {
-	i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
-	i->pages[t-1].xMin = io->x1;
-	i->pages[t-1].yMin = io->y1;
-	i->pages[t-1].xMax = io->x2;
-	i->pages[t-1].yMax = io->y2;
-	i->pages[t-1].width = io->x2 - io->x1;
-	i->pages[t-1].height = io->y2 - io->y1;
-	i->pages[t-1].number_of_images = io->num_images;
-	i->pages[t-1].number_of_links = io->num_links;
-	i->pages[t-1].number_of_fonts = io->num_fonts;
+	if(!global_page_range || is_in_range(t, global_page_range)) {
+	    i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
+	    i->pages[t-1].xMin = io->x1;
+	    i->pages[t-1].yMin = io->y1;
+	    i->pages[t-1].xMax = io->x2;
+	    i->pages[t-1].yMax = io->y2;
+	    i->pages[t-1].width = io->x2 - io->x1;
+	    i->pages[t-1].height = io->y2 - io->y1;
+	    i->pages[t-1].number_of_images = io->num_images;
+	    i->pages[t-1].number_of_links = io->num_links;
+	    i->pages[t-1].number_of_fonts = io->num_fonts;
+	    i->pages[t-1].has_info = 1;
+	}
     }
     i->info = io;
     i->outputDev = new GFXOutputDev(device_config);
