@@ -702,3 +702,15 @@ diff -u -r1.5 -r1.6
 -  startPage(0, NULL);
 +  startPage(0, NULL, 0,0,0,0);
  }
+--- SplashFTFontEngine.cc	2006-11-19 22:30:44.000000000 +0100
++++ SplashFTFontEngine.cc	2006-11-19 22:30:56.000000000 +0100
+@@ -13,9 +13,7 @@
+ #endif
+ 
+ #include <stdio.h>
+-#ifndef WIN32
+ #  include <unistd.h>
+-#endif
+ #include "gmem.h"
+ #include "GString.h"
+ #include "gfile.h"
