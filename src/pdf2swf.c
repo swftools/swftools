@@ -489,8 +489,6 @@ int main(int argn, char *argv[])
     
     initLog(0,-1,0,0,-1,loglevel);
 
-    driver = gfxsource_pdf_create();
-
 #if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
     if(installPath) {
 	fontdir = concatPaths(installPath, "fonts");
@@ -513,8 +511,10 @@ int main(int argn, char *argv[])
     srand(time(0));
 #endif
 #endif
-    processargs(argn, argv);
+    driver = gfxsource_pdf_create();
 
+    processargs(argn, argv);
+    
     if(!filename)
     {
 	fprintf(stderr, "Please specify an input file\n");
@@ -542,6 +542,9 @@ int main(int argn, char *argv[])
 
     // test if the page range is o.k.
     is_in_range(0x7fffffff, pagerange);
+
+    if(pagerange)
+	driver->set_parameter("pages", pagerange);
 
     if (!filename) {
 	args_callback_usage(argv[0]);
