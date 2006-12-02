@@ -2235,6 +2235,8 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(line_is_empty(line))
 	return;
+    if(!color->a)
+	return;
     gfxbbox_t r = gfxline_getbbox(line);
     int is_outside_page = !is_inside_page(dev, r.xmin, r.ymin) || !is_inside_page(dev, r.xmax, r.ymax);
 
