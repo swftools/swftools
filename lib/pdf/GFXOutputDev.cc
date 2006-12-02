@@ -2461,7 +2461,10 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GBool isolated, GBool knockout,
 				      GBool forSoftMask)
 {
-    char*colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
+    char*colormodename = "";
+    if(blendingColorSpace) {
+	colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
+    }
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     states[statepos].createsoftmask = forSoftMask;
     states[statepos].transparencygroup = !forSoftMask;
