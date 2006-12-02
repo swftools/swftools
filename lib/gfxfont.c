@@ -283,12 +283,17 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 		hasname = 1;
 	    }
 	}
-	if(has_had_errors && (isunicode && !glyph2unicode[t]) && !hasname) {
+
+#if 0 // some cantonese pdfs fail to work if this is activated
+
+	if(has_had_errors && (isunicode && !glyph2unicode[t]) && !hasname && t>=256) {
 	    /* some freetype versions crash or corrupt memory if we try to load
 	       characters (without unicode index or name) above 256 for some fonts.
 	       So skip those characters once the first error occured */
 	    omit = 1;
 	}
+#endif
+
 	if(!omit) {
 	    error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
 	    if(error) {
