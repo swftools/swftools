@@ -1,8 +1,8 @@
-/* gfxdevice_bitmap.cc
+/* render.c
 
    Part of the swftools package.
 
-   Copyright (c) 2005 Matthias Kramm <kramm@quiss.org> 
+   Copyright (c) 2005/2006/2007 Matthias Kramm <kramm@quiss.org> 
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -45,16 +45,13 @@ typedef struct _renderline
 } renderline_t;
 
 typedef struct _internal_result {
-    int width;
-    int height;
-    RGBA* img;
+    gfximage_t img;
     struct _internal_result*next;
 } internal_result_t;
 
 typedef struct _clipbuffer {
     U32*data;
-    int linesize;
-    struct _clipbuffer*prev;
+    struct _clipbuffer*next;
 } clipbuffer_t;
 
 typedef struct _internal {
@@ -62,19 +59,14 @@ typedef struct _internal {
     int height;
     int width2;
     int height2;
+    int bitwidth;
     int multiply;
     int antialize;
+    int zoom;
     int ymin, ymax;
 
-    int depth;
-
     RGBA* img;
-    int* zbuf; 
 
-    gfxfont_t*font;
-    char*fontid;
-    
-    clipbuffer_t*clipbufs;
     clipbuffer_t*clipbuf;
 
     renderline_t*lines;
@@ -174,6 +166,8 @@ static void add_line(gfxdevice_t*dev , double x1, double y1, double x2, double y
 #define PI 3.14159265358979
 static void add_solidline(gfxdevice_t*dev, double x1, double y1, double x2, double y2, double width)
 {
+    /* TODO: handle cap styles */
+
     internal_t*i = (internal_t*)dev->internal;
 
     double dx = x2-x1;
@@ -311,27 +305,31 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
     gfxmatrix_t*m = info->matrix;
     gfximage_t*b = info->image;
     
+    if(!b->width || !b->height) {
+	gfxcolor_t red = {255,255,0,0};
+        fill_line_solid(line, z, y, x1, x2, red);
+        return;
+    }
+    
     double det = m->m00*m->m11 - m->m01*m->m10;
     if(fabs(det) < 0.0005) { 
 	/* x direction equals y direction- the image is invisible */
 	return;
     }
     det = 1.0/det;
+    double xx1 =  (  (-m->tx) * m->m11 - (y - m->ty) * m->m10) * det;
+    double yy1 =  (- (-m->tx) * m->m01 + (y - m->ty) * m->m00) * det;
+    double xinc1 = m->m11 * det;
+    double yinc1 = m->m01 * det;
     
-    if(!b->width || !b->height) {
-	gfxcolor_t red = {255,255,0,0};
-        fill_line_solid(line, z, y, x1, x2, red);
-        return;
-    }
-
     U32 bit = 1<<(x1&31);
     int bitpos = (x1/32);
 
     do {
 	if(z[bitpos]&bit) {
 	    RGBA col;
-	    int xx = (int)((  (x - m->tx) * m->m11 - (y - m->ty) * m->m10)*det);
-	    int yy = (int)((- (x - m->tx) * m->m01 + (y - m->ty) * m->m00)*det);
+	    int xx = (int)(xx1 + x * xinc1);
+	    int yy = (int)(yy1 - x * yinc1);
 	    int ainv;
 
 	    if(info->clip) {
@@ -349,6 +347,7 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
 	    col = b->data[yy*b->width+xx];
 	    ainv = 255-col.a;
 
+	    /* needs bitmap with premultiplied alpha */
 	    line[x].r = ((line[x].r*ainv)>>8)+col.r;
 	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
 	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
@@ -396,7 +395,8 @@ void fill(gfxdevice_t*dev, fillinfo_t*fill)
     for(y=i->ymin;y<=i->ymax;y++) {
 	renderpoint_t*points = i->lines[y].points;
         RGBA*line = &i->img[i->width2*y];
-        int*zline = &i->zbuf[i->width2*y];
+        U32*zline = &i->clipbuf->data[i->bitwidth*y];
+
 	int n;
 	int num = i->lines[y].num;
 	int lastx;
@@ -421,6 +421,15 @@ void fill(gfxdevice_t*dev, fillinfo_t*fill)
             if(endx == i->width2)
                 break;
         }
+	if(fill->type == filltype_clip) {
+	    if(i->clipbuf->next) {
+		U32*line2 = &i->clipbuf->next->data[i->bitwidth*y];
+		int x;
+		for(x=0;x<i->bitwidth;x++)
+		    zline[x] &= line2[x];
+	    }
+	}
+
 	i->lines[y].num = 0;
     }
 }
@@ -438,8 +447,11 @@ int render_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
     internal_t*i = (internal_t*)dev->internal;
     if(!strcmp(key, "antialize")) {
 	i->antialize = atoi(value);
+	i->zoom = i->antialize * i->multiply;
     } else if(!strcmp(key, "multiply")) {
 	i->multiply = atoi(value);
+	i->zoom = i->antialize * i->multiply;
+	fprintf(stderr, "Warning: multiply not implemented yet\n");
     }
     return 0;
 }
@@ -449,37 +461,29 @@ void newclip(struct _gfxdevice*dev)
     internal_t*i = (internal_t*)dev->internal;
     
     clipbuffer_t*c = rfx_calloc(sizeof(clipbuffer_t));
-    c->linesize = ((i->width2+31) / 32);
-    c->data = rfx_calloc(c->linesize * i->height2);
-
-    if(!i->clipbufs) {
-	i->clipbufs = i->clipbuf = c;
-    } else {
-	clipbuffer_t*old = i->clipbuf;
-	i->clipbuf = c;
-	i->clipbuf->prev = old;
-    }
+    c->data = rfx_calloc(sizeof(U32) * i->bitwidth * i->height2);
+    c->next = i->clipbuf;
+    i->clipbuf = c;
+    if(c->next)
+	memcpy(c->data, c->next->data, i->bitwidth*i->height2);
+    else
+	memset(c->data, 0, sizeof(U32)*i->bitwidth*i->height2);
 }
 
 void endclip(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
     
-    if(!i->clipbufs) {
+    if(!i->clipbuf) {
 	fprintf(stderr, "endclip without any active clip buffers");
 	return;
     }
-    
-    clipbuffer_t*old = i->clipbuf;
 
-    if(i->clipbuf == i->clipbufs)
-	i->clipbufs = 0;
-
-    i->clipbuf = i->clipbuf->prev;
-
-    old->prev = 0;
-    free(old->data);old->data = 0;
-    free(old);
+    clipbuffer_t*c = i->clipbuf;
+    i->clipbuf = i->clipbuf->next;
+    c->next = 0;
+    free(c->data);c->data = 0;
+    free(c);
 }
 
 void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
@@ -496,17 +500,17 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 
         if(line->type == gfx_moveTo) {
         } else if(line->type == gfx_lineTo) {
-	    double x1=x,y1=y;
-	    double x3=line->x,y3=line->y;
+	    double x1=x*i->zoom,y1=y*i->zoom;
+	    double x3=line->x*i->zoom,y3=line->y*i->zoom;
 	    add_solidline(dev, x1, y1, x3, y3, width * i->multiply);
 	    fill_solid(dev, color);
         } else if(line->type == gfx_splineTo) {
 	    int c,t,parts,qparts;
 	    double xx,yy;
            
-	    double x1=x,y1=y;
-	    double x2=line->sx,y2=line->sy;
-	    double x3=line->x,y3=line->y;
+	    double x1=x*i->zoom,y1=y*i->zoom;
+	    double x2=line->sx*i->zoom,y2=line->sy*i->zoom;
+	    double x3=line->x*i->zoom,y3=line->y*i->zoom;
             
             c = abs(x3-2*x2+x1) + abs(y3-2*y2+y1);
             xx=x1;
@@ -542,17 +546,17 @@ static void draw_line(gfxdevice_t*dev, gfxline_t*line)
 
         if(line->type == gfx_moveTo) {
         } else if(line->type == gfx_lineTo) {
-	    double x1=x,y1=y;
-	    double x3=line->x,y3=line->y;
+	    double x1=x*i->zoom,y1=y*i->zoom;
+	    double x3=line->x*i->zoom,y3=line->y*i->zoom;
             
             add_line(dev, x1, y1, x3, y3);
         } else if(line->type == gfx_splineTo) {
 	    int c,t,parts,qparts;
 	    double xx,yy;
             
-	    double x1=x,y1=y;
-	    double x2=line->sx,y2=line->sy;
-	    double x3=line->x,y3=line->y;
+	    double x1=x*i->zoom,y1=y*i->zoom;
+	    double x2=line->sx*i->zoom,y2=line->sy*i->zoom;
+	    double x3=line->x*i->zoom,y3=line->y*i->zoom;
             
             c = abs(x3-2*x2+x1) + abs(y3-2*y2+y1);
             xx=x1;
@@ -606,13 +610,19 @@ void render_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 
     gfxcolor_t black = {255,0,0,0};
 
+    gfxmatrix_t m2 = *matrix;
+
     draw_line(dev, line);
 
     fillinfo_t info;
     info.type = filltype_bitmap;
     info.image = img;
-    info.matrix = matrix;
+    info.matrix = &m2;
     info.cxform = cxform;
+
+    m2.m00 *= i->zoom; m2.m01 *= i->zoom; m2.tx *= i->zoom;
+    m2.m10 *= i->zoom; m2.m11 *= i->zoom; m2.ty *= i->zoom;
+
     fill(dev, &info);
 }
 
@@ -648,29 +658,46 @@ void render_result_write(gfxresult_t*r, int filedesc)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
 }
-int  render_result_save(gfxresult_t*r, char*filename)
+int render_result_save(gfxresult_t*r, char*filename)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
     if(i->next) {
 	int nr=0;
 	while(i->next) {
-	    writePNG(filename, (unsigned char*)i->img, i->width, i->height);
+	    writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
 	    nr++;
 	}
     } else {
-	writePNG(filename, (unsigned char*)i->img, i->width, i->height);
+	writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
     }
     return 1;
 }
 void*render_result_get(gfxresult_t*r, char*name)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
+    if(!strncmp(name,"page",4)) {
+	int pagenr = atoi(&name[4]);
+	if(pagenr<0)
+	    return 0;
+	while(pagenr>0) {
+	    i = i->next;
+	    if(!i)
+		return 0;
+	}
+	return &i->img;
+    }
     return 0;
 }
 void render_result_destroy(gfxresult_t*r)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
-    free(i); r->internal = 0;
+    r->internal = 0;
+    while(i) {
+	internal_result_t*next = i->next;
+	free(i->img.data);i->img.data = 0;
+	free(i);
+	i = next;
+    }
     free(r);
 }
 
@@ -688,8 +715,6 @@ gfxresult_t* render_finish(struct _gfxdevice*dev)
 
     free(dev->internal); dev->internal = 0; i = 0;
 
-    /* TODO: free fonts */
-
     return res;
 }
 
@@ -703,10 +728,11 @@ void render_startpage(struct _gfxdevice*dev, int width, int height)
 	exit(1);
     }
     
-    i->width = width;
-    i->height = height;
-    i->width2 = width*i->antialize*i->multiply;
-    i->height2 = height*i->antialize*i->multiply;
+    i->width = width*i->multiply;
+    i->height = height*i->multiply;
+    i->width2 = width*i->zoom;
+    i->height2 = height*i->zoom;
+    i->bitwidth = (i->width2+31)/32;
 
     i->lines = (renderline_t*)rfx_alloc(i->height2*sizeof(renderline_t));
     for(y=0;y<i->height2;y++) {
@@ -714,12 +740,68 @@ void render_startpage(struct _gfxdevice*dev, int width, int height)
         i->lines[y].points = 0;
         i->lines[y].num = 0;
     }
-    i->zbuf = (int*)rfx_calloc(sizeof(int)*i->width2*i->height2);
     i->img = (RGBA*)rfx_calloc(sizeof(RGBA)*i->width2*i->height2);
     i->ymin = 0x7fffffff;
     i->ymax = -0x80000000;
 
+
+    /* initialize initial clipping field, which doesn't clip anything yet */
     newclip(dev);
+    memset(i->clipbuf->data, 255, sizeof(U32)*i->bitwidth*i->height2);
+}
+
+static void store_image(internal_t*i, internal_result_t*ir)
+{
+    ir->img.data = malloc(i->width*i->height*sizeof(RGBA));
+    ir->img.width = i->width;
+    ir->img.height = i->height;
+
+    gfxcolor_t*dest = ir->img.data;
+
+    if(i->antialize <= 1) /* no antializing */ {
+	int y;
+	for(y=0;y<i->height;y++) {
+	    RGBA*line = &i->img[y*i->width];
+	    memcpy(&dest[y*i->width], line, sizeof(RGBA)*i->width);
+	}
+    } else {
+	RGBA**lines = (RGBA**)rfx_calloc(sizeof(RGBA*)*i->antialize);
+	int q = i->antialize*i->antialize;
+	int ypos = 0;
+	int y;
+	int y2=0;
+	for(y=0;y<i->height2;y++) {
+	    int n;
+	    ypos = y % i->antialize;
+	    lines[ypos] = &i->img[y*i->width2];
+	    if(ypos == i->antialize-1) {
+		RGBA*out = &dest[(y2++)*i->width];
+		int x;
+		int r,g,b,a;
+		for(x=0;x<i->width;x++) {
+		    int xpos = x*i->antialize;
+		    int yp;
+		    U32 r=0,g=0,b=0,a=0;
+		    for(yp=0;yp<i->antialize;yp++) {
+			RGBA*lp = &lines[yp][xpos];
+			int xp;
+			for(xp=0;xp<i->antialize;xp++) {
+			    RGBA*p = &lp[xp];
+			    r += p->r;
+			    g += p->g;
+			    b += p->b;
+			    a += p->a;
+			}
+		    }
+		    out[x].r = r / q;
+		    out[x].g = g / q;
+		    out[x].b = b / q;
+		    out[x].a = a / q;
+		}
+	    }
+	}
+	rfx_free(lines);
+    }
 }
 
 void render_endpage(struct _gfxdevice*dev)
@@ -732,15 +814,17 @@ void render_endpage(struct _gfxdevice*dev)
     }
 
     endclip(dev);
-    while(i->clipbufs) {
+    while(i->clipbuf) {
 	fprintf(stderr, "Warning: unclosed clip while processing endpage()\n");
 	endclip(dev);
     }
     
     internal_result_t*ir= (internal_result_t*)rfx_calloc(sizeof(internal_result_t));
-    ir->width = i->width;
-    ir->height = i->height;
-    ir->img = i->img; i->img = 0;
+
+    int y,x;
+
+    store_image(i, ir);
+
     ir->next = 0;
     if(i->result_next) {
 	i->result_next->next = ir;
@@ -750,8 +834,11 @@ void render_endpage(struct _gfxdevice*dev)
     }
     i->result_next = ir;
 
-    rfx_free(i->lines);i->lines=0; //FIXME
-    rfx_free(i->zbuf);i->zbuf = 0;
+    for(y=0;y<i->height2;y++) {
+	rfx_free(i->lines[y].points); i->lines[y].points = 0;
+    }
+    rfx_free(i->lines);i->lines=0;
+
     if(i->img) {rfx_free(i->img);i->img = 0;}
 
     i->width2 = 0;
@@ -768,6 +855,9 @@ void gfxdevice_render_init(gfxdevice_t*dev)
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     int y;
     memset(dev, 0, sizeof(gfxdevice_t));
+    
+    dev->name = "render";
+
     dev->internal = i;
     
     i->width = 0;
@@ -776,6 +866,7 @@ void gfxdevice_render_init(gfxdevice_t*dev)
     i->height2 = 0;
     i->antialize = 1;
     i->multiply = 1;
+    i->zoom = 1;
 
     dev->setparameter = render_setparameter;
     dev->startpage = render_startpage;
