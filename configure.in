@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2006-11-05-2341
+VERSION=2006-12-02-1537
 
 
 # ------------------------------------------------------------------
@@ -126,7 +126,6 @@ fi
  AC_PROG_MAKE_SET
  AC_PROG_INSTALL
  AC_PROG_LN_S
- AC_PROG_LIBTOOL
  AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
 
 dnl Checks for system services
