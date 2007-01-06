@@ -95,6 +95,8 @@ typedef struct _gfxresult
 
 typedef struct _gfxdevice
 {
+    char* name; // gfx device name
+
     int (*setparameter)(struct _gfxdevice*dev, const char*key, const char*value);
 
     void (*startpage)(struct _gfxdevice*dev, int width, int height);
@@ -103,7 +105,7 @@ typedef struct _gfxdevice
     void (*endclip)(struct _gfxdevice*dev);
     void (*stroke)(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
     void (*fill)(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color);
-    void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform); //cxform? tiling?
+    void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform); //cxform? tiling?
     void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix); //?
 
     /* deprecated */ void (*addfont)(struct _gfxdevice*dev, gfxfont_t*font);

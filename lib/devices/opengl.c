@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
@@ -448,6 +449,8 @@ void gfxdevice_opengl_init(gfxdevice_t*dev)
     dbg("init");
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
+    
+    dev->name = "opengl";
 
     dev->internal = i;
     

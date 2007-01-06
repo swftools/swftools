@@ -201,6 +201,9 @@ void gfxdevice_file_init(gfxdevice_t*dev, char*filename)
 {
     internal_t*i = malloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
+
+    dev->name = "file";
+
     dev->internal = i;
 
     dev->setparameter = file_setparameter;
