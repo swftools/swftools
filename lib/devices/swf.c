@@ -877,6 +877,9 @@ static void setBackground(gfxdevice_t*dev, int x1, int y1, int x2, int y2)
 void gfxdevice_swf_init(gfxdevice_t* dev)
 {
     memset(dev, 0, sizeof(gfxdevice_t));
+    
+    dev->name = "swf";
+
     dev->internal = init_internal_struct();
 
     dev->startpage = swf_startframe;
@@ -1215,6 +1218,8 @@ void swfoutput_finalize(gfxdevice_t*dev)
     if(i->config_enablezlib || i->config_flashversion>=6) {
 	i->swf->compressed = 1;
     }
+
+    swf_Optimize(i->swf);
 }
 
 int swfresult_save(gfxresult_t*gfx, char*filename)
@@ -2006,6 +2011,7 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
     RGBA col;
     memset(&col, 0, sizeof(RGBA));
+    col.a = 255;
     SHAPE*shape;
     swf_ShapeNew(&shape);
     int fsid = swf_ShapeAddSolidFillStyle(shape,&col);
