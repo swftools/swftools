@@ -39,48 +39,13 @@ extern "C" {
 #include "./bitio.h"
 #include "./drawer.h"
 #include "./mem.h"
+#include "./types.h"
 
 #define DEBUG_RFXSWF
 #ifdef RFXSWF_DISABLESOUND
 #define NO_MP3
 #endif
 
-#ifndef TRUE
-#define TRUE (1)
-#endif
-#ifndef FALSE
-#define FALSE (0)
-#endif
-
-
-/* little/big endian stuff */
-
-#define PUT8(ptr,x) {((U8*)(ptr))[0]=x;}
-#define PUT16(ptr,x) {((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)((x)>>8);}
-#define PUT32(ptr,x) {((U8*)(ptr))[0]=(U8)(x);((U8*)(ptr))[1]=(U8)((x)>>8);((U8*)(ptr))[2]=(U8)((x)>>16);((U8*)(ptr))[3]=(U8)((x)>>24);}
-#define GET16(ptr) (((U16)(((U8*)(ptr))[0]))+(((U16)(((U8*)(ptr))[1]))<<8))
-#define GET32(ptr) (((U16)(((U8*)(ptr))[0]))+(((U16)(((U8*)(ptr))[1]))<<8)+(((U16)(((U8*)(ptr))[2]))<<16)+(((U16)(((U8*)(ptr))[3]))<<24))
-
-#ifdef WORDS_BIGENDIAN
-#define SWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
-#define SWAP32(s) (SWAP16(((s)>>16)&0x0000ffff)|((SWAP16(s)<<16)&0xffff0000))
-#define REVERSESWAP16(x) (x)
-#define REVERSESWAP32(x) (x)
-#else
-#define SWAP16(x) (x)
-#define SWAP32(x) (x)
-#define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
-#define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
-#endif
-
-// SWF Types
-
-typedef         unsigned long   U32;
-typedef         signed long     S32;
-typedef         unsigned short  U16;
-typedef         signed short    S16;
-typedef         unsigned char   U8;
-typedef         signed char     S8;
 typedef         signed long     SFIXED;
 typedef         signed long     SCOORD;
 
@@ -182,9 +147,9 @@ typedef struct _SWF
 
 // Basic Functions
 
-int  swf_ReadSWF2(struct reader_t*reader, SWF * swf);   // Reads SWF via callback
+int  swf_ReadSWF2(reader_t*reader, SWF * swf);   // Reads SWF via callback
 int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
-int  swf_WriteSWF2(struct writer_t*writer, SWF * swf);     // Writes SWF via callback, returns length or <0 if fails
+int  swf_WriteSWF2(writer_t*writer, SWF * swf);     // Writes SWF via callback, returns length or <0 if fails
 int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
 int  swf_WriteSWC(int handle, SWF * swf);   // for convenience, equal to swf->compressed=1;swf_WriteSWF(..)
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
@@ -193,11 +158,11 @@ SWF* swf_CopySWF(SWF*swf);
 
 // for streaming:
 int  swf_WriteHeader(int handle,SWF * swf);    // Writes Header of swf to file
-int  swf_WriteHeader2(struct writer_t*writer,SWF * swf);    // Writes Header of swf to file
+int  swf_WriteHeader2(writer_t*writer,SWF * swf);    // Writes Header of swf to file
 int  swf_WriteTag(int handle,TAG * tag);    // Writes TAG to file
-int  swf_WriteTag2(struct writer_t*writer, TAG * t); //Write TAG via callback
+int  swf_WriteTag2(writer_t*writer, TAG * t); //Write TAG via callback
 
-int  swf_ReadHeader(struct reader_t*reader, SWF * swf);   // Reads SWF Header via callback
+int  swf_ReadHeader(reader_t*reader, SWF * swf);   // Reads SWF Header via callback
 
 // folding/unfolding:
 

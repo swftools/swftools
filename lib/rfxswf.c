@@ -224,10 +224,10 @@ S32 swf_GetSBits(TAG * t,int nbits)
   return (S32)res;
 }
 
-U32 reader_GetBits(struct reader_t*reader, int nbits)
+U32 reader_GetBits(reader_t*reader, int nbits)
 { return reader_readbits(reader, nbits);
 }
-S32 reader_GetSBits(struct reader_t*reader, int nbits)
+S32 reader_GetSBits(reader_t*reader, int nbits)
 { U32 res = reader_readbits(reader, nbits);
   if (res&(1<<(nbits-1))) res|=(0xffffffff<<nbits);  
   return (S32)res;
@@ -381,7 +381,7 @@ int swf_GetRect(TAG * t,SRECT * r)
   return 0;
 }
 
-int reader_GetRect(struct reader_t*reader,SRECT * r)
+int reader_GetRect(reader_t*reader,SRECT * r)
 { int nbits;
   SRECT dummy;
   if (!r) r = &dummy;
@@ -820,7 +820,7 @@ int swf_DeleteTag(TAG * t)
   return 0;
 }
 
-TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
+TAG * swf_ReadTag(reader_t*reader, TAG * prev)
 { TAG * t;
   U16 raw;
   U32 len;
@@ -868,7 +868,7 @@ TAG * swf_ReadTag(struct reader_t*reader, TAG * prev)
 
 int swf_DefineSprite_GetRealSize(TAG * t);
 
-int swf_WriteTag2(struct writer_t*writer, TAG * t)
+int swf_WriteTag2(writer_t*writer, TAG * t)
 // returns tag length in bytes (incl. Header), -1 = Error
 // writer = 0 -> no output
 { U16 raw[3];
@@ -934,7 +934,7 @@ int swf_WriteTag2(struct writer_t*writer, TAG * t)
 
 int swf_WriteTag(int handle, TAG * t)
 {
-  struct writer_t writer;
+  writer_t writer;
   int len = 0;
   if(handle<0)
     return swf_WriteTag2(0, t);
@@ -1173,7 +1173,7 @@ void swf_OptimizeTagOrder(SWF*swf)
 
 // Movie Functions
 
-int swf_ReadSWF2(struct reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
+int swf_ReadSWF2(reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 {     
   if (!swf) return -1;
   memset(swf,0x00,sizeof(SWF));
@@ -1182,7 +1182,7 @@ int swf_ReadSWF2(struct reader_t*reader, SWF * swf)   // Reads SWF to memory (ma
     int len;
     TAG * t;
     TAG t1;
-    struct reader_t zreader;
+    reader_t zreader;
     
     if ((len = reader->read(reader ,b,8))<8) return -1;
 
@@ -1216,16 +1216,16 @@ int swf_ReadSWF2(struct reader_t*reader, SWF * swf)   // Reads SWF to memory (ma
 
 int swf_ReadSWF(int handle, SWF * swf)
 {
-  struct reader_t reader;
+  reader_t reader;
   reader_init_filereader(&reader, handle);
   return swf_ReadSWF2(&reader, swf);
 }
 
-int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
+int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
   int frameCount=0;
-  struct writer_t zwriter;
+  writer_t zwriter;
   int fileSize = 0;
   int inSprite = 0;
   int writer_lastpos = 0;
@@ -1355,7 +1355,7 @@ int  swf_WriteSWF2(struct writer_t*writer, SWF * swf)     // Writes SWF to file,
 
 int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 {
-  struct writer_t writer;
+  writer_t writer;
   int len = 0;
   swf->compressed = 0;
   
@@ -1372,7 +1372,7 @@ int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns leng
 
 int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 {
-  struct writer_t writer;
+  writer_t writer;
   int len = 0;
   swf->compressed = 1;
 
@@ -1386,7 +1386,7 @@ int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns leng
   return len;
 }
 
-int swf_WriteHeader2(struct writer_t*writer,SWF * swf)
+int swf_WriteHeader2(writer_t*writer,SWF * swf)
 {
   SWF myswf;
   memcpy(&myswf,swf,sizeof(SWF));
