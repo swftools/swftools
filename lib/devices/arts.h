@@ -29,7 +29,9 @@
 extern "C" {
 #endif
 
-void gfxdevice_arts_init(gfxdevice_t*self, gfxdevice_t*dest);
+void gfxdevice_removeclippings_init(gfxdevice_t*self, gfxdevice_t*dest);
+void gfxdevice_union_init(gfxdevice_t*self, gfxdevice_t*dest);
+gfxline_t*gfxdevice_union_getunion(struct _gfxdevice*dev);
 
 #ifdef __cplusplus
 }
