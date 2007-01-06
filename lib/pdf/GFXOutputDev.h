@@ -20,7 +20,14 @@ class GFXOutputState {
     int textRender;
     char createsoftmask;
     char transparencygroup;
+    int softmask;
+
     GFXOutputState();
+
+    gfxresult_t* grouprecording; // for transparency groups
+    gfxresult_t* softmaskrecording; // for soft masks
+
+    gfxdevice_t* olddevice;
 };
 
 typedef struct _parameter
@@ -75,7 +82,7 @@ public:
   void setXRef(PDFDoc*doc, XRef *xref);
 
   //----- link borders
-  virtual void drawLink(Link *link, Catalog *catalog) ;
+  virtual void processLink(Link *link, Catalog *catalog);
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state) ;
@@ -90,7 +97,10 @@ public:
   virtual void updateLineJoin(GfxState *state);
   virtual void updateLineCap(GfxState *state);
   virtual void updateFillOpacity(GfxState *state);
-
+  virtual void updateStrokeOpacity(GfxState *state);
+  virtual void updateFillOverprint(GfxState *state);
+  virtual void updateStrokeOverprint(GfxState *state);
+  virtual void updateTransfer(GfxState *state);
   
   virtual void updateAll(GfxState *state) 
   {
@@ -206,13 +216,16 @@ public:
   char* substitutesource[256];
   int substitutepos;
 
+  int user_movex,user_movey;
+  int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
+
   /* upper left corner of clipping rectangle (cropbox)- needs to be
      added to all drawing coordinates to give the impression that all
      pages start at (0,0)*/
-  int clipmovex,clipmovey;
+  int clipmovex;
+  int clipmovey;
 
-  int user_movex,user_movey;
-  int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
+  double width,height;
 
   gfxline_t* current_text_stroke;
   gfxline_t* current_text_clip;
