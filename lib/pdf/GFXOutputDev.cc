@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
@@ -64,6 +65,11 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfxfont.h"
+#include "../devices/record.h"
+#include "../devices/ops.h"
+#include "../devices/arts.h"
+#include "../devices/render.h"
+#include "../png.h"
 
 #include <math.h>
 
@@ -100,6 +106,34 @@ struct mapping {
 {"Symbol",                "s050000l"},
 {"ZapfDingbats",          "d050000l"}};
 
+static int verbose = 1;
+static int dbgindent = 0;
+static void dbg(char*format, ...)
+{
+    char buf[1024];
+    int l;
+    va_list arglist;
+    if(!verbose)
+	return;
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+    l = strlen(buf);
+    while(l && buf[l-1]=='\n') {
+	buf[l-1] = 0;
+	l--;
+    }
+    printf("(pdf) ");
+    int indent = dbgindent;
+    while(indent) {
+	printf(" ");
+	indent--;
+    }
+    printf("%s\n", buf);
+    fflush(stdout);
+}
+
+
 typedef struct _feature
 {
     char*string;
@@ -127,6 +161,8 @@ GFXOutputState::GFXOutputState() {
     this->textRender = 0;
     this->createsoftmask = 0;
     this->transparencygroup = 0;
+    this->softmask = 0;
+    this->grouprecording = 0;
 }
 
 GBool GFXOutputDev::interpretType3Chars() 
@@ -573,6 +609,9 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
 	draw.lineTo(&draw, lastx, lasty);
     }
     gfxline_t*result = (gfxline_t*)draw.result(&draw);
+
+    gfxline_optimize(result);
+
     return result;
 }
 
@@ -677,9 +716,6 @@ void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line)
         msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
-    if(states[statepos].transparencygroup && col.a != 255)
-	return;
-
     device->fill(device, line, &col);
 }
 
@@ -696,9 +732,6 @@ void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line)
 
 void GFXOutputDev::clip(GfxState *state) 
 {
-    if(states[statepos].createsoftmask)
-	return;
-
     GfxPath * path = state->getPath();
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
     clipToGfxLine(state, line);
@@ -904,9 +937,6 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode c, int nBytes, Unicode *_u, int uLen)
 {
-    if(states[statepos].createsoftmask)
-	return;
-
     int render = state->getRender();
     // check for invisible text -- this is used by Acrobat Capture
     if (render == 3) {
@@ -1093,6 +1123,8 @@ void GFXOutputDev::startFrame(int width, int height)
     }
 
     device->startpage(device, width, height);
+    this->width = width;
+    this->height = height;
 }
 
 void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
@@ -1148,7 +1180,7 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     device->fill(device, clippath, &white);
 }
 
-void GFXOutputDev::drawLink(Link *link, Catalog *catalog) 
+void GFXOutputDev::processLink(Link *link, Catalog *catalog) 
 {
     double x1, y1, x2, y2, w;
     gfxline_t points[5];
@@ -1333,25 +1365,32 @@ void GFXOutputDev::drawLink(Link *link, Catalog *catalog)
 }
 
 void GFXOutputDev::saveState(GfxState *state) {
-  msg("<trace> saveState\n");
-  updateAll(state);
-  if(statepos>=64) {
-    msg("<error> Too many nested states in pdf.");
-    return;
-  }
-  statepos ++;
-  states[statepos].textRender = states[statepos-1].textRender;
-  states[statepos].createsoftmask = states[statepos-1].createsoftmask;
-  states[statepos].transparencygroup = states[statepos-1].transparencygroup;
-  states[statepos].clipping = 0;
+    dbg("saveState");dbgindent+=2;
+
+    msg("<trace> saveState\n");
+    updateAll(state);
+    if(statepos>=64) {
+      msg("<error> Too many nested states in pdf.");
+      return;
+    }
+    statepos ++;
+    states[statepos].textRender = states[statepos-1].textRender;
+    states[statepos].createsoftmask = states[statepos-1].createsoftmask;
+    states[statepos].transparencygroup = states[statepos-1].transparencygroup;
+    states[statepos].clipping = 0;
 };
 
 void GFXOutputDev::restoreState(GfxState *state) {
+  dbgindent-=2; dbg("restoreState");
+
   if(statepos==0) {
       msg("<error> Invalid restoreState");
       return;
   }
   msg("<trace> restoreState");
+  if(states[statepos].softmask) {
+      clearSoftMask(state);
+  }
   updateAll(state);
   while(states[statepos].clipping) {
       device->endclip(device);
@@ -1422,7 +1461,28 @@ void GFXOutputDev::updateFillOpacity(GfxState *state)
     GfxRGB rgb;
     double opaq = state->getFillOpacity();
     state->getFillRGB(&rgb);
+    dbg("update fillopaq %f", opaq);
 }
+void GFXOutputDev::updateStrokeOpacity(GfxState *state)
+{
+    double opaq = state->getFillOpacity();
+    dbg("update strokeopaq %f", opaq);
+}
+void GFXOutputDev::updateFillOverprint(GfxState *state)
+{
+    double opaq = state->getFillOverprint();
+    dbg("update filloverprint %f", opaq);
+}
+void GFXOutputDev::updateStrokeOverprint(GfxState *state)
+{
+    double opaq = state->getStrokeOverprint();
+    dbg("update strokeoverprint %f", opaq);
+}
+void GFXOutputDev::updateTransfer(GfxState *state)
+{
+    dbg("update transfer");
+}
+
 
 void GFXOutputDev::updateStrokeColor(GfxState *state) 
 {
@@ -1979,6 +2039,10 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
 	/* TODO: pass image_dpi to device instead */
 	dev->setparameter(dev, "next_bitmap_is_jpeg", "1");
 
+    gfxline_show(&p1,stdout);
+
+    printf("%.2f %.2f %.2f\n", m.m00, m.m10, m.tx);
+    printf("%.2f %.2f %.2f\n", m.m01, m.m11, m.ty);
     dev->fillbitmap(dev, &p1, &img, &m, 0);
 }
 
@@ -2073,7 +2137,6 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   state->transform(0, 0, &x2, &y2); x2 += user_movex + clipmovex; y2 += user_movey + clipmovey;
   state->transform(1, 0, &x3, &y3); x3 += user_movex + clipmovex; y3 += user_movey + clipmovey;
   state->transform(1, 1, &x4, &y4); x4 += user_movex + clipmovex; y4 += user_movey + clipmovey;
-
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
@@ -2245,8 +2308,7 @@ void GFXOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
-    if(states[statepos].createsoftmask)
-	return;
+    dbg("drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
     msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
     drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0, 0,0,0,0, 0);
 }
@@ -2255,8 +2317,10 @@ void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
 {
-    if(states[statepos].createsoftmask)
-	return;
+    dbg("drawImage %dx%d, %s, %s, inline=%d", width, height, 
+	    colorMap?"colorMap":"no colorMap", 
+	    maskColors?"maskColors":"no maskColors",
+	    inlineImg);
     msg("<verbose> drawImage %dx%d, %s, %s, inline=%d", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
 	    maskColors?"maskColors":"no maskColors",
@@ -2273,8 +2337,9 @@ void GFXOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       Stream *maskStr, int maskWidth, int maskHeight,
 			       GBool maskInvert)
 {
-    if(states[statepos].createsoftmask)
-	return;
+    dbg("drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
+	    colorMap?"colorMap":"no colorMap", 
+	    maskWidth, maskHeight);
     msg("<verbose> drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
 	    maskWidth, maskHeight);
@@ -2291,8 +2356,9 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 				   int maskWidth, int maskHeight,
 				   GfxImageColorMap *maskColorMap)
 {
-    if(states[statepos].createsoftmask)
-	return;
+    dbg("drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 
+	    colorMap?"colorMap":"no colorMap", 
+	    maskWidth, maskHeight);
     msg("<verbose> drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
 	    maskWidth, maskHeight);
@@ -2304,8 +2370,7 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 
 void GFXOutputDev::stroke(GfxState *state) 
 {
-    if(states[statepos].createsoftmask)
-        return;
+    dbg("stroke");
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
@@ -2315,8 +2380,7 @@ void GFXOutputDev::stroke(GfxState *state)
 
 void GFXOutputDev::fill(GfxState *state) 
 {
-    if(states[statepos].createsoftmask)
-	return;
+    dbg("fill");
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
@@ -2326,8 +2390,7 @@ void GFXOutputDev::fill(GfxState *state)
 
 void GFXOutputDev::eoFill(GfxState *state) 
 {
-    if(states[statepos].createsoftmask)
-	return;
+    dbg("eofill");
 
     GfxPath * path = state->getPath();
     gfxcolor_t col = getFillColor(state);
@@ -2454,7 +2517,88 @@ void GFXOutputDev::preparePage(int pdfpage, int outputpage)
     if(pdfpage>this->pagepos)
 	this->pagepos = pdfpage;
 }
-  
+
+struct BBox
+{
+    double posx,posy;
+    double width,height;
+};
+
+BBox mkBBox(GfxState*state, double*bbox, double width, double height)
+{
+    double xMin, yMin, xMax, yMax, x, y;
+    double tx, ty, w, h;
+    // transform the bbox
+    state->transform(bbox[0], bbox[1], &x, &y);
+    xMin = xMax = x;
+    yMin = yMax = y;
+    state->transform(bbox[0], bbox[3], &x, &y);
+    if (x < xMin) {
+      xMin = x;
+    } else if (x > xMax) {
+      xMax = x;
+    }
+    if (y < yMin) {
+      yMin = y;
+    } else if (y > yMax) {
+      yMax = y;
+    }
+    state->transform(bbox[2], bbox[1], &x, &y);
+    if (x < xMin) {
+      xMin = x;
+    } else if (x > xMax) {
+      xMax = x;
+    }
+    if (y < yMin) {
+      yMin = y;
+    } else if (y > yMax) {
+      yMax = y;
+    }
+    state->transform(bbox[2], bbox[3], &x, &y);
+    if (x < xMin) {
+      xMin = x;
+    } else if (x > xMax) {
+      xMax = x;
+    }
+    if (y < yMin) {
+      yMin = y;
+    } else if (y > yMax) {
+      yMax = y;
+    }
+    tx = (int)floor(xMin);
+    if (tx < 0) {
+      tx = 0;
+    } else if (tx > width) {
+      tx = width;
+    }
+    ty = (int)floor(yMin);
+    if (ty < 0) {
+      ty = 0;
+    } else if (ty > height) {
+      ty = height;
+    }
+    w = (int)ceil(xMax) - tx + 1;
+    if (tx + w > width) {
+      w = width - tx;
+    }
+    if (w < 1) {
+      w = 1;
+    }
+    h = (int)ceil(yMax) - ty + 1;
+    if (ty + h > height) {
+      h = height - ty;
+    }
+    if (h < 1) {
+      h = 1;
+    }
+    BBox nbbox;
+    nbbox.posx = xMin;
+    nbbox.posx = yMin;
+    nbbox.width = w;
+    nbbox.height = h;
+    return nbbox;
+}
+
 #if xpdfUpdateVersion >= 16
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GfxColorSpace *blendingColorSpace,
@@ -2462,41 +2606,179 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GBool forSoftMask)
 {
     char*colormodename = "";
+    BBox rect = mkBBox(state, bbox, this->width, this->height);
+
     if(blendingColorSpace) {
 	colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
     }
+    dbg("beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
+    dbg("using clipping rect %f/%f/%f/%f\n", rect.posx,rect.posy,rect.width,rect.height);
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
-    states[statepos].createsoftmask = forSoftMask;
+    states[statepos].createsoftmask |= forSoftMask;
     states[statepos].transparencygroup = !forSoftMask;
+    states[statepos].olddevice = this->device;
+
+    this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
+
+    gfxdevice_record_init(this->device);
     
-    if(!forSoftMask) {
+    /*if(!forSoftMask) { ////???
 	state->setFillOpacity(0.0);
-    }
+    }*/
     warnfeature("transparency groups",1);
+    dbgindent+=2;
 }
 
 void GFXOutputDev::endTransparencyGroup(GfxState *state)
 {
+    dbgindent-=2;
+    dbg("endTransparencyGroup");
     msg("<verbose> endTransparencyGroup");
+
+    gfxdevice_t*r = this->device;
+
+    this->device = states[statepos].olddevice;
+
+    if(states[statepos].createsoftmask) {
+	states[statepos-1].softmaskrecording = r->finish(r);
+    } else {
+	states[statepos-1].grouprecording = r->finish(r);
+    }
+    
     states[statepos].createsoftmask = 0;
     states[statepos].transparencygroup = 0;
+    free(r);
 }
 
 void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 {
-    msg("<verbose> paintTransparencyGroup");
+    char*blendmodes[] = {"normal","multiply","screen","overlay","darken", "lighten",
+		       "colordodge","colorburn","hardlight","softlight","difference",
+		       "exclusion","hue","saturation","color","luminosity"};
+
+    dbg("paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
+    msg("<verbose> paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
+
+    gfxresult_t*grouprecording = states[statepos].grouprecording;
+   
+    if(state->getBlendMode() == gfxBlendNormal) {
+	gfxdevice_t ops;
+	gfxdevice_ops_init(&ops, this->device, (unsigned char)(state->getFillOpacity()*255));
+	gfxresult_record_replay(grouprecording, &ops);
+	ops.finish(&ops);
+    }
+    grouprecording->destroy(grouprecording);
+
+    states[statepos].grouprecording = 0;
 }
 
 void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *rgb)
 {
+    /* alpha = 1: retrieve mask values from alpha layer
+       alpha = 0: retrieve mask values from luminance */
+    dbg("setSoftMask %.1f/%.1f/%.1f/%.1f alpha=%d backdrop=%02x%02x%02x",
+	    bbox[0], bbox[1], bbox[2], bbox[3], alpha, colToByte(rgb->c[0]), colToByte(rgb->c[1]), colToByte(rgb->c[2]));
     msg("<verbose> setSoftMask %.1f/%.1f/%.1f/%.1f alpha=%d backdrop=%02x%02x%02x",
 	    bbox[0], bbox[1], bbox[2], bbox[3], alpha, colToByte(rgb->c[0]), colToByte(rgb->c[1]), colToByte(rgb->c[2]));
     warnfeature("soft masks",0);
+    
+    states[statepos].olddevice = this->device;
+    this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
+    gfxdevice_record_init(this->device);
+
+    dbg("softmaskrecording is %08x at statepos %d\n", states[statepos].softmaskrecording, statepos);
+    
+    states[statepos].softmask = 1;
 }
 
 void GFXOutputDev::clearSoftMask(GfxState *state)
 {
+    if(!states[statepos].softmask)
+	return;
+    states[statepos].softmask = 0;
+    dbg("clearSoftMask statepos=%d", statepos);
     msg("<verbose> clearSoftMask");
+    
+    if(!states[statepos].softmaskrecording || strcmp(this->device->name, "record")) {
+	msg("<error> Error in softmask/tgroup ordering");
+	return;
+    }
+  
+    gfxresult_t*mask = states[statepos].softmaskrecording;
+    gfxresult_t*below = this->device->finish(this->device);
+    this->device = states[statepos].olddevice;
+
+    /* get outline of all objects below the soft mask */
+    gfxdevice_t uniondev;
+    gfxdevice_union_init(&uniondev, 0);
+    gfxresult_record_replay(below, &uniondev);
+    gfxline_t*belowoutline = gfxdevice_union_getunion(&uniondev);
+    uniondev.finish(&uniondev);
+
+    gfxbbox_t bbox = gfxline_getbbox(belowoutline);
+#if 0 
+    this->device->startclip(this->device, belowoutline);
+    gfxresult_record_replay(below, this->device);
+    gfxresult_record_replay(mask, this->device);
+    this->device->endclip(this->device);
+    gfxline_free(belowoutline);
+#endif
+    
+    int width = (int)bbox.xmax,height = (int)bbox.ymax;
+
+    gfxdevice_t belowrender;
+    gfxdevice_render_init(&belowrender);
+    belowrender.setparameter(&belowrender, "antialize", "2");
+    belowrender.startpage(&belowrender, width, height);
+    gfxresult_record_replay(below, &belowrender);
+    belowrender.endpage(&belowrender);
+    gfxresult_t* belowresult = belowrender.finish(&belowrender);
+    gfximage_t* belowimg = (gfximage_t*)belowresult->get(belowresult,"page0");
+
+    gfxdevice_t maskrender;
+    gfxdevice_render_init(&maskrender);
+    maskrender.startpage(&maskrender, width, height);
+    gfxresult_record_replay(mask, &maskrender);
+    maskrender.endpage(&maskrender);
+    gfxresult_t* maskresult = maskrender.finish(&maskrender);
+    gfximage_t* maskimg = (gfximage_t*)maskresult->get(maskresult,"page0");
+
+    if(belowimg->width != maskimg->width || belowimg->height != maskimg->height) {
+	msg("<fatal> Internal error in mask drawing");
+	return;
+    }
+
+    int y,x;
+    for(y=0;y<height;y++) {
+	gfxcolor_t* l1 = &maskimg->data[maskimg->width*y];
+	gfxcolor_t* l2 = &belowimg->data[belowimg->width*y];
+	for(x=0;x<width;x++) {
+	    l1->a = 255;
+	    l2->a = (77*l1->r + 151*l1->g + 28*l1->b) >> 8;
+
+	    /* premultiply alpha... do we need this? (depends on output device)
+	    l2->r = (l2->a*l2->r) >> 8;
+	    l2->g = (l2->a*l2->g) >> 8;
+	    l2->b = (l2->a*l2->b) >> 8;
+	    */
+
+	    l1++;
+	    l2++;
+	}
+    }
+    gfxline_t*line = gfxline_makerectangle(0,0,width,height);
+
+    gfxmatrix_t matrix;
+    matrix.m00 = 1.0; matrix.m10 = 0.0; matrix.tx = 0.0;
+    matrix.m01 = 0.0; matrix.m11 = 1.0; matrix.ty = 0.0;
+
+    this->device->fillbitmap(this->device, line, belowimg, &matrix, 0);
+
+    mask->destroy(mask);
+    below->destroy(below);
+    maskresult->destroy(maskresult);
+    belowresult->destroy(belowresult);
+    states[statepos].softmaskrecording = 0;
 }
 #endif
 
