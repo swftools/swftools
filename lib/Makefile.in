@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-DEVICES = devices/file.$(O) devices/swf.$(O) devices/render.$(O) devices/arts.$(O) #devices/opengl.$(O)
+DEVICES = devices/file.$(O) devices/swf.$(O) devices/render.$(O) devices/arts.$(O) devices/record.$(O) devices/ops.$(O) #devices/opengl.$(O)
 
 all: librfxswf$(A) libpdf$(A) q.$(O) mem.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O) mp3.$(O) wav.$(O) $(DEVICES)
 
@@ -70,6 +70,10 @@ devices/opengl.$(O):  devices/opengl.c devices/opengl.h
 	$(C) devices/opengl.c -o devices/opengl.$(O)
 devices/arts.$(O):  devices/arts.c devices/arts.h
 	$(C) devices/arts.c -o devices/arts.$(O)
+devices/record.$(O):  devices/record.c devices/record.h
+	$(C) devices/record.c -o devices/record.$(O)
+devices/ops.$(O):  devices/ops.c devices/ops.h
+	$(C) devices/ops.c -o devices/ops.$(O)
 
 librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) mem.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) bitio.$(O) log.$(O) MD5.$(O) mem.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
