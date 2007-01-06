@@ -259,7 +259,7 @@
 	           actual starting positions (useful with zlib)
 	* pdf2swf: Default Flash version is now 6
 
-0.7.1 (not yet released):
+0.8.0 (not yet released):
 	* lib/modules/swfsound.c: Fixed compile problem if the lame library is present
 	* pdf2swf: Bugfix: -s flashversion was broken
 	* pdf2swf: -b and -l now also work on Windows
