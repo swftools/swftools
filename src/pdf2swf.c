@@ -36,6 +36,7 @@
 #include "../lib/rfxswf.h"
 #include "../lib/devices/swf.h"
 #include "../lib/devices/arts.h"
+#include "../lib/devices/record.h"
 #include "../lib/pdf/pdf.h"
 #include "../lib/log.h"
 
@@ -576,7 +577,7 @@ int main(int argn, char *argv[])
     gfxdevice_t*out;
     
     if(flatten) {
-	gfxdevice_arts_init(&wrap, &swf);
+	gfxdevice_removeclippings_init(&wrap, &swf);
 	out = &wrap;
     } else {
 	out = &swf;
@@ -673,6 +674,7 @@ int main(int argn, char *argv[])
     }
     
     gfxresult_t*result = out->finish(out);
+
     if(result->save(result, outputname) < 0) {
         exit(1);
     }
