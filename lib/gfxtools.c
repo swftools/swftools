@@ -315,6 +315,57 @@ gfxline_t * gfxline_clone(gfxline_t*line)
     }
     return dest;
 }
+void gfxline_optimize(gfxline_t*line)
+{
+    gfxline_t*l = line;
+    /* step 1: convert splines to lines, where possible */
+    double x=0,y=0;
+    while(l) {
+	if(l->type == gfx_splineTo) {
+	    double dx = l->x-x;
+	    double dy = l->y-y;
+	    double sx = l->sx-x;
+	    double sy = l->sy-y;
+	    if(fabs(dx*sy - dy*sx) < 0.000001 && (dx*sx + dy*sy) >= 0) {
+		l->type = gfx_lineTo;
+	    }
+	}
+	x = l->x;
+	y = l->y;
+	l = l->next;
+    }
+    /* step 2: combine adjacent lines and splines, where possible */
+    l = line;
+    while(l && l->next) {
+	gfxline_t*next = l->next;
+	char combine = 0;
+	double sx=0,sy=0;
+	if(l->type == gfx_lineTo && next->type == gfx_lineTo) {
+	    double dx = l->x-x;
+	    double dy = l->y-y;
+	    double nx = next->x-x;
+	    double ny = next->y-y;
+	    if(fabs(dx*ny - dy*nx) < 0.000001 && (dx*nx + dy*ny) >= 0) {
+		combine = 1;
+	    }
+	} else if(l->type == gfx_splineTo && next->type == gfx_splineTo) {
+	    /* TODO */
+	}
+	if(combine) {
+	    l->next = next->next;
+	    next->next = 0;
+	    l->x = next->x;
+	    l->y = next->y;
+	    l->sx = sx;
+	    l->sy = sy;
+	    rfx_free(next);
+	} else {
+	    x = l->x;
+	    y = l->y;
+	    l = l->next;
+	}
+    }
+}
 
 gfxline_t* gfxtool_dash_line(gfxline_t*line, float*dashes, float phase)
 {
@@ -344,12 +395,17 @@ void gfxline_show(gfxline_t*l, FILE*fi)
 
 void gfxline_free(gfxline_t*l)
 {
-    gfxline_t*next;
-    while(l) {
-	next = l->next;
-	l->next = 0;
+    if(l && (l+1) == l->next) {
+	/* flattened */
 	rfx_free(l);
-	l = next;
+    } else {
+	gfxline_t*next;
+	while(l) {
+	    next = l->next;
+	    l->next = 0;
+	    rfx_free(l);
+	    l = next;
+	}
     }
 }
 
@@ -648,4 +704,67 @@ void gfxmatrix_invert(gfxmatrix_t*m, gfxmatrix_t*dest)
     dest->m11 = m->m00 * det;
     dest->tx = -(dest->m00 * m->tx + dest->m10 * m->ty);
     dest->ty = -(dest->m01 * m->tx + dest->m11 * m->ty);
+}
+
+gfxfontlist_t* gfxfontlist_create()
+{
+    /* Initial list ist empty */
+    return 0;
+}
+
+gfxfont_t*gfxfontlist_findfont(gfxfontlist_t*list, char*id)
+{
+    gfxfontlist_t*l = list;
+    while(l) {
+	if(!strcmp((char*)l->font->id, id)) {
+	    return l->font;
+	}
+	l = l->next;
+    }
+    return 0;
+}
+char gfxfontlist_hasfont(gfxfontlist_t*list, gfxfont_t*font)
+{
+    gfxfontlist_t*l = list;
+    while(l) {
+	if(!strcmp((char*)l->font->id, font->id)) {
+	    return 1;
+	}
+	l = l->next;
+    }
+    return 0;
+}
+gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
+{
+    gfxfontlist_t*last=0,*l = list;
+    while(l) {
+	last = l;
+	if(!strcmp((char*)l->font->id, font->id)) {
+	    return list; // we already know this font
+	}
+	l = l->next;
+    }
+    if(!font) {
+	fprintf(stderr, "Tried to add zero font\n");
+    }
+    l = (gfxfontlist_t*)rfx_calloc(sizeof(gfxfontlist_t));
+    l->font = font;
+    l->next = 0;
+    if(last) {
+	last->next = l;
+	return list;
+    } else {
+	return l;
+    }
+}
+
+gfxline_t*gfxline_makerectangle(int x1,int y1,int x2, int y2)
+{
+    gfxline_t* line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t)*5);
+    line[0].x = x1;line[0].y = y1;line[0].type = gfx_moveTo;line[0].next = &line[1];
+    line[1].x = x2;line[1].y = y1;line[1].type = gfx_lineTo;line[1].next = &line[2];
+    line[2].x = x2;line[2].y = y2;line[2].type = gfx_lineTo;line[2].next = &line[3];
+    line[3].x = x1;line[3].y = y2;line[3].type = gfx_lineTo;line[3].next = &line[4];
+    line[4].x = x1;line[4].y = y1;line[4].type = gfx_lineTo;
+    return line;
 }
