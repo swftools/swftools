@@ -867,6 +867,36 @@ void swf_Relocate (SWF*swf, char*bitmap)
     }
 }
 
+/* untested */
+void swf_Relocate2(SWF*swf, int*id2id)
+{
+    TAG*tag;
+    tag = swf->firstTag;
+    while(tag) {
+	if(swf_isDefiningTag(tag)) {
+	    int id = swf_GetDefineID(tag);
+	    id = id2id[id];
+	    if(id>=0) {
+		swf_SetDefineID(tag, id);
+	    }
+	}
+	int num = swf_GetNumUsedIDs(tag);
+	if(num) {
+	    int *ptr;
+	    int t;
+	    ptr = rfx_alloc(sizeof(int)*num);
+	    swf_GetUsedIDs(tag, ptr);
+	    for(t=0;t<num;t++) {
+		int id = GET16(&tag->data[ptr[t]]);
+		id = id2id[id];
+		if(id>=0) {
+		    PUT16(&tag->data[ptr[t]], id);
+		}
+	    }
+	}
+    }
+}
+
 void swf_RelocateDepth(SWF*swf, char*bitmap)
 {
     TAG*tag;
@@ -1045,8 +1075,6 @@ void swf_Optimize(SWF*swf)
     }
     tag = swf->firstTag;
     while(tag) {
-        int doremap=1;
-        
         TAG*next = tag->next;
 
         /* remap the tag */
@@ -1060,7 +1088,6 @@ void swf_Optimize(SWF*swf)
             PUT16(&tag->data[positions[t]], id);
         }
         rfx_free(positions);
-        tag = tag->next;
 
         /* now look for previous tags with the same
            content */
@@ -1071,22 +1098,11 @@ void swf_Optimize(SWF*swf)
             int match=0;
             if(!dontremap[id]) 
             while((tag2 = hashmap[hash%hash_size])) {
-                if(tag2 != (TAG*)(-1) && tag->len == tag2->len) {
-                    int t;
-                    /* start at pos 2, as 0 and 1 are the id */
-                    for(t=2;t<tag->len;t++) {
-                        if(tag->data[t] != tag2->data[t])
-                            break;
-                    }
-                    if(t == tag->len) {
-                        match=1;
-                    }
-                }
-                if(match) {
-                    /* we found two identical tags- remap one
-                       of them */
-                    remap[id] = swf_GetDefineID(tag2);
-                    break;
+                if(tag2 != (TAG*)0 && tag->len == tag2->len) {
+		    if(memcmp(&tag->data[2],&tag2->data[2],tag->len-2) == 0) {
+			match = 1;
+			break;
+		    }
                 }
                 hash++;
             }
@@ -1094,10 +1110,12 @@ void swf_Optimize(SWF*swf)
                 while(hashmap[hash%hash_size]) hash++;
                 hashmap[hash%hash_size] = tag;
             } else {
+		/* we found two identical tags- remap one
+		   of them */
+                remap[id] = swf_GetDefineID(tag2);
                 swf_DeleteTag(tag);
                 if(tag == swf->firstTag)
                     swf->firstTag = next;
-                doremap = 0;
             }
         } else if(swf_isPseudoDefiningTag(tag)) {
             int id = swf_GetDefineID(tag);
@@ -1108,12 +1126,12 @@ void swf_Optimize(SWF*swf)
                 swf_DeleteTag(tag);
                 if(tag == swf->firstTag)
                     swf->firstTag = next;
-                doremap = 0;
             }
         }
 
         tag = next;
     }
+    
     rfx_free(dontremap);
     rfx_free(remap);
     rfx_free(id2tag);
