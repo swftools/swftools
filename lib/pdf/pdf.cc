@@ -295,6 +295,7 @@ gfxdocument_t*pdf_open(char*filename)
       delete userPW;
     }
     if (!i->doc->isOk()) {
+        printf("xpdf reports document as broken.\n");
         return 0;
     }
 
