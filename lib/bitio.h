@@ -20,6 +20,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <stdio.h>
+#include "types.h"
 
 #ifndef __rfxswf_bitio_h__
 #define __rfxswf_bitio_h__
@@ -39,52 +40,66 @@
 #define WRITER_TYPE_GROWING_MEM  6
 #define WRITER_TYPE_ZLIB WRITER_TYPE_ZLIB_C
 
-struct reader_t
+typedef struct _reader
 {
-    int (*read)(struct reader_t*, void*data, int len);
-    void (*dealloc)(struct reader_t*);
+    int (*read)(struct _reader*, void*data, int len);
+    void (*dealloc)(struct _reader*);
 
     void *internal;
     int type;
     unsigned char mybyte;
     unsigned char bitpos;
     int pos;
-};
+} reader_t;
 
-struct writer_t
+typedef struct _writer
 {
-    int (*write)(struct writer_t*, void*data, int len);
-    void (*finish)(struct writer_t*);
+    int (*write)(struct _writer*, void*data, int len);
+    void (*finish)(struct _writer*);
 
     void *internal;
     int type;
     unsigned char mybyte;
     unsigned char bitpos;
     int pos;
-};
+} writer_t;
 
-void reader_resetbits(struct reader_t*r);
-unsigned int reader_readbit(struct reader_t*r);
-unsigned int reader_readbits(struct reader_t*r, int num);
+void reader_resetbits(reader_t*r);
+unsigned int reader_readbit(reader_t*r);
+unsigned int reader_readbits(reader_t*r, int num);
 
-void writer_resetbits(struct writer_t*w);
-void writer_writebit(struct writer_t*w, int bit);
-void writer_writebits(struct writer_t*w, unsigned int data, int bits);
+U8 reader_readU8(reader_t*r);
+U16 reader_readU16(reader_t*r);
+U32 reader_readU32(reader_t*r);
+float reader_readFloat(reader_t*r);
+double reader_readDouble(reader_t*r);
+char*reader_readString(reader_t*r);
+
+void writer_resetbits(writer_t*w);
+void writer_writebit(writer_t*w, int bit);
+void writer_writebits(writer_t*w, unsigned int data, int bits);
+
+void writer_writeU8(writer_t*w, unsigned char b);
+void writer_writeU16(writer_t*w, unsigned short v);
+void writer_writeU32(writer_t*w, unsigned long v);
+void writer_writeFloat(writer_t*w, float f);
+void writer_writeDouble(writer_t*w, double f);
+void writer_writeString(writer_t*w, const char*s);
 
 /* standard readers / writers */
 
-void reader_init_filereader(struct reader_t*r, int handle);
-void reader_init_zlibinflate(struct reader_t*r, struct reader_t*input);
-void reader_init_memreader(struct reader_t*r, void*data, int length);
-void reader_init_nullreader(struct reader_t*r);
+void reader_init_filereader(reader_t*r, int handle);
+void reader_init_zlibinflate(reader_t*r, reader_t*input);
+void reader_init_memreader(reader_t*r, void*data, int length);
+void reader_init_nullreader(reader_t*r);
 
-void writer_init_filewriter(struct writer_t*w, int handle);
-void writer_init_filewriter2(struct writer_t*w, char*filename);
-void writer_init_zlibdeflate(struct writer_t*w, struct writer_t*output);
-void writer_init_memwriter(struct writer_t*r, void*data, int length);
-void writer_init_nullwriter(struct writer_t*w);
+void writer_init_filewriter(writer_t*w, int handle);
+void writer_init_filewriter2(writer_t*w, char*filename);
+void writer_init_zlibdeflate(writer_t*w, writer_t*output);
+void writer_init_memwriter(writer_t*r, void*data, int length);
+void writer_init_nullwriter(writer_t*w);
 
-void writer_init_growingmemwriter(struct writer_t*r);
-void* writer_growmemwrite_getmem(struct writer_t*w);
+void writer_init_growingmemwriter(writer_t*r, U32 grow);
+void* writer_growmemwrite_getmem(writer_t*w);
 
 #endif //__rfxswf_bitio_h__
