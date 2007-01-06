@@ -368,6 +368,7 @@ void extractTag(SWF*swf, char*filename)
             }
             if(number>=2)
 		printf("warning! You should use the -P when extracting multiple objects\n");
+
             if(number == 1) {
                 /* if there is only one object, we will scale it.
                    So let's figure out it's bounding box */
@@ -380,10 +381,15 @@ void extractTag(SWF*swf, char*filename)
                     }
                     tag = tag->next;
                 }
-            }
+		newswf.movieSize.xmin = 0;
+		newswf.movieSize.ymin = 0;
+		newswf.movieSize.xmax = 512*20;
+		newswf.movieSize.ymax = 512*20;
+            } else {
+		if((objectbbox.xmin|objectbbox.ymin|objectbbox.xmax|objectbbox.ymax)!=0)
+		    newswf.movieSize = objectbbox;
+	    }
 
-	    if((objectbbox.xmin|objectbbox.ymin|objectbbox.xmax|objectbbox.ymax)!=0)
-		newswf.movieSize = objectbbox;
 	    if(extractname_id>=0) {
 		desttag = swf_InsertTag(desttag, ST_PLACEOBJECT2);
 		swf_ObjectPlace(desttag, extractname_id, extractname_id, 0,0,extractname);
@@ -403,7 +409,7 @@ void extractTag(SWF*swf, char*filename)
                                 m.sx = (512*20*65536)/max;
                                 m.sy = (512*20*65536)/max;
                             }
-                            newswf.movieSize = swf_TurnRect(newswf.movieSize, &m);
+                            //newswf.movieSize = swf_TurnRect(newswf.movieSize, &m);
                         }
 			swf_ObjectPlace(desttag, t, t, &m,0,0);
 		    }
