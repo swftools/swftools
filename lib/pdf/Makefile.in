@@ -127,8 +127,8 @@ pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o pdftoppm$(E) $(LIBS) -lt1
 pdftotext$(E): $(xpdf_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS) -lt1
-pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) ../../src/pdf2swf.c
-	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) ../devices/swf.$(O) ../devices/arts.$(O) ../librfxswf$(A) ../art/libart.a ../os.$(O) ../gfxtools.$(O) ../gfxfont.$(O) -o pdf2swf$(E) $(LIBS)
+pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) ../../src/pdf2swf.c ../devices/swf.$(O) ../devices/record.$(O) ../devices/arts.$(O) ../devices/ops.$(O) ../devices/render.$(O) ../bitio.$(O) ../png.$(O)
+	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) ../devices/swf.$(O) ../devices/arts.$(O) ../devices/record.$(O) ../devices/render.$(O) ../devices/ops.$(O) ../png.$(O) ../librfxswf$(A) ../art/libart.a ../os.$(O) ../gfxtools.$(O) ../gfxfont.$(O) -o pdf2swf$(E) $(LIBS)
 
 install:
 uninstall:
