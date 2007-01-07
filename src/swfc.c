@@ -1755,7 +1755,7 @@ typedef int command_func_t(map_t*args);
 
 SRECT parseBox(char*str)
 {
-    SRECT r;
+    SRECT r = {0,0,0,0};
     float xmin, xmax, ymin, ymax;
     char*x = strchr(str, 'x');
     char*d1=0,*d2=0;
