@@ -40,7 +40,7 @@ typedef struct _internal {
     ArtSVP*svpunion;
 } internal_t;
 
-static int verbose = 1;
+static int verbose = 0;
 static void dbg(char*format, ...)
 {
     if(!verbose)
