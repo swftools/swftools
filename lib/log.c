@@ -96,7 +96,7 @@ static char * logimportance[]= {"Fatal","Error","Warning","Notice","Verbose","De
 static int loglevels=7;
 static char * logimportance2[]= {"       ","FATAL  ","ERROR  ","WARNING","NOTICE ","VERBOSE","DEBUG  ", "TRACE  "};
 
-static inline void log(const char* logString)
+static inline void log_str(const char* logString)
 {
    char timebuffer[32];
    char* logBuffer;
@@ -191,7 +191,7 @@ void msg_str(const char* buf)
 	if(x && (x-z)>maxloglevel)
 		return;
     }
-    log(buf);
+    log_str(buf);
 }
 void msg(const char* format, ...)
 {
@@ -210,6 +210,6 @@ void msg(const char* format, ...)
     vsprintf(buf, format, arglist);
 	va_end(arglist);
     strcat(buf, "\n");
-    log(buf);
+    log_str(buf);
 }
 
