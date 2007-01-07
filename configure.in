@@ -185,7 +185,7 @@ fi
 
 
 # this must be done after (I believe) AC_PROG_MAKE_SET
-if test "x$DEBUG" '!=' "x";then
+if test "x$DEBUG" '!=' "x" -o "x$STRIP" = "x";then
     STRIP="@echo debug enabled, not stripping "
     export STRIP
     AC_SUBST(STRIP)
