@@ -6,13 +6,15 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 
+#include <math.h>
 #include <time.h>
 #include <GL/gl.h>
 #include <GL/glut.h>
 
 #include <stdarg.h>
 
-#define ZSTEP (1/65536.0)
+//#define ZSTEP (1/65536.0)
+#define ZSTEP (1/8.0)
 
 typedef struct _fontlist {
     gfxfont_t*font;
@@ -26,11 +28,14 @@ typedef struct _internal {
     int width, height;
     int currentz;
    
+    int config_polygonoutlines;
+   
     GLUtesselator *tesselator;
+    GLUtesselator *tesselator_line;
     GLUtesselator *tesselator_tex;
 } internal_t;
 
-static int verbose = 1;
+static int verbose = 0;
 static void dbg(char*format, ...)
 {
     char buf[1024];
@@ -106,7 +111,11 @@ void CALLBACK combineCallbackTex(GLdouble coords[3], GLdouble *data[4], GLfloat 
 
 int opengl_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
+    internal_t*i = (internal_t*)dev->internal;
     dbg("setparameter %s=%s", key, value);
+    if(!strcmp(key, "polygonoutlines")) {
+        i->config_polygonoutlines = atoi(value);
+    }
     return 0;
 }
 
@@ -133,11 +142,20 @@ void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 {
     dbg("stroke");
     internal_t*i = (internal_t*)dev->internal;
+    i->currentz++;
     char running = 0;
     gfxline_t*l=0;
-    dbg("stroke");
+
     glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
+    
+    //glLineWidth(width*64);
+    if(width <= 0) {
+        width = 1.0;
+    }
     glLineWidth(width);
+    double z = i->currentz*ZSTEP;
+
+    glPolygonOffset(0.0, 500.0);
 
     l = line;
     while(l) {
@@ -151,29 +169,24 @@ void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 	    running = 1;
 	    glBegin(GL_LINE_STRIP);
 	}
-	glVertex3d(l->x, l->y, (i->currentz*ZSTEP));
+	glVertex3d(l->x, l->y, z);
 	l=l->next;
     }
     if(running) {
 	running = 0;
 	glEnd();
     }
-    i->currentz ++;
+    glLineWidth(1.0);
 }
 
-void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
+void tesselatePolygon(GLUtesselator*tesselator, double z, gfxline_t*line)
 {
-    dbg("fill");
-    internal_t*i = (internal_t*)dev->internal;
-    char running = 0;
     int len = 0;
-    double*xyz=0;
-    double lastx=0,lasty=0;
     gfxline_t*l=0;
-    dbg("fill");
-    glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
-
-    gluTessBeginPolygon(i->tesselator, NULL);
+    double lastx=0,lasty=0;
+    double*xyz=0;
+    char running = 0;
+    gluTessBeginPolygon(tesselator, NULL);
     l = line;
     len = 0;
     while(l) {
@@ -188,7 +201,6 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 	l = l->next;
     }
     //printf("full len:%d\n", len);
-    double z = (i->currentz*ZSTEP);
     xyz = malloc(sizeof(double)*3*len);
     l = line;
     len = 0;
@@ -196,12 +208,12 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 	if(l->type == gfx_moveTo) {
 	    if(running) {
 		running = 0;
-		gluTessEndContour(i->tesselator);
+		gluTessEndContour(tesselator);
 	    }
 	}
 	if(!running) {
 	    running = 1;
-	    gluTessBeginContour(i->tesselator);
+	    gluTessBeginContour(tesselator);
 	}
 
 	if(l->type == gfx_splineTo) {
@@ -218,7 +230,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 		xyz[len*3+0] = lastx*(1-t)*(1-t) + 2*l->sx*(1-t)*t + l->x*t*t;
 		xyz[len*3+1] = lasty*(1-t)*(1-t) + 2*l->sy*(1-t)*t + l->y*t*t;
 		xyz[len*3+2] = z;
-		gluTessVertex(i->tesselator, &xyz[len*3], &xyz[len*3]);
+		gluTessVertex(tesselator, &xyz[len*3], &xyz[len*3]);
 		len++;
 	    }
 	    //printf("%d\n", len);
@@ -226,7 +238,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 	    xyz[len*3+0] = l->x;
 	    xyz[len*3+1] = l->y;
 	    xyz[len*3+2] = z;
-	    gluTessVertex(i->tesselator, &xyz[len*3], &xyz[len*3]);
+	    gluTessVertex(tesselator, &xyz[len*3], &xyz[len*3]);
 	    len++;
 	}
 	lastx = l->x;
@@ -236,11 +248,25 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     }
     if(running) {
 	running = 0;
-	gluTessEndContour(i->tesselator);
+	gluTessEndContour(tesselator);
     }
-    gluTessEndPolygon(i->tesselator);
-    i->currentz ++;
+    gluTessEndPolygon(tesselator);
     free(xyz);
+}
+
+void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
+{
+    double z;
+    dbg("fill");
+    internal_t*i = (internal_t*)dev->internal;
+    
+    glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
+    
+    i->currentz ++;
+    z = (i->currentz*ZSTEP);
+    tesselatePolygon(i->tesselator, z, line);
+
+    //tesselatePolygon(i->tesselator_line, z, line);
 }
 
 void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
@@ -252,6 +278,8 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
     double*xyz=0;
     gfxline_t*l=0;
     glColor4f(1.0,0,0,1.0);
+    
+    i->currentz ++;
     
     GLuint texIDs[1];
     glGenTextures(1, texIDs);
@@ -274,6 +302,22 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 	    data[(y*newwidth+x)*4+2] = img->data[y*img->width+x].b;
 	    data[(y*newwidth+x)*4+3] = img->data[y*img->width+x].a;
 	}
+        int lastx = img->width - 1;
+        for(;x<newwidth;x++) {
+	    data[(y*newwidth+x)*4+0] = img->data[y*img->width+lastx].r;
+	    data[(y*newwidth+x)*4+1] = img->data[y*img->width+lastx].g;
+	    data[(y*newwidth+x)*4+2] = img->data[y*img->width+lastx].b;
+	    data[(y*newwidth+x)*4+3] = img->data[y*img->width+lastx].a;
+        }
+    }
+    int lasty = img->height - 1;
+    for(;y<newheight;y++) {
+        for(x=0;x<newwidth;x++) {
+	    data[(y*newwidth+x)*4+0] = img->data[lasty*img->width+x].r;
+	    data[(y*newwidth+x)*4+1] = img->data[lasty*img->width+x].g;
+	    data[(y*newwidth+x)*4+2] = img->data[lasty*img->width+x].b;
+	    data[(y*newwidth+x)*4+3] = img->data[lasty*img->width+x].a;
+        }
     }
 
     gfxmatrix_t m2;
@@ -337,7 +381,6 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 	gluTessEndContour(i->tesselator_tex);
     }
     gluTessEndPolygon(i->tesselator_tex);
-    i->currentz ++;
     free(xyz);
     
     glDisable(GL_TEXTURE_2D);
@@ -398,6 +441,8 @@ void opengl_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*co
     gfxline_transform(line2, matrix);
     opengl_fill(dev, line2, color);
     gfxline_free(line2);
+    
+    i->currentz --;
     
     return;
 }
@@ -473,7 +518,14 @@ void gfxdevice_opengl_init(gfxdevice_t*dev)
     gluTessCallback(i->tesselator, GLU_TESS_VERTEX, (callbackfunction_t)vertexCallback);
     gluTessCallback(i->tesselator, GLU_TESS_BEGIN, (callbackfunction_t)beginCallback);
     gluTessCallback(i->tesselator, GLU_TESS_END, (callbackfunction_t)endCallback);
-    //gluTessCallback(i->tesselator, GLU_TESS_END, (callbackfunction_t)combineCallback);
+    //gluTessCallback(i->tesselator, GLU_TESS_COMBINE, (callbackfunction_t)combineCallback);
+    
+    i->tesselator_line = gluNewTess();
+    gluTessCallback(i->tesselator_line, GLU_TESS_ERROR, (callbackfunction_t)errorCallback);
+    gluTessCallback(i->tesselator_line, GLU_TESS_VERTEX, (callbackfunction_t)vertexCallback);
+    gluTessCallback(i->tesselator_line, GLU_TESS_BEGIN, (callbackfunction_t)beginCallback);
+    gluTessCallback(i->tesselator_line, GLU_TESS_END, (callbackfunction_t)endCallback);
+    gluTessProperty(i->tesselator_line, GLU_TESS_BOUNDARY_ONLY, 1.0);
     
     i->tesselator_tex = gluNewTess();
     gluTessCallback(i->tesselator_tex, GLU_TESS_ERROR, (callbackfunction_t)errorCallback);
