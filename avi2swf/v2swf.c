@@ -70,12 +70,16 @@ typedef struct _v2swf_internal_t
     int keyframe;
     int showframe;
 
+    int skipframes;
+
     float samplepos;
     float framesamplepos;
     int samplewritepos;
     double soundframepos;
     int soundstreamhead;
     int seek;
+
+    int numframes;
 
     double audio_fix;
     int fixheader;
@@ -619,6 +623,21 @@ static int writeAudioOnly(v2swf_internal_t*i)
     return 1;
 }
 
+static int getframe(v2swf_internal_t*i)
+{
+    if(!i->skipframes)
+        return videoreader_getimage(i->video, i->vrbuffer);
+    else {
+        int t;
+        for(t=0;t<i->skipframes;t++) {
+            int ret = videoreader_getimage(i->video, i->vrbuffer);
+            if(!ret)
+                return 0;
+        }
+        return 1;
+    }
+}
+
 static int encodeoneframe(v2swf_internal_t*i)
 {
     videoreader_t*video = i->video;
@@ -636,11 +655,11 @@ static int encodeoneframe(v2swf_internal_t*i)
 	return writeAudioOnly(i);
     }
 
-    if(!videoreader_getimage(i->video, i->vrbuffer)) 
+    if(!getframe(i) || (i->numframes && i->frames==i->numframes)) 
     {
 	i->video_eof = 1;
 	msg("videoreader returned eof\n");
-	if(i->audio_eof) {
+	if(i->audio_eof || (i->numframes && i->frames==i->numframes)) {
 	    finish(i);
 	    return 0;
 	} else {
@@ -831,6 +850,15 @@ static int encodeoneframe(v2swf_internal_t*i)
     return 1;
 }
 
+static void init_fps(v2swf_internal_t*i)
+{
+    int oldframerate = i->framerate;
+    i->framerate = i->video->fps / i->skipframes;
+    i->video_fps = ((int)(i->framerate*256))/256.0;
+    if(oldframerate)
+        msg("setting new framerate to %f\n", i->framerate);
+}
+
 int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
 {
     int ret = 0;
@@ -844,10 +872,13 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
 
     ringbuffer_init(&i->r);
 
+    i->skipframes = 1;
+    i->framerate = 0;
+    i->video = video;
+    init_fps(i);
+
     msg("video: %dx%d, fps %f\n", video->width, video->height, video->fps);
 
-    i->video = video;
-    i->video_fps = ((int)(video->fps*256))/256.0;
     i->blockdiff = 64;
     i->keyframe_interval = 8;
     i->quality = 20;
@@ -855,11 +886,12 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     i->add_cut = 1;
     i->samplerate = 11025;
     i->prescale = 0;
+    i->numframes= 0;
+    i->skipframes = 0;
     i->head_done = 0;
     i->diffmode = DIFFMODE_QMEAN;
     i->audio_fix = 1.0;
     i->fixheader = 0;
-    i->framerate = i->video_fps;
     i->fpsratio = 1.00000000000;
     i->fpspos = 0.0;
     i->bitrate = 32;
@@ -942,6 +974,11 @@ void v2swf_setparameter(v2swf_t*v2swf, char*name, char*value)
 	i->scale = atoi(value);
     } else if(!strcmp(name, "quality")) {
 	i->quality = atoi(value);
+    } else if(!strcmp(name, "skipframes")) {
+	i->skipframes = atoi(value);
+        init_fps(i);
+    } else if(!strcmp(name, "numframes")) {
+	i->numframes = atoi(value);
     } else if(!strcmp(name, "motioncompensation")) {
 	i->domotion = atoi(value);
     } else if(!strcmp(name, "prescale")) {

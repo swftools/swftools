@@ -49,6 +49,7 @@ static float audio_adjust = 0;
 static int mp3_bitrate = 32;
 static int samplerate = 11025;
 static int numframes = 0;
+static char* skipframes = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -139,6 +140,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "S")) {
 	skip = atoi(val);
+	return 1;
+    }
+    else if(!strcmp(name, "C")) {
+	skipframes = strdup(val);
 	return 1;
     }
     else if(!strcmp(name, "s")) {
@@ -283,6 +288,8 @@ int main (int argc,char ** argv)
     v2swf_setparameter(&v2swf, "prescale", "1");
     v2swf_setparameter(&v2swf, "flash_version", itoa(flashversion));
     v2swf_setparameter(&v2swf, "keyframe_interval", itoa(keyframe_interval));
+    if(skipframes)
+	v2swf_setparameter(&v2swf, "skipframes", skipframes);
     if(expensive)
 	v2swf_setparameter(&v2swf, "motioncompensation", "1");
     if(flip)
