@@ -545,8 +545,9 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	    }
 	    printf("\n");*/
 	}
-	if(data)
-	    free(data);
+	if(data) {
+	    free(data); data=0;
+        }
     }
     
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
@@ -602,6 +603,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	    }
 	}
 	free(old);
+        free(imagedata);
     } else if(header.mode == 6 || header.mode == 2) {
 	int i,s=0;
 	int x,y;
@@ -637,6 +639,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	    else // header.mode = 2
 		applyfilter3(mode, src, old, dest, header.width);
 	}
+        free(imagedata);
     } else if(header.mode == 0 || header.mode == 3) {
 	COL*rgba = 0;
 	U8*tmpline = (U8*)malloc(header.width+1);
@@ -726,6 +729,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	free(tmpline);
 	free(destline);
 	free(rgba);
+        free(imagedata);
     } else {
 	printf("expected PNG mode to be 2, 3 or 6 (is:%d)\n", header.mode);
 	return 0;
