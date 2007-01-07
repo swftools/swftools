@@ -660,7 +660,7 @@ void render_result_write(gfxresult_t*r, int filedesc)
 }
 int render_result_save(gfxresult_t*r, char*filename)
 {
-    internal_result_t*i= (internal_result_t*)r->internal;
+    /*internal_result_t*i= (internal_result_t*)r->internal;
     if(i->next) {
 	int nr=0;
 	while(i->next) {
@@ -669,7 +669,7 @@ int render_result_save(gfxresult_t*r, char*filename)
 	}
     } else {
 	writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
-    }
+    }*/
     return 1;
 }
 void*render_result_get(gfxresult_t*r, char*name)
