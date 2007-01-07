@@ -120,6 +120,22 @@ public:
   //----- path clipping
   virtual void clip(GfxState *state) ;
   virtual void eoClip(GfxState *state) ;
+ 
+  //----- shaded fills
+  virtual GBool useTilingPatternFill();
+  virtual GBool useShadedFills();
+
+  /*
+  virtual void tilingPatternFill(GfxState *state, Object *str,
+				 int paintType, Dict *resDict,
+				 double *mat, double *bbox,
+				 int x0, int y0, int x1, int y1,
+				 double xStep, double yStep) {}
+  virtual void functionShadedFill(GfxState *state,
+				  GfxFunctionShading *shading) {}
+  virtual void axialShadedFill(GfxState *state, GfxAxialShading *shading) {}
+  virtual void radialShadedFill(GfxState *state, GfxRadialShading *shading) {}
+  */
 
   //----- text drawing
   virtual void beginString(GfxState *state, GString *s) ;
@@ -159,6 +175,8 @@ public:
   virtual void paintTransparencyGroup(GfxState *state, double *bbox);
   virtual void setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor);
   virtual void clearSoftMask(GfxState *state);
+#else
+  virtual void clearSoftMask(GfxState *state) {};
 #endif
  
   //----- type 3 chars
@@ -203,8 +221,6 @@ public:
   int jpeginfo; // did we write "File contains jpegs" yet?
   int pbminfo; // did we write "File contains jpegs" yet?
   int linkinfo; // did we write "File contains links" yet?
-  int ttfinfo; // did we write "File contains TrueType Fonts" yet?
-  int gradientinfo; // did we write "File contains Gradients yet?
 
   int type3active; // are we between beginType3()/endType3()?
 

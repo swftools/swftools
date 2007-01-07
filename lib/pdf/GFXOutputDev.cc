@@ -106,7 +106,7 @@ struct mapping {
 {"Symbol",                "s050000l"},
 {"ZapfDingbats",          "d050000l"}};
 
-static int verbose = 1;
+static int verbose = 0;
 static int dbgindent = 0;
 static void dbg(char*format, ...)
 {
@@ -141,7 +141,7 @@ typedef struct _feature
 } feature_t;
 feature_t*featurewarnings = 0;
 
-static void warnfeature(char*feature,char fully)
+static void showfeature(char*feature,char fully, char warn)
 {
     feature_t*f = featurewarnings;
     while(f) {
@@ -153,7 +153,19 @@ static void warnfeature(char*feature,char fully)
     f->string = strdup(feature);
     f->next = featurewarnings;
     featurewarnings = f;
-    msg("<warning> %s not yet %ssupported!",feature,fully?"fully ":"");
+    if(warn) {
+	msg("<warning> %s not yet %ssupported!",feature,fully?"fully ":"");
+    } else {
+	msg("<info> File contains %s",feature);
+    }
+}
+static void warnfeature(char*feature,char fully)
+{
+    showfeature(feature,fully,1);
+}
+static void infofeature(char*feature)
+{
+    showfeature(feature,0,0);
 }
 
 GFXOutputState::GFXOutputState() {
@@ -221,7 +233,6 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
 {
     this->jpeginfo = 0;
     this->textmodeinfo = 0;
-    this->ttfinfo = 0;
     this->linkinfo = 0;
     this->pbminfo = 0;
     this->type3active = 0;
@@ -615,9 +626,17 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
     return result;
 }
 
-/*----------------------------------------------------------------------------
- * Primitive Graphic routines
- *----------------------------------------------------------------------------*/
+GBool GFXOutputDev::useTilingPatternFill()
+{
+    warnfeature("tiled patterns", 1);
+    return gFalse;
+}
+
+GBool GFXOutputDev::useShadedFills()
+{
+    warnfeature("shaded fills", 1);
+    return gFalse;
+}
 
 void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
 {
@@ -927,8 +946,6 @@ void GFXOutputDev::beginString(GfxState *state, GString *s)
 
     gfxmatrix_t m = this->current_font_matrix;
 
-    /*if(render != 3 && render != 0)
-	msg("<warning> Text rendering mode %d (%s) not fully supported yet (for text \"%s\")", render, renderModeDesc[render&7], makeStringPrintable(s->getCString()));*/
     states[statepos].textRender = render;
 }
 
@@ -2039,10 +2056,6 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
 	/* TODO: pass image_dpi to device instead */
 	dev->setparameter(dev, "next_bitmap_is_jpeg", "1");
 
-    gfxline_show(&p1,stdout);
-
-    printf("%.2f %.2f %.2f\n", m.m00, m.m10, m.tx);
-    printf("%.2f %.2f %.2f\n", m.m01, m.m11, m.ty);
     dev->fillbitmap(dev, &p1, &img, &m, 0);
 }
 
@@ -2625,7 +2638,6 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
     /*if(!forSoftMask) { ////???
 	state->setFillOpacity(0.0);
     }*/
-    warnfeature("transparency groups",1);
     dbgindent+=2;
 }
 
@@ -2658,6 +2670,14 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 
     dbg("paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
     msg("<verbose> paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
+   
+    if(state->getBlendMode() == gfxBlendNormal)
+	infofeature("transparency groups");
+    else {
+	char buffer[80];
+	sprintf(buffer, "%s blended transparency groups", blendmodes[state->getBlendMode()]);
+	warnfeature("transparency groups", 0);
+    }
 
     gfxresult_t*grouprecording = states[statepos].grouprecording;
    
@@ -2680,7 +2700,10 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
 	    bbox[0], bbox[1], bbox[2], bbox[3], alpha, colToByte(rgb->c[0]), colToByte(rgb->c[1]), colToByte(rgb->c[2]));
     msg("<verbose> setSoftMask %.1f/%.1f/%.1f/%.1f alpha=%d backdrop=%02x%02x%02x",
 	    bbox[0], bbox[1], bbox[2], bbox[3], alpha, colToByte(rgb->c[0]), colToByte(rgb->c[1]), colToByte(rgb->c[2]));
-    warnfeature("soft masks",0);
+    if(!alpha)
+	infofeature("soft masks");
+    else
+	warnfeature("soft masks from alpha channel",0);
     
     states[statepos].olddevice = this->device;
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
@@ -2780,6 +2803,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     belowresult->destroy(belowresult);
     states[statepos].softmaskrecording = 0;
 }
+  
 #endif
 
 /*class MemCheck
