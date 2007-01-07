@@ -57,7 +57,7 @@ typedef struct _internal_result {
 #define OP_LINETO 0x0f
 #define OP_SPLINETO 0x10
 
-int record_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
+static int record_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_SETPARAM);
@@ -66,7 +66,7 @@ int record_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
     return 1;
 }
 
-void dumpLine(writer_t*w, gfxline_t*line)
+static void dumpLine(writer_t*w, gfxline_t*line)
 {
     while(line) {
 	if(line->type == gfx_moveTo) {
@@ -88,7 +88,7 @@ void dumpLine(writer_t*w, gfxline_t*line)
     }
     writer_writeU8(w, OP_END);
 }
-gfxline_t* readLine(reader_t*r)
+static gfxline_t* readLine(reader_t*r)
 {
     gfxline_t*start = 0, *pos = 0;
     while(1) {
@@ -120,7 +120,7 @@ gfxline_t* readLine(reader_t*r)
     }
     return start;
 }
-gfximage_t readImage(reader_t*r)
+static gfximage_t readImage(reader_t*r)
 {
     gfximage_t img;
     img.width = reader_readU16(r);
@@ -129,7 +129,7 @@ gfximage_t readImage(reader_t*r)
     r->read(r, img.data, img.width*img.height*4);
     return img;
 }
-gfxmatrix_t readMatrix(reader_t*r)
+static gfxmatrix_t readMatrix(reader_t*r)
 {
     gfxmatrix_t matrix;
     matrix.m00 = reader_readDouble(r);
@@ -140,7 +140,7 @@ gfxmatrix_t readMatrix(reader_t*r)
     matrix.ty = reader_readDouble(r);
     return matrix;
 }
-gfxcolor_t readColor(reader_t*r)
+static gfxcolor_t readColor(reader_t*r)
 {
     gfxcolor_t col;
     col.r = reader_readU8(r);
@@ -149,7 +149,7 @@ gfxcolor_t readColor(reader_t*r)
     col.a = reader_readU8(r);
     return col;
 }
-gfxgradient_t* readGradient(reader_t*r)
+static gfxgradient_t* readGradient(reader_t*r)
 {
     gfxgradient_t*start = 0, *pos = 0;
     while(1) {
@@ -168,7 +168,7 @@ gfxgradient_t* readGradient(reader_t*r)
     }
     return start;
 }
-gfxcxform_t* readCXForm(reader_t*r)
+static gfxcxform_t* readCXForm(reader_t*r)
 {
     U8 type = reader_readU8(r);
     if(!type)
@@ -181,14 +181,14 @@ gfxcxform_t* readCXForm(reader_t*r)
     return c;
 }
 
-void dumpColor(writer_t*w, gfxcolor_t*color)
+static void dumpColor(writer_t*w, gfxcolor_t*color)
 {
     writer_writeU8(w, color->r);
     writer_writeU8(w, color->g);
     writer_writeU8(w, color->b);
     writer_writeU8(w, color->a);
 }
-void dumpMatrix(writer_t*w, gfxmatrix_t*matrix)
+static void dumpMatrix(writer_t*w, gfxmatrix_t*matrix)
 {
     writer_writeDouble(w, matrix->m00);
     writer_writeDouble(w, matrix->m01);
@@ -197,7 +197,7 @@ void dumpMatrix(writer_t*w, gfxmatrix_t*matrix)
     writer_writeDouble(w, matrix->tx);
     writer_writeDouble(w, matrix->ty);
 }
-void dumpGradient(writer_t*w, gfxgradient_t*gradient)
+static void dumpGradient(writer_t*w, gfxgradient_t*gradient)
 {
     while(gradient) {
 	writer_writeU8(w, 1);
@@ -207,13 +207,13 @@ void dumpGradient(writer_t*w, gfxgradient_t*gradient)
     }
     writer_writeU8(w, 0);
 }
-void dumpImage(writer_t*w, gfximage_t*image)
+static void dumpImage(writer_t*w, gfximage_t*image)
 {
     writer_writeU16(w, image->width);
     writer_writeU16(w, image->height);
     w->write(w, image->data, image->width*image->height*4);
 }
-void dumpCXForm(writer_t*w, gfxcxform_t*c)
+static void dumpCXForm(writer_t*w, gfxcxform_t*c)
 {
     if(!c) {
 	writer_writeU8(w, 0);
@@ -225,7 +225,7 @@ void dumpCXForm(writer_t*w, gfxcxform_t*c)
 	writer_writeFloat(w, c->ar); writer_writeFloat(w, c->ag); writer_writeFloat(w, c->ab); writer_writeFloat(w, c->aa);
     }
 }
-void dumpFont(writer_t*w, gfxfont_t*font)
+static void dumpFont(writer_t*w, gfxfont_t*font)
 {
     writer_writeString(w, font->id);
     writer_writeU32(w, font->num_glyphs);
@@ -245,7 +245,7 @@ void dumpFont(writer_t*w, gfxfont_t*font)
 	writer_writeU32(w, font->unicode2glyph[t]);
     }
 }
-gfxfont_t*readFont(reader_t*r)
+static gfxfont_t*readFont(reader_t*r)
 {
     gfxfont_t* font = rfx_calloc(sizeof(gfxfont_t));
     font->id = reader_readString(r);
@@ -270,7 +270,7 @@ gfxfont_t*readFont(reader_t*r)
     return font;
 }
 
-void record_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
+static void record_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_STROKE);
@@ -282,20 +282,20 @@ void record_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
     dumpLine(&i->w, line);
 }
 
-void record_startclip(struct _gfxdevice*dev, gfxline_t*line)
+static void record_startclip(struct _gfxdevice*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_STARTCLIP);
     dumpLine(&i->w, line);
 }
 
-void record_endclip(struct _gfxdevice*dev)
+static void record_endclip(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_ENDCLIP);
 }
 
-void record_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
+static void record_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_FILL);
@@ -303,7 +303,7 @@ void record_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     dumpLine(&i->w, line);
 }
 
-void record_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
+static void record_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_FILLBITMAP);
@@ -313,7 +313,7 @@ void record_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
     dumpCXForm(&i->w, cxform);
 }
 
-void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
+static void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_FILLGRADIENT);
@@ -323,7 +323,7 @@ void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gr
     dumpLine(&i->w, line);
 }
 
-void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
+static void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_ADDFONT);
@@ -331,7 +331,7 @@ void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
     i->fontlist = gfxfontlist_addfont(i->fontlist, font);
 }
 
-void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
+static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(!gfxfontlist_hasfont(i->fontlist, font))
@@ -344,7 +344,7 @@ void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolo
     dumpMatrix(&i->w, matrix);
 }
 
-void record_startpage(struct _gfxdevice*dev, int width, int height)
+static void record_startpage(struct _gfxdevice*dev, int width, int height)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_STARTPAGE);
@@ -352,13 +352,13 @@ void record_startpage(struct _gfxdevice*dev, int width, int height)
     writer_writeU16(&i->w, height);
 }
 
-void record_endpage(struct _gfxdevice*dev)
+static void record_endpage(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_ENDPAGE);
 }
 
-void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_DRAWLINK);
@@ -475,12 +475,12 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
     }
 }
 
-void record_result_write(gfxresult_t*r, int filedesc)
+static void record_result_write(gfxresult_t*r, int filedesc)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
     write(filedesc, i->data, i->length);
 }
-int record_result_save(gfxresult_t*r, char*filename)
+static int record_result_save(gfxresult_t*r, char*filename)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
     FILE*fi = fopen(filename, "wb");
@@ -492,7 +492,7 @@ int record_result_save(gfxresult_t*r, char*filename)
     fclose(fi);
     return 0;
 }
-void*record_result_get(gfxresult_t*r, char*name)
+static void*record_result_get(gfxresult_t*r, char*name)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
     if(!strcmp(name, "data")) {
@@ -502,7 +502,7 @@ void*record_result_get(gfxresult_t*r, char*name)
     }
     return 0;
 }
-void record_result_destroy(gfxresult_t*r)
+static void record_result_destroy(gfxresult_t*r)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
     free(i->data);i->data = 0;
@@ -511,7 +511,7 @@ void record_result_destroy(gfxresult_t*r)
 }
 
 
-gfxresult_t* record_finish(struct _gfxdevice*dev)
+static gfxresult_t* record_finish(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
     
