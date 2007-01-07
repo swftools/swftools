@@ -202,6 +202,10 @@ public:
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
 
+  void showfeature(char*feature,char fully, char warn);
+  void warnfeature(char*feature,char fully);
+  void infofeature(char*feature);
+
   char outer_clip_box; //whether the page clip box is still on
 
   InfoOutputDev*info;
@@ -256,8 +260,8 @@ public:
   int pagepos;
 
   /* config */
-  int forceType0Fonts;
   int config_use_fontconfig;
+  int config_break_on_warning;
 
   parameter_t*parameters;
 };

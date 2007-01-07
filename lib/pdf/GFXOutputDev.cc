@@ -141,7 +141,7 @@ typedef struct _feature
 } feature_t;
 feature_t*featurewarnings = 0;
 
-static void showfeature(char*feature,char fully, char warn)
+void GFXOutputDev::showfeature(char*feature,char fully, char warn)
 {
     feature_t*f = featurewarnings;
     while(f) {
@@ -155,15 +155,19 @@ static void showfeature(char*feature,char fully, char warn)
     featurewarnings = f;
     if(warn) {
 	msg("<warning> %s not yet %ssupported!",feature,fully?"fully ":"");
+	if(this->config_break_on_warning) {
+	    msg("<fatal> Aborting conversion due to unsupported feature");
+	    exit(1);
+	}
     } else {
-	msg("<info> File contains %s",feature);
+	msg("<notice> File contains %s",feature);
     }
 }
-static void warnfeature(char*feature,char fully)
+void GFXOutputDev::warnfeature(char*feature,char fully)
 {
     showfeature(feature,fully,1);
 }
-static void infofeature(char*feature)
+void GFXOutputDev::infofeature(char*feature)
 {
     showfeature(feature,0,0);
 }
@@ -255,18 +259,17 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->pages = 0;
     this->pagebuflen = 0;
     this->pagepos = 0;
-  
-    this->forceType0Fonts=1;
     this->config_use_fontconfig=1;
+    this->config_break_on_warning=0;
 
     this->parameters = p;
 
     /* configure device */
     while(p) {
-	if(!strcmp(p->name,"forceType0Fonts")) {
-	    this->forceType0Fonts = atoi(p->value);
-	} else if(!strcmp(p->name,"fontconfig")) {
+	if(!strcmp(p->name,"fontconfig")) {
 	    this->config_use_fontconfig = atoi(p->value);
+	} else if(!strcmp(p->name,"breakonwarning")) {
+	    this->config_break_on_warning = atoi(p->value);
 	}
 	p = p->next;
     }
@@ -276,7 +279,7 @@ void GFXOutputDev::setDevice(gfxdevice_t*dev)
 {
     parameter_t*p = this->parameters;
 
-    /* TODO: get rid of this */
+    /* pass parameters to output device */
     this->device = dev;
     if(this->device) {
 	while(p) {
@@ -628,13 +631,13 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
 
 GBool GFXOutputDev::useTilingPatternFill()
 {
-    warnfeature("tiled patterns", 1);
+    infofeature("tiled patterns");
     return gFalse;
 }
 
 GBool GFXOutputDev::useShadedFills()
 {
-    warnfeature("shaded fills", 1);
+    infofeature("shaded fills");
     return gFalse;
 }
 
@@ -1900,7 +1903,7 @@ void GFXOutputDev::updateFont(GfxState *state)
     if(embedded &&
        (gfxFont->getType() == fontType1 ||
 	gfxFont->getType() == fontType1C ||
-       (gfxFont->getType() == fontCIDType0C && forceType0Fonts) ||
+        gfxFont->getType() == fontCIDType0C ||
 	gfxFont->getType() == fontTrueType ||
 	gfxFont->getType() == fontCIDType2
        ))
@@ -2676,7 +2679,7 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
     else {
 	char buffer[80];
 	sprintf(buffer, "%s blended transparency groups", blendmodes[state->getBlendMode()]);
-	warnfeature("transparency groups", 0);
+	warnfeature(buffer, 0);
     }
 
     gfxresult_t*grouprecording = states[statepos].grouprecording;
