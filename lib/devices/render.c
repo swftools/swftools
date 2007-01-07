@@ -491,9 +491,9 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
     internal_t*i = (internal_t*)dev->internal;
     double x,y;
     
-    if(cap_style != gfx_capRound || joint_style != gfx_joinRound) {
+    /*if(cap_style != gfx_capRound || joint_style != gfx_joinRound) {
 	fprintf(stderr, "Warning: cap/joint style != round not yet supported\n");
-    }
+    }*/
 
     while(line) {
         int x1,y1,x2,y2,x3,y3;
