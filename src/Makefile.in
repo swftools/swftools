@@ -86,8 +86,8 @@ jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
 swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/png.$(O)
 	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/png.$(O) $(LIBS)
 	$(STRIP) $@
-pdf2swf$(E): pdf2swf.$(O) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/devices/arts.$(O) ../lib/devices/swf.$(O) ../lib/devices/render.$(O)
-	$(LL) pdf2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O) ../lib/os.$(O) ../lib/devices/swf.$(O) ../lib/devices/arts.$(O) ../lib/devices/record.$(O) ../lib/devices/render.$(O) ../lib/art/libart$(A) $(LIBS) $(CXXLIBS)
+pdf2swf$(E): pdf2swf.$(O) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/devices/ops.$(O) ../lib/devices/arts.$(O) ../lib/devices/swf.$(O) ../lib/devices/render.$(O)
+	$(LL) pdf2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O) ../lib/os.$(O) ../lib/devices/swf.$(O) ../lib/devices/arts.$(O) ../lib/devices/ops.$(O) ../lib/devices/record.$(O) ../lib/devices/render.$(O) ../lib/art/libart$(A) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
 swfc$(E): parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) ../lib/librfxswf$(A)
 	$(L) parser.$(O) swfc.$(O) ../lib/q.$(O) ../lib/mp3.$(O) ../lib/wav.$(O) ../lib/png.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
