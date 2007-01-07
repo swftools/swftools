@@ -35,6 +35,7 @@ ${name}/src/pdf2swf.c \
 ${name}/src/swfc.c \
 ${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
+${name}/lib/types.h \
 ${name}/lib/action/lex.swf4.c \
 ${name}/lib/action/lex.swf5.c \
 ${name}/lib/action/swf4compiler.tab.c \
@@ -155,6 +156,10 @@ ${name}/lib/devices/render.h \
 ${name}/lib/devices/artsutils.c \
 ${name}/lib/devices/arts.c \
 ${name}/lib/devices/arts.h \
+${name}/lib/devices/record.c \
+${name}/lib/devices/record.h \
+${name}/lib/devices/ops.c \
+${name}/lib/devices/ops.h \
 ${name}/pdf2swf/HOWTO_pdf2swf \
 ${name}/lib/pdf/GFXOutputDev.h \
 ${name}/lib/pdf/GFXOutputDev.cc \
