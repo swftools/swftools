@@ -141,7 +141,7 @@ static PyObject* f_load(PyObject* self, PyObject* args, PyObject* kwargs)
 	}
 	close(fi);
     } else {
-	struct reader_t r;
+	reader_t r;
 	reader_init_memreader(&r, data, len);
 	swf->filename = 0;
 	if(swf_ReadSWF2(&r, &swf->swf)<0) {
