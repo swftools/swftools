@@ -98,6 +98,7 @@ U16 swf_GetDefineID(TAG * t)
   { case ST_DEFINESHAPE:
     case ST_DEFINESHAPE2:
     case ST_DEFINESHAPE3:
+    case ST_DEFINESHAPE4:
     case ST_DEFINEMORPHSHAPE:
     case ST_DEFINEEDITTEXT:
     case ST_DEFINEBITS:
@@ -105,14 +106,18 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINEBITSJPEG3:
     case ST_DEFINEBITSLOSSLESS:
     case ST_DEFINEBITSLOSSLESS2:
+    case ST_DEFINESCALINGGRID: //pseudodefine
     case ST_DEFINEBUTTON:
     case ST_DEFINEBUTTON2:
     case ST_DEFINEBUTTONCXFORM: //pseudodefine
     case ST_DEFINEBUTTONSOUND: //pseudodefine
+    case ST_CSMTEXTSETTINGS: //pseudodefine
     case ST_DEFINEFONT:
     case ST_DEFINEFONT2:
+    case ST_DEFINEFONT3:
     case ST_DEFINEFONTINFO: //pseudodefine
     case ST_DEFINEFONTINFO2: //pseudodefine
+    case ST_DEFINEFONTALIGNZONES: //pseudodefine
     case ST_DEFINETEXT:
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
@@ -210,9 +215,11 @@ static int swf_definingtagids[] =
 {ST_DEFINESHAPE,
  ST_DEFINESHAPE2,
  ST_DEFINESHAPE3,
+ ST_DEFINESHAPE4,
  ST_DEFINEMORPHSHAPE,
  ST_DEFINEFONT,
  ST_DEFINEFONT2,
+ ST_DEFINEFONT3,
  ST_DEFINETEXT,
  ST_DEFINETEXT2,
  ST_DEFINEEDITTEXT,
@@ -247,12 +254,16 @@ static int swf_spritetagids[] =
  -1
 };
 
+/* tags which add content or information to a character with a given ID */
 static int swf_pseudodefiningtagids[] = 
 {
  ST_DEFINEFONTINFO,
  ST_DEFINEFONTINFO2,
+ ST_DEFINEFONTALIGNZONES,
  ST_DEFINEBUTTONCXFORM,
  ST_DEFINEBUTTONSOUND,
+ ST_DEFINESCALINGGRID,
+ ST_CSMTEXTSETTINGS,
  ST_NAMECHARACTER,
  ST_DOINITACTION,
  ST_VIDEOFRAME,
@@ -362,8 +373,11 @@ char* swf_GetName(TAG * t)
         case ST_FRAMELABEL:
             name = &t->data[swf_GetTagPos(t)];
         break;
+        case ST_PLACEOBJECT3:
         case ST_PLACEOBJECT2: {   
             U8 flags = swf_GetU8(t);
+	    if(t->id == ST_PLACEOBJECT3)
+		swf_GetU8(t);
             swf_GetU16(t); //depth;
             if(flags&PF_CHAR) 
               swf_GetU16(t); //id
@@ -432,7 +446,7 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
 	    else 
 		{swf_GetRGB(tag, NULL);if(morph) swf_GetRGB(tag, NULL);}
 	}
-	else if(type == 0x10 || type == 0x12)
+	else if(type == 0x10 || type == 0x12 || type == 0x13)
 	{
 	    swf_ResetReadBits(tag);
 	    swf_GetMatrix(tag, NULL);
@@ -444,7 +458,7 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
 	    else
 		swf_GetGradient(tag, NULL, /*alpha*/ num>=3?1:0);
 	}
-	else if(type == 0x40 || type == 0x41)
+	else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
 	{
 	    swf_ResetReadBits(tag);
 	    // we made it.
@@ -526,6 +540,20 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 	} break;
 
+	case ST_IMPORTASSETS: 
+	case ST_IMPORTASSETS2: {
+	    swf_GetString(tag); //count
+	    swf_GetU8(tag); //reserved
+	    swf_GetU8(tag); //reserved
+	    int num =  swf_GetU16(tag); //url
+	    int t;
+	    for(t=0;t<num;t++) {
+		callback(tag, tag->pos + base, callback_data); //button id
+		swf_GetU16(tag); //id
+		while(swf_GetU8(tag)); //name
+	    }
+	} break;
+
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
 	case ST_GENERATORTEXT:
@@ -539,6 +567,12 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    if(!(tag->data[0]&2))
 		break;
 	    callback(tag, 3 + base, callback_data);
+        break;
+	case ST_PLACEOBJECT3:
+	    // only if placeflaghascharacter
+	    if(!(tag->data[0]&2))
+		break;
+	    callback(tag, 4 + base, callback_data);
         break;
 	case ST_REMOVEOBJECT:
 	    callback(tag, tag->pos + base, callback_data);
@@ -665,7 +699,10 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 	    break;
 	}
+	case ST_DEFINEFONTALIGNZONES:
+	case ST_DEFINESCALINGGRID:
 	case ST_GLYPHNAMES:
+	case ST_CSMTEXTSETTINGS:
 	case ST_DEFINEFONTINFO:
 	case ST_DEFINEFONTINFO2:
 	case ST_VIDEOFRAME:
@@ -679,6 +716,8 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	break;
 
 	case ST_DEFINEMORPHSHAPE:
+	case ST_DEFINESHAPE4:
+	num++;
 	case ST_DEFINESHAPE3:
 	num++; //fallthrough
 	case ST_DEFINESHAPE2:
@@ -695,10 +734,18 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 
 	    id = swf_GetU16(tag); // id;
-	    swf_GetRect(tag, NULL); // bounds
+	    swf_GetRect(tag, NULL); // shape bounds
 	    if(morph) {
 		swf_ResetReadBits(tag);
-		swf_GetRect(tag, NULL); // bounds2
+		swf_GetRect(tag, NULL); // shape bounds2
+		if(num==4)
+		    swf_GetRect(tag, NULL); // edge bounds1
+	    }
+	    if(num>=4) {
+		swf_GetRect(tag, NULL); // edge bounds
+		swf_GetU8(tag); // flags, &1: contains scaling stroke, &2: contains non-scaling stroke
+	    }
+	    if(morph) {
 		swf_GetU32(tag); //offset to endedges
 	    }
    
@@ -949,7 +996,8 @@ U8 swf_isShapeTag(TAG*tag)
 {
     if(tag->id == ST_DEFINESHAPE ||
        tag->id == ST_DEFINESHAPE2 ||
-       tag->id == ST_DEFINESHAPE3) 
+       tag->id == ST_DEFINESHAPE3 ||
+       tag->id == ST_DEFINESHAPE4) 
         return 1;
     return 0;
 }
@@ -957,7 +1005,8 @@ U8 swf_isShapeTag(TAG*tag)
 U8 swf_isPlaceTag(TAG*tag)
 {
     if(tag->id == ST_PLACEOBJECT ||
-       tag->id == ST_PLACEOBJECT2)
+       tag->id == ST_PLACEOBJECT2 ||
+       tag->id == ST_PLACEOBJECT3)
         return 1;
     return 0;
 }

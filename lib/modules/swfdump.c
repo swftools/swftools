@@ -209,6 +209,20 @@ char* swf_TagGetName(TAG*tag)
             return "VIDEOFRAME";
         case ST_DEFINEFONTINFO2:
             return "DEFINEFONTINFO2";
+        case ST_FILEATTRIBUTES:
+            return "FILEATTRIBUTES";
+        case ST_IMPORTASSETS2:
+            return "IMPORTASSETS2";
+        case ST_DEFINESCALINGGRID:
+            return "DEFINESCALINGGRID";
+        case ST_DEFINESHAPE4:
+            return "DEFINESHAPE4";
+        case ST_DEFINEFONT3:
+            return "DEFINEFONT3";
+        case ST_DEFINEFONTALIGNZONES:
+            return "DEFINEFONTALIGNZONES";
+        case ST_CSMTEXTSETTINGS:
+            return "CSMTEXTSETTINGS";
         case ST_FREEALL:
             return "FREEALL";
         case ST_MX4:

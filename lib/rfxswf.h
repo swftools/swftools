@@ -300,8 +300,17 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_VIDEOFRAME           61
 #define ST_DEFINEFONTINFO2	62
 #define ST_MX4			63 /*(?) */
+#define ST_ENABLEDEBUGGER2      64 /* version 8 */
 #define ST_SCRIPTLIMITS		65 /* version 7- u16 maxrecursedepth, u16 scripttimeoutseconds */
 #define ST_SETTABINDEX		66 /* version 7- u16 depth(!), u16 tab order value */
+#define ST_FILEATTRIBUTES	69 /* version 8 (required)- */
+#define ST_PLACEOBJECT3		70 /* version 8 */
+#define ST_IMPORTASSETS2	71 /* version 8 */
+#define ST_DEFINEFONTALIGNZONES 73 /* version 8 */
+#define ST_CSMTEXTSETTINGS	74 /* version 8 */
+#define ST_DEFINEFONT3		75 /* version 8 */
+#define ST_DEFINESCALINGGRID    78 /* version 8 */
+#define ST_DEFINESHAPE4		83 /* version 8 */
 
 /* custom tags- only valid for swftools */
 #define ST_REFLEX              777 /* to identify generator software */
