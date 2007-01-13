@@ -34,8 +34,8 @@ typedef struct _v2swf_internal_t
     
     int myframes;
 
-    struct writer_t out;
-    struct writer_t out2;
+    writer_t out;
+    writer_t out2;
 
     ringbuffer_t r;
     videoreader_t* video;
@@ -337,14 +337,14 @@ static void writeShowTags(v2swf_internal_t* i, int shapeid, int bmid, int width,
     i->showframe = 1;
 }
 
-static int wwrite(struct writer_t*w, void*data, int len)
+static int wwrite(writer_t*w, void*data, int len)
 {
     v2swf_internal_t* i = (v2swf_internal_t*)w->internal;
     ringbuffer_put(&i->r, data, len);
     return len;
 }
 
-static void wfinish(struct writer_t*w)
+static void wfinish(writer_t*w)
 {
     v2swf_internal_t* i = (v2swf_internal_t*)w->internal;
 }
@@ -905,8 +905,8 @@ int v2swf_init(v2swf_t*v2swf, videoreader_t * video)
     i->keyframe = 1;
     i->showframe = 0;
 
-    memset(&i->out, 0, sizeof(struct writer_t));
-    memset(&i->out2, 0, sizeof(struct writer_t));
+    memset(&i->out, 0, sizeof(writer_t));
+    memset(&i->out2, 0, sizeof(writer_t));
 
     return 0;
 }
