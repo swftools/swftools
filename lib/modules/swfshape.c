@@ -543,7 +543,7 @@ static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
                 else 
                     swf_GetRGB(tag, &dest->color);
             }
-            else if(type == 0x10 || type == 0x12)
+            else if(type == 0x10 || type == 0x11 || type == 0x12 || type == 0x13)
             {
                 /* linear/radial gradient fill */
                 swf_ResetReadBits(tag);
@@ -551,7 +551,7 @@ static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
                 swf_ResetReadBits(tag);
                 swf_GetGradient(tag, &dest->gradient, num>=3?1:0);
             }
-            else if(type == 0x40 || type == 0x41)
+            else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
             {
                 /* bitmap fill */
                 swf_ResetReadBits(tag);
