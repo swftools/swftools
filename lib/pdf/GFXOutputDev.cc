@@ -2717,6 +2717,10 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
     states[statepos].softmask = 1;
 }
 
+static inline Guchar div255(int x) {
+  return (Guchar)((x + (x >> 8) + 0x80) >> 8);
+}
+
 void GFXOutputDev::clearSoftMask(GfxState *state)
 {
     if(!states[statepos].softmask)
@@ -2779,14 +2783,12 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 	gfxcolor_t* l1 = &maskimg->data[maskimg->width*y];
 	gfxcolor_t* l2 = &belowimg->data[belowimg->width*y];
 	for(x=0;x<width;x++) {
-	    l1->a = 255;
 	    l2->a = (77*l1->r + 151*l1->g + 28*l1->b) >> 8;
 
-	    /* premultiply alpha... do we need this? (depends on output device)
-	    l2->r = (l2->a*l2->r) >> 8;
-	    l2->g = (l2->a*l2->g) >> 8;
-	    l2->b = (l2->a*l2->b) >> 8;
-	    */
+	    /* premultiply alpha */
+	    l2->r = div255(l2->a*l2->r);
+	    l2->g = div255(l2->a*l2->g);
+	    l2->b = div255(l2->a*l2->b);
 
 	    l1++;
 	    l2++;
