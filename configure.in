@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2006-12-02-1537
+VERSION=2007-01-10-2008
 
 
 # ------------------------------------------------------------------
@@ -31,7 +31,7 @@ if test "x${srcdir}" != "x."; then
     exit 1
 fi
 
-WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
+WARNINGS="-Wparentheses -Wimplicit -Wreturn-type -Wno-unused-value"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
     WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls"
 fi
