@@ -860,7 +860,8 @@ int args_callback_option(char *arg, char *val)
 	    break;
 
 	case 'z':
-	    global.version = 6;
+	    if(global.version<6)
+		global.version = 6;
 	    res = 0;
 	    break;
 
@@ -896,7 +897,7 @@ int args_callback_option(char *arg, char *val)
 		global.force_height = atoi(val);
 	    res = 1;
 	    break;
-
+	
 	case 'V':
 	    printf("png2swf - part of %s %s\n", PACKAGE, VERSION);
 	    exit(0);
@@ -957,6 +958,7 @@ static struct options_t options[] = {
 {"r", "rate"},
 {"o", "output"},
 {"z", "zlib"},
+{"T", "flashversion"},
 {"X", "pixel"},
 {"Y", "pixel"},
 {"v", "verbose"},
@@ -999,6 +1001,7 @@ void args_callback_usage(char *name)
     printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
     printf("-o , --output <filename>       Set name for SWF output file.\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
+    printf("-T , --flashversion            Set the flash version to generate\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
     printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");

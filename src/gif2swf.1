@@ -1,4 +1,4 @@
-.TH gif2swf "1" "January 2006" "gif2swf" "swftools"
+.TH gif2swf "1" "January 2007" "gif2swf" "swftools"
 .SH NAME
 gif2swf - Takes a number of gif  files and converts them to a swf movie, one
 picture per frame.
@@ -22,6 +22,9 @@ converted picture is a seperate frame in the target SWF.
 \fB\-z\fR, \fB\-\-zlib\fR \fIzlib\fR        
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
     smaller, but not playable in Flash Plugins of Version 5 and below.
+.TP
+\fB\-l\fR, \fB\-\-loop\fR \fIloop count\fR       
+    Set loop count. (default: 0 [=infinite loop])
 .TP
 \fB\-X\fR, \fB\-\-pixel\fR \fIwidth\fR
     Force movie width to \fIwidth\fR (default: autodetect)

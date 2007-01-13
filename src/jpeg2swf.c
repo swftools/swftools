@@ -495,6 +495,12 @@ int args_callback_option(char *arg, char *val)
 	    break;
 	}
 
+	case 'M': {
+	    global.mx = 1;
+	    res = 1;
+	    break;
+	}
+
 	case 'm': {
 	    char*s = strdup(val);
 	    char*c = strchr(s, ':');
@@ -537,6 +543,9 @@ static struct options_t options[] = {
 {"q", "quality"},
 {"r", "rate"},
 {"z", "zlib"},
+{"M", "mx"},
+{"x", "xoffset"},
+{"y", "yoffset"},
 {"X", "width"},
 {"Y", "height"},
 {"v", "verbose"},
@@ -579,8 +588,11 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-o , --output <outputfile>     Explicitly specify output file. (otherwise, output.swf will be used)\n");
     printf("-q , --quality <quality>       Set compression quality (1-100, 1=worst, 100=best)\n");
-    printf("-r , --rate <framerate>         Set movie framerate (frames per second)\n");
+    printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
+    printf("-M , --mx                      Use Flash MX H.263 compression (use for correlated images)\n");
+    printf("-x , --xoffset <offset>        horizontally offset images by <offset>\n");
+    printf("-y , --yoffset <offset>        vertically offset images by <offset>\n");
     printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
     printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");

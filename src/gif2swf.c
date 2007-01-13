@@ -1,6 +1,6 @@
 /* -*- mode: c; tab-width: 4; -*- ---------------------------[for (x)emacs]--
 
-   $Id: gif2swf.c,v 1.5 2005/05/11 17:20:29 dseg Exp $
+   $Id: gif2swf.c,v 1.6 2007/01/13 17:26:47 kramm Exp $
    GIF to SWF converter tool
 
    Part of the swftools package.
@@ -605,16 +605,16 @@ int args_callback_option(char *arg, char *val)
 }
 
 static struct options_t options[] = {
-    {"l", "loop"},
-    {"r", "rate"},
-    {"o", "output"},
-    {"z", "zlib"},
-    {"X", "pixel"},
-    {"Y", "pixel"},
-    {"v", "verbose"},
-    {"C", "cgi"},
-    {"V", "version"},
-    {0, 0}
+{"r", "rate"},
+{"o", "output"},
+{"z", "zlib"},
+{"l", "loop"},
+{"X", "pixel"},
+{"Y", "pixel"},
+{"v", "verbose"},
+{"C", "cgi"},
+{"V", "version"},
+{0,0}
 };
 
 int args_callback_longoption(char *name, char *val)
@@ -646,13 +646,12 @@ int args_callback_command(char *arg, char *next) // actually used as filename
 void args_callback_usage(char *name)
 {
     printf("\n");
-    printf("Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.gif [file2.gif...]\n",
-           name);
+    printf("Usage: %s [-X width] [-Y height] [-o file.swf] [-r rate] file1.gif [file2.gif ...]\n", name);
     printf("\n");
-    printf("-l , --loop <loop count>       Set loop count. (default: 0 [=infinite loop])\n");
     printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
     printf("-o , --output <filename>       Set name for SWF output file.\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
+    printf("-l , --loop <loop count>           Set loop count. (default: 0 [=infinite loop])\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --pixel <height>          Force movie height to <height> (default: autodetect)\n");
     printf("-v , --verbose <level>         Set verbose level (0=quiet, 1=default, 2=debug)\n");

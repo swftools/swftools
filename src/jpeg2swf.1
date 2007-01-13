@@ -1,4 +1,4 @@
-.TH jpeg2swf "1" "January 2006" "jpeg2swf" "swftools"
+.TH jpeg2swf "1" "January 2007" "jpeg2swf" "swftools"
 .SH NAME
 jpeg2swf - Converts jpeg images to SWF.
 
@@ -15,19 +15,19 @@ converted picture is a seperate frame in the target SWF.
 \fB\-o\fR, \fB\-\-output\fR \fIoutputfile\fR
     Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
 .TP
-\fB\-m\fR, \fB\-\-mx\fR 
-    Use Flash MX H.263 compression (use for correlated images)
-.TP
 \fB\-q\fR, \fB\-\-quality\fR \fIquality\fR
     Set compression quality (1-100, 1=worst, 100=best).
     This option can be set independently for each image.
 .TP
-\fB\-r\fR, \fB\-\-rate\fR \fIframerate\fR     
+\fB\-r\fR, \fB\-\-rate\fR \fIframerate\fR
     Set movie framerate (frames per second)
 .TP
 \fB\-z\fR, \fB\-\-zlib\fR \fIzlib\fR        
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
     smaller, but not playable in Flash Plugins of Version 5 and below.
+.TP
+\fB\-M\fR, \fB\-\-mx\fR 
+    Use Flash MX H.263 compression (use for correlated images)
 .TP
 \fB\-x\fR, \fB\-\-xoffset\fR \fIoffset\fR  
     horizontally offset images by \fIoffset\fR

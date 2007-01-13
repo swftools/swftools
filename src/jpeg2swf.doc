@@ -13,12 +13,14 @@ converted picture is a seperate frame in the target SWF.
     Set compression quality (1-100, 1=worst, 100=best)
     Set compression quality (1-100, 1=worst, 100=best).
     This option can be set independently for each image.
--r --rate <framerate>     
+-r --rate <framerate>
     Set movie framerate (frames per second)
 -z  --zlib    <zlib>        
     Enable Flash 6 (MX) Zlib Compression
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
     smaller, but not playable in Flash Plugins of Version 5 and below.
+-M --mx
+    Use Flash MX H.263 compression (use for correlated images)
 -x --xoffset <offset>  
     horizontally offset images by <offset>
 -y --yoffset <offset>  

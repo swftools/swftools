@@ -20,6 +20,8 @@ compression algorithm is used).
     Enable Flash 6 (MX) Zlib Compression
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
     smaller, but not playable in Flash Plugins of Version 5 and below.
+-T, --flashversion
+    Set the flash version to generate
 -X, --pixel <width>
     Force movie width to <width> (default: autodetect)
 -Y, --pixel <height>

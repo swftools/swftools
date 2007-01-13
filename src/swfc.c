@@ -49,6 +49,7 @@ static int do_cgi = 0;
 static struct options_t options[] = {
 {"h", "help"},
 {"V", "version"},
+{"C", "cgi"},
 {"v", "verbose"},
 {"o", "output"},
 {0,0}
@@ -94,6 +95,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-V , --version                 Print version info and exit\n");
+    printf("-C , --cgi                     Output to stdout (for use in CGI environments)\n");
     printf("-v , --verbose                 Increase verbosity. \n");
     printf("-o , --output <filename>       Set output file to <filename>.\n");
     printf("\n");
