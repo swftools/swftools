@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2007-01-10-2008
+VERSION=2007-01-13-1826
 
 
 # ------------------------------------------------------------------
@@ -33,7 +33,7 @@ fi
 
 WARNINGS="-Wparentheses -Wimplicit -Wreturn-type -Wno-unused-value"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
-    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls"
+    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -D_FORTIFY_SOURCE=2 "
 fi
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -44,8 +44,8 @@ if test "x$PROFILING" '!=' "x";then
 fi
 if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
-        CFLAGS="$WARNINGS -O2 -g -D_FORTIFY_SOURCE=2 $CFLAGS"
-        CXXFLAGS="$WARNINGS -O2 -g -D_FORTIFY_SOURCE=2 $CXXFLAGS"
+        CFLAGS="$WARNINGS -O2 -g $CFLAGS"
+        CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
     else
         CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
