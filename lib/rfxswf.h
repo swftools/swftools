@@ -99,6 +99,16 @@ typedef struct _GRADIENT
     RGBA rgba[8];
 } GRADIENT;
 
+typedef struct _FILTER
+{
+    U8 type;
+} FILTER;
+typedef struct _FILTERLIST
+{
+    int num;
+    FILTER*filter;
+} FILTERLIST;
+
 typedef struct _TAG             // NEVER access a Tag-Struct directly !
 { U16           id;
   U8 *          data;
@@ -888,8 +898,11 @@ void action_fixjump(ActionMarker m1, ActionMarker m2);
 
 // The following 3 routines only use placeobject2:
 
+extern char*blendModeNames[];
+
 int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
 int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
+int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U8 blendmode);
 int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 
 typedef struct _SWFPLACEOBJECT {
@@ -902,6 +915,8 @@ typedef struct _SWFPLACEOBJECT {
     U8*name;
     U16 clipdepth;
     ActionTAG* actions;
+    U8 blendmode;
+    FILTERLIST*filters;
 } SWFPLACEOBJECT;
 
 void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj);
