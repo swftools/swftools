@@ -473,15 +473,17 @@ void handleVideoFrame(TAG*tag, char*prefix)
     printf(" quant: %d ", quantizer);
 }
 
-void handlePlaceObject2(TAG*tag, char*prefix)
+void handlePlaceObject23(TAG*tag, char*prefix)
 {
-    U8 flags;
+    U8 flags,flags2=0;
     MATRIX m;
     CXFORM cx;
-    char pstr[3][160];
+    char pstr[3][256];
     int ppos[3] = {0,0,0};
     swf_SetTagPos(tag, 0);
     flags = swf_GetU8(tag);
+    if(tag->id == ST_PLACEOBJECT3)
+	flags2 = swf_GetU8(tag);
     swf_GetU16(tag); //depth
 
     //flags&1: move
@@ -514,11 +516,40 @@ void handlePlaceObject2(TAG*tag, char*prefix)
 	U16 clip = swf_GetU16(tag); //clip
 	if(placements) {
 	    ppos[0] += sprintf(pstr[0]+ppos[0], "| Clip  ");
-	    ppos[1] += sprintf(pstr[1]+ppos[1], "| %-5d ", clip);
+	    ppos[1] += sprintf(pstr[1]+ppos[1], "| %-4d ", clip);
 	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
 	}
     }
     if(flags&32) { while(swf_GetU8(tag)); }
+
+    if(flags2&1) { // filter list
+	U8 num = swf_GetU8(tag);
+	printf("%d filters\n");
+	char*filtername[] = {"dropshadow","blur","glow","bevel","gradientglow","convolution","colormatrix","gradientbevel"};
+	for(;num;num--) {
+	    U8 type = swf_GetU8(tag);
+	    printf("filter %d: %02x (%s)\n", type, type<sizeof(filtername)/sizeof(filtername[0])?filtername[type]:"?");
+	    return;// FIXME
+	}
+    }
+    if(flags2&2) { // blend mode
+	U8 blendmode = swf_GetU8(tag);
+	if(placements) {
+	    int t;
+	    char name[80];
+	    sprintf(name, "%-5d", blendmode);
+	    for(t=0;blendModeNames[t];t++) {
+		if(blendmode==t) {
+		    sprintf(name, "%-5s", blendModeNames[t]);
+		    break;
+		}
+	    }
+	    ppos[0] += sprintf(pstr[0]+ppos[0], "| Blend ");
+	    ppos[1] += sprintf(pstr[1]+ppos[1], "| %s ", name);
+	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
+	}
+    }
+
     if(placements && ppos[0]) {
 	printf("\n");
 	printf("%s %s\n", prefix, pstr[0]);
@@ -588,7 +619,7 @@ void handlePlaceObject(TAG*tag, char*prefix)
     swf_SetMatrix(tag2, &matrix);
     swf_SetCXForm(tag2, &cxform, 1);
 
-    handlePlaceObject2(tag2, prefix);
+    handlePlaceObject23(tag2, prefix);
 }
 char stylebuf[256];
 char* fillstyle2str(FILLSTYLE*style)
@@ -945,7 +976,7 @@ int main (int argc,char ** argv)
             if(swf_GetName(tag))
                 printf(" name \"%s\"",swf_GetName(tag));
         }
-	else if(tag->id == ST_PLACEOBJECT2) {
+	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
 	    if(tag->data[0]&1)
 		printf(" moves");
 	    else
@@ -957,6 +988,9 @@ int main (int argc,char ** argv)
 		printf(" object");
 
             printf(" at depth %04d", swf_GetDepth(tag));
+
+	    if(tag->data[1]&4)
+		printf(" as bitmap");
 	   
 	    swf_SetTagPos(tag, 0);
 	    if(tag->data[0]&64) {
@@ -1083,7 +1117,7 @@ int main (int argc,char ** argv)
 	    else
 		printf("\n");
 	}
-	else if(tag->id == ST_PLACEOBJECT2) {
+	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
 	}
 	else if(tag->id == ST_NAMECHARACTER) {
 	    swf_GetU16(tag);
@@ -1143,8 +1177,8 @@ int main (int argc,char ** argv)
 	else if(tag->id == ST_PLACEOBJECT) {
 	    handlePlaceObject(tag, myprefix);
 	}
-	else if(tag->id == ST_PLACEOBJECT2) {
-	    handlePlaceObject2(tag, myprefix);
+	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
+	    handlePlaceObject23(tag, myprefix);
 	}
 	else if(tag->id == ST_DEFINESHAPE ||
 		tag->id == ST_DEFINESHAPE2 ||
