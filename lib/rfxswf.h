@@ -309,6 +309,7 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_DEFINEFONTALIGNZONES 73 /* version 8 */
 #define ST_CSMTEXTSETTINGS	74 /* version 8 */
 #define ST_DEFINEFONT3		75 /* version 8 */
+#define ST_METADATA		77 /* version 8 */
 #define ST_DEFINESCALINGGRID    78 /* version 8 */
 #define ST_DEFINESHAPE4		83 /* version 8 */
 
