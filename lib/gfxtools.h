@@ -74,6 +74,8 @@ void gfxline_transform(gfxline_t*line, gfxmatrix_t*matrix);
 void gfxmatrix_dump(gfxmatrix_t*l, FILE*fi, char*prefix);
 void gfxmatrix_transform(gfxmatrix_t*m, gfxcoord_t* v1, gfxcoord_t*dest);
 void gfxmatrix_invert(gfxmatrix_t*src, gfxmatrix_t*dest);
+void gfxmatrix_unit(gfxmatrix_t*m);
+void gfxmatrix_multiply(gfxmatrix_t*m1, gfxmatrix_t*m2, gfxmatrix_t*dest);
 
 gfxfontlist_t* gfxfontlist_create();
 gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font);
