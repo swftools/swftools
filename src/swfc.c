@@ -222,6 +222,7 @@ typedef struct _parameters {
     float shear;
     SPOINT pivot;
     SPOINT pin;
+    U8 blendmode; //not interpolated
 } parameters_t;
 
 typedef struct _character {
@@ -345,6 +346,7 @@ static void parameters_clear(parameters_t*p)
     p->pivot.x = 0; p->pivot.y = 0;
     p->rotate = 0; 
     p->shear = 0; 
+    p->blendmode = 0;
     swf_GetCXForm(0, &p->cxform, 1);
 }
 
@@ -1614,9 +1616,15 @@ void s_put(char*instance, char*character, parameters_t p)
     i = s_addinstance(instance, c, currentdepth);
     i->parameters = p;
     m = s_instancepos(i->character->size, &p);
-    
-    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-    swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
+   
+    if(p.blendmode) {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
+	swf_ObjectPlaceBlend(tag, c->id, currentdepth, &m, &p.cxform, instance, p.blendmode);
+    } else {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
+    }
+
     i->lastTag = tag;
     i->lastFrame = currentframe;
     currentdepth++;
@@ -2292,6 +2300,8 @@ static int c_placement(map_t*args, int type)
     char* astr = lu(args, "alpha");
     char* pinstr = lu(args, "pin");
     char* as = map_lookup(args, "as");
+    char* blendmode = lu(args, "blend");
+    U8 blend;
     MULADD r,g,b,a;
     float oldwidth;
     float oldheight;
@@ -2443,6 +2453,21 @@ static int c_placement(map_t*args, int type)
     if(astr[0]) {
 	MULADD a = parseMulAdd(astr);
 	p.cxform.a0 = a.mul;p.cxform.a1 = a.add;
+    }
+
+    if(blendmode[0]) {
+	int t;
+	blend = 255;
+	for(t=0;blendModeNames[t];t++) {
+	    if(!strcmp(blendModeNames[t], blendmode)) {
+		blend = t;
+		break;
+	    }
+	}
+	if(blend == 255) {
+	    syntaxerror("unknown blend mode: '%s'", blendmode);
+	}
+	p.blendmode = blend;
     }
 
     if(type == 0)
@@ -2938,7 +2963,7 @@ static struct {
  {"edittext", c_edittext, "name font= size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0 @autosize=0 align="},
  {"morphshape", c_morphshape, "name start end"},
  {"button", c_button, "name"},
-    {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below= as="},
+    {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below= as="},
     {"on_press", c_on_press, "position=inside"},
     {"on_release", c_on_release, "position=anywhere"},
     {"on_move_in", c_on_move_in, "state=not_pressed"},
@@ -2952,12 +2977,12 @@ static struct {
  {"previousframe", c_previousframe, "name"},
 
     // object placement tags
- {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
- {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
- {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
- {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
- {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
- {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= pivot= pin= shear= rotate= ratio= above= below="},
+ {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
+ {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
+ {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
+ {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
+ {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
+ {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
  {"texture", c_texture, "<i> x=0 y=0 width= height= scale= scalex= scaley= r= shear= rotate="},
