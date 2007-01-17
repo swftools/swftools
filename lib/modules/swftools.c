@@ -203,6 +203,12 @@ U16 swf_GetPlaceID(TAG * t)
       U16 d = swf_GetU16(t);
       id = (flags&PF_CHAR)?swf_GetU16(t):id;
     } break;
+    case ST_PLACEOBJECT3:
+    { U8 flags = swf_GetU8(t);
+      U8 flags2 = swf_GetU8(t);
+      U16 d = swf_GetU16(t);
+      id = (flags&PF_CHAR)?swf_GetU16(t):id;
+    } break;
 
   }
 
@@ -330,6 +336,11 @@ int swf_GetDepth(TAG * t)
     { U8 flags = swf_GetU8(t);
       depth = swf_GetU16(t);
     } break;
+    case ST_PLACEOBJECT3:
+    { U8 flags = swf_GetU8(t);
+      U8 flags2 = swf_GetU8(t);
+      depth = swf_GetU16(t);
+    } break;
     case ST_SETTABINDEX:
     {
       depth = swf_GetU16(t);
@@ -387,7 +398,7 @@ char* swf_GetName(TAG * t)
               swf_GetCXForm(t, &c, 1);
             if(flags&PF_RATIO)
               swf_GetU16(t);
-            if(flags&PF_CLIPACTION)
+            if(flags&PF_CLIPDEPTH)
               swf_GetU16(t);
             if(flags&PF_NAME) {
               swf_ResetReadBits(t);
