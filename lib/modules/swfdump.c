@@ -231,6 +231,12 @@ char* swf_TagGetName(TAG*tag)
             return "SCRIPTLIMITS";
         case ST_SETTABINDEX:
             return "SETTABINDEX";
+	case ST_ENABLEDEBUGGER2:
+	    return "ENABLEDEBUGGER2";
+	case ST_PLACEOBJECT3:
+	    return "PLACEOBJECT3";
+	case ST_METADATA:
+	    return "METADATA";
         
 	case ST_REFLEX:
             return "REFLEX";
