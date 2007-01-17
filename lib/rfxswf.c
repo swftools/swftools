@@ -83,7 +83,16 @@ void swf_SetTagPos(TAG * t,U32 pos)
 char* swf_GetString(TAG*t)
 {
     char* str = ((char*)(&(t)->data[(t)->pos]));
-    while(swf_GetU8(t));
+    while(t->pos < t->len && swf_GetU8(t));
+    /* make sure we always have a trailing zero byte */
+    if(t->pos == t->len) {
+      if(t->len == t->memsize) {
+	swf_ResetWriteBits(t);
+	swf_SetU8(t, 0);
+	t->len = t->pos;
+      }
+      t->data[t->len] = 0;
+    }
     return str;
 }
 
