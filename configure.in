@@ -198,9 +198,22 @@ dnl Checks for libraries.
  exit;
  )
  AC_CHECK_LIB(z, deflate,, ZLIBMISSING=true)
- AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
- AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
- AC_CHECK_LIB(ungif, DGifOpen,, UNGIFMISSING=true)
+
+if test "x$ZLIBMISSING" = "xtrue";then
+    echo 
+    echo "ERROR:"
+    echo "You need zlib to compile swftools"
+    echo
+    exit
+fi
+ 
+AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
+AC_CHECK_LIB(t1, T1_LoadFont,, T1LIBMISSING=true)
+AC_CHECK_LIB(ungif, DGifOpen,, UNGIFMISSING=true)
+if "$UNGIFMISSING";then
+    UNGIFMISSING=
+    AC_CHECK_LIB(gif, DGifOpen,, UNGIFMISSING=true)
+fi
 
 RFX_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
