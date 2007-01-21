@@ -28,14 +28,6 @@ swfc:
     * Macros: .macro x=30 y=30 .text x=x+30 y=y+30 text="testtext" .end
 
 
-avi2swf:
-
-    * fix -n option
-    * speed up h.263 routines (MMX?)
-    * support for all-black I-Frames
-    * do a flash player test suite to find out which h.263 movies work where
-    * bicubic/area-averaging scaling
-
 swfcombine:
 
     * "swfcombine file.swf -s 200 box1=file1.swf" doesn't work if file1.swf contains sprites
