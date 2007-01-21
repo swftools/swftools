@@ -33,7 +33,7 @@ int file_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
     fprintf(i->fi, "setparameter %s=%s\n", key, value);
-    return 0;
+    return 1;
 }
 
 void file_startpage(struct _gfxdevice*dev, int width, int height)
