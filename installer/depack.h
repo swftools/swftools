@@ -21,7 +21,7 @@
 #ifndef Depack_h
 #define Depack_h
 
-typedef unsigned long int U32;
+typedef unsigned int U32;
 typedef unsigned char U8;
 
 typedef struct {
