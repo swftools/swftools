@@ -46,7 +46,7 @@ static void processargs(int argn2,char**argv2)
         if(t<argn2-1) next=argv2[t+1];
         else        next=0;
 
-        if(argv2[t][0]=='-')
+        if(argv2[t][0]=='-' && argv2[t][1])
         {
             if(argv2[t][1]=='-')
             {
@@ -81,10 +81,6 @@ static void processargs(int argn2,char**argv2)
                         }
                         s++;
                     } while(!ret);
-                }
-                else // - usually means "read stdout"
-                {
-                    t+=args_callback_option(&argv2[t][1],next);
                 }
             }
         }
