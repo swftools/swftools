@@ -335,8 +335,8 @@ which is used here together with the alpha parameter of <c>.change</c>:
   <code lang="swfc">
 .flash filename="text6.swf"
 .font times "Times.swf"
-.text hello text="HELLO" font=times size=100% color=blue
-.text world text="WORLD" font=times size=100% color=red
+.text hello text="HELLO" font=times size=200% color=blue
+.text world text="WORLD" font=times size=200% color=red
 
 .frame 1
         .put hello pin=center x=50 y=50 
@@ -351,32 +351,28 @@ which is used here together with the alpha parameter of <c>.change</c>:
 
 <section title="Clipping">
 
+Another example for clipping against text:
 
 <code lang="swfc">
-.flash filename="xorclip.swf" bbox=640x480 background=black version=6
+.flash filename="textclip.swf" bbox=400x120 background=black version=6
 .font times "Times.swf"
-.textshape helloworld text="HELLO WORLD" font=times size=500%
+.textshape helloworld text="HELLO WORLD" font=times size=300%
 .filled helloworld1 outline=helloworld fill=blue line=0
 .filled helloworld2 outline=helloworld fill=green line=0
 
 .frame 1
-	.box background width=640 height=480 fill=white line=0
-	.sprite twotexts
-	    .put h1=helloworld1 y=200
-	    .put h2=helloworld2 y=200
-	    .frame 1000
-	    .change h1 x=-500
-	    .change h2 x=-1000
-	.end
+.put h3=helloworld1 y=100
+.startclip h1=helloworld1 y=100
+    .put h2=helloworld2 y=100
+.end
 
-	.startclip twotexts
-	    .put background
-	.end
 .frame 1000
+.change h1 x=-1000
+.change h2 x=-500
+.change h3 x=-1000
 .end
 </code>
  
-
 </section>
 
 <section title="Edittext">
@@ -387,10 +383,10 @@ and set from ActionScript (see below).
 You can generate this type of text with the <c>.edittext</c> command:
 
 <code lang="swfc">
-.flash filename="edittext.swf" bbox=210x110
+.flash filename="edittext.swf" bbox=410x210
     .font Arial "Arial.swf"
-    .edittext myedittext font=Arial size=20% 
-                         width=200 height=100 
+    .edittext myedittext font=Arial size=50% 
+                         width=400 height=200 
                          color=blue border multiline wordwrap
                          text="Edit me!\nClick with your mouse on this text to edit it."
     .put myedittext x=3 y=3
@@ -767,6 +763,218 @@ outside the active area, it's easy to generate tooltips or subtitles.
 
 </section>
 -->
+
+</chapter>
+
+<chapter title="Blend Modes">
+
+Blend modes were introduced in Flash 8. They allow to use different alrithmetrics when
+it comes to putting transparent (or semi transparent) shapes or images on top of each
+other.
+The diffent blend modes are:
+
+<shell>
+normal
+layer
+multiply
+screen
+lighten
+darken
+add
+substract
+difference
+invert
+alpha
+erase
+overlay
+hardlight
+</shell>
+
+For example, in order to set a "invert" blend mode:
+
+<code lang="swfc">
+.flash filename="invert.swf" fps=50 bbox=511x127
+.jpeg pic stripe.jpg
+.put pic
+.font arial Arial.ttf
+.text txt font=arial text="Test inverted blend mode... ABCDEFGHIJKLMNOPQRSTUVWXYZ" size=200%
+
+.put txt x=512 y=120 blend=invert
+.frame 700
+.change txt x=-4096
+.end
+</code>
+
+The <c>layer</c> blend modes is especially useful, if you want to 
+make sprite transparent. Compare the two stacks of rectangles
+in the next example. In the left one (set without <c>layer</c>), when
+the sprite is made transparent via <c>alpha=50%</c>, the rectangles
+also are transparent in respect to each other- i.e., you don't get
+a transparent image of a stack of rectangles, you get an image
+of a stack of transparent rectangles. On the right side, the
+stack is set with <c>layer</c>, and only the whole sprite get's
+transparent.
+
+<code lang="swfc">
+.flash filename="layer.swf" fps=50 bbox=511x127
+.jpeg background stripe.jpg
+.put background
+
+.box b1 fill=green width=100 height=100
+.box b2 fill=cyan width=100 height=100
+.box b3 fill=blue width=100 height=100
+.sprite s1
+    .put b1
+    .put b2 x=25 y=25
+    .put b3 x=50 y=50
+.end
+.sprite s2
+    .put b1
+    .put b2 x=25 y=25
+    .put b3 x=50 y=50
+.end
+
+.put s1 alpha=50%
+.put s2 alpha=50% x=300 blend=layer
+
+.end
+</code>
+
+</chapter>
+
+<chapter title="Filters">
+
+<p>
+An especially nice new feature of Flash 8 are filters.
+</p>
+<p>
+The current version of swfc supports the following filters:
+</p>
+
+<shell>
+dropshadow
+blur
+gradientglow
+bevel
+</shell>
+
+<section><title>The "dropshadow" filter</title>
+
+<c>dropsshadow</c> can be used to add shadows below (or above) flash
+objects.
+Every shadow has a color, and a direction/distance parameter (<c>angle</c>,<c>distance</c>),
+which controls where the shadow will be placed.
+The shadow is calculated by blurring (radios <c>blur</c> the alpha layer of the corresponding object,
+strengthening it (multiplication with <c>strength</c>), filling it with <c>color</c> 
+and then merging it with the background.
+If the optional <c>knockout</c> option is given, the original object is removed, only the shadow
+is visible. If the <c>innershadow</c> parameter is given, the shadow will be <b>inside</b> the
+object.
+
+<code lang="swfc">
+.flash filename="shadow.swf" version=8 bbox=430x140 background=blue
+    .font myfont "Times.ttf"
+    .text mytext text="SHADOW" font=myfont size=140% color=yellow
+    .dropshadow myshadow color=black blur=5 angle=45 distance=50 passes=2 strength=1
+    .put mytext filter=myshadow y=75
+.end
+</code>
+
+</section>
+<section><title>The "bevel" filter</title>
+
+<p>
+The <c>bevel</c> filter essentially applies two shadows at once, at opposite directions.
+It supports the same arguments as the <c>dropshadow</c> filter, and also the optional
+<c>ontop</c> argument, which, if given, moves the "shadows" above the image. (useful
+together with <c>knockout</c>).
+</p>
+
+The following example demonstrates another feature of the swfc filter implementation: filters
+can also be animated.
+
+<code lang="swfc">
+.flash filename="bevel.swf" version=8 background=blue fps=12
+    .font arial "Arial.ttf"
+    .text abc text="FILTERS" font=arial size=130% color=red
+    .text beveltxt text="BEVEL" font=arial size=130% color=red
+    
+    .bevel bevel0 highlight=white shadow=black blur=9 angle=45 distance=4 passes=2 strength=2 knockout
+    .bevel bevel1 highlight=white shadow=black blur=14 angle=45 distance=6 passes=2 strength=2 knockout
+    
+    .bevel bevel2 highlight=white shadow=black blur=7 angle=0 distance=6 passes=2 strength=1 innershadow knockout
+    .bevel bevel3 highlight=white shadow=black blur=7 angle=360 distance=6 passes=2 strength=1 innershadow knockout
+
+    .put beveltxt filter=bevel0
+    .put abc filter=bevel2 y=80
+    .frame 50
+    .change beveltxt filter=bevel1
+    .frame 100
+    .change beveltxt filter=bevel0
+    .change abc filter=bevel3
+.end
+</code>
+
+</section>
+<section><title>The "blur" filter</title>
+
+The <c>blur</c> filter is probably the most simple filter- it only
+takes a blur radius and a number of passes. It then performs a blur effect
+by smoothening an area of <c>blurx</c> times <c>blury</c> pixels.
+
+<code lang="swfc">
+.flash filename="blur.swf" version=8 fps=50 bbox=200x200
+    .font arial "Arial.ttf"
+    .blur myblur1 blur=100 passes=2 # blur=100 is an abbreviation for blurx=100 blury=100
+    .blur myblur2 blurx=0 blury=0 passes=2
+    .blur myblur3 blurx=0 blury=100 passes=2
+    .textshape abc text="BLUR" font=arial size=100% 
+    .filled fabc outline=abc line=2 color=blue fill=white
+    .filled fabc2 outline=abc line=2 color=red fill=yellow
+    .sprite mysprite
+	.put fabc pin=center x=100 y=100
+	.put fabc2 pin=center x=100 y=100
+	.frame 200
+	.change fabc pin=center rotate=360
+	.change fabc2 pin=center rotate=-360
+    .end
+    .put mysprite filter=myblur1
+    .frame 200
+    .change mysprite filter=myblur2
+    .frame 400
+    .change mysprite filter=myblur3
+.end
+</code>
+
+</section>
+<section><title>The "gradientglow" filter</title>
+
+<c>gradientglow</c> is like the <c>shadow filter</c>, only that the
+resulting shadow color is calculated from a gradient instead of a single color.
+
+<code lang="swfc">
+.flash filename="filters.swf" version=8
+    .font times "Times.ttf"
+    .text abc text="Gradientglow" font=times size=100% color=blue
+    .gradient fire:
+	0% black/00
+	25% red/40
+	50% orange/80
+	75% yellow/c0
+	100% white/ff
+    .end
+    .gradientglow fireglow1 gradient=fire blur=20 innershadow angle=1 distance=20
+    .gradientglow fireglow2 gradient=fire blur=20 angle=0 distance=2 passes=1 knockout
+    .gradientglow fireglow3 gradient=fire blur=20 angle=0 distance=2 passes=1 ontop
+
+    .put abc1=abc filter=fireglow1
+    .put abc2=abc y=50 filter=fireglow2
+    .put abc3=abc y=100 filter=fireglow3
+.end
+
+</code>
+
+</section>
 
 </chapter>
 
