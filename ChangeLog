@@ -259,9 +259,14 @@
 	           actual starting positions (useful with zlib)
 	* pdf2swf: Default Flash version is now 6
 
-0.8.0 (not yet released):
+0.8.0:
 	* lib/modules/swfsound.c: Fixed compile problem if the lame library is present
 	* pdf2swf: Bugfix: -s flashversion was broken
 	* pdf2swf: -b and -l now also work on Windows
 	* swfbbox: The -c option is now documented
+	* swfdump: Added support for flash 8
+	* librfxswf: Added support for flash 8 filters and blend modes
+	* src/swfc: Added support for flash 8 filters and blend modes
+	* pdf2swf: upgraded to xpdf 3.01
+	* swfcombine: new -w (--scalex) -h (--scaley) options
 
