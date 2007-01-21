@@ -248,8 +248,9 @@ static int swf_spritetagids[] =
 {ST_SHOWFRAME,
  ST_PLACEOBJECT,
  ST_PLACEOBJECT2,
+ ST_PLACEOBJECT3,
  ST_REMOVEOBJECT,
- ST_REMOVEOBJECT2, //?
+ ST_REMOVEOBJECT2,
  ST_DOACTION,
  ST_STARTSOUND,
  ST_FRAMELABEL,
@@ -426,31 +427,33 @@ void swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2)
     for(t=0;t<gradient1->num;t++)
     {
 	int s=t;
-	if(s>=8) //FIXME
-	    s=7;
-	gradient1->ratios[t] = swf_GetU8(tag);
-	swf_GetRGBA(tag, &gradient1->rgba[t]);
-	gradient2->ratios[t] = swf_GetU8(tag);
-	swf_GetRGBA(tag, &gradient2->rgba[t]);
+	if(s>=16) //FIXME
+	    s=15;
+	gradient1->ratios[s] = swf_GetU8(tag);
+	swf_GetRGBA(tag, &gradient1->rgba[s]);
+	gradient2->ratios[s] = swf_GetU8(tag);
+	swf_GetRGBA(tag, &gradient2->rgba[s]);
     }
 }
 
 #define DEBUG_ENUMERATE if(0)
+//#define DEBUG_ENUMERATE
 
 void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph)
 {
     U16 count;
     int t;
     count = swf_GetU8(tag);
-    if(count == 0xff && num>1) // defineshape2,3 only
+    if(count == 0xff && num>1) // defineshape2,3,4 only
 	count = swf_GetU16(tag);
 
+    DEBUG_ENUMERATE printf("%d fill styles\n", count);
     for(t=0;t<count;t++)
     {
 	int type;
 	U8*pos;
-	swf_ResetReadBits(tag);
 	type = swf_GetU8(tag); //type
+	DEBUG_ENUMERATE printf("fill style %d) %02x (tagpos=%d)\n", t, type, tag->pos);
 	if(type == 0) {
 	    if(num == 3)
 		{swf_GetRGBA(tag, NULL);if(morph) swf_GetRGBA(tag, NULL);}
@@ -460,14 +463,17 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
 	else if(type == 0x10 || type == 0x12 || type == 0x13)
 	{
 	    swf_ResetReadBits(tag);
-	    swf_GetMatrix(tag, NULL);
+	    MATRIX m;
+	    swf_GetMatrix(tag, &m);
+	    DEBUG_ENUMERATE swf_DumpMatrix(stdout, &m);
 	    if(morph)
 		swf_GetMatrix(tag, NULL);
 	    swf_ResetReadBits(tag);
 	    if(morph)
 		swf_GetMorphGradient(tag, NULL, NULL);
-	    else
+	    else {
 		swf_GetGradient(tag, NULL, /*alpha*/ num>=3?1:0);
+	    }
 	}
 	else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
 	{
@@ -484,22 +490,26 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
 		swf_GetMatrix(tag, NULL);
 	}
 	else {
-	    fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x\n",type);
+	    fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x in tag %02x\n",type, tag->id);
 	}
     }
     swf_ResetReadBits(tag);
     count = swf_GetU8(tag); // line style array
     if(count == 0xff)
 	count = swf_GetU16(tag);
+    DEBUG_ENUMERATE printf("%d line styles\n", count);
     for(t=0;t<count;t++) 
     {
-	swf_GetU16(tag);
+	U16  width;
+	RGBA color;
+	width = swf_GetU16(tag);
 	if(morph)
 	    swf_GetU16(tag);
 	if(num == 3)
-	    {swf_GetRGBA(tag, NULL);if(morph) swf_GetRGBA(tag, NULL);}
+	    {swf_GetRGBA(tag, &color);if(morph) swf_GetRGBA(tag, NULL);}
 	else
-	    {swf_GetRGB(tag, NULL);if(morph) swf_GetRGB(tag, NULL);}
+	    {swf_GetRGB(tag, &color);if(morph) swf_GetRGB(tag, NULL);}
+	DEBUG_ENUMERATE printf("line style %d: %02x%02x%02x%02x \n", t, color.r,color.g,color.b,color.a);
     }
 }
 
@@ -726,9 +736,10 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    callback(tag, tag->pos + base, callback_data);
 	break;
 
-	case ST_DEFINEMORPHSHAPE:
+	case ST_DEFINEMORPHSHAPE2:
 	case ST_DEFINESHAPE4:
 	num++;
+	case ST_DEFINEMORPHSHAPE:
 	case ST_DEFINESHAPE3:
 	num++; //fallthrough
 	case ST_DEFINESHAPE2:
@@ -739,17 +750,18 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    int id; 
 	    int numshapes = 1;
 	    int morph = 0;
-	    if(tag->id == ST_DEFINEMORPHSHAPE) {
+	    if(tag->id == ST_DEFINEMORPHSHAPE || tag->id==ST_DEFINEMORPHSHAPE2) {
 		numshapes = 2;
 		morph = 1;
 	    }
 
 	    id = swf_GetU16(tag); // id;
-	    swf_GetRect(tag, NULL); // shape bounds
+	    SRECT r;
+	    swf_GetRect(tag, &r); // shape bounds
 	    if(morph) {
 		swf_ResetReadBits(tag);
 		swf_GetRect(tag, NULL); // shape bounds2
-		if(num==4)
+		if(num>=4)
 		    swf_GetRect(tag, NULL); // edge bounds1
 	    }
 	    if(num>=4) {
@@ -761,7 +773,9 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
    
 	    DEBUG_ENUMERATE printf("Tag:%d Name:%s ID:%d\n", tag->id, swf_TagGetName(tag), id);
+	    DEBUG_ENUMERATE printf("BBox %.2f %.2f %.2f %.2f\n", r.xmin/20.0,r.ymin/20.0,r.xmax/20.0,r.ymax/20.0);
 
+	    DEBUG_ENUMERATE printf("style tag pos: %d\n", tag->pos);
 	    enumerateUsedIDs_styles(tag, callback, callback_data, num, morph);
 	    DEBUG_ENUMERATE printf("-------\n");
 	    while(--numshapes>=0) /* morph shapes define two shapes */
@@ -769,7 +783,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		DEBUG_ENUMERATE printf("shape:%d\n", numshapes);
 		fillbits = swf_GetBits(tag, 4);
 		linebits = swf_GetBits(tag, 4);
-		DEBUG_ENUMERATE printf("%d %d\n", fillbits, linebits);
+		DEBUG_ENUMERATE printf("fillbits=%d linebits=%d\n", fillbits, linebits);
 		swf_ResetReadBits(tag);
 		while(1) {
 		    int flags;
