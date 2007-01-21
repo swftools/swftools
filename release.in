@@ -78,6 +78,7 @@ ${name}/avi2swf/v2swf.h \
 ${name}/swfs/simple_viewer.c \
 ${name}/swfs/keyboard_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
+${name}/lib/modules/swffilter.c \
 ${name}/lib/modules/swfrender.c \
 ${name}/lib/modules/swfdump.c \
 ${name}/lib/modules/swfobject.c \
@@ -158,6 +159,10 @@ ${name}/lib/devices/arts.c \
 ${name}/lib/devices/arts.h \
 ${name}/lib/devices/record.c \
 ${name}/lib/devices/record.h \
+${name}/lib/devices/rescale.c \
+${name}/lib/devices/rescale.h \
+${name}/lib/devices/bbox.c \
+${name}/lib/devices/bbox.h \
 ${name}/lib/devices/ops.c \
 ${name}/lib/devices/ops.h \
 ${name}/pdf2swf/HOWTO_pdf2swf \
