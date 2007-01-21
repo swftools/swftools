@@ -95,18 +95,19 @@ typedef struct _CXFORM
 typedef struct _GRADIENT
 {
     int num;
-    U8 ratios[8];
-    RGBA rgba[8];
+    U8* ratios;
+    RGBA* rgba;
 } GRADIENT;
 
 typedef struct _FILTER
 {
     U8 type;
 } FILTER;
+
 typedef struct _FILTERLIST
 {
     int num;
-    FILTER*filter;
+    FILTER*filter[8];
 } FILTERLIST;
 
 typedef struct _TAG             // NEVER access a Tag-Struct directly !
@@ -220,6 +221,7 @@ U32   swf_GetU32(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
 void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
+void  swf_FreeGradient(GRADIENT* gradient);
 char* swf_GetString(TAG*t);
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
@@ -231,6 +233,11 @@ int   swf_SetU32(TAG * t,U32 v);
 int   swf_GetRect(TAG * t,SRECT * r);
 int   swf_GetMatrix(TAG * t,MATRIX * m);
 int   swf_GetCXForm(TAG * t,CXFORM * cx,U8 alpha);
+
+double swf_GetFixed(TAG * t);
+void swf_SetFixed(TAG * t, double f);
+float swf_GetFixed8(TAG * t);
+void swf_SetFixed8(TAG * t, float f);
 
 //int   swf_SetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_SetRect(TAG * t,SRECT * r);
@@ -322,6 +329,7 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_METADATA		77 /* version 8 */
 #define ST_DEFINESCALINGGRID    78 /* version 8 */
 #define ST_DEFINESHAPE4		83 /* version 8 */
+#define ST_DEFINEMORPHSHAPE2    84 /* version 8 */
 
 /* custom tags- only valid for swftools */
 #define ST_REFLEX              777 /* to identify generator software */
@@ -604,6 +612,7 @@ void swf_DumpHeader(FILE * f,SWF * swf);
 void swf_DumpMatrix(FILE * f,MATRIX * m);
 void swf_DumpTag(FILE * f,TAG * t); 
 void swf_DumpSWF(FILE * f,SWF*swf);
+void swf_DumpGradient(FILE* f, GRADIENT*gradient);
 char* swf_TagGetName(TAG*tag);
 void swf_DumpFont(SWFFONT * font);
 
@@ -975,6 +984,75 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf);
 void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
 void swf_Render_ClearCanvas(RENDERBUF*dest);
 void swf_Render_Delete(RENDERBUF*dest);
+
+// swffilter.c
+
+#define FILTERTYPE_DROPSHADOW 0
+#define FILTERTYPE_BLUR 1
+#define FILTERTYPE_GLOW 2
+#define FILTERTYPE_BEVEL 3
+#define FILTERTYPE_GRADIENTGLOW 4
+#define FILTERTYPE_CONVOLUTION 5
+#define FILTERTYPE_COLORMATRIX 6
+#define FILTERTYPE_GRADIENTBEVEL 7
+	
+extern char*filtername[];
+
+typedef struct _FILTER_GRADIENTGLOW {
+    U8 type;
+    GRADIENT*gradient;
+    double blurx;
+    double blury;
+    double angle;
+    double distance;
+    float strength;
+    char innershadow;
+    char knockout;
+    char composite;
+    char ontop;
+    int passes;
+} FILTER_GRADIENTGLOW;
+
+typedef struct _FILTER_DROPSHADOW {
+    U8 type;
+    RGBA color;
+    double blurx;
+    double blury;
+    double angle;
+    double distance;
+    float strength;
+    char innershadow;
+    char knockout;
+    char composite;
+    int passes;
+} FILTER_DROPSHADOW;
+
+typedef struct _FILTER_BEVEL {
+    U8 type;
+    RGBA shadow;
+    RGBA highlight;
+    double blurx;
+    double blury;
+    double angle;
+    double distance;
+    float strength;
+    char innershadow;
+    char knockout;
+    char composite;
+    char ontop;
+    int passes;
+} FILTER_BEVEL;
+
+typedef struct _FILTER_BLUR {
+    U8 type;
+    double blurx;
+    double blury;
+    int passes;
+} FILTER_BLUR;
+
+void swf_SetFilter(TAG*tag, FILTER*f);
+FILTER*swf_GetFilter(TAG*tag);
+FILTER*swf_NewFilter(U8 type);
 
 #ifdef __cplusplus
 }

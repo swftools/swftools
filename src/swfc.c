@@ -203,6 +203,7 @@ static dictionary_t images;
 static dictionary_t textures;
 static dictionary_t outlines;
 static dictionary_t gradients;
+static dictionary_t filters;
 static char idmap[65536];
 static TAG*tag = 0; //current tag
 
@@ -223,6 +224,7 @@ typedef struct _parameters {
     SPOINT pivot;
     SPOINT pin;
     U8 blendmode; //not interpolated
+    FILTER*filter;
 } parameters_t;
 
 typedef struct _character {
@@ -249,6 +251,10 @@ typedef struct _gradient {
     char radial;
     int rotate;
 } gradient_t;
+
+typedef struct _filter {
+    FILTER filter;
+} filter_t;
 
 typedef struct _texture {
     FILLSTYLE fs;
@@ -328,15 +334,6 @@ static instance_t* s_addinstance(char*name, character_t*c, U16 depth)
     return i;
 }
 
-static void parameters_set(parameters_t*p, int x,int y, float scalex, float scaley, float rotate, float shear, SPOINT pivot, SPOINT pin, CXFORM cxform)
-{
-    p->x = x; p->y = y; 
-    p->scalex = scalex; p->scaley = scaley;
-    p->pin    = pin; p->pivot = pivot;
-    p->rotate = rotate; p->cxform = cxform;
-    p->shear = shear;
-}
-
 static void parameters_clear(parameters_t*p)
 {
     p->x = 0; p->y = 0; 
@@ -347,6 +344,7 @@ static void parameters_clear(parameters_t*p)
     p->rotate = 0; 
     p->shear = 0; 
     p->blendmode = 0;
+    p->filter = 0;
     swf_GetCXForm(0, &p->cxform, 1);
 }
 
@@ -413,6 +411,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     dictionary_init(&textures);
     dictionary_init(&outlines);
     dictionary_init(&gradients);
+    dictionary_init(&filters);
     dictionary_init(&instances);
     dictionary_init(&fonts);
     dictionary_init(&sounds);
@@ -703,7 +702,8 @@ static void s_endSWF()
     dictionary_clear(&images);
     dictionary_clear(&textures);
     dictionary_clear(&outlines);
-    dictionary_clear(&gradients);
+    dictionary_clear(&gradients); // mem leak
+    dictionary_clear(&filters);
     dictionary_clear(&fonts);
     dictionary_clear(&sounds);
 
@@ -1329,6 +1329,8 @@ GRADIENT parseGradient(const char*str)
     int lastpos = -1;
     const char* p = str;
     memset(&gradient, 0, sizeof(GRADIENT));
+    gradient.ratios = rfx_calloc(16*sizeof(U8));
+    gradient.rgba = rfx_calloc(16*sizeof(RGBA));
     while(*p) {
 	char*posstr,*colorstr;
 	int pos;
@@ -1342,8 +1344,8 @@ GRADIENT parseGradient(const char*str)
 	if(!*p) syntaxerror("Error in shape data: Color expected after %s", posstr);
 	colorstr = gradient_getToken(&p);
 	color = parseColor(colorstr);
-	if(gradient.num == sizeof(gradient.ratios)/sizeof(gradient.ratios[0])) {
-	    warning("gradient record too big- max size is 8, rest ignored");
+	if(gradient.num == 16) {
+	    warning("gradient record too big- max size is 16, rest ignored");
 	    break;
 	}
 	gradient.ratios[gradient.num] = pos;
@@ -1368,6 +1370,92 @@ void s_gradient(char*name, const char*text, int radial, int rotate)
     if(dictionary_lookup(&gradients, name))
 	syntaxerror("gradient %s defined twice", name);
     dictionary_put2(&gradients, name, gradient);
+}
+    
+void s_gradientglow(char*name, char*gradient, float blurx, float blury, 
+		    float angle, float distance, float strength, char innershadow, 
+		    char knockout, char composite, char ontop, int passes)
+{
+    gradient_t* g = dictionary_lookup(&gradients, gradient);
+
+    composite = 1;
+
+    if(!g)
+	syntaxerror("unknown gradient %s", gradient);
+    FILTER_GRADIENTGLOW* filter = rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
+    filter->type = FILTERTYPE_GRADIENTGLOW;
+    filter->gradient = &g->gradient;
+    filter->blurx = blurx;
+    filter->blury = blury;
+    filter->strength = strength;
+    filter->angle = angle;
+    filter->distance = distance;
+    filter->innershadow = innershadow;
+    filter->knockout = knockout;
+    filter->composite = composite;
+    filter->ontop = ontop;
+    filter->passes = passes;
+
+    if(dictionary_lookup(&filters, name))
+	syntaxerror("filter %s defined twice", name);
+    dictionary_put2(&filters, name, filter);
+}
+
+void s_dropshadow(char*name, RGBA color, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, int passes)
+{
+    composite = 1;
+    FILTER_DROPSHADOW* filter = rfx_calloc(sizeof(FILTER_DROPSHADOW));
+    filter->type = FILTERTYPE_DROPSHADOW;
+    filter->color= color;
+    filter->blurx = blurx;
+    filter->blury = blury;
+    filter->strength = strength;
+    filter->angle = angle;
+    filter->distance = distance;
+    filter->innershadow = innershadow;
+    filter->knockout = knockout;
+    filter->composite = composite;
+    filter->passes = passes;
+
+    if(dictionary_lookup(&filters, name))
+	syntaxerror("filter %s defined twice", name);
+    dictionary_put2(&filters, name, filter);
+}
+
+void s_bevel(char*name, RGBA shadow, RGBA highlight, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, char ontop, int passes)
+{
+    composite = 1;
+    FILTER_BEVEL* filter = rfx_calloc(sizeof(FILTER_BEVEL));
+    filter->type = FILTERTYPE_BEVEL;
+    filter->shadow = shadow;
+    filter->highlight = highlight;
+    filter->blurx = blurx;
+    filter->blury = blury;
+    filter->strength = strength;
+    filter->angle = angle;
+    filter->distance = distance;
+    filter->innershadow = innershadow;
+    filter->knockout = knockout;
+    filter->composite = composite;
+    filter->ontop = ontop;
+    filter->passes = passes;
+
+    if(dictionary_lookup(&filters, name))
+	syntaxerror("filter %s defined twice", name);
+    dictionary_put2(&filters, name, filter);
+}
+
+void s_blur(char*name, double blurx, double blury, int passes)
+{
+    FILTER_BLUR* filter = rfx_calloc(sizeof(FILTER_BLUR));
+    filter->type = FILTERTYPE_BLUR;
+    filter->blurx = blurx;
+    filter->blury = blury;
+    filter->passes = passes;
+
+    if(dictionary_lookup(&filters, name))
+	syntaxerror("filter %s defined twice", name);
+    dictionary_put2(&filters, name, filter);
 }
 
 void s_action(const char*text)
@@ -1604,6 +1692,30 @@ void s_endClip()
     currentdepth++;
 }
 
+void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*p, char move)
+{
+    SWFPLACEOBJECT po;
+    FILTERLIST flist;
+    swf_GetPlaceObject(NULL, &po);
+    po.id = id;
+    po.depth = depth;
+    po.matrix = m;
+    po.cxform = p->cxform;
+    po.name = name;
+    po.move = move;
+    if(move)
+	po.id = 0;
+    if(p->blendmode) {
+	po.blendmode = p->blendmode;
+    }
+    if(p->filter) {
+	flist.num = 1;
+	flist.filter[0] = p->filter;
+	po.filters = &flist;
+    }
+    swf_SetPlaceObject(tag, &po);
+}
+
 void s_put(char*instance, char*character, parameters_t p)
 {
     character_t* c = dictionary_lookup(&characters, character);
@@ -1617,17 +1729,17 @@ void s_put(char*instance, char*character, parameters_t p)
     i->parameters = p;
     m = s_instancepos(i->character->size, &p);
    
-    if(p.blendmode) {
+    if(p.blendmode || p.filter) {
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
-	swf_ObjectPlaceBlend(tag, c->id, currentdepth, &m, &p.cxform, instance, p.blendmode);
     } else {
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-	swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
     }
-
+    setPlacement(tag, c->id, currentdepth, m, instance, &p, 0);
+    
     i->lastTag = tag;
     i->lastFrame = currentframe;
     currentdepth++;
+    
 }
 
 void s_jump(char*instance, parameters_t p)
@@ -1641,10 +1753,91 @@ void s_jump(char*instance, parameters_t p)
     i->parameters = p;
     m = s_instancepos(i->character->size, &p);
 
-    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-    swf_ObjectMove(tag, i->depth, &m, &p.cxform);
+    if(p.blendmode || p.filter) {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
+    } else {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+    }
+    setPlacement(tag, 0, i->depth, m, 0, &p, 1);
+
     i->lastTag = tag;
     i->lastFrame = currentframe;
+}
+
+RGBA interpolateColor(RGBA c1, RGBA c2, float ratio)
+{
+    RGBA c;
+    c.r = c1.r * (1-ratio) + c2.r * ratio;
+    c.g = c1.g * (1-ratio) + c2.g * ratio;
+    c.b = c1.b * (1-ratio) + c2.b * ratio;
+    c.a = c1.a * (1-ratio) + c2.a * ratio;
+    return c;
+}
+
+FILTER* interpolateFilter(FILTER*filter1,FILTER*filter2, float ratio)
+{
+    if(!filter1 && !filter2)
+	return 0;
+    if(!filter1)
+	return interpolateFilter(filter2,filter1,1-ratio);
+
+    if(filter2 && filter2->type != filter1->type)
+	syntaxerror("can't interpolate between %s and %s filters yet", filtername[filter1->type], filtername[filter2->type]);
+   
+    if(filter1->type == FILTERTYPE_BLUR) {
+	FILTER_BLUR*f1 = (FILTER_BLUR*)filter1;
+	FILTER_BLUR*f2 = (FILTER_BLUR*)filter2;
+	if(f2 && f1->blurx == f2->blurx && f1->blury == f2->blury)
+	    return 0;
+	FILTER_BLUR*f = (FILTER_BLUR*)swf_NewFilter(FILTERTYPE_BLUR);
+	f->blurx= (f1->blurx)*(1-ratio) + (f2?f2->blurx:0)*ratio;
+	f->blury= (f1->blury)*(1-ratio) + (f2?f2->blury:0)*ratio;
+	f->passes= (f1->passes)*(1-ratio) + (f2?f2->passes:0)*ratio;
+	return (FILTER*)f;
+    } else if (filter1->type == FILTERTYPE_DROPSHADOW) {
+	FILTER_DROPSHADOW*f1 = (FILTER_DROPSHADOW*)filter1;
+	FILTER_DROPSHADOW*f2 = (FILTER_DROPSHADOW*)filter2;
+	if(f2 && !memcmp(&f1->color,&f2->color,sizeof(RGBA)) && f1->strength == f2->strength && 
+	   f1->blurx == f2->blurx && f1->blury == f2->blury && 
+	   f1->angle == f2->angle && f1->distance == f2->distance)
+	    return 0;
+	FILTER_DROPSHADOW*f = (FILTER_DROPSHADOW*)swf_NewFilter(FILTERTYPE_DROPSHADOW);
+	memcpy(f, f1, sizeof(FILTER_DROPSHADOW));
+	f->color = interpolateColor(f1->color, f2->color, ratio);
+	f->blurx= (f1->blurx)*(1-ratio) + (f2?f2->blurx:0)*ratio;
+	f->blury= (f1->blury)*(1-ratio) + (f2?f2->blury:0)*ratio;
+	f->passes= (f1->passes)*(1-ratio) + (f2?f2->passes:0)*ratio;
+	f->angle= (f1->angle)*(1-ratio) + (f2?f2->angle:0)*ratio;
+	f->distance= (f1->distance)*(1-ratio) + (f2?f2->distance:0)*ratio;
+	f->strength= (f1->strength)*(1-ratio) + (f2?f2->strength:0)*ratio;
+	return (FILTER*)f;
+    } else if (filter1->type == FILTERTYPE_BEVEL) {
+	FILTER_BEVEL*f1 = (FILTER_BEVEL*)filter1;
+	FILTER_BEVEL*f2 = (FILTER_BEVEL*)filter2;
+	if(f2 && !memcmp(&f1->shadow,&f2->shadow,sizeof(RGBA)) && 
+	   !memcmp(&f1->highlight,&f2->highlight,sizeof(RGBA)) && 
+	   f1->blurx == f2->blurx && f1->blury == f2->blury && f1->angle == f2->angle && f1->strength == f2->strength && f1->distance == f2->distance)
+	    return 0;
+	FILTER_BEVEL*f = (FILTER_BEVEL*)swf_NewFilter(FILTERTYPE_BEVEL);
+	memcpy(f, f1, sizeof(FILTER_BEVEL));
+	f->shadow = interpolateColor(f1->shadow, f2->shadow, ratio);
+	f->highlight = interpolateColor(f1->highlight, f2->highlight, ratio);
+	f->blurx= (f1->blurx)*(1-ratio) + (f2?f2->blurx:0)*ratio;
+	f->blury= (f1->blury)*(1-ratio) + (f2?f2->blury:0)*ratio;
+	f->passes= (f1->passes)*(1-ratio) + (f2?f2->passes:0)*ratio;
+	f->angle= (f1->angle)*(1-ratio) + (f2?f2->angle:0)*ratio;
+	f->distance= (f1->distance)*(1-ratio) + (f2?f2->distance:0)*ratio;
+	f->strength= (f1->strength)*(1-ratio) + (f2?f2->strength:0)*ratio;
+	return (FILTER*)f;
+    } /*else if (filter1->type == FILTERTYPE_GRADIENTGLOW) {
+	FILTER_GRADIENTGLOW*f = (FILTER_GRADIENTGLOW*)swf_NewFilter(FILTERTYPE_GRADIENTGLOW);
+	// can't interpolate gradients
+	memcpy(f, filter1, sizeof(FILTER_GRADIENTGLOW));
+	return (FILTER*)f;
+    }*/ else {
+	syntaxerror("can't interpolate %s filters yet", filtername[filter1->type]);
+    }
+    return 0;
 }
 
 parameters_t s_interpolate(parameters_t*p1, parameters_t*p2, int pos, int num)
@@ -1676,6 +1869,8 @@ parameters_t s_interpolate(parameters_t*p1, parameters_t*p2, int pos, int num)
     p.pivot.y = (p2->pivot.y-p1->pivot.y)*ratio + p1->pivot.y;
     p.pin.x = (p2->pin.x-p1->pin.x)*ratio + p1->pin.x;
     p.pin.y = (p2->pin.y-p1->pin.y)*ratio + p1->pin.y;
+
+    p.filter = interpolateFilter(p1->filter, p2->filter, ratio);
     return p;
 }
 
@@ -1698,8 +1893,12 @@ void s_change(char*instance, parameters_t p2)
     }
     
     m = s_instancepos(i->character->size, &p2);
-    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-    swf_ObjectMove(tag, i->depth, &m, &p2.cxform);
+    if(p2.blendmode || p2.filter) {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
+    } else {
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+    }
+    setPlacement(tag, 0, i->depth, m, 0, &p2, 1);
     i->parameters = p2;
 
     /* o.k., we got the start and end point set. Now iterate though all the
@@ -1716,9 +1915,14 @@ void s_change(char*instance, parameters_t p2)
 	    frame ++;
 	    p = s_interpolate(&p1, &p2, frame, allframes);
 	    m = s_instancepos(i->character->size, &p); //needed?
-	    lt = swf_InsertTag(t, ST_PLACEOBJECT2);
+
 	    i->lastFrame = currentframe;
-	    swf_ObjectMove(lt, i->depth, &m, &p.cxform);
+	    if(p.blendmode || p.filter) {
+		lt = swf_InsertTag(t, ST_PLACEOBJECT3);
+	    } else {
+		lt = swf_InsertTag(t, ST_PLACEOBJECT2);
+	    }
+	    setPlacement(lt, 0, i->depth, m, 0, &p, 1);
 	    t = lt;
 	    if(frame == allframes)
 		break;
@@ -1916,12 +2120,18 @@ int parseColor2(char*str, RGBA*color)
 	color->r = r; color->g = g; color->b = b; color->a = a;
 	return 1;
     }
+    int len=strlen(str);
+    U8 alpha = 255;
+    if(strchr(str, '/')) {
+	len = strchr(str, '/')-str;
+	sscanf(str+len+1,"%02x", &alpha);
+    }
     for(t=0;t<sizeof(colors)/sizeof(colors[0]);t++)
-	if(!strcmp(str, colors[t].name)) {
+	if(!strncmp(str, colors[t].name, len)) {
 	    r = colors[t].r;
 	    g = colors[t].g;
 	    b = colors[t].b;
-	    a = 255;
+	    a = alpha;
 	    color->r = r; color->g = g; color->b = b; color->a = a;
 	    return 1;
 	}
@@ -2061,7 +2271,7 @@ static int c_flash(map_t*args)
 	filename = outputname;
     
     if(!strcmp(compressstr, "default"))
-	compress = version==6;
+	compress = version>=6;
     else if(!strcmp(compressstr, "yes") || !strcmp(compressstr, "compress"))
 	compress = 1;
     else if(!strcmp(compressstr, "no"))
@@ -2206,6 +2416,117 @@ static int c_gradient(map_t*args)
     texture2(name, name, args, 0);
     return 0;
 }
+
+static int c_blur(map_t*args) 
+{
+    char*name = lu(args, "name");
+    char*blurstr = lu(args, "blur");
+    char*blurxstr = lu(args, "blurx");
+    char*blurystr = lu(args, "blury");
+    float blurx=1.0, blury=1.0;
+    if(blurstr[0]) {
+	blurx = parseFloat(blurstr);
+	blury = parseFloat(blurstr);
+    } 
+    if(blurxstr[0])
+	blurx = parseFloat(blurxstr);
+    if(blurystr[0])
+	blury = parseFloat(blurystr);
+    int passes = parseInt(lu(args, "passes"));
+    s_blur(name, blurx, blury, passes);
+    return 0;
+}
+
+static int c_gradientglow(map_t*args) 
+{
+    char*name = lu(args, "name");
+    char*gradient = lu(args, "gradient");
+    char*blurstr = lu(args, "blur");
+    char*blurxstr = lu(args, "blurx");
+    char*blurystr = lu(args, "blury");
+    float blurx=1.0, blury=1.0;
+    if(blurstr[0]) {
+	blurx = parseFloat(blurstr);
+	blury = parseFloat(blurstr);
+    } 
+    if(blurxstr[0])
+	blurx = parseFloat(blurxstr);
+    if(blurystr[0])
+	blury = parseFloat(blurystr);
+
+    float angle = parseFloat(lu(args, "angle")) / 180 * M_PI;
+    float distance = parseFloat(lu(args, "distance"));
+    float strength = parseFloat(lu(args, "strength"));
+    char innershadow = strcmp(lu(args, "innershadow"),"innershadow")?0:1;
+    char knockout = strcmp(lu(args, "knockout"),"knockout")?0:1;
+    char composite = strcmp(lu(args, "composite"),"composite")?0:1;
+    char ontop = strcmp(lu(args, "ontop"),"ontop")?0:1;
+    int passes = parseInt(lu(args, "passes"));
+
+    s_gradientglow(name, gradient, blurx, blury, angle, distance, strength, innershadow, knockout, composite, ontop, passes);
+    return 0;
+}
+
+static int c_dropshadow(map_t*args) 
+{
+    char*name = lu(args, "name");
+    RGBA color = parseColor(lu(args, "color"));
+    char*blurstr = lu(args, "blur");
+    char*blurxstr = lu(args, "blurx");
+    char*blurystr = lu(args, "blury");
+    float blurx=1.0, blury=1.0;
+    if(blurstr[0]) {
+	blurx = parseFloat(blurstr);
+	blury = parseFloat(blurstr);
+    } 
+    if(blurxstr[0])
+	blurx = parseFloat(blurxstr);
+    if(blurystr[0])
+	blury = parseFloat(blurystr);
+
+    float angle = parseFloat(lu(args, "angle")) / 180 * M_PI;
+    float distance = parseFloat(lu(args, "distance"));
+    float strength = parseFloat(lu(args, "strength"));
+    char innershadow = strcmp(lu(args, "innershadow"),"innershadow")?0:1;
+    char knockout = strcmp(lu(args, "knockout"),"knockout")?0:1;
+    char composite = strcmp(lu(args, "composite"),"composite")?0:1;
+    int passes = parseInt(lu(args, "passes"));
+
+    s_dropshadow(name, color, blurx, blury, angle, distance, strength, innershadow, knockout, composite, passes);
+    return 0;
+}
+
+static int c_bevel(map_t*args) 
+{
+    char*name = lu(args, "name");
+    RGBA shadow = parseColor(lu(args, "shadow"));
+    RGBA highlight = parseColor(lu(args, "highlight"));
+    char*blurstr = lu(args, "blur");
+    char*blurxstr = lu(args, "blurx");
+    char*blurystr = lu(args, "blury");
+    float blurx=1.0, blury=1.0;
+    if(blurstr[0]) {
+	blurx = parseFloat(blurstr);
+	blury = parseFloat(blurstr);
+    } 
+    if(blurxstr[0])
+	blurx = parseFloat(blurxstr);
+    if(blurystr[0])
+	blury = parseFloat(blurystr);
+
+    float angle = parseFloat(lu(args, "angle")) / 180 * M_PI;
+    float distance = parseFloat(lu(args, "distance"));
+    float strength = parseFloat(lu(args, "strength"));
+    char innershadow = strcmp(lu(args, "innershadow"),"innershadow")?0:1;
+    char knockout = strcmp(lu(args, "knockout"),"knockout")?0:1;
+    char composite = strcmp(lu(args, "composite"),"composite")?0:1;
+    char ontop = strcmp(lu(args, "ontop"),"ontop")?0:1;
+    int passes = parseInt(lu(args, "passes"));
+
+    s_bevel(name, shadow, highlight, blurx, blury, angle, distance, strength, innershadow, knockout, composite, ontop, passes);
+    return 0;
+}
+
 static int c_point(map_t*args) 
 {
     char*name = lu(args, "name");
@@ -2301,6 +2622,7 @@ static int c_placement(map_t*args, int type)
     char* pinstr = lu(args, "pin");
     char* as = map_lookup(args, "as");
     char* blendmode = lu(args, "blend");
+    char*filterstr = lu(args, "filter");
     U8 blend;
     MULADD r,g,b,a;
     float oldwidth;
@@ -2469,6 +2791,14 @@ static int c_placement(map_t*args, int type)
 	}
 	p.blendmode = blend;
     }
+    
+    if(filterstr[0]) {
+	FILTER*f = dictionary_lookup(&filters, filterstr);
+	if(!f) 
+	    syntaxerror("Unknown filter %s", filterstr);
+	p.filter = f;
+    }
+
 
     if(type == 0)
 	s_put(instance, character, p);
@@ -2953,6 +3283,12 @@ static struct {
  {"outline", c_outline, "name format=simple"},
  {"textshape", c_textshape, "name font size=100% text"},
 
+    // filters
+ {"blur", c_blur, "name blur= blurx= blury= passes=1"},
+ {"gradientglow", c_gradientglow, "name gradient blur= blurx= blury= angle=0.0 distance=0.0 strength=1.0 @innershadow=0 @knockout=0 @composite=0 @ontop=0 passes=1"},
+ {"dropshadow", c_dropshadow, "name color blur= blurx= blury= angle=0.0 distance=0.0 strength=1.0 @innershadow=0 @knockout=0 @composite=0 passes=1"},
+ {"bevel", c_bevel, "name shadow highlight blur= blurx= blury= angle=0.0 distance=0.0 strength=1.0 @innershadow=0 @knockout=0 @composite=0 @ontop=0 passes=1"},
+
     // character generators
  {"box", c_primitive, "name width height color=white line=1 @fill=none"},
  {"circle", c_primitive, "name r color=white line=1 @fill=none"},
@@ -2963,7 +3299,7 @@ static struct {
  {"edittext", c_edittext, "name font= size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0 @autosize=0 align="},
  {"morphshape", c_morphshape, "name start end"},
  {"button", c_button, "name"},
-    {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below= as="},
+    {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below= as="},
     {"on_press", c_on_press, "position=inside"},
     {"on_release", c_on_release, "position=anywhere"},
     {"on_move_in", c_on_move_in, "state=not_pressed"},
@@ -2977,12 +3313,12 @@ static struct {
  {"previousframe", c_previousframe, "name"},
 
     // object placement tags
- {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
- {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
- {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
- {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
- {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
- {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= pivot= pin= shear= rotate= ratio= above= below="},
+ {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
  {"texture", c_texture, "<i> x=0 y=0 width= height= scale= scalex= scaley= r= shear= rotate="},
