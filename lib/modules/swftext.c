@@ -1565,8 +1565,6 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
 	swf_TextSetCharRecordUTF8(tag, font, upos, scale * 20, gbits, abits);
 
 	upos= next;
-
-	printf("%s\n", upos);
     }
     free(utext);
 

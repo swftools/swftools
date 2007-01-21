@@ -495,9 +495,7 @@ SWFFONT* swf_LoadT1Font(char*filename)
 	    }
 	    last = pos;
 	    outline = outline->link;
-	    printf("t1lib: (%f,%f) ", pos.x, pos.y);
 	}
-	printf("\n");
 	
 	draw.finish(&draw);
 
