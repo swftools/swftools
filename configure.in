@@ -243,24 +243,19 @@ dnl Checks for typedefs, structures, and compiler characteristics.
  AC_TYPE_SIZE_T
  AC_STRUCT_TM
  AC_CHECK_TYPE(boolean,int) #needed for jpeglib
- dnl AC_CHECK_TYPE(bool,char)
- dnl AC_CHECK_TYPE(uchar,unsigned char)
- dnl AC_CHECK_TYPE(schar,signed char)
- dnl AC_CHECK_TYPE(word,unsigned short int)
- dnl AC_CHECK_TYPE(sword,unsigned short int)
- dnl AC_CHECK_TYPE(uint,unsigned long int)
-
-dnl Checks for library functions.
  AC_CHECK_FUNCS(popen mkstemp stat lrand48 rand srand48 srand bcopy bzero time)
 
-# ------------------------------------------------------------------
+AC_CHECK_SIZEOF([signed])
+AC_CHECK_SIZEOF([unsigned])
+AC_CHECK_SIZEOF([signed long])
+AC_CHECK_SIZEOF([unsigned long])
+AC_CHECK_SIZEOF([signed long long])
+AC_CHECK_SIZEOF([unsigned long long])
 
 RFX_CHECK_FREETYPE
 
 #RFX_CHECK_FONTCONFIG
 
-# ------------------------------------------------------------------
- 
 lame_objects= 
 lame_makefile=
 if test "x${DISABLE_LAME}" = "xtrue"; then
