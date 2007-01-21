@@ -5,7 +5,7 @@ include ../Makefile.common
 
 DEVICES = devices/file.$(O) devices/swf.$(O) devices/render.$(O) \
           devices/arts.$(O) devices/record.$(O) devices/ops.$(O) \
-	  devices/rescale.$(O) devices/bbox.$(O) devices/lrf.$(O) #devices/opengl.$(O)
+	  devices/rescale.$(O) devices/bbox.$(O) #devices/lrf.$(O) devices/opengl.$(O)
 
 all: librfxswf$(A) libpdf$(A) q.$(O) mem.$(O) os.$(O) gfxtools.$(O) gfxfont.$(O) art/libart$(A) png.$(O) mp3.$(O) wav.$(O) $(DEVICES)
 
