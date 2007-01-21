@@ -46,6 +46,7 @@ if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
         CFLAGS="$WARNINGS -O2 -g $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
+        LDFLAGS="-g $LIBS"
     else
         CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
