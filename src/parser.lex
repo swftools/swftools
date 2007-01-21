@@ -326,10 +326,19 @@ void freeTokens(struct token_t*file)
 
 struct token_t* generateTokens(char*filename)
 {
-    FILE*fi = fopen(filename, "rb");
+    FILE*fi;
     int t;
     struct token_t*result;
     int num;
+
+    if(!filename)
+	return 0;
+
+    if(!strcmp(filename,"-"))
+	fi = stdin;
+    else
+	fi = fopen(filename, "rb");
+
     if(!fi) {
 	printf("Couldn't find file %s\n", filename);
 	return 0;
@@ -359,7 +368,8 @@ struct token_t* generateTokens(char*filename)
 	    result[t].text += (int)strings.buffer;
     }
 
-    fclose(fi);
+    if(fi!=stdin)
+	fclose(fi);
     return result;
 }
 
