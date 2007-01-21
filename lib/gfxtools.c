@@ -713,10 +713,10 @@ void gfxmatrix_unit(gfxmatrix_t*m)
 }
 void gfxmatrix_multiply(gfxmatrix_t*m1, gfxmatrix_t*m2, gfxmatrix_t*dest)
 {
-    dest->m00 = m1->m00*m2->m00 + m1->m10*m2->m01 + m1->tx;
-    dest->m01 = m1->m01*m2->m00 + m1->m11*m2->m01 + m1->ty;
-    dest->m10 = m1->m00*m2->m10 + m1->m10*m2->m11 + m1->tx;
-    dest->m11 = m1->m01*m2->m10 + m1->m11*m2->m11 + m1->ty;
+    dest->m00 = m1->m00*m2->m00 + m1->m10*m2->m01;
+    dest->m01 = m1->m01*m2->m00 + m1->m11*m2->m01;
+    dest->m10 = m1->m00*m2->m10 + m1->m10*m2->m11;
+    dest->m11 = m1->m01*m2->m10 + m1->m11*m2->m11;
     dest->tx = m1->m00*m2->tx + m1->m10*m2->ty + m1->tx;
     dest->ty = m1->m01*m2->tx + m1->m11*m2->ty + m1->ty;
 }
