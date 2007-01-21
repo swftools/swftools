@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <memory.h>
+#include <math.h>
 #include "../types.h"
 #include "../mem.h"
 #include "../gfxdevice.h"
@@ -30,10 +31,14 @@
 
 typedef struct _internal {
     gfxdevice_t*out;
+    int origwidth;
+    int origheight;
     int targetwidth;
     int targetheight;
+    int centerx, centery;
     gfxmatrix_t matrix;
     double zoomwidth;
+    int keepratio;
 } internal_t;
 
 static int verbose = 1;
@@ -56,8 +61,51 @@ static void dbg(char*format, ...)
     fflush(stdout);
 }
 
+char gfxline_isRect(gfxline_t*line)
+{
+    return 1;
+    if(!line)
+	return 0;
+    double x1=line->x,y1=line->x,x2=line->x,y2=line->y;
+    int nx1=0,nx2=0,ny1=0,ny2=0;
+    line = line->next;
+    while(line) {
+	if(line->type != gfx_lineTo)
+	    return 0;
+	if(line->x < x1) {
+	    x1 = line->x;
+	    nx1++;
+	} else if(line->y < y1) {
+	    y1 = line->y;
+	    ny1++;
+	} else if(line->x > x2) {
+	    x2 = line->x;
+	    nx2++;
+	} else if(line->y > y1) {
+	    y2 = line->y;
+	    ny2++;
+	}
+	line = line->next;
+    }
+    return (nx1+nx2)==1 && (ny1+ny2)==1;
+}
+
 gfxline_t*transformgfxline(internal_t*i, gfxline_t*line)
 {
+    /* special case: transformed rectangle 
+    if(gfxline_isRect(line)) {
+	gfxbbox_t bbox = gfxline_getbbox(line);
+	if(fabs(bbox.xmin)<0.1 && fabs(bbox.ymin)<0.1 &&
+	   fabs(bbox.ymax-i->origwidth)<0.1 && fabs(bbox.ymax-i->origheight)<0.1) {
+	    gfxline_t r[5];
+	    r[0].x = 0;             r[0].y = 0;           r[0].type = gfx_moveTo;r[0].next = &r[1];
+	    r[1].x = i->targetwidth;r[1].y = 0;           r[1].type = gfx_lineTo;r[1].next = &r[2];
+	    r[2].x = i->targetwidth;r[2].y = i->targetheight;r[2].type = gfx_lineTo;r[2].next = &r[3];
+	    r[3].x = 0;             r[3].y = i->targetheight;r[3].type = gfx_lineTo;r[3].next = &r[4];
+	    r[4].x = 0;             r[4].y = 0;           r[4].type = gfx_lineTo;r[4].next = 0;
+	    return gfxline_clone(r);
+	}
+    } */
     gfxline_t*line2 = gfxline_clone(line);
     gfxline_transform(line2, &i->matrix);
     return line2;
@@ -66,14 +114,41 @@ gfxline_t*transformgfxline(internal_t*i, gfxline_t*line)
 int rescale_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
-    return i->out->setparameter(i->out,key,value);
+    if(!strcmp(key, "keepratio")) {
+	i->keepratio = atoi(value);
+	return 1;
+    } else return i->out->setparameter(i->out,key,value);
 }
 
 void rescale_startpage(gfxdevice_t*dev, int width, int height)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->matrix.m00 = (double)i->targetwidth / (double)width;
-    i->matrix.m11 = (double)i->targetheight / (double)height;
+
+    i->origwidth = width;
+    i->origheight = height;
+
+    if(i->keepratio) {
+	double rx = (double)i->targetwidth / (double)width;
+	double ry = (double)i->targetheight / (double)height;
+	if(rx<ry) {
+	    i->matrix.m00 = rx;
+	    i->matrix.m11 = rx;
+	    i->matrix.tx = 0;
+	    if(i->centery) {
+		i->matrix.ty = (i->targetheight - height*rx) / 2;
+	    }
+	} else {
+	    i->matrix.m00 = ry;
+	    i->matrix.m11 = ry;
+	    if(i->centerx) {
+		i->matrix.tx = (i->targetwidth - width*ry) / 2;
+	    }
+	    i->matrix.ty = 0;
+	}
+    } else {
+	i->matrix.m00 = (double)i->targetwidth / (double)width;
+	i->matrix.m11 = (double)i->targetheight / (double)height;
+    }
     i->out->startpage(i->out,i->targetwidth,i->targetheight);
 }
 
@@ -188,6 +263,7 @@ void gfxdevice_rescale_init(gfxdevice_t*dev, gfxdevice_t*out, int width, int hei
     i->targetwidth = width;
     i->targetheight = height;
     i->zoomwidth = 1.0;
+    i->centerx = 1;
 
     i->out = out;
 }
