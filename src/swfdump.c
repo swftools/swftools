@@ -473,6 +473,48 @@ void handleVideoFrame(TAG*tag, char*prefix)
     printf(" quant: %d ", quantizer);
 }
 
+void dumpFilter(FILTER*filter)
+{
+    if(filter->type == FILTERTYPE_BLUR) {
+	FILTER_BLUR*f = (FILTER_BLUR*)filter;
+	printf("blurx: %f blury: %f\n", f->blurx, f->blury);
+	printf("passes: %d\n", f->passes);
+    } if(filter->type == FILTERTYPE_DROPSHADOW) {
+	FILTER_DROPSHADOW*f = (FILTER_DROPSHADOW*)filter;
+	printf("blurx: %f blury: %f\n", f->blurx, f->blury);
+	printf("passes: %d\n", f->passes);
+	printf("angle: %f distance: %f\n", f->angle, f->distance);
+	printf("strength: %f passes: %d\n", f->strength, f->passes);
+	printf("flags: %s%s%s\n", 
+		f->knockout?"knockout ":"",
+		f->composite?"composite ":"",
+		f->innershadow?"innershadow ":"");
+    } if(filter->type == FILTERTYPE_BEVEL) {
+	FILTER_BEVEL*f = (FILTER_BEVEL*)filter;
+	printf("blurx: %f blury: %f\n", f->blurx, f->blury);
+	printf("passes: %d\n", f->passes);
+	printf("angle: %f distance: %f\n", f->angle, f->distance);
+	printf("strength: %f passes: %d\n", f->strength, f->passes);
+	printf("flags: %s%s%s%s\n", 
+		f->ontop?"ontop":"",
+		f->knockout?"knockout ":"",
+		f->composite?"composite ":"",
+		f->innershadow?"innershadow ":"");
+    } if(filter->type == FILTERTYPE_GRADIENTGLOW) {
+	FILTER_GRADIENTGLOW*f = (FILTER_GRADIENTGLOW*)filter;
+	swf_DumpGradient(stdout, f->gradient);
+	printf("blurx: %f blury: %f\n", f->blurx, f->blury);
+	printf("angle: %f distance: %f\n", f->angle, f->distance);
+	printf("strength: %f passes: %d\n", f->strength, f->passes);
+	printf("flags: %s%s%s%s\n", 
+		f->knockout?"knockout ":"",
+		f->ontop?"ontop ":"",
+		f->composite?"composite ":"",
+		f->innershadow?"innershadow ":"");
+    }
+    rfx_free(filter);
+}
+
 void handlePlaceObject23(TAG*tag, char*prefix)
 {
     U8 flags,flags2=0;
@@ -524,12 +566,20 @@ void handlePlaceObject23(TAG*tag, char*prefix)
 
     if(flags2&1) { // filter list
 	U8 num = swf_GetU8(tag);
-	printf("%d filters\n");
+	if(placements)
+	    printf("\n%d filters\n", num);
 	char*filtername[] = {"dropshadow","blur","glow","bevel","gradientglow","convolution","colormatrix","gradientbevel"};
-	for(;num;num--) {
-	    U8 type = swf_GetU8(tag);
-	    printf("filter %d: %02x (%s)\n", type, type<sizeof(filtername)/sizeof(filtername[0])?filtername[type]:"?");
-	    return;// FIXME
+	int t;
+	for(t=0;t<num;t++) {
+	    FILTER*filter = swf_GetFilter(tag);
+	    if(!filter) {
+		printf("\n"); 
+		return;
+	    }
+	    if(placements) {
+		printf("filter %d: %02x (%s)\n", t, filter->type, (filter->type<sizeof(filtername)/sizeof(filtername[0]))?filtername[filter->type]:"?");
+		dumpFilter(filter);
+	    }
 	}
     }
     if(flags2&2) { // blend mode
@@ -628,7 +678,7 @@ char* fillstyle2str(FILLSTYLE*style)
 	case 0x00:
 	    sprintf(stylebuf, "SOLID %02x%02x%02x%02x", style->color.r, style->color.g, style->color.b, style->color.a);
 	    break;
-	case 0x10: case 0x12:
+	case 0x10: case 0x11: case 0x12: case 0x13:
 	    sprintf(stylebuf, "GRADIENT (%d steps)", style->gradient.num);
 	    break;
 	case 0x40: case 0x42:
