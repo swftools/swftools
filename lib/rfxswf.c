@@ -82,7 +82,7 @@ void swf_SetTagPos(TAG * t,U32 pos)
 
 char* swf_GetString(TAG*t)
 {
-    char* str = ((char*)(&(t)->data[(t)->pos]));
+    int pos = t->pos;
     while(t->pos < t->len && swf_GetU8(t));
     /* make sure we always have a trailing zero byte */
     if(t->pos == t->len) {
@@ -93,7 +93,7 @@ char* swf_GetString(TAG*t)
       }
       t->data[t->len] = 0;
     }
-    return str;
+    return (char*)&(t->data[pos]);
 }
 
 U8 swf_GetU8(TAG * t)
@@ -260,6 +260,29 @@ int swf_SetBits(TAG * t,U32 v,int nbits)
 
 // Advanced Data Access Functions
 
+double swf_GetFixed(TAG * t)
+{
+  U16 low =  swf_GetU16(t);
+  U16 high = swf_GetU16(t);
+  return high + low*(1/65536.0);
+}
+void swf_SetFixed(TAG * t, double f)
+{
+  swf_SetU16(t, (U16)((f-(int)f)*65536));
+  swf_SetU16(t, (U16)f);
+}
+float swf_GetFixed8(TAG * t)
+{
+  U8 low =  swf_GetU8(t);
+  U8 high = swf_GetU8(t);
+  return high + low*(1/256.0);
+}
+void swf_SetFixed8(TAG * t, float f)
+{
+  swf_SetU8(t, (U8)((f-(int)f)*256));
+  swf_SetU8(t, (U8)f);
+}
+
 int swf_SetRGB(TAG * t,RGBA * col)
 { if (!t) return -1;
   if (col)
@@ -309,19 +332,24 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
       memset(gradient, 0, sizeof(GRADIENT));
       return;
     }
-    if(!gradient)
-	gradient = &dummy;
-    gradient->num = swf_GetU8(tag);
+    U8 num = swf_GetU8(tag);
+    if(gradient) {
+	gradient->num = num;
+	gradient->rgba = rfx_calloc(sizeof(RGBA)*gradient->num);
+	gradient->ratios = rfx_calloc(sizeof(gradient->ratios[0])*gradient->num);
+    }
     for(t=0;t<gradient->num;t++)
     {
-	int s=t;
-	if(s>=8) //FIXME
-	    s=7;
-	gradient->ratios[t] = swf_GetU8(tag);
+	U8 ratio = swf_GetU8(tag);
+	RGBA color;
 	if(!alpha)
-	    swf_GetRGB(tag, &gradient->rgba[t]);
+	    swf_GetRGB(tag, &color);
 	else
-	    swf_GetRGBA(tag, &gradient->rgba[t]);
+	    swf_GetRGBA(tag, &color);
+	if(gradient) {
+	  gradient->ratios[t] = ratio;
+	  gradient->rgba[t] = color;
+	}
     }
 }
 
@@ -341,6 +369,15 @@ void swf_SetGradient(TAG * tag, GRADIENT * gradient, char alpha)
 	else
 	    swf_SetRGBA(tag, &gradient->rgba[t]);
     }
+}
+
+void swf_FreeGradient(GRADIENT* gradient)
+{
+  if(gradient->ratios)
+    rfx_free(gradient->ratios);
+  if(gradient->rgba)
+    rfx_free(gradient->rgba);
+  memset(gradient, 0, sizeof(GRADIENT));
 }
 
 int swf_CountUBits(U32 v,int nbits)
@@ -1482,3 +1519,4 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfsound.c"
 #include "modules/swfdraw.c"
 #include "modules/swfrender.c"
+#include "modules/swffilter.c"
