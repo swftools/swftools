@@ -1152,6 +1152,11 @@ void s_texture(char*name, char*object, int x, int y, float scalex, float scaley,
 	fs->m.tx += p2.x;
 	fs->m.ty += p2.y;
     }
+    if(bitmap) {
+	fs->m.sx *= 20;
+	fs->m.sy *= 20;
+    }
+
 
     if(dictionary_lookup(&textures, name))
 	syntaxerror("texture %s defined twice", name);
