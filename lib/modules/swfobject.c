@@ -136,7 +136,7 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 	flags2 = (0?PF2_ASBITMAP:0)|(obj->blendmode?PF2_BLENDMODE:0)|(obj->filters?PF2_FILTERS:0);
 
 	swf_SetU8(t,flags);
-	if(t->id == ST_PLACEOBJECT2) 
+	if(t->id == ST_PLACEOBJECT3) 
 	    swf_SetU8(t,flags2);
 	swf_SetU16(t,obj->depth);
 	if (flags&PF_CHAR) swf_SetU16(t,obj->id);
@@ -149,7 +149,10 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 	if (flags&PF_NAME) swf_SetString(t,obj->name);
 
 	if (flags2&PF2_FILTERS) {
-	    // ...
+	    swf_SetU8(t,obj->filters->num);
+	    int s;
+	    for(s=0;s<obj->filters->num;s++)
+		swf_SetFilter(t,obj->filters->filter[s]);
 	}
 	if (flags2&PF2_BLENDMODE)
 	    swf_SetU8(t,obj->blendmode);
