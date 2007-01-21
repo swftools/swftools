@@ -40,6 +40,16 @@ void swf_DumpMatrix(FILE * f,MATRIX * m)
   fprintf(f," %08x, %08x \n",m->tx,m->ty);
 }
 
+void swf_DumpGradient(FILE * f,GRADIENT * g)
+{ if (!f) f = stderr;
+    fprintf(f, "%d gradient steps\n", g->num);
+    int t;
+    for(t=0;t<g->num;t++) {
+	RGBA c = g->rgba[t];
+	fprintf(f, "%d) %02x%02x%02x%02x at %d\n", t, c.r,c.g,c.b,c.a, g->ratios[t]);
+    }
+}
+
 void swf_DumpTag(FILE * f,TAG * t)
 { int i;
   if (!f) f = stderr;
