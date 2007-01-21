@@ -1774,7 +1774,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2007-01-13-1826
+VERSION=0.8.0
 
 
 # ------------------------------------------------------------------
@@ -1784,7 +1784,7 @@ if test "x${srcdir}" != "x."; then
     exit 1
 fi
 
-WARNINGS="-Wparentheses -Wimplicit -Wreturn-type -Wno-unused-value"
+WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
     WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -D_FORTIFY_SOURCE=2 "
 fi
@@ -4334,7 +4334,7 @@ else
   UNGIFMISSING=true
 fi
 
-if "$UNGIFMISSING";then
+if test "$UNGIFMISSING";then
     UNGIFMISSING=
 
 { echo "$as_me:$LINENO: checking for DGifOpen in -lgif" >&5
@@ -7251,10 +7251,9 @@ if test "x${ac_cv_header_zlib_h}" '!=' "xyes"; then
     MISSINGLIBS="${MISSINGLIBS} zlib.h"
     PARTIAL=true
 fi
-if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
-    MISSINGLIBS="${MISSINGLIBS} avifile"
-    PARTIAL=true
-fi
+#if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
+#    MISSINGLIBS="${MISSINGLIBS} avifile"
+#fi
 
 { echo "$as_me:$LINENO: result: ${MISSINGLIBS}" >&5
 echo "${ECHO_T}${MISSINGLIBS}" >&6; }
@@ -7268,7 +7267,8 @@ fi
 
 avi2swf="avi2swf/Makefile"
 if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
- echo "* Disabling avi2swf tool..."
+ #don't whine, avi2swf is outdated anyway
+ #echo "* Disabling avi2swf tool..."
  echo all install uninstall clean: > avi2swf/Makefile
  avi2swf=
 fi
