@@ -64,6 +64,7 @@ typedef struct _internal {
     int antialize;
     int zoom;
     int ymin, ymax;
+    int fillwhite;
 
     RGBA* img;
 
@@ -448,10 +449,15 @@ int render_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
     if(!strcmp(key, "antialize")) {
 	i->antialize = atoi(value);
 	i->zoom = i->antialize * i->multiply;
+	return 1;
     } else if(!strcmp(key, "multiply")) {
 	i->multiply = atoi(value);
 	i->zoom = i->antialize * i->multiply;
 	fprintf(stderr, "Warning: multiply not implemented yet\n");
+	return 1;
+    } else if(!strcmp(key, "fillwhite")) {
+	i->fillwhite = atoi(value);
+	return 1;
     }
     return 0;
 }
@@ -644,6 +650,10 @@ void render_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolo
 {
     internal_t*i = (internal_t*)dev->internal;
 
+    /* align characters to whole pixels */
+    matrix->tx = (int)(matrix->tx * i->antialize) / i->antialize;
+    matrix->ty = (int)(matrix->ty * i->antialize) / i->antialize;
+
     gfxglyph_t*glyph = &font->glyphs[glyphnr];
     gfxline_t*line2 = gfxline_clone(glyph->line);
     gfxline_transform(line2, matrix);
@@ -741,6 +751,10 @@ void render_startpage(struct _gfxdevice*dev, int width, int height)
         i->lines[y].num = 0;
     }
     i->img = (RGBA*)rfx_calloc(sizeof(RGBA)*i->width2*i->height2);
+    if(i->fillwhite) {
+	memset(i->img, 0xff, sizeof(RGBA)*i->width2*i->height2);
+    }
+
     i->ymin = 0x7fffffff;
     i->ymax = -0x80000000;
 
