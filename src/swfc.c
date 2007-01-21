@@ -681,7 +681,7 @@ static void s_endSWF()
 	warning("Empty bounding box for movie");
     }
     
-    if(do_cgi)
+    if(do_cgi || !strcmp(filename, "-"))
 	fi = fileno(stdout);
     else
 	fi = open(filename, O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
