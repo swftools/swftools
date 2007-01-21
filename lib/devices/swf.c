@@ -1804,7 +1804,6 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	    i->config_linkcolor.a);
 
     } else {
-	fprintf(stderr, "unknown parameter: %s (=%s)\n", name, value);
 	return 0;
     }
     return 1;
