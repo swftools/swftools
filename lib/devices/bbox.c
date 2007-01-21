@@ -30,11 +30,16 @@
 
 typedef struct _internal {
     gfxbbox_t bbox;
+    int do_graphics;
+    int do_text;
 } internal_t;
 
 void measuregfxline(internal_t*i, gfxline_t*line)
 {
     gfxbbox_t b = gfxline_getbbox(line);
+    if(b.xmin==0 && b.ymin==0 && b.xmax==0 && b.ymax==0) {
+	return;
+    }
     i->bbox = gfxbbox_expand_to_point(i->bbox, b.xmin, b.ymin);
     i->bbox = gfxbbox_expand_to_point(i->bbox, b.xmax, b.ymax);
 }
@@ -42,6 +47,13 @@ void measuregfxline(internal_t*i, gfxline_t*line)
 int bbox_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
+    if(!strcmp(key, "graphics")) {
+	i->do_graphics = atoi(value);
+	return 1;
+    } else if(!strcmp(key, "text")) {
+	i->do_text = atoi(value);
+	return 1;
+    }
     return 0;
 }
 
@@ -67,25 +79,29 @@ void bbox_endclip(gfxdevice_t*dev)
 void bbox_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     internal_t*i = (internal_t*)dev->internal;
-    measuregfxline(i, line);
+    if(i->do_graphics)
+	measuregfxline(i, line);
 }
 
 void bbox_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
-    measuregfxline(i, line);
+    if(i->do_graphics)
+	measuregfxline(i, line);
 }
 
 void bbox_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     internal_t*i = (internal_t*)dev->internal;
-    measuregfxline(i, line);
+    if(i->do_graphics)
+	measuregfxline(i, line);
 }
 
 void bbox_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
-    measuregfxline(i, line);
+    if(i->do_graphics)
+	measuregfxline(i, line);
 }
 
 void bbox_addfont(gfxdevice_t*dev, gfxfont_t*font)
@@ -97,11 +113,13 @@ void bbox_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*colo
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    gfxglyph_t*glyph = &font->glyphs[glyphnr];
-    gfxline_t*line2 = gfxline_clone(glyph->line);
-    gfxline_transform(line2, matrix);
-    measuregfxline(i, line2);
-    gfxline_free(line2);
+    if(i->do_text) {
+	gfxglyph_t*glyph = &font->glyphs[glyphnr];
+	gfxline_t*line2 = gfxline_clone(glyph->line);
+	gfxline_transform(line2, matrix);
+	measuregfxline(i, line2);
+	gfxline_free(line2);
+    }
 }
 
 void bbox_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
@@ -148,5 +166,8 @@ void gfxdevice_bbox_init(gfxdevice_t*dev)
     dev->drawlink = bbox_drawlink;
     dev->endpage = bbox_endpage;
     dev->finish = bbox_finish;
+
+    i->do_graphics = 1;
+    i->do_text = 1;
 }
 
