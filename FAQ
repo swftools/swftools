@@ -47,6 +47,12 @@
     ranlib /usr/local/lib/libjpeg.a
     ldconfig /usr/local/lib
 
+    In order to install jpeglib, it's furthermore been remarked that you need
+    to do
+    make install-lib
+    make install-headers
+    .
+
     If it still doesn't work, try removing the file "config.cache"
     before running configure again.
 
