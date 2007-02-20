@@ -78,6 +78,7 @@ typedef struct _swfoutput_internal
     int config_enablezlib;
     int config_insertstoptag;
     int config_flashversion;
+    int config_reordertags;
     int config_splinemaxerror;
     int config_fontsplinemaxerror;
     int config_filloverlap;
@@ -234,6 +235,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_linktarget=0;
     i->config_internallinkfunction=0;
     i->config_externallinkfunction=0;
+    i->config_reordertags=1;
 
     i->config_linkcolor.r = i->config_linkcolor.g = i->config_linkcolor.b = 255;
     i->config_linkcolor.a = 0x40;
@@ -1231,7 +1233,8 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	i->swf->compressed = 1;
     }
 
-    swf_Optimize(i->swf);
+    if(i->config_reordertags)
+	swf_Optimize(i->swf);
 }
 
 int swfresult_save(gfxresult_t*gfx, char*filename)
@@ -1754,6 +1757,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
 	i->config_bboxvars = atoi(value);
+    } else if(!strcmp(name, "reordertags")) {
+	i->config_reordertags = atoi(value);
     } else if(!strcmp(name, "internallinkfunction")) {
 	i->config_internallinkfunction = strdup(value);
     } else if(!strcmp(name, "externallinkfunction")) {
