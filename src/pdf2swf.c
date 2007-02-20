@@ -690,41 +690,23 @@ int main(int argn, char *argv[])
     char*zip = "";
     if(zlib)
 	zip = "-z";
-#undef SYSTEM_BACKTICKS
-    if(viewer && !preloader) {
-#ifdef SYSTEM_BACKTICKS
-	systemf("swfcombine %s `swfdump -XY \"%s\"` \"%s\" viewport=\"%s\" -o \"%s\"",zip,
-		viewer, outputname, outputname);
-#else
 	systemf("swfcombine %s -X %d -Y %d \"%s\" viewport=\"%s\" -o \"%s\"",zip,width,height,
 		viewer, outputname, outputname);
-#endif
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && !viewer) {
 	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-#ifdef SYSTEM_BACKTICKS
-	ret = systemf("swfcombine %s `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,
-		preloader, SWFDIR, preloader, outputname, outputname);
-#else
 	ret = systemf("swfcombine %s -Y %d -X %d %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,width,height,
 		SWFDIR, preloader, outputname, outputname);
-#endif
 	if(!system_quiet)
 	    printf("\n");
     }
     if(preloader && viewer) {
 	systemf("swfcombine \"%s\" viewport=%s -o __tmp__.swf",
-		viewer, outputname, outputname);
-#ifdef SYSTEM_BACKTICKS
-	systemf("swfcombine %s `swfdump -XY \"%s\"` `swfdump -r \"%s\"` %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,
-		outputname, preloader, SWFDIR, preloader, outputname);
-#else
-	/* TODO: read out rate */
+		viewer, outputname);
 	systemf("swfcombine %s -X %d -Y %d -r %f %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,width,height,
-		getRate(preloader), preloader, SWFDIR, preloader, outputname);
-#endif
+		getRate(preloader), SWFDIR, preloader, outputname);
 	systemf("rm __tmp__.swf");
     }
 
