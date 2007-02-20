@@ -446,7 +446,7 @@ void fill_solid(gfxdevice_t*dev, gfxcolor_t* color)
 int render_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
-    if(!strcmp(key, "antialize")) {
+    if(!strcmp(key, "antialize") || !strcmp(key, "antialise")) {
 	i->antialize = atoi(value);
 	i->zoom = i->antialize * i->multiply;
 	return 1;
@@ -670,25 +670,72 @@ void render_result_write(gfxresult_t*r, int filedesc)
 }
 int render_result_save(gfxresult_t*r, char*filename)
 {
-    /*internal_result_t*i= (internal_result_t*)r->internal;
+    internal_result_t*i= (internal_result_t*)r->internal;
+    if(!i) {
+	return 0; // no pages drawn
+    }
     if(i->next) {
 	int nr=0;
+	char filenamebuf[256];
+	char*origname = strdup(filename);
+	int l = strlen(origname);
+	if(l>3 && strchr("gG",origname[l-1]) && strchr("nN",filename[l-2]) &&
+		strchr("pP",origname[l-3]) && filename[l-4]=='.') {
+	    origname[l-4] = 0;
+	}
 	while(i->next) {
+	    sprintf(filenamebuf, "%s.%d.png", origname, nr);
 	    writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
 	    nr++;
 	}
+	free(origname);
     } else {
 	writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
-    }*/
+    }
     return 1;
+}
+char*gfximage_asXPM(gfximage_t*img, int depth)
+{
+    int d= 256/depth;
+    char*str = (char*)malloc(img->width*img->height*4 + 500 + 16*depth*depth*depth);
+    char*p = str;
+    p+= sprintf(p, "static char *noname[] = {\n\"%d %d 262144 3\",\n");
+    int r,g,b;
+    for(r=0;r<depth;r++)
+    for(g=0;g<depth;g++)
+    for(b=0;b<depth;b++) {
+	p += sprintf(p, "\"%c%c%c c #%02x%02x%02x\",\n", r+32,g+32,b+32, r*d,g*d,b*d);
+    }
+    int y;
+    for(y=0;y<img->height;y++)  {
+	p+=sprintf(p, "\"");
+	gfxcolor_t*col = &img->data[y*img->height];
+	int x;
+	for(x=0;x<img->width;x++) {
+	    p+=sprintf(p, "%c%c%c", 32+(col->r/d), 32+(col->g/d), 32+(col->b/d));
+	}
+	p+=sprintf(p, "\",\n");
+    }
+    *p = 0;
+    return p;
 }
 void*render_result_get(gfxresult_t*r, char*name)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
-    if(!strncmp(name,"page",4)) {
+    if(!strncmp(name,"xpm",3)) {
+	int pagenr = atoi(&name[3]);
+	if(pagenr<0)
+	    pagenr=0;
+	while(pagenr>0) {
+	    i = i->next;
+	    if(!i)
+		return 0;
+	}
+	return gfximage_asXPM(&i->img, 64);
+    } else if(!strncmp(name,"page",4)) {
 	int pagenr = atoi(&name[4]);
 	if(pagenr<0)
-	    return 0;
+	    pagenr=0;
 	while(pagenr>0) {
 	    i = i->next;
 	    if(!i)
