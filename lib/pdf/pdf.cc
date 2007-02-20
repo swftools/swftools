@@ -1,6 +1,7 @@
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../log.h"
+#include "config.h"
 #include "GlobalParams.h"
 #include "InfoOutputDev.h"
 #include "GFXOutputDev.h"
@@ -344,6 +345,9 @@ gfxdocument_t*pdf_open(char*filename)
     for(t=1;t<=pdf_doc->num_pages;t++) {
 	if(!global_page_range || is_in_range(t, global_page_range)) {
 	    i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
+#if xpdfUpdateVersion >= 16
+	    i->doc->processLinks((OutputDev*)io, t);
+#endif
 	    i->pages[t-1].xMin = io->x1;
 	    i->pages[t-1].yMin = io->y1;
 	    i->pages[t-1].xMax = io->x2;
