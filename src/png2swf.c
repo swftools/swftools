@@ -513,7 +513,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	}
 	if(!strncmp(tagid, "PLTE", 4)) {
 	    palette = data;
-	    palettelen = len/bypp;
+	    palettelen = len/3;
 	    data = 0; //don't free data
 	    if(VERBOSE(2))
 		printf("%d colors in palette\n", palettelen);
