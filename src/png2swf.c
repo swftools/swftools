@@ -76,7 +76,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
-    //rgb.g = 0xff; //<--- handy for testing alpha conversion
+    rgb.g = 0xff; //<--- handy for testing alpha conversion
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -179,7 +179,7 @@ int png_read_header(FILE*fi, struct png_header*header)
 	    header->width = REVERSESWAP32(*(U32*)&data[0]);
 	    header->height = REVERSESWAP32(*(U32*)&data[4]);
 	    a = data[8];      // should be 8
-	    b = data[9];      // should be 3(indexed) or 2(rgb)
+	    b = data[9];      // should be 3(indexed), 2(rgb), 0(grayscale) or 6(truecolor+alpha)
 
 	    c = data[10];     // compression mode (0)
 	    f = data[11];     // filter mode (0)
@@ -525,9 +525,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 		data = 0; //don't free data
 		if(VERBOSE(2))
 		    printf("found %d alpha colors\n", alphapalettelen);
-	    } else if(header.mode == 0) {
+	    } else if(header.mode == 0 || header.mode == 2) {
 		int t;
-		if(header.mode == 3) { // palette or grayscale?
+		if(header.mode == 2) { // palette or grayscale?
 		    alphacolor[0] = data[1];
 		    alphacolor[1] = data[3];
 		    alphacolor[2] = data[5];
@@ -605,10 +605,22 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
-	    if(header.mode==6)
+	    if(header.mode==6) {
 		applyfilter4(mode, src, old, dest, header.width);
-	    else if(header.mode==2)
+	    } else if(header.mode==2) {
 		applyfilter3(mode, src, old, dest, header.width);
+		/* replace alpha color */
+		if(hasalphacolor) {
+		    int x;
+		    for(x=0;x<header.width;x++) {
+			if(dest[x*4+1] == alphacolor[0] &&
+			   dest[x*4+2] == alphacolor[1] &&
+			   dest[x*4+3] == alphacolor[2]) {
+			    *(U32*)&dest[x*4] = 0;
+			}
+		    }
+		}
+	    }
 	}
 	free(firstline);
 

@@ -634,10 +634,22 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
-	    if(header.mode == 6)
+	    if(header.mode == 6) {
 		applyfilter4(mode, src, old, dest, header.width);
-	    else // header.mode = 2
+	    } else { // header.mode = 2
 		applyfilter3(mode, src, old, dest, header.width);
+		/* replace alpha color */
+		if(hasalphacolor) {
+		    int x;
+		    for(x=0;x<header.width;x++) {
+			if(dest[x*4+1] == alphacolor[0] &&
+			   dest[x*4+2] == alphacolor[1] &&
+			   dest[x*4+3] == alphacolor[2]) {
+			    *(U32*)&dest[x*4] = 0;
+			}
+		    }
+		}
+	    }
 	}
         free(imagedata);
     } else if(header.mode == 0 || header.mode == 3) {
