@@ -1200,7 +1200,11 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     device->fill(device, clippath, &white);
 }
 
-void GFXOutputDev::processLink(Link *link, Catalog *catalog) 
+#if xpdfUpdateVersion >= 16
+void GFXOutputDev::processLink(Link *link, Catalog *catalog)
+#else
+void GFXOutputDev::drawLink(Link *link, Catalog *catalog) 
+#endif
 {
     double x1, y1, x2, y2, w;
     gfxline_t points[5];
@@ -2396,7 +2400,8 @@ void GFXOutputDev::stroke(GfxState *state)
 
 void GFXOutputDev::fill(GfxState *state) 
 {
-    dbg("fill");
+    gfxcolor_t col = getFillColor(state);
+    dbg("fill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
@@ -2406,19 +2411,12 @@ void GFXOutputDev::fill(GfxState *state)
 
 void GFXOutputDev::eoFill(GfxState *state) 
 {
-    dbg("eofill");
+    gfxcolor_t col = getFillColor(state);
+    dbg("eofill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
     GfxPath * path = state->getPath();
-    gfxcolor_t col = getFillColor(state);
-
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> eofill\n");
-        dump_outline(line);
-    }
-
-    device->fill(device, line, &col);
+    fillGfxLine(state, line);
     gfxline_free(line);
 }
 
@@ -2758,6 +2756,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 
     gfxdevice_t belowrender;
     gfxdevice_render_init(&belowrender);
+    belowrender.setparameter(&belowrender, "fillwhite", "1"); //for isolated=0?
     belowrender.setparameter(&belowrender, "antialize", "2");
     belowrender.startpage(&belowrender, width, height);
     gfxresult_record_replay(below, &belowrender);
