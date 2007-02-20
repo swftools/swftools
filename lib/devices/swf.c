@@ -738,6 +738,18 @@ static void endtext(gfxdevice_t*dev)
 
     putcharacters(dev, i->tag);
     swf_SetU8(i->tag,0);
+
+    if(i->swf->fileVersion >= 8) {
+	i->tag = swf_InsertTag(i->tag, ST_CSMTEXTSETTINGS);
+	swf_SetU16(i->tag, i->textid);
+	//swf_SetU8(i->tag, /*subpixel grid*/(2<<3)|/*flashtype*/0x40);
+	//swf_SetU8(i->tag, /*grid*/(1<<3)|/*flashtype*/0x40);
+	//swf_SetU8(i->tag, /*grid*/(0<<3)|/*flashtype*/0x40);
+	swf_SetU8(i->tag, /*grid*/(1<<3)|/*no flashtype*/0x00);
+	swf_SetU32(i->tag, 0);//thickness
+	swf_SetU32(i->tag, 0);//sharpness
+	swf_SetU8(i->tag, 0);//reserved
+    }
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
 
     swf_ObjectPlace(i->tag,i->textid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
@@ -1885,10 +1897,10 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     int num_colors = swf_ImageGetNumberOfPaletteEntries(mem,sizex,sizey,0);
     int has_alpha = swf_ImageHasAlpha(mem,sizex,sizey);
     
-    msg("<verbose> Drawing %dx%d %s%simage at size %dx%d (%dx%d), %s%d colors",
+    msg("<verbose> Drawing %dx%d %s%simage (id %d) at size %dx%d (%dx%d), %s%d colors",
 	    sizex, sizey, 
 	    has_alpha?(has_alpha==2?"semi-transparent ":"transparent "):"", 
-	    is_jpeg?"jpeg-":"",
+	    is_jpeg?"jpeg-":"", i->currentswfid+1,
 	    newsizex, newsizey,
 	    targetwidth, targetheight,
 	    /*newsizex, newsizey,*/
