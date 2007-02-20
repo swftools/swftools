@@ -1039,7 +1039,7 @@ int main (int argc,char ** argv)
 
             printf(" at depth %04d", swf_GetDepth(tag));
 
-	    if(tag->data[1]&4)
+	    if(tag->id == ST_PLACEOBJECT3 && tag->data[1]&4)
 		printf(" as bitmap");
 	   
 	    swf_SetTagPos(tag, 0);
@@ -1134,6 +1134,26 @@ int main (int argc,char ** argv)
 	    } else {
 		printf("\n");
 	    }
+	}
+	else if(tag->id == ST_CSMTEXTSETTINGS) {
+	    U16 id = swf_GetU16(tag);
+	    U8 flags = swf_GetU8(tag);
+	    printf(" (");
+	    if(flags&0x40) {
+		printf("flashtype,");
+	    }
+	    switch(((flags>>3)&7)) {
+		case 0:printf("no grid,");break;
+		case 1:printf("pixel grid,");break;
+		case 2:printf("subpixel grid,");break;
+		case 3:printf("unknown grid,");break;
+	    }
+	    if(flags&0x87) 
+		printf("unknown[%08x],", flags);
+	    float thickness = swf_GetFixed(tag);
+	    float sharpness = swf_GetFixed(tag);
+	    printf("s=%.2f,t=%.2f)\n", thickness, sharpness);
+	    swf_GetU8(tag);
 	}
 	else if(tag->id == ST_DEFINEBITSLOSSLESS ||
 	   tag->id == ST_DEFINEBITSLOSSLESS2) {
