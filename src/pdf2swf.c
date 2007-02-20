@@ -688,7 +688,7 @@ int main(int argn, char *argv[])
     pdf->destroy(pdf);
 
     char*zip = "";
-    if(zlib)
+    if(zlib) {
 	zip = "-z";
 	systemf("swfcombine %s -X %d -Y %d \"%s\" viewport=\"%s\" -o \"%s\"",zip,width,height,
 		viewer, outputname, outputname);
