@@ -241,7 +241,7 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
 	    map16_enumerate(depthmap, increaseAge, 0);
 	}
     }
-    return 0;
+    return depthmap;
 }
 
 // ---- render handling ----
@@ -539,6 +539,7 @@ gfxdocument_t*swf_open(char*filename)
     i->width = (swf.movieSize.xmax - swf.movieSize.xmin) / 20;
     i->height = (swf.movieSize.ymax - swf.movieSize.ymin) / 20;
 
+    swf_doc->num_pages = swf.frameCount;
     swf_doc->internal = i;
     swf_doc->get = 0;
     swf_doc->destroy = swf_doc_destroy;

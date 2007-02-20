@@ -17,6 +17,9 @@ libswf_objects = swf.$(O)
 	$(AR) r ../libswf$(A)
 	$(RANLIB) ../libswf$(A)
 
+swfrender: $(libswf_objects) ../../src/swfrender.c ../devices/render.$(O)
+	$(L) ../../src/swfrender.c $(libswf_objects) ../librfxswf$(A) ../gfxtools.$(O) ../png.$(O) ../devices/render.$(O) -o swfrender $(LIBS)
+
 install:
 uninstall:
 
