@@ -22,6 +22,7 @@ typedef struct _swf_doc_internal
     int clips;
     SWF swf;
     int width,height;
+    MATRIX m;
 } swf_doc_internal_t;
 
 #define TYPE_SHAPE 1
@@ -233,14 +234,17 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
 	    U16 depth = swf_GetDepth(tag);
 	    map16_remove_id(depthmap, depth);
 	}
-	if(tag->id == ST_SHOWFRAME) {
+	if(tag->id == ST_SHOWFRAME || tag->id == ST_END) {
 	    if(frame == frame_to_extract) {
 		return depthmap;
 	    }
-	    frame++;
-	    map16_enumerate(depthmap, increaseAge, 0);
+	    if(tag->id == ST_SHOWFRAME) {
+		frame++;
+		map16_enumerate(depthmap, increaseAge, 0);
+	    }
 	}
     }
+    fprintf(stderr, "gfxsource_swf: frame %d not found\n", frame_to_extract);
     return depthmap;
 }
 
@@ -250,6 +254,7 @@ typedef struct _render
 {
     map16_t*id2char;
     gfxdevice_t*device;
+    MATRIX m;
     int clips;
 } render_t;
 
@@ -391,7 +396,9 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
     if(c->type == TYPE_SHAPE) {
 	SHAPE2 shape;
 	swf_ParseDefineShape(c->tag, &shape);
-	swf_ApplyMatrixToShape(&shape, &p->po.matrix);
+	MATRIX m;
+	swf_MatrixJoin(&m, &r->m, &p->po.matrix);
+	swf_ApplyMatrixToShape(&shape, &m);
 	SHAPELINE*line = shape.lines;
 	int t;
 	for(t=1;t<=shape.numfillstyles;t++) {
@@ -455,6 +462,7 @@ void swfpage_render(gfxpage_t*page, gfxdevice_t*output)
     r.id2char = pi->id2char;
     r.clips = 0;
     r.device = output;
+    r.m = pi->m;
     map16_enumerate(depths, placeObject, &r);
 }
 
@@ -515,7 +523,6 @@ gfxdocument_t*swf_open(char*filename)
 
     TAG*tag = 0;
     int f;
-    SWF swf;
     int frame;
     render_t r;
     gfxdevice_t d;
@@ -528,18 +535,22 @@ gfxdocument_t*swf_open(char*filename)
         perror("Couldn't open file: ");
 	return 0;
     }
-    if FAILED(swf_ReadSWF(f,&swf)) { 
+    if FAILED(swf_ReadSWF(f,&i->swf)) { 
         fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
         close(f);
 	return 0;
     }
-    swf_UnFoldAll(&swf);
+    swf_UnFoldAll(&i->swf);
     
-    i->id2char = extractDefinitions(&swf);
-    i->width = (swf.movieSize.xmax - swf.movieSize.xmin) / 20;
-    i->height = (swf.movieSize.ymax - swf.movieSize.ymin) / 20;
+    i->id2char = extractDefinitions(&i->swf);
+    i->width = (i->swf.movieSize.xmax - i->swf.movieSize.xmin) / 20;
+    i->height = (i->swf.movieSize.ymax - i->swf.movieSize.ymin) / 20;
+    
+    swf_GetMatrix(0, &i->m);
+    i->m.tx = -i->swf.movieSize.xmin;
+    i->m.ty = -i->swf.movieSize.ymin;
 
-    swf_doc->num_pages = swf.frameCount;
+    swf_doc->num_pages = i->swf.frameCount;
     swf_doc->internal = i;
     swf_doc->get = 0;
     swf_doc->destroy = swf_doc_destroy;
