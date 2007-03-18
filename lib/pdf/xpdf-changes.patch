@@ -6,13 +6,15 @@ retrieving revision 1.10
 diff -u -r1.9 -r1.10
 --- Gfx.cc	3 Dec 2005 10:11:33 -0000	1.9
 +++ Gfx.cc	3 Dec 2005 10:30:41 -0000	1.10
-@@ -439,7 +439,9 @@
+@@ -439,7 +439,11 @@
    fontChanged = gFalse;
    clip = clipNone;
    ignoreUndef = 0;
 -  out->startPage(pageNum, state);
 +  if(cropBox) {
 +      out->startPage(pageNum, state, cropBox->x1,cropBox->y1,cropBox->x2,cropBox->y2);
++  } else {
++      out->startPage(pageNum, state, 0,0,0,0);
 +  }
    out->setDefaultCTM(state->getCTM());
    out->updateAll(state);
@@ -665,14 +667,3 @@ diff -u -r1.5 -r1.6
  #include "gmem.h"
  #include "GString.h"
  #include "gfile.h"
---- xpdf/pdftoppm.cc.orig	2007-03-07 18:00:34.000000000 +0100
-+++ xpdf/pdftoppm.cc	2007-03-07 18:00:41.000000000 +0100
-@@ -179,7 +179,7 @@
-   splashOut->startDoc(doc->getXRef());
-   for (pg = firstPage; pg <= lastPage; ++pg) {
-     doc->displayPage(splashOut, pg, resolution, resolution, 0,
--		     gFalse, gTrue, gFalse);
-+		     /*usemediabox*/gTrue, gTrue, gFalse);
-     sprintf(ppmFile, "%.*s-%06d.%s",
- 	    (int)sizeof(ppmFile) - 32, ppmRoot, pg,
- 	    mono ? "pbm" : gray ? "pgm" : "ppm");
