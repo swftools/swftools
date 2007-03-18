@@ -48,6 +48,7 @@ ${name}/pdf2swf/fonts/Makefile.in \
 ${name}/lib/art/Makefile.in \
 ${name}/src/Makefile.in \
 ${name}/lib/Makefile.in \
+${name}/lib/swf/Makefile.in \
 ${name}/avi2swf/Makefile.in \
 ${name}/lib/pdf/Makefile.in \
 ${name}/lib/action/Makefile.in \
@@ -250,7 +251,7 @@ ${name}/lib/art/art_config.h \
 ${name}/lib/art/config.h \
 ${name}/lib/pdf/xpdf/gfile.cc \
 ${name}/lib/pdf/xpdf/gfile.h \
-${name}/lib/pdf/xpdf/gmem.c \
+${name}/lib/pdf/xpdf/gmem.cc \
 ${name}/lib/pdf/xpdf/gmem.h \
 ${name}/lib/pdf/xpdf/gtypes.h \
 ${name}/lib/pdf/xpdf/FoFiBase.cc \
