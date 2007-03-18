@@ -550,6 +550,8 @@ static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
                 swf_GetMatrix(tag, &dest->m);
                 swf_ResetReadBits(tag);
                 swf_GetGradient(tag, &dest->gradient, num>=3?1:0);
+		if(type == 0x13)
+		    swf_GetU8(tag);
             }
             else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
             {
