@@ -83,11 +83,7 @@ public:
   void setXRef(PDFDoc*doc, XRef *xref);
 
   //----- link borders
-#if xpdfUpdateVersion >= 16
   virtual void processLink(Link *link, Catalog *catalog);
-#else
-  virtual void drawLink(Link *link, Catalog *catalog);
-#endif
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state) ;

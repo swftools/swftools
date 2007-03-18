@@ -1200,11 +1200,8 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     device->fill(device, clippath, &white);
 }
 
-#if xpdfUpdateVersion >= 16
+
 void GFXOutputDev::processLink(Link *link, Catalog *catalog)
-#else
-void GFXOutputDev::drawLink(Link *link, Catalog *catalog) 
-#endif
 {
     double x1, y1, x2, y2, w;
     gfxline_t points[5];
@@ -1562,7 +1559,7 @@ char*GFXOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
       }
       FoFiType1C *cvt = FoFiType1C::make(fontBuf, fontLen);
       if(!cvt) return 0;
-      cvt->convertToType1(NULL, gTrue, FoFiWrite, f);
+      cvt->convertToType1(0, NULL, gTrue, FoFiWrite, f);
       //cvt->convertToCIDType0("test", f);
       //cvt->convertToType0("test", f);
       delete cvt;

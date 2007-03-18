@@ -1,24 +1,3 @@
-Index: FoFiType1C.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/FoFiType1C.cc,v
-retrieving revision 1.3
-retrieving revision 1.4
-diff -u -r1.3 -r1.4
---- FoFiType1C.cc	3 Dec 2005 10:11:33 -0000	1.3
-+++ FoFiType1C.cc	3 Dec 2005 10:30:41 -0000	1.4
-@@ -231,8 +231,11 @@
-     (*outputFunc)(outputStream,
- 		  "0 1 255 {1 index exch /.notdef put} for\n", 40);
-     enc = newEncoding ? newEncoding : encoding;
-+    if(!enc) {
-+	fprintf(stderr, "convertToType1: Warning: No Encoding\n");
-+    }
-     for (i = 0; i < 256; ++i) {
--      if (enc[i]) {
-+      if (enc && enc[i]) {
- 	sprintf(buf, "dup %d /%s put\n", i, enc[i]);
- 	(*outputFunc)(outputStream, buf, strlen(buf));
-       }
 Index: Gfx.cc
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Gfx.cc,v

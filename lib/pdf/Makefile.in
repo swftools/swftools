@@ -116,8 +116,8 @@ xpdf/GHash.$(O): xpdf/GHash.cc
 	$(CC) -I ./ -I xpdf xpdf/GHash.cc -o $@
 xpdf/gfile.$(O): xpdf/gfile.cc
 	$(CC) -I ./ -I xpdf xpdf/gfile.cc -o $@
-xpdf/gmem.$(O): xpdf/gmem.c
-	$(C) -I ./ -I xpdf xpdf/gmem.c -o $@
+xpdf/gmem.$(O): xpdf/gmem.cc
+	$(C) -I ./ -I xpdf xpdf/gmem.cc -o $@
 
 ../libpdf$(A): $(libpdf_objects) $(xpdf_objects)
 	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_objects)

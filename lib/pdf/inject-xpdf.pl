@@ -25,11 +25,18 @@ open(fi, ">switch");
 print fi <<EOF
 #!/bin/sh
 
-if test "x\$1" = "xstable";then
+VERSION=$1
+PS3="choose> "
+
+if test "x$VERSION" = "x";then
+    select V in stable latest;do VERSION="$V";break;done
+fi
+
+if test "x\$VERSION" = "xstable";then
     echo "Switching to stable version"
     rm -f xpdf
-    ln -s xpdf-3.01 xpdf
-elif test "x\$1" = "xlatest";then
+    ln -s xpdf-3.02 xpdf
+elif test "x\$VERSION" = "xlatest";then
     echo "Switching to latest version"
     rm -f xpdf
     ln -s $directory xpdf
