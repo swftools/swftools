@@ -365,10 +365,10 @@ static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx)
 RGBA swf_ColorTransform(RGBA*color, CXFORM*cx)
 {
     RGBA dest;
-    dest.r = (cx->r0*dest.r + cx->r1*256) >> 8;
-    dest.g = (cx->g0*dest.g + cx->g1*256) >> 8;
-    dest.b = (cx->b0*dest.b + cx->b1*256) >> 8;
-    dest.a = (cx->a0*dest.a + cx->a1*256) >> 8;
+    dest.r = (cx->r0*color->r + cx->r1*256) >> 8;
+    dest.g = (cx->g0*color->g + cx->g1*256) >> 8;
+    dest.b = (cx->b0*color->b + cx->b1*256) >> 8;
+    dest.a = (cx->a0*color->a + cx->a1*256) >> 8;
     return dest;
 }
 
