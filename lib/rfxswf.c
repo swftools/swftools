@@ -332,13 +332,13 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
       memset(gradient, 0, sizeof(GRADIENT));
       return;
     }
-    U8 num = swf_GetU8(tag);
+    U8 num = swf_GetU8(tag) & 15;
     if(gradient) {
 	gradient->num = num;
 	gradient->rgba = rfx_calloc(sizeof(RGBA)*gradient->num);
 	gradient->ratios = rfx_calloc(sizeof(gradient->ratios[0])*gradient->num);
     }
-    for(t=0;t<gradient->num;t++)
+    for(t=0;t<num;t++)
     {
 	U8 ratio = swf_GetU8(tag);
 	RGBA color;
