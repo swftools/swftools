@@ -162,6 +162,68 @@ static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
     }
     ArtSVP *svp = art_svp_from_vpath(vec);
     free(vec);
+
+    // We need to make sure that the SVP we now have bounds an area (i.e. the
+    // source line wound anticlockwise) rather than excludes an area (i.e. the
+    // line wound clockwise). It seems that PDF (or xpdf) is less strict about
+    // this for bitmaps than it is for fill areas.
+    //
+    // To check this, we'll sum the cross products of all pairs of adjacent
+    // lines. If the result is positive, the direction is correct; if not, we
+    // need to reverse the sense of the SVP generated. The easiest way to do
+    // this is to flip the up/down flags of all the segments.
+    //
+    // This is approximate; since the gfxline_t structure can contain any
+    // combination of moveTo, lineTo and splineTo in any order, not all pairs
+    // of lines in the shape that share a point need be described next to each
+    // other in the sequence. For ease, we'll consider only pairs of lines
+    // stored as lineTos and splineTos without intervening moveTos.
+    //
+    // TODO is this a valid algorithm? My vector maths is rusty.
+    //
+    // It may be more correct to instead reverse the line before we feed it
+    // into gfxfilltoSVP. However, this seems equivalent and is easier to
+    // implement!
+    double total_cross_product = 0.0;
+    gfxline_t* cursor = line;
+    if (cursor != NULL)
+    {
+	double x_last = cursor->x;
+	double y_last = cursor->y;
+	cursor = cursor->next;
+
+	while((cursor != NULL) && (cursor->next != NULL))
+	{
+	    if (((cursor->type == gfx_lineTo) || (cursor->type == gfx_splineTo))
+		&& ((cursor->next->type == gfx_lineTo) || (cursor->next->type == gfx_splineTo)))
+	    {
+		// Process these lines
+		//
+		// In this space (x right, y down) the cross-product is
+		// (x1 * y0) - (x0 * y1)
+		double x0 = cursor->x - x_last;
+		double y0 = cursor->y - y_last;
+		double x1 = cursor->next->x - cursor->x;
+		double y1 = cursor->next->y - cursor->y;
+		total_cross_product += (x1 * y0) - (x0 * y1);
+	    }
+
+	    x_last = cursor->x;
+	    y_last = cursor->y;
+	    cursor = cursor->next;
+	}
+    }
+    if (total_cross_product < 0.0)
+    {
+	int i = 0;
+	for(; i < svp->n_segs; ++i)
+	{
+	    if (svp->segs[i].dir != 0)
+		svp->segs[i].dir = 0;
+	    else
+		svp->segs[i].dir = 1;
+	}
+    }
     return svp;
 }
 static ArtSVP* boxToSVP(double x1, double y1,double x2, double y2)
