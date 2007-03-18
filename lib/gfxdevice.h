@@ -77,7 +77,6 @@ typedef struct _gfxcxform
     float gr,gg,gb,ga, tg;
     float br,bg,bb,ba, tb;
     float ar,ag,ab,aa, ta;
-    gfxcolor_t t;
 } gfxcxform_t;
 
 typedef struct _gfxbbox
