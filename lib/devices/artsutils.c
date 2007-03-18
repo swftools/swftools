@@ -65,6 +65,72 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
     }
     vec[pos].code = ART_END;
 
+    // Spot adjacent identical points
+    {
+	int j = 1;
+	while(j < pos)
+	{
+	    double dx = vec[j].x - vec[j-1].x;
+	    double dy = vec[j].y - vec[j-1].y;
+	    double d = dx*dx + dy*dy;
+	    if ((vec[j-1].x == vec[j].x)
+		&& (vec[j-1].y == vec[j].y))
+	    {
+		// adjacent identical points; remove one
+		memcpy(&(vec[j]), &(vec[j + 1]), sizeof(vec[j]) * (pos - j));
+		--pos;
+	    }
+	    else
+	    {
+		// different
+		++j;
+	    }
+	}
+    }
+
+    // Check for further non-adjacent identical points. We don't want any
+    // points other than the first and last points to exactly match.
+    //
+    // If we do find matching points, move the second point slightly. This
+    // currently moves the duplicate 2% towards the midpoint of its neighbours
+    // (easier to calculate than 2% down the perpendicular to the line joining
+    // the neighbours) but limiting the change to 0.1 twips to avoid visual
+    // problems when the shapes are large. Note that there is no minimum
+    // change: if the neighbouring points are colinear and equally spaced,
+    // e.g. they were generated as part of a straight spline, then the
+    // duplicate point may not actually move.
+    //
+    // The scan for duplicates algorithm is quadratic in the number of points:
+    // there's probably a better method but the numbers of points is generally
+    // small so this will do for now.
+    {
+	int i = 1, j;
+	for(; i < (pos - 1); ++i)
+	{
+	    for (j = 0; j < i; ++j)
+	    {
+		if ((vec[i].x == vec[j].x)
+		    && (vec[i].y == vec[j].y))
+		{
+		    // points match; shuffle point
+		    double dx = (vec[i-1].x + vec[i+1].x - (vec[i].x * 2.0)) / 100.0;
+		    double dy = (vec[i-1].y + vec[i+1].y - (vec[i].y * 2.0)) / 100.0;
+		    double dxxyy = (dx*dx) + (dy*dy);
+		    if (dxxyy > 0.01)
+		    {
+			// This is more than 0.1 twip's distance; scale down
+			double dscale = sqrt(dxxyy) * 10.0;
+			dx /= dscale;
+			dy /= dscale;
+		    };
+		    vec[i].x += dx;
+		    vec[i].y += dy;
+		    break;
+		}
+	    }
+	}
+    }
+
     return vec;
 }
 
