@@ -423,34 +423,6 @@ diff -u -r1.7 -r1.9
  
    // End a page.
    virtual void endPage() {}
-Index: Page.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Page.cc,v
-retrieving revision 1.5
-retrieving revision 1.6
-diff -u -r1.5 -r1.6
---- Page.cc	3 Dec 2005 10:11:33 -0000	1.5
-+++ Page.cc	3 Dec 2005 10:30:41 -0000	1.6
-@@ -66,6 +66,19 @@
-     cropBox = mediaBox;
-   }
- 
-+  /* if the crop box is larger than the media box, cut it down to 
-+     media box size */
-+  if(haveCropBox &&
-+     mediaBox.x1 <= cropBox.x2 &&
-+     mediaBox.y1 <= cropBox.y2 &&
-+     cropBox.x1 <= mediaBox.x2 &&
-+     cropBox.y1 <= mediaBox.y2) {
-+      if(mediaBox.x1 >= cropBox.x1) cropBox.x1 = mediaBox.x1;
-+      if(mediaBox.y1 >= cropBox.y1) cropBox.y1 = mediaBox.y1;
-+      if(mediaBox.x2 <= cropBox.x2) cropBox.x2 = mediaBox.x2;
-+      if(mediaBox.y2 <= cropBox.y2) cropBox.y2 = mediaBox.y2;
-+  }
-+
-   // other boxes
-   bleedBox = cropBox;
-   readBox(dict, "BleedBox", &bleedBox);
 Index: Stream.cc
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Stream.cc,v
@@ -693,3 +665,14 @@ diff -u -r1.5 -r1.6
  #include "gmem.h"
  #include "GString.h"
  #include "gfile.h"
+--- xpdf/pdftoppm.cc.orig	2007-03-07 18:00:34.000000000 +0100
++++ xpdf/pdftoppm.cc	2007-03-07 18:00:41.000000000 +0100
+@@ -179,7 +179,7 @@
+   splashOut->startDoc(doc->getXRef());
+   for (pg = firstPage; pg <= lastPage; ++pg) {
+     doc->displayPage(splashOut, pg, resolution, resolution, 0,
+-		     gFalse, gTrue, gFalse);
++		     /*usemediabox*/gTrue, gTrue, gFalse);
+     sprintf(ppmFile, "%.*s-%06d.%s",
+ 	    (int)sizeof(ppmFile) - 32, ppmRoot, pg,
+ 	    mono ? "pbm" : gray ? "pgm" : "ppm");
