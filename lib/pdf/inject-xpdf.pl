@@ -25,10 +25,10 @@ open(fi, ">switch");
 print fi <<EOF
 #!/bin/sh
 
-VERSION=$1
+VERSION=\$1
 PS3="choose> "
 
-if test "x$VERSION" = "x";then
+if test "x\$VERSION" = "x";then
     select V in stable latest;do VERSION="$V";break;done
 fi
 
