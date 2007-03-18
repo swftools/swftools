@@ -24,11 +24,10 @@
 #include <memory.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
-#include "../png.h"
 #include "../mem.h"
-
-typedef unsigned int U32;
-typedef unsigned char U8;
+#define PNG_INLINE_EXPORTS
+#include "../types.h"
+#include "../png.c"
 
 typedef gfxcolor_t RGBA;
 
