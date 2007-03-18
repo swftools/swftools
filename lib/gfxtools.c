@@ -783,3 +783,34 @@ gfxline_t*gfxline_makerectangle(int x1,int y1,int x2, int y2)
     line[4].x = x1;line[4].y = y1;line[4].type = gfx_lineTo;
     return line;
 }
+
+void gfximage_transform(gfximage_t*img, gfxcxform_t*cxform)
+{
+    int t;
+    int size = img->width*img->height;
+
+    int rr,rg,rb,ra, tr;
+    int gr,gg,gb,ga, tg;
+    int br,bg,bb,ba, tb;
+    int ar,ag,ab,aa, ta;
+    rr = (int)(cxform->rr*256);gr = (int)(cxform->gr*256);
+    rg = (int)(cxform->rg*256);gg = (int)(cxform->gg*256);
+    rb = (int)(cxform->rb*256);gb = (int)(cxform->gb*256);
+    ra = (int)(cxform->ra*256);ga = (int)(cxform->ga*256);
+    br = (int)(cxform->br*256);ar = (int)(cxform->ar*256);tr = (int)(cxform->tr*256);
+    bg = (int)(cxform->bg*256);ag = (int)(cxform->ag*256);tg = (int)(cxform->tg*256);
+    bb = (int)(cxform->bb*256);ab = (int)(cxform->ab*256);tb = (int)(cxform->tb*256);
+    ba = (int)(cxform->ba*256);aa = (int)(cxform->aa*256);ta = (int)(cxform->ta*256);
+
+    for(t=0;t<size;t++) {
+	gfxcolor_t*pixel = &img->data[t];
+	unsigned char r = (pixel->r * rr + pixel->g * rg + pixel->b * rb + pixel->a * ra + tr) / 256;
+	unsigned char g = (pixel->r * gr + pixel->g * gg + pixel->b * gb + pixel->a * ga + tg) / 256;
+	unsigned char b = (pixel->r * br + pixel->g * bg + pixel->b * bb + pixel->a * ba + tb) / 256;
+	unsigned char a = (pixel->r * ar + pixel->g * ag + pixel->b * ab + pixel->a * aa + ta) / 256;
+	pixel->r = r;
+	pixel->g = g;
+	pixel->b = b;
+	pixel->a = a;
+    }
+}
