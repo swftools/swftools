@@ -22,15 +22,25 @@
 #include <math.h>
 #include <fcntl.h>
 #include <zlib.h>
-#include "png.h"
 
-typedef unsigned char U8;
-typedef unsigned long U32;
+#ifdef EXPORT
+#undef EXPORT
+#endif
+
+#ifdef PNG_INLINE_EXPORTS
+#define EXPORT static
+#else
+#define EXPORT
+#include "png.h"
+#endif
+
+typedef unsigned u32;
+
 typedef struct _COL {
-    U8 a,r,g,b;
+    unsigned char a,r,g,b;
 } COL;
 
-static int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
+static int png_read_chunk(char (*head)[4], int*destlen, unsigned char**destdata, FILE*fi)
 {
     unsigned int len;
     unsigned char blen[4];
@@ -48,7 +58,7 @@ static int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 	if(!len) {
 	    *destdata = 0;
 	} else {
-	    *destdata = (U8*)malloc(len);
+	    *destdata = (unsigned char*)malloc(len);
 	    if(!fread(*destdata, len, 1, fi)) {
 		*destdata = 0;
 		if(destlen) *destlen=0;
@@ -84,9 +94,9 @@ static int png_read_header(FILE*fi, struct png_header*header)
     char id[4];
     int len;
     int ok=0;
-    U8 head[8] = {137,80,78,71,13,10,26,10};
-    U8 head2[8];
-    U8*data;
+    unsigned char head[8] = {137,80,78,71,13,10,26,10};
+    unsigned char head2[8];
+    unsigned char*data;
     fread(head2,8,1,fi);
     if(strncmp((const char*)head,(const char*)head2,4))
 	return 0;
@@ -155,7 +165,7 @@ static inline byte PaethPredictor (byte a,byte b,byte c)
         else return c;
 }
 
-static void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
+static void applyfilter1(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
 {
     int x;
     unsigned char last=0;
@@ -205,7 +215,7 @@ static void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
 
 }
 
-static void applyfilter2(int mode, U8*src, U8*old, U8*dest, int width)
+static void applyfilter2(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
 {
     int x;
     unsigned char lasta=0;
@@ -268,7 +278,7 @@ static void applyfilter2(int mode, U8*src, U8*old, U8*dest, int width)
 
 
 /* also performs 24 bit conversion! */
-static void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
+static void applyfilter3(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
 {
     int x;
     unsigned char lastr=0;
@@ -345,7 +355,7 @@ static void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
     }    
 }
 
-static void inline applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
+static void inline applyfilter4(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
 {
     int x;
     unsigned char lastr=0;
@@ -429,7 +439,7 @@ static void inline applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
 }
 
 
-int getPNGdimensions(char*sname, int*destwidth, int*destheight)
+EXPORT int getPNGdimensions(char*sname, int*destwidth, int*destheight)
 {
     FILE*fi;
     struct png_header header;
@@ -447,27 +457,27 @@ int getPNGdimensions(char*sname, int*destwidth, int*destheight)
     return 1;
 }
 
-int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
+EXPORT int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 {
     char tagid[4];
     int len;
-    U8*data;
-    U8*imagedata;
-    U8*zimagedata=0;
+    unsigned char*data;
+    unsigned char*imagedata;
+    unsigned char*zimagedata=0;
     unsigned long int imagedatalen;
     unsigned long int zimagedatalen=0;
-    U8*palette = 0;
+    unsigned char*palette = 0;
     int palettelen = 0;
-    U8*alphapalette = 0;
+    unsigned char*alphapalette = 0;
     int alphapalettelen = 0;
     struct png_header header;
     int bypp;
-    U8*data2 = 0;
-    U8 alphacolor[3];
+    unsigned char*data2 = 0;
+    unsigned char alphacolor[3];
     int hasalphacolor=0;
 
     FILE *fi;
-    U8 *scanline;
+    unsigned char *scanline;
 
     if ((fi = fopen(sname, "rb")) == NULL) {
 	printf("Couldn't open %s\n", sname);
@@ -489,7 +499,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
     }
 
     imagedatalen = bypp * header.width * header.height + 65536;
-    imagedata = (U8*)malloc(imagedatalen);
+    imagedata = (unsigned char*)malloc(imagedatalen);
 
     fseek(fi,8,SEEK_SET);
     while(!feof(fi))
@@ -526,10 +536,10 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	if(!strncmp(tagid, "IDAT", 4)) {
 	    if(!zimagedata) {
 		zimagedatalen = len;
-		zimagedata = (U8*)malloc(len);
+		zimagedata = (unsigned char*)malloc(len);
 		memcpy(zimagedata,data,len);
 	    } else {
-		zimagedata = (U8*)realloc(zimagedata, zimagedatalen+len);
+		zimagedata = (unsigned char*)realloc(zimagedata, zimagedatalen+len);
 		memcpy(&zimagedata[zimagedatalen], data, len);
 		zimagedatalen += len;
 	    }
@@ -562,20 +572,20 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
     *destwidth = header.width;
     *destheight = header.height;
 	
-    data2 = (U8*)malloc(header.width*header.height*4);
+    data2 = (unsigned char*)malloc(header.width*header.height*4);
 
     if(header.mode == 4)
     {
 	int i,s=0;
 	int x,y;
 	int pos=0;
-	U8* old= (U8*)malloc(header.width*2);
+	unsigned char* old= (unsigned char*)malloc(header.width*2);
 	memset(old, 0, header.width*2);
 	*destdata = data2;
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
-	    U8*src;
-	    U8*dest;
+	    unsigned char*src;
+	    unsigned char*dest;
 	    int x;
 	    dest = &data2[(y*header.width)*4];
 
@@ -594,8 +604,8 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	    memcpy(old, dest, header.width*2);
 
 	    for(x=header.width-1;x>=0;x--) {
-		U8 gray = dest[x*2+0];
-		U8 alpha = dest[x*2+1];
+		unsigned char gray = dest[x*2+0];
+		unsigned char alpha = dest[x*2+1];
 		dest[x*4+0] = alpha;
 		dest[x*4+1] = gray;
 		dest[x*4+2] = gray;
@@ -611,9 +621,9 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	*destdata = data2;
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
-	    U8*src;
-	    U8*dest;
-	    U8*old;
+	    unsigned char*src;
+	    unsigned char*dest;
+	    unsigned char*old;
 	    dest = &data2[(y*header.width)*4];
 
 	    if(header.bpp == 8)
@@ -645,7 +655,7 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 			if(dest[x*4+1] == alphacolor[0] &&
 			   dest[x*4+2] == alphacolor[1] &&
 			   dest[x*4+3] == alphacolor[2]) {
-			    *(U32*)&dest[x*4] = 0;
+			    *(u32*)&dest[x*4] = 0;
 			}
 		    }
 		}
@@ -654,8 +664,8 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
         free(imagedata);
     } else if(header.mode == 0 || header.mode == 3) {
 	COL*rgba = 0;
-	U8*tmpline = (U8*)malloc(header.width+1);
-	U8*destline = (U8*)malloc(header.width+1);
+	unsigned char*tmpline = (unsigned char*)malloc(header.width+1);
+	unsigned char*destline = (unsigned char*)malloc(header.width+1);
 	int i,x,y;
 	int pos=0;
 	
@@ -706,17 +716,17 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
 	    int x;
-	    U8*old;
-	    U8*src;
+	    unsigned char*old;
+	    unsigned char*src;
 	    src = &imagedata[pos];
 	    if(header.bpp == 8) {
 		pos+=header.width;
 	    } else {
 		int x,s=0;
 		int bitpos = 0;
-		U32 v = (1<<header.bpp)-1;
+		u32 v = (1<<header.bpp)-1;
 		for(x=0;x<header.width;x++) {
-		    U32 r = src[s/8]<<8 | 
+		    u32 r = src[s/8]<<8 | 
 			    src[s/8+1];
 		    int t;
 		    tmpline[x] = (r>>(16-header.bpp-(s&7)))&v;
@@ -750,18 +760,18 @@ int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
     return 1;
 }
 
-static U32 mycrc32;
+static u32 mycrc32;
 
-static U32*crc32_table = 0;
+static u32*crc32_table = 0;
 static void make_crc32_table(void)
 {
   int t;
   if(crc32_table) 
       return;
-  crc32_table = (U32*)malloc(1024);
+  crc32_table = (u32*)malloc(1024);
 
   for (t = 0; t < 256; t++) {
-    U32 c = t;
+    u32 c = t;
     int s;
     for (s = 0; s < 8; s++) {
       c = (0xedb88320L*(c&1)) ^ (c >> 1);
@@ -769,15 +779,15 @@ static void make_crc32_table(void)
     crc32_table[t] = c;
   }
 }
-static inline void png_write_byte(FILE*fi, U8 byte)
+static inline void png_write_byte(FILE*fi, unsigned char byte)
 {
     fwrite(&byte,1,1,fi);
     mycrc32 = crc32_table[(mycrc32 ^ byte) & 0xff] ^ (mycrc32 >> 8);
 }
 static void png_start_chunk(FILE*fi, char*type, int len)
 {
-    U8 mytype[4]={0,0,0,0};
-    U8 mylen[4];
+    unsigned char mytype[4]={0,0,0,0};
+    unsigned char mylen[4];
     mylen[0] = len>>24;
     mylen[1] = len>>16;
     mylen[2] = len>>8;
@@ -790,13 +800,13 @@ static void png_start_chunk(FILE*fi, char*type, int len)
     png_write_byte(fi,mytype[2]);
     png_write_byte(fi,mytype[3]);
 }
-static void png_write_bytes(FILE*fi, U8*bytes, int len)
+static void png_write_bytes(FILE*fi, unsigned char*bytes, int len)
 {
     int t;
     for(t=0;t<len;t++)
 	png_write_byte(fi,bytes[t]);
 }
-static void png_write_dword(FILE*fi, U32 dword)
+static void png_write_dword(FILE*fi, u32 dword)
 {
     png_write_byte(fi,dword>>24);
     png_write_byte(fi,dword>>16);
@@ -805,8 +815,8 @@ static void png_write_dword(FILE*fi, U32 dword)
 }
 static void png_end_chunk(FILE*fi)
 {
-    U32 tmp = mycrc32^0xffffffff;
-    U8 tmp2[4];
+    u32 tmp = mycrc32^0xffffffff;
+    unsigned char tmp2[4];
     tmp2[0] = tmp>>24;
     tmp2[1] = tmp>>16;
     tmp2[2] = tmp>>8;
@@ -814,24 +824,24 @@ static void png_end_chunk(FILE*fi)
     fwrite(&tmp2,4,1,fi);
 }
 
-void writePNG(char*filename, unsigned char*data, int width, int height)
+EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
 {
     FILE*fi;
     int crc;
     int t;
-    U8 format;
-    U8 tmp;
-    U8* data2=0;
-    U8* data3=0;
-    U32 datalen;
-    U32 datalen2;
-    U32 datalen3;
-    U8 head[] = {137,80,78,71,13,10,26,10}; // PNG header
+    unsigned char format;
+    unsigned char tmp;
+    unsigned char* data2=0;
+    unsigned char* data3=0;
+    u32 datalen;
+    u32 datalen2;
+    u32 datalen3;
+    unsigned char head[] = {137,80,78,71,13,10,26,10}; // PNG header
     int cols;
     char alpha = 1;
     int pos = 0;
     int error;
-    U32 tmp32;
+    u32 tmp32;
     int bpp;
     int ret;
 
@@ -882,7 +892,7 @@ void writePNG(char*filename, unsigned char*data, int width, int height)
 	int x,y;
 	int srcwidth = width * (bpp/8);
 	datalen3 = (width*4+5)*height;
-	data3 = (U8*)malloc(datalen3);
+	data3 = (unsigned char*)malloc(datalen3);
 	for(y=0;y<height;y++)
 	{
 	   data3[pos2++]=0; //filter type
@@ -899,7 +909,7 @@ void writePNG(char*filename, unsigned char*data, int width, int height)
     }
 
     datalen2 = datalen3;
-    data2 = (U8*)malloc(datalen2);
+    data2 = (unsigned char*)malloc(datalen2);
 
     if((ret = compress (data2, &datalen2, data3, datalen3)) != Z_OK) {
 	fprintf(stderr, "zlib error in pic %d\n", ret);
