@@ -70,7 +70,7 @@ devices/render.$(O):  devices/render.c devices/render.h
 	$(C) devices/render.c -o devices/render.$(O)
 devices/opengl.$(O):  devices/opengl.c devices/opengl.h
 	$(C) devices/opengl.c -o devices/opengl.$(O)
-devices/arts.$(O):  devices/arts.c devices/arts.h
+devices/arts.$(O):  devices/arts.c devices/arts.h devices/artsutils.c
 	$(C) devices/arts.c -o devices/arts.$(O)
 devices/record.$(O):  devices/record.c devices/record.h
 	$(C) devices/record.c -o devices/record.$(O)
