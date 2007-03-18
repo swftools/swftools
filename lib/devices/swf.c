@@ -1844,10 +1844,10 @@ static CXFORM gfxcxform_to_cxform(gfxcxform_t* c)
     cx.r0 = (S16)(c->rr*256);
     cx.g0 = (S16)(c->gg*256);
     cx.b0 = (S16)(c->bb*256);
-    cx.a1 = c->t.a;
-    cx.r1 = c->t.r;
-    cx.g1 = c->t.g;
-    cx.b1 = c->t.b;
+    cx.a1 = c->ta;
+    cx.r1 = c->tr;
+    cx.g1 = c->tg;
+    cx.b1 = c->tb;
     return cx;
 }
 
