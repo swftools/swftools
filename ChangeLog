@@ -270,3 +270,8 @@
 	* pdf2swf: upgraded to xpdf 3.01
 	* swfcombine: new -w (--scalex) -h (--scaley) options
 
+0.8.1:
+	* pdf2swf: Upgraded to xpdf 3.02
+	* lib/modules/swftools: Fixed several bugs in Flash8 parsing
+	* src/swfrender: Added --ng switch
+	* lib/swf/: New gfxdevice
