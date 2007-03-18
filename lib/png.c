@@ -30,7 +30,7 @@ typedef struct _COL {
     U8 a,r,g,b;
 } COL;
 
-int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
+static int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 {
     unsigned int len;
     unsigned char blen[4];
@@ -63,7 +63,7 @@ int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
     return 1;
 }
 
-unsigned int png_get_dword(FILE*fi)
+static unsigned int png_get_dword(FILE*fi)
 {
     unsigned int a;
     unsigned char b[4];
@@ -79,7 +79,7 @@ struct png_header
     int mode;
 };
 
-int png_read_header(FILE*fi, struct png_header*header)
+static int png_read_header(FILE*fi, struct png_header*header)
 {
     char id[4];
     int len;
@@ -139,7 +139,7 @@ int png_read_header(FILE*fi, struct png_header*header)
 
 typedef unsigned char byte;
 #define ABS(a) ((a)>0?(a):(-(a)))
-byte inline PaethPredictor (byte a,byte b,byte c)
+static inline byte PaethPredictor (byte a,byte b,byte c)
 {
         // a = left, b = above, c = upper left
         int p = a + b - c;        // initial estimate
@@ -155,7 +155,7 @@ byte inline PaethPredictor (byte a,byte b,byte c)
         else return c;
 }
 
-void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
+static void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
 {
     int x;
     unsigned char last=0;
@@ -205,7 +205,7 @@ void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
 
 }
 
-void applyfilter2(int mode, U8*src, U8*old, U8*dest, int width)
+static void applyfilter2(int mode, U8*src, U8*old, U8*dest, int width)
 {
     int x;
     unsigned char lasta=0;
@@ -268,7 +268,7 @@ void applyfilter2(int mode, U8*src, U8*old, U8*dest, int width)
 
 
 /* also performs 24 bit conversion! */
-void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
+static void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
 {
     int x;
     unsigned char lastr=0;
@@ -345,7 +345,7 @@ void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
     }    
 }
 
-void inline applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
+static void inline applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
 {
     int x;
     unsigned char lastr=0;
