@@ -8,6 +8,7 @@ pdf2swf:
 
 swfc:
 
+    * jpeg3 support
     * dotted/dashed lines
     * input from stdin
     * .movie feature
