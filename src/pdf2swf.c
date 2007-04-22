@@ -690,6 +690,8 @@ int main(int argn, char *argv[])
     char*zip = "";
     if(zlib) {
 	zip = "-z";
+    }
+    if(!preloader && viewer) {
 	systemf("swfcombine %s -X %d -Y %d \"%s\" viewport=\"%s\" -o \"%s\"",zip,width,height,
 		viewer, outputname, outputname);
 	if(!system_quiet)
