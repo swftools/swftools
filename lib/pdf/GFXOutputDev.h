@@ -21,7 +21,9 @@ class GFXOutputState {
     int textRender;
     char createsoftmask;
     char transparencygroup;
-    int softmask;
+    char softmask;
+    char softmask_alpha;
+    char isolated;
 
     GFXOutputState();
 
@@ -167,7 +169,6 @@ public:
 				   GfxImageColorMap *maskColorMap);
 
   //----- transparency groups and soft masks (xpdf >= ~ 3.01.16)
-#if xpdfUpdateVersion >= 16
   virtual void beginTransparencyGroup(GfxState *state, double *bbox,
 				      GfxColorSpace *blendingColorSpace,
 				      GBool isolated, GBool knockout,
@@ -176,9 +177,6 @@ public:
   virtual void paintTransparencyGroup(GfxState *state, double *bbox);
   virtual void setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor);
   virtual void clearSoftMask(GfxState *state);
-#else
-  virtual void clearSoftMask(GfxState *state) {};
-#endif
  
   //----- type 3 chars
   virtual GBool beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen);
