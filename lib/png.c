@@ -908,7 +908,7 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
 	datalen3=pos2;
     }
 
-    datalen2 = datalen3;
+    datalen2 = datalen3+256;
     data2 = (unsigned char*)malloc(datalen2);
 
     if((ret = compress (data2, &datalen2, data3, datalen3)) != Z_OK) {
@@ -923,4 +923,5 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
 
     free(data2);
     free(data3);
+    fclose(fi);
 }
