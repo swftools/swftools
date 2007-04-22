@@ -1123,7 +1123,7 @@ static void endshape(gfxdevice_t*dev)
 
     changeRect(dev, i->tag, i->bboxrectpos, &i->bboxrect);
 
-    msg("<trace> Placing shape id %d", i->shapeid);
+    msg("<trace> Placing shape ID %d", i->shapeid);
 
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     MATRIX m = i->page_matrix;
@@ -1661,6 +1661,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
 	}
     }
     
+    msg("<trace> Placing link ID %d", buttonid);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
 
     if(posx!=0 || posy!=0) {
@@ -2005,6 +2006,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
+    msg("<trace> Placing bitmap ID %d", myshapeid);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     CXFORM cxform2 = gfxcxform_to_cxform(cxform);
     swf_ObjectPlace(i->tag,myshapeid,getNewDepth(dev),&i->page_matrix,&cxform2,NULL);
@@ -2049,6 +2051,7 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
 
     /* TODO: remember the bbox, and check all shapes against it */
     
+    msg("<trace> Placing clip ID %d", myshapeid);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     i->cliptags[i->clippos] = i->tag;
     i->clipshapes[i->clippos] = myshapeid;
