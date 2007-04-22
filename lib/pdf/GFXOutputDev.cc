@@ -106,7 +106,7 @@ struct mapping {
 {"Symbol",                "s050000l"},
 {"ZapfDingbats",          "d050000l"}};
 
-static int verbose = 0;
+static int verbose = 1;
 static int dbgindent = 0;
 static void dbg(char*format, ...)
 {
@@ -179,6 +179,7 @@ GFXOutputState::GFXOutputState() {
     this->transparencygroup = 0;
     this->softmask = 0;
     this->grouprecording = 0;
+    this->isolated = 0;
 }
 
 GBool GFXOutputDev::interpretType3Chars() 
@@ -263,6 +264,8 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->config_break_on_warning=0;
 
     this->parameters = p;
+  
+    memset(states, 0, sizeof(states));
 
     /* configure device */
     while(p) {
@@ -2610,7 +2613,6 @@ BBox mkBBox(GfxState*state, double*bbox, double width, double height)
     return nbbox;
 }
 
-#if xpdfUpdateVersion >= 16
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GfxColorSpace *blendingColorSpace,
 				      GBool isolated, GBool knockout,
@@ -2625,10 +2627,12 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
     dbg("beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     dbg("using clipping rect %f/%f/%f/%f\n", rect.posx,rect.posy,rect.width,rect.height);
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
+    
     states[statepos].createsoftmask |= forSoftMask;
     states[statepos].transparencygroup = !forSoftMask;
-    states[statepos].olddevice = this->device;
+    states[statepos].isolated = isolated;
 
+    states[statepos].olddevice = this->device;
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
 
     gfxdevice_record_init(this->device);
@@ -2710,6 +2714,7 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
     dbg("softmaskrecording is %08x at statepos %d\n", states[statepos].softmaskrecording, statepos);
     
     states[statepos].softmask = 1;
+    states[statepos].softmask_alpha = alpha;
 }
 
 static inline Guchar div255(int x) {
@@ -2753,13 +2758,16 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 
     gfxdevice_t belowrender;
     gfxdevice_render_init(&belowrender);
-    belowrender.setparameter(&belowrender, "fillwhite", "1"); //for isolated=0?
+    if(states[statepos+1].isolated) {
+	belowrender.setparameter(&belowrender, "fillwhite", "1");
+    }
     belowrender.setparameter(&belowrender, "antialize", "2");
     belowrender.startpage(&belowrender, width, height);
     gfxresult_record_replay(below, &belowrender);
     belowrender.endpage(&belowrender);
     gfxresult_t* belowresult = belowrender.finish(&belowrender);
     gfximage_t* belowimg = (gfximage_t*)belowresult->get(belowresult,"page0");
+    writePNG("below.png", (unsigned char*)belowimg->data, belowimg->width, belowimg->height);
 
     gfxdevice_t maskrender;
     gfxdevice_render_init(&maskrender);
@@ -2779,12 +2787,18 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 	gfxcolor_t* l1 = &maskimg->data[maskimg->width*y];
 	gfxcolor_t* l2 = &belowimg->data[belowimg->width*y];
 	for(x=0;x<width;x++) {
-	    l2->a = (77*l1->r + 151*l1->g + 28*l1->b) >> 8;
+	    int alpha;
+	    if(states[statepos].softmask_alpha) {
+		alpha = l1->a;
+	    } else {
+		alpha = (77*l1->r + 151*l1->g + 28*l1->b) >> 8;
+	    }
 
 	    /* premultiply alpha */
-	    l2->r = div255(l2->a*l2->r);
-	    l2->g = div255(l2->a*l2->g);
-	    l2->b = div255(l2->a*l2->b);
+	    l2->a = div255(alpha*l2->a);
+	    l2->r = div255(alpha*l2->r);
+	    l2->g = div255(alpha*l2->g);
+	    l2->b = div255(alpha*l2->b);
 
 	    l1++;
 	    l2++;
@@ -2805,8 +2819,6 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     states[statepos].softmaskrecording = 0;
 }
   
-#endif
-
 /*class MemCheck
 {
     public: ~MemCheck()
