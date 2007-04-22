@@ -196,6 +196,11 @@ static PyObject* tag_getattr(PyObject * self, char* a)
 	char* name = swf_TagGetName(tag->internals.tag);
 	return Py_BuildValue("s", name);
     }
+    if(!strcmp(a, "data")) {
+	if(!fillTAG(self))
+	    return 0;
+	return Py_BuildValue("s#", tag->data, tag->len);
+    }
     if(tag->internals.getattr) {
 	PyObject* ret = tag->internals.getattr(&tag->internals, a);
 	if(ret) return ret;
