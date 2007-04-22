@@ -1774,7 +1774,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=0.8.0
+VERSION=0.8.1
 
 
 # ------------------------------------------------------------------
@@ -1813,6 +1813,10 @@ else
     CXXFLAGS="$WARNINGS -O -fomit-frame-pointer $CXXFLAGS"
 fi
 fi
+
+CFLAGS="-fPIC $CFLAGS"
+CXXFLAGS="-fPIC $CFLAGS"
+
 #OLDGCC=1
 #if test "x$OLDGCC" '!=' "x";then
 #     #CFLAGS="$CFLAGS --std=c89 -ansi -pendantic"
@@ -9754,8 +9758,8 @@ fi
 # ------------------------------------------------------------------
 
 if test -f "release.in"; then release_in="./release"; fi
-FILES="$release_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile pdf2swf/fonts/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile"
-
+if test -f "wx/Makefile.in"; then wx_in="wx/Makefile"; fi
+FILES="$release_in $wx_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile pdf2swf/fonts/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile lib/swf/Makefile"
 ac_config_files="$ac_config_files ${FILES}"
 
 cat >confcache <<\_ACEOF
