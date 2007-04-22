@@ -272,13 +272,13 @@ static void fill_line_solid(RGBA*line, U32*z, int y, int x1, int x2, RGBA col)
         col.r = (col.r*col.a)>>8;
         col.g = (col.g*col.a)>>8;
         col.b = (col.b*col.a)>>8;
-        col.a = 255;
         do {
 	    if(z[bitpos]&bit) {
 		line[x].r = ((line[x].r*ainv)>>8)+col.r;
 		line[x].g = ((line[x].g*ainv)>>8)+col.g;
 		line[x].b = ((line[x].b*ainv)>>8)+col.b;
-		line[x].a = 255;
+		//line[x].a = 255;
+		line[x].a = ((line[x].a*ainv)>>8)+col.a;
 	    }
 	    bit <<= 1;
 	    if(!bit) {
