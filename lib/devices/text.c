@@ -44,6 +44,7 @@ typedef struct _internal {
 int text_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
+    return 0;
 }
 void text_startpage(gfxdevice_t*dev, int width, int height)
 {
