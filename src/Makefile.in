@@ -47,50 +47,52 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 parser.yy.c: parser.lex
 	flex -B -s -oparser.yy.c parser.lex
 
-wav2swf$(E): wav2swf.$(O) ../lib/wav.$(O) ../lib/librfxswf$(A)
-	$(L) wav2swf.$(O) ../lib/wav.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+wav2swf$(E): wav2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) wav2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-png2swf$(E): png2swf.$(O) ../lib/librfxswf$(A)
-	$(L) png2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+png2swf$(E): png2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) png2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-gif2swf$(E): gif2swf.$(O) ../lib/librfxswf$(A)
-	$(L) gif2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+gif2swf$(E): gif2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) gif2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfcombine$(E): swfcombine.$(O) ../lib/librfxswf$(A)
-	$(L) swfcombine.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfcombine$(E): swfcombine.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfcombine.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfdump$(E): swfdump.$(O) ../lib/librfxswf$(A)
-	$(L) swfdump.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfdump$(E): swfdump.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfdump.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfedit$(E): swfedit.$(O) ../lib/librfxswf$(A)
-	$(L) swfedit.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfedit$(E): swfedit.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfedit.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swf2png$(E): swf2png.$(O) ../lib/librfxswf$(A) ../lib/png.$(O)
-	$(L) swf2png.$(O) -o $@ ../lib/librfxswf$(A) ../lib/png.$(O) $(LIBS)
+swf2png$(E): swf2png.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swf2png.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfextract$(E): swfextract.$(O) ../lib/librfxswf$(A)
-	$(L) swfextract.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfextract$(E): swfextract.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfextract.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfstrings$(E): swfstrings.$(O) ../lib/librfxswf$(A)
-	$(L) swfstrings.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfstrings$(E): swfstrings.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfstrings.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfbbox$(E): swfbbox.$(O) ../lib/librfxswf$(A)
-	$(L) swfbbox.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfbbox$(E): swfbbox.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfbbox.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A)
-	$(L) font2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) font2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A)
-	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS)
+jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/png.$(O)
-	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/png.$(O) $(LIBS)
+swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/png.$(O) ../lib/libbase$(A)
+	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-pdf2swf$(E): pdf2swf.$(O) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/devices/ops.$(O) ../lib/devices/arts.$(O) ../lib/devices/swf.$(O) ../lib/devices/render.$(O)
-	$(LL) pdf2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/gfxtools.$(O) ../lib/gfxfont.$(O) ../lib/os.$(O) ../lib/devices/swf.$(O) ../lib/devices/arts.$(O) ../lib/devices/ops.$(O) ../lib/devices/record.$(O) ../lib/devices/render.$(O) ../lib/art/libart$(A) $(LIBS) $(CXXLIBS)
+
+PDF2SWF_OBJ=../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/devices/arts.$(O) ../lib/devices/swf.$(O) ../lib/art/libart$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
+pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)
+	$(LL) pdf2swf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
-swfc$(E): parser.$(O) swfc.$(O) ../lib/libbase$(A) ../lib/librfxswf$(A)
-	$(L) parser.$(O) swfc.$(O) ../lib/libbase$(A) -o $@ ../lib/librfxswf$(A) $(LIBS)
+swfc$(E): parser.$(O) swfc.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A) 
+	$(L) parser.$(O) swfc.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
 
 install:
