@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: SWF.$(SLEXT) gfx.$(SLEXT) gfx$(A)
+all: SWF.$(SLEXT) SWF$(A) gfx.$(SLEXT) gfx$(A)
 exe: mypython$(E) swfpython$(E) testmem$(E)
 
 primitives.$(O): primitives.c primitives.h
@@ -32,6 +32,8 @@ SWF_OBJS=SWF.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) tagmap.$(O) action.
 SWF_DEPS=../librfxswf$(A) ../libbase$(A) ../art/libart$(A) 
 SWF.$(SLEXT): Makefile
 	$(L) -g $(SHARED) $(SWF_OBJS) $(SWF_DEPS) -o SWF.$(SLEXT) $(PYTHON_LIB) $(LIBS)
+SWF$(A): $(SWF_OBJS) $(SWF_DEPS) Makefile
+	$(AR) cru SWF$(A) $(SWF_OBJS) $(SWF_DEPS)
 
 GFX_DEPS=../libpdf$(A) ../devices/swf.$(O) ../librfxswf$(A) ../devices/arts.$(O) ../art/libart$(A) ../libgfx$(A) ../libbase$(A) 
 gfx.$(SLEXT): gfx.$(O) $(GFX_DEPS) Makefile
