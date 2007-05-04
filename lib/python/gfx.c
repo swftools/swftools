@@ -89,6 +89,7 @@ static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
 	return NULL;
 
     gfxresult_t*result = self->output_device->finish(self->output_device);
+    self->output_device = 0;
     if(result->save(result, filename) < 0) {
 	return PY_ERROR("Couldn't write to %s", filename);
     }
