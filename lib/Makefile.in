@@ -14,7 +14,7 @@ actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.sw
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c
 
 base_objects=q.$(O) utf8.$(O) mem.$(O) png.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
-gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/bbox.$(O)
+gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/bbox.$(O) devices/rescale.$(O)
 
 bitio.$(O): bitio.c bitio.h
 	$(C) bitio.c -o $@
