@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "../lib/q.h"
 #include "parser.h"
+#include "../lib/utf8.h"
 
 //RVALUE	 {NUMBER}|{PERCENT}|{NAME}|\"{STRING}\"|{DIM}
 //<a>.                {printf("<a>%s\n", yytext);}
@@ -30,55 +31,6 @@ static void count(char*text, int len, int condition)
 }
 
 static char*prefix = 0;
-
-static char utf8buf[16];
-static char* getUTF8(unsigned int charnum)
-{
-    memset(utf8buf, 0, sizeof(utf8buf));
-
-    if(charnum < 0x80) {
-	utf8buf[0] = charnum;
-	return utf8buf;
-    } else if(charnum <0x800) {
-	/* 0000 0080-0000 07FF   110xxxxx 10xxxxxx */
-	utf8buf[0] = 0xc0 | (charnum >> 6);
-	utf8buf[1] = 0x80 | (charnum & 0x3f);
-	return utf8buf;
-    } else if(charnum < 0x10000) {
-	/* 0000 0800-0000 FFFF   1110xxxx 10xxxxxx 10xxxxxx */
-	utf8buf[0] = 0xe0 | (charnum >> 12);
-	utf8buf[1] = 0x80 |((charnum >> 6)&0x3f);
-	utf8buf[2] = 0x80 |((charnum     )&0x3f);
-	return utf8buf;
-    } else if(charnum < 0x200000) {
-	/* 0001 0000-001F FFFF   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
-	utf8buf[0] = 0xf0 | (charnum >> 18);
-	utf8buf[1] = 0x80 |((charnum >> 12)&0x3f);
-	utf8buf[2] = 0x80 |((charnum >> 6 )&0x3f);
-	utf8buf[3] = 0x80 |((charnum      )&0x3f);
-	return utf8buf;
-    } else if(charnum < 0x4000000) {
-	/* 0020 0000-03FF FFFF   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-	utf8buf[0] = 0xf8 | (charnum >> 24);
-	utf8buf[1] = 0x80 |((charnum >> 18)&0x3f);
-	utf8buf[2] = 0x80 |((charnum >> 12)&0x3f);
-	utf8buf[3] = 0x80 |((charnum >> 6 )&0x3f);
-	utf8buf[4] = 0x80 |((charnum      )&0x3f);
-	return utf8buf;
-    } else if(charnum < 0x80000000) {
-	/* 0400 0000-7FFF FFFF   1111110x 10xxxxxx ... 10xxxxxx */
-	utf8buf[0] = 0xfc | (charnum >> 30);
-	utf8buf[1] = 0x80 |((charnum >> 24)&0x3f);
-	utf8buf[2] = 0x80 |((charnum >> 18)&0x3f);
-	utf8buf[3] = 0x80 |((charnum >> 12)&0x3f);
-	utf8buf[4] = 0x80 |((charnum >> 6 )&0x3f);
-	utf8buf[5] = 0x80 |((charnum      )&0x3f);
-	return utf8buf;
-    } else {
-	fprintf(stderr, "Illegal character: 0x%08x\n", charnum);
-	return utf8buf;
-    }
-}
 
 static void unescapeString(string_t * tmp)
 {
