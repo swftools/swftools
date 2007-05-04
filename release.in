@@ -122,6 +122,7 @@ ${name}/lib/h.263/dct.c \
 ${name}/lib/h.263/dct.h \
 ${name}/lib/python/Makefile.in \
 ${name}/lib/python/SWF.c \
+${name}/lib/python/gfx.c \
 ${name}/lib/python/image.c \
 ${name}/lib/python/image.h \
 ${name}/lib/python/primitives.c \
