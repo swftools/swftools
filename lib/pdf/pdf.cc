@@ -34,6 +34,7 @@ typedef struct _pdf_doc_internal
 {
     int protect;
     PDFDoc*doc;
+    Object docinfo;
     InfoOutputDev*info;
     GFXOutputDev*outputDev;
     pdf_page_info_t*pages;
@@ -119,6 +120,8 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 
     delete i->doc; i->doc=0;
     free(i->pages); i->pages = 0;
+
+    i->docinfo.free();
     
     if(i->info) {
 	delete i->info;i->info=0;
@@ -169,6 +172,77 @@ gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
     return pdf_page;
 }
 
+static char*getInfoString(Dict *infoDict, char *key)
+{
+    Object obj;
+    GString *s1, *s2;
+    int i;
+
+    if (infoDict->lookup(key, &obj)->isString()) {
+	s1 = obj.getString();
+	if ((s1->getChar(0) & 0xff) == 0xfe &&
+	    (s1->getChar(1) & 0xff) == 0xff) {
+	    s2 = new GString();
+	    for (i = 2; i < obj.getString()->getLength(); i += 2) {
+	      if (s1->getChar(i) == '\0') {
+		s2->append(s1->getChar(i+1));
+	      } else {
+		delete s2;
+		s2 = new GString("<unicode>");
+		break;
+	      }
+	    }
+	    char*ret = strdup(s2->getCString());
+	    delete s2;
+	    obj.free();
+	    return ret;
+	} else {
+	    char*ret = strdup(s1->getCString());
+	    obj.free();
+	    return ret;
+	}
+    }
+    return strdup("");
+}
+
+static char*getInfoDate(Dict *infoDict, char *key) 
+{
+    Object obj;
+    char *s;
+
+    if (infoDict->lookup(key, &obj)->isString()) {
+	s = obj.getString()->getCString();
+	if (s[0] == 'D' && s[1] == ':') {
+	  s += 2;
+	}
+	char*ret = strdup(s);
+	obj.free();
+	return ret;
+    }
+    return strdup("");
+}
+
+char* pdf_doc_getinfo(gfxdocument_t*doc, char*name)
+{
+    pdf_doc_internal_t*i= (pdf_doc_internal_t*)doc->internal;
+    if(!strcmp(name, "title")) return getInfoString(i->docinfo.getDict(), "Title");
+    else if(!strcmp(name, "subject")) return getInfoString(i->docinfo.getDict(), "Subject");
+    else if(!strcmp(name, "keywords")) return getInfoString(i->docinfo.getDict(), "Keywords");
+    else if(!strcmp(name, "author")) return getInfoString(i->docinfo.getDict(), "Author");
+    else if(!strcmp(name, "creator")) return getInfoString(i->docinfo.getDict(), "Creator");
+    else if(!strcmp(name, "producer")) return getInfoString(i->docinfo.getDict(), "Producer");
+    else if(!strcmp(name, "creationdate")) return getInfoDate(i->docinfo.getDict(), "CreationDate");
+    else if(!strcmp(name, "moddate")) return getInfoDate(i->docinfo.getDict(), "ModDate");
+    else if(!strcmp(name, "linearized")) return strdup(i->doc->isLinearized() ? "yes" : "no");
+    else if(!strcmp(name, "encrypted")) return strdup(i->doc->isEncrypted() ? "yes" : "no");
+    else if(!strcmp(name, "oktoprint")) return strdup(i->doc->okToPrint() ? "yes" : "no");
+    else if(!strcmp(name, "oktocopy")) return strdup(i->doc->okToCopy() ? "yes" : "no");
+    else if(!strcmp(name, "oktochange")) return strdup(i->doc->okToChange() ? "yes" : "no");
+    else if(!strcmp(name, "oktoaddnotes")) return strdup(i->doc->okToAddNotes() ? "yes" : "no");
+    return 0;
+}
+
+
 void storeDeviceParameter(char*name, char*value)
 {
     parameter_t*p = new parameter_t();
@@ -217,50 +291,6 @@ void pdf_set_parameter(char*name, char*value)
     }
 }
 
-static void printInfoString(Dict *infoDict, char *key, char *fmt) {
-  Object obj;
-  GString *s1, *s2;
-  int i;
-
-  if (infoDict->lookup(key, &obj)->isString()) {
-    s1 = obj.getString();
-    if ((s1->getChar(0) & 0xff) == 0xfe &&
-	(s1->getChar(1) & 0xff) == 0xff) {
-      s2 = new GString();
-      for (i = 2; i < obj.getString()->getLength(); i += 2) {
-	if (s1->getChar(i) == '\0') {
-	  s2->append(s1->getChar(i+1));
-	} else {
-	  delete s2;
-	  s2 = new GString("<unicode>");
-	  break;
-	}
-      }
-      printf(fmt, s2->getCString());
-      delete s2;
-    } else {
-      printf(fmt, s1->getCString());
-    }
-  }
-  obj.free();
-}
-
-static void printInfoDate(Dict *infoDict, char *key, char *fmt) {
-  Object obj;
-  char *s;
-
-  if (infoDict->lookup(key, &obj)->isString()) {
-    s = obj.getString()->getCString();
-    if (s[0] == 'D' && s[1] == ':') {
-      s += 2;
-    }
-    printf(fmt, s);
-  }
-  obj.free();
-}
-
-
-
 gfxdocument_t*pdf_open(char*filename)
 {
     gfxdocument_t*pdf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
@@ -280,7 +310,6 @@ gfxdocument_t*pdf_open(char*filename)
     
     GString *fileName = new GString(filename);
     GString *userPW;
-    Object info;
 
     // read config file
     if(!globalParams)
@@ -301,33 +330,9 @@ gfxdocument_t*pdf_open(char*filename)
         return 0;
     }
 
-    // print doc info
-    i->doc->getDocInfo(&info);
-    if (info.isDict() &&
-      (getScreenLogLevel()>=LOGLEVEL_NOTICE)) {
-      printInfoString(info.getDict(), "Title",        "Title:        %s\n");
-      printInfoString(info.getDict(), "Subject",      "Subject:      %s\n");
-      printInfoString(info.getDict(), "Keywords",     "Keywords:     %s\n");
-      printInfoString(info.getDict(), "Author",       "Author:       %s\n");
-      printInfoString(info.getDict(), "Creator",      "Creator:      %s\n");
-      printInfoString(info.getDict(), "Producer",     "Producer:     %s\n");
-      printInfoDate(info.getDict(),   "CreationDate", "CreationDate: %s\n");
-      printInfoDate(info.getDict(),   "ModDate",      "ModDate:      %s\n");
-      printf("Pages:        %d\n", i->doc->getNumPages());
-      printf("Linearized:   %s\n", i->doc->isLinearized() ? "yes" : "no");
-      printf("Encrypted:    ");
-      if (i->doc->isEncrypted()) {
-        printf("yes (print:%s copy:%s change:%s addNotes:%s)\n",
-               i->doc->okToPrint() ? "yes" : "no",
-               i->doc->okToCopy() ? "yes" : "no",
-               i->doc->okToChange() ? "yes" : "no",
-               i->doc->okToAddNotes() ? "yes" : "no");
-      } else {
-        printf("no\n");
-      }
-    }
-    info.free();
-                   
+    // get doc info
+    i->doc->getDocInfo(&i->docinfo);
+    
     pdf_doc->num_pages = i->doc->getNumPages();
     i->protect = 0;
     if (i->doc->isEncrypted()) {
@@ -365,6 +370,7 @@ gfxdocument_t*pdf_open(char*filename)
     pdf_doc->get = 0;
     pdf_doc->destroy = pdf_doc_destroy;
     pdf_doc->set_parameter = pdf_doc_set_parameter;
+    pdf_doc->getinfo = pdf_doc_getinfo;
     pdf_doc->getpage = pdf_doc_getpage;
 
 

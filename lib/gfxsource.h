@@ -45,6 +45,7 @@ typedef struct _gfxdocument
     void* (*get)(struct _gfxdocument*gfx, char*name);
     void  (*destroy)(struct _gfxdocument*gfx);
     void  (*set_parameter)(struct _gfxdocument*gfx, char*name, char*value);
+    char* (*getinfo)(struct _gfxdocument*gfx, char*key);
     struct _gfxpage* (*getpage)(struct _gfxdocument*gfx, int page);
     void*internal;
 } gfxdocument_t;
