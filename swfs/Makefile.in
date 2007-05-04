@@ -14,12 +14,12 @@ keyboard_viewer.$(O): keyboard_viewer.c
 PreLoaderTemplate.$(O): PreLoaderTemplate.c
 	$(C) -I../lib PreLoaderTemplate.c -o $@
 
-simple_viewer$(E): simple_viewer.$(O) ../lib/librfxswf$(A)
-	$(L) simple_viewer.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS) 
-keyboard_viewer$(E): keyboard_viewer.$(O) ../lib/librfxswf$(A)
-	$(L) keyboard_viewer.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS) 
-PreLoaderTemplate$(E): PreLoaderTemplate.$(O) ../lib/librfxswf$(A)
-	$(L) PreLoaderTemplate.$(O) -o $@ ../lib/librfxswf$(A) $(LIBS) 
+simple_viewer$(E): simple_viewer.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) simple_viewer.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS) 
+keyboard_viewer$(E): keyboard_viewer.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A) 
+	$(L) keyboard_viewer.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS) 
+PreLoaderTemplate$(E): PreLoaderTemplate.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A) 
+	$(L) PreLoaderTemplate.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS) 
 
 simple_viewer.swf: $(programs)
 	@echo Calling ./keybard_viewer to create keyboard_viewer.swf
