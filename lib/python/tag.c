@@ -199,7 +199,7 @@ static PyObject* tag_getattr(PyObject * self, char* a)
     if(!strcmp(a, "data")) {
 	if(!fillTAG(self))
 	    return 0;
-	return Py_BuildValue("s#", tag->data, tag->len);
+	return Py_BuildValue("s#", tag->internals.tag->data, tag->internals.tag->len);
     }
     if(tag->internals.getattr) {
 	PyObject* ret = tag->internals.getattr(&tag->internals, a);
