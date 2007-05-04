@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-void gfxdevice_dummy_init(gfxdevice_t*self);
+void gfxdevice_dummy_init(gfxdevice_t*dev, gfxdevice_t*out);
 
 #ifdef __cplusplus
 }
