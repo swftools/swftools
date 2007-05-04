@@ -22,7 +22,7 @@ action.$(O): action.c action.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c action.c -o action.$(O)
 pyutils.$(O): pyutils.c pyutils.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c pyutils.c -o pyutils.$(O)
-gfx.$(O): gfx.c gfx.h
+gfx.$(O): gfx.c 
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c gfx.c -o gfx.$(O)
 
 SWF.$(O): SWF.c pyutils.h primitives.h taglist.h
