@@ -30,7 +30,7 @@ SWF.$(O): SWF.c pyutils.h primitives.h taglist.h
 
 SWF_OBJS=SWF.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) tagmap.$(O) action.$(O) primitives.$(O) pyutils.$(O) 
 SWF_DEPS=../librfxswf$(A) ../libbase$(A) ../art/libart$(A) 
-SWF.$(SLEXT): Makefile
+SWF.$(SLEXT): $(SWF_OBJS) $(SWF_DEPS) Makefile
 	$(L) -g $(SHARED) $(SWF_OBJS) $(SWF_DEPS) -o SWF.$(SLEXT) $(PYTHON_LIB) $(LIBS)
 SWF$(A): $(SWF_OBJS) $(SWF_DEPS) Makefile
 	$(AR) cru SWF$(A) $(SWF_OBJS) $(SWF_DEPS)
