@@ -25,8 +25,10 @@
 #include "../devices/swf.h"
 #include "../devices/render.h"
 #include "../devices/rescale.h"
+#include "../devices/text.h"
 #include "../pdf/pdf.h"
 #include "../log.h"
+#include "../utf8.h"
 
 gfxsource_t*pdfdriver;
 
@@ -121,6 +123,30 @@ static PyObject* f_createSWF(PyObject* parent, PyObject* args, PyObject* kwargs)
     gfxdevice_swf_init(self->output_device);
     return (PyObject*)self;
 }
+static PyObject* f_createImageList(PyObject* parent, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
+	return NULL;
+    OutputObject*self = PyObject_New(OutputObject, &OutputClass);
+    
+    self->output_device = malloc(sizeof(gfxdevice_t));
+    gfxdevice_render_init(self->output_device);
+    return (PyObject*)self;
+}
+static PyObject* f_createPlainText(PyObject* parent, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
+	return NULL;
+    OutputObject*self = PyObject_New(OutputObject, &OutputClass);
+    
+    self->output_device = malloc(sizeof(gfxdevice_t));
+    gfxdevice_text_init(self->output_device);
+    return (PyObject*)self;
+}
+
+
 static void output_dealloc(PyObject* _self) {
     OutputObject* self = (OutputObject*)_self;
 
@@ -441,11 +467,18 @@ static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
 
 static PyMethodDef pdf2swf_methods[] =
 {
-    /* module functions */
+    /* sources */
     {"open", (PyCFunction)f_open, METH_KEYWORDS, ""},
     {"addfont", (PyCFunction)f_addfont, METH_KEYWORDS, ""},
     {"addfontdir", (PyCFunction)f_addfontdir, METH_KEYWORDS, ""},
     {"setoption", (PyCFunction)f_setoption, METH_KEYWORDS, ""},
+
+    /* devices */
+    {"SWF", (PyCFunction)f_createSWF, METH_KEYWORDS, ""},
+    {"ImageList", (PyCFunction)f_createImageList, METH_KEYWORDS, ""},
+    {"PlainText", (PyCFunction)f_createPlainText, METH_KEYWORDS, ""},
+
+    /* sentinel */
     {0, 0, 0, 0}
 };
 
