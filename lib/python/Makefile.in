@@ -22,12 +22,17 @@ action.$(O): action.c action.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c action.c -o action.$(O)
 pyutils.$(O): pyutils.c pyutils.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c pyutils.c -o pyutils.$(O)
+gfx.$(O): gfx.c gfx.h
+	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c gfx.c -o gfx.$(O)
 
 SWF.$(O): SWF.c pyutils.h primitives.h taglist.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.$(O)
 
 SWF.$(SLEXT): SWF.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) tagmap.$(O) action.$(O) primitives.$(O) pyutils.$(O) ../librfxswf$(A) ../png.$(O) Makefile
 	$(L) -g $(SHARED) SWF.$(O) tagmap.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) action.$(O) primitives.$(O) pyutils.$(O)  -o SWF.$(SLEXT) $(PYTHON_LIB) ../librfxswf$(A) ../png.$(O) $(LIBS)
+
+gfx.$(SLEXT): gfx.$(O) ../lib/png.$(O) ../lib/libpdf$(A) ../lib/devices/swf.$(O) ../lib/devices/render.$(O) ../lib/devices/rescale.$(O) ../lib/gfxtools.$(O) ../lib/librfxswf$(A) ../lib/gfxfont.$(O) ../lib/art/libart.a Makefile
+	$(L) -g $(SHARED) gfx.$(O) -o gfx.$(SLEXT) $(PYTHON_LIB) gfx.$(O) ../lib/png.$(O) ../lib/libpdf$(A) ../lib/devices/swf.$(O) ../lib/devices/render.$(O) ../lib/devices/rescale.$(O) ../lib/gfxtools.$(O) ../lib/librfxswf$(A) ../lib/gfxfont.$(O) ../lib/art/libart.a $(LIBS)
 
 #TODO:
 install:
