@@ -69,15 +69,15 @@ static char* strf(char*format, ...)
 
 //---------------------------------------------------------------------
 staticforward PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs);
-staticforward PyObject* output_startframe(PyObject* _self, PyObject* args, PyObject* kwargs);
-staticforward PyObject* output_endframe(PyObject* _self, PyObject* args, PyObject* kwargs);
+staticforward PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwargs);
+staticforward PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwargs);
 
 static PyMethodDef output_methods[] =
 {
     /* Output functions */
     {"save", (PyCFunction)output_save, METH_KEYWORDS, ""},
-    {"startframe", (PyCFunction)output_startframe, METH_KEYWORDS, ""},
-    {"endframe", (PyCFunction)output_endframe, METH_KEYWORDS, ""},
+    {"startpage", (PyCFunction)output_startpage, METH_KEYWORDS, ""},
+    {"endpage", (PyCFunction)output_endpage, METH_KEYWORDS, ""},
     {0,0,0,0}
 };
 static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
@@ -96,7 +96,7 @@ static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
     result->destroy(result);
     return PY_NONE;
 }
-static PyObject* output_startframe(PyObject* _self, PyObject* args, PyObject* kwargs)
+static PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
     int width=0, height=0;
@@ -105,7 +105,7 @@ static PyObject* output_startframe(PyObject* _self, PyObject* args, PyObject* kw
     self->output_device->startpage(self->output_device, width, height);
     return PY_NONE;
 }
-static PyObject* output_endframe(PyObject* _self, PyObject* args, PyObject* kwargs)
+static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
     if (!PyArg_ParseTuple(args, ""))
