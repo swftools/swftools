@@ -86,7 +86,12 @@ static void processargs(int argn2,char**argv2)
         }
         else
         {
-            t+=args_callback_command(argv2[t],next);
+	    int num = args_callback_command(argv2[t],next);
+	    if(num>2) {
+		fprintf("internal error in command line parsing\n");
+		exit(1);
+	    }
+            t+=num;
         }
     }
 }
@@ -200,6 +205,46 @@ static char is_in_range(int t, char*irange)
     if(range && last<=t)
 	return 1;
     return 0;
+}
+
+char* filename2template(char*filename, int*startindex)
+{
+    int l = strlen(filename);
+    char*newname = (char*)malloc(l+5);
+    /* first look whether the file is already numbered */
+    while(1) {
+        l--;
+        if(l<0 || strchr("0123456789", filename[l]))
+            break;
+    };
+    if(l>=0) {
+        int lastdigit=l;
+        int firstdigit=l;
+        while(firstdigit && strchr("0123456789", filename[firstdigit-1]))
+            firstdigit--;
+        *startindex = atoi(filename+firstdigit);
+        memcpy(newname, filename, firstdigit);
+        sprintf(newname+firstdigit, "%%%dd", lastdigit+1-firstdigit);
+        strcat(newname+firstdigit, filename+lastdigit+1);
+        return newname;
+    }
+    /* if it isn't, try to paste a %d between filename and extension */
+    char*dot = strrchr(filename, '.');
+    if(dot) {
+        int pos = dot-filename;
+        memcpy(newname, filename, pos);
+        newname[pos++] = '.';
+        newname[pos++] = '%';
+        newname[pos++] = 'd';
+        strcpy(newname+pos, dot);
+        *startindex = 1;
+        return newname;
+    }
+    /* if that didn't work either, just append the number at the end */
+    strcpy(newname, filename);
+    strcat(newname, ".%d");
+    *startindex = 1;
+    return newname;
 }
 
 #endif //__args_h__
