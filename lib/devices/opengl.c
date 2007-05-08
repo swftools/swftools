@@ -5,6 +5,8 @@
 
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#include "../MD5.h"
+#include "../types.h"
 
 #include <math.h>
 #include <time.h>
@@ -14,7 +16,7 @@
 #include <stdarg.h>
 
 //#define ZSTEP (1/65536.0)
-#define ZSTEP (1/8.0)
+#define ZSTEP (1/4.0)
 
 typedef struct _fontlist {
     gfxfont_t*font;
@@ -179,6 +181,8 @@ void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
     glLineWidth(1.0);
 }
 
+#define SPLINE_SUBDIVISION 2
+
 void tesselatePolygon(GLUtesselator*tesselator, double z, gfxline_t*line)
 {
     int len = 0;
@@ -191,7 +195,7 @@ void tesselatePolygon(GLUtesselator*tesselator, double z, gfxline_t*line)
     len = 0;
     while(l) {
 	if(l->type == gfx_splineTo) {
-            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->y-2*l->sy+lasty))/2;
+            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->y-2*l->sy+lasty))*SPLINE_SUBDIVISION;
 	    int steps = (int)c;
 	    if(steps<1) steps = 1;
 	    len += steps;
@@ -218,7 +222,7 @@ void tesselatePolygon(GLUtesselator*tesselator, double z, gfxline_t*line)
 
 	if(l->type == gfx_splineTo) {
 	    int j;
-            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->y-2*l->sy+lasty))/2;
+            double c = sqrt(abs(l->x-2*l->sx+lastx) + abs(l->y-2*l->sy+lasty))*SPLINE_SUBDIVISION;
 	    int steps = (int)c;
 	    if(steps<1) steps = 1;
 	    //printf("c=%f d1=%f (%f/%f) d2=%f (%f/%f)\n", c,d1,l->x-l->sx,l->y-l->sy,d2,lastx-l->sx,lasty-l->sy);
@@ -269,21 +273,41 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     //tesselatePolygon(i->tesselator_line, z, line);
 }
 
-void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
+typedef struct _gfxhash
 {
-    dbg("fillbitmap");
-    internal_t*i = (internal_t*)dev->internal;
-    char running = 0;
-    int len = 0;
-    double*xyz=0;
-    gfxline_t*l=0;
-    glColor4f(1.0,0,0,1.0);
-    
-    i->currentz ++;
-    
-    GLuint texIDs[1];
-    glGenTextures(1, texIDs);
+    unsigned char d[16];
+} gfxhash_t;
 
+char gfxhash_compare(gfxhash_t*h1, gfxhash_t*h2)
+{
+    return !memcmp(h1->d, h2->d, 16);
+}
+
+typedef struct _imgopengl
+{
+    gfxhash_t hash;
+    GLuint texID;
+    int width, height;
+    struct _imgopengl*next;
+} imgopengl_t;
+
+imgopengl_t*img2texid = 0;
+
+gfxhash_t gfximage_hash(gfximage_t*img)
+{
+    int t;
+    int size = img->width*img->height*4;
+    U8*data = (U8*)img->data;
+    gfxhash_t hash;
+    hash_md5(data, size, hash.d);
+    return hash;
+}
+
+imgopengl_t*addTexture(gfximage_t*img)
+{
+    gfxhash_t hash = gfximage_hash(img);
+    imgopengl_t*i = img2texid;
+    
     int width_bits = 0;
     int height_bits = 0;
     while(1<<width_bits < img->width)
@@ -292,6 +316,25 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 	height_bits++;
     int newwidth = 1<<width_bits;
     int newheight = 1<<height_bits;
+
+    while(i) {
+        if(gfxhash_compare(&hash, &i->hash) && newwidth==i->width && newheight==i->height) {
+            return i;
+        }
+        i = i->next;
+    }
+    
+    GLuint texIDs[1];
+    glGenTextures(1, texIDs);
+
+    i = malloc(sizeof(imgopengl_t));
+    i->hash = hash;
+    i->texID = texIDs[0];
+    i->next = img2texid;
+    img2texid = i;
+
+    i->width = newwidth;
+    i->height = newheight;
 
     unsigned char*data = malloc(newwidth*newheight*4);
     int x,y;
@@ -319,27 +362,44 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 	    data[(y*newwidth+x)*4+3] = img->data[lasty*img->width+x].a;
         }
     }
+    
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, i->texID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, i->width, i->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    
+    return i;
+};
+
+void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
+{
+    dbg("fillbitmap");
+    internal_t*i = (internal_t*)dev->internal;
+    char running = 0;
+    int len = 0;
+    double*xyz=0;
+    gfxline_t*l=0;
+    glColor4f(1.0,0,0,1.0);
+    
+    i->currentz ++;
+  
+    imgopengl_t* txt = addTexture(img);
 
     gfxmatrix_t m2;
     gfxmatrix_invert(matrix, &m2);
-    m2.m00 /= newwidth;
-    m2.m10 /= newwidth;
-    m2.tx /= newwidth;
-    m2.m01 /= newheight;
-    m2.m11 /= newheight;
-    m2.ty /= newheight;
+    m2.m00 /= txt->width;
+    m2.m10 /= txt->width;
+    m2.tx /= txt->width;
+    m2.m01 /= txt->height;
+    m2.m11 /= txt->height;
+    m2.ty /= txt->height;
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texIDs[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, newwidth, newheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    
-    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, txt->texID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    
     
     gluTessBeginPolygon(i->tesselator_tex, NULL);
     l = line;
