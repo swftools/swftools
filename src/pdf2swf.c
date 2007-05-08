@@ -553,9 +553,10 @@ int main(int argn, char *argv[])
     }
 
     /* add fonts */
+    /*
     if(fontdir) {
 	driver->set_parameter("fontdir", fontdir);
-    }
+    }*/
     for(t=0;t<fontpathpos;t++) {
 	driver->set_parameter("fontdir", fontpaths[t]);
     }
