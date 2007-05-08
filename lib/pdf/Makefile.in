@@ -8,7 +8,7 @@ all: ../libpdf$(A) pdf2swf
 
 libpdf: ../libpdf$(A)
 
-libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) pdf.$(O)
+libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) pdf.$(O) fonts.$(O)
 
 xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O) xpdf/gfile.$(O) \
 		  xpdf/FoFiTrueType.$(O) xpdf/FoFiType1.$(O) xpdf/FoFiType1C.$(O) xpdf/FoFiBase.$(O) xpdf/FoFiEncodings.$(O) \
@@ -21,6 +21,8 @@ xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O)
 		  xpdf/GfxState.$(O) xpdf/Function.$(O) xpdf/Annot.$(O) xpdf/NameToCharCode.$(O) xpdf/UnicodeMap.$(O) \
 		  xpdf/SecurityHandler.$(O)
 
+fonts.$(O): fonts.c
+	$(C) -I ./ -I xpdf fonts.c -o $@
 cmyk.$(O): cmyk.cc
 	$(CC) -I ./ -I xpdf cmyk.cc -o $@
 GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h

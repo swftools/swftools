@@ -1,3 +1,4 @@
+int d050000l_afm_len = 9381;
 char* d050000l_afm =
 "StartFontMetrics 3.0\nComment Copyright URW Software, Copyright 1997 by URW\nCom"
 "ment Creation Date: 10/19/1999\nComment See the file COPYING (GNU General Public"
@@ -121,6 +122,7 @@ char* d050000l_afm =
 "75 691 ;\nC -1 ; WX 278 ; N .notdef ; B 0 0 0 0 ;\nEndCharMetrics\nEndFontMetric"
 "s\n"
 ;
+int d050000l_pfb_len = 45955;
 char* d050000l_pfb =
 "\x80\x1\xb6\x12\x0\x0%!PS-AdobeFont-1.0: Dingbats 001.005\n%%CreationDate: Tue O"
 "ct 19 1999\n% Copyright URW Software, Copyright 1997 by URW\n% URW Software, Cop"
@@ -1694,6 +1696,7 @@ char* d050000l_pfb =
 "00000000000000000000000000000000000000000000000\r0000000000000000000000000000000"
 "000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n019003l_afm_len = 31763;
 char* n019003l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -2110,6 +2113,7 @@ char* n019003l_afm =
 " s -12\nKPX y semicolon -27\nKPX zero four -2\nKPX zero one -46\nKPX zero seven "
 "-39\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n019003l_pfb_len = 36026;
 char* n019003l_pfb =
 "\x80\x1]\x6\x0\x0%!PS-AdobeFont-1.0: NimbusSanL-Regu 1.05\n%%CreationDate: Wed D"
 "ec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Development\n"
@@ -3387,6 +3391,7 @@ char* n019003l_pfb =
 "00000000000000000000000000000000000000000000000000\r0000000000000000000000000000"
 "000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n019004l_afm_len = 31595;
 char* n019004l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -3801,6 +3806,7 @@ char* n019004l_afm =
 "X y semicolon -33\nKPX zero four 5\nKPX zero one -19\nKPX zero seven -10\nEndKer"
 "nPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n019004l_pfb_len = 35941;
 char* n019004l_pfb =
 "\x80\x1W\x6\x0\x0%!PS-AdobeFont-1.0: NimbusSanL-Bold 1.05\n%%CreationDate: Wed D"
 "ec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Development\n"
@@ -5077,6 +5083,7 @@ char* n019004l_pfb =
 "00000000000000000000000000000000000000000000000000000000\r0000000000000000000000"
 "000000000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n019023l_afm_len = 32114;
 char* n019023l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -5497,6 +5504,7 @@ char* n019023l_afm =
 "30\nKPX y period -80\nKPX y s -23\nKPX y semicolon -40\nKPX zero four -11\nKPX z"
 "ero one -56\nKPX zero seven -50\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n019023l_pfb_len = 38314;
 char* n019023l_pfb =
 "\x80\x1n\x6\x0\x0%!PS-AdobeFont-1.0: NimbusSanL-ReguItal 1.05\n%%CreationDate: W"
 "ed Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Developme"
@@ -6850,6 +6858,7 @@ char* n019023l_pfb =
 "0000000000000000000000000000000000000000000000000000000\r00000000000000000000000"
 "00000000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n019024l_afm_len = 31901;
 char* n019024l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -7268,6 +7277,7 @@ char* n019024l_afm =
 "-43\nKPX zero four -3\nKPX zero one -29\nKPX zero seven -21\nEndKernPairs\nEndKe"
 "rnData\nEndFontMetrics\n"
 ;
+int n019024l_pfb_len = 39013;
 char* n019024l_pfb =
 "\x80\x1h\x6\x0\x0%!PS-AdobeFont-1.0: NimbusSanL-BoldItal 1.05\n%%CreationDate: W"
 "ed Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Developme"
@@ -8652,6 +8662,7 @@ char* n019024l_pfb =
 "0000000000000000000000000000000000000000\r00000000000000000000000000000000000000"
 "00000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n021003l_afm_len = 31943;
 char* n021003l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -9070,6 +9081,7 @@ char* n021003l_afm =
 "X y period -73\nKPX y s -26\nKPX y semicolon -23\nKPX zero four 12\nKPX zero one"
 " -55\nKPX zero seven -5\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n021003l_pfb_len = 46026;
 char* n021003l_pfb =
 "\x80\x1m\x6\x0\x0%!PS-AdobeFont-1.0: NimbusRomNo9L-Regu 1.05\n%%CreationDate: We"
 "d Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Developmen"
@@ -10718,6 +10730,7 @@ char* n021003l_pfb =
 "0000000000000000000000000000000000000000000000000000\r00000000000000000000000000"
 "00000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n021004l_afm_len = 31889;
 char* n021004l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -11136,6 +11149,7 @@ char* n021004l_afm =
 "KPX zero four 11\nKPX zero one -31\nKPX zero seven 7\nEndKernPairs\nEndKernData\n"
 "EndFontMetrics\n"
 ;
+int n021004l_pfb_len = 44729;
 char* n021004l_pfb =
 "\x80\x1i\x6\x0\x0%!PS-AdobeFont-1.0: NimbusRomNo9L-Medi 1.05\n%%CreationDate: We"
 "d Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Developmen"
@@ -12732,6 +12746,7 @@ char* n021004l_pfb =
 "00000000000000000000000000000000000000000000000\r0000000000000000000000000000000"
 "000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n021023l_afm_len = 31920;
 char* n021023l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -13150,6 +13165,7 @@ char* n021023l_afm =
 " y s -19\nKPX y semicolon -45\nKPX zero four 14\nKPX zero one -50\nKPX zero seve"
 "n -3\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n021023l_pfb_len = 45458;
 char* n021023l_pfb =
 "\x80\x1~\x6\x0\x0%!PS-AdobeFont-1.0: NimbusRomNo9L-ReguItal 1.05\n%%CreationDate"
 ": Wed Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Develo"
@@ -14775,6 +14791,7 @@ char* n021023l_pfb =
 "000000000000000000000000000000000000000000000000000000\r000000000000000000000000"
 "0000000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n021024l_afm_len = 32028;
 char* n021024l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -15194,6 +15211,7 @@ char* n021024l_afm =
 "7\nKPX y period -26\nKPX y s -13\nKPX y semicolon -44\nKPX zero four -1\nKPX zer"
 "o one -50\nKPX zero seven -12\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n021024l_pfb_len = 44656;
 char* n021024l_pfb =
 "\x80\x1y\x6\x0\x0%!PS-AdobeFont-1.0: NimbusRomNo9L-MediItal 1.05\n%%CreationDate"
 ": Wed Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Develo"
@@ -16784,6 +16802,7 @@ char* n021024l_pfb =
 "000000000000000000000000000000000000000000000000000000000\r000000000000000000000"
 "0000000000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n022003l_afm_len = 31926;
 char* n022003l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -17202,6 +17221,7 @@ char* n022003l_afm =
 "X y s -30\nKPX y semicolon -72\nKPX zero four -58\nKPX zero one -81\nKPX zero se"
 "ven -73\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n022003l_pfb_len = 45758;
 char* n022003l_pfb =
 "\x80\x1[\x6\x0\x0%!PS-AdobeFont-1.0: NimbusMonL-Regu 1.05\n%%CreationDate: Wed D"
 "ec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Development\n"
@@ -18836,6 +18856,7 @@ char* n022003l_pfb =
 "00000000000000000000000000000000000000000000000000000000\r0000000000000000000000"
 "000000000000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n022004l_afm_len = 31779;
 char* n022004l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -19252,6 +19273,7 @@ char* n022004l_afm =
 "eriod -155\nKPX y s -21\nKPX y semicolon -79\nKPX zero four -59\nKPX zero one -7"
 "6\nKPX zero seven -68\nEndKernPairs\nEndKernData\nEndFontMetrics\n"
 ;
+int n022004l_pfb_len = 50493;
 char* n022004l_pfb =
 "\x80\x1U\x6\x0\x0%!PS-AdobeFont-1.0: NimbusMonL-Bold 1.05\n%%CreationDate: Wed D"
 "ec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Development\n"
@@ -21053,6 +21075,7 @@ char* n022004l_pfb =
 "00000000000000000000000000000000000000000000000\r0000000000000000000000000000000"
 "000000000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n022023l_afm_len = 32136;
 char* n022023l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -21474,6 +21497,7 @@ char* n022023l_afm =
 "KPX zero four -64\nKPX zero one -91\nKPX zero seven -82\nEndKernPairs\nEndKernDa"
 "ta\nEndFontMetrics\n"
 ;
+int n022023l_pfb_len = 44404;
 char* n022023l_pfb =
 "\x80\x1m\x6\x0\x0%!PS-AdobeFont-1.0: NimbusMonL-ReguObli 1.05\n%%CreationDate: W"
 "ed Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Developme"
@@ -23062,6 +23086,7 @@ char* n022023l_pfb =
 "000000000000000000000000000000000000000000\r000000000000000000000000000000000000"
 "0000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int n022024l_afm_len = 31961;
 char* n022024l_afm =
 "StartFontMetrics 3.0\nComment Copyright (URW)++,Copyright 1999 by (URW)++ Design"
 " & Development\nComment Creation Date: 12/22/1999\nComment See the file COPYING "
@@ -23481,6 +23506,7 @@ char* n022024l_afm =
 "-65\nKPX zero one -81\nKPX zero seven -79\nEndKernPairs\nEndKernData\nEndFontMet"
 "rics\n"
 ;
+int n022024l_pfb_len = 51527;
 char* n022024l_pfb =
 "\x80\x1g\x6\x0\x0%!PS-AdobeFont-1.0: NimbusMonL-BoldObli 1.05\n%%CreationDate: W"
 "ed Dec 22 1999\n% Copyright (URW)++,Copyright 1999 by (URW)++ Design & Developme"
@@ -25326,6 +25352,7 @@ char* n022024l_pfb =
 "00000000000000000000000000000000000000000\r0000000000000000000000000000000000000"
 "000000000000000000000000000\rcleartomark\n\x80\x3"
 ;
+int s050000l_afm_len = 9686;
 char* s050000l_afm =
 "StartFontMetrics 3.0\nComment Copyright URW Software, Copyright 1997 by URW\nCom"
 "ment Creation Date: 10/21/1999\nComment See the file COPYING (GNU General Public"
@@ -25452,6 +25479,7 @@ char* s050000l_afm =
 " 935 ;\nC 254 ; WX 494 ; N bracerightbt ; B 17 -70 255 926 ;\nC -1 ; WX 250 ; N "
 ".notdef ; B 0 0 0 0 ;\nEndCharMetrics\nEndFontMetrics\n"
 ;
+int s050000l_pfb_len = 33709;
 char* s050000l_pfb =
 "\x80\x1\xfb\x15\x0\x0%!PS-AdobeFont-1.0: StandardSymL 001.005\n%%CreationDate: T"
 "hu Oct 21 1999\n% Copyright URW Software, Copyright 1997 by URW\n% URW Software,"

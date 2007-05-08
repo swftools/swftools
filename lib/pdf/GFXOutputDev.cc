@@ -70,6 +70,7 @@
 #include "../devices/arts.h"
 #include "../devices/render.h"
 #include "../png.h"
+#include "fonts.h"
 
 #include <math.h>
 
@@ -87,26 +88,32 @@ static int fontnum = 0;
 
 static char* lastfontdir = 0;
 
-struct mapping {
+struct fontentry {
     char*pdffont;
     char*filename;
+    char*afm;
+    int afmlen;
+    char*pfb;
+    int pfblen;
+    char*fullfilename;
 } pdf2t1map[] ={
-{"Times-Roman",           "n021003l"},
-{"Times-Italic",          "n021023l"},
-{"Times-Bold",            "n021004l"},
-{"Times-BoldItalic",      "n021024l"},
-{"Helvetica",             "n019003l"},
-{"Helvetica-Oblique",     "n019023l"},
-{"Helvetica-Bold",        "n019004l"},
-{"Helvetica-BoldOblique", "n019024l"},
-{"Courier",               "n022003l"},
-{"Courier-Oblique",       "n022023l"},
-{"Courier-Bold",          "n022004l"},
-{"Courier-BoldOblique",   "n022024l"},
-{"Symbol",                "s050000l"},
-{"ZapfDingbats",          "d050000l"}};
+{"Times-Roman",           "n021003l", n021003l_afm, n021003l_afm_len, n021003l_pfb, n021003l_pfb_len},
+{"Times-Italic",          "n021023l", n021023l_afm, n021023l_afm_len, n021023l_pfb, n021023l_pfb_len},
+{"Times-Bold",            "n021004l", n021004l_afm, n021004l_afm_len, n021004l_pfb, n021004l_pfb_len},
+{"Times-BoldItalic",      "n021024l", n021024l_afm, n021024l_afm_len, n021024l_pfb, n021024l_pfb_len},
+{"Helvetica",             "n019003l", n019003l_afm, n019003l_afm_len, n019003l_pfb, n019003l_pfb_len},
+{"Helvetica-Oblique",     "n019023l", n019023l_afm, n019023l_afm_len, n019023l_pfb, n019023l_pfb_len},
+{"Helvetica-Bold",        "n019004l", n019004l_afm, n019004l_afm_len, n019004l_pfb, n019004l_pfb_len},
+{"Helvetica-BoldOblique", "n019024l", n019024l_afm, n019024l_afm_len, n019024l_pfb, n019024l_pfb_len},
+{"Courier",               "n022003l", n022003l_afm, n022003l_afm_len, n022003l_pfb, n022003l_pfb_len},
+{"Courier-Oblique",       "n022023l", n022023l_afm, n022023l_afm_len, n022023l_pfb, n022023l_pfb_len},
+{"Courier-Bold",          "n022004l", n022004l_afm, n022004l_afm_len, n022004l_pfb, n022004l_pfb_len},
+{"Courier-BoldOblique",   "n022024l", n022024l_afm, n022024l_afm_len, n022024l_pfb, n022024l_pfb_len},
+{"Symbol",                "s050000l", s050000l_afm, s050000l_afm_len, s050000l_pfb, s050000l_pfb_len},
+{"ZapfDingbats",          "d050000l", d050000l_afm, d050000l_afm_len, d050000l_pfb, d050000l_pfb_len}};
 
-static int verbose = 1;
+
+static int verbose = 0;
 static int dbgindent = 0;
 static void dbg(char*format, ...)
 {
@@ -1423,35 +1430,57 @@ void GFXOutputDev::restoreState(GfxState *state) {
   statepos--;
 }
 
+char* writeOutStdFont(fontentry* f)
+{
+    FILE*fi;
+    char namebuf1[512];
+    char namebuf2[512];
+    char* tmpFileName = mktmpname(namebuf1);
+
+    sprintf(namebuf2, "%s.afm", tmpFileName);
+    fi = fopen(namebuf2, "wb");
+    if(!fi)
+        return 0;
+    fwrite(f->afm, 1, f->afmlen, fi);
+    fclose(fi);
+
+    sprintf(namebuf2, "%s.pfb", tmpFileName);
+    fi = fopen(namebuf2, "wb");
+    if(!fi)
+        return 0;
+    fwrite(f->pfb, 1, f->pfblen, fi);
+    fclose(fi);
+
+    return strdup(namebuf2);
+}
+
 char* GFXOutputDev::searchFont(char*name) 
 {	
     int i;
     char*filename=0;
-    int is_standard_font = 0;
 	
     msg("<verbose> SearchFont(%s)", name);
 
     /* see if it is a pdf standard font */
-    for(i=0;i<sizeof(pdf2t1map)/sizeof(mapping);i++) 
+    for(i=0;i<sizeof(pdf2t1map)/sizeof(fontentry);i++) 
     {
 	if(!strcmp(name, pdf2t1map[i].pdffont))
 	{
-	    name = pdf2t1map[i].filename;
-	    is_standard_font = 1;
-	    break;
+            if(!pdf2t1map[i].fullfilename) {
+                pdf2t1map[i].fullfilename = writeOutStdFont(&pdf2t1map[i]);
+                if(!pdf2t1map[i].fullfilename) {
+                    msg("<error> Couldn't save default font- is the Temp Directory writable?");
+                } else {
+                    msg("<verbose> Storing standard PDF font %s at %s", name, pdf2t1map[i].fullfilename);
+                }
+            }
+	    return strdup(pdf2t1map[i].fullfilename);
 	}
     }
-    /* look in all font files */
+    /* else look in all font files */
     for(i=0;i<fontnum;i++) 
     {
-	if(strstr(fonts[i].filename, name))
-	{
-	    if(!fonts[i].used) {
-
-		fonts[i].used = 1;
-		if(!is_standard_font)
-		    msg("<notice> Using %s for %s", fonts[i].filename, name);
-	    }
+	if(strstr(fonts[i].filename, name)) {
 	    return strdup(fonts[i].filename);
 	}
     }
