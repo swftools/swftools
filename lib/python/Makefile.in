@@ -34,12 +34,14 @@ SWF.$(SLEXT): $(SWF_OBJS) $(SWF_DEPS) Makefile
 	$(L) -g $(SHARED) $(SWF_OBJS) $(SWF_DEPS) -o SWF.$(SLEXT) $(PYTHON_LIB) $(LIBS)
 SWF$(A): $(SWF_OBJS) $(SWF_DEPS) Makefile
 	$(AR) cru SWF$(A) $(SWF_OBJS) $(SWF_DEPS)
+	$(RANLIB) SWF$(A)
 
 GFX_DEPS=../libpdf$(A) ../devices/swf.$(O) ../librfxswf$(A) ../devices/arts.$(O) ../art/libart$(A) ../libgfx$(A) ../libbase$(A) 
 gfx.$(SLEXT): gfx.$(O) $(GFX_DEPS) Makefile
 	$(L) -g $(SHARED) gfx.$(O) -o gfx.$(SLEXT) $(GFX_DEPS) $(PYTHON_LIB) $(LIBS) $(CXXLIBS)
 gfx$(A): gfx.$(O) $(GFX_DEPS) Makefile
 	$(AR) cru gfx$(A) gfx.$(O) $(GFX_DEPS)
+	$(RANLIB) gfx$(A)
 
 #TODO:
 install:
