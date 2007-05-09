@@ -88,7 +88,7 @@ static void processargs(int argn2,char**argv2)
         {
 	    int num = args_callback_command(argv2[t],next);
 	    if(num>2) {
-		fprintf("internal error in command line parsing\n");
+		fprintf(stderr, "internal error in command line parsing\n");
 		exit(1);
 	    }
             t+=num;
@@ -207,7 +207,7 @@ static char is_in_range(int t, char*irange)
     return 0;
 }
 
-char* filename2template(char*filename, int*startindex)
+static char* filename2template(char*filename, int*startindex)
 {
     int l = strlen(filename);
     char*newname = (char*)malloc(l+5);
