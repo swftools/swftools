@@ -235,11 +235,17 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, char*name)
     else if(!strcmp(name, "creationdate")) return getInfoDate(i->docinfo.getDict(), "CreationDate");
     else if(!strcmp(name, "moddate")) return getInfoDate(i->docinfo.getDict(), "ModDate");
     else if(!strcmp(name, "linearized")) return strdup(i->doc->isLinearized() ? "yes" : "no");
+    else if(!strcmp(name, "tagged")) return strdup(i->doc->getStructTreeRoot()->isDict() ? "yes" : "no");
     else if(!strcmp(name, "encrypted")) return strdup(i->doc->isEncrypted() ? "yes" : "no");
     else if(!strcmp(name, "oktoprint")) return strdup(i->doc->okToPrint() ? "yes" : "no");
     else if(!strcmp(name, "oktocopy")) return strdup(i->doc->okToCopy() ? "yes" : "no");
     else if(!strcmp(name, "oktochange")) return strdup(i->doc->okToChange() ? "yes" : "no");
     else if(!strcmp(name, "oktoaddnotes")) return strdup(i->doc->okToAddNotes() ? "yes" : "no");
+    else if(!strcmp(name, "version")) { 
+        char buf[32];
+        sprintf(buf, "%.1f", i->doc->getPDFVersion());
+        return strdup(buf);
+    }
     return 0;
 }
 
