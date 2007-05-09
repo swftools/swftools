@@ -89,7 +89,7 @@ void render2(gfxpage_t*page, gfxdevice_t*output)
     pi->outputDev->setXRef(pi->doc, pi->doc->getXRef());
     pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, true, /*doLinks*/(int)1);
     pi->doc->processLinks((OutputDev*)pi->outputDev, page->nr);
-    pi->doc->endframe();
+    pi->outputDev->endframe();
 }
 
     
