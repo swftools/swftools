@@ -791,8 +791,6 @@ void GFXOutputDev::endframe()
 	device->endclip(device);
 	outer_clip_box = 0;
     }
-
-    device->endpage(device);
 }
 
 void GFXOutputDev::finish()
