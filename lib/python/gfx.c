@@ -446,6 +446,16 @@ static PyObject* f_setoption(PyObject* self, PyObject* args, PyObject* kwargs)
     return PY_NONE;
 }
 
+static PyObject* f_verbose(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"val", NULL};
+    int val;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &val))
+	return NULL;
+    setConsoleLogging(val);
+    return PY_NONE;
+}
+
 static PyObject* f_addfont(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"filename", NULL};
@@ -473,6 +483,7 @@ static PyMethodDef pdf2swf_methods[] =
     {"addfont", (PyCFunction)f_addfont, METH_KEYWORDS, ""},
     {"addfontdir", (PyCFunction)f_addfontdir, METH_KEYWORDS, ""},
     {"setoption", (PyCFunction)f_setoption, METH_KEYWORDS, ""},
+    {"verbose", (PyCFunction)f_verbose, METH_KEYWORDS, ""},
 
     /* devices */
     {"SWF", (PyCFunction)f_createSWF, METH_KEYWORDS, ""},
