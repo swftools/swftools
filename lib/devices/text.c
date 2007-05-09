@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <memory.h>
@@ -39,6 +40,9 @@ typedef struct _textpage {
 typedef struct _internal {
     textpage_t*first_page;
     textpage_t*current_page;
+    double currentx;
+    double currenty;
+    double lastadvance;
 } internal_t;
 
 int text_setparameter(gfxdevice_t*dev, const char*key, const char*value)
@@ -49,7 +53,7 @@ int text_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 void text_startpage(gfxdevice_t*dev, int width, int height)
 {
     internal_t*i = (internal_t*)dev->internal;
-    if(i->first_page) {
+    if(!i->first_page) {
 	i->first_page = i->current_page = (textpage_t*)malloc(sizeof(textpage_t));
     } else {
 	i->current_page->next = (textpage_t*)malloc(sizeof(textpage_t));
@@ -57,6 +61,11 @@ void text_startpage(gfxdevice_t*dev, int width, int height)
     }
     i->current_page->textsize = 4096;
     i->current_page->text = malloc(i->current_page->textsize);
+    i->current_page->textpos = 0;
+    i->current_page->next = 0;
+    i->currentx = 0;
+    i->currenty = 0;
+    i->lastadvance = 0;
 }
 void text_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
@@ -83,19 +92,40 @@ void text_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, 
     internal_t*i = (internal_t*)dev->internal;
 }
 void text_addfont(gfxdevice_t*dev, gfxfont_t*font) {}
-void text_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
+
+static void addchar(gfxdevice_t*dev, int unicode)
 {
     internal_t*i = (internal_t*)dev->internal;
-
+    if(!i->current_page) {
+        text_startpage(dev, 0, 0);
+    }
     if(i->current_page->textpos + 10 > i->current_page->textsize) {
 	i->current_page->textsize += 4096;
 	i->current_page->text = realloc(i->current_page->text, i->current_page->textsize);
     }
-
-    gfxglyph_t*glyph = &font->glyphs[glyphnr];
-    writeUTF8(glyph->unicode, &i->current_page->text[i->current_page->textpos]);
+    writeUTF8(unicode, &i->current_page->text[i->current_page->textpos]);
     i->current_page->textpos += strlen(&i->current_page->text[i->current_page->textpos]);
-    return;
+}
+
+void text_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
+{
+    internal_t*i = (internal_t*)dev->internal;
+    double xshift = matrix->tx - i->currentx;
+    double yshift = matrix->ty - i->currenty;
+    i->currentx = matrix->tx;
+    i->currenty = matrix->ty;
+
+    if(fabs(yshift)>1.0) {
+        addchar(dev, 10);
+    } else if(xshift > i->lastadvance*1.3 || xshift<0) {
+        addchar(dev, 32);
+    }
+    i->lastadvance = font->glyphs[glyphnr].advance*matrix->m00;
+
+    int u = font->glyphs[glyphnr].unicode;
+    if(u>13) {
+        addchar(dev, u);
+    }
 }
 
 void text_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
