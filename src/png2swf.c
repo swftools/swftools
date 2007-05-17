@@ -558,7 +558,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     }
     
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
-	fprintf(stderr, "Couldn't uncompress %s!\n", sname);
+	fprintf(stderr, "Couldn't uncompress IDAT chunk (%d bytes) in %s!\n", imagedatalen, sname);
 	if(zimagedata)
 	    free(zimagedata);
 	return 0;
