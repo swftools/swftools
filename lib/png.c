@@ -644,7 +644,7 @@ EXPORT int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**dest
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
-	    if(header.mode == 6) {
+	    if(header.mode == 6) { 
 		applyfilter4(mode, src, old, dest, header.width);
 	    } else { // header.mode = 2
 		applyfilter3(mode, src, old, dest, header.width);
@@ -784,21 +784,36 @@ static inline void png_write_byte(FILE*fi, unsigned char byte)
     fwrite(&byte,1,1,fi);
     mycrc32 = crc32_table[(mycrc32 ^ byte) & 0xff] ^ (mycrc32 >> 8);
 }
-static void png_start_chunk(FILE*fi, char*type, int len)
+static long png_start_chunk(FILE*fi, char*type, int len)
 {
     unsigned char mytype[4]={0,0,0,0};
     unsigned char mylen[4];
+    long filepos;
     mylen[0] = len>>24;
     mylen[1] = len>>16;
     mylen[2] = len>>8;
     mylen[3] = len;
     memcpy(mytype,type,strlen(type));
+    filepos = ftell(fi);
     fwrite(&mylen, 4, 1, fi);
     mycrc32=0xffffffff;
     png_write_byte(fi,mytype[0]);
     png_write_byte(fi,mytype[1]);
     png_write_byte(fi,mytype[2]);
     png_write_byte(fi,mytype[3]);
+    return filepos;
+}
+static void png_patch_len(FILE*fi, int pos, int len)
+{
+    unsigned char mylen[4];
+    long filepos;
+    mylen[0] = len>>24;
+    mylen[1] = len>>16;
+    mylen[2] = len>>8;
+    mylen[3] = len;
+    fseek(fi, pos, SEEK_SET);
+    fwrite(&mylen, 4, 1, fi);
+    fseek(fi, 0, SEEK_END);
 }
 static void png_write_bytes(FILE*fi, unsigned char*bytes, int len)
 {
@@ -824,6 +839,176 @@ static void png_end_chunk(FILE*fi)
     fwrite(&tmp2,4,1,fi);
 }
 
+#define ZLIB_BUFFER_SIZE 16384
+
+static long compress_line(z_stream*zs, Bytef*line, int len, FILE*fi)
+{
+    long size = 0;
+    zs->next_in = line;
+    zs->avail_in = len;
+
+    while(1) {
+	int ret = deflate(zs, Z_NO_FLUSH);
+	if (ret != Z_OK) {
+	    fprintf(stderr, "error in deflate(): %s", zs->msg?zs->msg:"unknown");
+	    return 0;
+	}
+	if(zs->avail_out != ZLIB_BUFFER_SIZE) {
+	    int consumed = ZLIB_BUFFER_SIZE - zs->avail_out;
+	    size += consumed;
+	    png_write_bytes(fi, zs->next_out - consumed , consumed);
+	    zs->next_out = zs->next_out - consumed;
+	    zs->avail_out = ZLIB_BUFFER_SIZE;
+	}
+	if(!zs->avail_in) {
+	    break;
+	}
+    }
+    return size;
+}
+
+static int test_line(z_stream*zs_orig, Bytef*line, int linelen)
+{
+    z_stream zs;
+    int ret = deflateCopy(&zs, zs_orig);
+    if(ret != Z_OK) {
+	fprintf(stderr, "Couldn't copy stream\n");
+	return 0;
+    }
+
+    zs.next_in = line;
+    zs.avail_in = linelen;
+
+    long size = 0;
+
+    int mode = Z_SYNC_FLUSH;
+    while(1) {
+	int ret = deflate(&zs, mode);
+	if (ret != Z_OK && ret != Z_STREAM_END) {
+	    fprintf(stderr, "error in deflate(): %s (mode %s, %d bytes remaining)\n", zs.msg?zs.msg:"unknown", 
+		    mode==Z_SYNC_FLUSH?"Z_SYNC_FLUSH":"Z_FINISH", zs.avail_in);
+	    return 0;
+	}
+	if(zs.avail_out != ZLIB_BUFFER_SIZE) {
+	    int consumed = ZLIB_BUFFER_SIZE - zs.avail_out;
+	    size += consumed;
+	    zs.next_out = zs.next_out - consumed;
+	    zs.avail_out = ZLIB_BUFFER_SIZE;
+	}
+        if (ret == Z_STREAM_END) {
+            break;
+        }
+	if(!zs.avail_in) {
+	    mode = Z_FINISH;
+	}
+    }
+    ret = deflateEnd(&zs);
+    if (ret != Z_OK) {
+	fprintf(stderr, "error in deflateEnd(): %s\n", zs.msg?zs.msg:"unknown");
+	return 0;
+    }
+    return size;
+}
+
+static int finishzlib(z_stream*zs, FILE*fi)
+{
+    int size = 0;
+    int ret;
+    while(1) {
+        ret = deflate(zs, Z_FINISH);
+        if (ret != Z_OK &&
+            ret != Z_STREAM_END) {
+	    fprintf(stderr, "error in deflate(finish): %s\n", zs->msg?zs->msg:"unknown");
+	    return 0;
+	}
+
+	if(zs->avail_out != ZLIB_BUFFER_SIZE) {
+	    int consumed = ZLIB_BUFFER_SIZE - zs->avail_out;
+	    size += consumed;
+	    png_write_bytes(fi, zs->next_out - consumed , consumed);
+	    zs->next_out = zs->next_out - consumed;
+	    zs->avail_out = ZLIB_BUFFER_SIZE;
+	}
+        if (ret == Z_STREAM_END) {
+            break;
+        }
+    }
+    ret = deflateEnd(zs);
+    if (ret != Z_OK) {
+	fprintf(stderr, "error in deflateEnd(): %s\n", zs->msg?zs->msg:"unknown");
+	return 0;
+    }
+    return size;
+}
+
+static void filter_line(int filtermode, unsigned char*dest, unsigned char*src, int width)
+{
+    int pos2 = 0;
+    int pos = 0;
+    int srcwidth = width*4;
+    int x;
+    if(filtermode == 0) {
+	for(x=0;x<width;x++) {
+	    dest[pos2++]=src[pos+1];
+	    dest[pos2++]=src[pos+2];
+	    dest[pos2++]=src[pos+3];
+	    dest[pos2++]=src[pos+0]; //alpha
+	    pos+=4;
+	}
+    } else if(filtermode == 1) {
+	/* x difference filter */
+	dest[pos2++]=src[pos+1];
+	dest[pos2++]=src[pos+2];
+	dest[pos2++]=src[pos+3];
+	dest[pos2++]=src[pos+0];
+	pos+=4;
+	for(x=1;x<width;x++) {
+	    dest[pos2++]=src[pos+1] - src[pos-4+1];
+	    dest[pos2++]=src[pos+2] - src[pos-4+2];
+	    dest[pos2++]=src[pos+3] - src[pos-4+3];
+	    dest[pos2++]=src[pos+0] - src[pos-4+0]; //alpha
+	    pos+=4;
+	}
+    } else if(filtermode == 2) {
+	/* y difference filter */
+	for(x=0;x<width;x++) {
+	    dest[pos2++]=src[pos+1] - src[pos-srcwidth+1];
+	    dest[pos2++]=src[pos+2] - src[pos-srcwidth+2];
+	    dest[pos2++]=src[pos+3] - src[pos-srcwidth+3];
+	    dest[pos2++]=src[pos+0] - src[pos-srcwidth+0]; //alpha
+	    pos+=4;
+	}
+    } else if(filtermode == 3) {
+	dest[pos2++]=src[pos+1] - src[pos-srcwidth+1]/2;
+	dest[pos2++]=src[pos+2] - src[pos-srcwidth+2]/2;
+	dest[pos2++]=src[pos+3] - src[pos-srcwidth+3]/2;
+	dest[pos2++]=src[pos+0] - src[pos-srcwidth+0]/2;
+	pos+=4;
+	/* x+y difference filter */
+	for(x=1;x<width;x++) {
+	    dest[pos2++]=src[pos+1] - (src[pos-4+1] + src[pos-srcwidth+1])/2;
+	    dest[pos2++]=src[pos+2] - (src[pos-4+2] + src[pos-srcwidth+2])/2;
+	    dest[pos2++]=src[pos+3] - (src[pos-4+3] + src[pos-srcwidth+3])/2;
+	    dest[pos2++]=src[pos+0] - (src[pos-4+0] + src[pos-srcwidth+0])/2; //alpha
+	    pos+=4;
+	}
+    } else if(filtermode == 4) {
+	dest[pos2++]=src[pos+1] - PaethPredictor(0, src[pos-srcwidth+1], 0);
+	dest[pos2++]=src[pos+2] - PaethPredictor(0, src[pos-srcwidth+2], 0);
+	dest[pos2++]=src[pos+3] - PaethPredictor(0, src[pos-srcwidth+3], 0);
+	dest[pos2++]=src[pos+0] - PaethPredictor(0, src[pos-srcwidth+0], 0);
+	pos+=4;
+	/* paeth difference filter */
+	for(x=1;x<width;x++) {
+	    dest[pos2++]=src[pos+1] - PaethPredictor(src[pos-4+1], src[pos-srcwidth+1], src[pos-4-srcwidth+1]);
+	    dest[pos2++]=src[pos+2] - PaethPredictor(src[pos-4+2], src[pos-srcwidth+2], src[pos-4-srcwidth+2]);
+	    dest[pos2++]=src[pos+3] - PaethPredictor(src[pos-4+3], src[pos-srcwidth+3], src[pos-4-srcwidth+3]);
+	    dest[pos2++]=src[pos+0] - PaethPredictor(src[pos-4+0], src[pos-srcwidth+0], src[pos-4-srcwidth+0]);
+	    pos+=4;
+	}
+    }
+}
+
 EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
 {
     FILE*fi;
@@ -832,10 +1017,8 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
     unsigned char format;
     unsigned char tmp;
     unsigned char* data2=0;
-    unsigned char* data3=0;
     u32 datalen;
     u32 datalen2;
-    u32 datalen3;
     unsigned char head[] = {137,80,78,71,13,10,26,10}; // PNG header
     int cols;
     char alpha = 1;
@@ -844,6 +1027,7 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
     u32 tmp32;
     int bpp;
     int ret;
+    z_stream zs;
 
     make_crc32_table();
 
@@ -876,7 +1060,7 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
      png_write_byte(fi,0); //filter mode
      png_write_byte(fi,0); //interlace mode
     png_end_chunk(fi);
-   
+
 /*    if(format == 3) {
 	png_start_chunk(fi, "PLTE", 768);
 	 
@@ -887,41 +1071,60 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
 	 }
 	png_end_chunk(fi);
     }*/
-    {
-	int pos2 = 0;
-	int x,y;
-	int srcwidth = width * (bpp/8);
-	datalen3 = (width*4+5)*height;
-	data3 = (unsigned char*)malloc(datalen3);
-	for(y=0;y<height;y++)
-	{
-	   data3[pos2++]=0; //filter type
-	   for(x=0;x<width;x++) {
-	       data3[pos2++]=data[pos+1];
-	       data3[pos2++]=data[pos+2];
-	       data3[pos2++]=data[pos+3];
-	       data3[pos2++]=data[pos+0]; //alpha
-	       pos+=4;
-	   }
-	   pos+=((srcwidth+3)&~3)-srcwidth; //align
-	}
-	datalen3=pos2;
-    }
-
-    datalen2 = datalen3+256;
-    data2 = (unsigned char*)malloc(datalen2);
-
-    if((ret = compress (data2, &datalen2, data3, datalen3)) != Z_OK) {
-	fprintf(stderr, "zlib error in pic %d\n", ret);
+    long idatpos = png_start_chunk(fi, "IDAT", 0);
+    
+    memset(&zs,0,sizeof(z_stream));
+    Bytef*writebuf = malloc(ZLIB_BUFFER_SIZE);
+    zs.zalloc = Z_NULL;
+    zs.zfree  = Z_NULL;
+    zs.opaque = Z_NULL;
+    zs.next_out = writebuf;
+    zs.avail_out = ZLIB_BUFFER_SIZE;
+    ret = deflateInit(&zs, 9);
+    if (ret != Z_OK) {
+	fprintf(stderr, "error in deflateInit(): %s", zs.msg?zs.msg:"unknown");
 	return;
     }
-    png_start_chunk(fi, "IDAT", datalen2);
-    png_write_bytes(fi,data2,datalen2);
+
+    long idatsize = 0;
+    {
+	int x,y;
+	int srcwidth = width * (bpp/8);
+	int linelen = 1 + ((srcwidth+3)&~3);
+	unsigned char* line = (unsigned char*)malloc(linelen);
+	unsigned char* bestline = (unsigned char*)malloc(linelen);
+	memset(line, 0, linelen);
+	for(y=0;y<height;y++)
+	{
+	    int filtermode;
+	    int bestsize = 0x7fffffff;
+	    for(filtermode=0;filtermode<5;filtermode++) {
+
+		if(!y && filtermode>=2)
+		    continue; // don't do y direction filters in the first row
+		
+		line[0]=filtermode; //filter type
+		filter_line(filtermode, line+1, &data[y*srcwidth], width);
+
+		int size = test_line(&zs, line, linelen);
+		if(size < bestsize) {
+		    memcpy(bestline, line, linelen);
+		    bestsize = size;
+		}
+	    }
+	    idatsize += compress_line(&zs, bestline, linelen, fi);
+	}
+	free(line);free(bestline);
+    }
+    idatsize += finishzlib(&zs, fi);
+    png_patch_len(fi, idatpos, idatsize);
     png_end_chunk(fi);
+
     png_start_chunk(fi, "IEND", 0);
     png_end_chunk(fi);
 
+    free(writebuf);
     free(data2);
-    free(data3);
     fclose(fi);
 }
+
