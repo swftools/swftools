@@ -38,6 +38,8 @@ gfxtools.$(O): gfxtools.c gfxtools.h $(top_builddir)/config.h
 	$(C) gfxtools.c -o $@
 gfxfont.$(O): gfxfont.c gfxfont.h $(top_builddir)/config.h
 	$(C) gfxfont.c -o $@
+gfxwindow.$(O): gfxwindow_win32.c gfxwindow_unix.c gfxwindow.c gfxwindow.h
+	$(C) gfxwindow.c -o $@
 
 MD5.$(O): MD5.c MD5.h
 	$(C) MD5.c -o $@
