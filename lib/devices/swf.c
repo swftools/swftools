@@ -1876,16 +1876,20 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 
     /// {
     if(is_jpeg && i->config_jpegsubpixels) {
-	newsizex = (int)(targetwidth*i->config_jpegsubpixels+0.5);
-	newsizey = (int)(targetheight*i->config_jpegsubpixels+0.5);
+	newsizex = (int)(targetwidth*i->config_jpegsubpixels + 0.5);
+	newsizey = (int)(targetheight*i->config_jpegsubpixels + 0.5);
     } else if(!is_jpeg && i->config_ppmsubpixels) {
-	newsizex = (int)(targetwidth*i->config_ppmsubpixels+0.5);
-	newsizey = (int)(targetheight*i->config_ppmsubpixels+0.5);
+	newsizex = (int)(targetwidth*i->config_ppmsubpixels + 0.5);
+	newsizey = (int)(targetheight*i->config_ppmsubpixels + 0.5);
     }
     /// }
 
-    if(sizex<=0 || sizey<=0 || newsizex<=0 || newsizey<=0)
+    if(sizex<=0 || sizey<=0)
 	return -1;
+    if(newsizex<=0)
+	newsizex = 1;
+    if(newsizey<=0)
+	newsizey = 1;
 
     /* TODO: cache images */
     
