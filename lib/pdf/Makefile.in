@@ -126,7 +126,7 @@ xpdf/gmem.$(O): xpdf/gmem.cc
 	$(RANLIB) ../libpdf$(A)
 
 pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
-	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o pdftoppm$(E) $(LIBS) -lt1
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o pdftoppm$(E) $(LIBS)
 pdftotext$(E): $(xpdf_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS) -lt1
 pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) ../../src/pdf2swf.c ../devices/swf.$(O) ../devices/record.$(O) ../devices/arts.$(O) ../devices/ops.$(O) ../devices/render.$(O) ../libbase$(A)
