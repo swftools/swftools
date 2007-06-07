@@ -20,8 +20,8 @@ avi2swf.$(O): avi2swf.cc videoreader_vfw.hh videoreader_avifile.hh
 v2swf.$(O): v2swf.c ../lib/q.h
 	$(C) $< -o $@
 
-avi2swf$(E): avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O)
-	$(LL) avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/q.$(O) -o avi2swf$(E) ../lib/librfxswf$(A) $(LIBS) $(VIDEO_LIBS)
+avi2swf$(E): avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) ../lib/libbase$(A)
+	$(LL) avi2swf.$(O) v2swf.$(O) videoreader_avifile.$(O) videoreader_vfw.$(O) -o avi2swf$(E) ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS) $(VIDEO_LIBS)
 	$(STRIP) avi2swf$(E)
 
 install:
