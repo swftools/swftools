@@ -182,9 +182,9 @@ typedef struct _QXWindow {
     XWindowAttributes xwa;
 
 #ifdef USE_PIXMAP
-    Pixmap winbuf;
+    Pixmap offscreen_pixmap;
 #else
-    XImage* winbuf;
+    XImage* offscreen_ximage;
 #endif
 
     U8*currentscr;
@@ -429,6 +429,7 @@ static QXWindow* openwindow(int posx,int posy,int w,int h,char*winName)
 
     qx->xgcv.foreground=X.white;
     qx->xgcv.background=X.black;
+    //qx->gc=XDefaultGC(X.d,qx->mywin);
     qx->gc=XCreateGC(X.d,qx->mywin,GCForeground|GCBackground,&qx->xgcv);
 
     XGetWindowAttributes(X.d,qx->mywin,&qx->xwa);
@@ -480,20 +481,20 @@ static QXWindow* openwindow(int posx,int posy,int w,int h,char*winName)
     qx->currentscr = (U8*)segInfo.shmaddr;
 
 # ifdef USE_PIXMAP
-    qx->winbuf = XShmCreatePixmap(X.d,qx->mywin,segInfo.shmaddr,&segInfo,qx->lenx,qx->leny,DefaultDepth(X.d, DefaultScreen(X.d)));
+    qx->offscreen_pixmap = XShmCreatePixmap(X.d,qx->mywin,segInfo.shmaddr,&segInfo,qx->lenx,qx->leny,DefaultDepth(X.d, DefaultScreen(X.d)));
 # else 
-    qx->winbuf = XShmCreateImage(X.d,X.v,24,ZPixmap,(char*)segInfo.shmaddr, &segInfo, qx->lenx,qx->leny);
-    XInitImage(qx->winbuf);
+    qx->offscreen_ximage = XShmCreateImage(X.d,X.v,24,ZPixmap,(char*)segInfo.shmaddr, &segInfo, qx->lenx,qx->leny);
+    XInitImage(qx->offscreen_ximage);
 # endif
 
 #else
 
+    qx->currentscr = malloc(qx->lenx*qx->leny*4);
 # ifdef USE_PIXMAP
-    qx->winbuf = XCreatePixmap(X.d,qx->mywin,qx->lenx,qx->leny, DefaultDepth(X.d,X.s));
+    qx->offscreen_pixmap = XCreatePixmapFromBitmapData(X.d,qx->mywin,qx->currentscr,qx->lenx,qx->leny,0,0,DefaultDepth(X.d,X.s));
 # else
-    qx->currentscr=malloc(qx->lenx*qx->leny*4);
-    qx->winbuf = XCreateImage(X.d,X.v,24,ZPixmap,0,(char*)qx->currentscr,qx->lenx,qx->leny,8,qx->lenx*4);
-    XInitImage(qx->winbuf);
+    qx->offscreen_ximage = XCreateImage(X.d,X.v,24,ZPixmap,0,(char*)qx->currentscr,qx->lenx,qx->leny,8,qx->lenx*4);
+    XInitImage(qx->offscreen_ximage);
 # endif
 
 #endif
@@ -737,12 +738,18 @@ static void gfxwindow_flippage(gfxwindow_t*win)
 	}
     }
 
-#ifdef USE_PIXMAP
     XSetFunction(X.d,i->qx->gc,GXcopy);
-    XCopyArea(X.d,i->qx->winbuf,i->qx->mywin,i->qx->gc, 0, 0, i->qx->lenx,i->qx->leny, 0, 0);
+#ifdef USE_PIXMAP
+# ifndef USE_SHM
+    if(i->qx->offscreen_pixmap) {
+        XFreePixmap(X.d,i->qx->offscreen_pixmap);i->qx->offscreen_pixmap = 0;
+    }
+    i->qx->offscreen_pixmap = XCreatePixmapFromBitmapData(X.d,i->qx->mywin,i->qx->currentscr,i->qx->lenx,i->qx->leny,X.white,X.black,DefaultDepth(X.d,X.s));
+# endif
+    XCopyArea(X.d,i->qx->offscreen_pixmap,i->qx->mywin,i->qx->gc, 0, 0, i->qx->lenx,i->qx->leny, 0, 0);
     XFlush(X.d);
 #else
-    XPutImage(X.d,qx->mywin,qx->gc,qx->winbuf,0,0,0,0,lenx,leny);
+    XPutImage(X.d,i->qx->mywin,i->qx->gc,i->qx->offscreen_ximage,0,0,0,0,i->qx->lenx,i->qx->leny);
 #endif
     pthread_mutex_unlock(&X.xmutex);
 }
