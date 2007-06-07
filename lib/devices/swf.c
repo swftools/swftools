@@ -91,6 +91,7 @@ typedef struct _swfoutput_internal
     char* config_linktarget;
     char*config_internallinkfunction;
     char*config_externallinkfunction;
+    char config_animate;
 
     SWF* swf;
 
@@ -753,7 +754,7 @@ static void endtext(gfxdevice_t*dev)
 	swf_SetU8(i->tag, 0);//reserved
     }
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-
+    
     swf_ObjectPlace(i->tag,i->textid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
     i->textid = -1;
 }
@@ -1130,6 +1131,10 @@ static void endshape(gfxdevice_t*dev)
     m.tx += i->shapeposx;
     m.ty += i->shapeposy;
     swf_ObjectPlace(i->tag,i->shapeid,getNewDepth(dev),&m,NULL,NULL);
+
+    if(i->config_animate) {
+	i->tag = swf_InsertTag(i->tag,ST_SHOWFRAME);
+    }
 
     swf_ShapeFree(i->shape);
     i->shape = 0;
@@ -1788,6 +1793,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_linktarget = strdup(value);
     } else if(!strcmp(name, "dumpfonts")) {
 	i->config_dumpfonts = atoi(value);
+    } else if(!strcmp(name, "animate")) {
+	i->config_animate = atoi(value);
     } else if(!strcmp(name, "next_bitmap_is_jpeg")) {
 	i->jpeg = 1;
     } else if(!strcmp(name, "jpegquality")) {
