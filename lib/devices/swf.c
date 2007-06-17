@@ -150,8 +150,9 @@ typedef struct _swfoutput_internal
 
     char overflow;
 
+    int current_font_size;
     MATRIX fontmatrix;
-    double fontm11,fontm12,fontm21,fontm22;
+    double lastfontm11,lastfontm12,lastfontm21,lastfontm22;
     SWFFONT *swffont;
     RGBA strokergb;
     RGBA fillrgb;
@@ -676,10 +677,10 @@ static void putcharacter(gfxdevice_t*dev, int fontid, int charid, int x,int y, i
 /* Notice: we can only put chars in the range -1639,1638 (-32768/20,32768/20).
    So if we set this value to high, the char coordinates will overflow.
    If we set it to low, however, the char positions will be inaccurate */
-#define FONT_INTERNAL_SIZE 4
+#define GLYPH_SCALE 1
 
 /* process a character. */
-static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, swfmatrix_t*m, gfxcolor_t*col)
+static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, float x, float y, gfxcolor_t*col)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!swffont) {
@@ -702,21 +703,21 @@ static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, swfmatrix_t*m
     if(i->textid<0)
 	starttext(dev);
 
-    float x = m->m31;
-    float y = m->m32;
-    float det = ((m->m11*m->m22)-(m->m21*m->m12));
+    double det = i->fontmatrix.sx/65536.0 * i->fontmatrix.sy/65536.0 - 
+	         i->fontmatrix.r0/65536.0 * i->fontmatrix.r1/65536.0;
+
     if(fabs(det) < 0.0005) { 
 	/* x direction equals y direction- the text is invisible */
 	return 1;
     }
-    det = 20*FONT_INTERNAL_SIZE / det;
+    det = 20 * GLYPH_SCALE / det;
 
     SPOINT p;
-    p.x = (SCOORD)((  x * m->m22 - y * m->m12)*det);
-    p.y = (SCOORD)((- x * m->m21 + y * m->m11)*det);
+    p.x = (SCOORD)((  x * i->fontmatrix.sy/65536.0 - y * i->fontmatrix.r1/65536.0)*det);
+    p.y = (SCOORD)((- x * i->fontmatrix.r0/65536.0 + y * i->fontmatrix.sx/65536.0)*det);
 
     RGBA rgba = *(RGBA*)col;
-    putcharacter(dev, swffont->id, charid,p.x,p.y,FONT_INTERNAL_SIZE, rgba);
+    putcharacter(dev, swffont->id, charid,p.x,p.y,i->current_font_size, rgba);
     swf_FontUseGlyph(swffont, charid);
     return 1;
 }
@@ -745,10 +746,11 @@ static void endtext(gfxdevice_t*dev)
     if(i->swf->fileVersion >= 8) {
 	i->tag = swf_InsertTag(i->tag, ST_CSMTEXTSETTINGS);
 	swf_SetU16(i->tag, i->textid);
+
 	//swf_SetU8(i->tag, /*subpixel grid*/(2<<3)|/*flashtype*/0x40);
-	//swf_SetU8(i->tag, /*grid*/(1<<3)|/*flashtype*/0x40);
-	//swf_SetU8(i->tag, /*grid*/(0<<3)|/*flashtype*/0x40);
-	swf_SetU8(i->tag, /*grid*/(1<<3)|/*no flashtype*/0x00);
+	swf_SetU8(i->tag, /*grid*/(1<<3)|/*flashtype*/0x40);
+	//swf_SetU8(i->tag, /*no grid*/(0<<3)|/*flashtype*/0x40);
+
 	swf_SetU32(i->tag, 0);//thickness
 	swf_SetU32(i->tag, 0);//sharpness
 	swf_SetU8(i->tag, 0);//reserved
@@ -760,29 +762,36 @@ static void endtext(gfxdevice_t*dev)
 }
 
 /* set's the matrix which is to be applied to characters drawn by swfoutput_drawchar() */
-static void swfoutput_setfontmatrix(gfxdevice_t*dev,double m11,double m21,
-                                                  double m12,double m22)
+static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,double m22)
 {
     m11 *= 1024;
     m12 *= 1024;
     m21 *= 1024;
     m22 *= 1024;
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->fontm11 == m11 &&
-       i->fontm12 == m12 &&
-       i->fontm21 == m21 &&
-       i->fontm22 == m22)
+    if(i->lastfontm11 == m11 &&
+       i->lastfontm12 == m12 &&
+       i->lastfontm21 == m21 &&
+       i->lastfontm22 == m22)
         return;
    if(i->textid>=0)
 	endtext(dev);
-    i->fontm11 = m11;
-    i->fontm12 = m12;
-    i->fontm21 = m21;
-    i->fontm22 = m22;
     
+    i->lastfontm11 = m11;
+    i->lastfontm12 = m12;
+    i->lastfontm21 = m21;
+    i->lastfontm22 = m22;
+
+    double xsize = sqrt(m11*m11 + m12*m12);
+    double ysize = sqrt(m21*m21 + m22*m22);
+    i->current_font_size = (xsize>ysize?xsize:ysize)*1;
+    if(i->current_font_size < 1)
+	i->current_font_size = 1;
+    double ifs = 1.0 / (i->current_font_size*GLYPH_SCALE);
+
     MATRIX m;
-    m.sx = (U32)(((i->fontm11)*65536)/FONT_INTERNAL_SIZE); m.r1 = (U32)(((i->fontm12)*65536)/FONT_INTERNAL_SIZE);
-    m.r0 = (U32)(((i->fontm21)*65536)/FONT_INTERNAL_SIZE); m.sy = (U32)(((i->fontm22)*65536)/FONT_INTERNAL_SIZE); 
+    m.sx = (U32)((m11*ifs)*65536); m.r1 = (U32)((m21*ifs)*65536);
+    m.r0 = (U32)((m12*ifs)*65536); m.sy = (U32)((m22*ifs)*65536); 
     m.tx = 0;
     m.ty = 0;
     i->fontmatrix = m;
@@ -2338,6 +2347,13 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	gfxline_t*line;
 	int advance = 0;
 	swffont->glyph2ascii[t] = font->glyphs[t].unicode;
+	if(swffont->glyph2ascii[t] == 0xffff || swffont->glyph2ascii[t] == 0x0000) {
+	    /* flash 8 flashtype requires unique unicode IDs for each character.
+	       We use the Unicode private user area to assign characters, hoping that
+	       the font doesn't contain more than 2048 glyphs */
+	    swffont->glyph2ascii[t] = 0xe000 + (t&0x1fff);
+	}
+
 	if(font->glyphs[t].name) {
 	    swffont->glyphnames[t] = strdup(font->glyphs[t].name);
 	} else {
@@ -2349,8 +2365,8 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
 	line = font->glyphs[t].line;
 	while(line) {
 	    FPOINT c,to;
-	    c.x = line->sx; c.y = line->sy;
-	    to.x = line->x; to.y = line->y;
+	    c.x = line->sx * GLYPH_SCALE; c.y = line->sy * GLYPH_SCALE;
+	    to.x = line->x * GLYPH_SCALE; to.y = line->y * GLYPH_SCALE;
 	    if(line->type == gfx_moveTo) {
 		draw.moveTo(&draw, &to);
 	    } else if(line->type == gfx_lineTo) {
@@ -2475,16 +2491,8 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 
 	swf_switchfont(dev, font->id); // set the current font
     }
-    swfoutput_setfontmatrix(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
+    setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
    
-    swfmatrix_t m;
-    m.m11 = i->fontm11;
-    m.m12 = i->fontm12;
-    m.m21 = i->fontm21;
-    m.m22 = i->fontm22;
-    m.m31 = matrix->tx;
-    m.m32 = matrix->ty;
-  
 /*    printf("%f %f\n", m.m31,  m.m32);
     {
     static int xpos = 40;
@@ -2495,5 +2503,5 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     }*/
 
 
-    drawchar(dev, i->swffont, glyph, &m, color);
+    drawchar(dev, i->swffont, glyph, matrix->tx, matrix->ty, color);
 }
