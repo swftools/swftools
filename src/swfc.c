@@ -979,6 +979,15 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 	return;
     }
     r = swf_SetDefineText(tag, font, &color, text, size);
+
+    if(stack[0].swf->fileVersion >= 8) {
+	tag = swf_InsertTag(tag, ST_CSMTEXTSETTINGS);
+	swf_SetU16(tag, id);
+	swf_SetU8(tag, /*grid*/(1<<3)|/*flashtype*/0x40);
+	swf_SetU32(tag, 0);//thickness
+	swf_SetU32(tag, 0);//sharpness
+	swf_SetU8(tag, 0);//reserved
+    }
    
     s_addcharacter(name, id, tag, r);
     incrementid();
@@ -1735,6 +1744,10 @@ void s_put(char*instance, char*character, parameters_t p)
     m = s_instancepos(i->character->size, &p);
    
     if(p.blendmode || p.filter) {
+	if(stack[0].swf->fileVersion < 8) {
+	    if(p.blendmode) warning("blendmodes only supported for flash version>=8");
+	    else            warning("filters only supported for flash version>=8");
+	}
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
     } else {
 	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
