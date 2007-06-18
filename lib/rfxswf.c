@@ -1282,15 +1282,6 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
 
   if(writer) writer_lastpos = writer->pos;
 
-  if(swf->fileVersion >= 8) {
-      if ((swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES) &&
-	  (!swf->firstTag->next || swf->firstTag->next->id != ST_FILEATTRIBUTES)) 
-      {
-	  U32 flags = 0; // | 128 = usenetwork, | 8 = hasmetadata
-	  swf_SetU32(swf_InsertTagBefore(swf, swf->firstTag,ST_FILEATTRIBUTES),flags);
-      }
-  }
-
   // Insert REFLEX Tag
 
 #ifdef INSERT_RFX_TAG
@@ -1302,6 +1293,14 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   }
 
 #endif // INSERT_RFX_TAG
+  
+  if(swf->fileVersion >= 8) {
+      if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
+      {
+	  U32 flags = 0; // | 128 = usenetwork, | 8 = hasmetadata
+	  swf_SetU32(swf_InsertTagBefore(swf, swf->firstTag,ST_FILEATTRIBUTES),flags);
+      }
+  }
 
   // Count Frames + File Size
 
