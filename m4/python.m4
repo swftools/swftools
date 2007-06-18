@@ -8,8 +8,8 @@ else
     if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
         echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
     fi
-    # iterate through version 2.2 to 2.4
-    for v in 2 3 4; do
+    # iterate through version 2.2 to 2.5
+    for v in 2 3 4 5; do
         # Linux
         if test -f "/usr/lib/python2.$v/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
