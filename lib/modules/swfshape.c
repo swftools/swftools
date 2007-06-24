@@ -506,7 +506,7 @@ void dummycallback1(TAG*tag, int x, void*y)
 // from swftools.c:
 void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph);
 
-static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
+static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
 {
     U16 count;
     int t;
@@ -520,6 +520,8 @@ static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
 	num = 2;
     else if(tag->id == ST_DEFINESHAPE3)
 	num = 3;
+    else if(tag->id == ST_DEFINESHAPE4)
+	num = 4;
 
     count = swf_GetU8(tag);
     if(count == 0xff && num>1) // defineshape2,3 only
@@ -538,7 +540,7 @@ static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
             shape->fillstyles[t].type = type;
             if(type == 0) {
                 /* plain color */
-                if(num == 3)
+                if(num >= 3)
                     swf_GetRGBA(tag, &dest->color);
                 else 
                     swf_GetRGB(tag, &dest->color);
@@ -580,13 +582,24 @@ static void parseFillStyleArray(TAG*tag, SHAPE2*shape)
         for(t=linestylestart;t<shape->numlinestyles;t++) 
         {
             shape->linestyles[t].width = swf_GetU16(tag);
-            if(num == 3)
+
+	    if(num >= 4) {
+		U16 flags = swf_GetU16(tag);
+		if(flags & 0x2000)
+		    swf_GetU16(tag); // miter limit
+		if(flags & 0x0800) {
+		    fprintf(stderr, "Filled strokes parsing not yet supported\n");
+		    return 0;
+		}
+	    }
+
+            if(num >= 3)
                 swf_GetRGBA(tag, &shape->linestyles[t].color);
             else
                 swf_GetRGB(tag, &shape->linestyles[t].color);
         }
     }
-    return;
+    return 1;
 }
 
 
@@ -637,7 +650,8 @@ static SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebi
 		} else {
 		    linestyleadd = shape2->numlinestyles;
 		    fillstyleadd = shape2->numfillstyles;
-		    parseFillStyleArray(tag, shape2);
+		    if(!parseFillStyleArray(tag, shape2))
+			return 0;
 		}
 		fillbits = swf_GetBits(tag, 4);
 		linebits = swf_GetBits(tag, 4);
@@ -940,6 +954,8 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
 	num = 2;
     else if(tag->id == ST_DEFINESHAPE3)
 	num = 3;
+    else if(tag->id == ST_DEFINESHAPE4)
+	num = 4;
     else {
 	fprintf(stderr, "parseDefineShape must be called with a shape tag");
     }
@@ -949,8 +965,16 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
     memset(shape, 0, sizeof(SHAPE2));
     shape->bbox = rfx_alloc(sizeof(SRECT));
     swf_GetRect(tag, shape->bbox);
+    if(num>=4) {
+	SRECT r2;
+	swf_ResetReadBits(tag);
+	swf_GetRect(tag, &r2); // edge bounds
+	U8 flags = swf_GetU8(tag); // flags, &1: contains scaling stroke, &2: contains non-scaling stroke
+    }
 
-    parseFillStyleArray(tag, shape);
+    if(!parseFillStyleArray(tag, shape)) {
+	return;
+    }
 
     swf_ResetReadBits(tag); 
     fill = (U16)swf_GetBits(tag,4);
