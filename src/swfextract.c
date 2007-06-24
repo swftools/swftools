@@ -48,6 +48,7 @@ char* extractname = 0;
 
 char hollow = 0;
 char originalplaceobjects = 0;
+char movetozero = 0;
 
 int numextracts = 0;
 
@@ -60,6 +61,7 @@ struct options_t options[] =
  {"j","jpegs"},
  {"p","pngs"},
  {"P","placeobject"},
+ {"0","movetozero"},
  {"m","mp3"},
  {"s","sound"},
  {"n","name"},
@@ -152,6 +154,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "P")) {
 	originalplaceobjects = 1;
+	return 0;
+    }
+    else if(!strcmp(name, "0")) {
+	movetozero = 1;
 	return 0;
     }
     else if(!strcmp(name, "w")) {
@@ -254,6 +260,18 @@ void enumerateIDs(TAG*tag, void(*callback)(void*))
 	callback(&tag->data[ptr[t]]);
 }
 
+void moveToZero(TAG*tag)
+{
+    if(!swf_isPlaceTag(tag))
+	return;
+    SWFPLACEOBJECT obj;
+    swf_GetPlaceObject(tag, &obj);
+    obj.matrix.tx = 0;
+    obj.matrix.ty = 0;
+    swf_ResetTag(tag, tag->id);
+    swf_SetPlaceObject(tag, &obj);
+}
+
 void extractTag(SWF*swf, char*filename)
 {
     SWF newswf;
@@ -271,6 +289,12 @@ void extractTag(SWF*swf, char*filename)
     newswf.fileVersion    = swf->fileVersion;
     newswf.frameRate      = swf->frameRate;
     newswf.movieSize	  = swf->movieSize;
+    if(movetozero && originalplaceobjects) {
+	newswf.movieSize.xmax = swf->movieSize.xmax - swf->movieSize.xmin;
+	newswf.movieSize.ymax = swf->movieSize.ymax - swf->movieSize.ymin;
+	newswf.movieSize.xmin = 0;
+	newswf.movieSize.ymin = 0;
+    }
 		
     newswf.firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     desttag = newswf.firstTag;
@@ -325,7 +349,7 @@ void extractTag(SWF*swf, char*filename)
 		swf_ExpandRect2(&objectbbox, &b);
 	    }
 	} else 
-	if (((((srctag->id == ST_PLACEOBJECT || srctag->id == ST_PLACEOBJECT2) && originalplaceobjects)
+	if ((((swf_isPlaceTag(srctag) && originalplaceobjects)
 	      || srctag->id == ST_STARTSOUND) && (used[swf_GetPlaceID(srctag)]&4) ) ||
 	      (swf_isPseudoDefiningTag(srctag) && used[swf_GetDefineID(srctag)]) ||
 	      (tagused[tagnum])) 
@@ -345,6 +369,9 @@ void extractTag(SWF*swf, char*filename)
 	    desttag->len = desttag->memsize = srctag->len;
 	    desttag->data = malloc(srctag->len);
 	    memcpy(desttag->data, srctag->data, srctag->len);
+	    if(movetozero && swf_isPlaceTag(desttag)) {
+		moveToZero(desttag);
+	    }
 	    if(reset)
 	        copy = 0;
 	}
@@ -360,18 +387,21 @@ void extractTag(SWF*swf, char*filename)
             TAG* objtag = 0;
             SRECT bbox;
             memset(&bbox, 0, sizeof(SRECT));
-	    for(t=0;t<65536;t++) {
-	        if(is_in_range(t, extractids)) {
-                    id = t;
-                    number++;
-                }
-            }
-            if(number>=2)
+	    if(extractids) {
+		for(t=0;t<65536;t++) {
+		    if(is_in_range(t, extractids)) {
+			id = t;
+			number++;
+		    }
+		}
+	    }
+            if(number>=2) {
 		printf("warning! You should use the -P when extracting multiple objects\n");
+	    }
 
             if(number == 1) {
                 /* if there is only one object, we will scale it.
-                   So let's figure out it's bounding box */
+                   So let's figure out its bounding box */
                 TAG*tag = swf->firstTag;
                 while(tag) {
                     if(swf_isDefiningTag(tag) && tag->id != ST_DEFINESPRITE) {
@@ -724,11 +754,11 @@ void handlelossless(TAG*tag)
     U8 bpp = 1;
     U8 format;
     U8 tmp;
-    U8* data=0;
+    Bytef* data=0;
     U8* data2=0;
     U8* data3=0;
-    U32 datalen;
-    U32 datalen2;
+    uLongf datalen;
+    uLongf datalen2;
     U32 datalen3;
     U8 head[] = {137,80,78,71,13,10,26,10};
     int cols;
@@ -998,6 +1028,11 @@ int main (int argc,char ** argv)
 	&& !extractmp3 && !extractsoundids && !extractfontids)
 	listavailable = 1;
 
+    if(!originalplaceobjects && movetozero) {
+	fprintf(stderr, "Error: -0 (--movetozero) can only be used in conjunction with -P (--placeobject)\n");
+	return 0;
+    }
+
     if(!filename)
     {
         fprintf(stderr, "You must supply a filename.\n");
@@ -1105,13 +1140,15 @@ int main (int argc,char ** argv)
 	    maing = tag->data[1];
 	    mainb = tag->data[2];
 	}
-	else if(tag->id == ST_PLACEOBJECT2) {
+	else if(swf_isPlaceTag(tag) && tag->id != ST_PLACEOBJECT ) {
 	    char*name = swf_GetName(tag);
 	    if(name && extractname && !strcmp(name, extractname)) {
 		int id = swf_GetPlaceID(tag); 
 		used[id] = 5;
 		found = 1;
-		tagused[tagnum] = 1;
+		if(originalplaceobjects) {
+		    tagused[tagnum] = 1;
+		}
 		depths[swf_GetDepth(tag)] = 1;
 		extractname_id = id;
 	    }
