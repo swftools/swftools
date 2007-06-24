@@ -1252,7 +1252,8 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_DEFINESHAPE ||
 		tag->id == ST_DEFINESHAPE2 ||
-		tag->id == ST_DEFINESHAPE3) {
+		tag->id == ST_DEFINESHAPE3 ||
+		tag->id == ST_DEFINESHAPE4) {
 	    if(showshapes)
 		handleShape(tag, myprefix);
 	}
