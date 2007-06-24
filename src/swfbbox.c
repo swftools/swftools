@@ -162,6 +162,8 @@ int hasid(TAG*tag)
 	return 1;
     if(tag->id == ST_PLACEOBJECT2 && (tag->data[0] & 2))
 	return 1;
+    if(tag->id == ST_PLACEOBJECT3 && (tag->data[0] & 2))
+	return 1;
     return 0;
 }
 
@@ -171,6 +173,8 @@ int hasname(TAG*tag)
 	return 0;
     if(tag->id == ST_PLACEOBJECT2 && (tag->data[0] & 0x20))
 	return 1;
+    if(tag->id == ST_PLACEOBJECT3 && (tag->data[0] & 0x20))
+	return 1;
     return 0;
 }
 
@@ -179,6 +183,12 @@ char* getname(TAG*tag)
     if(tag->id == ST_PLACEOBJECT)
 	return 0;
     if(tag->id == ST_PLACEOBJECT2 && (tag->data[0] & 0x20)) {
+	SWFPLACEOBJECT o;
+	tag->pos = 0;tag->readBit = 0;
+	swf_GetPlaceObject(tag, &o);
+	return o.name;
+    }
+    if(tag->id == ST_PLACEOBJECT3 && (tag->data[0] & 0x20)) {
 	SWFPLACEOBJECT o;
 	tag->pos = 0;tag->readBit = 0;
 	swf_GetPlaceObject(tag, &o);
@@ -232,7 +242,7 @@ static placement_t* readPlacements(SWF*swf)
     placement_t* p = (placement_t*)rfx_calloc(sizeof(placement_t)*65536);
     TAG*tag = swf->firstTag;
     while(tag) {
-	if(tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	if(swf_isPlaceTag(tag)) {
 	    SWFPLACEOBJECT*po = rfx_alloc(sizeof(SWFPLACEOBJECT));
 	    int id;
 	    swf_GetPlaceObject(tag, po);
@@ -405,7 +415,8 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
     while (tag) {
 	if (tag->id == ST_DEFINESHAPE ||
 	    tag->id == ST_DEFINESHAPE2 ||
-	    tag->id == ST_DEFINESHAPE3) {
+	    tag->id == ST_DEFINESHAPE3 ||
+	    tag->id == ST_DEFINESHAPE4) {
 	    SHAPE2 s;
 	    if(verbose) printf("%s\n", swf_TagGetName(tag));
 	    swf_ParseDefineShape(tag, &s);
@@ -487,7 +498,7 @@ static void showSwiftyOutput(SWF*swf)
 	if (tag->id == ST_SHOWFRAME) {
 	    printf("}\n{\n\t{frame %d}\n", frame++);
 	}
-	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	if (swf_isPlaceTag(tag)) {
 	    if(hasid(tag)) {
 		depth2id[swf_GetDepth(tag)] = swf_GetPlaceID(tag);
 	    }
@@ -495,7 +506,7 @@ static void showSwiftyOutput(SWF*swf)
 		depth2name[swf_GetDepth(tag)] = getname(tag);
 	    }
 	}
-	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	if (swf_isPlaceTag(tag)) {
 	    MATRIX m = getmatrix(tag);
 	    U16 id = depth2id[swf_GetDepth(tag)];
 	    char*name = depth2name[swf_GetDepth(tag)];
@@ -533,12 +544,12 @@ static SRECT getMovieClipBBox(TAG*tag)
     memset(&movieSize,0,sizeof(SRECT));
 
     while (tag->id != ST_END) {
-	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	if (swf_isPlaceTag(tag)) {
 	    if(hasid(tag)) {
 		depth2id[swf_GetDepth(tag)] = swf_GetPlaceID(tag);
 	    }
 	}
-	if (tag->id == ST_PLACEOBJECT || tag->id == ST_PLACEOBJECT2) {
+	if (swf_isPlaceTag(tag)) {
 	    MATRIX m = getmatrix(tag);
 	    U16 id = depth2id[swf_GetDepth(tag)];
 	    SRECT bbox = bboxes[id];
