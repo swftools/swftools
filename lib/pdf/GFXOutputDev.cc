@@ -1125,6 +1125,16 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
 {
     msg("<debug> beginType3Char %d, %08x, %d", code, *u, uLen);
     type3active = 1;
+
+    int t;
+    
+    gfxcolor_t col={255,0,0,0};
+    gfxmatrix_t m = {1,0,0, 0,1,0};
+
+    for(t=0;t<uLen;t++) {
+	device->drawchar(device, 0, u[t], &col, &m);
+    }
+
     /* the character itself is going to be passed using the draw functions */
     return gFalse; /* gTrue= is_in_cache? */
 }
