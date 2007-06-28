@@ -218,6 +218,8 @@ void arts_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 void arts_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     dbg("arts_drawchar");
+    if(!font)
+	return;
     internal_t*i = (internal_t*)dev->internal;
     gfxline_t*glyph = gfxline_clone(font->glyphs[glyphnr].line);
     gfxline_transform(glyph, matrix);

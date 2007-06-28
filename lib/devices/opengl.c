@@ -476,6 +476,8 @@ void opengl_addfont(gfxdevice_t*dev, gfxfont_t*font)
 void opengl_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
+    if(!font)
+	return;
 
     if(i->font && i->font->id && !strcmp(font->id, i->font->id)) {
 	// current font is correct

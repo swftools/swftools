@@ -648,6 +648,8 @@ void render_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 void render_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
+    if(!font)
+	return;
 
     /* align characters to whole pixels */
     matrix->tx = (int)(matrix->tx * i->antialize) / i->antialize;

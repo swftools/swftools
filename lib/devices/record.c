@@ -334,11 +334,14 @@ static void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
-    if(!gfxfontlist_hasfont(i->fontlist, font))
+    if(font && !gfxfontlist_hasfont(i->fontlist, font))
 	record_addfont(dev, font);
 
     writer_writeU8(&i->w, OP_DRAWCHAR);
-    writer_writeString(&i->w, font->id);
+    if(font) 
+	writer_writeString(&i->w, font->id);
+    else
+	writer_writeString(&i->w, "*NULL*");
     writer_writeU32(&i->w, glyphnr);
     dumpColor(&i->w, color);
     dumpMatrix(&i->w, matrix);
@@ -463,7 +466,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 	    }
 	    case OP_DRAWCHAR: {
 		char* id = reader_readString(r);
-		gfxfont_t*font = gfxfontlist_findfont(fontlist, id);
+		gfxfont_t*font = id?gfxfontlist_findfont(fontlist, id):0;
 		U32 glyph = reader_readU32(r);
 		gfxcolor_t color = readColor(r);
 		gfxmatrix_t matrix = readMatrix(r);

@@ -112,6 +112,8 @@ void bbox_addfont(gfxdevice_t*dev, gfxfont_t*font)
 void bbox_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
+    if(!font)
+	return;
 
     if(i->do_text) {
 	gfxglyph_t*glyph = &font->glyphs[glyphnr];

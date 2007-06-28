@@ -2482,6 +2482,8 @@ static void swf_switchfont(gfxdevice_t*dev, char*fontid)
 static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(!font)
+	return;
 	
     if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,font->id)) // not equal to current font
     {
