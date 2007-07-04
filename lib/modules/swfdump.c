@@ -247,6 +247,8 @@ char* swf_TagGetName(TAG*tag)
 	    return "PLACEOBJECT3";
 	case ST_METADATA:
 	    return "METADATA";
+	case ST_SCENEDESCRIPTION:
+	    return "SCENEDESCRIPTION";
         
 	case ST_REFLEX:
             return "REFLEX";

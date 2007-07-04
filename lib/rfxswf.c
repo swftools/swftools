@@ -1293,6 +1293,21 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   }
 
 #endif // INSERT_RFX_TAG
+
+  if(swf->fileVersion >= 9) {
+    if ((!swf->firstTag || swf->firstTag->id != ST_SCENEDESCRIPTION) &&
+	(!swf->firstTag || 
+	 !swf->firstTag->next || swf->firstTag->next->id != ST_SCENEDESCRIPTION) &&
+	(!swf->firstTag || 
+	 !swf->firstTag->next || 
+	 !swf->firstTag->next->next || swf->firstTag->next->next->id != ST_SCENEDESCRIPTION))
+    {
+	TAG*scene = swf_InsertTagBefore(swf, swf->firstTag,ST_SCENEDESCRIPTION);
+	swf_SetU16(scene, 1);
+	swf_SetString(scene, "Scene 1");
+	swf_SetU8(scene, 0);
+    }
+  }
   
   if(swf->fileVersion >= 8) {
       if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
