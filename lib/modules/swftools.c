@@ -962,10 +962,10 @@ void swf_Relocate (SWF*swf, char*bitmap)
 		if(slaveids[id]<0) {
 		    fprintf(stderr, "swf_Relocate: Mapping id (%d) never encountered before in %s\n", id,
 			    swf_TagGetName(tag));
-		    return ;
+		} else {
+		    id = slaveids[id];
+		    PUT16(&tag->data[ptr[t]], id);
 		}
-		id = slaveids[id];
-		PUT16(&tag->data[ptr[t]], id);
 	    }
 	}
 	tag=tag->next;
