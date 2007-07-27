@@ -275,3 +275,8 @@
 	* lib/modules/swftools: Fixed several bugs in Flash8 parsing
 	* src/swfrender: Added --ng switch
 	* lib/swf/: New gfxdevice
+
+0.8.2:
+	* pdf2swf: Added support for Flash 8 Flashtype
+	* src/swfdump: now dumps a few more Flash 8 tags (like DEFINESHAPE4)
+	* pdf2swf: Common fonts are now linked directly into the executable (removes need for InstallPath in registry)
