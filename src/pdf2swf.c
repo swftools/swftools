@@ -28,9 +28,6 @@
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
 #include "../lib/args.h"
 #include "../lib/os.h"
 #include "../lib/rfxswf.h"
@@ -486,24 +483,12 @@ int main(int argn, char *argv[])
     int nup_pos = 0;
     int x,y;
     char* installPath = getInstallationPath();
-    char* fontdir = 0;
     
     initLog(0,-1,0,0,-1,loglevel);
 
-#if defined(WIN32) && defined(HAVE_STAT) && defined(HAVE_SYS_STAT_H)
     if(installPath) {
-	fontdir = concatPaths(installPath, "fonts");
-	FILE*test = fopen(concatPaths(fontdir,"\\d050000l.afm"), "rb");
-	if(!test) {
-	    fprintf(stderr, "Couldn't find file %s - pdf2swf not installed properly? OS says:\n", concatPaths(fontdir, "\\d050000l.afm"));
-	    perror("open");
-	    exit(1);
-	}
-	fclose(test);
+	fontpaths[fontpathpos++] = concatPaths(installPath, "fonts");
     }
-#else
-    fontdir = concatPaths(installPath, "fonts");
-#endif
 
 #ifdef HAVE_SRAND48
     srand48(time(0));
@@ -553,10 +538,6 @@ int main(int argn, char *argv[])
     }
 
     /* add fonts */
-    /*
-    if(fontdir) {
-	driver->set_parameter("fontdir", fontdir);
-    }*/
     for(t=0;t<fontpathpos;t++) {
 	driver->set_parameter("fontdir", fontpaths[t]);
     }
