@@ -111,11 +111,13 @@ void map_destroy(map_t*map);
 void dictionary_init(dictionary_t*dict);
 void dictionary_put(dictionary_t*dict, string_t t1, void* t2);
 void dictionary_put2(dictionary_t*dict, const char* t1, void* t2);
+stringarray_t* dictionary_index(dictionary_t*dict);
 void* dictionary_lookup(dictionary_t*dict, const char*name);
 void dictionary_dump(dictionary_t*dict, FILE*fi, const char*prefix);
 void dictionary_del(dictionary_t*dict, const char* name);
 void dictionary_clear(dictionary_t*dict);
 void dictionary_destroy(dictionary_t*dict);
+void dictionary_free_all(dictionary_t* dict, void (*freeFunction)(void*));
 
 void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *));
 void heap_clear(heap_t*h);

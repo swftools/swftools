@@ -22,7 +22,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-static U32 readUTF8char(U8 ** text)
+U32 readUTF8char(U8 ** text)
 {
     U32 c = 0;
     if (!(*(*text) & 0x80))
@@ -572,18 +572,20 @@ void swf_LayoutFree(SWFLAYOUT * l)
 
 static void font_freeglyphnames(SWFFONT*f)
 {
-    if (f->glyphnames) {
-	int t;
-	for (t = 0; t < f->numchars; t++) {
-	    if (f->glyphnames[t]) {
-		rfx_free(f->glyphnames[t]);
-		f->glyphnames[t] = 0;
-	    }
+    if (f->glyphnames)
+    {
+        int t;
+        for (t = 0; t < f->numchars; t++)
+        {
+            if (f->glyphnames[t])
+            {
+                rfx_free(f->glyphnames[t]);
+                f->glyphnames[t] = 0;
+            }
+        }
+        rfx_free(f->glyphnames);
+        f->glyphnames = 0;
 	}
-	rfx_free(f->glyphnames);
-	f->glyphnames = 0;
-    }
-
 }
 static void font_freeusage(SWFFONT*f)
 {
@@ -1036,24 +1038,28 @@ void swf_FontFree(SWFFONT * f)
 {
     int i;
     if (!f)
-	return;
+        return;
 
-    if (f->glyph) {
-	for (i = 0; i < f->numchars; i++)
-	    if (f->glyph[i].shape) {
-		swf_ShapeFree(f->glyph[i].shape);
-		f->glyph[i].shape = NULL;
-	    }
-	rfx_free(f->glyph);
-	f->glyph = NULL;
+    if (f->glyph)
+    {
+        for (i = 0; i < f->numchars; i++)
+            if (f->glyph[i].shape)
+            {
+                swf_ShapeFree(f->glyph[i].shape);
+                f->glyph[i].shape = NULL;
+            }
+            rfx_free(f->glyph);
+            f->glyph = NULL;
     }
-    if (f->ascii2glyph) {
-	rfx_free(f->ascii2glyph);
-	f->ascii2glyph = NULL;
+    if (f->ascii2glyph)
+    {
+        rfx_free(f->ascii2glyph);
+        f->ascii2glyph = NULL;
     }
-    if (f->glyph2ascii) {
-	rfx_free(f->glyph2ascii);
-	f->glyph2ascii = NULL;
+    if (f->glyph2ascii)
+    {
+        rfx_free(f->glyph2ascii);
+        f->glyph2ascii = NULL;
     }
     font_freename(f);
     font_freelayout(f);

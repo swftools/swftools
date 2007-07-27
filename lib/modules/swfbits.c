@@ -393,6 +393,7 @@ int swf_SetJPEGBits(TAG * t, char *fname, int quality)
 	}
     }
 
+    free(scanline);
     swf_SetJPEGBitsFinish(out);
     jpeg_finish_decompress(&cinfo);
     fclose(f);

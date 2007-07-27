@@ -926,6 +926,7 @@ void swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape)
     swf_ShapeSetEnd(tag);
     shape->data = tag->data;
     shape->bitlen = tag->len*8;
+    free(tag);
 }
 
 void swf_SetShape2(TAG*tag, SHAPE2*shape2)
@@ -986,6 +987,13 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
     l = shape->lines;
 }
 
+static void free_lines(SHAPELINE* lines)
+{
+    if (lines->next)
+        free_lines(lines->next);
+    free(lines);
+}
+
 void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line, 
                          U8**destdata, U32*destbitlen, int out_bits_fill, int out_bits_line)
 {
@@ -1009,6 +1017,7 @@ void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line
 
     swf_Shape2ToShape(&s2,&s);
 
+    free_lines(s2.lines);
     free(s2.fillstyles);
     free(s2.linestyles);
     free(s.fillstyle.data);

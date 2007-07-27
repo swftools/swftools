@@ -157,6 +157,7 @@ int mp3_read(struct MP3*mp3, char* filename)
     if(!root)
     {
         fprintf(stderr, "readMP3: not a MP3 file\n");
+        fclose(fi);
         return 0;
     }
     
@@ -192,6 +193,7 @@ int mp3_read(struct MP3*mp3, char* filename)
         root = next;
     }
     
+    fclose(fi);
     return mp3->data != NULL;
 }
 

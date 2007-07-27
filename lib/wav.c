@@ -53,8 +53,9 @@ int wav_read(struct WAV*wav, char* filename)
     long int filesize;
     struct WAVBlock block;
     long int pos;
+    
     if(!fi)
-	return 0;
+        return 0;
     fseek(fi, 0, SEEK_END);
     filesize = ftell(fi);
     fseek(fi, 0, SEEK_SET);
@@ -62,65 +63,87 @@ int wav_read(struct WAV*wav, char* filename)
     //printf("Filesize: %d\n", filesize);
 
     if(!getWAVBlock (fi, &block))
-	return 0;
-    if(strncmp(block.id,"RIFF",4)) {
-	fprintf(stderr, "wav_read: not a WAV file\n");
-	return 0;
+    {
+        fclose(fi);
+        return 0;
+    }
+    if(strncmp(block.id,"RIFF",4))
+    {
+        fprintf(stderr, "wav_read: not a WAV file\n");
+        fclose(fi);
+        return 0;
     }
     if(block.size + 8 < filesize)
-	fprintf(stderr, "wav_read: warning - more tags (%d extra bytes)\n",
-		filesize - block.size - 8);
+        fprintf(stderr, "wav_read: warning - more tags (%d extra bytes)\n",
+    filesize - block.size - 8);
 
-    if(block.size == filesize) {
+    if(block.size == filesize)
 	/* some buggy software doesn't generate the right tag length */
-	block.size = filesize - 8;
-    }
+        block.size = filesize - 8;
 
     if(block.size + 8 > filesize)
-	fprintf(stderr, "wav_read: warning - short file (%d bytes missing)\n",
-		block.size + 8 -  filesize);
-    if(fread(b, 1, 4, fi) < 4) {
-	return 0;
+        fprintf(stderr, "wav_read: warning - short file (%d bytes missing)\n",
+    block.size + 8 -  filesize);
+    if(fread(b, 1, 4, fi) < 4)
+    {
+        fclose(fi);
+		return 0;
     }
-    if(strncmp(b, "WAVE", 4)) {
-	fprintf(stderr, "wav_read: not a WAV file (2)\n");
-	return 0;
-    }
+    if(strncmp(b, "WAVE", 4))
+    {
+        fprintf(stderr, "wav_read: not a WAV file (2)\n");
+        fclose(fi);
+		return 0;
+	}
  
     do
     {
-	getWAVBlock(fi, &block);
-	pos = ftell(fi);
-	if(!strncmp(block.id, "fmt ", 4)) {
-	    if(fread(&b, 1, 16, fi)<16)
-		return 0;
-	    wav->tag = b[0]|b[1]<<8;
-	    wav->channels = b[2]|b[3]<<8;
-	    wav->sampsPerSec = b[4]|b[5]<<8|b[6]<<16|b[7]<<24;
-	    wav->bytesPerSec = b[8]|b[9]<<8|b[10]<<16|b[11]<<24;
-	    wav->align = b[12]|b[13]<<8;
-	    wav->bps = b[14]|b[15]<<8;
-	} else if (!strncmp(block.id, "LIST", 4)) {
-	    // subchunk ICMT (comment) may exist
-	} else if (!strncmp(block.id, "data", 4)) {
-	    int l;
-	    wav->data = malloc(block.size);
-	    if(!wav->data) {
-		fprintf(stderr, "Out of memory (%d bytes needed)", block.size);
-		return 0;
-	    }
-	    l = fread(wav->data, 1, block.size, fi);
-	    if(l < block.size) {
-		fprintf(stderr, "Error while reading data block of size %d (%d bytes missing)", block.size, block.size-l);
-		return 0;
-	    }
-	    wav->size = block.size;
-	}
-	pos+=block.size;
-	fseek(fi, pos, SEEK_SET);
+        getWAVBlock(fi, &block);
+        pos = ftell(fi);
+        if(!strncmp(block.id, "fmt ", 4))
+        {
+            if(fread(&b, 1, 16, fi)<16)
+            {
+                fclose(fi);
+                return 0;
+            }
+            wav->tag = b[0]|b[1]<<8;
+            wav->channels = b[2]|b[3]<<8;
+            wav->sampsPerSec = b[4]|b[5]<<8|b[6]<<16|b[7]<<24;
+            wav->bytesPerSec = b[8]|b[9]<<8|b[10]<<16|b[11]<<24;
+            wav->align = b[12]|b[13]<<8;
+            wav->bps = b[14]|b[15]<<8;
+        }
+        else
+            if (!strncmp(block.id, "LIST", 4))
+            {
+        // subchunk ICMT (comment) may exist
+            }
+            else
+                if (!strncmp(block.id, "data", 4))
+                {
+                    int l;
+                    wav->data = malloc(block.size);
+                    if(!wav->data)
+                    {
+                        fprintf(stderr, "Out of memory (%d bytes needed)", block.size);
+                        fclose(fi);
+                        return 0;
+                    }
+                    l = fread(wav->data, 1, block.size, fi);
+                    if(l < block.size)
+                    {
+                        fprintf(stderr, "Error while reading data block of size %d (%d bytes missing)", block.size, block.size-l);
+                        fclose(fi);
+                        return 0;
+                    }
+                    wav->size = block.size;
+                }
+                pos+=block.size;
+                fseek(fi, pos, SEEK_SET);
     }
     while (pos < filesize);
-
+    fclose(fi);
     return 1;
 }
 

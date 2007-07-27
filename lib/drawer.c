@@ -94,52 +94,64 @@ static void draw_lineTo2(drawer_t*draw, double x, double y)
     draw->lineTo(draw, &c);
 }
 
+static float getFloat(const char** p)
+{
+    char* token = getToken(p);
+    float result = atof(token);
+    free(token);
+    return result;
+}
 
 void draw_string(drawer_t*draw, const char*string)
 {
     const char*p = string;
     while(*p) {
 	char*token = getToken(&p);
-	if(!token || !*token) 
+    if(!token)
+        break;
+    if (!*token) 
+    {
+        free(token);
 	    break;
+    }
 	if(!strncmp(token, "moveTo", 6) ||
 	   !strncmp(token, "M", 1) //svg
 	   ) {
 	    FPOINT to;
-	    to.x = atof(getToken(&p));
-	    to.y = atof(getToken(&p));
+        to.x = getFloat(&p);
+        to.y = getFloat(&p);
 	    draw->moveTo(draw, &to);
 	}
 	else if(!strncmp(token, "lineTo", 6) ||
 	        !strncmp(token, "L", 1) //svg
 	     ) {
 	    FPOINT to;
-	    to.x = atof(getToken(&p));
-	    to.y = atof(getToken(&p));
+        to.x = getFloat(&p);
+        to.y = getFloat(&p);
 	    draw->lineTo(draw, &to);
 	}
 	else if(!strncmp(token, "curveTo", 7) || !strncmp(token, "splineTo", 8)) {
 	    FPOINT mid,to;
-	    mid.x = atof(getToken(&p));
-	    mid.y = atof(getToken(&p));
-	    to.x = atof(getToken(&p));
-	    to.y = atof(getToken(&p));
+        mid.x = getFloat(&p);
+        mid.y = getFloat(&p);
+        to.x = getFloat(&p);
+        to.y = getFloat(&p);
 	    draw->splineTo(draw, &mid, &to);
 	}
 	else if(!strncmp(token, "conicTo", 5)) {
 	    FPOINT mid,to;
-	    mid.x = atof(getToken(&p));
-	    mid.y = atof(getToken(&p));
-	    to.x = atof(getToken(&p));
-	    to.y = atof(getToken(&p));
+        mid.x = getFloat(&p);
+        mid.y = getFloat(&p);
+        to.x = getFloat(&p);
+        to.y = getFloat(&p);
 	    draw_conicTo(draw, &mid, &to);
 	}
 	else if(!strncmp(token, "circle", 6)) {
 	    int mx,my,r;
 	    double r2;
-	    mx = atof(getToken(&p));
-	    my = atof(getToken(&p));
-	    r = atof(getToken(&p));
+        mx = getFloat(&p);
+        my = getFloat(&p);
+        r = getFloat(&p);
 	    r2 = 0.70710678118654757*r;
 	    draw_moveTo2(draw, mx, my-r);
 	    draw_conicTo2(draw, mx+r2, my-r2, mx+r, my);
@@ -149,10 +161,10 @@ void draw_string(drawer_t*draw, const char*string)
 	}
 	else if(!strncmp(token, "box", 3)) {
 	    int x1,y1,x2,y2;
-	    x1 = atof(getToken(&p));
-	    y1 = atof(getToken(&p));
-	    x2 = atof(getToken(&p));
-	    y2 = atof(getToken(&p));
+        x1 = getFloat(&p);
+        y1 = getFloat(&p);
+        x2 = getFloat(&p);
+        y2 = getFloat(&p);
 	    draw_moveTo2(draw, x1, y1);
 	    draw_lineTo2(draw, x1, y2);
 	    draw_lineTo2(draw, x2, y2);
@@ -163,12 +175,12 @@ void draw_string(drawer_t*draw, const char*string)
 	        !strncmp(token, "C", 1) //svg
 		) {
 	    FPOINT mid1,mid2,to;
-	    mid1.x = atof(getToken(&p));
-	    mid1.y = atof(getToken(&p));
-	    mid2.x = atof(getToken(&p));
-	    mid2.y = atof(getToken(&p));
-	    to.x = atof(getToken(&p));
-	    to.y = atof(getToken(&p));
+        mid1.x = getFloat(&p);
+        mid1.y = getFloat(&p);
+        mid2.x = getFloat(&p);
+        mid2.y = getFloat(&p);
+        to.x = getFloat(&p);
+        to.y = getFloat(&p);
 	    draw_cubicTo(draw, &mid1, &mid2, &to);
 	}
 	else if(!strncmp(token, "z", 1) //svg

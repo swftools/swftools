@@ -384,6 +384,12 @@ void dictionary_put2(dictionary_t*dict, const char*t1, void* t2)
     string_set(&s, (char*)t1);
     dictionary_put(dict, s, t2);
 }
+stringarray_t* dictionary_index(dictionary_t*dict)
+{
+    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
+    return &d->keys;
+}
+
 void* dictionary_lookup(dictionary_t*dict, const char*name)
 {
     int s;
@@ -428,6 +434,20 @@ void dictionary_destroy(dictionary_t*dict)
 {
     dictionary_clear(dict);
     free(dict);
+}
+
+void dictionary_free_all(dictionary_t* dict, void (*freeFunction)(void*))
+{
+    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
+    int num = 0;
+    char* name = stringarray_at(&d->keys, num)    ;
+    while (name)
+    {
+        freeFunction(dictionary_lookup(dict, name));
+        num++;
+        name = stringarray_at(&d->keys, num);
+    }
+    dictionary_clear(dict);
 }
 
 // ------------------------------- heap_t -------------------------------
