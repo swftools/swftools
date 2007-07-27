@@ -120,9 +120,10 @@ void text_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*colo
     } else if(xshift > i->lastadvance*1.3 || xshift<0) {
         addchar(dev, 32);
     }
+    int u;
     if(font) {
 	i->lastadvance = font->glyphs[glyphnr].advance*matrix->m00;
-	int u = font->glyphs[glyphnr].unicode;
+	u = font->glyphs[glyphnr].unicode;
     } else {
 	u = glyphnr;
 	i->currentx = 0;i->currenty = 0;
