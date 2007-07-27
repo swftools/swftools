@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <memory.h>
-#include "history.h"
+#include "swfc-history.h"
 
 change_t* change_new(U16 frame, int function, float value, interpolation_t* inter)
 {

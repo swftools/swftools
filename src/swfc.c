@@ -36,8 +36,9 @@
 #include "../lib/wav.h"
 #include "parser.h"
 #include "../lib/png.h"
-#include "../lib/interpolation.h"
-#include "../lib/history.h"
+#include "swfc-feedback.h"
+#include "swfc-interpolation.h"
+#include "swfc-history.h"
 
 //#define DEBUG
 static char * outputname = "output.swf";
@@ -1432,13 +1433,13 @@ void s_texture(char*name, char*object, int x, int y, float scalex, float scaley,
     dictionary_put2(&textures, name, texture);
 }
 
-void s_font(char*name, char*filename, char *glyphs)
+void s_font(char*name, char*filename)
 {
     if(dictionary_lookup(&fonts, name))
         syntaxerror("font %s defined twice", name);
         
     SWFFONT* font;
-    font = swf_LoadFont(filename, glyphs);
+    font = swf_LoadFont(filename);
    
     if(font == 0) {
 	warning("Couldn't open font file \"%s\"", filename);
@@ -3249,17 +3250,7 @@ static int c_font(map_t*args)
 {
     char*name = lu(args, "name");
     char*filename = lu(args, "filename");
-    fontData* usage = getFontData(name);
-    char* glyphs = usage->glyphs;
-    if (usage->needsAll)
-        glyphs = "";
-    else
-        if (usage->notUsed)
-        {
-            printf("font %s was defined but not used\n", name);
-            return 0;
-        }
-    s_font(name, filename, glyphs);
+    s_font(name, filename);
     return 0;
 }
 

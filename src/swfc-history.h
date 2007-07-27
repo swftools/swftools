@@ -22,11 +22,11 @@
 #ifndef __HISTORY_H
 #define __HISTORY_Y
 
-#include "types.h"
-#include "rfxswf.h"
-#include "q.h"
-#include "feedback.h"
-#include "interpolation.h"
+#include "../lib/types.h"
+#include "../lib/rfxswf.h"
+#include "../lib/q.h"
+#include "swfc-feedback.h"
+#include "swfc-interpolation.h"
 
 enum
 {

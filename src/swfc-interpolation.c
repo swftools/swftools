@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <memory.h>
-#include "interpolation.h"
+#include "swfc-interpolation.h"
 
 static inline float poly(float fraction, float start, float delta, int degree)
 {
