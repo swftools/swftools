@@ -33,6 +33,7 @@ ${name}/src/gif2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/pdf2swf.c \
 ${name}/src/swfc.c \
+${name}/src/swfrender.c \
 ${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
 ${name}/lib/types.h \
@@ -45,6 +46,7 @@ ${name}/lib/action/swf5compiler.tab.h \
 ${name}/src/parser.lex \
 ${name}/src/parser.h \
 ${name}/pdf2swf/fonts/Makefile.in \
+${name}/lib/swf/Makefile.in \
 ${name}/lib/art/Makefile.in \
 ${name}/src/Makefile.in \
 ${name}/lib/Makefile.in \
@@ -83,6 +85,8 @@ ${name}/swfs/keyboard_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
 ${name}/lib/modules/swffilter.c \
 ${name}/lib/modules/swfrender.c \
+${name}/lib/swf/swf.c \
+${name}/lib/swf/swf.h \
 ${name}/lib/modules/swfdump.c \
 ${name}/lib/modules/swfobject.c \
 ${name}/lib/modules/swfshape.c \
@@ -393,66 +397,4 @@ ${name}/lib/art/art_vpath_svp.c
 
 gzip -9 ${name}.tar
 rm -f ${name}
-
-
-
-#${name}/lib/lame/fft.c \
-#${name}/lib/lame/util.h \
-#${name}/lib/lame/tables.h \
-#${name}/lib/lame/lame.c \
-#${name}/lib/lame/quantize.c \
-#${name}/lib/lame/encoder.c \
-#${name}/lib/lame/lameerror.h \
-#${name}/lib/lame/quantize_pvt.h \
-#${name}/lib/lame/bitstream.c \
-#${name}/lib/lame/VbrTag.c \
-#${name}/lib/lame/util.c \
-#${name}/lib/lame/version.h \
-#${name}/lib/lame/newmdct.h \
-#${name}/lib/lame/version.c \
-#${name}/lib/lame/id3tag.c \
-#${name}/lib/lame/encoder.h \
-#${name}/lib/lame/reservoir.c \
-#${name}/lib/lame/fft.h \
-#${name}/lib/lame/bitstream.h \
-#${name}/lib/lame/newmdct.c \
-#${name}/lib/lame/id3tag.h \
-#${name}/lib/lame/config_static.h \
-#${name}/lib/lame/tables.c \
-#${name}/lib/lame/takehiro.c \
-#${name}/lib/lame/machine.h \
-#${name}/lib/lame/reservoir.h \
-#${name}/lib/lame/set_get.c \
-#${name}/lib/lame/vbrquantize.h \
-#${name}/lib/lame/lame.h \
-#${name}/lib/lame/tools.h \
-#${name}/lib/lame/psymodel.c \
-#${name}/lib/lame/l3side.h \
-#${name}/lib/lame/vbrquantize.c \
-#${name}/lib/lame/VbrTag.h \
-#${name}/lib/lame/psymodel.h \
-#${name}/lib/lame/quantize_pvt.c \
-#${name}/lib/lame/lame_global_flags.h \
-#${name}/lib/lame/quantize.h \
-#${name}/lib/lame/lame-analysis.h \
-#${name}/lib/lame/Makefile.in \
-
-#${name}/pdf2swf/ttf2pt1/Makefile.in \
-#${name}/pdf2swf/ttf2pt1/COPYRIGHT \
-#${name}/pdf2swf/ttf2pt1/byteorder.h \
-#${name}/pdf2swf/ttf2pt1/ft.c \
-#${name}/pdf2swf/ttf2pt1/bdf.c \
-#${name}/pdf2swf/ttf2pt1/bitmap.c \
-#${name}/pdf2swf/ttf2pt1/global.h \
-#${name}/pdf2swf/ttf2pt1/pt1.c \
-#${name}/pdf2swf/ttf2pt1/pt1.h \
-#${name}/pdf2swf/ttf2pt1/runt1asm.c \
-#${name}/pdf2swf/ttf2pt1/t1asm.c \
-#${name}/pdf2swf/ttf2pt1/ttf.c \
-#${name}/pdf2swf/ttf2pt1/ttf.h \
-#${name}/pdf2swf/ttf2pt1/ttf2pt1.c \
-#${name}/pdf2swf/ttf2pt1/ttf2pt1.h \
-#${name}/pdf2swf/ttf2pt1/version.h \
-#${name}/pdf2swf/ttf2pt1/win_missing.h \
-
 
