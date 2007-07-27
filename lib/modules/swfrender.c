@@ -105,7 +105,7 @@ static inline void add_pixel(RENDERBUF*dest, float x, int y, renderpoint_t*p)
 
 /* set this to 0.777777 or something if the "both fillstyles set while not inside shape"
    problem appears to often */
-#define CUT 0.5
+#define CUT 0.77887789
 
 #define INT(x) ((int)((x)+16)-16)
 
@@ -661,7 +661,7 @@ static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, st
 	    if(f->type == FILL_SOLID) {
                 /* plain color fill */
                 fill_solid(line, zline, y, x1, x2, f->color, l->p->depth);
-            } else if(f->type == FILL_TILED || f->type == FILL_CLIPPED) {
+            } else if(f->type == FILL_TILED || f->type == FILL_CLIPPED || f->type == (FILL_TILED|2) || f->type == (FILL_CLIPPED|2)) {
                 /* TODO: optimize (do this in add_pixel()?) */
                 bitmap_t* b = i->bitmaps;
                 while(b && b->id != f->id_bitmap) {
@@ -671,7 +671,7 @@ static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, st
                     fprintf(stderr, "Shape references unknown bitmap %d\n", f->id_bitmap);
                     fill_solid(line, zline, y, x1, x2, color_red, l->p->depth);
                 } else {
-                    fill_bitmap(line, zline, y, x1, x2, &f->m, b, FILL_CLIPPED?1:0, l->p->depth, i->multiply);
+                    fill_bitmap(line, zline, y, x1, x2, &f->m, b, /*clipped?*/f->type&1, l->p->depth, i->multiply);
                 }
             } else {
                 fprintf(stderr, "Undefined fillmode: %02x\n", f->type);
@@ -777,6 +777,7 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
                we always get (0,32), (32, 33), (33, 0) in the right order if
                they happen to fall on the same pixel.
                (not: (0,32), (33, 0), (32, 33))
+	       Notice: Weird fill styles appear if linestyles are involved, too.
             */
             fprintf(stderr, "<line %d: both fillstyles set while not inside shape>\n", y);
             return;
@@ -836,6 +837,15 @@ void swf_Process(RENDERBUF*dest, U32 clipdepth)
 	state_t fillstate;
         memset(&fillstate, 0, sizeof(state_t));
         qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
+	/* resort points */
+	/*if(y==884) {
+	    for(n=0;n<num;n++) {
+		printf("%f (%d/%d) %d\n", points[n].x, 
+			points[n].shapeline->fillstyle0,
+			points[n].shapeline->fillstyle1,
+			points[n].shapeline->linestyle);
+	    }
+	}*/
 
 	if(i->lines[y].pending_clipdepth && !clipdepth) {
 	    fill_clip(line, zline, y, 0, i->width2, i->lines[y].pending_clipdepth);
@@ -950,7 +960,7 @@ typedef struct
 {
     TAG*tag;
     SRECT*bbox;
-    enum {none_type, shape_type, image_type, text_type, font_type} type;
+    enum {none_type, shape_type, image_type, text_type, font_type, sprite_type} type;
     union {
         SHAPE2*shape;
         font_t*font;
@@ -1051,29 +1061,104 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
     }
 }
 
-void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
+static void renderFromTag(RENDERBUF*buf, character_t*idtable, TAG*firstTag, MATRIX*m)
 {
-    TAG*tag;
-    int t;
-    int numplacements;
-    RGBA color;
+    TAG*tag = 0;
+    int numplacements = 0;
     SWFPLACEOBJECT* placements;
-    
-    character_t* idtable = rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
-    SWFPLACEOBJECT** depthtable = rfx_calloc(sizeof(SWFPLACEOBJECT*)*65536); // depth to placeobject mapping
-    
-    tag = swf->firstTag;
+
+    tag = firstTag;
     numplacements = 0;
     while(tag) {
         if(tag->id == ST_PLACEOBJECT || 
            tag->id == ST_PLACEOBJECT2) {
 	    numplacements++;
 	}
+	if(tag->id == ST_SHOWFRAME || tag->id == ST_END)
+	    break;
 	tag = tag->next;
     }
     placements = rfx_calloc(sizeof(SWFPLACEOBJECT)*numplacements);
     numplacements = 0;
 
+    tag = firstTag;
+    while(tag) {
+	if(swf_isPlaceTag(tag)) {
+	    SWFPLACEOBJECT p;
+	    swf_GetPlaceObject(tag, &p);
+	    /* TODO: add move and deletion */
+	    placements[numplacements++] = p;
+	    swf_PlaceObjectFree(&p); //dirty! but it only frees fields we don't use
+	}
+	if(tag->id == ST_SHOWFRAME || tag->id == ST_END)
+	    break;
+        tag = tag->next;
+    }
+
+    qsort(placements, numplacements, sizeof(SWFPLACEOBJECT), compare_placements);
+     
+    int t;
+    for(t=0;t<numplacements;t++) {
+        SWFPLACEOBJECT*p = &placements[t];
+        int id = p->id;
+	MATRIX m2;
+	swf_MatrixJoin(&m2, m, &p->matrix);
+            
+        if(!idtable[id].tag) { 
+            fprintf(stderr, "rfxswf: Id %d is unknown\n", id);
+            continue;
+        }
+
+        if(idtable[id].type == shape_type) {
+            //SRECT sbbox = swf_TurnRect(*idtable[id].bbox, &p->matrix);
+            swf_RenderShape(buf, idtable[id].obj.shape, &m2, &p->cxform, p->depth, p->clipdepth);
+	} else if(idtable[id].type == sprite_type) {
+	    swf_UnFoldSprite(idtable[id].tag);
+	    renderFromTag(buf, idtable, idtable[id].tag->next, &m2);
+	    swf_FoldSprite(idtable[id].tag);
+        } else if(idtable[id].type == text_type) {
+	    TAG* tag = idtable[id].tag;
+	    textcallbackblock_t info;
+	    MATRIX mt;
+
+	    swf_SetTagPos(tag, 0);
+	    swf_GetU16(tag);
+	    swf_GetRect(tag,0);
+  	    swf_GetMatrix(tag,&mt);
+	    swf_MatrixJoin(&info.m, &m2, &mt);
+	    /*printf("Text matrix:\n");
+	    swf_DumpMatrix(stdout, &m);
+	    printf("Placement matrix:\n");
+	    swf_DumpMatrix(stdout, &p->matrix);
+	    printf("Final matrix:\n");
+	    swf_DumpMatrix(stdout, &info.m);*/
+
+	    info.idtable = idtable;
+	    info.depth = p->depth;
+	    info.cxform = &p->cxform;
+	    info.clipdepth = p->clipdepth;
+	    info.buf = buf;
+	    
+	    swf_ParseDefineText(tag, textcallback, &info);
+        } else {
+            fprintf(stderr, "Unknown/Unsupported Object Type for id %d: %s\n", id, swf_TagGetName(idtable[id].tag));
+        }
+    }
+
+    free(placements);
+}
+
+void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
+{
+    TAG*tag;
+    int t;
+    int numplacements;
+    RGBA color;
+
+    swf_FoldAll(swf);
+    
+    character_t* idtable = rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
+    
     /* set background color */
     color = swf_GetSWFBackgroundColor(swf);
     swf_Render_SetBackgroundColor(buf, color);
@@ -1123,61 +1208,16 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
             } else if(tag->id == ST_DEFINETEXT ||
                       tag->id == ST_DEFINETEXT2) {
                 idtable[id].type = text_type;
-            }
-        } else if(tag->id == ST_PLACEOBJECT || 
-                  tag->id == ST_PLACEOBJECT2) {
-            SWFPLACEOBJECT p;
-            swf_GetPlaceObject(tag, &p);
-            /* TODO: add move and deletion */
-            placements[numplacements++] = p;
-	    swf_PlaceObjectFree(&p); //dirty! but it only frees fields we don't use
+            } else if(tag->id == ST_DEFINESPRITE) {
+		idtable[id].type = sprite_type;
+	    }
         }
-        tag = tag->next;
+	tag = tag->next;
     }
-
-    qsort(placements, numplacements, sizeof(SWFPLACEOBJECT), compare_placements);
-      
-    for(t=0;t<numplacements;t++) {
-        SWFPLACEOBJECT*p = &placements[t];
-        int id = p->id;
-            
-        if(!idtable[id].tag) { 
-            fprintf(stderr, "rfxswf: Id %d is unknown\n", id);
-            continue;
-        }
-
-        if(idtable[id].type == shape_type) {
-            //SRECT sbbox = swf_TurnRect(*idtable[id].bbox, &p->matrix);
-            swf_RenderShape(buf, idtable[id].obj.shape, &p->matrix, &p->cxform, p->depth, p->clipdepth);
-        } else if(idtable[id].type == text_type) {
-	    TAG* tag = idtable[id].tag;
-	    textcallbackblock_t info;
-	    MATRIX m;
-
-	    swf_SetTagPos(tag, 0);
-	    swf_GetU16(tag);
-	    swf_GetRect(tag,0);
-  	    swf_GetMatrix(tag,&m);
-	    swf_MatrixJoin(&info.m, &p->matrix, &m);
-	    /*printf("Text matrix:\n");
-	    swf_DumpMatrix(stdout, &m);
-	    printf("Placement matrix:\n");
-	    swf_DumpMatrix(stdout, &p->matrix);
-	    printf("Final matrix:\n");
-	    swf_DumpMatrix(stdout, &info.m);*/
-
-	    info.idtable = idtable;
-	    info.depth = p->depth;
-	    info.cxform = &p->cxform;
-	    info.clipdepth = p->clipdepth;
-	    info.buf = buf;
-	    
-	    swf_ParseDefineText(tag, textcallback, &info);
-        } else {
-            fprintf(stderr, "Unknown/Unsupported Object Type for id %d: %s\n", id, swf_TagGetName(idtable[id].tag));
-        }
-    }
-
+    MATRIX m;
+    swf_GetMatrix(0, &m);
+    renderFromTag(buf, idtable, swf->firstTag, &m);
+    
     /* free id and depth tables again */
     for(t=0;t<65536;t++) {
         if(idtable[t].bbox) {
@@ -1207,8 +1247,6 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 	    }
 	}
     }
-    free(placements);
     free(idtable);
-    free(depthtable);
 }
-
+    
