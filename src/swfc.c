@@ -4,7 +4,7 @@
    Part of the swftools package.
 
    Copyright (c) 2001 Matthias Kramm <kramm@quiss.org>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -55,7 +55,7 @@ static struct options_t options[] = {
 {"o", "output"},
 {0,0}
 };
-    
+
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
@@ -161,7 +161,7 @@ static struct level
 
    /* for swf (0): */
    SWF*swf;
-   char*filename; 
+   char*filename;
 
    /* for sprites (1): */
    TAG*tag;
@@ -196,8 +196,8 @@ static dictionary_t sounds;
 static dictionary_t fontUsage;
 
 typedef struct _parameters {
-    int x,y; 
-    float scalex, scaley; 
+    int x,y;
+    float scalex, scaley;
     CXFORM cxform;
     float rotate;
     float shear;
@@ -255,31 +255,6 @@ char* interpolationFunctions[] = {"linear", \
         "bounceIn", "bounceOut", "bounceInOut", \
         "fastBounceIn", "fastBounceOut", "fastBounceInOut"};
 
-typedef struct _fontData {
-    char *glyphs;
-    int notUsed, needsAll;
-} fontData;
-
-void addFontData(char *name)
-{
-    fontData* newFont;
-    newFont = (fontData *)malloc(sizeof(fontData));
-    memset(newFont, 0, sizeof(fontData));
-    newFont->notUsed = 1;
-    dictionary_put2(&fontUsage, name, newFont);
-}
-
-void freeFontData(fontData* font)
-{
-    free(font->glyphs);
-    free(font);
-}
-
-fontData *getFontData(char *name)
-{
-    return (fontData *)dictionary_lookup(&fontUsage, name);
-}
-
 static void character_init(character_t*c)
 {
     memset(c, 0, sizeof(character_t));
@@ -323,11 +298,6 @@ static void free_font(void* f)
     swf_FontFree((SWFFONT*)f);
 }
 
-static void free_fontData(void* fd)
-{
-    freeFontData((fontData*)fd);
-}
-
 static void gradient_free(GRADIENT* grad)
 {
     free(grad->ratios);
@@ -363,8 +333,12 @@ static void freeDictionaries()
     dictionary_free_all(&filters, free);
     dictionary_free_all(&fonts, free_font);
     dictionary_free_all(&sounds, free);
-    dictionary_free_all(&fontUsage, free_fontData);
     dictionary_free_all(&interpolations, free);
+}
+
+static void freeFontDictionary()
+{
+    dictionary_free_all(&fonts, free_font);
 }
 
 static void incrementid()
@@ -381,7 +355,7 @@ static void s_addcharacter(char*name, U16 id, TAG*ctag, SRECT r)
     if(dictionary_lookup(&characters, name))
         syntaxerror("character %s defined twice", name);
     character_t* c = character_new();
-    
+
     c->definingTag = ctag;
     c->id = id;
     c->size = r;
@@ -399,7 +373,7 @@ static void s_addimage(char*name, U16 id, TAG*ctag, SRECT r)
 {
     if(dictionary_lookup(&images, name))
         syntaxerror("image %s defined twice", name);
-        
+
     character_t* c = character_new();
     c->definingTag = ctag;
     c->id = id;
@@ -420,13 +394,13 @@ static instance_t* s_addinstance(char*name, character_t*c, U16 depth)
 
 static void parameters_clear(parameters_t*p)
 {
-    p->x = 0; p->y = 0; 
+    p->x = 0; p->y = 0;
     p->scalex = 1.0; p->scaley = 1.0;
     p->pin.x = 0;  //1??
     p->pin.y = 0;
     p->pivot.x = 0; p->pivot.y = 0;
-    p->rotate = 0; 
-    p->shear = 0; 
+    p->rotate = 0;
+    p->shear = 0;
     p->blendmode = 0;
     p->filter = 0;
     swf_GetCXForm(0, &p->cxform, 1);
@@ -437,7 +411,7 @@ static void makeMatrix(MATRIX*m, parameters_t*p)
     SPOINT h;
     float sx,r1,r0,sy;
 
-    /*	      /sx r1\ /x\ 
+    /*	      /sx r1\ /x\
      *	      \r0 sy/ \y/
      */
 
@@ -452,7 +426,7 @@ static void makeMatrix(MATRIX*m, parameters_t*p)
     m->sy = (int)(sy*65536+0.5);
 
     m->tx = m->ty = 0;
-   
+
     h = swf_TurnPoint(p->pin, m);
     m->tx = p->x - h.x;
     m->ty = p->y - h.y;
@@ -464,7 +438,7 @@ static MATRIX s_instancepos(SRECT rect, parameters_t*p)
     SRECT r;
     makeMatrix(&m, p);
     r = swf_TurnRect(rect, &m);
-    if(currentrect.xmin == 0 && currentrect.ymin == 0 && 
+    if(currentrect.xmin == 0 && currentrect.ymin == 0 &&
        currentrect.xmax == 0 && currentrect.ymax == 0)
 	currentrect = r;
     else
@@ -556,7 +530,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
         syntaxerror(".swf blocks can't be nested");
     if(stackpos==sizeof(stack)/sizeof(stack[0]))
         syntaxerror("too many levels of recursion");
-        
+
     SWF*swf = (SWF*)malloc(sizeof(SWF));
 
     memset(swf, 0, sizeof(swf));
@@ -566,7 +540,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     swf->firstTag = tag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
     swf->compressed = compress;
     swf_SetRGB(tag,&background);
-    
+
     dictionary_init(&characters);
     dictionary_init(&images);
     dictionary_init(&textures);
@@ -574,7 +548,6 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     dictionary_init(&gradients);
     dictionary_init(&filters);
     dictionary_init(&instances);
-    dictionary_init(&fonts);
     dictionary_init(&sounds);
     dictionary_init(&interpolations);
     builtInInterpolations();
@@ -586,12 +559,11 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     stack[stackpos].swf = swf;
     stack[stackpos].oldframe = -1;
     stackpos++;
-    id = 0;
 
     currentframe = 0;
     memset(&currentrect, 0, sizeof(currentrect));
     currentdepth = 1;
-    
+
     memset(idmap, 0, sizeof(idmap));
     incrementid();
 }
@@ -611,7 +583,7 @@ void s_sprite(char*name)
     stack[stackpos].tag = tag;
     stack[stackpos].id = id;
     stack[stackpos].name = strdup(name);
-   
+
     /* FIXME: those four fields should be bundled together */
     dictionary_init(&instances);
     currentframe = 0;
@@ -674,7 +646,7 @@ void s_buttonput(char*character, char*as, parameters_t p)
     if(mybutton.endofshapes) {
 	syntaxerror("a .do may not precede a .show", character, character);
     }
-   
+
     m = s_instancepos(c->size, &p);
 
     r.id = c->id;
@@ -701,7 +673,7 @@ static void setbuttonrecords(TAG*tag)
     int flags[] = {BS_UP,BS_OVER,BS_DOWN,BS_HIT};
     if(!mybutton.endofshapes) {
 	int t;
-		
+
 	if(!mybutton.records[3].set) {
 	    memcpy(&mybutton.records[3], &mybutton.records[0], sizeof(buttonrecord_t));
 	}
@@ -723,7 +695,7 @@ void s_buttonaction(int flags, char*action)
 	return;
     }
     setbuttonrecords(stack[stackpos-1].tag);
-    
+
     a = swf_ActionCompile(text, stack[0].swf->fileVersion);
     if(!a) {
 	syntaxerror("Couldn't compile ActionScript");
@@ -755,7 +727,7 @@ static void s_endButton()
     setbuttonrecords(stack[stackpos-1].tag);
     setactionend(stack[stackpos-1].tag);
     stackpos--;
-      
+
     swf_ButtonPostProcess(stack[stackpos].tag, mybutton.nr_actions);
 
     r = currentrect;
@@ -847,7 +819,7 @@ static void writeInstance(instance_t* i)
             tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
         setPlacement(tag, 0, i->depth, m, 0, &p, 1);
         if (p.filter)
-            free(p.filter);        
+            free(p.filter);
     }
 }
 
@@ -865,7 +837,7 @@ void dumpSWF(SWF*swf)
 static void s_endSprite()
 {
     SRECT r = currentrect;
-    
+
     if(stack[stackpos].cut)
 	tag = removeFromTo(stack[stackpos].cut, tag);
 
@@ -881,7 +853,7 @@ static void s_endSprite()
         num++;
         name = stringarray_at(index, num);
     }
-    
+
     tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_END);
 
@@ -907,9 +879,9 @@ static void s_endSWF()
     int fi;
     SWF* swf;
     char*filename;
-    
+
     instance_t *i;
-    stringarray_t* index =dictionary_index(&instances);
+    stringarray_t* index = dictionary_index(&instances);
     int num = 0;
     char* name = stringarray_at(index, num);
     while (name)
@@ -924,10 +896,10 @@ static void s_endSWF()
 	tag = removeFromTo(stack[stackpos].cut, tag);
 
     stackpos--;
-   
+
     swf = stack[stackpos].swf;
     filename = stack[stackpos].filename;
-  
+
     //if(tag->prev && tag->prev->id != ST_SHOWFRAME)
     //    tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_SHOWFRAME);
@@ -935,21 +907,21 @@ static void s_endSWF()
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
-   
+
     if(optimize) {
 	swf_Optimize(swf);
     }
-    
+
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize = currentrect; /* "autocrop" */
     }
-    
+
     if(!(swf->movieSize.xmax-swf->movieSize.xmin) || !(swf->movieSize.ymax-swf->movieSize.ymin)) {
 	swf->movieSize.xmax += 20; /* 1 by 1 pixels */
 	swf->movieSize.ymax += 20;
 	warning("Empty bounding box for movie");
     }
-    
+
     if(do_cgi || !strcmp(filename, "-"))
 	fi = fileno(stdout);
     else
@@ -959,7 +931,7 @@ static void s_endSWF()
     }
     if(do_cgi)
 	{if(swf_WriteCGI(swf)<0) syntaxerror("WriteCGI() failed.\n");}
-    else if(swf->compressed) 
+    else if(swf->compressed)
 	{if(swf_WriteSWC(fi, swf)<0) syntaxerror("WriteSWC() failed.\n");}
     else
 	{if(swf_WriteSWF(fi, swf)<0) syntaxerror("WriteSWF() failed.\n");}
@@ -995,7 +967,7 @@ void s_frame(int nr, int cut, char*name, char anchor)
     int t;
     TAG*now = tag;
 
-    if(nr<1) 
+    if(nr<1)
 	syntaxerror("Illegal frame number");
     nr--; // internally, frame 1 is frame 0
 
@@ -1073,7 +1045,7 @@ int addFillStyle(SHAPE*s, SRECT*r, char*name)
 	return 0;
     }
 }
-	
+
 RGBA black={r:0,g:0,b:0,a:0};
 void s_box(char*name, int width, int height, RGBA color, int linewidth, char*texture)
 {
@@ -1107,7 +1079,7 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     swf_ShapeSetLine(tag,s,0,-height);
     swf_ShapeSetEnd(tag);
     swf_ShapeFree(s);
-   
+
     s_addcharacter(name, id, tag, r);
     incrementid();
 }
@@ -1132,7 +1104,7 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
     }
     if(texture)
 	fs1 = addFillStyle(s, &r2, texture);
-    
+
     swf_SetU16(tag,id);
     rect.xmin = r2.xmin-linewidth/2;
     rect.ymin = r2.ymin-linewidth/2;
@@ -1142,7 +1114,7 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
     swf_SetRect(tag,&rect);
     swf_SetShapeStyles(tag, s);
     swf_ShapeCountBits(s,0,0);
-    swf_RecodeShapeData(outline->shape->data, outline->shape->bitlen, outline->shape->bits.fill, outline->shape->bits.line, 
+    swf_RecodeShapeData(outline->shape->data, outline->shape->bitlen, outline->shape->bits.fill, outline->shape->bits.line,
                         &s->data,             &s->bitlen,             s->bits.fill,              s->bits.line);
     swf_SetShapeBits(tag, s);
     swf_SetBlock(tag, s->data, (s->bitlen+7)/8);
@@ -1181,7 +1153,7 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
     swf_ShapeSetCircle(tag, s, r,r,r,r);
     swf_ShapeSetEnd(tag);
     swf_ShapeFree(s);
-   
+
     s_addcharacter(name, id, tag, rect);
     incrementid();
 }
@@ -1196,7 +1168,7 @@ void s_textshape(char*name, char*fontname, float size, char*_text)
     font = dictionary_lookup(&fonts, fontname);
     if(!font)
 	syntaxerror("font \"%s\" not known!", fontname);
-    
+
     if(text[0] >= font->maxascii || font->ascii2glyph[text[0]]<0) {
 	warning("no character 0x%02x (%c) in font \"%s\"", text[0], text[0], fontname);
 	s_box(name, 0, 0, black, 20, 0);
@@ -1208,7 +1180,7 @@ void s_textshape(char*name, char*fontname, float size, char*_text)
     memset(outline, 0, sizeof(outline_t));
     outline->shape = font->glyph[g].shape;
     outline->bbox = font->layout->bounds[g];
-    
+
     {
 	drawer_t draw;
 	swf_Shape11DrawerInit(&draw, 0);
@@ -1232,7 +1204,7 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
     font = dictionary_lookup(&fonts, fontname);
     if(!font)
 	syntaxerror("font \"%s\" not known!", fontname);
-    
+
     tag = swf_InsertTag(tag, ST_DEFINETEXT2);
     swf_SetU16(tag, id);
     if(!font->numchars) {
@@ -1249,7 +1221,7 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 	swf_SetU32(tag, 0);//sharpness
 	swf_SetU8(tag, 0);//reserved
     }
-   
+
     s_addcharacter(name, id, tag, r);
     incrementid();
 }
@@ -1260,11 +1232,11 @@ void s_quicktime(char*name, char*url)
     MATRIX _m,*m=0;
 
     memset(&r, 0, sizeof(r));
-    
+
     tag = swf_InsertTag(tag, ST_DEFINEMOVIE);
     swf_SetU16(tag, id);
     swf_SetString(tag, url);
-    
+
     s_addcharacter(name, id, tag, r);
     incrementid();
 }
@@ -1292,7 +1264,7 @@ void s_edittext(char*name, char*fontname, int size, int width, int height, char*
     r.ymin = 0;
     r.xmax = width;
     r.ymax = height;
-    
+
     swf_SetEditText(tag, flags, r, text, color, maxlength, font?font->id:0, size, &layout, variable);
 
     s_addcharacter(name, id, tag, r);
@@ -1305,7 +1277,7 @@ void s_image(char*name, char*type, char*filename, int quality)
 {
     /* an image is actually two folded: 1st bitmap, 2nd character.
        Both of them can be used separately */
-    
+
     /* step 1: the bitmap */
     SRECT r;
     int imageID = id;
@@ -1435,20 +1407,8 @@ void s_texture(char*name, char*object, int x, int y, float scalex, float scaley,
 
 void s_font(char*name, char*filename)
 {
-    if(dictionary_lookup(&fonts, name))
-        syntaxerror("font %s defined twice", name);
-        
     SWFFONT* font;
-    font = swf_LoadFont(filename);
-   
-    if(font == 0) {
-	warning("Couldn't open font file \"%s\"", filename);
-	font = (SWFFONT*)malloc(sizeof(SWFFONT));
-	memset(font, 0, sizeof(SWFFONT));
-	dictionary_put2(&fonts, name, font);
-	return;
-    }
-
+    font = dictionary_lookup(&fonts, name);
     if(0)
     {
 	/* fix the layout. Only needed for old fonts */
@@ -1459,19 +1419,16 @@ void s_font(char*name, char*filename)
 	font->layout = 0;
 	swf_FontCreateLayout(font);
     }
-    /* just in case this thing is used in .edittext later on */
-    swf_FontPrepareForEditText(font);
-
     font->id = id;
+	swf_FontReduce_swfc(font);
     tag = swf_InsertTag(tag, ST_DEFINEFONT2);
     swf_FontSetDefine2(tag, font);
     tag = swf_InsertTag(tag, ST_EXPORTASSETS);
     swf_SetU16(tag, 1);
     swf_SetU16(tag, id);
     swf_SetString(tag, name);
-    incrementid();
 
-    dictionary_put2(&fonts, name, font);
+    incrementid();
 }
 
 
@@ -1494,7 +1451,7 @@ void s_sound(char*name, char*filename)
 
     if(dictionary_lookup(&sounds, name))
         syntaxerror("sound %s defined twice", name);
-        
+
     if(wav_read(&wav, filename))
     {
         int t;
@@ -1521,7 +1478,7 @@ void s_sound(char*name, char*filename)
             samples = 0;
             numsamples = 0;
         }
-    
+
     if(numsamples%blocksize != 0)
     {
 	// apply padding, so that block is a multiple of blocksize
@@ -1550,7 +1507,7 @@ void s_sound(char*name, char*filename)
     }
     else
         swf_SetSoundDefine(tag, samples, numsamples);
-    
+
     tag = swf_InsertTag(tag, ST_NAMECHARACTER);
     swf_SetU16(tag, id);
     swf_SetString(tag, name);
@@ -1564,7 +1521,7 @@ void s_sound(char*name, char*filename)
     sound->id = id;
 
     dictionary_put2(&sounds, name, sound);
-    
+
     incrementid();
 
     if (samples)
@@ -1577,7 +1534,7 @@ static char* gradient_getToken(const char**p)
     char*result;
     while(**p && strchr(" \t\n\r", **p)) {
 	(*p)++;
-    } 
+    }
     start = *p;
     while(**p && !strchr(" \t\n\r", **p)) {
 	(*p)++;
@@ -1599,7 +1556,7 @@ GRADIENT parseGradient(const char*str)
     memset(&gradient, 0, sizeof(GRADIENT));
     gradient.ratios = rfx_calloc(16*sizeof(U8));
     gradient.rgba = rfx_calloc(16*sizeof(RGBA));
-    
+
     while(*p)
     {
         char*posstr,*colorstr;
@@ -1649,14 +1606,14 @@ void s_gradient(char*name, const char*text, int radial, int rotate)
 
     dictionary_put2(&gradients, name, gradient);
 }
-    
-void s_gradientglow(char*name, char*gradient, float blurx, float blury, 
-		    float angle, float distance, float strength, char innershadow, 
+
+void s_gradientglow(char*name, char*gradient, float blurx, float blury,
+		    float angle, float distance, float strength, char innershadow,
 		    char knockout, char composite, char ontop, int passes)
 {
     if(dictionary_lookup(&filters, name))
         syntaxerror("filter %s defined twice", name);
-    
+
     gradient_t* g = dictionary_lookup(&gradients, gradient);
 
     composite = 1;
@@ -1762,7 +1719,7 @@ void s_initaction(const char*character, const char*text)
     ActionTAG* a = 0;
     character_t*c = 0;
     a = swf_ActionCompile(text, stack[0].swf->fileVersion);
-    if(!a) 
+    if(!a)
     {
         swf_ActionFree(a);
         syntaxerror("Couldn't compile ActionScript");
@@ -1781,7 +1738,7 @@ int s_swf3action(char*name, char*action)
 {
     ActionTAG* a = 0;
     instance_t* object = 0;
-    if(name) 
+    if(name)
 	object = (instance_t*)dictionary_lookup(&instances, name);
     if(!object && name && *name) {
 	/* we have a name, but couldn't find it. Abort. */
@@ -1805,14 +1762,14 @@ void s_outline(char*name, char*format, char*source)
 {
     if(dictionary_lookup(&outlines, name))
         syntaxerror("outline %s defined twice", name);
-        
+
     outline_t* outline;
 
     drawer_t draw;
     SHAPE* shape;
     SHAPE2* shape2;
     SRECT bounds;
-    
+
     //swf_Shape10DrawerInit(&draw, 0);
     swf_Shape11DrawerInit(&draw, 0);
 
@@ -1821,11 +1778,11 @@ void s_outline(char*name, char*format, char*source)
     shape = swf_ShapeDrawerToShape(&draw);
     bounds = swf_ShapeDrawerGetBBox(&draw);
     draw.dealloc(&draw);
-    
+
     outline = (outline_t*)rfx_calloc(sizeof(outline_t));
     outline->shape = shape;
     outline->bbox = bounds;
-    
+
     dictionary_put2(&outlines, name, outline);
 }
 
@@ -1859,25 +1816,25 @@ void s_includeswf(char*name, char*filename)
     int level = 0;
     U16 cutout[] = {ST_SETBACKGROUNDCOLOR, ST_PROTECT, ST_FREEALL, ST_REFLEX};
     f = open(filename,O_RDONLY|O_BINARY);
-    if (f<0) { 
+    if (f<0) {
 	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
-    if (swf_ReadSWF(f,&swf)<0) { 
+    if (swf_ReadSWF(f,&swf)<0) {
 	warning("Only SWF files supported in .shape for now. File \"%s\" wasn't SWF.", filename);
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
     close(f);
 
-    /* FIXME: The following sets the bounding Box for the character. 
+    /* FIXME: The following sets the bounding Box for the character.
               It is wrong for two reasons:
 	      a) It may be too small (in case objects in the movie clip at the borders)
 	      b) it may be too big (because the poor movie never got autocropped)
     */
     r = swf.movieSize;
-    
+
     s = tag = swf_InsertTag(tag, ST_DEFINESPRITE);
     swf_SetU16(tag, id);
     swf_SetU16(tag, swf.frameCount);
@@ -1903,7 +1860,7 @@ void s_includeswf(char*name, char*filename)
 	if(ftag->id != ST_SETBACKGROUNDCOLOR) {
 	    /* We simply dump all tags right after the sprite
 	       header, relying on the fact that swf_OptimizeTagOrder() will
-	       sort things out for us later. 
+	       sort things out for us later.
 	       We also rely on the fact that the imported SWF is well-formed.
 	     */
 	    tag = swf_InsertTag(tag, ftag->id);
@@ -1953,7 +1910,7 @@ void s_startclip(char*instance, char*character, parameters_t p)
     i = s_addinstance(instance, c, currentdepth);
     i->parameters = p;
     m = s_instancepos(i->character->size, &p);
-    
+
     tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     /* TODO: should be ObjectPlaceClip, with clipdepth backpatched */
     swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
@@ -2008,16 +1965,16 @@ void s_put(char*instance, char*character, parameters_t p)
     character_t* c = dictionary_lookup(&characters, character);
     instance_t* i;
     MATRIX m;
-    if(!c) 
+    if(!c)
         syntaxerror("character %s not known (in .put %s=%s)", character, instance, character);
-    
+
     i = s_addinstance(instance, c, currentdepth);
     i->parameters = p;
     m = s_instancepos(i->character->size, &p);
-   
+
     if(p.blendmode || p.filter)
     {
-        if(stack[0].swf->fileVersion < 8) 
+        if(stack[0].swf->fileVersion < 8)
         {
             if(p.blendmode)
                 warning("blendmodes only supported for flash version>=8");
@@ -2430,7 +2387,7 @@ static char* lu(map_t* args, char*name)
     return value;
 }
 
-static int c_flash(map_t*args) 
+static int c_flash(map_t*args)
 {
     char* filename = map_lookup(args, "filename");
     char* compressstr = lu(args, "compress");
@@ -2453,7 +2410,7 @@ static int c_flash(map_t*args)
 
     if(!filename || override_outputname)
 	filename = outputname;
-    
+
     if(!strcmp(compressstr, "default"))
 	compress = version>=6;
     else if(!strcmp(compressstr, "yes") || !strcmp(compressstr, "compress"))
@@ -2498,7 +2455,7 @@ static int c_interpolation(map_t *args)
     char* name = lu(args, "name");
     if (dictionary_lookup(&interpolations, name))
         syntaxerror("interpolation %s defined twice", name);
-    
+
     interpolation_t* inter = (interpolation_t*)malloc(sizeof(interpolation_t));
     char* functionstr = lu(args, "function");
     inter->function = 0;
@@ -2515,7 +2472,7 @@ static int c_interpolation(map_t *args)
     inter->growth = parseFloat(lu(args, "growth"));
     inter->bounces = parseInt(lu(args, "bounces"));
     inter->damping = parseInt(lu(args, "damping"));
-    
+
     dictionary_put2(&interpolations, name, inter);
     return 0;
 }
@@ -2539,7 +2496,7 @@ SPOINT getPoint(SRECT r, char*name)
     return *(SPOINT*)&mpoints.buffer[l];
 }
 
-static int texture2(char*name, char*object, map_t*args, int errors) 
+static int texture2(char*name, char*object, map_t*args, int errors)
 {
     SPOINT pos,size;
     char*xstr = map_lookup(args, "x");
@@ -2601,14 +2558,14 @@ static int texture2(char*name, char*object, map_t*args, int errors)
     return 0;
 }
 
-static int c_texture(map_t*args) 
+static int c_texture(map_t*args)
 {
     char*name = lu(args, "instance");
     char*object = lu(args, "character");
     return texture2(name, object, args, 1);
 }
 
-static int c_gradient(map_t*args) 
+static int c_gradient(map_t*args)
 {
     char*name = lu(args, "name");
     int radial= strcmp(lu(args, "radial"), "radial")?0:1;
@@ -2632,7 +2589,7 @@ static int c_gradient(map_t*args)
     return 0;
 }
 
-static int c_blur(map_t*args) 
+static int c_blur(map_t*args)
 {
     char*name = lu(args, "name");
     char*blurstr = lu(args, "blur");
@@ -2642,7 +2599,7 @@ static int c_blur(map_t*args)
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
 	blury = parseFloat(blurstr);
-    } 
+    }
     if(blurxstr[0])
 	blurx = parseFloat(blurxstr);
     if(blurystr[0])
@@ -2652,7 +2609,7 @@ static int c_blur(map_t*args)
     return 0;
 }
 
-static int c_gradientglow(map_t*args) 
+static int c_gradientglow(map_t*args)
 {
     char*name = lu(args, "name");
     char*gradient = lu(args, "gradient");
@@ -2663,7 +2620,7 @@ static int c_gradientglow(map_t*args)
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
 	blury = parseFloat(blurstr);
-    } 
+    }
     if(blurxstr[0])
 	blurx = parseFloat(blurxstr);
     if(blurystr[0])
@@ -2682,7 +2639,7 @@ static int c_gradientglow(map_t*args)
     return 0;
 }
 
-static int c_dropshadow(map_t*args) 
+static int c_dropshadow(map_t*args)
 {
     char*name = lu(args, "name");
     RGBA color = parseColor(lu(args, "color"));
@@ -2693,7 +2650,7 @@ static int c_dropshadow(map_t*args)
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
 	blury = parseFloat(blurstr);
-    } 
+    }
     if(blurxstr[0])
 	blurx = parseFloat(blurxstr);
     if(blurystr[0])
@@ -2711,7 +2668,7 @@ static int c_dropshadow(map_t*args)
     return 0;
 }
 
-static int c_bevel(map_t*args) 
+static int c_bevel(map_t*args)
 {
     char*name = lu(args, "name");
     RGBA shadow = parseColor(lu(args, "shadow"));
@@ -2723,7 +2680,7 @@ static int c_bevel(map_t*args)
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
 	blury = parseFloat(blurstr);
-    } 
+    }
     if(blurxstr[0])
 	blurx = parseFloat(blurxstr);
     if(blurystr[0])
@@ -2742,7 +2699,7 @@ static int c_bevel(map_t*args)
     return 0;
 }
 
-static int c_point(map_t*args) 
+static int c_point(map_t*args)
 {
     char*name = lu(args, "name");
     int pos;
@@ -2761,7 +2718,7 @@ static int c_point(map_t*args)
     dictionary_put(&points, s1, (void*)pos);
     return 0;
 }
-static int c_play(map_t*args) 
+static int c_play(map_t*args)
 {
     char*name = lu(args, "name");
     char*loop = lu(args, "loop");
@@ -2780,7 +2737,7 @@ static int c_play(map_t*args)
     return 0;
 }
 
-static int c_stop(map_t*args) 
+static int c_stop(map_t*args)
 {
     char*name = map_lookup(args, "name");
 
@@ -2792,7 +2749,7 @@ static int c_stop(map_t*args)
 	return 0;
 }
 
-static int c_nextframe(map_t*args) 
+static int c_nextframe(map_t*args)
 {
     char*name = lu(args, "name");
 
@@ -2803,7 +2760,7 @@ static int c_nextframe(map_t*args)
     return 0;
 }
 
-static int c_previousframe(map_t*args) 
+static int c_previousframe(map_t*args)
 {
     char*name = lu(args, "name");
 
@@ -2856,7 +2813,7 @@ static int c_placement(map_t*args, int type)
         xstr = lu(args, "x");
         ystr = lu(args, "y");
     }
-    
+
     if(luminancestr[0])
         luminance = parseMulAdd(luminancestr);
     else
@@ -2871,7 +2828,7 @@ static int c_placement(map_t*args, int type)
             syntaxerror("scalex/scaley and scale cannot both be set");
         scalexstr = scaleystr = scalestr;
     }
-    
+
     if(type == 0 || type == 4)  {
 	// put or startclip
 	character = lu(args, "character");
@@ -2885,7 +2842,7 @@ static int c_placement(map_t*args, int type)
     }
 
     /* x,y position */
-    if(xstr[0]) 
+    if(xstr[0])
     {
         if(isRelative(xstr))
         {
@@ -2939,7 +2896,7 @@ static int c_placement(map_t*args, int type)
                 p.scaley = (float)(parseNewSize(scaleystr, oldheight))/oldheight;
         set = set | SF_SCALEY;
    }
-   
+
     /* rotation */
     if(rotatestr[0])
     {
@@ -2964,11 +2921,11 @@ static int c_placement(map_t*args, int type)
     {
         if(isPoint(pivotstr))
             p.pivot = parsePoint(pivotstr);
-        else 
+        else
             p.pivot = getPoint(oldbbox, pivotstr);
         set = set | SF_PIVOT;
     }
-    
+
     if(pinstr[0])
     {
         if(isPoint(pinstr))
@@ -2977,7 +2934,7 @@ static int c_placement(map_t*args, int type)
             p.pin = getPoint(oldbbox, pinstr);
         set = set | SF_PIN;
     }
-	
+
     /* color transform */
 
     if(rstr[0] || luminancestr[0])
@@ -3052,11 +3009,11 @@ static int c_placement(map_t*args, int type)
         p.blendmode = blend;
         set = set | SF_BLEND;
 	}
-    
+
     if(filterstr[0])
     {
         FILTER*f = dictionary_lookup(&filters, filterstr);
-        if(!f) 
+        if(!f)
             syntaxerror("Unknown filter %s", filterstr);
         p.filter = f;
         set = set | SF_FILTER;
@@ -3093,69 +3050,69 @@ static int c_placement(map_t*args, int type)
             else
                 s_buttonput(character, "shape", p);
             break;
-//        default: 
+//        default:
 	}
     return 0;
 }
-static int c_put(map_t*args) 
+static int c_put(map_t*args)
 {
     c_placement(args, 0);
     return 0;
 }
-static int c_change(map_t*args) 
+static int c_change(map_t*args)
 {
     if (currentframe == 0)
         warning("change commands in frame 1 will be ignored, please use the put command to set object parameters");
     c_placement(args, 1);
     return 0;
 }
-static int c_qchange(map_t*args) 
+static int c_qchange(map_t*args)
 {
     c_placement(args, 2);
     return 0;
 }
-static int c_arcchange(map_t*args) 
+static int c_arcchange(map_t*args)
 {
     c_placement(args, 2);
     return 0;
 }
-static int c_jump(map_t*args) 
+static int c_jump(map_t*args)
 {
     c_placement(args, 3);
     return 0;
 }
-static int c_startclip(map_t*args) 
+static int c_startclip(map_t*args)
 {
     c_placement(args, 4);
     return 0;
 }
-static int c_show(map_t*args) 
+static int c_show(map_t*args)
 {
     c_placement(args, 5);
     return 0;
 }
-static int c_del(map_t*args) 
+static int c_del(map_t*args)
 {
     char*instance = lu(args, "name");
     s_delinstance(instance);
     return 0;
 }
-static int c_end(map_t*args) 
+static int c_end(map_t*args)
 {
     s_end();
     return 0;
 }
-static int c_sprite(map_t*args) 
+static int c_sprite(map_t*args)
 {
     char* name = lu(args, "name");
     s_sprite(name);
     return 0;
 }
-static int c_frame(map_t*args) 
+static int c_frame(map_t*args)
 {
     char*framestr = lu(args, "n");
     char*cutstr = lu(args, "cut");
-    
+
     char*name = lu(args, "name");
     char*anchor = lu(args, "anchor");
     char buf[40];
@@ -3182,7 +3139,7 @@ static int c_frame(map_t*args)
     s_frame(frame, cut, name, !strcmp(anchor, "anchor"));
     return 0;
 }
-static int c_primitive(map_t*args) 
+static int c_primitive(map_t*args)
 {
     char*name = lu(args, "name");
     char*command = lu(args, "commandname");
@@ -3201,7 +3158,7 @@ static int c_primitive(map_t*args)
 	type = 1;
     else if(!strcmp(command, "filled"))
 	type = 2;
-   
+
     if(type==0) {
 	width = parseTwip(lu(args, "width"));
 	height = parseTwip(lu(args, "height"));
@@ -3217,14 +3174,14 @@ static int c_primitive(map_t*args)
 	fillstr = 0;
     if(width<0 || height<0 || linewidth<0 || r<0)
 	syntaxerror("values width, height, line, r must be positive");
-    
+
     if(type == 0) s_box(name, width, height, color, linewidth, fillstr);
     else if(type==1) s_circle(name, r, color, linewidth, fillstr);
     else if(type==2) s_filled(name, outline, color, linewidth, fillstr);
     return 0;
 }
 
-static int c_textshape(map_t*args) 
+static int c_textshape(map_t*args)
 {
     char*name = lu(args, "name");
     char*text = lu(args, "text");
@@ -3235,7 +3192,7 @@ static int c_textshape(map_t*args)
     return 0;
 }
 
-static int c_swf(map_t*args) 
+static int c_swf(map_t*args)
 {
     char*name = lu(args, "name");
     char*filename = lu(args, "filename");
@@ -3246,7 +3203,7 @@ static int c_swf(map_t*args)
     return 0;
 }
 
-static int c_font(map_t*args) 
+static int c_font(map_t*args)
 {
     char*name = lu(args, "name");
     char*filename = lu(args, "filename");
@@ -3254,7 +3211,7 @@ static int c_font(map_t*args)
     return 0;
 }
 
-static int c_sound(map_t*args) 
+static int c_sound(map_t*args)
 {
     char*name = lu(args, "name");
     char*filename = lu(args, "filename");
@@ -3262,7 +3219,7 @@ static int c_sound(map_t*args)
     return 0;
 }
 
-static int c_text(map_t*args) 
+static int c_text(map_t*args)
 {
     char*name = lu(args, "name");
     char*text = lu(args, "text");
@@ -3273,12 +3230,12 @@ static int c_text(map_t*args)
     return 0;
 }
 
-static int c_soundtrack(map_t*args) 
+static int c_soundtrack(map_t*args)
 {
     return 0;
 }
 
-static int c_quicktime(map_t*args) 
+static int c_quicktime(map_t*args)
 {
     char*name = lu(args, "name");
     char*url = lu(args, "url");
@@ -3286,7 +3243,7 @@ static int c_quicktime(map_t*args)
     return 0;
 }
 
-static int c_image(map_t*args) 
+static int c_image(map_t*args)
 {
     char*command = lu(args, "commandname");
     char*name = lu(args, "name");
@@ -3300,7 +3257,7 @@ static int c_image(map_t*args)
     return 0;
 }
 
-static int c_outline(map_t*args) 
+static int c_outline(map_t*args)
 {
     char*name = lu(args, "name");
     char*format = lu(args, "format");
@@ -3425,7 +3382,7 @@ static int c_on_key(map_t*args)
 	    return 1;
 	}
     } else {
-	/* TODO: 
+	/* TODO:
 	   <ctrl-x> = 0x200*(x-'a')
 	   esc = = 0x3600
 	   space = = 0x4000;
@@ -3443,7 +3400,7 @@ static int c_on_key(map_t*args)
     return 0;
 }
 
-static int c_edittext(map_t*args) 
+static int c_edittext(map_t*args)
 {
  //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @autosize=0"},
     char*name = lu(args, "name");
@@ -3493,7 +3450,7 @@ static char* readfile(const char*filename)
     FILE*fi = fopen(filename, "rb");
     int l;
     char*text;
-    if(!fi) 
+    if(!fi)
 	syntaxerror("Couldn't find file %s: %s", filename, strerror(errno));
     fseek(fi, 0, SEEK_END);
     l = ftell(fi);
@@ -3505,7 +3462,7 @@ static char* readfile(const char*filename)
     return text;
 }
 
-static int c_action(map_t*args) 
+static int c_action(map_t*args)
 {
     char* filename  = map_lookup(args, "filename");
     if(!filename ||!*filename) {
@@ -3517,11 +3474,11 @@ static int c_action(map_t*args)
     } else {
 	s_action(readfile(filename));
     }
-   
+
     return 0;
 }
 
-static int c_initaction(map_t*args) 
+static int c_initaction(map_t*args)
 {
     char* character = lu(args, "name");
     char* filename  = map_lookup(args, "filename");
@@ -3534,7 +3491,7 @@ static int c_initaction(map_t*args)
     } else {
 	s_initaction(character, readfile(filename));
     }
-   
+
     return 0;
 }
 
@@ -3555,7 +3512,7 @@ static struct {
  {"font", c_font, "name filename"},
  {"soundtrack", c_soundtrack, "filename"},
  {"quicktime", c_quicktime, "url"},
- 
+
     // generators of primitives
 
  {"point", c_point, "name x=0 y=0"},
@@ -3586,7 +3543,7 @@ static struct {
     {"on_move_in", c_on_move_in, "state=not_pressed"},
     {"on_move_out", c_on_move_out, "state=not_pressed"},
     {"on_key", c_on_key, "key=any"},
- 
+
     // control tags
  {"play", c_play, "name loop=0 @nomultiple=0"},
  {"stop", c_stop, "name= "},
@@ -3618,7 +3575,7 @@ static map_t parseArguments(char*command, char*pattern)
 {
     char*x;
     char*d,*e;
-   
+
     string_t name[64];
     string_t value[64];
     int set[64];
@@ -3678,7 +3635,7 @@ static map_t parseArguments(char*command, char*pattern)
 	    d=&x[strlen(x)];
 	set[pos] = 0;
 
-	if(!e || d<e) { 
+	if(!e || d<e) {
 	    // no default
 	    name[pos].str = x;
 	    name[pos].len = d-x;
@@ -3773,7 +3730,7 @@ static map_t parseArguments(char*command, char*pattern)
 
     /* ok, now construct the dictionary from the parameters */
 
-    for(t=0;t<len;t++) 
+    for(t=0;t<len;t++)
     {
 	map_put(&result, name[t], value[t]);
     }
@@ -3792,7 +3749,7 @@ static void parseArgumentsForCommand(char*command)
 	    /* ugly hack- will be removed soon (once documentation and .sc generating
 	       utilities have been changed) */
 	    if(!strcmp(command, "swf") && !stackpos) {
-		warning("Please use .flash instead of .swf- this will be mandatory soon");	
+		warning("Please use .flash instead of .swf- this will be mandatory soon");
 		command = "flash";
 		t = 0;
 	    }
@@ -3804,7 +3761,7 @@ static void parseArgumentsForCommand(char*command)
     }
     if(nr<0)
 	syntaxerror("command %s not known", command);
-   
+
     // catch missing .flash directives at the beginning of a file
     if(strcmp(command, "flash") && !stackpos)
     {
@@ -3837,8 +3794,98 @@ static void parseArgumentsForCommand(char*command)
     return;
 }
 
+
+/* for now only intended to find what glyphs of each font are to be included in the swf file.
+ * Therefore some knowledge about the command is assumed i.e. it is font/text-related
+ * No syntax checking is done */
+static void analyseArgumentsForCommand(char*command)
+{
+    int t;
+    map_t args;
+    char* fontfile;
+    int nr = -1;
+    msg("<verbose> analyse Command: %s (line %d)", command, line);
+
+    for(t=0;t<sizeof(arguments)/sizeof(arguments[0]);t++)
+    {
+        if(!strcmp(arguments[t].command, command))
+        {
+            args = parseArguments(command, arguments[t].arguments);
+            nr = t;
+            break;
+        }
+    }
+#ifdef DEBUG
+    printf(".%s\n", command);fflush(stdout);
+    map_dump(&args, stdout, "\t");fflush(stdout);
+#endif
+    char* name = lu(&args, "name");
+    if (!strcmp(command, "font"))
+    {
+    	if(dictionary_lookup(&fonts, name))
+            syntaxerror("font %s defined twice", name);
+
+    	SWFFONT* font;
+    	fontfile = lu(&args, "filename");
+    	font = swf_LoadFont(fontfile);
+    	if(font == 0) {
+	    warning("Couldn't open font file \"%s\"", fontfile);
+	    font = (SWFFONT*)malloc(sizeof(SWFFONT));
+	    memset(font, 0, sizeof(SWFFONT));
+    	}
+	swf_FontPrepareForEditText(font);
+    	dictionary_put2(&fonts, name, font);
+    }
+    else
+    {
+        SWFFONT* font = dictionary_lookup(&fonts, lu(&args, "font"));
+        if (!font)
+            syntaxerror("font %s is not known in line %d", lu(&args, "font"), line);
+        else
+            if (!strcmp(command, "edittext"))
+            	swf_FontUseAll(font);
+            else
+            	swf_FontUseUTF8(font, lu(&args, "text"));
+    }
+    map_clear(&args);
+    return;
+}
+
+void skipParameters()
+{
+	do
+		readToken();
+	while (type != COMMAND);
+	pushBack();
+}
+
+void findFontUsage()
+{
+    char* fontRelated = "font;text;textshape;edittext;";
+    while(!noMoreTokens())
+    {
+        readToken();
+        if(type != COMMAND)
+            syntaxerror("command expected");
+        if (strstr(fontRelated, text))
+            analyseArgumentsForCommand(text);
+        else
+            if(strcmp(text, "end"))
+                skipParameters();
+    }
+}
+
+void firstPass()
+{
+    pos = 0;
+    id = 0;
+    dictionary_init(&fonts);
+    cleanUp = &freeFontDictionary;
+    findFontUsage();
+}
+
 int main (int argc,char ** argv)
-{ 
+{
     int t;
     processargs(argc, argv);
     initLog(0,-1,0,0,-1,verbose);
@@ -3847,12 +3894,13 @@ int main (int argc,char ** argv)
 	args_callback_usage(argv[0]);
 	exit(1);
     }
-    
+
     file = generateTokens(filename);
     if(!file) {
 	fprintf(stderr, "parser returned error.\n");
 	return 1;
     }
+    firstPass();
     pos=0;
     t=0;
 

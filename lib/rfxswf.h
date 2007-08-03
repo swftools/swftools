@@ -5,7 +5,7 @@
    Part of the swftools package.
 
    Copyright (c) 2000, 2001 Rainer Böhme <rfxswf@reflex-studio.de>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -19,7 +19,7 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
- 
+
 
 #ifndef __RFX_SWF_INCLUDED__
 #define __RFX_SWF_INCLUDED__
@@ -123,13 +123,13 @@ typedef struct _TAG             // NEVER access a Tag-Struct directly !
 
   U8            readBit;        // for Bit-Manipulating Functions [read]
   U8            writeBit;       // [write]
-  
+
 } TAG;
 
 #define swf_ResetReadBits(tag)   if (tag->readBit)  { tag->pos++; tag->readBit = 0; }
 #define swf_ResetWriteBits(tag)  if (tag->writeBit) { tag->writeBit = 0; }
 
-typedef struct _SOUNDINFO 
+typedef struct _SOUNDINFO
 {
     U8 stop;
     U8 nomultiple; //continue playing if already started
@@ -188,7 +188,7 @@ int swf_IsFolded(TAG*tag);
 void swf_OptimizeTagOrder(SWF*swf);
 
 // basic routines:
-    
+
 TAG * swf_InsertTag(TAG * after,U16 id);    // updates frames, if necessary
 TAG * swf_InsertTagBefore(SWF*swf, TAG * before,U16 id);     // like InsertTag, but insert tag before argument
 int   swf_DeleteTag(TAG * t);
@@ -196,7 +196,7 @@ int   swf_DeleteTag(TAG * t);
 void  swf_ClearTag(TAG * t);                //frees tag data
 void  swf_ResetTag(TAG*tag, U16 id);        //set's tag position and length to 0, without freeing it
 TAG*  swf_CopyTag(TAG*tag, TAG*to_copy);     //stores a copy of another tag into this taglist
-    
+
 void  swf_SetTagPos(TAG * t,U32 pos);       // resets Bitcount
 U32   swf_GetTagPos(TAG * t);
 
@@ -270,7 +270,7 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_PLACEOBJECT          4
 #define ST_REMOVEOBJECT         5
 #define ST_DEFINEBITS           6
-#define ST_DEFINEBITSJPEG       6 
+#define ST_DEFINEBITSJPEG       6
 #define ST_DEFINEBUTTON         7
 #define ST_JPEGTABLES           8
 #define ST_SETBACKGROUNDCOLOR   9
@@ -354,23 +354,23 @@ typedef struct _LINESTYLE
 typedef struct _FILLSTYLE
 { U8	    type;
   RGBA	    color;
-  MATRIX    m; 
+  MATRIX    m;
   U16	    id_bitmap;
   GRADIENT  gradient;
 } FILLSTYLE;
-     
+
 typedef struct _SHAPE           // NEVER access a Shape-Struct directly !
-{                 
+{
   struct
   { LINESTYLE * data;
     U16         n;
   } linestyle;
-                  
-  struct                    
+
+  struct
   { FILLSTYLE * data;
     U16         n;
   } fillstyle;
- 
+
   struct
   { U16         fill;
     U16         line;
@@ -447,7 +447,7 @@ void	swf_DumpShape(SHAPE2*shape2);
 void swf_ParseDefineShape(TAG*tag, SHAPE2*shape);
 void swf_SetShape2(TAG*tag, SHAPE2*shape2);
 
-void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line, 
+void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line,
                          U8**destdata, U32*destbitlen, int out_bits_fill, int out_bits_line);
 
 // swfdraw.c
@@ -492,7 +492,7 @@ typedef struct _FONTUSAGE
 #define FONT_STYLE_BOLD 1
 #define FONT_STYLE_ITALIC 2
 #define FONT_ENCODING_UNICODE 1
-#define FONT_ENCODING_ANSI 2 
+#define FONT_ENCODING_ANSI 2
 #define FONT_ENCODING_SHIFTJIS 4
 
 typedef struct _SWFFONT
@@ -502,7 +502,7 @@ typedef struct _SWFFONT
   SWFLAYOUT *   layout;
   U16		numchars;
   U16		maxascii; // highest mapped ascii value
-  
+
   U8		style;
   U8		encoding;
 
@@ -560,9 +560,12 @@ int swf_FontIsBold(SWFFONT * f);
 
 int swf_FontSetID(SWFFONT * f,U16 id);
 int swf_FontReduce(SWFFONT * f);
+int swf_FontReduce_swfc(SWFFONT * f);
 
 int swf_FontInitUsage(SWFFONT * f);
 int swf_FontUseGlyph(SWFFONT * f, int glyph);
+int swf_FontUseAll(SWFFONT* f);
+int swf_FontUseUTF8(SWFFONT * f, U8 * s);
 int swf_FontUse(SWFFONT* f,U8 * s);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
@@ -592,7 +595,7 @@ int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 void swf_FontPrepareForEditText(SWFFONT * f);
 
 /* notice: if you set the fontid, make sure you call swf_FontPrepareForEditText() for the font first */
-void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color, 
+void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
 	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
 
 SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
@@ -611,7 +614,7 @@ void swf_SetLoadFontParameters(int scale, int skip_unused, int full_unicode);
 
 void swf_DumpHeader(FILE * f,SWF * swf);
 void swf_DumpMatrix(FILE * f,MATRIX * m);
-void swf_DumpTag(FILE * f,TAG * t); 
+void swf_DumpTag(FILE * f,TAG * t);
 void swf_DumpSWF(FILE * f,SWF*swf);
 void swf_DumpGradient(FILE* f, GRADIENT*gradient);
 char* swf_TagGetName(TAG*tag);
@@ -628,7 +631,7 @@ void swf_DumpFont(SWFFONT * font);
 
 // Button Conditions
 
-/* missing: IDLE_OUTDOWN 
+/* missing: IDLE_OUTDOWN
             OUTDOWN_OVERUP
 	    OVERUP_OUTDOWN
 */
@@ -675,9 +678,9 @@ void swf_DumpFont(SWFFONT * font);
 
 /* everything above 0x4000 is standard ascii:
    0x4000 ' ' 0x4200 '!' 0x4600 '#' 0x4800 '$' 0x4a00 '%' 0x4c00 '&' ...
-   0x6000 '0' ... 0x7200 '9' 
-   0x8000 '@' 
-   0x8200 'A' ...  0xb400 'Z' 
+   0x6000 '0' ... 0x7200 '9'
+   0x8000 '@'
+   0x8200 'A' ...  0xb400 'Z'
    ...
    0xfc00 '~'
  */
@@ -777,7 +780,7 @@ void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // swfaction.c
 
-typedef struct _ActionTAG 
+typedef struct _ActionTAG
 { U8            op;
   U16           len;
   U8 *          data;
@@ -968,7 +971,7 @@ void swf_VideoStreamClear(VIDEOSTREAM*stream);
 
 // swfrender.c
 
-typedef struct RENDERBUF 
+typedef struct RENDERBUF
 {
     int width;
     int height;
@@ -996,7 +999,7 @@ void swf_Render_Delete(RENDERBUF*dest);
 #define FILTERTYPE_CONVOLUTION 5
 #define FILTERTYPE_COLORMATRIX 6
 #define FILTERTYPE_GRADIENTBEVEL 7
-	
+
 extern char*filtername[];
 
 typedef struct _FILTER_GRADIENTGLOW {
