@@ -1309,7 +1309,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
     }
   }
   
-  if(swf->fileVersion >= 8) {
+  if(swf->fileVersion >= 9) {
       if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
       {
 	  U32 flags = 0x8; // | 128 = usenetwork, | 8 = hasmetadata
