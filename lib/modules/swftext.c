@@ -1,13 +1,13 @@
 /* swftext.c
 
    Text and font routines
-      
+
    Extension module for the rfxswf library.
    Part of the swftools package.
 
    Copyright (c) 2001 Rainer Böhme <rfxswf@reflex-studio.de>
    Copyright (c) 2003,2004 Matthias Kramm
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -654,6 +654,53 @@ int swf_FontReduce_old(SWFFONT * f)
     return j;
 }
 
+int swf_FontReduce_swfc(SWFFONT * f)
+{
+    int i, j;
+    int max_unicode = 0;
+    if ((!f) || (!f->use) || f->use->is_reduced)
+	return -1;
+
+    font_freeglyphnames(f);
+
+    j = 0;
+    for (i = 0; i < f->numchars; i++) {
+	if (f->glyph[i].shape && f->use->chars[i]) {
+	    f->glyph2ascii[j] = f->glyph2ascii[i];
+	    if (f->layout)
+	    	f->layout->bounds[j] = f->layout->bounds[i];
+	    f->glyph[j] = f->glyph[i];
+	    f->use->chars[i] = j;
+	    j++;
+	} else {
+	    f->glyph2ascii[i] = 0;
+	    if(f->glyph[i].shape) {
+		swf_ShapeFree(f->glyph[i].shape);
+		f->glyph[i].shape = 0;
+		f->glyph[i].advance = 0;
+	    }
+	    f->use->chars[i] = -1;
+	}
+    }
+    f->use->used_glyphs = j;
+    for (i = 0; i < f->maxascii; i++) {
+	if(f->ascii2glyph[i] > -1)
+	    if (f->use->chars[f->ascii2glyph[i]]<0) {
+	    	f->use->chars[f->ascii2glyph[i]] = 0;
+	    	f->ascii2glyph[i] = -1;
+	    } else {
+	    	f->ascii2glyph[i] = f->use->chars[f->ascii2glyph[i]];
+	    	f->use->chars[f->ascii2glyph[i]] = 1;
+	    	max_unicode = i + 1;
+	    }
+    }
+    f->maxascii = max_unicode;
+    f->use->is_reduced = 1;
+    f->numchars = j;
+    font_freename(f);
+    return j;
+}
+
 int swf_FontReduce(SWFFONT * f)
 {
     int i;
@@ -661,7 +708,7 @@ int swf_FontReduce(SWFFONT * f)
     int max_glyph = 0;
     if ((!f) || (!f->use) || f->use->is_reduced)
 	return -1;
-    
+
     font_freelayout(f);
     font_freeglyphnames(f);
 
@@ -676,13 +723,14 @@ int swf_FontReduce(SWFFONT * f)
 		f->glyph[i].shape = 0;
 		f->glyph[i].advance = 0;
 	    }
-	    f->use->used_glyphs++;
+//	    f->use->used_glyphs++;
 	} else {
+	    f->use->used_glyphs++;
 	    max_glyph = i+1;
 	}
     }
     for (i = 0; i < f->maxascii; i++) {
-	if(!f->use->chars[f->ascii2glyph[i]]) {
+	if(f->ascii2glyph[i] > -1 && !f->use->chars[f->ascii2glyph[i]]) {
 	    if(f->ascii2glyph) {
 		f->ascii2glyph[i] = -1;
 	    }
@@ -703,7 +751,7 @@ void swf_FontSort(SWFFONT * font)
     int *newpos;
     if (!font)
 	return;
-    
+
     newplace = rfx_alloc(sizeof(int) * font->numchars);
 
     for (i = 0; i < font->numchars; i++) {
@@ -796,9 +844,35 @@ int swf_FontUse(SWFFONT * f, U8 * s)
     return 0;
 }
 
+int swf_FontUseUTF8(SWFFONT * f, U8 * s)
+{
+    if( (!s))
+	return -1;
+    int ascii;
+    while (*s)
+    {
+    	ascii = readUTF8char(&s);
+	if(ascii < f->maxascii && f->ascii2glyph[ascii]>=0)
+	    swf_FontUseGlyph(f, f->ascii2glyph[ascii]);
+    }
+    return 0;
+}
+
+int swf_FontUseAll(SWFFONT* f)
+{
+    int i;
+
+    if (!f->use)
+	swf_FontInitUsage(f);
+    for (i = 0; i < f->numchars; i++)
+    	f->use->chars[i] = 1;
+    f->use->used_glyphs = f->numchars;
+    return 0;
+}
+
 int swf_FontUseGlyph(SWFFONT * f, int glyph)
 {
-    if (!f->use) 
+    if (!f->use)
 	swf_FontInitUsage(f);
     if(glyph < 0 || glyph >= f->numchars)
 	return -1;
@@ -848,7 +922,7 @@ static inline int fontSize(SWFFONT * font)
     int size = 0;
     for (t = 0; t < font->numchars; t++) {
 	int l = 0;
-	if(font->glyph[t].shape) 
+	if(font->glyph[t].shape)
 	    l = (font->glyph[t].shape->bitlen + 7) / 8;
 	else
 	    l = 8;
@@ -1302,7 +1376,7 @@ void swf_WriteFont(SWFFONT * font, char *filename)
     int storeGlyphNames = 1;
 
     if (font->layout)
-	useDefineFont2 = 1;	/* the only thing new in definefont2 
+	useDefineFont2 = 1;	/* the only thing new in definefont2
 				   is layout information. */
 
     font->id = WRITEFONTID;	//"FN"
@@ -1539,7 +1613,7 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
     while(*upos) {
 	U8*next = upos;
 	int count = 0;
-	
+
 	swf_TextSetInfoRecord(tag, font, (scale * 1024) / 100, rgb, x, y);	//scale
 	x = 0;
 
@@ -1554,7 +1628,7 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
 
 	if(next[0] == 13 && next[1] == 10)
 	    next++;
-	
+
 	if(next[0] == 13 || next[0] == 10) {
 	    *next = 0;
 	    next++;
@@ -1566,7 +1640,7 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int s
 	   *that* in the flash specs)
 	 */
 	/* set the actual text- notice that we just pass our scale
-	   parameter over, as TextSetCharRecord calculates with 
+	   parameter over, as TextSetCharRecord calculates with
 	   percent, too */
 	swf_TextSetCharRecordUTF8(tag, font, upos, scale * 20, gbits, abits);
 
