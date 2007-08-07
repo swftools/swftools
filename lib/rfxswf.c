@@ -269,7 +269,7 @@ double swf_GetFixed(TAG * t)
 void swf_SetFixed(TAG * t, double f)
 {
   swf_SetU16(t, (U16)((f-(int)f)*65536));
-  swf_SetU16(t, (U16)f);
+  swf_SetU16(t, (U16)f - (f<0));
 }
 float swf_GetFixed8(TAG * t)
 {
@@ -280,7 +280,7 @@ float swf_GetFixed8(TAG * t)
 void swf_SetFixed8(TAG * t, float f)
 {
   swf_SetU8(t, (U8)((f-(int)f)*256));
-  swf_SetU8(t, (U8)f);
+  swf_SetU8(t, (U8)f - (f<0));
 }
 
 int swf_SetRGB(TAG * t,RGBA * col)
