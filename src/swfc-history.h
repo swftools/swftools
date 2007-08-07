@@ -49,9 +49,19 @@ enum
 #define SF_SHEAR 0x0200
 #define SF_PIVOT 0x0400
 #define SF_PIN 0x0800
-#define SF_BLEND 0x01000
-#define SF_FILTER 0x02000
+#define SF_BLEND 0x1000
+#define SF_FILTER 0x2000
+#define SF_ALL 0x3fff
 
+FILTER_BLUR* noBlur;
+FILTER_BEVEL* noBevel;
+FILTER_DROPSHADOW* noDropshadow;
+FILTER_GRADIENTGLOW* noGradientGlow;
+
+typedef struct _spline
+{
+    float a, b, c, d;
+} spline_t;
 
 typedef struct _change
 {
@@ -59,6 +69,7 @@ typedef struct _change
 	float value;
 	int function;
 	interpolation_t* interpolation;
+    spline_t spline;
 	struct _change* next;
 } change_t;
 
@@ -75,6 +86,7 @@ typedef struct _changeFilter
 	int function;
 	interpolation_t* interpolation;
 	struct _changeFilter* next;
+    spline_t spline;
 } changeFilter_t;
 
 changeFilter_t* changeFilter_new(U16 frame, int function, FILTER* value, interpolation_t* inter);
@@ -97,7 +109,9 @@ void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float 
 void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTER* value);
 void history_remember(history_t* past, char* parameter, U16 frame, int function, float value, interpolation_t* inter);
 void history_rememberFilter(history_t* past, U16 frame, int function, FILTER* value, interpolation_t* inter);
+int history_change(history_t* past, U16 frame, char* parameter);
 float history_value(history_t* past, U16 frame, char* parameter);
+int history_changeFilter(history_t* past, U16 frame);
 FILTER* history_valueFilter(history_t* past, U16 frame);
 
 #endif

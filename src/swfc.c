@@ -46,6 +46,7 @@ static int verbose = 2;
 static int optimize = 0;
 static int override_outputname = 0;
 static int do_cgi = 0;
+static int change_sets_all = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -446,7 +447,7 @@ static MATRIX s_instancepos(SRECT rect, parameters_t*p)
     return m;
 }
 
-void builtInInterpolations()
+void initBuiltIns()
 {
     interpolation_t* new;
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
@@ -522,6 +523,34 @@ void builtInInterpolations()
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_IN_OUT;
     dictionary_put2(&interpolations, "sineInOut", new);
+
+    RGBA c;
+    memset(&c, 0, sizeof(RGBA));
+    gradient_t* noGradient = (gradient_t*)malloc(sizeof(gradient_t));
+    noGradient->gradient.ratios = (U8*)malloc(16 * sizeof(U8));
+    noGradient->gradient.rgba = (RGBA*)malloc(16 * sizeof(RGBA));
+    noGradient->gradient.num = 2;
+    noGradient->gradient.rgba[0] = c;
+    noGradient->gradient.ratios[0] = 0;
+    noGradient->gradient.rgba[1] = c;
+    noGradient->gradient.ratios[1] = 255;
+    noGradient->radial = 0;
+    noGradient->rotate = 0;
+    dictionary_put2(&gradients, "no_gradient", noGradient);
+
+    noBlur = (FILTER_BLUR*) swf_NewFilter(FILTERTYPE_BLUR);
+    noBlur->passes = 1;
+    dictionary_put2(&filters, "no_blur", noBlur);
+    noBevel = (FILTER_BEVEL*) swf_NewFilter(FILTERTYPE_BEVEL);
+    noBevel->passes = 1;
+    dictionary_put2(&filters, "no_bevel", noBevel);
+    noDropshadow = (FILTER_DROPSHADOW*) swf_NewFilter(FILTERTYPE_DROPSHADOW);
+    noDropshadow->passes = 1;
+    dictionary_put2(&filters, "no_dropshadow", noDropshadow);
+    noGradientGlow = (FILTER_GRADIENTGLOW*) swf_NewFilter(FILTERTYPE_GRADIENTGLOW);
+    noGradientGlow->passes = 1;
+    noGradientGlow->gradient = &noGradient->gradient;
+    dictionary_put2(&filters, "no_gradientglow", noGradientGlow);
 }
 
 void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA background)
@@ -550,7 +579,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     dictionary_init(&instances);
     dictionary_init(&sounds);
     dictionary_init(&interpolations);
-    builtInInterpolations();
+    initBuiltIns();
     cleanUp = &freeDictionaries;
 
     memset(&stack[stackpos], 0, sizeof(stack[0]));
@@ -751,6 +780,34 @@ TAG* removeFromTo(TAG*from, TAG*to)
     return save;
 }
 
+static int parametersChange(history_t* history, int frame)
+{
+    int willChange = 0;
+
+    willChange = willChange || history_change(history, frame, "x");
+    willChange = willChange || history_change(history, frame, "y");
+    willChange = willChange || history_change(history, frame, "scalex");
+    willChange = willChange || history_change(history, frame, "scaley");
+    willChange = willChange || history_change(history, frame, "cxform.r0");
+    willChange = willChange || history_change(history, frame, "cxform.g0");
+    willChange = willChange || history_change(history, frame, "cxform.b0");
+    willChange = willChange || history_change(history, frame, "cxform.a0");
+    willChange = willChange || history_change(history, frame, "cxform.r1");
+    willChange = willChange || history_change(history, frame, "cxform.g1");
+    willChange = willChange || history_change(history, frame, "cxform.b1");
+    willChange = willChange || history_change(history, frame, "cxform.a1");
+    willChange = willChange || history_change(history, frame, "rotate");
+    willChange = willChange || history_change(history, frame, "shear");
+    willChange = willChange || history_change(history, frame, "pivot.x");
+    willChange = willChange || history_change(history, frame, "pivot.y");
+    willChange = willChange || history_change(history, frame, "pin.x");
+    willChange = willChange || history_change(history, frame, "pin.y");
+    willChange = willChange || history_change(history, frame, "blendmode");
+    willChange = willChange || history_changeFilter(history, frame);
+
+    return willChange;
+}
+
 static void readParameters(history_t* history, parameters_t* p, int frame)
 {
     p->x = history_value(history, frame, "x");
@@ -808,9 +865,11 @@ static void writeInstance(instance_t* i)
     while (frame < currentframe)
     {
         frame++;
-        readParameters(i->history, &p, frame);
         while (tag->id != ST_SHOWFRAME)
             tag = tag->next;
+        if (parametersChange(i->history, frame))
+        {
+            readParameters(i->history, &p, frame);
         m = s_instancepos(i->character->size, &p);
 
         if(p.blendmode || p.filter)
@@ -819,7 +878,14 @@ static void writeInstance(instance_t* i)
             tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
         setPlacement(tag, 0, i->depth, m, 0, &p, 1);
         if (p.filter)
+            {
+            	if (p.filter->type == FILTERTYPE_GRADIENTGLOW)
+            	    gradient_free(((FILTER_GRADIENTGLOW*)p.filter)->gradient);
             free(p.filter);
+    }
+}
+        else
+            tag = tag->next;
     }
 }
 
@@ -853,6 +919,8 @@ static void s_endSprite()
         num++;
         name = stringarray_at(index, num);
     }
+    while (tag->next)
+	tag = tag->next;
 
     tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_END);
@@ -1615,11 +1683,11 @@ void s_gradientglow(char*name, char*gradient, float blurx, float blury,
         syntaxerror("filter %s defined twice", name);
 
     gradient_t* g = dictionary_lookup(&gradients, gradient);
+    if(!g)
+	syntaxerror("unknown gradient %s", gradient);
 
     composite = 1;
 
-    if(!g)
-	syntaxerror("unknown gradient %s", gradient);
     FILTER_GRADIENTGLOW* filter = rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
     filter->type = FILTERTYPE_GRADIENTGLOW;
     filter->gradient = &g->gradient;
@@ -1893,11 +1961,15 @@ SRECT s_getInstanceBBox(char*name)
     if(!c) syntaxerror("internal error(5)");
     return c->size;
 }
-parameters_t s_getParameters(char*name)
+void s_getParameters(char*name, parameters_t* p)
 {
     instance_t * i = dictionary_lookup(&instances, name);
-    if(!i) syntaxerror("instance '%s' unknown(10)", name);
-    return i->parameters;
+    if(!i)
+    	syntaxerror("instance '%s' unknown(10)", name);
+    if (change_sets_all)
+        readParameters(i->history, p, currentframe);
+    else
+    	*p = i->parameters;
 }
 void s_startclip(char*instance, char*character, parameters_t p)
 {
@@ -2055,6 +2127,7 @@ void s_change(char*instance, parameters_t p2, interpolation_t* inter)
     instance_t* i = dictionary_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
+
     recordChanges(i->history, p2, CF_CHANGE, inter);
 }
 
@@ -2391,11 +2464,12 @@ static int c_flash(map_t*args)
 {
     char* filename = map_lookup(args, "filename");
     char* compressstr = lu(args, "compress");
+    char* change_modestr = lu(args, "change-sets-all");
     SRECT bbox = parseBox(lu(args, "bbox"));
     int version = parseInt(lu(args, "version"));
     int fps = (int)(parseFloat(lu(args, "fps"))*256);
-    int compress = 0;
     RGBA color = parseColor(lu(args, "background"));
+    int compress = 0;
 
     if(!filename || !*filename) {
 	/* for compatibility */
@@ -2418,6 +2492,12 @@ static int c_flash(map_t*args)
     else if(!strcmp(compressstr, "no"))
 	compress = 0;
     else syntaxerror("value \"%s\" not supported for the compress argument", compressstr);
+
+    if(!strcmp(change_modestr, "yes"))
+	change_sets_all = 1;
+    else
+	if(strcmp(change_modestr, "no"))
+	    syntaxerror("value \"%s\" not supported for the change-sets-all argument", change_modestr);
 
     s_swf(filename, bbox, version, fps, compress, color);
     return 0;
@@ -2801,7 +2881,7 @@ static int c_placement(map_t*args, int type)
     SRECT oldbbox;
     MULADD luminance;
     parameters_t p;
-    U32 set = 0x00000000;
+    U16 set = 0x0000;
 
     if(type==9)
     { // (?) .rotate  or .arcchange
@@ -2838,7 +2918,7 @@ static int c_placement(map_t*args, int type)
 	parameters_clear(&p);
 	// button's show
     } else {
-	p = s_getParameters(instance);
+	s_getParameters(instance, &p);
     }
 
     /* x,y position */
@@ -3019,6 +3099,8 @@ static int c_placement(map_t*args, int type)
         set = set | SF_FILTER;
     }
 
+    if (change_sets_all)
+	set = SF_ALL;
     p.set = set;
 
     switch (type)
@@ -3500,7 +3582,7 @@ static struct {
     command_func_t* func;
     char*arguments;
 } arguments[] =
-{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default"},
+{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default @change-sets-all=no"},
  {"frame", c_frame, "n=<plus>1 name= @cut=no @anchor=no"},
  // "import" type stuff
  {"swf", c_swf, "name filename"},
