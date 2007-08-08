@@ -205,7 +205,7 @@ typedef struct _parameters {
     SPOINT pivot;
     SPOINT pin;
     U8 blendmode; //not interpolated
-    FILTER*filter;
+    FILTERLIST* filters;
     U16 set; // bits indicating wether a parameter was set in the c_placement function
 } parameters_t;
 
@@ -219,8 +219,7 @@ typedef struct _instance {
     character_t*character;
     U16 depth;
     parameters_t parameters;
-    TAG* lastTag; //last tag which set the object
-    U16 lastFrame; //frame lastTag is in
+    U16 deathFrame;
     history_t* history;
 } instance_t;
 
@@ -403,7 +402,7 @@ static void parameters_clear(parameters_t*p)
     p->rotate = 0;
     p->shear = 0;
     p->blendmode = 0;
-    p->filter = 0;
+    p->filters = 0;
     swf_GetCXForm(0, &p->cxform, 1);
 }
 
@@ -416,10 +415,10 @@ static void makeMatrix(MATRIX*m, parameters_t*p)
      *	      \r0 sy/ \y/
      */
 
-    sx =  p->scalex*cos(p->rotate/360*2*PI);
-    r1 = -p->scalex*sin(p->rotate/360*2*PI)+sx*p->shear;
-    r0 =  p->scaley*sin(p->rotate/360*2*PI);
-    sy =  p->scaley*cos(p->rotate/360*2*PI)+r0*p->shear;
+    sx =  p->scalex*cos(p->rotate/360*2*M_PI);
+    r1 = -p->scalex*sin(p->rotate/360*2*M_PI)+sx*p->shear;
+    r0 =  p->scaley*sin(p->rotate/360*2*M_PI);
+    sy =  p->scaley*cos(p->rotate/360*2*M_PI)+r0*p->shear;
 
     m->sx = (int)(sx*65536+0.5);
     m->r1 = (int)(r1*65536+0.5);
@@ -538,17 +537,25 @@ void initBuiltIns()
     noGradient->rotate = 0;
     dictionary_put2(&gradients, "no_gradient", noGradient);
 
+    noFilters = 0;
+// put a no_filters entry in the filters dictionary to provoce a message when a user tries
+// to define a no_filters filter. The real filter=no_filters case is handled in parseFilters.
+    char* dummy = (char*)malloc(2);
+    dictionary_put2(&filters, "no_filters", dummy);
     noBlur = (FILTER_BLUR*) swf_NewFilter(FILTERTYPE_BLUR);
     noBlur->passes = 1;
     dictionary_put2(&filters, "no_blur", noBlur);
     noBevel = (FILTER_BEVEL*) swf_NewFilter(FILTERTYPE_BEVEL);
     noBevel->passes = 1;
+    noBevel->composite = 1;
     dictionary_put2(&filters, "no_bevel", noBevel);
     noDropshadow = (FILTER_DROPSHADOW*) swf_NewFilter(FILTERTYPE_DROPSHADOW);
     noDropshadow->passes = 1;
+    noDropshadow->composite = 1;
     dictionary_put2(&filters, "no_dropshadow", noDropshadow);
     noGradientGlow = (FILTER_GRADIENTGLOW*) swf_NewFilter(FILTERTYPE_GRADIENTGLOW);
     noGradientGlow->passes = 1;
+    noGradientGlow->composite = 1;
     noGradientGlow->gradient = &noGradient->gradient;
     dictionary_put2(&filters, "no_gradientglow", noGradientGlow);
 }
@@ -808,6 +815,18 @@ static int parametersChange(history_t* history, int frame)
     return willChange;
 }
 
+static void free_filterlist(FILTERLIST* f_list)
+{
+    int i;
+    for (i = 0; i < f_list->num; i++)
+    {
+        if (f_list->filter[i]->type == FILTERTYPE_GRADIENTGLOW)
+            gradient_free(((FILTER_GRADIENTGLOW*)f_list->filter[i])->gradient);
+        free(f_list->filter[i]);
+    }
+    free(f_list);
+}
+
 static void readParameters(history_t* history, parameters_t* p, int frame)
 {
     p->x = history_value(history, frame, "x");
@@ -829,7 +848,7 @@ static void readParameters(history_t* history, parameters_t* p, int frame)
     p->pin.x = history_value(history, frame, "pin.x");
     p->pin.y = history_value(history, frame, "pin.y");
     p->blendmode = history_value(history, frame, "blendmode");
-    p->filter = history_valueFilter(history, frame);
+    p->filters = history_valueFilter(history, frame);
 }
 
 void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*p, char move)
@@ -848,11 +867,8 @@ void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*
     if(p->blendmode) {
     po.blendmode = p->blendmode;
     }
-    if(p->filter) {
-    flist.num = 1;
-    flist.filter[0] = p->filter;
-    po.filters = &flist;
-    }
+    if (p->filters)
+    	po.filters = p->filters;
     swf_SetPlaceObject(tag, &po);
 }
 
@@ -867,22 +883,24 @@ static void writeInstance(instance_t* i)
         frame++;
         while (tag->id != ST_SHOWFRAME)
             tag = tag->next;
+        if (i->deathFrame == frame)
+        {
+	    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+	    swf_SetU16(tag, i->depth);
+	    break;
+        }
         if (parametersChange(i->history, frame))
         {
             readParameters(i->history, &p, frame);
         m = s_instancepos(i->character->size, &p);
 
-        if(p.blendmode || p.filter)
+            if(p.blendmode || p.filters)
             tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
         else
             tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
         setPlacement(tag, 0, i->depth, m, 0, &p, 1);
-        if (p.filter)
-            {
-            	if (p.filter->type == FILTERTYPE_GRADIENTGLOW)
-            	    gradient_free(((FILTER_GRADIENTGLOW*)p.filter)->gradient);
-            free(p.filter);
-    }
+            if (p.filters)
+            	free_filterlist(p.filters);
 }
         else
             tag = tag->next;
@@ -1091,8 +1109,8 @@ int addFillStyle(SHAPE*s, SRECT*r, char*name)
 	MATRIX rot,m;
 	double ccos,csin;
 	swf_GetMatrix(0, &rot);
-    ccos = cos(-gradient->rotate*2*PI/360);
-    csin = sin(-gradient->rotate*2*PI/360);
+    	ccos = cos(-gradient->rotate*2*M_PI/360);
+    	csin = sin(-gradient->rotate*2*M_PI/360);
 	rot.sx =  ccos*65536;
 	rot.r1 = -csin*65536;
 	rot.r0 =  csin*65536;
@@ -1663,6 +1681,44 @@ GRADIENT parseGradient(const char*str)
     return gradient;
 }
 
+FILTERLIST* parseFilters(char* list)
+{
+    if (!strcmp(list, "no_filters"))
+    	return noFilters;
+    FILTER* f;
+    FILTERLIST* f_list = (FILTERLIST*)malloc(sizeof(FILTERLIST));
+    f_list->num = 0;
+    char* f_start = list;
+    char* f_end;
+    while (f_start)
+    {
+    	f_end = strchr(f_start, ',');
+    	if (f_end)
+    	    *f_end = '\0';
+    	f = dictionary_lookup(&filters, f_start);
+    	if (!f)
+    	{
+    	    free(f_list);
+    	    syntaxerror("unknown filter %s", f_start);
+    	}
+    	if (f_list->num == 8)
+    	{
+    	    warning("too many filters in filterlist, no more than 8 please, rest ignored");
+    	    break;
+    	}
+    	f_list->filter[f_list->num] = f;
+    	f_list->num++;
+    	if (f_end)
+    	{
+    	    *f_end = ',';
+    	    f_start = f_end + 1;
+    	}
+    	else
+    	    f_start = 0;
+    }
+    return f_list;
+}
+
 void s_gradient(char*name, const char*text, int radial, int rotate)
 {
     gradient_t* gradient;
@@ -1986,8 +2042,6 @@ void s_startclip(char*instance, char*character, parameters_t p)
     tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     /* TODO: should be ObjectPlaceClip, with clipdepth backpatched */
     swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
-    i->lastTag = tag;
-    i->lastFrame= currentframe;
 
     stack[stackpos].tag = tag;
     stack[stackpos].type = 2;
@@ -2029,7 +2083,7 @@ void setStartparameters(instance_t* i, parameters_t* p, TAG* tag)
     history_begin(i->history, "pin.x", currentframe, tag, p->pin.x);
     history_begin(i->history, "pin.y", currentframe, tag, p->pin.y);
     history_begin(i->history, "blendmode", currentframe, tag, p->blendmode);
-    history_beginFilter(i->history, currentframe, tag, p->filter);
+    history_beginFilter(i->history, currentframe, tag, p->filters);
 }
 
 void s_put(char*instance, char*character, parameters_t p)
@@ -2044,7 +2098,7 @@ void s_put(char*instance, char*character, parameters_t p)
     i->parameters = p;
     m = s_instancepos(i->character->size, &p);
 
-    if(p.blendmode || p.filter)
+    if(p.blendmode || p.filters)
     {
         if(stack[0].swf->fileVersion < 8)
         {
@@ -2059,8 +2113,6 @@ void s_put(char*instance, char*character, parameters_t p)
         tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
     setPlacement(tag, c->id, currentdepth, m, instance, &p, 0);
     setStartparameters(i, &p, tag);
-    i->lastTag = tag;
-    i->lastFrame = currentframe;
     currentdepth++;
 }
 
@@ -2111,7 +2163,7 @@ void recordChanges(history_t* history, parameters_t p, int changeFunction, inter
     if (p.set & SF_BLEND)
         history_remember(history, "blendmode", currentframe, changeFunction, p.blendmode, inter);
     if (p.set & SF_FILTER)
-        history_rememberFilter(history, currentframe, changeFunction, p.filter, inter);
+        history_rememberFilter(history, currentframe, changeFunction, p.filters, inter);
 }
 
 void s_jump(char* instance, parameters_t p)
@@ -2136,9 +2188,7 @@ void s_delinstance(char*instance)
     instance_t* i = dictionary_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
-    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
-    swf_SetU16(tag, i->depth);
-    dictionary_del(&instances, instance);
+    i->deathFrame = currentframe;
 }
 
 void s_qchange(char*instance, parameters_t p)
@@ -2669,9 +2719,17 @@ static int c_gradient(map_t*args)
     return 0;
 }
 
-static int c_blur(map_t*args)
+static char* checkFiltername(map_t* args)
 {
     char*name = lu(args, "name");
+    if (strchr(name, ','))
+    	syntaxerror("the comma (,) is used to separate filters in filterlists. Please do not use in filternames.");
+    return name;
+}
+
+static int c_blur(map_t*args)
+{
+    char*name = checkFiltername(args);
     char*blurstr = lu(args, "blur");
     char*blurxstr = lu(args, "blurx");
     char*blurystr = lu(args, "blury");
@@ -2691,7 +2749,7 @@ static int c_blur(map_t*args)
 
 static int c_gradientglow(map_t*args)
 {
-    char*name = lu(args, "name");
+    char*name = checkFiltername(args);
     char*gradient = lu(args, "gradient");
     char*blurstr = lu(args, "blur");
     char*blurxstr = lu(args, "blurx");
@@ -2721,7 +2779,7 @@ static int c_gradientglow(map_t*args)
 
 static int c_dropshadow(map_t*args)
 {
-    char*name = lu(args, "name");
+    char*name = checkFiltername(args);
     RGBA color = parseColor(lu(args, "color"));
     char*blurstr = lu(args, "blur");
     char*blurxstr = lu(args, "blurx");
@@ -2750,7 +2808,7 @@ static int c_dropshadow(map_t*args)
 
 static int c_bevel(map_t*args)
 {
-    char*name = lu(args, "name");
+    char*name = checkFiltername(args);
     RGBA shadow = parseColor(lu(args, "shadow"));
     RGBA highlight = parseColor(lu(args, "highlight"));
     char*blurstr = lu(args, "blur");
@@ -3092,10 +3150,7 @@ static int c_placement(map_t*args, int type)
 
     if(filterstr[0])
     {
-        FILTER*f = dictionary_lookup(&filters, filterstr);
-        if(!f)
-            syntaxerror("Unknown filter %s", filterstr);
-        p.filter = f;
+        p.filters = parseFilters(filterstr);
         set = set | SF_FILTER;
     }
 

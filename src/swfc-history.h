@@ -53,6 +53,7 @@ enum
 #define SF_FILTER 0x2000
 #define SF_ALL 0x3fff
 
+FILTER* noFilters;
 FILTER_BLUR* noBlur;
 FILTER_BEVEL* noBevel;
 FILTER_DROPSHADOW* noDropshadow;
@@ -82,18 +83,18 @@ float change_value(change_t* first, U16 frame);
 typedef struct _changeFilter
 {
 	U16 frame;
-	FILTER* value;
+    FILTERLIST* value;
 	int function;
 	interpolation_t* interpolation;
 	struct _changeFilter* next;
     spline_t spline;
 } changeFilter_t;
 
-changeFilter_t* changeFilter_new(U16 frame, int function, FILTER* value, interpolation_t* inter);
+changeFilter_t* changeFilter_new(U16 frame, int function, FILTERLIST* value, interpolation_t* inter);
 void changeFilter_free(changeFilter_t* change);
 void changeFilter_init(changeFilter_t* change);
 void changeFilter_append(changeFilter_t* first, changeFilter_t* newChange);
-FILTER* changeFilter_value(changeFilter_t* first, U16 frame);
+FILTERLIST* changeFilter_value(changeFilter_t* first, U16 frame);
 
 typedef struct _history
 {
@@ -106,12 +107,12 @@ history_t* history_new();
 void history_free(history_t* past);
 void history_init(history_t* past);
 void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float value);
-void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTER* value);
+void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTERLIST* value);
 void history_remember(history_t* past, char* parameter, U16 frame, int function, float value, interpolation_t* inter);
-void history_rememberFilter(history_t* past, U16 frame, int function, FILTER* value, interpolation_t* inter);
+void history_rememberFilter(history_t* past, U16 frame, int function, FILTERLIST* value, interpolation_t* inter);
 int history_change(history_t* past, U16 frame, char* parameter);
 float history_value(history_t* past, U16 frame, char* parameter);
 int history_changeFilter(history_t* past, U16 frame);
-FILTER* history_valueFilter(history_t* past, U16 frame);
+FILTERLIST* history_valueFilter(history_t* past, U16 frame);
 
 #endif

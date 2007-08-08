@@ -65,8 +65,6 @@ enum {
 	IF_FAST_BOUNCE_IN_OUT = 34
 };
 
-#define PI 3.14159265358979
-
 float linear(float fraction, float start, float delta);
 
 float quadIn(float fraction, float start, float delta);

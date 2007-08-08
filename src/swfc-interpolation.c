@@ -140,7 +140,7 @@ float exponentialInOut(float fraction, float start, float delta)
 
 float sineIn(float fraction, float start, float delta)
 {
-	return delta * (1 - cos(fraction * PI/2)) + start;
+	return delta * (1 - cos(fraction * M_PI/2)) + start;
 }
 
 float sineOut(float fraction, float start, float delta)
@@ -164,8 +164,7 @@ float elasticIn(float fraction, float start, float delta, float amplitude, int b
 	if (amplitude < fabs(delta))
 		amplitude = delta;
 	float period = 1 / (bounces + 0.25);
-//	float s = asin(delta / amplitude) - 2 * PI / period;
-	return amplitude * pow(2, damping * (fraction - 1)) * sin(fraction * (2 * PI) / period /*+ fraction * s*/) + start;
+	return amplitude * pow(2, damping * (fraction - 1)) * sin(fraction * (2 * M_PI) / period) + start;
 }
 
 float elasticOut(float fraction, float start, float delta, float amplitude, int bounces, float damping)

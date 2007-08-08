@@ -206,7 +206,7 @@ float change_value(change_t* modification, U16 frame)
 	}
 }
 
-changeFilter_t* changeFilter_new(U16 frame, int function, FILTER* value, interpolation_t* inter)
+changeFilter_t* changeFilter_new(U16 frame, int function, FILTERLIST* value, interpolation_t* inter)
 {
 	changeFilter_t* newChange = (changeFilter_t*)malloc(sizeof(changeFilter_t));
 	changeFilter_init(newChange);
@@ -221,6 +221,7 @@ void changeFilter_free(changeFilter_t *change)
 {
 	if (change->next)
 		changeFilter_free(change->next);
+    free(change->value);
 	free(change);
 }
 
@@ -233,7 +234,46 @@ void changeFilter_append(changeFilter_t* first, changeFilter_t* newChange)
 {
 	while (first->next)
 		first = first->next;
+    if (!first->value || !newChange->value)
 	first->next = newChange;
+    else
+    {
+    	int i, mergedCount = 0;
+    	int common = first->value->num < newChange->value->num ? first->value->num : newChange->value->num;
+    	for (i = 0; i < common; i++)
+    	{
+    	    mergedCount++;
+    	    if (newChange->value->filter[i]->type != first->value->filter[i]->type)
+    	    	mergedCount++;
+    	}
+    	mergedCount = mergedCount + first->value->num - common + newChange->value->num - common;
+    	if (mergedCount > 8)
+    	{
+    	    char* list1;
+    	    char* list2;
+    	    char* newList;
+    	    list1 = (char*)malloc(1);
+    	    *list1 = '\0';
+    	    for (i = 0; i < first->value->num; i++)
+    	    {
+    	    	newList = (char*)malloc(strlen(list1) + strlen(filtername[first->value->filter[i]->type]) + 2);
+    	    	newList = strcat(strcat(list1, "+"), filtername[first->value->filter[i]->type]);
+    	    	free(list1);
+    	    	list1 = newList;
+    	    }
+    	    list2 = (char*)malloc(1);
+    	    *list2 = '\0';
+    	    for (i = 0; i < newChange->value->num; i++)
+    	    {
+    	    	newList = (char*)malloc(strlen(list1) + strlen(filtername[newChange->value->filter[i]->type]) + 2);
+    	    	newList = strcat(strcat(list2, "+"), filtername[newChange->value->filter[i]->type]);
+    	    	free(list2);
+    	    	list2 = newList;
+    	    }
+    	    syntaxerror("filterlists %s and %s cannot be interpolated.", list1, list2);
+    	}
+    	first->next = newChange;
+    }
 }
 
 RGBA interpolateColor(RGBA c1, RGBA c2, float ratio, interpolation_t* inter)
@@ -350,6 +390,37 @@ GRADIENT* interpolateGradient(GRADIENT* g1, GRADIENT* g2, float fraction, interp
     	    return interpolateNodes(g1, g2, fraction, inter);
 }
 
+FILTER* copyFilter(FILTER* original)
+{
+    if (!original)
+	return original;
+    FILTER* copy = swf_NewFilter(original->type);
+    switch (original->type)
+    {
+	case FILTERTYPE_BLUR:
+	    memcpy(copy, original, sizeof(FILTER_BLUR));
+	    break;
+	case FILTERTYPE_GRADIENTGLOW:
+	{
+	    memcpy(copy, original, sizeof(FILTER_GRADIENTGLOW));
+	    FILTER_GRADIENTGLOW* ggcopy = (FILTER_GRADIENTGLOW*)copy;
+	    ggcopy->gradient = (GRADIENT*)malloc(sizeof(GRADIENT));
+	    ggcopy->gradient->ratios = (U8*)malloc(16 * sizeof(U8));
+	    ggcopy->gradient->rgba = (RGBA*)malloc(16 * sizeof(RGBA));
+	    copyGradient(ggcopy->gradient, ((FILTER_GRADIENTGLOW*)original)->gradient);
+	}
+	    break;
+	case FILTERTYPE_DROPSHADOW:
+	    memcpy(copy, original, sizeof(FILTER_DROPSHADOW));
+	    break;
+	case FILTERTYPE_BEVEL:
+	    memcpy(copy, original, sizeof(FILTER_BEVEL));
+	    break;
+	default: syntaxerror("Internal error: unsupported filterype, cannot copy");
+    }
+    return copy;
+}
+
 FILTER* interpolateBlur(FILTER* filter1, FILTER* filter2, float ratio, interpolation_t* inter)
 	{
 		FILTER_BLUR*f1 = (FILTER_BLUR*)filter1;
@@ -359,7 +430,7 @@ FILTER* interpolateBlur(FILTER* filter1, FILTER* filter2, float ratio, interpola
     if (!f2)
     	f2 = noBlur;
     if(f1->blurx == f2->blurx && f1->blury == f2->blury)
-			return 0;
+	return copyFilter(filter1);
 		FILTER_BLUR*f = (FILTER_BLUR*)swf_NewFilter(FILTERTYPE_BLUR);
     f->blurx= interpolateScalar(f1->blurx, (f2->blurx), ratio, inter);
     f->blury= interpolateScalar(f1->blury, (f2->blury), ratio, inter);
@@ -385,7 +456,7 @@ FILTER* interpolateDropshadow(FILTER* filter1,FILTER* filter2, float ratio, inte
     if(!memcmp(&f1->color,&f2->color,sizeof(RGBA)) && f1->strength == f2->strength &&
 				f1->blurx == f2->blurx && f1->blury == f2->blury && 
 				f1->angle == f2->angle && f1->distance == f2->distance)
-				return 0;
+		return copyFilter(filter1);
 			FILTER_DROPSHADOW*f = (FILTER_DROPSHADOW*)swf_NewFilter(FILTERTYPE_DROPSHADOW);
 			memcpy(f, f1, sizeof(FILTER_DROPSHADOW));
 			f->color = interpolateColor(f1->color, f2->color, ratio, inter);
@@ -430,7 +501,7 @@ FILTER* interpolateBevel(FILTER* filter1,FILTER* filter2, float ratio, interpola
     if(!memcmp(&f1->shadow,&f2->shadow,sizeof(RGBA)) &&
 					!memcmp(&f1->highlight,&f2->highlight,sizeof(RGBA)) && 
 					f1->blurx == f2->blurx && f1->blury == f2->blury && f1->angle == f2->angle && f1->strength == f2->strength && f1->distance == f2->distance)
-					return 0;
+		return copyFilter(filter1);
 				FILTER_BEVEL*f = (FILTER_BEVEL*)swf_NewFilter(FILTERTYPE_BEVEL);
 				memcpy(f, f1, sizeof(FILTER_BEVEL));
 				f->shadow = interpolateColor(f1->shadow, f2->shadow, ratio, inter);
@@ -477,7 +548,7 @@ FILTER* interpolateGradientGlow(FILTER* filter1,FILTER* filter2, float ratio, in
     		!memcmp(&f1->gradient->ratios,&f2->gradient->ratios,f1->gradient->num * sizeof(U8)) &&
     		!memcmp(&f1->gradient->rgba,&f2->gradient->rgba,f1->gradient->num * sizeof(RGBA)) &&
 		f1->blurx == f2->blurx && f1->blury == f2->blury && f1->angle == f2->angle && f1->strength == f2->strength && f1->distance == f2->distance)
-		return 0;
+		return copyFilter(filter1);
 	FILTER_GRADIENTGLOW*f = (FILTER_GRADIENTGLOW*)swf_NewFilter(FILTERTYPE_GRADIENTGLOW);
     memcpy(f, f1, sizeof(FILTER_GRADIENTGLOW));
     f->blurx= interpolateScalar(f1->blurx, (f2->blurx), ratio, inter);
@@ -485,13 +556,6 @@ FILTER* interpolateGradientGlow(FILTER* filter1,FILTER* filter2, float ratio, in
     f->passes= interpolateScalar(f1->passes, (f2->passes), ratio, inter);
     f->angle= interpolateScalar(f1->angle, (f2->angle), ratio, inter);
     f->distance= interpolateScalar(f1->distance, (f2->distance), ratio, inter);
-    double d = f->distance;
-    double fr;
-    if (d < 0)
-    	fr = ((int)d - d)*65536;
-    else
-    	fr = (d - (int)d)*65536;
-    	printf("%.3f <> %.3f : %.3f = %.3f [%.3f . %.3f] - %.5u.%.5u\n", f1->distance, f2->distance, ratio, f->distance, d, fr/65536, (U16)d, (U16)fr);
     f->strength= interpolateScalar(f1->strength, (f2->strength), ratio, inter);
     f->gradient= interpolateGradient(f1->gradient, f2->gradient, ratio, inter);
     if (f1 == noGradientGlow)
@@ -515,7 +579,6 @@ FILTER* interpolateFilter(FILTER* filter1,FILTER* filter2, float ratio, interpol
     if(!filter1 && !filter2)
 	return 0;
 
-
     int filter_type;
     if (!filter1)
     	filter_type = filter2->type;
@@ -527,7 +590,6 @@ FILTER* interpolateFilter(FILTER* filter1,FILTER* filter2, float ratio, interpol
 		syntaxerror("can't interpolate between %s and %s filters yet", filtername[filter1->type], filtername[filter2->type]);
 	    else
 	    	filter_type = filter1->type;
-
 
     switch (filter_type)
     {
@@ -545,35 +607,90 @@ FILTER* interpolateFilter(FILTER* filter1,FILTER* filter2, float ratio, interpol
 	return 0;
 }
 
-FILTER* copyFilter(FILTER* original)
+FILTERLIST* copyFilterList(FILTERLIST* original)
 {
 	if (!original)
 		return original;
-	FILTER* copy = swf_NewFilter(original->type);
-	switch (original->type)
+    int i;
+    FILTERLIST* copy = (FILTERLIST*)malloc(sizeof(FILTERLIST));
+    copy->num = original->num;
+    for (i = 0; i < copy->num; i++)
+    	copy->filter[i] = copyFilter(original->filter[i]);
+    return copy;
+}
+
+FILTER* noFilter(int type)
+{
+    switch (type)
 	{
 		case FILTERTYPE_BLUR:
-			memcpy(copy, original, sizeof(FILTER_BLUR));
+    	    return (FILTER*)noBlur;
 			break;
-		case FILTERTYPE_GRADIENTGLOW:
-	{
-			memcpy(copy, original, sizeof(FILTER_GRADIENTGLOW));
-	    FILTER_GRADIENTGLOW* ggcopy = (FILTER_GRADIENTGLOW*)copy;
-	    ggcopy->gradient = (GRADIENT*)malloc(sizeof(GRADIENT));
-	    ggcopy->gradient->ratios = (U8*)malloc(16 * sizeof(U8));
-	    ggcopy->gradient->rgba = (RGBA*)malloc(16 * sizeof(RGBA));
-	    copyGradient(ggcopy->gradient, ((FILTER_GRADIENTGLOW*)original)->gradient);
-	}
+    	case FILTERTYPE_BEVEL:
+    	    return (FILTER*)noBevel;
 			break;
 		case FILTERTYPE_DROPSHADOW:
-			memcpy(copy, original, sizeof(FILTER_DROPSHADOW)); 
+    	    return (FILTER*)noDropshadow;
 			break;
-		case FILTERTYPE_BEVEL:
-			memcpy(copy, original, sizeof(FILTER_BEVEL)); 
+    	case FILTERTYPE_GRADIENTGLOW:
+    	    return (FILTER*)noGradientGlow;
 			break;
-	default: syntaxerror("Internal error: unsupported filterype");
+    	default:
+    	    syntaxerror("Internal error: unsupported filtertype, cannot match filterlists");
 	}
-	return copy;
+    return 0;
+}
+
+FILTERLIST* interpolateFilterList(FILTERLIST* list1, FILTERLIST* list2, float ratio, interpolation_t* inter)
+{
+    if (!list1 && !list2)
+	return list1;
+    FILTERLIST start, target, dummy;
+    dummy.num = 0;
+    if (!list1)
+    	list1 = &dummy;
+    if (!list2)
+    	list2 = &dummy;
+    int i, j = 0;
+    int common = list1->num < list2->num ? list1->num : list2->num;
+        for (i = 0; i < common; i++)
+    {
+    	start.filter[j] = list1->filter[i];
+    	if (list2->filter[i]->type == list1->filter[i]->type)
+    	{
+    	    target.filter[j] = list2->filter[i];
+    	    j++;
+    	}
+    	else
+    	{
+    	    target.filter[j] = noFilter(list1->filter[i]->type);
+    	    j++;
+    	    start.filter[j] = noFilter(list2->filter[i]->type);
+    	    target.filter[j] = list2->filter[i];
+    	    j++;
+    	}
+    }
+    if (list1->num > common)
+    	for (i = common; i < list1->num; i++)
+    	{
+    	    start.filter[j] = list1->filter[i];
+    	    target.filter[j] = noFilter(list1->filter[i]->type);
+    	    j++;
+    	}
+    if (list2->num > common)
+    	for (i = common; i < list2->num; i++)
+    	{
+    	    start.filter[j] = noFilter(list2->filter[i]->type);
+    	    target.filter[j] = list2->filter[i];
+    	    j++;
+    	}
+    start.num = j;
+    target.num = j;
+    FILTERLIST* mixedList = (FILTERLIST*)malloc(sizeof(FILTERLIST));
+    mixedList->num = j;
+    for (i = 0; i < j; i++)
+    	mixedList->filter[i] = interpolateFilter(start.filter[i], target.filter[i], ratio, inter);
+    return mixedList;
 }
 
 int changeFilter_differs(changeFilter_t* modification, U16 frame)
@@ -591,7 +708,7 @@ int changeFilter_differs(changeFilter_t* modification, U16 frame)
     return (modification->function != CF_JUMP);
 }
 
-FILTER* changeFilter_value(changeFilter_t* modification, U16 frame)
+FILTERLIST* changeFilter_value(changeFilter_t* modification, U16 frame)
 {
     changeFilter_t* previous = modification;
     while (modification && modification->frame < frame)
@@ -600,7 +717,7 @@ FILTER* changeFilter_value(changeFilter_t* modification, U16 frame)
 	modification = modification->next;
     }
     if (!modification)
-		return copyFilter(previous->value);
+	return copyFilterList(previous->value);
     if (modification->frame == frame)
 	{
 		do 
@@ -609,19 +726,19 @@ FILTER* changeFilter_value(changeFilter_t* modification, U16 frame)
 	    modification = modification->next;
 		}
 	while (modification && modification->frame == frame);
-	return copyFilter(previous->value);
+	return copyFilterList(previous->value);
 	}
     switch (modification->function)
 	{
 		case CF_PUT:
-	    return copyFilter(modification->value);
+	    return copyFilterList(modification->value);
 		case CF_CHANGE:
 		{
 	    float fraction = (frame - previous->frame) / (float)(modification->frame - previous->frame);
-	    return interpolateFilter(previous->value, modification->value, fraction, modification->interpolation);
+	    return interpolateFilterList(previous->value, modification->value, fraction, modification->interpolation);
 		}
 		case CF_JUMP:
-			return copyFilter(previous->value);
+	    return copyFilterList(previous->value);
 		default:
 			return 0;
 	}
@@ -674,7 +791,7 @@ void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float 
 	dictionary_put2(past->changes, parameter, first);
 }
 
-void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTER* value)
+void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTERLIST* value)
 {
 	changeFilter_t* first = changeFilter_new(frame, CF_PUT, value, 0);
 	past->firstTag = tag;
@@ -692,7 +809,7 @@ void history_remember(history_t* past, char* parameter, U16 frame, int function,
 	}
 }
 
-void history_rememberFilter(history_t* past, U16 frame, int function, FILTER* value, interpolation_t* inter)
+void history_rememberFilter(history_t* past, U16 frame, int function, FILTERLIST* value, interpolation_t* inter)
 {
 	changeFilter_t* first = dictionary_lookup(past->changes, "filter");
 	if (first) //should always be true
@@ -729,7 +846,7 @@ int history_changeFilter(history_t* past, U16 frame)
     return 0;
 }
 
-FILTER* history_valueFilter(history_t* past, U16 frame)
+FILTERLIST* history_valueFilter(history_t* past, U16 frame)
 {
 	changeFilter_t* first = dictionary_lookup(past->changes, "filter");
 	if (first)	//should always be true.
