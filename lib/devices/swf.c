@@ -92,6 +92,7 @@ typedef struct _swfoutput_internal
     char*config_internallinkfunction;
     char*config_externallinkfunction;
     char config_animate;
+    double config_framerate;
 
     SWF* swf;
 
@@ -227,6 +228,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_generate_fake_tags=0;
     i->config_insertstoptag=0;
     i->config_flashversion=6;
+    i->config_framerate=0.25;
     i->config_splinemaxerror=1;
     i->config_fontsplinemaxerror=1;
     i->config_filloverlap=0;
@@ -933,7 +935,7 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
    
     i->swf = (SWF*)rfx_calloc(sizeof(SWF));
     i->swf->fileVersion    = i->config_flashversion;
-    i->swf->frameRate      = 0x0040; // 1 frame per 4 seconds
+    i->swf->frameRate      = i->config_framerate*0x100;
     i->swf->movieSize.xmin = 0;
     i->swf->movieSize.ymin = 0;
     i->swf->movieSize.xmax = 0;
@@ -1793,6 +1795,11 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_flashversion = atoi(value);
 	if(i->swf) {
 	    i->swf->fileVersion = i->config_flashversion;
+	}
+    } else if(!strcmp(name, "framerate")) {
+	i->config_framerate = atoi(value);
+	if(i->swf) {
+	    i->swf->frameRate = i->config_framerate*0x100;
 	}
     } else if(!strcmp(name, "minlinewidth")) {
 	i->config_minlinewidth = atof(value);
