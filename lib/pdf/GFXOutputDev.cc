@@ -191,7 +191,7 @@ GFXOutputState::GFXOutputState() {
 
 GBool GFXOutputDev::interpretType3Chars() 
 {
-    return gTrue;
+    return this->do_interpretType3Chars;
 }
 
 typedef struct _drawnchar
@@ -269,6 +269,7 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->pagepos = 0;
     this->config_use_fontconfig=1;
     this->config_break_on_warning=0;
+    this->do_interpretType3Chars = gTrue;
 
     this->parameters = p;
   
@@ -276,14 +277,23 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
 
     /* configure device */
     while(p) {
-	if(!strcmp(p->name,"fontconfig")) {
-	    this->config_use_fontconfig = atoi(p->value);
-	} else if(!strcmp(p->name,"breakonwarning")) {
-	    this->config_break_on_warning = atoi(p->value);
-	}
+        setParameter(p->name, p->value);
 	p = p->next;
     }
 };
+
+void GFXOutputDev::setParameter(char*key, char*value)
+{
+    if(!strcmp(key,"rawtext")) {
+        this->do_interpretType3Chars = atoi(value)^1;
+    } else if(!strcmp(key,"breakonwarning")) {
+	this->config_break_on_warning = atoi(value);
+    } else if(!strcmp(key,"fontconfig")) {
+        this->config_use_fontconfig = atoi(value);
+    } else {
+        msg("<warning> Ignored parameter: %s=%s", key, value);
+    }
+}
   
 void GFXOutputDev::setDevice(gfxdevice_t*dev)
 {
@@ -870,6 +880,8 @@ char* makeStringPrintable(char*str)
 int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 {
     char*uniname = 0;
+    if(!font)
+        return charnr;
     if(u>0) {
 	int t;
 	/* find out char name from unicode index 
@@ -980,7 +992,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     Gushort *CIDToGIDMap = 0;
     GfxFont*font = state->getFont();
 
-    if(font->getType() == fontType3) {
+    if(font->getType() == fontType3 && do_interpretType3Chars) {
 	/* type 3 chars are passed as graphics */
 	msg("<debug> type3 char at %f/%f", x, y);
 	return;
@@ -1127,7 +1139,7 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
     type3active = 1;
 
     /*int t;
-    
+
     gfxcolor_t col={255,0,0,0};
     gfxmatrix_t m = {1,0,0, 0,1,0};
 
@@ -2792,6 +2804,8 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 #endif
     
     int width = (int)bbox.xmax,height = (int)bbox.ymax;
+    if(width<=0 || height<=0)
+        return;
 
     gfxdevice_t belowrender;
     gfxdevice_render_init(&belowrender);
