@@ -57,6 +57,7 @@ public:
 
   void setMove(int x,int y);
   void setClip(int x1,int y1,int x2,int y2);
+  void setParameter(char*key, char*value);
 
   void setInfo(InfoOutputDev*info) {this->info = info;}
   
@@ -206,6 +207,8 @@ public:
   void infofeature(char*feature);
 
   char outer_clip_box; //whether the page clip box is still on
+  
+  GBool do_interpretType3Chars;
 
   InfoOutputDev*info;
   GFXOutputState states[64];
