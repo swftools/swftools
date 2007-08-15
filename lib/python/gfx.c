@@ -313,12 +313,14 @@ static int page_print(PyObject * _self, FILE *fi, int flags)
 
 staticforward PyObject* doc_getPage(PyObject* parent, PyObject* args, PyObject* kwargs);
 staticforward PyObject* doc_getInfo(PyObject* parent, PyObject* args, PyObject* kwargs);
+staticforward PyObject* doc_setParameter(PyObject* parent, PyObject* args, PyObject* kwargs);
 
 static PyMethodDef doc_methods[] =
 {
     /* PDF functions */
     {"getPage", (PyCFunction)doc_getPage, METH_KEYWORDS, ""},
     {"getInfo", (PyCFunction)doc_getInfo, METH_KEYWORDS, ""},
+    {"setParameter", (PyCFunction)doc_setParameter, METH_KEYWORDS, ""},
     {0,0,0,0}
 };
 
@@ -354,6 +356,19 @@ static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
 
     char*s = self->doc->getinfo(self->doc, key);
     return PyString_FromString(s);
+}
+
+static PyObject* doc_setParameter(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    DocObject* self = (DocObject*)_self;
+
+    static char *kwlist[] = {"key", "value", NULL};
+    char*key = 0, *value=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &key,&value))
+	return NULL;
+
+    self->doc->set_parameter(self->doc, key, value);
+    return PY_NONE;
 }
 
 static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
