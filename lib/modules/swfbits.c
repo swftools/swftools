@@ -393,7 +393,7 @@ int swf_SetJPEGBits(TAG * t, char *fname, int quality)
 	}
     }
 
-    free(scanline);
+    rfx_free(scanline);
     swf_SetJPEGBitsFinish(out);
     jpeg_finish_decompress(&cinfo);
     fclose(f);
@@ -1146,7 +1146,7 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
 	swf_SetJPEGBits2(tag2, width, height, mem, quality);
     }
 
-    if(tag1 && tag1->len < tag2->len) {
+    if(quality>100 || (tag1 && tag1->len < tag2->len)) {
 	/* use the zlib version- it's smaller */
 	tag1->prev = tag;
 	if(tag) tag->next = tag1;
