@@ -140,13 +140,13 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 void pdf_doc_set_parameter(gfxdocument_t*gfx, char*name, char*value)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
+    GFXOutputDev*o = i->outputDev;
     if(!strcmp(name, "pagemap")) {
-	GFXOutputDev*o = i->outputDev;
 	int pdfpage=0, outputpage=0;
 	sscanf(value,"%d:%d", &pdfpage, &outputpage);
 	o->preparePage(pdfpage, outputpage);
     } else {
-	msg("<warning> Ignored parameter: %s=%s", name, value);
+        o->setParameter(name, value);
     }
 }
 
