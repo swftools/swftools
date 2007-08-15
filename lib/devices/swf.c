@@ -1816,7 +1816,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
     } else if(!strcmp(name, "jpegquality")) {
 	int val = atoi(value);
 	if(val<0) val=0;
-	if(val>100) val=100;
+	if(val>101) val=101;
 	i->config_jpegquality = val;
     } else if(!strcmp(name, "splinequality")) {
 	int v = atoi(value);
