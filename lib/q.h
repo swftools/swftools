@@ -112,6 +112,7 @@ void dictionary_init(dictionary_t*dict);
 void dictionary_put(dictionary_t*dict, string_t t1, void* t2);
 void dictionary_put2(dictionary_t*dict, const char* t1, void* t2);
 stringarray_t* dictionary_index(dictionary_t*dict);
+int dictionary_count(dictionary_t* dict);
 void* dictionary_lookup(dictionary_t*dict, const char*name);
 void dictionary_dump(dictionary_t*dict, FILE*fi, const char*prefix);
 void dictionary_del(dictionary_t*dict, const char* name);

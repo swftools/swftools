@@ -23,84 +23,110 @@
 #include <memory.h>
 #include "swfc-history.h"
 
-change_t* change_new(U16 frame, int function, float value, interpolation_t* inter)
+enum
 {
-	change_t* newChange = (change_t*)malloc(sizeof(change_t));
-	change_init(newChange);
-	newChange->frame = frame;
-	newChange->function = function;
-	newChange->value = value;
-	newChange->interpolation = inter;
-	return newChange;
+    T_BEFORE = 0,
+    T_AFTER = 1,
+    T_SYMMETRIC = 2
+};
+
+state_t* state_new(U16 frame, int function, float value, interpolation_t* inter)
+{
+    state_t* newState = (state_t*)malloc(sizeof(state_t));
+    state_init(newState);
+    newState->frame = frame;
+    newState->function = function;
+    newState->value = value;
+    newState->interpolation = inter;
+    return newState;
 }
 
-void change_free(change_t *change)
+void state_free(state_t* state)
 {
-	if (change->next)
-		change_free(change->next);
-	free(change);
+    if (state->next)
+	state_free(state->next);
+    free(state);
 }
 
-void change_init(change_t* change)
+void state_init(state_t* state)
 {
-	memset(change, 0, sizeof(change_t));
+    memset(state, 0, sizeof(state_t));
 }
 
-void change_append(change_t* first, change_t* newChange)
+state_t* state_at(state_t* state, U16 frame)
 {
-    change_t* previous = 0;
-    change_t* start = first;
+    while (state->next && state->next->frame < frame)
+    	state = state->next;
+    return state;
+}
+
+void state_append(state_t* state, state_t* newState)
+{
+    state_t* previous = 0;
+    state_t* start = state;
     float p0, p1, m0, m1;
 
-	while (first->next)
+    while (state->next)
     {
-    	previous = first;
-		first = first->next;
+    	previous = state;
+	state = state->next;
     }
-	first->next = newChange;
-    if (first->function == CF_QCHANGE)
+    state->next = newState;
+    if (state->function == CF_SCHANGE)
     {
     	p0 = previous->value;
-    	p1 = first->value;
-    	if (previous->function == CF_QCHANGE)
+    	p1 = state->value;
+    	if (previous->function == CF_SCHANGE)
     	    m0 = (3 * previous->spline.a + 2 * previous->spline.b + previous->spline.c);
     	else
-    	    if (previous->function == CF_CHANGE)
-    	    	m0 = (change_value(start, previous->frame) - change_value(start, previous->frame - 1)) * (first->frame - previous->frame);
+    	    if (previous->function == CF_CHANGE || previous->function == CF_SWEEP)
+    	    	m0 = state_tangent(start, previous->frame, T_BEFORE) * (state->frame - previous->frame);
     	    else
-    		m0 = (first->value - previous->value);
-    	if (newChange->function == CF_QCHANGE)
-    	    m1 = 0.5 * (newChange->value - previous->value);
+    		m0 = (state->value - previous->value);
+    	if (newState->function == CF_SCHANGE)
+    	    m1 = 0.5 * (newState->value - previous->value)/* * (state->frame - previous->frame) / (newState->frame - state->frame)*/;
     	else
-    	    if (newChange->function == CF_CHANGE)
-    		m1 = (change_value(previous, first->frame + 1) - change_value(previous, first->frame)) * (first->frame - previous->frame);
+    	    if (newState->function == CF_CHANGE || newState->function == CF_SWEEP)
+    		m1 = state_tangent(previous, state->frame, T_AFTER) * (state->frame - previous->frame);
     	    else
-  		m1 = (first->value - previous->value);
-    	first->spline.a = 2 * p0 + m0 - 2 * p1 + m1;
-    	first->spline.b = -3 * p0 - 2 * m0 + 3 * p1 - m1;
-    	first->spline.c = m0;
-    	first->spline.d = p0;
+  		m1 = (newState->value - state->value);
+    	state->spline.a = 2 * p0 + m0 - 2 * p1 + m1;
+    	state->spline.b = -3 * p0 - 2 * m0 + 3 * p1 - m1;
+    	state->spline.c = m0;
+    	state->spline.d = p0;
+//    	printf("p0: %f, p1: %f, m0: %f, m1: %f.\n", p0, p1, m0, m1);
+//    	printf("a: %f, b: %f, c: %f, d: %f.\n", state->spline.a, state->spline.b, state->spline.c, state->spline.d);
     }
-    if (newChange->function == CF_QCHANGE)
+    if (newState->function == CF_SCHANGE)
     {
-    	p0 = first->value;
-    	p1 = newChange->value;
-    	if (first->function == CF_QCHANGE)
+    	p0 = state->value;
+    	p1 = newState->value;
+    	if (state->function == CF_SCHANGE)
     	    m0 = m1;
     	else
-    	    if (first->function == CF_CHANGE)
-    	    	m0 = (change_value(start, first->frame) - change_value(start, first->frame - 1)) * (first->frame - previous->frame);
+    	    if (state->function == CF_CHANGE || state->function == CF_SWEEP)
+    	    	m0 = state_tangent(start, state->frame, T_BEFORE) * (state->frame - previous->frame);
     	    else
-	    	m0 = (newChange->value - first->value);
-    	m1 = (newChange->value - first->value);
-    	newChange->spline.a = 2 * p0 + m0 - 2 * p1 + m1;
-    	newChange->spline.b = -3 * p0 - 2 * m0 + 3 * p1 - m1;
-    	newChange->spline.c = m0;
-    	newChange->spline.d = p0;
+	    	m0 = (newState->value - state->value);
+    	m1 = (newState->value - state->value);
+    	newState->spline.a = 2 * p0 + m0 - 2 * p1 + m1;
+    	newState->spline.b = -3 * p0 - 2 * m0 + 3 * p1 - m1;
+    	newState->spline.c = m0;
+    	newState->spline.d = p0;
     }
+    }
+
+void state_insert(state_t* state, state_t* newState)
+{
+    while (state->next && state->next->frame < newState->frame)
+    	state = state->next;
+    newState->next = state->next;
+    state->next = newState;
+    // if this is going to be used to insert CF_SCHANGE states it will have to be extended
+    // as in state_append above. I know this is not necessary right now, so I'll be lazy.
 }
 
-float calculateSpline(change_t* modification, float fraction)
+float calculateSpline(state_t* modification, float fraction)
 {
     spline_t s = modification->spline;
     return (((s.a * fraction) + s.b) * fraction + s.c) * fraction + s.d;
@@ -113,21 +139,21 @@ float interpolateScalar(float p1, float p2, float fraction, interpolation_t* int
 	switch (inter->function)
 	{
 		case IF_LINEAR: return linear(fraction, p1, p2 - p1);
-		case IF_QUAD_IN: return quadIn(fraction, p1, p2 - p1);
-		case IF_QUAD_OUT: return quadOut(fraction, p1, p2 - p1);
-		case IF_QUAD_IN_OUT: return quadInOut(fraction, p1, p2 - p1);
-		case IF_CUBIC_IN: return cubicIn(fraction, p1, p2 - p1);
-		case IF_CUBIC_OUT: return cubicOut(fraction, p1, p2 - p1);
-		case IF_CUBIC_IN_OUT: return cubicInOut(fraction, p1, p2 - p1);
-		case IF_QUART_IN: return quartIn(fraction, p1, p2 - p1);
-		case IF_QUART_OUT: return quartOut(fraction, p1, p2 - p1);
-		case IF_QUART_IN_OUT: return quartInOut(fraction, p1, p2 - p1);
-		case IF_QUINT_IN: return quintIn(fraction, p1, p2 - p1);
-		case IF_QUINT_OUT: return quintOut(fraction, p1, p2 - p1);
-		case IF_QUINT_IN_OUT: return quintInOut(fraction, p1, p2 - p1);
-		case IF_CIRCLE_IN: return circleIn(fraction, p1, p2 - p1);
-		case IF_CIRCLE_OUT: return circleOut(fraction, p1, p2 - p1);
-		case IF_CIRCLE_IN_OUT: return circleInOut(fraction, p1, p2 - p1);
+	case IF_QUAD_IN: return quadIn(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUAD_OUT: return quadOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUAD_IN_OUT: return quadInOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_CUBIC_IN: return cubicIn(fraction, p1, p2 - p1, inter->slope);
+	case IF_CUBIC_OUT: return cubicOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_CUBIC_IN_OUT: return cubicInOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUART_IN: return quartIn(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUART_OUT: return quartOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUART_IN_OUT: return quartInOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUINT_IN: return quintIn(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUINT_OUT: return quintOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_QUINT_IN_OUT: return quintInOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_CIRCLE_IN: return circleIn(fraction, p1, p2 - p1, inter->slope);
+	case IF_CIRCLE_OUT: return circleOut(fraction, p1, p2 - p1, inter->slope);
+	case IF_CIRCLE_IN_OUT: return circleInOut(fraction, p1, p2 - p1, inter->slope);
 		case IF_EXPONENTIAL_IN: return exponentialIn(fraction, p1, p2 - p1);
 		case IF_EXPONENTIAL_OUT: return exponentialOut(fraction, p1, p2 - p1);
 		case IF_EXPONENTIAL_IN_OUT: return exponentialInOut(fraction, p1, p2 - p1);
@@ -150,9 +176,20 @@ float interpolateScalar(float p1, float p2, float fraction, interpolation_t* int
 	}
 }
 
-int change_differs(change_t* modification, U16 frame)
+float calculateSweep(state_t* modification, float fraction)
 {
-    change_t* previous = modification;
+    arc_t* a = &(modification->arc);
+    float angle = a->angle + fraction * a->delta_angle;
+    if (a->X)
+    	return a->cX + a->r * cos(angle);
+    else
+    	return a->cY + a->r * sin(angle);
+
+}
+
+int state_differs(state_t* modification, U16 frame)
+{
+    state_t* previous = modification;
     while (modification && modification->frame < frame)
 	{
 	previous = modification;
@@ -165,9 +202,23 @@ int change_differs(change_t* modification, U16 frame)
     return (modification->function != CF_JUMP);
 	}
 
-float change_value(change_t* modification, U16 frame)
+float state_tangent(state_t* modification, U16 frame, int tangent)
 {
-    change_t* previous = modification;
+    float deltaFrame = 0.1;
+    switch (tangent)
+{
+    	case T_BEFORE:
+    	    return (state_value(modification, frame) - state_value(modification, frame - deltaFrame)) / deltaFrame;
+    	case T_AFTER:
+    	    return (state_value(modification, frame + deltaFrame) - state_value(modification, frame)) / deltaFrame;
+    	default:
+    	    return (state_value(modification, frame + deltaFrame) - state_value(modification, frame - deltaFrame)) / (2 * deltaFrame);
+    }
+}
+
+float state_value(state_t* modification, float frame)
+{
+    state_t* previous = modification;
     while (modification && modification->frame < frame)
     {
 	previous = modification;
@@ -194,11 +245,18 @@ float change_value(change_t* modification, U16 frame)
 	    float fraction = (frame - previous->frame) / (float)(modification->frame - previous->frame);
 	    return interpolateScalar(previous->value, modification->value, fraction, modification->interpolation);
 	}
-	case CF_QCHANGE:
+	case CF_SCHANGE:
 	{
 	    float fraction = (frame - previous->frame) / (float)(modification->frame - previous->frame);
+	    fraction = interpolateScalar(0, 1, fraction, modification->interpolation);
 	    return calculateSpline(modification, fraction);
 		}
+	case CF_SWEEP:
+	{
+	    float fraction = (frame - previous->frame) / (float)(modification->frame - previous->frame);
+	    fraction = interpolateScalar(0, 1, fraction, modification->interpolation);
+	    return calculateSweep(modification, fraction);
+	}
 		case CF_JUMP:
 			return previous->value;
 		default:
@@ -206,10 +264,10 @@ float change_value(change_t* modification, U16 frame)
 	}
 }
 
-changeFilter_t* changeFilter_new(U16 frame, int function, FILTERLIST* value, interpolation_t* inter)
+filterState_t* filterState_new(U16 frame, int function, FILTERLIST* value, interpolation_t* inter)
 {
-	changeFilter_t* newChange = (changeFilter_t*)malloc(sizeof(changeFilter_t));
-	changeFilter_init(newChange);
+    filterState_t* newChange = (filterState_t*)malloc(sizeof(filterState_t));
+    filterState_init(newChange);
 	newChange->frame = frame;
 	newChange->function = function;
 	newChange->value = value;
@@ -217,20 +275,20 @@ changeFilter_t* changeFilter_new(U16 frame, int function, FILTERLIST* value, int
 	return newChange;
 }
 
-void changeFilter_free(changeFilter_t *change)
+void filterState_free(filterState_t *change)
 {
 	if (change->next)
-		changeFilter_free(change->next);
+	filterState_free(change->next);
     free(change->value);
 	free(change);
 }
 
-void changeFilter_init(changeFilter_t* change)
+void filterState_init(filterState_t* change)
 {
-	memset(change, 0, sizeof(changeFilter_t));
+    memset(change, 0, sizeof(filterState_t));
 }
 
-void changeFilter_append(changeFilter_t* first, changeFilter_t* newChange)
+void filterState_append(filterState_t* first, filterState_t* newChange)
 {
 	while (first->next)
 		first = first->next;
@@ -693,9 +751,9 @@ FILTERLIST* interpolateFilterList(FILTERLIST* list1, FILTERLIST* list2, float ra
     return mixedList;
 }
 
-int changeFilter_differs(changeFilter_t* modification, U16 frame)
+int filterState_differs(filterState_t* modification, U16 frame)
 {
-    changeFilter_t* previous = modification;
+    filterState_t* previous = modification;
     while (modification && modification->frame < frame)
 	{
 	previous = modification;
@@ -708,9 +766,9 @@ int changeFilter_differs(changeFilter_t* modification, U16 frame)
     return (modification->function != CF_JUMP);
 }
 
-FILTERLIST* changeFilter_value(changeFilter_t* modification, U16 frame)
+FILTERLIST* filterState_value(filterState_t* modification, U16 frame)
 {
-    changeFilter_t* previous = modification;
+    filterState_t* previous = modification;
     while (modification && modification->frame < frame)
     {
 	previous = modification;
@@ -753,104 +811,345 @@ history_t* history_new()
 
 void history_free(history_t* past)
 {
-	change_free(dictionary_lookup(past->changes, "x"));
-	change_free(dictionary_lookup(past->changes, "y"));
-	change_free(dictionary_lookup(past->changes, "scalex"));
-	change_free(dictionary_lookup(past->changes, "scaley"));
-	change_free(dictionary_lookup(past->changes, "cxform.r0"));
-	change_free(dictionary_lookup(past->changes, "cxform.g0"));
-	change_free(dictionary_lookup(past->changes, "cxform.b0"));
-	change_free(dictionary_lookup(past->changes, "cxform.a0"));
-	change_free(dictionary_lookup(past->changes, "cxform.r1"));
-	change_free(dictionary_lookup(past->changes, "cxform.g1"));
-	change_free(dictionary_lookup(past->changes, "cxform.b1"));
-	change_free(dictionary_lookup(past->changes, "cxform.a1"));
-	change_free(dictionary_lookup(past->changes, "rotate"));
-	change_free(dictionary_lookup(past->changes, "shear"));
-	change_free(dictionary_lookup(past->changes, "pivot.x"));
-	change_free(dictionary_lookup(past->changes, "pivot.y"));
-	change_free(dictionary_lookup(past->changes, "pin.x"));
-	change_free(dictionary_lookup(past->changes, "pin.y"));
-	change_free(dictionary_lookup(past->changes, "blendmode"));
-	changeFilter_free(dictionary_lookup(past->changes, "filter"));
-	dictionary_destroy(past->changes);
+    state_free(dictionary_lookup(past->states, "x"));
+    state_free(dictionary_lookup(past->states, "y"));
+    state_free(dictionary_lookup(past->states, "scalex"));
+    state_free(dictionary_lookup(past->states, "scaley"));
+    state_free(dictionary_lookup(past->states, "cxform.r0"));
+    state_free(dictionary_lookup(past->states, "cxform.g0"));
+    state_free(dictionary_lookup(past->states, "cxform.b0"));
+    state_free(dictionary_lookup(past->states, "cxform.a0"));
+    state_free(dictionary_lookup(past->states, "cxform.r1"));
+    state_free(dictionary_lookup(past->states, "cxform.g1"));
+    state_free(dictionary_lookup(past->states, "cxform.b1"));
+    state_free(dictionary_lookup(past->states, "cxform.a1"));
+    state_free(dictionary_lookup(past->states, "rotate"));
+    state_free(dictionary_lookup(past->states, "shear"));
+    state_free(dictionary_lookup(past->states, "pivot.x"));
+    state_free(dictionary_lookup(past->states, "pivot.y"));
+    state_free(dictionary_lookup(past->states, "pin.x"));
+    state_free(dictionary_lookup(past->states, "pin.y"));
+    state_free(dictionary_lookup(past->states, "blendmode"));
+    state_free(dictionary_lookup(past->states, "flags"));
+    filterState_free(dictionary_lookup(past->states, "filter"));
+    dictionary_destroy(past->states);
 	free(past);
 }
 
 void history_init(history_t* past)
 {
-	past->changes = (dictionary_t*)malloc(sizeof(dictionary_t));
-	dictionary_init(past->changes);
+    past->states = (dictionary_t*)malloc(sizeof(dictionary_t));
+    dictionary_init(past->states);
 }
 
 void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float value)
 {
-	change_t* first = change_new(frame, CF_PUT, value, 0);
+    state_t* first = state_new(frame, CF_PUT, value, 0);
 	past->firstTag = tag;
 	past->firstFrame = frame;
-	dictionary_put2(past->changes, parameter, first);
+    dictionary_put2(past->states, parameter, first);
 }
 
 void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTERLIST* value)
 {
-	changeFilter_t* first = changeFilter_new(frame, CF_PUT, value, 0);
+    filterState_t* first = filterState_new(frame, CF_PUT, value, 0);
 	past->firstTag = tag;
 	past->firstFrame = frame;
-	dictionary_put2(past->changes, "filter", first);
+    dictionary_put2(past->states, "filter", first);
 }
 
 void history_remember(history_t* past, char* parameter, U16 frame, int function, float value, interpolation_t* inter)
 {
-	change_t* first = dictionary_lookup(past->changes, parameter);
-	if (first) //should always be true
+    past->lastFrame = frame;
+    state_t* state = dictionary_lookup(past->states, parameter);
+    if (state) //should always be true
+    {
+	state_t* next = state_new(frame, function, value, inter);
+	state_append(state, next);
+    }
+    else
+    	syntaxerror("Internal error: changing parameter %s, which is unknown for the instance.", parameter);
+}
+
+static float getAngle(float dX, float dY)
+{
+    float radius = sqrt(dX * dX + dY * dY);
+    if (radius == 0)
+    	return 0.0;
+    if (dX >= 0)
+    	if (dY > 0)
+    	    return acos(dX / radius);
+    	else
+    	    return 2 * M_PI - acos(dX / radius);
+    else
+    	if (dY > 0)
+    	    return M_PI - acos(-dX / radius);
+    	else
+    	    return M_PI + acos(-dX / radius);
+}
+
+static float getDeltaAngle(float angle1, float angle2, int clockwise)
 	{
-		change_t* next = change_new(frame, function, value, inter);
-		change_append(first, next);
+    	    if (!clockwise)
+    	    {
+    	    	if (angle1 > angle2)
+    	    	    return angle2 - angle1;
+    	    	else
+    	    	    return angle2 - angle1 - 2 * M_PI;
+    	    }
+    	    else
+    	    {
+    	    	if (angle1 > angle2)
+    	    	    return 2 * M_PI - angle1 + angle2;
+    	    	else
+    	    	    return angle2 - angle1;
 	}
+}
+
+void history_rememberSweep(history_t* past, U16 frame, float x, float y, float r, int clockwise, int short_arc, interpolation_t* inter)
+{
+    float lastX, lastY, dX, dY;
+    U16 lastFrame;
+
+    past->lastFrame = frame;
+    state_t* change = dictionary_lookup(past->states, "x");
+    if (change) //should always be true
+    {
+    	while (change->next)
+    	    change = change->next;
+    	lastFrame = change->frame;
+    	lastX = change->value;
+    	change = dictionary_lookup(past->states, "y");
+    	if (change) //should always be true
+    	{
+    	    while (change->next)
+    	    	change = change->next;
+    	    lastY = change->value;
+    	    dX = x - lastX;
+    	    dY = y - lastY;
+    	    if (dX == 0 && dY == 0)
+	    	syntaxerror("sweep not possible: startpoint and endpoint must not be equal");
+   	    if ((dX) * (dX) + (dY) * (dY) > 4 * r * r)
+	    	syntaxerror("sweep not possible: radius is to small");
+    	    if (change->frame > lastFrame)
+    	    {
+    	    	lastFrame = change->frame;
+    	    	history_remember(past, "x", lastFrame, CF_JUMP, lastX, 0);
+    	    }
+    	    else
+    	    	if (change->frame < lastFrame)
+    	    	    history_remember(past, "y", lastFrame, CF_JUMP, lastY, 0);
+    	    float c1X, c1Y, c2X, c2Y;
+    	    if (dX == 0) //vertical
+    	    {
+    	    	c1Y = c2Y = (lastY + y) / 2;
+    	    	c1X = x + sqrt(r * r - (c1Y - y) * (c1Y - y));
+    	    	c2X = 2 * x -c1X;
+    	    }
+    	    else
+	    	if (dY == 0) //horizontal
+    	    	{
+    	    	    c1X = c2X = (lastX + x) / 2;
+    	    	    c1Y = y +sqrt(r * r - (c1X - x) * (c1X - x));
+    	    	    c2Y = 2 * y -c1Y;
+    	    	}
+    	    	else
+    	    	{
+    	    	    c1X = sqrt((r * r - (dX * dX + dY * dY) / 4) / (1 + dX * dX / dY / dY));
+    	    	    c2X = -c1X;
+    	    	    c1Y = -dX / dY * c1X;
+    	    	    c2Y = -c1Y;
+    	    	    c1X += (x + lastX) / 2;
+    	    	    c2X += (x + lastX) / 2;
+    	    	    c1Y += (y + lastY) / 2;
+    	    	    c2Y += (y + lastY) / 2;
+    	    	}
+    	    float angle1, angle2, delta_angle, centerX, centerY;
+    	    angle1 = getAngle(lastX - c1X, lastY - c1Y);
+    	    angle2 = getAngle(x - c1X, y - c1Y);
+    	    delta_angle = getDeltaAngle(angle1, angle2, clockwise);
+    	    if ((short_arc && fabs(delta_angle) <= M_PI) || (! short_arc && fabs(delta_angle) >= M_PI))
+    	    {
+    	        centerX = c1X;
+    	        centerY = c1Y;
+    	    }
+    	    else
+    	    {
+	        angle1 = getAngle(lastX - c2X, lastY - c2Y);
+    		angle2 = getAngle(x - c2X, y - c2Y);
+    	    	delta_angle = getDeltaAngle(angle1, angle2, clockwise);
+    	    	centerX = c2X;
+    	    	centerY = c2Y;
+    	    }
+    	    change = dictionary_lookup(past->states, "x");
+	    state_t* nextX = state_new(frame, CF_SWEEP, x, inter);
+	    nextX->arc.r = r;
+	    nextX->arc.angle = angle1;
+	    nextX->arc.delta_angle = delta_angle;
+	    nextX->arc.cX = centerX;
+	    nextX->arc.cY = centerY;
+	    nextX->arc.X = 1;
+	    state_append(change, nextX);
+    	    change = dictionary_lookup(past->states, "y");
+	    state_t* nextY = state_new(frame, CF_SWEEP, y, inter);
+	    nextY->arc.r = r;
+	    nextY->arc.angle = angle1;
+	    nextY->arc.delta_angle = delta_angle;
+	    nextY->arc.cX = centerX;
+	    nextY->arc.cY = centerY;
+	    nextY->arc.X = 0;
+	    state_append(change, nextY);
+    	}
+    	else
+    	    syntaxerror("Internal error: changing parameter y in sweep, which is unknown for the instance.");
+    }
+    else
+    	syntaxerror("Internal error: changing parameter x in sweep, which is unknown for the instance.");
 }
 
 void history_rememberFilter(history_t* past, U16 frame, int function, FILTERLIST* value, interpolation_t* inter)
 {
-	changeFilter_t* first = dictionary_lookup(past->changes, "filter");
+    past->lastFrame = frame;
+    filterState_t* first = dictionary_lookup(past->states, "filter");
 	if (first) //should always be true
 	{
-		changeFilter_t* next = changeFilter_new(frame, function, value, inter);
-		changeFilter_append(first, next);
+	filterState_t* next = filterState_new(frame, function, value, inter);
+	filterState_append(first, next);
+    }
+    else
+    	syntaxerror("Internal error: changing a filter not set for the instance.");
+}
+
+void history_processFlags(history_t* past)
+// to be called after completely recording this history, before calculating any values.
+{
+    state_t* flagState = dictionary_lookup(past->states, "flags");
+    state_t* nextState;
+    U16 nextFlags, toggledFlags, currentFlags = (U16)flagState->value;
+    while (flagState->next)
+    {
+    	nextState = flagState->next;
+    	nextFlags = (U16)nextState->value;
+    	toggledFlags = currentFlags ^ nextFlags;
+    	if (toggledFlags & IF_FIXED_ALIGNMENT)
+    	{ // the IF_FIXED_ALIGNMENT bit will change in the next state
+    	    if (nextFlags & IF_FIXED_ALIGNMENT)
+    	    { // the IF_FIXED_ALIGNMENT bit will be set
+    	    	int onFrame = nextState->frame;
+	    	state_t* rotations = dictionary_lookup(past->states, "rotate");
+	    	nextState->params.instanceAngle = state_value(rotations, onFrame);
+	    	state_t* resetRotate = state_new(onFrame, CF_JUMP, 0, 0);
+	    	state_insert(rotations, resetRotate);
+	    	if (onFrame == past->firstFrame)
+	    	    onFrame++;
+	    	state_t *x, *y;
+	    	float dx, dy;
+	    	do
+	    	{
+    	    	    x = dictionary_lookup(past->states, "x");
+    	    	    dx = state_tangent(x, onFrame, T_SYMMETRIC);
+    	    	    y = dictionary_lookup(past->states, "y");
+    	    	    dy = state_tangent(y, onFrame, T_SYMMETRIC);
+    	    	    onFrame++;
+	    	}
+	    	while (dx == 0 && dy == 0 && onFrame < past->lastFrame);
+	    	if (onFrame == past->lastFrame)
+    	    	    nextState->params.pathAngle = 0;
+	    	else
+    	    	    nextState->params.pathAngle = getAngle(dx, dy) / M_PI * 180;
+    	    }
+    	    else // the IF_FIXED_ALIGNMENT bit will be reset
+    	    {
+    	    	int offFrame = nextState->frame;
+	    	state_t* rotations = dictionary_lookup(past->states, "rotate");
+	    	state_t* setRotate = state_new(offFrame, CF_JUMP, flagState->params.instanceAngle + state_value(rotations, offFrame), 0);
+	    	state_insert(rotations, setRotate);
+    	    }
+    	}
+    	else // the IF_FIXED_ALIGNMENT bit will not change but some processing may be
+    	     // required just the same
+    	{
+    	    if (nextFlags & IF_FIXED_ALIGNMENT)
+    	    {
+    	    	nextState->params.instanceAngle = flagState->params.instanceAngle;
+    	    	nextState->params.pathAngle = flagState->params.pathAngle;
+    	    }
+    	}
+// and so on for all the other bits.
+    	flagState = nextState;
+    	currentFlags = nextFlags;
 	}
 }
 
 int history_change(history_t* past, U16 frame, char* parameter)
 {
-    change_t* first = dictionary_lookup(past->changes, parameter);
+    state_t* first = dictionary_lookup(past->states, parameter);
     if (first)	//should always be true.
-	return change_differs(first, frame);
-    printf("no history found for parameter %s\n", parameter);
+	return state_differs(first, frame);
+    syntaxerror("no history found to predict changes for parameter %s.\n", parameter);
     return 0;
 }
 
 float history_value(history_t* past, U16 frame, char* parameter)
 {
-	change_t* first = dictionary_lookup(past->changes, parameter);
-	if (first)	//should always be true.
-		return change_value(first, frame);
-	printf("no history found for parameter %s\n", parameter);
+    state_t* state = dictionary_lookup(past->states, parameter);
+    if (state)	//should always be true.
+	return state_value(state, frame);
+    syntaxerror("no history found to get a value for parameter %s.\n", parameter);
+    return 0;
+}
+
+float history_rotateValue(history_t* past, U16 frame)
+{
+    state_t* rotations = dictionary_lookup(past->states, "rotate");
+    if (rotations)	//should always be true.
+    {
+    	float angle = state_value(rotations, frame);
+    	state_t* flags = dictionary_lookup(past->states, "flags");
+    	U16 currentflags = state_value(flags, frame);
+    	if (currentflags & IF_FIXED_ALIGNMENT)
+    	{
+	    flags = state_at(flags, frame);
+	    if (frame == past->firstFrame)
+	    	frame++;
+	    state_t *x, *y;
+	    float dx, dy, pathAngle;
+	    do
+	    {
+    	    	x = dictionary_lookup(past->states, "x");
+    	    	dx = state_value(x, frame) - state_value(x, frame - 1);
+    	    	y = dictionary_lookup(past->states, "y");
+    	    	dy = state_value(y, frame) - state_value(y, frame - 1);
+    	    	frame--;
+	    }
+	    while (dx == 0 && dy == 0 && frame > past->firstFrame);
+	    if (frame == past->firstFrame)
+    	    	pathAngle = 0;
+	    else
+    	    	pathAngle = getAngle(dx, dy) / M_PI * 180;
+    	    return angle + flags->params.instanceAngle + pathAngle - flags->params.pathAngle;
+    	}
+	else
+	    return angle;
+    }
+    syntaxerror("no history found to get a value for parameter rotate.\n");
 	return 0;
 }
 
 int history_changeFilter(history_t* past, U16 frame)
 {
-    changeFilter_t* first = dictionary_lookup(past->changes, "filter");
+    filterState_t* first = dictionary_lookup(past->states, "filter");
     if (first)	//should always be true.
-	return changeFilter_differs(first, frame);
-    printf("no history found for parameter filter\n");
+	return filterState_differs(first, frame);
+    syntaxerror("no history found to predict changes for parameter filter.\n");
     return 0;
 }
 
-FILTERLIST* history_valueFilter(history_t* past, U16 frame)
+FILTERLIST* history_filterValue(history_t* past, U16 frame)
 {
-	changeFilter_t* first = dictionary_lookup(past->changes, "filter");
+    filterState_t* first = dictionary_lookup(past->states, "filter");
 	if (first)	//should always be true.
-		return changeFilter_value(first, frame);
-	printf("no history found for parameter filter\n");
+	return filterState_value(first, frame);
+    syntaxerror("no history found to get a value for parameter filter.\n");
 	return 0;
 }

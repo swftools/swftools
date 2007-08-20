@@ -39,9 +39,9 @@ swfc.$(O): swfc.c parser.h ../lib/q.h
 	$(C) swfc.c -o $@
 swfc-feedback.$(O): swfc-feedback.c swfc-feedback.h
 	$(C) swfc-feedback.c -o $@
-swfc-history.$(O): swfc-history.c swfc-history.h
+swfc-history.$(O): swfc-history.c swfc-history.h swfc-interpolation.h
 	$(C) swfc-history.c -o $@
-swfc-interpolation.$(O): swfc-feedback.c swfc-feedback.h
+swfc-interpolation.$(O): swfc-interpolation.c swfc-interpolation.h
 	$(C) swfc-interpolation.c -o $@
 parser.$(O): parser.yy.c parser.h ../lib/q.h
 	$(C) parser.yy.c -o $@

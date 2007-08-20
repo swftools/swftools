@@ -24,99 +24,99 @@
 #include <memory.h>
 #include "swfc-interpolation.h"
 
-static inline float poly(float fraction, float start, float delta, int degree)
+static inline float poly(float fraction, float start, float delta, float slope, int degree)
 {
-	return delta * pow(fraction, degree) + start;
+    return delta * ((1 - slope) * pow(fraction, degree) + slope * fraction) + start;
 }
 
 float linear(float fraction, float start, float delta)
 {
-	return poly(fraction, start, delta, 1);
+	return poly(fraction, start, delta, 0, 1);
 }
 
-float quadIn(float fraction, float start, float delta)
+float quadIn(float fraction, float start, float delta, float slope)
 {
-	return poly(fraction, start, delta, 2);
+	return poly(fraction, start, delta, slope, 2);
 }
 
-float quadOut(float fraction, float start, float delta)
+float quadOut(float fraction, float start, float delta, float slope)
 {
-	return quadIn(1 - fraction, start + delta, -delta);
+	return quadIn(1 - fraction, start + delta, -delta, slope);
 }
 
-float quadInOut(float fraction, float start, float delta)
-{
-	if (fraction < 0.5)
-		return quadIn(2 * fraction, start, delta / 2);
-	return quadOut(2 * fraction - 1, start + delta / 2, delta / 2);
-}
-
-float cubicIn(float fraction, float start, float delta)
-{
-	return poly(fraction, start, delta, 3);
-}
-
-float cubicOut(float fraction, float start, float delta)
-{
-	return cubicIn(1 - fraction, start + delta, -delta);
-}
-
-float cubicInOut(float fraction, float start, float delta)
+float quadInOut(float fraction, float start, float delta, float slope)
 {
 	if (fraction < 0.5)
-		return cubicIn(2 * fraction, start, delta / 2);
-	return cubicOut(2 * fraction - 1, start + delta / 2, delta / 2);
+		return quadIn(2 * fraction, start, delta / 2, slope);
+	return quadOut(2 * fraction - 1, start + delta / 2, delta / 2, slope);
 }
 
-float quartIn(float fraction, float start, float delta)
+float cubicIn(float fraction, float start, float delta, float slope)
 {
-	return poly(fraction, start, delta, 4);
+	return poly(fraction, start, delta, slope, 3);
 }
 
-float quartOut(float fraction, float start, float delta)
+float cubicOut(float fraction, float start, float delta, float slope)
 {
-	return quartIn(1 - fraction, start + delta, -delta);
+	return cubicIn(1 - fraction, start + delta, -delta, slope);
 }
 
-float quartInOut(float fraction, float start, float delta)
-{
-	if (fraction < 0.5)
-		return quartIn(2 * fraction, start, delta / 2);
-	return quartOut(2 * fraction - 1, start + delta / 2, delta / 2);
-}
-
-float quintIn(float fraction, float start, float delta)
-{
-	return poly(fraction, start, delta, 5);
-}
-
-float quintOut(float fraction, float start, float delta)
-{
-	return quintIn(1 - fraction, start + delta, -delta);
-}
-
-float quintInOut(float fraction, float start, float delta)
+float cubicInOut(float fraction, float start, float delta, float slope)
 {
 	if (fraction < 0.5)
-		return quintIn(2 * fraction, start, delta / 2);
-	return quintOut(2 * fraction - 1, start + delta / 2, delta / 2);
+		return cubicIn(2 * fraction, start, delta / 2, slope);
+	return cubicOut(2 * fraction - 1, start + delta / 2, delta / 2, slope);
 }
 
-float circleIn(float fraction, float start, float delta)
+float quartIn(float fraction, float start, float delta, float slope)
 {
-	return delta * (1 - sqrt(1 - fraction * fraction)) + start;
+	return poly(fraction, start, delta, slope, 4);
 }
 
-float circleOut(float fraction, float start, float delta)
+float quartOut(float fraction, float start, float delta, float slope)
 {
-	return circleIn(1 - fraction, start + delta, -delta);
+	return quartIn(1 - fraction, start + delta, -delta, slope);
 }
 
-float circleInOut(float fraction, float start, float delta)
+float quartInOut(float fraction, float start, float delta, float slope)
 {
 	if (fraction < 0.5)
-		return circleIn(2 * fraction, start, delta / 2);
-	return circleOut(2 * fraction - 1, start + delta / 2, delta / 2);
+		return quartIn(2 * fraction, start, delta / 2, slope);
+	return quartOut(2 * fraction - 1, start + delta / 2, delta / 2, slope);
+}
+
+float quintIn(float fraction, float start, float delta, float slope)
+{
+	return poly(fraction, start, delta, slope, 5);
+}
+
+float quintOut(float fraction, float start, float delta, float slope)
+{
+	return quintIn(1 - fraction, start + delta, -delta, slope);
+}
+
+float quintInOut(float fraction, float start, float delta, float slope)
+{
+	if (fraction < 0.5)
+		return quintIn(2 * fraction, start, delta / 2, slope);
+	return quintOut(2 * fraction - 1, start + delta / 2, delta / 2, slope);
+}
+
+float circleIn(float fraction, float start, float delta, float slope)
+{
+    return delta * (1 - sqrt(1 - (1 - 2 * slope) * fraction * fraction - 2 * slope * fraction)) + start;
+}
+
+float circleOut(float fraction, float start, float delta, float slope)
+{
+	return circleIn(1 - fraction, start + delta, -delta, slope);
+}
+
+float circleInOut(float fraction, float start, float delta, float slope)
+{
+	if (fraction < 0.5)
+		return circleIn(2 * fraction, start, delta / 2, slope);
+	return circleOut(2 * fraction - 1, start + delta / 2, delta / 2, slope);
 }
 
 float exponentialIn(float fraction, float start, float delta)

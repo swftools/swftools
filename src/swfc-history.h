@@ -32,8 +32,8 @@ enum
 {
 	CF_PUT = 1,
 	CF_CHANGE = 2,
-	CF_QCHANGE = 3,
-	CF_ARCCHANGE = 4,
+    CF_SCHANGE = 3,
+    CF_SWEEP = 4,
 	CF_JUMP = 5	
 };
 
@@ -53,6 +53,8 @@ enum
 #define SF_FILTER 0x2000
 #define SF_ALL 0x3fff
 
+#define IF_FIXED_ALIGNMENT 0x0001
+
 FILTER* noFilters;
 FILTER_BLUR* noBlur;
 FILTER_BEVEL* noBevel;
@@ -64,43 +66,58 @@ typedef struct _spline
     float a, b, c, d;
 } spline_t;
 
-typedef struct _change
+typedef struct _arc
+{
+    float r, angle, delta_angle, cX, cY;
+    int X; // boolean: 1 if this is for x; 0 if this is for y;
+} arc_t;
+
+typedef struct _flagparms
+{
+    float pathAngle, instanceAngle;
+} flagparams_t;
+
+typedef struct _state
 {
 	U16 frame;
 	float value;
 	int function;
 	interpolation_t* interpolation;
     spline_t spline;
-	struct _change* next;
-} change_t;
+    arc_t arc;
+    flagparams_t params;
+    struct _state* next;
+} state_t;
 
-change_t* change_new(U16 frame, int function, float value, interpolation_t* inter);
-void change_free(change_t* change);
-void change_init(change_t* change);
-void change_append(change_t* first, change_t* newChange);
-float change_value(change_t* first, U16 frame);
+state_t* state_new(U16 frame, int function, float value, interpolation_t* inter);
+void state_free(state_t* state);
+void state_init(state_t* state);
+state_t* state_at(state_t* state, U16 frame);
+void state_append(state_t* state, state_t* newState);
+void state_insert(state_t* state, state_t* newState);
+float state_value(state_t* first, float frame);
+float state_tangent(state_t* modification, U16 frame, int tangent);
 
-typedef struct _changeFilter
+typedef struct _filterState
 {
 	U16 frame;
     FILTERLIST* value;
 	int function;
 	interpolation_t* interpolation;
-	struct _changeFilter* next;
-    spline_t spline;
-} changeFilter_t;
+    struct _filterState* next;
+} filterState_t;
 
-changeFilter_t* changeFilter_new(U16 frame, int function, FILTERLIST* value, interpolation_t* inter);
-void changeFilter_free(changeFilter_t* change);
-void changeFilter_init(changeFilter_t* change);
-void changeFilter_append(changeFilter_t* first, changeFilter_t* newChange);
-FILTERLIST* changeFilter_value(changeFilter_t* first, U16 frame);
+filterState_t* filterState_new(U16 frame, int function, FILTERLIST* value, interpolation_t* inter);
+void filterState_free(filterState_t* change);
+void filterState_init(filterState_t* change);
+void filterState_append(filterState_t* first, filterState_t* newChange);
+FILTERLIST* filterState_value(filterState_t* first, U16 frame);
 
 typedef struct _history
 {
-	U16 firstFrame;
+    U16 firstFrame, lastFrame;
 	TAG* firstTag;
-	dictionary_t* changes;
+    dictionary_t* states;
 } history_t;
 
 history_t* history_new();
@@ -109,10 +126,13 @@ void history_init(history_t* past);
 void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float value);
 void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTERLIST* value);
 void history_remember(history_t* past, char* parameter, U16 frame, int function, float value, interpolation_t* inter);
+void history_rememberSweep(history_t* past, U16 frame, float x, float y, float r, int clockwise, int short_arc, interpolation_t* inter);
 void history_rememberFilter(history_t* past, U16 frame, int function, FILTERLIST* value, interpolation_t* inter);
+void history_processFlags(history_t* past);
 int history_change(history_t* past, U16 frame, char* parameter);
 float history_value(history_t* past, U16 frame, char* parameter);
+float history_rotateValue(history_t* past, U16 frame);
 int history_changeFilter(history_t* past, U16 frame);
-FILTERLIST* history_valueFilter(history_t* past, U16 frame);
+FILTERLIST* history_filterValue(history_t* past, U16 frame);
 
 #endif

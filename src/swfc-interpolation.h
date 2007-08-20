@@ -24,7 +24,7 @@
 
 typedef struct _interpolation {
 	int function;
-	float speed, amplitude, growth, damping;
+	float slope, speed, amplitude, growth, damping;
 	int bounces;
 } interpolation_t;
 
@@ -67,25 +67,25 @@ enum {
 
 float linear(float fraction, float start, float delta);
 
-float quadIn(float fraction, float start, float delta);
-float quadOut(float fraction, float start, float delta);
-float quadInOut(float fraction, float start, float delta);
+float quadIn(float fraction, float start, float delta, float slope);
+float quadOut(float fraction, float start, float delta, float slope);
+float quadInOut(float fraction, float start, float delta, float slope);
 
-float cubicIn(float fraction, float start, float delta);
-float cubicOut(float fraction, float start, float delta);
-float cubicInOut(float fraction, float start, float delta);
+float cubicIn(float fraction, float start, float delta, float slope);
+float cubicOut(float fraction, float start, float delta, float slope);
+float cubicInOut(float fraction, float start, float delta, float slope);
 
-float quartIn(float fraction, float start, float delta);
-float quartOut(float fraction, float start, float delta);
-float quartInOut(float fraction, float start, float delta);
+float quartIn(float fraction, float start, float delta, float slope);
+float quartOut(float fraction, float start, float delta, float slope);
+float quartInOut(float fraction, float start, float delta, float slope);
 
-float quintIn(float fraction, float start, float delta);
-float quintOut(float fraction, float start, float delta);
-float quintInOut(float fraction, float start, float delta);
+float quintIn(float fraction, float start, float delta, float slope);
+float quintOut(float fraction, float start, float delta, float slope);
+float quintInOut(float fraction, float start, float delta, float slope);
 
-float circleIn(float fraction, float start, float delta);
-float circleOut(float fraction, float start, float delta);
-float circleInOut(float fraction, float start, float delta);
+float circleIn(float fraction, float start, float delta, float slope);
+float circleOut(float fraction, float start, float delta, float slope);
+float circleInOut(float fraction, float start, float delta, float slope);
 
 float exponentialIn(float fraction, float start, float delta);
 float exponentialOut(float fraction, float start, float delta);

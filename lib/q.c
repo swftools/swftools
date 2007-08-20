@@ -389,7 +389,11 @@ stringarray_t* dictionary_index(dictionary_t*dict)
     dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
     return &d->keys;
 }
-
+int dictionary_count(dictionary_t* dict) // this count includes entries that have been deleted
+{
+    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
+    return d->num;
+}
 void* dictionary_lookup(dictionary_t*dict, const char*name)
 {
     int s;
