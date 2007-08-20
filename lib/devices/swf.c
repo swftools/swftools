@@ -1780,6 +1780,9 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_internallinkfunction = strdup(value);
     } else if(!strcmp(name, "externallinkfunction")) {
 	i->config_externallinkfunction = strdup(value);
+    } else if(!strcmp(name, "linkfunction")) { //sets both internallinkfunction and externallinkfunction
+	i->config_internallinkfunction = strdup(value);
+	i->config_externallinkfunction = strdup(value);
     } else if(!strcmp(name, "disable_polygon_conversion")) {
 	i->config_disable_polygon_conversion = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
