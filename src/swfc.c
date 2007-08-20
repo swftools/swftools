@@ -154,6 +154,19 @@ static int noMoreTokens()
     return 0;
 }
 
+enum
+{
+    PT_PUT = 0,
+    PT_CHANGE = 1,
+    PT_SCHANGE = 2,
+    PT_MOVE = 3,
+    PT_SMOVE = 4,
+    PT_SWEEP = 5,
+    PT_JUMP = 6,
+    PT_STARTCLIP = 7,
+    PT_BUTTON = 8
+};
+
 // ------------------------------ swf routines ----------------------------
 struct _character;
 static struct level
@@ -207,6 +220,7 @@ typedef struct _parameters {
     U8 blendmode; //not interpolated
     FILTERLIST* filters;
     U16 set; // bits indicating wether a parameter was set in the c_placement function
+    U16 flags; // bits to toggle anything you may care to implement as a toggle
 } parameters_t;
 
 typedef struct _character {
@@ -219,7 +233,6 @@ typedef struct _instance {
     character_t*character;
     U16 depth;
     parameters_t parameters;
-    U16 deathFrame;
     history_t* history;
 } instance_t;
 
@@ -324,8 +337,8 @@ static void free_outline(void* o)
 
 static void freeDictionaries()
 {
-   dictionary_free_all(&instances, free_instance);
-   dictionary_free_all(&characters, free);
+    dictionary_free_all(&instances, free_instance);
+    dictionary_free_all(&characters, free);
     dictionary_free_all(&images, free);
     dictionary_free_all(&textures, free);
     dictionary_free_all(&outlines, free_outline);
@@ -455,42 +468,54 @@ void initBuiltIns()
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_IN;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quadIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quadOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_IN_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quadInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_IN;
+    new->slope = 0;
     dictionary_put2(&interpolations, "cubicIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "cubicOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_IN_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "cubicInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_IN;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quartIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quartOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_IN_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quartInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_IN;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quintIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quintOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_IN_OUT;
+    new->slope = 0;
     dictionary_put2(&interpolations, "quintInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
@@ -540,7 +565,7 @@ void initBuiltIns()
     noFilters = 0;
 // put a no_filters entry in the filters dictionary to provoce a message when a user tries
 // to define a no_filters filter. The real filter=no_filters case is handled in parseFilters.
-    char* dummy = (char*)malloc(2);
+    FILTER* dummy = (FILTER*)malloc(sizeof(FILTER));
     dictionary_put2(&filters, "no_filters", dummy);
     noBlur = (FILTER_BLUR*) swf_NewFilter(FILTERTYPE_BLUR);
     noBlur->passes = 1;
@@ -841,14 +866,14 @@ static void readParameters(history_t* history, parameters_t* p, int frame)
     p->cxform.g1 = history_value(history, frame, "cxform.g1");
     p->cxform.b1 = history_value(history, frame, "cxform.b1");
     p->cxform.a1 = history_value(history, frame, "cxform.a1");
-    p->rotate = history_value(history, frame, "rotate");
+    p->rotate = history_rotateValue(history, frame);
     p->shear = history_value(history, frame, "shear");
     p->pivot.x = history_value(history, frame, "pivot.x");
     p->pivot.y = history_value(history, frame, "pivot.y");
     p->pin.x = history_value(history, frame, "pin.x");
     p->pin.y = history_value(history, frame, "pin.y");
     p->blendmode = history_value(history, frame, "blendmode");
-    p->filters = history_valueFilter(history, frame);
+    p->filters = history_filterValue(history, frame);
 }
 
 void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*p, char move)
@@ -878,30 +903,25 @@ static void writeInstance(instance_t* i)
     MATRIX m;
     int frame = i->history->firstFrame;
     TAG* tag = i->history->firstTag;
+    history_processFlags(i->history);
     while (frame < currentframe)
     {
         frame++;
         while (tag->id != ST_SHOWFRAME)
             tag = tag->next;
-        if (i->deathFrame == frame)
-        {
-	    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
-	    swf_SetU16(tag, i->depth);
-	    break;
-        }
         if (parametersChange(i->history, frame))
         {
             readParameters(i->history, &p, frame);
-        m = s_instancepos(i->character->size, &p);
+            m = s_instancepos(i->character->size, &p);
 
             if(p.blendmode || p.filters)
-            tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
-        else
-            tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-        setPlacement(tag, 0, i->depth, m, 0, &p, 1);
+        	tag = swf_InsertTag(tag, ST_PLACEOBJECT3);
+            else
+        	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+            setPlacement(tag, 0, i->depth, m, 0, &p, 1);
             if (p.filters)
             	free_filterlist(p.filters);
-}
+        }
         else
             tag = tag->next;
     }
@@ -928,14 +948,15 @@ static void s_endSprite()
     stackpos--;
     instance_t *i;
     stringarray_t* index =dictionary_index(&instances);
-    int num = 0;
-    char* name = stringarray_at(index, num);
-    while (name)
+    int num;
+    for (num = 0; num < dictionary_count(&instances); num++)
     {
-        i = dictionary_lookup(&instances, name);
-        writeInstance(i);
-        num++;
-        name = stringarray_at(index, num);
+    	char* name = stringarray_at(index, num);
+    	if (name)
+    	{
+            i = dictionary_lookup(&instances, name);
+            writeInstance(i);
+    	}
     }
     while (tag->next)
 	tag = tag->next;
@@ -968,14 +989,15 @@ static void s_endSWF()
 
     instance_t *i;
     stringarray_t* index = dictionary_index(&instances);
-    int num = 0;
-    char* name = stringarray_at(index, num);
-    while (name)
+    int num;
+    for (num = 0; num < dictionary_count(&instances); num++)
     {
-        i = dictionary_lookup(&instances, name);
-        writeInstance(i);
-        num++;
-        name = stringarray_at(index, num);
+    	char* name = stringarray_at(index, num);
+    	if (name)
+    	{
+            i = dictionary_lookup(&instances, name);
+            writeInstance(i);
+    	}
     }
 
     if(stack[stackpos].cut)
@@ -1684,7 +1706,7 @@ GRADIENT parseGradient(const char*str)
 FILTERLIST* parseFilters(char* list)
 {
     if (!strcmp(list, "no_filters"))
-    	return noFilters;
+    	return 0;
     FILTER* f;
     FILTERLIST* f_list = (FILTERLIST*)malloc(sizeof(FILTERLIST));
     f_list->num = 0;
@@ -2084,6 +2106,7 @@ void setStartparameters(instance_t* i, parameters_t* p, TAG* tag)
     history_begin(i->history, "pin.y", currentframe, tag, p->pin.y);
     history_begin(i->history, "blendmode", currentframe, tag, p->blendmode);
     history_beginFilter(i->history, currentframe, tag, p->filters);
+    history_begin(i->history, "flags", currentframe, tag, 0);
 }
 
 void s_put(char*instance, char*character, parameters_t p)
@@ -2174,13 +2197,31 @@ void s_jump(char* instance, parameters_t p)
     recordChanges(i->history, p, CF_JUMP, 0);
 }
 
-void s_change(char*instance, parameters_t p2, interpolation_t* inter)
+void s_change(char*instance, parameters_t p, interpolation_t* inter)
 {
     instance_t* i = dictionary_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
+    recordChanges(i->history, p, CF_CHANGE, inter);
+}
 
-    recordChanges(i->history, p2, CF_CHANGE, inter);
+void s_sweep(char* instance, parameters_t p, float radius, int clockwise, int short_arc, interpolation_t* inter)
+{
+    instance_t* i = dictionary_lookup(&instances, instance);
+    if(!i)
+        syntaxerror("instance %s not known", instance);
+    history_rememberSweep(i->history, currentframe, p.x, p.y, radius, clockwise, short_arc, inter);
+}
+
+void s_toggle(char* instance, U16 flagsOn, U16 flagsOff)
+{
+    instance_t* i = dictionary_lookup(&instances, instance);
+    if (!i)
+        syntaxerror("instance %s not known", instance);
+    U16 flags = (U16)history_value(i->history, currentframe, "flags");
+    flags |= flagsOn;
+    flags &= flagsOff;
+    history_remember(i->history, "flags", currentframe, CF_JUMP, flags, 0);
 }
 
 void s_delinstance(char*instance)
@@ -2188,15 +2229,18 @@ void s_delinstance(char*instance)
     instance_t* i = dictionary_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
-    i->deathFrame = currentframe;
+    writeInstance(i);
+    tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
+    swf_SetU16(tag, i->depth);
+    dictionary_del(&instances, instance);
 }
 
-void s_qchange(char*instance, parameters_t p)
+void s_schange(char*instance, parameters_t p, interpolation_t* inter)
 {
     instance_t* i = dictionary_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
-    recordChanges(i->history, p, CF_QCHANGE, 0);
+    recordChanges(i->history, p, CF_SCHANGE, inter);
 }
 
 void s_end()
@@ -2329,6 +2373,26 @@ int parseTwip(char*str)
 	    return sign*atoi(str)*20+atoi(dot)/5;
     }
     return 0;
+}
+
+int parseArc(char* str)
+{
+    if (!strcmp(str, "short"))
+    	return 1;
+    if (!strcmp(str, "long"))
+    	return 0;
+    syntaxerror("invalid value for the arc parameter: %s", str);
+    return 1;
+}
+
+int parseDir(char* str)
+{
+    if (!strcmp(str, "clockwise"))
+    	return 1;
+    if (!strcmp(str, "counterclockwise"))
+    	return 0;
+    syntaxerror("invalid value for the dir parameter: %s", str);
+    return 1;
 }
 
 int isPoint(char*str)
@@ -2598,10 +2662,11 @@ static int c_interpolation(map_t *args)
     if (!inter->function)
         syntaxerror("unkown interpolation function %s", functionstr);
     inter->speed = parseFloat(lu(args, "speed"));
-    inter->amplitude = parseFloat(lu(args, "amplitude"));
+    inter->amplitude = parseTwip(lu(args, "amplitude"));
     inter->growth = parseFloat(lu(args, "growth"));
     inter->bounces = parseInt(lu(args, "bounces"));
-    inter->damping = parseInt(lu(args, "damping"));
+    inter->damping = parseFloat(lu(args, "damping"));
+    inter->slope = parseFloat(lu(args, "slope"));
 
     dictionary_put2(&interpolations, name, inter);
     return 0;
@@ -2616,6 +2681,14 @@ SPOINT getPoint(SRECT r, char*name)
 	p.y = (r.ymin + r.ymax)/2;
 	return p;
     }
+    if (!strcmp(name, "bottom-center"))
+    {
+	SPOINT p;
+	p.x = (r.xmin + r.xmax)/2;
+	p.y = r.ymax;
+	return p;
+    }
+
 
     if(points_initialized)
 	l = (int)dictionary_lookup(&points, name);
@@ -2721,7 +2794,7 @@ static int c_gradient(map_t*args)
 
 static char* checkFiltername(map_t* args)
 {
-    char*name = lu(args, "name");
+    char* name = lu(args, "name");
     if (strchr(name, ','))
     	syntaxerror("the comma (,) is used to separate filters in filterlists. Please do not use in filternames.");
     return name;
@@ -2909,9 +2982,99 @@ static int c_previousframe(map_t*args)
     return 0;
 }
 
+static int c_movement(map_t*args, int type)
+{
+    char*instance = lu(args, "name");
+
+    char* xstr="";
+    char* ystr="";
+    SRECT oldbbox;
+    parameters_t p;
+    U16 set = 0x0000;
+
+    xstr = lu(args, "x");
+    ystr = lu(args, "y");
+
+    s_getParameters(instance, &p);
+
+    /* x,y position */
+    if(xstr[0])
+    {
+        if(isRelative(xstr))
+        {
+            if(type == PT_PUT || type == PT_STARTCLIP)
+                syntaxerror("relative x values not allowed for initial put or startclip");
+            p.x += parseTwip(getOffset(xstr))*getSign(xstr);
+        }
+        else
+        {
+            p.x = parseTwip(xstr);
+        }
+        set = set | SF_X;
+     }
+    if(ystr[0])
+    {
+        if(isRelative(ystr))
+        {
+            if(type == PT_PUT || type == PT_STARTCLIP)
+                syntaxerror("relative y values not allowed for initial put or startclip");
+            p.y += parseTwip(getOffset(ystr))*getSign(ystr);
+        }
+        else
+        {
+            p.y = parseTwip(ystr);
+        }
+        set = set | SF_Y;
+    }
+
+    if (change_sets_all)
+	set = SF_ALL;
+    p.set = set;
+
+    switch (type)
+    {
+        case PT_MOVE:
+            {
+                char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                if (!inter)
+                    syntaxerror("unkown interpolation %s", interstr);
+                s_change(instance, p, inter);
+            }
+            break;
+        case PT_SMOVE:
+            {
+                char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                if (!inter)
+                    syntaxerror("unkown interpolation %s", interstr);
+            	s_schange(instance, p, inter);
+            }
+            break;
+        case PT_SWEEP:
+            {
+            	char* rstr = lu(args, "r");
+            	int radius = parseTwip(rstr);
+            	if (radius <= 0)
+            		syntaxerror("sweep not possible: radius must be greater than 0.");
+            	char* dirstr = lu(args, "dir");
+            	int clockwise = parseDir(dirstr);
+            	char* arcstr = lu(args, "arc");
+            	int short_arc = parseArc(arcstr);
+                char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                if (!inter)
+                    syntaxerror("unkown interpolation %s", interstr);
+            	s_sweep(instance, p, radius, clockwise, short_arc, inter);
+            }
+            break;
+	}
+    return 0;
+}
+
 static int c_placement(map_t*args, int type)
 {
-    char*instance = lu(args, (type==0||type==4)?"instance":"name");
+    char*instance = lu(args, (type==PT_PUT||type==PT_STARTCLIP)?"instance":"name");
     char*character = 0;
 
     char* luminancestr = lu(args, "luminance");
@@ -2967,11 +3130,11 @@ static int c_placement(map_t*args, int type)
         scalexstr = scaleystr = scalestr;
     }
 
-    if(type == 0 || type == 4)  {
+    if(type == PT_PUT || type == PT_STARTCLIP)  {
 	// put or startclip
 	character = lu(args, "character");
 	parameters_clear(&p);
-    } else if (type == 5) {
+    } else if (type == PT_BUTTON) {
 	character = lu(args, "name");
 	parameters_clear(&p);
 	// button's show
@@ -2984,7 +3147,7 @@ static int c_placement(map_t*args, int type)
     {
         if(isRelative(xstr))
         {
-            if(type == 0 || type == 4)
+            if(type == PT_PUT || type == PT_STARTCLIP)
                 syntaxerror("relative x values not allowed for initial put or startclip");
             p.x += parseTwip(getOffset(xstr))*getSign(xstr);
         }
@@ -2998,7 +3161,7 @@ static int c_placement(map_t*args, int type)
     {
         if(isRelative(ystr))
         {
-            if(type == 0 || type == 4)
+            if(type == PT_PUT || type == PT_STARTCLIP)
                 syntaxerror("relative y values not allowed for initial put or startclip");
             p.y += parseTwip(getOffset(ystr))*getSign(ystr);
         }
@@ -3154,16 +3317,22 @@ static int c_placement(map_t*args, int type)
         set = set | SF_FILTER;
     }
 
+    if (type == PT_CHANGE && set & (SF_X | SF_Y))
+	warning("As of version 0.8.2 using the .change command to modify an \
+object's position on the stage is considered deprecated. Future \
+versions may consider x and y parameters for the .change command \
+to be illegal; please use the .move command.");
+
     if (change_sets_all)
 	set = SF_ALL;
     p.set = set;
 
     switch (type)
     {
-        case 0:
+        case PT_PUT:
             s_put(instance, character, p);
             break;
-        case 1:
+        case PT_CHANGE:
             {
                 char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
@@ -3172,16 +3341,22 @@ static int c_placement(map_t*args, int type)
                 s_change(instance, p, inter);
             }
             break;
-        case 2:
-            s_qchange(instance, p);
+        case PT_SCHANGE:
+            {
+                char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                if (!inter)
+                    syntaxerror("unkown interpolation %s", interstr);
+            	s_schange(instance, p, inter);
+            }
             break;
-        case 3:
+        case PT_JUMP:
             s_jump(instance, p);
             break;
-        case 4:
+        case PT_STARTCLIP:
             s_startclip(instance, character, p);
             break;
-        case 5:
+        case PT_BUTTON:
             if(as && as[0])
                 s_buttonput(character, as, p);
             else
@@ -3193,39 +3368,69 @@ static int c_placement(map_t*args, int type)
 }
 static int c_put(map_t*args)
 {
-    c_placement(args, 0);
+    c_placement(args, PT_PUT);
     return 0;
 }
 static int c_change(map_t*args)
 {
     if (currentframe == 0)
         warning("change commands in frame 1 will be ignored, please use the put command to set object parameters");
-    c_placement(args, 1);
+    c_placement(args, PT_CHANGE);
     return 0;
 }
-static int c_qchange(map_t*args)
+static int c_schange(map_t*args)
 {
-    c_placement(args, 2);
+    c_placement(args, PT_SCHANGE);
+    return 0;
+}
+static int c_move(map_t* args)
+{
+    c_movement(args, PT_MOVE);
+    return 0;
+}
+static int c_smove(map_t* args)
+{
+    c_movement(args, PT_SMOVE);
+    return 0;
+}
+static int c_sweep(map_t* args)
+{
+    c_movement(args, PT_SWEEP);
     return 0;
 }
 static int c_arcchange(map_t*args)
 {
-    c_placement(args, 2);
+    c_placement(args, 0);
     return 0;
 }
 static int c_jump(map_t*args)
 {
-    c_placement(args, 3);
+    c_placement(args, PT_JUMP);
     return 0;
 }
 static int c_startclip(map_t*args)
 {
-    c_placement(args, 4);
+    c_placement(args, PT_STARTCLIP);
     return 0;
 }
 static int c_show(map_t*args)
 {
-    c_placement(args, 5);
+    c_placement(args, PT_BUTTON);
+    return 0;
+}
+static int c_toggle(map_t* args)
+{
+    char*instance = lu(args, "name");
+    U16 flagsOn = 0x0000, flagsOff = 0xffff;
+    char* alignstr = lu(args, "fixed_alignment");
+    if (!strcmp(alignstr, "on"))
+    	flagsOn += IF_FIXED_ALIGNMENT;
+    else
+    	if (!strcmp(alignstr, "off"))
+    	    flagsOff -= IF_FIXED_ALIGNMENT;
+    	else
+    	    syntaxerror("values for toggle must be \"on\" or \"off\". %s is not legal.", alignstr);
+    s_toggle(instance, flagsOn, flagsOff);
     return 0;
 }
 static int c_del(map_t*args)
@@ -3646,7 +3851,7 @@ static struct {
  {"png", c_image, "name filename"},
  {"movie", c_movie, "name filename"},
  {"sound", c_sound, "name filename"},
- {"font", c_font, "name filename"},
+ {"font", c_font, "name filename glyphs="},
  {"soundtrack", c_soundtrack, "filename"},
  {"quicktime", c_quicktime, "url"},
 
@@ -3654,7 +3859,7 @@ static struct {
 
  {"point", c_point, "name x=0 y=0"},
  {"gradient", c_gradient, "name @radial=0 rotate=0 scale= scalex= scaley= x= y= width= height= r= shear="}, //extra parameters like .texture
- {"interpolation", c_interpolation, "name function=linear speed=1.3 amplitude=0 bounces=2 growth=1.5, damping=2"},
+ {"interpolation", c_interpolation, "name function=linear speed=1.3 amplitude=0 bounces=2 growth=1.5 damping=2 slope=0"},
  {"outline", c_outline, "name format=simple"},
  {"textshape", c_textshape, "name font size=100% text"},
 
@@ -3690,13 +3895,18 @@ static struct {
     // object placement tags
  {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
  {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"move", c_move,	"name x= y= interpolation=linear"},
+ {"smove", c_smove, 	"name x= y= interpolation=linear"},
+ {"sweep", c_sweep,	"name x= y= r= dir=counterclockwise arc=short interpolation=linear"},
  {"change", c_change,   "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below= interpolation=linear"},
- {"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
- {"qchange", c_qchange, "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ //{"arcchange", c_arcchange,   "name pivot= angle= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"schange", c_schange, "name red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below= interpolation=linear"},
  {"jump", c_jump,       "name x= y= red= green= blue= alpha= luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
  {"del", c_del, "name"},
     // virtual object placement
  {"texture", c_texture, "<i> x=0 y=0 width= height= scale= scalex= scaley= r= shear= rotate="},
+    // switching
+ {"toggle", c_toggle, "name fixed_alignment="},
 
     // commands which start a block
 //startclip (see above)
@@ -3970,6 +4180,7 @@ static void analyseArgumentsForCommand(char*command)
 	    font = (SWFFONT*)malloc(sizeof(SWFFONT));
 	    memset(font, 0, sizeof(SWFFONT));
     	}
+    	swf_FontUseUTF8(font, lu(&args, "glyphs"));
 	swf_FontPrepareForEditText(font);
     	dictionary_put2(&fonts, name, font);
     }
