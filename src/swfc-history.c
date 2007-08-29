@@ -25,9 +25,9 @@
 
 enum
 {
-    T_BEFORE = 0,
-    T_AFTER = 1,
-    T_SYMMETRIC = 2
+    T_BEFORE,
+    T_AFTER,
+    T_SYMMETRIC
 };
 
 state_t* state_new(U16 frame, int function, float value, interpolation_t* inter)
@@ -65,29 +65,34 @@ void state_append(state_t* state, state_t* newState)
     state_t* previous = 0;
     state_t* start = state;
     float p0, p1, m0, m1;
+    int previous_frames = 0, state_frames, new_frames;
 
     while (state->next)
     {
+    	if (previous)
+    	    previous_frames = state->frame - previous->frame;
     	previous = state;
 	state = state->next;
     }
     state->next = newState;
+    new_frames = newState->frame - state->frame;
     if (state->function == CF_SCHANGE)
     {
+    	state_frames = state->frame - previous->frame;
     	p0 = previous->value;
     	p1 = state->value;
     	if (previous->function == CF_SCHANGE)
-    	    m0 = (3 * previous->spline.a + 2 * previous->spline.b + previous->spline.c);
+    	    m0 = (3 * previous->spline.a + 2 * previous->spline.b + previous->spline.c) * state_frames / previous_frames ;
     	else
     	    if (previous->function == CF_CHANGE || previous->function == CF_SWEEP)
-    	    	m0 = state_tangent(start, previous->frame, T_BEFORE) * (state->frame - previous->frame);
+    	    	m0 = state_tangent(start, previous->frame, T_BEFORE) * state_frames;
     	    else
     		m0 = (state->value - previous->value);
     	if (newState->function == CF_SCHANGE)
-    	    m1 = 0.5 * (newState->value - previous->value)/* * (state->frame - previous->frame) / (newState->frame - state->frame)*/;
+    	    m1 = /*0.5 * */(newState->value - previous->value) * state_frames / (new_frames + state_frames);
     	else
     	    if (newState->function == CF_CHANGE || newState->function == CF_SWEEP)
-    		m1 = state_tangent(previous, state->frame, T_AFTER) * (state->frame - previous->frame);
+    		m1 = state_tangent(previous, state->frame, T_AFTER) * state_frames;
     	    else
   		m1 = (newState->value - state->value);
     	state->spline.a = 2 * p0 + m0 - 2 * p1 + m1;
@@ -105,7 +110,7 @@ void state_append(state_t* state, state_t* newState)
     	    m0 = m1;
     	else
     	    if (state->function == CF_CHANGE || state->function == CF_SWEEP)
-    	    	m0 = state_tangent(start, state->frame, T_BEFORE) * (state->frame - previous->frame);
+    	    	m0 = state_tangent(start, state->frame, T_BEFORE) * new_frames;
     	    else
 	    	m0 = (newState->value - state->value);
     	m1 = (newState->value - state->value);
@@ -113,6 +118,8 @@ void state_append(state_t* state, state_t* newState)
     	newState->spline.b = -3 * p0 - 2 * m0 + 3 * p1 - m1;
     	newState->spline.c = m0;
     	newState->spline.d = p0;
+//    	printf("p0: %f, p1: %f, m0: %f, m1: %f.\n", p0, p1, m0, m1);
+//    	printf("a: %f, b: %f, c: %f, d: %f.\n", newState->spline.a, newState->spline.b, newState->spline.c, newState->spline.d);
     }
     }
 
