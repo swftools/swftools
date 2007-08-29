@@ -124,6 +124,7 @@ public:
   //----- path clipping
   virtual void clip(GfxState *state) ;
   virtual void eoClip(GfxState *state) ;
+  virtual void clipToStrokePath(GfxState *state);
  
   //----- shaded fills
   virtual GBool useTilingPatternFill();
@@ -198,7 +199,7 @@ public:
 				   GBool inlineImg, int mask, int *maskColors,
 				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap);
   int setGfxFont(char*id, char*name, char*filename, double quality);
-  void strokeGfxline(GfxState *state, gfxline_t*line);
+  void strokeGfxline(GfxState *state, gfxline_t*line, int flags);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
 

@@ -69,6 +69,10 @@
 #include "../devices/ops.h"
 #include "../devices/arts.h"
 #include "../devices/render.h"
+
+#include "../art/libart.h"
+#include "../devices/artsutils.c"
+
 #include "../png.h"
 #include "fonts.h"
 
@@ -661,7 +665,9 @@ GBool GFXOutputDev::useShadedFills()
     return gFalse;
 }
 
-void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
+#define STROKE_FILL 1
+#define STROKE_CLIP 2
+void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 {
     int lineCap = state->getLineCap(); // 0=butt, 1=round 2=square
     int lineJoin = state->getLineJoin(); // 0=miter, 1=round 2=bevel
@@ -729,9 +735,23 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line)
 		);
         dump_outline(line);
     }
-   
-    //swfoutput_drawgfxline(output, line, width, &col, capType, joinType, miterLimit);
-    device->stroke(device, line, width, &col, capType, joinType, miterLimit);
+
+    if(flags&STROKE_FILL) {
+        ArtSVP* svp = gfxstrokeToSVP(line, width, capType, joinType, miterLimit);
+        gfxline_t*gfxline = SVPtogfxline(svp);
+        if(flags&STROKE_CLIP) {
+            device->startclip(device, gfxline);
+            states[statepos].clipping++;
+        } else {
+            device->fill(device, gfxline, &col);
+        }
+        free(gfxline);
+	art_svp_free(svp);
+    } else {
+        if(flags&STROKE_CLIP) 
+            msg("<error> Stroke&clip not supported at the same time");
+        device->stroke(device, line, width, &col, capType, joinType, miterLimit);
+    }
     
     if(line2)
 	gfxline_free(line2);
@@ -792,6 +812,13 @@ void GFXOutputDev::eoClip(GfxState *state)
 
     device->startclip(device, line);
     states[statepos].clipping++;
+    gfxline_free(line);
+}
+void GFXOutputDev::clipToStrokePath(GfxState *state)
+{
+    GfxPath * path = state->getPath();
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
+    strokeGfxline(state, line, STROKE_FILL|STROKE_CLIP);
     gfxline_free(line);
 }
 
@@ -1094,11 +1121,11 @@ void GFXOutputDev::endString(GfxState *state)
 	    current_text_stroke = 0;
 	} else if((render&3) == RENDER_FILLSTROKE) {
 	    fillGfxLine(state, current_text_stroke);
-	    strokeGfxline(state, current_text_stroke);
+	    strokeGfxline(state, current_text_stroke,0);
 	    gfxline_free(current_text_stroke);
 	    current_text_stroke = 0;
 	} else if((render&3) == RENDER_STROKE) {
-	    strokeGfxline(state, current_text_stroke);
+	    strokeGfxline(state, current_text_stroke,0);
 	    gfxline_free(current_text_stroke);
 	    current_text_stroke = 0;
 	}
@@ -2443,7 +2470,7 @@ void GFXOutputDev::stroke(GfxState *state)
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
-    strokeGfxline(state, line);
+    strokeGfxline(state, line, 0);
     gfxline_free(line);
 }
 
