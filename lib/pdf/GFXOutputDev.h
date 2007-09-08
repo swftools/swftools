@@ -40,9 +40,9 @@ typedef struct _parameter
     struct _parameter*next;
 } parameter_t;
 
-void addGlobalFont(char*filename);
-void addGlobalLanguageDir(char*dir);
-void addGlobalFontDir(char*dirname);
+void addGlobalFont(const char*filename);
+void addGlobalLanguageDir(const char*dir);
+void addGlobalFontDir(const char*dirname);
 
 class GFXOutputDev:  public OutputDev {
 public:
@@ -203,9 +203,9 @@ public:
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
 
-  void showfeature(char*feature,char fully, char warn);
-  void warnfeature(char*feature,char fully);
-  void infofeature(char*feature);
+  void showfeature(const char*feature,char fully, char warn);
+  void warnfeature(const char*feature,char fully);
+  void infofeature(const char*feature);
 
   char outer_clip_box; //whether the page clip box is still on
   
@@ -220,7 +220,7 @@ public:
   PDFDoc*doc;
   XRef*xref;
 
-  char* searchFont(char*name);
+  char* searchFont(const char*name);
   char* substituteFont(GfxFont*gfxFont, char*oldname);
   char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
   int t1id;
@@ -235,8 +235,8 @@ public:
 
   char type3Warning;
 
-  char* substitutetarget[256];
-  char* substitutesource[256];
+  const char* substitutetarget[256];
+  const char* substitutesource[256];
   int substitutepos;
 
   int user_movex,user_movey;

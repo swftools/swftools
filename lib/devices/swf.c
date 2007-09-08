@@ -178,7 +178,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
 static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font);
-static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action);
+static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action);
 static void swf_startframe(gfxdevice_t*dev, int width, int height);
 static void swf_endframe(gfxdevice_t*dev);
 static gfxresult_t* swf_finish(gfxdevice_t*driver);
@@ -1250,11 +1250,11 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	i->swf->compressed = 1;
     }
 
-    if(i->config_reordertags)
-	swf_Optimize(i->swf);
+//    if(i->config_reordertags)
+//	swf_Optimize(i->swf);
 }
 
-int swfresult_save(gfxresult_t*gfx, char*filename)
+int swfresult_save(gfxresult_t*gfx, const char*filename)
 {
     SWF*swf = (SWF*)gfx->internal;
     int fi;
@@ -1280,7 +1280,7 @@ int swfresult_save(gfxresult_t*gfx, char*filename)
      close(fi);
     return 0;
 }
-void* swfresult_get(gfxresult_t*gfx, char*name)
+void* swfresult_get(gfxresult_t*gfx, const char*name)
 {
     SWF*swf = (SWF*)gfx->internal;
     if(!strcmp(name, "swf")) {
@@ -1409,15 +1409,15 @@ static void swfoutput_setlinewidth(gfxdevice_t*dev, double _linewidth)
 static void drawlink(gfxdevice_t*dev, ActionTAG*,ActionTAG*, gfxline_t*points, char mouseover);
 static void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points);
 static void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points);
-static void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points);
+static void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points);
 
-void swfoutput_drawlink(gfxdevice_t*dev, char*url, gfxline_t*points)
+/*void swfoutput_drawlink(gfxdevice_t*dev, char*url, gfxline_t*points)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     dev->drawlink(dev, points, url);
-}
+}*/
 
-void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, char*url)
+void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, const char*url)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
@@ -1443,7 +1443,7 @@ void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, char*url)
 	swfoutput_linktourl(dev, url, points);
     }
 }
-void swfoutput_linktourl(gfxdevice_t*dev, char*url, gfxline_t*points)
+void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
 {
     ActionTAG* actions = 0;
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
@@ -2507,7 +2507,7 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	swf_switchfont(dev, font->id); // set the current font
     }
     setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
-   
+
 /*    printf("%f %f\n", m.m31,  m.m32);
     {
     static int xpos = 40;

@@ -59,7 +59,7 @@ void swf_SetLoadFontParameters(int _scale, int _skip_unused, int _full_unicode)
 #define FT_SCALE 1
 #define FT_SUBPIXELS 64
 
-static int ft_move_to(FT_Vector* _to, void* user) 
+static int ft_move_to(const FT_Vector* _to, void* user) 
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT to;
@@ -68,7 +68,7 @@ static int ft_move_to(FT_Vector* _to, void* user)
     draw->moveTo(draw, &to);
     return 0;
 }
-static int ft_line_to(FT_Vector* _to, void* user) 
+static int ft_line_to(const FT_Vector* _to, void* user) 
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT to;
@@ -77,7 +77,18 @@ static int ft_line_to(FT_Vector* _to, void* user)
     draw->lineTo(draw, &to);
     return 0;
 }
-static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* user)
+static int ft_conic_to(const FT_Vector* _c, const FT_Vector* _to, void* user) 
+{
+    drawer_t* draw = (drawer_t*)user;
+    FPOINT c,to;
+    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
+    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
+    c.x = _c->x*FT_SCALE/(float)FT_SUBPIXELS;
+    c.y = -_c->y*FT_SCALE/(float)FT_SUBPIXELS;
+    draw_conicTo(draw, &c, &to);
+    return 0;
+}
+static int ft_cubic_to(const FT_Vector* _c1, const FT_Vector* _c2, const FT_Vector* _to, void* user)
 {
     drawer_t* draw = (drawer_t*)user;
     FPOINT c1,c2,to;
@@ -88,17 +99,6 @@ static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* use
     c2.x = _c2->x*FT_SCALE/(float)FT_SUBPIXELS;
     c2.y = -_c2->y*FT_SCALE/(float)FT_SUBPIXELS;
     draw_cubicTo(draw, &c1, &c2, &to);
-    return 0;
-}
-static int ft_conic_to(FT_Vector* _c, FT_Vector* _to, void* user) 
-{
-    drawer_t* draw = (drawer_t*)user;
-    FPOINT c,to;
-    to.x = _to->x*FT_SCALE/(float)FT_SUBPIXELS;
-    to.y = -_to->y*FT_SCALE/(float)FT_SUBPIXELS;
-    c.x = _c->x*FT_SCALE/(float)FT_SUBPIXELS;
-    c.y = -_c->y*FT_SCALE/(float)FT_SUBPIXELS;
-    draw_conicTo(draw, &c, &to);
     return 0;
 }
 static FT_Outline_Funcs outline_functions =

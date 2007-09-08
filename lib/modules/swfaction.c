@@ -1015,7 +1015,7 @@ ActionTAG* action_PushLookup16(ActionTAG*atag, U16 index)
     *(U8*)&atag->tmp[2] = index>>8;
     return atag;
 }
-ActionTAG* action_PushString(ActionTAG*atag, char*str) 
+ActionTAG* action_PushString(ActionTAG*atag, const char*str) 
 {
     int l = strlen(str);
     char*ptr = (char*)rfx_alloc(l+2);

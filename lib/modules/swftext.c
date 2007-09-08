@@ -684,7 +684,7 @@ int swf_FontReduce_swfc(SWFFONT * f)
     }
     f->use->used_glyphs = j;
     for (i = 0; i < f->maxascii; i++) {
-	if(f->ascii2glyph[i] > -1)
+	if(f->ascii2glyph[i] > -1) {
 	    if (f->use->chars[f->ascii2glyph[i]]<0) {
 	    	f->use->chars[f->ascii2glyph[i]] = 0;
 	    	f->ascii2glyph[i] = -1;
@@ -694,6 +694,7 @@ int swf_FontReduce_swfc(SWFFONT * f)
 	    	max_unicode = i + 1;
 	    }
 	}
+    }
     f->maxascii = max_unicode;
     f->use->is_reduced = 1;
     f->numchars = j;

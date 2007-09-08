@@ -27,12 +27,12 @@ typedef struct _gfxglyph
     gfxcoord_t advance;
 
     int unicode; // array?
-    char*name;
+    const char*name;
 } gfxglyph_t;
 
 typedef struct _gfxfont
 {
-    char*id;
+    const char*id;
     int num_glyphs;
     int max_unicode;
     gfxglyph_t*glyphs;
@@ -87,8 +87,8 @@ typedef struct _gfxbbox
 typedef struct _gfxresult
 {
     void (*write)(struct _gfxresult*gfx, int filedesc);
-    int (*save)(struct _gfxresult*gfx, char*filename);
-    void* (*get)(struct _gfxresult*gfx, char*name);
+    int (*save)(struct _gfxresult*gfx, const char*filename);
+    void* (*get)(struct _gfxresult*gfx, const char*name);
     void (*destroy)(struct _gfxresult*gfx);
 
     void*internal;
@@ -96,7 +96,7 @@ typedef struct _gfxresult
 
 typedef struct _gfxdevice
 {
-    char* name; // gfx device name
+    const char* name; // gfx device name
 
     int (*setparameter)(struct _gfxdevice*dev, const char*key, const char*value);
 
@@ -113,7 +113,7 @@ typedef struct _gfxdevice
 
     void (*drawchar)(struct _gfxdevice*dev, gfxfont_t*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 
-    void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, char*action);
+    void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, const char*action);
     
     void (*endpage)(struct _gfxdevice*dev);
     

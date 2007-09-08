@@ -35,10 +35,10 @@ int setRegistryEntry(char*key,char*value);
 #endif
 
 char* getInstallationPath();
-char* concatPaths(char*base, char*add);
-char* stripFilename(char*filename, char*newext);
+char* concatPaths(const char*base, const char*add);
+char* stripFilename(const char*filename, const char*newext);
 
-char* mktempname(char*);
+char* mktempname(const char*);
 
 #ifdef __cplusplus
 }

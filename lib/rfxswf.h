@@ -890,7 +890,7 @@ ActionTAG* action_SetTarget(ActionTAG*atag, char* target);
 ActionTAG* action_GotoLabel(ActionTAG*atag, char* label);
 ActionTAG* action_WaitForFrame2(ActionTAG*atag, U8 skip);
 ActionTAG* action_With(ActionTAG*atag, char*object);
-ActionTAG* action_PushString(ActionTAG*atag, char*str);
+ActionTAG* action_PushString(ActionTAG*atag, const char*str);
 ActionTAG* action_PushFloat(ActionTAG*atag, float f);
 ActionTAG* action_PushNULL(ActionTAG*atag);
 ActionTAG* action_PushRegister(ActionTAG*atag, U8 reg);

@@ -33,8 +33,8 @@ struct _gfxpage;
 
 typedef struct _gfxsource
 {
-    void                 (*set_parameter)(char*name, char*value);
-    struct _gfxdocument* (*open)(char*filename);
+    void                 (*set_parameter)(const char*name, const char*value);
+    struct _gfxdocument* (*open)(const char*filename);
     void*internal;
 } gfxsource_t;
 
@@ -42,10 +42,10 @@ typedef struct _gfxdocument
 {
     gfxsource_t*driver;
     int num_pages;
-    void* (*get)(struct _gfxdocument*gfx, char*name);
+    void* (*get)(struct _gfxdocument*gfx, const char*name);
     void  (*destroy)(struct _gfxdocument*gfx);
-    void  (*set_parameter)(struct _gfxdocument*gfx, char*name, char*value);
-    char* (*getinfo)(struct _gfxdocument*gfx, char*key);
+    void  (*set_parameter)(struct _gfxdocument*gfx, const char*name, const char*value);
+    char* (*getinfo)(struct _gfxdocument*gfx, const char*key);
     struct _gfxpage* (*getpage)(struct _gfxdocument*gfx, int page);
     void*internal;
 } gfxdocument_t;

@@ -98,8 +98,8 @@ static void processargs(int argn2,char**argv2)
 
 struct options_t
 {
-    char*shortoption;
-    char*longoption;
+    const char*shortoption;
+    const char*longoption;
 };
 
 static int args_long2shortoption(struct options_t*options, char*name, char*val)

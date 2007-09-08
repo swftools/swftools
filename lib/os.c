@@ -109,7 +109,7 @@ char* getInstallationPath()
 #endif
 }
 
-char* concatPaths(char*base, char*add)
+char* concatPaths(const char*base, const char*add)
 {
     int l1 = strlen(base);
     int l2 = strlen(add);
@@ -127,11 +127,11 @@ char* concatPaths(char*base, char*add)
     return n;
 }
 
-char* stripFilename(char*filename, char*newext)
+char* stripFilename(const char*filename, const char*newext)
 {
     char*last1 = strrchr(filename, '/');
     char*last2 = strrchr(filename, '\\');
-    char*pos = filename;
+    const char*pos = filename;
     char*name;
     char*dot;
     if(last1>pos) pos = last1 + 1;
@@ -161,7 +161,7 @@ static char* getTempDir()
     return dir;
 }
 
-char* mktempname(char*ptr) {
+char* mktempname(const char*ptr) {
     static char tmpbuf[128];
     char*dir = getTempDir();
     int l = strlen(dir);
