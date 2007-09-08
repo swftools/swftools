@@ -669,7 +669,7 @@ int main(int argn, char *argv[])
 
     pdf->destroy(pdf);
 
-    char*zip = "";
+    const char*zip = "";
     if(zlib) {
 	zip = "-z";
     }
