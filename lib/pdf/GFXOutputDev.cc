@@ -80,7 +80,7 @@
 
 typedef struct _fontfile
 {
-    char*filename;
+    const char*filename;
     int used;
 } fontfile_t;
 
@@ -93,8 +93,8 @@ static int fontnum = 0;
 static char* lastfontdir = 0;
 
 struct fontentry {
-    char*pdffont;
-    char*filename;
+    const char*pdffont;
+    const char*filename;
     char*afm;
     int afmlen;
     char*pfb;
@@ -119,7 +119,7 @@ struct fontentry {
 
 static int verbose = 0;
 static int dbgindent = 0;
-static void dbg(char*format, ...)
+static void dbg(const char*format, ...)
 {
     char buf[1024];
     int l;
@@ -152,7 +152,7 @@ typedef struct _feature
 } feature_t;
 feature_t*featurewarnings = 0;
 
-void GFXOutputDev::showfeature(char*feature,char fully, char warn)
+void GFXOutputDev::showfeature(const char*feature,char fully, char warn)
 {
     feature_t*f = featurewarnings;
     while(f) {
@@ -174,11 +174,11 @@ void GFXOutputDev::showfeature(char*feature,char fully, char warn)
 	msg("<notice> File contains %s",feature);
     }
 }
-void GFXOutputDev::warnfeature(char*feature,char fully)
+void GFXOutputDev::warnfeature(const char*feature,char fully)
 {
     showfeature(feature,fully,1);
 }
-void GFXOutputDev::infofeature(char*feature)
+void GFXOutputDev::infofeature(const char*feature)
 {
     showfeature(feature,0,0);
 }
@@ -476,7 +476,7 @@ static char* gfxstate2str(GfxState *state)
   return mybuf;
 }
 
-static void dumpFontInfo(char*loglevel, GfxFont*font);
+static void dumpFontInfo(const char*loglevel, GfxFont*font);
 static int lastdumps[1024];
 static int lastdumppos = 0;
 /* nr = 0  unknown
@@ -503,7 +503,7 @@ static void showFontError(GfxFont*font, int nr)
     dumpFontInfo("<warning>", font);
 }
 
-static void dumpFontInfo(char*loglevel, GfxFont*font)
+static void dumpFontInfo(const char*loglevel, GfxFont*font)
 {
   char* id = getFontID(font);
   char* name = getFontName(font);
@@ -868,7 +868,7 @@ GBool GFXOutputDev::useDrawChar()
     return gTrue;
 }
 
-char*renderModeDesc[]= {"fill", "stroke", "fill+stroke", "invisible",
+const char*renderModeDesc[]= {"fill", "stroke", "fill+stroke", "invisible",
                       "clip+fill", "stroke+clip", "fill+stroke+clip", "clip"};
 
 #define RENDER_FILL 0
@@ -906,7 +906,7 @@ char* makeStringPrintable(char*str)
 
 int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
 {
-    char*uniname = 0;
+    const char*uniname = 0;
     if(!font)
         return charnr;
     if(u>0) {
@@ -959,6 +959,14 @@ int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
     }
 
     /* try to use the unicode id */
+    if(u>=0 && u<font->max_unicode && font->unicode2glyph[u]>=0) {
+	msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->unicode2glyph[u]);
+	return font->unicode2glyph[u];
+    }
+    /* try to use the unicode|0xe000 (needed for some WingDings fonts)
+       FIXME: do this only if we know the font is wingdings?
+     */
+    u |= 0xe000;
     if(u>=0 && u<font->max_unicode && font->unicode2glyph[u]>=0) {
 	msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->unicode2glyph[u]);
 	return font->unicode2glyph[u];
@@ -1031,6 +1039,13 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     if(uLen)
 	u = _u[0];
 
+/*    char*fontname = getFontName(font);
+    if(u<256 && strstr(fontname, "ingdings")) {
+        // symbols are at 0xe000 in the unicode table
+        u |= 0xe000;
+    }
+    free(fontname);*/
+
     if(font->isCIDFont()) {
 	GfxCIDFont*cfont = (GfxCIDFont*)font;
 
@@ -1078,6 +1093,22 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     state->transform(x, y, &m.tx, &m.ty);
     m.tx += user_movex + clipmovex;
     m.ty += user_movey + clipmovey;
+
+    if((!name || strcmp(name, "space")) && charid!=32 && u!=32)
+    {
+        gfxline_t*l = current_gfxfont->glyphs[charid].line;
+        double x,y;
+        char ok = 0;
+        while(l) {
+            if((l->type == gfx_lineTo || l->type == gfx_splineTo) && l->x!=x && l->y!=y) {
+                ok = 1;
+            }
+            l = l->next;
+        }
+        if(!ok) {
+            msg("<warning> Drawing empty character charid=%d", charid);
+        }
+    }
 
     if(render == RENDER_FILL) {
 	device->drawchar(device, current_gfxfont, charid, &col, &m);
@@ -1302,7 +1333,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
     LinkAction*action=link->getAction();
     char buf[128];
     char*s = 0;
-    char*type = "-?-";
+    const char*type = "-?-";
     char*named = 0;
     int page = -1;
     msg("<trace> drawlink action=%d\n", action->getKind());
@@ -1501,7 +1532,7 @@ char* writeOutStdFont(fontentry* f)
     return strdup(namebuf2);
 }
 
-char* GFXOutputDev::searchFont(char*name) 
+char* GFXOutputDev::searchFont(const char*name) 
 {	
     int i;
     char*filename=0;
@@ -1810,7 +1841,7 @@ char* GFXOutputDev::searchForSuitableFont(GfxFont*gfxFont)
 
 char* GFXOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
 {
-    char*fontname = 0, *filename = 0;
+    const char*fontname = 0, *filename = 0;
     msg("<notice> substituteFont(%s)", oldname);
 
     if(!(fontname = searchForSuitableFont(gfxFont))) {
@@ -2497,7 +2528,7 @@ void GFXOutputDev::eoFill(GfxState *state)
 }
 
 
-static char* dirseparator()
+static const char* dirseparator()
 {
 #ifdef WIN32
     return "\\";
@@ -2506,7 +2537,7 @@ static char* dirseparator()
 #endif
 }
 
-void addGlobalFont(char*filename)
+void addGlobalFont(const char*filename)
 {
     fontfile_t f;
     memset(&f, 0, sizeof(fontfile_t));
@@ -2519,10 +2550,10 @@ void addGlobalFont(char*filename)
     }
 }
 
-void addGlobalLanguageDir(char*dir)
+void addGlobalLanguageDir(const char*dir)
 {
     if(!globalParams)
-        globalParams = new GlobalParams("");
+        globalParams = new GlobalParams((char*)"");
     
     msg("<notice> Adding %s to language pack directories", dir);
 
@@ -2542,7 +2573,7 @@ void addGlobalLanguageDir(char*dir)
     fclose(fi);
 }
 
-void addGlobalFontDir(char*dirname)
+void addGlobalFontDir(const char*dirname)
 {
 #ifdef HAVE_DIRENT_H
     msg("<notice> Adding %s to font directories", dirname);
@@ -2694,7 +2725,7 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GBool isolated, GBool knockout,
 				      GBool forSoftMask)
 {
-    char*colormodename = "";
+    const char*colormodename = "";
     BBox rect = mkBBox(state, bbox, this->width, this->height);
 
     if(blendingColorSpace) {
@@ -2742,9 +2773,9 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
 
 void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 {
-    char*blendmodes[] = {"normal","multiply","screen","overlay","darken", "lighten",
-		       "colordodge","colorburn","hardlight","softlight","difference",
-		       "exclusion","hue","saturation","color","luminosity"};
+    const char*blendmodes[] = {"normal","multiply","screen","overlay","darken", "lighten",
+                               "colordodge","colorburn","hardlight","softlight","difference",
+                               "exclusion","hue","saturation","color","luminosity"};
 
     dbg("paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
     msg("<verbose> paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
