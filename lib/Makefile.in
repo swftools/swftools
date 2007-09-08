@@ -97,7 +97,7 @@ librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_
 	$(RANLIB) librfxswf$(A)
 
 libpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
-	cd pdf;$(MAKE) libpdf;cd ..
+	cd pdf;$(MAKE) libpdf
 
 
 install:
