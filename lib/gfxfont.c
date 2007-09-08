@@ -60,7 +60,7 @@ typedef struct _gfxdrawinfo_t {
     double quality;
 } gfxdrawinfo_t;
 
-static int ft_move_to(FT_Vector* _to, void* user) 
+static int ft_move_to(const FT_Vector* _to, void* user) 
 {
     gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
     gfxdrawer_t* draw = info->draw;
@@ -69,7 +69,7 @@ static int ft_move_to(FT_Vector* _to, void* user)
     draw->moveTo(draw, x,y);
     return 0;
 }
-static int ft_line_to(FT_Vector* _to, void* user) 
+static int ft_line_to(const FT_Vector* _to, void* user) 
 {
     gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
     gfxdrawer_t* draw = info->draw;
@@ -78,7 +78,7 @@ static int ft_line_to(FT_Vector* _to, void* user)
     draw->lineTo(draw, x,y);
     return 0;
 }
-static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* user)
+static int ft_cubic_to(const FT_Vector* _c1, const FT_Vector* _c2, const FT_Vector* _to, void* user)
 {
     gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
     gfxdrawer_t* draw = info->draw;
@@ -91,7 +91,7 @@ static int ft_cubic_to(FT_Vector* _c1, FT_Vector* _c2, FT_Vector* _to, void* use
     gfxdraw_cubicTo(draw, c1x, c1y, c2x, c2y, tox, toy, info->quality);
     return 0;
 }
-static int ft_conic_to(FT_Vector* _c, FT_Vector* _to, void* user) 
+static int ft_conic_to(const FT_Vector* _c, const FT_Vector* _to, void* user) 
 {
     gfxdrawinfo_t* info = (gfxdrawinfo_t*)user;
     gfxdrawer_t* draw = info->draw;
@@ -129,7 +129,7 @@ static void glyph_clear(gfxglyph_t*g)
 {
     gfxline_t*line;
     if(g->name) {
-	free(g->name); g->name = 0;
+	free((void*)g->name); g->name = 0;
     }
     gfxline_free(g->line);g->line = 0;
 }
@@ -191,9 +191,34 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 
     fontname = FT_Get_Postscript_Name(face);
 
+    /*for(t=0;t<face->num_charmaps;t++) {
+        printf("possible encoding: %c%c%c%c (%d of %d)\n", 
+                (face->charmaps[t]->encoding >> 24)&255,
+                (face->charmaps[t]->encoding >> 16)&255,
+                (face->charmaps[t]->encoding >> 8)&255,
+                (face->charmaps[t]->encoding >> 0)&255,
+                t+1, face->num_charmaps
+                );
+    }*/
+
     while(1) 
     {
 	charcode = FT_Get_First_Char(face, &gindex);
+
+        /*if(face->charmap) {
+            printf("ENCODING: %c%c%c%c (%d of %d)\n", 
+                    (face->charmap->encoding >> 24)&255,
+                    (face->charmap->encoding >> 16)&255,
+                    (face->charmap->encoding >> 8)&255,
+                    (face->charmap->encoding >> 0)&255,
+                    charmap, face->num_charmaps
+                    );
+        } else {
+            printf("ENCODING: NONE (%d of %d)\n",
+                    charmap, face->num_charmaps
+                    );
+        }*/
+
 	while(gindex != 0)
 	{
 	    if(gindex >= 0 && gindex<face->num_glyphs) {
@@ -213,7 +238,9 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 	   TODO: find a way to convert the encoding to unicode
 	 */
 	if(font->max_unicode == 0 && charmap < face->num_charmaps-1 && 
-		face->charmaps[charmap+1]->encoding != 0x41444243 /* custom */)
+		face->charmaps[charmap+1]->encoding != 0x41444243 /* custom */
+		&& face->charmaps[charmap+1]->encoding != 0x61726d6e    /* armn */
+                )
 		{
 	    charmap++;
 	    FT_Set_Charmap(face, face->charmaps[charmap]);
@@ -221,7 +248,6 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 	} else
 	    break;
     }
-
     /* TODO: if isunicode is 1, we now need to permutate the character
              order so that each character is at it's encoding position */
 
@@ -367,7 +393,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 		    */
 		font->glyphs[font->num_glyphs].unicode = 0;
 		if(font->glyphs[font->num_glyphs].name) {
-		    free(font->glyphs[font->num_glyphs].name);
+		    free((void*)font->glyphs[font->num_glyphs].name);
 		    font->glyphs[font->num_glyphs].name = 0;
 		}
 		FT_Done_Glyph(glyph);
