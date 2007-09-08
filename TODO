@@ -12,6 +12,7 @@ swfc:
     * dotted/dashed lines
     * input from stdin
     * .movie feature
+    * .group feature
     * button sounds
     * bounding box parsing: remove : syntax, add ; or +- syntax
     * color/line should be named linecolor/linewidth
