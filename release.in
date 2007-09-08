@@ -33,6 +33,12 @@ ${name}/src/gif2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/pdf2swf.c \
 ${name}/src/swfc.c \
+${name}/src/swfc-feedback.c \
+${name}/src/swfc-history.c \
+${name}/src/swfc-interpolation.c \
+${name}/src/swfc-feedback.h \
+${name}/src/swfc-history.h \
+${name}/src/swfc-interpolation.h \
 ${name}/src/swfrender.c \
 ${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
