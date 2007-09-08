@@ -85,6 +85,7 @@ typedef struct _swfoutput_internal
     int config_protect;
     int config_bboxvars;
     int config_disable_polygon_conversion;
+    int config_normalize_polygon_positions;
     RGBA config_linkcolor;
     float config_minlinewidth;
     double config_caplinewidth;
@@ -1785,6 +1786,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_externallinkfunction = strdup(value);
     } else if(!strcmp(name, "disable_polygon_conversion")) {
 	i->config_disable_polygon_conversion = atoi(value);
+    } else if(!strcmp(name, "normalize_polygon_positions")) {
+	i->config_normalize_polygon_positions = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
 	i->config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protect")) {
@@ -2262,17 +2265,17 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
     msg("<trace> draw as stroke, type=%d dots=%d", type, has_dots);
     endtext(dev);
 
-#ifdef NORMALIZE_POLYGON_POSITIONS
-    endshape(dev);
-    double startx = 0, starty = 0;
-    if(line && line->type == gfx_moveTo) {
-	startx = line->x;
-	starty = line->y;
+    if(i->config_normalize_polygon_positions) {
+	endshape(dev);
+	double startx = 0, starty = 0;
+	if(line && line->type == gfx_moveTo) {
+	    startx = line->x;
+	    starty = line->y;
+	}
+	line = gfxline_move(line, -startx, -starty);
+	i->shapeposx = (int)(startx*20);
+	i->shapeposy = (int)(starty*20);
     }
-    line = gfxline_move(line, -startx, -starty);
-    i->shapeposx = (int)(startx*20);
-    i->shapeposy = (int)(starty*20);
-#endif
 
     swfoutput_setstrokecolor(dev, color->r, color->g, color->b, color->a);
     swfoutput_setlinewidth(dev, width);
@@ -2280,9 +2283,9 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
     stopFill(dev);
     drawgfxline(dev, line);
 
-#ifdef NORMALIZE_POLYGON_POSITIONS
-    free(line); //account for _move
-#endif
+    if(i->config_normalize_polygon_positions) {
+	free(line); //account for _move
+    }
 
 }
 static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
@@ -2299,17 +2302,17 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     if(!i->config_ignoredraworder)
 	endshape(dev);
 
-#ifdef NORMALIZE_POLYGON_POSITIONS
-    endshape(dev);
-    double startx = 0, starty = 0;
-    if(line && line->type == gfx_moveTo) {
-	startx = line->x;
-	starty = line->y;
+    if(i->config_normalize_polygon_positions) {
+	endshape(dev);
+	double startx = 0, starty = 0;
+	if(line && line->type == gfx_moveTo) {
+	    startx = line->x;
+	    starty = line->y;
+	}
+	line = gfxline_move(line, -startx, -starty);
+	i->shapeposx = (int)(startx*20);
+	i->shapeposy = (int)(starty*20);
     }
-    line = gfxline_move(line, -startx, -starty);
-    i->shapeposx = (int)(startx*20);
-    i->shapeposy = (int)(starty*20);
-#endif
 
     swfoutput_setfillcolor(dev, color->r, color->g, color->b, color->a);
     startshape(dev);
@@ -2318,9 +2321,9 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     drawgfxline(dev, line);
     msg("<trace> end of swf_fill (shapeid=%d)", i->shapeid);
 
-#ifdef NORMALIZE_POLYGON_POSITIONS
-    free(line); //account for _move
-#endif
+    if(i->config_normalize_polygon_positions) {
+	free(line); //account for _move
+    }
 }
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
