@@ -499,7 +499,7 @@ static void showFontError(GfxFont*font, int nr)
     else if(nr == 1)
       msg("<warning> The following font caused problems (substituting):");
     else if(nr == 2)
-      msg("<warning> The following Type 3 Font will be rendered as bitmap:");
+      msg("<warning> The following Type 3 Font will be rendered as graphics:");
     dumpFontInfo("<warning>", font);
 }
 
