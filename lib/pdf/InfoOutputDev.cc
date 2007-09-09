@@ -12,8 +12,8 @@ InfoOutputDev::InfoOutputDev(XRef*xref)
     num_fonts = 0;
     id2font = new GHash();
     SplashColor white = {255,255,255};
-    splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
-    splash->startDoc(xref);
+    //splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
+    //splash->startDoc(xref);
 }
 InfoOutputDev::~InfoOutputDev() 
 {
@@ -82,8 +82,9 @@ void InfoOutputDev::updateFont(GfxState *state)
     }
     currentfont = info;
 
-    splash->doUpdateFont(state);
-    SplashFont* splash_font = splash->font;
+    //splash->doUpdateFont(state);
+    //SplashFont* splash_font = splash->getCurrentFont();
+
     //printf("%s: %d chars\n", id, splash_font->getNumChars());
 }
 
