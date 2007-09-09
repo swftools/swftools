@@ -67,12 +67,14 @@ void fontcallback(void*self,U16 id,U8 * name)
   TAG* t;
   
   swf_FontExtract(&swf,id,&font);
-  printf("#< %s %s %s>\n",name,swf_FontIsBold(font)?"bold":"",swf_FontIsItalic(font)?"italic":"");
+  printf("#<font %d \"%s\"%s%s>\n",id, name,swf_FontIsBold(font)?" bold":"",swf_FontIsItalic(font)?" italic":"");
 
   t = swf.firstTag;
 
   while (t)
-  { swf_TextPrintDefineText(t,font);
+  { 
+    if(swf_isTextTag(t))
+	swf_TextPrintDefineText(t,font);
     t = swf_NextTag(t);
   }
   
