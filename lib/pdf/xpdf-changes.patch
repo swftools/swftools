@@ -659,3 +659,115 @@ diff -u -r1.5 -r1.6
  #include "gmem.h"
  #include "GString.h"
  #include "gfile.h"
+--- SplashOutputDev.cc.orig	2007-09-09 12:29:45.000000000 +0200
++++ SplashOutputDev.cc	2007-09-09 12:30:02.000000000 +0200
+@@ -13,6 +13,7 @@
+ #endif
+ 
+ #include <string.h>
++#include <unistd.h>
+ #include <math.h>
+ #include "gfile.h"
+ #include "GlobalParams.h"
+--- SplashFontFile.cc.orig	2007-09-09 12:33:00.000000000 +0200
++++ SplashFontFile.cc	2007-09-09 12:33:07.000000000 +0200
+@@ -11,9 +11,7 @@
+ #endif
+ 
+ #include <stdio.h>
+-#ifndef WIN32
+-#  include <unistd.h>
+-#endif
++#include <unistd.h>
+ #include "GString.h"
+ #include "SplashFontFile.h"
+ #include "SplashFontFileID.h"
+--- SplashFont.orig.h	2007-09-09 14:23:47.000000000 +0200
++++ SplashFont.h	2007-09-09 14:24:28.000000000 +0200
+@@ -73,6 +73,9 @@
+   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
+ 			  SplashGlyphBitmap *bitmap) = 0;
+ 
++  // return the number of characters in this font
++  virtual int getNumChars() = 0;
++
+   // Return the path for a glyph.
+   virtual SplashPath *getGlyphPath(int c) = 0;
+ 
+--- SplashFTFont.orig.h	2007-09-09 14:23:47.000000000 +0200
++++ SplashFTFont.h	2007-09-09 14:25:19.000000000 +0200
+@@ -42,6 +42,9 @@
+   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
+ 			  SplashGlyphBitmap *bitmap);
+ 
++  // return the number of characters in this font
++  virtual int getNumChars();
++
+   // Return the path for a glyph.
+   virtual SplashPath *getGlyphPath(int c);
+ 
+--- SplashFTFont.cc.orig.h	2007-09-09 14:23:50.000000000 +0200
++++ SplashFTFont.cc	2007-09-09 14:27:35.000000000 +0200
+@@ -228,6 +228,12 @@
+   GBool needClose;
+ };
+ 
++int SplashFTFont::getNumChars()
++{
++  SplashFTFontFile* ff = (SplashFTFontFile *)fontFile;
++  return ff->face->num_glyphs;
++}
++
+ SplashPath *SplashFTFont::getGlyphPath(int c) {
+   static FT_Outline_Funcs outlineFuncs = {
+ #if FREETYPE_MINOR <= 1
+--- orig/GfxFont.h	2007-07-28 00:11:06.000000000 +0200
++++ GfxFont.h	2007-09-09 18:31:31.000000000 +0200
+@@ -164,6 +164,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy) = 0;
++  virtual CharCodeToUnicode* getCTU() = 0;
+ 
+ protected:
+ 
+@@ -204,6 +205,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy);
++  virtual CharCodeToUnicode* getCTU();
+ 
+   // Return the encoding.
+   char **getEncoding() { return enc; }
+@@ -266,6 +268,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy);
++  virtual CharCodeToUnicode* getCTU();
+ 
+   // Return the writing mode (0=horizontal, 1=vertical).
+   virtual int getWMode();
+--- orig/GfxFont.cc	2007-07-28 00:11:06.000000000 +0200
++++ GfxFont.cc	2007-09-09 18:33:37.000000000 +0200
+@@ -925,6 +925,10 @@
+   return 1;
+ }
+ 
++CharCodeToUnicode* Gfx8BitFont::getCTU() {
++    return ctu;
++}
++
+ CharCodeToUnicode *Gfx8BitFont::getToUnicode() {
+   ctu->incRefCnt();
+   return ctu;
+@@ -1417,6 +1421,10 @@
+   }
+ }
+ 
++CharCodeToUnicode* GfxCIDFont::getCTU() {
++    return ctu;
++}
++
+ int GfxCIDFont::getNextChar(char *s, int len, CharCode *code,
+ 			    Unicode *u, int uSize, int *uLen,
+ 			    double *dx, double *dy, double *ox, double *oy) {
