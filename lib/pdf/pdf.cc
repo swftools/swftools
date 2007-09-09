@@ -351,7 +351,7 @@ static gfxdocument_t*pdf_open(const char*filename)
               i->protect = 1;
     }
 
-    InfoOutputDev*io = new InfoOutputDev();
+    InfoOutputDev*io = new InfoOutputDev(i->doc->getXRef());
     int t;
     i->pages = (pdf_page_info_t*)malloc(sizeof(pdf_page_info_t)*pdf_doc->num_pages);
     memset(i->pages,0,sizeof(pdf_page_info_t)*pdf_doc->num_pages);
