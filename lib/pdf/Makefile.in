@@ -135,6 +135,8 @@ pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) ../../src/pdf2swf.c ../devices/sw
 install:
 uninstall:
 
+
 clean: 
 	rm -f xpdf/*.o xpdf/*.obj *.o pdf2swf pdftoppm pdftotext pdf2swf.exe pdftoppm.exe pdftotext.exe *.obj *.lo *.a *.lib *.la gmon.out
 
+.PHONY: clean install uninstall check all
