@@ -185,7 +185,6 @@ void GFXOutputDev::infofeature(const char*feature)
 
 GFXOutputState::GFXOutputState() {
     this->clipping = 0;
-    this->textRender = 0;
     this->createsoftmask = 0;
     this->transparencygroup = 0;
     this->softmask = 0;
@@ -286,7 +285,7 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     }
 };
 
-void GFXOutputDev::setParameter(char*key, char*value)
+void GFXOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key,"rawtext")) {
         this->do_interpretType3Chars = atoi(value)^1;
@@ -1003,8 +1002,13 @@ void GFXOutputDev::beginString(GfxState *state, GString *s)
     this->current_font_matrix.ty = 0;
 
     gfxmatrix_t m = this->current_font_matrix;
+}
 
-    states[statepos].textRender = render;
+static gfxline_t* mkEmptyGfxShape(double x, double y)
+{
+    gfxline_t*line = (gfxline_t*)malloc(sizeof(gfxline_t));
+    line->x = x;line->y = y;line->type = gfx_moveTo;line->next = 0;
+    return line;
 }
 
 void GFXOutputDev::drawChar(GfxState *state, double x, double y,
@@ -1018,9 +1022,6 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<debug> Ignoring invisible text: char %d at %f,%f", c, x, y);
 	return;
     }
-
-    if(states[statepos].textRender != render)
-	msg("<error> Internal error: drawChar.render!=beginString.render");
 
     gfxcolor_t col = getFillColor(state);
 
@@ -1128,6 +1129,9 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	if(render&RENDER_CLIP) {
 	    gfxline_t*add = gfxline_clone(tglyph);
 	    current_text_clip = gfxline_append(current_text_clip, add);
+	    if(!current_text_clip) {
+		current_text_clip = mkEmptyGfxShape(m.tx, m.ty);
+	    }
 	}
 	gfxline_free(tglyph);
     }
@@ -1137,8 +1141,6 @@ void GFXOutputDev::endString(GfxState *state)
 { 
     int render = state->getRender();
     msg("<trace> endString() render=%d textstroke=%08x", render, current_text_stroke);
-    if(states[statepos].textRender != render)
-	msg("<error> Internal error: drawChar.render!=beginString.render");
     
     if(current_text_stroke) {
 	/* fillstroke and stroke text rendering objects we can process right
@@ -1168,8 +1170,6 @@ void GFXOutputDev::endTextObject(GfxState *state)
 {
     int render = state->getRender();
     msg("<trace> endTextObject() render=%d textstroke=%08x clipstroke=%08x", render, current_text_stroke, current_text_clip);
-    if(states[statepos].textRender != render)
-	msg("<error> Internal error: drawChar.render!=beginString.render");
     
     if(current_text_clip) {
 	device->setparameter(device, "mark","TXT");
@@ -1483,7 +1483,6 @@ void GFXOutputDev::saveState(GfxState *state) {
       return;
     }
     statepos ++;
-    states[statepos].textRender = states[statepos-1].textRender;
     states[statepos].createsoftmask = states[statepos-1].createsoftmask;
     states[statepos].transparencygroup = states[statepos-1].transparencygroup;
     states[statepos].clipping = 0;
@@ -1496,7 +1495,8 @@ void GFXOutputDev::restoreState(GfxState *state) {
       msg("<error> Invalid restoreState");
       return;
   }
-  msg("<trace> restoreState");
+  msg("<trace> restoreState%s%s", states[statepos].softmask?" (end softmask)":"",
+	                          states[statepos].clipping?" (end clipping)":"");
   if(states[statepos].softmask) {
       clearSoftMask(state);
   }
@@ -2828,6 +2828,13 @@ static inline Guchar div255(int x) {
   return (Guchar)((x + (x >> 8) + 0x80) >> 8);
 }
 
+static unsigned char clampU8(unsigned char c, unsigned char min, unsigned char max)
+{
+    if(c < min) c = min;
+    if(c > max) c = max;
+    return c;
+}
+
 void GFXOutputDev::clearSoftMask(GfxState *state)
 {
     if(!states[statepos].softmask)
@@ -2903,11 +2910,13 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 		alpha = (77*l1->r + 151*l1->g + 28*l1->b) >> 8;
 	    }
 
-	    /* premultiply alpha */
 	    l2->a = div255(alpha*l2->a);
-	    l2->r = div255(alpha*l2->r);
-	    l2->g = div255(alpha*l2->g);
-	    l2->b = div255(alpha*l2->b);
+
+	    /* DON'T premultiply alpha- this is done by fillbitmap,
+	       depending on the output device */
+	    //l2->r = div255(alpha*l2->r);
+	    //l2->g = div255(alpha*l2->g);
+	    //l2->b = div255(alpha*l2->b);
 
 	    l1++;
 	    l2++;
