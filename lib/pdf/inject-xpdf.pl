@@ -15,7 +15,7 @@ system("tar -zxvf ../../$filename") and die;
 system("find -type f -exec mv {} .. \\;") and die;
 chdir("..");
 system("find -type d -exec rmdir {} \\; 2> /dev/null");
-system("patch --verbose < ../xpdf-changes.patch") and die;
+system("patch < ../xpdf-changes.patch") and die;
 chdir("..");
 system("rm -f xpdf");
 system("ln -s $directory xpdf");
