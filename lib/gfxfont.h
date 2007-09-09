@@ -32,7 +32,7 @@ extern "C" {
 
 /* The quality parameter is given by 1 divided by the zoom factor at which the font
    still looks good. 1=normal, 0.5=double resolution etc. */
-gfxfont_t* gfxfont_load(char*id, char*filename, double quality);
+gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality);
 void gfxfont_free(gfxfont_t*font);
 
 #ifdef __cplusplus
