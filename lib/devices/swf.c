@@ -2078,7 +2078,14 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     swf_SetShapeBits(i->tag,shape);
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
+    i->shapeisempty = 1;
     drawgfxline(dev, line);
+    if(i->shapeisempty) {
+	/* an empty clip shape is equivalent to a shape with no area */
+	moveto(dev, i->tag, line->x, line->y);
+	lineto(dev, i->tag, line->x, line->y);
+	lineto(dev, i->tag, line->x, line->y);
+    }
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
@@ -2332,7 +2339,7 @@ static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*grad
     msg("<error> Gradient filling not implemented yet");
 }
 
-static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, char* id)
+static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 {
     SWFFONT*swffont = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
     int t;
@@ -2473,7 +2480,7 @@ static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font)
     }
 }
 
-static void swf_switchfont(gfxdevice_t*dev, char*fontid)
+static void swf_switchfont(gfxdevice_t*dev, const char*fontid)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
