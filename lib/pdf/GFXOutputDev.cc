@@ -272,6 +272,7 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->pagepos = 0;
     this->config_use_fontconfig=1;
     this->config_break_on_warning=0;
+    this->config_remapunicode=0;
     this->do_interpretType3Chars = gTrue;
 
     this->parameters = p;
@@ -293,6 +294,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
 	this->config_break_on_warning = atoi(value);
     } else if(!strcmp(key,"fontconfig")) {
         this->config_use_fontconfig = atoi(value);
+    } else if(!strcmp(key,"remapunicode")) {
+        this->config_remapunicode = atoi(value);
     } else {
         msg("<warning> Ignored parameter: %s=%s", key, value);
     }
@@ -1029,6 +1032,13 @@ static gfxline_t* mkEmptyGfxShape(double x, double y)
     return line;
 }
 
+static char isValidUnicode(int c)
+{
+    if(c>=32 && c<0x2fffe)
+	return 1;
+    return 0;
+}
+
 void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
@@ -1107,6 +1117,10 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 		FIXNULL(name),c, u, FIXNULL((char*)current_gfxfont->id), current_gfxfont->num_glyphs);
 	return;
     }
+    //useless- the font has already been passed to the output device
+    //if(!isValidUnicode(current_gfxfont->glyphs[charid].unicode) && isValidUnicode(u)) {
+    //    current_gfxfont->glyphs[charid].
+    //}
 
     gfxmatrix_t m = this->current_font_matrix;
     state->transform(x, y, &m.tx, &m.ty);
@@ -1125,7 +1139,10 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
             l = l->next;
         }
         if(!ok) {
-            msg("<warning> Drawing empty character charid=%d", charid);
+	    static int lastemptychar = 0;
+	    if(charid != lastemptychar)
+		msg("<warning> Drawing empty character charid=%d u=%d", charid, u);
+	    lastemptychar = charid;
         }
     }
 
@@ -1919,7 +1936,7 @@ void GFXOutputDev::setXRef(PDFDoc*doc, XRef *xref)
     this->xref = xref;
 }
 
-int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize)
+int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize, CharCodeToUnicode*ctu)
 {
     gfxfont_t*font = 0;
     fontlist_t*last=0,*l = this->fontlist;
@@ -1947,12 +1964,22 @@ int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize)
     double quality = (1024 * 0.05) / maxSize;
    
     msg("<verbose> Loading %s...", filename);
-    font = gfxfont_load(id, filename, quality);
+    font = gfxfont_load(id, filename, 0, quality);
     if(!font) {
 	msg("<verbose> Couldn't load Font %s (%s)", filename, id);
 	return 0;
     }
     msg("<verbose> Font %s (%s) loaded successfully", filename, id);
+
+    if(this->config_remapunicode && ctu) {
+	int c;
+	for(c=0;c<font->num_glyphs;c++) {
+	    Unicode u[8];
+	    int uLen = ctu->mapToUnicode(c, u, 8);
+	    if(uLen && !isValidUnicode(font->glyphs[c].unicode) && isValidUnicode(u[0]))
+		font->glyphs[c].unicode = u[0];
+	}
+    }
 
     l = new fontlist_t;
     l->font = font;
@@ -1999,7 +2026,7 @@ void GFXOutputDev::updateFont(GfxState *state)
 
     /* second, see if this is a font which was used before-
        if so, we are done */
-    if(setGfxFont(fontid, fontname, 0, 0)) {
+    if(setGfxFont(fontid, fontname, 0, 0, gfxFont->getCTU())) {
 	free(fontid);
 	free(fontname);
 	return;
@@ -2072,8 +2099,8 @@ void GFXOutputDev::updateFont(GfxState *state)
 
     //swfoutput_setfont(&device, fontid, fileName);
     
-    if(!setGfxFont(fontid, fontname, 0, 0)) {
-	setGfxFont(fontid, fontname, fileName, maxSize);
+    if(!setGfxFont(fontid, fontname, 0, 0, gfxFont->getCTU())) {
+	setGfxFont(fontid, fontname, fileName, maxSize, gfxFont->getCTU());
     }
    
     if(fileName && del)
