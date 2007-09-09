@@ -136,7 +136,9 @@ static void glyph_clear(gfxglyph_t*g)
 
 static int errorno = 0;
 
-gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
+//#define DEBUG 1
+
+gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
 {
     FT_Face face;
     FT_Error error;
@@ -162,6 +164,9 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
     }
     error = FT_New_Face(ftlibrary, filename, 0, &face);
     FT_Set_Pixel_Sizes (face, 16*loadfont_scale, 16*loadfont_scale);
+#ifdef DEBUG
+    printf("gfxfont_load(%s, %s, %f)\n", id, filename, quality);
+#endif
 
     if(error) {
 	fprintf(stderr, "Couldn't load file %s- not a TTF file? (error=%02x)\n", filename, error);
@@ -191,7 +196,8 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 
     fontname = FT_Get_Postscript_Name(face);
 
-    /*for(t=0;t<face->num_charmaps;t++) {
+#ifdef DEBUG
+    for(t=0;t<face->num_charmaps;t++) {
         printf("possible encoding: %c%c%c%c (%d of %d)\n", 
                 (face->charmaps[t]->encoding >> 24)&255,
                 (face->charmaps[t]->encoding >> 16)&255,
@@ -199,25 +205,12 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
                 (face->charmaps[t]->encoding >> 0)&255,
                 t+1, face->num_charmaps
                 );
-    }*/
+    }
+#endif
 
     while(1) 
     {
 	charcode = FT_Get_First_Char(face, &gindex);
-
-        /*if(face->charmap) {
-            printf("ENCODING: %c%c%c%c (%d of %d)\n", 
-                    (face->charmap->encoding >> 24)&255,
-                    (face->charmap->encoding >> 16)&255,
-                    (face->charmap->encoding >> 8)&255,
-                    (face->charmap->encoding >> 0)&255,
-                    charmap, face->num_charmaps
-                    );
-        } else {
-            printf("ENCODING: NONE (%d of %d)\n",
-                    charmap, face->num_charmaps
-                    );
-        }*/
 
 	while(gindex != 0)
 	{
@@ -232,13 +225,29 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 	    charcode = FT_Get_Next_Char(face, charcode, &gindex);
 	}
 
+#ifdef DEBUG
+        if(face->charmap) {
+            printf("ENCODING: %c%c%c%c (%d of %d) max_unicode=%d\n", 
+                    (face->charmap->encoding >> 24)&255,
+                    (face->charmap->encoding >> 16)&255,
+                    (face->charmap->encoding >> 8)&255,
+                    (face->charmap->encoding >> 0)&255,
+                    charmap, face->num_charmaps, font->max_unicode
+                    );
+        } else {
+            printf("ENCODING: NONE (%d of %d) max_unicode=%d\n",
+                    charmap, face->num_charmaps, font->max_unicode
+                    );
+        }
+#endif
+
 	/* if we didn't find a single encoding character, try
 	   the font's charmaps instead. That usually means that
 	   the encoding is no longer unicode. 
 	   TODO: find a way to convert the encoding to unicode
 	 */
-	if(font->max_unicode == 0 && charmap < face->num_charmaps-1 && 
-		face->charmaps[charmap+1]->encoding != 0x41444243 /* custom */
+	if(font->max_unicode == 0 && charmap < face->num_charmaps-1
+		&& face->charmaps[charmap+1]->encoding != 0x41444243 /* adbc, custom */
 		&& face->charmaps[charmap+1]->encoding != 0x61726d6e    /* armn */
                 )
 		{
@@ -262,6 +271,9 @@ gfxfont_t* gfxfont_load(char*id, char*filename, double quality)
 	    g = -1;
 	font->unicode2glyph[t] = g;
 	if(g>=0) {
+#ifdef DEBUG
+	    printf("u%d ->%d\n", t, g);
+#endif
 	    max_unicode = t+1;
 	    if(!glyph2unicode[g]) {
 		glyph2unicode[g] = t;
