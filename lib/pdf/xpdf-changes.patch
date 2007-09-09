@@ -443,17 +443,12 @@ diff -u -r1.7 -r1.8
  #include <string.h>
  #include <ctype.h>
 Index: config.h
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/config.h,v
-retrieving revision 1.5
-retrieving revision 1.6
-diff -u -r1.5 -r1.6
---- config.h	3 Dec 2005 10:11:33 -0000	1.5
-+++ config.h	3 Dec 2005 10:30:41 -0000	1.6
-@@ -53,18 +53,18 @@
+--- config.h.orig	2007-09-09 12:11:20.000000000 +0200
++++ config.h	2007-09-09 12:11:40.000000000 +0200
+@@ -53,9 +53,9 @@
  
  // user config file name, relative to the user's home directory
- #if defined(VMS) || (defined(WIN32) && !defined(__CYGWIN32__))
+ #if defined(VMS) || defined(WIN32)
 -#define xpdfUserConfigFile "xpdfrc"
 +#define xpdfUserConfigFile "pdf2swf.conf"
  #else
@@ -462,10 +457,7 @@ diff -u -r1.5 -r1.6
  #endif
  
  // system config file name (set via the configure script)
--#ifdef SYSTEM_XPDFRC
--#define xpdfSysConfigFile SYSTEM_XPDFRC
-+#ifndef WIN32
-+#define xpdfSysConfigFile "/etc/pdf2swf.conf"
+@@ -64,7 +64,7 @@
  #else
  // under Windows, we get the directory with the executable and then
  // append this file name
