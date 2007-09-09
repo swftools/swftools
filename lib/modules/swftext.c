@@ -400,7 +400,7 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
     SRECT r;
     MATRIX m;
     U8 gbits, abits;
-    int fid = 0;
+    int fid = -1;
     RGBA color;
     int x = 0, y = 0;
     int fontsize = 0;
@@ -459,7 +459,6 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 		adv = swf_GetBits(t, abits);
 		xpos += adv;
 
-		// <deprecated>
 		if (id == fid) {
 		    if (jobs & FEDTJ_PRINT) {
 			int code = f->glyph2ascii[glyph];
@@ -467,12 +466,7 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 		    }
 		    if (jobs & FEDTJ_MODIFY)
 			f->glyph[glyph].advance = adv * 20;	//?
-		} else {
-		    if (jobs & FEDTJ_PRINT) {
-			printf("?");
-		    }
 		}
-		// </deprecated>
 
 		buf[i] = glyph;
 	    }
