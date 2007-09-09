@@ -1,14 +1,19 @@
+#include "SplashTypes.h"
+#include "SplashOutputDev.h"
 #include "InfoOutputDev.h"
 #include "GfxState.h"
 #include "../log.h"
 #include <math.h>
 
-InfoOutputDev::InfoOutputDev() 
+InfoOutputDev::InfoOutputDev(XRef*xref) 
 {
     num_links = 0;
     num_images = 0;
     num_fonts = 0;
     id2font = new GHash();
+    SplashColor white = {255,255,255};
+    splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
+    splash->startDoc(xref);
 }
 InfoOutputDev::~InfoOutputDev() 
 {
@@ -58,7 +63,6 @@ static char*getFontID(GfxFont*font)
     return strdup(buf);
 }
 
-
 void InfoOutputDev::updateFont(GfxState *state) 
 {
     GfxFont*font = state->getFont();
@@ -77,6 +81,10 @@ void InfoOutputDev::updateFont(GfxState *state)
       num_fonts++;
     }
     currentfont = info;
+
+    splash->doUpdateFont(state);
+    SplashFont* splash_font = splash->font;
+    //printf("%s: %d chars\n", id, splash_font->getNumChars());
 }
 
 void InfoOutputDev::drawChar(GfxState *state, double x, double y,

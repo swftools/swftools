@@ -3,6 +3,8 @@
 
 #include "GfxFont.h"
 #include "OutputDev.h"
+#include "SplashFont.h"
+#include "SplashOutputDev.h"
 #include "GHash.h"
 
 struct FontInfo
@@ -15,14 +17,15 @@ class InfoOutputDev: public OutputDev
 {
   GHash* id2font;
   FontInfo* currentfont;
+  SplashOutputDev*splash;
   public:
   int x1,y1,x2,y2;
   int num_links;
   int num_images;
   int num_fonts;
 
-  InfoOutputDev();
-  virtual ~InfoOutputDev();
+  InfoOutputDev(XRef*xref);
+  virtual ~InfoOutputDev(); 
   virtual GBool upsideDown();
   virtual GBool useDrawChar();
   virtual GBool interpretType3Chars();
