@@ -882,7 +882,7 @@ ActionTAG* action_BitLShift(ActionTAG*atag);
 ActionTAG* action_BitRShift(ActionTAG*atag);
 ActionTAG* action_BitURShift(ActionTAG*atag);
 ActionTAG* action_GotoFrame(ActionTAG*atag, U16 frame);
-ActionTAG* action_GetUrl(ActionTAG*atag, char* url, char* label);
+ActionTAG* action_GetUrl(ActionTAG*atag, const char* url, char* label);
 ActionTAG* action_StoreRegister(ActionTAG*atag, U8 reg);
 ActionTAG* action_Constantpool(ActionTAG*atag, char* constantpool);
 ActionTAG* action_WaitForFrame(ActionTAG*atag, U16 frame, U8 skip);
@@ -985,7 +985,7 @@ void swf_Render_SetBackgroundColor(RENDERBUF*buf, RGBA color);
 RGBA* swf_Render(RENDERBUF*dest);
 void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 depth,U16 clipdepth);
 void swf_RenderSWF(RENDERBUF*buf, SWF*swf);
-void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height);
+void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height); /* img is non-premultiplied */
 void swf_Render_ClearCanvas(RENDERBUF*dest);
 void swf_Render_Delete(RENDERBUF*dest);
 

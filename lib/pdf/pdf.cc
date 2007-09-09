@@ -137,7 +137,7 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
     }
 }
 
-void pdf_doc_set_parameter(gfxdocument_t*gfx, char*name, char*value)
+void pdf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
     GFXOutputDev*o = i->outputDev;
@@ -223,7 +223,7 @@ static char*getInfoDate(Dict *infoDict, char *key)
     return strdup("");
 }
 
-char* pdf_doc_getinfo(gfxdocument_t*doc, char*name)
+char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)doc->internal;
     if(!strcmp(name, "title")) return getInfoString(i->docinfo.getDict(), "Title");
@@ -250,7 +250,7 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, char*name)
 }
 
 
-void storeDeviceParameter(char*name, char*value)
+static void storeDeviceParameter(const char*name, const char*value)
 {
     parameter_t*p = new parameter_t();
     p->name = strdup(name);
@@ -265,7 +265,7 @@ void storeDeviceParameter(char*name, char*value)
     }
 }
 
-void pdf_set_parameter(char*name, char*value)
+static void pdf_set_parameter(const char*name, const char*value)
 {
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strncmp(name, "fontdir", strlen("fontdir"))) {
@@ -298,7 +298,7 @@ void pdf_set_parameter(char*name, char*value)
     }
 }
 
-gfxdocument_t*pdf_open(char*filename)
+static gfxdocument_t*pdf_open(const char*filename)
 {
     gfxdocument_t*pdf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(pdf_doc, 0, sizeof(gfxdocument_t));

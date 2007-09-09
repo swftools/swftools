@@ -1067,7 +1067,7 @@ ActionTAG* action_GotoLabel(ActionTAG*atag, char* label)
     char*ptr = strdup(label);
     return swf_AddActionTAG(atag, ACTION_GOTOLABEL, (U8*)ptr, strlen(ptr));
 }
-ActionTAG* action_GetUrl(ActionTAG*atag, char* url, char* label) 
+ActionTAG* action_GetUrl(ActionTAG*atag, const char* url, char* label) 
 {
     int l1= strlen(url);
     int l2= strlen(label);
