@@ -20,6 +20,11 @@ xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O)
 		  xpdf/PSTokenizer.$(O) xpdf/FontEncodingTables.$(O) xpdf/BuiltinFont.$(O) xpdf/BuiltinFontTables.$(O) \
 		  xpdf/GfxState.$(O) xpdf/Function.$(O) xpdf/Annot.$(O) xpdf/NameToCharCode.$(O) xpdf/UnicodeMap.$(O) \
 		  xpdf/SecurityHandler.$(O)
+splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState.$(O) xpdf/Splash.$(O) \
+		 xpdf/SplashBitmap.$(O) xpdf/SplashClip.$(O) xpdf/SplashPattern.$(O) \
+		 xpdf/SplashFontEngine.$(O) xpdf/SplashFontFile.$(O) xpdf/SplashFontFileID.$(O) \
+		 xpdf/SplashScreen.$(O) xpdf/SplashPath.$(O) xpdf/SplashXPath.$(O) xpdf/SplashXPathScanner.$(O) \
+		 xpdf/SplashFTFontEngine.$(O) xpdf/SplashFTFontFile.$(O) xpdf/SplashFTFont.$(O)
 
 fonts.$(O): fonts.c
 	$(C) -I ./ -I xpdf fonts.c -o $@
@@ -121,16 +126,20 @@ xpdf/gfile.$(O): xpdf/gfile.cc
 xpdf/gmem.$(O): xpdf/gmem.cc
 	$(C) -I ./ -I xpdf xpdf/gmem.cc -o $@
 
-../libpdf$(A): $(libpdf_objects) $(xpdf_objects)
+xpdf/%.$(O): xpdf/%.cc
+	$(CC) -I ./ -I xpdf $< -o $@
+
+
+../libpdf$(A): $(libpdf_objects) $(xpdf_objects) $(splash_objects)
 	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_objects)
 	$(RANLIB) ../libpdf$(A)
 
 pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o pdftoppm$(E) $(LIBS)
-pdftotext$(E): $(xpdf_objects)
+pdftotext$(E): $(xpdf_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS)
-pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) ../../src/pdf2swf.c ../devices/swf.$(O) ../devices/record.$(O) ../devices/arts.$(O) ../devices/ops.$(O) ../devices/render.$(O) ../libbase$(A)
-	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) ../devices/swf.$(O) ../devices/arts.$(O) ../devices/record.$(O) ../devices/render.$(O) ../devices/ops.$(O) ../png.$(O) ../librfxswf$(A) ../art/libart.a ../gfxtools.$(O) ../gfxfont.$(O) ../libbase$(A) -o pdf2swf$(E) $(LIBS)
+pdf2swf$(E): $(xpdf_objects) $(libpdf_objects) $(splash_objects) ../../src/pdf2swf.c ../devices/swf.$(O) ../devices/record.$(O) ../devices/arts.$(O) ../devices/ops.$(O) ../devices/render.$(O) ../libbase$(A)
+	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) ../devices/swf.$(O) ../devices/arts.$(O) ../devices/record.$(O) ../devices/render.$(O) ../devices/ops.$(O) ../png.$(O) ../librfxswf$(A) ../art/libart.a ../gfxtools.$(O) ../gfxfont.$(O) ../libbase$(A) -o pdf2swf$(E) $(LIBS)
 
 install:
 uninstall:
