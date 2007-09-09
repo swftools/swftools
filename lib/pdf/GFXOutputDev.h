@@ -57,7 +57,7 @@ public:
 
   void setMove(int x,int y);
   void setClip(int x1,int y1,int x2,int y2);
-  void setParameter(char*key, char*value);
+  void setParameter(const char*key, const char*value);
 
   void setInfo(InfoOutputDev*info) {this->info = info;}
   
@@ -192,6 +192,19 @@ public:
   char* searchForSuitableFont(GfxFont*gfxFont);
 
   void finish();
+
+  virtual GBool useDrawForm();
+  virtual void drawForm(Ref id);
+  virtual GBool needNonText();
+  virtual void endPage();
+
+  //virtual void dump();
+  //virtual void beginStringOp(GfxState *state);
+  //virtual void drawString(GfxState *state, GString *s);
+  //virtual void endStringOp(GfxState *state);
+  //virtual GBool getVectorAntialias() { return gFalse; }
+  //virtual void setVectorAntialias(GBool vaa) {}
+  //virtual void psXObject(Stream *psStream, Stream *level1Stream) {}
 
   private:
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,

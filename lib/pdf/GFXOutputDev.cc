@@ -663,6 +663,24 @@ GBool GFXOutputDev::useShadedFills()
     infofeature("shaded fills");
     return gFalse;
 }
+  
+GBool GFXOutputDev::useDrawForm() 
+{ 
+    infofeature("forms");
+    return gFalse; 
+}
+void GFXOutputDev::drawForm(Ref id) 
+{
+    msg("<error> drawForm not implemented");
+}
+GBool GFXOutputDev::needNonText() 
+{ 
+    return gTrue; 
+}
+void GFXOutputDev::endPage() 
+{
+    msg("<verbose> endPage");
+}
 
 #define STROKE_FILL 1
 #define STROKE_CLIP 2
