@@ -161,7 +161,7 @@ static char* getTempDir()
     return dir;
 }
 
-char* mktempname(const char*ptr) {
+char* mktempname(char*ptr) {
     static char tmpbuf[128];
     char*dir = getTempDir();
     int l = strlen(dir);

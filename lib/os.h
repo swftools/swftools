@@ -38,7 +38,7 @@ char* getInstallationPath();
 char* concatPaths(const char*base, const char*add);
 char* stripFilename(const char*filename, const char*newext);
 
-char* mktempname(const char*);
+char* mktempname(char*buffer);
 
 #ifdef __cplusplus
 }
