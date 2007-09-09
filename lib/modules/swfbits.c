@@ -868,6 +868,7 @@ void swf_PreMultiplyAlpha(RGBA*data, int width, int height)
     }
 }
 
+/* expects mem to be non-premultiplied */
 void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height)
 {
     int hasalpha = swf_ImageHasAlpha(data, width, height);
@@ -1007,20 +1008,13 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 		}
 	    } else {
 		for (x = 0; x < width; x++) {
-		    /* TODO: is un-premultiplying alpha the right thing to do?
-		       dest[pos2].r = data[pos + 1];
-		       dest[pos2].g = data[pos + 2];
-		       dest[pos2].b = data[pos + 3];*/
+		    /* remove premultiplication */
 		    int alpha = data[pos+0];
-		    if(alpha) {
-			dest[pos2].r = ((int)data[pos + 1]*255)/alpha;
-			dest[pos2].g = ((int)data[pos + 2]*255)/alpha;
-			dest[pos2].b = ((int)data[pos + 3]*255)/alpha;
-		    } else {
-			dest[pos2].r = data[pos + 1];
-			dest[pos2].g = data[pos + 2];
-			dest[pos2].b = data[pos + 3];
-		    }
+		    if(alpha)
+			alpha = 0xff0000/alpha
+		    dest[pos2].r = (data[pos + 1]*alpha)>>16;
+		    dest[pos2].g = (data[pos + 2]*alpha)>>16;
+		    dest[pos2].b = (data[pos + 3]*alpha)>>16;
 		    dest[pos2].a = data[pos + 0];	//alpha
 		    pos2++;
 		    pos += 4;
@@ -1043,6 +1037,8 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 #endif				// HAVE_ZLIB
 
 #if defined(HAVE_ZLIB) && defined(HAVE_JPEGLIB)
+
+/* expects bitmap to be non-premultiplied */
 int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int quality)
 {
     JPEGBITS *jpeg;
@@ -1059,6 +1055,14 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
 	U8 scanline[3 * width];
 	int x, p = 0;
 	for (x = 0; x < width; x++) {
+	    //int ia = bitmap[width*y+x].a;
+	    //if(ia) {
+	    //    /* remove premultiplication */
+	    //    ia = 0xff0000/ia;
+	    //}
+	    //scanline[p++] = (bitmap[width * y + x].r*ia)>>16;
+	    //scanline[p++] = (bitmap[width * y + x].g*ia)>>16;
+	    //scanline[p++] = (bitmap[width * y + x].b*ia)>>16;
 	    scanline[p++] = bitmap[width * y + x].r;
 	    scanline[p++] = bitmap[width * y + x].g;
 	    scanline[p++] = bitmap[width * y + x].b;
@@ -1125,6 +1129,7 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
     return 0;
 }
 
+/* expects mem to be non-premultiplied */
 TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quality)
 {
     TAG *tag1 = 0, *tag2 = 0;
