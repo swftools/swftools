@@ -306,7 +306,6 @@ ${name}/COPYING \
 ${name}/AUTHORS \
 ${name}/ChangeLog \
 ${name}/FAQ \
-${name}/TODO \
 ${name}/swfs/swft_loader.swf \
 ${name}/swfs/tessel_loader.swf \
 ${name}/m4/byteorder.m4 \
