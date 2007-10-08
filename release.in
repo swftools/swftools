@@ -294,10 +294,8 @@ ${name}/lib/pdf/xpdf/Splash.cc \
 ${name}/lib/pdf/xpdf/Splash.h \
 ${name}/lib/pdf/xpdf/SplashBitmap.cc \
 ${name}/lib/pdf/xpdf/SplashBitmap.h \
-${name}/lib/pdf/xpdf/SplashBitmap.o \
 ${name}/lib/pdf/xpdf/SplashClip.cc \
 ${name}/lib/pdf/xpdf/SplashClip.h \
-${name}/lib/pdf/xpdf/SplashClip.o \
 ${name}/lib/pdf/xpdf/SplashErrorCodes.h \
 ${name}/lib/pdf/xpdf/SplashFTFont.cc \
 ${name}/lib/pdf/xpdf/SplashFTFont.h \
