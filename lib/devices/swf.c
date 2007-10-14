@@ -79,6 +79,7 @@ typedef struct _swfoutput_internal
     int config_insertstoptag;
     int config_flashversion;
     int config_reordertags;
+    int config_showclipshapes;
     int config_splinemaxerror;
     int config_fontsplinemaxerror;
     int config_filloverlap;
@@ -235,6 +236,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_filloverlap=0;
     i->config_protect=0;
     i->config_bboxvars=0;
+    i->config_showclipshapes=0;
     i->config_minlinewidth=0.05;
     i->config_caplinewidth=1;
     i->config_linktarget=0;
@@ -1775,6 +1777,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
 	i->config_bboxvars = atoi(value);
+    } else if(!strcmp(name, "showclipshapes")) {
+	i->config_showclipshapes = atoi(value);
     } else if(!strcmp(name, "reordertags")) {
 	i->config_reordertags = atoi(value);
     } else if(!strcmp(name, "internallinkfunction")) {
@@ -2045,6 +2049,34 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     swf_ObjectPlace(i->tag,myshapeid,getNewDepth(dev),&i->page_matrix,&cxform2,NULL);
 }
 
+static RGBA col_black = {255,0,0,0};
+
+static void drawoutline(gfxdevice_t*dev, gfxline_t*line)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+
+    int myshapeid = getNewID(dev);
+    i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
+
+    SHAPE*shape;
+    swf_ShapeNew(&shape);
+    int lsid = swf_ShapeAddLineStyle(shape,1,&col_black);
+
+    swf_SetU16(i->tag,myshapeid);
+    SRECT r = gfxline_getSWFbbox(line);
+    swf_SetRect(i->tag,&r);
+    swf_SetShapeStyles(i->tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(i->tag,shape);
+    swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,lsid,0,0);
+    drawgfxline(dev, line);
+    swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(shape);
+	
+    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(i->tag, myshapeid, getNewDepth(dev), 0,0,0);
+}
+
 static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
@@ -2057,6 +2089,9 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
         msg("<warning> Too many clip levels.");
         i->clippos --;
     } 
+
+    if(i->config_showclipshapes)
+	drawoutline(dev, line);
 
     int myshapeid = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
