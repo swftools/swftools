@@ -49,9 +49,9 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
 	} else if(l2->type == gfx_splineTo) {
 	    int i;
             int parts = (int)(sqrt(fabs(l2->x-2*l2->sx+x) + fabs(l2->y-2*l2->sy+y))*subfraction);
-            if(!parts) parts = 1;
+	    double stepsize = parts?1.0/parts:0;
 	    for(i=0;i<=parts;i++) {
-		double t = (double)i/(double)parts;
+		double t = (double)i*stepsize;
 		vec[pos].code = ART_LINETO;
 		vec[pos].x = l2->x*t*t + 2*l2->sx*t*(1-t) + x*(1-t)*(1-t);
 		vec[pos].y = l2->y*t*t + 2*l2->sy*t*(1-t) + y*(1-t)*(1-t);
@@ -64,29 +64,38 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
 	l2 = l2->next;
     }
     vec[pos].code = ART_END;
+    
+    /* fix "dotted" lines */
+    int t;
+    char linepending=0;
+    for(t=0;vec[t].code!=ART_END;t++) {
+	if(t>0 && vec[t-1].code==ART_MOVETO && vec[t].code==ART_LINETO 
+		&& vec[t+1].code!=ART_LINETO
+	    && vec[t-1].x == vec[t].x
+	    && vec[t-1].y == vec[t].y) {
+	    vec[t].x += 0.01;
+	}
+	if(vec[t].code==ART_MOVETO)
+	    linepending=0;
+	x = vec[t].x;
+	y = vec[t].y;
+    }
 
     // Spot adjacent identical points
+    t = 1;
+    while(t < pos)
     {
-	int j = 1;
-	while(j < pos)
-	{
-	    double dx = vec[j].x - vec[j-1].x;
-	    double dy = vec[j].y - vec[j-1].y;
-	    double d = dx*dx + dy*dy;
-	    if ((vec[j-1].x == vec[j].x)
-		&& (vec[j-1].y == vec[j].y))
-	    {
-		// adjacent identical points; remove one
-		memcpy(&(vec[j]), &(vec[j + 1]), sizeof(vec[j]) * (pos - j));
-		--pos;
-	    }
-	    else
-	    {
-		// different
-		++j;
-	    }
+	if ((vec[t-1].x == vec[t].x) && (vec[t-1].y == vec[t].y)) {
+	    // adjacent identical points; remove one
+	    memcpy(&(vec[t]), &(vec[t + 1]), sizeof(vec[t]) * (pos - t));
+	    pos--;
+	} else {
+	    t++;
 	}
     }
+
+    /* adjacency remover disabled for now, pending code inspection */
+    return vec;
 
     // Check for further non-adjacent identical points. We don't want any
     // points other than the first and last points to exactly match.
@@ -255,6 +264,7 @@ static ArtSVP* boxToSVP(double x1, double y1,double x2, double y2)
 static ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line);
+
     ArtSVP *svp = art_svp_vpath_stroke (vec,
 			(joint_style==gfx_joinMiter)?ART_PATH_STROKE_JOIN_MITER:
 			((joint_style==gfx_joinRound)?ART_PATH_STROKE_JOIN_ROUND:
