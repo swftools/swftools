@@ -273,6 +273,7 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->config_use_fontconfig=1;
     this->config_break_on_warning=0;
     this->config_remapunicode=0;
+    this->config_transparent=0;
     this->do_interpretType3Chars = gTrue;
 
     this->parameters = p;
@@ -296,6 +297,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_use_fontconfig = atoi(value);
     } else if(!strcmp(key,"remapunicode")) {
         this->config_remapunicode = atoi(value);
+    } else if(!strcmp(p->name,"transparent")) {
+        this->config_transparent = atoi(p->value);
     } else {
         msg("<warning> Ignored parameter: %s=%s", key, value);
     }
@@ -1320,7 +1323,8 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     clippath[3].type = gfx_lineTo;clippath[3].x = x1; clippath[3].y = y2; clippath[3].next = &clippath[4];
     clippath[4].type = gfx_lineTo;clippath[4].x = x1; clippath[4].y = y1; clippath[4].next = 0;
     device->startclip(device, clippath); outer_clip_box = 1;
-    device->fill(device, clippath, &white);
+    if(!config_transparent)
+        device->fill(device, clippath, &white);
 }
 
 

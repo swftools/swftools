@@ -279,6 +279,7 @@ public:
   int config_use_fontconfig;
   int config_break_on_warning;
   int config_remapunicode;
+  int config_transparent;
 
   parameter_t*parameters;
 };
