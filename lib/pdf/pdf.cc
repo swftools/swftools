@@ -179,7 +179,7 @@ static char*getInfoString(Dict *infoDict, char *key)
     GString *s1, *s2;
     int i;
 
-    if (infoDict->lookup(key, &obj)->isString()) {
+    if (infoDict && infoDict->lookup(key, &obj)->isString()) {
 	s1 = obj.getString();
 	if ((s1->getChar(0) & 0xff) == 0xfe &&
 	    (s1->getChar(1) & 0xff) == 0xff) {
@@ -211,7 +211,7 @@ static char*getInfoDate(Dict *infoDict, char *key)
     Object obj;
     char *s;
 
-    if (infoDict->lookup(key, &obj)->isString()) {
+    if (infoDict && infoDict->lookup(key, &obj)->isString()) {
 	s = obj.getString()->getCString();
 	if (s[0] == 'D' && s[1] == ':') {
 	  s += 2;
