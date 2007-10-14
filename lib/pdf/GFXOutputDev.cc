@@ -297,10 +297,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_use_fontconfig = atoi(value);
     } else if(!strcmp(key,"remapunicode")) {
         this->config_remapunicode = atoi(value);
-    } else if(!strcmp(p->name,"transparent")) {
-        this->config_transparent = atoi(p->value);
-    } else {
-        msg("<warning> Ignored parameter: %s=%s", key, value);
+    } else if(!strcmp(key,"transparent")) {
+        this->config_transparent = atoi(value);
     }
 }
   
@@ -729,8 +727,6 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     if(dashnum && ldash) {
 	float * dash = (float*)malloc(sizeof(float)*(dashnum+1));
 	int t;
-	double cut = 0;
-	int fixzero = 0;
 	msg("<trace> %d dashes", dashnum);
 	msg("<trace> |  phase: %f", dashphase);
 	for(t=0;t<dashnum;t++) {
@@ -762,6 +758,12 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     if(flags&STROKE_FILL) {
         ArtSVP* svp = gfxstrokeToSVP(line, width, capType, joinType, miterLimit);
         gfxline_t*gfxline = SVPtogfxline(svp);
+	if(getLogLevel() >= LOGLEVEL_TRACE)  {
+	    dump_outline(gfxline);
+	}
+	if(!gfxline) {
+	    msg("<warning> Empty polygon (resulting from stroked line)");
+	}
         if(flags&STROKE_CLIP) {
             device->startclip(device, gfxline);
             states[statepos].clipping++;
@@ -841,6 +843,12 @@ void GFXOutputDev::clipToStrokePath(GfxState *state)
 {
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
+
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+        msg("<trace> cliptostrokepath\n");
+        dump_outline(line);
+    }
+
     strokeGfxline(state, line, STROKE_FILL|STROKE_CLIP);
     gfxline_free(line);
 }
