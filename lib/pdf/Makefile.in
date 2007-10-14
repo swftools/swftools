@@ -30,7 +30,7 @@ fonts.$(O): fonts.c
 	$(C) -I ./ -I xpdf fonts.c -o $@
 cmyk.$(O): cmyk.cc
 	$(CC) -I ./ -I xpdf cmyk.cc -o $@
-GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h
+GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h ../devices/artsutils.c
 	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
