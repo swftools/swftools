@@ -15,7 +15,7 @@ system("tar -zxvf ../../$filename") and die;
 system("find -type f -exec mv {} .. \\;") and die;
 chdir("..");
 system("find -type d -exec rmdir {} \\; 2> /dev/null");
-system("patch < ../xpdf-changes.patch") and die;
+system("patch < ../xpdf-changes.patch");
 chdir("..");
 system("rm -f xpdf");
 system("ln -s $directory xpdf");
@@ -29,8 +29,9 @@ VERSION=\$1
 PS3="choose> "
 
 if test "x\$VERSION" = "x";then
-    select V in stable latest;do VERSION="$V";break;done
+    select V in stable latest;do VERSION="\$V";break;done
 fi
+case $VERSION
 
 if test "x\$VERSION" = "xstable";then
     echo "Switching to stable version"
