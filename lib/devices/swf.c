@@ -2082,9 +2082,11 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     drawgfxline(dev, line);
     if(i->shapeisempty) {
 	/* an empty clip shape is equivalent to a shape with no area */
-	moveto(dev, i->tag, line->x, line->y);
-	lineto(dev, i->tag, line->x, line->y);
-	lineto(dev, i->tag, line->x, line->y);
+	int x = line?line->x:0;
+	int y = line?line->y:0;
+	moveto(dev, i->tag, x,y);
+	lineto(dev, i->tag, x,y);
+	lineto(dev, i->tag, x,y);
     }
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
