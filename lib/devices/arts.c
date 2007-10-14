@@ -252,7 +252,7 @@ void arts_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_
     gfxline_free(glyph);
 }
 
-void arts_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+void arts_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     dbg("arts_drawlink");
     internal_t*i = (internal_t*)dev->internal;
