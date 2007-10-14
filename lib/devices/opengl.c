@@ -16,7 +16,7 @@
 #include <stdarg.h>
 
 //#define ZSTEP (1/65536.0)
-#define ZSTEP (1/4.0)
+#define ZSTEP (1/32.0)
 
 typedef struct _fontlist {
     gfxfont_t*font;
@@ -67,12 +67,12 @@ void CALLBACK errorCallback(GLenum errorCode)
 {
    const GLubyte *estring;
    estring = gluErrorString(errorCode);
-   dbg("Tessellation Error: %s\n", estring);
+   printf("Tessellation Error: %s\n", estring);
    exit(0);
 }
 void CALLBACK beginCallback(GLenum which)
 {
-   glBegin(which);
+    glBegin(which);
 }
 void CALLBACK endCallback(void)
 {
@@ -263,7 +263,8 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     double z;
     dbg("fill");
     internal_t*i = (internal_t*)dev->internal;
-    
+  
+    glDisable(GL_TEXTURE_2D);
     glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
     
     i->currentz ++;
@@ -580,7 +581,7 @@ void gfxdevice_opengl_init(gfxdevice_t*dev)
     gluTessCallback(i->tesselator, GLU_TESS_VERTEX, (callbackfunction_t)vertexCallback);
     gluTessCallback(i->tesselator, GLU_TESS_BEGIN, (callbackfunction_t)beginCallback);
     gluTessCallback(i->tesselator, GLU_TESS_END, (callbackfunction_t)endCallback);
-    //gluTessCallback(i->tesselator, GLU_TESS_COMBINE, (callbackfunction_t)combineCallback);
+    gluTessCallback(i->tesselator, GLU_TESS_COMBINE, (callbackfunction_t)combineCallback);
     
     i->tesselator_line = gluNewTess();
     gluTessCallback(i->tesselator_line, GLU_TESS_ERROR, (callbackfunction_t)errorCallback);
