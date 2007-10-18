@@ -771,3 +771,13 @@ diff -u -r1.5 -r1.6
  int GfxCIDFont::getNextChar(char *s, int len, CharCode *code,
  			    Unicode *u, int uSize, int *uLen,
  			    double *dx, double *dy, double *ox, double *oy) {
+--- OutputDev.h.orig	Sat Jul 28 00:11:08 2007
++++ OutputDev.h	Sun Sep  9 13:50:40 2007
+@@ -17,6 +17,7 @@
+ 
+ #include "gtypes.h"
+ #include "CharTypes.h"
++#include "Object.h"
+ 
+ class GString;
+ class Gfx;
