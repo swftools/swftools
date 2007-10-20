@@ -115,6 +115,8 @@ void pdfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfx
     pi->outputDev->setDevice(0);
 }
 
+static int globalparams_count=0;
+
 void pdf_doc_destroy(gfxdocument_t*gfx)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
@@ -134,6 +136,13 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
     if(global_page_range) {
 	free(global_page_range);
 	global_page_range = 0;
+    }
+    
+    globalparams_count--;
+    if(!globalparams_count) {
+	delete globalParams;
+	globalParams = 0;
+	globalparams_count = 0;
     }
 }
 
@@ -300,6 +309,11 @@ static void pdf_set_parameter(const char*name, const char*value)
 
 static gfxdocument_t*pdf_open(const char*filename)
 {
+    if(!globalParams) {
+        globalParams = new GFXGlobalParams();
+	globalparams_count++;
+    }
+    
     gfxdocument_t*pdf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(pdf_doc, 0, sizeof(gfxdocument_t));
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
@@ -383,10 +397,6 @@ static gfxdocument_t*pdf_open(const char*filename)
 
 gfxsource_t*gfxsource_pdf_create()
 {
-    if(!globalParams) {
-        globalParams = new GFXGlobalParams();
-    }
-    
     gfxsource_t*src = (gfxsource_t*)malloc(sizeof(gfxsource_t));
     memset(src, 0, sizeof(gfxsource_t));
     src->set_parameter = pdf_set_parameter;
