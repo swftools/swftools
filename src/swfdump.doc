@@ -24,6 +24,8 @@ display placement information about objects.
     Show text fields (like swfstrings).
 -s, --shapes
     Show shape coordinates/styles
+-F, --fonts
+    Show font information
 -p, --placements
     Show placement information
 -b, --bbox
