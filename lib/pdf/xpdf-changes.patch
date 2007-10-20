@@ -580,6 +580,17 @@ retrieving revision 1.6
 diff -u -r1.5 -r1.6
 --- GlobalParams.h	2006-10-10 19:54:29.000000000 +0200
 +++ GlobalParams.h	2006-11-12 11:19:40.000000000 +0100
+@@ -213,8 +213,8 @@
+   FILE *getUnicodeMapFile(GString *encodingName);
+   FILE *findCMapFile(GString *collection, GString *cMapName);
+   FILE *findToUnicodeFile(GString *name);
+-  DisplayFontParam *getDisplayFont(GString *fontName);
+-  DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
++  virtual DisplayFontParam *getDisplayFont(GString *fontName);
++  virtual DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
+   GString *getPSFile();
+   int getPSPaperWidth();
+   int getPSPaperHeight();
 @@ -218,1 +218,1 @@
 -  void parseFile(GString *fileName, FILE *f);
 +public: void parseFile(GString *fileName, FILE *f); private:
