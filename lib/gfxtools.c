@@ -772,6 +772,16 @@ gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
 	return l;
     }
 }
+void gfxfontlist_free(gfxfontlist_t*list)
+{
+    gfxfontlist_t*l = list;
+    while(l) {
+	gfxfontlist_t*next = l;
+	memset(l, 0, sizeof(*l));
+	free(l);
+	l = next;
+    }
+}
 
 gfxline_t*gfxline_makerectangle(int x1,int y1,int x2, int y2)
 {
