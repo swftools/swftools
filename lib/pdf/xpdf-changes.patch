@@ -443,7 +443,7 @@ diff -u -r1.7 -r1.8
  #include <string.h>
  #include <ctype.h>
 Index: config.h
---- config.h.orig	2007-09-09 12:11:20.000000000 +0200
+--- config.h	2007-09-09 12:11:20.000000000 +0200
 +++ config.h	2007-09-09 12:11:40.000000000 +0200
 @@ -53,9 +53,9 @@
  
@@ -605,7 +605,7 @@ diff -u -r1.5 -r1.6
    //----- static tables
  
    NameToCharCode *		// mapping from char name to
---- SplashOutputDev.h.orig	2006-11-12 12:07:22.000000000 +0100
+--- SplashOutputDev.h	2006-11-12 12:07:22.000000000 +0100
 +++ SplashOutputDev.h	2006-11-12 12:08:48.000000000 +0100
 @@ -70,7 +70,7 @@
    //----- initialization and control
@@ -616,7 +616,7 @@ diff -u -r1.5 -r1.6
  
    // End a page.
    virtual void endPage();
---- SplashOutputDev.cc.orig	2006-11-12 12:07:06.000000000 +0100
+--- SplashOutputDev.cc	2006-11-12 12:07:06.000000000 +0100
 +++ SplashOutputDev.cc	2006-11-12 12:09:36.000000000 +0100
 @@ -696,7 +696,7 @@
    nT3Fonts = 0;
@@ -627,7 +627,7 @@ diff -u -r1.5 -r1.6
    int w, h;
    double *ctm;
    SplashCoord mat[6];
---- TextOutputDev.h.orig	2006-11-12 12:23:01.000000000 +0100
+--- TextOutputDev.h	2006-11-12 12:23:01.000000000 +0100
 +++ TextOutputDev.h	2006-11-12 12:25:31.000000000 +0100
 @@ -578,7 +578,7 @@
    //----- initialization and control
@@ -638,7 +638,7 @@ diff -u -r1.5 -r1.6
  
    // End a page.
    virtual void endPage();
---- TextOutputDev.cc.orig	2006-11-12 12:22:53.000000000 +0100
+--- TextOutputDev.cc	2006-11-12 12:22:53.000000000 +0100
 +++ TextOutputDev.cc	2006-11-12 12:25:03.000000000 +0100
 @@ -3805,7 +3805,7 @@
    }
@@ -649,7 +649,7 @@ diff -u -r1.5 -r1.6
    text->startPage(state);
  }
  
---- CoreOutputDev.cc.orig	2006-11-12 12:21:59.000000000 +0100
+--- CoreOutputDev.cc	2006-11-12 12:21:59.000000000 +0100
 +++ CoreOutputDev.cc	2006-11-12 12:23:29.000000000 +0100
 @@ -57,5 +57,5 @@
  
@@ -670,7 +670,7 @@ diff -u -r1.5 -r1.6
  #include "gmem.h"
  #include "GString.h"
  #include "gfile.h"
---- SplashOutputDev.cc.orig	2007-09-09 12:29:45.000000000 +0200
+--- SplashOutputDev.cc	2007-09-09 12:29:45.000000000 +0200
 +++ SplashOutputDev.cc	2007-09-09 12:30:02.000000000 +0200
 @@ -13,6 +13,7 @@
  #endif
@@ -680,7 +680,7 @@ diff -u -r1.5 -r1.6
  #include <math.h>
  #include "gfile.h"
  #include "GlobalParams.h"
---- SplashFontFile.cc.orig	2007-09-09 12:33:00.000000000 +0200
+--- SplashFontFile.cc	2007-09-09 12:33:00.000000000 +0200
 +++ SplashFontFile.cc	2007-09-09 12:33:07.000000000 +0200
 @@ -11,9 +11,7 @@
  #endif
@@ -693,7 +693,7 @@ diff -u -r1.5 -r1.6
  #include "GString.h"
  #include "SplashFontFile.h"
  #include "SplashFontFileID.h"
---- SplashFont.orig.h	2007-09-09 14:23:47.000000000 +0200
+--- SplashFont.h	2007-09-09 14:23:47.000000000 +0200
 +++ SplashFont.h	2007-09-09 14:24:28.000000000 +0200
 @@ -73,6 +73,9 @@
    virtual GBool makeGlyph(int c, int xFrac, int yFrac,
@@ -705,7 +705,7 @@ diff -u -r1.5 -r1.6
    // Return the path for a glyph.
    virtual SplashPath *getGlyphPath(int c) = 0;
  
---- SplashFTFont.orig.h	2007-09-09 14:23:47.000000000 +0200
+--- SplashFTFont.h	2007-09-09 14:23:47.000000000 +0200
 +++ SplashFTFont.h	2007-09-09 14:25:19.000000000 +0200
 @@ -42,6 +42,9 @@
    virtual GBool makeGlyph(int c, int xFrac, int yFrac,
@@ -717,7 +717,7 @@ diff -u -r1.5 -r1.6
    // Return the path for a glyph.
    virtual SplashPath *getGlyphPath(int c);
  
---- SplashFTFont.cc.orig.h	2007-09-09 14:23:50.000000000 +0200
+--- SplashFTFont.cc.h	2007-09-09 14:23:50.000000000 +0200
 +++ SplashFTFont.cc	2007-09-09 14:27:35.000000000 +0200
 @@ -228,6 +228,12 @@
    GBool needClose;
@@ -782,7 +782,7 @@ diff -u -r1.5 -r1.6
  int GfxCIDFont::getNextChar(char *s, int len, CharCode *code,
  			    Unicode *u, int uSize, int *uLen,
  			    double *dx, double *dy, double *ox, double *oy) {
---- OutputDev.h.orig	Sat Jul 28 00:11:08 2007
+--- OutputDev.h	Sat Jul 28 00:11:08 2007
 +++ OutputDev.h	Sun Sep  9 13:50:40 2007
 @@ -17,6 +17,7 @@
  
@@ -792,3 +792,32 @@ diff -u -r1.5 -r1.6
  
  class GString;
  class Gfx;
+--- SplashOutputDev.h	2007-10-20 13:17:02.000000000 +0200
++++ SplashOutputDev.h	2007-10-20 13:17:23.000000000 +0200
+@@ -206,6 +206,7 @@
+   virtual void setVectorAntialias(GBool vaa);
+ #endif
+ 
++  void doUpdateFont(GfxState *state);
+ private:
+ 
+   void setupScreenParams(double hDPI, double vDPI);
+@@ -215,7 +216,6 @@
+   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
+ #endif
+   SplashPath *convertPath(GfxState *state, GfxPath *path);
+-  void doUpdateFont(GfxState *state);
+   void drawType3Glyph(T3FontCache *t3Font,
+ 		      T3FontCacheTag *tag, Guchar *data);
+   static GBool imageMaskSrc(void *data, SplashColorPtr line);
+--- xpdf/GlobalParams.h 2007-10-20 13:18:03.000000000 +0200
++++ xpdf/GlobalParams.h	2007-10-20 13:25:52.000000000 +0200
+@@ -196,7 +196,7 @@
+   // file.
+   GlobalParams(char *cfgFileName);
+ 
+-  ~GlobalParams();
++  virtual ~GlobalParams();
+ 
+   void setBaseDir(char *dir);
+   void setupBaseFonts(char *dir);
