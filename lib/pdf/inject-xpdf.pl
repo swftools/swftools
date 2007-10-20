@@ -47,3 +47,7 @@ EOF
 close(fi);
 system("chmod a+x switch");
 
+$c = 'find '.$directory.' \( -name "*.cc" -or -name "*.h" -or -name "*.c" \) -exec cp {} {}.orig \;';
+print "$c\n";
+system($c);
+
