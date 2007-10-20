@@ -318,10 +318,6 @@ static gfxdocument_t*pdf_open(const char*filename)
     GString *fileName = new GString(filename);
     GString *userPW;
 
-    // read config file
-    if(!globalParams)
-        globalParams = new GlobalParams("");
-
     // open PDF file
     if (userPassword && userPassword[0]) {
       userPW = new GString(userPassword);
@@ -387,6 +383,10 @@ static gfxdocument_t*pdf_open(const char*filename)
 
 gfxsource_t*gfxsource_pdf_create()
 {
+    if(!globalParams) {
+        globalParams = new GFXGlobalParams();
+    }
+    
     gfxsource_t*src = (gfxsource_t*)malloc(sizeof(gfxsource_t));
     memset(src, 0, sizeof(gfxsource_t));
     src->set_parameter = pdf_set_parameter;
