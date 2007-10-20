@@ -59,6 +59,7 @@ static int hex = 0;
 static int used = 0;
 static int bbox = 0;
 static int cumulative = 0;
+static int showfonts = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -129,6 +130,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(name[0]=='f') {
 	xy |= 8;
+	return 0;
+    }
+    else if(name[0]=='F') {
+	showfonts = 1;
 	return 0;
     }
     else if(name[0]=='d') {
@@ -251,6 +256,57 @@ void dumpButtonActions(TAG*tag, char*prefix)
     }
     actions = swf_ActionGet(tag);
     swf_DumpActions(actions, prefix);
+}
+
+void dumpFont(TAG*tag, char*prefix)
+{
+    SWFFONT* font = malloc(sizeof(SWFFONT));
+    memset(font, 0, sizeof(SWFFONT));
+    if(tag->id == ST_DEFINEFONT2) {
+	swf_FontExtract_DefineFont2(0, font, tag);
+    } else if(tag->id == ST_DEFINEFONT) {
+	swf_FontExtract_DefineFont(0, font, tag);
+    } else {
+	printf("%sCan't parse %s yet\n", prefix,swf_TagGetName(tag));
+    }
+    printf("%sID: %d\n", prefix,font->id);
+    printf("%sVersion: %d\n", prefix,font->version);
+    printf("%sname: %s\n", prefix,font->name);
+    printf("%scharacters: %d\n", prefix,font->numchars);
+    printf("%shightest mapped unicode value: %d\n", prefix,font->maxascii);
+    if(font->layout)
+    {
+	printf("%sascent:%.2f\n", prefix,font->layout->ascent / 20.0);
+	printf("%sdescent:%.2f\n", prefix,font->layout->descent / 20.0);
+	printf("%sleading:%.2f\n", prefix,font->layout->leading / 20.0);
+	printf("%skerning records:%d\n", prefix,font->layout->kerningcount);
+    }
+    printf("%sstyle: %d\n", prefix,font->style);
+    printf("%sencoding: %02x\n", prefix,font->encoding);
+    printf("%slanguage: %02x\n", prefix,font->language);
+    int t;
+    for(t=0;t<font->numchars;t++) {
+	printf("%s== Glyph %d: advance=%d ==\n", prefix, t, font->glyph[t].advance);
+	SHAPE2* shape = swf_ShapeToShape2(font->glyph[t].shape);
+	SHAPELINE*line = shape->lines;
+
+	while(line) {
+	    if(line->type == moveTo) {
+		printf("%smoveTo %.2f %.2f\n", prefix, line->x/20.0, line->y/20.0);
+	    } else if(line->type == lineTo) {
+		printf("%slineTo %.2f %.2f\n", prefix, line->x/20.0, line->y/20.0);
+	    } else if(line->type == splineTo) {
+		printf("%ssplineTo (%.2f %.2f) %.2f %.2f\n", prefix,
+			line->sx/20.0, line->sy/20.0,
+			line->x/20.0, line->y/20.0
+			);
+	    }
+	    line = line->next;
+	}
+	swf_Shape2Free(shape);
+	free(shape);
+    }
+    swf_FontFree(font);
 }
 
 SWF swf;
@@ -1240,6 +1296,9 @@ int main (int argc,char ** argv)
         }
 	else if(tag->id == ST_DEFINEBUTTON && action) {
 	    dumpButtonActions(tag, myprefix);
+	}
+	else if(swf_isFontTag(tag) && showfonts) {
+	    dumpFont(tag, myprefix);
 	}
 	else if(tag->id == ST_DEFINEBUTTON2 && action) {
 	    dumpButton2Actions(tag, myprefix);
