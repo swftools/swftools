@@ -241,8 +241,95 @@ public:
 	chars[num_chars].charid = charid;
     }
 };
+    
+char* writeOutStdFont(fontentry* f)
+{
+    FILE*fi;
+    char namebuf1[512];
+    char namebuf2[512];
+    char* tmpFileName = mktmpname(namebuf1);
 
-static char*getFontID(GfxFont*font);
+    sprintf(namebuf2, "%s.afm", tmpFileName);
+    fi = fopen(namebuf2, "wb");
+    if(!fi)
+        return 0;
+    fwrite(f->afm, 1, f->afmlen, fi);
+    fclose(fi);
+
+    sprintf(namebuf2, "%s.pfb", tmpFileName);
+    fi = fopen(namebuf2, "wb");
+    if(!fi)
+        return 0;
+    fwrite(f->pfb, 1, f->pfblen, fi);
+    fclose(fi);
+    return strdup(namebuf2);
+}
+void unlinkfont(char* filename)
+{
+    int l;
+    if(!filename)
+	return;
+    msg("<verbose> Removing temporary font file %s", filename);
+    l=strlen(filename);
+    unlink(filename);
+    if(!strncmp(&filename[l-4],".afm",4)) {
+	memcpy(&filename[l-4],".pfb",4); unlink(filename);
+	memcpy(&filename[l-4],".pfa",4); unlink(filename);
+	memcpy(&filename[l-4],".afm",4);
+	return;
+    } else 
+    if(!strncmp(&filename[l-4],".pfa",4)) {
+	memcpy(&filename[l-4],".afm",4); unlink(filename);
+	memcpy(&filename[l-4],".pfa",4);
+	return;
+    } else 
+    if(!strncmp(&filename[l-4],".pfb",4)) {
+	memcpy(&filename[l-4],".afm",4); unlink(filename);
+	memcpy(&filename[l-4],".pfb",4);
+	return;
+    }
+}
+
+
+GFXGlobalParams::GFXGlobalParams()
+: GlobalParams("")
+{
+    //setupBaseFonts(char *dir); //not tested yet
+}
+GFXGlobalParams::~GFXGlobalParams()
+{
+    msg("<verbose> Performing cleanups");
+    int t;
+    for(t=0;t<sizeof(pdf2t1map)/sizeof(fontentry);t++) {
+	if(pdf2t1map[t].fullfilename) {
+	    unlinkfont(pdf2t1map[t].fullfilename);
+	}
+    }
+}
+DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
+{
+    msg("<verbose> looking for font %s in global params\n", fontName->getCString());
+
+    char*name = fontName->getCString();
+    /* see if it is a pdf standard font */
+    int t;
+    for(t=0;t<sizeof(pdf2t1map)/sizeof(fontentry);t++) {
+	if(!strcmp(name, pdf2t1map[t].pdffont)) {
+	    if(!pdf2t1map[t].fullfilename) {
+		pdf2t1map[t].fullfilename = writeOutStdFont(&pdf2t1map[t]);
+		if(!pdf2t1map[t].fullfilename) {
+		    msg("<error> Couldn't save default font- is the Temp Directory writable?");
+		} else {
+		    msg("<verbose> Storing standard PDF font %s at %s", name, pdf2t1map[t].fullfilename);
+		}
+	    }
+	    DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
+	    dfp->t1.fileName = new GString(pdf2t1map[t].fullfilename);
+	    return dfp;
+	}
+    }
+    return GlobalParams::getDisplayFont(fontName);
+}
 
 GFXOutputDev::GFXOutputDev(parameter_t*p)
 {
@@ -265,7 +352,6 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->user_clipy2 = 0;
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
-    this->fontlist = 0;
     this->outer_clip_box = 0;
     this->pages = 0;
     this->pagebuflen = 0;
@@ -277,6 +363,8 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->do_interpretType3Chars = gTrue;
 
     this->parameters = p;
+    
+    this->gfxfontlist = gfxfontlist_create();
   
     memset(states, 0, sizeof(states));
 
@@ -333,20 +421,6 @@ void GFXOutputDev::setClip(int x1,int y1,int x2,int y2)
     this->user_clipy2 = y2;
 }
 
-static char*getFontID(GfxFont*font)
-{
-    Ref*ref = font->getID();
-    GString*gstr = font->getName();
-    char* fname = gstr==0?0:gstr->getCString();
-    char buf[128];
-    if(fname==0) {
-	sprintf(buf, "font-%d-%d", ref->num, ref->gen);
-    } else {
-	sprintf(buf, "%s-%d-%d", fname, ref->num, ref->gen);
-    }
-    return strdup(buf);
-}
-
 static char*getFontName(GfxFont*font)
 {
     char*fontid;
@@ -370,113 +444,6 @@ static char*getFontName(GfxFont*font)
     }
     free(fontid);
     return fontname;
-}
-
-static char mybuf[1024];
-static char* gfxstate2str(GfxState *state)
-{
-  char*bufpos = mybuf;
-  GfxRGB rgb;
-  bufpos+=sprintf(bufpos,"CTM[%.3f/%.3f/%.3f/%.3f/%.3f/%.3f] ",
-				    state->getCTM()[0],
-				    state->getCTM()[1],
-				    state->getCTM()[2],
-				    state->getCTM()[3],
-				    state->getCTM()[4],
-				    state->getCTM()[5]);
-  if(state->getX1()!=0.0)
-  bufpos+=sprintf(bufpos,"X1-%.1f ",state->getX1());
-  if(state->getY1()!=0.0)
-  bufpos+=sprintf(bufpos,"Y1-%.1f ",state->getY1());
-  bufpos+=sprintf(bufpos,"X2-%.1f ",state->getX2());
-  bufpos+=sprintf(bufpos,"Y2-%.1f ",state->getY2());
-  bufpos+=sprintf(bufpos,"PW%.1f ",state->getPageWidth());
-  bufpos+=sprintf(bufpos,"PH%.1f ",state->getPageHeight());
-  /*bufpos+=sprintf(bufpos,"FC[%.1f/%.1f] ",
-	  state->getFillColor()->c[0], state->getFillColor()->c[1]);
-  bufpos+=sprintf(bufpos,"SC[%.1f/%.1f] ",
-	  state->getStrokeColor()->c[0], state->getFillColor()->c[1]);*/
-/*  bufpos+=sprintf(bufpos,"FC[%.1f/%.1f/%.1f/%.1f/%.1f/%.1f/%.1f/%.1f]",
-	  state->getFillColor()->c[0], state->getFillColor()->c[1],
-	  state->getFillColor()->c[2], state->getFillColor()->c[3],
-	  state->getFillColor()->c[4], state->getFillColor()->c[5],
-	  state->getFillColor()->c[6], state->getFillColor()->c[7]);
-  bufpos+=sprintf(bufpos,"SC[%.1f/%.1f/%.1f/%.1f/%.1f/%.1f/%.1f/%.1f]",
-	  state->getStrokeColor()->c[0], state->getFillColor()->c[1],
-	  state->getStrokeColor()->c[2], state->getFillColor()->c[3],
-	  state->getStrokeColor()->c[4], state->getFillColor()->c[5],
-	  state->getStrokeColor()->c[6], state->getFillColor()->c[7]);*/
-  state->getFillRGB(&rgb);
-  if(rgb.r || rgb.g || rgb.b)
-  bufpos+=sprintf(bufpos,"FR[%.1f/%.1f/%.1f] ", rgb.r,rgb.g,rgb.b);
-  state->getStrokeRGB(&rgb);
-  if(rgb.r || rgb.g || rgb.b)
-  bufpos+=sprintf(bufpos,"SR[%.1f/%.1f/%.1f] ", rgb.r,rgb.g,rgb.b);
-  if(state->getFillColorSpace()->getNComps()>1)
-  bufpos+=sprintf(bufpos,"CS[[%d]] ",state->getFillColorSpace()->getNComps());
-  if(state->getStrokeColorSpace()->getNComps()>1)
-  bufpos+=sprintf(bufpos,"SS[[%d]] ",state->getStrokeColorSpace()->getNComps());
-  if(state->getFillPattern())
-  bufpos+=sprintf(bufpos,"FP%08x ", state->getFillPattern());
-  if(state->getStrokePattern())
-  bufpos+=sprintf(bufpos,"SP%08x ", state->getStrokePattern());
- 
-  if(state->getFillOpacity()!=1.0)
-  bufpos+=sprintf(bufpos,"FO%.1f ", state->getFillOpacity());
-  if(state->getStrokeOpacity()!=1.0)
-  bufpos+=sprintf(bufpos,"SO%.1f ", state->getStrokeOpacity());
-
-  bufpos+=sprintf(bufpos,"LW%.1f ", state->getLineWidth());
- 
-  double * dash;
-  int length;
-  double start;
-  state->getLineDash(&dash, &length, &start);
-  int t;
-  if(length)
-  {
-      bufpos+=sprintf(bufpos,"DASH%.1f[",start);
-      for(t=0;t<length;t++) {
-	  bufpos+=sprintf(bufpos,"D%.1f",dash[t]);
-      }
-      bufpos+=sprintf(bufpos,"]");
-  }
-
-  if(state->getFlatness()!=1)
-  bufpos+=sprintf(bufpos,"F%d ", state->getFlatness());
-  if(state->getLineJoin()!=0)
-  bufpos+=sprintf(bufpos,"J%d ", state->getLineJoin());
-  if(state->getLineJoin()!=0)
-  bufpos+=sprintf(bufpos,"C%d ", state->getLineCap());
-  if(state->getLineJoin()!=0)
-  bufpos+=sprintf(bufpos,"ML%d ", state->getMiterLimit());
-
-  if(state->getFont() && getFontID(state->getFont()))
-  bufpos+=sprintf(bufpos,"F\"%s\" ",getFontID(state->getFont()));
-  bufpos+=sprintf(bufpos,"FS%.1f ", state->getFontSize());
-  bufpos+=sprintf(bufpos,"MAT[%.1f/%.1f/%.1f/%.1f/%.1f/%.1f] ", state->getTextMat()[0],state->getTextMat()[1],state->getTextMat()[2],
-	                           state->getTextMat()[3],state->getTextMat()[4],state->getTextMat()[5]);
-  if(state->getCharSpace())
-  bufpos+=sprintf(bufpos,"CS%.5f ", state->getCharSpace());
-  if(state->getWordSpace())
-  bufpos+=sprintf(bufpos,"WS%.5f ", state->getWordSpace());
-  if(state->getHorizScaling()!=1.0)
-  bufpos+=sprintf(bufpos,"SC%.1f ", state->getHorizScaling());
-  if(state->getLeading())
-  bufpos+=sprintf(bufpos,"L%.1f ", state->getLeading());
-  if(state->getRise())
-  bufpos+=sprintf(bufpos,"R%.1f ", state->getRise());
-  if(state->getRender())
-  bufpos+=sprintf(bufpos,"R%d ", state->getRender());
-  bufpos+=sprintf(bufpos,"P%08x ", state->getPath());
-  bufpos+=sprintf(bufpos,"CX%.1f ", state->getCurX());
-  bufpos+=sprintf(bufpos,"CY%.1f ", state->getCurY());
-  if(state->getLineX())
-  bufpos+=sprintf(bufpos,"LX%.1f ", state->getLineX());
-  if(state->getLineY())
-  bufpos+=sprintf(bufpos,"LY%.1f ", state->getLineY());
-  bufpos+=sprintf(bufpos," ");
-  return mybuf;
 }
 
 static void dumpFontInfo(const char*loglevel, GfxFont*font);
@@ -573,7 +540,6 @@ static void dumpFontInfo(const char*loglevel, GfxFont*font)
 
 //void GFXOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void GFXOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
 //void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) {printf("void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str, int width, int height, GfxImageColorMap *colorMap, GBool inlineImg) \n");}
-
 
 void dump_outline(gfxline_t*line)
 {
@@ -879,16 +845,7 @@ GFXOutputDev::~GFXOutputDev()
 	free(this->pages); this->pages = 0;
     }
 
-    fontlist_t*l = this->fontlist;
-    while(l) {
-	fontlist_t*next = l->next;
-	l->next = 0;
-	gfxfont_free(l->font);
-	free(l->filename);l->filename=0;
-	free(l);
-	l = next;
-    }
-    this->fontlist = 0;
+    gfxfontlist_free(this->gfxfontlist);
 };
 GBool GFXOutputDev::upsideDown() 
 {
@@ -934,84 +891,6 @@ char* makeStringPrintable(char*str)
     return tmp_printstr;
 }
 
-
-int getGfxCharID(gfxfont_t*font, int charnr, char *charname, int u)
-{
-    const char*uniname = 0;
-    if(!font)
-        return charnr;
-    if(u>0) {
-	int t;
-	/* find out char name from unicode index 
-	   TODO: should be precomputed
-	 */
-	for(t=0;t<sizeof(nameToUnicodeTab)/sizeof(nameToUnicodeTab[0]);t++) {
-	    if(nameToUnicodeTab[t].u == u) {
-		uniname = nameToUnicodeTab[t].name;
-		break;
-	    }
-	}
-    }
-
-    if(charname) {
-	int t;
-	for(t=0;t<font->num_glyphs;t++) {
-	    if(font->glyphs[t].name && !strcmp(font->glyphs[t].name,charname)) {
-		msg("<debug> Char [%d,>%s<,%d] maps to %d\n", charnr, charname, u, t);
-		return t;
-	    }
-	}
-	/* if we didn't find the character, maybe
-	   we can find the capitalized version */
-	for(t=0;t<font->num_glyphs;t++) {
-	    if(font->glyphs[t].name && !strcasecmp(font->glyphs[t].name,charname)) {
-		msg("<debug> Char [%d,>>%s<<,%d] maps to %d\n", charnr, charname, u, t);
-		return t;
-	    }
-	}
-    }
-
-    if(uniname) {
-	int t;
-	for(t=0;t<font->num_glyphs;t++) {
-	    if(font->glyphs[t].name && !strcmp(font->glyphs[t].name,uniname)) {
-		msg("<debug> Char [%d,%s,>%d(%s)<] maps to %d\n", charnr, charname, u, uniname, t);
-		return t;
-	    }
-	}
-	/* if we didn't find the character, maybe
-	   we can find the capitalized version */
-	for(t=0;t<font->num_glyphs;t++) {
-	    if(font->glyphs[t].name && !strcasecmp(font->glyphs[t].name,uniname)) {
-		msg("<debug> Char [%d,%s,>>%d(%s)<<] maps to %d\n", charnr, charname, u, uniname, t);
-		return t;
-	    }
-	}
-    }
-
-    /* try to use the unicode id */
-    if(u>=0 && u<font->max_unicode && font->unicode2glyph[u]>=0) {
-	msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->unicode2glyph[u]);
-	return font->unicode2glyph[u];
-    }
-    /* try to use the unicode|0xe000 (needed for some WingDings fonts)
-       FIXME: do this only if we know the font is wingdings?
-     */
-    u |= 0xe000;
-    if(u>=0 && u<font->max_unicode && font->unicode2glyph[u]>=0) {
-	msg("<debug> Char [%d,%s,>%d<] maps to %d\n", charnr, charname, u, font->unicode2glyph[u]);
-	return font->unicode2glyph[u];
-    }
-
-    if(charnr>=0 && charnr<font->num_glyphs) {
-	msg("<debug> Char [>%d<,%s,%d] maps to %d\n", charnr, charname, u, charnr);
-	return charnr;
-    }
-    
-    return -1;
-}
-
-
 void GFXOutputDev::beginString(GfxState *state, GString *s) 
 { 
     int render = state->getRender();
@@ -1021,7 +900,6 @@ void GFXOutputDev::beginString(GfxState *state, GString *s)
 
     msg("<trace> beginString(%s) render=%d", makeStringPrintable(s->getCString()), render);
     double m11,m21,m12,m22;
-//    msg("<debug> %s beginstring \"%s\"\n", gfxstate2str(state), s->getCString());
     state->getFontTransMat(&m11, &m12, &m21, &m22);
     m11 *= state->getHorizScaling();
     m21 *= state->getHorizScaling();
@@ -1032,8 +910,6 @@ void GFXOutputDev::beginString(GfxState *state, GString *s)
     this->current_font_matrix.m11 = -m22 / 1024.0;
     this->current_font_matrix.tx = 0;
     this->current_font_matrix.ty = 0;
-
-    gfxmatrix_t m = this->current_font_matrix;
 }
 
 static gfxline_t* mkEmptyGfxShape(double x, double y)
@@ -1053,18 +929,23 @@ static char isValidUnicode(int c)
 void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 			double dx, double dy,
 			double originX, double originY,
-			CharCode c, int nBytes, Unicode *_u, int uLen)
+			CharCode charid, int nBytes, Unicode *_u, int uLen)
 {
-    int render = state->getRender();
-    // check for invisible text -- this is used by Acrobat Capture
-    if (render == 3) {
-	msg("<debug> Ignoring invisible text: char %d at %f,%f", c, x, y);
+    if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
+	msg("<error> Invalid charid %d for font %s", charid, current_font_id);
 	return;
     }
 
+    CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
+
+    int render = state->getRender();
     gfxcolor_t col = getFillColor(state);
 
-    Gushort *CIDToGIDMap = 0;
+    // check for invisible text -- this is used by Acrobat Capture
+    if (render == RENDER_INVISIBLE) {
+	col.a = 0;
+    }
+
     GfxFont*font = state->getFont();
 
     if(font->getType() == fontType3 && do_interpretType3Chars) {
@@ -1072,100 +953,24 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<debug> type3 char at %f/%f", x, y);
 	return;
     }
-    
-    Unicode u=0;
-    char*name=0;
 
-    if(uLen)
-	u = _u[0];
-
-/*    char*fontname = getFontName(font);
-    if(u<256 && strstr(fontname, "ingdings")) {
-        // symbols are at 0xe000 in the unicode table
-        u |= 0xe000;
-    }
-    free(fontname);*/
-
-    if(font->isCIDFont()) {
-	GfxCIDFont*cfont = (GfxCIDFont*)font;
-
-	if(font->getType() == fontCIDType2)
-	    CIDToGIDMap = cfont->getCIDToGID();
-    } else {
-	Gfx8BitFont*font8;
-	font8 = (Gfx8BitFont*)font;
-	char**enc=font8->getEncoding();
-	name = enc[c];
-    }
-    if (CIDToGIDMap) {
-	msg("<debug> drawChar(%f, %f, c='%c' (%d), GID=%d, u=%d <%d>) CID=%d name=\"%s\" render=%d\n", x, y, (c&127)>=32?c:'?', c, CIDToGIDMap[c], u, uLen, font->isCIDFont(), FIXNULL(name), render);
-	c = CIDToGIDMap[c];
-    } else {
-	msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d name=\"%s\" render=%d\n",x,y,(c&127)>=32?c:'?',c,u, uLen, font->isCIDFont(), FIXNULL(name), render);
-    }
-
-    int charid = -1;
-   
-    if(uLen<=1) {
-	charid = getGfxCharID(current_gfxfont, c, name, u);
-    } else {
-	charid = getGfxCharID(current_gfxfont, c, name, -1);
-
-	if(charid < 0) {
-	    /* multiple unicodes- should usually map to a ligature.
-	       if the ligature doesn't exist, we need to draw
-	       the characters one-by-one. */
-	    int t;
-	    msg("<warning> ligature %d missing in font %s\n", c, current_gfxfont->id);
-	    for(t=0;t<uLen;t++) {
-		drawChar(state, x, y, dx, dy, originX, originY, c, nBytes, _u+t, 1);
-	    }
-	    return;
-	}
-    }
-    if(charid<0) {
-	msg("<warning> Didn't find character '%s' (c=%d,u=%d) in current charset (%s, %d characters)", 
-		FIXNULL(name),c, u, FIXNULL((char*)current_gfxfont->id), current_gfxfont->num_glyphs);
-	return;
-    }
-    //useless- the font has already been passed to the output device
-    //if(!isValidUnicode(current_gfxfont->glyphs[charid].unicode) && isValidUnicode(u)) {
-    //    current_gfxfont->glyphs[charid].
-    //}
+    Unicode u = uLen?(_u[0]):0;
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d\n",x,y,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render);
 
     gfxmatrix_t m = this->current_font_matrix;
     state->transform(x, y, &m.tx, &m.ty);
     m.tx += user_movex + clipmovex;
     m.ty += user_movey + clipmovey;
 
-    if((!name || strcmp(name, "space")) && charid!=32 && u!=32)
-    {
-        gfxline_t*l = current_gfxfont->glyphs[charid].line;
-        double x,y;
-        char ok = 0;
-        while(l) {
-            if((l->type == gfx_lineTo || l->type == gfx_splineTo) && l->x!=x && l->y!=y) {
-                ok = 1;
-            }
-            l = l->next;
-        }
-        if(!ok) {
-	    static int lastemptychar = 0;
-	    if(charid != lastemptychar)
-		msg("<warning> Drawing empty character charid=%d u=%d", charid, u);
-	    lastemptychar = charid;
-        }
-    }
-
-    if(render == RENDER_FILL) {
-	device->drawchar(device, current_gfxfont, charid, &col, &m);
+    if(render == RENDER_FILL || render == RENDER_INVISIBLE) {
+	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
 	if(!textmodeinfo) {
 	    msg("<notice> Some texts will be rendered as shape");
 	    textmodeinfo = 1;
 	}
-	gfxline_t*glyph = current_gfxfont->glyphs[charid].line;
+	gfxline_t*glyph = current_gfxfont->glyphs[glyphid].line;
 	gfxline_t*tglyph = gfxline_clone(glyph);
 	gfxline_transform(tglyph, &m);
 	if((render&3) != RENDER_INVISIBLE) {
@@ -1555,63 +1360,6 @@ void GFXOutputDev::restoreState(GfxState *state) {
   statepos--;
 }
 
-char* writeOutStdFont(fontentry* f)
-{
-    FILE*fi;
-    char namebuf1[512];
-    char namebuf2[512];
-    char* tmpFileName = mktmpname(namebuf1);
-
-    sprintf(namebuf2, "%s.afm", tmpFileName);
-    fi = fopen(namebuf2, "wb");
-    if(!fi)
-        return 0;
-    fwrite(f->afm, 1, f->afmlen, fi);
-    fclose(fi);
-
-    sprintf(namebuf2, "%s.pfb", tmpFileName);
-    fi = fopen(namebuf2, "wb");
-    if(!fi)
-        return 0;
-    fwrite(f->pfb, 1, f->pfblen, fi);
-    fclose(fi);
-
-    return strdup(namebuf2);
-}
-
-char* GFXOutputDev::searchFont(const char*name) 
-{	
-    int i;
-    char*filename=0;
-	
-    msg("<verbose> SearchFont(%s)", name);
-
-    /* see if it is a pdf standard font */
-    for(i=0;i<sizeof(pdf2t1map)/sizeof(fontentry);i++) 
-    {
-	if(!strcmp(name, pdf2t1map[i].pdffont))
-	{
-            if(!pdf2t1map[i].fullfilename) {
-                pdf2t1map[i].fullfilename = writeOutStdFont(&pdf2t1map[i]);
-                if(!pdf2t1map[i].fullfilename) {
-                    msg("<error> Couldn't save default font- is the Temp Directory writable?");
-                } else {
-                    msg("<verbose> Storing standard PDF font %s at %s", name, pdf2t1map[i].fullfilename);
-                }
-            }
-	    return strdup(pdf2t1map[i].fullfilename);
-	}
-    }
-    /* else look in all font files */
-    for(i=0;i<fontnum;i++) 
-    {
-	if(strstr(fonts[i].filename, name)) {
-	    return strdup(fonts[i].filename);
-	}
-    }
-    return 0;
-}
-
 void GFXOutputDev::updateLineWidth(GfxState *state)
 {
     double width = state->getTransformedLineWidth();
@@ -1669,461 +1417,104 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
     state->getStrokeRGB(&rgb);
 }
 
-void FoFiWrite(void *stream, char *data, int len)
-{
-   int ret = fwrite(data, len, 1, (FILE*)stream);
-}
-
-char*GFXOutputDev::writeEmbeddedFontToFile(XRef*ref, GfxFont*font)
-{
-    char*tmpFileName = NULL;
-    FILE *f;
-    int c;
-    char *fontBuf;
-    int fontLen;
-    Ref embRef;
-    Object refObj, strObj;
-    char namebuf[512];
-    tmpFileName = mktmpname(namebuf);
-    int ret;
-
-    ret = font->getEmbeddedFontID(&embRef);
-    if(!ret) {
-	msg("<verbose> Didn't get embedded font id");
-	/* not embedded- the caller should now search the font
-	   directories for this font */
-	return 0;
-    }
-
-    f = fopen(tmpFileName, "wb");
-    if (!f) {
-      msg("<error> Couldn't create temporary Type 1 font file");
-	return 0;
-    }
-
-    /*if(font->isCIDFont()) {
-	GfxCIDFont* cidFont = (GfxCIDFont *)font;
-	GString c = cidFont->getCollection();
-	msg("<notice> Collection: %s", c.getCString());
-    }*/
-
-    //if (font->getType() == fontType1C) {
-    if (0) { //font->getType() == fontType1C) {
-      if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
-	fclose(f);
-	msg("<error> Couldn't read embedded font file");
-	return 0;
-      }
-      FoFiType1C *cvt = FoFiType1C::make(fontBuf, fontLen);
-      if(!cvt) return 0;
-      cvt->convertToType1(0, NULL, gTrue, FoFiWrite, f);
-      //cvt->convertToCIDType0("test", f);
-      //cvt->convertToType0("test", f);
-      delete cvt;
-      gfree(fontBuf);
-    } else if(font->getType() == fontTrueType) {
-      msg("<verbose> writing font using TrueTypeFontFile::writeTTF");
-      if (!(fontBuf = font->readEmbFontFile(xref, &fontLen))) {
-	fclose(f);
-	msg("<error> Couldn't read embedded font file");
-	return 0;
-      }
-      FoFiTrueType *cvt = FoFiTrueType::make(fontBuf, fontLen);
-      cvt->writeTTF(FoFiWrite, f);
-      delete cvt;
-      gfree(fontBuf);
-    } else {
-      font->getEmbeddedFontID(&embRef);
-      refObj.initRef(embRef.num, embRef.gen);
-      refObj.fetch(ref, &strObj);
-      refObj.free();
-      strObj.streamReset();
-      int f4[4];
-      char f4c[4];
-      int t;
-      for(t=0;t<4;t++) {
-	  f4[t] = strObj.streamGetChar();
-	  f4c[t] = (char)f4[t];
-	  if(f4[t] == EOF)
-	      break;
-      }
-      if(t==4) {
-	  if(!strncmp(f4c, "true", 4)) {
-	      /* some weird TTF fonts don't start with 0,1,0,0 but with "true".
-		 Change this on the fly */
-	      f4[0] = f4[2] = f4[3] = 0;
-	      f4[1] = 1;
-	  }
-	  fputc(f4[0], f);
-	  fputc(f4[1], f);
-	  fputc(f4[2], f);
-	  fputc(f4[3], f);
-
-	  while ((c = strObj.streamGetChar()) != EOF) {
-	    fputc(c, f);
-	  }
-      }
-      strObj.streamClose();
-      strObj.free();
-    }
-    fclose(f);
-
-    return strdup(tmpFileName);
-}
-    
-char* GFXOutputDev::searchForSuitableFont(GfxFont*gfxFont)
-{
-    char*name = getFontName(gfxFont);
-    char*fontname = 0;
-    char*filename = 0;
-
-    if(!this->config_use_fontconfig)
-        return 0;
-    
-#ifdef HAVE_FONTCONFIG
-    FcPattern *pattern, *match;
-    FcResult result;
-    FcChar8 *v;
-
-    static int fcinitcalled = false; 
-        
-    msg("<debug> searchForSuitableFont(%s)", name);
-    
-    // call init ony once
-    if (!fcinitcalled) {
-        msg("<debug> Initializing FontConfig...");
-        fcinitcalled = true;
-	if(!FcInit()) {
-            msg("<debug> FontConfig Initialization failed. Disabling.");
-            config_use_fontconfig = 0;
-            return 0;
-        }
-        msg("<debug> ...initialized FontConfig");
-    }
-   
-    msg("<debug> FontConfig: Create \"%s\" Family Pattern", name);
-    pattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString, name, NULL);
-    if (gfxFont->isItalic()) // check for italic
-        msg("<debug> FontConfig: Adding Italic Slant");
-	FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
-    if (gfxFont->isBold()) // check for bold
-        msg("<debug> FontConfig: Adding Bold Weight");
-        FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
-
-    msg("<debug> FontConfig: Try to match...");
-    // configure and match using the original font name 
-    FcConfigSubstitute(0, pattern, FcMatchPattern); 
-    FcDefaultSubstitute(pattern);
-    match = FcFontMatch(0, pattern, &result);
-    
-    if (FcPatternGetString(match, "family", 0, &v) == FcResultMatch) {
-        msg("<debug> FontConfig: family=%s", (char*)v);
-        // if we get an exact match
-        if (strcmp((char *)v, name) == 0) {
-	    if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
-		filename = strdup((char*)v); // mem leak
-		char *nfn = strrchr(filename, '/');
-		if(nfn) fontname = strdup(nfn+1);
-		else    fontname = filename;
-            }
-            msg("<debug> FontConfig: Returning \"%s\"", fontname);
-        } else {
-            // initialize patterns
-            FcPatternDestroy(pattern);
-    	    FcPatternDestroy(match);
-
-            // now match against serif etc.
-	    if (gfxFont->isSerif()) {
-                msg("<debug> FontConfig: Create Serif Family Pattern");
-                pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "serif", NULL);
-            } else if (gfxFont->isFixedWidth()) {
-                msg("<debug> FontConfig: Create Monospace Family Pattern");
-                pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "monospace", NULL);
-            } else {
-                msg("<debug> FontConfig: Create Sans Family Pattern");
-                pattern = FcPatternBuild (NULL, FC_FAMILY, FcTypeString, "sans", NULL);
-            }
-
-            // check for italic
-            if (gfxFont->isItalic()) {
-                msg("<debug> FontConfig: Adding Italic Slant");
-                int bb = FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
-            }
-            // check for bold
-            if (gfxFont->isBold()) {
-                msg("<debug> FontConfig: Adding Bold Weight");
-                int bb = FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
-            }
-
-            msg("<debug> FontConfig: Try to match... (2)");
-            // configure and match using serif etc
-    	    FcConfigSubstitute (0, pattern, FcMatchPattern);
-            FcDefaultSubstitute (pattern);
-            match = FcFontMatch (0, pattern, &result);
-            
-            if (FcPatternGetString(match, "file", 0, &v) == FcResultMatch) {
-		filename = strdup((char*)v); // mem leak
-		char *nfn = strrchr(filename, '/');
-		if(nfn) fontname = strdup(nfn+1);
-		else    fontname = filename;
-    	    }
-            msg("<debug> FontConfig: Returning \"%s\"", fontname);
-        }        
-    }
-
-    //printf("FONTCONFIG: pattern");
-    //FcPatternPrint(pattern);
-    //printf("FONTCONFIG: match");
-    //FcPatternPrint(match);
- 
-    FcPatternDestroy(pattern);
-    FcPatternDestroy(match);
-
-    pdfswf_addfont(filename);
-    return fontname;
-#else
-    return 0;
-#endif
-}
-
-char* GFXOutputDev::substituteFont(GfxFont*gfxFont, char* oldname)
-{
-    const char*fontname = 0, *filename = 0;
-    msg("<notice> substituteFont(%s)", oldname);
-
-    if(!(fontname = searchForSuitableFont(gfxFont))) {
-	fontname = "Times-Roman";
-    }
-    filename = searchFont(fontname);
-    if(!filename) {
-	msg("<error> Couldn't find font %s- did you install the default fonts?", fontname);
-	return 0;
-    }
-
-    if(substitutepos>=sizeof(substitutesource)/sizeof(char*)) {
-	msg("<fatal> Too many fonts in file.");
-	exit(1);
-    }
-    if(oldname) {
-	substitutesource[substitutepos] = strdup(oldname); //mem leak
-	substitutetarget[substitutepos] = fontname;
-	msg("<notice> substituting %s -> %s", FIXNULL(oldname), FIXNULL(fontname));
-	substitutepos ++;
-    }
-    return strdup(filename); //mem leak
-}
-
-void unlinkfont(char* filename)
-{
-    int l;
-    if(!filename)
-	return;
-    l=strlen(filename);
-    unlink(filename);
-    if(!strncmp(&filename[l-4],".afm",4)) {
-	memcpy(&filename[l-4],".pfb",4);
-	unlink(filename);
-	memcpy(&filename[l-4],".pfa",4);
-	unlink(filename);
-	memcpy(&filename[l-4],".afm",4);
-	return;
-    } else 
-    if(!strncmp(&filename[l-4],".pfa",4)) {
-	memcpy(&filename[l-4],".afm",4);
-	unlink(filename);
-	memcpy(&filename[l-4],".pfa",4);
-	return;
-    } else 
-    if(!strncmp(&filename[l-4],".pfb",4)) {
-	memcpy(&filename[l-4],".afm",4);
-	unlink(filename);
-	memcpy(&filename[l-4],".pfb",4);
-	return;
-    }
-}
-
 void GFXOutputDev::setXRef(PDFDoc*doc, XRef *xref) 
 {
     this->doc = doc;
     this->xref = xref;
 }
 
-int GFXOutputDev::setGfxFont(char*id, char*name, char*filename, double maxSize, CharCodeToUnicode*ctu)
+gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
 {
-    gfxfont_t*font = 0;
-    fontlist_t*last=0,*l = this->fontlist;
+    gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
+    memset(font, 0, sizeof(gfxfont_t));
 
-    if(!id)
-	msg("<error> Internal Error: FontID is null");
-
-    /* TODO: should this be part of the state? */
-    while(l) {
-	last = l;
-	if(!strcmp(l->font->id, id)) {
-	    current_gfxfont = l->font;
-	    font = l->font;
-	    device->addfont(device, current_gfxfont);
-	    return 1;
+    font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*src->num_glyphs);
+    memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
+    font->id = strdup(getFontName(xpdffont));
+    int t;
+    double quality = (1024 * 0.05) / src->max_size;
+    double scale = 1;
+    //printf("%d glyphs\n", font->num_glyphs);
+    font->num_glyphs = 0;
+    for(t=0;t<src->num_glyphs;t++) {
+	if(src->glyphs[t]) {
+	    SplashPath*path = src->glyphs[t]->path;
+	    int len = path?path->getLength():0;
+	    //printf("glyph %d) %08x (%d line segments)\n", t, path, len);
+	    gfxglyph_t*glyph = &font->glyphs[font->num_glyphs];
+	    src->glyphs[t]->glyphid = font->num_glyphs;
+	    glyph->unicode = src->glyphs[t]->unicode;
+	    if(glyph->unicode >= font->max_unicode)
+		font->max_unicode = glyph->unicode+1;
+	    gfxdrawer_t drawer;
+	    gfxdrawer_target_gfxline(&drawer);
+	    int s;
+	    int count = 0;
+	    double xmax = 0;
+	    for(s=0;s<len;s++) {
+		Guchar f;
+		double x, y;
+		path->getPoint(s, &x, &y, &f);
+		if(x > xmax)
+		    xmax = x;
+		if(f&splashPathFirst) {
+		    drawer.moveTo(&drawer, x*scale, y*scale);
+		}
+		if(f&splashPathCurve) {
+		    double x2,y2;
+		    path->getPoint(++s, &x2, &y2, &f);
+		    if(f&splashPathCurve) {
+			double x3,y3;
+			path->getPoint(++s, &x3, &y3, &f);
+			gfxdraw_cubicTo(&drawer, x*scale, y*scale, x2*scale, y2*scale, x3*scale, y3*scale, quality);
+		    } else {
+			drawer.splineTo(&drawer, x*scale, y*scale, x2*scale, y2*scale);
+		    }
+		} else {
+		    drawer.lineTo(&drawer, x*scale, y*scale);
+		}
+	     //   printf("%f %f %s %s\n", x, y, (f&splashPathCurve)?"curve":"",
+	     //       			  (f&splashPathFirst)?"first":"",
+	     //       			  (f&splashPathLast)?"last":"");
+	    }
+	    glyph->line = (gfxline_t*)drawer.result(&drawer);
+	    glyph->advance = xmax*scale; // we don't know the real advance value, so this'll have to do
+	    font->num_glyphs++;
 	}
-	l = l->next;
     }
-    if(!filename) return 0;
-
-    /* A font size of e.g. 9 means the font will be scaled down by
-       1024 and scaled up by 9. So to have a maximum error of 1/20px,
-       we have to divide 0.05 by (fontsize/1024)
-     */
-    double quality = (1024 * 0.05) / maxSize;
-   
-    msg("<verbose> Loading %s...", filename);
-    font = gfxfont_load(id, filename, 0, quality);
-    if(!font) {
-	msg("<verbose> Couldn't load Font %s (%s)", filename, id);
-	return 0;
-    }
-    msg("<verbose> Font %s (%s) loaded successfully", filename, id);
-
-    if(this->config_remapunicode && ctu) {
-	int c;
-	for(c=0;c<font->num_glyphs;c++) {
-	    Unicode u[8];
-	    int uLen = ctu->mapToUnicode(c, u, 8);
-	    if(uLen && !isValidUnicode(font->glyphs[c].unicode) && isValidUnicode(u[0]))
-		font->glyphs[c].unicode = u[0];
+    font->unicode2glyph = (int*)malloc(sizeof(int)*font->max_unicode);
+    memset(font->unicode2glyph, -1, sizeof(int)*font->max_unicode);
+    for(t=0;t<font->num_glyphs;t++) {
+	if(font->glyphs[t].unicode>0 && font->glyphs[t].unicode<font->max_unicode) {
+	    font->unicode2glyph[font->glyphs[t].unicode] = t;
 	}
-    }
 
-    l = new fontlist_t;
-    l->font = font;
-    l->filename = strdup(filename);
-    l->next = 0;
-    current_gfxfont = l->font;
-    if(last) {
-	last->next = l;
-    } else {
-	this->fontlist = l;
     }
-    device->addfont(device, current_gfxfont);
-    return 1;
+    return font;
 }
 
 void GFXOutputDev::updateFont(GfxState *state) 
 {
-    GfxFont*gfxFont = state->getFont();
-      
+    GfxFont* gfxFont = state->getFont();
     if (!gfxFont) {
-	return;
+	return; 
     }  
+    char*id = getFontID(gfxFont);
+    if(!id) {
+	msg("<error> Internal Error: FontID is null");
+	return; 
+    }
+
+    this->current_fontinfo = this->info->getFont(id);
     
-    char * fontid = getFontID(gfxFont);
-    char * fontname = getFontName(gfxFont);
-
-    double maxSize = 1.0;
-
-    if(this->info) {
-	maxSize = this->info->getMaximumFontSize(fontid);
+    gfxfont_t*font = gfxfontlist_findfont(this->gfxfontlist,id);
+    if(!font) {
+	font = createGfxFont(gfxFont, current_fontinfo);
+	gfxfontlist_addfont(this->gfxfontlist, font);
+	device->addfont(device, font);
     }
-    
-    int t;
-    /* first, look if we substituted this font before-
-       this way, we don't initialize the T1 Fonts
-       too often */
-    for(t=0;t<substitutepos;t++) {
-	if(!strcmp(fontid, substitutesource[t])) {
-	    free(fontid);fontid=0;
-	    fontid = strdup(substitutetarget[t]);
-	    break;
-	}
-    }
-
-    /* second, see if this is a font which was used before-
-       if so, we are done */
-    if(setGfxFont(fontid, fontname, 0, 0, gfxFont->getCTU())) {
-	free(fontid);
-	free(fontname);
-	return;
-    }
-/*    if(swfoutput_queryfont(&device, fontid))
-	swfoutput_setfont(&device, fontid, 0);
-	
-	msg("<debug> updateFont(%s) [cached]", fontid);
-	return;
-    }*/
-
-    // look for Type 3 font
-    if (gfxFont->getType() == fontType3) {
-	if(!type3Warning) {
-	    type3Warning = gTrue;
-	    showFontError(gfxFont, 2);
-	}
-	free(fontid);
-	free(fontname);
-	return;
-    }
-
-    /* now either load the font, or find a substitution */
-
-    Ref embRef;
-    GBool embedded = gfxFont->getEmbeddedFontID(&embRef);
-
-    char*fileName = 0;
-    int del = 0;
-    if(embedded &&
-       (gfxFont->getType() == fontType1 ||
-	gfxFont->getType() == fontType1C ||
-        gfxFont->getType() == fontCIDType0C ||
-	gfxFont->getType() == fontTrueType ||
-	gfxFont->getType() == fontCIDType2
-       ))
-    {
-      fileName = writeEmbeddedFontToFile(xref, gfxFont);
-      if(!fileName) showFontError(gfxFont,0);
-      else del = 1;
-    } else {
-      fileName = searchFont(fontname);
-      if(!fileName) showFontError(gfxFont,0);
-    }
-    if(!fileName) {
-	char * fontname = getFontName(gfxFont);
-	msg("<warning> Font %s %scould not be loaded.", fontname, embedded?"":"(not embedded) ");
-	
-	if(lastfontdir)
-	    msg("<warning> Try putting a TTF version of that font (named \"%s.ttf\") into %s", fontname, lastfontdir);
-	else
-	    msg("<warning> Try specifying one or more font directories");
-
-	fileName = substituteFont(gfxFont, fontid);
-	if(!fileName)
-	    exit(1);
-	if(fontid) { free(fontid);fontid = strdup(substitutetarget[substitutepos-1]); /*ugly hack*/};
-	msg("<notice> Font is now %s (%s)", fontid, fileName);
-    }
-
-    if(!fileName) {
-	msg("<error> Couldn't set font %s\n", fontid);
-	free(fontid);
-	free(fontname);
-	return;
-    }
-	
-    msg("<verbose> updateFont(%s) -> %s (max size: %f)", fontid, fileName, maxSize);
-    dumpFontInfo("<verbose>", gfxFont);
-
-    //swfoutput_setfont(&device, fontid, fileName);
-    
-    if(!setGfxFont(fontid, fontname, 0, 0, gfxFont->getCTU())) {
-	setGfxFont(fontid, fontname, fileName, maxSize, gfxFont->getCTU());
-    }
-   
-    if(fileName && del)
-	unlinkfont(fileName);
-
-    if(fileName)
-        free(fileName);
-    free(fontid);
-    free(fontname);
-
-    msg("<verbose> |");
+    current_gfxfont = font;
+    free(id);
 }
 
 #define SQR(x) ((x)*(x))
@@ -2609,9 +2000,6 @@ void addGlobalFont(const char*filename)
 
 void addGlobalLanguageDir(const char*dir)
 {
-    if(!globalParams)
-        globalParams = new GlobalParams((char*)"");
-    
     msg("<notice> Adding %s to language pack directories", dir);
 
     int l;
@@ -2994,13 +2382,13 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     states[statepos].softmaskrecording = 0;
 }
   
-/*class MemCheck
-{
-    public: ~MemCheck()
-    {
-        delete globalParams;globalParams=0;
-        Object::memCheck(stderr);
-        gMemReport(stderr);
-    }
-} myMemCheck;*/
+//class MemCheck
+//{
+//    public: ~MemCheck()
+//    {
+//        delete globalParams;globalParams=0;
+//        Object::memCheck(stderr);
+//        gMemReport(stderr);
+//    }
+//} myMemCheck;
 

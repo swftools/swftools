@@ -3,6 +3,7 @@
 
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
+#include "../gfxtools.h"
 
 #include "config.h"
 #include "InfoOutputDev.h"
@@ -221,7 +222,9 @@ public:
   void infofeature(const char*feature);
 
   char outer_clip_box; //whether the page clip box is still on
-  
+
+  gfxfontlist_t*gfxfontlist;
+
   GBool do_interpretType3Chars;
 
   InfoOutputDev*info;
@@ -267,9 +270,8 @@ public:
   gfxline_t* current_text_clip;
   char* current_font_id;
   gfxfont_t* current_gfxfont;
+  FontInfo*current_fontinfo;
   gfxmatrix_t current_font_matrix;
-
-  fontlist_t* fontlist;
 
   int*pages;
   int pagebuflen;
@@ -282,6 +284,13 @@ public:
   int config_transparent;
 
   parameter_t*parameters;
+};
+
+class GFXGlobalParams:  public GlobalParams {
+    public:
+    GFXGlobalParams();
+    ~GFXGlobalParams();
+    virtual DisplayFontParam *getDisplayFont(GString *fontName);
 };
 
 #endif //__gfxoutputdev_h__
