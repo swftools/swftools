@@ -1992,6 +1992,7 @@ void addGlobalFont(const char*filename)
     f.filename = filename;
     if(fontnum < sizeof(fonts)/sizeof(fonts[0])) {
 	msg("<verbose> Adding font \"%s\".", filename);
+	msg("<warning> External fonts are not supported with this version. Ignoring font %s", filename);
 	fonts[fontnum++] = f;
     } else {
 	msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
@@ -2020,6 +2021,8 @@ void addGlobalLanguageDir(const char*dir)
 
 void addGlobalFontDir(const char*dirname)
 {
+    msg("<warning> External fonts are not supported with this version. Ignoring directory %s", dirname);
+    return;
 #ifdef HAVE_DIRENT_H
     msg("<notice> Adding %s to font directories", dirname);
     lastfontdir = strdup(dirname);
