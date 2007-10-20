@@ -131,7 +131,7 @@ xpdf/%.$(O): xpdf/%.cc
 
 
 ../libpdf$(A): $(libpdf_objects) $(xpdf_objects) $(splash_objects)
-	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_objects)
+	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_objects) $(splash_objects)
 	$(RANLIB) ../libpdf$(A)
 
 pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
