@@ -286,7 +286,8 @@ void dumpFont(TAG*tag, char*prefix)
     printf("%slanguage: %02x\n", prefix,font->language);
     int t;
     for(t=0;t<font->numchars;t++) {
-	printf("%s== Glyph %d: advance=%d ==\n", prefix, t, font->glyph[t].advance);
+	int u = font->glyph2ascii?font->glyph2ascii[t]:-1;
+	printf("%s== Glyph %d: advance=%d encoding=%d ==\n", prefix, t, font->glyph[t].advance, u);
 	SHAPE2* shape = swf_ShapeToShape2(font->glyph[t].shape);
 	SHAPELINE*line = shape->lines;
 
