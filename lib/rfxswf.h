@@ -554,6 +554,10 @@ int swf_FontEnumerate(SWF * swf,void (*FontCallback) (void*,U16,U8*), void*self)
 int swf_FontExtract(SWF * swf,int id,SWFFONT ** f);
 // Fetches all available information from DefineFont, DefineFontInfo, DefineText, ...
 // id = FontID, id=0 -> Extract first Font
+int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag);
+int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t);
+int swf_FontExtract_DefineFont(int id, SWFFONT * f, TAG * t);
+int swf_FontExtract_GlyphNames(int id, SWFFONT * f, TAG * tag);
 
 int swf_FontIsItalic(SWFFONT * f);
 int swf_FontIsBold(SWFFONT * f);
