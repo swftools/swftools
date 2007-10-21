@@ -111,7 +111,7 @@ typedef struct _gfxdevice
 
     /* deprecated */ void (*addfont)(struct _gfxdevice*dev, gfxfont_t*font);
 
-    void (*drawchar)(struct _gfxdevice*dev, gfxfont_t*fontid, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+    void (*drawchar)(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 
     void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, const char*action);
     
