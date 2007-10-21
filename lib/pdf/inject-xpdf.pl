@@ -31,8 +31,6 @@ PS3="choose> "
 if test "x\$VERSION" = "x";then
     select V in stable latest;do VERSION="\$V";break;done
 fi
-case $VERSION
-
 if test "x\$VERSION" = "xstable";then
     echo "Switching to stable version"
     rm -f xpdf
