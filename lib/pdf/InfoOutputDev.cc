@@ -146,7 +146,7 @@ void InfoOutputDev::updateFont(GfxState *state)
 
     state->setCTM(1.0,0,0,1.0,0,0);
     splash->updateCTM(state, 0,0,0,0,0,0);
-    state->setTextMat(1.0,0,0,-1.0,0,0);
+    state->setTextMat(1.0,0,0,1.0,0,0);
     state->setFont(font, 1024.0);
     splash->doUpdateFont(state);
     currentfont->splash_font = splash->getCurrentFont();
@@ -216,7 +216,7 @@ GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 	currentglyph->x1=0;
 	currentglyph->y1=0;
 	currentglyph->x2=dx;
-	currentglyph->y2=-dy;
+	currentglyph->y2=dy;
 	return gFalse;
     } else {
 	return gTrue;
@@ -228,15 +228,15 @@ void InfoOutputDev::type3D0(GfxState *state, double wx, double wy)
     currentglyph->x1=0;
     currentglyph->y1=0;
     currentglyph->x2=wx;
-    currentglyph->y2=-wy;
+    currentglyph->y2=wy;
 }
 
 void InfoOutputDev::type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury)
 {
     currentglyph->x1=llx;
-    currentglyph->y1=-lly;
+    currentglyph->y1=lly;
     currentglyph->x2=urx;
-    currentglyph->y2=-ury;
+    currentglyph->y2=ury;
 }
 
 void InfoOutputDev::endType3Char(GfxState *state)

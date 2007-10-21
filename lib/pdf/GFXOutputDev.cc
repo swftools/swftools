@@ -328,6 +328,13 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 	    return dfp;
 	}
     }
+    for(t=0;t<fontnum;t++) {
+	if(strstr(fonts[t].filename, name)) {
+	    DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
+	    dfp->t1.fileName = new GString(fonts[t].filename);
+	    return dfp;
+	}
+    }
     return GlobalParams::getDisplayFont(fontName);
 }
 
@@ -893,15 +900,25 @@ char* makeStringPrintable(char*str)
 #define INTERNAL_FONT_SIZE 1024.0
 void GFXOutputDev::updateFontMatrix(GfxState*state)
 {
-    double m11,m21,m12,m22;
-    state->getFontTransMat(&m11, &m12, &m21, &m22);
-    m11 *= state->getHorizScaling();
-    m21 *= state->getHorizScaling();
+    double* ctm = state->getCTM();
+    double fontSize = state->getFontSize();
+    double*textMat = state->getTextMat();
 
-    this->current_font_matrix.m00 = m11 / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.m01 = m12 / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.m10 = -m21 / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.m11 = -m22 / INTERNAL_FONT_SIZE;
+    /*  taking the absolute value of horizScaling seems to be required for
+	some italic fonts. FIXME: SplashOutputDev doesn't need this- why? */
+    double hscale = fabs(state->getHorizScaling());
+   
+    // from xpdf-3.02/SplashOutputDev:updateFont
+    double mm11 = textMat[0] * fontSize * hscale;
+    double mm12 = textMat[1] * fontSize * hscale;
+    double mm21 = textMat[2] * fontSize;
+    double mm22 = textMat[3] * fontSize;
+
+    // multiply with ctm, like state->getFontTransMat() does
+    this->current_font_matrix.m00 = (ctm[0]*mm11 + ctm[2]*mm12) / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.m01 = (ctm[1]*mm11 + ctm[3]*mm12) / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.m10 = (ctm[0]*mm21 + ctm[2]*mm22) / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.m11 = (ctm[1]*mm21 + ctm[3]*mm22) / INTERNAL_FONT_SIZE;
     this->current_font_matrix.tx = 0;
     this->current_font_matrix.ty = 0;
 }
@@ -914,7 +931,6 @@ void GFXOutputDev::beginString(GfxState *state, GString *s)
     }
 
     msg("<trace> beginString(%s) render=%d", makeStringPrintable(s->getCString()), render);
-    updateFontMatrix(state);
 }
 
 static gfxline_t* mkEmptyGfxShape(double x, double y)
@@ -940,7 +956,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<error> Invalid charid %d for font %s", charid, current_font_id);
 	return;
     }
-
+  
     CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
 
     int render = state->getRender();
@@ -1069,7 +1085,7 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
 	    msg("<error> Invalid charid %d for font %s", charid, current_font_id);
 	    return gFalse;
 	}
-	gfxcolor_t col={0,0,0,0};
+	gfxcolor_t col={128,0,0,0};
 	CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     }
@@ -1472,7 +1488,7 @@ gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
 		Guchar f;
 		double x, y;
 		path->getPoint(s, &x, &y, &f);
-		if(x > xmax)
+		if(!s || x > xmax)
 		    xmax = x;
 		if(f&splashPathFirst) {
 		    drawer.moveTo(&drawer, x*scale, y*scale);
@@ -2021,8 +2037,7 @@ void addGlobalFont(const char*filename)
     memset(&f, 0, sizeof(fontfile_t));
     f.filename = filename;
     if(fontnum < sizeof(fonts)/sizeof(fonts[0])) {
-	msg("<verbose> Adding font \"%s\".", filename);
-	msg("<warning> External fonts are not supported with this version. Ignoring font %s", filename);
+	msg("<notice> Adding font \"%s\".", filename);
 	fonts[fontnum++] = f;
     } else {
 	msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
@@ -2051,8 +2066,6 @@ void addGlobalLanguageDir(const char*dir)
 
 void addGlobalFontDir(const char*dirname)
 {
-    msg("<warning> External fonts are not supported with this version. Ignoring directory %s", dirname);
-    return;
 #ifdef HAVE_DIRENT_H
     msg("<notice> Adding %s to font directories", dirname);
     lastfontdir = strdup(dirname);
@@ -2079,8 +2092,7 @@ void addGlobalFontDir(const char*dirname)
 	    type=3;
 	if(!strncasecmp(&name[l-4], ".ttf", 4)) 
 	    type=2;
-	if(type)
-	{
+	if(type) {
 	    char*fontname = (char*)malloc(strlen(dirname)+strlen(name)+2);
 	    strcpy(fontname, dirname);
             strcat(fontname, dirseparator());
