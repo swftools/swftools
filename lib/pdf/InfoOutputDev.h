@@ -26,6 +26,7 @@
 #include "SplashFont.h"
 #include "SplashOutputDev.h"
 #include "SplashPath.h"
+#include "SplashFontFile.h"
 #include "GHash.h"
 
 struct GlyphInfo
@@ -72,6 +73,7 @@ class InfoOutputDev: public OutputDev
     virtual GBool useDrawChar();
     virtual GBool interpretType3Chars();
     virtual void startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2);
+    virtual void endPage();
     virtual void drawLink(Link *link, Catalog *catalog);
     virtual double getMaximumFontSize(char*id);
     virtual void updateFont(GfxState *state);
