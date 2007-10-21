@@ -96,6 +96,7 @@ public:
   //----- update graphics state
 
   virtual void updateFont(GfxState *state);
+  virtual void updateFontMatrix(GfxState *state);
   virtual void updateFillColor(GfxState *state);
   virtual void updateStrokeColor(GfxState *state);
   virtual void updateLineWidth(GfxState *state);
@@ -282,6 +283,7 @@ public:
   int config_break_on_warning;
   int config_remapunicode;
   int config_transparent;
+  int config_extrafontdata;
 
   parameter_t*parameters;
 };

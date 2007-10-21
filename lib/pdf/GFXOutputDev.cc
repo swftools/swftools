@@ -1,4 +1,4 @@
-/* pdfswf.cc
+/* GFXOutputDev.cc
    implements a pdf output device (OutputDev).
 
    This file is part of swftools.
@@ -194,7 +194,7 @@ GFXOutputState::GFXOutputState() {
 
 GBool GFXOutputDev::interpretType3Chars() 
 {
-    return this->do_interpretType3Chars;
+    return gTrue;
 }
 
 typedef struct _drawnchar
@@ -360,7 +360,7 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->config_break_on_warning=0;
     this->config_remapunicode=0;
     this->config_transparent=0;
-    this->do_interpretType3Chars = gTrue;
+    this->config_extrafontdata = 0;
 
     this->parameters = p;
     
@@ -377,9 +377,7 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
 
 void GFXOutputDev::setParameter(const char*key, const char*value)
 {
-    if(!strcmp(key,"rawtext")) {
-        this->do_interpretType3Chars = atoi(value)^1;
-    } else if(!strcmp(key,"breakonwarning")) {
+    if(!strcmp(key,"breakonwarning")) {
 	this->config_break_on_warning = atoi(value);
     } else if(!strcmp(key,"fontconfig")) {
         this->config_use_fontconfig = atoi(value);
@@ -387,6 +385,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_remapunicode = atoi(value);
     } else if(!strcmp(key,"transparent")) {
         this->config_transparent = atoi(value);
+    } else if(!strcmp(key,"extrafontdata")) {
+        this->config_extrafontdata = atoi(value);
     }
 }
   
@@ -890,6 +890,21 @@ char* makeStringPrintable(char*str)
     tmp_printstr[len] = 0;
     return tmp_printstr;
 }
+#define INTERNAL_FONT_SIZE 1024.0
+void GFXOutputDev::updateFontMatrix(GfxState*state)
+{
+    double m11,m21,m12,m22;
+    state->getFontTransMat(&m11, &m12, &m21, &m22);
+    m11 *= state->getHorizScaling();
+    m21 *= state->getHorizScaling();
+
+    this->current_font_matrix.m00 = m11 / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.m01 = m12 / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.m10 = -m21 / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.m11 = -m22 / INTERNAL_FONT_SIZE;
+    this->current_font_matrix.tx = 0;
+    this->current_font_matrix.ty = 0;
+}
 
 void GFXOutputDev::beginString(GfxState *state, GString *s) 
 { 
@@ -899,17 +914,7 @@ void GFXOutputDev::beginString(GfxState *state, GString *s)
     }
 
     msg("<trace> beginString(%s) render=%d", makeStringPrintable(s->getCString()), render);
-    double m11,m21,m12,m22;
-    state->getFontTransMat(&m11, &m12, &m21, &m22);
-    m11 *= state->getHorizScaling();
-    m21 *= state->getHorizScaling();
-
-    this->current_font_matrix.m00 = m11 / 1024.0;
-    this->current_font_matrix.m01 = m12 / 1024.0;
-    this->current_font_matrix.m10 = -m21 / 1024.0;
-    this->current_font_matrix.m11 = -m22 / 1024.0;
-    this->current_font_matrix.tx = 0;
-    this->current_font_matrix.ty = 0;
+    updateFontMatrix(state);
 }
 
 static gfxline_t* mkEmptyGfxShape(double x, double y)
@@ -948,7 +953,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 
     GfxFont*font = state->getFont();
 
-    if(font->getType() == fontType3 && do_interpretType3Chars) {
+    if(font->getType() == fontType3) {
 	/* type 3 chars are passed as graphics */
 	msg("<debug> type3 char at %f/%f", x, y);
 	return;
@@ -1034,38 +1039,49 @@ void GFXOutputDev::endTextObject(GfxState *state)
 /* the logic seems to be as following:
    first, beginType3Char is called, with the charcode and the coordinates.
    if this function returns true, it already knew about the char and has now drawn it.
-   if the function returns false, it's a new char, and type3D1 is called with some parameters-
-   the all draw operations until endType3Char are part of the char (which in this moment is
+   if the function returns false, it's a new char, and type3D0 and/or type3D1 might be 
+   called with some parameters.
+   Afterwards, all draw operations until endType3Char are part of the char (which in this moment is
    at the position first passed to beginType3Char). the char ends with endType3Char.
 
    The drawing operations between beginType3Char and endType3Char are somewhat different to
-   the normal ones. For example, the fillcolor equals the stroke color.
+   the normal ones. For example, the fillcolor equals the stroke color. (Because the stroke
+   color determines the color of a font)
 */
 
-GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen)
+GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode charid, Unicode *u, int uLen)
 {
-    msg("<debug> beginType3Char %d, %08x, %d", code, *u, uLen);
+    msg("<debug> beginType3Char %d u=%d", charid, uLen?u[0]:0);
     type3active = 1;
+    
+    if(config_extrafontdata && current_fontinfo) {
 
-    /*int t;
+	gfxmatrix_t m = this->current_font_matrix;
+	state->transform(0, 0, &m.tx, &m.ty);
+	m.m00*=INTERNAL_FONT_SIZE;
+	m.m01*=INTERNAL_FONT_SIZE;
+	m.m10*=INTERNAL_FONT_SIZE;
+	m.m11*=INTERNAL_FONT_SIZE;
+	m.tx += user_movex + clipmovex;
+	m.ty += user_movey + clipmovey;
 
-    gfxcolor_t col={255,0,0,0};
-    gfxmatrix_t m = {1,0,0, 0,1,0};
+	if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
+	    msg("<error> Invalid charid %d for font %s", charid, current_font_id);
+	    return gFalse;
+	}
+	gfxcolor_t col={0,0,0,0};
+	CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
+	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
+    }
 
-    for(t=0;t<uLen;t++) {
-	device->drawchar(device, 0, u[t], &col, &m);
-    }*/
 
     /* the character itself is going to be passed using the draw functions */
     return gFalse; /* gTrue= is_in_cache? */
 }
 
 void GFXOutputDev::type3D0(GfxState *state, double wx, double wy) {
-    msg("<debug> type3D0 width=%f height=%f", wx, wy);
 }
 void GFXOutputDev::type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury) {
-    msg("<debug> type3D1 width=%f height=%f bbox=(%f,%f,%f,%f)", wx, wy,
-	    llx,lly,urx,ury);
 }
 
 void GFXOutputDev::endType3Char(GfxState *state)
@@ -1136,8 +1152,9 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     clippath[3].type = gfx_lineTo;clippath[3].x = x1; clippath[3].y = y2; clippath[3].next = &clippath[4];
     clippath[4].type = gfx_lineTo;clippath[4].x = x1; clippath[4].y = y1; clippath[4].next = 0;
     device->startclip(device, clippath); outer_clip_box = 1;
-    if(!config_transparent)
+    if(!config_transparent) {
         device->fill(device, clippath, &white);
+    }
 }
 
 
@@ -1432,7 +1449,7 @@ gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
     font->id = strdup(getFontName(xpdffont));
     int t;
-    double quality = (1024 * 0.05) / src->max_size;
+    double quality = (INTERNAL_FONT_SIZE * 0.05) / src->max_size;
     double scale = 1;
     //printf("%d glyphs\n", font->num_glyphs);
     font->num_glyphs = 0;
@@ -1500,12 +1517,22 @@ void GFXOutputDev::updateFont(GfxState *state)
 	return; 
     }  
     char*id = getFontID(gfxFont);
+    msg("<verbose> Updating font to %s", id);
+    if(gfxFont->getType() == fontType3) {
+	infofeature("Type3 fonts");
+	if(!config_extrafontdata) {
+	    return;
+	}
+    }
     if(!id) {
 	msg("<error> Internal Error: FontID is null");
 	return; 
     }
 
     this->current_fontinfo = this->info->getFont(id);
+    if(!this->current_fontinfo->seen) {
+	dumpFontInfo("<verbose>", gfxFont);
+    }
     
     gfxfont_t*font = gfxfontlist_findfont(this->gfxfontlist,id);
     if(!font) {
@@ -1515,6 +1542,8 @@ void GFXOutputDev::updateFont(GfxState *state)
     }
     current_gfxfont = font;
     free(id);
+
+    updateFontMatrix(state);
 }
 
 #define SQR(x) ((x)*(x))
