@@ -236,6 +236,7 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "f"))
     {
 	driver->set_parameter("storeallcharacters", "1");
+	driver->set_parameter("extrafontdata", "1");
 	return 0;
     }
     else if (!strcmp(name, "w"))
@@ -487,9 +488,10 @@ int main(int argn, char *argv[])
     
     initLog(0,-1,0,0,-1,loglevel);
 
-    if(installPath) {
+    /* not needed anymore since fonts are embedded
+       if(installPath) {
 	fontpaths[fontpathpos++] = concatPaths(installPath, "fonts");
-    }
+    }*/
 
 #ifdef HAVE_SRAND48
     srand48(time(0));
