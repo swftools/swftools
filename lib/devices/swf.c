@@ -694,7 +694,7 @@ static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, float x, floa
     }
 
     if(charid<0 || charid>=swffont->numchars) {
-	msg("<warning> No character %d in font %s ", charid, FIXNULL((char*)swffont->name));
+	msg("<warning> No character %d in font %s (%d chars)", charid, FIXNULL((char*)swffont->name), swffont->numchars);
 	return 0;
     }
     /*if(swffont->glyph[charid].shape->bitlen <= 16) {
@@ -2438,9 +2438,10 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
 	swffont->layout->bounds[t] = swf_ShapeDrawerGetBBox(&draw);
 
-	if(swffont->layout->bounds[t].xmax && swffont->layout->bounds[t].xmax*2 < advance) {
-	    printf("fix bad advance value: bbox=%d, advance=%d (%f)\n", swffont->layout->bounds[t].xmax, advance, font->glyphs[t].advance);
-	    advance = swffont->layout->bounds[t].xmax;
+	int xmax = swffont->layout->bounds[t].xmax / 20;
+	if(xmax>0 && xmax*2 < advance) {
+	    printf("fix bad advance value: bbox=%d, advance=%d (%f)\n", xmax, advance, font->glyphs[t].advance);
+	    advance = xmax;
 	}
 	    
 	if(advance<32768) {
