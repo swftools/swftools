@@ -733,7 +733,7 @@ static void endtext(gfxdevice_t*dev)
     if(i->textid<0)
         return;
 
-    i->tag = swf_InsertTag(i->tag,ST_DEFINETEXT);
+    i->tag = swf_InsertTag(i->tag,ST_DEFINETEXT2);
     swf_SetU16(i->tag, i->textid);
 
     SRECT r;
