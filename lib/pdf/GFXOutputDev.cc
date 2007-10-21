@@ -1085,7 +1085,7 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
 	    msg("<error> Invalid charid %d for font %s", charid, current_font_id);
 	    return gFalse;
 	}
-	gfxcolor_t col={128,0,0,0};
+	gfxcolor_t col={0,0,0,0};
 	CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     }
