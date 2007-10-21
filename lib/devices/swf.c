@@ -962,9 +962,8 @@ static void startshape(gfxdevice_t*dev)
 
     if(i->shapeid>=0)
 	return;
-
-    if(i->textid>=0)
-        endtext(dev);
+    //if(i->chardatapos && i->chardata[i->chardatapos-1].color.a)
+    endtext(dev);
 
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
 
@@ -2342,7 +2341,9 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     gfxbbox_t r = gfxline_getbbox(line);
     int is_outside_page = !is_inside_page(dev, r.xmin, r.ymin) || !is_inside_page(dev, r.xmax, r.ymax);
 
+    //if(i->chardatapos && i->chardata[i->chardatapos-1].color.a) {
     endtext(dev);
+
     if(!i->config_ignoredraworder)
 	endshape(dev);
 
