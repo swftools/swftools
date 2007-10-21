@@ -960,7 +960,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     }
 
     Unicode u = uLen?(_u[0]):0;
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d\n",x,y,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render);
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d\n",x,y,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid);
 
     gfxmatrix_t m = this->current_font_matrix;
     state->transform(x, y, &m.tx, &m.ty);
@@ -1447,7 +1447,7 @@ gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
 
     font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*src->num_glyphs);
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
-    font->id = strdup(getFontName(xpdffont));
+    font->id = strdup(getFontID(xpdffont));
     int t;
     double quality = (INTERNAL_FONT_SIZE * 0.05) / src->max_size;
     double scale = 1;
@@ -1507,6 +1507,7 @@ gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
 	}
 
     }
+    msg("<trace> %d glyphs.", t, font->num_glyphs);
     return font;
 }
 

@@ -1,6 +1,7 @@
 #include "SplashTypes.h"
 #include "SplashOutputDev.h"
 #include "SplashPath.h"
+#include "SplashFontFile.h"
 #include "InfoOutputDev.h"
 #include "GfxState.h"
 #include "../log.h"
@@ -11,6 +12,8 @@ InfoOutputDev::InfoOutputDev(XRef*xref)
     num_links = 0;
     num_images = 0;
     num_fonts = 0;
+    currentfont = 0;
+    currentglyph = 0;
     id2font = new GHash(1);
     SplashColor white = {255,255,255};
     splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
@@ -44,6 +47,7 @@ FontInfo::FontInfo()
     this->seen = 0;
     this->num_glyphs = 0;
     this->glyphs = 0;
+    this->splash_font = 0;
 }
 FontInfo::~FontInfo()
 {
@@ -78,6 +82,9 @@ void InfoOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doub
     this->x2 = (int)x2;
     this->y2 = (int)y2;
     msg("<verbose> Generating info structure for page %d", pageNum);
+}
+void InfoOutputDev::endPage()
+{
 }
 void InfoOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
@@ -114,41 +121,35 @@ char*getFontID(GfxFont*font)
 void InfoOutputDev::updateFont(GfxState *state) 
 {
     GfxFont*font = state->getFont();
-    if(!font)
+    if(!font) {
+	currentfont = 0;
 	return;
+    }
     if(font->getType() == fontType3) {
+	currentfont = 0;
 	return;
     }
     char*id = getFontID(font);
 
-    FontInfo*info = (FontInfo*)id2font->lookup(id);
-    if(info) {
-	/* font already known */
-	free(id);
-	currentfont = info;
-	return;
-    }
+    if(currentfont)
+	currentfont->splash_font = 0;
 
-    info = new FontInfo;
-    info->font = font;
-    info->max_size = 0;
+    currentfont = (FontInfo*)id2font->lookup(id);
+    if(!currentfont) {
+	currentfont = new FontInfo;
+	currentfont->font = font;
+	currentfont->max_size = 0;
+	GString* idStr = new GString(id);
+	id2font->add(idStr, (void*)currentfont);
+	num_fonts++;
+    }
 
     state->setCTM(1.0,0,0,1.0,0,0);
     splash->updateCTM(state, 0,0,0,0,0,0);
     state->setTextMat(1.0,0,0,-1.0,0,0);
     state->setFont(font, 1024.0);
     splash->doUpdateFont(state);
-    info->splash_font = splash->getCurrentFont();
-
-    if(!info->splash_font) {
-	delete info;
-	return;
-    }
- 
-    GString* idStr = new GString(id);
-    id2font->add(idStr, (void*)info);
-    num_fonts++;
-    currentfont = info;
+    currentfont->splash_font = splash->getCurrentFont();
     free(id);
 }
 FontInfo* InfoOutputDev::getFont(char*id)
@@ -168,6 +169,9 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     double lenx = sqrt(m11*m11 + m12*m12);
     double leny = sqrt(m21*m21 + m22*m22);
     double len = lenx>leny?lenx:leny;
+    if(!currentfont || !currentfont->splash_font) {
+	return; //error
+    }
     if(currentfont && currentfont->max_size < len) {
 	currentfont->max_size = len;
     }
