@@ -1559,7 +1559,8 @@ void GFXOutputDev::updateFont(GfxState *state)
     gfxfont_t*font = gfxfontlist_findfont(this->gfxfontlist,id);
     if(!font) {
 	font = createGfxFont(gfxFont, current_fontinfo);
-	gfxfontlist_addfont(this->gfxfontlist, font);
+        font->id = strdup(id);
+	this->gfxfontlist = gfxfontlist_addfont(this->gfxfontlist, font);
 	device->addfont(device, font);
     }
     current_gfxfont = font;
