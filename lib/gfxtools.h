@@ -81,7 +81,7 @@ gfxfontlist_t* gfxfontlist_create();
 gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font);
 gfxfont_t*gfxfontlist_findfont(gfxfontlist_t*list, char*id);
 char gfxfontlist_hasfont(gfxfontlist_t*list, gfxfont_t*font);
-void gfxfontlist_free(gfxfontlist_t*list);
+void gfxfontlist_free(gfxfontlist_t*list, char deletefonts);
 
 gfxline_t*gfxline_makerectangle(int x1, int y1, int x2, int y2);
 void gfxline_show(gfxline_t*line, FILE*fi);

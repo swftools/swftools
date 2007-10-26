@@ -25,6 +25,7 @@
 #include <math.h>
 #include <assert.h>
 #include "gfxtools.h"
+#include "gfxfont.h"
 
 typedef struct _linedraw_internal
 {
@@ -772,12 +773,15 @@ gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
 	return l;
     }
 }
-void gfxfontlist_free(gfxfontlist_t*list)
+void gfxfontlist_free(gfxfontlist_t*list, char deletefonts)
 {
     gfxfontlist_t*l = list;
     while(l) {
 	gfxfontlist_t*next = l;
 	memset(l, 0, sizeof(*l));
+	if(l->font) {
+	    gfxfont_free(l->font);
+	}
 	free(l);
 	l = next;
     }
