@@ -852,7 +852,7 @@ GFXOutputDev::~GFXOutputDev()
 	free(this->pages); this->pages = 0;
     }
 
-    gfxfontlist_free(this->gfxfontlist);
+    gfxfontlist_free(this->gfxfontlist, 1);
 };
 GBool GFXOutputDev::upsideDown() 
 {
@@ -965,6 +965,8 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     // check for invisible text -- this is used by Acrobat Capture
     if (render == RENDER_INVISIBLE) {
 	col.a = 0;
+	if(!config_extrafontdata)
+	    return;
     }
 
     GfxFont*font = state->getFont();
@@ -1547,6 +1549,9 @@ void GFXOutputDev::updateFont(GfxState *state)
     }
 
     this->current_fontinfo = this->info->getFont(id);
+    if(!this->current_fontinfo) {
+	msg("<error> Internal Error: no fontinfo for font %s\n", id);
+    }
     if(!this->current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", gfxFont);
     }
