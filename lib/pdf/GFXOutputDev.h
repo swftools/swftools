@@ -8,13 +8,8 @@
 #include "config.h"
 #include "InfoOutputDev.h"
 #include "PDFDoc.h"
-
-typedef struct _fontlist
-{
-    char*filename;
-    gfxfont_t*font;
-    _fontlist*next;
-} fontlist_t;
+#include "GlobalParams.h"
+#include "CommonOutputDev.h"
 
 class GFXOutputState {
     public:
@@ -45,29 +40,21 @@ void addGlobalFont(const char*filename);
 void addGlobalLanguageDir(const char*dir);
 void addGlobalFontDir(const char*dirname);
 
-class GFXOutputDev:  public OutputDev {
+class GFXOutputDev:  public CommonOutputDev {
 public:
   gfxdevice_t* device;
 
-  // Constructor.
-  GFXOutputDev(parameter_t*p);
-  void setDevice(gfxdevice_t*dev);
-
-  // Destructor.
+  GFXOutputDev(InfoOutputDev*info, PDFDoc*doc);
   virtual ~GFXOutputDev() ;
 
-  void setMove(int x,int y);
-  void setClip(int x1,int y1,int x2,int y2);
-  void setParameter(const char*key, const char*value);
-
-  void setInfo(InfoOutputDev*info) {this->info = info;}
+  virtual void setDevice(gfxdevice_t*dev);
+  virtual void setMove(int x,int y);
+  virtual void setClip(int x1,int y1,int x2,int y2);
+  virtual void setParameter(const char*key, const char*value);
   
   // Start a page.
-  void startFrame(int width, int height);
-
   virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
-
-  void endframe();
+  virtual void endPage();
 
   //----- get info about output device
 
@@ -81,10 +68,6 @@ public:
   virtual GBool interpretType3Chars();
   
   //virtual GBool useShadedFills() { return gTrue; }
-
-  //----- initialization and control
-
-  void setXRef(PDFDoc*doc, XRef *xref);
 
   //----- link borders
   virtual void processLink(Link *link, Catalog *catalog);
@@ -189,7 +172,7 @@ public:
   virtual void type3D0(GfxState *state, double wx, double wy);
   virtual void type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury);
 
-  void preparePage(int pdfpage, int outputpage);
+  virtual void preparePage(int pdfpage, int outputpage);
 
   char* searchForSuitableFont(GfxFont*gfxFont);
 
@@ -198,7 +181,6 @@ public:
   virtual GBool useDrawForm();
   virtual void drawForm(Ref id);
   virtual GBool needNonText();
-  virtual void endPage();
 
   //virtual void dump();
   //virtual void beginStringOp(GfxState *state);
@@ -264,8 +246,6 @@ public:
      pages start at (0,0)*/
   int clipmovex;
   int clipmovey;
-
-  double width,height;
 
   gfxline_t* current_text_stroke;
   gfxline_t* current_text_clip;

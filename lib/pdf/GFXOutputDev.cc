@@ -31,9 +31,6 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#ifdef HAVE_FONTCONFIG
-#include <fontconfig.h>
-#endif
 //xpdf header files
 #include "config.h"
 #include "gfile.h"
@@ -338,8 +335,12 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
     return GlobalParams::getDisplayFont(fontName);
 }
 
-GFXOutputDev::GFXOutputDev(parameter_t*p)
+GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
 {
+    this->info = info;
+    this->doc = doc;
+    this->xref = doc->getXRef();
+
     this->jpeginfo = 0;
     this->textmodeinfo = 0;
     this->linkinfo = 0;
@@ -363,52 +364,39 @@ GFXOutputDev::GFXOutputDev(parameter_t*p)
     this->pages = 0;
     this->pagebuflen = 0;
     this->pagepos = 0;
-    this->config_use_fontconfig=1;
     this->config_break_on_warning=0;
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
 
-    this->parameters = p;
-    
     this->gfxfontlist = gfxfontlist_create();
   
     memset(states, 0, sizeof(states));
-
-    /* configure device */
-    while(p) {
-        setParameter(p->name, p->value);
-	p = p->next;
-    }
 };
 
 void GFXOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key,"breakonwarning")) {
 	this->config_break_on_warning = atoi(value);
-    } else if(!strcmp(key,"fontconfig")) {
-        this->config_use_fontconfig = atoi(value);
     } else if(!strcmp(key,"remapunicode")) {
         this->config_remapunicode = atoi(value);
     } else if(!strcmp(key,"transparent")) {
         this->config_transparent = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
+    } else if(!strcmp(key,"help")) {
+	printf("\nPDF layer options:\n");
+	printf("breakonwarning=0/1  Abort conversion if graphic objects are found which\n");
+	printf("                    are not 100%% supported\n");
+	printf("transparent=0/1     Make PDF transparent (alpha background)\n");
+	printf("extrafontdata=0/1   Store Type3 characters and capture characters\n");
     }
+    
 }
   
 void GFXOutputDev::setDevice(gfxdevice_t*dev)
 {
-    parameter_t*p = this->parameters;
-
-    /* pass parameters to output device */
     this->device = dev;
-    if(this->device) {
-	while(p) {
-	    this->device->setparameter(this->device, p->name, p->value);
-	    p = p->next;
-	}
-    }
 }
   
 void GFXOutputDev::setMove(int x,int y)
@@ -657,6 +645,10 @@ GBool GFXOutputDev::needNonText()
 void GFXOutputDev::endPage() 
 {
     msg("<verbose> endPage");
+    if(outer_clip_box) {
+	device->endclip(device);
+	outer_clip_box = 0;
+    }
 }
 
 #define STROKE_FILL 1
@@ -824,14 +816,6 @@ void GFXOutputDev::clipToStrokePath(GfxState *state)
 
     strokeGfxline(state, line, STROKE_FILL|STROKE_CLIP);
     gfxline_free(line);
-}
-
-void GFXOutputDev::endframe()
-{
-    if(outer_clip_box) {
-	device->endclip(device);
-	outer_clip_box = 0;
-    }
 }
 
 void GFXOutputDev::finish()
@@ -1106,18 +1090,6 @@ void GFXOutputDev::endType3Char(GfxState *state)
 {
     type3active = 0;
     msg("<debug> endType3Char");
-}
-
-void GFXOutputDev::startFrame(int width, int height) 
-{
-    if(outer_clip_box) {
-	device->endclip(device);
-	outer_clip_box = 0;
-    }
-
-    device->startpage(device, width, height);
-    this->width = width;
-    this->height = height;
 }
 
 void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
@@ -1452,11 +1424,6 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
     state->getStrokeRGB(&rgb);
 }
 
-void GFXOutputDev::setXRef(PDFDoc*doc, XRef *xref) 
-{
-    this->doc = doc;
-    this->xref = xref;
-}
 
 gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
 {
@@ -2222,13 +2189,11 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GBool forSoftMask)
 {
     const char*colormodename = "";
-    BBox rect = mkBBox(state, bbox, this->width, this->height);
 
     if(blendingColorSpace) {
 	colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
     }
     dbg("beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
-    dbg("using clipping rect %f/%f/%f/%f\n", rect.posx,rect.posy,rect.width,rect.height);
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     
     states[statepos].createsoftmask |= forSoftMask;

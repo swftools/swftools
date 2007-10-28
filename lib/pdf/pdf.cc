@@ -5,6 +5,7 @@
 #include "GlobalParams.h"
 #include "InfoOutputDev.h"
 #include "GFXOutputDev.h"
+#include "BitmapOutputDev.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER
@@ -36,7 +37,7 @@ typedef struct _pdf_doc_internal
     PDFDoc*doc;
     Object docinfo;
     InfoOutputDev*info;
-    GFXOutputDev*outputDev;
+    CommonOutputDev*outputDev;
     pdf_page_info_t*pages;
 } pdf_doc_internal_t;
 
@@ -46,7 +47,7 @@ typedef struct _pdf_page_internal
 
 typedef struct _dev_output_internal
 {
-    GFXOutputDev*outputDev;
+    CommonOutputDev*outputDev;
 } dev_output_internal_t;
 
 
@@ -67,7 +68,7 @@ void pdfpage_destroy(gfxpage_t*pdf_page)
     free(pdf_page);pdf_page=0;
 }
 
-void render2(gfxpage_t*page, gfxdevice_t*output)
+void render2(gfxpage_t*page, gfxdevice_t*dev)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
 
@@ -81,38 +82,41 @@ void render2(gfxpage_t*page, gfxdevice_t*output)
 	return;
     }
 
+    pi->outputDev->setDevice(dev);
     if(pi->protect) {
-	gfxdevice_t*dev = pi->outputDev->device;
         dev->setparameter(dev, "protect", "1");
     }
-    pi->outputDev->setInfo(pi->info);
-    pi->outputDev->setXRef(pi->doc, pi->doc->getXRef());
+    
+    /* pass global parameters to output device */
+    parameter_t*p = device_config;
+    while(p) {
+	dev->setparameter(dev, p->name, p->value);
+	p = p->next;
+    }
     pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, true, /*doLinks*/(int)1);
     pi->doc->processLinks((OutputDev*)pi->outputDev, page->nr);
-    pi->outputDev->endframe();
+    pi->outputDev->setDevice(0);
 }
 
     
 void pdfpage_render(gfxpage_t*page, gfxdevice_t*output)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    pi->outputDev->setDevice(output);
     pi->outputDev->setMove(0,0);
     pi->outputDev->setClip(0,0,0,0);
     render2(page, output);
-    pi->outputDev->setDevice(0);
 }
 
 void pdfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfxcoord_t y, gfxcoord_t _x1, gfxcoord_t _y1, gfxcoord_t _x2, gfxcoord_t _y2)
 {
-    int x1=(int)_x1,y1=(int)_y1,x2=(int)_x2,y2=(int)_y2;
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    pi->outputDev->setDevice(output);
-    pi->outputDev->setMove((int)x,(int)y);
+
+    int x1=(int)_x1,y1=(int)_y1,x2=(int)_x2,y2=(int)_y2;
     if((x1|y1|x2|y2)==0) x2++;
+
+    pi->outputDev->setMove((int)x,(int)y);
     pi->outputDev->setClip((int)x1,(int)y1,(int)x2,(int)y2);
     render2(page, output);
-    pi->outputDev->setDevice(0);
 }
 
 static int globalparams_count=0;
@@ -121,6 +125,9 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
 
+    if(i->outputDev) {
+	delete i->outputDev;i->outputDev=0;
+    }
     delete i->doc; i->doc=0;
     free(i->pages); i->pages = 0;
 
@@ -138,18 +145,18 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 	global_page_range = 0;
     }
     
-    globalparams_count--;
+    /*globalparams_count--;
     if(!globalparams_count) {
 	delete globalParams;
 	globalParams = 0;
 	globalparams_count = 0;
-    }
+    }*/
 }
 
 void pdf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
-    GFXOutputDev*o = i->outputDev;
+    CommonOutputDev*o = i->outputDev;
     if(!strcmp(name, "pagemap")) {
 	int pdfpage=0, outputpage=0;
 	sscanf(value,"%d:%d", &pdfpage, &outputpage);
@@ -302,18 +309,19 @@ static void pdf_set_parameter(const char*name, const char*value)
 	ppm_dpi = atoi(value);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
 	storeDeviceParameter("ppmsubpixels", buf);
+    } else if(!strcmp(name, "help")) {
+	printf("\nPDF device global parameters:\n");
+	printf("fontdir=<dir>   a directory with additional fonts\n");
+	printf("font=<filename> an dditional font filename\n");
+	printf("pages=<range>   the range of pages to convert (example: pages=1-100,210-)\n");
+	printf("zoom=<dpi>      the resultion (default: 72)\n");
     } else {
 	storeDeviceParameter(name,value);
-    }
+    } 
 }
 
 static gfxdocument_t*pdf_open(const char*filename)
 {
-    if(!globalParams) {
-        globalParams = new GFXGlobalParams();
-	globalparams_count++;
-    }
-    
     gfxdocument_t*pdf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(pdf_doc, 0, sizeof(gfxdocument_t));
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
@@ -381,8 +389,21 @@ static gfxdocument_t*pdf_open(const char*filename)
 	    i->pages[t-1].has_info = 1;
 	}
     }
-    i->info = io;
-    i->outputDev = new GFXOutputDev(device_config);
+
+    if(0) {
+	BitmapOutputDev*outputDev = new BitmapOutputDev(io, i->doc);
+	i->outputDev = (CommonOutputDev*)outputDev;
+    } else {
+	GFXOutputDev*outputDev = new GFXOutputDev(io, i->doc);
+	i->outputDev = (CommonOutputDev*)outputDev;
+    }
+
+    /* pass global parameters to PDF driver*/
+    parameter_t*p = device_config;
+    while(p) {
+	i->outputDev->setParameter(p->name, p->value);
+	p = p->next;
+    }
 
     pdf_doc->get = 0;
     pdf_doc->destroy = pdf_doc_destroy;
@@ -401,5 +422,12 @@ gfxsource_t*gfxsource_pdf_create()
     memset(src, 0, sizeof(gfxsource_t));
     src->set_parameter = pdf_set_parameter;
     src->open = pdf_open;
+
+    if(!globalParams) {
+        globalParams = new GFXGlobalParams();
+	//globalparams_count++;
+    }
+    
+
     return src;
 }

@@ -8,7 +8,7 @@ all: ../libpdf$(A) pdf2swf
 
 libpdf: ../libpdf$(A)
 
-libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) pdf.$(O) fonts.$(O)
+libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) pdf.$(O) fonts.$(O)
 
 xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O) xpdf/gfile.$(O) \
 		  xpdf/FoFiTrueType.$(O) xpdf/FoFiType1.$(O) xpdf/FoFiType1C.$(O) xpdf/FoFiBase.$(O) xpdf/FoFiEncodings.$(O) \
@@ -34,6 +34,8 @@ GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h ../devices/artsutils.c
 	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
+BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h
+	$(CC) -I ./ -I xpdf BitmapOutputDev.cc -o $@
 pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
 
