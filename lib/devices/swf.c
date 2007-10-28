@@ -1853,6 +1853,32 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	    i->config_linkcolor.b,
 	    i->config_linkcolor.a);
 
+    } else if(!strcmp(name, "help")) {
+	printf("\nSWF layer options:\n");
+	printf("jpegdpi=<dpi>               resolution adjustment for jpeg images\n");
+        printf("jpegsubpixels=<pixels>      resolution adjustment for jpeg images (same as jpegdpi, but in pixels)\n");
+        printf("ppmdpi=<dpi>                resolution adjustment for lossless images\n");
+        printf("ppmsubpixels=<pixels        resolution adjustment for  lossless images (same as ppmdpi, but in pixels)\n");
+        printf("subpixels=<pixels>          shortcut for setting both jpegsubpixels and ppmsubpixels\n");
+        printf("drawonlyshapes              convert everything to shapes (currently broken)\n");
+        printf("ignoredraworder             allow to perform a few optimizations for creating smaller SWFs\n");
+        printf("linksopennewwindow          make links open a new browser window\n");
+        printf("linktarget                  target window name of new links\n");
+        printf("linkcolor=<color)           color of links (format: RRGGBBAA)\n");
+        printf("storeallcharacters          don't reduce the fonts to used characters in the output file\n");
+        printf("enablezlib                  switch on zlib compression (also done if flashversion>=7)\n");
+        printf("bboxvars                    store the bounding box of the SWF file in actionscript variables\n");
+        printf("reordertags=0/1             (default: 1) perform some tag optimizations\n");
+        printf("internallinkfunction=<name> when the user clicks a internal link (to a different page) in the converted file, this actionscript function is called\n");
+        printf("externallinkfunction=<name> when the user clicks an external link (e.g. http://www.foo.bar/) on the converted file, this actionscript function is called\n");
+        printf("disable_polygon_conversion  never convert strokes to polygons (will remove capstyles and joint styles)\n");
+        printf("caplinewidth=<width>        the minimum thichness a line needs to have so that capstyles become visible (and are converted)\n");
+        printf("insertstop                  put an ActionScript \"STOP\" tag in every frame\n");
+        printf("protect                     add a \"protect\" tag to the file, to prevent loading in the Flash editor\n");
+        printf("flashversion=<version>      the SWF fileversion (6)\n");
+        printf("minlinewidth=<width>        convert horizontal/vertical boxes smaller than this width to lines (0.05) \n");
+        printf("animate                     insert a showframe tag after each placeobject (animate draw order of PDF files)\n");
+        printf("jpegquality=<quality>       set compression quality of jpeg images\n");
     } else {
 	return 0;
     }
