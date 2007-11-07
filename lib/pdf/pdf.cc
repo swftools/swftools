@@ -369,32 +369,32 @@ static gfxdocument_t*pdf_open(const char*filename)
               i->protect = 1;
     }
 
-    InfoOutputDev*io = new InfoOutputDev(i->doc->getXRef());
+    i->info = new InfoOutputDev(i->doc->getXRef());
     int t;
     i->pages = (pdf_page_info_t*)malloc(sizeof(pdf_page_info_t)*pdf_doc->num_pages);
     memset(i->pages,0,sizeof(pdf_page_info_t)*pdf_doc->num_pages);
     for(t=1;t<=pdf_doc->num_pages;t++) {
 	if(!global_page_range || is_in_range(t, global_page_range)) {
-	    i->doc->displayPage((OutputDev*)io, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
-	    i->doc->processLinks((OutputDev*)io, t);
-	    i->pages[t-1].xMin = io->x1;
-	    i->pages[t-1].yMin = io->y1;
-	    i->pages[t-1].xMax = io->x2;
-	    i->pages[t-1].yMax = io->y2;
-	    i->pages[t-1].width = io->x2 - io->x1;
-	    i->pages[t-1].height = io->y2 - io->y1;
-	    i->pages[t-1].number_of_images = io->num_images;
-	    i->pages[t-1].number_of_links = io->num_links;
-	    i->pages[t-1].number_of_fonts = io->num_fonts;
+	    i->doc->displayPage((OutputDev*)i->info, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
+	    i->doc->processLinks((OutputDev*)i->info, t);
+	    i->pages[t-1].xMin = i->info->x1;
+	    i->pages[t-1].yMin = i->info->y1;
+	    i->pages[t-1].xMax = i->info->x2;
+	    i->pages[t-1].yMax = i->info->y2;
+	    i->pages[t-1].width = i->info->x2 - i->info->x1;
+	    i->pages[t-1].height = i->info->y2 - i->info->y1;
+	    i->pages[t-1].number_of_images = i->info->num_images;
+	    i->pages[t-1].number_of_links = i->info->num_links;
+	    i->pages[t-1].number_of_fonts = i->info->num_fonts;
 	    i->pages[t-1].has_info = 1;
 	}
     }
 
     if(0) {
-	BitmapOutputDev*outputDev = new BitmapOutputDev(io, i->doc);
+	BitmapOutputDev*outputDev = new BitmapOutputDev(i->info, i->doc);
 	i->outputDev = (CommonOutputDev*)outputDev;
     } else {
-	GFXOutputDev*outputDev = new GFXOutputDev(io, i->doc);
+	GFXOutputDev*outputDev = new GFXOutputDev(i->info, i->doc);
 	i->outputDev = (CommonOutputDev*)outputDev;
     }
 
