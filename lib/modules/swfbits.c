@@ -270,6 +270,7 @@ int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits)
     if (!jpeg)
 	return -1;
     jpeg_finish_compress(&jpeg->cinfo);
+    jpeg_destroy_compress(&jpeg->cinfo);
     rfx_free(jpeg);
     return 0;
 }

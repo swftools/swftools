@@ -44,6 +44,7 @@ static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 	return;
 
     }
+    l->sx = l->sy = 0;
     d->x = l->x = x;
     d->y = l->y = y;
     l->next = 0;
