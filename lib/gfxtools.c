@@ -778,7 +778,7 @@ void gfxfontlist_free(gfxfontlist_t*list, char deletefonts)
 {
     gfxfontlist_t*l = list;
     while(l) {
-	gfxfontlist_t*next = l;
+	gfxfontlist_t*next = l->next;
 	memset(l, 0, sizeof(*l));
 	if(l->font) {
 	    gfxfont_free(l->font);
