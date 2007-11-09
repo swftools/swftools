@@ -281,8 +281,14 @@ static void storeDeviceParameter(const char*name, const char*value)
     }
 }
 
-static void pdf_set_parameter(const char*name, const char*value)
+typedef struct _gfxsource_internal
 {
+    int config_bitmap_optimizing;
+} gfxsource_internal_t;
+
+static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value)
+{
+    gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strncmp(name, "fontdir", strlen("fontdir"))) {
         addGlobalFontDir(value);
@@ -309,6 +315,8 @@ static void pdf_set_parameter(const char*name, const char*value)
 	ppm_dpi = atoi(value);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
 	storeDeviceParameter("ppmsubpixels", buf);
+    } else if(!strcmp(name, "poly2bitmap")) {
+        i->config_bitmap_optimizing = 1;
     } else if(!strcmp(name, "help")) {
 	printf("\nPDF device global parameters:\n");
 	printf("fontdir=<dir>   a directory with additional fonts\n");
@@ -320,8 +328,9 @@ static void pdf_set_parameter(const char*name, const char*value)
     } 
 }
 
-static gfxdocument_t*pdf_open(const char*filename)
+static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 {
+    gfxsource_internal_t*isrc = (gfxsource_internal_t*)src->internal;
     gfxdocument_t*pdf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(pdf_doc, 0, sizeof(gfxdocument_t));
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
@@ -390,7 +399,7 @@ static gfxdocument_t*pdf_open(const char*filename)
 	}
     }
 
-    if(0) {
+    if(isrc->config_bitmap_optimizing) {
 	BitmapOutputDev*outputDev = new BitmapOutputDev(i->info, i->doc);
 	i->outputDev = (CommonOutputDev*)outputDev;
     } else {
@@ -422,6 +431,8 @@ gfxsource_t*gfxsource_pdf_create()
     memset(src, 0, sizeof(gfxsource_t));
     src->set_parameter = pdf_set_parameter;
     src->open = pdf_open;
+    src->internal = malloc(sizeof(gfxsource_internal_t));
+    memset(src->internal, 0, sizeof(gfxsource_internal_t));
 
     if(!globalParams) {
         globalParams = new GFXGlobalParams();
