@@ -1225,7 +1225,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
 		swf_FontReduce(iterator->swffont);
 	    }
 	    int used = iterator->swffont->use && iterator->swffont->use->used_glyphs;
-	    if(i->config_storeallcharacters || used) {
+	    if(used) {
 		mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
 		swf_FontSetDefine2(mtag, iterator->swffont);
 	    }
