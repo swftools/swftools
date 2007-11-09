@@ -33,8 +33,9 @@ struct _gfxpage;
 
 typedef struct _gfxsource
 {
-    void                 (*set_parameter)(const char*name, const char*value);
-    struct _gfxdocument* (*open)(const char*filename);
+    void                 (*set_parameter)(struct _gfxsource*src, const char*name, const char*value);
+    struct _gfxdocument* (*open)(struct _gfxsource*src, const char*filename);
+    void  (*destroy)(struct _gfxsource*src);
     void*internal;
 } gfxsource_t;
 

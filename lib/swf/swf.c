@@ -509,12 +509,12 @@ gfxpage_t* swf_doc_getpage(gfxdocument_t*doc, int page)
     return swf_page;
 }
 
-void swf_set_parameter(char*name, char*value)
+void swf_set_parameter(gfxsource_t*src, char*name, char*value)
 {
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
 }
 
-gfxdocument_t*swf_open(char*filename)
+gfxdocument_t*swf_open(gfxsource_t*src, char*filename)
 {
     gfxdocument_t*swf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(swf_doc, 0, sizeof(gfxdocument_t));
