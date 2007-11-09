@@ -382,7 +382,7 @@ static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
     DocObject*self = PyObject_New(DocObject, &DriverClass);
    
     if(!strcmp(type,"pdf"))
-	self->doc = pdfdriver->open(filename);
+	self->doc = pdfdriver->open(pdfdriver,filename);
     else
 	return PY_ERROR("Unknown type %s", type);
 
