@@ -22,6 +22,12 @@
 
 #include "OutputDev.h"
 
+#define RENDER_FILL 0
+#define RENDER_STROKE 1
+#define RENDER_FILLSTROKE 2
+#define RENDER_INVISIBLE 3
+#define RENDER_CLIP 4
+
 class CommonOutputDev: public OutputDev
 {
     public:
