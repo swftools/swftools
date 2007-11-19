@@ -821,3 +821,22 @@ diff -u -r1.5 -r1.6
  
    void setBaseDir(char *dir);
    void setupBaseFonts(char *dir);
+--- xpdf/SplashOutputDev.h.orig	2007-10-21 17:43:29.000000000 +0200
++++ xpdf/SplashOutputDev.h	2007-11-19 10:07:27.000000000 +0100
+@@ -197,6 +197,8 @@
+ #endif
+ 
+   void doUpdateFont(GfxState *state);
++  
++  SplashPath *convertPath(GfxState *state, GfxPath *path);
+ private:
+ 
+   void setupScreenParams(double hDPI, double vDPI);
+@@ -205,7 +207,6 @@
+ #else
+   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
+ #endif
+-  SplashPath *convertPath(GfxState *state, GfxPath *path);
+   void drawType3Glyph(T3FontCache *t3Font,
+ 		      T3FontCacheTag *tag, Guchar *data);
+   static GBool imageMaskSrc(void *data, SplashColorPtr line);
