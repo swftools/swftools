@@ -24,22 +24,14 @@
 
 4.) What libraries do I need to compile swftools on Unix/Linux/BSD?
 
-    You need t1lib, freetype and jpeglib to compile pdf2swf.
+    You need freetype and jpeglib to compile pdf2swf.
     Links:
 	freetype:
 	 http://www.freetype.org
-	t1lib: 
-	 ftp://sunsite.unc.edu/pub/linux/libs/graphics/t1lib-1.3.1.tar.gz
-	t1lib (mirrored here): 
-	 http://www.quiss.org/swftools/t1lib-1.3.1.tar.gz
 	jpeglib: 
 	 http://www.ijg.org/files/jpegsrc.v6b.tar.gz
 
-    Furthermore, if you want to compile avi2swf, you need the avifile library:
-        http://avifile.sourceforge.net
-    .
-
-5.) when compiling the sourcecode version, configure doesn't find my jpeglib / my t1lib!
+5.) when compiling the sourcecode version, configure doesn't find my jpeglib!
 
     In case some of your libraries/include files are installed in /usr/local,
     try the following:
@@ -196,4 +188,33 @@
     If you need an answer to something, it's usually more effective to post it on the
     mailing list, though, as there are a lot of friendly users around there which may 
     have the one or other helpful tip concerning your problem.
+
+16.) When will feature/bugfix/enhancement XY be implemented?
+
+    Setting deadlines in a non-commercial, spare-time project like swftools tools is hard,
+    and keeping them is even harder, if not impossible. 
+
+    Therefore, do not ask about deadlines, and you won't get fuzzy, or even wrong, answers.
+
+17.) How to compile avi2swf?
+
+    avi2swf isn't part of the swftools distribution anymore. If you want to convert avi files
+    to swf, please use either mencoder or ffmpeg:
+
+    mencoder file.avi -lavfopts i_certify_that_my_video_stream_does_not_use_b_frames \
+                      -ffourcc FLV1 -oac mp3lame -of lavf -ovc lavc \
+                      -lavcopts vcodec=flv:acodec=mp3:vbitrate=500:abitrate=56 -srate 22050  \
+                      -o file.swf
+
+    or
+
+    ffmpeg -i video.mpg -b <bitrate> -s <X>y<Y> -pass 1 -passlogfile log_file video.flv
+    ffmpeg -i video.mpg -b <bitrate> -s <X>y<Y> -pass 2 -passlogfile log_file video.flv
+    flvtool2 -UP video.flv
+
+18.) How can I create transparent SWFs from PDFs?
+
+    Run pdf2swf as usual, and then, on the resulting file, execute:
+
+        swfextract -i 3- file.swf -o file.swf
 
