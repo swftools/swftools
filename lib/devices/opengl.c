@@ -493,8 +493,10 @@ void opengl_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*co
 	    l = l->next;
 	}
 	if(i->font == 0) {
-	    fprintf(stderr, "Unknown font id: %s", font->id);
-	    return;
+            opengl_addfont(dev, font);
+            i->font = font;
+	    //fprintf(stderr, "Unknown font id: %s", font->id);
+	    //return;
 	}
     }
 
