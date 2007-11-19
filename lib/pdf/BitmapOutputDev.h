@@ -30,6 +30,14 @@
 #include "PDFDoc.h"
 #include "CommonOutputDev.h"
 
+struct ClipState
+{
+    ClipState*next;
+    SplashBitmap*clipbitmap;
+    char written;
+    ClipState();
+};
+
 class BitmapOutputDev: public CommonOutputDev {
 public:
     BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc);
@@ -106,6 +114,7 @@ public:
     virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading);
     virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading);
 
+    void doClip(GfxState *state, GBool eo);
     virtual void clip(GfxState *state);
     virtual void eoClip(GfxState *state);
     virtual void clipToStrokePath(GfxState *state);
@@ -157,19 +166,32 @@ public:
     virtual void setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor);
     virtual void clearSoftMask(GfxState *state);
 
+    virtual void processLink(Link *link, Catalog *catalog);
 private:
     void flush();
 
     char config_bitmapfonts;
+    char config_extrafontdata;
 
-    int width, height;
+    SplashPath*bboxpath;
+
     PDFDoc*doc;
     XRef*xref;
     SplashOutputDev*rgbdev;
-    SplashOutputDev*alphadev;
+    SplashOutputDev*clip0dev;
+    SplashOutputDev*clip1dev;
     GFXOutputDev*gfxdev;
     InfoOutputDev*info;
     gfxdevice_t*dev;
+
+    int movex, movey;
+    int width, height;
+
+    int user_movex, user_movey;
+    int user_clipx1, user_clipy1;
+    int user_clipx2, user_clipy2;
+
+    //ClipState*clipstates;
 };
 
 #endif
