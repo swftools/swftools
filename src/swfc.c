@@ -2676,28 +2676,70 @@ SPOINT getPoint(SRECT r, char*name)
 {
     int l=0;
     if(!strcmp(name, "center")) {
-	SPOINT p;
-	p.x = (r.xmin + r.xmax)/2;
-	p.y = (r.ymin + r.ymax)/2;
-	return p;
+        SPOINT p;
+        p.x = (r.xmin + r.xmax)/2;
+        p.y = (r.ymin + r.ymax)/2;
+        return p;
     }
-    if (!strcmp(name, "bottom-center"))
-    {
-	SPOINT p;
-	p.x = (r.xmin + r.xmax)/2;
-	p.y = r.ymax;
-	return p;
+    if (!strcmp(name, "bottom-center")) {
+        SPOINT p;
+        p.x = (r.xmin + r.xmax)/2;
+        p.y = r.ymax;
+        return p;
+    }
+    if (!strcmp(name, "top-center")) {
+        SPOINT p;
+        p.x = (r.xmin + r.xmax)/2;
+        p.y = r.ymin;
+        return p;
+    }
+    if (!strcmp(name, "top-left")) {
+        SPOINT p;
+        p.x = r.xmin;
+        p.y = r.ymin;
+        return p;
+    }
+    if (!strcmp(name, "top-right")) {
+        SPOINT p;
+        p.x = r.xmax;
+        p.y = r.ymin;
+        return p;
+    }
+    if (!strcmp(name, "bottom-right")) {
+        SPOINT p;
+        p.x = r.xmax;
+        p.y = r.ymax;
+        return p;
+    }
+    if (!strcmp(name, "bottom-left")) {
+        SPOINT p;
+        p.x = r.xmin;
+        p.y = r.ymax;
+        return p;
+    }
+    if (!strcmp(name, "left-center")) {
+        SPOINT p;
+        p.x = r.xmin;
+        p.y = (r.ymin + r.ymax)/2;
+        return p;
+    }
+    if (!strcmp(name, "right-center")) {
+        SPOINT p;
+        p.x = r.xmax;
+        p.y = (r.ymin + r.ymax)/2;
+        return p;
     }
 
 
     if(points_initialized)
-	l = (int)dictionary_lookup(&points, name);
+        l = (int)dictionary_lookup(&points, name);
     if(l==0) {
-	syntaxerror("Invalid point: \"%s\".", name);
+        syntaxerror("Invalid point: \"%s\".", name);
     }
     l--;
     return *(SPOINT*)&mpoints.buffer[l];
 }
+
 
 static int texture2(char*name, char*object, map_t*args, int errors)
 {
