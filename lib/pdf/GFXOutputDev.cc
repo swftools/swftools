@@ -1428,7 +1428,7 @@ gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
     font->id = strdup(getFontID(xpdffont));
     int t;
-    double quality = (INTERNAL_FONT_SIZE * 0.05) / src->max_size;
+    double quality = (INTERNAL_FONT_SIZE * 20) / src->max_size;
     double scale = 1;
     //printf("%d glyphs\n", font->num_glyphs);
     font->num_glyphs = 0;
