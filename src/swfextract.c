@@ -340,6 +340,8 @@ void extractTag(SWF*swf, char*filename)
 	}
 	if(srctag->id == ST_DEFINESPRITE)
 	    sprite = 1;
+        if(srctag->id == ST_JPEGTABLES)
+            copy = 1;
 	if(swf_isDefiningTag(srctag)) {
 	    int id = swf_GetDefineID(srctag);
 	    if(used[id])  {
