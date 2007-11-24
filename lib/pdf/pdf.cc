@@ -323,9 +323,8 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	printf("font=<filename> an dditional font filename\n");
 	printf("pages=<range>   the range of pages to convert (example: pages=1-100,210-)\n");
 	printf("zoom=<dpi>      the resultion (default: 72)\n");
-    } else {
-	storeDeviceParameter(name,value);
-    } 
+    }	
+    storeDeviceParameter(name,value);
 }
 
 static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
