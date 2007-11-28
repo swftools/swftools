@@ -264,6 +264,7 @@ public:
   int config_remapunicode;
   int config_transparent;
   int config_extrafontdata;
+  double config_fontquality;
 
   parameter_t*parameters;
 };

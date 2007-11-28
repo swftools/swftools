@@ -368,6 +368,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
+    this->config_fontquality = 10;
 
     this->gfxfontlist = gfxfontlist_create();
   
@@ -384,12 +385,17 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_transparent = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
+    } else if(!strcmp(key,"fontquality")) {
+        this->config_fontquality = atof(value);
+	if(this->config_fontquality<=1)
+	    this->config_fontquality=1;
     } else if(!strcmp(key,"help")) {
 	printf("\nPDF layer options:\n");
 	printf("breakonwarning=0/1  Abort conversion if graphic objects are found which\n");
 	printf("                    are not 100%% supported\n");
 	printf("transparent=0/1     Make PDF transparent (alpha background)\n");
 	printf("extrafontdata=0/1   Store Type3 characters and capture characters\n");
+	printf("fontquality=1..100  Curve approximation quality of the fonts\n");
     }
     
 }
@@ -1419,7 +1425,7 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
 }
 
 
-gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
+gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src, double config_fontquality)
 {
     gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
     memset(font, 0, sizeof(gfxfont_t));
@@ -1428,7 +1434,8 @@ gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src)
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
     font->id = strdup(getFontID(xpdffont));
     int t;
-    double quality = (INTERNAL_FONT_SIZE * 20) / src->max_size;
+    
+    double quality = (INTERNAL_FONT_SIZE * 200 / config_fontquality) / src->max_size;
     double scale = 1;
     //printf("%d glyphs\n", font->num_glyphs);
     font->num_glyphs = 0;
@@ -1519,7 +1526,7 @@ void GFXOutputDev::updateFont(GfxState *state)
     
     gfxfont_t*font = gfxfontlist_findfont(this->gfxfontlist,id);
     if(!font) {
-	font = createGfxFont(gfxFont, current_fontinfo);
+	font = createGfxFont(gfxFont, current_fontinfo, this->config_fontquality);
         font->id = strdup(id);
 	this->gfxfontlist = gfxfontlist_addfont(this->gfxfontlist, font);
 	device->addfont(device, font);
