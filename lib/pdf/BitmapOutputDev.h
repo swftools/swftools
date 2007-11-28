@@ -104,11 +104,20 @@ public:
     virtual void stroke(GfxState *state);
     virtual void fill(GfxState *state);
     virtual void eoFill(GfxState *state);
+#if (xpdfMajorVersion < 3) || (xpdfMinorVersion < 2) || (xpdfUpdateVersion < 7)
     virtual void tilingPatternFill(GfxState *state, Object *str,
-				   int paintType, Dict *resDict,
-				   double *mat, double *bbox,
-				   int x0, int y0, int x1, int y1,
-				   double xStep, double yStep);
+			       int paintType, Dict *resDict,
+			       double *mat, double *bbox,
+			       int x0, int y0, int x1, int y1,
+			       double xStep, double yStep);
+#else
+    virtual void tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
+			       int paintType, Dict *resDict,
+			       double *mat, double *bbox,
+			       int x0, int y0, int x1, int y1,
+			       double xStep, double yStep);
+#endif
+
     virtual GBool functionShadedFill(GfxState *state,
 				     GfxFunctionShading *shading);
     virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading);
