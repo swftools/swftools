@@ -21,6 +21,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <Python.h>
+#include <stdarg.h>
 #undef HAVE_STAT
 #include "../devices/swf.h"
 #include "../devices/render.h"
@@ -39,6 +40,7 @@ staticforward PyTypeObject DriverClass;
 typedef struct {
     PyObject_HEAD
     gfxdevice_t*output_device;
+    PyObject*pyobj; //only for passthrough
 } OutputObject;
 
 typedef struct {
@@ -147,13 +149,199 @@ static PyObject* f_createPlainText(PyObject* parent, PyObject* args, PyObject* k
     return (PyObject*)self;
 }
 
+static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
+{
+    OutputObject*self = (OutputObject*)dev->internal;
+    
+    if(!PyObject_HasAttrString(self->pyobj, function))
+        return PY_NONE;
+
+    va_list ap;
+    va_start(ap, format);
+
+    PyObject*tuple = PyTuple_New(strlen(format));
+    int pos = 0;
+    while(format[pos]) {
+        char p = format[pos];
+        if(p=='s') {
+            char*s = va_arg(ap, char*);
+            PyTuple_SetItem(tuple, pos, PyString_FromString(s));
+        } else if(p=='i') {
+            int i = va_arg(ap, int);
+            PyTuple_SetItem(tuple, pos, PyInt_FromLong(i));
+        } else if(p=='c') {
+            void* ptr = va_arg(ap, void*);
+            gfxcolor_t*col = (gfxcolor_t*)ptr;
+            PyObject*colobj = PyTuple_New(4);
+            PyTuple_SetItem(colobj, 0, PyInt_FromLong(col->r));
+            PyTuple_SetItem(colobj, 1, PyInt_FromLong(col->g));
+            PyTuple_SetItem(colobj, 2, PyInt_FromLong(col->b));
+            PyTuple_SetItem(colobj, 3, PyInt_FromLong(col->a));
+            PyTuple_SetItem(tuple, pos, colobj);
+        } else if(p=='l') {
+            void* ptr = va_arg(ap, void*);
+            gfxline_t*line = (gfxline_t*)ptr;
+            gfxline_t*l;
+            int len = 0, i = 0;
+            l = line;
+            while(l) {l=l->next;len++;}
+            PyObject*list = PyList_New(len);
+            l = line;
+            while(l) {
+                PyObject*point=0;
+                if(l->type == gfx_moveTo) {
+                    point = PyTuple_New(3);
+                    PyTuple_SetItem(point, 0, PyString_FromString("m"));
+                    PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
+                    PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
+                } else if(l->type == gfx_lineTo) {
+                    point = PyTuple_New(3);
+                    PyTuple_SetItem(point, 0, PyString_FromString("l"));
+                    PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
+                    PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
+                } else if(l->type == gfx_splineTo) {
+                    point = PyTuple_New(5);
+                    PyTuple_SetItem(point, 0, PyString_FromString("l"));
+                    PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
+                    PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
+                    PyTuple_SetItem(point, 3, PyFloat_FromDouble(l->sy));
+                    PyTuple_SetItem(point, 4, PyFloat_FromDouble(l->sy));
+                } else {
+                    point = PY_NONE;
+                }
+                PyList_SetItem(list, i, point);
+                l = l->next;
+                i++;
+            }
+            PyTuple_SetItem(tuple, pos, list);
+        } else {
+            PyTuple_SetItem(tuple, pos, PY_NONE);
+        }
+        pos++;
+    }
+    va_end(ap);
+    PyObject*f = PyObject_GetAttrString(self->pyobj, function);
+    if(!f)
+        return 0;
+    PyErr_Clear();
+    PyObject* result = PyObject_CallObject(f, tuple);
+
+    if(!result)  // should we do some error handling here?
+        return 0;
+
+    Py_DECREF(result);
+    return 0;
+}
+    
+static int my_setparameter(gfxdevice_t*dev, const char*key, const char*value)
+{
+    callback_python("setparameter", dev, "ss", key, value);
+    return 1;
+}
+static void my_startpage(gfxdevice_t*dev, int width, int height)
+{
+    callback_python("startpage", dev, "ii", width, height);
+}
+static void my_startclip(gfxdevice_t*dev, gfxline_t*line)
+{
+    callback_python("startclip", dev, "l", line);
+}
+static void my_endclip(gfxdevice_t*dev)
+{
+    callback_python("endclip", dev, "");
+}
+static void my_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
+{
+    char*cap = 0;
+    char*joint = 0;
+    if(cap_style == gfx_capButt)
+        cap = "butt";
+    else if(cap_style == gfx_capRound)
+        cap = "round";
+    else if(cap_style == gfx_capSquare)
+        cap = "square";
+    if(joint_style == gfx_joinMiter)
+        joint = "miter";
+    else if(joint_style == gfx_joinRound)
+        joint = "round";
+    else if(joint_style == gfx_joinBevel)
+        joint = "bevel";
+    callback_python("stroke", dev, "licssi", line, width, color, cap, joint, miterLimit);
+}
+static void my_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
+{
+    callback_python("fill", dev, "lc", line, color);
+}
+static void my_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform)
+{
+    callback_python("fillbitmap", dev, "lImx", line, img, imgcoord2devcoord, cxform);
+}
+static void my_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
+{
+    callback_python("fillgradient", dev, "lgsm", line, gradient, type, matrix);
+}
+static void my_addfont(gfxdevice_t*dev, gfxfont_t*font)
+{
+    callback_python("addfont", dev, "f", font);
+}
+static void my_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+{
+    callback_python("drawchar", dev, "ficm", font, glyph, color, matrix);
+}
+static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+{
+    callback_python("drawlink", dev, "ls", line, action);
+}
+static void my_endpage(gfxdevice_t*dev)
+{
+    callback_python("drawlink", dev, "");
+}
+static gfxresult_t* my_finish(gfxdevice_t*dev)
+{
+    callback_python("finish", dev, "");
+    return 0;
+}
+
+static PyObject* f_createPassThrough(PyObject* parent, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {"device", NULL};
+    PyObject*obj;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &obj))
+	return NULL;
+    OutputObject*self = PyObject_New(OutputObject, &OutputClass);
+   
+    self->pyobj = obj;
+    self->output_device = malloc(sizeof(gfxdevice_t));
+    memset(self->output_device, 0, sizeof(gfxdevice_t));
+    self->output_device->name = strdup("passthrough");
+
+    self->output_device->setparameter = my_setparameter;
+    self->output_device->startpage = my_startpage;
+    self->output_device->startclip = my_startclip;
+    self->output_device->addfont = my_addfont;
+    self->output_device->endclip = my_endclip;
+    self->output_device->stroke = my_stroke;
+    self->output_device->fill = my_fill;
+    self->output_device->fillbitmap = my_fillbitmap;
+    self->output_device->fillgradient = my_fillgradient;
+    self->output_device->drawchar = my_drawchar;
+    self->output_device->drawlink = my_drawlink;
+    self->output_device->endpage = my_endpage;
+    self->output_device->finish = my_finish;
+    self->output_device->internal = self;
+
+    return (PyObject*)self;
+}
+
 
 static void output_dealloc(PyObject* _self) {
     OutputObject* self = (OutputObject*)_self;
 
     if(self->output_device) {
         gfxresult_t*result = self->output_device->finish(self->output_device);
-	result->destroy(result);result=0;
+        if(result) {
+	    result->destroy(result);result=0;
+        }
         self->output_device = 0;
     }
     
@@ -519,6 +707,7 @@ static PyMethodDef pdf2swf_methods[] =
     {"SWF", (PyCFunction)f_createSWF, METH_KEYWORDS, ""},
     {"ImageList", (PyCFunction)f_createImageList, METH_KEYWORDS, ""},
     {"PlainText", (PyCFunction)f_createPlainText, METH_KEYWORDS, ""},
+    {"PassThrough", (PyCFunction)f_createPassThrough, METH_KEYWORDS, ""},
 
     /* sentinel */
     {0, 0, 0, 0}
