@@ -543,7 +543,7 @@ static SRECT getMovieClipBBox(TAG*tag)
 
     memset(&movieSize,0,sizeof(SRECT));
 
-    while (tag->id != ST_END) {
+    while (tag && tag->id != ST_END) {
 	if (swf_isPlaceTag(tag)) {
 	    if(hasid(tag)) {
 		depth2id[swf_GetDepth(tag)] = swf_GetPlaceID(tag);
