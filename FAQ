@@ -218,3 +218,12 @@
 
         swfextract -i 3- file.swf -o file.swf
 
+19.) How can I convert SWF frames to bitmap?
+
+    There's a "swfrender" utility in the CVS, which isn't finished yet,
+    and will only work for *very* simple SWF files. (No Actionscript, no
+    gradient fills, no morph shapes, no blending modes, no filters, etc.)
+    Probably other Flash Open-Source projects (like Gnash) have some
+    more sophisticated utilities for this.
+    If you find something that works, I'd like to know about it. 
+    Please mail me at kramm@quiss.org.
