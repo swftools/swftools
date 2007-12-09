@@ -1097,11 +1097,10 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     this->currentpage = pageNum;
     double x1,y1,x2,y2;
     int rot = doc->getPageRotate(1);
-    gfxcolor_t white;
+    gfxcolor_t white = {255,255,255,255};
+    gfxcolor_t black = {255,0,0,0};
     laststate = state;
     gfxline_t clippath[5];
-
-    white.r = white.g = white.b = white.a = 255;
 
     /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
     state->transform(state->getX2(),state->getY2(),&x2,&y2);
