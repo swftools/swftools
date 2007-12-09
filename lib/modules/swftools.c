@@ -118,6 +118,7 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINEFONTINFO: //pseudodefine
     case ST_DEFINEFONTINFO2: //pseudodefine
     case ST_DEFINEFONTALIGNZONES: //pseudodefine
+    case ST_DEFINEFONTNAME: //pseudodefine
     case ST_DEFINETEXT:
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
@@ -270,6 +271,7 @@ static int swf_pseudodefiningtagids[] =
  ST_DEFINEFONTINFO,
  ST_DEFINEFONTINFO2,
  ST_DEFINEFONTALIGNZONES,
+ ST_DEFINEFONTNAME,
  ST_DEFINEBUTTONCXFORM,
  ST_DEFINEBUTTONSOUND,
  ST_DEFINESCALINGGRID,
@@ -607,6 +609,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
 	case ST_DEFINEBINARY:
+	case ST_DEFINEFONTNAME:
 	case ST_GENERATORTEXT:
 	    callback(tag, tag->pos + base, callback_data);
         break;

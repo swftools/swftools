@@ -237,6 +237,8 @@ char* swf_TagGetName(TAG*tag)
             return "DEFINEFONT3";
         case ST_DEFINEFONTALIGNZONES:
             return "DEFINEFONTALIGNZONES";
+        case ST_DEFINEFONTNAME:
+            return "DEFINEFONTNAME";
         case ST_CSMTEXTSETTINGS:
             return "CSMTEXTSETTINGS";
         case ST_FREEALL:

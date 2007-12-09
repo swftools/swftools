@@ -334,6 +334,7 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_DEFINEMORPHSHAPE2    84 /* version 8 */
 #define ST_SCENEDESCRIPTION	86 /* version 9 */
 #define ST_DEFINEBINARY		87 /* version 9 */
+#define ST_DEFINEFONTNAME	88 /* version 9 */
 
 /* custom tags- only valid for swftools */
 #define ST_REFLEX              777 /* to identify generator software */

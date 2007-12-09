@@ -1246,7 +1246,7 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
 	}
-	else if(tag->id == ST_NAMECHARACTER) {
+	else if(tag->id == ST_NAMECHARACTER || tag->id==ST_DEFINEFONTNAME) {
 	    swf_GetU16(tag);
 	    printf(" \"%s\"\n", swf_GetString(tag));
 	}
@@ -1309,6 +1309,13 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
 	    handlePlaceObject23(tag, myprefix);
+	}
+	else if(tag->id == ST_DEFINEFONTNAME) {
+	    swf_SetTagPos(tag, 0);
+	    swf_GetU16(tag); //id
+	    swf_GetString(tag); //name
+	    char* copyright = swf_GetString(tag);
+	    printf("%s%s\n", myprefix, copyright);
 	}
 	else if(tag->id == ST_DEFINESHAPE ||
 		tag->id == ST_DEFINESHAPE2 ||
