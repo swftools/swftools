@@ -35,78 +35,98 @@ typedef struct _internal {
 int dummy_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
-    return i->out->setparameter(i->out,key,value);
+    if(i->out) {
+	return i->out->setparameter(i->out,key,value);
+    } else {
+	return 0;
+    }
 }
 
 void dummy_startpage(gfxdevice_t*dev, int width, int height)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->startpage(i->out,width,height);
+    if(i->out)
+	i->out->startpage(i->out,width,height);
 }
 void dummy_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->startclip(i->out,line);
+    if(i->out)
+	i->out->startclip(i->out,line);
 }
 void dummy_endclip(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->endclip(i->out);
+    if(i->out)
+	i->out->endclip(i->out);
 }
 void dummy_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->stroke(i->out, line, width, color, cap_style, joint_style, miterLimit);
+    if(i->out)
+	i->out->stroke(i->out, line, width, color, cap_style, joint_style, miterLimit);
 }
 
 void dummy_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->fill(i->out, line, color);
+    if(i->out)
+	i->out->fill(i->out, line, color);
 }
 
 void dummy_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->fillbitmap(i->out, line, img, matrix, cxform);
+    if(i->out)
+	i->out->fillbitmap(i->out, line, img, matrix, cxform);
 }
 
 void dummy_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->fillgradient(i->out, line, gradient, type, matrix);
+    if(i->out)
+	i->out->fillgradient(i->out, line, gradient, type, matrix);
 }
 
 void dummy_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->addfont(i->out, font);
+    if(i->out)
+	i->out->addfont(i->out, font);
 }
 
 void dummy_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->drawchar(i->out, font, glyphnr, color, matrix);
+    if(i->out)
+	i->out->drawchar(i->out, font, glyphnr, color, matrix);
 }
 
-void dummy_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
+void dummy_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->drawlink(i->out, line, action);
+    if(i->out)
+	i->out->drawlink(i->out, line, action);
 }
 
 void dummy_endpage(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->endpage(i->out);
+    if(i->out)
+	i->out->endpage(i->out);
 }
 
 gfxresult_t* dummy_finish(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    gfxdevice_t*out = i->out;
-    free(dev->internal);dev->internal = 0;i=0;
-    return out->finish(out);
+    if(i->out) {
+	gfxdevice_t*out = i->out;
+	free(dev->internal);dev->internal = 0;i=0;
+	return out->finish(out);
+    } else {
+	free(dev->internal);dev->internal = 0;i=0;
+	return 0;
+    }
 }
 
 void gfxdevice_dummy_init(gfxdevice_t*dev, gfxdevice_t*out)
