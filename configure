@@ -1774,7 +1774,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=0.8.1
+VERSION=2007-12-09-2003
 
 
 # ------------------------------------------------------------------
@@ -4193,79 +4193,6 @@ else
 fi
 
 
-{ echo "$as_me:$LINENO: checking for T1_LoadFont in -lt1" >&5
-echo $ECHO_N "checking for T1_LoadFont in -lt1... $ECHO_C" >&6; }
-if test "${ac_cv_lib_t1_T1_LoadFont+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lt1  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char T1_LoadFont ();
-int
-main ()
-{
-return T1_LoadFont ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext &&
-       $as_test_x conftest$ac_exeext; then
-  ac_cv_lib_t1_T1_LoadFont=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_t1_T1_LoadFont=no
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ echo "$as_me:$LINENO: result: $ac_cv_lib_t1_T1_LoadFont" >&5
-echo "${ECHO_T}$ac_cv_lib_t1_T1_LoadFont" >&6; }
-if test $ac_cv_lib_t1_T1_LoadFont = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBT1 1
-_ACEOF
-
-  LIBS="-lt1 $LIBS"
-
-else
-  T1LIBMISSING=true
-fi
-
-
 { echo "$as_me:$LINENO: checking for DGifOpen in -lungif" >&5
 echo $ECHO_N "checking for DGifOpen in -lungif... $ECHO_C" >&6; }
 if test "${ac_cv_lib_ungif_DGifOpen+set}" = set; then
@@ -5307,8 +5234,7 @@ done
 
 
 
-
-for ac_header in zlib.h gif_lib.h jpeglib.h t1lib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
+for ac_header in zlib.h gif_lib.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
@@ -9545,8 +9471,8 @@ else
     if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
         echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
     fi
-    # iterate through version 2.2 to 2.4
-    for v in 2 3 4; do
+    # iterate through version 2.2 to 2.5
+    for v in 2 3 4 5; do
         # Linux
         if test -f "/usr/lib/python2.$v/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
@@ -9648,9 +9574,9 @@ if test "x$JPEGLIBMISSING" = "xtrue";then
     DISABLEJPEG2SWF=true
     PARTIAL=true
 fi
-if test "x$T1LIBMISSING" = "xtrue";then
-    MISSINGLIBS="${MISSINGLIBS} t1lib"
-fi
+#if test "x$T1LIBMISSING" = "xtrue";then
+#    MISSINGLIBS="${MISSINGLIBS} t1lib"
+#fi
 if test "x$UNGIFMISSING" = "xtrue";then
     DISABLEGIF2SWF=true
     MISSINGLIBS="${MISSINGLIBS} ungif"
@@ -9668,9 +9594,9 @@ if test "x$HAVE_FREETYPE" '!=' "x1"; then
     MISSINGLIBS="${MISSINGLIBS} freetype"
     PARTIAL=true
 fi
-if test "x${ac_cv_header_t1lib_h}" '!=' "xyes"; then
-    MISSINGLIBS="${MISSINGLIBS} t1lib.h"
-fi
+#if test "x${ac_cv_header_t1lib_h}" '!=' "xyes"; then
+#    MISSINGLIBS="${MISSINGLIBS} t1lib.h"
+#fi
 if test "x${ac_cv_header_gif_lib_h}" '!=' "xyes"; then
     DISABLEGIF2SWF=true
     MISSINGLIBS="${MISSINGLIBS} gif_lib.h"
