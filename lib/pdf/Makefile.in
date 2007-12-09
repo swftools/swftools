@@ -36,6 +36,8 @@ InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
 BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h
 	$(CC) -I ./ -I xpdf BitmapOutputDev.cc -o $@
+DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h
+	$(CC) -I ./ -I xpdf DummyOutputDev.cc -o $@
 pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
 
