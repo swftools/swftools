@@ -241,6 +241,7 @@ static int swf_definingtagids[] =
  ST_DEFINEBUTTON2,
  ST_DEFINESOUND,
  ST_DEFINEVIDEOSTREAM,
+ ST_DEFINEBINARY,
  -1
 };
 
@@ -253,6 +254,7 @@ static int swf_spritetagids[] =
  ST_REMOVEOBJECT,
  ST_REMOVEOBJECT2,
  ST_DOACTION,
+ ST_DOABC,
  ST_STARTSOUND,
  ST_FRAMELABEL,
  ST_SOUNDSTREAMHEAD,
@@ -604,6 +606,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
+	case ST_DEFINEBINARY:
 	case ST_GENERATORTEXT:
 	    callback(tag, tag->pos + base, callback_data);
         break;

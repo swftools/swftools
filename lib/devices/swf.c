@@ -853,7 +853,7 @@ void swf_endframe(gfxdevice_t*dev)
     if(!i->pagefinished)
         endpage(dev);
 
-    if(i->config_insertstoptag) {
+    if( (i->swf->fileVersion <= 8) && (i->config_insertstoptag) ) {
 	ActionTAG*atag=0;
 	atag = action_Stop(atag);
 	atag = action_End(atag);
@@ -1174,7 +1174,6 @@ void wipeSWF(SWF*swf)
     }
 }
 
-
 void swfoutput_finalize(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
@@ -1251,6 +1250,10 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	i->swf->compressed = 1;
     }
 
+    /* Initialize AVM2 if it is a Flash9 file */
+    if(i->config_flashversion>=9 && i->config_insertstoptag) {
+	AVM2_InsertStops(i->swf);
+    }
 //    if(i->config_reordertags)
 //	swf_Optimize(i->swf);
 }

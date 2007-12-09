@@ -1314,7 +1314,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   if(swf->fileVersion >= 9) {
       if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
       {
-	  U32 flags = 0x8; // | 128 = usenetwork, | 8 = hasmetadata
+	  U32 flags = 0x8; // | 128 = usenetwork, | 16 = Actionscript3 | 8 = hasmetadata
 	  swf_SetU32(swf_InsertTagBefore(swf, swf->firstTag,ST_FILEATTRIBUTES),flags);
       }
   }
@@ -1532,6 +1532,7 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 #include "modules/swfcgi.c"
 #include "modules/swfbits.c"
 #include "modules/swfaction.c"
+#include "modules/swfabc.c"
 #include "modules/swfsound.c"
 #include "modules/swfdraw.c"
 #include "modules/swfrender.c"

@@ -1281,7 +1281,7 @@ int main (int argc,char ** argv)
 	    if(tag->len)
 		dumperror("End Tag not empty");
         }
-	else if(tag->id == ST_EXPORTASSETS) {
+	else if(tag->id == ST_EXPORTASSETS || tag->id == ST_SYMBOLCLASS) {
 	    handleExportAssets(tag, myprefix);
 	}
         else if(tag->id == ST_DOACTION && action) {

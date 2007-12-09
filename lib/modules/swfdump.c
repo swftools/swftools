@@ -145,6 +145,8 @@ char* swf_TagGetName(TAG*tag)
             return "DEFINEEDITTEXT";
         case ST_DOACTION:
             return "DOACTION";
+        case ST_DOABC:
+            return "DOABC";
         case ST_DEFINEFONTINFO:
             return "DEFINEFONTINFO";
         case ST_DEFINESOUND:
@@ -205,6 +207,10 @@ char* swf_TagGetName(TAG*tag)
             return "EXTERNALFONT";
 	case ST_EXPORTASSETS:
 	    return "EXPORTASSETS";
+	case ST_SYMBOLCLASS:
+	    return "SYMBOLCLASS";
+	case ST_DEFINEBINARY:
+	    return "DEFINEBINARY";
 	case ST_IMPORTASSETS:
 	    return "IMPORTASSETS";
 	case ST_ENABLEDEBUGGER:

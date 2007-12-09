@@ -326,11 +326,14 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_DEFINEFONTALIGNZONES 73 /* version 8 */
 #define ST_CSMTEXTSETTINGS	74 /* version 8 */
 #define ST_DEFINEFONT3		75 /* version 8 */
+#define ST_SYMBOLCLASS		76 /* version 9 */
 #define ST_METADATA		77 /* version 8 */
 #define ST_DEFINESCALINGGRID    78 /* version 8 */
+#define ST_DOABC		82 /* version 9 */
 #define ST_DEFINESHAPE4		83 /* version 8 */
 #define ST_DEFINEMORPHSHAPE2    84 /* version 8 */
 #define ST_SCENEDESCRIPTION	86 /* version 9 */
+#define ST_DEFINEBINARY		87 /* version 9 */
 
 /* custom tags- only valid for swftools */
 #define ST_REFLEX              777 /* to identify generator software */
@@ -1061,6 +1064,8 @@ typedef struct _FILTER_BLUR {
 void swf_SetFilter(TAG*tag, FILTER*f);
 FILTER*swf_GetFilter(TAG*tag);
 FILTER*swf_NewFilter(U8 type);
+
+void AVM2_InsertStops(SWF*swf);
 
 #ifdef __cplusplus
 }
