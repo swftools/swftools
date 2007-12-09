@@ -93,7 +93,7 @@
 #undef HAVE_SYS_TYPES_H
 
 /* Define if you have the <t1lib.h> header file.  */
-#undef HAVE_T1LIB_H
+/* #undef HAVE_T1LIB_H */
 
 /* Define if you have the <zlib.h> header file.  */
 #undef HAVE_ZLIB_H
@@ -115,7 +115,7 @@
 #undef HAVE_LIBM
 
 /* Define if you have the t1 library (-lt1).  */
-#undef HAVE_LIBT1
+/* #undef HAVE_LIBT1 */
 
 /* Define if you have the z library (-lz).  */
 #undef HAVE_LIBZ
@@ -169,10 +169,10 @@
 #endif
 #endif
 
-#ifdef HAVE_T1LIB_H
-#ifdef HAVE_LIBT1
-#define HAVE_T1LIB
-#endif
-#endif
+/* #ifdef HAVE_T1LIB_H */
+/* #ifdef HAVE_LIBT1 */
+/* #define HAVE_T1LIB */
+/* #endif */
+/* #endif */
 
 #endif
