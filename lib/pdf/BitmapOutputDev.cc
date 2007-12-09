@@ -79,6 +79,10 @@ BitmapOutputDev::~BitmapOutputDev()
 
 }
 
+GBool BitmapOutputDev::getVectorAntialias()
+{
+    return this->rgbdev->getVectorAntialias();
+}
 void BitmapOutputDev::setVectorAntialias(GBool vaa)
 {
     this->rgbdev->setVectorAntialias(vaa);
@@ -190,11 +194,13 @@ void BitmapOutputDev::flush()
 	gfxcolor_t*out = &img->data[y*rangex];
 	Guchar*ain = &alpha[(y+ymin)*width+xmin];
 	for(x=0;x<rangex;x++) {
+	    /* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
+	       have to premultiply alpha (mix background and pixel according to the alpha channel).
+	    */
 	    out[x].r = (in[x*3+0]*ain[x])/255;
 	    out[x].g = (in[x*3+1]*ain[x])/255;
 	    out[x].b = (in[x*3+2]*ain[x])/255;
 	    out[x].a = ain[x];
-	    //out[x].a = ain[x]?255:0;
 	}
     }
     /* transform bitmap rectangle to "device space" */
