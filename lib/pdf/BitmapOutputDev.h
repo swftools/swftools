@@ -176,6 +176,9 @@ public:
     virtual void clearSoftMask(GfxState *state);
 
     virtual void processLink(Link *link, Catalog *catalog);
+  
+    virtual void setVectorAntialias(GBool vaa);
+    
 private:
     void flush();
 
