@@ -28,7 +28,7 @@
 #include "../log.h"
 
 static SplashColor splash_white = {255,255,255};
-static SplashColor splash_black = {255,255,255};
+static SplashColor splash_black = {0,0,0};
     
 ClipState::ClipState()
 {
@@ -79,6 +79,10 @@ BitmapOutputDev::~BitmapOutputDev()
 
 }
 
+void BitmapOutputDev::setVectorAntialias(GBool vaa)
+{
+    this->rgbdev->setVectorAntialias(vaa);
+}
 void BitmapOutputDev::setDevice(gfxdevice_t*dev)
 {
     this->dev = dev;
@@ -148,6 +152,7 @@ void BitmapOutputDev::flush()
 {
     int width = rgbdev->getBitmapWidth();
     int height = rgbdev->getBitmapHeight();
+    
     SplashColorPtr rgb = rgbdev->getBitmap()->getDataPtr();
     Guchar*alpha = rgbdev->getBitmap()->getAlphaPtr();
 
@@ -185,10 +190,11 @@ void BitmapOutputDev::flush()
 	gfxcolor_t*out = &img->data[y*rangex];
 	Guchar*ain = &alpha[(y+ymin)*width+xmin];
 	for(x=0;x<rangex;x++) {
-	    out[x].r = in[x*3+0];
-	    out[x].g = in[x*3+1];
-	    out[x].b = in[x*3+2];
+	    out[x].r = (in[x*3+0]*ain[x])/255;
+	    out[x].g = (in[x*3+1]*ain[x])/255;
+	    out[x].b = (in[x*3+2]*ain[x])/255;
 	    out[x].a = ain[x];
+	    //out[x].a = ain[x]?255:0;
 	}
     }
     /* transform bitmap rectangle to "device space" */
@@ -208,7 +214,7 @@ void BitmapOutputDev::flush()
     gfxline_free(line);
 
     memset(rgbdev->getBitmap()->getAlphaPtr(), 0, rgbdev->getBitmap()->getWidth()*rgbdev->getBitmap()->getHeight());
-    memset(rgbdev->getBitmap()->getDataPtr(), 0, rgbdev->getBitmap()->getWidth()*rgbdev->getBitmap()->getHeight()*sizeof(SplashColor));
+    memset(rgbdev->getBitmap()->getDataPtr(), 0, rgbdev->getBitmap()->getRowSize()*rgbdev->getBitmap()->getHeight());
 
     free(img->data);img->data=0;free(img);img=0;
 }
@@ -238,28 +244,6 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     clip0dev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     clip1dev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     gfxdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-
-    /*int width = this->rgbdev->getBitmap()->getWidth();
-    int height = this->rgbdev->getBitmap()->getHeight();
-    this->bboxpath = new SplashPath();
-    this->bboxpath->moveTo(0,0);
-    this->bboxpath->lineTo(width,0);
-    this->bboxpath->lineTo(width,height);
-    this->bboxpath->lineTo(0,height);
-    this->bboxpath->lineTo(0,0);
-
-    if(this->clipbitmap) {
-	delete this->clipbitmap;this->clipbitmap = 0;
-    }
-    this->clipbitmap = new SplashBitmap(width, height, 1, splashModeMono1, gFalse, gTrue);
-    if(this->clipdev) {
-	delete this->clipdev;this->clipdev = 0;
-    }
-    SplashScreenParams params;
-    params.type = splashScreenDispersed;
-    params.size = 0;
-    params.dotRadius = 0;
-    this->clipdev = new Splash(this->clipbitmap, 0, (SplashScreenParams*)0);*/
 }
 
 void BitmapOutputDev::endPage()
@@ -297,9 +281,9 @@ GBool BitmapOutputDev::useTilingPatternFill()
 
 GBool BitmapOutputDev::useShadedFills()
 {
-    clip0dev->useTilingPatternFill();
-    clip1dev->useTilingPatternFill();
-    return rgbdev->useTilingPatternFill();
+    clip0dev->useShadedFills();
+    clip1dev->useShadedFills();
+    return rgbdev->useShadedFills();
 }
 
 GBool BitmapOutputDev::useDrawForm()
@@ -438,8 +422,9 @@ void BitmapOutputDev::updateFillColor(GfxState *state)
 {
     rgbdev->updateFillColor(state);
     clip0dev->updateFillColor(state);
-    clip0dev->updateFillColor(state);
     clip1dev->updateFillColor(state);
+    if(!config_bitmapfonts)
+	gfxdev->updateFillColor(state);
 }
 void BitmapOutputDev::updateStrokeColor(GfxState *state)
 {
@@ -552,6 +537,8 @@ void BitmapOutputDev::updateTextShift(GfxState *state, double shift)
     rgbdev->updateTextShift(state, shift);
     clip0dev->updateTextShift(state, shift);
     clip1dev->updateTextShift(state, shift);
+    if(!config_bitmapfonts)
+	gfxdev->updateTextShift(state, shift);
 }
 
 void BitmapOutputDev::stroke(GfxState *state)
@@ -715,7 +702,6 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	   text */
 	if(memcmp(clip0->getDataPtr(), clip1->getDataPtr(), width8*height)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
-
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    if(config_extrafontdata) {
 		int oldrender = state->getRender();
@@ -725,7 +711,9 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    }
 	} else {
 	    /* this char is not at all affected by clipping. Now just find out whether the
-	       bitmap we're currently working on needs to be dumped out first */
+	       bitmap we're currently working on needs to be dumped out first,
+	       by checking whether any of the char pixels in clip1dev is above any non-alpha
+	       pixels in rgbdev */
     
 	    Guchar*alpha = rgbdev->getBitmap()->getAlphaPtr();
 	    Guchar*charpixels = clip1dev->getBitmap()->getDataPtr();
