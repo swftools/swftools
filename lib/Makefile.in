@@ -14,7 +14,7 @@ actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.sw
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c
 
 base_objects=q.$(O) utf8.$(O) mem.$(O) png.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
-gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/bbox.$(O) devices/rescale.$(O)
+gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/bbox.$(O) devices/rescale.$(O)
 
 bitio.$(O): bitio.c bitio.h
 	$(C) bitio.c -o $@
@@ -67,6 +67,8 @@ devices/swf.$(O):  devices/swf.c devices/swf.h
 	$(C) devices/swf.c -o devices/swf.$(O)
 devices/file.$(O):  devices/file.c devices/file.h
 	$(C) devices/file.c -o devices/file.$(O)
+devices/dummy.$(O):  devices/dummy.c devices/dummy.h
+	$(C) devices/dummy.c -o devices/dummy.$(O)
 devices/render.$(O):  devices/render.c devices/render.h
 	$(C) devices/render.c -o devices/render.$(O)
 devices/opengl.$(O):  devices/opengl.c devices/opengl.h
