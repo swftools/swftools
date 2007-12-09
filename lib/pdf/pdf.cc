@@ -1,5 +1,6 @@
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
+#include "../devices/rescale.h"
 #include "../log.h"
 #include "config.h"
 #include "GlobalParams.h"
@@ -11,15 +12,14 @@
 #define NO_ARGPARSER
 #include "../args.h"
 
+static double zoom = 72; /* xpdf: 86 */
+static int jpeg_dpi = 0;
+static int ppm_dpi = 0;
+static int multiply = 1;
+static char* global_page_range = 0;
+
 static parameter_t* device_config = 0;
 static parameter_t* device_config_next = 0;
-
-int jpeg_dpi = 0;
-int ppm_dpi = 0;
-
-static double zoom = 72; /* xpdf: 86 */
-
-static char* global_page_range = 0;
 
 typedef struct _pdf_page_info
 {
@@ -39,6 +39,7 @@ typedef struct _pdf_doc_internal
     InfoOutputDev*info;
     CommonOutputDev*outputDev;
     pdf_page_info_t*pages;
+    gfxdevice_t* middev;
 } pdf_doc_internal_t;
 
 typedef struct _pdf_page_internal
@@ -71,7 +72,14 @@ void pdfpage_destroy(gfxpage_t*pdf_page)
 void render2(gfxpage_t*page, gfxdevice_t*dev)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-
+    
+    if(pi->middev) {
+	gfxdevice_rescale_setdevice(pi->middev, dev);
+	pi->middev->setparameter(pi->middev, "protect", "1");
+	dev = pi->middev;
+    } 
+    dev->setparameter(dev, "protect", "1");
+	
     if(!pi) {
 	msg("<fatal> pdf_page_render: Parent PDF this page belongs to doesn't exist yet/anymore");
 	return;
@@ -83,6 +91,7 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
     }
 
     pi->outputDev->setDevice(dev);
+
     if(pi->protect) {
         dev->setparameter(dev, "protect", "1");
     }
@@ -93,9 +102,12 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
 	dev->setparameter(dev, p->name, p->value);
 	p = p->next;
     }
-    pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom, zoom, /*rotate*/0, true, true, /*doLinks*/(int)1);
+    pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, /*doLinks*/(int)1);
     pi->doc->processLinks((OutputDev*)pi->outputDev, page->nr);
     pi->outputDev->setDevice(0);
+    if(pi->middev) {
+	gfxdevice_rescale_setdevice(pi->middev, 0x00000000);
+    }
 }
 
     
@@ -114,8 +126,8 @@ void pdfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfx
     int x1=(int)_x1,y1=(int)_y1,x2=(int)_x2,y2=(int)_y2;
     if((x1|y1|x2|y2)==0) x2++;
 
-    pi->outputDev->setMove((int)x,(int)y);
-    pi->outputDev->setClip((int)x1,(int)y1,(int)x2,(int)y2);
+    pi->outputDev->setMove((int)x*multiply,(int)y*multiply);
+    pi->outputDev->setClip((int)x1*multiply,(int)y1*multiply,(int)x2*multiply,(int)y2*multiply);
     render2(page, output);
 }
 
@@ -127,6 +139,10 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 
     if(i->outputDev) {
 	delete i->outputDev;i->outputDev=0;
+    }
+    if(i->middev) {
+	gfxdevice_rescale_setdevice(i->middev, 0x00000000);
+	i->middev->finish(i->middev);
     }
     delete i->doc; i->doc=0;
     free(i->pages); i->pages = 0;
@@ -317,6 +333,8 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	storeDeviceParameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "poly2bitmap")) {
         i->config_bitmap_optimizing = 1;
+    } else if(!strcmp(name, "multiply")) {
+        multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
 	printf("\nPDF device global parameters:\n");
 	printf("fontdir=<dir>   a directory with additional fonts\n");
@@ -411,6 +429,12 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     while(p) {
 	i->outputDev->setParameter(p->name, p->value);
 	p = p->next;
+    }
+
+    i->middev = 0;
+    if(multiply>1) {
+    	i->middev = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
+	gfxdevice_rescale_init(i->middev, 0x00000000, 0, 0, 1.0 / multiply);
     }
 
     pdf_doc->get = 0;
