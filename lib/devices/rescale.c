@@ -117,7 +117,13 @@ int rescale_setparameter(gfxdevice_t*dev, const char*key, const char*value)
     if(!strcmp(key, "keepratio")) {
 	i->keepratio = atoi(value);
 	return 1;
-    } else return i->out->setparameter(i->out,key,value);
+    } else {
+	if(i->out) {
+	    return i->out->setparameter(i->out,key,value);
+	} else {
+	    return 0;
+	}
+    }
 }
 
 void rescale_startpage(gfxdevice_t*dev, int width, int height)
@@ -127,29 +133,34 @@ void rescale_startpage(gfxdevice_t*dev, int width, int height)
     i->origwidth = width;
     i->origheight = height;
 
-    if(i->keepratio) {
-	double rx = (double)i->targetwidth / (double)width;
-	double ry = (double)i->targetheight / (double)height;
-	if(rx<ry) {
-	    i->matrix.m00 = rx;
-	    i->matrix.m11 = rx;
-	    i->matrix.tx = 0;
-	    if(i->centery) {
-		i->matrix.ty = (i->targetheight - height*rx) / 2;
+    if(i->targetwidth && i->targetheight) {
+	if(i->keepratio) {
+	    double rx = (double)i->targetwidth / (double)width;
+	    double ry = (double)i->targetheight / (double)height;
+	    if(rx<ry) {
+		i->matrix.m00 = rx;
+		i->matrix.m11 = rx;
+		i->matrix.tx = 0;
+		if(i->centery) {
+		    i->matrix.ty = (i->targetheight - height*rx) / 2;
+		}
+	    } else {
+		i->matrix.m00 = ry;
+		i->matrix.m11 = ry;
+		if(i->centerx) {
+		    i->matrix.tx = (i->targetwidth - width*ry) / 2;
+		}
+		i->matrix.ty = 0;
 	    }
 	} else {
-	    i->matrix.m00 = ry;
-	    i->matrix.m11 = ry;
-	    if(i->centerx) {
-		i->matrix.tx = (i->targetwidth - width*ry) / 2;
-	    }
-	    i->matrix.ty = 0;
+	    i->matrix.m00 = (double)i->targetwidth / (double)width;
+	    i->matrix.m11 = (double)i->targetheight / (double)height;
 	}
+	i->zoomwidth = sqrt(i->matrix.m00*i->matrix.m11);
+	i->out->startpage(i->out,i->targetwidth,i->targetheight);
     } else {
-	i->matrix.m00 = (double)i->targetwidth / (double)width;
-	i->matrix.m11 = (double)i->targetheight / (double)height;
+	i->out->startpage(i->out,(int)(width*i->matrix.m00),(int)(height*i->matrix.m11));
     }
-    i->out->startpage(i->out,i->targetwidth,i->targetheight);
 }
 
 void rescale_startclip(gfxdevice_t*dev, gfxline_t*line)
@@ -214,7 +225,7 @@ void rescale_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*c
     i->out->drawchar(i->out, font, glyphnr, color, &m2);
 }
 
-void rescale_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
+void rescale_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
     gfxline_t*line2 = transformgfxline(i, line);
@@ -233,10 +244,14 @@ gfxresult_t* rescale_finish(gfxdevice_t*dev)
     internal_t*i = (internal_t*)dev->internal;
     gfxdevice_t*out = i->out;
     free(dev->internal);dev->internal = 0;i=0;
-    return out->finish(out);
+    if(out) {
+	return out->finish(out);
+    } else {
+	return 0;
+    }
 }
 
-void gfxdevice_rescale_init(gfxdevice_t*dev, gfxdevice_t*out, int width, int height)
+void gfxdevice_rescale_init(gfxdevice_t*dev, gfxdevice_t*out, int width, int height, double scale)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
@@ -264,7 +279,39 @@ void gfxdevice_rescale_init(gfxdevice_t*dev, gfxdevice_t*out, int width, int hei
     i->targetheight = height;
     i->zoomwidth = 1.0;
     i->centerx = 1;
+	
+    i->matrix.m00 = scale;
+    i->matrix.m01 = 0;
+    i->matrix.m11 = scale;
+    i->matrix.m10 = 0;
+    i->matrix.tx = 0;
+    i->matrix.ty = 0;
+    i->zoomwidth = scale;
 
     i->out = out;
 }
 
+void gfxdevice_rescale_setzoom(gfxdevice_t*dev, double scale)
+{
+    internal_t*i = (internal_t*)dev->internal;
+    if(strcmp(dev->name, "rescale")) {
+	fprintf(stderr, "Internal error: can't cast device %s to a rescale device\n", dev->name);
+	return;
+    }
+    i->matrix.m00 = scale;
+    i->matrix.m01 = 0;
+    i->matrix.m11 = scale;
+    i->matrix.m10 = 0;
+    i->matrix.tx = 0;
+    i->matrix.ty = 0;
+    i->zoomwidth = scale;
+}
+void gfxdevice_rescale_setdevice(gfxdevice_t*dev, gfxdevice_t*out)
+{
+    internal_t*i = (internal_t*)dev->internal;
+    if(strcmp(dev->name, "rescale")) {
+	fprintf(stderr, "Internal error: can't cast device %s to a rescale device\n", dev->name);
+	return;
+    }
+    i->out = out;
+}

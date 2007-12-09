@@ -28,7 +28,14 @@
 extern "C" {
 #endif
 
-void gfxdevice_rescale_init(gfxdevice_t*self, gfxdevice_t*dest, int targetwidth, int targetheight);
+/* either:
+    width,height = desired output size
+   or:
+    scale = desired zoom factor
+*/
+void gfxdevice_rescale_init(gfxdevice_t*dev, gfxdevice_t*out, int width, int height, double scale);
+void gfxdevice_rescale_setzoom(gfxdevice_t*dev, double scale);
+void gfxdevice_rescale_setdevice(gfxdevice_t*dev, gfxdevice_t*out);
 
 #ifdef __cplusplus
 }
