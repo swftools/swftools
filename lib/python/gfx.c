@@ -201,10 +201,10 @@ static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*forma
                     PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
                 } else if(l->type == gfx_splineTo) {
                     point = PyTuple_New(5);
-                    PyTuple_SetItem(point, 0, PyString_FromString("l"));
+                    PyTuple_SetItem(point, 0, PyString_FromString("s"));
                     PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
                     PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
-                    PyTuple_SetItem(point, 3, PyFloat_FromDouble(l->sy));
+                    PyTuple_SetItem(point, 3, PyFloat_FromDouble(l->sx));
                     PyTuple_SetItem(point, 4, PyFloat_FromDouble(l->sy));
                 } else {
                     point = PY_NONE;
@@ -226,11 +226,14 @@ static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*forma
     PyErr_Clear();
     PyObject* result = PyObject_CallObject(f, tuple);
 
-    if(!result)  // should we do some error handling here?
+    if(!result) { 
+        PyErr_Print();
+        PyErr_Clear();
         return 0;
-
-    Py_DECREF(result);
-    return 0;
+    } else {
+        Py_DECREF(result);
+        return 0;
+    }
 }
     
 static int my_setparameter(gfxdevice_t*dev, const char*key, const char*value)
