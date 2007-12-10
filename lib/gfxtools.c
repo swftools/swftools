@@ -349,7 +349,6 @@ void gfxline_optimize(gfxline_t*line)
 	    double nx = next->x-l->x;
 	    double ny = next->y-l->y;
 	    if(fabs(dx*ny - dy*nx) < 0.000001 && (dx*nx + dy*ny) >= 0) {
-		printf("(%f %f) (%f %f)\n", dx, dy, nx, ny);
 		combine = 1;
 	    }
 	} else if(l->type == gfx_splineTo && next->type == gfx_splineTo) {
