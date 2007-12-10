@@ -438,7 +438,7 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
     gfxdevice_t dev1,dev2;
     gfxdevice_render_init(&dev1);
     dev1.setparameter(&dev1, "antialise", "2");
-    gfxdevice_rescale_init(&dev2, &dev1, width, height);
+    gfxdevice_rescale_init(&dev2, &dev1, width, height, 0);
     dev2.startpage(&dev2, self->page->width, self->page->height);
     self->page->render(self->page, &dev2);
     dev2.endpage(&dev2);
