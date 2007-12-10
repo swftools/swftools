@@ -109,6 +109,7 @@ ${name}/lib/wav.c \
 ${name}/lib/wav.h \
 ${name}/lib/mp3.h \
 ${name}/lib/modules/swfdraw.c \
+${name}/lib/modules/swfabc.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/action/action.h \
 ${name}/lib/action/actioncompiler.c \
