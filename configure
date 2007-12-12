@@ -1774,7 +1774,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2007-12-09-2003
+VERSION=2007-04-28-2027
 
 
 # ------------------------------------------------------------------
@@ -5234,7 +5234,8 @@ done
 
 
 
-for ac_header in zlib.h gif_lib.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
+
+for ac_header in zlib.h gif_lib.h io.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then

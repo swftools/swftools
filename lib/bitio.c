@@ -149,7 +149,7 @@ static void writer_memwrite_finish(writer_t*w)
 void writer_init_memwriter(writer_t*w, void*data, int len)
 {
     struct memwrite_t *mr;
-    mr = (memwrite_t *)malloc(sizeof(struct memwrite_t));
+    mr = (struct memwrite_t*)malloc(sizeof(struct memwrite_t));
     mr->data = (unsigned char *)data;
     mr->length = len;
     memset(w, 0, sizeof(writer_t));

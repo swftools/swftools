@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-DEVICES = devices/swf.$(O) devices/arts.$(O) #devices/lrf.$(O) devices/opengl.$(O)
+DEVICES = devices/swf.$(O) devices/arts.$(O) devices/artsutils.$(O) #devices/lrf.$(O) devices/opengl.$(O)
 
 all: librfxswf$(A) libpdf$(A) art/libart$(A) libbase$(A) libgfx$(A) $(DEVICES)
 
@@ -73,8 +73,10 @@ devices/render.$(O):  devices/render.c devices/render.h
 	$(C) devices/render.c -o devices/render.$(O)
 devices/opengl.$(O):  devices/opengl.c devices/opengl.h
 	$(C) devices/opengl.c -o devices/opengl.$(O)
-devices/arts.$(O):  devices/arts.c devices/arts.h devices/artsutils.c
+devices/arts.$(O):  devices/arts.c devices/arts.h devices/artsutils.h
 	$(C) devices/arts.c -o devices/arts.$(O)
+devices/artsutils.$(O):  devices/artsutils.c devices/artsutils.h
+	$(C) devices/artsutils.c -o devices/artsutils.$(O)
 devices/record.$(O):  devices/record.c devices/record.h
 	$(C) devices/record.c -o devices/record.$(O)
 devices/text.$(O):  devices/text.c devices/text.h

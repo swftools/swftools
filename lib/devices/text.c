@@ -147,7 +147,7 @@ void text_result_write(gfxresult_t*r, int filedesc)
 {
     textpage_t*i= (textpage_t*)r->internal;
 }
-int text_result_save(gfxresult_t*r, char*filename)
+int text_result_save(gfxresult_t*r, const char*filename)
 {
     textpage_t*i= (textpage_t*)r->internal;
     if(!i) {
@@ -163,7 +163,7 @@ int text_result_save(gfxresult_t*r, char*filename)
     fclose(fi);
     return 1;
 }
-void*text_result_get(gfxresult_t*r, char*name)
+void*text_result_get(gfxresult_t*r, const char*name)
 {
     textpage_t*i= (textpage_t*)r->internal;
     if(!strcmp(name,"text")) {

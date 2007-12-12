@@ -138,7 +138,7 @@ void fileresult_destroy(struct _gfxresult*gfx)
     free(i->filename);i->filename = 0;
 }
 
-int fileresult_save(struct _gfxresult*gfx, char*filename)
+int fileresult_save(struct _gfxresult*gfx, const char*filename)
 {
     gfxresult_internal_t*i = (gfxresult_internal_t*)gfx->internal;
     FILE*fi,*fo;
@@ -168,7 +168,7 @@ int fileresult_save(struct _gfxresult*gfx, char*filename)
     return 0;
 }
 
-void* fileresult_get(struct _gfxresult*gfx, char*name)
+void* fileresult_get(struct _gfxresult*gfx, const char*name)
 {
     return 0; 
 }
