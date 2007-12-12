@@ -186,7 +186,7 @@ static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char
     po->depth = depth;
     po->clipdepth = clipdepth;
     po->ratio = ratio;
-    po->name = name;
+    po->name = (unsigned char*)name;
     po->move = move;
     if(clipdepth) po->clipdepth = clipdepth;
     if(matrix) po->matrix = matrix_getMatrix(matrix);
@@ -637,7 +637,7 @@ static PyObject* image_save(PyObject*self, PyObject*args)
     if(!PyArg_ParseTuple(args, "s", &filename))
 	return NULL;
 
-    writePNG(filename, fi->rgba ,fi->width, fi->height);
+    writePNG(filename, (unsigned char*)fi->rgba ,fi->width, fi->height);
     
     return PY_NONE;
 }
