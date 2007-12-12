@@ -177,6 +177,8 @@ ${name}/lib/devices/record.c \
 ${name}/lib/devices/record.h \
 ${name}/lib/devices/rescale.c \
 ${name}/lib/devices/rescale.h \
+${name}/lib/devices/dummy.c \
+${name}/lib/devices/dummy.h \
 ${name}/lib/devices/bbox.c \
 ${name}/lib/devices/bbox.h \
 ${name}/lib/devices/ops.c \
