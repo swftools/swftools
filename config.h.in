@@ -151,6 +151,9 @@
 /* have/use internal l.a.m.e. mp3 library */
 #undef HAVE_LAME 
 
+/* whether python-imaging was found */
+#undef HAVE_PYTHON_IMAGING
+
 /* system() can handle command substitution */
 #undef SYSTEM_BACKTICKS
 
