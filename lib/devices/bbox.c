@@ -124,7 +124,7 @@ void bbox_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*colo
     }
 }
 
-void bbox_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
+void bbox_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
 }

@@ -28,6 +28,7 @@
 #define PNG_INLINE_EXPORTS
 #include "../types.h"
 #include "../png.c"
+#include "render.h"
 
 typedef gfxcolor_t RGBA;
 
@@ -465,8 +466,8 @@ void newclip(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
     
-    clipbuffer_t*c = rfx_calloc(sizeof(clipbuffer_t));
-    c->data = rfx_calloc(sizeof(U32) * i->bitwidth * i->height2);
+    clipbuffer_t*c = (clipbuffer_t*)rfx_calloc(sizeof(clipbuffer_t));
+    c->data = (U32*)rfx_calloc(sizeof(U32) * i->bitwidth * i->height2);
     c->next = i->clipbuf;
     i->clipbuf = c;
     if(c->next)
@@ -510,14 +511,14 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 	    add_solidline(dev, x1, y1, x3, y3, width * i->multiply);
 	    fill_solid(dev, color);
         } else if(line->type == gfx_splineTo) {
-	    int c,t,parts,qparts;
+	    int t,parts,qparts;
 	    double xx,yy;
            
 	    double x1=x*i->zoom,y1=y*i->zoom;
 	    double x2=line->sx*i->zoom,y2=line->sy*i->zoom;
 	    double x3=line->x*i->zoom,y3=line->y*i->zoom;
             
-            c = abs(x3-2*x2+x1) + abs(y3-2*y2+y1);
+            double c = abs(x3-2*x2+x1) + abs(y3-2*y2+y1);
             xx=x1;
 	    yy=y1;
 
@@ -669,7 +670,7 @@ void render_result_write(gfxresult_t*r, int filedesc)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
 }
-int render_result_save(gfxresult_t*r, char*filename)
+int render_result_save(gfxresult_t*r, const char*filename)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
     if(!i) {
@@ -720,7 +721,7 @@ char*gfximage_asXPM(gfximage_t*img, int depth)
     *p = 0;
     return p;
 }
-void*render_result_get(gfxresult_t*r, char*name)
+void*render_result_get(gfxresult_t*r, const char*name)
 {
     internal_result_t*i= (internal_result_t*)r->internal;
     if(!strncmp(name,"xpm",3)) {
@@ -814,7 +815,7 @@ void render_startpage(struct _gfxdevice*dev, int width, int height)
 
 static void store_image(internal_t*i, internal_result_t*ir)
 {
-    ir->img.data = malloc(i->width*i->height*sizeof(RGBA));
+    ir->img.data = (gfxcolor_t*)malloc(i->width*i->height*sizeof(gfxcolor_t));
     ir->img.width = i->width;
     ir->img.height = i->height;
 
@@ -907,7 +908,7 @@ void render_endpage(struct _gfxdevice*dev)
     i->height2 = 0;
 }
 
-void render_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+void render_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     /* not supported for this output device */
 }

@@ -208,7 +208,7 @@ art_svp_render_aa_iter_step (ArtSVPRenderAAIter *iter, int *p_start,
   artfloat x_min, x_max;
   int ix_min, ix_max;
   artfloat delta; /* delta should be int too? */
-  int last, this;
+  int last, xthis;
   int xdelta;
   artfloat rslope, drslope;
   int start;
@@ -322,21 +322,21 @@ art_svp_render_aa_iter_step (ArtSVPRenderAAIter *iter, int *p_start,
 		  ix_max = x1;
 		for (; x < ix_max; x++)
 		  {
-		    this = (seg->dir ? 16711680.0 : -16711680.0) * rslope *
+		    xthis = (seg->dir ? 16711680.0 : -16711680.0) * rslope *
 		      (x + 0.5 - x_min);
-		    xdelta = this - last;
-		    last = this;
+		    xdelta = xthis - last;
+		    last = xthis;
 
 		    ADD_STEP(x, xdelta)
 		  }
 		if (x < x1)
 		  {
-		    this =
+		    xthis =
 		      delta * (1 - 0.5 *
 			       (x_max - ix_max) * (x_max - ix_max) *
 			       rslope);
-		    xdelta = this - last;
-		    last = this;
+		    xdelta = xthis - last;
+		    last = xthis;
 
 		    ADD_STEP(x, xdelta)
 		    

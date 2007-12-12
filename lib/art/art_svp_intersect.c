@@ -458,10 +458,10 @@ art_svp_writer_rewind_new (ArtWindRule rule)
 
   result->rule = rule;
   result->n_segs_max = 16;
-  result->svp = art_alloc (sizeof(ArtSVP) + 
+  result->svp = (ArtSVP*)art_alloc (sizeof(ArtSVP) + 
 			   (result->n_segs_max - 1) * sizeof(ArtSVPSeg));
   result->svp->n_segs = 0;
-  result->n_points_max = art_new (int, result->n_segs_max);
+  result->n_points_max = (int*)art_new (int, result->n_segs_max);
 
   return &result->super;
 }
@@ -650,10 +650,8 @@ art_svp_intersect_push_pt (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
   art_pri_insert (ctx->pq, pri_pt);
 }
 
-typedef enum {
-  ART_BREAK_LEFT = 1,
-  ART_BREAK_RIGHT = 2
-} ArtBreakFlags;
+#define ART_BREAK_LEFT 1
+#define ART_BREAK_RIGHT 2
 
 /**
  * art_svp_intersect_break: Break an active segment.
@@ -665,7 +663,7 @@ typedef enum {
  */
 static double
 art_svp_intersect_break (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
-			 double x_ref, double y, ArtBreakFlags break_flags)
+			 double x_ref, double y, int break_flags)
 {
   double x0, y0, x1, y1;
   const ArtSVPSeg *in_seg = seg->in_seg;
@@ -715,7 +713,7 @@ art_svp_intersect_break (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
  **/
 static ArtActiveSeg *
 art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
-			     ArtActiveSeg *seg, ArtBreakFlags break_flags)
+			     ArtActiveSeg *seg, int break_flags)
 {
   ArtActiveSeg *left, *right;
   double x_min = x, x_max = x;
@@ -855,7 +853,7 @@ art_svp_intersect_swap_active (ArtIntersectCtx *ctx,
 static art_boolean
 art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 			      ArtActiveSeg *left_seg, ArtActiveSeg *right_seg,
-			      ArtBreakFlags break_flags)
+			      int break_flags)
 {
   double left_x0, left_y0, left_x1;
   double left_y1 = left_seg->y1;

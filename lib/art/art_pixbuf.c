@@ -272,7 +272,7 @@ art_pixbuf_duplicate (const ArtPixBuf *pixbuf)
 
   size = (pixbuf->height - 1) * pixbuf->rowstride +
     pixbuf->width * ((pixbuf->n_channels * pixbuf->bits_per_sample + 7) >> 3);
-  result->pixels = art_alloc (size);
+  result->pixels = (art_u8*)art_alloc (size);
   memcpy (result->pixels, pixbuf->pixels, size);
 
   result->width = pixbuf->width;

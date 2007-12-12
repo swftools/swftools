@@ -81,7 +81,7 @@ art_vpath_new_circle (double x, double y, double r)
   ArtVpath *vec;
   double theta;
 
-  vec = art_new (ArtVpath, CIRCLE_STEPS + 2);
+  vec = (ArtVpath*)art_new (ArtVpath, CIRCLE_STEPS + 2);
 
   for (i = 0; i < CIRCLE_STEPS + 1; i++)
     {
@@ -112,25 +112,25 @@ art_vpath_affine_transform (const ArtVpath *src, const double matrix[6])
 {
   int i;
   int size;
-  ArtVpath *new;
+  ArtVpath *xnew;
   double x, y;
 
   for (i = 0; src[i].code != ART_END; i++);
   size = i;
 
-  new = art_new (ArtVpath, size + 1);
+  xnew = (ArtVpath*)art_new (ArtVpath, size + 1);
 
   for (i = 0; i < size; i++)
     {
-      new[i].code = src[i].code;
+      xnew[i].code = src[i].code;
       x = src[i].x;
       y = src[i].y;
-      new[i].x = matrix[0] * x + matrix[2] * y + matrix[4];
-      new[i].y = matrix[1] * x + matrix[3] * y + matrix[5];
+      xnew[i].x = matrix[0] * x + matrix[2] * y + matrix[4];
+      xnew[i].y = matrix[1] * x + matrix[3] * y + matrix[5];
     }
-  new[i].code = ART_END;
+  xnew[i].code = ART_END;
 
-  return new;
+  return xnew;
 }
 
 /**
@@ -201,7 +201,7 @@ art_vpath_perturb (ArtVpath *src)
 {
   int i;
   int size;
-  ArtVpath *new;
+  ArtVpath *xnew;
   double x, y;
   double x_start, y_start;
   int open;
@@ -209,14 +209,14 @@ art_vpath_perturb (ArtVpath *src)
   for (i = 0; src[i].code != ART_END; i++);
   size = i;
 
-  new = art_new (ArtVpath, size + 1);
+  xnew = (ArtVpath*)art_new (ArtVpath, size + 1);
 
   x_start = 0;
   y_start = 0;
   open = 0;
   for (i = 0; i < size; i++)
     {
-      new[i].code = src[i].code;
+      xnew[i].code = src[i].code;
       x = src[i].x + (PERTURBATION * rand ()) / RAND_MAX - PERTURBATION * 0.5;
       y = src[i].y + (PERTURBATION * rand ()) / RAND_MAX - PERTURBATION * 0.5;
       if (src[i].code == ART_MOVETO)
@@ -232,10 +232,10 @@ art_vpath_perturb (ArtVpath *src)
 	  x = x_start;
 	  y = y_start;
 	}
-      new[i].x = x;
-      new[i].y = y;
+      xnew[i].x = x;
+      xnew[i].y = y;
     }
-  new[i].code = ART_END;
+  xnew[i].code = ART_END;
 
-  return new;
+  return xnew;
 }

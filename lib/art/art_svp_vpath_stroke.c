@@ -425,7 +425,7 @@ art_svp_vpath_stroke_raw (ArtVpath *vpath,
   int n_result, n_result_max;
   double half_lw = 0.5 * line_width;
   int closed;
-  int last, this, next, second;
+  int last, xthis, next, second;
   double dx, dy;
 
   n_forw_max = 16;
@@ -453,12 +453,12 @@ art_svp_vpath_stroke_raw (ArtVpath *vpath,
 	 the opening pathcode), but why fix code that isn't broken?
       */
 
-      this = begin_idx;
+      xthis = begin_idx;
       /* skip over identical points at the beginning of the subpath */
-      for (i = this + 1; vpath[i].code == ART_LINETO; i++)
+      for (i = xthis + 1; vpath[i].code == ART_LINETO; i++)
 	{
-	  dx = vpath[i].x - vpath[this].x;
-	  dy = vpath[i].y - vpath[this].y;
+	  dx = vpath[i].x - vpath[xthis].x;
+	  dy = vpath[i].y - vpath[xthis].y;
 	  if (dx * dx + dy * dy > EPSILON_2)
 	    break;
 	}
@@ -468,13 +468,13 @@ art_svp_vpath_stroke_raw (ArtVpath *vpath,
       /* invariant: this doesn't coincide with next */
       while (vpath[next].code == ART_LINETO)
 	{
-	  last = this;
-	  this = next;
+	  last = xthis;
+	  xthis = next;
 	  /* skip over identical points after the beginning of the subpath */
-	  for (i = this + 1; vpath[i].code == ART_LINETO; i++)
+	  for (i = xthis + 1; vpath[i].code == ART_LINETO; i++)
 	    {
-	      dx = vpath[i].x - vpath[this].x;
-	      dy = vpath[i].y - vpath[this].y;
+	      dx = vpath[i].x - vpath[xthis].x;
+	      dy = vpath[i].y - vpath[xthis].y;
 	      if (dx * dx + dy * dy > EPSILON_2)
 		break;
 	    }
@@ -486,15 +486,15 @@ art_svp_vpath_stroke_raw (ArtVpath *vpath,
 		 semantics (i.e. explicit closepath code rather than
 		 just the fact that end of the path is the beginning) */
 	      if (closed &&
-		  vpath[this].x == vpath[begin_idx].x &&
-		  vpath[this].y == vpath[begin_idx].y)
+		  vpath[xthis].x == vpath[begin_idx].x &&
+		  vpath[xthis].y == vpath[begin_idx].y)
 		{
 		  int j;
 
 		  /* path is closed, render join to beginning */
 		  render_seg (&forw, &n_forw, &n_forw_max,
 			      &rev, &n_rev, &n_rev_max,
-			      vpath, last, this, second,
+			      vpath, last, xthis, second,
 			      join, half_lw, miter_limit, flatness);
 
 #ifdef VERBOSE
@@ -526,7 +526,7 @@ art_svp_vpath_stroke_raw (ArtVpath *vpath,
 		  /* add to forw rather than result to ensure that
 		     forw has at least one point. */
 		  render_cap (&forw, &n_forw, &n_forw_max,
-			      vpath, last, this,
+			      vpath, last, xthis,
 			      cap, half_lw, flatness);
 		  art_vpath_add_point (&result, &n_result, &n_result_max,
 				   ART_MOVETO, forw[0].x,
@@ -550,7 +550,7 @@ art_svp_vpath_stroke_raw (ArtVpath *vpath,
 	  else
 	    render_seg (&forw, &n_forw, &n_forw_max,
 			&rev, &n_rev, &n_rev_max,
-			vpath, last, this, next,
+			vpath, last, xthis, next,
 			join, half_lw, miter_limit, flatness);
 	}
       end_idx = next;

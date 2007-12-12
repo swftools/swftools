@@ -51,8 +51,8 @@ art_vpath_svp_point_compare (double x1, double y1, double x2, double y2)
 static int
 art_vpath_svp_compare (const void *s1, const void *s2)
 {
-  const ArtVpathSVPEnd *e1 = s1;
-  const ArtVpathSVPEnd *e2 = s2;
+  const ArtVpathSVPEnd *e1 = (ArtVpathSVPEnd *)s1;
+  const ArtVpathSVPEnd *e2 = (ArtVpathSVPEnd *)s2;
 
   return art_vpath_svp_point_compare (e1->x, e1->y, e2->x, e2->y);
 }
@@ -85,7 +85,7 @@ art_vpath_from_svp (const ArtSVP *svp)
 {
   int n_segs = svp->n_segs;
   ArtVpathSVPEnd *ends;
-  ArtVpath *new;
+  ArtVpath *xnew;
   int *visited;
   int n_new, n_new_max;
   int i, k;
@@ -99,7 +99,7 @@ art_vpath_from_svp (const ArtSVP *svp)
   last_x = 0; /* to eliminate "uninitialized" warning */
   last_y = 0;
 
-  ends = art_new (ArtVpathSVPEnd, n_segs * 2);
+  ends = (ArtVpathSVPEnd*)art_new (ArtVpathSVPEnd, n_segs * 2);
   for (i = 0; i < svp->n_segs; i++)
     {
       int lastpt;
@@ -120,9 +120,9 @@ art_vpath_from_svp (const ArtSVP *svp)
   n_new = 0;
   n_new_max = 16; /* I suppose we _could_ estimate this from traversing
 		     the svp, so we don't have to reallocate */
-  new = art_new (ArtVpath, n_new_max);
+  xnew = (ArtVpath*)art_new (ArtVpath, n_new_max);
 
-  visited = art_new (int, n_segs);
+  visited = (int*)art_new (int, n_segs);
   for (i = 0; i < n_segs; i++)
     visited[i] = 0;
 
@@ -163,7 +163,7 @@ art_vpath_from_svp (const ArtSVP *svp)
 	    {
 	      if (first)
 		{
-		  art_vpath_add_point (&new, &n_new, &n_new_max,
+		  art_vpath_add_point (&xnew, &n_new, &n_new_max,
 				       ART_MOVETO,
 				       svp->segs[seg_num].points[pt_num].x,
 				       svp->segs[seg_num].points[pt_num].y);
@@ -171,7 +171,7 @@ art_vpath_from_svp (const ArtSVP *svp)
 	    }
 	  else
 	    {
-	      art_vpath_add_point (&new, &n_new, &n_new_max,
+	      art_vpath_add_point (&xnew, &n_new, &n_new_max,
 				   ART_LINETO,
 				   svp->segs[seg_num].points[pt_num].x,
 				   svp->segs[seg_num].points[pt_num].y);
@@ -188,9 +188,9 @@ art_vpath_from_svp (const ArtSVP *svp)
       visited[seg_num] = 1;
     }
 
-  art_vpath_add_point (&new, &n_new, &n_new_max,
+  art_vpath_add_point (&xnew, &n_new, &n_new_max,
 		       ART_END, 0, 0);
   art_free (visited);
   art_free (ends);
-  return new;
+  return xnew;
 }

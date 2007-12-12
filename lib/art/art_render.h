@@ -74,10 +74,8 @@ typedef enum {
   ART_COMPOSITE_CUSTOM
 } ArtCompositingMode;
 
-typedef enum {
-  ART_IMAGE_SOURCE_CAN_CLEAR = 1,
-  ART_IMAGE_SOURCE_CAN_COMPOSITE = 2
-} ArtImageSourceFlags;
+#define ART_IMAGE_SOURCE_CAN_CLEAR 1
+#define ART_IMAGE_SOURCE_CAN_COMPOSITE 2
 
 struct _ArtRenderMaskRun {
   int x;
@@ -93,7 +91,7 @@ struct _ArtRenderCallback {
 struct _ArtImageSource {
   ArtRenderCallback super;
   void (*negotiate) (ArtImageSource *self, ArtRender *render,
-		     ArtImageSourceFlags *p_flags,
+		     int *p_flags,
 		     int *p_buf_depth, ArtAlphaType *p_alpha_type);
 };
 

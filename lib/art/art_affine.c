@@ -124,7 +124,7 @@ art_ftoa (char str[80], double x)
       *p++ = '-';
       x = -x;
     }
-  if ((int)floor ((x + EPSILON / 2) < 1))
+  if (floor (x + EPSILON / 2) < 1)
     {
       *p++ = '0';
       *p++ = '.';
@@ -147,7 +147,7 @@ art_ftoa (char str[80], double x)
 	  x -= floor (x + EPSILON / 2);
 	  for (j = i; j < 6; j++)
 	    x *= 10;
-	  ix = floor (x + 0.5);
+	  ix = (int)floor (x + 0.5);
 
 	  for (j = 0; j < i; j++)
 	    ix *= 10;

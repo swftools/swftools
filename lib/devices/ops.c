@@ -27,6 +27,7 @@
 #include "../mem.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#include "ops.h"
 
 typedef struct _internal {
     gfxdevice_t*out;
@@ -110,7 +111,7 @@ void ops_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxma
     gfximage_t img2;
     img2.width = img->width;
     img2.height = img->height;
-    img2.data = malloc(img->width*img->height*4);
+    img2.data = (gfxcolor_t*)malloc(img->width*img->height*4);
     int x,y; 
     for(y=0;y<img->height;y++)  {
 	gfxcolor_t*in = &img->data[y*img->width];
@@ -142,7 +143,7 @@ void ops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t
     i->out->drawchar(i->out, font, glyphnr, color, matrix);
 }
 
-void ops_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+void ops_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
     i->out->drawlink(i->out, line, action);

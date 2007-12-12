@@ -199,7 +199,7 @@ gfxresult_t* file_finish(struct _gfxdevice*dev)
 
 void gfxdevice_file_init(gfxdevice_t*dev, char*filename)
 {
-    internal_t*i = malloc(sizeof(internal_t));
+    internal_t*i = (internal_t*)malloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
 
     dev->name = "file";

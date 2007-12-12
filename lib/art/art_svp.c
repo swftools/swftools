@@ -136,8 +136,8 @@ art_svp_free (ArtSVP *svp)
 int
 art_svp_seg_compare (const void *s1, const void *s2)
 {
-  const ArtSVPSeg *seg1 = s1;
-  const ArtSVPSeg *seg2 = s2;
+  const ArtSVPSeg *seg1 = (ArtSVPSeg *)s1;
+  const ArtSVPSeg *seg2 = (ArtSVPSeg *)s2;
 
   if (seg1->points[0].y - EPSILON > seg2->points[0].y) return 1;
   else if (seg1->points[0].y + EPSILON < seg2->points[0].y) return -1;

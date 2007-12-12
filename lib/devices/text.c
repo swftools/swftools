@@ -60,7 +60,7 @@ void text_startpage(gfxdevice_t*dev, int width, int height)
 	i->current_page = i->current_page->next;
     }
     i->current_page->textsize = 4096;
-    i->current_page->text = malloc(i->current_page->textsize);
+    i->current_page->text = (char*)malloc(i->current_page->textsize);
     i->current_page->textpos = 0;
     i->current_page->next = 0;
     i->currentx = 0;
@@ -133,7 +133,7 @@ void text_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*colo
     }
 }
 
-void text_drawlink(gfxdevice_t*dev, gfxline_t*line, char*action)
+void text_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
 }
@@ -173,7 +173,7 @@ void*text_result_get(gfxresult_t*r, char*name)
 	    len += i->textpos;
 	    j = j->next;
 	}
-	char*text = malloc(len);
+	char*text = (char*)malloc(len);
 	int pos = 0;
 	j = i;
 	while(j) {

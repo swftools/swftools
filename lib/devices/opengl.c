@@ -17,6 +17,7 @@
 
 //#define ZSTEP (1/65536.0)
 #define ZSTEP (1/32.0)
+//#define ZSTEP (1/4.0)
 
 typedef struct _fontlist {
     gfxfont_t*font;

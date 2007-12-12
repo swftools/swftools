@@ -249,7 +249,7 @@ art_render_gradient_linear_render_8 (ArtRenderCallback *self,
       (gradient->stops[n_stops-1].offset < (1.0 - EPSILON)))
   {
     extra_stops = 0;
-    tmp_stops = stops = alloca (sizeof (ArtGradientStop) * (n_stops + 2));
+    tmp_stops = stops = (ArtGradientStop*)alloca (sizeof (ArtGradientStop) * (n_stops + 2));
     if (gradient->stops[0].offset > EPSILON /* 0.0 */)
       {
 	memcpy (tmp_stops, gradient->stops, sizeof (ArtGradientStop));
@@ -282,7 +282,7 @@ art_render_gradient_linear_render_8 (ArtRenderCallback *self,
   if (spread == ART_GRADIENT_REFLECT)
     {
       tmp_stops = stops;
-      stops = alloca (sizeof (ArtGradientStop) * n_stops * 2);
+      stops = (ArtGradientStop*)alloca (sizeof (ArtGradientStop) * n_stops * 2);
       memcpy (stops, tmp_stops, sizeof (ArtGradientStop) * n_stops);
 
       for (i = 0; i< n_stops; i++)
@@ -561,7 +561,7 @@ art_render_gradient_linear_render (ArtRenderCallback *self, ArtRender *render,
 
 static void
 art_render_gradient_linear_negotiate (ArtImageSource *self, ArtRender *render,
-				      ArtImageSourceFlags *p_flags,
+				      int *p_flags,
 				      int *p_buf_depth, ArtAlphaType *p_alpha)
 {
   if (render->depth == 8 &&
@@ -593,7 +593,7 @@ art_render_gradient_linear (ArtRender *render,
 			    const ArtGradientLinear *gradient,
 			    ArtFilterLevel level)
 {
-  ArtImageSourceGradLin *image_source = art_alloc (sizeof (ArtImageSourceGradLin) +
+  ArtImageSourceGradLin *image_source = (ArtImageSourceGradLin*)art_alloc (sizeof (ArtImageSourceGradLin) +
 						   sizeof (ArtGradientStop) * (gradient->n_stops - 1));
 
   image_source->super.super.render = NULL;
@@ -630,7 +630,7 @@ art_render_gradient_radial_render (ArtRenderCallback *self, ArtRender *render,
   double fx = gradient->fx;
   double fy = gradient->fy;
   double dx, dy;
-  double *affine = gradient->affine;
+  double *affine = (double*)&gradient->affine[0];
   double aff0 = affine[0];
   double aff1 = affine[1];
   const double a = z->a;
@@ -673,7 +673,7 @@ art_render_gradient_radial_render (ArtRenderCallback *self, ArtRender *render,
 
 static void
 art_render_gradient_radial_negotiate (ArtImageSource *self, ArtRender *render,
-				      ArtImageSourceFlags *p_flags,
+				      int *p_flags,
 				      int *p_buf_depth, ArtAlphaType *p_alpha)
 {
   self->super.render = art_render_gradient_radial_render;
@@ -695,7 +695,7 @@ art_render_gradient_radial (ArtRender *render,
 			    const ArtGradientRadial *gradient,
 			    ArtFilterLevel level)
 {
-  ArtImageSourceGradRad *image_source = art_alloc (sizeof (ArtImageSourceGradRad) +
+  ArtImageSourceGradRad *image_source = (ArtImageSourceGradRad*)art_alloc (sizeof (ArtImageSourceGradRad) +
 						   sizeof (ArtGradientStop) * (gradient->n_stops - 1));
   double fx = gradient->fx;
   double fy = gradient->fy;

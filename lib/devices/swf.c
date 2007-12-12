@@ -23,19 +23,23 @@
 #include <string.h>
 #include "../../config.h"
 #include <fcntl.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #ifdef HAVE_ASSERT_H
 #include <assert.h>
 #else
 #define assert(a)
 #endif
 #include <math.h>
+#include "../mem.h"
 #include "../log.h"
 #include "../rfxswf.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../art/libart.h"
-#include "artsutils.c"
+#include "swf.h"
+#include "artsutils.h"
 
 #define CHARDATAMAX 8192
 #define CHARMIDX 0
@@ -929,7 +933,6 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     i->dev = dev;
 
-    SRECT r;
     RGBA rgb;
 
     msg("<verbose> initializing swf output\n", i->max_x,i->max_y);
@@ -1215,7 +1218,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
     }
 
     endpage(dev);
-    fontlist_t *tmp,*iterator = i->fontlist;
+    fontlist_t *iterator = i->fontlist;
     while(iterator) {
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
@@ -1595,12 +1598,10 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     SRECT r;
     int lsid=0;
     int fsid;
-    plotxy_t p1,p2,p3,p4;
     int myshapeid;
     int myshapeid2;
     double posx = 0;
     double posy = 0;
-    int t;
     int buttonid = getNewID(dev);
     gfxbbox_t bbox = gfxline_getbbox(points);
 
@@ -2046,8 +2047,6 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     double fy = (double)img->height / (double)newheight;
 
     MATRIX m;
-    float m00,m10,tx;
-    float m01,m11,ty;
     m.sx = (int)(65536*20*matrix->m00*fx); m.r1 = (int)(65536*20*matrix->m10*fy);
     m.r0 = (int)(65536*20*matrix->m01*fx); m.sy = (int)(65536*20*matrix->m11*fy);
     m.tx = (int)(matrix->tx*20);

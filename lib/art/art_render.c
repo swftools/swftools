@@ -945,7 +945,7 @@ art_render_invoke (ArtRender *render)
   int i;
   int n_callbacks, n_callbacks_max;
   ArtImageSource *image_source;
-  ArtImageSourceFlags image_flags;
+  int image_flags;
   int buf_depth;
   ArtAlphaType buf_alpha;
   art_boolean first = ART_TRUE;
@@ -1320,11 +1320,11 @@ art_render_image_solid_rgb8 (ArtRenderCallback *self, ArtRender *render,
 
 static void
 art_render_image_solid_negotiate (ArtImageSource *self, ArtRender *render,
-				  ArtImageSourceFlags *p_flags,
+				  int *p_flags,
 				  int *p_buf_depth, ArtAlphaType *p_alpha)
 {
   ArtImageSourceSolid *z = (ArtImageSourceSolid *)self;
-  ArtImageSourceFlags flags = 0;
+  int flags = 0;
   static void (*render_cbk) (ArtRenderCallback *self, ArtRender *render,
 			     art_u8 *dest, int y);
 

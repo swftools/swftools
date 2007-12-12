@@ -21,12 +21,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <memory.h>
+#ifdef HAVE_IO_H
+#include <io.h>
+#endif
+#include <string.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../types.h"
 #include "../bitio.h"
+#include "record.h"
 
 typedef struct _internal {
     gfxfontlist_t* fontlist;
@@ -95,7 +102,7 @@ static gfxline_t* readLine(reader_t*r)
 	unsigned char op = reader_readU8(r);
 	if(op == OP_END)
 	    break;
-	gfxline_t*line = rfx_calloc(sizeof(gfxline_t));
+	gfxline_t*line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
 	if(!start) {
 	    start = pos = line;
 	} else {
@@ -125,7 +132,7 @@ static gfximage_t readImage(reader_t*r)
     gfximage_t img;
     img.width = reader_readU16(r);
     img.height = reader_readU16(r);
-    img.data = rfx_alloc(img.width*img.height*4);
+    img.data = (gfxcolor_t*)rfx_alloc(img.width*img.height*4);
     r->read(r, img.data, img.width*img.height*4);
     return img;
 }
@@ -156,7 +163,7 @@ static gfxgradient_t* readGradient(reader_t*r)
 	U8 op = reader_readU8(r);
 	if(!op)
 	    break;
-	gfxgradient_t*g = rfx_calloc(sizeof(gfxgradient_t));
+	gfxgradient_t*g = (gfxgradient_t*)rfx_calloc(sizeof(gfxgradient_t));
 	if(!start) {
 	    start = pos = g;
 	} else {
@@ -173,7 +180,7 @@ static gfxcxform_t* readCXForm(reader_t*r)
     U8 type = reader_readU8(r);
     if(!type)
 	return 0;
-    gfxcxform_t* c = rfx_calloc(sizeof(gfxcxform_t));
+    gfxcxform_t* c = (gfxcxform_t*)rfx_calloc(sizeof(gfxcxform_t));
     c->rr = reader_readFloat(r); c->rg = reader_readFloat(r); c->rb = reader_readFloat(r); c->ra = reader_readFloat(r);
     c->gr = reader_readFloat(r); c->gg = reader_readFloat(r); c->gb = reader_readFloat(r); c->ga = reader_readFloat(r);
     c->br = reader_readFloat(r); c->bg = reader_readFloat(r); c->bb = reader_readFloat(r); c->ba = reader_readFloat(r);
@@ -247,12 +254,12 @@ static void dumpFont(writer_t*w, gfxfont_t*font)
 }
 static gfxfont_t*readFont(reader_t*r)
 {
-    gfxfont_t* font = rfx_calloc(sizeof(gfxfont_t));
+    gfxfont_t* font = (gfxfont_t*)rfx_calloc(sizeof(gfxfont_t));
     font->id = reader_readString(r);
     font->num_glyphs = reader_readU32(r);
     font->max_unicode = reader_readU32(r);
-    font->glyphs = rfx_calloc(sizeof(gfxglyph_t)*font->num_glyphs);
-    font->unicode2glyph = rfx_calloc(sizeof(font->unicode2glyph[0])*font->max_unicode);
+    font->glyphs = (gfxglyph_t*)rfx_calloc(sizeof(gfxglyph_t)*font->num_glyphs);
+    font->unicode2glyph = (int*)rfx_calloc(sizeof(font->unicode2glyph[0])*font->max_unicode);
     int t;
     for(t=0;t<font->num_glyphs;t++) {
 	font->glyphs[t].line = readLine(r);
@@ -260,7 +267,7 @@ static gfxfont_t*readFont(reader_t*r)
 	font->glyphs[t].unicode = reader_readU32(r);
 	font->glyphs[t].name = reader_readString(r);
 	if(!font->glyphs[t].name[0]) {
-	    free(font->glyphs[t].name);
+	    free((void*)(font->glyphs[t].name));
 	    font->glyphs[t].name = 0;
 	}
     }
@@ -361,7 +368,7 @@ static void record_endpage(struct _gfxdevice*dev)
     writer_writeU8(&i->w, OP_ENDPAGE);
 }
 
-static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
     writer_writeU8(&i->w, OP_DRAWLINK);
@@ -408,8 +415,20 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		double width = reader_readDouble(r);
 		double miterlimit = reader_readDouble(r);
 		gfxcolor_t color = readColor(r);
-		gfx_capType captype = reader_readU8(r);
-		gfx_joinType jointtype = reader_readU8(r);
+		gfx_capType captype;
+        int v = reader_readU8(r);
+        switch (v) {
+        case 0: captype = gfx_capButt; break;
+        case 1: captype = gfx_capRound; break;
+        case 2: captype = gfx_capSquare; break;
+        }
+		gfx_joinType jointtype;
+        v = reader_readU8(r);
+        switch (v) {
+        case 0: jointtype = gfx_joinMiter; break;
+        case 1: jointtype = gfx_joinRound; break;
+        case 2: jointtype = gfx_joinBevel; break;
+        }
 		gfxline_t* line = readLine(r);
 		device->stroke(device, line, width, &color, captype, jointtype,miterlimit);
 		gfxline_free(line);
@@ -443,7 +462,14 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		break;
 	    }
 	    case OP_FILLGRADIENT: {
-		gfxgradienttype_t type = reader_readU8(r);
+		gfxgradienttype_t type;
+        int v = reader_readU8(r);
+        switch (v) {
+        case 0: 
+          type = gfxgradient_radial; break;
+        case 1:
+          type = gfxgradient_linear; break;
+        }  
 		gfxgradient_t*gradient = readGradient(r);
 		gfxmatrix_t matrix = readMatrix(r);
 		gfxline_t* line = readLine(r);
@@ -483,7 +509,7 @@ static void record_result_write(gfxresult_t*r, int filedesc)
     internal_result_t*i = (internal_result_t*)r->internal;
     write(filedesc, i->data, i->length);
 }
-static int record_result_save(gfxresult_t*r, char*filename)
+static int record_result_save(gfxresult_t*r, const char*filename)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
     FILE*fi = fopen(filename, "wb");
@@ -495,7 +521,7 @@ static int record_result_save(gfxresult_t*r, char*filename)
     fclose(fi);
     return 0;
 }
-static void*record_result_get(gfxresult_t*r, char*name)
+static void*record_result_get(gfxresult_t*r, const char*name)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
     if(!strcmp(name, "data")) {

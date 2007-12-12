@@ -25,7 +25,7 @@ void idct(int*src);
 void preparequant(int quant);
 void dct2(int*src, int*dest);
 
-int zigzagtable[64];
+extern int zigzagtable[64];
 void zigzag(int*src);
 
 #endif //__dct_h__

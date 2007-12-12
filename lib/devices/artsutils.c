@@ -1,7 +1,12 @@
+#include "../../config.h"
+#include "../rfxswf.h"
+#include "../gfxdevice.h"
+#include "../gfxtools.h"
+#include "../art/libart.h"
 #include <assert.h>
 #include <math.h>
 
-static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
+ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
 {
     ArtVpath *vec = NULL;
     int pos=0,len=0;
@@ -143,7 +148,7 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line)
     return vec;
 }
 
-static void show_path(ArtSVP*path)
+void show_path(ArtSVP*path)
 {
     int t;
     printf("Segments: %d\n", path->n_segs);
@@ -161,7 +166,7 @@ static void show_path(ArtSVP*path)
     printf("\n");
 }
 
-static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
+ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line);
     if(perturb) {
@@ -235,7 +240,7 @@ static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
     }
     return svp;
 }
-static ArtSVP* boxToSVP(double x1, double y1,double x2, double y2)
+ArtSVP* boxToSVP(double x1, double y1,double x2, double y2)
 {
     ArtVpath *vec = art_new (ArtVpath, 5+1);
     vec[0].code = ART_MOVETO;
@@ -261,7 +266,7 @@ static ArtSVP* boxToSVP(double x1, double y1,double x2, double y2)
     return svp;
 }
 
-static ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
+ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line);
 
@@ -280,7 +285,7 @@ static ArtSVP* gfxstrokeToSVP(gfxline_t*line, gfxcoord_t width, gfx_capType cap_
     return svp;
 }
 
-static gfxline_t* SVPtogfxline(ArtSVP*svp)
+gfxline_t* SVPtogfxline(ArtSVP*svp)
 {
     int size = 0;
     int t;
@@ -309,4 +314,3 @@ static gfxline_t* SVPtogfxline(ArtSVP*svp)
 	return 0;
     }
 }
-

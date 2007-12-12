@@ -23,11 +23,14 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <memory.h>
+#include <string.h>
+#include <math.h>
 #include "../mem.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../art/libart.h"
-#include "artsutils.c"
+#include "arts.h"
+#include "artsutils.h"
 
 typedef struct _clip {
     ArtSVP*svp;
@@ -41,6 +44,7 @@ typedef struct _internal {
 } internal_t;
 
 static int verbose = 0;
+
 static void dbg(char*format, ...)
 {
     if(!verbose)
@@ -336,6 +340,6 @@ void gfxdevice_union_init(gfxdevice_t*dev,gfxdevice_t*out)
     dev->finish = arts_finish;
 
     i->out = out;
-    i->svpunion = gfxstrokeToSVP(0, 0, 0, 0, 0);
+    i->svpunion = gfxstrokeToSVP(0, 0, gfx_capButt, gfx_joinMiter, 0);
 }
 
