@@ -1,6 +1,12 @@
 #include <Python.h>
+#ifdef HAVE_STAT
+#undef HAVE_STAT
+#endif
 //#include "/usr/include/python2.3/Imaging.h"
+#include "../../config.h"
+#ifdef HAVE_PYTHON_IMAGING
 #include <Imaging.h>
+#endif
 #include "pyutils.h"
 #undef HAVE_STAT
 #include "../rfxswf.h"
@@ -9,28 +15,41 @@
 /* there should be a better way to do this... */
 typedef struct {
     PyObject_HEAD
+#ifdef HAVE_PYTHON_IMAGING
     Imaging image;
+#endif
 } ImagingObject;
 
 int image_getWidth(PyObject*_image) {
+#ifdef HAVE_PYTHON_IMAGING
     if(strcmp(_image->ob_type->tp_name, "ImagingCore")) {
 	PyErr_SetString(PyExc_Exception, setError("not an image: %s", _image->ob_type->tp_name));
 	return 0;
     }
     ImagingObject*image = (ImagingObject*)_image;
     return image->image->xsize;
+#else
+    PyErr_SetString(PyExc_Exception, "imaging not compiled in");
+    return 0;
+#endif
 }
 
 int image_getHeight(PyObject*_image) {
+#ifdef HAVE_PYTHON_IMAGING
     if(strcmp(_image->ob_type->tp_name, "ImagingCore")) {
 	PyErr_SetString(PyExc_Exception, setError("not an image: %s", _image->ob_type->tp_name));
 	return 0;
     }
     ImagingObject*image = (ImagingObject*)_image;
     return image->image->ysize;
+#else
+    PyErr_SetString(PyExc_Exception, "imaging not compiled in");
+    return 0;
+#endif
 }
 
 int image_getBPP(PyObject*_image) {
+#ifdef HAVE_PYTHON_IMAGING
     if(strcmp(_image->ob_type->tp_name, "ImagingCore")) {
 	PyErr_SetString(PyExc_Exception, setError("not an image: %s", _image->ob_type->tp_name));
 	return 0;
@@ -53,10 +72,15 @@ int image_getBPP(PyObject*_image) {
     }
     PyErr_SetString(PyExc_Exception, setError("Unknown image format (%s).", image->image->mode));
     return 0;
+#else
+    PyErr_SetString(PyExc_Exception, "imaging not compiled in");
+    return 0;
+#endif
 }
 
 RGBA* image_toRGBA(PyObject*_image) 
 {
+#ifdef HAVE_PYTHON_IMAGING
     if(strcmp(_image->ob_type->tp_name, "ImagingCore")) {
 	PyErr_SetString(PyExc_Exception, setError("not an image: %s", _image->ob_type->tp_name));
 	return 0;
@@ -92,13 +116,19 @@ RGBA* image_toRGBA(PyObject*_image)
     }
 	
     PyErr_SetString(PyExc_Exception, setError("Unsupported image format: %s (try .convert(\"RGBA\")", image->image->mode));
+#else
+    PyErr_SetString(PyExc_Exception, "imaging not compiled in");
+#endif
     return 0;
 }
 
+#ifdef HAVE_PYTHON_IMAGING
 extern PyObject*PyImagingNew(Imaging imOut);
+#endif
 
 PyObject* rgba_to_image(RGBA*rgba, int width, int height)
 {
+#ifdef HAVE_PYTHON_IMAGING
 #ifndef WIN32
     Imaging img = ImagingNew("RGBA", width, height);
     int y;
@@ -121,6 +151,10 @@ PyObject* rgba_to_image(RGBA*rgba, int width, int height)
     return PyImagingNew(img);
 #else
     fprintf(stderr, "This image extraction is not yet supported on non-linux systems\n");
+    return 0;
+#endif
+#else
+    PyErr_SetString(PyExc_Exception, "imaging not compiled in");
     return 0;
 #endif
 }
