@@ -104,7 +104,7 @@ static int png_read_header(FILE*fi, struct png_header*header)
     while(png_read_chunk(&id, &len, &data, fi))
     {
 	//printf("Chunk: %c%c%c%c (len:%d)\n", id[0],id[1],id[2],id[3], len);
-	if(!strncasecmp(id, "IHDR", 4)) {
+	if(!strncmp(id, "IHDR", 4)) {
 	    char a,b,c,f,i;
 	    if(len < 8) exit(1);
 	    header->width = data[0]<<24|data[1]<<16|data[2]<<8|data[3];
@@ -439,7 +439,7 @@ static void inline applyfilter4(int mode, unsigned char*src, unsigned char*old, 
 }
 
 
-EXPORT int getPNGdimensions(char*sname, int*destwidth, int*destheight)
+EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
 {
     FILE*fi;
     struct png_header header;
@@ -457,7 +457,7 @@ EXPORT int getPNGdimensions(char*sname, int*destwidth, int*destheight)
     return 1;
 }
 
-EXPORT int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata)
+EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char**destdata)
 {
     char tagid[4];
     int len;
@@ -1009,7 +1009,7 @@ static void filter_line(int filtermode, unsigned char*dest, unsigned char*src, i
     }
 }
 
-EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
+EXPORT void writePNG(const char*filename, unsigned char*data, int width, int height)
 {
     FILE*fi;
     int crc;
@@ -1074,7 +1074,7 @@ EXPORT void writePNG(char*filename, unsigned char*data, int width, int height)
     long idatpos = png_start_chunk(fi, "IDAT", 0);
     
     memset(&zs,0,sizeof(z_stream));
-    Bytef*writebuf = malloc(ZLIB_BUFFER_SIZE);
+    Bytef*writebuf = (Bytef*)malloc(ZLIB_BUFFER_SIZE);
     zs.zalloc = Z_NULL;
     zs.zfree  = Z_NULL;
     zs.opaque = Z_NULL;

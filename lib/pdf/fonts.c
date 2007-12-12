@@ -1,3 +1,5 @@
+#include "fonts.h"
+
 int d050000l_afm_len = 9381;
 char* d050000l_afm =
 "StartFontMetrics 3.0\nComment Copyright URW Software, Copyright 1997 by URW\nCom"

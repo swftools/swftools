@@ -69,15 +69,15 @@ static void swf_cgienv(unsigned char * var)
   // fprintf(stderr,"%s\n",var);
 
   
-  buf = (unsigned char*)rfx_alloc(strlen(var) + sizeof(PREFIX) + 2);
+  buf = (unsigned char*)rfx_alloc(strlen((const char*)var) + sizeof(PREFIX) + 2);
   if (!buf) return;
 
-  strcpy(buf, PREFIX);
+  strcpy((char*)buf, (const char*)PREFIX);
   if (var[0] == '_')
-  { strcpy(&buf[sizeof(PREFIX)-1], &var[1]);
+  { strcpy((char*)&buf[sizeof(PREFIX)-1], (const char*)&var[1]);
     despace = 1;
   }
-  else strcpy(&buf[sizeof(PREFIX)-1], var);
+  else strcpy((char*)&buf[sizeof(PREFIX)-1], (const char*)var);
 
   for (c = buf; c[0] ; c++)
   { if (c[0] == '.') c[0] = '_';
@@ -106,22 +106,22 @@ static void swf_cgienv(unsigned char * var)
     t[1] = 0;
   }
 
-  if ((oldval = getenv(buf)))
-  { newval = (unsigned char*)rfx_alloc(strlen(oldval) + strlen(buf) + strlen(&c[1]) + 3);
+  if ((oldval = (unsigned char*)getenv((const char*)buf)))
+  { newval = (unsigned char*)rfx_alloc(strlen((const char*)oldval) + strlen((const char *)buf) + strlen((const char*)&c[1]) + 3);
     if (!newval) return;
 
     c[0] = '=';
-    sprintf(newval, "%s#%s", buf, oldval);
+    sprintf((char*)newval, "%s#%s", buf, oldval);
     c[0] = 0;
 
-    oldval -= strlen(buf) + 1; // skip past VAR= 
+    oldval -= strlen((const char*)buf) + 1; // skip past VAR= 
   }
   else 
   { c[0] = '=';
     newval = buf;
   }
   
-  putenv(newval);
+  putenv((const char *)newval);
         
   if (oldval)
   { rfx_free(oldval);
@@ -136,7 +136,7 @@ static void swf_scanquery(char * q)
   while (next)
   { next = strchr(q, '&');
     if (next) next[0] = 0;
-    swf_cgienv(q);
+    swf_cgienv((unsigned char*)q);
     if (next)
     { next[0] = '&';
       q = next+1;
@@ -155,7 +155,7 @@ char * swf_postread()
   if (!buf) return NULL;
         
   size = atoi(buf);
-  buf = (unsigned char*)rfx_alloc(size + 1);
+  buf = (char*)rfx_alloc(size + 1);
   if (buf)
   { do
     { got = fread(buf + sofar, 1, size - sofar, stdin);

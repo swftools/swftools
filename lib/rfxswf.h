@@ -24,10 +24,6 @@
 #ifndef __RFX_SWF_INCLUDED__
 #define __RFX_SWF_INCLUDED__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -227,7 +223,7 @@ int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
 void  swf_SetS16(TAG * t,int v);
 int   swf_SetU32(TAG * t,U32 v);
-#define swf_SetString(t,s)  swf_SetBlock(t,s,strlen(s)+1)
+#define swf_SetString(t,s)  swf_SetBlock(t,s,strlen((const char *)s)+1)
 
 //int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_GetRect(TAG * t,SRECT * r);
@@ -397,9 +393,10 @@ typedef struct _SHAPE2
     SRECT* bbox; // may be NULL
 } SHAPE2;
 
+enum SHAPELINETYPE {moveTo, lineTo, splineTo};
 typedef struct _SHAPELINE
 {
-    enum {moveTo, lineTo, splineTo} type;
+    enum SHAPELINETYPE type;
     SCOORD x,y;
     SCOORD sx,sy; //only if type==splineTo
     int fillstyle0;
@@ -1068,9 +1065,4 @@ FILTER*swf_NewFilter(U8 type);
 
 void AVM2_InsertStops(SWF*swf);
 
-#ifdef __cplusplus
-}
 #endif
-
-#endif
-

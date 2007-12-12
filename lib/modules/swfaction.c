@@ -167,7 +167,7 @@ ActionTAG* swf_ActionGet(TAG*tag)
 	    length = swf_GetU16(tag);
 
 	if(length) {
-	    data = rfx_alloc(length);
+	    data = (U8*)rfx_alloc(length);
 	    swf_GetBlock(tag, data, length);
 	} else {
 	  data = 0;
@@ -228,13 +228,13 @@ int OpAdvance(char c, U8*data)
 	case 'f':
 	    return 2;
 	case 'u':
-	    return strlen(data)+1;
+	    return strlen((const char*)data)+1;
 	case 't':
-	    return strlen(data)+1;
+	    return strlen((const char*)data)+1;
 	case 'l': 
-	    return strlen(data)+1;
+	    return strlen((const char*)data)+1;
 	case 'c': 
-	    return strlen(data)+1;
+	    return strlen((const char*)data)+1;
 	case 'C': 
 	    return 2;
 	case 's':
@@ -248,7 +248,7 @@ int OpAdvance(char c, U8*data)
 	case 'p': {
 	    U8 type = *data++;
 	    if(type == 0) {
-		return 1+strlen(data)+1; //string
+		return 1+strlen((const char*)data)+1; //string
 	    } else if (type == 1) {
 		return 1+4; //float
 	    } else if (type == 2) {
@@ -352,7 +352,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		      printf(" String:\"%s\"", data);
 #ifdef MAX_LOOKUP
 		      if (entry<MAX_LOOKUP)
-			lookup[entry++] = strdup(data);
+			lookup[entry++] = strdup((const char*)data);
 #endif
 		  } break;
 		  case 'C': {
@@ -440,10 +440,10 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 			  printf(" bool:%s", *value?"true":"false");
 		      } else if (type == 6) {
 			  U8 a[8];
-			  int t;
 			  memcpy(&a[4],value,4);
 			  memcpy(a,&value[4],4);
 #ifdef WORDS_BIGENDIAN
+			  int t;
 			  for(t=0;t<4;t++) {
 			      U8 tmp = a[t];
 			      a[t]=a[7-t];
@@ -556,25 +556,25 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 		    case 'u': {
 			if(type&TYPE_URL)
 			{
-			    replacelen = strlen(data);
+			    replacelen = strlen((const char*)data);
 			    replacepos = data;
-			    replacement = callback(data); // may be null
+			    replacement = (U8*)callback((char*)data); // may be null
 			}
 		    } break;
 	    	    case 't': {
 			if(type&TYPE_TARGET)
 			{
-			    replacelen = strlen(data);
+			    replacelen = strlen((const char*)data);
 			    replacepos = data;
-			    replacement = callback(data); // may be null
+			    replacement = (U8*)callback((char*)data); // may be null
 			}
 		    } break;
 		    case 'c': {
 		    	if(type&TYPE_STRING)
 			{
-			    replacelen = strlen(data);
+			    replacelen = strlen((const char*)data);
 			    replacepos = data;
-			    replacement = callback(data); // may be null
+			    replacement = (U8*)callback((char*)data); // may be null
 			}
 		    } break;
 		    case 'C': {
@@ -584,13 +584,13 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 		    } break;
 		    case 'p': {
 			U8 datatype = *data;
-			char*value = &data[1];
+			char*value = (char*)&data[1];
 			if(datatype == 0) { //string
 			    if(type&TYPE_STRING)
 			    {
 				replacelen = strlen(value);
-				replacepos = value;
-				replacement = callback(value); // may be null
+				replacepos = (U8*)value;
+				replacement = (U8*)callback(value); // may be null
 			    }
 			} else if (datatype == 8) { //lookup
 			}
@@ -604,15 +604,15 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 
 		if(replacement)
 		{
-		    int newlen = strlen(replacement);
-		    char * newdata = rfx_alloc(atag->len - replacelen + newlen);
+		    int newlen = strlen((const char *)replacement);
+		    char * newdata = (char*)rfx_alloc(atag->len - replacelen + newlen);
 		    int rpos = replacepos - atag->data;
 		    memcpy(newdata, atag->data, rpos);
 		    memcpy(&newdata[rpos], replacement, newlen);
 		    memcpy(&newdata[rpos+newlen], &replacepos[replacelen],
 			    &data[atag->len] - &replacepos[replacelen]);
 		    rfx_free(atag->data);
-		    atag->data = newdata;
+		    atag->data = (U8*)newdata;
 		    data = &atag->data[rpos+newlen+1];
 		}
 	    }
@@ -1011,7 +1011,7 @@ ActionTAG* action_PushLookup16(ActionTAG*atag, U16 index)
 {
     atag = swf_AddActionTAG(atag, ACTION_PUSH, 0, 3);
     *(U8*)atag->tmp = 9; //lookup
-    *(U8*)&atag->tmp[1] = index;
+    *(U8*)&atag->tmp[1] = (U8)index;
     *(U8*)&atag->tmp[2] = index>>8;
     return atag;
 }
@@ -1071,10 +1071,10 @@ ActionTAG* action_GetUrl(ActionTAG*atag, const char* url, char* label)
 {
     int l1= strlen(url);
     int l2= strlen(label);
-    char*ptr = rfx_alloc(l1+l2+2);
+    char*ptr = (char*)rfx_alloc(l1+l2+2);
     strcpy(ptr, url);
     strcpy(&ptr[l1+1], label);
-    return swf_AddActionTAG(atag, ACTION_GETURL, ptr, l1+l2+2);
+    return swf_AddActionTAG(atag, ACTION_GETURL, (U8*)ptr, l1+l2+2);
 }
 //TODO:
 ActionTAG* action_DefineFunction(ActionTAG*atag, U8*data, int len) {return atag;}
@@ -1096,7 +1096,7 @@ ActionTAG* swf_ActionCompile(const char* source, int version)
     if(!ret || buffer==0 || len == 0)
 	return 0;
 
-    swf_SetBlock(tag, buffer, len);
+    swf_SetBlock(tag, (U8*)buffer, len);
     swf_SetU8(tag, 0);
 
     rfx_free(buffer);

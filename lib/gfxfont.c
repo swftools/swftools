@@ -24,6 +24,7 @@
 #include "../config.h"
 #include "gfxdevice.h"
 #include "gfxtools.h"
+#include "gfxfont.h"
 
 static int loadfont_scale = 64;
 static int full_unicode = 1;
@@ -149,7 +150,6 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
     int t;
     int*glyph2glyph = 0;
     int*glyph2unicode = 0;
-    FT_Size size;
     int max_unicode = 0;
     int charmap = -1;
     int isunicode = 1;
@@ -177,7 +177,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 	return 0;
     }
 
-    font = rfx_calloc(sizeof(gfxfont_t));
+    font = (gfxfont_t*)rfx_calloc(sizeof(gfxfont_t));
     //font->style =  ((face->style_flags&FT_STYLE_FLAG_ITALIC)?FONT_STYLE_ITALIC:0) |((face->style_flags&FT_STYLE_FLAG_BOLD)?FONT_STYLE_BOLD:0);
     //font->ascent = abs(face->ascender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMin;
     //font->descent = abs(face->descender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMax;
@@ -186,9 +186,9 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
     font->max_unicode = 0;
     font->id = strdup(id);
     
-    font->glyphs = rfx_calloc(face->num_glyphs*sizeof(gfxglyph_t));
-    glyph2unicode = rfx_calloc(face->num_glyphs*sizeof(int));
-    glyph2glyph = rfx_calloc(face->num_glyphs*sizeof(int));
+    font->glyphs = (gfxglyph_t*)rfx_calloc(face->num_glyphs*sizeof(gfxglyph_t));
+    glyph2unicode = (int*)rfx_calloc(face->num_glyphs*sizeof(int));
+    glyph2glyph = (int*)rfx_calloc(face->num_glyphs*sizeof(int));
 
     if(FT_HAS_GLYPH_NAMES(face)) {
 	//font->glyphnames = rfx_calloc(face->num_glyphs*sizeof(char*));
@@ -263,7 +263,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
     if(full_unicode)
 	font->max_unicode = 65535;
     
-    font->unicode2glyph = rfx_calloc(font->max_unicode*sizeof(int));
+    font->unicode2glyph = (int*)rfx_calloc(font->max_unicode*sizeof(int));
     
     for(t=0;t<font->max_unicode;t++) {
 	int g = FT_Get_Char_Index(face, t);
@@ -298,12 +298,9 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
-	FT_BBox bbox;
-	FT_Matrix matrix;
 	char name[128];
 	gfxdrawer_t draw;
 	gfxdrawinfo_t info;
-	int ret;
 	char hasname = 0;
 	int omit = 0;
 	name[0]=0;
@@ -442,7 +439,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 	   so that the encoding equals the char position, and
 	   remove the unicode table */
 	int t;
-	gfxglyph_t*newglyphs = rfx_calloc(font->max_unicode*sizeof(gfxglyph_t));
+	gfxglyph_t*newglyphs = (gfxglyph_t*)rfx_calloc(font->max_unicode*sizeof(gfxglyph_t));
 
 	for(t=0;t<max_unicode;t++) {
 	    int c = font->unicode2glyph[t];

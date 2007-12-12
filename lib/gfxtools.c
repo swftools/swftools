@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <math.h>
+#include <string.h>
 #include <assert.h>
 #include "gfxtools.h"
 #include "gfxfont.h"
@@ -37,7 +38,7 @@ typedef struct _linedraw_internal
 static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
-    gfxline_t*l = rfx_alloc(sizeof(gfxline_t));
+    gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
     l->type = gfx_moveTo;
     if((int)((d->x * 5120) == (int)(x * 5120)) &&
        (int)((d->y * 5120) == (int)(y * 5120))) {
@@ -58,7 +59,7 @@ static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 static void linedraw_lineTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
-    gfxline_t*l = rfx_alloc(sizeof(gfxline_t));
+    gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
 
     if(!i->start) {
 	/* starts with a line, not with a moveto. That needs we first
@@ -80,7 +81,7 @@ static void linedraw_lineTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxcoord_t x, gfxcoord_t y)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
-    gfxline_t*l = rfx_alloc(sizeof(gfxline_t));
+    gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
 
     if(!i->start) {
 	/* starts with a line, not with a moveto. That needs we first
@@ -305,7 +306,7 @@ gfxline_t * gfxline_clone(gfxline_t*line)
     gfxline_t*dest = 0;
     gfxline_t*pos = 0;
     while(line) {
-	gfxline_t*n = rfx_calloc(sizeof(gfxline_t));
+	gfxline_t*n = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
 	*n = *line;
 	n->next = 0;
 	if(!pos) {

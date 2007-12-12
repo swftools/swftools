@@ -50,13 +50,13 @@ char* getRegistryEntry(char*path)
 	fprintf(stderr, "RegOpenKeyEx failed\n");
 	return 0;
     }
-    rc = RegQueryValueEx(key, NULL, 0, 0, 0, &size) ;
+    rc = RegQueryValueEx(key, NULL, 0, 0, 0, (LPDWORD)&size) ;
     if(rc != ERROR_SUCCESS) {
 	fprintf(stderr, "RegQueryValueEx(1) failed: %d\n", rc);
 	return 0;
     }
-    buf = malloc(size+1);
-    rc = RegQueryValueEx(key, NULL, 0, &type, (BYTE*)buf, &size);
+    buf = (char*)malloc(size+1);
+    rc = RegQueryValueEx(key, NULL, 0, &type, (BYTE*)buf, (LPDWORD)&size);
     if(rc != ERROR_SUCCESS) {
 	fprintf(stderr, "RegQueryValueEx(2) failed: %d\n", rc);
 	return 0;
@@ -120,7 +120,7 @@ char* concatPaths(const char*base, const char*add)
     while(pos < l2 && add[pos] == seperator)
 	pos++;
 
-    n = malloc(l1 + (l2-pos) + 2);
+    n = (char*)malloc(l1 + (l2-pos) + 2);
     memcpy(n,base,l1);
     n[l1]=seperator;
     strcpy(&n[l1+1],&add[pos]);

@@ -23,7 +23,7 @@ static void swf_ShapeDrawerClear(drawer_t*draw);
 
 static void swf_ShapeDrawerInit(drawer_t*draw, TAG*tag, int fillstylebits, int linestylebits)
 {
-    SWFSHAPEDRAWER*sdraw = rfx_calloc(sizeof(SWFSHAPEDRAWER));
+    SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)rfx_calloc(sizeof(SWFSHAPEDRAWER));
     draw->internal = sdraw;
 
     draw->setLineStyle = swf_ShapeDrawerSetLineStyle;
@@ -196,7 +196,7 @@ SRECT swf_ShapeDrawerGetBBox(drawer_t*draw)
 SHAPE* swf_ShapeDrawerToShape(drawer_t*draw)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
-    SHAPE* shape = rfx_alloc(sizeof(SHAPE));
+    SHAPE* shape = (SHAPE*)rfx_alloc(sizeof(SHAPE));
     if(!sdraw->isfinished) {
 	fprintf(stderr, "Warning: you should Finish() your drawer before calling DrawerToShape");
 	swf_ShapeDrawerFinish(draw);

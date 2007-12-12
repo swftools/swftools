@@ -146,19 +146,19 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	return 0;
     }
 
-    font = rfx_calloc(sizeof(SWFFONT));
+    font = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
     font->id = -1;
     font->version = 2;
-    font->layout = rfx_calloc(sizeof(SWFLAYOUT));
-    font->layout->bounds = rfx_calloc(face->num_glyphs*sizeof(SRECT));
+    font->layout = (SWFLAYOUT*)rfx_calloc(sizeof(SWFLAYOUT));
+    font->layout->bounds = (SRECT*)rfx_calloc(face->num_glyphs*sizeof(SRECT));
     font->style =  ((face->style_flags&FT_STYLE_FLAG_ITALIC)?FONT_STYLE_ITALIC:0)
 	          |((face->style_flags&FT_STYLE_FLAG_BOLD)?FONT_STYLE_BOLD:0);
     font->encoding = FONT_ENCODING_UNICODE;
-    font->glyph2ascii = rfx_calloc(face->num_glyphs*sizeof(U16));
+    font->glyph2ascii = (U16*)rfx_calloc(face->num_glyphs*sizeof(U16));
     font->maxascii = 0;
-    font->glyph = rfx_calloc(face->num_glyphs*sizeof(SWFGLYPH));
+    font->glyph = (SWFGLYPH*)rfx_calloc(face->num_glyphs*sizeof(SWFGLYPH));
     if(FT_HAS_GLYPH_NAMES(face)) {
-	font->glyphnames = rfx_calloc(face->num_glyphs*sizeof(char*));
+	font->glyphnames = (char**)rfx_calloc(face->num_glyphs*sizeof(char*));
     }
 
     font->layout->ascent = abs(face->ascender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMin;
@@ -216,7 +216,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     if(full_unicode)
 	font->maxascii = 65535;
     
-    font->ascii2glyph = rfx_calloc(font->maxascii*sizeof(int));
+    font->ascii2glyph = (int*)rfx_calloc(font->maxascii*sizeof(int));
     
     for(t=0;t<font->maxascii;t++) {
 	int g = FT_Get_Char_Index(face, t);

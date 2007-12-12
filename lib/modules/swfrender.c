@@ -211,7 +211,7 @@ static void add_solidline(RENDERBUF*buf, double x1, double y1, double x2, double
         vy = (-dx/d);
     }
 
-    segments = width/2;
+    segments = (int)(width/2);
     if(segments < 2)
         segments = 2;
 
@@ -330,11 +330,11 @@ void swf_Render_AddImage(RENDERBUF*buf, U16 id, RGBA*img, int width, int height)
 {
     renderbuf_internal*i = (renderbuf_internal*)buf->internal;
 
-    bitmap_t*bm = rfx_calloc(sizeof(bitmap_t));
+    bitmap_t*bm = (bitmap_t*)rfx_calloc(sizeof(bitmap_t));
     bm->id = id;
     bm->width = width;
     bm->height = height;
-    bm->data = rfx_alloc(width*height*4);
+    bm->data = (RGBA*)rfx_alloc(width*height*4);
     memcpy(bm->data, img, width*height*4);
 
     bm->next = i->bitmaps;
@@ -380,7 +380,7 @@ void swf_Render_Delete(RENDERBUF*dest)
 
 static SHAPE2* linestyle2fillstyle(SHAPE2*shape)
 {
-    SHAPE2*s = rfx_calloc(sizeof(SHAPE2));
+    SHAPE2*s = (SHAPE2*)rfx_calloc(sizeof(SHAPE2));
     int t;
     s->numfillstyles = shape->numlinestyles;
     s->fillstyles = (FILLSTYLE*)rfx_calloc(sizeof(FILLSTYLE)*shape->numlinestyles);
@@ -482,7 +482,7 @@ void swf_RenderShape(RENDERBUF*dest, SHAPE2*shape, MATRIX*m, CXFORM*c, U16 _dept
             xx=x1;
 	    yy=y1;
 
-            parts = (int)(sqrt(c)/3);
+            parts = (int)(sqrt((float)c)/3);
             if(!parts) parts = 1;
 
             for(t=1;t<=parts;t++) {
@@ -783,7 +783,7 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
             return;
         }
         
-        n = rfx_calloc(sizeof(layer_t));
+        n = (layer_t*)rfx_calloc(sizeof(layer_t));
 
         if(DEBUG&2) printf("<+>");
 
@@ -855,8 +855,8 @@ void swf_Process(RENDERBUF*dest, U32 clipdepth)
         for(n=0;n<num;n++) {
             renderpoint_t*p = &points[n];
             renderpoint_t*next= n<num-1?&points[n+1]:0;
-            int startx = p->x;
-            int endx = next?next->x:i->width2;
+            int startx = (int)p->x;
+            int endx = (int)(next?next->x:i->width2);
             if(endx > i->width2)
                 endx = i->width2;
             if(startx < 0)
@@ -956,11 +956,12 @@ typedef struct
     SHAPE2**glyphs;
 } font_t;
 
+enum CHARACTER_TYPE {none_type, shape_type, image_type, text_type, font_type, sprite_type};
 typedef struct
 {
     TAG*tag;
     SRECT*bbox;
-    enum {none_type, shape_type, image_type, text_type, font_type, sprite_type} type;
+    enum CHARACTER_TYPE type;
     union {
         SHAPE2*shape;
         font_t*font;
@@ -1078,7 +1079,7 @@ static void renderFromTag(RENDERBUF*buf, character_t*idtable, TAG*firstTag, MATR
 	    break;
 	tag = tag->next;
     }
-    placements = rfx_calloc(sizeof(SWFPLACEOBJECT)*numplacements);
+    placements = (SWFPLACEOBJECT*)rfx_calloc(sizeof(SWFPLACEOBJECT)*numplacements);
     numplacements = 0;
 
     tag = firstTag;
@@ -1152,12 +1153,11 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
 {
     TAG*tag;
     int t;
-    int numplacements;
     RGBA color;
 
     swf_FoldAll(swf);
     
-    character_t* idtable = rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
+    character_t* idtable = (character_t*)rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
     
     /* set background color */
     color = swf_GetSWFBackgroundColor(swf);
@@ -1169,11 +1169,11 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
         if(swf_isDefiningTag(tag)) {
             int id = swf_GetDefineID(tag);
             idtable[id].tag = tag;
-            idtable[id].bbox = rfx_alloc(sizeof(SRECT));
+            idtable[id].bbox = (SRECT*)rfx_alloc(sizeof(SRECT));
             *idtable[id].bbox = swf_GetDefineBBox(tag);
 
             if(swf_isShapeTag(tag)) {
-                SHAPE2* shape = rfx_calloc(sizeof(SHAPE2));
+                SHAPE2* shape = (SHAPE2*)rfx_calloc(sizeof(SHAPE2));
                 swf_ParseDefineShape(tag, shape);
                 idtable[id].type = shape_type;
                 idtable[id].obj.shape = shape;
@@ -1187,11 +1187,11 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
                       tag->id == ST_DEFINEFONT2) {
 		int t;
 		SWFFONT*swffont;
-		font_t*font = rfx_calloc(sizeof(font_t));
+		font_t*font = (font_t*)rfx_calloc(sizeof(font_t));
 		idtable[id].obj.font = font;
                 swf_FontExtract(swf,id,&swffont);
 		font->numchars = swffont->numchars;
-		font->glyphs = rfx_calloc(sizeof(SHAPE2*)*font->numchars);
+		font->glyphs = (SHAPE2**)rfx_calloc(sizeof(SHAPE2*)*font->numchars);
 		for(t=0;t<font->numchars;t++) {
 		    if(!swffont->glyph[t].shape->fillstyle.n) {
 			/* the actual fill color will be overwritten while rendering */

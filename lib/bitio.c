@@ -20,7 +20,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#ifdef HAVE_IO_H
+#include <io.h>
+#endif
+#include <string.h>
 #include <memory.h>
 #include <fcntl.h>
 
@@ -101,8 +107,8 @@ static void reader_memread_dealloc(reader_t*reader)
 }
 void reader_init_memreader(reader_t*r, void*newdata, int newlength)
 {
-    struct memread_t*mr = malloc(sizeof(struct memread_t));
-    mr->data = newdata;
+    struct memread_t*mr = (struct memread_t*)malloc(sizeof(struct memread_t));
+    mr->data = (unsigned char*)newdata;
     mr->length = newlength;
     r->read = reader_memread;
     r->dealloc = reader_memread_dealloc;
@@ -143,8 +149,8 @@ static void writer_memwrite_finish(writer_t*w)
 void writer_init_memwriter(writer_t*w, void*data, int len)
 {
     struct memwrite_t *mr;
-    mr = malloc(sizeof(struct memwrite_t));
-    mr->data = data;
+    mr = (memwrite_t *)malloc(sizeof(struct memwrite_t));
+    mr->data = (unsigned char *)data;
     mr->length = len;
     memset(w, 0, sizeof(writer_t));
     w->write = writer_memwrite_write;
@@ -178,12 +184,12 @@ static int writer_growmemwrite_write(writer_t*w, void* data, int len)
 	    newlength += mw->grow;
 	}
 #ifdef NO_REALLOC
-	newmem = malloc(newlength);
+	newmem = (unsigned char*)malloc(newlength);
 	memcpy(newmem, mw->data, mw->length);
 	free(mw->data);
 	mw->data = newmem;
 #else
-	mw->data = realloc(mw->data, newlength);
+	mw->data = (unsigned char*)realloc(mw->data, newlength);
 #endif
 	mw->length = newlength;
     }
@@ -214,9 +220,9 @@ void* writer_growmemwrite_getmem(writer_t*w)
 void writer_init_growingmemwriter(writer_t*w, U32 grow)
 {
     struct growmemwrite_t *mr;
-    mr = malloc(sizeof(struct growmemwrite_t));
+    mr = (struct growmemwrite_t *)malloc(sizeof(struct growmemwrite_t));
     mr->length = 4096;
-    mr->data = malloc(mr->length);
+    mr->data = (unsigned char *)malloc(mr->length);
     mr->grow = grow;
     memset(w, 0, sizeof(writer_t));
     w->write = writer_growmemwrite_write;
@@ -251,7 +257,7 @@ static void writer_filewrite_finish(writer_t*w)
 }
 void writer_init_filewriter(writer_t*w, int handle)
 {
-    struct filewrite_t *mr = malloc(sizeof(struct filewrite_t));
+    struct filewrite_t *mr = (struct filewrite_t *)malloc(sizeof(struct filewrite_t));
     mr->handle = handle;
     mr->free_handle = 0;
     memset(w, 0, sizeof(writer_t));
@@ -330,7 +336,7 @@ static int reader_zlibinflate(reader_t*reader, void* data, int len)
     if(!len)
 	return 0;
     
-    z->zs.next_out = data;
+    z->zs.next_out = (Bytef *)data;
     z->zs.avail_out = len;
 
     while(1) {
@@ -432,7 +438,7 @@ static int writer_zlibdeflate_write(writer_t*writer, void* data, int len)
     if(!len)
 	return 0;
     
-    z->zs.next_in = data;
+    z->zs.next_in = (Bytef *)data;
     z->zs.avail_in = len;
 
     while(1) {
@@ -636,7 +642,7 @@ char*reader_readString(reader_t*r)
 	if(!b)
 	    break;
     }
-    char*string = writer_growmemwrite_getmem(&g);
+    char*string = (char*)writer_growmemwrite_getmem(&g);
     writer_growmemwrite_finish(&g);
     return string;
 }
@@ -705,5 +711,3 @@ void writer_writeDouble(writer_t*w, double f)
     w->write(w, &b7, 1);
     w->write(w, &b8, 1);
 }
-
-

@@ -23,9 +23,9 @@
 extern "C" {
 #endif
 
-int getPNG(char*sname, int*destwidth, int*destheight, unsigned char**destdata);
-int getPNGdimensions(char*sname, int*destwidth, int*destheight);
-void writePNG(char*filename, unsigned char*data, int width, int height);
+int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char**destdata);
+int getPNGdimensions(const char*sname, int*destwidth, int*destheight);
+void writePNG(const char*filename, unsigned char*data, int width, int height);
 
 #ifdef __cplusplus
 }

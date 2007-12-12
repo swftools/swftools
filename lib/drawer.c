@@ -50,7 +50,7 @@ static char* getToken(const char**p)
     else while(**p && !strchr(" ,()\t\n\r", **p)) {
 	(*p)++;
     }
-    result = malloc((*p)-start+1);
+    result = (char*)malloc((*p)-start+1);
     memcpy(result,start,(*p)-start+1);
     result[(*p)-start] = 0;
     return result;

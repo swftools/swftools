@@ -56,7 +56,7 @@ FILTER*swf_GetFilter(TAG*tag)
     U8 type = swf_GetU8(tag);
     FILTER*filter;
     if(type == FILTERTYPE_BLUR) {
-	FILTER_BLUR* f = rfx_calloc(sizeof(FILTER_BLUR));
+	FILTER_BLUR* f = (FILTER_BLUR*)rfx_calloc(sizeof(FILTER_BLUR));
 	f->type = type;
 	f->blurx = swf_GetFixed(tag);
 	f->blury = swf_GetFixed(tag);
@@ -64,12 +64,12 @@ FILTER*swf_GetFilter(TAG*tag)
 	f->passes = (flags&15)<<3;
 	return (FILTER*)f;
     } else if(type == FILTERTYPE_GRADIENTGLOW) {
-	FILTER_GRADIENTGLOW* f = rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
+	FILTER_GRADIENTGLOW* f = (FILTER_GRADIENTGLOW*)rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
 	f->type = type;
-	f->gradient = rfx_calloc(sizeof(GRADIENT));
+	f->gradient = (GRADIENT*)rfx_calloc(sizeof(GRADIENT));
 	f->gradient->num = swf_GetU8(tag);
-	f->gradient->rgba = rfx_calloc(sizeof(RGBA)*f->gradient->num);
-	f->gradient->ratios = rfx_calloc(sizeof(U8)*f->gradient->num);
+	f->gradient->rgba = (RGBA*)rfx_calloc(sizeof(RGBA)*f->gradient->num);
+	f->gradient->ratios = (U8*)rfx_calloc(sizeof(U8)*f->gradient->num);
 	int s;
 	for(s=0;s<f->gradient->num;s++)
 	    swf_GetRGBA(tag, &f->gradient->rgba[s]);
@@ -89,7 +89,7 @@ FILTER*swf_GetFilter(TAG*tag)
 	f->ontop = (flags>>4)&1;
 	return (FILTER*)f;
     } else if(type == FILTERTYPE_DROPSHADOW) {
-	FILTER_DROPSHADOW* f = rfx_calloc(sizeof(FILTER_DROPSHADOW));
+	FILTER_DROPSHADOW* f = (FILTER_DROPSHADOW*)rfx_calloc(sizeof(FILTER_DROPSHADOW));
 	f->type = type;
 	swf_GetRGBA(tag, &f->color);
 	f->blurx = swf_GetFixed(tag);
@@ -104,7 +104,7 @@ FILTER*swf_GetFilter(TAG*tag)
 	f->composite = (flags>>5)&1;
 	return (FILTER*)f;
     } else if(type == FILTERTYPE_BEVEL) {
-	FILTER_BEVEL* f = rfx_calloc(sizeof(FILTER_BEVEL));
+	FILTER_BEVEL* f = (FILTER_BEVEL*)rfx_calloc(sizeof(FILTER_BEVEL));
 	f->type = type;
 	swf_GetRGBA(tag, &f->shadow);
 	swf_GetRGBA(tag, &f->highlight);
@@ -130,13 +130,13 @@ FILTER*swf_NewFilter(U8 type)
 {
     FILTER*f = 0;
     if(type == FILTERTYPE_BLUR)
-	f = rfx_calloc(sizeof(FILTER_BLUR));
+	f = (FILTER*)rfx_calloc(sizeof(FILTER_BLUR));
     else if(type == FILTERTYPE_GRADIENTGLOW)
-	f = rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
+	f = (FILTER*)rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
     else if(type == FILTERTYPE_DROPSHADOW)
-	f = rfx_calloc(sizeof(FILTER_DROPSHADOW));
+	f = (FILTER*)rfx_calloc(sizeof(FILTER_DROPSHADOW));
     else if(type == FILTERTYPE_BEVEL)
-	f = rfx_calloc(sizeof(FILTER_BEVEL));
+	f = (FILTER*)rfx_calloc(sizeof(FILTER_BEVEL));
     else 
 	fprintf(stderr, "Creation of filter type %02x not supported yet\n", type);
     if(f)

@@ -388,7 +388,7 @@ char* swf_GetName(TAG * t)
     switch(swf_GetTagID(t))
     {
         case ST_FRAMELABEL:
-            name = &t->data[swf_GetTagPos(t)];
+            name = (char*)&t->data[swf_GetTagPos(t)];
         break;
         case ST_PLACEOBJECT3:
         case ST_PLACEOBJECT2: {   
@@ -408,7 +408,7 @@ char* swf_GetName(TAG * t)
               swf_GetU16(t);
             if(flags&PF_NAME) {
               swf_ResetReadBits(t);
-              name = &t->data[swf_GetTagPos(t)];
+              name = (char*)&t->data[swf_GetTagPos(t)];
             }
         }
         break;
@@ -427,13 +427,13 @@ void swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2)
     
     if(gradient1) {
 	gradient1->num = num;
-	gradient1->rgba = rfx_calloc(sizeof(RGBA)*gradient1->num);
-	gradient1->ratios = rfx_calloc(sizeof(gradient1->ratios[0])*gradient1->num);
+	gradient1->rgba = (RGBA*)rfx_calloc(sizeof(RGBA)*gradient1->num);
+	gradient1->ratios = (U8*)rfx_calloc(sizeof(gradient1->ratios[0])*gradient1->num);
     }
     if(gradient2) {
 	gradient2->num = num;
-	gradient2->rgba = rfx_calloc(sizeof(RGBA)*gradient2->num);
-	gradient2->ratios = rfx_calloc(sizeof(gradient2->ratios[0])*gradient2->num);
+	gradient2->rgba = (RGBA*)rfx_calloc(sizeof(RGBA)*gradient2->num);
+	gradient2->ratios = (U8*)rfx_calloc(sizeof(gradient2->ratios[0])*gradient2->num);
     }
     for(t=0;t<num;t++)
     {
@@ -652,7 +652,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		if(id == ST_END)
 		    break;
 		tag2->len = tag2->memsize = len;
-		tag2->data = rfx_alloc(len);
+		tag2->data = (U8*)rfx_alloc(len);
 		memcpy(tag2->data, &tag->data[tag->pos], len);
 		/* I never saw recursive sprites, but they are (theoretically) 
 		   possible, so better add base here again */
@@ -960,7 +960,7 @@ void swf_Relocate (SWF*swf, char*bitmap)
 	
 	num = swf_GetNumUsedIDs(tag);
 	if(num) {
-	    ptr = rfx_alloc(sizeof(int)*num);
+	    ptr = (int*)rfx_alloc(sizeof(int)*num);
 	    swf_GetUsedIDs(tag, ptr);
 
 	    for(t=0;t<num;t++) {
@@ -995,7 +995,7 @@ void swf_Relocate2(SWF*swf, int*id2id)
 	if(num) {
 	    int *ptr;
 	    int t;
-	    ptr = rfx_alloc(sizeof(int)*num);
+	    ptr = (int*)rfx_alloc(sizeof(int)*num);
 	    swf_GetUsedIDs(tag, ptr);
 	    for(t=0;t<num;t++) {
 		int id = GET16(&tag->data[ptr[t]]);
@@ -1161,10 +1161,10 @@ static int tagHash(TAG*tag)
 void swf_Optimize(SWF*swf)
 {
     const int hash_size = 131072;
-    char* dontremap = rfx_calloc(sizeof(char)*65536);
-    U16* remap = rfx_alloc(sizeof(U16)*65536);
-    TAG* id2tag = rfx_calloc(sizeof(TAG*)*65536);
-    TAG** hashmap = rfx_calloc(sizeof(TAG*)*hash_size);
+    char* dontremap = (char*)rfx_calloc(sizeof(char)*65536);
+    U16* remap = (U16*)rfx_alloc(sizeof(U16)*65536);
+    TAG* id2tag = (TAG*)rfx_calloc(sizeof(TAG*)*65536);
+    TAG** hashmap = (TAG**)rfx_calloc(sizeof(TAG*)*hash_size);
     TAG* tag;
     int t;
     for(t=0;t<65536;t++) {
@@ -1192,7 +1192,7 @@ void swf_Optimize(SWF*swf)
 
         /* remap the tag */
         int num = swf_GetNumUsedIDs(tag);
-        int*positions = rfx_alloc(sizeof(int)*num);
+        int*positions = (int*)rfx_alloc(sizeof(int)*num);
         int t;
         swf_GetUsedIDs(tag, positions);
         for(t=0;t<num;t++) {
@@ -1273,7 +1273,7 @@ void swf_SetDefineBBox(TAG * tag, SRECT newbbox)
 	      swf_ResetReadBits(tag);
 	      after_bbox_offset = tag->pos;
 	      len = tag->len - after_bbox_offset;
-	      data = malloc(len);
+	      data = (U8*)malloc(len);
 	      memcpy(data, &tag->data[after_bbox_offset], len);
 	      tag->writeBit = 0;
 	      tag->len = 2;

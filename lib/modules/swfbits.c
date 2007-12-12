@@ -21,6 +21,14 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "jpeglib.h"
+#ifdef __cplusplus
+}
+#endif
+
 #define OUTBUFFER_SIZE 0x8000
 
 int swf_ImageHasAlpha(RGBA*img, int width, int height)
@@ -112,7 +120,7 @@ int swf_ImageGetNumberOfPaletteEntries(RGBA*img, int width, int height, RGBA*pal
     int palette_overflow = 0;
     U32 lastcol32 = 0;
 
-    pal = malloc(65536*sizeof(U32));
+    pal = (U32*)malloc(65536*sizeof(U32));
 
     memset(size, 0, sizeof(size));
 
@@ -468,7 +476,7 @@ void swf_SaveJPEG(char*filename, RGBA*pixels, int width, int height, int quality
 	perror(buf);
 	return;
     }
-    data2 = rfx_calloc(width*3);
+    data2 = (unsigned char *)rfx_calloc(width*3);
 
     memset(&cinfo, 0, sizeof(cinfo));
     memset(&jerr, 0, sizeof(jerr));
@@ -602,7 +610,7 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
     jpeg_read_header(&cinfo, TRUE);
     *width = cinfo.image_width;
     *height = cinfo.image_height;
-    dest =
+    dest = (RGBA*)
 	rfx_alloc(sizeof(RGBA) * cinfo.image_width * cinfo.image_height);
 
     jpeg_start_decompress(&cinfo);
@@ -660,7 +668,7 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
 
 int RFXSWF_deflate_wraper(TAG * t, z_stream * zs, boolean finish)
 {
-    U8 *data = rfx_alloc(OUTBUFFER_SIZE);
+    U8 *data = (U8*)rfx_alloc(OUTBUFFER_SIZE);
     zs->next_out = data;
     zs->avail_out = OUTBUFFER_SIZE;
     while (1) {
@@ -716,7 +724,7 @@ int swf_SetLosslessBits(TAG * t, U16 width, U16 height, void *bitmap, U8 bitmap_
 
     switch (bitmap_flags) {
     case BMF_8BIT:
-	return swf_SetLosslessBitsIndexed(t, width, height, bitmap, NULL, 256);
+	return swf_SetLosslessBitsIndexed(t, width, height, (U8*)bitmap, NULL, 256);
     case BMF_16BIT:
 	bps = BYTES_PER_SCANLINE(sizeof(U16) * width);
 	break;
@@ -741,7 +749,7 @@ int swf_SetLosslessBits(TAG * t, U16 width, U16 height, void *bitmap, U8 bitmap_
 
 	if (deflateInit(&zs, Z_DEFAULT_COMPRESSION) == Z_OK) {
 	    zs.avail_in = bps * height;
-	    zs.next_in = bitmap;
+	    zs.next_in = (Bytef *)bitmap;
 
 	    if (RFXSWF_deflate_wraper(t, &zs, TRUE) < 0)
 		res = -3;
@@ -762,7 +770,7 @@ int swf_SetLosslessBitsIndexed(TAG * t, U16 width, U16 height, U8 * bitmap, RGBA
     if (!pal)			// create default palette for grayscale images
     {
 	int i;
-	pal = rfx_alloc(256 * sizeof(RGBA));
+	pal = (RGBA*)rfx_alloc(256 * sizeof(RGBA));
 	for (i = 0; i < 256; i++) {
 	    pal[i].r = pal[i].g = pal[i].b = i;
 	    pal[i].a = 0xff;
@@ -790,7 +798,7 @@ int swf_SetLosslessBitsIndexed(TAG * t, U16 width, U16 height, U8 * bitmap, RGBA
 
 	if (deflateInit(&zs, Z_DEFAULT_COMPRESSION) == Z_OK) {
 	    U8 *zpal;		// compress palette
-	    if ((zpal = rfx_alloc(ncolors * 4))) {
+	    if ((zpal = (U8*)rfx_alloc(ncolors * 4))) {
 		U8 *pp = zpal;
 		int i;
 
@@ -956,7 +964,7 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
     *dwidth = width = swf_GetU16(tag);
     *dheight = height = swf_GetU16(tag);
 
-    dest = rfx_alloc(sizeof(RGBA) * width * height);
+    dest = (RGBA*)rfx_alloc(sizeof(RGBA) * width * height);
 
     if (format == 3)
 	cols = swf_GetU8(tag) + 1;
@@ -969,7 +977,7 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 	if (data)
 	    rfx_free(data);
 	datalen += 4096;
-	data = rfx_alloc(datalen);
+	data = (U8*)rfx_alloc(datalen);
 	error =
 	    uncompress(data, &datalen, &tag->data[tag->pos],
 		       tag->len - tag->pos);
@@ -1073,7 +1081,7 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
     swf_SetJPEGBitsFinish(jpeg);
     PUT32(&tag->data[pos], tag->len - pos - 4);
 
-    data = rfx_alloc(OUTBUFFER_SIZE);
+    data = (U8*)rfx_alloc(OUTBUFFER_SIZE);
     memset(&zs, 0x00, sizeof(z_stream));
 
     if (deflateInit(&zs, Z_DEFAULT_COMPRESSION) != Z_OK) {
@@ -1221,7 +1229,7 @@ void swf_RemoveJPEGTables(SWF * swf)
 	if (tag->id == ST_DEFINEBITSJPEG) {
 	    int len = tag->len;
 	    void *data = rfx_alloc(len);
-	    swf_GetBlock(tag, data, tag->len);
+	    swf_GetBlock(tag, (U8*)data, tag->len);
 	    swf_ResetTag(tag, ST_DEFINEBITSJPEG2);
 	    swf_SetBlock(tag, &((U8*)data)[0], 2); //id
 	    swf_SetBlock(tag, tables_tag->data, tables_tag->len);
@@ -1248,7 +1256,7 @@ static int bicubic = 0;
 
 static scale_lookup_t**make_scale_lookup(int width, int newwidth)
 {
-    scale_lookup_t*lookupx = malloc((width>newwidth?width:newwidth)*2*sizeof(scale_lookup_t));
+    scale_lookup_t*lookupx = (scale_lookup_t*)malloc((width>newwidth?width:newwidth)*2*sizeof(scale_lookup_t));
     scale_lookup_t**lblockx = (scale_lookup_t**)malloc((newwidth+1)*sizeof(scale_lookup_t**));
     double fx = ((double)width)/((double)newwidth);
     double px = 0;

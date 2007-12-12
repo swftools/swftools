@@ -1393,7 +1393,7 @@ void test_copy_diff()
     VIDEOSTREAM stream;
     VIDEOSTREAM* s = &stream;
     TAG*tag;
-    RGBA*pic = rfx_alloc(256*256*sizeof(RGBA));
+    RGBA*pic = (RGBA*)rfx_alloc(256*256*sizeof(RGBA));
     block_t fb;
     int x,y;
     int bx,by;

@@ -89,7 +89,7 @@ int wav_read(struct WAV*wav, char* filename)
         fclose(fi);
 		return 0;
     }
-    if(strncmp(b, "WAVE", 4))
+    if(strncmp((const char*)b, "WAVE", 4))
     {
         fprintf(stderr, "wav_read: not a WAV file (2)\n");
         fclose(fi);
@@ -123,7 +123,7 @@ int wav_read(struct WAV*wav, char* filename)
                 if (!strncmp(block.id, "data", 4))
                 {
                     int l;
-                    wav->data = malloc(block.size);
+                    wav->data = (unsigned char*)malloc(block.size);
                     if(!wav->data)
                     {
                         fprintf(stderr, "Out of memory (%d bytes needed)", block.size);

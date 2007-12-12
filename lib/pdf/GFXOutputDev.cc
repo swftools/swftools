@@ -22,7 +22,9 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <string.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include "../../config.h"
 #include "../os.h"
 #ifdef HAVE_DIRENT_H
@@ -57,7 +59,7 @@
 #include "GHash.h"
 #include "GFXOutputDev.h"
 
-//swftools header files
+//  swftools header files
 #include "../log.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
@@ -68,7 +70,7 @@
 #include "../devices/render.h"
 
 #include "../art/libart.h"
-#include "../devices/artsutils.c"
+#include "../devices/artsutils.h"
 
 #include "../png.h"
 #include "fonts.h"
@@ -701,7 +703,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 	msg("<trace> %d dashes", dashnum);
 	msg("<trace> |  phase: %f", dashphase);
 	for(t=0;t<dashnum;t++) {
-	    dash[t] = ldash[t];
+	    dash[t] = (float)ldash[t];
 	    msg("<trace> |  d%-3d: %f", t, ldash[t]);
 	}
 	dash[dashnum] = -1;
@@ -709,7 +711,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 	    dump_outline(line);
 	}
 
-	line2 = gfxtool_dash_line(line, dash, dashphase);
+	line2 = gfxtool_dash_line(line, dash, (float)dashphase);
 	line = line2;
 	free(dash);
 	msg("<trace> After dashing:");
@@ -1149,7 +1151,7 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
 
 void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 {
-    double x1, y1, x2, y2, w;
+    double x1, y1, x2, y2;
     gfxline_t points[5];
     int x, y;
     
@@ -1518,6 +1520,7 @@ void GFXOutputDev::updateFont(GfxState *state)
     this->current_fontinfo = this->info->getFont(id);
     if(!this->current_fontinfo) {
 	msg("<error> Internal Error: no fontinfo for font %s\n", id);
+    return;
     }
     if(!this->current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", gfxFont);
@@ -1546,7 +1549,6 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
     unsigned char*newdata;
     int x,y;
     newdata= (unsigned char*)malloc(newwidth*newheight);
-    int t;
     double fx = (double)(width)/newwidth;
     double fy = (double)(height)/newheight;
     double px = 0;
@@ -1618,9 +1620,6 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
      p5.x = (int)(p5.x*20)/20.0;
      p5.y = (int)(p5.y*20)/20.0;
     }
-    
-    float m00,m10,tx;
-    float m01,m11,ty;
     
     gfxmatrix_t m;
     m.m00 = (p4.x-p1.x)/sizex; m.m10 = (p2.x-p1.x)/sizey;
@@ -1746,7 +1745,6 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   }
 
   if(mask) {
-      int i,j;
       unsigned char buf[8];
       int x,y;
       unsigned char*pic = new unsigned char[width*height];
@@ -1775,7 +1773,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       /* the size of the drawn image is added to the identifier
 	 as the same image may require different bitmaps if displayed
 	 at different sizes (due to antialiasing): */
-      int t,found = -1;
+      int found = -1;
       if(type3active) {
 	  unsigned char*pic2 = 0;
 	  numpalette = 16;
@@ -1795,7 +1793,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  
 	  /* make a black/white palette */
 
-	  float r = 255/(numpalette-1);
+	  float r = 255./(float)(numpalette-1);
 	  int t;
 	  for(t=0;t<numpalette;t++) {
 	      pal[t].r = colToByte(rgb.r);
@@ -2021,7 +2019,6 @@ void addGlobalLanguageDir(const char*dir)
 {
     msg("<notice> Adding %s to language pack directories", dir);
 
-    int l;
     FILE*fi = 0;
     char* config_file = (char*)malloc(strlen(dir) + 1 + sizeof("add-to-xpdfrc") + 1);
     strcpy(config_file, dir);
@@ -2075,7 +2072,7 @@ void addGlobalFontDir(const char*dirname)
     }
     closedir(dir);
 #else
-    msg("<warning> No dirent.h- unable to add font dir %s", dir);
+    msg("<warning> No dirent.h- unable to add font dir %s", dirname);
 #endif
 }
 

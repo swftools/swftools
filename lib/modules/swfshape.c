@@ -203,7 +203,7 @@ int swf_SetShapeStyleCount(TAG * t,U16 n)
     return 3;
   }
   else
-  { swf_SetU8(t,n);
+  { swf_SetU8(t,(U8)n);
     return 1;
   }
 }
@@ -277,9 +277,9 @@ int swf_ShapeAddFillStyle(SHAPE * s,U8 type,MATRIX * m,RGBA * color,U16 id_bitma
   // handle memory
   
   if (s->fillstyle.data)
-  { FILLSTYLE * new = (FILLSTYLE *)rfx_realloc(s->fillstyle.data,(s->fillstyle.n+1)*sizeof(FILLSTYLE));
-    if (!new) return -1;
-    s->fillstyle.data = new;
+  { FILLSTYLE * xnew = (FILLSTYLE *)rfx_realloc(s->fillstyle.data,(s->fillstyle.n+1)*sizeof(FILLSTYLE));
+    if (!xnew) return -1;
+    s->fillstyle.data = xnew;
   }
   else
   { s->fillstyle.data = (FILLSTYLE *)rfx_alloc(sizeof(FILLSTYLE));
@@ -323,9 +323,9 @@ int swf_ShapeAddLineStyle(SHAPE * s,U16 width,RGBA * color)
     def.r = def.g = def.b = 0; 
   }
   if (s->linestyle.data)
-  { LINESTYLE * new = (LINESTYLE *)rfx_realloc(s->linestyle.data,(s->linestyle.n+1)*sizeof(LINESTYLE));
-    if (!new) return -1;
-    s->linestyle.data = new;
+  { LINESTYLE * xnew = (LINESTYLE *)rfx_realloc(s->linestyle.data,(s->linestyle.n+1)*sizeof(LINESTYLE));
+    if (!xnew) return -1;
+    s->linestyle.data = xnew;
   }
   else
   { s->linestyle.data = (LINESTYLE *)rfx_alloc(sizeof(LINESTYLE));
@@ -529,7 +529,7 @@ static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
 
     shape->numfillstyles += count;
     if(shape->numfillstyles) {
-	shape->fillstyles = rfx_realloc(shape->fillstyles, sizeof(FILLSTYLE)*shape->numfillstyles);
+	shape->fillstyles = (FILLSTYLE*)rfx_realloc(shape->fillstyles, sizeof(FILLSTYLE)*shape->numfillstyles);
 
         for(t=fillstylestart;t<shape->numfillstyles;t++)
         {
@@ -576,7 +576,7 @@ static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
 
     shape->numlinestyles += count;
     if(count) {
-	shape->linestyles = rfx_realloc(shape->linestyles, sizeof(LINESTYLE)*shape->numlinestyles);
+	shape->linestyles = (LINESTYLE*)rfx_realloc(shape->linestyles, sizeof(LINESTYLE)*shape->numlinestyles);
         /* TODO: should we start with 1 and insert a correct definition of the
            "built in" linestyle 0? */
         for(t=linestylestart;t<shape->numlinestyles;t++) 
@@ -791,15 +791,15 @@ SHAPE2* swf_Shape2Clone(SHAPE2 * s)
 {
     SHAPELINE*line = s->lines;
     SHAPELINE*prev = 0;
-    SHAPE2*s2 = rfx_alloc(sizeof(SHAPE2));
+    SHAPE2*s2 = (SHAPE2*)rfx_alloc(sizeof(SHAPE2));
     memcpy(s2,s,sizeof(SHAPE2));
-    s2->linestyles = rfx_alloc(sizeof(LINESTYLE)*s->numlinestyles);
+    s2->linestyles = (LINESTYLE*)rfx_alloc(sizeof(LINESTYLE)*s->numlinestyles);
     memcpy(s2->linestyles, s->linestyles, sizeof(LINESTYLE)*s->numlinestyles);
-    s2->fillstyles = rfx_alloc(sizeof(FILLSTYLE)*s->numfillstyles);
+    s2->fillstyles = (FILLSTYLE*)rfx_alloc(sizeof(FILLSTYLE)*s->numfillstyles);
     memcpy(s2->fillstyles, s->fillstyles, sizeof(FILLSTYLE)*s->numfillstyles);
 
     while(line) {
-	SHAPELINE*line2 = rfx_alloc(sizeof(SHAPELINE));
+	SHAPELINE*line2 = (SHAPELINE*)rfx_alloc(sizeof(SHAPELINE));
         memcpy(line2, line, sizeof(SHAPELINE));
         line2->next = 0;
         if(prev)
@@ -810,7 +810,7 @@ SHAPE2* swf_Shape2Clone(SHAPE2 * s)
 	line = line->next;
     }
     if(s->bbox) {
-        s2->bbox = rfx_alloc(sizeof(SRECT));
+        s2->bbox = (SRECT*)rfx_alloc(sizeof(SRECT));
         memcpy(s2->bbox, s->bbox, sizeof(SRECT));
     }
     return s2;
@@ -964,7 +964,7 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
 
     id = swf_GetU16(tag); //id
     memset(shape, 0, sizeof(SHAPE2));
-    shape->bbox = rfx_alloc(sizeof(SRECT));
+    shape->bbox = (SRECT*)rfx_alloc(sizeof(SRECT));
     swf_GetRect(tag, shape->bbox);
     if(num>=4) {
 	SRECT r2;
@@ -1004,8 +1004,8 @@ void swf_RecodeShapeData(U8*data, int bitlen, int in_bits_fill, int in_bits_line
     s2.lines = swf_ParseShapeData(data, bitlen, in_bits_fill, in_bits_line, 1, 0);
     s2.numfillstyles = out_bits_fill?1<<(out_bits_fill-1):0;
     s2.numlinestyles = out_bits_line?1<<(out_bits_line-1):0;
-    s2.fillstyles = rfx_calloc(sizeof(FILLSTYLE)*s2.numfillstyles);
-    s2.linestyles = rfx_calloc(sizeof(LINESTYLE)*s2.numlinestyles);
+    s2.fillstyles = (FILLSTYLE*)rfx_calloc(sizeof(FILLSTYLE)*s2.numfillstyles);
+    s2.linestyles = (LINESTYLE*)rfx_calloc(sizeof(LINESTYLE)*s2.numlinestyles);
 
     line = s2.lines;
     while(line) {

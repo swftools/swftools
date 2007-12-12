@@ -29,7 +29,13 @@
 
 #ifdef HAVE_JPEGLIB
 #define HAVE_BOOLEAN
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <jpeglib.h>
+#ifdef __cplusplus
+}
+#endif
 #endif // HAVE_JPEGLIB
 
 #ifdef HAVE_ZLIB
@@ -40,6 +46,9 @@
 #ifdef HAVE_LAME
 #include "lame/lame.h"
 #endif
+#endif
+#ifdef __cplusplus
+}
 #endif
 
 #ifdef HAVE_TIME_H
@@ -268,7 +277,7 @@ double swf_GetFixed(TAG * t)
 }
 void swf_SetFixed(TAG * t, double f)
 {
-  U16 fr = (f-(int)f)*65536;
+  U16 fr = (U16)(f-(int)f)*65536;
   swf_SetU16(t, fr);
   swf_SetU16(t, (U16)f - (f<0 && fr!=0));
 }
@@ -276,11 +285,11 @@ float swf_GetFixed8(TAG * t)
 {
   U8 low =  swf_GetU8(t);
   U8 high = swf_GetU8(t);
-  return high + low*(1/256.0);
+  return (float)(high + low*(1/256.0));
 }
 void swf_SetFixed8(TAG * t, float f)
 {
-  U8 fr = (f-(int)f)*256;
+  U8 fr = (U8)(f-(int)f)*256;
   swf_SetU8(t, fr);
   swf_SetU8(t, (U8)f - (f<0 && fr!=0));
 }
@@ -337,8 +346,8 @@ void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
     U8 num = swf_GetU8(tag) & 15;
     if(gradient) {
 	gradient->num = num;
-	gradient->rgba = rfx_calloc(sizeof(RGBA)*gradient->num);
-	gradient->ratios = rfx_calloc(sizeof(gradient->ratios[0])*gradient->num);
+	gradient->rgba = (RGBA*)rfx_calloc(sizeof(RGBA)*gradient->num);
+	gradient->ratios = (U8*)rfx_calloc(sizeof(gradient->ratios[0])*gradient->num);
     }
     for(t=0;t<num;t++)
     {
@@ -755,7 +764,7 @@ void  swf_SetPassword(TAG * t, const char * password)
     md5string = crypt_md5(password, salt);
 
     swf_SetU16(t,0);
-    swf_SetString(t, md5string);
+    swf_SetString(t, (U8*)md5string);
 }
 
 int swf_VerifyPassword(TAG * t, const char * password)
@@ -1291,7 +1300,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   if ((swf->firstTag && swf->firstTag->id != ST_REFLEX) &&
       (!swf->firstTag->next || swf->firstTag->next->id != ST_REFLEX)) 
   {
-      swf_SetBlock(swf_InsertTagBefore(swf, swf->firstTag,ST_REFLEX),"rfx",3);
+      swf_SetBlock(swf_InsertTagBefore(swf, swf->firstTag,ST_REFLEX),(U8*)"rfx",3);
   }
 
 #endif // INSERT_RFX_TAG
@@ -1306,7 +1315,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
     {
 	TAG*scene = swf_InsertTagBefore(swf, swf->firstTag,ST_SCENEDESCRIPTION);
 	swf_SetU16(scene, 1);
-	swf_SetString(scene, "Scene 1");
+	swf_SetString(scene, (U8*)"Scene 1");
 	swf_SetU8(scene, 0);
     }
   }
@@ -1493,7 +1502,7 @@ int swf_WriteCGI(SWF * swf)
 
 SWF* swf_CopySWF(SWF*swf)
 {
-    SWF*nswf = rfx_alloc(sizeof(SWF));
+    SWF*nswf = (SWF*)rfx_alloc(sizeof(SWF));
     TAG*tag, *ntag;
     memcpy(nswf, swf, sizeof(SWF));
     nswf->firstTag = 0;
