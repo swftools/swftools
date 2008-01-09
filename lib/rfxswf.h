@@ -28,7 +28,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <ctype.h>
 #include "../config.h"
@@ -36,6 +38,10 @@
 #include "./drawer.h"
 #include "./mem.h"
 #include "./types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define DEBUG_RFXSWF
 #ifdef RFXSWF_DISABLESOUND
@@ -1064,5 +1070,9 @@ FILTER*swf_GetFilter(TAG*tag);
 FILTER*swf_NewFilter(U8 type);
 
 void AVM2_InsertStops(SWF*swf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

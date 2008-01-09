@@ -178,13 +178,12 @@ static int writer_growmemwrite_write(writer_t*w, void* data, int len)
 	exit(1);
     }
     if(mw->length - w->pos < len) {
-	unsigned char*newmem;
 	int newlength = mw->length;
 	while(newlength - w->pos < len) {
 	    newlength += mw->grow;
 	}
 #ifdef NO_REALLOC
-	newmem = (unsigned char*)malloc(newlength);
+	unsigned char*newmem = (unsigned char*)malloc(newlength);
 	memcpy(newmem, mw->data, mw->length);
 	free(mw->data);
 	mw->data = newmem;

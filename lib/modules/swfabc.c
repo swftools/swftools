@@ -51,7 +51,7 @@ void AVM2_InsertStops(SWF*swf)
     char pool2[26] = {0x01,0x00,0x00,0x00,0x73,0x74,0x6f,0x70,0x5f,0x66,0x6c,0x61,0x2e,0x4d,0x61,0x69
     ,0x6e,0x54,0x69,0x6d,0x65,0x6c,0x69,0x6e,0x65,0x00};
     TAG * classCall = swf_InsertTagBefore(swf, swf->firstTag, 0x04c);
-    swf_SetBlock(classCall, pool2, sizeof(pool2));
+    swf_SetBlock(classCall, (U8*)pool2, sizeof(pool2));
 
     //0x52 is the Flash9 equivalent to DoAction
     char init_pool[322] = { 0x01,0x00,0x00,0x00, /* Flag Parameter to 0x52 */
@@ -257,25 +257,25 @@ void AVM2_InsertStops(SWF*swf)
     TAG *classInit = swf_InsertTagBefore(swf, swf->firstTag, 0x052);
 
     /* Copy the environment Initialization code */
-    swf_SetBlock(classInit, init_pool,sizeof(init_pool));
+    swf_SetBlock(classInit, (U8*)init_pool,sizeof(init_pool));
     /* Copy Constructor Method header */
-    swf_SetBlock(classInit, constructor_header, sizeof(constructor_header));
+    swf_SetBlock(classInit, (U8*)constructor_header, sizeof(constructor_header));
     /* Add Code block size (u30) to the method header */
-    swf_SetBlock(classInit, code_len, clen_len);
+    swf_SetBlock(classInit, (U8*)code_len, clen_len);
 
     /* Copy Constructor Method body first part */
-    swf_SetBlock(classInit, constructor_first, sizeof(constructor_first));
+    swf_SetBlock(classInit, (U8*)constructor_first, sizeof(constructor_first));
 
     /* Register the callback for every frame */
     for (i = 0; i < frame_nums; ++i) {
 	AVM2_uint32toU30(i,constructor_frame_register + 3); // Write current frame number
-	swf_SetBlock(classInit, constructor_frame_register, sizeof(constructor_frame_register));
+	swf_SetBlock(classInit, (U8*)constructor_frame_register, sizeof(constructor_frame_register));
     }
 
     /* Copy Constructor method body ending, just a return */
-    swf_SetBlock(classInit, constructor_return, sizeof(constructor_return));
+    swf_SetBlock(classInit, (U8*)constructor_return, sizeof(constructor_return));
 
     /* Copy the script init code */
-    swf_SetBlock(classInit, script_init_pool, sizeof(script_init_pool));
+    swf_SetBlock(classInit, (U8*)script_init_pool, sizeof(script_init_pool));
 }
 

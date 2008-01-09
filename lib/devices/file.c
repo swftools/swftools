@@ -20,7 +20,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
+#include <string.h>
 #include <memory.h>
 #include "../gfxdevice.h"
 
@@ -112,7 +115,7 @@ void file_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     internal_t*i = (internal_t*)dev->internal;
 }
 
-void file_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+void file_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
     fprintf(i->fi, "drawlink %s\n", action);

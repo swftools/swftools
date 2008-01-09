@@ -47,12 +47,13 @@ extern "C" {
 #include "lame/lame.h"
 #endif
 #endif
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef HAVE_TIME_H
 #include <time.h>
+#endif
+
+#ifdef HAVE_IO_H
+#include <io.h>
 #endif
 
 #include "./bitio.h"
@@ -337,7 +338,6 @@ void swf_GetRGBA(TAG * t, RGBA * col)
 
 void swf_GetGradient(TAG * tag, GRADIENT * gradient, char alpha)
 {
-    GRADIENT dummy;
     int t;
     if(!tag) {
       memset(gradient, 0, sizeof(GRADIENT));
@@ -771,7 +771,7 @@ int swf_VerifyPassword(TAG * t, const char * password)
 {
     char*md5string1, *md5string2;
     char*x;
-    char*md5, *salt;
+    char*salt;
     int n;
 
     if(t->len >= 5 && t->pos==0 && 
@@ -1071,7 +1071,7 @@ void swf_UnFoldSprite(TAG * t)
 void swf_FoldSprite(TAG * t)
 {
   TAG*sprtag=t,*tmp;
-  U16 id,frames,tmpid;
+  U16 id,frames;
   int level;
   if(t->id!=ST_DEFINESPRITE)
       return;

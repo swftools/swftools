@@ -502,8 +502,6 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
     }*/
 
     while(line) {
-        int x1,y1,x2,y2,x3,y3;
-
         if(line->type == gfx_moveTo) {
         } else if(line->type == gfx_lineTo) {
 	    double x1=x*i->zoom,y1=y*i->zoom;
@@ -511,7 +509,7 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 	    add_solidline(dev, x1, y1, x3, y3, width * i->multiply);
 	    fill_solid(dev, color);
         } else if(line->type == gfx_splineTo) {
-	    int t,parts,qparts;
+	    int t,parts;
 	    double xx,yy;
            
 	    double x1=x*i->zoom,y1=y*i->zoom;
@@ -916,7 +914,6 @@ void render_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 void gfxdevice_render_init(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
-    int y;
     memset(dev, 0, sizeof(gfxdevice_t));
     
     dev->name = "render";

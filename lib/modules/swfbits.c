@@ -289,8 +289,8 @@ void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap,
     JPEGBITS *jpeg;
     int y;
     jpeg = swf_SetJPEGBitsStart(tag, width, height, quality);
+	U8 *scanline = (U8*)rfx_alloc(3 * width);
     for (y = 0; y < height; y++) {
-	U8 scanline[3 * width];
 	int x, p = 0;
 	for (x = 0; x < width; x++) {
 	    scanline[p++] = bitmap[width * y + x].r;
@@ -299,6 +299,7 @@ void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap,
 	}
 	swf_SetJPEGBitsLine(jpeg, scanline);
     }
+    rfx_free(scanline);
     swf_SetJPEGBitsFinish(jpeg);
 }
 
@@ -1060,8 +1061,8 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
     pos = tag->len;
     swf_SetU32(tag, 0);		//placeholder
     jpeg = swf_SetJPEGBitsStart(tag, width, height, quality);
+	U8 *scanline = (U8*)rfx_alloc(3 * width);
     for (y = 0; y < height; y++) {
-	U8 scanline[3 * width];
 	int x, p = 0;
 	for (x = 0; x < width; x++) {
 	    //int ia = bitmap[width*y+x].a;
@@ -1078,6 +1079,7 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
 	}
 	swf_SetJPEGBitsLine(jpeg, scanline);
     }
+    rfx_free(scanline);
     swf_SetJPEGBitsFinish(jpeg);
     PUT32(&tag->data[pos], tag->len - pos - 4);
 
@@ -1092,8 +1094,8 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
     zs.next_out = data;
     zs.avail_out = OUTBUFFER_SIZE;
 
+	scanline = (U8*)rfx_alloc(width);
     for (y = 0; y < height; y++) {
-	U8 scanline[width];
 	int x, p = 0;
 	for (x = 0; x < width; x++) {
 	    scanline[p++] = bitmap[width * y + x].a;
@@ -1116,6 +1118,8 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
 	    }
 	}
     }
+
+    rfx_free(scanline);
 
     while (1) {
 	int ret = deflate(&zs, Z_FINISH);

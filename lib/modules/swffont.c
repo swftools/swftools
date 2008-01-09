@@ -122,7 +122,6 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     SWFFONT* font;
     int t;
     int*glyph2glyph;
-    FT_Size size;
     int max_unicode = 0;
     int charmap = -1;
 
@@ -239,10 +238,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
 	FT_BBox bbox;
-	FT_Matrix matrix;
 	char name[128];
 	drawer_t draw;
-	int ret;
 	char hasname = 0;
 	name[0]=0;
 	if(FT_HAS_GLYPH_NAMES(face)) {

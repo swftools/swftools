@@ -254,7 +254,6 @@ static int approximate3(const struct cspline*s, struct qspline*q, int size, doub
 	char left = 0,recurse=0;
 	int t;
 	int probes = 15;
-	double dx,dy;
 
 	/* create simple approximation: a qspline which run's through the
 	   qspline point at 0.5 */
@@ -322,6 +321,7 @@ static int approximate3(const struct cspline*s, struct qspline*q, int size, doub
 
 	/* convert control point representation to 
 	   d*x^3 + c*x^2 + b*x + a */
+	double dx,dy;
 	dx= s->end.x  - s->control2.x*3 + s->control1.x*3 - s->start.x;
 	dy= s->end.y  - s->control2.y*3 + s->control1.y*3 - s->start.y;
 	

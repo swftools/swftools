@@ -534,7 +534,6 @@ static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
         for(t=fillstylestart;t<shape->numfillstyles;t++)
         {
             int type;
-            U8*pos;
             FILLSTYLE*dest = &shape->fillstyles[t];
             type = swf_GetU8(tag); //type
             shape->fillstyles[t].type = type;
@@ -877,7 +876,7 @@ void swf_ShapeSetBitmapRect(TAG*tag, U16 gfxid, int width, int height)
 void swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape)
 {
     TAG*tag = swf_InsertTag(0,0);
-    SHAPELINE*l,*next;
+    SHAPELINE*l;
     int newx=0,newy=0,lastx=0,lasty=0,oldls=0,oldfs0=0,oldfs1=0;
 
     memset(shape, 0, sizeof(SHAPE));
@@ -946,8 +945,6 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
 {
     int num = 0, id;
     U16 fill,line;
-    SRECT r;
-    SRECT r2;
     SHAPELINE*l;
     if(tag->id == ST_DEFINESHAPE)
 	num = 1;

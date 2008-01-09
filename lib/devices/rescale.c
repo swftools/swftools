@@ -21,9 +21,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <memory.h>
 #include <math.h>
+#include <string.h>
+#include "rescale.h"
 #include "../types.h"
 #include "../mem.h"
 #include "../gfxdevice.h"

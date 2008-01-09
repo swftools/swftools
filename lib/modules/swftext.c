@@ -237,8 +237,6 @@ int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t)
 int swf_FontExtract_GlyphNames(int id, SWFFONT * f, TAG * tag)
 {
     U16 fid;
-    U16 maxcode;
-    U8 flags;
     swf_SaveTagPos(tag);
     swf_SetTagPos(tag, 0);
 
@@ -741,7 +739,7 @@ int swf_FontReduce(SWFFONT * f)
 
 void swf_FontSort(SWFFONT * font)
 {
-    int i, j, k;
+    int i, j;
     int *newplace;
     int *newpos;
     if (!font)
@@ -932,7 +930,6 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
     U8 flags = 0;
     int t;
     int pos;
-    int pos2;
     swf_SetU16(tag, f->id);
 
     if (f->layout) flags |= 128;		// haslayout

@@ -471,7 +471,6 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
     for(t=0;t<count;t++)
     {
 	int type;
-	U8*pos;
 	type = swf_GetU8(tag); //type
 	DEBUG_ENUMERATE printf("fill style %d) %02x (tagpos=%d)\n", t, type, tag->pos);
 	if(type == 0) {
@@ -675,7 +674,6 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 	    while(1)
 	    {
-		U16 charid;
 		if(!swf_GetU8(tag)) //flags
 		    break; 
 		callback(tag, tag->pos + base, callback_data);

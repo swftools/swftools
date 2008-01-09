@@ -3,6 +3,7 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../art/libart.h"
+#include "artsutils.h"
 #include <assert.h>
 #include <math.h>
 

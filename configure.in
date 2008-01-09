@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2007-04-28-2027
+VERSION=2007-12-11-1640
 
 
 # ------------------------------------------------------------------

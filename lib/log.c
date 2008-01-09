@@ -20,19 +20,17 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#ifdef __NT__
-#include "stdafx.h"
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#ifdef WIN32
+//#include "stdafx.h"
 #include <malloc.h>
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
 #include <unistd.h>
 #endif
 

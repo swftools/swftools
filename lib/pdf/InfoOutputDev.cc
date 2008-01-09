@@ -1,3 +1,4 @@
+#include "Object.h"
 #include "SplashTypes.h"
 #include "SplashOutputDev.h"
 #include "SplashPath.h"
