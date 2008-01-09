@@ -143,7 +143,7 @@ pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
 pdftotext$(E): $(xpdf_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS)
 
-gfx_objects = ../devices/swf.$(O) ../devices/arts.$(O) ../libgfx$(A) ../art/libart$(A) ../librfxswf$(A) ../libbase$(A)
+gfx_objects = ../devices/swf.$(O) ../devices/arts.$(O) ../devices/artsutils.$(O) ../libgfx$(A) ../art/libart$(A) ../librfxswf$(A) ../libbase$(A)
 
 pdf2swf$(E): ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) $(gfx_objects)
 	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
