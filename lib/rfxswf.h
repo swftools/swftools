@@ -28,9 +28,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#ifndef WIN32
 #include <unistd.h>
-#endif
 #include <fcntl.h>
 #include <ctype.h>
 #include "../config.h"
