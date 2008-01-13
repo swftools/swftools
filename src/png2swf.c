@@ -26,6 +26,7 @@
 #include <zlib.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/png.h"
 
 #define MAX_INPUT_FILES 1024
 #define VERBOSE(x) (global.verbose>=x)
@@ -41,6 +42,7 @@ struct {
     int do_cgi;
     int version;
     char *outfile;
+    int mkjpeg;
     float scale;
 } global;
 
@@ -76,7 +78,7 @@ TAG *MovieStart(SWF * swf, float framerate, int dx, int dy)
     t = swf->firstTag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
 
     rgb.r = rgb.g = rgb.b = rgb.a = 0x00;
-    rgb.g = 0xff; //<--- handy for testing alpha conversion
+    //rgb.g = 0xff; //<--- handy for testing alpha conversion
     swf_SetRGB(t, &rgb);
 
     return t;
@@ -320,7 +322,6 @@ void applyfilter3(int mode, U8*src, U8*old, U8*dest, int width)
 	    src+=3;
 	}
     }    
-
 }
 
 void applyfilter4(int mode, U8*src, U8*old, U8*dest, int width)
@@ -458,15 +459,9 @@ void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
 
 }
 
-TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
+TAG* PNG2Image(TAG*t, U16 id, char*filename, int*width, int*height)
 {
-    SHAPE *s;
-    SRECT r;
-    MATRIX m;
-    int fs;
-
     char tagid[4];
-    int len;
     U8*data;
     U8*imagedata;
     U8*zimagedata=0;
@@ -480,18 +475,23 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     int bypp;
     U8 alphacolor[3];
     int hasalphacolor=0;
+    int len;
+
 
     FILE *fi;
     U8 *scanline;
 
-    if ((fi = fopen(sname, "rb")) == NULL) {
+    if ((fi = fopen(filename, "rb")) == NULL) {
 	if (VERBOSE(1))
-	    fprintf(stderr, "Read access failed: %s\n", sname);
+	    fprintf(stderr, "Read access failed: %s\n", filename);
 	return t;
     }
 
     if(!png_read_header(fi, &header))
 	return 0;
+
+    *width = header.width;
+    *height = header.height;
 
     if(header.mode == 3 || header.mode == 0) bypp = 1;
     else
@@ -558,7 +558,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     }
     
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
-	fprintf(stderr, "Couldn't uncompress IDAT chunk (%d bytes) in %s!\n", imagedatalen, sname);
+	fprintf(stderr, "Couldn't uncompress IDAT chunk (%d bytes) in %s!\n", imagedatalen, filename);
 	if(zimagedata)
 	    free(zimagedata);
 	return 0;
@@ -743,6 +743,45 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	free(rgba);
 	free(data2);
     }
+    fclose(fi);
+    return t;
+}
+
+TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
+{
+    SHAPE *s;
+    SRECT r;
+    MATRIX m;
+    int fs;
+
+    int width=0, height=0;
+
+    if(global.mkjpeg) {
+	RGBA*data = 0;
+	getPNG(sname, &width, &height, (unsigned char**)&data);
+	if(!data) 
+	    exit(1);
+	if(swf_ImageHasAlpha(data, width, height)) {
+	    t = swf_InsertTag(t, ST_DEFINEBITSJPEG3);
+	    swf_SetU16(t, id);
+	    swf_SetJPEGBits3(t, width,height,data,global.mkjpeg);
+	} else {
+	    t = swf_InsertTag(t, ST_DEFINEBITSJPEG2);
+	    swf_SetU16(t, id);
+	    swf_SetJPEGBits2(t, width,height,data,global.mkjpeg);
+	}
+    } else if(1) {
+	RGBA*data = 0;
+	getPNG(sname, &width, &height, (unsigned char**)&data);
+	if(!data) 
+	    exit(1);
+	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
+	swf_SetU16(t, id);
+	swf_SetLosslessImage(t, data,width,height);
+    } else {
+	/* old code: transform PNG encoding 1:1 to SWF */
+	t = PNG2Image(t, id, sname, &width, &height);
+    }
 
     t = swf_InsertTag(t, ST_DEFINESHAPE3);
 
@@ -757,8 +796,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     swf_SetU16(t, id + 1);	// id
 
     r.xmin = r.ymin = 0;
-    r.xmax = header.width * 20;
-    r.ymax = header.height * 20;
+    r.xmax = width * 20;
+    r.ymax = height * 20;
     swf_SetRect(t, &r);
 
     swf_SetShapeHeader(t, s);
@@ -784,14 +823,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	m.tx = move_x*20;
 	m.ty = move_y*20;
     } else {
-	m.tx = (swf->movieSize.xmax - (int) (header.width * global.scale * 20)) / 2;
-	m.ty = (swf->movieSize.ymax - (int) (header.height * global.scale * 20)) / 2;
+	m.tx = (swf->movieSize.xmax - (int) (width * global.scale * 20)) / 2;
+	m.ty = (swf->movieSize.ymax - (int) (height * global.scale * 20)) / 2;
     }
     swf_ObjectPlace(t, id + 1, 50, &m, NULL, NULL);
 
     t = swf_InsertTag(t, ST_SHOWFRAME);
-
-    fclose(fi);
 
     return t;
 }
@@ -875,6 +912,11 @@ int args_callback_option(char *arg, char *val)
 	    if(global.version<6)
 		global.version = 6;
 	    res = 0;
+	    break;
+
+	case 'j':
+	    global.mkjpeg = atoi(val);
+	    res = 1;
 	    break;
 
 	case 'T':
@@ -969,6 +1011,7 @@ int args_callback_option(char *arg, char *val)
 static struct options_t options[] = {
 {"r", "rate"},
 {"o", "output"},
+{"j", "jpeg"},
 {"z", "zlib"},
 {"T", "flashversion"},
 {"X", "pixel"},
@@ -1012,6 +1055,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-r , --rate <framerate>        Set movie framerate (frames per second)\n");
     printf("-o , --output <filename>       Set name for SWF output file.\n");
+    printf("-j , --jpeg <quality>          Generate a lossy jpeg bitmap inside the SWF, with a given quality (1-100)\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("-T , --flashversion            Set the flash version to generate\n");
     printf("-X , --pixel <width>           Force movie width to <width> (default: autodetect)\n");
@@ -1033,7 +1077,7 @@ int main(int argc, char **argv)
 
     global.framerate = 1.0;
     global.verbose = 1;
-    global.version = 4;
+    global.version = 6;
     global.scale = 1.0;
 
     processargs(argc, argv);
