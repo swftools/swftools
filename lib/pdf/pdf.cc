@@ -332,7 +332,7 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
 	storeDeviceParameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "poly2bitmap")) {
-        i->config_bitmap_optimizing = 1;
+        i->config_bitmap_optimizing = atoi(value);
     } else if(!strcmp(name, "multiply")) {
         multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
