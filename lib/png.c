@@ -619,6 +619,9 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 	int x,y;
 	int pos=0;
 	*destdata = data2;
+	
+	unsigned char* firstline = malloc(header.width*4);
+	memset(firstline,0,header.width*4);
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
 	    unsigned char*src;
@@ -639,8 +642,7 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 	    }
 
 	    if(!y) {
-		memset(data2,0,header.width*4);
-		old = &data2[y*header.width*4];
+		old = firstline;
 	    } else {
 		old = &data2[(y-1)*header.width*4];
 	    }
@@ -661,6 +663,7 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 		}
 	    }
 	}
+	free(firstline);
         free(imagedata);
     } else if(header.mode == 0 || header.mode == 3) {
 	COL*rgba = 0;
