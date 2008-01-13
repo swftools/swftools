@@ -1,4 +1,4 @@
-.TH png2swf "1" "January 2007" "png2swf" "swftools"
+.TH png2swf "1" "January 2008" "png2swf" "swftools"
 .SH NAME
 png2swf - Takes a number of png files and converts them to a swf movie, one
 picture per frame.
@@ -22,6 +22,9 @@ compression algorithm is used).
 .TP
 \fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
     Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+.TP
+\fB\-j\fR, \fB\-\-jpeg\fR \fIquality\fR
+    Generate a lossy jpeg bitmap inside the SWF, with a given quality (1-100)
 .TP
 \fB\-z\fR, \fB\-\-zlib\fR \fIzlib\fR        
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be

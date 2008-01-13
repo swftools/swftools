@@ -70,6 +70,7 @@ static struct options_t options[] = {
 {"a", "action"},
 {"t", "text"},
 {"s", "shapes"},
+{"F", "fonts"},
 {"p", "placements"},
 {"b", "bbox"},
 {"X", "width"},
@@ -176,6 +177,7 @@ void args_callback_usage(char *name)
     printf("-a , --action                  Disassemble action tags\n");
     printf("-t , --text                    Show text fields (like swfstrings).\n");
     printf("-s , --shapes                  Show shape coordinates/styles\n");
+    printf("-F , --fonts                   Show font information\n");
     printf("-p , --placements              Show placement information\n");
     printf("-b , --bbox                    Print tag's bounding boxes\n");
     printf("-X , --width                   Prints out a string of the form \"-X width\".\n");

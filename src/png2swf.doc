@@ -16,6 +16,8 @@ compression algorithm is used).
 -o, --output <filename>
     Set name for SWF output file.
     Explicitly specify output file. (Otherwise, output will go to stdout / output.swf)
+-j, --jpeg <quality>
+    Generate a lossy jpeg bitmap inside the SWF, with a given quality (1-100)
 -z  --zlib    <zlib>        
     Enable Flash 6 (MX) Zlib Compression
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
