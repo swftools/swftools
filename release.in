@@ -171,6 +171,7 @@ ${name}/lib/devices/render.h \
 ${name}/lib/devices/text.c \
 ${name}/lib/devices/text.h \
 ${name}/lib/devices/artsutils.c \
+${name}/lib/devices/artsutils.h \
 ${name}/lib/devices/arts.c \
 ${name}/lib/devices/arts.h \
 ${name}/lib/devices/record.c \
