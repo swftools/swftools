@@ -690,11 +690,13 @@ int main(int argn, char *argv[])
 	    printf("\n");
     }
     if(preloader && viewer) {
+        char tmpname[] = "__swf__XXXXXX";
+        mkstemp(tmpname); /* could fail */
 	systemf("swfcombine \"%s\" viewport=%s -o __tmp__.swf",
 		viewer, outputname);
-	systemf("swfcombine %s -X %d -Y %d -r %f %s/PreLoaderTemplate.swf loader=%s movie=__tmp__.swf -o \"%s\"",zip,width,height,
-		getRate(preloader), SWFDIR, preloader, outputname);
-	systemf("rm __tmp__.swf");
+        systemf("swfcombine %s -X %d -Y %d -r %f %s/PreLoaderTemplate.swf loader=%s movie=%s -o \"%s\"",zip,width,height,
+                getRate(preloader), SWFDIR, preloader, tmpname, outputname);
+        systemf("rm %s", tmpname);
     }
 
     return 0;
