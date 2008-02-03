@@ -939,7 +939,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 			CharCode charid, int nBytes, Unicode *_u, int uLen)
 {
     if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
-	msg("<error> Invalid charid %d for font %s", charid, current_font_id);
+	msg("<error> Invalid charid %d for font (%d characters)", charid, current_fontinfo?current_fontinfo->num_glyphs:0);
 	return;
     }
   
@@ -1070,7 +1070,7 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
 	m.ty += user_movey + clipmovey;
 
 	if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
-	    msg("<error> Invalid charid %d for font %s", charid, current_font_id);
+	    msg("<error> Invalid charid %d for font", charid);
 	    return gFalse;
 	}
 	gfxcolor_t col={0,0,0,0};
@@ -1520,7 +1520,7 @@ void GFXOutputDev::updateFont(GfxState *state)
     this->current_fontinfo = this->info->getFont(id);
     if(!this->current_fontinfo) {
 	msg("<error> Internal Error: no fontinfo for font %s\n", id);
-    return;
+	return;
     }
     if(!this->current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", gfxFont);
