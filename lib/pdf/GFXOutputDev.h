@@ -249,7 +249,6 @@ public:
 
   gfxline_t* current_text_stroke;
   gfxline_t* current_text_clip;
-  char* current_font_id;
   gfxfont_t* current_gfxfont;
   FontInfo*current_fontinfo;
   gfxmatrix_t current_font_matrix;
