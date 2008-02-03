@@ -197,6 +197,8 @@ char* swf_TagGetName(TAG*tag)
             return "SOUNDSTREAMHEAD2";
         case ST_DEFINEMORPHSHAPE:
             return "DEFINEMORPHSHAPE";
+        case ST_DEFINEMORPHSHAPE2:
+            return "DEFINEMORPHSHAPE2";
         case ST_DEFINEFONT2:
             return "DEFINEFONT2";
         case ST_TEMPLATECOMMAND:
