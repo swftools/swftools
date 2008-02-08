@@ -78,7 +78,6 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
 	pi->middev->setparameter(pi->middev, "protect", "1");
 	dev = pi->middev;
     } 
-    dev->setparameter(dev, "protect", "1");
 	
     if(!pi) {
 	msg("<fatal> pdf_page_render: Parent PDF this page belongs to doesn't exist yet/anymore");
