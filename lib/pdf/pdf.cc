@@ -34,6 +34,7 @@ typedef struct _pdf_page_info
 typedef struct _pdf_doc_internal
 {
     int protect;
+    int nocopy;
     PDFDoc*doc;
     Object docinfo;
     InfoOutputDev*info;
@@ -187,6 +188,10 @@ gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
 
     if(page < 1 || page > doc->num_pages)
         return 0;
+    if(di->nocopy) {
+        msg("<error> PDF disallows copying.");
+        return 0;
+    }
     
     gfxpage_t* pdf_page = (gfxpage_t*)malloc(sizeof(gfxpage_t));
     pdf_page_internal_t*pi= (pdf_page_internal_t*)malloc(sizeof(pdf_page_internal_t));
@@ -387,8 +392,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     i->protect = 0;
     if (i->doc->isEncrypted()) {
           if(!i->doc->okToCopy()) {
-              printf("PDF disallows copying.\n");
-              return 0;
+              i->nocopy = 1;
           }
           if(!i->doc->okToChange() || !i->doc->okToAddNotes())
               i->protect = 1;
