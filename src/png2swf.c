@@ -1064,7 +1064,7 @@ void args_callback_usage(char *name)
     printf("-q , --quiet                   Omit normal log messages, only log errors\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout\n");
     printf("-V , --version                 Print version information and exit\n");
-    printf("-s , --scale <percent>         Scale image to <percent>% size.\n");
+    printf("-s , --scale <percent>         Scale image to <percent>%% size.\n");
     printf("\n");
 }
 
