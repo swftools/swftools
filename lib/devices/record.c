@@ -539,6 +539,7 @@ static void replay(struct _gfxdevice*recorddev, gfxdevice_t*device, void*data, i
 	    }
 	}
     }
+    r->dealloc(r);
     gfxfontlist_free(fontlist, 1);
 }
 void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
@@ -584,6 +585,31 @@ static void record_result_destroy(gfxresult_t*r)
     free(r);
 }
 
+static unsigned char printable(unsigned char a)
+{
+    if(a<32 || a==127) return '.';
+    else return a;
+}
+
+static void hexdumpMem(unsigned char*data, int len)
+{
+    int t;
+    char ascii[32];
+    for(t=0;t<len;t++) {
+	printf("%02x ", data[t]);
+	ascii[t&15] = printable(data[t]);
+	if((t && ((t&15)==15)) || (t==len-1))
+	{
+	    int s,p=((t)&15)+1;
+	    ascii[p] = 0;
+	    for(s=p-1;s<16;s++) {
+		printf("   ");
+	    }
+	    printf(" %s\n", ascii);
+	}
+    }
+}
+
 void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)dev->internal;
@@ -601,6 +627,8 @@ static gfxresult_t* record_finish(struct _gfxdevice*dev)
     msg("<trace> record: END\n");
     
     writer_writeU8(&i->w, OP_END);
+    
+    gfxfontlist_free(i->fontlist, 0);
    
     internal_result_t*ir = (internal_result_t*)rfx_calloc(sizeof(gfxresult_t));
     ir->data = writer_growmemwrite_getmem(&i->w);
