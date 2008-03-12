@@ -38,6 +38,10 @@ struct ClipState
     ClipState();
 };
 
+#define STATE_PARALLEL 0
+#define STATE_TEXT_IS_ABOVE 1
+#define STATE_BITMAP_IS_ABOVE 2
+
 class BitmapOutputDev: public CommonOutputDev {
 public:
     BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc);
@@ -123,7 +127,6 @@ public:
     virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading);
     virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading);
 
-    void doClip(GfxState *state, GBool eo);
     virtual void clip(GfxState *state);
     virtual void eoClip(GfxState *state);
     virtual void clipToStrokePath(GfxState *state);
@@ -179,12 +182,23 @@ public:
   
     virtual void setVectorAntialias(GBool vaa);
     virtual GBool getVectorAntialias();
+
     
 private:
-    void flush();
+    void clearClips();
+    void clearBoolPolyDev();
+    void clearBoolTextDev();
+    void flushText();
+    void flushBitmap();
+    void checkNewText();
+    void checkNewBitmap();
+    GBool clip0and1differ();
+    GBool intersection();
 
     char config_bitmapfonts;
     char config_extrafontdata;
+
+    int layerstate;
 
     SplashPath*bboxpath;
 
@@ -193,6 +207,10 @@ private:
     SplashOutputDev*rgbdev;
     SplashOutputDev*clip0dev;
     SplashOutputDev*clip1dev;
+    SplashOutputDev*boolpolydev;
+    SplashOutputDev*booltextdev;
+
+    gfxdevice_t* gfxoutput;
     GFXOutputDev*gfxdev;
     InfoOutputDev*info;
     gfxdevice_t*dev;
