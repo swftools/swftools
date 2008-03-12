@@ -508,6 +508,10 @@ void gfxfont_free(gfxfont_t*font)
     if(font->unicode2glyph) {
 	free(font->unicode2glyph);font->unicode2glyph = 0;
     }
+    if(font->id) {
+	free((void*)font->id);font->id=0;
+    }
+
     free(font);
 }
 

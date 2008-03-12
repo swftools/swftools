@@ -31,8 +31,8 @@ InfoOutputDev::~InfoOutputDev()
     }
     id2font->killIter(&i);
 
-    delete id2font;
-    delete splash;
+    delete id2font;id2font=0;
+    delete splash;splash=0;
 }
 void FontInfo::grow(int size)
 {
@@ -65,6 +65,7 @@ FontInfo::~FontInfo()
 	    glyphs[t]=0;
 	}
     }
+    free(glyphs);glyphs=0;
 }
 GBool InfoOutputDev::upsideDown() {return gTrue;}
 GBool InfoOutputDev::useDrawChar() {return gTrue;}
