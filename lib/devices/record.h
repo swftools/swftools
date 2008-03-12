@@ -31,6 +31,8 @@ extern "C" {
 
 void gfxdevice_record_init(gfxdevice_t*);
 
+void gfxdevice_record_flush(gfxdevice_t*, gfxdevice_t*);
+
 void gfxresult_record_replay(gfxresult_t*, gfxdevice_t*);
 
 #ifdef __cplusplus

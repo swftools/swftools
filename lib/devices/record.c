@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include "../../config.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -33,6 +34,7 @@
 #include "../gfxtools.h"
 #include "../types.h"
 #include "../bitio.h"
+#include "../log.h"
 #include "record.h"
 
 typedef struct _internal {
@@ -67,6 +69,7 @@ typedef struct _internal_result {
 static int record_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: SETPARAM %s %s\n", key, value);
     writer_writeU8(&i->w, OP_SETPARAM);
     writer_writeString(&i->w, key);
     writer_writeString(&i->w, value);
@@ -280,6 +283,7 @@ static gfxfont_t*readFont(reader_t*r)
 static void record_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: STROKE\n");
     writer_writeU8(&i->w, OP_STROKE);
     writer_writeDouble(&i->w, width);
     writer_writeDouble(&i->w, miterLimit);
@@ -292,6 +296,7 @@ static void record_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t widt
 static void record_startclip(struct _gfxdevice*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: STARTCLIP\n");
     writer_writeU8(&i->w, OP_STARTCLIP);
     dumpLine(&i->w, line);
 }
@@ -299,12 +304,14 @@ static void record_startclip(struct _gfxdevice*dev, gfxline_t*line)
 static void record_endclip(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: ENDCLIP\n");
     writer_writeU8(&i->w, OP_ENDCLIP);
 }
 
 static void record_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: FILL\n");
     writer_writeU8(&i->w, OP_FILL);
     dumpColor(&i->w, color);
     dumpLine(&i->w, line);
@@ -313,6 +320,7 @@ static void record_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 static void record_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: FILLBITMAP\n");
     writer_writeU8(&i->w, OP_FILLBITMAP);
     dumpImage(&i->w, img);
     dumpMatrix(&i->w, matrix);
@@ -323,6 +331,7 @@ static void record_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*
 static void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: FILLGRADIENT\n");
     writer_writeU8(&i->w, OP_FILLGRADIENT);
     writer_writeU8(&i->w, type);
     dumpGradient(&i->w, gradient);
@@ -333,6 +342,7 @@ static void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradie
 static void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: ADDFONT\n");
     writer_writeU8(&i->w, OP_ADDFONT);
     dumpFont(&i->w, font);
     i->fontlist = gfxfontlist_addfont(i->fontlist, font);
@@ -341,9 +351,12 @@ static void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
-    if(font && !gfxfontlist_hasfont(i->fontlist, font))
+    if(font && !gfxfontlist_hasfont(i->fontlist, font)) {
 	record_addfont(dev, font);
+	i->fontlist = gfxfontlist_addfont(i->fontlist, font);
+    }
 
+    msg("<trace> record: DRAWCHAR %d\n", glyphnr);
     writer_writeU8(&i->w, OP_DRAWCHAR);
     if(font) 
 	writer_writeString(&i->w, font->id);
@@ -357,6 +370,7 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
 static void record_startpage(struct _gfxdevice*dev, int width, int height)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: STARTPAGE\n");
     writer_writeU8(&i->w, OP_STARTPAGE);
     writer_writeU16(&i->w, width);
     writer_writeU16(&i->w, height);
@@ -365,31 +379,39 @@ static void record_startpage(struct _gfxdevice*dev, int width, int height)
 static void record_endpage(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: ENDPAGE\n");
     writer_writeU8(&i->w, OP_ENDPAGE);
 }
 
 static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: DRAWLINK\n");
     writer_writeU8(&i->w, OP_DRAWLINK);
     dumpLine(&i->w, line);
     writer_writeString(&i->w, action);
 }
 
-void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
+static void replay(struct _gfxdevice*recorddev, gfxdevice_t*device, void*data, int length)
 {
-    internal_result_t*i = (internal_result_t*)result->internal;
+    internal_t*i = 0;
+    if(recorddev) {
+	i = (internal_t*)recorddev->internal;
+    }
+
     reader_t r2;
     reader_t*r = &r2;
-    reader_init_memreader(r, i->data, i->length);
+    reader_init_memreader(r, data, length);
     gfxfontlist_t* fontlist = gfxfontlist_create();
 
-    while(1) {
+    while(r->pos < length) {
 	unsigned char op = reader_readU8(r);
 	switch(op) {
 	    case OP_END:
+		msg("<trace> replay: END");
 		return;
 	    case OP_SETPARAM: {
+		msg("<trace> replay: SETPARAM");
 		char*key;
 		char*value;
 		key = reader_readString(r);
@@ -400,51 +422,58 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		break;
 	    }
 	    case OP_STARTPAGE: {
+		msg("<trace> replay: STARTPAGE");
 		U16 width = reader_readU16(r);
 		U16 height = reader_readU16(r);
 		device->startpage(device, width, height);
 		break;
 	    }
 	    case OP_ENDPAGE: {
+		msg("<trace> replay: ENDPAGE");
 		break;
 	    }
 	    case OP_FINISH: {
+		msg("<trace> replay: FINISH");
 		break;
 	    }
 	    case OP_STROKE: {
+		msg("<trace> replay: STROKE");
 		double width = reader_readDouble(r);
 		double miterlimit = reader_readDouble(r);
 		gfxcolor_t color = readColor(r);
 		gfx_capType captype;
-        int v = reader_readU8(r);
-        switch (v) {
-        case 0: captype = gfx_capButt; break;
-        case 1: captype = gfx_capRound; break;
-        case 2: captype = gfx_capSquare; break;
-        }
+		int v = reader_readU8(r);
+		switch (v) {
+		    case 0: captype = gfx_capButt; break;
+		    case 1: captype = gfx_capRound; break;
+		    case 2: captype = gfx_capSquare; break;
+		}
 		gfx_joinType jointtype;
-        v = reader_readU8(r);
-        switch (v) {
-        case 0: jointtype = gfx_joinMiter; break;
-        case 1: jointtype = gfx_joinRound; break;
-        case 2: jointtype = gfx_joinBevel; break;
-        }
+		v = reader_readU8(r);
+		switch (v) {
+		    case 0: jointtype = gfx_joinMiter; break;
+		    case 1: jointtype = gfx_joinRound; break;
+		    case 2: jointtype = gfx_joinBevel; break;
+		}
 		gfxline_t* line = readLine(r);
 		device->stroke(device, line, width, &color, captype, jointtype,miterlimit);
 		gfxline_free(line);
 		break;
 	    }
 	    case OP_STARTCLIP: {
+		msg("<trace> replay: STARTCLIP");
 		gfxline_t* line = readLine(r);
 		device->startclip(device, line);
 		gfxline_free(line);
 		break;
 	    }
 	    case OP_ENDCLIP: {
+		msg("<trace> replay: ENDCLIP");
 		device->endclip(device);
 		break;
 	    }
 	    case OP_FILL: {
+		msg("<trace> replay: FILL");
 		gfxcolor_t color = readColor(r);
 		gfxline_t* line = readLine(r);
 		device->fill(device, line, &color);
@@ -452,6 +481,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		break;
 	    }
 	    case OP_FILLBITMAP: {
+		msg("<trace> replay: FILLBITMAP");
 		gfximage_t img = readImage(r);
 		gfxmatrix_t matrix = readMatrix(r);
 		gfxline_t* line = readLine(r);
@@ -462,14 +492,15 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		break;
 	    }
 	    case OP_FILLGRADIENT: {
+		msg("<trace> replay: FILLGRADIENT");
 		gfxgradienttype_t type;
-        int v = reader_readU8(r);
-        switch (v) {
-        case 0: 
-          type = gfxgradient_radial; break;
-        case 1:
-          type = gfxgradient_linear; break;
-        }  
+		int v = reader_readU8(r);
+		switch (v) {
+		    case 0: 
+		      type = gfxgradient_radial; break;
+		    case 1:
+		      type = gfxgradient_linear; break;
+		}  
 		gfxgradient_t*gradient = readGradient(r);
 		gfxmatrix_t matrix = readMatrix(r);
 		gfxline_t* line = readLine(r);
@@ -477,6 +508,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		break;
 	    }
 	    case OP_DRAWLINK: {
+		msg("<trace> replay: DRAWLINK");
 		gfxline_t* line = readLine(r);
 		char* s = reader_readString(r);
 		device->drawlink(device,line,s);
@@ -485,6 +517,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 		break;
 	    }
 	    case OP_ADDFONT: {
+		msg("<trace> replay: ADDFONT");
 		gfxfont_t*font = readFont(r);
 		fontlist = gfxfontlist_addfont(fontlist, font);
 		device->addfont(device, font);
@@ -493,7 +526,11 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 	    case OP_DRAWCHAR: {
 		char* id = reader_readString(r);
 		gfxfont_t*font = id?gfxfontlist_findfont(fontlist, id):0;
+		if(i && !font) {
+		    font = gfxfontlist_findfont(i->fontlist, id);
+		}
 		U32 glyph = reader_readU32(r);
+		msg("<trace> replay: DRAWCHAR font=%s glyph=%d", id, glyph);
 		gfxcolor_t color = readColor(r);
 		gfxmatrix_t matrix = readMatrix(r);
 		device->drawchar(device, font, glyph, &color, &matrix);
@@ -502,6 +539,12 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 	    }
 	}
     }
+    gfxfontlist_free(fontlist, 1);
+}
+void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
+{
+    internal_result_t*i = (internal_result_t*)result->internal;
+    replay(0, device, i->data, i->length);
 }
 
 static void record_result_write(gfxresult_t*r, int filedesc)
@@ -534,21 +577,35 @@ static void*record_result_get(gfxresult_t*r, const char*name)
 static void record_result_destroy(gfxresult_t*r)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
-    free(i->data);i->data = 0;
+    if(i->data) {
+	free(i->data);i->data = 0;
+    }
     free(r->internal);r->internal = 0;
     free(r);
 }
 
+void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
+{
+    internal_t*i = (internal_t*)dev->internal;
+    if(out) {
+	int len=0;
+	void*data = writer_growmemwrite_memptr(&i->w, &len);
+	replay(dev, out, data, len);
+    }
+    writer_growmemwrite_reset(&i->w);
+}
 
 static gfxresult_t* record_finish(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
+    msg("<trace> record: END\n");
     
     writer_writeU8(&i->w, OP_END);
    
     internal_result_t*ir = (internal_result_t*)rfx_calloc(sizeof(gfxresult_t));
     ir->data = writer_growmemwrite_getmem(&i->w);
     ir->length = i->w.pos;
+    i->w.finish(&i->w);
 
     gfxresult_t*result= (gfxresult_t*)rfx_calloc(sizeof(gfxresult_t));
     result->save = record_result_save;
