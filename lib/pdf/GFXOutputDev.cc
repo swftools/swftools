@@ -80,6 +80,7 @@
 typedef struct _fontfile
 {
     const char*filename;
+    int len; // basename length
     int used;
 } fontfile_t;
 
@@ -327,12 +328,21 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 	    return dfp;
 	}
     }
+    
+    int bestlen = 0x7fffffff;
+    const char*bestfilename = 0;
     for(t=0;t<fontnum;t++) {
 	if(strstr(fonts[t].filename, name)) {
-	    DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
-	    dfp->t1.fileName = new GString(fonts[t].filename);
-	    return dfp;
-	}
+            if(fonts[t].len < bestlen) {
+                bestlen = fonts[t].len;
+                bestfilename = fonts[t].filename;
+            }
+        }
+    }
+    if(bestfilename) {
+        DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
+        dfp->t1.fileName = new GString(bestfilename);
+        return dfp;
     }
     return GlobalParams::getDisplayFont(fontName);
 }
@@ -2007,6 +2017,15 @@ void addGlobalFont(const char*filename)
     fontfile_t f;
     memset(&f, 0, sizeof(fontfile_t));
     f.filename = filename;
+    int len = strlen(filename);
+    char*r1 = strrchr(filename, '/');
+    char*r2 = strrchr(filename, '\\');
+    if(r2>r1)
+        r1 = r2;
+    if(r1) {
+        len = strlen(r1+1);
+    }
+    f.len = len;
     if(fontnum < sizeof(fonts)/sizeof(fonts[0])) {
 	msg("<notice> Adding font \"%s\".", filename);
 	fonts[fontnum++] = f;
