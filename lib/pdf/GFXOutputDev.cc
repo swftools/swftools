@@ -82,10 +82,14 @@ typedef struct _fontfile
     const char*filename;
     int len; // basename length
     int used;
+    struct _fontfile*next;
 } fontfile_t;
 
 // for pdfswf_addfont
-static fontfile_t fonts[2048];
+
+static fontfile_t* global_fonts = 0;
+static fontfile_t* global_fonts_next = 0;
+
 static int fontnum = 0;
 
 /* config */
@@ -331,13 +335,16 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
     
     int bestlen = 0x7fffffff;
     const char*bestfilename = 0;
-    for(t=0;t<fontnum;t++) {
-	if(strstr(fonts[t].filename, name)) {
-            if(fonts[t].len < bestlen) {
-                bestlen = fonts[t].len;
-                bestfilename = fonts[t].filename;
+    
+    fontfile_t*f = 0;
+    while(f) {
+	if(strstr(f->filename, name)) {
+            if(f->len < bestlen) {
+                bestlen = f->len;
+                bestfilename = f->filename;
             }
         }
+        f = f->next;
     }
     if(bestfilename) {
         DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
@@ -2014,9 +2021,9 @@ static const char* dirseparator()
 
 void addGlobalFont(const char*filename)
 {
-    fontfile_t f;
-    memset(&f, 0, sizeof(fontfile_t));
-    f.filename = filename;
+    fontfile_t* f = (fontfile_t*)malloc(sizeof(fontfile_t));
+    memset(f, 0, sizeof(fontfile_t));
+    f->filename = filename;
     int len = strlen(filename);
     char*r1 = strrchr(filename, '/');
     char*r2 = strrchr(filename, '\\');
@@ -2025,12 +2032,14 @@ void addGlobalFont(const char*filename)
     if(r1) {
         len = strlen(r1+1);
     }
-    f.len = len;
-    if(fontnum < sizeof(fonts)/sizeof(fonts[0])) {
-	msg("<notice> Adding font \"%s\".", filename);
-	fonts[fontnum++] = f;
+    f->len = len;
+
+    msg("<notice> Adding font \"%s\".", filename);
+    if(global_fonts_next) {
+        global_fonts_next->next = f;
+        global_fonts_next = global_fonts_next->next;
     } else {
-	msg("<error> Too many external fonts. Not adding font file \"%s\".", filename);
+        global_fonts_next = global_fonts = f;
     }
 }
 
