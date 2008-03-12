@@ -244,6 +244,24 @@ int args_callback_option(char*name,char*val) {
 	driver->set_parameter(driver, "linksopennewwindow", "0");
 	return 0;
     }
+    else if (!strcmp(name, "O"))
+    {
+	int level = 1;
+	int ret=0;
+	if(val&& val[0] && val[1]==0 && isdigit(val[0])) {
+	    level = atoi(val);
+	    ret=1;
+	}
+	if(level>=1)
+	    driver->set_parameter(driver, "poly2bitmap", "1");
+	if(level>=2)
+	    driver->set_parameter(driver, "bitmapfonts", "1");
+	if(level>=3)
+	    driver->set_parameter(driver, "ignoredraworder", "1");
+
+	flatten = 1;
+	return ret;
+    }
     else if (!strcmp(name, "G"))
     {
 	flatten = 1;
@@ -671,6 +689,7 @@ int main(int argn, char *argv[])
     result->destroy(result);
 
     pdf->destroy(pdf);
+    driver->destroy(driver);
 
     const char*zip = "";
     if(zlib) {
@@ -702,6 +721,7 @@ int main(int argn, char *argv[])
                 getRate(preloader), SWFDIR, preloader, tmpname, outputname);
         systemf("rm %s", tmpname);
     }
+
 
     return 0;
 }
