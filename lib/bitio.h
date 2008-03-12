@@ -100,6 +100,8 @@ void writer_init_memwriter(writer_t*r, void*data, int length);
 void writer_init_nullwriter(writer_t*w);
 
 void writer_init_growingmemwriter(writer_t*r, U32 grow);
+void* writer_growmemwrite_memptr(writer_t*w, int*len);
 void* writer_growmemwrite_getmem(writer_t*w);
+void writer_growmemwrite_reset(writer_t*w);
 
 #endif //__rfxswf_bitio_h__

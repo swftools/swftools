@@ -206,6 +206,14 @@ static void writer_growmemwrite_finish(writer_t*w)
     free(w->internal);mw=0;
     memset(w, 0, sizeof(writer_t));
 }
+void* writer_growmemwrite_memptr(writer_t*w, int*len)
+{
+    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    if(len) {
+	*len = w->pos;
+    }
+    return mw->data;
+}
 void* writer_growmemwrite_getmem(writer_t*w)
 {
     struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
@@ -215,6 +223,13 @@ void* writer_growmemwrite_getmem(writer_t*w)
     */
     mw->data = 0;
     return ret;
+}
+void writer_growmemwrite_reset(writer_t*w)
+{
+    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    w->pos = 0;
+    w->bitpos = 0;
+    w->mybyte = 0;
 }
 void writer_init_growingmemwriter(writer_t*w, U32 grow)
 {
@@ -590,29 +605,39 @@ void reader_resetbits(reader_t*r)
 
 U8 reader_readU8(reader_t*r)
 {
-    U8 b;
-    r->read(r, &b, 1);
+    U8 b = 0;
+    if(r->read(r, &b, 1)<1) {
+	fprintf(stderr, "bitio.c:reader_readU8: Read over end of memory region\n");
+    }
     return b;
 }
 U16 reader_readU16(reader_t*r)
 {
-    U8 b1,b2;
-    r->read(r, &b1, 1);
-    r->read(r, &b2, 1);
+    U8 b1=0,b2=0;
+    if(r->read(r, &b1, 1)<1) {
+	fprintf(stderr, "bitio.c:reader_readU16: Read over end of memory region\n");
+    }
+    if(r->read(r, &b2, 1)<1) {
+	fprintf(stderr, "bitio.c:reader_readU16: Read over end of memory region\n");
+    }
     return b1|b2<<8;
 }
 U32 reader_readU32(reader_t*r)
 {
-    U8 b1,b2,b3,b4;
-    r->read(r, &b1, 1);
-    r->read(r, &b2, 1);
-    r->read(r, &b3, 1);
-    r->read(r, &b4, 1);
+    U8 b1=0,b2=0,b3=0,b4=0;
+    if(r->read(r, &b1, 1)<1)
+	fprintf(stderr, "bitio.c:reader_readU32: Read over end of memory region\n");
+    if(r->read(r, &b2, 1)<1)
+	fprintf(stderr, "bitio.c:reader_readU32: Read over end of memory region\n");
+    if(r->read(r, &b3, 1)<1)
+	fprintf(stderr, "bitio.c:reader_readU32: Read over end of memory region\n");
+    if(r->read(r, &b4, 1)<1)
+	fprintf(stderr, "bitio.c:reader_readU32: Read over end of memory region\n");
     return b1|b2<<8|b3<<16|b4<<24;
 }
 float reader_readFloat(reader_t*r)
 {
-    U8 b1,b2,b3,b4;
+    U8 b1=0,b2=0,b3=0,b4=0;
     r->read(r, &b1, 1);
     r->read(r, &b2, 1);
     r->read(r, &b3, 1);
