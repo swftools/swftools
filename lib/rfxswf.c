@@ -1254,6 +1254,7 @@ int swf_ReadSWF2(reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed
 	reader_init_zlibinflate(&zreader, reader);
 	reader = &zreader;
     }
+    swf->compressed = 0; // derive from version number from now on
 
     reader_GetRect(reader, &swf->movieSize);
     reader->read(reader, &swf->frameRate, 2);
@@ -1382,11 +1383,10 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
        It also means that we don't initialize our own zlib
        writer, but assume the caller provided one.
      */
-      if(swf->compressed) {
+      if(swf->compressed==1 || (swf->compressed==0 && swf->fileVersion>=6)) {
 	char*id = "CWS";
 	writer->write(writer, id, 3);
-      }
-      else {
+      } else {
 	char*id = "FWS";
 	writer->write(writer, id, 3);
       }
@@ -1395,7 +1395,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
       PUT32(b4, swf->fileSize);
       writer->write(writer, b4, 4);
       
-      if(swf->compressed) {
+      if(swf->compressed==1 || (swf->compressed==0 && swf->fileVersion>=6)) {
 	writer_init_zlibdeflate(&zwriter, writer);
 	writer = &zwriter;
       }
@@ -1421,7 +1421,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
     { if (swf_WriteTag2(writer, t)<0) return -1;
       t = swf_NextTag(t);
     }
-    if(swf->compressed) {
+    if(swf->compressed==1 || (swf->compressed==0 && swf->fileVersion>=6) || swf->compressed==8) {
       if(swf->compressed != 8) {
 	zwriter.finish(&zwriter);
 	return writer->pos - writer_lastpos;
@@ -1437,28 +1437,11 @@ int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns leng
 {
   writer_t writer;
   int len = 0;
-  swf->compressed = 0;
   
   if(handle<0) {
     writer_init_nullwriter(&writer);
     len = swf_WriteSWF2(&writer, swf);
     return len;
-  }
-  writer_init_filewriter(&writer, handle);
-  len = swf_WriteSWF2(&writer, swf);
-  writer.finish(&writer);
-  return len;
-}
-
-int  swf_WriteSWC(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
-{
-  writer_t writer;
-  int len = 0;
-  swf->compressed = 1;
-
-  if(handle<0) {
-    writer_init_nullwriter(&writer);
-    len = swf_WriteSWF2(&writer, swf);
   }
   writer_init_filewriter(&writer, handle);
   len = swf_WriteSWF2(&writer, swf);

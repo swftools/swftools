@@ -28,7 +28,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <ctype.h>
 #include "../config.h"
@@ -162,7 +164,6 @@ int  swf_ReadSWF2(reader_t*reader, SWF * swf);   // Reads SWF via callback
 int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 int  swf_WriteSWF2(writer_t*writer, SWF * swf);     // Writes SWF via callback, returns length or <0 if fails
 int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns length or <0 if fails
-int  swf_WriteSWC(int handle, SWF * swf);   // for convenience, equal to swf->compressed=1;swf_WriteSWF(..)
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
 void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
 SWF* swf_CopySWF(SWF*swf);
