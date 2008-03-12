@@ -81,7 +81,6 @@ typedef struct _swfoutput_internal
     int config_drawonlyshapes;
     int config_jpegquality;
     int config_storeallcharacters;
-    int config_generate_fake_tags;
     int config_enablezlib;
     int config_insertstoptag;
     int config_flashversion;
@@ -234,7 +233,6 @@ static swfoutput_internal* init_internal_struct()
     i->config_jpegquality=85;
     i->config_storeallcharacters=0;
     i->config_enablezlib=0;
-    i->config_generate_fake_tags=0;
     i->config_insertstoptag=0;
     i->config_flashversion=6;
     i->config_framerate=0.25;
@@ -1800,8 +1798,6 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	if(i->config_protect && i->tag) {
 	    i->tag = swf_InsertTag(i->tag, ST_PROTECT);
 	}
-    } else if(!strcmp(name, "faketags")) {
-	i->config_generate_fake_tags = atoi(value);
     } else if(!strcmp(name, "flashversion")) {
 	i->config_flashversion = atoi(value);
 	if(i->swf) {
