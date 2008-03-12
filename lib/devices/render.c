@@ -752,10 +752,15 @@ void render_result_destroy(gfxresult_t*r)
     while(i) {
 	internal_result_t*next = i->next;
 	free(i->img.data);i->img.data = 0;
-	free(i);
+
+        /* FIXME memleak
+           the following rfx_free causes a segfault on WIN32 machines,
+           if executed */
+        //rfx_free(i);
+
 	i = next;
     }
-    free(r);
+    rfx_free(r);
 }
 
 gfxresult_t* render_finish(struct _gfxdevice*dev)
