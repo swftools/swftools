@@ -292,7 +292,7 @@ void BitmapOutputDev::checkNewText()
     /* called once some new text was drawn on booltextdev, and
        before the same thing is drawn on gfxdev */
     
-    msg("<debug> Testing new text data against current bitmap data, state=%d, counter=%d\n", layerstate, dbg_btm_counter);
+    msg("<trace> Testing new text data against current bitmap data, state=%d, counter=%d\n", layerstate, dbg_btm_counter);
     
     char filename1[80];
     char filename2[80];
@@ -337,7 +337,7 @@ void BitmapOutputDev::checkNewText()
 void BitmapOutputDev::checkNewBitmap()
 {
     /* similar to checkNewText() above, only in reverse */
-    msg("<debug> Testing new graphics data against current text data, state=%d, counter=%d\n", layerstate, dbg_btm_counter);
+    msg("<trace> Testing new graphics data against current text data, state=%d, counter=%d\n", layerstate, dbg_btm_counter);
 
     char filename1[80];
     char filename2[80];
