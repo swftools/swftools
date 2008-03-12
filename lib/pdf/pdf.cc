@@ -288,10 +288,21 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 
 static void storeDeviceParameter(const char*name, const char*value)
 {
+    parameter_t*o = device_config;
+    while(o) {
+        if(!strcmp(name, o->name)) {
+            /* overwrite old value */
+            free(o->value);
+            o->value = strdup(value);
+            return;
+        }
+        o = o->next;
+    }
     parameter_t*p = new parameter_t();
     p->name = strdup(name);
     p->value = strdup(value);
     p->next = 0;
+
     if(device_config_next) {
 	device_config_next->next = p;
 	device_config_next = p;
@@ -426,7 +437,6 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	GFXOutputDev*outputDev = new GFXOutputDev(i->info, i->doc);
 	i->outputDev = (CommonOutputDev*)outputDev;
     }
-
     /* pass global parameters to PDF driver*/
     parameter_t*p = device_config;
     while(p) {
