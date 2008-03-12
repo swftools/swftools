@@ -669,7 +669,7 @@ GBool GFXOutputDev::needNonText()
 }
 void GFXOutputDev::endPage() 
 {
-    msg("<verbose> endPage");
+    msg("<verbose> endPage (GfxOutputDev)");
     if(outer_clip_box) {
 	device->endclip(device);
 	outer_clip_box = 0;
