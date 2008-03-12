@@ -138,6 +138,10 @@ xpdf/%.$(O): xpdf/%.cc
 	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_objects) $(splash_objects)
 	$(RANLIB) ../libpdf$(A)
 
+xpdfapp_objects=xpdf/XPDF*.cc xpdf/PDFCore.cc xpdf/TextOutputDev.cc xpdf/xpdf.cc xpdf/CoreOutputDev.cc xpdf/UnicodeTypeTable.cc xpdf/PSOutputDev.cc
+xxpdf$(E): $(xpdf_objects) xpdf/Splash*.cc
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . $(xpdfapp_objects) $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o xxpdf$(E) $(LIBS) -lXm -lX11
+
 pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) xpdf/Splash*.cc xpdf/parseargs.c -o pdftoppm$(E) $(LIBS)
 pdftotext$(E): $(xpdf_objects) $(splash_objects)
