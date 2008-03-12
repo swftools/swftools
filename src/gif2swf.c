@@ -1,6 +1,6 @@
 /* -*- mode: c; tab-width: 4; -*- ---------------------------[for (x)emacs]--
 
-   $Id: gif2swf.c,v 1.6 2007/01/13 17:26:47 kramm Exp $
+   $Id: gif2swf.c,v 1.7 2008/03/12 19:13:31 kramm Exp $
    GIF to SWF converter tool
 
    Part of the swftools package.
@@ -184,13 +184,8 @@ int MovieFinish(SWF * swf, TAG * t, char *sname)
         if FAILED
             (swf_WriteCGI(swf)) fprintf(stderr, "WriteCGI() failed.\n");
     } else {
-        if (global.version >= 6) {
-            if (swf_WriteSWC(f, swf) < 0)
-                fprintf(stderr, "Unable to write output file: %s\n", sname);
-        } else {
-            if (swf_WriteSWF(f, swf) < 0)
-                fprintf(stderr, "Unable to write output file: %s\n", sname);
-        }
+        if (swf_WriteSWF(f, swf) < 0)
+            fprintf(stderr, "Unable to write output file: %s\n", sname);
         if (f != so)
             close(f);
     }

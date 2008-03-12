@@ -100,13 +100,8 @@ int MovieFinish(SWF * swf, TAG * t, char *sname)
     if(global.do_cgi) {
 	if FAILED(swf_WriteCGI(swf)) fprintf(stderr,"WriteCGI() failed.\n");
     } else {
-	if(global.version >= 6) {
-	    if (swf_WriteSWC(f, swf)<0) 
-		    fprintf(stderr, "Unable to write output file: %s\n", sname);
-	} else {
-	    if (swf_WriteSWF(f, swf)<0) 
-		    fprintf(stderr, "Unable to write output file: %s\n", sname);
-	}
+        if (swf_WriteSWF(f, swf)<0) 
+            fprintf(stderr, "Unable to write output file: %s\n", sname);
 	if (f != so)
 	    close(f);
     }

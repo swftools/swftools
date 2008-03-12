@@ -1064,7 +1064,7 @@ void v2swf_backpatch(v2swf_t*v2swf, char*filename)
 		close(fi);
 		fi = open(filename, O_WRONLY|O_BINARY|O_TRUNC|O_CREAT, 0666);
 		if(fi>=0) {
-		    swf_WriteSWC(fi, &tmp);
+		    swf_WriteSWF(fi, &tmp);
 		    close(fi);
 		    msg("v2swf_backpatch %s - fix header: success\n", filename);
 		}

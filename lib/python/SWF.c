@@ -211,18 +211,10 @@ static PyObject * swf_save(PyObject* self, PyObject* args, PyObject* kwargs)
 	PyErr_SetString(PyExc_Exception, setError("couldn't create output file %s", filename));
 	return 0;
     }
-    if(swf->compressed) {
-	    if(swf_WriteSWC(fi, swf)<0) {
-		close(fi);
-		PyErr_SetString(PyExc_Exception, setError("WriteSWC() failed."));
-		return 0;
-	    }
-    } else {
-	    if(swf_WriteSWF(fi, swf)<0) {
-		close(fi);
-		PyErr_SetString(PyExc_Exception, setError("WriteSWC() failed."));
-		return 0;
-	    }
+    if(swf_WriteSWF(fi, swf)<0) {
+        close(fi);
+        PyErr_SetString(PyExc_Exception, setError("WriteSWC() failed."));
+        return 0;
     }
     close(fi);
 

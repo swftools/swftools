@@ -1499,7 +1499,7 @@ void mkblack()
     tag = swf_InsertTag(tag, ST_END);
 
     int fi = open("black.swf", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-    if(swf_WriteSWC(fi,&swf)<0) {
+    if(swf_WriteSWF(fi,&swf)<0) {
 	fprintf(stderr,"WriteSWF() failed.\n");
     }
     close(fi);
@@ -1634,7 +1634,7 @@ int main(int argn, char*argv[])
     tag = swf_InsertTag(tag, ST_END);
 
     fi = open("video3.swf", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-    if(swf_WriteSWC(fi,&swf)<0) {
+    if(swf_WriteSWF(fi,&swf)<0) {
 	fprintf(stderr,"WriteSWF() failed.\n");
     }
     close(fi);

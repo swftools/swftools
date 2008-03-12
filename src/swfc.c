@@ -1039,8 +1039,6 @@ static void s_endSWF()
     }
     if(do_cgi)
 	{if(swf_WriteCGI(swf)<0) syntaxerror("WriteCGI() failed.\n");}
-    else if(swf->compressed)
-	{if(swf_WriteSWC(fi, swf)<0) syntaxerror("WriteSWC() failed.\n");}
     else
 	{if(swf_WriteSWF(fi, swf)<0) syntaxerror("WriteSWF() failed.\n");}
 

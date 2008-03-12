@@ -136,13 +136,8 @@ int MovieFinish(SWF * swf, TAG * t, char *sname)
 	    sname = "output.swf";
 	handle = open(sname, O_BINARY | O_RDWR | O_CREAT | O_TRUNC, 0666);
     }
-    if(global.version >= 6) {
-	if (swf_WriteSWC(handle, swf)<0) 
-		fprintf(stderr, "Unable to write output file: %s\n", sname);
-    } else {
-	if (swf_WriteSWF(handle, swf)<0) 
-		fprintf(stderr, "Unable to write output file: %s\n", sname);
-    }
+    if (swf_WriteSWF(handle, swf)<0) 
+        fprintf(stderr, "Unable to write output file: %s\n", sname);
 
     if (handle != so)
 	close(handle);

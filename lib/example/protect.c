@@ -74,10 +74,8 @@ int main(int argn,char ** argv)
     if(fi<0) {
 	fprintf(stderr, "couldn't create output file %s", outfilename);
     }
-    if(swf.compressed) 
-	{if(swf_WriteSWC(fi, &swf)<0) fprintf(stderr, "WriteSWC() failed.\n");}
-    else
-	{if(swf_WriteSWF(fi, &swf)<0) fprintf(stderr, "WriteSWF() failed.\n");}
+    if(swf_WriteSWF(fi, &swf)<0) 
+        fprintf(stderr, "WriteSWF() failed.\n");
 
     close(fi);
     

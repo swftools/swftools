@@ -1278,13 +1278,8 @@ int swfresult_save(gfxresult_t*gfx, const char*filename)
 	return -1;
     }
     
-    if(swf->compressed) {
-	if FAILED(swf_WriteSWC(fi,swf)) 
-	    msg("<error> WriteSWC() failed.\n");
-    } else {
-	if FAILED(swf_WriteSWF(fi,swf)) 
-	    msg("<error> WriteSWF() failed.\n");
-    }
+    if FAILED(swf_WriteSWF(fi,swf)) 
+        msg("<error> WriteSWF() failed.\n");
 
     if(filename)
      close(fi);

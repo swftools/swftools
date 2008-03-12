@@ -1283,9 +1283,10 @@ int main(int argn, char *argv[])
     if(config.zlib) {
 	if(newswf.fileVersion < 6)
 	    newswf.fileVersion = 6;
-	swf_WriteSWC(fi, &newswf);
+        newswf.compressed = 1;
+	swf_WriteSWF(fi, &newswf);
     } else {
-	newswf.compressed = 0;
+	newswf.compressed = -1; // don't compress
 	swf_WriteSWF(fi, &newswf);
     }
     close(fi);
