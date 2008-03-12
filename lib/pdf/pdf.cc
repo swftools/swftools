@@ -41,6 +41,7 @@ typedef struct _pdf_doc_internal
     CommonOutputDev*outputDev;
     pdf_page_info_t*pages;
     gfxdevice_t* middev;
+    char*filename;
 } pdf_doc_internal_t;
 
 typedef struct _pdf_page_internal
@@ -148,6 +149,10 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
     free(i->pages); i->pages = 0;
 
     i->docinfo.free();
+
+    if(i->filename) {
+	free(i->filename);i->filename=0;
+    }
     
     if(i->info) {
 	delete i->info;i->info=0;
@@ -370,7 +375,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     pdf_doc->internal = i;
     char*userPassword=0;
     
-    filename = strdup(filename);
+    i->filename = strdup(filename);
 
     char*x = 0;
     if((x = strchr(filename, '|'))) {
@@ -460,6 +465,14 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     return pdf_doc;
 
 }
+    
+void pdf_destroy(gfxsource_t*src)
+{
+    if(!src->internal)
+	return;
+    gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
+    free(src->internal);src->internal=0;
+}
 
 gfxsource_t*gfxsource_pdf_create()
 {
@@ -467,6 +480,7 @@ gfxsource_t*gfxsource_pdf_create()
     memset(src, 0, sizeof(gfxsource_t));
     src->set_parameter = pdf_set_parameter;
     src->open = pdf_open;
+    src->destroy = pdf_destroy;
     src->internal = malloc(sizeof(gfxsource_internal_t));
     memset(src->internal, 0, sizeof(gfxsource_internal_t));
 
