@@ -727,6 +727,10 @@ static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, float x, floa
     p.y = (SCOORD)((- x * i->fontmatrix.r0/65536.0 + y * i->fontmatrix.sx/65536.0)*det);
 
     RGBA rgba = *(RGBA*)col;
+    
+    msg("<trace> Drawing char %d in font %d at %d,%d in color %02x%02x%02x%02x", 
+	    charid, swffont->id, p.x,p.y, rgba.r, rgba.g, rgba.b, rgba.a);
+
     putcharacter(dev, swffont->id, charid,p.x,p.y,i->current_font_size, rgba);
     swf_FontUseGlyph(swffont, charid);
     return 1;
@@ -2563,8 +2567,10 @@ static void swf_switchfont(gfxdevice_t*dev, const char*fontid)
 static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(!font)
+    if(!font) {
+	msg("<error> swf_drawchar called (glyph %d) without font", glyph);
 	return;
+    }
 	
     if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,font->id)) // not equal to current font
     {
