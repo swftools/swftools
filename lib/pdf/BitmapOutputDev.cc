@@ -93,8 +93,14 @@ BitmapOutputDev::~BitmapOutputDev()
     if(this->rgbdev) {
 	delete this->rgbdev;this->rgbdev = 0;
     }
+    if(this->gfxdev) {
+	delete this->gfxdev;this->gfxdev= 0;
+    }
     if(this->boolpolydev) {
 	delete this->boolpolydev;this->boolpolydev = 0;
+    }
+    if(this->booltextdev) {
+	delete this->booltextdev;this->booltextdev = 0;
     }
     if(this->clip0dev) {
 	delete this->clip0dev;this->clip0dev = 0;
@@ -496,7 +502,7 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     this->width = (int)(x2-x1);
     this->height = (int)(y2-y1);
 
-    msg("<verbose> startPage");
+    msg("<debug> startPage");
     rgbdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     boolpolydev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     booltextdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
@@ -934,21 +940,21 @@ void BitmapOutputDev::updateTextShift(GfxState *state, double shift)
 
 void BitmapOutputDev::stroke(GfxState *state)
 {
-    msg("<verbose> stroke");
+    msg("<debug> stroke");
     boolpolydev->stroke(state);
     checkNewBitmap();
     rgbdev->stroke(state);
 }
 void BitmapOutputDev::fill(GfxState *state)
 {
-    msg("<verbose> fill");
+    msg("<debug> fill");
     boolpolydev->fill(state);
     checkNewBitmap();
     rgbdev->fill(state);
 }
 void BitmapOutputDev::eoFill(GfxState *state)
 {
-    msg("<verbose> eoFill");
+    msg("<debug> eoFill");
     boolpolydev->eoFill(state);
     checkNewBitmap();
     rgbdev->eoFill(state);
@@ -960,7 +966,7 @@ void BitmapOutputDev::tilingPatternFill(GfxState *state, Object *str,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep)
 {
-    msg("<verbose> tilingPatternFill");
+    msg("<debug> tilingPatternFill");
     boolpolydev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
     checkNewBitmap();
     rgbdev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
@@ -972,7 +978,7 @@ void BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep) 
 {
-    msg("<verbose> tilingPatternFill");
+    msg("<debug> tilingPatternFill");
     boolpolydev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
     checkNewBitmap();
     rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
@@ -981,21 +987,21 @@ void BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
 
 GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
 {
-    msg("<verbose> functionShadedFill");
+    msg("<debug> functionShadedFill");
     boolpolydev->functionShadedFill(state, shading);
     checkNewBitmap();
     return rgbdev->functionShadedFill(state, shading);
 }
 GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
 {
-    msg("<verbose> axialShadedFill");
+    msg("<debug> axialShadedFill");
     boolpolydev->axialShadedFill(state, shading);
     checkNewBitmap();
     return rgbdev->axialShadedFill(state, shading);
 }
 GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
 {
-    msg("<verbose> radialShadedFill");
+    msg("<debug> radialShadedFill");
     boolpolydev->radialShadedFill(state, shading);
     checkNewBitmap();
     return rgbdev->radialShadedFill(state, shading);
@@ -1006,7 +1012,7 @@ SplashColor white = {255,255,255};
 
 void BitmapOutputDev::clip(GfxState *state)
 {
-    msg("<verbose> clip");
+    msg("<debug> clip");
     boolpolydev->clip(state);
     booltextdev->clip(state);
     rgbdev->clip(state);
@@ -1014,7 +1020,7 @@ void BitmapOutputDev::clip(GfxState *state)
 }
 void BitmapOutputDev::eoClip(GfxState *state)
 {
-    msg("<verbose> eoClip");
+    msg("<debug> eoClip");
     boolpolydev->eoClip(state);
     booltextdev->eoClip(state);
     rgbdev->eoClip(state);
@@ -1022,7 +1028,7 @@ void BitmapOutputDev::eoClip(GfxState *state)
 }
 void BitmapOutputDev::clipToStrokePath(GfxState *state)
 {
-    msg("<verbose> clipToStrokePath");
+    msg("<debug> clipToStrokePath");
     boolpolydev->clipToStrokePath(state);
     booltextdev->clipToStrokePath(state);
     rgbdev->clipToStrokePath(state);
@@ -1031,24 +1037,24 @@ void BitmapOutputDev::clipToStrokePath(GfxState *state)
 
 void BitmapOutputDev::beginStringOp(GfxState *state)
 {
-    msg("<verbose> beginStringOp");
+    msg("<debug> beginStringOp");
     if(this->config_bitmapfonts) {
 	rgbdev->beginStringOp(state);
+    } else {
 	clip0dev->beginStringOp(state);
 	clip1dev->beginStringOp(state);
-    } else {
 	booltextdev->beginStringOp(state);
 	gfxdev->beginStringOp(state);
     }
 }
 void BitmapOutputDev::endStringOp(GfxState *state)
 {
-    msg("<verbose> endStringOp");
+    msg("<debug> endStringOp");
     if(this->config_bitmapfonts) {
 	rgbdev->endStringOp(state);
+    } else {
 	clip0dev->endStringOp(state);
 	clip1dev->endStringOp(state);
-    } else {
 	booltextdev->endStringOp(state);
 	checkNewText();
 	gfxdev->endStringOp(state);
@@ -1056,24 +1062,24 @@ void BitmapOutputDev::endStringOp(GfxState *state)
 }
 void BitmapOutputDev::beginString(GfxState *state, GString *s)
 {
-    msg("<verbose> beginString");
+    msg("<debug> beginString");
     if(this->config_bitmapfonts) {
 	rgbdev->beginString(state, s);
+    } else {
 	clip0dev->beginString(state, s);
 	clip1dev->beginString(state, s);
-    } else {
 	booltextdev->beginString(state, s);
 	gfxdev->beginString(state, s);
     }
 }
 void BitmapOutputDev::endString(GfxState *state)
 {
-    msg("<verbose> endString");
+    msg("<debug> endString");
     if(this->config_bitmapfonts) {
 	rgbdev->endString(state);
+    } else {
 	clip0dev->endString(state);
 	clip1dev->endString(state);
-    } else {
 	booltextdev->endString(state);
 	checkNewText();
 	gfxdev->endString(state);
@@ -1098,7 +1104,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		      double originX, double originY,
 		      CharCode code, int nBytes, Unicode *u, int uLen)
 {
-    msg("<verbose> drawChar");
+    msg("<debug> drawChar");
     if(this->config_bitmapfonts || (state->getRender()&4) /*clip*/ ) {
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else {
@@ -1149,12 +1155,12 @@ void BitmapOutputDev::endTextObject(GfxState *state)
               might end up unflushed- should be handled similarily as
 	      drawChar() above
      */
-    msg("<verbose> endTextObject");
+    msg("<debug> endTextObject");
     if(this->config_bitmapfonts) {
 	rgbdev->endTextObject(state);
+    } else {
 	clip0dev->endTextObject(state);
 	clip1dev->endTextObject(state);
-    } else {
 	gfxdev->endType3Char(state);
     }
 }
@@ -1165,7 +1171,7 @@ GBool BitmapOutputDev::beginType3Char(GfxState *state, double x, double y,
 			     double dx, double dy,
 			     CharCode code, Unicode *u, int uLen)
 {
-    msg("<verbose> beginType3Char");
+    msg("<debug> beginType3Char");
     if(this->config_bitmapfonts) {
 	return rgbdev->beginType3Char(state, x, y, dx, dy, code, u, uLen);
     } else {
@@ -1176,7 +1182,7 @@ GBool BitmapOutputDev::beginType3Char(GfxState *state, double x, double y,
 }
 void BitmapOutputDev::type3D0(GfxState *state, double wx, double wy)
 {
-    msg("<verbose> type3D0");
+    msg("<debug> type3D0");
     if(this->config_bitmapfonts) {
 	rgbdev->type3D0(state, wx, wy);
     } else {
@@ -1185,7 +1191,7 @@ void BitmapOutputDev::type3D0(GfxState *state, double wx, double wy)
 }
 void BitmapOutputDev::type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury)
 {
-    msg("<verbose> type3D1");
+    msg("<debug> type3D1");
     if(this->config_bitmapfonts) {
 	rgbdev->type3D1(state, wx, wy, llx, lly, urx, ury);
     } else {
@@ -1194,7 +1200,7 @@ void BitmapOutputDev::type3D1(GfxState *state, double wx, double wy, double llx,
 }
 void BitmapOutputDev::endType3Char(GfxState *state)
 {
-    msg("<verbose> endType3Char");
+    msg("<debug> endType3Char");
     if(this->config_bitmapfonts) {
 	rgbdev->endType3Char(state);
     } else {
@@ -1205,7 +1211,7 @@ void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
 			   GBool inlineImg)
 {
-    msg("<verbose> drawImageMask");
+    msg("<debug> drawImageMask");
     boolpolydev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
     checkNewBitmap();
     rgbdev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
@@ -1214,7 +1220,7 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
 		       int *maskColors, GBool inlineImg)
 {
-    msg("<verbose> drawImage");
+    msg("<debug> drawImage");
     boolpolydev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
     checkNewBitmap();
     rgbdev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
@@ -1225,7 +1231,7 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     Stream *maskStr, int maskWidth, int maskHeight,
 			     GBool maskInvert)
 {
-    msg("<verbose> drawMaskedImage");
+    msg("<debug> drawMaskedImage");
     boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
     checkNewBitmap();
     rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
@@ -1237,14 +1243,14 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
 				 int maskWidth, int maskHeight,
 				 GfxImageColorMap *maskColorMap)
 {
-    msg("<verbose> drawSoftMaskedImage");
+    msg("<debug> drawSoftMaskedImage");
     boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
     checkNewBitmap();
     rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
 }
 void BitmapOutputDev::drawForm(Ref id)
 {
-    msg("<verbose> drawForm");
+    msg("<debug> drawForm");
     boolpolydev->drawForm(id);
     checkNewBitmap();
     rgbdev->drawForm(id);
@@ -1252,7 +1258,7 @@ void BitmapOutputDev::drawForm(Ref id)
 
 void BitmapOutputDev::processLink(Link *link, Catalog *catalog)
 {
-    msg("<verbose> processLink");
+    msg("<debug> processLink");
     gfxdev->processLink(link, catalog);
 }
 
@@ -1261,13 +1267,14 @@ void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				    GBool isolated, GBool knockout,
 				    GBool forSoftMask)
 {
-    msg("<verbose> beginTransparencyGroup");
+    msg("<debug> beginTransparencyGroup");
+    boolpolydev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
     rgbdev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
     clip1dev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
 }
 void BitmapOutputDev::endTransparencyGroup(GfxState *state)
 {
-    msg("<verbose> endTransparencyGroup");
+    msg("<debug> endTransparencyGroup");
     boolpolydev->endTransparencyGroup(state);
     checkNewBitmap();
     rgbdev->endTransparencyGroup(state);
@@ -1275,14 +1282,14 @@ void BitmapOutputDev::endTransparencyGroup(GfxState *state)
 }
 void BitmapOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 {
-    msg("<verbose> paintTransparencyGroup");
+    msg("<debug> paintTransparencyGroup");
     boolpolydev->paintTransparencyGroup(state,bbox);
     checkNewBitmap();
     rgbdev->paintTransparencyGroup(state,bbox);
 }
 void BitmapOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor)
 {
-    msg("<verbose> setSoftMask");
+    msg("<debug> setSoftMask");
     boolpolydev->setSoftMask(state, bbox, alpha, transferFunc, backdropColor);
     checkNewBitmap();
     rgbdev->setSoftMask(state, bbox, alpha, transferFunc, backdropColor);
@@ -1290,7 +1297,7 @@ void BitmapOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Fu
 }
 void BitmapOutputDev::clearSoftMask(GfxState *state)
 {
-    msg("<verbose> clearSoftMask");
+    msg("<debug> clearSoftMask");
     boolpolydev->clearSoftMask(state);
     checkNewBitmap();
     rgbdev->clearSoftMask(state);
