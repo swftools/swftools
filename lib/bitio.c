@@ -89,15 +89,12 @@ static int reader_memread(reader_t*reader, void* data, int len)
 {
     struct memread_t*mr = (struct memread_t*)reader->internal;
 
-    if(mr->length - reader->pos > len) {
-	memcpy(data, &mr->data[reader->pos], len);
-	reader->pos += len;
-	return len;
-    } else {
-	memcpy(data, &mr->data[reader->pos], mr->length - reader->pos);
-	reader->pos += mr->length;
-	return mr->length - reader->pos;
+    if(mr->length - reader->pos < len) {
+	len = mr->length - reader->pos;
     }
+    memcpy(data, &mr->data[reader->pos], len);
+    reader->pos += len;
+    return len;
 }
 static void reader_memread_dealloc(reader_t*reader)
 {
