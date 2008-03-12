@@ -2470,8 +2470,8 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	    advance = xmax;
 	}
 	    
-	if(advance<32768) {
-	    swffont->glyph[t].advance = advance;
+	if(advance<32768/20) {
+	    swffont->glyph[t].advance = advance*20;
 	} else {
 	    swffont->glyph[t].advance = 32767;
 	}
@@ -2489,6 +2489,9 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	swffont->layout->descent = (bounds.ymax - bounds.ymin)/2;
 	swffont->layout->leading = bounds.ymax - bounds.ymin;
     }
+    swffont->layout->descent= (bounds.ymax - bounds.ymin);
+    swffont->layout->ascent = 0;
+    swffont->layout->leading = bounds.ymax - bounds.ymin;
 
     return swffont;
 }
