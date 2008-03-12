@@ -196,9 +196,9 @@ static int writer_growmemwrite_write(writer_t*w, void* data, int len)
 static void writer_growmemwrite_finish(writer_t*w)
 {
     struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
-    if(mw->data)
-	free(mw->data);
-    mw->data = 0;
+    if(mw->data) {
+	free(mw->data);mw->data = 0;
+    }
     mw->length = 0;
     free(w->internal);mw=0;
     memset(w, 0, sizeof(writer_t));
@@ -230,15 +230,15 @@ void writer_growmemwrite_reset(writer_t*w)
 }
 void writer_init_growingmemwriter(writer_t*w, U32 grow)
 {
-    struct growmemwrite_t *mr;
-    mr = (struct growmemwrite_t *)malloc(sizeof(struct growmemwrite_t));
-    mr->length = 4096;
-    mr->data = (unsigned char *)malloc(mr->length);
-    mr->grow = grow;
+    struct growmemwrite_t *mw;
+    mw = (struct growmemwrite_t *)malloc(sizeof(struct growmemwrite_t));
+    mw->length = 4096;
+    mw->data = (unsigned char *)malloc(mw->length);
+    mw->grow = grow;
     memset(w, 0, sizeof(writer_t));
     w->write = writer_growmemwrite_write;
     w->finish = writer_growmemwrite_finish;
-    w->internal = (void*)mr;
+    w->internal = (void*)mw;
     w->type = WRITER_TYPE_GROWING_MEM;
     w->bitpos = 0;
     w->mybyte = 0;
@@ -664,7 +664,7 @@ char*reader_readString(reader_t*r)
 	    break;
     }
     char*string = (char*)writer_growmemwrite_getmem(&g);
-    writer_growmemwrite_finish(&g);
+    g.finish(&g);
     return string;
 }
 
