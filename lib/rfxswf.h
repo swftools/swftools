@@ -1064,9 +1064,22 @@ typedef struct _FILTER_BLUR {
     int passes;
 } FILTER_BLUR;
 
+typedef struct _FILTER_GLOW {
+    U8 type;
+    RGBA rgba;
+    double blurx;
+    double blury;
+    double strength;
+    int passes;
+    char innerglow;
+    char knockout;
+    char composite;
+} FILTER_GLOW;
+
 void swf_SetFilter(TAG*tag, FILTER*f);
 FILTER*swf_GetFilter(TAG*tag);
 FILTER*swf_NewFilter(U8 type);
+void swf_DeleteFilter(FILTER*f);
 
 void AVM2_InsertStops(SWF*swf);
 
