@@ -538,6 +538,15 @@ void dumpFilter(FILTER*filter)
 	FILTER_BLUR*f = (FILTER_BLUR*)filter;
 	printf("blurx: %f blury: %f\n", f->blurx, f->blury);
 	printf("passes: %d\n", f->passes);
+    } if(filter->type == FILTERTYPE_GLOW) {
+	FILTER_GLOW*f = (FILTER_GLOW*)filter;
+	printf("color %02x%02x%02x%02x\n", f->rgba.r,f->rgba.g,f->rgba.b,f->rgba.a);
+	printf("blurx: %f blury: %f strength: %f\n", f->blurx, f->blury, f->strength);
+	printf("passes: %d\n", f->passes);
+	printf("flags: %s%s%s\n", 
+		f->knockout?"knockout ":"",
+		f->composite?"composite ":"",
+		f->innerglow?"innerglow":"");
     } if(filter->type == FILTERTYPE_DROPSHADOW) {
 	FILTER_DROPSHADOW*f = (FILTER_DROPSHADOW*)filter;
 	printf("blurx: %f blury: %f\n", f->blurx, f->blury);
@@ -926,7 +935,6 @@ int main (int argc,char ** argv)
     }
 
     f = open(filename,O_RDONLY|O_BINARY);
-
     if (f<0)
     { 
 	char buffer[256];
@@ -934,6 +942,12 @@ int main (int argc,char ** argv)
         perror(buffer);
         exit(1);
     }
+    char header[3];
+    read(f, header, 3);
+    int compressed = (header[0]=='C');
+    close(f);
+    f = open(filename,O_RDONLY|O_BINARY);
+
     if FAILED(swf_ReadSWF(f,&swf))
     { 
         fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
@@ -943,13 +957,18 @@ int main (int argc,char ** argv)
 
 #ifdef HAVE_STAT
     fstat(f, &statbuf);
-    if(statbuf.st_size != swf.fileSize && !swf.compressed)
+    if(statbuf.st_size != swf.fileSize && !compressed)
         dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
                 statbuf.st_size, swf.fileSize);
     filesize = statbuf.st_size;
 #endif
 
     close(f);
+    
+    if(action && swf.fileVersion>=9) {
+        fprintf(stderr, "Actionscript parsing (-a) not yet supported for SWF versions>=9\n");
+	action = 0;
+    }
 
     xsize = (swf.movieSize.xmax-swf.movieSize.xmin)/20;
     ysize = (swf.movieSize.ymax-swf.movieSize.ymin)/20;
@@ -1018,7 +1037,7 @@ int main (int argc,char ** argv)
 	return 0;
     } 
     printf("[HEADER]        File version: %d\n", swf.fileVersion);
-    if(swf.compressed) {
+    if(compressed) {
 	printf("[HEADER]        File is zlib compressed.");
 	if(filesize && swf.fileSize)
 	    printf(" Ratio: %02d%%\n", filesize*100/(swf.fileSize));
