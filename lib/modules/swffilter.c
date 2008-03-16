@@ -9,6 +9,8 @@ void swf_SetFilter(TAG*tag, FILTER*filter)
 	swf_SetFixed(tag, f->blury);
 	U8 flags = f->passes << 3;
 	swf_SetU8(tag, flags);
+    } else if(filter->type == FILTERTYPE_GLOW) {
+	FILTER_GLOW*f = (FILTER_GLOW*)filter;
     } else if(filter->type == FILTERTYPE_DROPSHADOW) {
 	FILTER_DROPSHADOW*f = (FILTER_DROPSHADOW*)filter;
 	swf_SetRGBA(tag, &f->color);
@@ -62,6 +64,19 @@ FILTER*swf_GetFilter(TAG*tag)
 	f->blury = swf_GetFixed(tag);
 	U8 flags = swf_GetU8(tag);
 	f->passes = (flags&15)<<3;
+	return (FILTER*)f;
+    } else if(type == FILTERTYPE_GLOW) {
+	FILTER_GLOW* f = (FILTER_GLOW*)rfx_calloc(sizeof(FILTER_GLOW));
+	f->type = type;
+	swf_GetRGBA(tag, &f->rgba);
+	f->blurx = swf_GetFixed(tag);
+	f->blury = swf_GetFixed(tag);
+	f->strength = swf_GetFixed8(tag);
+	U8 flags = swf_GetU8(tag);
+	f->passes = flags&31;
+	f->innerglow = (flags>>7)&1;
+	f->knockout = (flags>>6)&1;
+	f->composite = (flags>>5)&1;
 	return (FILTER*)f;
     } else if(type == FILTERTYPE_GRADIENTGLOW) {
 	FILTER_GRADIENTGLOW* f = (FILTER_GRADIENTGLOW*)rfx_calloc(sizeof(FILTER_GRADIENTGLOW));
@@ -142,4 +157,10 @@ FILTER*swf_NewFilter(U8 type)
     if(f)
 	f->type = type;
     return f;
+}
+
+void swf_DeleteFilter(FILTER*f)
+{
+    //FIXME
+    free(f);
 }
