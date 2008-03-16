@@ -506,6 +506,39 @@ void dummycallback1(TAG*tag, int x, void*y)
 // from swftools.c:
 void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph);
 
+static void parseFillStyle(FILLSTYLE*dest, TAG*tag, int num)
+{
+    int type = swf_GetU8(tag); //type
+    dest->type = type;
+    if(type == 0) {
+	/* plain color */
+	if(num >= 3)
+	    swf_GetRGBA(tag, &dest->color);
+	else 
+	    swf_GetRGB(tag, &dest->color);
+    }
+    else if(type == 0x10 || type == 0x11 || type == 0x12 || type == 0x13)
+    {
+	/* linear/radial gradient fill */
+	swf_ResetReadBits(tag);
+	swf_GetMatrix(tag, &dest->m);
+	swf_ResetReadBits(tag);
+	swf_GetGradient(tag, &dest->gradient, num>=3?1:0);
+	if(type == 0x13)
+	    swf_GetU16(tag);
+    }
+    else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
+    {
+	/* bitmap fill */
+	swf_ResetReadBits(tag);
+	dest->id_bitmap = swf_GetU16(tag); //id
+	swf_ResetReadBits(tag); //?
+	swf_GetMatrix(tag, &dest->m);
+    }
+    else {
+	fprintf(stderr, "rfxswf:swfshape.c Unknown fillstyle:0x%02x in tag %02d\n",type, tag->id);
+    }
+}
 static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
 {
     U16 count;
@@ -531,40 +564,8 @@ static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
     if(shape->numfillstyles) {
 	shape->fillstyles = (FILLSTYLE*)rfx_realloc(shape->fillstyles, sizeof(FILLSTYLE)*shape->numfillstyles);
 
-        for(t=fillstylestart;t<shape->numfillstyles;t++)
-        {
-            int type;
-            FILLSTYLE*dest = &shape->fillstyles[t];
-            type = swf_GetU8(tag); //type
-            shape->fillstyles[t].type = type;
-            if(type == 0) {
-                /* plain color */
-                if(num >= 3)
-                    swf_GetRGBA(tag, &dest->color);
-                else 
-                    swf_GetRGB(tag, &dest->color);
-            }
-            else if(type == 0x10 || type == 0x11 || type == 0x12 || type == 0x13)
-            {
-                /* linear/radial gradient fill */
-                swf_ResetReadBits(tag);
-                swf_GetMatrix(tag, &dest->m);
-                swf_ResetReadBits(tag);
-                swf_GetGradient(tag, &dest->gradient, num>=3?1:0);
-		if(type == 0x13)
-		    swf_GetU8(tag);
-            }
-            else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
-            {
-                /* bitmap fill */
-                swf_ResetReadBits(tag);
-                dest->id_bitmap = swf_GetU16(tag); //id
-                swf_ResetReadBits(tag); //?
-                swf_GetMatrix(tag, &dest->m);
-            }
-            else {
-                fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x\n",type);
-            }
+        for(t=fillstylestart;t<shape->numfillstyles;t++) {
+	    parseFillStyle(&shape->fillstyles[t], tag, num);
         }
     }
 
@@ -580,22 +581,29 @@ static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
            "built in" linestyle 0? */
         for(t=linestylestart;t<shape->numlinestyles;t++) 
         {
+	    char fill = 0;
             shape->linestyles[t].width = swf_GetU16(tag);
 
 	    if(num >= 4) {
 		U16 flags = swf_GetU16(tag);
-		if(flags & 0x2000)
+		if((flags & 0x30) == 0x20)
 		    swf_GetU16(tag); // miter limit
-		if(flags & 0x0800) {
-		    fprintf(stderr, "Filled strokes parsing not yet supported\n");
-		    return 0;
+		if(flags & 0x08) {
+		    fprintf(stderr, "Warning: Filled strokes parsing not yet fully supported\n");
+		    fill = 1;
 		}
 	    }
 
-            if(num >= 3)
-                swf_GetRGBA(tag, &shape->linestyles[t].color);
-            else
-                swf_GetRGB(tag, &shape->linestyles[t].color);
+	    if(fill) {
+		FILLSTYLE f;
+		parseFillStyle(&f, tag, num);
+		shape->linestyles[t].color = f.color;
+	    } else {
+		if(num >= 3)
+		    swf_GetRGBA(tag, &shape->linestyles[t].color);
+		else
+		    swf_GetRGB(tag, &shape->linestyles[t].color);
+	    }
         }
     }
     return 1;
@@ -621,7 +629,7 @@ static SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebi
     tag->data = data;
     tag->len = tag->memsize = (bits+7)/8;
     tag->pos = 0;
-    tag->id = version==1?ST_DEFINESHAPE:(version==2?ST_DEFINESHAPE2:ST_DEFINESHAPE3);
+    tag->id = version==1?ST_DEFINESHAPE:(version==2?ST_DEFINESHAPE2:(version==3?ST_DEFINESHAPE3:ST_DEFINESHAPE4));
 
     lines->next = 0;
     while(1) {
@@ -977,9 +985,11 @@ void swf_ParseDefineShape(TAG*tag, SHAPE2*shape)
     swf_ResetReadBits(tag); 
     fill = (U16)swf_GetBits(tag,4);
     line = (U16)swf_GetBits(tag,4);
+    if(!fill && !line) {
+	fprintf(stderr, "fill/line bits are both zero\n");
+    }
 
-    shape->lines = swf_ParseShapeData(&tag->data[tag->pos], (tag->len - tag->pos)*8, fill, line, 
-	    tag->id == ST_DEFINESHAPE?1:(tag->id==ST_DEFINESHAPE2?2:3), shape);
+    shape->lines = swf_ParseShapeData(&tag->data[tag->pos], (tag->len - tag->pos)*8, fill, line, num, shape);
 
     l = shape->lines;
 }

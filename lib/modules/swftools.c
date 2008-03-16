@@ -461,6 +461,92 @@ void swf_GetMorphGradient(TAG * tag, GRADIENT * gradient1, GRADIENT * gradient2)
 #define DEBUG_ENUMERATE if(0)
 //#define DEBUG_ENUMERATE
 
+void enumerateUsedIDs_fillstyle(TAG * tag, int t, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph)
+{
+    int type;
+    type = swf_GetU8(tag); //type
+    DEBUG_ENUMERATE printf("fill style %d) type=%02x (tagpos=%d)\n", t, type, tag->pos);
+    if(type == 0) {
+	RGBA color;
+	if(num >= 3)
+	    {swf_GetRGBA(tag, &color);if(morph) swf_GetRGBA(tag, NULL);}
+	else 
+	    {swf_GetRGB(tag, &color);if(morph) swf_GetRGB(tag, NULL);}
+	DEBUG_ENUMERATE printf("               %02x%02x%02x%02x\n", color.r,color.g,color.b,color.a);
+    }
+    else if(type == 0x10 || type == 0x12 || type == 0x13)
+    {
+	swf_ResetReadBits(tag);
+	MATRIX m;
+	swf_GetMatrix(tag, &m);
+	DEBUG_ENUMERATE swf_DumpMatrix(stdout, &m);
+	if(morph) {
+	    swf_GetMatrix(tag, &m);
+	    DEBUG_ENUMERATE swf_DumpMatrix(stdout, &m);
+	}
+	swf_ResetReadBits(tag);
+	if(morph) {
+	    swf_GetMorphGradient(tag, NULL, NULL);
+	    if(type == 0x13) {
+		swf_GetU16(tag);
+		swf_GetU16(tag);
+	    }
+	} else {
+	    GRADIENT g;
+	    swf_GetGradient(tag, &g, /*alpha*/ num>=3?1:0);
+	    DEBUG_ENUMERATE swf_DumpGradient(stdout, &g);
+	    if(type == 0x13)
+		swf_GetU16(tag);
+	}
+    }
+    else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
+    {
+	swf_ResetReadBits(tag);
+	if(tag->data[tag->pos] != 0xff ||
+	   tag->data[tag->pos+1] != 0xff)
+	(callback)(tag, tag->pos, callback_data);
+
+	swf_GetU16(tag);
+	swf_ResetReadBits(tag);
+	swf_GetMatrix(tag, NULL);
+	if(morph)
+	    swf_GetMatrix(tag, NULL);
+    }
+    else {
+	fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x in tag %02d\n",type, tag->id);
+    }
+}
+
+void enumerateUsedIDs_linestyle(TAG * tag, int t, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph)
+{
+    U16  width;
+    RGBA color;
+    width = swf_GetU16(tag);
+    char fill=0;
+    if(morph)
+	swf_GetU16(tag);
+    if(num >= 4) {
+	U16 flags = swf_GetU16(tag);
+	DEBUG_ENUMERATE printf("line style %d) flags: %08x\n", t, flags);
+	if((flags & 0x30) == 0x20) {
+	    U16 miter = swf_GetU16(tag); // miter limit
+	    DEBUG_ENUMERATE printf("line style %d) miter join: %08x\n", t, miter);
+	}
+	if(flags & 0x08) {
+	    fill = 1;
+	}
+    }
+    if(!fill) {
+	if(num >= 3)
+	    {swf_GetRGBA(tag, &color);if(morph) swf_GetRGBA(tag, NULL);}
+	else
+	    {swf_GetRGB(tag, &color);if(morph) swf_GetRGB(tag, NULL);}
+    } else {
+	enumerateUsedIDs_fillstyle(tag, t, callback, callback_data, num, morph);
+    }
+    DEBUG_ENUMERATE printf("line style %d) width=%.2f color=%02x%02x%02x%02x \n", t, width/20.0, color.r,color.g,color.b,color.a);
+}
+
 void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void*callback_data, int num, int morph)
 {
     U16 count;
@@ -472,50 +558,7 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
     DEBUG_ENUMERATE printf("%d fill styles\n", count);
     for(t=0;t<count;t++)
     {
-	int type;
-	type = swf_GetU8(tag); //type
-	DEBUG_ENUMERATE printf("fill style %d) %02x (tagpos=%d)\n", t, type, tag->pos);
-	if(type == 0) {
-	    if(num >= 3)
-		{swf_GetRGBA(tag, NULL);if(morph) swf_GetRGBA(tag, NULL);}
-	    else 
-		{swf_GetRGB(tag, NULL);if(morph) swf_GetRGB(tag, NULL);}
-	}
-	else if(type == 0x10 || type == 0x12 || type == 0x13)
-	{
-	    swf_ResetReadBits(tag);
-	    MATRIX m;
-	    swf_GetMatrix(tag, &m);
-	    DEBUG_ENUMERATE swf_DumpMatrix(stdout, &m);
-	    if(morph)
-		swf_GetMatrix(tag, NULL);
-	    swf_ResetReadBits(tag);
-	    if(morph)
-		swf_GetMorphGradient(tag, NULL, NULL);
-	    else {
-		GRADIENT g;
-		swf_GetGradient(tag, &g, /*alpha*/ num>=3?1:0);
-		DEBUG_ENUMERATE swf_DumpGradient(stdout, &g);
-		if(type == 0x13)
-		    swf_GetU16(tag);
-	    }
-	}
-	else if(type == 0x40 || type == 0x41 || type == 0x42 || type == 0x43)
-	{
-	    swf_ResetReadBits(tag);
-	    if(tag->data[tag->pos] != 0xff ||
-	       tag->data[tag->pos+1] != 0xff)
-	    (callback)(tag, tag->pos, callback_data);
-
-	    swf_GetU16(tag);
-	    swf_ResetReadBits(tag);
-	    swf_GetMatrix(tag, NULL);
-	    if(morph)
-		swf_GetMatrix(tag, NULL);
-	}
-	else {
-	    fprintf(stderr, "rfxswf:swftools.c Unknown fillstyle:0x%02x in tag %02x\n",type, tag->id);
-	}
+	enumerateUsedIDs_fillstyle(tag, t, callback, callback_data, num, morph);
     }
     swf_ResetReadBits(tag);
     count = swf_GetU8(tag); // line style array
@@ -524,24 +567,7 @@ void enumerateUsedIDs_styles(TAG * tag, void (*callback)(TAG*, int, void*), void
     DEBUG_ENUMERATE printf("%d line styles\n", count);
     for(t=0;t<count;t++) 
     {
-	U16  width;
-	RGBA color;
-	width = swf_GetU16(tag);
-	if(morph)
-	    swf_GetU16(tag);
-	if(num >= 4) {
-	    U16 flags = swf_GetU16(tag);
-	    if(flags & 0x2000)
-		swf_GetU16(tag); // miter limit
-	    if(flags & 0x0800) {
-		fprintf(stderr, "Filled strokes parsing not yet supported\n");
-	    }
-	}
-	if(num >= 3)
-	    {swf_GetRGBA(tag, &color);if(morph) swf_GetRGBA(tag, NULL);}
-	else
-	    {swf_GetRGB(tag, &color);if(morph) swf_GetRGB(tag, NULL);}
-	DEBUG_ENUMERATE printf("line style %d: %02x%02x%02x%02x \n", t, color.r,color.g,color.b,color.a);
+	enumerateUsedIDs_linestyle(tag, t, callback, callback_data, num, morph);
     }
 }
 
@@ -676,7 +702,8 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 	    while(1)
 	    {
-		if(!swf_GetU8(tag)) //flags
+		U8 flags = swf_GetU8(tag);
+		if(!flags) //flags
 		    break; 
 		callback(tag, tag->pos + base, callback_data);
 		swf_GetU16(tag); //char
@@ -686,6 +713,16 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		if(num>1) {
 		  swf_ResetReadBits(tag);
 		  swf_GetCXForm(tag, NULL, 1);
+		}
+		if(flags&0x10) {
+		    U8 num = swf_GetU8(tag);
+		    int t;
+		    for(t=0;t<num;t++) {
+			swf_DeleteFilter(swf_GetFilter(tag));
+		    }
+		}
+		if(flags&0x20) {
+		    U8 blendmode = swf_GetU8(tag);
 		}
 	    }
 	    // ...
@@ -824,6 +861,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		linebits = swf_GetBits(tag, 4);
 		DEBUG_ENUMERATE printf("fillbits=%d linebits=%d\n", fillbits, linebits);
 		swf_ResetReadBits(tag);
+		int x=0,y=0;
 		while(1) {
 		    int flags;
 		    flags = swf_GetBits(tag, 1);
@@ -833,10 +871,9 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 			    break;
 			if(flags&1) { //move
 			    int n = swf_GetBits(tag, 5); 
-			    int x,y;
 			    x = swf_GetBits(tag, n); //x
 			    y = swf_GetBits(tag, n); //y
-			    DEBUG_ENUMERATE printf("move %f %f\n",x/20.0,y/20.0);
+			    DEBUG_ENUMERATE printf("moveTo %.2f %.2f\n",x/20.0,y/20.0);
 			}
 			if(flags&2) { //fill0
 			    int fill0;
@@ -864,15 +901,18 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 			if(flags) { //straight edge
 			    int n = swf_GetBits(tag, 4) + 2;
 			    if(swf_GetBits(tag, 1)) { //line flag
-				int x,y;
-				x = swf_GetSBits(tag, n); //delta x
-				y = swf_GetSBits(tag, n); //delta y
-				DEBUG_ENUMERATE printf("line %f %f\n",x/20.0,y/20.0);
+				x += swf_GetSBits(tag, n); //delta x
+				y += swf_GetSBits(tag, n); //delta y
+				DEBUG_ENUMERATE printf("lineTo %.2f %.2f\n",x/20.0,y/20.0);
 			    } else {
 				int v=swf_GetBits(tag, 1);
 				int d;
 				d = swf_GetSBits(tag, n); //vert/horz
-				DEBUG_ENUMERATE printf("%s %f\n",v?"vertical":"horizontal", d/20.0);
+				if(!v)
+				    x += d;
+				else
+				    y += d;
+				DEBUG_ENUMERATE printf("lineTo %.2f %.2f (%s)\n",x/20.0,y/20.0, v?"vertical":"horizontal");
 			    }
 			} else { //curved edge
 			    int n = swf_GetBits(tag, 4) + 2;
@@ -881,7 +921,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 			    y1 = swf_GetSBits(tag, n);
 			    x2 = swf_GetSBits(tag, n);
 			    y2 = swf_GetSBits(tag, n);
-			    DEBUG_ENUMERATE printf("curve %f %f %f %f\n", x1/20.0, y1/20.0, x2/20.0, y2/20.0);
+			    DEBUG_ENUMERATE printf("splineTo %.2f %.2f %.2f %.2f\n", x1/20.0, y1/20.0, x2/20.0, y2/20.0);
 			}
 		    }
 		}
