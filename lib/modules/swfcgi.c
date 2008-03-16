@@ -121,7 +121,7 @@ static void swf_cgienv(unsigned char * var)
     newval = buf;
   }
   
-  putenv((const char *)newval);
+  putenv((char *)newval);
         
   if (oldval)
   { rfx_free(oldval);
