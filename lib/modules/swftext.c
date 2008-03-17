@@ -1136,14 +1136,14 @@ void swf_FontFree(SWFFONT * f)
     rfx_free(f);
 }
 
-int swf_TextSetInfoRecord(TAG * t, SWFFONT * font, U16 size, RGBA * color, int dx, int dy)
+int swf_TextSetInfoRecord(TAG * t, SWFFONT * font, U16 size, RGBA * color, int x, int y)
 {
     U8 flags;
     if (!t)
 	return -1;
 
-    flags = TF_TEXTCONTROL | (font ? TF_HASFONT : 0) | (color ? TF_HASCOLOR : 0) | (dx ? TF_HASXOFFSET : 0)
-	| (dy ? TF_HASYOFFSET : 0);
+    flags = TF_TEXTCONTROL | (font ? TF_HASFONT : 0) | (color ? TF_HASCOLOR : 0) | (x ? TF_HASXOFFSET : 0)
+	| (y ? TF_HASYOFFSET : 0);
 
     swf_SetU8(t, flags);
     if (font)
@@ -1154,20 +1154,20 @@ int swf_TextSetInfoRecord(TAG * t, SWFFONT * font, U16 size, RGBA * color, int d
 	else
 	    swf_SetRGB(t, color);
     }
-    if (dx) {
-	if(dx != SET_TO_ZERO) {
-	    if(dx>32767 || dx<-32768)
-		fprintf(stderr, "Warning: Horizontal char position overflow: %d\n", dx);
-	    swf_SetS16(t, dx);
+    if (x) {
+	if(x != SET_TO_ZERO) {
+	    if(x>32767 || x<-32768)
+		fprintf(stderr, "Warning: Horizontal char position overflow: %d\n", x);
+	    swf_SetS16(t, x);
 	} else {
 	    swf_SetS16(t, 0);
 	}
     }
-    if (dy) {
-	if(dy != SET_TO_ZERO) {
-	    if(dy>32767 || dy<-32768)
-		fprintf(stderr, "Warning: Vertical char position overflow: %d\n", dy);
-	    swf_SetS16(t, dy);
+    if (y) {
+	if(y != SET_TO_ZERO) {
+	    if(y>32767 || y<-32768)
+		fprintf(stderr, "Warning: Vertical char position overflow: %d\n", y);
+	    swf_SetS16(t, y);
 	} else {
 	    swf_SetS16(t, 0);
 	}
