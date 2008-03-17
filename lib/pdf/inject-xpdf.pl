@@ -15,7 +15,12 @@ system("tar -zxvf ../../$filename") and die;
 system("find -type f -exec mv {} .. \\;") and die;
 chdir("..");
 system("find -type d -exec rmdir {} \\; 2> /dev/null");
-system("patch < ../xpdf-changes.patch");
+
+$c = 'find . \( -name "*.cc" -or -name "*.h" -or -name "*.c" \) -exec cp {} {}.orig \;';
+print "$c\n";
+system($c);
+
+system("patch < ../xpdf-changes.patch 2>&1 | grep failed");
 chdir("..");
 system("rm -f xpdf");
 system("ln -s $directory xpdf");
@@ -45,7 +50,4 @@ EOF
 close(fi);
 system("chmod a+x switch");
 
-$c = 'find '.$directory.' \( -name "*.cc" -or -name "*.h" -or -name "*.c" \) -exec cp {} {}.orig \;';
-print "$c\n";
-system($c);
 
