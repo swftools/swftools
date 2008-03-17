@@ -319,7 +319,7 @@ SWFFONT**fonts;
 void textcallback(void*self, int*glyphs, int*ypos, int nr, int fontid, int fontsize, int startx, int starty, RGBA*color) 
 {
     int font=-1,t;
-    printf("                <%2d glyphs in font %2d, color #%02x%02x%02x%02x> ",nr, fontid, color->r, color->g, color->b, color->a);
+    printf("                <%2d glyphs in font %2d size %d, color #%02x%02x%02x%02x> ",nr, fontid, fontsize, color->r, color->g, color->b, color->a);
     for(t=0;t<fontnum;t++)
     {
 	if(fonts[t]->id == fontid) {
