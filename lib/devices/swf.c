@@ -689,53 +689,6 @@ static void putcharacter(gfxdevice_t*dev, int fontid, int charid, int x,int y, i
    If we set it to low, however, the char positions will be inaccurate */
 #define GLYPH_SCALE 1
 
-/* process a character. */
-static int drawchar(gfxdevice_t*dev, SWFFONT *swffont, int charid, float x, float y, gfxcolor_t*col)
-{
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(!swffont) {
-	msg("<warning> Font is NULL");
-	return 0;
-    }
-
-    if(charid<0 || charid>=swffont->numchars) {
-	msg("<warning> No character %d in font %s (%d chars)", charid, FIXNULL((char*)swffont->name), swffont->numchars);
-	return 0;
-    }
-    /*if(swffont->glyph[charid].shape->bitlen <= 16) {
-	msg("<warning> Glyph %d in current charset (%s, %d characters) is empty", 
-		charid, FIXNULL((char*)swffont->name), swffont->numchars);
-	return 1;
-    }*/
-
-    if(i->shapeid>=0)
-	endshape(dev);
-    if(i->textid<0)
-	starttext(dev);
-
-    double det = i->fontmatrix.sx/65536.0 * i->fontmatrix.sy/65536.0 - 
-	         i->fontmatrix.r0/65536.0 * i->fontmatrix.r1/65536.0;
-
-    if(fabs(det) < 0.0005) { 
-	/* x direction equals y direction- the text is invisible */
-	return 1;
-    }
-    det = 20 * GLYPH_SCALE / det;
-
-    SPOINT p;
-    p.x = (SCOORD)((  x * i->fontmatrix.sy/65536.0 - y * i->fontmatrix.r1/65536.0)*det);
-    p.y = (SCOORD)((- x * i->fontmatrix.r0/65536.0 + y * i->fontmatrix.sx/65536.0)*det);
-
-    RGBA rgba = *(RGBA*)col;
-    
-    msg("<trace> Drawing char %d in font %d at %d,%d in color %02x%02x%02x%02x", 
-	    charid, swffont->id, p.x,p.y, rgba.r, rgba.g, rgba.b, rgba.a);
-
-    putcharacter(dev, swffont->id, charid,p.x,p.y,i->current_font_size, rgba);
-    swf_FontUseGlyph(swffont, charid);
-    return 1;
-}
-
 static void endtext(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
@@ -776,7 +729,7 @@ static void endtext(gfxdevice_t*dev)
 }
 
 /* set's the matrix which is to be applied to characters drawn by swfoutput_drawchar() */
-static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,double m22)
+static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,double m22,double x, double y, char force)
 {
     m11 *= 1024;
     m12 *= 1024;
@@ -786,7 +739,7 @@ static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,doubl
     if(i->lastfontm11 == m11 &&
        i->lastfontm12 == m12 &&
        i->lastfontm21 == m21 &&
-       i->lastfontm22 == m22)
+       i->lastfontm22 == m22 && !force)
         return;
    if(i->textid>=0)
 	endtext(dev);
@@ -806,8 +759,11 @@ static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,doubl
     MATRIX m;
     m.sx = (U32)((m11*ifs)*65536); m.r1 = (U32)((m21*ifs)*65536);
     m.r0 = (U32)((m12*ifs)*65536); m.sy = (U32)((m22*ifs)*65536); 
-    m.tx = 0;
-    m.ty = 0;
+    /* this is the position of the first char to set a new fontmatrix-
+       we hope that it's close enough to all other characters using the
+       font, so we use its position as origin for the matrix */
+    m.tx = x*20;
+    m.ty = y*20;
     i->fontmatrix = m;
 }
 
@@ -2574,26 +2530,61 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	msg("<error> swf_drawchar called (glyph %d) without font", glyph);
 	return;
     }
-	
     if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,font->id)) // not equal to current font
     {
 	/* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
 		 with multiple fonts */
 	endtext(dev);
-
 	swf_switchfont(dev, font->id); // set the current font
     }
-    setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
+    if(!i->swffont) {
+	msg("<warning> Font is NULL");
+	return;
+    }
+    if(glyph<0 || glyph>=i->swffont->numchars) {
+	msg("<warning> No character %d in font %s (%d chars)", glyph, FIXNULL((char*)i->swffont->name), i->swffont->numchars);
+	return;
+    }
+    
+    setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11, matrix->tx, matrix->ty, 0);
+    
+    double det = i->fontmatrix.sx/65536.0 * i->fontmatrix.sy/65536.0 - 
+	         i->fontmatrix.r0/65536.0 * i->fontmatrix.r1/65536.0;
+    if(fabs(det) < 0.0005) { 
+	/* x direction equals y direction- the text is invisible */
+	msg("<verbose> Not drawing invisible character character %d (det=%f, m=[%f %f;%f %f]\n", glyph, 
+		i->fontmatrix.sx/65536.0, i->fontmatrix.r1/65536.0, 
+		i->fontmatrix.r0/65536.0, i->fontmatrix.sy/65536.0);
+	return;
+    }
 
-/*    printf("%f %f\n", m.m31,  m.m32);
-    {
-    static int xpos = 40;
-    static int ypos = 200;
-    m.m31 = xpos;
-    m.m32 = ypos;
-    xpos += 10;
+    /*if(i->swffont->glyph[glyph].shape->bitlen <= 16) {
+	msg("<warning> Glyph %d in current charset (%s, %d characters) is empty", 
+		glyph, FIXNULL((char*)i->swffont->name), i->swffont->numchars);
+	return 1;
     }*/
 
+    /* calculate character position with respect to the current font matrix */
+    double s = 20 * GLYPH_SCALE / det;
+    double px = matrix->tx - i->fontmatrix.tx/20.0;
+    double py = matrix->ty - i->fontmatrix.ty/20.0;
+    int x = (SCOORD)((  px * i->fontmatrix.sy/65536.0 - py * i->fontmatrix.r1/65536.0)*s);
+    int y = (SCOORD)((- px * i->fontmatrix.r0/65536.0 + py * i->fontmatrix.sx/65536.0)*s);
+    if(x>32767 || x<-32768 || y>32767 || y<-32768) {
+	msg("<verbose> Moving character origin to %f %f\n", matrix->tx, matrix->ty);
+	endtext(dev);
+	setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11, matrix->tx, matrix->ty, 1);
+    }
+    
+    if(i->shapeid>=0)
+	endshape(dev);
+    if(i->textid<0)
+	starttext(dev);
 
-    drawchar(dev, i->swffont, glyph, matrix->tx, matrix->ty, color);
+    msg("<trace> Drawing char %d in font %d at %d,%d in color %02x%02x%02x%02x", 
+	    glyph, i->swffont->id, x, y, color->r, color->g, color->b, color->a);
+
+    putcharacter(dev, i->swffont->id, glyph, x, y, i->current_font_size, *(RGBA*)color);
+    swf_FontUseGlyph(i->swffont, glyph);
+    return;
 }
