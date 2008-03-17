@@ -172,16 +172,26 @@ diff -u -r1.4 -r1.7
    line = 1;
    while (getLine(buf, sizeof(buf) - 1, f)) {
  
-@@ -659,6 +682,32 @@
-   }
+@@ -1142,6 +1165,42 @@
+   deleteGList(tokens, GString);
  }
  
++static char is_absolute(char*filename)
++{
++    int l = strlen(filename);
++    if(filename[0] == '/' || filename[0] == '\\') 
++	return 1;
++    if(l>2 && filename[1]==':' && (filename[2]=='\\' || filename[2]=='/'))
++	return 1;
++    return 0;
++}
++
 +static GString* qualify_filename(GString*path, GString*filename)
 +{
 +  GString*fullpath = 0;
 +  char*prefix = "/usr/local/share/xpdf/";
 +
-+  if (filename->getChar(0) != '\\' && filename->getChar(0) != '/') {
++  if (!is_absolute(filename->getCString())) {
 +    /* relative path */
 +    fullpath = path->copy();
 +    fullpath->append(filename);
@@ -205,15 +215,20 @@ diff -u -r1.4 -r1.7
  void GlobalParams::parseNameToUnicode(GList *tokens, GString *fileName,
  					 int line) {
    GString *name;
-@@ -673,7 +722,7 @@
+@@ -1156,10 +1215,10 @@
  	  fileName->getCString(), line);
      return;
    }
 -  name = (GString *)tokens->get(1);
 +  name = qualify_filename(this->path, (GString *)tokens->get(1));
    if (!(f = fopen(name->getCString(), "r"))) {
-     error(-1, "Couldn't open 'nameToUnicode' file '%s'",
- 	  name->getCString());
+-    error(-1, "Couldn't open 'nameToUnicode' file '%s'",
+-	  name->getCString());
++    error(-1, "Couldn't open 'nameToUnicode' file '%s' using path '%s'",
++	  name->getCString(), path->getCString());
+     return;
+   }
+   line2 = 1;
 @@ -705,10 +754,12 @@
    }
    collection = (GString *)tokens->get(1);
