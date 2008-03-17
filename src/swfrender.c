@@ -9,6 +9,7 @@
 #include "../lib/args.h"
 #include "../lib/gfxsource.h"
 #include "../lib/swf/swf.h"
+#include "../lib/devices/render.h"
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -98,7 +99,7 @@ int main(int argn, char*argv[])
 	swf_Render_Delete(&buf);
     } else {
 	gfxsource_t*src = gfxsource_swf_create();
-	gfxdocument_t*doc = src->open(filename);
+	gfxdocument_t*doc = src->open(src, filename);
 	if(!doc) {
 	    fprintf(stderr,"Couldn't open %s\n", filename);
 	    exit(1);
