@@ -75,6 +75,36 @@ int mp3_read(struct MP3*mp3, char* filename)
         int chanmode;
 
         if(fread(hdr,1,4,fi) < 4) break;
+
+        if(hdr[0] == 'I' && hdr[1] == 'D' && hdr[2] == '3')
+        {
+            /* Skip ID3 header */
+            unsigned id3_size = 0;
+            if(fread(FrameBuf, 1, 6, fi) < 6) break;
+ 
+            id3_size = (FrameBuf[5])
+                     + (FrameBuf[4] << 7)
+                     + (FrameBuf[3] << 14)
+                     + (FrameBuf[2] << 21);
+            fprintf(stderr, "readMP3: skipping ID3 tag (10+%u bytes)\n", id3_size);
+            if(fseek(fi, id3_size, SEEK_CUR) < 0)
+            {
+                /* Cannot seek? Try reading. */
+                char* tmpbuf = (char*)malloc(id3_size);
+                int nread=0;
+                if(!tmpbuf)
+                {
+                    fprintf(stderr, "readMP3: fseek and malloc both failed?\n");
+                    break;
+                }
+                nread = fread(tmpbuf, 1, id3_size, fi);
+                free(tmpbuf);
+                if(nread < id3_size) break;
+            }
+            continue;
+        }
+
+
         if(hdr[0] != 0xFF
         || (hdr[1] & 0xE0) != 0xE0)
         {
