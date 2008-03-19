@@ -187,7 +187,9 @@ ${name}/lib/devices/ops.h \
 ${name}/lib/pdf/GFXOutputDev.h \
 ${name}/lib/pdf/GFXOutputDev.cc \
 ${name}/lib/pdf/BitmapOutputDev.h \
+${name}/lib/pdf/FullBitmapOutputDev.h \
 ${name}/lib/pdf/BitmapOutputDev.cc \
+${name}/lib/pdf/FullBitmapOutputDev.cc \
 ${name}/lib/pdf/InfoOutputDev.h \
 ${name}/lib/pdf/InfoOutputDev.cc \
 ${name}/lib/pdf/CommonOutputDev.h \
