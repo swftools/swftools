@@ -1206,6 +1206,10 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 	    points[1].x, points[1].y,
 	    points[2].x, points[2].y,
 	    points[3].x, points[3].y); 
+    
+    if(getLogLevel() >= LOGLEVEL_TRACE)  {
+	dump_outline(points);
+    }
 
     LinkAction*action=link->getAction();
     char buf[128];
@@ -1798,7 +1802,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic2 = antialize(pic,width,height,realwidth,realheight,numpalette);
 
 	  if(!pic2) {
-	    delete pic;
+	    delete[] pic;
 	    delete imgStr;
 	    return;
 	  }
@@ -1855,7 +1859,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  drawimagejpeg(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
       else
 	  drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
-      delete pic;
+      delete[] pic;
       delete imgStr;
       if(maskbitmap) free(maskbitmap);
       return;
@@ -1906,7 +1910,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       }
       drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
 
-      delete pic;
+      delete[] pic;
       delete imgStr;
       if(maskbitmap) free(maskbitmap);
       return;
@@ -2221,7 +2225,8 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
     dbg("beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     
-    states[statepos].createsoftmask |= forSoftMask;
+    //states[statepos].createsoftmask |= forSoftMask;
+    states[statepos].createsoftmask = forSoftMask;
     states[statepos].transparencygroup = !forSoftMask;
     states[statepos].isolated = isolated;
 
@@ -2246,10 +2251,11 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
 
     this->device = states[statepos].olddevice;
 
+    gfxresult_t*recording = r->finish(r);
     if(states[statepos].createsoftmask) {
-	states[statepos-1].softmaskrecording = r->finish(r);
+	states[statepos-1].softmaskrecording = recording;
     } else {
-	states[statepos-1].grouprecording = r->finish(r);
+	states[statepos-1].grouprecording = recording;
     }
     
     states[statepos].createsoftmask = 0;
