@@ -195,7 +195,6 @@ private:
     GBool clip0and1differ();
     GBool intersection();
 
-    char config_bitmapfonts;
     char config_extrafontdata;
 
     int layerstate;
