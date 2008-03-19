@@ -617,7 +617,7 @@ void BitmapOutputDev::setDefaultCTM(double *ctm)
     rgbdev->setDefaultCTM(ctm);
     clip0dev->setDefaultCTM(ctm);
     clip1dev->setDefaultCTM(ctm);
-    //gfxdev->setDefaultCTM(ctm);//?
+    gfxdev->setDefaultCTM(ctm);
 }
 void BitmapOutputDev::saveState(GfxState *state) 
 {
@@ -1191,16 +1191,24 @@ void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				    GBool forSoftMask)
 {
     msg("<debug> beginTransparencyGroup");
-    boolpolydev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
-    rgbdev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
+    GfxState*state1 = state->copy(gTrue);
+    GfxState*state2 = state->copy(gTrue);
+    boolpolydev->beginTransparencyGroup(state1, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
+    rgbdev->beginTransparencyGroup(state2, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
     clip1dev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
+    delete state1;
+    delete state2;
 }
 void BitmapOutputDev::endTransparencyGroup(GfxState *state)
 {
     msg("<debug> endTransparencyGroup");
-    boolpolydev->endTransparencyGroup(state);
+    GfxState*state1 = state->copy(gTrue);
+    GfxState*state2 = state->copy(gTrue);
+    boolpolydev->endTransparencyGroup(state1);
     checkNewBitmap();
-    rgbdev->endTransparencyGroup(state);
+    rgbdev->endTransparencyGroup(state2);
+    delete state1;
+    delete state2;
     clip1dev->endTransparencyGroup(state);
 }
 void BitmapOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
@@ -1209,6 +1217,7 @@ void BitmapOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
     boolpolydev->paintTransparencyGroup(state,bbox);
     checkNewBitmap();
     rgbdev->paintTransparencyGroup(state,bbox);
+    clip1dev->paintTransparencyGroup(state,bbox);
 }
 void BitmapOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor)
 {
