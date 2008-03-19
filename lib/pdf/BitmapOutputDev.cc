@@ -74,7 +74,6 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
 
     this->gfxdev->setDevice(this->gfxoutput);
     
-    this->config_bitmapfonts = 0;
     this->config_extrafontdata = 0;
     this->bboxpath = 0;
     //this->clipdev = 0;
@@ -147,8 +146,6 @@ void BitmapOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key, "extrafontdata")) {
 	this->config_extrafontdata = atoi(value);
-    } else if(!strcmp(key, "bitmapfonts")) {
-	this->config_bitmapfonts = atoi(value);
     }
     this->gfxdev->setParameter(key, value);
 }
@@ -156,7 +153,7 @@ void BitmapOutputDev::preparePage(int pdfpage, int outputpage)
 {
 }
 
-void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymin, int*xmax, int*ymax)
+static void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymin, int*xmax, int*ymax)
 {
     *ymin = -1;
     *xmin = width;
@@ -297,7 +294,7 @@ void BitmapOutputDev::checkNewText()
 {
     /* called once some new text was drawn on booltextdev, and
        before the same thing is drawn on gfxdev */
-    
+   
     msg("<trace> Testing new text data against current bitmap data, state=%d, counter=%d\n", layerstate, dbg_btm_counter);
     
     char filename1[80];
@@ -589,15 +586,11 @@ GBool BitmapOutputDev::useDrawForm()
 
 GBool BitmapOutputDev::interpretType3Chars()
 {
-    if(!config_bitmapfonts) {
-	boolpolydev->interpretType3Chars();
-	booltextdev->interpretType3Chars();
-	clip0dev->interpretType3Chars();
-	clip1dev->interpretType3Chars();
-	return rgbdev->interpretType3Chars();
-    } else {
-	return gfxdev->interpretType3Chars();
-    }
+    boolpolydev->interpretType3Chars();
+    booltextdev->interpretType3Chars();
+    clip0dev->interpretType3Chars();
+    clip1dev->interpretType3Chars();
+    return rgbdev->interpretType3Chars();
 }
 
 GBool BitmapOutputDev::needNonText() 
@@ -664,8 +657,7 @@ void BitmapOutputDev::updateAll(GfxState *state)
     rgbdev->updateAll(state);
     clip0dev->updateAll(state);
     clip1dev->updateAll(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateAll(state);
+    gfxdev->updateAll(state);
 }
 void BitmapOutputDev::updateCTM(GfxState *state, double m11, double m12, double m21, double m22, double m31, double m32)
 {
@@ -674,8 +666,7 @@ void BitmapOutputDev::updateCTM(GfxState *state, double m11, double m12, double 
     rgbdev->updateCTM(state,m11,m12,m21,m22,m31,m32);
     clip0dev->updateCTM(state,m11,m12,m21,m22,m31,m32);
     clip1dev->updateCTM(state,m11,m12,m21,m22,m31,m32);
-    if(!config_bitmapfonts)
-	gfxdev->updateCTM(state,m11,m12,m21,m22,m31,m32);
+    gfxdev->updateCTM(state,m11,m12,m21,m22,m31,m32);
 }
 void BitmapOutputDev::updateLineDash(GfxState *state)
 {
@@ -684,8 +675,7 @@ void BitmapOutputDev::updateLineDash(GfxState *state)
     rgbdev->updateLineDash(state);
     clip0dev->updateLineDash(state);
     clip1dev->updateLineDash(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateLineDash(state);
+    gfxdev->updateLineDash(state);
 }
 void BitmapOutputDev::updateFlatness(GfxState *state)
 {
@@ -694,8 +684,7 @@ void BitmapOutputDev::updateFlatness(GfxState *state)
     rgbdev->updateFlatness(state);
     clip0dev->updateFlatness(state);
     clip1dev->updateFlatness(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateFlatness(state);
+    gfxdev->updateFlatness(state);
 }
 void BitmapOutputDev::updateLineJoin(GfxState *state)
 {
@@ -704,8 +693,7 @@ void BitmapOutputDev::updateLineJoin(GfxState *state)
     rgbdev->updateLineJoin(state);
     clip0dev->updateLineJoin(state);
     clip1dev->updateLineJoin(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateLineJoin(state);
+    gfxdev->updateLineJoin(state);
 }
 void BitmapOutputDev::updateLineCap(GfxState *state)
 {
@@ -714,8 +702,7 @@ void BitmapOutputDev::updateLineCap(GfxState *state)
     rgbdev->updateLineCap(state);
     clip0dev->updateLineCap(state);
     clip1dev->updateLineCap(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateLineCap(state);
+    gfxdev->updateLineCap(state);
 }
 void BitmapOutputDev::updateMiterLimit(GfxState *state)
 {
@@ -724,8 +711,7 @@ void BitmapOutputDev::updateMiterLimit(GfxState *state)
     rgbdev->updateMiterLimit(state);
     clip0dev->updateMiterLimit(state);
     clip1dev->updateMiterLimit(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateMiterLimit(state);
+    gfxdev->updateMiterLimit(state);
 }
 void BitmapOutputDev::updateLineWidth(GfxState *state)
 {
@@ -734,8 +720,7 @@ void BitmapOutputDev::updateLineWidth(GfxState *state)
     rgbdev->updateLineWidth(state);
     clip0dev->updateLineWidth(state);
     clip1dev->updateLineWidth(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateLineWidth(state);
+    gfxdev->updateLineWidth(state);
 }
 void BitmapOutputDev::updateStrokeAdjust(GfxState *state)
 {
@@ -744,8 +729,7 @@ void BitmapOutputDev::updateStrokeAdjust(GfxState *state)
     rgbdev->updateStrokeAdjust(state);
     clip0dev->updateStrokeAdjust(state);
     clip1dev->updateStrokeAdjust(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateStrokeAdjust(state);
+    gfxdev->updateStrokeAdjust(state);
 }
 void BitmapOutputDev::updateFillColorSpace(GfxState *state)
 {
@@ -754,8 +738,7 @@ void BitmapOutputDev::updateFillColorSpace(GfxState *state)
     rgbdev->updateFillColorSpace(state);
     clip0dev->updateFillColorSpace(state);
     clip1dev->updateFillColorSpace(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateFillColorSpace(state);
+    gfxdev->updateFillColorSpace(state);
 }
 void BitmapOutputDev::updateStrokeColorSpace(GfxState *state)
 {
@@ -764,8 +747,7 @@ void BitmapOutputDev::updateStrokeColorSpace(GfxState *state)
     rgbdev->updateStrokeColorSpace(state);
     clip0dev->updateStrokeColorSpace(state);
     clip1dev->updateStrokeColorSpace(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateStrokeColorSpace(state);
+    gfxdev->updateStrokeColorSpace(state);
 }
 void BitmapOutputDev::updateFillColor(GfxState *state)
 {
@@ -774,8 +756,7 @@ void BitmapOutputDev::updateFillColor(GfxState *state)
     rgbdev->updateFillColor(state);
     clip0dev->updateFillColor(state);
     clip1dev->updateFillColor(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateFillColor(state);
+    gfxdev->updateFillColor(state);
 }
 void BitmapOutputDev::updateStrokeColor(GfxState *state)
 {
@@ -784,8 +765,7 @@ void BitmapOutputDev::updateStrokeColor(GfxState *state)
     rgbdev->updateStrokeColor(state);
     clip0dev->updateStrokeColor(state);
     clip1dev->updateStrokeColor(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateStrokeColor(state);
+    gfxdev->updateStrokeColor(state);
 }
 void BitmapOutputDev::updateBlendMode(GfxState *state)
 {
@@ -794,8 +774,7 @@ void BitmapOutputDev::updateBlendMode(GfxState *state)
     rgbdev->updateBlendMode(state);
     clip0dev->updateBlendMode(state);
     clip1dev->updateBlendMode(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateBlendMode(state);
+    gfxdev->updateBlendMode(state);
 }
 void BitmapOutputDev::updateFillOpacity(GfxState *state)
 {
@@ -804,8 +783,7 @@ void BitmapOutputDev::updateFillOpacity(GfxState *state)
     rgbdev->updateFillOpacity(state);
     clip0dev->updateFillOpacity(state);
     clip1dev->updateFillOpacity(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateFillOpacity(state);
+    gfxdev->updateFillOpacity(state);
 }
 void BitmapOutputDev::updateStrokeOpacity(GfxState *state)
 {
@@ -814,8 +792,7 @@ void BitmapOutputDev::updateStrokeOpacity(GfxState *state)
     rgbdev->updateStrokeOpacity(state);
     clip0dev->updateStrokeOpacity(state);
     clip1dev->updateStrokeOpacity(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateStrokeOpacity(state);
+    gfxdev->updateStrokeOpacity(state);
 }
 void BitmapOutputDev::updateFillOverprint(GfxState *state)
 {
@@ -824,8 +801,7 @@ void BitmapOutputDev::updateFillOverprint(GfxState *state)
     rgbdev->updateFillOverprint(state);
     clip0dev->updateFillOverprint(state);
     clip1dev->updateFillOverprint(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateFillOverprint(state);
+    gfxdev->updateFillOverprint(state);
 }
 void BitmapOutputDev::updateStrokeOverprint(GfxState *state)
 {
@@ -834,8 +810,7 @@ void BitmapOutputDev::updateStrokeOverprint(GfxState *state)
     rgbdev->updateStrokeOverprint(state);
     clip0dev->updateStrokeOverprint(state);
     clip1dev->updateStrokeOverprint(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateStrokeOverprint(state);
+    gfxdev->updateStrokeOverprint(state);
 }
 void BitmapOutputDev::updateTransfer(GfxState *state)
 {
@@ -844,8 +819,7 @@ void BitmapOutputDev::updateTransfer(GfxState *state)
     rgbdev->updateTransfer(state);
     clip0dev->updateTransfer(state);
     clip1dev->updateTransfer(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateTransfer(state);
+    gfxdev->updateTransfer(state);
 }
 void BitmapOutputDev::updateFont(GfxState *state)
 {
@@ -854,8 +828,7 @@ void BitmapOutputDev::updateFont(GfxState *state)
     rgbdev->updateFont(state);
     clip0dev->updateFont(state);
     clip1dev->updateFont(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateFont(state);
+    gfxdev->updateFont(state);
 }
 void BitmapOutputDev::updateTextMat(GfxState *state)
 {
@@ -864,8 +837,7 @@ void BitmapOutputDev::updateTextMat(GfxState *state)
     rgbdev->updateTextMat(state);
     clip0dev->updateTextMat(state);
     clip1dev->updateTextMat(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateTextMat(state);
+    gfxdev->updateTextMat(state);
 }
 void BitmapOutputDev::updateCharSpace(GfxState *state)
 {
@@ -874,8 +846,7 @@ void BitmapOutputDev::updateCharSpace(GfxState *state)
     rgbdev->updateCharSpace(state);
     clip0dev->updateCharSpace(state);
     clip1dev->updateCharSpace(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateCharSpace(state);
+    gfxdev->updateCharSpace(state);
 }
 void BitmapOutputDev::updateRender(GfxState *state)
 {
@@ -884,8 +855,7 @@ void BitmapOutputDev::updateRender(GfxState *state)
     rgbdev->updateRender(state);
     clip0dev->updateRender(state);
     clip1dev->updateRender(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateRender(state);
+    gfxdev->updateRender(state);
 }
 void BitmapOutputDev::updateRise(GfxState *state)
 {
@@ -894,8 +864,7 @@ void BitmapOutputDev::updateRise(GfxState *state)
     rgbdev->updateRise(state);
     clip0dev->updateRise(state);
     clip1dev->updateRise(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateRise(state);
+    gfxdev->updateRise(state);
 }
 void BitmapOutputDev::updateWordSpace(GfxState *state)
 {
@@ -904,8 +873,7 @@ void BitmapOutputDev::updateWordSpace(GfxState *state)
     rgbdev->updateWordSpace(state);
     clip0dev->updateWordSpace(state);
     clip1dev->updateWordSpace(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateWordSpace(state);
+    gfxdev->updateWordSpace(state);
 }
 void BitmapOutputDev::updateHorizScaling(GfxState *state)
 {
@@ -914,8 +882,7 @@ void BitmapOutputDev::updateHorizScaling(GfxState *state)
     rgbdev->updateHorizScaling(state);
     clip0dev->updateHorizScaling(state);
     clip1dev->updateHorizScaling(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateHorizScaling(state);
+    gfxdev->updateHorizScaling(state);
 }
 void BitmapOutputDev::updateTextPos(GfxState *state)
 {
@@ -924,8 +891,7 @@ void BitmapOutputDev::updateTextPos(GfxState *state)
     rgbdev->updateTextPos(state);
     clip0dev->updateTextPos(state);
     clip1dev->updateTextPos(state);
-    if(!config_bitmapfonts)
-	gfxdev->updateTextPos(state);
+    gfxdev->updateTextPos(state);
 }
 void BitmapOutputDev::updateTextShift(GfxState *state, double shift)
 {
@@ -934,8 +900,7 @@ void BitmapOutputDev::updateTextShift(GfxState *state, double shift)
     rgbdev->updateTextShift(state, shift);
     clip0dev->updateTextShift(state, shift);
     clip1dev->updateTextShift(state, shift);
-    if(!config_bitmapfonts)
-	gfxdev->updateTextShift(state, shift);
+    gfxdev->updateTextShift(state, shift);
 }
 
 void BitmapOutputDev::stroke(GfxState *state)
@@ -1038,52 +1003,36 @@ void BitmapOutputDev::clipToStrokePath(GfxState *state)
 void BitmapOutputDev::beginStringOp(GfxState *state)
 {
     msg("<debug> beginStringOp");
-    if(this->config_bitmapfonts) {
-	rgbdev->beginStringOp(state);
-    } else {
-	clip0dev->beginStringOp(state);
-	clip1dev->beginStringOp(state);
-	booltextdev->beginStringOp(state);
-	gfxdev->beginStringOp(state);
-    }
+    clip0dev->beginStringOp(state);
+    clip1dev->beginStringOp(state);
+    booltextdev->beginStringOp(state);
+    gfxdev->beginStringOp(state);
 }
 void BitmapOutputDev::endStringOp(GfxState *state)
 {
     msg("<debug> endStringOp");
-    if(this->config_bitmapfonts) {
-	rgbdev->endStringOp(state);
-    } else {
-	clip0dev->endStringOp(state);
-	clip1dev->endStringOp(state);
-	booltextdev->endStringOp(state);
-	checkNewText();
-	gfxdev->endStringOp(state);
-    }
+    clip0dev->endStringOp(state);
+    clip1dev->endStringOp(state);
+    booltextdev->endStringOp(state);
+    checkNewText();
+    gfxdev->endStringOp(state);
 }
 void BitmapOutputDev::beginString(GfxState *state, GString *s)
 {
     msg("<debug> beginString");
-    if(this->config_bitmapfonts) {
-	rgbdev->beginString(state, s);
-    } else {
-	clip0dev->beginString(state, s);
-	clip1dev->beginString(state, s);
-	booltextdev->beginString(state, s);
-	gfxdev->beginString(state, s);
-    }
+    clip0dev->beginString(state, s);
+    clip1dev->beginString(state, s);
+    booltextdev->beginString(state, s);
+    gfxdev->beginString(state, s);
 }
 void BitmapOutputDev::endString(GfxState *state)
 {
     msg("<debug> endString");
-    if(this->config_bitmapfonts) {
-	rgbdev->endString(state);
-    } else {
-	clip0dev->endString(state);
-	clip1dev->endString(state);
-	booltextdev->endString(state);
-	checkNewText();
-	gfxdev->endString(state);
-    }
+    clip0dev->endString(state);
+    clip1dev->endString(state);
+    booltextdev->endString(state);
+    checkNewText();
+    gfxdev->endString(state);
 }
 
 void BitmapOutputDev::clearClips()
@@ -1105,7 +1054,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		      CharCode code, int nBytes, Unicode *u, int uLen)
 {
     msg("<debug> drawChar");
-    if(this->config_bitmapfonts || (state->getRender()&4) /*clip*/ ) {
+    if(state->getRender()&4 /*clip*/ ) {
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else {
 	clearClips();
@@ -1140,29 +1089,19 @@ void BitmapOutputDev::drawString(GfxState *state, GString *s)
 {
     msg("<error> internal error: drawString not implemented");
     return;
-    if(this->config_bitmapfonts) {
-	rgbdev->drawString(state, s);
-	clip0dev->drawString(state, s);
-	clip1dev->drawString(state, s);
-    } else {
-	booltextdev->drawString(state, s);
-	gfxdev->drawString(state, s);
-    }
+    clip0dev->drawString(state, s);
+    clip1dev->drawString(state, s);
+    booltextdev->drawString(state, s);
+    gfxdev->drawString(state, s);
 }
 void BitmapOutputDev::endTextObject(GfxState *state)
 {
-    /* FIXME: the below might render things (stroke outlines etc.) to gfxdev which
-              might end up unflushed- should be handled similarily as
-	      drawChar() above
-     */
     msg("<debug> endTextObject");
-    if(this->config_bitmapfonts) {
-	rgbdev->endTextObject(state);
-    } else {
-	clip0dev->endTextObject(state);
-	clip1dev->endTextObject(state);
-	gfxdev->endType3Char(state);
-    }
+    clip0dev->endTextObject(state);
+    clip1dev->endTextObject(state);
+    booltextdev->endTextObject(state);
+    checkNewText();
+    gfxdev->endTextObject(state);
 }
 
 /* TODO: these four operations below *should* do nothing, as type3
@@ -1172,40 +1111,24 @@ GBool BitmapOutputDev::beginType3Char(GfxState *state, double x, double y,
 			     CharCode code, Unicode *u, int uLen)
 {
     msg("<debug> beginType3Char");
-    if(this->config_bitmapfonts) {
-	return rgbdev->beginType3Char(state, x, y, dx, dy, code, u, uLen);
-    } else {
-	/* call gfxdev so that it can generate "invisible" characters
-	   on top of the actual graphic content, for text extraction */
-	return gfxdev->beginType3Char(state, x, y, dx, dy, code, u, uLen);
-    }
+    /* call gfxdev so that it can generate "invisible" characters
+       on top of the actual graphic content, for text extraction */
+    return gfxdev->beginType3Char(state, x, y, dx, dy, code, u, uLen);
 }
 void BitmapOutputDev::type3D0(GfxState *state, double wx, double wy)
 {
     msg("<debug> type3D0");
-    if(this->config_bitmapfonts) {
-	rgbdev->type3D0(state, wx, wy);
-    } else {
-	return gfxdev->type3D0(state, wx, wy);
-    }
+    return gfxdev->type3D0(state, wx, wy);
 }
 void BitmapOutputDev::type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury)
 {
     msg("<debug> type3D1");
-    if(this->config_bitmapfonts) {
-	rgbdev->type3D1(state, wx, wy, llx, lly, urx, ury);
-    } else {
-	return gfxdev->type3D1(state, wx, wy, llx, lly, urx, ury);
-    }
+    return gfxdev->type3D1(state, wx, wy, llx, lly, urx, ury);
 }
 void BitmapOutputDev::endType3Char(GfxState *state)
 {
     msg("<debug> endType3Char");
-    if(this->config_bitmapfonts) {
-	rgbdev->endType3Char(state);
-    } else {
-	gfxdev->endType3Char(state);
-    }
+    gfxdev->endType3Char(state);
 }
 void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
