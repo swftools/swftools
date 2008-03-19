@@ -6,7 +6,9 @@
 #include "GlobalParams.h"
 #include "InfoOutputDev.h"
 #include "GFXOutputDev.h"
+#include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
+#include "DummyOutputDev.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER
@@ -320,6 +322,7 @@ static void storeDeviceParameter(const char*name, const char*value)
 typedef struct _gfxsource_internal
 {
     int config_bitmap_optimizing;
+    int config_full_bitmap_optimizing;
 } gfxsource_internal_t;
 
 static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value)
@@ -353,6 +356,8 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	storeDeviceParameter("ppmsubpixels", buf);
     } else if(!strcmp(name, "poly2bitmap")) {
         i->config_bitmap_optimizing = atoi(value);
+    } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
+        i->config_full_bitmap_optimizing = atoi(value);
     } else if(!strcmp(name, "multiply")) {
         multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
@@ -435,13 +440,17 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	}
     }
 
-    if(isrc->config_bitmap_optimizing) {
+    if(isrc->config_full_bitmap_optimizing) {
+	FullBitmapOutputDev*outputDev = new FullBitmapOutputDev(i->info, i->doc);
+	i->outputDev = (CommonOutputDev*)outputDev;
+    } else if(isrc->config_bitmap_optimizing) {
 	BitmapOutputDev*outputDev = new BitmapOutputDev(i->info, i->doc);
 	i->outputDev = (CommonOutputDev*)outputDev;
     } else {
 	GFXOutputDev*outputDev = new GFXOutputDev(i->info, i->doc);
 	i->outputDev = (CommonOutputDev*)outputDev;
     }
+
     /* pass global parameters to PDF driver*/
     parameter_t*p = device_config;
     while(p) {
