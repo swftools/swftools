@@ -4,6 +4,7 @@ top_srcdir = @top_srcdir@
 include ../Makefile.common
 
 programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) @PDF2SWF@
+opt_programs = swfrender$(E) swfbytes$(E)
 
 all: $(programs)
 
@@ -104,10 +105,10 @@ swfc$(E): parser.$(O) swfc.$(O) swfc-feedback.$(O) swfc-history.$(O) swfc-interp
 install:
 	$(mkinstalldirs) $(bindir)
 	$(mkinstalldirs) $(man1dir)
-	@for file in $(programs); do $(INSTALL_BIN);$(INSTALL_MAN1);done
+	@for file in $(programs) $(opt_programs); do if test -f $$file;then $(INSTALL_BIN);$(INSTALL_MAN1);fi;done
 	
 uninstall:
-	@for file in $(programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
+	@for file in $(programs) $(opt_programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
 clean: 
 	rm -f *.o *.obj *.lo *.la *~ gmon.out
