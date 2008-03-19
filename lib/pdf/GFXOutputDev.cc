@@ -156,7 +156,7 @@ typedef struct _feature
 } feature_t;
 feature_t*featurewarnings = 0;
 
-void GFXOutputDev::showfeature(const char*feature,char fully, char warn)
+void GFXOutputDev::showfeature(const char*feature, char fully, char warn)
 {
     feature_t*f = featurewarnings;
     while(f) {
@@ -1732,7 +1732,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   imgStr = new ImageStream(str, width, ncomps,bits);
   imgStr->reset();
 
-  if(!width || !height || (height<=1 && width<=1))
+  if(!width || !height || (height<=1 && width<=1 && maskWidth<=1 && maskHeight<=1))
   {
       msg("<verbose> Ignoring %d by %d image", width, height);
       unsigned char buf[8];
@@ -1903,10 +1903,35 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	for (x = 0; x < width; ++x) {
 	  imgStr->getPixel(pixBuf);
 	  pic[width*y+x] = pal[pixBuf[0]];
-	  if(maskbitmap) {
-	      pic[width*y+x].a = maskbitmap[(y*maskHeight/height)*maskWidth+(x*maskWidth/width)];
-	  }
 	}
+      }
+      if(maskbitmap) {
+	  if(maskWidth < width && maskHeight < height) {
+	      for(y = 0; y < height; y++) {
+		  for (x = 0; x < width; x++) {
+		      pic[width*y+x].a = maskbitmap[(y*maskHeight/height)*maskWidth+(x*maskWidth/width)];
+		  }
+	      }
+	  } else {
+	      msg("<verbose> resampling %dx%d to mask size (%dx%d)", width, height, maskWidth, maskHeight);
+	      gfxcolor_t*newpic=new gfxcolor_t[maskWidth*maskHeight];
+	      double dx = width / maskWidth;
+	      double dy = height / maskHeight;
+	      double yy = 0;
+	      for(y = 0; y < maskHeight; y++) {
+		  double xx = 0;
+		  for (x = 0; x < maskWidth; x++) {
+		      newpic[maskWidth*y+x] = pic[int(yy)*width+int(xx)];
+		      newpic[maskWidth*y+x].a = maskbitmap[maskWidth*y+x];
+		      xx += dx;
+		  }
+		  yy += dy;
+	      }
+	      delete[] pic;
+	      pic = newpic;
+	      width = maskWidth;
+	      height = maskHeight;
+	  }
       }
       drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
 
