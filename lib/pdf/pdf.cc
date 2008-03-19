@@ -22,6 +22,8 @@ static char* global_page_range = 0;
 static parameter_t* device_config = 0;
 static parameter_t* device_config_next = 0;
 
+static int globalparams_count=0;
+
 typedef struct _pdf_page_info
 {
     int xMin, yMin, xMax, yMax;
@@ -132,8 +134,6 @@ void pdfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfx
     pi->outputDev->setClip((int)x1*multiply,(int)y1*multiply,(int)x2*multiply,(int)y2*multiply);
     render2(page, output);
 }
-
-static int globalparams_count=0;
 
 void pdf_doc_destroy(gfxdocument_t*gfx)
 {
@@ -480,6 +480,14 @@ void pdf_destroy(gfxsource_t*src)
 	return;
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
     free(src->internal);src->internal=0;
+    
+    parameter_t*p = device_config;
+    while(p) {
+	parameter_t*next = p->next;
+	p->next = 0;free(p);
+	p = next;
+    }
+    delete globalParams;globalParams = 0;
 }
 
 gfxsource_t*gfxsource_pdf_create()
