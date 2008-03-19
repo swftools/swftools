@@ -489,6 +489,7 @@ static void replay(struct _gfxdevice*recorddev, gfxdevice_t*device, void*data, i
 		device->fillbitmap(device, line, &img, &matrix, cxform);
 		if(cxform)
 		    free(cxform);
+		free(img.data);img.data=0;
 		break;
 	    }
 	    case OP_FILLGRADIENT: {
