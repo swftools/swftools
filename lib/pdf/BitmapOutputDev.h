@@ -198,6 +198,7 @@ private:
     char config_extrafontdata;
 
     int layerstate;
+    GBool emptypage;
 
     SplashPath*bboxpath;
 
@@ -208,6 +209,12 @@ private:
     SplashOutputDev*clip1dev;
     SplashOutputDev*boolpolydev;
     SplashOutputDev*booltextdev;
+
+    SplashBitmap*rgbbitmap;
+    SplashBitmap*clip0bitmap;
+    SplashBitmap*clip1bitmap;
+    SplashBitmap*boolpolybitmap;
+    SplashBitmap*booltextbitmap;
 
     gfxdevice_t* gfxoutput;
     GFXOutputDev*gfxdev;
