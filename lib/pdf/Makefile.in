@@ -30,17 +30,17 @@ fonts.$(O): fonts.c
 	$(C) -I ./ -I xpdf fonts.c -o $@
 cmyk.$(O): cmyk.cc
 	$(CC) -I ./ -I xpdf cmyk.cc -o $@
-GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h ../devices/artsutils.c
+GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h CommonOutputDev.h ../devices/artsutils.c
 	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
-BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h
+BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h
 	$(CC) -I ./ -I xpdf BitmapOutputDev.cc -o $@
-FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h
+FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOutputDev.h
 	$(CC) -I ./ -I xpdf FullBitmapOutputDev.cc -o $@
 DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h
 	$(CC) -I ./ -I xpdf DummyOutputDev.cc -o $@
-pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h
+pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
 
 xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc
