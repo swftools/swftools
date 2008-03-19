@@ -167,13 +167,11 @@ void FullBitmapOutputDev::flushBitmap()
 	gfxcolor_t*out = &img->data[y*rangex];
 	Guchar*ain = &alpha[(y+ymin)*width+xmin];
 	for(x=0;x<rangex;x++) {
-	    /* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
-	       have to premultiply alpha (mix background and pixel according to the alpha channel).
-	    */
-	    out[x].r = (in[x*3+0]*ain[x])/255;
-	    out[x].g = (in[x*3+1]*ain[x])/255;
-	    out[x].b = (in[x*3+2]*ain[x])/255;
-	    out[x].a = ain[x];
+	    // blend against a white background
+	    out[x].r = (in[x*3+0]*ain[x])/255 + 255-ain[x];
+	    out[x].g = (in[x*3+1]*ain[x])/255 + 255-ain[x];
+	    out[x].b = (in[x*3+2]*ain[x])/255 + 255-ain[x];
+	    out[x].a = 255;//ain[x];
 	}
     }
     /* transform bitmap rectangle to "device space" */
@@ -191,9 +189,6 @@ void FullBitmapOutputDev::flushBitmap()
     gfxline_t* line = gfxline_makerectangle(xmin, ymin, xmax, ymax);
     dev->fillbitmap(dev, line, img, &m, 0);
     gfxline_free(line);
-
-    memset(rgbdev->getBitmap()->getAlphaPtr(), 0, rgbdev->getBitmap()->getWidth()*rgbdev->getBitmap()->getHeight());
-    memset(rgbdev->getBitmap()->getDataPtr(), 0, rgbdev->getBitmap()->getRowSize()*rgbdev->getBitmap()->getHeight());
 
     free(img->data);img->data=0;free(img);img=0;
 }
