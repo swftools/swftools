@@ -8,7 +8,6 @@
 #include "GFXOutputDev.h"
 #include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
-#include "DummyOutputDev.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER
