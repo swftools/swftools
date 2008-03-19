@@ -566,6 +566,12 @@ static void fill_solid(RGBA*line, int*z, int y, int x1, int x2, RGBA col, U32 de
     }
 }
 
+static int inline clamp(int v)
+{
+    if(v>255) return 255;
+    else return v;
+}
+
 static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitmap_t*b, int clipbitmap, U32 depth, double fmultiply)
 {
     int x = x1;
@@ -609,9 +615,9 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
 	    col = b->data[yy*b->width+xx];
 	    ainv = 255-col.a;
 
-	    line[x].r = ((line[x].r*ainv)>>8)+col.r;
-	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
-	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
+	    line[x].r = clamp(((line[x].r*ainv)>>8)+col.r);
+	    line[x].g = clamp(((line[x].g*ainv)>>8)+col.g);
+	    line[x].b = clamp(((line[x].b*ainv)>>8)+col.b);
 	    line[x].a = 255;
 	    
 	    z[x] = depth;
