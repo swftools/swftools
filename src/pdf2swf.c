@@ -203,6 +203,14 @@ int args_callback_option(char*name,char*val) {
 	driver->set_parameter(driver, "ignoredraworder", "1");
 	return 0;
     }
+#ifndef WIN32
+    else if (!strcmp(name, "Q"))
+    {
+	int seconds = atoi(val);
+	alarm(seconds);
+	return 1;
+    }
+#endif
     else if (!strcmp(name, "z"))
     {
 	driver->set_parameter(driver, "enablezlib", "1");
@@ -371,6 +379,7 @@ struct options_t options[] =
  {"z","zlib"},
  {"s","set"},
  {"S","shapes"},
+ {"Q","maxtime"},
  {"j","jpegquality"},
  {"p","pages"},
  {"w","samewindow"},
