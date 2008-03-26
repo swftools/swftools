@@ -68,6 +68,7 @@ void gfxdraw_conicTo(gfxdrawer_t*draw, double cx, double cy, double tox, double 
 
 gfxbbox_t gfxline_getbbox(gfxline_t*line);
 gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y);
+void gfxbbox_intersect(gfxbbox_t*box1, gfxbbox_t*box2);
 
 void gfxline_transform(gfxline_t*line, gfxmatrix_t*matrix);
 

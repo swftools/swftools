@@ -615,6 +615,22 @@ gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y)
     return box;
 }
 
+void gfxbbox_intersect(gfxbbox_t*box1, gfxbbox_t*box2)
+{
+    if(box2->xmin > box1->xmin)
+	box1->xmin = box2->xmin;
+    if(box2->ymin > box1->ymin)
+	box1->ymin = box2->ymin;
+    if(box2->xmax < box1->xmax)
+	box1->xmax = box2->xmax;
+    if(box2->ymax > box1->ymax)
+	box1->ymax = box2->ymax;
+    if(box1->xmin > box1->xmax)
+	box1->xmax = box1->xmin;
+    if(box1->ymin > box1->ymax)
+	box1->ymax = box1->ymin;
+}
+
 gfxbbox_t gfxline_getbbox(gfxline_t*line)
 {
     gfxcoord_t x=0,y=0;
