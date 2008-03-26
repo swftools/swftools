@@ -2402,10 +2402,14 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
     }
 
     gfxresult_t*grouprecording = states[statepos].grouprecording;
-   
-    if(state->getBlendMode() == gfxBlendNormal) {
+  
+    int blendmode = state->getBlendMode();
+    if(blendmode == gfxBlendNormal || blendmode == gfxBlendMultiply) {
+	int alpha = state->getFillOpacity()*255;
+	if(blendmode == gfxBlendMultiply && alpha>200)
+	    alpha = 128;
 	gfxdevice_t ops;
-	gfxdevice_ops_init(&ops, this->device, (unsigned char)(state->getFillOpacity()*255));
+	gfxdevice_ops_init(&ops, this->device, alpha);
 	gfxresult_record_replay(grouprecording, &ops);
 	ops.finish(&ops);
     }
