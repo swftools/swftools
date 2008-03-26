@@ -760,8 +760,8 @@ static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,doubl
     double ifs = 1.0 / (i->current_font_size*GLYPH_SCALE);
 
     MATRIX m;
-    m.sx = (U32)((m11*ifs)*65536); m.r1 = (U32)((m21*ifs)*65536);
-    m.r0 = (U32)((m12*ifs)*65536); m.sy = (U32)((m22*ifs)*65536); 
+    m.sx = (S32)((m11*ifs)*65536); m.r1 = (S32)((m21*ifs)*65536);
+    m.r0 = (S32)((m12*ifs)*65536); m.sy = (S32)((m22*ifs)*65536); 
     /* this is the position of the first char to set a new fontmatrix-
        we hope that it's close enough to all other characters using the
        font, so we use its position as origin for the matrix */
@@ -791,9 +791,9 @@ static void draw_watermark(gfxdevice_t*dev, gfxbbox_t r, char drawall)
 	for(y=0;y<watermark2_height;y++)
 	for(x=0;x<watermark2_width;x++) {
 	    if(((watermark2[x]>>y)&1)) {
-		if(!drawall && lrand48()%5)
+		if(!drawall && rand()%5)
 		    continue;
-		unsigned int b = lrand48();
+		unsigned int b = rand();
 		moveto(dev, i->tag, x*sx+tx+((b>>1)&1)/20.0, y*sy+ty+((b>>3)&1)/20.0);
 		lineto(dev, i->tag, x*sx+px+tx+((b>>2)&1)/20.0, y*sy+ty+((b>>3)&1)/20.0);
 		lineto(dev, i->tag, x*sx+px+tx+((b>>2)&1)/20.0, y*sy+py+ty+((b>>4)&1)/20.0);
@@ -830,7 +830,7 @@ static void insert_watermark(gfxdevice_t*dev, char drawall)
     if(drawall) {
 	swfoutput_setfillcolor(dev, 0,0,255,192);
     } else {
-	swfoutput_setfillcolor(dev, lrand48(),lrand48(),lrand48(),(lrand48()&127)+128);
+	swfoutput_setfillcolor(dev, rand(),rand(),rand(),(rand()&127)+128);
     }
     startshape(dev);
     startFill(dev);
