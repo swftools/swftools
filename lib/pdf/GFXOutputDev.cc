@@ -33,6 +33,9 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#ifdef HAVE_FONTCONFIG
+#include <fontconfig.h>
+#endif
 //xpdf header files
 #include "config.h"
 #include "gfile.h"
@@ -294,6 +297,8 @@ void unlinkfont(char* filename)
     }
 }
 
+static int config_use_fontconfig = 1;
+static int fcinitcalled = 0; 
 
 GFXGlobalParams::GFXGlobalParams()
 : GlobalParams("")
@@ -309,12 +314,179 @@ GFXGlobalParams::~GFXGlobalParams()
 	    unlinkfont(pdf2t1map[t].fullfilename);
 	}
     }
+#ifdef HAVE_FONTCONFIG
+    if(config_use_fontconfig && fcinitcalled)
+	FcFini();
+#endif
 }
+#ifdef HAVE_FONTCONFIG
+static char fc_ismatch(FcPattern*match, char*family, char*style)
+{
+    char*fcfamily=0,*fcstyle=0,*fcfullname=0,*filename=0;
+    FcBool scalable=FcFalse, outline=FcFalse;
+    FcPatternGetString(match, "family", 0, (FcChar8**)&fcfamily);
+    FcPatternGetString(match, "style", 0, (FcChar8**)&fcstyle);
+    FcPatternGetString(match, "file", 0, (FcChar8**)&filename);
+    FcPatternGetBool(match, "outline", 0, &outline);
+    FcPatternGetBool(match, "scalable", 0, &scalable);
+
+    if(scalable!=FcTrue || outline!=FcTrue)
+	return 0;
+
+    if (!strcasecmp(fcfamily, family)) {
+	msg("<debug> Font %s-%s (%s) is a match for %s%s%s", fcfamily, fcstyle, filename, family, style?"-":"", style?style:"");
+	return 1;
+    } else {
+	//msg("<debug> Font %s-%s (%s) is NOT a match for %s%s%s", fcfamily, fcstyle, filename, family, style?"-":"", style?style:"");
+	return 0;
+    }
+}
+#endif
+
+char* fontconfig_searchForFont(char*name)
+{
+#ifdef HAVE_FONTCONFIG
+    if(!config_use_fontconfig)
+	return 0;
+    
+    // call init ony once
+    if (!fcinitcalled) {
+        fcinitcalled = 1;
+
+	// check whether we have a config file
+	char* configfile = (char*)FcConfigFilename(0);
+	int configexists = 0;
+	FILE*fi = fopen(configfile, "rb");
+	if(fi) {
+	    configexists = 1;fclose(fi);
+	    msg("<debug> Initializing FontConfig (configfile=%s)", configfile);
+	} else {
+	    msg("<debug> Initializing FontConfig (no configfile)");
+	}
+
+	if(!configexists) {
+	    /* A fontconfig instance which didn't find a configfile is unbelievably
+	       cranky, so let's just write out a small xml file and make fontconfig
+	       happy */
+	    FcConfig*c = FcConfigCreate();
+	    char namebuf[512];
+	    char* tmpFileName = mktmpname(namebuf);
+	    FILE*fi = fopen(tmpFileName, "wb");
+	    fprintf(fi, "<?xml version=\"1.0\"?>\n<fontconfig>\n");//<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+#ifdef WIN32
+	    fprintf(fi, "<dir>WINDOWSFONTDIR</dir>\n");
+#endif
+	    fprintf(fi, "<dir>~/.fonts</dir>\n");
+#ifdef WIN32
+	    fprintf(fi, "<cachedir>WINDOWSTEMPDIR_FONTCONFIG_CACHE</cachedir>\n");
+#endif
+	    fprintf(fi, "<cachedir>~/.fontconfig</cachedir>\n");
+	    fprintf(fi, "</fontconfig>\n");
+	    fclose(fi);
+	    FcConfigParseAndLoad(c, (FcChar8*)tmpFileName, 1);
+	    FcConfigBuildFonts(c);
+	    FcConfigSetCurrent(c);
+	}
+
+	if(!FcInit()) {
+            msg("<debug> FontConfig Initialization failed. Disabling.");
+            config_use_fontconfig = 0;
+            return 0;
+        }
+	FcConfig * config = FcConfigGetCurrent();
+	if(!config) {
+            msg("<debug> FontConfig Config Initialization failed. Disabling.");
+            config_use_fontconfig = 0;
+            return 0;
+        }
+	FcFontSet * set =  FcConfigGetFonts(config, FcSetSystem);
+        msg("<verbose> FontConfig initialized. Found %d fonts", set?set->nfont:0);
+	if(!set || !set->nfont) {
+            msg("<debug> FontConfig has zero fonts. Disabling.");
+            config_use_fontconfig = 0;
+            return 0;
+        }
+
+	if(getLogLevel() >= LOGLEVEL_TRACE) {
+	    int t;
+	    for(t=0;t<set->nfont;t++) {
+		char*fcfamily=0,*fcstyle=0,*filename=0;
+		FcBool scalable=FcFalse, outline=FcFalse;
+		FcPatternGetString(set->fonts[t], "family", 0, (FcChar8**)&fcfamily);
+		FcPatternGetString(set->fonts[t], "style", 0, (FcChar8**)&fcstyle);
+		FcPatternGetString(set->fonts[t], "file", 0, (FcChar8**)&filename);
+		FcPatternGetBool(set->fonts[t], "outline", 0, &outline);
+		FcPatternGetBool(set->fonts[t], "scalable", 0, &scalable);
+		if(scalable && outline) {
+		    msg("<trace> %s-%s -> %s", fcfamily, fcstyle, filename);
+		}
+	    }
+	}
+    }
+
+    char*family = strdup(name);
+    char*style = 0;
+    char*dash = strchr(family, '-');
+    FcPattern*pattern = 0;
+    if(dash) {
+	*dash = 0;
+	style = dash+1;
+	msg("<debug> FontConfig: Looking for font %s (family=%s style=%s)", name, family, style);
+	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, FC_STYLE, FcTypeString, style, NULL);
+    } else {
+	msg("<debug> FontConfig: Looking for font %s (family=%s)", name, family);
+	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
+    }
+
+    FcResult result;
+    FcConfigSubstitute(0, pattern, FcMatchPattern); 
+    FcDefaultSubstitute(pattern);
+
+    FcFontSet*set = FcFontSort(0, pattern, 1, 0, &result);
+    if(set) {
+	int t;
+	for(t=0;t<set->nfont;t++) {
+	    FcPattern*match = set->fonts[t];
+	    //FcPattern*match = FcFontMatch(0, pattern, &result);
+	    if(fc_ismatch(match, family, style)) {
+		char*filename=0;
+		if(FcPatternGetString(match, "file", 0, (FcChar8**)&filename) != FcResultMatch) {
+		    msg("<debug> FontConfig: Couldn't get fontconfig's filename for font %s", name);
+		    filename=0;
+		}
+		//FcPatternDestroy(match);
+		msg("<debug> fontconfig: returning filename %s", filename);
+		free(family);
+		FcPatternDestroy(pattern);
+		FcFontSetDestroy(set);
+		return filename?strdup(filename):0;
+	    }
+	}
+    }
+    free(family);
+    FcPatternDestroy(pattern);
+    FcFontSetDestroy(set);
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+static DisplayFontParamKind detectFontType(const char*filename)
+{
+    if(strstr(filename, ".ttf") || strstr(filename, ".TTF"))
+	return displayFontTT;
+    if(strstr(filename, ".pfa") || strstr(filename, ".PFA") || strstr(filename, ".pfb"))
+	return displayFontT1;
+    return displayFontTT;
+}
+
 DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 {
     msg("<verbose> looking for font %s in global params", fontName->getCString());
 
     char*name = fontName->getCString();
+    
     /* see if it is a pdf standard font */
     int t;
     for(t=0;t<sizeof(pdf2t1map)/sizeof(fontentry);t++) {
@@ -346,9 +518,25 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
         }
         f = f->next;
     }
-    if(bestfilename) {
-        DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
-        dfp->t1.fileName = new GString(bestfilename);
+
+    /* if we didn't find anything up to now, try looking for the
+       font via fontconfig */
+    char*filename = 0;
+    if(!bestfilename) {
+	filename = fontconfig_searchForFont(name);
+    } else {
+	filename = strdup(bestfilename);
+    }
+
+    if(filename) {
+	DisplayFontParamKind kind = detectFontType(filename);
+        DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), kind);
+	if(kind == displayFontTT) {
+	    dfp->tt.fileName = new GString(filename);
+	} else {
+	    dfp->t1.fileName = new GString(filename);
+	}
+	free(filename);
         return dfp;
     }
     return GlobalParams::getDisplayFont(fontName);
@@ -2405,7 +2593,7 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
   
     int blendmode = state->getBlendMode();
     if(blendmode == gfxBlendNormal || blendmode == gfxBlendMultiply) {
-	int alpha = state->getFillOpacity()*255;
+	int alpha = (int)(state->getFillOpacity()*255);
 	if(blendmode == gfxBlendMultiply && alpha>200)
 	    alpha = 128;
 	gfxdevice_t ops;
