@@ -362,7 +362,7 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
     } else if(!strcmp(name, "help")) {
 	printf("\nPDF device global parameters:\n");
 	printf("fontdir=<dir>   a directory with additional fonts\n");
-	printf("font=<filename> an dditional font filename\n");
+	printf("font=<filename> an additional font filename\n");
 	printf("pages=<range>   the range of pages to convert (example: pages=1-100,210-)\n");
 	printf("zoom=<dpi>      the resultion (default: 72)\n");
     }	
