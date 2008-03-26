@@ -29,14 +29,14 @@ SWF.$(O): SWF.c pyutils.h primitives.h taglist.h
 	$(C) -Wall -Wno-unused -fPIC $(PYTHON_INCLUDES) -c SWF.c -o SWF.$(O)
 
 SWF_OBJS=SWF.$(O) taglist.$(O) tag.$(O) image.$(O) tags.$(O) tagmap.$(O) action.$(O) primitives.$(O) pyutils.$(O) 
-SWF_DEPS=../librfxswf$(A) ../libbase$(A) ../art/libart$(A) 
+SWF_DEPS=../librfxswf$(A) ../libbase$(A)
 SWF.$(SLEXT): $(SWF_OBJS) $(SWF_DEPS) Makefile
 	$(L) -g $(SHARED) $(SWF_OBJS) $(SWF_DEPS) -o SWF.$(SLEXT) $(PYTHON_LIB) $(LIBS)
 SWF$(A): $(SWF_OBJS) $(SWF_DEPS) Makefile
 	$(AR) cru SWF$(A) $(SWF_OBJS) $(SWF_DEPS)
 	$(RANLIB) SWF$(A)
 
-GFX_DEPS=../libpdf$(A) ../devices/swf.$(O) ../librfxswf$(A) ../devices/artsutils.$(O) ../devices/arts.$(O) ../art/libart$(A) ../libgfx$(A) ../libbase$(A) 
+GFX_DEPS=../libpdf$(A) ../devices/swf.$(O) ../librfxswf$(A) ../libgfx$(A) ../libbase$(A) 
 gfx.$(SLEXT): gfx.$(O) $(GFX_DEPS) Makefile
 	$(L) -g $(SHARED) gfx.$(O) -o gfx.$(SLEXT) $(GFX_DEPS) $(PYTHON_LIB) $(LIBS) $(CXXLIBS)
 gfx$(A): gfx.$(O) $(GFX_DEPS) Makefile
