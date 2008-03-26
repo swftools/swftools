@@ -3,9 +3,9 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-DEVICES = devices/swf.$(O) devices/arts.$(O) devices/artsutils.$(O) #devices/lrf.$(O) devices/opengl.$(O)
+DEVICES = devices/swf.$(O) #devices/lrf.$(O) devices/opengl.$(O)
 
-all: librfxswf$(A) libpdf$(A) art/libart$(A) libbase$(A) libgfx$(A) $(DEVICES)
+all: librfxswf$(A) libpdf$(A) libbase$(A) libgfx$(A) $(DEVICES)
 
 lame_objects = @lame_objects@
 
@@ -13,9 +13,12 @@ h263_objects = h.263/dct.$(O) h.263/h263tables.$(O) h.263/swfvideo.$(O)
 actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.swf4.$(O) action/lex.swf5.$(O) action/libming.$(O) action/swf4compiler.tab.$(O) action/swf5compiler.tab.$(O) action/actioncompiler.$(O)
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c
 
-base_objects=q.$(O) utf8.$(O) mem.$(O) png.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
-gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/bbox.$(O) devices/rescale.$(O)
+base_objects=q.$(O) utf8.$(O) png.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
+gfx_objects=gfxtools.$(O) gfxfont.$(O) gfxpoly.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O)
+art_objects = art/art_affine.$(O) art/art_alphagamma.$(O) art/art_bpath.$(O) art/art_gray_svp.$(O) art/art_misc.$(O) art/art_pixbuf.$(O) art/art_rect.$(O) art/art_rect_svp.$(O) art/art_rect_uta.$(O) art/art_render.$(O) art/art_render_gradient.$(O) art/art_render_mask.$(O) art/art_render_svp.$(O) art/art_rgb.$(O) art/art_rgb_a_affine.$(O) art/art_rgb_affine.$(O) art/art_rgb_affine_private.$(O) art/art_rgb_bitmap_affine.$(O) art/art_rgb_pixbuf_affine.$(O) art/art_rgb_rgba_affine.$(O) art/art_rgb_svp.$(O) art/art_rgba.$(O) art/art_svp.$(O) art/art_svp_intersect.$(O) art/art_svp_ops.$(O) art/art_svp_point.$(O) art/art_svp_render_aa.$(O) art/art_svp_vpath.$(O) art/art_svp_vpath_stroke.$(O) art/art_svp_wind.$(O) art/art_uta.$(O) art/art_uta_ops.$(O) art/art_uta_rect.$(O) art/art_uta_svp.$(O) art/art_uta_vpath.$(O) art/art_vpath.$(O) art/art_vpath_bpath.$(O) art/art_vpath_dash.$(O) art/art_vpath_svp.$(O)
 
+%.$(O): %.c 
+	$(C) $< -o $@
 bitio.$(O): bitio.c bitio.h
 	$(C) bitio.c -o $@
 drawer.$(O): drawer.c drawer.h
@@ -36,6 +39,8 @@ os.$(O): os.c os.h $(top_builddir)/config.h
 	$(C) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" os.c -o $@
 gfxtools.$(O): gfxtools.c gfxtools.h $(top_builddir)/config.h
 	$(C) gfxtools.c -o $@
+gfxpoly.$(O): gfxpoly.c gfxpoly.h $(top_builddir)/config.h
+	$(C) gfxpoly.c -o $@
 gfxfont.$(O): gfxfont.c gfxfont.h $(top_builddir)/config.h
 	$(C) gfxfont.c -o $@
 gfxwindow.$(O): gfxwindow_win32.c gfxwindow_unix.c gfxwindow.c gfxwindow.h
@@ -52,9 +57,6 @@ $(lame_objects):
 	cd lame;$(MAKE) all;cd ..
 $(actioncompiler_objects):
 	cd action;$(MAKE) all;cd ..
-
-art/libart$(A):
-	cd art; $(MAKE) libart$(A);cd ..
 
 h.263/dct.$(O):  h.263/dct.c h.263/dct.h
 	$(C) h.263/dct.c -o h.263/dct.$(O)
@@ -73,10 +75,8 @@ devices/render.$(O):  devices/render.c devices/render.h
 	$(C) devices/render.c -o devices/render.$(O)
 devices/opengl.$(O):  devices/opengl.c devices/opengl.h
 	$(C) devices/opengl.c -o devices/opengl.$(O)
-devices/arts.$(O):  devices/arts.c devices/arts.h devices/artsutils.h
-	$(C) devices/arts.c -o devices/arts.$(O)
-devices/artsutils.$(O):  devices/artsutils.c devices/artsutils.h
-	$(C) devices/artsutils.c -o devices/artsutils.$(O)
+devices/polyops.$(O):  devices/polyops.c devices/polyops.h gfxpoly.h
+	$(C) devices/polyops.c -o devices/polyops.$(O)
 devices/record.$(O):  devices/record.c devices/record.h
 	$(C) devices/record.c -o devices/record.$(O)
 devices/text.$(O):  devices/text.c devices/text.h
@@ -93,8 +93,8 @@ devices/lrf.$(O):  devices/lrf.c devices/lrf.h
 libbase$(A): $(base_objects) Makefile
 	$(AR) r libbase$(A) $(base_objects)
 
-libgfx$(A): $(gfx_objects) Makefile
-	$(AR) r libgfx$(A) $(gfx_objects)
+libgfx$(A): $(gfx_objects) $(art_objects) Makefile
+	$(AR) r libgfx$(A) $(gfx_objects) $(art_objects)
 
 librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects) Makefile
 	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
@@ -109,9 +109,9 @@ uninstall:
 
 clean: 
 	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
+	rm -f art/*.o art/*.obj art/*.lo art/*.a art/*.lib art/*.la art/gmon.out
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
-	cd art && $(MAKE) clean && cd ..
 	cd pdf && $(MAKE) clean && cd ..
 
