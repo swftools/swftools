@@ -64,13 +64,13 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfxfont.h"
+#include "../gfxpoly.h"
 #include "../devices/record.h"
 #include "../devices/ops.h"
-#include "../devices/arts.h"
+#include "../devices/polyops.h"
 #include "../devices/render.h"
 
 #include "../art/libart.h"
-#include "../devices/artsutils.h"
 
 #include "../png.h"
 #include "fonts.h"
@@ -312,7 +312,7 @@ GFXGlobalParams::~GFXGlobalParams()
 }
 DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 {
-    msg("<verbose> looking for font %s in global params\n", fontName->getCString());
+    msg("<verbose> looking for font %s in global params", fontName->getCString());
 
     char*name = fontName->getCString();
     /* see if it is a pdf standard font */
@@ -383,11 +383,13 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->pages = 0;
     this->pagebuflen = 0;
     this->pagepos = 0;
+    this->config_convertgradients=0;
     this->config_break_on_warning=0;
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
     this->config_fontquality = 10;
+    this->config_optimize_polygons = 0;
 
     this->gfxfontlist = gfxfontlist_create();
   
@@ -404,6 +406,10 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_transparent = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
+    } else if(!strcmp(key,"convertgradients")) {
+        this->config_convertgradients = atoi(value);
+    } else if(!strcmp(key,"optimize_polygons")) {
+        this->config_optimize_polygons = atoi(value);
     } else if(!strcmp(key,"fontquality")) {
         this->config_fontquality = atof(value);
 	if(this->config_fontquality<=1)
@@ -498,39 +504,39 @@ static void dumpFontInfo(const char*loglevel, GfxFont*font)
   char* id = getFontID(font);
   char* name = getFontName(font);
   Ref* r=font->getID();
-  msg("%s=========== %s (ID:%d,%d) ==========\n", loglevel, name, r->num,r->gen);
+  msg("%s=========== %s (ID:%d,%d) ==========", loglevel, name, r->num,r->gen);
 
   GString*gstr  = font->getTag();
    
-  msg("%s| Tag: %s\n", loglevel, id);
+  msg("%s| Tag: %s", loglevel, id);
   
-  if(font->isCIDFont()) msg("%s| is CID font\n", loglevel);
+  if(font->isCIDFont()) msg("%s| is CID font", loglevel);
 
   GfxFontType type=font->getType();
   switch(type) {
     case fontUnknownType:
-     msg("%s| Type: unknown\n",loglevel);
+     msg("%s| Type: unknown",loglevel);
     break;
     case fontType1:
-     msg("%s| Type: 1\n",loglevel);
+     msg("%s| Type: 1",loglevel);
     break;
     case fontType1C:
-     msg("%s| Type: 1C\n",loglevel);
+     msg("%s| Type: 1C",loglevel);
     break;
     case fontType3:
-     msg("%s| Type: 3\n",loglevel);
+     msg("%s| Type: 3",loglevel);
     break;
     case fontTrueType:
-     msg("%s| Type: TrueType\n",loglevel);
+     msg("%s| Type: TrueType",loglevel);
     break;
     case fontCIDType0:
-     msg("%s| Type: CIDType0\n",loglevel);
+     msg("%s| Type: CIDType0",loglevel);
     break;
     case fontCIDType0C:
-     msg("%s| Type: CIDType0C\n",loglevel);
+     msg("%s| Type: CIDType0C",loglevel);
     break;
     case fontCIDType2:
-     msg("%s| Type: CIDType2\n",loglevel);
+     msg("%s| Type: CIDType2",loglevel);
     break;
   }
   
@@ -541,18 +547,18 @@ static void dumpFontInfo(const char*loglevel, GfxFont*font)
     embeddedName = font->getEmbeddedFontName()->getCString();
   }
   if(embedded)
-   msg("%s| Embedded id: %s id: %d\n",loglevel, FIXNULL(embeddedName), embRef.num);
+   msg("%s| Embedded id: %s id: %d",loglevel, FIXNULL(embeddedName), embRef.num);
 
   gstr = font->getExtFontFile();
   if(gstr)
-   msg("%s| External Font file: %s\n", loglevel, FIXNULL(gstr->getCString()));
+   msg("%s| External Font file: %s", loglevel, FIXNULL(gstr->getCString()));
 
   // Get font descriptor flags.
-  if(font->isFixedWidth()) msg("%s| is fixed width\n", loglevel);
-  if(font->isSerif()) msg("%s| is serif\n", loglevel);
-  if(font->isSymbolic()) msg("%s| is symbolic\n", loglevel);
-  if(font->isItalic()) msg("%s| is italic\n", loglevel);
-  if(font->isBold()) msg("%s| is bold\n", loglevel);
+  if(font->isFixedWidth()) msg("%s| is fixed width", loglevel);
+  if(font->isSerif()) msg("%s| is serif", loglevel);
+  if(font->isSymbolic()) msg("%s| is symbolic", loglevel);
+  if(font->isItalic()) msg("%s| is italic", loglevel);
+  if(font->isBold()) msg("%s| is bold", loglevel);
 
   free(id);
   free(name);
@@ -575,7 +581,7 @@ void dump_outline(gfxline_t*line)
     }
 }
 
-gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey)
+gfxline_t* GFXOutputDev::gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey)
 {
     int num = path->getNumSubpaths();
     int s,t;
@@ -597,9 +603,7 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
 	for(s=0;s<subnum;s++) {
 	   double x,y;
 	   
-	   state->transform(subpath->getX(s),subpath->getY(s),&x,&y);
-	   x += user_movex;
-	   y += user_movey;
+	   this->transformXY(state, subpath->getX(s),subpath->getY(s),&x,&y);
 
 	   if(s==0) {
 		if(closed && needsfix && (fabs(posx-lastx)+fabs(posy-lasty))>0.001) {
@@ -645,13 +649,179 @@ gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user
 GBool GFXOutputDev::useTilingPatternFill()
 {
     infofeature("tiled patterns");
+//    if(config_convertgradients)
+//	return gTrue;
     return gFalse;
 }
-
 GBool GFXOutputDev::useShadedFills()
 {
     infofeature("shaded fills");
+    if(config_convertgradients)
+	return gTrue;
     return gFalse;
+}
+
+void GFXOutputDev::transformXY(GfxState*state, double x, double y, double*nx, double*ny)
+{
+    state->transform(x,y,nx,ny);
+    *nx += user_movex + clipmovex;
+    *ny += user_movey + clipmovey;
+}
+
+
+#if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
+void GFXOutputDev::tilingPatternFill(GfxState *state, Object *str,
+			       int paintType, Dict *resDict,
+			       double *mat, double *bbox,
+			       int x0, int y0, int x1, int y1,
+			       double xStep, double yStep)
+#else
+void GFXBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
+			       int paintType, Dict *resDict,
+			       double *mat, double *bbox,
+			       int x0, int y0, int x1, int y1,
+			       double xStep, double yStep) 
+#endif
+{
+    msg("<debug> tilingPatternFill");
+    infofeature("tiling pattern fills");
+}
+
+GBool GFXOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
+{
+    msg("<error> functionShadedFill not supported yet");
+    infofeature("function shaded fills");
+    return gFalse;
+}
+static gfxcolor_t col2col(GfxColorSpace*colspace, GfxColor* col)
+{
+    gfxcolor_t c;
+    GfxRGB rgb;
+    colspace->getRGB(col, &rgb);
+    c.r = colToByte(rgb.r);
+    c.g = colToByte(rgb.g);
+    c.b = colToByte(rgb.b);
+    c.a = 255;
+    return c;
+}
+
+GBool GFXOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
+{
+    double x0,y0,r0,x1,y1,x2,y2,x9,y9,r1;
+    shading->getCoords(&x0,&y0,&r0,&x9,&y9,&r1);
+    x1=x0+r1;y1=y0;
+    x2=x0;   y2=y0+r1;
+    this->transformXY(state, x0,y0, &x0,&y0);
+    this->transformXY(state, x1,y1, &x1,&y1);
+    this->transformXY(state, x2,y2, &x2,&y2);
+    
+    GfxColor color0;
+    GfxColor color1;
+    GfxColor color2;
+    shading->getColor(0.0, &color0);
+    shading->getColor(0.5, &color1);
+    shading->getColor(1.0, &color2);
+  
+    GfxColorSpace* colspace = shading->getColorSpace();
+    
+    msg("<verbose> radialShadedFill %f %f %f %f %f %f %02x%02x%02x->%02x%02x%02x", x0, y0, x1, y1, x2, y2,
+	    colToByte(color0.c[0]), colToByte(color0.c[1]), colToByte(color0.c[2]), 
+	    colToByte(color1.c[0]), colToByte(color1.c[1]), colToByte(color1.c[2]),
+	    colToByte(color2.c[0]), colToByte(color2.c[1]), colToByte(color2.c[2]));
+    infofeature("radial shaded fills");
+
+    gfxgradient_t*g = (gfxgradient_t*)malloc(sizeof(gfxgradient_t)*3);
+    g[0].next = &g[1];
+    g[1].next = &g[2];
+    g[2].next = 0;
+    g[0].color = col2col(colspace, &color0);
+    g[1].color = col2col(colspace, &color1);
+    g[2].color = col2col(colspace, &color2);
+    g[0].pos = 0.0;
+    g[1].pos = 0.5;
+    g[2].pos = 1.0;
+
+    gfxbbox_t b = states[statepos].clipbbox;
+    gfxline_t p1,p2,p3,p4,p5;
+    p1.type=gfx_moveTo;p1.x=b.xmin; p1.y=b.ymin; p1.next=&p2;
+    p2.type=gfx_lineTo;p2.x=b.xmin; p2.y=b.ymax; p2.next=&p3;
+    p3.type=gfx_lineTo;p3.x=b.xmax; p3.y=b.ymax; p3.next=&p4;
+    p4.type=gfx_lineTo;p4.x=b.xmax; p4.y=b.ymin; p4.next=&p5;
+    p5.type=gfx_lineTo;p5.x=b.xmin; p5.y=b.ymin; p5.next=0;
+    
+    gfxmatrix_t m;
+    //m.m00 = (x3-x0); m.m10 = (x1-x0);
+    //m.m01 = (y3-y0); m.m11 = (y1-y0);
+    //x3/y3 specifies another (the ending) circle, not the second radius of an ellipse
+    m.m00 = (x1-x0); m.m10 = (x2-x0);
+    m.m01 = (y1-y0); m.m11 = (y2-y0);
+    m.tx = x0 - 0.5;
+    m.ty = y0 - 0.5;
+
+    device->fillgradient(device, &p1, g, gfxgradient_radial, &m);
+    return gTrue;
+}
+
+GBool GFXOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
+{
+    double x0,y0,x1,y1;
+    shading->getCoords(&x0,&y0,&x1,&y1);
+    this->transformXY(state, x0,y0,&x0,&y0);
+    this->transformXY(state, x1,y1,&x1,&y1);
+
+    GfxColor color0;
+    GfxColor color1;
+    GfxColor color2;
+    shading->getColor(0.0, &color0);
+    shading->getColor(0.5, &color1);
+    shading->getColor(1.0, &color2);
+    
+    GfxColorSpace* colspace = shading->getColorSpace();
+    
+    msg("<verbose> axialShadedFill %f %f %f %f %02x%02x%02x->%02x%02x%02x->%02x%02x%02x", x0, y0, x1, y1,
+	    colToByte(color0.c[0]), colToByte(color0.c[1]), colToByte(color0.c[2]), 
+	    colToByte(color1.c[0]), colToByte(color1.c[1]), colToByte(color1.c[2]),
+	    colToByte(color2.c[0]), colToByte(color2.c[1]), colToByte(color2.c[2])
+	    );
+    infofeature("axial shaded fills");
+
+    gfxgradient_t*g = (gfxgradient_t*)malloc(sizeof(gfxgradient_t)*3);
+    g[0].next = &g[1];
+    g[1].next = &g[2];
+    g[2].next = 0;
+    g[0].color = col2col(colspace, &color0);
+    g[1].color = col2col(colspace, &color1);
+    g[2].color = col2col(colspace, &color2);
+    g[0].pos = 0.0;
+    g[1].pos = 0.5;
+    g[2].pos = 1.0;
+ 
+    double xMin,yMin,xMax,yMax;
+    state->getUserClipBBox(&xMin, &yMin, &xMax, &yMax);
+    this->transformXY(state, xMin, yMin, &xMin, &yMin);
+    msg("<verbose> userClipBox %f %f %f %f", xMin, yMin, xMax, yMax);
+
+    xMin = 0; yMin = 0;
+    xMin = 1024; yMin = 1024;
+
+    gfxbbox_t b = states[statepos].clipbbox;
+    gfxline_t p1,p2,p3,p4,p5;
+    p1.type=gfx_moveTo;p1.x=b.xmin; p1.y=b.ymin; p1.next=&p2;
+    p2.type=gfx_lineTo;p2.x=b.xmin; p2.y=b.ymax; p2.next=&p3;
+    p3.type=gfx_lineTo;p3.x=b.xmax; p3.y=b.ymax; p3.next=&p4;
+    p4.type=gfx_lineTo;p4.x=b.xmax; p4.y=b.ymin; p4.next=&p5;
+    p5.type=gfx_lineTo;p5.x=b.xmin; p5.y=b.ymin; p5.next=0;
+   
+    /* the gradient starts at (-1.0,0.0), so move (0,0) to
+       the middle of the two control points */
+    gfxmatrix_t m;
+    m.m00 = (x1-x0)/2; m.m10 = -(y1-y0)/2;
+    m.m01 = (y1-y0)/2; m.m11 =  (x1-x0)/2;
+    m.tx = (x0 + x1)/2 - 0.5;
+    m.ty = (y0 + y1)/2 - 0.5;
+
+    device->fillgradient(device, &p1, g, gfxgradient_linear, &m);
+    return gTrue;
 }
   
 GBool GFXOutputDev::useDrawForm() 
@@ -735,7 +905,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     }
     
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d color=%02x%02x%02x%02x\n",
+        msg("<trace> stroke width=%f join=%s cap=%s dashes=%d color=%02x%02x%02x%02x",
 		width,
 		lineJoin==0?"miter": (lineJoin==1?"round":"bevel"),
 		lineCap==0?"butt": (lineJoin==1?"round":"square"),
@@ -746,8 +916,8 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     }
 
     if(flags&STROKE_FILL) {
-        ArtSVP* svp = gfxstrokeToSVP(line, width, capType, joinType, miterLimit);
-        gfxline_t*gfxline = SVPtogfxline(svp);
+        gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, capType, joinType, miterLimit);
+        gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
 	if(getLogLevel() >= LOGLEVEL_TRACE)  {
 	    dump_outline(gfxline);
 	}
@@ -761,7 +931,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
             device->fill(device, gfxline, &col);
         }
         free(gfxline);
-	art_svp_free(svp);
+	gfxpoly_free(poly);
     } else {
         if(flags&STROKE_CLIP) 
             msg("<error> Stroke&clip not supported at the same time");
@@ -790,7 +960,7 @@ void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line)
     gfxcolor_t col = getFillColor(state);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> fill %02x%02x%02x%02x\n", col.r, col.g, col.b, col.a);
+        msg("<trace> fill %02x%02x%02x%02x", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
     device->fill(device, line, &col);
@@ -799,9 +969,10 @@ void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line)
 void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line) 
 {
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> clip\n");
         dump_outline(line);
     }
+    gfxbbox_t bbox = gfxline_getbbox(line);
+    gfxbbox_intersect(&states[statepos].clipbbox, &bbox);
 
     device->startclip(device, line);
     states[statepos].clipping++;
@@ -810,7 +981,13 @@ void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line)
 void GFXOutputDev::clip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
+    msg("<trace> clip");
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    if(config_optimize_polygons) {
+	gfxline_t*line2 = gfxline_circularToEvenOdd(line);
+	gfxline_free(line);
+	line = line2;
+    }
     clipToGfxLine(state, line);
     gfxline_free(line);
 }
@@ -819,14 +996,7 @@ void GFXOutputDev::eoClip(GfxState *state)
 {
     GfxPath * path = state->getPath();
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-
-    if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> eoclip\n");
-        dump_outline(line);
-    }
-
-    device->startclip(device, line);
-    states[statepos].clipping++;
+    clipToGfxLine(state, line);
     gfxline_free(line);
 }
 void GFXOutputDev::clipToStrokePath(GfxState *state)
@@ -835,7 +1005,7 @@ void GFXOutputDev::clipToStrokePath(GfxState *state)
     gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> cliptostrokepath\n");
+        msg("<trace> cliptostrokepath");
         dump_outline(line);
     }
 
@@ -981,12 +1151,10 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     }
 
     Unicode u = uLen?(_u[0]):0;
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d\n",x,y,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid);
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",x,y,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
 
     gfxmatrix_t m = this->current_font_matrix;
-    state->transform(x, y, &m.tx, &m.ty);
-    m.tx += user_movex + clipmovex;
-    m.ty += user_movey + clipmovey;
+    this->transformXY(state, x, y, &m.tx, &m.ty);
 
     if(render == RENDER_FILL || render == RENDER_INVISIBLE) {
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
@@ -1078,13 +1246,11 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
     if(config_extrafontdata && current_fontinfo) {
 
 	gfxmatrix_t m = this->current_font_matrix;
-	state->transform(0, 0, &m.tx, &m.ty);
+	this->transformXY(state, 0, 0, &m.tx, &m.ty);
 	m.m00*=INTERNAL_FONT_SIZE;
 	m.m01*=INTERNAL_FONT_SIZE;
 	m.m10*=INTERNAL_FONT_SIZE;
 	m.m11*=INTERNAL_FONT_SIZE;
-	m.tx += user_movex + clipmovex;
-	m.ty += user_movey + clipmovey;
 
 	if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
 	    msg("<error> Invalid charid %d for font", charid);
@@ -1152,7 +1318,7 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     
     msg("<notice> processing PDF page %d (%dx%d:%d:%d) (move:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1, user_movex + clipmovex, user_movey + clipmovey);
     if(rot!=0)
-        msg("<verbose> page is rotated %d degrees\n", rot);
+        msg("<verbose> page is rotated %d degrees", rot);
 
     clippath[0].type = gfx_moveTo;clippath[0].x = x1; clippath[0].y = y1; clippath[0].next = &clippath[1];
     clippath[1].type = gfx_lineTo;clippath[1].x = x2; clippath[1].y = y1; clippath[1].next = &clippath[2];
@@ -1163,6 +1329,10 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     if(!config_transparent) {
         device->fill(device, clippath, &white);
     }
+    states[statepos].clipbbox.xmin = x1;
+    states[statepos].clipbbox.ymin = x1;
+    states[statepos].clipbbox.xmax = x2;
+    states[statepos].clipbbox.ymax = y2;
 }
 
 
@@ -1172,7 +1342,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
     gfxline_t points[5];
     int x, y;
     
-    msg("<debug> drawlink\n");
+    msg("<debug> drawlink");
 
     link->getRect(&x1, &y1, &x2, &y2);
     cvtUserToDev(x1, y1, &x, &y);
@@ -1201,7 +1371,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
     points[4].y = y + user_movey + clipmovey;
     points[4].next = 0;
     
-    msg("<trace> drawlink %.2f/%.2f %.2f/%.2f %.2f/%.2f %.2f/%.2f\n",
+    msg("<trace> drawlink %.2f/%.2f %.2f/%.2f %.2f/%.2f %.2f/%.2f",
 	    points[0].x, points[0].y,
 	    points[1].x, points[1].y,
 	    points[2].x, points[2].y,
@@ -1217,7 +1387,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
     const char*type = "-?-";
     char*named = 0;
     int page = -1;
-    msg("<trace> drawlink action=%d\n", action->getKind());
+    msg("<trace> drawlink action=%d", action->getKind());
     switch(action->getKind())
     {
         case actionGoTo: {
@@ -1313,14 +1483,14 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         }
         break;
         default: {
-            msg("<error> Unknown link type!\n");
+            msg("<error> Unknown link type!");
             break;
         }
     }
 
     if(!s) s = strdup("-?-");
     
-    msg("<trace> drawlink s=%s\n", s);
+    msg("<trace> drawlink s=%s", s);
 
     if(!linkinfo && (page || s))
     {
@@ -1350,14 +1520,14 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         device->drawlink(device, points, s);
     }
 
-    msg("<verbose> \"%s\" link to \"%s\" (%d)\n", type, FIXNULL(s), page);
+    msg("<verbose> \"%s\" link to \"%s\" (%d)", type, FIXNULL(s), page);
     free(s);s=0;
 }
 
 void GFXOutputDev::saveState(GfxState *state) {
     dbg("saveState");dbgindent+=2;
 
-    msg("<trace> saveState\n");
+    msg("<trace> saveState");
     updateAll(state);
     if(statepos>=64) {
       msg("<error> Too many nested states in pdf.");
@@ -1367,6 +1537,7 @@ void GFXOutputDev::saveState(GfxState *state) {
     states[statepos].createsoftmask = states[statepos-1].createsoftmask;
     states[statepos].transparencygroup = states[statepos-1].transparencygroup;
     states[statepos].clipping = 0;
+    states[statepos].clipbbox = states[statepos-1].clipbbox;
 };
 
 void GFXOutputDev::restoreState(GfxState *state) {
@@ -1540,7 +1711,7 @@ void GFXOutputDev::updateFont(GfxState *state)
 
     this->current_fontinfo = this->info->getFont(id);
     if(!this->current_fontinfo) {
-	msg("<error> Internal Error: no fontinfo for font %s\n", id);
+	msg("<error> Internal Error: no fontinfo for font %s", id);
 	return;
     }
     if(!this->current_fontinfo->seen) {
@@ -1552,8 +1723,9 @@ void GFXOutputDev::updateFont(GfxState *state)
 	font = createGfxFont(gfxFont, current_fontinfo, this->config_fontquality);
         font->id = strdup(id);
 	this->gfxfontlist = gfxfontlist_addfont(this->gfxfontlist, font);
-	device->addfont(device, font);
     }
+    device->addfont(device, font);
+
     current_gfxfont = font;
     free(id);
 
@@ -1747,10 +1919,10 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       return;
   }
 
-  state->transform(0, 1, &x1, &y1); x1 += user_movex + clipmovex; y1 += user_movey + clipmovey;
-  state->transform(0, 0, &x2, &y2); x2 += user_movex + clipmovex; y2 += user_movey + clipmovey;
-  state->transform(1, 0, &x3, &y3); x3 += user_movex + clipmovex; y3 += user_movey + clipmovey;
-  state->transform(1, 1, &x4, &y4); x4 += user_movex + clipmovex; y4 += user_movey + clipmovey;
+  this->transformXY(state, 0, 1, &x1, &y1);
+  this->transformXY(state, 0, 0, &x2, &y2);
+  this->transformXY(state, 1, 0, &x3, &y3);
+  this->transformXY(state, 1, 1, &x4, &y4);
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
@@ -1758,7 +1930,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pbminfo = 1;
       }
       if(mask)
-      msg("<verbose> drawing %d by %d masked picture\n", width, height);
+      msg("<verbose> drawing %d by %d masked picture", width, height);
   }
   if(!jpeginfo && (str->getKind()==strDCT)) {
       msg("<notice> file contains jpeg pictures");
@@ -1964,7 +2136,7 @@ void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 	    maskColors?"maskColors":"no maskColors",
 	    inlineImg);
     if(colorMap)
-	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d", colorMap->getNumPixelComps(),
 		colorMap->getBits(),colorMap->getColorSpace()->getMode());
     drawGeneralImage(state,ref,str,width,height,colorMap,0,inlineImg,0,maskColors, 0,0,0,0, 0);
 }
@@ -1982,7 +2154,7 @@ void GFXOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 	    colorMap?"colorMap":"no colorMap", 
 	    maskWidth, maskHeight);
     if(colorMap)
-	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d", colorMap->getNumPixelComps(),
 		colorMap->getBits(),colorMap->getColorSpace()->getMode());
     drawGeneralImage(state,ref,str,width,height,colorMap,0,0,0,0, maskStr, maskWidth, maskHeight, maskInvert, 0);
 }
@@ -2001,7 +2173,7 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 	    colorMap?"colorMap":"no colorMap", 
 	    maskWidth, maskHeight);
     if(colorMap)
-	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d\n", colorMap->getNumPixelComps(),
+	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d", colorMap->getNumPixelComps(),
 		colorMap->getBits(),colorMap->getColorSpace()->getMode());
     drawGeneralImage(state,ref,str,width,height,colorMap,0,0,0,0, maskStr, maskWidth, maskHeight, 0, maskColorMap);
 }
@@ -2023,6 +2195,11 @@ void GFXOutputDev::fill(GfxState *state)
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    if(config_optimize_polygons) {
+        gfxline_t*line2 = gfxline_circularToEvenOdd(line);
+        gfxline_free(line);
+        line = line2;
+    }
     fillGfxLine(state, line);
     gfxline_free(line);
 }
@@ -2098,7 +2275,7 @@ void addGlobalFontDir(const char*dirname)
     lastfontdir = strdup(dirname);
     DIR*dir = opendir(dirname);
     if(!dir) {
-	msg("<warning> Couldn't open directory %s\n", dirname);
+	msg("<warning> Couldn't open directory %s", dirname);
 	return;
     }
     struct dirent*ent;
@@ -2154,87 +2331,6 @@ void GFXOutputDev::preparePage(int pdfpage, int outputpage)
     this->pages[pdfpage] = outputpage;
     if(pdfpage>this->pagepos)
 	this->pagepos = pdfpage;
-}
-
-struct BBox
-{
-    double posx,posy;
-    double width,height;
-};
-
-BBox mkBBox(GfxState*state, double*bbox, double width, double height)
-{
-    double xMin, yMin, xMax, yMax, x, y;
-    double tx, ty, w, h;
-    // transform the bbox
-    state->transform(bbox[0], bbox[1], &x, &y);
-    xMin = xMax = x;
-    yMin = yMax = y;
-    state->transform(bbox[0], bbox[3], &x, &y);
-    if (x < xMin) {
-      xMin = x;
-    } else if (x > xMax) {
-      xMax = x;
-    }
-    if (y < yMin) {
-      yMin = y;
-    } else if (y > yMax) {
-      yMax = y;
-    }
-    state->transform(bbox[2], bbox[1], &x, &y);
-    if (x < xMin) {
-      xMin = x;
-    } else if (x > xMax) {
-      xMax = x;
-    }
-    if (y < yMin) {
-      yMin = y;
-    } else if (y > yMax) {
-      yMax = y;
-    }
-    state->transform(bbox[2], bbox[3], &x, &y);
-    if (x < xMin) {
-      xMin = x;
-    } else if (x > xMax) {
-      xMax = x;
-    }
-    if (y < yMin) {
-      yMin = y;
-    } else if (y > yMax) {
-      yMax = y;
-    }
-    tx = (int)floor(xMin);
-    if (tx < 0) {
-      tx = 0;
-    } else if (tx > width) {
-      tx = width;
-    }
-    ty = (int)floor(yMin);
-    if (ty < 0) {
-      ty = 0;
-    } else if (ty > height) {
-      ty = height;
-    }
-    w = (int)ceil(xMax) - tx + 1;
-    if (tx + w > width) {
-      w = width - tx;
-    }
-    if (w < 1) {
-      w = 1;
-    }
-    h = (int)ceil(yMax) - ty + 1;
-    if (ty + h > height) {
-      h = height - ty;
-    }
-    if (h < 1) {
-      h = 1;
-    }
-    BBox nbbox;
-    nbbox.posx = xMin;
-    nbbox.posx = yMin;
-    nbbox.width = w;
-    nbbox.height = h;
-    return nbbox;
 }
 
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
