@@ -42,7 +42,7 @@
 #include "../gfxtools.h"
 #include "../art/libart.h"
 #include "swf.h"
-#include "artsutils.h"
+#include "../gfxpoly.h"
 
 #define CHARDATAMAX 8192
 #define CHARMIDX 0
@@ -83,6 +83,7 @@ typedef struct _swfoutput_internal
     int config_storeallcharacters;
     int config_enablezlib;
     int config_insertstoptag;
+    int config_watermark;
     int config_flashversion;
     int config_reordertags;
     int config_showclipshapes;
@@ -119,6 +120,8 @@ typedef struct _swfoutput_internal
     SHAPE* shape;
     int shapeid;
     int textid;
+
+    int watermarks;
     
     int fillstyleid;
     int linestyleid;
@@ -767,15 +770,97 @@ static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,doubl
     i->fontmatrix = m;
 }
 
+static int watermark2_width=47;
+static int watermark2_height=11;
+static int watermark2[47] = {95,1989,71,0,2015,337,1678,0,2015,5,1921,320,1938,25,2006,1024,
+                             1042,21,13,960,1039,976,8,2000,1359,1088,31,1989,321,1728,0,1152,
+                             1344,832,0,1984,0,896,1088,1088,896,0,1984,128,256,512,1984};
+
+static void draw_watermark(gfxdevice_t*dev, gfxbbox_t r, char drawall)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    double wx = r.xmax / 5.0;
+    double tx = r.xmax*4.0 / 5.0;
+    double ty = r.ymax-wx*watermark2_height/watermark2_width;
+    double sx = (r.xmax - tx) / watermark2_width;
+    double sy = (r.ymax - ty) / watermark2_height;
+    double px = sx-0.5;
+    double py = sy-0.5;
+    if(ty > 0 && px > 1.0 && py > 1.0) {
+	int x,y;
+	for(y=0;y<watermark2_height;y++)
+	for(x=0;x<watermark2_width;x++) {
+	    if(((watermark2[x]>>y)&1)) {
+		if(!drawall && lrand48()%5)
+		    continue;
+		unsigned int b = lrand48();
+		moveto(dev, i->tag, x*sx+tx+((b>>1)&1)/20.0, y*sy+ty+((b>>3)&1)/20.0);
+		lineto(dev, i->tag, x*sx+px+tx+((b>>2)&1)/20.0, y*sy+ty+((b>>3)&1)/20.0);
+		lineto(dev, i->tag, x*sx+px+tx+((b>>2)&1)/20.0, y*sy+py+ty+((b>>4)&1)/20.0);
+		lineto(dev, i->tag, x*sx+tx+((b>>1)&1)/20.0, y*sy+py+ty+((b>>4)&1)/20.0);
+		lineto(dev, i->tag, x*sx+tx+((b>>1)&1)/20.0, y*sy+ty+((b>>3)&1)/20.0);
+	    }
+	}
+    }
+}
+
+static void swfoutput_setfillcolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->fillrgb.r == r &&
+       i->fillrgb.g == g &&
+       i->fillrgb.b == b &&
+       i->fillrgb.a == a) return;
+    if(i->shapeid>=0)
+     endshape(dev);
+
+    i->fillrgb.r = r;
+    i->fillrgb.g = g;
+    i->fillrgb.b = b;
+    i->fillrgb.a = a;
+}
+static void insert_watermark(gfxdevice_t*dev, char drawall)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(!drawall && i->watermarks>20)
+	return;
+    endshape(dev);
+    endtext(dev);
+   
+    if(drawall) {
+	swfoutput_setfillcolor(dev, 0,0,255,192);
+    } else {
+	swfoutput_setfillcolor(dev, lrand48(),lrand48(),lrand48(),(lrand48()&127)+128);
+    }
+    startshape(dev);
+    startFill(dev);
+
+    gfxbbox_t r; r.xmin = r.ymin = 0;
+    r.xmax = i->max_x;
+    r.ymax = i->max_y;
+    draw_watermark(dev, r, drawall);
+    endshape(dev);
+    i->watermarks++;
+}
+
+
 static void endpage(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->pagefinished)
+      return;
     if(i->shapeid>=0)
       endshape(dev);
     if(i->textid>=0)
       endtext(dev);
+    
     while(i->clippos)
         dev->endclip(dev);
+
+    if(i->config_watermark) {
+	insert_watermark(dev, 1);
+    }
+
     i->pagefinished = 1;
 }
 
@@ -793,6 +878,7 @@ void swf_startframe(gfxdevice_t*dev, int width, int height)
     i->min_y = 0;
     i->max_x = width;
     i->max_y = height;
+    i->watermarks = 0;
 
     /* set clipping/background rectangle */
     /* TODO: this should all be done in SWFOutputDev */
@@ -911,6 +997,7 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     i->swf->firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     i->tag = i->swf->firstTag;
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
+    rgb.r = 0;
     swf_SetRGB(i->tag,&rgb);
 
     i->startdepth = i->depth = 0;
@@ -972,9 +1059,11 @@ static void starttext(gfxdevice_t*dev)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->shapeid>=0)
         endshape(dev);
-      
-    i->textid = getNewID(dev);
 
+    if(i->config_watermark) {
+	insert_watermark(dev, 0);
+    }
+    i->textid = getNewID(dev);
     i->swflastx=i->swflasty=0;
 }
 	    
@@ -1171,9 +1260,6 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	swf_ActionFree(a);
     }
 
-    if(i->frameno == i->lastframeno) // fix: add missing pagefeed
-        dev->endpage(dev);
-
     if(i->mark) {
 	free(i->mark);i->mark = 0;
     }
@@ -1321,22 +1407,6 @@ static void swfoutput_destroy(gfxdevice_t* dev)
 
     free(i);i=0;
     memset(dev, 0, sizeof(gfxdevice_t));
-}
-
-static void swfoutput_setfillcolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
-{
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->fillrgb.r == r &&
-       i->fillrgb.g == g &&
-       i->fillrgb.b == b &&
-       i->fillrgb.a == a) return;
-    if(i->shapeid>=0)
-     endshape(dev);
-
-    i->fillrgb.r = r;
-    i->fillrgb.g = g;
-    i->fillrgb.b = b;
-    i->fillrgb.a = a;
 }
 
 static void swfoutput_setstrokecolor(gfxdevice_t* dev, U8 r, U8 g, U8 b, U8 a)
@@ -1751,6 +1821,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_disable_polygon_conversion = atoi(value);
     } else if(!strcmp(name, "normalize_polygon_positions")) {
 	i->config_normalize_polygon_positions = atoi(value);
+    } else if(!strcmp(name, "wxwindowparams")) {
+	i->config_watermark = atoi(value);
     } else if(!strcmp(name, "insertstop")) {
 	i->config_insertstoptag = atoi(value);
     } else if(!strcmp(name, "protect")) {
@@ -1805,12 +1877,6 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_linkcolor.g = NIBBLE(value[2])<<4 | NIBBLE(value[3]);
 	i->config_linkcolor.b = NIBBLE(value[4])<<4 | NIBBLE(value[5]);
 	i->config_linkcolor.a = NIBBLE(value[6])<<4 | NIBBLE(value[7]);
-	printf("%02x%02x%02x%02x\n", 
-	    i->config_linkcolor.r,
-	    i->config_linkcolor.g,
-	    i->config_linkcolor.b,
-	    i->config_linkcolor.a);
-
     } else if(!strcmp(name, "help")) {
 	printf("\nSWF layer options:\n");
 	printf("jpegdpi=<dpi>               resolution adjustment for jpeg images\n");
@@ -2024,7 +2090,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
-    msg("<trace> Placing bitmap ID %d", myshapeid);
+    msg("<trace> Placing image, shape ID %d, bitmap ID %d", myshapeid, bitid);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     CXFORM cxform2 = gfxcxform_to_cxform(cxform);
     swf_ObjectPlace(i->tag,myshapeid,getNewDepth(dev),&i->page_matrix,&cxform2,NULL);
@@ -2103,6 +2169,12 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
 	moveto(dev, i->tag, x,y);
 	lineto(dev, i->tag, x,y);
 	lineto(dev, i->tag, x,y);
+    }
+    if(!i->shapeisempty && i->currentswfid==1 && r.xmin==0 && r.ymin==0 && r.xmax==(int)(i->max_x*20) && r.ymax==(int)(i->max_y*20)) {
+	if(i->config_watermark) {
+	    gfxbbox_t r; r.xmin = r.ymin = 0;r.xmax = i->max_x;r.ymax = i->max_y;
+	    draw_watermark(dev, r, 1);
+	}
     }
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
@@ -2279,11 +2351,11 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 	if(has_dots)
 	    gfxline_fix_short_edges(line);
 	/* we need to convert the line into a polygon */
-	ArtSVP* svp = gfxstrokeToSVP(line, width, cap_style, joint_style, miterLimit);
-	gfxline_t*gfxline = SVPtogfxline(svp);
+	gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, cap_style, joint_style, miterLimit);
+	gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
 	dev->fill(dev, gfxline, color);
-	free(gfxline);
-	art_svp_free(svp);
+	gfxline_free(gfxline);
+	gfxpoly_free(poly);
 	return;
     }
 
@@ -2313,6 +2385,7 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
     }
 
 }
+
 static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
@@ -2346,17 +2419,91 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     startFill(dev);
     i->fill=1;
     drawgfxline(dev, line);
+    
+    if(i->currentswfid==2 && r.xmin==0 && r.ymin==0 && r.xmax==i->max_x && r.ymax==i->max_y) {
+	if(i->config_watermark) {
+	    draw_watermark(dev, r, 1);
+	}
+    }
+
     msg("<trace> end of swf_fill (shapeid=%d)", i->shapeid);
 
     if(i->config_normalize_polygon_positions) {
 	free(line); //account for _move
     }
 }
+
+static GRADIENT* gfxgradient_to_GRADIENT(gfxgradient_t*gradient)
+{
+    int num = 0;
+    gfxgradient_t*g = gradient;
+    while(g) {
+	num++;
+	g = g->next;
+    }
+    GRADIENT* swfgradient = malloc(sizeof(GRADIENT));
+    swfgradient->num = num;
+    swfgradient->rgba = malloc(sizeof(swfgradient->rgba[0])*num);
+    swfgradient->ratios = malloc(sizeof(swfgradient->ratios[0])*num);
+
+    g = gradient;
+    num = 0;
+    while(g) {
+	swfgradient->ratios[num] = g->pos*255;
+	swfgradient->rgba[num] = *(RGBA*)&g->color;
+	num++;
+	g = g->next;
+    }
+    return swfgradient;
+}
+
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     if(line_is_empty(line))
 	return;
-    msg("<error> Gradient filling not implemented yet");
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    
+    if(line_is_empty(line))
+	return;
+
+    GRADIENT* swfgradient = gfxgradient_to_GRADIENT(gradient);
+    if(!swfgradient)
+	return;
+  
+    endshape(dev);
+    endtext(dev);
+
+    double f = type==gfxgradient_radial?4:4;
+    MATRIX m;
+    m.sx = (int)(matrix->m00*20*f); m.r1 = (int)(matrix->m10*20*f);
+    m.r0 = (int)(matrix->m01*20*f); m.sy = (int)(matrix->m11*20*f);
+    m.tx = (int)(matrix->tx*20);
+    m.ty = (int)(matrix->ty*20);
+
+    /* shape */
+    int myshapeid = getNewID(dev);
+    i->tag = swf_InsertTag(i->tag, ST_DEFINESHAPE2);
+    SHAPE*shape;
+    swf_ShapeNew(&shape);
+    int fsid = swf_ShapeAddGradientFillStyle(shape,&m,swfgradient,type==gfxgradient_radial);
+    swf_SetU16(i->tag, myshapeid);
+    SRECT r = gfxline_getSWFbbox(line);
+    swf_SetRect(i->tag,&r);
+    swf_SetShapeStyles(i->tag,shape);
+    swf_ShapeCountBits(shape,NULL,NULL);
+    swf_SetShapeBits(i->tag,shape);
+    swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
+    i->swflastx = i->swflasty = UNDEFINED_COORD;
+    drawgfxline(dev, line);
+    swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(shape);
+
+    int depth = getNewDepth(dev);
+    msg("<trace> Placing gradient, shape ID %d, depth %d", myshapeid, depth);
+    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+    swf_ObjectPlace(i->tag,myshapeid,depth,&i->page_matrix,NULL,NULL);
+
+    swf_FreeGradient(swfgradient);free(swfgradient);
 }
 
 static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
@@ -2538,7 +2685,7 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	swf_switchfont(dev, font->id); // set the current font
     }
     if(!i->swffont) {
-	msg("<warning> Font is NULL");
+	msg("<warning> swf_drawchar: Font is NULL");
 	return;
     }
     if(glyph<0 || glyph>=i->swffont->numchars) {
@@ -2553,6 +2700,7 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     if(fabs(det) < 0.0005) { 
 	/* x direction equals y direction- the text is invisible */
 	msg("<verbose> Not drawing invisible character character %d (det=%f, m=[%f %f;%f %f]\n", glyph, 
+		det,
 		i->fontmatrix.sx/65536.0, i->fontmatrix.r1/65536.0, 
 		i->fontmatrix.r0/65536.0, i->fontmatrix.sy/65536.0);
 	return;
