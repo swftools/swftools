@@ -91,10 +91,10 @@ jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
 swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/swf/swf.$(O) ../lib/libbase$(A) 
-	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/swf/swf.$(O) ../lib/libbase$(A) $(LIBS) 
+	$(L) swfrender.$(O) -o $@ ../lib/swf/swf.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) $(LIBS) 
 	$(STRIP) $@
 
-PDF2SWF_OBJ=../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/devices/polyops.$(O) ../lib/devices/swf.$(O) ../lib/libgfx$(A) ../lib/libbase$(A)
+PDF2SWF_OBJ=../lib/libpdf$(A) ../lib/devices/polyops.$(O) ../lib/devices/swf.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
 pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)
 	$(LL) pdf2swf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
