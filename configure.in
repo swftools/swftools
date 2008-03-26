@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2007-12-11-1640
+VERSION=2008-03-24-2356
 
 
 # ------------------------------------------------------------------
@@ -257,7 +257,7 @@ AC_CHECK_SIZEOF([unsigned long long])
 
 RFX_CHECK_FREETYPE
 
-#RFX_CHECK_FONTCONFIG
+RFX_CHECK_FONTCONFIG
 
 lame_objects= 
 lame_makefile=
