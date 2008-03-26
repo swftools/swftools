@@ -1269,8 +1269,15 @@ void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				    GBool forSoftMask)
 {
     msg("<debug> beginTransparencyGroup");
+#if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
+    GfxState*state1 = state->copy();
+    GfxState*state2 = state->copy();
+    state1->setPath(state->getPath()->copy());
+    state2->setPath(state->getPath()->copy());
+#else
     GfxState*state1 = state->copy(gTrue);
     GfxState*state2 = state->copy(gTrue);
+#endif
     boolpolydev->beginTransparencyGroup(state1, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
     rgbdev->beginTransparencyGroup(state2, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
     clip1dev->beginTransparencyGroup(state, bbox, blendingColorSpace, isolated, knockout, forSoftMask);
@@ -1280,8 +1287,15 @@ void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 void BitmapOutputDev::endTransparencyGroup(GfxState *state)
 {
     msg("<debug> endTransparencyGroup");
+#if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
+    GfxState*state1 = state->copy();
+    GfxState*state2 = state->copy();
+    state1->setPath(state->getPath()->copy());
+    state2->setPath(state->getPath()->copy());
+#else
     GfxState*state1 = state->copy(gTrue);
     GfxState*state2 = state->copy(gTrue);
+#endif
     boolpolydev->endTransparencyGroup(state1);
     checkNewBitmap();
     rgbdev->endTransparencyGroup(state2);
