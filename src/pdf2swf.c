@@ -32,7 +32,7 @@
 #include "../lib/os.h"
 #include "../lib/rfxswf.h"
 #include "../lib/devices/swf.h"
-#include "../lib/devices/arts.h"
+#include "../lib/devices/polyops.h"
 #include "../lib/devices/record.h"
 #include "../lib/pdf/pdf.h"
 #include "../lib/log.h"
@@ -266,12 +266,11 @@ int args_callback_option(char*name,char*val) {
 	    driver->set_parameter(driver, "bitmapfonts", "1");
 	if(level>=3)
 	    driver->set_parameter(driver, "ignoredraworder", "1");
-
-	flatten = 1;
 	return ret;
     }
     else if (!strcmp(name, "G"))
     {
+	driver->set_parameter(driver, "optimize_polygons", "1");
 	flatten = 1;
 	return 0;
     }
