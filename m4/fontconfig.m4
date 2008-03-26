@@ -44,6 +44,7 @@ if (echo $LIBS | grep lfreetype >/dev/null 2>&1); then
 fi
 
 cat > conftest.c << EOF
+#include <string.h>
 #include <fontconfig.h>
 
 int main()
@@ -51,6 +52,8 @@ int main()
     FcPattern *pattern, *match;
     FcResult result;
     FcChar8 *v;
+    char*s1="abc",*s2="ABC";
+    strcasecmp(s1,s2);
     FcInit();
     pattern = FcPatternBuild(0, FC_FAMILY, FcTypeString, "", 0);
     FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
