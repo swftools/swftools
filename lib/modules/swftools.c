@@ -23,6 +23,8 @@
 
 // Matrix & Math tools for SWF files
 
+#include "../rfxswf.h"
+
 #define S64 long long
 SFIXED RFXSWF_SP(SFIXED a1,SFIXED a2,SFIXED b1,SFIXED b2)
 { S64 a = ((S64)a1*(S64)b1+(S64)a2*(S64)b2)>>16;

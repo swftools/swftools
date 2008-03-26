@@ -23,6 +23,9 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "../rfxswf.h"
 
 /* one bit flag: */
 #define clip_type 0
@@ -625,6 +628,87 @@ static void fill_bitmap(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, bitma
     } while(++x<x2);
 }
 
+static void fill_gradient(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, GRADIENT*g, int type, U32 depth, double fmultiply)
+{
+    int x = x1;
+    
+    double m11= m->sx*fmultiply/80, m21= m->r1*fmultiply/80;
+    double m12= m->r0*fmultiply/80, m22= m->sy*fmultiply/80;
+    double rx = m->tx*fmultiply/20.0;
+    double ry = m->ty*fmultiply/20.0;
+
+    double det = m11*m22 - m12*m21;
+    if(fabs(det) < 0.0005) { 
+	/* x direction equals y direction- the image is invisible */
+	return;
+    }
+    det = 1.0/det;
+
+    RGBA palette[512];
+    RGBA oldcol = g->rgba[0];
+    int r0 = g->ratios[0]*2;
+    int t;
+    for(t=0;t<r0;t++) 
+	palette[t] = oldcol;
+    for(t=1;t<g->num;t++) {
+	int r1 = g->ratios[t]*2;
+	RGBA newcol = g->rgba[t];
+	if(r0 == r1)
+	    continue;
+	//printf("%d %d->%d %02x%02x%02x%02x->%02x%02x%02x%02x\n", 
+	//	t, r0, r1, oldcol.r,oldcol.g,oldcol.b,oldcol.a,
+	//	newcol.r,newcol.g,newcol.b,newcol.a);
+	double f = 1.0 / (r1-r0);
+	double p0 = 1;
+	double p1 = 0;
+	int s;
+	for(;r0<=r1;r0++) {
+	    palette[r0].r = oldcol.r*p0 + newcol.r*p1;
+	    palette[r0].g = oldcol.g*p0 + newcol.g*p1;
+	    palette[r0].b = oldcol.b*p0 + newcol.b*p1;
+	    palette[r0].a = oldcol.a*p0 + newcol.a*p1;
+	    p0 -= f;
+	    p1 += f;
+	}
+	oldcol = newcol;
+    }
+    for(t=r0;t<512;t++) 
+	palette[t] = oldcol;
+
+    do {
+	if(depth >= z[x]) {
+	    RGBA col;
+	    double xx = (  (x - rx) * m22 - (y - ry) * m21)*det;
+	    double yy = (- (x - rx) * m12 + (y - ry) * m11)*det;
+	    int ainv;
+	    ainv = 255-col.a;
+
+	    if(type == FILL_LINEAR) {
+		int xr = xx*256;
+		if(xr<-256)
+		    xr = -256;
+		if(xr>255)
+		    xr = 255;
+		col = palette[xr+256];
+	    } else {
+		int xr = sqrt(xx*xx+yy*yy)*511;
+		if(xr<0)
+		    xr = 0;
+		if(xr>511)
+		    xr = 511;
+		col = palette[xr];
+	    }
+
+	    line[x].r = clamp(((line[x].r*ainv)>>8)+col.r);
+	    line[x].g = clamp(((line[x].g*ainv)>>8)+col.g);
+	    line[x].b = clamp(((line[x].b*ainv)>>8)+col.b);
+	    line[x].a = 255;
+	    
+	    z[x] = depth;
+	}
+    } while(++x<x2);
+}
+
 typedef struct _layer {
     int fillid;
     renderpoint_t*p;
@@ -679,6 +763,8 @@ static void fill(RENDERBUF*dest, RGBA*line, int*zline, int y, int x1, int x2, st
                 } else {
                     fill_bitmap(line, zline, y, x1, x2, &f->m, b, /*clipped?*/f->type&1, l->p->depth, i->multiply);
                 }
+            } else if(f->type == FILL_LINEAR || f->type == FILL_RADIAL) {
+		fill_gradient(line, zline, y, x1, x2, &f->m, &f->gradient, f->type, l->p->depth, i->multiply);
             } else {
                 fprintf(stderr, "Undefined fillmode: %02x\n", f->type);
 	    }

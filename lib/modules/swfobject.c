@@ -21,19 +21,8 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
-#define PF_MOVE         0x01
-#define PF_CHAR         0x02
-#define PF_MATRIX       0x04
-#define PF_CXFORM       0x08
-#define PF_RATIO        0x10
-#define PF_NAME         0x20
-#define PF_CLIPDEPTH    0x40
-#define PF_ACTIONEVENT  0x80
+#include "../rfxswf.h"
 
-#define PF2_FILTERS      0x01
-#define PF2_BLENDMODE    0x02
-#define PF2_ASBITMAP     0x04
-//...
 
 char*blendModeNames[] = {"normal","normal2","layer","multiply",
 		       "screen","lighten", "darken","add",

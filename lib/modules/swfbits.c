@@ -21,13 +21,29 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
+#include "../../config.h"
+#ifdef HAVE_ZLIB
+#include <zconf.h>
+#include <zlib.h>
+#endif
+#include <fcntl.h>
+#include <ctype.h>
+
+#ifdef HAVE_JPEGLIB
+#define HAVE_BOOLEAN
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "jpeglib.h"
+#include <jpeglib.h>
 #ifdef __cplusplus
 }
 #endif
+#endif // HAVE_JPEGLIB
+
+#include "../rfxswf.h"
 
 #define OUTBUFFER_SIZE 0x8000
 

@@ -22,6 +22,8 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include "../rfxswf.h"
+
 U32 readUTF8char(U8 ** text)
 {
     U32 c = 0;
@@ -118,7 +120,6 @@ int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *), void*s
 		int l;
 		U8 s[257];
 		s[0] = 0;
-		swf_SaveTagPos(t);
 		swf_SetTagPos(t, 0);
 
 		id = swf_GetU16(t);
@@ -130,8 +131,6 @@ int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *), void*s
 		}
 
 		(FontCallback) (self, id, s);
-
-		swf_RestoreTagPos(t);
 	    }
 	}
 	t = swf_NextTag(t);
@@ -142,7 +141,6 @@ int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *), void*s
 int swf_FontExtract_DefineFont(int id, SWFFONT * f, TAG * t)
 {
     U16 fid;
-    swf_SaveTagPos(t);
     swf_SetTagPos(t, 0);
 
     fid = swf_GetU16(t);
@@ -164,8 +162,6 @@ int swf_FontExtract_DefineFont(int id, SWFFONT * f, TAG * t)
 	for (i = 0; i < n; i++)
 	    swf_GetSimpleShape(t, &f->glyph[i].shape);
     }
-
-    swf_RestoreTagPos(t);
     return id;
 }
 
@@ -174,7 +170,6 @@ int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t)
     U16 fid;
     U16 maxcode;
     U8 flags;
-    swf_SaveTagPos(t);
     swf_SetTagPos(t, 0);
 
     fid = swf_GetU16(t);
@@ -229,15 +224,12 @@ int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t)
 	for (i = 0; i < f->numchars; i++)
 	    f->ascii2glyph[f->glyph2ascii[i]] = i;
     }
-
-    swf_RestoreTagPos(t);
     return id;
 }
 
 int swf_FontExtract_GlyphNames(int id, SWFFONT * f, TAG * tag)
 {
     U16 fid;
-    swf_SaveTagPos(tag);
     swf_SetTagPos(tag, 0);
 
     fid = swf_GetU16(tag);
@@ -250,8 +242,6 @@ int swf_FontExtract_GlyphNames(int id, SWFFONT * f, TAG * tag)
 	    f->glyphnames[t] = strdup(swf_GetString(tag));
 	}
     }
-
-    swf_RestoreTagPos(tag);
     return id;
 }
 
@@ -264,7 +254,6 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     U32 offset_start;
     U32 *offset;
     U8 flags1, flags2, namelen;
-    swf_SaveTagPos(tag);
     swf_SetTagPos(tag, 0);
     font->version = 2;
     fid = swf_GetU16(tag);
@@ -380,7 +369,6 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	    }
 	}
     }
-    swf_RestoreTagPos(t);
     return font->id;
 }
 
@@ -405,7 +393,6 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 
     memset(&color, 0, sizeof(color));
 
-    swf_SaveTagPos(t);
     swf_SetTagPos(t, 0);
 
     cid = swf_GetU16(t);
@@ -476,7 +463,6 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 	}
     }
 
-    swf_RestoreTagPos(t);
     return id;
 }
 

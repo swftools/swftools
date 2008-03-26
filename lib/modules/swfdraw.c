@@ -1,5 +1,7 @@
 // swfdraw.c
 
+#include "../rfxswf.h"
+
 typedef struct _SWFSHAPEDRAWER
 {
     SHAPE*shape;

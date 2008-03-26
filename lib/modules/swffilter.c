@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include "../rfxswf.h"
+
 char* filtername[] = {"dropshadow","blur","glow","bevel","gradientglow","convolution","colormatrix","gradientbevel", 0};
 
 void swf_SetFilter(TAG*tag, FILTER*filter)
