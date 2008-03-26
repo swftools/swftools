@@ -129,8 +129,8 @@ libbase$(A): $(base_objects) Makefile
 libgfx$(A): $(gfx_objects) $(art_objects) Makefile
 	$(AR) r libgfx$(A) $(gfx_objects) $(art_objects)
 
-librfxswf$(A): Makefile rfxswf.$(O) $(rfxswf_objects) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects) Makefile
-	$(AR) r librfxswf$(A) rfxswf.$(O) $(rfxswf_objects) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+librfxswf$(A): Makefile $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects) Makefile
+	$(AR) r librfxswf$(A) $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(RANLIB) librfxswf$(A)
 
 libpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
