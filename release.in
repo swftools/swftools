@@ -38,7 +38,6 @@ ${name}/src/swfc-interpolation.c \
 ${name}/src/swfc-feedback.h \
 ${name}/src/swfc-history.h \
 ${name}/src/swfc-interpolation.h \
-${name}/src/swfrender.c \
 ${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
 ${name}/lib/types.h \
@@ -90,6 +89,7 @@ ${name}/swfs/keyboard_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
 ${name}/lib/modules/swffilter.c \
 ${name}/lib/modules/swfrender.c \
+${name}/src/swfrender.c \
 ${name}/lib/swf/swf.c \
 ${name}/lib/swf/swf.h \
 ${name}/lib/modules/swfdump.c \
