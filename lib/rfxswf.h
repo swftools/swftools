@@ -211,6 +211,8 @@ U8*   swf_GetTagLenPtr(TAG * t);
 U32   swf_GetBits(TAG * t,int nbits);
 S32   swf_GetSBits(TAG * t,int nbits);
 int   swf_SetBits(TAG * t,U32 v,int nbits);
+int   swf_CountUBits(U32 v,int nbits);
+int   swf_CountBits(U32 v,int nbits);
 
 int   swf_GetBlock(TAG * t,U8 * b,int l);   // resets Bitcount
 int   swf_SetBlock(TAG * t,U8 * b,int l);
@@ -222,6 +224,7 @@ U32   swf_GetU32(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
 void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
+void  swf_SetGradient(TAG * tag, GRADIENT * gradient, char alpha);
 void  swf_FreeGradient(GRADIENT* gradient);
 char* swf_GetString(TAG*t);
 int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
@@ -438,6 +441,10 @@ int   swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y);
 int   swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay);
 int   swf_ShapeSetCircle(TAG * t,SHAPE * s,S32 x,S32 y,S32 rx,S32 ry);
 int   swf_ShapeSetEnd(TAG * t);
+int   swf_SetShapeStyleCount(TAG * t,U16 n);
+int   swf_SetFillStyle(TAG * t,FILLSTYLE * f);
+int   swf_SetLineStyle(TAG * t,LINESTYLE * l);
+
 
 void  swf_ShapeSetBitmapRect(TAG * t, U16 gfxid, int width, int height);
 
@@ -927,6 +934,20 @@ int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
 int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
 int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U8 blendmode);
 int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
+
+#define PF_MOVE         0x01
+#define PF_CHAR         0x02
+#define PF_MATRIX       0x04
+#define PF_CXFORM       0x08
+#define PF_RATIO        0x10
+#define PF_NAME         0x20
+#define PF_CLIPDEPTH    0x40
+#define PF_ACTIONEVENT  0x80
+
+#define PF2_FILTERS      0x01
+#define PF2_BLENDMODE    0x02
+#define PF2_ASBITMAP     0x04
+//...
 
 typedef struct _SWFPLACEOBJECT {
     U16 depth;

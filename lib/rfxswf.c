@@ -26,18 +26,6 @@
 
 #include "mem.h"
 #include "rfxswf.h"
-
-#ifdef HAVE_JPEGLIB
-#define HAVE_BOOLEAN
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <jpeglib.h>
-#ifdef __cplusplus
-}
-#endif
-#endif // HAVE_JPEGLIB
-
 #ifdef HAVE_ZLIB
 #include <zlib.h>
 #endif // HAVE_ZLIB
@@ -74,11 +62,6 @@ U16   swf_GetTagID(TAG * t)    { return t->id; }
 U32   swf_GetTagLen(TAG * t) { return t->len; }
 U8*   swf_GetTagLenPtr(TAG * t) { return &(t->data[t->len]); }
 U32   swf_GetTagPos(TAG * t)   { return t->pos; }
-
-// for future purpose: avoid high level lib functions to change tagpos/bitpos
-
-#define swf_SaveTagPos(tag)
-#define swf_RestoreTagPos(tag)
 
 void swf_SetTagPos(TAG * t,U32 pos)
 { swf_ResetReadBits(t);
@@ -1514,18 +1497,18 @@ void swf_FreeTags(SWF * swf)                 // Frees all malloc'ed memory for t
 
 // include advanced functions
 
-#include "modules/swfdump.c"
-#include "modules/swfshape.c"
-#include "modules/swftext.c"
-#include "modules/swffont.c"
-#include "modules/swfobject.c"
-#include "modules/swfbutton.c"
-#include "modules/swftools.c"
-#include "modules/swfcgi.c"
-#include "modules/swfbits.c"
-#include "modules/swfaction.c"
-#include "modules/swfabc.c"
-#include "modules/swfsound.c"
-#include "modules/swfdraw.c"
-#include "modules/swfrender.c"
-#include "modules/swffilter.c"
+//#include "modules/swfdump.c"
+//#include "modules/swfshape.c"
+//#include "modules/swftext.c"
+//#include "modules/swffont.c"
+//#include "modules/swfobject.c"
+//#include "modules/swfbutton.c"
+//#include "modules/swftools.c"
+//#include "modules/swfcgi.c"
+//#include "modules/swfbits.c"
+//#include "modules/swfaction.c"
+//#include "modules/swfabc.c"
+//#include "modules/swfsound.c"
+//#include "modules/swfdraw.c"
+//#include "modules/swfrender.c"
+//#include "modules/swffilter.c"
