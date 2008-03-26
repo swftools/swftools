@@ -160,7 +160,9 @@ void ops_endpage(struct _gfxdevice*dev)
 
 gfxresult_t* ops_finish(struct _gfxdevice*dev)
 {
-    free(dev->internal);dev->internal = 0;
+    if(dev->internal) 
+	free(dev->internal);
+    dev->internal = 0;
     return 0;
 }
 
