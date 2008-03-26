@@ -188,7 +188,7 @@ x_order (ArtPoint z0, ArtPoint z1, ArtPoint z2, ArtPoint z3)
 	    {
 	      if (d1 > 0) return 1;
 	      else if (d1 < 0) return -1;
-	      else printf ("case 1 degenerate\n");
+	      else /*printf ("case 1 degenerate\n")*/;
 	      return 0;
 	    }
 	  else /* d0 < 0 */
@@ -263,7 +263,7 @@ x_order (ArtPoint z0, ArtPoint z1, ArtPoint z2, ArtPoint z3)
       if (d3 > 0) return -1;
       else if (d3 < 0) return 1;
       else
-	fprintf (stderr, "colinear!\n");
+	/*fprintf (stderr, "colinear!\n")*/;
     }
   else /* d2 < 0 */
     {
@@ -291,7 +291,7 @@ x_order (ArtPoint z0, ArtPoint z1, ArtPoint z2, ArtPoint z3)
       if (d1 > 0) return 1;
       else if (d1 < 0) return -1;
       else
-	fprintf (stderr, "colinear!\n");
+	/*fprintf (stderr, "colinear!\n")*/;
     }
   else /* d0 < 0 */
     {
@@ -335,7 +335,7 @@ x_order_2 (ArtPoint z0, ArtPoint z1, ArtPoint z2, ArtPoint z3)
 
   if (z0.x == z1.x && z1.x == z2.x && z2.x == z3.x)
     {
-      art_dprint ("x_order_2: colinear and horizontally aligned!\n");
+      //art_dprint ("x_order_2: colinear and horizontally aligned!\n");
       return 0;
     }
 
@@ -344,7 +344,7 @@ x_order_2 (ArtPoint z0, ArtPoint z1, ArtPoint z2, ArtPoint z3)
   if (z0.x >= z2.x && z1.x >= z2.x && z0.x >= z3.x && z1.x >= z3.x)
     return 1;
   
-  fprintf (stderr, "x_order_2: colinear!\n");
+  //fprintf (stderr, "x_order_2: colinear!\n");
   return 0;
 }
 
