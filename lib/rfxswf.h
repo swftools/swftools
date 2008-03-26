@@ -255,6 +255,7 @@ int   swf_VerifyPassword(TAG * t, const char * password);
 
 // helper functions:
 
+SRECT swf_ClipRect(SRECT border, SRECT r);
 void swf_ExpandRect(SRECT*src, SPOINT add);
 void swf_ExpandRect2(SRECT*src, SRECT*add);
 void swf_ExpandRect3(SRECT*src, SPOINT center, int radius);

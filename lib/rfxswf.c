@@ -454,6 +454,20 @@ int swf_SetRect(TAG * t,SRECT * r)
   return 0;
 }
 
+SRECT swf_ClipRect(SRECT border, SRECT r)
+{
+    if(r.xmax > border.xmax) r.xmax = border.xmax;
+    if(r.ymax > border.ymax) r.ymax = border.ymax;
+    if(r.xmax < border.xmin) r.xmax = border.xmin;
+    if(r.ymax < border.ymin) r.ymax = border.ymin;
+    
+    if(r.xmin > border.xmax) r.xmin = border.xmax;
+    if(r.ymin > border.ymax) r.ymin = border.ymax;
+    if(r.xmin < border.xmin) r.xmin = border.xmin;
+    if(r.ymin < border.ymin) r.ymin = border.ymin;
+    return r;
+}
+
 void swf_ExpandRect(SRECT*src, SPOINT add)
 {
     if((src->xmin | src->ymin | src->xmax | src->ymax)==0) {
