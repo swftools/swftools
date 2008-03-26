@@ -35,7 +35,7 @@ gfxsource_t*pdfdriver;
 
 staticforward PyTypeObject OutputClass;
 staticforward PyTypeObject PageClass;
-staticforward PyTypeObject DriverClass;
+staticforward PyTypeObject DocClass;
 
 typedef struct {
     PyObject_HEAD
@@ -70,18 +70,12 @@ static char* strf(char*format, ...)
 #define PY_NONE Py_BuildValue("s", 0)
 
 //---------------------------------------------------------------------
-staticforward PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs);
-staticforward PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwargs);
-staticforward PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwargs);
-
-static PyMethodDef output_methods[] =
-{
-    /* Output functions */
-    {"save", (PyCFunction)output_save, METH_KEYWORDS, ""},
-    {"startpage", (PyCFunction)output_startpage, METH_KEYWORDS, ""},
-    {"endpage", (PyCFunction)output_endpage, METH_KEYWORDS, ""},
-    {0,0,0,0}
-};
+PyDoc_STRVAR(output_save_doc, \
+"save(filename)\n\n"
+"Saves the contents of an output device to a file\n"
+"Depending on what the output device is, the contents\n"
+"of the file may be plain text, an image, an SWF file,\n"
+"etc.\n");
 static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
@@ -98,6 +92,22 @@ static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
     result->destroy(result);
     return PY_NONE;
 }
+
+PyDoc_STRVAR(output_startpage_doc, \
+"startpage(width, height)\n\n"
+"Starts a new page/frame in the output device.\n"
+"The usual way to render documents is to start a new page in the\n"
+"device for each page in the document:\n"
+"\n"
+"for pagenr in range(1,doc.pages+1):\n"
+"    page = doc.getPage(pagenr)\n"
+"    output.startpage(page.width, page.height)\n"
+"    page.render(output)\n"
+"    output.endpage()\n"
+"\n"
+"It is, however, also possible to render more than one document page\n"
+"to a single output page. E.g. for side-by-side or book views.\n"
+);
 static PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
@@ -107,6 +117,11 @@ static PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwa
     self->output_device->startpage(self->output_device, width, height);
     return PY_NONE;
 }
+PyDoc_STRVAR(output_endpage_doc, \
+"endpage()\n\n"
+"Ends a page in the output device. This function should be called\n"
+"once for every startpage()\n"
+);
 static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
@@ -115,10 +130,17 @@ static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwarg
     self->output_device->endpage(self->output_device);
     return PY_NONE;
 }
+PyDoc_STRVAR(f_createSWF_doc, \
+"SWF()\n\n"
+"Creates a device which renders documents to SWF (Flash) files.\n"
+"Depending on the way the document parser behaves (see the poly2bitmap\n"
+"and bitmap parameters), the resulting SWF might use vector operations\n"
+"and Flash Texts to display the document, or just a single bitmap\n"
+);
 static PyObject* f_createSWF(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
+    if (args && !PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
 	return NULL;
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
     
@@ -126,6 +148,15 @@ static PyObject* f_createSWF(PyObject* parent, PyObject* args, PyObject* kwargs)
     gfxdevice_swf_init(self->output_device);
     return (PyObject*)self;
 }
+
+PyDoc_STRVAR(f_createImageList_doc, \
+"ImageList()\n\n"
+"Creates a device which renders documents to bitmaps.\n"
+"Each page that is rendered will create new bitmap.\n"
+"As, right now, the only way to access the bitmaps is\n"
+"by using the save() function on the imagelist, you can\n"
+"currently only retrieve the first bitmap/page.\n"
+);
 static PyObject* f_createImageList(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {NULL};
@@ -137,6 +168,13 @@ static PyObject* f_createImageList(PyObject* parent, PyObject* args, PyObject* k
     gfxdevice_render_init(self->output_device);
     return (PyObject*)self;
 }
+
+PyDoc_STRVAR(f_createPlainText_doc, \
+"PlainText()\n\n"
+"Creates a device which can be used to extract text from documents,\n"
+"by passing it as parameter to page.render().\n"
+"The extracted text can be saved by plaintext.save(filename).\n"
+);
 static PyObject* f_createPlainText(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {NULL};
@@ -305,6 +343,27 @@ static gfxresult_t* my_finish(gfxdevice_t*dev)
     return 0;
 }
 
+
+PyDoc_STRVAR(f_createPassThrough_doc, \
+"PassThrough(device)\n\n"
+"Creates a PassThrough device, which can be used as parameter in calls\n"
+"to page.render().\n"
+"device needs to be a class implementing at least the following functions:\n\n"
+"setparameter(key,value)\n"
+"startpage(width,height)\n"
+"startclip(outline)\n"
+"endclip()\n"
+"stroke(outline, width, color, capstyle, jointstyle, miterLimit)\n"
+"fill(outline, color)\n"
+"fillbitmap(outline, image, matrix, colortransform)\n"
+"fillgradient(outline, gradient, gradienttype, matrix)\n"
+"addfont(font)\n"
+"drawchar(font, glyph, color, matrix)\n"
+"drawlink(outline, url)\n"
+"finish()\n\n"
+"If any of these functions are not defined, a error message will be printed,\n"
+"however the rendering process will be continued.\n"
+);
 static PyObject* f_createPassThrough(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"device", NULL};
@@ -336,6 +395,14 @@ static PyObject* f_createPassThrough(PyObject* parent, PyObject* args, PyObject*
     return (PyObject*)self;
 }
 
+static PyMethodDef output_methods[] =
+{
+    /* Output functions */
+    {"save", (PyCFunction)output_save, METH_KEYWORDS, output_save_doc},
+    {"startpage", (PyCFunction)output_startpage, METH_KEYWORDS, output_startpage_doc},
+    {"endpage", (PyCFunction)output_endpage, METH_KEYWORDS, output_endpage_doc},
+    {0,0,0,0}
+};
 
 static void output_dealloc(PyObject* _self) {
     OutputObject* self = (OutputObject*)_self;
@@ -353,7 +420,7 @@ static void output_dealloc(PyObject* _self) {
 static PyObject* output_getattr(PyObject * _self, char* a)
 {
     OutputObject*self = (OutputObject*)_self;
-    
+   
 /*    if(!strcmp(a, "x1")) {
         return PyInt_FromLong(self->output_device->x1);
     } else if(!strcmp(a, "y1")) {
@@ -386,13 +453,15 @@ static int output_print(PyObject * _self, FILE *fi, int flags)
 staticforward PyObject* page_render(PyObject* _self, PyObject* args, PyObject* kwargs);
 staticforward PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs);
 
-static PyMethodDef page_methods[] =
-{
-    /* Page functions */
-    {"render", (PyCFunction)page_render, METH_KEYWORDS, ""},
-    {"asImage", (PyCFunction)page_asImage, METH_KEYWORDS, ""},
-    {0,0,0,0}
-};
+PyDoc_STRVAR(page_render_doc, \
+"render(output, move=(0,0), clip=None)\n\n"
+"Renders a page to the rendering backend specified by the output\n"
+"parameter. Rendering consists of calling a number of functions on the\n"
+"output device, see the description of the \"PassThrough\" device.\n"
+"The page may be shifted to a given position using the move parameter,\n"
+"and may also be clipped to a specific size using the clip parameter.\n"
+"The clipping operation is applied after the move operation.\n"
+);
 static PyObject* page_render(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     PageObject* self = (PageObject*)_self; 
@@ -425,6 +494,13 @@ static PyObject* page_render(PyObject* _self, PyObject* args, PyObject* kwargs)
     return PY_NONE;
 }
 
+PyDoc_STRVAR(page_asImage_doc, \
+"asImage(width, height)\n\n"
+"Creates a bitmap from a page. The bitmap will be returned as a string\n"
+"containing RGB triplets. The bitmap will have the specified width and\n"
+"height. The aspect ratio of width and height doesn't need to be the same\n"
+"as the page.\n"
+);
 static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     PageObject* self = (PageObject*)_self; 
@@ -459,6 +535,13 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
     return PyString_FromStringAndSize((char*)data,img->width*img->height*3);
 }
 
+static PyMethodDef page_methods[] =
+{
+    /* Page functions */
+    {"render", (PyCFunction)page_render, METH_KEYWORDS, page_render_doc},
+    {"asImage", (PyCFunction)page_asImage, METH_KEYWORDS, page_asImage_doc},
+    {0,0,0,0}
+};
 static void page_dealloc(PyObject* _self) {
     PageObject* self = (PageObject*)_self; 
     if(self->page) {
@@ -472,6 +555,7 @@ static void page_dealloc(PyObject* _self) {
     
     PyObject_Del(self);
 }
+
 static PyObject* page_getattr(PyObject * _self, char* a)
 {
     PageObject*self = (PageObject*)_self;
@@ -490,6 +574,7 @@ static PyObject* page_getattr(PyObject * _self, char* a)
     }
     return Py_FindMethod(page_methods, _self, a);
 }
+
 static int page_setattr(PyObject * self, char* a, PyObject * o) {
     return -1;
 }
@@ -502,19 +587,17 @@ static int page_print(PyObject * _self, FILE *fi, int flags)
 
 //---------------------------------------------------------------------
 
-staticforward PyObject* doc_getPage(PyObject* parent, PyObject* args, PyObject* kwargs);
-staticforward PyObject* doc_getInfo(PyObject* parent, PyObject* args, PyObject* kwargs);
-staticforward PyObject* doc_setParameter(PyObject* parent, PyObject* args, PyObject* kwargs);
-
-static PyMethodDef doc_methods[] =
-{
-    /* PDF functions */
-    {"getPage", (PyCFunction)doc_getPage, METH_KEYWORDS, ""},
-    {"getInfo", (PyCFunction)doc_getInfo, METH_KEYWORDS, ""},
-    {"setParameter", (PyCFunction)doc_setParameter, METH_KEYWORDS, ""},
-    {0,0,0,0}
-};
-
+PyDoc_STRVAR(doc_getPage_doc,
+"getPage(nr)\n\n"
+"\n"
+"Get one page from a document file. The nr parameter specifies\n"
+"which page to retrieve. Counting starts at 1, so the first page\n"
+"can be retrieved by\n"
+"    page = doc.getPage(1)\n"
+".\n"
+"You can find out how many pages a document contains by querying\n"
+"it's pages field (doc.pages)\n"
+);
 static PyObject* doc_getPage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     DocObject* self = (DocObject*)_self;
@@ -536,6 +619,18 @@ static PyObject* doc_getPage(PyObject* _self, PyObject* args, PyObject* kwargs)
     return (PyObject*)page;
 }
 
+PyDoc_STRVAR(doc_getInfo_doc,
+"getInfo(key)\n\n"
+"\n"
+"Retrieve some information about a document. For PDF files, key\n"
+"can have the following values:\n\n"
+"\"title\", \"subject\", \"keywords\", \"author\", \"creator\", \"producer\",\n"
+"\"creationdate\", \"moddate\", \"linearized\", \"tagged\", \"encrypted\",\n"
+"\"oktoprint\", \"oktocopy\", \"oktochange\", \"oktoaddnotes\", \"version\".\n\n"
+"If the \"oktocopy\" digital rights management flag is set to \"no\", then the\n"
+"pdf parser won't allow you to access the PDF file. Trying to extract pages\n"
+"from it will raise an exception.\n"
+);
 static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     DocObject* self = (DocObject*)_self;
@@ -549,6 +644,14 @@ static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
     return PyString_FromString(s);
 }
 
+PyDoc_STRVAR(doc_setParameter_doc,
+"setParameter(key, value)\n\n"
+"\n"
+"Pass a parameter or setting to the document parser. Unlike\n"
+"the module level setoption() function, the parameters set\n"
+"using setParameter will only be valid for the object itself\n"
+"during its lifetime.\n"
+);
 static PyObject* doc_setParameter(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     DocObject* self = (DocObject*)_self;
@@ -562,15 +665,32 @@ static PyObject* doc_setParameter(PyObject* _self, PyObject* args, PyObject* kwa
     return PY_NONE;
 }
 
+PyDoc_STRVAR(f_open_doc,
+"open(type, filename) -> object\n\n"
+"Open a PDF file. The type argument always has to be \"pdf\"\n"
+"It returns a doc object which can be used to process the pdf\n"
+"contents. E.g.\n"
+"    doc = open(\"pdf\", \"document.pdf\")\n"
+"If the file is not a PDF file or is encrypted without\n"
+"a proper password specified, an exception is being raised.\n"
+"If the filename argument contains a '|' char, everything behind\n"
+"the '|' is treated as password used for opening the file.\n"
+"E.g.\n"
+"    doc = open(\"pdf\", \"document.pdf|mysecretpassword\")\n"
+);
 static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"type", "filename", NULL};
     char*filename;
     char*type;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &type, &filename))
-	return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &type, &filename)) {
+        type = "pdf";
+	PyErr_Clear();
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
+	    return NULL;
+    }
 
-    DocObject*self = PyObject_New(DocObject, &DriverClass);
+    DocObject*self = PyObject_New(DocObject, &DocClass);
    
     if(!strcmp(type,"pdf"))
 	self->doc = pdfdriver->open(pdfdriver,filename);
@@ -584,6 +704,16 @@ static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
     self->filename = strdup(filename);
     return (PyObject*)self;
 }
+
+static PyMethodDef doc_methods[] =
+{
+    /* PDF functions */
+    {"getPage", (PyCFunction)doc_getPage, METH_KEYWORDS, doc_getPage_doc},
+    {"getInfo", (PyCFunction)doc_getInfo, METH_KEYWORDS, doc_getInfo_doc},
+    {"setParameter", (PyCFunction)doc_setParameter, METH_KEYWORDS, doc_setParameter_doc},
+    {0,0,0,0}
+};
+
 static void doc_dealloc(PyObject* _self) {
     DocObject* self = (DocObject*)_self;
     if(self->doc) {
@@ -618,45 +748,83 @@ static int doc_print(PyObject * _self, FILE *fi, int flags)
 
 //---------------------------------------------------------------------
 
+PyDoc_STRVAR(output_doc,
+"An Output object can be used as parameter to the render()\n"
+"call of a page. It's not possible to create this type of\n"
+"object directly (i.e., from a class), however you can\n"
+"use a PassThrough() device to pass things over to Python.\n"
+"Examples for classes implementing the Output class are: \n"
+"ImageList, SWF, PlainText, PassThrough\n"
+);
 static PyTypeObject OutputClass =
 {
     PyObject_HEAD_INIT(NULL)
     0,
-    tp_name: "Output",
+    tp_name: "gfx.Output",
     tp_basicsize: sizeof(OutputObject),
     tp_itemsize: 0,
     tp_dealloc: output_dealloc,
     tp_print: output_print,
     tp_getattr: output_getattr,
     tp_setattr: output_setattr,
+    tp_doc: output_doc,
+    tp_methods: output_methods
 };
+PyDoc_STRVAR(page_doc,
+"A Page object contains a single page of a document.\n"
+"page.width and page.height (or page.size) contain the\n"
+"page dimensions. page.nr is the number of the page, and\n"
+"page.doc is the parent document.\n"
+);
 static PyTypeObject PageClass =
 {
     PyObject_HEAD_INIT(NULL)
     0,
-    tp_name: "Page",
+    tp_name: "gfx.Page",
     tp_basicsize: sizeof(PageObject),
     tp_itemsize: 0,
     tp_dealloc: page_dealloc,
     tp_print: page_print,
     tp_getattr: page_getattr,
     tp_setattr: page_setattr,
+    tp_doc: page_doc,
+    tp_methods: page_methods
 };
-static PyTypeObject DriverClass =
+PyDoc_STRVAR(doc_doc,
+"A Doc object is used for storing a document (like a PDF).\n"
+"doc.pages contains the number of pages in the document,\n"
+"and doc.filename the name of the file the document was\n"
+"created (loaded) from\n"
+);
+static PyTypeObject DocClass =
 {
     PyObject_HEAD_INIT(NULL)
     0,
-    tp_name: "PDF",
+    tp_name: "gfx.Doc",
     tp_basicsize: sizeof(DocObject),
     tp_itemsize: 0,
     tp_dealloc: doc_dealloc,
     tp_print: doc_print,
     tp_getattr: doc_getattr,
     tp_setattr: doc_setattr,
+    tp_doc: doc_doc,
+    tp_methods: doc_methods,
 };
 
 //=====================================================================
 
+PyDoc_STRVAR(f_setoption_doc, \
+"setoption(key,value)\n\n"
+"\n"
+"Set a parameter in the gfx module (which might affect the PDF\n"
+"parser or any of the rendering backends). This is a parameter\n"
+"which would usually be passed with the \"-s\" option to pdf2swf\n"
+"For a list of all parameters, see the output of\n"
+"    pdf2swf -s help\n"
+"and\n"
+"    pdf2swf somefile.pdf -s help\n"
+".\n"
+);
 static PyObject* f_setoption(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"key", "value", NULL};
@@ -667,6 +835,19 @@ static PyObject* f_setoption(PyObject* self, PyObject* args, PyObject* kwargs)
     return PY_NONE;
 }
 
+PyDoc_STRVAR(f_verbose_doc, \
+"verbose(level)\n\n"
+"Set the logging verbosity of the gfx module. Log levels are:\n"
+"level=-1          Log nothing\n"
+"level=0 (fatal)   Log only fatal errors\n"
+"level=1 (error)   Log only fatal errors and errors\n"
+"level=2 (warn)    Log all errors and warnings\n"
+"level=3 (notice)  Log also some rudimentary data about the parsing/conversion\n"
+"level=4 (verbose) Log some additional parsing information\n"
+"level=5 (debug)   Log debug statements\n"
+"level=6 (trace)   Log extended debug statements\n"
+"All logging messages are written to stdout.\n"
+);
 static PyObject* f_verbose(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"val", NULL};
@@ -676,6 +857,13 @@ static PyObject* f_verbose(PyObject* self, PyObject* args, PyObject* kwargs)
     setConsoleLogging(val);
     return PY_NONE;
 }
+
+PyDoc_STRVAR(f_addfont_doc, \
+"addfont(filename)\n\n"
+"Passes an additional font file to the PDF parser. If a PDF contains\n"
+"external fonts (i.e. fonts which are not contained in the PDF itself)\n"
+"then the files added by addfont() will be searched.\n"
+);
 
 static PyObject* f_addfont(PyObject* self, PyObject* args, PyObject* kwargs)
 {
@@ -687,6 +875,12 @@ static PyObject* f_addfont(PyObject* self, PyObject* args, PyObject* kwargs)
     return PY_NONE;
 }
 
+PyDoc_STRVAR(f_addfontdir_doc, \
+"addfontdir(dirname)\n\n"
+"Passes a complete directory containing fonts to the PDF parser. Any\n"
+"font file within this directory might be used to resolve external fonts\n"
+"in PDF files\n"
+);
 static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"filename", NULL};
@@ -700,30 +894,45 @@ static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
 static PyMethodDef pdf2swf_methods[] =
 {
     /* sources */
-    {"open", (PyCFunction)f_open, METH_KEYWORDS, ""},
-    {"addfont", (PyCFunction)f_addfont, METH_KEYWORDS, ""},
-    {"addfontdir", (PyCFunction)f_addfontdir, METH_KEYWORDS, ""},
-    {"setoption", (PyCFunction)f_setoption, METH_KEYWORDS, ""},
-    {"verbose", (PyCFunction)f_verbose, METH_KEYWORDS, ""},
+    {"open", (PyCFunction)f_open, METH_KEYWORDS, f_open_doc},
+    {"addfont", (PyCFunction)f_addfont, METH_KEYWORDS, f_addfont_doc},
+    {"addfontdir", (PyCFunction)f_addfontdir, METH_KEYWORDS, f_addfontdir_doc},
+    {"setoption", (PyCFunction)f_setoption, METH_KEYWORDS, f_setoption_doc},
+    {"verbose", (PyCFunction)f_verbose, METH_KEYWORDS, f_verbose_doc},
 
     /* devices */
-    {"SWF", (PyCFunction)f_createSWF, METH_KEYWORDS, ""},
-    {"ImageList", (PyCFunction)f_createImageList, METH_KEYWORDS, ""},
-    {"PlainText", (PyCFunction)f_createPlainText, METH_KEYWORDS, ""},
-    {"PassThrough", (PyCFunction)f_createPassThrough, METH_KEYWORDS, ""},
+    {"SWF", (PyCFunction)f_createSWF, METH_KEYWORDS, f_createSWF_doc},
+    {"ImageList", (PyCFunction)f_createImageList, METH_KEYWORDS, f_createImageList_doc},
+    {"PlainText", (PyCFunction)f_createPlainText, METH_KEYWORDS, f_createPlainText_doc},
+    {"PassThrough", (PyCFunction)f_createPassThrough, METH_KEYWORDS, f_createPassThrough_doc},
 
     /* sentinel */
     {0, 0, 0, 0}
 };
+
+PyDoc_STRVAR(gfx_doc, \
+"This module contains a PDF parser (based on xpdf) and a number of\n"
+"rendering backends. In particular, it can extract text from PDF pages,\n"
+"create bitmaps from them, or convert PDF files to SWF.\n" 
+"The latter functionality is similar to what is offered by swftools'\n" 
+"(http://www.swftools.org) pdf2swf utility, however more powerful-\n" 
+"You can also create individual SWF files from single pages of the PDF\n" 
+"or combine more than one page into a bigger PDF.\n"
+);
 
 void initgfx(void)
 {
     initLog(0,0,0,0,0,2);
     OutputClass.ob_type = &PyType_Type;
     PageClass.ob_type = &PyType_Type;
-    DriverClass.ob_type = &PyType_Type;
- 
+    DocClass.ob_type = &PyType_Type;
+
     pdfdriver = gfxsource_pdf_create();
     
-    PyObject*module = Py_InitModule("gfx", pdf2swf_methods);
+    PyObject*module = Py_InitModule3("gfx", pdf2swf_methods, gfx_doc);
+    PyObject*module_dict = PyModule_GetDict(module);
+
+    PyDict_SetItemString(module_dict, "Doc", (PyObject*)&DocClass);
+    PyDict_SetItemString(module_dict, "Page", (PyObject*)&PageClass);
+    PyDict_SetItemString(module_dict, "Output", (PyObject*)&OutputClass);
 }
