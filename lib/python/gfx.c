@@ -135,7 +135,7 @@ PyDoc_STRVAR(f_createSWF_doc, \
 "Creates a device which renders documents to SWF (Flash) files.\n"
 "Depending on the way the document parser behaves (see the poly2bitmap\n"
 "and bitmap parameters), the resulting SWF might use vector operations\n"
-"and Flash Texts to display the document, or just a single bitmap\n"
+"and Flash Texts to display the document, or just a single bitmap.\n"
 );
 static PyObject* f_createSWF(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
@@ -362,7 +362,7 @@ PyDoc_STRVAR(f_createPassThrough_doc, \
 "drawlink(outline, url)\n"
 "finish()\n\n"
 "If any of these functions are not defined, a error message will be printed,\n"
-"however the rendering process will be continued.\n"
+"however the rendering process will *not* be aborted.\n"
 );
 static PyObject* f_createPassThrough(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
@@ -589,14 +589,13 @@ static int page_print(PyObject * _self, FILE *fi, int flags)
 
 PyDoc_STRVAR(doc_getPage_doc,
 "getPage(nr)\n\n"
-"\n"
 "Get one page from a document file. The nr parameter specifies\n"
 "which page to retrieve. Counting starts at 1, so the first page\n"
 "can be retrieved by\n"
 "    page = doc.getPage(1)\n"
 ".\n"
 "You can find out how many pages a document contains by querying\n"
-"it's pages field (doc.pages)\n"
+"its pages field (doc.pages)\n"
 );
 static PyObject* doc_getPage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
@@ -621,7 +620,6 @@ static PyObject* doc_getPage(PyObject* _self, PyObject* args, PyObject* kwargs)
 
 PyDoc_STRVAR(doc_getInfo_doc,
 "getInfo(key)\n\n"
-"\n"
 "Retrieve some information about a document. For PDF files, key\n"
 "can have the following values:\n\n"
 "\"title\", \"subject\", \"keywords\", \"author\", \"creator\", \"producer\",\n"
@@ -646,7 +644,6 @@ static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
 
 PyDoc_STRVAR(doc_setParameter_doc,
 "setParameter(key, value)\n\n"
-"\n"
 "Pass a parameter or setting to the document parser. Unlike\n"
 "the module level setoption() function, the parameters set\n"
 "using setParameter will only be valid for the object itself\n"
@@ -754,7 +751,7 @@ PyDoc_STRVAR(output_doc,
 "object directly (i.e., from a class), however you can\n"
 "use a PassThrough() device to pass things over to Python.\n"
 "Examples for classes implementing the Output class are: \n"
-"ImageList, SWF, PlainText, PassThrough\n"
+"ImageList, SWF, PlainText and PassThrough.\n"
 );
 static PyTypeObject OutputClass =
 {
@@ -815,10 +812,9 @@ static PyTypeObject DocClass =
 
 PyDoc_STRVAR(f_setoption_doc, \
 "setoption(key,value)\n\n"
-"\n"
 "Set a parameter in the gfx module (which might affect the PDF\n"
 "parser or any of the rendering backends). This is a parameter\n"
-"which would usually be passed with the \"-s\" option to pdf2swf\n"
+"which would usually be passed with the \"-s\" option to pdf2swf.\n"
 "For a list of all parameters, see the output of\n"
 "    pdf2swf -s help\n"
 "and\n"
