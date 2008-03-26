@@ -336,7 +336,7 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
     int bestlen = 0x7fffffff;
     const char*bestfilename = 0;
     
-    fontfile_t*f = 0;
+    fontfile_t*f = global_fonts;
     while(f) {
 	if(strstr(f->filename, name)) {
             if(f->len < bestlen) {
