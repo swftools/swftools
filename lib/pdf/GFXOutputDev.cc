@@ -2553,14 +2553,15 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 void GFXOutputDev::endTransparencyGroup(GfxState *state)
 {
     dbgindent-=2;
-    dbg("endTransparencyGroup");
-    msg("<verbose> endTransparencyGroup");
-
     gfxdevice_t*r = this->device;
 
     this->device = states[statepos].olddevice;
 
     gfxresult_t*recording = r->finish(r);
+    
+    dbg("endTransparencyGroup forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
+    msg("<verbose> endTransparencyGroup forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
+
     if(states[statepos].createsoftmask) {
 	states[statepos-1].softmaskrecording = recording;
     } else {
