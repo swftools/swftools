@@ -15,7 +15,8 @@ rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c module
 
 base_objects=q.$(O) utf8.$(O) png.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
 gfx_objects=gfxtools.$(O) gfxfont.$(O) gfxpoly.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O)
-art_objects = art/art_affine.$(O) art/art_alphagamma.$(O) art/art_bpath.$(O) art/art_gray_svp.$(O) art/art_misc.$(O) art/art_pixbuf.$(O) art/art_rect.$(O) art/art_rect_svp.$(O) art/art_rect_uta.$(O) art/art_render.$(O) art/art_render_gradient.$(O) art/art_render_mask.$(O) art/art_render_svp.$(O) art/art_rgb.$(O) art/art_rgb_a_affine.$(O) art/art_rgb_affine.$(O) art/art_rgb_affine_private.$(O) art/art_rgb_bitmap_affine.$(O) art/art_rgb_pixbuf_affine.$(O) art/art_rgb_rgba_affine.$(O) art/art_rgb_svp.$(O) art/art_rgba.$(O) art/art_svp.$(O) art/art_svp_intersect.$(O) art/art_svp_ops.$(O) art/art_svp_point.$(O) art/art_svp_render_aa.$(O) art/art_svp_vpath.$(O) art/art_svp_vpath_stroke.$(O) art/art_svp_wind.$(O) art/art_uta.$(O) art/art_uta_ops.$(O) art/art_uta_rect.$(O) art/art_uta_svp.$(O) art/art_uta_vpath.$(O) art/art_vpath.$(O) art/art_vpath_bpath.$(O) art/art_vpath_dash.$(O) art/art_vpath_svp.$(O)
+art_objects=art/art_affine.$(O) art/art_alphagamma.$(O) art/art_bpath.$(O) art/art_gray_svp.$(O) art/art_misc.$(O) art/art_pixbuf.$(O) art/art_rect.$(O) art/art_rect_svp.$(O) art/art_rect_uta.$(O) art/art_render.$(O) art/art_render_gradient.$(O) art/art_render_mask.$(O) art/art_render_svp.$(O) art/art_rgb.$(O) art/art_rgb_a_affine.$(O) art/art_rgb_affine.$(O) art/art_rgb_affine_private.$(O) art/art_rgb_bitmap_affine.$(O) art/art_rgb_pixbuf_affine.$(O) art/art_rgb_rgba_affine.$(O) art/art_rgb_svp.$(O) art/art_rgba.$(O) art/art_svp.$(O) art/art_svp_intersect.$(O) art/art_svp_ops.$(O) art/art_svp_point.$(O) art/art_svp_render_aa.$(O) art/art_svp_vpath.$(O) art/art_svp_vpath_stroke.$(O) art/art_svp_wind.$(O) art/art_uta.$(O) art/art_uta_ops.$(O) art/art_uta_rect.$(O) art/art_uta_svp.$(O) art/art_uta_vpath.$(O) art/art_vpath.$(O) art/art_vpath_bpath.$(O) art/art_vpath_dash.$(O) art/art_vpath_svp.$(O)
+rfxswf_objects=modules/swfabc.$(O) modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfmorph.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O)
 
 %.$(O): %.c 
 	$(C) $< -o $@
@@ -37,6 +38,38 @@ wav.$(O): wav.c wav.h $(top_builddir)/config.h
 	$(C) wav.c -o $@
 os.$(O): os.c os.h $(top_builddir)/config.h
 	$(C) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" os.c -o $@
+modules/swfabc.$(O): modules/swfabc.c rfxswf.h
+	$(C) modules/swfabc.c -o $@
+modules/swfaction.$(O): modules/swfaction.c rfxswf.h
+	$(C) modules/swfaction.c -o $@
+modules/swfbits.$(O): modules/swfbits.c rfxswf.h
+	$(C) modules/swfbits.c -o $@
+modules/swfbutton.$(O): modules/swfbutton.c rfxswf.h
+	$(C) modules/swfbutton.c -o $@
+modules/swfcgi.$(O): modules/swfcgi.c rfxswf.h
+	$(C) modules/swfcgi.c -o $@
+modules/swfdraw.$(O): modules/swfdraw.c rfxswf.h
+	$(C) modules/swfdraw.c -o $@
+modules/swfdump.$(O): modules/swfdump.c rfxswf.h
+	$(C) modules/swfdump.c -o $@
+modules/swffilter.$(O): modules/swffilter.c rfxswf.h
+	$(C) modules/swffilter.c -o $@
+modules/swffont.$(O): modules/swffont.c rfxswf.h
+	$(C) modules/swffont.c -o $@
+modules/swfmorph.$(O): modules/swfmorph.c rfxswf.h
+	$(C) modules/swfmorph.c -o $@
+modules/swfobject.$(O): modules/swfobject.c rfxswf.h
+	$(C) modules/swfobject.c -o $@
+modules/swfrender.$(O): modules/swfrender.c rfxswf.h
+	$(C) modules/swfrender.c -o $@
+modules/swfshape.$(O): modules/swfshape.c rfxswf.h
+	$(C) modules/swfshape.c -o $@
+modules/swfsound.$(O): modules/swfsound.c rfxswf.h
+	$(C) modules/swfsound.c -o $@
+modules/swftext.$(O): modules/swftext.c rfxswf.h
+	$(C) modules/swftext.c -o $@
+modules/swftools.$(O): modules/swftools.c rfxswf.h
+	$(C) modules/swftools.c -o $@
 gfxtools.$(O): gfxtools.c gfxtools.h $(top_builddir)/config.h
 	$(C) gfxtools.c -o $@
 gfxpoly.$(O): gfxpoly.c gfxpoly.h $(top_builddir)/config.h
@@ -96,8 +129,8 @@ libbase$(A): $(base_objects) Makefile
 libgfx$(A): $(gfx_objects) $(art_objects) Makefile
 	$(AR) r libgfx$(A) $(gfx_objects) $(art_objects)
 
-librfxswf$(A): Makefile rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects) Makefile
-	$(AR) r librfxswf$(A) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+librfxswf$(A): Makefile rfxswf.$(O) $(rfxswf_objects) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects) Makefile
+	$(AR) r librfxswf$(A) rfxswf.$(O) $(rfxswf_objects) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
 	$(RANLIB) librfxswf$(A)
 
 libpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
@@ -110,6 +143,7 @@ uninstall:
 clean: 
 	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
 	rm -f art/*.o art/*.obj art/*.lo art/*.a art/*.lib art/*.la art/gmon.out
+	rm -f modules/*.o modules/*.obj modules/*.lo modules/*.a modules/*.lib modules/*.la modules/gmon.out
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
