@@ -515,7 +515,7 @@ void opengl_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*co
 
 
 
-void opengl_drawlink(struct _gfxdevice*dev, gfxline_t*line, char*action)
+void opengl_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
 {
     dbg("link");
 }
@@ -525,12 +525,12 @@ void opengl_endpage(struct _gfxdevice*dev)
     dbg("endpage");
 }
 
-int opengl_result_save(struct _gfxresult*gfx, char*filename)
+int opengl_result_save(struct _gfxresult*gfx, const char*filename)
 {
     dbg("result:save");
     return 0;
 }
-void* opengl_result_get(struct _gfxresult*gfx, char*name)
+void* opengl_result_get(struct _gfxresult*gfx, const char*name)
 {
     dbg("result:get");
     return 0;
