@@ -119,6 +119,8 @@ typedef struct _gfxdevice
     
     void (*endpage)(struct _gfxdevice*dev);
     
+    const char* (*geterror)();
+    
     gfxresult_t* (*finish)(struct _gfxdevice*dev);
 
     void* internal;
