@@ -155,6 +155,8 @@ typedef struct _swfoutput_internal
     int bboxrectpos;
     SRECT bboxrect;
 
+    SRECT pagebbox;
+
     chardata_t chardata[CHARDATAMAX];
     int chardatapos;
     int firstpage;
@@ -703,7 +705,7 @@ static void endtext(gfxdevice_t*dev)
 
     SRECT r;
     r = getcharacterbbox(dev, i->swffont, &i->fontmatrix);
-    
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
 
     swf_SetMatrix(i->tag,&i->fontmatrix);
@@ -880,17 +882,17 @@ void swf_startframe(gfxdevice_t*dev, int width, int height)
     i->max_y = height;
     i->watermarks = 0;
 
-    /* set clipping/background rectangle */
-    /* TODO: this should all be done in SWFOutputDev */
-    //setBackground(dev, x1, y1, x2, y2);
+    /* create a bbox structure with the page size. This is used
+       for clipping shape and text bounding boxes. As we don't want to
+       generate bounding boxes which extend beyond the movie size (in
+       order to not confuse Flash), we clip everything against i->pagebbox */
+    i->pagebbox.xmin = 0;
+    i->pagebbox.ymin = 0;
+    i->pagebbox.xmax = width*20;
+    i->pagebbox.ymax = height*20;
 
     /* increase SWF's bounding box */
-    SRECT r;
-    r.xmin = 0;
-    r.ymin = 0;
-    r.xmax = width*20;
-    r.ymax = height*20;
-    swf_ExpandRect2(&i->swf->movieSize, &r);
+    swf_ExpandRect2(&i->swf->movieSize, &i->pagebbox);
 
     i->lastframeno = i->frameno;
     i->firstpage = 0;
@@ -1034,11 +1036,7 @@ static void startshape(gfxdevice_t*dev)
 
     i->bboxrectpos = i->tag->len;
     /* changed later */
-    r.xmin = 0;
-    r.ymin = 0;
-    r.xmax = 20*i->max_x;
-    r.ymax = 20*i->max_y;
-    swf_SetRect(i->tag,&r);
+    swf_SetRect(i->tag,&i->pagebbox);
    
     memset(&i->bboxrect, 0, sizeof(i->bboxrect));
 
@@ -1188,7 +1186,8 @@ static void endshape(gfxdevice_t*dev)
     
     swf_ShapeSetEnd(i->tag);
 
-    changeRect(dev, i->tag, i->bboxrectpos, &i->bboxrect);
+    SRECT r = swf_ClipRect(i->pagebbox, i->bboxrect);
+    changeRect(dev, i->tag, i->bboxrectpos, &r);
 
     msg("<trace> Placing shape ID %d", i->shapeid);
 
@@ -1642,6 +1641,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     r.ymin = (int)(bbox.ymin*20);
     r.xmax = (int)(bbox.xmax*20);
     r.ymax = (int)(bbox.ymax*20);
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,i->shape);
     swf_ShapeCountBits(i->shape,NULL,NULL);
@@ -1664,6 +1664,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     r.ymin = (int)(bbox.ymin*20);
     r.xmax = (int)(bbox.xmax*20);
     r.ymax = (int)(bbox.ymax*20);
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,i->shape);
     swf_ShapeCountBits(i->shape,NULL,NULL);
@@ -2080,6 +2081,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     int fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
     swf_SetU16(i->tag, myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,shape);
     swf_ShapeCountBits(shape,NULL,NULL);
@@ -2111,6 +2113,7 @@ static void drawoutline(gfxdevice_t*dev, gfxline_t*line)
 
     swf_SetU16(i->tag,myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,shape);
     swf_ShapeCountBits(shape,NULL,NULL);
@@ -2154,6 +2157,7 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     }
     swf_SetU16(i->tag,myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,shape);
     swf_ShapeCountBits(shape,NULL,NULL);
@@ -2488,6 +2492,7 @@ static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*grad
     int fsid = swf_ShapeAddGradientFillStyle(shape,&m,swfgradient,type==gfxgradient_radial);
     swf_SetU16(i->tag, myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
+    r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetShapeStyles(i->tag,shape);
     swf_ShapeCountBits(shape,NULL,NULL);
