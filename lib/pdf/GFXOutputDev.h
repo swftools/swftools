@@ -21,6 +21,8 @@ class GFXOutputState {
     char softmask_alpha;
     char isolated;
 
+    gfxbbox_t clipbbox;
+
     GFXOutputState();
 
     gfxresult_t* grouprecording; // for transparency groups
@@ -115,17 +117,23 @@ public:
   virtual GBool useTilingPatternFill();
   virtual GBool useShadedFills();
 
-  /*
+#if (xpdfMajorVersion < 3) || (xpdfMinorVersion < 2) || (xpdfUpdateVersion < 7)
   virtual void tilingPatternFill(GfxState *state, Object *str,
-				 int paintType, Dict *resDict,
-				 double *mat, double *bbox,
-				 int x0, int y0, int x1, int y1,
-				 double xStep, double yStep) {}
-  virtual void functionShadedFill(GfxState *state,
-				  GfxFunctionShading *shading) {}
-  virtual void axialShadedFill(GfxState *state, GfxAxialShading *shading) {}
-  virtual void radialShadedFill(GfxState *state, GfxRadialShading *shading) {}
-  */
+			     int paintType, Dict *resDict,
+			     double *mat, double *bbox,
+			     int x0, int y0, int x1, int y1,
+			     double xStep, double yStep);
+#else
+  virtual void tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
+			     int paintType, Dict *resDict,
+			     double *mat, double *bbox,
+			     int x0, int y0, int x1, int y1,
+			     double xStep, double yStep);
+#endif
+  virtual GBool functionShadedFill(GfxState *state,
+				   GfxFunctionShading *shading);
+  virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading);
+  virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading);
 
   //----- text drawing
   virtual void beginString(GfxState *state, GString *s) ;
@@ -191,6 +199,10 @@ public:
   //virtual void psXObject(Stream *psStream, Stream *level1Stream) {}
 
   private:
+  gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey);
+
+  void transformXY(GfxState*state, double x, double y, double*nx, double*ny);
+
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int *maskColors,
@@ -263,6 +275,8 @@ public:
   int config_remapunicode;
   int config_transparent;
   int config_extrafontdata;
+  int config_convertgradients;
+  int config_optimize_polygons;
   double config_fontquality;
 
   parameter_t*parameters;
