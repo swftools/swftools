@@ -1017,7 +1017,6 @@ void BitmapOutputDev::clip(GfxState *state)
 }
 void BitmapOutputDev::eoClip(GfxState *state)
 {
-    return;
     msg("<debug> eoClip");
     boolpolydev->eoClip(state);
     booltextdev->eoClip(state);
