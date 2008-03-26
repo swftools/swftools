@@ -161,7 +161,9 @@ ${name}/lib/os.h \
 ${name}/lib/gfxdevice.h \
 ${name}/lib/gfxsource.h \
 ${name}/lib/gfxtools.h \
+${name}/lib/gfxpoly.h \
 ${name}/lib/gfxtools.c \
+${name}/lib/gfxpoly.c \
 ${name}/lib/devices/swf.h \
 ${name}/lib/devices/swf.c \
 ${name}/lib/devices/file.h \
@@ -170,10 +172,8 @@ ${name}/lib/devices/render.c \
 ${name}/lib/devices/render.h \
 ${name}/lib/devices/text.c \
 ${name}/lib/devices/text.h \
-${name}/lib/devices/artsutils.c \
-${name}/lib/devices/artsutils.h \
-${name}/lib/devices/arts.c \
-${name}/lib/devices/arts.h \
+${name}/lib/devices/polyops.c \
+${name}/lib/devices/polyops.h \
 ${name}/lib/devices/record.c \
 ${name}/lib/devices/record.h \
 ${name}/lib/devices/rescale.c \
