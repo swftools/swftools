@@ -38,6 +38,7 @@ static int showbbox = 0;
 static int showorigbbox = 1;
 static int expand = 0;
 static int clip = 0;
+static int checkclippings = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -80,7 +81,6 @@ int args_callback_option(char*name,char*val)
     } 
     else if(!strcmp(name, "c")) {
 	if(showorigbbox == 1) showorigbbox = 0;
-	optimize = 1;
 	clip = 1;
 	return 0;
     } 
@@ -91,6 +91,13 @@ int args_callback_option(char*name,char*val)
     else if(!strcmp(name, "q")) {
 	if(verbose)
 	    verbose --;
+	return 0;
+    } 
+    else if(!strcmp(name, "Q")) {
+	/* DEPRECATED- was used for testing the bbox-clip feature
+	   of pdf2swf */
+	if(showorigbbox == 1) showorigbbox = 0;
+	checkclippings = 1;
 	return 0;
     } 
     else if(!strcmp(name, "e")) {
@@ -270,20 +277,6 @@ static void freePlacements(placement_t*p)
     rfx_free(p);
 }
 
-SRECT swf_ClipRect(SRECT border, SRECT r)
-{
-    if(r.xmax > border.xmax) r.xmax = border.xmax;
-    if(r.ymax > border.ymax) r.ymax = border.ymax;
-    if(r.xmax < border.xmin) r.xmax = border.xmin;
-    if(r.ymax < border.ymin) r.ymax = border.ymin;
-    
-    if(r.xmin > border.xmax) r.xmin = border.xmax;
-    if(r.ymin > border.ymax) r.ymin = border.ymax;
-    if(r.xmin < border.xmin) r.xmin = border.xmin;
-    if(r.ymin < border.ymin) r.ymin = border.ymin;
-    return r;
-}
-
 static SRECT clipBBox(TAG*tag, SRECT mbbox, SRECT r)
 {
     int id = swf_GetDefineID(tag);
@@ -328,7 +321,25 @@ static SRECT clipBBox(TAG*tag, SRECT mbbox, SRECT r)
 		r.xmax /20.0,
 		r.ymax /20.0);
     }
-    
+   
+    if(checkclippings) {
+	int clip = 0;
+	if(r.xmax > mbbox.xmax) clip += r.xmax - mbbox.xmax;
+	if(r.ymax > mbbox.ymax) clip += r.ymax - mbbox.ymax;
+	if(r.xmax < mbbox.xmin) clip += -(r.xmax - mbbox.xmin);
+	if(r.ymax < mbbox.ymin) clip += -(r.ymax - mbbox.ymin);
+	
+	if(r.xmin > mbbox.xmax) clip += r.xmin = mbbox.xmax;
+	if(r.ymin > mbbox.ymax) clip += r.ymin = mbbox.ymax;
+	if(r.xmin < mbbox.xmin) clip += -(r.xmin = mbbox.xmin);
+	if(r.ymin < mbbox.ymin) clip += -(r.ymin = mbbox.ymin);
+	if(clip > 3*20) {
+	    printf("needs clipping: [%.2f %.2f %2.f %2.f] is outside [%.2f %2.f %2.f %2.f]\n",
+		    r.xmin / 20.0, r.ymin / 20.0, r.xmax / 20.0, r.ymax / 20.0,
+		    mbbox.xmin / 20.0, mbbox.ymin / 20.0, mbbox.xmax / 20.0, mbbox.ymax / 20.0
+		    );
+	}
+    }
 
     r = swf_ClipRect(mbbox, r);
    
@@ -420,14 +431,15 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 	    SHAPE2 s;
 	    if(verbose) printf("%s\n", swf_TagGetName(tag));
 	    swf_ParseDefineShape(tag, &s);
-	    swf_Shape2Optimize(&s);
+	    if(optimize)
+		swf_Shape2Optimize(&s);
 	    tag->len = 2;
 	    tag->pos = 0;
 	    if(!s.bbox) {
 		fprintf(stderr, "Internal error (5)\n");
 		exit(1);
 	    }
-	    if(clip) {
+	    if(clip || checkclippings) {
 		*s.bbox = clipBBox(tag, swf->movieSize, *s.bbox);
 	    }
 	    swf_SetShape2(tag, &s);
@@ -465,7 +477,9 @@ static void swf_OptimizeBoundingBoxes(SWF*swf)
 	    	printf("old: %d %d %d %d\n", oldbox.xmin, oldbox.ymin, oldbox.xmax, oldbox.ymax);
 	    	printf("new: %d %d %d %d\n", bounds.r.xmin, bounds.r.ymin, bounds.r.xmax, bounds.r.ymax);
 	    }
-	    if(clip) {
+	    if(!optimize)
+		bounds.r = oldbox; //set to old bounds from the tag header
+	    if(clip || checkclippings) {
 		bounds.r = clipBBox(tag, swf->movieSize, bounds.r);
 	    }
 	    
@@ -604,14 +618,14 @@ int main (int argc,char ** argv)
 
     swf_OptimizeTagOrder(&swf);
 
-    if(clip) {
+    if(clip || checkclippings) {
 	placements = readPlacements(&swf);
     }
 
     swf_FoldAll(&swf);
 
     /* Optimize bounding boxes in case -O flag was set */
-    if(optimize) {
+    if(optimize || checkclippings || clip) {
 	swf_OptimizeBoundingBoxes(&swf);
     }
     
@@ -660,7 +674,7 @@ int main (int argc,char ** argv)
     
     if(showbbox) {
 	if(verbose>=0)
-	    printf("Real Movie Size: ");
+	    printf("Real Movie Size (size of visible objects): ");
 	printf("%.2f x %.2f :%.2f :%.2f\n", 
 		(newMovieSize.xmax-newMovieSize.xmin)/20.0,
 		(newMovieSize.ymax-newMovieSize.ymin)/20.0,
@@ -670,7 +684,7 @@ int main (int argc,char ** argv)
     }
     if(showorigbbox) {
 	if(verbose>=0)
-	    printf("Original Movie Size: ");
+	    printf("Movie Size accordings to file header: ");
 	printf("%.2f x %.2f :%.2f :%.2f\n", 
 		(oldMovieSize.xmax-oldMovieSize.xmin)/20.0,
 		(oldMovieSize.ymax-oldMovieSize.ymin)/20.0,
