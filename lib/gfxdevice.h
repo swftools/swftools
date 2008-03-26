@@ -62,8 +62,10 @@ typedef struct _gfximage
     int height;
 } gfximage_t;
 
+/* gradients: A radial gradient will start at 0,0 and have a radius of 1,0 
+              An axial gradient starts at -1,0 and ends at 1,0
+ */
 typedef enum {gfxgradient_radial, gfxgradient_linear} gfxgradienttype_t;
-
 typedef struct _gfxgradient
 {
     gfxcolor_t color;
@@ -107,7 +109,7 @@ typedef struct _gfxdevice
     void (*stroke)(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
     void (*fill)(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color);
     void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform); //cxform? tiling?
-    void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix); //?
+    void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*gradcoord2devcoord); //?
 
     /* deprecated */ void (*addfont)(struct _gfxdevice*dev, gfxfont_t*font);
 
