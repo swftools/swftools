@@ -701,6 +701,7 @@ VIDEO_CFLAGS
 USE_GZIP
 PYTHON_LIB
 PYTHON_INCLUDES
+HAVE_PYTHON_IMAGING
 PDF2SWF
 LIBPDF
 JPEG2SWF
@@ -1774,7 +1775,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2007-04-28-2027
+VERSION=2008-03-26-1351
 
 
 # ------------------------------------------------------------------
@@ -8872,7 +8873,287 @@ if test "x${HAVE_FREETYPE}" '!=' "x1"; then
 fi
 
 
-#RFX_CHECK_FONTCONFIG
+
+OLDCPPFLAGS="${CPPFLAGS}"
+OLDLIBS="${LIBS}"
+
+if test -d /usr/include/fontconfig; then
+    CPPFLAGS="$CPPFLAGS -I/usr/include/fontconfig"
+fi
+
+{ echo "$as_me:$LINENO: checking for FcInit in -lfontconfig" >&5
+echo $ECHO_N "checking for FcInit in -lfontconfig... $ECHO_C" >&6; }
+if test "${ac_cv_lib_fontconfig_FcInit+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lfontconfig  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char FcInit ();
+int
+main ()
+{
+return FcInit ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+  ac_cv_lib_fontconfig_FcInit=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_fontconfig_FcInit=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_lib_fontconfig_FcInit" >&5
+echo "${ECHO_T}$ac_cv_lib_fontconfig_FcInit" >&6; }
+if test $ac_cv_lib_fontconfig_FcInit = yes; then
+  HAVE_LIB_FONTCONFIG=1
+fi
+
+
+for ac_header in fontconfig.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  { echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6; }
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+ac_res=`eval echo '${'$as_ac_Header'}'`
+	       { echo "$as_me:$LINENO: result: $ac_res" >&5
+echo "${ECHO_T}$ac_res" >&6; }
+else
+  # Is the header compilable?
+{ echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_header_compiler=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <$ac_header>
+_ACEOF
+if { (ac_try="$ac_cpp conftest.$ac_ext"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_cpp conftest.$ac_ext") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null && {
+	 test -z "$ac_c_preproc_warn_flag$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       }; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+
+rm -f conftest.err conftest.$ac_ext
+{ echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: $ac_header: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: $ac_header: in the future, the compiler will take precedence" >&2;}
+
+    ;;
+esac
+{ echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6; }
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=\$ac_header_preproc"
+fi
+ac_res=`eval echo '${'$as_ac_Header'}'`
+	       { echo "$as_me:$LINENO: result: $ac_res" >&5
+echo "${ECHO_T}$ac_res" >&6; }
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ HAVE_FONTCONFIG_H=1
+fi
+
+done
+
+
+if test "x${HAVE_LIB_FONTCONFIG}" != "x";then
+if test "x${HAVE_FONTCONFIG_H}" != "x";then
+    HAVE_FONTCONFIG=1
+fi
+fi
+
+if test "x${HAVE_FONTCONFIG}" = "x1"; then
+    LIBS="$LIBS -lfontconfig"
+{ echo "$as_me:$LINENO: checking whether we can compile the fontconfig test program" >&5
+echo $ECHO_N "checking whether we can compile the fontconfig test program... $ECHO_C" >&6; }
+
+if (echo $LIBS | grep lfreetype >/dev/null 2>&1); then
+    #move freetype library to the end of libraries, otherwise fontconfig
+    #won't compile.
+    LIBS=`echo $LIBS | sed -e 's/-lfreetype//g' -e 's/$/ -lfreetype/'`
+fi
+
+cat > conftest.c << EOF
+#include <string.h>
+#include <fontconfig.h>
+
+int main()
+{
+    FcPattern *pattern, *match;
+    FcResult result;
+    FcChar8 *v;
+    char*s1="abc",*s2="ABC";
+    strcasecmp(s1,s2);
+    FcInit();
+    pattern = FcPatternBuild(0, FC_FAMILY, FcTypeString, "", 0);
+    FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
+    FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
+    FcConfigSubstitute(0, pattern, FcMatchPattern);
+    FcDefaultSubstitute(pattern);
+    match = FcFontMatch(0, pattern, &result);
+    FcPatternGetString(match, "family", 0, &v) == FcResultMatch;
+    FcPatternPrint(pattern);
+    FcPatternDestroy(pattern);
+    FcPatternDestroy(match);
+    return 0;
+}
+EOF
+
+    ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LDFLAGS $LIBS -o conftest${ac_exeext}'
+    if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+	{ echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6; }
+	cat >>confdefs.h <<_ACEOF
+#define HAVE_FONTCONFIG 1
+_ACEOF
+
+    else
+	echo "configure: failed program was:" >&5
+	cat conftest.c >&5
+	HAVE_FONTCONFIG=0
+	{ echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+    fi
+    rm -f conftest*
+fi
+
+# if the above didn't work out, reset all changes to the compiler variables.
+if test "x${HAVE_FREETYPE}" "!=" "x1"; then
+    CPPFLAGS=$OLDCPPFLAGS
+    LIBS=$OLDLIBS
+fi
+
 
 lame_objects=
 lame_makefile=
@@ -9463,8 +9744,8 @@ fi
 # ------------------------------------------------------------------
 
 
-{ echo "$as_me:$LINENO: checking for Python.h and PIL" >&5
-echo $ECHO_N "checking for Python.h and PIL... $ECHO_C" >&6; }
+{ echo "$as_me:$LINENO: checking for Python.h" >&5
+echo $ECHO_N "checking for Python.h... $ECHO_C" >&6; }
 
 if test "x$PYTHON_LIB" '!=' "x" -a "x$PYTHON_INCLUDES" '!=' "x";then
     PY_VERSION=unknown
@@ -9475,9 +9756,15 @@ else
     # iterate through version 2.2 to 2.5
     for v in 2 3 4 5; do
         # Linux
-        if test -f "/usr/lib/python2.$v/site-packages/PIL/_imaging.so" -a -f "/usr/include/python2.$v/Python.h";then
+        if test -f "/usr/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
-	    PYTHON_LIB="-lpython$PY_VERSION /usr/lib/python$PY_VERSION/site-packages/PIL/_imaging.so"
+	    PYTHON_LIB="-lpython$PY_VERSION"
+            if test -f "/usr/lib/python2.$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /usr/lib/python2.$v/site-packages/PIL/_imaging.so"
+                HAVE_PYTHON_IMAGING_LIB=1
+            else
+                PYTHON_LIB2="$PYTHON_LIB"
+            fi
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
         # Mac OS X
         elif test -f "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
@@ -9486,6 +9773,7 @@ else
             PYTHON_LIB="-framework Python"
             if test -f "/Library/Python/2.$v/PIL/_imaging.so";then
                 PYTHON_LIB2="$PYTHON_LIB /Library/Python/2.$v/PIL/_imaging.so"
+                HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"
             fi
@@ -9495,10 +9783,15 @@ else
 	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.a" \
 	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.so" \
 	          ")" \
-	       -a -f "/sw/include/python2.$v/Python.h" \
-               -a -f "/sw/lib/python2.$v/site-packages/PIL/_imaging.so";then
+	       -a -f "/sw/include/python2.$v/Python.h"; then
             PY_VERSION=2.$v
             PYTHON_LIB="-L /sw/lib/python2.$v/config/ -lpython$PY_VERSION /sw/lib/python2.$v/site-packages/PIL/_imaging.so"
+            if test -f "/sw/lib/python2.$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /sw/lib/python2.$v/site-packages/PIL/_imaging.so"
+                HAVE_PYTHON_IMAGING_LIB=1
+            else
+                PYTHON_LIB2="$PYTHON_LIB"
+            fi
             PYTHON_INCLUDES="-I /sw/include/python2.$v/"
         fi
     done
@@ -9515,7 +9808,6 @@ echo $ECHO_N "checking whether we can compile the python test program... $ECHO_C
 
     cat > conftest.c << EOF
 #include <Python.h>
-#include <Imaging.h>
 
 int main()
 {
@@ -9525,21 +9817,53 @@ int main()
     return ret;
 }
 EOF
+
     ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
     if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
 	{ echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6; }
 	PYTHON_OK=yes
     else
-        ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
-        if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-            { echo "$as_me:$LINENO: result: yes" >&5
+        echo "configure: failed program was:" >&5
+        cat conftest.c >&5
+        { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+    fi
+    rm -f conftest*
+    if test "x$PYTHON_OK" = "xyes";then
+        { echo "$as_me:$LINENO: checking for Python-Imaging" >&5
+echo $ECHO_N "checking for Python-Imaging... $ECHO_C" >&6; }
+    cat > conftest.c << EOF
+#include <Python.h>
+#include <Imaging.h>
+
+int main()
+{
+    Py_Main(0, 0);
+    return 0;
+}
+EOF
+        if test "$HAVE_PYTHON_IMAGING_LIB"; then
+            ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
+            if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+                PYTHON_LIB="${PYTHON_LIB2}"
+                cat >>confdefs.h <<_ACEOF
+#define HAVE_PYTHON_IMAGING 1
+_ACEOF
+
+                HAVE_PYTHON_IMAGING=yes
+                export HAVE_PYTHON_IMAGING
+
+                { echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6; }
-            PYTHON_LIB="${PYTHON_LIB2}"
-            PYTHON_OK=yes
+            else
+                echo "configure: failed program was:" >&5
+                cat conftest.c >&5
+                { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+            fi
         else
-            echo "configure: failed program was:" >&5
-            cat conftest.c >&5
+            echo "(didn't find the Python-Imaging libraries)" >&5
             { echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
         fi
@@ -10393,6 +10717,7 @@ VIDEO_CFLAGS!$VIDEO_CFLAGS$ac_delim
 USE_GZIP!$USE_GZIP$ac_delim
 PYTHON_LIB!$PYTHON_LIB$ac_delim
 PYTHON_INCLUDES!$PYTHON_INCLUDES$ac_delim
+HAVE_PYTHON_IMAGING!$HAVE_PYTHON_IMAGING$ac_delim
 PDF2SWF!$PDF2SWF$ac_delim
 LIBPDF!$LIBPDF$ac_delim
 JPEG2SWF!$JPEG2SWF$ac_delim
@@ -10402,7 +10727,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 95; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 96; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -10421,7 +10746,7 @@ fi
 
 cat >>$CONFIG_STATUS <<_ACEOF
 cat >"\$tmp/subs-1.sed" <<\CEOF$ac_eof
-/@[a-zA-Z_][a-zA-Z_0-9]*@/!b end
+/@[a-zA-Z_][a-zA-Z_0-9]*@/!b
 _ACEOF
 sed '
 s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g
@@ -10434,8 +10759,6 @@ N; s/^.*\n//; s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g; b n
 ' >>$CONFIG_STATUS <conf$$subs.sed
 rm -f conf$$subs.sed
 cat >>$CONFIG_STATUS <<_ACEOF
-:end
-s/|#_!!_#|//g
 CEOF$ac_eof
 _ACEOF
 
@@ -10683,7 +11006,7 @@ s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 s&@INSTALL@&$ac_INSTALL&;t t
 $ac_datarootdir_hack
-" $ac_file_inputs | sed -f "$tmp/subs-1.sed" >$tmp/out
+" $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed 's/|#_!!_#|//g' >$tmp/out
 
 test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
   { ac_out=`sed -n '/\${datarootdir}/p' "$tmp/out"`; test -n "$ac_out"; } &&
