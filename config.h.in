@@ -178,6 +178,10 @@
 #endif
 #endif
 
+#ifdef HAVE_FT2BUILD_H
+#define HAVE_FREETYPE_H
+#endif
+
 /* #ifdef HAVE_T1LIB_H */
 /* #ifdef HAVE_LIBT1 */
 /* #define HAVE_T1LIB */
