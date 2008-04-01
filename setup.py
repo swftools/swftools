@@ -276,7 +276,7 @@ libgfx_sources = [
 "lib/art/art_uta_svp.c", "lib/art/art_uta_vpath.c", "lib/art/art_vpath.c", "lib/art/art_vpath_bpath.c",
 "lib/art/art_vpath_dash.c", "lib/art/art_vpath_svp.c",
 ]
-gfxswf_sources = ["lib/devices/swf.c"]
+gfxswf_sources = ["lib/devices/swf.c", "lib/readers/swf.c", "lib/readers/image.c"]
 
 swf_module = Extension(
     name='SWF', 
