@@ -133,11 +133,11 @@ static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwarg
     self->output_device->endpage(self->output_device);
     return PY_NONE;
 }
-PyDoc_STRVAR(output_setParameter_doc, \
-"setParameter(key, value)\n\n"
+PyDoc_STRVAR(output_setparameter_doc, \
+"setparameter(key, value)\n\n"
 "Set a output-device dependent parameter"
 );
-static PyObject* output_setParameter(PyObject* _self, PyObject* args, PyObject* kwargs)
+static PyObject* output_setparameter(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
     static char *kwlist[] = {"key", "value", NULL};
@@ -415,7 +415,7 @@ static PyMethodDef output_methods[] =
     {"save", (PyCFunction)output_save, METH_KEYWORDS, output_save_doc},
     {"startpage", (PyCFunction)output_startpage, METH_KEYWORDS, output_startpage_doc},
     {"endpage", (PyCFunction)output_endpage, METH_KEYWORDS, output_endpage_doc},
-    {"setParameter", (PyCFunction)output_setParameter, METH_KEYWORDS, output_setParameter_doc},
+    {"setparameter", (PyCFunction)output_setparameter, METH_KEYWORDS, output_setparameter_doc},
     {0,0,0,0}
 };
 
@@ -657,14 +657,14 @@ static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
     return PyString_FromString(s);
 }
 
-PyDoc_STRVAR(doc_setParameter_doc,
-"setParameter(key, value)\n\n"
+PyDoc_STRVAR(doc_setparameter_doc,
+"setparameter(key, value)\n\n"
 "Pass a parameter or setting to the document parser. Unlike\n"
 "the module level setparameter() function, the parameters set\n"
-"using setParameter will only be valid for the object itself\n"
+"using setparameter will only be valid for the object itself\n"
 "during its lifetime.\n"
 );
-static PyObject* doc_setParameter(PyObject* _self, PyObject* args, PyObject* kwargs)
+static PyObject* doc_setparameter(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     DocObject* self = (DocObject*)_self;
 
@@ -723,7 +723,7 @@ static PyMethodDef doc_methods[] =
     /* PDF functions */
     {"getPage", (PyCFunction)doc_getPage, METH_KEYWORDS, doc_getPage_doc},
     {"getInfo", (PyCFunction)doc_getInfo, METH_KEYWORDS, doc_getInfo_doc},
-    {"setParameter", (PyCFunction)doc_setParameter, METH_KEYWORDS, doc_setParameter_doc},
+    {"setparameter", (PyCFunction)doc_setparameter, METH_KEYWORDS, doc_setparameter_doc},
     {0,0,0,0}
 };
 
