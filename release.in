@@ -52,10 +52,9 @@ ${name}/avi2swf/avi2swf.1"
 
 MAKEFILES="${name}/src/Makefile.in \
 ${name}/pdf2swf/fonts/Makefile.in \
-${name}/lib/swf/Makefile.in \
+${name}/lib/readers/Makefile.in \
 ${name}/lib/art/Makefile.in \
 ${name}/lib/Makefile.in \
-${name}/lib/swf/Makefile.in \
 ${name}/avi2swf/Makefile.in \
 ${name}/lib/pdf/Makefile.in \
 ${name}/lib/action/Makefile.in \
@@ -81,14 +80,18 @@ ${name}/lib/MD5.h \
 ${name}/lib/MD5.c \
 ${name}/lib/png.h \
 ${name}/lib/png.c \
+${name}/lib/jpeg.h \
+${name}/lib/jpeg.c \
 ${name}/lib/drawer.c \
 ${name}/lib/drawer.h \
 ${name}/lib/mem.c \
 ${name}/lib/mem.h
 ${name}/lib/modules/swffilter.c \
 ${name}/lib/modules/swfrender.c \
-${name}/lib/swf/swf.c \
-${name}/lib/swf/swf.h \
+${name}/lib/readers/swf.c \
+${name}/lib/readers/swf.h \
+${name}/lib/readers/image.c \
+${name}/lib/readers/image.h \
 ${name}/lib/modules/swfdump.c \
 ${name}/lib/modules/swfobject.c \
 ${name}/lib/modules/swfshape.c \
