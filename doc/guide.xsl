@@ -47,7 +47,7 @@
 	<table cellspacing="0" cellpadding="0">
 	<tr>
 	    <td>__prevlink__</td>
-	    <td width="100%" align="center">SWFC Manual: __currentchapter__</td>
+	    <td width="100%" align="center"><!--SWFC Manual: -->__currentchapter__</td>
 	    <td>__nextlink__</td>
 	</tr>
 	</table>
