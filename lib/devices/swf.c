@@ -2522,7 +2522,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
     swffont->version = 2;
     swffont->name = (U8*)strdup(id);
     swffont->layout = (SWFLAYOUT*)rfx_calloc(sizeof(SWFLAYOUT));
-    swffont->layout->ascent = 0; /* ? */
+    swffont->layout->ascent = 0;
     swffont->layout->descent = 0;
     swffont->layout->leading = 0;
     swffont->layout->bounds = (SRECT*)rfx_calloc(sizeof(SRECT)*font->num_glyphs);
@@ -2590,17 +2590,21 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 
 	swf_ExpandRect2(&bounds, &swffont->layout->bounds[t]);
     }
-    if(bounds.ymin < 0 && bounds.ymax > 0) {
-	swffont->layout->ascent = -bounds.ymin;
-	swffont->layout->descent = bounds.ymax;
-	swffont->layout->leading = bounds.ymax - bounds.ymin;
-    } else {
-	swffont->layout->ascent = (bounds.ymax - bounds.ymin)/2;
-	swffont->layout->descent = (bounds.ymax - bounds.ymin)/2;
-	swffont->layout->leading = bounds.ymax - bounds.ymin;
-    }
-    swffont->layout->descent= (bounds.ymax - bounds.ymin);
-    swffont->layout->ascent = 0;
+
+
+    /* Flash player will use the advance value from the char, and the ascent/descent values
+       from the layout for text selection.
+       ascent will extend the char into negative y direction, from the baseline, while descent
+       will extend in positive y direction, also from the baseline.
+       The baseline is defined as the y-position zero 
+     */
+
+    swffont->layout->ascent = -bounds.ymin;
+    if(swffont->layout->ascent < 0)
+        swffont->layout->ascent = 0;
+    swffont->layout->descent = bounds.ymax;
+    if(swffont->layout->descent < 0)
+        swffont->layout->descent = 0;
     swffont->layout->leading = bounds.ymax - bounds.ymin;
 
     return swffont;
