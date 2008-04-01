@@ -796,6 +796,11 @@ RGBA swf_GetSWFBackgroundColor(SWF*swf);
 
 void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
+// swfabc.c
+
+void AVM2_InsertStops(SWF*swf);
+void swf_DissassembleABC(TAG*tag);
+
 // swfaction.c
 
 typedef struct _ActionTAG
@@ -1102,8 +1107,6 @@ void swf_SetFilter(TAG*tag, FILTER*f);
 FILTER*swf_GetFilter(TAG*tag);
 FILTER*swf_NewFilter(U8 type);
 void swf_DeleteFilter(FILTER*f);
-
-void AVM2_InsertStops(SWF*swf);
 
 #ifdef __cplusplus
 }
