@@ -1,9 +1,12 @@
 #!/usr/bin/env python
+
+from distutils import ccompiler
+from distutils.core import CompileError
+
 try:
-    from distutils.core import setup,Extension,CompileError
-    from distutils import ccompiler
-except:
-    from setuptools import setup, Extension, ccompiler, CompileError
+    from setuptools import setup, Extension
+except ImportError:
+    from distutils.core import setup, Extension
 
 cc = ccompiler.new_compiler()
 
@@ -16,7 +19,7 @@ DATADIR = "/usr/share/swftools/"
 def update_list(list1, list2):
     for v in list2:
         if v not in list1:
-            list1 += [v]
+            list1.append(v)
 
 COMPILER_OPTIONS = ['-fPIC', '-Wparentheses', '-Wimplicit', '-Wreturn-type',
                     '-O3', '-fomit-frame-pointer', '-Winline', 
@@ -24,13 +27,29 @@ COMPILER_OPTIONS = ['-fPIC', '-Wparentheses', '-Wimplicit', '-Wreturn-type',
                     '-DSWFTOOLS_DATADIR="'+DATADIR+'"']
 INCLUDE=['lib/lame/', 'lib/pdf/xpdf', 'lib/pdf']
 
-update_list(cc.include_dirs, [os.path.join(sys.prefix,"include"), 
-                              os.path.join(sys.prefix,'include/freetype2'),
-                              os.path.join(sys.prefix,'include/fontconfig')])
+if 'SWFTOOLS_SYSTEM_PREFIX' in os.environ:
+    # Allow overriding the prefix location. This is useful if your
+    # python is compiled in a custom location.
+    PREFIX = os.environ.get('SWFTOOLS_SYSTEM_PREFIX').strip()
+    if not os.path.exists(PREFIX):
+        print 'The SWFTOOLS_SYSTEM_PREFIX location does not exist'
+        sys.exit(1)
+    print 'Using %s as prefix for header files' % PREFIX
+else:
+    # Default to the prefix used for the python interpreter
+    PREFIX = sys.prefix
+        
+update_list(cc.include_dirs, [os.path.join(PREFIX, 'include'), 
+                              os.path.join(PREFIX, 'include/freetype2'),
+                              os.path.join(PREFIX, 'include/fontconfig')])
 
 update_list(cc.library_dirs, ["/usr/lib", "/usr/local/lib"])
+
 if sys.platform == "darwin":
-    update_list(cc.include_dirs, ["/sw/include/freetype2", "/sw/lib/freetype2/include", "/sw/include", "/opt/local/include"])
+    update_list(cc.include_dirs, ["/sw/include/freetype2",
+                                  "/sw/lib/freetype2/include",
+                                  "/sw/include",
+                                  "/opt/local/include"])
     update_list(cc.library_dirs, ["/sw/lib", "/opt/local/lib"])
 
 class ConfigScript:
@@ -284,7 +303,7 @@ gfx_module = Extension(
     )    
 
 setup(name='SWFTools',
-      version='2008-03-26-1351',
+      version='0.9dev',
       description='Python wrapper for SWFTools',
       author='Matthias Kramm',
       author_email='kramm@quiss.org',
