@@ -1498,8 +1498,8 @@ void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
 	actions = action_GetUrl(actions, url, i->config_linktarget);
     }
     actions = action_End(actions);
-    
-    drawlink(dev, actions, 0, points,0);
+   
+    drawlink(dev, actions, 0, points, 0);
 }
 void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 {
@@ -1522,7 +1522,7 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 	actions = action_End(actions);
     }
 
-    drawlink(dev, actions, 0, points,0);
+    drawlink(dev, actions, 0, points, 0);
 }
 
 /* Named Links (a.k.a. Acrobatmenu) are used to implement various gadgets
@@ -1572,7 +1572,7 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
 	actions2 = action_End(actions2);
     }
 
-    drawlink(dev, actions1, actions2, points,mouseover);
+    drawlink(dev, actions1, actions2, points, mouseover);
 
     swf_ActionFree(actions1);
     swf_ActionFree(actions2);
@@ -1709,6 +1709,8 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
             swf_ButtonPostProcess(i->tag, 1);
 	}
     }
+    char name[80];
+    sprintf(name, "link%d", buttonid);
     
     msg("<trace> Placing link ID %d", buttonid);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
@@ -1722,9 +1724,9 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
         m = i->page_matrix;
         m.tx = p.x;
         m.ty = p.y;
-	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&m,0,0);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&m,0,name);
     } else {
-	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&i->page_matrix,0,0);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&i->page_matrix,0,name);
     }
 }
 
