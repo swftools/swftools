@@ -75,7 +75,10 @@ PyDoc_STRVAR(output_save_doc, \
 "Saves the contents of an output device to a file\n"
 "Depending on what the output device is, the contents\n"
 "of the file may be plain text, an image, an SWF file,\n"
-"etc.\n");
+"etc.\n"
+"For the ImageList device, several files (named\n"
+"filename.1.png, filename.2.png etc.) might be created)\n"
+);
 static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     OutputObject* self = (OutputObject*)_self;
@@ -130,6 +133,20 @@ static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwarg
     self->output_device->endpage(self->output_device);
     return PY_NONE;
 }
+PyDoc_STRVAR(output_setParameter_doc, \
+"setParameter(key, value)\n\n"
+"Set a output-device dependent parameter"
+);
+static PyObject* output_setParameter(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    OutputObject* self = (OutputObject*)_self;
+    static char *kwlist[] = {"key", "value", NULL};
+    char*key=0,*value=0;
+    if (args && !PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &key, &value))
+	return NULL;
+    self->output_device->setparameter(self->output_device, key, value);
+    return PY_NONE;
+}
 PyDoc_STRVAR(f_createSWF_doc, \
 "SWF()\n\n"
 "Creates a device which renders documents to SWF (Flash) files.\n"
@@ -153,9 +170,8 @@ PyDoc_STRVAR(f_createImageList_doc, \
 "ImageList()\n\n"
 "Creates a device which renders documents to bitmaps.\n"
 "Each page that is rendered will create new bitmap.\n"
-"As, right now, the only way to access the bitmaps is\n"
-"by using the save() function on the imagelist, you can\n"
-"currently only retrieve the first bitmap/page.\n"
+"Using save(), you can save the images to a number\n"
+"of files\n"
 );
 static PyObject* f_createImageList(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
@@ -350,7 +366,6 @@ PyDoc_STRVAR(f_createPassThrough_doc, \
 "to page.render().\n"
 "device needs to be a class implementing at least the following functions:\n\n"
 "setparameter(key,value)\n"
-"startpage(width,height)\n"
 "startclip(outline)\n"
 "endclip()\n"
 "stroke(outline, width, color, capstyle, jointstyle, miterLimit)\n"
@@ -360,7 +375,6 @@ PyDoc_STRVAR(f_createPassThrough_doc, \
 "addfont(font)\n"
 "drawchar(font, glyph, color, matrix)\n"
 "drawlink(outline, url)\n"
-"finish()\n\n"
 "If any of these functions are not defined, a error message will be printed,\n"
 "however the rendering process will *not* be aborted.\n"
 );
@@ -401,6 +415,7 @@ static PyMethodDef output_methods[] =
     {"save", (PyCFunction)output_save, METH_KEYWORDS, output_save_doc},
     {"startpage", (PyCFunction)output_startpage, METH_KEYWORDS, output_startpage_doc},
     {"endpage", (PyCFunction)output_endpage, METH_KEYWORDS, output_endpage_doc},
+    {"setParameter", (PyCFunction)output_setParameter, METH_KEYWORDS, output_setParameter_doc},
     {0,0,0,0}
 };
 
@@ -497,7 +512,7 @@ static PyObject* page_render(PyObject* _self, PyObject* args, PyObject* kwargs)
 PyDoc_STRVAR(page_asImage_doc, \
 "asImage(width, height)\n\n"
 "Creates a bitmap from a page. The bitmap will be returned as a string\n"
-"containing RGB triplets. The bitmap will have the specified width and\n"
+"containing RGB triplets. The bitmap will be rescaled to the specified width and\n"
 "height. The aspect ratio of width and height doesn't need to be the same\n"
 "as the page.\n"
 );
@@ -645,7 +660,7 @@ static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
 PyDoc_STRVAR(doc_setParameter_doc,
 "setParameter(key, value)\n\n"
 "Pass a parameter or setting to the document parser. Unlike\n"
-"the module level setoption() function, the parameters set\n"
+"the module level setparameter() function, the parameters set\n"
 "using setParameter will only be valid for the object itself\n"
 "during its lifetime.\n"
 );
@@ -681,9 +696,10 @@ static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
     char*filename;
     char*type;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &type, &filename)) {
+	static char *kwlist2[] = {"filename", NULL};
         type = "pdf";
 	PyErr_Clear();
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist2, &filename))
 	    return NULL;
     }
 
@@ -810,8 +826,8 @@ static PyTypeObject DocClass =
 
 //=====================================================================
 
-PyDoc_STRVAR(f_setoption_doc, \
-"setoption(key,value)\n\n"
+PyDoc_STRVAR(f_setparameter_doc, \
+"setparameter(key,value)\n\n"
 "Set a parameter in the gfx module (which might affect the PDF\n"
 "parser or any of the rendering backends). This is a parameter\n"
 "which would usually be passed with the \"-s\" option to pdf2swf.\n"
@@ -821,7 +837,7 @@ PyDoc_STRVAR(f_setoption_doc, \
 "    pdf2swf somefile.pdf -s help\n"
 ".\n"
 );
-static PyObject* f_setoption(PyObject* self, PyObject* args, PyObject* kwargs)
+static PyObject* f_setparameter(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"key", "value", NULL};
     char*key=0,*value=0;
@@ -893,7 +909,8 @@ static PyMethodDef pdf2swf_methods[] =
     {"open", (PyCFunction)f_open, METH_KEYWORDS, f_open_doc},
     {"addfont", (PyCFunction)f_addfont, METH_KEYWORDS, f_addfont_doc},
     {"addfontdir", (PyCFunction)f_addfontdir, METH_KEYWORDS, f_addfontdir_doc},
-    {"setoption", (PyCFunction)f_setoption, METH_KEYWORDS, f_setoption_doc},
+    {"setoption", (PyCFunction)f_setparameter, METH_KEYWORDS, f_setparameter_doc}, // for backwards-compatibility
+    {"setparameter", (PyCFunction)f_setparameter, METH_KEYWORDS, f_setparameter_doc},
     {"verbose", (PyCFunction)f_verbose, METH_KEYWORDS, f_verbose_doc},
 
     /* devices */
