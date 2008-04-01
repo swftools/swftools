@@ -497,6 +497,7 @@ typedef struct _abc_trait {
 typedef struct _abc_class {
     int index;
     abc_file_t*abc;
+    const char*name;
     int classname_index;
     int superclass_index;
     int ns_index;
@@ -986,6 +987,7 @@ void swf_DissassembleABC(TAG*tag)
 	memset(cls, 0, sizeof(abc_class_t));
 	const char* classname = dict_getstr(pool->multinames, swf_GetU30(tag));
 	const char* supername = dict_getstr(pool->multinames, swf_GetU30(tag));
+	cls->name = classname;
 	U8 flags = swf_GetU8(tag);
 	const char*ns = "";
 	if(flags&8) {
@@ -1113,9 +1115,12 @@ abc_class_t* abc_NewClass(abc_file_t*abc, char*classname, char*superclass) {
     memset(c, 0, sizeof(abc_class_t));
     c->index = dict_append(abc->classes, 0, c);
     c->abc = abc;
+    c->name = strdup(classname);
     c->classname_index = multiname_index(abc, classname);
     c->superclass_index = multiname_index(abc, superclass);
     c->ns_index = abc_RegisterProtectedNameSpace(abc, classname);
+    c->iinit = -1;
+    c->cinit = -1;
 
     c->traits = dict_new();
     return c;
@@ -1327,11 +1332,19 @@ void swf_WriteABC(TAG*tag, abc_file_t*abc)
 	swf_SetU30(tag, c->ns_index);
 
 	swf_SetU30(tag, 0); // no interfaces
+	if(c->iinit<0) {
+	    fprintf(stderr, "Error: Class %s has no constructor\n", c->name);
+	    return;
+	}
 	swf_SetU30(tag, c->iinit);
 	write_traits(abc, tag, c->traits);
     }
     for(t=0;t<abc->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)dict_getdata(abc->classes, t);
+	if(c->cinit<0) {
+	    fprintf(stderr, "Error: Class %s has no constructor\n", c->name);
+	    return;
+	}
 	swf_SetU30(tag, c->cinit);
 	swf_SetU30(tag, 0); // no traits
     }
@@ -1384,19 +1397,6 @@ void swf_AddButtonLinks(TAG*tag)
     c->max_scope_depth = 11;
     abc_getlocal_0(c);
     abc_pushscope(c);
-
-    abc_getlex(c,":MyButton1");
-    abc_getlex(c,"flash.events:MouseEvent");
-    abc_getproperty(c, ":CLICK");
-    abc_getlex(c, ":gotoPage1");
-    abc_callpropvoid(c, ":addEventListener" ,2);
-
-    abc_getlex(c,":MyButton2");
-    abc_getlex(c,"flash.events:MouseEvent");
-    abc_getproperty(c, ":CLICK");
-    abc_getlex(c,":gotoPage2");
-    abc_callpropvoid(c,":addEventListener",2);
-
     abc_returnvoid(c);
     
     abc_AddSlot(maintimeline, ":MyButton1", 0, "flash.display:SimpleButton");
@@ -1435,14 +1435,29 @@ void swf_AddButtonLinks(TAG*tag)
     c->local_count = 1;
     c->init_scope_depth = 10;
     c->max_scope_depth = 11;
+
     abc_getlocal_0(c);
     abc_pushscope(c);
+
     abc_getlocal_0(c);
     abc_constructsuper(c,0);
     abc_findpropstrict(c,":addFrameScript");
     abc_pushbyte(c,0x00);
     abc_getlex(c,"[packageinternal]buttonmitlink_fla:frame1");
     abc_callpropvoid(c,":addFrameScript",2);
+
+    abc_getlex(c,":MyButton1");
+    abc_getlex(c,"flash.events:MouseEvent");
+    abc_getproperty(c, ":CLICK");
+    abc_getlex(c, ":gotoPage1");
+    abc_callpropvoid(c, ":addEventListener" ,2);
+
+    abc_getlex(c,":MyButton2");
+    abc_getlex(c,"flash.events:MouseEvent");
+    abc_getproperty(c, ":CLICK");
+    abc_getlex(c,":gotoPage2");
+    abc_callpropvoid(c,":addEventListener",2);
+
     abc_returnvoid(c);
     
     c = abc_AddInitScript(abc, 0, 0);
