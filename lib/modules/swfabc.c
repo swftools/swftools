@@ -1,12 +1,12 @@
-/* swfbits.c
+/* swfabc.c
 
-   Bitmap functions (needs libjpeg) 
+   Routines for handling Flash2 AVM2 ABC Actionscript
 
    Extension module for the rfxswf library.
    Part of the swftools package.
 
    Copyright (c) 2007 Alessandro Molina
-   Copyright (c) 2007 Matthias Kramm <kramm@quiss.org>
+   Copyright (c) 2007,2008 Matthias Kramm <kramm@quiss.org>
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <stdarg.h>
 #include "../rfxswf.h"
 
 static unsigned AVM2_uint32toU30(unsigned val, char * out)
@@ -29,7 +30,7 @@ static unsigned AVM2_uint32toU30(unsigned val, char * out)
     unsigned len = 0;
 
     while(val) {
-	  out[len++] = val & 0xFF;
+	  out[len++] = (val&~0x7f?0x80:0) | (val & 0x7F);
 	  val >>= 7;
     }
 
@@ -50,150 +51,127 @@ void AVM2_InsertStops(SWF*swf)
 	t = t->next;
     }
 
-    char pool2[26] = {0x01,0x00,0x00,0x00,0x73,0x74,0x6f,0x70,0x5f,0x66,0x6c,0x61,0x2e,0x4d,0x61,0x69
-    ,0x6e,0x54,0x69,0x6d,0x65,0x6c,0x69,0x6e,0x65,0x00};
-    TAG * classCall = swf_InsertTagBefore(swf, swf->firstTag, 0x04c);
-    swf_SetBlock(classCall, (U8*)pool2, sizeof(pool2));
-
+    TAG * classCall = swf_InsertTagBefore(swf, swf->firstTag, ST_SYMBOLCLASS);
+    swf_SetU16(classCall, 1); // number of symbols
+    swf_SetU16(classCall, 0); // object id
+    swf_SetString(classCall, "stop_fla:MainTimeline"); // class to associate with the symbol
+	              
     //0x52 is the Flash9 equivalent to DoAction
-    char init_pool[322] = { 0x01,0x00,0x00,0x00, /* Flag Parameter to 0x52 */
-		       0x00,                /* 0 terminated class name */
-		       0x10,0x00,0x2e,0x00, /* ABC file magic number */
-		       0x00,0x00,0x00,0x11, /* Constant Pool dec:
-    0 Integers, 0 Unsigned Integers, 0 Doubles, 17 Strings */
+    char init_pool[322] = { 
+      0x01,0x00,0x00,0x00, /* Flag Parameter to ST_DOABC (1 = lazy load)*/
+      0x00,                /* 0 terminated class name */
+      0x10,0x00,0x2e,0x00, /* ABC file magic number (minor version, major version) */
+      0x00, /* zero integers */
+      0x00, /* zero unsigned integers */
+      0x00, /* zero doubles */
+		
+      0x11, /* 16 strings (+1) */
+	0x08, 's','t','o','p','_','f','l','a', 
+	0x0c, 'M','a','i','n','T','i','m','e','l','i','n','e',
+	0x0d, 'f','l','a','s','h','.','d','i','s','p','l','a','y', 
+	0x09, 'M','o','v','i','e','C','l','i','p',
+	0x15, 's','t','o','p','_','f','l','a',':','M','a','i','n','T','i','m','e','l','i','n','e',
+	0x06, 'd','o','s','t','o','p',
+	0x00, // Empty string: ref. to the global namespace
+	0x04, 's','t','o','p',
+	0x0e, 'a','d','d','F','r','a','m','e','S','c','r','i','p','t',
+	0x06, 'O','b','j','e','c','t',
+	0x0c, 'f','l','a','s','h','.','e','v','e','n','t','s',
+	0x0f, 'E','v','e','n','t','D','i','s','p','a','t','c','h','e','r',
+	0x0d, 'D','i','s','p','l','a','y','O','b','j','e','c','t',
+	0x11, 'I','n','t','e','r','a','c','t','i','v','e','O','b','j','e','c','t',
+	0x16, 'D','i','s','p','l','a','y','O','b','j','e','c','t','C','o','n','t','a','i','n','e','r',
+	0x06, 'S','p','r','i','t','e',
 
-      /* HERE FOLLOW THE 16 STRINGS OF THE CPOOL */
-      0x08,                            /* Len of 'stop_fla' (8) */
-      's','t','o','p','_','f','l','a', 
-      0x0c,                            /* Len of 'MainTimeline' */
-      'M','a','i','n','T','i','m','e','l','i','n','e',
-      0x0d,                            /* Len of 'flash.display' (13) */
-      'f','l','a','s','h','.','d','i','s','p','l','a','y', 
-      0x09,                                                    /* Len of 'MovieClip' (9) */
-      'M','o','v','i','e','C','l','i','p',
-      0x15,                                                    /* Len of 'stop_fla:MainTimeLine' (21) */
-      's','t','o','p','_','f','l','a',':','M','a','i','n','T','i','m','e','l','i','n','e',
-      0x06,                                                    /* Len of 'dostop' (6) */
-      'd','o','s','t','o','p',
-      0x00,   /* Empty string: ref. to the global namespace */
-      0x04,                                                    /* Len of 'stop' (4) */
-      's','t','o','p',
-      0x0e,                                                    /* Len of 'addFrameScript' (14) */
-      'a','d','d','F','r','a','m','e','S','c','r','i','p','t',
-      0x06,                                                    /* Len of 'Object' (6) */
-      'O','b','j','e','c','t',
-      0x0c,                                                    /* Len of 'flash.events' (12) */
-      'f','l','a','s','h','.','e','v','e','n','t','s',
-      0x0f,                                                    /* Len of 'EventDispatcher' (15) */
-      'E','v','e','n','t','D','i','s','p','a','t','c','h','e','r',
-      0x0d,                                                    /* Len of 'DisplayObject' (13) */
-      'D','i','s','p','l','a','y','O','b','j','e','c','t',
-      0x11,                                                    /* Len of 'InteractiveObject' (17) */
-      'I','n','t','e','r','a','c','t','i','v','e','O','b','j','e','c','t',
-      0x16,                                                    /* Len of 'DisplayObjectContainer' (22) */
-      'D','i','s','p','l','a','y','O','b','j','e','c','t','C','o','n','t','a','i','n','e','r',
-      0x06,                                                    /* Len of 'Sprite' (6) */
-      'S','p','r','i','t','e',
-
-      0x07, /* No. of NameSpaces (+1) */
-      /* HERE FOLLOW THE 6 NAMESPACES OF THE CPOOL*/
-      0x16,0x01, /* kind: CONSTANT_PackageNamespace, ref. to: stop_fla */
-      0x16,0x03, /* kind: CONSTANT_PackageNamespace, ref. to: flash.display */
-      0x18,0x05, /* kind: CONSTANT_ProtectedNamespace, ref. to: stop_fla:MainTimeline */
-      0x17,0x01, /* kind: CONSTANT_PackageInternalNs, ref. to: MainTimeline */
-      0x16,0x07, /* kind: CONSTANT_PackageNamespace, ref. to the global namespace */
-      0x16,0x0b, /* kind: CONSTANT_PackageNamespace, ref. to: flash.events */
+      0x07, /* 6 namespaces (+1) */
+	0x16,0x01, /* kind: CONSTANT_PackageNamespace, ref. to: stop_fla */
+	0x16,0x03, /* kind: CONSTANT_PackageNamespace, ref. to: flash.display */
+	0x18,0x05, /* kind: CONSTANT_ProtectedNamespace, ref. to: stop_fla:MainTimeline */
+	0x17,0x01, /* kind: CONSTANT_PackageInternalNs, ref. to: MainTimeline */
+	0x16,0x07, /* kind: CONSTANT_PackageNamespace, ref. to the global namespace */
+	0x16,0x0b, /* kind: CONSTANT_PackageNamespace, ref. to: flash.events */
 			      
-      0x00, /* NO NAMESPACE_SET */
+      0x00, /* zero namespace sets */
 			      
-      0x0c, /* No. of MultiNames (+1) */
-      /* HERE FOLLOW THE 11 MULTINAMES OF THE CPOOL */
-      /*      1st value: Multiname kind (0x07 = Qualified Name, a multiname with 1 namespace, refers to a method)
-		      2nd value: refers to namespace name index in the namespace table
-		      3rd value: refers to method name index in the string table */
-      0x07,0x01,0x02, /* Ref. to method: stop_fla:MainTimeLine */
-      0x07,0x02,0x04, /* Ref. to method: flash.display:MovieClip */
-      0x07,0x04,0x06, /* Ref. to method: <4th namespace>:dostop */
-      0x07,0x05,0x08, /* Ref. to method: <global>:stop */
-      0x07,0x05,0x09, /* Ref. to method: <global>:addFrameScript */
-      0x07,0x05,0x0a, /* Ref. to method: <global>:Object */
-      0x07,0x06,0x0c, /* Ref. to method: flash.events:EventDispatcher */
-      0x07,0x02,0x0d, /* Ref. to method: flash.display:DisplayObject */
-      0x07,0x02,0x0e, /* Ref. to method: flash.display:InteractiveObject */
-      0x07,0x02,0x0f, /* Ref. to method: flash.display:DisplayObjectContainer */
-      0x07,0x02,0x10, /* Ref. to method: flash.display:Sprite */
-      /* END OF THE CPOOL */  
+      0x0c, /* 11 MultiNames (+1) */
+	/*  1st value: Multiname kind (0x07 = Qualified Name, a multiname with 1 namespace, refers to a method)
+	    2nd value: refers to namespace name index in the namespace table
+	    3rd value: refers to method name index in the string table */
+	0x07,0x01,0x02, /* stop_fla:MainTimeLine */
+	0x07,0x02,0x04, /* flash.display:MovieClip */
+	0x07,0x04,0x06, /* <4th namespace>:dostop */
+	0x07,0x05,0x08, /* <global>:stop */
+	0x07,0x05,0x09, /* <global>:addFrameScript */
+	0x07,0x05,0x0a, /* <global>:Object */
+	0x07,0x06,0x0c, /* flash.events:EventDispatcher */
+	0x07,0x02,0x0d, /* flash.display:DisplayObject */
+	0x07,0x02,0x0e, /* flash.display:InteractiveObject */
+	0x07,0x02,0x0f, /* flash.display:DisplayObjectContainer */
+	0x07,0x02,0x10, /* flash.display:Sprite */
 			      
-      0x04,   /* Method count: there are 4 methods */
-      /* HERE FOLLOW THE 4 METHODS SIGNATURES */              
-      /* METHOD 1 */
-      0x00, /* No params (nor params types)*/
-      0x00, /* Any return type */
-      0x00, /* No method name */
-      0x00, /* Flags */
-      /* SAME FOR THE OTHER METHODS */
-      0x00,0x00,0x00,0x00,
-      0x00,0x00,0x00,0x00,
-      0x00,0x00,0x00,0x00,
+      0x04, /* 4 Methods */
+	/* METHOD 1 */
+	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
+	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
+	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
+	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
 
-      0x00,   /* Metadata count: there is no metadata (nor metadata_info) */
+      0x00, /* Zero Metadata */
 
-      0x01,   /* Class count: there is 1 class */
-      /* HERE FOLLOW THE INSTANCE DATA */
-      0x01, /* Name: ref. to multiname no. 1 (MainTimeline) */
-      0x02, /* Super_name (base class): ref. to multiname no. 2 (flash.display) */
-      0x08, /* Flags: 0x08 value indicates that it uses its protected namespace (and make next field exists) */
-      0x03, /* Ref. to namespace no. 3 (MainTimeline, protected namespace for this class) */
-      0x00, /* No. of interfaces: there are no interfaces (nor interface definition) */
-      0x02, /* Initializer index: ref. to method no. 2 */
-      0x01, /* No. of traits */
-      /* Trait section */     
-	      0x03, /* Name: ref. to multiname no. 3 (stop) */
-	      0x01, /* 0000: no attributes (nor metadata in the next subsection);
-			       then 1: type is Trait_Method */
-	      /* Trait_method section */
-		      0x00, /* NO optimization for virtual calls */
-		      0x01, /* Ref. to method no. 1 */
-      /* HERE FOLLOW THE CLASS DATA */
-      0x00, /* Ref. to method no. 0 as static initializer for this class */
-      0x00, /* No. of traits for this class (no ones) */
+      0x01, /* 1 Class */
+	0x01, /* Name: ref. to multiname no. 1 (MainTimeline) */
+	0x02, /* Super_name (base class): ref. to multiname no. 2 (flash.display) */
+	0x08, /* Flags: 0x08 value indicates that it uses its protected namespace (and make next field exists) */
+	0x03, /* Ref. to namespace no. 3 (MainTimeline, protected namespace for this class) */
+	0x00, /* No. of interfaces: there are no interfaces (nor interface definition) */
+	0x02, /* Initializer index: ref. to method no. 2 */
+	0x01, /* No. of traits */
+	/* Trait section */     
+		0x03, /* Name: ref. to multiname no. 3 (stop) */
+		0x01, /* 0000: no attributes (nor metadata in the next subsection);
+				 then 1: type is Trait_Method */
+		/* Trait_method section */
+			0x00, /* NO optimization for virtual calls */
+			0x01, /* Ref. to method no. 1 */
+	/* HERE FOLLOW THE CLASS DATA */
+	0x00, /* Ref. to method no. 0 as static initializer for this class */
+	0x00, /* No. of traits for this class (no ones) */
 
-      0x01, /* Script count: there is 1 script */
-      /* HERE FOLLOW THE SCRIPT DATA */
-      0x03, /* Ref. to method no. 3, invoked prior to any other code in the script  */
-      0x01, /* No. of traits */
-      /* Trait section */
-      0x01, /* Name: ref. to multiname no. 1 (flash.display:MovieClip) */
-      0x04,  /* 0000: no attributes (nor metadata in the next subsection);
-				then 4: type is Trait_Class*/
-		      /* Trait_class section */
-		      0x01, /* Slot ID where the trait resides */
-		      0x00, /* Class index (there is only one class)*/
+      0x01, /* 1 Script */
+	0x03, /* Ref. to method no. 3, invoked prior to any other code in the script  */
+	0x01, /* No. of traits */
+	/* Trait section */
+	0x01, /* Name: ref. to multiname no. 1 (flash.display:MovieClip) */
+	0x04,  /* 0000: no attributes (nor metadata in the next subsection);
+				  then 4: type is Trait_Class*/
+			/* Trait_class section */
+			0x01, /* Slot ID where the trait resides */
+			0x00, /* Class index (there is only one class)*/
 
       0x04, /* Method body count: there are 4 method bodies */
-      /* HERE FOLLOW THE METHOD BODY DATA */
-      0x00, /* Method index, ref. to method no. 0 */
-      0x01, /* Max stack slots the method can use */
-      0x01, /* No. of registers +1 the method can use: this one cannot use registers */
-      0x09,0x0a, /* Min and max scope depth the method can access*/
-      0x03, /* Code length (in bytes) */
-      /* The actual method code:
-		      this is the function stop_fla::MainTimeline$cinit()*/
-		      0xd0,0x30,0x47,
-      0x00, /* No. of exceptions (no exceptions) */
-      0x00, /* No. of traits (no traits) */
+	/* HERE FOLLOW THE METHOD BODY DATA */
+	0x00, /* Method index, ref. to method no. 0 */
+	0x01, /* Max stack slots the method can use */
+	0x01, /* No. of registers +1 the method can use: this one cannot use registers */
+	0x09,0x0a, /* Min and max scope depth the method can access*/
+	0x03, /* Code length (in bytes) */
+	/* The actual method code:
+			this is the function stop_fla::MainTimeline$cinit()*/
+			0xd0,0x30,0x47,
+	0x00, /* No. of exceptions (no exceptions) */
+	0x00, /* No. of traits (no traits) */
 
-      0x01, /* Method index, ref. to method no. 1 */
-      0x01, /* Max stack slots the method can use */
-      0x01, /* No. of registers +1 the method can use: this one cannot use registers */
-      0x0a,0x0b, /* Min and max scope depth the method can access*/
-      0x08, /* Code length (in bytes) */
-      /* The actual method code:
-		      this is the function stop_fla::dostop(), 
-		      the one that actually executes the stop() */
-      0xd0,0x30,0x5d,0x04,0x4f,0x04,0x00,0x47,
-      0x00, /* No. of exceptions (no exceptions) */
-      0x00, /* No. of traits (no traits) */
+	0x01, /* Method index, ref. to method no. 1 */
+	0x01, /* Max stack slots the method can use */
+	0x01, /* No. of registers +1 the method can use: this one cannot use registers */
+	0x0a,0x0b, /* Min and max scope depth the method can access*/
+	0x08, /* Code length (in bytes) */
+	/* The actual method code:
+	   this is the function stop_fla::dostop(), 
+	   the one that actually executes the stop() */
+	0xd0,0x30,0x5d,0x04,0x4f,0x04,0x00,0x47,
+	0x00, /* No. of exceptions (no exceptions) */
+	0x00, /* No. of traits (no traits) */
     };
 
     /* Header of stop_fla::MainTimeline() method */
@@ -256,7 +234,7 @@ void AVM2_InsertStops(SWF*swf)
     unsigned clen_len = AVM2_uint32toU30((6 + sizeof(constructor_frame_register) * frame_nums), code_len);
     unsigned i, offset = 0;
 
-    TAG *classInit = swf_InsertTagBefore(swf, swf->firstTag, 0x052);
+    TAG *classInit = swf_InsertTagBefore(swf, swf->firstTag, ST_DOABC);
 
     /* Copy the environment Initialization code */
     swf_SetBlock(classInit, (U8*)init_pool,sizeof(init_pool));
@@ -281,3 +259,1227 @@ void AVM2_InsertStops(SWF*swf)
     swf_SetBlock(classInit, (U8*)script_init_pool, sizeof(script_init_pool));
 }
 
+void AVM2_InsertButtonLink(SWF*swf)
+{		
+    unsigned char displayEventCode[] = {
+    // button.dispatchEvent(new Event("pdflinkdown"),true,true)
+
+    0x01, 0x00, 0x00, 0x00, //flags
+    0x00, 
+    0x10, 0x00, 0x2e, 0x00, //version
+    0x00, //no ints
+    0x00, //no uints
+    0x00, //no floats
+    0x14, //19 strings
+    0x17, 'e','v','e','n','t','_','o','h','n','e','_','l','i','s','t','e','n','e','r','_','f','l','a',
+    0x0c, 'M','a','i','n','t','i','m','e','l','i','n','e',
+    0x0d, 'f','l','a','s','h','.','d','i','s','p','l','a','y',
+    0x09, 'M','o','v','i','e','c','l','i','p',
+    0x24, 'e','v','e','n','t','_','o','h','n','e','_','l','i','s','t','e','n','e','r','_','f','l','a',':','M','a','i','n','t','i','m','e','l','i','n','e',
+    0x00,
+    0x06, 'b','u','t','t','o','n', 
+    0x06, 'f','r','a','m','e','1', 
+    0x0c, 'f','l','a','s','h','.','e','v','e','n','t','s', 
+    0x05, 'E','v','e','n','t', 
+    0x0b, 'p','d','f','l','i','n','k','d','o','w','n', 
+    0x0d, 'd','i','s','p','a','t','c','h','E','v','e','n','t', 
+    0x0e, 'a','d','d','F','r','a','m','e','S','c','r','i','p','t',
+    0x06, 'O','b','j','e','c','t', 
+    0x0f, 'E','v','e','n','t','d','i','s','p','a','t','c','h','e','r',
+    0x0d, 'D','i','s','p','l','a','y','O','b','j','e','c','t', 
+    0x11, 'I','n','t','e','r','a','c','t','i','v','e','O','b','j','e','c','t',
+    0x16, 'D','i','s','p','l','a','y','O','b','j','e','c','t','C','o','n','t','a','i','n','e','r',
+    0x06, 'S','p','r','i','t','e',
+
+    0x07,  // 6 namespaces
+    0x16, 0x01, 
+    0x16, 0x03, 
+    0x18, 0x05, 
+    0x16, 0x06, 
+    0x17, 0x01, 
+    0x16, 0x09,
+
+    0x00, //zero namespace sets
+
+    0x0e, //13 multinames
+    0x07, 0x01, 0x02, 
+    0x07, 0x02, 0x04, 
+    0x07, 0x04, 0x07, 
+    0x07, 0x05, 0x08, 
+    0x07, 0x06, 0x0a, 
+    0x07, 0x04, 0x0c, 
+    0x07, 0x04, 0x0d, 
+    0x07, 0x04, 0x0e, 
+    0x07, 0x06, 0x0f, 
+    0x07, 0x02, 0x10, 
+    0x07, 0x02, 0x11, 
+    0x07, 0x02, 0x12, 
+    0x07, 0x02, 0x13,
+
+    0x04, // 4 methods
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    
+    0x00, // zero metadata
+
+    0x01, // 1 class
+      0x01, 0x02, 0x08, 0x03, 0x00, 0x02, 
+      0x02, // 2 traits
+        0x03, 0x00, // name, slot
+	  0x00, 0x02, 0x00, 
+	0x04, 0x01, // name, method,
+	  0x00, 0x01,
+      0x00, // ref to method 0 (initializer)
+      0x00, // no traits
+
+    0x01, // 1 script
+      0x03, 0x01, 0x01, 0x04, 0x01, 0x00, 
+
+    0x04, // 4 method bodies
+       // method 1
+       0x00, 0x01, 0x01, 0x09, 0x0a, 
+       0x03, 0xd0, 0x30, 0x47, // code
+       0x00, 0x00, 
+       // method 2
+       0x01, 0x05, 0x01, 0x0a, 0x0b, 
+       0x11, 0xd0, 0x30, 0x60, 0x03, 0x5d, 0x05, 0x2c, 0x0b, 0x26, 0x26, 0x4a, 0x05, 0x03, 0x4f, 0x06, 0x01, 0x47, // code
+       0x00, 0x00, 
+       // method 3
+       0x02, 0x03, 0x01, 0x0a, 0x0b, 
+       0x0f, 0xd0, 0x30, 0xd0, 0x49, 0x00, 0x5d, 0x07, 0x24, 0x00, 0x60, 0x04, 0x4f, 0x07, 0x02, 0x47, // code
+       0x00, 0x00, 
+       // method 4
+       0x03, 0x02, 0x01, 0x01, 0x09, 
+       0x27, 0xd0, 0x30, 0x65, 0x00, 0x60, 0x08, 0x30, 0x60, 0x09, 0x30, 0x60, 0x0a, 0x30, 0x60, 0x0b, //code
+       0x30, 0x60, 0x0c, 0x30, 0x60, 0x0d, 0x30, 0x60, 0x02, 0x30, 0x60, 0x02, 0x58, 0x00, 0x1d, 0x1d, 
+       0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x68, 0x01, 0x47, 
+       0x00, 0x00,
+    };
+}
+
+int swf_GetU30(TAG*tag)
+{
+    U32 shift = 0;
+    U32 s = 0;
+    while(1) {
+	U8 b = swf_GetU8(tag);
+	s|=(b&127)<<shift;
+	shift+=7;
+	if(!(b&128))
+	    break;
+    }
+    return s;
+}
+
+typedef struct _abc_method {
+    /* from method signature: */
+    const char*name;
+    char*paramstr;
+    int return_type_index;//index into multiname
+    int param_count;
+    int params[16]; // indexes into multiname
+    U8 flags;
+
+    int index;
+    int method_body_index;
+} abc_method_t;
+
+typedef struct _abc_multiname {
+    int namespace_index;
+    int name_index;
+} abc_multiname_t;
+
+typedef struct _dict_entry {
+    const char*name;
+    void*data;
+} dict_entry_t;
+
+typedef struct _dict {
+    int num;
+    int size;
+    dict_entry_t*d;
+} dict_t;
+
+
+dict_t* dict_new() {
+    dict_t*d = malloc(sizeof(dict_t));
+    memset(d, 0, sizeof(dict_t));
+    return d;
+}
+const char*dict_getstr(dict_t*dict, int nr) {
+    if(nr > dict->num || nr<0) {
+	printf("error: reference to string %d in dict\n");
+	return 0;
+    }
+    return dict->d[nr].name;
+}
+char*dict_getdata(dict_t*dict, int nr) {
+    if(nr > dict->num || nr<0) {
+	printf("error: reference to string %d in dict\n");
+	return 0;
+    }
+    return dict->d[nr].data;
+}
+int dict_append(dict_t*dict, const char*name, void*data) {
+    while(dict->size <= dict->num) {
+	dict->size += 64;
+	if(!dict->d) {
+	    dict->d = malloc(sizeof(dict_entry_t)*dict->size);
+	} else {
+	    dict->d = realloc(dict->d, sizeof(dict_entry_t)*dict->size);
+	}
+    }
+    if(name) {
+	dict->d[dict->num].name = strdup(name);
+    } else {
+	dict->d[dict->num].name = 0;
+    }
+    dict->d[dict->num].data = data;
+    return dict->num++;
+}
+int dict_find(dict_t*dict, const char*name)
+{
+    if(!name)
+	name = "";
+    int t;
+    for(t=0;t<dict->num;t++) {
+	if(dict->d[t].name && !strcmp(dict->d[t].name,name))
+	    return t;
+    }
+    return -1;
+}
+int dict_update(dict_t*dict, char*name, void*data) {
+    int pos = dict_find(dict, name);
+    if(pos>=0) {
+	dict->d[pos].data = data;
+	return pos;
+    }
+    return dict_append(dict, name, data);
+}
+int dict_append_if_new(dict_t*dict, char*name, void*data) {
+    int pos = dict_find(dict, name);
+    if(pos>=0)
+	return pos;
+    return dict_append(dict, name, data);
+}
+
+typedef struct _abc_file_t {
+
+    // contant_pool
+
+    dict_t*ints;
+    dict_t*uints;
+    dict_t*floats;
+    dict_t*strings;
+    dict_t*namespaces;
+    dict_t*sets;
+    dict_t*multinames;
+
+    // abc_file
+
+    dict_t*methods;
+    dict_t*classes;
+    dict_t*scripts;
+    dict_t*method_bodies;
+} abc_file_t;
+
+typedef struct _abc_trait {
+    unsigned char type;
+    int name_index;
+    U32 data1;
+    U32 data2;
+    int vindex;
+    int vkind;
+} abc_trait_t;
+
+typedef struct _abc_class {
+    int index;
+    abc_file_t*abc;
+    int classname_index;
+    int superclass_index;
+    int ns_index;
+    int iinit;
+    int cinit;
+    dict_t*traits;
+} abc_class_t;
+
+typedef struct _abc_code {
+    int index;
+    abc_file_t*abc;
+    //abc_class_t*cls;
+    abc_method_t*method;
+    TAG*tag;
+    int max_stack;
+    int local_count;
+    int init_scope_depth;
+    int max_scope_depth;
+    int exception_count;
+    dict_t*traits;
+} abc_code_t;
+
+typedef struct _opcode
+{
+    unsigned char opcode;
+    char*name;
+    char*params;
+} opcode_t;
+
+/* 2 = multiname
+   m = method
+   n = number of params
+   i = method info
+   b = byte
+   s = short
+   c = class
+   s = string
+*/
+
+int abc_RegisterNameSpace(abc_file_t*file, char*name);
+int abc_RegisterPackageNameSpace(abc_file_t*file, char*name);
+int abc_RegisterPackageInternalNameSpace(abc_file_t*file, char*name);
+int abc_RegisterProtectedNameSpace(abc_file_t*file, char*name);
+int abc_RegisterExplicitNameSpace(abc_file_t*file, char*name);
+int abc_RegisterStaticProtectedNameSpace(abc_file_t*file, char*name);
+int abc_RegisterPrivateNameSpace(abc_file_t*file, char*name);
+
+
+opcode_t opcodes[]={
+{0xa0, "add", ""},
+{0xc5, "add_i", ""},
+{0x86, "atype", "2"},
+{0x87, "astypelate", ""},
+{0xA8, "bitand", ""},
+{0x97, "bitnot", ""},
+{0xa9, "bitor", ""},
+{0xaa, "bitxor", ""},
+{0x41, "call", "n"},
+{0x43, "callmethod", "mn"},
+{0x4c, "callproplex", "2n"},
+{0x4f, "callpropvoid", "2n"},
+{0x44, "callstatic", "in"},
+{0x45, "callsuper", "2n"},
+{0x4e, "callsupervoid", "2n"},
+{0x78, "checkfilter", ""},
+{0x80, "coerce", "m"},
+{0x82, "coerce_a", ""},
+{0x85, "coerce_s", ""},
+{0x42, "construct", "n"},
+{0x4a, "constructprop", "2n"},
+{0x49, "constructsuper", "n"},
+{0x76, "convert_b", ""},
+{0x73, "convert_i", ""},
+{0x75, "convert_d", ""},
+{0x77, "convert_o", ""},
+{0x74, "convert_u", ""},
+{0x70, "convert_s", ""},
+{0xd0, "getlocal_0", ""},
+{0xd1, "getlocal_1", ""},
+{0xd2, "getlocal_2", ""},
+{0xd3, "getlocal_3", ""},
+{0x30, "pushscope", ""},
+{0x47, "returnvoid", ""},
+{0x5d, "findpropstrict", "2"},
+{0x60, "getlex", "2"},
+{0x65, "getscopeobject", "u"},
+{0x2c, "pushstring", "s"},
+{0x66, "getproperty", "2"},
+{0x24, "pushbyte", "b"},
+{0x58, "newclass", "c"},
+{0x1d, "popscope", ""},
+{0x68, "initproperty", "2"},
+{0x26, "pushtrue", ""},
+{0x25, "pushshort", "u"},
+{0x02, "nop", ""},
+};
+
+static int parse_code(TAG*tag, int len, abc_file_t*pool, char*prefix)
+{
+    int end=tag->pos+len;
+    while(tag->pos<end) {
+	U8 opcode = swf_GetU8(tag);
+	int t;
+	char found = 0;
+	for(t=0;t<sizeof(opcodes)/sizeof(opcodes[0]);t++) {
+	    if(opcodes[t].opcode == opcode) {
+		printf("%s%s ", prefix, opcodes[t].name);
+		char*p = opcodes[t].params;
+		char first = 1;
+		while(*p) {
+		    if(!first)
+			printf(", ");
+		    if(*p == 'n') {
+			int n = swf_GetU30(tag);
+			printf("%d params", n);
+		    } else if(*p == '2') {
+			const char* m = dict_getstr(pool->multinames, swf_GetU30(tag));
+			printf("%s", m);
+		    } else if(*p == 'm') {
+			int n = swf_GetU30(tag);
+			printf("[method%d]", n);
+		    } else if(*p == 'c') {
+			int n = swf_GetU30(tag);
+			printf("[classinfo%d]", n);
+		    } else if(*p == 'i') {
+			int n = swf_GetU30(tag);
+			printf("[methodbody%d]", n);
+		    } else if(*p == 'u') {
+			int n = swf_GetU30(tag);
+			printf("%d", n);
+		    } else if(*p == 'b') {
+			int b = swf_GetU8(tag);
+			printf("%02x", b);
+		    } else if(*p == 's') {
+			const char*s = dict_getstr(pool->strings, swf_GetU30(tag));
+			printf("\"%s\"", s);
+		    }
+		    p++;
+		    first = 0;
+		}
+		found = 1;
+		break;
+	    }
+	}
+	if(!found) {
+	    printf("Can't parse opcode %02x\n", opcode);
+	    return 0;
+	}
+	printf("\n");
+    }
+    if(tag->pos!=end) {
+	printf("Read beyond end of ABC Bytecode\n");
+	return 0;
+    }
+    return 1;
+}
+
+static void dump_method(const char*prefix, const char*type, const char*name, int nr, abc_file_t*pool)
+{
+    if(nr >= pool->methods->num) {
+	printf("Invalid method number: %d\n", nr);
+	return;
+    }
+    abc_method_t*m = (abc_method_t*)dict_getdata(pool->methods, nr);
+    printf("%s%s %s %s%s\n", prefix, type, dict_getstr(pool->multinames,m->return_type_index), name, m->paramstr);
+
+    abc_code_t*c = (abc_code_t*)dict_getdata(pool->method_bodies, m->method_body_index);
+    
+    printf("%s[%d %d %d %d %d]\n", prefix, c->max_stack, c->local_count, c->init_scope_depth, c->max_scope_depth, c->exception_count);
+
+    swf_SetTagPos(c->tag, 0);
+    char prefix2[80];
+    sprintf(prefix2, "%s    ", prefix);
+    printf("%s{\n", prefix);
+    parse_code(c->tag, c->tag->len, pool,prefix2);
+    printf("%s}\n", prefix);
+}
+
+//#define DEBUG
+#define DEBUG if(0)
+
+#define TRAIT_SLOT 0
+#define TRAIT_METHOD 1
+#define TRAIT_GETTER 2
+#define TRAIT_SETTER 3
+#define TRAIT_CLASS 4
+#define TRAIT_FUNCTION 5
+static dict_t* parse_traits(char*prefix, TAG*tag, abc_file_t*pool, char print)
+{
+    int num_traits = swf_GetU30(tag);
+    dict_t*traits = dict_new();
+    int t;
+    for(t=0;t<num_traits;t++) {
+	abc_trait_t*trait = malloc(sizeof(abc_trait_t));
+	memset(trait, 0, sizeof(abc_trait_t));
+	dict_append(traits, 0, trait);
+	int name_index = swf_GetU30(tag);
+	const char*name = dict_getstr(pool->multinames, name_index);
+	U8 kind = swf_GetU8(tag);
+	DEBUG printf("trait %d) %s type=%02x\n", t, name, kind);
+	if(kind == 1 || kind == 2 || kind == 3) { // method / getter / setter
+	    int disp_id = swf_GetU30(tag);
+	    int nr = swf_GetU30(tag);
+	    DEBUG printf("%smethod %d %d %s\n", prefix, nr, disp_id, ((abc_method_t*)dict_getdata(pool->methods, nr))->paramstr);
+	    if(print) dump_method(prefix, kind==1?"method":(kind==2?"getter":"setter"), name, nr, pool);
+	} else if(kind == 5) { // function
+	    int slot_id = swf_GetU30(tag);
+	    int nr = swf_GetU30(tag);
+	    if(print) dump_method(prefix, "function", name, nr, pool);
+	} else if(kind == 4) { // class
+	    int slot_id = swf_GetU30(tag);
+	    int cls = swf_GetU30(tag);
+	    if(print) printf("%sclass %s %d %d\n", prefix, name, slot_id, cls);
+	} else if(kind == 0) { // slot
+	    int slot_id = swf_GetU30(tag);
+	    const char*type_name = dict_getstr(pool->multinames, swf_GetU30(tag));
+	    int vindex = swf_GetU30(tag);
+	    if(vindex) {
+		U8 vkind = swf_GetU8(tag);
+	    }
+	    if(print) printf("%sslot %s %d %s (vindex=%d)\n", prefix, name, slot_id, type_name, vindex);
+	} else {
+	    printf("    can't parse trait type %d\n", kind);
+	    return 0;
+	}
+    }
+    return traits;
+}
+
+void swf_CopyData(TAG*to, TAG*from, int len)
+{
+    unsigned char*data = malloc(len);
+    swf_GetBlock(from, data, len);
+    swf_SetBlock(to, data, len);
+    free(data);
+}
+
+abc_file_t*abc_file_new()
+{
+    abc_file_t*f = malloc(sizeof(abc_file_t));
+    memset(f, 0, sizeof(abc_file_t));
+
+    f->ints = dict_new();
+    f->ints = dict_new();
+    f->uints = dict_new();
+    f->floats = dict_new();
+    f->strings = dict_new();
+    dict_append(f->strings, "--<UNDEFINED>--", 0);
+    f->namespaces = dict_new();
+    dict_append(f->namespaces, "--<UNDEFINED>--", 0);
+    f->sets = dict_new();
+    dict_append(f->sets, "--<UNDEFINED>--", 0);
+    f->multinames = dict_new();
+    dict_append(f->multinames, "--<UNDEFINED>--", 0);
+
+    // abc_file
+
+    f->methods = dict_new();
+    f->classes = dict_new();
+    f->scripts = dict_new();
+    f->method_bodies = dict_new();
+
+    return f;
+}
+
+static char* access2str(int type)
+{
+    if(type==0x08) return "";
+    else if(type==0x16) return "package";
+    else if(type==0x17) return "packageinternal";
+    else if(type==0x18) return "protected";
+    else if(type==0x19) return "explicit";
+    else if(type==0x1A) return "staticprotected";
+    else if(type==0x05) return "private";
+    else return "undefined";
+}
+
+void swf_DissassembleABC(TAG*tag)
+{
+    abc_file_t* pool = abc_file_new();
+
+    swf_SetTagPos(tag, 0);
+    U32 flags = swf_GetU32(tag);
+    DEBUG printf("flags=%08x\n", flags);
+    char*classname = swf_GetString(tag);
+    U32 version = swf_GetU32(tag);
+
+    pool->ints->num = swf_GetU30(tag)-1;
+    if(pool->ints->num>0) {
+	printf("can't parse ints yet\n");
+	return;
+    }
+    pool->uints->num = swf_GetU30(tag)-1;
+    if(pool->uints->num>0) {
+	printf("can't parse uints yet\n");
+	return;
+    }
+    pool->floats->num = swf_GetU30(tag)-1;
+    if(pool->floats->num>0) {
+	printf("can't parse floats yet\n");
+	return;
+    }
+    int num_strings = swf_GetU30(tag);
+    int t;
+    DEBUG printf("%d strings\n", num_strings);
+    for(t=1;t<num_strings;t++) {
+	int len = swf_GetU30(tag);
+	char*s = malloc(len+1);
+	swf_GetBlock(tag, s, len);
+	s[len] = 0;
+	dict_append(pool->strings, s, 0);
+	DEBUG printf("%d) \"%s\"\n", t, pool->strings->d[t].name);
+    }
+    int num_namespaces = swf_GetU30(tag);
+    DEBUG printf("%d namespaces\n", num_namespaces);
+    for(t=1;t<num_namespaces;t++) {
+	U8 type = swf_GetU8(tag);
+	int namenr = swf_GetU30(tag);
+	const char*name = dict_getstr(pool->strings, namenr);
+	dict_append(pool->namespaces, name, (void*)(int)type);
+	int w = 0;
+	DEBUG w=1;
+	if(w) {
+	    if(type==0x08) printf("Namespace %s\n", name);
+	    else if(type==0x16) printf("PackageNamespace %s\n", name);
+	    else if(type==0x17) printf("PackageInternalNs %s\n", name);
+	    else if(type==0x18) printf("ProtectedNamespace %s\n", name);
+	    else if(type==0x19) printf("ExplicitNamespace %s\n", name);
+	    else if(type==0x1A) printf("StaticProtectedNs %s\n", name);
+	    else if(type==0x05) printf("PrivateNs %s\n", name);
+	    else {
+		printf("Undefined namespace type\n");
+		return;
+	    }
+	}
+    }
+    int num_sets = swf_GetU30(tag);
+    if(num_sets>0) {
+	printf("can't parse namespace sets yet\n");
+	return;
+    }
+    int num_multinames = swf_GetU30(tag);
+    for(t=1;t<num_multinames;t++) {
+	U8 type = swf_GetU8(tag);
+	char*mname = 0;
+	if(type==0x07 || type==0x0d) {
+	    int nr1 = swf_GetU30(tag);
+	    const char*namespace = dict_getstr(pool->namespaces, nr1);
+	    U8 access = (U8)(int)dict_getdata(pool->namespaces, nr1);
+	    const char*methodname = dict_getstr(pool->strings, swf_GetU30(tag));
+	    DEBUG printf("multiname %d) <%s> %s:%s\n", t, access2str(access), namespace, methodname);
+	    mname = malloc(strlen(namespace)+strlen(methodname)+300);
+	    sprintf(mname, "[%s]\0", access2str(access));
+	    strcat(mname, namespace);
+	    strcat(mname, ":");
+	    strcat(mname, methodname);
+	} else if(type==0x0f || type==0x10) {
+	    const char*methodname = dict_getstr(pool->strings, swf_GetU30(tag));
+	    mname = strdup(methodname);
+	} else if(type==0x11 || type==0x12) {
+	    mname = strdup("");
+	} else if(type==0x09 || type==0x0e || type==0x1b || type==0x1c) {
+	    printf("no support for namespace sets yet\n", type);
+	    return;
+	} else {
+	    printf("can't parse type %d multinames yet\n", type);
+	    return;
+	}
+	dict_append(pool->multinames, mname, 0);
+	free(mname);
+    }
+    
+    int num_methods = swf_GetU30(tag);
+    for(t=0;t<num_methods;t++) {
+	abc_method_t*m = malloc(sizeof(abc_method_t));
+	memset(m, 0, sizeof(*m));
+	m->param_count = swf_GetU30(tag);
+	m->return_type_index = swf_GetU30(tag);
+	m->index = t;
+	int s;
+	char params[256];
+	params[0]='(';
+	params[1]=0;
+	for(s=0;s<m->param_count;s++) {
+	    if(s)
+		strcat(params, ", ");
+	    int typenr = swf_GetU30(tag);
+	    if(s < sizeof(m->params)/sizeof(m->params[0]))
+		m->params[s] = typenr;
+	    const char*type = dict_getstr(pool->multinames, typenr);
+	    strcat(params, type);
+	}
+	strcat(params, ")");
+	int namenr = swf_GetU30(tag);
+	m->name = "";
+	if(namenr)
+	    m->name = dict_getstr(pool->strings, namenr);
+	m->paramstr=strdup(params);
+	DEBUG printf("method %d) %s\n", t, m->paramstr);
+
+	m->flags = swf_GetU8(tag);
+	if(m->flags&0x88) {
+	    printf("can't parse optional or params names yet\n");
+	    return;
+	}
+	dict_append(pool->methods, m->name, m);
+    }
+    int num_metadata = swf_GetU30(tag);
+    for(t=0;t<num_metadata;t++) {
+	printf("can't parse metadata yet\n");
+	return;
+    }
+	
+    /* skip classes, and scripts for now, and do the real parsing later */
+    int num_classes = swf_GetU30(tag);
+    int classes_pos = tag->pos;
+    DEBUG printf("%d classes\n", num_classes);
+    for(t=0;t<num_classes;t++) {
+	swf_GetU30(tag);
+	swf_GetU30(tag);
+	U8 flags = swf_GetU8(tag);
+	if(flags&8) 
+	    swf_GetU30(tag);
+	swf_GetU30(tag);
+	swf_GetU30(tag);
+	if(!parse_traits("", tag, pool, 0))
+	    return;
+    }
+    for(t=0;t<num_classes;t++) {
+	swf_GetU30(tag);
+	if(!parse_traits("", tag, pool, 0))
+	    return;
+    }
+    int num_scripts = swf_GetU30(tag);
+    DEBUG printf("%d scripts\n", num_scripts);
+    for(t=0;t<num_scripts;t++) {
+	int init = swf_GetU30(tag);
+	if(!parse_traits("", tag, pool, 0))
+	    return;
+    }
+
+    int num_method_bodies = swf_GetU30(tag);
+    DEBUG printf("%d method bodies\n", num_method_bodies);
+    for(t=0;t<num_method_bodies;t++) {
+	int methodnr = swf_GetU30(tag);
+	if(methodnr >= pool->methods->num) {
+	    printf("Invalid method number: %d\n", methodnr);
+	    return;
+	}
+	abc_method_t*m = (abc_method_t*)dict_getdata(pool->methods, methodnr);
+	abc_code_t*c = malloc(sizeof(abc_code_t));
+	memset(c, 0, sizeof(abc_code_t));
+	c->max_stack = swf_GetU30(tag);
+	c->local_count = swf_GetU30(tag);
+	c->init_scope_depth = swf_GetU30(tag);
+	c->max_scope_depth = swf_GetU30(tag);
+	int code_length = swf_GetU30(tag);
+	c->method = m;
+	m->method_body_index = t;
+
+	c->tag = swf_InsertTag(0,0);
+
+	swf_CopyData(c->tag, tag, code_length);
+
+	int exception_count = swf_GetU30(tag);
+	c->traits = parse_traits("<method body trait>", tag, pool, 1);
+	if(!c->traits) {
+	    return;
+	}
+	DEBUG printf("method_body %d) (method %d), %d bytes of code", t, methodnr, code_length);
+	int r,l = code_length>32?32:code_length;
+	for(r=0;r<l;r++) {
+	    DEBUG printf("%02x ", c->tag->data[r]);
+	}
+	DEBUG printf("\n");
+
+	dict_append(pool->method_bodies, 0, c);
+    }
+    if(tag->len - tag->pos) {
+	printf("%d unparsed bytes remaining in ABC block\n", tag->len - tag->pos);
+	return;
+    }
+
+    swf_SetTagPos(tag, classes_pos);
+    for(t=0;t<num_classes;t++) {
+	abc_class_t*cls = malloc(sizeof(abc_class_t));
+	memset(cls, 0, sizeof(abc_class_t));
+	const char* classname = dict_getstr(pool->multinames, swf_GetU30(tag));
+	const char* supername = dict_getstr(pool->multinames, swf_GetU30(tag));
+	U8 flags = swf_GetU8(tag);
+	const char*ns = "";
+	if(flags&8) {
+	    cls->ns_index = swf_GetU30(tag);
+	    ns = dict_getstr(pool->namespaces, cls->ns_index);
+	}
+	printf("class %s extends %s, %s, flags=%02x\n", classname, supername, ns, flags);
+	printf("{\n");
+	int num_interfaces = swf_GetU30(tag);
+	if(num_interfaces>0) {
+	    printf("can't parse interfaces yet\n");
+	    return;
+	}
+	cls->iinit = swf_GetU30(tag);
+	dump_method("    ","constructor", classname, cls->iinit, pool);
+	cls->traits = parse_traits("    ",tag, pool, 1);
+	if(!cls->traits) {
+	    return;
+	}
+	printf("}\n");
+	dict_append(pool->classes, 0, cls);
+    }
+    for(t=0;t<num_classes;t++) {
+	int cinit = swf_GetU30(tag);
+	dump_method("    ","staticconstructor", "", cinit, pool);
+	if(!parse_traits("    ",tag, pool, 1))
+	    return;
+    }
+    int num_scripts2 = swf_GetU30(tag);
+    printf("\n");
+    for(t=0;t<num_scripts2;t++) {
+	int init = swf_GetU30(tag);
+	dump_method("","initmethod", "init", init, pool);
+	if(!parse_traits("", tag, pool, 1))
+	    return;
+    }
+}
+
+static int registerNameSpace(abc_file_t*file, U8 access, char*name) {
+    if(access==0) { // autodetect access
+	char*n = strdup(name);
+	if(n[0] == '[') {
+	    char*bracket = strchr(n, ']');
+	    if(bracket) {
+		*bracket = 0;
+		char*a = n+1;
+		name += (bracket-n)+1;
+		if(!strcmp(a, "")) access=0x16;
+		else if(!strcmp(a, "package")) access=0x16;
+		else if(!strcmp(a, "packageinternal")) access=0x17;
+		else if(!strcmp(a, "protected")) access=0x18;
+		else if(!strcmp(a, "explicit")) access=0x19;
+		else if(!strcmp(a, "staticprotected")) access=0x1a;
+		else if(!strcmp(a, "private")) access=0x05;
+		else {
+		    fprintf(stderr, "Undefined access level: [%s]\n", a);
+		    return -1;
+		}
+	    }
+	} else {
+	    access = 0x16;
+	}
+	free(n);
+    }
+    int t;
+    for(t=0;t<file->namespaces->num;t++) {
+	const char*name2 = dict_getstr(file->namespaces, t);
+	U8 access2 = (U8)(int)dict_getdata(file->namespaces, t);
+	if(access == access2 && !strcmp(name, name2)) {
+	    return t;
+	}
+    }
+    dict_update(file->strings, name, 0);
+    return dict_append(file->namespaces, name, (void*)(int)access);
+}
+int abc_RegisterNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x08, name);
+}
+int abc_RegisterPackageNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x16 , name);
+}
+int abc_RegisterPackageInternalNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x17, name);
+}
+int abc_RegisterProtectedNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x18, name);
+}
+int abc_RegisterExplicitNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x19, name);
+}
+int abc_RegisterStaticProtectedNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x1a, name);
+}
+int abc_RegisterPrivateNameSpace(abc_file_t*file, char*name) {
+    return registerNameSpace(file, 0x05, name);
+}
+static int multiname_index(abc_file_t*abc, const char*name2) 
+{
+    if(!name2)
+	name2 = ":";
+    int pos = dict_find(abc->multinames, name2);
+    if(pos>=0)
+	return pos;
+
+    int access = 0x16;
+    char*n = strdup(name2);
+    char*p = strchr(n, ':');
+    char*namespace=0,*name=0;
+    if(!p) {
+	namespace = "";
+	name = n;
+    } else {
+	*p = 0;
+	namespace = n;
+	name = p+1;
+    }
+    abc_multiname_t*m = malloc(sizeof(abc_multiname_t));
+    m->namespace_index = registerNameSpace(abc, 0, namespace);
+    m->name_index = dict_append_if_new(abc->strings, name, 0);
+    return dict_append(abc->multinames, name2, m);
+}
+
+abc_class_t* abc_NewClass(abc_file_t*abc, char*classname, char*superclass) {
+    abc_class_t* c = malloc(sizeof(abc_class_t));
+    memset(c, 0, sizeof(abc_class_t));
+    c->index = dict_append(abc->classes, 0, c);
+    c->abc = abc;
+    c->classname_index = multiname_index(abc, classname);
+    c->superclass_index = multiname_index(abc, superclass);
+    c->ns_index = abc_RegisterProtectedNameSpace(abc, classname);
+
+    c->traits = dict_new();
+    return c;
+}
+
+abc_code_t* add_method(abc_file_t*abc, abc_class_t*cls, char*returntype, char*name, int num_params, va_list va)
+{
+    /* construct code (method body) object */
+    abc_code_t* c = malloc(sizeof(abc_code_t));
+    memset(c, 0, sizeof(abc_code_t));
+    c->index = dict_append(abc->method_bodies, 0, c);
+    c->tag = swf_InsertTag(0,0);
+    c->abc = abc;
+    c->traits = dict_new();
+
+    /* construct method object */
+    abc_method_t* m = malloc(sizeof(abc_method_t));
+    memset(m, 0, sizeof(abc_method_t));
+    m->param_count = num_params;
+    m->index = dict_append(abc->methods, 0, m);
+    if(returntype) 
+	m->return_type_index = multiname_index(abc, returntype);
+    else
+	m->return_type_index = 0;
+    if(num_params>sizeof(m->params)/sizeof(m->params[0])) {
+	fprintf(stderr, "abc: Too many parameters\n");
+	return 0;
+    }
+    int t;
+    for(t=0;t<num_params;t++) {
+	const char*param = va_arg(va, const char*);
+	m->params[t] = multiname_index(abc, param);
+    }
+
+    /* crosslink the two objects */
+    m->method_body_index = c->index;
+    c->method = m;
+
+    return c;
+}
+
+abc_code_t* abc_AddConstructor(abc_class_t*cls, char*returntype, int num_params, ...) 
+{
+    va_list va;
+    va_start(va, num_params);
+    abc_code_t* c = add_method(cls->abc, cls, returntype, 0, num_params, va);
+    va_end(va);
+    cls->iinit = c->index;
+    return c;
+}
+
+abc_code_t* abc_AddStaticConstructor(abc_class_t*cls, char*returntype, int num_params, ...) 
+{
+    va_list va;
+    va_start(va, num_params);
+    abc_code_t* c = add_method(cls->abc, cls, returntype, 0, num_params, va);
+    va_end(va);
+    cls->cinit = c->index;
+    return c;
+}
+
+abc_trait_t*trait_new(int type, int name_index, int data1, int data2, int vindex, int vkind)
+{
+    abc_trait_t*trait = malloc(sizeof(abc_trait_t));
+    memset(trait, 0, sizeof(abc_trait_t));
+    trait->type = type;
+    trait->name_index = name_index;
+    trait->data1 = data1;
+    trait->data2 = data2;
+    trait->vindex = vindex;
+    trait->vkind = vkind;
+    return trait;
+}
+
+abc_code_t* abc_AddMethod(abc_class_t*cls, char*returntype, char*name, int num_params, ...) 
+{
+    abc_file_t*abc = cls->abc;
+    va_list va;
+    va_start(va, num_params);
+    abc_code_t* c = add_method(cls->abc, cls, returntype, name, num_params, va);
+    va_end(va);
+    dict_append(cls->traits, 0, trait_new(TRAIT_METHOD, multiname_index(abc, name), 0, c->method->index, 0, 0));
+    return c;
+}
+
+void abc_AddSlot(abc_class_t*cls, char*name, int slot, char*multiname)
+{
+    abc_file_t*abc = cls->abc;
+    int i = multiname_index(abc, name);
+    dict_append(cls->traits, 0, trait_new(TRAIT_SLOT, i, slot, multiname_index(abc, multiname), 0, 0));
+}
+
+void abc_code_addClassTrait(abc_code_t*code, char*multiname, int slotid, abc_class_t*cls)
+{
+    abc_file_t*abc = code->abc;
+    int i = multiname_index(abc, multiname);
+    abc_trait_t*trait = trait_new(TRAIT_CLASS, i, slotid, cls->index, 0, 0);
+    dict_append(code->traits, 0, trait);
+}
+
+abc_code_t* abc_AddInitScript(abc_file_t*abc, char*returntype, int num_params, ...) 
+{
+    va_list va;
+    va_start(va, num_params);
+    abc_code_t* c = add_method(abc, 0, returntype, 0, num_params, va);
+    dict_append(abc->scripts, 0, c);
+    va_end(va);
+    return c;
+}
+
+void swf_SetU30(TAG*tag, U32 u)
+{
+    do {
+	swf_SetU8(tag, (u&~0x7f?0x80:0) | (u&0x7F));
+	u>>=7;
+    } while(u);
+}
+void swf_SetU30String(TAG*tag, const char*str)
+{
+    int l = strlen(str);
+    swf_SetU30(tag, l);
+    swf_SetBlock(tag, (void*)str, l);
+}
+
+static void write_traits(abc_file_t*abc, TAG*tag, dict_t*traits)
+{
+    swf_SetU30(tag, traits->num);
+    int s;
+
+    for(s=0;s<traits->num;s++) {
+	abc_trait_t*trait = (abc_trait_t*)dict_getdata(traits, s);
+	swf_SetU30(tag, trait->name_index);
+	swf_SetU8(tag, trait->type);
+	swf_SetU30(tag, trait->data1);
+	swf_SetU30(tag, trait->data2);
+	if(trait->type == 0) { //slot
+	    swf_SetU30(tag, trait->vindex);
+	    if(trait->vindex) {
+		swf_SetU8(tag, trait->vkind);
+	    }
+	}
+    }
+}
+
+void swf_WriteABC(TAG*tag, abc_file_t*abc)
+{
+    swf_SetU32(tag, 1);
+    swf_SetU8(tag, 0);
+    swf_SetU16(tag, 0x10);
+    swf_SetU16(tag, 0x2e);
+    swf_SetU30(tag, abc->ints->num>1?abc->ints->num:0);
+    // ...
+    swf_SetU30(tag, abc->uints->num>1?abc->uints->num:0);
+    // ...
+    swf_SetU30(tag, abc->floats->num>1?abc->floats->num:0);
+    // ...
+    swf_SetU30(tag, abc->strings->num>1?abc->strings->num:0);
+    int t;
+    for(t=1;t<abc->strings->num;t++) {
+	swf_SetU30String(tag, dict_getstr(abc->strings, t));
+    }
+    swf_SetU30(tag, abc->namespaces->num>1?abc->namespaces->num:0);
+    for(t=1;t<abc->namespaces->num;t++) {
+	U8 type = (U8)(int)dict_getdata(abc->namespaces, t);
+	const char*name = dict_getstr(abc->namespaces, t);
+	int i = dict_find(abc->strings, name);
+	if(i<0) {
+	    fprintf(stderr, "Couldn't find namespace \"%s\" in constant pool\n", name);
+	    return;
+	}
+	swf_SetU8(tag, type);
+	swf_SetU30(tag, i);
+    }
+    swf_SetU30(tag, abc->sets->num>1?abc->sets->num:0);
+    // ...
+
+    swf_SetU30(tag, abc->multinames->num>1?abc->multinames->num:0);
+    // ...
+    for(t=1;t<abc->multinames->num;t++) {
+	abc_multiname_t*m = (abc_multiname_t*)dict_getdata(abc->multinames, t);
+	swf_SetU8(tag, 0x07);
+	swf_SetU30(tag, m->namespace_index);
+	swf_SetU30(tag, m->name_index);
+    }
+    
+    swf_SetU30(tag, abc->methods->num);
+    for(t=0;t<abc->methods->num;t++) {
+	abc_method_t*m = (abc_method_t*)dict_getdata(abc->methods, t);
+	swf_SetU30(tag, m->param_count);
+	swf_SetU30(tag, m->return_type_index);
+	int s;
+	for(s=0;s<m->param_count;s++) {
+	    swf_SetU30(tag, m->params[s]);
+	}
+	swf_SetU30(tag, 0); // name
+	swf_SetU8(tag, 0); //flags
+    }
+
+    swf_SetU30(tag, 0);//metadata
+
+    swf_SetU30(tag, abc->classes->num);
+
+    for(t=0;t<abc->classes->num;t++) {
+	abc_class_t*c = (abc_class_t*)dict_getdata(abc->classes, t);
+	swf_SetU30(tag, c->classname_index);
+	swf_SetU30(tag, c->superclass_index);
+
+	swf_SetU8(tag, 8); // flags
+	swf_SetU30(tag, c->ns_index);
+
+	swf_SetU30(tag, 0); // no interfaces
+	swf_SetU30(tag, c->iinit);
+	write_traits(abc, tag, c->traits);
+    }
+    for(t=0;t<abc->classes->num;t++) {
+	abc_class_t*c = (abc_class_t*)dict_getdata(abc->classes, t);
+	swf_SetU30(tag, c->cinit);
+	swf_SetU30(tag, 0); // no traits
+    }
+
+    swf_SetU30(tag, abc->scripts->num);
+    for(t=0;t<abc->scripts->num;t++) {
+	abc_code_t*c = (abc_code_t*)dict_getdata(abc->scripts, t);
+	swf_SetU30(tag, c->index); //!=t!
+	write_traits(abc, tag, c->traits);
+    }
+
+    swf_SetU30(tag, abc->method_bodies->num);
+    for(t=0;t<abc->method_bodies->num;t++) {
+	abc_code_t*c = (abc_code_t*)dict_getdata(abc->method_bodies, t);
+	abc_method_t*m = c->method;
+	swf_SetU30(tag, m->index);
+	swf_SetU30(tag, c->max_stack);
+	swf_SetU30(tag, c->local_count);
+	swf_SetU30(tag, c->init_scope_depth);
+	swf_SetU30(tag, c->max_scope_depth);
+	swf_SetU30(tag, c->tag->len);
+	swf_SetBlock(tag, c->tag->data, c->tag->len);
+	swf_SetU30(tag, c->exception_count);
+	swf_SetU8(tag, 0); // no traits
+    }
+}
+
+#include "swfabc_ops.c"
+
+void swf_AddButtonLinks(TAG*tag)
+{
+    abc_file_t*abc = abc_file_new();
+    abc_code_t*c = 0;
+    
+    abc_class_t*maintimeline = abc_NewClass(abc, "buttonmitlink_fla:MainTimeline", "flash.display:MovieClip");
+    
+    c = abc_AddStaticConstructor(maintimeline, 0, 0);
+    c->max_stack = 1;
+    c->local_count = 1;
+    c->init_scope_depth = 9;
+    c->max_scope_depth = 10;
+    abc_getlocal_0(c);
+    abc_pushscope(c);
+    abc_returnvoid(c);
+    
+    c = abc_AddMethod(maintimeline, 0, "[packageinternal]buttonmitlink_fla:frame1", 0);
+    c->max_stack = 3;
+    c->local_count = 1;
+    c->init_scope_depth = 10;
+    c->max_scope_depth = 11;
+    abc_getlocal_0(c);
+    abc_pushscope(c);
+
+    abc_getlex(c,":MyButton1");
+    abc_getlex(c,"flash.events:MouseEvent");
+    abc_getproperty(c, ":CLICK");
+    abc_getlex(c, ":gotoPage1");
+    abc_callpropvoid(c, ":addEventListener" ,2);
+
+    abc_getlex(c,":MyButton2");
+    abc_getlex(c,"flash.events:MouseEvent");
+    abc_getproperty(c, ":CLICK");
+    abc_getlex(c,":gotoPage2");
+    abc_callpropvoid(c,":addEventListener",2);
+
+    abc_returnvoid(c);
+    
+    abc_AddSlot(maintimeline, ":MyButton1", 0, "flash.display:SimpleButton");
+    abc_AddSlot(maintimeline, ":MyButton2", 0, "flash.display:SimpleButton");
+
+    c = abc_AddMethod(maintimeline, ":void", ":gotoPage2", 1, "flash.events:MouseEvent");
+    c->max_stack = 3;
+    c->local_count = 2;
+    c->init_scope_depth = 10;
+    c->max_scope_depth = 11;
+    abc_getlocal_0(c);
+    abc_pushscope(c);
+    abc_findpropstrict(c, "flash.net:navigateToURL");
+    abc_findpropstrict(c, "flash.net:URLRequest");
+    abc_pushstring(c, "http://www.quiss.org");
+    abc_constructprop(c, "flash.net:URLRequest", 1);
+    abc_callpropvoid(c, "flash.net:navigateToURL", 1);
+    abc_returnvoid(c);
+    
+    c = abc_AddMethod(maintimeline, ":void", ":gotoPage1", 1, "flash.events:MouseEvent");
+    c->max_stack = 3;
+    c->local_count = 2;
+    c->init_scope_depth = 10;
+    c->max_scope_depth = 11;
+    abc_getlocal_0(c);
+    abc_pushscope(c);
+    abc_findpropstrict(c,"flash.net:navigateToURL");
+    abc_findpropstrict(c,"flash.net:URLRequest");
+    abc_pushstring(c,"http://www.google.com/");
+    abc_constructprop(c,"flash.net:URLRequest", 1);
+    abc_callpropvoid(c,"flash.net:navigateToURL", 1);
+    abc_returnvoid(c);
+    
+    c = abc_AddConstructor(maintimeline, 0, 0);
+    c->max_stack = 3;
+    c->local_count = 1;
+    c->init_scope_depth = 10;
+    c->max_scope_depth = 11;
+    abc_getlocal_0(c);
+    abc_pushscope(c);
+    abc_getlocal_0(c);
+    abc_constructsuper(c,0);
+    abc_findpropstrict(c,":addFrameScript");
+    abc_pushbyte(c,0x00);
+    abc_getlex(c,"[packageinternal]buttonmitlink_fla:frame1");
+    abc_callpropvoid(c,":addFrameScript",2);
+    abc_returnvoid(c);
+    
+    c = abc_AddInitScript(abc, 0, 0);
+    c->max_stack = 2;
+    c->local_count = 1;
+    c->init_scope_depth = 1;
+    c->max_scope_depth = 9;
+    abc_getlocal_0(c);
+    abc_pushscope(c);
+    abc_getscopeobject(c, 0);
+    abc_getlex(c,":Object");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.events:EventDispatcher");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.display:DisplayObject");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.display:InteractiveObject");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.display:DisplayObjectContainer");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.display:Sprite");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.display:MovieClip");
+    abc_pushscope(c);
+    abc_getlex(c,"flash.display:MovieClip");
+    abc_newclass(c,maintimeline);
+    abc_popscope(c);
+    abc_popscope(c);
+    abc_popscope(c);
+    abc_popscope(c);
+    abc_popscope(c);
+    abc_popscope(c);
+    abc_popscope(c);
+    abc_initproperty(c,"buttonmitlink_fla:MainTimeline");
+    abc_returnvoid(c);
+
+    abc_code_addClassTrait(c, "buttonmitlink_fla:MainTimeline", 1, maintimeline);
+
+    swf_WriteABC(tag, abc);
+}
