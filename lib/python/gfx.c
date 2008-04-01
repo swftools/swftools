@@ -28,10 +28,14 @@
 #include "../devices/rescale.h"
 #include "../devices/text.h"
 #include "../pdf/pdf.h"
+#include "../readers/swf.h"
+#include "../readers/image.h"
 #include "../log.h"
 #include "../utf8.h"
 
-gfxsource_t*pdfdriver;
+static gfxsource_t*pdfdriver = 0;
+static gfxsource_t*swfdriver = 0;
+static gfxsource_t*imagedriver = 0;
 
 staticforward PyTypeObject OutputClass;
 staticforward PyTypeObject PageClass;
@@ -693,20 +697,41 @@ PyDoc_STRVAR(f_open_doc,
 static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"type", "filename", NULL};
-    char*filename;
-    char*type;
+    char*filename=0;
+    char*type=0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &type, &filename)) {
 	static char *kwlist2[] = {"filename", NULL};
-        type = "pdf";
+        type = 0;
 	PyErr_Clear();
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist2, &filename))
 	    return NULL;
     }
 
     DocObject*self = PyObject_New(DocObject, &DocClass);
+
+    if(!type) { //autodetect
+	type = "pdf"; //default
+	int l = strlen(filename);
+	if(l>4) {
+	    if(filename[l-4]=='.') {
+		if(strchr("pP", filename[l-3]) && strchr("dD", filename[l-2]) && strchr("fF", filename[l-1]))
+		    type = "pdf";
+		if(strchr("jJ", filename[l-3]) && strchr("pP", filename[l-2]) && strchr("gG", filename[l-1]))
+		    type = "image";
+		if(strchr("pP", filename[l-3]) && strchr("nN", filename[l-2]) && strchr("gG", filename[l-1]))
+		    type = "image";
+	    } else if(filename[l-5]=='.') {
+		type = "image";
+	    }
+	}
+    }
    
     if(!strcmp(type,"pdf"))
 	self->doc = pdfdriver->open(pdfdriver,filename);
+    else if(!strcmp(type, "image")) 
+	self->doc = imagedriver->open(imagedriver, filename);
+    else if(!strcmp(type, "swf")) 
+	self->doc = swfdriver->open(imagedriver, filename);
     else
 	return PY_ERROR("Unknown type %s", type);
 
@@ -941,6 +966,8 @@ void initgfx(void)
     DocClass.ob_type = &PyType_Type;
 
     pdfdriver = gfxsource_pdf_create();
+    swfdriver = gfxsource_swf_create();
+    imagedriver = gfxsource_image_create();
     
     PyObject*module = Py_InitModule3("gfx", pdf2swf_methods, gfx_doc);
     PyObject*module_dict = PyModule_GetDict(module);
