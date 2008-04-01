@@ -6,25 +6,17 @@ rm -f ${name}.tar
 rm -f ${name}.tar.gz
 ln -s ./ ${name}
 cd lib/action;make generated >/dev/null 2>&1;cd ../..
-tar -chf ${name}.tar \
-${name}/src/swfcombine.1 \
-${name}/src/swfstrings.1 \
-${name}/src/swfdump.1 \
-${name}/src/swfextract.1 \
-${name}/src/jpeg2swf.1 \
-${name}/src/png2swf.1 \
-${name}/src/pdf2swf.1 \
-${name}/src/gif2swf.1 \
-${name}/src/wav2swf.1 \
-${name}/src/swfc.1 \
-${name}/avi2swf/avi2swf.1 \
+
+SOURCES="${name}/src/swfcombine.1 \
+${name}/src/swfstrings.1 ${name}/src/swfdump.1 ${name}/src/swfextract.1 \
+${name}/src/jpeg2swf.1 ${name}/src/png2swf.1 ${name}/src/pdf2swf.1 \
+${name}/src/gif2swf.1 ${name}/src/wav2swf.1 ${name}/src/swfc.1 \
+${name}/src/swfbbox.1 ${name}/src/font2swf.1
 ${name}/src/swfcombine.c \
 ${name}/src/swfstrings.c \
 ${name}/src/swfdump.c \
 ${name}/src/font2swf.c \
 ${name}/src/swfbbox.c \
-${name}/src/swfbbox.1 \
-${name}/src/font2swf.1 \
 ${name}/src/swfextract.c \
 ${name}/src/jpeg2swf.c \
 ${name}/src/png2swf.c \
@@ -38,21 +30,30 @@ ${name}/src/swfc-interpolation.c \
 ${name}/src/swfc-feedback.h \
 ${name}/src/swfc-history.h \
 ${name}/src/swfc-interpolation.h \
-${name}/doc/fileformat.sc \
 ${name}/src/parser.yy.c \
-${name}/lib/types.h \
-${name}/lib/action/lex.swf4.c \
-${name}/lib/action/lex.swf5.c \
-${name}/lib/action/swf4compiler.tab.c \
-${name}/lib/action/swf5compiler.tab.c \
-${name}/lib/action/swf4compiler.tab.h \
-${name}/lib/action/swf5compiler.tab.h \
 ${name}/src/parser.lex \
 ${name}/src/parser.h \
+${name}/src/swfrender.c \
+${name}/swfs/simple_viewer.c \
+${name}/swfs/keyboard_viewer.c \
+${name}/swfs/PreLoaderTemplate.c \
+${name}/swfs/swft_loader.swf \
+${name}/swfs/tessel_loader.swf"
+
+AVI2SWF="${name}/avi2swf/avi2swf.cc \
+${name}/avi2swf/videoreader.h \
+${name}/avi2swf/videoreader_avifile.hh \
+${name}/avi2swf/videoreader_avifile.cc \
+${name}/avi2swf/videoreader_vfw.hh \
+${name}/avi2swf/videoreader_vfw.cc \
+${name}/avi2swf/v2swf.c \
+${name}/avi2swf/v2swf.h \
+${name}/avi2swf/avi2swf.1"
+
+MAKEFILES="${name}/src/Makefile.in \
 ${name}/pdf2swf/fonts/Makefile.in \
 ${name}/lib/swf/Makefile.in \
 ${name}/lib/art/Makefile.in \
-${name}/src/Makefile.in \
 ${name}/lib/Makefile.in \
 ${name}/lib/swf/Makefile.in \
 ${name}/avi2swf/Makefile.in \
@@ -60,7 +61,15 @@ ${name}/lib/pdf/Makefile.in \
 ${name}/lib/action/Makefile.in \
 ${name}/swfs/Makefile.in \
 ${name}/Makefile.in \
-${name}/Makefile.common.in \
+${name}/Makefile.common.in"
+
+LIB="${name}/lib/types.h \
+${name}/lib/action/lex.swf4.c \
+${name}/lib/action/lex.swf5.c \
+${name}/lib/action/swf4compiler.tab.c \
+${name}/lib/action/swf5compiler.tab.c \
+${name}/lib/action/swf4compiler.tab.h \
+${name}/lib/action/swf5compiler.tab.h \
 ${name}/lib/args.h \
 ${name}/lib/bitio.c \
 ${name}/lib/bitio.h \
@@ -75,21 +84,9 @@ ${name}/lib/png.c \
 ${name}/lib/drawer.c \
 ${name}/lib/drawer.h \
 ${name}/lib/mem.c \
-${name}/lib/mem.h \
-${name}/avi2swf/avi2swf.cc \
-${name}/avi2swf/videoreader.h \
-${name}/avi2swf/videoreader_avifile.hh \
-${name}/avi2swf/videoreader_avifile.cc \
-${name}/avi2swf/videoreader_vfw.hh \
-${name}/avi2swf/videoreader_vfw.cc \
-${name}/avi2swf/v2swf.c \
-${name}/avi2swf/v2swf.h \
-${name}/swfs/simple_viewer.c \
-${name}/swfs/keyboard_viewer.c \
-${name}/swfs/PreLoaderTemplate.c \
+${name}/lib/mem.h
 ${name}/lib/modules/swffilter.c \
 ${name}/lib/modules/swfrender.c \
-${name}/src/swfrender.c \
 ${name}/lib/swf/swf.c \
 ${name}/lib/swf/swf.h \
 ${name}/lib/modules/swfdump.c \
@@ -110,6 +107,7 @@ ${name}/lib/wav.h \
 ${name}/lib/mp3.h \
 ${name}/lib/modules/swfdraw.c \
 ${name}/lib/modules/swfabc.c \
+${name}/lib/modules/swfabc_ops.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/action/action.h \
 ${name}/lib/action/actioncompiler.c \
@@ -131,26 +129,7 @@ ${name}/lib/h.263/swfvideo.c \
 ${name}/lib/h.263/h263tables.c \
 ${name}/lib/h.263/h263tables.h \
 ${name}/lib/h.263/dct.c \
-${name}/lib/h.263/dct.h \
-${name}/lib/python/Makefile.in \
-${name}/lib/python/SWF.c \
-${name}/lib/python/gfx.c \
-${name}/lib/python/image.c \
-${name}/lib/python/image.h \
-${name}/lib/python/primitives.c \
-${name}/lib/python/primitives.h \
-${name}/lib/python/pyutils.c \
-${name}/lib/python/pyutils.h \
-${name}/lib/python/action.c \
-${name}/lib/python/action.h \
-${name}/lib/python/tag.c \
-${name}/lib/python/tag.h \
-${name}/lib/python/tags.c \
-${name}/lib/python/tags.h \
-${name}/lib/python/taglist.c \
-${name}/lib/python/taglist.h \
-${name}/lib/python/tagmap.c \
-${name}/lib/python/tagmap.h \
+${name}/lib/h.263/dct.h
 ${name}/lib/rfxswf.c \
 ${name}/lib/rfxswf.h \
 ${name}/lib/old_rfxswf.h \
@@ -343,31 +322,6 @@ ${name}/lib/pdf/xpdf/SplashXPath.cc \
 ${name}/lib/pdf/xpdf/SplashXPath.h \
 ${name}/lib/pdf/xpdf/SplashXPathScanner.cc \
 ${name}/lib/pdf/xpdf/SplashXPathScanner.h \
-${name}/configure.in \
-${name}/config.guess \
-${name}/config.sub \
-${name}/install-sh \
-${name}/mkinstalldirs \
-${name}/missing \
-${name}/ltmain.sh \
-${name}/configure \
-${name}/config.h.in \
-${name}/INSTALL \
-${name}/COPYING \
-${name}/AUTHORS \
-${name}/ChangeLog \
-${name}/FAQ \
-${name}/swfs/swft_loader.swf \
-${name}/swfs/tessel_loader.swf \
-${name}/m4/byteorder.m4 \
-${name}/m4/backticks.m4 \
-${name}/m4/fontconfig.m4 \
-${name}/m4/freetype.m4 \
-${name}/m4/gcc.2.95.m4 \
-${name}/m4/mingw.m4 \
-${name}/m4/python.m4 \
-${name}/m4/avi2swf.m4 \
-${name}/m4/Makefile \
 ${name}/lib/art/art_affine.h \
 ${name}/lib/art/art_alphagamma.h \
 ${name}/lib/art/art_bpath.h \
@@ -449,7 +403,57 @@ ${name}/lib/art/art_uta_vpath.c \
 ${name}/lib/art/art_vpath.c \
 ${name}/lib/art/art_vpath_bpath.c \
 ${name}/lib/art/art_vpath_dash.c \
-${name}/lib/art/art_vpath_svp.c
+${name}/lib/art/art_vpath_svp.c"
+
+PYTHON="${name}/lib/python/Makefile.in \
+${name}/lib/python/SWF.c \
+${name}/lib/python/gfx.c \
+${name}/lib/python/image.c \
+${name}/lib/python/image.h \
+${name}/lib/python/primitives.c \
+${name}/lib/python/primitives.h \
+${name}/lib/python/pyutils.c \
+${name}/lib/python/pyutils.h \
+${name}/lib/python/action.c \
+${name}/lib/python/action.h \
+${name}/lib/python/tag.c \
+${name}/lib/python/tag.h \
+${name}/lib/python/tags.c \
+${name}/lib/python/tags.h \
+${name}/lib/python/taglist.c \
+${name}/lib/python/taglist.h \
+${name}/lib/python/tagmap.c \
+${name}/lib/python/tagmap.h \
+${name}/setup.py"
+
+CONFIGURE="${name}/configure.in \
+${name}/configure \
+${name}/config.h.in \
+${name}/config.guess \
+${name}/config.sub \
+${name}/m4/byteorder.m4 \
+${name}/m4/backticks.m4 \
+${name}/m4/fontconfig.m4 \
+${name}/m4/freetype.m4 \
+${name}/m4/gcc.2.95.m4 \
+${name}/m4/mingw.m4 \
+${name}/m4/python.m4 \
+${name}/m4/avi2swf.m4 \
+${name}/m4/Makefile \
+${name}/install-sh \
+${name}/mkinstalldirs \
+${name}/missing \
+${name}/ltmain.sh"
+
+DOC="${name}/doc/fileformat.sc \
+${name}/ChangeLog \
+${name}/FAQ"
+
+tar -chf ${name}.tar \
+${SOURCES} ${AVI2SWF} ${MAKEFILES} ${DOC} ${LIB} ${PYTHON} ${CONFIGURE} \
+${name}/INSTALL \
+${name}/COPYING \
+${name}/AUTHORS \
 
 gzip -9 ${name}.tar
 rm -f ${name}
