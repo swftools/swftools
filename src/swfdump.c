@@ -964,11 +964,11 @@ int main (int argc,char ** argv)
 #endif
 
     close(f);
-    
-    if(action && swf.fileVersion>=9) {
-        fprintf(stderr, "Actionscript parsing (-a) not yet supported for SWF versions>=9\n");
-	action = 0;
-    }
+
+    //if(action && swf.fileVersion>=9) {
+    //    fprintf(stderr, "Actionscript parsing (-a) not yet supported for SWF versions>=9\n");
+    //    action = 0;
+    //}
 
     xsize = (swf.movieSize.xmax-swf.movieSize.xmin)/20;
     ysize = (swf.movieSize.ymax-swf.movieSize.ymin)/20;
@@ -1309,6 +1309,9 @@ int main (int argc,char ** argv)
             ActionTAG*actions;
             actions = swf_ActionGet(tag);
             swf_DumpActions(actions, myprefix);
+        }
+        else if(tag->id == ST_DOABC && action) {
+            swf_DissassembleABC(tag);
         }
         else if(tag->id == ST_DOINITACTION && action) {
             ActionTAG*actions;
