@@ -92,7 +92,7 @@ Boxes:
  <section><title>A simple swfc example</title>
 
   <p>
-   Let's create simple SWF file, shall we?
+   Let's create a simple SWF file, shall we?
    The following script creates a red box with a yellow border. On the right side you
    see the script used, on the left side the swf file that is generated.
   </p>
