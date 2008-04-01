@@ -4,18 +4,15 @@ srcdir = .
 top_srcdir = ../..
 include ../../Makefile.common
 
-all: ../libswf$(A)
+all: swf.$(O) image.$(O)
 
 libswf: ../libswf$(A)
 
 swf.$(O): swf.c swf.h
 	$(C) swf.c -o swf.$(O)
 
-libswf_objects = swf.$(O) 
-
-../libswf$(A): $(libswf_objects)
-	$(AR) r ../libswf$(A)
-	$(RANLIB) ../libswf$(A)
+image.$(O): image.c image.h
+	$(C) image.c -o image.$(O)
 
 swfrender: $(libswf_objects) ../../src/swfrender.c ../devices/render.$(O)
 	$(L) ../../src/swfrender.c $(libswf_objects) ../librfxswf$(A) ../gfxtools.$(O) ../png.$(O) ../devices/render.$(O) -o swfrender $(LIBS)
