@@ -154,7 +154,7 @@ int args_callback_option(char*name,char*val) {
 	char*x2 = strtok(0, ":");
 	char*y2 = strtok(0, ":");
 	if(!(x1 && y1 && x2 && y2)) {
-	    fprintf(stderr, "-m option requires four arguments, <x1>:<y1>:<x2>:<y2>\n");
+	    fprintf(stderr, "-c option requires four arguments, <x1>:<y1>:<x2>:<y2>\n");
 	    exit(1);
 	}
 	custom_clip = 1;
