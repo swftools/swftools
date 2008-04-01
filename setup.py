@@ -123,6 +123,21 @@ class ConfigScript:
     def system_has_property(self,name):
         if name.startswith("STD"):
             return 1
+        elif name.startswith("HAVE_") and name.endswith("_H"):
+            header = name[5:].lower()
+            c = header.rfind("_")
+            if c>=0:
+                header = header[0:c]+"."+header[c+1]
+            header = header.replace("_","/")
+            ok = 0
+            for dir in cc.include_dirs:
+                if os.path.isfile(os.path.join(dir,header)):
+                    ok = 1
+                    break
+            if ok and self.test_code("#include <"+header+">", ""):
+                if header.startswith("sys"):
+                    self.includefiles += [header]
+                return 1
         elif name.startswith("HAVE_LIB") \
           or name.startswith("HAVE_FONTCONFIG") \
           or name.startswith("HAVE_FREETYPE"):
@@ -152,21 +167,6 @@ class ConfigScript:
                 if self.test_code("", "static int test_array [%d+1-sizeof(%s)];\ntest_array [0] = 0;" % (i,t)):
                     return i
             return None
-        elif name.startswith("HAVE_") and name.endswith("_H"):
-            header = name[5:].lower()
-            c = header.rfind("_")
-            if c>=0:
-                header = header[0:c]+"."+header[c+1]
-            header = header.replace("_","/")
-            ok = 0
-            for dir in cc.include_dirs:
-                if os.path.isfile(os.path.join(dir,header)):
-                    ok = 1
-                    break
-            if ok and self.test_code("#include <"+header+">", ""):
-                if header.startswith("sys"):
-                    self.includefiles += [header]
-                return 1
         elif name.startswith("USE_FREEETYPE"):
             # TODO: run a test here?
             return 1 
