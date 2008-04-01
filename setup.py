@@ -16,6 +16,11 @@ import stat
 
 DATADIR = "/usr/share/swftools/"
 
+def update_dirs(list1, list2):
+    for v in list2:
+        if v not in list1 and os.path.isdir(v):
+            list1.append(v)
+
 def update_list(list1, list2):
     for v in list2:
         if v not in list1:
@@ -27,30 +32,23 @@ COMPILER_OPTIONS = ['-fPIC', '-Wparentheses', '-Wimplicit', '-Wreturn-type',
                     '-DSWFTOOLS_DATADIR="'+DATADIR+'"']
 INCLUDE=['lib/lame/', 'lib/pdf/xpdf', 'lib/pdf']
 
-if 'SWFTOOLS_SYSTEM_PREFIX' in os.environ:
-    # Allow overriding the prefix location. This is useful if your
-    # python is compiled in a custom location.
-    PREFIX = os.environ.get('SWFTOOLS_SYSTEM_PREFIX').strip()
-    if not os.path.exists(PREFIX):
-        print 'The SWFTOOLS_SYSTEM_PREFIX location does not exist'
-        sys.exit(1)
-    print 'Using %s as prefix for header files' % PREFIX
+if 'library_dirs' in os.environ:
+    update_dirs(cc.library_dirs, [path.strip() for path in os.environ.get('library_dirs').strip().split(":")])
 else:
-    # Default to the prefix used for the python interpreter
-    PREFIX = sys.prefix
-        
-update_list(cc.include_dirs, [os.path.join(PREFIX, 'include'), 
-                              os.path.join(PREFIX, 'include/freetype2'),
-                              os.path.join(PREFIX, 'include/fontconfig')])
+    update_dirs(cc.library_dirs, [os.path.join(sys.prefix, 'lib'), 
+                                  os.path.join(sys.prefix, 'local/lib')])
+    if sys.platform == "darwin":
+        update_list(cc.library_dirs, ["/sw/lib", "/opt/local/lib"])
 
-update_list(cc.library_dirs, ["/usr/lib", "/usr/local/lib"])
+if 'include_dirs' in os.environ:
+    update_dirs(cc.include_dirs, [path.strip() for path in os.environ.get('include_dirs').strip().split(":")])
+else:
+    update_dirs(cc.include_dirs, [os.path.join(sys.prefix, 'include'), 
+                                  os.path.join(sys.prefix, 'include/freetype2'),
+                                  os.path.join(sys.prefix, 'include/fontconfig')])
+    if sys.platform == "darwin":
+        update_dirs(cc.include_dirs, ["/sw/include/freetype2", "/sw/lib/freetype2/include", "/sw/include", "/opt/local/include"])
 
-if sys.platform == "darwin":
-    update_list(cc.include_dirs, ["/sw/include/freetype2",
-                                  "/sw/lib/freetype2/include",
-                                  "/sw/include",
-                                  "/opt/local/include"])
-    update_list(cc.library_dirs, ["/sw/lib", "/opt/local/lib"])
 
 class ConfigScript:
     def __init__(self):
