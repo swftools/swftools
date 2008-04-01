@@ -488,7 +488,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 }
 #else
 
-gfxfont_t* gfxfont_load(char*filename)
+gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
 {
     fprintf(stderr, "No freetype support compiled in! Not able to load %s\n", filename);
 }
