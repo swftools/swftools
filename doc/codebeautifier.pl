@@ -1,3 +1,4 @@
+$nr = 1;
 while(<stdin>)
 {
     if(/\[CALLPERL\s+(.*)\s+left\]/ ... /\[CALLPERL end\]/) {
@@ -27,6 +28,18 @@ while(<stdin>)
 	$code="";
 	print;
 	unlink "tmp.sc";
+    }
+    elsif ($code ne "" && ($lang eq "python" or $lang eq "shell")) {
+	$code =~ s/&quot;/"/g;
+	if($lang eq "python") {
+	   open(fi, ">$nr.py");print fi $code;close(fi);
+	    $nr = $nr + 1;
+	}
+	print "<td bgcolor=\"#ffffff\" width=\"$width\">";
+	print $embed;
+	print "</td>";
+	$code="";
+	print;
     }
     elsif ($code ne "") {
 	$code="";
