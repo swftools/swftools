@@ -864,7 +864,7 @@ void GFXOutputDev::tilingPatternFill(GfxState *state, Object *str,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep)
 #else
-void GFXBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
+void GFXOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
@@ -1325,7 +1325,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 
     // check for invisible text -- this is used by Acrobat Capture
     if (render == RENDER_INVISIBLE) {
-	col.a = 0;
+	col.a = 255;
 	if(!config_extrafontdata)
 	    return;
     }
