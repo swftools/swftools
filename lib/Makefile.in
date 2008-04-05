@@ -83,7 +83,7 @@ MD5.$(O): MD5.c MD5.h
 	$(C) MD5.c -o $@
 log.$(O): log.c log.h
 	$(C) log.c -o $@
-rfxswf.$(O): rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(rfxswf_modules) $(top_builddir)/config.h
+rfxswf.$(O): rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(top_builddir)/config.h
 	$(C) rfxswf.c -o $@
 
 $(lame_objects):
