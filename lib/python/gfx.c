@@ -25,6 +25,7 @@
 #undef HAVE_STAT
 #include "../devices/swf.h"
 #include "../devices/render.h"
+#include "../devices/ocr.h"
 #include "../devices/rescale.h"
 #include "../devices/text.h"
 #include "../pdf/pdf.h"
@@ -169,6 +170,27 @@ static PyObject* f_createSWF(PyObject* parent, PyObject* args, PyObject* kwargs)
     gfxdevice_swf_init(self->output_device);
     return (PyObject*)self;
 }
+
+PyDoc_STRVAR(f_createOCR_doc, \
+"OCR()\n\n"
+"Creates a device which processes documents using OCR (optical\n"
+"character recognition).\n"
+"This is handy for e.g. extracting fulltext from PDF documents\n"
+"which have broken fonts, and where hence the \"PlainText\"\n"
+"device doesn't work.\n"
+);
+static PyObject* f_createOCR(PyObject* parent, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {NULL};
+    if (args && !PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
+	return NULL;
+    OutputObject*self = PyObject_New(OutputObject, &OutputClass);
+    
+    self->output_device = malloc(sizeof(gfxdevice_t));
+    gfxdevice_ocr_init(self->output_device);
+    return (PyObject*)self;
+}
+
 
 PyDoc_STRVAR(f_createImageList_doc, \
 "ImageList()\n\n"
@@ -948,6 +970,7 @@ static PyMethodDef pdf2swf_methods[] =
 
     /* devices */
     {"SWF", (PyCFunction)f_createSWF, METH_KEYWORDS, f_createSWF_doc},
+    {"OCR", (PyCFunction)f_createOCR, METH_KEYWORDS, f_createOCR_doc},
     {"ImageList", (PyCFunction)f_createImageList, METH_KEYWORDS, f_createImageList_doc},
     {"PlainText", (PyCFunction)f_createPlainText, METH_KEYWORDS, f_createPlainText_doc},
     {"PassThrough", (PyCFunction)f_createPassThrough, METH_KEYWORDS, f_createPassThrough_doc},
