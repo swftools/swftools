@@ -726,6 +726,8 @@ static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
 		    type = "image";
 		if(strchr("pP", filename[l-3]) && strchr("nN", filename[l-2]) && strchr("gG", filename[l-1]))
 		    type = "image";
+		if(strchr("sS", filename[l-3]) && strchr("wW", filename[l-2]) && strchr("fF", filename[l-1]))
+		    type = "swf";
 	    } else if(filename[l-5]=='.') {
 		type = "image";
 	    }
@@ -734,9 +736,9 @@ static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
    
     if(!strcmp(type,"pdf"))
 	self->doc = pdfdriver->open(pdfdriver,filename);
-    else if(!strcmp(type, "image")) 
+    else if(!strcmp(type, "image") || !strcmp(type, "img"))  
 	self->doc = imagedriver->open(imagedriver, filename);
-    else if(!strcmp(type, "swf")) 
+    else if(!strcmp(type, "swf") || !strcmp(type, "SWF"))
 	self->doc = swfdriver->open(imagedriver, filename);
     else
 	return PY_ERROR("Unknown type %s", type);
