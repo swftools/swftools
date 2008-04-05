@@ -99,7 +99,7 @@ static int png_read_header(FILE*fi, struct png_header*header)
     unsigned char*data;
     fread(head2,8,1,fi);
     if(strncmp((const char*)head,(const char*)head2,4))
-	return 0;
+	return 0; // not a png file
     
     while(png_read_chunk(&id, &len, &data, fi))
     {
@@ -448,7 +448,6 @@ EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
 	return 0;
     }
     if(!png_read_header(fi, &header)) {
-	fprintf(stderr, "Error reading header from file %s\n", sname);
 	return 0;
     }
 
