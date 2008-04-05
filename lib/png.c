@@ -484,7 +484,6 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
     }
 
     if(!png_read_header(fi, &header)) {
-	printf("Error reading header from file %s\n", sname);
 	return 0;
     }
 
