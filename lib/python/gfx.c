@@ -683,16 +683,22 @@ static PyObject* doc_setparameter(PyObject* _self, PyObject* args, PyObject* kwa
 
 PyDoc_STRVAR(f_open_doc,
 "open(type, filename) -> object\n\n"
-"Open a PDF file. The type argument always has to be \"pdf\"\n"
-"It returns a doc object which can be used to process the pdf\n"
-"contents. E.g.\n"
+"Open a PDF, SWF or image file. The type argument should be \"pdf\",\n"
+"\"swf\" or \"image\" accordingly. It returns a doc object which can be\n"
+"used to process the file contents.\n"
+"E.g.\n"
 "    doc = open(\"pdf\", \"document.pdf\")\n"
-"If the file is not a PDF file or is encrypted without\n"
+"    doc = open(\"swf\", \"flashfile.swf\")\n"
+"    doc = open(\"image\", \"image.png\")\n"
+"If the file could not be loaded, or is a encrypted PDF file without\n"
 "a proper password specified, an exception is being raised.\n"
 "If the filename argument contains a '|' char, everything behind\n"
 "the '|' is treated as password used for opening the file.\n"
 "E.g.\n"
 "    doc = open(\"pdf\", \"document.pdf|mysecretpassword\")\n"
+".\n"
+"Notice that for image files, the only supported file formats right now\n"
+"are jpeg and png.\n"
 );
 static PyObject* f_open(PyObject* parent, PyObject* args, PyObject* kwargs)
 {
@@ -832,7 +838,8 @@ PyDoc_STRVAR(doc_doc,
 "A Doc object is used for storing a document (like a PDF).\n"
 "doc.pages contains the number of pages in the document,\n"
 "and doc.filename the name of the file the document was\n"
-"created (loaded) from\n"
+"created (loaded) from. If the document was created from\n"
+"an image file, the number of pages is always 1\n"
 );
 static PyTypeObject DocClass =
 {
@@ -934,7 +941,6 @@ static PyMethodDef pdf2swf_methods[] =
     {"open", (PyCFunction)f_open, METH_KEYWORDS, f_open_doc},
     {"addfont", (PyCFunction)f_addfont, METH_KEYWORDS, f_addfont_doc},
     {"addfontdir", (PyCFunction)f_addfontdir, METH_KEYWORDS, f_addfontdir_doc},
-    {"setoption", (PyCFunction)f_setparameter, METH_KEYWORDS, f_setparameter_doc}, // for backwards-compatibility
     {"setparameter", (PyCFunction)f_setparameter, METH_KEYWORDS, f_setparameter_doc},
     {"verbose", (PyCFunction)f_verbose, METH_KEYWORDS, f_verbose_doc},
 
@@ -955,7 +961,7 @@ PyDoc_STRVAR(gfx_doc, \
 "The latter functionality is similar to what is offered by swftools'\n" 
 "(http://www.swftools.org) pdf2swf utility, however more powerful-\n" 
 "You can also create individual SWF files from single pages of the PDF\n" 
-"or combine more than one page into a bigger PDF.\n"
+"or mix pages from different PDF files.\n"
 );
 
 void initgfx(void)
