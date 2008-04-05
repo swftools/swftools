@@ -484,10 +484,11 @@ void pdf_destroy(gfxsource_t*src)
     parameter_t*p = device_config;
     while(p) {
 	parameter_t*next = p->next;
-	p->next = 0;free(p);
+	p->next = 0;delete p;
 	p = next;
     }
     delete globalParams;globalParams = 0;
+    free(src);
 }
 
 gfxsource_t*gfxsource_pdf_create()
