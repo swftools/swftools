@@ -30,6 +30,9 @@
 #include "../../swftools/lib/gfxsource.h"
 #include "../../swftools/lib/gfxdevice.h"
 #include "../../swftools/lib/gfxpoly.h"
+#include "../../swftools/lib/devices/swf.h"
+#include "../../swftools/lib/devices/text.h"
+#include "../../swftools/lib/devices/render.h"
 #include "../../swftools/lib/devices/bbox.h"
 #include "../../swftools/lib/devices/lrf.h"
 #include "../../swftools/lib/devices/ocr.h"
@@ -40,12 +43,13 @@
 #include "../../swftools/lib/pdf/pdf.h"
 #include "../../swftools/lib/log.h"
 
-gfxsource_t*driver;
+static gfxsource_t*driver = 0;
 
 static char * outputname = 0;
 static int loglevel = 3;
 static char * pagerange = 0;
 static char * filename = 0;
+static const char * format = "ocr";
 
 int args_callback_option(char*name,char*val) {
     if (!strcmp(name, "o"))
@@ -58,6 +62,11 @@ int args_callback_option(char*name,char*val) {
 	loglevel ++;
         setConsoleLogging(loglevel);
 	return 0;
+    }
+    else if (!strcmp(name, "f"))
+    {
+	format = val;
+	return 1;
     }
     else if (!strcmp(name, "q"))
     {
@@ -80,15 +89,20 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "s"))
     {
-	const char*s = strdup(val);
+        if(!driver) {
+            fprintf(stderr, "Specify input file before -s\n");
+            exit(1);
+        }
+	char*s = strdup(val);
 	char*c = strchr(s, '=');
 	if(c && *c && c[1])  {
 	    *c = 0;
 	    c++;
 	    driver->set_parameter(driver, s,c);
-	}
-	else
+	} else {
 	    driver->set_parameter(driver, s,"1");
+        }
+        free(s);
 	return 1;
     }
     else if (!strcmp(name, "V"))
@@ -118,9 +132,22 @@ int args_callback_longoption(char*name,char*val) {
 }
 
 int args_callback_command(char*name, char*val) {
-    if (!filename) 
+    if (!filename) {
+
         filename = name;
-    else {
+
+        if(strstr(filename, ".pdf") || strstr(filename, ".PDF")) {
+            msg("<notice> Treating file as PDF");
+            driver = gfxsource_pdf_create();
+        } else if(strstr(filename, ".swf") || strstr(filename, ".SWF")) {
+            msg("<notice> Treating file as SWF");
+            driver = gfxsource_swf_create();
+        } else if(strstr(filename, ".jpg") || strstr(filename, ".JPG") ||
+                  strstr(filename, ".png") || strstr(filename, ".PNG")) {
+            msg("<notice> Treating file as Image");
+            driver = gfxsource_image_create();
+        }
+    } else {
 	if(outputname)
 	{
 	     fprintf(stderr, "Error: Do you want the output to go to %s or to %s?", 
@@ -141,25 +168,11 @@ int main(int argn, char *argv[])
     processargs(argn, argv);
     initLog(0,-1,0,0,-1,loglevel);
     
-    gfxsource_t*source = 0;
-    
     if(!filename) {
 	fprintf(stderr, "Please specify an input file\n");
 	exit(1);
     }
     
-    if(strstr(filename, ".pdf") || strstr(filename, ".PDF")) {
-        msg("<notice> Treating file as PDF");
-        source = gfxsource_pdf_create();
-    } else if(strstr(filename, ".swf") || strstr(filename, ".SWF")) {
-        msg("<notice> Treating file as SWF");
-        source = gfxsource_swf_create();
-    } else if(strstr(filename, ".jpg") || strstr(filename, ".JPG") ||
-              strstr(filename, ".png") || strstr(filename, ".PNG")) {
-        msg("<notice> Treating file as Image");
-        source = gfxsource_image_create();
-    }
-
     if(!outputname)
     {
 	if(filename) {
@@ -172,55 +185,80 @@ int main(int argn, char *argv[])
 	fprintf(stderr, "Please use -o to specify an output file\n");
 	exit(1);
     }
-    printf("%s\n", filename);
     is_in_range(0x7fffffff, pagerange);
     if(pagerange)
-	source->set_parameter(source, "pages", pagerange);
+	driver->set_parameter(driver, "pages", pagerange);
 
     if(!filename) {
 	args_callback_usage(argv[0]);
 	exit(0);
     }
 
-    gfxdocument_t* doc = source->open(source, filename);
+    gfxdocument_t* doc = driver->open(driver, filename);
     if(!doc) {
         msg("<error> Couldn't open %s", filename);
         exit(1);
     }
 
-    gfxdevice_t lrf;
-    gfxdevice_lrf_init(&lrf);
+    gfxresult_t*result = 0;
+    if(!strcmp(format, "lrf")) {
+        gfxdevice_t lrf;
+        gfxdevice_lrf_init(&lrf);
 
-    gfxdevice_t rescale;
-    gfxdevice_rescale_init(&rescale, &lrf, 592, 732, 0);
+        gfxdevice_t rescale;
+        gfxdevice_rescale_init(&rescale, &lrf, 592, 732, 0);
 
-    gfxdevice_t*out = &rescale;
-    out->setparameter(out, "keepratio", "1");
-    out->setparameter(out, "pagepattern", outputname);
+        gfxdevice_t*out = &rescale;
+        out->setparameter(out, "keepratio", "1");
+        out->setparameter(out, "pagepattern", outputname);
 
-    gfxdevice_t bbox2,*bbox=&bbox2;
-    gfxdevice_bbox_init(bbox);
-    bbox->setparameter(bbox, "graphics", "0");
+        gfxdevice_t bbox2,*bbox=&bbox2;
+        gfxdevice_bbox_init(bbox);
+        bbox->setparameter(bbox, "graphics", "0");
 
-    int pagenr;
+        int pagenr;
 
-    for(pagenr = 1; pagenr <= doc->num_pages; pagenr++) 
-    {
-	if(is_in_range(pagenr, pagerange)) {
-	    gfxpage_t* page = doc->getpage(doc, pagenr);
-	    bbox->startpage(bbox,-1,-1);
-	    page->render(page, bbox);
-	    gfxbbox_t b = gfxdevice_bbox_getbbox(bbox);
+        for(pagenr = 1; pagenr <= doc->num_pages; pagenr++) 
+        {
+            if(is_in_range(pagenr, pagerange)) {
+                gfxpage_t* page = doc->getpage(doc, pagenr);
+                bbox->startpage(bbox,-1,-1);
+                page->render(page, bbox);
+                gfxbbox_t b = gfxdevice_bbox_getbbox(bbox);
 
-	    out->startpage(out, b.xmax-b.xmin, b.ymax-b.ymin);
-	    page->rendersection(page, out, -b.xmin, -b.ymin, 0,0,b.xmax-b.xmin,b.ymax-b.ymin);
-	    out->endpage(out);
+                out->startpage(out, b.xmax-b.xmin, b.ymax-b.ymin);
+                page->rendersection(page, out, -b.xmin, -b.ymin, 0,0,b.xmax-b.xmin,b.ymax-b.ymin);
+                out->endpage(out);
 
-	    page->destroy(page);
-	}
+                page->destroy(page);
+            }
+        }
+        result = out->finish(out);
+    } else {
+        gfxdevice_t _out,*out=&_out;
+        if(!strcmp(format, "ocr")) {
+            gfxdevice_ocr_init(out);
+        } if(!strcmp(format, "swf")) {
+            gfxdevice_swf_init(out);
+        } if(!strcmp(format, "img")) {
+            gfxdevice_render_init(out);
+        } if(!strcmp(format, "txt")) {
+            gfxdevice_text_init(out);
+        }
+
+        int pagenr;
+        for(pagenr = 1; pagenr <= doc->num_pages; pagenr++) 
+        {
+            if(is_in_range(pagenr, pagerange)) {
+                gfxpage_t* page = doc->getpage(doc, pagenr);
+                out->startpage(out, page->width, page->height);
+                page->render(page, out);
+                out->endpage(out);
+                page->destroy(page);
+            }
+        }
+        result = out->finish(out);
     }
-
-    gfxresult_t*result = out->finish(out);
 
     if(result) {
 	if(result->save(result, outputname) < 0) {
@@ -231,6 +269,7 @@ int main(int argn, char *argv[])
 
     doc->destroy(doc);
 
+    driver->destroy(driver);
     return 0;
 }
 
