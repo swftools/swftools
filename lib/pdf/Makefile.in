@@ -149,10 +149,13 @@ pdftoppm$(E): $(xpdf_objects) xpdf/Splash*.cc
 pdftotext$(E): $(xpdf_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS)
 
-gfx_objects = ../devices/swf.$(O) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
+gfx_objects = ../libgfxswf$(A) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
+gfx_objects2 = $(gfx_objects) ../devices/lrf.$(O) ../libocr$(A)
 
 pdf2swf$(E): ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) $(gfx_objects)
 	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
+gfx2gfx$(E): ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) $(gfx_objects2)
+	$(LL) $(CPPFLAGS) -g ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_objects) $(splash_objects) $(gfx_objects2) -o gfx2gfx$(E) $(LIBS)
 
 install:
 uninstall:
