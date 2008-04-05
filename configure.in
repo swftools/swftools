@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2008-03-24-2356
+VERSION=2008-04-02-1230
 
 
 # ------------------------------------------------------------------
@@ -451,7 +451,7 @@ fi
 
 if test -f "release.in"; then release_in="./release"; fi
 if test -f "wx/Makefile.in"; then wx_in="wx/Makefile"; fi
-FILES="$release_in $wx_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile pdf2swf/fonts/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile lib/swf/Makefile"
+FILES="$release_in $wx_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile pdf2swf/fonts/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile lib/readers/Makefile"
 AC_OUTPUT(${FILES})
 
 dnl new autoconf
