@@ -730,6 +730,7 @@ void*render_result_get(gfxresult_t*r, const char*name)
 	    i = i->next;
 	    if(!i)
 		return 0;
+            pagenr--;
 	}
 	return gfximage_asXPM(&i->img, 64);
     } else if(!strncmp(name,"page",4)) {
@@ -740,6 +741,7 @@ void*render_result_get(gfxresult_t*r, const char*name)
 	    i = i->next;
 	    if(!i)
 		return 0;
+            pagenr--;
 	}
 	return &i->img;
     }
