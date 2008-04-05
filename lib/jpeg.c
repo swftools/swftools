@@ -298,12 +298,10 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
     struct jpeg_source_mgr mgr;
 
     FILE*fi = fopen(filename, "rb");
-    if(!fi)
+    if(!fi) {
+        fprintf(stderr, "Couldn't open file %s\n", filename);
 	return 0;
-    fseek(fi, SEEK_END, 0);
-    long filesize = ftell(fi);
-    fseek(fi, SEEK_SET, 0);
-    fclose(fi);
+    }
 
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_decompress(&cinfo); 
