@@ -126,8 +126,8 @@ devices/lrf.$(O):  devices/lrf.c devices/lrf.h
 devices/ocr.$(O): devices/ocr.c devices/ocr.h gocr/gocr.h
 	$(C) devices/ocr.c -o devices/ocr.$(O)
 
-readers/swf.$(O): readers/swf.c readers/swf.h
-	$(C) readers/swf.c -o readers/swf.$(O)
+readers/swf2.$(O): readers/swf2.c readers/swf.h
+	$(C) readers/swf.c -o readers/swf2.$(O)
 readers/image.$(O): readers/image.c readers/image.h
 	$(C) readers/image.c -o readers/image.$(O)
 
@@ -137,8 +137,8 @@ libocr$(A): $(ocr_objects) devices/ocr.$(O)
 libbase$(A): $(base_objects) Makefile
 	$(AR) r libbase$(A) $(base_objects)
 
-libgfxswf$(A): devices/swf.$(O) readers/swf.$(O) readers/image.$(O)
-	$(AR) r libgfxswf$(A) devices/swf.$(O) readers/swf.$(O) readers/image.$(O)
+libgfxswf$(A): devices/swf.$(O) readers/swf2.$(O) readers/image.$(O)
+	$(AR) r libgfxswf$(A) devices/swf.$(O) readers/swf2.$(O) readers/image.$(O)
 
 libgfx$(A): $(gfx_objects) $(art_objects) Makefile
 	$(AR) r libgfx$(A) $(gfx_objects) $(art_objects)
