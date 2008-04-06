@@ -1026,6 +1026,8 @@ void GFXOutputDev::endPage()
 	device->endclip(device);
 	outer_clip_box = 0;
     }
+    /* notice: we're not fully done yet with this page- there might still be 
+       a few calls to drawLink() yet to come */
 }
 
 #define STROKE_FILL 1
