@@ -164,9 +164,19 @@ art_vpath_render_bez (ArtVpath **p_vpath, int *pn, int *pn_max,
   /* z3_0_dot is dist z0-z3 squared */
   z3_0_dot = x3_0 * x3_0 + y3_0 * y3_0;
 
-  /* todo: this test is far from satisfactory. */
   if (z3_0_dot < 0.001)
-    goto nosubdivide;
+    {
+      /* if start and end point are almost identical, the flatness tests
+       * don't work properly, so fall back on testing whether both of
+       * the other two control points are the same as the start point,
+       * too.
+       */
+      if (hypot(x1 - x0, y1 - y0) < 0.001
+	  && hypot(x2 - x0, y2 - y0) < 0.001)
+	  goto nosubdivide;
+      else
+	  goto subdivide;
+    }
 
   /* we can avoid subdivision if:
 
@@ -203,6 +213,7 @@ art_vpath_render_bez (ArtVpath **p_vpath, int *pn, int *pn_max,
   if (z2_dot + z2_dot > z3_0_dot)
     goto subdivide;
 
+      
  nosubdivide:
   /* don't subdivide */
   art_vpath_add_point (p_vpath, pn, pn_max,
