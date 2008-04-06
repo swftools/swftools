@@ -327,7 +327,7 @@ gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 	return (gfxpoly_t*)gfxpoly_strokeToPoly(0, 0, gfx_capButt, gfx_joinMiter, 0);
     }
     ArtSVP* svp2 = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_ODDEVEN);
-    free(svp);svp=svp2;
+    art_svp_free(svp);svp=svp2;
     return (gfxpoly_t*)svp;
 }
 
@@ -407,5 +407,5 @@ gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2)
 void gfxpoly_free(gfxpoly_t*poly)
 {
     ArtSVP*svp = (ArtSVP*)poly;
-    free(svp);
+    art_svp_free(svp);
 }

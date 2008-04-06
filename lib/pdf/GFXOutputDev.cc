@@ -1812,14 +1812,14 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
 }
 
 
-gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src, double config_fontquality)
+static gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src, double config_fontquality)
 {
     gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
     memset(font, 0, sizeof(gfxfont_t));
 
     font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*src->num_glyphs);
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
-    font->id = strdup(getFontID(xpdffont));
+    font->id = 0;
     int t;
     
     double quality = (INTERNAL_FONT_SIZE * 200 / config_fontquality) / src->max_size;
@@ -2661,7 +2661,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     }
   
     gfxresult_t*mask = states[statepos].softmaskrecording;
-    gfxresult_t*below = this->device->finish(this->device);
+    gfxresult_t*below = this->device->finish(this->device);free(this->device);
     this->device = states[statepos].olddevice;
 
     /* get outline of all objects below the soft mask */
