@@ -438,6 +438,7 @@ void fill(gfxdevice_t*dev, fillinfo_t*fill)
 void fill_solid(gfxdevice_t*dev, gfxcolor_t* color)
 {
     fillinfo_t info;
+    memset(&info, 0, sizeof(info));
     info.type = filltype_solid;
     info.color = color;
     fill(dev, &info);
@@ -588,6 +589,7 @@ void render_startclip(struct _gfxdevice*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
     fillinfo_t info;
+    memset(&info, 0, sizeof(info));
     newclip(dev);
     info.type = filltype_clip;
     draw_line(dev, line);
@@ -619,6 +621,7 @@ void render_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
     draw_line(dev, line);
 
     fillinfo_t info;
+    memset(&info, 0, sizeof(info));
     info.type = filltype_bitmap;
     info.image = img;
     info.matrix = &m2;
