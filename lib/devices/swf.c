@@ -76,6 +76,7 @@ typedef struct _swfoutput_internal
     double config_dumpfonts;
     double config_ppmsubpixels;
     double config_jpegsubpixels;
+    int config_simpleviewer;
     int config_opennewwindow;
     int config_ignoredraworder;
     int config_drawonlyshapes;
@@ -279,7 +280,7 @@ static U16 getNewID(gfxdevice_t* dev)
 static U16 getNewDepth(gfxdevice_t* dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->depth == 65535) {
+    if(i->depth == 65520) {
 	if(!id_error) {
 	    msg("<error> Depth Table overflow");
 	    msg("<error> This file is too complex to render- SWF only supports 65536 shapes at once");
@@ -866,11 +867,98 @@ static void endpage(gfxdevice_t*dev)
     i->pagefinished = 1;
 }
 
+static void addViewer(gfxdevice_t* dev)
+{
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+
+    SHAPE*s;
+    RGBA button_colors[3]= {{0xbf,0x00,0x00,0x80},{0xbf,0x20,0x20,0xc0}, {0xbf,0xc0,0xc0,0xff}};
+    int ids[6];
+    int button_sizex = 20;
+    int button_sizey = 20; 
+    int t;
+    RGBA black = {255,0,0,0};
+    for(t=0;t<6;t++) {
+	i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
+	swf_ShapeNew(&s);
+	int ls1 = swf_ShapeAddLineStyle(s,40,&black);
+	int fs1 = swf_ShapeAddSolidFillStyle(s,&button_colors[t/2]);
+	int shapeid = ids[t] = getNewID(dev);
+	swf_SetU16(i->tag,shapeid);
+	SRECT r;
+	r.xmin = -20*button_sizex;
+	r.xmax = 20*button_sizex; 
+	r.ymin = 0;
+	r.ymax = 40*button_sizey;
+	swf_SetRect(i->tag,&r);              // set shape bounds
+	swf_SetShapeHeader(i->tag,s);        // write all styles to tag
+	swf_ShapeSetAll(i->tag,s,0*button_sizex,0,ls1,fs1,0);
+	swf_ShapeSetLine(i->tag,s,(1-(t&1)*2)*20*button_sizex,20*button_sizey);
+	swf_ShapeSetLine(i->tag,s,-(1-(t&1)*2)*20*button_sizex,20*button_sizey);
+	swf_ShapeSetLine(i->tag,s,0,-40*button_sizey);
+	swf_ShapeSetEnd(i->tag);   // finish drawing
+	swf_ShapeFree(s);   // clean shape structure (which isn't needed anymore after writing the tag)
+    }
+    ActionTAG*a1=0,*a2=0,*a3=0;
+    a1 = action_NextFrame(a1);
+    a1 = action_Stop(a1);
+    a1 = action_End(a1);
+    
+    a2 = action_PreviousFrame(a2);
+    a2 = action_Stop(a2);
+    a2 = action_End(a2);
+    
+    a3 = action_Stop(a3);
+    a3 = action_End(a3);
+
+    i->tag = swf_InsertTag(i->tag, ST_DOACTION);
+    swf_ActionSet(i->tag,a3);
+
+    i->tag = swf_InsertTag(i->tag,ST_DEFINEBUTTON);
+    int buttonid1 = getNewID(dev);
+    swf_SetU16(i->tag, buttonid1);
+    swf_ButtonSetRecord(i->tag,BS_UP|BS_HIT,ids[0],1,NULL,NULL);
+    swf_ButtonSetRecord(i->tag,BS_OVER,ids[2],1,NULL,NULL);
+    swf_ButtonSetRecord(i->tag,BS_DOWN,ids[4],1,NULL,NULL);
+    swf_SetU8(i->tag,0); // end of button records
+    swf_ActionSet(i->tag,a1);
+    
+    i->tag = swf_InsertTag(i->tag,ST_DEFINEBUTTON);
+    int buttonid2 = getNewID(dev);
+    swf_SetU16(i->tag, buttonid2);
+    swf_ButtonSetRecord(i->tag,BS_UP|BS_HIT,ids[1],1,NULL,NULL);
+    swf_ButtonSetRecord(i->tag,BS_OVER,ids[3],1,NULL,NULL);
+    swf_ButtonSetRecord(i->tag,BS_DOWN,ids[5],1,NULL,NULL);
+    swf_SetU8(i->tag,0); // end of button records
+    swf_ActionSet(i->tag,a2);
+  
+    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+    MATRIX m;
+    swf_GetMatrix(0, &m);
+    m.tx = button_sizex*20+200;
+    swf_ObjectPlace(i->tag, buttonid2, 65534,&m,0,0);
+    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
+    m.tx = button_sizex*20+200+200;
+    swf_ObjectPlace(i->tag, buttonid1, 65535,&m,0,0);
+}
+
+
 void swf_startframe(gfxdevice_t*dev, int width, int height)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->firstpage) {
+	if(i->config_protect) {
+	    i->tag = swf_InsertTag(i->tag, ST_PROTECT);
+	    i->config_protect = 0;
+	}
+	if(i->config_simpleviewer) {
+	    addViewer(dev);
+	}
+    }
+    
     if(!i->firstpage && !i->pagefinished)
         endpage(dev);
+
     msg("<verbose> Starting new SWF page of size %dx%d", width, height);
 
     swf_GetMatrix(0, &i->page_matrix);
@@ -962,7 +1050,7 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     
     dev->name = "swf";
 
-    dev->internal = init_internal_struct();
+    dev->internal = init_internal_struct(); // set config to default values
 
     dev->startpage = swf_startframe;
     dev->endpage = swf_endframe;
@@ -982,15 +1070,13 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     i->dev = dev;
 
-    RGBA rgb;
-
     msg("<verbose> initializing swf output\n", i->max_x,i->max_y);
 
     i->swffont = 0;
    
     i->swf = (SWF*)rfx_calloc(sizeof(SWF));
-    i->swf->fileVersion    = i->config_flashversion;
-    i->swf->frameRate      = i->config_framerate*0x100;
+    i->swf->fileVersion    = 0;
+    i->swf->frameRate      = 0x80;
     i->swf->movieSize.xmin = 0;
     i->swf->movieSize.ymin = 0;
     i->swf->movieSize.xmax = 0;
@@ -998,14 +1084,12 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     
     i->swf->firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     i->tag = i->swf->firstTag;
+    RGBA rgb;
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
     rgb.r = 0;
     swf_SetRGB(i->tag,&rgb);
 
     i->startdepth = i->depth = 0;
-    
-    if(i->config_protect)
-      i->tag = swf_InsertTag(i->tag, ST_PROTECT);
 }
 
 static void startshape(gfxdevice_t*dev)
@@ -1100,7 +1184,7 @@ void cancelshape(gfxdevice_t*dev)
     i->shapeid = -1;
     i->bboxrectpos = -1;
 
-//    i->currentswfid--; // this was an *exceptionally* bad idea
+//    i->currentswfid--; // doesn't work, for some reason
 }
 
 void fixAreas(gfxdevice_t*dev)
@@ -1233,6 +1317,9 @@ void swfoutput_finalize(gfxdevice_t*dev)
     if(i->tag && i->tag->id == ST_END)
         return; //already done
 
+    i->swf->fileVersion = i->config_flashversion;
+    i->swf->frameRate = i->config_framerate*0x100;
+
     if(i->config_bboxvars) {
 	TAG* tag = swf_InsertTag(i->swf->firstTag, ST_DOACTION);
 	ActionTAG*a = 0;
@@ -1281,6 +1368,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
 
         iterator = iterator->next;
     }
+	
     i->tag = swf_InsertTag(i->tag,ST_END);
     TAG* tag = i->tag->prev;
 
@@ -1853,6 +1941,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "animate")) {
 	i->config_animate = atoi(value);
+    } else if(!strcmp(name, "simpleviewer")) {
+	i->config_simpleviewer = atoi(value);
     } else if(!strcmp(name, "next_bitmap_is_jpeg")) {
 	i->jpeg = 1;
     } else if(!strcmp(name, "jpegquality")) {
