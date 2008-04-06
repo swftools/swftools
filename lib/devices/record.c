@@ -415,17 +415,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length
 	unsigned char op = reader_readU8(r);
 	switch(op) {
 	    case OP_END:
-		r->dealloc(r);
-
-		{
-		    gfxfontlist_t*l = fontlist;
-		    while(l) {
-			l = l->next;
-		    }
-		}
-
-		gfxfontlist_free(fontlist, 1);
-		return;
+		goto finish;
 	    case OP_SETPARAM: {
 		msg("<trace> replay: SETPARAM");
 		char*key;
@@ -557,7 +547,9 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length
 	    }
 	}
     }
-    msg("<error> No END token in gfx recording");
+finish:
+    r->dealloc(r);
+    gfxfontlist_free(fontlist, 1);
 }
 void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 {
