@@ -126,7 +126,7 @@ devices/lrf.$(O):  devices/lrf.c devices/lrf.h
 devices/ocr.$(O): devices/ocr.c devices/ocr.h gocr/gocr.h
 	$(C) devices/ocr.c -o devices/ocr.$(O)
 
-readers/swf2.$(O): readers/swf2.c readers/swf.h
+readers/swf2.$(O): readers/swf.c readers/swf.h
 	$(C) readers/swf.c -o readers/swf2.$(O)
 readers/image.$(O): readers/image.c readers/image.h
 	$(C) readers/image.c -o readers/image.$(O)
