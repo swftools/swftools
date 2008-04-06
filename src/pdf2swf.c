@@ -39,7 +39,8 @@
 
 #define SWFDIR concatPaths(getInstallationPath(), "swfs")
 
-gfxsource_t*driver;
+static gfxsource_t*driver = 0;
+static gfxdevice_t*out = 0;
 
 static char * outputname = 0;
 static int loglevel = 3;
@@ -188,9 +189,11 @@ int args_callback_option(char*name,char*val) {
 	    *c = 0;
 	    c++;
 	    driver->set_parameter(driver, s,c);
-	}
-	else
+	    out->setparameter(out, s,c);
+	} else {
 	    driver->set_parameter(driver, s,"1");
+	    out->setparameter(out, s,"1");
+	}
 	return 1;
     }
     else if (!strcmp(name, "S"))
@@ -528,7 +531,17 @@ int main(int argn, char *argv[])
 #endif
     driver = gfxsource_pdf_create();
 
+    gfxdevice_t swf,wrap;
+    gfxdevice_swf_init(&swf);
+    
+    gfxdevice_removeclippings_init(&wrap, &swf);
+
+    out = &wrap;
     processargs(argn, argv);
+    
+    if(!flatten) {
+	out = &swf;
+    }
     
     if(!filename)
     {
@@ -581,17 +594,6 @@ int main(int argn, char *argv[])
     if(!pdf) {
         msg("<error> Couldn't open %s", filename);
         exit(1);
-    }
-
-    gfxdevice_t swf,wrap;
-    gfxdevice_swf_init(&swf);
-    gfxdevice_t*out;
-    
-    if(flatten) {
-	gfxdevice_removeclippings_init(&wrap, &swf);
-	out = &wrap;
-    } else {
-	out = &swf;
     }
 
     struct mypage_t {
