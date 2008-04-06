@@ -1775,7 +1775,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2008-03-26-1351
+VERSION=2008-04-02-1230
 
 
 # ------------------------------------------------------------------
@@ -5236,7 +5236,8 @@ done
 
 
 
-for ac_header in zlib.h gif_lib.h io.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
+
+for ac_header in zlib.h gif_lib.h io.h wchar.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
@@ -5825,7 +5826,9 @@ fi
 
 
 
-for ac_func in popen mkstemp stat lrand48 rand srand48 srand bcopy bzero time
+
+
+for ac_func in popen wcschr wcsdup mkstemp stat lrand48 rand srand48 srand bcopy bzero time
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 { echo "$as_me:$LINENO: checking for $ac_func" >&5
@@ -10010,7 +10013,7 @@ fi
 
 if test -f "release.in"; then release_in="./release"; fi
 if test -f "wx/Makefile.in"; then wx_in="wx/Makefile"; fi
-FILES="$release_in $wx_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile pdf2swf/fonts/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile lib/swf/Makefile"
+FILES="$release_in $wx_in Makefile.common ${avi2swf} Makefile lib/Makefile lib/action/Makefile src/Makefile ${pdf2swf_makefile} swfs/Makefile pdf2swf/fonts/Makefile ${pythonrfxswf} ${lame_makefile} lib/art/Makefile lib/readers/Makefile"
 ac_config_files="$ac_config_files ${FILES}"
 
 cat >confcache <<\_ACEOF
