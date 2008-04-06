@@ -40,8 +40,9 @@ GFX_DEPS=../libpdf$(A) ../libgfxswf$(A)  ../librfxswf$(A) ../libgfx$(A) ../liboc
 gfx.$(SLEXT): gfx.$(O) $(GFX_DEPS) Makefile
 	$(L) -g $(SHARED) gfx.$(O) -o gfx.$(SLEXT) $(GFX_DEPS) $(PYTHON_LIB) $(LIBS) $(CXXLIBS)
 gfx$(A): gfx.$(O) $(GFX_DEPS) Makefile
-	mkdir tmp;cd tmp;for file in $(GFX_DEPS);do ar x ../$$file || cp ../$$file .;done
-	$(AR) cru gfx$(A) gfx.$(O) tmp/*.$(O)
+	mkdir -p tmp 
+	ar cru gfx$(A) gfx.$(O)
+	for file in $(GFX_DEPS);do rm -f tmp/*;cd tmp;ar x ../$$file || cp ../$$file .;cd ..;$(AR) q gfx$(A) tmp/*.$(O) || break;done
 	$(RANLIB) gfx$(A)
 
 #TODO:
