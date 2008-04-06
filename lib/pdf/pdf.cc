@@ -484,6 +484,8 @@ void pdf_destroy(gfxsource_t*src)
     parameter_t*p = device_config;
     while(p) {
 	parameter_t*next = p->next;
+	if(p->name) free(p->name);p->name = 0;
+	if(p->value) free(p->value);p->value =0;
 	p->next = 0;delete p;
 	p = next;
     }
