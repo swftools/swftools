@@ -774,7 +774,7 @@ gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
     gfxfontlist_t*last=0,*l = list;
     while(l) {
 	last = l;
-	if(!strcmp((char*)l->font->id, font->id)) {
+	if(l->font == font) {
 	    return list; // we already know this font
 	}
 	l = l->next;
