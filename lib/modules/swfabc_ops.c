@@ -135,13 +135,13 @@ void abc_convert_s(abc_code_t*c)
 {
     swf_SetU8(c->tag, 0x70);
 }
-void abc_debug(abc_code_t*c, int v, char*s, int v, int v)
+void abc_debug(abc_code_t*c, int v, char*s, int v3, int v2)
 {
     swf_SetU8(c->tag, 0xef);
     swf_SetU8(c->tag, v);
     swf_SetU30(c->tag, dict_update(c->abc->strings, s, 0));
-    swf_SetU8(c->tag, v);
-    swf_SetU30(c->tag, v);
+    swf_SetU8(c->tag, v3);
+    swf_SetU30(c->tag, v2);
 }
 void abc_debugfile(abc_code_t*c, char*s)
 {
@@ -283,69 +283,65 @@ void abc_hasnext(abc_code_t*c)
 {
     swf_SetU8(c->tag, 0x1f);
 }
-void abc_hasnext2(abc_code_t*c, int v, int v)
+void abc_hasnext2(abc_code_t*c, int v, int v2)
 {
     swf_SetU8(c->tag, 0x32);
     swf_SetU30(c->tag, v);
-    swf_SetU30(c->tag, v);
+    swf_SetU30(c->tag, v2);
 }
-void abc_ifeq(abc_code_t*c, )
+void abc_ifeq(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x13);
 }
-void abc_iffalse(abc_code_t*c, )
+void abc_iffalse(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x12);
 }
-void abc_ifge(abc_code_t*c, )
+void abc_ifge(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x18);
 }
-void abc_ifgt(abc_code_t*c, )
+void abc_ifgt(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x17);
 }
-void abc_ifle(abc_code_t*c, )
+void abc_ifle(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x16);
 }
-void abc_iflt(abc_code_t*c, )
+void abc_iflt(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x15);
 }
-void abc_ifnge(abc_code_t*c, )
+void abc_ifnge(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x0f);
 }
-void abc_ifngt(abc_code_t*c, )
+void abc_ifngt(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x0e);
 }
-void abc_ifnle(abc_code_t*c, )
+void abc_ifnle(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x0d);
 }
-void abc_ifnlt(abc_code_t*c, )
+void abc_ifnlt(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x0c);
 }
-void abc_ifne(abc_code_t*c, )
+void abc_ifne(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x14);
 }
-void abc_ifne(abc_code_t*c, )
-{
-    swf_SetU8(c->tag, 0x14);
-}
-void abc_ifstricteq(abc_code_t*c, )
+void abc_ifstricteq(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x19);
 }
-void abc_ifstrictne(abc_code_t*c, )
+void abc_ifstrictne(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x1a);
 }
-void abc_iftrue(abc_code_t*c, )
+void abc_iftrue(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x11);
 }
@@ -389,7 +385,7 @@ void abc_istypelate(abc_code_t*c)
 {
     swf_SetU8(c->tag, 0xb3);
 }
-void abc_jump(abc_code_t*c, )
+void abc_jump(abc_code_t*c, int target)
 {
     swf_SetU8(c->tag, 0x10);
 }
@@ -409,10 +405,6 @@ void abc_lessequals(abc_code_t*c)
 void abc_lessthan(abc_code_t*c)
 {
     swf_SetU8(c->tag, 0xad);
-}
-void abc_lookupswitch(abc_code_t*c, )
-{
-    swf_SetU8(c->tag, 0x1b);
 }
 void abc_lshift(abc_code_t*c)
 {
@@ -501,7 +493,7 @@ void abc_pushdouble(abc_code_t*c, int v)
     swf_SetU8(c->tag, 0x2f);
     swf_SetU30(c->tag, v);
 }
-void abc_pushtrue(abc_code_t*c)
+void abc_pushfalse(abc_code_t*c)
 {
     swf_SetU8(c->tag, 0x27);
 }

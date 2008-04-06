@@ -650,7 +650,6 @@ opcode_t opcodes[]={
 {0x0d, "ifnle", "j"},
 {0x0c, "ifnlt", "j"},
 {0x14, "ifne", "j"},
-{0x14, "ifne", "j"},
 {0x19, "ifstricteq", "j"},
 {0x1a, "ifstrictne", "j"},
 {0x11, "iftrue", "j"},
@@ -689,7 +688,7 @@ opcode_t opcodes[]={
 {0x1d, "popscope", ""},
 {0x24, "pushbyte", "b"},
 {0x2f, "pushdouble", "u"}, //index into floats
-{0x27, "pushtrue", ""},
+{0x27, "pushfalse", ""},
 {0x2d, "pushint", "u"}, //index into ints
 {0x31, "pushnamespace", "u"}, //index into namespace
 {0x28, "pushnan", ""},
