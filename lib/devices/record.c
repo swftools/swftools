@@ -40,6 +40,7 @@
 typedef struct _internal {
     gfxfontlist_t* fontlist;
     writer_t w;
+    int cliplevel;
 } internal_t;
 
 typedef struct _internal_result {
@@ -299,6 +300,7 @@ static void record_startclip(struct _gfxdevice*dev, gfxline_t*line)
     msg("<trace> record: %08x STARTCLIP\n", dev);
     writer_writeU8(&i->w, OP_STARTCLIP);
     dumpLine(&i->w, line);
+    i->cliplevel++;
 }
 
 static void record_endclip(struct _gfxdevice*dev)
@@ -306,6 +308,10 @@ static void record_endclip(struct _gfxdevice*dev)
     internal_t*i = (internal_t*)dev->internal;
     msg("<trace> record: %08x ENDCLIP\n", dev);
     writer_writeU8(&i->w, OP_ENDCLIP);
+    i->cliplevel--;
+    if(i->cliplevel<0) {
+	msg("<error> record: endclip() without startclip()");
+    }
 }
 
 static void record_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
@@ -342,10 +348,12 @@ static void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradie
 static void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
-    msg("<trace> record: %08x ADDFONT\n", dev);
-    writer_writeU8(&i->w, OP_ADDFONT);
-    dumpFont(&i->w, font);
-    i->fontlist = gfxfontlist_addfont(i->fontlist, font);
+    msg("<trace> record: %08x ADDFONT %s\n", dev);
+    if(font && !gfxfontlist_hasfont(i->fontlist, font)) {
+	writer_writeU8(&i->w, OP_ADDFONT);
+	dumpFont(&i->w, font);
+	i->fontlist = gfxfontlist_addfont(i->fontlist, font);
+    }
 }
 
 static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
@@ -353,7 +361,6 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
     internal_t*i = (internal_t*)dev->internal;
     if(font && !gfxfontlist_hasfont(i->fontlist, font)) {
 	record_addfont(dev, font);
-	i->fontlist = gfxfontlist_addfont(i->fontlist, font);
     }
 
     msg("<trace> record: %08x DRAWCHAR %d\n", glyphnr, dev);
@@ -408,7 +415,16 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length
 	unsigned char op = reader_readU8(r);
 	switch(op) {
 	    case OP_END:
-		msg("<trace> replay: END");
+		r->dealloc(r);
+
+		{
+		    gfxfontlist_t*l = fontlist;
+		    while(l) {
+			l = l->next;
+		    }
+		}
+
+		gfxfontlist_free(fontlist, 1);
 		return;
 	    case OP_SETPARAM: {
 		msg("<trace> replay: SETPARAM");
@@ -487,6 +503,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length
 		gfxline_t* line = readLine(r);
 		gfxcxform_t* cxform = readCXForm(r);
 		out->fillbitmap(out, line, &img, &matrix, cxform);
+		gfxline_free(line);
 		if(cxform)
 		    free(cxform);
 		free(img.data);img.data=0;
@@ -540,8 +557,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length
 	    }
 	}
     }
-    r->dealloc(r);
-    gfxfontlist_free(fontlist, 1);
+    msg("<error> No END token in gfx recording");
 }
 void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 {
@@ -625,7 +641,11 @@ void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 static gfxresult_t* record_finish(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    msg("<trace> record: %08x END\n", dev);
+    msg("<trace> record: %08x END", dev);
+
+    if(i->cliplevel) {
+	msg("<error> Warning: unclosed cliplevels");
+    }
     
     writer_writeU8(&i->w, OP_END);
     
@@ -657,6 +677,7 @@ void gfxdevice_record_init(gfxdevice_t*dev)
     
     writer_init_growingmemwriter(&i->w, 1048576);
     i->fontlist = gfxfontlist_create();
+    i->cliplevel = 0;
 
     dev->setparameter = record_setparameter;
     dev->startpage = record_startpage;
