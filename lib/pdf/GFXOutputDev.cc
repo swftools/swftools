@@ -2175,7 +2175,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 
 	  width = realwidth;
 	  height = realheight;
-	  free(pic);
+	  delete[] pic;
 	  pic = pic2;
 	  
 	  /* make a black/white palette */
@@ -2197,8 +2197,8 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	}
       }
       drawimagelossless(device, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
-      free(pic2);
-      free(pic);
+      delete[] pic2;
+      delete[] pic;
       delete imgStr;
       if(maskbitmap) free(maskbitmap);
       return;
