@@ -38,6 +38,12 @@ typedef struct _parameter
     struct _parameter*next;
 } parameter_t;
 
+typedef struct _feature
+{
+    char*string;
+    struct _feature*next;
+} feature_t;
+
 void addGlobalFont(const char*filename);
 void addGlobalLanguageDir(const char*dir);
 void addGlobalFontDir(const char*dirname);
@@ -215,6 +221,8 @@ public:
   void showfeature(const char*feature,char fully, char warn);
   void warnfeature(const char*feature,char fully);
   void infofeature(const char*feature);
+
+  feature_t*featurewarnings;
 
   char outer_clip_box; //whether the page clip box is still on
 

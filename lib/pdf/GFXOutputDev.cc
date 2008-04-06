@@ -152,16 +152,9 @@ static void dbg(const char*format, ...)
 }
 
 
-typedef struct _feature
-{
-    char*string;
-    struct _feature*next;
-} feature_t;
-feature_t*featurewarnings = 0;
-
 void GFXOutputDev::showfeature(const char*feature, char fully, char warn)
 {
-    feature_t*f = featurewarnings;
+    feature_t*f = this->featurewarnings;
     while(f) {
 	if(!strcmp(feature, f->string))
 	    return;
@@ -169,8 +162,8 @@ void GFXOutputDev::showfeature(const char*feature, char fully, char warn)
     }
     f = (feature_t*)malloc(sizeof(feature_t));
     f->string = strdup(feature);
-    f->next = featurewarnings;
-    featurewarnings = f;
+    f->next = this->featurewarnings;
+    this->featurewarnings = f;
     if(warn) {
 	msg("<warning> %s not yet %ssupported!",feature,fully?"fully ":"");
 	if(this->config_break_on_warning) {
@@ -582,6 +575,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->gfxfontlist = gfxfontlist_create();
   
     memset(states, 0, sizeof(states));
+    this->featurewarnings = 0;
 };
 
 void GFXOutputDev::setParameter(const char*key, const char*value)
@@ -1218,6 +1212,18 @@ GFXOutputDev::~GFXOutputDev()
     if(this->pages) {
 	free(this->pages); this->pages = 0;
     }
+    
+    feature_t*f = this->featurewarnings;
+    while(f) {
+	feature_t*next = f->next;
+	if(f->string) {
+	    free(f->string);f->string =0;
+	}
+	f->next = 0;
+	free(f);
+	f = next;
+    }
+    this->featurewarnings = 0;
 
     gfxfontlist_free(this->gfxfontlist, 1);this->gfxfontlist = 0;
 };
@@ -2114,14 +2120,14 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
-	  msg("<notice> file contains pbm pictures %s",mask?"(masked)":"");
+	  msg("<notice> File contains pbm pictures %s",mask?"(masked)":"");
 	  pbminfo = 1;
       }
       if(mask)
       msg("<verbose> drawing %d by %d masked picture", width, height);
   }
   if(!jpeginfo && (str->getKind()==strDCT)) {
-      msg("<notice> file contains jpeg pictures");
+      msg("<notice> File contains jpeg pictures");
       jpeginfo = 1;
   }
 
@@ -2664,14 +2670,13 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     gfxresult_record_replay(below, &uniondev);
     gfxline_t*belowoutline = gfxdevice_union_getunion(&uniondev);
     uniondev.finish(&uniondev);
-
     gfxbbox_t bbox = gfxline_getbbox(belowoutline);
+    gfxline_free(belowoutline);belowoutline=0;
 #if 0 
     this->device->startclip(this->device, belowoutline);
     gfxresult_record_replay(below, this->device);
     gfxresult_record_replay(mask, this->device);
     this->device->endclip(this->device);
-    gfxline_free(belowoutline);
 #endif
     
     int width = (int)bbox.xmax,height = (int)bbox.ymax;
