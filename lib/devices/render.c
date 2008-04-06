@@ -567,7 +567,7 @@ static void draw_line(gfxdevice_t*dev, gfxline_t*line)
             xx=x1;
 	    yy=y1;
 
-            parts = (int)(sqrt(c)/3);
+            parts = (int)(sqrt(c));
             if(!parts) parts = 1;
 
             for(t=1;t<=parts;t++) {
