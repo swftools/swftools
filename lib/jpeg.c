@@ -319,7 +319,7 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
     for (y=0;y<height;y++) {
 	int x;
 	U8 *js = scanline;
-	RGBA*line = (RGBA*)&(*dest)[y*width];
+        RGBA*line = &((RGBA*)(*dest))[y*width];
 
 	jpeg_read_scanlines(&cinfo, &js, 1);
 	if (cinfo.out_color_space == JCS_GRAYSCALE) {
