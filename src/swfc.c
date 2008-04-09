@@ -2364,11 +2364,11 @@ int parseTwip(char*str)
 	}
 	free(old);
 	if(l==0)
-	    return sign*atoi(str)*20;
+	    return sign*(atoi(str)*20);
 	if(l==1)
-	    return sign*atoi(str)*20+atoi(dot)*2;
+	    return sign*(atoi(str)*20+atoi(dot)*2);
 	if(l==2)
-	    return sign*atoi(str)*20+atoi(dot)/5;
+	    return sign*(atoi(str)*20+atoi(dot)/5);
     }
     return 0;
 }
