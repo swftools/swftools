@@ -274,7 +274,11 @@ libgfx_sources = [
 "lib/art/art_svp_render_aa.c", "lib/art/art_svp_vpath.c", "lib/art/art_svp_vpath_stroke.c",
 "lib/art/art_svp_wind.c", "lib/art/art_uta.c", "lib/art/art_uta_ops.c", "lib/art/art_uta_rect.c",
 "lib/art/art_uta_svp.c", "lib/art/art_uta_vpath.c", "lib/art/art_vpath.c", "lib/art/art_vpath_bpath.c",
-"lib/art/art_vpath_dash.c", "lib/art/art_vpath_svp.c",
+"lib/art/art_vpath_dash.c", "lib/art/art_vpath_svp.c", "lib/gocr/box.c", 
+"lib/gocr/database.c", "lib/gocr/detect.c", "lib/gocr/job.c", "lib/gocr/lines.c", "lib/gocr/list.c", 
+"lib/gocr/ocr0.c", "lib/gocr/ocr0n.c", "lib/gocr/ocr1.c", "lib/gocr/otsu.c", "lib/gocr/output.c", 
+"lib/gocr/pgm2asc.c", "lib/gocr/pixel.c", "lib/gocr/progress.c", "lib/gocr/remove.c", "lib/gocr/unicode.c",
+"lib/devices/ocr.c",
 ]
 gfxswf_sources = ["lib/devices/swf.c", "lib/readers/swf.c", "lib/readers/image.c"]
 
