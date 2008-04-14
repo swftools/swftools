@@ -58,13 +58,24 @@ int main()
     pattern = FcPatternBuild(0, FC_FAMILY, FcTypeString, "", 0);
     FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
     FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
+
+    FcConfig*c = FcConfigCreate();
+    FcConfigParseAndLoad(c, (FcChar8*)"", 1);
+    FcConfigBuildFonts(c);
+    FcConfigSetCurrent(c);
+	
+    FcFontSet * set =  FcConfigGetFonts(c, FcSetSystem);
+    FcFontSetDestroy(set);
+
     FcConfigSubstitute(0, pattern, FcMatchPattern); 
     FcDefaultSubstitute(pattern);
     match = FcFontMatch(0, pattern, &result);
     FcPatternGetString(match, "family", 0, &v) == FcResultMatch;
+    FcPatternGetBool(match, "family", 0, &v) == FcResultMatch;
     FcPatternPrint(pattern);
     FcPatternDestroy(pattern);
     FcPatternDestroy(match);
+    FcFini();
     return 0;
 }
 EOF
