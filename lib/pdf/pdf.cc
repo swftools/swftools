@@ -361,10 +361,14 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
         multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
 	printf("\nPDF device global parameters:\n");
-	printf("fontdir=<dir>   a directory with additional fonts\n");
-	printf("font=<filename> an additional font filename\n");
-	printf("pages=<range>   the range of pages to convert (example: pages=1-100,210-)\n");
-	printf("zoom=<dpi>      the resultion (default: 72)\n");
+	printf("fontdir=<dir>     a directory with additional fonts\n");
+	printf("font=<filename>   an additional font filename\n");
+	printf("pages=<range>     the range of pages to convert (example: pages=1-100,210-)\n");
+	printf("zoom=<dpi>        the resultion (default: 72)\n");
+	printf("languagedir=<dir> Add an xpdf language directory\n");
+	printf("multiply=<times>  Render everything at <times> the resolution\n");
+	printf("poly2bitmap       Convert graphics to bitmaps\n");
+	printf("bitmap            Convert everything to bitmaps\n");
     }	
     storeDeviceParameter(name,value);
 }
