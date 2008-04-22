@@ -80,6 +80,8 @@
 
 #include <math.h>
 
+#define SQRT2 1.41421356237309504880
+
 typedef struct _fontfile
 {
     const char*filename;
@@ -1026,13 +1028,12 @@ void GFXOutputDev::endPage()
 	device->endclip(device);
 	outer_clip_box = 0;
     }
-    if(this->dashPattern) {
-        free(this->dashPattern);
-        this->dashPattern = 0;
-    }
+    this->dashPattern = 0;
     /* notice: we're not fully done yet with this page- there might still be 
        a few calls to drawLink() yet to come */
 }
+
+static inline double sqr(double x) {return x*x;}
 
 #define STROKE_FILL 1
 #define STROKE_CLIP 2
@@ -1067,13 +1068,27 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 
     gfxline_t*line2 = 0;
 
-    if(0 && this->dashLength && this->dashPattern) {
+    if(this->dashLength && this->dashPattern) {
 	float * dash = (float*)malloc(sizeof(float)*(this->dashLength+1));
 	int t;
+
+        /* try to find out how much the transformation matrix would
+           stretch the dashes, and factor that into the dash lengths.
+           This is not the entirely correct approach- it would be 
+           better to first convert the path to an unscaled version,
+           then apply dashing, and then transform the path using
+           the current transformation matrix. However there are few
+           PDFs which actually stretch a dashed path in a non-orthonormal
+           way */
+        double tx1, ty1, tx2, ty2;
+	this->transformXY(state, 0, 0, &tx1, &ty1);
+	this->transformXY(state, 1, 1, &tx2, &ty2);
+        double f = sqrt(sqr(tx2-tx1)+sqr(ty2-ty1)) / SQRT2;
+
 	msg("<trace> %d dashes", this->dashLength);
 	msg("<trace> |  phase: %f", this->dashStart);
 	for(t=0;t<this->dashLength;t++) {
-	    dash[t] = (float)this->dashPattern[t];
+	    dash[t] = (float)this->dashPattern[t] * f;
 	    msg("<trace> |  d%-3d: %f", t, this->dashPattern[t]);
 	}
 	dash[this->dashLength] = -1;
@@ -1081,7 +1096,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 	    dump_outline(line);
 	}
 
-	line2 = gfxtool_dash_line(line, dash, (float)this->dashStart);
+	line2 = gfxtool_dash_line(line, dash, (float)(this->dashStart*f));
 	line = line2;
 	free(dash);
 	msg("<trace> After dashing:");
