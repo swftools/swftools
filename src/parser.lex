@@ -168,7 +168,7 @@ void handleInclude(char*text, int len)
     while(len >=1 && (text[0] == ' ' || text[0] == '\t')) {
 	text++;len--;
     }
-    while(len >= 1 && (text[len-1] == ' ' || text[len-1] == '\n')) {
+    while(len >= 1 && (text[len-1] == ' ' || text[len-1] == "\r" || text[len-1] == '\n')) {
 	len--;
     }
     if(len >= 2 && text[0] == '"' && text[len-1] == '"') {
