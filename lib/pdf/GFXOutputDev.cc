@@ -1026,6 +1026,10 @@ void GFXOutputDev::endPage()
 	device->endclip(device);
 	outer_clip_box = 0;
     }
+    if(this->dashPattern) {
+        free(this->dashPattern);
+        this->dashPattern = 0;
+    }
     /* notice: we're not fully done yet with this page- there might still be 
        a few calls to drawLink() yet to come */
 }
@@ -1050,7 +1054,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     col.g = colToByte(rgb.g);
     col.b = colToByte(rgb.b);
     col.a = (unsigned char)(opaq*255);
-   
+
     gfx_capType capType = gfx_capRound;
     if(lineCap == 0) capType = gfx_capButt;
     else if(lineCap == 1) capType = gfx_capRound;
@@ -1061,28 +1065,23 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     else if(lineJoin == 1) joinType = gfx_joinRound;
     else if(lineJoin == 2) joinType = gfx_joinBevel;
 
-    int dashnum = 0;
-    double dashphase = 0;
-    double * ldash = 0;
-    state->getLineDash(&ldash, &dashnum, &dashphase);
-
     gfxline_t*line2 = 0;
 
-    if(dashnum && ldash) {
-	float * dash = (float*)malloc(sizeof(float)*(dashnum+1));
+    if(0 && this->dashLength && this->dashPattern) {
+	float * dash = (float*)malloc(sizeof(float)*(this->dashLength+1));
 	int t;
-	msg("<trace> %d dashes", dashnum);
-	msg("<trace> |  phase: %f", dashphase);
-	for(t=0;t<dashnum;t++) {
-	    dash[t] = (float)ldash[t];
-	    msg("<trace> |  d%-3d: %f", t, ldash[t]);
+	msg("<trace> %d dashes", this->dashLength);
+	msg("<trace> |  phase: %f", this->dashStart);
+	for(t=0;t<this->dashLength;t++) {
+	    dash[t] = (float)this->dashPattern[t];
+	    msg("<trace> |  d%-3d: %f", t, this->dashPattern[t]);
 	}
-	dash[dashnum] = -1;
+	dash[this->dashLength] = -1;
 	if(getLogLevel() >= LOGLEVEL_TRACE) {
 	    dump_outline(line);
 	}
 
-	line2 = gfxtool_dash_line(line, dash, (float)dashphase);
+	line2 = gfxtool_dash_line(line, dash, (float)this->dashStart);
 	line = line2;
 	free(dash);
 	msg("<trace> After dashing:");
@@ -1093,7 +1092,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 		width,
 		lineJoin==0?"miter": (lineJoin==1?"round":"bevel"),
 		lineCap==0?"butt": (lineJoin==1?"round":"square"),
-		dashnum,
+		this->dashLength,
 		col.r,col.g,col.b,col.a
 		);
         dump_outline(line);
@@ -1529,6 +1528,10 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     states[statepos].clipbbox.ymin = x1;
     states[statepos].clipbbox.xmax = x2;
     states[statepos].clipbbox.ymax = y2;
+    
+    this->dashPattern = 0;
+    this->dashLength = 0;
+    this->dashStart = 0;
 }
 
 
@@ -1755,11 +1758,19 @@ void GFXOutputDev::restoreState(GfxState *state) {
   }
   statepos--;
 }
+ 
+void GFXOutputDev::updateLineDash(GfxState *state) 
+{
+    state->getLineDash(&this->dashPattern, &this->dashLength, &this->dashStart);
+    msg("<debug> updateLineDash, %d dashes", this->dashLength);
+    if(!this->dashLength) {
+        this->dashPattern = 0;
+    }
+}
 
 void GFXOutputDev::updateLineWidth(GfxState *state)
 {
     double width = state->getTransformedLineWidth();
-    //swfoutput_setlinewidth(&device, width);
 }
 
 void GFXOutputDev::updateLineCap(GfxState *state)
