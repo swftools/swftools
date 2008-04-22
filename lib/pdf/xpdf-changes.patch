@@ -134,6 +134,17 @@ diff -u -r1.10 -r1.12
  					   sizeof(GfxColorComp));
        for (i = 0; i <= maxPixel; ++i) {
  	lookup[k][i] = dblToCol(decodeLow[k] +
+@@ -3754,7 +3769,10 @@
+ }
+ 
+ void GfxState::setPath(GfxPath *pathA) {
++  if(pathA) {
++      if(path)
+   delete path;
++  }
+   path = pathA;
+ }
+
 Index: GlobalParams.cc
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.cc,v
