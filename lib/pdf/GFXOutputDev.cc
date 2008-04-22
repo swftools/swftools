@@ -73,8 +73,6 @@
 #include "../devices/polyops.h"
 #include "../devices/render.h"
 
-#include "../art/libart.h"
-
 #include "../png.h"
 #include "fonts.h"
 
@@ -1128,7 +1126,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
         } else {
             device->fill(device, gfxline, &col);
         }
-        free(gfxline);
+        gfxline_free(gfxline);
 	gfxpoly_free(poly);
     } else {
         if(flags&STROKE_CLIP) 
