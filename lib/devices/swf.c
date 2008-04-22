@@ -1667,12 +1667,15 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
     free(tmp);
 }
 
-static void drawgfxline(gfxdevice_t*dev, gfxline_t*line)
+static void drawgfxline(gfxdevice_t*dev, gfxline_t*line, int fill)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     gfxcoord_t lastx=0,lasty=0,px=0,py=0;
     char lastwasmoveto;
     int lines= 0, splines=0;
+
+    i->fill = fill;
+
     while(1) {
 	if(!line)
 	    break;
@@ -1736,7 +1739,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     swf_SetShapeBits(i->tag,i->shape);
     swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,0,fsid,0);
     i->swflastx = i->swflasty = 0;
-    drawgfxline(dev, points);
+    drawgfxline(dev, points, 1);
     swf_ShapeSetEnd(i->tag);
 
     /* shape2 */
@@ -1759,7 +1762,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     swf_SetShapeBits(i->tag,i->shape);
     swf_ShapeSetAll(i->tag,i->shape,/*x*/0,/*y*/0,0,fsid,0);
     i->swflastx = i->swflasty = 0;
-    drawgfxline(dev, points);
+    drawgfxline(dev, points, 1);
     swf_ShapeSetEnd(i->tag);
 
     if(!mouseover)
@@ -2180,7 +2183,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     swf_SetShapeBits(i->tag,shape);
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
-    drawgfxline(dev, line);
+    drawgfxline(dev, line, 1);
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
@@ -2211,7 +2214,7 @@ static void drawoutline(gfxdevice_t*dev, gfxline_t*line)
     swf_ShapeCountBits(shape,NULL,NULL);
     swf_SetShapeBits(i->tag,shape);
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,lsid,0,0);
-    drawgfxline(dev, line);
+    drawgfxline(dev, line, 1);
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 	
@@ -2257,7 +2260,7 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
     i->shapeisempty = 1;
-    drawgfxline(dev, line);
+    drawgfxline(dev, line, 1);
     if(i->shapeisempty) {
 	/* an empty clip shape is equivalent to a shape with no area */
 	int x = line?line->x:0;
@@ -2474,7 +2477,7 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
     swfoutput_setlinewidth(dev, width);
     startshape(dev);
     stopFill(dev);
-    drawgfxline(dev, line);
+    drawgfxline(dev, line, 0);
 
     if(i->config_normalize_polygon_positions) {
 	free(line); //account for _move
@@ -2513,8 +2516,7 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     swfoutput_setfillcolor(dev, color->r, color->g, color->b, color->a);
     startshape(dev);
     startFill(dev);
-    i->fill=1;
-    drawgfxline(dev, line);
+    drawgfxline(dev, line, 1);
     
     if(i->currentswfid==2 && r.xmin==0 && r.ymin==0 && r.xmax==i->max_x && r.ymax==i->max_y) {
 	if(i->config_watermark) {
@@ -2591,7 +2593,7 @@ static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*grad
     swf_SetShapeBits(i->tag,shape);
     swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
-    drawgfxline(dev, line);
+    drawgfxline(dev, line, 1);
     swf_ShapeSetEnd(i->tag);
     swf_ShapeFree(shape);
 
