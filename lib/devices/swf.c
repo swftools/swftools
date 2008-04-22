@@ -2825,6 +2825,9 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	msg("<verbose> Moving character origin to %f %f\n", matrix->tx, matrix->ty);
 	endtext(dev);
 	setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11, matrix->tx, matrix->ty, 1);
+        /* since we just moved the char origin to the current char's position, 
+           it now has the relative position (0,0) */
+        x = y = 0;
     }
     
     if(i->shapeid>=0)
