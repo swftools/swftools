@@ -1274,7 +1274,9 @@ void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 #if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
     GfxState*state1 = state->copy();
     GfxState*state2 = state->copy();
+    state1->setPath(0);
     state1->setPath(state->getPath()->copy());
+    state2->setPath(0);
     state2->setPath(state->getPath()->copy());
 #else
     GfxState*state1 = state->copy(gTrue);
@@ -1292,7 +1294,9 @@ void BitmapOutputDev::endTransparencyGroup(GfxState *state)
 #if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
     GfxState*state1 = state->copy();
     GfxState*state2 = state->copy();
+    state1->setPath(0);
     state1->setPath(state->getPath()->copy());
+    state2->setPath(0);
     state2->setPath(state->getPath()->copy());
 #else
     GfxState*state1 = state->copy(gTrue);
