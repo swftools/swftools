@@ -86,6 +86,7 @@ public:
 
   //----- update graphics state
 
+  virtual void updateLineDash(GfxState *state);
   virtual void updateFont(GfxState *state);
   virtual void updateFontMatrix(GfxState *state);
   virtual void updateFillColor(GfxState *state);
@@ -286,6 +287,10 @@ public:
   int config_convertgradients;
   int config_optimize_polygons;
   double config_fontquality;
+    
+  double *dashPattern;
+  int dashLength;
+  double dashStart;
 
   parameter_t*parameters;
 };
