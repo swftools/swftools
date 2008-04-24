@@ -3,7 +3,8 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: SWF.$(SLEXT) SWF$(A) gfx.$(SLEXT) gfx$(A)
+all: SWF.$(SLEXT) gfx.$(SLEXT)
+static: SWF$(A) gfx$(A)
 exe: mypython$(E) swfpython$(E) testmem$(E)
 
 primitives.$(O): primitives.c primitives.h
@@ -77,4 +78,4 @@ test6: SWF.$(SLEXT)
 clean:
 	rm -f *.o *.obj *.so mypython swfpython
 
-.PHONY: test,test1,test2
+.PHONY: test test1 test2 static all exe
