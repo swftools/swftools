@@ -120,10 +120,9 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
           lineto x,y moveto x,y becomes lineto x,y
           moveto x,y moveto x,y becomes moveto x,y
      */
-    int t;
+    int t = 1;
     while(t < pos)
     {
-	int t = 1;
 	if ((vec[t-1].x == vec[t].x) && (vec[t-1].y == vec[t].y)) {
 	    // adjacent identical points; remove one
 	    int type = ART_MOVETO;
@@ -352,7 +351,6 @@ gfxpoly_t* gfxpoly_union(gfxpoly_t*poly1, gfxpoly_t*poly2)
 gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line, 0);
-
     ArtSVP *svp = art_svp_vpath_stroke (vec,
 			(joint_style==gfx_joinMiter)?ART_PATH_STROKE_JOIN_MITER:
 			((joint_style==gfx_joinRound)?ART_PATH_STROKE_JOIN_ROUND:
