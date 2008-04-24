@@ -1083,6 +1083,8 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 	this->transformXY(state, 1, 1, &tx2, &ty2);
         double f = sqrt(sqr(tx2-tx1)+sqr(ty2-ty1)) / SQRT2;
 
+	f = 1.0; //disable dash length transform for now
+
 	msg("<trace> %d dashes", this->dashLength);
 	msg("<trace> |  phase: %f", this->dashStart);
 	for(t=0;t<this->dashLength;t++) {
