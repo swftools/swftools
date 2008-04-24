@@ -477,12 +477,13 @@ void newclip(struct _gfxdevice*dev)
 	memset(c->data, 0, sizeof(U32)*i->bitwidth*i->height2);
 }
 
-void endclip(struct _gfxdevice*dev)
+void endclip(struct _gfxdevice*dev, char removelast)
 {
     internal_t*i = (internal_t*)dev->internal;
-    
-    if(!i->clipbuf) {
-	fprintf(stderr, "endclip without any active clip buffers");
+   
+    /* test for at least one cliplevel (the one we created ourselves) */
+    if(!i->clipbuf || (!i->clipbuf->next && !removelast)) {
+	fprintf(stderr, "endclip without any active clip buffers\n");
 	return;
     }
 
@@ -599,7 +600,7 @@ void render_startclip(struct _gfxdevice*dev, gfxline_t*line)
 void render_endclip(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    endclip(dev);
+    endclip(dev, 0);
 }
 
 void render_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
@@ -884,10 +885,10 @@ void render_endpage(struct _gfxdevice*dev)
 	exit(1);
     }
 
-    endclip(dev);
+    endclip(dev, 1);
     while(i->clipbuf) {
 	fprintf(stderr, "Warning: unclosed clip while processing endpage()\n");
-	endclip(dev);
+	endclip(dev, 1);
     }
     
     internal_result_t*ir= (internal_result_t*)rfx_calloc(sizeof(internal_result_t));
