@@ -1739,7 +1739,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 }
 
 void GFXOutputDev::saveState(GfxState *state) {
-    dbg("saveState");dbgindent+=2;
+    dbg("saveState"); dbgindent+=2;
 
     msg("<trace> saveState");
     updateAll(state);
@@ -2561,11 +2561,11 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 				      GBool forSoftMask)
 {
     const char*colormodename = "";
-
+  
     if(blendingColorSpace) {
 	colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
     }
-    dbg("beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
+    dbg("beginTransparencyGroup device=%08x %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", device, bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     
     //states[statepos].createsoftmask |= forSoftMask;
@@ -2643,8 +2643,14 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 
 void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *rgb)
 {
+    if(states[statepos].softmask) {
+	/* shouldn't happen, but *does* happen */
+	clearSoftMask(state);
+    }
+
     /* alpha = 1: retrieve mask values from alpha layer
        alpha = 0: retrieve mask values from luminance */
+
     dbg("setSoftMask %.1f/%.1f/%.1f/%.1f alpha=%d backdrop=%02x%02x%02x",
 	    bbox[0], bbox[1], bbox[2], bbox[3], alpha, colToByte(rgb->c[0]), colToByte(rgb->c[1]), colToByte(rgb->c[2]));
     msg("<verbose> setSoftMask %.1f/%.1f/%.1f/%.1f alpha=%d backdrop=%02x%02x%02x",
@@ -2658,7 +2664,7 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
     gfxdevice_record_init(this->device);
 
-    dbg("softmaskrecording is %08x at statepos %d\n", states[statepos].softmaskrecording, statepos);
+    dbg("softmaskrecording is %08x (dev=%08x) at statepos %d\n", states[statepos].softmaskrecording, this->device, statepos);
     
     states[statepos].softmask = 1;
     states[statepos].softmask_alpha = alpha;
@@ -2681,7 +2687,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
 	return;
     states[statepos].softmask = 0;
     dbg("clearSoftMask statepos=%d", statepos);
-    msg("<verbose> clearSoftMask");
+    msg("<verbose> clearSoftMask statepos=%d", statepos);
     
     if(!states[statepos].softmaskrecording || strcmp(this->device->name, "record")) {
 	msg("<error> Error in softmask/tgroup ordering");
