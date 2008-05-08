@@ -24,8 +24,10 @@
 #include "gfxdevice.h"
 #include "gfxtools.h"
 #include "gfxpoly.h"
+#include "mem.h"
 #include "art/libart.h"
 #include "art/art_svp_intersect.h"
+#include "log.h"
 #include <assert.h>
 #include <memory.h>
 #include <math.h>
@@ -104,9 +106,9 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 	int t;
 	for(t=0;vec[t].code!=ART_END;t++) {
 	    if(t>0 && vec[t-1].code==ART_MOVETO && vec[t].code==ART_LINETO 
-		    && vec[t+1].code!=ART_LINETO
-		&& vec[t-1].x == vec[t].x
-		&& vec[t-1].y == vec[t].y) {
+		    && vec[t+1].code!=ART_LINETO &&
+		vec[t-1].x == vec[t].x && 
+                vec[t-1].y == vec[t].y) {
 		vec[t].x += 0.01;
 	    }
 	    x = vec[t].x;
@@ -120,11 +122,22 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
           lineto x,y lineto x,y becomes lineto x,y
           lineto x,y moveto x,y becomes lineto x,y
           moveto x,y moveto x,y becomes moveto x,y
+          lineto x,y lineto x2,y2 becomes lineto x2,y2 (if dir(x,y) ~= dir(x2,y2))
      */
     int t = 1;
     while(t < pos)
     {
-	if ((vec[t-1].x == vec[t].x) && (vec[t-1].y == vec[t].y)) {
+        double dx = vec[t].x-vec[t-1].x;
+        double dy = vec[t].y-vec[t-1].y;
+        char samedir = 0;
+        if(t<pos-1 && vec[t].code == ART_LINETO && vec[t+1].code == ART_LINETO) {
+            double dx2 = vec[t+1].x-vec[t].x;
+            double dy2 = vec[t+1].y-vec[t].y;
+            if(fabs(dx*dy2 - dy*dx2) < 0.001) {
+                samedir=1;
+            }
+        }
+	if(fabs(dx) + fabs(dy) < 0.01 || samedir) {
 	    // adjacent identical points; remove the second
 	    memcpy(&vec[t], &vec[t+1], sizeof(vec[0]) * (pos - t - 1));
 	    pos--;
@@ -200,17 +213,114 @@ void show_path(ArtSVP*path)
     printf("\n");
 }
 
-ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
+void write_svp_postscript(const char*filename, ArtSVP*svp)
+{
+    FILE*fi = fopen(filename, "wb");
+    int i, j;
+    double xmin=0,ymin=0,xmax=0,ymax=0;
+    fprintf(fi, "%% begin\n");
+    for (i = 0; i < svp->n_segs; i++) {
+        for (j = 0; j < svp->segs[i].n_points; j++) {
+            double x = svp->segs[i].points[j].x;
+            double y = svp->segs[i].points[j].y;
+            if(i==0 && j==0) {
+                xmin = xmax = x;
+                ymin = ymax = y;
+            } else {
+                if(x < xmin) xmin = x;
+                if(x > xmax) xmax = x;
+                if(y < ymin) ymin = y;
+                if(y > ymax) ymax = y;
+            }
+        }
+    }
+    if(xmax == xmin) xmax=xmin+1;
+    if(ymax == ymin) ymax=ymin+1;
+
+    for (i = 0; i < svp->n_segs; i++)
+      {
+        fprintf(fi, "%g setgray\n", svp->segs[i].dir ? 0.7 : 0);
+        for (j = 0; j < svp->segs[i].n_points; j++)
+          {
+            fprintf(fi, "%g %g %s\n",
+                    20 + 550*(svp->segs[i].points[j].x-xmin)/(xmax-xmin),
+                    820 - 800*(svp->segs[i].points[j].y-ymin)/(ymax-ymin),
+                    j ? "lineto" : "moveto");
+          }
+        fprintf(fi, "stroke\n");
+      }
+
+    fprintf(fi, "showpage\n");
+    fclose(fi);
+}
+
+void write_vpath_postscript(const char*filename, ArtVpath*path)
+{
+    FILE*fi = fopen(filename, "wb");
+    int i, j;
+    double xmin=0,ymin=0,xmax=0,ymax=0;
+    fprintf(fi, "%% begin\n");
+    ArtVpath*p = path;
+    char first = 1;
+    while(p->code != ART_END) {
+        if(p->code == ART_MOVETO || p->code == ART_MOVETO_OPEN) {
+            if(!first)
+                fprintf(fi, "stroke\n");
+            first = 0;
+            fprintf(fi, "1 setgray\n");
+            fprintf(fi, "%.32f %.32f moveto\n", p->x, p->y);
+        } else {
+            fprintf(fi, "%.32f %.32f lineto\n", p->x, p->y);
+        }
+        p++;
+    }
+    if(!first)
+        fprintf(fi, "stroke\n");
+    fprintf(fi, "showpage\n");
+    fclose(fi);
+}
+
+static int vpath_len(ArtVpath*svp)
+{
+    int len = 0;
+    while(svp->code != ART_END) {
+        svp ++;
+        len ++;
+    }
+    return len;
+}
+
+int gfxline_len(gfxline_t*line)
+{
+    gfxline_t*i = line;
+    int len = 0;
+    while(i) {
+        len ++;
+        i = i->next;
+    }
+    return len;
+}
+
+
+static int debug = 0;
+static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line, 1);
+    msg("<verbose> Casting gfxline of %d segments (%d line segments) to a gfxpoly", gfxline_len(line), vpath_len(vec));
+
     if(perturb) {
 	ArtVpath* vec2 = art_vpath_perturb(vec);
 	free(vec);
 	vec = vec2;
     }
     ArtSVP *svp = art_svp_from_vpath(vec);
+    if(debug) {
+        write_vpath_postscript("vpath.ps", vec);
+        write_svp_postscript("polygon.ps", svp);
+    }
     free(vec);
 
+#if 0
     // We need to make sure that the SVP we now have bounds an area (i.e. the
     // source line wound anticlockwise) rather than excludes an area (i.e. the
     // line wound clockwise). It seems that PDF (or xpdf) is less strict about
@@ -272,6 +382,8 @@ ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
 		svp->segs[i].dir = 1;
 	}
     }
+#endif
+
     return svp;
 }
 
@@ -281,6 +393,9 @@ gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
     int size = 0;
     int t;
     int pos = 0;
+
+    msg("<verbose> Casting polygon of %d segments back to gfxline", svp->n_segs);
+
     for(t=0;t<svp->n_segs;t++) {
 	size += svp->segs[t].n_points + 1;
     }
@@ -305,24 +420,17 @@ gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
 	return 0;
     }
 }
-
 gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 {
     ArtSVP* svp = gfxfillToSVP(line, 1);
-    if (svp->n_segs > 500)
-    {
-	int lineParts = 0;
-	gfxline_t* lineCursor = line;
-	while(lineCursor != NULL)
-	{
-	    if(lineCursor->type != gfx_moveTo) ++lineParts;
-	    lineCursor = lineCursor->next;
-	}
-	fprintf(stderr, "arts_fill abandonning shape with %d segments (%d line parts)\n", svp->n_segs, lineParts);
-	art_svp_free(svp);
 
-	/* return empty shape */
-	return (gfxpoly_t*)gfxpoly_strokeToPoly(0, 0, gfx_capButt, gfx_joinMiter, 0);
+    /* we do xor-filling by default, so dir is always 1 
+       (actually for oddeven rewinding it makes no difference, but
+        it's "cleaner")
+     */
+    int t;
+    for(t=0; t<svp->n_segs; t++) {
+        svp->segs[t].dir = 1;
     }
 
     /* for some reason, we need to rewind / self-intersect the polygons that gfxfillToSVP
@@ -345,6 +453,7 @@ gfxpoly_t* gfxpoly_intersect(gfxpoly_t*poly1, gfxpoly_t*poly2)
 {
     ArtSVP* svp1 = (ArtSVP*)poly1;
     ArtSVP* svp2 = (ArtSVP*)poly2;
+    msg("<verbose> Intersecting two polygons of %d and %d segments", svp1->n_segs, svp2->n_segs);
 	
     ArtSVP* svp = art_svp_intersect(svp1, svp2);
     return (gfxpoly_t*)svp;
@@ -354,6 +463,7 @@ gfxpoly_t* gfxpoly_union(gfxpoly_t*poly1, gfxpoly_t*poly2)
 {
     ArtSVP* svp1 = (ArtSVP*)poly1;
     ArtSVP* svp2 = (ArtSVP*)poly2;
+    msg("<verbose> Unifying two polygons of %d and %d segments", svp1->n_segs, svp2->n_segs);
 	
     ArtSVP* svp = art_svp_union(svp1, svp2);
     return (gfxpoly_t*)svp;
@@ -362,6 +472,8 @@ gfxpoly_t* gfxpoly_union(gfxpoly_t*poly1, gfxpoly_t*poly2)
 gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line, 0);
+    msg("<verbose> Casting gfxline of %d segments to a stroke-polygon", gfxline_len(line));
+
     ArtSVP *svp = art_svp_vpath_stroke (vec,
 			(joint_style==gfx_joinMiter)?ART_PATH_STROKE_JOIN_MITER:
 			((joint_style==gfx_joinRound)?ART_PATH_STROKE_JOIN_ROUND:
@@ -379,15 +491,21 @@ gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType ca
 
 gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
 {
+    msg("<verbose> Converting circular-filled gfxline of %d segments to even-odd filled gfxline", gfxline_len(line));
     ArtSVP* svp = gfxfillToSVP(line, 1);
 
+    /* TODO: ART_WIND_RULE_POSITIVE means that a shape is visible if
+             positive and negative line segments add up to something positive.
+             I *think* that clockwise fill in PDF is defined in a way, however,
+             that the *last* shape's direction will determine whether something
+             is filled */
     ArtSVP* svp_rewinded;
 #ifdef ART_USE_NEW_INTERSECTOR
     ArtSvpWriter * swr = art_svp_writer_rewind_new (ART_WIND_RULE_POSITIVE);
     art_svp_intersector(svp, swr);
     svp_rewinded = art_svp_writer_rewind_reap(swr);
 #else
-    jjj
+    error
     svp_rewinded = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_POSITIVE);
 #endif
 
