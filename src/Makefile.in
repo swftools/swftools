@@ -90,8 +90,8 @@ font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/swf/swf.$(O) ../lib/libbase$(A) 
-	$(L) swfrender.$(O) -o $@ ../lib/swf/swf.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) $(LIBS) 
+swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) 
+	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libgfxswf$(A) ../lib/libbase$(A) $(LIBS) 
 	$(STRIP) $@
 
 PDF2SWF_OBJ=../lib/libpdf$(A) ../lib/devices/polyops.$(O) ../lib/devices/swf.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
