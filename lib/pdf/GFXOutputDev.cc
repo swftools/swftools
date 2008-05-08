@@ -1965,8 +1965,8 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
     unsigned char*newdata;
     int x,y;
     newdata= (unsigned char*)malloc(newwidth*newheight);
-    double fx = (double)(width)/newwidth;
-    double fy = (double)(height)/newheight;
+    double fx = ((double)width)/newwidth;
+    double fy = ((double)height)/newheight;
     double px = 0;
     int blocksize = (int)(8192/(fx*fy));
     int r = 8192*256/palettesize;
@@ -1985,8 +1985,8 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
 	    int yweight2 = (int)((ey-toy)*256);
 	    int a = 0;
 	    int xx,yy;
-	    for(xx=fromx;xx<=tox;xx++)
-	    for(yy=fromy;yy<=toy;yy++) {
+	    for(xx=fromx;xx<tox;xx++)
+	    for(yy=fromy;yy<toy;yy++) {
 		int b = 1-data[width*yy+xx];
 		int weight=256;
 		if(xx==fromx) weight = (weight*xweight1)/256;
@@ -2142,10 +2142,10 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       return;
   }
 
-  this->transformXY(state, 0, 1, &x1, &y1);
-  this->transformXY(state, 0, 0, &x2, &y2);
-  this->transformXY(state, 1, 0, &x3, &y3);
-  this->transformXY(state, 1, 1, &x4, &y4);
+  this->transformXY(state, 0, 1, &x1, &y1); x1 = (int)(x1);y1 = (int)(y1);
+  this->transformXY(state, 0, 0, &x2, &y2); x2 = (int)(x2);y2 = (int)(y2);
+  this->transformXY(state, 1, 0, &x3, &y3); x3 = (int)(x3);y3 = (int)(y3);
+  this->transformXY(state, 1, 1, &x4, &y4); x4 = (int)(x4);y4 = (int)(y4);
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
@@ -2201,7 +2201,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	    delete imgStr;
 	    return;
 	  }
-
+          
 	  width = realwidth;
 	  height = realheight;
 	  delete[] pic;
@@ -2217,6 +2217,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	      pal[t].b = colToByte(rgb.b);
 	      pal[t].a = (unsigned char)(t*r);
 	  }
+          
       }
 
       gfxcolor_t*pic2 = new gfxcolor_t[width*height];
