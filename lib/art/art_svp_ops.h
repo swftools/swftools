@@ -37,6 +37,8 @@ ArtSVP *art_svp_intersect (const ArtSVP *svp1, const ArtSVP *svp2);
 ArtSVP *art_svp_diff (const ArtSVP *svp1, const ArtSVP *svp2);
 ArtSVP *art_svp_minus (const ArtSVP *svp1, const ArtSVP *svp2);
 
+ArtSVP *art_svp_merge (const ArtSVP *svp1, const ArtSVP *svp2);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

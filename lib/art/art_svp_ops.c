@@ -52,8 +52,7 @@
  *
  * Return value: The merged #ArtSVP.
  **/
-static ArtSVP *
-art_svp_merge (const ArtSVP *svp1, const ArtSVP *svp2)
+ArtSVP * art_svp_merge (const ArtSVP *svp1, const ArtSVP *svp2)
 {
   ArtSVP *svp_new;
   int ix;
