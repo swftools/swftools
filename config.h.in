@@ -32,6 +32,22 @@
 /* Define if you have the time.h header file */
 #undef HAVE_TIME_H
 
+/* Define if you have the sys/time.h header file */
+#undef HAVE_SYS_TIME_H
+
+/* Define if you have the sys/resource.h header file */
+#undef HAVE_SYS_RESOURCE_H
+
+/* Define if you have the malloc.h header file */
+#undef HAVE_MALLOC_H
+
+/* Define if you have the getrusage function */
+#undef HAVE_GETRUSAGE
+
+/* Define if you have the mallinfo function */
+#undef HAVE_MALLINFO
+
+
 /* Define if you have the unistd.h header file */
 #undef HAVE_UNISTD_H
 
