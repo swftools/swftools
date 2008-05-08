@@ -34,9 +34,16 @@
 #include "art_config.h"
 #endif
 
+#include "../mem.h"
+#ifdef __mem_h__
+#define art_alloc rfx_alloc
+#define art_free rfx_free
+#define art_realloc rfx_realloc
+#else
 #define art_alloc malloc
 #define art_free free
 #define art_realloc realloc
+#endif
 
 /* These aren't, strictly speaking, configuration macros, but they're
    damn handy to have around, and may be worth playing with for
