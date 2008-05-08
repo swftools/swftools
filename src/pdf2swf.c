@@ -25,9 +25,16 @@
 #include <string.h>
 #include <unistd.h>
 #include "../config.h"
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
+
 #include "../lib/args.h"
 #include "../lib/os.h"
 #include "../lib/rfxswf.h"
@@ -55,6 +62,8 @@ static int xnup = 1;
 static int ynup = 1;
 
 static int info_only = 0;
+
+static int max_time = 0;
 
 static int flatten = 0;
 
@@ -89,6 +98,23 @@ int systemf(const char* format, ...)
     }
     return ret;
 }
+
+#ifdef HAVE_SIGNAL_H
+void sigalarm(int signal)
+{
+    msg("<fatal> Aborting rendering after %d seconds", max_time);
+#if 0 && defined(HAVE_SYS_TIME_H) && defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRUSAGE)
+    struct rusage usage;
+    getrusage(RUSAGE_CHILDREN, &usage);
+    msg("<fatal> Memory used: %d,%d,%d", usage.ru_maxrss, usage.ru_idrss, usage.ru_isrss);
+#endif 
+#if defined(HAVE_MALLINFO) && defined(HAVE_MALLOC_H)
+    struct mallinfo info = mallinfo();
+    msg("<fatal> Memory used: %d Mb (%d bytes)", info.uordblks/1048576, info.uordblks);
+#endif
+    exit(1);
+}
+#endif
 
 int args_callback_option(char*name,char*val) {
     if (!strcmp(name, "o"))
@@ -209,8 +235,11 @@ int args_callback_option(char*name,char*val) {
 #ifndef WIN32
     else if (!strcmp(name, "Q"))
     {
-	int seconds = atoi(val);
-	alarm(seconds);
+	max_time = atoi(val);
+	alarm(max_time);
+# ifdef HAVE_SIGNAL_H
+        signal(SIGALRM, sigalarm);
+# endif
 	return 1;
     }
 #endif
