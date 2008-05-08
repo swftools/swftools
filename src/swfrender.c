@@ -8,7 +8,7 @@
 #include "../lib/png.h"
 #include "../lib/args.h"
 #include "../lib/gfxsource.h"
-#include "../lib/swf/swf.h"
+#include "../lib/readers/swf.h"
 #include "../lib/devices/render.h"
 
 static struct options_t options[] = {
