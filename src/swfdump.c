@@ -1265,6 +1265,12 @@ int main (int argc,char ** argv)
 	    else
 		printf("\n");
 	}
+	else if(tag->id == ST_DEFINESCALINGGRID) {
+	    U16 id = swf_GetU16(tag);
+	    SRECT r;
+	    swf_GetRect(tag, &r);
+	    printf(" (%.2f,%.2f)-(%.2f,%.2f)\n", r.xmin/20.0, r.ymin/20.0, r.xmax/20.0, r.ymax/20.0);
+	}
 	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
 	}
 	else if(tag->id == ST_NAMECHARACTER || tag->id==ST_DEFINEFONTNAME) {
