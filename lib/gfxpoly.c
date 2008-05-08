@@ -25,6 +25,7 @@
 #include "gfxtools.h"
 #include "gfxpoly.h"
 #include "art/libart.h"
+#include "art/art_svp_intersect.h"
 #include <assert.h>
 #include <memory.h>
 #include <math.h>
@@ -114,8 +115,8 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
     }
 
     /* Find adjacent identical points. If an ajdacent pair of identical
-       points is found, the moveto is removed (unless both are movetos).
-       So moveto x,y lineto x,y becomes lineto x,y
+       points is found, the second is removed.
+       So moveto x,y lineto x,y becomes moveto x,y
           lineto x,y lineto x,y becomes lineto x,y
           lineto x,y moveto x,y becomes lineto x,y
           moveto x,y moveto x,y becomes moveto x,y
@@ -124,12 +125,8 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
     while(t < pos)
     {
 	if ((vec[t-1].x == vec[t].x) && (vec[t-1].y == vec[t].y)) {
-	    // adjacent identical points; remove one
-	    int type = ART_MOVETO;
-	    if(vec[t-1].code==ART_LINETO || vec[t].code==ART_LINETO)
-		type = ART_LINETO;
-	    memcpy(&vec[t], &vec[t+1], sizeof(vec[0]) * (pos - t));
-	    vec[t].code = type;
+	    // adjacent identical points; remove the second
+	    memcpy(&vec[t], &vec[t+1], sizeof(vec[0]) * (pos - t - 1));
 	    pos--;
 	} else {
 	    t++;
@@ -323,10 +320,24 @@ gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 	}
 	fprintf(stderr, "arts_fill abandonning shape with %d segments (%d line parts)\n", svp->n_segs, lineParts);
 	art_svp_free(svp);
+
+	/* return empty shape */
 	return (gfxpoly_t*)gfxpoly_strokeToPoly(0, 0, gfx_capButt, gfx_joinMiter, 0);
     }
-    ArtSVP* svp2 = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_ODDEVEN);
-    art_svp_free(svp);svp=svp2;
+
+    /* for some reason, we need to rewind / self-intersect the polygons that gfxfillToSVP
+       returns- art probably uses a different fill mode (circular?) for vpaths */
+    ArtSVP*svp_uncrossed=0;
+#ifdef ART_USE_NEW_INTERSECTOR
+    ArtSvpWriter * swr = art_svp_writer_rewind_new(ART_WIND_RULE_ODDEVEN);
+    art_svp_intersector(svp, swr);
+    svp_uncrossed = art_svp_writer_rewind_reap(swr);
+#else
+    svp_uncrossed = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_ODDEVEN);
+#endif
+    art_svp_free(svp);
+    svp=svp_uncrossed;
+
     return (gfxpoly_t*)svp;
 }
 
@@ -369,10 +380,20 @@ gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType ca
 gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
 {
     ArtSVP* svp = gfxfillToSVP(line, 1);
-    ArtSVP* svp2 = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_POSITIVE);
-    gfxline_t* result = gfxpoly_to_gfxline((gfxpoly_t*)svp2);
+
+    ArtSVP* svp_rewinded;
+#ifdef ART_USE_NEW_INTERSECTOR
+    ArtSvpWriter * swr = art_svp_writer_rewind_new (ART_WIND_RULE_POSITIVE);
+    art_svp_intersector(svp, swr);
+    svp_rewinded = art_svp_writer_rewind_reap(swr);
+#else
+    jjj
+    svp_rewinded = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_POSITIVE);
+#endif
+
+    gfxline_t* result = gfxpoly_to_gfxline((gfxpoly_t*)svp_rewinded);
     art_svp_free(svp);
-    art_svp_free(svp2);
+    art_svp_free(svp_rewinded);
     return result;
 }
 
