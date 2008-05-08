@@ -273,7 +273,7 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "G"))
     {
-	driver->set_parameter(driver, "optimize_polygons", "1");
+	//driver->set_parameter(driver, "optimize_polygons", "1");
 	flatten = 1;
 	return 0;
     }
