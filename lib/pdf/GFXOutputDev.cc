@@ -564,7 +564,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->pages = 0;
     this->pagebuflen = 0;
     this->pagepos = 0;
-    this->config_convertgradients=0;
+    this->config_convertgradients=1;
     this->config_break_on_warning=0;
     this->config_remapunicode=0;
     this->config_transparent=0;
