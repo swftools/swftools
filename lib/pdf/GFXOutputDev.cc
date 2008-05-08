@@ -1972,19 +1972,23 @@ unsigned char* antialize(unsigned char*data, int width, int height, int newwidth
 	double ex = px + fx;
 	int fromx = (int)px;
 	int tox = (int)ex;
-	int xweight1 = (int)(((fromx+1)-px)*256);
+	int xweight1 = (int)((1-(px-fromx))*256);
 	int xweight2 = (int)((ex-tox)*256);
 	double py =0;
 	for(y=0;y<newheight;y++) {
 	    double ey = py + fy;
 	    int fromy = (int)py;
 	    int toy = (int)ey;
-	    int yweight1 = (int)(((fromy+1)-py)*256);
+	    int yweight1 = (int)((1-(py-fromy))*256);
 	    int yweight2 = (int)((ey-toy)*256);
 	    int a = 0;
 	    int xx,yy;
-	    for(xx=fromx;xx<tox;xx++)
-	    for(yy=fromy;yy<toy;yy++) {
+            if(tox>=width) 
+                tox = width-1;
+            if(toy>=height) 
+                toy = height-1;
+	    for(xx=fromx;xx<=tox;xx++)
+	    for(yy=fromy;yy<=toy;yy++) {
 		int b = 1-data[width*yy+xx];
 		int weight=256;
 		if(xx==fromx) weight = (weight*xweight1)/256;
