@@ -47,6 +47,7 @@ static int optimize = 0;
 static int override_outputname = 0;
 static int do_cgi = 0;
 static int change_sets_all = 0;
+static int do_exports = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -186,6 +187,8 @@ static struct level
    dictionary_t oldinstances;
    SRECT oldrect;
    TAG* cut;
+
+   SRECT scalegrid;
 
 } stack[256];
 static int stackpos = 0;
@@ -347,6 +350,7 @@ static void freeDictionaries()
     dictionary_free_all(&fonts, free_font);
     dictionary_free_all(&sounds, free);
     dictionary_free_all(&interpolations, free);
+    cleanUp = 0;
 }
 
 static void freeFontDictionary()
@@ -374,13 +378,15 @@ static void s_addcharacter(char*name, U16 id, TAG*ctag, SRECT r)
     c->size = r;
     dictionary_put2(&characters, name, c);
 
-    tag = swf_InsertTag(tag, ST_NAMECHARACTER);
-    swf_SetU16(tag, id);
-    swf_SetString(tag, name);
-    tag = swf_InsertTag(tag, ST_EXPORTASSETS);
-    swf_SetU16(tag, 1);
-    swf_SetU16(tag, id);
-    swf_SetString(tag, name);
+    if(do_exports) {
+	tag = swf_InsertTag(tag, ST_NAMECHARACTER);
+	swf_SetU16(tag, id);
+	swf_SetString(tag, name);
+	tag = swf_InsertTag(tag, ST_EXPORTASSETS);
+	swf_SetU16(tag, 1);
+	swf_SetU16(tag, id);
+	swf_SetString(tag, name);
+    }
 }
 static void s_addimage(char*name, U16 id, TAG*ctag, SRECT r)
 {
@@ -629,7 +635,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     incrementid();
 }
 
-void s_sprite(char*name)
+void s_sprite(char*name, SRECT*scalegrid)
 {
     tag = swf_InsertTag(tag, ST_DEFINESPRITE);
     swf_SetU16(tag, id); //id
@@ -644,6 +650,11 @@ void s_sprite(char*name)
     stack[stackpos].tag = tag;
     stack[stackpos].id = id;
     stack[stackpos].name = strdup(name);
+    if(scalegrid) {
+	stack[stackpos].scalegrid = *scalegrid;
+    } else {
+	memset(&stack[stackpos].scalegrid, 0, sizeof(SRECT));
+    }
 
     /* FIXME: those four fields should be bundled together */
     dictionary_init(&instances);
@@ -966,6 +977,15 @@ static void s_endSprite()
 
     tag = stack[stackpos].tag;
     swf_FoldSprite(tag);
+
+    if(stack[stackpos].scalegrid.xmin | stack[stackpos].scalegrid.ymin |
+       stack[stackpos].scalegrid.xmax | stack[stackpos].scalegrid.ymax) 
+    {
+	tag = swf_InsertTag(tag, ST_DEFINESCALINGGRID);
+	swf_SetU16(tag, stack[stackpos].id);
+	swf_SetRect(tag, &stack[stackpos].scalegrid);
+    }
+
     if(tag->next != 0)
         syntaxerror("internal error(7)");
     /* TODO: before clearing, prepend "<spritename>." to names and
@@ -2047,40 +2067,6 @@ void s_getParameters(char*name, parameters_t* p)
     else
     	*p = i->parameters;
 }
-void s_startclip(char*instance, char*character, parameters_t p)
-{
-    character_t* c = dictionary_lookup(&characters, character);
-    instance_t* i;
-    MATRIX m;
-    if(!c) {
-	syntaxerror("character %s not known", character);
-    }
-    i = s_addinstance(instance, c, currentdepth);
-    i->parameters = p;
-    m = s_instancepos(i->character->size, &p);
-
-    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-    /* TODO: should be ObjectPlaceClip, with clipdepth backpatched */
-    swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
-
-    stack[stackpos].tag = tag;
-    stack[stackpos].type = 2;
-    stackpos++;
-
-    currentdepth++;
-}
-void s_endClip()
-{
-    SWFPLACEOBJECT p;
-    stackpos--;
-    swf_SetTagPos(stack[stackpos].tag, 0);
-    swf_GetPlaceObject(stack[stackpos].tag, &p);
-    p.clipdepth = currentdepth;
-    p.name = 0;
-    swf_ClearTag(stack[stackpos].tag);
-    swf_SetPlaceObject(stack[stackpos].tag, &p);
-    currentdepth++;
-}
 
 void setStartparameters(instance_t* i, parameters_t* p, TAG* tag)
 {
@@ -2105,6 +2091,42 @@ void setStartparameters(instance_t* i, parameters_t* p, TAG* tag)
     history_begin(i->history, "blendmode", currentframe, tag, p->blendmode);
     history_beginFilter(i->history, currentframe, tag, p->filters);
     history_begin(i->history, "flags", currentframe, tag, 0);
+}
+
+void s_startclip(char*instance, char*character, parameters_t p)
+{
+    character_t* c = dictionary_lookup(&characters, character);
+    instance_t* i;
+    MATRIX m;
+    if(!c) {
+	syntaxerror("character %s not known", character);
+    }
+    i = s_addinstance(instance, c, currentdepth);
+    i->parameters = p;
+    m = s_instancepos(i->character->size, &p);
+
+    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+    /* TODO: should be ObjectPlaceClip, with clipdepth backpatched */
+    swf_ObjectPlace(tag, c->id, currentdepth, &m, &p.cxform, instance);
+
+    stack[stackpos].tag = tag;
+    stack[stackpos].type = 2;
+    stackpos++;
+
+    setStartparameters(i, &p, tag);
+    currentdepth++;
+}
+void s_endClip()
+{
+    SWFPLACEOBJECT p;
+    stackpos--;
+    swf_SetTagPos(stack[stackpos].tag, 0);
+    swf_GetPlaceObject(stack[stackpos].tag, &p);
+    p.clipdepth = currentdepth;
+    p.name = 0;
+    swf_ClearTag(stack[stackpos].tag);
+    swf_SetPlaceObject(stack[stackpos].tag, &p);
+    currentdepth++;
 }
 
 void s_put(char*instance, char*character, parameters_t p)
@@ -2325,7 +2347,7 @@ int parseInt(char*str)
 	    syntaxerror("Not an Integer: \"%s\"", str);
     return atoi(str);
 }
-int parseTwip(char*str)
+int parseRawTwip(char*str)
 {
     char*dot;
     int sign=1;
@@ -2371,6 +2393,48 @@ int parseTwip(char*str)
 	    return sign*(atoi(str)*20+atoi(dot)/5);
     }
     return 0;
+}
+
+static dictionary_t defines;
+static int defines_initialized = 0;
+static mem_t define_values;
+
+int parseTwip(char*str)
+{
+    /* TODO: make this a proper expression parser */
+    char*p = str;
+    int val = 0;
+    int add = 1;
+    char*lastpos = str;
+    while(*p) {
+	if(*p == '+') 
+	    add = 1;
+	else if(*p == '-')
+	    add = -1;
+	else if(!lastpos)
+	    lastpos = p;
+	p++;
+	if((*p == '+' || *p == '-' || *p == 0) && lastpos) {
+	    char save = *p;
+	    *p = 0;
+
+	    int l = 0;
+	    int v = 0;
+	    if(defines_initialized) {
+		l = (int)dictionary_lookup(&defines, lastpos);
+	    }
+	    if(l) {
+		v = *(int*)&define_values.buffer[l-1];
+	    } else {
+		v = parseRawTwip(lastpos);
+	    }
+	    *p = save;
+	    val += v*add;
+	    lastpos = 0;
+	    add = 1;
+	}
+    }
+    return val;
 }
 
 int parseArc(char* str)
@@ -2577,6 +2641,7 @@ static int c_flash(map_t*args)
     char* filename = map_lookup(args, "filename");
     char* compressstr = lu(args, "compress");
     char* change_modestr = lu(args, "change-sets-all");
+    char* exportstr = lu(args, "export");
     SRECT bbox = parseBox(lu(args, "bbox"));
     int version = parseInt(lu(args, "version"));
     int fps = (int)(parseFloat(lu(args, "fps"))*256);
@@ -2611,6 +2676,8 @@ static int c_flash(map_t*args)
 	if(strcmp(change_modestr, "no"))
 	    syntaxerror("value \"%s\" not supported for the change-sets-all argument", change_modestr);
 
+    do_exports=atoi(exportstr);
+
     s_swf(filename, bbox, version, fps, compress, color);
     return 0;
 }
@@ -2637,9 +2704,10 @@ int getSign(char*str)
     syntaxerror("internal error (348)");
     return 0;
 }
+
 static dictionary_t points;
 static mem_t mpoints;
-int points_initialized = 0;
+static int points_initialized = 0;
 
 static int c_interpolation(map_t *args)
 {
@@ -2734,8 +2802,7 @@ SPOINT getPoint(SRECT r, char*name)
     if(l==0) {
         syntaxerror("Invalid point: \"%s\".", name);
     }
-    l--;
-    return *(SPOINT*)&mpoints.buffer[l];
+    return *(SPOINT*)&mpoints.buffer[l-1];
 }
 
 
@@ -2950,6 +3017,23 @@ static int c_bevel(map_t*args)
     return 0;
 }
 
+static int c_define(map_t*args)
+{
+    char*name = lu(args, "name");
+    char*value = lu(args, "value");
+    
+    if(!defines_initialized) {
+	dictionary_init(&defines);
+	mem_init(&define_values);
+	defines_initialized = 1;
+    }
+    int val = parseTwip(value);
+    int pos = mem_put(&define_values, &val, sizeof(val));
+    string_t s;
+    string_set(&s, name);
+    dictionary_put(&defines, s, (void*)(pos+1));
+    return 0;
+}
 static int c_point(map_t*args)
 {
     char*name = lu(args, "name");
@@ -2965,8 +3049,7 @@ static int c_point(map_t*args)
     p.y = parseTwip(lu(args, "y"));
     pos = mem_put(&mpoints, &p, sizeof(p));
     string_set(&s1, name);
-    pos++;
-    dictionary_put(&points, s1, (void*)pos);
+    dictionary_put(&points, s1, (void*)(pos+1));
     return 0;
 }
 static int c_play(map_t*args)
@@ -3487,7 +3570,14 @@ static int c_end(map_t*args)
 static int c_sprite(map_t*args)
 {
     char* name = lu(args, "name");
-    s_sprite(name);
+    char* scalinggrid = lu(args, "scalinggrid");
+
+    if(scalinggrid && *scalinggrid) {
+	SRECT r = parseBox(scalinggrid);
+	s_sprite(name, &r);
+    } else {
+	s_sprite(name, 0);
+    }
     return 0;
 }
 static int c_frame(map_t*args)
@@ -3882,7 +3972,7 @@ static struct {
     command_func_t* func;
     char*arguments;
 } arguments[] =
-{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default @change-sets-all=no"},
+{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default @change-sets-all=no @export=1"},
  {"frame", c_frame, "n=<plus>1 name= @cut=no @anchor=no"},
  // "import" type stuff
  {"swf", c_swf, "name filename"},
@@ -3897,6 +3987,7 @@ static struct {
 
     // generators of primitives
 
+ {"define", c_define, "name value=0"},
  {"point", c_point, "name x=0 y=0"},
  {"gradient", c_gradient, "name @radial=0 rotate=0 scale= scalex= scaley= x= y= width= height= r= shear="}, //extra parameters like .texture
  {"interpolation", c_interpolation, "name function=linear speed=1.3 amplitude=0 bounces=2 growth=1.5 damping=2 slope=0"},
@@ -3950,7 +4041,7 @@ static struct {
 
     // commands which start a block
 //startclip (see above)
- {"sprite", c_sprite, "name"},
+ {"sprite", c_sprite, "name scalinggrid="},
  {"action", c_action, "filename="},
  {"initaction", c_initaction, "name filename="},
 
