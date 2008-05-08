@@ -21,6 +21,11 @@ ocr_objects=gocr/box.$(O) gocr/database.$(O) gocr/detect.$(O) gocr/job.$(O) gocr
 
 %.$(O): %.c 
 	$(C) $< -o $@
+lame/%.$(O): lame/%.$(C)
+	$(C) $< -o $@
+action/%.$(O): action/%.$(C)
+	$(C) $< -o $@
+
 bitio.$(O): bitio.c bitio.h
 	$(C) bitio.c -o $@
 drawer.$(O): drawer.c drawer.h
@@ -87,10 +92,8 @@ log.$(O): log.c log.h
 rfxswf.$(O): rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(top_builddir)/config.h
 	$(C) rfxswf.c -o $@
 
-$(lame_objects):
-	cd lame;$(MAKE) all;cd ..
-$(actioncompiler_objects):
-	cd action;$(MAKE) all;cd ..
+#$(actioncompiler_objects):
+#	cd action;$(MAKE) all;cd ..
 
 h.263/dct.$(O):  h.263/dct.c h.263/dct.h
 	$(C) h.263/dct.c -o h.263/dct.$(O)
