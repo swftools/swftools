@@ -1203,7 +1203,8 @@ void GFXOutputDev::clipToStrokePath(GfxState *state)
     gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> cliptostrokepath");
+        double width = state->getTransformedLineWidth();
+        msg("<trace> cliptostrokepath width=%f", width);
         dump_outline(line);
     }
 
