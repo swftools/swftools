@@ -27,10 +27,15 @@
 #include "mem.h"
 #include "art/libart.h"
 #include "art/art_svp_intersect.h"
+#include "art/art_svp_ops.h"
 #include "log.h"
 #include <assert.h>
 #include <memory.h>
 #include <math.h>
+
+#define PERTURBATE
+//#define SHEAR
+//#define DEBUG
 
 static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 {
@@ -46,9 +51,9 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
     while(l2) {
 	if(l2->type == gfx_moveTo) {
 	    pos ++;
-	} if(l2->type == gfx_lineTo) {
+	} else if(l2->type == gfx_lineTo) {
 	    pos ++;
-	} if(l2->type == gfx_splineTo) {
+	} else if(l2->type == gfx_splineTo) {
             int parts = (int)(sqrt(fabs(l2->x-2*l2->sx+x) + fabs(l2->y-2*l2->sy+y))*subfraction);
             if(!parts) parts = 1;
             pos += parts + 1;
@@ -66,7 +71,7 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
     l2 = line;
     while(l2) {
 	if(l2->type == gfx_moveTo) {
-	    vec[pos].code = ART_MOVETO;
+	    vec[pos].code = ART_MOVETO_OPEN;
 	    vec[pos].x = l2->x;
 	    vec[pos].y = l2->y;
 	    pos++; 
@@ -80,7 +85,8 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 	} else if(l2->type == gfx_splineTo) {
 	    int i;
             int parts = (int)(sqrt(fabs(l2->x-2*l2->sx+x) + fabs(l2->y-2*l2->sy+y))*subfraction);
-	    double stepsize = parts?1.0/parts:0;
+            if(!parts) parts = 1;
+	    double stepsize = 1.0/parts;
 	    for(i=0;i<=parts;i++) {
 		double t = (double)i*stepsize;
 		vec[pos].code = ART_LINETO;
@@ -94,8 +100,9 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 	y = l2->y;
 	l2 = l2->next;
     }
-    vec[pos].code = ART_END;
-   
+    vec[pos++].code = ART_END;
+    assert(pos == len);
+
     if(!fill) {
 	/* Fix "dotted" lines. Those are lines where singular points are created
 	   by a moveto x,y lineto x,y combination. We "fix" these by shifting the
@@ -105,14 +112,12 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 	 */
 	int t;
 	for(t=0;vec[t].code!=ART_END;t++) {
-	    if(t>0 && vec[t-1].code==ART_MOVETO && vec[t].code==ART_LINETO 
-		    && vec[t+1].code!=ART_LINETO &&
+	    if(t>0 && (vec[t-1].code==ART_MOVETO_OPEN || vec[t-1].code==ART_MOVETO) 
+                   && vec[t].code==ART_LINETO && vec[t+1].code!=ART_LINETO &&
 		vec[t-1].x == vec[t].x && 
                 vec[t-1].y == vec[t].y) {
 		vec[t].x += 0.01;
 	    }
-	    x = vec[t].x;
-	    y = vec[t].y;
 	}
     }
 
@@ -124,75 +129,95 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
           moveto x,y moveto x,y becomes moveto x,y
           lineto x,y lineto x2,y2 becomes lineto x2,y2 (if dir(x,y) ~= dir(x2,y2))
      */
-    int t = 1;
-    while(t < pos)
+    pos = 0;
+    int outpos = 0;
+    while(1)
     {
-        double dx = vec[t].x-vec[t-1].x;
-        double dy = vec[t].y-vec[t-1].y;
-        char samedir = 0;
-        if(t<pos-1 && vec[t].code == ART_LINETO && vec[t+1].code == ART_LINETO) {
-            double dx2 = vec[t+1].x-vec[t].x;
-            double dy2 = vec[t+1].y-vec[t].y;
-            if(fabs(dx*dy2 - dy*dx2) < 0.001) {
-                samedir=1;
+        if(vec[pos].code == ART_END) {
+            vec[outpos++] = vec[pos++];
+            break;
+        }
+
+        char samedir = 0, samepoint = 0;
+        if(outpos) {
+            double dx = vec[pos].x-vec[pos-1].x;
+            double dy = vec[pos].y-vec[pos-1].y;
+            /*if(pos<len-1 && vec[pos].code == ART_LINETO && vec[pos+1].code == ART_LINETO) {
+                double dx2 = vec[pos+1].x-vec[pos].x;
+                double dy2 = vec[pos+1].y-vec[pos].y;
+                if(fabs(dx*dy2 - dy*dx2) < 0.0001 && dx*dx2 + dy*dy2 >= 0) {
+                    samedir=1;
+                }
+            }*/
+            if(fabs(dx) + fabs(dy) < 0.0001) {
+                samepoint=1;
             }
         }
-	if(fabs(dx) + fabs(dy) < 0.01 || samedir) {
-	    // adjacent identical points; remove the second
-	    memcpy(&vec[t], &vec[t+1], sizeof(vec[0]) * (pos - t - 1));
-	    pos--;
-	} else {
-	    t++;
-	}
-    }
-
-    /* adjacency remover disabled for now, pending code inspection */
-    return vec;
-
-    // Check for further non-adjacent identical points. We don't want any
-    // points other than the first and last points to exactly match.
-    //
-    // If we do find matching points, move the second point slightly. This
-    // currently moves the duplicate 2% towards the midpoint of its neighbours
-    // (easier to calculate than 2% down the perpendicular to the line joining
-    // the neighbours) but limiting the change to 0.1 twips to avoid visual
-    // problems when the shapes are large. Note that there is no minimum
-    // change: if the neighbouring points are colinear and equally spaced,
-    // e.g. they were generated as part of a straight spline, then the
-    // duplicate point may not actually move.
-    //
-    // The scan for duplicates algorithm is quadratic in the number of points:
-    // there's probably a better method but the numbers of points is generally
-    // small so this will do for now.
-    {
-	int i = 1, j;
-	for(; i < (pos - 1); ++i)
-	{
-	    for (j = 0; j < i; ++j)
-	    {
-		if ((vec[i].x == vec[j].x)
-		    && (vec[i].y == vec[j].y))
-		{
-		    // points match; shuffle point
-		    double dx = (vec[i-1].x + vec[i+1].x - (vec[i].x * 2.0)) / 100.0;
-		    double dy = (vec[i-1].y + vec[i+1].y - (vec[i].y * 2.0)) / 100.0;
-		    double dxxyy = (dx*dx) + (dy*dy);
-		    if (dxxyy > 0.01)
-		    {
-			// This is more than 0.1 twip's distance; scale down
-			double dscale = sqrt(dxxyy) * 10.0;
-			dx /= dscale;
-			dy /= dscale;
-		    };
-		    vec[i].x += dx;
-		    vec[i].y += dy;
-		    break;
-		}
-	    }
-	}
+        if(!samepoint && !samedir) {
+            vec[outpos++] = vec[pos++];
+        } else {
+            pos++; // skip
+        }
     }
 
     return vec;
+}
+
+static void shear_svp(ArtSVP*svp, double v)
+{
+    /* do a "shearing on the polygon. We do this to eliminate all
+       horizontal lines (which libart can't handle properly, even though
+       it tries). */
+
+    int t;
+    for(t=0;t<svp->n_segs;t++) {
+        ArtSVPSeg* seg = &svp->segs[t];
+        int s;
+        for(s=0;s<seg->n_points;s++) {
+            ArtPoint* point = &seg->points[s];
+            point->y += point->x*v;
+        }
+    }
+}
+
+static double find_shear_value(ArtSVP*svp)
+{
+    /* We try random values until we find one
+       where there's no slope below a given value, or if that fails,
+       at least no slope of 0 */
+
+    double v = 0;
+    int tries = 0;
+    while(1) {
+        char fail = 0;
+        int t;
+        for(t=0;t<svp->n_segs;t++) {
+            ArtSVPSeg* seg = &svp->segs[t];
+            int s;
+            for(s=0;s<seg->n_points-1;s++) {
+                ArtPoint* p1 = &seg->points[s];
+                ArtPoint* p2 = &seg->points[s+1];
+                double dx = p2->x - p1->x;
+                double dy = p2->y - p1->y;
+                dy += dx*v;
+                if(dy==0) {
+                    fail = 1;
+                    break;
+                }
+                if(tries<100 && dx && fabs(dy / dx) < 1e-5) {
+                    fail = 1;
+                    break;
+                }
+            }
+            if(fail) 
+                break;
+        }
+        if(!fail) 
+            break;
+        v = lrand48() / 2000000000.0;
+        tries++;
+    }
+    return v;
 }
 
 void show_path(ArtSVP*path)
@@ -213,8 +238,26 @@ void show_path(ArtSVP*path)
     printf("\n");
 }
 
+void check_svp(ArtSVP*svp)
+{
+    int t;
+    for(t=0;t<svp->n_segs;t++) {
+	ArtSVPSeg* seg = &svp->segs[t];
+	int p;
+	for(p=0;p<seg->n_points-1;p++) {
+	    ArtPoint* p1 = &seg->points[p];
+	    ArtPoint* p2 = &seg->points[p+1];
+            if(p1->y > p2->y) {
+                fprintf(stderr, "bad svp, y in seg %08x is non-increasing\n");
+                exit(0);
+            }
+	}
+    }
+}
+
 void write_svp_postscript(const char*filename, ArtSVP*svp)
 {
+    printf("writing %s\n", filename);
     FILE*fi = fopen(filename, "wb");
     int i, j;
     double xmin=0,ymin=0,xmax=0,ymax=0;
@@ -242,9 +285,13 @@ void write_svp_postscript(const char*filename, ArtSVP*svp)
         fprintf(fi, "%g setgray\n", svp->segs[i].dir ? 0.7 : 0);
         for (j = 0; j < svp->segs[i].n_points; j++)
           {
-            fprintf(fi, "%g %g %s\n",
-                    20 + 550*(svp->segs[i].points[j].x-xmin)/(xmax-xmin),
-                    820 - 800*(svp->segs[i].points[j].y-ymin)/(ymax-ymin),
+            //fprintf(fi, "%g %g %s\n",
+            //        20 + 550*(svp->segs[i].points[j].x-xmin)/(xmax-xmin),
+            //        820 - 800*(svp->segs[i].points[j].y-ymin)/(ymax-ymin),
+            //        j ? "lineto" : "moveto");
+            fprintf(fi, "%.32f %.32f %s\n",
+                    svp->segs[i].points[j].x,
+                    svp->segs[i].points[j].y,
                     j ? "lineto" : "moveto");
           }
         fprintf(fi, "stroke\n");
@@ -267,12 +314,36 @@ void write_vpath_postscript(const char*filename, ArtVpath*path)
             if(!first)
                 fprintf(fi, "stroke\n");
             first = 0;
-            fprintf(fi, "1 setgray\n");
+            fprintf(fi, "0.0 setgray\n");
             fprintf(fi, "%.32f %.32f moveto\n", p->x, p->y);
         } else {
             fprintf(fi, "%.32f %.32f lineto\n", p->x, p->y);
         }
         p++;
+    }
+    if(!first)
+        fprintf(fi, "stroke\n");
+    fprintf(fi, "showpage\n");
+    fclose(fi);
+}
+
+void write_gfxline_postscript(const char*filename, gfxline_t*line)
+{
+    FILE*fi = fopen(filename, "wb");
+    int i, j;
+    fprintf(fi, "%% begin\n");
+    char first = 1;
+    while(line) {
+        if(line->type == gfx_moveTo) {
+            if(!first)
+                fprintf(fi, "stroke\n");
+            first = 0;
+            fprintf(fi, "0.0 setgray\n");
+            fprintf(fi, "%.32f %.32f moveto\n", line->x, line->y);
+        } else {
+            fprintf(fi, "%.32f %.32f lineto\n", line->x, line->y);
+        }
+        line = line->next;
     }
     if(!first)
         fprintf(fi, "stroke\n");
@@ -301,91 +372,101 @@ int gfxline_len(gfxline_t*line)
     return len;
 }
 
+static ArtVpath*pvpath= 0;
+static int cmppos(const void*_p1, const void*_p2)
+{
+    int*p1 = (int*)_p1;
+    int*p2 = (int*)_p2;
+    ArtVpath*v1 = &pvpath[*p1]; 
+    ArtVpath*v2 = &pvpath[*p2]; 
+    if(v1->y < v2->y)
+        return -1;
+    else if(v1->y > v2->y)
+        return 1;
+    else if(v1->x < v2->x)
+        return -2;
+    else if(v1->x > v2->x)
+        return 2;
+    else 
+        return 0;
+}
 
-static int debug = 0;
+#define PERTURBATION 2e-3
+static void my_perturb(ArtVpath*vpath)
+{
+    int t;
+    int len = vpath_len(vpath);
+    int*pos = (int*)malloc(len*sizeof(int));
+    for(t=0;t<len;t++)
+        pos[t] = t;
+    pvpath = vpath;
+    qsort(pos, len, sizeof(int), cmppos);
+    t=0;
+    while(t<len) {
+        int t2=t+1;
+        while(t2<len && !cmppos(&pos[t],&pos[t2])) {
+            t2++;
+        }
+
+        double dx = (PERTURBATION * rand ()) / RAND_MAX - PERTURBATION * 0.5;
+        double dy = (PERTURBATION * rand ()) / RAND_MAX - PERTURBATION * 0.5;
+        int s;
+        for(s=t;s<t2;s++) {
+            vpath[pos[s]].x += dx;
+            vpath[pos[s]].y += dy;
+        }
+        t = t2;
+    }
+    free(pos);
+    pvpath = 0;
+}
+
 static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line, 1);
     msg("<verbose> Casting gfxline of %d segments (%d line segments) to a gfxpoly", gfxline_len(line), vpath_len(vec));
 
     if(perturb) {
-	ArtVpath* vec2 = art_vpath_perturb(vec);
-	free(vec);
-	vec = vec2;
+	//ArtVpath* vec2 = art_vpath_perturb(vec);
+	//free(vec);
+	//vec = vec2;
+        my_perturb(vec);
     }
     ArtSVP *svp = art_svp_from_vpath(vec);
-    if(debug) {
-        write_vpath_postscript("vpath.ps", vec);
-        write_svp_postscript("polygon.ps", svp);
-    }
     free(vec);
-
-#if 0
-    // We need to make sure that the SVP we now have bounds an area (i.e. the
-    // source line wound anticlockwise) rather than excludes an area (i.e. the
-    // line wound clockwise). It seems that PDF (or xpdf) is less strict about
-    // this for bitmaps than it is for fill areas.
-    //
-    // To check this, we'll sum the cross products of all pairs of adjacent
-    // lines. If the result is positive, the direction is correct; if not, we
-    // need to reverse the sense of the SVP generated. The easiest way to do
-    // this is to flip the up/down flags of all the segments.
-    //
-    // This is approximate; since the gfxline_t structure can contain any
-    // combination of moveTo, lineTo and splineTo in any order, not all pairs
-    // of lines in the shape that share a point need be described next to each
-    // other in the sequence. For ease, we'll consider only pairs of lines
-    // stored as lineTos and splineTos without intervening moveTos.
-    //
-    // TODO is this a valid algorithm? My vector maths is rusty.
-    //
-    // It may be more correct to instead reverse the line before we feed it
-    // into gfxfilltoSVP. However, this seems equivalent and is easier to
-    // implement!
-    double total_cross_product = 0.0;
-    gfxline_t* cursor = line;
-    if (cursor != NULL)
-    {
-	double x_last = cursor->x;
-	double y_last = cursor->y;
-	cursor = cursor->next;
-
-	while((cursor != NULL) && (cursor->next != NULL))
-	{
-	    if (((cursor->type == gfx_lineTo) || (cursor->type == gfx_splineTo))
-		&& ((cursor->next->type == gfx_lineTo) || (cursor->next->type == gfx_splineTo)))
-	    {
-		// Process these lines
-		//
-		// In this space (x right, y down) the cross-product is
-		// (x1 * y0) - (x0 * y1)
-		double x0 = cursor->x - x_last;
-		double y0 = cursor->y - y_last;
-		double x1 = cursor->next->x - cursor->x;
-		double y1 = cursor->next->y - cursor->y;
-		total_cross_product += (x1 * y0) - (x0 * y1);
-	    }
-
-	    x_last = cursor->x;
-	    y_last = cursor->y;
-	    cursor = cursor->next;
-	}
-    }
-    if (total_cross_product < 0.0)
-    {
-	int i = 0;
-	for(; i < svp->n_segs; ++i)
-	{
-	    if (svp->segs[i].dir != 0)
-		svp->segs[i].dir = 0;
-	    else
-		svp->segs[i].dir = 1;
-	}
-    }
-#endif
 
     return svp;
 }
+
+ArtSVP* run_intersector(ArtSVP*svp, ArtWindRule rule)
+{
+    ArtSvpWriter * swr = art_svp_writer_rewind_new(rule);
+
+#ifdef SHEAR
+    double shear = find_shear_value(svp);
+    gfxline_t*line =  gfxpoly_to_gfxline((gfxpoly_t*)svp);
+    gfxline_t*l = line;
+    while(l) {
+        l->y += l->x*shear;
+        l->sy += l->sx*shear;
+        l= l->next;
+    }
+    svp = (ArtSVP*)gfxpoly_fillToPoly(line);
+    printf("shearing svp by %.16f\n", shear);
+#endif
+
+    art_svp_intersector(svp, swr);
+    ArtSVP*result = art_svp_writer_rewind_reap(swr);
+    check_svp(result);
+
+#ifdef SHEAR
+    art_svp_free(svp);
+    shear_svp(result, -shear);
+#endif
+
+    return result;
+}
+
 
 gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
 {
@@ -395,10 +476,11 @@ gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
     int pos = 0;
 
     msg("<verbose> Casting polygon of %d segments back to gfxline", svp->n_segs);
-
+    
     for(t=0;t<svp->n_segs;t++) {
-	size += svp->segs[t].n_points + 1;
+	size += svp->segs[t].n_points;
     }
+    size = size + 1;
     gfxline_t* lines = (gfxline_t*)rfx_alloc(sizeof(gfxline_t)*size);
 
     for(t=0;t<svp->n_segs;t++) {
@@ -420,9 +502,27 @@ gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
 	return 0;
     }
 }
+
 gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 {
+    /* I'm not sure whether doing perturbation here is actually
+       a good idea- if that line has been run through the machine
+       several times already, it might be safer to leave it alone,
+       since it should already be in a format libart can handle */
+#ifdef PERTURBATE
     ArtSVP* svp = gfxfillToSVP(line, 1);
+#else
+    ArtSVP* svp = gfxfillToSVP(line, 0);
+#endif
+
+#ifdef DEBUG
+    char filename[80];
+    static int counter = 0;
+    sprintf(filename, "svp%d.ps", counter);
+    write_svp_postscript(filename, svp);
+    sprintf(filename, "gfxline%d.ps", counter);
+    write_gfxline_postscript(filename, line);
+#endif
 
     /* we do xor-filling by default, so dir is always 1 
        (actually for oddeven rewinding it makes no difference, but
@@ -432,17 +532,19 @@ gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
     for(t=0; t<svp->n_segs; t++) {
         svp->segs[t].dir = 1;
     }
-
+            
     /* for some reason, we need to rewind / self-intersect the polygons that gfxfillToSVP
        returns- art probably uses a different fill mode (circular?) for vpaths */
     ArtSVP*svp_uncrossed=0;
-#ifdef ART_USE_NEW_INTERSECTOR
-    ArtSvpWriter * swr = art_svp_writer_rewind_new(ART_WIND_RULE_ODDEVEN);
-    art_svp_intersector(svp, swr);
-    svp_uncrossed = art_svp_writer_rewind_reap(swr);
-#else
-    svp_uncrossed = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_ODDEVEN);
+   
+#ifdef DEBUG
+    sprintf(filename, "svp%d_in.ps", counter);
+    write_svp_postscript(filename, svp);
+    counter++;
 #endif
+
+    svp_uncrossed = run_intersector(svp, ART_WIND_RULE_ODDEVEN);
+
     art_svp_free(svp);
     svp=svp_uncrossed;
 
@@ -451,12 +553,44 @@ gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 
 gfxpoly_t* gfxpoly_intersect(gfxpoly_t*poly1, gfxpoly_t*poly2)
 {
+    ArtSvpWriter *swr;
+    
+    static int counter = 0;
+    
     ArtSVP* svp1 = (ArtSVP*)poly1;
     ArtSVP* svp2 = (ArtSVP*)poly2;
     msg("<verbose> Intersecting two polygons of %d and %d segments", svp1->n_segs, svp2->n_segs);
+    
+#ifdef DEBUG
+    char filename[80];
+    sprintf(filename, "isvp%d_src1.ps", counter);
+    write_svp_postscript(filename, svp1);
+    sprintf(filename, "isvp%d_src2.ps", counter);
+    write_svp_postscript(filename, svp2);
+#endif
+    
+    ArtSVP* svp3 = art_svp_merge (svp1, svp2);
+
+#ifdef DEBUG
+    sprintf(filename, "isvp%d_src.ps", counter);
+    write_svp_postscript(filename, svp3);
+#endif
+
+    //write_svp_postscript("svp.ps", svp3);
+    ArtSVP*svp_new = run_intersector(svp3, ART_WIND_RULE_INTERSECT);
+
+    art_free (svp3); /* shallow free because svp3 contains shared segments */
+
+#ifdef DEBUG
+    sprintf(filename, "isvp%d.ps", counter);
+    write_svp_postscript(filename, svp_new);
+#endif
+
+    counter++;
+    
+    //write_svp_postscript("svp_new.ps", svp_new);
 	
-    ArtSVP* svp = art_svp_intersect(svp1, svp2);
-    return (gfxpoly_t*)svp;
+    return (gfxpoly_t*)svp_new;
 }
 
 gfxpoly_t* gfxpoly_union(gfxpoly_t*poly1, gfxpoly_t*poly2)
@@ -473,6 +607,10 @@ gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType ca
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line, 0);
     msg("<verbose> Casting gfxline of %d segments to a stroke-polygon", gfxline_len(line));
+
+    ArtVpath* vec2 = art_vpath_perturb(vec);
+    free(vec);
+    vec = vec2;
 
     ArtSVP *svp = art_svp_vpath_stroke (vec,
 			(joint_style==gfx_joinMiter)?ART_PATH_STROKE_JOIN_MITER:
@@ -500,14 +638,8 @@ gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
              that the *last* shape's direction will determine whether something
              is filled */
     ArtSVP* svp_rewinded;
-#ifdef ART_USE_NEW_INTERSECTOR
-    ArtSvpWriter * swr = art_svp_writer_rewind_new (ART_WIND_RULE_POSITIVE);
-    art_svp_intersector(svp, swr);
-    svp_rewinded = art_svp_writer_rewind_reap(swr);
-#else
-    error
-    svp_rewinded = art_svp_rewind_uncrossed(art_svp_uncross(svp),ART_WIND_RULE_POSITIVE);
-#endif
+    
+    svp_rewinded = run_intersector(svp, ART_WIND_RULE_POSITIVE);
 
     gfxline_t* result = gfxpoly_to_gfxline((gfxpoly_t*)svp_rewinded);
     art_svp_free(svp);
