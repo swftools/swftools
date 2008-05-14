@@ -108,6 +108,8 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
     }
     pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, /*doLinks*/(int)1);
     pi->doc->processLinks((OutputDev*)pi->outputDev, page->nr);
+    pi->outputDev->finishPage();
+
     pi->outputDev->setDevice(0);
     if(pi->middev) {
 	gfxdevice_rescale_setdevice(pi->middev, 0x00000000);

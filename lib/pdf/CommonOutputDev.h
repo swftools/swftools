@@ -37,5 +37,6 @@ class CommonOutputDev: public OutputDev
     virtual void setParameter(const char*key, const char*value) = 0;
   
     virtual void preparePage(int pdfpage, int outputpage) = 0;
+    virtual void finishPage() {};
 };
 #endif //__deviceinterface_h__

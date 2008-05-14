@@ -72,6 +72,7 @@ public:
 
     virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
     virtual void endPage();
+    virtual void finishPage();
 
     virtual void saveState(GfxState *state);
     virtual void restoreState(GfxState *state);

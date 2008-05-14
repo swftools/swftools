@@ -552,6 +552,13 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
 void BitmapOutputDev::endPage()
 {
     msg("<verbose> endPage (BitmapOutputDev)");
+
+    /* notice: we're not fully done yet with this page- there might still be 
+       a few calls to drawLink() yet to come */
+}
+void BitmapOutputDev::finishPage()
+{
+    msg("<verbose> finishPage (BitmapOutputDev)");
     gfxdev->endPage();
    
     if(layerstate == STATE_BITMAP_IS_ABOVE) {
@@ -569,9 +576,6 @@ void BitmapOutputDev::endPage()
     rgbdev->endPage();
     clip0dev->endPage();
     clip1dev->endPage();
-
-    /* notice: we're not fully done yet with this page- there might still be 
-       a few calls to drawLink() yet to come */
 }
 
 GBool BitmapOutputDev::upsideDown()
