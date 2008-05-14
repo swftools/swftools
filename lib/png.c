@@ -197,6 +197,7 @@ static void applyfilter1(int mode, unsigned char*src, unsigned char*old, unsigne
     else if(mode==3) {
 	for(x=0;x<width;x++) {
 	    *dest = *src+(*old+last)/2;
+	    last = *dest;
 	    dest++;
 	    old++;
 	    src++;
