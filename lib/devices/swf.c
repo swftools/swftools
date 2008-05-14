@@ -1975,9 +1975,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_linkcolor.a = NIBBLE(value[6])<<4 | NIBBLE(value[7]);
     } else if(!strcmp(name, "help")) {
 	printf("\nSWF layer options:\n");
-	printf("jpegdpi=<dpi>               resolution adjustment for jpeg images\n");
         printf("jpegsubpixels=<pixels>      resolution adjustment for jpeg images (same as jpegdpi, but in pixels)\n");
-        printf("ppmdpi=<dpi>                resolution adjustment for lossless images\n");
         printf("ppmsubpixels=<pixels        resolution adjustment for  lossless images (same as ppmdpi, but in pixels)\n");
         printf("subpixels=<pixels>          shortcut for setting both jpegsubpixels and ppmsubpixels\n");
         printf("drawonlyshapes              convert everything to shapes (currently broken)\n");
