@@ -169,7 +169,9 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     font->layout->leading = font->layout->ascent + font->layout->descent;
     font->layout->kerningcount = 0;
     
-    name = FT_Get_Postscript_Name(face);
+    name = face->family_name;
+    if(!(name && *name))
+        name = FT_Get_Postscript_Name(face);
     if(name && *name)
 	font->name = (U8*)strdup(name);
 
