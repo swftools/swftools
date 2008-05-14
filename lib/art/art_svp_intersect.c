@@ -21,6 +21,8 @@
    code.
 */
 
+#include <stdio.h>
+#include <assert.h>
 #include "config.h"
 #include "art_svp_intersect.h"
 
@@ -36,6 +38,8 @@
 #define CHEAP_SANITYCHECK
 
 #define noVERBOSE
+
+#define ABORT_ON_ERROR
 
 #include "art_misc.h"
 
@@ -83,8 +87,6 @@ art_pri_empty (ArtPriQ *pq)
   return pq->n_items == 0;
 }
 
-#ifdef ART_PRIQ_USE_HEAP
-
 /* This heap implementation is based on Vasek Chvatal's course notes:
    http://www.cs.rutgers.edu/~chvatal/notes/pq.html#heap */
 
@@ -110,6 +112,9 @@ art_pri_bubble_up (ArtPriQ *pq, int vacant, ArtPriPoint *missing)
 static void
 art_pri_insert (ArtPriQ *pq, ArtPriPoint *point)
 {
+#ifdef VERBOSE
+  art_dprint("insert into pq %08x: %.16f,%.16f %08x\n", pq, point->x, point->y, point->user_data);
+#endif
   if (pq->n_items == pq->n_items_max)
     art_expand (pq->items, ArtPriPoint *, pq->n_items_max);
 
@@ -151,148 +156,41 @@ art_pri_choose (ArtPriQ *pq)
   return result;
 }
 
-#else
+static const ArtSVP* current_svp = 0;
 
-/* Choose least point in queue */
-static ArtPriPoint *
-art_pri_choose (ArtPriQ *pq)
+void art_abort()
 {
-  int i;
-  int best = 0;
-  double best_x, best_y;
-  double y;
-  ArtPriPoint *result;
-
-  if (pq->n_items == 0)
-    return NULL;
-
-  best_x = pq->items[best]->x;
-  best_y = pq->items[best]->y;
-
-  for (i = 1; i < pq->n_items; i++)
-    {
-      y = pq->items[i]->y;
-      if (y < best_y || (y == best_y && pq->items[i]->x < best_x))
-	{
-	  best = i;
-	  best_x = pq->items[best]->x;
-	  best_y = y;
-	}
+#ifdef ABORT_ON_ERROR
+    if(!current_svp) {
+        fprintf(stderr, "internal error: no current polygon\n");
+        exit(1);
     }
-  result = pq->items[best];
-  pq->items[best] = pq->items[--pq->n_items];
-  return result;
-}
+    const ArtSVP*svp = current_svp;
+    FILE*fi = fopen("svp.ps", "wb");
+    int i, j;
+    fprintf(fi, "%% begin\n");
+    for (i = 0; i < svp->n_segs; i++)
+    {
+        fprintf(fi, "%g setgray\n", svp->segs[i].dir ? 0.7 : 0);
+        for (j = 0; j < svp->segs[i].n_points; j++)
+          {
+            fprintf(fi, "%.32f %.32f %s\n",
+                    svp->segs[i].points[j].x,
+                    svp->segs[i].points[j].y,
+                    j ? "lineto" : "moveto");
+          }
+        fprintf(fi, "stroke\n");
+    }
+    fprintf(fi, "showpage\n");
+    fclose(fi);
 
-static void
-art_pri_insert (ArtPriQ *pq, ArtPriPoint *point)
-{
-  if (pq->n_items == pq->n_items_max)
-    art_expand (pq->items, ArtPriPoint *, pq->n_items_max);
-
-  pq->items[pq->n_items++] = point;
-}
-
+    fprintf(stderr, "There was an error during polygon processing.\n");
+    fprintf(stderr, "I saved a debug file, called svp.ps, to the current directory.\n");
+    fprintf(stderr, "Please help making this tool more stable by mailing\n");
+    fprintf(stderr, "this file to debug@swftools.org. Thank you!\n");
+    exit(1);
 #endif
-
-#ifdef TEST_PRIQ
-
-#include <stdlib.h> /* for rand() */
-#include <stdio.h>
-
-static double
-double_rand (double lo, double hi, int quant)
-{
-  int tmp = rand () / (RAND_MAX * (1.0 / quant)) + 0.5;
-  return lo + tmp * ((hi - lo) / quant);
 }
-
-/*
- * This custom allocator for priority queue points is here so I can
- * test speed. It doesn't look like it will be that significant, but
- * if I want a small improvement later, it's something.
- */
-
-typedef ArtPriPoint *ArtPriPtPool;
-
-static ArtPriPtPool *
-art_pri_pt_pool_new (void)
-{
-  ArtPriPtPool *result = art_new (ArtPriPtPool, 1);
-  *result = NULL;
-  return result;
-}
-
-static ArtPriPoint *
-art_pri_pt_alloc (ArtPriPtPool *pool)
-{
-  ArtPriPoint *result = *pool;
-  if (result == NULL)
-    return art_new (ArtPriPoint, 1);
-  else
-    {
-      *pool = result->user_data;
-      return result;
-    }
-}
-
-static void
-art_pri_pt_free (ArtPriPtPool *pool, ArtPriPoint *pt)
-{
-  pt->user_data = *pool;
-  *pool = pt;
-}
-
-static void
-art_pri_pt_pool_free (ArtPriPtPool *pool)
-{
-  ArtPriPoint *pt = *pool;
-  while (pt != NULL)
-    {
-      ArtPriPoint *next = pt->user_data;
-      art_free (pt);
-      pt = next;
-    }
-  art_free (pool);
-}
-
-int
-main (int argc, char **argv)
-{
-  ArtPriPtPool *pool = art_pri_pt_pool_new ();
-  ArtPriQ *pq;
-  int i, j;
-  const int n_iter = 1;
-  const int pq_size = 100;
-
-  for (j = 0; j < n_iter; j++)
-    {
-      pq = art_pri_new ();
-
-      for (i = 0; i < pq_size; i++)
-	{
-	  ArtPriPoint *pt = art_pri_pt_alloc (pool);
-	  pt->x = double_rand (0, 1, 100);
-	  pt->y = double_rand (0, 1, 100);
-	  pt->user_data = (void *)i;
-	  art_pri_insert (pq, pt);
-	}
-
-      while (!art_pri_empty (pq))
-	{
-	  ArtPriPoint *pt = art_pri_choose (pq);
-	  if (n_iter == 1)
-	    printf ("(%g, %g), %d\n", pt->x, pt->y, (int)pt->user_data);
-	  art_pri_pt_free (pool, pt);
-	}
-
-      art_pri_free (pq);
-    }
-  art_pri_pt_pool_free (pool);
-  return 0;
-}
-
-#else /* TEST_PRIQ */
 
 /* A virtual class for an "svp writer". A client of this object creates an
    SVP by repeatedly calling "add segment" and "add point" methods on it.
@@ -344,11 +242,16 @@ art_svp_writer_rewind_add_segment (ArtSvpWriter *self, int wind_left,
     default:
       art_die ("Unknown wind rule %d\n", swr->rule);
     }
+
+#ifdef VERBOSE
+  art_dprint("New svp segment %d: %.32f %.32f left_filled=%d, right_filled=%d\n", swr->svp->n_segs, x, y, left_filled, right_filled);
+#endif
+
   if (left_filled == right_filled)
     {
       /* discard segment now */
 #ifdef VERBOSE
-      art_dprint ("swr add_segment: %d += %d (%g, %g) --> -1\n",
+      art_dprint ("  discarding segment: %d += %d (%.16f, %.16f)\n",
 	      wind_left, delta_wind, x, y);
 #endif
       return -1;
@@ -358,7 +261,7 @@ art_svp_writer_rewind_add_segment (ArtSvpWriter *self, int wind_left,
   seg_num = svp->n_segs++;
   if (swr->n_segs_max == seg_num)
     {
-      swr->n_segs_max <<= 1;
+      swr->n_segs_max += 10;
       svp = (ArtSVP *)art_realloc (svp, sizeof(ArtSVP) +
 				   (swr->n_segs_max - 1) *
 				   sizeof(ArtSVPSeg));
@@ -378,9 +281,9 @@ art_svp_writer_rewind_add_segment (ArtSvpWriter *self, int wind_left,
   seg->points[0].x = x;
   seg->points[0].y = y;
 #ifdef VERBOSE
-    art_dprint ("swr add_segment: %d += %d (%g, %g) --> %d(%s)\n",
+    art_dprint ("swr add_segment: %d += %d (%.16f, %.16f) --> %d (%s)\n",
 	    wind_left, delta_wind, x, y, seg_num,
-	    seg->dir ? "v" : "^");
+	    seg->dir ? "filled" : "non-filled");
 #endif
   return seg_num;
 }
@@ -389,21 +292,52 @@ static void
 art_svp_writer_rewind_add_point (ArtSvpWriter *self, int seg_id,
 				 double x, double y)
 {
+
   ArtSvpWriterRewind *swr = (ArtSvpWriterRewind *)self;
   ArtSVPSeg *seg;
   int n_points;
 
 #ifdef VERBOSE
-  art_dprint ("swr add_point: %d (%g, %g)\n", seg_id, x, y);
+  art_dprint ("swr add_point: %d (%.16f, %.16f)\n", seg_id, x, y);
 #endif
   if (seg_id < 0)
     /* omitted segment */
     return;
 
   seg = &swr->svp->segs[seg_id];
+
+  if(n_points &&
+        seg->points[seg->n_points-1].x == x &&
+        seg->points[seg->n_points-1].y == y) {
+      //art_warn("duplicate point %.16f,%.16f in segment %08x\n", 
+      //        x, y, seg_id);
+      return;
+  }
+
   n_points = seg->n_points++;
   if (swr->n_points_max[seg_id] == n_points)
     art_expand (seg->points, ArtPoint, swr->n_points_max[seg_id]);
+
+  if(0 && n_points>=2) {
+      double dx1 = seg->points[n_points-1].x - seg->points[n_points-2].x;
+      double dy1 = seg->points[n_points-1].y - seg->points[n_points-2].y;
+      double dx2 = x - seg->points[n_points-2].x;
+      double dy2 = y - seg->points[n_points-2].y;
+      if(fabs(dx1*dy2 - dx2*dy1) < 1e-10) {
+          seg->n_points--;
+          n_points--; // remove previous point pointing in the same direction
+
+         //art_warn("redundant point %.16f,%.16f in segment %08x\n", 
+         //        seg->points[n_points-1].x, seg->points[n_points-1].y,
+         //        seg_id);
+      }
+  }
+  
+  if(n_points && seg->points[n_points-1].y > y) {
+      art_warn("non-increasing segment (%.16f -> %.16f)\n", seg->points[n_points-1].y, y);
+      art_abort();
+  }
+
   seg->points[n_points].x = x;
   seg->points[n_points].y = y;
   if (x < seg->bbox.x0)
@@ -418,7 +352,7 @@ art_svp_writer_rewind_close_segment (ArtSvpWriter *self, int seg_id)
 {
   /* Not needed for this simple implementation. A potential future
      optimization is to merge segments that can be merged safely. */
-#ifdef SANITYCHECK
+#ifdef CHEAP_SANITYCHECK
   ArtSvpWriterRewind *swr = (ArtSvpWriterRewind *)self;
   ArtSVPSeg *seg;
 
@@ -466,7 +400,22 @@ art_svp_writer_rewind_new (ArtWindRule rule)
   return &result->super;
 }
 
-/* Now, data structures for the active list */
+/* Now, data structures for the active list.
+
+   signs:
+               /  |
+        b<0   /   |   \ b>0, c<0
+        c>0  /\   |   /\
+            /  \  |  /  \
+           /    \ | /     
+                 \|/
+     -------------+--------------------
+                 /|\ 
+             \  / | \  /
+              \/  |  \/ b<0, c<0
+        b>0    \  |  /
+        c>0     \ | /
+ */
 
 typedef struct _ArtActiveSeg ArtActiveSeg;
 
@@ -547,10 +496,17 @@ static void
 art_svp_intersect_setup_seg (ArtActiveSeg *seg, ArtPriPoint *pri_pt)
 {
   const ArtSVPSeg *in_seg = seg->in_seg;
-  int in_curs = seg->in_curs++;
+  int in_curs = 0;
   double x0, y0, x1, y1;
   double dx, dy, s;
   double a, b, r2;
+
+  //do {
+    in_curs = seg->in_curs++;
+  //} while(in_seg->points[in_curs].x == in_seg->points[in_curs + 1].x &&
+  //        in_seg->points[in_curs].y == in_seg->points[in_curs + 1].y &&
+  //        in_curs < in_seg->n_points-1
+  //       );
 
   x0 = in_seg->points[in_curs].x;
   y0 = in_seg->points[in_curs].y;
@@ -561,6 +517,9 @@ art_svp_intersect_setup_seg (ArtActiveSeg *seg, ArtPriPoint *pri_pt)
   dx = x1 - x0;
   dy = y1 - y0;
   r2 = dx * dx + dy * dy;
+  if(r2 == 0) {
+      //art_warn("segment %08x has zero length\n", seg);
+  }
   s = r2 == 0 ? 1 : 1 / sqrt (r2);
   seg->a = a = dy * s;
   seg->b = b = -dx * s;
@@ -573,6 +532,16 @@ art_svp_intersect_setup_seg (ArtActiveSeg *seg, ArtPriPoint *pri_pt)
   seg->n_stack = 1;
   seg->stack[0].x = x1;
   seg->stack[0].y = y1;
+
+  if(y1 < y0) {
+      art_warn("art_svp_intersect.c: bad input polygon %08x, contains decreasing y values\n", seg->in_seg);
+      art_abort();
+  }
+#ifdef VERBOSE
+  art_dprint("segment %08x (top: %.16f,%.16f) starts with endpoint at %.16f,%.16f\n", seg, 
+          x0, y0,
+          x1, y1);
+#endif
 }
 
 /**
@@ -597,18 +566,20 @@ art_svp_intersect_add_horiz (ArtIntersectCtx *ctx, ArtActiveSeg *seg)
   ArtActiveSeg *place;
   ArtActiveSeg *place_right = NULL;
 
-
 #ifdef CHEAP_SANITYCHECK
   if (seg->flags & ART_ACTIVE_FLAGS_IN_HORIZ)
     {
-      //art_warn ("*** attempt to put segment in horiz list twice\n");
+      double dx = seg->x[1] - seg->x[0];
+      double dy = seg->y1 - seg->y0;
+      double len = sqrt(dx*dx+dy*dy);
+      art_warn("attempt to put segment %08x %.16f,%.16f (len:%.16f) in horiz list twice\n", seg, seg->x[0], seg->y0, len);
       return;
     }
   seg->flags |= ART_ACTIVE_FLAGS_IN_HORIZ;
 #endif
 
 #ifdef VERBOSE
-  art_dprint ("add_horiz %lx, x = %g\n", (unsigned long) seg, seg->horiz_x);
+  art_dprint ("add_horiz %08x, x = %.16f\n", (unsigned long) seg, seg->horiz_x);
 #endif
   for (place = *pp; place != NULL && (place->horiz_x > seg->horiz_x ||
 				      (place->horiz_x == seg->horiz_x &&
@@ -621,10 +592,21 @@ art_svp_intersect_add_horiz (ArtIntersectCtx *ctx, ArtActiveSeg *seg)
   *pp = seg;
   seg->horiz_left = place;
   seg->horiz_right = place_right;
+
   if (place == NULL)
     ctx->horiz_first = seg;
   else
     place->horiz_right = seg;
+
+#ifdef VERBOSE
+  art_dprint("horiz_list:\n");
+  ArtActiveSeg*s = ctx->horiz_first;
+  while(s) {
+      art_dprint("  %08x x=%.16f wind_left=%d delta_wind=%d horiz_delta_wind=%d\n", s, s->horiz_x, 
+              s->wind_left, s->delta_wind, s->horiz_delta_wind);
+      s = s->horiz_right;
+  }
+#endif
 }
 
 static void
@@ -636,9 +618,37 @@ art_svp_intersect_push_pt (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
 
   if (n_stack == seg->n_stack_max)
     art_expand (seg->stack, ArtPoint, seg->n_stack_max);
+
+
   seg->stack[n_stack].x = x;
   seg->stack[n_stack].y = y;
   seg->n_stack++;
+
+#ifdef VERBOSE
+  int t;
+  art_dprint("art_svp_intersect_push_pt %08x |top %.16f,%.16f\n", seg, seg->x[0], seg->y0);
+  for(t=seg->n_stack-1;t>=0;t--) {
+      if(t!=seg->n_stack-1)
+          art_dprint("art_svp_intersect_push_pt %08x |pt  %.16f,%.16f\n", seg, seg->stack[t].x, seg->stack[t].y);
+      else
+          art_dprint("art_svp_intersect_push_pt %08x |new %.16f,%.16f\n", seg, seg->stack[t].x, seg->stack[t].y);
+  }
+#endif
+#ifdef VERBOSE
+  art_dprint("(shortening segment %08x to %.16f,%.16f)\n", seg, x, y);
+#endif
+  
+  if(seg->stack[seg->n_stack-1].y == seg->y0) {
+      art_warn("duplicate y coordinate (=y0) in point stack\n");
+  }
+
+  if(n_stack) {
+      if(seg->stack[seg->n_stack-2].y < seg->stack[seg->n_stack-1].y) {
+          art_warn("bad shortening- segment got *longer*\n");
+          art_abort();
+      }
+  }
+
 
   seg->x[1] = x;
   seg->y1 = y;
@@ -674,24 +684,49 @@ art_svp_intersect_break (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
   y0 = in_seg->points[in_curs - 1].y;
   x1 = in_seg->points[in_curs].x;
   y1 = in_seg->points[in_curs].y;
+
   x = x0 + (x1 - x0) * ((y - y0) / (y1 - y0));
+
+  //printf("%d %.16f %.16f %d\n", break_flags&ART_BREAK_LEFT, x, x_ref, x > x_ref);
+  //printf("%d %.16f %.16f %d\n", break_flags&ART_BREAK_RIGHT, x, x_ref, x < x_ref);
+
   if ((break_flags == ART_BREAK_LEFT && x > x_ref) ||
       (break_flags == ART_BREAK_RIGHT && x < x_ref))
     {
 #ifdef VERBOSE
-      art_dprint ("art_svp_intersect_break: limiting x to %f, was %f, %s\n",
+      art_dprint ("art_svp_intersect_break %08x: limiting x to %.16f, was %.16f, %s\n", seg,
 		  x_ref, x, break_flags == ART_BREAK_LEFT ? "left" : "right");
-      x = x_ref;
 #endif
+      //x = x_ref; //used to be *within* the VERBOSE comment
     }
+  
+  if(y < y0 || y > y1) {
+      art_warn("!! bad break %.16f of %.16f-%.16f\n", y, y0, y1);
+      return x;
+  }
 
   /* I think we can count on min(x0, x1) <= x <= max(x0, x1) with sane
      arithmetic, but it might be worthwhile to check just in case. */
+
+  /* TODO: should we check seg instead of in_seg ? */
+  if(x0<x1) {
+      if(x<x0 || x>x1) {
+          art_warn("bad x value %.16f in intersect_break: not between %.16f and %.16f\n", x, x0, x1);
+      } 
+  } else {
+      if(x<x1 || x>x0) {
+          art_warn("bad x value %.16f in intersect_break:  not between %.16f and %.16f\n", x, x1, x0);
+      } 
+  }
+
 
   if (y > ctx->y)
     art_svp_intersect_push_pt (ctx, seg, x, y);
   else
     {
+      if(y < ctx->y) {
+          art_warn("intersect_break at a y above the current scanline (%.16f < %.16f)", y, ctx->y);
+      }
       seg->x[0] = x;
       seg->y0 = y;
       seg->horiz_x = x;
@@ -730,8 +765,38 @@ art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
     right = left->right; 
   left_live = (break_flags & ART_BREAK_LEFT) && (left != NULL);
   right_live = (break_flags & ART_BREAK_RIGHT) && (right != NULL);
+
+#ifdef VERBOSE
+  double dd = 0;
+  if(seg)
+      dd = seg->a*x + seg->b*y + seg->c;
+  art_dprint("add_point seg=%08x %f,%f%s%s (left=%08x, right=%08x) d=%f\n", seg, x, y, 
+          break_flags&ART_BREAK_LEFT?" BREAK_LEFT":"",
+          break_flags&ART_BREAK_LEFT?" BREAK_RIGHT":"",
+          seg?seg->left:0, seg?seg->right:0, dd);
+#endif
+  /* add_point relies on the fact that the active list is ascending-
+     no checks are done for lines which are not in strict order.
+
+     a point position (x,y) is tested against left (if break_flags&ART_BREAK_LEFT)
+     and right (if break_flags&ART_BREAK_RIGHT) neighboring segments which are
+     within EPSILON_A distance of the point. If they are, they are split at y. 
+     For ART_BREAK_LEFT, the "intersection point" on the line (which is to the left
+     of (x,y) will never be to the right of "our" (x,y)- new_x will be shifted
+     by _break to make sure of that. (Which should only happen for horizontal
+     line segments) Likewise for ART_BREAK_RIGHT. 
+
+     The horizontal area around (x,y) (x_min, x_max) will be extended into the
+     break direction for every cut we make.
+   */
+		  
+  //new_x = art_svp_intersect_break (ctx, left, x_min, y, ART_BREAK_LEFT);
+
   while (left_live || right_live)
     {
+#ifdef VERBOSE
+      art_dprint("  left: %08x (%d) right: %08x (%d)\n", left, left_live, right, right_live);
+#endif
       if (left_live)
 	{
 	  if (x <= left->x[left->flags & ART_ACTIVE_FLAGS_BNEG] &&
@@ -740,10 +805,13 @@ art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
 	      y != left->y0 && y < left->y1)
 	    {
 	      d = x_min * left->a + y * left->b + left->c;
-	      if (d < EPSILON_A)
+              if (d < EPSILON_A)
 		{
 		  new_x = art_svp_intersect_break (ctx, left, x_min, y,
 						   ART_BREAK_LEFT);
+#ifdef VERBOSE
+                  art_dprint("break %08x at x<=%.16f,y=%.16f, new_x=%f\n", left, x_min, y, new_x);
+#endif
 		  if (new_x > x_max)
 		    {
 		      x_max = new_x;
@@ -768,10 +836,13 @@ art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
 	      y != right->y0 && y < right->y1)
 	    {
 	      d = x_max * right->a + y * right->b + right->c;
-	      if (d > -EPSILON_A)
+              if (d > -EPSILON_A)
 		{
 		  new_x = art_svp_intersect_break (ctx, right, x_max, y,
 						   ART_BREAK_RIGHT);
+#ifdef VERBOSE
+                  art_dprint("break %08x at x>=%.16f,y=%.16f, new_x=%f\n", right, x_max, y, new_x);
+#endif
 		  if (new_x < x_min)
 		    {
 		      x_min = new_x;
@@ -794,15 +865,21 @@ art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
      to actually fix up non-ascending pairs. */
 
   /* Now, (left, right) defines an interval of segments broken. Sort
-     into ascending x order. */
+     into ascending x order. (find segment to the left of the new point) */
   test = left == NULL ? ctx->active_head : left->right;
   result = left;
   if (test != NULL && test != right)
     {
       if (y == test->y0)
 	x_test = test->x[0];
-      else /* assert y == test->y1, I think */
+      else if(y == test->y1)
 	x_test = test->x[1];
+      else {
+        art_warn ("internal error in add_point: y=%.16f is between %.16f and %.16f\n", y, test->y0, test->y1);
+	x_test = test->x[1];
+        art_abort();
+      }
+
       for (;;)
 	{
 	  if (x_test <= x)
@@ -810,6 +887,8 @@ art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
 	  test = test->right;
 	  if (test == right)
 	    break;
+
+          /* FIXME the following code doesn't do anything (?) */
 	  new_x = x_test;
 	  if (new_x < x_test)
 	    {
@@ -825,6 +904,12 @@ static void
 art_svp_intersect_swap_active (ArtIntersectCtx *ctx,
 			       ArtActiveSeg *left_seg, ArtActiveSeg *right_seg)
 {
+  if((left_seg && left_seg->right != right_seg) ||
+     (right_seg && right_seg->left != left_seg)) {
+      art_warn("error: active list in disarray\n");
+      art_abort();
+  }
+
   right_seg->left = left_seg->left;
   if (right_seg->left != NULL)
     right_seg->left->right = right_seg;
@@ -835,6 +920,19 @@ art_svp_intersect_swap_active (ArtIntersectCtx *ctx,
     left_seg->right->left = left_seg;
   left_seg->left = right_seg;
   right_seg->right = left_seg;
+}
+
+volatile char add0 = 0;
+static double double_precision(double x)
+{
+    /* make sure x has exactly 11 bits exponent and 52 bit mantissa-
+       there is probably a more elegant (or faster) way to trick the compiler
+       into doing this, but this works for now. */
+    unsigned char xx[8];
+    *(double*)xx = x;
+    xx[0]+=add0; xx[1]+=add0; xx[2]+=add0; xx[3]+=add0;
+    xx[4]+=add0; xx[5]+=add0; xx[6]+=add0; xx[7]+=add0;
+    return *(double*)xx;
 }
 
 /**
@@ -868,8 +966,29 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 #ifdef VERBOSE 
   static int count = 0;
 
-  art_dprint ("art_svp_intersect_test_cross %lx <-> %lx: count=%d\n",
+  art_dprint ("art_svp_intersect_test_cross %08x <-> %08x: count=%d\n",
 	  (unsigned long)left_seg, (unsigned long)right_seg, count++);
+  art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", left_seg, 
+          left_seg->x[0], left_seg->y0,
+          left_seg->x[1], left_seg->y1);
+  art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", right_seg, 
+          right_seg->x[0], right_seg->y0,
+          right_seg->x[1], right_seg->y1);
+#endif
+
+#ifdef CHEAP_SANITYCHECK
+  if (right_seg->x[0] < left_seg->x[(left_seg->flags & ART_ACTIVE_FLAGS_BNEG) ^ 1]) {
+      /* notice: if we test *only* the line equation here, dd might be < 0, even though
+         right_seg was inserted to the right of left_seg correctly, due to numerical
+         instabilities */
+      double dd = right_seg->x[0] * left_seg->a + right_seg->y0 * left_seg->b + left_seg->c;
+      if(dd < 0) {
+          //art_warn ("segment %08x[%d] isn't to the left of %08x[%d]. d=%.16f\n", 
+          //        left_seg, left_seg->n_stack,
+          //        right_seg, right_seg->n_stack,
+          //        dd);
+      }
+  }
 #endif
 
   if (left_seg->y0 == right_seg->y0 && left_seg->x[0] == right_seg->x[0])
@@ -890,15 +1009,23 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 	    return ART_FALSE;
 	  d = left_x1 * right_seg->a + left_y1 * right_seg->b + right_seg->c;
 	  if (d < -EPSILON_A)
-	    return ART_FALSE;
-	  else if (d < EPSILON_A)
+	    
+              return ART_FALSE;
+	  else if (d < EPSILON_A) /* should we use zero here? */
 	    {
+#ifdef VERBOSE 
+                art_dprint("break %08x because of common top point, left_y1 < right_y1\n", right_seg);
+#endif
 	      /* I'm unsure about the break flags here. */
 	      double right_x1 = art_svp_intersect_break (ctx, right_seg,
 							 left_x1, left_y1,
 							 ART_BREAK_RIGHT);
-	      if (left_x1 <= right_x1)
+              
+              /* this is always true due to ART_BREAK_RIGHT right_x1>=left_x1 if 
+                 _break uses x_ref clipping */
+	      if (left_x1 <= right_x1) {
 		return ART_FALSE;
+              }
 	    }
 	}
       else if (left_y1 > right_y1)
@@ -908,18 +1035,27 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 
 	  if (right_x1 > left_seg->x[left_seg->flags & ART_ACTIVE_FLAGS_BNEG] ||
 	      right_y1 == left_seg->y0)
-	    return ART_FALSE;
+	    
+              return ART_FALSE;
 	  d = right_x1 * left_seg->a + right_y1 * left_seg->b + left_seg->c;
 	  if (d > EPSILON_A)
 	    return ART_FALSE;
-	  else if (d > -EPSILON_A)
+	  else if (d > -EPSILON_A) /* should we use zero here? */
 	    {
+#ifdef VERBOSE 
+              art_dprint("break %08x because of common top point, left_y1 > right_y1\n", left_seg);
+#endif
 	      /* See above regarding break flags. */
 	      double left_x1 = art_svp_intersect_break (ctx, left_seg,
 							right_x1, right_y1,
 							ART_BREAK_LEFT);
-	      if (left_x1 <= right_x1)
+
+              /* this is always true, due to ART_BREAK_LEFT left_x1<=right_x1, if
+                 _break uses x_ref clipping
+               */
+	      if (left_x1 <= right_x1) {
 		return ART_FALSE;
+              }
 	    }
 	}
       else /* left_y1 == right_y1 */
@@ -927,10 +1063,17 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 	  double left_x1 = left_seg->x[1];
 	  double right_x1 = right_seg->x[1];
 
-	  if (left_x1 <= right_x1)
+	  
+          if (left_x1 <= right_x1)
 	    return ART_FALSE;
 	}
+
+      //int wind_left = left_seg->wind_left;
+      //int wind_right = right_seg->wind_left;
       art_svp_intersect_swap_active (ctx, left_seg, right_seg);
+      //left_seg->wind_left = wind_right;
+      //right_seg->wind_left = wind_left;
+
       return ART_TRUE;
     }
 
@@ -943,14 +1086,35 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 	  right_seg->x[(right_seg->flags & ART_ACTIVE_FLAGS_BNEG) ^ 1] ||
 	  left_y1 == right_seg->y0)
 	return ART_FALSE;
+
+      if(left_y1 < right_seg->y0) {
+          art_warn("left_y1 < right_seg->y0\n");
+          return ART_FALSE;
+      }
+
+      /* we might want to output a warning for left_y1 < right_seg->y0 */
+
       d = left_x1 * right_seg->a + left_y1 * right_seg->b + right_seg->c;
       if (d < -EPSILON_A)
 	return ART_FALSE;
       else if (d < EPSILON_A)
 	{
+#ifdef VERBOSE 
+          art_dprint("break %08x at %.16f because left_y1 < right_y1\n", right_seg, left_y1);
+          art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", right_seg, 
+                  right_seg->x[0], right_seg->y0,
+                  right_seg->x[1], right_seg->y1);
+#endif
 	  double right_x1 = art_svp_intersect_break (ctx, right_seg,
 						     left_x1, left_y1,
 						     ART_BREAK_RIGHT);
+#ifdef VERBOSE 
+          art_dprint("after break:\n", right_seg);
+          art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", right_seg, 
+                  right_seg->x[0], right_seg->y0,
+                  right_seg->x[1], right_seg->y1);
+#endif
+          /* this is always true if _break uses x_ref clipping */
 	  if (left_x1 <= right_x1)
 	    return ART_FALSE;
 	}
@@ -963,14 +1127,26 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
       if (right_x1 > left_seg->x[left_seg->flags & ART_ACTIVE_FLAGS_BNEG] ||
 	  right_y1 == left_seg->y0)
 	return ART_FALSE;
+      
+      if(right_y1 < left_seg->y0) {
+          art_warn("left_y1 < right_seg->y0\n");
+          return ART_FALSE;
+      }
+      
+      /* we might want to output a warning for right_y1 < left_seg->y0 */
+
       d = right_x1 * left_seg->a + right_y1 * left_seg->b + left_seg->c;
       if (d > EPSILON_A)
 	return ART_FALSE;
       else if (d > -EPSILON_A)
 	{
+#ifdef VERBOSE 
+          art_dprint("break %08x because left_y1 > right_y1\n", right_seg);
+#endif
 	  double left_x1 = art_svp_intersect_break (ctx, left_seg,
 						    right_x1, right_y1,
 						    ART_BREAK_LEFT);
+          /* this is always true if _break uses x_ref clipping */
 	  if (left_x1 <= right_x1)
 	    return ART_FALSE;
 	}
@@ -984,6 +1160,7 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 	return ART_FALSE;
     }
 
+
   /* The segments cross. Find the intersection point. */
 
   in_seg = left_seg->in_seg;
@@ -992,6 +1169,15 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
   left_y0 = in_seg->points[in_curs - 1].y;
   left_x1 = in_seg->points[in_curs].x;
   left_y1 = in_seg->points[in_curs].y;
+
+#if 0
+  /* check for endpoint = firstpoint cases */
+  if(left_seg->y0 == right_seg->y1 && left_seg->x[0] == right_seg->x[1])
+      return ART_FALSE;
+  if(left_seg->y1 == right_seg->y0 && left_seg->x[1] == right_seg->x[0])
+      return ART_FALSE;
+#endif
+
   d0 = left_x0 * right_seg->a + left_y0 * right_seg->b + right_seg->c;
   d1 = left_x1 * right_seg->a + left_y1 * right_seg->b + right_seg->c;
   if (d0 == d1)
@@ -1036,12 +1222,41 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
   else if (x > right_seg->x[right_seg->flags & ART_ACTIVE_FLAGS_BNEG])
     x = right_seg->x[right_seg->flags & ART_ACTIVE_FLAGS_BNEG];
 
+  x = double_precision(x);
+  y = double_precision(y);
+
+  assert(ctx->y >= left_seg->y0);
+#ifdef VERBOSE
+  art_dprint ("intersect at %.16f %.16f\n", x, y);
+#endif
+
+
+  if(y < ctx->y) {
+      /* as we use the full segment length (not just the subsegment currently
+         under evaluation), intersection points may be above the current scanline.
+         As we're not able to process these anymore, we also don't need to add
+         anything to the active list or pq */
+      if(ctx->y -  y > EPSILON_A) {
+        art_warn("ignoring previously unhandled intersection point %.16f,%.16f between segments %08x and %08x, dy = %.16f\n", 
+                   x, y, left_seg, right_seg,
+                   ctx->y - y);
+        art_abort();
+      }
+
+      return ART_FALSE;
+  }
+  
+  if(y > left_seg->y1) {
+      /* not within the subsegment we're currently looking into- this is not an intersection */
+      return ART_FALSE;
+  }
+
   if (y == left_seg->y0)
     {
       if (y != right_seg->y0)
 	{
 #ifdef VERBOSE
-	  art_dprint ("art_svp_intersect_test_cross: intersection (%g, %g) matches former y0 of %lx, %lx\n",
+	  art_dprint ("art_svp_intersect_test_cross: intersection (%.16f, %.16f) matches former y0 of %08x, [%08x]\n",
 		    x, y, (unsigned long)left_seg, (unsigned long)right_seg);
 #endif
 	  art_svp_intersect_push_pt (ctx, right_seg, x, y);
@@ -1051,8 +1266,17 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 	}
       else
 	{
-	  /* Intersection takes place at current scan line; process
-	     immediately rather than queueing intersection point into
+#ifdef VERBOSE
+	  art_dprint ("art_svp_intersect_test_cross: intersection (%.16f, %.16f) at current scan line (y=ly0=ry0)\n",
+		    x, y, (unsigned long)left_seg, (unsigned long)right_seg);
+#endif
+	  /* Intersection takes place at current scan line, with
+             left->x0 <= x <= right->x0, left->x0 != right->x0.
+
+             This happens if one of the lines is horizontal, or very near
+             horizontal. (true horizontal lines are processed by _horiz())
+             
+             Process immediately rather than queueing intersection point into
 	     priq. */
 	  ArtActiveSeg *winner, *loser;
 
@@ -1067,7 +1291,11 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
 	      winner = right_seg;
 	      loser = left_seg;
 	    }
-
+#ifdef VERBOSE
+          art_dprint ("           x = %.16f\n", x);
+          art_dprint (" loser->x[0] = %.16f\n", loser->x[0]);
+          art_dprint ("winner->x[0] = %.16f\n", winner->x[0]);
+#endif
 	  loser->x[0] = winner->x[0];
 	  loser->horiz_x = loser->x[0];
 	  loser->horiz_delta_wind += loser->delta_wind;
@@ -1080,8 +1308,15 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
   else if (y == right_seg->y0)
     {
 #ifdef VERBOSE
-      art_dprint ("*** art_svp_intersect_test_cross: intersection (%g, %g) matches latter y0 of %lx, %lx\n",
+      art_dprint ("*** art_svp_intersect_test_cross: intersection (%.16f, %.16f) matches latter y0 of [%08x], %08x\n",
 	      x, y, (unsigned long)left_seg, (unsigned long)right_seg);
+      art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", left_seg, 
+              left_seg->x[0], left_seg->y0,
+              left_seg->x[1], left_seg->y1);
+      art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", right_seg, 
+              right_seg->x[0], right_seg->y0,
+              right_seg->x[1], right_seg->y1);
+
 #endif
       art_svp_intersect_push_pt (ctx, left_seg, x, y);
       if ((break_flags & ART_BREAK_LEFT) && left_seg->left != NULL)
@@ -1091,16 +1326,16 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
   else
     {
 #ifdef VERBOSE
-      art_dprint ("Inserting (%g, %g) into %lx, %lx\n",
+      art_dprint ("Inserting (%.16f, %.16f) into %08x, %08x\n",
 	      x, y, (unsigned long)left_seg, (unsigned long)right_seg);
 #endif
       /* Insert the intersection point into both segments. */
       art_svp_intersect_push_pt (ctx, left_seg, x, y);
       art_svp_intersect_push_pt (ctx, right_seg, x, y);
       if ((break_flags & ART_BREAK_LEFT) && left_seg->left != NULL)
-	art_svp_intersect_add_point (ctx, x, y, left_seg->left, break_flags);
+	art_svp_intersect_add_point (ctx, x, y, left_seg->left, ART_BREAK_LEFT | ART_BREAK_RIGHT);
       if ((break_flags & ART_BREAK_RIGHT) && right_seg->right != NULL)
-	art_svp_intersect_add_point (ctx, x, y, right_seg->right, break_flags);
+	art_svp_intersect_add_point (ctx, x, y, right_seg->right, ART_BREAK_LEFT | ART_BREAK_RIGHT);
     }
   return ART_FALSE;
 }
@@ -1136,9 +1371,11 @@ art_svp_intersect_active_free (ArtActiveSeg *seg)
 {
   art_free (seg->stack);
 #ifdef VERBOSE
-  art_dprint ("Freeing %lx\n", (unsigned long) seg);
-#endif
+  art_dprint ("Freeing %08x\n", (unsigned long) seg);
+#else
+  // !!!
   art_free (seg);
+#endif
 }
 
 /**
@@ -1217,6 +1454,11 @@ art_svp_intersect_horiz (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
   if (x0 == x1)
     return;
 
+#ifdef VERBOSE
+  art_dprint("horiz: seg=%08x x0=%f x1=%f segid=%08x flags=%s delta_wind=%d\n", seg, x0, x1, seg->seg_id,
+          seg->flags & ART_ACTIVE_FLAGS_OUT?"out":"", seg->delta_wind);
+#endif
+
   hs = art_new (ArtActiveSeg, 1);
 
   hs->flags = ART_ACTIVE_FLAGS_DEL | (seg->flags & ART_ACTIVE_FLAGS_OUT);
@@ -1263,7 +1505,7 @@ art_svp_intersect_horiz (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
 	      art_svp_intersect_break (ctx, left, x1, ctx->y, ART_BREAK_LEFT);
 	    }
 #ifdef VERBOSE
-	  art_dprint ("x0=%g > x1=%g, swapping %lx, %lx\n",
+	  art_dprint ("x0=%.16f > x1=%.16f, swapping %08x, %08x\n",
 		  x0, x1, (unsigned long)left, (unsigned long)seg);
 #endif
 	  art_svp_intersect_swap_active (ctx, left, seg);
@@ -1295,7 +1537,7 @@ art_svp_intersect_horiz (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
 				       ART_BREAK_LEFT);
 	    }
 #ifdef VERBOSE
-	  art_dprint ("[right]x0=%g < x1=%g, swapping %lx, %lx\n",
+	  art_dprint ("[right]x0=%.16f < x1=%.16f, swapping %08x, %08x\n",
 		  x0, x1, (unsigned long)seg, (unsigned long)right);
 #endif
 	  art_svp_intersect_swap_active (ctx, seg, right);
@@ -1329,16 +1571,20 @@ art_svp_intersect_insert_line (ArtIntersectCtx *ctx, ArtActiveSeg *seg)
   if (seg->y1 == seg->y0)
     {
 #ifdef VERBOSE
-      art_dprint ("art_svp_intersect_insert_line: %lx is horizontal\n",
-	      (unsigned long)seg);
+      art_dprint ("art_svp_intersect_insert_line(%d): %08x is horizontal\n", seg->flags&ART_ACTIVE_FLAGS_IN_ACTIVE, (unsigned long)seg);
 #endif
       art_svp_intersect_horiz (ctx, seg, seg->x[0], seg->x[1]);
     }
   else
     {
+#ifdef VERBOSE
+      art_dprint ("art_svp_intersect_insert_line(%d): %08x is non-horizontal\n", seg->flags&ART_ACTIVE_FLAGS_IN_ACTIVE, (unsigned long)seg);
+#endif
       art_svp_intersect_insert_cross (ctx, seg);
       art_svp_intersect_add_horiz (ctx, seg);
     }
+
+  seg->flags |= ART_ACTIVE_FLAGS_IN_ACTIVE; //q
 }
 
 static void
@@ -1351,6 +1597,9 @@ art_svp_intersect_process_intersection (ArtIntersectCtx *ctx,
   seg->x[0] = seg->stack[n_stack].x;
   seg->y0 = seg->stack[n_stack].y;
   seg->horiz_x = seg->x[0];
+#ifdef VERBOSE
+  art_dprint("process intersection %08x (%.16f,%.16f-%.16f,%.16f)\n", seg, seg->x[0], seg->y0, seg->x[1], seg->y1);
+#endif
   art_svp_intersect_insert_line (ctx, seg);
 }
 
@@ -1364,7 +1613,7 @@ art_svp_intersect_advance_cursor (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
 
   if (swr != NULL)
     swr->add_point (swr, seg->seg_id, seg->x[1], seg->y1);
-  if (in_curs + 1 == in_seg->n_points)
+  if (in_curs + 1 >= in_seg->n_points)
     {
       ArtActiveSeg *left = seg->left, *right = seg->right;
 
@@ -1431,16 +1680,37 @@ art_svp_intersect_add_seg (ArtIntersectCtx *ctx, const ArtSVPSeg *in_seg)
 
       if (x0 < test->x[test_bneg])
 	{
-	  if (x0 < test->x[test_bneg ^ 1])
+	  if (x0 < test->x[test_bneg ^ 1]) {
+#ifdef VERBOSE
+            art_dprint("inserting segment %08x before %08x (x0 < xmin)\n", seg, test);
+#endif
 	    break;
+          }
 	  d = x0 * test->a + y0 * test->b + test->c;
-	  if (d < 0)
+	  if (d < 0) {
+#ifdef VERBOSE
+            art_dprint("inserting segment %08x before %08x (d = %.16f)\n", seg, test, d);
+#endif
 	    break;
-	}
+          }
+#ifdef VERBOSE
+          art_dprint("segment %08x is to the right of %08x d=%.16f\n", seg, test, d);
+#endif
+	} else {
+#ifdef VERBOSE
+	    d = x0 * test->a + y0 * test->b + test->c;
+            art_dprint("segment %08x is to the right of %08x d=%.16f (not used)\n", seg, test, d);
+#endif
+        }
       last = test;
     }
 
   left = art_svp_intersect_add_point (ctx, x0, y0, last, ART_BREAK_LEFT | ART_BREAK_RIGHT);
+
+#ifdef VERBOSE
+  art_dprint("left=%08x x0=%.16f y=%.16f\n", left, x0, y0);
+#endif
+
   seg->left = left;
   if (left == NULL)
     {
@@ -1479,7 +1749,7 @@ art_svp_intersect_sanitycheck_winding (ArtIntersectCtx *ctx)
       if (seg->flags & ART_ACTIVE_FLAGS_OUT)
 	{
 	  if (winding_number != seg->wind_left)
-	    art_warn ("*** art_svp_intersect_sanitycheck_winding: seg %lx has wind_left of %d, expected %d\n",
+	    art_warn ("*** art_svp_intersect_sanitycheck_winding: seg %08x has wind_left of %d, expected %d\n",
 		  (unsigned long) seg, seg->wind_left, winding_number);
 	  winding_number = seg->wind_left + seg->delta_wind;
 	}
@@ -1516,10 +1786,10 @@ art_svp_intersect_horiz_commit (ArtIntersectCtx *ctx)
   double last_x = 0; /* initialization just to avoid warning */
 
 #ifdef VERBOSE
-  art_dprint ("art_svp_intersect_horiz_commit: y=%g\n", ctx->y);
+  art_dprint ("art_svp_intersect_horiz_commit: y=%.16f\n", ctx->y);
   for (seg = ctx->horiz_first; seg != NULL; seg = seg->horiz_right)
-    art_dprint (" %lx: %g %+d\n",
-	    (unsigned long)seg, seg->horiz_x, seg->horiz_delta_wind);
+    art_dprint (" %08x: %.16f %+d segid=%d\n",
+	    (unsigned long)seg, seg->horiz_x, seg->horiz_delta_wind, seg->seg_id);
 #endif
 
   /* Output points to svp writer. */
@@ -1535,6 +1805,9 @@ art_svp_intersect_horiz_commit (ArtIntersectCtx *ctx)
 	  ArtSvpWriter *swr = ctx->out;
 	  int seg_id;
 
+#ifdef VERBOSE
+          art_dprint ("generate horizontal segment: y=%.16f x=%.16f-%.16f wind=%d horiz_wind=%d\n", ctx->y, last_x, x, winding_number, horiz_wind);
+#endif
 	  seg_id = swr->add_segment (swr, winding_number, horiz_wind,
 				     last_x, ctx->y);
 	  swr->add_point (swr, seg_id, x, ctx->y);
@@ -1565,8 +1838,7 @@ art_svp_intersect_horiz_commit (ArtIntersectCtx *ctx)
 	  do
 	    {
 #ifdef VERBOSE
-	      art_dprint (" curs %lx: winding_number = %d += %d\n",
-		      (unsigned long)curs, winding_number, curs->delta_wind);
+	      art_dprint (" curs %08x: winding_number = %d += %d\n", (unsigned long)curs, winding_number, curs->delta_wind);
 #endif
 	      if (!(curs->flags & ART_ACTIVE_FLAGS_OUT) ||
 		  curs->wind_left != winding_number)
@@ -1622,36 +1894,30 @@ art_svp_intersect_horiz_commit (ArtIntersectCtx *ctx)
 #endif
 }
 
-#ifdef VERBOSE
-static void
-art_svp_intersect_print_active (ArtIntersectCtx *ctx)
-{
-  ArtActiveSeg *seg;
-
-  art_dprint ("Active list (y = %g):\n", ctx->y);
-  for (seg = ctx->active_head; seg != NULL; seg = seg->right)
-    {
-      art_dprint (" %lx: (%g, %g)-(%g, %g), (a, b, c) = (%g, %g, %g)\n",
-	      (unsigned long)seg,
-	      seg->x[0], seg->y0, seg->x[1], seg->y1,
-	      seg->a, seg->b, seg->c);
-    }
-}
-#endif
-
 #ifdef SANITYCHECK
 static void
-art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx)
+art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx, double y)
 {
   ArtActiveSeg *seg;
   ArtActiveSeg *last = NULL;
   double d;
 
+#ifdef VERbOSE
+  art_dprint ("Active list (y = %.16f (new: %.16f)):\n", ctx->y, y);
+#endif
+
   for (seg = ctx->active_head; seg != NULL; seg = seg->right)
     {
+#ifdef VERBOSE
+      char c1=' ',c2=' ',e1=' ';
+      if(seg->y0 > ctx->y) c1='!';
+      if(seg->y0 > y) c2='!';
+      if(seg->y0 > seg->y1) e1='E';
+#endif
+
       if (seg->left != last)
 	{
-	  art_warn ("*** art_svp_intersect_sanitycheck: last=%lx, seg->left=%lx\n",
+	  art_warn ("*** art_svp_intersect_sanitycheck: last=%08x, seg->left=%08x\n",
 		    (unsigned long)last, (unsigned long)seg->left);
 	}
       if (last != NULL)
@@ -1674,11 +1940,21 @@ art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx)
 		    last->y1 == seg->y0))
 		{
 		  d = last->x[1] * seg->a + last->y1 * seg->b + seg->c;
-		  if (d >= -EPSILON_A)
-		    art_warn ("*** bottom (%g, %g) of %lx is not clear of %lx to right (d = %g)\n",
+		  if (d >= EPSILON_A) {
+		    art_warn ("*** bottom (%.16f, %.16f) of %08x is not clear of %08x to right (d = %g)\n",
 			      last->x[1], last->y1, (unsigned long) last,
 			      (unsigned long) seg, d);
-		}
+                    art_abort();
+                  } else {
+#ifdef VERBOSE
+                      art_dprint("is to the left (d=%.16f of previous x1,y1) of\n", d);
+#endif
+                  }
+		} else {
+#ifdef VERBOSE
+                    art_dprint("is to the left (previous x1 < next x%d) of\n", (seg->flags & ART_ACTIVE_FLAGS_BNEG) ^ 1);
+#endif
+                }
 	    }
 	  else if (last->y1 > seg->y1)
 
@@ -1688,22 +1964,49 @@ art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx)
 		    seg->y1 == last->y0))
 	      {
 		d = seg->x[1] * last->a + seg->y1 * last->b + last->c;
-		if (d <= EPSILON_A)
-		  art_warn ("*** bottom (%g, %g) of %lx is not clear of %lx to left (d = %g)\n",
+		if (d < -EPSILON_A) {
+		  art_warn ("*** bottom (%.16f, %.16f) of %08x is not clear of %08x to left (d = %.16f)\n",
 			      seg->x[1], seg->y1, (unsigned long) seg,
 			      (unsigned long) last, d);
-	      }
+                  art_abort();
+                } else {
+#ifdef VERBOSE
+                  art_dprint("is to the left (d=%.16f of next x1,y1) of\n", d);
+#endif
+                } 
+	      } else {
+#ifdef VERBOSE
+                  art_dprint("is to the left (next x1 > previous x%d) of\n", last->flags & ART_ACTIVE_FLAGS_BNEG);
+#endif
+              }
 	    }
 	  else
 	    {
-	      if (last->x[1] > seg->x[1])
-		art_warn ("*** bottoms (%g, %g) of %lx and (%g, %g) of %lx out of order\n",
+	      if (last->x[1] - seg->x[1] > EPSILON_A) {
+		art_warn ("*** bottoms (%.16f, %.16f) of %08x and (%.16f, %.16f) of %08x out of order\n",
 			  last->x[1], last->y1, (unsigned long)last,
 			  seg->x[1], seg->y1, (unsigned long)seg);
+                art_abort();
+              } else {
+#ifdef VERBOSE
+                  art_dprint("is to the left (y1s equal, previous x1 < next x1)\n");
+#endif
+              }
 	    }
 	}
+
+#ifdef VERBOSE
+      art_dprint ("%c%08x: %c%c %02d (%.16f, %.16f)-(%.16f, %.16f) ",
+              e1,
+	      (unsigned long)seg, c1, c2, seg->flags,
+	      seg->x[0], seg->y0, seg->x[1], seg->y1);
+#endif
+
       last = seg;
     }
+#ifdef VERBOSE
+  art_dprint("\n");
+#endif
 }
 #endif
 
@@ -1719,6 +2022,25 @@ art_svp_intersector (const ArtSVP *in, ArtSvpWriter *out)
 
   if (in->n_segs == 0)
     return;
+  
+  current_svp = in;
+
+#ifdef VERBOSE
+  int t;
+  art_dprint("Segments: %d\n", in->n_segs);
+  for(t=0;t<in->n_segs;t++) {
+      const ArtSVPSeg* seg = &in->segs[t];
+      art_dprint("Segment %08x(%d): %d points, %s, BBox: (%f,%f,%f,%f)\n", 
+              seg, t, seg->n_points, seg->dir==0?"UP  ":"DOWN",
+              seg->bbox.x0, seg->bbox.y0, seg->bbox.x1, seg->bbox.y1);
+      int p;
+      for(p=0;p<seg->n_points;p++) {
+          ArtPoint* point = &seg->points[p];
+          art_dprint("        (%.16f,%.16f)\n", point->x, point->y);
+      }
+  }
+  art_dprint("\n");
+#endif
 
   ctx = art_new (ArtIntersectCtx, 1);
   ctx->in = in;
@@ -1739,63 +2061,120 @@ art_svp_intersector (const ArtSVP *in, ArtSvpWriter *out)
   ctx->y = first_point->y;
   art_pri_insert (pq, first_point);
 
+  double lasty = -HUGE_VAL;
   while (!art_pri_empty (pq))
     {
       ArtPriPoint *pri_point = art_pri_choose (pq);
       ArtActiveSeg *seg = (ArtActiveSeg *)pri_point->user_data;
 
 #ifdef VERBOSE
-      art_dprint ("\nIntersector step %d\n", count++);
-      art_svp_intersect_print_active (ctx);
-      art_dprint ("priq choose (%g, %g) %lx\n", pri_point->x, pri_point->y,
-	      (unsigned long)pri_point->user_data);
+      art_dprint ("\nIntersector step %d (%d items in pq)\n", count++, pq->n_items);
 #endif
 #ifdef SANITYCHECK
-      art_svp_intersect_sanitycheck(ctx);
+      art_svp_intersect_sanitycheck(ctx, pri_point->y);
+#endif
+#ifdef VERBOSE
+      art_dprint ("priq choose (%.16f, %.16f) %08x\n", pri_point->x, pri_point->y,
+	      (unsigned long)pri_point->user_data);
+      if(seg) {
+          art_dprint ("            %08x = %.16f,%.16f -> %.16f %.16f\n", seg, seg->x[0], seg->y0, seg->x[1], seg->y1);
+      }
+      //int t;
+      //for(t=0;t<pq->n_items;t++) {
+      //    art_dprint("pq[%d] %.16f,%.16f %08x\n", 
+      //            t,
+      //            pq->items[t]->x,
+      //            pq->items[t]->y,
+      //            pq->items[t]->user_data);
+      //}
 #endif
 
+      //art_dprint("y=%f %08x\n", pri_point->y, pri_point->user_data);
       if (ctx->y != pri_point->y)
 	{
 	  art_svp_intersect_horiz_commit (ctx);
 	  ctx->y = pri_point->y;
 	}
 
+      if(ctx->y < lasty) {
+          art_warn("y decreased\n");
+          art_abort();
+      }
+
       if (seg == NULL)
 	{
 	  /* Insert new segment from input */
-	  const ArtSVPSeg *in_seg = &in->segs[ctx->in_curs++];
-	  art_svp_intersect_add_seg (ctx, in_seg);
-	  if (ctx->in_curs < in->n_segs)
-	    {
-	      const ArtSVPSeg *next_seg = &in->segs[ctx->in_curs];
-	      pri_point->x = next_seg->points[0].x;
-	      pri_point->y = next_seg->points[0].y;
-	      /* user_data is already NULL */
-	      art_pri_insert (pq, pri_point);
-	    }
-	  else
-	    art_free (pri_point);
+	  const ArtSVPSeg *in_seg = 0;
+          
+          while(1) {
+              in_seg = &in->segs[ctx->in_curs++];
+              if(in_seg->n_points > 1)
+                  break;
+              if(ctx->in_curs == in->n_segs) {
+                  in_seg = 0;
+                  break;
+              }
+
+#ifdef VERBOSE 
+              art_dprint("ignoring input segment %08x- it only contains %d point(s)\n", 
+                      in_seg, in_seg->n_points);
+#endif
+          }
+        
+          if(in_seg) {
+              int t;
+              int error = 0;
+              for(t=0;t<in_seg->n_points-1;t++) {
+                  if(!(in_seg->points[t].y <= in_seg->points[t+1].y)) {
+                      error = 1;
+                  }
+              }
+              if(error) {
+                  art_warn("bad input: contains a segment with descending y\n");
+                  for(t=0;t<in_seg->n_points;t++) {
+                      art_dprint("%d) %.16f %.16f\n", t, in_seg->points[t].x, in_seg->points[t].y);
+                  }
+                  art_abort();
+              }
+
+#ifdef VERBOSE
+              art_dprint("insert new segment from input (%.16f,%.16f) dir=%d\n", in_seg->points[0].x, in_seg->points[0].y, in_seg->dir);
+#endif
+              art_svp_intersect_add_seg (ctx, in_seg);
+              if (ctx->in_curs < in->n_segs)
+                {
+                  const ArtSVPSeg *next_seg = &in->segs[ctx->in_curs];
+                  pri_point->x = next_seg->points[0].x;
+                  pri_point->y = next_seg->points[0].y;
+                  /* user_data is already NULL */
+                  art_pri_insert (pq, pri_point);
+                }
+              else
+                art_free(pri_point);pri_point =0;
+          } else {
+            art_free(pri_point);pri_point = 0;
+          }
 	}
       else
 	{
-	  int n_stack = seg->n_stack;
+          int n_stack = seg->n_stack;
 
-	  if (n_stack > 1)
-	    {
-	      art_svp_intersect_process_intersection (ctx, seg);
-	      art_free (pri_point);
-	    }
-	  else
-	    {
-	      art_svp_intersect_advance_cursor (ctx, seg, pri_point);
-	    }
+          if (n_stack > 1)
+            {
+              art_svp_intersect_process_intersection (ctx, seg);
+              art_free (pri_point);
+            }
+          else
+            {
+              art_svp_intersect_advance_cursor (ctx, seg, pri_point);
+            }
 	}
+        lasty = ctx->y;
     }
 
   art_svp_intersect_horiz_commit (ctx);
 
   art_pri_free (pq);
   art_free (ctx);
+  current_svp = 0;
 }
-
-#endif /* not TEST_PRIQ */
