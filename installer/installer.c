@@ -36,8 +36,9 @@ static char*install_path = "c:\\swftools\\";
 static char pathBuf[1024];
 static int do_abort = 0;
 
-static HWND wnd_progress = 0;
 static HWND wnd_params = 0;
+static HWND wnd_progress = 0;
+static HWND wnd_finish = 0;
 
 static HBITMAP logo;
 
@@ -63,6 +64,11 @@ struct params_data {
     HWND edit;
     HWND explore;
 };
+struct finish_data {
+    int width,height;
+    int ok;
+    HWND installButton;
+};
 
 LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -79,6 +85,9 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	}
 	if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "progress")) {
 	    wnd_progress = hwnd;
+	}
+	if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "finish")) {
+	    wnd_finish = hwnd;
 	}
     }
 
@@ -336,6 +345,43 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	    default:
 		return DefWindowProc(hwnd, message, wParam, lParam);
 	}
+    } else if(hwnd == wnd_finish) {
+	static struct finish_data data;
+	switch(message)
+	{
+	    case WM_CREATE: {
+
+		/* TODO:
+
+		   "swftools has been installed into directory %s
+		   successfully"
+
+		   [x] Create Desktop Shortcut
+		   [x] Create Start Menu Entry
+
+		*/
+
+		RECT rc;
+		CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
+		GetClientRect (hwnd, &rc);
+		data.width = rc.right - rc.left;
+		data.height = rc.bottom - rc.top;
+		
+		data.installButton = CreateWindow (
+			WC_BUTTON,
+			"Finish",
+			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+			(data.width - 80)/2,
+			data.height - 40,
+			80, 
+			32,
+			hwnd,  /* Parent */
+			(HMENU)0xabcd,
+			cs->hInstance,
+			NULL
+			);
+	    }
+	}
     }
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
@@ -394,10 +440,9 @@ int addRegistryEntries(char*install_dir)
 int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
 {
     WNDCLASSEX wcl;
-
     wcl.hInstance    = me;
-    wcl.lpszClassName= "SWFTools-Installer";
     wcl.lpfnWndProc  = WindowFunc;
+    wcl.lpszClassName= "SWFTools-Install";
     wcl.style        = CS_HREDRAW | CS_VREDRAW;
     wcl.hIcon        = LoadIcon(NULL, IDI_APPLICATION);
     wcl.hIconSm      = LoadIcon(NULL, IDI_APPLICATION);
@@ -405,15 +450,44 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     wcl.lpszMenuName = NULL; //no menu
     wcl.cbClsExtra   = 0;
     wcl.cbWndExtra   = 0;
-    //wcl.hbrBackground= (HBRUSH) GetStockObject(DKGRAY_BRUSH);
-    //wcl.hbrBackground= (HBRUSH) GetStockObject (WHITE_BRUSH);
     wcl.hbrBackground= (HBRUSH) GetStockObject(LTGRAY_BRUSH);
-    //wcl.hbrBackground= (HBRUSH) GetStockObject (GRAY_BRUSH);
     wcl.cbSize       = sizeof(WNDCLASSEX);
 
+    WNDCLASSEX wcl_background;
+    memcpy(&wcl_background, &wcl, sizeof(WNDCLASSEX));
+    wcl_background.lpszClassName= "SWFTools Installer";
+    wcl_background.hbrBackground= CreateSolidBrush(RGB(0, 0, 128));
+
     if(!RegisterClassEx(&wcl)) {
-	return 0;
+	MessageBox(0, "Could not register window class", "Install.exe", MB_OK);
+	return 1;
     }
+    if(!RegisterClassEx(&wcl_background)) {
+        MessageBox(0, "Could not register window class 2", "Install.exe", MB_OK);
+        return 1;
+    }
+
+    HWND background = CreateWindow(wcl_background.lpszClassName, "Setup SWFTools",
+			 0, 0, 0, 
+			 GetSystemMetrics(SM_CXFULLSCREEN),
+			 GetSystemMetrics(SM_CYFULLSCREEN),
+			 NULL, NULL, me, NULL);
+    
+    if(!background) {
+	MessageBox(0, "Could not create installation background window", "Install.exe", MB_OK);
+	return 1;
+    }
+
+    ShowWindow(background, SW_SHOWMAXIMIZED);
+    UpdateWindow(background);
+
+    RECT r = {0,0,0,0};
+    GetWindowRect(background, &r);
+    int xx = 320, yy = 200;
+    if(r.right - r.left > 320)
+	xx = r.right - r.left;
+    if(r.right - r.left > 200)
+	yy = r.bottom - r.top;
     
     logo = LoadBitmap(me, "SWFTOOLS");
     
@@ -424,19 +498,24 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     CoInitialize(0);
     InitCommonControls();
    
-    CreateWindow (
+    HWND installpath_window = CreateWindow(
 	    wcl.lpszClassName,          /* Class name */
-	    "SWFTools Installer",            /* Caption */
-	    WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
-	    CW_USEDEFAULT,              /* Initial x (use default) */
-	    CW_USEDEFAULT,              /* Initial y (use default) */
+	    "SWFTools Installer",       /* Caption */
+	    WS_CHILD | WS_CAPTION,
+	    (xx-320)/2,                 /* Initial x  */
+	    (yy-200)/2,                 /* Initial y  */
 	    320,                        /* Initial x size */
 	    200,                        /* Initial y size */
-	    NULL,                       /* No parent window */
+	    background,                       /* No parent window */
 	    NULL,                       /* No menu */
 	    me,                         /* This program instance */
 	    (void*)"params"		/* Creation parameters */
 	    );
+
+    if(!installpath_window) {
+	MessageBox(0, "Could not create installation window", "Install.exe", MB_OK);
+	return 1;
+    }
 
     ShowWindow (wnd_params, nWinMode);
     UpdateWindow (wnd_params);
@@ -450,7 +529,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     }
 
     if(do_abort)
-	return 0;
+	return 1;
    
     /*char buf[1024];
     sprintf(buf, "Do you want me to install SWFTools into the directory %s now?", install_path);
@@ -461,12 +540,12 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     CreateWindow (
 	    wcl.lpszClassName,          /* Class name */
 	    "Installing...",            /* Caption */
-	    WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
-	    CW_USEDEFAULT,              /* Initial x (use default) */
-	    CW_USEDEFAULT,              /* Initial y (use default) */
+	    WS_CHILD | WS_CAPTION,
+	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
+	    (xx-260)/2, (yy-128)/2,
 	    260,                        /* Initial x size */
 	    128,                        /* Initial y size */
-	    NULL,                       /* No parent window */
+	    background,                 /* No parent window */
 	    NULL,                       /* No menu */
 	    me,                         /* This program instance */
 	    (void*)"progress"		/* Creation parameters */
@@ -480,6 +559,26 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 
     while(wnd_progress)
 	processMessages();
+
+    CreateWindow (
+	    wcl.lpszClassName,          /* Class name */
+	    "Finished",                 /* Caption */
+	    WS_CHILD | WS_CAPTION,
+	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
+	    (xx-320)/2, (yy-160)/2,
+	    320,                        /* Initial x size */
+	    160,                        /* Initial y size */
+	    background,                 /* No parent window */
+	    NULL,                       /* No menu */
+	    me,                         /* This program instance */
+	    (void*)"finish"		/* Creation parameters */
+	    );
+    ShowWindow(wnd_finish, nWinMode);
+    UpdateWindow(wnd_finish);
+
+    while(wnd_finish)
+	processMessages();
+
 
     if(!addRegistryEntries(install_path)) {
 	success = 0;
