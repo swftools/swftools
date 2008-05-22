@@ -30,6 +30,12 @@
 #include "../config.h" //for swftools version
 #include "../lib/os.h" //for registry functions
 
+static int config_forAllUsers = 0;
+static int config_createLinks = 0;
+static int config_createStartmenu = 1;
+static int config_createDesktop = 1;
+
+
 extern char*crndata;
 
 static char*install_path = "c:\\swftools\\";
@@ -377,23 +383,27 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			cs->hInstance,
 			NULL
 			);
-		
-                data.check1 = CreateWindow (
-			WC_BUTTON,
-			"Create Desktop Shortcut",
-			WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
-			32, data.height - 96, 
-                        data.width-32*2, 32, 
-                        hwnd, (HMENU)0xabcf, cs->hInstance, NULL);
-                
-                data.check2 = CreateWindow (
-			WC_BUTTON,
-			"Create Start Menu Entry",
-			WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
-			32, data.height - 64, 
-                        data.width-32*2, 32, 
-                        hwnd, (HMENU)0xabd0, cs->hInstance, NULL);
-		
+	
+		if(config_createLinks) {
+		    data.check1 = CreateWindow (
+			    WC_BUTTON,
+			    "Create Desktop Shortcut",
+			    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
+			    32, data.height - 96, 
+			    data.width-32*2, 32, 
+			    hwnd, (HMENU)0xabcf, cs->hInstance, NULL);
+		    
+		    data.check2 = CreateWindow (
+			    WC_BUTTON,
+			    "Create Start Menu Entry",
+			    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
+			    32, data.height - 64, 
+			    data.width-32*2, 32, 
+			    hwnd, (HMENU)0xabd0, cs->hInstance, NULL);
+		    
+		    SendDlgItemMessage(hwnd, 0xabcf, BM_SETCHECK, config_createStartmenu, 0);
+		    SendDlgItemMessage(hwnd, 0xabd0, BM_SETCHECK, config_createDesktop, 0);
+		}
 	    }
 	    case WM_PAINT: {
 		TEXTMETRIC tm;
@@ -423,9 +433,15 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		    return 0;
                 }
 		if((wParam&0xffff) == 0xabcf) {
-		    return 1;
+		    config_createDesktop = SendDlgItemMessage(hwnd, 0xabcf, BM_GETCHECK, 0, 0);
+		    config_createDesktop^=1;
+		    SendDlgItemMessage(hwnd, 0xabcf, BM_SETCHECK, config_createDesktop, 0);
+		    return 0;
                 }
 		if((wParam&0xffff) == 0xabd0) {
+		    config_createStartmenu = SendDlgItemMessage(hwnd, 0xabd0, BM_GETCHECK, 0, 0);
+		    config_createStartmenu^=1;
+		    SendDlgItemMessage(hwnd, 0xabd0, BM_SETCHECK, config_createStartmenu, 0);
 		    return 0;
                 }
             }
@@ -517,6 +533,47 @@ int addRegistryEntries(char*install_dir)
     return 1;
 }
 
+int CreateShortcut(char*path, char*description, char*filename, char*arguments, int iconindex, char*iconpath, char*workdir)
+{
+    WCHAR wszFilename[MAX_PATH];
+    IShellLink *ps1 = NULL;
+    IPersistFile *pPf = NULL;
+    HRESULT hr;
+    hr = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLink, (void*)&ps1);
+    if(FAILED(hr)) return 0;
+    hr = ps1->lpVtbl->QueryInterface(ps1, &IID_IPersistFile, (void **)&pPf);
+    if(FAILED(hr)) return 0;
+    hr = ps1->lpVtbl->SetPath(ps1, path);
+    if(FAILED(hr)) return 0;
+    hr = ps1->lpVtbl->SetDescription(ps1, description);
+    
+    if (arguments) {
+	hr = ps1->lpVtbl->SetArguments(ps1, arguments);
+	if(FAILED(hr)) return 0;
+    }
+    if (iconpath) {
+	hr = ps1->lpVtbl->SetIconLocation(ps1, iconpath, iconindex);
+	if (FAILED(hr)) return 0;
+    }
+    if (workdir) {
+	hr = ps1->lpVtbl->SetWorkingDirectory(ps1, workdir);
+	if (FAILED(hr)) return 0;
+    }
+    MultiByteToWideChar(CP_ACP, 0, filename, -1, wszFilename, MAX_PATH);
+    hr = pPf->lpVtbl->Save(pPf, wszFilename, TRUE);
+    if(FAILED(hr)) {
+	return 0;
+    }
+    pPf->lpVtbl->Release(pPf);
+    ps1->lpVtbl->Release(ps1);
+    return 1;
+}
+
+
+static HRESULT (WINAPI *f_SHGetSpecialFolderPath)(HWND hwnd, LPTSTR lpszPath, int nFolder, BOOL fCreate);
+static char path_startmenu[MAX_PATH];
+static char path_desktop[MAX_PATH];
+
 int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
 {
     WNDCLASSEX wcl;
@@ -532,7 +589,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     wcl.cbWndExtra   = 0;
     wcl.hbrBackground= (HBRUSH)GetStockObject(LTGRAY_BRUSH);
     wcl.cbSize       = sizeof(WNDCLASSEX);
-    
+
     WNDCLASSEX wcl_text;
     memcpy(&wcl_text, &wcl, sizeof(WNDCLASSEX));
     wcl_text.lpszClassName= "TextClass";
@@ -542,7 +599,34 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     memcpy(&wcl_background, &wcl, sizeof(WNDCLASSEX));
     wcl_background.lpszClassName= "SWFTools Installer";
     wcl_background.hbrBackground= CreateSolidBrush(RGB(0, 0, 128));
-    
+  
+    HINSTANCE shell32 = LoadLibrary("shell32.dll");
+    if(!shell32) {
+	MessageBox(0, "Could not load shell32.dll", "Install.exe", MB_OK);
+	return 1;
+    }
+    f_SHGetSpecialFolderPath = (HRESULT (WINAPI*)(HWND,LPTSTR,int,BOOL))GetProcAddress(shell32, "SHGetSpecialFolderPathA");
+    if(!f_SHGetSpecialFolderPath) {
+	MessageBox(0, "Could not load shell32.dll", "Install.exe", MB_OK);
+	return 1;
+    }
+	
+    HRESULT ret = CoInitialize(NULL);
+    if(FAILED(ret)) {
+	MessageBox(0, "Could not initialize COM interface", "Install.exe", MB_OK);
+	return 1;
+    }
+
+    char mypath[MAX_PATH];
+    path_startmenu[0] = 0;
+    path_desktop[0] = 0;
+    if(config_forAllUsers) {
+	f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_COMMON_DESKTOPDIRECTORY, 0);
+	f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_COMMON_PROGRAMS, 0);
+    } else {
+	f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_DESKTOPDIRECTORY, 0);
+	f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_PROGRAMS, 0);
+    }
 
     if(!RegisterClassEx(&wcl)) {
 	MessageBox(0, "Could not register window class", "Install.exe", MB_OK);
@@ -652,15 +736,23 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	MessageBox(background, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
 	return 1;
     }
+    
+    char* pdf2swf_path = concatPaths(install_path, "pdf2swf_gui.exe");
+    FILE*fi = fopen(pdf2swf_path, "rb");
+    if(fi) {
+	config_createLinks = 1;
+	fclose(fi);
+    }
 
+    int h = config_createLinks?200:140;
     CreateWindow (
 	    wcl.lpszClassName,          /* Class name */
 	    "Finished",                 /* Caption */
 	    WS_CHILD | WS_CAPTION,
 	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
-	    (xx-320)/2, (yy-160)/2,
+	    (xx-320)/2, (yy-h)/2,
 	    320,                        /* Initial x size */
-	    200,                        /* Initial y size */
+	    h,                        /* Initial y size */
 	    background,                 /* No parent window */
 	    NULL,                       /* No menu */
 	    me,                         /* This program instance */
@@ -677,19 +769,27 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     }
 
     if(!addRegistryEntries(install_path)) {
-	success = 0;
 	MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
+	return 1;
     }
 
-    if(success) {
-	//char buf[1024];
-	//sprintf(buf, "SWFTools Version %s has been installed into %s successfully", VERSION, install_path);
-	//MessageBox(0, buf, "SWFTools Install", MB_OK|MB_ICONINFORMATION);
-    } else {
-	/* error will already have been notified by either myarchivestatus or some other
-	   routine */
-	/*sprintf(buf, "Installation failed\nLast message: %s", lastmessage);
-	ret = MessageBox(0, buf, "SWFTools Install", MB_OK|MB_ICONERROR);*/
+    if(config_createLinks) {
+	if(config_createDesktop && path_desktop[0]) {
+	    char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
+	    if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
+		MessageBox(0, "Couldn't create desktop shortcut", "Install.exe", MB_OK);
+		return 1;
+	    }
+	}
+	if(config_createStartmenu && path_startmenu[0]) {
+	    char* group = concatPaths(path_startmenu, "pdf2swf");
+	    CreateDirectory(group, 0);
+	    char* linkName = concatPaths(group, "pdf2swf.lnk");
+	    if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
+		MessageBox(0, "Couldn't create start menu entry", "Install.exe", MB_OK);
+		return 1;
+	    }
+	}
     }
     exit(0);
 }
