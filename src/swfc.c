@@ -2404,17 +2404,15 @@ int parseTwip(char*str)
     /* TODO: make this a proper expression parser */
     char*p = str;
     int val = 0;
-    int add = 1;
+    char ex = 0;
     char*lastpos = str;
     while(*p) {
-	if(*p == '+') 
-	    add = 1;
-	else if(*p == '-')
-	    add = -1;
+	if(*p == '+' || *p == '-' || *p == '/' || *p == '*')
+	    ex = *p;
 	else if(!lastpos)
 	    lastpos = p;
 	p++;
-	if((*p == '+' || *p == '-' || *p == 0) && lastpos) {
+	if((*p == '+' || *p == '-' || *p == '/' || *p == '*' || *p == 0) && lastpos) {
 	    char save = *p;
 	    *p = 0;
 
@@ -2429,9 +2427,18 @@ int parseTwip(char*str)
 		v = parseRawTwip(lastpos);
 	    }
 	    *p = save;
-	    val += v*add;
+	    if(ex == '+') 
+		val += v;
+	    else if(ex == '-')
+		val -= v;
+	    else if(ex == '/')
+		val = (val*20) / v;
+	    else if(ex == '*')
+		val = (val*v) / 20;
+	    else
+		val += v;
+	    ex = 0;
 	    lastpos = 0;
-	    add = 1;
 	}
     }
     return val;
