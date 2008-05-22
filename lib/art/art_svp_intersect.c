@@ -39,7 +39,7 @@
 
 #define noVERBOSE
 
-#define ABORT_ON_ERROR
+#define noABORT_ON_ERROR
 
 #include "art_misc.h"
 
@@ -156,10 +156,13 @@ art_pri_choose (ArtPriQ *pq)
   return result;
 }
 
-static const ArtSVP* current_svp = 0;
+/* TODO: this is *not* thread save */
+const ArtSVP* current_svp = 0;
+int art_error_in_intersector=0;
 
-void art_abort()
+void art_report_error()
 {
+    art_error_in_intersector = 1;
 #ifdef ABORT_ON_ERROR
     if(!current_svp) {
         fprintf(stderr, "internal error: no current polygon\n");
@@ -335,7 +338,7 @@ art_svp_writer_rewind_add_point (ArtSvpWriter *self, int seg_id,
   
   if(n_points && seg->points[n_points-1].y > y) {
       art_warn("non-increasing segment (%.16f -> %.16f)\n", seg->points[n_points-1].y, y);
-      art_abort();
+      art_report_error();
   }
 
   seg->points[n_points].x = x;
@@ -535,7 +538,7 @@ art_svp_intersect_setup_seg (ArtActiveSeg *seg, ArtPriPoint *pri_pt)
 
   if(y1 < y0) {
       art_warn("art_svp_intersect.c: bad input polygon %08x, contains decreasing y values\n", seg->in_seg);
-      art_abort();
+      art_report_error();
   }
 #ifdef VERBOSE
   art_dprint("segment %08x (top: %.16f,%.16f) starts with endpoint at %.16f,%.16f\n", seg, 
@@ -645,7 +648,7 @@ art_svp_intersect_push_pt (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
   if(n_stack) {
       if(seg->stack[seg->n_stack-2].y < seg->stack[seg->n_stack-1].y) {
           art_warn("bad shortening- segment got *longer*\n");
-          art_abort();
+          art_report_error();
       }
   }
 
@@ -702,6 +705,7 @@ art_svp_intersect_break (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
   
   if(y < y0 || y > y1) {
       art_warn("!! bad break %.16f of %.16f-%.16f\n", y, y0, y1);
+      art_report_error();
       return x;
   }
 
@@ -712,10 +716,12 @@ art_svp_intersect_break (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
   if(x0<x1) {
       if(x<x0 || x>x1) {
           art_warn("bad x value %.16f in intersect_break: not between %.16f and %.16f\n", x, x0, x1);
+	  art_report_error();
       } 
   } else {
       if(x<x1 || x>x0) {
           art_warn("bad x value %.16f in intersect_break:  not between %.16f and %.16f\n", x, x1, x0);
+	  art_report_error();
       } 
   }
 
@@ -726,6 +732,7 @@ art_svp_intersect_break (ArtIntersectCtx *ctx, ArtActiveSeg *seg,
     {
       if(y < ctx->y) {
           art_warn("intersect_break at a y above the current scanline (%.16f < %.16f)", y, ctx->y);
+	  art_report_error();
       }
       seg->x[0] = x;
       seg->y0 = y;
@@ -877,7 +884,7 @@ art_svp_intersect_add_point (ArtIntersectCtx *ctx, double x, double y,
       else {
         art_warn ("internal error in add_point: y=%.16f is between %.16f and %.16f\n", y, test->y0, test->y1);
 	x_test = test->x[1];
-        art_abort();
+        art_report_error();
       }
 
       for (;;)
@@ -907,7 +914,7 @@ art_svp_intersect_swap_active (ArtIntersectCtx *ctx,
   if((left_seg && left_seg->right != right_seg) ||
      (right_seg && right_seg->left != left_seg)) {
       art_warn("error: active list in disarray\n");
-      art_abort();
+      art_report_error();
   }
 
   right_seg->left = left_seg->left;
@@ -1250,6 +1257,7 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
          intersection is handled twice- once when the line is inserted, and
          once when e.g. some other intersection point triggers insert_cross.
       */
+      art_warn ("previously unhandled intersection point %.16f %.16f (dy=%.16f)\n", x, y, ctx->y - y);
       return ART_FALSE;
   }
   
@@ -1951,7 +1959,7 @@ art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx, double y)
 		    art_warn ("*** bottom (%.16f, %.16f) of %08x is not clear of %08x to right (d = %g)\n",
 			      last->x[1], last->y1, (unsigned long) last,
 			      (unsigned long) seg, d);
-                    art_abort();
+                    art_report_error();
                   } else {
 #ifdef VERBOSE
                       art_dprint("is to the left (d=%.16f of previous x1,y1) of\n", d);
@@ -1975,7 +1983,7 @@ art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx, double y)
 		  art_warn ("*** bottom (%.16f, %.16f) of %08x is not clear of %08x to left (d = %.16f)\n",
 			      seg->x[1], seg->y1, (unsigned long) seg,
 			      (unsigned long) last, d);
-                  art_abort();
+                  art_report_error();
                 } else {
 #ifdef VERBOSE
                   art_dprint("is to the left (d=%.16f of next x1,y1) of\n", d);
@@ -1993,7 +2001,7 @@ art_svp_intersect_sanitycheck (ArtIntersectCtx *ctx, double y)
 		art_warn ("*** bottoms (%.16f, %.16f) of %08x and (%.16f, %.16f) of %08x out of order\n",
 			  last->x[1], last->y1, (unsigned long)last,
 			  seg->x[1], seg->y1, (unsigned long)seg);
-                art_abort();
+                art_report_error();
               } else {
 #ifdef VERBOSE
                   art_dprint("is to the left (y1s equal, previous x1 < next x1)\n");
@@ -2105,7 +2113,7 @@ art_svp_intersector (const ArtSVP *in, ArtSvpWriter *out)
 
       if(ctx->y < lasty) {
           art_warn("y decreased\n");
-          art_abort();
+          art_report_error();
       }
 
       if (seg == NULL)
@@ -2141,7 +2149,7 @@ art_svp_intersector (const ArtSVP *in, ArtSvpWriter *out)
                   for(t=0;t<in_seg->n_points;t++) {
                       art_dprint("%d) %.16f %.16f\n", t, in_seg->points[t].x, in_seg->points[t].y);
                   }
-                  art_abort();
+                  art_report_error();
               }
 
 #ifdef VERBOSE
