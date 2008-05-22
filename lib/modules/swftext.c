@@ -942,10 +942,11 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
     swf_SetU8(tag, 0);		//reserved flags
     if (f->name) {
 	/* font name */
-	swf_SetU8(tag, strlen((const char*)f->name));
-	swf_SetBlock(tag, f->name, strlen((const char*)f->name));
+	swf_SetU8(tag, strlen((const char*)f->name)+1);
+	swf_SetBlock(tag, f->name, strlen((const char*)f->name)+1);
     } else {
 	/* font name (="") */
+	swf_SetU8(tag, 1);
 	swf_SetU8(tag, 0);
     }
     /* number of glyphs */
