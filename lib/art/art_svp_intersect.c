@@ -971,9 +971,18 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
   art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", left_seg, 
           left_seg->x[0], left_seg->y0,
           left_seg->x[1], left_seg->y1);
+  art_dprint ("(full:     %.16f,%.16f -> %.16f %.16f)\n", 
+          left_seg->in_seg->points[left_seg->in_curs - 1].x, left_seg->in_seg->points[left_seg->in_curs - 1].y,
+          left_seg->in_seg->points[left_seg->in_curs].x, left_seg->in_seg->points[left_seg->in_curs].y
+          );
+
   art_dprint ("%08x = %.16f,%.16f -> %.16f %.16f\n", right_seg, 
           right_seg->x[0], right_seg->y0,
           right_seg->x[1], right_seg->y1);
+  art_dprint ("(full:     %.16f,%.16f -> %.16f %.16f)\n", 
+          right_seg->in_seg->points[right_seg->in_curs - 1].x, right_seg->in_seg->points[right_seg->in_curs - 1].y,
+          right_seg->in_seg->points[right_seg->in_curs].x, right_seg->in_seg->points[right_seg->in_curs].y
+          );
 #endif
 
 #ifdef CHEAP_SANITYCHECK
@@ -1235,14 +1244,12 @@ art_svp_intersect_test_cross (ArtIntersectCtx *ctx,
       /* as we use the full segment length (not just the subsegment currently
          under evaluation), intersection points may be above the current scanline.
          As we're not able to process these anymore, we also don't need to add
-         anything to the active list or pq */
-      if(ctx->y -  y > EPSILON_A) {
-        art_warn("ignoring previously unhandled intersection point %.16f,%.16f between segments %08x and %08x, dy = %.16f\n", 
-                   x, y, left_seg, right_seg,
-                   ctx->y - y);
-        art_abort();
-      }
+         anything to the active list or pq.
 
+         Intersection points above the current scanline happen if an
+         intersection is handled twice- once when the line is inserted, and
+         once when e.g. some other intersection point triggers insert_cross.
+      */
       return ART_FALSE;
   }
   
