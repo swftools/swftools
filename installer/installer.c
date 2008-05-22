@@ -39,6 +39,7 @@ static int do_abort = 0;
 static HWND wnd_params = 0;
 static HWND wnd_progress = 0;
 static HWND wnd_finish = 0;
+static HWND wnd_background = 0;
 
 static HBITMAP logo;
 
@@ -67,7 +68,10 @@ struct params_data {
 struct finish_data {
     int width,height;
     int ok;
+    char*text;
     HWND installButton;
+    HWND check1;
+    HWND check2;
 };
 
 LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -78,16 +82,20 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
        WM_CREATE, we need to assign our window pointers *before* the
        CreateWindow returns, because that's when the WM_CREATE event 
        is sent  */
+
     if(message == WM_CREATE) {
 	CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
 	if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "params")) {
 	    wnd_params = hwnd;
 	}
-	if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "progress")) {
+        else if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "progress")) {
 	    wnd_progress = hwnd;
 	}
-	if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "finish")) {
+        else if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "finish")) {
 	    wnd_finish = hwnd;
+	}
+        else if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "background")) {
+	    wnd_background = hwnd;
 	}
     }
 
@@ -106,6 +114,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		memset(&data, 0, sizeof(data));
 		data.text1 = "Installing SWFTools";
 		data.text2 = (char*)malloc(strlen(install_path)+250);
+                data.text3 = "";
 		sprintf(data.text2, "to %s", install_path);
 		data.pos = 0;
 		data.step = 1;
@@ -130,25 +139,10 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 			data.bar_width, 
 			data.bar_height,
 			hwnd,  /* Parent */
-			(HMENU)1,
+			0,
 			cs->hInstance,
 			NULL
 			);
-
-		data.wnd_text3 = CreateWindow (
-			WC_STATIC,
-			"text3",
-			WS_CHILD | WS_VISIBLE,
-			data.bar_posx,
-			72,
-			(rc.right - rc.left - data.bar_posx*2), 
-			20,
-			hwnd,  /* Parent */
-			(HMENU)1,
-			cs->hInstance,
-			NULL
-			);
-		SendMessage(data.wnd_text3, WM_SETTEXT, 0, (LPARAM)"");
 
 		SendMessage(data.hwndButton, PBM_SETRANGE, 0, (LPARAM) MAKELONG(0,data.range));
 		SendMessage(data.hwndButton, PBM_SETSTEP, (WPARAM) data.step, 0);
@@ -167,7 +161,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		RECT          rc;              /* A rectangle used during drawing */
                 
                 hdc = GetDC(hwnd);
-                SelectObject(hdc, GetStockObject(SYSTEM_FIXED_FONT));
+                SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
                 GetTextMetrics(hdc, &tm);
                 ReleaseDC(hwnd, hdc);
 
@@ -199,6 +193,9 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 
 		rc.top = 32; rc.left= 0; rc.right = data.width; rc.bottom = 48;
 		DrawText(hdc, text, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+		
+                //rc.top = data.height-32; rc.left= 0; rc.right = data.width; rc.bottom = data.height;
+		//DrawText(hdc, data.text3, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 
 		EndPaint (hwnd, &ps);
 		return 0;
@@ -222,20 +219,6 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		data.height = rc.bottom - rc.top;
 
 		//EDITTEXT IDD_EDIT,68,8,72,12, ES_LEFT | ES_AUTOHSCROLL | WS_CHILD | WS_VISIBLE | WS_BORDER  | WS_TABSTOP
-		HWND text = CreateWindow(
-			WC_STATIC,
-			"Select Installation Directory:",
-			WS_CHILD | WS_VISIBLE,
-			32, 
-			16,
-			data.width-32*2, 
-			20,
-			hwnd,  /* Parent */
-			0,
-			cs->hInstance,
-			NULL
-			);
-
 		data.edit = CreateWindow (
 			WC_EDIT,
 			"EditPath",
@@ -288,7 +271,20 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		return 0;
 	    }
 	    case WM_PAINT: {
-		return DefWindowProc(hwnd, message, wParam, lParam);
+		TEXTMETRIC tm;
+		HDC hdc;
+		PAINTSTRUCT ps;
+		RECT rc;
+                hdc = GetDC(hwnd);
+                SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
+                GetTextMetrics(hdc, &tm);
+                ReleaseDC(hwnd, hdc);
+		hdc = BeginPaint (hwnd, &ps);
+		SetBkMode(hdc, TRANSPARENT);
+		rc.top = 32; rc.left= 16; rc.right = data.width-32*2; rc.bottom = 20;
+		DrawText(hdc, "Select Installation directory", -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+		EndPaint (hwnd, &ps);
+		return 0;
 	    }
 	    case WM_COMMAND: {
 		if((wParam&0xffff) == 0x9999) {
@@ -317,13 +313,12 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		    return 0;
 		} else if((wParam&0xffff) == 0xabcd) {
 		    data.ok = 1;
-		    DestroyWindow(wnd_params);
+		    DestroyWindow(hwnd);
 		    return 0;
 		} else if((wParam&0xffff) == 0x1234) {
 		    SendMessage(data.edit, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
 		    if(pathBuf[0]) {
 			install_path = pathBuf;
-			printf("Path edited: now \"%s\"\n", install_path);
 		    }
 		    return 0;
 		}
@@ -331,7 +326,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	    }
 	    case WM_KEYDOWN: {
 		if(wParam == 0x49) {
-		    DestroyWindow(wnd_params);
+		    DestroyWindow(hwnd);
 		}
 		return 0;
 	    }
@@ -350,7 +345,6 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	switch(message)
 	{
 	    case WM_CREATE: {
-
 		/* TODO:
 
 		   "swftools has been installed into directory %s
@@ -366,22 +360,108 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 		GetClientRect (hwnd, &rc);
 		data.width = rc.right - rc.left;
 		data.height = rc.bottom - rc.top;
+
+                data.text = malloc(strlen(install_path)+256);
+                sprintf(data.text, "SWFTools has been installed into directory\r\n%s\r\nsucessfully.", install_path);
 		
 		data.installButton = CreateWindow (
 			WC_BUTTON,
 			"Finish",
 			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 			(data.width - 80)/2,
-			data.height - 40,
+			data.height - 32,
 			80, 
 			32,
-			hwnd,  /* Parent */
-			(HMENU)0xabcd,
+			hwnd, 
+			(HMENU)0xabce,
 			cs->hInstance,
 			NULL
 			);
+		
+                data.check1 = CreateWindow (
+			WC_BUTTON,
+			"Create Desktop Shortcut",
+			WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
+			32, data.height - 96, 
+                        data.width-32*2, 32, 
+                        hwnd, (HMENU)0xabcf, cs->hInstance, NULL);
+                
+                data.check2 = CreateWindow (
+			WC_BUTTON,
+			"Create Start Menu Entry",
+			WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
+			32, data.height - 64, 
+                        data.width-32*2, 32, 
+                        hwnd, (HMENU)0xabd0, cs->hInstance, NULL);
+		
 	    }
+	    case WM_PAINT: {
+		TEXTMETRIC tm;
+		HDC hdc;
+		PAINTSTRUCT ps;
+		RECT rc;
+                hdc = GetDC(hwnd);
+                SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
+                GetTextMetrics(hdc, &tm);
+                ReleaseDC(hwnd, hdc);
+		hdc = BeginPaint (hwnd, &ps);
+		SetBkMode(hdc, TRANSPARENT);
+                rc.left = 0; 
+		rc.top = 10;
+                rc.right = data.width; 
+                rc.bottom = data.height-40-32;
+		DrawText(hdc, data.text, -1, &rc, DT_CENTER | DT_VCENTER);
+		EndPaint (hwnd, &ps);
+		return 0;
+
+		return DefWindowProc(hwnd, message, wParam, lParam);
+	    }
+	    case WM_COMMAND: {
+		if((wParam&0xffff) == 0xabce) {
+		    data.ok = 1;
+		    DestroyWindow(hwnd);
+		    return 0;
+                }
+		if((wParam&0xffff) == 0xabcf) {
+		    return 1;
+                }
+		if((wParam&0xffff) == 0xabd0) {
+		    return 0;
+                }
+            }
+	    case WM_DESTROY: {
+                free(data.text);data.text = 0;
+		if(!data.ok) {
+		    do_abort = 1;
+                    PostQuitMessage(0);
+		}
+		wnd_finish = 0;
+		return DefWindowProc(hwnd, message, wParam, lParam);
+            }
 	}
+    } else if(hwnd == wnd_background) {
+	switch(message)
+	{
+	    case WM_PAINT: {
+		HDC hdc;
+		PAINTSTRUCT ps;
+		RECT rc;
+		hdc = BeginPaint(hwnd, &ps);
+		SetBkMode(hdc, TRANSPARENT);
+
+                HPEN pen = CreatePen(PS_SOLID, 2, RGB(255, 255, 0));    
+                HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+
+                MoveToEx(hdc, 10, 10, 0);
+                LineTo(hdc, 100, 100);
+
+                SelectObject(hdc, oldPen); 
+                DeleteObject(pen);
+
+		EndPaint(hwnd, &ps);
+		return 1;
+            }
+        }
     }
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
@@ -450,13 +530,19 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     wcl.lpszMenuName = NULL; //no menu
     wcl.cbClsExtra   = 0;
     wcl.cbWndExtra   = 0;
-    wcl.hbrBackground= (HBRUSH) GetStockObject(LTGRAY_BRUSH);
+    wcl.hbrBackground= (HBRUSH)GetStockObject(LTGRAY_BRUSH);
     wcl.cbSize       = sizeof(WNDCLASSEX);
+    
+    WNDCLASSEX wcl_text;
+    memcpy(&wcl_text, &wcl, sizeof(WNDCLASSEX));
+    wcl_text.lpszClassName= "TextClass";
+    wcl_text.hbrBackground = GetStockObject(HOLLOW_BRUSH);
 
     WNDCLASSEX wcl_background;
     memcpy(&wcl_background, &wcl, sizeof(WNDCLASSEX));
     wcl_background.lpszClassName= "SWFTools Installer";
     wcl_background.hbrBackground= CreateSolidBrush(RGB(0, 0, 128));
+    
 
     if(!RegisterClassEx(&wcl)) {
 	MessageBox(0, "Could not register window class", "Install.exe", MB_OK);
@@ -471,7 +557,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 			 0, 0, 0, 
 			 GetSystemMetrics(SM_CXFULLSCREEN),
 			 GetSystemMetrics(SM_CYFULLSCREEN),
-			 NULL, NULL, me, NULL);
+			 NULL, NULL, me, 
+	                 (void*)"background");
     
     if(!background) {
 	MessageBox(0, "Could not create installation background window", "Install.exe", MB_OK);
@@ -497,7 +584,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 
     CoInitialize(0);
     InitCommonControls();
-   
+    
     HWND installpath_window = CreateWindow(
 	    wcl.lpszClassName,          /* Class name */
 	    "SWFTools Installer",       /* Caption */
@@ -513,7 +600,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	    );
 
     if(!installpath_window) {
-	MessageBox(0, "Could not create installation window", "Install.exe", MB_OK);
+	MessageBox(background, "Could not create installation window", "Install.exe", MB_OK);
 	return 1;
     }
 
@@ -528,8 +615,10 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
         DispatchMessage(&msg);
     }
 
-    if(do_abort)
+    if(do_abort) {
+	MessageBox(background, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
 	return 1;
+    }
    
     /*char buf[1024];
     sprintf(buf, "Do you want me to install SWFTools into the directory %s now?", install_path);
@@ -559,6 +648,10 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 
     while(wnd_progress)
 	processMessages();
+    if(do_abort) {
+	MessageBox(background, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
+	return 1;
+    }
 
     CreateWindow (
 	    wcl.lpszClassName,          /* Class name */
@@ -567,7 +660,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
 	    (xx-320)/2, (yy-160)/2,
 	    320,                        /* Initial x size */
-	    160,                        /* Initial y size */
+	    200,                        /* Initial y size */
 	    background,                 /* No parent window */
 	    NULL,                       /* No menu */
 	    me,                         /* This program instance */
@@ -578,7 +671,10 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 
     while(wnd_finish)
 	processMessages();
-
+    if(do_abort) {
+	MessageBox(0, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
+	return 1;
+    }
 
     if(!addRegistryEntries(install_path)) {
 	success = 0;
@@ -586,9 +682,9 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     }
 
     if(success) {
-	char buf[1024];
-	sprintf(buf, "SWFTools Version %s has been installed into %s successfully", VERSION, install_path);
-	MessageBox(0, buf, "SWFTools Install", MB_OK|MB_ICONINFORMATION);
+	//char buf[1024];
+	//sprintf(buf, "SWFTools Version %s has been installed into %s successfully", VERSION, install_path);
+	//MessageBox(0, buf, "SWFTools Install", MB_OK|MB_ICONINFORMATION);
     } else {
 	/* error will already have been notified by either myarchivestatus or some other
 	   routine */
@@ -597,6 +693,4 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     }
     exit(0);
 }
-
-
 
