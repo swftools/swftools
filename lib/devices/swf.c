@@ -1995,6 +1995,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
         printf("protect                     add a \"protect\" tag to the file, to prevent loading in the Flash editor\n");
         printf("flashversion=<version>      the SWF fileversion (6)\n");
         printf("minlinewidth=<width>        convert horizontal/vertical boxes smaller than this width to lines (0.05) \n");
+        printf("simpleviewer                Add next/previous buttons to the SWF\n");
         printf("animate                     insert a showframe tag after each placeobject (animate draw order of PDF files)\n");
         printf("jpegquality=<quality>       set compression quality of jpeg images\n");
     } else {
