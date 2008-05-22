@@ -238,25 +238,180 @@ void show_path(ArtSVP*path)
     printf("\n");
 }
 
-void check_svp(ArtSVP*svp)
+
+typedef struct svp_segment_part
+{
+    double y1;
+    double y2;
+    char active;
+} svp_segment_part_t;
+
+int compare_double(const void*_y1, const void*_y2)
+{
+    const double*y1 = _y1;
+    const double*y2 = _y2;
+    if(*y1<*y2) return -1;
+    if(*y1>*y2) return 1;
+    else return 0;
+}
+
+int compare_seg_start(const void*_s1, const void*_s2)
+{
+    svp_segment_part_t*s1 = *(svp_segment_part_t**)_s1;
+    svp_segment_part_t*s2 = *(svp_segment_part_t**)_s2;
+    if(s1->y1 < s2->y1) return -1;
+    if(s1->y1 > s2->y1) return 1;
+    else return 0;
+}
+
+int compare_seg_end(const void*_s1, const void*_s2)
+{
+    svp_segment_part_t*s1 = *(svp_segment_part_t**)_s1;
+    svp_segment_part_t*s2 = *(svp_segment_part_t**)_s2;
+    if(s1->y2 < s2->y2) return -1;
+    if(s1->y2 > s2->y2) return 1;
+    else return 0;
+}
+
+void clean_svp(ArtSVP*svp)
 {
     int t;
+    int oldpoints = 0;
+    int newpoints = 0;
+    int oldsegs = 0;
+    int newsegs = 0;
     for(t=0;t<svp->n_segs;t++) {
 	ArtSVPSeg* seg = &svp->segs[t];
 	int p;
+	int pos=0;
+	double lasty = 0;
+	oldpoints += seg->n_points;
+	for(p=0;p<seg->n_points;p++) {
+	    ArtPoint* p1 = &seg->points[p];
+	    if(!p || lasty!=p1->y) {
+		seg->points[pos] = seg->points[p];
+		pos++;
+		lasty = p1->y;
+            }
+	}
+	seg->n_points = pos;
+	newpoints += seg->n_points;
+    }
+    int pos = 0;
+    oldsegs = svp->n_segs;
+    for(t=0;t<svp->n_segs;t++) {
+	if(svp->segs[t].n_points > 1) {
+	    svp->segs[pos++] = svp->segs[t];
+	}
+    }
+    svp->n_segs = pos;
+    newsegs = svp->n_segs;
+    if(newsegs < oldsegs || newpoints < oldpoints) {
+	msg("<verbose> Simplified polygon from %d points to %d points, %d to %d segs",
+		oldpoints, newpoints, oldsegs, newsegs);
+    }
+}
+
+int check_svp(ArtSVP*svp)
+{
+    /* count number of y coordinates and segs */
+    int t;
+    int num_points = 0;
+    int num_segs = 0;
+    for(t=0;t<svp->n_segs;t++) {
+	if(!svp->segs[t].n_points) {
+            msg("<error> svp contains segment with zero points\n");
+	    return 0;
+	}
+	num_points += svp->segs[t].n_points;
+	num_segs += svp->segs[t].n_points - 1;
+    }
+
+    /* create segs and ys */
+    double*y = malloc(sizeof(double)*num_points);
+    svp_segment_part_t*segs = malloc(sizeof(svp_segment_part_t)*num_segs);
+    svp_segment_part_t**seg_start = malloc(sizeof(svp_segment_part_t*)*num_segs);
+    svp_segment_part_t**seg_end = malloc(sizeof(svp_segment_part_t*)*num_segs);
+    
+    int c1=0;
+    num_segs = 0;
+    for(t=0;t<svp->n_segs;t++) {
+	ArtSVPSeg* seg = &svp->segs[t];
+	int p;
+	for(p=0;p<seg->n_points;p++) {
+	    y[c1++] = seg->points[p].y;
+	    assert(c1 <= num_points);
+	}
 	for(p=0;p<seg->n_points-1;p++) {
 	    ArtPoint* p1 = &seg->points[p];
 	    ArtPoint* p2 = &seg->points[p+1];
-            if(p1->y > p2->y) {
-                fprintf(stderr, "bad svp, y in seg %08x is non-increasing\n");
-                exit(0);
-            }
+            
+	    if(p1->y >= p2->y) {
+                msg("<error> bad svp, y in seg is non-increasing %.16f -> %.16f\n", p1->y, p2->y);
+            } else {
+		segs[num_segs].y1 = p1->y;
+		segs[num_segs].y2 = p2->y;
+		segs[num_segs].active = 0;
+		seg_start[num_segs] = &segs[num_segs];
+		seg_end[num_segs] = &segs[num_segs];
+		num_segs++;
+	    }
 	}
     }
+
+    qsort(y, num_points, sizeof(double), compare_double);
+    qsort(seg_start, num_segs, sizeof(svp_segment_part_t*), compare_seg_start);
+    qsort(seg_end, num_segs, sizeof(svp_segment_part_t*), compare_seg_end);
+
+    double lasty = y[0]+1;
+    int num_active = 0;
+    int bleed = 0;
+    double bleedy1=0,bleedy2 = 0;
+    for(t=0;t<num_points;t++) {
+	if(lasty == y[t])
+	    continue;
+	int s;
+	for(s=0;s<num_segs;s++) {
+	    if(segs[s].y1==y[t]) {
+		/* segment is starting */
+		segs[s].active = 1;
+		num_active++;
+	    } else if(segs[s].y2==y[t]) {
+		segs[s].active = 0;
+		num_active--;
+	    }
+	}
+	if(num_active&1) {
+	    bleed = num_active;
+	    bleedy1 = y[t];
+	} else {
+	    if(bleed) {
+		bleedy2 = y[t];
+		break;
+	    }
+	}
+	lasty = y[t];
+    }
+    if(bleed) {
+	msg("<warning> svp bleeds from y=%.16f to y=%.16f (%d/%d active segments)\n", 
+		bleedy1, bleedy2,
+		bleed, num_segs);
+	free(y);free(segs);free(seg_start);free(seg_end);
+	return 0;
+    }
+
+    free(y);
+    free(segs);
+    free(seg_start);
+    free(seg_end);
+
+    return 1;
 }
 
 void write_svp_postscript(const char*filename, ArtSVP*svp)
 {
+    if(!svp)
+	return;
     printf("writing %s\n", filename);
     FILE*fi = fopen(filename, "wb");
     int i, j;
@@ -438,35 +593,49 @@ static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
     return svp;
 }
 
+//#ifdef SHEAR
+//    double shear = find_shear_value(svp);
+//    gfxline_t*line =  gfxpoly_to_gfxline((gfxpoly_t*)svp);
+//    gfxline_t*l = line;
+//    while(l) {
+//        l->y += l->x*shear;
+//        l->sy += l->sx*shear;
+//        l= l->next;
+//    }
+//    svp = (ArtSVP*)gfxpoly_fillToPoly(line);
+//    printf("shearing svp by %.16f\n", shear);
+//#endif
+// ....
+//#ifdef SHEAR
+//    art_svp_free(svp);
+//    shear_svp(result, -shear);
+//#endif
+
+
+
+extern const ArtSVP* current_svp;
+extern void art_report_error();
+extern int art_error_in_intersector;
+
 ArtSVP* run_intersector(ArtSVP*svp, ArtWindRule rule)
 {
     ArtSvpWriter * swr = art_svp_writer_rewind_new(rule);
 
-#ifdef SHEAR
-    double shear = find_shear_value(svp);
-    gfxline_t*line =  gfxpoly_to_gfxline((gfxpoly_t*)svp);
-    gfxline_t*l = line;
-    while(l) {
-        l->y += l->x*shear;
-        l->sy += l->sx*shear;
-        l= l->next;
-    }
-    svp = (ArtSVP*)gfxpoly_fillToPoly(line);
-    printf("shearing svp by %.16f\n", shear);
-#endif
-
     art_svp_intersector(svp, swr);
     ArtSVP*result = art_svp_writer_rewind_reap(swr);
-    check_svp(result);
-
-#ifdef SHEAR
-    art_svp_free(svp);
-    shear_svp(result, -shear);
-#endif
-
+    clean_svp(result);
+    if(!check_svp(result)) {
+	msg("<warning> Error in polygon processing");
+	current_svp = result;
+	art_report_error(); // might set art_error_in_intersector
+    }
+    if(art_error_in_intersector) {
+	art_svp_free(result);
+	art_error_in_intersector=0;
+	return 0;
+    }
     return result;
 }
-
 
 gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
 {
@@ -554,7 +723,7 @@ gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 gfxpoly_t* gfxpoly_intersect(gfxpoly_t*poly1, gfxpoly_t*poly2)
 {
     ArtSvpWriter *swr;
-    
+
     static int counter = 0;
     
     ArtSVP* svp1 = (ArtSVP*)poly1;
@@ -640,6 +809,10 @@ gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
     ArtSVP* svp_rewinded;
     
     svp_rewinded = run_intersector(svp, ART_WIND_RULE_POSITIVE);
+    if(!svp_rewinded) {
+	art_svp_free(svp);
+	return 0;
+    }
 
     gfxline_t* result = gfxpoly_to_gfxline((gfxpoly_t*)svp_rewinded);
     art_svp_free(svp);
