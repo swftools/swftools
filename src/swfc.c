@@ -1546,7 +1546,7 @@ void s_font(char*name, char*filename)
 	swf_FontCreateLayout(font);
     }
     font->id = id;
-	swf_FontReduce_swfc(font);
+    swf_FontReduce_swfc(font);
     tag = swf_InsertTag(tag, ST_DEFINEFONT2);
     swf_FontSetDefine2(tag, font);
     tag = swf_InsertTag(tag, ST_EXPORTASSETS);
@@ -4289,6 +4289,7 @@ static void analyseArgumentsForCommand(char*command)
     map_t args;
     char* fontfile;
     int nr = -1;
+    U8* glyphs_to_include;
     msg("<verbose> analyse Command: %s (line %d)", command, line);
 
     for(t=0;t<sizeof(arguments)/sizeof(arguments[0]);t++)
@@ -4318,8 +4319,26 @@ static void analyseArgumentsForCommand(char*command)
 	    font = (SWFFONT*)malloc(sizeof(SWFFONT));
 	    memset(font, 0, sizeof(SWFFONT));
     	}
-    	swf_FontUseUTF8(font, lu(&args, "glyphs"));
-	swf_FontPrepareForEditText(font);
+    	else
+    	{
+	    swf_FontPrepareForEditText(font);
+    	    glyphs_to_include = lu(&args, "glyphs");
+    	    if (!strcmp(glyphs_to_include, "all"))
+    	    {
+    	    	swf_FontUseAll(font);
+    	    	font->use->glyphs_specified = 1;
+    	    }
+    	    else
+    	    {
+    	    	if (strcmp (glyphs_to_include, ""))
+    	    	{
+    	    	    swf_FontUseUTF8(font, glyphs_to_include);
+    	    	    font->use->glyphs_specified = 1;
+    	    	}
+    	    	else
+    	    	    swf_FontInitUsage(font);
+    	    }
+    	}
     	dictionary_put2(&fonts, name, font);
     }
     else
@@ -4328,10 +4347,16 @@ static void analyseArgumentsForCommand(char*command)
         if (!font)
             syntaxerror("font %s is not known in line %d", lu(&args, "font"), line);
         else
-            if (!strcmp(command, "edittext"))
-            	swf_FontUseAll(font);
-            else
-            	swf_FontUseUTF8(font, lu(&args, "text"));
+            if (font->use && !font->use->glyphs_specified)
+            {
+		if (!strcmp(command, "edittext"))
+		{
+            	    swf_FontUseAll(font);
+            	    font->use->glyphs_specified = 1;
+		}
+            	else
+            	    swf_FontUseUTF8(font, lu(&args, "text"));
+            }
     }
     map_clear(&args);
     return;

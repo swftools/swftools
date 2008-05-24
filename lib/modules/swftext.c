@@ -801,6 +801,7 @@ int swf_FontInitUsage(SWFFONT * f)
     f->use->is_reduced = 0;
     f->use->used_glyphs = 0;
     f->use->chars = (int*)rfx_calloc(sizeof(f->use->chars[0]) * f->numchars);
+    f->use->glyphs_specified = 0;
     return 0;
 }
 
