@@ -233,6 +233,9 @@ unsigned char* render_svp(ArtSVP*svp, intbbox_t*bbox, double zoom, ArtWindRule r
     return image;
 }
 
+#define MAX_WIDTH 8192
+#define MAX_HEIGHT 4096
+
 intbbox_t get_svp_bbox(ArtSVP*svp, double zoom)
 {
     int t;
@@ -259,6 +262,20 @@ intbbox_t get_svp_bbox(ArtSVP*svp, double zoom)
             if(y2 > b.xmax) b.ymax = y2;
         }
     }
+    if(b.xmax > (int)(MAX_WIDTH*zoom))
+	b.xmax = (int)(MAX_WIDTH*zoom);
+    if(b.ymax > (int)(MAX_HEIGHT*zoom))
+	b.ymax = (int)(MAX_HEIGHT*zoom);
+    if(b.xmin < -(int)(MAX_WIDTH*zoom))
+	b.xmin = -(int)(MAX_WIDTH*zoom);
+    if(b.ymin < -(int)(MAX_HEIGHT*zoom))
+	b.ymin = -(int)(MAX_HEIGHT*zoom);
+    
+    if(b.xmin > b.xmax) 
+	b.xmin = b.xmax;
+    if(b.ymin > b.ymax) 
+	b.ymin = b.ymax;
+
     b.width = b.xmax - b.xmin;
     b.height = b.ymax - b.ymin;
     return b;
@@ -657,7 +674,7 @@ int check_svp(ArtSVP*svp)
     qsort(seg_start, num_segs, sizeof(svp_segment_part_t*), compare_seg_start);
     qsort(seg_end, num_segs, sizeof(svp_segment_part_t*), compare_seg_end);
 
-    double lasty = y[0]+1;
+    double lasty = num_points?y[0]+1:0;
     int num_active = 0;
     int bleed = 0;
     double bleedy1=0,bleedy2 = 0;
@@ -925,9 +942,9 @@ ArtSVP* run_intersector(ArtSVP*svp, ArtWindRule rule)
 	current_svp = result;
 	art_report_error(); // might set art_error_in_intersector
     } else {
+        msg("<verbose> Comparing polygon renderings of size %dx%d and %dx%d", bbox.width, bbox.height, bbox.width, bbox.height);
         unsigned char*data1 = render_svp(svp, &bbox, zoom, rule);
         unsigned char*data2 = render_svp(result, &bbox, zoom, ART_WIND_RULE_ODDEVEN);
-        msg("<verbose> Comparing polygon renderings of size %dx%d and %dx%d", bbox.width, bbox.height, bbox.width, bbox.height);
         if(!compare_bitmaps(&bbox, data1, data2)) {
             msg("<verbose> Bad SVP rewinding result- polygons don't match");
             current_svp = result;
@@ -984,7 +1001,7 @@ gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
 gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
 {
     /* I'm not sure whether doing perturbation here is actually
-       a good idea- if that line has been run through the machine
+       a good idea- if that line has been run through the machinery
        several times already, it might be safer to leave it alone,
        since it should already be in a format libart can handle */
 #ifdef PERTURBATE
