@@ -97,7 +97,7 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
        a gfxline into a gfxpoly- for polygons which are too
        complex or just degenerate, this might fail. So handle
        all the cases where polygon conversion or intersection
-       might fail */
+       might go awry */
     if(!poly && !oldclip) {
 	i->out->startclip(i->out,line);
 	currentclip = 0;
@@ -166,7 +166,7 @@ static void addtounion(struct _gfxdevice*dev, gfxpoly_t*poly)
     }
 }
 
-gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly)
+static gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly, char*ok)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(i->clip && i->clip->poly) {
@@ -182,6 +182,7 @@ gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly)
 	// this is the case where everything went right
 	gfxline_t*line = gfxpoly_to_gfxline(poly);
 	gfxpoly_free(poly);
+        *ok = 1;
 	return line;
     } else {
 	if(i->clip && i->clip->poly) {
@@ -206,12 +207,14 @@ void polyops_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfx
     internal_t*i = (internal_t*)dev->internal;
 
     gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, cap_style, joint_style, miterLimit);
-    gfxline_t*line2 = handle_poly(dev, poly);
+    char ok = 0;
+    gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
-    if(line2) {
-	if(i->out) i->out->fill(i->out, line2, color);
+    if(ok) {
+	if(i->out && line2) i->out->fill(i->out, line2, color);
 	gfxline_free(line2);
     } else {
+        msg("<error> ..");
 	if(i->out) i->out->stroke(i->out, line, width, color, cap_style, joint_style, miterLimit);
     }
 }
@@ -222,10 +225,11 @@ void polyops_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     internal_t*i = (internal_t*)dev->internal;
 
     gfxpoly_t*poly = gfxpoly_fillToPoly(line);
-    gfxline_t*line2 = handle_poly(dev, poly);
+    char ok = 0;
+    gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
-    if(line2) {
-	if(i->out) i->out->fill(i->out, line2, color);
+    if(ok) {
+	if(i->out && line2) i->out->fill(i->out, line2, color);
 	gfxline_free(line2);
     } else {
 	if(i->out) i->out->fill(i->out, line, color);
@@ -238,10 +242,11 @@ void polyops_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, g
     internal_t*i = (internal_t*)dev->internal;
     
     gfxpoly_t*poly = gfxpoly_fillToPoly(line);
-    gfxline_t*line2 = handle_poly(dev, poly);
+    char ok = 0;
+    gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
-    if(line2) {
-	if(i->out) i->out->fillbitmap(i->out, line2, img, matrix, cxform);
+    if(ok) {
+	if(i->out && line2) i->out->fillbitmap(i->out, line2, img, matrix, cxform);
 	gfxline_free(line2);
     } else {
 	if(i->out) i->out->fillbitmap(i->out, line, img, matrix, cxform);
@@ -254,10 +259,11 @@ void polyops_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*g
     internal_t*i = (internal_t*)dev->internal;
     
     gfxpoly_t*poly = gfxpoly_fillToPoly(line);
-    gfxline_t*line2 = handle_poly(dev, poly);
+    char ok = 0;
+    gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
-    if(line2) {
-	if(i->out) i->out->fillgradient(i->out, line2, gradient, type, matrix);
+    if(ok) {
+	if(i->out && line2) i->out->fillgradient(i->out, line2, gradient, type, matrix);
 	gfxline_free(line2);
     } else {
 	if(i->out) i->out->fillgradient(i->out, line, gradient, type, matrix);
@@ -284,8 +290,9 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
 	gfxbbox_t bbox = gfxline_getbbox(glyph);
 	gfxpoly_t*dummybox = gfxpoly_createbox(bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax);
 
-	gfxline_t*gfxline = handle_poly(dev, dummybox);
-	if(gfxline) {
+        char ok=0;
+	gfxline_t*gfxline = handle_poly(dev, dummybox, &ok);
+	if(ok) {
 	    gfxbbox_t bbox2 = gfxline_getbbox(gfxline);
 	    double w = bbox2.xmax - bbox2.xmin;
 	    double h = bbox2.ymax - bbox2.ymin;
