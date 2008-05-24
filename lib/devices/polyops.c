@@ -45,6 +45,9 @@ typedef struct _internal {
     gfxdevice_t*out;
     clip_t*clip;
     gfxpoly_t*polyunion;
+    
+    int good_polygons;
+    int bad_polygons;
 } internal_t;
 
 static int verbose = 0;
@@ -90,6 +93,11 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
 
     gfxpoly_t* oldclip = i->clip?i->clip->poly:0;
     gfxpoly_t* poly = gfxpoly_fillToPoly(line);
+    if(poly) 
+        i->good_polygons++;
+    else
+        i->bad_polygons++;
+
     gfxpoly_t* currentclip = 0;
     int type = 0;
 
@@ -111,11 +119,13 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
     } else if(poly && oldclip) {
 	gfxpoly_t*intersection = gfxpoly_intersect(poly, oldclip);
 	if(intersection) {
+            i->good_polygons++;
 	    // this case is what usually happens 
 	    gfxpoly_free(poly);poly=0;
 	    currentclip = intersection;
 	    type = 0;
 	} else {
+            i->bad_polygons++;
 	    gfxline_t*oldclipline = gfxpoly_to_gfxline(oldclip);
 	    i->out->startclip(i->out, oldclipline);
 	    currentclip = poly;
@@ -176,6 +186,12 @@ static gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly, char*ok)
 	    gfxpoly_free(old);
 	}
     }
+
+    if(poly) 
+        i->good_polygons++;
+    else
+        i->bad_polygons++;
+
     addtounion(dev, poly);
     gfxline_t*gfxline = 0;
     if(poly) {
@@ -335,8 +351,13 @@ gfxresult_t* polyops_finish(struct _gfxdevice*dev)
     dbg("polyops_finish");
     internal_t*i = (internal_t*)dev->internal;
 
+
     if(i->polyunion) {
 	gfxpoly_free(i->polyunion);i->polyunion=0;
+    } else {
+        if(i->bad_polygons) {
+            msg("<notice> --flatten success rate: %.1f%% (%d failed polygons)", i->good_polygons*100.0 / (i->good_polygons + i->bad_polygons), i->bad_polygons);
+        }
     }
     if(i->out) {
 	return i->out->finish(i->out);
