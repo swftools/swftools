@@ -114,6 +114,7 @@ int args_callback_option(char*name,char*val)
 	    fprintf(stderr, "Only one --jpegs argument is allowed. (Try to use a range, e.g. -j 1,2,3)\n");
 	    exit(1);
 	}
+	/* TODO: count number of IDs in val range */
 	numextracts++;
 	extractjpegids = val;
 	return 1;
