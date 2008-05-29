@@ -2054,6 +2054,7 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
 	/* TODO: pass image_dpi to device instead */
 	dev->setparameter(dev, "next_bitmap_is_jpeg", "1");
 
+    dump_outline(&p1);
     dev->fillbitmap(dev, &p1, &img, &m, 0);
 }
 
@@ -2144,10 +2145,20 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       return;
   }
 
-  this->transformXY(state, 0, 1, &x1, &y1); x1 = (int)(x1);y1 = (int)(y1);
-  this->transformXY(state, 0, 0, &x2, &y2); x2 = (int)(x2);y2 = (int)(y2);
-  this->transformXY(state, 1, 0, &x3, &y3); x3 = (int)(x3);y3 = (int)(y3);
-  this->transformXY(state, 1, 1, &x4, &y4); x4 = (int)(x4);y4 = (int)(y4);
+  this->transformXY(state, 0, 1, &x1, &y1);
+  this->transformXY(state, 0, 0, &x2, &y2);
+  this->transformXY(state, 1, 0, &x3, &y3);
+  this->transformXY(state, 1, 1, &x4, &y4);
+
+  if(type3active) {
+      /* as type 3 bitmaps are antialized, we need to place them
+	 at integer coordinates, otherwise flash player's antializing
+	 will kick in and make everything blurry */
+      x1 = (int)(x1);y1 = (int)(y1);
+      x2 = (int)(x2);y2 = (int)(y2);
+      x3 = (int)(x3);y3 = (int)(y3);
+      x4 = (int)(x4);y4 = (int)(y4);
+  }
 
   if(!pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
