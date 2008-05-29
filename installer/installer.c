@@ -39,6 +39,7 @@ static int config_createDesktop = 1;
 
 static char path_startmenu[MAX_PATH] = "\0";
 static char path_desktop[MAX_PATH] = "\0";
+static char path_programfiles[MAX_PATH] = "\0";
 
 extern char*crndata;
 extern char*license_text;
@@ -49,11 +50,55 @@ static int do_abort = 0;
 
 static char* pdf2swf_path;
 
-static HBITMAP logo;
+static HBITMAP logo = 0;
 
 static HINSTANCE me;
 
 #define USER_SETMESSAGE 0x7f01
+
+void tball(HDC hdc, double px, double py, double sx, double sy)
+{
+    MoveToEx(hdc, 75.25*sx+px, -32.50*sy+py, 0);
+    LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 74.95*sx+px, -3.45*sy+py); LineTo(hdc, 75.25*sx+px, -32.50*sy+py);
+    LineTo(hdc, 44.85*sx+px, -104.30*sy+py); LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 17.30*sx+px, -91.80*sy+py);
+    LineTo(hdc, 29.35*sx+px, -10.10*sy+py); LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 47.60*sx+px, 63.80*sy+py);
+    LineTo(hdc, 74.75*sx+px, 51.10*sy+py); LineTo(hdc, 74.95*sx+px, -3.45*sy+py);
+    MoveToEx(hdc, 74.75*sx+px, 51.10*sy+py, 0);
+    LineTo(hdc, 29.35*sx+px, 118.75*sy+py); LineTo(hdc, -45.20*sx+px, 155.35*sy+py);
+    LineTo(hdc, -127.95*sx+px, 145.10*sy+py); LineTo(hdc, -194.85*sx+px, 104.30*sy+py);
+    LineTo(hdc, -225.25*sx+px, 32.50*sy+py); LineTo(hdc, -224.75*sx+px, -51.10*sy+py);
+    LineTo(hdc, -179.35*sx+px, -118.75*sy+py); LineTo(hdc, -104.80*sx+px, -155.35*sy+py);
+    LineTo(hdc, -22.05*sx+px, -145.10*sy+py); LineTo(hdc, 44.85*sx+px, -104.30*sy+py);
+    LineTo(hdc, 17.30*sx+px, -91.80*sy+py); LineTo(hdc, -75.00*sx+px, -122.60*sy+py);
+    LineTo(hdc, -45.20*sx+px, -43.70*sy+py); LineTo(hdc, 17.30*sx+px, -91.80*sy+py);
+    LineTo(hdc, -22.05*sx+px, -145.10*sy+py); LineTo(hdc, -75.00*sx+px, -122.60*sy+py);
+    LineTo(hdc, -104.80*sx+px, -155.35*sy+py); LineTo(hdc, -167.30*sx+px, -107.25*sy+py);
+    LineTo(hdc, -75.00*sx+px, -122.60*sy+py); LineTo(hdc, -127.95*sx+px, -63.55*sy+py);
+    LineTo(hdc, -45.20*sx+px, -43.70*sy+py); LineTo(hdc, 29.35*sx+px, -10.10*sy+py);
+    LineTo(hdc, 47.60*sx+px, 63.80*sy+py); LineTo(hdc, -25.70*sx+px, 52.45*sy+py);
+    LineTo(hdc, -25.70*sx+px, 128.45*sy+py); LineTo(hdc, 47.60*sx+px, 63.80*sy+py);
+    LineTo(hdc, 29.35*sx+px, 118.75*sy+py); LineTo(hdc, -25.70*sx+px, 128.45*sy+py);
+    LineTo(hdc, -45.20*sx+px, 155.35*sy+py); LineTo(hdc, -118.85*sx+px, 143.85*sy+py);
+    LineTo(hdc, -127.95*sx+px, 145.10*sy+py);
+    MoveToEx(hdc, -179.35*sx+px, -118.75*sy+py, 0);
+    LineTo(hdc, -167.30*sx+px, -107.25*sy+py); LineTo(hdc, -127.95*sx+px, -63.55*sy+py);
+    LineTo(hdc, -118.85*sx+px, 21.65*sy+py); LineTo(hdc, -45.20*sx+px, -43.70*sy+py);
+    LineTo(hdc, -25.70*sx+px, 52.45*sy+py); LineTo(hdc, 29.35*sx+px, -10.10*sy+py);
+    MoveToEx(hdc, -225.25*sx+px, 32.50*sy+py, 0);
+    LineTo(hdc, -194.85*sx+px, -17.85*sy+py); LineTo(hdc, -224.75*sx+px, -51.10*sy+py);
+    LineTo(hdc, -167.30*sx+px, -107.25*sy+py); LineTo(hdc, -194.85*sx+px, -17.85*sy+py);
+    LineTo(hdc, -127.95*sx+px, -63.55*sy+py);
+    MoveToEx(hdc, -175.85*sx+px, 77.60*sy+py, 0);
+    LineTo(hdc, -96.35*sx+px, 99.55*sy+py); LineTo(hdc, -118.85*sx+px, 21.65*sy+py);
+    LineTo(hdc, -175.85*sx+px, 77.60*sy+py); LineTo(hdc, -225.25*sx+px, 32.50*sy+py);
+    MoveToEx(hdc, -118.85*sx+px, 143.85*sy+py, 0);
+    LineTo(hdc, -175.85*sx+px, 77.60*sy+py); LineTo(hdc, -194.85*sx+px, 104.30*sy+py);
+    LineTo(hdc, -118.85*sx+px, 143.85*sy+py); LineTo(hdc, -96.35*sx+px, 99.55*sy+py);
+    LineTo(hdc, -25.70*sx+px, 52.45*sy+py); LineTo(hdc, -118.85*sx+px, 21.65*sy+py);
+    LineTo(hdc, -194.85*sx+px, -17.85*sy+py); LineTo(hdc, -175.85*sx+px, 77.60*sy+py);
+    MoveToEx(hdc, -96.35*sx+px, 99.55*sy+py, 0);
+    LineTo(hdc, -25.70*sx+px, 128.45*sy+py); LineTo(hdc, -118.85*sx+px, 143.85*sy+py);
+}
 
 static HWND wnd_background = 0;
 LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -75,19 +120,23 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	hdc = BeginPaint(hwnd, &ps);
 	SetBkMode(hdc, TRANSPARENT);
 
-	HPEN pen = CreatePen(PS_SOLID, 2, RGB(32, 32, 128));
-	HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+        double s = width / 1282.0;
+	
+        HPEN pen0 = CreatePen(PS_SOLID, 2, RGB(0, 32, 128));
+	HPEN oldPen = (HPEN)SelectObject(hdc, pen0);
+        tball(hdc, 0.7*width,0.2*height,s,s);
 
-	int t;
-	for(t=0;t<20;t++) {
-	    MoveToEx(hdc, t*t, 0, 0);
-	    LineTo(hdc, t*t, height);
-	    MoveToEx(hdc, 0, t*t, 0);
-	    LineTo(hdc, width, t*t);
-	}
+	HPEN pen1 = CreatePen(PS_SOLID, 2, RGB(0, 48, 128));
+	(HPEN)SelectObject(hdc, pen1);
+        tball(hdc, 0.233*width,0.3*height,s*2,s*2);
+	
+        HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 64, 128));
+	(HPEN)SelectObject(hdc, pen2);
+        tball(hdc, width, 1.2*height,s*3,-s*3);
 
 	SelectObject(hdc, oldPen); 
-	DeleteObject(pen);
+	DeleteObject(pen1);
+	DeleteObject(pen2);
 	EndPaint(hwnd, &ps);
 	return 1;
     }
@@ -156,9 +205,9 @@ BOOL CALLBACK PropertySheetFuncCommon(HWND hwnd, UINT message, WPARAM wParam, LP
     HWND dialog = GetParent(hwnd);
 
     if(message == WM_INITDIALOG) {
-	//    create_bitmap(hwnd);
-	//    if(hBitmap)
-	//	    SendDlgItemMessage(hwnd, IDC_BITMAP, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+	if(logo)
+	    SendDlgItemMessage(hwnd, IDC_BITMAP, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)logo);
+
         RECT rc;
         GetWindowRect(dialog, &rc);
 	int width = rc.right - rc.left;
@@ -183,6 +232,9 @@ BOOL CALLBACK PropertySheetFunc1(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if(message == WM_INITDIALOG) {
 	SetDlgItemText(hwnd, IDC_INSTALL_PATH, install_path);
+
+        SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, 0, 0);
+        SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, 1, 0);
     }
     if(message == WM_COMMAND) {
 	if((wParam&0xffff) == IDC_BROWSE) {
@@ -205,6 +257,14 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    return 0;
 
 	}
+	else if((wParam&0xffff) == IDC_ALLUSERS) {
+            SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, 1, 0);
+            SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, 0, 0);
+        }
+	else if((wParam&0xffff) == IDC_CURRENTUSER) {
+            SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, 0, 0);
+            SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, 1, 0);
+        }
 	else if((wParam&0xffff) == IDC_INSTALL_PATH) {
 	    SendDlgItemMessage(hwnd, IDC_INSTALL_PATH, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
 	    if(pathBuf[0]) {
@@ -255,6 +315,9 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
 }
+
+static HRESULT (WINAPI *f_SHGetSpecialFolderPath)(HWND hwnd, LPTSTR lpszPath, int nFolder, BOOL fCreate);
+
 BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if(message == WM_INITDIALOG) {
 	pdf2swf_path = concatPaths(install_path, "pdf2swf_gui.exe");
@@ -291,6 +354,23 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
 	    return 1;
 	}
+
+        char mypath[MAX_PATH];
+        path_startmenu[0] = 0;
+        path_desktop[0] = 0;
+        if(config_forAllUsers) {
+            f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_COMMON_DESKTOPDIRECTORY, 0);
+            f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_COMMON_PROGRAMS, 0);
+        }
+        /* get local program/desktop directory- this is both for forAllUsers=0 as well
+           as a fallback if the above didn't return any paths */
+        if(!path_startmenu[0]) {
+            f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_PROGRAMS, 0);
+        }
+        if(!path_desktop[0]) {
+            f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_DESKTOPDIRECTORY, 0);
+        }
+
 	if(config_createLinks) {
 	    if(config_createDesktop && path_desktop[0]) {
 		char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
@@ -356,8 +436,6 @@ void runPropertySheet(HWND parent)
     PropertySheet(&sheet);
 }
 
-static HRESULT (WINAPI *f_SHGetSpecialFolderPath)(HWND hwnd, LPTSTR lpszPath, int nFolder, BOOL fCreate);
-
 int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
 {
     me = _me;
@@ -374,7 +452,7 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     wcl_background.cbWndExtra   = 0;
     wcl_background.hbrBackground= CreateSolidBrush(RGB(0, 0, 128));
     wcl_background.cbSize       = sizeof(WNDCLASSEX);
-  
+
     HINSTANCE shell32 = LoadLibrary("shell32.dll");
     if(!shell32) {
 	MessageBox(0, "Could not load shell32.dll", "Install.exe", MB_OK);
@@ -392,16 +470,8 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
 	return 1;
     }
 
-    char mypath[MAX_PATH];
-    path_startmenu[0] = 0;
-    path_desktop[0] = 0;
-    if(config_forAllUsers) {
-	f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_COMMON_DESKTOPDIRECTORY, 0);
-	f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_COMMON_PROGRAMS, 0);
-    } else {
-	f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_DESKTOPDIRECTORY, 0);
-	f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_PROGRAMS, 0);
-    }
+    path_programfiles[0] = 0;
+    f_SHGetSpecialFolderPath(NULL, path_programfiles, CSIDL_PROGRAM_FILES, 0);
 
     if(!RegisterClassEx(&wcl_background)) {
         MessageBox(0, "Could not register window background class", "Install.exe", MB_OK);
@@ -427,8 +497,14 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     logo = LoadBitmap(me, "SWFTOOLS");
     
     install_path = getRegistryEntry("Software\\quiss.org\\swftools\\InstallPath");
-    if(!install_path || !install_path[0])
-	install_path = "c:\\swftools\\";
+    install_path = 0;
+    if(!install_path || !install_path[0]) {
+        if(path_programfiles[0]) {
+            install_path = concatPaths(path_programfiles, "SWFTools");
+        } else {
+	    install_path = "c:\\swftools\\";
+        }
+    }
 
     CoInitialize(0);
     InitCommonControls();
