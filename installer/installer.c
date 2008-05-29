@@ -351,16 +351,6 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 	switch(message)
 	{
 	    case WM_CREATE: {
-		/* TODO:
-
-		   "swftools has been installed into directory %s
-		   successfully"
-
-		   [x] Create Desktop Shortcut
-		   [x] Create Start Menu Entry
-
-		*/
-
 		RECT rc;
 		CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
 		GetClientRect (hwnd, &rc);
@@ -469,7 +459,7 @@ LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 HPEN oldPen = (HPEN)SelectObject(hdc, pen);
 
                 MoveToEx(hdc, 10, 10, 0);
-                LineTo(hdc, 100, 100);
+                //LineTo(hdc, 100, 100);
 
                 SelectObject(hdc, oldPen); 
                 DeleteObject(pen);
@@ -650,6 +640,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     }
 
     ShowWindow(background, SW_SHOWMAXIMIZED);
+    SetForegroundWindow(background);
     UpdateWindow(background);
 
     RECT r = {0,0,0,0};
@@ -672,7 +663,7 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     HWND installpath_window = CreateWindow(
 	    wcl.lpszClassName,          /* Class name */
 	    "SWFTools Installer",       /* Caption */
-	    WS_CHILD | WS_CAPTION,
+	    /*WS_CHILD |*/ WS_CAPTION,
 	    (xx-320)/2,                 /* Initial x  */
 	    (yy-200)/2,                 /* Initial y  */
 	    320,                        /* Initial x size */
@@ -689,6 +680,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     }
 
     ShowWindow (wnd_params, nWinMode);
+    SetFocus(wnd_params);
+    SetForegroundWindow(wnd_params);
     UpdateWindow (wnd_params);
    
     MSG msg;
@@ -713,8 +706,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     CreateWindow (
 	    wcl.lpszClassName,          /* Class name */
 	    "Installing...",            /* Caption */
-	    WS_CHILD | WS_CAPTION,
-	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
+	    //WS_CHILD | WS_CAPTION,
+	    WS_CAPTION, 
 	    (xx-260)/2, (yy-128)/2,
 	    260,                        /* Initial x size */
 	    128,                        /* Initial y size */
@@ -724,6 +717,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	    (void*)"progress"		/* Creation parameters */
 	    );
     ShowWindow (wnd_progress, nWinMode);
+    SetFocus(wnd_progress);
+    SetForegroundWindow(wnd_progress);
     UpdateWindow (wnd_progress);
     
     int success = unpack_archive(crndata, install_path, myarchivestatus);
@@ -744,11 +739,11 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	fclose(fi);
     }
 
-    int h = config_createLinks?200:140;
+    int h = config_createLinks?200:160;
     CreateWindow (
 	    wcl.lpszClassName,          /* Class name */
 	    "Finished",                 /* Caption */
-	    WS_CHILD | WS_CAPTION,
+	    /*WS_CHILD |*/ WS_CAPTION,
 	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
 	    (xx-320)/2, (yy-h)/2,
 	    320,                        /* Initial x size */
@@ -759,6 +754,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	    (void*)"finish"		/* Creation parameters */
 	    );
     ShowWindow(wnd_finish, nWinMode);
+    SetFocus(wnd_finish);
+    SetForegroundWindow(wnd_finish);
     UpdateWindow(wnd_finish);
 
     while(wnd_finish)
