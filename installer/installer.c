@@ -22,8 +22,10 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shlobj.h>
+#include <prsht.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "installer.h"
 
 #include "depack.h"
 
@@ -35,439 +37,59 @@ static int config_createLinks = 0;
 static int config_createStartmenu = 1;
 static int config_createDesktop = 1;
 
+static char path_startmenu[MAX_PATH] = "\0";
+static char path_desktop[MAX_PATH] = "\0";
 
 extern char*crndata;
+extern char*license_text;
 
 static char*install_path = "c:\\swftools\\";
 static char pathBuf[1024];
 static int do_abort = 0;
 
-static HWND wnd_params = 0;
-static HWND wnd_progress = 0;
-static HWND wnd_finish = 0;
-static HWND wnd_background = 0;
+static char* pdf2swf_path;
 
 static HBITMAP logo;
 
+static HINSTANCE me;
+
 #define USER_SETMESSAGE 0x7f01
 
-struct progress_data {
-    int width,height;
-    int bar_width;
-    int bar_height;
-    int bar_posx;
-    int bar_posy;
-    int pos,step,range;
-    char*text1;
-    char*text2;
-    char*text3;
-    HWND hwndButton;
-    HWND wnd_text3;
-};
-struct params_data {
-    int width,height;
-    int ok;
-    HWND installButton;
-    HWND edit;
-    HWND explore;
-};
-struct finish_data {
-    int width,height;
-    int ok;
-    char*text;
-    HWND installButton;
-    HWND check1;
-    HWND check2;
-};
-
+static HWND wnd_background = 0;
 LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    //printf("%08x, %d %08x %08x\n", hwnd, message, wParam, lParam);
-   
-    /* in order for the delegation below to also work for
-       WM_CREATE, we need to assign our window pointers *before* the
-       CreateWindow returns, because that's when the WM_CREATE event 
-       is sent  */
-
     if(message == WM_CREATE) {
 	CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
-	if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "params")) {
-	    wnd_params = hwnd;
-	}
-        else if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "progress")) {
-	    wnd_progress = hwnd;
-	}
-        else if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "finish")) {
-	    wnd_finish = hwnd;
-	}
-        else if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "background")) {
+        if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "background")) {
 	    wnd_background = hwnd;
 	}
     }
+    if(hwnd == wnd_background && message == WM_PAINT) {
+	HDC hdc;
+	PAINTSTRUCT ps;
+	RECT rc;
+        GetWindowRect(hwnd, &rc);
+	int width = rc.right - rc.left;
+	int height = rc.bottom - rc.top;
 
-    if(hwnd == 0) {
-	return DefWindowProc(hwnd, message, wParam, lParam);
-    } else if(hwnd == wnd_progress) {
-	static struct progress_data data;
+	hdc = BeginPaint(hwnd, &ps);
+	SetBkMode(hdc, TRANSPARENT);
 
-	switch(message)
-	{
-	    case USER_SETMESSAGE:
-		data.text3 = (char*)wParam;
-		SendMessage(data.wnd_text3, WM_SETTEXT, 0, (LPARAM)data.text3);
-		return 0;
-	    case WM_CREATE: {
-		memset(&data, 0, sizeof(data));
-		data.text1 = "Installing SWFTools";
-		data.text2 = (char*)malloc(strlen(install_path)+250);
-                data.text3 = "";
-		sprintf(data.text2, "to %s", install_path);
-		data.pos = 0;
-		data.step = 1;
+	HPEN pen = CreatePen(PS_SOLID, 2, RGB(32, 32, 128));
+	HPEN oldPen = (HPEN)SelectObject(hdc, pen);
 
-		CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
-		RECT rc;
-		GetClientRect (hwnd, &rc);
-		data.width = rc.right - rc.left;
-		data.height = rc.bottom - rc.top;
-		data.bar_width = cs->cx - 17;
-		data.bar_height= 16;
-		data.bar_posx = (data.width -data.bar_width)/2;
-		data.bar_posy = 56;
-		data.range = 50;
-
-		data.hwndButton = CreateWindow (
-			PROGRESS_CLASS,
-			"Progress",
-			WS_CHILD | WS_VISIBLE,
-			data.bar_posx,
-			data.bar_posy,
-			data.bar_width, 
-			data.bar_height,
-			hwnd,  /* Parent */
-			0,
-			cs->hInstance,
-			NULL
-			);
-
-		SendMessage(data.hwndButton, PBM_SETRANGE, 0, (LPARAM) MAKELONG(0,data.range));
-		SendMessage(data.hwndButton, PBM_SETSTEP, (WPARAM) data.step, 0);
-		return 0;
-	    }   
-	    case PBM_STEPIT: {
-		if(data.pos+data.step < data.range) {
-		    data.pos += data.step;
-		    SendMessage(data.hwndButton, PBM_STEPIT, wParam, lParam);
-		}
-	    }
-	    case WM_PAINT: {
-		TEXTMETRIC    tm;
-		HDC           hdc;             /* A device context used for drawing */
-		PAINTSTRUCT   ps;              /* Also used during window drawing */
-		RECT          rc;              /* A rectangle used during drawing */
-                
-                hdc = GetDC(hwnd);
-                SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
-                GetTextMetrics(hdc, &tm);
-                ReleaseDC(hwnd, hdc);
-
-		hdc = BeginPaint (hwnd, &ps);
-
-		/*
-		// draw logo 
-		HDC memDc=CreateCompatibleDC(hdc);
-		SelectObject(memDc,logo);
-		BitBlt(hdc,0,0,406,93,memDc,0,0,SRCCOPY);
-		DeleteDC(memDc);
-		// /
-		*/
-
-		SetBkMode(hdc, TRANSPARENT);
-		
-		rc.top = 8; rc.left= 0; rc.right = data.width; rc.bottom = 24;
-		DrawText(hdc, data.text1, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-
-		char buf[256];
-		char*text = data.text2;
-		if(tm.tmAveCharWidth * strlen(text) > data.width) {
-		    int chars = (data.width / tm.tmAveCharWidth)-8;
-		    if(chars>240) chars=240;
-		    strncpy(buf, text, chars);
-		    strcpy(&buf[chars],"...");
-		    text = buf;
-		}
-
-		rc.top = 32; rc.left= 0; rc.right = data.width; rc.bottom = 48;
-		DrawText(hdc, text, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-		
-                //rc.top = data.height-32; rc.left= 0; rc.right = data.width; rc.bottom = data.height;
-		//DrawText(hdc, data.text3, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-
-		EndPaint (hwnd, &ps);
-		return 0;
-	    }
-	    case WM_DESTROY:
-		wnd_progress = 0;
-		return DefWindowProc(hwnd, message, wParam, lParam);
-	    default:
-		return DefWindowProc(hwnd, message, wParam, lParam);
+	int t;
+	for(t=0;t<20;t++) {
+	    MoveToEx(hdc, t*t, 0, 0);
+	    LineTo(hdc, t*t, height);
+	    MoveToEx(hdc, 0, t*t, 0);
+	    LineTo(hdc, width, t*t);
 	}
-    } else if(hwnd == wnd_params) {
-	static struct params_data data;
-	switch(message)
-	{
-	    case WM_CREATE: {
-		memset(&data, 0, sizeof(data));
-		CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
-		RECT rc;
-		GetClientRect (hwnd, &rc);
-		data.width = rc.right - rc.left;
-		data.height = rc.bottom - rc.top;
 
-		//EDITTEXT IDD_EDIT,68,8,72,12, ES_LEFT | ES_AUTOHSCROLL | WS_CHILD | WS_VISIBLE | WS_BORDER  | WS_TABSTOP
-		data.edit = CreateWindow (
-			WC_EDIT,
-			"EditPath",
-			WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL,
-			32, 
-			48,
-			(data.width-64)-32*2, 
-			20,
-			hwnd,  /* Parent */
-			(HMENU)0x1234,
-			cs->hInstance,
-			NULL
-			);
-		
-		data.explore = CreateWindow (
-			WC_BUTTON,
-			"Browse",
-			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-			data.width-32-64,
-			48,
-			64, 
-			20,
-			hwnd,  /* Parent */
-			(HMENU)0x9999,
-			cs->hInstance,
-			NULL
-			);
-		
-		data.installButton = CreateWindow (
-			WC_BUTTON,
-			"Install",
-			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-			(data.width - 80)/2,
-			data.height - 32*2,
-			80, 
-			32,
-			hwnd,  /* Parent */
-			(HMENU)0xabcd,
-			cs->hInstance,
-			NULL
-			);
-		
-		SendMessage(data.edit, WM_SETTEXT, 0, (LPARAM)install_path);
-		return 0;
-	    }   
-	    case USER_SETMESSAGE: {
-		//install_path = (char*)lParam;
-		SendMessage(data.edit, WM_SETTEXT, 0, (LPARAM)install_path);
-		printf("Setting path to %s\n", install_path);
-		return 0;
-	    }
-	    case WM_PAINT: {
-		TEXTMETRIC tm;
-		HDC hdc;
-		PAINTSTRUCT ps;
-		RECT rc;
-                hdc = GetDC(hwnd);
-                SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
-                GetTextMetrics(hdc, &tm);
-                ReleaseDC(hwnd, hdc);
-		hdc = BeginPaint (hwnd, &ps);
-		SetBkMode(hdc, TRANSPARENT);
-		rc.top = 32; rc.left= 16; rc.right = data.width-32*2; rc.bottom = 20;
-		DrawText(hdc, "Select Installation directory", -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-		EndPaint (hwnd, &ps);
-		return 0;
-	    }
-	    case WM_COMMAND: {
-		if((wParam&0xffff) == 0x9999) {
-		    BROWSEINFOA browse;
-		    memset(&browse, 0, sizeof(browse));
-		    browse.ulFlags = BIF_EDITBOX | BIF_NEWDIALOGSTYLE | BIF_USENEWUI;// | BIF_RETURNONLYFSDIRS; //BIF_VALIDATE
-		    browse.pszDisplayName = (CHAR*)malloc(MAX_PATH);
-		    memset(browse.pszDisplayName, 0, MAX_PATH);
-		    browse.lpszTitle = "Select installation directory";
-		    /*browse.pidlRoot = (ITEMIDLIST*)malloc(sizeof(ITEMIDLIST)*200);
-		    memset((void*)browse.pidlRoot, 0, sizeof(ITEMIDLIST)*200);*/
-		    printf("Start browsing %s\n", browse.pszDisplayName);
-		    //SHGetDesktopFolder
-		    //ParseDisplayName(install_path,0,&browse.pidlRoot,0,0);
-		    //SHParseDisplayName(install_path,0,&browse.pidlRoot,0,0);
-		    //SHBrowseForFolderA(&browse);
-		    browse.pidlRoot = SHBrowseForFolder(&browse);
-		    printf("Browsing returns %s / %08x\n", browse.pszDisplayName, browse.pidlRoot);
-		    if(browse.pszDisplayName) {
-			if(SHGetPathFromIDList(browse.pidlRoot, browse.pszDisplayName)) {
-			    printf("Path is %s\n", browse.pszDisplayName);
-			    install_path = browse.pszDisplayName;
-			}
-		    }
-		    SendMessage(data.edit, WM_SETTEXT, 0, (LPARAM)install_path);
-		    return 0;
-		} else if((wParam&0xffff) == 0xabcd) {
-		    data.ok = 1;
-		    DestroyWindow(hwnd);
-		    return 0;
-		} else if((wParam&0xffff) == 0x1234) {
-		    SendMessage(data.edit, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
-		    if(pathBuf[0]) {
-			install_path = pathBuf;
-		    }
-		    return 0;
-		}
-		return DefWindowProc(hwnd, message, wParam, lParam);
-	    }
-	    case WM_KEYDOWN: {
-		if(wParam == 0x49) {
-		    DestroyWindow(hwnd);
-		}
-		return 0;
-	    }
-	    case WM_DESTROY:
-		if(!data.ok) {
-		    do_abort = 1;
-                    PostQuitMessage (0);
-		}
-		wnd_params = 0;
-		return DefWindowProc(hwnd, message, wParam, lParam);
-	    default:
-		return DefWindowProc(hwnd, message, wParam, lParam);
-	}
-    } else if(hwnd == wnd_finish) {
-	static struct finish_data data;
-	switch(message)
-	{
-	    case WM_CREATE: {
-		RECT rc;
-		CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
-		GetClientRect (hwnd, &rc);
-		data.width = rc.right - rc.left;
-		data.height = rc.bottom - rc.top;
-
-                data.text = malloc(strlen(install_path)+256);
-                sprintf(data.text, "SWFTools has been installed into directory\r\n%s\r\nsucessfully.", install_path);
-		
-		data.installButton = CreateWindow (
-			WC_BUTTON,
-			"Finish",
-			WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-			(data.width - 80)/2,
-			data.height - 32,
-			80, 
-			32,
-			hwnd, 
-			(HMENU)0xabce,
-			cs->hInstance,
-			NULL
-			);
-	
-		if(config_createLinks) {
-		    data.check1 = CreateWindow (
-			    WC_BUTTON,
-			    "Create Desktop Shortcut",
-			    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
-			    32, data.height - 96, 
-			    data.width-32*2, 32, 
-			    hwnd, (HMENU)0xabcf, cs->hInstance, NULL);
-		    
-		    data.check2 = CreateWindow (
-			    WC_BUTTON,
-			    "Create Start Menu Entry",
-			    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_CHECKBOX,
-			    32, data.height - 64, 
-			    data.width-32*2, 32, 
-			    hwnd, (HMENU)0xabd0, cs->hInstance, NULL);
-		    
-		    SendDlgItemMessage(hwnd, 0xabcf, BM_SETCHECK, config_createStartmenu, 0);
-		    SendDlgItemMessage(hwnd, 0xabd0, BM_SETCHECK, config_createDesktop, 0);
-		}
-	    }
-	    case WM_PAINT: {
-		TEXTMETRIC tm;
-		HDC hdc;
-		PAINTSTRUCT ps;
-		RECT rc;
-                hdc = GetDC(hwnd);
-                SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
-                GetTextMetrics(hdc, &tm);
-                ReleaseDC(hwnd, hdc);
-		hdc = BeginPaint (hwnd, &ps);
-		SetBkMode(hdc, TRANSPARENT);
-                rc.left = 0; 
-		rc.top = 10;
-                rc.right = data.width; 
-                rc.bottom = data.height-40-32;
-		DrawText(hdc, data.text, -1, &rc, DT_CENTER | DT_VCENTER);
-		EndPaint (hwnd, &ps);
-		return 0;
-
-		return DefWindowProc(hwnd, message, wParam, lParam);
-	    }
-	    case WM_COMMAND: {
-		if((wParam&0xffff) == 0xabce) {
-		    data.ok = 1;
-		    DestroyWindow(hwnd);
-		    return 0;
-                }
-		if((wParam&0xffff) == 0xabcf) {
-		    config_createDesktop = SendDlgItemMessage(hwnd, 0xabcf, BM_GETCHECK, 0, 0);
-		    config_createDesktop^=1;
-		    SendDlgItemMessage(hwnd, 0xabcf, BM_SETCHECK, config_createDesktop, 0);
-		    return 0;
-                }
-		if((wParam&0xffff) == 0xabd0) {
-		    config_createStartmenu = SendDlgItemMessage(hwnd, 0xabd0, BM_GETCHECK, 0, 0);
-		    config_createStartmenu^=1;
-		    SendDlgItemMessage(hwnd, 0xabd0, BM_SETCHECK, config_createStartmenu, 0);
-		    return 0;
-                }
-            }
-	    case WM_DESTROY: {
-                free(data.text);data.text = 0;
-		if(!data.ok) {
-		    do_abort = 1;
-                    PostQuitMessage(0);
-		}
-		wnd_finish = 0;
-		return DefWindowProc(hwnd, message, wParam, lParam);
-            }
-	}
-    } else if(hwnd == wnd_background) {
-	switch(message)
-	{
-	    case WM_PAINT: {
-		HDC hdc;
-		PAINTSTRUCT ps;
-		RECT rc;
-		hdc = BeginPaint(hwnd, &ps);
-		SetBkMode(hdc, TRANSPARENT);
-
-                HPEN pen = CreatePen(PS_SOLID, 2, RGB(255, 255, 0));    
-                HPEN oldPen = (HPEN)SelectObject(hdc, pen);
-
-                MoveToEx(hdc, 10, 10, 0);
-                //LineTo(hdc, 100, 100);
-
-                SelectObject(hdc, oldPen); 
-                DeleteObject(pen);
-
-		EndPaint(hwnd, &ps);
-		return 1;
-            }
-        }
+	SelectObject(hdc, oldPen); 
+	DeleteObject(pen);
+	EndPaint(hwnd, &ps);
+	return 1;
     }
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
@@ -480,38 +102,6 @@ void processMessages()
 	GetMessage(&msg, NULL, 0, 0);
 	TranslateMessage(&msg);
 	DispatchMessage(&msg);
-    }
-}
-
-static char*lastmessage = 0;
-void myarchivestatus(int type, char*text)
-{
-    if(text && text[0]=='[')
-	return;
-    //printf("%s\n", text);
-			
-    SendMessage(wnd_progress, USER_SETMESSAGE, (WPARAM)strdup(text), 0);
-    SendMessage(wnd_progress, WM_PAINT, 0, 0);
-    int t;
-    for(t=0;t<9;t++) {
-	SendMessage(wnd_progress, PBM_STEPIT, 0, 0);
-	/* while we're here, we might also make ourselves useful */
-	processMessages();
-	/* we want the user to see what we're writing, right? */
-	Sleep(30);
-    }
-
-    if(type<0) {
-	while(1) {
-	    int ret = MessageBox(0, text, "Error", MB_RETRYCANCEL|MB_ICONERROR);
-	    
-	    /* there is no MB_CANCEL, so, *sigh*, we have to display
-	       the "retry" button. So pretend it's doing anything... */
-	    if(ret==IDRETRY)
-		continue;
-	    else
-		break;
-	}
     }
 }
 
@@ -559,36 +149,231 @@ int CreateShortcut(char*path, char*description, char*filename, char*arguments, i
     return 1;
 }
 
+BOOL CALLBACK PropertySheetFuncCommon(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, int buttons)
+{
+    LPNMHDR lpnm;
+	
+    HWND dialog = GetParent(hwnd);
+
+    if(message == WM_INITDIALOG) {
+	//    create_bitmap(hwnd);
+	//    if(hBitmap)
+	//	    SendDlgItemMessage(hwnd, IDC_BITMAP, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+        RECT rc;
+        GetWindowRect(dialog, &rc);
+	int width = rc.right - rc.left;
+	int height = rc.bottom - rc.top;
+        MoveWindow(dialog, (GetSystemMetrics(SM_CXSCREEN) - width)/2, (GetSystemMetrics(SM_CYSCREEN) - height)/2, width, height, FALSE);
+	return FALSE;
+     }
+
+    if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_SETACTIVE)) {
+	PropSheet_SetWizButtons(dialog, buttons);
+    	return FALSE;
+    }
+    return FALSE;
+}
+
+BOOL CALLBACK PropertySheetFunc1(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if(message == WM_INITDIALOG) {
+	SetDlgItemText(hwnd, IDC_LICENSE, license_text);
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_NEXT);
+}
+BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if(message == WM_INITDIALOG) {
+	SetDlgItemText(hwnd, IDC_INSTALL_PATH, install_path);
+    }
+    if(message == WM_COMMAND) {
+	if((wParam&0xffff) == IDC_BROWSE) {
+	    BROWSEINFOA browse;
+	    memset(&browse, 0, sizeof(browse));
+	    browse.ulFlags = BIF_EDITBOX | BIF_NEWDIALOGSTYLE | BIF_USENEWUI;// | BIF_RETURNONLYFSDIRS; //BIF_VALIDATE
+	    browse.pszDisplayName = (CHAR*)malloc(MAX_PATH);
+	    memset(browse.pszDisplayName, 0, MAX_PATH);
+	    browse.lpszTitle = "Select installation directory";
+	    printf("Start browsing %s\n", browse.pszDisplayName);
+	    browse.pidlRoot = SHBrowseForFolder(&browse);
+	    printf("Browsing returns %s / %08x\n", browse.pszDisplayName, browse.pidlRoot);
+	    if(browse.pszDisplayName) {
+		if(SHGetPathFromIDList(browse.pidlRoot, browse.pszDisplayName)) {
+		    printf("Path is %s\n", browse.pszDisplayName);
+		    install_path = browse.pszDisplayName;
+		}
+	    }
+	    SendDlgItemMessage(hwnd, IDC_INSTALL_PATH, WM_SETTEXT, 0, (LPARAM)install_path);
+	    return 0;
+
+	}
+	else if((wParam&0xffff) == IDC_INSTALL_PATH) {
+	    SendDlgItemMessage(hwnd, IDC_INSTALL_PATH, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
+	    if(pathBuf[0]) {
+		install_path = pathBuf;
+	    }
+	    return 0;
+	}
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
+}
+HWND statuswnd;
+static int progress_pos = 0;
+void PropertyArchiveStatus(int type, char*text)
+{
+    if(text && text[0]=='[') return;
+    SetDlgItemText(statuswnd, IDC_INFO, strdup(text));
+    int t;
+    /* There are usually 6 messages, and a range of 54 to fill, so 
+       step 9 times */
+    for(t=0;t<9;t++) {
+	SendDlgItemMessage(statuswnd, IDC_PROGRESS, PBM_SETPOS, ++progress_pos, 0);
+	processMessages();
+	Sleep(30);
+    }
+    if(type<0) {
+	while(1) {
+	    int ret = MessageBox(0, text, "Error", MB_RETRYCANCEL|MB_ICONERROR);
+	    if(ret==IDRETRY) continue;
+	    else break;
+	}
+    }
+}
+BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    HWND dialog = GetParent(hwnd);
+    if(message == WM_INITDIALOG) {
+	SetDlgItemText(hwnd, IDC_INFO, "Ready to install");
+    }
+    if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZNEXT)) {
+	PropSheet_SetWizButtons(dialog, 0);
+	SendMessage(dialog, PSM_CANCELTOCLOSE, 0, 0); //makes wine display a warning
+	SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
+	statuswnd = hwnd;
+	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0,54));
+	progress_pos = 0;
+	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, progress_pos, 0);
+	int success = unpack_archive(crndata, install_path, PropertyArchiveStatus);
+	return 0;
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
+}
+BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if(message == WM_INITDIALOG) {
+	pdf2swf_path = concatPaths(install_path, "pdf2swf_gui.exe");
+	FILE*fi = fopen(pdf2swf_path, "rb");
+	if(fi) {
+	    config_createLinks = 1;
+	    fclose(fi);
+	}
+	if(!config_createLinks) {
+	    SendDlgItemMessage(hwnd, IDC_STARTMENU, SW_HIDE, 0, 0);
+	    SendDlgItemMessage(hwnd, IDC_DESKTOP, SW_HIDE, 0, 0);
+	}
+
+	SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_SETCHECK, config_createStartmenu, 0);
+	SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_SETCHECK, config_createStartmenu, 0);
+    }
+    if(message == WM_COMMAND) {
+	if((wParam&0xffff) == IDC_STARTMENU) {
+	    config_createStartmenu = SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_GETCHECK, 0, 0);
+	    config_createStartmenu^=1;
+	    SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_SETCHECK, config_createStartmenu, 0);
+	    return 0;
+	}
+	if((wParam&0xffff) == IDC_DESKTOP) {
+	    config_createDesktop = SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_GETCHECK, 0, 0);
+	    config_createDesktop^=1;
+	    SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_SETCHECK, config_createDesktop, 0);
+	    return 0;
+	}
+    }
+
+    if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZFINISH)) {
+	if(!addRegistryEntries(install_path)) {
+	    MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
+	    return 1;
+	}
+	if(config_createLinks) {
+	    if(config_createDesktop && path_desktop[0]) {
+		char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
+		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
+		    MessageBox(0, "Couldn't create desktop shortcut", "Install.exe", MB_OK);
+		    return 1;
+		}
+	    }
+	    if(config_createStartmenu && path_startmenu[0]) {
+		char* group = concatPaths(path_startmenu, "pdf2swf");
+		CreateDirectory(group, 0);
+		char* linkName = concatPaths(group, "pdf2swf.lnk");
+		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
+		    MessageBox(0, "Couldn't create start menu entry", "Install.exe", MB_OK);
+		    return 1;
+		}
+	    }
+	}
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_FINISH);
+}
+
+#ifndef PSP_HIDEHEADER
+#define PSP_HIDEHEADER	2048
+#endif
+
+typedef struct _wizardpage {
+    DLGPROC function;
+    int resource;
+} wizardpage_t;
+
+void runPropertySheet(HWND parent)
+{
+    PROPSHEETHEADER sheet;
+
+    wizardpage_t wpage[5] = {
+	{PropertySheetFunc1, IDD_LICENSE},
+	{PropertySheetFunc2, IDD_INSTALLDIR},
+	{PropertySheetFunc3, IDD_PROGRESS},
+	{PropertySheetFunc4, IDD_FINISH},
+    };
+    int num = sizeof(wpage)/sizeof(wpage[0]);
+    HPROPSHEETPAGE pages[num];
+    int t;
+    for(t=0;t<num;t++) {
+	PROPSHEETPAGE page;
+	memset(&page, 0, sizeof(PROPSHEETPAGE));
+	page.dwSize = sizeof(PROPSHEETPAGE);
+	page.dwFlags = PSP_DEFAULT|PSP_HIDEHEADER;
+	page.hInstance = me;
+	page.pfnDlgProc = wpage[t].function;
+	page.pszTemplate = MAKEINTRESOURCE(wpage[t].resource);
+	pages[t] = CreatePropertySheetPage(&page);
+    }
+
+    memset(&sheet, 0, sizeof(PROPSHEETHEADER));
+    sheet.dwSize = sizeof(PROPSHEETHEADER);
+    sheet.hInstance = me;
+    sheet.hwndParent = parent;
+    sheet.phpage = pages;
+    sheet.dwFlags = PSH_WIZARD;
+    sheet.nPages = num;
+    PropertySheet(&sheet);
+}
 
 static HRESULT (WINAPI *f_SHGetSpecialFolderPath)(HWND hwnd, LPTSTR lpszPath, int nFolder, BOOL fCreate);
-static char path_startmenu[MAX_PATH];
-static char path_desktop[MAX_PATH];
 
-int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
+int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
 {
-    WNDCLASSEX wcl;
-    wcl.hInstance    = me;
-    wcl.lpfnWndProc  = WindowFunc;
-    wcl.lpszClassName= "SWFTools-Install";
-    wcl.style        = CS_HREDRAW | CS_VREDRAW;
-    wcl.hIcon        = LoadIcon(NULL, IDI_APPLICATION);
-    wcl.hIconSm      = LoadIcon(NULL, IDI_APPLICATION);
-    wcl.hCursor      = LoadCursor(NULL, IDC_ARROW);
-    wcl.lpszMenuName = NULL; //no menu
-    wcl.cbClsExtra   = 0;
-    wcl.cbWndExtra   = 0;
-    wcl.hbrBackground= (HBRUSH)GetStockObject(LTGRAY_BRUSH);
-    wcl.cbSize       = sizeof(WNDCLASSEX);
-
-    WNDCLASSEX wcl_text;
-    memcpy(&wcl_text, &wcl, sizeof(WNDCLASSEX));
-    wcl_text.lpszClassName= "TextClass";
-    wcl_text.hbrBackground = GetStockObject(HOLLOW_BRUSH);
-
+    me = _me;
     WNDCLASSEX wcl_background;
-    memcpy(&wcl_background, &wcl, sizeof(WNDCLASSEX));
-    wcl_background.lpszClassName= "SWFTools Installer";
+    wcl_background.hInstance    = me;
+    wcl_background.lpfnWndProc  = WindowFunc;
+    wcl_background.lpszClassName= "SWFTools Install";
+    wcl_background.style        = CS_HREDRAW | CS_VREDRAW;
+    wcl_background.hIcon        = LoadIcon(NULL, IDI_APPLICATION);
+    wcl_background.hIconSm      = LoadIcon(NULL, IDI_APPLICATION);
+    wcl_background.hCursor      = LoadCursor(NULL, IDC_ARROW);
+    wcl_background.lpszMenuName = NULL; //no menu
+    wcl_background.cbClsExtra   = 0;
+    wcl_background.cbWndExtra   = 0;
     wcl_background.hbrBackground= CreateSolidBrush(RGB(0, 0, 128));
+    wcl_background.cbSize       = sizeof(WNDCLASSEX);
   
     HINSTANCE shell32 = LoadLibrary("shell32.dll");
     if(!shell32) {
@@ -601,8 +386,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	return 1;
     }
 	
-    HRESULT ret = CoInitialize(NULL);
-    if(FAILED(ret)) {
+    HRESULT coret = CoInitialize(NULL);
+    if(FAILED(coret)) {
 	MessageBox(0, "Could not initialize COM interface", "Install.exe", MB_OK);
 	return 1;
     }
@@ -618,12 +403,8 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 	f_SHGetSpecialFolderPath(NULL, path_startmenu, CSIDL_PROGRAMS, 0);
     }
 
-    if(!RegisterClassEx(&wcl)) {
-	MessageBox(0, "Could not register window class", "Install.exe", MB_OK);
-	return 1;
-    }
     if(!RegisterClassEx(&wcl_background)) {
-        MessageBox(0, "Could not register window class 2", "Install.exe", MB_OK);
+        MessageBox(0, "Could not register window background class", "Install.exe", MB_OK);
         return 1;
     }
 
@@ -643,14 +424,6 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
     SetForegroundWindow(background);
     UpdateWindow(background);
 
-    RECT r = {0,0,0,0};
-    GetWindowRect(background, &r);
-    int xx = 320, yy = 200;
-    if(r.right - r.left > 320)
-	xx = r.right - r.left;
-    if(r.right - r.left > 200)
-	yy = r.bottom - r.top;
-    
     logo = LoadBitmap(me, "SWFTOOLS");
     
     install_path = getRegistryEntry("Software\\quiss.org\\swftools\\InstallPath");
@@ -659,135 +432,18 @@ int WINAPI WinMain(HINSTANCE me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode
 
     CoInitialize(0);
     InitCommonControls();
+
+    RECT r = {0,0,0,0};
+    GetWindowRect(background, &r);
+    int xx = 320, yy = 200;
+    if(r.right - r.left > 320)
+	xx = r.right - r.left;
+    if(r.right - r.left > 200)
+	yy = r.bottom - r.top;
     
-    HWND installpath_window = CreateWindow(
-	    wcl.lpszClassName,          /* Class name */
-	    "SWFTools Installer",       /* Caption */
-	    /*WS_CHILD |*/ WS_CAPTION,
-	    (xx-320)/2,                 /* Initial x  */
-	    (yy-200)/2,                 /* Initial y  */
-	    320,                        /* Initial x size */
-	    200,                        /* Initial y size */
-	    background,                       /* No parent window */
-	    NULL,                       /* No menu */
-	    me,                         /* This program instance */
-	    (void*)"params"		/* Creation parameters */
-	    );
+    int ret = 0;
+    runPropertySheet(background);
 
-    if(!installpath_window) {
-	MessageBox(background, "Could not create installation window", "Install.exe", MB_OK);
-	return 1;
-    }
-
-    ShowWindow (wnd_params, nWinMode);
-    SetFocus(wnd_params);
-    SetForegroundWindow(wnd_params);
-    UpdateWindow (wnd_params);
-   
-    MSG msg;
-    while(wnd_params)
-    {
-	GetMessage(&msg,NULL,0,0);
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
-    if(do_abort) {
-	MessageBox(background, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
-	return 1;
-    }
-   
-    /*char buf[1024];
-    sprintf(buf, "Do you want me to install SWFTools into the directory %s now?", install_path);
-    int ret = MessageBox(0, buf, "SWFTools Install", MB_YESNO|MB_ICONQUESTION);
-    if(ret == IDNO)
-	return 0;*/
-    
-    CreateWindow (
-	    wcl.lpszClassName,          /* Class name */
-	    "Installing...",            /* Caption */
-	    //WS_CHILD | WS_CAPTION,
-	    WS_CAPTION, 
-	    (xx-260)/2, (yy-128)/2,
-	    260,                        /* Initial x size */
-	    128,                        /* Initial y size */
-	    background,                 /* No parent window */
-	    NULL,                       /* No menu */
-	    me,                         /* This program instance */
-	    (void*)"progress"		/* Creation parameters */
-	    );
-    ShowWindow (wnd_progress, nWinMode);
-    SetFocus(wnd_progress);
-    SetForegroundWindow(wnd_progress);
-    UpdateWindow (wnd_progress);
-    
-    int success = unpack_archive(crndata, install_path, myarchivestatus);
-   
-    DestroyWindow(wnd_progress);
-
-    while(wnd_progress)
-	processMessages();
-    if(do_abort) {
-	MessageBox(background, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
-	return 1;
-    }
-    
-    char* pdf2swf_path = concatPaths(install_path, "pdf2swf_gui.exe");
-    FILE*fi = fopen(pdf2swf_path, "rb");
-    if(fi) {
-	config_createLinks = 1;
-	fclose(fi);
-    }
-
-    int h = config_createLinks?200:160;
-    CreateWindow (
-	    wcl.lpszClassName,          /* Class name */
-	    "Finished",                 /* Caption */
-	    /*WS_CHILD |*/ WS_CAPTION,
-	    //WS_OVERLAPPEDWINDOW&(~WS_SIZEBOX),        /* Style */
-	    (xx-320)/2, (yy-h)/2,
-	    320,                        /* Initial x size */
-	    h,                        /* Initial y size */
-	    background,                 /* No parent window */
-	    NULL,                       /* No menu */
-	    me,                         /* This program instance */
-	    (void*)"finish"		/* Creation parameters */
-	    );
-    ShowWindow(wnd_finish, nWinMode);
-    SetFocus(wnd_finish);
-    SetForegroundWindow(wnd_finish);
-    UpdateWindow(wnd_finish);
-
-    while(wnd_finish)
-	processMessages();
-    if(do_abort) {
-	MessageBox(0, "Aborting Installation", "Error", MB_OK|MB_ICONERROR);
-	return 1;
-    }
-
-    if(!addRegistryEntries(install_path)) {
-	MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
-	return 1;
-    }
-
-    if(config_createLinks) {
-	if(config_createDesktop && path_desktop[0]) {
-	    char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
-	    if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
-		MessageBox(0, "Couldn't create desktop shortcut", "Install.exe", MB_OK);
-		return 1;
-	    }
-	}
-	if(config_createStartmenu && path_startmenu[0]) {
-	    char* group = concatPaths(path_startmenu, "pdf2swf");
-	    CreateDirectory(group, 0);
-	    char* linkName = concatPaths(group, "pdf2swf.lnk");
-	    if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
-		MessageBox(0, "Couldn't create start menu entry", "Install.exe", MB_OK);
-		return 1;
-	    }
-	}
-    }
-    exit(0);
+    return ret;
 }
 
