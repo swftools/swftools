@@ -233,8 +233,9 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     if(message == WM_INITDIALOG) {
 	SetDlgItemText(hwnd, IDC_INSTALL_PATH, install_path);
 
-        SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, 0, 0);
-        SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, 1, 0);
+        config_forAllUsers = 0;
+        SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, config_forAllUsers, 0);
+        SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, config_forAllUsers^1, 0);
     }
     if(message == WM_COMMAND) {
 	if((wParam&0xffff) == IDC_BROWSE) {
@@ -258,12 +259,14 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
 	}
 	else if((wParam&0xffff) == IDC_ALLUSERS) {
-            SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, 1, 0);
-            SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, 0, 0);
+            config_forAllUsers = 1;
+            SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, config_forAllUsers, 0);
+            SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, config_forAllUsers^1, 0);
         }
 	else if((wParam&0xffff) == IDC_CURRENTUSER) {
-            SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, 0, 0);
-            SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, 1, 0);
+            config_forAllUsers = 0;
+            SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, config_forAllUsers, 0);
+            SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, config_forAllUsers^1, 0);
         }
 	else if((wParam&0xffff) == IDC_INSTALL_PATH) {
 	    SendDlgItemMessage(hwnd, IDC_INSTALL_PATH, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
@@ -374,6 +377,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	if(config_createLinks) {
 	    if(config_createDesktop && path_desktop[0]) {
 		char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
+                printf("Creating desktop link %s -> %s\n", linkName, pdf2swf_path);
 		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
 		    MessageBox(0, "Couldn't create desktop shortcut", "Install.exe", MB_OK);
 		    return 1;
@@ -383,12 +387,15 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		char* group = concatPaths(path_startmenu, "pdf2swf");
 		CreateDirectory(group, 0);
 		char* linkName = concatPaths(group, "pdf2swf.lnk");
+                printf("Creating %s -> %s\n", linkName, pdf2swf_path);
 		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
 		    MessageBox(0, "Couldn't create start menu entry", "Install.exe", MB_OK);
 		    return 1;
 		}
 	    }
-	}
+	} else {
+            printf("not creating desktop/startmenu links\n");
+        }
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_FINISH);
 }
@@ -497,7 +504,6 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     logo = LoadBitmap(me, "SWFTOOLS");
     
     install_path = getRegistryEntry("Software\\quiss.org\\swftools\\InstallPath");
-    install_path = 0;
     if(!install_path || !install_path[0]) {
         if(path_programfiles[0]) {
             install_path = concatPaths(path_programfiles, "SWFTools");
