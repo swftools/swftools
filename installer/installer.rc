@@ -1,5 +1,59 @@
 #include <windows.h>
+#include "installer.h"
 
 MYICON1	    ICON    "swftools.ico"
 SWFTOOLS    BITMAP  "swftools.bmp"
+
+IDD_LICENSE DIALOGEX 0, 0, 379, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT     "This Installer will install swftools on your computer. Please read and sign the following license agreement."
+              IDC_TITLE,125,10,247,20,NOT WS_GROUP
+    EDITTEXT  IDC_LICENSE,125,31,247,131,ES_MULTILINE | ES_READONLY |
+              WS_VSCROLL | WS_HSCROLL | NOT WS_TABSTOP
+    CONTROL   110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
+              104,163,WS_EX_CLIENTEDGE
+    LTEXT     "Click next if you agree with this license.",IDC_STATIC,125,163,247,8
+END
+
+IDD_INSTALLDIR DIALOGEX 0, 0, 379, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "Select installation directory:",IDC_TITLE,125,10,
+                    247,12,NOT WS_GROUP
+    PUSHBUTTON      "Browse...",IDC_BROWSE,322,7,50,14,WS_VISIBLE
+    EDITTEXT        IDC_INSTALL_PATH ,125,24,247,11,ES_AUTOHSCROLL
+    CONTROL         110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8, 104,163,WS_EX_CLIENTEDGE
+END
+
+IDD_PROGRESS DIALOGEX 0, 0, 379, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "Click ""Next"" to begin the install process. If you want to review or change any of your installation settings, click ""Back"". Click ""Cancel"" to exit the Installer."
+                    IDC_TITLE,125,10,246,31,NOT WS_GROUP
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,
+                    125,157,246,14
+    CTEXT           "Installation progress:",IDC_INFO,125,137,246,8
+    CONTROL         110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
+                    104,163,WS_EX_CLIENTEDGE
+END
+
+IDD_FINISH DIALOGEX 0, 0, 379, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Installation is finished.",
+                    IDC_TITLE,125,10,247,31,NOT WS_GROUP
+    CHECKBOX        "Create start menu entry", IDC_STARTMENU, 125,40,247,8
+    CHECKBOX        "Create desktop shortcut", IDC_DESKTOP, 125,70,247,8
+    CONTROL         110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
+                    104,163,WS_EX_CLIENTEDGE
+END
 
