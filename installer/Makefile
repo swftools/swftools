@@ -6,7 +6,7 @@ LICENSE=gpl.c
 
 all: files1.exe files2.exe mkarchive
 
-LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid ../z/libz.a
+LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid
 
 files1.c: ../win32/*.exe mkarchive
 	CWD=`pwd`
@@ -42,8 +42,11 @@ installer.o: installer.c installer.h archive.h ../lib/os.h
 installer.coff: installer.rc swftools.ico installer.h
 	$(WINDRES) installer.rc -O coff -F pe-i386 -o installer.coff
 
-%.exe: %.c installer.o license.o archive.o installer.coff Makefile
-	$(CC) installer.o license.o archive.o installer.coff $< -o $@ $(LIBS)
+lzma/LzmaDecode.o: lzma/LzmaDecode.c lzma/LzmaDecode.h lzma/LzmaTypes.h
+	$(CC) -c lzma/LzmaDecode.c -o lzma/LzmaDecode.o
+
+%.exe: %.c installer.o license.o archive.o lzma/LzmaDecode.o installer.coff Makefile
+	$(CC) installer.o license.o archive.o lzma/LzmaDecode.o installer.coff $< -o $@ $(LIBS)
 	$(STRIP) $@
 	./makegui $@
 	#upx -9 --best $@ 2>/dev/null || true
