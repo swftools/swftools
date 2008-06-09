@@ -163,10 +163,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     if(FT_HAS_GLYPH_NAMES(face)) {
 	font->glyphnames = (char**)rfx_calloc(face->num_glyphs*sizeof(char*));
     }
-
-    font->layout->ascent = abs(face->ascender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMin;
-    font->layout->descent = abs(face->descender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMax;
-    font->layout->leading = font->layout->ascent + font->layout->descent;
+    
     font->layout->kerningcount = 0;
     
     name = face->family_name;
@@ -240,6 +237,8 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
     font->numchars = 0;
 
     glyph2glyph = (int*)rfx_calloc(face->num_glyphs*sizeof(int));
+
+    SRECT fontbbox = {0,0,0,0};
 
     for(t=0; t < face->num_glyphs; t++) {
 	FT_Glyph glyph;
@@ -323,12 +322,17 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	    font->glyph[font->numchars].advance = 0;
 #endif
 	
+	SRECT b = swf_ShapeDrawerGetBBox(&draw);
+
+	//font->layout->bounds[font->numchars].xmin = (bbox.xMin*FT_SCALE*20)/FT_SUBPIXELS;
+	//font->layout->bounds[font->numchars].ymin = (bbox.yMin*FT_SCALE*20)/FT_SUBPIXELS;
+	//font->layout->bounds[font->numchars].xmax = (bbox.xMax*FT_SCALE*20)/FT_SUBPIXELS;
+	//font->layout->bounds[font->numchars].ymax = (bbox.yMax*FT_SCALE*20)/FT_SUBPIXELS;
+
+	font->layout->bounds[font->numchars] = b;
 	font->glyph[font->numchars].shape = swf_ShapeDrawerToShape(&draw);
-	
-	font->layout->bounds[font->numchars].xmin = (bbox.xMin*FT_SCALE*20)/FT_SUBPIXELS;
-	font->layout->bounds[font->numchars].ymin = (bbox.yMin*FT_SCALE*20)/FT_SUBPIXELS;
-	font->layout->bounds[font->numchars].xmax = (bbox.xMax*FT_SCALE*20)/FT_SUBPIXELS;
-	font->layout->bounds[font->numchars].ymax = (bbox.yMax*FT_SCALE*20)/FT_SUBPIXELS;
+
+	swf_ExpandRect2(&fontbbox, &font->layout->bounds[font->numchars]);
 
 	draw.dealloc(&draw);
 
@@ -338,6 +342,19 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 	glyph2glyph[t] = font->numchars;
 	font->numchars++;
     }
+    
+    //font->layout->ascent = abs(face->ascender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMin;
+    //font->layout->descent = abs(face->descender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMax;
+    //font->layout->leading = font->layout->ascent + font->layout->descent;
+
+    font->layout->ascent = -fontbbox.ymin;
+    if(font->layout->ascent < 0)
+        font->layout->ascent = 0;
+    font->layout->descent = fontbbox.ymax;
+    if(font->layout->descent < 0)
+        font->layout->descent = 0;
+    font->layout->leading = fontbbox.ymax - fontbbox.ymin;
+
     /* notice: if skip_unused is true, font->glyph2ascii, font->glyphnames and font->layout->bounds will 
 	       have more memory allocated than just font->numchars, but only the first font->numchars 
 	       are used/valid */
