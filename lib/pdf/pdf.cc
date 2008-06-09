@@ -334,7 +334,7 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
         addGlobalFontDir(value);
     } else if(!strcmp(name, "pages")) {
 	global_page_range = strdup(value);
-    } else if(!strncmp(name, "font", strlen("font"))) {
+    } else if(!strncmp(name, "font", strlen("font")) && name[4]!='q') {
 	addGlobalFont(value);
     } else if(!strncmp(name, "languagedir", strlen("languagedir"))) {
         addGlobalLanguageDir(value);
