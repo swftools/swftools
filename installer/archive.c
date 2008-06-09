@@ -371,6 +371,10 @@ int unpack_archive(void*data, int len, char*destdir, statusfunc_t f)
 #else
     reader_t*z = reader_init_lzma(data, len);
 #endif
+    if(!z) {
+	f(1, "Couldn't decompress installation files");
+	return 0;
+    }
 
     f(0, "Creating installation directory");
     if(!create_directory(destdir,f)) return 0;
