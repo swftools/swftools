@@ -6,7 +6,7 @@ LICENSE=gpl.c
 
 all: files1.exe files2.exe mkarchive
 
-LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid
+LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid ../z/libz.a
 
 files1.c: ../win32/*.exe mkarchive
 	CWD=`pwd`
@@ -27,23 +27,23 @@ mkarchive: mkarchive.c
 crnfiles1.o: crnfiles1.c
 crnfiles2.o: crnfiles2.c
 
-depack.o: depack.c depack.h Makefile
-	$(CC) -c depack.c -o depack.o
+#depack.o: depack.c depack.h Makefile
+#	$(CC) -c depack.c -o depack.o
 
-archive.o: archive.c archive.c depack.h
+archive.o: archive.c archive.c
 	$(CC) -c archive.c -o archive.o
 
 license.o: $(LICENSE)
 	$(CC) -c $< -o license.o
 
-installer.o: installer.c installer.h depack.h archive.h ../lib/os.h
+installer.o: installer.c installer.h archive.h ../lib/os.h
 	$(CC) -c installer.c -o installer.o
 
 installer.coff: installer.rc swftools.ico installer.h
 	$(WINDRES) installer.rc -O coff -F pe-i386 -o installer.coff
 
-%.exe: %.c installer.o license.o depack.o archive.o depack.h installer.coff Makefile
-	$(CC) installer.o depack.o license.o archive.o installer.coff $< -o $@ $(LIBS)
+%.exe: %.c installer.o license.o archive.o installer.coff Makefile
+	$(CC) installer.o license.o archive.o installer.coff $< -o $@ $(LIBS)
 	$(STRIP) $@
 	./makegui $@
 	#upx -9 --best $@ 2>/dev/null || true
