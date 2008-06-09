@@ -1549,10 +1549,12 @@ void s_font(char*name, char*filename)
     swf_FontReduce_swfc(font);
     tag = swf_InsertTag(tag, ST_DEFINEFONT2);
     swf_FontSetDefine2(tag, font);
-    tag = swf_InsertTag(tag, ST_EXPORTASSETS);
-    swf_SetU16(tag, 1);
-    swf_SetU16(tag, id);
-    swf_SetString(tag, name);
+    if(do_exports) {
+	tag = swf_InsertTag(tag, ST_EXPORTASSETS);
+	swf_SetU16(tag, 1);
+	swf_SetU16(tag, id);
+	swf_SetString(tag, name);
+    }
 
     incrementid();
 }
@@ -1634,13 +1636,15 @@ void s_sound(char*name, char*filename)
     else
         swf_SetSoundDefine(tag, samples, numsamples);
 
-    tag = swf_InsertTag(tag, ST_NAMECHARACTER);
-    swf_SetU16(tag, id);
-    swf_SetString(tag, name);
-    tag = swf_InsertTag(tag, ST_EXPORTASSETS);
-    swf_SetU16(tag, 1);
-    swf_SetU16(tag, id);
-    swf_SetString(tag, name);
+    if(do_exports) {
+	tag = swf_InsertTag(tag, ST_NAMECHARACTER);
+	swf_SetU16(tag, id);
+	swf_SetString(tag, name);
+	tag = swf_InsertTag(tag, ST_EXPORTASSETS);
+	swf_SetU16(tag, 1);
+	swf_SetU16(tag, id);
+	swf_SetString(tag, name);
+    }
 
     sound = (sound_t*)malloc(sizeof(sound_t)); /* mem leak */
     sound->tag = tag;
@@ -2123,7 +2127,7 @@ void s_endClip()
     swf_SetTagPos(stack[stackpos].tag, 0);
     swf_GetPlaceObject(stack[stackpos].tag, &p);
     p.clipdepth = currentdepth;
-    p.name = 0;
+    //p.name = 0;
     swf_ClearTag(stack[stackpos].tag);
     swf_SetPlaceObject(stack[stackpos].tag, &p);
     currentdepth++;
