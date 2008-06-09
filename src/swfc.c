@@ -816,7 +816,8 @@ TAG* removeFromTo(TAG*from, TAG*to)
     TAG*save = from->prev;
     while(from!=to) {
 	TAG*next = from->next;
-	swf_DeleteTag(from);
+	if(swf_isAllowedSpriteTag(from))
+	    swf_DeleteTag(from);
 	from = next;
     }
     save->next = 0;
@@ -953,9 +954,6 @@ static void s_endSprite()
 {
     SRECT r = currentrect;
 
-    if(stack[stackpos].cut)
-	tag = removeFromTo(stack[stackpos].cut, tag);
-
     stackpos--;
     instance_t *i;
     stringarray_t* index =dictionary_index(&instances);
@@ -969,6 +967,9 @@ static void s_endSprite()
             writeInstance(i);
     	}
     }
+
+    if(stack[stackpos].cut)
+	tag = removeFromTo(stack[stackpos].cut, tag);
 
     // the writeInstance loop above may have inserted tags after what used yo be the current tag,
     // so let's make sure 'tag' point to the current tag again.
