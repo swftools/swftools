@@ -80,6 +80,7 @@ typedef struct _swfoutput_internal
     int config_opennewwindow;
     int config_ignoredraworder;
     int config_drawonlyshapes;
+    int config_linknameurl;
     int config_jpegquality;
     int config_storeallcharacters;
     int config_enablezlib;
@@ -254,6 +255,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_internallinkfunction=0;
     i->config_externallinkfunction=0;
     i->config_reordertags=1;
+    i->config_linknameurl=1;
 
     i->config_linkcolor.r = i->config_linkcolor.g = i->config_linkcolor.b = 255;
     i->config_linkcolor.a = 0x40;
@@ -1526,7 +1528,7 @@ static void swfoutput_setlinewidth(gfxdevice_t*dev, double _linewidth)
 }
 
 
-static void drawlink(gfxdevice_t*dev, ActionTAG*,ActionTAG*, gfxline_t*points, char mouseover);
+static void drawlink(gfxdevice_t*dev, ActionTAG*,ActionTAG*, gfxline_t*points, char mouseover, const char*url);
 static void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points);
 static void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points);
 static void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points);
@@ -1587,7 +1589,7 @@ void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
     }
     actions = action_End(actions);
    
-    drawlink(dev, actions, 0, points, 0);
+    drawlink(dev, actions, 0, points, 0, url);
 }
 void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 {
@@ -1610,7 +1612,10 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 	actions = action_End(actions);
     }
 
-    drawlink(dev, actions, 0, points, 0);
+    char name[80];
+    sprintf(name, "page%d", page);
+
+    drawlink(dev, actions, 0, points, 0, name);
 }
 
 /* Named Links (a.k.a. Acrobatmenu) are used to implement various gadgets
@@ -1660,7 +1665,7 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
 	actions2 = action_End(actions2);
     }
 
-    drawlink(dev, actions1, actions2, points, mouseover);
+    drawlink(dev, actions1, actions2, points, mouseover, name);
 
     swf_ActionFree(actions1);
     swf_ActionFree(actions2);
@@ -1707,7 +1712,7 @@ static void drawgfxline(gfxdevice_t*dev, gfxline_t*line, int fill)
 }
 
 
-static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gfxline_t*points, char mouseover)
+static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gfxline_t*points, char mouseover, const char*url)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     RGBA rgb;
@@ -1800,8 +1805,10 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
             swf_ButtonPostProcess(i->tag, 1);
 	}
     }
-    char name[80];
-    sprintf(name, "link%d", buttonid);
+    const char* name = 0;
+    if(i->config_linknameurl) {
+	name = url;
+    }
     
     msg("<trace> Placing link ID %d", buttonid);
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
@@ -1983,6 +1990,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
         printf("linksopennewwindow          make links open a new browser window\n");
         printf("linktarget                  target window name of new links\n");
         printf("linkcolor=<color)           color of links (format: RRGGBBAA)\n");
+        printf("linknameurl		    Link buttons will be named like the URL they refer to (handy for iterating through links with actionscript)\n");
         printf("storeallcharacters          don't reduce the fonts to used characters in the output file\n");
         printf("enablezlib                  switch on zlib compression (also done if flashversion>=7)\n");
         printf("bboxvars                    store the bounding box of the SWF file in actionscript variables\n");
