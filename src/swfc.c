@@ -969,6 +969,9 @@ static void s_endSprite()
             writeInstance(i);
     	}
     }
+
+    // the writeInstance loop above may have inserted tags after what used yo be the current tag,
+    // so let's make sure 'tag' point to the current tag again.
     while (tag->next)
 	tag = tag->next;
 
@@ -1027,6 +1030,11 @@ static void s_endSWF()
 
     swf = stack[stackpos].swf;
     filename = stack[stackpos].filename;
+
+    // the writeInstance loop above may have inserted tags after what used yo be the current tag,
+    // so let's make sure 'tag' point to the current tag again.
+    while (tag->next)
+	tag = tag->next;
 
     //if(tag->prev && tag->prev->id != ST_SHOWFRAME)
     //    tag = swf_InsertTag(tag, ST_SHOWFRAME);
