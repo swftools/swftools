@@ -470,6 +470,11 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	progress_pos = 0;
 	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, progress_pos, 0);
 	int success = unpack_archive(crndata, crndata_len, install_path, PropertyArchiveStatus);
+	if(!success) {
+	    MessageBox(0, "Couldn't extract all installation files", "SWFTools Install", MB_OK|MB_ICONERROR);
+	    do_abort=1;
+	    exit(1);
+	}
 	return 0;
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
@@ -482,6 +487,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	pdf2swf_path = concatPaths(install_path, "pdf2swf_gui.exe");
 	FILE*fi = fopen(pdf2swf_path, "rb");
 	if(fi) {
+	    printf("a GUI program exists, creating desktop/startmenu links\n");
 	    config_createLinks = 1;
 	    fclose(fi);
 	}
