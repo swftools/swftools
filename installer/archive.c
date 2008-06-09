@@ -28,8 +28,13 @@
 #include <sys/stat.h>
 #endif
 #include "archive.h"
+
+#ifdef ZLIB
 #include "../z/zlib.h"
 #define ZLIB_BUFFER_SIZE 16384
+#else
+#include "lzma/LzmaDecode.h"
+#endif
 
 static int verbose = 0;
 static void msg(char*format, ...)
@@ -98,8 +103,76 @@ reader_t*reader_init_memreader(void*newdata, int newlength)
     r->pos = 0;
     return r;
 } 
+/* ---------------------------- lzma reader -------------------------- */
+typedef struct
+{
+    reader_t*input;
+    CLzmaDecoderState state;
+    unsigned char*mem;
+    int pos;
+    int len;
+    int lzmapos;
+    int available;
+} lzma_t;
 
+static void reader_lzma_dealloc(reader_t*reader)
+{
+    lzma_t*i = (lzma_t*)reader->internal;
+    free(i->state.Probs);i->state.Probs = 0;
+    free(i->state.Dictionary);i->state.Dictionary = 0;
+    free(reader->internal);reader->internal=0;
+}
 
+static int reader_lzma_read(reader_t*reader, void*data, int len)
+{
+    lzma_t*i = (lzma_t*)reader->internal;
+
+    SizeT processed = 0;
+    if(len>i->available)
+	len = i->available;
+    int ret = LzmaDecode(&i->state, 
+	                 &i->mem[i->pos], i->len-i->pos, &i->lzmapos, 
+	                 data, len, &processed);
+    i->available -= processed;
+    i->pos += i->lzmapos;
+    return processed;
+}
+
+reader_t* reader_init_lzma(void*mem, int len)
+{
+    reader_t*r = malloc(sizeof(reader_t));
+    memset(r, 0, sizeof(reader_t));
+
+    lzma_t*i = (lzma_t*)malloc(sizeof(lzma_t));
+    memset(i, 0, sizeof(lzma_t));
+    r->internal = i;
+    r->read = reader_lzma_read;
+    r->dealloc = reader_lzma_dealloc;
+    r->pos = 0;
+
+    i->mem = mem;
+    i->len = len;
+    i->lzmapos = 0;
+
+    if(LzmaDecodeProperties(&i->state.Properties, mem, LZMA_PROPERTIES_SIZE)) {
+	printf("Couldn't decode properties\n");
+	return 0;
+    }
+    i->pos += LZMA_PROPERTIES_SIZE;
+
+    unsigned char*l = &i->mem[i->pos];
+    i->available = (long long)l[0]     | (long long)l[1]<<8  | (long long)l[2]<<16 | (long long)l[3]<<24 | 
+	          (long long)l[4]<<32 | (long long)l[5]<<40 | (long long)l[6]<<48 | (long long)l[7]<<56;
+    i->pos += 8; //uncompressed size
+
+    i->state.Probs = (CProb *)malloc(LzmaGetNumProbs(&i->state.Properties) * sizeof(CProb));
+    i->state.Dictionary = (unsigned char *)malloc(i->state.Properties.DictionarySize);
+    LzmaDecoderInit(&i->state);
+
+    return r;
+}
+
+#ifdef ZLIB
 /* ---------------------------- zlibinflate reader -------------------------- */
 struct zlibinflate_t
 {
@@ -192,6 +265,7 @@ reader_t* reader_init_zlibinflate(reader_t*input)
 }
 
 /* -------------------------------------------------------------------------- */
+#endif
 
 
 static int create_directory(char*path,statusfunc_t f)
@@ -292,7 +366,11 @@ static int write_file(char*filename, reader_t*r, int len,statusfunc_t f)
 int unpack_archive(void*data, int len, char*destdir, statusfunc_t f)
 {
     reader_t*m = reader_init_memreader(data, len);
+#ifdef ZLIB
     reader_t*z = reader_init_zlibinflate(m);
+#else
+    reader_t*z = reader_init_lzma(data, len);
+#endif
 
     f(0, "Creating installation directory");
     if(!create_directory(destdir,f)) return 0;
