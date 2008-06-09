@@ -23,7 +23,7 @@
 
 typedef void (*statusfunc_t)(int type, char*text);
 
-int unpack_archive(void*data, char*destdir, statusfunc_t f);
+int unpack_archive(void*data, int len, char*destdir, statusfunc_t f);
 
 #endif //__archive_h__
 
