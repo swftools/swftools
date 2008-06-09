@@ -40,6 +40,7 @@ static char path_programfiles[MAX_PATH] = "\0";
 
 extern char*crndata;
 extern int crndata_len;
+extern int crn_decompressed_size;
 
 extern char*license_text;
 
@@ -427,12 +428,40 @@ void PropertyArchiveStatus(int type, char*text)
 	}
     }
 }
+
+void print_space(char*dest, char*msg, ULONGLONG size)
+{
+    if(size < 1024)
+	sprintf(dest, "%s%d Bytes", msg, size);
+    else if(size < 1048576l)
+	sprintf(dest, "%s%.2f Kb", msg, size/1024.0);
+    else if(size < 1073741824l)
+	sprintf(dest, "%s%.2f Mb", msg, size/1048576.0);
+    else if(size < 1099511627776ll)
+	sprintf(dest, "%s%.2f Gb", msg, size/1073741824.0);
+    else
+	sprintf(dest, "%s%.2f Tb", msg, size/1125899906842624.0);
+}
+
 BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     HWND dialog = GetParent(hwnd);
     if(message == WM_INITDIALOG) {
 	SetDlgItemText(hwnd, IDC_INFO, "Ready to install");
+
+	char buf[256];
+	print_space(buf, "Space required: ", crn_decompressed_size);
+	SetDlgItemText(hwnd, IDC_SPACE1, buf);
+	ULARGE_INTEGER available,total,totalfree;
+	available.QuadPart=0;
+	total.QuadPart=0;
+	totalfree.QuadPart=0;
+	GetDiskFreeSpaceEx(install_path, &available, &total, &totalfree);
+	print_space(buf, "Space available: ", available.QuadPart);
+	SetDlgItemText(hwnd, IDC_SPACE2, buf);
     }
     if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZNEXT)) {
+	SetDlgItemText(hwnd, IDC_SPACE1, "");
+	SetDlgItemText(hwnd, IDC_SPACE2, "");
 	PropSheet_SetWizButtons(dialog, 0);
 	SendMessage(dialog, PSM_CANCELTOCLOSE, 0, 0); //makes wine display a warning
 	SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
