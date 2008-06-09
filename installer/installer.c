@@ -44,7 +44,7 @@ extern char*crndata;
 extern char*license_text;
 
 static char*install_path = "c:\\swftools\\";
-static char pathBuf[1024];
+static char pathBuf[MAX_PATH];
 static int do_abort = 0;
 
 static char* pdf2swf_path;
@@ -115,6 +115,71 @@ static char* concatPaths(const char*base, const char*add)
     n[l1]='\\';
     strcpy(&n[l1+1],&add[pos]);
     return n;
+}
+
+static void handleTemplateFile(const char*filename)
+{
+    FILE*fi = fopen(filename, "rb");
+    fseek(fi, SEEK_END, 0);
+    int len = ftell(fi);
+    fseek(fi, SEEK_SET, 0);
+    char*file = malloc(len);
+    fread(file, len, 1, fi);
+    fclose(fi);
+    int l = strlen(install_path);
+    fi = fopen(filename, "wb");
+    char*pos = file;
+    char*lastpos = file;
+    while(1) {
+        pos = strstr(pos, "%%PATH%%");
+        if(!pos) {
+            pos = &file[len];
+            break;
+        }
+        if(pos!=lastpos)
+            fwrite(lastpos, pos-lastpos, 1, fi);
+        fwrite(install_path, l, 1, fi);
+        pos+=8; // length of "%%PATH%%"
+        lastpos = pos;
+    }
+    fwrite(lastpos, pos-lastpos, 1, fi);
+    fclose(fi);
+    free(file);
+}
+
+static char* getRegistryEntry(char*path)
+{
+    int res = 0;
+    HKEY key;
+    long rc;
+    long size = 0;
+    DWORD type;
+    char*buf;
+    rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path, 0, KEY_ALL_ACCESS/* KEY_READ*/, &key);
+    if (rc != ERROR_SUCCESS) {
+	fprintf(stderr, "RegOpenKeyEx failed\n");
+	return 0;
+    }
+    rc = RegQueryValueEx(key, NULL, 0, 0, 0, (LPDWORD)&size) ;
+    if(rc != ERROR_SUCCESS) {
+	fprintf(stderr, "RegQueryValueEx(1) failed: %d\n", rc);
+	return 0;
+    }
+    buf = (char*)malloc(size+1);
+    rc = RegQueryValueEx(key, NULL, 0, &type, (BYTE*)buf, (LPDWORD)&size);
+    if(rc != ERROR_SUCCESS) {
+	fprintf(stderr, "RegQueryValueEx(2) failed: %d\n", rc);
+	return 0;
+    }
+    if(type == REG_SZ || type == REG_EXPAND_SZ) {
+	while(size && buf[size-1] == '\0')
+          --size;
+	buf[size] = 0;
+	/* TODO: convert */
+	return buf;
+    } else if(type == REG_BINARY) {
+	return buf;
+    }
 }
 
 static int setRegistryEntry(char*key,char*value)
@@ -240,6 +305,18 @@ int CreateShortcut(char*path, char*description, char*filename, char*arguments, i
     return 1;
 }
 
+static int CreateURL(const char*url, const char*path)
+{
+    FILE*fi = fopen(path, "wb");
+    if(!fi)
+        return 0;
+    fprintf(fi, "[InternetShortcut]\r\n");
+    fprintf(fi, "URL=http://localhost:8081/\r\n");
+    fclose(fi);
+    return 1;
+}
+
+
 BOOL CALLBACK PropertySheetFuncCommon(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, int buttons)
 {
     LPNMHDR lpnm;
@@ -294,6 +371,10 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		if(SHGetPathFromIDList(browse.pidlRoot, browse.pszDisplayName)) {
 		    printf("Path is %s\n", browse.pszDisplayName);
 		    install_path = browse.pszDisplayName;
+                    int l = strlen(install_path);
+                    while(l && install_path[l-1]=='\\') {
+                        install_path[--l]=0;
+                    }   
 		}
 	    }
 	    SendDlgItemMessage(hwnd, IDC_INSTALL_PATH, WM_SETTEXT, 0, (LPARAM)install_path);
@@ -314,6 +395,10 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    SendDlgItemMessage(hwnd, IDC_INSTALL_PATH, WM_GETTEXT, sizeof(pathBuf), (LPARAM)&(pathBuf[0]));
 	    if(pathBuf[0]) {
 		install_path = pathBuf;
+                int l = strlen(install_path);
+                while(l && install_path[l-1]=='\\') {
+                    install_path[--l]=0;
+                }   
 	    }
 	    return 0;
 	}
