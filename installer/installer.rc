@@ -25,8 +25,7 @@ STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
 CAPTION "Setup"
 FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
-    LTEXT           "Select installation directory:",IDC_TITLE,125-X,10,
-                    247,12,NOT WS_GROUP
+    LTEXT           "Select installation directory:",IDC_TITLE,125-X,10,247,12,NOT WS_GROUP
     PUSHBUTTON      "Browse...",IDC_BROWSE,322-X,7,50,14,WS_VISIBLE
     EDITTEXT        IDC_INSTALL_PATH ,125-X,30,247,11,ES_AUTOHSCROLL
 
@@ -43,6 +42,8 @@ FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
     LTEXT           "Click ""Next"" to begin the install process. If you want to review or change any of your installation settings, click ""Back"". Click ""Cancel"" to exit the Installer."
                     IDC_TITLE,125-X,10,246,31,NOT WS_GROUP
+    LTEXT           "Required space: ",IDC_SPACE1,125-X,60,246,8,NOT WS_GROUP
+    LTEXT           "Available space: ",IDC_SPACE2,125-X,80,246,8,NOT WS_GROUP
     CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,
                     125-X,157,246,14
     CTEXT           "Installation progress:",IDC_INFO,125-X,137,246,8
