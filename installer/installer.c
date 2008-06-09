@@ -56,7 +56,7 @@ static HINSTANCE me;
 
 #define USER_SETMESSAGE 0x7f01
 
-void tball(HDC hdc, double px, double py, double sx, double sy)
+static void tball(HDC hdc, double px, double py, double sx, double sy)
 {
     MoveToEx(hdc, 75.25*sx+px, -32.50*sy+py, 0);
     LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 74.95*sx+px, -3.45*sy+py); LineTo(hdc, 75.25*sx+px, -32.50*sy+py);
@@ -98,6 +98,49 @@ void tball(HDC hdc, double px, double py, double sx, double sy)
     LineTo(hdc, -194.85*sx+px, -17.85*sy+py); LineTo(hdc, -175.85*sx+px, 77.60*sy+py);
     MoveToEx(hdc, -96.35*sx+px, 99.55*sy+py, 0);
     LineTo(hdc, -25.70*sx+px, 128.45*sy+py); LineTo(hdc, -118.85*sx+px, 143.85*sy+py);
+}
+
+static char* concatPaths(const char*base, const char*add)
+{
+    int l1 = strlen(base);
+    int l2 = strlen(add);
+    int pos = 0;
+    char*n = 0;
+    while(l1 && base[l1-1] == '\\')
+	l1--;
+    while(pos < l2 && add[pos] == '\\')
+	pos++;
+
+    n = (char*)malloc(l1 + (l2-pos) + 2);
+    memcpy(n,base,l1);
+    n[l1]='\\';
+    strcpy(&n[l1+1],&add[pos]);
+    return n;
+}
+
+static int setRegistryEntry(char*key,char*value)
+{
+    HKEY hkey1;
+    HKEY hkey2;
+    int ret1 = -1, ret2= -1;
+    ret1 = RegCreateKey(HKEY_CURRENT_USER, key, &hkey1);
+    if(config_forAllUsers) {
+	ret2 = RegCreateKey(HKEY_LOCAL_MACHINE, key, &hkey2);
+    }
+
+    if(ret1 && ret2) {
+	fprintf(stderr, "registry: CreateKey %s failed\n", key);
+	return 0;
+    }
+    if(!ret1)
+	ret1 = RegSetValue(hkey1, NULL, REG_SZ, value, strlen(value)+1);
+    if(!ret2)
+	ret2 = RegSetValue(hkey2, NULL, REG_SZ, value, strlen(value)+1);
+    if(ret1 && ret2) {
+	fprintf(stderr, "registry: SetValue %s failed\n", key);
+	return 0;
+    }
+    return 1;
 }
 
 static HWND wnd_background = 0;

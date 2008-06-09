@@ -36,20 +36,17 @@ license.o: $(LICENSE)
 installer.o: installer.c installer.h depack.h archive.h ../lib/os.h
 	$(CC) -c installer.c -o installer.o
 
-os.o: ../lib/os.c ../lib/os.h
-	$(CC) -c ../lib/os.c -o os.o
-
 installer.coff: installer.rc swftools.ico installer.h
 	$(WINDRES) installer.rc -O coff -F pe-i386 -o installer.coff
 
-%.exe: %.c installer.o license.o depack.o archive.o depack.h os.o installer.coff Makefile
-	$(CC) installer.o depack.o license.o archive.o os.o installer.coff $< -o $@ $(LIBS)
+%.exe: %.c installer.o license.o depack.o archive.o depack.h installer.coff Makefile
+	$(CC) installer.o depack.o license.o archive.o installer.coff $< -o $@ $(LIBS)
 	$(STRIP) $@
 	./makegui $@
 	#upx -9 --best $@ 2>/dev/null || true
 
-#installer.exe: installer.c depack.o archive.o depack.h crnfiles.o os.o installer.coff Makefile
-#	$(CC) installer.c depack.o archive.o crnfiles.o os.o installer.coff -o installer.exe $(LIBS)
+#installer.exe: installer.c depack.o archive.o depack.h crnfiles.o installer.coff Makefile
+#	$(CC) installer.c depack.o archive.o crnfiles.o installer.coff -o installer.exe $(LIBS)
 #	$(STRIP) installer.exe
 #	#./makegui installer.exe
 #	#upx -9 --best installer.exe 2>/dev/null || true
