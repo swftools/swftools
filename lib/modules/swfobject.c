@@ -57,7 +57,7 @@ int isUnitCXForm(CXFORM* cx)
     return 0;
 }
 
-static int objectplace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction, U8 blendmode, FILTERLIST*filters)
+static int objectplace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U16 clipaction, U8 blendmode, FILTERLIST*filters)
 { U8 flags,flags2;
   if (!t) return -1;
 
@@ -87,15 +87,15 @@ static int objectplace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name
     swf_SetU8(t,blendmode);
   return 0; 
 }
-int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name)
+int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name)
 {
     return objectplace(t,id,depth,m,cx,name,0,0,0);
 }
-int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction)
+int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U16 clipaction)
 { 
     return objectplace(t,id,depth,m,cx,name,clipaction,0,0);
 }
-int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U8 blend)
+int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U8 blend)
 { 
     if(t->id != ST_PLACEOBJECT3)
 	fprintf(stderr, "wrong tag- ignoring blend mode\n");

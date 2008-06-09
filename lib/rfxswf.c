@@ -139,7 +139,7 @@ int swf_GetBlock(TAG * t,U8 * b,int l)
   return l;
 }
 
-int swf_SetBlock(TAG * t,U8 * b,int l)
+int swf_SetBlock(TAG * t,const U8 * b,int l)
 // Appends Block to the end of Tagdata, returns size
 { U32 newlen = t->len + l;
   swf_ResetWriteBits(t);

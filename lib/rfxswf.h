@@ -215,7 +215,7 @@ int   swf_CountUBits(U32 v,int nbits);
 int   swf_CountBits(U32 v,int nbits);
 
 int   swf_GetBlock(TAG * t,U8 * b,int l);   // resets Bitcount
-int   swf_SetBlock(TAG * t,U8 * b,int l);
+int   swf_SetBlock(TAG * t,const U8 * b,int l);
 
 U8    swf_GetU8(TAG * t);                   // resets Bitcount
 U16   swf_GetU16(TAG * t);
@@ -937,9 +937,9 @@ void action_fixjump(ActionMarker m1, ActionMarker m2);
 
 extern char*blendModeNames[];
 
-int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name);
-int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U16 clipaction);
-int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,U8 * name, U8 blendmode);
+int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name);
+int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U16 clipaction);
+int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U8 blendmode);
 int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 
 #define PF_MOVE         0x01
