@@ -46,25 +46,25 @@ char* getRegistryEntry(char*path)
     DWORD type;
     char*buf;
     rc = RegOpenKeyEx(HKEY_CURRENT_USER, path, 0, KEY_ALL_ACCESS, &key);
-    if(rc != ERROR_SUCCESS)
+    if(rc)
 	rc = RegOpenKeyEx(HKEY_CURRENT_USER, path, 0, KEY_READ, &key);
-    if(rc != ERROR_SUCCESS)
+    if(rc)
 	rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path, 0, KEY_ALL_ACCESS, &key);
-    if(rc != ERROR_SUCCESS)
+    if(rc)
 	rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path, 0, KEY_READ, &key);
 
-    if (rc != ERROR_SUCCESS) {
+    if (rc) {
 	fprintf(stderr, "RegOpenKeyEx failed\n");
 	return 0;
     }
     rc = RegQueryValueEx(key, NULL, 0, 0, 0, (LPDWORD)&size) ;
-    if(rc != ERROR_SUCCESS) {
+    if(rc) {
 	fprintf(stderr, "RegQueryValueEx(1) failed: %d\n", rc);
 	return 0;
     }
     buf = (char*)malloc(size+1);
     rc = RegQueryValueEx(key, NULL, 0, &type, (BYTE*)buf, (LPDWORD)&size);
-    if(rc != ERROR_SUCCESS) {
+    if(rc) {
 	fprintf(stderr, "RegQueryValueEx(2) failed: %d\n", rc);
 	return 0;
     }
@@ -77,6 +77,7 @@ char* getRegistryEntry(char*path)
     } else if(type == REG_BINARY) {
 	return buf;
     }
+    return 0;
 }
 
 int setRegistryEntry(char*key,char*value)
@@ -86,15 +87,15 @@ int setRegistryEntry(char*key,char*value)
     int ret1 = 0, ret2=0;
     ret1 = RegCreateKey(HKEY_CURRENT_USER, key, &hkey1);
     ret2 = RegCreateKey(HKEY_LOCAL_MACHINE, key, &hkey2);
-    if(ret1 != ERROR_SUCCESS && ret2 != ERROR_SUCESS) {
+    if(ret1 && ret2) {
 	fprintf(stderr, "registry: CreateKey %s failed\n", key);
 	return 0;
     }
-    if(ret1==ERROR_SUCCESS)
+    if(!ret1)
 	ret1 = RegSetValue(hkey1, NULL, REG_SZ, value, strlen(value)+1);
-    if(ret2==ERROR_SUCCESS)
+    if(!ret2)
 	ret2 = RegSetValue(hkey2, NULL, REG_SZ, value, strlen(value)+1);
-    if(ret1 != ERROR_SUCCESS && ret2 != ERROR_SUCCESS) {
+    if(ret1 && ret2) {
 	fprintf(stderr, "registry: SetValue %s failed\n", key);
 	return 0;
     }
