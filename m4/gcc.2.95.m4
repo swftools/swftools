@@ -1,4 +1,4 @@
-AC_DEFUN(RFX_CHECK_OLDGCC,
+AC_DEFUN([RFX_CHECK_OLDGCC],
 [
 AC_MSG_CHECKING([whether gcc supports lazy variable declaration])
 

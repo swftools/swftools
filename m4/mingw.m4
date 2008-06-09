@@ -1,4 +1,4 @@
-AC_DEFUN(RFX_CHECK_MING,
+AC_DEFUN([RFX_CHECK_MING],
 [
 AC_CANONICAL_HOST
 AC_EXEEXT
@@ -36,19 +36,19 @@ AC_SUBST(AR)
 dnl Checks for system services
 
 if test "x${CYGWIN}" = "xyes"; then
-    AC_DEFINE_UNQUOTED(CYGWIN, 1)
+    AC_DEFINE([CYGWIN], [1], [Define on cygwin])
     AC_MSG_RESULT(cygwin)
 else
     if test "x${MINGW}" = "xyes"; then
-	AC_DEFINE_UNQUOTED(MINGW, 1)
+	AC_DEFINE([MINGW], [1], [Define on Mingw])
 	WIN32=1
-	AC_DEFINE_UNQUOTED(WIN32, 1)
+	AC_DEFINE([WIN32], [1], [Define on windows])
 	LIBS="$LIBS -lws2_32 -lgdi32"
-	AC_MSG_RESULT(mingw)
+	AC_MSG_RESULT([mingw])
     else
 	LINUX=1
 	export LINUX
-	AC_DEFINE_UNQUOTED(LINUX, 1)
+	AC_DEFINE([LINUX], [1], [Define if not on cygwin or mingw])
 	AC_MSG_RESULT()
     fi
 fi

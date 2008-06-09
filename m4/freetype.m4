@@ -15,10 +15,10 @@
 # Substitutes:
 #
 
-AC_DEFUN(RFX_CHECK_FREETYPE,
+AC_DEFUN([RFX_CHECK_FREETYPE],
 [
 
-AC_PATH_PROG(FREETYPE_CONFIG, freetype-config,, "$PATH:/usr/local/bin:/sw/bin:/opt/local/bin")
+AC_PATH_PROG([FREETYPE_CONFIG], [freetype-config],, ["$PATH:/usr/local/bin:/sw/bin:/opt/local/bin"])
 
 OLDCPPFLAGS="${CPPFLAGS}"
 OLDLIBS="${LIBS}"
@@ -36,12 +36,12 @@ if test "x${FREETYPE_CONFIG}" '=' "x";then
     # if we didn't find the freetype-config program, we won't
     # know where the libs are expected to be. So just blindly
     # try to link against them.
-    AC_CHECK_LIB(freetype, FT_Init_FreeType,HAVE_LIB_FREETYPE=1,)
+    AC_CHECK_LIB([freetype], [FT_Init_FreeType],[HAVE_LIB_FREETYPE=1],)
 fi
 
-AC_CHECK_HEADERS(ft2build.h,HAVE_FT2BUILD_H=1)
+AC_CHECK_HEADERS([ft2build.h],[HAVE_FT2BUILD_H=1])
 if test "x${HAVE_FT2BUILD_H}" '=' "x";then
-    AC_CHECK_HEADERS(freetype/freetype.h,HAVE_FREETYPE_FREETYPE_H=1)
+    AC_CHECK_HEADERS([freetype/freetype.h],[HAVE_FREETYPE_FREETYPE_H=1])
 fi
 
 if test "x${HAVE_LIB_FREETYPE}" '!=' "x" -o \
@@ -125,15 +125,15 @@ EOF
 
     ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LDFLAGS $LIBS -o conftest${ac_exeext}'
     if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-	AC_MSG_RESULT(yes)
-	AC_DEFINE_UNQUOTED(HAVE_FREETYPE, 1)
-	AC_DEFINE_UNQUOTED(HAVE_FREETYPE_FREETYPE_H, 1)
-	AC_DEFINE_UNQUOTED(USE_FREETYPE, 1)  # for ttf2tp1
+	AC_MSG_RESULT([yes])
+	AC_DEFINE([HAVE_FREETYPE], [1], [have/use freetype library])
+	AC_DEFINE([HAVE_FREETYPE_FREETYPE_H], [1], [Define if freetype headers are available])
+	AC_DEFINE([USE_FREETYPE], [1], [Define if freetype is available])  # for ttf2tp1
     else
 	echo "configure: failed program was:" >&5
 	cat conftest.c >&5
 	HAVE_FREETYPE=0
-	AC_MSG_RESULT(no)
+	AC_MSG_RESULT([no])
     fi
     rm -f conftest*
 fi

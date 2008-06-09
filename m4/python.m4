@@ -1,4 +1,4 @@
-AC_DEFUN(RFX_CHECK_PYTHON,
+AC_DEFUN([RFX_CHECK_PYTHON],
 [
 AC_MSG_CHECKING([for Python.h])
 
@@ -53,7 +53,7 @@ else
 fi
 
 if test "x$PY_VERSION" "!=" "x"; then
-    AC_MSG_RESULT($PY_VERSION)
+    AC_MSG_RESULT([$PY_VERSION])
     export PYTHON_INCLUDES PYTHON_LIB
     AC_SUBST(PYTHON_LIB)
     AC_SUBST(PYTHON_INCLUDES)
@@ -97,7 +97,7 @@ EOF
             ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
             if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
                 PYTHON_LIB="${PYTHON_LIB2}"
-                AC_DEFINE_UNQUOTED(HAVE_PYTHON_IMAGING, 1)
+                AC_DEFINE([HAVE_PYTHON_IMAGING], [1], [whether python-imaging was found])
                 HAVE_PYTHON_IMAGING=yes
                 export HAVE_PYTHON_IMAGING
                 AC_SUBST(HAVE_PYTHON_IMAGING)
@@ -114,6 +114,6 @@ EOF
     fi
     rm -f conftest*
 else
-    AC_MSG_RESULT(nope)
+    AC_MSG_RESULT([nope])
 fi
 ])

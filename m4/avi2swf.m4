@@ -1,7 +1,7 @@
-AC_DEFUN(RFX_CHECK_AVI2SWF,
+AC_DEFUN([RFX_CHECK_AVI2SWF],
 [
 
-AC_CHECK_PROGS(AVIFILE_CONFIG, avifile-config)
+AC_CHECK_PROGS([AVIFILE_CONFIG], [avifile-config])
 
 if test "x$AVIFILE_CONFIG" '!=' "x";then
     OLDCPPFLAGS="$CPPFLAGS"
@@ -109,7 +109,7 @@ if test "x$AVIFILE_CONFIG" '!=' "x";then
       AC_MSG_RESULT(yes)
       AVIFILE=true
       export AVIFILE
-      AC_DEFINE_UNQUOTED(AVIFILE, true)
+      AC_DEFINE([AVIFILE], [true], [Define if Avifile is available])
     else
       echo "configure: failed program was:" >&5
       cat conftest.cpp >&5

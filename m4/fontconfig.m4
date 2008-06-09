@@ -15,7 +15,7 @@
 # Substitutes:
 #
 
-AC_DEFUN(RFX_CHECK_FONTCONFIG,
+AC_DEFUN([RFX_CHECK_FONTCONFIG],
 [
 OLDCPPFLAGS="${CPPFLAGS}"
 OLDLIBS="${LIBS}"
@@ -24,8 +24,8 @@ if test -d /usr/include/fontconfig; then
     CPPFLAGS="$CPPFLAGS -I/usr/include/fontconfig"
 fi
 
-AC_CHECK_LIB(fontconfig, FcInit,HAVE_LIB_FONTCONFIG=1,)
-AC_CHECK_HEADERS(fontconfig.h,HAVE_FONTCONFIG_H=1)
+AC_CHECK_LIB(fontconfig, FcInit, [HAVE_LIB_FONTCONFIG=1],)
+AC_CHECK_HEADERS(fontconfig.h,[HAVE_FONTCONFIG_H=1])
 
 if test "x${HAVE_LIB_FONTCONFIG}" != "x";then
 if test "x${HAVE_FONTCONFIG_H}" != "x";then
@@ -83,7 +83,7 @@ EOF
     ac_link='$CC $CPPFLAGS $CFLAGS conftest.c $LDFLAGS $LIBS -o conftest${ac_exeext}'
     if { (eval echo freetype.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
 	AC_MSG_RESULT(yes)
-	AC_DEFINE_UNQUOTED(HAVE_FONTCONFIG, 1)
+	AC_DEFINE([HAVE_FONTCONFIG], [1], [Define if fontconfig is available])
     else
 	echo "configure: failed program was:" >&5
 	cat conftest.c >&5
