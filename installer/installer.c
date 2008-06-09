@@ -30,7 +30,6 @@
 #include "depack.h"
 
 #include "../config.h" //for swftools version
-#include "../lib/os.h" //for registry functions
 
 static int config_forAllUsers = 0;
 static int config_createLinks = 0;
