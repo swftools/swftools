@@ -27,8 +27,6 @@
 #include <stdlib.h>
 #include "installer.h"
 
-#include "depack.h"
-
 #include "../config.h" //for swftools version
 
 static int config_forAllUsers = 0;
@@ -41,6 +39,8 @@ static char path_desktop[MAX_PATH] = "\0";
 static char path_programfiles[MAX_PATH] = "\0";
 
 extern char*crndata;
+extern int crndata_len;
+
 extern char*license_text;
 
 static char*install_path = "c:\\swftools\\";
@@ -412,9 +412,9 @@ void PropertyArchiveStatus(int type, char*text)
     if(text && text[0]=='[') return;
     SetDlgItemText(statuswnd, IDC_INFO, strdup(text));
     int t;
-    /* There are usually 6 messages, and a range of 54 to fill, so 
+    /* There are usually 4 messages, and a range of 40 to fill, so 
        step 9 times */
-    for(t=0;t<9;t++) {
+    for(t=0;t<10;t++) {
 	SendDlgItemMessage(statuswnd, IDC_PROGRESS, PBM_SETPOS, ++progress_pos, 0);
 	processMessages();
 	Sleep(30);
@@ -437,10 +437,10 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	SendMessage(dialog, PSM_CANCELTOCLOSE, 0, 0); //makes wine display a warning
 	SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
 	statuswnd = hwnd;
-	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0,54));
+	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0,40));
 	progress_pos = 0;
 	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, progress_pos, 0);
-	int success = unpack_archive(crndata, install_path, PropertyArchiveStatus);
+	int success = unpack_archive(crndata, crndata_len, install_path, PropertyArchiveStatus);
 	return 0;
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
