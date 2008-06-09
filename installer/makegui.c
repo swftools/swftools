@@ -23,20 +23,30 @@
 
 int main(int argn, char*argv[])
 {
+    char flag = 2;
     if(argn<2) {
 	printf("Usage:\n");
-	printf("\t%s program.exe\n", argv[0]);
+	printf("\t%s program.exe [console]\n", argv[0]);
 	return 0;
     }
+    if(argn==3) {
+	if(!strcmp(argv[2], "console")) {
+	    flag = 3;
+	}
+    }
+
     FILE*fi = fopen(argv[1], "rb+");
     if(!fi) {
 	perror(argv[1]);
 	exit(1);
     }
     fseek(fi,220,SEEK_SET); 
-    char two=2;
-    printf("Setting Win32 GUI flag in %s\n", argv[1]);
-    fwrite(&two, 1, 1, fi);
+    if(flag == 2)
+	printf("Setting Win32 GUI flag in %s\n", argv[1]);
+    else if(flag == 3)
+	printf("Setting Win32 Console flag in %s\n", argv[1]);
+
+    fwrite(&flag, 1, 1, fi);
     fclose(fi);
     return 0;
 }
