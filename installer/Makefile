@@ -4,7 +4,7 @@ WINDRES=/opt/xmingw/bin/i386-mingw32msvc-windres
 
 LICENSE=gpl.c
 
-all: files1.exe files2.exe uninstall.exe mkarchive
+all: files1.exe files2.exe mkarchive
 
 LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid
 
@@ -33,17 +33,11 @@ crnfiles2.o: crnfiles2.c
 archive.o: archive.c archive.c
 	$(CC) -c archive.c -o archive.o
 
-utils.o: utils.c utils.c
-	$(CC) -c utils.c -o utils.o
-
 license.o: $(LICENSE)
 	$(CC) -c $< -o license.o
 
-installer.o: installer.c installer.h archive.h
+installer.o: installer.c installer.h archive.h ../lib/os.h
 	$(CC) -c installer.c -o installer.o
-
-uninstaller.o: installer.c installer.h
-	$(CC) -DDEINSTALL -c installer.c -o uninstaller.o
 
 installer.coff: installer.rc swftools.ico installer.h
 	$(WINDRES) installer.rc -O coff -F pe-i386 -o installer.coff
@@ -51,15 +45,10 @@ installer.coff: installer.rc swftools.ico installer.h
 lzma/LzmaDecode.o: lzma/LzmaDecode.c lzma/LzmaDecode.h lzma/LzmaTypes.h
 	$(CC) -c lzma/LzmaDecode.c -o lzma/LzmaDecode.o
 
-uninstall.exe: uninstaller.o utils.o installer.coff Makefile
-	$(CC) uninstaller.o utils.o installer.coff -o $@ $(LIBS)
+%.exe: %.o installer.o license.o archive.o lzma/LzmaDecode.o installer.coff Makefile
+	$(CC) installer.o license.o archive.o lzma/LzmaDecode.o installer.coff $< -o $@ $(LIBS)
 	$(STRIP) $@
-	#./makegui $@
-
-%.exe: %.o installer.o license.o archive.o utils.o lzma/LzmaDecode.o installer.coff Makefile
-	$(CC) installer.o license.o utils.o archive.o lzma/LzmaDecode.o installer.coff $< -o $@ $(LIBS)
-	$(STRIP) $@
-	#./makegui $@
+	./makegui $@
 	#upx -9 --best $@ 2>/dev/null || true
 
 #installer.exe: installer.c depack.o archive.o depack.h crnfiles.o installer.coff Makefile
