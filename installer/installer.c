@@ -26,6 +26,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "installer.h"
+#ifndef DEINSTALL
+#include "archive.h"
+#endif
+#include "utils.h"
 
 #include "../config.h" //for swftools version
 
@@ -33,22 +37,23 @@ static int config_forAllUsers = 0;
 static int config_createLinks = 0;
 static int config_createStartmenu = 1;
 static int config_createDesktop = 1;
+static int config_deleteextra = 1;
 
 static char path_startmenu[MAX_PATH] = "\0";
 static char path_desktop[MAX_PATH] = "\0";
 static char path_programfiles[MAX_PATH] = "\0";
 
-extern char*crndata;
-extern int crndata_len;
-extern int crn_decompressed_size;
-
-extern char*license_text;
-
-static char*install_path = "c:\\swftools\\";
 static char pathBuf[MAX_PATH];
 static int do_abort = 0;
 
 static char* pdf2swf_path;
+
+static char registry_path[1024];
+
+static char*install_path = "c:\\swftools\\";
+#define SOFTWARE_DOMAIN "quiss.org"
+#define SOFTWARE_NAME "SWFTools"
+#define INSTALLER_NAME "SWFTools Installer"
 
 static HBITMAP logo = 0;
 
@@ -56,66 +61,101 @@ static HINSTANCE me;
 
 #define USER_SETMESSAGE 0x7f01
 
-static void tball(HDC hdc, double px, double py, double sx, double sy)
+#ifndef DEINSTALL
+extern char*crndata;
+extern int crndata_len;
+extern int crn_decompressed_size;
+extern char*license_text;
+
+#include "background.c"
+#endif
+
+typedef struct _filelist
 {
-    MoveToEx(hdc, 75.25*sx+px, -32.50*sy+py, 0);
-    LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 74.95*sx+px, -3.45*sy+py); LineTo(hdc, 75.25*sx+px, -32.50*sy+py);
-    LineTo(hdc, 44.85*sx+px, -104.30*sy+py); LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 17.30*sx+px, -91.80*sy+py);
-    LineTo(hdc, 29.35*sx+px, -10.10*sy+py); LineTo(hdc, 74.75*sx+px, -24.80*sy+py); LineTo(hdc, 47.60*sx+px, 63.80*sy+py);
-    LineTo(hdc, 74.75*sx+px, 51.10*sy+py); LineTo(hdc, 74.95*sx+px, -3.45*sy+py);
-    MoveToEx(hdc, 74.75*sx+px, 51.10*sy+py, 0);
-    LineTo(hdc, 29.35*sx+px, 118.75*sy+py); LineTo(hdc, -45.20*sx+px, 155.35*sy+py);
-    LineTo(hdc, -127.95*sx+px, 145.10*sy+py); LineTo(hdc, -194.85*sx+px, 104.30*sy+py);
-    LineTo(hdc, -225.25*sx+px, 32.50*sy+py); LineTo(hdc, -224.75*sx+px, -51.10*sy+py);
-    LineTo(hdc, -179.35*sx+px, -118.75*sy+py); LineTo(hdc, -104.80*sx+px, -155.35*sy+py);
-    LineTo(hdc, -22.05*sx+px, -145.10*sy+py); LineTo(hdc, 44.85*sx+px, -104.30*sy+py);
-    LineTo(hdc, 17.30*sx+px, -91.80*sy+py); LineTo(hdc, -75.00*sx+px, -122.60*sy+py);
-    LineTo(hdc, -45.20*sx+px, -43.70*sy+py); LineTo(hdc, 17.30*sx+px, -91.80*sy+py);
-    LineTo(hdc, -22.05*sx+px, -145.10*sy+py); LineTo(hdc, -75.00*sx+px, -122.60*sy+py);
-    LineTo(hdc, -104.80*sx+px, -155.35*sy+py); LineTo(hdc, -167.30*sx+px, -107.25*sy+py);
-    LineTo(hdc, -75.00*sx+px, -122.60*sy+py); LineTo(hdc, -127.95*sx+px, -63.55*sy+py);
-    LineTo(hdc, -45.20*sx+px, -43.70*sy+py); LineTo(hdc, 29.35*sx+px, -10.10*sy+py);
-    LineTo(hdc, 47.60*sx+px, 63.80*sy+py); LineTo(hdc, -25.70*sx+px, 52.45*sy+py);
-    LineTo(hdc, -25.70*sx+px, 128.45*sy+py); LineTo(hdc, 47.60*sx+px, 63.80*sy+py);
-    LineTo(hdc, 29.35*sx+px, 118.75*sy+py); LineTo(hdc, -25.70*sx+px, 128.45*sy+py);
-    LineTo(hdc, -45.20*sx+px, 155.35*sy+py); LineTo(hdc, -118.85*sx+px, 143.85*sy+py);
-    LineTo(hdc, -127.95*sx+px, 145.10*sy+py);
-    MoveToEx(hdc, -179.35*sx+px, -118.75*sy+py, 0);
-    LineTo(hdc, -167.30*sx+px, -107.25*sy+py); LineTo(hdc, -127.95*sx+px, -63.55*sy+py);
-    LineTo(hdc, -118.85*sx+px, 21.65*sy+py); LineTo(hdc, -45.20*sx+px, -43.70*sy+py);
-    LineTo(hdc, -25.70*sx+px, 52.45*sy+py); LineTo(hdc, 29.35*sx+px, -10.10*sy+py);
-    MoveToEx(hdc, -225.25*sx+px, 32.50*sy+py, 0);
-    LineTo(hdc, -194.85*sx+px, -17.85*sy+py); LineTo(hdc, -224.75*sx+px, -51.10*sy+py);
-    LineTo(hdc, -167.30*sx+px, -107.25*sy+py); LineTo(hdc, -194.85*sx+px, -17.85*sy+py);
-    LineTo(hdc, -127.95*sx+px, -63.55*sy+py);
-    MoveToEx(hdc, -175.85*sx+px, 77.60*sy+py, 0);
-    LineTo(hdc, -96.35*sx+px, 99.55*sy+py); LineTo(hdc, -118.85*sx+px, 21.65*sy+py);
-    LineTo(hdc, -175.85*sx+px, 77.60*sy+py); LineTo(hdc, -225.25*sx+px, 32.50*sy+py);
-    MoveToEx(hdc, -118.85*sx+px, 143.85*sy+py, 0);
-    LineTo(hdc, -175.85*sx+px, 77.60*sy+py); LineTo(hdc, -194.85*sx+px, 104.30*sy+py);
-    LineTo(hdc, -118.85*sx+px, 143.85*sy+py); LineTo(hdc, -96.35*sx+px, 99.55*sy+py);
-    LineTo(hdc, -25.70*sx+px, 52.45*sy+py); LineTo(hdc, -118.85*sx+px, 21.65*sy+py);
-    LineTo(hdc, -194.85*sx+px, -17.85*sy+py); LineTo(hdc, -175.85*sx+px, 77.60*sy+py);
-    MoveToEx(hdc, -96.35*sx+px, 99.55*sy+py, 0);
-    LineTo(hdc, -25.70*sx+px, 128.45*sy+py); LineTo(hdc, -118.85*sx+px, 143.85*sy+py);
+    const char*filename;
+    struct _filelist*next;
+    char type;
+} filelist_t;
+
+static filelist_t* registerFile(filelist_t*next, const char*filename, char type)
+{
+    filelist_t*file = malloc(sizeof(filelist_t));
+    file->filename = strdup(filename);
+    file->type = type;
+    file->next = next;
+    return file;
 }
 
-static char* concatPaths(const char*base, const char*add)
+static filelist_t* readFileList(char*filename)
 {
-    int l1 = strlen(base);
-    int l2 = strlen(add);
-    int pos = 0;
-    char*n = 0;
-    while(l1 && base[l1-1] == '\\')
-	l1--;
-    while(pos < l2 && add[pos] == '\\')
-	pos++;
+    FILE*fi = fopen(filename, "rb");
+    if(!fi) {
+	return 0;
+    }
+    fseek(fi, 0, SEEK_END);
+    int len = ftell(fi);
+    fseek(fi, 0, SEEK_SET);
+    char*data = malloc(len);
+    fread(data, len, 1, fi);
+    fclose(fi);
+    int t=0;
+    char*line = data;
+    filelist_t*list = 0,*lpos=0;;
+    while(t<len) {
+	if(data[t]=='\r' || data[t]=='\n') {
+	    data[t++] = 0;
+	    if(strchr("DFI", line[0]) && line[1]==' ' && line[2]!=' ') {
+		filelist_t*f = malloc(sizeof(filelist_t));
+		f->type=line[0];
+		f->filename=strdup(line+2);
+		f->next = 0;
+		if(!list) {
+		    list = lpos = f;
+		} else {
+		    lpos->next = f;
+		    lpos = f;
+		}
+	    } else {
+		// skip line- this usually only happens if somebody tampered
+	        // with the file
+	    }
+	    while(t<len && (data[t]=='\0' || data[t]=='\r' || data[t]=='\n'))
+		t++;
+	    line = &data[t];
+	} else {
+	    t++;
+	}
+    }
+    return list;
+}
 
-    n = (char*)malloc(l1 + (l2-pos) + 2);
-    memcpy(n,base,l1);
-    n[l1]='\\';
-    strcpy(&n[l1+1],&add[pos]);
-    return n;
+static void writeFileList(filelist_t*file, const char*filename)
+{
+    FILE*fi = fopen(filename, "wb");
+    fprintf(fi, "[%s installed files]\r\n", SOFTWARE_NAME);
+    if(!fi) {
+	char buf[1024];
+	sprintf(buf, "Couldn't write file %s", filename);
+	MessageBox(0, buf, INSTALLER_NAME, MB_OK|MB_ICONERROR);
+	do_abort=1;
+	exit(1);
+    }
+    while(file) {
+	fprintf(fi, "%c %s\r\n", file->type, file->filename);
+	file = file->next;
+    }
+    fclose(fi);
+}
+
+static filelist_t*installedFiles = 0;
+
+static void addFile(const char*filename)
+{
+    installedFiles = registerFile(installedFiles, filename, 'F');
+}
+static void addDir(const char*filename)
+{
+    installedFiles = registerFile(installedFiles, filename, 'D');
 }
 
 static void handleTemplateFile(const char*filename)
@@ -147,6 +187,39 @@ static void handleTemplateFile(const char*filename)
     fclose(fi);
     free(file);
 }
+
+static int setRegistryEntry(char*key,char*value)
+{
+    HKEY hkey1;
+    HKEY hkey2;
+    int ret1 = -1, ret2= -1;
+    ret1 = RegCreateKey(HKEY_CURRENT_USER, key, &hkey1);
+    if(config_forAllUsers) {
+	ret2 = RegCreateKey(HKEY_LOCAL_MACHINE, key, &hkey2);
+    }
+
+    if(ret1 && ret2) {
+	fprintf(stderr, "registry: CreateKey %s failed\n", key);
+	return 0;
+    }
+    if(ret1) {
+	installedFiles = registerFile(installedFiles, key, 'k');
+    }
+    if(ret2) {
+	installedFiles = registerFile(installedFiles, key, 'K');
+    }
+
+    if(!ret1)
+	ret1 = RegSetValue(hkey1, NULL, REG_SZ, value, strlen(value)+1);
+    if(!ret2)
+	ret2 = RegSetValue(hkey2, NULL, REG_SZ, value, strlen(value)+1);
+    if(ret1 && ret2) {
+	fprintf(stderr, "registry: SetValue %s failed\n", key);
+	return 0;
+    }
+    return 1;
+}
+
 
 static char* getRegistryEntry(char*path)
 {
@@ -183,74 +256,6 @@ static char* getRegistryEntry(char*path)
     }
 }
 
-static int setRegistryEntry(char*key,char*value)
-{
-    HKEY hkey1;
-    HKEY hkey2;
-    int ret1 = -1, ret2= -1;
-    ret1 = RegCreateKey(HKEY_CURRENT_USER, key, &hkey1);
-    if(config_forAllUsers) {
-	ret2 = RegCreateKey(HKEY_LOCAL_MACHINE, key, &hkey2);
-    }
-
-    if(ret1 && ret2) {
-	fprintf(stderr, "registry: CreateKey %s failed\n", key);
-	return 0;
-    }
-    if(!ret1)
-	ret1 = RegSetValue(hkey1, NULL, REG_SZ, value, strlen(value)+1);
-    if(!ret2)
-	ret2 = RegSetValue(hkey2, NULL, REG_SZ, value, strlen(value)+1);
-    if(ret1 && ret2) {
-	fprintf(stderr, "registry: SetValue %s failed\n", key);
-	return 0;
-    }
-    return 1;
-}
-
-static HWND wnd_background = 0;
-LRESULT CALLBACK WindowFunc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    if(message == WM_CREATE) {
-	CREATESTRUCT*cs = ((LPCREATESTRUCT)lParam);
-        if(cs->lpCreateParams && !strcmp((char*)cs->lpCreateParams, "background")) {
-	    wnd_background = hwnd;
-	}
-    }
-    if(hwnd == wnd_background && message == WM_PAINT) {
-	HDC hdc;
-	PAINTSTRUCT ps;
-	RECT rc;
-        GetWindowRect(hwnd, &rc);
-	int width = rc.right - rc.left;
-	int height = rc.bottom - rc.top;
-
-	hdc = BeginPaint(hwnd, &ps);
-	SetBkMode(hdc, TRANSPARENT);
-
-        double s = width / 1282.0;
-	
-        HPEN pen0 = CreatePen(PS_SOLID, 2, RGB(0, 32, 128));
-	HPEN oldPen = (HPEN)SelectObject(hdc, pen0);
-        tball(hdc, 0.7*width,0.2*height,s,s);
-
-	HPEN pen1 = CreatePen(PS_SOLID, 2, RGB(0, 48, 128));
-	(HPEN)SelectObject(hdc, pen1);
-        tball(hdc, 0.233*width,0.3*height,s*2,s*2);
-	
-        HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 64, 128));
-	(HPEN)SelectObject(hdc, pen2);
-        tball(hdc, width, 1.2*height,s*3,-s*3);
-
-	SelectObject(hdc, oldPen); 
-	DeleteObject(pen1);
-	DeleteObject(pen2);
-	EndPaint(hwnd, &ps);
-	return 1;
-    }
-    return DefWindowProc(hwnd, message, wParam, lParam);
-}
-
 void processMessages()
 {
     MSG msg;
@@ -265,13 +270,14 @@ void processMessages()
 int addRegistryEntries(char*install_dir)
 {
     int ret;
-    ret = setRegistryEntry("Software\\quiss.org\\swftools\\InstallPath", install_dir);
+    ret = setRegistryEntry(registry_path, install_dir);
     if(!ret) return 0;
     return 1;
 }
 
 int CreateShortcut(char*path, char*description, char*filename, char*arguments, int iconindex, char*iconpath, char*workdir)
 {
+    printf("Creating %s -> %s\n", filename, path);
     WCHAR wszFilename[MAX_PATH];
     IShellLink *ps1 = NULL;
     IPersistFile *pPf = NULL;
@@ -303,6 +309,7 @@ int CreateShortcut(char*path, char*description, char*filename, char*arguments, i
     }
     pPf->lpVtbl->Release(pPf);
     ps1->lpVtbl->Release(ps1);
+    addFile(filename);
     return 1;
 }
 
@@ -314,6 +321,7 @@ static int CreateURL(const char*url, const char*path)
     fprintf(fi, "[InternetShortcut]\r\n");
     fprintf(fi, "URL=http://localhost:8081/\r\n");
     fclose(fi);
+    addFile(path);
     return 1;
 }
 
@@ -343,6 +351,7 @@ BOOL CALLBACK PropertySheetFuncCommon(HWND hwnd, UINT message, WPARAM wParam, LP
     return FALSE;
 }
 
+#ifndef DEINSTALL
 BOOL CALLBACK PropertySheetFunc1(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if(message == WM_INITDIALOG) {
 	SetDlgItemText(hwnd, IDC_LICENSE, license_text);
@@ -365,12 +374,9 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    browse.pszDisplayName = (CHAR*)malloc(MAX_PATH);
 	    memset(browse.pszDisplayName, 0, MAX_PATH);
 	    browse.lpszTitle = "Select installation directory";
-	    printf("Start browsing %s\n", browse.pszDisplayName);
 	    browse.pidlRoot = SHBrowseForFolder(&browse);
-	    printf("Browsing returns %s / %08x\n", browse.pszDisplayName, browse.pidlRoot);
 	    if(browse.pszDisplayName) {
 		if(SHGetPathFromIDList(browse.pidlRoot, browse.pszDisplayName)) {
-		    printf("Path is %s\n", browse.pszDisplayName);
 		    install_path = browse.pszDisplayName;
                     int l = strlen(install_path);
                     while(l && install_path[l-1]=='\\') {
@@ -408,25 +414,45 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 }
 HWND statuswnd;
 static int progress_pos = 0;
-void PropertyArchiveStatus(int type, char*text)
+
+void PropertyArchiveError(char*text)
 {
-    if(text && text[0]=='[') return;
+    while(1) {
+	int ret = MessageBox(0, text, "Error", MB_RETRYCANCEL|MB_ICONERROR);
+	if(ret==IDRETRY) continue;
+	else break;
+    }
+}
+
+void PropertyArchive_NewFile(char*filename)
+{
+    addFile(filename);
+    processMessages();
+}
+void PropertyArchive_NewDirectory(char*filename)
+{
+    addDir(filename);
+    processMessages();
+}
+
+static int lastlen = 0;
+void PropertyArchiveStatus(int pos, int len)
+{
+    if(len!=lastlen) {
+	SendDlgItemMessage(statuswnd, IDC_PROGRESS, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0,len));
+	lastlen = len;
+    }
+    SendDlgItemMessage(statuswnd, IDC_PROGRESS, PBM_SETPOS, pos, 0);
+    processMessages();
+    Sleep(30);
+}
+void PropertyArchiveMessage(char*text)
+{
+    if(text && text[0]=='[') {
+	return;
+    }
     SetDlgItemText(statuswnd, IDC_INFO, strdup(text));
-    int t;
-    /* There are usually 4 messages, and a range of 40 to fill, so 
-       step 9 times */
-    for(t=0;t<10;t++) {
-	SendDlgItemMessage(statuswnd, IDC_PROGRESS, PBM_SETPOS, ++progress_pos, 0);
-	processMessages();
-	Sleep(30);
-    }
-    if(type<0) {
-	while(1) {
-	    int ret = MessageBox(0, text, "Error", MB_RETRYCANCEL|MB_ICONERROR);
-	    if(ret==IDRETRY) continue;
-	    else break;
-	}
-    }
+    processMessages();
 }
 
 void print_space(char*dest, char*msg, ULONGLONG size)
@@ -455,8 +481,19 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	available.QuadPart=0;
 	total.QuadPart=0;
 	totalfree.QuadPart=0;
-	GetDiskFreeSpaceEx(install_path, &available, &total, &totalfree);
-	print_space(buf, "Space available: ", available.QuadPart);
+	if(GetDiskFreeSpaceEx(install_path, &available, &total, &totalfree)) {
+	    print_space(buf, "Space available: ", available.QuadPart);
+	} else {
+	    sprintf(buf, "Space available: [Error %d]", GetLastError());
+	    if(GetLastError() == ERROR_FILE_NOT_FOUND && install_path[0] && install_path[1]==':') {
+		/* installation directory does not yet exist */
+		char path[3]={'c',':',0};
+		path[0] = install_path[0];
+		if(GetDiskFreeSpaceEx(path, &available, &total, &totalfree)) {
+		    print_space(buf, "Space available: ", available.QuadPart);
+		}
+	    } 
+	}
 	SetDlgItemText(hwnd, IDC_SPACE2, buf);
     }
     if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZNEXT)) {
@@ -466,12 +503,16 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	SendMessage(dialog, PSM_CANCELTOCLOSE, 0, 0); //makes wine display a warning
 	SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
 	statuswnd = hwnd;
-	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0,40));
-	progress_pos = 0;
-	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, progress_pos, 0);
-	int success = unpack_archive(crndata, crndata_len, install_path, PropertyArchiveStatus);
+	status_t status;
+	status.status = PropertyArchiveStatus;
+	status.message = PropertyArchiveMessage;
+	status.error = PropertyArchiveError;
+	status.new_file = PropertyArchive_NewFile;
+	status.new_directory = PropertyArchive_NewDirectory;
+	int success = unpack_archive(crndata, crndata_len, install_path, &status);
+	memset(&status, 0, sizeof(status_t));
 	if(!success) {
-	    MessageBox(0, "Couldn't extract all installation files", "SWFTools Install", MB_OK|MB_ICONERROR);
+	    MessageBox(0, "Couldn't extract all installation files", INSTALLER_NAME, MB_OK|MB_ICONERROR);
 	    do_abort=1;
 	    exit(1);
 	}
@@ -497,7 +538,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	}
 
 	SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_SETCHECK, config_createStartmenu, 0);
-	SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_SETCHECK, config_createStartmenu, 0);
+	SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_SETCHECK, config_createDesktop, 0);
     }
     if(message == WM_COMMAND) {
 	if((wParam&0xffff) == IDC_STARTMENU) {
@@ -516,7 +557,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
     if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZFINISH)) {
 	if(!addRegistryEntries(install_path)) {
-	    MessageBox(0, "Couldn't create Registry Entries", "SWFTools Install", MB_OK|MB_ICONERROR);
+	    MessageBox(0, "Couldn't create Registry Entries", INSTALLER_NAME, MB_OK|MB_ICONERROR);
 	    return 1;
 	}
 
@@ -535,13 +576,15 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
         if(!path_desktop[0]) {
             f_SHGetSpecialFolderPath(NULL, path_desktop, CSIDL_DESKTOPDIRECTORY, 0);
         }
+	
+	char*uninstall_path = concatPaths(install_path, "uninstall.exe");
 
 	if(config_createLinks) {
 	    if(config_createDesktop && path_desktop[0]) {
 		char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
                 printf("Creating desktop link %s -> %s\n", linkName, pdf2swf_path);
 		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
-		    MessageBox(0, "Couldn't create desktop shortcut", "Install.exe", MB_OK);
+		    MessageBox(0, "Couldn't create desktop shortcut", INSTALLER_NAME, MB_OK);
 		    return 1;
 		}
 	    }
@@ -549,18 +592,139 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		char* group = concatPaths(path_startmenu, "pdf2swf");
 		CreateDirectory(group, 0);
 		char* linkName = concatPaths(group, "pdf2swf.lnk");
-                printf("Creating %s -> %s\n", linkName, pdf2swf_path);
-		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
-		    MessageBox(0, "Couldn't create start menu entry", "Install.exe", MB_OK);
+		if(!CreateShortcut(pdf2swf_path, "pdf2swf", concatPaths(group, "pdf2swf.lnk"), 0, 0, 0, install_path) ||
+		   !CreateShortcut(uninstall_path, "uninstall", concatPaths(group, "uninstall.lnk"), 0, 0, 0, install_path)) {
+		    MessageBox(0, "Couldn't create start menu entry", INSTALLER_NAME, MB_OK);
 		    return 1;
 		}
 	    }
 	} else {
             printf("not creating desktop/startmenu links\n");
         }
+
+	char*uninstall_ini = concatPaths(install_path, "uninstall.ini");
+	addFile(uninstall_ini);
+	writeFileList(installedFiles, uninstall_ini);
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_FINISH);
 }
+#endif
+
+#ifdef DEINSTALL
+
+BOOL CALLBACK PropertySheetFunc5(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    HWND dialog = GetParent(hwnd);
+    if(message == WM_INITDIALOG) {
+	SetDlgItemText(hwnd, IDC_INFO, "Ready to deinstall");
+    }
+    if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZNEXT)) {
+
+	filelist_t* list = readFileList("uninstall.ini");
+	if(!list) {
+	    list = readFileList(concatPaths(install_path, "uninstall.ini"));
+	    if(!list) {
+		MessageBox(0, "Couldn't determine installed files list- did you run uninstall twice?", INSTALLER_NAME, MB_OK);
+		exit(-1);
+	    }
+	}
+	filelist_t* l = list;
+	int num = 0;
+	while(l) {num++;l=l->next;}
+
+	PropSheet_SetWizButtons(dialog, 0);
+	SendMessage(dialog, PSM_CANCELTOCLOSE, 0, 0);
+	SetDlgItemText(hwnd, IDC_TITLE, "Uninstalling files...");
+	SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0,num));
+	num = 0;
+	l = list;
+	while(l) {
+	    SendDlgItemMessage(hwnd, IDC_PROGRESS, PBM_SETPOS, num, 0);
+	    if(l->type=='F')
+		DeleteFile(l->filename);
+	    else if(l->type=='D')
+		RemoveDirectory(l->filename);
+	    else if(l->type=='I') 
+		/* skip- we will remove ourselves later */;
+	    num++;l = l->next;
+	}
+
+	return 0;
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
+}
+
+void findfiles(char*path, int*pos, char*data, int len, char del)
+{
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile(concatPaths(path, "*"), &findFileData);
+    if(hFind == INVALID_HANDLE_VALUE)
+	return;
+    do {
+	if(findFileData.cFileName[0] == '.' &&
+	   (findFileData.cFileName[0] == '.' || findFileData.cFileName == '\0'))
+	    continue;
+	char*f = concatPaths(path, findFileData.cFileName);
+	if(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+	    findfiles(f, pos, data, len, del);
+	    if(del) {
+		RemoveDirectory(f);
+	    }
+	} else {
+	    int l = strlen(f);
+	    if(data) {
+		if(*pos+l <= len) {
+		    memcpy(&data[*pos], f, l);(*pos)+=l;
+		    data[(*pos)++] = '\r';
+		    data[(*pos)++] = '\n';
+		}
+	    } else {
+		(*pos) += l+2;
+	    }
+	    if(del) {
+		DeleteFile(f);
+	    }
+	}
+    } while(FindNextFile(hFind, &findFileData));
+    FindClose(hFind);
+}
+
+BOOL CALLBACK PropertySheetFunc6(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if(message == WM_INITDIALOG) {
+	SendDlgItemMessage(hwnd, IDC_DELETEEXTRA, BM_SETCHECK, config_deleteextra, 0);
+
+	int len = 0;
+
+	findfiles(install_path, &len, 0, 0, 0);
+	char*data = malloc(len);
+	int pos = 0;
+	findfiles(install_path, &pos, data, len, 0);
+
+	SetDlgItemText(hwnd, IDC_FILELIST, data);
+    }
+    if(message == WM_COMMAND) {
+	if((wParam&0xffff) == IDC_DELETEEXTRA) {
+	    config_deleteextra = SendDlgItemMessage(hwnd, IDC_DELETEEXTRA, BM_GETCHECK, 0, 0);
+	    config_deleteextra ^=1;
+	    SendDlgItemMessage(hwnd, IDC_DELETEEXTRA, BM_SETCHECK, config_deleteextra, 0);
+	    return 0;
+	}
+    }
+    if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZNEXT)) {
+	if(config_deleteextra) {
+	    int pos = 0;
+	    findfiles(install_path, &pos, 0, 0, 1);
+	}
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_NEXT);
+}
+
+BOOL CALLBACK PropertySheetFunc7(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if(message == WM_INITDIALOG) {
+	// ...
+    }
+    return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_FINISH);
+}
+#endif
 
 #ifndef PSP_HIDEHEADER
 #define PSP_HIDEHEADER	2048
@@ -576,10 +740,16 @@ void runPropertySheet(HWND parent)
     PROPSHEETHEADER sheet;
 
     wizardpage_t wpage[5] = {
+#ifndef DEINSTALL
 	{PropertySheetFunc1, IDD_LICENSE},
 	{PropertySheetFunc2, IDD_INSTALLDIR},
 	{PropertySheetFunc3, IDD_PROGRESS},
 	{PropertySheetFunc4, IDD_FINISH},
+#else
+	{PropertySheetFunc5, IDD_SURE},
+	{PropertySheetFunc6, IDD_EXTRAFILES},
+	{PropertySheetFunc7, IDD_DEINSTALLED},
+#endif
     };
     int num = sizeof(wpage)/sizeof(wpage[0]);
     HPROPSHEETPAGE pages[num];
@@ -605,13 +775,72 @@ void runPropertySheet(HWND parent)
     PropertySheet(&sheet);
 }
 
+#ifdef DEINSTALL
+
+static void remove_self()
+{
+    char exename[MAX_PATH];
+    char batname[MAX_PATH];
+    FILE *fp;
+
+    GetModuleFileName(NULL, exename, sizeof(exename));
+    sprintf(batname, "%s.bat", exename);
+    fp = fopen(batname, "w");
+    fprintf(fp, ":Repeat\n");
+    fprintf(fp, "del \"%s\"\n", exename);
+    fprintf(fp, "if exist \"%s\" goto Repeat\n", exename);
+    fprintf(fp, "del \"%s\"\n", batname);
+    fclose(fp);
+
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    si.cb = sizeof(si);
+    if (CreateProcess(NULL, batname, NULL, NULL, FALSE,
+		      CREATE_SUSPENDED | IDLE_PRIORITY_CLASS,
+		      NULL, "\\", &si, &pi)) {
+	    SetThreadPriority(pi.hThread, THREAD_PRIORITY_IDLE);
+	    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+	    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	    CloseHandle(pi.hProcess);
+	    ResumeThread(pi.hThread);
+	    CloseHandle(pi.hThread);
+    }
+
+}
+
+int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
+{
+    me = _me;
+    sprintf(registry_path, "Software\\%s\\%s\\InstallPath", SOFTWARE_DOMAIN, SOFTWARE_NAME);
+
+    HWND background = 0;
+    logo = LoadBitmap(me, "LOGO");
+
+    install_path = getRegistryEntry(registry_path);
+    if(!install_path || !install_path[0]) {
+	MessageBox(0, "Couldn't find software installation directory- did you run the deinstallation twice?", INSTALLER_NAME, MB_OK);
+	return 1;
+    }
+
+    CoInitialize(0);
+    InitCommonControls();
+
+    runPropertySheet(background);
+
+    remove_self();
+    return 0;
+}
+#else
 int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMode)
 {
     me = _me;
     WNDCLASSEX wcl_background;
     wcl_background.hInstance    = me;
     wcl_background.lpfnWndProc  = WindowFunc;
-    wcl_background.lpszClassName= "SWFTools Install";
+    wcl_background.lpszClassName= INSTALLER_NAME;
     wcl_background.style        = CS_HREDRAW | CS_VREDRAW;
     wcl_background.hIcon        = LoadIcon(NULL, IDI_APPLICATION);
     wcl_background.hIconSm      = LoadIcon(NULL, IDI_APPLICATION);
@@ -622,20 +851,22 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     wcl_background.hbrBackground= CreateSolidBrush(RGB(0, 0, 128));
     wcl_background.cbSize       = sizeof(WNDCLASSEX);
 
+    sprintf(registry_path, "Software\\%s\\%s\\InstallPath", SOFTWARE_DOMAIN, SOFTWARE_NAME);
+
     HINSTANCE shell32 = LoadLibrary("shell32.dll");
     if(!shell32) {
-	MessageBox(0, "Could not load shell32.dll", "Install.exe", MB_OK);
+	MessageBox(0, "Could not load shell32.dll", INSTALLER_NAME, MB_OK);
 	return 1;
     }
     f_SHGetSpecialFolderPath = (HRESULT (WINAPI*)(HWND,LPTSTR,int,BOOL))GetProcAddress(shell32, "SHGetSpecialFolderPathA");
     if(!f_SHGetSpecialFolderPath) {
-	MessageBox(0, "Could not load shell32.dll", "Install.exe", MB_OK);
+	MessageBox(0, "Could not load shell32.dll", INSTALLER_NAME, MB_OK);
 	return 1;
     }
 	
     HRESULT coret = CoInitialize(NULL);
     if(FAILED(coret)) {
-	MessageBox(0, "Could not initialize COM interface", "Install.exe", MB_OK);
+	MessageBox(0, "Could not initialize COM interface", INSTALLER_NAME, MB_OK);
 	return 1;
     }
 
@@ -643,11 +874,11 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     f_SHGetSpecialFolderPath(NULL, path_programfiles, CSIDL_PROGRAM_FILES, 0);
 
     if(!RegisterClassEx(&wcl_background)) {
-        MessageBox(0, "Could not register window background class", "Install.exe", MB_OK);
+        MessageBox(0, "Could not register window background class", INSTALLER_NAME, MB_OK);
         return 1;
     }
 
-    HWND background = CreateWindow(wcl_background.lpszClassName, "Setup SWFTools",
+    HWND background = CreateWindow(wcl_background.lpszClassName, INSTALLER_NAME,
 			 0, 0, 0, 
 			 GetSystemMetrics(SM_CXFULLSCREEN),
 			 GetSystemMetrics(SM_CYFULLSCREEN),
@@ -655,7 +886,7 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
 	                 (void*)"background");
     
     if(!background) {
-	MessageBox(0, "Could not create installation background window", "Install.exe", MB_OK);
+	MessageBox(0, "Could not create installation background window", INSTALLER_NAME, MB_OK);
 	return 1;
     }
 
@@ -663,31 +894,20 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     SetForegroundWindow(background);
     UpdateWindow(background);
 
-    logo = LoadBitmap(me, "SWFTOOLS");
-    
-    install_path = getRegistryEntry("Software\\quiss.org\\swftools\\InstallPath");
+    logo = LoadBitmap(me, "LOGO");
+
+    install_path = getRegistryEntry(registry_path);
     if(!install_path || !install_path[0]) {
         if(path_programfiles[0]) {
-            install_path = concatPaths(path_programfiles, "SWFTools");
+            install_path = concatPaths(path_programfiles, SOFTWARE_NAME);
         } else {
-	    install_path = "c:\\swftools\\";
+	    install_path = concatPaths("c:\\", SOFTWARE_NAME);
         }
     }
 
-    CoInitialize(0);
     InitCommonControls();
 
-    RECT r = {0,0,0,0};
-    GetWindowRect(background, &r);
-    int xx = 320, yy = 200;
-    if(r.right - r.left > 320)
-	xx = r.right - r.left;
-    if(r.right - r.left > 200)
-	yy = r.bottom - r.top;
-    
-    int ret = 0;
     runPropertySheet(background);
-
-    return ret;
+    return 0;
 }
-
+#endif
