@@ -612,6 +612,55 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
 #ifdef DEINSTALL
 
+void findfiles(char*path, int*pos, char*data, int len, char del)
+{
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile(concatPaths(path, "*"), &findFileData);
+    if(hFind == INVALID_HANDLE_VALUE)
+	return;
+    do {
+	if(findFileData.cFileName[0] == '.' &&
+	   (findFileData.cFileName[0] == '.' || findFileData.cFileName == '\0'))
+	    continue;
+	char*f = concatPaths(path, findFileData.cFileName);
+	if(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+	    findfiles(f, pos, data, len, del);
+	    if(del) {
+		RemoveDirectory(f);
+	    }
+	} else {
+	    int l = strlen(f);
+
+	    /* don't list the uninstaller as file- it's going to be removed *after*
+	       everything else is done */
+	    char*uninstaller="uninstall.exe";
+	    int ll = strlen(uninstaller);
+	    if(l>=ll) {
+		if(!strcasecmp(&f[l-ll],uninstaller)) {
+		    continue;
+		}
+	    }
+
+	    if(data) {
+		if(*pos+l <= len) {
+		    memcpy(&data[*pos], f, l);(*pos)+=l;
+		    data[(*pos)++] = '\r';
+		    data[(*pos)++] = '\n';
+		    data[(*pos)] = 0;
+		}
+	    } else {
+		(*pos) += l+2;
+	    }
+	    if(del) {
+		DeleteFile(f);
+	    }
+	}
+    } while(FindNextFile(hFind, &findFileData));
+    FindClose(hFind);
+}
+
+static char*extrafiles = 0;
+
 BOOL CALLBACK PropertySheetFunc5(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     HWND dialog = GetParent(hwnd);
     if(message == WM_INITDIALOG) {
@@ -623,8 +672,10 @@ BOOL CALLBACK PropertySheetFunc5(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	if(!list) {
 	    list = readFileList(concatPaths(install_path, "uninstall.ini"));
 	    if(!list) {
-		MessageBox(0, "Couldn't determine installed files list- did you run uninstall twice?", INSTALLER_NAME, MB_OK);
-		exit(-1);
+		//Don't abort. If there's still something there, it'll be catched by the "extra files"
+		//functionality later
+		//MessageBox(0, "Couldn't determine installed files list- did you run uninstall twice?", INSTALLER_NAME, MB_OK);
+		//exit(-1);
 	    }
 	}
 	filelist_t* l = list;
@@ -648,58 +699,26 @@ BOOL CALLBACK PropertySheetFunc5(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    num++;l = l->next;
 	}
 
+	int len = 0;
+	findfiles(install_path, &len, 0, 0, 0);
+	if(len) {
+	    extrafiles = malloc(len);
+	    int pos = 0;
+	    findfiles(install_path, &pos, extrafiles, len, 0);
+	} else {
+	    PropSheet_RemovePage(dialog, 1, 0);
+	}
 	return 0;
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
 }
 
-void findfiles(char*path, int*pos, char*data, int len, char del)
-{
-    WIN32_FIND_DATA findFileData;
-    HANDLE hFind = FindFirstFile(concatPaths(path, "*"), &findFileData);
-    if(hFind == INVALID_HANDLE_VALUE)
-	return;
-    do {
-	if(findFileData.cFileName[0] == '.' &&
-	   (findFileData.cFileName[0] == '.' || findFileData.cFileName == '\0'))
-	    continue;
-	char*f = concatPaths(path, findFileData.cFileName);
-	if(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-	    findfiles(f, pos, data, len, del);
-	    if(del) {
-		RemoveDirectory(f);
-	    }
-	} else {
-	    int l = strlen(f);
-	    if(data) {
-		if(*pos+l <= len) {
-		    memcpy(&data[*pos], f, l);(*pos)+=l;
-		    data[(*pos)++] = '\r';
-		    data[(*pos)++] = '\n';
-		}
-	    } else {
-		(*pos) += l+2;
-	    }
-	    if(del) {
-		DeleteFile(f);
-	    }
-	}
-    } while(FindNextFile(hFind, &findFileData));
-    FindClose(hFind);
-}
-
 BOOL CALLBACK PropertySheetFunc6(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if(message == WM_INITDIALOG) {
 	SendDlgItemMessage(hwnd, IDC_DELETEEXTRA, BM_SETCHECK, config_deleteextra, 0);
-
-	int len = 0;
-
-	findfiles(install_path, &len, 0, 0, 0);
-	char*data = malloc(len);
-	int pos = 0;
-	findfiles(install_path, &pos, data, len, 0);
-
-	SetDlgItemText(hwnd, IDC_FILELIST, data);
+	if(extrafiles) {
+	    SetDlgItemText(hwnd, IDC_FILELIST, extrafiles);
+	}
     }
     if(message == WM_COMMAND) {
 	if((wParam&0xffff) == IDC_DELETEEXTRA) {
