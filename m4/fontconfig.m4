@@ -94,7 +94,7 @@ EOF
 fi
 
 # if the above didn't work out, reset all changes to the compiler variables.
-if test "x${HAVE_FREETYPE}" "!=" "x1"; then 
+if test "x${HAVE_FONTCONFIG}" "!=" "x1"; then 
     CPPFLAGS=$OLDCPPFLAGS
     LIBS=$OLDLIBS
 fi 
