@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #endif
 #include "archive.h"
+#include "utils.h"
 
 #ifdef ZLIB
 #include "../z/zlib.h"
@@ -268,7 +269,7 @@ reader_t* reader_init_zlibinflate(reader_t*input)
 #endif
 
 
-static int create_directory(char*path,statusfunc_t f)
+static int create_directory(char*path,status_t* f)
 {
     if(!path || !*path || (*path=='.' && (!path[1] || path[1]=='.')))
 	return 1; //nothing to do
@@ -291,17 +292,17 @@ static int create_directory(char*path,statusfunc_t f)
 	perror("mkdir");
 	char buf[1024];
 	sprintf(buf, "create directory \"%s\" FAILED", path);
-	f(-1, buf);
+	f->error(buf);
 	return 0;
     }
     return 1;
 }
-static int goto_directory(char*path,statusfunc_t f)
+static int goto_directory(char*path,status_t* f)
 {
     if(chdir(path)<0) {
 	char buf[1024];
 	sprintf(buf, "changing to directory \"%s\" FAILED", path);
-	f(-1, buf);
+	f->error(buf);
 	return 0;
     }
     return 1;
@@ -319,7 +320,7 @@ static char*get_directory(char*filename)
     //msg("directory name of \"%s\" is \"%s\"", filename, basenamebuf);
     return basenamebuf;
 }
-static int write_file(char*filename, reader_t*r, int len,statusfunc_t f)
+static int write_file(char*filename, reader_t*r, int len,status_t* f)
 {
     while(filename[0]=='.' && (filename[1]=='/' || filename[1]=='\\'))
 	filename+=2;
@@ -332,13 +333,15 @@ static int write_file(char*filename, reader_t*r, int len,statusfunc_t f)
 	p++;
     }
 
+    f->new_file(filename);
+
     msg("create file \"%s\" (%d bytes)", filename, len);
     FILE*fo = fopen(filename, "wb");
 
     if(!fo) {
 	char buf[1024];
 	sprintf(buf, "Couldn't create file %s", filename);
-	f(-1, buf);
+	f->error(buf);
 	free(filename);
 	return 0;
     }
@@ -352,7 +355,7 @@ static int write_file(char*filename, reader_t*r, int len,statusfunc_t f)
 	if(n < l) {
 	    char buf[1024];
 	    sprintf(buf, "Couldn't read byte %d (pos+%d) from input buffer for file %s", pos+n, n, filename);
-	    f(-1, buf);
+	    f->error(buf);
 	    return 0;
 	}
 	fwrite(buf, l, 1, fo);
@@ -363,7 +366,7 @@ static int write_file(char*filename, reader_t*r, int len,statusfunc_t f)
     return 1;
 }
 
-int unpack_archive(void*data, int len, char*destdir, statusfunc_t f)
+int unpack_archive(void*data, int len, char*destdir, status_t* f)
 {
     reader_t*m = reader_init_memreader(data, len);
 #ifdef ZLIB
@@ -372,22 +375,36 @@ int unpack_archive(void*data, int len, char*destdir, statusfunc_t f)
     reader_t*z = reader_init_lzma(data, len);
 #endif
     if(!z) {
-	f(1, "Couldn't decompress installation files");
+	f->error("Couldn't decompress installation files");
 	return 0;
     }
 
-    f(0, "Creating installation directory");
+    f->message("Creating installation directory");
     if(!create_directory(destdir,f)) return 0;
-    f(0, "Changing to installation directory");
-    if(!goto_directory(destdir,f)) return 0;
+
+    printf("%s\n", destdir);
+	
+    unsigned b1=0,b2=0,b3=0,b4=0;
+    int l = 0;
+    l+=z->read(z, &b1, 1);
+    l+=z->read(z, &b2, 1);
+    l+=z->read(z, &b3, 1);
+    l+=z->read(z, &b4, 1);
+    if(l<4)
+	return 0;
+    /* read size */
+    int num = b1|b2<<8|b3<<16|b4<<24;
+
+    f->status(0, num);
     
-    f(0, "Uncompressing files...");
+    f->message("Uncompressing files...");
+    int pos = 0;
     while(1) {
 	/* read id */
 	unsigned char id[4];
 	id[3] = 0;
 	if(z->read(z, id, 3)<3) {
-	    f(-1, "Unexpected end of archive");
+	    f->error("Unexpected end of archive");
 	    return 0;
 	}
 	if(!strcmp(id, "END"))
@@ -411,20 +428,26 @@ int unpack_archive(void*data, int len, char*destdir, statusfunc_t f)
 	char*filename = malloc(filename_len+1);
 	z->read(z, filename, filename_len);
 	filename[(int)filename_len] = 0;
+    
+	while(filename[0]=='.' && (filename[1]=='/' || filename[1]=='\\'))
+	    filename+=2;
+	filename = concatPaths(destdir, filename);
+    
+	f->status(++pos, num);
 
 	if(verbose) printf("[%s] %s %d\n", id, filename, len);
 	char buf[2048];
 	sprintf(buf, "[%s] %s (%d bytes)", id, filename, len);
-	f(0, buf);
+	f->message(buf);
 	if(!strcmp(id, "DIR")) {
+	    f->new_directory(filename);
 	    if(!create_directory(filename,f)) return 0;
 	} else {
 	    if(!create_directory(get_directory(filename),f)) return 0;
-
 	    if(!write_file(filename,z,len,f)) return 0;
 	}
     }
-    f(0, "Finishing Installation");
+    f->message("Finishing Installation");
     return 1;
 }
 
