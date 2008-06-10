@@ -21,9 +21,16 @@
 #ifndef __archive_h__
 #define __archive_h__
 
-typedef void (*statusfunc_t)(int type, char*text);
+typedef struct _status
+{
+    void (*message)(char*text);
+    void (*status)(int pos, int len);
+    void (*error)(char*text);
+    void (*new_file)(char*filename);
+    void (*new_directory)(char*filename);
+} status_t;
 
-int unpack_archive(void*data, int len, char*destdir, statusfunc_t f);
+int unpack_archive(void*data, int len, char*destdir, status_t* f);
 
 #endif //__archive_h__
 
