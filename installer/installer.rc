@@ -2,7 +2,7 @@
 #include "installer.h"
 
 MYICON1	    ICON    "swftools.ico"
-SWFTOOLS    BITMAP  "swftools.bmp"
+LOGO	    BITMAP  "swftools.bmp"
 
 #define X 64
 
@@ -63,4 +63,42 @@ BEGIN
     CONTROL         110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
                     104-X,163,WS_EX_CLIENTEDGE
 END
+
+IDD_SURE DIALOGEX 0, 0, 379-X, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "This program will deinstall the software from your computer. Click ""Next"" to remove all files and startmenu/desktop entries from this machine. Click ""Cancel"" to exit the Deinstaller."
+                    IDC_TITLE,125-X,10,246,31,NOT WS_GROUP
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,
+                    125-X,157,246,14
+    CTEXT           "Installation progress:",IDC_INFO,125-X,137,246,8
+    CONTROL         110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
+                    104-X,163,WS_EX_CLIENTEDGE
+END
+
+IDD_EXTRAFILES DIALOGEX 0, 0, 379-X, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT     "The installation directory still contains files which were created after the initial installation. Please decide whether those files should be removed, too."
+              IDC_TITLE,125-X,10,247,20,NOT WS_GROUP
+    EDITTEXT  IDC_FILELIST,125-X,31,247,130,ES_MULTILINE | ES_READONLY |
+              WS_VSCROLL | WS_HSCROLL | NOT WS_TABSTOP
+    CHECKBOX  "Delete extra files", IDC_DELETEEXTRA, 125-X,163,247,8
+    CONTROL   110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
+              104-X,163,WS_EX_CLIENTEDGE
+END
+
+IDD_DEINSTALLED DIALOGEX 0, 0, 379-X, 178
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Setup"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "Deinstallation is finished." IDC_TITLE,125-X,10,246,31,NOT WS_GROUP
+    CONTROL         110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8, 104-X,163,WS_EX_CLIENTEDGE
+END
+
 
