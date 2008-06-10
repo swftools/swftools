@@ -1,7 +1,7 @@
 #include <windows.h>
 #include "installer.h"
 
-MYICON1	    ICON    "swftools.ico"
+MYICON1	    ICON    "installer.ico"
 LOGO	    BITMAP  "swftools.bmp"
 
 #define X 64
@@ -87,7 +87,7 @@ BEGIN
               IDC_TITLE,125-X,10,247,20,NOT WS_GROUP
     EDITTEXT  IDC_FILELIST,125-X,31,247,130,ES_MULTILINE | ES_READONLY |
               WS_VSCROLL | WS_HSCROLL | NOT WS_TABSTOP
-    CHECKBOX  "Delete extra files", IDC_DELETEEXTRA, 125-X,163,247,8
+    CHECKBOX  "Delete the above files", IDC_DELETEEXTRA, 125-X,163,247,8
     CONTROL   110,IDC_BITMAP,"Static",SS_BITMAP | SS_CENTERIMAGE,6,8,
               104-X,163,WS_EX_CLIENTEDGE
 END
