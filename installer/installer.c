@@ -121,9 +121,9 @@ static char* concatPaths(const char*base, const char*add)
 static void handleTemplateFile(const char*filename)
 {
     FILE*fi = fopen(filename, "rb");
-    fseek(fi, SEEK_END, 0);
+    fseek(fi, 0, SEEK_END);
     int len = ftell(fi);
-    fseek(fi, SEEK_SET, 0);
+    fseek(fi, 0, SEEK_SET);
     char*file = malloc(len);
     fread(file, len, 1, fi);
     fclose(fi);
