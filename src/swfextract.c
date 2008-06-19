@@ -593,14 +593,16 @@ void handlefont(SWF*swf, TAG*tag)
     swf_FontFree(f);
 }
 
-U8*jpegtables = 0;
-int jpegtablessize;
+static char has_jpegtables=0;
+static U8*jpegtables = 0;
+static int jpegtablessize = 0;
 
 void handlejpegtables(TAG*tag)
 {
     if(tag->id == ST_JPEGTABLES) {
 	jpegtables = tag->data;
 	jpegtablessize = tag->len;
+	has_jpegtables = 1;
     }
 }
 
@@ -645,10 +647,14 @@ void handlejpeg(TAG*tag)
     /* swf jpeg images have two streams, which both start with ff d8 and
        end with ff d9. The following code handles sorting the middle
        <ff d9 ff d8> bytes out, so that one stream remains */
-    if(tag->id == ST_DEFINEBITSJPEG && tag->len>2 && jpegtables) {
+    if(tag->id == ST_DEFINEBITSJPEG && tag->len>2 && has_jpegtables) {
 	fi = save_fopen(filename, "wb");
-	fwrite(jpegtables, 1, jpegtablessize-2, fi); //don't write end tag (ff,d8)
-	fwrite(&tag->data[2+2], tag->len-2-2, 1, fi); //don't write start tag (ff,d9)
+	if(jpegtablessize>=2) {
+	    fwrite(jpegtables, 1, jpegtablessize-2, fi); //don't write end tag (ff,d8)
+	    fwrite(&tag->data[2+2], tag->len-2-2, 1, fi); //don't write start tag (ff,d9)
+	} else {
+	    fwrite(tag->data+2, tag->len-2, 1, fi);
+	}
 	fclose(fi);
     }
     else if(tag->id == ST_DEFINEBITSJPEG2 && tag->len>2) {
@@ -679,7 +685,7 @@ void handlejpeg(TAG*tag)
     }
     else {
 	int id = GET16(tag->data);
-	fprintf(stderr, "Object %d is not a JPEG picture!\n",id);
+	fprintf(stderr, "Object %d is not a JPEG picture!\n",id, jpegtables);
 	exit(1);
     }
 }
@@ -1113,8 +1119,9 @@ int main (int argc,char ** argv)
 		handlesoundstream(tag);
 	}
 
-	if(tag->id == ST_JPEGTABLES)
+	if(tag->id == ST_JPEGTABLES) {
 	    handlejpegtables(tag);
+	}
 
 	if(swf_isDefiningTag(tag)) {
 	    int id = swf_GetDefineID(tag);
