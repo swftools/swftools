@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <memory.h>
 #include <unistd.h>
 #include "../config.h"
 #ifdef HAVE_SIGNAL_H
@@ -115,6 +116,40 @@ void sigalarm(int signal)
     exit(1);
 }
 #endif
+
+typedef struct _parameter {
+    struct _parameter*next;
+    const char*name;
+    const char*value;
+} parameter_t;
+
+static parameter_t* device_config = 0;
+static parameter_t* device_config_next = 0;
+static void store_parameter(const char*name, const char*value)
+{
+    parameter_t*o = device_config;
+    while(o) {
+        if(!strcmp(name, o->name)) {
+            /* overwrite old value */
+            free((void*)o->value);
+            o->value = strdup(value);
+            return;
+        }
+        o = o->next;
+    }
+    parameter_t*p = malloc(sizeof(parameter_t));
+    p->name = strdup(name);
+    p->value = strdup(value);
+    p->next = 0;
+
+    if(device_config_next) {
+	device_config_next->next = p;
+	device_config_next = p;
+    } else {
+	device_config = p;
+	device_config_next = p;
+    }
+}
 
 int args_callback_option(char*name,char*val) {
     if (!strcmp(name, "o"))
@@ -214,11 +249,18 @@ int args_callback_option(char*name,char*val) {
 	if(c && *c && c[1])  {
 	    *c = 0;
 	    c++;
-	    driver->set_parameter(driver, s,c);
-	    out->setparameter(out, s,c);
+	    store_parameter(s,c);
+	} else if(strcmp(s,"help")) {
+	    printf("PDF Parameters:\n");
+	    gfxsource_t*pdf = gfxsource_pdf_create(&pdf);
+	    pdf->set_parameter(pdf, "help", "");
+	    gfxdevice_t swf;
+	    gfxdevice_swf_init(&swf);
+	    printf("SWF Parameters:\n");
+	    swf.setparameter(&swf, "help", "");
+	    exit(0);
 	} else {
-	    driver->set_parameter(driver, s,"1");
-	    out->setparameter(out, s,"1");
+	    store_parameter(s,"1");
 	}
 	return 1;
     }
@@ -529,6 +571,25 @@ void show_info(gfxsource_t*driver, char*filename)
     pdf->destroy(pdf);
 }
 
+
+static gfxdevice_t swf,wrap;
+gfxdevice_t*create_output_device()
+{
+    gfxdevice_swf_init(&swf);
+    gfxdevice_removeclippings_init(&wrap, &swf);
+    out = &wrap;
+    if(!flatten) {
+	out = &swf;
+    }
+    /* pass global parameters to output device */
+    parameter_t*p = device_config;
+    while(p) {
+	out->setparameter(out, p->name, p->value);
+	p = p->next;
+    }
+    return out;
+}
+
 int main(int argn, char *argv[])
 {
     int ret;
@@ -539,6 +600,7 @@ int main(int argn, char *argv[])
     int nup_pos = 0;
     int x,y;
     char* installPath = getInstallationPath();
+    char one_file_per_page = 0;
     
     initLog(0,-1,0,0,-1,loglevel);
 
@@ -554,20 +616,18 @@ int main(int argn, char *argv[])
     srand(time(0));
 #endif
 #endif
-    driver = gfxsource_pdf_create();
 
-    gfxdevice_t swf,wrap;
-    gfxdevice_swf_init(&swf);
-    
-    gfxdevice_removeclippings_init(&wrap, &swf);
-
-    out = &wrap;
     processargs(argn, argv);
     
-    if(!flatten) {
-	out = &swf;
-    }
+    driver = gfxsource_pdf_create();
     
+    /* pass global parameters to PDF driver*/
+    parameter_t*p = device_config;
+    while(p) {
+	driver->set_parameter(driver, p->name, p->value);
+	p = p->next;
+    }
+
     if(!filename)
     {
 	fprintf(stderr, "Please specify an input file\n");
@@ -615,10 +675,38 @@ int main(int argn, char *argv[])
 	filename = fullname;
     }
 
+    char*u = 0;
+    if((u = strchr(outputname, '%'))) {
+	if(strchr(u+1, '%') || 
+	   strchr(outputname, '%')!=u)  {
+	    msg("<error> only one %%d allowed in filename\n");
+	    return 1;
+	}
+	if(preloader || viewer) {
+	    msg("<error> -b/-l/-B/-L not supported together with %%d in filename\n");
+	    return 1;
+	}
+	msg("<notice> outputting one file per page");
+	one_file_per_page = 1;
+	char*pattern = malloc(strlen(outputname)+2);
+	/* convert % to %d */
+	int l = u-outputname+1;
+	memcpy(pattern, outputname, l);
+	pattern[l]='d';
+	strcpy(pattern+l+1, outputname+l);
+	outputname = pattern;
+    }
+
     gfxdocument_t* pdf = driver->open(driver, filename);
     if(!pdf) {
         msg("<error> Couldn't open %s", filename);
         exit(1);
+    }
+    /* pass global parameters document */
+    p = device_config;
+    while(p) {
+	pdf->set_parameter(pdf, p->name, p->value);
+	p = p->next;
     }
 
     struct mypage_t {
@@ -647,6 +735,7 @@ int main(int argn, char *argv[])
 
     pagenum = 0;
 
+    gfxdevice_t*out = create_output_device();;
     for(pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
     {
 	if(is_in_range(pagenr, pagerange)) {
@@ -708,55 +797,82 @@ int main(int argn, char *argv[])
 		pages[t].page->destroy(pages[t].page);
 	    }
 	    pagenum = 0;
+
+	    if(one_file_per_page) {
+		gfxresult_t*result = out->finish(out);out=0;
+		char buf[1024];
+		sprintf(buf, outputname, one_file_per_page++);
+		if(result->save(result, buf) < 0) {
+		    return 1;
+		}
+		result->destroy(result);result=0;
+		out = create_output_device();;
+		msg("<notice> Writing SWF file %s", buf);
+	    }
 	}
     }
-    
-    gfxresult_t*result = out->finish(out);
+   
+    if(one_file_per_page) {
+	// remove empty device
+	gfxresult_t*result = out->finish(out);out=0;
+	result->destroy(result);result=0;
+    } else {
+	gfxresult_t*result = out->finish(out);
+	msg("<notice> Writing SWF file %s", outputname);
+	if(result->save(result, outputname) < 0) {
+	    exit(1);
+	}
+	int width = (int)result->get(result, "width");
+	int height = (int)result->get(result, "height");
+	result->destroy(result);result=0;
 
-    if(result->save(result, outputname) < 0) {
-        exit(1);
+	if(preloader || viewer) {
+	    const char*zip = "";
+	    if(zlib) {
+		zip = "-z";
+	    }
+	    if(!preloader && viewer) {
+		systemf("swfcombine %s -X %d -Y %d \"%s\" viewport=\"%s\" -o \"%s\"",zip,width,height,
+			viewer, outputname, outputname);
+		if(!system_quiet)
+		    printf("\n");
+	    }
+	    if(preloader && !viewer) {
+		msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
+		ret = systemf("swfcombine %s -Y %d -X %d %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,width,height,
+			SWFDIR, preloader, outputname, outputname);
+		if(!system_quiet)
+		    printf("\n");
+	    }
+	    if(preloader && viewer) {
+#ifdef HAVE_MKSTEMP
+		char tmpname[] = "__swf__XXXXXX";
+		mkstemp(tmpname);
+#else 
+		char*tmpname = "__tmp__.swf";
+#endif
+		systemf("swfcombine \"%s\" viewport=%s -o %s",
+			viewer, outputname, tmpname);
+		systemf("swfcombine %s -X %d -Y %d -r %f %s/PreLoaderTemplate.swf loader=%s movie=%s -o \"%s\"",zip,width,height,
+			getRate(preloader), SWFDIR, preloader, tmpname, outputname);
+		systemf("rm %s", tmpname);
+	    }
+	}
     }
-
-    int width = (int)result->get(result, "width");
-    int height = (int)result->get(result, "height");
-    msg("<notice> SWF written");
-    
-    result->destroy(result);
 
     pdf->destroy(pdf);
     driver->destroy(driver);
 
-    const char*zip = "";
-    if(zlib) {
-	zip = "-z";
+   
+    /* free global parameters */
+    p = device_config;
+    while(p) {
+	parameter_t*next = p->next;
+	if(p->name) free((void*)p->name);p->name = 0;
+	if(p->value) free((void*)p->value);p->value =0;
+	p->next = 0;free(p);
+	p = next;
     }
-    if(!preloader && viewer) {
-	systemf("swfcombine %s -X %d -Y %d \"%s\" viewport=\"%s\" -o \"%s\"",zip,width,height,
-		viewer, outputname, outputname);
-	if(!system_quiet)
-	    printf("\n");
-    }
-    if(preloader && !viewer) {
-	msg("<warning> --preloader option without --viewer option doesn't make very much sense.");
-	ret = systemf("swfcombine %s -Y %d -X %d %s/PreLoaderTemplate.swf loader=\"%s\" movie=\"%s\" -o \"%s\"",zip,width,height,
-		SWFDIR, preloader, outputname, outputname);
-	if(!system_quiet)
-	    printf("\n");
-    }
-    if(preloader && viewer) {
-#ifdef HAVE_MKSTEMP
-        char tmpname[] = "__swf__XXXXXX";
-        mkstemp(tmpname);
-#else 
-	char*tmpname = "__tmp__.swf";
-#endif
-	systemf("swfcombine \"%s\" viewport=%s -o %s",
-		viewer, outputname, tmpname);
-        systemf("swfcombine %s -X %d -Y %d -r %f %s/PreLoaderTemplate.swf loader=%s movie=%s -o \"%s\"",zip,width,height,
-                getRate(preloader), SWFDIR, preloader, tmpname, outputname);
-        systemf("rm %s", tmpname);
-    }
-
 
     return 0;
 }
