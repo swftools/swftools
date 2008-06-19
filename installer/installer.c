@@ -807,6 +807,7 @@ static void remove_self()
     fprintf(fp, "del \"%s\"\n", exename);
     fprintf(fp, "if exist \"%s\" goto Repeat\n", exename);
     fprintf(fp, "del \"%s\"\n", batname);
+    fprintf(fp, "rmdir \"%s\"\n", install_path);
     fclose(fp);
 
     STARTUPINFO si;
