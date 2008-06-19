@@ -618,7 +618,7 @@ int findjpegboundary(U8*data, int len)
 {
     int t;
     int pos=-1;
-    for(t=0;t<len;t++) {
+    for(t=0;t<len-4;t++) {
 	if(data[t  ]==0xff &&
 	   data[t+1]==0xd9 &&
 	   data[t+2]==0xff &&
