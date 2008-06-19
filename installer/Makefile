@@ -8,13 +8,13 @@ all: files1.exe files2.exe uninstall.exe mkarchive
 
 LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid
 
-files1.c: ../win32/*.exe mkarchive
+files1.c: ../win32/*.exe mkarchive uninstall.exe
 	cp uninstall.exe ../win32/
 	CWD=`pwd`
 	cd ../win32;../installer/mkarchive `find`
 	mv ../win32/crnfiles.c ./files1.c
 
-files2.c: ../win32_gui/*.exe ../win32_gui/*.swf mkarchive
+files2.c: ../win32_gui/*.exe ../win32_gui/*.swf mkarchive uninstall.exe
 	cp uninstall.exe ../win32_gui/
 	CWD=`pwd`
 	cd ../win32_gui;../installer/mkarchive `find`
