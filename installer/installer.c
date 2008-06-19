@@ -48,6 +48,8 @@ static char* pdf2swf_path;
 
 static char registry_path[1024];
 
+static char elevated = 0;
+
 static char*install_path = "c:\\swftools\\";
 #define SOFTWARE_DOMAIN "quiss.org"
 #define SOFTWARE_NAME "SWFTools"
@@ -254,6 +256,21 @@ static char* getRegistryEntry(char*path)
     }
 }
 
+static int has_full_access = 0;
+static char hasFullAccess()
+{
+    /* find out whether we can write keys in HKEY_LOCAL_MACHINE */
+    HKEY hKey;
+    int ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall", 0,
+                           KEY_CREATE_SUB_KEY, &hKey);
+    if(!ret) {
+        RegCloseKey(hKey);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 void processMessages()
 {
     MSG msg;
@@ -360,7 +377,6 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     if(message == WM_INITDIALOG) {
 	SetDlgItemText(hwnd, IDC_INSTALL_PATH, install_path);
 
-        config_forAllUsers = 0;
         SendDlgItemMessage(hwnd, IDC_ALLUSERS, BM_SETCHECK, config_forAllUsers, 0);
         SendDlgItemMessage(hwnd, IDC_CURRENTUSER, BM_SETCHECK, config_forAllUsers^1, 0);
     }
@@ -407,6 +423,23 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    }
 	    return 0;
 	}
+    }
+    if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_SETACTIVE)) {
+        if(!elevated && !has_full_access && config_forAllUsers) {
+            OSVERSIONINFO winverinfo;
+            memset(&winverinfo, 0, sizeof(OSVERSIONINFO));
+            winverinfo.dwOSVersionInfoSize = sizeof(winverinfo);
+            if (GetVersionEx(&winverinfo) && winverinfo.dwMajorVersion >= 5) {
+                /* we're on Vista, were asked to install for all users, but don't have
+                   priviledges to do so. Ask to spawn the process elevated. */
+                char exename[MAX_PATH];
+                GetModuleFileName(NULL, exename, sizeof(exename));
+                if((int)ShellExecute(0, "runas", exename, "elevated", NULL, SW_SHOWNORMAL)>32) {
+                    /* that worked- the second process will do the work */
+                    exit(0);
+                }
+            }
+        }
     }
     return PropertySheetFuncCommon(hwnd, message, wParam, lParam, PSWIZB_BACK|PSWIZB_NEXT);
 }
@@ -483,7 +516,8 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    print_space(buf, "Space available: ", available.QuadPart);
 	} else {
 	    sprintf(buf, "Space available: [Error %d]", GetLastError());
-	    if(GetLastError() == ERROR_FILE_NOT_FOUND && install_path[0] && install_path[1]==':') {
+	    if((GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_PATH_NOT_FOUND)
+                && install_path[0] && install_path[1]==':') {
 		/* installation directory does not yet exist */
 		char path[3]={'c',':',0};
 		path[0] = install_path[0];
@@ -589,6 +623,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    if(config_createStartmenu && path_startmenu[0]) {
 		char* group = concatPaths(path_startmenu, "pdf2swf");
 		CreateDirectory(group, 0);
+                addDir(group);
 		char* linkName = concatPaths(group, "pdf2swf.lnk");
 		if(!CreateShortcut(pdf2swf_path, "pdf2swf", concatPaths(group, "pdf2swf.lnk"), 0, 0, 0, install_path) ||
 		   !CreateShortcut(uninstall_path, "uninstall", concatPaths(group, "uninstall.lnk"), 0, 0, 0, install_path)) {
@@ -623,9 +658,9 @@ void findfiles(char*path, int*pos, char*data, int len, char del)
 	char*f = concatPaths(path, findFileData.cFileName);
 	if(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 	    findfiles(f, pos, data, len, del);
-	    if(del) {
-		RemoveDirectory(f);
-	    }
+            /* always try to remove directories- if they are empty, this
+               will work, and they won't prevent superdirectory deletion later */
+            RemoveDirectory(f);
 	} else {
 	    int l = strlen(f);
 
@@ -662,7 +697,7 @@ static char*extrafiles = 0;
 BOOL CALLBACK PropertySheetFunc5(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     HWND dialog = GetParent(hwnd);
     if(message == WM_INITDIALOG) {
-	SetDlgItemText(hwnd, IDC_INFO, "Ready to deinstall");
+	SetDlgItemText(hwnd, IDC_INFO, "Ready to uninstall");
     }
     if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_WIZNEXT)) {
 
@@ -768,7 +803,22 @@ void runPropertySheet(HWND parent)
 	{PropertySheetFunc7, IDD_DEINSTALLED},
 #endif
     };
+
     int num = sizeof(wpage)/sizeof(wpage[0]);
+
+#ifndef DEINSTALL
+    if(elevated) {
+        /* remove license.
+           TODO: remove installdir querying, too (pass installdir
+                 to second process) */
+        int t;
+        for(t=1;t<num;t++) {
+            wpage[t-1] = wpage[t];
+        }
+        num --;
+    }
+#endif
+
     HPROPSHEETPAGE pages[num];
     int t;
     for(t=0;t<num;t++) {
@@ -797,17 +847,29 @@ void runPropertySheet(HWND parent)
 static void remove_self()
 {
     char exename[MAX_PATH];
-    char batname[MAX_PATH];
+    char batdir[MAX_PATH];
+    char batfile[MAX_PATH];
+    char*batname;
     FILE *fp;
 
+    memset(batdir, 0, sizeof(batdir));
+
     GetModuleFileName(NULL, exename, sizeof(exename));
-    sprintf(batname, "%s.bat", exename);
+    GetTempPath(MAX_PATH, batdir);
+    sprintf(batfile, "%08x.bat", rand());
+
+    batname = concatPaths(batdir, batfile);
+
     fp = fopen(batname, "w");
+    if(!fp) {
+        return;
+    } 
+
     fprintf(fp, ":Repeat\n");
     fprintf(fp, "del \"%s\"\n", exename);
     fprintf(fp, "if exist \"%s\" goto Repeat\n", exename);
-    fprintf(fp, "del \"%s\"\n", batname);
     fprintf(fp, "rmdir \"%s\"\n", install_path);
+    fprintf(fp, "del \"%s\"\n", batname);
     fclose(fp);
 
     STARTUPINFO si;
@@ -839,7 +901,7 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
 
     install_path = getRegistryEntry(registry_path);
     if(!install_path || !install_path[0]) {
-	MessageBox(0, "Couldn't find software installation directory- did you run the deinstallation twice?", INSTALLER_NAME, MB_OK);
+	MessageBox(0, "Couldn't find software installation directory- did you run the uninstallation twice?", INSTALLER_NAME, MB_OK);
 	return 1;
     }
 
@@ -870,6 +932,12 @@ int WINAPI WinMain(HINSTANCE _me,HINSTANCE hPrevInst,LPSTR lpszArgs, int nWinMod
     wcl_background.cbSize       = sizeof(WNDCLASSEX);
 
     sprintf(registry_path, "Software\\%s\\%s\\InstallPath", SOFTWARE_DOMAIN, SOFTWARE_NAME);
+
+    if(lpszArgs && strstr(lpszArgs, "elevated")) {
+        elevated = 1;
+    }
+    has_full_access = hasFullAccess();
+    config_forAllUsers = has_full_access;
 
     HINSTANCE shell32 = LoadLibrary("shell32.dll");
     if(!shell32) {
