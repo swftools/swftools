@@ -938,7 +938,12 @@ int swf_WriteTag2(writer_t*writer, TAG * t)
      t->id!=ST_DEFINEBITSJPEG&&t->id!=ST_DEFINEBITSJPEG2&&t->id!=ST_DEFINEBITSJPEG3);
 
   if (writer)
-  { if (short_tag)
+  {
+#ifdef MEASURE
+  int oldpos = writer->pos;
+#endif
+    
+    if (short_tag)
     { raw[0] = SWAP16(len|((t->id&0x3ff)<<6));
       if (writer->write(writer,raw,2)!=2)
       {
@@ -981,6 +986,11 @@ int swf_WriteTag2(writer_t*writer, TAG * t)
     #ifdef DEBUG_RFXSWF
       else if (t->len) fprintf(stderr,"WriteTag(): Tag Data Error, id=%i\n",t->id);
     #endif
+
+#ifdef MEASURE
+  writer->flush(writer);
+  printf("TAG %s costs %d bytes\n", swf_TagGetName(t), writer->pos-oldpos);
+#endif
   }
 
   return t->len+(short_tag?2:6);
