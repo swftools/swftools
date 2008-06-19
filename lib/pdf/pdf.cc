@@ -196,10 +196,6 @@ gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
 
     if(page < 1 || page > doc->num_pages)
         return 0;
-    if(di->nocopy) {
-        msg("<error> PDF disallows copying.");
-        return 0;
-    }
     
     gfxpage_t* pdf_page = (gfxpage_t*)malloc(sizeof(gfxpage_t));
     pdf_page_internal_t*pi= (pdf_page_internal_t*)malloc(sizeof(pdf_page_internal_t));
