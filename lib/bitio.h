@@ -55,6 +55,7 @@ typedef struct _reader
 typedef struct _writer
 {
     int (*write)(struct _writer*, void*data, int len);
+    void (*flush)(struct _writer*);
     void (*finish)(struct _writer*);
 
     void *internal;

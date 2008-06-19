@@ -80,14 +80,15 @@ void reader_init_filereader(reader_t*r, int handle)
 
 /* ---------------------------- mem reader ------------------------------- */
 
-struct memread_t
+typedef struct _memread
 {
     unsigned char*data;
     int length;
-};
+} memread_t;
+
 static int reader_memread(reader_t*reader, void* data, int len) 
 {
-    struct memread_t*mr = (struct memread_t*)reader->internal;
+    memread_t*mr = (memread_t*)reader->internal;
 
     if(mr->length - reader->pos < len) {
 	len = mr->length - reader->pos;
@@ -104,7 +105,7 @@ static void reader_memread_dealloc(reader_t*reader)
 }
 void reader_init_memreader(reader_t*r, void*newdata, int newlength)
 {
-    struct memread_t*mr = (struct memread_t*)malloc(sizeof(struct memread_t));
+    memread_t*mr = (memread_t*)malloc(sizeof(memread_t));
     mr->data = (unsigned char*)newdata;
     mr->length = newlength;
     r->read = reader_memread;
@@ -118,15 +119,15 @@ void reader_init_memreader(reader_t*r, void*newdata, int newlength)
 
 /* ---------------------------- mem writer ------------------------------- */
 
-struct memwrite_t
+typedef struct _memwrite
 {
     unsigned char*data;
     int length;
-};
+} memwrite_t;
 
 static int writer_memwrite_write(writer_t*w, void* data, int len) 
 {
-    struct memwrite_t*mw = (struct memwrite_t*)w->internal;
+    memwrite_t*mw = (memwrite_t*)w->internal;
     if(mw->length - w->pos > len) {
 	memcpy(&mw->data[w->pos], data, len);
 	w->pos += len;
@@ -143,14 +144,18 @@ static void writer_memwrite_finish(writer_t*w)
 	free(w->internal);
     w->internal = 0;
 }
+static void dummy_flush(writer_t*w)
+{
+}
 void writer_init_memwriter(writer_t*w, void*data, int len)
 {
-    struct memwrite_t *mr;
-    mr = (struct memwrite_t*)malloc(sizeof(struct memwrite_t));
+    memwrite_t *mr;
+    mr = (memwrite_t*)malloc(sizeof(memwrite_t));
     mr->data = (unsigned char *)data;
     mr->length = len;
     memset(w, 0, sizeof(writer_t));
     w->write = writer_memwrite_write;
+    w->flush = dummy_flush;
     w->finish = writer_memwrite_finish;
     w->internal = (void*)mr;
     w->type = WRITER_TYPE_MEM;
@@ -161,15 +166,15 @@ void writer_init_memwriter(writer_t*w, void*data, int len)
 
 /* ------------------------- growing mem writer ------------------------------- */
 
-struct growmemwrite_t
+typedef struct _growmemwrite
 {
     unsigned char*data;
     int length;
     U32 grow;
-};
+} growmemwrite_t;
 static int writer_growmemwrite_write(writer_t*w, void* data, int len) 
 {
-    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    growmemwrite_t*mw = (growmemwrite_t*)w->internal;
     if(!mw->data) {
 	fprintf(stderr, "Illegal write operation: data already given away");
 	exit(1);
@@ -195,7 +200,7 @@ static int writer_growmemwrite_write(writer_t*w, void* data, int len)
 }
 static void writer_growmemwrite_finish(writer_t*w)
 {
-    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    growmemwrite_t*mw = (growmemwrite_t*)w->internal;
     if(mw->data) {
 	free(mw->data);mw->data = 0;
     }
@@ -205,7 +210,7 @@ static void writer_growmemwrite_finish(writer_t*w)
 }
 void* writer_growmemwrite_memptr(writer_t*w, int*len)
 {
-    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    growmemwrite_t*mw = (growmemwrite_t*)w->internal;
     if(len) {
 	*len = w->pos;
     }
@@ -213,7 +218,7 @@ void* writer_growmemwrite_memptr(writer_t*w, int*len)
 }
 void* writer_growmemwrite_getmem(writer_t*w)
 {
-    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    growmemwrite_t*mw = (growmemwrite_t*)w->internal;
     void*ret = mw->data;
     /* remove own reference so that neither write() nor finish() can free it.
        It's property of the caller now.
@@ -223,20 +228,20 @@ void* writer_growmemwrite_getmem(writer_t*w)
 }
 void writer_growmemwrite_reset(writer_t*w)
 {
-    struct growmemwrite_t*mw = (struct growmemwrite_t*)w->internal;
+    growmemwrite_t*mw = (growmemwrite_t*)w->internal;
     w->pos = 0;
     w->bitpos = 0;
     w->mybyte = 0;
 }
 void writer_init_growingmemwriter(writer_t*w, U32 grow)
 {
-    struct growmemwrite_t *mw;
-    mw = (struct growmemwrite_t *)malloc(sizeof(struct growmemwrite_t));
+    growmemwrite_t *mw = (growmemwrite_t *)malloc(sizeof(growmemwrite_t));
     mw->length = 4096;
     mw->data = (unsigned char *)malloc(mw->length);
     mw->grow = grow;
     memset(w, 0, sizeof(writer_t));
     w->write = writer_growmemwrite_write;
+    w->flush = dummy_flush;
     w->finish = writer_growmemwrite_finish;
     w->internal = (void*)mw;
     w->type = WRITER_TYPE_GROWING_MEM;
@@ -247,20 +252,21 @@ void writer_init_growingmemwriter(writer_t*w, U32 grow)
 
 /* ---------------------------- file writer ------------------------------- */
 
-struct filewrite_t
+typedef struct _filewrite
 {
     int handle;
     char free_handle;
-};
+} filewrite_t;
 
 static int writer_filewrite_write(writer_t*w, void* data, int len) 
 {
-    struct filewrite_t * fw= (struct filewrite_t*)w->internal;
+    filewrite_t * fw= (filewrite_t*)w->internal;
+    w->pos += len;
     return write(fw->handle, data, len);
 }
 static void writer_filewrite_finish(writer_t*w)
 {
-    struct filewrite_t *mr = (struct filewrite_t*)w->internal;
+    filewrite_t *mr = (filewrite_t*)w->internal;
     if(mr->free_handle)
 	close(mr->handle);
     free(w->internal);
@@ -268,7 +274,7 @@ static void writer_filewrite_finish(writer_t*w)
 }
 void writer_init_filewriter(writer_t*w, int handle)
 {
-    struct filewrite_t *mr = (struct filewrite_t *)malloc(sizeof(struct filewrite_t));
+    filewrite_t *mr = (filewrite_t *)malloc(sizeof(filewrite_t));
     mr->handle = handle;
     mr->free_handle = 0;
     memset(w, 0, sizeof(writer_t));
@@ -288,7 +294,7 @@ void writer_init_filewriter2(writer_t*w, char*filename)
 #endif
 	    O_WRONLY|O_CREAT|O_TRUNC, 0644);
     writer_init_filewriter(w, fi);
-    ((struct filewrite_t*)w->internal)->free_handle = 1;
+    ((filewrite_t*)w->internal)->free_handle = 1;
 }
 
 /* ---------------------------- null writer ------------------------------- */
@@ -306,6 +312,7 @@ void writer_init_nullwriter(writer_t*w)
 {
     memset(w, 0, sizeof(writer_t));
     w->write = writer_nullwrite_write;
+    w->flush = dummy_flush;
     w->finish = writer_nullwrite_finish;
     w->internal = 0;
     w->type = WRITER_TYPE_NULL;
@@ -315,14 +322,14 @@ void writer_init_nullwriter(writer_t*w)
 }
 /* ---------------------------- zlibinflate reader -------------------------- */
 
-struct zlibinflate_t
+typedef struct _zlibinflate
 {
 #ifdef HAVE_ZLIB
     z_stream zs;
     reader_t*input;
     unsigned char readbuffer[ZLIB_BUFFER_SIZE];
 #endif
-};
+} zlibinflate_t;
 
 #ifdef HAVE_ZLIB
 static void zlib_error(int ret, char* msg, z_stream*zs)
@@ -339,7 +346,7 @@ static void zlib_error(int ret, char* msg, z_stream*zs)
 static int reader_zlibinflate(reader_t*reader, void* data, int len) 
 {
 #ifdef HAVE_ZLIB
-    struct zlibinflate_t*z = (struct zlibinflate_t*)reader->internal;
+    zlibinflate_t*z = (zlibinflate_t*)reader->internal;
     int ret;
     if(!z) {
 	return 0;
@@ -386,7 +393,7 @@ static int reader_zlibinflate(reader_t*reader, void* data, int len)
 static void reader_zlibinflate_dealloc(reader_t*reader)
 {
 #ifdef HAVE_ZLIB
-    struct zlibinflate_t*z = (struct zlibinflate_t*)reader->internal;
+    zlibinflate_t*z = (zlibinflate_t*)reader->internal;
     /* test whether read() already did basic deallocation */
     if(reader->internal) {
 	inflateEnd(&z->zs);
@@ -398,11 +405,10 @@ static void reader_zlibinflate_dealloc(reader_t*reader)
 void reader_init_zlibinflate(reader_t*r, reader_t*input)
 {
 #ifdef HAVE_ZLIB
-    struct zlibinflate_t*z;
+    zlibinflate_t*z = (zlibinflate_t*)malloc(sizeof(zlibinflate_t));
+    memset(z, 0, sizeof(zlibinflate_t));
     int ret;
     memset(r, 0, sizeof(reader_t));
-    z = (struct zlibinflate_t*)malloc(sizeof(struct zlibinflate_t));
-    memset(z, 0, sizeof(struct zlibinflate_t));
     r->internal = z;
     r->read = reader_zlibinflate;
     r->dealloc = reader_zlibinflate_dealloc;
@@ -424,19 +430,19 @@ void reader_init_zlibinflate(reader_t*r, reader_t*input)
 
 /* ---------------------------- zlibdeflate writer -------------------------- */
 
-struct zlibdeflate_t
+typedef struct _zlibdeflate
 {
 #ifdef HAVE_ZLIB
     z_stream zs;
     writer_t*output;
     unsigned char writebuffer[ZLIB_BUFFER_SIZE];
 #endif
-};
+} zlibdeflate_t;
 
 static int writer_zlibdeflate_write(writer_t*writer, void* data, int len) 
 {
 #ifdef HAVE_ZLIB
-    struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
+    zlibdeflate_t*z = (zlibdeflate_t*)writer->internal;
     int ret;
     if(writer->type != WRITER_TYPE_ZLIB) {
 	fprintf(stderr, "Wrong writer ID (writer not initialized?)\n");
@@ -458,6 +464,7 @@ static int writer_zlibdeflate_write(writer_t*writer, void* data, int len)
 	if (ret != Z_OK) zlib_error(ret, "bitio:deflate_deflate", &z->zs);
 
 	if(z->zs.next_out != z->writebuffer) {
+	    writer->pos += z->zs.next_out - (Bytef*)z->writebuffer;
 	    z->output->write(z->output, z->writebuffer, z->zs.next_out - (Bytef*)z->writebuffer);
 	    z->zs.next_out = z->writebuffer;
 	    z->zs.avail_out = ZLIB_BUFFER_SIZE;
@@ -467,17 +474,52 @@ static int writer_zlibdeflate_write(writer_t*writer, void* data, int len)
 	    break;
 	}
     }
-    writer->pos += len;
     return len;
 #else
     fprintf(stderr, "Error: swftools was compiled without zlib support");
     exit(1);
 #endif
 }
+
+void writer_zlibdeflate_flush(writer_t*writer)
+{
+#ifdef HAVE_ZLIB
+    zlibdeflate_t*z = (zlibdeflate_t*)writer->internal;
+    int ret;
+    if(writer->type != WRITER_TYPE_ZLIB) {
+	fprintf(stderr, "Wrong writer ID (writer not initialized?)\n");
+	return;
+    }
+    if(!z) {
+	fprintf(stderr, "zlib not initialized!\n");
+	return;
+    }
+
+    z->zs.next_in = 0;
+    z->zs.avail_in = 0;
+    while(1) {
+	ret = deflate(&z->zs, Z_SYNC_FLUSH);
+	if (ret != Z_OK) zlib_error(ret, "bitio:deflate_flush", &z->zs);
+	if(z->zs.next_out != z->writebuffer) {
+	    writer->pos += z->zs.next_out - (Bytef*)z->writebuffer;
+	    z->output->write(z->output, z->writebuffer, z->zs.next_out - (Bytef*)z->writebuffer);
+	    z->zs.next_out = z->writebuffer;
+	    z->zs.avail_out = ZLIB_BUFFER_SIZE;
+	} 
+	/* TODO: how will zlib let us know it needs more buffer space? */
+	break;
+    }
+    return;
+#else
+    fprintf(stderr, "Error: swftools was compiled without zlib support");
+    exit(1);
+#endif
+}
+
 static void writer_zlibdeflate_finish(writer_t*writer)
 {
 #ifdef HAVE_ZLIB
-    struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
+    zlibdeflate_t*z = (zlibdeflate_t*)writer->internal;
     writer_t*output;
     int ret;
     if(writer->type != WRITER_TYPE_ZLIB) {
@@ -493,6 +535,7 @@ static void writer_zlibdeflate_finish(writer_t*writer)
 	    ret != Z_STREAM_END) zlib_error(ret, "bitio:deflate_finish", &z->zs);
 
 	if(z->zs.next_out != z->writebuffer) {
+	    writer->pos += z->zs.next_out - (Bytef*)z->writebuffer;
 	    z->output->write(z->output, z->writebuffer, z->zs.next_out - (Bytef*)z->writebuffer);
 	    z->zs.next_out = z->writebuffer;
 	    z->zs.avail_out = ZLIB_BUFFER_SIZE;
@@ -516,13 +559,14 @@ static void writer_zlibdeflate_finish(writer_t*writer)
 void writer_init_zlibdeflate(writer_t*w, writer_t*output)
 {
 #ifdef HAVE_ZLIB
-    struct zlibdeflate_t*z;
+    zlibdeflate_t*z;
     int ret;
     memset(w, 0, sizeof(writer_t));
-    z = (struct zlibdeflate_t*)malloc(sizeof(struct zlibdeflate_t));
-    memset(z, 0, sizeof(struct zlibdeflate_t));
+    z = (zlibdeflate_t*)malloc(sizeof(zlibdeflate_t));
+    memset(z, 0, sizeof(zlibdeflate_t));
     w->internal = z;
     w->write = writer_zlibdeflate_write;
+    w->flush = writer_zlibdeflate_flush;
     w->finish = writer_zlibdeflate_finish;
     w->type = WRITER_TYPE_ZLIB;
     w->pos = 0;
