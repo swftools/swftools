@@ -1,77 +1,87 @@
-.TH pdf2swf "1" "January 2003" "pdf2swf" "swftools"
+.TH pdf2swf "1" "June 2008" "pdf2swf" "swftools"
 .SH NAME
-pdf2swf - convert PDF files into SWF
+pdf2swf - Converts Acrobat PDF files into Flash SWF Animation files.
+
 .SH Synopsis
-.B pdf2swf
-[\fIoptions\fR] \fIfile.pdf\fR [-o \fIfile.swf\fR]
+.B pdf2swf [-options] file.pdf -o file.swf
+
 .SH DESCRIPTION
-This tools converts Acrobat PDF files into Flash SWF Animation
-files.
+Converts a PDF file to a SWF file.
+
 .SH OPTIONS
 .TP
-\fB\-h\fR, \fB\-\-help\fR
-Print short help message and exit
+\fB\-h\fR, \fB\-\-help\fR 
+    Print short help message and exit
 .TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version info and exit
+\fB\-V\fR, \fB\-\-version\fR 
+    Print version info and exit
 .TP
-\fB\-p\fR, \fB\-\-pages\fR \fIrange\fR
-Convert only pages in \fIrange\fR with \fIrange\fR e.g. 1-20 or 1,4,6,9-11 or
-3-5,10-12
+\fB\-o\fR, \fB\-\-output\fR file.swf
+    will go into a seperate file.
 .TP
-\fB\-v\fR, \fB\-\-verbose\fR
-Be verbose. Use more than one -v for greater effect.
+\fB\-p\fR, \fB\-\-pages\fR range
+    3-5,10-12
 .TP
-\fB\-z\fR, \fB\-\-zlib\fR
-Use Flash 6 (MX) zlib compression.
-\fBThe resulting SWF will not be playable in browsers with Flash Plugins 5 and below!\fR
+\fB\-P\fR, \fB\-\-password\fR password
+    Use password for deciphering the pdf.
 .TP
-\fB\-i\fR, \fB\-\-ignore\fR
-Allows pdf2swf to change the draw order of the pdf. This may make the generated
-SWF files a little bit smaller, but it may also cause the images in the pdf to look funny.
+\fB\-v\fR, \fB\-\-verbose\fR 
+    Be verbose. Use more than one -v for greater effect.
 .TP
-\fB\-j\fR, \fB\-\-jpegquality\fR \fIquality\fR
-Set quality of embedded jpeg pictures to \fIquality\fR. 0 is worst (small), 100 is best (big). (default:85)
+\fB\-z\fR, \fB\-\-zlib\fR 
+    The resulting SWF will not be playable in browsers with Flash Plugins 5 and below!
 .TP
-\fB\-s\fR, \fB\-\-set\fR \fIparam=value\fR
-Set a SWF encoder specific parameter. See pdf2swf \-\-help for more information.
+\fB\-i\fR, \fB\-\-ignore\fR 
+    SWF files a little bit smaller, but it may also cause the images in the pdf to look funny.
 .TP
-\fB\-w\fR, \fB\-\-samewindow\fR
-When converting pdf hyperlinks, don't make the links open a new window when clicked on,
-but open the page they point to in the window the SWF is displayed.
+\fB\-j\fR, \fB\-\-jpegquality\fR quality
+    Set quality of embedded jpeg pictures to quality. 0 is worst (small), 100 is best (big). (default:85)
 .TP
-\fB\-t\fR, \fB\-\-stop\fR
-Insert a stop() command in each page. The resulting SWF file will not turn pages automatically.
+\fB\-s\fR, \fB\-\-set\fR param=value
+    Set a SWF encoder specific parameter.  See pdf2swf -s help for more information.
 .TP
-\fB\-T\fR, \fB\-\-flashversion\fR \fInum\fR
-Set Flash Version in the SWF header to \fInum\fR.
+\fB\-w\fR, \fB\-\-samewindow\fR 
+    When clicked on, the page they point to will be opened in the window the SWF is displayed.
 .TP
-\fB\-F\fR, \fB\-\-fontdir\fR \fIdirectory\fR
-Add \fIdirectory\fR to the font search path.
+\fB\-t\fR, \fB\-\-stop\fR 
+    The resulting SWF file will not turn pages automatically.
+.TP
+\fB\-T\fR, \fB\-\-flashversion\fR num
+    Set Flash Version in the SWF header to num.
+.TP
+\fB\-F\fR, \fB\-\-fontdir\fR directory
+    Add directory to the font search path.
 .TP
 \fB\-b\fR, \fB\-\-defaultviewer\fR 
-Link a standard viewer to the swf file. Therefore the swf file will be "browseable", i.e.
-display some buttons for turning pages.
-The viewer swf to be used is determined by a symlink named "default_viewer.swf" in
-the swftools data directory.
+    Therefore the swf file will be "browseable", i.e.  display some buttons for turning pages.
+    The viewer swf to be used is determined by a symlink named "default_viewer.swf" in
+    the swftools data directory.
 .TP
-\fB\-l\fR, \fB\-\-defaultloader\fR
-Link a standard preloader to the swf file which will be displayed while the main swf is
-loading.
-The loader swf to be used is determined by a symlink named "default_loader.swf" in
-the swftools data directory.
+\fB\-l\fR, \fB\-\-defaultloader\fR 
+    The loader swf to be used is determined by a symlink named "default_loader.swf" in
+    the swftools data directory.
 .TP
-\fB\-B\fR, \fB\-\-viewer\fR \fIfilename\fR
-Link viewer \fIfilename\fR to the swf file. See http://www.quiss.org/swftools/pdf2swf_usage.html
-for information on how to create your own viewers.
+\fB\-B\fR, \fB\-\-viewer\fR filename
+    See http://www.quiss.org/swftools/pdf2swf_usage.html for information on how to create your own viewers.
 .TP
-\fB\-L\fR, \fB\-\-loader\fR \fIfilename\fR
-Link preloader \fIfilename\fR to the swf file, where \fIfilename\fR
-is an arbitrary swf animation.
-.SH BUGS
-.PP
-dashed lines don't work.
-
-.SH AUTHOR
-
-Matthias Kramm <kramm@quiss.org>
+\fB\-L\fR, \fB\-\-preloader\fR filename
+    filename is an arbitrary swf animation.
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR 
+    Suppress normal messages.  Use -qq to suppress warnings, also.
+.TP
+\fB\-S\fR, \fB\-\-shapes\fR 
+    Don't use SWF Fonts, but store everything as shape.
+.TP
+\fB\-f\fR, \fB\-\-fonts\fR 
+    Store full fonts in SWF. (Don't reduce to used characters).
+.TP
+\fB\-G\fR, \fB\-\-flatten\fR 
+    This usually makes the file faster to render and also usually smaller, but will increase
+    conversion time.
+.TP
+\fB\-I\fR, \fB\-\-info\fR 
+    Don't do actual conversion, just display a list of all pages in the PDF.
+.TP
+\fB\-Q\fR, \fB\-\-maxtime\fR n
+    Abort conversion after n seconds. Only available on Unix.

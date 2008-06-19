@@ -401,29 +401,32 @@ int args_callback_option(char*name,char*val) {
  {"l","defaultpreloader","Link default preloader to the pdf"}
  {0,0}
 };*/
-struct options_t options[] =
-{{"o","output"},
- {"q","quiet"},
- {"V","version"},
- {"i","ignore"},
- {"I","info"},
- {"z","zlib"},
- {"s","set"},
- {"S","shapes"},
- {"Q","maxtime"},
- {"j","jpegquality"},
- {"p","pages"},
- {"w","samewindow"},
- {"f","fonts"},
- {"F","fontdir"},
- {"B","viewer"},
- {"G","flatten"},
- {"L","preloader"},
- {"b","defaultviewer"},
- {"l","defaultpreloader"},
- {"t","stop"},
- {"T","flashversion"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"V", "version"},
+{"o", "output"},
+{"p", "pages"},
+{"P", "password"},
+{"v", "verbose"},
+{"z", "zlib"},
+{"i", "ignore"},
+{"j", "jpegquality"},
+{"s", "set"},
+{"w", "samewindow"},
+{"t", "stop"},
+{"T", "flashversion"},
+{"F", "fontdir"},
+{"b", "defaultviewer"},
+{"l", "defaultloader"},
+{"B", "viewer"},
+{"L", "preloader"},
+{"q", "quiet"},
+{"S", "shapes"},
+{"f", "fonts"},
+{"G", "flatten"},
+{"I", "info"},
+{"Q", "maxtime"},
+{0,0}
 };
 
 int args_callback_longoption(char*name,char*val) {
@@ -445,43 +448,36 @@ int args_callback_command(char*name, char*val) {
     return 0;
 }
 
-void args_callback_usage(char*name)
+void args_callback_usage(char *name)
 {
-    printf("Usage: %s [Options] input.pdf [-o output.swf]\n", name);
-    printf("\nBasic options:\n");
-    printf("-p  --pages=range          Convert only pages in range\n");
-    printf("-P  --password=password    Use password for deciphering the pdf\n");
-    printf("-v  --verbose              Be verbose. Use more than one -v for greater effect\n");
-    printf("-q  --quiet                Suppress normal messages. Use -qq to suppress warnings, also.\n");
-#ifdef HAVE_DIRENT_H
-    printf("-F  --fontdir directory    Add directory to font search path\n");
-#endif
-    printf("-V  --version              Print program version\n");
-    printf("\nEnhanced conversion options:\n");
-    printf("-S  --shapes               Don't use SWF Fonts, but store everything as shape\n");
-    printf("-z  --zlib                 Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)\n");
-    printf("-w  --samewindow           Don't open a new Browser Window for Links in the SWF\n");
-    printf("-f  --fonts                Store full fonts in SWF. (Don't reduce to used characters)\n");
-    printf("-T  --flashversion=num     Set the flash version in the header to num (default: 4)\n");
-    printf("-s insertstop              Insert a \"Stop\" Tag in every frame (don't turn pages automatically)\n");
-    printf("-s zoom=factor             Scale result, default: 72\n");
-    printf("-s jpegquality=quality     Set quality of embedded jpeg pictures (default:85)\n");
-    printf("-s caplinewidth=value      Set the minimum line width to trigger cap style handling to value. (3)\n");
-    printf("-s splinequality=value     Set the quality of spline convertion to value (0-100, default: 100).\n");
-    printf("-s fontquality=value       Set the quality of font convertion to value (0-100, default: 100).\n");
-    printf("-s ignoredraworder         Ignore draw order (makes the SWF file smaller and faster, but may produce\n"
-	   "                           graphic errors)\n");
-    printf("-s filloverlap             Make intersecting shapes overlap, instead of canceling each\n"
-	   "                           other out. (Needed for some Powerpoint PDFs)\n");
-    printf("-s transparent             Make the SWF transparent\n");
-    //deliberately undocumented (for now)
-    //printf("-2                         Put 2 pages into each frame.\n");
-    //printf("-4                         Put 4 pages into each frame.\n");
-    printf("Postprocessing options:\n");
-    printf("-b  --defaultviewer        Link default viewer to the pdf (%s)\n", concatPaths(SWFDIR, "default_viewer.swf"));
-    printf("-l  --defaultpreloader     Link default preloader the pdf (%s)\n", concatPaths(SWFDIR, "default_loader.swf"));
-    printf("-B  --viewer=filename      Link viewer \"name\" to the pdf (\"%s -B\" for list)\n", name);
-    printf("-L  --preloader=filename   Link preloader \"name\" to the pdf (\"%s -L\" for list)\n",name);
+    printf("\n");
+    printf("Usage: %s [-options] file.pdf -o file.swf\n", name);
+    printf("\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-V , --version                 Print version info and exit\n");
+    printf("-o , --output file.swf         Direct output to file.swf. If file.swf contains '%d' (file%d.swf), then each page \n");
+    printf("-p , --pages range             Convert only pages in range with range e.g. 1-20 or 1,4,6,9-11 or\n");
+    printf("-P , --password password       Use password for deciphering the pdf.\n");
+    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");
+    printf("-z , --zlib                    Use Flash 6 (MX) zlib compression.\n");
+    printf("-i , --ignore                  Allows pdf2swf to change the draw order of the pdf. This may make the generated\n");
+    printf("-j , --jpegquality quality     Set quality of embedded jpeg pictures to quality. 0 is worst (small), 100 is best (big). (default:85)\n");
+    printf("-s , --set param=value         Set a SWF encoder specific parameter.  See pdf2swf -s help for more information.\n");
+    printf("-w , --samewindow              When converting pdf hyperlinks, don't make the links open a new window. \n");
+    printf("-t , --stop                    Insert a stop() command in each page. \n");
+    printf("-T , --flashversion num        Set Flash Version in the SWF header to num.\n");
+    printf("-F , --fontdir directory       Add directory to the font search path.\n");
+    printf("-b , --defaultviewer           Link a standard viewer to the swf file. \n");
+    printf("-l , --defaultloader           Link a standard preloader to the swf file which will be displayed while the main swf is loading.\n");
+    printf("-B , --viewer filename         Link viewer filename to the swf file. \n");
+    printf("-L , --preloader filename      Link preloader filename to the swf file. \n");
+    printf("-q , --quiet                   Suppress normal messages.  Use -qq to suppress warnings, also.\n");
+    printf("-S , --shapes                  Don't use SWF Fonts, but store everything as shape.\n");
+    printf("-f , --fonts                   Store full fonts in SWF. (Don't reduce to used characters).\n");
+    printf("-G , --flatten                 Remove as many clip layers from file as possible. \n");
+    printf("-I , --info                    Don't do actual conversion, just display a list of all pages in the PDF.\n");
+    printf("-Q , --maxtime n               Abort conversion after n seconds. Only available on Unix.\n");
+    printf("\n");
 }
 
 float getRate(char*filename)
