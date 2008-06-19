@@ -133,8 +133,8 @@ char* swf_TagGetName(TAG*tag)
             return "PLACEOBJECT";
         case ST_REMOVEOBJECT:
             return "REMOVEOBJECT";
-        case ST_DEFINEBITS:
-            return "DEFINEBITS";
+        case ST_DEFINEBITSJPEG:
+            return "DEFINEBITSJPEG";
         case ST_DEFINEBUTTON:
             return "DEFINEBUTTON";
         case ST_JPEGTABLES:
