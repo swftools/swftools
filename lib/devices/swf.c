@@ -43,6 +43,7 @@
 #include "../art/libart.h"
 #include "swf.h"
 #include "../gfxpoly.h"
+#include "../png.h"
 
 #define CHARDATAMAX 8192
 #define CHARMIDX 0
@@ -80,6 +81,7 @@ typedef struct _swfoutput_internal
     int config_opennewwindow;
     int config_ignoredraworder;
     int config_drawonlyshapes;
+    int config_frameresets;
     int config_linknameurl;
     int config_jpegquality;
     int config_storeallcharacters;
@@ -115,6 +117,7 @@ typedef struct _swfoutput_internal
 
     TAG *tag;
     int currentswfid;
+    int startids;
     int depth;
     int startdepth;
     int linewidth;
@@ -140,12 +143,14 @@ typedef struct _swfoutput_internal
     int clippos;
 
     /* image cache */
+    /*
     int pic_xids[1024];
     int pic_yids[1024];
     int pic_ids[1024];
     int pic_width[1024];
     int pic_height[1024];
     int picpos;
+    */
 
     int frameno;
     int lastframeno;
@@ -1011,6 +1016,14 @@ void swf_endframe(gfxdevice_t*dev)
         swf_SetU16(i->tag,i->depth);
     }
     i->depth = i->startdepth;
+
+    if(i->config_frameresets) {
+	for(i->currentswfid;i->currentswfid>i->startids;i->currentswfid--) {
+	    i->tag = swf_InsertTag(i->tag,ST_FREECHARACTER);
+	    swf_SetU16(i->tag,i->currentswfid);
+	}
+	i->currentswfid = i->startids;
+    }
 }
 
 static void setBackground(gfxdevice_t*dev, int x1, int y1, int x2, int y2)
@@ -1092,6 +1105,7 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     swf_SetRGB(i->tag,&rgb);
 
     i->startdepth = i->depth = 0;
+    i->startids = i->currentswfid = 0;
 }
 
 static void startshape(gfxdevice_t*dev)
@@ -1907,6 +1921,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
 	i->config_bboxvars = atoi(value);
+    } else if(!strcmp(name, "frameresets")) {
+	i->config_frameresets = atoi(value);
     } else if(!strcmp(name, "showclipshapes")) {
 	i->config_showclipshapes = atoi(value);
     } else if(!strcmp(name, "reordertags")) {
@@ -2002,10 +2018,12 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
         printf("insertstop                  put an ActionScript \"STOP\" tag in every frame\n");
         printf("protect                     add a \"protect\" tag to the file, to prevent loading in the Flash editor\n");
         printf("flashversion=<version>      the SWF fileversion (6)\n");
+        printf("framerate=<fps>		    SWF framerate\n");
         printf("minlinewidth=<width>        convert horizontal/vertical boxes smaller than this width to lines (0.05) \n");
         printf("simpleviewer                Add next/previous buttons to the SWF\n");
         printf("animate                     insert a showframe tag after each placeobject (animate draw order of PDF files)\n");
         printf("jpegquality=<quality>       set compression quality of jpeg images\n");
+	printf("splinequality=<value>       Set the quality of spline convertion to value (0-100, default: 100).\n");
     } else {
 	return 0;
     }
@@ -2117,6 +2135,7 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
 
     if(cacheid<=0) {
 	bitid = getNewID(dev);
+
 	i->tag = swf_AddImage(i->tag, bitid, mem, sizex, sizey, i->config_jpegquality);
 	addImageToCache(dev, mem, sizex, sizey);
     } else {
