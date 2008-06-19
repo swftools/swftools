@@ -596,13 +596,6 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_fontquality = atof(value);
 	if(this->config_fontquality<=1)
 	    this->config_fontquality=1;
-    } else if(!strcmp(key,"help")) {
-	printf("\nPDF layer options:\n");
-	printf("breakonwarning=0/1  Abort conversion if graphic objects are found which\n");
-	printf("                    are not 100%% supported\n");
-	printf("transparent=0/1     Make PDF transparent (alpha background)\n");
-	printf("extrafontdata=0/1   Store Type3 characters and capture characters\n");
-	printf("fontquality=1..100  Curve approximation quality of the fonts\n");
     }
     
 }
