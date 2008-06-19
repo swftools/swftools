@@ -1,8 +1,8 @@
 /* archive.h
 
-   Part of the swftools installer.
+   Part of the rfx installer.
    
-   Copyright (c) 2004 Matthias Kramm <kramm@quiss.org> 
+   Copyright (c) 2004-2008 Matthias Kramm <kramm@quiss.org> 
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

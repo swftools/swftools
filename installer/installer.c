@@ -1,8 +1,8 @@
 /* installer.c
 
-   Part of the swftools installer (Main program).
+   Part of the rfx installer (Main program).
    
-   Copyright (c) 2004 Matthias Kramm <kramm@quiss.org> 
+   Copyright (c) 2004-2008 Matthias Kramm <kramm@quiss.org> 
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,8 +30,6 @@
 #include "archive.h"
 #endif
 #include "utils.h"
-
-#include "../config.h" //for swftools version
 
 static int config_forAllUsers = 0;
 static int config_createLinks = 0;
@@ -95,7 +93,7 @@ static filelist_t* readFileList(char*filename)
     fseek(fi, 0, SEEK_END);
     int len = ftell(fi);
     fseek(fi, 0, SEEK_SET);
-    char*data = malloc(len);
+    char*data = malloc(len+1);
     fread(data, len, 1, fi);
     fclose(fi);
     int t=0;
@@ -164,7 +162,7 @@ static void handleTemplateFile(const char*filename)
     fseek(fi, 0, SEEK_END);
     int len = ftell(fi);
     fseek(fi, 0, SEEK_SET);
-    char*file = malloc(len);
+    char*file = malloc(len+1);
     fread(file, len, 1, fi);
     fclose(fi);
     int l = strlen(install_path);
