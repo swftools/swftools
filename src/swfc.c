@@ -2418,7 +2418,7 @@ int parseTwip(char*str)
     char*p = str;
     int val = 0;
     char ex = 0;
-    char*lastpos = str;
+    char*lastpos = 0;
     while(*p) {
 	if(*p == '+' || *p == '-' || *p == '/' || *p == '*')
 	    ex = *p;
@@ -2440,6 +2440,7 @@ int parseTwip(char*str)
 		v = parseRawTwip(lastpos);
 	    }
 	    *p = save;
+            printf("%f %c= %f\n", val/20.0, ex, v/20.0);
 	    if(ex == '+') 
 		val += v;
 	    else if(ex == '-')
@@ -2454,6 +2455,7 @@ int parseTwip(char*str)
 	    lastpos = 0;
 	}
     }
+    printf("%s -> %.2f\n", str, val/20.0);
     return val;
 }
 
