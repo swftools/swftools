@@ -31,13 +31,6 @@ class GFXOutputState {
     gfxdevice_t* olddevice;
 };
 
-typedef struct _parameter
-{
-    char*name;
-    char*value;
-    struct _parameter*next;
-} parameter_t;
-
 typedef struct _feature
 {
     char*string;
@@ -291,8 +284,6 @@ public:
   double *dashPattern;
   int dashLength;
   double dashStart;
-
-  parameter_t*parameters;
 };
 
 class GFXGlobalParams:  public GlobalParams {
