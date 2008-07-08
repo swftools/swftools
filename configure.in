@@ -21,7 +21,7 @@ AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
 
 PACKAGE=swftools
-VERSION=2008-06-08-1156
+VERSION=2008-06-23-2005
 
 
 # ------------------------------------------------------------------
@@ -259,14 +259,14 @@ RFX_CHECK_FREETYPE
 
 RFX_CHECK_FONTCONFIG
 
-lame_objects= 
+lame_in_source= 
 lame_makefile=
 if test "x${DISABLE_LAME}" = "xtrue"; then
     echo "*" Disabling lame support...
 else
     # old lame code at lib/lame
     if test -f lib/lame/Makefile.in; then
-	lame_objects="lame/psymodel.\$(O) lame/fft.\$(O) lame/newmdct.\$(O) lame/quantize.\$(O) lame/takehiro.\$(O) lame/reservoir.\$(O) lame/quantize_pvt.\$(O) lame/vbrquantize.\$(O) lame/encoder.\$(O) lame/id3tag.\$(O) lame/version.\$(O) lame/tables.\$(O) lame/util.\$(O) lame/bitstream.\$(O) lame/set_get.\$(O) lame/VbrTag.\$(O) lame/lame.\$(O)"
+	lame_in_source='$(lame_objects)'
 	lame_makefile="lib/lame/Makefile"
 	CPPFLAGS="$CPPFLAGS -Ilame"
 	AC_DEFINE([HAVE_LAME], [1], [have/use internal l.a.m.e. mp3 library])
@@ -285,7 +285,7 @@ else
 	fi
     fi
 fi
-AC_SUBST(lame_objects)
+AC_SUBST(lame_in_source)
 
 # ------------------------------------------------------------------
  

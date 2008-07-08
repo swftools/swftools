@@ -7,7 +7,9 @@ DEVICES = devices/swf.$(O) #devices/lrf.$(O) devices/opengl.$(O)
 
 all: librfxswf$(A) libpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A) libocr$(A) $(DEVICES)
 
-lame_objects = @lame_objects@
+lame_objects = lame/psymodel.$(O) lame/fft.$(O) lame/newmdct.$(O) lame/quantize.$(O) lame/takehiro.$(O) lame/reservoir.$(O) lame/quantize_pvt.$(O) lame/vbrquantize.$(O) lame/encoder.$(O) lame/id3tag.$(O) lame/version.$(O) lame/tables.$(O) lame/util.$(O) lame/bitstream.$(O) lame/set_get.$(O) lame/VbrTag.$(O) lame/lame.$(O)
+
+lame_in_source = @lame_in_source@
 
 h263_objects = h.263/dct.$(O) h.263/h263tables.$(O) h.263/swfvideo.$(O)
 actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.swf4.$(O) action/lex.swf5.$(O) action/libming.$(O) action/swf4compiler.tab.$(O) action/swf5compiler.tab.$(O) action/actioncompiler.$(O)
@@ -146,8 +148,8 @@ libgfxswf$(A): devices/swf.$(O) readers/swf2.$(O) readers/image.$(O)
 libgfx$(A): $(gfx_objects) $(art_objects) Makefile
 	$(AR) r libgfx$(A) $(gfx_objects) $(art_objects)
 
-librfxswf$(A): Makefile $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects) Makefile
-	$(AR) r librfxswf$(A) $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_objects) $(h263_objects) $(actioncompiler_objects)
+librfxswf$(A): Makefile $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_in_source) $(h263_objects) $(actioncompiler_objects) Makefile
+	$(AR) r librfxswf$(A) $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_in_source) $(h263_objects) $(actioncompiler_objects)
 	$(RANLIB) librfxswf$(A)
 
 libpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
