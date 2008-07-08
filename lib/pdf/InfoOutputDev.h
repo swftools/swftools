@@ -60,11 +60,13 @@ class InfoOutputDev: public OutputDev
     FontInfo* currentfont;
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
+
     public:
     int x1,y1,x2,y2;
     int num_links;
     int num_images;
     int num_fonts;
+    int num_polygons;
 
     InfoOutputDev(XRef*xref);
     virtual ~InfoOutputDev(); 
@@ -82,6 +84,9 @@ class InfoOutputDev: public OutputDev
     virtual void type3D0(GfxState *state, double wx, double wy);
     virtual void type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury);
     virtual void endType3Char(GfxState *state);
+  
+    virtual void fill(GfxState *state);
+    virtual void eoFill(GfxState *state);
 
     virtual void drawChar(GfxState *state, double x, double y,
 			  double dx, double dy,

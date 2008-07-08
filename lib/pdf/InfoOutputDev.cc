@@ -13,6 +13,7 @@ InfoOutputDev::InfoOutputDev(XRef*xref)
     num_links = 0;
     num_images = 0;
     num_fonts = 0;
+    num_polygons= 0;
     currentfont = 0;
     currentglyph = 0;
     id2font = new GHash(1);
@@ -154,6 +155,17 @@ void InfoOutputDev::updateFont(GfxState *state)
     currentfont->splash_font = splash->getCurrentFont();
     free(id);
 }
+
+void InfoOutputDev::fill(GfxState *state)
+{
+    num_polygons++;
+}
+
+void InfoOutputDev::eoFill(GfxState *state)
+{
+    num_polygons++;
+}
+
 FontInfo* InfoOutputDev::getFont(char*id)
 {
     return (FontInfo*)id2font->lookup(id);
