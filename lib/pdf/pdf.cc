@@ -42,6 +42,7 @@ typedef struct _pdf_doc_internal
     pdf_page_info_t*pages;
     gfxdevice_t* middev;
     char*filename;
+    gfxsource_t*parent;
 } pdf_doc_internal_t;
 
 typedef struct _pdf_page_internal
@@ -52,6 +53,23 @@ typedef struct _dev_output_internal
 {
     CommonOutputDev*outputDev;
 } dev_output_internal_t;
+
+typedef struct _parameter
+{
+    struct _parameter *next;
+    const char*name;
+    const char*value;
+} parameter_t;
+
+typedef struct _gfxsource_internal
+{
+    int config_bitmap_optimizing;
+    int config_full_bitmap_optimizing;
+
+    parameter_t* device_config;
+    parameter_t* device_config_next;
+
+} gfxsource_internal_t;
 
 
 static char* dirseparator()
@@ -97,6 +115,12 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
         dev->setparameter(dev, "protect", "1");
     }
     
+    /* pass global parameters to output device */
+    parameter_t*p = ((gfxsource_internal_t*)pi->parent->internal)->device_config;
+    while(p) {
+	dev->setparameter(dev, p->name, p->value);
+	p = p->next;
+    }
     pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, /*doLinks*/(int)1);
     pi->doc->processLinks((OutputDev*)pi->outputDev, page->nr);
     pi->outputDev->finishPage();
@@ -280,11 +304,32 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
     return 0;
 }
 
-typedef struct _gfxsource_internal
+
+static void storeDeviceParameter(gfxsource_internal_t*i, const char*name, const char*value)
 {
-    int config_bitmap_optimizing;
-    int config_full_bitmap_optimizing;
-} gfxsource_internal_t;
+    parameter_t*o = i->device_config;
+    while(o) {
+        if(!strcmp(name, o->name)) {
+            /* overwrite old value */
+            free((void*)o->value);
+            o->value = strdup(value);
+            return;
+        }
+        o = o->next;
+    }
+    parameter_t*p = new parameter_t();
+    p->name = strdup(name);
+    p->value = strdup(value);
+    p->next = 0;
+
+    if(i->device_config_next) {
+	i->device_config_next->next = p;
+	i->device_config_next = p;
+    } else {
+	i->device_config = p;
+	i->device_config_next = p;
+    }
+}
 
 static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value)
 {
@@ -302,19 +347,19 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	char buf[80];
 	zoom = atof(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	storeDeviceParameter("jpegsubpixels", buf);
+	storeDeviceParameter(i, "jpegsubpixels", buf);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	storeDeviceParameter("ppmsubpixels", buf);
+	storeDeviceParameter(i, "ppmsubpixels", buf);
     } else if(!strcmp(name, "jpegdpi")) {
 	char buf[80];
 	jpeg_dpi = atoi(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	storeDeviceParameter("jpegsubpixels", buf);
+	storeDeviceParameter(i, "jpegsubpixels", buf);
     } else if(!strcmp(name, "ppmdpi")) {
 	char buf[80];
 	ppm_dpi = atoi(value);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	storeDeviceParameter("ppmsubpixels", buf);
+	storeDeviceParameter(i, "ppmsubpixels", buf);
     } else if(!strcmp(name, "poly2bitmap")) {
         i->config_bitmap_optimizing = atoi(value);
     } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
@@ -322,19 +367,15 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
     } else if(!strcmp(name, "multiply")) {
         multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
-	printf("fontdir=<dir>       a directory with additional fonts\n");
-	printf("font=<filename>     an additional font filename\n");
-	printf("pages=<range>       the range of pages to convert (example: pages=1-100,210-)\n");
-	printf("zoom=<dpi>          the resultion (default: 72)\n");
-	printf("bitmap              Convert everything to bitmaps\n");
-	printf("poly2bitmap         Convert graphics to bitmaps\n");
-	printf("languagedir=<dir>   Add an xpdf language directory\n");
-	printf("multiply=<times>    Render everything at <times> the resolution\n");
-	printf("breakonwarning=0/1  Abort conversion if graphic objects are found which\n");
-	printf("                    are not 100%% supported\n");
-	printf("transparent=0/1     Make output file transparent (alpha background)\n");
-	printf("extrafontdata=0/1   Store Type3 characters and capture characters\n");
-	printf("fontquality=1..100  Curve approximation quality of the fonts\n");
+	printf("\nPDF device global parameters:\n");
+	printf("fontdir=<dir>     a directory with additional fonts\n");
+	printf("font=<filename>   an additional font filename\n");
+	printf("pages=<range>     the range of pages to convert (example: pages=1-100,210-)\n");
+	printf("zoom=<dpi>        the resultion (default: 72)\n");
+	printf("languagedir=<dir> Add an xpdf language directory\n");
+	printf("multiply=<times>  Render everything at <times> the resolution\n");
+	printf("poly2bitmap       Convert graphics to bitmaps\n");
+	printf("bitmap            Convert everything to bitmaps\n");
     }	
 }
 
@@ -345,6 +386,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     memset(pdf_doc, 0, sizeof(gfxdocument_t));
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
     memset(i, 0, sizeof(pdf_doc_internal_t));
+    i->parent = src;
     pdf_doc->internal = i;
     char*userPassword=0;
     
@@ -419,6 +461,13 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	i->outputDev = (CommonOutputDev*)outputDev;
     }
 
+    /* pass global parameters to PDF driver*/
+    parameter_t*p = isrc->device_config;
+    while(p) {
+	i->outputDev->setParameter(p->name, p->value);
+	p = p->next;
+    }
+
     i->middev = 0;
     if(multiply>1) {
     	i->middev = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
@@ -441,8 +490,19 @@ void pdf_destroy(gfxsource_t*src)
     if(!src->internal)
 	return;
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
-    free(src->internal);src->internal=0;
     
+    parameter_t*p = i->device_config;
+    while(p) {
+	parameter_t*next = p->next;
+	if(p->name) free((void*)p->name);p->name = 0;
+	if(p->value) free((void*)p->value);p->value =0;
+	p->next = 0;delete p;
+	p = next;
+    }
+    i->device_config=i->device_config_next=0;
+    
+    free(src->internal);src->internal=0;
+
     delete globalParams;globalParams = 0;
     free(src);
 }
