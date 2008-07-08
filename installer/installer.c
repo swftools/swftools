@@ -563,10 +563,14 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    printf("a GUI program exists, creating desktop/startmenu links\n");
 	    config_createLinks = 1;
 	    fclose(fi);
+	} else {
+	    config_createLinks = 0;
+	    config_createStartmenu = 0;
+	    config_createDesktop = 0;
 	}
 	if(!config_createLinks) {
-	    SendDlgItemMessage(hwnd, IDC_STARTMENU, SW_HIDE, 0, 0);
-	    SendDlgItemMessage(hwnd, IDC_DESKTOP, SW_HIDE, 0, 0);
+	    SendDlgItemMessage(hwnd, IDC_STARTMENU, BN_DISABLE, 0, 0);
+	    SendDlgItemMessage(hwnd, IDC_DESKTOP, BN_DISABLE, 0, 0);
 	}
 
 	SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_SETCHECK, config_createStartmenu, 0);
@@ -575,13 +579,17 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     if(message == WM_COMMAND) {
 	if((wParam&0xffff) == IDC_STARTMENU) {
 	    config_createStartmenu = SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_GETCHECK, 0, 0);
-	    config_createStartmenu^=1;
+	    if(config_createLinks) {
+		config_createStartmenu^=1;
+	    }
 	    SendDlgItemMessage(hwnd, IDC_STARTMENU, BM_SETCHECK, config_createStartmenu, 0);
 	    return 0;
 	}
 	if((wParam&0xffff) == IDC_DESKTOP) {
 	    config_createDesktop = SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_GETCHECK, 0, 0);
-	    config_createDesktop^=1;
+	    if(config_createLinks) {
+		config_createDesktop^=1;
+	    }
 	    SendDlgItemMessage(hwnd, IDC_DESKTOP, BM_SETCHECK, config_createDesktop, 0);
 	    return 0;
 	}
