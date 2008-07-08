@@ -137,7 +137,7 @@ static void store_parameter(const char*name, const char*value)
         }
         o = o->next;
     }
-    parameter_t*p = malloc(sizeof(parameter_t));
+    parameter_t*p = (parameter_t*)malloc(sizeof(parameter_t));
     p->name = strdup(name);
     p->value = strdup(value);
     p->next = 0;
@@ -250,9 +250,9 @@ int args_callback_option(char*name,char*val) {
 	    *c = 0;
 	    c++;
 	    store_parameter(s,c);
-	} else if(strcmp(s,"help")) {
+	} else if(!strcmp(s,"help")) {
 	    printf("PDF Parameters:\n");
-	    gfxsource_t*pdf = gfxsource_pdf_create(&pdf);
+	    gfxsource_t*pdf = gfxsource_pdf_create();
 	    pdf->set_parameter(pdf, "help", "");
 	    gfxdevice_t swf;
 	    gfxdevice_swf_init(&swf);
@@ -266,12 +266,12 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "S"))
     {
-	driver->set_parameter(driver, "drawonlyshapes", "1");
+	store_parameter("drawonlyshapes", "1");
 	return 0;
     }
     else if (!strcmp(name, "i"))
     {
-	driver->set_parameter(driver, "ignoredraworder", "1");
+	store_parameter("ignoredraworder", "1");
 	return 0;
     }
 #ifndef WIN32
@@ -287,13 +287,13 @@ int args_callback_option(char*name,char*val) {
 #endif
     else if (!strcmp(name, "z"))
     {
-	driver->set_parameter(driver, "enablezlib", "1");
+	store_parameter("enablezlib", "1");
 	zlib = 1;
 	return 0;
     }
     else if (!strcmp(name, "n"))
     {
-	driver->set_parameter(driver, "opennewwindow", "1");
+	store_parameter("opennewwindow", "1");
 	return 0;
     }
     else if (!strcmp(name, "I"))
@@ -303,27 +303,27 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "t"))
     {
-	driver->set_parameter(driver, "insertstop", "1");
+	store_parameter("insertstop", "1");
 	return 0;
     }
     else if (!strcmp(name, "T"))
     {
 	if(!strcasecmp(val, "mx"))
-	    driver->set_parameter(driver, "flashversion", "6");
+	    store_parameter("flashversion", "6");
 	else
-	    driver->set_parameter(driver, "flashversion", val);
+	    store_parameter("flashversion", val);
 
 	return 1;
     }
     else if (!strcmp(name, "f"))
     {
-	driver->set_parameter(driver, "storeallcharacters", "1");
-	driver->set_parameter(driver, "extrafontdata", "1");
+	store_parameter("storeallcharacters", "1");
+	store_parameter("extrafontdata", "1");
 	return 0;
     }
     else if (!strcmp(name, "w"))
     {
-	driver->set_parameter(driver, "linksopennewwindow", "0");
+	store_parameter("linksopennewwindow", "0");
 	return 0;
     }
     else if (!strcmp(name, "O"))
@@ -335,16 +335,16 @@ int args_callback_option(char*name,char*val) {
 	    ret=1;
 	}
 	if(level>=1)
-	    driver->set_parameter(driver, "poly2bitmap", "1");
+	    store_parameter("poly2bitmap", "1");
 	if(level>=2)
-	    driver->set_parameter(driver, "bitmapfonts", "1");
+	    store_parameter("bitmapfonts", "1");
 	if(level>=3)
-	    driver->set_parameter(driver, "ignoredraworder", "1");
+	    store_parameter("ignoredraworder", "1");
 	return ret;
     }
     else if (!strcmp(name, "G"))
     {
-	//driver->set_parameter(driver, "optimize_polygons", "1");
+	//store_parameter("optimize_polygons", "1");
 	flatten = 1;
 	return 0;
     }
@@ -406,10 +406,10 @@ int args_callback_option(char*name,char*val) {
     else if (!strcmp(name, "j"))
     {
 	if(name[1]) {
-	    driver->set_parameter(driver, "jpegquality", &name[1]);
+	    store_parameter("jpegquality", &name[1]);
 	    return 0;
 	} else {
-	    driver->set_parameter(driver, "jpegquality", val);
+	    store_parameter("jpegquality", val);
 	    return 1;
 	}
     }
@@ -688,7 +688,7 @@ int main(int argn, char *argv[])
 	}
 	msg("<notice> outputting one file per page");
 	one_file_per_page = 1;
-	char*pattern = malloc(strlen(outputname)+2);
+	char*pattern = (char*)malloc(strlen(outputname)+2);
 	/* convert % to %d */
 	int l = u-outputname+1;
 	memcpy(pattern, outputname, l);
