@@ -93,6 +93,9 @@ jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) 
 	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libgfxswf$(A) ../lib/libbase$(A) $(LIBS) 
 	$(STRIP) $@
+swfedit$(E): swfedit.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) swfedit.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
+	$(STRIP) $@
 
 PDF2SWF_OBJ=../lib/libpdf$(A) ../lib/devices/polyops.$(O) ../lib/devices/swf.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
 pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)
