@@ -678,6 +678,10 @@ U32 reader_readU32(reader_t*r)
 }
 float reader_readFloat(reader_t*r)
 {
+    float f;
+    r->read(r, &f, 4);
+    return f;
+
     U8 b1=0,b2=0,b3=0,b4=0;
     r->read(r, &b1, 1);
     r->read(r, &b2, 1);
@@ -743,7 +747,10 @@ void writer_writeU32(writer_t*w, unsigned long v)
 }
 void writer_writeFloat(writer_t*w, float f)
 {
-    unsigned long v = *(unsigned long*)&f;
+    w->write(w, &f, 4);
+    return;
+
+    unsigned v = *(unsigned*)&f;
     unsigned char b1 = v;
     unsigned char b2 = v>>8;
     unsigned char b3 = v>>16;
