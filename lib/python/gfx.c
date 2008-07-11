@@ -23,11 +23,16 @@
 #include <Python.h>
 #include <stdarg.h>
 #undef HAVE_STAT
+#include "../../config.h"
+#include "../gfxtools.h"
 #include "../devices/swf.h"
 #include "../devices/render.h"
 #include "../devices/ocr.h"
 #include "../devices/rescale.h"
 #include "../devices/text.h"
+#ifdef USE_OPENGL
+#include "../devices/opengl.h"
+#endif
 #include "../pdf/pdf.h"
 #include "../readers/swf.h"
 #include "../readers/image.h"
@@ -125,6 +130,182 @@ static PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwa
     self->output_device->startpage(self->output_device, width, height);
     return PY_NONE;
 }
+
+/* as the definition of the python image type comes from another module (not
+   included here, reproduce the necessary structure and extract the image
+   without using the type definition */
+typedef struct {
+    PyObject_HEAD
+    gfximage_t*image;
+    PyObject* strrepr;
+} ImageObject;
+static gfximage_t*toImage(PyObject*_bitmap)
+{
+    if(!_bitmap || !_bitmap->ob_type->tp_name || strcmp(_bitmap->ob_type->tp_name, "Image")) {
+        return PY_ERROR("Second argument to fillbitmap must be an image");
+    }
+    ImageObject*bitmap = (ImageObject*)_bitmap;
+    return bitmap->image;
+}
+
+static gfxline_t*toLine(PyObject*_line)
+{
+    int t;
+    int num = PyList_Size(_line);
+    gfxline_t first;
+    first.next = 0;
+    gfxline_t*last=&first;
+    for(t=0;t<num;t++) {
+        PyObject*p= PySequence_GetItem(_line, t);
+        if(!PyTuple_Check(p))
+            return PY_ERROR("each point must be a tuple");
+        PyObject*_type = PyTuple_GetItem(p, 0);
+        if(!PyString_Check(_type))
+            return PY_ERROR("point tuples must start with a string");
+        char*type = PyString_AsString(_type);
+        int s;
+        int size = PyTuple_Size(p);
+        for(s=1;s<size;s++) {
+            if(!PyFloat_Check(PyTuple_GetItem(p,s))) {
+                return PY_ERROR("coordinates must be floats");
+            }
+        }
+        gfxline_t*l = malloc(sizeof(gfxline_t));
+        memset(l, 0, sizeof(gfxline_t));
+        last->next = l;
+        last = l;
+        if(type[0]=='m') {
+            l->type = gfx_moveTo;
+            if(size!=3)
+                return PY_ERROR("need 2 values for move");
+            l->x = PyFloat_AsDouble(PyTuple_GetItem(p, 1));
+            l->y = PyFloat_AsDouble(PyTuple_GetItem(p, 2));
+        } else if(type[0]=='l') {
+            l->type = gfx_lineTo;
+            if(size!=3)
+                return PY_ERROR("need 2 values for line");
+            l->x = PyFloat_AsDouble(PyTuple_GetItem(p, 1));
+            l->y = PyFloat_AsDouble(PyTuple_GetItem(p, 2));
+        } else if(type[0]=='s') {
+            l->type = gfx_splineTo;
+            if(size!=5)
+                return PY_ERROR("need 4 values for spline");
+            l->x = PyFloat_AsDouble(PyTuple_GetItem(p, 1));
+            l->y = PyFloat_AsDouble(PyTuple_GetItem(p, 2));
+            l->sx = PyFloat_AsDouble(PyTuple_GetItem(p, 3));
+            l->sy = PyFloat_AsDouble(PyTuple_GetItem(p, 4));
+        } else {
+            PY_ERROR("Unknown line code '%s'", l->type);
+        }
+    }
+    return first.next;
+}
+
+PyDoc_STRVAR(output_fillbitmap_doc, \
+"fillbitmap()\n\n"
+"fill a polygon with a bitmap pattern\n"
+);
+static PyObject* output_fillbitmap(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    OutputObject* self = (OutputObject*)_self;
+    PyObject*_line=0;
+    PyObject*_bitmap=0;
+    static char *kwlist[] = {"line", "bitmap", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O", kwlist, &PyList_Type, &_line, &_bitmap))
+	return NULL;
+
+    gfximage_t*image = toImage(_bitmap);
+    if(!image)
+        return 0;
+
+    gfxline_t*line = toLine(_line);
+    if(!line) 
+        return 0;
+
+    /* TODO */
+    gfxmatrix_t m;
+    memset(&m, 0, sizeof(gfxmatrix_t));
+    m.m00 = m.m11 = 1.0;
+
+    self->output_device->fillbitmap(self->output_device, line, image, &m, 0);
+    gfxline_free(line);
+    return PY_NONE;
+}
+
+PyDoc_STRVAR(output_fill_doc, \
+"fill()\n\n"
+"fill a polygon with a color\n"
+);
+static PyObject* output_fill(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    OutputObject* self = (OutputObject*)_self;
+    PyObject*_line=0;
+    PyObject*_bitmap=0;
+    static char *kwlist[] = {"line", "color", NULL};
+
+    PyObject* color=0;
+
+    int a=255,r=0,g=0,b=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O", kwlist, &PyList_Type, &_line, &color))
+	return NULL;
+
+    if(!PyArg_ParseTuple(color, "iiii:color",  &a, &r, &g, &b)) {
+        return NULL;
+    }
+
+    gfxcolor_t c;
+    c.r = r; c.g = g; c.b = b; c.a = a;
+
+    gfxline_t*line = toLine(_line);
+    if(!line) 
+        return 0;
+
+    /* TODO */
+    gfxmatrix_t m;
+    memset(&m, 0, sizeof(gfxmatrix_t));
+    m.m00 = m.m11 = 1.0;
+
+    self->output_device->fill(self->output_device, line, &c);
+    gfxline_free(line);
+    return PY_NONE;
+}
+
+PyDoc_STRVAR(output_stroke_doc, \
+"stroke()\n\n"
+"stroke a polygon with a color\n"
+);
+static PyObject* output_stroke(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    OutputObject* self = (OutputObject*)_self;
+    PyObject*_line=0;
+    PyObject*_bitmap=0;
+    static char *kwlist[] = {"line", "width", "color", NULL};
+
+    PyObject* color=0;
+
+    int a=255,r=0,g=0,b=0;
+    double width = 1.0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!fO", kwlist, &PyList_Type, &_line, &width, &color))
+	return NULL;
+
+    if(!PyArg_ParseTuple(color, "iiii:color",  &a, &r, &g, &b)) {
+        return NULL;
+    }
+
+    gfxcolor_t c;
+    c.r = r; c.g = g; c.b = b; c.a = a;
+
+    gfxline_t*line = toLine(_line);
+    if(!line) 
+        return 0;
+
+    self->output_device->stroke(self->output_device, line, width, &c, 
+            /*TODO*/ gfx_capRound, gfx_joinRound, 0.0);
+    gfxline_free(line);
+    return PY_NONE;
+}
+
 PyDoc_STRVAR(output_endpage_doc, \
 "endpage()\n\n"
 "Ends a page in the output device. This function should be called\n"
@@ -229,10 +410,30 @@ static PyObject* f_createPlainText(PyObject* parent, PyObject* args, PyObject* k
     return (PyObject*)self;
 }
 
+#ifdef USE_OPENGL
+PyDoc_STRVAR(f_createOpenGL_doc, \
+"OpenGL()\n\n"
+"Creates a device which renders everything to OpenGL.\n"
+"Can be used for desktop display and debugging.\n"
+"This device is not available on all systems.\n"
+);
+static PyObject* f_createOpenGL(PyObject* parent, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
+	return NULL;
+    OutputObject*self = PyObject_New(OutputObject, &OutputClass);
+    
+    self->output_device = malloc(sizeof(gfxdevice_t));
+    gfxdevice_opengl_init(self->output_device);
+    return (PyObject*)self;
+}
+#endif
+
 static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
 {
     OutputObject*self = (OutputObject*)dev->internal;
-    
+
     if(!PyObject_HasAttrString(self->pyobj, function))
         return PY_NONE;
 
@@ -253,10 +454,10 @@ static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*forma
             void* ptr = va_arg(ap, void*);
             gfxcolor_t*col = (gfxcolor_t*)ptr;
             PyObject*colobj = PyTuple_New(4);
-            PyTuple_SetItem(colobj, 0, PyInt_FromLong(col->r));
-            PyTuple_SetItem(colobj, 1, PyInt_FromLong(col->g));
-            PyTuple_SetItem(colobj, 2, PyInt_FromLong(col->b));
-            PyTuple_SetItem(colobj, 3, PyInt_FromLong(col->a));
+            PyTuple_SetItem(colobj, 0, PyInt_FromLong(col->a));
+            PyTuple_SetItem(colobj, 1, PyInt_FromLong(col->r));
+            PyTuple_SetItem(colobj, 2, PyInt_FromLong(col->g));
+            PyTuple_SetItem(colobj, 3, PyInt_FromLong(col->b));
             PyTuple_SetItem(tuple, pos, colobj);
         } else if(p=='l') {
             void* ptr = va_arg(ap, void*);
@@ -413,6 +614,7 @@ static PyObject* f_createPassThrough(PyObject* parent, PyObject* args, PyObject*
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
    
     self->pyobj = obj;
+    Py_INCREF(obj);
     self->output_device = malloc(sizeof(gfxdevice_t));
     memset(self->output_device, 0, sizeof(gfxdevice_t));
     self->output_device->name = strdup("passthrough");
@@ -440,6 +642,9 @@ static PyMethodDef output_methods[] =
     /* Output functions */
     {"save", (PyCFunction)output_save, METH_KEYWORDS, output_save_doc},
     {"startpage", (PyCFunction)output_startpage, METH_KEYWORDS, output_startpage_doc},
+    {"fill", (PyCFunction)output_fill, METH_KEYWORDS, output_fill_doc},
+    {"fillbitmap", (PyCFunction)output_fillbitmap, METH_KEYWORDS, output_fillbitmap_doc},
+    {"stroke", (PyCFunction)output_stroke, METH_KEYWORDS, output_stroke_doc},
     {"endpage", (PyCFunction)output_endpage, METH_KEYWORDS, output_endpage_doc},
     {"setparameter", (PyCFunction)output_setparameter, METH_KEYWORDS, output_setparameter_doc},
     {0,0,0,0}
@@ -974,6 +1179,9 @@ static PyMethodDef pdf2swf_methods[] =
     {"ImageList", (PyCFunction)f_createImageList, METH_KEYWORDS, f_createImageList_doc},
     {"PlainText", (PyCFunction)f_createPlainText, METH_KEYWORDS, f_createPlainText_doc},
     {"PassThrough", (PyCFunction)f_createPassThrough, METH_KEYWORDS, f_createPassThrough_doc},
+#ifdef USE_OPENGL
+    {"OpenGL", (PyCFunction)f_createOpenGL, METH_KEYWORDS, f_createOpenGL_doc},
+#endif
 
     /* sentinel */
     {0, 0, 0, 0}
