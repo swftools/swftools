@@ -229,6 +229,7 @@ dnl Checks for header files.
  AC_CONFIG_HEADER(config.h)
  AC_HEADER_DIRENT
  AC_HEADER_STDC
+
  AC_CHECK_HEADERS(zlib.h gif_lib.h io.h wchar.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h sys/time.h sys/resource.h)
 
 AC_DEFINE_UNQUOTED([PACKAGE], ["$PACKAGE"], [Name of package])
@@ -258,6 +259,12 @@ AC_CHECK_SIZEOF([unsigned long long])
 RFX_CHECK_FREETYPE
 
 RFX_CHECK_FONTCONFIG
+
+RFX_CHECK_OPENGL
+if test "$HAVE_OPENGL";then
+    DEVICE_OPENGL='devices/opengl.$(O)'
+    AC_SUBST(DEVICE_OPENGL)
+fi
 
 lame_in_source= 
 lame_makefile=
@@ -469,6 +476,14 @@ AH_BOTTOM([
 
 #ifdef HAVE_FT2BUILD_H
 #define HAVE_FREETYPE_H 1
+#endif
+
+#ifdef HAVE_GL_GL_H
+#ifdef HAVE_GL_GLUT_H
+#ifdef HAVE_OPENGL
+#define USE_OPENGL
+#endif
+#endif
 #endif
 
 #endif // __config_h__
