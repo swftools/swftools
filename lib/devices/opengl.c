@@ -77,7 +77,7 @@ void CALLBACK beginCallback(GLenum which)
 }
 void CALLBACK endCallback(void)
 {
-   glEnd();
+    glEnd();
 }
 void CALLBACK vertexCallback(GLvoid *vertex)
 {
@@ -101,14 +101,18 @@ void CALLBACK vertexCallbackTex(GLvoid *vertex)
 }
 void CALLBACK combineCallbackTex(GLdouble coords[3], GLdouble *data[4], GLfloat w[4], GLdouble **out)
 {
-   GLdouble *vertex, *texCoord;
+   GLdouble *vertex;
    vertex = (GLdouble *) malloc(5 * sizeof(GLdouble));
    vertex[0] = coords[0];
    vertex[1] = coords[1];
    vertex[2] = coords[2];
-   texCoord = &vertex[3];
-   vertex[3] = w[0]*data[0][3] + w[1]*data[1][3] + w[2]*data[2][3] + w[3]*data[3][3];
-   vertex[4] = w[0]*data[0][4] + w[1]*data[1][4] + w[2]*data[2][4] + w[3]*data[3][4];
+   if(data[2] && data[3]) {
+       vertex[3] = w[0]*data[0][3] + w[1]*data[1][3] + w[2]*data[2][3] + w[3]*data[3][3];
+       vertex[4] = w[0]*data[0][4] + w[1]*data[1][4] + w[2]*data[2][4] + w[3]*data[3][4];
+   } else {
+       vertex[3] = w[0]*data[0][3] + w[1]*data[1][3];
+       vertex[4] = w[0]*data[0][4] + w[1]*data[1][4];
+   }
    *out = vertex;
 }
 
@@ -262,9 +266,9 @@ void tesselatePolygon(GLUtesselator*tesselator, double z, gfxline_t*line)
 void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 {
     double z;
-    dbg("fill");
+    dbg("fill %02x%02x%02x%02x", color->a, color->r, color->g, color->b);
     internal_t*i = (internal_t*)dev->internal;
-  
+
     glDisable(GL_TEXTURE_2D);
     glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
     
@@ -380,7 +384,7 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
     int len = 0;
     double*xyz=0;
     gfxline_t*l=0;
-    glColor4f(1.0,0,0,1.0);
+    glColor4f(1.0,0,0.7,1.0);
     
     i->currentz ++;
   
