@@ -59,6 +59,20 @@ static void dumpline(FILE*fi, gfxline_t*line)
     }
 }
 
+static void dumpmatrix (FILE*fi, gfxmatrix_t*matrix)
+{
+    fprintf(fi, "| %5.2f %5.2f %5.2f\n", matrix->m00, matrix->m10, matrix->tx);
+    fprintf(fi, "| %5.2f %5.2f %5.2f\n", matrix->m01, matrix->m11, matrix->ty);
+}
+
+static void dumpgradient (FILE*fi, gfxgradient_t*gradient)
+{
+    while(gradient) {
+        fprintf(fi, "pos %f: %02x%02x%02x%02x\n", gradient->pos, gradient->color.r, gradient->color.g, gradient->color.b, gradient->color.a);
+	gradient = gradient->next;
+    }
+}
+
 void file_startclip(struct _gfxdevice*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
@@ -95,6 +109,7 @@ void file_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxm
 {
     internal_t*i = (internal_t*)dev->internal;
     fprintf(i->fi, "fillbitmap\n");
+    dumpmatrix(i->fi, matrix);
     dumpline(i->fi, line);
 }
 
@@ -102,12 +117,15 @@ void file_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*grad
 {
     internal_t*i = (internal_t*)dev->internal;
     fprintf(i->fi, "fillgradient\n");
+    dumpmatrix(i->fi, matrix);
+    dumpgradient(i->fi, gradient);
     dumpline(i->fi, line);
 }
 
 void file_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
+    fprintf(i->fi, "addfont %s\n", font->id);
 }
 
 void file_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
