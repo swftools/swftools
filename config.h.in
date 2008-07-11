@@ -134,6 +134,18 @@
 /* Define if you have the <version.h> header file.  */
 #undef HAVE_VERSION_H
 
+/* Define if you have the OpenGL header files */
+#undef HAVE_GL_GL_H 
+#undef HAVE_GL_GLUT_H
+
+/* Define if you have the OpenGL libraries */
+#undef HAVE_LIBGL
+#undef HAVE_LIBGLU
+#undef HAVE_LIBGLUT
+
+/* Define if OpenGL seems to work */
+#undef HAVE_OPENGL
+
 /* Define if you have the jpeg library (-ljpeg).  */
 /* Define if you have the jpeg library (-ljpeg).  */
 #undef HAVE_LIBJPEG
@@ -208,5 +220,14 @@
 /* #define HAVE_T1LIB */
 /* #endif */
 /* #endif */
+
+#ifdef HAVE_GL_GL_H
+#ifdef HAVE_GL_GLUT_H
+#ifdef HAVE_OPENGL
+#define USE_OPENGL
+#endif
+#endif
+#endif
+
 
 #endif
