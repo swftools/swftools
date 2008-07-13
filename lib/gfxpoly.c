@@ -723,7 +723,6 @@ void write_svp_postscript(const char*filename, ArtSVP*svp)
 {
     if(!svp)
 	return;
-    printf("writing %s\n", filename);
     FILE*fi = fopen(filename, "wb");
     int i, j;
     double xmin=0,ymin=0,xmax=0,ymax=0;
@@ -922,11 +921,6 @@ static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
 //    shear_svp(result, -shear);
 //#endif
 
-
-
-extern const ArtSVP* current_svp;
-extern void art_report_error();
-extern int art_error_in_intersector;
 
 ArtSVP* run_intersector(ArtSVP*svp, ArtWindRule rule)
 {
