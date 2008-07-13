@@ -37,6 +37,9 @@ ${name}/src/swfrender.c \
 ${name}/swfs/simple_viewer.c \
 ${name}/swfs/keyboard_viewer.c \
 ${name}/swfs/PreLoaderTemplate.c \
+${name}/swfs/PreLoaderTemplate.sc \
+${name}/swfs/rfxview.sc \
+${name}/swfs/rfxview.swf \
 ${name}/swfs/swft_loader.swf \
 ${name}/swfs/tessel_loader.swf"
 
