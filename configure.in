@@ -19,6 +19,8 @@ AC_ARG_ENABLE(optimizations,
 [  --enable-optimizations  turn on compiler optimizations (recommended for avi2swf)], OPTIMIZE=true)
 AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
+AC_ARG_WITH([external-libart],
+[  --with-external-libart  use external libart library (at your own risk)], [EXTERNAL_LIBART=true])
 
 PACKAGE=swftools
 VERSION=2008-06-23-2005
@@ -293,6 +295,24 @@ else
     fi
 fi
 AC_SUBST(lame_in_source)
+
+art_in_source='$(art_objects)'
+AC_DEFINE([INTERNAL_LIBART], [1], [use internal libart library])
+
+if test "x$EXTERNAL_LIBART" = "xtrue"; then
+    art_in_source=
+    PKG_CHECK_MODULES([LIBART],[libart-2.0],,[libart_pkgconfig_libart=no])
+    if test "x$libart_pkgconfig_libart" = "xno"; then
+        AC_CHECK_HEADERS([libart_lgpl/libart.h],[
+           AC_CHECK_LIB([art_lgpl_2],[art_new],,[])
+        ],[AC_MSG_ERROR([No libart library found. This library is required.])])
+    else
+	CPPFLAGS="$CPPFLAGS $LIBART_CFLAGS"
+        AC_DEFINE([INTERNAL_LIBART], [0])
+        LIBS="$LIBS $LIBART_LIBS"
+    fi
+fi
+AC_SUBST([art_in_source])
 
 # ------------------------------------------------------------------
  
