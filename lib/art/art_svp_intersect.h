@@ -32,6 +32,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+extern const ArtSVP* current_svp;
+extern void art_report_error();
+extern int art_error_in_intersector;
+
 #ifndef ART_WIND_RULE_DEFINED
 #define ART_WIND_RULE_DEFINED
 typedef enum {
