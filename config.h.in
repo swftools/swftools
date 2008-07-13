@@ -159,6 +159,15 @@
 /* Define if you have the z library (-lz).  */
 #undef HAVE_LIBZ
 
+/* use internal libart library */
+#undef INTERNAL_LIBART
+
+/* Define to 1 if you have the `art_lgpl_2' library (-lart_lgpl_2). */
+#undef HAVE_LIBART_LGPL_2
+
+/* Define to 1 if you have the <libart_lgpl/libart.h> header file. */
+#undef HAVE_LIBART_LGPL_LIBART_H
+
 /* Name of package */
 #undef PACKAGE
 
