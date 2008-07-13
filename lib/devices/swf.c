@@ -40,7 +40,11 @@
 #include "../rfxswf.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#ifdef INTERNAL_LIBART
 #include "../art/libart.h"
+#else
+#include <libart_lgpl/libart.h>
+#endif
 #include "swf.h"
 #include "../gfxpoly.h"
 #include "../png.h"
@@ -1953,7 +1957,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	    i->swf->fileVersion = i->config_flashversion;
 	}
     } else if(!strcmp(name, "framerate")) {
-	i->config_framerate = atoi(value);
+	i->config_framerate = atof(value);
 	if(i->swf) {
 	    i->swf->frameRate = i->config_framerate*0x100;
 	}
