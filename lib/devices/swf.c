@@ -40,11 +40,6 @@
 #include "../rfxswf.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
-#ifdef INTERNAL_LIBART
-#include "../art/libart.h"
-#else
-#include <libart_lgpl/libart.h>
-#endif
 #include "swf.h"
 #include "../gfxpoly.h"
 #include "../png.h"
