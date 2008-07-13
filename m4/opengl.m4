@@ -41,7 +41,7 @@ if { (eval echo opengl.m4:71: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && tes
 else
     echo "configure: failed program was:" >&5
     cat conftest.c >&5
-    HAVE_OPENGL=0
+    HAVE_OPENGL=
     AC_MSG_RESULT(no)
 fi
 rm -f conftest*
