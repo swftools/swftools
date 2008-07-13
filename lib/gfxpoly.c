@@ -25,9 +25,15 @@
 #include "gfxtools.h"
 #include "gfxpoly.h"
 #include "mem.h"
+#ifdef INTERNAL_LIBART
 #include "art/libart.h"
 #include "art/art_svp_intersect.h"
 #include "art/art_svp_ops.h"
+#else
+#include <libart_lgpl/libart.h>
+#include <libart_lgpl/art_svp_intersect.h>
+#include <libart_lgpl/art_svp_ops.h>
+#endif
 #include "log.h"
 #include <assert.h>
 #include <memory.h>
