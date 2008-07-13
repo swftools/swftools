@@ -529,7 +529,13 @@ static double find_shear_value(ArtSVP*svp)
         }
         if(!fail) 
             break;
-        v = lrand48() / 2000000000.0;
+#ifdef HAVE_LRAND48
+	v = lrand48() / 2000000000.0;;
+#elif HAVE_RAND
+        v = rand() / 2000000000.0;
+#else
+#error "no lrand48()/rand() implementation found"
+#endif
         tries++;
     }
     return v;
