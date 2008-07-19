@@ -48,11 +48,11 @@ extern "C" {
 #define NO_MP3
 #endif
 
-typedef         signed long     SFIXED;
-typedef         signed long     SCOORD;
+typedef signed SFIXED;
+typedef signed SCOORD;
 
-#define SCOORD_MAX 0x7fffffff
-#define SCOORD_MIN -0x80000000
+#define SCOORD_MAX 0x7fffffffl
+#define SCOORD_MIN -0x80000000l
 
 // Basic Structures
 
