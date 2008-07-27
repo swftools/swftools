@@ -1100,7 +1100,7 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     i->tag = i->swf->firstTag;
     RGBA rgb;
     rgb.a = rgb.r = rgb.g = rgb.b = 0xff;
-    rgb.r = 0;
+    //rgb.r = 0;
     swf_SetRGB(i->tag,&rgb);
 
     i->startdepth = i->depth = 0;
@@ -1194,7 +1194,7 @@ void cancelshape(gfxdevice_t*dev)
     /* delete old shape tag */
     TAG*todel = i->tag;
     i->tag = i->tag->prev;
-    swf_DeleteTag(todel);
+    swf_DeleteTag(0, todel);
     if(i->shape) {swf_ShapeFree(i->shape);i->shape=0;}
     i->shapeid = -1;
     i->bboxrectpos = -1;
@@ -1319,7 +1319,7 @@ void wipeSWF(SWF*swf)
 	   tag->id != ST_END &&
 	   tag->id != ST_DOACTION &&
 	   tag->id != ST_SHOWFRAME) {
-	    swf_DeleteTag(tag);
+	    swf_DeleteTag(swf, tag);
 	}
 	tag = next;
     }
@@ -1391,7 +1391,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
        and the ST_END- they confuse the flash player  */
     while(tag->id == ST_REMOVEOBJECT2) {
         TAG* prev = tag->prev;
-        swf_DeleteTag(tag);
+        swf_DeleteTag(i->swf, tag);
         tag = prev;
     }
     
@@ -2653,6 +2653,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
     for(t=0;t<font->max_unicode;t++) {
 	swffont->ascii2glyph[t] = font->unicode2glyph[t];
     }
+    SRECT max = {0,0,0,0};
     for(t=0;t<font->num_glyphs;t++) {
 	drawer_t draw;
 	gfxline_t*line;
@@ -2689,13 +2690,11 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	}
 	draw.finish(&draw);
 	swffont->glyph[t].shape = swf_ShapeDrawerToShape(&draw);
-	swffont->layout->bounds[t] = swf_ShapeDrawerGetBBox(&draw);
 
-	int xmax = swffont->layout->bounds[t].xmax / 20;
-	if(xmax>0 && xmax*2 < advance) {
-	    printf("fix bad advance value: bbox=%d, advance=%d (%f)\n", xmax, advance, font->glyphs[t].advance);
-	    advance = xmax;
-	}
+	SRECT bbox = swf_ShapeDrawerGetBBox(&draw);
+	swf_ExpandRect2(&max, &bbox);
+
+	swffont->layout->bounds[t] = bbox;
 	    
 	if(advance<32768/20) {
 	    swffont->glyph[t].advance = advance*20;
@@ -2706,6 +2705,23 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	draw.dealloc(&draw);
 
 	swf_ExpandRect2(&bounds, &swffont->layout->bounds[t]);
+    }
+    for(t=0;t<font->num_glyphs;t++) {
+	SRECT bbox = swffont->layout->bounds[t];
+
+	/* if the glyph doesn't have a bounding box, use the
+	   combined bounding box (necessary e.g. for space characters) */
+	if(!(bbox.xmin|bbox.ymin|bbox.xmax|bbox.ymax)) {
+	    swffont->layout->bounds[t] = bbox = max;
+	}
+	
+	/* check that the advance value is reasonable, by comparing it
+	   with the bounding box */
+	if(bbox.xmax>0 && (bbox.xmax*2 < swffont->glyph[t].advance || !swffont->glyph[t].advance)) {
+	    if(swffont->glyph[t].advance)
+		msg("<warning> fix bad advance value: bbox=%.2f, advance=%.2f\n", bbox.xmax/20.0, swffont->glyph[t].advance/20.0);
+	    swffont->glyph[t].advance = bbox.xmax;
+	}
     }
 
 
