@@ -817,7 +817,7 @@ TAG* removeFromTo(TAG*from, TAG*to)
     while(from!=to) {
 	TAG*next = from->next;
 	if(swf_isAllowedSpriteTag(from))
-	    swf_DeleteTag(from);
+	    swf_DeleteTag(0, from);
 	from = next;
     }
     save->next = 0;
