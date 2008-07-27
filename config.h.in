@@ -146,6 +146,15 @@
 /* Define if OpenGL seems to work */
 #undef HAVE_OPENGL
 
+/* Define if you use poppler */
+#undef HAVE_POPPLER
+
+/* Define to 1 if you have the `poppler' library (-lpoppler). */
+#undef HAVE_LIBPOPPLER
+
+/* Define to 1 if you have the <OutputDev.h> header file. */
+#undef HAVE_OUTPUTDEV_H
+
 /* Define if you have the jpeg library (-ljpeg).  */
 /* Define if you have the jpeg library (-ljpeg).  */
 #undef HAVE_LIBJPEG
@@ -238,5 +247,9 @@
 #endif
 #endif
 
+#ifdef HAVE_POPPLER
+#define GString GooString
+#define GHash GooHash
+#endif
 
 #endif
