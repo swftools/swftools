@@ -207,7 +207,7 @@ public:
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
 				   GBool inlineImg, int mask, int *maskColors,
 				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap);
-  int setGfxFont(char*id, char*name, char*filename, double maxSize, CharCodeToUnicode*ctu);
+
   void strokeGfxline(GfxState *state, gfxline_t*line, int flags);
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
