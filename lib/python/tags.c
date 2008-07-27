@@ -106,7 +106,7 @@ static int po_parse(tag_internals_t*self)
     SWFPLACEOBJECT* swfpo = malloc(sizeof(SWFPLACEOBJECT));
     swf_GetPlaceObject(self->tag, swfpo);
     i->po = swfpo;
-    swf_DeleteTag(self->tag);self->tag = 0;
+    swf_DeleteTag(0, self->tag);self->tag = 0;
 	
     if(i->po->id) {
 	i->character = tagmap_id2obj(self->tagmap, i->po->id);
@@ -420,7 +420,7 @@ static int sprite_setattr(tag_internals_t*self,char*a, PyObject*obj)
 {
     sprite_internal_t*si = (sprite_internal_t*)self->data;
     if(self->tag) {
-	swf_DeleteTag(self->tag);
+	swf_DeleteTag(0, self->tag);
 	self->tag = 0;
     }
     if(!strcmp(a, "tags")) {
@@ -573,7 +573,7 @@ static int image_parse(tag_internals_t*self)
     i->isindexed = 0;
     i->islossless = 1;
 
-    swf_DeleteTag(self->tag);self->tag = 0;
+    swf_DeleteTag(0, self->tag);self->tag = 0;
     return 1;
 }
 static int imagetag_getWidth(PyObject* self)
@@ -684,7 +684,7 @@ static int shape_parse(tag_internals_t*self)
     SHAPE2* shape2 = malloc(sizeof(SHAPE2));
     swf_ParseDefineShape(self->tag, shape2);
     i->shape2 = shape2;
-    swf_DeleteTag(self->tag);self->tag = 0;
+    swf_DeleteTag(0, self->tag);self->tag = 0;
     return 1;
 }
 static void shape_dealloc(tag_internals_t*self)

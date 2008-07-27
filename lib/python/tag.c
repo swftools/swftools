@@ -83,7 +83,7 @@ static void tag_dealloc(PyObject * self)
 	tag->internals.data = 0;
     }
     if(tag->internals.tag) {
-	swf_DeleteTag(tag->internals.tag);
+	swf_DeleteTag(0, tag->internals.tag);
 	tag->internals.tag = 0;
     }
     Py_DECREF(tag->internals.tagmap);
@@ -229,7 +229,7 @@ static int tag_setattr(PyObject * _self, char* a, PyObject * o)
     /* a setattr will almost certainly change the tag data,
        so delete the tag */
     if(self->internals.tag) {
-	swf_DeleteTag(self->internals.tag);
+	swf_DeleteTag(0, self->internals.tag);
 	self->internals.tag = 0;
     }
     if(self->internals.setattr) {

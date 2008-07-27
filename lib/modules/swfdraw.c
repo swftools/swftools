@@ -179,7 +179,7 @@ static void swf_ShapeDrawerClear(drawer_t*draw)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
     if(sdraw->tagfree) {
-	swf_DeleteTag(sdraw->tag);
+	swf_DeleteTag(0, sdraw->tag);
 	sdraw->tag = 0;
     }
     swf_ShapeFree(sdraw->shape);

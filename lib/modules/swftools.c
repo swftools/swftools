@@ -686,7 +686,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 		/* I never saw recursive sprites, but they are (theoretically) 
 		   possible, so better add base here again */
 		enumerateUsedIDs(tag2, tag->pos + base, callback, callback_data);
-		swf_DeleteTag(tag2);
+		swf_DeleteTag(0, tag2);
 		swf_GetBlock(tag, NULL, len);
 	    }
 	} 
@@ -1268,9 +1268,7 @@ void swf_Optimize(SWF*swf)
 		/* we found two identical tags- remap one
 		   of them */
                 remap[id] = swf_GetDefineID(tag2);
-                swf_DeleteTag(tag);
-                if(tag == swf->firstTag)
-                    swf->firstTag = next;
+                swf_DeleteTag(swf, tag);
             }
         } else if(swf_isPseudoDefiningTag(tag)) {
             int id = swf_GetDefineID(tag);
@@ -1278,9 +1276,7 @@ void swf_Optimize(SWF*swf)
                 /* if this tag was remapped, we don't
                    need the helper tag anymore. Discard
                    it. */
-                swf_DeleteTag(tag);
-                if(tag == swf->firstTag)
-                    swf->firstTag = next;
+                swf_DeleteTag(swf, tag);
             }
         }
 

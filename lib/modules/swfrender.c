@@ -23,6 +23,9 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "../rfxswf.h"
 
 /* one bit flag: */
 #define clip_type 0
@@ -362,7 +365,7 @@ void swf_Render_Delete(RENDERBUF*dest)
 
     /* delete line buffers */
     for(y=0;y<i->height2;y++) {
-        swf_DeleteTag(i->lines[y].points);
+        swf_DeleteTag(0, i->lines[y].points);
         i->lines[y].points = 0;
     }
 

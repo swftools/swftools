@@ -45,7 +45,7 @@ PyObject * taglist_new2(TAG*tag)
     while(t) {len++;last=t;t=t->next;}
 
     if(last && last->id==ST_END) {
-	swf_DeleteTag(last); last = 0;
+	swf_DeleteTag(0, last); last = 0;
 	len--;
 	if(len==0) tag = 0;
     }

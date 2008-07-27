@@ -1185,13 +1185,13 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
 	tag1->prev = tag;
 	if(tag) tag->next = tag1;
 	tag = tag1;
-	swf_DeleteTag(tag2);
+	swf_DeleteTag(0, tag2);
     } else {
 	/* use the jpeg version- it's smaller */
 	tag2->prev = tag;
 	if(tag) tag->next = tag2;
 	tag = tag2;
-	swf_DeleteTag(tag1);
+	swf_DeleteTag(0, tag1);
     }
     return tag;
 }
@@ -1260,7 +1260,7 @@ void swf_RemoveJPEGTables(SWF * swf)
     }
     if (swf->firstTag == tables_tag)
 	swf->firstTag = tables_tag->next;
-    swf_DeleteTag(tables_tag);
+    swf_DeleteTag(swf, tables_tag);
 }
 
 typedef struct scale_lookup {
