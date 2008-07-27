@@ -863,15 +863,18 @@ TAG* swf_CopyTag(TAG*tag, TAG*to_copy)
     return tag;
 }
 
-int swf_DeleteTag(TAG * t)
-{ if (!t) return -1;
+TAG* swf_DeleteTag(SWF*swf, TAG * t)
+{
+  TAG*next = t->next;
 
+  if (swf && swf->firstTag==t) 
+    swf->firstTag = t->next;
   if (t->prev) t->prev->next = t->next;
   if (t->next) t->next->prev = t->prev;
 
   if (t->data) rfx_free(t->data);
   rfx_free(t);
-  return 0;
+  return next;
 }
 
 TAG * swf_ReadTag(reader_t*reader, TAG * prev)
@@ -1139,7 +1142,7 @@ void swf_FoldSprite(TAG * t)
     if(t->id == ST_END)
 	level--;
     t = swf_NextTag(t);
-    swf_DeleteTag(tmp);
+    swf_DeleteTag(0, tmp);
   } 
   while (t && level);
   if(level)
