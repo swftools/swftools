@@ -1102,7 +1102,7 @@ ActionTAG* swf_ActionCompile(const char* source, int version)
     rfx_free(buffer);
 
     a = swf_ActionGet(tag);
-    swf_DeleteTag(tag);
+    swf_DeleteTag(0, tag);
     return a;
 }
 
