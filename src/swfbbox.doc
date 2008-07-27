@@ -14,9 +14,9 @@ It can also dump the corners of the bounding boxes of all frames of a movie.
 -B, --newbbox
     Show recalculated (optimized/expanded) bounding box
 -e, --expand
-    Write out a new file using the recalculated bounding box
+    Write out a new file using the recalculated header bounding box
 -O, --optimize 
-    Recalculate bounding boxes
+    Recalculate all object bounding boxes (except for the header)
 -S, --swifty
     Print out transformed bounding boxes
 -c, --clip                    
