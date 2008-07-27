@@ -293,6 +293,20 @@ void args_callback_usage(char *name)
     printf("\n");
 }
 
+void removeCommonTags(SWF * swf)
+{
+    TAG*tag = swf->firstTag;
+    while(tag) {
+	if(tag->id == ST_SCENEDESCRIPTION ||
+	   tag->id == ST_FILEATTRIBUTES ||
+	   tag->id == ST_REFLEX) {
+	    tag = swf_DeleteTag(swf, tag);
+	} else {
+	    tag = tag->next;
+	}
+    }
+}
+
 static void makestackmaster(SWF*swf)
 {
     TAG*tag;
@@ -317,6 +331,7 @@ static void makestackmaster(SWF*swf)
 	}
 	close(fi);
 	swf_RemoveJPEGTables(&head);
+	removeCommonTags(&head);
 	msg("<verbose> File %s has bounding box %d:%d:%d:%d\n",
 		slave_filename[t], 
 		head.movieSize.xmin, head.movieSize.ymin,
@@ -443,7 +458,7 @@ void jpeg_assert(SWF*master, SWF*slave)
 	{
 	    // ok, both have jpegtables, but they're identical.
 	    // delete one and don't throw an error
-	    swf_DeleteTag(spos);
+	    swf_DeleteTag(slave, spos);
 	    spos = 0;
 	}
     }
@@ -931,9 +946,7 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     }
     tag = swf_InsertTag(tag, ST_END);
 
-    tag = newswf->firstTag;
-    newswf->firstTag = newswf->firstTag->next; //remove temporary tag
-    swf_DeleteTag(tag);
+    swf_DeleteTag(newswf, tag);
 }
 
 void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
@@ -1045,9 +1058,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|   FLAGS_WRITESPRITE	);
     }
 
-    tag = newswf->firstTag;
-    newswf->firstTag = newswf->firstTag->next; //remove temporary tag
-    swf_DeleteTag(tag);
+    swf_DeleteTag(newswf, tag);
 }
 
 void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
@@ -1186,6 +1197,7 @@ int main(int argn, char *argv[])
 	    exit(1);
 	}
 	swf_RemoveJPEGTables(&master);
+	removeCommonTags(&master);
 	msg("<debug> Read %d bytes from masterfile\n", ret);
 	close(fi);
     }
@@ -1254,6 +1266,7 @@ int main(int argn, char *argv[])
 		msg("<debug> Read %d bytes from slavefile\n", ret);
 		close(fi);
 		swf_RemoveJPEGTables(&slave);
+		removeCommonTags(&slave);
 	    }
 	    else
 	    {
