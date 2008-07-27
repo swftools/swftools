@@ -23,11 +23,24 @@
 
 #include "GfxFont.h"
 #include "OutputDev.h"
-#include "SplashFont.h"
 #include "SplashOutputDev.h"
+#ifdef HAVE_POPPLER
+#include <splash/SplashTypes.h>
+#include <splash/SplashPath.h>
+#include <splash/SplashFont.h>
+#include <splash/SplashFontFile.h>
+#else
+#include "SplashTypes.h"
 #include "SplashPath.h"
+#include "SplashFont.h"
 #include "SplashFontFile.h"
+#endif
+
+#ifdef HAVE_POPPLER
+#include <goo/GooHash.h>
+#else
 #include "GHash.h"
+#endif
 
 struct GlyphInfo
 {

@@ -1,9 +1,18 @@
+#include "config.h"
 #include "Object.h"
-#include "SplashTypes.h"
-#include "SplashOutputDev.h"
-#include "SplashPath.h"
-#include "SplashFontFile.h"
 #include "InfoOutputDev.h"
+#include "SplashOutputDev.h"
+#ifdef HAVE_POPPLER
+#include <splash/SplashTypes.h>
+#include <splash/SplashPath.h>
+#include <splash/SplashFont.h>
+#include <splash/SplashFontFile.h>
+#else
+#include "SplashTypes.h"
+#include "SplashPath.h"
+#include "SplashFont.h"
+#include "SplashFontFile.h"
+#endif
 #include "GfxState.h"
 #include "../log.h"
 #include <math.h>

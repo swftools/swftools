@@ -38,9 +38,13 @@
 #endif
 //xpdf header files
 #include "config.h"
+#ifdef HAVE_POPPLER
+#include <goo/GooString.h>
+#include <goo/gfile.h>
+#else
 #include "gfile.h"
 #include "GString.h"
-#include "gmem.h"
+#endif
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -54,12 +58,8 @@
 #include "OutputDev.h"
 #include "GfxFont.h"
 #include "GfxState.h"
-#include "CharCodeToUnicode.h"
 #include "NameToUnicodeTable.h"
 #include "GlobalParams.h"
-#include "FoFiType1C.h"
-#include "FoFiTrueType.h"
-#include "GHash.h"
 #include "GFXOutputDev.h"
 
 //  swftools header files
