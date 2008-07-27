@@ -189,6 +189,8 @@ ${name}/lib/devices/polyops.c \
 ${name}/lib/devices/polyops.h \
 ${name}/lib/devices/record.c \
 ${name}/lib/devices/record.h \
+${name}/lib/devices/opengl.c \
+${name}/lib/devices/opengl.h \
 ${name}/lib/devices/rescale.c \
 ${name}/lib/devices/rescale.h \
 ${name}/lib/devices/dummy.c \
