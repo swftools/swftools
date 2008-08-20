@@ -1334,9 +1334,21 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   }
   
   if(swf->fileVersion >= 9) {
+      TAG*tag = swf->firstTag;
+      U32 flags = 0x08; // | 128 = usenetwork, | 16 = hasmetadata | 8 = actionscript3
+      while(tag) {
+	/* FIXME: this doesn't find actionscript in buttons */
+	if(tag->id == ST_DOACTION || tag->id == ST_DOINITACTION) 
+	  has_version_8_action=1;
+	if(tag->id == ST_DOABC) 
+	  has_version_9_action=1;
+	tag = tag->next;
+      }
+      if(has_version_8_action && !has_version_9_action)
+	flags = 0x00;
+
       if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
       {
-	  U32 flags = 0x8; // | 128 = usenetwork, | 16 = Actionscript3 | 8 = hasmetadata
 	  swf_SetU32(swf_InsertTagBefore(swf, swf->firstTag,ST_FILEATTRIBUTES),flags);
       }
   }
