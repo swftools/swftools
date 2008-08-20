@@ -28,6 +28,7 @@
 #define PNG_INLINE_EXPORTS
 #include "../types.h"
 #include "../png.c"
+#include "../log.h"
 #include "render.h"
 
 typedef gfxcolor_t RGBA;
@@ -76,15 +77,16 @@ typedef struct _internal {
     internal_result_t*result_next;
 } internal_t;
 
-typedef enum {filltype_solid,filltype_clip,filltype_bitmap} filltype_t;
+typedef enum {filltype_solid,filltype_clip,filltype_bitmap,filltype_gradient} filltype_t;
 
 typedef struct _fillinfo {
-    filltype_t type; //0=solid,1=clip
+    filltype_t type;
     gfxcolor_t*color;
     gfximage_t*image;
     gfxmatrix_t*matrix;
     gfxcxform_t*cxform;
-    char clip;
+    RGBA*gradient;
+    char clip_or_radial;
 } fillinfo_t;
 
 
@@ -333,7 +335,7 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
 	    int yy = (int)(yy1 - x * yinc1);
 	    int ainv;
 
-	    if(info->clip) {
+	    if(info->clip_or_radial) {
 		if(xx<0) xx=0;
 		if(xx>=b->width) xx = b->width-1;
 		if(yy<0) yy=0;
@@ -346,6 +348,61 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
 	    }
 
 	    col = b->data[yy*b->width+xx];
+	    ainv = 255-col.a;
+
+	    /* needs bitmap with premultiplied alpha */
+	    line[x].r = ((line[x].r*ainv)>>8)+col.r;
+	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
+	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
+	    line[x].a = 255;
+	}
+	bit <<= 1;
+	if(!bit) {
+	    bit = 1;bitpos++;
+	}
+    } while(++x<x2);
+}
+
+static void fill_line_gradient(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t*info)
+{
+    int x = x1;
+
+    gfxmatrix_t*m = info->matrix;
+    RGBA*g= info->gradient;
+    
+    double det = m->m00*m->m11 - m->m01*m->m10;
+    if(fabs(det) < 0.0005) { 
+	/* x direction equals y direction */
+	return;
+    }
+    det = 1.0/det;
+    double xx1 =  (  (-m->tx) * m->m11 - (y - m->ty) * m->m10) * det;
+    double yy1 =  (- (-m->tx) * m->m01 + (y - m->ty) * m->m00) * det;
+    double xinc1 = m->m11 * det;
+    double yinc1 = m->m01 * det;
+    
+    U32 bit = 1<<(x1&31);
+    int bitpos = (x1/32);
+
+    do {
+	if(z[bitpos]&bit) {
+	    RGBA col;
+	    int ainv;
+
+            int pos = 0;
+            if(info->clip_or_radial) {
+                double xx = xx1 + x * xinc1;
+                double yy = yy1 + y * yinc1;
+                double r = sqrt(xx*xx + yy*yy);
+                if(r>1) r = 1;
+                pos = (int)(r*255.999);
+            } else {
+                double r = xx1 + x * xinc1;
+                if(r>1) r = 1;
+                if(r<-1) r = -1;
+                pos = (int)((r+1)*127.999);
+            }
+	    col = g[pos];
 	    ainv = 255-col.a;
 
 	    /* needs bitmap with premultiplied alpha */
@@ -385,7 +442,8 @@ void fill_line(gfxdevice_t*dev, RGBA*line, U32*zline, int y, int startx, int end
 	fill_line_clip(line, zline, y, startx, endx);
     else if(fill->type == filltype_bitmap)
 	fill_line_bitmap(line, zline, y, startx, endx, fill);
-    // etc.
+    else if(fill->type == filltype_gradient)
+	fill_line_gradient(line, zline, y, startx, endx, fill);
 }
 
 void fill(gfxdevice_t*dev, fillinfo_t*fill)
@@ -615,8 +673,6 @@ void render_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    gfxcolor_t black = {255,0,0,0};
-
     gfxmatrix_t m2 = *matrix;
 
     draw_line(dev, line);
@@ -638,10 +694,58 @@ void render_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gr
 {
     internal_t*i = (internal_t*)dev->internal;
     
-    gfxcolor_t black = {255,0,0,0};
+    gfxmatrix_t m2 = *matrix;
 
     draw_line(dev, line);
-    fill_solid(dev, &black);
+
+    RGBA g[256];
+    fillinfo_t info;
+    memset(&info, 0, sizeof(info));
+    info.type = filltype_gradient;
+    info.gradient = g;
+    info.matrix = &m2;
+
+    m2.m00 *= i->zoom; m2.m01 *= i->zoom; m2.tx *= i->zoom;
+    m2.m10 *= i->zoom; m2.m11 *= i->zoom; m2.ty *= i->zoom;
+
+    info.clip_or_radial = type == gfxgradient_radial;
+
+    int pos = 0;
+    gfxcolor_t color = {0,0,0,0};
+    pos=0;
+    while(gradient) {
+        int nextpos = gradient->pos*256;
+        int t;
+        if(nextpos>256) {
+            msg("<error> Invalid gradient- contains values > 1.0");
+            return;
+        }
+        
+        gfxcolor_t nextcolor = gradient->color;
+        if(nextpos!=pos) {
+            double p0 = 1.0;
+            double p1 = 0.0;
+            double step = 1.0/(nextpos-pos);
+            int t;
+            for(t=pos;t<nextpos;t++) {
+                g[t].r = color.r*p0 + nextcolor.r*p1;
+                g[t].g = color.g*p0 + nextcolor.g*p1;
+                g[t].b = color.b*p0 + nextcolor.b*p1;
+                g[t].a = color.a*p0 + nextcolor.a*p1;
+                p0 -= step;
+                p1 += step;
+            }
+        }
+        color=nextcolor;
+
+        pos = nextpos;
+        gradient = gradient->next;
+    }
+    if(pos!=256) {
+        msg("<error> Invalid gradient- doesn't end with 1.0");
+    }
+
+    fill(dev, &info);
 }
 
 void render_addfont(struct _gfxdevice*dev, gfxfont_t*font)
