@@ -195,7 +195,7 @@ static gfxline_t*toLine(PyObject*_line)
             l->sx = PyFloat_AsDouble(PyTuple_GetItem(p, 3));
             l->sy = PyFloat_AsDouble(PyTuple_GetItem(p, 4));
         } else {
-            PY_ERROR("Unknown line code '%s'", l->type);
+            return PY_ERROR("Unknown line code '%s'", type);
         }
     }
     return first.next;
@@ -217,7 +217,7 @@ static PyObject* output_fillbitmap(PyObject* _self, PyObject* args, PyObject* kw
 
     gfximage_t*image = toImage(_bitmap);
     if(!image)
-        return 0;
+        return PY_ERROR("invalid image");
 
     gfxline_t*line = toLine(_line);
     if(!line) 
@@ -285,7 +285,7 @@ static PyObject* output_stroke(PyObject* _self, PyObject* args, PyObject* kwargs
     PyObject* color=0;
 
     int a=255,r=0,g=0,b=0;
-    double width = 1.0;
+    float width = 1.0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!fO", kwlist, &PyList_Type, &_line, &width, &color))
 	return NULL;
 
