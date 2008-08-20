@@ -294,12 +294,13 @@ typedef struct _imgopengl
     gfxhash_t hash;
     GLuint texID;
     int width, height;
+    unsigned char*data;
     struct _imgopengl*next;
 } imgopengl_t;
 
-imgopengl_t*img2texid = 0;
+static imgopengl_t*img2texid = 0;
 
-gfxhash_t gfximage_hash(gfximage_t*img)
+static gfxhash_t gfximage_hash(gfximage_t*img)
 {
     int t;
     int size = img->width*img->height*4;
@@ -309,7 +310,22 @@ gfxhash_t gfximage_hash(gfximage_t*img)
     return hash;
 }
 
-imgopengl_t*addTexture(gfximage_t*img)
+static void delTextures()
+{
+    imgopengl_t*i = img2texid;
+    while(i) {
+        imgopengl_t*next = i->next;
+        if(i->data) {
+            glDeleteTextures(1, &i->texID);
+            free(i->data);
+        }
+        memset(i, 0, sizeof(imgopengl_t));
+        free(i);
+        i = next;
+    }
+}
+
+static imgopengl_t*addTexture(gfximage_t*img)
 {
     gfxhash_t hash = gfximage_hash(img);
     imgopengl_t*i = img2texid;
@@ -343,6 +359,7 @@ imgopengl_t*addTexture(gfximage_t*img)
     i->height = newheight;
 
     unsigned char*data = malloc(newwidth*newheight*4);
+    i->data = data;
     int x,y;
     for(y=0;y<img->height;y++) {
 	for(x=0;x<img->width;x++) {
@@ -543,6 +560,7 @@ void opengl_result_destroy(struct _gfxresult*gfx)
 {
     dbg("result:destroy");
     free(gfx);
+    delTextures();
 }
 
 gfxresult_t*opengl_finish(struct _gfxdevice*dev)
