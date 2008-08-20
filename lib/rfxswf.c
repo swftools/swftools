@@ -1296,13 +1296,14 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   writer_t zwriter;
   int fileSize = 0;
   int inSprite = 0;
-  int writer_lastpos = 0;
   int ret;
+  writer_t*original_writer = writer;
+  int writer_lastpos = 0;
     
   if (!swf) return -1;
   if (!writer) return -1; // the caller should provide a nullwriter, not 0, for querying SWF size
 
-  if(writer) writer_lastpos = writer->pos;
+  if(original_writer) writer_lastpos = original_writer->pos;
 
   // Insert REFLEX Tag
 
@@ -1435,7 +1436,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
     if(swf->compressed==1 || (swf->compressed==0 && swf->fileVersion>=6) || swf->compressed==8) {
       if(swf->compressed != 8) {
 	zwriter.finish(&zwriter);
-	return writer->pos - writer_lastpos;
+	return original_writer->pos - writer_lastpos;
       }
       return (int)fileSize;
     } else {
