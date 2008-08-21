@@ -1082,7 +1082,7 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
     zs.opaque = Z_NULL;
     zs.next_out = writebuf;
     zs.avail_out = ZLIB_BUFFER_SIZE;
-    ret = deflateInit(&zs, 9);
+    ret = deflateInit(&zs, 1);
     if (ret != Z_OK) {
 	fprintf(stderr, "error in deflateInit(): %s", zs.msg?zs.msg:"unknown");
 	return;
