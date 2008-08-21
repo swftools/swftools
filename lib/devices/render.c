@@ -566,7 +566,7 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
         } else if(line->type == gfx_lineTo) {
 	    double x1=x*i->zoom,y1=y*i->zoom;
 	    double x3=line->x*i->zoom,y3=line->y*i->zoom;
-	    add_solidline(dev, x1, y1, x3, y3, width * i->multiply);
+	    add_solidline(dev, x1, y1, x3, y3, width * i->zoom);
 	    fill_solid(dev, color);
         } else if(line->type == gfx_splineTo) {
 	    int t,parts;
@@ -587,7 +587,7 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
                 double nx = (double)(t*t*x3 + 2*t*(parts-t)*x2 + (parts-t)*(parts-t)*x1)/(double)(parts*parts);
                 double ny = (double)(t*t*y3 + 2*t*(parts-t)*y2 + (parts-t)*(parts-t)*y1)/(double)(parts*parts);
                 
-		add_solidline(dev, xx, yy, nx, ny, width * i->multiply);
+		add_solidline(dev, xx, yy, nx, ny, width * i->zoom);
 		fill_solid(dev, color);
                 xx = nx;
                 yy = ny;
