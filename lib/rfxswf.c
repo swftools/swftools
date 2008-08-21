@@ -1336,6 +1336,8 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   if(swf->fileVersion >= 9) {
       TAG*tag = swf->firstTag;
       U32 flags = 0x08; // | 128 = usenetwork, | 16 = hasmetadata | 8 = actionscript3
+      int has_version_8_action=0;
+      int has_version_9_action=0;
       while(tag) {
 	/* FIXME: this doesn't find actionscript in buttons */
 	if(tag->id == ST_DOACTION || tag->id == ST_DOINITACTION) 
