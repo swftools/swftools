@@ -679,11 +679,11 @@ int main(int argn, char *argv[])
     if((u = strchr(outputname, '%'))) {
 	if(strchr(u+1, '%') || 
 	   strchr(outputname, '%')!=u)  {
-	    msg("<error> only one %%d allowed in filename\n");
+	    msg("<error> only one %% allowed in filename\n");
 	    return 1;
 	}
 	if(preloader || viewer) {
-	    msg("<error> -b/-l/-B/-L not supported together with %%d in filename\n");
+	    msg("<error> -b/-l/-B/-L not supported together with %% in filename\n");
 	    return 1;
 	}
 	msg("<notice> outputting one file per page");
