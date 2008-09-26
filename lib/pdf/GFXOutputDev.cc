@@ -2079,6 +2079,8 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   GBool inlineImg, int mask, int*maskColors,
 				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap)
 {
+  /* the code in this function is *old*. It's not pretty, but it works. */
+
   double x1,y1,x2,y2,x3,y3,x4,y4;
   ImageStream *imgStr;
   Guchar pixBuf[4];
@@ -2202,10 +2204,6 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	    pic[width*y+x] = buf[0];
       }
       
-      /* the size of the drawn image is added to the identifier
-	 as the same image may require different bitmaps if displayed
-	 at different sizes (due to antialiasing): */
-      int found = -1;
       if(type3active) {
 	  unsigned char*pic2 = 0;
 	  numpalette = 16;
@@ -2263,7 +2261,23 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic[width*y+x].b = (unsigned char)(colToByte(rgb.b));
 	  pic[width*y+x].a = 255;//(U8)(rgb.a * 255 + 0.5);
 	  if(maskbitmap) {
-	      pic[width*y+x].a = maskbitmap[(y*maskHeight/height)*maskWidth+(x*maskWidth/width)];
+              int x1 = x*maskWidth/width;
+              int y1 = y*maskHeight/height;
+              int x2 = (x+1)*maskWidth/width;
+              int y2 = (y+1)*maskHeight/height;
+              int xx,yy;
+              unsigned int alpha=0;
+              unsigned int count=0;
+              for(xx=x1;xx<x2;xx++)
+              for(yy=y1;yy<y2;yy++) {
+                  alpha += maskbitmap[yy*maskWidth+xx];
+                  count ++;
+              }
+              if(count) {
+                pic[width*y+x].a = alpha / count;
+              } else {
+                pic[width*y+x].a = maskbitmap[y1*maskWidth+x1];
+              }
 	  }
 	}
       }
