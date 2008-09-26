@@ -211,7 +211,7 @@ void rescale_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradien
 {
     internal_t*i = (internal_t*)dev->internal;
     gfxline_t*line2 = transformgfxline(i, line);
-    i->out->fillgradient(i->out, line, gradient, type, matrix);
+    i->out->fillgradient(i->out, line2, gradient, type, matrix);
     gfxline_free(line2);
 }
 
@@ -233,7 +233,7 @@ void rescale_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
     internal_t*i = (internal_t*)dev->internal;
     gfxline_t*line2 = transformgfxline(i, line);
-    i->out->drawlink(i->out, line, action);
+    i->out->drawlink(i->out, line2, action);
     gfxline_free(line2);
 }
 
