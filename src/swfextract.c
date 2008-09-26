@@ -940,7 +940,7 @@ void handlelossless(TAG*tag)
 }
 #endif
 
-FILE*mp3file;
+static FILE*mp3file=0;
 void handlesoundstream(TAG*tag)
 {
     char*filename = "output.mp3";
@@ -1183,8 +1183,13 @@ int main (int argc,char ** argv)
     if (found)
 	extractTag(&swf, destfilename);
 
-    if(mp3file)
+    if(mp3file) {
 	fclose(mp3file);
+    } else {
+        if(extractmp3) {
+            msg("<error> Didn't find a soundstream in file");
+        }
+    }
 
     swf_FreeTags(&swf);
     return 0;
