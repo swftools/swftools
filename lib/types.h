@@ -1,6 +1,8 @@
 #ifndef __rfxtypes_h__
 #define __rfxtypes_h__
 
+#include "../config.h"
+
 #ifndef TRUE
 #define TRUE (1)
 #endif
@@ -30,6 +32,19 @@
 
 // SWF Types
 
+#if SIZEOF_SIGNED_LONG_LONG != 8
+#error "no way to define 64 bit integer"
+#endif
+#if SIZEOF_SIGNED != 4
+#error "don't know how to define 32 bit integer"
+#endif
+#if SIZEOF_SIGNED_SHORT != 2
+#error "don't know how to define 16 bit integer"
+#endif
+#if SIZEOF_SIGNED_CHAR != 1
+#error "don't know how to define 8 bit integer"
+#endif
+
 typedef         unsigned long long  U64;
 typedef         signed long long    S64;
 typedef         unsigned	    U32;
@@ -38,5 +53,13 @@ typedef         unsigned short      U16;
 typedef         signed short        S16;
 typedef         unsigned char       U8;
 typedef         signed char         S8;
+
+#if SIZEOF_VOIDP == SIZEOF_LONG_LONG
+typedef unsigned long long ptroff_t;
+#elif SIZEOF_VOIDP == SIZEOF_SIGNED
+typedef unsigned ptroff_t;
+#else
+#error "Unknown pointer size"
+#endif
 
 #endif
