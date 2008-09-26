@@ -307,7 +307,7 @@ static int dbg_btm_counter=1;
 
 static const char*STATE_NAME[] = {"parallel", "textabovebitmap", "bitmapabovetext"};
 
-void BitmapOutputDev::checkNewText()
+void BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
 {
     /* called once some new text was drawn on booltextdev, and
        before the same thing is drawn on gfxdev */
@@ -324,7 +324,7 @@ void BitmapOutputDev::checkNewText()
     }
     dbg_btm_counter++;
 
-    if(intersection()) {
+    if(intersection(x1,y1,x2,y2)) {
 	if(layerstate==STATE_PARALLEL) {
 	    /* the new text is above the bitmap. So record that fact,
 	       and also clear the bitmap buffer, so we can check for
@@ -373,7 +373,7 @@ void BitmapOutputDev::checkNewBitmap()
     }
     dbg_btm_counter++;
 
-    if(intersection()) {
+    if(intersection(0,0,0,0)) {
 	if(layerstate==STATE_PARALLEL) {
 	    msg("<verbose> Bitmap is above current text data");
 	    layerstate=STATE_BITMAP_IS_ABOVE;
@@ -409,14 +409,46 @@ void BitmapOutputDev::checkNewBitmap()
 //            break;
 //}
 
-GBool BitmapOutputDev::clip0and1differ()
+GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 {
     if(clip0bitmap->getMode()==splashModeMono1) {
+	if(x2<=x1)
+	    return gFalse;
+	if(x2<0)
+	    return gFalse;
+	if(x1<0)
+	    x1 = 0;
+	if(x1>=clip0bitmap->getWidth())
+	    return gFalse;
+	if(x2>clip0bitmap->getWidth())
+	    x2=clip0bitmap->getWidth();
+
+	if(y2<=y1)
+	    return gFalse;
+	if(y2<0)
+	    return gFalse;
+	if(y1<0)
+	    y1 = 0;
+	if(y1>=clip0bitmap->getHeight())
+	    return gFalse;
+	if(y2>clip0bitmap->getHeight())
+	    y2=clip0bitmap->getHeight();
+	
 	SplashBitmap*clip0 = clip0bitmap;
 	SplashBitmap*clip1 = clip1bitmap;
-	int width8 = (clip0->getWidth()+7)/8;
-	int height = clip0->getHeight();
-	return memcmp(clip0->getDataPtr(), clip1->getDataPtr(), width8*height);
+	int width8 = (clip0bitmap->getWidth()+7)/8;
+	int height = clip0bitmap->getHeight();
+	int x18 = x1/8;
+	int x28 = (x2+7)/8;
+	int y;
+
+	for(y=y1;y<y2;y++) {
+	    unsigned char*row1 = &clip0bitmap->getDataPtr()[width8*y+x18];
+	    unsigned char*row2 = &clip1bitmap->getDataPtr()[width8*y+x28];
+	    if(memcmp(row1, row2, x28-x18))
+		return gTrue;
+	}
+	return gFalse;
     } else {
 	SplashBitmap*clip0 = clip0bitmap;
 	SplashBitmap*clip1 = clip1bitmap;
@@ -440,7 +472,17 @@ static void clearBooleanBitmap(SplashBitmap*btm)
     }
 }
 
-GBool BitmapOutputDev::intersection()
+long long unsigned int compare64(long long unsigned int*data1, long long unsigned int*data2, int len)
+{
+    long long unsigned int c;
+    int t;
+    for(t=0;t<len;t++) {
+        c |= data1[t]&data2[t];
+    }
+    return c;
+}
+
+GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
 {
     SplashBitmap*boolpoly = boolpolybitmap;
     SplashBitmap*booltext = booltextbitmap;
@@ -451,23 +493,32 @@ GBool BitmapOutputDev::intersection()
 
 	Guchar*polypixels = boolpoly->getDataPtr();
 	Guchar*textpixels = booltext->getDataPtr();
-    
+
 	int width8 = (width+7)/8;
 	int height = boolpoly->getHeight();
 	
+	if(x1|y1|x2|y2) {
+	    if(y1>=0 && y1<=y2 && y2<=height) {
+		polypixels+=y1*width8;
+		textpixels+=y1*width8;
+		height=y2-y1;
+	    }
+	}
+	
 	int t;
 	int len = height*width8;
-	unsigned int c=0;
-	if(len & (sizeof(unsigned int)-1)) {
-	    Guchar c2=0;
-	    for(t=0;t<len;t++) {
-		c2 |= polypixels[t]&textpixels[t];
-	    }
-	    c = c2;
-	} else {
-	    len /= sizeof(unsigned int);
-	    for(t=0;t<len;t++) {
-		c |= (((unsigned int*)polypixels)[t]) & (((unsigned int*)textpixels)[t]);
+	unsigned long long int c=0;
+        assert(sizeof(unsigned long long int)==8);
+	{
+            if(((int)polypixels&7) || ((int)textpixels&7)) {
+                //msg("<warning> Non-optimal alignment");
+            }
+            int l2 = len;
+	    len /= sizeof(unsigned long long int);
+            c = compare64((unsigned long long int*)polypixels, (unsigned long long int*)textpixels, len);
+            int l1 = len*sizeof(unsigned long long int);
+	    for(t=l1;t<l2;t++) {
+		c |= (unsigned long long int)(polypixels[t]&textpixels[t]);
 	    }
 	}
 	if(c)
@@ -1053,7 +1104,7 @@ void BitmapOutputDev::endStringOp(GfxState *state)
     clip0dev->endStringOp(state);
     clip1dev->endStringOp(state);
     booltextdev->endStringOp(state);
-    checkNewText();
+    checkNewText(0,0,0,0);
     gfxdev->endStringOp(state);
 }
 void BitmapOutputDev::beginString(GfxState *state, GString *s)
@@ -1070,7 +1121,7 @@ void BitmapOutputDev::endString(GfxState *state)
     clip0dev->endString(state);
     clip1dev->endString(state);
     booltextdev->endString(state);
-    checkNewText();
+    checkNewText(0,0,0,0);
     gfxdev->endString(state);
 }
 
@@ -1099,11 +1150,27 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clearClips();
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+   
+	/* calculate the bbox of this character */
+	int x1 = (int)x, x2 = (int)x+1, y1 = (int)y, y2 = (int)y+1;
+	SplashPath*path = clip0dev->getCurrentFont()->getGlyphPath(code);
+	int t;
+	for(t=0;t<path->getLength();t++) {
+	    double xx,yy;
+	    Guchar f;
+	    path->getPoint(t,&xx,&yy,&f);
+	    xx+=x;
+	    yy+=y;
+	    if(xx<x1) x1=(int)xx;
+	    if(yy<y1) y1=(int)yy;
+	    if(xx>x2) x2=(int)xx+1;
+	    if(yy>y2) y2=(int)yy+1;
+	}
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
 	   text */
-	if(clip0and1differ()) {
+	if(clip0and1differ(x1,y1,x2,y2)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    checkNewBitmap();
@@ -1118,7 +1185,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    checkNewText();
+	    checkNewText(x1,y1,x2,y2);
 	    /* use polygonal output device to do the actual text handling */
 	    gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	}
@@ -1140,7 +1207,8 @@ void BitmapOutputDev::endTextObject(GfxState *state)
     clip0dev->endTextObject(state);
     clip1dev->endTextObject(state);
     booltextdev->endTextObject(state);
-    checkNewText();
+    /* TODO: do this only if rendermode!=0 */
+    checkNewText(0,0,0,0);
     gfxdev->endTextObject(state);
 }
 

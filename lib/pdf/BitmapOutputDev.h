@@ -191,10 +191,10 @@ private:
     void clearBoolTextDev();
     void flushText();
     void flushBitmap();
-    void checkNewText();
+    void checkNewText(int x1, int y1, int x2, int y2);
     void checkNewBitmap();
-    GBool clip0and1differ();
-    GBool intersection();
+    GBool clip0and1differ(int x1,int y1,int x2,int y2);
+    GBool intersection(int x1,int y1,int x2,int y2);
 
     char config_extrafontdata;
 
