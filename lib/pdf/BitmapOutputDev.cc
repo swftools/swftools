@@ -29,6 +29,7 @@
 #include "../log.h"
 #include "../png.h"
 #include "../devices/record.h"
+#include "../types.h"
 
 #define UNKNOWN_BOUNDING_BOX 0,0,0,0
 
@@ -604,7 +605,7 @@ GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
 	unsigned long long int c=0;
         assert(sizeof(unsigned long long int)==8);
 	{
-            if(((int)polypixels&7) || ((int)textpixels&7)) {
+            if(((ptroff_t)polypixels&7) || ((ptroff_t)textpixels&7)) {
                 //msg("<warning> Non-optimal alignment");
             }
             int l2 = len;
