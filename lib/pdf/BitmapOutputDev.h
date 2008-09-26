@@ -187,12 +187,12 @@ public:
     
 private:
     void clearClips();
-    void clearBoolPolyDev();
-    void clearBoolTextDev();
+    void clearBoolPolyDev(int x1, int y1, int x2, int y2);
+    void clearBoolTextDev(int x1, int y1, int x2, int y2);
     void flushText();
     void flushBitmap();
-    void checkNewText(int x1, int y1, int x2, int y2);
-    void checkNewBitmap();
+    GBool checkNewText(int x1, int y1, int x2, int y2);
+    GBool checkNewBitmap(int x1, int y1, int x2, int y2);
     GBool clip0and1differ(int x1,int y1,int x2,int y2);
     GBool intersection(int x1,int y1,int x2,int y2);
 

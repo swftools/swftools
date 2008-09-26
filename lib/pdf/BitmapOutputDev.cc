@@ -30,6 +30,8 @@
 #include "../png.h"
 #include "../devices/record.h"
 
+#define UNKNOWN_BOUNDING_BOX 0,0,0,0
+
 static SplashColor splash_white = {255,255,255};
 static SplashColor splash_black = {0,0,0};
     
@@ -194,6 +196,7 @@ void BitmapOutputDev::flushBitmap()
     
     SplashColorPtr rgb = rgbbitmap->getDataPtr();
     Guchar*alpha = rgbbitmap->getAlphaPtr();
+    Guchar*alpha2 = boolpolybitmap->getAlphaPtr();
 
     int xmin,ymin,xmax,ymax;
     getBitmapBBox(alpha, width, height, &xmin,&ymin,&xmax,&ymax);
@@ -216,7 +219,7 @@ void BitmapOutputDev::flushBitmap()
     //xmin = ymin = 0;
     //xmax = width;
     //ymax = height;
-
+    
     int rangex = xmax-xmin;
     int rangey = ymax-ymin;
     gfximage_t*img = (gfximage_t*)malloc(sizeof(gfximage_t)); 
@@ -228,6 +231,7 @@ void BitmapOutputDev::flushBitmap()
 	SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*sizeof(SplashColor)];
 	gfxcolor_t*out = &img->data[y*rangex];
 	Guchar*ain = &alpha[(y+ymin)*width+xmin];
+	Guchar*ain2 = &alpha2[(y+ymin)*width+xmin];
 	if(this->emptypage) {
 	    for(x=0;x<rangex;x++) {
 		/* the first bitmap on the page doesn't need to have an alpha channel-
@@ -239,13 +243,18 @@ void BitmapOutputDev::flushBitmap()
 	    }
 	} else {
 	    for(x=0;x<rangex;x++) {
+                /*
+                if(!ain2[x]) {
+		    out[x].r = 0;out[x].g = 0;out[x].b = 0;out[x].a = 0;
+                } else {*/
+
 		/* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
 		   have to premultiply alpha (mix background and pixel according to the alpha channel).
 		*/
-		out[x].r = (in[x*3+0]*ain[x])/255;
-		out[x].g = (in[x*3+1]*ain[x])/255;
-		out[x].b = (in[x*3+2]*ain[x])/255;
-		out[x].a = ain[x];
+                out[x].r = (in[x*3+0]*ain[x])/255;
+                out[x].g = (in[x*3+1]*ain[x])/255;
+                out[x].b = (in[x*3+2]*ain[x])/255;
+                out[x].a = ain[x];
 	    }
 	}
     }
@@ -281,6 +290,31 @@ void BitmapOutputDev::flushText()
     this->emptypage = 0;
 }
 
+void writeBitmap(SplashBitmap*bitmap, char*filename)
+{
+    int y,x;
+    
+    int width = bitmap->getWidth();
+    int height = bitmap->getHeight();
+
+    gfxcolor_t*data = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
+
+    for(y=0;y<height;y++) {
+	gfxcolor_t*line = &data[y*width];
+	for(x=0;x<width;x++) {
+            Guchar c[4];
+	    bitmap->getPixel(x,y,c);
+	    int a = bitmap->getAlpha(x,y);
+	    line[x].r = c[0];
+	    line[x].g = c[1];
+	    line[x].b = c[2];
+	    line[x].a = a;
+	}
+    }
+    writePNG(filename, (unsigned char*)data, width, height);
+    free(data);
+}
+
 void writeAlpha(SplashBitmap*bitmap, char*filename)
 {
     int y,x;
@@ -307,7 +341,39 @@ static int dbg_btm_counter=1;
 
 static const char*STATE_NAME[] = {"parallel", "textabovebitmap", "bitmapabovetext"};
 
-void BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
+int checkAlphaSanity(SplashBitmap*boolbtm, SplashBitmap*alphabtm)
+{
+    assert(boolbtm->getWidth() == alphabtm->getWidth());
+    assert(boolbtm->getHeight() == alphabtm->getHeight());
+    if(boolbtm->getMode()==splashModeMono1) {
+        return 1;
+    }
+
+    int width = boolbtm->getWidth();
+    int height = boolbtm->getHeight();
+
+    int bad=0;
+    int x,y;
+    for(y=0;y<height;y++) {
+	for(x=0;x<width;x++) {
+	    int a1 = alphabtm->getAlpha(x,y);
+	    int a2 = boolbtm->getAlpha(x,y);
+            if(a1!=a2) {
+                bad++;
+            }
+	}
+    }
+    double badness = bad/(double)(width*height);
+    if(badness>0.2) {
+        msg("<error> Bitmaps don't correspond: %d out of %d pixels wrong (%.2f%%)", bad, width*height, 
+                badness*100.0);
+        return 0;
+    }
+    msg("<notice> %f", badness);
+    return 1;
+}
+
+GBool BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
 {
     /* called once some new text was drawn on booltextdev, and
        before the same thing is drawn on gfxdev */
@@ -316,14 +382,19 @@ void BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
     
     char filename1[80];
     char filename2[80];
-    sprintf(filename1, "state%dbitmap_afternewtext.png", dbg_btm_counter);
-    sprintf(filename2, "state%dtext_afternewtext.png", dbg_btm_counter);
+    char filename3[80];
+    sprintf(filename1, "state%dboolbitmap_afternewtext.png", dbg_btm_counter);
+    sprintf(filename2, "state%dbooltext_afternewtext.png", dbg_btm_counter);
+    sprintf(filename3, "state%dbitmap_afternewtext.png", dbg_btm_counter);
     if(0) {
+        msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
+	writeBitmap(rgbdev->getBitmap(), filename3);
     }
     dbg_btm_counter++;
 
+    GBool ret = false;
     if(intersection(x1,y1,x2,y2)) {
 	if(layerstate==STATE_PARALLEL) {
 	    /* the new text is above the bitmap. So record that fact,
@@ -331,7 +402,7 @@ void BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
 	       new intersections */
 	    msg("<verbose> Text is above current bitmap/polygon data");
 	    layerstate=STATE_TEXT_IS_ABOVE;
-	    clearBoolPolyDev();
+	    clearBoolPolyDev(x1,y1,x2,y2);
 	} else if(layerstate==STATE_BITMAP_IS_ABOVE) {
 	    /* there's a bitmap above the (old) text. So we need
 	       to flush out that text, and record that the *new*
@@ -343,8 +414,12 @@ void BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
 	    /* clear both bool devices- the text device because
 	       we just dumped out all the (old) text, and the
 	       poly dev so we can check for new intersections */
-	    clearBoolPolyDev();
-	    clearBoolTextDev();
+	    clearBoolPolyDev(x1,y1,x2,y2);
+            /* FIXME this destroys the text pixels we just
+               drew to test for the intersection- however we need
+               those to check for the *new* intersections */
+	    clearBoolTextDev(x1,y1,x2,y2);
+            ret = true;
 	} else {
 	    /* we already know that the current text section is
 	       above the current bitmap section- now just new
@@ -353,42 +428,54 @@ void BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
 	       the polygon bitmap again, so we can check for
 	       new intersections */
 	    msg("<verbose> Text is still above current bitmap/polygon data");
-	    clearBoolPolyDev();
+	    clearBoolPolyDev(x1,y1,x2,y2);
 	}
     } 
+    return ret;
 }
 
-void BitmapOutputDev::checkNewBitmap()
+GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
 {
     /* similar to checkNewText() above, only in reverse */
     msg("<trace> Testing new graphics data against current text data, state=%s, counter=%d\n", STATE_NAME[layerstate], dbg_btm_counter);
 
     char filename1[80];
     char filename2[80];
-    sprintf(filename1, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
-    sprintf(filename2, "state%dtext_afternewgfx.png", dbg_btm_counter);
+    char filename3[80];
+    sprintf(filename1, "state%dboolbitmap_afternewgfx.png", dbg_btm_counter);
+    sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
+    sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
+
     if(0) {
+        msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
+	writeBitmap(rgbdev->getBitmap(), filename3);
     }
     dbg_btm_counter++;
 
-    if(intersection(0,0,0,0)) {
+    GBool ret = false;
+    if(intersection(x1,y1,x2,y2)) {
 	if(layerstate==STATE_PARALLEL) {
 	    msg("<verbose> Bitmap is above current text data");
 	    layerstate=STATE_BITMAP_IS_ABOVE;
-	    clearBoolTextDev();
+	    clearBoolTextDev(x1,y1,x2,y2);
 	} else if(layerstate==STATE_TEXT_IS_ABOVE) {
 	    msg("<verbose> Bitmap is above current text data (which is above some bitmap)");
 	    flushBitmap();
 	    layerstate=STATE_BITMAP_IS_ABOVE;
-	    clearBoolTextDev();
-	    clearBoolPolyDev();
+	    clearBoolTextDev(x1,y1,x2,y2);
+            /* FIXME this destroys the polygon pixels we just
+               drew to test for the intersection- however we need
+               those to check for the *new* intersections */
+	    clearBoolPolyDev(x1,y1,x2,y2);
+            ret = true;
 	} else {
 	    msg("<verbose> Bitmap is still above current text data");
-	    clearBoolTextDev();
+	    clearBoolTextDev(x1,y1,x2,y2);
 	}
     } 
+    return ret;
 }
 
 //void checkNewText() {
@@ -458,8 +545,13 @@ GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
     }
 }
 
-static void clearBooleanBitmap(SplashBitmap*btm)
+static void clearBooleanBitmap(SplashBitmap*btm, int x1, int y1, int x2, int y2)
 {
+    if(!(x1|y1|x2|y2)) {
+        x1 = y1 = 0;
+        x2 = btm->getWidth();
+        y2 = btm->getHeight();
+    }
     if(btm->getMode()==splashModeMono1) {
 	int width8 = (btm->getWidth()+7)/8;
 	int width = btm->getWidth();
@@ -592,8 +684,8 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
 
     /* just in case any device did draw a white background rectangle 
        into the device */
-    clearBoolTextDev();
-    clearBoolPolyDev();
+    clearBoolTextDev(UNKNOWN_BOUNDING_BOX);
+    clearBoolPolyDev(UNKNOWN_BOUNDING_BOX);
 
     this->layerstate = STATE_PARALLEL;
     this->emptypage = 1;
@@ -911,6 +1003,7 @@ void BitmapOutputDev::updateTransfer(GfxState *state)
     clip1dev->updateTransfer(state);
     gfxdev->updateTransfer(state);
 }
+
 void BitmapOutputDev::updateFont(GfxState *state)
 {
     boolpolydev->updateFont(state);
@@ -997,21 +1090,25 @@ void BitmapOutputDev::stroke(GfxState *state)
 {
     msg("<debug> stroke");
     boolpolydev->stroke(state);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->stroke(state);
 }
 void BitmapOutputDev::fill(GfxState *state)
 {
     msg("<debug> fill");
     boolpolydev->fill(state);
-    checkNewBitmap();
+    if(checkNewBitmap(UNKNOWN_BOUNDING_BOX)) {
+        boolpolydev->fill(state);
+    }
     rgbdev->fill(state);
 }
 void BitmapOutputDev::eoFill(GfxState *state)
 {
     msg("<debug> eoFill");
     boolpolydev->eoFill(state);
-    checkNewBitmap();
+    if(checkNewBitmap(UNKNOWN_BOUNDING_BOX)) {
+        boolpolydev->eoFill(state);
+    }
     rgbdev->eoFill(state);
 }
 #if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
@@ -1023,7 +1120,7 @@ void BitmapOutputDev::tilingPatternFill(GfxState *state, Object *str,
 {
     msg("<debug> tilingPatternFill");
     boolpolydev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
 }
 #else
@@ -1035,7 +1132,7 @@ void BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
 {
     msg("<debug> tilingPatternFill");
     boolpolydev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
 }
 #endif
@@ -1044,21 +1141,21 @@ GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *s
 {
     msg("<debug> functionShadedFill");
     boolpolydev->functionShadedFill(state, shading);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     return rgbdev->functionShadedFill(state, shading);
 }
 GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
 {
     msg("<debug> axialShadedFill");
     boolpolydev->axialShadedFill(state, shading);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     return rgbdev->axialShadedFill(state, shading);
 }
 GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
 {
     msg("<debug> radialShadedFill");
     boolpolydev->radialShadedFill(state, shading);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     return rgbdev->radialShadedFill(state, shading);
 }
 
@@ -1104,7 +1201,7 @@ void BitmapOutputDev::endStringOp(GfxState *state)
     clip0dev->endStringOp(state);
     clip1dev->endStringOp(state);
     booltextdev->endStringOp(state);
-    checkNewText(0,0,0,0);
+    checkNewText(UNKNOWN_BOUNDING_BOX);
     gfxdev->endStringOp(state);
 }
 void BitmapOutputDev::beginString(GfxState *state, GString *s)
@@ -1121,31 +1218,37 @@ void BitmapOutputDev::endString(GfxState *state)
     clip0dev->endString(state);
     clip1dev->endString(state);
     booltextdev->endString(state);
-    checkNewText(0,0,0,0);
+    checkNewText(UNKNOWN_BOUNDING_BOX);
     gfxdev->endString(state);
 }
 
 void BitmapOutputDev::clearClips()
 {
-    clearBooleanBitmap(clip0bitmap);
-    clearBooleanBitmap(clip1bitmap);
+    clearBooleanBitmap(clip0bitmap, 0, 0, 0, 0);
+    clearBooleanBitmap(clip1bitmap, 0, 0, 0, 0);
 }
-void BitmapOutputDev::clearBoolPolyDev()
+void BitmapOutputDev::clearBoolPolyDev(int x1, int y1, int x2, int y2)
 {
-    clearBooleanBitmap(boolpolybitmap);
+    clearBooleanBitmap(boolpolybitmap, x1, y1, x2, y2);
 }
-void BitmapOutputDev::clearBoolTextDev()
+void BitmapOutputDev::clearBoolTextDev(int x1, int y1, int x2, int y2)
 {
-    clearBooleanBitmap(booltextbitmap);
+    clearBooleanBitmap(booltextbitmap, x1, y1, x2, y2);
 }
 void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		      double dx, double dy,
 		      double originX, double originY,
 		      CharCode code, int nBytes, Unicode *u, int uLen)
 {
-    msg("<debug> drawChar");
+    msg("<debug> drawChar render=%d", state->getRender());
+
     if(state->getRender()&RENDER_CLIP) {
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+        
+        /* FIXME: do we need these calls? */
+        boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+        booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+        clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else {
 	clearClips();
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
@@ -1173,7 +1276,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	if(clip0and1differ(x1,y1,x2,y2)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    checkNewBitmap();
+	    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    if(config_extrafontdata) {
 		int oldrender = state->getRender();
@@ -1208,7 +1311,7 @@ void BitmapOutputDev::endTextObject(GfxState *state)
     clip1dev->endTextObject(state);
     booltextdev->endTextObject(state);
     /* TODO: do this only if rendermode!=0 */
-    checkNewText(0,0,0,0);
+    checkNewText(UNKNOWN_BOUNDING_BOX);
     gfxdev->endTextObject(state);
 }
 
@@ -1279,7 +1382,7 @@ void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 	str = cpystr->getStream();
     }
     boolpolydev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
     if(cpystr)
 	delete cpystr;
@@ -1295,7 +1398,7 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 	str = cpystr->getStream();
     }
     boolpolydev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
     if(cpystr)
 	delete cpystr;
@@ -1308,7 +1411,7 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 {
     msg("<debug> drawMaskedImage streamkind=%d", str->getKind());
     boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
 }
 void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
@@ -1320,14 +1423,14 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
 {
     msg("<debug> drawSoftMaskedImage %dx%d (%dx%d) streamkind=%d", width, height, maskWidth, maskHeight, str->getKind());
     boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
 }
 void BitmapOutputDev::drawForm(Ref id)
 {
     msg("<debug> drawForm");
     boolpolydev->drawForm(id);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->drawForm(id);
 }
 
@@ -1375,7 +1478,7 @@ void BitmapOutputDev::endTransparencyGroup(GfxState *state)
     GfxState*state2 = state->copy(gTrue);
 #endif
     boolpolydev->endTransparencyGroup(state1);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->endTransparencyGroup(state2);
     delete state1;
     delete state2;
@@ -1385,7 +1488,7 @@ void BitmapOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 {
     msg("<debug> paintTransparencyGroup");
     boolpolydev->paintTransparencyGroup(state,bbox);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->paintTransparencyGroup(state,bbox);
     clip1dev->paintTransparencyGroup(state,bbox);
 }
@@ -1393,7 +1496,7 @@ void BitmapOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Fu
 {
     msg("<debug> setSoftMask");
     boolpolydev->setSoftMask(state, bbox, alpha, transferFunc, backdropColor);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->setSoftMask(state, bbox, alpha, transferFunc, backdropColor);
     clip1dev->setSoftMask(state, bbox, alpha, transferFunc, backdropColor);
 }
@@ -1401,7 +1504,7 @@ void BitmapOutputDev::clearSoftMask(GfxState *state)
 {
     msg("<debug> clearSoftMask");
     boolpolydev->clearSoftMask(state);
-    checkNewBitmap();
+    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     rgbdev->clearSoftMask(state);
     clip1dev->clearSoftMask(state);
 }
