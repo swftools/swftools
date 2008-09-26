@@ -310,7 +310,8 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	swf_GetSimpleShape(tag, &(font->glyph[t].shape));
     }
 
-    swf_SetTagPos(tag, offset[glyphcount]+offset_start);
+    if(glyphcount)
+        swf_SetTagPos(tag, offset[glyphcount]+offset_start);
 
     free(offset);
 
