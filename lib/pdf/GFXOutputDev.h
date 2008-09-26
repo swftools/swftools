@@ -29,6 +29,8 @@ class GFXOutputState {
     gfxresult_t* softmaskrecording; // for soft masks
 
     gfxdevice_t* olddevice;
+
+    GfxState*state;
 };
 
 typedef struct _feature
