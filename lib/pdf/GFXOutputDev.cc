@@ -1960,7 +1960,7 @@ void GFXOutputDev::updateFont(GfxState *state)
 
 unsigned char* antialize(unsigned char*data, int width, int height, int newwidth, int newheight, int palettesize)
 {
-    if((newwidth<2 || newheight<2) ||
+    if((newwidth<1 || newheight<1) ||
        (width<=newwidth || height<=newheight))
 	return 0;
     unsigned char*newdata;
