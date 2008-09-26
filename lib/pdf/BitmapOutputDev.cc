@@ -269,6 +269,8 @@ void BitmapOutputDev::flushBitmap()
     m.ty = ymin;
     m.m00 = m.m11 = 1;
     m.m10 = m.m01 = 0;
+    m.tx -= 0.5;
+    m.ty -= 0.5;
 
     gfxline_t* line = gfxline_makerectangle(xmin, ymin, xmax, ymax);
     dev->fillbitmap(dev, line, img, &m, 0);
