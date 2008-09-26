@@ -125,7 +125,7 @@ struct fontentry {
 
 
 static int verbose = 0;
-static int dbgindent = 0;
+static int dbgindent = 1;
 static void dbg(const char*format, ...)
 {
     char buf[1024];
@@ -1356,7 +1356,8 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",x,y,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
 
     gfxmatrix_t m = this->current_font_matrix;
-    this->transformXY(state, x, y, &m.tx, &m.ty);
+    this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
+    m.tx += originX; m.ty += originY;
 
     if(render == RENDER_FILL || render == RENDER_INVISIBLE) {
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
@@ -1731,38 +1732,47 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 }
 
 void GFXOutputDev::saveState(GfxState *state) {
-    dbg("saveState"); dbgindent+=2;
+    dbg("saveState %08x", state); dbgindent+=2;
 
-    msg("<trace> saveState");
+    msg("<trace> saveState %08x", state);
     updateAll(state);
     if(statepos>=64) {
-      msg("<error> Too many nested states in pdf.");
-      return;
+      msg("<fatal> Too many nested states in pdf.");
+      exit(1);
     }
     statepos ++;
+    states[statepos].state = state;
     states[statepos].createsoftmask = states[statepos-1].createsoftmask;
     states[statepos].transparencygroup = states[statepos-1].transparencygroup;
     states[statepos].clipping = 0;
+    states[statepos].olddevice = 0;
     states[statepos].clipbbox = states[statepos-1].clipbbox;
 };
 
 void GFXOutputDev::restoreState(GfxState *state) {
-  dbgindent-=2; dbg("restoreState");
+  dbgindent-=2; dbg("restoreState %08x", state);
 
   if(statepos==0) {
-      msg("<error> Invalid restoreState");
-      return;
+      msg("<fatal> Invalid restoreState");
+      exit(1);
   }
-  msg("<trace> restoreState%s%s", states[statepos].softmask?" (end softmask)":"",
+  msg("<trace> restoreState %08x%s%s", state,
+	                          states[statepos].softmask?" (end softmask)":"",
 	                          states[statepos].clipping?" (end clipping)":"");
   if(states[statepos].softmask) {
       clearSoftMask(state);
   }
   updateAll(state);
+  
   while(states[statepos].clipping) {
       device->endclip(device);
       states[statepos].clipping--;
   }
+  if(states[statepos].state!=state) {
+      msg("<fatal> bad state nesting");
+      exit(1);
+  }
+  states[statepos].state=0;
   statepos--;
 }
  
@@ -2583,6 +2593,7 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 
     states[statepos].olddevice = this->device;
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
+    dbg("this->device now %08x (old: %08x)", this->device, states[statepos].olddevice);
 
     gfxdevice_record_init(this->device);
     
@@ -2597,11 +2608,21 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
     dbgindent-=2;
     gfxdevice_t*r = this->device;
 
+    dbg("endTransparencyGroup this->device now back to %08x (destroying %08x)", states[statepos].olddevice, this->device);
+    
     this->device = states[statepos].olddevice;
+    if(!this->device) {
+	msg("<fatal> bad state nesting in transparency group- PDF file broken?");
+	/* if these errors occur more often, we should build a seperate
+	   transparency group stack, like xpdf/SplashOutputDev.cc does */
+	restoreState(state);
+	this->device = states[statepos].olddevice;
+    }
+    states[statepos].olddevice = 0;
 
     gfxresult_t*recording = r->finish(r);
     
-    dbg("endTransparencyGroup forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
+    dbg("                     forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
     msg("<verbose> endTransparencyGroup forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
 
     if(states[statepos].createsoftmask) {
@@ -2621,9 +2642,9 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
                                "colordodge","colorburn","hardlight","softlight","difference",
                                "exclusion","hue","saturation","color","luminosity"};
 
-    dbg("paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
+    dbg("paintTransparencyGroup blend=%s softmaskon=%d recording=%08x", blendmodes[state->getBlendMode()], states[statepos].softmask, states[statepos].grouprecording);
     msg("<verbose> paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
-   
+
     if(state->getBlendMode() == gfxBlendNormal)
 	infofeature("transparency groups");
     else {
@@ -2640,6 +2661,7 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 	if(blendmode == gfxBlendMultiply && alpha>200)
 	    alpha = 128;
 	gfxdevice_t ops;
+	dbg("this->device=%08x, this->device->name=%s\n", this->device, this->device->name);
 	gfxdevice_ops_init(&ops, this->device, alpha);
 	gfxresult_record_replay(grouprecording, &ops);
 	ops.finish(&ops);
@@ -2667,7 +2689,11 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
 	infofeature("soft masks");
     else
 	warnfeature("soft masks from alpha channel",0);
-    
+   
+    if(states[statepos].olddevice) {
+	msg("<fatal> Internal error: badly balanced softmasks/transparency groups");
+	exit(1);
+    }
     states[statepos].olddevice = this->device;
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
     gfxdevice_record_init(this->device);
