@@ -470,7 +470,7 @@ GBool BitmapOutputDev::intersection()
 	unsigned long long int c=0;
         assert(sizeof(unsigned long long int)==8);
 	{
-            if((polypixels&7) || (textpixels&7)) {
+            if(((int)polypixels&7) || ((int)textpixels&7)) {
                 msg("<warning> Non-optimal alignment");
             }
             int l2 = len;
