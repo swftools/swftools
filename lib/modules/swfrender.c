@@ -1048,7 +1048,7 @@ typedef struct
     SHAPE2**glyphs;
 } font_t;
 
-enum CHARACTER_TYPE {none_type, shape_type, image_type, text_type, font_type, sprite_type};
+enum CHARACTER_TYPE {none_type, shape_type, image_type, text_type, edittext_type, font_type, sprite_type};
 typedef struct
 {
     TAG*tag;
@@ -1233,6 +1233,12 @@ static void renderFromTag(RENDERBUF*buf, character_t*idtable, TAG*firstTag, MATR
 	    info.buf = buf;
 	    
 	    swf_ParseDefineText(tag, textcallback, &info);
+        } else if(idtable[id].type == edittext_type) {
+	    TAG* tag = idtable[id].tag;
+            U16 flags = swf_GetBits(tag, 16);
+	    if(flags & ET_HASTEXT) {
+                fprintf(stderr, "edittext not supported yet (id %d)\n", id);
+            }
         } else {
             fprintf(stderr, "Unknown/Unsupported Object Type for id %d: %s\n", id, swf_TagGetName(idtable[id].tag));
         }
@@ -1302,6 +1308,8 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
                 idtable[id].type = text_type;
             } else if(tag->id == ST_DEFINESPRITE) {
 		idtable[id].type = sprite_type;
+            } else if(tag->id == ST_DEFINEEDITTEXT) {
+		idtable[id].type = edittext_type;
 	    }
         }
 	tag = tag->next;
