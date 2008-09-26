@@ -766,6 +766,10 @@ void s_buttonaction(int flags, char*action)
     if(flags==0) {
 	return;
     }
+    if(!stackpos || !stack[stackpos-1].tag ||
+            stack[stackpos-1].tag->id != ST_DEFINEBUTTON2) {
+        syntaxerror("Need to be inside a button for .on_* commands");
+    }
     setbuttonrecords(stack[stackpos-1].tag);
 
     a = swf_ActionCompile(text, stack[0].swf->fileVersion);
@@ -2537,7 +2541,6 @@ static double parseExpression(char*s)
 int parseTwip(char*str)
 {
     int v = (int)(parseExpression(str)*20);
-    printf("%s = %.2f\n", str, v/20.0);
     return v;
 }
 
