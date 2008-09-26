@@ -456,7 +456,7 @@ LIBPDF='libpdf$(A)'
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "* Disabling pdf2swf tool..."
   rm -f lib/pdf/Makefile
-  echo all install uninstall clean: > lib/pdf/Makefile
+  echo all install uninstall clean libpdf: > lib/pdf/Makefile
   pdf2swf_makefile=""
   PDF2SWF=
   LIBPDF=
