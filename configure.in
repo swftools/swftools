@@ -255,12 +255,11 @@ dnl Checks for typedefs, structures, and compiler characteristics.
  AC_CHECK_TYPE(boolean,int) #needed for jpeglib
  AC_CHECK_FUNCS(popen wcschr wcsdup mkstemp stat lrand48 rand srand48 srand bcopy bzero time getrusage mallinfo)
 
+AC_CHECK_SIZEOF([signed char])
+AC_CHECK_SIZEOF([signed short])
 AC_CHECK_SIZEOF([signed])
-AC_CHECK_SIZEOF([unsigned])
-AC_CHECK_SIZEOF([signed long])
-AC_CHECK_SIZEOF([unsigned long])
 AC_CHECK_SIZEOF([signed long long])
-AC_CHECK_SIZEOF([unsigned long long])
+AC_CHECK_SIZEOF([void*])
 
 RFX_CHECK_FREETYPE
 
