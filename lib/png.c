@@ -1082,7 +1082,7 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
     zs.opaque = Z_NULL;
     zs.next_out = writebuf;
     zs.avail_out = ZLIB_BUFFER_SIZE;
-    ret = deflateInit(&zs, 1);
+    ret = deflateInit(&zs, Z_NO_COMPRESSION);
     if (ret != Z_OK) {
 	fprintf(stderr, "error in deflateInit(): %s", zs.msg?zs.msg:"unknown");
 	return;
@@ -1100,7 +1100,7 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
 	{
 	    int filtermode;
 	    int bestsize = 0x7fffffff;
-	    for(filtermode=0;filtermode<5;filtermode++) {
+	    for(filtermode=0;filtermode<=0;filtermode++) {
 
 		if(!y && filtermode>=2)
 		    continue; // don't do y direction filters in the first row
