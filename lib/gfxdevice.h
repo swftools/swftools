@@ -35,6 +35,9 @@ typedef struct _gfxfont
     const char*id;
     int num_glyphs;
     int max_unicode;
+    
+    double ascent,descent;
+
     gfxglyph_t*glyphs;
     int* unicode2glyph;
 } gfxfont_t;
