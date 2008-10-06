@@ -299,8 +299,8 @@ int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits)
     return 0;
 }
 
-void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap,
-		      int quality)
+#if defined(HAVE_JPEGLIB)
+void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap, int quality)
 {
     JPEGBITS *jpeg;
     int y;
@@ -318,6 +318,13 @@ void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap,
     rfx_free(scanline);
     swf_SetJPEGBitsFinish(jpeg);
 }
+#else
+void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap, int quality)
+{
+    fprintf(stderr, "Error: swftools compiled without jpeglib\n");
+    return -1;
+}
+#endif
 
 void swf_GetJPEGSize(char *fname, int *width, int *height)
 {
@@ -1158,6 +1165,15 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
     return 0;
 }
 
+#else
+int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int quality)
+{
+    fprintf(stderr, "Error: swftools compiled without jpeglib\n");
+    return -1;
+}
+#endif
+
+
 /* expects mem to be non-premultiplied */
 TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quality)
 {
@@ -1195,8 +1211,6 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
     }
     return tag;
 }
-
-#endif
 
 RGBA *swf_ExtractImage(TAG * tag, int *dwidth, int *dheight)
 {
