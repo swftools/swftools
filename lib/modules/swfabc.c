@@ -916,9 +916,9 @@ abc_file_t*abc_file_new()
     memset(f, 0, sizeof(abc_file_t));
 
     f->ints = dict_new();
-    dict_append(f->ints, 0, (void*)0);
+    dict_append(f->ints, 0, (void*)(ptroff_t)0);
     f->uints = dict_new();
-    dict_append(f->uints, 0, (void*)0);
+    dict_append(f->uints, 0, (void*)(ptroff_t)0);
     f->floats = dict_new();
     dict_append(f->floats, 0, 0);
     f->strings = dict_new();
@@ -973,7 +973,7 @@ void swf_DissassembleABC(TAG*tag)
     for(t=1;t<num_ints;t++) {
         S32 v = swf_GetU30(tag);
         DEBUG printf("int %d) %d\n", t, v);
-        dict_append(pool->ints, 0, (void*)v);
+        dict_append(pool->ints, 0, (void*)(ptroff_t)v);
     }
 
     int num_uints = swf_GetU30(tag);
@@ -981,7 +981,7 @@ void swf_DissassembleABC(TAG*tag)
     for(t=1;t<num_uints;t++) {
         U32 v = swf_GetS30(tag);
         DEBUG printf("uint %d) %d\n", t, v);
-        dict_append(pool->uints, 0, (void*)v);
+        dict_append(pool->uints, 0, (void*)(ptroff_t)v);
     }
     
     int num_floats = swf_GetU30(tag);
@@ -1008,7 +1008,7 @@ void swf_DissassembleABC(TAG*tag)
 	U8 type = swf_GetU8(tag);
 	int namenr = swf_GetU30(tag);
 	const char*name = dict_getstr(pool->strings, namenr);
-	dict_append(pool->namespaces, name, (void*)(int)type);
+	dict_append(pool->namespaces, name, (void*)(ptroff_t)type);
 	int w = 0;
 	DEBUG w=1;
 	if(w) {
@@ -1056,7 +1056,7 @@ void swf_DissassembleABC(TAG*tag)
 	if(type==0x07 || type==0x0d) {
 	    int nr1 = swf_GetU30(tag);
 	    const char*namespace = dict_getstr(pool->namespaces, nr1);
-	    U8 access = (U8)(int)dict_getdata(pool->namespaces, nr1);
+	    U8 access = (U8)(ptroff_t)dict_getdata(pool->namespaces, nr1);
 	    const char*methodname = dict_getstr(pool->strings, swf_GetU30(tag));
 	    DEBUG printf("multiname %d) <%s> %s:%s\n", t, access2str(access), namespace, methodname);
 	    mname = malloc(strlen(namespace)+strlen(methodname)+300);
@@ -1303,13 +1303,13 @@ static int registerNameSpace(abc_file_t*file, U8 access, char*name) {
     int t;
     for(t=0;t<file->namespaces->num;t++) {
 	const char*name2 = dict_getstr(file->namespaces, t);
-	U8 access2 = (U8)(int)dict_getdata(file->namespaces, t);
+	U8 access2 = (U8)(ptroff_t)dict_getdata(file->namespaces, t);
 	if(access == access2 && !strcmp(name, name2)) {
 	    return t;
 	}
     }
     dict_update(file->strings, name, 0);
-    return dict_append(file->namespaces, name, (void*)(int)access);
+    return dict_append(file->namespaces, name, (void*)(ptroff_t)access);
 }
 int abc_RegisterNameSpace(abc_file_t*file, char*name) {
     return registerNameSpace(file, 0x08, name);
@@ -1532,7 +1532,7 @@ void swf_WriteABC(TAG*tag, abc_file_t*abc)
     }
     swf_SetU30(tag, abc->namespaces->num>1?abc->namespaces->num:0);
     for(t=1;t<abc->namespaces->num;t++) {
-	U8 type = (U8)(int)dict_getdata(abc->namespaces, t);
+	U8 type = (U8)(ptroff_t)dict_getdata(abc->namespaces, t);
 	const char*name = dict_getstr(abc->namespaces, t);
 	int i = dict_find(abc->strings, name);
 	if(i<0) {
