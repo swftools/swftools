@@ -2657,7 +2657,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
     for(t=0;t<font->num_glyphs;t++) {
 	drawer_t draw;
 	gfxline_t*line;
-	int advance = 0;
+	double advance = 0;
 	swffont->glyph2ascii[t] = font->glyphs[t].unicode;
 	if(swffont->glyph2ascii[t] == 0xffff || swffont->glyph2ascii[t] == 0x0000) {
 	    /* flash 8 flashtype requires unique unicode IDs for each character.
@@ -2671,7 +2671,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	} else {
 	    swffont->glyphnames[t] = 0;
 	}
-	advance = (int)(font->glyphs[t].advance);
+	advance = font->glyphs[t].advance;
 
 	swf_Shape01DrawerInit(&draw, 0);
 	line = font->glyphs[t].line;
@@ -2696,9 +2696,10 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 
 	swffont->layout->bounds[t] = bbox;
 	    
-	if(advance<32768/20) {
-	    swffont->glyph[t].advance = advance*20;
+	if(advance<32768.0/20) {
+	    swffont->glyph[t].advance = (int)(advance*20);
 	} else {
+	    //msg("<warning> Advance value overflow in glyph %d", t);
 	    swffont->glyph[t].advance = 32767;
 	}
 
@@ -2717,11 +2718,12 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	
 	/* check that the advance value is reasonable, by comparing it
 	   with the bounding box */
-	if(bbox.xmax>0 && (bbox.xmax*2 < swffont->glyph[t].advance || !swffont->glyph[t].advance)) {
+	if(bbox.xmax>0 && (bbox.xmax*10 < swffont->glyph[t].advance || !swffont->glyph[t].advance)) {
 	    if(swffont->glyph[t].advance)
-		msg("<warning> fix bad advance value: bbox=%.2f, advance=%.2f\n", bbox.xmax/20.0, swffont->glyph[t].advance/20.0);
+		msg("<warning> fix bad advance value for char %d: bbox=%.2f, advance=%.2f\n", t, bbox.xmax/20.0, swffont->glyph[t].advance/20.0);
 	    swffont->glyph[t].advance = bbox.xmax;
 	}
+	//swffont->glyph[t].advance = bbox.xmax - bbox.xmin;
     }
 
 
@@ -2739,6 +2741,14 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
     if(swffont->layout->descent < 0)
         swffont->layout->descent = 0;
     swffont->layout->leading = bounds.ymax - bounds.ymin;
+
+    /* if the font has proper ascent/descent values (>0) and those define
+       greater line spacing that what we estimated from the bounding boxes,
+       use the font's parameters */
+    if(font->ascent*20 > swffont->layout->ascent)
+	swffont->layout->ascent = font->ascent*20;
+    if(font->descent*20 > swffont->layout->descent)
+	swffont->layout->descent = font->descent*20;
 
     return swffont;
 }
