@@ -42,18 +42,35 @@
 #include "GHash.h"
 #endif
 
+struct AdvanceSample
+{
+    double advance;
+    struct AdvanceSample*next;
+};
+
 struct GlyphInfo
 {
     SplashPath*path;
     int unicode;
     int glyphid;
+    double advance;
     double x1,y1,x2,y2;
+
+    double estimateAdvance();
+
+    AdvanceSample*advance_samples;
 };
 
 struct FontInfo
 {
     FontInfo();
     ~FontInfo();
+
+    double lastx,lasty;
+    int lastchar;
+
+    double ascender,descender;
+
     void grow(int size);
 
     GfxFont*font;
