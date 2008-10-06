@@ -36,6 +36,8 @@ swfbytes.$(O): swfbytes.c
 	$(C) swfbytes.c -o $@
 font2swf.$(O): font2swf.c
 	$(C) font2swf.c -o $@
+swfedit.$(O): swfedit.c
+	$(C) swfedit.c -o $@
 swfc.$(O): swfc.c parser.h ../lib/q.h
 	$(C) swfc.c -o $@
 swfc-feedback.$(O): swfc-feedback.c swfc-feedback.h
