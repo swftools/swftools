@@ -214,6 +214,8 @@ public:
   void clipToGfxLine(GfxState *state, gfxline_t*line);
   void fillGfxLine(GfxState *state, gfxline_t*line);
 
+  gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src);
+
   void showfeature(const char*feature,char fully, char warn);
   void warnfeature(const char*feature,char fully);
   void infofeature(const char*feature);
@@ -281,6 +283,7 @@ public:
   int config_extrafontdata;
   int config_convertgradients;
   int config_optimize_polygons;
+  int config_bigchar;
   double config_fontquality;
     
   double *dashPattern;

@@ -564,6 +564,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->pages = 0;
     this->pagebuflen = 0;
     this->pagepos = 0;
+    this->config_bigchar=0;
     this->config_convertgradients=1;
     this->config_break_on_warning=0;
     this->config_remapunicode=0;
@@ -592,6 +593,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_convertgradients = atoi(value);
     } else if(!strcmp(key,"optimize_polygons")) {
         this->config_optimize_polygons = atoi(value);
+    } else if(!strcmp(key,"bigchar")) {
+        this->config_bigchar = atoi(value);
     } else if(!strcmp(key,"fontquality")) {
         this->config_fontquality = atof(value);
 	if(this->config_fontquality<=1)
@@ -1842,7 +1845,7 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
 }
 
 
-static gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src, double config_fontquality)
+gfxfont_t* GFXOutputDev::createGfxFont(GfxFont*xpdffont, FontInfo*src)
 {
     gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
     memset(font, 0, sizeof(gfxfont_t));
@@ -1851,11 +1854,14 @@ static gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src, double config_fo
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
     font->id = 0;
     int t;
-    
+
     double quality = (INTERNAL_FONT_SIZE * 200 / config_fontquality) / src->max_size;
     double scale = 1;
     //printf("%d glyphs\n", font->num_glyphs);
     font->num_glyphs = 0;
+    font->ascent = fabs(src->descender);
+    font->descent = fabs(src->ascender);
+    
     for(t=0;t<src->num_glyphs;t++) {
 	if(src->glyphs[t]) {
 	    SplashPath*path = src->glyphs[t]->path;
@@ -1897,8 +1903,21 @@ static gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src, double config_fo
 	     //       			  (f&splashPathFirst)?"first":"",
 	     //       			  (f&splashPathLast)?"last":"");
 	    }
+
 	    glyph->line = (gfxline_t*)drawer.result(&drawer);
-	    glyph->advance = xmax*scale; // we don't know the real advance value, so this'll have to do
+	    if(src->glyphs[t]->advance>0) {
+		glyph->advance = src->glyphs[t]->advance;
+	    } else {
+		msg("<warning> Approximating advance value for glyph %d", t);
+		glyph->advance = xmax*scale;
+	    }
+	    if(this->config_bigchar) {
+		double max = src->glyphs[t]->advance_max;
+		if(max>0 && max > glyph->advance) {
+		    glyph->advance = max;
+		}
+	    }
+
 	    font->num_glyphs++;
 	}
     }
@@ -1944,7 +1963,7 @@ void GFXOutputDev::updateFont(GfxState *state)
     
     gfxfont_t*font = gfxfontlist_findfont(this->gfxfontlist,id);
     if(!font) {
-	font = createGfxFont(gfxFont, current_fontinfo, this->config_fontquality);
+	font = this->createGfxFont(gfxFont, current_fontinfo);
         font->id = strdup(id);
 	this->gfxfontlist = gfxfontlist_addfont(this->gfxfontlist, font);
     }
