@@ -1185,6 +1185,7 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
     swf_SetU16(tag1, bitid);
     swf_SetLosslessImage(tag1, mem, width, height);
 
+#if defined(HAVE_JPEGLIB)
     /* try jpeg image */
     if(has_alpha) {
 	tag2 = swf_InsertTag(0, ST_DEFINEBITSJPEG3);
@@ -1195,8 +1196,9 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
 	swf_SetU16(tag2, bitid);
 	swf_SetJPEGBits2(tag2, width, height, mem, quality);
     }
+#endif
 
-    if(quality>100 || (tag1 && tag1->len < tag2->len)) {
+    if(quality>100 || !tag2 || (tag1 && tag1->len < tag2->len)) {
 	/* use the zlib version- it's smaller */
 	tag1->prev = tag;
 	if(tag) tag->next = tag1;
