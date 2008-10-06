@@ -42,12 +42,6 @@
 #include "GHash.h"
 #endif
 
-struct AdvanceSample
-{
-    double advance;
-    struct AdvanceSample*next;
-};
-
 struct GlyphInfo
 {
     SplashPath*path;
@@ -56,9 +50,7 @@ struct GlyphInfo
     double advance;
     double x1,y1,x2,y2;
 
-    double estimateAdvance();
-
-    AdvanceSample*advance_samples;
+    double advance_max;
 };
 
 struct FontInfo

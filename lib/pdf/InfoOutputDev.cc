@@ -207,7 +207,7 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     GlyphInfo*g = currentfont->glyphs[code];
     if(!g) {
 	g = currentfont->glyphs[code] = new GlyphInfo();
-	g->advance_samples = 0;
+	g->advance_max = 0;
 	currentfont->splash_font->last_advance = -1;
 	g->path = currentfont->splash_font->getGlyphPath(code);
 	g->advance = currentfont->splash_font->last_advance;
@@ -218,52 +218,14 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     }
     if(currentfont->lastchar>=0 && currentfont->lasty == y) {
 	double xshift = x - currentfont->lastx;
-	if(xshift>=0) {
-	    AdvanceSample* old = g->advance_samples;
-	    g->advance_samples = new AdvanceSample();
-	    g->advance_samples->next = old;
-	    g->advance_samples->advance = xshift;
+	if(xshift>=0 && xshift > g->advance_max) {
+	    g->advance_max = xshift;
 	}
     }
 
     currentfont->lastx = x;
     currentfont->lasty = y;
     currentfont->lastchar = code;
-}
-
-static int compare_double(const void *_a, const void *_b)
-{
-    const double*a = (const double*)_a;
-    const double*b = (const double*)_b;
-    if(*a < *b) 
-	return -1;
-    if(*a > *b) 
-	return 1;
-    return 0;
-}
-
-double GlyphInfo::estimateAdvance()
-{
-    AdvanceSample*a = advance_samples;
-    int n=0;
-    while(a) {
-	n++;
-	a = a->next;
-    }
-    if(!n)
-	return -1;
-    double*list = (double*)malloc(sizeof(double)*n);
-    n = 0;
-    a = advance_samples;
-    while(a) {
-	list[n++] = a->advance;
-	a = a->next;
-    }
-    // FIXME: a true median algorithm would be faster
-    qsort(list, n, sizeof(double), compare_double);
-    double median = list[n/2];
-    free(list);
-    return median;
 }
 
 GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen)
