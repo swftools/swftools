@@ -54,7 +54,7 @@ typedef         signed short        S16;
 typedef         unsigned char       U8;
 typedef         signed char         S8;
 
-#if SIZEOF_VOIDP == SIZEOF_LONG_LONG
+#if SIZEOF_VOIDP == SIZEOF_SIGNED_LONG_LONG
 typedef unsigned long long ptroff_t;
 #elif SIZEOF_VOIDP == SIZEOF_SIGNED
 typedef unsigned ptroff_t;
