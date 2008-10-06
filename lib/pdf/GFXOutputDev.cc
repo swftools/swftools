@@ -2571,17 +2571,20 @@ void GFXOutputDev::preparePage(int pdfpage, int outputpage)
 
     if(!this->pages) {
 	this->pagebuflen = 1024;
+	if(pdfpage > this->pagebuflen)
+	    this->pagebuflen = pdfpage+1;
 	this->pages = (int*)malloc(this->pagebuflen*sizeof(int));
 	memset(this->pages, -1, this->pagebuflen*sizeof(int));
-    } else {
-	while(pdfpage >= this->pagebuflen)
-	{
-	    int oldlen = this->pagebuflen;
-	    this->pagebuflen+=1024;
-	    this->pages = (int*)realloc(this->pages, this->pagebuflen*sizeof(int));
-	    memset(&this->pages[oldlen], -1, (this->pagebuflen-oldlen)*sizeof(int));
-	}
     }
+
+    while(pdfpage >= this->pagebuflen)
+    {
+	int oldlen = this->pagebuflen;
+	this->pagebuflen+=1024;
+	this->pages = (int*)realloc(this->pages, this->pagebuflen*sizeof(int));
+	memset(&this->pages[oldlen], -1, (this->pagebuflen-oldlen)*sizeof(int));
+    }
+
     this->pages[pdfpage] = outputpage;
     if(pdfpage>this->pagepos)
 	this->pagepos = pdfpage;
