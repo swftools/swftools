@@ -1289,6 +1289,8 @@ int swf_ReadSWF(int handle, SWF * swf)
   return swf_ReadSWF2(&reader, swf);
 }
 
+int no_extra_tags = 0;
+
 int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, returns length or <0 if fails
 { U32 len;
   TAG * t;
@@ -1307,51 +1309,55 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
 
   // Insert REFLEX Tag
 
+  if(!no_extra_tags) {
+      /* this block needs a complete rewrite */
+
 #ifdef INSERT_RFX_TAG
 
-  if ((swf->firstTag && swf->firstTag->id != ST_REFLEX) &&
-      (!swf->firstTag->next || (swf->firstTag->next->id != ST_REFLEX &&
-      (!swf->firstTag->next->next || (swf->firstTag->next->next->id!=ST_REFLEX)))))
-  {
-      swf_SetBlock(swf_InsertTagBefore(swf, swf->firstTag,ST_REFLEX),(U8*)"rfx",3);
-  }
+      if ((swf->firstTag && swf->firstTag->id != ST_REFLEX) &&
+	  (!swf->firstTag->next || (swf->firstTag->next->id != ST_REFLEX &&
+	  (!swf->firstTag->next->next || (swf->firstTag->next->next->id!=ST_REFLEX)))))
+      {
+	  swf_SetBlock(swf_InsertTagBefore(swf, swf->firstTag,ST_REFLEX),(U8*)"rfx",3);
+      }
 
 #endif // INSERT_RFX_TAG
 
-  if(swf->fileVersion >= 9) {
-    if ((!swf->firstTag || swf->firstTag->id != ST_SCENEDESCRIPTION) &&
-	(!swf->firstTag || 
-	 !swf->firstTag->next || swf->firstTag->next->id != ST_SCENEDESCRIPTION) &&
-	(!swf->firstTag || 
-	 !swf->firstTag->next || 
-	 !swf->firstTag->next->next || swf->firstTag->next->next->id != ST_SCENEDESCRIPTION))
-    {
-	TAG*scene = swf_InsertTagBefore(swf, swf->firstTag,ST_SCENEDESCRIPTION);
-	swf_SetU16(scene, 1);
-	swf_SetString(scene, (U8*)"Scene 1");
-	swf_SetU8(scene, 0);
-    }
-  }
-  
-  if(swf->fileVersion >= 9) {
-      TAG*tag = swf->firstTag;
-      U32 flags = 0x08; // | 128 = usenetwork, | 16 = hasmetadata | 8 = actionscript3
-      int has_version_8_action=0;
-      int has_version_9_action=0;
-      while(tag) {
-	/* FIXME: this doesn't find actionscript in buttons */
-	if(tag->id == ST_DOACTION || tag->id == ST_DOINITACTION) 
-	  has_version_8_action=1;
-	if(tag->id == ST_DOABC) 
-	  has_version_9_action=1;
-	tag = tag->next;
+      if(swf->fileVersion >= 9) {
+	if ((!swf->firstTag || swf->firstTag->id != ST_SCENEDESCRIPTION) &&
+	    (!swf->firstTag || 
+	     !swf->firstTag->next || swf->firstTag->next->id != ST_SCENEDESCRIPTION) &&
+	    (!swf->firstTag || 
+	     !swf->firstTag->next || 
+	     !swf->firstTag->next->next || swf->firstTag->next->next->id != ST_SCENEDESCRIPTION))
+	{
+	    TAG*scene = swf_InsertTagBefore(swf, swf->firstTag,ST_SCENEDESCRIPTION);
+	    swf_SetU16(scene, 1);
+	    swf_SetString(scene, (U8*)"Scene 1");
+	    swf_SetU8(scene, 0);
+	}
       }
-      if(has_version_8_action && !has_version_9_action)
-	flags = 0x00;
+      
+      if(swf->fileVersion >= 9) {
+	  TAG*tag = swf->firstTag;
+	  U32 flags = 0x08; // 16 = has symbolclass tag | 8 = actionscript3 | 1 = usenetwork
+	  int has_version_8_action=0;
+	  int has_version_9_action=0;
+	  while(tag) {
+	    /* FIXME: this doesn't find actionscript in buttons */
+	    if(tag->id == ST_DOACTION || tag->id == ST_DOINITACTION) 
+	      has_version_8_action=1;
+	    if(tag->id == ST_DOABC) 
+	      has_version_9_action=1;
+	    tag = tag->next;
+	  }
+	  if(has_version_8_action && !has_version_9_action)
+	    flags = 0x00;
 
-      if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
-      {
-	  swf_SetU32(swf_InsertTagBefore(swf, swf->firstTag,ST_FILEATTRIBUTES),flags);
+	  if (swf->firstTag && swf->firstTag->id != ST_FILEATTRIBUTES)
+	  {
+	      swf_SetU32(swf_InsertTagBefore(swf, swf->firstTag,ST_FILEATTRIBUTES),flags);
+	  }
       }
   }
 
