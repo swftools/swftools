@@ -572,6 +572,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_extrafontdata = 0;
     this->config_fontquality = 10;
     this->config_optimize_polygons = 0;
+    this->config_multiply = 1;
 
     this->gfxfontlist = gfxfontlist_create();
   
@@ -591,6 +592,10 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_extrafontdata = atoi(value);
     } else if(!strcmp(key,"convertgradients")) {
         this->config_convertgradients = atoi(value);
+    } else if(!strcmp(key,"multiply")) {
+        this->config_multiply = atoi(value);
+        if(this->config_multiply<1) 
+            this->config_multiply=1;
     } else if(!strcmp(key,"optimize_polygons")) {
         this->config_optimize_polygons = atoi(value);
     } else if(!strcmp(key,"bigchar")) {
@@ -2035,7 +2040,7 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,
-        double x4,double y4, int type)
+        double x4,double y4, int type, int multiply)
 {
     gfxcolor_t*newpic=0;
     
@@ -2060,12 +2065,13 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
      p5.x = (int)(p5.x*20)/20.0;
      p5.y = (int)(p5.y*20)/20.0;
     }
-    
+
     gfxmatrix_t m;
     m.m00 = (p4.x-p1.x)/sizex; m.m10 = (p2.x-p1.x)/sizey;
     m.m01 = (p4.y-p1.y)/sizex; m.m11 = (p2.y-p1.y)/sizey;
-    m.tx = p1.x - 0.5;
-    m.ty = p1.y - 0.5;
+        
+    m.tx = p1.x - 0.5*multiply;
+    m.ty = p1.y - 0.5*multiply;
 
     gfximage_t img;
     img.data = (gfxcolor_t*)data;
@@ -2081,15 +2087,15 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
 }
 
 void drawimagejpeg(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey, 
-        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4, int multiply)
 {
-    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG);
+    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG, multiply);
 }
 
 void drawimagelossless(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey, 
-        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4)
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4, int multiply)
 {
-    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS);
+    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS, multiply);
 }
 
 
@@ -2222,7 +2228,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 		buf[0]=1-buf[0];
 	    pic[width*y+x] = buf[0];
       }
-      
+     
       if(type3active) {
 	  unsigned char*pic2 = 0;
 	  numpalette = 16;
@@ -2259,7 +2265,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  pic2[width*y+x] = pal[pic[y*width+x]];
 	}
       }
-      drawimagelossless(device, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+      drawimagelossless(device, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
       delete[] pic2;
       delete[] pic;
       delete imgStr;
@@ -2301,9 +2307,9 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	}
       }
       if(str->getKind()==strDCT)
-	  drawimagejpeg(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+	  drawimagejpeg(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
       else
-	  drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+	  drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
       delete[] pic;
       delete imgStr;
       if(maskbitmap) free(maskbitmap);
@@ -2378,7 +2384,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	      height = maskHeight;
 	  }
       }
-      drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4);
+      drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
 
       delete[] pic;
       delete imgStr;
