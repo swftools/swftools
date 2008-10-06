@@ -4,7 +4,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: ../libpdf$(A) pdf2swf$(E)
+all: ../libpdf$(A)
 
 libpdf: ../libpdf$(A)
 
