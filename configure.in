@@ -25,7 +25,7 @@ AC_ARG_WITH([poppler],
 [  --with-poppler          use poppler instead of internal xpdf (currently broken)], [USE_POPPLER=true])
 
 PACKAGE=swftools
-VERSION=2008-07-11-0020
+VERSION=2008-09-22-1956
 
 
 # ------------------------------------------------------------------
@@ -532,13 +532,13 @@ AH_BOTTOM([
 #endif
 #endif
 
-#endif // __config_h__
-])
-
 #ifdef HAVE_POPPLER
 #define GString GooString
 #define GHash GooHash
 #endif
+
+#endif // __config_h__
+])
 
 
 if test -f "release.in"; then release_in="./release"; fi
