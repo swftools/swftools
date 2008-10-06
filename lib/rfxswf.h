@@ -515,8 +515,8 @@ typedef struct _SWFFONT
   U8		version; // 0 = not set, 1 = definefont, 2 = definefont2
   U8 *          name;
   SWFLAYOUT *   layout;
-  U16		numchars;
-  U16		maxascii; // highest mapped ascii value
+  int           numchars;
+  int           maxascii; // highest mapped ascii/unicode value
 
   U8		style;
   U8		encoding;
