@@ -737,8 +737,8 @@ diff -u -r1.5 -r1.6
  #include "GString.h"
  #include "SplashFontFile.h"
  #include "SplashFontFileID.h"
---- SplashFont.h	2007-09-09 14:23:47.000000000 +0200
-+++ SplashFont.h	2007-09-09 14:24:28.000000000 +0200
+--- xpdf/SplashFont.h.orig	2008-09-09 21:31:01.000000000 +0200
++++ xpdf/SplashFont.h	2008-10-05 17:36:44.000000000 +0200
 @@ -73,6 +73,9 @@
    virtual GBool makeGlyph(int c, int xFrac, int yFrac,
  			  SplashGlyphBitmap *bitmap) = 0;
@@ -749,33 +749,16 @@ diff -u -r1.5 -r1.6
    // Return the path for a glyph.
    virtual SplashPath *getGlyphPath(int c) = 0;
  
---- SplashFTFont.h	2007-09-09 14:23:47.000000000 +0200
-+++ SplashFTFont.h	2007-09-09 14:25:19.000000000 +0200
-@@ -42,6 +42,9 @@
-   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
- 			  SplashGlyphBitmap *bitmap);
+@@ -83,6 +86,9 @@
+   void getBBox(int *xMinA, int *yMinA, int *xMaxA, int *yMaxA)
+     { *xMinA = xMin; *yMinA = yMin; *xMaxA = xMax; *yMaxA = yMax; }
  
-+  // return the number of characters in this font
-+  virtual int getNumChars();
-+
-   // Return the path for a glyph.
-   virtual SplashPath *getGlyphPath(int c);
++  double ascender;
++  double descender;
++  double last_advance; //set after getGlyphPath()
+ protected:
  
---- SplashFTFont.cc.h	2007-09-09 14:23:50.000000000 +0200
-+++ SplashFTFont.cc	2007-09-09 14:27:35.000000000 +0200
-@@ -228,6 +228,12 @@
-   GBool needClose;
- };
- 
-+int SplashFTFont::getNumChars()
-+{
-+  SplashFTFontFile* ff = (SplashFTFontFile *)fontFile;
-+  return ff->face->num_glyphs;
-+}
-+
- SplashPath *SplashFTFont::getGlyphPath(int c) {
-   static FT_Outline_Funcs outlineFuncs = {
- #if FREETYPE_MINOR <= 1
+   SplashFontFile *fontFile;
 --- orig/GfxFont.h	2007-07-28 00:11:06.000000000 +0200
 +++ GfxFont.h	2007-09-09 18:31:31.000000000 +0200
 @@ -164,6 +164,7 @@
@@ -884,3 +867,80 @@ diff -u -r1.5 -r1.6
    void drawType3Glyph(T3FontCache *t3Font,
  		      T3FontCacheTag *tag, Guchar *data);
    static GBool imageMaskSrc(void *data, SplashColorPtr line);
+--- xpdf/SplashFont.cc.orig	2008-09-09 21:31:01.000000000 +0200
++++ xpdf/SplashFont.cc	2008-10-05 17:37:08.000000000 +0200
+@@ -48,6 +48,10 @@
+   cacheTags = NULL;
+ 
+   xMin = yMin = xMax = yMax = 0;
++
++  last_advance = -1;
++  ascender = -1;
++  descender = -1;
+ }
+ 
+ void SplashFont::initCache() {
+--- xpdf/SplashFTFont.cc.orig	2008-09-09 21:31:01.000000000 +0200
++++ xpdf/SplashFTFont.cc	2008-10-05 17:37:32.000000000 +0200
+@@ -46,6 +46,7 @@
+   int x, y;
+ 
+   face = fontFileA->face;
++  
+   if (FT_New_Size(face, &sizeObj)) {
+     return;
+   }
+@@ -54,6 +55,10 @@
+   if (FT_Set_Pixel_Sizes(face, 0, (int)size)) {
+     return;
+   }
++ 
++  this->ascender = face->ascender;
++  this->descender = face->descender;
++
+   // if the textMat values are too small, FreeType's fixed point
+   // arithmetic doesn't work so well
+   textScale = splashSqrt(textMat[2]*textMat[2] + textMat[3]*textMat[3]) / size;
+@@ -228,6 +233,12 @@
+   GBool needClose;
+ };
+ 
++int SplashFTFont::getNumChars()
++{
++  SplashFTFontFile* ff = (SplashFTFontFile *)fontFile;
++  return ff->face->num_glyphs;
++}
++
+ SplashPath *SplashFTFont::getGlyphPath(int c) {
+   static FT_Outline_Funcs outlineFuncs = {
+ #if FREETYPE_MINOR <= 1
+@@ -249,6 +260,8 @@
+   FT_UInt gid;
+   FT_Glyph glyph;
+ 
++  this->last_advance = -1;
++
+   ff = (SplashFTFontFile *)fontFile;
+   ff->face->size = sizeObj;
+   FT_Set_Transform(ff->face, &textMatrix, NULL);
+@@ -268,6 +281,8 @@
+   if (FT_Get_Glyph(slot, &glyph)) {
+     return NULL;
+   }
++  this->last_advance = glyph->advance.x/65536.0;
++
+   path.path = new SplashPath();
+   path.textScale = textScale;
+   path.needClose = gFalse;
+--- xpdf/SplashFTFont.h.orig	2008-09-09 21:31:01.000000000 +0200
++++ xpdf/SplashFTFont.h	2008-10-04 17:39:57.000000000 +0200
+@@ -42,6 +42,9 @@
+   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
+ 			  SplashGlyphBitmap *bitmap);
+ 
++  // return the number of characters in this font
++  virtual int getNumChars();
++
+   // Return the path for a glyph.
+   virtual SplashPath *getGlyphPath(int c);
+ 
