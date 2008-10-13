@@ -799,8 +799,11 @@ void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // swfabc.c
 
-void AVM2_InsertStops(SWF*swf);
 void swf_DissassembleABC(TAG*tag);
+
+// swfscripts.c
+
+void AVM2_InsertStops(SWF*swf);
 
 // swfaction.c
 
