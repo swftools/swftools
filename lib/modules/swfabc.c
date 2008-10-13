@@ -5,7 +5,6 @@
    Extension module for the rfxswf library.
    Part of the swftools package.
 
-   Copyright (c) 2007 Alessandro Molina
    Copyright (c) 2007,2008 Matthias Kramm <kramm@quiss.org>
  
    This program is free software; you can redistribute it and/or modify
@@ -24,382 +23,6 @@
 
 #include <stdarg.h>
 #include "../rfxswf.h"
-
-static unsigned AVM2_uint32toU30(unsigned val, char * out)
-{
-    unsigned len = 0;
-
-    while(val) {
-	  out[len++] = (val&~0x7f?0x80:0) | (val & 0x7F);
-	  val >>= 7;
-    }
-
-    return len;
-}
-
-void AVM2_InsertStops(SWF*swf)
-{
-    TAG * t;
-
-    //MAIN AS3 CLASS INIT
-    unsigned frame_nums = 0;
-
-    /* Count number of pages to set up stop callback for every frame */
-    t = swf->firstTag;
-    while(t) {
-	if (t->id == ST_SHOWFRAME) ++frame_nums;
-	t = t->next;
-    }
-
-    TAG * classCall = swf_InsertTagBefore(swf, swf->firstTag, ST_SYMBOLCLASS);
-    swf_SetU16(classCall, 1); // number of symbols
-    swf_SetU16(classCall, 0); // object id
-    swf_SetString(classCall, "stop_fla:MainTimeline"); // class to associate with the symbol
-	              
-    //0x52 is the Flash9 equivalent to DoAction
-    char init_pool[322] = { 
-      0x01,0x00,0x00,0x00, /* Flag Parameter to ST_DOABC (1 = lazy load)*/
-      0x00,                /* 0 terminated class name */
-      0x10,0x00,0x2e,0x00, /* ABC file magic number (minor version, major version) */
-      0x00, /* zero integers */
-      0x00, /* zero unsigned integers */
-      0x00, /* zero doubles */
-		
-      0x11, /* 16 strings (+1) */
-	0x08, 's','t','o','p','_','f','l','a', 
-	0x0c, 'M','a','i','n','T','i','m','e','l','i','n','e',
-	0x0d, 'f','l','a','s','h','.','d','i','s','p','l','a','y', 
-	0x09, 'M','o','v','i','e','C','l','i','p',
-	0x15, 's','t','o','p','_','f','l','a',':','M','a','i','n','T','i','m','e','l','i','n','e',
-	0x06, 'd','o','s','t','o','p',
-	0x00, // Empty string: ref. to the global namespace
-	0x04, 's','t','o','p',
-	0x0e, 'a','d','d','F','r','a','m','e','S','c','r','i','p','t',
-	0x06, 'O','b','j','e','c','t',
-	0x0c, 'f','l','a','s','h','.','e','v','e','n','t','s',
-	0x0f, 'E','v','e','n','t','D','i','s','p','a','t','c','h','e','r',
-	0x0d, 'D','i','s','p','l','a','y','O','b','j','e','c','t',
-	0x11, 'I','n','t','e','r','a','c','t','i','v','e','O','b','j','e','c','t',
-	0x16, 'D','i','s','p','l','a','y','O','b','j','e','c','t','C','o','n','t','a','i','n','e','r',
-	0x06, 'S','p','r','i','t','e',
-
-      0x07, /* 6 namespaces (+1) */
-	0x16,0x01, /* kind: CONSTANT_PackageNamespace, ref. to: stop_fla */
-	0x16,0x03, /* kind: CONSTANT_PackageNamespace, ref. to: flash.display */
-	0x18,0x05, /* kind: CONSTANT_ProtectedNamespace, ref. to: stop_fla:MainTimeline */
-	0x17,0x01, /* kind: CONSTANT_PackageInternalNs, ref. to: MainTimeline */
-	0x16,0x07, /* kind: CONSTANT_PackageNamespace, ref. to the global namespace */
-	0x16,0x0b, /* kind: CONSTANT_PackageNamespace, ref. to: flash.events */
-			      
-      0x00, /* zero namespace sets */
-			      
-      0x0c, /* 11 MultiNames (+1) */
-	/*  1st value: Multiname kind (0x07 = Qualified Name, a multiname with 1 namespace, refers to a method)
-	    2nd value: refers to namespace name index in the namespace table
-	    3rd value: refers to method name index in the string table */
-	0x07,0x01,0x02, /* stop_fla:MainTimeLine */
-	0x07,0x02,0x04, /* flash.display:MovieClip */
-	0x07,0x04,0x06, /* <4th namespace>:dostop */
-	0x07,0x05,0x08, /* <global>:stop */
-	0x07,0x05,0x09, /* <global>:addFrameScript */
-	0x07,0x05,0x0a, /* <global>:Object */
-	0x07,0x06,0x0c, /* flash.events:EventDispatcher */
-	0x07,0x02,0x0d, /* flash.display:DisplayObject */
-	0x07,0x02,0x0e, /* flash.display:InteractiveObject */
-	0x07,0x02,0x0f, /* flash.display:DisplayObjectContainer */
-	0x07,0x02,0x10, /* flash.display:Sprite */
-			      
-      0x04, /* 4 Methods */
-	/* METHOD 1 */
-	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
-	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
-	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
-	0x00,0x00,0x00,0x00, /* No params (nor params types), no return type, no method name, flags */
-
-      0x00, /* Zero Metadata */
-
-      0x01, /* 1 Class */
-	0x01, /* Name: ref. to multiname no. 1 (MainTimeline) */
-	0x02, /* Super_name (base class): ref. to multiname no. 2 (flash.display) */
-	0x08, /* Flags: 0x08 value indicates that it uses its protected namespace (and make next field exists) */
-	0x03, /* Ref. to namespace no. 3 (MainTimeline, protected namespace for this class) */
-	0x00, /* No. of interfaces: there are no interfaces (nor interface definition) */
-	0x02, /* Initializer index: ref. to method no. 2 */
-	0x01, /* No. of traits */
-	/* Trait section */     
-		0x03, /* Name: ref. to multiname no. 3 (stop) */
-		0x01, /* 0000: no attributes (nor metadata in the next subsection);
-				 then 1: type is Trait_Method */
-		/* Trait_method section */
-			0x00, /* NO optimization for virtual calls */
-			0x01, /* Ref. to method no. 1 */
-	/* HERE FOLLOW THE CLASS DATA */
-	0x00, /* Ref. to method no. 0 as static initializer for this class */
-	0x00, /* No. of traits for this class (no ones) */
-
-      0x01, /* 1 Script */
-	0x03, /* Ref. to method no. 3, invoked prior to any other code in the script  */
-	0x01, /* No. of traits */
-	/* Trait section */
-	0x01, /* Name: ref. to multiname no. 1 (flash.display:MovieClip) */
-	0x04,  /* 0000: no attributes (nor metadata in the next subsection);
-				  then 4: type is Trait_Class*/
-			/* Trait_class section */
-			0x01, /* Slot ID where the trait resides */
-			0x00, /* Class index (there is only one class)*/
-
-      0x04, /* Method body count: there are 4 method bodies */
-	/* HERE FOLLOW THE METHOD BODY DATA */
-	0x00, /* Method index, ref. to method no. 0 */
-	0x01, /* Max stack slots the method can use */
-	0x01, /* No. of registers +1 the method can use: this one cannot use registers */
-	0x09,0x0a, /* Min and max scope depth the method can access*/
-	0x03, /* Code length (in bytes) */
-	/* The actual method code:
-			this is the function stop_fla::MainTimeline$cinit()*/
-			0xd0,0x30,0x47,
-	0x00, /* No. of exceptions (no exceptions) */
-	0x00, /* No. of traits (no traits) */
-
-	0x01, /* Method index, ref. to method no. 1 */
-	0x01, /* Max stack slots the method can use */
-	0x01, /* No. of registers +1 the method can use: this one cannot use registers */
-	0x0a,0x0b, /* Min and max scope depth the method can access*/
-	0x08, /* Code length (in bytes) */
-	/* The actual method code:
-	   this is the function stop_fla::dostop(), 
-	   the one that actually executes the stop() */
-	0xd0,0x30,0x5d,0x04,0x4f,0x04,0x00,0x47,
-	0x00, /* No. of exceptions (no exceptions) */
-	0x00, /* No. of traits (no traits) */
-    };
-
-    /* Header of stop_fla::MainTimeline() method */
-    char constructor_header[5] = {
-      0x02, /* Method index, ref. to method no. 2 */
-      0x03, /* Max stack slots the method can use */
-      0x01, /* No. of registers +1 the method can use: this one cannot use registers */
-      0x0a,0x0b /* Min and max scope depth the method can access*/
-    };
-
-    char constructor_first[5] = {
-      /* The actual method code:
-    This is the function stop_fla::MainTimeline()
-    Does: calls the super constructor for class #0 (MainTimeline),
-	    then puts on the stack the object, namespace and name of the arguments
-	    needed by the addFrameScripts, then calls the addFrameScripts
-	     */
-      0xd0,   /* getlocal0 */
-      0x30,   /* pushscope */
-      0xd0,   /* getlocal0 */
-      0x49,   /* constructsuper */
-      0x00   /*              0 */
-    };
-
-    char constructor_frame_register[10] = {
-      0x5d,   /* findpropstrict */
-      0x05,   /*              'addFrameScript' */
-      0x25,   /* pushshort */
-      0x00,   /*              frame number for pushshort */
-  0x02,   /* NOP (hack to write u30 value of frame number when > 127) */
-      0x60,   /* getlex */
-      0x03,   /*              'stop_fla::dostop' */
-      0x4f,   /* callpropvoid */
-      0x05,   /*              'addFrameScript' */
-      0x02   /*              2*/
-    };
-
-    char constructor_return[3] = { 
-      0x47, /* returnvoid */
-      0x00, /* No. of exceptions (no exceptions) */
-      0x00, /* No. of traits (no traits) */
-    };
-
-    char script_init_pool[47] = {
-      0x03, /* Method index, ref. to method no. 3 */
-      0x02, /* Max stack slots the method can use */
-      0x01, /* No. of registers +1 the method can use: this one cannot use registers */
-      0x01,0x09, /* Min and max scope depth the method can access*/
-      0x27, /* Code length (in bytes) */
-      /* The actual method code:
-		      this is the function script0$init() */
-      0xd0,0x30,0x65,0x00,0x60,0x06,0x30,0x60,0x07,0x30,0x60,0x08,0x30,0x60,0x09,0x30,0x60,0x0a,0x30,0x60,
-      0x0b,0x30,0x60,0x02,0x30,0x60,0x02,0x58,0x00,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x68,0x01,0x47,
-      0x00, /* No. of exceptions (no exceptions) */
-      0x00  /* No. of traits (no traits) */
-    };
-    /* END OF THE ABCFILE (Actionscript Byte Code) */
-
-    char code_len[5] = {0, };
-    unsigned clen_len = AVM2_uint32toU30((6 + sizeof(constructor_frame_register) * frame_nums), code_len);
-    unsigned i, offset = 0;
-
-    TAG *classInit = swf_InsertTagBefore(swf, swf->firstTag, ST_DOABC);
-
-    /* Copy the environment Initialization code */
-    swf_SetBlock(classInit, (U8*)init_pool,sizeof(init_pool));
-    /* Copy Constructor Method header */
-    swf_SetBlock(classInit, (U8*)constructor_header, sizeof(constructor_header));
-    /* Add Code block size (u30) to the method header */
-    swf_SetBlock(classInit, (U8*)code_len, clen_len);
-
-    /* Copy Constructor Method body first part */
-    swf_SetBlock(classInit, (U8*)constructor_first, sizeof(constructor_first));
-
-    /* Register the callback for every frame */
-    for (i = 0; i < frame_nums; ++i) {
-	AVM2_uint32toU30(i,constructor_frame_register + 3); // Write current frame number
-	swf_SetBlock(classInit, (U8*)constructor_frame_register, sizeof(constructor_frame_register));
-    }
-
-    /* Copy Constructor method body ending, just a return */
-    swf_SetBlock(classInit, (U8*)constructor_return, sizeof(constructor_return));
-
-    /* Copy the script init code */
-    swf_SetBlock(classInit, (U8*)script_init_pool, sizeof(script_init_pool));
-}
-
-void AVM2_InsertButtonLink(SWF*swf)
-{		
-    unsigned char displayEventCode[] = {
-    // button.dispatchEvent(new Event("pdflinkdown"),true,true)
-
-    0x01, 0x00, 0x00, 0x00, //flags
-    0x00, 
-    0x10, 0x00, 0x2e, 0x00, //version
-    0x00, //no ints
-    0x00, //no uints
-    0x00, //no floats
-    0x14, //19 strings
-    0x17, 'e','v','e','n','t','_','o','h','n','e','_','l','i','s','t','e','n','e','r','_','f','l','a',
-    0x0c, 'M','a','i','n','t','i','m','e','l','i','n','e',
-    0x0d, 'f','l','a','s','h','.','d','i','s','p','l','a','y',
-    0x09, 'M','o','v','i','e','c','l','i','p',
-    0x24, 'e','v','e','n','t','_','o','h','n','e','_','l','i','s','t','e','n','e','r','_','f','l','a',':','M','a','i','n','t','i','m','e','l','i','n','e',
-    0x00,
-    0x06, 'b','u','t','t','o','n', 
-    0x06, 'f','r','a','m','e','1', 
-    0x0c, 'f','l','a','s','h','.','e','v','e','n','t','s', 
-    0x05, 'E','v','e','n','t', 
-    0x0b, 'p','d','f','l','i','n','k','d','o','w','n', 
-    0x0d, 'd','i','s','p','a','t','c','h','E','v','e','n','t', 
-    0x0e, 'a','d','d','F','r','a','m','e','S','c','r','i','p','t',
-    0x06, 'O','b','j','e','c','t', 
-    0x0f, 'E','v','e','n','t','d','i','s','p','a','t','c','h','e','r',
-    0x0d, 'D','i','s','p','l','a','y','O','b','j','e','c','t', 
-    0x11, 'I','n','t','e','r','a','c','t','i','v','e','O','b','j','e','c','t',
-    0x16, 'D','i','s','p','l','a','y','O','b','j','e','c','t','C','o','n','t','a','i','n','e','r',
-    0x06, 'S','p','r','i','t','e',
-
-    0x07,  // 6 namespaces
-    0x16, 0x01, 
-    0x16, 0x03, 
-    0x18, 0x05, 
-    0x16, 0x06, 
-    0x17, 0x01, 
-    0x16, 0x09,
-
-    0x00, //zero namespace sets
-
-    0x0e, //13 multinames
-    0x07, 0x01, 0x02, 
-    0x07, 0x02, 0x04, 
-    0x07, 0x04, 0x07, 
-    0x07, 0x05, 0x08, 
-    0x07, 0x06, 0x0a, 
-    0x07, 0x04, 0x0c, 
-    0x07, 0x04, 0x0d, 
-    0x07, 0x04, 0x0e, 
-    0x07, 0x06, 0x0f, 
-    0x07, 0x02, 0x10, 
-    0x07, 0x02, 0x11, 
-    0x07, 0x02, 0x12, 
-    0x07, 0x02, 0x13,
-
-    0x04, // 4 methods
-    0x00, 0x00, 0x00, 0x00, 
-    0x00, 0x00, 0x00, 0x00, 
-    0x00, 0x00, 0x00, 0x00, 
-    0x00, 0x00, 0x00, 0x00, 
-    
-    0x00, // zero metadata
-
-    0x01, // 1 class
-      0x01, 0x02, 0x08, 0x03, 0x00, 0x02, 
-      0x02, // 2 traits
-        0x03, 0x00, // name, slot
-	  0x00, 0x02, 0x00, 
-	0x04, 0x01, // name, method,
-	  0x00, 0x01,
-      0x00, // ref to method 0 (initializer)
-      0x00, // no traits
-
-    0x01, // 1 script
-      0x03, 0x01, 0x01, 0x04, 0x01, 0x00, 
-
-    0x04, // 4 method bodies
-       // method 1
-       0x00, 0x01, 0x01, 0x09, 0x0a, 
-       0x03, 0xd0, 0x30, 0x47, // code
-       0x00, 0x00, 
-       // method 2
-       0x01, 0x05, 0x01, 0x0a, 0x0b, 
-       0x11, 0xd0, 0x30, 0x60, 0x03, 0x5d, 0x05, 0x2c, 0x0b, 0x26, 0x26, 0x4a, 0x05, 0x03, 0x4f, 0x06, 0x01, 0x47, // code
-       0x00, 0x00, 
-       // method 3
-       0x02, 0x03, 0x01, 0x0a, 0x0b, 
-       0x0f, 0xd0, 0x30, 0xd0, 0x49, 0x00, 0x5d, 0x07, 0x24, 0x00, 0x60, 0x04, 0x4f, 0x07, 0x02, 0x47, // code
-       0x00, 0x00, 
-       // method 4
-       0x03, 0x02, 0x01, 0x01, 0x09, 
-       0x27, 0xd0, 0x30, 0x65, 0x00, 0x60, 0x08, 0x30, 0x60, 0x09, 0x30, 0x60, 0x0a, 0x30, 0x60, 0x0b, //code
-       0x30, 0x60, 0x0c, 0x30, 0x60, 0x0d, 0x30, 0x60, 0x02, 0x30, 0x60, 0x02, 0x58, 0x00, 0x1d, 0x1d, 
-       0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x68, 0x01, 0x47, 
-       0x00, 0x00,
-    };
-}
-
-int swf_GetU30(TAG*tag)
-{
-    U32 shift = 0;
-    U32 s = 0;
-    while(1) {
-	U8 b = swf_GetU8(tag);
-	s|=(b&127)<<shift;
-	shift+=7;
-	if(!(b&128))
-	    break;
-    }
-    return s;
-}
-
-int swf_GetS30(TAG*tag)
-{
-    U32 shift = 0;
-    U32 s = 0;
-    while(1) {
-	U8 b = swf_GetU8(tag);
-	s|=(b&127)<<shift;
-	shift+=7;
-	if(!(b&128)) {
-            if(b&64) {
-                s|=0xffffffff<<shift;
-            }
-	    break;
-        }
-    }
-    return s;
-}
-
-double swf_GetD64(TAG*tag)
-{
-    U32 b[2];
-
-    b[0] = swf_GetU32(tag);
-    b[1] = swf_GetU32(tag);
-
-    return 0.0;
-}
 
 typedef struct _abc_method {
     /* from method signature: */
@@ -430,12 +53,88 @@ typedef struct _dict {
     dict_entry_t*d;
 } dict_t;
 
+typedef struct _abc_file_t {
+
+    // contant_pool
+
+    dict_t*ints;
+    dict_t*uints;
+    dict_t*floats;
+    dict_t*strings;
+    dict_t*namespaces;
+    dict_t*namespace_sets;
+    dict_t*sets;
+    dict_t*multinames;
+
+    // abc_file
+
+    dict_t*methods;
+    dict_t*classes;
+    dict_t*scripts;
+    dict_t*method_bodies;
+} abc_file_t;
+
+typedef struct _abc_trait {
+    unsigned char type;
+    int name_index;
+
+    union {
+        int disp_id;
+        int slot_id;
+        int data1;
+    };
+    union {
+        int nr;
+        int cls;
+        int type_index;
+        int data2;
+    };
+    int vindex;
+    int vkind;
+} abc_trait_t;
+
+typedef struct _abc_class {
+    int index;
+    abc_file_t*abc;
+    const char*name;
+    int classname_index;
+    int superclass_index;
+    int ns_index;
+    int iinit;
+    
+    int static_constructor_index;
+    dict_t*static_constructor_traits;
+
+    dict_t*traits;
+} abc_class_t;
+
+typedef struct _abc_code {
+    int index;
+    abc_file_t*abc;
+    //abc_class_t*cls;
+    abc_method_t*method;
+    TAG*tag;
+    int max_stack;
+    int local_count;
+    int init_scope_depth;
+    int max_scope_depth;
+    int exception_count;
+    dict_t*traits;
+} abc_code_t;
+
 
 dict_t* dict_new() {
     dict_t*d = malloc(sizeof(dict_t));
     memset(d, 0, sizeof(dict_t));
     return d;
 }
+
+void dict_free(dict_t*dict) {
+    if(dict->d)
+    free(dict->d);dict->d = 0;
+    free(dict);
+}
+
 const char*dict_getstr(dict_t*dict, int nr) {
     if(nr > dict->num || nr<0) {
 	printf("error: reference to string %d in dict\n");
@@ -493,61 +192,46 @@ int dict_append_if_new(dict_t*dict, char*name, void*data) {
     return dict_append(dict, name, data);
 }
 
-typedef struct _abc_file_t {
+int swf_GetU30(TAG*tag)
+{
+    U32 shift = 0;
+    U32 s = 0;
+    while(1) {
+	U8 b = swf_GetU8(tag);
+	s|=(b&127)<<shift;
+	shift+=7;
+	if(!(b&128))
+	    break;
+    }
+    return s;
+}
 
-    // contant_pool
+int swf_GetS30(TAG*tag)
+{
+    U32 shift = 0;
+    U32 s = 0;
+    while(1) {
+	U8 b = swf_GetU8(tag);
+	s|=(b&127)<<shift;
+	shift+=7;
+	if(!(b&128)) {
+            if(b&64) {
+                s|=0xffffffff<<shift;
+            }
+	    break;
+        }
+    }
+    return s;
+}
 
-    dict_t*ints;
-    dict_t*uints;
-    dict_t*floats;
-    dict_t*strings;
-    dict_t*namespaces;
-    dict_t*namespace_sets;
-    dict_t*sets;
-    dict_t*multinames;
+double swf_GetD64(TAG*tag)
+{
+    double value = *(double*)&tag->data[tag->pos];
+    swf_GetU32(tag);
+    swf_GetU32(tag);
+    return value;
+}
 
-    // abc_file
-
-    dict_t*methods;
-    dict_t*classes;
-    dict_t*scripts;
-    dict_t*method_bodies;
-} abc_file_t;
-
-typedef struct _abc_trait {
-    unsigned char type;
-    int name_index;
-    U32 data1;
-    U32 data2;
-    int vindex;
-    int vkind;
-} abc_trait_t;
-
-typedef struct _abc_class {
-    int index;
-    abc_file_t*abc;
-    const char*name;
-    int classname_index;
-    int superclass_index;
-    int ns_index;
-    int iinit;
-    int cinit;
-    dict_t*traits;
-} abc_class_t;
-
-typedef struct _abc_code {
-    int index;
-    abc_file_t*abc;
-    //abc_class_t*cls;
-    abc_method_t*method;
-    TAG*tag;
-    int max_stack;
-    int local_count;
-    int init_scope_depth;
-    int max_scope_depth;
-    int exception_count;
-    dict_t*traits;
-} abc_code_t;
 
 typedef struct _opcode
 {
@@ -729,6 +413,17 @@ int swf_GetU24(TAG*tag)
     int b3 = swf_GetU8(tag);
     return b3<<16|b2<<8|b1;
 }
+int swf_GetS24(TAG*tag)
+{
+    int b1 = swf_GetU8(tag);
+    int b2 = swf_GetU8(tag);
+    int b3 = swf_GetU8(tag);
+    if(b3&0x80) {
+        return -1-((b3<<16|b2<<8|b1)^0xffffff);
+    } else {
+        return b3<<16|b2<<8|b1;
+    }
+}
 static int parse_code(TAG*tag, int len, abc_file_t*pool, char*prefix)
 {
     int end=tag->pos+len;
@@ -755,7 +450,8 @@ static int parse_code(TAG*tag, int len, abc_file_t*pool, char*prefix)
 			printf("[method%d]", n);
 		    } else if(*p == 'c') {
 			int n = swf_GetU30(tag);
-			printf("[classinfo%d]", n);
+                        abc_class_t*cls = (abc_class_t*)dict_getdata(pool->classes, n);
+			printf("[classinfo%d %s]", n, cls->name);
 		    } else if(*p == 'i') {
 			int n = swf_GetU30(tag);
 			printf("[methodbody%d]", n);
@@ -766,7 +462,7 @@ static int parse_code(TAG*tag, int len, abc_file_t*pool, char*prefix)
 			int b = swf_GetU8(tag);
 			printf("%02x", b);
 		    } else if(*p == 'j') {
-			printf("%d", swf_GetU24(tag));
+			printf("%d", swf_GetS24(tag));
 		    } else if(*p == 's') {
 			const char*s = dict_getstr(pool->strings, swf_GetU30(tag));
 			printf("\"%s\"", s);
@@ -848,7 +544,9 @@ static void parse_metadata(TAG*tag, abc_file_t*pool)
 #define TRAIT_SETTER 3
 #define TRAIT_CLASS 4
 #define TRAIT_FUNCTION 5
-static dict_t* parse_traits(char*prefix, TAG*tag, abc_file_t*pool, char print)
+#define TRAIT_CONST 6
+
+static dict_t* traits_parse(TAG*tag, abc_file_t*pool)
 {
     int num_traits = swf_GetU30(tag);
     dict_t*traits = dict_new();
@@ -856,37 +554,36 @@ static dict_t* parse_traits(char*prefix, TAG*tag, abc_file_t*pool, char print)
     if(num_traits) {
         DEBUG printf("%d traits\n", num_traits);
     }
+    
     for(t=0;t<num_traits;t++) {
 	abc_trait_t*trait = malloc(sizeof(abc_trait_t));
 	memset(trait, 0, sizeof(abc_trait_t));
 	dict_append(traits, 0, trait);
-	int name_index = swf_GetU30(tag);
-	const char*name = dict_getstr(pool->multinames, name_index);
-	U8 kind = swf_GetU8(tag);
+	trait->name_index = swf_GetU30(tag);
+	const char*name = dict_getstr(pool->multinames, trait->name_index);
+	U8 kind = trait->type = swf_GetU8(tag);
         U8 attributes = kind&0xf0;
         kind&=0x0f;
 	DEBUG printf("  trait %d) %s type=%02x\n", t, name, kind);
 	if(kind == 1 || kind == 2 || kind == 3) { // method / getter / setter
-	    int disp_id = swf_GetU30(tag);
-	    int nr = swf_GetU30(tag);
-	    DEBUG printf("  %smethod %d %d %s\n", prefix, nr, disp_id, ((abc_method_t*)dict_getdata(pool->methods, nr))->paramstr);
-	    if(print) dump_method(prefix, kind==1?"method":(kind==2?"getter":"setter"), name, nr, pool);
+	    trait->disp_id = swf_GetU30(tag);
+	    trait->nr = swf_GetU30(tag);
+	    DEBUG printf("  method/getter/setter\n");
 	} else if(kind == 5) { // function
-	    int slot_id = swf_GetU30(tag);
-	    int nr = swf_GetU30(tag);
-	    if(print) dump_method(prefix, "function", name, nr, pool);
+	    trait->slot_id =  swf_GetU30(tag);
+	    trait->nr = swf_GetU30(tag);
 	} else if(kind == 4) { // class
-	    int slot_id = swf_GetU30(tag);
-	    int cls = swf_GetU30(tag);
-	    if(print) printf("  %sclass %s %d %d\n", prefix, name, slot_id, cls);
+	    trait->slot_id = swf_GetU30(tag);
+	    trait->cls = swf_GetU30(tag);
+	    DEBUG printf("  class %s %d %d\n", name, trait->slot_id, trait->cls);
 	} else if(kind == 0 || kind == 6) { // slot, const
-	    int slot_id = swf_GetU30(tag);
+	    trait->slot_id = swf_GetU30(tag);
 	    const char*type_name = dict_getstr(pool->multinames, swf_GetU30(tag));
-	    int vindex = swf_GetU30(tag);
-	    if(vindex) {
-		U8 vkind = swf_GetU8(tag);
+	    trait->vindex = swf_GetU30(tag);
+	    if(trait->vindex) {
+		trait->vkind = swf_GetU8(tag);
 	    }
-	    if(print) printf("  %sslot %s %d %s (vindex=%d)\n", prefix, name, slot_id, type_name, vindex);
+	    DEBUG printf("  slot %s %d %s (vindex=%d)\n", name, trait->slot_id, type_name, trait->vindex);
 	} else {
 	    printf("    can't parse trait type %d\n", kind);
 	    return 0;
@@ -900,6 +597,42 @@ static dict_t* parse_traits(char*prefix, TAG*tag, abc_file_t*pool, char print)
         }
     }
     return traits;
+}
+
+static void dump_traits(char*prefix, dict_t*traits, abc_file_t*pool)
+{
+    int num_traits = traits->num;
+    int t;
+    for(t=0;t<num_traits;t++) {
+	abc_trait_t*trait = (abc_trait_t*)dict_getdata(traits, t);
+	const char*name = dict_getstr(pool->multinames, trait->name_index);
+	U8 kind = trait->type;
+        U8 attributes = kind&0xf0;
+        kind&=0x0f;
+	if(kind == TRAIT_METHOD) {
+	    printf("%s method %d %d %s\n", prefix, trait->nr, trait->disp_id, ((abc_method_t*)dict_getdata(pool->methods, trait->nr))->paramstr);
+	    dump_method(prefix, "method", name, trait->nr, pool);
+	} else if(kind == TRAIT_GETTER) {
+	    dump_method(prefix, "getter", name, trait->nr, pool);
+        } else if(kind == TRAIT_SETTER) {
+	    dump_method(prefix, "setter", name, trait->nr, pool);
+	} else if(kind == TRAIT_FUNCTION) { // function
+	    dump_method(prefix, "function", name, trait->nr, pool);
+	} else if(kind == TRAIT_CLASS) { // class
+            abc_class_t*cls = (abc_class_t*)dict_getdata(pool->classes, trait->cls);
+            if(!cls) {
+	        printf("%sslot %d: class %s=class%d %d\n", prefix, trait->slot_id, name, trait->cls);
+            } else {
+	        printf("%sslot %d: class %s=%s\n", prefix, trait->slot_id, name, cls->name);
+            }
+	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
+	    int slot_id = trait->slot_id;
+	    const char*type_name = dict_getstr(pool->multinames, trait->type_index);
+	    printf("  %sslot %s %d %s (vindex=%d)\n", prefix, name, trait->slot_id, type_name, trait->vindex);
+	} else {
+	    printf("    can't dump trait type %d\n", kind);
+	}
+    }
 }
 
 void swf_CopyData(TAG*to, TAG*from, int len)
@@ -922,15 +655,15 @@ abc_file_t*abc_file_new()
     f->floats = dict_new();
     dict_append(f->floats, 0, 0);
     f->strings = dict_new();
-    dict_append(f->strings, "--<UNDEFINED>--", 0);
+    dict_append(f->strings, "--<UNDEFINED_STRING>--", 0);
     f->namespaces = dict_new();
-    dict_append(f->namespaces, "--<UNDEFINED>--", 0);
+    dict_append(f->namespaces, "--<UNDEFINED_NAMESPACE>--", 0);
     f->namespace_sets = dict_new();
-    dict_append(f->namespace_sets, "--<UNDEFINED>--", 0);
+    dict_append(f->namespace_sets, "--<UNDEFINED_NSSET>--", 0);
     f->sets = dict_new();
-    dict_append(f->sets, "--<UNDEFINED>--", 0);
+    dict_append(f->sets, "--<UNDEFINED_SET>--", 0);
     f->multinames = dict_new();
-    dict_append(f->multinames, "--<UNDEFINED>--", 0);
+    dict_append(f->multinames, "--<UNDEFINED_MULTINAME>--", 0);
 
     // abc_file
 
@@ -1136,8 +869,10 @@ void swf_DissassembleABC(TAG*tag)
             }
         }
 	if(m->flags&0x80) {
-	    printf("can't parse param names yet\n");
-	    return;
+            /* debug information- not used by avm2 */
+	    for(s=0;s<m->param_count;s++) {
+	        m->name = dict_getstr(pool->strings, swf_GetU30(tag));
+            }
 	}
 	dict_append(pool->methods, m->name, m);
     }
@@ -1149,6 +884,10 @@ void swf_DissassembleABC(TAG*tag)
     int classes_pos = tag->pos;
     DEBUG printf("%d classes\n", num_classes);
     for(t=0;t<num_classes;t++) {
+	abc_class_t*cls = malloc(sizeof(abc_class_t));
+	memset(cls, 0, sizeof(abc_class_t));
+	dict_append(pool->classes, 0, cls);
+	
         DEBUG printf("class %d\n", t);
 	swf_GetU30(tag); //classname
 	swf_GetU30(tag); //supername
@@ -1161,21 +900,19 @@ void swf_DissassembleABC(TAG*tag)
             const char*interface = dict_getstr(pool->multinames, swf_GetU30(tag));
             DEBUG printf("  class %d interface: %s\n", t, interface);
         }
-	swf_GetU30(tag); //iinit
-	if(!parse_traits("", tag, pool, 0))
-	    return;
+	cls->iinit = swf_GetU30(tag);
+	cls->traits = traits_parse(tag, pool);
     }
     for(t=0;t<num_classes;t++) {
-	swf_GetU30(tag); //cinit
-	if(!parse_traits("", tag, pool, 0))
-	    return;
+        abc_class_t*cls = (abc_class_t*)dict_getdata(pool->classes, t);
+	cls->static_constructor_index = swf_GetU30(tag); // cinit
+	cls->static_constructor_traits = traits_parse(tag, pool);
     }
     int num_scripts = swf_GetU30(tag);
     DEBUG printf("%d scripts\n", num_scripts);
     for(t=0;t<num_scripts;t++) {
 	int init = swf_GetU30(tag);
-	if(!parse_traits("", tag, pool, 0))
-	    return;
+	dict_t*traits = traits_parse(tag, pool); //TODO: store
     }
 
     int num_method_bodies = swf_GetU30(tag);
@@ -1210,10 +947,12 @@ void swf_DissassembleABC(TAG*tag)
             swf_GetU30(tag); //exc_type
             swf_GetU30(tag); //var_name
         }
-	c->traits = parse_traits("<method body trait>", tag, pool, 1);
+	c->traits = traits_parse(tag, pool);
 	if(!c->traits) {
 	    return;
 	}
+        dump_traits("<method body trait>", c->traits, pool);
+
 	DEBUG printf("method_body %d) (method %d), %d bytes of code", t, methodnr, code_length);
 	int r,l = code_length>32?32:code_length;
 	for(r=0;r<l;r++) {
@@ -1230,8 +969,8 @@ void swf_DissassembleABC(TAG*tag)
 
     swf_SetTagPos(tag, classes_pos);
     for(t=0;t<num_classes;t++) {
-	abc_class_t*cls = malloc(sizeof(abc_class_t));
-	memset(cls, 0, sizeof(abc_class_t));
+        abc_class_t*cls = (abc_class_t*)dict_getdata(pool->classes, t);
+
 	const char* classname = dict_getstr(pool->multinames, swf_GetU30(tag));
 	const char* supername = dict_getstr(pool->multinames, swf_GetU30(tag));
 	cls->name = classname;
@@ -1251,26 +990,31 @@ void swf_DissassembleABC(TAG*tag)
         }
 	cls->iinit = swf_GetU30(tag);
 	dump_method("    ","constructor", classname, cls->iinit, pool);
-	cls->traits = parse_traits("    ",tag, pool, 1);
+	cls->traits = traits_parse(tag, pool);
 	if(!cls->traits) {
 	    return;
 	}
-	printf("}\n");
-	dict_append(pool->classes, 0, cls);
+	dump_traits("    ",cls->traits, pool);
+	
+	dump_method("    ","staticconstructor", "", cls->static_constructor_index, pool);
+        dump_traits("    ", cls->static_constructor_traits, pool);
+	
+        printf("}\n");
     }
     for(t=0;t<num_classes;t++) {
-	int cinit = swf_GetU30(tag);
-	dump_method("    ","staticconstructor", "", cinit, pool);
-	if(!parse_traits("    ",tag, pool, 1))
-	    return;
+        /* SKIP */
+	swf_GetU30(tag); // cindex
+	traits_parse(tag, pool); // TODO: free
     }
     int num_scripts2 = swf_GetU30(tag);
     printf("\n");
     for(t=0;t<num_scripts2;t++) {
 	int init = swf_GetU30(tag);
 	dump_method("","initmethod", "init", init, pool);
-	if(!parse_traits("", tag, pool, 1))
-	    return;
+        dict_t*traits = traits_parse(tag, pool);
+        if(!traits)
+            return;
+        dump_traits("", traits, pool);
     }
 }
 
@@ -1368,7 +1112,7 @@ abc_class_t* abc_NewClass(abc_file_t*abc, char*classname, char*superclass) {
     c->superclass_index = multiname_index(abc, superclass);
     c->ns_index = abc_RegisterProtectedNameSpace(abc, classname);
     c->iinit = -1;
-    c->cinit = -1;
+    c->static_constructor_index = -1;
 
     c->traits = dict_new();
     return c;
@@ -1426,7 +1170,7 @@ abc_code_t* abc_AddStaticConstructor(abc_class_t*cls, char*returntype, int num_p
     va_start(va, num_params);
     abc_code_t* c = add_method(cls->abc, cls, returntype, 0, num_params, va);
     va_end(va);
-    cls->cinit = c->index;
+    cls->static_constructor_index = c->index;
     return c;
 }
 
@@ -1589,12 +1333,12 @@ void swf_WriteABC(TAG*tag, abc_file_t*abc)
     }
     for(t=0;t<abc->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)dict_getdata(abc->classes, t);
-	if(c->cinit<0) {
-	    fprintf(stderr, "Error: Class %s has no constructor\n", c->name);
+	if(c->static_constructor_index<0) {
+	    fprintf(stderr, "Error: Class %s has no static constructor\n", c->name);
 	    return;
 	}
-	swf_SetU30(tag, c->cinit);
-	swf_SetU30(tag, 0); // no traits
+	swf_SetU30(tag, c->static_constructor_index);
+        write_traits(abc, tag, c->static_constructor_traits);
     }
 
     swf_SetU30(tag, abc->scripts->num);
@@ -1634,6 +1378,7 @@ void swf_AddButtonLinks(TAG*tag)
     c->local_count = 1;
     c->init_scope_depth = 9;
     c->max_scope_depth = 10;
+
     abc_getlocal_0(c);
     abc_pushscope(c);
     abc_returnvoid(c);
@@ -1746,3 +1491,4 @@ void swf_AddButtonLinks(TAG*tag)
 
     swf_WriteABC(tag, abc);
 }
+
