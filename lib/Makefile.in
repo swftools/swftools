@@ -15,7 +15,7 @@ h263_objects = h.263/dct.$(O) h.263/h263tables.$(O) h.263/swfvideo.$(O)
 actioncompiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.swf4.$(O) action/lex.swf5.$(O) action/libming.$(O) action/swf4compiler.tab.$(O) action/swf5compiler.tab.$(O) action/actioncompiler.$(O)
 actioncompiler_in_source = $(actioncompiler_objects)
 
-rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c
+rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c modules/swfscripts.c
 
 base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
 gfx_objects=gfxtools.$(O) gfxfont.$(O) gfxpoly.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@
@@ -23,7 +23,7 @@ gfx_objects=gfxtools.$(O) gfxfont.$(O) gfxpoly.$(O) devices/dummy.$(O) devices/f
 art_objects = art/art_affine.$(O) art/art_alphagamma.$(O) art/art_bpath.$(O) art/art_gray_svp.$(O) art/art_misc.$(O) art/art_pixbuf.$(O) art/art_rect.$(O) art/art_rect_svp.$(O) art/art_rect_uta.$(O) art/art_render.$(O) art/art_render_gradient.$(O) art/art_render_mask.$(O) art/art_render_svp.$(O) art/art_rgb.$(O) art/art_rgb_a_affine.$(O) art/art_rgb_affine.$(O) art/art_rgb_affine_private.$(O) art/art_rgb_bitmap_affine.$(O) art/art_rgb_pixbuf_affine.$(O) art/art_rgb_rgba_affine.$(O) art/art_rgb_svp.$(O) art/art_rgba.$(O) art/art_svp.$(O) art/art_svp_intersect.$(O) art/art_svp_ops.$(O) art/art_svp_point.$(O) art/art_svp_render_aa.$(O) art/art_svp_vpath.$(O) art/art_svp_vpath_stroke.$(O) art/art_svp_wind.$(O) art/art_uta.$(O) art/art_uta_ops.$(O) art/art_uta_rect.$(O) art/art_uta_svp.$(O) art/art_uta_vpath.$(O) art/art_vpath.$(O) art/art_vpath_bpath.$(O) art/art_vpath_dash.$(O) art/art_vpath_svp.$(O)
 art_in_source = @art_in_source@
 
-rfxswf_objects=modules/swfabc.$(O) modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O)
+rfxswf_objects=modules/swfabc.$(O) modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O) modules/swfscripts.$(O)
 ocr_objects=gocr/box.$(O) gocr/database.$(O) gocr/detect.$(O) gocr/job.$(O) gocr/lines.$(O) gocr/list.$(O) gocr/ocr0.$(O) gocr/ocr0n.$(O) gocr/ocr1.$(O) gocr/otsu.$(O) gocr/output.$(O) gocr/pgm2asc.$(O) gocr/pixel.$(O) gocr/progress.$(O) gocr/remove.$(O) gocr/unicode.$(O)
 
 %.$(O): %.c 
