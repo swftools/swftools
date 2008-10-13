@@ -944,3 +944,14 @@ diff -u -r1.5 -r1.6
    // Return the path for a glyph.
    virtual SplashPath *getGlyphPath(int c);
  
+--- xpdf/SplashScreen.cc.orig	2008-10-06 17:59:44.000000000 +0200
++++ xpdf/SplashScreen.cc	2008-10-06 18:20:09.000000000 +0200
+@@ -363,6 +363,8 @@
+ int SplashScreen::test(int x, int y, Guchar value) {
+   int xx, yy;
+ 
++  return 0;
++
+   if (value < minVal) {
+     return 0;
+   }
