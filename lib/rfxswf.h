@@ -156,6 +156,7 @@ typedef struct _SWF
   U16           frameRate;
   U16           frameCount;     // valid after load and save
   TAG *         firstTag;
+  U32           fileAttributes; // for SWFs >= Flash9
 } SWF;
 
 // Basic Functions
@@ -799,7 +800,9 @@ void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // swfabc.c
 
-void swf_DissassembleABC(TAG*tag);
+void* swf_ReadABC(TAG*tag);
+void swf_WriteABC(TAG*tag, void*code);
+void swf_AddButtonLinks(SWF*swf, char stop_each_frame);
 
 // swfscripts.c
 
