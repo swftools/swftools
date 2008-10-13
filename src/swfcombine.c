@@ -314,6 +314,7 @@ static void makestackmaster(SWF*swf)
     SRECT box;
     int fileversion = config.zlib?6:3;
     int frameRate = 256;
+    U32 fileAttributes = 0;
     RGBA rgb;
     rgb.r=rgb.b=rgb.g=0;
     memset(&box, 0, sizeof(box));
@@ -331,7 +332,9 @@ static void makestackmaster(SWF*swf)
 	}
 	close(fi);
 	swf_RemoveJPEGTables(&head);
+        fileAttributes |= head.fileAttributes;
 	removeCommonTags(&head);
+
 	msg("<verbose> File %s has bounding box %d:%d:%d:%d\n",
 		slave_filename[t], 
 		head.movieSize.xmin, head.movieSize.ymin,
@@ -371,6 +374,7 @@ static void makestackmaster(SWF*swf)
     swf->fileVersion = fileversion;
     swf->movieSize = box;
     swf->frameRate = frameRate;
+    swf->fileAttributes = fileAttributes;
 
     swf->firstTag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
     tag = swf->firstTag;
@@ -1069,6 +1073,8 @@ void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 
     if(!master->fileVersion && slave)
 	master->fileVersion = slave->fileVersion;
+        
+    master->fileAttributes |= slave->fileAttributes;
 
     swf_FoldAll(master);
     swf_FoldAll(slave);
