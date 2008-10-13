@@ -76,6 +76,7 @@ typedef struct _swfoutput_internal
     double config_dumpfonts;
     double config_ppmsubpixels;
     double config_jpegsubpixels;
+    char hasbuttons;
     int config_simpleviewer;
     int config_opennewwindow;
     int config_ignoredraworder;
@@ -259,7 +260,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_internallinkfunction=0;
     i->config_externallinkfunction=0;
     i->config_reordertags=1;
-    i->config_linknameurl=1;
+    i->config_linknameurl=0;
 
     i->config_linkcolor.r = i->config_linkcolor.g = i->config_linkcolor.b = 255;
     i->config_linkcolor.a = 0x40;
@@ -1402,9 +1403,10 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	i->swf->compressed = 1;
     }
 
-    /* Initialize AVM2 if it is a Flash9 file */
-    if(i->config_flashversion>=9 && i->config_insertstoptag) {
-	AVM2_InsertStops(i->swf);
+    /* Add AVM2 actionscript */
+    if(i->config_flashversion>=9 && 
+            (i->config_insertstoptag || i->hasbuttons)) {
+        swf_AddButtonLinks(i->swf, i->config_insertstoptag);
     }
 //    if(i->config_reordertags)
 //	swf_Optimize(i->swf);
@@ -1738,6 +1740,8 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     double posy = 0;
     int buttonid = getNewID(dev);
     gfxbbox_t bbox = gfxline_getbbox(points);
+    
+    i->hasbuttons = 1;
 
     /* shape */
     myshapeid = getNewID(dev);
@@ -1818,9 +1822,13 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
             swf_ButtonPostProcess(i->tag, 1);
 	}
     }
+    char buf[80];
     const char* name = 0;
     if(i->config_linknameurl) {
 	name = url;
+    } else {
+        name = buf;
+        sprintf(buf, "button%d", buttonid);
     }
     
     msg("<trace> Placing link ID %d", buttonid);
