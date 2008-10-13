@@ -1016,6 +1016,13 @@ void* swf_ReadABC(TAG*tag)
 	    cls->ns_index = swf_GetU30(tag);
 	    ns = dict_getstr(pool->namespaces, cls->ns_index);
 	}
+        /* TODO
+
+           flags&01 = sealed
+           flags&02 = final
+           flags&04 = interface
+           flags&08 = protectedNS
+        */
 	printf("class %s extends %s, %s, flags=%02x\n", classname, supername, ns, cls->flags);
 	printf("{\n");
 	
@@ -1435,13 +1442,27 @@ void swf_WriteABC(TAG*tag, void*code)
 
 #include "swfabc_ops.c"
 
-void swf_AddButtonLinks(TAG*tag)
+void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
 {
+    int num_frames = 0;
+    TAG*tag=swf->firstTag;
+    while(tag) {
+        if(tag->id == ST_SHOWFRAME)
+            num_frames++;
+        tag = tag->next;
+    }
+
     abc_file_t*file = abc_file_new();
     abc_method_body_t*c = 0;
    
-    abc_class_t*cls = abc_NewClass(file, "buttonmitlink_fla:MainTimeline", "flash.display:MovieClip");
-   
+    abc_class_t*cls = abc_NewClass(file, "rfx:MainTimeline", "flash.display:MovieClip");
+  
+    TAG*abctag = swf_InsertTagBefore(swf, swf->firstTag, ST_DOABC);
+    
+    tag = swf_InsertTag(abctag, ST_SYMBOLCLASS);
+    swf_SetU16(tag, 1);
+    swf_SetU16(tag, 0);
+    swf_SetString(tag, "rfx.MainTimeline");
 
     c = abc_AddStaticConstructor(cls, "void", 0);
     c->max_stack = 1;
@@ -1473,41 +1494,65 @@ void swf_AddButtonLinks(TAG*tag)
     //abc_getlocal_0(c);
     //abc_constructsuper(c,0);
 
-    abc_findpropstrict(c,":addFrameScript");
-    abc_pushbyte(c,0x00);
-    abc_getlex(c,"[packageinternal]buttonmitlink_fla:frame1");
-    abc_callpropvoid(c,":addFrameScript",2);
+    if(stop_each_frame) {
+        int i;
+        for(i=0;i<num_frames;i++) {
+            abc_findpropstrict(c,":addFrameScript");
+            abc_pushbyte(c,i);
+            abc_getlex(c,"[packageinternal]rfx:stopframe");
+            abc_callpropvoid(c,":addFrameScript",2);
+        }
+    }
         
-    abc_getlex(c,":MyButton1");
-    abc_getlex(c,"flash.events:MouseEvent");
-    abc_getproperty(c, ":CLICK");
-    abc_getlex(c, ":gotoPage1");
-    abc_callpropvoid(c, ":addEventListener" ,2);
+    tag = swf->firstTag;
+    int n = 1;
+    while(tag) {
+        if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
+            char buttonname[80];
+            char functionname[80];
+            sprintf(buttonname, ":button%d", swf_GetDefineID(tag));
+            //sprintf(functionname, ":clickLink%d", swf_GetDefineID(t));
+            sprintf(functionname, ":clickLink1");
+            abc_getlex(c,buttonname);
+            abc_getlex(c,"flash.events:MouseEvent");
+            abc_getproperty(c, ":CLICK");
+            abc_getlex(c,functionname);
+            abc_callpropvoid(c, ":addEventListener" ,2);
+        }
+        tag = tag->next;
+    }
 
-    abc_getlex(c,":MyButton2");
-    abc_getlex(c,"flash.events:MouseEvent");
-    abc_getproperty(c, ":CLICK");
-    abc_getlex(c,":gotoPage2");
-    abc_callpropvoid(c,":addEventListener",2);
     abc_returnvoid(c);
 
+    if(stop_each_frame) {
+        int i;
+        for(i=0;i<num_frames;i++) {
+            
+            c = abc_AddMethod(cls, 0, "[packageinternal]rfx:stopframe", 0);
+            c->max_stack = 3;
+            c->local_count = 1;
+            c->init_scope_depth = 10;
+            c->max_scope_depth = 11;
+
+            abc_findpropstrict(c, "[package]:stop");
+            abc_callpropvoid(c, "[package]:stop", 0);
+            abc_getlocal_0(c);
+            abc_pushscope(c);
+            abc_returnvoid(c);
+        }
+    }
     
-    c = abc_AddMethod(cls, 0, "[packageinternal]buttonmitlink_fla:frame1", 0);
-    c->max_stack = 3;
-    c->local_count = 1;
-    c->init_scope_depth = 10;
-    c->max_scope_depth = 11;
+    tag = swf->firstTag;
+    while(tag) {
+        if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
+            char buttonname[80];
+            sprintf(buttonname, ":button%d", swf_GetDefineID(tag));
+            abc_AddSlot(cls, buttonname, 0, "flash.display:SimpleButton");
+        }
+        tag = tag->next;
+    }
 
-    abc_getlocal_0(c);
-    abc_pushscope(c);
-    abc_returnvoid(c);
-
-    
-    abc_AddSlot(cls, ":MyButton1", 0, "flash.display:SimpleButton");
-    abc_AddSlot(cls, ":MyButton2", 0, "flash.display:SimpleButton");
-
-
-    c = abc_AddMethod(cls, ":void", ":gotoPage1", 1, "flash.events:MouseEvent");
+    c = abc_AddMethod(cls, ":void", ":clickLink1", 1, "flash.events:MouseEvent");
     c->max_stack = 3;
     c->local_count = 2;
     c->init_scope_depth = 10;
@@ -1516,29 +1561,12 @@ void swf_AddButtonLinks(TAG*tag)
     abc_pushscope(c);
     abc_findpropstrict(c,"flash.net:navigateToURL");
     abc_findpropstrict(c,"flash.net:URLRequest");
-    abc_pushstring(c,"http://www.google.com/");
+    abc_pushstring(c,"http://www.quiss.org/");
     //abc_pushstring(c,"file:///home/kramm/c/swftools/lib/modules/test2.html");
     abc_constructprop(c,"flash.net:URLRequest", 1);
     abc_callpropvoid(c,"flash.net:navigateToURL", 1);
     abc_returnvoid(c);
   
-
-    c = abc_AddMethod(cls, ":void", ":gotoPage2", 1, "flash.events:MouseEvent");
-    c->max_stack = 3;
-    c->local_count = 2;
-    c->init_scope_depth = 10;
-    c->max_scope_depth = 11;
-    abc_getlocal_0(c);
-    abc_pushscope(c);
-    abc_findpropstrict(c, "flash.net:navigateToURL");
-    abc_findpropstrict(c, "flash.net:URLRequest");
-    abc_pushstring(c, "http://www.quiss.org");
-    //abc_pushstring(c, "file:///home/kramm/c/swftools/lib/modules/test1.html");
-    abc_constructprop(c, "flash.net:URLRequest", 1);
-    abc_callpropvoid(c, "flash.net:navigateToURL", 1);
-    abc_returnvoid(c);
-
-
 
     abc_script_t*s = abc_AddInitScript(file, 0, 0);
     c = (abc_method_body_t*)dict_getdata(file->method_bodies, s->method->method_body_index);
@@ -1572,12 +1600,12 @@ void swf_AddButtonLinks(TAG*tag)
     abc_popscope(c);
     abc_popscope(c);
     abc_popscope(c);
-    abc_initproperty(c,"buttonmitlink_fla:MainTimeline");
+    abc_initproperty(c,"rfx:MainTimeline");
     abc_returnvoid(c);
 
-    //abc_method_body_addClassTrait(c, "buttonmitlink_fla:MainTimeline", 1, cls);
-    abc_initscript_addClassTrait(s, "buttonmitlink_fla:MainTimeline", 1, cls);
+    //abc_method_body_addClassTrait(c, "rfx:MainTimeline", 1, cls);
+    abc_initscript_addClassTrait(s, "rfx:MainTimeline", 1, cls);
 
-    swf_WriteABC(tag, file);
+    swf_WriteABC(abctag, file);
 }
 
