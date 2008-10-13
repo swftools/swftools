@@ -28,9 +28,9 @@ ocr_objects=gocr/box.$(O) gocr/database.$(O) gocr/detect.$(O) gocr/job.$(O) gocr
 
 %.$(O): %.c 
 	$(C) $< -o $@
-lame/%.$(O): lame/%.$(C)
+lame/%.$(O): lame/%.c
 	$(C) $< -o $@
-action/%.$(O): action/%.$(C)
+action/%.$(O): action/%.c
 	$(C) $< -o $@
 
 bitio.$(O): bitio.c bitio.h
