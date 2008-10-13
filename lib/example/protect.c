@@ -62,7 +62,7 @@ int main(int argn,char ** argv)
 	    if(!ret) printf("Password validation failed\n");
 	    else printf("Password ok\n");
 
-	    swf_DeleteTag(tag);
+	    swf_DeleteTag(&swf, tag);
 	}
 	tag = next;
     }
