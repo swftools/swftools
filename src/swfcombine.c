@@ -1062,7 +1062,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		FLAGS_WRITEDEFINES|FLAGS_WRITENONDEFINES|   FLAGS_WRITESPRITE	);
     }
 
-    swf_DeleteTag(newswf, tag);
+    swf_DeleteTag(newswf, newswf->firstTag);
 }
 
 void combine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
