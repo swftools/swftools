@@ -535,7 +535,7 @@ static void dump_method(const char*prefix, const char*type, const char*name, int
         dump_traits(prefix, c->traits, pool);
     printf("%s{\n", prefix);
     parse_code(c->tag, c->tag->len, pool,prefix2);
-    printf("%s}\n", prefix);
+    printf("%s}\n\n", prefix);
 }
 
 //#define DEBUG
@@ -648,7 +648,7 @@ static void dump_traits(const char*prefix, dict_t*traits, abc_file_t*pool)
 	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
 	    int slot_id = trait->slot_id;
 	    const char*type_name = dict_getstr(pool->multinames, trait->type_index);
-	    printf("  %sslot %s %d %s (vindex=%d)\n", prefix, name, trait->slot_id, type_name, trait->vindex);
+	    printf("%sslot %s %d %s (vindex=%d)\n", prefix, name, trait->slot_id, type_name, trait->vindex);
 	} else {
 	    printf("    can't dump trait type %d\n", kind);
 	}
@@ -1490,22 +1490,18 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
     abc_getlex(c, "[package]flash.system:Security");
     abc_pushstring(c, "*");
     abc_callpropvoid(c, "[package]:allowDomain", 1);
-
-    //abc_getlocal_0(c);
-    //abc_constructsuper(c,0);
-
+    
     if(stop_each_frame) {
         int i;
         for(i=0;i<num_frames;i++) {
-            abc_findpropstrict(c,":addFrameScript");
+            abc_findpropstrict(c,"[package]:addFrameScript");
             abc_pushbyte(c,i);
             abc_getlex(c,"[packageinternal]rfx:stopframe");
-            abc_callpropvoid(c,":addFrameScript",2);
+            abc_callpropvoid(c,"[package]:addFrameScript",2);
         }
     }
-        
+      
     tag = swf->firstTag;
-    int n = 1;
     while(tag) {
         if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
             char buttonname[80];
@@ -1525,21 +1521,17 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
     abc_returnvoid(c);
 
     if(stop_each_frame) {
-        int i;
-        for(i=0;i<num_frames;i++) {
-            
-            c = abc_AddMethod(cls, 0, "[packageinternal]rfx:stopframe", 0);
-            c->max_stack = 3;
-            c->local_count = 1;
-            c->init_scope_depth = 10;
-            c->max_scope_depth = 11;
+        c = abc_AddMethod(cls, 0, "[packageinternal]rfx:stopframe", 0);
+        c->max_stack = 3;
+        c->local_count = 1;
+        c->init_scope_depth = 10;
+        c->max_scope_depth = 11;
 
-            abc_findpropstrict(c, "[package]:stop");
-            abc_callpropvoid(c, "[package]:stop", 0);
-            abc_getlocal_0(c);
-            abc_pushscope(c);
-            abc_returnvoid(c);
-        }
+        abc_getlocal_0(c);
+        abc_pushscope(c);
+        abc_findpropstrict(c, "[package]:stop");
+        abc_callpropvoid(c, "[package]:stop", 0);
+        abc_returnvoid(c);
     }
     
     tag = swf->firstTag;
