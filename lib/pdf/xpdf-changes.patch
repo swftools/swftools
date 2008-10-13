@@ -510,94 +510,6 @@ Index: config.h
  #endif
  
  //------------------------------------------------------------------------
-Index: gfile.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/gfile.cc,v
-retrieving revision 1.12
-retrieving revision 1.13
-diff -u -r1.12 -r1.13
---- gfile.cc	3 Dec 2005 10:11:33 -0000	1.12
-+++ gfile.cc	3 Dec 2005 10:30:41 -0000	1.13
-@@ -437,6 +437,52 @@
- #endif
- }
- 
-+static char* getTempDir()
-+{
-+#ifdef WIN32
-+    char*dir = getenv("TMP");
-+    if(!dir) dir = getenv("TEMP");
-+    if(!dir) dir = getenv("tmp");
-+    if(!dir) dir = getenv("temp");
-+    if(!dir) dir = "C:\\";
-+#else
-+    char* dir = "/tmp/";
-+#endif
-+    return dir;
-+}
-+
-+char* mktmpname(char*ptr) {
-+    static char tmpbuf[128];
-+    char*dir = getTempDir();
-+    int l = strlen(dir);
-+    char*sep = "";
-+    if(!ptr)
-+	ptr = tmpbuf;
-+    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
-+#ifdef WIN32
-+	sep = "\\";
-+#else
-+	sep = "/";
-+#endif
-+    }
-+
-+ //   used to be mktemp. This does remove the warnings, but
-+ //   It's not exactly an improvement.
-+#ifdef HAVE_LRAND48
-+    sprintf(ptr, "%s%s%08x%08x",dir,sep,lrand48(),lrand48());
-+#else
-+#   ifdef HAVE_RAND
-+	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
-+#   else
-+	static int count = 1;
-+	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
-+	count ++;
-+#   endif
-+#endif
-+     return ptr;
-+}
-+
-+
- GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
- #if defined(WIN32)
-   //---------- Win32 ----------
-@@ -463,7 +509,7 @@
-   // with this file name after the tmpnam call and before the fopen
-   // call.  I will happily accept fixes to this function for non-Unix
-   // OSs.
--  if (!(s = tmpnam(NULL))) {
-+  if (!(s = mktmpname(NULL))) {
-     return gFalse;
-   }
-   *name = new GString(s);
-@@ -490,7 +536,7 @@
-     (*name)->append("/XXXXXX")->append(ext);
-     fd = mkstemps((*name)->getCString(), strlen(ext));
- #else
--    if (!(s = tmpnam(NULL))) {
-+    if (!(s = mktmpname(NULL))) {
-       return gFalse;
-     }
-     *name = new GString(s);
-@@ -507,7 +553,7 @@
-     (*name)->append("/XXXXXX");
-     fd = mkstemp((*name)->getCString());
- #else // HAVE_MKSTEMP
--    if (!(s = tmpnam(NULL))) {
-+    if (!(s = mktmpname(NULL))) {
-       return gFalse;
-     }
-     *name = new GString(s);
 Index: gfile.h
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/gfile.h,v
@@ -955,3 +867,112 @@ diff -u -r1.5 -r1.6
    if (value < minVal) {
      return 0;
    }
+--- xpdf/gfile.cc.orig	2007-02-27 23:05:51.000000000 +0100
++++ xpdf/gfile.cc	2008-10-12 15:15:22.000000000 +0200
+@@ -439,6 +439,52 @@
+ #endif
+ }
+ 
++static char* getTempDir()
++{
++#ifdef WIN32
++    char*dir = getenv("TMP");
++    if(!dir) dir = getenv("TEMP");
++    if(!dir) dir = getenv("tmp");
++    if(!dir) dir = getenv("temp");
++    if(!dir) dir = "C:\\";
++#else
++    char* dir = "/tmp/";
++#endif
++    return dir;
++}
++
++char* mktmpname(char*ptr) {
++    static char tmpbuf[128];
++    char*dir = getTempDir();
++    int l = strlen(dir);
++    char*sep = "";
++    if(!ptr)
++	ptr = tmpbuf;
++    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
++#ifdef WIN32
++	sep = "\\";
++#else
++	sep = "/";
++#endif
++    }
++
++ //   used to be mktemp. This does remove the warnings, but
++ //   It's not exactly an improvement.
++#ifdef HAVE_LRAND48
++    sprintf(ptr, "%s%s%08x%08x",dir,sep,lrand48(),lrand48());
++#else
++#   ifdef HAVE_RAND
++	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
++#   else
++	static int count = 1;
++	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
++	count ++;
++#   endif
++#endif
++     return ptr;
++}
++
++
+ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
+ #if defined(WIN32)
+   //---------- Win32 ----------
+@@ -460,7 +506,7 @@
+   s->append("x");
+   t = (int)time(NULL);
+   for (i = 0; i < 1000; ++i) {
+-    sprintf(buf, "%d", t + i);
++    sprintf(buf, "%08x-%08x", t + i, GetCurrentThreadId());
+     s2 = s->copy()->append(buf);
+     if (ext) {
+       s2->append(ext);
+@@ -468,8 +514,7 @@
+     if (!(f2 = fopen(s2->getCString(), "r"))) {
+       if (!(f2 = fopen(s2->getCString(), mode))) {
+ 	delete s2;
+-	delete s;
+-	return gFalse;
++        continue;
+       }
+       *name = s2;
+       *f = f2;
+@@ -479,6 +524,7 @@
+     fclose(f2);
+     delete s2;
+   }
++  fprintf(stderr, "Couldn't create temporary file\n");
+   delete s;
+   return gFalse;
+ #elif defined(VMS) || defined(__EMX__) || defined(ACORN) || defined(MACOS)
+@@ -489,7 +535,7 @@
+   // with this file name after the tmpnam call and before the fopen
+   // call.  I will happily accept fixes to this function for non-Unix
+   // OSs.
+-  if (!(s = tmpnam(NULL))) {
++  if (!(s = mktmpname(NULL))) {
+     return gFalse;
+   }
+   *name = new GString(s);
+@@ -516,7 +562,7 @@
+     (*name)->append("/XXXXXX")->append(ext);
+     fd = mkstemps((*name)->getCString(), strlen(ext));
+ #else
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
+@@ -533,7 +579,7 @@
+     (*name)->append("/XXXXXX");
+     fd = mkstemp((*name)->getCString());
+ #else // HAVE_MKSTEMP
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
