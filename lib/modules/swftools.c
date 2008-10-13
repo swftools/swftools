@@ -123,6 +123,7 @@ U16 swf_GetDefineID(TAG * t)
     case ST_DEFINEFONTALIGNZONES: //pseudodefine
     case ST_DEFINEFONTNAME: //pseudodefine
     case ST_DEFINETEXT:
+    case ST_DEFINEBINARY:
     case ST_DEFINETEXT2:
     case ST_DEFINESOUND:
     case ST_DEFINESPRITE:
