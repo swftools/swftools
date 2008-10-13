@@ -923,7 +923,7 @@ static void writeInstance(instance_t* i)
     while (frame < currentframe)
     {
         frame++;
-        while (tag->id != ST_SHOWFRAME)
+        while (tag && tag->id != ST_SHOWFRAME)
             tag = tag->next;
         if (parametersChange(i->history, frame))
         {
