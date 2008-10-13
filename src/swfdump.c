@@ -60,6 +60,7 @@ static int used = 0;
 static int bbox = 0;
 static int cumulative = 0;
 static int showfonts = 0;
+static int showbuttons = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -73,6 +74,7 @@ static struct options_t options[] = {
 {"F", "fonts"},
 {"p", "placements"},
 {"b", "bbox"},
+{"B", "buttons"},
 {"X", "width"},
 {"Y", "height"},
 {"r", "rate"},
@@ -149,8 +151,12 @@ int args_callback_option(char*name,char*val)
 	bbox = 1;
 	return 0;
     }
+    else if(name[0]=='B') {
+	showbuttons = 1;
+	return 0;
+    }
     else if(name[0]=='D') {
-	action = placements = showtext = showshapes = 1;
+	showbuttons = action = placements = showtext = showshapes = 1;
 	return 0;
     }
     else {
@@ -250,6 +256,7 @@ void dumpButton2Actions(TAG*tag, char*prefix)
 void dumpButtonActions(TAG*tag, char*prefix)
 {
     ActionTAG*actions;
+    swf_SetTagPos(tag, 0);
     swf_GetU16(tag); // id
     while (swf_GetU8(tag))      // state  -> parse ButtonRecord
     { swf_GetU16(tag);          // id
@@ -258,6 +265,31 @@ void dumpButtonActions(TAG*tag, char*prefix)
     }
     actions = swf_ActionGet(tag);
     swf_DumpActions(actions, prefix);
+}
+
+void dumpButton(TAG*tag, char*prefix)
+{
+    swf_SetTagPos(tag, 0);
+    swf_GetU16(tag); // id
+    while (1) {
+        U8 flags = swf_GetU8(tag);
+        if(!flags)
+            break;
+        U16 id = swf_GetU16(tag);
+        U16 depth = swf_GetU16(tag);
+        char event[80];
+        sprintf(event, "%s%s%s%s", 
+                (flags&BS_HIT)?"[hit]":"",
+                (flags&BS_DOWN)?"[down]":"",
+                (flags&BS_OVER)?"[over]":"",
+                (flags&BS_UP)?"[up]":"");
+        if(flags&0xf0) {
+            printf("%s | Show %d at depth %d for %s flags=%02x\n", prefix, id, depth, event, flags);
+        } else {
+            printf("%s | Show %d at depth %d for %s\n", prefix, id, depth, event);
+        }
+        swf_GetMatrix(tag,NULL);  // matrix
+    }
 }
 
 void dumpFont(TAG*tag, char*prefix)
@@ -800,6 +832,10 @@ void handleShape(TAG*tag, char*prefix)
 	    printf("%-2d) %s", t+1, linestyle2str(&shape.linestyles[t]));
 	}
 	printf("\n");
+        //if(shape.fillstyles[t].type&0x40) {
+        //    MATRIX m = shape.fillstyles[t].m;
+        //    swf_DumpMatrix(stdout, &m);
+        //}
     }
 
     printf("%s |\n", prefix);
@@ -1317,7 +1353,7 @@ int main (int argc,char ** argv)
             swf_DumpActions(actions, myprefix);
         }
         else if(tag->id == ST_DOABC && action) {
-            swf_DissassembleABC(tag);
+            swf_ReadABC(tag);
         }
         else if(tag->id == ST_DOINITACTION && action) {
             ActionTAG*actions;
@@ -1325,14 +1361,21 @@ int main (int argc,char ** argv)
             actions = swf_ActionGet(tag);
             swf_DumpActions(actions, myprefix);
         }
-	else if(tag->id == ST_DEFINEBUTTON && action) {
-	    dumpButtonActions(tag, myprefix);
+	else if(tag->id == ST_DEFINEBUTTON) {
+            if(showbuttons) {
+                dumpButton(tag, myprefix);
+            }
+            if(action) {
+	        dumpButtonActions(tag, myprefix);
+            }
 	}
 	else if(swf_isFontTag(tag) && showfonts) {
 	    dumpFont(tag, myprefix);
 	}
-	else if(tag->id == ST_DEFINEBUTTON2 && action) {
-	    dumpButton2Actions(tag, myprefix);
+	else if(tag->id == ST_DEFINEBUTTON2) {
+            if(action) {
+	        dumpButton2Actions(tag, myprefix);
+            }
 	}
 	else if(tag->id == ST_PLACEOBJECT) {
 	    handlePlaceObject(tag, myprefix);

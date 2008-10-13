@@ -28,6 +28,8 @@ display placement information about objects.
     Show font information
 -p, --placements
     Show placement information
+-B, --buttons
+    Show button information
 -b, --bbox
     Print tag's bounding boxes
 -X, --width
