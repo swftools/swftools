@@ -151,6 +151,8 @@ char* swf_TagGetName(TAG*tag)
             return "DOACTION";
         case ST_DOABC:
             return "DOABC";
+        case ST_RAWABC:
+            return "RAWABC";
         case ST_DEFINEFONTINFO:
             return "DEFINEFONTINFO";
         case ST_DEFINESOUND:
