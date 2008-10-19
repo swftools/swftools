@@ -1352,7 +1352,7 @@ int main (int argc,char ** argv)
             actions = swf_ActionGet(tag);
             swf_DumpActions(actions, myprefix);
         }
-        else if(tag->id == ST_DOABC && action) {
+        else if((tag->id == ST_DOABC || tag->id == ST_RAWABC) && action) {
             swf_ReadABC(tag);
         }
         else if(tag->id == ST_DOINITACTION && action) {
