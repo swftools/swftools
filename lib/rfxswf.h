@@ -329,6 +329,7 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_FILEATTRIBUTES	69 /* version 8 (required)- */
 #define ST_PLACEOBJECT3		70 /* version 8 */
 #define ST_IMPORTASSETS2	71 /* version 8 */
+#define ST_RAWABC               72 /* version 9, used by flex */
 #define ST_DEFINEFONTALIGNZONES 73 /* version 8 */
 #define ST_CSMTEXTSETTINGS	74 /* version 8 */
 #define ST_DEFINEFONT3		75 /* version 8 */
