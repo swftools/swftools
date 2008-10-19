@@ -102,3 +102,47 @@ int swf_ButtonPostProcess(TAG * t,int anz_action)
   }
   return 0;
 }
+
+ActionTAG* swf_Button1GetAction(TAG*tag)
+{
+    swf_GetU16(tag); //button id
+    while(1)
+    {
+        U8 flags = swf_GetU8(tag);
+        if(!flags)
+            break; 
+        swf_GetU16(tag); //char
+        swf_GetU16(tag); //layer
+        swf_ResetReadBits(tag);
+        swf_GetMatrix(tag, NULL);
+    }
+    return swf_ActionGet(tag);
+}
+
+ActionTAG* swf_Button2GetAction(TAG*tag)
+{
+    swf_GetU16(tag); //button id
+    swf_GetU8(tag); //flag
+    U16 offset = swf_GetU16(tag); //offset
+    swf_SetTagPos(tag, offset);
+    swf_GetU16(tag); // next offset
+    swf_GetU16(tag); // condition
+
+    /* notice: this only returns the *first* action block.
+       For the current appliances, this is enough.
+     */
+    return swf_ActionGet(tag);
+}
+
+ActionTAG* swf_ButtonGetAction(TAG*t)
+{
+    if(t->id == ST_DEFINEBUTTON) {
+        return swf_Button1GetAction(t);
+    } else if(t->id == ST_DEFINEBUTTON2) { 
+        return swf_Button2GetAction(t);
+    } else {
+        fprintf(stderr, "error in buttongetaction: not a button tag\n");
+        return 0;
+    }
+}
+
