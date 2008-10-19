@@ -1176,6 +1176,20 @@ int main (int argc,char ** argv)
         else if(tag->id == ST_FREECHARACTER) {
             printf(" frees object %04d", swf_GetPlaceID(tag));
         }
+        else if(tag->id == ST_DOABC) {
+            swf_SetTagPos(tag, 0);
+            U32 flags = swf_GetU32(tag);
+            char*s = swf_GetString(tag);
+            if(*s) {
+                printf(" \"%s\"", s);
+            }
+            if(flags&1) {
+                if(name)
+                    printf(",");
+                printf(" lazy load");
+            }
+            swf_SetTagPos(tag, 0);
+        }
 	else if(tag->id == ST_STARTSOUND) {
 	    U8 flags;
 	    U16 id;
@@ -1235,8 +1249,7 @@ int main (int argc,char ** argv)
 	    if(issprite) {spriteframe++; spriteframelabel = 0;}
 	    if(!issprite) {mainframe++; framelabel = 0;}
 	}
-
-	if(tag->id == ST_SETBACKGROUNDCOLOR) {
+        else if(tag->id == ST_SETBACKGROUNDCOLOR) {
 	    U8 r = swf_GetU8(tag);
 	    U8 g = swf_GetU8(tag);
 	    U8 b = swf_GetU8(tag);
@@ -1269,7 +1282,8 @@ int main (int argc,char ** argv)
 	    printf("s=%.2f,t=%.2f)\n", thickness, sharpness);
 	    swf_GetU8(tag);
 	}
-	else if(tag->id == ST_DEFINEBITSLOSSLESS ||
+
+	if(tag->id == ST_DEFINEBITSLOSSLESS ||
 	   tag->id == ST_DEFINEBITSLOSSLESS2) {
 	    handleDefineBits(tag);
 	    printf("\n");
