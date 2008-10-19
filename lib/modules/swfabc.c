@@ -1040,10 +1040,11 @@ void* swf_ReadABC(TAG*tag)
     swf_SetTagPos(tag, 0);
     int t;
     if(tag->id == ST_DOABC) {
-        /* the strange 72 tag from flex doesn't have abc flags */
         U32 abcflags = swf_GetU32(tag);
         DEBUG printf("flags=%08x\n", abcflags);
-        char*classname = swf_GetString(tag);
+        char*name= swf_GetString(tag);
+        if(*name)
+            printf("#name: %s\n", name);
     }
     U32 version = swf_GetU32(tag);
     if(version!=0x002e0010) {
@@ -1563,7 +1564,7 @@ void swf_WriteABC(TAG*abctag, void*code)
 
 #include "swfabc_ops.c"
 
-void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
+void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 {
     int num_frames = 0;
     int has_buttons = 0;
@@ -1664,7 +1665,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
 
                 abc_method_body_t*h =
                     abc_class_method(cls, "::void", functionname, 1, "flash.events::MouseEvent");
-                h->max_stack = 3;
+                h->max_stack = 6;
                 h->local_count = 2;
                 h->init_scope_depth = 10;
                 h->max_scope_depth = 11;
@@ -1673,20 +1674,43 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
 
                 ActionTAG*oldaction = swf_ButtonGetAction(tag);
                 if(oldaction && oldaction->op == ACTION__GOTOFRAME) {
-                    abc_findpropstrict(h,"flash.net::gotoFrame");
                     int framenr = GET16(oldaction->data);
-                    // FIXME: doesn't work yet
-                    if(framenr>255) {
+                    if(framenr>254) {
                         fprintf(stderr, "Warning: Couldn't translate jump to frame %d to flash 9 actionscript\n", framenr);
                     }
-                    abc_pushbyte(h,framenr);
-                    abc_callpropvoid(h,"flash.net::gotoFrame", 1);
+                    if(!events) {
+                        abc_findpropstrict(h,"[package]::gotoAndStop");
+                        abc_pushbyte(h,framenr+1);
+                        abc_callpropvoid(h,"[package]::gotoAndStop", 1);
+                    } else {
+                        char framename[80];
+                        sprintf(framename, "frame%d", framenr);
+                        abc_getlocal_0(h); //this
+                        abc_findpropstrict(h, "[package]flash.events::TextEvent");
+                        abc_pushstring(h, "link");
+                        abc_pushtrue(h);
+                        abc_pushtrue(h);
+                        abc_pushstring(h, framename);
+                        abc_constructprop(h,"[package]flash.events::TextEvent", 4);
+                        abc_callpropvoid(h,"[package]::dispatchEvent", 1);
+                    }
                 } else if(oldaction && oldaction->op == ACTION__GETURL) {
-                    abc_findpropstrict(h,"flash.net::navigateToURL");
-                    abc_findpropstrict(h,"flash.net::URLRequest");
-                    abc_pushstring(h,oldaction->data);
-                    abc_constructprop(h,"flash.net::URLRequest", 1);
-                    abc_callpropvoid(h,"flash.net::navigateToURL", 1);
+                    if(!events) {
+                        abc_findpropstrict(h,"flash.net::navigateToURL");
+                        abc_findpropstrict(h,"flash.net::URLRequest");
+                        abc_pushstring(h,oldaction->data); //url
+                        abc_constructprop(h,"flash.net::URLRequest", 1);
+                        abc_callpropvoid(h,"flash.net::navigateToURL", 1);
+                    } else {
+                        abc_getlocal_0(h); //this
+                        abc_findpropstrict(h, "[package]flash.events::TextEvent");
+                        abc_pushstring(h, "link");
+                        abc_pushtrue(h);
+                        abc_pushtrue(h);
+                        abc_pushstring(h,oldaction->data); //url
+                        abc_constructprop(h,"[package]flash.events::TextEvent", 4);
+                        abc_callpropvoid(h,"[package]::dispatchEvent", 1);
+                    }
                 } else if(oldaction) {
                     fprintf(stderr, "Warning: Couldn't translate button code of button %d to flash 9 abc action\n", id);
                 }
