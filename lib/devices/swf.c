@@ -1406,7 +1406,8 @@ void swfoutput_finalize(gfxdevice_t*dev)
     /* Add AVM2 actionscript */
     if(i->config_flashversion>=9 && 
             (i->config_insertstoptag || i->hasbuttons)) {
-        swf_AddButtonLinks(i->swf, i->config_insertstoptag);
+        swf_AddButtonLinks(i->swf, i->config_insertstoptag, 
+                i->config_internallinkfunction||i->config_externallinkfunction);
     }
 //    if(i->config_reordertags)
 //	swf_Optimize(i->swf);
@@ -1589,7 +1590,7 @@ void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
     if(i->textid>=0)
 	endtext(dev);
     
-    if(i->config_externallinkfunction) {
+    if(i->config_externallinkfunction && i->config_flashversion<=8) {
 	actions = action_PushString(actions, url); //parameter
 	actions = action_PushInt(actions, 1); //number of parameters (1)
 	actions = action_PushString(actions, i->config_externallinkfunction); //function name
@@ -1616,7 +1617,7 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
     if(i->textid>=0)
 	endtext(dev);
   
-    if(!i->config_internallinkfunction) {
+    if(!i->config_internallinkfunction || i->config_flashversion>=9) {
 	actions = action_GotoFrame(actions, page-1);
 	actions = action_End(actions);
     } else {
