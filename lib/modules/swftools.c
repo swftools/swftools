@@ -636,6 +636,10 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    }
 	} break;
 
+        case ST_DOABC:
+        case ST_RAWABC:
+        break;
+
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
 	case ST_DEFINEBINARY:
