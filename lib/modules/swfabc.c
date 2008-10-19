@@ -791,12 +791,21 @@ static int multiname_index(abc_file_t*pool, const char*name2)
     char*p = strstr(n, "::");
     char*namespace=0,*name=0;
     if(!p) {
+        if(strchr(n, ':')) {
+            fprintf(stderr, "Error: single ':' in name\n");
+        }
 	namespace = "";
 	name = n;
     } else {
 	*p = 0;
 	namespace = n;
 	name = p+2;
+        if(strchr(namespace, ':')) {
+            fprintf(stderr, "Error: single ':' in namespace\n");
+        }
+        if(strchr(name, ':')) {
+            fprintf(stderr, "Error: single ':' in qualified name\n");
+        }
     }
 
     abc_multiname_t*m = malloc(sizeof(abc_multiname_t));
@@ -1029,10 +1038,13 @@ void* swf_ReadABC(TAG*tag)
     abc_file_t* pool = abc_file_new();
 
     swf_SetTagPos(tag, 0);
-    U32 abcflags = swf_GetU32(tag);
     int t;
-    DEBUG printf("flags=%08x\n", abcflags);
-    char*classname = swf_GetString(tag);
+    if(tag->id == ST_DOABC) {
+        /* the strange 72 tag from flex doesn't have abc flags */
+        U32 abcflags = swf_GetU32(tag);
+        DEBUG printf("flags=%08x\n", abcflags);
+        char*classname = swf_GetString(tag);
+    }
     U32 version = swf_GetU32(tag);
     if(version!=0x002e0010) {
         fprintf(stderr, "Warning: unknown AVM2 version %08x\n", version);
@@ -1346,7 +1358,7 @@ void* swf_ReadABC(TAG*tag)
             swf_GetU30(tag); // multiname index TODO
         }
 	cls->iinit = swf_GetU30(tag);
-	dump_method("    ","constructor", classname, cls->iinit, pool);
+	dump_method("    ","constructor", cls->classname, cls->iinit, pool);
 	cls->traits = traits_parse(tag, pool);
 	if(!cls->traits) {
 	    fprintf(stderr, "Can't parse class traits\n");
@@ -1486,9 +1498,10 @@ void swf_WriteABC(TAG*abctag, void*code)
         dict_append_if_new(pool->strings, namespace_name, 0);
     }
 
-    swf_SetU32(tag, 1);
-    swf_SetU8(tag, 0);
-    swf_SetU16(tag, 0x10);
+    swf_SetU32(tag, 1); // flags
+    swf_SetU8(tag, 0); //classname
+
+    swf_SetU16(tag, 0x10); //version
     swf_SetU16(tag, 0x2e);
 
     swf_SetU30(tag, pool->ints->num>1?pool->ints->num:0);
@@ -1553,10 +1566,13 @@ void swf_WriteABC(TAG*abctag, void*code)
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
 {
     int num_frames = 0;
+    int has_buttons = 0;
     TAG*tag=swf->firstTag;
     while(tag) {
         if(tag->id == ST_SHOWFRAME)
             num_frames++;
+        if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2)
+            has_buttons = 1;
         tag = tag->next;
     }
 
@@ -1564,7 +1580,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
     abc_method_body_t*c = 0;
    
     abc_class_t*cls = abc_class_new(file, "rfx::MainTimeline", "flash.display::MovieClip");
-    abc_class_protectedNS(cls, "rfx::MainTimeline");
+    abc_class_protectedNS(cls, "rfx:MainTimeline");
   
     TAG*abctag = swf_InsertTagBefore(swf, swf->firstTag, ST_DOABC);
     
@@ -1588,6 +1604,8 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
     c->local_count = 1;
     c->init_scope_depth = 10;
     c->max_scope_depth = 11;
+    
+    abc_debugfile(c, "constructor.as");
 
     abc_getlocal_0(c);
     abc_pushscope(c);
@@ -1599,54 +1617,71 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
     abc_pushstring(c, "*");
     abc_callpropvoid(c, "[package]::allowDomain", 1);
     
-    if(stop_each_frame) {
-        int i;
-        for(i=0;i<num_frames;i++) {
-            abc_findpropstrict(c,"[package]::addFrameScript");
-            abc_pushbyte(c,i);
-            abc_getlex(c,"[packageinternal]rfx::stopframe");
-            abc_callpropvoid(c,"[package]::addFrameScript",2);
-        }
-    }
-      
-    tag = swf->firstTag;
-    while(tag) {
-        if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
+    if(stop_each_frame || has_buttons) {
+        int frame = 0;
+        tag = swf->firstTag;
+        abc_method_body_t*f = 0; //frame script
+        while(tag && tag->id!=ST_END) {
+            char framename[80];
+            char needs_framescript=0;
             char buttonname[80];
             char functionname[80];
-            sprintf(buttonname, "::button%d", swf_GetDefineID(tag));
-            //sprintf(functionname, ":clickLink%d", swf_GetDefineID(t));
-            sprintf(functionname, "::clickLink1");
-            abc_getlex(c,buttonname);
-            abc_getlex(c,"flash.events::MouseEvent");
-            abc_getproperty(c, "::CLICK");
-            abc_getlex(c,functionname);
-            abc_callpropvoid(c, "::addEventListener" ,2);
-        }
-        tag = tag->next;
-    }
+            sprintf(framename, "[packageinternal]rfx::frame%d", frame);
+            
+            if(!f && (tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2 || stop_each_frame)) {
+                /* make the contructor add a frame script */
+                abc_findpropstrict(c,"[package]::addFrameScript");
+                abc_pushbyte(c,frame);
+                abc_getlex(c,framename);
+                abc_callpropvoid(c,"[package]::addFrameScript",2);
 
+                f = abc_class_method(cls, 0, framename, 0);
+                f->max_stack = 3;
+                f->local_count = 1;
+                f->init_scope_depth = 10;
+                f->max_scope_depth = 11;
+                abc_debugfile(f, "framescript.as");
+                abc_debugline(f, 1);
+                abc_getlocal_0(f);
+                abc_pushscope(f);
+            }
+
+            if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
+                U16 id = swf_GetDefineID(tag);
+                sprintf(buttonname, "::button%d", swf_GetDefineID(tag));
+                abc_getlex(f,buttonname);
+                abc_getlex(f,"flash.events::MouseEvent");
+                abc_getproperty(f, "::CLICK");
+                sprintf(functionname, "::clickLink1");
+                abc_getlex(f,functionname);
+                abc_callpropvoid(f, "::addEventListener" ,2);
+
+                if(stop_each_frame) {
+                    abc_findpropstrict(f, "[package]::stop");
+                    abc_callpropvoid(f, "[package]::stop", 0);
+                }
+                needs_framescript = 1;
+            }
+            if(tag->id == ST_SHOWFRAME) {
+                if(f) {
+                    abc_returnvoid(f);
+                    f = 0;
+                }
+                frame++;
+            }
+            tag = tag->next;
+        }
+        if(f) {
+            abc_returnvoid(f);
+        }
+    }
     abc_returnvoid(c);
 
-    if(stop_each_frame) {
-        c = abc_class_method(cls, 0, "[packageinternal]rfx::stopframe", 0);
-        c->max_stack = 3;
-        c->local_count = 1;
-        c->init_scope_depth = 10;
-        c->max_scope_depth = 11;
-
-        abc_getlocal_0(c);
-        abc_pushscope(c);
-        abc_findpropstrict(c, "[package]::stop");
-        abc_callpropvoid(c, "[package]::stop", 0);
-        abc_returnvoid(c);
-    }
-    
     tag = swf->firstTag;
     while(tag) {
         if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
             char buttonname[80];
-            sprintf(buttonname, ":button%d", swf_GetDefineID(tag));
+            sprintf(buttonname, "::button%d", swf_GetDefineID(tag));
             abc_AddSlot(cls, buttonname, 0, "flash.display::SimpleButton");
         }
         tag = tag->next;
