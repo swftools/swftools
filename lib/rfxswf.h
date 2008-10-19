@@ -329,7 +329,6 @@ SRECT swf_TurnRect(SRECT r, MATRIX* m);
 #define ST_FILEATTRIBUTES	69 /* version 8 (required)- */
 #define ST_PLACEOBJECT3		70 /* version 8 */
 #define ST_IMPORTASSETS2	71 /* version 8 */
-#define ST_RAWABC               72 /* version 9, used by flex */
 #define ST_DEFINEFONTALIGNZONES 73 /* version 8 */
 #define ST_CSMTEXTSETTINGS	74 /* version 8 */
 #define ST_DEFINEFONT3		75 /* version 8 */
@@ -641,6 +640,80 @@ void swf_DumpGradient(FILE* f, GRADIENT*gradient);
 char* swf_TagGetName(TAG*tag);
 void swf_DumpFont(SWFFONT * font);
 
+// swfbutton.c
+
+// Button States
+
+#define BS_HIT          0x08
+#define BS_DOWN         0x04
+#define BS_OVER         0x02
+#define BS_UP           0x01
+
+// Button Conditions
+
+/* missing: IDLE_OUTDOWN
+            OUTDOWN_OVERUP
+	    OVERUP_OUTDOWN
+*/
+#define BC_OVERDOWN_IDLE        0x0100
+#define BC_IDLE_OVERDOWN        0x0080
+#define BC_OUTDOWN_IDLE         0x0040
+#define BC_OUTDOWN_OVERDOWN     0x0020
+#define BC_OVERDOWN_OUTDOWN     0x0010
+#define BC_OVERDOWN_OVERUP      0x0008
+#define BC_OVERUP_OVERDOWN      0x0004
+#define BC_OVERUP_IDLE          0x0002
+#define BC_IDLE_OVERUP          0x0001
+
+#define BC_KEY(c) (c<<9)
+
+#define BC_CURSORLEFT           0x0200
+#define BC_CURSORRIGHT          0x0400
+#define BC_POS1                 0x0600
+#define BC_END                  0x0800
+#define BC_INSERT               0x0a00
+#define BC_DELETE               0x0c00
+#define BC_CLEAR		0x0e00
+#define BC_BACKSPACE            0x1000
+#define BC_ENTER                0x1a00
+#define BC_CURSORUP             0x1c00
+#define BC_CURSORDOWN           0x1e00
+#define BC_PAGEUP               0x2000
+#define BC_PAGEDOWN             0x2200
+#define BC_TAB                  0x2400
+#define BC_ESCAPE		0x3600
+#define BC_SPACE                0x4000
+
+/* these are probably only valid with linux:
+   Ctrl-A	 0x0200
+   Ctrl-X	 0x3000
+   Ctrl-Y	 0x3200
+   Ctrl-Z	 0x3400
+   Escape/Ctrl-[ 0x3600
+   Ctrl-\	 0x3800
+   Ctrl-]	 0x3a00
+   Ctrl-^	 0x3c00
+   Ctrl-/	 0x3e00
+   */
+
+/* everything above 0x4000 is standard ascii:
+   0x4000 ' ' 0x4200 '!' 0x4600 '#' 0x4800 '$' 0x4a00 '%' 0x4c00 '&' ...
+   0x6000 '0' ... 0x7200 '9'
+   0x8000 '@'
+   0x8200 'A' ...  0xb400 'Z'
+   ...
+   0xfc00 '~'
+ */
+
+// Button Flag
+
+#define BF_TRACKMENU            0x01
+
+int swf_ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx);
+int swf_ButtonSetCondition(TAG * t,U16 condition); // for DefineButton2
+int swf_ButtonSetFlags(TAG * t,U8 flags);  // necessary for DefineButton2
+int swf_ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineButton2-Tags (how many conditions to process)
+
 // swfbits.c
 
 int swf_ImageHasAlpha(RGBA*img, int width, int height);
@@ -761,8 +834,6 @@ void swf_ActionEnumerateStrings(ActionTAG*atag, char*(*callback)(char*));
 // using action/actioncompiler.h:
 ActionTAG* swf_ActionCompile(const char* source, int version);
 
-#define ACTION__GOTOFRAME      0x81
-#define ACTION__GETURL         0x83
 ActionTAG* action_End(ActionTAG*atag);
 ActionTAG* action_NextFrame(ActionTAG*atag);
 ActionTAG* action_PreviousFrame(ActionTAG*atag);
@@ -937,81 +1008,6 @@ void swf_SetVideoStreamBlackFrame(TAG*tag, VIDEOSTREAM*s);
 void swf_SetVideoStreamPFrame(TAG*tag, VIDEOSTREAM*s, RGBA*pic, int quant/* 1-31, 1=best quality, 31=best compression*/);
 void swf_SetVideoStreamMover(TAG*tag, VIDEOSTREAM*s, signed char* movex, signed char* movey, void** image, int quant);
 void swf_VideoStreamClear(VIDEOSTREAM*stream);
-
-// swfbutton.c
-
-// Button States
-
-#define BS_HIT          0x08
-#define BS_DOWN         0x04
-#define BS_OVER         0x02
-#define BS_UP           0x01
-
-// Button Conditions
-
-/* missing: IDLE_OUTDOWN
-            OUTDOWN_OVERUP
-	    OVERUP_OUTDOWN
-*/
-#define BC_OVERDOWN_IDLE        0x0100
-#define BC_IDLE_OVERDOWN        0x0080
-#define BC_OUTDOWN_IDLE         0x0040
-#define BC_OUTDOWN_OVERDOWN     0x0020
-#define BC_OVERDOWN_OUTDOWN     0x0010
-#define BC_OVERDOWN_OVERUP      0x0008
-#define BC_OVERUP_OVERDOWN      0x0004
-#define BC_OVERUP_IDLE          0x0002
-#define BC_IDLE_OVERUP          0x0001
-
-#define BC_KEY(c) (c<<9)
-
-#define BC_CURSORLEFT           0x0200
-#define BC_CURSORRIGHT          0x0400
-#define BC_POS1                 0x0600
-#define BC_END                  0x0800
-#define BC_INSERT               0x0a00
-#define BC_DELETE               0x0c00
-#define BC_CLEAR		0x0e00
-#define BC_BACKSPACE            0x1000
-#define BC_ENTER                0x1a00
-#define BC_CURSORUP             0x1c00
-#define BC_CURSORDOWN           0x1e00
-#define BC_PAGEUP               0x2000
-#define BC_PAGEDOWN             0x2200
-#define BC_TAB                  0x2400
-#define BC_ESCAPE		0x3600
-#define BC_SPACE                0x4000
-
-/* these are probably only valid with linux:
-   Ctrl-A	 0x0200
-   Ctrl-X	 0x3000
-   Ctrl-Y	 0x3200
-   Ctrl-Z	 0x3400
-   Escape/Ctrl-[ 0x3600
-   Ctrl-\	 0x3800
-   Ctrl-]	 0x3a00
-   Ctrl-^	 0x3c00
-   Ctrl-/	 0x3e00
-   */
-
-/* everything above 0x4000 is standard ascii:
-   0x4000 ' ' 0x4200 '!' 0x4600 '#' 0x4800 '$' 0x4a00 '%' 0x4c00 '&' ...
-   0x6000 '0' ... 0x7200 '9'
-   0x8000 '@'
-   0x8200 'A' ...  0xb400 'Z'
-   ...
-   0xfc00 '~'
- */
-
-// Button Flag
-
-#define BF_TRACKMENU            0x01
-
-int swf_ButtonSetRecord(TAG * t,U8 state,U16 id,U16 layer,MATRIX * m,CXFORM * cx);
-int swf_ButtonSetCondition(TAG * t,U16 condition); // for DefineButton2
-int swf_ButtonSetFlags(TAG * t,U8 flags);  // necessary for DefineButton2
-int swf_ButtonPostProcess(TAG * t,int anz_action); // Set all offsets in DefineButton2-Tags (how many conditions to process)
-ActionTAG* swf_ButtonGetAction(TAG*t);
 
 // swfrender.c
 
