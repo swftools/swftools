@@ -1652,7 +1652,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
                 abc_getlex(f,buttonname);
                 abc_getlex(f,"flash.events::MouseEvent");
                 abc_getproperty(f, "::CLICK");
-                sprintf(functionname, "::clickLink1");
+                sprintf(functionname, "::clickbutton%d", swf_GetDefineID(tag));
                 abc_getlex(f,functionname);
                 abc_callpropvoid(f, "::addEventListener" ,2);
 
@@ -1661,6 +1661,37 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
                     abc_callpropvoid(f, "[package]::stop", 0);
                 }
                 needs_framescript = 1;
+
+                abc_method_body_t*h =
+                    abc_class_method(cls, "::void", functionname, 1, "flash.events::MouseEvent");
+                h->max_stack = 3;
+                h->local_count = 2;
+                h->init_scope_depth = 10;
+                h->max_scope_depth = 11;
+                abc_getlocal_0(h);
+                abc_pushscope(h);
+
+                ActionTAG*oldaction = swf_ButtonGetAction(tag);
+                if(oldaction && oldaction->op == ACTION__GOTOFRAME) {
+                    abc_findpropstrict(h,"flash.net::gotoFrame");
+                    int framenr = GET16(oldaction->data);
+                    // FIXME: doesn't work yet
+                    if(framenr>255) {
+                        fprintf(stderr, "Warning: Couldn't translate jump to frame %d to flash 9 actionscript\n", framenr);
+                    }
+                    abc_pushbyte(h,framenr);
+                    abc_callpropvoid(h,"flash.net::gotoFrame", 1);
+                } else if(oldaction && oldaction->op == ACTION__GETURL) {
+                    abc_findpropstrict(h,"flash.net::navigateToURL");
+                    abc_findpropstrict(h,"flash.net::URLRequest");
+                    abc_pushstring(h,oldaction->data);
+                    abc_constructprop(h,"flash.net::URLRequest", 1);
+                    abc_callpropvoid(h,"flash.net::navigateToURL", 1);
+                } else if(oldaction) {
+                    fprintf(stderr, "Warning: Couldn't translate button code of button %d to flash 9 abc action\n", id);
+                }
+                abc_returnvoid(h);
+                swf_ActionFree(oldaction);
             }
             if(tag->id == ST_SHOWFRAME) {
                 if(f) {
@@ -1687,21 +1718,6 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame)
         tag = tag->next;
     }
 
-    c = abc_class_method(cls, "::void", "::clickLink1", 1, "flash.events::MouseEvent");
-    c->max_stack = 3;
-    c->local_count = 2;
-    c->init_scope_depth = 10;
-    c->max_scope_depth = 11;
-    abc_getlocal_0(c);
-    abc_pushscope(c);
-    abc_findpropstrict(c,"flash.net::navigateToURL");
-    abc_findpropstrict(c,"flash.net::URLRequest");
-    abc_pushstring(c,"http://www.quiss.org/");
-    //abc_pushstring(c,"file:///home/kramm/c/swftools/lib/modules/test2.html");
-    abc_constructprop(c,"flash.net::URLRequest", 1);
-    abc_callpropvoid(c,"flash.net::navigateToURL", 1);
-    abc_returnvoid(c);
-  
 
     abc_script_t*s = abc_initscript(file, 0, 0);
     c = (abc_method_body_t*)dict_getdata(file->method_bodies, s->method->method_body_index);
