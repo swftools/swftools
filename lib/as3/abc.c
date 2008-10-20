@@ -1562,7 +1562,7 @@ void swf_WriteABC(TAG*abctag, void*code)
     swf_DeleteTag(0, tmp);
 }
 
-#include "swfabc_ops.c"
+#include "abc_ops.c"
 
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 {
