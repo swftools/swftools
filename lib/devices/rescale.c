@@ -137,31 +137,37 @@ void rescale_startpage(gfxdevice_t*dev, int width, int height)
     i->origwidth = width;
     i->origheight = height;
 
-    if(i->targetwidth && i->targetheight) {
+    if(i->targetwidth || i->targetheight) {
+        int targetwidth = i->targetwidth;
+        if(!targetwidth)
+            targetwidth = width*i->targetheight/height;
+        int targetheight = i->targetheight;
+        if(!targetheight)
+            targetheight = height*i->targetwidth/width;
 	if(i->keepratio) {
-	    double rx = (double)i->targetwidth / (double)width;
-	    double ry = (double)i->targetheight / (double)height;
+	    double rx = (double)targetwidth / (double)width;
+	    double ry = (double)targetheight / (double)height;
 	    if(rx<ry) {
 		i->matrix.m00 = rx;
 		i->matrix.m11 = rx;
 		i->matrix.tx = 0;
 		if(i->centery) {
-		    i->matrix.ty = (i->targetheight - height*rx) / 2;
+		    i->matrix.ty = (targetheight - height*rx) / 2;
 		}
 	    } else {
 		i->matrix.m00 = ry;
 		i->matrix.m11 = ry;
 		if(i->centerx) {
-		    i->matrix.tx = (i->targetwidth - width*ry) / 2;
+		    i->matrix.tx = (targetwidth - width*ry) / 2;
 		}
 		i->matrix.ty = 0;
 	    }
 	} else {
-	    i->matrix.m00 = (double)i->targetwidth / (double)width;
-	    i->matrix.m11 = (double)i->targetheight / (double)height;
+	    i->matrix.m00 = (double)targetwidth / (double)width;
+	    i->matrix.m11 = (double)targetheight / (double)height;
 	}
 	i->zoomwidth = sqrt(i->matrix.m00*i->matrix.m11);
-	i->out->startpage(i->out,i->targetwidth,i->targetheight);
+	i->out->startpage(i->out,targetwidth,targetheight);
     } else {
 	i->out->startpage(i->out,(int)(width*i->matrix.m00),(int)(height*i->matrix.m11));
     }
