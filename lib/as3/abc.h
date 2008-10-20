@@ -24,13 +24,7 @@
 #ifndef __swfabc_h__
 #define __swfabc_h__
 
-#define DECLARE(x) struct _##x;typedef struct _##x x##_t;
-#define DECLARE_LIST(x) \
-struct _##x##_list { \
-    struct _##x* x; \
-    struct _##x##_list*next; \
-}; \
-typedef struct _##x##_list x##_list_t; \
+#include "utils.h"
 
 DECLARE(abc_file);
 DECLARE(abc_method_body);
@@ -74,17 +68,6 @@ struct _abc_multiname {
     const char*namespace_set_name; // FIXME should be a struct
     const char*name;
 };
-
-typedef struct _dict_entry {
-    const char*name;
-    void*data;
-} dict_entry_t;
-
-typedef struct _dict {
-    int num;
-    int size;
-    dict_entry_t*d;
-} dict_t;
 
 struct _abc_file {
 
