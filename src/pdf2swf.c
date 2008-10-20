@@ -50,6 +50,8 @@
 static gfxsource_t*driver = 0;
 static gfxdevice_t*out = 0;
 
+static int maxwidth=0, maxheight=0;
+
 static char * outputname = 0;
 static int loglevel = 3;
 static char * pagerange = 0;
@@ -180,6 +182,16 @@ int args_callback_option(char*name,char*val) {
         xnup = 3;
         ynup = 3;
 	return 0;
+    }
+    else if (!strcmp(name, "X"))
+    {
+        maxwidth = atoi(value);
+	return 1;
+    }
+    else if (!strcmp(name, "Y"))
+    {
+        maxheight = atoi(value);
+	return 1;
     }
     else if (!strcmp(name, "q"))
     {
@@ -468,6 +480,8 @@ static struct options_t options[] = {
 {"G", "flatten"},
 {"I", "info"},
 {"Q", "maxtime"},
+{"X", "width"},
+{"Y", "height"},
 {0,0}
 };
 
@@ -572,15 +586,24 @@ void show_info(gfxsource_t*driver, char*filename)
 }
 
 
-static gfxdevice_t swf,wrap;
+static gfxdevice_t swf,wrap,rescale;
 gfxdevice_t*create_output_device()
 {
     gfxdevice_swf_init(&swf);
-    gfxdevice_removeclippings_init(&wrap, &swf);
-    out = &wrap;
-    if(!flatten) {
-	out = &swf;
+
+    /* set up filter chain */
+	
+    out = &swf;
+    if(flatten) {
+        gfxdevice_removeclippings_init(&wrap, &swf);
+        out = &wrap;
     }
+
+    if(maxwidth || maxheight) {
+        gfxdevice_rescale_init(&rescale, out, maxwidth, maxheight);
+        out = &rescale;
+    }
+
     /* pass global parameters to output device */
     parameter_t*p = device_config;
     while(p) {
