@@ -1253,13 +1253,11 @@ int main (int argc,char ** argv)
 	    U8 r = swf_GetU8(tag);
 	    U8 g = swf_GetU8(tag);
 	    U8 b = swf_GetU8(tag);
-	    printf(" (%02x/%02x/%02x)\n",r,g,b);
+	    printf(" (%02x/%02x/%02x)",r,g,b);
 	}
 	else if(tag->id == ST_PROTECT) {
 	    if(tag->len>0) {
-		printf(" %s\n", swf_GetString(tag));
-	    } else {
-		printf("\n");
+		printf(" %s", swf_GetString(tag));
 	    }
 	}
 	else if(tag->id == ST_CSMTEXTSETTINGS) {
@@ -1279,7 +1277,7 @@ int main (int argc,char ** argv)
 		printf("unknown[%08x],", flags);
 	    float thickness = swf_GetFixed(tag);
 	    float sharpness = swf_GetFixed(tag);
-	    printf("s=%.2f,t=%.2f)\n", thickness, sharpness);
+	    printf("s=%.2f,t=%.2f)", thickness, sharpness);
 	    swf_GetU8(tag);
 	}
 
