@@ -117,7 +117,7 @@ typedef struct _history
 {
     U16 firstFrame, lastFrame;
 	TAG* firstTag;
-    dictionary_t* states;
+    dict_t* states;
 } history_t;
 
 history_t* history_new();
