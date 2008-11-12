@@ -540,7 +540,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->info = info;
     this->doc = doc;
     this->xref = doc->getXRef();
-
+    
     this->jpeginfo = 0;
     this->textmodeinfo = 0;
     this->linkinfo = 0;
@@ -1004,6 +1004,8 @@ GBool GFXOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
     m.ty = (y0 + y1)/2 - 0.5;
 
     device->fillgradient(device, &p1, g, gfxgradient_linear, &m);
+
+    free(g);
     return gTrue;
 }
   
@@ -1227,6 +1229,9 @@ GFXOutputDev::~GFXOutputDev()
 
     if(this->pages) {
 	free(this->pages); this->pages = 0;
+    }
+    if(this->dashPattern) {
+        free(this->dashPattern);this->dashPattern = 0;
     }
     
     feature_t*f = this->featurewarnings;
@@ -1786,10 +1791,18 @@ void GFXOutputDev::restoreState(GfxState *state) {
  
 void GFXOutputDev::updateLineDash(GfxState *state) 
 {
-    state->getLineDash(&this->dashPattern, &this->dashLength, &this->dashStart);
+    if(this->dashPattern) {
+        free(this->dashPattern);this->dashPattern = 0;
+    }
+    double *pattern = 0;
+    state->getLineDash(&pattern, &this->dashLength, &this->dashStart);
     msg("<debug> updateLineDash, %d dashes", this->dashLength);
     if(!this->dashLength) {
         this->dashPattern = 0;
+    } else {
+        double*p = (double*)malloc(this->dashLength*sizeof(this->dashPattern[0]));
+        memcpy(p, pattern, this->dashLength*sizeof(this->dashPattern[0]));
+        this->dashPattern = p;
     }
 }
 
