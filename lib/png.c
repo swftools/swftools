@@ -1344,8 +1344,7 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
 	{
 	    int filtermode;
 	    int bestsize = 0x7fffffff;
-	    for(filtermode=0;filtermode<=5;filtermode++) {
-
+	    for(filtermode=0;filtermode<=0;filtermode++) {
 		if(!y && filtermode>=2)
 		    continue; // don't do y direction filters in the first row
 		
