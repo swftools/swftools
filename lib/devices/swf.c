@@ -1589,6 +1589,8 @@ void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
 	endshape(dev);
     if(i->textid>=0)
 	endtext(dev);
+
+    /* TODO: escape special characters in url */
     
     if(i->config_externallinkfunction && i->config_flashversion<=8) {
 	actions = action_PushString(actions, url); //parameter
@@ -2840,6 +2842,17 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	msg("<error> swf_drawchar called (glyph %d) without font", glyph);
 	return;
     }
+
+    if(i->config_drawonlyshapes) {
+        gfxglyph_t*glyph = &font->glyphs[glyphnr];
+        gfxline_t*line2 = gfxline_clone(glyph->line);
+        gfxline_transform(line2, matrix);
+        draw_line(dev, line2);
+        fill_solid(dev, color);
+        gfxline_free(line2);
+        return;
+    }
+
     if(!i->swffont || !i->swffont->name || strcmp((char*)i->swffont->name,font->id)) // not equal to current font
     {
 	/* TODO: remove the need for this (enhance getcharacterbbox so that it can cope
