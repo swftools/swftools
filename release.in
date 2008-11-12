@@ -141,6 +141,8 @@ ${name}/lib/modules/swfdraw.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/as3/utils.c \
 ${name}/lib/as3/utils.h \
+${name}/lib/as3/files.c \
+${name}/lib/as3/files.h \
 ${name}/lib/as3/abc.c \
 ${name}/lib/as3/abc.h \
 ${name}/lib/as3/abc_ops.c \
