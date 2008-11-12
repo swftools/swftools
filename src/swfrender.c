@@ -14,14 +14,15 @@
 static struct options_t options[] = {
 {"h", "help"},
 {"o", "output"},
-{"n", "ng"},
+{"l", "legacy"},
 {"V", "version"},
 {0,0}
 };
 
-static int ng = 0;
+static int ng = 1;
 static char*filename = 0;
 static char*outputname = "output.png";
+static int quantize = 0;
 
 int args_callback_option(char*name,char*val)
 {
@@ -31,8 +32,11 @@ int args_callback_option(char*name,char*val)
     } else if(!strcmp(name, "o")) {
 	outputname = strdup(val);
 	return 1;
-    } else if(!strcmp(name, "n")) {
-	ng = 1;
+    } else if(!strcmp(name, "l")) {
+	ng = 0;
+	return 0;
+    } else if(!strcmp(name, "q")) {
+	quantize = 1;
 	return 0;
     } else {
         printf("Unknown option: -%s\n", name);
@@ -51,7 +55,7 @@ void args_callback_usage(char *name)
     printf("Usage: %s file.swf [-o output.png]\n", name);
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
-    printf("-n , --ng			   Use next generation renderer (based on gfxdevice)\n");
+    printf("-l , --legacy                  Use old rendering framework\n");
     printf("-o , --output		   Output file (default: output.png)\n");
     printf("\n");
 }
@@ -95,7 +99,10 @@ int main(int argn, char*argv[])
 				   (swf.movieSize.ymax - swf.movieSize.ymin) / 20, 2, 1);
 	swf_RenderSWF(&buf, &swf);
 	RGBA* img = swf_Render(&buf);
-	writePNG(outputname, (unsigned char*)img, buf.width, buf.height);
+        if(quantize)
+	    writePalettePNG(outputname, (unsigned char*)img, buf.width, buf.height);
+        else
+	    writePNG(outputname, (unsigned char*)img, buf.width, buf.height);
 	swf_Render_Delete(&buf);
     } else {
 	gfxsource_t*src = gfxsource_swf_create();
@@ -106,6 +113,9 @@ int main(int argn, char*argv[])
 	}
 	gfxdevice_t dev2,*dev=&dev2;
 	gfxdevice_render_init(dev);
+        if(quantize) {
+            dev->setparameter(dev, "palette", "1");
+        }
 
 	int t;
 	for(t=1;t<=doc->num_pages;t++) {
