@@ -779,7 +779,7 @@ typedef struct {
     u32 color;
 } colornum_t;
 
-int compare_colors(const void*_c1, const void*_c2) {
+static int compare_colors(const void*_c1, const void*_c2) {
     colornum_t*c1 = (colornum_t*)_c1;
     colornum_t*c2 = (colornum_t*)_c2;
     return c1->num - c2->num;
@@ -1376,11 +1376,11 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
     fclose(fi);
 }
 
-void writePNG(const char*filename, unsigned char*data, int width, int height)
+EXPORT void writePNG(const char*filename, unsigned char*data, int width, int height)
 {
     savePNG(filename, data, width, height, 0);
 }
-void writePalettePNG(const char*filename, unsigned char*data, int width, int height)
+EXPORT void writePalettePNG(const char*filename, unsigned char*data, int width, int height)
 {
     savePNG(filename, data, width, height, 256);
 }
