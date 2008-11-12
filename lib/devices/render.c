@@ -808,7 +808,11 @@ int render_result_save(gfxresult_t*r, const char*filename)
 	}
 	free(origname);
     } else {
-	writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+        if(!i->palette) {
+	    writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+	} else {
+	    writePalettePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+	}
     }
     return 1;
 }
