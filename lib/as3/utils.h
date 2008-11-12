@@ -46,4 +46,16 @@ typedef struct _dict {
     dict_entry_t*d;
 } dict_t;
 
+dict_t* dict_new();
+void dict_free(dict_t*dict);
+const char*dict_getstr(dict_t*dict, int nr);
+char*dict_getdata(dict_t*dict, int nr);
+int dict_append(dict_t*dict, const char*name, void*data);
+int dict_find(dict_t*dict, const char*name);
+int dict_find2(dict_t*dict, const char*name, void*data);
+int dict_update(dict_t*dict, const char*name, void*data);
+int dict_update(dict_t*dict, const char*name, void*data);
+int dict_append_if_new(dict_t*dict, const char*name, void*data);
+
+
 #endif
