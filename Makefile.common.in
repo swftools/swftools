@@ -8,6 +8,7 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 # compiling
 DEFS=@DEFS@
 INCLUDES=
+DEP=@CC@ -MM $(DEFS) $(INCLUDES) @CPPFLAGS@
 C=@CC@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CFLAGS@
 CC=@CXX@ -c $(DEFS) $(INCLUDES) @CPPFLAGS@ @CXXFLAGS@
 L=@CC@ $(DEFS)
