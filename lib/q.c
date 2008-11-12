@@ -171,6 +171,23 @@ void ringbuffer_clear(ringbuffer_t*r)
     free(i);
 }
 
+// ------------------------------- crc32 --------------------------------------
+static unsigned int*crc32 = 0;
+static void crc32_init(void)
+{
+    int t;
+    if(crc32) 
+        return;
+    crc32= (unsigned int*)malloc(sizeof(unsigned int)*256);
+    for(t=0; t<256; t++) {
+        unsigned int c = t;
+        int s;
+        for (s = 0; s < 8; s++) {
+          c = (0xedb88320L*(c&1)) ^ (c >> 1);
+        }
+        crc32[t] = c;
+    }
+}
 // ------------------------------- string_t -----------------------------------
 
 void string_set2(string_t*str, char*text, int len)
@@ -182,6 +199,16 @@ void string_set(string_t*str, char*text)
 {
     str->len = strlen(text);
     str->str = text;
+}
+unsigned int string_hash(string_t*str)
+{
+    int t;
+    unsigned int checksum = 0;
+    crc32_init();
+    for(t=0;t<str->len;t++) {
+        checksum = checksum>>8 ^ crc32[(str->str[t]^checksum)&0xff];
+    }
+    return checksum;
 }
 void string_dup2(string_t*str, const char*text, int len)
 {
@@ -196,13 +223,13 @@ void string_dup(string_t*str, const char*text)
 int string_equals(string_t*str, const char*text)
 {
     int l = strlen(text);
-    if(str->len == l && !strncmp(str->str, text, l))
+    if(str->len == l && !memcmp(str->str, text, l))
 	return 1;
     return 0;
 }
 int string_equals2(string_t*str, string_t*str2)
 {
-    if(str->len == str2->len && !strncmp(str->str, str2->str, str->len))
+    if(str->len == str2->len && !memcmp(str->str, str2->str, str->len))
 	return 1;
     return 0;
 }
@@ -213,27 +240,48 @@ char* string_cstr(string_t*str)
 
 // ------------------------------- stringarray_t ------------------------------
 
+#define DEFAULT_HASH_SIZE 257
+
+typedef struct _stringlist {
+    int index;
+    struct _stringlist*next;
+} stringlist_t;
+
 typedef struct _stringarray_internal_t
 {
     mem_t data;
     mem_t pos;
+    stringlist_t**hash;
     int num;
+    int hashsize;
 } stringarray_internal_t;
-void stringarray_init(stringarray_t*sa)
+
+void stringarray_init(stringarray_t*sa, int hashsize)
 {
     stringarray_internal_t*s;
+    int t;
     sa->internal = (stringarray_internal_t*)malloc(sizeof(stringarray_internal_t)); 
     memset(sa->internal, 0, sizeof(stringarray_internal_t));
     s = (stringarray_internal_t*)sa->internal;
     mem_init(&s->data);
     mem_init(&s->pos);
+    s->hash = malloc(sizeof(stringlist_t*)*hashsize);
+    memset(s->hash, 0, sizeof(stringlist_t*)*hashsize);
+    s->hashsize = hashsize;
 }
 void stringarray_put(stringarray_t*sa, string_t str)
 {
     stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
     int pos;
+    int hash = string_hash(&str) % s->hashsize;
     pos = mem_putstring(&s->data, str);
     mem_put(&s->pos, &pos, sizeof(int));
+
+    stringlist_t*l = malloc(sizeof(stringlist_t));
+    l->index = s->num;
+    l->next = s->hash[hash];
+    s->hash[hash] = l;
+
     s->num++;
 }
 char* stringarray_at(stringarray_t*sa, int pos)
@@ -254,20 +302,47 @@ string_t stringarray_at2(stringarray_t*sa, int pos)
     s.len = s.str?strlen(s.str):0;
     return s;
 }
+static stringlist_t* stringlist_del(stringarray_t*sa, stringlist_t*l, int index)
+{
+    stringlist_t*ll = l;
+    stringlist_t*old = l;
+    while(l) {
+        if(index==l->index) {
+            old->next = l->next;
+            memset(l, 0, sizeof(stringlist_t));
+            free(l);
+            if(old==l)
+                return 0;
+            else
+                return ll;
+        }
+        old = l;
+        l = l->next;
+    }
+    fprintf(stderr, "Internal error: did not find string %d in hash\n", index);
+    return ll;
+}
+
 void stringarray_del(stringarray_t*sa, int pos)
 {
     stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    string_t str = stringarray_at2(sa, pos);
+    int hash = string_hash(&str) % s->hashsize;
+    s->hash[hash] = stringlist_del(sa, s->hash[hash], pos);
     *(int*)&s->pos.buffer[pos*sizeof(int)] = -1;
 }
 int stringarray_find(stringarray_t*sa, string_t* str)
 {
     stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    int hash = string_hash(str) % s->hashsize;
     int t;
-    for(t=0;t<s->num;t++) {
-	string_t s = stringarray_at2(sa, t);
-	if(s.str && string_equals2(&s, str)) {
-	    return t;
-	}
+    stringlist_t*l = s->hash[hash];
+    while(l) {
+        string_t s = stringarray_at2(sa, l->index);
+        if(string_equals2(str, &s)) {
+            return l->index;
+        }
+        l = l->next;
     }
     return -1;
 }
@@ -276,6 +351,16 @@ void stringarray_clear(stringarray_t*sa)
     stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
     mem_clear(&s->data);
     mem_clear(&s->pos);
+    int t;
+    for(t=0;t<s->hashsize;t++) {
+        stringlist_t*l = s->hash[t];
+        while(l) {
+            stringlist_t*next = l->next;
+            memset(l, 0, sizeof(stringlist_t));
+            free(l);
+            l = next;
+        }
+    }
     free(s);
 }
 void stringarray_destroy(stringarray_t*sa)
@@ -300,8 +385,8 @@ void map_init(map_t*map)
     map->internal = (map_internal_t*)malloc(sizeof(map_internal_t));
     memset(map->internal, 0, sizeof(map_internal_t));
     m = (map_internal_t*)map->internal;
-    stringarray_init(&m->keys);
-    stringarray_init(&m->values);
+    stringarray_init(&m->keys, DEFAULT_HASH_SIZE);
+    stringarray_init(&m->values, DEFAULT_HASH_SIZE);
 }
 void map_put(map_t*map, string_t t1, string_t t2)
 {
@@ -361,7 +446,7 @@ void dictionary_init(dictionary_t*dict)
     dict->internal = (dictionary_internal_t*)malloc(sizeof(dictionary_internal_t));
     memset(dict->internal, 0, sizeof(dictionary_internal_t));
     d = (dictionary_internal_t*)dict->internal;
-    stringarray_init(&d->keys);
+    stringarray_init(&d->keys, DEFAULT_HASH_SIZE);
     mem_init(&d->values);
 }
 void dictionary_put(dictionary_t*dict, string_t t1, void* t2)
