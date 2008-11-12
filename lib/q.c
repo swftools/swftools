@@ -60,18 +60,12 @@ void mem_destroy(mem_t*mem)
     mem_clear(mem);
     free(mem);
 }
-static int mem_put_(mem_t*m,void*data, int length, int null)
+static int mem_put_(mem_t*m,const void*data, int length, int null)
 {
     int n = m->pos;
     m->pos += length + (null?1:0);
-    if(m->pos > m->len)
-    { 
-	//m->len += 1024>length?1024:(null?length*2:length);
-
-	m->len *= 2;
-	while(m->len < m->pos)
-	    m->len += 64;
-
+    if(m->pos > m->len) { 
+        m->len = (m->pos+63)&~63;
 	m->buffer = m->buffer?(char*)realloc(m->buffer,m->len):(char*)malloc(m->len);
     }
     memcpy(&m->buffer[n], data, length);
@@ -171,374 +165,6 @@ void ringbuffer_clear(ringbuffer_t*r)
     free(i);
 }
 
-// ------------------------------- crc32 --------------------------------------
-static unsigned int*crc32 = 0;
-static void crc32_init(void)
-{
-    int t;
-    if(crc32) 
-        return;
-    crc32= (unsigned int*)malloc(sizeof(unsigned int)*256);
-    for(t=0; t<256; t++) {
-        unsigned int c = t;
-        int s;
-        for (s = 0; s < 8; s++) {
-          c = (0xedb88320L*(c&1)) ^ (c >> 1);
-        }
-        crc32[t] = c;
-    }
-}
-// ------------------------------- string_t -----------------------------------
-
-void string_set2(string_t*str, char*text, int len)
-{
-    str->len = len;
-    str->str = text;
-}
-void string_set(string_t*str, char*text)
-{
-    str->len = strlen(text);
-    str->str = text;
-}
-unsigned int string_hash(string_t*str)
-{
-    int t;
-    unsigned int checksum = 0;
-    crc32_init();
-    for(t=0;t<str->len;t++) {
-        checksum = checksum>>8 ^ crc32[(str->str[t]^checksum)&0xff];
-    }
-    return checksum;
-}
-void string_dup2(string_t*str, const char*text, int len)
-{
-    str->len = len;
-    str->str = strdup_n(text, len);
-}
-void string_dup(string_t*str, const char*text)
-{
-    str->len = strlen(text);
-    str->str = strdup(text);
-}
-int string_equals(string_t*str, const char*text)
-{
-    int l = strlen(text);
-    if(str->len == l && !memcmp(str->str, text, l))
-	return 1;
-    return 0;
-}
-int string_equals2(string_t*str, string_t*str2)
-{
-    if(str->len == str2->len && !memcmp(str->str, str2->str, str->len))
-	return 1;
-    return 0;
-}
-char* string_cstr(string_t*str)
-{
-    return strdup_n(str->str, str->len);
-}
-
-// ------------------------------- stringarray_t ------------------------------
-
-#define DEFAULT_HASH_SIZE 257
-
-typedef struct _stringlist {
-    int index;
-    struct _stringlist*next;
-} stringlist_t;
-
-typedef struct _stringarray_internal_t
-{
-    mem_t data;
-    mem_t pos;
-    stringlist_t**hash;
-    int num;
-    int hashsize;
-} stringarray_internal_t;
-
-void stringarray_init(stringarray_t*sa, int hashsize)
-{
-    stringarray_internal_t*s;
-    int t;
-    sa->internal = (stringarray_internal_t*)malloc(sizeof(stringarray_internal_t)); 
-    memset(sa->internal, 0, sizeof(stringarray_internal_t));
-    s = (stringarray_internal_t*)sa->internal;
-    mem_init(&s->data);
-    mem_init(&s->pos);
-    s->hash = malloc(sizeof(stringlist_t*)*hashsize);
-    memset(s->hash, 0, sizeof(stringlist_t*)*hashsize);
-    s->hashsize = hashsize;
-}
-void stringarray_put(stringarray_t*sa, string_t str)
-{
-    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
-    int pos;
-    int hash = string_hash(&str) % s->hashsize;
-    pos = mem_putstring(&s->data, str);
-    mem_put(&s->pos, &pos, sizeof(int));
-
-    stringlist_t*l = malloc(sizeof(stringlist_t));
-    l->index = s->num;
-    l->next = s->hash[hash];
-    s->hash[hash] = l;
-
-    s->num++;
-}
-char* stringarray_at(stringarray_t*sa, int pos)
-{
-    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
-    int p;
-    if(pos<0 || pos>=s->num)
-	return 0;
-    p = *(int*)&s->pos.buffer[pos*sizeof(int)];
-    if(p<0)
-	return 0;
-    return &s->data.buffer[p];
-}
-string_t stringarray_at2(stringarray_t*sa, int pos)
-{
-    string_t s;
-    s.str = stringarray_at(sa, pos);
-    s.len = s.str?strlen(s.str):0;
-    return s;
-}
-static stringlist_t* stringlist_del(stringarray_t*sa, stringlist_t*l, int index)
-{
-    stringlist_t*ll = l;
-    stringlist_t*old = l;
-    while(l) {
-        if(index==l->index) {
-            old->next = l->next;
-            memset(l, 0, sizeof(stringlist_t));
-            free(l);
-            if(old==l)
-                return 0;
-            else
-                return ll;
-        }
-        old = l;
-        l = l->next;
-    }
-    fprintf(stderr, "Internal error: did not find string %d in hash\n", index);
-    return ll;
-}
-
-void stringarray_del(stringarray_t*sa, int pos)
-{
-    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
-    string_t str = stringarray_at2(sa, pos);
-    int hash = string_hash(&str) % s->hashsize;
-    s->hash[hash] = stringlist_del(sa, s->hash[hash], pos);
-    *(int*)&s->pos.buffer[pos*sizeof(int)] = -1;
-}
-int stringarray_find(stringarray_t*sa, string_t* str)
-{
-    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
-    int hash = string_hash(str) % s->hashsize;
-    int t;
-    stringlist_t*l = s->hash[hash];
-    while(l) {
-        string_t s = stringarray_at2(sa, l->index);
-        if(string_equals2(str, &s)) {
-            return l->index;
-        }
-        l = l->next;
-    }
-    return -1;
-}
-void stringarray_clear(stringarray_t*sa)
-{
-    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
-    mem_clear(&s->data);
-    mem_clear(&s->pos);
-    int t;
-    for(t=0;t<s->hashsize;t++) {
-        stringlist_t*l = s->hash[t];
-        while(l) {
-            stringlist_t*next = l->next;
-            memset(l, 0, sizeof(stringlist_t));
-            free(l);
-            l = next;
-        }
-    }
-    free(s);
-}
-void stringarray_destroy(stringarray_t*sa)
-{
-    stringarray_clear(sa);
-    free(sa);
-}
-
-
-// ------------------------------- map_t --------------------------------------
-
-typedef struct _map_internal_t
-{
-    stringarray_t keys;
-    stringarray_t values;
-    int num;
-} map_internal_t;
-
-void map_init(map_t*map)
-{
-    map_internal_t*m;
-    map->internal = (map_internal_t*)malloc(sizeof(map_internal_t));
-    memset(map->internal, 0, sizeof(map_internal_t));
-    m = (map_internal_t*)map->internal;
-    stringarray_init(&m->keys, DEFAULT_HASH_SIZE);
-    stringarray_init(&m->values, DEFAULT_HASH_SIZE);
-}
-void map_put(map_t*map, string_t t1, string_t t2)
-{
-    map_internal_t*m = (map_internal_t*)map->internal;
-    stringarray_put(&m->keys, t1);
-    stringarray_put(&m->values, t2);
-    m->num++;
-}
-char* map_lookup(map_t*map, const char*name)
-{
-    int s;
-    map_internal_t*m = (map_internal_t*)map->internal;
-    string_t str;
-    string_set(&str, (char*)name);
-    s = stringarray_find(&m->keys, &str);
-    if(s>=0) {
-	string_t s2 = stringarray_at2(&m->values, s);
-	return s2.str;
-    }
-    return 0;
-}
-void map_dump(map_t*map, FILE*fi, const char*prefix)
-{
-    int t;
-    map_internal_t*m = (map_internal_t*)map->internal;
-    for(t=0;t<m->num;t++) {
-	string_t s1 = stringarray_at2(&m->keys, t);
-	string_t s2 = stringarray_at2(&m->values, t);
-	fprintf(fi, "%s%s=%s\n", prefix, s1.str, s2.str);
-    }
-}
-void map_clear(map_t*map)
-{
-    map_internal_t*m = (map_internal_t*)map->internal;
-    stringarray_clear(&m->keys);
-    stringarray_clear(&m->values);
-    free(m);
-}
-void map_destroy(map_t*map)
-{
-    map_clear(map);
-    free(map);
-}
-
-// ------------------------------- dictionary_t -------------------------------
-
-typedef struct _dictionary_internal_t
-{
-    stringarray_t keys;
-    mem_t values;
-    int num;
-} dictionary_internal_t;
-
-void dictionary_init(dictionary_t*dict)
-{
-    dictionary_internal_t*d;
-    dict->internal = (dictionary_internal_t*)malloc(sizeof(dictionary_internal_t));
-    memset(dict->internal, 0, sizeof(dictionary_internal_t));
-    d = (dictionary_internal_t*)dict->internal;
-    stringarray_init(&d->keys, DEFAULT_HASH_SIZE);
-    mem_init(&d->values);
-}
-void dictionary_put(dictionary_t*dict, string_t t1, void* t2)
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    int s=0;
-    s = stringarray_find(&d->keys, &t1);
-    if(s>=0) {
-	/* replace */
-	*(void**)(&d->values.buffer[s*sizeof(void*)]) = t2;
-    } else {
-	stringarray_put(&d->keys, t1);
-	mem_put(&d->values, &t2, sizeof(void*));
-	d->num++;
-    }
-}
-void dictionary_put2(dictionary_t*dict, const char*t1, void* t2)
-{
-    string_t s;
-    string_set(&s, (char*)t1);
-    dictionary_put(dict, s, t2);
-}
-stringarray_t* dictionary_index(dictionary_t*dict)
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    return &d->keys;
-}
-int dictionary_count(dictionary_t* dict) // this count includes entries that have been deleted
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    return d->num;
-}
-void* dictionary_lookup(dictionary_t*dict, const char*name)
-{
-    int s;
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    string_t str;
-    string_set(&str, (char*)name);
-    s = stringarray_find(&d->keys, &str);
-    if(s>=0) {
-	return *(void**)&d->values.buffer[sizeof(void*)*s];
-    }
-    return 0;
-}
-void dictionary_dump(dictionary_t*dict, FILE*fi, const char*prefix)
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    int t;
-    for(t=0;t<d->num;t++) {
-	string_t s1 = stringarray_at2(&d->keys, t);
-	fprintf(fi, "%s%s=%08x\n", prefix, s1.str, *(void**)&d->values.buffer[sizeof(void*)*t]);
-    }
-}
-void dictionary_del(dictionary_t*dict, const char* name)
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    int s;
-    string_t str;
-    string_set(&str, (char*)name);
-    s = stringarray_find(&d->keys, &str);
-    if(s>=0) {
-	*(void**)(&d->values.buffer[s*sizeof(void*)]) = 0;
-	stringarray_del(&d->keys, s);
-    }
-}
-void dictionary_clear(dictionary_t*dict)
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    stringarray_clear(&d->keys);
-    mem_clear(&d->values);
-    free(d);
-}
-void dictionary_destroy(dictionary_t*dict)
-{
-    dictionary_clear(dict);
-    free(dict);
-}
-
-void dictionary_free_all(dictionary_t* dict, void (*freeFunction)(void*))
-{
-    dictionary_internal_t*d = (dictionary_internal_t*)dict->internal;
-    int num = 0;
-    char* name = stringarray_at(&d->keys, num)    ;
-    while (name)
-    {
-        freeFunction(dictionary_lookup(dict, name));
-        num++;
-        name = stringarray_at(&d->keys, num);
-    }
-    dictionary_clear(dict);
-}
-
 // ------------------------------- heap_t -------------------------------
 
 void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *))
@@ -636,5 +262,403 @@ void** heap_flatten(heap_t*h)
 	*p++ = heap_chopmax(h);
     }
     return nodes;
+}
+
+// ------------------------------- crc32 --------------------------------------
+static unsigned int*crc32 = 0;
+static void crc32_init(void)
+{
+    int t;
+    if(crc32) 
+        return;
+    crc32= (unsigned int*)malloc(sizeof(unsigned int)*256);
+    for(t=0; t<256; t++) {
+        unsigned int c = t;
+        int s;
+        for (s = 0; s < 8; s++) {
+          c = (0xedb88320L*(c&1)) ^ (c >> 1);
+        }
+        crc32[t] = c;
+    }
+}
+// ------------------------------- string_t -----------------------------------
+
+void string_set2(string_t*str, const char*text, int len)
+{
+    str->len = len;
+    str->str = text;
+}
+void string_set(string_t*str, const char*text)
+{
+    str->len = strlen(text);
+    str->str = text;
+}
+string_t string_new(const char*text, int len)
+{
+    string_t s;
+    s.len = len;
+    s.str = text;
+    return s;
+}
+string_t string_new2(const char*text)
+{
+    string_t s;
+    s.len = strlen(text);
+    s.str = text;
+    return s;
+}
+unsigned int string_hash(string_t*str)
+{
+    int t;
+    unsigned int checksum = 0;
+    if(!crc32)
+        crc32_init();
+    for(t=0;t<str->len;t++) {
+        checksum = checksum>>8 ^ crc32[(str->str[t]^checksum)&0xff];
+    }
+    return checksum;
+}
+unsigned int string_hash2(const char*str)
+{
+    unsigned int checksum = 0;
+    if(!crc32)
+        crc32_init();
+    while(*str) {
+        checksum = checksum>>8 ^ crc32[(*str^checksum)&0xff];
+        str++;
+    }
+    return checksum;
+}
+void string_dup2(string_t*str, const char*text, int len)
+{
+    str->len = len;
+    str->str = strdup_n(text, len);
+}
+void string_dup(string_t*str, const char*text)
+{
+    str->len = strlen(text);
+    str->str = strdup(text);
+}
+int string_equals(string_t*str, const char*text)
+{
+    int l = strlen(text);
+    if(str->len == l && !memcmp(str->str, text, l))
+	return 1;
+    return 0;
+}
+int string_equals2(string_t*str, string_t*str2)
+{
+    if(str->len == str2->len && !memcmp(str->str, str2->str, str->len))
+	return 1;
+    return 0;
+}
+char* string_cstr(string_t*str)
+{
+    return strdup_n(str->str, str->len);
+}
+
+// ------------------------------- stringarray_t ------------------------------
+
+#define DEFAULT_HASH_SIZE 257
+
+typedef struct _stringlist {
+    int index;
+    struct _stringlist*next;
+} stringlist_t;
+
+typedef struct _stringarray_internal_t
+{
+    mem_t pos;
+    stringlist_t**hash;
+    int num;
+    int hashsize;
+} stringarray_internal_t;
+
+void stringarray_init(stringarray_t*sa, int hashsize)
+{
+    stringarray_internal_t*s;
+    int t;
+    sa->internal = (stringarray_internal_t*)malloc(sizeof(stringarray_internal_t)); 
+    memset(sa->internal, 0, sizeof(stringarray_internal_t));
+    s = (stringarray_internal_t*)sa->internal;
+    mem_init(&s->pos);
+    s->hash = malloc(sizeof(stringlist_t*)*hashsize);
+    memset(s->hash, 0, sizeof(stringlist_t*)*hashsize);
+    s->hashsize = hashsize;
+}
+void stringarray_put(stringarray_t*sa, string_t str)
+{
+    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    int pos;
+    int hash = string_hash(&str) % s->hashsize;
+
+    char*ss = string_cstr(&str);
+    mem_put(&s->pos, &ss, sizeof(char*));
+
+    stringlist_t*l = malloc(sizeof(stringlist_t));
+    l->index = s->num;
+    l->next = s->hash[hash];
+    s->hash[hash] = l;
+
+    s->num++;
+}
+char* stringarray_at(stringarray_t*sa, int pos)
+{
+    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    char*p;
+    if(pos<0 || pos>=s->num)
+	return 0;
+    p = *(char**)&s->pos.buffer[pos*sizeof(char*)];
+    if(p<0)
+	return 0;
+    return p;
+}
+string_t stringarray_at2(stringarray_t*sa, int pos)
+{
+    string_t s;
+    s.str = stringarray_at(sa, pos);
+    s.len = s.str?strlen(s.str):0;
+    return s;
+}
+static stringlist_t* stringlist_del(stringarray_t*sa, stringlist_t*l, int index)
+{
+    stringlist_t*ll = l;
+    stringlist_t*old = l;
+    while(l) {
+        if(index==l->index) {
+            old->next = l->next;
+            memset(l, 0, sizeof(stringlist_t));
+            free(l);
+            if(old==l)
+                return 0;
+            else
+                return ll;
+        }
+        old = l;
+        l = l->next;
+    }
+    fprintf(stderr, "Internal error: did not find string %d in hash\n", index);
+    return ll;
+}
+
+void stringarray_del(stringarray_t*sa, int pos)
+{
+    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    string_t str = stringarray_at2(sa, pos);
+    int hash = string_hash(&str) % s->hashsize;
+    s->hash[hash] = stringlist_del(sa, s->hash[hash], pos);
+    *(char**)&s->pos.buffer[pos*sizeof(char*)] = 0;
+}
+int stringarray_find(stringarray_t*sa, string_t* str)
+{
+    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    int hash = string_hash(str) % s->hashsize;
+    int t;
+    stringlist_t*l = s->hash[hash];
+    //TODO: statistics
+    while(l) {
+        string_t s = stringarray_at2(sa, l->index);
+        if(string_equals2(str, &s)) {
+            return l->index;
+        }
+        l = l->next;
+    }
+    return -1;
+}
+void stringarray_clear(stringarray_t*sa)
+{
+    stringarray_internal_t*s = (stringarray_internal_t*)sa->internal;
+    mem_clear(&s->pos);
+    int t;
+    for(t=0;t<s->hashsize;t++) {
+        stringlist_t*l = s->hash[t];
+        while(l) {
+            stringlist_t*next = l->next;
+            memset(l, 0, sizeof(stringlist_t));
+            free(l);
+            l = next;
+        }
+    }
+    free(s->hash);s->hash=0;
+    free(s);
+}
+void stringarray_destroy(stringarray_t*sa)
+{
+    stringarray_clear(sa);
+    free(sa);
+}
+
+
+// ------------------------------- dictionary_t -------------------------------
+
+dict_t*dict_new()
+{
+    dict_t*d = malloc(sizeof(dict_t));
+    dict_init(d);
+    return d;
+}
+void dict_init(dict_t*h) 
+{
+    memset(h, 0, sizeof(dict_t));
+    h->hashsize = DEFAULT_HASH_SIZE;
+    h->slots = malloc(sizeof(dictentry_t*)*h->hashsize);
+    h->num = 0;
+    memset(h->slots, 0, sizeof(dictentry_t*)*h->hashsize);
+}
+void dict_put(dict_t*h, string_t s, void* data)
+{
+    unsigned int checksum = string_hash(&s) % h->hashsize;
+    dictentry_t*e = (dictentry_t*)malloc(sizeof(dictentry_t));
+    e->s = strdup(s.str);
+    e->next = h->slots[checksum];
+    e->data = data;
+    h->slots[checksum] = e;
+    h->num++;
+}
+void dict_put2(dict_t*h, const char*s, void*data) 
+{
+    string_t s2;
+    string_set(&s2, s);
+    dict_put(h, s2, data);
+}
+void dict_dump(dict_t*h, FILE*fi, const char*prefix)
+{
+    int t;
+    for(t=0;t<h->hashsize;t++) {
+        dictentry_t*e = h->slots[t];
+        while(e) {
+            fprintf(fi, "%s%s=%08x\n", prefix, e->s, e->data);
+            e = e->next;
+        }
+    }
+}
+int dict_count(dict_t*h)
+{
+    return h->num;
+}
+void* dict_lookup(dict_t*h, const char*s)
+{
+    unsigned int checksum = string_hash2(s) % h->hashsize;
+    dictentry_t*e = h->slots[checksum];
+    while(e) {
+        if(!strcmp(e->s, s)) {
+            return e->data;
+        }
+        e = e->next;
+    }
+    return 0;
+}
+char dict_del(dict_t*h, const char*s)
+{
+    unsigned int checksum = string_hash2(s) % h->hashsize;
+    dictentry_t*head = h->slots[checksum];
+    dictentry_t*e = head, *prev=0;
+    while(e) {
+        if(!strcmp(e->s, s)) {
+            dictentry_t*next = e->next;
+            free((void*)e->s);
+            memset(e, 0, sizeof(dictentry_t));
+            free(e);
+            if(e == head) {
+                h->slots[checksum] = 0;
+            } else {
+                prev->next = next;
+            }
+            return 1;
+        }
+        prev = e;
+        e = e->next;
+    }
+    return 0;
+}
+void dict_foreach_value(dict_t*h, void (*runFunction)(void*))
+{
+    int t;
+    for(t=0;t<h->hashsize;t++) {
+        dictentry_t*e = h->slots[t];
+        while(e) {
+            dictentry_t*next = e->next;
+            if(runFunction) {
+                runFunction(e->data);
+            }
+            e = e->next;
+        }
+    }
+}
+void dict_free_all(dict_t*h, void (*freeFunction)(void*))
+{
+    int t;
+    for(t=0;t<h->hashsize;t++) {
+        dictentry_t*e = h->slots[t];
+        while(e) {
+            dictentry_t*next = e->next;
+            free((void*)e->s);
+            if(freeFunction) {
+                freeFunction(e->data);
+            }
+            memset(e, 0, sizeof(dictentry_t));
+            free(e);
+            e = next;
+        }
+    }
+    free(h->slots);h->slots = 0;
+}
+void dict_clear(dict_t*h) 
+{
+    dict_free_all(h, 0);
+}
+void dict_destroy(dict_t*dict)
+{
+    dict_clear(dict);
+    free(dict);
+}
+
+// ------------------------------- map_t --------------------------------------
+
+typedef struct _map_internal_t
+{
+    dict_t d;
+} map_internal_t;
+
+void map_init(map_t*map)
+{
+    map_internal_t*m;
+    map->internal = (map_internal_t*)malloc(sizeof(map_internal_t));
+    memset(map->internal, 0, sizeof(map_internal_t));
+    m = (map_internal_t*)map->internal;
+    dict_init(&m->d);
+}
+void map_put(map_t*map, string_t t1, string_t t2)
+{
+    map_internal_t*m = (map_internal_t*)map->internal;
+    dict_put2(&m->d, string_cstr(&t1), (void*)string_cstr(&t2));
+}
+const char* map_lookup(map_t*map, const char*name)
+{
+    map_internal_t*m = (map_internal_t*)map->internal;
+    const char*value = dict_lookup(&m->d, name);
+    return value;
+}
+void map_dump(map_t*map, FILE*fi, const char*prefix)
+{
+    int t;
+    map_internal_t*m = (map_internal_t*)map->internal;
+    fprintf(fi, "ERROR: map dumping not implemented yet\n");
+    /*for(t=0;t<m->num;t++) {
+	string_t s1 = stringarray_at2(&m->keys, t);
+	string_t s2 = stringarray_at2(&m->values, t);
+	fprintf(fi, "%s%s=%s\n", prefix, s1.str, s2.str);
+    }*/
+}
+void map_clear(map_t*map)
+{
+    map_internal_t*m = (map_internal_t*)map->internal;
+    dict_clear(&m->d);
+    free(m);
+}
+void map_destroy(map_t*map)
+{
+    map_clear(map);
+    free(map);
 }
 

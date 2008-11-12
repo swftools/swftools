@@ -23,7 +23,6 @@
 #define __q_h__
 
 #include <stdio.h>
-#include "../config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +44,7 @@ typedef struct _ringbuffer_t
 
 /* non-nul terminated string */
 typedef struct _string_t {
-    char*str;
+    const char*str;
     int len;
 } string_t;
 
@@ -55,9 +54,17 @@ typedef struct _map_t {
 } map_t;
 
 /* (void*)s referenced by strings */
-typedef struct _dictionary_t {
-    void*internal;
-} dictionary_t;
+typedef struct _dictentry {
+    const char*s;
+    void*data;
+    struct _dictentry*next;
+} dictentry_t;
+
+typedef struct _dict {
+    dictentry_t**slots;
+    int hashsize;
+    int num;
+} dict_t;
 
 /* array of strings */
 typedef struct _stringarray_t
@@ -87,13 +94,17 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int size);
 int ringbuffer_read(ringbuffer_t*r, void*buf, int size);
 void ringbuffer_clear(ringbuffer_t*r);
 
-void string_set(string_t*str, char*text);
-void string_set2(string_t*str, char*text, int len);
+string_t string_new(const char*text, int len);
+string_t string_new2(const char*text);
+unsigned int string_hash(string_t*str);
+unsigned int string_hash2(const char*str);
+void string_set(string_t*str, const char*text);
+void string_set2(string_t*str, const char*text, int len);
 void string_dup(string_t*str, const char*text);
 void string_dup2(string_t*str, const char*text, int len);
 int string_equals(string_t*str, const char*text);
 
-void stringarray_init(stringarray_t*sa);
+void stringarray_init(stringarray_t*sa, int hashsize);
 void stringarray_put(stringarray_t*sa, string_t str);
 char* stringarray_at(stringarray_t*sa, int pos);
 string_t stringarray_at2(stringarray_t*sa, int pos);
@@ -103,22 +114,24 @@ void stringarray_destroy(stringarray_t*sa);
 
 void map_init(map_t*map);
 void map_put(map_t*map, string_t t1, string_t t2);
-char* map_lookup(map_t*map, const char*name);
+const char* map_lookup(map_t*map, const char*name);
 void map_dump(map_t*map, FILE*fi, const char*prefix);
 void map_clear(map_t*map);
 void map_destroy(map_t*map);
 
-void dictionary_init(dictionary_t*dict);
-void dictionary_put(dictionary_t*dict, string_t t1, void* t2);
-void dictionary_put2(dictionary_t*dict, const char* t1, void* t2);
-stringarray_t* dictionary_index(dictionary_t*dict);
-int dictionary_count(dictionary_t* dict);
-void* dictionary_lookup(dictionary_t*dict, const char*name);
-void dictionary_dump(dictionary_t*dict, FILE*fi, const char*prefix);
-void dictionary_del(dictionary_t*dict, const char* name);
-void dictionary_clear(dictionary_t*dict);
-void dictionary_destroy(dictionary_t*dict);
-void dictionary_free_all(dictionary_t* dict, void (*freeFunction)(void*));
+dict_t*dict_new();
+void dict_init(dict_t*dict);
+void dict_put(dict_t*dict, string_t t1, void* t2);
+void dict_put2(dict_t*dict, const char* t1, void* t2);
+stringarray_t* dict_index(dict_t*dict);
+int dict_count(dict_t* dict);
+void* dict_lookup(dict_t*dict, const char*name);
+void dict_dump(dict_t*dict, FILE*fi, const char*prefix);
+char dict_del(dict_t*dict, const char* name);
+void dict_foreach_value(dict_t*h, void (*runFunction)(void*));
+void dict_free_all(dict_t*h, void (*freeFunction)(void*));
+void dict_clear(dict_t*dict);
+void dict_destroy(dict_t*dict);
 
 void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *));
 void heap_clear(heap_t*h);
