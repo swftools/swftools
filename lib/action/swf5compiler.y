@@ -1,4 +1,4 @@
-/* $Id: swf5compiler.y,v 1.1 2004/02/02 10:12:34 kramm Exp $ */
+/* $Id: swf5compiler.y,v 1.2 2008/11/12 10:29:01 kramm Exp $ */
 
 %start program
 
@@ -391,7 +391,7 @@ identifier
 	| POST	{ $$ = strdup("post"); }
 	| GET	{ $$ = strdup("get"); }
 	| LOADVARIABLES	{ $$ = strdup("loadvariables"); }
-	| LOADMOVIE	{ $$ = strdup("loadmovie"); }
+	| LOADMOVIE	{ $$ = strdup("loadMovie"); }
 	;
 
 formals_list

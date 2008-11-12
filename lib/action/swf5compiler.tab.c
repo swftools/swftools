@@ -3369,7 +3369,7 @@ yyreduce:
 
   case 116:
 #line 394 "swf5compiler.y"
-    { yyval.str = strdup("loadmovie"); ;}
+    { yyval.str = strdup("loadMovie"); ;}
     break;
 
   case 117:
