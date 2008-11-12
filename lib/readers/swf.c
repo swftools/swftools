@@ -208,7 +208,7 @@ static gfximage_t* findimage(render_t*r, U16 id)
 }
 //---- shape handling ----
 
-static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx)
+static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx, MATRIX*po_m)
 {
     if(f->type == FILL_SOLID) {
 	gfxcolor_t c = *(gfxcolor_t*)&f->color;
@@ -218,7 +218,10 @@ static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx)
 	gfxmatrix_t m;
 	gfxcxform_t gfxcx;
 	convertCXForm(cx, &gfxcx);
-	convertMatrix(&f->m, &m);
+	MATRIX m2;
+	swf_MatrixJoin(&m2, po_m, &f->m);
+	swf_DumpMatrix(stdout, &m2);
+	convertMatrix(&m2, &m);
         m.m00/=20.0; m.m10/=20.0;
         m.m01/=20.0; m.m11/=20.0;
 	/* TODO: handle clipped */
@@ -291,7 +294,7 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
             FILLSTYLE f;
             f.type = FILL_SOLID;
             f.color = *color;
-            renderFilled(info->r, line, &f, 0);
+            renderFilled(info->r, line, &f, 0, 0);
             gfxline_free(line);
 	}
     }
@@ -507,7 +510,7 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
 	   line = swfline_to_gfxline(shape.lines, -1, t);
 	   if(line) {
 	       if(!p->po.clipdepth) {
-		   renderFilled(r, line, &shape.fillstyles[t-1], &p->po.cxform);
+		   renderFilled(r, line, &shape.fillstyles[t-1], &p->po.cxform, &p->po.matrix);
 	       } else { 
 		   r->device->startclip(r->device, line);
                    r->clips_waiting[p->po.clipdepth]++;
