@@ -785,11 +785,13 @@ char* fillstyle2str(FILLSTYLE*style)
 	    /* TODO: display information about that bitmap */
 	    sprintf(stylebuf, "BITMAPt%s %d", (style->type&2)?"n":"", style->id_bitmap);
 	    /* TODO: show matrix */
+	    //swf_DumpMatrix(stdout, &style->m);
 	    break;
 	case 0x41: case 0x43:
 	    /* TODO: display information about that bitmap */
 	    sprintf(stylebuf, "BITMAPc%s %d", (style->type&2)?"n":"", style->id_bitmap);
 	    /* TODO: show matrix */
+	    //swf_DumpMatrix(stdout, &style->m);
 	    break;
 	default:
 	    sprintf(stylebuf, "UNKNOWN[%02x]",style->type);
