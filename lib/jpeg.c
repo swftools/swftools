@@ -313,7 +313,7 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
 
     int width = *_width = cinfo.output_width;
     int height = *_height = cinfo.output_height;
-    *dest = malloc(width*height*4);
+    *dest = (unsigned char*)malloc(width*height*4);
 
     int y;
     for (y=0;y<height;y++) {
