@@ -348,7 +348,7 @@ static void record_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradie
 static void record_addfont(struct _gfxdevice*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
-    msg("<trace> record: %08x ADDFONT %s\n", dev);
+    msg("<trace> record: %08x ADDFONT %s\n", dev, font->id);
     if(font && !gfxfontlist_hasfont(i->fontlist, font)) {
 	writer_writeU8(&i->w, OP_ADDFONT);
 	dumpFont(&i->w, font);
