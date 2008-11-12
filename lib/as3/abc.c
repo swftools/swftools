@@ -901,13 +901,13 @@ int register_multiname(abc_file_t*pool, abc_multiname_t*n)
     if(!n)
         return 0;
     /* FIXME: might create duplicates */
-    return dict_append_if_new2(pool->multinames, n->name, n);
+    return dict_append_if_new(pool->multinames, n->name, n);
 }
 
 int register_namespace(abc_file_t*pool, abc_namespace_t*ns)
 {
     /* FIXME: might create duplicates */
-    return dict_append_if_new2(pool->namespaces, ns->name, ns);
+    return dict_append_if_new(pool->namespaces, ns->name, ns);
 }
 
 static inline abc_multiname_t*multiname_lookup(abc_file_t*pool, int i)
