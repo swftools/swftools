@@ -616,18 +616,18 @@ int swf_TextPrintDefineText(TAG * t,SWFFONT * f);
 void swf_FontPrepareForEditText(SWFFONT * f);
 
 /* notice: if you set the fontid, make sure you call swf_FontPrepareForEditText() for the font first */
-void swf_SetEditText(TAG*tag, U16 flags, SRECT r, char*text, RGBA*color,
-	int maxlength, U16 font, U16 height, EditTextLayout*layout, char*variable);
+void swf_SetEditText(TAG*tag, U16 flags, SRECT r, const char*text, RGBA*color,
+	int maxlength, U16 font, U16 height, EditTextLayout*layout, const char*variable);
 
-SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, char*text, int scale);
+SRECT swf_SetDefineText(TAG*tag, SWFFONT*font, RGBA*rgb, const char*text, int scale);
 
-void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, char*text);
+void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, const char*text);
 
 // swffont.c
 
-SWFFONT* swf_LoadTrueTypeFont(char*filename);
-SWFFONT* swf_LoadT1Font(char*filename);
-SWFFONT* swf_LoadFont(char*filename);
+SWFFONT* swf_LoadTrueTypeFont(const char*filename);
+SWFFONT* swf_LoadT1Font(const char*filename);
+SWFFONT* swf_LoadFont(const char*filename);
 
 void swf_SetLoadFontParameters(int scale, int skip_unused, int full_unicode);
 
@@ -652,9 +652,9 @@ int swf_SetJPEGBitsLines(JPEGBITS * jpegbits,U8 ** data,int n); // deprecated
 int swf_SetJPEGBitsLine(JPEGBITS * jpegbits,U8 * data); // deprecated
 int swf_SetJPEGBitsFinish(JPEGBITS * jpegbits); // deprecated
 
-void swf_GetJPEGSize(char * fname, int*width, int*height);
+void swf_GetJPEGSize(const char * fname, int*width, int*height);
 
-int swf_SetJPEGBits(TAG * t,char * fname,int quality);
+int swf_SetJPEGBits(TAG * t,const char * fname,int quality);
 void swf_SetJPEGBits2(TAG * t,U16 width,U16 height,RGBA * bitmap,int quality);
 int swf_SetJPEGBits3(TAG * tag,U16 width,U16 height,RGBA* bitmap, int quality);
 RGBA* swf_JPEG2TagToImage(TAG*tag, int*width, int*height);
@@ -725,9 +725,8 @@ RGBA swf_GetSWFBackgroundColor(SWF*swf);
 
 void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
-// swfabc.c
-
-void* swf_ReadABC(TAG*tag);
+// as3/abc.c
+void*swf_ReadABC(TAG*tag);
 void swf_WriteABC(TAG*tag, void*code);
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events);
 
@@ -841,7 +840,7 @@ ActionTAG* action_GetUrl(ActionTAG*atag, const char* url, char* label);
 ActionTAG* action_StoreRegister(ActionTAG*atag, U8 reg);
 ActionTAG* action_Constantpool(ActionTAG*atag, char* constantpool);
 ActionTAG* action_WaitForFrame(ActionTAG*atag, U16 frame, U8 skip);
-ActionTAG* action_SetTarget(ActionTAG*atag, char* target);
+ActionTAG* action_SetTarget(ActionTAG*atag, const char* target);
 ActionTAG* action_GotoLabel(ActionTAG*atag, char* label);
 ActionTAG* action_WaitForFrame2(ActionTAG*atag, U8 skip);
 ActionTAG* action_With(ActionTAG*atag, char*object);
