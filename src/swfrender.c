@@ -16,6 +16,8 @@ static struct options_t options[] = {
 {"o", "output"},
 {"l", "legacy"},
 {"V", "version"},
+{"X", "width"},
+{"Y", "height"},
 {0,0}
 };
 
@@ -23,6 +25,9 @@ static int ng = 1;
 static char*filename = 0;
 static char*outputname = "output.png";
 static int quantize = 0;
+
+static int width = 0;
+static int height = 0;
 
 int args_callback_option(char*name,char*val)
 {
@@ -38,6 +43,12 @@ int args_callback_option(char*name,char*val)
     } else if(!strcmp(name, "q")) {
 	quantize = 1;
 	return 0;
+    } else if(!strcmp(name, "X")) {
+	width = atoi(val);
+	return 1;
+    } else if(!strcmp(name, "Y")) {
+	height = atoi(val);
+	return 1;
     } else {
         printf("Unknown option: -%s\n", name);
 	exit(1);
@@ -116,6 +127,9 @@ int main(int argn, char*argv[])
         if(quantize) {
             dev->setparameter(dev, "palette", "1");
         }
+	if(width || height) {
+	    dev = gfxdevice_rescale_new(dev, width, height, 0);
+	}
 
 	int t;
 	for(t=1;t<=doc->num_pages;t++) {
