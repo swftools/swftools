@@ -2844,11 +2844,10 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     }
 
     if(i->config_drawonlyshapes) {
-        gfxglyph_t*glyph = &font->glyphs[glyphnr];
-        gfxline_t*line2 = gfxline_clone(glyph->line);
+        gfxglyph_t*g = &font->glyphs[glyph];
+        gfxline_t*line2 = gfxline_clone(g->line);
         gfxline_transform(line2, matrix);
-        draw_line(dev, line2);
-        fill_solid(dev, color);
+	dev->fill(dev, line2, color);
         gfxline_free(line2);
         return;
     }
