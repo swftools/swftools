@@ -30,6 +30,14 @@ static int quantize = 0;
 static int width = 0;
 static int height = 0;
 
+typedef struct _parameter {
+    const char*name;
+    const char*value;
+    struct _parameter*next;
+} parameter_t;
+
+parameter_t*params = 0;
+
 int args_callback_option(char*name,char*val)
 {
     if(!strcmp(name, "V")) {
@@ -44,6 +52,22 @@ int args_callback_option(char*name,char*val)
     } else if(!strcmp(name, "q")) {
 	quantize = 1;
 	return 0;
+    } else if(!strcmp(name, "s")) {
+	char*s = strdup(val);
+	char*c = strchr(s, '=');
+	parameter_t*p = malloc(sizeof(parameter_t));
+	p->next = params;
+	params = p;
+	if(c && *c && c[1])  {
+	    *c = 0;
+	    c++;
+	    p->name = s;
+	    p->value = s;
+	} else {
+	    p->name = s;
+	    p->value = "1";
+	}
+	return 1;
     } else if(!strcmp(name, "X")) {
 	width = atoi(val);
 	return 1;
@@ -117,8 +141,16 @@ int main(int argn, char*argv[])
 	    writePNG(outputname, (unsigned char*)img, buf.width, buf.height);
 	swf_Render_Delete(&buf);
     } else {
+	parameter_t*p;
+
 	gfxsource_t*src = gfxsource_swf_create();
+	for(p=params;p;p=p->next) {
+	    src->set_parameter(src, p->name, p->value);
+	}
 	gfxdocument_t*doc = src->open(src, filename);
+	for(p=params;p;p=p->next) {
+	    doc->set_parameter(doc, p->name, p->value);
+	}
 	if(!doc) {
 	    fprintf(stderr,"Couldn't open %s\n", filename);
 	    exit(1);
@@ -131,6 +163,9 @@ int main(int argn, char*argv[])
         }
 	if(width || height) {
 	    dev = gfxdevice_rescale_new(dev, width, height, 0);
+	}
+	for(p=params;p;p=p->next) {
+	    dev->setparameter(dev, p->name, p->value);
 	}
 
 	int t;
