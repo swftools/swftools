@@ -425,7 +425,7 @@ BOOL CALLBACK PropertySheetFunc2(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	}
     }
     if(message == WM_NOTIFY && (((LPNMHDR)lParam)->code == PSN_SETACTIVE)) {
-        if(!elevated && !has_full_access && config_forAllUsers) {
+        if(!elevated && !has_full_access) {
             OSVERSIONINFO winverinfo;
             memset(&winverinfo, 0, sizeof(OSVERSIONINFO));
             winverinfo.dwOSVersionInfoSize = sizeof(winverinfo);
