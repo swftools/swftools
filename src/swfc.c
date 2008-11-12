@@ -360,10 +360,11 @@ static void freeFontDictionary()
 
 static void incrementid()
 {
-    while(idmap[++id]) {
-	if(id==65535)
-	    syntaxerror("Out of character ids.");
+    while(id<65536 && idmap[id]) {
+        id++;
     }
+    if(id>=65536)
+	syntaxerror("Out of character ids.");
     idmap[id] = 1;
 }
 
@@ -4330,34 +4331,30 @@ static void parseArgumentsForCommand(char*command)
     if(nr<0)
 	syntaxerror("command %s not known", command);
 
+#ifndef EMPTY
     // catch missing .flash directives at the beginning of a file
     if(strcmp(command, "flash") && !stackpos)
     {
-	syntaxerror("No movie defined- use .flash first");
+        syntaxerror("No movie defined- use .flash first");
     }
+#endif
 
 #ifdef DEBUG
     printf(".%s\n", command);fflush(stdout);
     map_dump(&args, stdout, "\t");fflush(stdout);
 #endif
 
+#ifndef EMPTY
     (*arguments[nr].func)(&args);
-
-    /*if(!strcmp(command, "button") ||
-       !strcmp(command, "action")) {
-	while(1) {
-	    readToken();
-	    if(type == COMMAND) {
-		if(!strcmp(text, "end"))
-		    break;
-		else {
-		    pushBack();
-		    break;
-		}
-	    }
+#else
+    if(!strcmp(command, "action")  || !strcmp(command, "initaction") ||
+       !strcmp(command, "outline") || !strcmp(command, "gradient")) {
+	readToken();
+	if(type != RAWDATA) {
+	    syntaxerror("colon (:) expected");
 	}
-    }*/
-
+    }
+#endif
     map_clear(&args);
     return;
 }
