@@ -25,7 +25,11 @@ extern "C" {
 
 int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char**destdata);
 int getPNGdimensions(const char*sname, int*destwidth, int*destheight);
+
+void savePNG(const char*filename, unsigned char*data, int width, int height, int numcolors);
+
 void writePNG(const char*filename, unsigned char*data, int width, int height);
+void writePalettePNG(const char*filename, unsigned char*data, int width, int height);
 
 #ifdef __cplusplus
 }

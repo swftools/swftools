@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <math.h>
 #include <fcntl.h>
 #include <zlib.h>
@@ -762,6 +763,200 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
     return 1;
 }
 
+static char hasAlpha(unsigned char*_image, int size)
+{
+    COL*image = (COL*)_image;
+    int t;
+    for(t=0;t<size;t++) {
+        if(image[t].a!=255)
+            return 1;
+    }
+    return 0;
+}
+
+typedef struct {
+    u32 num;
+    u32 color;
+} colornum_t;
+
+int compare_colors(const void*_c1, const void*_c2) {
+    colornum_t*c1 = (colornum_t*)_c1;
+    colornum_t*c2 = (colornum_t*)_c2;
+    return c1->num - c2->num;
+}
+
+static colornum_t* getColors(COL*image, int size, int*num)
+{
+    unsigned char*colexists = malloc((256*256*256)/8);
+    memset(colexists, 0, (256*256*256)/8);
+    int t;
+    int count=0;
+
+    /* find all different colors in the image */
+    for(t=0;t<size;t++) {
+        int index = (image[t].r)|(image[t].g)<<8|(image[t].b)<<16;
+        if(!(colexists[index/8]&(1<<(index&7)))) {
+            count++;
+            colexists[index/8]|=(1<<(index&7));
+        }
+    }
+    
+    /* now store them in an array */
+    colornum_t*colors=(colornum_t*)malloc(sizeof(colornum_t)*count);
+    int pos=0;
+    for(t=0;t<256*256*256;t++) {
+        if(colexists[t/8]&(1<<(t&7))) {
+            colors[pos].color = t;
+            colors[pos].num = 0;
+            pos++;
+        }
+    }
+
+    /* next, count how often each color occurs */
+    for(t=0;t<size;t++) {
+        int col = (image[t].r)|(image[t].g)<<8|(image[t].b)<<16;
+        int min,max,i,l;
+        for(min=0, max=count, i=count/2, l=count; i != l; l=i,i=(min+max)/2) {
+            if(colors[i].color >= col) max=i;
+            else min=i+1;
+        }
+        assert(colors[i].color==col);
+        colors[i].num++;
+    }
+    free(colexists);
+    *num = count;
+    return colors;
+}
+
+static COL* getOptimalPalette(COL*image, int size, int palettesize)
+{
+    int num;
+    COL* ret = malloc(sizeof(COL)*palettesize);
+    memset(ret, 0, sizeof(COL)*palettesize);
+    colornum_t*colors = getColors(image, size, &num);
+
+    assert(palettesize<=256);
+
+    qsort(colors, num, sizeof(colornum_t), compare_colors);
+
+    if(num<=palettesize) {
+        /* if there are not more than palettesize different colors in 
+           the image anyway, we are done */
+        int t;
+        for(t=0;t<num;t++) {
+            ret[t].r = colors[t].color;
+            ret[t].g = colors[t].color>>8;
+            ret[t].b = colors[t].color>>16;
+            ret[t].a = 255;
+        }
+        return ret;
+    }
+
+    colornum_t*centers = malloc(sizeof(colornum_t)*palettesize);
+    int t;
+    for(t=0;t<palettesize;t++) {
+        centers[t].color = colors[t].color;
+    }
+    unsigned char*belongsto = (unsigned char*)malloc(num);
+    memset(belongsto, 0, num);
+    /* do a k-means clustering on the colors */
+    char change = 1;
+    int tries = 0;
+    while(change) {
+        if(tries++ >= (palettesize+num)*2) {
+            fprintf(stderr, "Warning: didn't find optimal palette\n");
+            break;
+        }
+        change = 0;
+        int s,t;
+        for(s=0;s<palettesize;s++) {
+            centers[s].num = 0;
+        }
+        for(t=0;t<num;t++) {
+            int best=0x7fffffff;
+            int bestpos=0;
+            for(s=0;s<palettesize;s++) {
+                int distance = 0;
+                distance += abs((centers[s].color>>0&0xff) - (colors[t].color>>0&0xff));
+                distance += abs((centers[s].color>>8&0xff) - (colors[t].color>>8&0xff));
+                distance += abs((centers[s].color>>16&0xff) - (colors[t].color>>16&0xff));
+                distance *= colors[t].num;
+                if(distance<best) {
+                    best = distance;
+                    bestpos = s;
+                }
+            }
+            if(bestpos!=belongsto[t])
+                change = 1;
+            belongsto[t] = bestpos;
+        }
+        for(s=0;s<palettesize;s++) {
+            int r=0;
+            int g=0;
+            int b=0;
+            int count=0;
+            for(t=0;t<num;t++) {
+                if(belongsto[t]==s) {
+                    r += ((colors[t].color>>0)&0xff)*colors[t].num;
+                    g += ((colors[t].color>>8)&0xff)*colors[t].num;
+                    b += ((colors[t].color>>16)&0xff)*colors[t].num;
+                    count+=colors[t].num;
+                }
+            }
+            if(!count) {
+                int random = lrand48()%num;
+                centers[s].color = colors[random].color;
+                centers[s].num = 0;
+                change = 1;
+            } else {
+                r /= count;
+                g /= count;
+                b /= count;
+                centers[s].color = r|g<<8|b<<16;
+                centers[s].num = count;
+            }
+        }
+    }
+    free(belongsto);
+    free(colors);
+    for(t=0;t<palettesize;t++) {
+        ret[t].r = centers[t].color;
+        ret[t].g = centers[t].color>>8;
+        ret[t].b = centers[t].color>>16;
+        ret[t].a = 255;
+    }
+    free(centers);
+    return ret;
+}
+
+static int sqr(const int x) {return x*x;}
+
+static void quantizeImage(unsigned char*_image, int size, int numcolors, unsigned char**newimage, COL**palette) 
+{
+    COL*image = (COL*)_image;
+    COL*pal= getOptimalPalette(image, size, numcolors);
+    *palette = pal;
+    *newimage = (unsigned char*)malloc(size);
+    int t;
+    for(t=0;t<size;t++) {
+        int best=0x7fffffff;
+        int bestcol = 0;
+        int s;
+        for(s=0;s<numcolors;s++) {
+            int distance = 0;
+            distance += sqr((pal[s].r) - (image[t].r))*5;
+            distance += sqr((pal[s].g) - (image[t].g))*6;
+            distance += sqr((pal[s].b) - (image[t].b))*4;
+            if(distance<best) {
+                best = distance;
+                bestcol = s;
+            }
+        }
+        //image[t] = pal[bestcol];
+        (*newimage)[t] = bestcol;
+    }
+}
+
 static u32 mycrc32;
 
 static u32*crc32_table = 0;
@@ -943,7 +1138,49 @@ static int finishzlib(z_stream*zs, FILE*fi)
     return size;
 }
 
-static void filter_line(int filtermode, unsigned char*dest, unsigned char*src, int width)
+static void filter_line8(int filtermode, unsigned char*dest, unsigned char*src, int width)
+{
+    int pos2 = 0;
+    int pos = 0;
+    int srcwidth = width;
+    int x;
+    if(filtermode == 0) {
+	for(x=0;x<width;x++) {
+	    dest[pos2++]=src[pos++]; //alpha
+	}
+    } else if(filtermode == 1) {
+	/* x difference filter */
+	dest[pos2++]=src[pos++];
+	for(x=1;x<width;x++) {
+	    dest[pos2++]=src[pos] - src[pos-1];
+	    pos++;
+	}
+    } else if(filtermode == 2) {
+	/* y difference filter */
+	for(x=0;x<width;x++) {
+	    dest[pos2++]=src[pos+0] - src[pos-srcwidth+0]; //alpha
+	    pos++;
+	}
+    } else if(filtermode == 3) {
+	dest[pos2++]=src[pos+0] - src[pos-srcwidth+0]/2;
+	pos++;
+	/* x+y difference filter */
+	for(x=1;x<width;x++) {
+	    dest[pos2++]=src[pos+0] - (src[pos-1+0] + src[pos-srcwidth+0])/2; //alpha
+	    pos++;
+	}
+    } else if(filtermode == 4) {
+	dest[pos2++]=src[pos+0] - PaethPredictor(0, src[pos-srcwidth+0], 0);
+	pos++;
+	/* paeth difference filter */
+	for(x=1;x<width;x++) {
+	    dest[pos2++]=src[pos+0] - PaethPredictor(src[pos-1+0], src[pos-srcwidth+0], src[pos-1-srcwidth+0]);
+	    pos++;
+	}
+    }
+}
+
+static void filter_line32(int filtermode, unsigned char*dest, unsigned char*src, int width)
 {
     int pos2 = 0;
     int pos = 0;
@@ -1011,7 +1248,7 @@ static void filter_line(int filtermode, unsigned char*dest, unsigned char*src, i
     }
 }
 
-EXPORT void writePNG(const char*filename, unsigned char*data, int width, int height)
+EXPORT void savePNG(const char*filename, unsigned char*data, int width, int height, int numcolors)
 {
     FILE*fi;
     int crc;
@@ -1030,12 +1267,20 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
     int bpp;
     int ret;
     z_stream zs;
+    COL*palette=0;
 
     make_crc32_table();
 
-    bpp = 32;
-    cols = 0;
-    format = 5;
+    if(!numcolors) {
+        bpp = 32;
+        cols = 0;
+        format = 5;
+    } else {
+        bpp = 8;
+        cols = numcolors;
+        format = 3;
+        quantizeImage(data, width*height, numcolors, &data, &palette);
+    }
 
     datalen = (width*height*bpp/8+cols*8);
     
@@ -1063,16 +1308,15 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
      png_write_byte(fi,0); //interlace mode
     png_end_chunk(fi);
 
-/*    if(format == 3) {
+    if(format == 3) {
 	png_start_chunk(fi, "PLTE", 768);
-	 
-	 for(t=0;t<256;t++) {
+	 for(t=0;t<cols;t++) {
 	     png_write_byte(fi,palette[t].r);
 	     png_write_byte(fi,palette[t].g);
 	     png_write_byte(fi,palette[t].b);
 	 }
 	png_end_chunk(fi);
-    }*/
+    }
     long idatpos = png_start_chunk(fi, "IDAT", 0);
     
     memset(&zs,0,sizeof(z_stream));
@@ -1082,7 +1326,7 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
     zs.opaque = Z_NULL;
     zs.next_out = writebuf;
     zs.avail_out = ZLIB_BUFFER_SIZE;
-    ret = deflateInit(&zs, Z_NO_COMPRESSION);
+    ret = deflateInit(&zs, 9);
     if (ret != Z_OK) {
 	fprintf(stderr, "error in deflateInit(): %s", zs.msg?zs.msg:"unknown");
 	return;
@@ -1100,13 +1344,16 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
 	{
 	    int filtermode;
 	    int bestsize = 0x7fffffff;
-	    for(filtermode=0;filtermode<=0;filtermode++) {
+	    for(filtermode=0;filtermode<=5;filtermode++) {
 
 		if(!y && filtermode>=2)
 		    continue; // don't do y direction filters in the first row
 		
 		line[0]=filtermode; //filter type
-		filter_line(filtermode, line+1, &data[y*srcwidth], width);
+                if(bpp==8)
+		    filter_line8(filtermode, line+1, &data[y*srcwidth], width);
+                else
+		    filter_line32(filtermode, line+1, &data[y*srcwidth], width);
 
 		int size = test_line(&zs, line, linelen);
 		if(size < bestsize) {
@@ -1130,3 +1377,11 @@ EXPORT void writePNG(const char*filename, unsigned char*data, int width, int hei
     fclose(fi);
 }
 
+void writePNG(const char*filename, unsigned char*data, int width, int height)
+{
+    savePNG(filename, data, width, height, 0);
+}
+void writePalettePNG(const char*filename, unsigned char*data, int width, int height)
+{
+    savePNG(filename, data, width, height, 256);
+}
