@@ -1,8 +1,10 @@
+#include <assert.h>
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../gfxtools.h"
 #include "../log.h"
 #include "../mem.h"
+#include "../png.h"
 #include "../rfxswf.h"
 #include "swf.h"
 
@@ -51,6 +53,17 @@ typedef struct _sprite
     int frameCount;
 } sprite_t;
 
+struct _render
+{
+    map16_t*id2char;
+    gfxdevice_t*device;
+    MATRIX m;
+    int clips;
+    int*clips_waiting;
+};
+typedef struct _render render_t;
+
+
 static void placement_free(placement_t*p)
 {
     swf_PlaceObjectFree(&p->po);
@@ -95,32 +108,197 @@ void map16_enumerate(map16_t*map, void (*f)(void*self, int id, void*data), void*
 	}
     }
 }
+//---- conversion stuff ----
+
+static void convertMatrix(MATRIX*from, gfxmatrix_t*to)
+{
+    to->m00 = from->sx / 65536.0; to->m10 = from->r1 / 65536.0;
+    to->m01 = from->r0 / 65536.0; to->m11 = from->sy / 65536.0;
+    to->tx = from->tx/20.0;
+    to->ty = from->ty/20.0;
+}
+
+static void convertCXForm(CXFORM*from, gfxcxform_t*to)
+{
+    memset(to, 0, sizeof(gfxcxform_t));
+    to->aa = from->a0 / 256.0;
+    to->rr = from->r0 / 256.0;
+    to->gg = from->g0 / 256.0;
+    to->bb = from->b0 / 256.0;
+    to->ta = from->a1;
+    to->tr = from->r1;
+    to->tg = from->g1;
+    to->tb = from->b1;
+}
+
+static gfxgradient_t* convertGradient(GRADIENT*from)
+{
+    gfxgradient_t*g = rfx_calloc(from->num * sizeof(gfxgradient_t));
+    int t;
+    for(t=0;t<from->num;t++) {
+	g[t].pos = from->ratios[t] / 255.0;
+	g[t].color = *(gfxcolor_t*)&from->rgba[t];
+	if(t<from->num-1)
+	    g[t].next = &g[t+1];
+	else
+	    g[t].next = 0;
+    }
+    return g;
+}
+
+gfxline_t* swfline_to_gfxline(SHAPELINE*line, int linestyle, int fillstyle0)
+{
+    gfxdrawer_t d;
+    SCOORD x=0,y=0;
+    gfxline_t*l;
+    gfxdrawer_target_gfxline(&d);
+    if(line && line->type != moveTo) {
+	fprintf(stderr, "Warning: Shape doesn't start with a moveTo\n");
+    }
+    while(line) {
+	if(line->fillstyle0 == fillstyle0 || line->fillstyle1 == fillstyle0 || 
+	   line->linestyle == linestyle) {
+	    if(line->type == lineTo) {
+		d.moveTo(&d, x/20.0,y/20.0);
+		d.lineTo(&d, line->x/20.0,line->y/20.0);
+	    } else if(line->type == splineTo) {
+		d.moveTo(&d, x/20.0,y/20.0);
+		d.splineTo(&d, line->sx/20.0, line->sy/20.0, line->x/20.0,line->y/20.0);
+	    }
+	}
+	x = line->x;
+	y = line->y;
+	line = line->next;
+    }
+    l = d.result(&d);    
+    return l;
+}
+
 
 //---- bitmap handling ----
 
-typedef struct _bitmap
+gfximage_t* gfximage_new(RGBA*data, int width, int height)
 {
-    int width, height;
-    RGBA*data;
-} bitmap_t;
-
-bitmap_t* bitmap_new(RGBA*data, int width, int height)
-{
-    bitmap_t* b = (bitmap_t*)rfx_calloc(sizeof(bitmap_t));
-    b->data = data;
+    gfximage_t* b = (gfximage_t*)rfx_calloc(sizeof(gfximage_t));
+    b->data = (gfxcolor_t*)data;
     b->width = width;
     b->height = height;
     return b;
 }
 
-void bitmap_free(bitmap_t*b)
+void gfximage_free(gfximage_t*b)
 {
     free(b->data); //!
     b->data = 0;
     free(b);
 }
 
-//---- handling ----
+static gfximage_t* findimage(render_t*r, U16 id)
+{
+    character_t*c = (character_t*)map16_get_id(r->id2char, id);
+    assert(c && c->type == TYPE_BITMAP);
+    gfximage_t*img = (gfximage_t*)c->data;
+
+    /*char filename[80];
+    sprintf(filename, "bitmap%d.png", id);
+    writePNG(filename, (unsigned char*)img->data, img->width, img->height);
+    printf("saving bitmap %d to %s\n", id, filename);*/
+
+    return c->data;
+}
+//---- shape handling ----
+
+static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx)
+{
+    if(f->type == FILL_SOLID) {
+	gfxcolor_t c = *(gfxcolor_t*)&f->color;
+	r->device->fill(r->device, line, &c);
+    } else if(f->type == FILL_TILED || f->type == FILL_CLIPPED) {
+	gfximage_t* img = findimage(r, f->id_bitmap);
+	gfxmatrix_t m;
+	gfxcxform_t gfxcx;
+	convertCXForm(cx, &gfxcx);
+	convertMatrix(&f->m, &m);
+        m.m00/=20.0; m.m10/=20.0;
+        m.m01/=20.0; m.m11/=20.0;
+	/* TODO: handle clipped */
+	r->device->fillbitmap(r->device, line, img, &m, &gfxcx);
+    } else if(f->type == FILL_LINEAR || f->type == FILL_RADIAL) {
+	gfxmatrix_t m;
+	gfxgradient_t* g;
+	convertMatrix(&f->m, &m);
+	g = convertGradient(&f->gradient);
+	r->device->fillgradient(r->device, line, g, f->type == FILL_LINEAR ? gfxgradient_linear : gfxgradient_radial, &m);
+	free(g);
+    }
+}
+
+//---- font handling ----
+
+typedef struct
+{
+    int numchars;
+    gfxline_t**glyphs;
+} font_t;
+        
+typedef struct textcallbackblock
+{
+    render_t*r;
+    MATRIX m;
+} textcallbackblock_t;
+
+static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, 
+		    int xstart, int ystart, RGBA* color)
+{
+    textcallbackblock_t * info = (textcallbackblock_t*)self;
+    font_t*font = 0;
+    int t;
+    character_t*cfont = map16_get_id(info->r->id2char, fontid);
+    if(!cfont) {
+	fprintf(stderr, "Font %d unknown\n", fontid);
+        return;
+    }
+    if(cfont->type != TYPE_FONT) {
+	fprintf(stderr, "ID %d is not a font\n", fontid);
+	return;
+    }
+    font = cfont->data;
+
+    for(t=0;t<nr;t++) {
+	int x = xstart + xpos[t];
+	int y = ystart;
+	MATRIX m = info->m;
+	SPOINT p;
+	
+	p.x = x; p.y = y; 
+	p = swf_TurnPoint(p, &m);
+	
+	m.sx = (m.sx * fontsize) / 1024;
+	m.sy = (m.sy * fontsize) / 1024;
+	m.r0 = (m.r0 * fontsize) / 1024;
+	m.r1 = (m.r1 * fontsize) / 1024;
+	m.tx = p.x;
+	m.ty = p.y;
+
+        gfxmatrix_t gm;
+        convertMatrix(&m, &gm);
+
+	if(chars[t]<0 || chars[t]>= font->numchars) {
+	    fprintf(stderr, "Character out of range: %d\n", chars[t]);
+	} else {
+            gfxline_t*line = gfxline_clone(font->glyphs[chars[t]]);
+            gfxline_transform(line, &gm);
+            FILLSTYLE f;
+            f.type = FILL_SOLID;
+            f.color = *color;
+            renderFilled(info->r, line, &f, 0);
+            gfxline_free(line);
+	}
+    }
+}
+
+
+//---- tag handling ----
 
 static map16_t* extractDefinitions(SWF*swf)
 {
@@ -155,11 +333,34 @@ static map16_t* extractDefinitions(SWF*swf)
 	else if(tag->id == ST_DEFINEFONT ||
 		tag->id == ST_DEFINEFONT2) {
 	    character_t*c = rfx_calloc(sizeof(character_t));
-	    SWFFONT*font = 0;
-	    swf_FontExtract(swf, id, &font);
+	    SWFFONT*swffont = 0;
+	    font_t*font = (font_t*)rfx_calloc(sizeof(font_t));
+	    swf_FontExtract(swf, id, &swffont);
+            font->numchars = swffont->numchars;
+            font->glyphs = (gfxline_t**)rfx_calloc(sizeof(gfxline_t*)*font->numchars);
+            int t;
+            RGBA color_white = {255,255,255,255};
+            for(t=0;t<font->numchars;t++) {
+                if(!swffont->glyph[t].shape->fillstyle.n) {
+                    swf_ShapeAddSolidFillStyle(swffont->glyph[t].shape, &color_white);
+                }
+                SHAPE2*s2 = swf_ShapeToShape2(swffont->glyph[t].shape);
+                font->glyphs[t] = swfline_to_gfxline(s2->lines, 0, 1);
+                swf_Shape2Free(s2);
+            }
+            swf_FontFree(swffont);
+
 	    c->tag = tag;
 	    c->type = TYPE_FONT;
 	    c->data = font;
+	    map16_add_id(map, id, c);
+	}
+	else if(tag->id == ST_DEFINETEXT ||
+		tag->id == ST_DEFINETEXT2) {
+	    character_t*c = rfx_calloc(sizeof(character_t));
+	    c->tag = tag;
+	    c->type = TYPE_TEXT;
+	    c->data = 0;
 	    map16_add_id(map, id, c);
 	}
 	else if(tag->id == ST_DEFINEBITSJPEG || 
@@ -170,7 +371,7 @@ static map16_t* extractDefinitions(SWF*swf)
 	    character_t*c = rfx_calloc(sizeof(character_t));
 	    int width, height;
 	    void*data = swf_ExtractImage(tag, &width, &height);
-	    bitmap_t*b = bitmap_new(data, width, height);
+	    gfximage_t*b = gfximage_new(data, width, height);
 	    c->tag = tag;
 	    c->type = TYPE_BITMAP;
 	    c->data = b;
@@ -248,15 +449,7 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
     return depthmap;
 }
 
-// ---- render handling ----
-
-typedef struct _render
-{
-    map16_t*id2char;
-    gfxdevice_t*device;
-    MATRIX m;
-    int clips;
-} render_t;
+// ---- rendering ----
 
 static void stopClippings(int from, render_t*r)
 {
@@ -266,100 +459,8 @@ static void stopClippings(int from, render_t*r)
     r->clips = from;
 }
 
-gfxline_t* swfline_to_gfxline(SHAPELINE*line, int linestyle, int fillstyle0)
-{
-    gfxdrawer_t d;
-    SCOORD x=0,y=0;
-    gfxline_t*l;
-    gfxdrawer_target_gfxline(&d);
-    if(line->type != moveTo) {
-	fprintf(stderr, "Warning: Shape doesn't start with a moveTo\n");
-    }
-    while(line) {
-	if(line->fillstyle0 == fillstyle0 || line->fillstyle1 == fillstyle0 || 
-	   line->linestyle == linestyle) {
-	    if(line->type == lineTo) {
-		d.moveTo(&d, x/20.0,y/20.0);
-		d.lineTo(&d, line->x/20.0,line->y/20.0);
-	    } else if(line->type == splineTo) {
-		d.moveTo(&d, x/20.0,y/20.0);
-		d.splineTo(&d, line->sx/20.0, line->sy/20.0, line->x/20.0,line->y/20.0);
-	    }
-	}
-	x = line->x;
-	y = line->y;
-	line = line->next;
-    }
-    l = d.result(&d);    
-    return l;
-}
-
 void swf_ShapeApplyMatrix(SHAPE2*shape, MATRIX*m)
 {
-}
-
-static void convertMatrix(MATRIX*from, gfxmatrix_t*to)
-{
-    to->m00 = from->sx / 65536.0; to->m10 = from->r1 / 65536.0;
-    to->m01 = from->r0 / 65536.0; to->m11 = from->sy / 65536.0;
-    to->tx = from->tx/20.0;
-    to->ty = from->ty/20.0;
-}
-
-static void convertCXForm(CXFORM*from, gfxcxform_t*to)
-{
-    memset(to, 0, sizeof(gfxcxform_t));
-    to->aa = from->a0 / 256.0;
-    to->rr = from->r0 / 256.0;
-    to->gg = from->g0 / 256.0;
-    to->bb = from->b0 / 256.0;
-    to->ta = from->a1;
-    to->tr = from->r1;
-    to->tg = from->g1;
-    to->tb = from->b1;
-}
-
-static gfxgradient_t* convertGradient(GRADIENT*from)
-{
-    gfxgradient_t*g = rfx_calloc(from->num * sizeof(gfxgradient_t));
-    int t;
-    for(t=0;t<from->num;t++) {
-	g[t].pos = from->ratios[t] / 255.0;
-	g[t].color = *(gfxcolor_t*)&from->rgba[t];
-	if(t<from->num-1)
-	    g[t].next = &g[t+1];
-	else
-	    g[t].next = 0;
-    }
-    return g;
-}
-
-gfximage_t* findimage(render_t*r)
-{
-    return 0;
-}
-
-static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx)
-{
-    if(f->type == FILL_SOLID) {
-	gfxcolor_t c = *(gfxcolor_t*)&f->color;
-	r->device->fill(r->device, line, &c);
-    } else if(f->type == FILL_TILED || f->type == FILL_CLIPPED) {
-	gfximage_t* img = findimage(r);
-	gfxmatrix_t m;
-	gfxcxform_t gfxcx;
-	convertCXForm(cx, &gfxcx);
-	convertMatrix(&f->m, &m);
-	/* TODO: handle clipped */
-	r->device->fillbitmap(r->device, line, img, &m, &gfxcx);
-    } else if(f->type == FILL_LINEAR || f->type == FILL_RADIAL) {
-	gfxmatrix_t m;
-	gfxgradient_t* g;
-	convertMatrix(&f->m, &m);
-	g = convertGradient(&f->gradient);
-	r->device->fillgradient(r->device, line, g, f->type == FILL_LINEAR ? gfxgradient_linear : gfxgradient_radial, &m);
-	free(g);
-    }
 }
 
 RGBA swf_ColorTransform(RGBA*color, CXFORM*cx)
@@ -409,6 +510,7 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
 		   renderFilled(r, line, &shape.fillstyles[t-1], &p->po.cxform);
 	       } else { 
 		   r->device->startclip(r->device, line);
+                   r->clips_waiting[p->po.clipdepth]++;
 		   r->clips++;
 	       }
 	   }
@@ -422,6 +524,19 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
 	   if(line) renderOutline(r, line, &shape.linestyles[t-1], &p->po.cxform);
 	   gfxline_free(line);
 	}
+    } else if(c->type == TYPE_TEXT) {
+        TAG* tag = c->tag;
+        textcallbackblock_t info;
+        MATRIX mt,mt2;
+        swf_SetTagPos(tag, 0);
+        swf_GetU16(tag);
+        swf_GetRect(tag,0);
+        swf_GetMatrix(tag,&mt);
+
+        swf_MatrixJoin(&mt2, &r->m, &mt);
+        swf_MatrixJoin(&info.m, &mt2, &p->po.matrix);
+        info.r = r;
+        swf_ParseDefineText(tag, textcallback, &info);
     }
 }
 
@@ -433,15 +548,16 @@ static void placeObject(void*self, int id, void*data)
     placement_t*p = (placement_t*)data;
     character_t*c = map16_get_id(r->id2char, p->po.id);
     if(!c)  {
-	fprintf(stderr, "Error: ID %d unknown\n", p->po.id);
+        fprintf(stderr, "Error: ID %d unknown\n", p->po.id);
+        return;
     }
     if(c->type == TYPE_SPRITE) {
-	int oldclip = r->clips;
-	sprite_t* s = (sprite_t*)c->data;
-	map16_t* depths = extractFrame(c->tag, p->age % s->frameCount);
-	map16_enumerate(depths, placeObject, r);
-	stopClippings(oldclip, r);
-	return;
+        int oldclip = r->clips;
+        sprite_t* s = (sprite_t*)c->data;
+        map16_t* depths = extractFrame(c->tag, p->age % s->frameCount);
+        map16_enumerate(depths, placeObject, r);
+        stopClippings(oldclip, r);
+        return;
     }
     renderCharacter(r, p, c);
 }
@@ -463,7 +579,20 @@ void swfpage_render(gfxpage_t*page, gfxdevice_t*output)
     r.clips = 0;
     r.device = output;
     r.m = pi->m;
-    map16_enumerate(depths, placeObject, &r);
+    r.clips_waiting = malloc(sizeof(r.clips_waiting[0])*65536);
+    memset(r.clips_waiting, 0, sizeof(r.clips_waiting[0])*65536);
+
+    int t;
+    for(t=0;t<65536;t++) {
+        int i;
+        for(i=0; i<r.clips_waiting[t]; i++) {
+            output->endclip(output);
+        }
+	if(depths->ids[t]) {
+	    placeObject(&r, t, depths->ids[t]);
+	}
+    }
+    free(r.clips_waiting);
 }
 
 void swfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfxcoord_t y, gfxcoord_t _x1, gfxcoord_t _y1, gfxcoord_t _x2, gfxcoord_t _y2)
@@ -533,12 +662,12 @@ gfxdocument_t*swf_open(gfxsource_t*src, const char*filename)
     f = open(filename,O_RDONLY|O_BINARY);
     if (f<0) { 
         perror("Couldn't open file: ");
-	return 0;
+        return 0;
     }
     if FAILED(swf_ReadSWF(f,&i->swf)) { 
         fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
         close(f);
-	return 0;
+        return 0;
     }
     swf_UnFoldAll(&i->swf);
     
