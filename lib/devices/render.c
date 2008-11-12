@@ -48,6 +48,7 @@ typedef struct _renderline
 typedef struct _internal_result {
     gfximage_t img;
     struct _internal_result*next;
+    char palette;
 } internal_result_t;
 
 typedef struct _clipbuffer {
@@ -66,6 +67,8 @@ typedef struct _internal {
     int zoom;
     int ymin, ymax;
     int fillwhite;
+
+    char palette;
 
     RGBA* img;
 
@@ -308,7 +311,7 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
     gfxmatrix_t*m = info->matrix;
     gfximage_t*b = info->image;
     
-    if(!b->width || !b->height) {
+    if(!b || !b->width || !b->height) {
 	gfxcolor_t red = {255,255,0,0};
         fill_line_solid(line, z, y, x1, x2, red);
         return;
@@ -516,6 +519,9 @@ int render_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 	return 1;
     } else if(!strcmp(key, "fillwhite")) {
 	i->fillwhite = atoi(value);
+	return 1;
+    } else if(!strcmp(key, "palette")) {
+	i->palette = atoi(value);
 	return 1;
     }
     return 0;
@@ -793,7 +799,11 @@ int render_result_save(gfxresult_t*r, const char*filename)
 	}
 	while(i->next) {
 	    sprintf(filenamebuf, "%s.%d.png", origname, nr);
-	    writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+            if(!i->palette) {
+	        writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+            } else {
+	        writePalettePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+            }
 	    nr++;
 	}
 	free(origname);
@@ -990,12 +1000,18 @@ void render_endpage(struct _gfxdevice*dev)
     }
 
     endclip(dev, 1);
+    int unclosed = 0;
     while(i->clipbuf) {
-	fprintf(stderr, "Warning: unclosed clip while processing endpage()\n");
 	endclip(dev, 1);
+        unclosed++;
+    }
+
+    if(unclosed) {
+        fprintf(stderr, "Warning: %d unclosed clip(s) while processing endpage()\n", unclosed);
     }
     
     internal_result_t*ir= (internal_result_t*)rfx_calloc(sizeof(internal_result_t));
+    ir->palette = i->palette;
 
     int y,x;
 
@@ -1058,3 +1074,10 @@ void gfxdevice_render_init(gfxdevice_t*dev)
     dev->finish = render_finish;
 }
 
+
+gfxdevice_t* gfxdevice_render_new()
+{
+    gfxdevice_t* d = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
+    gfxdevice_render_init(d);
+    return d;
+}
