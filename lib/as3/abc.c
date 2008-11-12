@@ -1580,6 +1580,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                     if(!events) {
                         abc_findpropstrict(h,"flash.net::navigateToURL");
                         abc_findpropstrict(h,"flash.net::URLRequest");
+                        // TODO: target _blank
                         abc_pushstring(h,oldaction->data); //url
                         abc_constructprop(h,"flash.net::URLRequest", 1);
                         abc_callpropvoid(h,"flash.net::navigateToURL", 1);
