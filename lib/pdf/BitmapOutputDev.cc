@@ -53,7 +53,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->rgbdev = new SplashOutputDev(splashModeRGB8, 1, gFalse, splash_white, gTrue, gTrue);
   
     /* color mode for binary bitmaps */
-    SplashColorMode colorMode = splashModeMono1;
+    SplashColorMode colorMode = splashModeMono8;
 
     /* two devices for testing things against clipping: one clips, the other doesn't */
     this->clip0dev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
@@ -302,24 +302,16 @@ void writeBitmap(SplashBitmap*bitmap, char*filename)
 
     gfxcolor_t*data = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
 
-    unsigned char aa=0;
-    if(bitmap->getMode()==splashModeMono1)
-        aa=255;
-
     for(y=0;y<height;y++) {
 	gfxcolor_t*line = &data[y*width];
 	for(x=0;x<width;x++) {
-            Guchar c[4] = {0,0,0,0};
+            Guchar c[4];
 	    bitmap->getPixel(x,y,c);
+	    int a = bitmap->getAlpha(x,y);
 	    line[x].r = c[0];
 	    line[x].g = c[1];
 	    line[x].b = c[2];
-            if(aa) {
-	        line[x].a = aa;
-            } else {
-	        int a = bitmap->getAlpha(x,y);
-	        line[x].a = a;
-            }
+	    line[x].a = a;
 	}
     }
     writePNG(filename, (unsigned char*)data, width, height);
@@ -332,11 +324,6 @@ void writeAlpha(SplashBitmap*bitmap, char*filename)
     
     int width = bitmap->getWidth();
     int height = bitmap->getHeight();
-    
-    if(bitmap->getMode()==splashModeMono1) {
-        writeBitmap(bitmap, filename);
-        return;
-    }
 
     gfxcolor_t*data = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
 
@@ -462,7 +449,7 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
     sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
 
-    if(dbg_btm_counter==12) {
+    if(0) {
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
@@ -512,43 +499,35 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
 //            break;
 //}
 
-static inline GBool fixBBox(int*x1, int*y1, int*x2, int*y2, int width, int height)
-{
-    if(!(*x1|*y1|*x2|*y2)) {
-        // undefined bbox
-        *x1 = *y1 = 0;
-        *x2 = width;
-        *y2 = height;
-        return gTrue;
-    }
-    if(*x2<=*x1) return gFalse;
-    if(*x2<0) return gFalse;
-    if(*x1<0) *x1 = 0;
-    if(*x1>=width) return gFalse;
-    if(*x2>width) *x2=width;
-
-    if(*y2<=*y1) return gFalse;
-    if(*y2<0) return gFalse;
-    if(*y1<0) *y1 = 0;
-    if(*y1>=height) return gFalse;
-    if(*y2>height) *y2=height;
-    return gTrue;
-}
-
 GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 {
     if(clip0bitmap->getMode()==splashModeMono1) {
-        int width = clip0bitmap->getWidth();
-	int width8 = (width+7)/8;
-	int height = clip0bitmap->getHeight();
+	if(x2<=x1)
+	    return gFalse;
+	if(x2<0)
+	    return gFalse;
+	if(x1<0)
+	    x1 = 0;
+	if(x1>=clip0bitmap->getWidth())
+	    return gFalse;
+	if(x2>clip0bitmap->getWidth())
+	    x2=clip0bitmap->getWidth();
 
-        if(fixBBox(&x1,&y1,&x2,&y2,width,height)) {
-            /* area is outside or null */
-            return gFalse;
-        }
+	if(y2<=y1)
+	    return gFalse;
+	if(y2<0)
+	    return gFalse;
+	if(y1<0)
+	    y1 = 0;
+	if(y1>=clip0bitmap->getHeight())
+	    return gFalse;
+	if(y2>clip0bitmap->getHeight())
+	    y2=clip0bitmap->getHeight();
 	
 	SplashBitmap*clip0 = clip0bitmap;
 	SplashBitmap*clip1 = clip1bitmap;
+	int width8 = (clip0bitmap->getWidth()+7)/8;
+	int height = clip0bitmap->getHeight();
 	int x18 = x1/8;
 	int x28 = (x2+7)/8;
 	int y;
@@ -561,15 +540,21 @@ GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 	}
 	return gFalse;
     } else {
+	if(x1<0) x1=0;
+	if(x2<0) x2=0;
+	if(y1<0) y1=0;
+	if(y2<0) y2=0;
+	if(x1>clip0bitmap->getWidth()) x1=clip0bitmap->getWidth();
+	if(y1>clip0bitmap->getHeight()) y1=clip0bitmap->getHeight();
+	if(x2>clip0bitmap->getWidth()) x2=clip0bitmap->getWidth();
+	if(y2>clip0bitmap->getHeight()) y2=clip0bitmap->getHeight();
+        if(x1>x2) x1=x2;
+        if(y1>x2) y1=y2;
+
 	SplashBitmap*clip0 = clip0bitmap;
 	SplashBitmap*clip1 = clip1bitmap;
 	int width = clip0->getAlphaRowSize();
 	int height = clip0->getHeight();
-
-        if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
-            x1=y1=0;x2=y2=1;
-        }
-
         Guchar*a0 = clip0->getAlphaPtr();
         Guchar*a1 = clip1->getAlphaPtr();
         int x,y;
@@ -614,42 +599,14 @@ static void clearBooleanBitmap(SplashBitmap*btm, int x1, int y1, int x2, int y2)
     }
 }
 
-GBool compare8(unsigned char*data1, unsigned char*data2, int len)
+long long unsigned int compare64(long long unsigned int*data1, long long unsigned int*data2, int len)
 {
-    if(!len)
-        return 0;
-    if(((ptroff_t)data1&7)==((ptroff_t)data2&7)) {
-        // oh good, we can do aligning
-        while((ptroff_t)data1&7) {
-            if(*data1&*data2)
-                return 1;
-            data1++;
-            data2++;
-            if(!--len)
-                return 0;
-        }
-    }
-    /* use 64 bit for the (hopefully aligned) middle section */
-    int l8 = len/8;
-    long long unsigned int*d1 = (long long unsigned int*)data1;
-    long long unsigned int*d2 = (long long unsigned int*)data2;
-    long long unsigned int x = 0;
+    long long unsigned int c;
     int t;
-    for(t=0;t<l8;t++) {
-        x |= d1[t]&d2[t];
-    }
-    if(x)
-        return 1;
-
-    data1+=l8*8;
-    data2+=l8*8;
-    len -= l8*8;
     for(t=0;t<len;t++) {
-        if(data1[t]&data2[t]) {
-            return 1;
-        }
+        c |= data1[t]&data2[t];
     }
-    return 0;
+    return c;
 }
 
 GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
@@ -660,17 +617,19 @@ GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
     if(boolpoly->getMode()==splashModeMono1) {
 	/* alternative implementation, using one bit per pixel-
 	   needs the no-dither patch in xpdf */
-	
-        int width = boolpoly->getWidth();
-	int height = boolpoly->getHeight();
 
-        if(!fixBBox(&x1,&y1,&x2,&y2, width, height)) {
-            return gFalse;
-        }
+        if(x1>=width) return gFalse;
+        if(x2<=0)     return gFalse;
+        if(y1>=height)return gFalse;
+        if(y2<=0)     return gFalse;
+        if(x1>=x2)    return gFalse;
+        if(y1>=y2)    return gFalse;
 
 	Guchar*polypixels = boolpoly->getDataPtr();
 	Guchar*textpixels = booltext->getDataPtr();
 
+	int width = boolpoly->getWidth();
+	int height = boolpoly->getHeight();
         int width8 = (width+7)/8;
         int runx = width8;
         int runy = height;
@@ -691,28 +650,31 @@ GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
         }*/
 
         int x,y;
-        unsigned char*data1 = (unsigned char*)polypixels;
-        unsigned char*data2 = (unsigned char*)textpixels;
-        msg("<verbose> Testing area (%d,%d,%d,%d), runx=%d,runy=%d", x1,y1,x2,y2, runx, runy);
         for(y=0;y<runy;y++) {
-            compare8(data1,data2,runx);
-            /*for(x=0;x<runx;x++) {
-                if(data1[x]&data2[x])
+            unsigned char*data1 = (unsigned char*)polypixels[y*width8];
+            unsigned char*data2 = (unsigned char*)textpixels[y*width8];
+            for(x=0;x<runx;x++) {
+                if(polypixels[x]&textpixels[x])
                     return gTrue;
-            }*/
-            data1+=width8;
-            data2+=width8;
+            }
         }
         return gFalse;
     } else {
-	int width = boolpoly->getAlphaRowSize();
-	int height = boolpoly->getHeight();
-
-        if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
-            x1=y1=0;x2=y2=1;
-        }
+        if(x1<0) x1=0;
+        if(y1<0) y1=0;
+        if(x2<0) x2=0;
+        if(y2<0) y2=0;
+        if(x1>width)  x1=width;
+        if(y1>height) y1=height;
+        if(x2>width)  x2=width;
+        if(y2>height) y2=height;
+        if(x1>x2) x1=x2;
+        if(y1>y2) y1=y2;
 	Guchar*polypixels = boolpoly->getAlphaPtr();
 	Guchar*textpixels = booltext->getAlphaPtr();
+	
+	int width = boolpoly->getAlphaRowSize();
+	int height = boolpoly->getHeight();
 
         int x,y;
         char overlap1 = 0;
@@ -746,7 +708,7 @@ GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
             msg("<warning> Bad bounding box: intersection outside bbox");
             msg("<warning> given bbox: %d %d %d %d", x1, y1, x2, y2);
             msg("<warning> changed area: %d %d %d %d", ax1, ay1, ax2, ay2);
-	    //writeAlpha(booltextbitmap, "alpha.png");
+	    writeAlpha(booltextbitmap, "alpha.png");
         }
 	return overlap2;
     }
