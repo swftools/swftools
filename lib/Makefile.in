@@ -167,7 +167,7 @@ uninstall:
 
 clean: 
 	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
-	for dir in art modules devices swf h.263;do rm -f $$dir/*.o $$dir/*.obj $$dir/*.lo $$dir/*.a $$dir/*.lib $$dir/*.la $$dir/gmon.out;done
+	for dir in art modules devices swf as3 h.263;do rm -f $$dir/*.o $$dir/*.obj $$dir/*.lo $$dir/*.a $$dir/*.lib $$dir/*.la $$dir/gmon.out;done
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..
