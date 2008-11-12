@@ -80,8 +80,8 @@
     lineTo 8,-8
 .end
 
-.font arialbold filename="../viewer/ArialBold.ttf" glyphs="1:"
-.font arial filename="../viewer/Arial.ttf" glyphs="0123456789 /:"
+.font arialbold filename="../wx/ArialBold.ttf" glyphs="1:"
+.font arial filename="../wx/Arial.ttf" glyphs="0123456789 /:"
 
 .textshape oneoneoutline text="1:1" font=arialbold size=14pt
 
@@ -300,7 +300,7 @@
 
 .edittext et width=110 height=20 font=arial size=18pt color=black noselect align=center
 
-.font dbgarial filename="../doc/Courier.ttf"
+.font dbgarial filename="../wx/Courier.ttf"
 #.edittext debugtxt width=width height=20 font=dbgarial size=18pt color=#004000 noselect
 #.put debugtxt y=20
 
