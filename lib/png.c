@@ -782,7 +782,7 @@ typedef struct {
 static int compare_colors(const void*_c1, const void*_c2) {
     colornum_t*c1 = (colornum_t*)_c1;
     colornum_t*c2 = (colornum_t*)_c2;
-    return c1->num - c2->num;
+    return c2->num - c1->num;
 }
 
 static colornum_t* getColors(COL*image, int size, int*num)
@@ -817,6 +817,7 @@ static colornum_t* getColors(COL*image, int size, int*num)
         int col = (image[t].r)|(image[t].g)<<8|(image[t].b)<<16;
         int min,max,i,l;
         for(min=0, max=count, i=count/2, l=count; i != l; l=i,i=(min+max)/2) {
+	    // binary search
             if(colors[i].color >= col) max=i;
             else min=i+1;
         }
@@ -850,6 +851,12 @@ static COL* getOptimalPalette(COL*image, int size, int palettesize)
             ret[t].a = 255;
         }
         return ret;
+    }
+
+    if(num>2048) {
+	/* if there are too many different colors, pick the ones that
+	   occur most often */
+	num = 2048;
     }
 
     colornum_t*centers = malloc(sizeof(colornum_t)*palettesize);
