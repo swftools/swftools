@@ -4,9 +4,9 @@
    
    Copyright (c) 2001,2002,2003,2004 Matthias Kramm <kramm@quiss.org>
  
-   This program is free software; you can redistribute it and/or modify
+   This program is rfx_free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
+   the rfx_free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -15,14 +15,16 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
+   along with this program; if not, write to the rfx_free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include <memory.h>
+#include "mem.h"
 #include "q.h"
 
 // ------------------------------- malloc, alloc routines ---------------------
@@ -30,7 +32,7 @@
 #ifndef STRNDUP
 char* strdup_n(const char*str, int size)
 {
-    char*m = (char*)malloc(size+1);
+    char*m = (char*)rfx_alloc(size+1);
     memcpy(m, str, size);
     m[size] = 0;
     return m;
@@ -53,12 +55,12 @@ void mem_init(mem_t*mem)
 }
 void mem_clear(mem_t*mem)
 {
-    free(mem->buffer);mem->buffer = 0;
+    rfx_free(mem->buffer);mem->buffer = 0;
 }
 void mem_destroy(mem_t*mem)
 {
     mem_clear(mem);
-    free(mem);
+    rfx_free(mem);
 }
 static int mem_put_(mem_t*m,const void*data, int length, int null)
 {
@@ -66,8 +68,9 @@ static int mem_put_(mem_t*m,const void*data, int length, int null)
     m->pos += length + (null?1:0);
     if(m->pos > m->len) { 
         m->len = (m->pos+63)&~63;
-	m->buffer = m->buffer?(char*)realloc(m->buffer,m->len):(char*)malloc(m->len);
+	m->buffer = m->buffer?(char*)rfx_realloc(m->buffer,m->len):(char*)rfx_alloc(m->len);
     }
+    assert(n+length <= m->len);
     memcpy(&m->buffer[n], data, length);
     if(null)
 	m->buffer[n + length] = 0;
@@ -94,11 +97,10 @@ typedef struct _ringbuffer_internal_t
 
 void ringbuffer_init(ringbuffer_t*r)
 {
-    ringbuffer_internal_t*i = (ringbuffer_internal_t*)malloc(sizeof(ringbuffer_internal_t)); 
+    ringbuffer_internal_t*i = (ringbuffer_internal_t*)rfx_calloc(sizeof(ringbuffer_internal_t)); 
     memset(r, 0, sizeof(ringbuffer_t));
-    memset(i, 0, sizeof(ringbuffer_internal_t));
     r->internal = i;
-    i->buffer = (unsigned char*)malloc(1024);
+    i->buffer = (unsigned char*)rfx_alloc(1024);
     i->buffersize = 1024;
 }
 int ringbuffer_read(ringbuffer_t*r, void*buf, int len)
@@ -137,9 +139,9 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
 	if(newbuffersize < r->available + len)
 	    newbuffersize = r->available + len + 1024;
 
-	buf2 = (unsigned char*)malloc(newbuffersize);
+	buf2 = (unsigned char*)rfx_alloc(newbuffersize);
 	ringbuffer_read(r, buf2, r->available);
-	free(i->buffer);
+	rfx_free(i->buffer);
 	i->buffer = buf2;
 	i->buffersize = newbuffersize;
 	i->readpos = 0;
@@ -161,8 +163,8 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int len)
 void ringbuffer_clear(ringbuffer_t*r)
 {
     ringbuffer_internal_t*i = (ringbuffer_internal_t*)r->internal;
-    free(i->buffer);i->buffer = 0;
-    free(i);
+    rfx_free(i->buffer);i->buffer = 0;
+    rfx_free(i);
 }
 
 // ------------------------------- heap_t -------------------------------
@@ -174,13 +176,13 @@ void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const v
     h->size = 0;
     h->elem_size = elem_size;
     h->compare = compare;
-    h->elements = (void**)malloc(n*sizeof(void*));memset(h->elements, 0, n*sizeof(void*));
-    h->data = (char*)malloc(h->max_size*h->elem_size);memset(h->data, 0, h->max_size*h->elem_size);
+    h->elements = (void**)rfx_calloc(n*sizeof(void*));
+    h->data = (char*)rfx_calloc(h->max_size*h->elem_size);
 }
 void heap_clear(heap_t*h)
 {
-    free(h->elements);
-    free(h->data);
+    rfx_free(h->elements);
+    rfx_free(h->data);
 }
 
 #define HEAP_NODE_SMALLER(h,node1,node2) ((h)->compare((node1),(node2))>0)
@@ -252,7 +254,7 @@ void heap_dump(heap_t*h, FILE*fi)
 }
 void** heap_flatten(heap_t*h)
 {
-    void**nodes = (void**)malloc(h->size*sizeof(void*));
+    void**nodes = (void**)rfx_alloc(h->size*sizeof(void*));
     void**p = nodes;
    
     while(h->size) {
@@ -271,7 +273,7 @@ static void crc32_init(void)
     int t;
     if(crc32) 
         return;
-    crc32= (unsigned int*)malloc(sizeof(unsigned int)*256);
+    crc32= (unsigned int*)rfx_alloc(sizeof(unsigned int)*256);
     for(t=0; t<256; t++) {
         unsigned int c = t;
         int s;
@@ -307,6 +309,10 @@ string_t string_new2(const char*text)
     s.str = text;
     return s;
 }
+char* string_cstr(string_t*str)
+{
+    return strdup_n(str->str, str->len);
+}
 unsigned int string_hash(string_t*str)
 {
     int t;
@@ -321,13 +327,21 @@ unsigned int string_hash(string_t*str)
 unsigned int string_hash2(const char*str)
 {
     unsigned int checksum = 0;
+    const char*p = str;
     if(!crc32)
         crc32_init();
-    while(*str) {
-        checksum = checksum>>8 ^ crc32[(*str^checksum)&0xff];
-        str++;
+    while(*p) {
+        checksum = checksum>>8 ^ crc32[(*p^checksum)&0xff];
+        p++;
     }
     return checksum;
+}
+unsigned int string_hash3(const char*str, int len)
+{
+    string_t s;
+    s.str = str;
+    s.len = len;
+    return string_hash(&s);
 }
 void string_dup2(string_t*str, const char*text, int len)
 {
@@ -352,14 +366,8 @@ int string_equals2(string_t*str, string_t*str2)
 	return 1;
     return 0;
 }
-char* string_cstr(string_t*str)
-{
-    return strdup_n(str->str, str->len);
-}
 
 // ------------------------------- stringarray_t ------------------------------
-
-#define DEFAULT_HASH_SIZE 257
 
 typedef struct _stringlist {
     int index;
@@ -378,12 +386,10 @@ void stringarray_init(stringarray_t*sa, int hashsize)
 {
     stringarray_internal_t*s;
     int t;
-    sa->internal = (stringarray_internal_t*)malloc(sizeof(stringarray_internal_t)); 
-    memset(sa->internal, 0, sizeof(stringarray_internal_t));
+    sa->internal = (stringarray_internal_t*)rfx_calloc(sizeof(stringarray_internal_t)); 
     s = (stringarray_internal_t*)sa->internal;
     mem_init(&s->pos);
-    s->hash = malloc(sizeof(stringlist_t*)*hashsize);
-    memset(s->hash, 0, sizeof(stringlist_t*)*hashsize);
+    s->hash = rfx_calloc(sizeof(stringlist_t*)*hashsize);
     s->hashsize = hashsize;
 }
 void stringarray_put(stringarray_t*sa, string_t str)
@@ -395,7 +401,7 @@ void stringarray_put(stringarray_t*sa, string_t str)
     char*ss = string_cstr(&str);
     mem_put(&s->pos, &ss, sizeof(char*));
 
-    stringlist_t*l = malloc(sizeof(stringlist_t));
+    stringlist_t*l = rfx_alloc(sizeof(stringlist_t));
     l->index = s->num;
     l->next = s->hash[hash];
     s->hash[hash] = l;
@@ -428,7 +434,7 @@ static stringlist_t* stringlist_del(stringarray_t*sa, stringlist_t*l, int index)
         if(index==l->index) {
             old->next = l->next;
             memset(l, 0, sizeof(stringlist_t));
-            free(l);
+            rfx_free(l);
             if(old==l)
                 return 0;
             else
@@ -475,44 +481,71 @@ void stringarray_clear(stringarray_t*sa)
         while(l) {
             stringlist_t*next = l->next;
             memset(l, 0, sizeof(stringlist_t));
-            free(l);
+            rfx_free(l);
             l = next;
         }
     }
-    free(s->hash);s->hash=0;
-    free(s);
+    rfx_free(s->hash);s->hash=0;
+    rfx_free(s);
 }
 void stringarray_destroy(stringarray_t*sa)
 {
     stringarray_clear(sa);
-    free(sa);
+    rfx_free(sa);
 }
 
 
 // ------------------------------- dictionary_t -------------------------------
 
+#define INITIAL_SIZE 63
+
 dict_t*dict_new()
 {
-    dict_t*d = malloc(sizeof(dict_t));
+    dict_t*d = rfx_alloc(sizeof(dict_t));
     dict_init(d);
     return d;
 }
 void dict_init(dict_t*h) 
 {
     memset(h, 0, sizeof(dict_t));
-    h->hashsize = DEFAULT_HASH_SIZE;
-    h->slots = malloc(sizeof(dictentry_t*)*h->hashsize);
+    h->hashsize = INITIAL_SIZE;
+    h->slots = h->hashsize?(dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*h->hashsize):0;
     h->num = 0;
-    memset(h->slots, 0, sizeof(dictentry_t*)*h->hashsize);
+}
+static void dict_expand(dict_t*h, int newlen)
+{
+    assert(h->hashsize < newlen);
+    dictentry_t**newslots = (dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*newlen);
+    int t; 
+    for(t=0;t<h->hashsize;t++) {
+        dictentry_t*e = h->slots[t];
+        while(e) {
+            dictentry_t*next = e->next;
+            unsigned int newhash = e->hash%newlen;
+            e->next = newslots[newhash];
+            newslots[newhash] = e;
+            e = next;
+        }
+    }
+    if(h->slots)
+        rfx_free(h->slots);
+    h->slots = newslots;
+    h->hashsize = newlen;
 }
 void dict_put(dict_t*h, string_t s, void* data)
 {
-    unsigned int checksum = string_hash(&s) % h->hashsize;
-    dictentry_t*e = (dictentry_t*)malloc(sizeof(dictentry_t));
-    e->s = strdup(s.str);
-    e->next = h->slots[checksum];
+    unsigned int hash = string_hash(&s);
+    dictentry_t*e = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
+
+    unsigned int hash2 = string_hash(&s) % h->hashsize;
+    char*sdata = rfx_alloc(s.len);
+    memcpy(sdata, s.str, s.len);
+    e->s = sdata;
+    e->len = s.len;
+    e->hash = hash; //for resizing
+    e->next = h->slots[hash2];
     e->data = data;
-    h->slots[checksum] = e;
+    h->slots[hash2] = e;
     h->num++;
 }
 void dict_put2(dict_t*h, const char*s, void*data) 
@@ -521,13 +554,21 @@ void dict_put2(dict_t*h, const char*s, void*data)
     string_set(&s2, s);
     dict_put(h, s2, data);
 }
+void dict_put3(dict_t*h, const char* s, int len, void*data)
+{
+    string_t s3;
+    string_set2(&s3, s, len);
+    dict_put(h, s3, data);
+}
 void dict_dump(dict_t*h, FILE*fi, const char*prefix)
 {
     int t;
     for(t=0;t<h->hashsize;t++) {
         dictentry_t*e = h->slots[t];
         while(e) {
+            char*s = strdup_n(e->s, e->len);
             fprintf(fi, "%s%s=%08x\n", prefix, e->s, e->data);
+            rfx_free(s);
             e = e->next;
         }
     }
@@ -536,34 +577,54 @@ int dict_count(dict_t*h)
 {
     return h->num;
 }
-void* dict_lookup(dict_t*h, const char*s)
+void* dict_lookup2(dict_t*h, const char*s, int len)
 {
-    unsigned int checksum = string_hash2(s) % h->hashsize;
-    dictentry_t*e = h->slots[checksum];
+    if(!h->num)
+        return 0;
+
+    if(h->num*3 >= h->hashsize*2) {
+        /* if dict is 2/3 filled, double the size */
+        dict_expand(h, (h->hashsize+1)*2-1);
+    }
+
+    unsigned int ohash = string_hash2(s);
+    unsigned int hash = ohash % h->hashsize;
+
+    dictentry_t*e = h->slots[hash];
     while(e) {
-        if(!strcmp(e->s, s)) {
+        if(e->len == len && !memcmp(e->s, s, len)) {
             return e->data;
         }
         e = e->next;
     }
     return 0;
 }
+void* dict_lookup(dict_t*h, const char*s)
+{
+    int l = strlen(s);
+    return dict_lookup2(h, s, l);
+}
 char dict_del(dict_t*h, const char*s)
 {
-    unsigned int checksum = string_hash2(s) % h->hashsize;
-    dictentry_t*head = h->slots[checksum];
+    if(!h->num)
+        return 0;
+    unsigned int hash = string_hash2(s) % h->hashsize;
+    int l = strlen(s);
+    dictentry_t*head = h->slots[hash];
     dictentry_t*e = head, *prev=0;
     while(e) {
-        if(!strcmp(e->s, s)) {
+        if(e->len ==l && !memcmp(e->s, s, l)) {
             dictentry_t*next = e->next;
-            free((void*)e->s);
+            rfx_free((void*)e->s);
             memset(e, 0, sizeof(dictentry_t));
-            free(e);
+            rfx_free(e);
             if(e == head) {
-                h->slots[checksum] = 0;
+                h->slots[hash] = 0;
             } else {
+                assert(prev);
                 prev->next = next;
             }
+            h->num--;
             return 1;
         }
         prev = e;
@@ -579,7 +640,9 @@ void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*k
         while(e) {
             dictentry_t*next = e->next;
             if(runFunction) {
-                runFunction(data, e->s, e->data);
+                char*s = strdup_n(e->s, e->len); //append \0
+                runFunction(data, s, e->data);
+                rfx_free(s);
             }
             e = e->next;
         }
@@ -606,16 +669,17 @@ void dict_free_all(dict_t*h, void (*freeFunction)(void*))
         dictentry_t*e = h->slots[t];
         while(e) {
             dictentry_t*next = e->next;
-            free((void*)e->s);
+            rfx_free((void*)e->s);
             if(freeFunction) {
                 freeFunction(e->data);
             }
             memset(e, 0, sizeof(dictentry_t));
-            free(e);
+            rfx_free(e);
             e = next;
         }
     }
-    free(h->slots);h->slots = 0;
+    rfx_free(h->slots);
+    memset(h, 0, sizeof(dict_t));
 }
 void dict_clear(dict_t*h) 
 {
@@ -624,7 +688,7 @@ void dict_clear(dict_t*h)
 void dict_destroy(dict_t*dict)
 {
     dict_clear(dict);
-    free(dict);
+    rfx_free(dict);
 }
 
 // ------------------------------- map_t --------------------------------------
@@ -637,15 +701,17 @@ typedef struct _map_internal_t
 void map_init(map_t*map)
 {
     map_internal_t*m;
-    map->internal = (map_internal_t*)malloc(sizeof(map_internal_t));
-    memset(map->internal, 0, sizeof(map_internal_t));
+    map->internal = (map_internal_t*)rfx_calloc(sizeof(map_internal_t));
     m = (map_internal_t*)map->internal;
     dict_init(&m->d);
 }
 void map_put(map_t*map, string_t t1, string_t t2)
 {
     map_internal_t*m = (map_internal_t*)map->internal;
-    dict_put2(&m->d, string_cstr(&t1), (void*)string_cstr(&t2));
+    string_t s;
+    char* s1 = string_cstr(&t1);
+    dict_put2(&m->d, s1, (void*)string_cstr(&t2));
+    rfx_free(s1);
 }
 const char* map_lookup(map_t*map, const char*name)
 {
@@ -653,7 +719,11 @@ const char* map_lookup(map_t*map, const char*name)
     const char*value = dict_lookup(&m->d, name);
     return value;
 }
-void dumpmapentry(void*data, const char*key, void*value)
+static void freestring(void*data)
+{
+    rfx_free(data);
+}
+static void dumpmapentry(void*data, const char*key, void*value)
 {
     FILE*fi = (FILE*)data;
     fprintf(fi, "%s=%s\n", key, (char*)value);
@@ -662,18 +732,17 @@ void map_dump(map_t*map, FILE*fi, const char*prefix)
 {
     int t;
     map_internal_t*m = (map_internal_t*)map->internal;
-    fprintf(fi, "ERROR: map dumping not implemented yet\n");
     dict_foreach_keyvalue(&m->d, dumpmapentry, fi);
 }
 void map_clear(map_t*map)
 {
     map_internal_t*m = (map_internal_t*)map->internal;
-    dict_clear(&m->d);
-    free(m);
+    dict_free_all(&m->d, freestring);
+    rfx_free(m);
 }
 void map_destroy(map_t*map)
 {
     map_clear(map);
-    free(map);
+    rfx_free(map);
 }
 

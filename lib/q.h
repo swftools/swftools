@@ -55,6 +55,8 @@ typedef struct _map_t {
 
 typedef struct _dictentry {
     const char*s;
+    int len;
+    unsigned int hash;
     void*data;
     struct _dictentry*next;
 } dictentry_t;
@@ -68,7 +70,7 @@ typedef struct _dict {
 
 /* array of strings, string<->int mapping,
    with O(1) for int->string lookup and
-        O(n/hashsize) for string->int lookup */
+        ~O(n/hashsize) for string->int lookup */
 typedef struct _stringarray_t
 {
     void*internal;
@@ -100,6 +102,7 @@ string_t string_new(const char*text, int len);
 string_t string_new2(const char*text);
 unsigned int string_hash(string_t*str);
 unsigned int string_hash2(const char*str);
+unsigned int string_hash3(const char*str, int len);
 void string_set(string_t*str, const char*text);
 void string_set2(string_t*str, const char*text, int len);
 void string_dup(string_t*str, const char*text);
@@ -118,6 +121,8 @@ dict_t*dict_new();
 void dict_init(dict_t*dict);
 void dict_put(dict_t*dict, string_t t1, void* t2);
 void dict_put2(dict_t*dict, const char* t1, void* t2);
+void dict_put3(dict_t*dict, const char* t1, int len, void* t2);
+
 stringarray_t* dict_index(dict_t*dict);
 int dict_count(dict_t* dict);
 void* dict_lookup(dict_t*dict, const char*name);
