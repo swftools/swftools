@@ -571,6 +571,20 @@ char dict_del(dict_t*h, const char*s)
     }
     return 0;
 }
+void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*key, void*val), void*data)
+{
+    int t;
+    for(t=0;t<h->hashsize;t++) {
+        dictentry_t*e = h->slots[t];
+        while(e) {
+            dictentry_t*next = e->next;
+            if(runFunction) {
+                runFunction(data, e->s, e->data);
+            }
+            e = e->next;
+        }
+    }
+}
 void dict_foreach_value(dict_t*h, void (*runFunction)(void*))
 {
     int t;
@@ -639,16 +653,17 @@ const char* map_lookup(map_t*map, const char*name)
     const char*value = dict_lookup(&m->d, name);
     return value;
 }
+void dumpmapentry(void*data, const char*key, void*value)
+{
+    FILE*fi = (FILE*)data;
+    fprintf(fi, "%s=%s\n", key, (char*)value);
+}
 void map_dump(map_t*map, FILE*fi, const char*prefix)
 {
     int t;
     map_internal_t*m = (map_internal_t*)map->internal;
     fprintf(fi, "ERROR: map dumping not implemented yet\n");
-    /*for(t=0;t<m->num;t++) {
-	string_t s1 = stringarray_at2(&m->keys, t);
-	string_t s2 = stringarray_at2(&m->values, t);
-	fprintf(fi, "%s%s=%s\n", prefix, s1.str, s2.str);
-    }*/
+    dict_foreach_keyvalue(&m->d, dumpmapentry, fi);
 }
 void map_clear(map_t*map)
 {

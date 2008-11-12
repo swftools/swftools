@@ -53,20 +53,22 @@ typedef struct _map_t {
     void*internal;
 } map_t;
 
-/* (void*)s referenced by strings */
 typedef struct _dictentry {
     const char*s;
     void*data;
     struct _dictentry*next;
 } dictentry_t;
 
+/* (void*) pointers referenced by strings */
 typedef struct _dict {
     dictentry_t**slots;
     int hashsize;
     int num;
 } dict_t;
 
-/* array of strings */
+/* array of strings, string<->int mapping,
+   with O(1) for int->string lookup and
+        O(n/hashsize) for string->int lookup */
 typedef struct _stringarray_t
 {
     void*internal;
@@ -112,13 +114,6 @@ int stringarray_find(stringarray_t*sa, string_t*str);
 void stringarray_clear(stringarray_t*sa);
 void stringarray_destroy(stringarray_t*sa);
 
-void map_init(map_t*map);
-void map_put(map_t*map, string_t t1, string_t t2);
-const char* map_lookup(map_t*map, const char*name);
-void map_dump(map_t*map, FILE*fi, const char*prefix);
-void map_clear(map_t*map);
-void map_destroy(map_t*map);
-
 dict_t*dict_new();
 void dict_init(dict_t*dict);
 void dict_put(dict_t*dict, string_t t1, void* t2);
@@ -128,10 +123,18 @@ int dict_count(dict_t* dict);
 void* dict_lookup(dict_t*dict, const char*name);
 void dict_dump(dict_t*dict, FILE*fi, const char*prefix);
 char dict_del(dict_t*dict, const char* name);
+void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*key, void*val), void*data);
 void dict_foreach_value(dict_t*h, void (*runFunction)(void*));
 void dict_free_all(dict_t*h, void (*freeFunction)(void*));
 void dict_clear(dict_t*dict);
 void dict_destroy(dict_t*dict);
+
+void map_init(map_t*map);
+void map_put(map_t*map, string_t t1, string_t t2);
+const char* map_lookup(map_t*map, const char*name);
+void map_dump(map_t*map, FILE*fi, const char*prefix);
+void map_clear(map_t*map);
+void map_destroy(map_t*map);
 
 void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *));
 void heap_clear(heap_t*h);
