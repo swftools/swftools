@@ -195,6 +195,9 @@ private:
     GBool checkNewBitmap(int x1, int y1, int x2, int y2);
     GBool clip0and1differ(int x1,int y1,int x2,int y2);
     GBool intersection(int x1,int y1,int x2,int y2);
+    
+    virtual gfxbbox_t getImageBBox(GfxState*state);
+    virtual gfxbbox_t getBBox(GfxState*state);
 
     char config_extrafontdata;
 

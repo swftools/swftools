@@ -53,7 +53,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->rgbdev = new SplashOutputDev(splashModeRGB8, 1, gFalse, splash_white, gTrue, gTrue);
   
     /* color mode for binary bitmaps */
-    SplashColorMode colorMode = splashModeMono8;
+    SplashColorMode colorMode = splashModeMono1;
 
     /* two devices for testing things against clipping: one clips, the other doesn't */
     this->clip0dev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
@@ -302,16 +302,24 @@ void writeBitmap(SplashBitmap*bitmap, char*filename)
 
     gfxcolor_t*data = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
 
+    unsigned char aa=0;
+    if(bitmap->getMode()==splashModeMono1)
+        aa=255;
+
     for(y=0;y<height;y++) {
 	gfxcolor_t*line = &data[y*width];
 	for(x=0;x<width;x++) {
-            Guchar c[4];
+            Guchar c[4] = {0,0,0,0};
 	    bitmap->getPixel(x,y,c);
-	    int a = bitmap->getAlpha(x,y);
 	    line[x].r = c[0];
 	    line[x].g = c[1];
 	    line[x].b = c[2];
-	    line[x].a = a;
+            if(aa) {
+	        line[x].a = aa;
+            } else {
+	        int a = bitmap->getAlpha(x,y);
+	        line[x].a = a;
+            }
 	}
     }
     writePNG(filename, (unsigned char*)data, width, height);
@@ -324,6 +332,11 @@ void writeAlpha(SplashBitmap*bitmap, char*filename)
     
     int width = bitmap->getWidth();
     int height = bitmap->getHeight();
+    
+    if(bitmap->getMode()==splashModeMono1) {
+        writeBitmap(bitmap, filename);
+        return;
+    }
 
     gfxcolor_t*data = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
 
@@ -449,7 +462,7 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
     sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
 
-    if(0) {
+    if(dbg_btm_counter==12) {
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
@@ -499,35 +512,43 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
 //            break;
 //}
 
+static inline GBool fixBBox(int*x1, int*y1, int*x2, int*y2, int width, int height)
+{
+    if(!(*x1|*y1|*x2|*y2)) {
+        // undefined bbox
+        *x1 = *y1 = 0;
+        *x2 = width;
+        *y2 = height;
+        return gTrue;
+    }
+    if(*x2<=*x1) return gFalse;
+    if(*x2<0) return gFalse;
+    if(*x1<0) *x1 = 0;
+    if(*x1>=width) return gFalse;
+    if(*x2>width) *x2=width;
+
+    if(*y2<=*y1) return gFalse;
+    if(*y2<0) return gFalse;
+    if(*y1<0) *y1 = 0;
+    if(*y1>=height) return gFalse;
+    if(*y2>height) *y2=height;
+    return gTrue;
+}
+
 GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 {
     if(clip0bitmap->getMode()==splashModeMono1) {
-	if(x2<=x1)
-	    return gFalse;
-	if(x2<0)
-	    return gFalse;
-	if(x1<0)
-	    x1 = 0;
-	if(x1>=clip0bitmap->getWidth())
-	    return gFalse;
-	if(x2>clip0bitmap->getWidth())
-	    x2=clip0bitmap->getWidth();
+        int width = clip0bitmap->getWidth();
+	int width8 = (width+7)/8;
+	int height = clip0bitmap->getHeight();
 
-	if(y2<=y1)
-	    return gFalse;
-	if(y2<0)
-	    return gFalse;
-	if(y1<0)
-	    y1 = 0;
-	if(y1>=clip0bitmap->getHeight())
-	    return gFalse;
-	if(y2>clip0bitmap->getHeight())
-	    y2=clip0bitmap->getHeight();
+        if(fixBBox(&x1,&y1,&x2,&y2,width,height)) {
+            /* area is outside or null */
+            return gFalse;
+        }
 	
 	SplashBitmap*clip0 = clip0bitmap;
 	SplashBitmap*clip1 = clip1bitmap;
-	int width8 = (clip0bitmap->getWidth()+7)/8;
-	int height = clip0bitmap->getHeight();
 	int x18 = x1/8;
 	int x28 = (x2+7)/8;
 	int y;
@@ -544,7 +565,33 @@ GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 	SplashBitmap*clip1 = clip1bitmap;
 	int width = clip0->getAlphaRowSize();
 	int height = clip0->getHeight();
-	return memcmp(clip0->getAlphaPtr(), clip1->getAlphaPtr(), width*height);
+
+        if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
+            x1=y1=0;x2=y2=1;
+        }
+
+        Guchar*a0 = clip0->getAlphaPtr();
+        Guchar*a1 = clip1->getAlphaPtr();
+        int x,y;
+        char differs=0;
+        for(y=y1;y<y2;y++) {
+            for(x=x1;x<x2;x++) {
+                if(a0[y*width+x]!=a1[y*width+x]) {
+                    differs=1;
+                    break;
+                }
+            }
+            if(differs)
+                break;
+        }
+	char differs2 = memcmp(a0, a1, width*height);
+        if(differs && !differs2) 
+            msg("<warning> Strange internal error (2)");
+        else if(!differs && differs2) {
+            msg("<warning> Bad Bounding Box: Difference in clip0 and clip1 outside bbox");
+            msg("<warning> %d %d %d %d", x1, y1, x2, y2);
+        }
+        return differs2;
     }
 }
 
@@ -567,84 +614,141 @@ static void clearBooleanBitmap(SplashBitmap*btm, int x1, int y1, int x2, int y2)
     }
 }
 
-long long unsigned int compare64(long long unsigned int*data1, long long unsigned int*data2, int len)
+GBool compare8(unsigned char*data1, unsigned char*data2, int len)
 {
-    long long unsigned int c;
-    int t;
-    for(t=0;t<len;t++) {
-        c |= data1[t]&data2[t];
+    if(!len)
+        return 0;
+    if(((ptroff_t)data1&7)==((ptroff_t)data2&7)) {
+        // oh good, we can do aligning
+        while((ptroff_t)data1&7) {
+            if(*data1&*data2)
+                return 1;
+            data1++;
+            data2++;
+            if(!--len)
+                return 0;
+        }
     }
-    return c;
+    /* use 64 bit for the (hopefully aligned) middle section */
+    int l8 = len/8;
+    long long unsigned int*d1 = (long long unsigned int*)data1;
+    long long unsigned int*d2 = (long long unsigned int*)data2;
+    long long unsigned int x = 0;
+    int t;
+    for(t=0;t<l8;t++) {
+        x |= d1[t]&d2[t];
+    }
+    if(x)
+        return 1;
+
+    data1+=l8*8;
+    data2+=l8*8;
+    len -= l8*8;
+    for(t=0;t<len;t++) {
+        if(data1[t]&data2[t]) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
 {
     SplashBitmap*boolpoly = boolpolybitmap;
     SplashBitmap*booltext = booltextbitmap;
-	
+            
     if(boolpoly->getMode()==splashModeMono1) {
 	/* alternative implementation, using one bit per pixel-
-	   would work if xpdf wouldn't try to dither everything */
+	   needs the no-dither patch in xpdf */
+	
+        int width = boolpoly->getWidth();
+	int height = boolpoly->getHeight();
+
+        if(!fixBBox(&x1,&y1,&x2,&y2, width, height)) {
+            return gFalse;
+        }
 
 	Guchar*polypixels = boolpoly->getDataPtr();
 	Guchar*textpixels = booltext->getDataPtr();
 
-	int width8 = (width+7)/8;
-	int height = boolpoly->getHeight();
+        int width8 = (width+7)/8;
+        int runx = width8;
+        int runy = height;
 	
 	if(x1|y1|x2|y2) {
-	    if(y1>=0 && y1<=y2 && y2<=height) {
-		polypixels+=y1*width8;
-		textpixels+=y1*width8;
-		height=y2-y1;
-	    }
+            polypixels+=y1*width8+x1/8;
+            textpixels+=y1*width8+x1/8;
+            runx=(x2+7)/8 - x1/8;
+            runy=y2-y1;
 	}
 	
 	int t;
-	int len = height*width8;
-	unsigned long long int c=0;
-        assert(sizeof(unsigned long long int)==8);
-	{
-            if(((ptroff_t)polypixels&7) || ((ptroff_t)textpixels&7)) {
-                //msg("<warning> Non-optimal alignment");
-            }
-            int l2 = len;
-	    len /= sizeof(unsigned long long int);
-            c = compare64((unsigned long long int*)polypixels, (unsigned long long int*)textpixels, len);
-            int l1 = len*sizeof(unsigned long long int);
-	    for(t=l1;t<l2;t++) {
-		c |= (unsigned long long int)(polypixels[t]&textpixels[t]);
-	    }
-	}
-	if(c)
-	    /* if graphic data and the characters overlap, they have common bits */
-	    return gTrue;
-	else
-	    return gFalse;
+	unsigned char c=0;
+        
+        /*assert(sizeof(unsigned long long int)==8);
+        if(((ptroff_t)polypixels&7) || ((ptroff_t)textpixels&7)) {
+            //msg("<warning> Non-optimal alignment");
+        }*/
+
+        int x,y;
+        unsigned char*data1 = (unsigned char*)polypixels;
+        unsigned char*data2 = (unsigned char*)textpixels;
+        msg("<verbose> Testing area (%d,%d,%d,%d), runx=%d,runy=%d", x1,y1,x2,y2, runx, runy);
+        for(y=0;y<runy;y++) {
+            compare8(data1,data2,runx);
+            /*for(x=0;x<runx;x++) {
+                if(data1[x]&data2[x])
+                    return gTrue;
+            }*/
+            data1+=width8;
+            data2+=width8;
+        }
+        return gFalse;
     } else {
-	Guchar*polypixels = boolpoly->getAlphaPtr();
-	Guchar*textpixels = booltext->getAlphaPtr();
-	
 	int width = boolpoly->getAlphaRowSize();
 	int height = boolpoly->getHeight();
-	
-	int t;
-	int len = height*width;
-	unsigned int c=0;
-	if(len & (sizeof(unsigned int)-1)) {
-	    Guchar c2=0;
-	    for(t=0;t<len;t++) {
-		if(polypixels[t]&&textpixels[t])
-		    return gTrue;
-	    }
-	} else {
-	    len /= sizeof(unsigned int);
-	    for(t=0;t<len;t++) {
-		if((((unsigned int*)polypixels)[t]) & (((unsigned int*)textpixels)[t]))
-		    return gTrue;
-	    }
-	}
-	return gFalse;
+
+        if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
+            x1=y1=0;x2=y2=1;
+        }
+	Guchar*polypixels = boolpoly->getAlphaPtr();
+	Guchar*textpixels = booltext->getAlphaPtr();
+
+        int x,y;
+        char overlap1 = 0;
+        char overlap2 = 0;
+        for(x=x1;x<x2;x++) {
+            for(y=y1;y<y2;y++) {
+                if(polypixels[width*y+x]&&textpixels[width*y+x])
+                    overlap1 = 1;
+            }
+        }
+        int ax1=0,ay1=0,ax2=0,ay2=0;
+        for(y=0;y<height;y++) {
+            for(x=0;x<width;x++) {
+                if(polypixels[width*y+x]&&textpixels[width*y+x]) {
+                    overlap2 = 1;
+                    if(!(ax1|ay1|ax2|ay2)) {
+                        ax1 = ax2 = x;
+                        ay1 = ay2 = y;
+                    } else {
+                        ax1 = ax1<x?ax1:x;
+                        ay1 = ay1<y?ay1:y;
+                        ax2 = ax2>x?ax2:x;
+                        ay2 = ay2>y?ay2:y;
+                    }
+                }
+            }
+        }
+        if(overlap1 && !overlap2)
+            msg("<warning> strange internal error");
+        if(!overlap1 && overlap2) {
+            msg("<warning> Bad bounding box: intersection outside bbox");
+            msg("<warning> given bbox: %d %d %d %d", x1, y1, x2, y2);
+            msg("<warning> changed area: %d %d %d %d", ax1, ay1, ax2, ay2);
+	    //writeAlpha(booltextbitmap, "alpha.png");
+        }
+	return overlap2;
     }
 }
 
@@ -1089,18 +1193,61 @@ void BitmapOutputDev::updateTextShift(GfxState *state, double shift)
     gfxdev->updateTextShift(state, shift);
 }
 
+double max(double x, double y) 
+{
+    return x>y?x:y;
+}
+double min(double x, double y) 
+{
+    return x<y?x:y;
+}
+
+gfxbbox_t BitmapOutputDev::getBBox(GfxState*state)
+{
+    GfxPath * path = state->getPath();
+    int num = path->getNumSubpaths();
+    gfxbbox_t bbox = {0,0,1,1};
+    char valid=0;
+    int t;
+    for(t = 0; t < num; t++) {
+	GfxSubpath *subpath = path->getSubpath(t);
+	int subnum = subpath->getNumPoints();
+        int s;
+	for(s=0;s<subnum;s++) {
+	   double x,y;
+	   state->transform(subpath->getX(s),subpath->getY(s),&x,&y);
+           if(!valid) {
+               bbox.xmin = x; bbox.ymin = y;
+               bbox.xmax = x; bbox.ymax = y;
+               valid = 1;
+           } else {
+               bbox.xmin = min(bbox.xmin, x);
+               bbox.ymin = min(bbox.ymin, y);
+               bbox.xmax = max(bbox.xmax, x);
+               bbox.ymax = max(bbox.ymax, y);
+           }
+        }
+    }
+    return bbox;
+}
+
 void BitmapOutputDev::stroke(GfxState *state)
 {
     msg("<debug> stroke");
     boolpolydev->stroke(state);
-    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+    gfxbbox_t bbox = getBBox(state);
+    double width = state->getTransformedLineWidth();
+    bbox.xmin -= width; bbox.ymin -= width;
+    bbox.xmax += width; bbox.ymax += width;
+    checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->stroke(state);
 }
 void BitmapOutputDev::fill(GfxState *state)
 {
     msg("<debug> fill");
     boolpolydev->fill(state);
-    if(checkNewBitmap(UNKNOWN_BOUNDING_BOX)) {
+    gfxbbox_t bbox = getBBox(state);
+    if(checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax))) {
         boolpolydev->fill(state);
     }
     rgbdev->fill(state);
@@ -1109,7 +1256,8 @@ void BitmapOutputDev::eoFill(GfxState *state)
 {
     msg("<debug> eoFill");
     boolpolydev->eoFill(state);
-    if(checkNewBitmap(UNKNOWN_BOUNDING_BOX)) {
+    gfxbbox_t bbox = getBBox(state);
+    if(checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax))) {
         boolpolydev->eoFill(state);
     }
     rgbdev->eoFill(state);
@@ -1198,15 +1346,6 @@ void BitmapOutputDev::beginStringOp(GfxState *state)
     booltextdev->beginStringOp(state);
     gfxdev->beginStringOp(state);
 }
-void BitmapOutputDev::endStringOp(GfxState *state)
-{
-    msg("<debug> endStringOp");
-    clip0dev->endStringOp(state);
-    clip1dev->endStringOp(state);
-    booltextdev->endStringOp(state);
-    checkNewText(UNKNOWN_BOUNDING_BOX);
-    gfxdev->endStringOp(state);
-}
 void BitmapOutputDev::beginString(GfxState *state, GString *s)
 {
     msg("<debug> beginString");
@@ -1214,15 +1353,6 @@ void BitmapOutputDev::beginString(GfxState *state, GString *s)
     clip1dev->beginString(state, s);
     booltextdev->beginString(state, s);
     gfxdev->beginString(state, s);
-}
-void BitmapOutputDev::endString(GfxState *state)
-{
-    msg("<debug> endString");
-    clip0dev->endString(state);
-    clip1dev->endString(state);
-    booltextdev->endString(state);
-    checkNewText(UNKNOWN_BOUNDING_BOX);
-    gfxdev->endString(state);
 }
 
 void BitmapOutputDev::clearClips()
@@ -1254,7 +1384,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
     } else if(rgbbitmap != rgbdev->getBitmap()) {
 	// we're doing softmasking or transparency grouping
 	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+	//checkNewBitmap(UNKNOWN_BOUNDING_BOX);
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else {
 	// we're drawing a regular char
@@ -1270,17 +1400,19 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
                 msg("<error> couldn't create outline for char %d", code);
             return;
         }
+        x-=originX;
+        y-=originY;
+        path->offset((SplashCoord)x, (SplashCoord)y);
 	int t;
 	for(t=0;t<path->getLength();t++) {
 	    double xx,yy;
 	    Guchar f;
 	    path->getPoint(t,&xx,&yy,&f);
-	    xx+=x;
-	    yy+=y;
+            state->transform(xx,yy,&xx,&yy);
 	    if(xx<x1) x1=(int)xx;
 	    if(yy<y1) y1=(int)yy;
-	    if(xx>x2) x2=(int)xx+1;
-	    if(yy>y2) y2=(int)yy+1;
+	    if(xx>=x2) x2=(int)xx+1;
+	    if(yy>=y2) y2=(int)yy+1;
 	}
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
@@ -1289,7 +1421,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	if(clip0and1differ(x1,y1,x2,y2)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+	    checkNewBitmap(x1,y1,x2,y2);
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    if(config_extrafontdata) {
 		int oldrender = state->getRender();
@@ -1323,9 +1455,29 @@ void BitmapOutputDev::endTextObject(GfxState *state)
     clip0dev->endTextObject(state);
     clip1dev->endTextObject(state);
     booltextdev->endTextObject(state);
-    /* TODO: do this only if rendermode!=0 */
-    checkNewText(UNKNOWN_BOUNDING_BOX);
+    /* the only thing "drawn" here is clipping */
+    //checkNewText(UNKNOWN_BOUNDING_BOX);
     gfxdev->endTextObject(state);
+}
+void BitmapOutputDev::endString(GfxState *state)
+{
+    msg("<debug> endString");
+    clip0dev->endString(state);
+    clip1dev->endString(state);
+    booltextdev->endString(state);
+    int render = state->getRender();
+    if(render != RENDER_INVISIBLE && render != RENDER_FILL) {
+        checkNewText(UNKNOWN_BOUNDING_BOX);
+    }
+    gfxdev->endString(state);
+}
+void BitmapOutputDev::endStringOp(GfxState *state)
+{
+    msg("<debug> endStringOp");
+    clip0dev->endStringOp(state);
+    clip1dev->endStringOp(state);
+    booltextdev->endStringOp(state);
+    gfxdev->endStringOp(state);
 }
 
 /* TODO: these four operations below *should* do nothing, as type3
@@ -1384,6 +1536,30 @@ class CopyStream: public Object
     Stream* getStream() {return this->memstream;};
 };
 
+gfxbbox_t BitmapOutputDev::getImageBBox(GfxState*state)
+{
+    gfxbbox_t bbox;
+    double x,y;
+    state->transform(0, 1, &x, &y);
+    bbox.xmin=bbox.xmax = x;
+    bbox.ymin=bbox.ymax = x;
+    state->transform(0, 0, &x, &y);
+    bbox.xmin=min(bbox.xmin,x);
+    bbox.ymin=min(bbox.ymin,y);
+    bbox.xmax=max(bbox.xmin,x);
+    bbox.ymax=max(bbox.ymin,y);
+    state->transform(1, 0, &x, &y);
+    bbox.xmin=min(bbox.xmin,x);
+    bbox.ymin=min(bbox.ymin,y);
+    bbox.xmax=max(bbox.xmin,x);
+    bbox.ymax=max(bbox.ymin,y);
+    state->transform(1, 1, &x, &y);
+    bbox.xmin=min(bbox.xmin,x);
+    bbox.ymin=min(bbox.ymin,y);
+    bbox.xmax=max(bbox.xmin,x);
+    bbox.ymax=max(bbox.ymin,y);
+    return bbox;
+}
 void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
 			   GBool inlineImg)
@@ -1395,7 +1571,8 @@ void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 	str = cpystr->getStream();
     }
     boolpolydev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
-    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+    gfxbbox_t bbox = getImageBBox(state);
+    checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
     if(cpystr)
 	delete cpystr;
@@ -1411,7 +1588,8 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 	str = cpystr->getStream();
     }
     boolpolydev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
-    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+    gfxbbox_t bbox=getImageBBox(state);
+    checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
     if(cpystr)
 	delete cpystr;
@@ -1424,7 +1602,8 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 {
     msg("<debug> drawMaskedImage streamkind=%d", str->getKind());
     boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
-    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+    gfxbbox_t bbox=getImageBBox(state);
+    checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
 }
 void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
@@ -1436,7 +1615,8 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
 {
     msg("<debug> drawSoftMaskedImage %dx%d (%dx%d) streamkind=%d", width, height, maskWidth, maskHeight, str->getKind());
     boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
-    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
+    gfxbbox_t bbox=getImageBBox(state);
+    checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
 }
 void BitmapOutputDev::drawForm(Ref id)
