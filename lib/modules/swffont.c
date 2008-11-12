@@ -116,7 +116,7 @@ static FT_Outline_Funcs outline_functions =
 
 static FT_Library ftlibrary = 0;
 
-SWFFONT* swf_LoadTrueTypeFont(char*filename)
+SWFFONT* swf_LoadTrueTypeFont(const char*filename)
 {
     FT_Face face;
     FT_Error error;
@@ -373,7 +373,7 @@ SWFFONT* swf_LoadTrueTypeFont(char*filename)
 }
 #else  //HAVE_FREETYPE
 
-SWFFONT* swf_LoadTrueTypeFont(char*filename)
+SWFFONT* swf_LoadTrueTypeFont(const char*filename)
 {
     fprintf(stderr, "Warning: no freetype library- not able to load %s\n", filename);
     return 0;
@@ -389,7 +389,7 @@ static int t1lib_initialized = 0;
 
 static int counter = 0;
 
-SWFFONT* swf_LoadT1Font(char*filename)
+SWFFONT* swf_LoadT1Font(const char*filename)
 {
     SWFFONT * font;
     int nr;
@@ -539,7 +539,7 @@ SWFFONT* swf_LoadT1Font(char*filename)
 
 #else
 
-SWFFONT* swf_LoadT1Font(char*filename)
+SWFFONT* swf_LoadT1Font(const char*filename)
 {
     fprintf(stderr, "Warning: no t1lib- not able to load %s\n", filename);
     return 0;
@@ -571,7 +571,7 @@ static int isSWF(const char*filename)
     return 0;
 }
 
-SWFFONT* swf_LoadFont(char*filename)
+SWFFONT* swf_LoadFont(const char*filename)
 {
     int is_swf;
     if(filename == 0)

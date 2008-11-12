@@ -1513,7 +1513,7 @@ void swf_WriteFont(SWFFONT * font, char *filename)
 }
 
 
-void swf_SetEditText(TAG * tag, U16 flags, SRECT r, char *text, RGBA * color, int maxlength, U16 font, U16 height, EditTextLayout * layout, char *variable)
+void swf_SetEditText(TAG * tag, U16 flags, SRECT r, const char *text, RGBA * color, int maxlength, U16 font, U16 height, EditTextLayout * layout, const char *variable)
 {
     swf_SetRect(tag, &r);
     swf_ResetWriteBits(tag);
@@ -1554,7 +1554,7 @@ void swf_SetEditText(TAG * tag, U16 flags, SRECT r, char *text, RGBA * color, in
 	swf_SetString(tag, (U8*)text);
 }
 
-SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, char *text, int scale)
+SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, const char *text, int scale)
 {
     SRECT r;
     U8 gbits, abits;
@@ -1677,7 +1677,7 @@ void swf_FontCreateLayout(SWFFONT * f)
     }
 }
 
-void swf_DrawText(drawer_t * draw, SWFFONT * font, int size, char *text)
+void swf_DrawText(drawer_t * draw, SWFFONT * font, int size, const char *text)
 {
     U8 *s = (U8 *) text;
     int advance = 0;

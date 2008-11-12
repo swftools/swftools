@@ -326,7 +326,7 @@ void swf_SetJPEGBits2(TAG * tag, U16 width, U16 height, RGBA * bitmap, int quali
 }
 #endif
 
-void swf_GetJPEGSize(char *fname, int *width, int *height)
+void swf_GetJPEGSize(const char *fname, int *width, int *height)
 {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -347,7 +347,7 @@ void swf_GetJPEGSize(char *fname, int *width, int *height)
     fclose(fi);
 }
 
-int swf_SetJPEGBits(TAG * t, char *fname, int quality)
+int swf_SetJPEGBits(TAG * t, const char *fname, int quality)
 {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;

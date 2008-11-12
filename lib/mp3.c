@@ -47,7 +47,7 @@ static const unsigned SR_mpeg25[4] = {11025,12000,8000,0};
 static const unsigned SR_reserved[4] = {0,0,0,0};
 static const unsigned*const SR[4] = {SR_mpeg25, SR_reserved, SR_mpeg2, SR_mpeg1};
 
-int mp3_read(struct MP3*mp3, char* filename)
+int mp3_read(struct MP3*mp3, const char* filename)
 {
     struct MP3Frame* root = 0;
     struct MP3Frame** cur = &root;

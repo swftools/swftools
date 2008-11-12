@@ -969,7 +969,7 @@ ActionTAG* action_WaitForFrame(ActionTAG*atag, U16 frame, U8 skip)
     *(U8*)&atag->tmp[2] = skip;
     return atag;
 }
-ActionTAG* action_SetTarget(ActionTAG*atag, char* target)
+ActionTAG* action_SetTarget(ActionTAG*atag, const char* target)
 {
     char*ptr = strdup(target);
     return swf_AddActionTAG(atag, ACTION_SETTARGET, (U8*)ptr, strlen(ptr)+1);

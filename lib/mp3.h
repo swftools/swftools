@@ -15,5 +15,5 @@ struct MP3 {
     unsigned long   size;
 };
 
-int mp3_read(struct MP3*mp3, char* filename);
+int mp3_read(struct MP3*mp3, const char* filename);
 void mp3_clear(struct MP3*mp3);
