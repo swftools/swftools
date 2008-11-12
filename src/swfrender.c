@@ -10,6 +10,7 @@
 #include "../lib/gfxsource.h"
 #include "../lib/readers/swf.h"
 #include "../lib/devices/render.h"
+#include "../lib/devices/rescale.h"
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -124,6 +125,7 @@ int main(int argn, char*argv[])
 	}
 	gfxdevice_t dev2,*dev=&dev2;
 	gfxdevice_render_init(dev);
+        dev->setparameter(dev, "antialise", "4");
         if(quantize) {
             dev->setparameter(dev, "palette", "1");
         }
