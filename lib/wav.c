@@ -46,7 +46,7 @@ int getWAVBlock(FILE*fi, struct WAVBlock*block)
     return 1;
 }
 
-int wav_read(struct WAV*wav, char* filename)
+int wav_read(struct WAV*wav, const char* filename)
 {
     FILE*fi = fopen(filename, "rb");
     unsigned char b[16];
@@ -131,13 +131,17 @@ int wav_read(struct WAV*wav, char* filename)
                         return 0;
                     }
                     l = fread(wav->data, 1, block.size, fi);
-                    if(l < block.size)
-                    {
-                        fprintf(stderr, "Error while reading data block of size %d (%d bytes missing)", block.size, block.size-l);
+                    if(l<=0) {
+                        fprintf(stderr, "Error: Couldn't read WAV data block\n");
                         fclose(fi);
                         return 0;
+                    } else if(l < block.size)
+                    {
+                        fprintf(stderr, "Warning: data block of size %d is only %d bytes (%d bytes missing)\n", block.size, l, block.size-l);
+                        wav->size = l;
+                    } else {
+                        wav->size = block.size;
                     }
-                    wav->size = block.size;
                 }
                 pos+=block.size;
                 fseek(fi, pos, SEEK_SET);
@@ -147,7 +151,7 @@ int wav_read(struct WAV*wav, char* filename)
     return 1;
 }
 
-int wav_write(struct WAV*wav, char*filename)
+int wav_write(struct WAV*wav, const char*filename)
 {
     FILE*fi = fopen(filename, "wb");
     char*b="RIFFWAVEfmt \x10\0\0\0data";
