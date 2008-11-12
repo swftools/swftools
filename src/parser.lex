@@ -38,7 +38,7 @@ static void unescapeString(string_t * tmp)
     /* fixme - this routine expects the string to be
        null-terminated */
 
-    for (p1=tmp->str; (p=strchr(p1, '\\')); p1 = p+1) 
+    for (p1=(char*)tmp->str; (p=strchr(p1, '\\')); p1 = p+1) 
     {
 	int nr=2;
 	int new=1;
@@ -168,7 +168,10 @@ void handleInclude(char*text, int len)
     while(len >=1 && (text[0] == ' ' || text[0] == '\t')) {
 	text++;len--;
     }
-    while(len >= 1 && (text[len-1] == ' ' || text[len-1] == "\r" || text[len-1] == '\n')) {
+    while(len >= 1 && 
+          (text[len-1] == ' ' || 
+           text[len-1] == '\r' || 
+           text[len-1] == '\n')) {
 	len--;
     }
     if(len >= 2 && text[0] == '"' && text[len-1] == '"') {
