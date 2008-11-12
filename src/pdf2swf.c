@@ -42,6 +42,7 @@
 #include "../lib/devices/swf.h"
 #include "../lib/devices/polyops.h"
 #include "../lib/devices/record.h"
+#include "../lib/devices/rescale.h"
 #include "../lib/pdf/pdf.h"
 #include "../lib/log.h"
 
@@ -185,12 +186,12 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "X"))
     {
-        maxwidth = atoi(value);
+        maxwidth = atoi(val);
 	return 1;
     }
     else if (!strcmp(name, "Y"))
     {
-        maxheight = atoi(value);
+        maxheight = atoi(val);
 	return 1;
     }
     else if (!strcmp(name, "q"))
@@ -600,7 +601,7 @@ gfxdevice_t*create_output_device()
     }
 
     if(maxwidth || maxheight) {
-        gfxdevice_rescale_init(&rescale, out, maxwidth, maxheight);
+        gfxdevice_rescale_init(&rescale, out, maxwidth, maxheight, 0);
         out = &rescale;
     }
 
