@@ -138,10 +138,12 @@ ${name}/lib/wav.c \
 ${name}/lib/wav.h \
 ${name}/lib/mp3.h \
 ${name}/lib/modules/swfdraw.c \
-${name}/lib/modules/swfabc.c \
-${name}/lib/modules/swfabc.h \
-${name}/lib/modules/swfabc_ops.c \
 ${name}/lib/modules/swfaction.c \
+${name}/lib/as3/utils.c \
+${name}/lib/as3/utils.h \
+${name}/lib/as3/abc.c \
+${name}/lib/as3/abc.h \
+${name}/lib/as3/abc_ops.c \
 ${name}/lib/action/action.h \
 ${name}/lib/action/actioncompiler.c \
 ${name}/lib/action/actioncompiler.h \
