@@ -497,7 +497,11 @@ void stringarray_destroy(stringarray_t*sa)
 
 // ------------------------------- dictionary_t -------------------------------
 
-#define INITIAL_SIZE 63
+#define INITIAL_SIZE 1
+
+static int max(int x, int y) {
+    return x>y?x:y;
+}
 
 dict_t*dict_new()
 {
@@ -534,6 +538,7 @@ static void dict_expand(dict_t*h, int newlen)
 }
 void dict_put(dict_t*h, string_t s, void* data)
 {
+    /* TODO: should we look for duplicates here? */
     unsigned int hash = string_hash(&s);
     dictentry_t*e = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
 
@@ -581,16 +586,32 @@ void* dict_lookup2(dict_t*h, const char*s, int len)
 {
     if(!h->num)
         return 0;
-
-    if(h->num*3 >= h->hashsize*2) {
-        /* if dict is 2/3 filled, double the size */
-        dict_expand(h, (h->hashsize+1)*2-1);
-    }
-
+    
     unsigned int ohash = string_hash2(s);
     unsigned int hash = ohash % h->hashsize;
 
+    /* check first entry for match */
     dictentry_t*e = h->slots[hash];
+    if(e && e->len == len && !memcmp(e->s, s, len)) {
+        return e->data;
+    } else if(e) {
+        e = e->next;
+    }
+
+    /* if dict is 2/3 filled, double the size. Do
+       this the first time we have to actually iterate
+       through a slot to find our data */
+    if(e && h->num*3 >= h->hashsize*2) {
+        int newsize = h->hashsize;
+        while(h->num*3 >= newsize*2) {
+            newsize = newsize<15?15:(newsize+1)*2-1;
+        }
+        dict_expand(h, newsize);
+        hash = ohash % h->hashsize;
+        e = h->slots[hash];
+    }
+
+    /* check subsequent entries for a match */
     while(e) {
         if(e->len == len && !memcmp(e->s, s, len)) {
             return e->data;
