@@ -54,8 +54,6 @@ int dict_append(dict_t*dict, const char*name, void*data);
 int dict_find(dict_t*dict, const char*name);
 int dict_find2(dict_t*dict, const char*name, void*data);
 int dict_update(dict_t*dict, const char*name, void*data);
-int dict_update(dict_t*dict, const char*name, void*data);
 int dict_append_if_new(dict_t*dict, const char*name, void*data);
-
 
 #endif
