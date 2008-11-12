@@ -904,7 +904,7 @@ static COL* getOptimalPalette(COL*image, int size, int palettesize)
                 }
             }
             if(!count) {
-                int random = lrand48()%num;
+                int random = rand()%num;
                 centers[s].color = colors[random].color;
                 centers[s].num = 0;
                 change = 1;
