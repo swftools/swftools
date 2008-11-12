@@ -181,7 +181,7 @@ void* leave_file()
     } else {
         current_column = column_stack[include_stack_ptr];
         current_line = line_stack[include_stack_ptr];
-        free(current_filename);
+        free(current_filename);current_filename=0;
         current_filename = filename_stack[include_stack_ptr];
         current_include_dirs = includedir_stack[include_stack_ptr];
         return include_stack[include_stack_ptr];
