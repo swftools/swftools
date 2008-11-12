@@ -862,7 +862,7 @@ diff -u -r1.5 -r1.6
  int SplashScreen::test(int x, int y, Guchar value) {
    int xx, yy;
  
-+  return 0;
++  return 1;
 +
    if (value < minVal) {
      return 0;
