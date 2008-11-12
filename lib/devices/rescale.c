@@ -325,3 +325,10 @@ void gfxdevice_rescale_setdevice(gfxdevice_t*dev, gfxdevice_t*out)
     }
     i->out = out;
 }
+
+gfxdevice_t* gfxdevice_rescale_new(gfxdevice_t*out, int width, int height, double scale)
+{
+    gfxdevice_t* d = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
+    gfxdevice_recale_init(d, out, width, height, scale);
+    return d;
+}
