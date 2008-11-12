@@ -103,12 +103,6 @@ int dict_append_if_new(dict_t*dict, const char*name, void*data) {
 	return pos;
     return dict_append(dict, name, data);
 }
-int dict_append_if_new2(dict_t*dict, const char*name, void*data) {
-    int pos = dict_find2(dict, name, data);
-    if(pos>=0)
-	return pos;
-    return dict_append(dict, name, data);
-}
 
 typedef struct _commonlist {
     void*entry;
