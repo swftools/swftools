@@ -818,35 +818,35 @@ history_t* history_new()
 
 void history_free(history_t* past)
 {
-    state_free(dictionary_lookup(past->states, "x"));
-    state_free(dictionary_lookup(past->states, "y"));
-    state_free(dictionary_lookup(past->states, "scalex"));
-    state_free(dictionary_lookup(past->states, "scaley"));
-    state_free(dictionary_lookup(past->states, "cxform.r0"));
-    state_free(dictionary_lookup(past->states, "cxform.g0"));
-    state_free(dictionary_lookup(past->states, "cxform.b0"));
-    state_free(dictionary_lookup(past->states, "cxform.a0"));
-    state_free(dictionary_lookup(past->states, "cxform.r1"));
-    state_free(dictionary_lookup(past->states, "cxform.g1"));
-    state_free(dictionary_lookup(past->states, "cxform.b1"));
-    state_free(dictionary_lookup(past->states, "cxform.a1"));
-    state_free(dictionary_lookup(past->states, "rotate"));
-    state_free(dictionary_lookup(past->states, "shear"));
-    state_free(dictionary_lookup(past->states, "pivot.x"));
-    state_free(dictionary_lookup(past->states, "pivot.y"));
-    state_free(dictionary_lookup(past->states, "pin.x"));
-    state_free(dictionary_lookup(past->states, "pin.y"));
-    state_free(dictionary_lookup(past->states, "blendmode"));
-    state_free(dictionary_lookup(past->states, "flags"));
-    filterState_free(dictionary_lookup(past->states, "filter"));
-    dictionary_destroy(past->states);
-	free(past);
+    state_free(dict_lookup(past->states, "x"));
+    state_free(dict_lookup(past->states, "y"));
+    state_free(dict_lookup(past->states, "scalex"));
+    state_free(dict_lookup(past->states, "scaley"));
+    state_free(dict_lookup(past->states, "cxform.r0"));
+    state_free(dict_lookup(past->states, "cxform.g0"));
+    state_free(dict_lookup(past->states, "cxform.b0"));
+    state_free(dict_lookup(past->states, "cxform.a0"));
+    state_free(dict_lookup(past->states, "cxform.r1"));
+    state_free(dict_lookup(past->states, "cxform.g1"));
+    state_free(dict_lookup(past->states, "cxform.b1"));
+    state_free(dict_lookup(past->states, "cxform.a1"));
+    state_free(dict_lookup(past->states, "rotate"));
+    state_free(dict_lookup(past->states, "shear"));
+    state_free(dict_lookup(past->states, "pivot.x"));
+    state_free(dict_lookup(past->states, "pivot.y"));
+    state_free(dict_lookup(past->states, "pin.x"));
+    state_free(dict_lookup(past->states, "pin.y"));
+    state_free(dict_lookup(past->states, "blendmode"));
+    state_free(dict_lookup(past->states, "flags"));
+    filterState_free(dict_lookup(past->states, "filter"));
+    dict_destroy(past->states);
+    free(past);
 }
 
 void history_init(history_t* past)
 {
-    past->states = (dictionary_t*)malloc(sizeof(dictionary_t));
-    dictionary_init(past->states);
+    past->states = (dict_t*)malloc(sizeof(dict_t));
+    dict_init(past->states);
 }
 
 void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float value)
@@ -854,7 +854,7 @@ void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float 
     state_t* first = state_new(frame, CF_PUT, value, 0);
 	past->firstTag = tag;
 	past->firstFrame = frame;
-    dictionary_put2(past->states, parameter, first);
+    dict_put2(past->states, parameter, first);
 }
 
 void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTERLIST* value)
@@ -862,13 +862,13 @@ void history_beginFilter(history_t* past, U16 frame, TAG* tag, FILTERLIST* value
     filterState_t* first = filterState_new(frame, CF_PUT, value, 0);
 	past->firstTag = tag;
 	past->firstFrame = frame;
-    dictionary_put2(past->states, "filter", first);
+    dict_put2(past->states, "filter", first);
 }
 
 void history_remember(history_t* past, char* parameter, U16 frame, int function, float value, interpolation_t* inter)
 {
     past->lastFrame = frame;
-    state_t* state = dictionary_lookup(past->states, parameter);
+    state_t* state = dict_lookup(past->states, parameter);
     if (state) //should always be true
     {
 	state_t* next = state_new(frame, function, value, inter);
@@ -919,14 +919,14 @@ void history_rememberSweep(history_t* past, U16 frame, float x, float y, float r
     U16 lastFrame;
 
     past->lastFrame = frame;
-    state_t* change = dictionary_lookup(past->states, "x");
+    state_t* change = dict_lookup(past->states, "x");
     if (change) //should always be true
     {
     	while (change->next)
     	    change = change->next;
     	lastFrame = change->frame;
     	lastX = change->value;
-    	change = dictionary_lookup(past->states, "y");
+    	change = dict_lookup(past->states, "y");
     	if (change) //should always be true
     	{
     	    while (change->next)
@@ -988,7 +988,7 @@ void history_rememberSweep(history_t* past, U16 frame, float x, float y, float r
     	    	centerX = c2X;
     	    	centerY = c2Y;
     	    }
-    	    change = dictionary_lookup(past->states, "x");
+    	    change = dict_lookup(past->states, "x");
 	    state_t* nextX = state_new(frame, CF_SWEEP, x, inter);
 	    nextX->arc.r = r;
 	    nextX->arc.angle = angle1;
@@ -997,7 +997,7 @@ void history_rememberSweep(history_t* past, U16 frame, float x, float y, float r
 	    nextX->arc.cY = centerY;
 	    nextX->arc.X = 1;
 	    state_append(change, nextX);
-    	    change = dictionary_lookup(past->states, "y");
+    	    change = dict_lookup(past->states, "y");
 	    state_t* nextY = state_new(frame, CF_SWEEP, y, inter);
 	    nextY->arc.r = r;
 	    nextY->arc.angle = angle1;
@@ -1017,7 +1017,7 @@ void history_rememberSweep(history_t* past, U16 frame, float x, float y, float r
 void history_rememberFilter(history_t* past, U16 frame, int function, FILTERLIST* value, interpolation_t* inter)
 {
     past->lastFrame = frame;
-    filterState_t* first = dictionary_lookup(past->states, "filter");
+    filterState_t* first = dict_lookup(past->states, "filter");
 	if (first) //should always be true
 	{
 	filterState_t* next = filterState_new(frame, function, value, inter);
@@ -1030,7 +1030,7 @@ void history_rememberFilter(history_t* past, U16 frame, int function, FILTERLIST
 void history_processFlags(history_t* past)
 // to be called after completely recording this history, before calculating any values.
 {
-    state_t* flagState = dictionary_lookup(past->states, "flags");
+    state_t* flagState = dict_lookup(past->states, "flags");
     state_t* nextState;
     U16 nextFlags, toggledFlags, currentFlags = (U16)flagState->value;
     while (flagState->next)
@@ -1043,7 +1043,7 @@ void history_processFlags(history_t* past)
     	    if (nextFlags & IF_FIXED_ALIGNMENT)
     	    { // the IF_FIXED_ALIGNMENT bit will be set
     	    	int onFrame = nextState->frame;
-	    	state_t* rotations = dictionary_lookup(past->states, "rotate");
+	    	state_t* rotations = dict_lookup(past->states, "rotate");
 	    	nextState->params.instanceAngle = state_value(rotations, onFrame);
 	    	state_t* resetRotate = state_new(onFrame, CF_JUMP, 0, 0);
 	    	state_insert(rotations, resetRotate);
@@ -1053,9 +1053,9 @@ void history_processFlags(history_t* past)
 	    	float dx, dy;
 	    	do
 	    	{
-    	    	    x = dictionary_lookup(past->states, "x");
+    	    	    x = dict_lookup(past->states, "x");
     	    	    dx = state_tangent(x, onFrame, T_SYMMETRIC);
-    	    	    y = dictionary_lookup(past->states, "y");
+    	    	    y = dict_lookup(past->states, "y");
     	    	    dy = state_tangent(y, onFrame, T_SYMMETRIC);
     	    	    onFrame++;
 	    	}
@@ -1068,7 +1068,7 @@ void history_processFlags(history_t* past)
     	    else // the IF_FIXED_ALIGNMENT bit will be reset
     	    {
     	    	int offFrame = nextState->frame;
-	    	state_t* rotations = dictionary_lookup(past->states, "rotate");
+	    	state_t* rotations = dict_lookup(past->states, "rotate");
 	    	state_t* setRotate = state_new(offFrame, CF_JUMP, flagState->params.instanceAngle + state_value(rotations, offFrame), 0);
 	    	state_insert(rotations, setRotate);
     	    }
@@ -1090,7 +1090,7 @@ void history_processFlags(history_t* past)
 
 int history_change(history_t* past, U16 frame, char* parameter)
 {
-    state_t* first = dictionary_lookup(past->states, parameter);
+    state_t* first = dict_lookup(past->states, parameter);
     if (first)	//should always be true.
 	return state_differs(first, frame);
     syntaxerror("no history found to predict changes for parameter %s.\n", parameter);
@@ -1099,7 +1099,7 @@ int history_change(history_t* past, U16 frame, char* parameter)
 
 float history_value(history_t* past, U16 frame, char* parameter)
 {
-    state_t* state = dictionary_lookup(past->states, parameter);
+    state_t* state = dict_lookup(past->states, parameter);
     if (state)	//should always be true.
 	return state_value(state, frame);
     syntaxerror("no history found to get a value for parameter %s.\n", parameter);
@@ -1108,11 +1108,11 @@ float history_value(history_t* past, U16 frame, char* parameter)
 
 float history_rotateValue(history_t* past, U16 frame)
 {
-    state_t* rotations = dictionary_lookup(past->states, "rotate");
+    state_t* rotations = dict_lookup(past->states, "rotate");
     if (rotations)	//should always be true.
     {
     	float angle = state_value(rotations, frame);
-    	state_t* flags = dictionary_lookup(past->states, "flags");
+    	state_t* flags = dict_lookup(past->states, "flags");
     	U16 currentflags = state_value(flags, frame);
     	if (currentflags & IF_FIXED_ALIGNMENT)
     	{
@@ -1123,9 +1123,9 @@ float history_rotateValue(history_t* past, U16 frame)
 	    float dx, dy, pathAngle;
 	    do
 	    {
-    	    	x = dictionary_lookup(past->states, "x");
+    	    	x = dict_lookup(past->states, "x");
     	    	dx = state_value(x, frame) - state_value(x, frame - 1);
-    	    	y = dictionary_lookup(past->states, "y");
+    	    	y = dict_lookup(past->states, "y");
     	    	dy = state_value(y, frame) - state_value(y, frame - 1);
     	    	frame--;
 	    }
@@ -1145,7 +1145,7 @@ float history_rotateValue(history_t* past, U16 frame)
 
 int history_changeFilter(history_t* past, U16 frame)
 {
-    filterState_t* first = dictionary_lookup(past->states, "filter");
+    filterState_t* first = dict_lookup(past->states, "filter");
     if (first)	//should always be true.
 	return filterState_differs(first, frame);
     syntaxerror("no history found to predict changes for parameter filter.\n");
@@ -1154,7 +1154,7 @@ int history_changeFilter(history_t* past, U16 frame)
 
 FILTERLIST* history_filterValue(history_t* past, U16 frame)
 {
-    filterState_t* first = dictionary_lookup(past->states, "filter");
+    filterState_t* first = dict_lookup(past->states, "filter");
 	if (first)	//should always be true.
 	return filterState_value(first, frame);
     syntaxerror("no history found to get a value for parameter filter.\n");

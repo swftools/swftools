@@ -184,7 +184,7 @@ static struct level
    char*name;
    U16 olddepth;
    int oldframe;
-   dictionary_t oldinstances;
+   dict_t oldinstances;
    SRECT oldrect;
    TAG* cut;
 
@@ -193,13 +193,13 @@ static struct level
 } stack[256];
 static int stackpos = 0;
 
-static dictionary_t characters;
-static dictionary_t images;
-static dictionary_t textures;
-static dictionary_t outlines;
-static dictionary_t gradients;
-static dictionary_t filters;
-static dictionary_t interpolations;
+static dict_t characters;
+static dict_t images;
+static dict_t textures;
+static dict_t outlines;
+static dict_t gradients;
+static dict_t filters;
+static dict_t interpolations;
 static char idmap[65536];
 static TAG*tag = 0; //current tag
 
@@ -207,10 +207,10 @@ static int id; //current character id
 static int currentframe; //current frame in current level
 static SRECT currentrect; //current bounding box in current level
 static U16 currentdepth;
-static dictionary_t instances;
-static dictionary_t fonts;
-static dictionary_t sounds;
-static dictionary_t fontUsage;
+static dict_t instances;
+static dict_t fonts;
+static dict_t sounds;
+static dict_t fontUsage;
 
 typedef struct _parameters {
     int x,y;
@@ -340,22 +340,22 @@ static void free_outline(void* o)
 
 static void freeDictionaries()
 {
-    dictionary_free_all(&instances, free_instance);
-    dictionary_free_all(&characters, free);
-    dictionary_free_all(&images, free);
-    dictionary_free_all(&textures, free);
-    dictionary_free_all(&outlines, free_outline);
-    dictionary_free_all(&gradients, free_gradient);
-    dictionary_free_all(&filters, free);
-    dictionary_free_all(&fonts, free_font);
-    dictionary_free_all(&sounds, free);
-    dictionary_free_all(&interpolations, free);
+    dict_free_all(&instances, free_instance);
+    dict_free_all(&characters, free);
+    dict_free_all(&images, free);
+    dict_free_all(&textures, free);
+    dict_free_all(&outlines, free_outline);
+    dict_free_all(&gradients, free_gradient);
+    dict_free_all(&filters, free);
+    dict_free_all(&fonts, free_font);
+    dict_free_all(&sounds, free);
+    dict_free_all(&interpolations, free);
     cleanUp = 0;
 }
 
 static void freeFontDictionary()
 {
-    dictionary_free_all(&fonts, free_font);
+    dict_free_all(&fonts, free_font);
 }
 
 static void incrementid()
@@ -367,16 +367,16 @@ static void incrementid()
     idmap[id] = 1;
 }
 
-static void s_addcharacter(char*name, U16 id, TAG*ctag, SRECT r)
+static void s_addcharacter(const char*name, U16 id, TAG*ctag, SRECT r)
 {
-    if(dictionary_lookup(&characters, name))
+    if(dict_lookup(&characters, name))
         syntaxerror("character %s defined twice", name);
     character_t* c = character_new();
 
     c->definingTag = ctag;
     c->id = id;
     c->size = r;
-    dictionary_put2(&characters, name, c);
+    dict_put2(&characters, name, c);
 
     if(do_exports) {
 	tag = swf_InsertTag(tag, ST_NAMECHARACTER);
@@ -388,26 +388,26 @@ static void s_addcharacter(char*name, U16 id, TAG*ctag, SRECT r)
 	swf_SetString(tag, name);
     }
 }
-static void s_addimage(char*name, U16 id, TAG*ctag, SRECT r)
+static void s_addimage(const char*name, U16 id, TAG*ctag, SRECT r)
 {
-    if(dictionary_lookup(&images, name))
+    if(dict_lookup(&images, name))
         syntaxerror("image %s defined twice", name);
 
     character_t* c = character_new();
     c->definingTag = ctag;
     c->id = id;
     c->size = r;
-    dictionary_put2(&images, name, c);
+    dict_put2(&images, name, c);
 }
-static instance_t* s_addinstance(char*name, character_t*c, U16 depth)
+static instance_t* s_addinstance(const char*name, character_t*c, U16 depth)
 {
-    if(dictionary_lookup(&instances, name))
+    if(dict_lookup(&instances, name))
         syntaxerror("object %s defined twice", name);
     instance_t* i = instance_new();
     i->character = c;
     i->depth = depth;
     //swf_GetMatrix(0, &i->matrix);
-    dictionary_put2(&instances, name, i);
+    dict_put2(&instances, name, i);
     return i;
 }
 
@@ -470,89 +470,89 @@ void initBuiltIns()
     interpolation_t* new;
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_LINEAR;
-    dictionary_put2(&interpolations, "linear", new);
+    dict_put2(&interpolations, "linear", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_IN;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quadIn", new);
+    dict_put2(&interpolations, "quadIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quadOut", new);
+    dict_put2(&interpolations, "quadOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_IN_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quadInOut", new);
+    dict_put2(&interpolations, "quadInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_IN;
     new->slope = 0;
-    dictionary_put2(&interpolations, "cubicIn", new);
+    dict_put2(&interpolations, "cubicIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "cubicOut", new);
+    dict_put2(&interpolations, "cubicOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_IN_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "cubicInOut", new);
+    dict_put2(&interpolations, "cubicInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_IN;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quartIn", new);
+    dict_put2(&interpolations, "quartIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quartOut", new);
+    dict_put2(&interpolations, "quartOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_IN_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quartInOut", new);
+    dict_put2(&interpolations, "quartInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_IN;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quintIn", new);
+    dict_put2(&interpolations, "quintIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quintOut", new);
+    dict_put2(&interpolations, "quintOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_IN_OUT;
     new->slope = 0;
-    dictionary_put2(&interpolations, "quintInOut", new);
+    dict_put2(&interpolations, "quintInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CIRCLE_IN;
-    dictionary_put2(&interpolations, "circleIn", new);
+    dict_put2(&interpolations, "circleIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CIRCLE_OUT;
-    dictionary_put2(&interpolations, "circleOut", new);
+    dict_put2(&interpolations, "circleOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CIRCLE_IN_OUT;
-    dictionary_put2(&interpolations, "circleInOut", new);
+    dict_put2(&interpolations, "circleInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_EXPONENTIAL_IN;
-    dictionary_put2(&interpolations, "exponentialIn", new);
+    dict_put2(&interpolations, "exponentialIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_EXPONENTIAL_OUT;
-    dictionary_put2(&interpolations, "exponentialOut", new);
+    dict_put2(&interpolations, "exponentialOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_EXPONENTIAL_IN_OUT;
-    dictionary_put2(&interpolations, "exponentialInOut", new);
+    dict_put2(&interpolations, "exponentialInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_IN;
-    dictionary_put2(&interpolations, "sineIn", new);
+    dict_put2(&interpolations, "sineIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_OUT;
-    dictionary_put2(&interpolations, "sineOut", new);
+    dict_put2(&interpolations, "sineOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_IN_OUT;
-    dictionary_put2(&interpolations, "sineInOut", new);
+    dict_put2(&interpolations, "sineInOut", new);
 
     RGBA c;
     memset(&c, 0, sizeof(RGBA));
@@ -566,32 +566,32 @@ void initBuiltIns()
     noGradient->gradient.ratios[1] = 255;
     noGradient->radial = 0;
     noGradient->rotate = 0;
-    dictionary_put2(&gradients, "no_gradient", noGradient);
+    dict_put2(&gradients, "no_gradient", noGradient);
 
     noFilters = 0;
 // put a no_filters entry in the filters dictionary to provoce a message when a user tries
 // to define a no_filters filter. The real filter=no_filters case is handled in parseFilters.
     FILTER* dummy = (FILTER*)malloc(sizeof(FILTER));
-    dictionary_put2(&filters, "no_filters", dummy);
+    dict_put2(&filters, "no_filters", dummy);
     noBlur = (FILTER_BLUR*) swf_NewFilter(FILTERTYPE_BLUR);
     noBlur->passes = 1;
-    dictionary_put2(&filters, "no_blur", noBlur);
+    dict_put2(&filters, "no_blur", noBlur);
     noBevel = (FILTER_BEVEL*) swf_NewFilter(FILTERTYPE_BEVEL);
     noBevel->passes = 1;
     noBevel->composite = 1;
-    dictionary_put2(&filters, "no_bevel", noBevel);
+    dict_put2(&filters, "no_bevel", noBevel);
     noDropshadow = (FILTER_DROPSHADOW*) swf_NewFilter(FILTERTYPE_DROPSHADOW);
     noDropshadow->passes = 1;
     noDropshadow->composite = 1;
-    dictionary_put2(&filters, "no_dropshadow", noDropshadow);
+    dict_put2(&filters, "no_dropshadow", noDropshadow);
     noGradientGlow = (FILTER_GRADIENTGLOW*) swf_NewFilter(FILTERTYPE_GRADIENTGLOW);
     noGradientGlow->passes = 1;
     noGradientGlow->composite = 1;
     noGradientGlow->gradient = &noGradient->gradient;
-    dictionary_put2(&filters, "no_gradientglow", noGradientGlow);
+    dict_put2(&filters, "no_gradientglow", noGradientGlow);
 }
 
-void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA background)
+void s_swf(const char*name, SRECT r, int version, int fps, int compress, RGBA background)
 {
     if(stackpos)
         syntaxerror(".swf blocks can't be nested");
@@ -608,15 +608,15 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     swf->compressed = compress;
     swf_SetRGB(tag,&background);
 
-    dictionary_init(&characters);
-    dictionary_init(&images);
-    dictionary_init(&textures);
-    dictionary_init(&outlines);
-    dictionary_init(&gradients);
-    dictionary_init(&filters);
-    dictionary_init(&instances);
-    dictionary_init(&sounds);
-    dictionary_init(&interpolations);
+    dict_init(&characters);
+    dict_init(&images);
+    dict_init(&textures);
+    dict_init(&outlines);
+    dict_init(&gradients);
+    dict_init(&filters);
+    dict_init(&instances);
+    dict_init(&sounds);
+    dict_init(&interpolations);
     initBuiltIns();
     cleanUp = &freeDictionaries;
 
@@ -635,7 +635,7 @@ void s_swf(char*name, SRECT r, int version, int fps, int compress, RGBA backgrou
     incrementid();
 }
 
-void s_sprite(char*name, SRECT*scalegrid)
+void s_sprite(const char*name, SRECT*scalegrid)
 {
     tag = swf_InsertTag(tag, ST_DEFINESPRITE);
     swf_SetU16(tag, id); //id
@@ -657,7 +657,7 @@ void s_sprite(char*name, SRECT*scalegrid)
     }
 
     /* FIXME: those four fields should be bundled together */
-    dictionary_init(&instances);
+    dict_init(&instances);
     currentframe = 0;
     currentdepth = 1;
     memset(&currentrect, 0, sizeof(currentrect));
@@ -683,7 +683,7 @@ typedef struct _button
 
 static button_t mybutton;
 
-void s_button(char*name)
+void s_button(const char*name)
 {
     tag = swf_InsertTag(tag, ST_DEFINEBUTTON2);
     swf_SetU16(tag, id); //id
@@ -702,12 +702,12 @@ void s_button(char*name)
     stackpos++;
     incrementid();
 }
-void s_buttonput(char*character, char*as, parameters_t p)
+void s_buttonput(const char*character, const char*as, parameters_t p)
 {
-    character_t* c = dictionary_lookup(&characters, character);
+    character_t* c = dict_lookup(&characters, character);
     MATRIX m;
     int flags = 0;
-    char*o = as,*s = as;
+    const char*o = as,*s = as;
     buttonrecord_t r;
     if(!stackpos || (stack[stackpos-1].type != 3))  {
 	syntaxerror(".show may only appear in .button");
@@ -760,7 +760,7 @@ static void setbuttonrecords(TAG*tag)
     }
 }
 
-void s_buttonaction(int flags, char*action)
+void s_buttonaction(int flags, const char*action)
 {
     ActionTAG* a = 0;
     if(flags==0) {
@@ -892,7 +892,7 @@ static void readParameters(history_t* history, parameters_t* p, int frame)
     p->filters = history_filterValue(history, frame);
 }
 
-void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*p, char move)
+void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, const char*name, parameters_t*p, char move)
 {
     SWFPLACEOBJECT po;
     FILTERLIST flist;
@@ -901,7 +901,7 @@ void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*
     po.depth = depth;
     po.matrix = m;
     po.cxform = p->cxform;
-    po.name = name;
+    po.name = (char*)name;
     po.move = move;
     if(move)
     po.id = 0;
@@ -913,14 +913,15 @@ void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, char*name, parameters_t*
     swf_SetPlaceObject(tag, &po);
 }
 
-static void writeInstance(instance_t* i)
+static void writeInstance(void* _i)
 {
+    instance_t*i = (instance_t*)_i;
     parameters_t p;
     MATRIX m;
     int frame = i->history->firstFrame;
     TAG* tag = i->history->firstTag;
     history_processFlags(i->history);
-    while (frame < currentframe)
+    while (tag && frame < currentframe)
     {
         frame++;
         while (tag && tag->id != ST_SHOWFRAME)
@@ -937,9 +938,9 @@ static void writeInstance(instance_t* i)
             setPlacement(tag, 0, i->depth, m, 0, &p, 1);
             if (p.filters)
             	free_filterlist(p.filters);
-        }
-        else
+        } else if(tag) {
             tag = tag->next;
+        }
     }
 }
 
@@ -960,22 +961,13 @@ static void s_endSprite()
 
     stackpos--;
     instance_t *i;
-    stringarray_t* index =dictionary_index(&instances);
-    int num;
-    for (num = 0; num < dictionary_count(&instances); num++)
-    {
-    	char* name = stringarray_at(index, num);
-    	if (name)
-    	{
-            i = dictionary_lookup(&instances, name);
-            writeInstance(i);
-    	}
-    }
+
+    dict_foreach_value(&instances, writeInstance);
 
     if(stack[stackpos].cut)
 	tag = removeFromTo(stack[stackpos].cut, tag);
 
-    // the writeInstance loop above may have inserted tags after what used yo be the current tag,
+    // the writeInstance loop above may have inserted tags after what used to be the current tag,
     // so let's make sure 'tag' point to the current tag again.
     while (tag->next)
 	tag = tag->next;
@@ -998,7 +990,7 @@ static void s_endSprite()
         syntaxerror("internal error(7)");
     /* TODO: before clearing, prepend "<spritename>." to names and
              copy into old instances dict */
-   dictionary_free_all(&instances, free_instance);
+    dict_free_all(&instances, free_instance);
 
     currentframe = stack[stackpos].oldframe;
     currentrect = stack[stackpos].oldrect;
@@ -1015,18 +1007,7 @@ static void s_endSWF()
     SWF* swf;
     char*filename;
 
-    instance_t *i;
-    stringarray_t* index = dictionary_index(&instances);
-    int num;
-    for (num = 0; num < dictionary_count(&instances); num++)
-    {
-    	char* name = stringarray_at(index, num);
-    	if (name)
-    	{
-            i = dictionary_lookup(&instances, name);
-            writeInstance(i);
-    	}
-    }
+    dict_foreach_value(&instances, writeInstance);
 
     if(stack[stackpos].cut)
 	tag = removeFromTo(stack[stackpos].cut, tag);
@@ -1101,7 +1082,7 @@ int s_getframe()
     return currentframe+1;
 }
 
-void s_frame(int nr, int cut, char*name, char anchor)
+void s_frame(int nr, int cut, const char*name, char anchor)
 {
     int t;
     TAG*now = tag;
@@ -1136,9 +1117,9 @@ void s_frame(int nr, int cut, char*name, char anchor)
     currentframe = nr;
 }
 
-int parseColor2(char*str, RGBA*color);
+int parseColor2(const char*str, RGBA*color);
 
-int addFillStyle(SHAPE*s, SRECT*r, char*name)
+int addFillStyle(SHAPE*s, SRECT*r, const char*name)
 {
     RGBA color;
     character_t*image;
@@ -1147,9 +1128,9 @@ int addFillStyle(SHAPE*s, SRECT*r, char*name)
     if(name[0] == '#') {
 	parseColor2(name, &color);
 	return swf_ShapeAddSolidFillStyle(s, &color);
-    } else if ((texture = dictionary_lookup(&textures, name))) {
+    } else if ((texture = dict_lookup(&textures, name))) {
 	return swf_ShapeAddFillStyle2(s, &texture->fs);
-    } else if((image = dictionary_lookup(&images, name))) {
+    } else if((image = dict_lookup(&images, name))) {
 	MATRIX m;
 	swf_GetMatrix(0, &m);
 	m.sx = 65536.0*20.0*(r->xmax - r->xmin)/image->size.xmax;
@@ -1157,7 +1138,7 @@ int addFillStyle(SHAPE*s, SRECT*r, char*name)
 	m.tx = r->xmin;
 	m.ty = r->ymin;
 	return swf_ShapeAddBitmapFillStyle(s, &m, image->id, 0);
-    }  else if ((gradient = dictionary_lookup(&gradients, name))) {
+    }  else if ((gradient = dict_lookup(&gradients, name))) {
 	SRECT r2;
 	MATRIX rot,m;
 	double ccos,csin;
@@ -1186,7 +1167,7 @@ int addFillStyle(SHAPE*s, SRECT*r, char*name)
 }
 
 RGBA black={r:0,g:0,b:0,a:0};
-void s_box(char*name, int width, int height, RGBA color, int linewidth, char*texture)
+void s_box(const char*name, int width, int height, RGBA color, int linewidth, const char*texture)
 {
     SRECT r,r2;
     SHAPE* s;
@@ -1223,13 +1204,13 @@ void s_box(char*name, int width, int height, RGBA color, int linewidth, char*tex
     incrementid();
 }
 
-void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*texture)
+void s_filled(const char*name, const char*outlinename, RGBA color, int linewidth, const char*texture)
 {
     SRECT rect,r2;
     SHAPE* s;
     int ls1,fs1=0;
     outline_t* outline;
-    outline = dictionary_lookup(&outlines, outlinename);
+    outline = dict_lookup(&outlines, outlinename);
     if(!outline) {
 	syntaxerror("outline %s not defined", outlinename);
     }
@@ -1263,7 +1244,7 @@ void s_filled(char*name, char*outlinename, RGBA color, int linewidth, char*textu
     incrementid();
 }
 
-void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
+void s_circle(const char*name, int r, RGBA color, int linewidth, const char*texture)
 {
     SRECT rect,r2;
     SHAPE* s;
@@ -1297,14 +1278,14 @@ void s_circle(char*name, int r, RGBA color, int linewidth, char*texture)
     incrementid();
 }
 
-void s_textshape(char*name, char*fontname, float size, char*_text)
+void s_textshape(const char*name, const char*fontname, float size, const char*_text)
 {
     int g;
     U8*text = (U8*)_text;
     outline_t* outline;
 
     SWFFONT*font;
-    font = dictionary_lookup(&fonts, fontname);
+    font = dict_lookup(&fonts, fontname);
     if(!font)
 	syntaxerror("font \"%s\" not known!", fontname);
 
@@ -1323,24 +1304,24 @@ void s_textshape(char*name, char*fontname, float size, char*_text)
     {
 	drawer_t draw;
 	swf_Shape11DrawerInit(&draw, 0);
-	swf_DrawText(&draw, font, (int)(size*100), _text);
+	swf_DrawText(&draw, font, (int)(size*100), (char*)_text);
 	draw.finish(&draw);
 	outline->shape = swf_ShapeDrawerToShape(&draw);
 	outline->bbox = swf_ShapeDrawerGetBBox(&draw);
 	draw.dealloc(&draw);
     }
 
-    if(dictionary_lookup(&outlines, name))
+    if(dict_lookup(&outlines, name))
 	syntaxerror("outline %s defined twice", name);
-    dictionary_put2(&outlines, name, outline);
+    dict_put2(&outlines, name, outline);
 }
 
-void s_text(char*name, char*fontname, char*text, int size, RGBA color)
+void s_text(const char*name, const char*fontname, const char*text, int size, RGBA color)
 {
     SRECT r;
     MATRIX _m,*m=0;
     SWFFONT*font;
-    font = dictionary_lookup(&fonts, fontname);
+    font = dict_lookup(&fonts, fontname);
     if(!font)
 	syntaxerror("font \"%s\" not known!", fontname);
 
@@ -1350,7 +1331,7 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
-    r = swf_SetDefineText(tag, font, &color, text, size);
+    r = swf_SetDefineText(tag, font, &color, (char*)text, size);
 
     if(stack[0].swf->fileVersion >= 8) {
 	tag = swf_InsertTag(tag, ST_CSMTEXTSETTINGS);
@@ -1365,7 +1346,7 @@ void s_text(char*name, char*fontname, char*text, int size, RGBA color)
     incrementid();
 }
 
-void s_quicktime(char*name, char*url)
+void s_quicktime(const char*name, const char*url)
 {
     SRECT r;
     MATRIX _m,*m=0;
@@ -1380,7 +1361,7 @@ void s_quicktime(char*name, char*url)
     incrementid();
 }
 
-void s_edittext(char*name, char*fontname, int size, int width, int height, char*text, RGBA*color, int maxlength, char*variable, int flags, int align)
+void s_edittext(const char*name, const char*fontname, int size, int width, int height, const char*text, RGBA*color, int maxlength, const char*variable, int flags, int align)
 {
     SWFFONT*font = 0;
     EditTextLayout layout;
@@ -1388,7 +1369,7 @@ void s_edittext(char*name, char*fontname, int size, int width, int height, char*
 
     if(fontname && *fontname) {
 	flags |= ET_USEOUTLINES;
-	font = dictionary_lookup(&fonts, fontname);
+	font = dict_lookup(&fonts, fontname);
 	if(!font)
 	    syntaxerror("font \"%s\" not known!", fontname);
     }
@@ -1404,7 +1385,7 @@ void s_edittext(char*name, char*fontname, int size, int width, int height, char*
     r.xmax = width;
     r.ymax = height;
 
-    swf_SetEditText(tag, flags, r, text, color, maxlength, font?font->id:0, size, &layout, variable);
+    swf_SetEditText(tag, flags, r, (char*)text, color, maxlength, font?font->id:0, size, &layout, (char*)variable);
 
     s_addcharacter(name, id, tag, r);
     incrementid();
@@ -1412,7 +1393,7 @@ void s_edittext(char*name, char*fontname, int size, int width, int height, char*
 
 /* type: either "jpeg" or "png"
  */
-void s_image(char*name, char*type, char*filename, int quality)
+void s_image(const char*name, const char*type, const char*filename, int quality)
 {
     /* an image is actually two folded: 1st bitmap, 2nd character.
        Both of them can be used separately */
@@ -1430,7 +1411,7 @@ void s_image(char*name, char*type, char*filename, int quality)
 	tag = swf_InsertTag(tag, ST_DEFINEBITSJPEG2);
 	swf_SetU16(tag, imageID);
 
-	if(swf_SetJPEGBits(tag, filename, quality) < 0) {
+	if(swf_SetJPEGBits(tag, (char*)filename, quality) < 0) {
 	    syntaxerror("Image \"%s\" not found, or contains errors", filename);
 	}
 
@@ -1481,10 +1462,10 @@ void s_image(char*name, char*type, char*filename, int quality)
     incrementid();
 }
 
-void s_getBitmapSize(char*name, int*width, int*height)
+void s_getBitmapSize(const char*name, int*width, int*height)
 {
-    character_t* image = dictionary_lookup(&images, name);
-    gradient_t* gradient = dictionary_lookup(&gradients,name);
+    character_t* image = dict_lookup(&images, name);
+    gradient_t* gradient = dict_lookup(&gradients,name);
     if(image) {
 	*width = image->size.xmax;
 	*height = image->size.ymax;
@@ -1504,12 +1485,12 @@ void s_getBitmapSize(char*name, int*width, int*height)
     syntaxerror("No such bitmap/gradient: %s", name);
 }
 
-void s_texture(char*name, char*object, int x, int y, float scalex, float scaley, float rotate, float shear)
+void s_texture(const char*name, const char*object, int x, int y, float scalex, float scaley, float rotate, float shear)
 {
-    if(dictionary_lookup(&textures, name))
+    if(dict_lookup(&textures, name))
         syntaxerror("texture %s defined twice", name);
-    gradient_t* gradient = dictionary_lookup(&gradients, object);
-    character_t* bitmap = dictionary_lookup(&images, object);
+    gradient_t* gradient = dict_lookup(&gradients, object);
+    character_t* bitmap = dict_lookup(&images, object);
     texture_t* texture = (texture_t*)rfx_calloc(sizeof(texture_t));
     parameters_t p;
     FILLSTYLE*fs = &texture->fs;
@@ -1541,13 +1522,13 @@ void s_texture(char*name, char*object, int x, int y, float scalex, float scaley,
 	fs->m.sy *= 20;
     }
 
-    dictionary_put2(&textures, name, texture);
+    dict_put2(&textures, name, texture);
 }
 
-void s_font(char*name, char*filename)
+void s_font(const char*name, const char*filename)
 {
     SWFFONT* font;
-    font = dictionary_lookup(&fonts, name);
+    font = dict_lookup(&fonts, name);
     if(0)
     {
 	/* fix the layout. Only needed for old fonts */
@@ -1580,7 +1561,7 @@ typedef struct _sound_t
     TAG*tag;
 } sound_t;
 
-void s_sound(char*name, char*filename)
+void s_sound(const char*name, const char*filename)
 {
     struct WAV wav, wav2;
     struct MP3 mp3;
@@ -1590,7 +1571,7 @@ void s_sound(char*name, char*filename)
     unsigned blocksize = 1152;
     int is_mp3 = 0;
 
-    if(dictionary_lookup(&sounds, name))
+    if(dict_lookup(&sounds, name))
         syntaxerror("sound %s defined twice", name);
 
     if(wav_read(&wav, filename))
@@ -1663,7 +1644,7 @@ void s_sound(char*name, char*filename)
     sound->tag = tag;
     sound->id = id;
 
-    dictionary_put2(&sounds, name, sound);
+    dict_put2(&sounds, name, sound);
 
     incrementid();
 
@@ -1688,8 +1669,8 @@ static char* gradient_getToken(const char**p)
     return result;
 }
 
-float parsePercent(char*str);
-RGBA parseColor(char*str);
+float parsePercent(const char*str);
+RGBA parseColor(const char*str);
 
 GRADIENT parseGradient(const char*str)
 {
@@ -1752,7 +1733,7 @@ FILTERLIST* parseFilters(char* list)
     	f_end = strchr(f_start, ',');
     	if (f_end)
     	    *f_end = '\0';
-    	f = dictionary_lookup(&filters, f_start);
+    	f = dict_lookup(&filters, f_start);
     	if (!f)
     	{
     	    free(f_list);
@@ -1776,7 +1757,7 @@ FILTERLIST* parseFilters(char* list)
     return f_list;
 }
 
-void s_gradient(char*name, const char*text, int radial, int rotate)
+void s_gradient(const char*name, const char*text, int radial, int rotate)
 {
     gradient_t* gradient;
     gradient = malloc(sizeof(gradient_t));
@@ -1785,17 +1766,17 @@ void s_gradient(char*name, const char*text, int radial, int rotate)
     gradient->radial = radial;
     gradient->rotate = rotate;
 
-    dictionary_put2(&gradients, name, gradient);
+    dict_put2(&gradients, name, gradient);
 }
 
-void s_gradientglow(char*name, char*gradient, float blurx, float blury,
+void s_gradientglow(const char*name, const char*gradient, float blurx, float blury,
 		    float angle, float distance, float strength, char innershadow,
 		    char knockout, char composite, char ontop, int passes)
 {
-    if(dictionary_lookup(&filters, name))
+    if(dict_lookup(&filters, name))
         syntaxerror("filter %s defined twice", name);
 
-    gradient_t* g = dictionary_lookup(&gradients, gradient);
+    gradient_t* g = dict_lookup(&gradients, gradient);
     if(!g)
 	syntaxerror("unknown gradient %s", gradient);
 
@@ -1815,12 +1796,12 @@ void s_gradientglow(char*name, char*gradient, float blurx, float blury,
     filter->ontop = ontop;
     filter->passes = passes;
 
-    dictionary_put2(&filters, name, filter);
+    dict_put2(&filters, name, filter);
 }
 
-void s_dropshadow(char*name, RGBA color, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, int passes)
+void s_dropshadow(const char*name, RGBA color, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, int passes)
 {
-    if(dictionary_lookup(&filters, name))
+    if(dict_lookup(&filters, name))
         syntaxerror("filter %s defined twice", name);
 
     composite = 1;
@@ -1837,12 +1818,12 @@ void s_dropshadow(char*name, RGBA color, double blurx, double blury, double angl
     filter->composite = composite;
     filter->passes = passes;
 
-    dictionary_put2(&filters, name, filter);
+    dict_put2(&filters, name, filter);
 }
 
-void s_bevel(char*name, RGBA shadow, RGBA highlight, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, char ontop, int passes)
+void s_bevel(const char*name, RGBA shadow, RGBA highlight, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, char ontop, int passes)
 {
-    if(dictionary_lookup(&filters, name))
+    if(dict_lookup(&filters, name))
         syntaxerror("filter %s defined twice", name);
 
     composite = 1;
@@ -1861,12 +1842,12 @@ void s_bevel(char*name, RGBA shadow, RGBA highlight, double blurx, double blury,
     filter->ontop = ontop;
     filter->passes = passes;
 
-    dictionary_put2(&filters, name, filter);
+    dict_put2(&filters, name, filter);
 }
 
-void s_blur(char*name, double blurx, double blury, int passes)
+void s_blur(const char*name, double blurx, double blury, int passes)
 {
-    if(dictionary_lookup(&filters, name))
+    if(dict_lookup(&filters, name))
         syntaxerror("filter %s defined twice", name);
 
     FILTER_BLUR* filter = rfx_calloc(sizeof(FILTER_BLUR));
@@ -1875,7 +1856,7 @@ void s_blur(char*name, double blurx, double blury, int passes)
     filter->blury = blury;
     filter->passes = passes;
 
-    dictionary_put2(&filters, name, filter);
+    dict_put2(&filters, name, filter);
 }
 
 void s_action(const char*text)
@@ -1906,7 +1887,7 @@ void s_initaction(const char*character, const char*text)
         syntaxerror("Couldn't compile ActionScript");
     }
 
-    c = (character_t*)dictionary_lookup(&characters, character);
+    c = (character_t*)dict_lookup(&characters, character);
 
     tag = swf_InsertTag(tag, ST_DOINITACTION);
     swf_SetU16(tag, c->id);
@@ -1915,12 +1896,12 @@ void s_initaction(const char*character, const char*text)
     swf_ActionFree(a);
 }
 
-int s_swf3action(char*name, char*action)
+int s_swf3action(const char*name, const char*action)
 {
     ActionTAG* a = 0;
     instance_t* object = 0;
     if(name)
-	object = (instance_t*)dictionary_lookup(&instances, name);
+	object = (instance_t*)dict_lookup(&instances, name);
     if(!object && name && *name) {
 	/* we have a name, but couldn't find it. Abort. */
 	return 0;
@@ -1939,9 +1920,9 @@ int s_swf3action(char*name, char*action)
     return 1;
 }
 
-void s_outline(char*name, char*format, char*source)
+void s_outline(const char*name, const char*format, const char*source)
 {
-    if(dictionary_lookup(&outlines, name))
+    if(dict_lookup(&outlines, name))
         syntaxerror("outline %s defined twice", name);
 
     outline_t* outline;
@@ -1964,16 +1945,16 @@ void s_outline(char*name, char*format, char*source)
     outline->shape = shape;
     outline->bbox = bounds;
 
-    dictionary_put2(&outlines, name, outline);
+    dict_put2(&outlines, name, outline);
 }
 
-int s_playsound(char*name, int loops, int nomultiple, int stop)
+int s_playsound(const char*name, int loops, int nomultiple, int stop)
 {
     sound_t* sound;
     SOUNDINFO info;
     if(!name)
 	return 0;
-    sound = dictionary_lookup(&sounds, name);
+    sound = dict_lookup(&sounds, name);
     if(!sound)
 	return 0;
 
@@ -1987,7 +1968,7 @@ int s_playsound(char*name, int loops, int nomultiple, int stop)
     return 1;
 }
 
-void s_includeswf(char*name, char*filename)
+void s_includeswf(const char*name, const char*filename)
 {
     int f;
     SWF swf;
@@ -2059,24 +2040,24 @@ void s_includeswf(char*name, char*filename)
     s_addcharacter(name, id, tag, r);
     incrementid();
 }
-SRECT s_getCharBBox(char*name)
+SRECT s_getCharBBox(const char*name)
 {
-    character_t* c = dictionary_lookup(&characters, name);
+    character_t* c = dict_lookup(&characters, name);
     if(!c) syntaxerror("character '%s' unknown(2)", name);
     return c->size;
 }
-SRECT s_getInstanceBBox(char*name)
+SRECT s_getInstanceBBox(const char*name)
 {
-    instance_t * i = dictionary_lookup(&instances, name);
+    instance_t * i = dict_lookup(&instances, name);
     character_t * c;
     if(!i) syntaxerror("instance '%s' unknown(4)", name);
     c = i->character;
     if(!c) syntaxerror("internal error(5)");
     return c->size;
 }
-void s_getParameters(char*name, parameters_t* p)
+void s_getParameters(const char*name, parameters_t* p)
 {
-    instance_t * i = dictionary_lookup(&instances, name);
+    instance_t * i = dict_lookup(&instances, name);
     if(!i)
     	syntaxerror("instance '%s' unknown(10)", name);
     if (change_sets_all)
@@ -2110,9 +2091,9 @@ void setStartparameters(instance_t* i, parameters_t* p, TAG* tag)
     history_begin(i->history, "flags", currentframe, tag, 0);
 }
 
-void s_startclip(char*instance, char*character, parameters_t p)
+void s_startclip(const char*instance, const char*character, parameters_t p)
 {
-    character_t* c = dictionary_lookup(&characters, character);
+    character_t* c = dict_lookup(&characters, character);
     instance_t* i;
     MATRIX m;
     if(!c) {
@@ -2146,9 +2127,9 @@ void s_endClip()
     currentdepth++;
 }
 
-void s_put(char*instance, char*character, parameters_t p)
+void s_put(const char*instance, const char*character, parameters_t p)
 {
-    character_t* c = dictionary_lookup(&characters, character);
+    character_t* c = dict_lookup(&characters, character);
     instance_t* i;
     MATRIX m;
     if(!c)
@@ -2226,33 +2207,33 @@ void recordChanges(history_t* history, parameters_t p, int changeFunction, inter
         history_rememberFilter(history, currentframe, changeFunction, p.filters, inter);
 }
 
-void s_jump(char* instance, parameters_t p)
+void s_jump(const char* instance, parameters_t p)
 {
-    instance_t* i = dictionary_lookup(&instances, instance);
+    instance_t* i = dict_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
     recordChanges(i->history, p, CF_JUMP, 0);
 }
 
-void s_change(char*instance, parameters_t p, interpolation_t* inter)
+void s_change(const char*instance, parameters_t p, interpolation_t* inter)
 {
-    instance_t* i = dictionary_lookup(&instances, instance);
+    instance_t* i = dict_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
     recordChanges(i->history, p, CF_CHANGE, inter);
 }
 
-void s_sweep(char* instance, parameters_t p, float radius, int clockwise, int short_arc, interpolation_t* inter)
+void s_sweep(const char* instance, parameters_t p, float radius, int clockwise, int short_arc, interpolation_t* inter)
 {
-    instance_t* i = dictionary_lookup(&instances, instance);
+    instance_t* i = dict_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
     history_rememberSweep(i->history, currentframe, p.x, p.y, radius, clockwise, short_arc, inter);
 }
 
-void s_toggle(char* instance, U16 flagsOn, U16 flagsOff)
+void s_toggle(const char* instance, U16 flagsOn, U16 flagsOff)
 {
-    instance_t* i = dictionary_lookup(&instances, instance);
+    instance_t* i = dict_lookup(&instances, instance);
     if (!i)
         syntaxerror("instance %s not known", instance);
     U16 flags = (U16)history_value(i->history, currentframe, "flags");
@@ -2261,20 +2242,21 @@ void s_toggle(char* instance, U16 flagsOn, U16 flagsOff)
     history_remember(i->history, "flags", currentframe, CF_JUMP, flags, 0);
 }
 
-void s_delinstance(char*instance)
+void s_delinstance(const char*instance)
 {
-    instance_t* i = dictionary_lookup(&instances, instance);
+    instance_t* i = dict_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
     writeInstance(i);
     tag = swf_InsertTag(tag, ST_REMOVEOBJECT2);
     swf_SetU16(tag, i->depth);
-    dictionary_del(&instances, instance);
+    dict_del(&instances, instance);
+    free(i);
 }
 
-void s_schange(char*instance, parameters_t p, interpolation_t* inter)
+void s_schange(const char*instance, parameters_t p, interpolation_t* inter)
 {
-    instance_t* i = dictionary_lookup(&instances, instance);
+    instance_t* i = dict_lookup(&instances, instance);
     if(!i)
         syntaxerror("instance %s not known", instance);
     recordChanges(i->history, p, CF_SCHANGE, inter);
@@ -2307,7 +2289,7 @@ void s_end()
 
 typedef int command_func_t(map_t*args);
 
-SRECT parseBox(char*str)
+SRECT parseBox(const char*str)
 {
     SRECT r = {0,0,0,0};
     float xmin, xmax, ymin, ymax;
@@ -2347,11 +2329,11 @@ error:
     syntaxerror("expression %s is not a valid bound Box.\nE.g. 1024x768 or 1024x768:30:30 would have been valid bounding Boxes.", str);
     return r;
 }
-float parseFloat(char*str)
+float parseFloat(const char*str)
 {
     return atof(str);
 }
-int parseInt(char*str)
+int parseInt(const char*str)
 {
     int t;
     int l=strlen(str);
@@ -2364,7 +2346,7 @@ int parseInt(char*str)
 	    syntaxerror("Not an Integer: \"%s\"", str);
     return atoi(str);
 }
-static double parseRawTwip(char*str)
+static double parseRawTwip(const char*str)
 {
     char*dot;
     int sign=1;
@@ -2381,7 +2363,7 @@ static double parseRawTwip(char*str)
     } else {
 	char* old = strdup(str);
 	int l=strlen(dot+1);
-	char*s;
+	const char*s;
 	*dot++ = 0;
 	for(s=str;s<dot-1;s++) {
             if(*s<'0' || *s>'9')
@@ -2414,16 +2396,16 @@ static double parseRawTwip(char*str)
     return 0;
 }
 
-static dictionary_t defines;
+static dict_t defines;
 static int defines_initialized = 0;
 static mem_t define_values;
 
-static double parseNameOrTwip(char*s)
+static double parseNameOrTwip(const char*s)
 {
     int l = 0;
     double v;
     if(defines_initialized) {
-        l = (int)dictionary_lookup(&defines, s);
+        l = (int)dict_lookup(&defines, s);
     }
     if(l) {
         return *(int*)&define_values.buffer[l-1];
@@ -2538,13 +2520,14 @@ static double parseExpression(char*s)
     }
 }
 
-int parseTwip(char*str)
+int parseTwip(const char*str)
 {
-    int v = (int)(parseExpression(str)*20);
+    char*str2 = (char*)str;
+    int v = (int)(parseExpression(str2)*20);
     return v;
 }
 
-int parseArc(char* str)
+int parseArc(const char* str)
 {
     if (!strcmp(str, "short"))
     	return 1;
@@ -2554,7 +2537,7 @@ int parseArc(char* str)
     return 1;
 }
 
-int parseDir(char* str)
+int parseDir(const char* str)
 {
     if (!strcmp(str, "clockwise"))
     	return 1;
@@ -2564,7 +2547,7 @@ int parseDir(char* str)
     return 1;
 }
 
-int isPoint(char*str)
+int isPoint(const char*str)
 {
     if(strchr(str, '('))
 	return 1;
@@ -2572,7 +2555,7 @@ int isPoint(char*str)
 	return 0;
 }
 
-SPOINT parsePoint(char*str)
+SPOINT parsePoint(const char*str)
 {
     SPOINT p;
     char tmp[80];
@@ -2587,7 +2570,7 @@ SPOINT parsePoint(char*str)
     return p;
 }
 
-int parseColor2(char*str, RGBA*color)
+int parseColor2(const char*str, RGBA*color)
 {
     int l = strlen(str);
     int r,g,b,a;
@@ -2635,7 +2618,7 @@ int parseColor2(char*str, RGBA*color)
     return 0;
 
 }
-RGBA parseColor(char*str)
+RGBA parseColor(const char*str)
 {
     RGBA c;
     if(!parseColor2(str, &c))
@@ -2648,7 +2631,7 @@ typedef struct _muladd {
     S16 add;
 } MULADD;
 
-MULADD parseMulAdd(char*str)
+MULADD parseMulAdd(const char*str)
 {
     float add, mul;
     char* str2 = (char*)malloc(strlen(str)+5);
@@ -2691,7 +2674,7 @@ MULADD mergeMulAdd(MULADD m1, MULADD m2)
     return r;
 }
 
-float parsePxOrPercent(char*fontname, char*str)
+float parsePxOrPercent(const char*fontname, const char*str)
 {
     int l = strlen(str);
     if(strchr(str, '%'))
@@ -2704,7 +2687,7 @@ float parsePxOrPercent(char*fontname, char*str)
     return 0;
 }
 
-float parsePercent(char*str)
+float parsePercent(const char*str)
 {
     int l = strlen(str);
     if(!l)
@@ -2715,11 +2698,11 @@ float parsePercent(char*str)
     syntaxerror("Expression '%s' is not a percentage", str);
     return 0;
 }
-int isPercent(char*str)
+int isPercent(const char*str)
 {
     return str[strlen(str)-1]=='%';
 }
-int parseNewSize(char*str, int size)
+int parseNewSize(const char*str, int size)
 {
     if(isPercent(str))
 	return parsePercent(str)*size;
@@ -2733,9 +2716,9 @@ int isColor(char*str)
     return parseColor2(str, &c);
 }
 
-static char* lu(map_t* args, char*name)
+static const char* lu(map_t* args, char*name)
 {
-    char* value = map_lookup(args, name);
+    const char* value = map_lookup(args, name);
     if(!value) {
 	map_dump(args, stdout, "");
 	syntaxerror("internal error 2: value %s should be set", name);
@@ -2745,10 +2728,10 @@ static char* lu(map_t* args, char*name)
 
 static int c_flash(map_t*args)
 {
-    char* filename = map_lookup(args, "filename");
-    char* compressstr = lu(args, "compress");
-    char* change_modestr = lu(args, "change-sets-all");
-    char* exportstr = lu(args, "export");
+    const char* filename = map_lookup(args, "filename");
+    const char* compressstr = lu(args, "compress");
+    const char* change_modestr = lu(args, "change-sets-all");
+    const char* exportstr = lu(args, "export");
     SRECT bbox = parseBox(lu(args, "bbox"));
     int version = parseInt(lu(args, "version"));
     int fps = (int)(parseFloat(lu(args, "fps"))*256);
@@ -2788,12 +2771,12 @@ static int c_flash(map_t*args)
     s_swf(filename, bbox, version, fps, compress, color);
     return 0;
 }
-int isRelative(char*str)
+int isRelative(const char*str)
 {
     return !strncmp(str, "<plus>", 6) ||
 	   !strncmp(str, "<minus>", 7);
 }
-char* getOffset(char*str)
+const char* getOffset(const char*str)
 {
     if(!strncmp(str, "<plus>", 6))
 	return str+6;
@@ -2802,7 +2785,7 @@ char* getOffset(char*str)
     syntaxerror("internal error (347)");
     return 0;
 }
-int getSign(char*str)
+int getSign(const char*str)
 {
     if(!strncmp(str, "<plus>", 6))
 	return 1;
@@ -2812,19 +2795,19 @@ int getSign(char*str)
     return 0;
 }
 
-static dictionary_t points;
+static dict_t points;
 static mem_t mpoints;
 static int points_initialized = 0;
 
 static int c_interpolation(map_t *args)
 {
     int i;
-    char* name = lu(args, "name");
-    if (dictionary_lookup(&interpolations, name))
+    const char* name = lu(args, "name");
+    if (dict_lookup(&interpolations, name))
         syntaxerror("interpolation %s defined twice", name);
 
     interpolation_t* inter = (interpolation_t*)malloc(sizeof(interpolation_t));
-    char* functionstr = lu(args, "function");
+    const char* functionstr = lu(args, "function");
     inter->function = 0;
     for (i = 0; i < sizeof(interpolationFunctions) / sizeof(interpolationFunctions[0]); i++)
         if (!strcmp(functionstr,interpolationFunctions[i]))
@@ -2841,11 +2824,11 @@ static int c_interpolation(map_t *args)
     inter->damping = parseFloat(lu(args, "damping"));
     inter->slope = parseFloat(lu(args, "slope"));
 
-    dictionary_put2(&interpolations, name, inter);
+    dict_put2(&interpolations, name, inter);
     return 0;
 }
 
-SPOINT getPoint(SRECT r, char*name)
+SPOINT getPoint(SRECT r, const char*name)
 {
     int l=0;
     if(!strcmp(name, "center")) {
@@ -2905,7 +2888,7 @@ SPOINT getPoint(SRECT r, char*name)
 
 
     if(points_initialized)
-        l = (int)dictionary_lookup(&points, name);
+        l = (int)dict_lookup(&points, name);
     if(l==0) {
         syntaxerror("Invalid point: \"%s\".", name);
     }
@@ -2913,19 +2896,19 @@ SPOINT getPoint(SRECT r, char*name)
 }
 
 
-static int texture2(char*name, char*object, map_t*args, int errors)
+static int texture2(const char*name, const char*object, map_t*args, int errors)
 {
     SPOINT pos,size;
-    char*xstr = map_lookup(args, "x");
-    char*ystr = map_lookup(args, "y");
-    char*widthstr = map_lookup(args, "width");
-    char*heightstr = map_lookup(args, "height");
-    char*scalestr = map_lookup(args, "scale");
-    char*scalexstr = map_lookup(args, "scalex");
-    char*scaleystr = map_lookup(args, "scaley");
-    char*rotatestr = map_lookup(args, "rotate");
-    char* shearstr = map_lookup(args, "shear");
-    char* radiusstr = map_lookup(args, "r");
+    const char*xstr = map_lookup(args, "x");
+    const char*ystr = map_lookup(args, "y");
+    const char*widthstr = map_lookup(args, "width");
+    const char*heightstr = map_lookup(args, "height");
+    const char*scalestr = map_lookup(args, "scale");
+    const char*scalexstr = map_lookup(args, "scalex");
+    const char*scaleystr = map_lookup(args, "scaley");
+    const char*rotatestr = map_lookup(args, "rotate");
+    const char* shearstr = map_lookup(args, "shear");
+    const char* radiusstr = map_lookup(args, "r");
     float x=0,y=0;
     float scalex = 1.0, scaley = 1.0;
     float rotate=0, shear=0;
@@ -2977,14 +2960,14 @@ static int texture2(char*name, char*object, map_t*args, int errors)
 
 static int c_texture(map_t*args)
 {
-    char*name = lu(args, "instance");
-    char*object = lu(args, "character");
+    const char*name = lu(args, "instance");
+    const char*object = lu(args, "character");
     return texture2(name, object, args, 1);
 }
 
 static int c_gradient(map_t*args)
 {
-    char*name = lu(args, "name");
+    const char*name = lu(args, "name");
     int radial= strcmp(lu(args, "radial"), "radial")?0:1;
     int rotate = parseInt(lu(args, "rotate"));
 
@@ -2992,7 +2975,7 @@ static int c_gradient(map_t*args)
     if(type != RAWDATA)
         syntaxerror("colon (:) expected");
 
-    if(dictionary_lookup(&gradients, name))
+    if(dict_lookup(&gradients, name))
         syntaxerror("gradient %s defined twice", name);
 
     s_gradient(name, text, radial, rotate);
@@ -3006,9 +2989,9 @@ static int c_gradient(map_t*args)
     return 0;
 }
 
-static char* checkFiltername(map_t* args)
+static const char* checkFiltername(map_t* args)
 {
-    char* name = lu(args, "name");
+    const char* name = lu(args, "name");
     if (strchr(name, ','))
     	syntaxerror("the comma (,) is used to separate filters in filterlists. Please do not use in filternames.");
     return name;
@@ -3016,10 +2999,10 @@ static char* checkFiltername(map_t* args)
 
 static int c_blur(map_t*args)
 {
-    char*name = checkFiltername(args);
-    char*blurstr = lu(args, "blur");
-    char*blurxstr = lu(args, "blurx");
-    char*blurystr = lu(args, "blury");
+    const char*name = checkFiltername(args);
+    const char*blurstr = lu(args, "blur");
+    const char*blurxstr = lu(args, "blurx");
+    const char*blurystr = lu(args, "blury");
     float blurx=1.0, blury=1.0;
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
@@ -3036,11 +3019,11 @@ static int c_blur(map_t*args)
 
 static int c_gradientglow(map_t*args)
 {
-    char*name = checkFiltername(args);
-    char*gradient = lu(args, "gradient");
-    char*blurstr = lu(args, "blur");
-    char*blurxstr = lu(args, "blurx");
-    char*blurystr = lu(args, "blury");
+    const char*name = checkFiltername(args);
+    const char*gradient = lu(args, "gradient");
+    const char*blurstr = lu(args, "blur");
+    const char*blurxstr = lu(args, "blurx");
+    const char*blurystr = lu(args, "blury");
     float blurx=1.0, blury=1.0;
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
@@ -3066,11 +3049,11 @@ static int c_gradientglow(map_t*args)
 
 static int c_dropshadow(map_t*args)
 {
-    char*name = checkFiltername(args);
+    const char*name = checkFiltername(args);
     RGBA color = parseColor(lu(args, "color"));
-    char*blurstr = lu(args, "blur");
-    char*blurxstr = lu(args, "blurx");
-    char*blurystr = lu(args, "blury");
+    const char*blurstr = lu(args, "blur");
+    const char*blurxstr = lu(args, "blurx");
+    const char*blurystr = lu(args, "blury");
     float blurx=1.0, blury=1.0;
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
@@ -3095,12 +3078,12 @@ static int c_dropshadow(map_t*args)
 
 static int c_bevel(map_t*args)
 {
-    char*name = checkFiltername(args);
+    const char*name = checkFiltername(args);
     RGBA shadow = parseColor(lu(args, "shadow"));
     RGBA highlight = parseColor(lu(args, "highlight"));
-    char*blurstr = lu(args, "blur");
-    char*blurxstr = lu(args, "blurx");
-    char*blurystr = lu(args, "blury");
+    const char*blurstr = lu(args, "blur");
+    const char*blurxstr = lu(args, "blurx");
+    const char*blurystr = lu(args, "blury");
     float blurx=1.0, blury=1.0;
     if(blurstr[0]) {
 	blurx = parseFloat(blurstr);
@@ -3126,11 +3109,11 @@ static int c_bevel(map_t*args)
 
 static int c_define(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*value = lu(args, "value");
+    const char*name = lu(args, "name");
+    const char*value = lu(args, "value");
     
     if(!defines_initialized) {
-	dictionary_init(&defines);
+	dict_init(&defines);
 	mem_init(&define_values);
 	defines_initialized = 1;
     }
@@ -3138,17 +3121,17 @@ static int c_define(map_t*args)
     int pos = mem_put(&define_values, &val, sizeof(val));
     string_t s;
     string_set(&s, name);
-    dictionary_put(&defines, s, (void*)(pos+1));
+    dict_put(&defines, s, (void*)(pos+1));
     return 0;
 }
 static int c_point(map_t*args)
 {
-    char*name = lu(args, "name");
+    const char*name = lu(args, "name");
     int pos;
     string_t s1;
     SPOINT p;
     if(!points_initialized) {
-	dictionary_init(&points);
+	dict_init(&points);
 	mem_init(&mpoints);
 	points_initialized = 1;
     }
@@ -3156,14 +3139,14 @@ static int c_point(map_t*args)
     p.y = parseTwip(lu(args, "y"));
     pos = mem_put(&mpoints, &p, sizeof(p));
     string_set(&s1, name);
-    dictionary_put(&points, s1, (void*)(pos+1));
+    dict_put(&points, s1, (void*)(pos+1));
     return 0;
 }
 static int c_play(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*loop = lu(args, "loop");
-    char*nomultiple = lu(args, "nomultiple");
+    const char*name = lu(args, "name");
+    const char*loop = lu(args, "loop");
+    const char*nomultiple = lu(args, "nomultiple");
     int nm = 0;
     if(!strcmp(nomultiple, "nomultiple"))
 	nm = 1;
@@ -3180,7 +3163,7 @@ static int c_play(map_t*args)
 
 static int c_stop(map_t*args)
 {
-    char*name = map_lookup(args, "name");
+    const char*name = map_lookup(args, "name");
 
     if(s_playsound(name, 0,0,1))
         return 0;
@@ -3192,7 +3175,7 @@ static int c_stop(map_t*args)
 
 static int c_nextframe(map_t*args)
 {
-    char*name = lu(args, "name");
+    const char*name = lu(args, "name");
 
     if(s_swf3action(name, "nextframe")) {
 	return 0;
@@ -3203,7 +3186,7 @@ static int c_nextframe(map_t*args)
 
 static int c_previousframe(map_t*args)
 {
-    char*name = lu(args, "name");
+    const char*name = lu(args, "name");
 
     if(s_swf3action(name, "previousframe")) {
 	return 0;
@@ -3214,10 +3197,10 @@ static int c_previousframe(map_t*args)
 
 static int c_movement(map_t*args, int type)
 {
-    char*instance = lu(args, "name");
+    const char*instance = lu(args, "name");
 
-    char* xstr="";
-    char* ystr="";
+    const char* xstr="";
+    const char* ystr="";
     SRECT oldbbox;
     parameters_t p;
     U16 set = 0x0000;
@@ -3265,8 +3248,8 @@ static int c_movement(map_t*args, int type)
     {
         case PT_MOVE:
             {
-                char* interstr = lu(args, "interpolation");
-                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                const char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if (!inter)
                     syntaxerror("unkown interpolation %s", interstr);
                 s_change(instance, p, inter);
@@ -3274,8 +3257,8 @@ static int c_movement(map_t*args, int type)
             break;
         case PT_SMOVE:
             {
-                char* interstr = lu(args, "interpolation");
-                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                const char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if (!inter)
                     syntaxerror("unkown interpolation %s", interstr);
             	s_schange(instance, p, inter);
@@ -3283,16 +3266,16 @@ static int c_movement(map_t*args, int type)
             break;
         case PT_SWEEP:
             {
-            	char* rstr = lu(args, "r");
+            	const char* rstr = lu(args, "r");
             	int radius = parseTwip(rstr);
             	if (radius <= 0)
             		syntaxerror("sweep not possible: radius must be greater than 0.");
-            	char* dirstr = lu(args, "dir");
+            	const char* dirstr = lu(args, "dir");
             	int clockwise = parseDir(dirstr);
-            	char* arcstr = lu(args, "arc");
+            	const char* arcstr = lu(args, "arc");
             	int short_arc = parseArc(arcstr);
-                char* interstr = lu(args, "interpolation");
-                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                const char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if (!inter)
                     syntaxerror("unkown interpolation %s", interstr);
             	s_sweep(instance, p, radius, clockwise, short_arc, inter);
@@ -3304,27 +3287,27 @@ static int c_movement(map_t*args, int type)
 
 static int c_placement(map_t*args, int type)
 {
-    char*instance = lu(args, (type==PT_PUT||type==PT_STARTCLIP)?"instance":"name");
-    char*character = 0;
+    const char*instance = lu(args, (type==PT_PUT||type==PT_STARTCLIP)?"instance":"name");
+    const char*character = 0;
 
-    char* luminancestr = lu(args, "luminance");
-    char* scalestr = lu(args, "scale");
-    char* scalexstr = lu(args, "scalex");
-    char* scaleystr = lu(args, "scaley");
-    char* rotatestr = lu(args, "rotate");
-    char* shearstr = lu(args, "shear");
-    char* xstr="", *pivotstr="";
-    char* ystr="", *anglestr="";
-    char*above = lu(args, "above"); /*FIXME*/
-    char*below = lu(args, "below");
-    char* rstr = lu(args, "red");
-    char* gstr = lu(args, "green");
-    char* bstr = lu(args, "blue");
-    char* astr = lu(args, "alpha");
-    char* pinstr = lu(args, "pin");
-    char* as = map_lookup(args, "as");
-    char* blendmode = lu(args, "blend");
-    char* filterstr = lu(args, "filter");
+    const char* luminancestr = lu(args, "luminance");
+    const char* scalestr = lu(args, "scale");
+    const char* scalexstr = lu(args, "scalex");
+    const char* scaleystr = lu(args, "scaley");
+    const char* rotatestr = lu(args, "rotate");
+    const char* shearstr = lu(args, "shear");
+    const char* xstr="", *pivotstr="";
+    const char* ystr="", *anglestr="";
+    const char*above = lu(args, "above"); /*FIXME*/
+    const char*below = lu(args, "below");
+    const char* rstr = lu(args, "red");
+    const char* gstr = lu(args, "green");
+    const char* bstr = lu(args, "blue");
+    const char* astr = lu(args, "alpha");
+    const char* pinstr = lu(args, "pin");
+    const char* as = map_lookup(args, "as");
+    const char* blendmode = lu(args, "blend");
+    const char* filterstr = lu(args, "filter");
     U8 blend;
     MULADD r,g,b,a;
     float oldwidth;
@@ -3543,7 +3526,7 @@ static int c_placement(map_t*args, int type)
 
     if(filterstr[0])
     {
-        p.filters = parseFilters(filterstr);
+        p.filters = parseFilters((char*)filterstr);
         set = set | SF_FILTER;
     }
 
@@ -3564,8 +3547,8 @@ to be illegal; please use the .move command.");
             break;
         case PT_CHANGE:
             {
-                char* interstr = lu(args, "interpolation");
-                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                const char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if (!inter)
                     syntaxerror("unkown interpolation %s", interstr);
                 s_change(instance, p, inter);
@@ -3573,8 +3556,8 @@ to be illegal; please use the .move command.");
             break;
         case PT_SCHANGE:
             {
-                char* interstr = lu(args, "interpolation");
-                interpolation_t* inter = (interpolation_t*)dictionary_lookup(&interpolations, interstr);
+                const char* interstr = lu(args, "interpolation");
+                interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if (!inter)
                     syntaxerror("unkown interpolation %s", interstr);
             	s_schange(instance, p, inter);
@@ -3650,9 +3633,9 @@ static int c_show(map_t*args)
 }
 static int c_toggle(map_t* args)
 {
-    char*instance = lu(args, "name");
+    const char*instance = lu(args, "name");
     U16 flagsOn = 0x0000, flagsOff = 0xffff;
-    char* alignstr = lu(args, "fixed_alignment");
+    const char* alignstr = lu(args, "fixed_alignment");
     if (!strcmp(alignstr, "on"))
     	flagsOn += IF_FIXED_ALIGNMENT;
     else
@@ -3665,7 +3648,7 @@ static int c_toggle(map_t* args)
 }
 static int c_del(map_t*args)
 {
-    char*instance = lu(args, "name");
+    const char*instance = lu(args, "name");
     s_delinstance(instance);
     return 0;
 }
@@ -3676,8 +3659,8 @@ static int c_end(map_t*args)
 }
 static int c_sprite(map_t*args)
 {
-    char* name = lu(args, "name");
-    char* scalinggrid = lu(args, "scalinggrid");
+    const char* name = lu(args, "name");
+    const char* scalinggrid = lu(args, "scalinggrid");
 
     if(scalinggrid && *scalinggrid) {
 	SRECT r = parseBox(scalinggrid);
@@ -3689,11 +3672,11 @@ static int c_sprite(map_t*args)
 }
 static int c_frame(map_t*args)
 {
-    char*framestr = lu(args, "n");
-    char*cutstr = lu(args, "cut");
+    const char*framestr = lu(args, "n");
+    const char*cutstr = lu(args, "cut");
 
-    char*name = lu(args, "name");
-    char*anchor = lu(args, "anchor");
+    const char*name = lu(args, "name");
+    const char*anchor = lu(args, "anchor");
     char buf[40];
 
     if(!strcmp(anchor, "anchor") && !*name)
@@ -3720,18 +3703,18 @@ static int c_frame(map_t*args)
 }
 static int c_primitive(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*command = lu(args, "commandname");
+    const char*name = lu(args, "name");
+    const char*command = lu(args, "commandname");
     int width=0, height=0, r=0;
     int linewidth = parseTwip(lu(args, "line"));
-    char*colorstr = lu(args, "color");
+    const char*colorstr = lu(args, "color");
     RGBA color = parseColor(colorstr);
-    char*fillstr = lu(args, "fill");
+    const char*fillstr = lu(args, "fill");
     int dofill = 1;
     int type=0;
-    char* font;
-    char* text;
-    char* outline=0;
+    const char* font;
+    const char* text;
+    const char* outline=0;
     RGBA fill;
     if(!strcmp(command, "circle"))
 	type = 1;
@@ -3762,9 +3745,9 @@ static int c_primitive(map_t*args)
 
 static int c_textshape(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*text = lu(args, "text");
-    char*font = lu(args, "font");
+    const char*name = lu(args, "name");
+    const char*text = lu(args, "text");
+    const char*font = lu(args, "font");
     float size = parsePxOrPercent(font, lu(args, "size"));
 
     s_textshape(name, font, size, text);
@@ -3773,9 +3756,9 @@ static int c_textshape(map_t*args)
 
 static int c_swf(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*filename = lu(args, "filename");
-    char*command = lu(args, "commandname");
+    const char*name = lu(args, "name");
+    const char*filename = lu(args, "filename");
+    const char*command = lu(args, "commandname");
     if(!strcmp(command, "shape"))
 	warning("Please use .swf instead of .shape");
     s_includeswf(name, filename);
@@ -3784,25 +3767,25 @@ static int c_swf(map_t*args)
 
 static int c_font(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*filename = lu(args, "filename");
+    const char*name = lu(args, "name");
+    const char*filename = lu(args, "filename");
     s_font(name, filename);
     return 0;
 }
 
 static int c_sound(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*filename = lu(args, "filename");
+    const char*name = lu(args, "name");
+    const char*filename = lu(args, "filename");
     s_sound(name, filename);
     return 0;
 }
 
 static int c_text(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*text = lu(args, "text");
-    char*font = lu(args, "font");
+    const char*name = lu(args, "name");
+    const char*text = lu(args, "text");
+    const char*font = lu(args, "font");
     float size = parsePxOrPercent(font, lu(args, "size"));
     RGBA color = parseColor(lu(args, "color"));
     s_text(name, font, text, (int)(size*100), color);
@@ -3816,17 +3799,17 @@ static int c_soundtrack(map_t*args)
 
 static int c_quicktime(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*url = lu(args, "url");
+    const char*name = lu(args, "name");
+    const char*url = lu(args, "url");
     s_quicktime(name, url);
     return 0;
 }
 
 static int c_image(map_t*args)
 {
-    char*command = lu(args, "commandname");
-    char*name = lu(args, "name");
-    char*filename = lu(args, "filename");
+    const char*command = lu(args, "commandname");
+    const char*name = lu(args, "name");
+    const char*filename = lu(args, "filename");
     if(!strcmp(command,"jpeg")) {
 	int quality = (int)(parsePercent(lu(args, "quality"))*100);
 	s_image(name, "jpeg", filename, quality);
@@ -3838,8 +3821,8 @@ static int c_image(map_t*args)
 
 static int c_outline(map_t*args)
 {
-    char*name = lu(args, "name");
-    char*format = lu(args, "format");
+    const char*name = lu(args, "name");
+    const char*format = lu(args, "format");
 
     readToken();
     if(type != RAWDATA)
@@ -3851,22 +3834,22 @@ static int c_outline(map_t*args)
 
 int fakechar(map_t*args)
 {
-    char*name = lu(args, "name");
+    const char*name = lu(args, "name");
     s_box(name, 0, 0, black, 20, 0);
     return 0;
 }
 
 static int c_egon(map_t*args) {return fakechar(args);}
 static int c_button(map_t*args) {
-    char*name = lu(args, "name");
+    const char*name = lu(args, "name");
     s_button(name);
     return 0;
 }
 static int current_button_flags = 0;
 static int c_on_press(map_t*args)
 {
-    char*position = lu(args, "position");
-    char*action = "";
+    const char*position = lu(args, "position");
+    const char*action = "";
     if(!strcmp(position, "inside")) {
 	current_button_flags |= BC_OVERUP_OVERDOWN;
     } else if(!strcmp(position, "outside")) {
@@ -3887,8 +3870,8 @@ static int c_on_press(map_t*args)
 }
 static int c_on_release(map_t*args)
 {
-    char*position = lu(args, "position");
-    char*action = "";
+    const char*position = lu(args, "position");
+    const char*action = "";
     if(!strcmp(position, "inside")) {
 	current_button_flags |= BC_OVERDOWN_OVERUP;
     } else if(!strcmp(position, "outside")) {
@@ -3908,8 +3891,8 @@ static int c_on_release(map_t*args)
 }
 static int c_on_move_in(map_t*args)
 {
-    char*position = lu(args, "state");
-    char*action = "";
+    const char*position = lu(args, "state");
+    const char*action = "";
     if(!strcmp(position, "pressed")) {
 	current_button_flags |= BC_OUTDOWN_OVERDOWN;
     } else if(!strcmp(position, "not_pressed")) {
@@ -3929,8 +3912,8 @@ static int c_on_move_in(map_t*args)
 }
 static int c_on_move_out(map_t*args)
 {
-    char*position = lu(args, "state");
-    char*action = "";
+    const char*position = lu(args, "state");
+    const char*action = "";
     if(!strcmp(position, "pressed")) {
 	current_button_flags |= BC_OVERDOWN_OUTDOWN;
     } else if(!strcmp(position, "not_pressed")) {
@@ -3950,8 +3933,8 @@ static int c_on_move_out(map_t*args)
 }
 static int c_on_key(map_t*args)
 {
-    char*key = lu(args, "key");
-    char*action = "";
+    const char*key = lu(args, "key");
+    const char*action = "";
     if(strlen(key)==1) {
 	/* ascii */
 	if(key[0]>=32) {
@@ -3982,24 +3965,24 @@ static int c_on_key(map_t*args)
 static int c_edittext(map_t*args)
 {
  //"name font size width height text="" color=black maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @autosize=0"},
-    char*name = lu(args, "name");
-    char*font = lu(args, "font");
+    const char*name = lu(args, "name");
+    const char*font = lu(args, "font");
     int size = (int)(1024*parsePxOrPercent(font, lu(args, "size")));
     int width = parseTwip(lu(args, "width"));
     int height = parseTwip(lu(args, "height"));
-    char*text  = lu(args, "text");
+    const char*text  = lu(args, "text");
     RGBA color = parseColor(lu(args, "color"));
     int maxlength = parseInt(lu(args, "maxlength"));
-    char*variable = lu(args, "variable");
-    char*passwordstr = lu(args, "password");
-    char*wordwrapstr = lu(args, "wordwrap");
-    char*multilinestr = lu(args, "multiline");
-    char*htmlstr = lu(args, "html");
-    char*noselectstr = lu(args, "noselect");
-    char*readonlystr = lu(args, "readonly");
-    char*borderstr = lu(args, "border");
-    char*autosizestr = lu(args, "autosize");
-    char*alignstr = lu(args, "align");
+    const char*variable = lu(args, "variable");
+    const char*passwordstr = lu(args, "password");
+    const char*wordwrapstr = lu(args, "wordwrap");
+    const char*multilinestr = lu(args, "multiline");
+    const char*htmlstr = lu(args, "html");
+    const char*noselectstr = lu(args, "noselect");
+    const char*readonlystr = lu(args, "readonly");
+    const char*borderstr = lu(args, "border");
+    const char*autosizestr = lu(args, "autosize");
+    const char*alignstr = lu(args, "align");
     int align = -1;
 
     int flags = 0;
@@ -4024,7 +4007,7 @@ static int c_edittext(map_t*args)
 static int c_morphshape(map_t*args) {return fakechar(args);}
 static int c_movie(map_t*args) {return fakechar(args);}
 
-static char* readfile(const char*filename)
+static char* readfile(char*filename)
 {
     FILE*fi = fopen(filename, "rb");
     int l;
@@ -4043,7 +4026,7 @@ static char* readfile(const char*filename)
 
 static int c_action(map_t*args)
 {
-    char* filename  = map_lookup(args, "filename");
+    const char* filename  = map_lookup(args, "filename");
     if(!filename ||!*filename) {
 	readToken();
 	if(type != RAWDATA) {
@@ -4051,7 +4034,7 @@ static int c_action(map_t*args)
 	}
 	s_action(text);
     } else {
-	s_action(readfile(filename));
+	s_action(readfile((char*)filename));
     }
 
     return 0;
@@ -4059,8 +4042,8 @@ static int c_action(map_t*args)
 
 static int c_initaction(map_t*args)
 {
-    char* character = lu(args, "name");
-    char* filename  = map_lookup(args, "filename");
+    const char* character = lu(args, "name");
+    const char* filename  = map_lookup(args, "filename");
     if(!filename ||!*filename) {
 	readToken();
 	if(type != RAWDATA) {
@@ -4068,7 +4051,7 @@ static int c_initaction(map_t*args)
 	}
 	s_initaction(character, text);
     } else {
-	s_initaction(character, readfile(filename));
+	s_initaction(character, readfile((char*)filename));
     }
 
     return 0;
@@ -4387,7 +4370,7 @@ static void analyseArgumentsForCommand(char*command)
 {
     int t;
     map_t args;
-    char* fontfile;
+    const char* fontfile;
     int nr = -1;
     U8* glyphs_to_include;
     msg("<verbose> analyse Command: %s (line %d)", command, line);
@@ -4405,10 +4388,10 @@ static void analyseArgumentsForCommand(char*command)
     printf(".%s\n", command);fflush(stdout);
     map_dump(&args, stdout, "\t");fflush(stdout);
 #endif
-    char* name = lu(&args, "name");
+    const char* name = lu(&args, "name");
     if (!strcmp(command, "font"))
     {
-    	if(dictionary_lookup(&fonts, name))
+    	if(dict_lookup(&fonts, name))
             syntaxerror("font %s defined twice", name);
 
     	SWFFONT* font;
@@ -4422,7 +4405,7 @@ static void analyseArgumentsForCommand(char*command)
     	else
     	{
 	    swf_FontPrepareForEditText(font);
-    	    glyphs_to_include = lu(&args, "glyphs");
+    	    glyphs_to_include = (U8*)lu(&args, "glyphs");
     	    if (!strcmp(glyphs_to_include, "all"))
     	    {
     	    	swf_FontUseAll(font);
@@ -4439,11 +4422,11 @@ static void analyseArgumentsForCommand(char*command)
     	    	    swf_FontInitUsage(font);
     	    }
     	}
-    	dictionary_put2(&fonts, name, font);
+    	dict_put2(&fonts, name, font);
     }
     else
     {
-        SWFFONT* font = dictionary_lookup(&fonts, lu(&args, "font"));
+        SWFFONT* font = dict_lookup(&fonts, lu(&args, "font"));
         if (!font)
             syntaxerror("font %s is not known in line %d", lu(&args, "font"), line);
         else
@@ -4455,7 +4438,7 @@ static void analyseArgumentsForCommand(char*command)
             	    font->use->glyphs_specified = 1;
 		}
             	else
-            	    swf_FontUseUTF8(font, lu(&args, "text"));
+            	    swf_FontUseUTF8(font, (U8*)lu(&args, "text"));
             }
     }
     map_clear(&args);
@@ -4490,7 +4473,7 @@ void firstPass()
 {
     pos = 0;
     id = 0;
-    dictionary_init(&fonts);
+    dict_init(&fonts);
     cleanUp = &freeFontDictionary;
     findFontUsage();
 }
