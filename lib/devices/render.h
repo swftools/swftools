@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 void gfxdevice_render_init(gfxdevice_t*);
+gfxdevice_t* gfxdevice_render_new();
 
 #ifdef __cplusplus
 }
