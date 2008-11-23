@@ -1325,7 +1325,7 @@ SRECT swf_TextCalculateBBoxUTF8(SWFFONT * font, U8 * s, int scale)
 }
 
 
-SWFFONT *swf_ReadFont(char *filename)
+SWFFONT *swf_ReadFont(const char *filename)
 {
     int f;
     SWF swf;
