@@ -36,7 +36,7 @@ opcode_t opcodes[]={
 {0xa9, "bitor", "",            -2, 1, 0, 0},
 {0xaa, "bitxor", ""            -2, 1, 0, 0},
 {0x41, "call", "n",            -2, 1, 0, OP_STACK_ARGS},
-{0x43, "callmethod", "mn",     -1, 1, 0, OP_STACK_ARGS|OP_STACK_NS},
+{0x43, "callmethod", "mn",     -1, 1, 0, OP_STACK_ARGS},
 {0x4c, "callproplex", "2n",    -1, 1, 0, OP_STACK_ARGS|OP_STACK_NS},
 {0x46, "callproperty", "2n",   -1, 1, 0, OP_STACK_ARGS|OP_STACK_NS},
 {0x4f, "callpropvoid", "2n",   -1, 0, 0, OP_STACK_ARGS|OP_STACK_NS},
@@ -93,7 +93,7 @@ opcode_t opcodes[]={
 {0x12, "iffalse", "j",         -1, 0, 0, OP_BRANCH},
 {0x18, "ifge", "j",            -2, 0, 0, OP_BRANCH},
 {0x17, "ifgt", "j",            -2, 0, 0, OP_BRANCH},
-{0x16, "ifle", "j"             -2, 0, 0, OP_BRANCH},
+{0x16, "ifle", "j",            -2, 0, 0, OP_BRANCH},
 {0x15, "iflt", "j",            -2, 0, 0, OP_BRANCH},
 {0x0f, "ifnge", "j",           -2, 0, 0, OP_BRANCH},
 {0x0e, "ifngt", "j",           -2, 0, 0, OP_BRANCH},
@@ -115,8 +115,8 @@ opcode_t opcodes[]={
 {0x10, "jump", "j",             0, 0, 0, OP_JUMP},
 {0x08, "kill", "r",             0, 0, 0, OP_REGISTER},
 {0x09, "label", "",             0, 0, 0, OP_LABEL},
-{0xae, "lessequals", "",       -2, 1, 0, OP_BRANCH},
-{0xad, "lessthan", "",         -2, 1, 0, OP_BRANCH},
+{0xae, "lessequals", "",       -2, 1, 0, 0},
+{0xad, "lessthan", "",         -2, 1, 0, 0},
 {0x1b, "lookupswitch", "S",    -1, 0, 0, OP_SWITCH},
 {0xa5, "lshift", "",           -2, 1, 0, 0},
 {0xa4, "modulo", "",           -2, 1, 0, 0},
@@ -125,11 +125,11 @@ opcode_t opcodes[]={
 {0x90, "negate", "",           -1, 1, 0, 0},
 {0xc4, "negate_i", "",         -1, 1, 0, 0},
 {0x57, "newactivation", "",     0, 1, 0, OP_NEED_ACTIVATION},
-{0x56, "newarray", "u",         0, 1, 0, OP_STACK_ARGS},
+{0x56, "newarray", "n",         0, 1, 0, OP_STACK_ARGS},
 {0x5a, "newcatch", "u",         0, 1, 0, 0}, //u = index into exception_info
 {0x58, "newclass", "c",        -1, 1, 0, 0}, //c = index into class_info
 {0x40, "newfunction", "m",      0, 1, 0, 0}, //i = index into method_info
-{0x55, "newobject", "u",        0, 1, 0, OP_STACK_ARGS2},
+{0x55, "newobject", "n",        0, 1, 0, OP_STACK_ARGS2},
 {0x1e, "nextname", "",         -2, 1, 0, 0},
 {0x23, "nextvalue", "",        -2, 1, 0, 0},
 {0x02, "nop", "",               0, 0, 0, 0},
@@ -192,9 +192,14 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
 {
     abc_code_t*head=0;
     abc_code_t*code=0;
+    int start=tag->pos;
     int end=tag->pos+len;
     //printf("-->\n");fflush(stdout);
+
+    abc_code_t**bytepos = rfx_calloc(sizeof(abc_code_t*)*len);
+        
     while(tag->pos<end) {
+        int codepos = tag->pos-start;
         U8 opcode = swf_GetU8(tag);
         opcode_t*op = opcode_get(opcode);
 	if(!op) {
@@ -203,6 +208,10 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
         }
         //printf("%s\n", op->name);fflush(stdout);
         NEW(abc_code_t,c);
+        c->pos = codepos;
+
+        bytepos[codepos] = c;
+
         if(!head) {
             head = code = c;
         } else {
@@ -232,8 +241,9 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
                 data = (void*)(ptroff_t)swf_GetU30(tag);
             } else if(*p == 'b') { // byte
                 data = (void*)(ptroff_t)swf_GetU8(tag);
-            } else if(*p == 'j') { // jump TODO
-                data = (void*)(ptroff_t)swf_GetS24(tag);
+            } else if(*p == 'j') { // jump
+                int j = swf_GetS24(tag);
+                data = (void*)(ptroff_t)j;
             } else if(*p == 's') { // string
                 data = strdup((char*)pool_lookup_string(pool, swf_GetU30(tag)));
             } else if(*p == 'D') { // debug
@@ -242,9 +252,9 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
                 if(type!=1) 
                     fprintf(stderr, "Unknown debug type: %02x\n", type);
                 /*register name*/
-                code->params[0] = strdup((char*)pool_lookup_string(pool, swf_GetU30(tag)));
+                code->data[0] = strdup((char*)pool_lookup_string(pool, swf_GetU30(tag)));
                 /*register index*/
-                code->params[1] = (void*)(ptroff_t)swf_GetU8(tag);
+                code->data[1] = (void*)(ptroff_t)swf_GetU8(tag);
                 /*unused*/
                 swf_GetU30(tag);
             } else if(*p == 'S') { // switch statement TODO
@@ -256,14 +266,58 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
                     swf_GetU24(tag);
                 data = 0;
             } else {
-                printf("Can't parse opcode param type \"%c\"\n", *p);
+                printf("Can't parse opcode param type \"%c\".\n", *p);
                 return 0;
             }
             if(data)
-                code->params[pos++] = data;
+                code->data[pos++] = data;
             p++;
         }
     }
+
+//#define DEBUG_BYTES
+#ifdef DEBUG_BYTES
+    int t;
+    for(t=0;t<len;t++) {
+        abc_code_t*c = bytepos[t];
+        if(c) {
+            opcode_t*op = opcode_get(c->opcode);
+            if(op->flags & (OP_JUMP|OP_BRANCH)) {
+                printf("%5d) %02x %s %d\n", t, tag->data[start+t], op->name, c->data[0]);
+            } else {
+                printf("%5d) %02x %s\n", t, tag->data[start+t], op->name);
+            }
+        } else {
+            printf("%5d) %02x\n", t, tag->data[start+t]);
+        }
+    }
+    printf("%5d) %02x\n", t, tag->data[start+t]);
+#endif
+
+    abc_code_t*c = head;
+    while(c) {
+        opcode_t*op = opcode_get(c->opcode);
+        if(op->flags & (OP_JUMP|OP_BRANCH)) {
+            int j = ((int)(ptroff_t)c->data[0]) + 4;
+#ifdef DEBUG_BYTES
+            printf("%s %d %d\n", op->name, c->pos, j);
+#endif
+            if(c->pos+j < 0 ||
+               c->pos+j > len ||
+              (c->pos+j!=len && !bytepos[c->pos+j])) {
+                /* flex likes to generate these. yuck. */
+                fprintf(stderr, "Invalid jump instruction \"%s\" from %d to %d (%d)\n", op->name, c->pos, c->pos+j, len);
+                code->branch = 0;
+            } else {
+                if(c->pos==len)
+                    code->branch = 0;
+                else
+                    code->branch = bytepos[c->pos+j];
+            }
+        }
+        c = c->next;
+    } 
+    free(bytepos);
     return head;
 }
 
@@ -275,13 +329,13 @@ void code_free(abc_code_t*c)
         char*p = op?op->params:"";
         int pos=0;
         while(*p) {
-            void*data = c->params[pos];
+            void*data = c->data[pos];
             if(*p == '2') { //multiname
                 multiname_destroy(data);
             } else if(strchr("sD", *p)) {
                 free(data);
             }
-            c->params[pos]=0;
+            c->data[pos]=0;
             p++;pos++;
         }
         memset(c, 0, sizeof(c));
@@ -308,7 +362,7 @@ int code_dump(abc_code_t*c, abc_file_t*file, char*prefix, FILE*fo)
             char first = 1;
             int pos=0;
             while(*p) {
-                void*data = c->params[pos];
+                void*data = c->data[pos];
                 if(pos>0)
                     printf(", ");
 
@@ -346,7 +400,7 @@ int code_dump(abc_code_t*c, abc_file_t*file, char*prefix, FILE*fo)
                 } else if(*p == 's') {
                     fprintf(fo, "\"%s\"", data);
                 } else if(*p == 'D') {
-                    fprintf(fo, "[register %02x=%s]", (ptroff_t)c->params[1], (char*)c->params[0]);
+                    fprintf(fo, "[register %02x=%s]", (ptroff_t)c->data[1], (char*)c->data[0]);
                 } else if(*p == 'S') {
                     fprintf(fo, "[switch data]");
                 } else {
@@ -364,10 +418,10 @@ int code_dump(abc_code_t*c, abc_file_t*file, char*prefix, FILE*fo)
     return 1;
 }
 
-int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
+static int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
 {
-    opcode_t*c = opcode_get(code->opcode);
-    char*p = c->params;
+    opcode_t*op = opcode_get(code->opcode);
+    char*p = op->params;
     int pos = 0;
     int len = 0;
     
@@ -376,7 +430,7 @@ int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
     len++;
 
     while(*p) {
-        void*data = code->params[pos++];
+        void*data = code->data[pos++];
         assert(pos<=2);
         if(*p == 'n') { // number
             len += swf_SetU30(tag, (ptroff_t)data);
@@ -409,9 +463,9 @@ int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
             if(tag)
                 swf_SetU8(tag, 1);
             len++;
-            len+=swf_SetU30(tag, pool_register_string(pool,code->params[0]));
+            len+=swf_SetU30(tag, pool_register_string(pool,code->data[0]));
             if(tag)
-                swf_SetU8(tag, (ptroff_t)code->params[1]);
+                swf_SetU8(tag, (ptroff_t)code->data[1]);
             len++;
             len+=swf_SetU30(tag, 0);
         } else if(*p == 'S') { // switch statement
@@ -426,6 +480,180 @@ int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
     return len;
 }
 
+void code_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
+{
+    int pos = 0;
+    int length = 0;
+    abc_code_t*c = code;
+    while(c) {
+        c->pos = pos;
+        pos += opcode_write(0, c, pool, file);
+        c = c->next;
+    }
+    length = pos;
+    swf_SetU30(tag, pos);
+    int start = tag->len;
+    c = code;
+    pos = 0;
+    while(c) {
+        opcode_t*op = opcode_get(code->opcode);
+        if(op->flags&(OP_BRANCH|OP_JUMP)) {
+            int skip = 0;
+            if(c->branch)
+                skip = (c->branch->pos) - pos - 4;
+            else
+                skip = length - pos - 4;
+            c->data[0] = (void*)(ptroff_t)skip;
+        }
+        pos += opcode_write(tag, c, pool, file);
+        c = c->next;
+    }
+    assert(tag->len - start == pos);
+}
+
+
+typedef struct {
+    int stackpos;
+    int scopepos;
+    abc_code_t*code;
+    char seen;
+} stackpos_t;
+
+typedef struct {
+    stackpos_t*stack;
+    int num;
+    int maxlocal;
+    int maxstack;
+    int maxscope;
+} currentstats_t;
+
+static int stack_minus(abc_code_t*c)
+{
+    opcode_t*op = opcode_get(c->opcode);
+    assert(op->stack_minus<=0);
+    int stack = op->stack_minus;
+    if(op->flags&OP_STACK_NS) {
+        multiname_t*m = (multiname_t*)c->data[0];
+        stack--; //read namespace
+        if(m->type == RTQNAMEL || m->type == RTQNAMELA) {
+            stack--; //read name
+        }
+    } 
+    if(op->flags&OP_STACK_ARGS || op->flags&OP_STACK_ARGS2) {
+        assert(strchr(op->params, 'n'));
+        int nr = (ptroff_t)(op->params[0]=='n'?c->data[0]:c->data[1]);
+        stack-=nr;
+        if(op->flags&OP_STACK_ARGS2)
+            stack-=nr;
+    }
+    return stack;
+}
+static void handleregister(currentstats_t*stats, int reg)
+{
+    if(reg > stats->maxlocal)
+        stats->maxlocal = reg;
+}
+
+static void callcode(currentstats_t*stats, int pos, int stack, int scope)
+{
+    while(pos<stats->num) {
+        if(stats->stack[pos].seen) {
+            if(stats->stack[pos].stackpos != stack ||
+               stats->stack[pos].scopepos != scope) {
+                fprintf(stderr, "Stack mismatch at pos %d\n", pos);
+            }
+            return;
+        }
+        stats->stack[pos].seen = 1;
+        stats->stack[pos].stackpos = stack;
+        stats->stack[pos].scopepos = scope;
+
+        abc_code_t*c = stats->stack[pos].code;
+        opcode_t*op = opcode_get(c->opcode);
+
+        stack += stack_minus(c);
+
+        if(stack<0) {
+            fprintf(stderr, "error: stack underflow at %d (%s)\n", pos, op->name);
+            return;
+        }
+
+        stack += op->stack_plus;
+        scope += op->scope_stack_plus;
+
+        if(stack > stats->maxstack)
+            stats->maxstack = stack;
+        if(scope > stats->maxscope)
+            stats->maxscope = scope;
+        
+        if(op->flags & OP_REGISTER) {
+            char*p = op->params;
+            int pos = 0;
+            char ok=0;
+            while(*p) {
+                if(*p=='r') {
+                    handleregister(stats, (ptroff_t)c->data[pos]);
+                    ok = 1;
+                }
+                p++;
+            }
+            if(!ok) {
+                handleregister(stats, c->opcode&3);
+            }
+        }
+        if(op->flags & (OP_THROW|OP_RETURN))
+            return;
+        if(op->flags & OP_JUMP) {
+            c = c->branch;
+            pos = c->pos;
+            continue;
+        }
+        if(op->flags & OP_BRANCH) {
+            int newpos = c->branch->pos;
+            callcode(stats, newpos, stack, scope);
+        }
+    
+        pos++;
+        if(pos<stats->num) {
+            assert(c->next == stats->stack[pos].code);
+        }
+    }
+}
+
+codestats_t code_get_statistics(abc_code_t*code) 
+{
+    int num = 0;
+    abc_code_t*c = code;
+    while(c) {
+        num++;
+        c = c->next;
+    }
+    currentstats_t current;
+    current.stack = rfx_calloc(sizeof(stackpos_t)*num);
+    current.maxlocal = 0;
+    current.maxstack = 0;
+    current.maxscope = 0;
+    current.num = num;
+
+    num = 0;
+    c = code;
+    while(c) {
+        //crosslink
+        current.stack[num].code = c;
+        c->pos = num;
+        num++;
+        c = c->next;
+    }
+    callcode(&current, 0, 0, 0);
+
+    free(current.stack);
+
+    codestats_t stats;
+    stats.local_count = current.maxlocal;
+    stats.max_stack = current.maxstack;
+    stats.max_scope_depth = current.maxscope;
+    return stats;
+}
 abc_code_t* add_opcode(abc_code_t*atag, U8 op)
 {
     abc_code_t*tmp = (abc_code_t*)malloc(sizeof(abc_code_t));
