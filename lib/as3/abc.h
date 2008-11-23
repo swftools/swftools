@@ -24,77 +24,43 @@
 #ifndef __swfabc_h__
 #define __swfabc_h__
 
-#include "utils.h"
+#include "../q.h"
+#include "pool.h"
 
 DECLARE(abc_file);
 DECLARE(abc_method_body);
 DECLARE(abc_interface);
-DECLARE(abc_multiname);
-DECLARE(abc_namespace);
+DECLARE(abc_code);
+DECLARE(abc_class);
 
-DECLARE_LIST(abc_multiname);
+DECLARE(trait);
 
 typedef struct _abc_method {
-    abc_multiname_t*return_type;
-    abc_multiname_list_t*parameters;
+    multiname_t*return_type;
+    multiname_list_t*parameters;
     const char*name;
     U8 flags;
-
-    int index;
-    int method_body_index;
+    abc_method_body_t*body;
+    
+    int index; //filled in during writing
 } abc_method_t;
 
-typedef enum multiname_type
-{QNAME=0x07,
- QNAMEA=0x0D,
- RTQNAME=0x0F,
- RTQNAMEA=0x10,
- RTQNAMEL=0x11,
- RTQNAMELA=0x12,
- MULTINAME=0x09,
- MULTINAMEA=0x0E,
- MULTINAMEL=0x1B,
- MULTINAMELA=0x1C
-} multiname_type_t;
-
-struct _abc_namespace {
-    U8 access;
-    char*name;
-};
-
-struct _abc_multiname {
-    multiname_type_t type;
-    abc_namespace_t*ns;
-    const char*namespace_set_name; // FIXME should be a struct
-    const char*name;
-};
-
 struct _abc_file {
-
-    // contant_pool
-
-    dict_t*ints;
-    dict_t*uints;
-    dict_t*floats;
-    dict_t*strings;
-    dict_t*namespaces;
-    dict_t*namespace_sets;
-    dict_t*sets;
-    dict_t*multinames;
-
     // abc_file
 
-    dict_t*methods;
-    dict_t*classes;
-    dict_t*scripts;
-    dict_t*method_bodies;
+    const char*name;
+    array_t*metadata;
+    array_t*methods;
+    array_t*classes;
+    array_t*scripts;
+    array_t*method_bodies;
 };
 
 abc_file_t*abc_file_new();
 
-typedef struct _abc_trait {
+struct _trait {
     unsigned char type;
-    int name_index;
+    multiname_t*name;
 
     union {
         int disp_id;
@@ -102,33 +68,34 @@ typedef struct _abc_trait {
         int data1;
     };
     union {
-        int nr;
-        int cls;
-        int type_index;
+        abc_method_t*method;
+        abc_class_t*cls;
+        multiname_t*type_name;
         int data2;
     };
     int vindex;
     int vkind;
-} abc_trait_t;
+};
 
-typedef struct _abc_class {
-    int index;
+struct _abc_class {
     abc_file_t*pool;
     
-    const char*classname;
-    const char*superclass;
+    multiname_t*classname;
+    multiname_t*superclass;
     const char*protectedNS;
 
-    abc_multiname_list_t*interfaces;
+    multiname_list_t*interfaces;
 
-    int iinit;
+    abc_method_t*constructor;
     U8 flags;
     
-    int static_constructor_index;
-    dict_t*static_constructor_traits;
+    abc_method_t*static_constructor;
 
-    dict_t*traits;
-} abc_class_t;
+    trait_list_t*static_constructor_traits;
+    trait_list_t*traits;
+    
+    int index; //filled in during writing
+};
 
 abc_class_t* abc_class_new(abc_file_t*pool, char*classname, char*superclass);
 void abc_class_sealed(abc_class_t*c);
@@ -140,18 +107,28 @@ abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype,
 abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int num_params, ...);
 abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...);
 
+struct _abc_code {
+    U8 opcode;
+    U8 len;
+    void*params[2];
+    abc_code_t*next;
+    abc_code_t*prev;
+    abc_code_t*parent;
+};
+
 struct _abc_method_body {
-    int index;
     abc_file_t*pool;
     //abc_class_t*cls;
     abc_method_t*method;
-    TAG*tag;
+    abc_code_t*code;
     int max_stack;
     int local_count;
     int init_scope_depth;
     int max_scope_depth;
     int exception_count;
-    dict_t*traits;
+    trait_list_t*traits;
+    
+    int index; // filled in during writing
 };
 
 typedef struct _abc_label {
@@ -160,9 +137,11 @@ typedef struct _abc_label {
 typedef struct _abc_script {
     abc_method_t*method;
     abc_file_t*pool;
-    dict_t*traits;
+    trait_list_t*traits;
 } abc_script_t;
 
 abc_script_t* abc_initscript(abc_file_t*pool, char*returntype, int num_params, ...);
+
+#define __ 
 
 #endif
