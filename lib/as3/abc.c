@@ -922,10 +922,11 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 {
     abc_file_t* file = (abc_file_t*)code;
         
-    if(file->name)
+    if(file->name) {
         fprintf(fo, "%s#\n", prefix);
         fprintf(fo, "%s#name: %s\n", prefix, file->name);
         fprintf(fo, "%s#\n", prefix);
+    }
 
     int t;
     for(t=0;t<file->metadata->num;t++) {
