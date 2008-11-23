@@ -12,7 +12,7 @@ abc_code_t* abc_add_i(abc_code_t*prev)
 abc_code_t* abc_astype(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x86);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_astypelate(abc_code_t*prev)
@@ -43,56 +43,56 @@ abc_code_t* abc_bitxor(abc_code_t*prev)
 abc_code_t* abc_call(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x41);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callmethod(abc_code_t*prev, abc_method_body_t* m, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x43);
-    self->data[0] = m;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = m;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callproplex(abc_code_t*prev, char* name, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x4c);
-    self->data[0] = name;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = name;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callproperty(abc_code_t*prev, char* name, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x46);
-    self->data[0] = name;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = name;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callpropvoid(abc_code_t*prev, char* name, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x4f);
-    self->data[0] = name;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = name;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callstatic(abc_code_t*prev, abc_method_t* m, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x44);
-    self->data[0] = m;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = m;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callsuper(abc_code_t*prev, char* name, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x45);
-    self->data[0] = name;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = name;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_callsupervoid(abc_code_t*prev, char* name, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x4e);
-    self->data[0] = name;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = name;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_checkfilter(abc_code_t*prev)
@@ -103,7 +103,7 @@ abc_code_t* abc_checkfilter(abc_code_t*prev)
 abc_code_t* abc_coerce(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x80);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_coerce_a(abc_code_t*prev)
@@ -119,20 +119,20 @@ abc_code_t* abc_coerce_s(abc_code_t*prev)
 abc_code_t* abc_construct(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x42);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_constructprop(abc_code_t*prev, char* name, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x4a);
-    self->data[0] = name;
-    self->data[1] = (void*)(ptroff_t)v;
+    self->params[0] = name;
+    self->params[1] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_constructsuper(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x49);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_convert_b(abc_code_t*prev)
@@ -174,25 +174,25 @@ abc_code_t* abc_debug(abc_code_t*prev, void* debuginfo)
 abc_code_t* abc_debugfile(abc_code_t*prev, char* s)
 {
     abc_code_t*self = add_opcode(prev, 0xf1);
-    self->data[0] = strdup(s);
+    self->params[0] = strdup(s);
     return self;
 }
 abc_code_t* abc_debugline(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0xf0);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_declocal(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0x94);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_declocal_i(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0xc3);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_decrement(abc_code_t*prev)
@@ -208,7 +208,7 @@ abc_code_t* abc_decrement_i(abc_code_t*prev)
 abc_code_t* abc_deleteproperty(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x6a);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_divide(abc_code_t*prev)
@@ -224,7 +224,7 @@ abc_code_t* abc_dup(abc_code_t*prev)
 abc_code_t* abc_dxns(abc_code_t*prev, char* s)
 {
     abc_code_t*self = add_opcode(prev, 0x06);
-    self->data[0] = strdup(s);
+    self->params[0] = strdup(s);
     return self;
 }
 abc_code_t* abc_dxnslate(abc_code_t*prev)
@@ -250,19 +250,19 @@ abc_code_t* abc_esc_xelem(abc_code_t*prev)
 abc_code_t* abc_findproperty(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x5e);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_findpropstrict(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x5d);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_getdescendants(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x59);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_getglobalscope(abc_code_t*prev)
@@ -273,19 +273,19 @@ abc_code_t* abc_getglobalscope(abc_code_t*prev)
 abc_code_t* abc_getglobalslot(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x6e);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_getlex(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x60);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_getlocal(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0x62);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_getlocal_0(abc_code_t*prev)
@@ -311,25 +311,25 @@ abc_code_t* abc_getlocal_3(abc_code_t*prev)
 abc_code_t* abc_getproperty(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x66);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_getscopeobject(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x65);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_getslot(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x6c);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_getsuper(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x04);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_greaterequals(abc_code_t*prev)
@@ -345,92 +345,92 @@ abc_code_t* abc_hasnext(abc_code_t*prev)
 abc_code_t* abc_hasnext2(abc_code_t*prev, int reg, int reg2)
 {
     abc_code_t*self = add_opcode(prev, 0x32);
-    self->data[0] = (void*)(ptroff_t)reg;
-    self->data[1] = (void*)(ptroff_t)reg2;
+    self->params[0] = (void*)(ptroff_t)reg;
+    self->params[1] = (void*)(ptroff_t)reg2;
     return self;
 }
 abc_code_t* abc_ifeq(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x13);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_iffalse(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x12);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifge(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x18);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifgt(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x17);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifle(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x16);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_iflt(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x15);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifnge(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x0f);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifngt(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x0e);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifnle(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x0d);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifnlt(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x0c);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifne(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x14);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifstricteq(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x19);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_ifstrictne(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x1a);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_iftrue(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x11);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_in(abc_code_t*prev)
@@ -441,13 +441,13 @@ abc_code_t* abc_in(abc_code_t*prev)
 abc_code_t* abc_inclocal(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0x92);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_inclocal_i(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0xc2);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_increment(abc_code_t*prev)
@@ -463,7 +463,7 @@ abc_code_t* abc_increment_i(abc_code_t*prev)
 abc_code_t* abc_initproperty(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x68);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_instanceof(abc_code_t*prev)
@@ -474,7 +474,7 @@ abc_code_t* abc_instanceof(abc_code_t*prev)
 abc_code_t* abc_istype(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0xb2);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_istypelate(abc_code_t*prev)
@@ -485,13 +485,13 @@ abc_code_t* abc_istypelate(abc_code_t*prev)
 abc_code_t* abc_jump(abc_code_t*prev, abc_code_t* label)
 {
     abc_code_t*self = add_opcode(prev, 0x10);
-    self->data[0] = label;
+    self->params[0] = label;
     return self;
 }
 abc_code_t* abc_kill(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0x08);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_label(abc_code_t*prev)
@@ -553,31 +553,31 @@ abc_code_t* abc_newactivation(abc_code_t*prev)
 abc_code_t* abc_newarray(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x56);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_newcatch(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x5a);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_newclass(abc_code_t*prev, abc_class_t* m)
 {
     abc_code_t*self = add_opcode(prev, 0x58);
-    self->data[0] = m;
+    self->params[0] = m;
     return self;
 }
 abc_code_t* abc_newfunction(abc_code_t*prev, abc_method_body_t* m)
 {
     abc_code_t*self = add_opcode(prev, 0x40);
-    self->data[0] = m;
+    self->params[0] = m;
     return self;
 }
 abc_code_t* abc_newobject(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x55);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_nextname(abc_code_t*prev)
@@ -613,13 +613,13 @@ abc_code_t* abc_popscope(abc_code_t*prev)
 abc_code_t* abc_pushbyte(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x24);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_pushdouble(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x2f);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_pushfalse(abc_code_t*prev)
@@ -630,13 +630,13 @@ abc_code_t* abc_pushfalse(abc_code_t*prev)
 abc_code_t* abc_pushint(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x2d);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_pushnamespace(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x31);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_pushnan(abc_code_t*prev)
@@ -657,13 +657,13 @@ abc_code_t* abc_pushscope(abc_code_t*prev)
 abc_code_t* abc_pushshort(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x25);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_pushstring(abc_code_t*prev, char* s)
 {
     abc_code_t*self = add_opcode(prev, 0x2c);
-    self->data[0] = strdup(s);
+    self->params[0] = strdup(s);
     return self;
 }
 abc_code_t* abc_pushtrue(abc_code_t*prev)
@@ -674,7 +674,7 @@ abc_code_t* abc_pushtrue(abc_code_t*prev)
 abc_code_t* abc_pushuint(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x2e);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_pushundefined(abc_code_t*prev)
@@ -705,7 +705,7 @@ abc_code_t* abc_rshift(abc_code_t*prev)
 abc_code_t* abc_setlocal(abc_code_t*prev, int reg)
 {
     abc_code_t*self = add_opcode(prev, 0x63);
-    self->data[0] = (void*)(ptroff_t)reg;
+    self->params[0] = (void*)(ptroff_t)reg;
     return self;
 }
 abc_code_t* abc_setlocal_0(abc_code_t*prev)
@@ -731,25 +731,25 @@ abc_code_t* abc_setlocal_3(abc_code_t*prev)
 abc_code_t* abc_setglobalslot(abc_code_t*prev, int v)
 {
     abc_code_t*self = add_opcode(prev, 0x6f);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->params[0] = (void*)(ptroff_t)v;
     return self;
 }
 abc_code_t* abc_setproperty(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x61);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_setslot(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x6d);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_setsuper(abc_code_t*prev, char* name)
 {
     abc_code_t*self = add_opcode(prev, 0x05);
-    self->data[0] = name;
+    self->params[0] = name;
     return self;
 }
 abc_code_t* abc_strictequals(abc_code_t*prev)
