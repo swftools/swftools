@@ -91,7 +91,7 @@ struct _abc_class {
     
     multiname_t*classname;
     multiname_t*superclass;
-    const char*protectedNS;
+    namespace_t*protectedNS;
 
     multiname_list_t*interfaces;
 
@@ -106,11 +106,13 @@ struct _abc_class {
     int index; //filled in during writing
 };
 
-abc_class_t* abc_class_new(abc_file_t*pool, char*classname, char*superclass);
+abc_class_t* abc_class_new(abc_file_t*pool, multiname_t*classname, multiname_t*superclass);
+abc_class_t* abc_class_new2(abc_file_t*pool, char*classname, char*superclass);
 void abc_class_sealed(abc_class_t*c);
 void abc_class_final(abc_class_t*c);
 void abc_class_interface(abc_class_t*c);
 void abc_class_protectedNS(abc_class_t*c, char*namespace);
+void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
 
 abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype, int num_params, ...);
 abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int num_params, ...);
