@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <memory.h>
 #include "mem.h"
+#include "types.h"
 #include "q.h"
 
 // ------------------------------- malloc, alloc routines ---------------------
@@ -292,7 +293,11 @@ void string_set2(string_t*str, const char*text, int len)
 }
 void string_set(string_t*str, const char*text)
 {
-    str->len = strlen(text);
+    if(text) {
+        str->len = strlen(text);
+    } else {
+        str->len = 0;
+    }
     str->str = text;
 }
 string_t string_new(const char*text, int len)
@@ -305,7 +310,11 @@ string_t string_new(const char*text, int len)
 string_t string_new2(const char*text)
 {
     string_t s;
-    s.len = strlen(text);
+    if(text) {
+        s.len = strlen(text);
+    } else {
+        s.len = 0;
+    }
     s.str = text;
     return s;
 }
@@ -578,11 +587,12 @@ void dict_dump(dict_t*h, FILE*fi, const char*prefix)
         }
     }
 }
+
 int dict_count(dict_t*h)
 {
     return h->num;
 }
-void* dict_lookup2(dict_t*h, const char*s, int len)
+void* dict_lookup4(dict_t*h, const char*s, int len, const void*data)
 {
     if(!h->num)
         return 0;
@@ -613,12 +623,21 @@ void* dict_lookup2(dict_t*h, const char*s, int len)
 
     /* check subsequent entries for a match */
     while(e) {
-        if(e->len == len && !memcmp(e->s, s, len)) {
+        if(e->len == len && !memcmp(e->s, s, len) && (!data || data==e->data)) {
             return e->data;
         }
         e = e->next;
     }
     return 0;
+}
+void* dict_lookup3(dict_t*h, const char*s, const void*data)
+{
+    int l = strlen(s);
+    return dict_lookup4(h, s, l, data);
+}
+void* dict_lookup2(dict_t*h, const char*s, int len)
+{
+    return dict_lookup4(h, s, len, 0);
 }
 void* dict_lookup(dict_t*h, const char*s)
 {
@@ -653,6 +672,16 @@ char dict_del(dict_t*h, const char*s)
     }
     return 0;
 }
+
+static dictentry_t* dict_get_all(dict_t*h, const char*s)
+{
+    if(!h->num)
+        return 0;
+    unsigned int ohash = string_hash2(s);
+    unsigned int hash = ohash % h->hashsize;
+    return h->slots[hash];
+}
+
 void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*key, void*val), void*data)
 {
     int t;
@@ -683,6 +712,7 @@ void dict_foreach_value(dict_t*h, void (*runFunction)(void*))
         }
     }
 }
+
 void dict_free_all(dict_t*h, void (*freeFunction)(void*))
 {
     int t;
@@ -702,10 +732,12 @@ void dict_free_all(dict_t*h, void (*freeFunction)(void*))
     rfx_free(h->slots);
     memset(h, 0, sizeof(dict_t));
 }
+
 void dict_clear(dict_t*h) 
 {
     dict_free_all(h, 0);
 }
+
 void dict_destroy(dict_t*dict)
 {
     dict_clear(dict);
@@ -767,3 +799,140 @@ void map_destroy(map_t*map)
     rfx_free(map);
 }
 
+// ------------------------------- array_t --------------------------------------
+
+array_t* array_new() {
+    array_t*d = malloc(sizeof(array_t));
+    memset(d, 0, sizeof(array_t));
+    d->entry2pos = dict_new();
+    return d;
+}
+void array_free(array_t*array) {
+    dict_destroy(array->entry2pos);
+    array->entry2pos;
+    if(array->d) {
+        free(array->d);array->d = 0;
+    }
+    free(array);
+}
+const char*array_getkey(array_t*array, int nr) {
+    if(nr > array->num || nr<0) {
+	printf("error: reference to element %d in array[%d]\n", nr, array->num);
+        *(int*)0 = 0;
+	return 0;
+    }
+    return array->d[nr].name;
+}
+char*array_getvalue(array_t*array, int nr) {
+    if(nr > array->num || nr<0) {
+	printf("error: reference to element %d in array[%d]\n", nr, array->num);
+        *(int*)0 = 0;
+	return 0;
+    }
+    return array->d[nr].data;
+}
+int array_append(array_t*array, const char*name, const void*data) {
+    while(array->size <= array->num) {
+	array->size += 64;
+	if(!array->d) {
+	    array->d = malloc(sizeof(array_entry_t)*array->size);
+	} else {
+	    array->d = realloc(array->d, sizeof(array_entry_t)*array->size);
+	}
+    }
+    if(name) {
+	array->d[array->num].name = strdup(name);
+    } else {
+	array->d[array->num].name = 0;
+    }
+    array->d[array->num].data = (void*)data;
+    dict_put2(array->entry2pos, name, (void*)(ptroff_t)(array->num+1));
+    return array->num++;
+}
+int array_find(array_t*array, const char*name)
+{
+    if(!name)
+	name = "";
+    int pos = (int)(ptroff_t)dict_lookup(array->entry2pos, name);
+    return pos-1;
+}
+int array_find2(array_t*array, const char*name, void*data)
+{
+    if(!name)
+	name = "";
+    int len= strlen(name);
+
+    dictentry_t*e = dict_get_all(array->entry2pos, name);
+
+    while(e) {
+        int index = ((int)(ptroff_t)e->data) - 1;
+        if(e->len == len && !memcmp(e->s, name, len) && array->d[index].data == data) {
+            return index;
+        }
+        e = e->next;
+    }
+    return -1;
+}
+int array_update(array_t*array, const char*name, void*data) {
+    int pos = array_find(array, name);
+    if(pos>=0) {
+	array->d[pos].data = data;
+	return pos;
+    }
+    return array_append(array, name, data);
+}
+int array_append_if_new(array_t*array, const char*name, void*data) {
+    int pos = array_find(array, name);
+    if(pos>=0)
+	return pos;
+    return array_append(array, name, data);
+}
+
+// ------------------------------- list_t --------------------------------------
+
+struct _commonlist;
+typedef struct _listinfo {
+    int size;
+    struct _commonlist*last;
+} listinfo_t;
+
+typedef struct _commonlist {
+    void*entry;
+    struct _commonlist*next;
+    listinfo_t info[0];
+} commonlist_t;
+
+int list_length(void*_list)
+{
+    commonlist_t*l = (commonlist_t*)_list;
+    if(!l)
+        return 0;
+    return l->info[0].size;
+}
+void list_append_(void*_list, void*entry)
+{
+    commonlist_t**list = (commonlist_t**)_list;
+    commonlist_t* n = 0;
+    if(!*list) {
+        n = malloc(sizeof(commonlist_t)+sizeof(listinfo_t));
+        *list = n;
+    } else {
+        n = malloc(sizeof(commonlist_t));
+        (*list)->info[0].last->next = n;
+    }
+    n->next = 0;
+    n->entry = entry;
+    (*list)->info[0].last = n;
+    (*list)->info[0].size++;
+}
+void list_free_(void*_list) 
+{
+    commonlist_t**list = (commonlist_t**)_list;
+    commonlist_t*l = *list;
+    while(l) {
+        commonlist_t*next = l->next;
+        free(l);
+        l = next;
+    }
+    *list = 0;
+}

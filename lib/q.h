@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#define NEW(t,y) t*y = (t*)malloc(sizeof(t));memset(y, 0, sizeof(t));
+
 /* dynamically growing mem section */
 typedef struct _mem_t {
     char*buffer;
@@ -68,6 +70,19 @@ typedef struct _dict {
     int num;
 } dict_t;
 
+/* array of key/value pairs, with fast lookup */
+typedef struct _array_entry {
+    const char*name;
+    void*data;
+} array_entry_t;
+
+typedef struct _array {
+    int num;
+    int size;
+    array_entry_t*d;
+    dict_t*entry2pos;
+} array_t;
+
 /* array of strings, string<->int mapping,
    with O(1) for int->string lookup and
         ~O(n/hashsize) for string->int lookup */
@@ -86,6 +101,8 @@ typedef struct _heap
     int max_size;
     int(*compare)(const void *, const void *);
 } heap_t;
+
+char* strdup_n(const char*str, int size);
 
 void mem_init(mem_t*mem);
 int mem_put(mem_t*m, void*data, int length);
@@ -111,6 +128,7 @@ int string_equals(string_t*str, const char*text);
 
 void stringarray_init(stringarray_t*sa, int hashsize);
 void stringarray_put(stringarray_t*sa, string_t str);
+
 char* stringarray_at(stringarray_t*sa, int pos);
 string_t stringarray_at2(stringarray_t*sa, int pos);
 int stringarray_find(stringarray_t*sa, string_t*str);
@@ -122,16 +140,16 @@ void dict_init(dict_t*dict);
 void dict_put(dict_t*dict, string_t t1, void* t2);
 void dict_put2(dict_t*dict, const char* t1, void* t2);
 void dict_put3(dict_t*dict, const char* t1, int len, void* t2);
-
-stringarray_t* dict_index(dict_t*dict);
-int dict_count(dict_t* dict);
-void* dict_lookup(dict_t*dict, const char*name);
-void dict_dump(dict_t*dict, FILE*fi, const char*prefix);
-char dict_del(dict_t*dict, const char* name);
+int dict_count(dict_t*h);
+void dict_dump(dict_t*h, FILE*fi, const char*prefix);
+void* dict_lookup3(dict_t*h, const char*s, const void*data);
+void* dict_lookup2(dict_t*h, const char*s, int len);
+void* dict_lookup(dict_t*h, const char*s);
+char dict_del(dict_t*h, const char*s);
 void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*key, void*val), void*data);
 void dict_foreach_value(dict_t*h, void (*runFunction)(void*));
 void dict_free_all(dict_t*h, void (*freeFunction)(void*));
-void dict_clear(dict_t*dict);
+void dict_clear(dict_t*h);
 void dict_destroy(dict_t*dict);
 
 void map_init(map_t*map);
@@ -150,7 +168,29 @@ void* heap_chopmax(heap_t*h);
 void heap_dump(heap_t*h, FILE*fi);
 void** heap_flatten(heap_t*h);
 
-char* strdup_n(const char*str, int size);
+array_t* array_new();
+void array_free(array_t*array);
+const char*array_getkey(array_t*array, int nr);
+char*array_getvalue(array_t*array, int nr);
+int array_append(array_t*array, const char*name, const void*data);
+int array_find(array_t*array, const char*name);
+int array_find2(array_t*array, const char*name, void*data);
+int array_update(array_t*array, const char*name, void*data);
+int array_append_if_new(array_t*array, const char*name, void*data);
+
+#define DECLARE(x) struct _##x;typedef struct _##x x##_t;
+#define DECLARE_LIST(x) \
+struct _##x##_list { \
+    struct _##x* x; \
+    struct _##x##_list*next; \
+}; \
+typedef struct _##x##_list x##_list_t;
+int list_length(void*_list);
+void list_append_(void*_list, void*entry);
+void list_free_(void*_list);
+#define list_new() ((void*)0)
+#define list_append(list, e) {sizeof((list)->next);list_append_(&(list),(e));}
+#define list_free(list) {sizeof((list)->next);list_free_(&(list));}
 
 #ifdef __cplusplus
 }
