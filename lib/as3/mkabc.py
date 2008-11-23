@@ -68,21 +68,21 @@ for line in fi.readlines():
         i = 0
         for pname,c in zip(names,params):
             if(c == "2"):
-                foc.write("    self->params[%d] = %s;\n" % (i,pname));
+                foc.write("    self->data[%d] = %s;\n" % (i,pname));
             elif(c in "nur"):
-                foc.write("    self->params[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
+                foc.write("    self->data[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
             elif(c == "b"):
-                foc.write("    self->params[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
+                foc.write("    self->data[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
             elif(c == "s"):
-                foc.write("    self->params[%d] = strdup(%s);\n" % (i,pname))
+                foc.write("    self->data[%d] = strdup(%s);\n" % (i,pname))
             elif(c == "m"):
-                foc.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->data[%d] = %s;\n" % (i,pname))
             elif(c == "c"):
-                foc.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->data[%d] = %s;\n" % (i,pname))
             elif(c == "i"):
-                foc.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->data[%d] = %s;\n" % (i,pname))
             elif(c == "j"):
-                foc.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->data[%d] = %s;\n" % (i,pname))
             elif(c == "S"):
                 foc.write("    /* FIXME: write labels %s */\n" % pname)
             elif(c == "D"):
