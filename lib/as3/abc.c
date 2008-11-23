@@ -218,6 +218,9 @@ opcode_t* opcode_get(U8 op)
     return 0;
 }
 
+/* TODO: switch to a datastructure with just values */
+#define NO_KEY ""
+
 abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
 {
     abc_code_t*head=0;
@@ -547,9 +550,10 @@ abc_file_t*abc_file_new()
 #define CLASS_PROTECTED_NS 8
 
 abc_class_t* abc_class_new(abc_file_t*pool, multiname_t*classname, multiname_t*superclass) {
-    abc_class_t* c = malloc(sizeof(abc_class_t));
-    memset(c, 0, sizeof(abc_class_t));
-    c->index = array_append(pool->classes, classname->name, c);
+    
+    NEW(abc_class_t,c);
+    array_append(pool->classes, NO_KEY, c);
+
     c->pool = pool;
     c->classname = classname;
     c->superclass = superclass;
@@ -589,16 +593,16 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
 abc_method_body_t* add_method(abc_file_t*pool, abc_class_t*cls, char*returntype, int num_params, va_list va)
 {
     /* construct code (method body) object */
-    abc_method_body_t* c = malloc(sizeof(abc_method_body_t));
-    memset(c, 0, sizeof(abc_method_body_t));
-    c->index = array_append(pool->method_bodies, 0, c);
+    NEW(abc_method_body_t,c);
+    array_append(pool->method_bodies, NO_KEY, c);
     c->pool = pool;
     c->traits = list_new();
     c->code = 0;
 
     /* construct method object */
     NEW(abc_method_t,m);
-    m->index = array_append(pool->methods, 0, m);
+    array_append(pool->methods, NO_KEY, m);
+
     if(returntype && strcmp(returntype, "void")) {
 	m->return_type = multiname_fromstring(returntype);
     } else {
@@ -650,6 +654,17 @@ trait_t*trait_new(int type, multiname_t*name, int data1, int data2, int vindex, 
     trait->vkind = vkind;
     return trait;
 }
+trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
+{
+    int type = TRAIT_METHOD;
+    trait_t*trait = malloc(sizeof(trait_t));
+    memset(trait, 0, sizeof(trait_t));
+    trait->kind = type&0x0f;
+    trait->attributes = type&0xf0;
+    trait->name = name;
+    trait->method = m;
+    return trait;
+}
 
 abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...)
 {
@@ -658,7 +673,7 @@ abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name,
     va_start(va, num_params);
     abc_method_body_t* c = add_method(cls->pool, cls, returntype, num_params, va);
     va_end(va);
-    list_append(cls->traits, trait_new(TRAIT_METHOD, multiname_fromstring(name), 0, c->method->index, 0, 0));
+    list_append(cls->traits, trait_new_method(multiname_fromstring(name), c->method));
     return c;
 }
 
@@ -698,7 +713,7 @@ abc_script_t* abc_initscript(abc_file_t*pool, char*returntype, int num_params, .
     s->method = c->method;
     s->traits = list_new();
     s->pool = pool;
-    array_append(pool->scripts, 0, s);
+    array_append(pool->scripts, NO_KEY, s);
     va_end(va);
     return s;
 }
@@ -707,7 +722,7 @@ static void dump_traits(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 
 static void dump_method(FILE*fo, const char*prefix, const char*type, const char*name, abc_method_t*m, abc_file_t*file)
 {
-    const char*return_type = "";
+    const char*return_type = "void";
     if(m->return_type)
         return_type = multiname_to_string(m->return_type);
 
@@ -1024,7 +1039,10 @@ void* swf_ReadABC(TAG*tag)
 	NEW(abc_method_t,m);
 	int param_count = swf_GetU30(tag);
 	int return_type_index = swf_GetU30(tag);
-        m->return_type = multiname_clone(pool_lookup_multiname(pool, return_type_index));
+        if(return_type_index)
+            m->return_type = multiname_clone(pool_lookup_multiname(pool, return_type_index));
+        else
+            m->return_type = 0;
 
 	int s;
 	for(s=0;s<param_count;s++) {
@@ -1061,7 +1079,7 @@ void* swf_ReadABC(TAG*tag)
                 l = l->next;
             }
 	}
-	array_append(file->methods, m->name, m);
+	array_append(file->methods, NO_KEY, m);
     }
             
     parse_metadata(tag, file, pool);
@@ -1075,12 +1093,11 @@ void* swf_ReadABC(TAG*tag)
 	memset(cls, 0, sizeof(abc_class_t));
 	
         DEBUG printf("class %d\n", t);
-	int name_index = swf_GetU30(tag); //classname
-        char*name = pool_lookup_string(pool, name_index);
-	
-        array_append(file->classes, name, cls);
-
+	swf_GetU30(tag); //classname
 	swf_GetU30(tag); //supername
+
+        array_append(file->classes, NO_KEY, cls);
+
 	cls->flags = swf_GetU8(tag);
 	if(cls->flags&8) 
 	    swf_GetU30(tag); //protectedNS
@@ -1147,7 +1164,7 @@ void* swf_ReadABC(TAG*tag)
 
 	DEBUG printf("method_body %d) (method %d), %d bytes of code", t, methodnr, code_length);
 
-	array_append(file->method_bodies, m->name, c);
+	array_append(file->method_bodies, NO_KEY, c);
     }
     if(tag->len - tag->pos) {
 	fprintf(stderr, "%d unparsed bytes remaining in ABC block\n", tag->len - tag->pos);
@@ -1193,7 +1210,7 @@ void* swf_ReadABC(TAG*tag)
         memset(s, 0, sizeof(abc_script_t));
         s->method = m;
         s->traits = traits_parse(tag, pool, file);
-        array_append(file->scripts, "script", s);
+        array_append(file->scripts, NO_KEY, s);
         if(!s->traits) {
 	    fprintf(stderr, "Can't parse script traits\n");
             return 0;
