@@ -412,9 +412,9 @@ char* multiname_to_string(multiname_t*m)
         else
             strcat(mname, "*");
     } else if(m->type==RTQNAMEL) {
-        mname = strdup("<l>");
+        mname = strdup("<rt,l>");
     } else if(m->type==RTQNAMELA) {
-        mname = strdup("<l,attr>");
+        mname = strdup("<rt,l,attr>");
     } else if(m->type==MULTINAME || m->type==MULTINAMEA) {
         char*s = namespace_set_to_string(m->namespace_set);
         mname = malloc(strlen(s)+namelen+16);
