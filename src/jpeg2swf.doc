@@ -29,6 +29,8 @@ converted picture is a seperate frame in the target SWF.
     Force movie width to <width> (default: autodetect)
 -Y --height <height>  
     Force movie height to <height> (default: autodetect)
+-T --flashversion <version>  
+    Set flash file version to <version>
 -v --verbose <level> 
     Set verbose level to <level> (0=quiet, 1=default, 2=debug)
 -V --version  
