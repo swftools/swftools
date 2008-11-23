@@ -2175,7 +2175,7 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
   imgStr = new ImageStream(str, width, ncomps,bits);
   imgStr->reset();
 
-  if(!width || !height || (height<=1 && width<=1 && maskWidth<=1 && maskHeight<=1))
+  if(!width || !height || ((height+width)<=1 && (maskWidth+maskHeight)<=1))
   {
       msg("<verbose> Ignoring %d by %d image", width, height);
       unsigned char buf[8];
