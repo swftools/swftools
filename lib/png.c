@@ -1342,8 +1342,15 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
     long idatsize = 0;
     {
 	int x,y;
-	int srcwidth = width * (bpp/8);
-	int linelen = 1 + ((srcwidth+3)&~3);
+        int bypp = bpp/8;
+	int srcwidth = width * bypp;
+	int linelen = 1 + srcwidth;
+        if(bypp==2) 
+            linelen = 1 + ((srcwidth+1)&~1);
+        else if(bypp==3) 
+            linelen = 1 + ((srcwidth+2)/3)*3;
+        else if(bypp==4) 
+            linelen = 1 + ((srcwidth+3)&~3);
 	unsigned char* line = (unsigned char*)malloc(linelen);
 	unsigned char* bestline = (unsigned char*)malloc(linelen);
 	memset(line, 0, linelen);
