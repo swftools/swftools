@@ -825,7 +825,7 @@ int main(int argn, char *argv[])
 	    if(one_file_per_page) {
 		gfxresult_t*result = out->finish(out);out=0;
 		char buf[1024];
-		sprintf(buf, outputname, one_file_per_page++);
+		sprintf(buf, outputname, pagenr);
 		if(result->save(result, buf) < 0) {
 		    return 1;
 		}
