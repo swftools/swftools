@@ -808,24 +808,6 @@ void* swf_ReadABC(TAG*tag)
     return file;
 }
 
-static void code_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
-{
-    int len = 0;
-    abc_code_t*c = code;
-    while(c) {
-        len += opcode_write(0, c, pool, file);
-        c = c->next;
-    }
-    swf_SetU30(tag, len);
-    int pos = tag->len;
-    c = code;
-    while(c) {
-        opcode_write(tag, c, pool, file);
-        c = c->next;
-    }
-    assert(tag->len - pos == len);
-}
-
 void swf_WriteABC(TAG*abctag, void*code)
 {
     abc_file_t*file = (abc_file_t*)code;
