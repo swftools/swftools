@@ -623,7 +623,6 @@ int main(int argn, char *argv[])
     char t1searchpath[1024];
     int nup_pos = 0;
     int x,y;
-    char* installPath = getInstallationPath();
     int one_file_per_page = 0;
     
     initLog(0,-1,0,0,-1,loglevel);
