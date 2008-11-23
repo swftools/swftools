@@ -2,6 +2,7 @@
 #define __opcodes_h__
 #include "abc.h"
 #include "pool.h"
+#include "code.h"
 abc_code_t* abc_add(abc_code_t*prev);
 #define add(method) {method->code = abc_add(method->code);}
 abc_code_t* abc_add_i(abc_code_t*prev);
