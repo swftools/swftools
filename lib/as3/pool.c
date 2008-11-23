@@ -336,12 +336,12 @@ void pool_read(pool_t*pool, TAG*tag)
         NEW(multiname_t,m);
 	m->type = swf_GetU8(tag);
 	if(m->type==0x07 || m->type==0x0d) {
-	    int namespace_index = swf_GetU30(tag);
+	    int namespace_index = swf_GetU30(tag); // 0 = '*' (any)
             m->ns = (namespace_t*)array_getvalue(pool->namespaces, namespace_index);
             int name_index = swf_GetU30(tag);
 	    m->name = array_getkey(pool->strings, name_index);
 	} else if(m->type==0x0f || m->type==0x10) {
-            int name_index = swf_GetU30(tag);
+            int name_index = swf_GetU30(tag); // 0 = '*' (any name)
 	    m->name = array_getkey(pool->strings, name_index);
 	} else if(m->type==0x11 || m->type==0x12) {
 	} else if(m->type==0x09 || m->type==0x0e) {
