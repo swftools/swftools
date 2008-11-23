@@ -322,7 +322,23 @@ char* string_cstr(string_t*str)
 {
     return strdup_n(str->str, str->len);
 }
-unsigned int string_hash(string_t*str)
+
+unsigned int crc32_add_byte(unsigned int checksum, unsigned char b) 
+{
+    if(!crc32)
+        crc32_init();
+    return checksum>>8 ^ crc32[(b^checksum)&0xff];
+}
+unsigned int crc32_add_string(unsigned int checksum, const char*s)
+{
+    while(*s) {
+        checksum = crc32_add_byte(checksum, *s);
+        s++;
+    }
+    return checksum;
+}
+
+unsigned int string_hash(const string_t*str)
 {
     int t;
     unsigned int checksum = 0;
@@ -503,6 +519,65 @@ void stringarray_destroy(stringarray_t*sa)
     rfx_free(sa);
 }
 
+// ------------------------------- type_t -------------------------------
+
+char charptr_equals(const void*o1, const void*o2) 
+{
+    return !strcmp(o1,o2);
+}
+unsigned int charptr_hash(const void*o) 
+{
+    return string_hash2(o);
+}
+void* charptr_dup(const void*o) 
+{
+    return strdup(o);
+}
+void charptr_free(void*o) 
+{
+    rfx_free(o);
+}
+char stringstruct_equals(const void*o1, const void*o2) 
+{
+    string_t*s1 = (string_t*)o1;
+    string_t*s2 = (string_t*)o2;
+    int l = s1->len<s2->len?s1->len:s2->len;
+    int r = memcmp(s1->str, s2->str, l);
+    if(r)
+        return 0;
+    else
+        return s1->len==s2->len;
+}
+unsigned int stringstruct_hash(const void*o) 
+{
+    return string_hash(o);
+}
+void*stringstruct_dup(const void*o) 
+{
+    string_t*s = malloc(sizeof(string_t));
+    string_set2(s, ((string_t*)o)->str, ((string_t*)o)->len);
+    return s;
+}
+void stringstruct_free(void*o) 
+{
+    rfx_free((void*)(((string_t*)o)->str));
+    rfx_free((void*)o);
+}
+
+
+type_t charptr_type = {
+    equals: charptr_equals,
+    hash: charptr_hash,
+    dup: charptr_dup,
+    free: charptr_free,
+};
+
+type_t stringstruct_type = {
+    equals: stringstruct_equals,
+    hash: stringstruct_hash,
+    dup: stringstruct_dup,
+    free: stringstruct_free,
+};
 
 // ------------------------------- dictionary_t -------------------------------
 
@@ -518,13 +593,22 @@ dict_t*dict_new()
     dict_init(d);
     return d;
 }
+dict_t*dict_new2(type_t*t)
+{
+    dict_t*d = rfx_alloc(sizeof(dict_t));
+    dict_init(d);
+    d->key_type = t;
+    return d;
+}
 void dict_init(dict_t*h) 
 {
     memset(h, 0, sizeof(dict_t));
     h->hashsize = INITIAL_SIZE;
     h->slots = h->hashsize?(dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*h->hashsize):0;
     h->num = 0;
+    h->key_type = &charptr_type;
 }
+
 static void dict_expand(dict_t*h, int newlen)
 {
     assert(h->hashsize < newlen);
@@ -545,34 +629,25 @@ static void dict_expand(dict_t*h, int newlen)
     h->slots = newslots;
     h->hashsize = newlen;
 }
-void dict_put(dict_t*h, string_t s, void* data)
-{
-    /* TODO: should we look for duplicates here? */
-    unsigned int hash = string_hash(&s);
-    dictentry_t*e = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
 
-    unsigned int hash2 = string_hash(&s) % h->hashsize;
-    char*sdata = rfx_alloc(s.len);
-    memcpy(sdata, s.str, s.len);
-    e->s = sdata;
-    e->len = s.len;
+dictentry_t* dict_put(dict_t*h, const void*key, void* data)
+{
+    unsigned int hash = h->key_type->hash(key);
+    dictentry_t*e = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
+    unsigned int hash2 = hash % h->hashsize;
+    
+    e->key = h->key_type->dup(key);
     e->hash = hash; //for resizing
     e->next = h->slots[hash2];
     e->data = data;
     h->slots[hash2] = e;
     h->num++;
+    return e;
 }
 void dict_put2(dict_t*h, const char*s, void*data) 
 {
-    string_t s2;
-    string_set(&s2, s);
-    dict_put(h, s2, data);
-}
-void dict_put3(dict_t*h, const char* s, int len, void*data)
-{
-    string_t s3;
-    string_set2(&s3, s, len);
-    dict_put(h, s3, data);
+    assert(h->key_type == &charptr_type);
+    dict_put(h, s, data);
 }
 void dict_dump(dict_t*h, FILE*fi, const char*prefix)
 {
@@ -580,9 +655,11 @@ void dict_dump(dict_t*h, FILE*fi, const char*prefix)
     for(t=0;t<h->hashsize;t++) {
         dictentry_t*e = h->slots[t];
         while(e) {
-            char*s = strdup_n(e->s, e->len);
-            fprintf(fi, "%s%s=%08x\n", prefix, e->s, e->data);
-            rfx_free(s);
+            if(h->key_type==&charptr_type) {
+                fprintf(fi, "%s%08x=%08x\n", prefix, e->key, e->data);
+            } else {
+                fprintf(fi, "%s%s=%08x\n", prefix, e->key, e->data);
+            }
             e = e->next;
         }
     }
@@ -592,17 +669,18 @@ int dict_count(dict_t*h)
 {
     return h->num;
 }
-void* dict_lookup4(dict_t*h, const char*s, int len, const void*data)
+
+void* dict_lookup(dict_t*h, const void*key)
 {
     if(!h->num)
         return 0;
     
-    unsigned int ohash = string_hash2(s);
+    unsigned int ohash = h->key_type->hash(key);
     unsigned int hash = ohash % h->hashsize;
 
     /* check first entry for match */
     dictentry_t*e = h->slots[hash];
-    if(e && e->len == len && !memcmp(e->s, s, len)) {
+    if(e && h->key_type->equals(e->key, key)) {
         return e->data;
     } else if(e) {
         e = e->next;
@@ -623,39 +701,24 @@ void* dict_lookup4(dict_t*h, const char*s, int len, const void*data)
 
     /* check subsequent entries for a match */
     while(e) {
-        if(e->len == len && !memcmp(e->s, s, len) && (!data || data==e->data)) {
+        if(h->key_type->equals(e->key, key)) {
             return e->data;
         }
         e = e->next;
     }
     return 0;
 }
-void* dict_lookup3(dict_t*h, const char*s, const void*data)
-{
-    int l = strlen(s);
-    return dict_lookup4(h, s, l, data);
-}
-void* dict_lookup2(dict_t*h, const char*s, int len)
-{
-    return dict_lookup4(h, s, len, 0);
-}
-void* dict_lookup(dict_t*h, const char*s)
-{
-    int l = strlen(s);
-    return dict_lookup2(h, s, l);
-}
-char dict_del(dict_t*h, const char*s)
+char dict_del(dict_t*h, const void*key)
 {
     if(!h->num)
         return 0;
-    unsigned int hash = string_hash2(s) % h->hashsize;
-    int l = strlen(s);
+    unsigned int hash = h->key_type->hash(key) % h->hashsize;
     dictentry_t*head = h->slots[hash];
     dictentry_t*e = head, *prev=0;
     while(e) {
-        if(e->len ==l && !memcmp(e->s, s, l)) {
+        if(h->key_type->equals(e->key, key)) {
             dictentry_t*next = e->next;
-            rfx_free((void*)e->s);
+            rfx_free((void*)e->key);
             memset(e, 0, sizeof(dictentry_t));
             rfx_free(e);
             if(e == head) {
@@ -673,16 +736,16 @@ char dict_del(dict_t*h, const char*s)
     return 0;
 }
 
-static dictentry_t* dict_get_all(dict_t*h, const char*s)
+static dictentry_t* dict_get_slot(dict_t*h, const void*key)
 {
     if(!h->num)
         return 0;
-    unsigned int ohash = string_hash2(s);
+    unsigned int ohash = h->key_type->hash(key);
     unsigned int hash = ohash % h->hashsize;
     return h->slots[hash];
 }
 
-void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*key, void*val), void*data)
+void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const void*key, void*val), void*data)
 {
     int t;
     for(t=0;t<h->hashsize;t++) {
@@ -690,9 +753,7 @@ void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*k
         while(e) {
             dictentry_t*next = e->next;
             if(runFunction) {
-                char*s = strdup_n(e->s, e->len); //append \0
-                runFunction(data, s, e->data);
-                rfx_free(s);
+                runFunction(data, e->key, e->data);
             }
             e = e->next;
         }
@@ -720,7 +781,7 @@ void dict_free_all(dict_t*h, void (*freeFunction)(void*))
         dictentry_t*e = h->slots[t];
         while(e) {
             dictentry_t*next = e->next;
-            rfx_free((void*)e->s);
+            h->key_type->free(e->key);
             if(freeFunction) {
                 freeFunction(e->data);
             }
@@ -776,7 +837,7 @@ static void freestring(void*data)
 {
     rfx_free(data);
 }
-static void dumpmapentry(void*data, const char*key, void*value)
+static void dumpmapentry(void*data, const void*key, void*value)
 {
     FILE*fi = (FILE*)data;
     fprintf(fi, "%s=%s\n", key, (char*)value);
@@ -807,31 +868,29 @@ array_t* array_new() {
     d->entry2pos = dict_new();
     return d;
 }
-void array_free(array_t*array) {
-    dict_destroy(array->entry2pos);
-    array->entry2pos;
-    if(array->d) {
-        free(array->d);array->d = 0;
-    }
-    free(array);
+array_t* array_new2(type_t*type) {
+    array_t*d = malloc(sizeof(array_t));
+    memset(d, 0, sizeof(array_t));
+    d->entry2pos = dict_new2(type);
+    return d;
 }
-const char*array_getkey(array_t*array, int nr) {
+void*array_getkey(array_t*array, int nr) {
     if(nr > array->num || nr<0) {
 	printf("error: reference to element %d in array[%d]\n", nr, array->num);
-        *(int*)0 = 0;
+        *(int*)0 = 0xdead;
 	return 0;
     }
     return array->d[nr].name;
 }
-char*array_getvalue(array_t*array, int nr) {
+void*array_getvalue(array_t*array, int nr) {
     if(nr > array->num || nr<0) {
 	printf("error: reference to element %d in array[%d]\n", nr, array->num);
-        *(int*)0 = 0;
+        *(int*)0 = 0xdead;
 	return 0;
     }
     return array->d[nr].data;
 }
-int array_append(array_t*array, const char*name, const void*data) {
+int array_append(array_t*array, const void*name, void*data) {
     while(array->size <= array->num) {
 	array->size += 64;
 	if(!array->d) {
@@ -840,40 +899,37 @@ int array_append(array_t*array, const char*name, const void*data) {
 	    array->d = realloc(array->d, sizeof(array_entry_t)*array->size);
 	}
     }
+
+    dictentry_t*e = dict_put(array->entry2pos, name, (void*)(ptroff_t)(array->num+1));
+
     if(name) {
-	array->d[array->num].name = strdup(name);
+	array->d[array->num].name = e->key;
     } else {
 	array->d[array->num].name = 0;
     }
     array->d[array->num].data = (void*)data;
-    dict_put2(array->entry2pos, name, (void*)(ptroff_t)(array->num+1));
     return array->num++;
 }
-int array_find(array_t*array, const char*name)
+int array_find(array_t*array, const void*name)
 {
-    if(!name)
-	name = "";
     int pos = (int)(ptroff_t)dict_lookup(array->entry2pos, name);
     return pos-1;
 }
-int array_find2(array_t*array, const char*name, void*data)
+int array_find2(array_t*array, const void*name, void*data)
 {
-    if(!name)
-	name = "";
-    int len= strlen(name);
-
-    dictentry_t*e = dict_get_all(array->entry2pos, name);
+    dict_t*h= array->entry2pos;
+    dictentry_t*e = dict_get_slot(array->entry2pos, name);
 
     while(e) {
         int index = ((int)(ptroff_t)e->data) - 1;
-        if(e->len == len && !memcmp(e->s, name, len) && array->d[index].data == data) {
+        if(h->key_type->equals(e->key, name) && array->d[index].data == data) {
             return index;
         }
         e = e->next;
     }
     return -1;
 }
-int array_update(array_t*array, const char*name, void*data) {
+int array_update(array_t*array, const void*name, void*data) {
     int pos = array_find(array, name);
     if(pos>=0) {
 	array->d[pos].data = data;
@@ -881,11 +937,18 @@ int array_update(array_t*array, const char*name, void*data) {
     }
     return array_append(array, name, data);
 }
-int array_append_if_new(array_t*array, const char*name, void*data) {
+int array_append_if_new(array_t*array, const void*name, void*data) {
     int pos = array_find(array, name);
     if(pos>=0)
 	return pos;
     return array_append(array, name, data);
+}
+void array_free(array_t*array) {
+    dict_destroy(array->entry2pos);
+    if(array->d) {
+        free(array->d);array->d = 0;
+    }
+    free(array);
 }
 
 // ------------------------------- list_t --------------------------------------
@@ -916,6 +979,7 @@ void list_append_(void*_list, void*entry)
     if(!*list) {
         n = malloc(sizeof(commonlist_t)+sizeof(listinfo_t));
         *list = n;
+        (*list)->info[0].size = 0;
     } else {
         n = malloc(sizeof(commonlist_t));
         (*list)->info[0].last->next = n;
@@ -935,4 +999,17 @@ void list_free_(void*_list)
         l = next;
     }
     *list = 0;
+}
+void*list_clone_(void*_list) 
+{
+    commonlist_t*l = *(commonlist_t**)_list;
+
+    void*dest = 0;
+    while(l) {
+        commonlist_t*next = l->next;
+        list_append_(&dest, l->entry);
+        l = next;
+    }
+    return dest;
+
 }

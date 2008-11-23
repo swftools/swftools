@@ -55,9 +55,24 @@ typedef struct _map_t {
     void*internal;
 } map_t;
 
+/* type information */
+typedef char (*equals_func)(const void*o1, const void*o2);
+typedef unsigned int (*hash_func)(const void*o);
+typedef void* (*dup_func)(const void*o);
+typedef void (*free_func)(void*o);
+
+typedef struct _type_t {
+    equals_func equals;
+    hash_func hash;
+    dup_func dup;
+    free_func free;
+} type_t;
+
+extern type_t charptr_type;
+extern type_t stringstruct_type;
+
 typedef struct _dictentry {
-    const char*s;
-    int len;
+    void*key;
     unsigned int hash;
     void*data;
     struct _dictentry*next;
@@ -66,13 +81,14 @@ typedef struct _dictentry {
 /* (void*) pointers referenced by strings */
 typedef struct _dict {
     dictentry_t**slots;
+    type_t*key_type;
     int hashsize;
     int num;
 } dict_t;
 
 /* array of key/value pairs, with fast lookup */
 typedef struct _array_entry {
-    const char*name;
+    void*name;
     void*data;
 } array_entry_t;
 
@@ -104,6 +120,9 @@ typedef struct _heap
 
 char* strdup_n(const char*str, int size);
 
+unsigned int crc32_add_byte(unsigned int crc32, unsigned char b);
+unsigned int crc32_add_string(unsigned int crc32, const char*s);
+
 void mem_init(mem_t*mem);
 int mem_put(mem_t*m, void*data, int length);
 int mem_putstring(mem_t*m, string_t str);
@@ -117,7 +136,7 @@ void ringbuffer_clear(ringbuffer_t*r);
 
 string_t string_new(const char*text, int len);
 string_t string_new2(const char*text);
-unsigned int string_hash(string_t*str);
+unsigned int string_hash(const string_t*str);
 unsigned int string_hash2(const char*str);
 unsigned int string_hash3(const char*str, int len);
 void string_set(string_t*str, const char*text);
@@ -136,17 +155,15 @@ void stringarray_clear(stringarray_t*sa);
 void stringarray_destroy(stringarray_t*sa);
 
 dict_t*dict_new();
+dict_t*dict_new2(type_t*type);
 void dict_init(dict_t*dict);
-void dict_put(dict_t*dict, string_t t1, void* t2);
-void dict_put2(dict_t*dict, const char* t1, void* t2);
-void dict_put3(dict_t*dict, const char* t1, int len, void* t2);
+dictentry_t*dict_put(dict_t*h, const void*key, void* data);
 int dict_count(dict_t*h);
 void dict_dump(dict_t*h, FILE*fi, const char*prefix);
-void* dict_lookup3(dict_t*h, const char*s, const void*data);
-void* dict_lookup2(dict_t*h, const char*s, int len);
-void* dict_lookup(dict_t*h, const char*s);
-char dict_del(dict_t*h, const char*s);
-void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const char*key, void*val), void*data);
+void* dict_lookup(dict_t*h, const void*s);
+char dict_del(dict_t*h, const void*s);
+
+void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const void*key, void*val), void*data);
 void dict_foreach_value(dict_t*h, void (*runFunction)(void*));
 void dict_free_all(dict_t*h, void (*freeFunction)(void*));
 void dict_clear(dict_t*h);
@@ -169,14 +186,15 @@ void heap_dump(heap_t*h, FILE*fi);
 void** heap_flatten(heap_t*h);
 
 array_t* array_new();
+array_t* array_new2(type_t*type);
 void array_free(array_t*array);
-const char*array_getkey(array_t*array, int nr);
-char*array_getvalue(array_t*array, int nr);
-int array_append(array_t*array, const char*name, const void*data);
-int array_find(array_t*array, const char*name);
-int array_find2(array_t*array, const char*name, void*data);
-int array_update(array_t*array, const char*name, void*data);
-int array_append_if_new(array_t*array, const char*name, void*data);
+void*array_getkey(array_t*array, int nr);
+void*array_getvalue(array_t*array, int nr);
+int array_append(array_t*array, const void*name, void*data);
+int array_find(array_t*array, const void*name);
+int array_find2(array_t*array, const void*name, void*data);
+int array_update(array_t*array, const void*name, void*data);
+int array_append_if_new(array_t*array, const void*name, void*data);
 
 #define DECLARE(x) struct _##x;typedef struct _##x x##_t;
 #define DECLARE_LIST(x) \
@@ -186,11 +204,13 @@ struct _##x##_list { \
 }; \
 typedef struct _##x##_list x##_list_t;
 int list_length(void*_list);
+void*list_clone_(void*_list);
 void list_append_(void*_list, void*entry);
 void list_free_(void*_list);
 #define list_new() ((void*)0)
 #define list_append(list, e) {sizeof((list)->next);list_append_(&(list),(e));}
 #define list_free(list) {sizeof((list)->next);list_free_(&(list));}
+#define list_clone(list) (sizeof((list)->next),list_clone_(&(list)))
 
 #ifdef __cplusplus
 }
