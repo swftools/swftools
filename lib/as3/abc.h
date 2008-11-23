@@ -58,8 +58,17 @@ struct _abc_file {
 
 abc_file_t*abc_file_new();
 
+#define TRAIT_SLOT 0
+#define TRAIT_METHOD 1
+#define TRAIT_GETTER 2
+#define TRAIT_SETTER 3
+#define TRAIT_CLASS 4
+#define TRAIT_FUNCTION 5
+#define TRAIT_CONST 6
+
 struct _trait {
-    unsigned char type;
+    unsigned char kind;
+    unsigned char attributes;
     multiname_t*name;
 
     union {
