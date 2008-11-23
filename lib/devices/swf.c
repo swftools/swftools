@@ -98,6 +98,7 @@ typedef struct _swfoutput_internal
     int config_bboxvars;
     int config_disable_polygon_conversion;
     int config_normalize_polygon_positions;
+    char config_disablelinks;
     RGBA config_linkcolor;
     float config_minlinewidth;
     double config_caplinewidth;
@@ -236,6 +237,7 @@ static swfoutput_internal* init_internal_struct()
     i->firstpage = 1;
     i->pagefinished = 1;
 
+    i->config_disablelinks=0;
     i->config_dumpfonts=0;
     i->config_ppmsubpixels=0;
     i->config_jpegsubpixels=0;
@@ -1559,6 +1561,9 @@ void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, const char*url)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 
+    if(i->config_disablelinks)
+        return;
+
     if(!strncmp("http://pdf2swf:", url, 15)) {
 	char*tmp = strdup(url);
 	int l = strlen(tmp);
@@ -1977,6 +1982,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "animate")) {
 	i->config_animate = atoi(value);
+    } else if(!strcmp(name, "disablelinks")) {
+	i->config_disablelinks = atoi(value);
     } else if(!strcmp(name, "simpleviewer")) {
 	i->config_simpleviewer = atoi(value);
     } else if(!strcmp(name, "next_bitmap_is_jpeg")) {
@@ -2034,6 +2041,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
         printf("animate                     insert a showframe tag after each placeobject (animate draw order of PDF files)\n");
         printf("jpegquality=<quality>       set compression quality of jpeg images\n");
 	printf("splinequality=<value>       Set the quality of spline convertion to value (0-100, default: 100).\n");
+	printf("disablelinks                Disable links.\n");
     } else {
 	return 0;
     }
