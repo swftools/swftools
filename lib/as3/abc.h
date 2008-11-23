@@ -28,14 +28,17 @@
 #include "pool.h"
 
 DECLARE(abc_file);
+DECLARE(abc_method);
 DECLARE(abc_method_body);
 DECLARE(abc_interface);
-DECLARE(abc_code);
 DECLARE(abc_class);
+
+#include "code.h"
+#include "opcodes.h"
 
 DECLARE(trait);
 
-typedef struct _abc_method {
+struct _abc_method {
     multiname_t*return_type;
     multiname_list_t*parameters;
     const char*name;
@@ -43,7 +46,7 @@ typedef struct _abc_method {
     abc_method_body_t*body;
     
     int index; //filled in during writing
-} abc_method_t;
+};
 
 struct _abc_file {
     // abc_file
@@ -118,24 +121,17 @@ abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype,
 abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int num_params, ...);
 abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...);
 
-struct _abc_code {
-    U8 opcode;
-    U8 len;
-    void*params[2];
-    abc_code_t*next;
-    abc_code_t*prev;
-    abc_code_t*parent;
-};
-
 struct _abc_method_body {
     abc_file_t*pool;
     //abc_class_t*cls;
     abc_method_t*method;
     abc_code_t*code;
+
     int max_stack;
     int local_count;
     int init_scope_depth;
     int max_scope_depth;
+
     int exception_count;
     trait_list_t*traits;
     
@@ -150,6 +146,8 @@ typedef struct _abc_script {
     abc_file_t*pool;
     trait_list_t*traits;
 } abc_script_t;
+
+abc_method_t* abc_nullmethod(abc_file_t*file);
 
 abc_script_t* abc_initscript(abc_file_t*pool, char*returntype, int num_params, ...);
 

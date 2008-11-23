@@ -29,24 +29,6 @@
 
 char stringbuffer[2048];
 
-typedef struct _opcode
-{
-    unsigned char opcode;
-    char*name;
-    char*params;
-} opcode_t;
-
-/* 2 = multiname
-   m = method
-   n = number of params
-   i = method info
-   b = byte
-   s = short
-   c = class
-   s = string
-   S = switch
-*/
-
 int abc_RegisterNameSpace(abc_file_t*file, const char*name);
 int abc_RegisterPackageNameSpace(abc_file_t*file, const char*name);
 int abc_RegisterPackageInternalNameSpace(abc_file_t*file, const char*name);
@@ -55,403 +37,8 @@ int abc_RegisterExplicitNameSpace(abc_file_t*file, const char*name);
 int abc_RegisterStaticProtectedNameSpace(abc_file_t*file, const char*name);
 int abc_RegisterPrivateNameSpace(abc_file_t*file, const char*name);
 
-
-opcode_t opcodes[]={
-{0xa0, "add", ""},
-{0xc5, "add_i", ""},
-{0x86, "atype", "2"},
-{0x87, "astypelate", ""},
-{0xA8, "bitand", ""},
-{0x97, "bitnot", ""},
-{0xa9, "bitor", ""},
-{0xaa, "bitxor", ""},
-{0x41, "call", "n"},
-{0x43, "callmethod", "mn"},
-{0x4c, "callproplex", "2n"},
-{0x46, "callproperty", "2n"},
-{0x4f, "callpropvoid", "2n"},
-{0x44, "callstatic", "in"},
-{0x45, "callsuper", "2n"},
-{0x4e, "callsupervoid", "2n"},
-{0x78, "checkfilter", ""},
-{0x80, "coerce", "2"},
-{0x82, "coerce_a", ""},
-{0x85, "coerce_s", ""},
-{0x42, "construct", "n"},
-{0x4a, "constructprop", "2n"},
-{0x49, "constructsuper", "n"},
-{0x76, "convert_b", ""},
-{0x73, "convert_i", ""},
-{0x75, "convert_d", ""},
-{0x77, "convert_o", ""},
-{0x74, "convert_u", ""},
-{0x70, "convert_s", ""},
-{0xef, "debug", "D"},
-{0xf1, "debugfile", "s"},
-{0xf0, "debugline", "u"},
-{0x94, "declocal", "u"},
-{0xc3, "declocal_i", "u"},
-{0x93, "decrement", ""},
-{0xc1, "decrement_i", ""},
-{0x6a, "deleteproperty", "2"},
-{0xa3, "divide", ""},
-{0x2a, "dup", ""},
-{0x06, "dxns", "s"},
-{0x07, "dxnslate", ""},
-{0xab, "equals", ""},
-{0x72, "esc_xattr", ""},
-{0x71, "esc_xelem", ""},
-{0x5e, "findproperty", "2"},
-{0x5d, "findpropstrict", "2"},
-{0x59, "getdescendants", "2"},
-{0x64, "getglobalscope", ""},
-{0x6e, "getglobalslot", "u"},
-{0x60, "getlex", "2"},
-{0x62, "getlocal", "u"},
-{0xd0, "getlocal_0", ""},
-{0xd1, "getlocal_1", ""},
-{0xd2, "getlocal_2", ""},
-{0xd3, "getlocal_3", ""},
-{0x66, "getproperty", "2"},
-{0x65, "getscopeobject", "u"},
-{0x6c, "getslot", "u"},
-{0x04, "getsuper", "2"},
-{0xaf, "greaterequals", ""},
-{0x1f, "hasnext", ""},
-{0x32, "hasnext2", "uu"},
-{0x13, "ifeq", "j"},
-{0x12, "iffalse", "j"},
-{0x18, "ifge", "j"},
-{0x17, "ifgt", "j"},
-{0x16, "ifle", "j"},
-{0x15, "iflt", "j"},
-{0x0f, "ifnge", "j"},
-{0x0e, "ifngt", "j"},
-{0x0d, "ifnle", "j"},
-{0x0c, "ifnlt", "j"},
-{0x14, "ifne", "j"},
-{0x19, "ifstricteq", "j"},
-{0x1a, "ifstrictne", "j"},
-{0x11, "iftrue", "j"},
-{0xb4, "in", ""},
-{0x92, "inclocal", "u"},
-{0xc2, "inclocal_i", "u"},
-{0x91, "increment", ""},
-{0xc0, "increment_i", ""},
-{0x68, "initproperty", "2"},
-{0xb1, "instanceof", ""},
-{0xb2, "istype", "2"},
-{0xb3, "istypelate", ""},
-{0x10, "jump", "j"},
-{0x08, "kill", "u"},
-{0x09, "label", ""},
-{0xae, "lessequals", ""},
-{0xad, "lessthan", ""},
-{0x1b, "lookupswitch", "S"},
-{0xa5, "lshift", ""},
-{0xa4, "modulo", ""},
-{0xa2, "multiply", ""},
-{0xc7, "multiply_i", ""},
-{0x90, "negate", ""},
-{0xc4, "negate_i", ""},
-{0x57, "newactivation", ""},
-{0x56, "newarray", "u"},
-{0x5a, "newcatch", "u"}, //index into exception_info
-{0x58, "newclass", "c"}, //index into class_info
-{0x40, "newfunction", "u"}, //index into method_info
-{0x55, "newobject", "u"},
-{0x1e, "nextname", ""},
-{0x23, "nextvalue", ""},
-{0x02, "nop", ""},
-{0x96, "not", ""},
-{0x29, "pop", ""},
-{0x1d, "popscope", ""},
-{0x24, "pushbyte", "b"},
-{0x2f, "pushdouble", "u"}, //index into floats
-{0x27, "pushfalse", ""},
-{0x2d, "pushint", "u"}, //index into ints
-{0x31, "pushnamespace", "u"}, //index into namespace
-{0x28, "pushnan", ""},
-{0x20, "pushnull", ""},
-{0x30, "pushscope", ""},
-{0x25, "pushshort", "u"},
-{0x2c, "pushstring", "s"},
-{0x26, "pushtrue", ""},
-{0x2e, "pushuint", "u"}, //index into uints
-{0x21, "pushundefined", ""},
-{0x1c, "pushwith", ""},
-{0x48, "returnvalue", ""},
-{0x47, "returnvoid", ""},
-{0xa6, "rshift", ""},
-{0x63, "setlocal", "u"},
-{0xd4, "setlocal_0", ""},
-{0xd5, "setlocal_1", ""},
-{0xd6, "setlocal_2", ""},
-{0xd7, "setlocal_3", ""},
-{0x6f, "setglobalshot", "u"},
-{0x61, "setproperty", "2"},
-{0x6d, "setslot", "u"},
-{0x05, "setsuper", "2"},
-{0xac, "strictequals", ""},
-{0xa1, "subtract", ""},
-{0xc6, "subtract_i", ""},
-{0x2b, "swap", ""},
-{0x03, "throw", ""},
-{0x95, "typeof", ""},
-{0xa7, "urshift", ""},
-{0xb0, "xxx", ""},
-};
-
-static U8 op2index[256] = {254};
-
-opcode_t* opcode_get(U8 op)
-{
-    int t;
-    if(op2index[0]==254) {
-        memset(op2index, 255, sizeof(op2index));
-        for(t=0;t<sizeof(opcodes)/sizeof(opcodes[0]);t++) {
-            op2index[opcodes[t].opcode] = t;
-        }
-    }
-    if(op2index[op]!=255)
-        return &opcodes[op2index[op]];
-    return 0;
-}
-
 /* TODO: switch to a datastructure with just values */
 #define NO_KEY ""
-
-abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
-{
-    abc_code_t*head=0;
-    abc_code_t*code=0;
-    int end=tag->pos+len;
-    //printf("-->\n");fflush(stdout);
-    while(tag->pos<end) {
-        U8 opcode = swf_GetU8(tag);
-        opcode_t*op = opcode_get(opcode);
-	if(!op) {
-	    fprintf(stderr, "Can't parse opcode %02x\n", opcode);
-	    return head;
-        }
-        //printf("%s\n", op->name);fflush(stdout);
-        NEW(abc_code_t,c);
-        if(!head) {
-            head = code = c;
-        } else {
-            code->next = c;
-            code = c;
-        }
-
-        c->opcode = opcode;
-
-        char*p = op->params;
-        int pos = 0;
-        while(*p) {
-            void*data = 0;
-            if(*p == 'n') { // number
-                data = (void*)(ptroff_t)swf_GetU30(tag);
-            } else if(*p == '2') { //multiname
-                data = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
-            } else if(*p == 'm') { //method
-                data = array_getvalue(file->methods, swf_GetU30(tag));
-            } else if(*p == 'c') { //classinfo
-                data = array_getvalue(file->classes, swf_GetU30(tag));
-            } else if(*p == 'i') { //methodbody TODO
-                data = array_getvalue(file->method_bodies, swf_GetU30(tag));
-            } else if(*p == 'u') { // lookoup TODO
-                data = (void*)(ptroff_t)swf_GetU30(tag);
-            } else if(*p == 'b') { // byte
-                data = (void*)(ptroff_t)swf_GetU8(tag);
-            } else if(*p == 'j') { // jump TODO
-                data = (void*)(ptroff_t)swf_GetS24(tag);
-            } else if(*p == 's') { // string
-                data = strdup((char*)pool_lookup_string(pool, swf_GetU30(tag)));
-            } else if(*p == 'D') { // debug
-                /*type, usually 1*/
-                U8 type = swf_GetU8(tag);
-                if(type!=1) 
-                    fprintf(stderr, "Unknown debug type: %02x\n", type);
-                /*register name*/
-                code->params[0] = strdup((char*)pool_lookup_string(pool, swf_GetU30(tag)));
-                /*register index*/
-                code->params[1] = (void*)(ptroff_t)swf_GetU8(tag);
-                /*unused*/
-                swf_GetU30(tag);
-            } else if(*p == 'S') { // switch statement TODO
-                /* I hate these things */
-                swf_GetU24(tag); //default
-                int num = swf_GetU30(tag)+1;
-                int t;
-                for(t=0;t<num;t++) 
-                    swf_GetU24(tag);
-                data = 0;
-            } else {
-                printf("Can't parse opcode param type \"%c\"\n", *p);
-                return 0;
-            }
-            if(data)
-                code->params[pos++] = data;
-            p++;
-        }
-    }
-    return head;
-}
-
-static void code_free(abc_code_t*c)
-{
-    while(c) {
-        abc_code_t*next = c->next;
-        opcode_t*op = opcode_get(c->opcode);
-        char*p = op?op->params:"";
-        int pos=0;
-        while(*p) {
-            void*data = c->params[pos];
-            if(*p == '2') { //multiname
-                multiname_destroy(data);
-            } else if(strchr("sD", *p)) {
-                free(data);
-            }
-            c->params[pos]=0;
-            p++;pos++;
-        }
-        memset(c, 0, sizeof(c));
-        free(c);
-        c = next;
-    }
-}
-
-static int code_dump(abc_code_t*c, abc_file_t*file, char*prefix, FILE*fo)
-{
-    pool_t*pool = pool_new();
-
-    while(c) {
-	U8 opcode = c->opcode;
-	int t;
-	char found = 0;
-        opcode_t*op = opcode_get(opcode);
-	if(!op) {
-	    fprintf(stderr, "Can't parse opcode %02x.\n", opcode);
-	    return 0;
-	} else {
-            fprintf(fo, "%s%s ", prefix, op->name);
-            char*p = op->params;
-            char first = 1;
-            int pos=0;
-            while(*p) {
-                void*data = c->params[pos];
-                if(pos>0)
-                    printf(", ");
-
-                if(*p == 'n') {
-                    int n = (ptroff_t)data;
-                    fprintf(fo, "%d params", n);
-                } else if(*p == '2') {
-                    multiname_t*n = (multiname_t*)data;
-                    char* m = multiname_to_string(n);
-                    fprintf(fo, "%s", m);
-                    free(m);
-                } else if(*p == 'm') {
-                    abc_method_t*m = (abc_method_t*)data;
-                    fprintf(fo, "[method %s]", m->name);
-                } else if(*p == 'c') {
-                    abc_class_t*cls = (abc_class_t*)data;
-                    char*classname = multiname_to_string(cls->classname);
-                    fprintf(fo, "[classinfo %s]", classname);
-                    free(classname);
-                } else if(*p == 'i') {
-                    abc_method_body_t*b = (abc_method_body_t*)data;
-                    fprintf(fo, "[methodbody]");
-                } else if(*p == 'u') {
-                    int n = (ptroff_t)data;
-                    fprintf(fo, "%d", n);
-                } else if(*p == 'b') {
-                    int b = (ptroff_t)data;
-                    fprintf(fo, "%02x", b);
-                } else if(*p == 'j') {
-                    int n = (ptroff_t)data;
-                    fprintf(fo, "%d", n);
-                } else if(*p == 's') {
-                    fprintf(fo, "\"%s\"", data);
-                } else if(*p == 'D') {
-                    fprintf(fo, "[register %02x=%s]", (ptroff_t)c->params[1], (char*)c->params[0]);
-                } else if(*p == 'S') {
-                    fprintf(fo, "[switch data]");
-                } else {
-                    fprintf(stderr, "Can't parse opcode param type \"%c\"\n", *p);
-                    return 0;
-                }
-                p++;
-                pos++;
-                first = 0;
-            }
-            fprintf(fo, "\n");
-	}
-        c = c->next;
-    }
-    return 1;
-}
-
-static int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
-{
-    opcode_t*c = opcode_get(code->opcode);
-    char*p = c->params;
-    int pos = 0;
-    int len = 0;
-    
-    if(tag)
-        swf_SetU8(tag, code->opcode);
-    len++;
-
-    while(*p) {
-        void*data = code->params[pos++];
-        assert(pos<=2);
-        if(*p == 'n') { // number
-            len += swf_SetU30(tag, (ptroff_t)data);
-        } else if(*p == '2') { //multiname
-            multiname_t*m = (multiname_t*)data;
-            len += swf_SetU30(tag, pool_register_multiname(pool, m));
-        } else if(*p == 'm') { //method
-            abc_method_t*m = (abc_method_t*)data;
-            len += swf_SetU30(tag, m->index);
-        } else if(*p == 'c') { //classinfo 
-            abc_class_t*cls = (abc_class_t*)data;
-            len += swf_SetU30(tag, cls->index);
-        } else if(*p == 'i') { //methodbody
-            abc_method_body_t*m = (abc_method_body_t*)data;
-            len += swf_SetU30(tag, m->index);
-        } else if(*p == 'u') { // integer
-            len += swf_SetU30(tag, (ptroff_t)data);
-        } else if(*p == 'b') { // byte
-            if(tag)
-                swf_SetU8(tag, (ptroff_t)data);
-            len++;
-        } else if(*p == 'j') { // jump
-            len += swf_SetS24(tag, (ptroff_t)data);
-        } else if(*p == 's') { // string
-            int index = pool_register_string(pool, data);
-            len += swf_SetU30(tag, index);
-        } else if(*p == 'D') { // debug statement
-            if(tag)
-                swf_SetU8(tag, 1);
-            len++;
-            len+=swf_SetU30(tag, pool_register_string(pool,code->params[0]));
-            if(tag)
-                swf_SetU8(tag, (ptroff_t)code->params[1]);
-            len++;
-            len+=swf_SetU30(tag, 0);
-        } else if(*p == 'S') { // switch statement
-            len+=swf_SetU24(tag, 0); //default
-            len+=swf_SetU30(tag, 0); //nr-1
-            len+=swf_SetU24(tag, 0); //first
-        } else {
-            printf("Can't parse opcode param type \"%c\"\n", *p);
-        }
-        p++;
-    }
-    return len;
-}
-
 
 static char* params_to_string(multiname_list_t*list)
 {
@@ -1247,9 +834,25 @@ void swf_WriteABC(TAG*abctag, void*code)
     TAG*tmp = swf_InsertTag(0,0);
     TAG*tag = tmp;
     int t;
-
-    swf_SetU30(tag, file->methods->num);
    
+    char need_null_method=0;
+    for(t=0;t<file->classes->num;t++) {
+	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
+        if(!c->constructor || !c->static_constructor) {
+            need_null_method=1;
+            break;
+        }
+    }
+
+    abc_method_t*nullmethod = 0;
+    if(need_null_method) {
+        nullmethod = malloc(sizeof(abc_method_t));
+        memset(nullmethod, 0, sizeof(abc_method_t));
+        /*TODO: might be more efficient to have this at the beginning */
+        array_append(file->methods, NO_KEY, nullmethod);
+    }
+   
+    swf_SetU30(tag, file->methods->num);
     /* enumerate classes, methods and method bodies */
     for(t=0;t<file->methods->num;t++) {
 	abc_method_t*m = (abc_method_t*)array_getvalue(file->methods, t);
@@ -1328,19 +931,19 @@ void swf_WriteABC(TAG*abctag, void*code)
         }
 
 	if(!c->constructor) {
-	    fprintf(stderr, "Error: Class %s has no constructor\n", c->classname);
-	    return;
-	}
-	swf_SetU30(tag, c->constructor->index);
+            swf_SetU30(tag, nullmethod->index);
+	} else {
+	    swf_SetU30(tag, c->constructor->index);
+        }
 	traits_write(pool, tag, c->traits);
     }
     for(t=0;t<file->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
 	if(!c->static_constructor) {
-	    fprintf(stderr, "Error: Class %s has no static constructor\n", c->classname);
-	    return;
-	}
-	swf_SetU30(tag, c->static_constructor->index);
+            swf_SetU30(tag, nullmethod->index);
+	} else {
+	    swf_SetU30(tag, c->static_constructor->index);
+        }
         traits_write(pool, tag, c->static_constructor_traits);
     }
 
@@ -1469,24 +1072,6 @@ void swf_FreeABC(void*code)
 
     free(file);
 }
-
-abc_code_t* add_opcode(abc_code_t*atag, U8 op)
-{
-    abc_code_t*tmp = (abc_code_t*)malloc(sizeof(abc_code_t));
-    tmp->opcode = op;
-    tmp->next = 0;
-    if(atag) {
-	tmp->prev = atag;
-	atag->next = tmp;
-	tmp->parent = atag->parent;
-    } else {
-	tmp->prev = 0;
-	tmp->parent = tmp;
-    }
-    return tmp;
-}
-
-#include "abc_ops.c"
 
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 {
