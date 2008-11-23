@@ -1090,6 +1090,8 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
 	msg("<trace> |  phase: %f", this->dashStart);
 	for(t=0;t<this->dashLength;t++) {
 	    dash[t] = (float)this->dashPattern[t] * f;
+            if(!dash[t])
+                dash[t] = 1e-37;
 	    msg("<trace> |  d%-3d: %f", t, this->dashPattern[t]);
 	}
 	dash[this->dashLength] = -1;
