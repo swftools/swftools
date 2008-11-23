@@ -37,13 +37,13 @@ DECLARE_LIST(trait);
 
 /* abc file constant pool */
 struct _pool {
-    array_t*ints;
-    array_t*uints;
-    array_t*floats;
-    array_t*strings;
-    array_t*namespaces;
-    array_t*namespace_sets;
-    array_t*multinames;
+    array_t*x_ints;
+    array_t*x_uints;
+    array_t*x_floats;
+    array_t*x_strings;
+    array_t*x_namespaces;
+    array_t*x_namespace_sets;
+    array_t*x_multinames;
 };
 
 typedef enum multiname_type
@@ -68,6 +68,8 @@ struct _namespace {
 struct _namespace_set {
     namespace_list_t*namespaces;
 };
+
+extern type_t multiname_type;
 struct _multiname {
     multiname_type_t type;
     namespace_t*ns;
@@ -81,9 +83,18 @@ char* multiname_to_string(multiname_t*m);
 char* namespace_to_string(namespace_t*ns);
 
 /* integer -> object */
+int pool_lookup_int(pool_t*pool, int i);
+unsigned int pool_lookup_uint(pool_t*pool, int i);
+double pool_lookup_float(pool_t*pool, int i);
+char*pool_lookup_string(pool_t*pool, int i);
+namespace_t*pool_lookup_namespace(pool_t*pool, int i);
+namespace_set_t*pool_lookup_namespace_set(pool_t*pool, int i);
 multiname_t*pool_lookup_multiname(pool_t*pool, int i);
 
 /* object -> integer (lookup) */
+int pool_find_int(pool_t*pool, int x);
+int pool_find_uint(pool_t*pool, unsigned int x);
+int pool_find_double(pool_t*pool, double x);
 int pool_find_namespace(pool_t*pool, namespace_t*ns);
 int pool_find_namespace_set(pool_t*pool, namespace_set_t*set);
 int pool_find_string(pool_t*pool, const char*s);
@@ -97,10 +108,27 @@ int pool_register_multiname(pool_t*pool, multiname_t*n);
 int pool_register_multiname2(pool_t*pool, char*name);
 
 /* creation */
-multiname_t* multiname_fromstring(const char*name);
+namespace_t* namespace_new(U8 access, const char*name);
+namespace_t* namespace_new_package(const char*name);
+namespace_t* namespace_new_packageinternal(const char*name);
+namespace_t* namespace_new_protected(const char*name);
+namespace_t* namespace_new_explicit(const char*name);
+namespace_t* namespace_new_staticprotected(const char*name);
+namespace_t* namespace_new_private(const char*name);
+namespace_t* namespace_clone(namespace_t*ns);
 
+multiname_t* multiname_fromstring(const char*name);
+multiname_t* multiname_new(namespace_t*ns, const char*name);
+multiname_t* multiname_clone(multiname_t*other);
+
+/* freeing */
+void multiname_destroy(multiname_t*m);
+void namespace_destroy(namespace_t*n);
+
+/* pool constructors/destructors */
 pool_t*pool_new();
 void pool_read(pool_t*pool, TAG*tag);
+void pool_write(pool_t*pool, TAG*tag);
 void pool_destroy(pool_t*pool);
 
 #endif
