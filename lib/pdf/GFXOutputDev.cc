@@ -575,6 +575,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_multiply = 1;
 
     this->gfxfontlist = gfxfontlist_create();
+    this->dashPattern = 0;
   
     memset(states, 0, sizeof(states));
     this->featurewarnings = 0;
