@@ -1367,7 +1367,9 @@ int main (int argc,char ** argv)
             swf_DumpActions(actions, myprefix);
         }
         else if((tag->id == ST_DOABC || tag->id == ST_RAWABC) && action) {
-            swf_ReadABC(tag);
+            void*abccode = swf_ReadABC(tag);
+            swf_DumpABC(stdout, abccode, "");
+            swf_FreeABC(abccode);
         }
         else if(tag->id == ST_DOINITACTION && action) {
             ActionTAG*actions;
