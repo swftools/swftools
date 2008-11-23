@@ -38,6 +38,8 @@ char* access2str(int type)
 char* multiname_to_string(multiname_t*m)
 {
     char*mname = 0;
+    if(!m)
+        return strdup("--<UNDEFINED_MULTINAME>--");
     if(m->type==0x07 || m->type==0x0d) {
         mname = malloc(strlen(m->ns->name)+strlen(m->name)+32);
         sprintf(mname, "<%s>\0", access2str(m->ns->access));
@@ -104,8 +106,9 @@ char* namespace_set_to_string(namespace_set_t*set)
         char*s = namespace_to_string(lns->namespace);
         strcat(desc, s);
         free(s);
-        strcat(desc, ",");
         lns = lns->next;
+        if(lns)
+            strcat(desc, ",");
     }
     strcat(desc, "}");
     return desc;
