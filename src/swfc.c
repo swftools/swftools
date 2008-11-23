@@ -377,7 +377,7 @@ static void s_addcharacter(const char*name, U16 id, TAG*ctag, SRECT r)
     c->definingTag = ctag;
     c->id = id;
     c->size = r;
-    dict_put2(&characters, name, c);
+    dict_put(&characters, name, c);
 
     if(do_exports) {
 	tag = swf_InsertTag(tag, ST_NAMECHARACTER);
@@ -398,7 +398,7 @@ static void s_addimage(const char*name, U16 id, TAG*ctag, SRECT r)
     c->definingTag = ctag;
     c->id = id;
     c->size = r;
-    dict_put2(&images, name, c);
+    dict_put(&images, name, c);
 }
 static instance_t* s_addinstance(const char*name, character_t*c, U16 depth)
 {
@@ -408,7 +408,7 @@ static instance_t* s_addinstance(const char*name, character_t*c, U16 depth)
     i->character = c;
     i->depth = depth;
     //swf_GetMatrix(0, &i->matrix);
-    dict_put2(&instances, name, i);
+    dict_put(&instances, name, i);
     return i;
 }
 
@@ -471,89 +471,89 @@ void initBuiltIns()
     interpolation_t* new;
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_LINEAR;
-    dict_put2(&interpolations, "linear", new);
+    dict_put(&interpolations, "linear", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_IN;
     new->slope = 0;
-    dict_put2(&interpolations, "quadIn", new);
+    dict_put(&interpolations, "quadIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "quadOut", new);
+    dict_put(&interpolations, "quadOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUAD_IN_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "quadInOut", new);
+    dict_put(&interpolations, "quadInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_IN;
     new->slope = 0;
-    dict_put2(&interpolations, "cubicIn", new);
+    dict_put(&interpolations, "cubicIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "cubicOut", new);
+    dict_put(&interpolations, "cubicOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CUBIC_IN_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "cubicInOut", new);
+    dict_put(&interpolations, "cubicInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_IN;
     new->slope = 0;
-    dict_put2(&interpolations, "quartIn", new);
+    dict_put(&interpolations, "quartIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "quartOut", new);
+    dict_put(&interpolations, "quartOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUART_IN_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "quartInOut", new);
+    dict_put(&interpolations, "quartInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_IN;
     new->slope = 0;
-    dict_put2(&interpolations, "quintIn", new);
+    dict_put(&interpolations, "quintIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "quintOut", new);
+    dict_put(&interpolations, "quintOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_QUINT_IN_OUT;
     new->slope = 0;
-    dict_put2(&interpolations, "quintInOut", new);
+    dict_put(&interpolations, "quintInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CIRCLE_IN;
-    dict_put2(&interpolations, "circleIn", new);
+    dict_put(&interpolations, "circleIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CIRCLE_OUT;
-    dict_put2(&interpolations, "circleOut", new);
+    dict_put(&interpolations, "circleOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_CIRCLE_IN_OUT;
-    dict_put2(&interpolations, "circleInOut", new);
+    dict_put(&interpolations, "circleInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_EXPONENTIAL_IN;
-    dict_put2(&interpolations, "exponentialIn", new);
+    dict_put(&interpolations, "exponentialIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_EXPONENTIAL_OUT;
-    dict_put2(&interpolations, "exponentialOut", new);
+    dict_put(&interpolations, "exponentialOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_EXPONENTIAL_IN_OUT;
-    dict_put2(&interpolations, "exponentialInOut", new);
+    dict_put(&interpolations, "exponentialInOut", new);
 
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_IN;
-    dict_put2(&interpolations, "sineIn", new);
+    dict_put(&interpolations, "sineIn", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_OUT;
-    dict_put2(&interpolations, "sineOut", new);
+    dict_put(&interpolations, "sineOut", new);
     new = (interpolation_t*)malloc(sizeof(interpolation_t));
     new->function = IF_SINE_IN_OUT;
-    dict_put2(&interpolations, "sineInOut", new);
+    dict_put(&interpolations, "sineInOut", new);
 
     RGBA c;
     memset(&c, 0, sizeof(RGBA));
@@ -567,29 +567,29 @@ void initBuiltIns()
     noGradient->gradient.ratios[1] = 255;
     noGradient->radial = 0;
     noGradient->rotate = 0;
-    dict_put2(&gradients, "no_gradient", noGradient);
+    dict_put(&gradients, "no_gradient", noGradient);
 
     noFilters = 0;
 // put a no_filters entry in the filters dictionary to provoce a message when a user tries
 // to define a no_filters filter. The real filter=no_filters case is handled in parseFilters.
     FILTER* dummy = (FILTER*)malloc(sizeof(FILTER));
-    dict_put2(&filters, "no_filters", dummy);
+    dict_put(&filters, "no_filters", dummy);
     noBlur = (FILTER_BLUR*) swf_NewFilter(FILTERTYPE_BLUR);
     noBlur->passes = 1;
-    dict_put2(&filters, "no_blur", noBlur);
+    dict_put(&filters, "no_blur", noBlur);
     noBevel = (FILTER_BEVEL*) swf_NewFilter(FILTERTYPE_BEVEL);
     noBevel->passes = 1;
     noBevel->composite = 1;
-    dict_put2(&filters, "no_bevel", noBevel);
+    dict_put(&filters, "no_bevel", noBevel);
     noDropshadow = (FILTER_DROPSHADOW*) swf_NewFilter(FILTERTYPE_DROPSHADOW);
     noDropshadow->passes = 1;
     noDropshadow->composite = 1;
-    dict_put2(&filters, "no_dropshadow", noDropshadow);
+    dict_put(&filters, "no_dropshadow", noDropshadow);
     noGradientGlow = (FILTER_GRADIENTGLOW*) swf_NewFilter(FILTERTYPE_GRADIENTGLOW);
     noGradientGlow->passes = 1;
     noGradientGlow->composite = 1;
     noGradientGlow->gradient = &noGradient->gradient;
-    dict_put2(&filters, "no_gradientglow", noGradientGlow);
+    dict_put(&filters, "no_gradientglow", noGradientGlow);
 }
 
 void s_swf(const char*name, SRECT r, int version, int fps, int compress, RGBA background)
@@ -633,6 +633,8 @@ void s_swf(const char*name, SRECT r, int version, int fps, int compress, RGBA ba
     currentdepth = 1;
 
     memset(idmap, 0, sizeof(idmap));
+    idmap[0]=1; //main movie has ID 0
+
     incrementid();
 }
 
@@ -1314,7 +1316,7 @@ void s_textshape(const char*name, const char*fontname, float size, const char*_t
 
     if(dict_lookup(&outlines, name))
 	syntaxerror("outline %s defined twice", name);
-    dict_put2(&outlines, name, outline);
+    dict_put(&outlines, name, outline);
 }
 
 void s_text(const char*name, const char*fontname, const char*text, int size, RGBA color)
@@ -1523,7 +1525,7 @@ void s_texture(const char*name, const char*object, int x, int y, float scalex, f
 	fs->m.sy *= 20;
     }
 
-    dict_put2(&textures, name, texture);
+    dict_put(&textures, name, texture);
 }
 
 void s_font(const char*name, const char*filename)
@@ -1645,7 +1647,7 @@ void s_sound(const char*name, const char*filename)
     sound->tag = tag;
     sound->id = id;
 
-    dict_put2(&sounds, name, sound);
+    dict_put(&sounds, name, sound);
 
     incrementid();
 
@@ -1767,7 +1769,7 @@ void s_gradient(const char*name, const char*text, int radial, int rotate)
     gradient->radial = radial;
     gradient->rotate = rotate;
 
-    dict_put2(&gradients, name, gradient);
+    dict_put(&gradients, name, gradient);
 }
 
 void s_gradientglow(const char*name, const char*gradient, float blurx, float blury,
@@ -1797,7 +1799,7 @@ void s_gradientglow(const char*name, const char*gradient, float blurx, float blu
     filter->ontop = ontop;
     filter->passes = passes;
 
-    dict_put2(&filters, name, filter);
+    dict_put(&filters, name, filter);
 }
 
 void s_dropshadow(const char*name, RGBA color, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, int passes)
@@ -1819,7 +1821,7 @@ void s_dropshadow(const char*name, RGBA color, double blurx, double blury, doubl
     filter->composite = composite;
     filter->passes = passes;
 
-    dict_put2(&filters, name, filter);
+    dict_put(&filters, name, filter);
 }
 
 void s_bevel(const char*name, RGBA shadow, RGBA highlight, double blurx, double blury, double angle, double distance, double strength, char innershadow, char knockout, char composite, char ontop, int passes)
@@ -1843,7 +1845,7 @@ void s_bevel(const char*name, RGBA shadow, RGBA highlight, double blurx, double 
     filter->ontop = ontop;
     filter->passes = passes;
 
-    dict_put2(&filters, name, filter);
+    dict_put(&filters, name, filter);
 }
 
 void s_blur(const char*name, double blurx, double blury, int passes)
@@ -1857,7 +1859,7 @@ void s_blur(const char*name, double blurx, double blury, int passes)
     filter->blury = blury;
     filter->passes = passes;
 
-    dict_put2(&filters, name, filter);
+    dict_put(&filters, name, filter);
 }
 
 void s_action(const char*text)
@@ -1946,7 +1948,7 @@ void s_outline(const char*name, const char*format, const char*source)
     outline->shape = shape;
     outline->bbox = bounds;
 
-    dict_put2(&outlines, name, outline);
+    dict_put(&outlines, name, outline);
 }
 
 int s_playsound(const char*name, int loops, int nomultiple, int stop)
@@ -2825,7 +2827,7 @@ static int c_interpolation(map_t *args)
     inter->damping = parseFloat(lu(args, "damping"));
     inter->slope = parseFloat(lu(args, "slope"));
 
-    dict_put2(&interpolations, name, inter);
+    dict_put(&interpolations, name, inter);
     return 0;
 }
 
@@ -3120,16 +3122,13 @@ static int c_define(map_t*args)
     }
     int val = parseTwip(value);
     int pos = mem_put(&define_values, &val, sizeof(val));
-    string_t s;
-    string_set(&s, name);
-    dict_put(&defines, s, (void*)(pos+1));
+    dict_put(&defines, name, (void*)(pos+1));
     return 0;
 }
 static int c_point(map_t*args)
 {
     const char*name = lu(args, "name");
     int pos;
-    string_t s1;
     SPOINT p;
     if(!points_initialized) {
 	dict_init(&points);
@@ -3139,8 +3138,7 @@ static int c_point(map_t*args)
     p.x = parseTwip(lu(args, "x"));
     p.y = parseTwip(lu(args, "y"));
     pos = mem_put(&mpoints, &p, sizeof(p));
-    string_set(&s1, name);
-    dict_put(&points, s1, (void*)(pos+1));
+    dict_put(&points, name, (void*)(pos+1));
     return 0;
 }
 static int c_play(map_t*args)
@@ -4419,7 +4417,7 @@ static void analyseArgumentsForCommand(char*command)
     	    	    swf_FontInitUsage(font);
     	    }
     	}
-    	dict_put2(&fonts, name, font);
+    	dict_put(&fonts, name, font);
     }
     else
     {
