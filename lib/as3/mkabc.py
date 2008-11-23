@@ -2,10 +2,19 @@
 
 import re
 
-fi = open("abc.c", "rb")
-fo = open("abc_ops.c", "wb")
+fi = open("code.c", "rb")
+foc = open("opcodes.c", "wb")
+foh = open("opcodes.h", "wb")
 
-R = re.compile('{(0x..),\s*"([^"]*)"\s*,\s*"([^"]*)"\s*}\s*,\s*')
+foh.write("#ifndef __opcodes_h__\n")
+foh.write("#define __opcodes_h__\n")
+foh.write("#include \"abc.h\"\n")
+foh.write("#include \"pool.h\"\n")
+foh.write("#include \"code.h\"\n")
+
+foc.write("#include \"opcodes.h\"\n")
+
+R = re.compile('{(0x..),\s*"([^"]*)"\s*,\s*"([^"]*)"[^}]*}\s*')
 
 for line in fi.readlines():
     line = line.strip()
@@ -32,9 +41,13 @@ for line in fi.readlines():
             elif c == "c":
                 type,pname="abc_class_t*","m"
             elif c == "j":
-                type,pname="abc_label_t*","j"
+                type,pname="abc_code_t*","label"
             elif c == "S":
                 type,pname="void*","labels"
+            elif c == "D":
+                type,pname="void*","debuginfo"
+            elif c == "r":
+                type,pname="int","reg"
             else:
                 raise "Unknown type "+c
             paramstr += type
@@ -47,43 +60,49 @@ for line in fi.readlines():
             paramstr += pname
             names += [pname]
 
-        fo.write("abc_code_t* abc_%s(abc_code_t*prev%s)\n" % (name, paramstr))
-        fo.write("{\n")
-        fo.write("    abc_code_t*self = add_opcode(prev, %s);\n" % op)
+        foh.write("abc_code_t* abc_%s(abc_code_t*prev%s);\n" % (name, paramstr))
+
+        foc.write("abc_code_t* abc_%s(abc_code_t*prev%s)\n" % (name, paramstr))
+        foc.write("{\n")
+        foc.write("    abc_code_t*self = add_opcode(prev, %s);\n" % op)
         i = 0
         for pname,c in zip(names,params):
             if(c == "2"):
-                fo.write("    self->params[%d] = %s;\n" % (i,pname));
-            elif(c in "nu"):
-                fo.write("    self->params[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
+                foc.write("    self->params[%d] = %s;\n" % (i,pname));
+            elif(c in "nur"):
+                foc.write("    self->params[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
             elif(c == "b"):
-                fo.write("    self->params[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
+                foc.write("    self->params[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
             elif(c == "s"):
-                fo.write("    self->params[%d] = strdup(%s);\n" % (i,pname))
+                foc.write("    self->params[%d] = strdup(%s);\n" % (i,pname))
             elif(c == "m"):
-                fo.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->params[%d] = %s;\n" % (i,pname))
             elif(c == "c"):
-                fo.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->params[%d] = %s;\n" % (i,pname))
             elif(c == "i"):
-                fo.write("    self->params[%d] = %s;\n" % (i,pname))
+                foc.write("    self->params[%d] = %s;\n" % (i,pname))
             elif(c == "j"):
-                fo.write("    /* FIXME: write label %s */\n" % pname)
+                foc.write("    self->params[%d] = %s;\n" % (i,pname))
             elif(c == "S"):
-                fo.write("    /* FIXME: write labels %s */\n" % pname)
+                foc.write("    /* FIXME: write labels %s */\n" % pname)
+            elif(c == "D"):
+                foc.write("    /* FIXME: write debuginfo %s */\n" % pname)
             else:
                 raise "Unknown type "+c
             i = i+1
-        fo.write("    return self;\n")
-        fo.write("}\n")
+        foc.write("    return self;\n")
+        foc.write("}\n")
 
-        fo.write("#define "+name+"(")
-        fo.write(",".join(["method"]+names))
-        fo.write(") {method->code = abc_"+name+"(")
-        fo.write(",".join(["method->code"]+names))
-        fo.write(");}\n")
+        foh.write("#define "+name+"(")
+        foh.write(",".join(["method"]+names))
+        foh.write(") {method->code = abc_"+name+"(")
+        foh.write(",".join(["method->code"]+names))
+        foh.write(");}\n")
 
+foh.write("#endif\n")
 
-fo.close()
+foh.close()
+foc.close()
 fi.close()
 #{0x75, "convert_d", ""},
 
