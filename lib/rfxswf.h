@@ -232,7 +232,20 @@ int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
 void  swf_SetS16(TAG * t,int v);
 int   swf_SetU32(TAG * t,U32 v);
-#define swf_SetString(t,s)  swf_SetBlock(t,s,strlen((const char *)s)+1)
+void  swf_SetString(TAG*t,const char*s);
+
+double swf_GetD64(TAG*tag);
+
+int   swf_SetU30String(TAG*tag, const char*str);
+int   swf_SetD64(TAG*tag, double v);
+int   swf_SetU30(TAG*tag, U32 u);
+int   swf_SetS30(TAG*tag, S32 s);
+int   swf_GetU24(TAG*tag);
+int   swf_GetS24(TAG*tag);
+int   swf_SetU24(TAG*tag, U32 v);
+int   swf_SetS24(TAG*tag, U32 v);
+int   swf_GetS30(TAG*tag);
+int   swf_GetU30(TAG*tag);
 
 //int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_GetRect(TAG * t,SRECT * r);
@@ -599,7 +612,7 @@ void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
 int swf_ParseDefineText(TAG * t, void(*callback)(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA* color), void*self);
 
 void swf_WriteFont(SWFFONT* font, char* filename);
-SWFFONT* swf_ReadFont(char* filename);
+SWFFONT* swf_ReadFont(const char* filename);
 
 void swf_FontFree(SWFFONT * f);
 
@@ -727,7 +740,9 @@ void swf_uncgi();  // same behaviour as Steven Grimm's uncgi-library
 
 // as3/abc.c
 void*swf_ReadABC(TAG*tag);
+void*swf_DumpABC(FILE*fo, void*code, char*prefix);
 void swf_WriteABC(TAG*tag, void*code);
+void swf_FreeABC(void*code);
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events);
 
 // swfaction.c

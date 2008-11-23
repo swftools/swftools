@@ -94,6 +94,7 @@ U8 swf_GetU8(TAG * t)
   #ifdef DEBUG_RFXSWF
     if (t->pos>=t->len) 
     { fprintf(stderr,"GetU8() out of bounds: TagID = %i\n",t->id);
+      *(int*)0=0;
       return 0;
     }
   #endif
@@ -277,6 +278,144 @@ void swf_SetFixed8(TAG * t, float f)
   swf_SetU8(t, fr);
   swf_SetU8(t, (U8)f - (f<0 && fr!=0));
 }
+int swf_GetU30(TAG*tag)
+{
+    U32 shift = 0;
+    U32 s = 0;
+    while(1) {
+	U8 b = swf_GetU8(tag);
+	s|=(b&127)<<shift;
+	shift+=7;
+	if(!(b&128))
+	    break;
+    }
+    return s;
+}
+int swf_GetS30(TAG*tag)
+{
+    U32 shift = 0;
+    U32 s = 0;
+    int nr=0;
+    while(1) {
+	U8 b = swf_GetU8(tag);
+        nr++;
+	s|=(b&127)<<shift;
+	shift+=7;
+	if(!(b&128)) {
+            if(b&64) {
+                s|=0xffffffff<<shift;
+            }
+	    break;
+        }
+    }
+    return s;
+}
+int swf_SetS30(TAG*tag, S32 s)
+{
+    S32 neg = s<0?-1:0;
+    U8 sign = s<0?0x80:0;
+    int nr=0,pos=tag->len;
+    while(1) {
+        U8 val = s&0x7f;
+        U8 vsign = s&0x80;
+	s>>=7;
+        neg>>=7;
+        if(s==neg && vsign==sign) {
+            /* if the value we just wrote has the same sign as s
+               and all the remaining bits are equal to the sign of s
+               too, stop writing */
+            if(tag)
+	      swf_SetU8(tag, val);
+            nr++;
+            break;
+        } else {
+            if(tag)
+	      swf_SetU8(tag, 0x80 | val);
+            nr++;
+        }
+    };
+    return nr;
+
+}
+int swf_SetU30(TAG*tag, U32 u)
+{
+    int nr = 0;
+    do {
+        if(tag)
+	  swf_SetU8(tag, (u&~0x7f?0x80:0) | (u&0x7F));
+	u>>=7;
+        nr++;
+    } while(u);
+    return nr;
+}
+int swf_SetU30String(TAG*tag, const char*str)
+{
+    int l = strlen(str);
+    int len=0;
+    len+=swf_SetU30(tag, l);
+    len+=l;
+    swf_SetBlock(tag, (void*)str, l);
+    return len;
+}
+double swf_GetD64(TAG*tag)
+{
+    /* FIXME: this is not big-endian compatible */
+    double value = *(double*)&tag->data[tag->pos];
+    swf_GetU32(tag);
+    swf_GetU32(tag);
+    return value;
+}
+int swf_SetD64(TAG*tag, double v)
+{
+    /* FIXME: this is not big-endian compatible */
+    swf_SetU32(tag, ((U32*)&v)[0]);
+    swf_SetU32(tag, ((U32*)&v)[1]);
+    return 8;
+}
+int swf_GetU24(TAG*tag)
+{
+    int b1 = swf_GetU8(tag);
+    int b2 = swf_GetU8(tag);
+    int b3 = swf_GetU8(tag);
+    return b3<<16|b2<<8|b1;
+}
+int swf_GetS24(TAG*tag)
+{
+    int b1 = swf_GetU8(tag);
+    int b2 = swf_GetU8(tag);
+    int b3 = swf_GetU8(tag);
+    if(b3&0x80) {
+        return -1-((b3<<16|b2<<8|b1)^0xffffff);
+    } else {
+        return b3<<16|b2<<8|b1;
+    }
+}
+int swf_SetU24(TAG*tag, U32 v)
+{
+    if(tag) {
+        if(v&0xff000000)
+          fprintf(stderr, "Error: Overflow in swf_SetU24()\n");
+        swf_SetU8(tag, v);
+        swf_SetU8(tag, v>>8);
+        swf_SetU8(tag, v>>16);
+    }
+    return 3;
+}
+int swf_SetS24(TAG*tag, U32 v)
+{
+    if(tag) {
+        if(!(v&0xff000000))
+          return swf_SetU24(tag, v);
+        if((v&0xff000000)!=0xff000000) {
+          fprintf(stderr, "Error: Overflow in swf_SetS24()\n");
+        }
+        swf_SetU8(tag, v);
+        swf_SetU8(tag, v>>8);
+        swf_SetU8(tag, v>>16);
+    }
+    return 3;
+}
+
 
 int swf_SetRGB(TAG * t,RGBA * col)
 { if (!t) return -1;
@@ -762,6 +901,15 @@ void  swf_SetPassword(TAG * t, const char * password)
 
     swf_SetU16(t,0);
     swf_SetString(t, (U8*)md5string);
+} 
+
+void swf_SetString(TAG*t, const char* s) 
+{
+    if(!s) {
+        swf_SetU8(t, 0);
+    } else {
+        swf_SetBlock(t,s,strlen(s)+1);
+    }
 }
 
 int swf_VerifyPassword(TAG * t, const char * password)
