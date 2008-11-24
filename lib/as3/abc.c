@@ -136,12 +136,12 @@ abc_file_t*abc_file_new()
 #define CLASS_INTERFACE 4
 #define CLASS_PROTECTED_NS 8
 
-abc_class_t* abc_class_new(abc_file_t*pool, multiname_t*classname, multiname_t*superclass) {
+abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass) {
     
     NEW(abc_class_t,c);
-    array_append(pool->classes, NO_KEY, c);
+    array_append(file->classes, NO_KEY, c);
 
-    c->pool = pool;
+    c->file = file;
     c->classname = classname;
     c->superclass = superclass;
     c->flags = 0;
@@ -177,18 +177,18 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
     list_append(c->interfaces, interface);
 }
 
-abc_method_body_t* add_method(abc_file_t*pool, abc_class_t*cls, char*returntype, int num_params, va_list va)
+abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, char*returntype, int num_params, va_list va)
 {
     /* construct code (method body) object */
     NEW(abc_method_body_t,c);
-    array_append(pool->method_bodies, NO_KEY, c);
-    c->pool = pool;
+    array_append(file->method_bodies, NO_KEY, c);
+    c->file = file;
     c->traits = list_new();
     c->code = 0;
 
     /* construct method object */
     NEW(abc_method_t,m);
-    array_append(pool->methods, NO_KEY, m);
+    array_append(file->methods, NO_KEY, m);
 
     if(returntype && strcmp(returntype, "void")) {
 	m->return_type = multiname_fromstring(returntype);
@@ -212,7 +212,7 @@ abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int n
 {
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(cls->pool, cls, returntype, num_params, va);
+    abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
     va_end(va);
     cls->constructor = c->method;
     return c;
@@ -222,7 +222,7 @@ abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype,
 {
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(cls->pool, cls, returntype, num_params, va);
+    abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
     va_end(va);
     cls->static_constructor = c->method;
     return c;
@@ -255,10 +255,10 @@ trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
 
 abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...)
 {
-    abc_file_t*pool = cls->pool;
+    abc_file_t*file = cls->file;
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(cls->pool, cls, returntype, num_params, va);
+    abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
     va_end(va);
     list_append(cls->traits, trait_new_method(multiname_fromstring(name), c->method));
     return c;
@@ -266,14 +266,14 @@ abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name,
 
 void abc_AddSlot(abc_class_t*cls, char*name, int slot, char*multiname)
 {
-    abc_file_t*pool = cls->pool;
+    abc_file_t*file = cls->file;
     multiname_t*m = multiname_fromstring(multiname);
     list_append(cls->traits, trait_new(TRAIT_SLOT, m, slot, 0, 0, 0));
 }
 
 void abc_method_body_addClassTrait(abc_method_body_t*code, char*multiname, int slotid, abc_class_t*cls)
 {
-    abc_file_t*pool = code->pool;
+    abc_file_t*file = code->file;
     multiname_t*m = multiname_fromstring(multiname);
     trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0, 0);
     trait->cls = cls;
@@ -284,23 +284,23 @@ void abc_method_body_addClassTrait(abc_method_body_t*code, char*multiname, int s
    and traits of the init script are *not* the same thing */
 void abc_initscript_addClassTrait(abc_script_t*script, char*multiname, int slotid, abc_class_t*cls)
 {
-    abc_file_t*pool = script->pool;
+    abc_file_t*file = script->file;
     multiname_t*m = multiname_fromstring(multiname);
     trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0, 0);
     trait->cls = cls;
     list_append(script->traits, trait);
 }
 
-abc_script_t* abc_initscript(abc_file_t*pool, char*returntype, int num_params, ...) 
+abc_script_t* abc_initscript(abc_file_t*file, char*returntype, int num_params, ...) 
 {
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(pool, 0, returntype, num_params, va);
+    abc_method_body_t* c = add_method(file, 0, returntype, num_params, va);
     abc_script_t* s = malloc(sizeof(abc_script_t));
     s->method = c->method;
     s->traits = list_new();
-    s->pool = pool;
-    array_append(pool->scripts, NO_KEY, s);
+    s->file = file;
+    array_append(file->scripts, NO_KEY, s);
     va_end(va);
     return s;
 }

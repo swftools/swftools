@@ -92,7 +92,7 @@ struct _trait {
 };
 
 struct _abc_class {
-    abc_file_t*pool;
+    abc_file_t*file;
     
     multiname_t*classname;
     multiname_t*superclass;
@@ -111,8 +111,8 @@ struct _abc_class {
     int index; //filled in during writing
 };
 
-abc_class_t* abc_class_new(abc_file_t*pool, multiname_t*classname, multiname_t*superclass);
-abc_class_t* abc_class_new2(abc_file_t*pool, char*classname, char*superclass);
+abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass);
+abc_class_t* abc_class_new2(abc_file_t*file, char*classname, char*superclass);
 void abc_class_sealed(abc_class_t*c);
 void abc_class_final(abc_class_t*c);
 void abc_class_interface(abc_class_t*c);
@@ -132,7 +132,7 @@ struct _exception {
 };
 
 struct _abc_method_body {
-    abc_file_t*pool;
+    abc_file_t*file;
     //abc_class_t*cls;
     abc_method_t*method;
     code_t*code;
@@ -151,13 +151,12 @@ struct _abc_method_body {
 
 typedef struct _abc_script {
     abc_method_t*method;
-    abc_file_t*pool;
+    abc_file_t*file;
     trait_list_t*traits;
 } abc_script_t;
 
 abc_method_t* abc_nullmethod(abc_file_t*file);
-
-abc_script_t* abc_initscript(abc_file_t*pool, char*returntype, int num_params, ...);
+abc_script_t* abc_initscript(abc_file_t*file, char*returntype, int num_params, ...);
 
 #define __ 
 
