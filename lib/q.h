@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-#define NEW(t,y) t*y = (t*)malloc(sizeof(t));memset(y, 0, sizeof(t));
+#define NEW(t,y) t*y = (t*)rfx_calloc(sizeof(t));
 
 /* dynamically growing mem section */
 typedef struct _mem_t {
@@ -203,7 +203,7 @@ struct _##x##_list { \
     struct _##x##_list*next; \
 }; \
 typedef struct _##x##_list x##_list_t;
-int list_length(void*_list);
+int list_length_(void*_list);
 void*list_clone_(void*_list);
 void list_append_(void*_list, void*entry);
 void list_free_(void*_list);
@@ -211,6 +211,7 @@ void list_free_(void*_list);
 #define list_append(list, e) {sizeof((list)->next);list_append_(&(list),(e));}
 #define list_free(list) {sizeof((list)->next);list_free_(&(list));}
 #define list_clone(list) (sizeof((list)->next),list_clone_(&(list)))
+#define list_length(list) (sizeof((list)->next),list_length_(list))
 
 #ifdef __cplusplus
 }

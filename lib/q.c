@@ -331,6 +331,8 @@ unsigned int crc32_add_byte(unsigned int checksum, unsigned char b)
 }
 unsigned int crc32_add_string(unsigned int checksum, const char*s)
 {
+    if(!s)
+        return checksum;
     while(*s) {
         checksum = crc32_add_byte(checksum, *s);
         s++;
@@ -523,19 +525,27 @@ void stringarray_destroy(stringarray_t*sa)
 
 char charptr_equals(const void*o1, const void*o2) 
 {
+    if(!o1 || !o2)
+        return o1==o2;
     return !strcmp(o1,o2);
 }
 unsigned int charptr_hash(const void*o) 
 {
+    if(!o)
+        return 0;
     return string_hash2(o);
 }
 void* charptr_dup(const void*o) 
 {
+    if(!o)
+        return 0;
     return strdup(o);
 }
 void charptr_free(void*o) 
 {
-    rfx_free(o);
+    if(o) {
+        rfx_free(o);
+    }
 }
 char stringstruct_equals(const void*o1, const void*o2) 
 {
@@ -965,7 +975,7 @@ typedef struct _commonlist {
     listinfo_t info[0];
 } commonlist_t;
 
-int list_length(void*_list)
+int list_length_(void*_list)
 {
     commonlist_t*l = (commonlist_t*)_list;
     if(!l)
