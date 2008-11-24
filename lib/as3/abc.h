@@ -32,6 +32,8 @@ DECLARE(abc_method);
 DECLARE(abc_method_body);
 DECLARE(abc_interface);
 DECLARE(abc_class);
+DECLARE(exception);
+DECLARE_LIST(exception);
 
 #include "code.h"
 #include "opcodes.h"
@@ -121,25 +123,31 @@ abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype,
 abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int num_params, ...);
 abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...);
 
+struct _exception {
+    code_t*from;
+    code_t*to;
+    code_t*target;
+    multiname_t*exc_type;
+    multiname_t*var_name;
+};
+
 struct _abc_method_body {
     abc_file_t*pool;
     //abc_class_t*cls;
     abc_method_t*method;
-    abc_code_t*code;
+    code_t*code;
 
     int max_stack;
     int local_count;
     int init_scope_depth;
     int max_scope_depth;
 
-    int exception_count;
+    exception_list_t* exceptions;
+
     trait_list_t*traits;
     
     int index; // filled in during writing
 };
-
-typedef struct _abc_label {
-} abc_label_t;
 
 typedef struct _abc_script {
     abc_method_t*method;

@@ -322,14 +322,14 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
         return;
     }
     
-    fprintf(fo, "%s[%d %d %d %d %d]\n", prefix, c->max_stack, c->local_count, c->init_scope_depth, c->max_scope_depth, c->exception_count);
+    fprintf(fo, "%s[%d %d %d %d %d]\n", prefix, c->max_stack, c->local_count, c->init_scope_depth, c->max_scope_depth, list_length(c->exceptions));
 
     char prefix2[80];
     sprintf(prefix2, "%s    ", prefix);
     if(c->traits)
         dump_traits(fo, prefix, c->traits, file);
     fprintf(fo, "%s{\n", prefix);
-    code_dump(c->code, file, prefix2, fo);
+    code_dump(c->code, c->exceptions, file, prefix2, fo);
     fprintf(fo, "%s}\n\n", prefix);
 }
 
@@ -634,8 +634,9 @@ void* swf_ReadABC(TAG*tag)
 	int s;
 	for(s=0;s<param_count;s++) {
 	    int type_index = swf_GetU30(tag);
-            multiname_t*param = multiname_clone(pool_lookup_multiname(pool, type_index));
+            
             /* type_index might be 0, which probably means "..." (varargs) */
+            multiname_t*param = type_index?multiname_clone(pool_lookup_multiname(pool, type_index)):0;
             list_append(m->parameters, param);
         }
 
@@ -735,18 +736,27 @@ void* swf_ReadABC(TAG*tag)
 	m->body = c;
 
         int pos = tag->pos + code_length;
-        c->code = code_parse(tag, code_length, file, pool);
+        codelookup_t*codelookup = 0;
+        c->code = code_parse(tag, code_length, file, pool, &codelookup);
         tag->pos = pos;
 
 	int exception_count = swf_GetU30(tag);
         int s;
+        c->exceptions = list_new();
         for(s=0;s<exception_count;s++) {
-            swf_GetU30(tag); //from
-            swf_GetU30(tag); //to
-            swf_GetU30(tag); //target
-            swf_GetU30(tag); //exc_type
-            swf_GetU30(tag); //var_name
+            exception_t*e = malloc(sizeof(exception_t));
+
+            e->from = code_atposition(codelookup, swf_GetU30(tag));
+            e->to = code_atposition(codelookup, swf_GetU30(tag));
+            e->target = code_atposition(codelookup, swf_GetU30(tag));
+
+            e->exc_type = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
+            e->var_name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
+            //e->var_name = pool_lookup_string(pool, swf_GetU30(tag));
+            //if(e->var_name) e->var_name = strdup(e->var_name);
+            list_append(c->exceptions, e);
         }
+        codelookup_free(codelookup);
 	c->traits = traits_parse(tag, pool, file);
 
 	DEBUG printf("method_body %d) (method %d), %d bytes of code", t, methodnr, code_length);
@@ -948,7 +958,18 @@ void swf_WriteABC(TAG*abctag, void*code)
 
         code_write(tag, c->code, pool, file);
 
-	swf_SetU30(tag, c->exception_count);
+	swf_SetU30(tag, list_length(c->exceptions));
+        exception_list_t*l = c->exceptions;
+        while(l) {
+            // warning: assumes "pos" in each code_t is up-to-date
+            swf_SetU30(tag, l->exception->from->pos);
+            swf_SetU30(tag, l->exception->to->pos);
+            swf_SetU30(tag, l->exception->target->pos);
+            swf_SetU30(tag, pool_register_multiname(pool, l->exception->exc_type));
+            swf_SetU30(tag, pool_register_multiname(pool, l->exception->var_name));
+            l = l->next;
+        }
+
         traits_write(pool, tag, c->traits);
     }
 
@@ -972,9 +993,8 @@ void swf_WriteABC(TAG*abctag, void*code)
     pool_destroy(pool);
 }
 
-void swf_FreeABC(void*code)
+void abc_file_free(abc_file_t*file)
 {
-    abc_file_t*file= (abc_file_t*)code;
 
     int t;
     for(t=0;t<file->metadata->num;t++) {
@@ -1053,6 +1073,12 @@ void swf_FreeABC(void*code)
     }
 
     free(file);
+}
+
+void swf_FreeABC(void*code)
+{
+    abc_file_t*file= (abc_file_t*)code;
+    abc_file_free(file);
 }
 
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
