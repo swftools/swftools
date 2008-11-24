@@ -41,9 +41,9 @@ for line in fi.readlines():
             elif c == "c":
                 type,pname="abc_class_t*","m"
             elif c == "j":
-                type,pname="abc_code_t*","label"
+                type,pname="code_t*","label"
             elif c == "S":
-                type,pname="void*","labels"
+                type,pname="lookupswitch_t*","l"
             elif c == "D":
                 type,pname="void*","debuginfo"
             elif c == "r":
@@ -60,15 +60,15 @@ for line in fi.readlines():
             paramstr += pname
             names += [pname]
 
-        foh.write("abc_code_t* abc_%s(abc_code_t*prev%s);\n" % (name, paramstr))
+        foh.write("code_t* abc_%s(code_t*prev%s);\n" % (name, paramstr))
 
-        foc.write("abc_code_t* abc_%s(abc_code_t*prev%s)\n" % (name, paramstr))
+        foc.write("code_t* abc_%s(code_t*prev%s)\n" % (name, paramstr))
         foc.write("{\n")
-        foc.write("    abc_code_t*self = add_opcode(prev, %s);\n" % op)
+        foc.write("    code_t*self = add_opcode(prev, %s);\n" % op)
         i = 0
         for pname,c in zip(names,params):
             if(c == "2"):
-                foc.write("    self->data[%d] = %s;\n" % (i,pname));
+                foc.write("    self->data[%d] = multiname_fromstring(%s); // FIXME\n" % (i,pname));
             elif(c in "nur"):
                 foc.write("    self->data[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
             elif(c == "b"):
@@ -82,9 +82,10 @@ for line in fi.readlines():
             elif(c == "i"):
                 foc.write("    self->data[%d] = %s;\n" % (i,pname))
             elif(c == "j"):
-                foc.write("    self->data[%d] = %s;\n" % (i,pname))
+                foc.write("    self->data[%d] = 0; //placeholder\n" % i)
+                foc.write("    self->branch = %s;\n" % pname)
             elif(c == "S"):
-                foc.write("    /* FIXME: write labels %s */\n" % pname)
+                foc.write("    self->data[%d] = %s;\n" % (i,pname))
             elif(c == "D"):
                 foc.write("    /* FIXME: write debuginfo %s */\n" % pname)
             else:
@@ -95,9 +96,9 @@ for line in fi.readlines():
 
         foh.write("#define "+name+"(")
         foh.write(",".join(["method"]+names))
-        foh.write(") {method->code = abc_"+name+"(")
+        foh.write(") (method->code = abc_"+name+"(")
         foh.write(",".join(["method->code"]+names))
-        foh.write(");}\n")
+        foh.write("))\n")
 
 foh.write("#endif\n")
 
