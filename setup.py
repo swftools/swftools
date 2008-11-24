@@ -234,7 +234,7 @@ base_sources = [
 "lib/q.c", "lib/utf8.c", "lib/png.c", "lib/jpeg.c", "lib/wav.c", "lib/mp3.c", "lib/os.c", "lib/bitio.c", "lib/log.c", "lib/mem.c",
 ]
 rfxswf_sources = [
-"lib/modules/swfabc.c", "lib/modules/swfaction.c", "lib/modules/swfbits.c", "lib/modules/swfbutton.c",
+"lib/modules/swfaction.c", "lib/modules/swfbits.c", "lib/modules/swfbutton.c",
 "lib/modules/swfcgi.c", "lib/modules/swfdraw.c", "lib/modules/swfdump.c", "lib/modules/swffilter.c",
 "lib/modules/swffont.c", "lib/modules/swfobject.c", "lib/modules/swfrender.c", "lib/modules/swfshape.c",
 "lib/modules/swfsound.c", "lib/modules/swftext.c", "lib/modules/swftools.c",
