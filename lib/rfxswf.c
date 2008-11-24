@@ -282,13 +282,19 @@ int swf_GetU30(TAG*tag)
 {
     U32 shift = 0;
     U32 s = 0;
+    int nr=0;
     while(1) {
 	U8 b = swf_GetU8(tag);
+        nr++;
 	s|=(b&127)<<shift;
 	shift+=7;
-	if(!(b&128))
+	if(!(b&128) || shift>=32)
 	    break;
     }
+    /*int nr2= swf_SetU30(0, s);
+    if(nr!=nr2) {
+      printf("Signed value %d stored in %d bytes, I'd store it in %d bytes\n", s, nr, nr2);
+    }*/
     return s;
 }
 int swf_GetS30(TAG*tag)
@@ -301,20 +307,26 @@ int swf_GetS30(TAG*tag)
         nr++;
 	s|=(b&127)<<shift;
 	shift+=7;
-	if(!(b&128)) {
+	if(!(b&128) || shift>=32) {
             if(b&64) {
                 s|=0xffffffff<<shift;
             }
 	    break;
         }
     }
+    /* It's not uncommon for other applications (Flex for all negative numbers, and
+       Flash for -1) to generate a lot more bytes than would be necessary.
+       int nr2= swf_SetS30(0, s);
+    if(nr!=nr2) {
+      printf("Signed value %d stored in %d bytes, I'd store it in %d bytes\n", s, nr, nr2);
+    }*/
     return s;
 }
 int swf_SetS30(TAG*tag, S32 s)
 {
     S32 neg = s<0?-1:0;
     U8 sign = s<0?0x80:0;
-    int nr=0,pos=tag->len;
+    int nr=0;
     while(1) {
         U8 val = s&0x7f;
         U8 vsign = s&0x80;
@@ -339,6 +351,10 @@ int swf_SetS30(TAG*tag, S32 s)
 }
 int swf_SetU30(TAG*tag, U32 u)
 {
+    if(u&0x80000000) {
+      fprintf(stderr, "Bit 31 set in U30 value");
+      u&=0x7fffffff;
+    }
     int nr = 0;
     do {
         if(tag)
