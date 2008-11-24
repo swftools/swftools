@@ -757,10 +757,10 @@ code_t* abc_pushfalse(code_t*prev)
     code_t*self = add_opcode(prev, 0x27);
     return self;
 }
-code_t* abc_pushint(code_t*prev, abc_method_t* m)
+code_t* abc_pushint(code_t*prev, int i)
 {
     code_t*self = add_opcode(prev, 0x2d);
-    self->data[0] = m;
+    self->data[0] = (void*)(ptroff_t)i;
     return self;
 }
 code_t* abc_pushnamespace(code_t*prev, int v)

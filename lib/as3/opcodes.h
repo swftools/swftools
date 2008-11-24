@@ -263,8 +263,8 @@ code_t* abc_pushdouble(code_t*prev, double f);
 #define pushdouble(method,f) (method->code = abc_pushdouble(method->code,f))
 code_t* abc_pushfalse(code_t*prev);
 #define pushfalse(method) (method->code = abc_pushfalse(method->code))
-code_t* abc_pushint(code_t*prev, abc_method_t* m);
-#define pushint(method,m) (method->code = abc_pushint(method->code,m))
+code_t* abc_pushint(code_t*prev, int i);
+#define pushint(method,i) (method->code = abc_pushint(method->code,i))
 code_t* abc_pushnamespace(code_t*prev, int v);
 #define pushnamespace(method,v) (method->code = abc_pushnamespace(method->code,v))
 code_t* abc_pushnan(code_t*prev);
