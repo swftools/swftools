@@ -21,15 +21,14 @@ typedef struct _opcode
 } opcode_t;
 
 struct _abc_code {
-    U8 opcode;
-    U8 len;
     void*data[2];
     abc_code_t*next;
     abc_code_t*prev;
-    abc_code_t*parent;
 
     abc_code_t*branch;
     int pos; //used during code path evaluation
+    
+    U8 opcode;
 };
 
 struct _codestats {
@@ -45,6 +44,8 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool);
 int        code_dump(abc_code_t*c, abc_file_t*file, char*prefix, FILE*fo);
 void       code_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file);
 void       code_free(abc_code_t*c);
+
+codestats_t code_get_statistics(abc_code_t*code);
 
 
 #endif

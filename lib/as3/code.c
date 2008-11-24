@@ -143,7 +143,7 @@ opcode_t opcodes[]={
 {0x31, "pushnamespace", "u",    0, 1, 0, 0}, //index into namespace
 {0x28, "pushnan", "",           0, 1, 0, 0},
 {0x20, "pushnull", "",          0, 1, 0, 0},
-{0x30, "pushscope", "",         0, 0, 1, 0},
+{0x30, "pushscope", "",        -1, 0, 1, 0},
 {0x25, "pushshort", "u",        0, 1, 0, 0},
 {0x2c, "pushstring", "s",       0, 1, 0, 0},
 {0x26, "pushtrue", "",          0, 1, 0, 0},
@@ -321,8 +321,16 @@ abc_code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool)
     return head;
 }
 
+abc_code_t*code_find_start(abc_code_t*c)
+{
+    while(c->prev) 
+        c=c->prev;
+    return c;
+}
+
 void code_free(abc_code_t*c)
 {
+    c = code_find_start(c);
     while(c) {
         abc_code_t*next = c->next;
         opcode_t*op = opcode_get(c->opcode);
@@ -346,6 +354,7 @@ void code_free(abc_code_t*c)
 
 int code_dump(abc_code_t*c, abc_file_t*file, char*prefix, FILE*fo)
 {
+    c = code_find_start(c);
     pool_t*pool = pool_new();
 
     while(c) {
@@ -482,6 +491,7 @@ static int opcode_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
 
 void code_write(TAG*tag, abc_code_t*code, pool_t*pool, abc_file_t*file)
 {
+    code = code_find_start(code);
     int pos = 0;
     int length = 0;
     abc_code_t*c = code;
@@ -550,8 +560,8 @@ static int stack_minus(abc_code_t*c)
 }
 static void handleregister(currentstats_t*stats, int reg)
 {
-    if(reg > stats->maxlocal)
-        stats->maxlocal = reg;
+    if(reg+1 > stats->maxlocal)
+        stats->maxlocal = reg+1;
 }
 
 static void callcode(currentstats_t*stats, int pos, int stack, int scope)
@@ -564,12 +574,15 @@ static void callcode(currentstats_t*stats, int pos, int stack, int scope)
             }
             return;
         }
+    
         stats->stack[pos].seen = 1;
         stats->stack[pos].stackpos = stack;
         stats->stack[pos].scopepos = scope;
 
         abc_code_t*c = stats->stack[pos].code;
         opcode_t*op = opcode_get(c->opcode);
+        
+        printf("Walking %s at position %d, stack=%d, scope=%d\n", op->name, pos, stack, scope);
 
         stack += stack_minus(c);
 
@@ -622,6 +635,7 @@ static void callcode(currentstats_t*stats, int pos, int stack, int scope)
 
 codestats_t code_get_statistics(abc_code_t*code) 
 {
+    code = code_find_start(code);
     int num = 0;
     abc_code_t*c = code;
     while(c) {
@@ -651,6 +665,7 @@ codestats_t code_get_statistics(abc_code_t*code)
     codestats_t stats;
     stats.local_count = current.maxlocal;
     stats.max_stack = current.maxstack;
+    stats.init_scope_depth = 0;
     stats.max_scope_depth = current.maxscope;
     return stats;
 }
@@ -662,10 +677,8 @@ abc_code_t* add_opcode(abc_code_t*atag, U8 op)
     if(atag) {
 	tmp->prev = atag;
 	atag->next = tmp;
-	tmp->parent = atag->parent;
     } else {
 	tmp->prev = 0;
-	tmp->parent = tmp;
     }
     return tmp;
 }
