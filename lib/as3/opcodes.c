@@ -1,794 +1,931 @@
 #include "opcodes.h"
-abc_code_t* abc_add(abc_code_t*prev)
+code_t* abc_add(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa0);
+    code_t*self = add_opcode(prev, 0xa0);
     return self;
 }
-abc_code_t* abc_add_i(abc_code_t*prev)
+code_t* abc_add_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xc5);
+    code_t*self = add_opcode(prev, 0xc5);
     return self;
 }
-abc_code_t* abc_astype(abc_code_t*prev, char* name)
+code_t* abc_astype(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x86);
+    code_t*self = add_opcode(prev, 0x86);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_astypelate(abc_code_t*prev)
+code_t* abc_astype2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x87);
+    code_t*self = add_opcode(prev, 0x86);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_bitand(abc_code_t*prev)
+code_t* abc_astypelate(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xA8);
+    code_t*self = add_opcode(prev, 0x87);
     return self;
 }
-abc_code_t* abc_bitnot(abc_code_t*prev)
+code_t* abc_bitand(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x97);
+    code_t*self = add_opcode(prev, 0xA8);
     return self;
 }
-abc_code_t* abc_bitor(abc_code_t*prev)
+code_t* abc_bitnot(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa9);
+    code_t*self = add_opcode(prev, 0x97);
     return self;
 }
-abc_code_t* abc_bitxor(abc_code_t*prev)
+code_t* abc_bitor(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xaa);
+    code_t*self = add_opcode(prev, 0xa9);
     return self;
 }
-abc_code_t* abc_call(abc_code_t*prev, int v)
+code_t* abc_bitxor(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x41);
+    code_t*self = add_opcode(prev, 0xaa);
+    return self;
+}
+code_t* abc_call(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x41);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callmethod(abc_code_t*prev, abc_method_body_t* m, int v)
+code_t* abc_callmethod(code_t*prev, abc_method_body_t* m, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x43);
+    code_t*self = add_opcode(prev, 0x43);
     self->data[0] = m;
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callproplex(abc_code_t*prev, char* name, int v)
+code_t* abc_callproplex(code_t*prev, char* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x4c);
+    code_t*self = add_opcode(prev, 0x4c);
     self->data[0] = multiname_fromstring(name);
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callproperty(abc_code_t*prev, char* name, int v)
+code_t* abc_callproplex2(code_t*prev, multiname_t* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x46);
+    code_t*self = add_opcode(prev, 0x4c);
+    self->data[0] = multiname_clone(name);
+    self->data[1] = (void*)(ptroff_t)v;
+    return self;
+}
+code_t* abc_callproperty(code_t*prev, char* name, int v)
+{
+    code_t*self = add_opcode(prev, 0x46);
     self->data[0] = multiname_fromstring(name);
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callpropvoid(abc_code_t*prev, char* name, int v)
+code_t* abc_callproperty2(code_t*prev, multiname_t* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x4f);
+    code_t*self = add_opcode(prev, 0x46);
+    self->data[0] = multiname_clone(name);
+    self->data[1] = (void*)(ptroff_t)v;
+    return self;
+}
+code_t* abc_callpropvoid(code_t*prev, char* name, int v)
+{
+    code_t*self = add_opcode(prev, 0x4f);
     self->data[0] = multiname_fromstring(name);
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callstatic(abc_code_t*prev, abc_method_t* m, int v)
+code_t* abc_callpropvoid2(code_t*prev, multiname_t* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x44);
+    code_t*self = add_opcode(prev, 0x4f);
+    self->data[0] = multiname_clone(name);
+    self->data[1] = (void*)(ptroff_t)v;
+    return self;
+}
+code_t* abc_callstatic(code_t*prev, abc_method_t* m, int v)
+{
+    code_t*self = add_opcode(prev, 0x44);
     self->data[0] = m;
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callsuper(abc_code_t*prev, char* name, int v)
+code_t* abc_callsuper(code_t*prev, char* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x45);
+    code_t*self = add_opcode(prev, 0x45);
     self->data[0] = multiname_fromstring(name);
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_callsupervoid(abc_code_t*prev, char* name, int v)
+code_t* abc_callsuper2(code_t*prev, multiname_t* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x4e);
+    code_t*self = add_opcode(prev, 0x45);
+    self->data[0] = multiname_clone(name);
+    self->data[1] = (void*)(ptroff_t)v;
+    return self;
+}
+code_t* abc_callsupervoid(code_t*prev, char* name, int v)
+{
+    code_t*self = add_opcode(prev, 0x4e);
     self->data[0] = multiname_fromstring(name);
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_checkfilter(abc_code_t*prev)
+code_t* abc_callsupervoid2(code_t*prev, multiname_t* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x78);
+    code_t*self = add_opcode(prev, 0x4e);
+    self->data[0] = multiname_clone(name);
+    self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_coerce(abc_code_t*prev, char* name)
+code_t* abc_checkfilter(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x80);
+    code_t*self = add_opcode(prev, 0x78);
+    return self;
+}
+code_t* abc_coerce(code_t*prev, char* name)
+{
+    code_t*self = add_opcode(prev, 0x80);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_coerce_a(abc_code_t*prev)
+code_t* abc_coerce2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x82);
+    code_t*self = add_opcode(prev, 0x80);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_coerce_s(abc_code_t*prev)
+code_t* abc_coerce_a(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x85);
+    code_t*self = add_opcode(prev, 0x82);
     return self;
 }
-abc_code_t* abc_construct(abc_code_t*prev, int v)
+code_t* abc_coerce_s(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x42);
+    code_t*self = add_opcode(prev, 0x85);
+    return self;
+}
+code_t* abc_construct(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x42);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_constructprop(abc_code_t*prev, char* name, int v)
+code_t* abc_constructprop(code_t*prev, char* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x4a);
+    code_t*self = add_opcode(prev, 0x4a);
     self->data[0] = multiname_fromstring(name);
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_constructsuper(abc_code_t*prev, int v)
+code_t* abc_constructprop2(code_t*prev, multiname_t* name, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x49);
+    code_t*self = add_opcode(prev, 0x4a);
+    self->data[0] = multiname_clone(name);
+    self->data[1] = (void*)(ptroff_t)v;
+    return self;
+}
+code_t* abc_constructsuper(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x49);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_convert_b(abc_code_t*prev)
+code_t* abc_convert_b(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x76);
+    code_t*self = add_opcode(prev, 0x76);
     return self;
 }
-abc_code_t* abc_convert_i(abc_code_t*prev)
+code_t* abc_convert_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x73);
+    code_t*self = add_opcode(prev, 0x73);
     return self;
 }
-abc_code_t* abc_convert_d(abc_code_t*prev)
+code_t* abc_convert_d(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x75);
+    code_t*self = add_opcode(prev, 0x75);
     return self;
 }
-abc_code_t* abc_convert_o(abc_code_t*prev)
+code_t* abc_convert_o(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x77);
+    code_t*self = add_opcode(prev, 0x77);
     return self;
 }
-abc_code_t* abc_convert_u(abc_code_t*prev)
+code_t* abc_convert_u(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x74);
+    code_t*self = add_opcode(prev, 0x74);
     return self;
 }
-abc_code_t* abc_convert_s(abc_code_t*prev)
+code_t* abc_convert_s(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x70);
+    code_t*self = add_opcode(prev, 0x70);
     return self;
 }
-abc_code_t* abc_debug(abc_code_t*prev, void* debuginfo)
+code_t* abc_debug(code_t*prev, void* debuginfo)
 {
-    abc_code_t*self = add_opcode(prev, 0xef);
+    code_t*self = add_opcode(prev, 0xef);
     /* FIXME: write debuginfo debuginfo */
     return self;
 }
-abc_code_t* abc_debugfile(abc_code_t*prev, char* s)
+code_t* abc_debugfile(code_t*prev, char* s)
 {
-    abc_code_t*self = add_opcode(prev, 0xf1);
+    code_t*self = add_opcode(prev, 0xf1);
     self->data[0] = strdup(s);
     return self;
 }
-abc_code_t* abc_debugline(abc_code_t*prev, int v)
+code_t* abc_debugline(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0xf0);
+    code_t*self = add_opcode(prev, 0xf0);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_declocal(abc_code_t*prev, int reg)
+code_t* abc_declocal(code_t*prev, int reg)
 {
-    abc_code_t*self = add_opcode(prev, 0x94);
+    code_t*self = add_opcode(prev, 0x94);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_declocal_i(abc_code_t*prev, int reg)
+code_t* abc_declocal_i(code_t*prev, int reg)
 {
-    abc_code_t*self = add_opcode(prev, 0xc3);
+    code_t*self = add_opcode(prev, 0xc3);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_decrement(abc_code_t*prev)
+code_t* abc_decrement(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x93);
+    code_t*self = add_opcode(prev, 0x93);
     return self;
 }
-abc_code_t* abc_decrement_i(abc_code_t*prev)
+code_t* abc_decrement_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xc1);
+    code_t*self = add_opcode(prev, 0xc1);
     return self;
 }
-abc_code_t* abc_deleteproperty(abc_code_t*prev, char* name)
+code_t* abc_deleteproperty(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x6a);
+    code_t*self = add_opcode(prev, 0x6a);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_divide(abc_code_t*prev)
+code_t* abc_deleteproperty2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0xa3);
+    code_t*self = add_opcode(prev, 0x6a);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_dup(abc_code_t*prev)
+code_t* abc_divide(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x2a);
+    code_t*self = add_opcode(prev, 0xa3);
     return self;
 }
-abc_code_t* abc_dxns(abc_code_t*prev, char* s)
+code_t* abc_dup(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x06);
+    code_t*self = add_opcode(prev, 0x2a);
+    return self;
+}
+code_t* abc_dxns(code_t*prev, char* s)
+{
+    code_t*self = add_opcode(prev, 0x06);
     self->data[0] = strdup(s);
     return self;
 }
-abc_code_t* abc_dxnslate(abc_code_t*prev)
+code_t* abc_dxnslate(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x07);
+    code_t*self = add_opcode(prev, 0x07);
     return self;
 }
-abc_code_t* abc_equals(abc_code_t*prev)
+code_t* abc_equals(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xab);
+    code_t*self = add_opcode(prev, 0xab);
     return self;
 }
-abc_code_t* abc_esc_xattr(abc_code_t*prev)
+code_t* abc_esc_xattr(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x72);
+    code_t*self = add_opcode(prev, 0x72);
     return self;
 }
-abc_code_t* abc_esc_xelem(abc_code_t*prev)
+code_t* abc_esc_xelem(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x71);
+    code_t*self = add_opcode(prev, 0x71);
     return self;
 }
-abc_code_t* abc_findproperty(abc_code_t*prev, char* name)
+code_t* abc_findproperty(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x5e);
+    code_t*self = add_opcode(prev, 0x5e);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_findpropstrict(abc_code_t*prev, char* name)
+code_t* abc_findproperty2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x5d);
+    code_t*self = add_opcode(prev, 0x5e);
+    self->data[0] = multiname_clone(name);
+    return self;
+}
+code_t* abc_findpropstrict(code_t*prev, char* name)
+{
+    code_t*self = add_opcode(prev, 0x5d);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_getdescendants(abc_code_t*prev, char* name)
+code_t* abc_findpropstrict2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x59);
+    code_t*self = add_opcode(prev, 0x5d);
+    self->data[0] = multiname_clone(name);
+    return self;
+}
+code_t* abc_getdescendants(code_t*prev, char* name)
+{
+    code_t*self = add_opcode(prev, 0x59);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_getglobalscope(abc_code_t*prev)
+code_t* abc_getdescendants2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x64);
+    code_t*self = add_opcode(prev, 0x59);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_getglobalslot(abc_code_t*prev, int v)
+code_t* abc_getglobalscope(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x6e);
+    code_t*self = add_opcode(prev, 0x64);
+    return self;
+}
+code_t* abc_getglobalslot(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x6e);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_getlex(abc_code_t*prev, char* name)
+code_t* abc_getlex(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x60);
+    code_t*self = add_opcode(prev, 0x60);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_getlocal(abc_code_t*prev, int reg)
+code_t* abc_getlex2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x62);
+    code_t*self = add_opcode(prev, 0x60);
+    self->data[0] = multiname_clone(name);
+    return self;
+}
+code_t* abc_getlocal(code_t*prev, int reg)
+{
+    code_t*self = add_opcode(prev, 0x62);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_getlocal_0(abc_code_t*prev)
+code_t* abc_getlocal_0(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd0);
+    code_t*self = add_opcode(prev, 0xd0);
     return self;
 }
-abc_code_t* abc_getlocal_1(abc_code_t*prev)
+code_t* abc_getlocal_1(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd1);
+    code_t*self = add_opcode(prev, 0xd1);
     return self;
 }
-abc_code_t* abc_getlocal_2(abc_code_t*prev)
+code_t* abc_getlocal_2(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd2);
+    code_t*self = add_opcode(prev, 0xd2);
     return self;
 }
-abc_code_t* abc_getlocal_3(abc_code_t*prev)
+code_t* abc_getlocal_3(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd3);
+    code_t*self = add_opcode(prev, 0xd3);
     return self;
 }
-abc_code_t* abc_getproperty(abc_code_t*prev, char* name)
+code_t* abc_getproperty(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x66);
+    code_t*self = add_opcode(prev, 0x66);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_getscopeobject(abc_code_t*prev, int v)
+code_t* abc_getproperty2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x65);
+    code_t*self = add_opcode(prev, 0x66);
+    self->data[0] = multiname_clone(name);
+    return self;
+}
+code_t* abc_getscopeobject(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x65);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_getslot(abc_code_t*prev, int v)
+code_t* abc_getslot(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x6c);
+    code_t*self = add_opcode(prev, 0x6c);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_getsuper(abc_code_t*prev, char* name)
+code_t* abc_getsuper(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x04);
+    code_t*self = add_opcode(prev, 0x04);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_greaterequals(abc_code_t*prev)
+code_t* abc_getsuper2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0xaf);
+    code_t*self = add_opcode(prev, 0x04);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_hasnext(abc_code_t*prev)
+code_t* abc_greaterthan(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x1f);
+    code_t*self = add_opcode(prev, 0xaf);
     return self;
 }
-abc_code_t* abc_hasnext2(abc_code_t*prev, int reg, int reg2)
+code_t* abc_greaterequals(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x32);
+    code_t*self = add_opcode(prev, 0xb0);
+    return self;
+}
+code_t* abc_hasnext(code_t*prev)
+{
+    code_t*self = add_opcode(prev, 0x1f);
+    return self;
+}
+code_t* abc_hasnext2(code_t*prev, int reg, int reg2)
+{
+    code_t*self = add_opcode(prev, 0x32);
     self->data[0] = (void*)(ptroff_t)reg;
     self->data[1] = (void*)(ptroff_t)reg2;
     return self;
 }
-abc_code_t* abc_ifeq(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifeq(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x13);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x13);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_iffalse(abc_code_t*prev, abc_code_t* label)
+code_t* abc_iffalse(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x12);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x12);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifge(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifge(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x18);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x18);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifgt(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifgt(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x17);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x17);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifle(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifle(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x16);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x16);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_iflt(abc_code_t*prev, abc_code_t* label)
+code_t* abc_iflt(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x15);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x15);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifnge(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifnge(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x0f);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x0f);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifngt(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifngt(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x0e);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x0e);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifnle(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifnle(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x0d);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x0d);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifnlt(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifnlt(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x0c);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x0c);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifne(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifne(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x14);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x14);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifstricteq(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifstricteq(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x19);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x19);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_ifstrictne(abc_code_t*prev, abc_code_t* label)
+code_t* abc_ifstrictne(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x1a);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x1a);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_iftrue(abc_code_t*prev, abc_code_t* label)
+code_t* abc_iftrue(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x11);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0x11);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
     return self;
 }
-abc_code_t* abc_in(abc_code_t*prev)
+code_t* abc_in(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xb4);
+    code_t*self = add_opcode(prev, 0xb4);
     return self;
 }
-abc_code_t* abc_inclocal(abc_code_t*prev, int reg)
+code_t* abc_inclocal(code_t*prev, int reg)
 {
-    abc_code_t*self = add_opcode(prev, 0x92);
+    code_t*self = add_opcode(prev, 0x92);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_inclocal_i(abc_code_t*prev, int reg)
+code_t* abc_inclocal_i(code_t*prev, int reg)
 {
-    abc_code_t*self = add_opcode(prev, 0xc2);
+    code_t*self = add_opcode(prev, 0xc2);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_increment(abc_code_t*prev)
+code_t* abc_increment(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x91);
+    code_t*self = add_opcode(prev, 0x91);
     return self;
 }
-abc_code_t* abc_increment_i(abc_code_t*prev)
+code_t* abc_increment_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xc0);
+    code_t*self = add_opcode(prev, 0xc0);
     return self;
 }
-abc_code_t* abc_initproperty(abc_code_t*prev, char* name)
+code_t* abc_initproperty(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x68);
+    code_t*self = add_opcode(prev, 0x68);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_instanceof(abc_code_t*prev)
+code_t* abc_initproperty2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0xb1);
+    code_t*self = add_opcode(prev, 0x68);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_istype(abc_code_t*prev, char* name)
+code_t* abc_instanceof(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xb2);
+    code_t*self = add_opcode(prev, 0xb1);
+    return self;
+}
+code_t* abc_istype(code_t*prev, char* name)
+{
+    code_t*self = add_opcode(prev, 0xb2);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_istypelate(abc_code_t*prev)
+code_t* abc_istype2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0xb3);
+    code_t*self = add_opcode(prev, 0xb2);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_jump(abc_code_t*prev, abc_code_t* label)
+code_t* abc_istypelate(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x10);
-    self->data[0] = label;
+    code_t*self = add_opcode(prev, 0xb3);
     return self;
 }
-abc_code_t* abc_kill(abc_code_t*prev, int reg)
+code_t* abc_jump(code_t*prev, code_t* label)
 {
-    abc_code_t*self = add_opcode(prev, 0x08);
+    code_t*self = add_opcode(prev, 0x10);
+    self->data[0] = 0; //placeholder
+    self->branch = label;
+    return self;
+}
+code_t* abc_kill(code_t*prev, int reg)
+{
+    code_t*self = add_opcode(prev, 0x08);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_label(abc_code_t*prev)
+code_t* abc_label(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x09);
+    code_t*self = add_opcode(prev, 0x09);
     return self;
 }
-abc_code_t* abc_lessequals(abc_code_t*prev)
+code_t* abc_lessequals(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xae);
+    code_t*self = add_opcode(prev, 0xae);
     return self;
 }
-abc_code_t* abc_lessthan(abc_code_t*prev)
+code_t* abc_lessthan(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xad);
+    code_t*self = add_opcode(prev, 0xad);
     return self;
 }
-abc_code_t* abc_lookupswitch(abc_code_t*prev, void* labels)
+code_t* abc_lookupswitch(code_t*prev, lookupswitch_t* l)
 {
-    abc_code_t*self = add_opcode(prev, 0x1b);
-    /* FIXME: write labels labels */
+    code_t*self = add_opcode(prev, 0x1b);
+    self->data[0] = l;
     return self;
 }
-abc_code_t* abc_lshift(abc_code_t*prev)
+code_t* abc_lshift(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa5);
+    code_t*self = add_opcode(prev, 0xa5);
     return self;
 }
-abc_code_t* abc_modulo(abc_code_t*prev)
+code_t* abc_modulo(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa4);
+    code_t*self = add_opcode(prev, 0xa4);
     return self;
 }
-abc_code_t* abc_multiply(abc_code_t*prev)
+code_t* abc_multiply(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa2);
+    code_t*self = add_opcode(prev, 0xa2);
     return self;
 }
-abc_code_t* abc_multiply_i(abc_code_t*prev)
+code_t* abc_multiply_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xc7);
+    code_t*self = add_opcode(prev, 0xc7);
     return self;
 }
-abc_code_t* abc_negate(abc_code_t*prev)
+code_t* abc_negate(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x90);
+    code_t*self = add_opcode(prev, 0x90);
     return self;
 }
-abc_code_t* abc_negate_i(abc_code_t*prev)
+code_t* abc_negate_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xc4);
+    code_t*self = add_opcode(prev, 0xc4);
     return self;
 }
-abc_code_t* abc_newactivation(abc_code_t*prev)
+code_t* abc_newactivation(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x57);
+    code_t*self = add_opcode(prev, 0x57);
     return self;
 }
-abc_code_t* abc_newarray(abc_code_t*prev, int v)
+code_t* abc_newarray(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x56);
+    code_t*self = add_opcode(prev, 0x56);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_newcatch(abc_code_t*prev, int v)
+code_t* abc_newcatch(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x5a);
+    code_t*self = add_opcode(prev, 0x5a);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_newclass(abc_code_t*prev, abc_class_t* m)
+code_t* abc_newclass(code_t*prev, abc_class_t* m)
 {
-    abc_code_t*self = add_opcode(prev, 0x58);
+    code_t*self = add_opcode(prev, 0x58);
     self->data[0] = m;
     return self;
 }
-abc_code_t* abc_newfunction(abc_code_t*prev, abc_method_body_t* m)
+code_t* abc_newfunction(code_t*prev, abc_method_body_t* m)
 {
-    abc_code_t*self = add_opcode(prev, 0x40);
+    code_t*self = add_opcode(prev, 0x40);
     self->data[0] = m;
     return self;
 }
-abc_code_t* abc_newobject(abc_code_t*prev, int v)
+code_t* abc_newobject(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x55);
+    code_t*self = add_opcode(prev, 0x55);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_nextname(abc_code_t*prev)
+code_t* abc_nextname(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x1e);
+    code_t*self = add_opcode(prev, 0x1e);
     return self;
 }
-abc_code_t* abc_nextvalue(abc_code_t*prev)
+code_t* abc_nextvalue(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x23);
+    code_t*self = add_opcode(prev, 0x23);
     return self;
 }
-abc_code_t* abc_nop(abc_code_t*prev)
+code_t* abc_nop(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x02);
+    code_t*self = add_opcode(prev, 0x02);
     return self;
 }
-abc_code_t* abc_not(abc_code_t*prev)
+code_t* abc_not(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x96);
+    code_t*self = add_opcode(prev, 0x96);
     return self;
 }
-abc_code_t* abc_pop(abc_code_t*prev)
+code_t* abc_pop(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x29);
+    code_t*self = add_opcode(prev, 0x29);
     return self;
 }
-abc_code_t* abc_popscope(abc_code_t*prev)
+code_t* abc_popscope(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x1d);
+    code_t*self = add_opcode(prev, 0x1d);
     return self;
 }
-abc_code_t* abc_pushbyte(abc_code_t*prev, int v)
+code_t* abc_pushbyte(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x24);
+    code_t*self = add_opcode(prev, 0x24);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_pushdouble(abc_code_t*prev, int v)
+code_t* abc_pushdouble(code_t*prev, double f)
 {
-    abc_code_t*self = add_opcode(prev, 0x2f);
+    code_t*self = add_opcode(prev, 0x2f);
+    double*fp = malloc(sizeof(double));
+    *fp = f;
+    self->data[0] = fp;
+    return self;
+}
+code_t* abc_pushfalse(code_t*prev)
+{
+    code_t*self = add_opcode(prev, 0x27);
+    return self;
+}
+code_t* abc_pushint(code_t*prev, abc_method_t* m)
+{
+    code_t*self = add_opcode(prev, 0x2d);
+    self->data[0] = m;
+    return self;
+}
+code_t* abc_pushnamespace(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x31);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_pushfalse(abc_code_t*prev)
+code_t* abc_pushnan(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x27);
+    code_t*self = add_opcode(prev, 0x28);
     return self;
 }
-abc_code_t* abc_pushint(abc_code_t*prev, int v)
+code_t* abc_pushnull(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x2d);
+    code_t*self = add_opcode(prev, 0x20);
+    return self;
+}
+code_t* abc_pushscope(code_t*prev)
+{
+    code_t*self = add_opcode(prev, 0x30);
+    return self;
+}
+code_t* abc_pushshort(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x25);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_pushnamespace(abc_code_t*prev, int v)
+code_t* abc_pushstring(code_t*prev, char* s)
 {
-    abc_code_t*self = add_opcode(prev, 0x31);
-    self->data[0] = (void*)(ptroff_t)v;
-    return self;
-}
-abc_code_t* abc_pushnan(abc_code_t*prev)
-{
-    abc_code_t*self = add_opcode(prev, 0x28);
-    return self;
-}
-abc_code_t* abc_pushnull(abc_code_t*prev)
-{
-    abc_code_t*self = add_opcode(prev, 0x20);
-    return self;
-}
-abc_code_t* abc_pushscope(abc_code_t*prev)
-{
-    abc_code_t*self = add_opcode(prev, 0x30);
-    return self;
-}
-abc_code_t* abc_pushshort(abc_code_t*prev, int v)
-{
-    abc_code_t*self = add_opcode(prev, 0x25);
-    self->data[0] = (void*)(ptroff_t)v;
-    return self;
-}
-abc_code_t* abc_pushstring(abc_code_t*prev, char* s)
-{
-    abc_code_t*self = add_opcode(prev, 0x2c);
+    code_t*self = add_opcode(prev, 0x2c);
     self->data[0] = strdup(s);
     return self;
 }
-abc_code_t* abc_pushtrue(abc_code_t*prev)
+code_t* abc_pushtrue(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x26);
+    code_t*self = add_opcode(prev, 0x26);
     return self;
 }
-abc_code_t* abc_pushuint(abc_code_t*prev, int v)
+code_t* abc_pushuint(code_t*prev, unsigned int u)
 {
-    abc_code_t*self = add_opcode(prev, 0x2e);
-    self->data[0] = (void*)(ptroff_t)v;
+    code_t*self = add_opcode(prev, 0x2e);
+    self->data[0] = (void*)(ptroff_t)u;
     return self;
 }
-abc_code_t* abc_pushundefined(abc_code_t*prev)
+code_t* abc_pushundefined(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x21);
+    code_t*self = add_opcode(prev, 0x21);
     return self;
 }
-abc_code_t* abc_pushwith(abc_code_t*prev)
+code_t* abc_pushwith(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x1c);
+    code_t*self = add_opcode(prev, 0x1c);
     return self;
 }
-abc_code_t* abc_returnvalue(abc_code_t*prev)
+code_t* abc_returnvalue(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x48);
+    code_t*self = add_opcode(prev, 0x48);
     return self;
 }
-abc_code_t* abc_returnvoid(abc_code_t*prev)
+code_t* abc_returnvoid(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x47);
+    code_t*self = add_opcode(prev, 0x47);
     return self;
 }
-abc_code_t* abc_rshift(abc_code_t*prev)
+code_t* abc_rshift(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa6);
+    code_t*self = add_opcode(prev, 0xa6);
     return self;
 }
-abc_code_t* abc_setlocal(abc_code_t*prev, int reg)
+code_t* abc_setlocal(code_t*prev, int reg)
 {
-    abc_code_t*self = add_opcode(prev, 0x63);
+    code_t*self = add_opcode(prev, 0x63);
     self->data[0] = (void*)(ptroff_t)reg;
     return self;
 }
-abc_code_t* abc_setlocal_0(abc_code_t*prev)
+code_t* abc_setlocal_0(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd4);
+    code_t*self = add_opcode(prev, 0xd4);
     return self;
 }
-abc_code_t* abc_setlocal_1(abc_code_t*prev)
+code_t* abc_setlocal_1(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd5);
+    code_t*self = add_opcode(prev, 0xd5);
     return self;
 }
-abc_code_t* abc_setlocal_2(abc_code_t*prev)
+code_t* abc_setlocal_2(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd6);
+    code_t*self = add_opcode(prev, 0xd6);
     return self;
 }
-abc_code_t* abc_setlocal_3(abc_code_t*prev)
+code_t* abc_setlocal_3(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xd7);
+    code_t*self = add_opcode(prev, 0xd7);
     return self;
 }
-abc_code_t* abc_setglobalslot(abc_code_t*prev, int v)
+code_t* abc_setglobalslot(code_t*prev, int v)
 {
-    abc_code_t*self = add_opcode(prev, 0x6f);
+    code_t*self = add_opcode(prev, 0x6f);
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-abc_code_t* abc_setproperty(abc_code_t*prev, char* name)
+code_t* abc_setproperty(code_t*prev, char* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x61);
+    code_t*self = add_opcode(prev, 0x61);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_setslot(abc_code_t*prev, char* name)
+code_t* abc_setproperty2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x6d);
+    code_t*self = add_opcode(prev, 0x61);
+    self->data[0] = multiname_clone(name);
+    return self;
+}
+code_t* abc_setslot(code_t*prev, int v)
+{
+    code_t*self = add_opcode(prev, 0x6d);
+    self->data[0] = (void*)(ptroff_t)v;
+    return self;
+}
+code_t* abc_setsuper(code_t*prev, char* name)
+{
+    code_t*self = add_opcode(prev, 0x05);
     self->data[0] = multiname_fromstring(name);
     return self;
 }
-abc_code_t* abc_setsuper(abc_code_t*prev, char* name)
+code_t* abc_setsuper2(code_t*prev, multiname_t* name)
 {
-    abc_code_t*self = add_opcode(prev, 0x05);
-    self->data[0] = multiname_fromstring(name);
+    code_t*self = add_opcode(prev, 0x05);
+    self->data[0] = multiname_clone(name);
     return self;
 }
-abc_code_t* abc_strictequals(abc_code_t*prev)
+code_t* abc_strictequals(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xac);
+    code_t*self = add_opcode(prev, 0xac);
     return self;
 }
-abc_code_t* abc_subtract(abc_code_t*prev)
+code_t* abc_subtract(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa1);
+    code_t*self = add_opcode(prev, 0xa1);
     return self;
 }
-abc_code_t* abc_subtract_i(abc_code_t*prev)
+code_t* abc_subtract_i(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xc6);
+    code_t*self = add_opcode(prev, 0xc6);
     return self;
 }
-abc_code_t* abc_swap(abc_code_t*prev)
+code_t* abc_swap(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x2b);
+    code_t*self = add_opcode(prev, 0x2b);
     return self;
 }
-abc_code_t* abc_throw(abc_code_t*prev)
+code_t* abc_throw(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x03);
+    code_t*self = add_opcode(prev, 0x03);
     return self;
 }
-abc_code_t* abc_typeof(abc_code_t*prev)
+code_t* abc_typeof(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0x95);
+    code_t*self = add_opcode(prev, 0x95);
     return self;
 }
-abc_code_t* abc_urshift(abc_code_t*prev)
+code_t* abc_urshift(code_t*prev)
 {
-    abc_code_t*self = add_opcode(prev, 0xa7);
-    return self;
-}
-abc_code_t* abc_xxx(abc_code_t*prev)
-{
-    abc_code_t*self = add_opcode(prev, 0xb0);
+    code_t*self = add_opcode(prev, 0xa7);
     return self;
 }

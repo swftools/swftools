@@ -9,6 +9,8 @@ code_t* abc_add_i(code_t*prev);
 #define add_i(method) (method->code = abc_add_i(method->code))
 code_t* abc_astype(code_t*prev, char* name);
 #define astype(method,name) (method->code = abc_astype(method->code,name))
+code_t* abc_astype2(code_t*prev, multiname_t* name);
+#define astype2(method,name) (method->code = abc_astype2(method->code,name))
 code_t* abc_astypelate(code_t*prev);
 #define astypelate(method) (method->code = abc_astypelate(method->code))
 code_t* abc_bitand(code_t*prev);
@@ -25,20 +27,32 @@ code_t* abc_callmethod(code_t*prev, abc_method_body_t* m, int v);
 #define callmethod(method,m,v) (method->code = abc_callmethod(method->code,m,v))
 code_t* abc_callproplex(code_t*prev, char* name, int v);
 #define callproplex(method,name,v) (method->code = abc_callproplex(method->code,name,v))
+code_t* abc_callproplex2(code_t*prev, multiname_t* name, int v);
+#define callproplex2(method,name,v) (method->code = abc_callproplex2(method->code,name,v))
 code_t* abc_callproperty(code_t*prev, char* name, int v);
 #define callproperty(method,name,v) (method->code = abc_callproperty(method->code,name,v))
+code_t* abc_callproperty2(code_t*prev, multiname_t* name, int v);
+#define callproperty2(method,name,v) (method->code = abc_callproperty2(method->code,name,v))
 code_t* abc_callpropvoid(code_t*prev, char* name, int v);
 #define callpropvoid(method,name,v) (method->code = abc_callpropvoid(method->code,name,v))
+code_t* abc_callpropvoid2(code_t*prev, multiname_t* name, int v);
+#define callpropvoid2(method,name,v) (method->code = abc_callpropvoid2(method->code,name,v))
 code_t* abc_callstatic(code_t*prev, abc_method_t* m, int v);
 #define callstatic(method,m,v) (method->code = abc_callstatic(method->code,m,v))
 code_t* abc_callsuper(code_t*prev, char* name, int v);
 #define callsuper(method,name,v) (method->code = abc_callsuper(method->code,name,v))
+code_t* abc_callsuper2(code_t*prev, multiname_t* name, int v);
+#define callsuper2(method,name,v) (method->code = abc_callsuper2(method->code,name,v))
 code_t* abc_callsupervoid(code_t*prev, char* name, int v);
 #define callsupervoid(method,name,v) (method->code = abc_callsupervoid(method->code,name,v))
+code_t* abc_callsupervoid2(code_t*prev, multiname_t* name, int v);
+#define callsupervoid2(method,name,v) (method->code = abc_callsupervoid2(method->code,name,v))
 code_t* abc_checkfilter(code_t*prev);
 #define checkfilter(method) (method->code = abc_checkfilter(method->code))
 code_t* abc_coerce(code_t*prev, char* name);
 #define coerce(method,name) (method->code = abc_coerce(method->code,name))
+code_t* abc_coerce2(code_t*prev, multiname_t* name);
+#define coerce2(method,name) (method->code = abc_coerce2(method->code,name))
 code_t* abc_coerce_a(code_t*prev);
 #define coerce_a(method) (method->code = abc_coerce_a(method->code))
 code_t* abc_coerce_s(code_t*prev);
@@ -47,6 +61,8 @@ code_t* abc_construct(code_t*prev, int v);
 #define construct(method,v) (method->code = abc_construct(method->code,v))
 code_t* abc_constructprop(code_t*prev, char* name, int v);
 #define constructprop(method,name,v) (method->code = abc_constructprop(method->code,name,v))
+code_t* abc_constructprop2(code_t*prev, multiname_t* name, int v);
+#define constructprop2(method,name,v) (method->code = abc_constructprop2(method->code,name,v))
 code_t* abc_constructsuper(code_t*prev, int v);
 #define constructsuper(method,v) (method->code = abc_constructsuper(method->code,v))
 code_t* abc_convert_b(code_t*prev);
@@ -77,6 +93,8 @@ code_t* abc_decrement_i(code_t*prev);
 #define decrement_i(method) (method->code = abc_decrement_i(method->code))
 code_t* abc_deleteproperty(code_t*prev, char* name);
 #define deleteproperty(method,name) (method->code = abc_deleteproperty(method->code,name))
+code_t* abc_deleteproperty2(code_t*prev, multiname_t* name);
+#define deleteproperty2(method,name) (method->code = abc_deleteproperty2(method->code,name))
 code_t* abc_divide(code_t*prev);
 #define divide(method) (method->code = abc_divide(method->code))
 code_t* abc_dup(code_t*prev);
@@ -93,16 +111,24 @@ code_t* abc_esc_xelem(code_t*prev);
 #define esc_xelem(method) (method->code = abc_esc_xelem(method->code))
 code_t* abc_findproperty(code_t*prev, char* name);
 #define findproperty(method,name) (method->code = abc_findproperty(method->code,name))
+code_t* abc_findproperty2(code_t*prev, multiname_t* name);
+#define findproperty2(method,name) (method->code = abc_findproperty2(method->code,name))
 code_t* abc_findpropstrict(code_t*prev, char* name);
 #define findpropstrict(method,name) (method->code = abc_findpropstrict(method->code,name))
+code_t* abc_findpropstrict2(code_t*prev, multiname_t* name);
+#define findpropstrict2(method,name) (method->code = abc_findpropstrict2(method->code,name))
 code_t* abc_getdescendants(code_t*prev, char* name);
 #define getdescendants(method,name) (method->code = abc_getdescendants(method->code,name))
+code_t* abc_getdescendants2(code_t*prev, multiname_t* name);
+#define getdescendants2(method,name) (method->code = abc_getdescendants2(method->code,name))
 code_t* abc_getglobalscope(code_t*prev);
 #define getglobalscope(method) (method->code = abc_getglobalscope(method->code))
 code_t* abc_getglobalslot(code_t*prev, int v);
 #define getglobalslot(method,v) (method->code = abc_getglobalslot(method->code,v))
 code_t* abc_getlex(code_t*prev, char* name);
 #define getlex(method,name) (method->code = abc_getlex(method->code,name))
+code_t* abc_getlex2(code_t*prev, multiname_t* name);
+#define getlex2(method,name) (method->code = abc_getlex2(method->code,name))
 code_t* abc_getlocal(code_t*prev, int reg);
 #define getlocal(method,reg) (method->code = abc_getlocal(method->code,reg))
 code_t* abc_getlocal_0(code_t*prev);
@@ -115,12 +141,18 @@ code_t* abc_getlocal_3(code_t*prev);
 #define getlocal_3(method) (method->code = abc_getlocal_3(method->code))
 code_t* abc_getproperty(code_t*prev, char* name);
 #define getproperty(method,name) (method->code = abc_getproperty(method->code,name))
+code_t* abc_getproperty2(code_t*prev, multiname_t* name);
+#define getproperty2(method,name) (method->code = abc_getproperty2(method->code,name))
 code_t* abc_getscopeobject(code_t*prev, int v);
 #define getscopeobject(method,v) (method->code = abc_getscopeobject(method->code,v))
 code_t* abc_getslot(code_t*prev, int v);
 #define getslot(method,v) (method->code = abc_getslot(method->code,v))
 code_t* abc_getsuper(code_t*prev, char* name);
 #define getsuper(method,name) (method->code = abc_getsuper(method->code,name))
+code_t* abc_getsuper2(code_t*prev, multiname_t* name);
+#define getsuper2(method,name) (method->code = abc_getsuper2(method->code,name))
+code_t* abc_greaterthan(code_t*prev);
+#define greaterthan(method) (method->code = abc_greaterthan(method->code))
 code_t* abc_greaterequals(code_t*prev);
 #define greaterequals(method) (method->code = abc_greaterequals(method->code))
 code_t* abc_hasnext(code_t*prev);
@@ -167,10 +199,14 @@ code_t* abc_increment_i(code_t*prev);
 #define increment_i(method) (method->code = abc_increment_i(method->code))
 code_t* abc_initproperty(code_t*prev, char* name);
 #define initproperty(method,name) (method->code = abc_initproperty(method->code,name))
+code_t* abc_initproperty2(code_t*prev, multiname_t* name);
+#define initproperty2(method,name) (method->code = abc_initproperty2(method->code,name))
 code_t* abc_instanceof(code_t*prev);
 #define instanceof(method) (method->code = abc_instanceof(method->code))
 code_t* abc_istype(code_t*prev, char* name);
 #define istype(method,name) (method->code = abc_istype(method->code,name))
+code_t* abc_istype2(code_t*prev, multiname_t* name);
+#define istype2(method,name) (method->code = abc_istype2(method->code,name))
 code_t* abc_istypelate(code_t*prev);
 #define istypelate(method) (method->code = abc_istypelate(method->code))
 code_t* abc_jump(code_t*prev, code_t* label);
@@ -183,8 +219,8 @@ code_t* abc_lessequals(code_t*prev);
 #define lessequals(method) (method->code = abc_lessequals(method->code))
 code_t* abc_lessthan(code_t*prev);
 #define lessthan(method) (method->code = abc_lessthan(method->code))
-code_t* abc_lookupswitch(code_t*prev, void* labels);
-#define lookupswitch(method,labels) (method->code = abc_lookupswitch(method->code,labels))
+code_t* abc_lookupswitch(code_t*prev, lookupswitch_t* l);
+#define lookupswitch(method,l) (method->code = abc_lookupswitch(method->code,l))
 code_t* abc_lshift(code_t*prev);
 #define lshift(method) (method->code = abc_lshift(method->code))
 code_t* abc_modulo(code_t*prev);
@@ -223,12 +259,12 @@ code_t* abc_popscope(code_t*prev);
 #define popscope(method) (method->code = abc_popscope(method->code))
 code_t* abc_pushbyte(code_t*prev, int v);
 #define pushbyte(method,v) (method->code = abc_pushbyte(method->code,v))
-code_t* abc_pushdouble(code_t*prev, int v);
-#define pushdouble(method,v) (method->code = abc_pushdouble(method->code,v))
+code_t* abc_pushdouble(code_t*prev, double f);
+#define pushdouble(method,f) (method->code = abc_pushdouble(method->code,f))
 code_t* abc_pushfalse(code_t*prev);
 #define pushfalse(method) (method->code = abc_pushfalse(method->code))
-code_t* abc_pushint(code_t*prev, int v);
-#define pushint(method,v) (method->code = abc_pushint(method->code,v))
+code_t* abc_pushint(code_t*prev, abc_method_t* m);
+#define pushint(method,m) (method->code = abc_pushint(method->code,m))
 code_t* abc_pushnamespace(code_t*prev, int v);
 #define pushnamespace(method,v) (method->code = abc_pushnamespace(method->code,v))
 code_t* abc_pushnan(code_t*prev);
@@ -243,8 +279,8 @@ code_t* abc_pushstring(code_t*prev, char* s);
 #define pushstring(method,s) (method->code = abc_pushstring(method->code,s))
 code_t* abc_pushtrue(code_t*prev);
 #define pushtrue(method) (method->code = abc_pushtrue(method->code))
-code_t* abc_pushuint(code_t*prev, int v);
-#define pushuint(method,v) (method->code = abc_pushuint(method->code,v))
+code_t* abc_pushuint(code_t*prev, unsigned int u);
+#define pushuint(method,u) (method->code = abc_pushuint(method->code,u))
 code_t* abc_pushundefined(code_t*prev);
 #define pushundefined(method) (method->code = abc_pushundefined(method->code))
 code_t* abc_pushwith(code_t*prev);
@@ -269,10 +305,14 @@ code_t* abc_setglobalslot(code_t*prev, int v);
 #define setglobalslot(method,v) (method->code = abc_setglobalslot(method->code,v))
 code_t* abc_setproperty(code_t*prev, char* name);
 #define setproperty(method,name) (method->code = abc_setproperty(method->code,name))
-code_t* abc_setslot(code_t*prev, char* name);
-#define setslot(method,name) (method->code = abc_setslot(method->code,name))
+code_t* abc_setproperty2(code_t*prev, multiname_t* name);
+#define setproperty2(method,name) (method->code = abc_setproperty2(method->code,name))
+code_t* abc_setslot(code_t*prev, int v);
+#define setslot(method,v) (method->code = abc_setslot(method->code,v))
 code_t* abc_setsuper(code_t*prev, char* name);
 #define setsuper(method,name) (method->code = abc_setsuper(method->code,name))
+code_t* abc_setsuper2(code_t*prev, multiname_t* name);
+#define setsuper2(method,name) (method->code = abc_setsuper2(method->code,name))
 code_t* abc_strictequals(code_t*prev);
 #define strictequals(method) (method->code = abc_strictequals(method->code))
 code_t* abc_subtract(code_t*prev);
@@ -287,6 +327,4 @@ code_t* abc_typeof(code_t*prev);
 #define typeof(method) (method->code = abc_typeof(method->code))
 code_t* abc_urshift(code_t*prev);
 #define urshift(method) (method->code = abc_urshift(method->code))
-code_t* abc_xxx(code_t*prev);
-#define xxx(method) (method->code = abc_xxx(method->code))
 #endif
