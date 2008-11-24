@@ -142,8 +142,8 @@ opcode_t opcodes[]={
 {0x24, "pushbyte", "b",         0, 1, 0, 0},
 {0x2f, "pushdouble", "f",       0, 1, 0, 0}, //index into floats
 {0x27, "pushfalse", "",         0, 1, 0, 0},
-{0x2d, "pushint", "i",          0, 1, 0, 0}, //index into ints
-{0x31, "pushnamespace", "u",    0, 1, 0, 0}, //index into namespace
+{0x2d, "pushint", "I",          0, 1, 0, 0}, //index into ints
+{0x31, "pushnamespace", "u",    0, 1, 0, 0}, //index into namespace TODO
 {0x28, "pushnan", "",           0, 1, 0, 0},
 {0x20, "pushnull", "",          0, 1, 0, 0},
 {0x30, "pushscope", "",        -1, 0, 1, 0},
