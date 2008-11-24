@@ -76,7 +76,7 @@ static char* strf(char*format, ...)
     va_end(arglist);
     return strdup(buf);
 }
-#define PY_ERROR(s,args...) (PyErr_SetString(PyExc_Exception, strf(s, ## args)),NULL)
+#define PY_ERROR(s,args...) (PyErr_SetString(PyExc_Exception, strf(s, ## args)),(PyObject*)NULL)
 #define PY_NONE Py_BuildValue("s", 0)
 
 //---------------------------------------------------------------------
@@ -142,7 +142,8 @@ typedef struct {
 static gfximage_t*toImage(PyObject*_bitmap)
 {
     if(!_bitmap || !_bitmap->ob_type->tp_name || strcmp(_bitmap->ob_type->tp_name, "Image")) {
-        return PY_ERROR("Second argument to fillbitmap must be an image");
+        PY_ERROR("Second argument to fillbitmap must be an image");
+        return 0;
     }
     ImageObject*bitmap = (ImageObject*)_bitmap;
     return bitmap->image;
@@ -170,7 +171,7 @@ static gfxline_t*toLine(PyObject*_line)
                 return PY_ERROR("coordinates must be floats");
             }
         }
-        gfxline_t*l = malloc(sizeof(gfxline_t));
+        gfxline_t*l = (gfxline_t*)malloc(sizeof(gfxline_t));
         memset(l, 0, sizeof(gfxline_t));
         last->next = l;
         last = l;
@@ -347,7 +348,7 @@ static PyObject* f_createSWF(PyObject* parent, PyObject* args, PyObject* kwargs)
 	return NULL;
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
     
-    self->output_device = malloc(sizeof(gfxdevice_t));
+    self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     gfxdevice_swf_init(self->output_device);
     return (PyObject*)self;
 }
@@ -367,7 +368,7 @@ static PyObject* f_createOCR(PyObject* parent, PyObject* args, PyObject* kwargs)
 	return NULL;
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
     
-    self->output_device = malloc(sizeof(gfxdevice_t));
+    self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     gfxdevice_ocr_init(self->output_device);
     return (PyObject*)self;
 }
@@ -387,7 +388,7 @@ static PyObject* f_createImageList(PyObject* parent, PyObject* args, PyObject* k
 	return NULL;
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
     
-    self->output_device = malloc(sizeof(gfxdevice_t));
+    self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     gfxdevice_render_init(self->output_device);
     return (PyObject*)self;
 }
@@ -405,7 +406,7 @@ static PyObject* f_createPlainText(PyObject* parent, PyObject* args, PyObject* k
 	return NULL;
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
     
-    self->output_device = malloc(sizeof(gfxdevice_t));
+    self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     gfxdevice_text_init(self->output_device);
     return (PyObject*)self;
 }
@@ -424,7 +425,7 @@ static PyObject* f_createOpenGL(PyObject* parent, PyObject* args, PyObject* kwar
 	return NULL;
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
     
-    self->output_device = malloc(sizeof(gfxdevice_t));
+    self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     gfxdevice_opengl_init(self->output_device);
     return (PyObject*)self;
 }
@@ -615,7 +616,7 @@ static PyObject* f_createPassThrough(PyObject* parent, PyObject* args, PyObject*
    
     self->pyobj = obj;
     Py_INCREF(obj);
-    self->output_device = malloc(sizeof(gfxdevice_t));
+    self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     memset(self->output_device, 0, sizeof(gfxdevice_t));
     self->output_device->name = strdup("passthrough");
 
@@ -770,7 +771,7 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
     gfxresult_t*result = dev2.finish(&dev2);
     gfximage_t*img = (gfximage_t*)result->get(result,"page0");
     int l = img->width*img->height;
-    unsigned char*data = malloc(img->width*img->height*3);
+    unsigned char*data = (unsigned char*)malloc(img->width*img->height*3);
     int s,t;
     for(t=0,s=0;t<l;s+=3,t++) {
 	data[s+0] = img->data[t].r;
