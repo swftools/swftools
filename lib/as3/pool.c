@@ -555,7 +555,6 @@ char* multiname_to_string(multiname_t*m)
     } else {
         fprintf(stderr, "Invalid multiname type: %02x\n", m->type);
     }
-    free(name);
     return mname;
 }
 

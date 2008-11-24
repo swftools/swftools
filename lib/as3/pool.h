@@ -117,9 +117,15 @@ namespace_t* namespace_new_staticprotected(const char*name);
 namespace_t* namespace_new_private(const char*name);
 namespace_t* namespace_clone(namespace_t*ns);
 
+namespace_t* namespace_fromstring(const char*name);
+
 multiname_t* multiname_fromstring(const char*name);
 multiname_t* multiname_new(namespace_t*ns, const char*name);
 multiname_t* multiname_clone(multiname_t*other);
+
+/* accessors etc. */
+char multiname_late_namespace(multiname_t*m);
+char multiname_late_name(multiname_t*m);
 
 /* freeing */
 void multiname_destroy(multiname_t*m);
