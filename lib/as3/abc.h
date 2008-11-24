@@ -40,9 +40,18 @@ DECLARE_LIST(exception);
 
 DECLARE(trait);
 
+
+#define METHOD_NEED_ARGUMENTS 1
+#define METHOD_NEED_ACTIVATION 2
+#define METHOD_NEED_REST 4
+#define METHOD_HAS_OPTIONAL 8
+#define METHOD_SET_DXNS 0x40
+#define METHOD_HAS_PARAM_NAMES 0x80
+
 struct _abc_method {
     multiname_t*return_type;
     multiname_list_t*parameters;
+    constant_list_t*optional_parameters;
     const char*name;
     U8 flags;
     abc_method_body_t*body;
@@ -71,6 +80,7 @@ abc_file_t*abc_file_new();
 #define TRAIT_FUNCTION 5
 #define TRAIT_CONST 6
 
+
 struct _trait {
     unsigned char kind;
     unsigned char attributes;
@@ -87,8 +97,7 @@ struct _trait {
         multiname_t*type_name;
         int data2;
     };
-    int vindex;
-    int vkind;
+    constant_t*value;
 };
 
 struct _abc_class {
@@ -147,6 +156,7 @@ struct _abc_method_body {
     trait_list_t*traits;
     
     int index; // filled in during writing
+    codestats_t*stats; //filled in during writing
 };
 
 typedef struct _abc_script {

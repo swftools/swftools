@@ -43,40 +43,37 @@ int abc_RegisterPrivateNameSpace(abc_file_t*file, const char*name);
 static char* params_to_string(multiname_list_t*list)
 {
     multiname_list_t*l;
-    int n;
-
-    l = list;
-    n = 0;
-    while(list) {
-        n++;list=list->next;
-    }
-
+    int n = list_length(list);
     char**names = (char**)malloc(sizeof(char*)*n);
     
     l = list;
     n = 0;
     int size = 0;
-    while(list) {
-        names[n] = multiname_to_string(list->multiname);
+    while(l) {
+        names[n] = multiname_to_string(l->multiname);
         size += strlen(names[n]) + 2;
-        n++;list=list->next;
+        n++;l=l->next;
     }
 
-    char* params = malloc(size+5);
+    char* params = malloc(size+15);
     params[0]='(';
     params[1]=0;
     l = list;
     int s=0;
     n = 0;
-    while(list) {
+    while(l) {
         if(s)
             strcat(params, ", ");
         strcat(params, names[n]);
         free(names[n]);
+        l = l->next;
         n++;
         s=1;
     }
     free(names);
+    /*char num[20];
+    sprintf(num, "[%d params]", n);
+    strcat(params, num);*/
     strcat(params, ")");
     int t;
     return params;
@@ -228,7 +225,7 @@ abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype,
     return c;
 }
 
-trait_t*trait_new(int type, multiname_t*name, int data1, int data2, int vindex, int vkind)
+trait_t*trait_new(int type, multiname_t*name, int data1, int data2, constant_t*v)
 {
     trait_t*trait = malloc(sizeof(trait_t));
     memset(trait, 0, sizeof(trait_t));
@@ -237,8 +234,18 @@ trait_t*trait_new(int type, multiname_t*name, int data1, int data2, int vindex, 
     trait->name = name;
     trait->data1 = data1;
     trait->data2 = data2;
-    trait->vindex = vindex;
-    trait->vkind = vkind;
+    trait->value = v;
+    return trait;
+}
+trait_t*trait_new_member(multiname_t*type, multiname_t*name,constant_t*v)
+{
+    int kind = TRAIT_SLOT;
+    trait_t*trait = malloc(sizeof(trait_t));
+    memset(trait, 0, sizeof(trait_t));
+    trait->kind = kind&0x0f;
+    trait->attributes = kind&0xf0;
+    trait->name = name;
+    trait->type_name = type;
     return trait;
 }
 trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
@@ -264,31 +271,36 @@ abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name,
     return c;
 }
 
-void abc_AddSlot(abc_class_t*cls, char*name, int slot, char*multiname)
+void abc_AddSlot(abc_class_t*cls, char*name, int slot, char*type)
 {
     abc_file_t*file = cls->file;
-    multiname_t*m = multiname_fromstring(multiname);
-    list_append(cls->traits, trait_new(TRAIT_SLOT, m, slot, 0, 0, 0));
+    multiname_t*m_name = multiname_fromstring(name);
+    multiname_t*m_type = multiname_fromstring(type);
+    trait_t*t = trait_new_member(m_type, m_name, 0);
+    t->slot_id = list_length(cls->traits);
+    list_append(cls->traits, t);
 }
 
 void abc_method_body_addClassTrait(abc_method_body_t*code, char*multiname, int slotid, abc_class_t*cls)
 {
     abc_file_t*file = code->file;
     multiname_t*m = multiname_fromstring(multiname);
-    trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0, 0);
+    trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0);
     trait->cls = cls;
     list_append(code->traits, trait);
 }
 
 /* notice: traits of a method (body) belonging to an init script
    and traits of the init script are *not* the same thing */
-void abc_initscript_addClassTrait(abc_script_t*script, char*multiname, int slotid, abc_class_t*cls)
+int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc_class_t*cls)
 {
     abc_file_t*file = script->file;
-    multiname_t*m = multiname_fromstring(multiname);
-    trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0, 0);
+    multiname_t*m = multiname_clone(multiname);
+    int slotid = list_length(script->traits)+1;
+    trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0);
     trait->cls = cls;
     list_append(script->traits, trait);
+    return slotid;
 }
 
 abc_script_t* abc_initscript(abc_file_t*file, char*returntype, int num_params, ...) 
@@ -305,7 +317,7 @@ abc_script_t* abc_initscript(abc_file_t*file, char*returntype, int num_params, .
     return s;
 }
 
-static void dump_traits(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file);
+static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file);
 
 static void dump_method(FILE*fo, const char*prefix, const char*type, const char*name, abc_method_t*m, abc_file_t*file)
 {
@@ -315,7 +327,7 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
     else
         return_type = strdup("void");
     char*paramstr = params_to_string(m->parameters);
-    fprintf(fo, "%s%s %s %s=%s %s\n", prefix, type, return_type, name, m->name, paramstr);
+    fprintf(fo, "%s%s %s %s=%s %s (%d params)\n", prefix, type, return_type, name, m->name, paramstr, list_length(m->parameters));
     free(paramstr);paramstr=0;
     free(return_type);return_type=0;
 
@@ -324,12 +336,12 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
         return;
     }
     
-    fprintf(fo, "%s[%d %d %d %d %d]\n", prefix, c->max_stack, c->local_count, c->init_scope_depth, c->max_scope_depth, list_length(c->exceptions));
+    fprintf(fo, "%s[stack:%d locals:%d scope:%d-%d flags:%02x]\n", prefix, c->max_stack, c->local_count, c->init_scope_depth, c->max_scope_depth, c->method->flags);
 
     char prefix2[80];
     sprintf(prefix2, "%s    ", prefix);
     if(c->traits)
-        dump_traits(fo, prefix, c->traits, file);
+        traits_dump(fo, prefix, c->traits, file);
     fprintf(fo, "%s{\n", prefix);
     code_dump(c->code, c->exceptions, file, prefix2, fo);
     fprintf(fo, "%s}\n\n", prefix);
@@ -344,6 +356,9 @@ static void traits_free(trait_list_t*traits)
         }
 	if(t->trait->kind == TRAIT_SLOT || t->trait->kind == TRAIT_CONST) {
             multiname_destroy(t->trait->type_name);
+        }
+        if(t->trait->value) {
+            constant_free(t->trait->value);t->trait->value = 0;
         }
         free(t->trait);t->trait = 0;
         t = t->next;
@@ -361,8 +376,7 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
     }
     
     for(t=0;t<num_traits;t++) {
-	trait_t*trait = malloc(sizeof(trait_t));
-	memset(trait, 0, sizeof(trait_t));
+        NEW(trait_t,trait);
 	list_append(traits, trait);
 
 	trait->name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag))); // always a QName (ns,name)
@@ -393,11 +407,12 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
              */
 	    trait->slot_id = swf_GetU30(tag);
             trait->type_name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
-	    trait->vindex = swf_GetU30(tag);
-	    if(trait->vindex) {
-		trait->vkind = swf_GetU8(tag);
+	    int vindex = swf_GetU30(tag);
+	    if(vindex) {
+		int vkind = swf_GetU8(tag);
+                trait->value = constant_fromindex(pool, vindex, vkind);
 	    }
-	    DEBUG printf("  slot %s %d %s (vindex=%d)\n", name, trait->slot_id, trait->type_name->name, trait->vindex);
+	    DEBUG printf("  slot %s %d %s (%s)\n", name, trait->slot_id, trait->type_name->name, constant_to_string(trait->value));
 	} else {
 	    fprintf(stderr, "Can't parse trait type %d\n", kind);
 	}
@@ -468,9 +483,10 @@ static void traits_write(pool_t*pool, TAG*tag, trait_list_t*traits)
         }
 
 	if(trait->kind == TRAIT_SLOT || trait->kind == TRAIT_CONST) {
-	    swf_SetU30(tag, trait->vindex);
-	    if(trait->vindex) {
-		swf_SetU8(tag, trait->vkind);
+            int vindex = constant_get_index(pool, trait->value);
+	    swf_SetU30(tag, vindex);
+	    if(vindex) {
+		swf_SetU8(tag, trait->value->type);
 	    }
 	}
         if(trait->attributes&0x40) {
@@ -482,7 +498,7 @@ static void traits_write(pool_t*pool, TAG*tag, trait_list_t*traits)
 }
 
 
-static void dump_traits(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file)
+static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file)
 {
     int t;
     while(traits) {
@@ -505,14 +521,18 @@ static void dump_traits(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 	} else if(kind == TRAIT_CLASS) { // class
             abc_class_t*cls = trait->cls;
             if(!cls) {
-	        fprintf(fo, "%sslot %d: class %s=class%d\n", prefix, trait->slot_id, name);
+	        fprintf(fo, "%sslot %d: class %s=00000000\n", prefix, trait->slot_id, name);
             } else {
 	        fprintf(fo, "%sslot %d: class %s=%s\n", prefix, trait->slot_id, name, cls->classname->name);
             }
 	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
 	    int slot_id = trait->slot_id;
 	    char*type_name = multiname_to_string(trait->type_name);
-	    fprintf(fo, "%sslot %s %d %s (vindex=%d)\n", prefix, name, trait->slot_id, type_name, trait->vindex);
+            char*value = constant_to_string(trait->value);
+	    fprintf(fo, "%sslot %d: %s%s %s %s %s\n", prefix, trait->slot_id, 
+                    kind==TRAIT_CONST?"const ":"", type_name, name, 
+                    value?"=":"", value);
+            if(value) free(value);
             free(type_name);
 	} else {
 	    fprintf(fo, "%s    can't dump trait type %d\n", prefix, kind);
@@ -583,13 +603,13 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 
         if(cls->static_constructor)
             dump_method(fo, prefix2,"staticconstructor", "", cls->static_constructor, file);
-        dump_traits(fo, prefix2, cls->static_constructor_traits, file);
+        traits_dump(fo, prefix2, cls->static_constructor_traits, file);
 	
         char*n = multiname_to_string(cls->classname);
         if(cls->constructor)
 	    dump_method(fo, prefix2, "constructor", n, cls->constructor, file);
         free(n);
-	dump_traits(fo, prefix2,cls->traits, file);
+	traits_dump(fo, prefix2,cls->traits, file);
         fprintf(fo, "%s}\n", prefix);
     }
     fprintf(fo, "%s\n", prefix);
@@ -597,7 +617,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
     for(t=0;t<file->scripts->num;t++) {
         abc_script_t*s = (abc_script_t*)array_getvalue(file->scripts, t);
         dump_method(fo, prefix,"initmethod", "init", s->method, file);
-        dump_traits(fo, prefix, s->traits, file);
+        traits_dump(fo, prefix, s->traits, file);
     }
     return file;
 }
@@ -613,7 +633,7 @@ void* swf_ReadABC(TAG*tag)
         U32 abcflags = swf_GetU32(tag);
         DEBUG printf("flags=%08x\n", abcflags);
         char*name= swf_GetString(tag);
-        file->name = name?strdup(name):0;
+        file->name = (name&&name[0])?strdup(name):0;
     }
     U32 version = swf_GetU32(tag);
     if(version!=0x002e0010) {
@@ -654,11 +674,14 @@ void* swf_ReadABC(TAG*tag)
 
         if(m->flags&0x08) {
             /* TODO optional parameters */
+            m->optional_parameters = list_new();
             int num = swf_GetU30(tag);
             int s;
             for(s=0;s<num;s++) {
-                int val = swf_GetU30(tag);
-                U8 kind = swf_GetU8(tag); // specifies index type for "val"
+                int vindex = swf_GetU30(tag);
+                U8 vkind = swf_GetU8(tag); // specifies index type for "val"
+                constant_t*c = constant_fromindex(pool, vindex, vkind);
+                list_append(m->optional_parameters, c);
             }
         }
 	if(m->flags&0x80) {
@@ -859,18 +882,14 @@ void swf_WriteABC(TAG*abctag, void*code)
     for(t=0;t<file->method_bodies->num;t++) {
         abc_method_body_t*m = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
         m->index = t;
-        exception_list_t*ee = m->exceptions;
-        while(ee) {
-            exception_t*e=ee->exception;ee->exception=0;
-            e->from = e->to = e->target = 0;
-            multiname_destroy(e->exc_type);e->exc_type=0;
-            multiname_destroy(e->var_name);e->var_name=0;
-            free(e);
-            ee=ee->next;
-        }
-        list_free(m->exceptions);m->exceptions=0;
     }
-
+    
+    /* generate code statistics */
+    for(t=0;t<file->method_bodies->num;t++) {
+        abc_method_body_t*m = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
+        m->stats = code_get_statistics(m->code, m->exceptions);
+    }
+    
     for(t=0;t<file->methods->num;t++) {
 	abc_method_t*m = (abc_method_t*)array_getvalue(file->methods, t);
         int n = 0;
@@ -892,7 +911,23 @@ void swf_WriteABC(TAG*abctag, void*code)
 	    swf_SetU30(tag, 0);
         }
 
-	swf_SetU8(tag, 0); //flags
+        U8 flags = m->flags&(METHOD_NEED_REST|METHOD_NEED_ARGUMENTS);
+        if(m->optional_parameters)
+            flags |= METHOD_HAS_OPTIONAL;
+        if(m->body) {
+            flags |= m->body->stats->flags;
+        }
+
+	swf_SetU8(tag, flags);
+        if(flags&METHOD_HAS_OPTIONAL) {
+            swf_SetU30(tag, list_length(m->optional_parameters));
+            constant_list_t*l = m->optional_parameters;
+            while(l) {
+                swf_SetU30(tag, constant_get_index(pool, l->constant));
+                swf_SetU8(tag, l->constant->type);
+                l = l->next;
+            }
+        }
     }
    
     /* write metadata */
@@ -963,10 +998,20 @@ void swf_WriteABC(TAG*abctag, void*code)
 	abc_method_body_t*c = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
 	abc_method_t*m = c->method;
 	swf_SetU30(tag, m->index);
-	swf_SetU30(tag, c->max_stack);
-	swf_SetU30(tag, c->local_count);
+
+	//swf_SetU30(tag, c->max_stack);
+	//swf_SetU30(tag, c->local_count);
+	//swf_SetU30(tag, c->init_scope_depth);
+	//swf_SetU30(tag, c->max_scope_depth);
+
+	swf_SetU30(tag, c->stats->max_stack);
+        if(list_length(c->method->parameters)+1 <= c->stats->local_count)
+	    swf_SetU30(tag, c->stats->local_count);
+        else
+	    swf_SetU30(tag, list_length(c->method->parameters)+1);
 	swf_SetU30(tag, c->init_scope_depth);
-	swf_SetU30(tag, c->max_scope_depth);
+	swf_SetU30(tag, c->stats->max_scope_depth+
+                        c->init_scope_depth);
 
         code_write(tag, c->code, pool, file);
 
@@ -983,6 +1028,13 @@ void swf_WriteABC(TAG*abctag, void*code)
         }
 
         traits_write(pool, tag, c->traits);
+    }
+   
+    /* free temporary codestat data again. Notice: If we were to write this
+       file multiple times, this can also be shifted to abc_file_free() */
+    for(t=0;t<file->method_bodies->num;t++) {
+        abc_method_body_t*m = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
+        codestats_free(m->stats);m->stats=0;
     }
 
     // --- start to write real tag --
@@ -1007,7 +1059,6 @@ void swf_WriteABC(TAG*abctag, void*code)
 
 void abc_file_free(abc_file_t*file)
 {
-
     int t;
     for(t=0;t<file->metadata->num;t++) {
         array_t*items = (array_t*)array_getvalue(file->metadata, t);
@@ -1028,6 +1079,13 @@ void abc_file_free(abc_file_t*file)
             param = param->next;
         }
         list_free(m->parameters);m->parameters=0;
+       
+        constant_list_t*opt = m->optional_parameters;
+        while(opt) {
+            constant_free(opt->constant);opt->constant=0;
+            opt = opt->next;
+        }
+        list_free(m->optional_parameters);m->optional_parameters=0;
 
         if(m->name) {
             free((void*)m->name);m->name=0;
@@ -1076,6 +1134,18 @@ void abc_file_free(abc_file_t*file)
         abc_method_body_t*body = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
         code_free(body->code);body->code=0;
 	traits_free(body->traits);body->traits=0;
+
+        exception_list_t*ee = body->exceptions;
+        while(ee) {
+            exception_t*e=ee->exception;ee->exception=0;
+            e->from = e->to = e->target = 0;
+            multiname_destroy(e->exc_type);e->exc_type=0;
+            multiname_destroy(e->var_name);e->var_name=0;
+            free(e);
+            ee=ee->next;
+        }
+        list_free(body->exceptions);body->exceptions=0;
+        
         free(body);
     }
     array_free(file->method_bodies);
@@ -1310,7 +1380,9 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     __ returnvoid(c);
 
     //abc_method_body_addClassTrait(c, "rfx:MainTimeline", 1, cls);
-    abc_initscript_addClassTrait(s, "rfx::MainTimeline", 1, cls);
+    multiname_t*classname = multiname_fromstring("rfx::MainTimeline");
+    abc_initscript_addClassTrait(s, classname, cls);
+    multiname_destroy(classname);
 
     swf_WriteABC(abctag, file);
 }
