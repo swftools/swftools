@@ -526,6 +526,7 @@ typedef struct {
     int maxlocal;
     int maxstack;
     int maxscope;
+    int flags;
 } currentstats_t;
 
 static int stack_minus(code_t*c)
@@ -620,6 +621,11 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
             stats->maxstack = stack;
         if(scope > stats->maxscope)
             stats->maxscope = scope;
+
+        if(op->flags & OP_SET_DXNS)
+            stats->flags |= FLAGS_SET_DXNS;
+        if(op->flags & OP_NEED_ACTIVATION)
+            stats->flags |= FLAGS_ACTIVATION;
         
         if(op->flags & OP_REGISTER) {
             char*p = op->params;
@@ -708,6 +714,7 @@ static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions)
     current->maxstack = 0;
     current->maxscope = 0;
     current->num = num;
+    current->flags = 0;
 
 //#define DEBUG_BYTES
 #ifdef DEBUG_BYTES
@@ -888,11 +895,12 @@ codestats_t* code_get_statistics(code_t*code, exception_list_t*exceptions)
     currentstats_t*current = code_get_stats(code, exceptions);
     if(!current)
         return 0;
-    codestats_t*stats = malloc(sizeof(codestats_t));
+    codestats_t*stats = rfx_calloc(sizeof(codestats_t));
     stats->local_count = current->maxlocal;
     stats->max_stack = current->maxstack;
     stats->init_scope_depth = 0;
     stats->max_scope_depth = current->maxscope;
+    stats->flags = current->flags;
 
     stats_free(current);current=0;
     return stats;

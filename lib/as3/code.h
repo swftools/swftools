@@ -40,11 +40,14 @@ struct _lookupswitch {
     code_list_t*targets;
 };
 
+#define FLAGS_ACTIVATION 0x02
+#define FLAGS_SET_DXNS 0x40
 struct _codestats {
     int max_stack;
     int local_count;
     int init_scope_depth;
     int max_scope_depth;
+    int flags;
 };
 
 struct _codelookup {
