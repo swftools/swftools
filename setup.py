@@ -166,8 +166,6 @@ class ConfigScript:
             for i in [1,2,4,8]:
                 s = "static int test_array [%d+1-sizeof(%s)*2];\ntest_array [0] = 0;" % (i*2,t)
                 if self.test_code("", s):
-                    print s
-                    print i
                     return i
             return None
         elif name.startswith("USE_FREEETYPE"):
