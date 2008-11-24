@@ -265,6 +265,7 @@ void dumpButtonActions(TAG*tag, char*prefix)
     }
     actions = swf_ActionGet(tag);
     swf_DumpActions(actions, prefix);
+    swf_ActionFree(actions);
 }
 
 void dumpButton(TAG*tag, char*prefix)
