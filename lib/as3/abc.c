@@ -857,6 +857,16 @@ void swf_WriteABC(TAG*abctag, void*code)
     for(t=0;t<file->method_bodies->num;t++) {
         abc_method_body_t*m = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
         m->index = t;
+        exception_list_t*ee = m->exceptions;
+        while(ee) {
+            exception_t*e=ee->exception;ee->exception=0;
+            e->from = e->to = e->target = 0;
+            multiname_destroy(e->exc_type);e->exc_type=0;
+            multiname_destroy(e->var_name);e->var_name=0;
+            free(e);
+            ee=ee->next;
+        }
+        list_free(m->exceptions);m->exceptions=0;
     }
 
     for(t=0;t<file->methods->num;t++) {
