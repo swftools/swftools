@@ -309,13 +309,15 @@ static void dump_traits(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 
 static void dump_method(FILE*fo, const char*prefix, const char*type, const char*name, abc_method_t*m, abc_file_t*file)
 {
-    const char*return_type = "void";
+    char*return_type = 0;
     if(m->return_type)
         return_type = multiname_to_string(m->return_type);
-
+    else
+        return_type = strdup("void");
     char*paramstr = params_to_string(m->parameters);
-
     fprintf(fo, "%s%s %s %s=%s %s\n", prefix, type, return_type, name, m->name, paramstr);
+    free(paramstr);paramstr=0;
+    free(return_type);return_type=0;
 
     abc_method_body_t*c = m->body;
     if(!c) {
@@ -651,7 +653,7 @@ void* swf_ReadABC(TAG*tag)
         DEBUG printf("method %d) %s flags=%02x\n", t, params_to_string(m->parameters), m->flags);
 
         if(m->flags&0x08) {
-            /* optional parameters */
+            /* TODO optional parameters */
             int num = swf_GetU30(tag);
             int s;
             for(s=0;s<num;s++) {
