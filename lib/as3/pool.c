@@ -555,6 +555,7 @@ char* multiname_to_string(multiname_t*m)
     } else {
         fprintf(stderr, "Invalid multiname type: %02x\n", m->type);
     }
+    free(name);
     return mname;
 }
 
@@ -616,6 +617,171 @@ type_t multiname_type = {
     equals: (equals_func)multiname_equals
 };
 
+
+// ------------------------------- constants -------------------------------------
+
+#define NS_TYPE(x) ((x) == 0x08 || (x) == 0x16 || (x) == 0x17 || (x) == 0x18 ||  \
+                                   (x) == 0x19 || (x) == 0x1a || (x) == 0x05)
+
+#define UNIQUE_CONSTANT(x) ((x) == CONSTANT_TRUE || (x) == CONSTANT_FALSE || (x) == CONSTANT_NULL || (x) == CONSTANT_UNDEFINED)
+
+constant_t* constant_new_int(int i) 
+{
+    NEW(constant_t,c);
+    c->i = i;
+    c->type = CONSTANT_INT;
+    return c;
+}
+constant_t* constant_new_uint(unsigned int u)
+{
+    NEW(constant_t,c);
+    c->u = u;
+    c->type = CONSTANT_UINT;
+    return c;
+}
+constant_t* constant_new_float(double f)
+{
+    NEW(constant_t,c);
+    c->f = f;
+    c->type = CONSTANT_FLOAT;
+    return c;
+}
+constant_t* constant_new_string(char*s)
+{
+    NEW(constant_t,c);
+    c->s = strdup(s);
+    c->type = CONSTANT_STRING;
+    return c;
+}
+constant_t* constant_new_namespace(namespace_t*ns)
+{
+    NEW(constant_t,c);
+    c->ns = namespace_clone(ns);
+    c->type = ns->access;
+    assert(NS_TYPE(c->type));
+    return c;
+}
+constant_t* constant_new_true()
+{
+    NEW(constant_t,c);
+    c->type = CONSTANT_TRUE;
+    return c;
+}
+constant_t* constant_new_false()
+{
+    NEW(constant_t,c);
+    c->type = CONSTANT_FALSE;
+    return c;
+}
+constant_t* constant_new_null()
+{
+    NEW(constant_t,c);
+    c->type = CONSTANT_NULL;
+    return c;
+}
+constant_t* constant_new_undefined()
+{
+    NEW(constant_t,c);
+    c->type = CONSTANT_UNDEFINED;
+    return c;
+}
+constant_t* constant_fromindex(pool_t*pool, int index, int type)
+{
+    if(!index) {
+        /* even for nonvalued constants (like TRUE/FALSE etc.), a nonzero
+           index is present to indicate that a type is coming */
+        return 0;
+    } 
+    NEW(constant_t,c);
+    c->type = type;
+    if(NS_TYPE(c->type)) {
+        c->ns =  pool_lookup_namespace(pool, index);
+    } else if(c->type == CONSTANT_INT) {
+        c->i =  pool_lookup_int(pool, index);
+    } else if(c->type == CONSTANT_UINT) {
+        c->u =  pool_lookup_uint(pool, index);
+    } else if(c->type == CONSTANT_FLOAT) {
+        c->f =  pool_lookup_float(pool, index);
+    } else if(c->type == CONSTANT_STRING) {
+        c->s =  pool_lookup_string(pool, index);
+    } else if(UNIQUE_CONSTANT(c->type)) {
+        // ok
+    } else {
+        fprintf(stderr, "invalid constant type %02x\n", c->type);
+    }
+    return c;
+}
+char* constant_to_string(constant_t*c)
+{
+    if(!c)
+        return 0;
+    char buf[30];
+    if(NS_TYPE(c->type)) {
+        return namespace_to_string(c->ns);
+    } else if(c->type == CONSTANT_INT) {
+        sprintf(buf, "%d", c->i);
+        return strdup(buf);
+    } else if(c->type == CONSTANT_UINT) {
+        sprintf(buf, "%u", c->u);
+        return strdup(buf);
+    } else if(c->type == CONSTANT_FLOAT) {
+        sprintf(buf, "%f", c->f);
+        return strdup(buf);
+    } else if(c->type == CONSTANT_STRING) {
+        return strdup(c->s);
+    } else if(c->type == CONSTANT_TRUE) {
+        return strdup("true");
+    } else if(c->type == CONSTANT_FALSE) {
+        return strdup("false");
+    } else if(c->type == CONSTANT_NULL) {
+        return strdup("null");
+    } else if(c->type == CONSTANT_UNDEFINED) {
+        return strdup("undefined");
+    } else {
+        fprintf(stderr, "invalid constant type %02x\n", c->type);
+        return 0;
+    }
+}
+char constant_has_index(constant_t*c) 
+{
+    if(!c)
+        return 0;
+    return !UNIQUE_CONSTANT(c->type);
+}
+int constant_get_index(pool_t*pool, constant_t*c)
+{
+    if(!c)
+        return 0;
+    if(NS_TYPE(c->type)) {
+        assert(c->ns);
+        assert(c->type == c->ns->access);
+        return pool_register_namespace(pool, c->ns);
+    } else if(c->type == CONSTANT_INT) {
+        return pool_register_int(pool, c->i);
+    } else if(c->type == CONSTANT_UINT) {
+        return pool_register_uint(pool, c->u);
+    } else if(c->type == CONSTANT_FLOAT) {
+        return pool_register_float(pool, c->f);
+    } else if(c->type == CONSTANT_STRING) {
+        return pool_register_string(pool, c->s);
+    } else if(!constant_has_index(c)) {
+        return 1;
+    } else {
+        fprintf(stderr, "invalid constant type %02x\n", c->type);
+        return 0;
+    }
+}
+void constant_free(constant_t*c)
+{
+    if(!c)
+        return;
+    if(c->type == CONSTANT_STRING) {
+        free(c->s);c->s=0;
+    } else if (NS_TYPE(c->type)) {
+        namespace_destroy(c->ns);c->ns=0;
+    }
+    free(c);
+}
 // ------------------------------- pool -------------------------------------
 
 int pool_register_uint(pool_t*p, unsigned int i)
@@ -858,8 +1024,8 @@ void pool_read(pool_t*pool, TAG*tag)
     for(t=1;t<num_namespaces;t++) {
 	U8 type = swf_GetU8(tag);
 	int namenr = swf_GetU30(tag);
-	const char*name = ""; 
-        if(namenr) //spec page 22: "a value of zero denotes an empty string"
+	const char*name = 0; 
+        if(namenr)
             name = array_getkey(pool->x_strings, namenr);
         namespace_t*ns = namespace_new(type, name);
 	array_append(pool->x_namespaces, ns, 0);
@@ -917,12 +1083,6 @@ void pool_read(pool_t*pool, TAG*tag)
         DEBUG printf("multiname %d) %s\n", t, multiname_to_string(&m));
 	array_append(pool->x_multinames, &m, 0);
     }
-    printf("%d ints\n", num_ints);
-    printf("%d uints\n", num_uints);
-    printf("%d strings\n", num_strings);
-    printf("%d namespaces\n", num_namespaces);
-    printf("%d namespace sets\n", num_sets);
-    printf("%d multinames\n", num_multinames);
 } 
 
 void pool_write(pool_t*pool, TAG*tag)
@@ -954,10 +1114,17 @@ void pool_write(pool_t*pool, TAG*tag)
     }
     for(t=1;t<pool->x_namespaces->num;t++) {
 	namespace_t*ns= (namespace_t*)array_getkey(pool->x_namespaces, t);
-        if(ns->name && ns->name[0])
-            array_append_if_new(pool->x_strings, ns->name, 0);
+        /*  The spec says (page 22): "a value of zero denotes an empty string".
+            However when actually using zero strings as empty namespaces, the
+            flash player breaks.*/
+        //if(ns->name && ns->name[0])
+        array_append_if_new(pool->x_strings, ns->name, 0);
     }
 
+    //pool_register_int(pool, 15);
+    //pool_register_int(pool, 1);
+    //pool_register_int(pool, 0);
+    
     /* write data */
     swf_SetU30(tag, pool->x_ints->num>1?pool->x_ints->num:0);
     for(t=1;t<pool->x_ints->num;t++) {
@@ -970,8 +1137,8 @@ void pool_write(pool_t*pool, TAG*tag)
     }
     swf_SetU30(tag, pool->x_floats->num>1?pool->x_floats->num:0);
     for(t=1;t<pool->x_floats->num;t++) {
-        array_getvalue(pool->x_floats, t);
-        swf_SetD64(tag, 0.0); // fixme
+        double d = pool_lookup_float(pool, t);
+        swf_SetD64(tag, d);
     }
     swf_SetU30(tag, pool->x_strings->num>1?pool->x_strings->num:0);
     for(t=1;t<pool->x_strings->num;t++) {
@@ -983,8 +1150,10 @@ void pool_write(pool_t*pool, TAG*tag)
 	swf_SetU8(tag, ns->access);
 	const char*name = ns->name;
 	int i = 0;
-        if(name && name[0])
-            i = pool_find_string(pool, name);
+        
+        //if(name && name[0])
+        i = pool_find_string(pool, name);
+
 	swf_SetU30(tag, i);
     }
     swf_SetU30(tag, pool->x_namespace_sets->num>1?pool->x_namespace_sets->num:0);
