@@ -751,13 +751,17 @@ static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions)
     return current;
 }
 
+void stats_free(currentstats_t*stats)
+{
+    free(stats->stack);stats->stack=0;
+    free(stats);
+}
+
 int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
 {
     exception_list_t*e = exceptions;
     c = code_find_start(c);
     currentstats_t*stats =  code_get_stats(c, exceptions);
-
-    pool_t*pool = pool_new();
 
     int pos = 0;
     while(c) {
@@ -875,6 +879,7 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
         pos++;
         c = c->next;
     }
+    stats_free(stats);
     return 1;
 }
 
@@ -888,8 +893,8 @@ codestats_t* code_get_statistics(code_t*code, exception_list_t*exceptions)
     stats->max_stack = current->maxstack;
     stats->init_scope_depth = 0;
     stats->max_scope_depth = current->maxscope;
-    free(current->stack);current->stack=0;
-    free(current);current=0;
+
+    stats_free(current);current=0;
     return stats;
 }
 
