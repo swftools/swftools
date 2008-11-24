@@ -695,15 +695,15 @@ constant_t* constant_fromindex(pool_t*pool, int index, int type)
     NEW(constant_t,c);
     c->type = type;
     if(NS_TYPE(c->type)) {
-        c->ns =  pool_lookup_namespace(pool, index);
+        c->ns = namespace_clone(pool_lookup_namespace(pool, index));
     } else if(c->type == CONSTANT_INT) {
-        c->i =  pool_lookup_int(pool, index);
+        c->i = pool_lookup_int(pool, index);
     } else if(c->type == CONSTANT_UINT) {
-        c->u =  pool_lookup_uint(pool, index);
+        c->u = pool_lookup_uint(pool, index);
     } else if(c->type == CONSTANT_FLOAT) {
-        c->f =  pool_lookup_float(pool, index);
+        c->f = pool_lookup_float(pool, index);
     } else if(c->type == CONSTANT_STRING) {
-        c->s =  pool_lookup_string(pool, index);
+        c->s = strdup(pool_lookup_string(pool, index));
     } else if(UNIQUE_CONSTANT(c->type)) {
         // ok
     } else {
@@ -754,6 +754,9 @@ int constant_get_index(pool_t*pool, constant_t*c)
         return 0;
     if(NS_TYPE(c->type)) {
         assert(c->ns);
+        /*if(c->type!=c->ns->access) {
+            printf("%02x<->%02x\n", c->type, c->ns->access);
+        }*/
         assert(c->type == c->ns->access);
         return pool_register_namespace(pool, c->ns);
     } else if(c->type == CONSTANT_INT) {
