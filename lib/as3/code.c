@@ -140,9 +140,9 @@ opcode_t opcodes[]={
 {0x29, "pop", "",              -1, 0, 0, 0},
 {0x1d, "popscope", "",          0, 0,-1, 0},
 {0x24, "pushbyte", "b",         0, 1, 0, 0},
-{0x2f, "pushdouble", "u",       0, 1, 0, 0}, //index into floats
+{0x2f, "pushdouble", "f",       0, 1, 0, 0}, //index into floats
 {0x27, "pushfalse", "",         0, 1, 0, 0},
-{0x2d, "pushint", "u",          0, 1, 0, 0}, //index into ints
+{0x2d, "pushint", "i",          0, 1, 0, 0}, //index into ints
 {0x31, "pushnamespace", "u",    0, 1, 0, 0}, //index into namespace
 {0x28, "pushnan", "",           0, 1, 0, 0},
 {0x20, "pushnull", "",          0, 1, 0, 0},
@@ -150,7 +150,7 @@ opcode_t opcodes[]={
 {0x25, "pushshort", "u",        0, 1, 0, 0},
 {0x2c, "pushstring", "s",       0, 1, 0, 0},
 {0x26, "pushtrue", "",          0, 1, 0, 0},
-{0x2e, "pushuint", "u",         0, 1, 0, 0}, //index into uints
+{0x2e, "pushuint", "U",         0, 1, 0, 0}, //index into uints
 {0x21, "pushundefined", "",     0, 1, 0, 0},
 {0x1c, "pushwith", "",         -1, 0, 1, 0},
 {0x48, "returnvalue", "",      -1, 0, 0, OP_RETURN},
@@ -163,7 +163,7 @@ opcode_t opcodes[]={
 {0xd7, "setlocal_3", "",       -1, 0, 0, OP_REGISTER},
 {0x6f, "setglobalslot", "u",   -1, 0, 0, 0},
 {0x61, "setproperty", "2",     -2, 0, 0, OP_STACK_NS},
-{0x6d, "setslot", "2",         -2, 0, 0, 0},
+{0x6d, "setslot", "u",         -2, 0, 0, 0},
 {0x05, "setsuper", "2",        -2, 0, 0, OP_STACK_NS},
 {0xac, "strictequals", "",     -2, 1, 0, 0},
 {0xa1, "subtract", "",         -2, 1, 0, 0},
@@ -272,6 +272,14 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
                 data = (void*)(ptroff_t)swf_GetU30(tag);
             } else if(*p == '2') { //multiname
                 data = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
+            } else if(*p == 'U') { //uint
+                data = (void*)(ptroff_t)pool_lookup_uint(pool, swf_GetU30(tag));
+            } else if(*p == 'I') { //int
+                data = (void*)(ptroff_t)pool_lookup_int(pool, swf_GetU30(tag));
+            } else if(*p == 'f') { //int
+                double*fp = malloc(sizeof(double));
+                *fp = pool_lookup_float(pool, swf_GetU30(tag));
+                data = fp;
             } else if(*p == 'm') { //method
                 data = array_getvalue(file->methods, swf_GetU30(tag));
             } else if(*p == 'c') { //classinfo
@@ -393,7 +401,7 @@ void code_free(code_t*c)
             void*data = c->data[pos];
             if(*p == '2') { //multiname
                 multiname_destroy(data);
-            } else if(strchr("sD", *p)) {
+            } else if(strchr("sDf", *p)) {
                 free(data);
             } else if(strchr("S", *p)) {
                 lookupswitch_t*l = (lookupswitch_t*)data;
@@ -415,7 +423,7 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
     char*p = op->params;
     int pos = 0;
     int len = 0;
-    
+
     if(tag)
         swf_SetU8(tag, c->opcode);
     len++;
@@ -437,6 +445,12 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
         } else if(*p == 'i') { //methodbody
             abc_method_body_t*m = (abc_method_body_t*)data;
             len += swf_SetU30(tag, m->index);
+        } else if(*p == 'I') { // int
+            len += swf_SetU30(tag, pool_register_int(pool, (ptroff_t)data));
+        } else if(*p == 'U') { // uint
+            len += swf_SetU30(tag, pool_register_uint(pool, (ptroff_t)data));
+        } else if(*p == 'f') { //  float
+            len += swf_SetU30(tag, pool_register_float(pool, *(double*)data));
         } else if(*p == 'u') { // integer
             len += swf_SetU30(tag, (ptroff_t)data);
         } else if(*p == 'r') { // integer
@@ -588,11 +602,13 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
         if(stats->stack[pos].seen) {
             if(stats->stack[pos].stackpos != stack ||
                stats->stack[pos].scopepos != scope) {
-                dumpstack(stats);
+                //dumpstack(stats);
                 fprintf(stderr, "Stack mismatch at pos %d\n", pos);
                 fprintf(stderr, "Should be: %d:%d, is: %d:%d\n", stack, scope,
                     stats->stack[pos].stackpos, stats->stack[pos].scopepos);
-                return 0;
+               
+                /* return error here if we do verification */
+                //return 0;
             }
             return 1;
         }
@@ -610,8 +626,11 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
 
         if(stack<0) {
             fprintf(stderr, "error: stack underflow at %d (%s)\n", pos, op->name);
-            printf("error: stack underflow at %d (%s)\n", pos, op->name);exit(0);
-            return 0;
+           
+            /* if we would do true verification (if we would be a vm), this is 
+               where we would return the error 
+               return 0;
+             */
         }
 
         stack += op->stack_plus;
@@ -760,8 +779,10 @@ static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions)
 
 void stats_free(currentstats_t*stats)
 {
-    free(stats->stack);stats->stack=0;
-    free(stats);
+    if(stats) {
+        free(stats->stack);stats->stack=0;
+        free(stats);
+    }
 }
 
 int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
@@ -798,10 +819,14 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
             char first = 1;
             int i=0;
 
-            fprintf(fo, "%s%5d) %c %d:%d %s ", prefix, c->pos, stats->stack[c->pos].seen?'x':'|', 
-                                   stats->stack[c->pos].stackpos,
-                                   stats->stack[c->pos].scopepos,
-                                   op->name);
+            if(stats) {
+                fprintf(fo, "%s%5d) %c %d:%d %s ", prefix, c->pos, stats->stack[c->pos].seen?'x':'|', 
+                                       stats->stack[c->pos].stackpos,
+                                       stats->stack[c->pos].scopepos,
+                                       op->name);
+            } else {
+                fprintf(fo, "%s%5d) ? ?:? %s ", prefix, c->pos, op->name);
+            }
 
             while(*p) {
                 void*data = c->data[i];
@@ -827,9 +852,12 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
                 } else if(*p == 'i') {
                     abc_method_body_t*b = (abc_method_body_t*)data;
                     fprintf(fo, "[methodbody]");
-                } else if(*p == 'u') {
+                } else if(*p == 'u' || *p == 'I' || *p == 'U') {
                     int n = (ptroff_t)data;
                     fprintf(fo, "%d", n);
+                } else if(*p == 'f') {
+                    double f = *(double*)data;
+                    fprintf(fo, "%f", f);
                 } else if(*p == 'r') {
                     int n = (ptroff_t)data;
                     fprintf(fo, "r%d", n);
@@ -898,7 +926,6 @@ codestats_t* code_get_statistics(code_t*code, exception_list_t*exceptions)
     codestats_t*stats = rfx_calloc(sizeof(codestats_t));
     stats->local_count = current->maxlocal;
     stats->max_stack = current->maxstack;
-    stats->init_scope_depth = 0;
     stats->max_scope_depth = current->maxscope;
     stats->flags = current->flags;
 
@@ -929,7 +956,6 @@ void codestats_print(codestats_t*stats)
 {
     printf("max_stack: %d\n", stats->max_stack);
     printf("local_count: %d\n", stats->local_count);
-    printf("init_scope_depth: %d\n", stats->init_scope_depth);
-    printf("max_scope_depth: %d\n", stats->max_scope_depth);
+    printf("scope_depth: %d\n", stats->max_scope_depth);
 }
 

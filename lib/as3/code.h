@@ -45,7 +45,6 @@ struct _lookupswitch {
 struct _codestats {
     int max_stack;
     int local_count;
-    int init_scope_depth;
     int max_scope_depth;
     int flags;
 };
