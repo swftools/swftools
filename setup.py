@@ -161,8 +161,13 @@ class ConfigScript:
                 return "int"
         elif name.startswith("SIZEOF_"):
             t = name[7:].lower().replace("_", " ")
+            if t == "voidp":
+                t = "void*"
             for i in [1,2,4,8]:
-                if self.test_code("", "static int test_array [%d+1-sizeof(%s)];\ntest_array [0] = 0;" % (i,t)):
+                s = "static int test_array [%d+1-sizeof(%s)*2];\ntest_array [0] = 0;" % (i*2,t)
+                if self.test_code("", s):
+                    print s
+                    print i
                     return i
             return None
         elif name.startswith("USE_FREEETYPE"):
@@ -238,7 +243,9 @@ rfxswf_sources = [
 "lib/rfxswf.c", "lib/drawer.c", "lib/MD5.c", "lib/h.263/dct.c", "lib/h.263/h263tables.c",
 "lib/h.263/swfvideo.c", "lib/action/assembler.c", "lib/action/compile.c",
 "lib/action/lex.swf4.c", "lib/action/lex.swf5.c", "lib/action/libming.c",
-"lib/action/swf4compiler.tab.c", "lib/action/swf5compiler.tab.c", "lib/action/actioncompiler.c"
+"lib/action/swf4compiler.tab.c", 
+"lib/as3/abc.c", "lib/as3/code.c", "lib/as3/pool.c", "lib/as3/files.c", "lib/as3/opcodes.c", 
+"lib/action/swf5compiler.tab.c", "lib/action/actioncompiler.c"
 ]
 libpdf_sources = [
 "lib/pdf/GFXOutputDev.cc", "lib/pdf/InfoOutputDev.cc", "lib/pdf/BitmapOutputDev.cc",
