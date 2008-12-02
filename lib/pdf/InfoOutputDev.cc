@@ -165,8 +165,12 @@ void InfoOutputDev::updateFont(GfxState *state)
     state->setFont(font, 1024.0);
     splash->doUpdateFont(state);
     currentfont->splash_font = splash->getCurrentFont();
-    currentfont->ascender = currentfont->splash_font->ascender;
-    currentfont->descender = currentfont->splash_font->descender;
+    if(currentfont->splash_font) {
+        currentfont->ascender = currentfont->splash_font->ascender;
+        currentfont->descender = currentfont->splash_font->descender;
+    } else {
+        currentfont->ascender = currentfont->descender = 0;
+    }
     free(id);
 }
 
