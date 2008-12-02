@@ -20,7 +20,7 @@ $c = 'find . \( -name "*.cc" -or -name "*.h" -or -name "*.c" \) -exec cp {} {}.o
 print "$c\n";
 system($c);
 
-system("patch < ../xpdf-changes.patch 2>&1 | grep failed");
+system("patch < ../xpdf-changes.patch 2>&1 | grep -i failed");
 chdir("..");
 system("rm -f xpdf");
 system("ln -s $directory xpdf");
