@@ -211,6 +211,7 @@ namespace_t* namespace_fromstring(const char*name)
             if(!strcmp(a, "")) access=0x16;
             else if(!strcmp(a, "undefined")) access=0x08; // public??
             else if(!strcmp(a, "package")) access=0x16;
+            else if(!strcmp(a, "public")) access=0x16;
             else if(!strcmp(a, "packageinternal")) access=0x17;
             else if(!strcmp(a, "protected")) access=0x18;
             else if(!strcmp(a, "explicit")) access=0x19;
@@ -472,7 +473,7 @@ multiname_t* multiname_clone(multiname_t*other)
 char* access2str(int type)
 {
     if(type==0x08) return "access08";
-    else if(type==0x16) return "package";
+    else if(type==0x16) return "public";
     else if(type==0x17) return "packageinternal";
     else if(type==0x18) return "protected";
     else if(type==0x19) return "explicit";
