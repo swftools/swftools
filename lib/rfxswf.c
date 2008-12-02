@@ -94,7 +94,6 @@ U8 swf_GetU8(TAG * t)
   #ifdef DEBUG_RFXSWF
     if (t->pos>=t->len) 
     { fprintf(stderr,"GetU8() out of bounds: TagID = %i\n",t->id);
-      *(int*)0=0;
       return 0;
     }
   #endif
@@ -278,7 +277,8 @@ void swf_SetFixed8(TAG * t, float f)
   swf_SetU8(t, fr);
   swf_SetU8(t, (U8)f - (f<0 && fr!=0));
 }
-int swf_GetU30(TAG*tag)
+
+U32 swf_GetU30(TAG*tag)
 {
     U32 shift = 0;
     U32 s = 0;
@@ -293,9 +293,75 @@ int swf_GetU30(TAG*tag)
     }
     /*int nr2= swf_SetU30(0, s);
     if(nr!=nr2) {
-      printf("Signed value %d stored in %d bytes, I'd store it in %d bytes\n", s, nr, nr2);
+      printf("Unsigned value %d stored in %d bytes, I'd store it in %d bytes\n", s, nr, nr2);
     }*/
     return s;
+}
+
+int swf_SetU30(TAG*tag, U32 u)
+{
+    if(u&0x80000000) {
+      fprintf(stderr, "Error: Bit 31 set in U30 value\n");
+      u&=0x7fffffff;
+    }
+    int nr = 0;
+    do {
+        if(tag)
+	  swf_SetU8(tag, (u&~0x7f?0x80:0) | (u&0x7F));
+	u>>=7;
+        nr++;
+    } while(u);
+    return nr;
+}
+
+void swf_SetABCU32(TAG*tag, U32 u)
+{
+  do {
+      swf_SetU8(tag, (u&~0x7f?0x80:0) | (u&0x7F));
+      u>>=7;
+  } while(u);
+}
+U32 swf_GetABCU32(TAG*tag)
+{
+  return swf_GetU30(tag);
+}
+void swf_SetABCS32(TAG*tag, S32 v)
+{
+  swf_SetABCU32(tag, v);
+}
+S32 swf_GetABCS32(TAG*tag)
+{
+  return swf_GetABCU32(tag);
+}
+
+#if 0
+
+/*The AVM2 spec is just plain wrong, claiming that S32 values are sign
+extended. They're not.
+This wastes up to 4 bytes for every negative value. */
+
+void swf_SetABCS32(TAG*tag, S32 s)
+{
+  printf("write S32: %d\n", s);
+    S32 neg = s<0?-1:0;
+    U8 sign = s<0?0x40:0;
+    while(1) {
+        U8 val = s&0x7f;
+        U8 vsign = s&0x40;
+	s>>=7;
+        neg>>=7;
+        if(s==neg && vsign==sign) {
+            /* if the value we now write has the same sign as s
+               and all the remaining bits are equal to the sign of s
+               too, stop writing */
+	    swf_SetU8(tag, val);
+            printf("put %02x\n", val);
+            break;
+        } else {
+            swf_SetU8(tag, 0x80 | val);
+            printf("put %02x\n", 0x80|val);
+        }
+    };
 }
 int swf_GetS30(TAG*tag)
 {
@@ -309,7 +375,8 @@ int swf_GetS30(TAG*tag)
 	shift+=7;
 	if(!(b&128) || shift>=32) {
             if(b&64) {
-                s|=0xffffffff<<shift;
+                if(shift<32) 
+                  s|=0xffffffff<<shift;
             }
 	    break;
         }
@@ -322,48 +389,8 @@ int swf_GetS30(TAG*tag)
     }*/
     return s;
 }
-int swf_SetS30(TAG*tag, S32 s)
-{
-    S32 neg = s<0?-1:0;
-    U8 sign = s<0?0x80:0;
-    int nr=0;
-    while(1) {
-        U8 val = s&0x7f;
-        U8 vsign = s&0x80;
-	s>>=7;
-        neg>>=7;
-        if(s==neg && vsign==sign) {
-            /* if the value we just wrote has the same sign as s
-               and all the remaining bits are equal to the sign of s
-               too, stop writing */
-            if(tag)
-	      swf_SetU8(tag, val);
-            nr++;
-            break;
-        } else {
-            if(tag)
-	      swf_SetU8(tag, 0x80 | val);
-            nr++;
-        }
-    };
-    return nr;
+#endif
 
-}
-int swf_SetU30(TAG*tag, U32 u)
-{
-    if(u&0x80000000) {
-      fprintf(stderr, "Bit 31 set in U30 value");
-      u&=0x7fffffff;
-    }
-    int nr = 0;
-    do {
-        if(tag)
-	  swf_SetU8(tag, (u&~0x7f?0x80:0) | (u&0x7F));
-	u>>=7;
-        nr++;
-    } while(u);
-    return nr;
-}
 int swf_SetU30String(TAG*tag, const char*str)
 {
     int l = strlen(str);

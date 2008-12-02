@@ -234,18 +234,20 @@ void  swf_SetS16(TAG * t,int v);
 int   swf_SetU32(TAG * t,U32 v);
 void  swf_SetString(TAG*t,const char*s);
 
+/* abc datatypes */
+U32 swf_GetU30(TAG*tag);
+int swf_SetU30(TAG*tag, U32 u);
+void swf_SetABCU32(TAG*tag, U32 u);
+U32 swf_GetABCU32(TAG*tag);
+void swf_SetABCS32(TAG*tag, S32 v);
+S32 swf_GetABCS32(TAG*tag);
+int    swf_SetU30String(TAG*tag, const char*str);
 double swf_GetD64(TAG*tag);
-
-int   swf_SetU30String(TAG*tag, const char*str);
-int   swf_SetD64(TAG*tag, double v);
-int   swf_SetU30(TAG*tag, U32 u);
-int   swf_SetS30(TAG*tag, S32 s);
-int   swf_GetU24(TAG*tag);
-int   swf_GetS24(TAG*tag);
-int   swf_SetU24(TAG*tag, U32 v);
-int   swf_SetS24(TAG*tag, U32 v);
-int   swf_GetS30(TAG*tag);
-int   swf_GetU30(TAG*tag);
+int    swf_SetD64(TAG*tag, double v);
+int    swf_GetU24(TAG*tag);
+int    swf_GetS24(TAG*tag);
+int    swf_SetU24(TAG*tag, U32 v);
+int    swf_SetS24(TAG*tag, U32 v);
 
 //int   swf_GetPoint(TAG * t,SPOINT * p);     // resets Bitcount
 int   swf_GetRect(TAG * t,SRECT * r);
