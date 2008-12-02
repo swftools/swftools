@@ -8,5 +8,8 @@ multiname_t* registry_getstringclass();
 multiname_t* registry_getintclass();
 multiname_t* registry_getuintclass();
 multiname_t* registry_getbooleanclass();
+
 multiname_t* registry_getsuperclass(multiname_t*m);
+
+multiname_t* registry_getMovieClip();
 #endif

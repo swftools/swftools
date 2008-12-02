@@ -4,6 +4,9 @@
 static namespace_t static_empty_ns = {
     ACCESS_PACKAGE, ""
 };
+static namespace_t static_flash_display_ns = {
+    ACCESS_PACKAGE, "flash.display"
+};
 static multiname_t static_object_class = {
     QNAME, &static_empty_ns, 0, "Object"
 };
@@ -25,6 +28,9 @@ static multiname_t static_int_class = {
 static multiname_t static_uint_class = {
     QNAME, &static_empty_ns, 0, "uint"
 };
+static multiname_t static_movieclip_class = {
+    QNAME, &static_flash_display_ns, 0, "MovieClip"
+};
 
 multiname_t* registry_getobjectclass() {return &static_object_class;}
 multiname_t* registry_getanytype() {return &static_anytype_class;}
@@ -33,6 +39,8 @@ multiname_t* registry_getintclass() {return &static_int_class;}
 multiname_t* registry_getuintclass() {return &static_uint_class;}
 multiname_t* registry_getbooleanclass() {return &static_boolean_class;}
 multiname_t* registry_getnumberclass() {return &static_number_class;}
+multiname_t* registry_getMovieClip() {return &static_movieclip_class;}
+
 
 multiname_t* registry_findclass(const char*package, const char*name)
 {
@@ -40,7 +48,14 @@ multiname_t* registry_findclass(const char*package, const char*name)
     if(!package) {
         m = multiname_new(0, name);
     } else {
-        namespace_t*ns = namespace_new_packageinternal(package);
+        namespace_t*ns = 0;
+
+        /* things in the "flash" package are usually public */
+        if(!strncmp(package, "flash", 5))
+            ns =namespace_new_package(package);
+        else
+            ns = namespace_new_packageinternal(package);
+
         m = multiname_new(ns,name);
         namespace_destroy(ns);
     }
@@ -48,8 +63,22 @@ multiname_t* registry_findclass(const char*package, const char*name)
 }
 multiname_t* registry_getsuperclass(multiname_t*m)
 {
-    if(m->name && !strcmp(m->name, "Object"))
-            return 0;
-    return &static_object_class;
+    if(!m->name)
+        return 0;
+    if(!strcmp(m->name, "Object"))
+        return 0;
+
+    else if(!strcmp(m->name, "MovieClip"))
+        return multiname_fromstring("[package]flash.display::Sprite");
+    else if(!strcmp(m->name, "Sprite"))
+        return multiname_fromstring("[package]flash.display::DisplayObjectContainer");
+    else if(!strcmp(m->name, "DisplayObjectContainer"))
+        return multiname_fromstring("[package]flash.display::InteractiveObject");
+    else if(!strcmp(m->name, "InteractiveObject"))
+        return multiname_fromstring("[package]flash.display::DisplayObject");
+    else if(!strcmp(m->name, "DisplayObject"))
+        return multiname_fromstring("[package]flash.events::EventDispatcher");
+    else
+        return &static_object_class;
 }
 
