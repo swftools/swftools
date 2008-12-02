@@ -987,7 +987,7 @@ void list_append_(void*_list, void*entry)
     commonlist_t**list = (commonlist_t**)_list;
     commonlist_t* n = 0;
     if(!*list) {
-        n = malloc(sizeof(commonlist_t)+sizeof(listinfo_t));
+        n = (commonlist_t*)malloc(sizeof(commonlist_t)+sizeof(listinfo_t));
         *list = n;
         (*list)->info[0].size = 0;
     } else {
@@ -998,6 +998,23 @@ void list_append_(void*_list, void*entry)
     n->entry = entry;
     (*list)->info[0].last = n;
     (*list)->info[0].size++;
+}
+/* notice: prepending uses slighly more space than appending */
+void list_prepend_(void*_list, void*entry)
+{
+    commonlist_t**list = (commonlist_t**)_list;
+    commonlist_t* n = (commonlist_t*)malloc(sizeof(commonlist_t)+sizeof(listinfo_t));
+    int size = 0;
+    commonlist_t* last = 0;
+    if(*list) {
+        last = (*list)->info[0].last;
+        size = (*list)->info[0].size;
+    }
+    n->next = *list;
+    n->entry = entry;
+    *list = n;
+    (*list)->info[0].last = last;
+    (*list)->info[0].size = size+1;
 }
 void list_free_(void*_list) 
 {
