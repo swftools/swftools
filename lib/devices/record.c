@@ -549,7 +549,11 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length
     }
 finish:
     r->dealloc(r);
-    gfxfontlist_free(fontlist, 1);
+    /* problem: if we just replayed into a device which stores the
+       font for later use (the record device itself is a nice example),
+       then we can't free it yet */
+    //gfxfontlist_free(fontlist, 1);
+    gfxfontlist_free(fontlist, 0);
 }
 void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 {
