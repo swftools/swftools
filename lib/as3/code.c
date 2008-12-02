@@ -20,7 +20,6 @@
    n = u30 number of params
    i = u30 index into method info
    b = byte
-   s = short
    c = u30 index into class
    s = string (u30 index into strings)
    S = switch
