@@ -1,54 +1,3 @@
-//%glr-parser
-//%expect-rr 1
-%error-verbose
-
-%token T_IDENTIFIER
-%token T_STRING
-%token T_REGEXP
-%token T_DOTDOT ".."
-%token T_COLONCOLON "::"
-%token T_GE ">="
-%token T_LE "<="
-%token T_EQEQ "=="
-%token T_PLUSPLUS "++"
-%token T_MINUSMINUS "--"
-%token T_IMPLEMENTS
-%token T_NAMESPACE
-%token T_PACKAGE
-%token T_PROTECTED
-%token T_PUBLIC
-%token T_PRIVATE
-%token T_UINT
-%token T_USE
-%token T_INTERNAL
-%token T_INT
-%token T_NEW
-%token T_NATIVE
-%token T_FUNCTION
-%token T_FOR
-%token T_CLASS
-%token T_CONST
-%token T_SET
-%token T_STATIC
-%token T_IMPORT
-%token T_INTERFACE
-%token T_NUMBER
-%token T_NULL
-%token T_FALSE
-%token T_TRUE
-%token T_BOOLEAN
-%token T_VAR
-%token T_AS
-%token T_IS
-%token T_DYNAMIC
-%token T_OVERRIDE
-%token T_FINAL
-%token T_GET
-%token T_EXTENDS
-
-
-%token T_EMPTY
-     
 %{
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,6 +7,152 @@
 #include "files.h"
 #include "tokenizer.h"
 #include "registry.h"
+%}
+
+//%glr-parser
+//%expect-rr 1
+%error-verbose
+
+%union tokenunion {
+    tokenptr_t token;
+    multiname_t*multiname;
+    multiname_list_t*multiname_list;
+}
+
+
+%token<token> T_IDENTIFIER
+%token<token> T_STRING
+%token<token> T_REGEXP
+%token<token> T_IMPLEMENTS
+%token<token> T_NAMESPACE
+%token<token> T_PACKAGE
+%token<token> T_PROTECTED
+%token<token> T_PUBLIC
+%token<token> T_PRIVATE
+%token<token> T_UINT
+%token<token> T_USE
+%token<token> T_INTERNAL
+%token<token> T_INT
+%token<token> T_NEW
+%token<token> T_NATIVE
+%token<token> T_FUNCTION
+%token<token> T_FOR
+%token<token> T_CLASS
+%token<token> T_CONST
+%token<token> T_SET
+%token<token> T_STATIC
+%token<token> T_IMPORT
+%token<token> T_INTERFACE
+%token<token> T_NUMBER
+%token<token> T_NULL
+%token<token> T_FALSE
+%token<token> T_TRUE
+%token<token> T_BOOLEAN
+%token<token> T_VAR
+%token<token> T_DYNAMIC
+%token<token> T_OVERRIDE
+%token<token> T_FINAL
+%token<token> T_GET
+%token<token> T_EXTENDS
+%token<token> T_EMPTY
+%token<token> T_EQEQ "=="
+%token<token> T_LE "<="
+%token<token> T_GE ">="
+%token<token> T_DIVBY "/=" 
+%token<token> T_MODBY "%="
+%token<token> T_PLUSBY "+=" 
+%token<token> T_MINUSBY "-="
+%token<token> T_SHRBY ">>="
+%token<token> T_SHLBY "<<="
+%token<token> T_USHRBY ">>>="
+%token<token> T_OROR "||"
+%token<token> T_ANDAND "&&"
+%token<token> T_COLONCOLON "::"
+%token<token> T_MINUSMINUS "--"
+%token<token> T_PLUSPLUS "++"
+%token<token> T_DOTDOT ".."
+%token<token> T_SHL "<<"
+%token<token> T_USHR ">>>"
+%token<token> T_SHR ">>"
+%token<token> T_IS "is"
+%token<token> T_AS "as"
+%token<token> T_SEMICOLON ';'
+%token<token> T_STAR '*'
+%token<token> T_DOT '.'
+
+// precendence: from low to high
+// http://livedocs.adobe.com/flash/9.0/main/wwhelp/wwhimpl/common/html/wwhelp.htm?context=LiveDocs_Parts&file=00000012.html
+
+%right '?' ':'
+%nonassoc '='
+%nonassoc "/=" "%="
+%nonassoc "+=" "-="
+%nonassoc ">>="
+%nonassoc "<<="
+%nonassoc ">>>="
+%nonassoc "||"
+%nonassoc "&&"
+%nonassoc '|'
+%nonassoc '^'
+%nonassoc '&'
+%nonassoc "!=" "==" "<=" '<' ">=" '>' // TODO: support "a < b < c" syntax?
+%nonassoc "is"
+%left '-'
+%left '+'
+%left "<<"
+%left ">>>"
+%left ">>"
+%left '%'
+%left '/'
+%left '*'
+%left '!'
+%left '~'
+%left "--" "++"
+%left '['
+%nonassoc "as"
+%left '.' ".." "::"
+%left '('
+
+%type <token> CODE
+%type <token> CODEPIECE
+%type <token> PACKAGE_DECLARATION
+%type <token> FUNCTION_DECLARATION
+%type <token> VARIABLE_DECLARATION
+%type <token> CLASS_DECLARATION
+%type <token> NAMESPACE_DECLARATION
+%type <token> INTERFACE_DECLARATION
+%type <token> EXPRESSION
+%type <token> E
+%type <token> CONSTANT
+%type <token> FOR
+%type <token> USE
+%type <token> ASSIGNMENT
+%type <token> IMPORT
+%type <multiname> MAYBETYPE
+%type <token> PACKAGESPEC
+%type <token> GETSET
+%type <token> PARAM
+%type <token> PARAMS
+%type <token> PARAM_LIST
+%type <token> MODIFIERS
+%type <token> MODIFIER_LIST
+%type <multiname_list> IMPLEMENTS_LIST
+%type <multiname> EXTENDS
+%type <multiname_list> EXTENDS_LIST
+%type <multiname> PACKAGEANDCLASS
+%type <multiname_list> PACKAGEANDCLASS_LIST
+%type <token> MULTILEVELIDENTIFIER
+%type <multiname> TYPE
+%type <token> VAR
+%type <token> VARIABLE
+%type <token> NEW
+%type <token> FUNCTIONCALL
+%type <token> X_IDENTIFIER
+%type <token> MODIFIER
+%type <token> PACKAGE
+
+     
+%{
 
 static int yyerror(char*s)
 {
@@ -116,7 +211,7 @@ DECLARE_LIST(state);
 
 static state_list_t*state_stack=0;
 
-static void initialize_state()
+void initialize_state()
 {
     NEW(state_t, s);
     NEW(state_list_t, sl);
@@ -131,7 +226,7 @@ static void initialize_state()
     __ getlocal_0(m);
     __ pushscope(m);
 }
-static void finalize_state()
+void* finalize_state()
 {
     if(state->level) {
         syntaxerror("unexpected end of file");
@@ -139,6 +234,7 @@ static void finalize_state()
     abc_method_body_t*m = state->init->method->body;
     //__ popscope(m);
     __ returnvoid(m);
+    return state->file;
 }
 
 static void new_state()
@@ -179,18 +275,24 @@ static void endpackage()
     old_state();
 }
 
-static void startclass(token_t*modifiers, token_t*name, token_t*extends, token_t*implements)
+static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, multiname_list_t*implements)
 {
-    token_list_t*t;
     if(state->cls) {
         syntaxerror("inner classes now allowed"); 
     }
     new_state();
     state->classname = name->text;
     printf("entering class %s\n", name->text);
+    token_list_t*t=0;
     printf("  modifiers: ");for(t=modifiers->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
-    printf("  extends: %s\n", extends->text);
-    printf("  implements (%d): ", list_length(implements->tokens));for(t=implements->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
+    printf("  extends: %s\n", multiname_tostring(extends));
+
+    multiname_list_t*mlist=0;
+    printf("  implements (%d): ", list_length(implements));
+    for(mlist=implements;mlist;mlist=mlist->next)  {
+        printf("%s ", multiname_tostring(mlist->multiname));
+    }
+    printf("\n");
 
     char public=0,internal=0,final=0,sealed=1;
     for(t=modifiers->tokens;t;t=t->next) {
@@ -220,20 +322,12 @@ static void startclass(token_t*modifiers, token_t*name, token_t*extends, token_t
     else
         syntaxerror("public classes only allowed inside a package");
 
-    /* try to find the superclass */
-    multiname_t* superclass = 0;
-    if(extends->type != T_EMPTY) {
-        superclass = registry_findclass(extends->text);
-    } else {
-        superclass = registry_getobjectclass();
-    }
-
-    state->cls = abc_class_new(state->file, classname, superclass);
+    state->cls = abc_class_new(state->file, classname, extends);
     if(final) abc_class_final(state->cls);
     if(sealed) abc_class_sealed(state->cls);
 
-    for(t=implements->tokens;t;t=t->next) {
-        abc_class_add_interface(state->cls, registry_findclass(t->token->text));
+    for(mlist=implements;mlist;mlist=mlist->next) {
+        abc_class_add_interface(state->cls, mlist->multiname);
     }
 
     /* now write the construction code for this class */
@@ -241,7 +335,7 @@ static void startclass(token_t*modifiers, token_t*name, token_t*extends, token_t
 
     abc_method_body_t*m = state->init->method->body;
     __ getglobalscope(m);
-    multiname_t*s = superclass;
+    multiname_t*s = extends;
     int count=0;
     while(s) {
         //TODO: invert
@@ -255,7 +349,7 @@ static void startclass(token_t*modifiers, token_t*name, token_t*extends, token_t
     /* TODO: if this is one of *our* classes, we can also 
              do a getglobalscope/getslot <nr> (which references
              the init function's slots) */
-    __ getlex2(m, superclass);
+    __ getlex2(m, extends);
     __ newclass(m,state->cls);
 
     while(count--) {
@@ -284,7 +378,7 @@ static void print_imports()
     }
 }
 static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
-                          token_t*params, token_t*type)
+                          token_t*params, multiname_t*type)
 {
     token_list_t*t;
     new_state();
@@ -295,21 +389,29 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     printf("  getset: %s\n", getset->text);
     printf("  params: ");for(t=params->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
-    printf("  type: %s\n", type->text);
+    printf("  type: %s\n", multiname_tostring(type));
     print_imports();
+
+    abc_method_body_t* m=0;
+    if(!strcmp(state->classname,name->text)) {
+        m = abc_class_constructor(state->cls, type, 0);
+    } else {
+        m = abc_class_method(state->cls, type, name->text, 0);
+    }
+
 }
 static void endfunction()
 {
     printf("leaving function %s\n", state->function);
     old_state();
 }
-static int newvariable(token_t*mod, token_t*varconst, token_t*name, token_t*type)
+static int newvariable(token_t*mod, token_t*varconst, token_t*name, multiname_t*type)
 {
     token_list_t*t;
     printf("defining new variable %s\n", name->text);
     printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     printf("  access: ");printf("%s\n", varconst->text);
-    printf("  type: ");printf("%s\n", type->text);
+    printf("  type: ");printf("%s\n", multiname_tostring(type));
 }
 static token_t* empty_token()
 {
@@ -340,23 +442,16 @@ void extend_s(token_t*list, char*seperator, token_t*add) {
 }
 
 %}
+
 %%
 
-PROGRAM: CODE PROGRAM
-PROGRAM: 
-
-//EMPTY: {
-//    token_t* t = malloc(sizeof(token_t));
-//    t->text = strdup("");
-//    t->type = T_EMPTY;
-//    $$ = t;
-//}
-
-CODE: CODE CODEPIECE {$$=$1;}
-CODE: CODEPIECE {$$=empty_token();}
+PROGRAM: MAYBECODE
 
 MAYBECODE: CODE
 MAYBECODE: 
+
+CODE: CODE CODEPIECE {$$=$1;}
+CODE: CODEPIECE {$$=empty_token();}
 
 CODEPIECE: ';'
 CODEPIECE: VARIABLE_DECLARATION {$$=$1;}
@@ -376,17 +471,16 @@ PACKAGE_DECLARATION : T_PACKAGE '{' {startpackage(0)} MAYBECODE '}' {endpackage(
 
 IMPORT : T_IMPORT PACKAGESPEC {addimport($2);}
 
-TYPE : BUILTIN_TYPE | '*' | T_IDENTIFIER
-// TODO: do we need this? all it does it is clutter up our keyword space
-BUILTIN_TYPE : T_STRING
-BUILTIN_TYPE : T_NUMBER
-BUILTIN_TYPE : T_INT
-BUILTIN_TYPE : T_UINT
-BUILTIN_TYPE : T_BOOLEAN
-BUILTIN_TYPE : T_NULL
+TYPE : PACKAGEANDCLASS {$$=$1;}
+     | '*'        {$$=registry_getanytype();}
+     |  T_STRING  {$$=registry_getstringclass();}
+     |  T_INT     {$$=registry_getintclass();}
+     |  T_UINT    {$$=registry_getuintclass();}
+     |  T_BOOLEAN {$$=registry_getbooleanclass();}
+     |  T_NUMBER  {$$=registry_getnumberclass();}
 
 MAYBETYPE: ':' TYPE {$$=$2;}
-MAYBETYPE:          {$$=empty_token();}
+MAYBETYPE:          {$$=0;}
 
 //FUNCTION_HEADER:      NAMESPACE MODIFIERS T_FUNCTION GETSET T_IDENTIFIER '(' PARAMS ')' 
 FUNCTION_HEADER:      MODIFIERS T_FUNCTION GETSET T_IDENTIFIER '(' PARAMS ')' 
@@ -403,7 +497,8 @@ NAMESPACE_DECLARATION : MODIFIERS T_NAMESPACE T_IDENTIFIER '=' T_STRING
 
 CONSTANT : T_NUMBER
 CONSTANT : T_STRING
-CONSTANT : T_TRUE | T_FALSE
+CONSTANT : T_TRUE
+CONSTANT : T_FALSE
 CONSTANT : T_NULL
 
 VAR : T_CONST | T_VAR
@@ -419,42 +514,40 @@ VARIABLE_DECLARATION : MODIFIERS VAR T_IDENTIFIER MAYBETYPE '=' EXPRESSION {
     //setvariable(i,$6);
 }
 
-// operator prescendence:
-// http://livedocs.adobe.com/flash/9.0/main/wwhelp/wwhimpl/common/html/wwhelp.htm?context=LiveDocs_Parts&file=00000012.html
-EXPRESSION : EXPRESSION '<' EXPRESSION
-EXPRESSION : EXPRESSION '>' EXPRESSION
-EXPRESSION : EXPRESSION "<=" EXPRESSION
-EXPRESSION : EXPRESSION ">=" EXPRESSION
-EXPRESSION : EXPRESSION "==" EXPRESSION
-EXPRESSION : EXPRESSION '+' TERM
-EXPRESSION : EXPRESSION '-' TERM
-EXPRESSION : TERM
-EXPRESSION : '-' TERM
-TERM : TERM '*' FACTOR
-TERM : TERM '/' FACTOR
-TERM : EMOD
-EMOD: FACTOR "++"
-EMOD: FACTOR "--"
-EMOD: FACTOR
-FACTOR : '(' EXPRESSION ')'
-FACTOR : CONSTANT
-FACTOR : VARIABLE
-FACTOR : FUNCTIONCALL
-FACTOR : T_REGEXP
-FACTOR : NEW
-FACTOR : IS
-FACTOR : AS
+EXPRESSION : E
 
-IS : EXPRESSION T_IS TYPE
-AS : EXPRESSION T_AS TYPE
-NEW : T_NEW T_IDENTIFIER | T_NEW T_IDENTIFIER '(' ')'
-NEW : T_NEW T_IDENTIFIER '(' EXPRESSIONLIST ')'
+E : CONSTANT
+E : VARIABLE
+E : NEW
+E : T_REGEXP
+E : FUNCTIONCALL
+E : E '<' E
+E : E '>' E
+E : E "<=" E
+E : E ">=" E
+E : E "==" E
+E : E '+' E
+E : E '-' E
+E : E '/' E
+E : E '%' E
+E : E '*' E
+E : E "++"
+E : E "--"
+E : E "as" TYPE
+E : E "is" TYPE
 
-FUNCTIONCALL : VARIABLE '(' EXPRESSIONLIST ')'
+//E : '(' E ')'  // conflicts with function calls: "a=f(c++);"<->"a=f;(c++)"
+//E : '-' E      // conflicts with non-assignment statements: "a=3-1;"<->"a=3;-1"
+
+NEW : T_NEW T_IDENTIFIER
+    | T_NEW T_IDENTIFIER '(' ')'
+    | T_NEW T_IDENTIFIER '(' EXPRESSION_LIST ')'
+
+FUNCTIONCALL : VARIABLE '(' EXPRESSION_LIST ')'
 FUNCTIONCALL : VARIABLE '(' ')'
 
-EXPRESSIONLIST : EXPRESSION
-EXPRESSIONLIST : EXPRESSION ',' EXPRESSIONLIST
+EXPRESSION_LIST : EXPRESSION
+EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION
 
 VARIABLE : T_IDENTIFIER
 VARIABLE : VARIABLE '.' T_IDENTIFIER
@@ -504,23 +597,28 @@ DECLARATION : FUNCTION_DECLARATION
 IDECLARATION : VARIABLE_DECLARATION
 IDECLARATION : FUNCTION_DECLARATION
 
-IMPLEMENTS_LIST : {$$=empty_token();}
-IMPLEMENTS_LIST : T_IMPLEMENTS MIDENTIFIER_LIST {$$=$2;}
+IMPLEMENTS_LIST : {$$=list_new();}
+IMPLEMENTS_LIST : T_IMPLEMENTS PACKAGEANDCLASS_LIST {$$=$2;}
 
-EXTENDS : {$$=empty_token();}
-EXTENDS : T_EXTENDS MULTILEVELIDENTIFIER {$$=$2;}
+EXTENDS : {$$=registry_getobjectclass();}
+EXTENDS : T_EXTENDS PACKAGEANDCLASS {$$=$2;}
 
-EXTENDS_LIST : {$$=empty_token();}
-EXTENDS_LIST : T_EXTENDS MIDENTIFIER_LIST {$$=$2;}
+EXTENDS_LIST : {$$=list_new();}
+EXTENDS_LIST : T_EXTENDS PACKAGEANDCLASS_LIST {$$=$2;}
 
 //IDENTIFIER_LIST : T_IDENTIFIER ',' IDENTIFIER_LIST {extend($3,$1);$$=$3;}
 //IDENTIFIER_LIST : T_IDENTIFIER                     {$$=empty_token();extend($$,$1);}
 
-MULTILEVELIDENTIFIER : T_IDENTIFIER                          {$$=empty_token();extend($$,$1);}
-MULTILEVELIDENTIFIER : MULTILEVELIDENTIFIER '.' X_IDENTIFIER {extend_s($1,".",$3);$$=$1;}
+PACKAGEANDCLASS : T_IDENTIFIER {$$ = registry_findclass(state->package, $1->text);}
+PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {$$ = registry_findclass($1->text, $3->text);}
+PACKAGE : X_IDENTIFIER
+PACKAGE : PACKAGE '.' X_IDENTIFIER {$$=$1;extend_s($$,".",$3);}
 
-MIDENTIFIER_LIST : MULTILEVELIDENTIFIER                      {$$=empty_token();extend($$,$1);}
-MIDENTIFIER_LIST : MIDENTIFIER_LIST ',' MULTILEVELIDENTIFIER {extend($1,$3);$$=$1;}
+MULTILEVELIDENTIFIER : MULTILEVELIDENTIFIER '.' X_IDENTIFIER {$$=$1;extend_s($$, ".", $3)}
+MULTILEVELIDENTIFIER : T_IDENTIFIER                 {$$=$1;extend($$,$1)};
+
+PACKAGEANDCLASS_LIST : PACKAGEANDCLASS {$$=list_new();list_append($$, $1);}
+PACKAGEANDCLASS_LIST : PACKAGEANDCLASS_LIST ',' PACKAGEANDCLASS {$$=$1;list_append($$,$3);}
 
 MAYBE_DECLARATION_LIST : 
 MAYBE_DECLARATION_LIST : DECLARATION_LIST
@@ -532,76 +630,7 @@ MAYBE_IDECLARATION_LIST : IDECLARATION_LIST
 IDECLARATION_LIST : IDECLARATION
 IDECLARATION_LIST : IDECLARATION_LIST FUNCTION_HEADER
 
+// chapter 14
 // keywords: as break case catch class const continue default delete do else extends false finally for function if implements import in instanceof interface internal is native new null package private protected public return super switch this throw to true try typeof use var void while with
 // syntactic keywords: each get set namespace include dynamic final native override static
-// chapter 14
 
-
-%%
-
-#ifdef MAIN
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <memory.h>
-
-void test_lexer()
-{
-    while(1) {
-        int token = yylex();
-        if(token==T_EOF)
-            break;
-        if(token>=32 && token<256) {
-            printf("'%c'\n", token);
-        } else {
-            printf("%s\n", token2string(avm2_lval));
-        }
-    }
-}
-
-int main(int argn, char*argv[])
-{
-    //FILE*fi = fopen("/home/kramm/c/flex/text.as", "rb");
-    char*filename = "include.as";
-    char buf[512];
-    if(argn>1)
-        filename=argv[1];
-
-    add_include_dir(getcwd(buf, 512));
-    char*fullfilename = enter_file(filename, 0);
-
-    FILE*fi = fopen(fullfilename, "rb");
-    if(!fi) {
-        perror(fullfilename);
-        return 1;
-    }
-    initialize_state();
-    avm2_set_in(fi);
-
-    if(argn>2 && !strcmp(argv[2], "-lex")) {
-        test_lexer();
-        return 0;
-    }
-    avm2_parse();
-
-    finalize_state();
-
-    SWF swf;
-    memset(&swf, 0, sizeof(swf));
-    swf.fileVersion = 9;
-    swf.frameRate = 0x2500;
-    swf.movieSize.xmin = swf.movieSize.ymin = 0;
-    swf.movieSize.xmax = 1024*20;
-    swf.movieSize.ymax = 768*20;
-    TAG*tag = swf.firstTag = swf_InsertTag(0, ST_DOABC);
-    swf_WriteABC(tag, state->file);
-    swf_InsertTag(tag, ST_END);
-
-    int f = open("abc.swf",O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0644);
-    swf_WriteSWF(f,&swf);
-    close(f);
-
-    return 0;
-}
-#endif

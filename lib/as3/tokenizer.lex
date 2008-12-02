@@ -92,6 +92,8 @@ void handleInclude(char*text, int len, char quotes)
     //BEGIN(INITIAL); keep context
 }
 
+char start_of_expression;
+
 static inline int m(int type)
 {
     char*s = malloc(yyleng+1);
@@ -101,7 +103,7 @@ static inline int m(int type)
     NEW(token_t,t);
     t->type = type;
     t->text = s;
-    avm2_lval = t;
+    avm2_lval.token = t;
     return type;
 }
 
