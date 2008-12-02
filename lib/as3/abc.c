@@ -40,7 +40,7 @@ int abc_RegisterPrivateNameSpace(abc_file_t*file, const char*name);
 /* TODO: switch to a datastructure with just values */
 #define NO_KEY ""
 
-static char* params_to_string(multiname_list_t*list)
+static char* params_tostring(multiname_list_t*list)
 {
     multiname_list_t*l;
     int n = list_length(list);
@@ -50,7 +50,7 @@ static char* params_to_string(multiname_list_t*list)
     n = 0;
     int size = 0;
     while(l) {
-        names[n] = multiname_to_string(l->multiname);
+        names[n] = multiname_tostring(l->multiname);
         size += strlen(names[n]) + 2;
         n++;l=l->next;
     }
@@ -174,7 +174,7 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
     list_append(c->interfaces, interface);
 }
 
-abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, char*returntype, int num_params, va_list va)
+abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, int num_params, va_list va)
 {
     /* construct code (method body) object */
     NEW(abc_method_body_t,c);
@@ -187,11 +187,8 @@ abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, char*returntype,
     NEW(abc_method_t,m);
     array_append(file->methods, NO_KEY, m);
 
-    if(returntype && strcmp(returntype, "void")) {
-	m->return_type = multiname_fromstring(returntype);
-    } else {
-	m->return_type = 0;
-    }
+    m->return_type = returntype;
+
     int t;
     for(t=0;t<num_params;t++) {
 	const char*param = va_arg(va, const char*);
@@ -205,7 +202,7 @@ abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, char*returntype,
     return c;
 }
 
-abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int num_params, ...) 
+abc_method_body_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
 {
     va_list va;
     va_start(va, num_params);
@@ -215,7 +212,7 @@ abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int n
     return c;
 }
 
-abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype, int num_params, ...) 
+abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
 {
     va_list va;
     va_start(va, num_params);
@@ -260,7 +257,7 @@ trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
     return trait;
 }
 
-abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...)
+abc_method_body_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...)
 {
     abc_file_t*file = cls->file;
     va_list va;
@@ -303,7 +300,7 @@ int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc
     return slotid;
 }
 
-abc_script_t* abc_initscript(abc_file_t*file, char*returntype, int num_params, ...) 
+abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype, int num_params, ...) 
 {
     va_list va;
     va_start(va, num_params);
@@ -323,10 +320,10 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
 {
     char*return_type = 0;
     if(m->return_type)
-        return_type = multiname_to_string(m->return_type);
+        return_type = multiname_tostring(m->return_type);
     else
         return_type = strdup("void");
-    char*paramstr = params_to_string(m->parameters);
+    char*paramstr = params_tostring(m->parameters);
     fprintf(fo, "%s%s %s %s=%s %s (%d params)\n", prefix, type, return_type, name, m->name, paramstr, list_length(m->parameters));
     free(paramstr);paramstr=0;
     free(return_type);return_type=0;
@@ -382,7 +379,7 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
 	trait->name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag))); // always a QName (ns,name)
 
 	const char*name = 0;
-	DEBUG name = multiname_to_string(trait->name);
+	DEBUG name = multiname_tostring(trait->name);
 	U8 kind = swf_GetU8(tag);
         U8 attributes = kind&0xf0;
         kind&=0x0f;
@@ -412,7 +409,7 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
 		int vkind = swf_GetU8(tag);
                 trait->value = constant_fromindex(pool, vindex, vkind);
 	    }
-	    DEBUG printf("  slot %s %d %s (%s)\n", name, trait->slot_id, trait->type_name->name, constant_to_string(trait->value));
+	    DEBUG printf("  slot %s %d %s (%s)\n", name, trait->slot_id, trait->type_name->name, constant_tostring(trait->value));
 	} else {
 	    fprintf(stderr, "Can't parse trait type %d\n", kind);
 	}
@@ -503,7 +500,7 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
     int t;
     while(traits) {
 	trait_t*trait = traits->trait;
-	char*name = multiname_to_string(trait->name);
+	char*name = multiname_tostring(trait->name);
 	U8 kind = trait->kind;
         U8 attributes = trait->attributes;
 	if(kind == TRAIT_METHOD) {
@@ -527,8 +524,8 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
             }
 	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
 	    int slot_id = trait->slot_id;
-	    char*type_name = multiname_to_string(trait->type_name);
-            char*value = constant_to_string(trait->value);
+	    char*type_name = multiname_tostring(trait->type_name);
+            char*value = constant_tostring(trait->value);
 	    fprintf(fo, "%sslot %d: %s%s %s %s %s\n", prefix, trait->slot_id, 
                     kind==TRAIT_CONST?"const ":"", type_name, name, 
                     value?"=":"", value);
@@ -574,23 +571,23 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
         if(cls->flags&2) fprintf(fo, "final ");
         if(cls->flags&4) fprintf(fo, "interface ");
         if(cls->flags&8) {
-            char*s = namespace_to_string(cls->protectedNS);
+            char*s = namespace_tostring(cls->protectedNS);
             fprintf(fo, "protectedNS(%s) ", s);
             free(s);
         }
 
-        char*classname = multiname_to_string(cls->classname);
+        char*classname = multiname_tostring(cls->classname);
 	fprintf(fo, "class %s", classname);
         free(classname);
         if(cls->superclass) {
-            char*supername = multiname_to_string(cls->superclass);
+            char*supername = multiname_tostring(cls->superclass);
             fprintf(fo, " extends %s", supername);
             free(supername);
             multiname_list_t*ilist = cls->interfaces;
             if(ilist)
                 fprintf(fo, " implements");
             while(ilist) {
-                char*s = multiname_to_string(ilist->multiname);
+                char*s = multiname_tostring(ilist->multiname);
                 fprintf(fo, " %s", s);
                 free(s);
                 ilist = ilist->next;
@@ -605,7 +602,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
             dump_method(fo, prefix2,"staticconstructor", "", cls->static_constructor, file);
         traits_dump(fo, prefix2, cls->static_constructor_traits, file);
 	
-        char*n = multiname_to_string(cls->classname);
+        char*n = multiname_tostring(cls->classname);
         if(cls->constructor)
 	    dump_method(fo, prefix2, "constructor", n, cls->constructor, file);
         free(n);
@@ -670,7 +667,7 @@ void* swf_ReadABC(TAG*tag)
 
 	m->flags = swf_GetU8(tag);
 	
-        DEBUG printf("method %d) %s flags=%02x\n", t, params_to_string(m->parameters), m->flags);
+        DEBUG printf("method %d) %s flags=%02x\n", t, params_tostring(m->parameters), m->flags);
 
         if(m->flags&0x08) {
             /* TODO optional parameters */
@@ -1263,7 +1260,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 needs_framescript = 1;
 
                 abc_method_body_t*h =
-                    abc_class_method(cls, "::void", functionname, 1, "flash.events::MouseEvent");
+                    abc_class_method(cls, 0, functionname, 1, "flash.events::MouseEvent");
                 h->max_stack = 6;
                 h->local_count = 2;
                 h->init_scope_depth = 10;

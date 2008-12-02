@@ -128,9 +128,9 @@ void abc_class_interface(abc_class_t*c);
 void abc_class_protectedNS(abc_class_t*c, char*namespace);
 void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
 
-abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, char*returntype, int num_params, ...);
-abc_method_body_t* abc_class_constructor(abc_class_t*cls, char*returntype, int num_params, ...);
-abc_method_body_t* abc_class_method(abc_class_t*cls, char*returntype, char*name, int num_params, ...);
+abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
+abc_method_body_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
+abc_method_body_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...);
 
 struct _exception {
     code_t*from;
@@ -166,7 +166,7 @@ typedef struct _abc_script {
 } abc_script_t;
 
 abc_method_t* abc_nullmethod(abc_file_t*file);
-abc_script_t* abc_initscript(abc_file_t*file, char*returntype, int num_params, ...);
+abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype, int num_params, ...);
 
 #define __ 
 
