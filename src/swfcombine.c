@@ -1022,8 +1022,12 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 
     if (spriteid<0 && !config.isframe) {
 	if(slavename) {
-	    if(strcmp(slavename,"!!dummy!!"))
+	    if(strcmp(slavename,"!!dummy!!")) {
 		msg("<warning> Didn't find anything named %s in file. No substitutions will occur.", slavename);
+		if(!strcmp(slavename, "swf")) {
+		    msg("<warning> (If you were trying to combine rfxview with a document, try replacing 'swf' with 'viewport'.");
+		}
+	    }
 	}
 	else
 	    msg("<warning> Didn't find id %d in file. No substitutions will occur.", slaveid);
