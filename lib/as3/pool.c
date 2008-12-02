@@ -995,7 +995,7 @@ void pool_read(pool_t*pool, TAG*tag)
     DEBUG printf("%d ints\n", num_ints);
     int t;
     for(t=1;t<num_ints;t++) {
-        S32 v = swf_GetS30(tag);
+        S32 v = swf_GetABCS32(tag);
         DEBUG printf("int %d) %d\n", t, v);
         array_append(pool->x_ints, &v, 0);
     }
@@ -1003,7 +1003,7 @@ void pool_read(pool_t*pool, TAG*tag)
     int num_uints = swf_GetU30(tag);
     DEBUG printf("%d uints\n", num_uints);
     for(t=1;t<num_uints;t++) {
-        U32 v = swf_GetU30(tag);
+        U32 v = swf_GetABCU32(tag);
         DEBUG printf("uint %d) %d\n", t, v);
         array_append(pool->x_uints, &v, 0);
     }
@@ -1137,11 +1137,11 @@ void pool_write(pool_t*pool, TAG*tag)
     swf_SetU30(tag, pool->x_ints->num>1?pool->x_ints->num:0);
     for(t=1;t<pool->x_ints->num;t++) {
         S32 val = *(int*)array_getkey(pool->x_ints, t);
-        swf_SetS30(tag, val);
+        swf_SetABCS32(tag, val);
     }
     swf_SetU30(tag, pool->x_uints->num>1?pool->x_uints->num:0);
     for(t=1;t<pool->x_uints->num;t++) {
-        swf_SetU30(tag, *(unsigned int*)array_getkey(pool->x_uints, t));
+        swf_SetABCU32(tag, *(unsigned int*)array_getkey(pool->x_uints, t));
     }
     swf_SetU30(tag, pool->x_floats->num>1?pool->x_floats->num:0);
     for(t=1;t<pool->x_floats->num;t++) {
