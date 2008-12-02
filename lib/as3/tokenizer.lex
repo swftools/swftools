@@ -121,9 +121,10 @@ static inline int handlenumber()
     char is_float=0;
     for(t=0;t<yyleng;t++) {
         if(yytext[t]=='.') {
+            if(is_float)
+                syntaxerror("Invalid number");
             is_float=1;
-        } 
-        if(!strchr("0123456789", yytext[t])) {
+        } else if(!strchr("-0123456789", yytext[t])) {
             syntaxerror("Invalid number");
         }
     }
@@ -131,18 +132,16 @@ static inline int handlenumber()
         avm2_lval.number_float = atof(s);
         return T_FLOAT;
     } 
-    int l=0;
-    if(yytext[0]=='-')
-        l++;
+    char l = (yytext[0]=='-');
 
-    char*max = l?"2147483648":"4294967296";
-    if(yyleng>10)
+    char*max = l?"1073741824":"2147483647";
+    if(yyleng-l>10)
         syntaxerror("integer overflow");
-    if(yyleng==10) {
+    if(yyleng-l==10) {
         int t;
         for(t=0;t<yyleng-l;t++) {
             if(yytext[l+t]>max[t])
-                syntaxerror("integer overflow");
+                syntaxerror("integer overflow %s > %s", s+l,max);
             else if(yytext[l+t]<max[t])
                 break;
         }
@@ -151,12 +150,17 @@ static inline int handlenumber()
         avm2_lval.number_int = atoi(s);
         return T_INT;
     } else {
-        unsigned int v = atoi(s);
+        unsigned int v = 0;
+        for(t=0;t<yyleng;t++) {
+            v*=10;
+            v+=yytext[t]-'0';
+        }
         avm2_lval.number_uint = v;
         if(v<256)
             return T_BYTE;
-        else if(v<0x80000000)
-            return T_SHORT;
+        /* useless- numbers are usually smaller if stored in the constant pool
+          else if(v<0x80000000u)
+            return T_SHORT;*/
         else
             return T_UINT;
     }
