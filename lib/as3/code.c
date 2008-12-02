@@ -384,7 +384,7 @@ void codelookup_free(codelookup_t*codelookup)
 
 code_t*code_find_start(code_t*c)
 {
-    while(c->prev) 
+    while(c && c->prev) 
         c=c->prev;
     return c;
 }
@@ -590,7 +590,7 @@ static void dumpstack(currentstats_t*stats)
                 printf(" 00000000\n");
         }
         if(op->params[0]=='2') {
-            printf(" %s", multiname_to_string(c->data[0]));
+            printf(" %s", multiname_tostring(c->data[0]));
         }
         printf("\n");
     }
@@ -744,7 +744,7 @@ static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions)
         if(op->flags & (OP_JUMP|OP_BRANCH)) {
             printf("%5d) %s %08x\n", t, op->name, c->branch);
         } else if(op->params[0]=='2') {
-            printf("%5d) %s %s\n", t, op->name, multiname_to_string(c->data[0]));
+            printf("%5d) %s %s\n", t, op->name, multiname_tostring(c->data[0]));
         } else {
             printf("%5d) %s\n", t, op->name);
         }
@@ -802,8 +802,8 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
             if(c==e->exception->from)
                 fprintf(fo, "%s   TRY {\n", prefix);
             if(c==e->exception->target) {
-                char*s1 = multiname_to_string(e->exception->exc_type);
-                char*s2 = multiname_to_string(e->exception->var_name);
+                char*s1 = multiname_tostring(e->exception->exc_type);
+                char*s2 = multiname_tostring(e->exception->var_name);
                 fprintf(fo, "%s   CATCH(%s %s)\n", prefix, s1, s2);
                 free(s1);
                 free(s2);
@@ -838,7 +838,7 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
                     fprintf(fo, "%d params", n);
                 } else if(*p == '2') {
                     multiname_t*n = (multiname_t*)data;
-                    char* m = multiname_to_string(n);
+                    char* m = multiname_tostring(n);
                     fprintf(fo, "%s", m);
                     free(m);
                 } else if(*p == 'm') {
@@ -846,7 +846,7 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
                     fprintf(fo, "[method %s]", m->name);
                 } else if(*p == 'c') {
                     abc_class_t*cls = (abc_class_t*)data;
-                    char*classname = multiname_to_string(cls->classname);
+                    char*classname = multiname_tostring(cls->classname);
                     fprintf(fo, "[classinfo %s]", classname);
                     free(classname);
                 } else if(*p == 'i') {
