@@ -1,3 +1,25 @@
+/* parser.lex
+
+   Routines for compiling Flash2 AVM2 ABC Actionscript
+
+   Extension module for the rfxswf library.
+   Part of the swftools package.
+
+   Copyright (c) 2008 Matthias Kramm <kramm@quiss.org>
+ 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 %{
 #include <stdlib.h>
 #include <stdio.h>
@@ -128,6 +150,7 @@
 %type <multiname> TYPE
 %type <token> VAR
 %type <token> VARIABLE
+%type <code> VAR_READ
 %type <token> NEW
 %type <token> X_IDENTIFIER
 %type <token> MODIFIER
@@ -606,10 +629,10 @@ VARIABLE_DECLARATION : MODIFIERS VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
 MAYBEEXPRESSION : '=' EXPRESSION {$$=$2;}
                 |                {$$=code_new();}
 
-EXPRESSION : E %prec prec_none  {$$ = $1;} //precendence below '-x'
+EXPRESSION : E %prec prec_none  /*precendence below '-x'*/ {$$ = $1;}
 
 E : CONSTANT
-E : VARIABLE %prec T_IDENTIFIER {$$ = abc_pushundefined(0); /* FIXME */}
+E : VAR_READ %prec T_IDENTIFIER {$$ = $1;}
 E : NEW                         {$$ = abc_pushundefined(0); /* FIXME */}
 E : T_REGEXP                    {$$ = abc_pushundefined(0); /* FIXME */}
 E : FUNCTIONCALL
@@ -653,6 +676,12 @@ MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
 EXPRESSION_LIST : EXPRESSION                     {$$=list_new();list_append($$,$1);}
 EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION {list_append($$,$3);}
 
+VAR_READ : T_IDENTIFIER {
+        int i = array_find(state->vars, $1->text);
+        if(i<0)
+            syntaxerror("unknown variable");
+        $$ = abc_getlocal(0, i);
+}
 VARIABLE : T_IDENTIFIER
 VARIABLE : VARIABLE '.' T_IDENTIFIER
 VARIABLE : VARIABLE ".." T_IDENTIFIER // descendants
