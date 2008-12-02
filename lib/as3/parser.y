@@ -7,6 +7,8 @@
 #include "files.h"
 #include "tokenizer.h"
 #include "registry.h"
+#include "code.h"
+#include "opcodes.h"
 %}
 
 //%glr-parser
@@ -17,44 +19,59 @@
     tokenptr_t token;
     multiname_t*multiname;
     multiname_list_t*multiname_list;
+    int number_int;
+    unsigned int number_uint;
+    double number_float;
+    struct _code*code;
+    struct _code_list*code_list;
 }
 
 
 %token<token> T_IDENTIFIER
 %token<token> T_STRING
 %token<token> T_REGEXP
-%token<token> T_IMPLEMENTS
-%token<token> T_NAMESPACE
-%token<token> T_PACKAGE
-%token<token> T_PROTECTED
-%token<token> T_PUBLIC
-%token<token> T_PRIVATE
-%token<token> T_UINT
-%token<token> T_USE
-%token<token> T_INTERNAL
-%token<token> T_INT
-%token<token> T_NEW
-%token<token> T_NATIVE
-%token<token> T_FUNCTION
-%token<token> T_FOR
-%token<token> T_CLASS
-%token<token> T_CONST
-%token<token> T_SET
-%token<token> T_STATIC
-%token<token> T_IMPORT
-%token<token> T_INTERFACE
-%token<token> T_NUMBER
-%token<token> T_NULL
-%token<token> T_FALSE
-%token<token> T_TRUE
-%token<token> T_BOOLEAN
-%token<token> T_VAR
-%token<token> T_DYNAMIC
-%token<token> T_OVERRIDE
-%token<token> T_FINAL
-%token<token> T_GET
-%token<token> T_EXTENDS
 %token<token> T_EMPTY
+%token<number_int> T_INT
+%token<number_uint> T_UINT
+%token<number_uint> T_BYTE
+%token<number_uint> T_SHORT
+%token<number_float> T_FLOAT
+
+%token<token> KW_IMPLEMENTS
+%token<token> KW_NAMESPACE
+%token<token> KW_PACKAGE "package"
+%token<token> KW_PROTECTED
+%token<token> KW_PUBLIC
+%token<token> KW_PRIVATE
+%token<token> KW_USE "use"
+%token<token> KW_INTERNAL
+%token<token> KW_NEW "new"
+%token<token> KW_NATIVE
+%token<token> KW_FUNCTION "function"
+%token<token> KW_FOR "for"
+%token<token> KW_CLASS "class"
+%token<token> KW_CONST "const"
+%token<token> KW_SET "set"
+%token<token> KW_STATIC
+%token<token> KW_IMPORT "import"
+%token<token> KW_INTERFACE "interface"
+%token<token> KW_NULL
+%token<token> KW_VAR "var"
+%token<token> KW_DYNAMIC
+%token<token> KW_OVERRIDE
+%token<token> KW_FINAL
+%token<token> KW_GET "get"
+%token<token> KW_EXTENDS
+%token<token> KW_FALSE "False"
+%token<token> KW_TRUE "True"
+%token<token> KW_BOOLEAN "Boolean"
+%token<token> KW_UINT "uint"
+%token<token> KW_INT "int"
+%token<token> KW_NUMBER "Number"
+%token<token> KW_STRING "String"
+%token<token> KW_IS "is"
+%token<token> KW_AS "as"
+
 %token<token> T_EQEQ "=="
 %token<token> T_LE "<="
 %token<token> T_GE ">="
@@ -74,15 +91,54 @@
 %token<token> T_SHL "<<"
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
-%token<token> T_IS "is"
-%token<token> T_AS "as"
 %token<token> T_SEMICOLON ';'
 %token<token> T_STAR '*'
 %token<token> T_DOT '.'
 
+%type <token> CODE
+%type <code> CODEPIECE CODEPIECE2
+%type <token> PACKAGE_DECLARATION
+%type <token> FUNCTION_DECLARATION
+%type <code> VARIABLE_DECLARATION
+%type <token> CLASS_DECLARATION
+%type <token> NAMESPACE_DECLARATION
+%type <token> INTERFACE_DECLARATION
+%type <code> EXPRESSION
+%type <code> MAYBEEXPRESSION
+%type <code> E
+%type <code> CONSTANT
+%type <token> FOR
+%type <token> USE
+%type <token> ASSIGNMENT
+%type <token> IMPORT
+%type <multiname> MAYBETYPE
+%type <token> PACKAGESPEC
+%type <token> GETSET
+%type <token> PARAM
+%type <token> PARAMS
+%type <token> PARAM_LIST
+%type <token> MODIFIERS
+%type <token> MODIFIER_LIST
+%type <multiname_list> IMPLEMENTS_LIST
+%type <multiname> EXTENDS
+%type <multiname_list> EXTENDS_LIST
+%type <multiname> PACKAGEANDCLASS
+%type <multiname_list> PACKAGEANDCLASS_LIST
+%type <token> MULTILEVELIDENTIFIER
+%type <multiname> TYPE
+%type <token> VAR
+%type <token> VARIABLE
+%type <token> NEW
+%type <token> X_IDENTIFIER
+%type <token> MODIFIER
+%type <token> PACKAGE
+%type <code> FUNCTIONCALL
+%type <code_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST
+
 // precendence: from low to high
 // http://livedocs.adobe.com/flash/9.0/main/wwhelp/wwhimpl/common/html/wwhelp.htm?context=LiveDocs_Parts&file=00000012.html
 
+%left prec_none
 %right '?' ':'
 %nonassoc '='
 %nonassoc "/=" "%="
@@ -111,45 +167,8 @@
 %left '['
 %nonassoc "as"
 %left '.' ".." "::"
+%nonassoc T_IDENTIFIER
 %left '('
-
-%type <token> CODE
-%type <token> CODEPIECE
-%type <token> PACKAGE_DECLARATION
-%type <token> FUNCTION_DECLARATION
-%type <token> VARIABLE_DECLARATION
-%type <token> CLASS_DECLARATION
-%type <token> NAMESPACE_DECLARATION
-%type <token> INTERFACE_DECLARATION
-%type <token> EXPRESSION
-%type <token> E
-%type <token> CONSTANT
-%type <token> FOR
-%type <token> USE
-%type <token> ASSIGNMENT
-%type <token> IMPORT
-%type <multiname> MAYBETYPE
-%type <token> PACKAGESPEC
-%type <token> GETSET
-%type <token> PARAM
-%type <token> PARAMS
-%type <token> PARAM_LIST
-%type <token> MODIFIERS
-%type <token> MODIFIER_LIST
-%type <multiname_list> IMPLEMENTS_LIST
-%type <multiname> EXTENDS
-%type <multiname_list> EXTENDS_LIST
-%type <multiname> PACKAGEANDCLASS
-%type <multiname_list> PACKAGEANDCLASS_LIST
-%type <token> MULTILEVELIDENTIFIER
-%type <multiname> TYPE
-%type <token> VAR
-%type <token> VARIABLE
-%type <token> NEW
-%type <token> FUNCTIONCALL
-%type <token> X_IDENTIFIER
-%type <token> MODIFIER
-%type <token> PACKAGE
 
      
 %{
@@ -182,6 +201,18 @@ static token_t* concat3(token_t* t1, token_t* t2, token_t* t3)
     t->text[l1+l2+l3] = 0;
     return t;
 }
+static char* concat3str(const char* t1, const char* t2, const char* t3)
+{
+    int l1 = strlen(t1);
+    int l2 = strlen(t2);
+    int l3 = strlen(t3);
+    char*text = malloc(l1+l2+l3+1);
+    memcpy(text   , t1, l1);
+    memcpy(text+l1, t2, l2);
+    memcpy(text+l1+l2, t3, l3);
+    text[l1+l2+l3] = 0;
+    return text;
+}
 
 typedef struct _import {
     char*path;
@@ -197,11 +228,14 @@ typedef struct _state {
 
     char*package;     
     char*function;
+    abc_method_body_t*m;
     import_list_t*imports;
    
     /* class data */
     char*classname;
     abc_class_t*cls;
+
+    array_t*vars;
 
 } state_t;
 
@@ -219,12 +253,16 @@ void initialize_state()
     state = sl->state = s;
 
     state->file = abc_file_new();
+    state->file->flags &= ~ABCFILE_LAZY;
     state->level = 0;
     
     state->init = abc_initscript(state->file, 0, 0);
     abc_method_body_t*m = state->init->method->body;
     __ getlocal_0(m);
     __ pushscope(m);
+    __ findpropstrict(m, "[package]::trace");
+    __ pushstring(m, "[entering global init function]");
+    __ callpropvoid(m, "[package]::trace", 1);
 }
 void* finalize_state()
 {
@@ -233,6 +271,10 @@ void* finalize_state()
     }
     abc_method_body_t*m = state->init->method->body;
     //__ popscope(m);
+    
+    __ findpropstrict(m, "[package]::trace");
+    __ pushstring(m, "[leaving global init function]");
+    __ callpropvoid(m, "[package]::trace", 1);
     __ returnvoid(m);
     return state->file;
 }
@@ -241,6 +283,11 @@ static void new_state()
 {
     NEW(state_t, s);
     NEW(state_list_t, sl);
+
+    if(state->m) {
+        syntaxerror("not able to start another method scope");
+    }
+
     memcpy(s, state, sizeof(state_t)); //shallow copy
     sl->next = state_stack;
     sl->state = s;
@@ -275,6 +322,7 @@ static void endpackage()
     old_state();
 }
 
+char*globalclass=0;
 static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, multiname_list_t*implements)
 {
     if(state->cls) {
@@ -296,13 +344,13 @@ static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, mul
 
     char public=0,internal=0,final=0,sealed=1;
     for(t=modifiers->tokens;t;t=t->next) {
-        if(t->token->type == T_INTERNAL) {
+        if(t->token->type == KW_INTERNAL) {
             /* the programmer is being explicit- 
                being internal is the default anyway */
             internal = 1;
-        } else if(t->token->type == T_PUBLIC) {
+        } else if(t->token->type == KW_PUBLIC) {
             public = 1;
-        } else if(t->token->type == T_FINAL) {
+        } else if(t->token->type == KW_FINAL) {
             final = 1;
         } else {
             syntaxerror("modifier \"%s\" not supported in class declaration", t->token->text);
@@ -336,26 +384,42 @@ static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, mul
     abc_method_body_t*m = state->init->method->body;
     __ getglobalscope(m);
     multiname_t*s = extends;
+
     int count=0;
+    
     while(s) {
-        //TODO: invert
         //TODO: take a look at the current scope stack, maybe 
         //      we can re-use something
+        s = registry_getsuperclass(s);
+        if(!s) 
+        break;
         __ getlex2(m, s);
         __ pushscope(m);
-        s = registry_getsuperclass(s);
+        m->code = m->code->prev->prev; // invert
         count++;
     }
+    /* continue appending after last op end */
+    while(m->code && m->code->next) m->code = m->code->next; 
+
     /* TODO: if this is one of *our* classes, we can also 
              do a getglobalscope/getslot <nr> (which references
              the init function's slots) */
     __ getlex2(m, extends);
+    __ dup(m);
+    __ pushscope(m); // we get a Verify Error #1107 if this is not the top scope
     __ newclass(m,state->cls);
-
     while(count--) {
         __ popscope(m);
     }
     __ setslot(m, slotindex);
+
+    if(!globalclass && public && multiname_equals(registry_getMovieClip(),extends)) {
+        if(state->package && state->package[0]) {
+            globalclass = concat3str(state->package, ".", state->classname);
+        } else {
+            globalclass = strdup(state->classname);
+        }
+    }
 }
 
 static void endclass()
@@ -392,17 +456,22 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     printf("  type: %s\n", multiname_tostring(type));
     print_imports();
 
-    abc_method_body_t* m=0;
     if(!strcmp(state->classname,name->text)) {
-        m = abc_class_constructor(state->cls, type, 0);
+        state->m = abc_class_constructor(state->cls, type, 0);
     } else {
-        m = abc_class_method(state->cls, type, name->text, 0);
+        state->m = abc_class_method(state->cls, type, name->text, 0);
     }
+    state->vars = array_new();
+    array_append(state->vars, "this", 0);
 
+    __ getlocal_0(state->m);
+    __ pushscope(state->m);
 }
 static void endfunction()
 {
     printf("leaving function %s\n", state->function);
+    __ returnvoid(state->m);
+
     old_state();
 }
 static int newvariable(token_t*mod, token_t*varconst, token_t*name, multiname_t*type)
@@ -412,6 +481,17 @@ static int newvariable(token_t*mod, token_t*varconst, token_t*name, multiname_t*
     printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     printf("  access: ");printf("%s\n", varconst->text);
     printf("  type: ");printf("%s\n", multiname_tostring(type));
+
+    if(!state->vars) 
+        syntaxerror("not allowed to defined variables outside a method");
+
+    int index = array_find(state->vars, name->text);
+    if(index>=0) {
+        syntaxerror("Variable %s already defined", name->text);
+    } else {
+        index = array_append(state->vars, name->text, 0);
+    }
+    return index;
 }
 static token_t* empty_token()
 {
@@ -450,76 +530,88 @@ PROGRAM: MAYBECODE
 MAYBECODE: CODE
 MAYBECODE: 
 
-CODE: CODE CODEPIECE {$$=$1;}
-CODE: CODEPIECE {$$=empty_token();}
+CODE: CODE CODEPIECE2 {$$=$1;}
+CODE: CODEPIECE2 {$$=empty_token();}
 
-CODEPIECE: ';'
-CODEPIECE: VARIABLE_DECLARATION {$$=$1;}
-CODEPIECE: PACKAGE_DECLARATION
-CODEPIECE: IMPORT
-CODEPIECE: NAMESPACE_DECLARATION
-CODEPIECE: CLASS_DECLARATION
-CODEPIECE: INTERFACE_DECLARATION
-CODEPIECE: FUNCTION_DECLARATION
-CODEPIECE: EXPRESSION
-CODEPIECE: FOR
-CODEPIECE: USE
-CODEPIECE: ASSIGNMENT
+CODEPIECE2: CODEPIECE {
+    if(state->m) {
+        state->m->code = code_append(state->m->code, $1);
+    }
+}
 
-PACKAGE_DECLARATION : T_PACKAGE MULTILEVELIDENTIFIER '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
-PACKAGE_DECLARATION : T_PACKAGE '{' {startpackage(0)} MAYBECODE '}' {endpackage()}
+CODEPIECE: ';'                   {/*TODO*/$$=code_new();}
+CODEPIECE: VARIABLE_DECLARATION  {$$=$1}
+CODEPIECE: PACKAGE_DECLARATION   {/*TODO*/$$=code_new();}
+CODEPIECE: IMPORT                {/*TODO*/$$=code_new();}
+CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=code_new();}
+CODEPIECE: CLASS_DECLARATION     {/*TODO*/$$=code_new();}
+CODEPIECE: INTERFACE_DECLARATION {/*TODO*/$$=code_new();}
+CODEPIECE: FUNCTION_DECLARATION  {/*TODO*/$$=code_new();}
+CODEPIECE: EXPRESSION            {/*calculate and discard*/$$=$1;$$=abc_pop($$);}
+CODEPIECE: FOR                   {/*TODO*/$$=code_new();}
+CODEPIECE: USE                   {/*TODO*/$$=code_new();}
+CODEPIECE: ASSIGNMENT            {/*TODO*/$$=code_new();}
 
-IMPORT : T_IMPORT PACKAGESPEC {addimport($2);}
+PACKAGE_DECLARATION : "package" MULTILEVELIDENTIFIER '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
+PACKAGE_DECLARATION : "package" '{' {startpackage(0)} MAYBECODE '}' {endpackage()}
+
+IMPORT : "import" PACKAGESPEC {addimport($2);}
 
 TYPE : PACKAGEANDCLASS {$$=$1;}
      | '*'        {$$=registry_getanytype();}
-     |  T_STRING  {$$=registry_getstringclass();}
-     |  T_INT     {$$=registry_getintclass();}
-     |  T_UINT    {$$=registry_getuintclass();}
-     |  T_BOOLEAN {$$=registry_getbooleanclass();}
-     |  T_NUMBER  {$$=registry_getnumberclass();}
+     |  "String"  {$$=registry_getstringclass();}
+     |  "int"     {$$=registry_getintclass();}
+     |  "uint"    {$$=registry_getuintclass();}
+     |  "Boolean" {$$=registry_getbooleanclass();}
+     |  "Number"  {$$=registry_getnumberclass();}
 
 MAYBETYPE: ':' TYPE {$$=$2;}
 MAYBETYPE:          {$$=0;}
 
 //FUNCTION_HEADER:      NAMESPACE MODIFIERS T_FUNCTION GETSET T_IDENTIFIER '(' PARAMS ')' 
-FUNCTION_HEADER:      MODIFIERS T_FUNCTION GETSET T_IDENTIFIER '(' PARAMS ')' 
+FUNCTION_HEADER:      MODIFIERS "function" GETSET T_IDENTIFIER '(' PARAMS ')' 
                       MAYBETYPE
-FUNCTION_DECLARATION: MODIFIERS T_FUNCTION GETSET T_IDENTIFIER '(' PARAMS ')' 
+FUNCTION_DECLARATION: MODIFIERS "function" GETSET T_IDENTIFIER '(' PARAMS ')' 
                       MAYBETYPE '{' {startfunction(0,$1,$3,$4,$6,$8)} MAYBECODE '}' {endfunction()}
 
-NAMESPACE_DECLARATION : MODIFIERS T_NAMESPACE T_IDENTIFIER
-NAMESPACE_DECLARATION : MODIFIERS T_NAMESPACE T_IDENTIFIER '=' T_IDENTIFIER
-NAMESPACE_DECLARATION : MODIFIERS T_NAMESPACE T_IDENTIFIER '=' T_STRING
+NAMESPACE_DECLARATION : MODIFIERS KW_NAMESPACE T_IDENTIFIER
+NAMESPACE_DECLARATION : MODIFIERS KW_NAMESPACE T_IDENTIFIER '=' T_IDENTIFIER
+NAMESPACE_DECLARATION : MODIFIERS KW_NAMESPACE T_IDENTIFIER '=' T_STRING
 
 //NAMESPACE :              {$$=empty_token();}
 //NAMESPACE : T_IDENTIFIER {$$=$1};
 
-CONSTANT : T_NUMBER
-CONSTANT : T_STRING
-CONSTANT : T_TRUE
-CONSTANT : T_FALSE
-CONSTANT : T_NULL
+CONSTANT : T_BYTE {$$ = abc_pushbyte(0, $1);}
+CONSTANT : T_SHORT {$$ = abc_pushshort(0, $1);}
+CONSTANT : T_INT {$$ = abc_pushint(0, $1);}
+CONSTANT : T_UINT {$$ = abc_pushuint(0, $1);}
+CONSTANT : T_FLOAT {$$ = abc_pushdouble(0, $1);}
+CONSTANT : T_STRING {$$ = abc_pushstring(0, $1->text);}
+CONSTANT : KW_TRUE {$$ = abc_pushtrue(0);}
+CONSTANT : KW_FALSE {$$ = abc_pushfalse(0);}
+CONSTANT : KW_NULL {$$ = abc_pushnull(0);}
 
-VAR : T_CONST | T_VAR
+VAR : "const" | "var"
 
 // type annotation
 // TODO: NAMESPACE
 
-VARIABLE_DECLARATION : MODIFIERS VAR T_IDENTIFIER MAYBETYPE {
+VARIABLE_DECLARATION : MODIFIERS VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     int i = newvariable($1,$2,$3,$4);
-}
-VARIABLE_DECLARATION : MODIFIERS VAR T_IDENTIFIER MAYBETYPE '=' EXPRESSION {
-    int i = newvariable($1,$2,$3,$4);
-    //setvariable(i,$6);
+    $$=code_new();
+    $$ = $5;
+    $$ = abc_setlocal($$, i);
 }
 
-EXPRESSION : E
+MAYBEEXPRESSION : '=' EXPRESSION {$$=$2;}
+                |                {$$=code_new();}
+
+EXPRESSION : E %prec prec_none  {$$ = $1;} //precendence below '-x'
 
 E : CONSTANT
-E : VARIABLE
-E : NEW
-E : T_REGEXP
+E : VARIABLE %prec T_IDENTIFIER {$$ = abc_pushundefined(0); /* FIXME */}
+E : NEW                         {$$ = abc_pushundefined(0); /* FIXME */}
+E : T_REGEXP                    {$$ = abc_pushundefined(0); /* FIXME */}
 E : FUNCTIONCALL
 E : E '<' E
 E : E '>' E
@@ -535,19 +627,31 @@ E : E "++"
 E : E "--"
 E : E "as" TYPE
 E : E "is" TYPE
+E : '(' E ')' {$$=$2;}
+E : '-' E {$$=$2;}
 
-//E : '(' E ')'  // conflicts with function calls: "a=f(c++);"<->"a=f;(c++)"
-//E : '-' E      // conflicts with non-assignment statements: "a=3-1;"<->"a=3;-1"
+NEW : "new" T_IDENTIFIER
+    | "new" T_IDENTIFIER '(' ')'
+    | "new" T_IDENTIFIER '(' EXPRESSION_LIST ')'
 
-NEW : T_NEW T_IDENTIFIER
-    | T_NEW T_IDENTIFIER '(' ')'
-    | T_NEW T_IDENTIFIER '(' EXPRESSION_LIST ')'
+FUNCTIONCALL : T_IDENTIFIER '(' MAYBE_EXPRESSION_LIST ')' {
+        /* TODO: use abc_call (for calling local variables),
+                 abc_callstatic (for calling own methods) */
+        $$ = code_new();
+        $$ = abc_findproperty($$, $1->text);
+        code_list_t*l = $3;
+        // push parameters on stack
+        while(l) {
+            $$ = code_append($$, l->code);
+            l = l->next;
+        }
+        $$ = abc_callproperty($$, $1->text, list_length($3));
+}
 
-FUNCTIONCALL : VARIABLE '(' EXPRESSION_LIST ')'
-FUNCTIONCALL : VARIABLE '(' ')'
-
-EXPRESSION_LIST : EXPRESSION
-EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION
+MAYBE_EXPRESSION_LIST : {}
+MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
+EXPRESSION_LIST : EXPRESSION                     {$$=list_new();list_append($$,$1);}
+EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION {list_append($$,$3);}
 
 VARIABLE : T_IDENTIFIER
 VARIABLE : VARIABLE '.' T_IDENTIFIER
@@ -557,27 +661,27 @@ VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
 VARIABLE : VARIABLE '[' EXPRESSION ']' // unqualified expression
 
 ASSIGNMENT :           VARIABLE           '=' EXPRESSION
-NEW_ASSIGNMENT : T_VAR VARIABLE MAYBETYPE '=' EXPRESSION
+NEW_ASSIGNMENT : "var" VARIABLE MAYBETYPE '=' EXPRESSION
 
-FOR : T_FOR '(' NEW_ASSIGNMENT ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}'
-FOR : T_FOR '(' ASSIGNMENT     ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}'
+FOR : "for" '(' NEW_ASSIGNMENT ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}'
+FOR : "for" '(' ASSIGNMENT     ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}'
 
-USE : T_USE T_NAMESPACE T_IDENTIFIER
+USE : "use" KW_NAMESPACE T_IDENTIFIER
 
 // keywords which also may be identifiers
-X_IDENTIFIER : T_IDENTIFIER | T_PACKAGE
+X_IDENTIFIER : T_IDENTIFIER | KW_PACKAGE
 
 PACKAGESPEC : PACKAGESPEC '.' PACKAGESPEC {if($1->text[0]=='*') syntaxerror("wildcard in the middle of path");
                                            $$ = concat3($1,$2,$3);}
 PACKAGESPEC : X_IDENTIFIER                {$$=$1;}
 PACKAGESPEC : '*'                         {$$=$1;}
 
-GETSET : T_GET {$$=$1;}
-       | T_SET {$$=$1;}
+GETSET : "get" {$$=$1;}
+       | "set" {$$=$1;}
        |       {$$=empty_token();}
 
-CLASS_DECLARATION : MODIFIERS T_CLASS T_IDENTIFIER EXTENDS IMPLEMENTS_LIST '{' {startclass($1,$3,$4,$5);} MAYBE_DECLARATION_LIST '}' {endclass();}
-INTERFACE_DECLARATION : MODIFIERS T_INTERFACE T_IDENTIFIER EXTENDS_LIST '{' MAYBE_IDECLARATION_LIST '}'
+CLASS_DECLARATION : MODIFIERS "class" T_IDENTIFIER EXTENDS IMPLEMENTS_LIST '{' {startclass($1,$3,$4,$5);} MAYBE_DECLARATION_LIST '}' {endclass();}
+INTERFACE_DECLARATION : MODIFIERS "interface" T_IDENTIFIER EXTENDS_LIST '{' MAYBE_IDECLARATION_LIST '}'
 
 PARAMS: {$$=empty_token();}
 PARAMS: PARAM_LIST {$$=$1;}
@@ -589,7 +693,7 @@ MODIFIERS : {$$=empty_token();}
 MODIFIERS : MODIFIER_LIST {$$=$1}
 MODIFIER_LIST : MODIFIER MODIFIER_LIST {extend($2,$1);$$=$2;}
 MODIFIER_LIST : MODIFIER               {$$=empty_token();extend($$,$1);}
-MODIFIER : T_PUBLIC | T_PRIVATE | T_PROTECTED | T_STATIC | T_DYNAMIC | T_FINAL | T_OVERRIDE | T_NATIVE | T_INTERNAL
+MODIFIER : KW_PUBLIC | KW_PRIVATE | KW_PROTECTED | KW_STATIC | KW_DYNAMIC | KW_FINAL | KW_OVERRIDE | KW_NATIVE | KW_INTERNAL
 
 DECLARATION : VARIABLE_DECLARATION
 DECLARATION : FUNCTION_DECLARATION
@@ -598,13 +702,13 @@ IDECLARATION : VARIABLE_DECLARATION
 IDECLARATION : FUNCTION_DECLARATION
 
 IMPLEMENTS_LIST : {$$=list_new();}
-IMPLEMENTS_LIST : T_IMPLEMENTS PACKAGEANDCLASS_LIST {$$=$2;}
+IMPLEMENTS_LIST : KW_IMPLEMENTS PACKAGEANDCLASS_LIST {$$=$2;}
 
 EXTENDS : {$$=registry_getobjectclass();}
-EXTENDS : T_EXTENDS PACKAGEANDCLASS {$$=$2;}
+EXTENDS : KW_EXTENDS PACKAGEANDCLASS {$$=$2;}
 
 EXTENDS_LIST : {$$=list_new();}
-EXTENDS_LIST : T_EXTENDS PACKAGEANDCLASS_LIST {$$=$2;}
+EXTENDS_LIST : KW_EXTENDS PACKAGEANDCLASS_LIST {$$=$2;}
 
 //IDENTIFIER_LIST : T_IDENTIFIER ',' IDENTIFIER_LIST {extend($3,$1);$$=$3;}
 //IDENTIFIER_LIST : T_IDENTIFIER                     {$$=empty_token();extend($$,$1);}
