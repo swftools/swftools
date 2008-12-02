@@ -27,7 +27,7 @@
    u = u30
    r = register
 */
-  
+
 opcode_t opcodes[]={
 {0xa0, "add", "",              -2, 1, 0, 0},
 {0xc5, "add_i", "",            -2, 1, 0, 0},
@@ -130,7 +130,9 @@ opcode_t opcodes[]={
 {0x57, "newactivation", "",     0, 1, 0, OP_NEED_ACTIVATION},
 {0x56, "newarray", "n",         0, 1, 0, OP_STACK_ARGS},
 {0x5a, "newcatch", "u",         0, 1, 0, 0}, //u = index into exception_info
+#define OP_NEWCLASS 0x58
 {0x58, "newclass", "c",        -1, 1, 0, 0}, //c = index into class_info
+#define OP_NEWFUNCTION 0x40
 {0x40, "newfunction", "m",      0, 1, 0, 0}, //i = index into method_info
 {0x55, "newobject", "n",        0, 1, 0, OP_STACK_ARGS2},
 {0x1e, "nextname", "",         -2, 1, 0, 0},
@@ -645,6 +647,17 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
             stats->flags |= FLAGS_SET_DXNS;
         if(op->flags & OP_NEED_ACTIVATION)
             stats->flags |= FLAGS_ACTIVATION;
+
+        if(c->opcode == OP_NEWCLASS) {
+            abc_class_t*cls = (abc_class_t*)(c->data[0]);
+            if(scope > cls->init_scope_depth)
+                cls->init_scope_depth = scope;
+        }
+        if(c->opcode == OP_NEWFUNCTION) {
+            abc_method_t*m = (abc_method_t*)(c->data[0]);
+            if(m->body && scope > m->body->init_scope_depth)
+                m->body->init_scope_depth = scope;
+        }
         
         if(op->flags & OP_REGISTER) {
             char*p = op->params;
@@ -945,6 +958,7 @@ code_t* add_opcode(code_t*atag, U8 op)
     tmp->next = 0;
     if(atag) {
 	tmp->prev = atag;
+        tmp->next = atag->next;
 	atag->next = tmp;
     } else {
 	tmp->prev = 0;
@@ -957,5 +971,25 @@ void codestats_print(codestats_t*stats)
     printf("max_stack: %d\n", stats->max_stack);
     printf("local_count: %d\n", stats->local_count);
     printf("scope_depth: %d\n", stats->max_scope_depth);
+}
+
+code_t* code_append(code_t*code, code_t*toappend)
+{
+    if(!code)
+        return toappend;
+    if(!toappend)
+        return code;
+    //find end of first list
+    while(code->next) {
+        code = code->next;
+    }
+    code_t*start=toappend;
+    //and start of second list
+    while(start->prev) {
+        start = start->prev;
+    }
+    code->next = start;
+    start->prev = code;
+    return toappend;
 }
 

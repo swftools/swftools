@@ -1,5 +1,5 @@
-#ifndef __code_h__
-#define __code_h__
+#ifndef __abc_code_h__
+#define __abc_code_h__
 
 #include "../q.h"
 
@@ -68,5 +68,8 @@ codestats_t* code_get_statistics(code_t*code, exception_list_t*exceptions);
 void codestats_print(codestats_t*s);
 void codestats_free(codestats_t*s);
 
+code_t* code_append(code_t*code, code_t*toappend);
+
+#define code_new() (0)
 
 #endif
