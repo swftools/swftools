@@ -172,7 +172,7 @@ char*escape_string(const char*str)
     return newstr;
 }
 
-char* namespace_to_string(namespace_t*ns)
+char* namespace_tostring(namespace_t*ns)
 {
     if(!ns)
         return strdup("NULL");
@@ -335,7 +335,7 @@ namespace_set_t* namespace_set_new()
     set->namespaces = list_new();
     return set;
 }
-char* namespace_set_to_string(namespace_set_t*set)
+char* namespace_set_tostring(namespace_set_t*set)
 {
     if(!set)
         return strdup("NULL");
@@ -348,7 +348,7 @@ char* namespace_set_to_string(namespace_set_t*set)
     int l = 0;
     namespace_list_t*lns = set->namespaces;
     while(lns) {
-        char*s = namespace_to_string(lns->namespace);
+        char*s = namespace_tostring(lns->namespace);
         l += strlen(s)+1;
         free(s);
         lns = lns->next;
@@ -357,7 +357,7 @@ char* namespace_set_to_string(namespace_set_t*set)
     strcpy(desc, "{");
     lns = set->namespaces;
     while(lns) {
-        char*s = namespace_to_string(lns->namespace);
+        char*s = namespace_tostring(lns->namespace);
         strcat(desc, s);
         free(s);
         lns = lns->next;
@@ -444,7 +444,11 @@ multiname_t* multiname_new(namespace_t*ns, const char*name)
 {
     NEW(multiname_t,m);
     m->type = QNAME;
-    m->ns = namespace_clone(ns);
+    if(!ns) {
+        m->ns = namespace_new_packageinternal("");
+    } else {
+        m->ns = namespace_clone(ns);
+    }
     m->name = strdup(name);
     return m;
 }
@@ -497,7 +501,7 @@ char multiname_late_name(multiname_t*m)
            m->type==MULTINAMEL || m->type==MULTINAMELA;
 }
 
-char* multiname_to_string(multiname_t*m)
+char* multiname_tostring(multiname_t*m)
 {
     char*mname = 0;
     if(!m)
@@ -533,7 +537,7 @@ char* multiname_to_string(multiname_t*m)
     } else if(m->type==RTQNAMELA) {
         mname = strdup("<rt,l,attr>");
     } else if(m->type==MULTINAME || m->type==MULTINAMEA) {
-        char*s = namespace_set_to_string(m->namespace_set);
+        char*s = namespace_set_tostring(m->namespace_set);
         mname = malloc(strlen(s)+namelen+16);
         if(m->type == MULTINAME)
             strcpy(mname,"<multi>");
@@ -544,7 +548,7 @@ char* multiname_to_string(multiname_t*m)
         strcat(mname, name);
         free(s);
     } else if(m->type==MULTINAMEL || m->type==MULTINAMELA) {
-        char*s = namespace_set_to_string(m->namespace_set);
+        char*s = namespace_set_tostring(m->namespace_set);
         mname = malloc(strlen(s)+16);
         if(m->type == MULTINAMEL)
             strcpy(mname,"<l,multi>");
@@ -711,13 +715,13 @@ constant_t* constant_fromindex(pool_t*pool, int index, int type)
     }
     return c;
 }
-char* constant_to_string(constant_t*c)
+char* constant_tostring(constant_t*c)
 {
     if(!c)
         return 0;
     char buf[30];
     if(NS_TYPE(c->type)) {
-        return namespace_to_string(c->ns);
+        return namespace_tostring(c->ns);
     } else if(c->type == CONSTANT_INT) {
         sprintf(buf, "%d", c->i);
         return strdup(buf);
@@ -880,7 +884,7 @@ int pool_find_namespace(pool_t*pool, namespace_t*ns)
         return 0;
     int i = array_find(pool->x_namespaces, ns);
     if(i<=0) {
-        char*s = namespace_to_string(ns);
+        char*s = namespace_tostring(ns);
         fprintf(stderr, "Couldn't find namespace \"%s\" %08x in constant pool\n", s, ns);
         free(s);
         return 0;
@@ -893,7 +897,7 @@ int pool_find_namespace_set(pool_t*pool, namespace_set_t*set)
         return 0;
     int i = array_find(pool->x_namespace_sets, set);
     if(i<=0) {
-        char*s = namespace_set_to_string(set);
+        char*s = namespace_set_tostring(set);
         fprintf(stderr, "Couldn't find namespace_set \"%s\" in constant pool\n", s);
         free(s);
         return 0;
@@ -917,7 +921,7 @@ int pool_find_multiname(pool_t*pool, multiname_t*name)
         return 0;
     int i = array_find(pool->x_multinames, name);
     if(i<=0) {
-        char*s = multiname_to_string(name);
+        char*s = multiname_tostring(name);
         fprintf(stderr, "Couldn't find multiname \"%s\" in constant pool\n", s);
         free(s);
         return 0;
@@ -1032,7 +1036,7 @@ void pool_read(pool_t*pool, TAG*tag)
             name = array_getkey(pool->x_strings, namenr);
         namespace_t*ns = namespace_new(type, name);
 	array_append(pool->x_namespaces, ns, 0);
-	DEBUG printf("%d) %02x \"%s\"\n", t, type, namespace_to_string(ns));
+	DEBUG printf("%d) %02x \"%s\"\n", t, type, namespace_tostring(ns));
         namespace_destroy(ns);
     }
     int num_sets = swf_GetU30(tag);
@@ -1050,7 +1054,7 @@ void pool_read(pool_t*pool, TAG*tag)
             list_append(nsset->namespaces, namespace_clone(ns));
         }
         array_append(pool->x_namespace_sets, nsset, 0);
-        DEBUG printf("set %d) %s\n", t, namespace_set_to_string(nsset));
+        DEBUG printf("set %d) %s\n", t, namespace_set_tostring(nsset));
         namespace_set_destroy(nsset);
     }
 
@@ -1083,7 +1087,7 @@ void pool_read(pool_t*pool, TAG*tag)
 	} else {
 	    printf("can't parse type %d multinames yet\n", m.type);
 	}
-        DEBUG printf("multiname %d) %s\n", t, multiname_to_string(&m));
+        DEBUG printf("multiname %d) %s\n", t, multiname_tostring(&m));
 	array_append(pool->x_multinames, &m, 0);
     }
 } 

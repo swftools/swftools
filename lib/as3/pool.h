@@ -102,7 +102,7 @@ constant_t* constant_new_null();
 constant_t* constant_new_undefined();
 char constant_has_index(constant_t*c);
 constant_t* constant_fromindex(pool_t*pool, int index, int type);
-char* constant_to_string(constant_t*c);
+char* constant_tostring(constant_t*c);
 int constant_get_index(pool_t*pool, constant_t*c);
 void constant_free(constant_t*c);
 
@@ -138,9 +138,9 @@ struct _multiname {
 };
 
 /* object -> string */
-char* namespace_set_to_string(namespace_set_t*set);
-char* multiname_to_string(multiname_t*m);
-char* namespace_to_string(namespace_t*ns);
+char* namespace_set_tostring(namespace_set_t*set);
+char* multiname_tostring(multiname_t*m);
+char* namespace_tostring(namespace_t*ns);
 
 /* integer -> object */
 int pool_lookup_int(pool_t*pool, int i);
