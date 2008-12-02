@@ -59,10 +59,12 @@ struct _abc_method {
     int index; //filled in during writing
 };
 
+#define ABCFILE_LAZY 1
 struct _abc_file {
     // abc_file
 
     const char*name;
+    U32 flags;
     array_t*metadata;
     array_t*methods;
     array_t*classes;
@@ -116,6 +118,8 @@ struct _abc_class {
 
     trait_list_t*static_constructor_traits;
     trait_list_t*traits;
+
+    int init_scope_depth; // volatile, might be increased during code verification
     
     int index; //filled in during writing
 };
@@ -146,10 +150,15 @@ struct _abc_method_body {
     abc_method_t*method;
     code_t*code;
 
-    int max_stack;
-    int local_count;
-    int init_scope_depth;
-    int max_scope_depth;
+    struct {
+        //for dumping: filled in during parsing
+        int max_stack;
+        int local_count;
+        int max_scope_depth;
+        int init_scope_depth;
+    } old;
+
+    int init_scope_depth; // volatile, might be increased during code verification
 
     exception_list_t* exceptions;
 

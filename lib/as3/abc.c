@@ -124,6 +124,7 @@ abc_file_t*abc_file_new()
     f->classes = array_new();
     f->scripts = array_new();
     f->method_bodies = array_new();
+    f->flags = ABCFILE_LAZY;
 
     return f;
 }
@@ -333,7 +334,7 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
         return;
     }
     
-    fprintf(fo, "%s[stack:%d locals:%d scope:%d-%d flags:%02x]\n", prefix, c->max_stack, c->local_count, c->init_scope_depth, c->max_scope_depth, c->method->flags);
+    fprintf(fo, "%s[stack:%d locals:%d scope:%d-%d flags:%02x]\n", prefix, c->old.max_stack, c->old.local_count, c->old.init_scope_depth, c->old.max_scope_depth, c->method->flags);
 
     char prefix2[80];
     sprintf(prefix2, "%s    ", prefix);
@@ -361,6 +362,12 @@ static void traits_free(trait_list_t*traits)
         t = t->next;
     }
     list_free(traits);
+}
+            
+static char trait_is_method(trait_t*trait)
+{
+    return (trait->kind == TRAIT_METHOD || trait->kind == TRAIT_GETTER || 
+            trait->kind == TRAIT_SETTER || trait->kind == TRAIT_FUNCTION);
 }
 
 static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
@@ -748,10 +755,12 @@ void* swf_ReadABC(TAG*tag)
 	abc_method_t*m = (abc_method_t*)array_getvalue(file->methods, methodnr);
 	abc_method_body_t*c = malloc(sizeof(abc_method_body_t));
 	memset(c, 0, sizeof(abc_method_body_t));
-	c->max_stack = swf_GetU30(tag);
-	c->local_count = swf_GetU30(tag);
-	c->init_scope_depth = swf_GetU30(tag);
-	c->max_scope_depth = swf_GetU30(tag);
+	c->old.max_stack = swf_GetU30(tag);
+	c->old.local_count = swf_GetU30(tag);
+	c->old.init_scope_depth = swf_GetU30(tag);
+	c->old.max_scope_depth = swf_GetU30(tag);
+
+        c->init_scope_depth = c->old.init_scope_depth;
 	int code_length = swf_GetU30(tag);
 
 	c->method = m;
@@ -830,10 +839,6 @@ void* swf_ReadABC(TAG*tag)
         s->method = m;
         s->traits = traits_parse(tag, pool, file);
         array_append(file->scripts, NO_KEY, s);
-        if(!s->traits) {
-	    fprintf(stderr, "Can't parse script traits\n");
-            return 0;
-        }
     }
 
     pool_destroy(pool);
@@ -860,12 +865,25 @@ void swf_WriteABC(TAG*abctag, void*code)
 
     abc_method_t*nullmethod = 0;
     if(need_null_method) {
-        nullmethod = malloc(sizeof(abc_method_t));
-        memset(nullmethod, 0, sizeof(abc_method_t));
+        NEW(abc_method_t,m);
+        nullmethod = m;
         /*TODO: might be more efficient to have this at the beginning */
         array_append(file->methods, NO_KEY, nullmethod);
+        
+        NEW(abc_method_body_t,body);
+        body->method = m;
+        m->body = body;
+        __ returnvoid(body);
+        array_append(file->method_bodies, NO_KEY, body);
     }
-   
+    for(t=0;t<file->classes->num;t++) {
+	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
+        if(!c->constructor)
+            c->constructor = nullmethod;
+        if(!c->static_constructor)
+            c->static_constructor = nullmethod;
+    }
+
     swf_SetU30(tag, file->methods->num);
     /* enumerate classes, methods and method bodies */
     for(t=0;t<file->methods->num;t++) {
@@ -885,6 +903,41 @@ void swf_WriteABC(TAG*abctag, void*code)
     for(t=0;t<file->method_bodies->num;t++) {
         abc_method_body_t*m = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
         m->stats = code_get_statistics(m->code, m->exceptions);
+    }
+    
+    /* level init scope depths: The init scope depth of a method is
+       always as least as high as the init scope depth of it's surrounding
+       class.
+       A method has it's own init_scope_depth if it's an init method 
+       (then its init scope depth is zero), or if it's used as a closure.
+
+       Not sure yet what to do with methods which are used at different
+       locations- e.g. the nullmethod is used all over the place.
+
+       Also, I have the strong suspicion that flash player uses only
+       the difference between max_scope_stack and init_scope_stack, anyway.
+     */
+    for(t=0;t<file->classes->num;t++) {
+	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
+        trait_list_t*traits = c->traits;
+        if(c->constructor &&
+           c->constructor->body->init_scope_depth < c->init_scope_depth) {
+           c->constructor->body->init_scope_depth = c->init_scope_depth;
+        }
+        if(c->static_constructor &&
+           c->static_constructor->body->init_scope_depth < c->init_scope_depth) {
+           c->static_constructor->body->init_scope_depth = c->init_scope_depth;
+        }
+        while(traits) {
+            trait_t*trait = traits->trait;
+            if(trait_is_method(trait) && trait->method->body) {
+                abc_method_body_t*body = trait->method->body;
+	        if(body->init_scope_depth < c->init_scope_depth) {
+                   body->init_scope_depth = c->init_scope_depth;
+                }
+            }
+            traits = traits->next;
+        }
     }
     
     for(t=0;t<file->methods->num;t++) {
@@ -996,10 +1049,10 @@ void swf_WriteABC(TAG*abctag, void*code)
 	abc_method_t*m = c->method;
 	swf_SetU30(tag, m->index);
 
-	//swf_SetU30(tag, c->max_stack);
-	//swf_SetU30(tag, c->local_count);
-	//swf_SetU30(tag, c->init_scope_depth);
-	//swf_SetU30(tag, c->max_scope_depth);
+	//swf_SetU30(tag, c->old.max_stack);
+	//swf_SetU30(tag, c->old.local_count);
+	//swf_SetU30(tag, c->old.init_scope_depth);
+	//swf_SetU30(tag, c->old.max_scope_depth);
 
 	swf_SetU30(tag, c->stats->max_stack);
         if(list_length(c->method->parameters)+1 <= c->stats->local_count)
@@ -1039,7 +1092,7 @@ void swf_WriteABC(TAG*abctag, void*code)
     tag = abctag;
 
     if(tag->id == ST_DOABC) {
-        swf_SetU32(tag, 1); // flags
+        swf_SetU32(tag, file->flags); // flags
         swf_SetString(tag, file->name);
     }
 
@@ -1187,20 +1240,20 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     swf_SetString(tag, "rfx.MainTimeline");
 
     c = abc_class_staticconstructor(cls, 0, 0);
-    c->max_stack = 1;
-    c->local_count = 1;
-    c->init_scope_depth = 9;
-    c->max_scope_depth = 10;
+    c->old.max_stack = 1;
+    c->old.local_count = 1;
+    c->old.init_scope_depth = 9;
+    c->old.max_scope_depth = 10;
 
     __ getlocal_0(c);
     __ pushscope(c);
     __ returnvoid(c);
 
     c = abc_class_constructor(cls, 0, 0);
-    c->max_stack = 3;
-    c->local_count = 1;
-    c->init_scope_depth = 10;
-    c->max_scope_depth = 11;
+    c->old.max_stack = 3;
+    c->old.local_count = 1;
+    c->old.init_scope_depth = 10;
+    c->old.max_scope_depth = 11;
     
     debugfile(c, "constructor.as");
 
@@ -1233,10 +1286,10 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 __ callpropvoid(c,"[package]::addFrameScript",2);
 
                 f = abc_class_method(cls, 0, framename, 0);
-                f->max_stack = 3;
-                f->local_count = 1;
-                f->init_scope_depth = 10;
-                f->max_scope_depth = 11;
+                f->old.max_stack = 3;
+                f->old.local_count = 1;
+                f->old.init_scope_depth = 10;
+                f->old.max_scope_depth = 11;
                 __ debugfile(f, "framescript.as");
                 __ debugline(f, 1);
                 __ getlocal_0(f);
@@ -1261,10 +1314,10 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 
                 abc_method_body_t*h =
                     abc_class_method(cls, 0, functionname, 1, "flash.events::MouseEvent");
-                h->max_stack = 6;
-                h->local_count = 2;
-                h->init_scope_depth = 10;
-                h->max_scope_depth = 11;
+                h->old.max_stack = 6;
+                h->old.local_count = 2;
+                h->old.init_scope_depth = 10;
+                h->old.max_scope_depth = 11;
                 __ getlocal_0(h);
                 __ pushscope(h);
 
@@ -1342,10 +1395,10 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 
     abc_script_t*s = abc_initscript(file, 0, 0);
     c = s->method->body;
-    c->max_stack = 2;
-    c->local_count = 1;
-    c->init_scope_depth = 1;
-    c->max_scope_depth = 9;
+    c->old.max_stack = 2;
+    c->old.local_count = 1;
+    c->old.init_scope_depth = 1;
+    c->old.max_scope_depth = 9;
 
     __ getlocal_0(c);
     __ pushscope(c);
