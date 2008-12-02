@@ -306,8 +306,8 @@
 
 .put et x=width/2-30 y=8
 
-#.swf swf filename=paper5.swf
-.sprite swf
+#.swf viewport filename=paper5.swf
+.sprite viewport
 .end
 
 .box f width=100 height=100 line=0 fill=black
@@ -315,11 +315,11 @@
 .button areabutton
     .show f as=area
     .on_press inside:
-	swf.startDrag(false, left-scrollxrange, top-scrollyrange, left,top);
+	viewport.startDrag(false, left-scrollxrange, top-scrollyrange, left,top);
 	Dragging = "xy";
     .end
     .on_release:
-	swf.stopDrag();
+	viewport.stopDrag();
 	Dragging = "";
     .end
 .end
@@ -329,12 +329,12 @@
     .put f
 .end
 .put cliparea=cf x=10 y=40
-.put swf x=10 y=40
+.put viewport x=10 y=40
 
 .action:
 
-    swfwidth = swf._width;
-    swfheight = swf._height;
+    swfwidth = viewport._width;
+    swfheight = viewport._height;
 
     Dragging = "";
     
@@ -395,7 +395,7 @@
     areabutton._yscale = contentheight;
     cliparea._xscale = contentwidth;
     cliparea._yscale = contentheight;
-    swf.setMask(cliparea);
+    viewport.setMask(cliparea);
     
 
     lastzoom = 1;
@@ -405,8 +405,8 @@
     //debugtxt.text = Stage.width+ " x " + Stage.height;
 
     setPageNr = function() {
-	et.text = "  "+pagenr+" / "+swf._totalframes;
-	swf.gotoAndStop(pagenr);
+	et.text = "  "+pagenr+" / "+viewport._totalframes;
+	viewport.gotoAndStop(pagenr);
     };
    
     setNoScrollZoomLevel = function() {
@@ -429,12 +429,12 @@
 
     swfpos2scrollbars = function() {
 	if(scrollxrange) {
-	    hscrollbar._x = 10 + (left-swf._x)*scrollbarxrange/scrollxrange;
+	    hscrollbar._x = 10 + (left-viewport._x)*scrollbarxrange/scrollxrange;
 	} else {
 	    hscrollbar._x = 10;
 	}
 	if(scrollyrange) {
-	    vscrollbar._y = 40 + (top-swf._y)*scrollbaryrange/scrollyrange;
+	    vscrollbar._y = 40 + (top-viewport._y)*scrollbaryrange/scrollyrange;
 	} else {
 	    vscrollbar._y = 40;
 	}
@@ -469,24 +469,24 @@
 	    scrollbaryrange = 0;
 	}
 
-	swf._xscale = zoom*100;
-	swf._yscale = zoom*100;
+	viewport._xscale = zoom*100;
+	viewport._yscale = zoom*100;
    
-	focusx = contentwidth/2 - (swf._x-10);
-	focusy = contentheight/2 - (swf._y-40);
+	focusx = contentwidth/2 - (viewport._x-10);
+	focusy = contentheight/2 - (viewport._y-40);
 
-	swf._x = left - focusx * zoom / lastzoom + width/2;
-	swf._y = top - focusy * zoom / lastzoom + height/2;
+	viewport._x = left - focusx * zoom / lastzoom + width/2;
+	viewport._y = top - focusy * zoom / lastzoom + height/2;
 
-	if(swf._x > left) {
-	    swf._x = left;
-	} else if(swf._x < left-scrollxrange) {
-	    swf._x = left-scrollxrange;
+	if(viewport._x > left) {
+	    viewport._x = left;
+	} else if(viewport._x < left-scrollxrange) {
+	    viewport._x = left-scrollxrange;
 	} 
-	if(swf._y > top) {
-	    swf._y = top;
-	} else if(swf._y < top-scrollyrange) {
-	    swf._y = top-scrollyrange;
+	if(viewport._y > top) {
+	    viewport._y = top;
+	} else if(viewport._y < top-scrollyrange) {
+	    viewport._y = top-scrollyrange;
 	}
 
 	swfpos2scrollbars();
@@ -530,7 +530,7 @@
 	}
     };
     r1.onRelease = function(){ 
-	if(pagenr < swf._totalframes) {
+	if(pagenr < viewport._totalframes) {
 	    pagenr = pagenr + 1;
 	    setPageNr();
 	}
@@ -554,9 +554,9 @@
     };
     refreshDrag = function(){
 	if(Dragging == "h") {
-	    swf._x = left + (10-hscrollbar._x)*scrollxrange/scrollbarxrange;
+	    viewport._x = left + (10-hscrollbar._x)*scrollxrange/scrollbarxrange;
 	} else if(Dragging == "v") {
-	    swf._y = top + (40-vscrollbar._y)*scrollyrange/scrollbaryrange;
+	    viewport._y = top + (40-vscrollbar._y)*scrollyrange/scrollbaryrange;
 	} else if(Dragging == "xy") {
 	    swfpos2scrollbars();
 	}
