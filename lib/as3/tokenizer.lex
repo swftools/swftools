@@ -107,6 +107,61 @@ static inline int m(int type)
     return type;
 }
 
+static char numberbuf[64];
+static inline int handlenumber()
+{
+    if(yyleng>sizeof(numberbuf)-1)
+        syntaxerror("decimal number overflow");
+
+    char*s = numberbuf;
+    memcpy(s, yytext, yyleng);
+    s[yyleng]=0;
+
+    int t;
+    char is_float=0;
+    for(t=0;t<yyleng;t++) {
+        if(yytext[t]=='.') {
+            is_float=1;
+        } 
+        if(!strchr("0123456789", yytext[t])) {
+            syntaxerror("Invalid number");
+        }
+    }
+    if(is_float) {
+        avm2_lval.number_float = atof(s);
+        return T_FLOAT;
+    } 
+    int l=0;
+    if(yytext[0]=='-')
+        l++;
+
+    char*max = l?"2147483648":"4294967296";
+    if(yyleng>10)
+        syntaxerror("integer overflow");
+    if(yyleng==10) {
+        int t;
+        for(t=0;t<yyleng-l;t++) {
+            if(yytext[l+t]>max[t])
+                syntaxerror("integer overflow");
+            else if(yytext[l+t]<max[t])
+                break;
+        }
+    }
+    if(yytext[0]=='-') {
+        avm2_lval.number_int = atoi(s);
+        return T_INT;
+    } else {
+        unsigned int v = atoi(s);
+        avm2_lval.number_uint = v;
+        if(v<256)
+            return T_BYTE;
+        else if(v<0x80000000)
+            return T_SHORT;
+        else
+            return T_UINT;
+    }
+}
+
 void initialize_scanner();
 #define YY_USER_INIT initialize_scanner();
 
@@ -118,7 +173,9 @@ void initialize_scanner();
 %s BEGINNING
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
+
 NUMBER	 -?[0-9]+(\.[0-9]*)?
+
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
 MULTILINE_COMMENT [/][*]([*][^/]|[^*]|[\x00-\x31])*[*]+[/]
@@ -133,58 +190,59 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 ^include{S}+{STRING}{S}*/\n    {c();handleInclude(yytext, yyleng, 1);}
 ^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {c();handleInclude(yytext, yyleng, 0);}
-{STRING}                     {c(); return m(T_STRING);BEGIN(INITIAL);}
+{STRING}                     {c(); BEGIN(INITIAL);return m(T_STRING);}
 
 <BEGINNING,REGEXPOK>{
-{REGEXP}                     {c(); return m(T_REGEXP);BEGIN(INITIAL);} 
+{REGEXP}                     {c(); BEGIN(INITIAL);return m(T_REGEXP);} 
 }
 
 \xef\xbb\xbf                 {/* utf 8 bom */}
 {S}                          {c();}
 
-{NUMBER}                     {c();return m(T_NUMBER);BEGIN(INITIAL);}
+{NUMBER}                     {c(); BEGIN(INITIAL);return handlenumber();}
+
 [>][=]                       {return m(T_GE);}
 [<][=]                       {return m(T_LE);}
-[-][-]                       {return m(T_MINUSMINUS);BEGIN(INITIAL);}
-[+][+]                       {return m(T_PLUSPLUS);BEGIN(INITIAL);}
-==                           {return m(T_EQEQ);BEGIN(REGEXPOK);}
+[-][-]                       {BEGIN(INITIAL);return m(T_MINUSMINUS);}
+[+][+]                       {BEGIN(INITIAL);return m(T_PLUSPLUS);}
+==                           {BEGIN(REGEXPOK);return m(T_EQEQ);}
 \.\.                         {return m(T_DOTDOT);}
 \.                           {return m('.');}
 ::                           {return m(T_COLONCOLON);}
 :                            {return m(':');}
-implements                   {return m(T_IMPLEMENTS);}
-interface                    {return m(T_INTERFACE);}
-namespace                    {return m(T_NAMESPACE);}
-protected                    {return m(T_PROTECTED);}
-override                     {return m(T_OVERRIDE);}
-internal                     {return m(T_INTERNAL);}
-function                     {return m(T_FUNCTION);}
-package                      {return m(T_PACKAGE);}
-private                      {return m(T_PRIVATE);}
-Boolean                      {return m(T_BOOLEAN);}
-dynamic                      {return m(T_DYNAMIC);}
-extends                      {return m(T_EXTENDS);}
-public                       {return m(T_PUBLIC);}
-native                       {return m(T_NATIVE);}
-static                       {return m(T_STATIC);}
-import                       {return m(T_IMPORT);}
-number                       {return m(T_NUMBER);}
-class                        {return m(T_CLASS);}
-const                        {return m(T_CONST);}
-final                        {return m(T_FINAL);}
-False                        {return m(T_FALSE);}
-True                         {return m(T_TRUE);}
-uint                         {return m(T_UINT);}
-null                         {return m(T_NULL);}
-use                          {return m(T_USE);}
-int                          {return m(T_INT);}
-new                          {return m(T_NEW);}
-get                          {return m(T_GET);}
-for                          {return m(T_FOR);}
-set                          {return m(T_SET);}
-var                          {return m(T_VAR);}
-is                           {return m(T_IS) ;}
-as                           {return m(T_AS);}
+implements                   {return m(KW_IMPLEMENTS);}
+interface                    {return m(KW_INTERFACE);}
+namespace                    {return m(KW_NAMESPACE);}
+protected                    {return m(KW_PROTECTED);}
+override                     {return m(KW_OVERRIDE);}
+internal                     {return m(KW_INTERNAL);}
+function                     {return m(KW_FUNCTION);}
+package                      {return m(KW_PACKAGE);}
+private                      {return m(KW_PRIVATE);}
+Boolean                      {return m(KW_BOOLEAN);}
+dynamic                      {return m(KW_DYNAMIC);}
+extends                      {return m(KW_EXTENDS);}
+public                       {return m(KW_PUBLIC);}
+native                       {return m(KW_NATIVE);}
+static                       {return m(KW_STATIC);}
+import                       {return m(KW_IMPORT);}
+Number                       {return m(KW_NUMBER);}
+class                        {return m(KW_CLASS);}
+const                        {return m(KW_CONST);}
+final                        {return m(KW_FINAL);}
+False                        {return m(KW_FALSE);}
+True                         {return m(KW_TRUE);}
+uint                         {return m(KW_UINT);}
+null                         {return m(KW_NULL);}
+use                          {return m(KW_USE);}
+int                          {return m(KW_INT);}
+new                          {return m(KW_NEW);}
+get                          {return m(KW_GET);}
+for                          {return m(KW_FOR);}
+set                          {return m(KW_SET);}
+var                          {return m(KW_VAR);}
+is                           {return m(KW_IS) ;}
+as                           {return m(KW_AS);}
 {NAME}                       {c();BEGIN(INITIAL);return m(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,.<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
@@ -232,47 +290,49 @@ static char mbuf[256];
 char*token2string(token_t*t)
 {
     int nr=t->type;
-    if(nr==T_STRING)     return "STRING";
-    else if(nr==T_NUMBER)     return "NUMBER";
+    if(nr==T_STRING)     return "<string>";
+    else if(nr==T_INT)     return "<int>";
+    else if(nr==T_UINT)     return "<uint>";
+    else if(nr==T_FLOAT)     return "<float>";
     else if(nr==T_REGEXP)     return "REGEXP";
     else if(nr==T_EOF)        return "***END***";
     else if(nr==T_GE)         return ">=";
     else if(nr==T_LE)         return "<=";
     else if(nr==T_MINUSMINUS) return "--";
     else if(nr==T_PLUSPLUS)   return "++";
-    else if(nr==T_IMPLEMENTS) return "implements";
-    else if(nr==T_INTERFACE)  return "interface";
-    else if(nr==T_NAMESPACE)  return "namespace";
-    else if(nr==T_PROTECTED)  return "protected";
-    else if(nr==T_OVERRIDE)   return "override";
-    else if(nr==T_INTERNAL)   return "internal";
-    else if(nr==T_FUNCTION)   return "function";
-    else if(nr==T_PACKAGE)    return "package";
-    else if(nr==T_PRIVATE)    return "private";
-    else if(nr==T_BOOLEAN)    return "Boolean";
-    else if(nr==T_DYNAMIC)    return "dynamic";
-    else if(nr==T_EXTENDS)    return "extends";
-    else if(nr==T_PUBLIC)     return "public";
-    else if(nr==T_NATIVE)     return "native";
-    else if(nr==T_STATIC)     return "static";
-    else if(nr==T_IMPORT)     return "import";
-    else if(nr==T_NUMBER)     return "number";
-    else if(nr==T_CLASS)      return "class";
-    else if(nr==T_CONST)      return "const";
-    else if(nr==T_FINAL)      return "final";
-    else if(nr==T_FALSE)      return "False";
-    else if(nr==T_TRUE)       return "True";
-    else if(nr==T_UINT)       return "uint";
-    else if(nr==T_NULL)       return "null";
-    else if(nr==T_USE)        return "use";
-    else if(nr==T_INT)        return "int";
-    else if(nr==T_NEW)        return "new";
-    else if(nr==T_GET)        return "get";
-    else if(nr==T_FOR)        return "for";
-    else if(nr==T_SET)        return "set";
-    else if(nr==T_VAR)        return "var";
-    else if(nr==T_IS)         return "is";
-    else if(nr==T_AS)         return "as";
+    else if(nr==KW_IMPLEMENTS) return "implements";
+    else if(nr==KW_INTERFACE)  return "interface";
+    else if(nr==KW_NAMESPACE)  return "namespace";
+    else if(nr==KW_PROTECTED)  return "protected";
+    else if(nr==KW_OVERRIDE)   return "override";
+    else if(nr==KW_INTERNAL)   return "internal";
+    else if(nr==KW_FUNCTION)   return "function";
+    else if(nr==KW_PACKAGE)    return "package";
+    else if(nr==KW_PRIVATE)    return "private";
+    else if(nr==KW_BOOLEAN)    return "Boolean";
+    else if(nr==KW_DYNAMIC)    return "dynamic";
+    else if(nr==KW_EXTENDS)    return "extends";
+    else if(nr==KW_PUBLIC)     return "public";
+    else if(nr==KW_NATIVE)     return "native";
+    else if(nr==KW_STATIC)     return "static";
+    else if(nr==KW_IMPORT)     return "import";
+    else if(nr==KW_NUMBER)     return "number";
+    else if(nr==KW_CLASS)      return "class";
+    else if(nr==KW_CONST)      return "const";
+    else if(nr==KW_FINAL)      return "final";
+    else if(nr==KW_FALSE)      return "False";
+    else if(nr==KW_TRUE)       return "True";
+    else if(nr==KW_UINT)       return "uint";
+    else if(nr==KW_NULL)       return "null";
+    else if(nr==KW_USE)        return "use";
+    else if(nr==KW_INT)        return "int";
+    else if(nr==KW_NEW)        return "new";
+    else if(nr==KW_GET)        return "get";
+    else if(nr==KW_FOR)        return "for";
+    else if(nr==KW_SET)        return "set";
+    else if(nr==KW_VAR)        return "var";
+    else if(nr==KW_IS)         return "is";
+    else if(nr==KW_AS)         return "as";
     else if(nr==T_IDENTIFIER) {
         if(strlen(t->text)>sizeof(mbuf)-1)
             return "ID(...)";

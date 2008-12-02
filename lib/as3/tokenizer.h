@@ -20,6 +20,7 @@
 #define __parser_h__
 
 #include "../q.h"
+#include "pool.h"
 
 DECLARE(token);
 DECLARE_LIST(token);
@@ -30,9 +31,11 @@ struct _token {
     token_list_t*tokens;
 };
 
+extern char start_of_expression;
+
 typedef token_t*tokenptr_t;
 
-#define YYSTYPE tokenptr_t
+//#define YYSTYPE tokenptr_t
 
 #include "parser.tab.h"
 
