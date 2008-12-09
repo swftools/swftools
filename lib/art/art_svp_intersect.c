@@ -309,7 +309,7 @@ art_svp_writer_rewind_add_point (ArtSvpWriter *self, int seg_id,
 
   seg = &swr->svp->segs[seg_id];
 
-  if(n_points &&
+  if(seg->n_points &&
         seg->points[seg->n_points-1].x == x &&
         seg->points[seg->n_points-1].y == y) {
       //art_warn("duplicate point %.16f,%.16f in segment %08x\n", 
