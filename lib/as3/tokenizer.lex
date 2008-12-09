@@ -1,4 +1,28 @@
+/* tokenizer.lex
+
+   Routines for compiling Flash2 AVM2 ABC Actionscript
+
+   Extension module for the rfxswf library.
+   Part of the swftools package.
+
+   Copyright (c) 2008 Matthias Kramm <kramm@quiss.org>
+ 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 %{
+
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -91,6 +115,22 @@ void handleInclude(char*text, int len, char quotes)
     yy_switch_to_buffer(yy_create_buffer( yyin, YY_BUF_SIZE ) );
     //BEGIN(INITIAL); keep context
 }
+
+static void handleString(char*s, int len)
+{
+    if(s[0]=='"') {
+        if(s[len-1]!='"') syntaxerror("String doesn't end with '\"'");
+        s++;len-=2;
+    }
+    else if(s[0]=='\'') {
+        if(s[len-1]!='\'') syntaxerror("String doesn't end with '\"'");
+        s++;len-=2;
+    }
+    else syntaxerror("String incorrectly terminated");
+    s[len] = 0;
+    avm2_lval.string = s;
+}
+
 
 char start_of_expression;
 
@@ -187,7 +227,7 @@ NUMBER	 -?[0-9]+(\.[0-9]*)?
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
-MULTILINE_COMMENT [/][*]([*][^/]|[^*]|[\x00-\x31])*[*]+[/]
+MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n]*\n
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 %%
@@ -199,7 +239,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 ^include{S}+{STRING}{S}*/\n    {c();handleInclude(yytext, yyleng, 1);}
 ^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {c();handleInclude(yytext, yyleng, 0);}
-{STRING}                     {c(); BEGIN(INITIAL);return m(T_STRING);}
+{STRING}                     {c(); BEGIN(INITIAL);handleString(yytext, yyleng);return T_STRING;}
 
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return m(T_REGEXP);} 
@@ -210,11 +250,18 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 {NUMBER}                     {c(); BEGIN(INITIAL);return handlenumber();}
 
+3rr0r                        {/* for debugging: generates a tokenizer-level error */
+                              syntaxerror("3rr0r");}
+
+[!][=]                       {BEGIN(REGEXPOK);return m(T_NE);}
+[=][=][=]                    {BEGIN(REGEXPOK);return m(T_EQEQEQ);}
+[=][=]                       {BEGIN(REGEXPOK);return m(T_EQEQ);}
 [>][=]                       {return m(T_GE);}
 [<][=]                       {return m(T_LE);}
+[+][=]                       {return m(T_PLUSBY);}
+[-][=]                       {return m(T_MINUSBY);}
 [-][-]                       {BEGIN(INITIAL);return m(T_MINUSMINUS);}
 [+][+]                       {BEGIN(INITIAL);return m(T_PLUSPLUS);}
-==                           {BEGIN(REGEXPOK);return m(T_EQEQ);}
 \.\.                         {return m(T_DOTDOT);}
 \.                           {return m('.');}
 ::                           {return m(T_COLONCOLON);}
@@ -236,13 +283,16 @@ native                       {return m(KW_NATIVE);}
 static                       {return m(KW_STATIC);}
 import                       {return m(KW_IMPORT);}
 Number                       {return m(KW_NUMBER);}
+while                        {return m(KW_WHILE);}
 class                        {return m(KW_CLASS);}
 const                        {return m(KW_CONST);}
 final                        {return m(KW_FINAL);}
-False                        {return m(KW_FALSE);}
-True                         {return m(KW_TRUE);}
+false                        {return m(KW_FALSE);}
+break                        {return m(KW_BREAK);}
+true                         {return m(KW_TRUE);}
 uint                         {return m(KW_UINT);}
 null                         {return m(KW_NULL);}
+else                         {return m(KW_ELSE);}
 use                          {return m(KW_USE);}
 int                          {return m(KW_INT);}
 new                          {return m(KW_NEW);}
@@ -251,6 +301,7 @@ for                          {return m(KW_FOR);}
 set                          {return m(KW_SET);}
 var                          {return m(KW_VAR);}
 is                           {return m(KW_IS) ;}
+if                           {return m(KW_IF) ;}
 as                           {return m(KW_AS);}
 {NAME}                       {c();BEGIN(INITIAL);return m(T_IDENTIFIER);}
 
@@ -333,6 +384,7 @@ char*token2string(token_t*t)
     else if(nr==KW_TRUE)       return "True";
     else if(nr==KW_UINT)       return "uint";
     else if(nr==KW_NULL)       return "null";
+    else if(nr==KW_ELSE)       return "else";
     else if(nr==KW_USE)        return "use";
     else if(nr==KW_INT)        return "int";
     else if(nr==KW_NEW)        return "new";
