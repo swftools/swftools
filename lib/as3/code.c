@@ -995,12 +995,21 @@ void codestats_print(codestats_t*stats)
     printf("scope_depth: %d\n", stats->max_scope_depth);
 }
 
+code_t* code_end(code_t*code)
+{
+    if(!code)
+        return 0;
+    while(code->next)
+        code = code->next;
+    return code;
+}
+
 code_t* code_append(code_t*code, code_t*toappend)
 {
     if(!code)
-        return toappend;
+        return code_end(toappend);
     if(!toappend)
-        return code;
+        return code_end(code);
     //find end of first list
     while(code->next) {
         code = code->next;
@@ -1012,6 +1021,6 @@ code_t* code_append(code_t*code, code_t*toappend)
     }
     code->next = start;
     start->prev = code;
-    return toappend;
+    return code_end(toappend);
 }
 
