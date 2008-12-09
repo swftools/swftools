@@ -30,6 +30,7 @@ multiname_t* registry_getnumberclass();
 multiname_t* registry_getstringclass();
 multiname_t* registry_getintclass();
 multiname_t* registry_getuintclass();
+multiname_t* registry_getnullclass();
 multiname_t* registry_getbooleanclass();
 
 multiname_t* registry_getsuperclass(multiname_t*m);

@@ -51,6 +51,9 @@ static multiname_t static_int_class = {
 static multiname_t static_uint_class = {
     QNAME, &static_empty_ns, 0, "uint"
 };
+static multiname_t static_null_class = {
+    QNAME, &static_empty_ns, 0, "null"
+};
 static multiname_t static_movieclip_class = {
     QNAME, &static_flash_display_ns, 0, "MovieClip"
 };
@@ -60,6 +63,7 @@ multiname_t* registry_getanytype() {return &static_anytype_class;}
 multiname_t* registry_getstringclass() {return &static_string_class;}
 multiname_t* registry_getintclass() {return &static_int_class;}
 multiname_t* registry_getuintclass() {return &static_uint_class;}
+multiname_t* registry_getnullclass() {return &static_null_class;}
 multiname_t* registry_getbooleanclass() {return &static_boolean_class;}
 multiname_t* registry_getnumberclass() {return &static_number_class;}
 multiname_t* registry_getMovieClip() {return &static_movieclip_class;}
