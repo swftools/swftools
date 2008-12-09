@@ -21,6 +21,7 @@
 
 #include "../q.h"
 #include "pool.h"
+#include "code.h"
 
 DECLARE(token);
 DECLARE_LIST(token);
@@ -31,11 +32,14 @@ struct _token {
     token_list_t*tokens;
 };
 
+typedef struct _writeable {
+    code_t*write;
+    code_t*read;
+} writeable_t;
+
 extern char start_of_expression;
 
 typedef token_t*tokenptr_t;
-
-//#define YYSTYPE tokenptr_t
 
 #include "parser.tab.h"
 
