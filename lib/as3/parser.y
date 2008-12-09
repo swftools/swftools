@@ -1,3 +1,25 @@
+/* parser.lex
+
+   Routines for compiling Flash2 AVM2 ABC Actionscript
+
+   Extension module for the rfxswf library.
+   Part of the swftools package.
+
+   Copyright (c) 2008 Matthias Kramm <kramm@quiss.org>
+ 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 %{
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,11 +46,13 @@
     double number_float;
     struct _code*code;
     struct _code_list*code_list;
+    struct _writeable writeable;
+    char*string;
 }
 
 
 %token<token> T_IDENTIFIER
-%token<token> T_STRING
+%token<string> T_STRING
 %token<token> T_REGEXP
 %token<token> T_EMPTY
 %token<number_int> T_INT
@@ -62,17 +86,20 @@
 %token<token> KW_FINAL
 %token<token> KW_GET "get"
 %token<token> KW_EXTENDS
-%token<token> KW_FALSE "False"
-%token<token> KW_TRUE "True"
+%token<token> KW_FALSE "false"
+%token<token> KW_TRUE "true"
 %token<token> KW_BOOLEAN "Boolean"
 %token<token> KW_UINT "uint"
 %token<token> KW_INT "int"
 %token<token> KW_NUMBER "Number"
 %token<token> KW_STRING "String"
+%token<token> KW_IF "if"
+%token<token> KW_ELSE  "else"
 %token<token> KW_IS "is"
 %token<token> KW_AS "as"
 
 %token<token> T_EQEQ "=="
+%token<token> T_NE "!="
 %token<token> T_LE "<="
 %token<token> T_GE ">="
 %token<token> T_DIVBY "/=" 
@@ -95,8 +122,9 @@
 %token<token> T_STAR '*'
 %token<token> T_DOT '.'
 
-%type <token> CODE
+%type <code> CODE
 %type <code> CODEPIECE CODEPIECE2
+%type <code> CODEBLOCK MAYBECODE
 %type <token> PACKAGE_DECLARATION
 %type <token> FUNCTION_DECLARATION
 %type <code> VARIABLE_DECLARATION
@@ -106,10 +134,11 @@
 %type <code> EXPRESSION
 %type <code> MAYBEEXPRESSION
 %type <code> E
+%type <writeable> LH
 %type <code> CONSTANT
-%type <token> FOR
+%type <code> FOR IF MAYBEELSE
 %type <token> USE
-%type <token> ASSIGNMENT
+%type <code> ASSIGNMENT NEW_ASSIGNMENT SOME_ASSIGNMENT
 %type <token> IMPORT
 %type <multiname> MAYBETYPE
 %type <token> PACKAGESPEC
@@ -127,7 +156,7 @@
 %type <token> MULTILEVELIDENTIFIER
 %type <multiname> TYPE
 %type <token> VAR
-%type <token> VARIABLE
+//%type <token> VARIABLE
 %type <code> VAR_READ
 %type <token> NEW
 %type <token> X_IDENTIFIER
@@ -169,7 +198,10 @@
 %nonassoc "as"
 %left '.' ".." "::"
 %nonassoc T_IDENTIFIER
+%left ';'
+%nonassoc "else"
 %left '('
+%left prec_highest
 
      
 %{
@@ -479,8 +511,12 @@ static int newvariable(token_t*mod, token_t*varconst, token_t*name, multiname_t*
 {
     token_list_t*t;
     printf("defining new variable %s\n", name->text);
-    printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
-    printf("  access: ");printf("%s\n", varconst->text);
+    if(mod) {
+        printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
+    }
+    if(varconst) {
+        printf("  access: ");printf("%s\n", varconst->text);
+    }
     printf("  type: ");printf("%s\n", multiname_tostring(type));
 
     if(!state->vars) 
@@ -528,11 +564,11 @@ void extend_s(token_t*list, char*seperator, token_t*add) {
 
 PROGRAM: MAYBECODE
 
-MAYBECODE: CODE
-MAYBECODE: 
+MAYBECODE: CODE {$$=$1;}
+MAYBECODE:      {$$=code_new();}
 
 CODE: CODE CODEPIECE2 {$$=$1;}
-CODE: CODEPIECE2 {$$=empty_token();}
+CODE: CODEPIECE2 {$$=code_new();}
 
 CODEPIECE2: CODEPIECE {
     if(state->m) {
@@ -540,7 +576,7 @@ CODEPIECE2: CODEPIECE {
     }
 }
 
-CODEPIECE: ';'                   {/*TODO*/$$=code_new();}
+CODEPIECE: ';'                   {$$=code_new();}
 CODEPIECE: VARIABLE_DECLARATION  {$$=$1}
 CODEPIECE: PACKAGE_DECLARATION   {/*TODO*/$$=code_new();}
 CODEPIECE: IMPORT                {/*TODO*/$$=code_new();}
@@ -549,9 +585,13 @@ CODEPIECE: CLASS_DECLARATION     {/*TODO*/$$=code_new();}
 CODEPIECE: INTERFACE_DECLARATION {/*TODO*/$$=code_new();}
 CODEPIECE: FUNCTION_DECLARATION  {/*TODO*/$$=code_new();}
 CODEPIECE: EXPRESSION            {/*calculate and discard*/$$=$1;$$=abc_pop($$);}
-CODEPIECE: FOR                   {/*TODO*/$$=code_new();}
+CODEPIECE: FOR                   {$$=$1}
+CODEPIECE: IF                    {$$=$1}
 CODEPIECE: USE                   {/*TODO*/$$=code_new();}
 CODEPIECE: ASSIGNMENT            {/*TODO*/$$=code_new();}
+
+CODEBLOCK :  '{' MAYBECODE '}' {$$=$2;}
+CODEBLOCK :  CODEPIECE         {$$=$1;}
 
 PACKAGE_DECLARATION : "package" MULTILEVELIDENTIFIER '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
 PACKAGE_DECLARATION : "package" '{' {startpackage(0)} MAYBECODE '}' {endpackage()}
@@ -582,12 +622,12 @@ NAMESPACE_DECLARATION : MODIFIERS KW_NAMESPACE T_IDENTIFIER '=' T_STRING
 //NAMESPACE :              {$$=empty_token();}
 //NAMESPACE : T_IDENTIFIER {$$=$1};
 
-CONSTANT : T_BYTE {$$ = abc_pushbyte(0, $1);}
+CONSTANT : T_BYTE {$$ = abc_pushbyte(0, $1);$$=abc_coerce2($$,registry_getnumberclass());}
 CONSTANT : T_SHORT {$$ = abc_pushshort(0, $1);}
 CONSTANT : T_INT {$$ = abc_pushint(0, $1);}
 CONSTANT : T_UINT {$$ = abc_pushuint(0, $1);}
 CONSTANT : T_FLOAT {$$ = abc_pushdouble(0, $1);}
-CONSTANT : T_STRING {$$ = abc_pushstring(0, $1->text);}
+CONSTANT : T_STRING {$$ = abc_pushstring(0, $1);}
 CONSTANT : KW_TRUE {$$ = abc_pushtrue(0);}
 CONSTANT : KW_FALSE {$$ = abc_pushfalse(0);}
 CONSTANT : KW_NULL {$$ = abc_pushnull(0);}
@@ -599,10 +639,56 @@ VAR : "const" | "var"
 
 VARIABLE_DECLARATION : MODIFIERS VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     int i = newvariable($1,$2,$3,$4);
-    $$=code_new();
     $$ = $5;
     $$ = abc_setlocal($$, i);
 }
+
+NEW_ASSIGNMENT : "var" T_IDENTIFIER MAYBETYPE '=' EXPRESSION {
+    int i = newvariable(0,0,$2,$3);
+    $$ = $5;
+    $$ = abc_setlocal($$, i);
+}
+ASSIGNMENT :           T_IDENTIFIER '=' EXPRESSION {
+    int i = array_find(state->vars, $1->text);
+    if(i<0) {
+        syntaxerror("Unknown variable '%s'", $1->text);
+    } 
+    $$ = $3;
+    $$ = abc_setlocal($$, i);
+}
+SOME_ASSIGNMENT : ASSIGNMENT | NEW_ASSIGNMENT
+
+FOR : "for" '(' SOME_ASSIGNMENT ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}' {
+    $$ = $3;
+    code_t*loopstart = $$ = abc_label($$);
+    $$ = code_append($$, $5);
+    code_t*myif = $$ = abc_iffalse($$, 0);
+    $$ = code_append($$, $10);
+    $$ = code_append($$, $7);$$=abc_pop($$);
+    $$ = abc_jump($$, loopstart);
+    $$ = abc_label($$);
+    myif->branch = $$;
+}
+MAYBEELSE:  %prec prec_none {$$ = code_new();}
+MAYBEELSE: "else" CODEBLOCK {$$=$2;}
+MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
+
+IF  : "if" '(' EXPRESSION ')' CODEBLOCK MAYBEELSE {
+    $$=$3;
+    code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
+    $$ = code_append($$, $5);
+    if($6) {
+        myjmp = $$ = abc_jump($$, 0);
+    }
+    myif->branch = $$ = abc_label($$);
+    if($6) {
+        $$ = code_append($$, $6);
+        myjmp->branch = $$ = abc_label($$);
+    }
+}
+
+USE : "use" KW_NAMESPACE T_IDENTIFIER
+
 
 MAYBEEXPRESSION : '=' EXPRESSION {$$=$2;}
                 |                {$$=code_new();}
@@ -614,22 +700,32 @@ E : VAR_READ %prec T_IDENTIFIER {$$ = $1;}
 E : NEW                         {$$ = abc_pushundefined(0); /* FIXME */}
 E : T_REGEXP                    {$$ = abc_pushundefined(0); /* FIXME */}
 E : FUNCTIONCALL
-E : E '<' E
-E : E '>' E
-E : E "<=" E
-E : E ">=" E
-E : E "==" E
-E : E '+' E
+E : E '<' E {$$ = code_append($1,$3);$$ = abc_greaterequals($$);$$=abc_not($$);}
+E : E '>' E {$$ = code_append($1,$3);$$ = abc_greaterthan($$);}
+E : E "<=" E {$$ = code_append($1,$3);$$ = abc_greaterthan($$);$$=abc_not($$);}
+E : E ">=" E {$$ = code_append($1,$3);$$ = abc_greaterequals($$);}
+E : E "==" E {$$ = code_append($1,$3);$$ = abc_equals($$);}
+E : E "!=" E {$$ = code_append($1,$3);$$ = abc_equals($$);$$ = abc_not($$);}
+E : E '+' E  {$$ = code_append($1,$3);$$ = abc_add($$);}
 E : E '-' E
 E : E '/' E
 E : E '%' E
 E : E '*' E
-E : E "++"
-E : E "--"
 E : E "as" TYPE
 E : E "is" TYPE
 E : '(' E ')' {$$=$2;}
 E : '-' E {$$=$2;}
+
+// TODO: use inclocal where appropriate
+E : LH "++" {$$ = $1.read;$$=abc_increment($$);$$=abc_dup($$);$$=code_append($$,$1.write);}
+E : LH "--" {$$ = $1.read;$$=abc_decrement($$);$$=abc_dup($$);$$=code_append($$,$1.write);}
+
+LH: T_IDENTIFIER {
+  int i = array_find(state->vars, $1->text);
+  if(i<0) syntaxerror("unknown variable '%s'", $1->text);
+  $$.read = abc_getlocal(0, i);
+  $$.write = abc_setlocal(0, i);
+}
 
 NEW : "new" T_IDENTIFIER
     | "new" T_IDENTIFIER '(' ')'
@@ -657,23 +753,16 @@ EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION {list_append($$,$3);}
 VAR_READ : T_IDENTIFIER {
         int i = array_find(state->vars, $1->text);
         if(i<0)
-            syntaxerror("unknown variable");
+            syntaxerror("unknown variable '%s'", $1->text);
         $$ = abc_getlocal(0, i);
 }
-VARIABLE : T_IDENTIFIER
-VARIABLE : VARIABLE '.' T_IDENTIFIER
-VARIABLE : VARIABLE ".." T_IDENTIFIER // descendants
-VARIABLE : VARIABLE "::" VARIABLE // namespace declaration
-VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
-VARIABLE : VARIABLE '[' EXPRESSION ']' // unqualified expression
 
-ASSIGNMENT :           VARIABLE           '=' EXPRESSION
-NEW_ASSIGNMENT : "var" VARIABLE MAYBETYPE '=' EXPRESSION
-
-FOR : "for" '(' NEW_ASSIGNMENT ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}'
-FOR : "for" '(' ASSIGNMENT     ';' EXPRESSION ';' EXPRESSION ')' '{' MAYBECODE '}'
-
-USE : "use" KW_NAMESPACE T_IDENTIFIER
+//VARIABLE : T_IDENTIFIER
+//VARIABLE : VARIABLE '.' T_IDENTIFIER
+//VARIABLE : VARIABLE ".." T_IDENTIFIER // descendants
+//VARIABLE : VARIABLE "::" VARIABLE // namespace declaration
+//VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
+//VARIABLE : VARIABLE '[' EXPRESSION ']' // unqualified expression
 
 // keywords which also may be identifiers
 X_IDENTIFIER : T_IDENTIFIER | KW_PACKAGE
