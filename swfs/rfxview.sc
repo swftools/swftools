@@ -101,6 +101,13 @@
     lineTo  2,-8
 .end
 
+.outline zoomoutline:
+    moveTo 8,0 lineTo 4,3 lineTo 4,-3 lineTo 8,0
+    moveTo -8,0 lineTo -4,3 lineTo -4,-3 lineTo -8,0
+    moveTo 0,8 lineTo 3,4 lineTo -3,4 lineTo 0,8
+    moveTo 0,-8 lineTo 3,-4 lineTo -3,-4 lineTo 0,-8
+.end
+
 .outline minusoutline:
     moveTo -7,2
     lineTo -7,-2
@@ -124,6 +131,8 @@
 .filled mincircle_over outline=minusoutline fill=grad4l line=1 color=#00000060
 .filled oincircle outline=oneoneoutline fill=grad2l line=1.2 color=#00000060
 .filled oincircle_over outline=oneoneoutline fill=grad4l line=1.2 color=#00000060
+.filled zincircle outline=zoomoutline fill=grad2l line=1 color=#00000060
+.filled zincircle_over outline=zoomoutline fill=grad4l line=1 color=#00000060
 
 .sprite plusface
  .put shadcircle 11 13 pin=center .put outcircle 11 11 pin=center .put pincircle 11 11 pin=center scale=90%
@@ -175,6 +184,16 @@
  .put shadcircle 11 13 pin=center scale=90% .put outcircle_over 11 11 pin=center scale=90% .put oincircle_over 9 11 pin=center scale=79%
 .end
 
+.sprite zbface
+ .put shadcircle 11 13 pin=center .put outcircle 11 11 pin=center .put zincircle 10 11 pin=center scale=90% luminance=50%
+.end
+.sprite zbfaceover 
+ .put shadcircle 11 13 pin=center .put outcircle_over 11 11 pin=center .put zincircle_over 10 11 pin=center scale=90%
+.end
+.sprite zbfacedown 
+ .put shadcircle 11 13 pin=center scale=90% .put outcircle_over 11 11 pin=center scale=90% .put zincircle_over 10 11 pin=center scale=79%
+.end
+
 .button rightbutton
   .show rbface as=idle
   .show outcircle as=area
@@ -210,16 +229,24 @@
   .show obfaceover as=hover
 .end
 
+.button fullsizebutton
+  .show zbface as=idle
+  .show outcircle as=area
+  .show zbfacedown as=pressed
+  .show zbfaceover as=hover
+.end
+
 #======================================== frame ===========================================================
   
 .frame 1
 
 .put p1=plusbutton x=width-25-20 y=20 pin=center
 .put m1=minusbutton x=width-50-20 y=20 pin=center
+.put o1=oneonebutton x=width-75-20 y=20 pin=center
+.put z1=fullsizebutton x=width-100-20 y=20 pin=center
+
 .put l1=leftbutton x=width/2-100 y=20 pin=center
 .put r1=rightbutton x=width/2+100 y=20 pin=center
-
-.put o1=oneonebutton x=width-75-20 y=20 pin=center
 
 .sprite background
 .end
@@ -300,13 +327,13 @@
 
 .edittext et width=110 height=20 font=arial size=18pt color=black noselect align=center
 
-.font dbgarial filename="../wx/Courier.ttf"
+#.font dbgarial filename="Courier.ttf"
 #.edittext debugtxt width=width height=20 font=dbgarial size=18pt color=#004000 noselect
 #.put debugtxt y=20
 
 .put et x=width/2-30 y=8
 
-#.swf viewport filename=paper5.swf
+#.swf viewport filename=paper5.viewport
 .sprite viewport
 .end
 
@@ -353,7 +380,8 @@
     hscrollbar._y = fullheight-22;
     p1._x = fullwidth-25-20 - p1._width/2;
     o1._x = fullwidth-50-20 - o1._width/2;
-    m1._x = fullwidth-75-20 - m1._width/2;
+    z1._x = fullwidth-75-20 - z1._width/2;
+    m1._x = fullwidth-100-20 - m1._width/2;
 
     l1._x = fullwidth/2-100 - l1._width/2;
     r1._x = fullwidth/2+100 - r1._width/2;
@@ -403,6 +431,7 @@
     zoom = 1;
  	
     //debugtxt.text = Stage.width+ " x " + Stage.height;
+    //debugtxt.text = zoomtype;
 
     setPageNr = function() {
 	et.text = "  "+pagenr+" / "+viewport._totalframes;
@@ -422,6 +451,18 @@
 	}
     };
     
+    setOneDirScrollZoomLevel = function() {
+	xscale = contentwidth / swfwidth;
+	yscale = contentheight / swfheight;
+	if(xscale > yscale) {
+	    zoom = xscale;
+	    setZoomLevel();
+	} else {
+	    zoom = yscale;
+	    setZoomLevel();
+	}
+    };
+   
     set11ZoomLevel = function() {
 	zoom = 1.0;
 	setZoomLevel();
@@ -520,8 +561,14 @@
 
     pagenr = 1;
     setPageNr();
-    setNoScrollZoomLevel();
-    //set11ZoomLevel();
+
+    if(zoomtype=="1") {
+	set11ZoomLevel();
+    } else if(zoomtype=="2") {
+	setNoScrollZoomLevel();
+    } else {
+	setOneDirScrollZoomLevel();
+    }
 	
     l1.onRelease = function(){ 
 	if(pagenr > 1) {
@@ -551,6 +598,9 @@
     };
     o1.onRelease = function(){ 
 	setNoScrollZoomLevel();
+    };
+    z1.onRelease = function(){ 
+	setOneDirScrollZoomLevel();
     };
     refreshDrag = function(){
 	if(Dragging == "h") {
