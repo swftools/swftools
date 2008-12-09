@@ -32,6 +32,7 @@ DECLARE(codestats);
 DECLARE(codelookup);
 DECLARE(lookupswitch);
 
+
 #include "abc.h"
 
 typedef struct _opcode
@@ -55,7 +56,6 @@ struct _code {
     int pos; //used during code path evaluation
     
     U8 opcode;
-    char badbranch;
 };
 
 struct _lookupswitch {

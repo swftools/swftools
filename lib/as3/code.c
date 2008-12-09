@@ -196,6 +196,9 @@ opcode_t opcodes[]={
 {0x03, "throw", "",            -1, 0, 0, OP_THROW},
 {0x95, "typeof", "",           -1, 1, 0, 0},
 {0xa7, "urshift", "",          -2, 1, 0, 0},
+
+/* dummy instruction. Warning: this one are not actually supported by flash */
+{0xff, "__break__", "",             0, 0, 0, OP_RETURN},
 };
 
 static U8 op2index[256] = {254};
@@ -555,7 +558,8 @@ typedef struct {
     int stackpos;
     int scopepos;
     code_t*code;
-    char seen;
+    char flags;
+    char error;
 } stackpos_t;
 
 typedef struct {
@@ -596,13 +600,16 @@ static void handleregister(currentstats_t*stats, int reg)
         stats->maxlocal = reg+1;
 }
 
+#define FLAG_SEEN 1
+#define FLAG_ERROR 2
+
 static void dumpstack(currentstats_t*stats)
 {
     int t;
     for(t=0;t<stats->num;t++) {
         code_t*c = stats->stack[t].code;
         opcode_t*op = opcode_get(c->opcode);
-        printf("%5d) %c %d:%d %s", t, stats->stack[t].seen?'x':'|', 
+        printf("%5d) %c %d:%d %s", t, (stats->stack[t].flags&FLAG_SEEN)?'x':'|', 
                                stats->stack[t].stackpos,
                                stats->stack[t].scopepos,
                                op->name);
@@ -623,10 +630,11 @@ static void dumpstack(currentstats_t*stats)
 static char callcode(currentstats_t*stats, int pos, int stack, int scope)
 {
     while(pos<stats->num) {
-        if(stats->stack[pos].seen) {
+        if(stats->stack[pos].flags&FLAG_SEEN) {
             if(stats->stack[pos].stackpos != stack ||
                stats->stack[pos].scopepos != scope) {
                 //dumpstack(stats);
+                stats->stack[pos].flags |= FLAG_ERROR;
                 fprintf(stderr, "Stack mismatch at pos %d\n", pos);
                 fprintf(stderr, "Should be: %d:%d, is: %d:%d\n", stack, scope,
                     stats->stack[pos].stackpos, stats->stack[pos].scopepos);
@@ -637,7 +645,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
             return 1;
         }
     
-        stats->stack[pos].seen = 1;
+        stats->stack[pos].flags |= FLAG_SEEN;
         stats->stack[pos].stackpos = stack;
         stats->stack[pos].scopepos = scope;
 
@@ -649,6 +657,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
         stack += stack_minus(c);
 
         if(stack<0) {
+            stats->stack[pos].flags |= FLAG_ERROR;
             fprintf(stderr, "error: stack underflow at %d (%s)\n", pos, op->name);
            
             /* if we would do true verification (if we would be a vm), this is 
@@ -698,17 +707,22 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
         }
         if(op->flags&OP_RETURN) {
             if(OP_RETURN==0x48/*returnvalue*/) {
-                if(stack!=1)
+                if(stack!=1) {
+                    stats->stack[pos].flags |= FLAG_ERROR;
                     fprintf(stderr, "return(value) with stackposition %d\n", stack);
+                }
             } else if(OP_RETURN==0x47) {
-                if(stack!=0)
+                if(stack!=0) {
+                    stats->stack[pos].flags |= FLAG_ERROR;
                     fprintf(stderr, "return(void) with stackposition %d\n", stack);
+                }
             }
         }
         if(op->flags & (OP_THROW|OP_RETURN))
             return 1;
         if(op->flags & OP_JUMP) {
             if(!c->branch) {
+                stats->stack[pos].flags |= FLAG_ERROR;
                 fprintf(stderr, "Error: Invalid jump target in instruction %s at position %d.\n", op->name, pos);
                 return 0;
             }
@@ -718,6 +732,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
         }
         if(op->flags & OP_BRANCH) {
             if(!c->branch) {
+                stats->stack[pos].flags |= FLAG_ERROR;
                 fprintf(stderr, "Error: Invalid jump target in instruction %s at position %d\n", op->name, pos);
                 return 0;
             }
@@ -728,6 +743,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
         if(op->flags & OP_LOOKUPSWITCH) {
             lookupswitch_t*l = c->data[0];
             if(!l->def) {
+                stats->stack[pos].flags |= FLAG_ERROR;
                 fprintf(stderr, "Error: Invalid jump target in instruction %s at position %d\n", op->name, pos);
                 return 0;
             }
@@ -736,6 +752,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
             code_list_t*t = l->targets;
             while(t) {
                 if(!t->code) {
+                    stats->stack[pos].flags |= FLAG_ERROR;
                     fprintf(stderr, "Error: Invalid jump target in instruction %s at position %d\n", op->name, pos);
                     return 0;
                 }
@@ -855,7 +872,9 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
             int i=0;
 
             if(stats) {
-                fprintf(fo, "%s%5d) %c %d:%d %s ", prefix, c->pos, stats->stack[c->pos].seen?'x':'|', 
+                int f = stats->stack[c->pos].flags;
+                fprintf(fo, "%s%5d) %c %d:%d %s ", prefix, c->pos, 
+                                       (f&FLAG_ERROR)?'E':((f&FLAG_SEEN)?'+':'|'),
                                        stats->stack[c->pos].stackpos,
                                        stats->stack[c->pos].scopepos,
                                        op->name);
