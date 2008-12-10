@@ -4422,9 +4422,10 @@ static void analyseArgumentsForCommand(char*command)
     else
     {
         SWFFONT* font = dict_lookup(&fonts, lu(&args, "font"));
-        if (!font)
-            syntaxerror("font %s is not known in line %d", lu(&args, "font"), line);
-        else
+        if (!font) {
+	    //that's ok... it might be an edittext with a system font
+            //syntaxerror("font %s is not known in line %d", lu(&args, "font"), line);
+	} else
             if (font->use && !font->use->glyphs_specified)
             {
 		if (!strcmp(command, "edittext"))
