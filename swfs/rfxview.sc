@@ -325,13 +325,17 @@
 .put hscrollbar y=height-22 x=10
 .put vscrollbar x=width-22 y=40
 
-.edittext et width=110 height=20 font=arial size=18pt color=black noselect align=center
+.edittext et width=50 height=20 font=arial size=18pt color=black variable=current_pagenumber maxlength=3 text="1" align=left
+.edittext etmiddle text="/" width=10 height=25 font=arial color=black noselect size=18pt align=center
+.edittext et_total_pages width=50 height=25 font=arial color=black noselect size=18pt align=right
 
 #.font dbgarial filename="Courier.ttf"
 #.edittext debugtxt width=width height=20 font=dbgarial size=18pt color=#004000 noselect
 #.put debugtxt y=20
 
-.put et x=width/2-30 y=8
+.put et x=width/2-55 y=8
+.put etmiddle x=width/2-5 y=8
+.put et_total_pages x=width/2+5 y=8
 
 #.swf viewport filename=paper5.viewport
 .sprite viewport
@@ -358,8 +362,9 @@
 .put cliparea=cf x=10 y=40
 .put viewport x=10 y=40
 
-.action:
 
+.action:
+    et_total_pages.text=viewport._totalframes;
     swfwidth = viewport._width;
     swfheight = viewport._height;
 
@@ -386,7 +391,9 @@
     l1._x = fullwidth/2-100 - l1._width/2;
     r1._x = fullwidth/2+100 - r1._width/2;
 
-    et._x = fullwidth/2 - et._width/2;
+    et._x = fullwidth/2 - (et._width+etmiddle._width+et_total_pages._width)/2;
+    etmiddle._x = fullwidth/2 - (et._width+etmiddle._width+et_total_pages._width)/2 + et._width;
+    et_total_pages._x = fullwidth/2 - (et._width+etmiddle._width+et_total_pages._width)/2 + et._width+etmiddle._width;
 
     //.box f width=width-40 height=height-40-30 line=0 fill=black
     //.box vscroll1 width=10 height=height-40-30 line=1 color=#00000060 fill=grad7
@@ -434,7 +441,7 @@
     //debugtxt.text = zoomtype;
 
     setPageNr = function() {
-	et.text = "  "+pagenr+" / "+viewport._totalframes;
+        current_pagenumber = pagenr;
 	viewport.gotoAndStop(pagenr);
     };
    
@@ -570,6 +577,14 @@
 	setOneDirScrollZoomLevel();
     }
 	
+    et.onChanged = function(){
+	if(current_pagenumber <= viewport._totalframes) {
+	    if (current_pagenumber > 0) {
+		pagenr = int(current_pagenumber);
+		setPageNr();
+	    }
+	}
+    };
     l1.onRelease = function(){ 
 	if(pagenr > 1) {
 	    pagenr = pagenr - 1;
