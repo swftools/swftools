@@ -846,7 +846,7 @@ void history_free(history_t* past)
 void history_init(history_t* past)
 {
     past->states = (dict_t*)malloc(sizeof(dict_t));
-    dict_init(past->states);
+    dict_init(past->states, 16);
 }
 
 void history_begin(history_t* past, char* parameter, U16 frame, TAG* tag, float value)

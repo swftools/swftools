@@ -609,15 +609,15 @@ void s_swf(const char*name, SRECT r, int version, int fps, int compress, RGBA ba
     swf->compressed = compress;
     swf_SetRGB(tag,&background);
 
-    dict_init(&characters);
-    dict_init(&images);
-    dict_init(&textures);
-    dict_init(&outlines);
-    dict_init(&gradients);
-    dict_init(&filters);
-    dict_init(&instances);
-    dict_init(&sounds);
-    dict_init(&interpolations);
+    dict_init(&characters, 16);
+    dict_init(&images, 16);
+    dict_init(&textures, 16);
+    dict_init(&outlines, 16);
+    dict_init(&gradients, 16);
+    dict_init(&filters, 16);
+    dict_init(&instances, 16);
+    dict_init(&sounds, 16);
+    dict_init(&interpolations, 16);
     initBuiltIns();
     cleanUp = &freeDictionaries;
 
@@ -660,7 +660,7 @@ void s_sprite(const char*name, SRECT*scalegrid)
     }
 
     /* FIXME: those four fields should be bundled together */
-    dict_init(&instances);
+    dict_init(&instances, 16);
     currentframe = 0;
     currentdepth = 1;
     memset(&currentrect, 0, sizeof(currentrect));
@@ -3116,7 +3116,7 @@ static int c_define(map_t*args)
     const char*value = lu(args, "value");
     
     if(!defines_initialized) {
-	dict_init(&defines);
+	dict_init(&defines, 16);
 	mem_init(&define_values);
 	defines_initialized = 1;
     }
@@ -3131,7 +3131,7 @@ static int c_point(map_t*args)
     int pos;
     SPOINT p;
     if(!points_initialized) {
-	dict_init(&points);
+	dict_init(&points, 16);
 	mem_init(&mpoints);
 	points_initialized = 1;
     }
@@ -4469,7 +4469,7 @@ void firstPass()
 {
     pos = 0;
     id = 0;
-    dict_init(&fonts);
+    dict_init(&fonts, 16);
     cleanUp = &freeFontDictionary;
     findFontUsage();
 }
