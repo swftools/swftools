@@ -40,8 +40,10 @@
 
 %union tokenunion {
     tokenptr_t token;
-    multiname_t*multiname;
-    multiname_list_t*multiname_list;
+
+    struct _class_signature*class_signature;
+    struct _class_signature_list*class_signature_list;
+
     int number_int;
     unsigned int number_uint;
     double number_float;
@@ -146,7 +148,7 @@
 %type <token> USE_NAMESPACE
 %type <code> ASSIGNMENT FOR_INIT
 %type <token> IMPORT
-%type <multiname> MAYBETYPE
+%type <class_signature> MAYBETYPE
 %type <token> PACKAGESPEC
 %type <token> GETSET
 %type <token> PARAM
@@ -154,13 +156,13 @@
 %type <token> PARAM_LIST
 %type <token> MODIFIERS
 %type <token> MODIFIER_LIST
-%type <multiname_list> IMPLEMENTS_LIST
-%type <multiname> EXTENDS
-%type <multiname_list> EXTENDS_LIST
-%type <multiname> PACKAGEANDCLASS
-%type <multiname_list> PACKAGEANDCLASS_LIST
+%type <class_signature_list> IMPLEMENTS_LIST
+%type <class_signature> EXTENDS
+%type <class_signature_list> EXTENDS_LIST
+%type <class_signature> PACKAGEANDCLASS
+%type <class_signature_list> PACKAGEANDCLASS_LIST
 %type <token> MULTILEVELIDENTIFIER
-%type <multiname> TYPE
+%type <class_signature> TYPE
 %type <token> VAR
 //%type <token> VARIABLE
 %type <value> VAR_READ
@@ -187,7 +189,7 @@
 %nonassoc '|'
 %nonassoc '^'
 %nonassoc '&'
-%nonassoc "!=" "==" "<=" '<' ">=" '>' // TODO: support "a < b < c" syntax?
+%nonassoc "!=" "==" "===" "<=" '<' ">=" '>' // TODO: support "a < b < c" syntax?
 %nonassoc "is"
 %left '-'
 %left '+'
@@ -287,6 +289,8 @@ static state_t* state = 0;
 
 DECLARE_LIST(state);
 
+#define MULTINAME(m,x) multiname_t m;namespace_t m##_ns;registry_fill_multiname(&m, &m##_ns, x);
+
 static state_list_t*state_stack=0;
 
 static void new_state()
@@ -366,7 +370,7 @@ static void endpackage()
 }
 
 char*globalclass=0;
-static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, multiname_list_t*implements)
+static void startclass(token_t*modifiers, token_t*name, class_signature_t*extends, class_signature_list_t*implements)
 {
     if(state->cls) {
         syntaxerror("inner classes now allowed"); 
@@ -376,12 +380,13 @@ static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, mul
     printf("entering class %s\n", name->text);
     token_list_t*t=0;
     printf("  modifiers: ");for(t=modifiers->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
-    printf("  extends: %s\n", multiname_tostring(extends));
+    if(extends) 
+        printf("  extends: %s.%s\n", extends->package, extends->name);
 
-    multiname_list_t*mlist=0;
+    class_signature_list_t*mlist=0;
     printf("  implements (%d): ", list_length(implements));
     for(mlist=implements;mlist;mlist=mlist->next)  {
-        printf("%s ", multiname_tostring(mlist->multiname));
+        printf("%s ", mlist->class_signature->name);
     }
     printf("\n");
 
@@ -403,40 +408,57 @@ static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, mul
         syntaxerror("public and internal not supported at the same time.");
 
     /* create the class name, together with the proper attributes */
-    multiname_t* classname = 0;
-    if(!public && !state->package)
-        classname = multiname_new(namespace_new_private(current_filename), state->classname);
-    else if(!public && state->package)
-        classname = multiname_new(namespace_new_packageinternal(state->package), state->classname);
-    else if(state->package)
-        classname = multiname_new(namespace_new_package(state->package), state->classname);
-    else
-        syntaxerror("public classes only allowed inside a package");
+    int access=0;
+    char*package=0;
 
-    state->cls = abc_class_new(state->file, classname, extends);
+    if(!public && !state->package) {
+        access = ACCESS_PRIVATE; package = current_filename;
+    } else if(!public && state->package) {
+        access = ACCESS_PACKAGEINTERNAL; package = state->package;
+    } else if(state->package) {
+        access = ACCESS_PACKAGE; package = state->package;
+    } else {
+        syntaxerror("public classes only allowed inside a package");
+    }
+
+    if(registry_findclass(package, state->classname)) {
+        syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, state->classname);
+    }
+    
+    class_signature_t* classname = class_signature_register(access, package, state->classname);
+
+    multiname_t*extends2 = sig2mname(extends);
+    multiname_t*classname2 = sig2mname(classname);
+
+    state->cls = abc_class_new(state->file, classname2, extends2);
     if(final) abc_class_final(state->cls);
     if(sealed) abc_class_sealed(state->cls);
 
     for(mlist=implements;mlist;mlist=mlist->next) {
-        abc_class_add_interface(state->cls, mlist->multiname);
+        MULTINAME(m, mlist->class_signature);
+        abc_class_add_interface(state->cls, &m);
     }
 
     /* now write the construction code for this class */
-    int slotindex = abc_initscript_addClassTrait(state->init, classname, state->cls);
+    int slotindex = abc_initscript_addClassTrait(state->init, classname2, state->cls);
 
     abc_method_body_t*m = state->init->method->body;
     __ getglobalscope(m);
-    multiname_t*s = extends;
+    class_signature_t*s = extends;
 
     int count=0;
     
     while(s) {
         //TODO: take a look at the current scope stack, maybe 
         //      we can re-use something
-        s = registry_getsuperclass(s);
+        s = s->superclass;
         if(!s) 
         break;
-        __ getlex2(m, s);
+       
+        multiname_t*s2 = sig2mname(s);
+        __ getlex2(m, s2);
+        multiname_destroy(s2);
+
         __ pushscope(m);
         m->code = m->code->prev->prev; // invert
         count++;
@@ -447,7 +469,7 @@ static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, mul
     /* TODO: if this is one of *our* classes, we can also 
              do a getglobalscope/getslot <nr> (which references
              the init function's slots) */
-    __ getlex2(m, extends);
+    __ getlex2(m, extends2);
     __ dup(m);
     __ pushscope(m); // we get a Verify Error #1107 if this is not the top scope
     __ newclass(m,state->cls);
@@ -456,7 +478,8 @@ static void startclass(token_t*modifiers, token_t*name, multiname_t*extends, mul
     }
     __ setslot(m, slotindex);
 
-    if(!globalclass && public && multiname_equals(registry_getMovieClip(),extends)) {
+    /* flash.display.MovieClip handling */
+    if(!globalclass && public && class_signature_equals(registry_getMovieClip(),extends)) {
         if(state->package && state->package[0]) {
             globalclass = concat3str(state->package, ".", state->classname);
         } else {
@@ -485,7 +508,7 @@ static void print_imports()
     }
 }
 static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
-                          token_t*params, multiname_t*type)
+                          token_t*params, class_signature_t*type)
 {
     token_list_t*t;
     new_state();
@@ -496,22 +519,27 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     printf("  getset: %s\n", getset->text);
     printf("  params: ");for(t=params->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
-    printf("  type: %s\n", multiname_tostring(type));
+    if(type)
+        printf("  type: %s.%s\n", type->package, type->name);
     print_imports();
     
     if(state->m) {
         syntaxerror("not able to start another method scope");
     }
 
+    multiname_t*type2 = sig2mname(type);
+
     if(!strcmp(state->classname,name->text)) {
-        state->m = abc_class_constructor(state->cls, type, 0);
+        state->m = abc_class_constructor(state->cls, type2, 0);
     } else {
-        state->m = abc_class_method(state->cls, type, name->text, 0);
+        state->m = abc_class_method(state->cls, type2, name->text, 0);
     }
     array_append(state->vars, "this", 0);
 
     __ getlocal_0(state->m);
     __ pushscope(state->m);
+
+    multiname_destroy(type2);
 }
 static void endfunction()
 {
@@ -548,7 +576,7 @@ void extend_s(token_t*list, char*seperator, token_t*add) {
     list->text[l1+l2+l3]=0;
 }
 
-int find_variable(char*name, multiname_t**m)
+int find_variable(char*name, class_signature_t**m)
 {
     state_list_t* s = state_stack;
     while(s) {
@@ -564,11 +592,11 @@ int find_variable(char*name, multiname_t**m)
     syntaxerror("undefined variable: %s", name);
 }
 
-multiname_t*join_types(multiname_t*type1, multiname_t*type2, char op)
+class_signature_t*join_types(class_signature_t*type1, class_signature_t*type2, char op)
 {
     return registry_getanytype(); // FIXME
 }
-char is_subtype_of(multiname_t*type, multiname_t*supertype)
+char is_subtype_of(class_signature_t*type, class_signature_t*supertype)
 {
     return 1; // FIXME
 }
@@ -646,7 +674,8 @@ VARIABLE_DECLARATION : VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     $$ = $4.c;
    
     if(!is_subtype_of($4.t, $3)) {
-        syntaxerror("Can't convert %s to %s", multiname_tostring($4.t), multiname_tostring($3));
+        syntaxerror("Can't convert %s to %s", $4.t->name, 
+                                              $3->name);
     }
 
     int index = array_append(state->vars, $2->text, $3) + state->local_var_base;
@@ -669,7 +698,7 @@ VARIABLE_DECLARATION : VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     printf("variable %s -> %d (%s)\n", $2->text, index, $4.t->name);
 }
 ASSIGNMENT :           T_IDENTIFIER '=' EXPRESSION {
-    multiname_t*type=0;
+    class_signature_t*type=0;
     int i = find_variable($1->text, &type);
     $$ = $3.c;
     if(!type && $3.t) {
@@ -763,7 +792,8 @@ NAMESPACE_DECLARATION : MODIFIERS KW_NAMESPACE T_IDENTIFIER '=' T_STRING
 //NAMESPACE : T_IDENTIFIER {$$=$1};
 
 CONSTANT : T_BYTE {$$.c = abc_pushbyte(0, $1);
-                   $$.c = abc_coerce2($$.c, registry_getintclass()); // FIXME
+                   MULTINAME(m, registry_getintclass());
+                   $$.c = abc_coerce2($$.c, &m); // FIXME
                    $$.t = TYPE_INT;
                   }
 CONSTANT : T_SHORT {$$.c = abc_pushshort(0, $1);
@@ -846,24 +876,28 @@ E : '(' E ')' {$$=$2;}
 E : '-' E {$$=$2;}
 
 E : LH "+=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
-               $$.c=abc_coerce2($$.c, registry_getintclass()); // FIXME
+               MULTINAME(m, registry_getintclass());
+               $$.c=abc_coerce2($$.c, &m); // FIXME
                $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
                $$.t = $1.type;
               }
 E : LH "-=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
-               $$.c=abc_coerce2($$.c, registry_getintclass()); // FIXME
+               MULTINAME(m, registry_getintclass());
+               $$.c=abc_coerce2($$.c, &m); // FIXME
                $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
                $$.t = $1.type;
               }
 
 // TODO: use inclocal where appropriate
 E : LH "++" {$$.c = $1.read;$$.c=abc_increment($$.c);
-             $$.c=abc_coerce2($$.c, registry_getintclass()); //FIXME
+             MULTINAME(m, registry_getintclass());
+             $$.c=abc_coerce2($$.c, &m); //FIXME
              $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
              $$.t = $1.type;
             }
 E : LH "--" {$$.c = $1.read;$$.c=abc_decrement($$.c);
-             $$.c=abc_coerce2($$.c, registry_getintclass()); //FIXME
+             MULTINAME(m, registry_getintclass());
+             $$.c=abc_coerce2($$.c, &m); //FIXME
              $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
              $$.t = $1.type;
             }
