@@ -621,7 +621,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 
         if(cls->static_constructor)
             dump_method(fo, prefix2,"staticconstructor", "", cls->static_constructor, file);
-        traits_dump(fo, prefix2, cls->static_constructor_traits, file);
+        traits_dump(fo, prefix2, cls->static_traits, file);
 	
         char*n = multiname_tostring(cls->classname);
         if(cls->constructor)
@@ -629,6 +629,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
         free(n);
 	traits_dump(fo, prefix2,cls->traits, file);
         fprintf(fo, "%s}\n", prefix);
+
     }
     fprintf(fo, "%s\n", prefix);
 
@@ -789,7 +790,7 @@ void* swf_ReadABC(TAG*tag)
         int s;
         c->exceptions = list_new();
         for(s=0;s<exception_count;s++) {
-            exception_t*e = malloc(sizeof(exception_t));
+            abc_exception_t*e = malloc(sizeof(abc_exception_t));
 
             e->from = code_atposition(codelookup, swf_GetU30(tag));
             e->to = code_atposition(codelookup, swf_GetU30(tag));
@@ -841,7 +842,7 @@ void* swf_ReadABC(TAG*tag)
         abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
         /* SKIP */
 	swf_GetU30(tag); // cindex
-	cls->static_constructor_traits = traits_parse(tag, pool, file);
+	cls->static_traits = traits_parse(tag, pool, file);
     }
     int num_scripts2 = swf_GetU30(tag);
     for(t=0;t<num_scripts2;t++) {
@@ -868,35 +869,24 @@ void swf_WriteABC(TAG*abctag, void*code)
     TAG*tag = tmp;
     int t;
    
-    char need_null_method=0;
     for(t=0;t<file->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
-        if(!c->constructor || !c->static_constructor) {
-            need_null_method=1;
-            break;
+        if(!c->constructor) {
+            NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
+            NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
+            body->method = m; m->body = body;
+            __ returnvoid(body);
+            c->constructor = m;
+        }
+        if(!c->static_constructor) {
+            NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
+            NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
+            body->method = m; m->body = body;
+            __ returnvoid(body);
+            c->static_constructor = m;
         }
     }
 
-    abc_method_t*nullmethod = 0;
-    if(need_null_method) {
-        NEW(abc_method_t,m);
-        nullmethod = m;
-        /*TODO: might be more efficient to have this at the beginning */
-        array_append(file->methods, NO_KEY, nullmethod);
-        
-        NEW(abc_method_body_t,body);
-        body->method = m;
-        m->body = body;
-        __ returnvoid(body);
-        array_append(file->method_bodies, NO_KEY, body);
-    }
-    for(t=0;t<file->classes->num;t++) {
-	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
-        if(!c->constructor)
-            c->constructor = nullmethod;
-        if(!c->static_constructor)
-            c->static_constructor = nullmethod;
-    }
 
     swf_SetU30(tag, file->methods->num);
     /* enumerate classes, methods and method bodies */
@@ -927,6 +917,8 @@ void swf_WriteABC(TAG*abctag, void*code)
 
        Not sure yet what to do with methods which are used at different
        locations- e.g. the nullmethod is used all over the place.
+       EDIT: flashplayer doesn't allow this anyway- a method can only
+             be used once
 
        Also, I have the strong suspicion that flash player uses only
        the difference between max_scope_stack and init_scope_stack, anyway.
@@ -1033,21 +1025,17 @@ void swf_WriteABC(TAG*abctag, void*code)
             interface = interface->next;
         }
 
-	if(!c->constructor) {
-            swf_SetU30(tag, nullmethod->index);
-	} else {
-	    swf_SetU30(tag, c->constructor->index);
-        }
+	assert(c->constructor);
+	swf_SetU30(tag, c->constructor->index);
+
 	traits_write(pool, tag, c->traits);
     }
     for(t=0;t<file->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
-	if(!c->static_constructor) {
-            swf_SetU30(tag, nullmethod->index);
-	} else {
-	    swf_SetU30(tag, c->static_constructor->index);
-        }
-        traits_write(pool, tag, c->static_constructor_traits);
+	assert(c->static_constructor);
+	swf_SetU30(tag, c->static_constructor->index);
+        
+        traits_write(pool, tag, c->static_traits);
     }
 
     swf_SetU30(tag, file->scripts->num);
@@ -1080,14 +1068,14 @@ void swf_WriteABC(TAG*abctag, void*code)
         code_write(tag, c->code, pool, file);
 
 	swf_SetU30(tag, list_length(c->exceptions));
-        exception_list_t*l = c->exceptions;
+        abc_exception_list_t*l = c->exceptions;
         while(l) {
             // warning: assumes "pos" in each code_t is up-to-date
-            swf_SetU30(tag, l->exception->from->pos);
-            swf_SetU30(tag, l->exception->to->pos);
-            swf_SetU30(tag, l->exception->target->pos);
-            swf_SetU30(tag, pool_register_multiname(pool, l->exception->exc_type));
-            swf_SetU30(tag, pool_register_multiname(pool, l->exception->var_name));
+            swf_SetU30(tag, l->abc_exception->from->pos);
+            swf_SetU30(tag, l->abc_exception->to->pos);
+            swf_SetU30(tag, l->abc_exception->target->pos);
+            swf_SetU30(tag, pool_register_multiname(pool, l->abc_exception->exc_type));
+            swf_SetU30(tag, pool_register_multiname(pool, l->abc_exception->var_name));
             l = l->next;
         }
 
@@ -1124,15 +1112,17 @@ void swf_WriteABC(TAG*abctag, void*code)
 void abc_file_free(abc_file_t*file)
 {
     int t;
-    for(t=0;t<file->metadata->num;t++) {
-        array_t*items = (array_t*)array_getvalue(file->metadata, t);
-        int s;
-        for(s=0;s<items->num;s++) {
-            free(array_getvalue(items, s));
+    if(file->metadata) {
+        for(t=0;t<file->metadata->num;t++) {
+            array_t*items = (array_t*)array_getvalue(file->metadata, t);
+            int s;
+            for(s=0;s<items->num;s++) {
+                free(array_getvalue(items, s));
+            }
+            array_free(items);
         }
-        array_free(items);
+        array_free(file->metadata);file->metadata=0;
     }
-    array_free(file->metadata);
 
     for(t=0;t<file->methods->num;t++) {
         abc_method_t*m = (abc_method_t*)array_getvalue(file->methods, t);
@@ -1159,12 +1149,12 @@ void abc_file_free(abc_file_t*file)
         }
         free(m);
     }
-    array_free(file->methods);
+    array_free(file->methods);file->methods=0;
 
     for(t=0;t<file->classes->num;t++) {
         abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
         traits_free(cls->traits);cls->traits=0;
-	traits_free(cls->static_constructor_traits);cls->static_constructor_traits=0;
+	traits_free(cls->static_traits);cls->static_traits=0;
 
         if(cls->classname) {
             multiname_destroy(cls->classname);
@@ -1185,23 +1175,23 @@ void abc_file_free(abc_file_t*file)
         }
         free(cls);
     }
-    array_free(file->classes);
+    array_free(file->classes);file->classes=0;
 
     for(t=0;t<file->scripts->num;t++) {
         abc_script_t*s = (abc_script_t*)array_getvalue(file->scripts, t);
         traits_free(s->traits);s->traits=0;
         free(s);
     }
-    array_free(file->scripts);
+    array_free(file->scripts);file->scripts=0;
 
     for(t=0;t<file->method_bodies->num;t++) {
         abc_method_body_t*body = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
         code_free(body->code);body->code=0;
 	traits_free(body->traits);body->traits=0;
 
-        exception_list_t*ee = body->exceptions;
+        abc_exception_list_t*ee = body->exceptions;
         while(ee) {
-            exception_t*e=ee->exception;ee->exception=0;
+            abc_exception_t*e=ee->abc_exception;ee->abc_exception=0;
             e->from = e->to = e->target = 0;
             multiname_destroy(e->exc_type);e->exc_type=0;
             multiname_destroy(e->var_name);e->var_name=0;
@@ -1212,7 +1202,7 @@ void abc_file_free(abc_file_t*file)
         
         free(body);
     }
-    array_free(file->method_bodies);
+    array_free(file->method_bodies);file->method_bodies=0;
 
     if(file->name) {
         free((void*)file->name);file->name=0;
