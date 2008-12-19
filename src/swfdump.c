@@ -977,32 +977,38 @@ int main (int argc,char ** argv)
     if (f<0)
     { 
 	char buffer[256];
-	sprintf(buffer, "Couldn't open %s", filename);
+	sprintf(buffer, "Couldn't open %.200s", filename);
         perror(buffer);
         exit(1);
     }
     char header[3];
     read(f, header, 3);
-    int compressed = (header[0]=='C');
+    char compressed = (header[0]=='C');
+    char isflash = header[0]=='F' && header[1] == 'W' && header[2] == 'S' ||
+                   header[0]=='C' && header[1] == 'W' && header[2] == 'S';
     close(f);
-    f = open(filename,O_RDONLY|O_BINARY);
 
-    if FAILED(swf_ReadSWF(f,&swf))
-    { 
-        fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
-        close(f);
-        exit(1);
-    }
+    int fl=strlen(filename);
+    if(!isflash && fl>3 && !strcmp(&filename[fl-4], ".abc")) {
+        swf_ReadABCfile(filename, &swf);
+    } else {
+        f = open(filename,O_RDONLY|O_BINARY);
+        if FAILED(swf_ReadSWF(f,&swf))
+        { 
+            fprintf(stderr, "%s is not a valid SWF file or contains errors.\n",filename);
+            close(f);
+            exit(1);
+        }
 
 #ifdef HAVE_STAT
-    fstat(f, &statbuf);
-    if(statbuf.st_size != swf.fileSize && !compressed)
-        dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
-                statbuf.st_size, swf.fileSize);
-    filesize = statbuf.st_size;
+        fstat(f, &statbuf);
+        if(statbuf.st_size != swf.fileSize && !compressed)
+            dumperror("Real Filesize (%d) doesn't match header Filesize (%d)",
+                    statbuf.st_size, swf.fileSize);
+        filesize = statbuf.st_size;
 #endif
-
-    close(f);
+        close(f);
+    }
 
     //if(action && swf.fileVersion>=9) {
     //    fprintf(stderr, "Actionscript parsing (-a) not yet supported for SWF versions>=9\n");
@@ -1040,9 +1046,9 @@ int main (int argc,char ** argv)
     if(html)
     {
 	char*fileversions[] = {"","1,0,0,0", "2,0,0,0","3,0,0,0","4,0,0,0",
-			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0","9,0,0,0"};
-	if(swf.fileVersion>9) {
-	    fprintf(stderr, "Fileversion>9\n");
+			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0","9,0,0,0","10,0,0,0"};
+	if(swf.fileVersion>10) {
+	    fprintf(stderr, "Fileversion>10\n");
 	    exit(1);
 	}
 
@@ -1179,10 +1185,22 @@ int main (int argc,char ** argv)
         else if(tag->id == ST_FREECHARACTER) {
             printf(" frees object %04d", swf_GetPlaceID(tag));
         }
+        else if(tag->id == ST_FILEATTRIBUTES) {
+            swf_SetTagPos(tag, 0);
+            U32 flags = swf_GetU32(tag);
+            if(flags&1) printf(" usenetwork");
+            if(flags&8) printf(" as3");
+            if(flags&16) printf(" symbolclass");
+            if(flags&~(1|8|16))
+                printf(" flags=%02x", flags);
+        }
         else if(tag->id == ST_DOABC) {
             swf_SetTagPos(tag, 0);
             U32 flags = swf_GetU32(tag);
             char*s = swf_GetString(tag);
+            if(flags) {
+                printf(" flags=%08x", flags);
+            }
             if(*s) {
                 printf(" \"%s\"", s);
             }
