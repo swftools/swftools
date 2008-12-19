@@ -168,6 +168,7 @@ int  swf_WriteSWF(int handle,SWF * swf);    // Writes SWF to file, returns lengt
 int  swf_WriteCGI(SWF * swf);               // Outputs SWF with valid CGI header to stdout
 void swf_FreeTags(SWF * swf);               // Frees all malloc'ed memory for swf
 SWF* swf_CopySWF(SWF*swf);
+void swf_ReadABCfile(char*filename, SWF*swf);
 
 // for streaming:
 int  swf_WriteHeader(int handle,SWF * swf);    // Writes Header of swf to file
@@ -241,7 +242,7 @@ void swf_SetABCU32(TAG*tag, U32 u);
 U32 swf_GetABCU32(TAG*tag);
 void swf_SetABCS32(TAG*tag, S32 v);
 S32 swf_GetABCS32(TAG*tag);
-int    swf_SetU30String(TAG*tag, const char*str);
+int    swf_SetU30String(TAG*tag, const char*str, int len);
 double swf_GetD64(TAG*tag);
 int    swf_SetD64(TAG*tag, double v);
 int    swf_GetU24(TAG*tag);
