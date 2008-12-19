@@ -158,6 +158,7 @@ dict_t*dict_new();
 dict_t*dict_new2(type_t*type);
 void dict_init(dict_t*dict, int size);
 dictentry_t*dict_put(dict_t*h, const void*key, void* data);
+void dict_put2(dict_t*h, const char*s, void*data);
 int dict_count(dict_t*h);
 void dict_dump(dict_t*h, FILE*fi, const char*prefix);
 void* dict_lookup(dict_t*h, const void*s);
