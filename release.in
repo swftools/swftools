@@ -141,6 +141,10 @@ ${name}/lib/modules/swfdraw.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/as3/code.c \
 ${name}/lib/as3/code.h \
+${name}/lib/as3/registry.c \
+${name}/lib/as3/registry.h \
+${name}/lib/as3/builtin.c \
+${name}/lib/as3/builtin.h \
 ${name}/lib/as3/opcodes.c \
 ${name}/lib/as3/opcodes.h \
 ${name}/lib/as3/pool.c \
