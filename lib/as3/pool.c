@@ -813,7 +813,8 @@ int pool_register_float(pool_t*p, double d)
 int pool_register_string(pool_t*pool, const char*s)
 {
     if(!s) return 0;
-    int pos = array_append_if_new(pool->x_strings, s, 0);
+    ptroff_t l = strlen(s);
+    int pos = array_append_if_new(pool->x_strings, s, (void*)l);
     assert(pos!=0);
     return pos;
 }
@@ -949,6 +950,12 @@ char*pool_lookup_string(pool_t*pool, int i)
 {
     return (char*)array_getkey(pool->x_strings, i);
 }
+string_t pool_lookup_string2(pool_t*pool, int i)
+{
+    char*s = (char*)array_getkey(pool->x_strings, i);
+    int len = (int)(ptroff_t)array_getvalue(pool->x_strings, i);
+    return string_new(s,len);
+}
 namespace_t*pool_lookup_namespace(pool_t*pool, int i)
 {
     return (namespace_t*)array_getkey(pool->x_namespaces, i);
@@ -1023,7 +1030,7 @@ void pool_read(pool_t*pool, TAG*tag)
 	char*s = malloc(len+1);
 	swf_GetBlock(tag, s, len);
 	s[len] = 0;
-	array_append(pool->x_strings, s, 0);
+	array_append(pool->x_strings, s, (void*)(ptroff_t)len);
         free(s);
 	DEBUG printf("%d) \"%s\"\n", t, pool->x_strings->d[t].name);
     }
@@ -1126,7 +1133,7 @@ void pool_write(pool_t*pool, TAG*tag)
             However when actually using zero strings as empty namespaces, the
             flash player breaks.*/
         //if(ns->name && ns->name[0])
-        array_append_if_new(pool->x_strings, ns->name, 0);
+        pool_register_string(pool, ns->name);
     }
 
     //pool_register_int(pool, 15);
@@ -1150,7 +1157,8 @@ void pool_write(pool_t*pool, TAG*tag)
     }
     swf_SetU30(tag, pool->x_strings->num>1?pool->x_strings->num:0);
     for(t=1;t<pool->x_strings->num;t++) {
-	swf_SetU30String(tag, array_getkey(pool->x_strings, t));
+        string_t str = pool_lookup_string2(pool, t);
+	swf_SetU30String(tag, str.str, str.len);
     }
     swf_SetU30(tag, pool->x_namespaces->num>1?pool->x_namespaces->num:0);
     for(t=1;t<pool->x_namespaces->num;t++) {
