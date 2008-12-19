@@ -126,6 +126,8 @@ for line in fi.readlines():
             foh.write(",".join(["method->code"]+names))
             foh.write("))\n")
 
+            foh.write("#define OPCODE_"+name.upper()+" "+op+"\n")
+
 foh.write("#endif\n")
 
 foh.close()
