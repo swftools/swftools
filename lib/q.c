@@ -600,20 +600,20 @@ static int max(int x, int y) {
 dict_t*dict_new()
 {
     dict_t*d = rfx_alloc(sizeof(dict_t));
-    dict_init(d);
+    dict_init(d, INITIAL_SIZE);
     return d;
 }
 dict_t*dict_new2(type_t*t)
 {
     dict_t*d = rfx_alloc(sizeof(dict_t));
-    dict_init(d);
+    dict_init(d, INITIAL_SIZE);
     d->key_type = t;
     return d;
 }
-void dict_init(dict_t*h) 
+void dict_init(dict_t*h, int size) 
 {
     memset(h, 0, sizeof(dict_t));
-    h->hashsize = INITIAL_SIZE;
+    h->hashsize = size;
     h->slots = h->hashsize?(dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*h->hashsize):0;
     h->num = 0;
     h->key_type = &charptr_type;
@@ -827,7 +827,7 @@ void map_init(map_t*map)
     map_internal_t*m;
     map->internal = (map_internal_t*)rfx_calloc(sizeof(map_internal_t));
     m = (map_internal_t*)map->internal;
-    dict_init(&m->d);
+    dict_init(&m->d, INITIAL_SIZE);
 }
 void map_put(map_t*map, string_t t1, string_t t2)
 {

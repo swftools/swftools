@@ -156,7 +156,7 @@ void stringarray_destroy(stringarray_t*sa);
 
 dict_t*dict_new();
 dict_t*dict_new2(type_t*type);
-void dict_init(dict_t*dict);
+void dict_init(dict_t*dict, int size);
 dictentry_t*dict_put(dict_t*h, const void*key, void* data);
 int dict_count(dict_t*h);
 void dict_dump(dict_t*h, FILE*fi, const char*prefix);
@@ -191,10 +191,12 @@ void array_free(array_t*array);
 void*array_getkey(array_t*array, int nr);
 void*array_getvalue(array_t*array, int nr);
 int array_append(array_t*array, const void*name, void*data);
+#define array_contains(a,b) (array_find((a),(b))>=0)
 int array_find(array_t*array, const void*name);
 int array_find2(array_t*array, const void*name, void*data);
 int array_update(array_t*array, const void*name, void*data);
 int array_append_if_new(array_t*array, const void*name, void*data);
+#define array_length(a) ((a)->num)
 
 #define DECLARE(x) struct _##x;typedef struct _##x x##_t;
 #define DECLARE_LIST(x) \
