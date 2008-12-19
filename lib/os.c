@@ -26,6 +26,24 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 #include <string.h>
 #ifdef WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#else
+#undef HAVE_STAT
+#endif
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#else
+#undef HAVE_MMAP
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#else
+#undef HAVE_STAT
 #endif
 
 #if defined(CYGWIN)
@@ -203,5 +221,55 @@ char* mktempname(char*ptr) {
 #   endif
 #endif
      return ptr;
+}
+
+memfile_t* memfile_open(const char*path)
+{
+    memfile_t*file = malloc(sizeof(memfile_t));
+#if defined(HAVE_MMAP) && defined(HAVE_STAT)
+    int fi = open(path, O_RDONLY);
+    if(fi<0) {
+        perror(path);
+        free(file);
+        return 0;
+    }
+    struct stat sb;
+    if(fstat(fi, &sb)<0) {
+        perror(path);
+        return 0;
+    }
+    file->len = sb.st_size;
+    file->data = mmap(0, sb.st_size, PROT_READ, MAP_PRIVATE, fi, 0);
+#else
+    FILE*fi = fopen(path, "rb");
+    if(!fi) {
+        perror(path);
+        free(file);
+        return 0;
+    }
+    fseek(fi, 0, SEEK_END);
+    file->len = ftell(fi);
+    fseek(fi, 0, SEEK_SET);
+    file->data = malloc(file->len);
+    if(!file->data) {
+        fprintf(stderr, "Out of memory while allocating memory for file %s\n", path);
+        free(file);
+        return 0;
+    }
+    fread(file->data, file->len, 1, fi);
+    fclose(fi);
+#endif
+    return file;
+}
+
+void memfile_close(memfile_t*file)
+{
+#if defined(HAVE_MMAP) && defined(HAVE_STAT)
+    munmap(file->data, file->len);
+#else
+    free(file->data);
+#endif
+    file->data = file->len = 0;
+    free(file);
 }
 
