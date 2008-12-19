@@ -152,9 +152,7 @@ opcode_t opcodes[]={
 {0x57, "newactivation", "",     0, 1, 0, OP_NEED_ACTIVATION},
 {0x56, "newarray", "n",         0, 1, 0, OP_STACK_ARGS},
 {0x5a, "newcatch", "u",         0, 1, 0, 0}, //u = index into exception_info
-#define OP_NEWCLASS 0x58
 {0x58, "newclass", "c",        -1, 1, 0, 0}, //c = index into class_info
-#define OP_NEWFUNCTION 0x40
 {0x40, "newfunction", "m",      0, 1, 0, 0}, //i = index into method_info
 {0x55, "newobject", "n",        0, 1, 0, OP_STACK_ARGS2},
 {0x1e, "nextname", "",         -2, 1, 0, 0},
@@ -684,12 +682,12 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
         if(op->flags & OP_NEED_ACTIVATION)
             stats->flags |= FLAGS_ACTIVATION;
 
-        if(c->opcode == OP_NEWCLASS) {
+        if(c->opcode == OPCODE_NEWCLASS) {
             abc_class_t*cls = (abc_class_t*)(c->data[0]);
             if(scope > cls->init_scope_depth)
                 cls->init_scope_depth = scope;
         }
-        if(c->opcode == OP_NEWFUNCTION) {
+        if(c->opcode == OPCODE_NEWFUNCTION) {
             abc_method_t*m = (abc_method_t*)(c->data[0]);
             if(m->body && scope > m->body->init_scope_depth)
                 m->body->init_scope_depth = scope;
@@ -826,8 +824,8 @@ static currentstats_t* code_get_stats(code_t*code, abc_exception_list_t*exceptio
     }
     abc_exception_list_t*e = exceptions;
     while(e) {
-        if(e->exception->target)
-            callcode(current, e->exception->target->pos, 1, 0);
+        if(e->abc_exception->target)
+            callcode(current, e->abc_exception->target->pos, 1, 0);
         e = e->next;
     }
 
@@ -856,11 +854,11 @@ int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*p
 
         e = exceptions;
         while(e) {
-            if(c==e->exception->from)
+            if(c==e->abc_exception->from)
                 fprintf(fo, "%s   TRY {\n", prefix);
-            if(c==e->exception->target) {
-                char*s1 = multiname_tostring(e->exception->exc_type);
-                char*s2 = multiname_tostring(e->exception->var_name);
+            if(c==e->abc_exception->target) {
+                char*s1 = multiname_tostring(e->abc_exception->exc_type);
+                char*s2 = multiname_tostring(e->abc_exception->var_name);
                 fprintf(fo, "%s   CATCH(%s %s)\n", prefix, s1, s2);
                 free(s1);
                 free(s2);
@@ -961,9 +959,9 @@ int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*p
         
         e = exceptions;
         while(e) {
-            if(c==e->exception->to) {
-                if(e->exception->target)
-                    fprintf(fo, "%s   } // END TRY (HANDLER: %d)\n", prefix, e->exception->target->pos);
+            if(c==e->abc_exception->to) {
+                if(e->abc_exception->target)
+                    fprintf(fo, "%s   } // END TRY (HANDLER: %d)\n", prefix, e->abc_exception->target->pos);
                 else
                     fprintf(fo, "%s   } // END TRY (HANDLER: 00000000)\n", prefix);
             }
