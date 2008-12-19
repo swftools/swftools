@@ -636,7 +636,7 @@ void breakjumpsto(code_t*c, code_t*jump)
     while(c->prev) 
         c=c->prev;
     while(c) {
-        if(c->opcode == OPCODE_BREAK) {
+        if(c->opcode == OPCODE___BREAK__) {
             c->opcode = OPCODE_JUMP;
             c->branch = jump;
         }
@@ -728,7 +728,7 @@ VARIABLE_DECLARATION : VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     int index = new_variable($2->text, $3);
     
     if($3) {
-        if($4.c->prev || $4.c->opcode != OPCODE_PUSH_UNDEFINED) {
+        if($4.c->prev || $4.c->opcode != OPCODE_PUSHUNDEFINED) {
             $$ = $4.c;
             $$ = converttype($$, $4.t, $3);
             $$ = abc_setlocal($$, index);
@@ -746,7 +746,7 @@ VARIABLE_DECLARATION : VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
            or
             var x=expr;
         */
-        if($4.c->prev || $4.c->opcode != OPCODE_PUSH_UNDEFINED) {
+        if($4.c->prev || $4.c->opcode != OPCODE_PUSHUNDEFINED) {
             $$ = $4.c;
             $$ = abc_coerce_a($$);
             $$ = abc_setlocal($$, index);
