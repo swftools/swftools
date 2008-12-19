@@ -39,24 +39,6 @@ diff -u -r1.9 -r1.10
  }
  
  Gfx::Gfx(XRef *xrefA, OutputDev *outA, Dict *resDict,
-@@ -3783,6 +3789,7 @@
-   pushResources(resDict);
- 
-   // save current graphics state
-+  GfxState*mystate = state;
-   saveState();
- 
-   // kill any pre-existing path
-@@ -3848,6 +3855,9 @@
- 
-   // restore graphics state
-   restoreState();
-+  if(state!=mystate) {
-+      fprintf(stderr, "Invalid state nesting in PDF file- file broken?\n");
-+  }
- 
-   // pop resource stack
-   popResources();
 Index: GfxFont.h
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GfxFont.h,v
