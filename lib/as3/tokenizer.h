@@ -20,9 +20,13 @@
 #define __parser_h__
 
 #include "../q.h"
+#include "abc.h"
 #include "pool.h"
-#include "code.h"
+#include "files.h"
+#include "tokenizer.h"
 #include "registry.h"
+#include "code.h"
+#include "opcodes.h"
 
 DECLARE(token);
 DECLARE_LIST(token);
