@@ -645,8 +645,19 @@ void breakjumpsto(code_t*c, code_t*jump)
 }
 code_t*converttype(code_t*c, class_signature_t*from, class_signature_t*to)
 {
-    /* TODO */
-    return abc_nop(c);
+    if(!to) {
+        /*TODO: can omit this if from is zero? */
+        return abc_coerce_a(c);
+    }
+    if(TYPE_IS_NUMBER(from) && TYPE_IS_UINT(to)) {
+        MULTINAME(m, TYPE_UINT);
+        return abc_coerce2(c, &m);
+    }
+    if(TYPE_IS_NUMBER(from) && TYPE_IS_INT(to)) {
+        MULTINAME(m, TYPE_INT);
+        return abc_coerce2(c, &m);
+    }
+    return c;
 }
 
 code_t*defaultvalue(code_t*c, class_signature_t*type)
@@ -804,7 +815,7 @@ FOR_INIT : {$$=code_new();}
 FOR_INIT : ASSIGNMENT | VARIABLE_DECLARATION | VOIDEXPRESSION
 
 FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
-    code_append($$, state->initcode);state->initcode=0;
+    $$ = state->initcode;state->initcode=0;
 
     $$ = code_append($$, $4);
     code_t*loopstart = $$ = abc_label($$);
@@ -953,28 +964,30 @@ E : '(' E ')' {$$=$2;}
 E : '-' E {$$=$2;}
 
 E : LH "+=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
-               MULTINAME(m, registry_getintclass());
-               $$.c=abc_coerce2($$.c, &m); // FIXME
+               class_signature_t*type = join_types($1.type, $3.t, '+');
+               $$.c=converttype($$.c, type, $1.type);
                $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
                $$.t = $1.type;
               }
 E : LH "-=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
-               MULTINAME(m, registry_getintclass());
-               $$.c=abc_coerce2($$.c, &m); // FIXME
+               class_signature_t*type = join_types($1.type, $3.t, '-');
+               $$.c=converttype($$.c, type, $1.type);
                $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
                $$.t = $1.type;
               }
 
 // TODO: use inclocal where appropriate
 E : LH "++" {$$.c = $1.read;$$.c=abc_increment($$.c);
-             MULTINAME(m, registry_getintclass());
-             $$.c=abc_coerce2($$.c, &m); //FIXME
+             class_signature_t*type = $1.type;
+             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) type = TYPE_NUMBER;
+             $$.c=converttype($$.c, type, $1.type);
              $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
              $$.t = $1.type;
             }
 E : LH "--" {$$.c = $1.read;$$.c=abc_decrement($$.c);
-             MULTINAME(m, registry_getintclass());
-             $$.c=abc_coerce2($$.c, &m); //FIXME
+             class_signature_t*type = $1.type;
+             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) type = TYPE_NUMBER;
+             $$.c=converttype($$.c, 0, $1.type);
              $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
              $$.t = $1.type;
             }
