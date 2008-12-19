@@ -32,8 +32,8 @@ DECLARE(abc_method);
 DECLARE(abc_method_body);
 DECLARE(abc_interface);
 DECLARE(abc_class);
-DECLARE(exception);
-DECLARE_LIST(exception);
+DECLARE(abc_exception);
+DECLARE_LIST(abc_exception);
 
 #include "code.h"
 #include "opcodes.h"
@@ -136,7 +136,7 @@ abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*retu
 abc_method_body_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
 abc_method_body_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...);
 
-struct _exception {
+struct _abc_exception {
     code_t*from;
     code_t*to;
     code_t*target;
@@ -160,7 +160,7 @@ struct _abc_method_body {
 
     int init_scope_depth; // volatile, might be increased during code verification
 
-    exception_list_t* exceptions;
+    abc_exception_list_t* exceptions;
 
     trait_list_t*traits;
     

@@ -197,7 +197,12 @@ opcode_t opcodes[]={
 {0x95, "typeof", "",           -1, 1, 0, 0},
 {0xa7, "urshift", "",          -2, 1, 0, 0},
 
-/* dummy instruction. Warning: this one are not actually supported by flash */
+/* opcodes not documented, but seen in the wild */
+//0x53: seen in builtin.abc- followed by 0x01 (might be the number of stack params)
+{0x53, "xxx1", "",             -1, 0, 0, 0},
+{0x01, "xxx2", "",              0, 0, 0, 0},
+
+/* dummy instruction. Warning: this one is not actually supported by flash */
 {0xff, "__break__", "",             0, 0, 0, OP_RETURN},
 };
 
@@ -274,7 +279,7 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
         opcode_t*op = opcode_get(opcode);
 	if(!op) {
 	    fprintf(stderr, "Can't parse opcode %02x\n", opcode);
-	    return head;
+	    continue;
         }
         //printf("%s\n", op->name);fflush(stdout);
         NEW(code_t,c);
@@ -770,7 +775,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
     return 1;
 }
 
-static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions) 
+static currentstats_t* code_get_stats(code_t*code, abc_exception_list_t*exceptions) 
 {
     code = code_find_start(code);
     int num = 0;
@@ -819,10 +824,10 @@ static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions)
         free(current);
         return 0;
     }
-    exception_list_t*e = exceptions;
+    abc_exception_list_t*e = exceptions;
     while(e) {
-        if(e->exception->target)
-            callcode(current, e->exception->target->pos, 1, 0);
+        if(e->abc_exception->target)
+            callcode(current, e->abc_exception->target->pos, 1, 0);
         e = e->next;
     }
 
@@ -837,9 +842,9 @@ void stats_free(currentstats_t*stats)
     }
 }
 
-int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
+int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
 {
-    exception_list_t*e = exceptions;
+    abc_exception_list_t*e = exceptions;
     c = code_find_start(c);
     currentstats_t*stats =  code_get_stats(c, exceptions);
 
@@ -851,11 +856,11 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
 
         e = exceptions;
         while(e) {
-            if(c==e->exception->from)
+            if(c==e->abc_exception->from)
                 fprintf(fo, "%s   TRY {\n", prefix);
-            if(c==e->exception->target) {
-                char*s1 = multiname_tostring(e->exception->exc_type);
-                char*s2 = multiname_tostring(e->exception->var_name);
+            if(c==e->abc_exception->target) {
+                char*s1 = multiname_tostring(e->abc_exception->exc_type);
+                char*s2 = multiname_tostring(e->abc_exception->var_name);
                 fprintf(fo, "%s   CATCH(%s %s)\n", prefix, s1, s2);
                 free(s1);
                 free(s2);
@@ -956,9 +961,9 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
         
         e = exceptions;
         while(e) {
-            if(c==e->exception->to) {
-                if(e->exception->target)
-                    fprintf(fo, "%s   } // END TRY (HANDLER: %d)\n", prefix, e->exception->target->pos);
+            if(c==e->abc_exception->to) {
+                if(e->abc_exception->target)
+                    fprintf(fo, "%s   } // END TRY (HANDLER: %d)\n", prefix, e->abc_exception->target->pos);
                 else
                     fprintf(fo, "%s   } // END TRY (HANDLER: 00000000)\n", prefix);
             }
@@ -972,7 +977,7 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
     return 1;
 }
 
-codestats_t* code_get_statistics(code_t*code, exception_list_t*exceptions) 
+codestats_t* code_get_statistics(code_t*code, abc_exception_list_t*exceptions) 
 {
     currentstats_t*current = code_get_stats(code, exceptions);
     if(!current)

@@ -790,7 +790,7 @@ void* swf_ReadABC(TAG*tag)
         int s;
         c->exceptions = list_new();
         for(s=0;s<exception_count;s++) {
-            exception_t*e = malloc(sizeof(exception_t));
+            abc_exception_t*e = malloc(sizeof(abc_exception_t));
 
             e->from = code_atposition(codelookup, swf_GetU30(tag));
             e->to = code_atposition(codelookup, swf_GetU30(tag));
@@ -1081,14 +1081,14 @@ void swf_WriteABC(TAG*abctag, void*code)
         code_write(tag, c->code, pool, file);
 
 	swf_SetU30(tag, list_length(c->exceptions));
-        exception_list_t*l = c->exceptions;
+        abc_exception_list_t*l = c->exceptions;
         while(l) {
             // warning: assumes "pos" in each code_t is up-to-date
-            swf_SetU30(tag, l->exception->from->pos);
-            swf_SetU30(tag, l->exception->to->pos);
-            swf_SetU30(tag, l->exception->target->pos);
-            swf_SetU30(tag, pool_register_multiname(pool, l->exception->exc_type));
-            swf_SetU30(tag, pool_register_multiname(pool, l->exception->var_name));
+            swf_SetU30(tag, l->abc_exception->from->pos);
+            swf_SetU30(tag, l->abc_exception->to->pos);
+            swf_SetU30(tag, l->abc_exception->target->pos);
+            swf_SetU30(tag, pool_register_multiname(pool, l->abc_exception->exc_type));
+            swf_SetU30(tag, pool_register_multiname(pool, l->abc_exception->var_name));
             l = l->next;
         }
 
@@ -1202,9 +1202,9 @@ void abc_file_free(abc_file_t*file)
         code_free(body->code);body->code=0;
 	traits_free(body->traits);body->traits=0;
 
-        exception_list_t*ee = body->exceptions;
+        abc_exception_list_t*ee = body->exceptions;
         while(ee) {
-            exception_t*e=ee->exception;ee->exception=0;
+            abc_exception_t*e=ee->abc_exception;ee->abc_exception=0;
             e->from = e->to = e->target = 0;
             multiname_destroy(e->exc_type);e->exc_type=0;
             multiname_destroy(e->var_name);e->var_name=0;
