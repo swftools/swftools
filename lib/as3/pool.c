@@ -720,7 +720,7 @@ char* constant_tostring(constant_t*c)
 {
     if(!c)
         return 0;
-    char buf[30];
+    char buf[32];
     if(NS_TYPE(c->type)) {
         return namespace_tostring(c->ns);
     } else if(c->type == CONSTANT_INT) {
@@ -730,6 +730,7 @@ char* constant_tostring(constant_t*c)
         sprintf(buf, "%u", c->u);
         return strdup(buf);
     } else if(c->type == CONSTANT_FLOAT) {
+        char buf[1024];
         sprintf(buf, "%f", c->f);
         return strdup(buf);
     } else if(c->type == CONSTANT_STRING) {
@@ -836,9 +837,6 @@ int pool_register_multiname(pool_t*pool, multiname_t*n)
 {
     if(!n) return 0;
     int pos = array_append_if_new(pool->x_multinames, n, 0);
-    if(pos==0) {
-        *(int*)0=0xdead;
-    }
     assert(pos!=0);
     return pos;
 }
