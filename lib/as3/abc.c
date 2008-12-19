@@ -1084,11 +1084,11 @@ void swf_WriteABC(TAG*abctag, void*code)
         abc_exception_list_t*l = c->exceptions;
         while(l) {
             // warning: assumes "pos" in each code_t is up-to-date
-            swf_SetU30(tag, l->abc_exception->from->pos);
-            swf_SetU30(tag, l->abc_exception->to->pos);
-            swf_SetU30(tag, l->abc_exception->target->pos);
-            swf_SetU30(tag, pool_register_multiname(pool, l->abc_exception->exc_type));
-            swf_SetU30(tag, pool_register_multiname(pool, l->abc_exception->var_name));
+            swf_SetU30(tag, l->exception->from->pos);
+            swf_SetU30(tag, l->exception->to->pos);
+            swf_SetU30(tag, l->exception->target->pos);
+            swf_SetU30(tag, pool_register_multiname(pool, l->exception->exc_type));
+            swf_SetU30(tag, pool_register_multiname(pool, l->exception->var_name));
             l = l->next;
         }
 
@@ -1204,7 +1204,7 @@ void abc_file_free(abc_file_t*file)
 
         abc_exception_list_t*ee = body->exceptions;
         while(ee) {
-            abc_exception_t*e=ee->abc_exception;ee->abc_exception=0;
+            abc_exception_t*e=ee->exception;ee->exception=0;
             e->from = e->to = e->target = 0;
             multiname_destroy(e->exc_type);e->exc_type=0;
             multiname_destroy(e->var_name);e->var_name=0;

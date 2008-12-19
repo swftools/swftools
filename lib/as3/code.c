@@ -775,7 +775,7 @@ static char callcode(currentstats_t*stats, int pos, int stack, int scope)
     return 1;
 }
 
-static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions) 
+static currentstats_t* code_get_stats(code_t*code, abc_exception_list_t*exceptions) 
 {
     code = code_find_start(code);
     int num = 0;
@@ -824,7 +824,7 @@ static currentstats_t* code_get_stats(code_t*code, exception_list_t*exceptions)
         free(current);
         return 0;
     }
-    exception_list_t*e = exceptions;
+    abc_exception_list_t*e = exceptions;
     while(e) {
         if(e->exception->target)
             callcode(current, e->exception->target->pos, 1, 0);
@@ -842,9 +842,9 @@ void stats_free(currentstats_t*stats)
     }
 }
 
-int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
+int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
 {
-    exception_list_t*e = exceptions;
+    abc_exception_list_t*e = exceptions;
     c = code_find_start(c);
     currentstats_t*stats =  code_get_stats(c, exceptions);
 
@@ -977,7 +977,7 @@ int code_dump(code_t*c, exception_list_t*exceptions, abc_file_t*file, char*prefi
     return 1;
 }
 
-codestats_t* code_get_statistics(code_t*code, exception_list_t*exceptions) 
+codestats_t* code_get_statistics(code_t*code, abc_exception_list_t*exceptions) 
 {
     currentstats_t*current = code_get_stats(code, exceptions);
     if(!current)
