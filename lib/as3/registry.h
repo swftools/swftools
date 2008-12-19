@@ -77,6 +77,8 @@ multiname_t* class_signature_to_multiname(class_signature_t*cls);
 #define TYPE_IS_INT(t)    ((t) == registry_getintclass())
 #define TYPE_UINT                 registry_getuintclass()
 #define TYPE_IS_UINT(t)   ((t) == registry_getuintclass())
+#define TYPE_NUMBER               registry_getnumberclass()
+#define TYPE_IS_NUMBER(t) ((t) == registry_getnumberclass())
 #define TYPE_FLOAT                registry_getnumberclass()
 #define TYPE_IS_FLOAT(t)  ((t) == registry_getnumberclass())
 #define TYPE_BOOLEAN              registry_getbooleanclass()
