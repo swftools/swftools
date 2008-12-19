@@ -23,17 +23,51 @@
 
 #ifndef __abc_registry_h__
 #define __abc_registry_h__
-multiname_t* registry_findclass(const char*package, const char*name);
-multiname_t* registry_getanytype();
-multiname_t* registry_getobjectclass();
-multiname_t* registry_getnumberclass();
-multiname_t* registry_getstringclass();
-multiname_t* registry_getintclass();
-multiname_t* registry_getuintclass();
-multiname_t* registry_getnullclass();
-multiname_t* registry_getbooleanclass();
 
-multiname_t* registry_getsuperclass(multiname_t*m);
+#include "pool.h"
 
-multiname_t* registry_getMovieClip();
+DECLARE(class_signature);
+DECLARE_LIST(class_signature);
+DECLARE(function_signature);
+
+struct _class_signature {
+    /* this is very similar to a QNAME */
+    U8 access;
+    const char*package;
+    const char*name;
+
+    class_signature_t*superclass;
+    dict_t members;
+    class_signature_t*interfaces[];
+};
+char class_signature_equals(class_signature_t*c1, class_signature_t*c2);
+extern type_t class_signature_type;
+
+struct _function_signature {
+    const char*name;
+    class_signature_list_t*params;
+};
+extern type_t function_signature_type;
+
+void registry_init();
+        
+class_signature_t* class_signature_register(int access, char*package, char*name);
+
+// static multinames
+class_signature_t* registry_getanytype();
+class_signature_t* registry_getobjectclass();
+class_signature_t* registry_getnumberclass();
+class_signature_t* registry_getstringclass();
+class_signature_t* registry_getintclass();
+class_signature_t* registry_getuintclass();
+class_signature_t* registry_getnullclass();
+class_signature_t* registry_getbooleanclass();
+class_signature_t* registry_getMovieClip();
+
+class_signature_t* registry_findclass(const char*package, const char*name);
+
+void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c);
+multiname_t* class_signature_to_multiname(class_signature_t*cls);
+#define sig2mname(x) class_signature_to_multiname(x)
+
 #endif

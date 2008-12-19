@@ -21,91 +21,130 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <assert.h>
 #include "pool.h"
 #include "registry.h"
+#include "builtin.h"
 
-static namespace_t static_empty_ns = {
-    ACCESS_PACKAGE, ""
-};
-static namespace_t static_flash_display_ns = {
-    ACCESS_PACKAGE, "flash.display"
-};
-static multiname_t static_object_class = {
-    QNAME, &static_empty_ns, 0, "Object"
-};
-static multiname_t static_anytype_class = {
-    QNAME, &static_empty_ns, 0, 0
-};
-static multiname_t static_string_class = {
-    QNAME, &static_empty_ns, 0, "String"
-};
-static multiname_t static_boolean_class = {
-    QNAME, &static_empty_ns, 0, "Boolean"
-};
-static multiname_t static_number_class = {
-    QNAME, &static_empty_ns, 0, "Number"
-};
-static multiname_t static_int_class = {
-    QNAME, &static_empty_ns, 0, "int"
-};
-static multiname_t static_uint_class = {
-    QNAME, &static_empty_ns, 0, "uint"
-};
-static multiname_t static_null_class = {
-    QNAME, &static_empty_ns, 0, "null"
-};
-static multiname_t static_movieclip_class = {
-    QNAME, &static_flash_display_ns, 0, "MovieClip"
-};
+static dict_t*classes=0;
 
-multiname_t* registry_getobjectclass() {return &static_object_class;}
-multiname_t* registry_getanytype() {return &static_anytype_class;}
-multiname_t* registry_getstringclass() {return &static_string_class;}
-multiname_t* registry_getintclass() {return &static_int_class;}
-multiname_t* registry_getuintclass() {return &static_uint_class;}
-multiname_t* registry_getnullclass() {return &static_null_class;}
-multiname_t* registry_getbooleanclass() {return &static_boolean_class;}
-multiname_t* registry_getnumberclass() {return &static_number_class;}
-multiname_t* registry_getMovieClip() {return &static_movieclip_class;}
+// ----------------------- class signature ------------------------------
 
-
-multiname_t* registry_findclass(const char*package, const char*name)
+char class_signature_equals(class_signature_t*c1, class_signature_t*c2)
 {
-    multiname_t*m=0;
-    if(!package) {
-        m = multiname_new(0, name);
-    } else {
-        namespace_t*ns = 0;
-
-        /* things in the "flash" package are usually public */
-        if(!strncmp(package, "flash", 5))
-            ns =namespace_new_package(package);
-        else
-            ns = namespace_new_packageinternal(package);
-
-        m = multiname_new(ns,name);
-        namespace_destroy(ns);
+    /* notice: access right is *not* respected */
+    if(!strcmp(c1->name, c2->name) &&
+       !strcmp(c1->package, c2->package)) {
+        return 1;
     }
-    return m;
+    return 0;
 }
-multiname_t* registry_getsuperclass(multiname_t*m)
+static unsigned int class_signature_hash(class_signature_t*c)
 {
-    if(!m->name)
-        return 0;
-    if(!strcmp(m->name, "Object"))
-        return 0;
+    unsigned int hash = 0;
+    hash = crc32_add_string(hash, c->package);
+    hash = crc32_add_string(hash, c->name);
+    return hash;
+}
 
-    else if(!strcmp(m->name, "MovieClip"))
-        return multiname_fromstring("[package]flash.display::Sprite");
-    else if(!strcmp(m->name, "Sprite"))
-        return multiname_fromstring("[package]flash.display::DisplayObjectContainer");
-    else if(!strcmp(m->name, "DisplayObjectContainer"))
-        return multiname_fromstring("[package]flash.display::InteractiveObject");
-    else if(!strcmp(m->name, "InteractiveObject"))
-        return multiname_fromstring("[package]flash.display::DisplayObject");
-    else if(!strcmp(m->name, "DisplayObject"))
-        return multiname_fromstring("[package]flash.events::EventDispatcher");
-    else
-        return &static_object_class;
+static void* dummy_clone(void*other) {return other;}
+static void dummy_destroy(class_signature_t*c) {}
+
+type_t class_signature_type = {
+    hash: (hash_func)class_signature_hash,
+    equals: (equals_func)class_signature_equals,
+    /* all signatures are static */
+    dup: (dup_func)dummy_clone,
+    free: (free_func)dummy_destroy,
+};
+
+// ----------------------- function signature ------------------------------
+
+static char function_signature_equals(function_signature_t*f1, function_signature_t*f2)
+{
+    return !strcmp(f1->name, f2->name);
+}
+static unsigned int function_signature_hash(function_signature_t*f)
+{
+    return crc32_add_string(0, f->name);
+}
+type_t function_signature_type = {
+    hash: (hash_func)function_signature_hash,
+    equals: (equals_func)function_signature_equals,
+    /* all signatures are static */
+    dup: (dup_func)dummy_clone,
+    free: (free_func)dummy_destroy,
+};
+
+// ------------------------- constructors --------------------------------
+
+class_signature_t* class_signature_register(int access, char*package, char*name)
+{
+    class_signature_t*c = malloc(sizeof(class_signature_t));
+    c->access = access;
+    c->package = package;
+    c->name = name;
+    dict_put(classes, c, c);
+    return c;
+}
+
+// --------------- builtin classes (from builtin.c) ----------------------
+
+void registry_init()
+{
+    classes = builtin_getclasses();
+}
+class_signature_t* registry_safefindclass(const char*package, const char*name)
+{
+    class_signature_t*c = registry_findclass(package, name);
+    if(!c)
+        printf("%s.%s\n", package, name);
+    assert(c);
+    return c;
+}
+class_signature_t* registry_findclass(const char*package, const char*name)
+{
+    assert(classes);
+    class_signature_t tmp;
+    tmp.package = package;
+    tmp.name = name;
+    class_signature_t* c = (class_signature_t*)dict_lookup(classes, &tmp);
+    return c;
+}
+void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c)
+{
+    m->type = QNAME;
+    m->ns = n;
+    m->ns->access = c->access;
+    m->ns->name = (char*)c->package;
+    m->name = c->name;
+    m->namespace_set = 0;
+}
+multiname_t* class_signature_to_multiname(class_signature_t*cls)
+{
+    if(!cls)
+        return 0;
+    multiname_t*m=0;
+    namespace_t*ns = namespace_new(cls->access, cls->package);
+    return multiname_new(ns,cls->name);
+}
+
+// ----------------------- builtin types ------------------------------
+class_signature_t* registry_getanytype() {return 0;/*FIXME*/}
+
+class_signature_t* registry_getobjectclass() {return registry_safefindclass("", "Object");}
+class_signature_t* registry_getstringclass() {return registry_safefindclass("", "String");}
+class_signature_t* registry_getintclass() {return registry_safefindclass("", "int");}
+class_signature_t* registry_getuintclass() {return registry_safefindclass("", "uint");}
+class_signature_t* registry_getbooleanclass() {return registry_safefindclass("", "Boolean");}
+class_signature_t* registry_getnumberclass() {return registry_safefindclass("", "Number");}
+class_signature_t* registry_getMovieClip() {return registry_safefindclass("flash.display", "MovieClip");}
+
+// ----------------------- builtin dummy types -------------------------
+class_signature_t nullclass = {
+    ACCESS_PACKAGE, "", "null", 0, 0, 0,
+};
+class_signature_t* registry_getnullclass() {
+    return &nullclass;
 }
 
