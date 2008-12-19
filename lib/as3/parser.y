@@ -41,16 +41,16 @@
 %union tokenunion {
     tokenptr_t token;
 
-    struct _class_signature*class_signature;
-    struct _class_signature_list*class_signature_list;
+    class_signature_t*class_signature;
+    class_signature_list_t*class_signature_list;
 
     int number_int;
     unsigned int number_uint;
     double number_float;
-    struct _code*code;
-    struct _typedcode value;
-    struct _typedcode_list*value_list;
-    struct _writeable writeable;
+    code_t*code;
+    typedcode_t value;
+    typedcode_list_t*value_list;
+    writeable_t writeable;
     char*string;
 }
 
