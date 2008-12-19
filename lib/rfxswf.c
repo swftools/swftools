@@ -46,6 +46,7 @@
 
 #include "./bitio.h"
 #include "./MD5.h"
+#include "./os.h"
 
 // internal constants
 
@@ -300,10 +301,6 @@ U32 swf_GetU30(TAG*tag)
 
 int swf_SetU30(TAG*tag, U32 u)
 {
-    if(u&0x80000000) {
-      fprintf(stderr, "Error: Bit 31 set in U30 value\n");
-      u&=0x7fffffff;
-    }
     int nr = 0;
     do {
         if(tag)
@@ -391,9 +388,8 @@ int swf_GetS30(TAG*tag)
 }
 #endif
 
-int swf_SetU30String(TAG*tag, const char*str)
+int swf_SetU30String(TAG*tag, const char*str, int l)
 {
-    int l = strlen(str);
     int len=0;
     len+=swf_SetU30(tag, l);
     len+=l;
@@ -1484,6 +1480,17 @@ int swf_ReadSWF(int handle, SWF * swf)
   reader_t reader;
   reader_init_filereader(&reader, handle);
   return swf_ReadSWF2(&reader, swf);
+}
+
+void swf_ReadABCfile(char*filename, SWF*swf)
+{
+    memset(swf, 0, sizeof(SWF));
+    swf->fileVersion=9;
+    swf->fileAttributes=1; //as3
+    TAG*tag = swf->firstTag = swf_InsertTag(0, ST_RAWABC);
+    memfile_t*file = memfile_open(filename);
+    swf_SetBlock(tag, file->data, file->len);
+    memfile_close(file);
 }
 
 int no_extra_tags = 0;
