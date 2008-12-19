@@ -320,6 +320,10 @@ static void old_state()
     state_stack = state_stack->next;
     free(old);
     state = state_stack->state;
+    /*if(state->initcode) {
+        printf("residual initcode\n");
+        code_dump(state->initcode, 0, 0, "", stdout);
+    }*/
     state->initcode = code_append(state->initcode, oldstate->initcode);
 }
 void initialize_state()
@@ -536,6 +540,7 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     } else {
         state->m = abc_class_method(state->cls, type2, name->text, 0);
     }
+    /* state->vars is initialized by state_new */
     array_append(state->vars, "this", 0);
 
     __ getlocal_0(state->m);
@@ -545,11 +550,13 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
 }
 static void endfunction()
 {
-    printf("leaving function %s\n", state->function);
+    /*printf("leaving function %s\n", state->function);*/
     __ returnvoid(state->m);
 
     old_state();
 }
+
+
 static token_t* empty_token()
 {
     NEW(token_t,t);
@@ -578,7 +585,7 @@ void extend_s(token_t*list, char*seperator, token_t*add) {
     list->text[l1+l2+l3]=0;
 }
 
-int find_variable(char*name, class_signature_t**m)
+static int find_variable(char*name, class_signature_t**m)
 {
     state_list_t* s = state_stack;
     while(s) {
@@ -592,6 +599,27 @@ int find_variable(char*name, class_signature_t**m)
         s = s->next;
     }
     syntaxerror("undefined variable: %s", name);
+} 
+static char variable_exists(char*name) 
+{
+    return array_contains(state->vars, name);
+}
+static int new_variable(char*name, class_signature_t*type)
+{
+    return array_append(state->vars, name, type) + state->local_var_base;
+}
+code_t* killvars(code_t*c) 
+{
+    int t;
+    for(t=0;t<state->vars->num;t++) {
+        class_signature_t*type = array_getvalue(state->vars, t);
+        //do this always, otherwise register types don't match
+        //in the verifier when doing nested loops
+        //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
+            c = abc_kill(c, t+state->local_var_base);
+        //}
+    }
+    return c;
 }
 
 class_signature_t*join_types(class_signature_t*type1, class_signature_t*type2, char op)
@@ -603,20 +631,35 @@ char is_subtype_of(class_signature_t*type, class_signature_t*supertype)
     return 1; // FIXME
 }
 
-#define TYPE_ANY                  registry_getanytype()
-#define TYPE_IS_ANY(t)    ((t) == registry_getanytype())
-#define TYPE_INT                  registry_getintclass()
-#define TYPE_IS_INT(t)    ((t) == registry_getintclass())
-#define TYPE_UINT                 registry_getuintclass()
-#define TYPE_IS_UINT(t)   ((t) == registry_getuintclass())
-#define TYPE_FLOAT                registry_getnumberclass()
-#define TYPE_IS_FLOAT(t)  ((t) == registry_getnumberclass())
-#define TYPE_BOOLEAN              registry_getbooleanclass()
-#define TYPE_IS_BOOLEAN(t)((t) == registry_getbooleanclass())
-#define TYPE_STRING               registry_getstringclass()
-#define TYPE_IS_STRING(t) ((t) == registry_getstringclass())
-#define TYPE_NULL                 registry_getnullclass()
-#define TYPE_IS_NULL(t)   ((t) == registry_getnullclass())
+void breakjumpsto(code_t*c, code_t*jump) 
+{
+    while(c->prev) 
+        c=c->prev;
+    while(c) {
+        if(c->opcode == OPCODE_BREAK) {
+            c->opcode = OPCODE_JUMP;
+            c->branch = jump;
+        }
+        c = c->next;
+    }
+}
+code_t*converttype(code_t*c, class_signature_t*from, class_signature_t*to)
+{
+    /* TODO */
+    return abc_nop(c);
+}
+
+code_t*defaultvalue(code_t*c, class_signature_t*type)
+{
+    if(TYPE_IS_INT(type) || TYPE_IS_UINT(type) || TYPE_IS_FLOAT(type)) {
+       c = abc_pushbyte(c, 0);
+    } else if(TYPE_IS_BOOLEAN(type)) {
+       c = abc_pushfalse(c);
+    } else {
+       c = abc_pushnull(c);
+    }
+    return c;
+}
 
 %}
 
@@ -658,6 +701,9 @@ CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
 FUNCTION_DECLARATION: MODIFIERS "function" GETSET T_IDENTIFIER '(' PARAMS ')' 
                       MAYBETYPE '{' {startfunction(0,$1,$3,$4,$6,$8)} MAYBECODE '}' {
     if(!state->m) syntaxerror("internal error: undefined function");
+    state->initcode = abc_nop(state->initcode);
+    state->initcode = abc_nop(state->initcode);
+    state->initcode = abc_nop(state->initcode);
     state->m->code = code_append(state->initcode, $11);state->initcode=0;
     endfunction()
 }
@@ -671,33 +717,50 @@ MAYBEEXPRESSION : '=' EXPRESSION {$$=$2;}
 
 VAR : "const" | "var"
 VARIABLE_DECLARATION : VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
-    if(array_contains(state->vars, $2->text))
+    if(variable_exists($2->text))
         syntaxerror("Variable %s already defined", $2->text);
-    $$ = $4.c;
    
     if(!is_subtype_of($4.t, $3)) {
         syntaxerror("Can't convert %s to %s", $4.t->name, 
                                               $3->name);
     }
 
-    int index = array_append(state->vars, $2->text, $3) + state->local_var_base;
-    $$ = abc_setlocal($$, index);
-
+    int index = new_variable($2->text, $3);
+    
     if($3) {
-        if(TYPE_IS_INT($3) || TYPE_IS_UINT($3) || TYPE_IS_FLOAT($3)) {
-            state->initcode = abc_pushbyte(state->initcode, 32);
-        } else if(TYPE_IS_BOOLEAN($3)) {
-            state->initcode = abc_pushfalse(state->initcode);
+        if($4.c->prev || $4.c->opcode != OPCODE_PUSH_UNDEFINED) {
+            $$ = $4.c;
+            $$ = converttype($$, $4.t, $3);
+            $$ = abc_setlocal($$, index);
         } else {
-            state->initcode = abc_pushnull(state->initcode);
+            $$ = defaultvalue(0, $3);
+            $$ = abc_setlocal($$, index);
         }
+
+        /* push default value for type on stack */
+        state->initcode = defaultvalue(state->initcode, $3);
         state->initcode = abc_setlocal(state->initcode, index);
-    } /*else {
-        // that's the default for a local register, anyway
+    } else {
+        /* only bother to actually set this variable if its syntax is either
+            var x:type;
+           or
+            var x=expr;
+        */
+        if($4.c->prev || $4.c->opcode != OPCODE_PUSH_UNDEFINED) {
+            $$ = $4.c;
+            $$ = abc_coerce_a($$);
+            $$ = abc_setlocal($$, index);
+        } else {
+            $$ = code_new();
+        }
+    }
+    
+    /* that's the default for a local register, anyway
+        else {
         state->initcode = abc_pushundefined(state->initcode);
         state->initcode = abc_setlocal(state->initcode, index);
     }*/
-    printf("variable %s -> %d (%s)\n", $2->text, index, $4.t->name);
+    printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
 }
 ASSIGNMENT :           T_IDENTIFIER '=' EXPRESSION {
     class_signature_t*type=0;
@@ -719,7 +782,9 @@ MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
 IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
-    $$=$4.c;
+    $$ = state->initcode;state->initcode=0;
+
+    $$ = code_append($$, $4.c);
     code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
    
     $$ = code_append($$, $6);
@@ -731,33 +796,43 @@ IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
         $$ = code_append($$, $7);
         myjmp->branch = $$ = abc_label($$);
     }
-    old_state();
+    
+    $$ = killvars($$);old_state();
 }
 
 FOR_INIT : {$$=code_new();}
 FOR_INIT : ASSIGNMENT | VARIABLE_DECLARATION | VOIDEXPRESSION
 
 FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
-    $$ = $4;
+    code_append($$, state->initcode);state->initcode=0;
+
+    $$ = code_append($$, $4);
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $6.c);
     code_t*myif = $$ = abc_iffalse($$, 0);
     $$ = code_append($$, $10);
     $$ = code_append($$, $8);
     $$ = abc_jump($$, loopstart);
-    $$ = abc_label($$);
-    myif->branch = $$;
-    old_state();
+    code_t*out = $$ = abc_label($$);
+    breakjumpsto($$, out);
+    myif->branch = out;
+
+    $$ = killvars($$);old_state();
 }
 
 WHILE : "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
-    code_t*myjmp = $$ = abc_jump(0, 0);
+    $$ = state->initcode;state->initcode=0;
+
+    code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $6);
     myjmp->branch = $$ = abc_label($$);
     $$ = code_append($$, $4.c);
     $$ = abc_iftrue($$, loopstart);
-    old_state();
+    code_t*out = $$ = abc_label($$);
+    breakjumpsto($$, out);
+
+    $$ = killvars($$);old_state();
 }
 
 BREAK : "break" {
@@ -794,8 +869,8 @@ NAMESPACE_DECLARATION : MODIFIERS KW_NAMESPACE T_IDENTIFIER '=' T_STRING
 //NAMESPACE : T_IDENTIFIER {$$=$1};
 
 CONSTANT : T_BYTE {$$.c = abc_pushbyte(0, $1);
-                   MULTINAME(m, registry_getintclass());
-                   $$.c = abc_coerce2($$.c, &m); // FIXME
+                   //MULTINAME(m, registry_getintclass());
+                   //$$.c = abc_coerce2($$.c, &m); // FIXME
                    $$.t = TYPE_INT;
                   }
 CONSTANT : T_SHORT {$$.c = abc_pushshort(0, $1);
