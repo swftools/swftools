@@ -74,7 +74,7 @@ void syntaxerror(const char*format, ...)
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename, current_line, current_column, buf);
+    fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename_short, current_line, current_column, buf);
     fflush(stderr);
     exit(1);
 }
@@ -227,7 +227,7 @@ NUMBER	 -?[0-9]+(\.[0-9]*)?
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
-MULTILINE_COMMENT [/][*]([*][^/]|[^*]|[\x00-\x31])*[*]+[/]
+MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n]*\n
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 %%
@@ -250,10 +250,16 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 {NUMBER}                     {c(); BEGIN(INITIAL);return handlenumber();}
 
+3rr0r                        {/* for debugging: generates a tokenizer-level error */
+                              syntaxerror("3rr0r");}
+
 [!][=]                       {BEGIN(REGEXPOK);return m(T_NE);}
+[=][=][=]                    {BEGIN(REGEXPOK);return m(T_EQEQEQ);}
 [=][=]                       {BEGIN(REGEXPOK);return m(T_EQEQ);}
 [>][=]                       {return m(T_GE);}
 [<][=]                       {return m(T_LE);}
+[+][=]                       {return m(T_PLUSBY);}
+[-][=]                       {return m(T_MINUSBY);}
 [-][-]                       {BEGIN(INITIAL);return m(T_MINUSMINUS);}
 [+][+]                       {BEGIN(INITIAL);return m(T_PLUSPLUS);}
 \.\.                         {return m(T_DOTDOT);}
@@ -277,10 +283,12 @@ native                       {return m(KW_NATIVE);}
 static                       {return m(KW_STATIC);}
 import                       {return m(KW_IMPORT);}
 Number                       {return m(KW_NUMBER);}
+while                        {return m(KW_WHILE);}
 class                        {return m(KW_CLASS);}
 const                        {return m(KW_CONST);}
 final                        {return m(KW_FINAL);}
 false                        {return m(KW_FALSE);}
+break                        {return m(KW_BREAK);}
 true                         {return m(KW_TRUE);}
 uint                         {return m(KW_UINT);}
 null                         {return m(KW_NULL);}
