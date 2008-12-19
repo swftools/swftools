@@ -22,6 +22,7 @@
 #include "../q.h"
 #include "pool.h"
 #include "code.h"
+#include "registry.h"
 
 DECLARE(token);
 DECLARE_LIST(token);
@@ -37,12 +38,12 @@ struct _token {
 typedef struct _writeable {
     code_t*write;
     code_t*read;
-    multiname_t*type;
+    class_signature_t*type;
 } writeable_t;
 
 struct _typedcode {
     code_t*c;
-    multiname_t*t;
+    class_signature_t*t;
 };
 struct _typedcode_list {
     struct _typedcode typedcode;
