@@ -360,12 +360,12 @@ static void startpackage(token_t*t)
     } 
     new_state();
     char*name = t?t->text:"";
-    printf("entering package \"%s\"\n", name);
+    /*printf("entering package \"%s\"\n", name);*/
     state->package = name;
 }
 static void endpackage()
 {
-    printf("leaving package \"%s\"\n", state->package);
+    /*printf("leaving package \"%s\"\n", state->package);*/
     old_state();
 }
 
@@ -377,18 +377,19 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     }
     new_state();
     state->classname = name->text;
-    printf("entering class %s\n", name->text);
+
     token_list_t*t=0;
+    class_signature_list_t*mlist=0;
+    /*printf("entering class %s\n", name->text);
     printf("  modifiers: ");for(t=modifiers->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     if(extends) 
         printf("  extends: %s.%s\n", extends->package, extends->name);
 
-    class_signature_list_t*mlist=0;
     printf("  implements (%d): ", list_length(implements));
     for(mlist=implements;mlist;mlist=mlist->next)  {
         printf("%s ", mlist->class_signature->name);
     }
-    printf("\n");
+    printf("\n");*/
 
     char public=0,internal=0,final=0,sealed=1;
     for(t=modifiers->tokens;t;t=t->next) {
@@ -490,7 +491,7 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
 
 static void endclass()
 {
-    printf("leaving class %s\n", state->classname);
+    /*printf("leaving class %s\n", state->classname);*/
     old_state();
 }
 static void addimport(token_t*t)
@@ -513,7 +514,8 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     token_list_t*t;
     new_state();
     state->function = name->text;
-    printf("entering function %s\n", name->text);
+    
+    /*printf("entering function %s\n", name->text);
     if(ns)
         printf("  namespace: %s\n", ns->text);
     printf("  getset: %s\n", getset->text);
@@ -521,7 +523,7 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     printf("  mod: ");for(t=mod->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     if(type)
         printf("  type: %s.%s\n", type->package, type->name);
-    print_imports();
+    print_imports();*/
     
     if(state->m) {
         syntaxerror("not able to start another method scope");
