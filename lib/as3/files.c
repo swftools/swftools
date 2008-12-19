@@ -55,6 +55,7 @@ typedef struct _include_dir {
 int current_line=1;
 int current_column=0;
 char* current_filename=0;
+char* current_filename_short=0;
 include_dir_t* current_include_dirs=0;
 
 #define MAX_INCLUDE_DEPTH 16
@@ -63,6 +64,7 @@ void*include_stack[MAX_INCLUDE_DEPTH];
 int line_stack[MAX_INCLUDE_DEPTH];
 int column_stack[MAX_INCLUDE_DEPTH];
 char* filename_stack[MAX_INCLUDE_DEPTH];
+char* shortfilename_stack[MAX_INCLUDE_DEPTH];
 include_dir_t* includedir_stack[MAX_INCLUDE_DEPTH];
 int include_stack_ptr = 0;
 
@@ -160,6 +162,7 @@ char*enter_file(char*filename, void*state)
     include_stack[include_stack_ptr] = state;
     line_stack[include_stack_ptr] = current_line;
     column_stack[include_stack_ptr] = current_column;
+    shortfilename_stack[include_stack_ptr] = current_filename_short = strdup(filename);
     filename_stack[include_stack_ptr] = current_filename;
     includedir_stack[include_stack_ptr] = current_include_dirs;
     add_include_dir(get_path(fullfilename));
@@ -181,8 +184,8 @@ void* leave_file()
     } else {
         current_column = column_stack[include_stack_ptr];
         current_line = line_stack[include_stack_ptr];
-        free(current_filename);current_filename=0;
-        current_filename = filename_stack[include_stack_ptr];
+        free(current_filename);current_filename = filename_stack[include_stack_ptr];
+        free(current_filename_short);current_filename_short = shortfilename_stack[include_stack_ptr];
         current_include_dirs = includedir_stack[include_stack_ptr];
         return include_stack[include_stack_ptr];
     }

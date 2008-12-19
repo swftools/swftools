@@ -25,6 +25,7 @@
 extern int current_line;
 extern int current_column;
 extern char* current_filename;
+extern char* current_filename_short;
 
 void add_include_dir(char*dir);
 
