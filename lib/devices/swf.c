@@ -77,6 +77,7 @@ typedef struct _swfoutput_internal
     double config_ppmsubpixels;
     double config_jpegsubpixels;
     char hasbuttons;
+    int config_dots;
     int config_simpleviewer;
     int config_opennewwindow;
     int config_ignoredraworder;
@@ -246,6 +247,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_drawonlyshapes=0;
     i->config_jpegquality=85;
     i->config_storeallcharacters=0;
+    i->config_dots=1;
     i->config_enablezlib=0;
     i->config_insertstoptag=0;
     i->config_flashversion=6;
@@ -386,10 +388,16 @@ static void linetoxy(gfxdevice_t*dev, TAG*tag, plotxy_t p0)
 	swf_ShapeSetLine (tag, i->shape, rx,ry);
 	addPointToBBox(dev, i->swflastx,i->swflasty);
 	addPointToBBox(dev, px,py);
-    }/* else if(!i->fill) {
+    } /* this is a nice idea, but doesn't work with current flash
+         players (the pixel will be invisible if they're not
+         precisely on a pixel boundary) 
+         Besides, we should only do this if this lineto itself
+         is again followed by a "move".
+         else if(!i->fill && i->config_dots) {
        // treat lines of length 0 as plots, making them
        // at least 1 twip wide so Flash will display them
-	plot(dev, i->swflastx, i->swflasty, tag);
+	//plot(dev, i->swflastx, i->swflasty, tag);
+	swf_ShapeSetLine (tag, i->shape, rx+1,ry);
     }*/
 
     i->shapeisempty = 0;
@@ -1936,6 +1944,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
 	i->config_bboxvars = atoi(value);
+    } else if(!strcmp(name, "dots")) {
+	i->config_dots = atoi(value);
     } else if(!strcmp(name, "frameresets")) {
 	i->config_frameresets = atoi(value);
     } else if(!strcmp(name, "showclipshapes")) {
@@ -2027,6 +2037,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
         printf("storeallcharacters          don't reduce the fonts to used characters in the output file\n");
         printf("enablezlib                  switch on zlib compression (also done if flashversion>=7)\n");
         printf("bboxvars                    store the bounding box of the SWF file in actionscript variables\n");
+        printf("dots                        Take care to handle dots correctly\n");
         printf("reordertags=0/1             (default: 1) perform some tag optimizations\n");
         printf("internallinkfunction=<name> when the user clicks a internal link (to a different page) in the converted file, this actionscript function is called\n");
         printf("externallinkfunction=<name> when the user clicks an external link (e.g. http://www.foo.bar/) on the converted file, this actionscript function is called\n");
@@ -2483,12 +2494,14 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 
     /* TODO: * split line into segments, and perform this check for all segments */
 
-    if(i->config_disable_polygon_conversion || type>=5 ||
+    if(i->config_disable_polygon_conversion || /*type>=5 ||*/
        (!has_dots &&
         (width <= i->config_caplinewidth 
         || (cap_style == gfx_capRound && joint_style == gfx_joinRound)
-        || (cap_style == gfx_capRound && type<=2)))) {} else 
+        || (cap_style == gfx_capRound && type<=2)))) 
     {
+        // ...
+    } else {
 	/* convert line to polygon */
 	msg("<trace> draw as polygon, type=%d dots=%d", type, has_dots);
 	if(has_dots)
