@@ -929,6 +929,16 @@ code_t* abc_urshift(code_t*prev)
     code_t*self = add_opcode(prev, 0xa7);
     return self;
 }
+code_t* abc_xxx1(code_t*prev)
+{
+    code_t*self = add_opcode(prev, 0x53);
+    return self;
+}
+code_t* abc_xxx2(code_t*prev)
+{
+    code_t*self = add_opcode(prev, 0x01);
+    return self;
+}
 code_t* abc___break__(code_t*prev)
 {
     code_t*self = add_opcode(prev, 0xff);
