@@ -112,12 +112,12 @@ struct _abc_class {
     multiname_list_t*interfaces;
 
     abc_method_t*constructor;
-    U8 flags;
+    trait_list_t*traits;
     
     abc_method_t*static_constructor;
-
-    trait_list_t*static_constructor_traits;
-    trait_list_t*traits;
+    trait_list_t*static_traits;
+    
+    U8 flags;
 
     int init_scope_depth; // volatile, might be increased during code verification
     

@@ -334,7 +334,21 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
         return;
     }
     
-    fprintf(fo, "%s[stack:%d locals:%d scope:%d-%d flags:%02x]\n", prefix, c->old.max_stack, c->old.local_count, c->old.init_scope_depth, c->old.max_scope_depth, c->method->flags);
+    fprintf(fo, "%s[stack:%d locals:%d scope:%d-%d flags:", 
+            prefix, c->old.max_stack, c->old.local_count, c->old.init_scope_depth, 
+            c->old.max_scope_depth);
+
+
+    int flags = c->method->flags;
+    if(flags&METHOD_NEED_ARGUMENTS) {fprintf(fo, " need_arguments");flags&=~METHOD_NEED_ARGUMENTS;}
+    if(flags&METHOD_NEED_ACTIVATION) {fprintf(fo, " need_activation");flags&=~METHOD_NEED_ACTIVATION;}
+    if(flags&METHOD_NEED_REST) {fprintf(fo, " need_rest");flags&=~METHOD_NEED_REST;}
+    if(flags&METHOD_HAS_OPTIONAL) {fprintf(fo, " has_optional");flags&=~METHOD_HAS_OPTIONAL;}
+    if(flags&METHOD_SET_DXNS) {fprintf(fo, " set_dxns");flags&=~METHOD_SET_DXNS;}
+    if(flags&METHOD_HAS_PARAM_NAMES) {fprintf(fo, " has_param_names");flags&=~METHOD_HAS_PARAM_NAMES;}
+    if(flags) fprintf(fo, " %02x", flags);
+    fprintf(fo, "]\n");
+
 
     char prefix2[80];
     sprintf(prefix2, "%s    ", prefix);
@@ -607,7 +621,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 
         if(cls->static_constructor)
             dump_method(fo, prefix2,"staticconstructor", "", cls->static_constructor, file);
-        traits_dump(fo, prefix2, cls->static_constructor_traits, file);
+        traits_dump(fo, prefix2, cls->static_traits, file);
 	
         char*n = multiname_tostring(cls->classname);
         if(cls->constructor)
@@ -615,6 +629,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
         free(n);
 	traits_dump(fo, prefix2,cls->traits, file);
         fprintf(fo, "%s}\n", prefix);
+
     }
     fprintf(fo, "%s\n", prefix);
 
@@ -827,7 +842,7 @@ void* swf_ReadABC(TAG*tag)
         abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
         /* SKIP */
 	swf_GetU30(tag); // cindex
-	cls->static_constructor_traits = traits_parse(tag, pool, file);
+	cls->static_traits = traits_parse(tag, pool, file);
     }
     int num_scripts2 = swf_GetU30(tag);
     for(t=0;t<num_scripts2;t++) {
@@ -1033,7 +1048,7 @@ void swf_WriteABC(TAG*abctag, void*code)
 	} else {
 	    swf_SetU30(tag, c->static_constructor->index);
         }
-        traits_write(pool, tag, c->static_constructor_traits);
+        traits_write(pool, tag, c->static_traits);
     }
 
     swf_SetU30(tag, file->scripts->num);
@@ -1110,15 +1125,17 @@ void swf_WriteABC(TAG*abctag, void*code)
 void abc_file_free(abc_file_t*file)
 {
     int t;
-    for(t=0;t<file->metadata->num;t++) {
-        array_t*items = (array_t*)array_getvalue(file->metadata, t);
-        int s;
-        for(s=0;s<items->num;s++) {
-            free(array_getvalue(items, s));
+    if(file->metadata) {
+        for(t=0;t<file->metadata->num;t++) {
+            array_t*items = (array_t*)array_getvalue(file->metadata, t);
+            int s;
+            for(s=0;s<items->num;s++) {
+                free(array_getvalue(items, s));
+            }
+            array_free(items);
         }
-        array_free(items);
+        array_free(file->metadata);file->metadata=0;
     }
-    array_free(file->metadata);
 
     for(t=0;t<file->methods->num;t++) {
         abc_method_t*m = (abc_method_t*)array_getvalue(file->methods, t);
@@ -1145,12 +1162,12 @@ void abc_file_free(abc_file_t*file)
         }
         free(m);
     }
-    array_free(file->methods);
+    array_free(file->methods);file->methods=0;
 
     for(t=0;t<file->classes->num;t++) {
         abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
         traits_free(cls->traits);cls->traits=0;
-	traits_free(cls->static_constructor_traits);cls->static_constructor_traits=0;
+	traits_free(cls->static_traits);cls->static_traits=0;
 
         if(cls->classname) {
             multiname_destroy(cls->classname);
@@ -1171,14 +1188,14 @@ void abc_file_free(abc_file_t*file)
         }
         free(cls);
     }
-    array_free(file->classes);
+    array_free(file->classes);file->classes=0;
 
     for(t=0;t<file->scripts->num;t++) {
         abc_script_t*s = (abc_script_t*)array_getvalue(file->scripts, t);
         traits_free(s->traits);s->traits=0;
         free(s);
     }
-    array_free(file->scripts);
+    array_free(file->scripts);file->scripts=0;
 
     for(t=0;t<file->method_bodies->num;t++) {
         abc_method_body_t*body = (abc_method_body_t*)array_getvalue(file->method_bodies, t);
@@ -1198,7 +1215,7 @@ void abc_file_free(abc_file_t*file)
         
         free(body);
     }
-    array_free(file->method_bodies);
+    array_free(file->method_bodies);file->method_bodies=0;
 
     if(file->name) {
         free((void*)file->name);file->name=0;
