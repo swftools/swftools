@@ -68,6 +68,29 @@ class_signature_t* registry_findclass(const char*package, const char*name);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c);
 multiname_t* class_signature_to_multiname(class_signature_t*cls);
+
+/* convenience functions */
 #define sig2mname(x) class_signature_to_multiname(x)
+#define TYPE_ANY                  registry_getanytype()
+#define TYPE_IS_ANY(t)    ((t) == registry_getanytype())
+#define TYPE_INT                  registry_getintclass()
+#define TYPE_IS_INT(t)    ((t) == registry_getintclass())
+#define TYPE_UINT                 registry_getuintclass()
+#define TYPE_IS_UINT(t)   ((t) == registry_getuintclass())
+#define TYPE_FLOAT                registry_getnumberclass()
+#define TYPE_IS_FLOAT(t)  ((t) == registry_getnumberclass())
+#define TYPE_BOOLEAN              registry_getbooleanclass()
+#define TYPE_IS_BOOLEAN(t)((t) == registry_getbooleanclass())
+#define TYPE_STRING               registry_getstringclass()
+#define TYPE_IS_STRING(t) ((t) == registry_getstringclass())
+#define TYPE_NULL                 registry_getnullclass()
+#define TYPE_IS_NULL(t)   ((t) == registry_getnullclass())
+        
+#define TYPE_IS_BUILTIN_SIMPLE(type) (TYPE_IS_INT(type) || \
+                                      TYPE_IS_UINT(type) || \
+                                      TYPE_IS_FLOAT(type) || \
+                                      TYPE_IS_BOOLEAN(type) || \
+                                      TYPE_IS_STRING(type))
+
 
 #endif
