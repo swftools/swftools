@@ -55,7 +55,7 @@ def check(s):
         return 0 not in row
     return 0
 
-def runcmd(cmd,args,output,wait):
+def runcmd(cmd,args,wait):
     #fo = open(tempfile, "wb")
     fo= os.tmpfile()
     p = subprocess.Popen([cmd] + args, executable=cmd, stdout=fo, stderr=fo)
@@ -89,7 +89,7 @@ class Test:
     def compile(self):
         try: os.unlink("abc.swf");
         except: pass
-        ret,output = runcmd("./parser",[self.file],"/tmp/abctest.txt",wait=60)
+        ret,output = runcmd("./parser",[self.file],wait=60)
         self.compile_error = 0
         self.compile_output = output
         if ret:
@@ -98,7 +98,7 @@ class Test:
             self.compile_error = 1
 
     def run(self):
-        ret,output = runcmd("flashplayer",["abc.swf"],"/tmp/abctest.txt",wait=1)
+        ret,output = runcmd("flashplayer",["abc.swf"],wait=1)
         os.system("killall flashplayer")
         self.flash_output = output
         
