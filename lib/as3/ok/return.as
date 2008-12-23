@@ -4,10 +4,10 @@ package {
         function Test() {
         }
         function getok1() {
-            return "ok1/2";
+            return "ok 1/2";
         }
         function getok2():String {
-            return "ok2/2";
+            return "ok 2/2";
         }
     };
 
