@@ -1171,11 +1171,6 @@ E : E "&&" E {$$.t = join_types($1.t, $3.t, 'A');
               jmp->branch = label;              
              }
 
-//E : E '.' T_IDENTIFIER '(' ')'
-//            {$$.c = 0; // FIXME
-//             $$.t = 0;
-//            }
-
 E : E '.' T_IDENTIFIER
             {$$.c = $1.c;
              if($$.t) {
