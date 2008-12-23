@@ -44,7 +44,9 @@ def check(s):
                 return 0
             if not row:
                 row = [0]*len
-            row[nr-1] = len
+            if row[nr-1]:
+                return 0
+            row[nr-1] = 1
         elif line == "ok":
             ok = 1
     if ok:
@@ -70,7 +72,6 @@ def runcmd(cmd,args,output,wait):
     fo.seek(0)
     output = fo.read()
     fo.close()
-
     return ret,output
 
 class Test:
@@ -86,10 +87,14 @@ class Test:
             self.run()
 
     def compile(self):
+        try: os.unlink("abc.swf");
+        except: pass
         ret,output = runcmd("./parser",[self.file],"/tmp/abctest.txt",wait=60)
         self.compile_error = 0
         self.compile_output = output
-        if ret&0xff00:
+        if ret:
+            self.compile_error = 1
+        if not os.path.isfile("abc.swf"):
             self.compile_error = 1
 
     def run(self):
