@@ -86,6 +86,8 @@ void       code_free(code_t*c);
 code_t* code_atposition(codelookup_t*l, int pos);
 void codelookup_free(codelookup_t*codelookup);
 
+code_t*code_cutlast(code_t*c);
+
 codestats_t* code_get_statistics(code_t*code, abc_exception_list_t*exceptions);
 
 void codestats_print(codestats_t*s);

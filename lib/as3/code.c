@@ -1045,3 +1045,13 @@ code_t* code_append(code_t*code, code_t*toappend)
     return code_end(toappend);
 }
 
+code_t*code_cutlast(code_t*c)
+{
+    assert(!c->next);
+    code_t*prev = c->prev;
+    c->prev = 0;
+    prev->next=0;
+    code_free(c);
+    return prev;
+}
+
