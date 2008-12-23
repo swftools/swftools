@@ -1045,8 +1045,19 @@ code_t* code_append(code_t*code, code_t*toappend)
     return code_end(toappend);
 }
 
+lookupswitch_t*lookupswitch_dup(lookupswitch_t*l)
+{
+    lookupswitch_t*n = malloc(sizeof(lookupswitch_t));
+    fprintf(stderr, "lookupswitch dupping not supported yet\n");
+    n->targets = list_clone(l->targets);
+    return 0;
+}
+
 code_t*code_dup(code_t*c)
 {
+    /* misses branch relocation */
+    fprintf(stderr, "dupping not supported yet\n");
+    return 0;
     if(!c) return 0;
 
     while(c->prev) c = c->prev;
@@ -1055,6 +1066,25 @@ code_t*code_dup(code_t*c)
     while(c) {
         NEW(code_t, n);
         memcpy(n, c, sizeof(code_t));
+
+        opcode_t*op = opcode_get(c->opcode);
+        char*p = op?op->params:"";
+        int pos=0;
+        while(*p) {
+            if(*p == '2') { //multiname
+                c->data[pos] = multiname_clone(c->data[pos]);
+            } else if(*p == 's' || *p == 'D') {
+                c->data[pos] = strdup(c->data[pos]);
+            } else if(*p == 'f') {
+                double old = *(double*)c->data[pos];
+                c->data[pos] = malloc(sizeof(double));
+                *(double*)c->data[pos] = old;
+            } else if(strchr("S", *p)) {
+                c->data[pos] = lookupswitch_dup(c->data[pos]);
+            }
+            p++;pos++;
+        }
+
         n->prev = last;
         if(last) {
             last->next = n;
