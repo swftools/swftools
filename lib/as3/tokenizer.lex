@@ -78,19 +78,6 @@ void syntaxerror(const char*format, ...)
     fflush(stderr);
     exit(1);
 }
-void warning(const char*format, ...)
-{
-    char buf[1024];
-    int l;
-    va_list arglist;
-    if(!verbose)
-	return;
-    va_start(arglist, format);
-    vsprintf(buf, format, arglist);
-    va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
-    fflush(stderr);
-}
 
 
 #ifndef YY_CURRENT_BUFFER
@@ -266,67 +253,58 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
-[&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
-[|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}
-[!][=]                       {c();BEGIN(REGEXPOK);return m(T_NE);}
-[=][=][=]                    {c();BEGIN(REGEXPOK);return m(T_EQEQEQ);}
-[=][=]                       {c();BEGIN(REGEXPOK);return m(T_EQEQ);}
-[>][=]                       {c();return m(T_GE);}
-[<][=]                       {c();return m(T_LE);}
-[-][-]                       {c();BEGIN(INITIAL);return m(T_MINUSMINUS);}
-[+][+]                       {c();BEGIN(INITIAL);return m(T_PLUSPLUS);}
-[+][=]                       {c();return m(T_PLUSBY);}
-[-][=]                       {c();return m(T_MINUSBY);}
-[/][=]                       {c();return m(T_DIVBY);}
-[%][=]                       {c();return m(T_MODBY);}
-[>][>][=]                    {c();return m(T_SHRBY);}
-[<][<][=]                    {c();return m(T_SHLBY);}
-[>][>][>][=]                 {c();return m(T_USHRBY);}
-[<][<]                       {c();return m(T_SHL);}
-[>][>][>]                    {c();return m(T_USHR);}
-[>][>]                       {c();return m(T_SHR);}
-\.\.                         {c();return m(T_DOTDOT);}
-\.                           {c();return m('.');}
-::                           {c();return m(T_COLONCOLON);}
-:                            {c();return m(':');}
-implements                   {c();return m(KW_IMPLEMENTS);}
-interface                    {c();return m(KW_INTERFACE);}
-namespace                    {c();return m(KW_NAMESPACE);}
-protected                    {c();return m(KW_PROTECTED);}
-override                     {c();return m(KW_OVERRIDE);}
-internal                     {c();return m(KW_INTERNAL);}
-function                     {c();return m(KW_FUNCTION);}
-package                      {c();return m(KW_PACKAGE);}
-private                      {c();return m(KW_PRIVATE);}
-Boolean                      {c();return m(KW_BOOLEAN);}
-dynamic                      {c();return m(KW_DYNAMIC);}
-extends                      {c();return m(KW_EXTENDS);}
-return                       {c();return m(KW_RETURN);}
-public                       {c();return m(KW_PUBLIC);}
-native                       {c();return m(KW_NATIVE);}
-static                       {c();return m(KW_STATIC);}
-import                       {c();return m(KW_IMPORT);}
-Number                       {c();return m(KW_NUMBER);}
-while                        {c();return m(KW_WHILE);}
-class                        {c();return m(KW_CLASS);}
-const                        {c();return m(KW_CONST);}
-final                        {c();return m(KW_FINAL);}
-false                        {c();return m(KW_FALSE);}
-break                        {c();return m(KW_BREAK);}
-true                         {c();return m(KW_TRUE);}
-uint                         {c();return m(KW_UINT);}
-null                         {c();return m(KW_NULL);}
-else                         {c();return m(KW_ELSE);}
-use                          {c();return m(KW_USE);}
-int                          {c();return m(KW_INT);}
-new                          {c();return m(KW_NEW);}
-get                          {c();return m(KW_GET);}
-for                          {c();return m(KW_FOR);}
-set                          {c();return m(KW_SET);}
-var                          {c();return m(KW_VAR);}
-is                           {c();return m(KW_IS) ;}
-if                           {c();return m(KW_IF) ;}
-as                           {c();return m(KW_AS);}
+[&][&]                       {BEGIN(REGEXPOK);return m(T_ANDAND);}
+[|][|]                       {BEGIN(REGEXPOK);return m(T_OROR);}
+[!][=]                       {BEGIN(REGEXPOK);return m(T_NE);}
+[=][=][=]                    {BEGIN(REGEXPOK);return m(T_EQEQEQ);}
+[=][=]                       {BEGIN(REGEXPOK);return m(T_EQEQ);}
+[>][=]                       {return m(T_GE);}
+[<][=]                       {return m(T_LE);}
+[+][=]                       {return m(T_PLUSBY);}
+[-][=]                       {return m(T_MINUSBY);}
+[-][-]                       {BEGIN(INITIAL);return m(T_MINUSMINUS);}
+[+][+]                       {BEGIN(INITIAL);return m(T_PLUSPLUS);}
+\.\.                         {return m(T_DOTDOT);}
+\.                           {return m('.');}
+::                           {return m(T_COLONCOLON);}
+:                            {return m(':');}
+implements                   {return m(KW_IMPLEMENTS);}
+interface                    {return m(KW_INTERFACE);}
+namespace                    {return m(KW_NAMESPACE);}
+protected                    {return m(KW_PROTECTED);}
+override                     {return m(KW_OVERRIDE);}
+internal                     {return m(KW_INTERNAL);}
+function                     {return m(KW_FUNCTION);}
+package                      {return m(KW_PACKAGE);}
+private                      {return m(KW_PRIVATE);}
+Boolean                      {return m(KW_BOOLEAN);}
+dynamic                      {return m(KW_DYNAMIC);}
+extends                      {return m(KW_EXTENDS);}
+public                       {return m(KW_PUBLIC);}
+native                       {return m(KW_NATIVE);}
+static                       {return m(KW_STATIC);}
+import                       {return m(KW_IMPORT);}
+Number                       {return m(KW_NUMBER);}
+while                        {return m(KW_WHILE);}
+class                        {return m(KW_CLASS);}
+const                        {return m(KW_CONST);}
+final                        {return m(KW_FINAL);}
+false                        {return m(KW_FALSE);}
+break                        {return m(KW_BREAK);}
+true                         {return m(KW_TRUE);}
+uint                         {return m(KW_UINT);}
+null                         {return m(KW_NULL);}
+else                         {return m(KW_ELSE);}
+use                          {return m(KW_USE);}
+int                          {return m(KW_INT);}
+new                          {return m(KW_NEW);}
+get                          {return m(KW_GET);}
+for                          {return m(KW_FOR);}
+set                          {return m(KW_SET);}
+var                          {return m(KW_VAR);}
+is                           {return m(KW_IS) ;}
+if                           {return m(KW_IF) ;}
+as                           {return m(KW_AS);}
 {NAME}                       {c();BEGIN(INITIAL);return m(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,.<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
