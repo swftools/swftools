@@ -611,6 +611,7 @@ void multiname_destroy(multiname_t*m)
         if(m->namespace_set) {
             namespace_set_destroy(m->namespace_set);m->namespace_set = 0;
         }
+        m->type=0;
         free(m);
     }
 }
