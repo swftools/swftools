@@ -82,7 +82,7 @@ type_t function_signature_type = {
 
 class_signature_t* class_signature_register(int access, char*package, char*name)
 {
-    class_signature_t*c = malloc(sizeof(class_signature_t));
+    NEW(class_signature_t,c);
     c->access = access;
     c->package = package;
     c->name = name;
@@ -109,6 +109,8 @@ class_signature_t* registry_findclass(const char*package, const char*name)
     tmp.package = package;
     tmp.name = name;
     class_signature_t* c = (class_signature_t*)dict_lookup(classes, &tmp);
+    /*if(c)
+        printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
 }
 void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c)
