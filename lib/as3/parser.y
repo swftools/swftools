@@ -666,6 +666,8 @@ void breakjumpsto(code_t*c, code_t*jump)
 }
 code_t*converttype(code_t*c, class_signature_t*from, class_signature_t*to)
 {
+    if(from==to)
+        return c;
     if(!to) {
         /*TODO: can omit this if from is zero? */
         return abc_coerce_a(c);
@@ -1010,23 +1012,27 @@ E : E "!=" E {$$.c = code_append($1.c,$3.c);$$.c = abc_equals($$.c);$$.c = abc_n
               $$.t = TYPE_BOOLEAN;
              }
 
-E : E "||" E {$$.c = $1.c;
-              $$.c=abc_dup($$.c);
+E : E "||" E {$$.t = join_types($1.t, $3.t, 'O');
+              $$.c = $1.c;
+              $$.c = converttype($$.c, $1.t, $$.t);
+              $$.c = abc_dup($$.c);
               code_t*jmp = $$.c = abc_iftrue($$.c, 0);
-              $$.c=abc_pop($$.c);
+              $$.c = abc_pop($$.c);
               $$.c = code_append($$.c,$3.c);
+              $$.c = converttype($$.c, $1.t, $$.t);
               code_t*label = $$.c = abc_label($$.c);
               jmp->branch = label;
-              $$.t = join_types($1.t, $3.t, 'O');
              }
-E : E "&&" E {$$.c = $1.c;
-              $$.c=abc_dup($$.c);
+E : E "&&" E {$$.t = join_types($1.t, $3.t, 'A');
+              $$.c = $1.c;
+              $$.c = converttype($$.c, $1.t, $$.t);
+              $$.c = abc_dup($$.c);
               code_t*jmp = $$.c = abc_iffalse($$.c, 0);
-              $$.c=abc_pop($$.c);
+              $$.c = abc_pop($$.c);
               $$.c = code_append($$.c,$3.c);
+              $$.c = converttype($$.c, $1.t, $$.t);
               code_t*label = $$.c = abc_label($$.c);
-              jmp->branch = label;
-              $$.t = join_types($1.t, $3.t, 'A');
+              jmp->branch = label;              
              }
 
 E : '!' E    {$$.c=$2.c;
