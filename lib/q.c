@@ -619,6 +619,25 @@ void dict_init(dict_t*h, int size)
     h->key_type = &charptr_type;
 }
 
+dict_t*dict_clone(dict_t*o)
+{
+    dict_t*h = rfx_alloc(sizeof(dict_t));
+    memcpy(h, o, sizeof(dict_t));
+    h->slots = h->hashsize?(dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*h->hashsize):0;
+    int t;
+    for(t=0;t<h->hashsize;t++) {
+        dictentry_t*e = h->slots[t];
+        while(e) {
+            dictentry_t*n = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
+            memcpy(n, e, sizeof(dictentry_t));
+            n->data = h->key_type->dup(e->data);
+            n->next = h->slots[t];
+            h->slots[t] = n;
+        }
+    }
+    return h;
+}
+
 static void dict_expand(dict_t*h, int newlen)
 {
     assert(h->hashsize < newlen);
@@ -746,7 +765,7 @@ char dict_del(dict_t*h, const void*key)
     return 0;
 }
 
-static dictentry_t* dict_get_slot(dict_t*h, const void*key)
+dictentry_t* dict_get_slot(dict_t*h, const void*key)
 {
     if(!h->num)
         return 0;
@@ -799,6 +818,7 @@ void dict_free_all(dict_t*h, void (*freeFunction)(void*))
             rfx_free(e);
             e = next;
         }
+        h->slots[t]=0;
     }
     rfx_free(h->slots);
     memset(h, 0, sizeof(dict_t));
