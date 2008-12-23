@@ -77,6 +77,8 @@ struct _codelookup {
     int len;
 };
 
+code_t*code_dup(code_t*c); //shallow copy
+
 code_t*add_opcode(code_t*atag, U8 op);
 
 code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**codelookup);

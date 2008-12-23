@@ -1045,6 +1045,26 @@ code_t* code_append(code_t*code, code_t*toappend)
     return code_end(toappend);
 }
 
+code_t*code_dup(code_t*c)
+{
+    if(!c) return 0;
+
+    while(c->prev) c = c->prev;
+
+    code_t*last = 0;
+    while(c) {
+        NEW(code_t, n);
+        memcpy(n, c, sizeof(code_t));
+        n->prev = last;
+        if(last) {
+            last->next = n;
+        }
+        last = n;
+        c = c->next;
+    }
+    return last;
+}
+
 code_t*code_cutlast(code_t*c)
 {
     assert(!c->next);
