@@ -24,7 +24,6 @@
 #include <memory.h>
 #include "../rfxswf.h"
 #include "../os.h"
-#include "pool.h"
 #include "files.h"
 #include "tokenizer.h"
 #include "parser.tab.h"
@@ -84,10 +83,6 @@ static int compare_classes(const void*v1, const void*v2)
     return strcmp(c1->classname->name, c2->classname->name);
 }
 
-char* kind2string(int kind)
-{
-}
-
 void load_libraries(char*filename, int pass, FILE*fi)
 {
     SWF swf;
@@ -126,11 +121,11 @@ void load_libraries(char*filename, int pass, FILE*fi)
         }
         char*id = mkid(package, name);
         U8 flags = cls->flags;
-        
-        if(pass==0)  {
-            fprintf(fi, "static classinfo_t %s;\n", id);
-        } else if(pass==1) {
-            fprintf(fi, "static classinfo_t %s = {0x%02x, 0x%02x, \"%s\", \"%s\"", id, access, flags, package, name);
+      
+        if(pass==0) 
+            fprintf(fi, "static class_signature_t %s;\n", id);
+        else if(pass==1) {
+            fprintf(fi, "static class_signature_t %s = {0x%02x, 0x%02x, \"%s\", \"%s\"", id, access, flags, package, name);
             if(superid)
                 fprintf(fi, ", &%s, interfaces:{", superid);
             else
@@ -148,71 +143,57 @@ void load_libraries(char*filename, int pass, FILE*fi)
             trait_list_t*l=cls->traits;
             fprintf(fi, "    dict_put(d, &%s, &%s);\n", id, id);
             fprintf(fi, "    dict_init(&%s.members, %d);\n", id, list_length(l)+1);
+            int j;
+            dict_t*d = dict_new();
+            for(;l;l=l->next) {
+                trait_t*trait = l->trait;
+                if(trait->name->ns->access==ACCESS_PRIVATE)
+                    continue;
+                char*type="something";
+                const char*name = trait->name->name;
+                if(dict_lookup(d, name)) {
+                    continue;
+                } else {
+                    dict_put(d, (char*)name, (char*)name);
+                }
+                switch(trait->kind) {
+                    case TRAIT_METHOD: type="method";break;
+                    case TRAIT_CONST: type="const";break;
+                    case TRAIT_FUNCTION: type="function";break;
+                    case TRAIT_GETTER: type="member";break;
+                    case TRAIT_SETTER: type="member";break;
+                    case TRAIT_SLOT: type="member";break;
+                    case TRAIT_CLASS: type="subclass";break;
+                }
+                fprintf(fi, "    dict_put(&%s.members, \"%s\", \"%s\");\n", 
+                        id, name, type);
+            }
+            l=cls->static_traits;
+            for(;l;l=l->next) {
+                trait_t*trait = l->trait;
+                if(trait->name->ns->access==ACCESS_PRIVATE)
+                    continue;
+                char*type="static entity";
+                const char*name = trait->name->name;
+                if(dict_lookup(d, name)) {
+                    continue;
+                } else {
+                    dict_put(d, (char*)name, (char*)name);
+                }
+                switch(trait->kind) {
+                    case TRAIT_METHOD: type="static method";break;
+                    case TRAIT_CONST: type="constant";break;
+                    case TRAIT_FUNCTION: type="static function";break;
+                    case TRAIT_GETTER: type="static variable";break;
+                    case TRAIT_SETTER: type="static variable";break;
+                    case TRAIT_SLOT: type="static variable";break;
+                    case TRAIT_CLASS: type="static subclass";break;
+                }
+                fprintf(fi, "    dict_put(&%s.members, \"%s\", \"%s\");\n", 
+                        id, name, type);
+            }
+            dict_destroy(d);
         }
-
-      
-        trait_list_t*l=0;
-        char is_static = 0;
-        dict_t*d = dict_new();
-        l = cls->traits;
-        while(l) {
-            trait_t*trait = l->trait;
-            if(trait->name->ns->access==ACCESS_PRIVATE)
-                goto cont;
-            const char*name = trait->name->name;
-            char id2[1024];
-            sprintf(id2, "%s_%s", id, name);
-            char*retvalue = 0;
-
-            if(dict_lookup(d, name)) {
-                goto cont;
-            } else {
-                dict_put(d, (char*)name, (char*)name);
-            }
-            char*type="0";
-            switch(trait->kind) {
-                case TRAIT_METHOD: {
-                    multiname_t*ret = trait->method->return_type;
-                    if(!ret)
-                        retvalue = 0;
-                    else
-                        retvalue = mkid(ret->ns->name, ret->name);
-                    if(ret && !strcmp(ret->name, "void"))
-                        retvalue = 0;
-                } //fallthrough
-                case TRAIT_FUNCTION:
-                    type = "MEMBER_METHOD";
-                    break;
-                case TRAIT_CONST:
-                case TRAIT_GETTER:
-                case TRAIT_SETTER:
-                case TRAIT_SLOT:
-                    type = "MEMBER_SLOT";
-                    break;
-                default:
-                    fprintf(stderr, "Unknown trait type %d\n", trait->kind);
-            }
-            if(pass==0) {
-                fprintf(fi, "static memberinfo_t %s;\n", id2);
-            } if(pass==1) {
-                fprintf(fi, "static memberinfo_t %s = {%s, \"%s\"", id2, type, name);
-                if(!retvalue)
-                    fprintf(fi, ", 0");
-                else
-                    fprintf(fi, ", &%s", retvalue);
-                fprintf(fi, "};\n");
-            } else if(pass==2) {
-                fprintf(fi, "    dict_put(&%s.members, \"%s\", &%s);\n", id, name, id2);
-            }
-cont:
-            l = l->next;
-            if(!l && !is_static) {
-                l = cls->static_traits;
-                is_static = 1;
-            }
-        }
-        
-        dict_destroy(d);
 
         if(id) free(id);
         if(superid) free(superid);
@@ -235,7 +216,7 @@ int main()
    
     fprintf(fi, "dict_t* builtin_getclasses()\n");
     fprintf(fi, "{\n");
-    fprintf(fi, "    dict_t*d = dict_new2(&classinfo_type);\n");
+    fprintf(fi, "    dict_t*d = dict_new2(&class_signature_type);\n");
     load_libraries("builtin.abc", 2, fi);
     load_libraries("playerglobal.abc", 2, fi);
     fprintf(fi, "    return d;\n");
