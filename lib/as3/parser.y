@@ -84,6 +84,7 @@
 %token<token> KW_SET "set"
 %token<token> KW_STATIC
 %token<token> KW_IMPORT "import"
+%token<token> KW_RETURN "return"
 %token<token> KW_INTERFACE "interface"
 %token<token> KW_NULL
 %token<token> KW_VAR "var"
@@ -146,7 +147,7 @@
 %type <value> E
 %type <writeable> LH
 %type <value> CONSTANT
-%type <code> FOR IF WHILE MAYBEELSE BREAK
+%type <code> FOR IF WHILE MAYBEELSE BREAK RETURN
 %type <token> USE_NAMESPACE
 %type <code> ASSIGNMENT FOR_INIT
 %type <token> IMPORT
@@ -174,7 +175,7 @@
 %type <value> FUNCTIONCALL
 %type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST MAYBE_PARAM_VALUES
 
-// precendence: from low to high
+// precedence: from low to high
 // http://livedocs.adobe.com/flash/9.0/main/wwhelp/wwhimpl/common/html/wwhelp.htm?context=LiveDocs_Parts&file=00000012.html
 
 %left prec_none
@@ -211,6 +212,7 @@
 %left ';'
 %nonassoc "else"
 %left '('
+%left prec_highest
 
      
 %{
@@ -643,10 +645,6 @@ code_t* killvars(code_t*c)
     return c;
 }
 
-class_signature_t*join_types(class_signature_t*type1, class_signature_t*type2, char op)
-{
-    return registry_getanytype(); // FIXME
-}
 char is_subtype_of(class_signature_t*type, class_signature_t*supertype)
 {
     return 1; // FIXME
@@ -663,6 +661,11 @@ void breakjumpsto(code_t*c, code_t*jump)
         }
         c = c->next;
     }
+}
+
+class_signature_t*join_types(class_signature_t*type1, class_signature_t*type2, char op)
+{
+    return registry_getanytype(); // FIXME
 }
 code_t*converttype(code_t*c, class_signature_t*from, class_signature_t*to)
 {
@@ -720,6 +723,7 @@ CODEPIECE: VOIDEXPRESSION        {$$=$1}
 CODEPIECE: FOR                   {$$=$1}
 CODEPIECE: WHILE                 {$$=$1}
 CODEPIECE: BREAK                 {$$=$1}
+CODEPIECE: RETURN                {$$=$1}
 CODEPIECE: IF                    {$$=$1}
 CODEPIECE: ASSIGNMENT            {$$=$1}
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=code_new();}
@@ -925,6 +929,103 @@ INTERFACE_DECLARATION : MODIFIERS "interface" T_IDENTIFIER
                               MAYBE_IDECLARATION_LIST 
                               '}' {endclass();}
 
+/* ------------- package + class ids --------------- */
+
+PACKAGEANDCLASS : T_IDENTIFIER {
+
+    /* try current package */
+    $$ = registry_findclass(state->package, $1->text);
+
+    /* try explicit imports */
+    dictentry_t* e = dict_get_slot(state->imports, $1->text);
+    while(e) {
+        if($$)
+            break;
+        if(!strcmp(e->key, $1->text)) {
+            $$ = (class_signature_t*)e->data;
+        }
+        e = e->next;
+    }
+
+    /* try package.* imports */
+    import_list_t*l = state->wildcard_imports;
+    while(l) {
+        if($$)
+            break;
+        //printf("does package %s contain a class %s?\n", l->import->package, $1->text);
+        $$ = registry_findclass(l->import->package, $1->text);
+        l = l->next;
+    }
+
+    /* try global package */
+    if(!$$) {
+        $$ = registry_findclass("", $1->text);
+    }
+
+    if(!$$) syntaxerror("Could not find class %s\n", $1->text);
+}
+PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
+    $$ = registry_findclass($1->text, $3->text);
+    if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1->text, $3->text);
+}
+
+
+/* ----------function calls, constructor calls ------ */
+
+MAYBE_PARAM_VALUES :  %prec prec_none {$$=0;}
+MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2}
+
+MAYBE_EXPRESSION_LIST : {$$=0;}
+MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
+EXPRESSION_LIST : EXPRESSION                     {$$=list_new();
+                                                  typedcode_t*t = malloc(sizeof(typedcode_t));
+                                                  *t = $1;
+                                                  list_append($$, t);}
+EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION {$$=$1;
+                                                  typedcode_t*t = malloc(sizeof(typedcode_t));
+                                                  *t = $3;
+                                                  list_append($$, t);}
+
+NEW : "new" PACKAGEANDCLASS MAYBE_PARAM_VALUES {
+    MULTINAME(m, $2);
+    $$.c = code_new();
+    $$.c = abc_findpropstrict2($$.c, &m);
+    typedcode_list_t*l = $3;
+    int len = 0;
+    while(l) {
+        $$.c = code_append($$.c, l->typedcode->c); // push parameters on stack
+        l = l->next;
+        len ++;
+    }
+    $$.c = abc_constructprop2($$.c, &m, len);
+    $$.t = $2;
+}
+
+FUNCTIONCALL : T_IDENTIFIER '(' MAYBE_EXPRESSION_LIST ')' {
+    /* TODO: use abc_call (for calling local variables),
+             abc_callstatic (for calling own methods) */
+    $$.c = code_new();
+    $$.c = abc_findpropstrict($$.c, $1->text);
+    typedcode_list_t*l = $3;
+    int len = 0;
+    while(l) {
+        $$.c = code_append($$.c, l->typedcode->c); // push parameters on stack
+        l = l->next;
+        len ++;
+    }
+    $$.c = abc_callproperty($$.c, $1->text, len);
+    /* TODO: look up the functions's return value */
+    $$.t = TYPE_ANY;
+}
+
+RETURN: "return" %prec prec_none {
+    $$ = abc_returnvoid(0);
+}
+RETURN: "return" EXPRESSION {
+    $$ = $2.c;
+    $$ = abc_returnvalue($$);
+}
+
 TYPE : PACKAGEANDCLASS {$$=$1;}
      | '*'        {$$=registry_getanytype();}
      |  "String"  {$$=registry_getstringclass();}
@@ -980,7 +1081,7 @@ CONSTANT : KW_NULL {$$.c = abc_pushnull(0);
 USE_NAMESPACE : "use" "namespace" T_IDENTIFIER
 
 
-EXPRESSION : E %prec prec_none  /*precendence below '-x'*/ {$$ = $1;}
+EXPRESSION : E %prec prec_none  /*precedence below '-x'*/ {$$ = $1;}
 VOIDEXPRESSION : E %prec prec_none {$$=$1.c;/*calculate and discard*/$$=abc_pop($$);}
 
 E : CONSTANT
@@ -1071,17 +1172,27 @@ E : LH "-=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
               }
 
 // TODO: use inclocal where appropriate
-E : LH "++" {$$.c = $1.read;$$.c=abc_increment($$.c);
+E : LH "++" {$$.c = $1.read;
              class_signature_t*type = $1.type;
-             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) type = TYPE_NUMBER;
+             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
+                 $$.c=abc_increment_i($$.c);
+             } else {
+                 $$.c=abc_increment($$.c);
+                 type = TYPE_NUMBER;
+             }
              $$.c=converttype($$.c, type, $1.type);
              $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
              $$.t = $1.type;
             }
-E : LH "--" {$$.c = $1.read;$$.c=abc_decrement($$.c);
+E : LH "--" {$$.c = $1.read;
              class_signature_t*type = $1.type;
-             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) type = TYPE_NUMBER;
-             $$.c=converttype($$.c, 0, $1.type);
+             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
+                 $$.c=abc_decrement_i($$.c);
+             } else {
+                 $$.c=abc_decrement($$.c);
+                 type = TYPE_NUMBER;
+             }
+             $$.c=converttype($$.c, type, $1.type);
              $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
              $$.t = $1.type;
             }
@@ -1092,51 +1203,6 @@ LH: T_IDENTIFIER {
   $$.write = abc_setlocal(0, i);
 }
 
-MAYBE_PARAM_VALUES :  %prec prec_none {$$=0;}
-MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2}
-
-NEW : "new" PACKAGEANDCLASS MAYBE_PARAM_VALUES {
-    MULTINAME(m, $2);
-    $$.c = code_new();
-    $$.c = abc_findpropstrict2($$.c, &m);
-    typedcode_list_t*l = $3;
-    int len = 0;
-    while(l) {
-        $$.c = code_append($$.c, l->typedcode->c); // push parameters on stack
-        l = l->next;
-        len ++;
-    }
-    $$.c = abc_constructprop2($$.c, &m, len);
-    $$.t = $2;
-}
-
-FUNCTIONCALL : T_IDENTIFIER '(' MAYBE_EXPRESSION_LIST ')' {
-    /* TODO: use abc_call (for calling local variables),
-             abc_callstatic (for calling own methods) */
-    $$.c = code_new();
-    $$.c = abc_findpropstrict($$.c, $1->text);
-    typedcode_list_t*l = $3;
-    int len = 0;
-    while(l) {
-        $$.c = code_append($$.c, l->typedcode->c); // push parameters on stack
-        l = l->next;
-        len ++;
-    }
-    $$.c = abc_callproperty($$.c, $1->text, len);
-    /* TODO: look up the functions's return value */
-    $$.t = TYPE_ANY;
-}
-
-MAYBE_EXPRESSION_LIST : {$$=0;}
-MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
-EXPRESSION_LIST : EXPRESSION                     {$$=list_new();
-                                                  typedcode_t*t = malloc(sizeof(typedcode_t));
-                                                  *t = $1;
-                                                  list_append($$, t);}
-EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION {$$=$1;
-                                                  typedcode_t*t = malloc(sizeof(typedcode_t));
-                                                  *t = $3;
-                                                  list_append($$, t);}
 
 VAR_READ : T_IDENTIFIER {
     int i = find_variable($1->text, &$$.t);
@@ -1174,45 +1240,6 @@ IDECLARATION : FUNCTION_DECLARATION
 
 //IDENTIFIER_LIST : T_IDENTIFIER ',' IDENTIFIER_LIST {extend($3,$1);$$=$3;}
 //IDENTIFIER_LIST : T_IDENTIFIER                     {$$=empty_token();extend($$,$1);}
-
-PACKAGEANDCLASS : T_IDENTIFIER {
-
-    /* try current package */
-    $$ = registry_findclass(state->package, $1->text);
-
-    /* try explicit imports */
-    dictentry_t* e = dict_get_slot(state->imports, $1->text);
-    while(e) {
-        if($$)
-            break;
-        if(!strcmp(e->key, $1->text)) {
-            $$ = (class_signature_t*)e->data;
-        }
-        e = e->next;
-    }
-
-    /* try package.* imports */
-    import_list_t*l = state->wildcard_imports;
-    while(l) {
-        if($$)
-            break;
-        //printf("does package %s contain a class %s?\n", l->import->package, $1->text);
-        $$ = registry_findclass(l->import->package, $1->text);
-        l = l->next;
-    }
-
-    /* try global package */
-    if(!$$) {
-        $$ = registry_findclass("", $1->text);
-    }
-
-    if(!$$) syntaxerror("Could not find class %s\n", $1->text);
-}
-PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
-    $$ = registry_findclass($1->text, $3->text);
-    if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1->text, $3->text);
-}
-
 
 MULTILEVELIDENTIFIER : MULTILEVELIDENTIFIER '.' X_IDENTIFIER {$$=$1;extend_s($$, ".", $3)}
 MULTILEVELIDENTIFIER : T_IDENTIFIER                 {$$=$1;extend($$,$1)};
