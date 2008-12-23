@@ -41,20 +41,14 @@ struct _token {
     token_list_t*tokens;
 };
 
-typedef struct _writeable {
-    code_t*write;
-    code_t*read;
-    class_signature_t*type;
-} writeable_t;
-
 struct _param {
     char*name;
-    class_signature_t*type;
+    classinfo_t*type;
 };
 
 struct _typedcode {
     code_t*c;
-    class_signature_t*t;
+    classinfo_t*t;
 };
 
 extern char start_of_expression;
@@ -64,6 +58,7 @@ typedef token_t*tokenptr_t;
 #include "parser.tab.h"
 
 void syntaxerror(const char*format, ...);
+void warning(const char*format, ...);
 
 #define T_EOF 0
 
