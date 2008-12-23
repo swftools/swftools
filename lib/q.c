@@ -686,7 +686,7 @@ void dict_dump(dict_t*h, FILE*fi, const char*prefix)
     for(t=0;t<h->hashsize;t++) {
         dictentry_t*e = h->slots[t];
         while(e) {
-            if(h->key_type==&charptr_type) {
+            if(h->key_type!=&charptr_type) {
                 fprintf(fi, "%s%08x=%08x\n", prefix, e->key, e->data);
             } else {
                 fprintf(fi, "%s%s=%08x\n", prefix, e->key, e->data);
