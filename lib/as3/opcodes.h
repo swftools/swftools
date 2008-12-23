@@ -33,7 +33,7 @@ code_t* abc_bitxor(code_t*prev);
 code_t* abc_call(code_t*prev, int v);
 #define call(method,v) (method->code = abc_call(method->code,v))
 #define OPCODE_CALL 0x41
-code_t* abc_callmethod(code_t*prev, abc_method_body_t* m, int v);
+code_t* abc_callmethod(code_t*prev, abc_method_t* m, int v);
 #define callmethod(method,m,v) (method->code = abc_callmethod(method->code,m,v))
 #define OPCODE_CALLMETHOD 0x43
 code_t* abc_callproplex(code_t*prev, char* name, int v);
@@ -54,7 +54,7 @@ code_t* abc_callpropvoid(code_t*prev, char* name, int v);
 code_t* abc_callpropvoid2(code_t*prev, multiname_t* name, int v);
 #define callpropvoid2(method,name,v) (method->code = abc_callpropvoid2(method->code,name,v))
 #define OPCODE_CALLPROPVOID2 0x4f
-code_t* abc_callstatic(code_t*prev, abc_method_t* m, int v);
+code_t* abc_callstatic(code_t*prev, abc_method_body_t* m, int v);
 #define callstatic(method,m,v) (method->code = abc_callstatic(method->code,m,v))
 #define OPCODE_CALLSTATIC 0x44
 code_t* abc_callsuper(code_t*prev, char* name, int v);
@@ -360,7 +360,7 @@ code_t* abc_newcatch(code_t*prev, int v);
 code_t* abc_newclass(code_t*prev, abc_class_t* m);
 #define newclass(method,m) (method->code = abc_newclass(method->code,m))
 #define OPCODE_NEWCLASS 0x58
-code_t* abc_newfunction(code_t*prev, abc_method_body_t* m);
+code_t* abc_newfunction(code_t*prev, abc_method_t* m);
 #define newfunction(method,m) (method->code = abc_newfunction(method->code,m))
 #define OPCODE_NEWFUNCTION 0x40
 code_t* abc_newobject(code_t*prev, int v);

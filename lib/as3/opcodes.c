@@ -52,7 +52,7 @@ code_t* abc_call(code_t*prev, int v)
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-code_t* abc_callmethod(code_t*prev, abc_method_body_t* m, int v)
+code_t* abc_callmethod(code_t*prev, abc_method_t* m, int v)
 {
     code_t*self = add_opcode(prev, 0x43);
     self->data[0] = m;
@@ -101,7 +101,7 @@ code_t* abc_callpropvoid2(code_t*prev, multiname_t* name, int v)
     self->data[1] = (void*)(ptroff_t)v;
     return self;
 }
-code_t* abc_callstatic(code_t*prev, abc_method_t* m, int v)
+code_t* abc_callstatic(code_t*prev, abc_method_body_t* m, int v)
 {
     code_t*self = add_opcode(prev, 0x44);
     self->data[0] = m;
@@ -696,7 +696,7 @@ code_t* abc_newclass(code_t*prev, abc_class_t* m)
     self->data[0] = m;
     return self;
 }
-code_t* abc_newfunction(code_t*prev, abc_method_body_t* m)
+code_t* abc_newfunction(code_t*prev, abc_method_t* m)
 {
     code_t*self = add_opcode(prev, 0x40);
     self->data[0] = m;
