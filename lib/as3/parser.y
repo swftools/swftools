@@ -487,9 +487,8 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
         __ getlex2(m, s2);
         multiname_destroy(s2);
 
-        __ pushscope(m);
+        __ pushscope(m); count++;
         m->code = m->code->prev->prev; // invert
-        count++;
     }
     /* continue appending after last op end */
     while(m->code && m->code->next) m->code = m->code->next; 
@@ -500,9 +499,15 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     if(extends2) {
         __ getlex2(m, extends2);
         __ dup(m);
-        __ pushscope(m); // we get a Verify Error #1107 if this is not the top scope
+        /* notice: we get a Verify Error #1107 if the top elemnt on the scope
+           stack is not the superclass */
+        __ pushscope(m);count++;
     } else {
         __ pushnull(m);
+        /* notice: we get a verify error #1107 if the top element on the scope 
+           stack is not the global object */
+        __ getlocal_0(m);
+        __ pushscope(m);count++;
     }
     __ newclass(m,state->cls);
     while(count--) {
