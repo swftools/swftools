@@ -625,14 +625,16 @@ dict_t*dict_clone(dict_t*o)
     memcpy(h, o, sizeof(dict_t));
     h->slots = h->hashsize?(dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*h->hashsize):0;
     int t;
-    for(t=0;t<h->hashsize;t++) {
-        dictentry_t*e = h->slots[t];
+    for(t=0;t<o->hashsize;t++) {
+        dictentry_t*e = o->slots[t];
         while(e) {
             dictentry_t*n = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
             memcpy(n, e, sizeof(dictentry_t));
-            n->data = h->key_type->dup(e->data);
+            n->key = h->key_type->dup(e->key);
+            n->data = e->data;
             n->next = h->slots[t];
             h->slots[t] = n;
+            e = e->next;
         }
     }
     return h;
