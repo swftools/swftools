@@ -175,12 +175,14 @@ abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*retu
     /* construct code (method body) object */
     NEW(abc_method_body_t,c);
     array_append(file->method_bodies, NO_KEY, c);
+    c->index = array_length(file->method_bodies);
     c->file = file;
     c->traits = list_new();
     c->code = 0;
 
     /* construct method object */
     NEW(abc_method_t,m);
+    m->index = array_length(file->methods);
     array_append(file->methods, NO_KEY, m);
 
     m->return_type = returntype;
@@ -260,7 +262,13 @@ abc_method_body_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, cha
     va_start(va, num_params);
     abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
     va_end(va);
-    list_append(cls->traits, trait_new_method(multiname_fromstring(name), c->method));
+    trait_t*t = trait_new_method(multiname_fromstring(name), c->method);
+    c->method->trait = t;
+    /* start assigning traits at position #1.
+       Weird things happen when assigning slot 0- slot 0 and 1 seem
+       to be identical */
+    t->slot_id = list_length(cls->traits)+1;
+    list_append(cls->traits, t);
     return c;
 }
 
@@ -268,10 +276,23 @@ trait_t* abc_class_slot(abc_class_t*cls, char*name, multiname_t*type)
 {
     abc_file_t*file = cls->file;
     multiname_t*m_name = multiname_fromstring(name);
-    multiname_t*m_type = type;
+    multiname_t*m_type = multiname_clone(type);
     trait_t*t = trait_new_member(m_type, m_name, 0);
-    t->slot_id = list_length(cls->traits);
+    t->slot_id = list_length(cls->traits)+1;
     list_append(cls->traits, t);
+    return t;
+}
+
+trait_t* abc_class_find_slotid(abc_class_t*cls, int slotid)
+{
+    trait_list_t*l;
+    trait_t*t=0;
+    for(l=cls->traits;l;l=l->next) {
+        if(l->trait->slot_id==slotid) {
+            t=l->trait; 
+            break;
+        }
+    }
     return t;
 }
 
@@ -343,7 +364,12 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
     if(flags&METHOD_SET_DXNS) {fprintf(fo, " set_dxns");flags&=~METHOD_SET_DXNS;}
     if(flags&METHOD_HAS_PARAM_NAMES) {fprintf(fo, " has_param_names");flags&=~METHOD_HAS_PARAM_NAMES;}
     if(flags) fprintf(fo, " %02x", flags);
-    fprintf(fo, "]\n");
+    fprintf(fo, "]");
+
+    if(m->trait) {
+        fprintf(fo, " slot:%d", m->trait->slot_id);
+    }
+    fprintf(fo, "\n");
 
 
     char prefix2[80];
@@ -406,10 +432,12 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
 	if(kind == TRAIT_METHOD || kind == TRAIT_GETTER || kind == TRAIT_SETTER) { // method / getter / setter
 	    trait->disp_id = swf_GetU30(tag);
 	    trait->method = (abc_method_t*)array_getvalue(file->methods, swf_GetU30(tag));
+            trait->method->trait = trait;
 	    DEBUG printf("  method/getter/setter\n");
 	} else if(kind == TRAIT_FUNCTION) { // function
 	    trait->slot_id =  swf_GetU30(tag);
 	    trait->method = (abc_method_t*)array_getvalue(file->methods, swf_GetU30(tag));
+            trait->method->trait = trait;
 	} else if(kind == TRAIT_CLASS) { // class
 	    trait->slot_id = swf_GetU30(tag);
 	    trait->cls = (abc_class_t*)array_getvalue(file->classes, swf_GetU30(tag));
@@ -707,6 +735,7 @@ void* swf_ReadABC(TAG*tag)
                 l = l->next;
             }
 	}
+        m->index = array_length(file->methods);
 	array_append(file->methods, NO_KEY, m);
     }
             
@@ -874,6 +903,7 @@ void swf_WriteABC(TAG*abctag, void*code)
             if(!(c->flags&CLASS_INTERFACE)) {
                 NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
                 NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
+                // don't bother to set m->index
                 body->method = m; m->body = body;
                 __ returnvoid(body);
                 c->constructor = m;

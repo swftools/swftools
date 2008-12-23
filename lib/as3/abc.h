@@ -55,6 +55,8 @@ struct _abc_method {
     const char*name;
     U8 flags;
     abc_method_body_t*body;
+
+    trait_t*trait;
     
     int index; //filled in during writing
 };
@@ -136,6 +138,8 @@ void abc_class_final(abc_class_t*c);
 void abc_class_interface(abc_class_t*c);
 void abc_class_protectedNS(abc_class_t*c, char*namespace);
 void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
+
+trait_t* abc_class_find_slotid(abc_class_t*c, int slotid);
 
 abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
 abc_method_body_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
