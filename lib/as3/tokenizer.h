@@ -44,17 +44,17 @@ struct _token {
 typedef struct _writeable {
     code_t*write;
     code_t*read;
-    classinfo_t*type;
+    class_signature_t*type;
 } writeable_t;
 
 struct _param {
     char*name;
-    classinfo_t*type;
+    class_signature_t*type;
 };
 
 struct _typedcode {
     code_t*c;
-    classinfo_t*t;
+    class_signature_t*t;
 };
 
 extern char start_of_expression;
