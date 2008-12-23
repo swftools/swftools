@@ -1301,6 +1301,10 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 __ debugline(f, 1);
                 __ getlocal_0(f);
                 __ pushscope(f);
+                if(stop_each_frame) {
+                    __ findpropstrict(f, "[package]::stop");
+                    __ callpropvoid(f, "[package]::stop", 0);
+                }
             }
 
             if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
@@ -1313,10 +1317,6 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 __ getlex(f,functionname);
                 __ callpropvoid(f, "::addEventListener" ,2);
 
-                if(stop_each_frame) {
-                    __ findpropstrict(f, "[package]::stop");
-                    __ callpropvoid(f, "[package]::stop", 0);
-                }
                 needs_framescript = 1;
 
                 abc_method_body_t*h =
