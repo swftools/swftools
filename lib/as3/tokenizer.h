@@ -30,8 +30,10 @@
 
 DECLARE(token);
 DECLARE_LIST(token);
+DECLARE(param);
+DECLARE_LIST(param);
 DECLARE(typedcode);
-DECLARE(typedcode_list);
+DECLARE_LIST(typedcode);
 
 struct _token {
     int type;
@@ -42,16 +44,17 @@ struct _token {
 typedef struct _writeable {
     code_t*write;
     code_t*read;
-    class_signature_t*type;
+    classinfo_t*type;
 } writeable_t;
+
+struct _param {
+    char*name;
+    classinfo_t*type;
+};
 
 struct _typedcode {
     code_t*c;
-    class_signature_t*t;
-};
-struct _typedcode_list {
-    struct _typedcode typedcode;
-    struct _typedcode_list*nxt;
+    classinfo_t*t;
 };
 
 extern char start_of_expression;

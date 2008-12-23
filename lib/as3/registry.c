@@ -30,7 +30,7 @@ static dict_t*classes=0;
 
 // ----------------------- class signature ------------------------------
 
-char class_signature_equals(class_signature_t*c1, class_signature_t*c2)
+char classinfo_equals(classinfo_t*c1, classinfo_t*c2)
 {
     if(!!c1 != !!c2)
         return 0;
@@ -41,7 +41,7 @@ char class_signature_equals(class_signature_t*c1, class_signature_t*c2)
     }
     return 0;
 }
-static unsigned int class_signature_hash(class_signature_t*c)
+static unsigned int classinfo_hash(classinfo_t*c)
 {
     unsigned int hash = 0;
     hash = crc32_add_string(hash, c->package);
@@ -50,11 +50,11 @@ static unsigned int class_signature_hash(class_signature_t*c)
 }
 
 static void* dummy_clone(void*other) {return other;}
-static void dummy_destroy(class_signature_t*c) {}
+static void dummy_destroy(classinfo_t*c) {}
 
-type_t class_signature_type = {
-    hash: (hash_func)class_signature_hash,
-    equals: (equals_func)class_signature_equals,
+type_t classinfo_type = {
+    hash: (hash_func)classinfo_hash,
+    equals: (equals_func)classinfo_equals,
     /* all signatures are static */
     dup: (dup_func)dummy_clone,
     free: (free_func)dummy_destroy,
@@ -62,17 +62,17 @@ type_t class_signature_type = {
 
 // ----------------------- function signature ------------------------------
 
-static char function_signature_equals(function_signature_t*f1, function_signature_t*f2)
+static char memberinfo_equals(memberinfo_t*f1, memberinfo_t*f2)
 {
     return !strcmp(f1->name, f2->name);
 }
-static unsigned int function_signature_hash(function_signature_t*f)
+static unsigned int memberinfo_hash(memberinfo_t*f)
 {
     return crc32_add_string(0, f->name);
 }
-type_t function_signature_type = {
-    hash: (hash_func)function_signature_hash,
-    equals: (equals_func)function_signature_equals,
+type_t memberinfo_type = {
+    hash: (hash_func)memberinfo_hash,
+    equals: (equals_func)memberinfo_equals,
     /* all signatures are static */
     dup: (dup_func)dummy_clone,
     free: (free_func)dummy_destroy,
@@ -80,9 +80,9 @@ type_t function_signature_type = {
 
 // ------------------------- constructors --------------------------------
 
-class_signature_t* class_signature_register(int access, char*package, char*name)
+classinfo_t* classinfo_register(int access, char*package, char*name)
 {
-    NEW(class_signature_t,c);
+    NEW(classinfo_t,c);
     c->access = access;
     c->package = package;
     c->name = name;
@@ -96,24 +96,24 @@ void registry_init()
 {
     classes = builtin_getclasses();
 }
-class_signature_t* registry_safefindclass(const char*package, const char*name)
+classinfo_t* registry_safefindclass(const char*package, const char*name)
 {
-    class_signature_t*c = registry_findclass(package, name);
+    classinfo_t*c = registry_findclass(package, name);
     assert(c);
     return c;
 }
-class_signature_t* registry_findclass(const char*package, const char*name)
+classinfo_t* registry_findclass(const char*package, const char*name)
 {
     assert(classes);
-    class_signature_t tmp;
+    classinfo_t tmp;
     tmp.package = package;
     tmp.name = name;
-    class_signature_t* c = (class_signature_t*)dict_lookup(classes, &tmp);
+    classinfo_t* c = (classinfo_t*)dict_lookup(classes, &tmp);
     /*if(c)
         printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
 }
-void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c)
+void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c)
 {
     m->type = QNAME;
     m->ns = n;
@@ -122,7 +122,7 @@ void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c)
     m->name = c->name;
     m->namespace_set = 0;
 }
-multiname_t* class_signature_to_multiname(class_signature_t*cls)
+multiname_t* classinfo_to_multiname(classinfo_t*cls)
 {
     if(!cls)
         return 0;
@@ -132,21 +132,21 @@ multiname_t* class_signature_to_multiname(class_signature_t*cls)
 }
 
 // ----------------------- builtin types ------------------------------
-class_signature_t* registry_getanytype() {return 0;/*FIXME*/}
+classinfo_t* registry_getanytype() {return 0;/*FIXME*/}
 
-class_signature_t* registry_getobjectclass() {return registry_safefindclass("", "Object");}
-class_signature_t* registry_getstringclass() {return registry_safefindclass("", "String");}
-class_signature_t* registry_getintclass() {return registry_safefindclass("", "int");}
-class_signature_t* registry_getuintclass() {return registry_safefindclass("", "uint");}
-class_signature_t* registry_getbooleanclass() {return registry_safefindclass("", "Boolean");}
-class_signature_t* registry_getnumberclass() {return registry_safefindclass("", "Number");}
-class_signature_t* registry_getMovieClip() {return registry_safefindclass("flash.display", "MovieClip");}
+classinfo_t* registry_getobjectclass() {return registry_safefindclass("", "Object");}
+classinfo_t* registry_getstringclass() {return registry_safefindclass("", "String");}
+classinfo_t* registry_getintclass() {return registry_safefindclass("", "int");}
+classinfo_t* registry_getuintclass() {return registry_safefindclass("", "uint");}
+classinfo_t* registry_getbooleanclass() {return registry_safefindclass("", "Boolean");}
+classinfo_t* registry_getnumberclass() {return registry_safefindclass("", "Number");}
+classinfo_t* registry_getMovieClip() {return registry_safefindclass("flash.display", "MovieClip");}
 
 // ----------------------- builtin dummy types -------------------------
-class_signature_t nullclass = {
+classinfo_t nullclass = {
     ACCESS_PACKAGE, 0, "", "null", 0, 0, 0,
 };
-class_signature_t* registry_getnullclass() {
+classinfo_t* registry_getnullclass() {
     return &nullclass;
 }
 

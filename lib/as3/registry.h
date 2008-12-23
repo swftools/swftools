@@ -26,52 +26,60 @@
 
 #include "pool.h"
 
-DECLARE(class_signature);
-DECLARE_LIST(class_signature);
-DECLARE(function_signature);
+DECLARE(classinfo);
+DECLARE_LIST(classinfo);
+DECLARE(memberinfo);
 
-struct _class_signature {
+struct _classinfo {
     /* this is very similar to a QNAME */
     U8 access;
     U8 flags;
     const char*package;
     const char*name;
 
-    class_signature_t*superclass;
+    classinfo_t*superclass;
     dict_t members;
-    class_signature_t*interfaces[];
+    classinfo_t*interfaces[];
 };
-char class_signature_equals(class_signature_t*c1, class_signature_t*c2);
-extern type_t class_signature_type;
+char classinfo_equals(classinfo_t*c1, classinfo_t*c2);
 
-struct _function_signature {
+#define MEMBER_SLOT 1
+#define MEMBER_METHOD 2
+struct _memberinfo {
+    U8 type;
     const char*name;
-    class_signature_list_t*params;
+    union {
+        classinfo_t*returnvalue;
+        classinfo_t*type;
+    };
+    classinfo_list_t*params;
 };
+
+extern type_t classinfo_type;
 extern type_t function_signature_type;
 
 void registry_init();
         
-class_signature_t* class_signature_register(int access, char*package, char*name);
+classinfo_t* classinfo_register(int access, char*package, char*name);
 
 // static multinames
-class_signature_t* registry_getanytype();
-class_signature_t* registry_getobjectclass();
-class_signature_t* registry_getnumberclass();
-class_signature_t* registry_getstringclass();
-class_signature_t* registry_getintclass();
-class_signature_t* registry_getuintclass();
-class_signature_t* registry_getnullclass();
-class_signature_t* registry_getbooleanclass();
-class_signature_t* registry_getMovieClip();
+classinfo_t* registry_getanytype();
+classinfo_t* registry_getobjectclass();
+classinfo_t* registry_getnumberclass();
+classinfo_t* registry_getstringclass();
+classinfo_t* registry_getintclass();
+classinfo_t* registry_getuintclass();
+classinfo_t* registry_getnullclass();
+classinfo_t* registry_getbooleanclass();
+classinfo_t* registry_getMovieClip();
 
-class_signature_t* registry_findclass(const char*package, const char*name);
+classinfo_t* registry_findclass(const char*package, const char*name);
 
-void registry_fill_multiname(multiname_t*m, namespace_t*n, class_signature_t*c);
-multiname_t* class_signature_to_multiname(class_signature_t*cls);
+void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
+multiname_t* classinfo_to_multiname(classinfo_t*cls);
 
 /* convenience functions */
-#define sig2mname(x) class_signature_to_multiname(x)
+#define sig2mname(x) classinfo_to_multiname(x)
 #define TYPE_ANY                  registry_getanytype()
 #define TYPE_IS_ANY(t)    ((t) == registry_getanytype())
 #define TYPE_INT                  registry_getintclass()
