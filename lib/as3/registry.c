@@ -80,6 +80,7 @@ type_t memberinfo_type = {
 
 // ------------------------- constructors --------------------------------
 
+#define AVERAGE_NUMBER_OF_MEMBERS 8
 classinfo_t* classinfo_register(int access, char*package, char*name)
 {
     NEW(classinfo_t,c);
@@ -87,7 +88,16 @@ classinfo_t* classinfo_register(int access, char*package, char*name)
     c->package = package;
     c->name = name;
     dict_put(classes, c, c);
+    dict_init(&c->members,AVERAGE_NUMBER_OF_MEMBERS);
     return c;
+}
+memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 kind)
+{
+    NEW(memberinfo_t,m);
+    m->kind = kind;
+    m->name = strdup(name);
+    dict_put(&cls->members, name, m);
+    return m;
 }
 
 // --------------- builtin classes (from builtin.c) ----------------------
@@ -112,6 +122,10 @@ classinfo_t* registry_findclass(const char*package, const char*name)
     /*if(c)
         printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
+}
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*name)
+{
+    return (memberinfo_t*)dict_lookup(&cls->members, name);
 }
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c)
 {

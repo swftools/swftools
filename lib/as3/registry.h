@@ -46,13 +46,14 @@ char classinfo_equals(classinfo_t*c1, classinfo_t*c2);
 #define MEMBER_SLOT 1
 #define MEMBER_METHOD 2
 struct _memberinfo {
-    U8 type;
+    U8 kind;
     const char*name;
     union {
         classinfo_t*returnvalue;
         classinfo_t*type;
     };
     classinfo_list_t*params;
+    int slot;
 };
 
 extern type_t classinfo_type;
@@ -61,6 +62,7 @@ extern type_t function_signature_type;
 void registry_init();
         
 classinfo_t* classinfo_register(int access, char*package, char*name);
+memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 type);
 
 // static multinames
 classinfo_t* registry_getanytype();
@@ -74,6 +76,7 @@ classinfo_t* registry_getbooleanclass();
 classinfo_t* registry_getMovieClip();
 
 classinfo_t* registry_findclass(const char*package, const char*name);
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*name);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
 multiname_t* classinfo_to_multiname(classinfo_t*cls);
