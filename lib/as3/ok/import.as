@@ -4,9 +4,10 @@ package package1 {
             trace("ok 1/2");
         }
     }
+}
 package package2 {
     public class Class2 {
-        public function Class4() {
+        public function Class2() {
             trace("ok 2/2");
         }
     }
@@ -17,7 +18,7 @@ package {
     import package2.*
 
     public class Main extends flash.display.MovieClip {
-        public function TestImport() {
+        public function Main() {
             new Class1();
             new Class2();
         }
