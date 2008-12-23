@@ -474,7 +474,7 @@ Index: config.h
 @@ -53,9 +53,9 @@
  
  // user config file name, relative to the user's home directory
- #if defined(VMS) || defined(WIN32)
+ #if defined(VMS) || (defined(WIN32) && !defined(__CYGWIN32__))
 -#define xpdfUserConfigFile "xpdfrc"
 +#define xpdfUserConfigFile "pdf2swf.conf"
  #else
