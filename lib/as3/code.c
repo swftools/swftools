@@ -196,9 +196,8 @@ opcode_t opcodes[]={
 {0xa7, "urshift", "",          -2, 1, 0, 0},
 
 /* opcodes not documented, but seen in the wild */
-//0x53: seen in builtin.abc- followed by 0x01 (might be the number of stack params)
-{0x53, "xxx1", "",             -1, 0, 0, 0},
-{0x01, "xxx2", "",              0, 0, 0, 0},
+//0x53: seen in builtin.abc
+{0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
 
 /* dummy instruction. Warning: this one is not actually supported by flash */
 {0xff, "__break__", "",             0, 0, 0, OP_RETURN},
