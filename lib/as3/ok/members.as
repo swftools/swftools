@@ -1,7 +1,7 @@
 package package1 {
     public class Class1 {
         public var a;
-        public var b;
+        public var b:int;
         public var c:int;
         public var d = 1;
         public var e:int = 1;
@@ -22,19 +22,20 @@ package package1 {
         }
     }
 }
-package package2 {
+package {
     import package1.Class1
+    import flash.display.MovieClip
 
     public class Main extends flash.display.MovieClip {
         public function Main() {
             var cls = new Class1();
             cls.a = 1;
             cls.b++;
-            cls.c = c.a;
+            cls.c = cls.a;
             cls.write();
 
             cls.c += 1;
-            cls.c -= c.a;
+            cls.c -= cls.a;
         }
     }
 }
