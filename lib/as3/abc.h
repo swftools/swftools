@@ -102,6 +102,11 @@ struct _trait {
     constant_t*value;
 };
 
+#define CLASS_SEALED 1
+#define CLASS_FINAL 2
+#define CLASS_INTERFACE 4
+#define CLASS_PROTECTED_NS 8
+
 struct _abc_class {
     abc_file_t*file;
     

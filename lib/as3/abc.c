@@ -129,19 +129,14 @@ abc_file_t*abc_file_new()
     return f;
 }
 
-#define CLASS_SEALED 1
-#define CLASS_FINAL 2
-#define CLASS_INTERFACE 4
-#define CLASS_PROTECTED_NS 8
-
 abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass) {
     
     NEW(abc_class_t,c);
     array_append(file->classes, NO_KEY, c);
 
     c->file = file;
-    c->classname = classname;
-    c->superclass = superclass;
+    c->classname = multiname_clone(classname);
+    c->superclass = multiname_clone(superclass);
     c->flags = 0;
     c->constructor = 0;
     c->static_constructor = 0;
@@ -172,7 +167,7 @@ void abc_class_protectedNS(abc_class_t*c, char*namespace)
 }
 void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
 {
-    list_append(c->interfaces, interface);
+    list_append(c->interfaces, multiname_clone(interface));
 }
 
 abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, int num_params, va_list va)
@@ -689,7 +684,7 @@ void* swf_ReadABC(TAG*tag)
 
 	m->flags = swf_GetU8(tag);
 	
-        DEBUG printf("method %d) %s flags=%02x\n", t, params_tostring(m->parameters), m->flags);
+        DEBUG printf("method %d) %s %s flags=%02x\n", t, m->name, params_tostring(m->parameters), m->flags);
 
         if(m->flags&0x08) {
             /* TODO optional parameters */
@@ -724,13 +719,13 @@ void* swf_ReadABC(TAG*tag)
 	abc_class_t*cls = malloc(sizeof(abc_class_t));
 	memset(cls, 0, sizeof(abc_class_t));
 	
-        DEBUG printf("class %d\n", t);
 	swf_GetU30(tag); //classname
 	swf_GetU30(tag); //supername
 
         array_append(file->classes, NO_KEY, cls);
 
 	cls->flags = swf_GetU8(tag);
+        DEBUG printf("class %d %02x\n", t, cls->flags);
 	if(cls->flags&8) 
 	    swf_GetU30(tag); //protectedNS
         int s;
@@ -743,12 +738,14 @@ void* swf_ReadABC(TAG*tag)
             DEBUG printf("  class %d interface: %s\n", t, m->name);
         }
 
-	swf_GetU30(tag); //iinit
+	int iinit = swf_GetU30(tag); //iinit
+        DEBUG printf("--iinit-->%d\n", iinit);
 	traits_skip(tag);
     }
     for(t=0;t<num_classes;t++) {
         abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
 	int cinit = swf_GetU30(tag);
+        DEBUG printf("--cinit(%d)-->%d\n", t, cinit);
         cls->static_constructor = (abc_method_t*)array_getvalue(file->methods, cinit);
         traits_skip(tag);
     }
@@ -805,7 +802,7 @@ void* swf_ReadABC(TAG*tag)
         codelookup_free(codelookup);
 	c->traits = traits_parse(tag, pool, file);
 
-	DEBUG printf("method_body %d) (method %d), %d bytes of code", t, methodnr, code_length);
+	DEBUG printf("method_body %d) (method %d), %d bytes of code\n", t, methodnr, code_length);
 
 	array_append(file->method_bodies, NO_KEY, c);
     }
@@ -832,7 +829,7 @@ void* swf_ReadABC(TAG*tag)
         int num_interfaces = swf_GetU30(tag); //interface count
         int s;
         for(s=0;s<num_interfaces;s++) {
-            swf_GetU30(tag); // multiname index TODO
+            swf_GetU30(tag);
         }
 	int iinit = swf_GetU30(tag);
         cls->constructor = (abc_method_t*)array_getvalue(file->methods, iinit);
@@ -868,15 +865,21 @@ void swf_WriteABC(TAG*abctag, void*code)
     TAG*tmp = swf_InsertTag(0,0);
     TAG*tag = tmp;
     int t;
-   
+  
+    /* add method bodies where needed */
     for(t=0;t<file->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
         if(!c->constructor) {
-            NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
-            NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
-            body->method = m; m->body = body;
-            __ returnvoid(body);
-            c->constructor = m;
+            if(!(c->flags&CLASS_INTERFACE)) {
+                NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
+                NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
+                body->method = m; m->body = body;
+                __ returnvoid(body);
+                c->constructor = m;
+            } else {
+                NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
+                c->constructor = m;
+            }
         }
         if(!c->static_constructor) {
             NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
@@ -926,11 +929,11 @@ void swf_WriteABC(TAG*abctag, void*code)
     for(t=0;t<file->classes->num;t++) {
 	abc_class_t*c = (abc_class_t*)array_getvalue(file->classes, t);
         trait_list_t*traits = c->traits;
-        if(c->constructor &&
+        if(c->constructor && c->constructor->body &&
            c->constructor->body->init_scope_depth < c->init_scope_depth) {
            c->constructor->body->init_scope_depth = c->init_scope_depth;
         }
-        if(c->static_constructor &&
+        if(c->static_constructor && c->static_constructor->body &&
            c->static_constructor->body->init_scope_depth < c->init_scope_depth) {
            c->static_constructor->body->init_scope_depth = c->init_scope_depth;
         }
