@@ -32,6 +32,8 @@ static dict_t*classes=0;
 
 char class_signature_equals(class_signature_t*c1, class_signature_t*c2)
 {
+    if(!!c1 != !!c2)
+        return 0;
     /* notice: access right is *not* respected */
     if(!strcmp(c1->name, c2->name) &&
        !strcmp(c1->package, c2->package)) {
@@ -97,8 +99,6 @@ void registry_init()
 class_signature_t* registry_safefindclass(const char*package, const char*name)
 {
     class_signature_t*c = registry_findclass(package, name);
-    if(!c)
-        printf("%s.%s\n", package, name);
     assert(c);
     return c;
 }
@@ -142,7 +142,7 @@ class_signature_t* registry_getMovieClip() {return registry_safefindclass("flash
 
 // ----------------------- builtin dummy types -------------------------
 class_signature_t nullclass = {
-    ACCESS_PACKAGE, "", "null", 0, 0, 0,
+    ACCESS_PACKAGE, 0, "", "null", 0, 0, 0,
 };
 class_signature_t* registry_getnullclass() {
     return &nullclass;

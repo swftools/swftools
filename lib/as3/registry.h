@@ -33,6 +33,7 @@ DECLARE(function_signature);
 struct _class_signature {
     /* this is very similar to a QNAME */
     U8 access;
+    U8 flags;
     const char*package;
     const char*name;
 
