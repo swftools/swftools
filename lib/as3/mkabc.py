@@ -66,9 +66,9 @@ for line in fi.readlines():
                 elif c in "nubs":
                     type,pname="int","v"
                 elif c == "m":
-                    type,pname="abc_method_body_t*","m"
-                elif c == "i":
                     type,pname="abc_method_t*","m"
+                elif c == "i":
+                    type,pname="abc_method_body_t*","m"
                 elif c == "c":
                     type,pname="abc_class_t*","m"
                 elif c == "j":
