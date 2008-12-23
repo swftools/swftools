@@ -132,7 +132,7 @@
 %token<token> T_STAR '*'
 %token<token> T_DOT '.'
 
-%type <token> X_IDENTIFIER
+%type <token> X_IDENTIFIER VARCONST
 %type <code> CODE
 %type <code> CODEPIECE
 %type <code> CODEBLOCK MAYBECODE
@@ -291,6 +291,8 @@ typedef struct _state {
     /* class data */
     char*classname;
     abc_class_t*cls;
+    code_t*cls_init;
+    code_t*cls_static_init;
 
     array_t*vars;
     int local_var_base;
@@ -534,7 +536,25 @@ static void startclass(token_t*modifiers, token_t*name, classinfo_t*extends, cla
 
 static void endclass()
 {
-    /*printf("leaving class %s\n", state->classname);*/
+    if(state->cls_init) {
+        if(!state->cls->constructor) {
+            abc_method_body_t*m = abc_class_constructor(state->cls, 0, 0);
+            m->code = state->cls_init;
+        } else {
+            state->cls->constructor->body->code = 
+                code_append(state->cls_init, state->cls->constructor->body->code);
+        }
+    }
+    if(state->cls_static_init) {
+        if(!state->cls->static_constructor) {
+            abc_method_body_t*m = abc_class_staticconstructor(state->cls, 0, 0);
+            m->code = state->cls_static_init;
+        } else {
+            state->cls->static_constructor->body->code = 
+                code_append(state->cls_static_init, state->cls->static_constructor->body->code);
+        }
+    }
+
     old_state();
 }
 static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
@@ -713,6 +733,11 @@ code_t*defaultvalue(code_t*c, classinfo_t*type)
     return c;
 }
 
+char is_pushundefined(code_t*c)
+{
+    return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
+}
+
 %}
 
 
@@ -748,18 +773,6 @@ CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=code_new();}
 CODEBLOCK :  '{' MAYBECODE '}' {$$=$2;}
 CODEBLOCK :  CODEPIECE ';'             {$$=$1;}
 CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
-
-/* ------------ functions --------------------------- */
-
-FUNCTION_DECLARATION: MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
-                      MAYBETYPE '{' {startfunction(0,$1,$3,$4,$6,$8)} MAYBECODE '}' {
-    if(!state->m) syntaxerror("internal error: undefined function");
-    state->initcode = abc_nop(state->initcode);
-    state->initcode = abc_nop(state->initcode);
-    state->initcode = abc_nop(state->initcode);
-    state->m->code = code_append(state->initcode, $11);state->initcode=0;
-    endfunction()
-}
 
 /* ------------ variables --------------------------- */
 
@@ -919,7 +932,7 @@ IMPORT : "import" PACKAGE '.' '*' {
        $$=0;
 }
 
-/* ------------ classes and interfaces -------------- */
+/* ------------ classes and interfaces (header) -------------- */
 
 MODIFIERS : {$$=empty_token();}
 MODIFIERS : MODIFIER_LIST {$$=$1}
@@ -941,11 +954,50 @@ CLASS_DECLARATION : MODIFIERS "class" T_IDENTIFIER
                               '{' {startclass($1,$3,$4,$5, 0);} 
                               MAYBE_DECLARATION_LIST 
                               '}' {endclass();}
+
 INTERFACE_DECLARATION : MODIFIERS "interface" T_IDENTIFIER 
                               EXTENDS_LIST 
                               '{' {startclass($1,$3,0,$4,1);}
                               MAYBE_IDECLARATION_LIST 
                               '}' {endclass();}
+
+/* ------------ classes and interfaces (body) -------------- */
+
+MAYBE_DECLARATION_LIST : 
+MAYBE_DECLARATION_LIST : DECLARATION_LIST
+DECLARATION_LIST : DECLARATION
+DECLARATION_LIST : DECLARATION_LIST DECLARATION
+DECLARATION : ';'
+DECLARATION : SLOT_DECLARATION
+DECLARATION : FUNCTION_DECLARATION
+
+VARCONST: "var" | "const"
+SLOT_DECLARATION: MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
+    trait_t*t=0;
+    if($4) {
+        MULTINAME(m, $4);
+        t=abc_class_slot(state->cls, $3->text, &m);
+    } else {
+        t=abc_class_slot(state->cls, $3->text, 0);
+    }
+    if($2->type==KW_CONST) {
+        t->kind= TRAIT_CONST;
+    }
+    if($5.c && !is_pushundefined($5.c)) {
+        code_t*c = $5.c;
+        c = abc_getlocal_0(c);
+        c = converttype(c, $5.t, $4);
+        c = abc_setslot(c, t->slot_id);
+        state->cls_init = code_append(state->cls_init, c);
+    }
+}
+
+FUNCTION_DECLARATION: MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
+                      MAYBETYPE '{' {startfunction(0,$1,$3,$4,$6,$8)} MAYBECODE '}' {
+    if(!state->m) syntaxerror("internal error: undefined function");
+    state->m->code = code_append(state->initcode, $11);state->initcode=0;
+    endfunction()
+}
 
 /* ------------- package + class ids --------------- */
 
@@ -1248,7 +1300,29 @@ E : LH "--" {$$.c = $1.read;
              $$.t = $1.type;
             }
 
+/*LH: E {
+    $$.type = $1.t;
+    $$.read = $1.c;
+    $$.write = code_dup($1.c);
+    if($$.write->opcode == OPCODE_GETPROPERTY) {
+        $$.write->opcode = OPCODE_SETPROPERTY;
+    } else if($$.write->opcode == OPCODE_GETLOCAL) { 
+        $$.write->opcode = OPCODE_SETLOCAL;
+    } else if($$.write->opcode == OPCODE_GETLOCAL_0) { 
+        $$.write->opcode = OPCODE_SETLOCAL_0;
+    } else if($$.write->opcode == OPCODE_GETLOCAL_1) { 
+        $$.write->opcode = OPCODE_SETLOCAL_1;
+    } else if($$.write->opcode == OPCODE_GETLOCAL_2) { 
+        $$.write->opcode = OPCODE_SETLOCAL_2;
+    } else if($$.write->opcode == OPCODE_GETLOCAL_3) { 
+        $$.write->opcode = OPCODE_SETLOCAL_3;
+    } else {
+        syntaxerror("illegal lvalue: can't assign a value to this expression");
+    }
+}*/
+
 LH: T_IDENTIFIER {
+  $$.type = 0;
   int i = find_variable_safe($1->text, &$$.type);
   $$.read = abc_getlocal(0, i);
   $$.write = abc_setlocal(0, i);
@@ -1288,9 +1362,6 @@ PARAM:  T_IDENTIFIER ':' TYPE {$$ = malloc(sizeof(param_t));
 PARAM:  T_IDENTIFIER          {$$ = malloc(sizeof(param_t));
                                $$->name=$1->text;$$->type = TYPE_ANY;}
 
-DECLARATION : VARIABLE_DECLARATION
-DECLARATION : FUNCTION_DECLARATION
-
 IDECLARATION : VARIABLE_DECLARATION
 IDECLARATION : FUNCTION_DECLARATION
 
@@ -1300,10 +1371,6 @@ IDECLARATION : FUNCTION_DECLARATION
 QNAME_LIST : QNAME {$$=list_new();list_append($$, $1);}
 QNAME_LIST : QNAME_LIST ',' QNAME {$$=$1;list_append($$,$3);}
 
-MAYBE_DECLARATION_LIST : 
-MAYBE_DECLARATION_LIST : DECLARATION_LIST
-DECLARATION_LIST : DECLARATION
-DECLARATION_LIST : DECLARATION_LIST DECLARATION
 
 MAYBE_IDECLARATION_LIST : 
 MAYBE_IDECLARATION_LIST : IDECLARATION_LIST
