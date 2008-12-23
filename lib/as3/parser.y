@@ -149,7 +149,6 @@
 %type <code> ASSIGNMENT FOR_INIT
 %type <token> IMPORT
 %type <class_signature> MAYBETYPE
-%type <token> PACKAGESPEC
 %type <token> GETSET
 %type <token> PARAM
 %type <token> PARAMS
@@ -257,7 +256,7 @@ static char* concat3str(const char* t1, const char* t2, const char* t3)
 }
 
 typedef struct _import {
-    char*path;
+    char*package;
 } import_t;
 
 DECLARE_LIST(import);
@@ -275,7 +274,10 @@ typedef struct _state {
     code_t*initcode;
 
     abc_method_body_t*m;
-    import_list_t*imports;
+    
+    import_list_t*wildcard_imports;
+    dict_t*imports;
+    char has_own_imports;
    
     /* class data */
     char*classname;
@@ -303,14 +305,26 @@ static void new_state()
         memcpy(s, state, sizeof(state_t)); //shallow copy
     sl->next = state_stack;
     sl->state = s;
-    if(oldstate)
+    if(oldstate) {
         s->local_var_base = array_length(oldstate->vars) + oldstate->local_var_base;
+    }
+    if(!s->imports) {
+        s->imports = dict_new();
+    }
     state_stack = sl;
     state = s;
     state->level++;
     state->vars = array_new();
     state->initcode = 0;
+    state->has_own_imports = 0;
 }
+static void state_has_imports()
+{
+    state->wildcard_imports = list_clone(state->wildcard_imports);
+    state->imports = dict_clone(state->imports);
+    state->has_own_imports = 1;
+}
+
 static void old_state()
 {
     if(!state_stack || !state_stack->next)
@@ -324,6 +338,10 @@ static void old_state()
         printf("residual initcode\n");
         code_dump(state->initcode, 0, 0, "", stdout);
     }*/
+    if(oldstate->has_own_imports) {
+        list_free(oldstate->wildcard_imports);
+        dict_destroy(oldstate->imports);oldstate->imports=0;
+    }
     state->initcode = code_append(state->initcode, oldstate->initcode);
 }
 void initialize_state()
@@ -374,7 +392,7 @@ static void endpackage()
 }
 
 char*globalclass=0;
-static void startclass(token_t*modifiers, token_t*name, class_signature_t*extends, class_signature_list_t*implements)
+static void startclass(token_t*modifiers, token_t*name, class_signature_t*extends, class_signature_list_t*implements, char interface)
 {
     if(state->cls) {
         syntaxerror("inner classes now allowed"); 
@@ -388,12 +406,12 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     printf("  modifiers: ");for(t=modifiers->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     if(extends) 
         printf("  extends: %s.%s\n", extends->package, extends->name);
-
     printf("  implements (%d): ", list_length(implements));
     for(mlist=implements;mlist;mlist=mlist->next)  {
-        printf("%s ", mlist->class_signature->name);
+        printf("%s ", mlist->class_signature?mlist->class_signature->name:0);
     }
-    printf("\n");*/
+    printf("\n");
+    */
 
     char public=0,internal=0,final=0,sealed=1;
     for(t=modifiers->tokens;t;t=t->next) {
@@ -432,12 +450,14 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     
     class_signature_t* classname = class_signature_register(access, package, state->classname);
 
+    MULTINAME(classname2,classname);
+    
     multiname_t*extends2 = sig2mname(extends);
-    multiname_t*classname2 = sig2mname(classname);
 
-    state->cls = abc_class_new(state->file, classname2, extends2);
+    state->cls = abc_class_new(state->file, &classname2, extends2);
     if(final) abc_class_final(state->cls);
     if(sealed) abc_class_sealed(state->cls);
+    if(interface) abc_class_interface(state->cls);
 
     for(mlist=implements;mlist;mlist=mlist->next) {
         MULTINAME(m, mlist->class_signature);
@@ -445,7 +465,7 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     }
 
     /* now write the construction code for this class */
-    int slotindex = abc_initscript_addClassTrait(state->init, classname2, state->cls);
+    int slotindex = abc_initscript_addClassTrait(state->init, &classname2, state->cls);
 
     abc_method_body_t*m = state->init->method->body;
     __ getglobalscope(m);
@@ -474,9 +494,13 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     /* TODO: if this is one of *our* classes, we can also 
              do a getglobalscope/getslot <nr> (which references
              the init function's slots) */
-    __ getlex2(m, extends2);
-    __ dup(m);
-    __ pushscope(m); // we get a Verify Error #1107 if this is not the top scope
+    if(extends2) {
+        __ getlex2(m, extends2);
+        __ dup(m);
+        __ pushscope(m); // we get a Verify Error #1107 if this is not the top scope
+    } else {
+        __ pushnull(m);
+    }
     __ newclass(m,state->cls);
     while(count--) {
         __ popscope(m);
@@ -491,26 +515,13 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
             globalclass = strdup(state->classname);
         }
     }
+    multiname_destroy(extends2);
 }
 
 static void endclass()
 {
     /*printf("leaving class %s\n", state->classname);*/
     old_state();
-}
-static void addimport(token_t*t)
-{
-    NEW(import_t,i);
-    i->path = t->text;
-    list_append(state->imports, i);
-}
-static void print_imports()
-{
-    import_list_t*l = state->imports;
-    while(l) {
-        printf("  import %s\n", l->import->path);
-        l = l->next;
-    }
 }
 static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
                           token_t*params, class_signature_t*type)
@@ -855,7 +866,52 @@ BREAK : "break" {
 PACKAGE_DECLARATION : "package" MULTILEVELIDENTIFIER '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
 PACKAGE_DECLARATION : "package" '{' {startpackage(0)} MAYBECODE '}' {endpackage()}
 
-IMPORT : "import" PACKAGESPEC {addimport($2);}
+PACKAGE: PACKAGE '.' X_IDENTIFIER {$$ = concat3($1,$2,$3);}
+PACKAGE: X_IDENTIFIER             {$$=$1;}
+
+IMPORT : "import" PACKAGE '.' X_IDENTIFIER {
+       class_signature_t*c = registry_findclass($2->text, $4->text);
+       if(!c) 
+            syntaxerror("Couldn't import %s.%s\n", $2->text, $4->text);
+       state_has_imports();
+       dict_put(state->imports, $4->text, c);
+       $$=0;
+}
+IMPORT : "import" PACKAGE '.' '*' {
+       NEW(import_t,i);
+       i->package = $2->text;
+       state_has_imports();
+       list_append(state->wildcard_imports, i);
+       $$=0;
+}
+
+/* ------------ classes and interfaces -------------- */
+
+MODIFIERS : {$$=empty_token();}
+MODIFIERS : MODIFIER_LIST {$$=$1}
+MODIFIER_LIST : MODIFIER MODIFIER_LIST {extend($2,$1);$$=$2;}
+MODIFIER_LIST : MODIFIER               {$$=empty_token();extend($$,$1);}
+MODIFIER : KW_PUBLIC | KW_PRIVATE | KW_PROTECTED | KW_STATIC | KW_DYNAMIC | KW_FINAL | KW_OVERRIDE | KW_NATIVE | KW_INTERNAL
+
+EXTENDS : {$$=registry_getobjectclass();}
+EXTENDS : KW_EXTENDS PACKAGEANDCLASS {$$=$2;}
+
+EXTENDS_LIST : {$$=list_new();}
+EXTENDS_LIST : KW_EXTENDS PACKAGEANDCLASS_LIST {$$=$2;}
+
+IMPLEMENTS_LIST : {$$=list_new();}
+IMPLEMENTS_LIST : KW_IMPLEMENTS PACKAGEANDCLASS_LIST {$$=$2;}
+
+CLASS_DECLARATION : MODIFIERS "class" T_IDENTIFIER 
+                              EXTENDS IMPLEMENTS_LIST 
+                              '{' {startclass($1,$3,$4,$5, 0);} 
+                              MAYBE_DECLARATION_LIST 
+                              '}' {endclass();}
+INTERFACE_DECLARATION : MODIFIERS "interface" T_IDENTIFIER 
+                              EXTENDS_LIST 
+                              '{' {startclass($1,$3,0,$4,1);}
+                              MAYBE_IDECLARATION_LIST 
+                              '}' {endclass();}
 
 TYPE : PACKAGEANDCLASS {$$=$1;}
      | '*'        {$$=registry_getanytype();}
@@ -1043,17 +1099,9 @@ VAR_READ : T_IDENTIFIER {
 // keywords which also may be identifiers
 X_IDENTIFIER : T_IDENTIFIER | KW_PACKAGE
 
-PACKAGESPEC : PACKAGESPEC '.' PACKAGESPEC {if($1->text[0]=='*') syntaxerror("wildcard in the middle of path");
-                                           $$ = concat3($1,$2,$3);}
-PACKAGESPEC : X_IDENTIFIER                {$$=$1;}
-PACKAGESPEC : '*'                         {$$=$1;}
-
 GETSET : "get" {$$=$1;}
        | "set" {$$=$1;}
        |       {$$=empty_token();}
-
-CLASS_DECLARATION : MODIFIERS "class" T_IDENTIFIER EXTENDS IMPLEMENTS_LIST '{' {startclass($1,$3,$4,$5);} MAYBE_DECLARATION_LIST '}' {endclass();}
-INTERFACE_DECLARATION : MODIFIERS "interface" T_IDENTIFIER EXTENDS_LIST '{' MAYBE_IDECLARATION_LIST '}'
 
 PARAMS: {$$=empty_token();}
 PARAMS: PARAM_LIST {$$=$1;}
@@ -1061,34 +1109,41 @@ PARAM_LIST: PARAM_LIST ',' PARAM {extend($1,$3);$$=$1;}
 PARAM_LIST: PARAM                {$$=empty_token();extend($$,$1);}
 PARAM:  T_IDENTIFIER ':' TYPE {$$=$1;}
 
-MODIFIERS : {$$=empty_token();}
-MODIFIERS : MODIFIER_LIST {$$=$1}
-MODIFIER_LIST : MODIFIER MODIFIER_LIST {extend($2,$1);$$=$2;}
-MODIFIER_LIST : MODIFIER               {$$=empty_token();extend($$,$1);}
-MODIFIER : KW_PUBLIC | KW_PRIVATE | KW_PROTECTED | KW_STATIC | KW_DYNAMIC | KW_FINAL | KW_OVERRIDE | KW_NATIVE | KW_INTERNAL
-
 DECLARATION : VARIABLE_DECLARATION
 DECLARATION : FUNCTION_DECLARATION
 
 IDECLARATION : VARIABLE_DECLARATION
 IDECLARATION : FUNCTION_DECLARATION
 
-IMPLEMENTS_LIST : {$$=list_new();}
-IMPLEMENTS_LIST : KW_IMPLEMENTS PACKAGEANDCLASS_LIST {$$=$2;}
-
-EXTENDS : {$$=registry_getobjectclass();}
-EXTENDS : KW_EXTENDS PACKAGEANDCLASS {$$=$2;}
-
-EXTENDS_LIST : {$$=list_new();}
-EXTENDS_LIST : KW_EXTENDS PACKAGEANDCLASS_LIST {$$=$2;}
-
 //IDENTIFIER_LIST : T_IDENTIFIER ',' IDENTIFIER_LIST {extend($3,$1);$$=$3;}
 //IDENTIFIER_LIST : T_IDENTIFIER                     {$$=empty_token();extend($$,$1);}
 
-PACKAGEANDCLASS : T_IDENTIFIER {$$ = registry_findclass(state->package, $1->text);}
-PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {$$ = registry_findclass($1->text, $3->text);}
-PACKAGE : X_IDENTIFIER
-PACKAGE : PACKAGE '.' X_IDENTIFIER {$$=$1;extend_s($$,".",$3);}
+PACKAGEANDCLASS : T_IDENTIFIER {
+    $$ = registry_findclass(state->package, $1->text);
+    import_list_t*l = state->wildcard_imports;
+    while(l) {
+        if($$)
+            break;
+        //printf("does package %s contain a class %s?\n", l->import->package, $1->text);
+        $$ = registry_findclass(l->import->package, $1->text);
+        l = l->next;
+    }
+    dictentry_t* e = dict_get_slot(state->imports, $1->text);
+    while(e) {
+        if($$)
+            break;
+        if(!strcmp(e->key, $1->text)) {
+            $$ = (class_signature_t*)e->data;
+        }
+        e = e->next;
+    }
+    if(!$$) syntaxerror("Could not find class %s\n", $1->text);
+}
+PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
+    $$ = registry_findclass($1->text, $3->text);
+    if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1->text, $3->text);
+}
+
 
 MULTILEVELIDENTIFIER : MULTILEVELIDENTIFIER '.' X_IDENTIFIER {$$=$1;extend_s($$, ".", $3)}
 MULTILEVELIDENTIFIER : T_IDENTIFIER                 {$$=$1;extend($$,$1)};
