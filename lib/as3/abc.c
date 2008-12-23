@@ -264,14 +264,15 @@ abc_method_body_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, cha
     return c;
 }
 
-void abc_AddSlot(abc_class_t*cls, char*name, int slot, char*type)
+trait_t* abc_class_slot(abc_class_t*cls, char*name, multiname_t*type)
 {
     abc_file_t*file = cls->file;
     multiname_t*m_name = multiname_fromstring(name);
-    multiname_t*m_type = multiname_fromstring(type);
+    multiname_t*m_type = type;
     trait_t*t = trait_new_member(m_type, m_name, 0);
     t->slot_id = list_length(cls->traits);
     list_append(cls->traits, t);
+    return t;
 }
 
 void abc_method_body_addClassTrait(abc_method_body_t*code, char*multiname, int slotid, abc_class_t*cls)
@@ -1394,7 +1395,8 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
         if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2) {
             char buttonname[80];
             sprintf(buttonname, "::button%d", swf_GetDefineID(tag));
-            abc_AddSlot(cls, buttonname, 0, "flash.display::SimpleButton");
+            multiname_t*s = multiname_fromstring(buttonname);
+            abc_class_slot(cls, buttonname, s);
         }
         tag = tag->next;
     }
