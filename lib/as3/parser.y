@@ -41,8 +41,8 @@
 %union tokenunion {
     tokenptr_t token;
 
-    class_signature_t*class_signature;
-    class_signature_list_t*class_signature_list;
+    classinfo_t*classinfo;
+    classinfo_list_t*classinfo_list;
 
     int number_int;
     unsigned int number_uint;
@@ -86,7 +86,7 @@
 %token<token> KW_IMPORT "import"
 %token<token> KW_RETURN "return"
 %token<token> KW_INTERFACE "interface"
-%token<token> KW_NULL
+%token<token> KW_NULL "null"
 %token<token> KW_VAR "var"
 %token<token> KW_DYNAMIC
 %token<token> KW_OVERRIDE
@@ -132,6 +132,7 @@
 %token<token> T_STAR '*'
 %token<token> T_DOT '.'
 
+%type <token> X_IDENTIFIER
 %type <code> CODE
 %type <code> CODEPIECE
 %type <code> CODEBLOCK MAYBECODE
@@ -151,25 +152,24 @@
 %type <token> USE_NAMESPACE
 %type <code> ASSIGNMENT FOR_INIT
 %type <token> IMPORT
-%type <class_signature> MAYBETYPE
+%type <classinfo> MAYBETYPE
 %type <token> GETSET
 %type <param> PARAM
 %type <param_list> PARAM_LIST
 %type <param_list> MAYBE_PARAM_LIST
 %type <token> MODIFIERS
 %type <token> MODIFIER_LIST
-%type <class_signature_list> IMPLEMENTS_LIST
-%type <class_signature> EXTENDS
-%type <class_signature_list> EXTENDS_LIST
-%type <class_signature> PACKAGEANDCLASS
-%type <class_signature_list> PACKAGEANDCLASS_LIST
-%type <token> MULTILEVELIDENTIFIER
-%type <class_signature> TYPE
+%type <classinfo_list> IMPLEMENTS_LIST
+%type <classinfo> EXTENDS
+%type <classinfo_list> EXTENDS_LIST
+%type <classinfo> CLASS PACKAGEANDCLASS QNAME
+%type <classinfo_list> QNAME_LIST
+%type <classinfo> TYPE
 %type <token> VAR
 //%type <token> VARIABLE
 %type <value> VAR_READ
 %type <value> NEW
-%type <token> X_IDENTIFIER
+//%type <token> T_IDENTIFIER
 %type <token> MODIFIER
 %type <token> PACKAGE
 %type <value> FUNCTIONCALL
@@ -212,6 +212,12 @@
 %left ';'
 %nonassoc "else"
 %left '('
+
+// needed for "return" precedence:
+%nonassoc T_STRING T_REGEXP
+%nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
+%nonassoc "new" "false" "true" "null"
+
 %left prec_highest
 
      
@@ -395,7 +401,7 @@ static void endpackage()
 }
 
 char*globalclass=0;
-static void startclass(token_t*modifiers, token_t*name, class_signature_t*extends, class_signature_list_t*implements, char interface)
+static void startclass(token_t*modifiers, token_t*name, classinfo_t*extends, classinfo_list_t*implements, char interface)
 {
     if(state->cls) {
         syntaxerror("inner classes now allowed"); 
@@ -404,14 +410,14 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     state->classname = name->text;
 
     token_list_t*t=0;
-    class_signature_list_t*mlist=0;
+    classinfo_list_t*mlist=0;
     /*printf("entering class %s\n", name->text);
     printf("  modifiers: ");for(t=modifiers->tokens;t;t=t->next) printf("%s ", t->token->text);printf("\n");
     if(extends) 
         printf("  extends: %s.%s\n", extends->package, extends->name);
     printf("  implements (%d): ", list_length(implements));
     for(mlist=implements;mlist;mlist=mlist->next)  {
-        printf("%s ", mlist->class_signature?mlist->class_signature->name:0);
+        printf("%s ", mlist->classinfo?mlist->classinfo->name:0);
     }
     printf("\n");
     */
@@ -451,7 +457,7 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
         syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, state->classname);
     }
     
-    class_signature_t* classname = class_signature_register(access, package, state->classname);
+    classinfo_t* classname = classinfo_register(access, package, state->classname);
 
     MULTINAME(classname2,classname);
     
@@ -463,7 +469,7 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     if(interface) abc_class_interface(state->cls);
 
     for(mlist=implements;mlist;mlist=mlist->next) {
-        MULTINAME(m, mlist->class_signature);
+        MULTINAME(m, mlist->classinfo);
         abc_class_add_interface(state->cls, &m);
     }
 
@@ -472,7 +478,7 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
 
     abc_method_body_t*m = state->init->method->body;
     __ getglobalscope(m);
-    class_signature_t*s = extends;
+    classinfo_t*s = extends;
 
     int count=0;
     
@@ -516,7 +522,7 @@ static void startclass(token_t*modifiers, token_t*name, class_signature_t*extend
     __ setslot(m, slotindex);
 
     /* flash.display.MovieClip handling */
-    if(!globalclass && public && class_signature_equals(registry_getMovieClip(),extends)) {
+    if(!globalclass && public && classinfo_equals(registry_getMovieClip(),extends)) {
         if(state->package && state->package[0]) {
             globalclass = concat3str(state->package, ".", state->classname);
         } else {
@@ -532,7 +538,7 @@ static void endclass()
     old_state();
 }
 static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
-                          param_list_t*params, class_signature_t*type)
+                          param_list_t*params, classinfo_t*type)
 {
     token_list_t*t;
     new_state();
@@ -553,7 +559,6 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     }
 
     multiname_t*type2 = sig2mname(type);
-
     if(!strcmp(state->classname,name->text)) {
         state->m = abc_class_constructor(state->cls, type2, 0);
     } else {
@@ -573,8 +578,6 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
 
     __ getlocal_0(state->m);
     __ pushscope(state->m);
-
-    multiname_destroy(type2);
 }
 static void endfunction()
 {
@@ -613,7 +616,7 @@ void extend_s(token_t*list, char*seperator, token_t*add) {
     list->text[l1+l2+l3]=0;
 }
 
-static int find_variable(char*name, class_signature_t**m)
+static int find_variable(char*name, classinfo_t**m)
 {
     state_list_t* s = state_stack;
     while(s) {
@@ -626,13 +629,20 @@ static int find_variable(char*name, class_signature_t**m)
         }
         s = s->next;
     }
-    syntaxerror("undefined variable: %s", name);
+    return -1;
 } 
+static int find_variable_safe(char*name, classinfo_t**m)
+{
+    int i = find_variable(name, m);
+    if(i<0)
+        syntaxerror("undefined variable: %s", name);
+    return i;
+}
 static char variable_exists(char*name) 
 {
     return array_contains(state->vars, name);
 }
-static int new_variable(char*name, class_signature_t*type)
+static int new_variable(char*name, classinfo_t*type)
 {
     return array_append(state->vars, name, type) + state->local_var_base;
 }
@@ -640,7 +650,7 @@ code_t* killvars(code_t*c)
 {
     int t;
     for(t=0;t<state->vars->num;t++) {
-        class_signature_t*type = array_getvalue(state->vars, t);
+        classinfo_t*type = array_getvalue(state->vars, t);
         //do this always, otherwise register types don't match
         //in the verifier when doing nested loops
         //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
@@ -650,7 +660,7 @@ code_t* killvars(code_t*c)
     return c;
 }
 
-char is_subtype_of(class_signature_t*type, class_signature_t*supertype)
+char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
 {
     return 1; // FIXME
 }
@@ -668,11 +678,11 @@ void breakjumpsto(code_t*c, code_t*jump)
     }
 }
 
-class_signature_t*join_types(class_signature_t*type1, class_signature_t*type2, char op)
+classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
 {
     return registry_getanytype(); // FIXME
 }
-code_t*converttype(code_t*c, class_signature_t*from, class_signature_t*to)
+code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 {
     if(from==to)
         return c;
@@ -691,7 +701,7 @@ code_t*converttype(code_t*c, class_signature_t*from, class_signature_t*to)
     return c;
 }
 
-code_t*defaultvalue(code_t*c, class_signature_t*type)
+code_t*defaultvalue(code_t*c, classinfo_t*type)
 {
     if(TYPE_IS_INT(type) || TYPE_IS_UINT(type) || TYPE_IS_FLOAT(type)) {
        c = abc_pushbyte(c, 0);
@@ -806,8 +816,8 @@ VARIABLE_DECLARATION : VAR T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
 }
 ASSIGNMENT :           T_IDENTIFIER '=' EXPRESSION {
-    class_signature_t*type=0;
-    int i = find_variable($1->text, &type);
+    classinfo_t*type=0;
+    int i = find_variable_safe($1->text, &type);
     $$ = $3.c;
     if(!type && $3.t) {
         // convert to "any" type, the register is untyped
@@ -884,18 +894,21 @@ BREAK : "break" {
 
 /* ------------ packages and imports ---------------- */
 
-PACKAGE_DECLARATION : "package" MULTILEVELIDENTIFIER '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
-PACKAGE_DECLARATION : "package" '{' {startpackage(0)} MAYBECODE '}' {endpackage()}
+X_IDENTIFIER: T_IDENTIFIER
+            | "package"
 
 PACKAGE: PACKAGE '.' X_IDENTIFIER {$$ = concat3($1,$2,$3);}
 PACKAGE: X_IDENTIFIER             {$$=$1;}
 
-IMPORT : "import" PACKAGE '.' X_IDENTIFIER {
-       class_signature_t*c = registry_findclass($2->text, $4->text);
+PACKAGE_DECLARATION : "package" PACKAGE '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
+PACKAGE_DECLARATION : "package" '{' {startpackage(0)} MAYBECODE '}' {endpackage()}
+
+IMPORT : "import" QNAME {
+       classinfo_t*c = $2;
        if(!c) 
-            syntaxerror("Couldn't import %s.%s\n", $2->text, $4->text);
+            syntaxerror("Couldn't import class\n");
        state_has_imports();
-       dict_put(state->imports, $4->text, c);
+       dict_put(state->imports, c->name, c);
        $$=0;
 }
 IMPORT : "import" PACKAGE '.' '*' {
@@ -915,13 +928,13 @@ MODIFIER_LIST : MODIFIER               {$$=empty_token();extend($$,$1);}
 MODIFIER : KW_PUBLIC | KW_PRIVATE | KW_PROTECTED | KW_STATIC | KW_DYNAMIC | KW_FINAL | KW_OVERRIDE | KW_NATIVE | KW_INTERNAL
 
 EXTENDS : {$$=registry_getobjectclass();}
-EXTENDS : KW_EXTENDS PACKAGEANDCLASS {$$=$2;}
+EXTENDS : KW_EXTENDS QNAME {$$=$2;}
 
 EXTENDS_LIST : {$$=list_new();}
-EXTENDS_LIST : KW_EXTENDS PACKAGEANDCLASS_LIST {$$=$2;}
+EXTENDS_LIST : KW_EXTENDS QNAME_LIST {$$=$2;}
 
 IMPLEMENTS_LIST : {$$=list_new();}
-IMPLEMENTS_LIST : KW_IMPLEMENTS PACKAGEANDCLASS_LIST {$$=$2;}
+IMPLEMENTS_LIST : KW_IMPLEMENTS QNAME_LIST {$$=$2;}
 
 CLASS_DECLARATION : MODIFIERS "class" T_IDENTIFIER 
                               EXTENDS IMPLEMENTS_LIST 
@@ -936,7 +949,7 @@ INTERFACE_DECLARATION : MODIFIERS "interface" T_IDENTIFIER
 
 /* ------------- package + class ids --------------- */
 
-PACKAGEANDCLASS : T_IDENTIFIER {
+CLASS: T_IDENTIFIER {
 
     /* try current package */
     $$ = registry_findclass(state->package, $1->text);
@@ -947,7 +960,7 @@ PACKAGEANDCLASS : T_IDENTIFIER {
         if($$)
             break;
         if(!strcmp(e->key, $1->text)) {
-            $$ = (class_signature_t*)e->data;
+            $$ = (classinfo_t*)e->data;
         }
         e = e->next;
     }
@@ -969,10 +982,14 @@ PACKAGEANDCLASS : T_IDENTIFIER {
 
     if(!$$) syntaxerror("Could not find class %s\n", $1->text);
 }
+
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
     $$ = registry_findclass($1->text, $3->text);
     if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1->text, $3->text);
 }
+
+QNAME: PACKAGEANDCLASS
+     | CLASS
 
 
 /* ----------function calls, constructor calls ------ */
@@ -991,7 +1008,7 @@ EXPRESSION_LIST : EXPRESSION_LIST ',' EXPRESSION {$$=$1;
                                                   *t = $3;
                                                   list_append($$, t);}
 
-NEW : "new" PACKAGEANDCLASS MAYBE_PARAM_VALUES {
+NEW : "new" CLASS MAYBE_PARAM_VALUES {
     MULTINAME(m, $2);
     $$.c = code_new();
     $$.c = abc_findpropstrict2($$.c, &m);
@@ -1006,19 +1023,32 @@ NEW : "new" PACKAGEANDCLASS MAYBE_PARAM_VALUES {
     $$.t = $2;
 }
 
-FUNCTIONCALL : T_IDENTIFIER '(' MAYBE_EXPRESSION_LIST ')' {
-    /* TODO: use abc_call (for calling local variables),
-             abc_callstatic (for calling own methods) */
-    $$.c = code_new();
-    $$.c = abc_findpropstrict($$.c, $1->text);
+/* TODO: use abc_call (for calling local variables),
+         abc_callstatic (for calling own methods) 
+         call (for closures)
+*/
+FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
     typedcode_list_t*l = $3;
     int len = 0;
+    code_t*paramcode = 0;
     while(l) {
-        $$.c = code_append($$.c, l->typedcode->c); // push parameters on stack
+        paramcode = code_append(paramcode, l->typedcode->c); // push parameters on stack
         l = l->next;
         len ++;
     }
-    $$.c = abc_callproperty($$.c, $1->text, len);
+
+    $$.c = $1.c;
+    if($$.c->opcode == OPCODE_GETPROPERTY) {
+        multiname_t*name = multiname_clone($$.c->data[0]);
+        $$.c = code_cutlast($$.c);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_callproperty2($$.c, name, len);
+    } else {
+        int i = find_variable_safe("this", 0);
+        $$.c = abc_getlocal($$.c, i);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_call($$.c, len);
+    }
     /* TODO: look up the functions's return value */
     $$.t = TYPE_ANY;
 }
@@ -1031,7 +1061,7 @@ RETURN: "return" EXPRESSION {
     $$ = abc_returnvalue($$);
 }
 
-TYPE : PACKAGEANDCLASS {$$=$1;}
+TYPE : QNAME {$$=$1;}
      | '*'        {$$=registry_getanytype();}
      |  "String"  {$$=registry_getstringclass();}
      |  "int"     {$$=registry_getintclass();}
@@ -1141,6 +1171,27 @@ E : E "&&" E {$$.t = join_types($1.t, $3.t, 'A');
               jmp->branch = label;              
              }
 
+//E : E '.' T_IDENTIFIER '(' ')'
+//            {$$.c = 0; // FIXME
+//             $$.t = 0;
+//            }
+
+E : E '.' T_IDENTIFIER
+            {$$.c = $1.c;
+             if($$.t) {
+                 namespace_t ns = {$$.t->access, (char*)$$.t->package};
+                 multiname_t m = {QNAME, &ns, 0, $3->text};
+                 $$.c = abc_getproperty2($$.c, &m);
+                /* FIXME: get type of ($1.t).$3 */
+                 $$.t = registry_getanytype();
+             } else {
+                 namespace_t ns = {ACCESS_PACKAGE, ""};
+                 multiname_t m = {QNAME, &ns, 0, $3->text};
+                 $$.c = abc_getproperty2($$.c, &m);
+                 $$.t = registry_getanytype();
+             }
+            }
+
 E : '!' E    {$$.c=$2.c;
               $$.c = abc_not($$.c);
               $$.t = TYPE_BOOLEAN;
@@ -1158,19 +1209,19 @@ E : E '*' E {$$.c = code_append($1.c,$3.c);$$.c = abc_multiply($$.c);$$.c=abc_co
              $$.t = join_types($1.t, $3.t, '*');
             }
 
-E : E "as" TYPE
-E : E "is" TYPE
+E : E "as" E
+E : E "is" E
 E : '(' E ')' {$$=$2;}
 E : '-' E {$$=$2;}
 
 E : LH "+=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
-               class_signature_t*type = join_types($1.type, $3.t, '+');
+               classinfo_t*type = join_types($1.type, $3.t, '+');
                $$.c=converttype($$.c, type, $1.type);
                $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
                $$.t = $1.type;
               }
 E : LH "-=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
-               class_signature_t*type = join_types($1.type, $3.t, '-');
+               classinfo_t*type = join_types($1.type, $3.t, '-');
                $$.c=converttype($$.c, type, $1.type);
                $$.c=abc_dup($$.c);$$.c=code_append($$.c,$1.write);
                $$.t = $1.type;
@@ -1178,7 +1229,7 @@ E : LH "-=" E {$$.c = $1.read;$$.c=code_append($$.c,$3.c);$$.c=abc_add($$.c);
 
 // TODO: use inclocal where appropriate
 E : LH "++" {$$.c = $1.read;
-             class_signature_t*type = $1.type;
+             classinfo_t*type = $1.type;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  $$.c=abc_increment_i($$.c);
              } else {
@@ -1190,7 +1241,7 @@ E : LH "++" {$$.c = $1.read;
              $$.t = $1.type;
             }
 E : LH "--" {$$.c = $1.read;
-             class_signature_t*type = $1.type;
+             classinfo_t*type = $1.type;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  $$.c=abc_decrement_i($$.c);
              } else {
@@ -1203,15 +1254,23 @@ E : LH "--" {$$.c = $1.read;
             }
 
 LH: T_IDENTIFIER {
-  int i = find_variable($1->text, &$$.type);
+  int i = find_variable_safe($1->text, &$$.type);
   $$.read = abc_getlocal(0, i);
   $$.write = abc_setlocal(0, i);
 }
 
 
 VAR_READ : T_IDENTIFIER {
+    $$.t = 0;
+    $$.c = 0;
     int i = find_variable($1->text, &$$.t);
-    $$.c = abc_getlocal(0, i);
+    if(i>=0) {
+        $$.c = abc_getlocal($$.c, i);
+    } else {
+        $$.t = 0;
+        $$.c = abc_findpropstrict($$.c, $1->text);
+        $$.c = abc_getproperty($$.c, $1->text);
+    }
 }
 
 //VARIABLE : T_IDENTIFIER
@@ -1220,9 +1279,6 @@ VAR_READ : T_IDENTIFIER {
 //VARIABLE : VARIABLE "::" VARIABLE // namespace declaration
 //VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
 //VARIABLE : VARIABLE '[' EXPRESSION ']' // unqualified expression
-
-// keywords which also may be identifiers
-X_IDENTIFIER : T_IDENTIFIER | KW_PACKAGE
 
 GETSET : "get" {$$=$1;}
        | "set" {$$=$1;}
@@ -1246,11 +1302,8 @@ IDECLARATION : FUNCTION_DECLARATION
 //IDENTIFIER_LIST : T_IDENTIFIER ',' IDENTIFIER_LIST {extend($3,$1);$$=$3;}
 //IDENTIFIER_LIST : T_IDENTIFIER                     {$$=empty_token();extend($$,$1);}
 
-MULTILEVELIDENTIFIER : MULTILEVELIDENTIFIER '.' X_IDENTIFIER {$$=$1;extend_s($$, ".", $3)}
-MULTILEVELIDENTIFIER : T_IDENTIFIER                 {$$=$1;extend($$,$1)};
-
-PACKAGEANDCLASS_LIST : PACKAGEANDCLASS {$$=list_new();list_append($$, $1);}
-PACKAGEANDCLASS_LIST : PACKAGEANDCLASS_LIST ',' PACKAGEANDCLASS {$$=$1;list_append($$,$3);}
+QNAME_LIST : QNAME {$$=list_new();list_append($$, $1);}
+QNAME_LIST : QNAME_LIST ',' QNAME {$$=$1;list_append($$,$3);}
 
 MAYBE_DECLARATION_LIST : 
 MAYBE_DECLARATION_LIST : DECLARATION_LIST
