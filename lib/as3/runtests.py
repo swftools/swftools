@@ -130,8 +130,10 @@ class Test:
     def doprintlong(self):
         print self.nr, self.file
         print "================================"
+        print "compile:", (test.compile_error and "error" or "ok")
         print test.compile_output
         print "================================"
+        print "run:", (test.flash_error and "error" or "ok")
         print test.flash_output
         print "================================"
 
