@@ -280,6 +280,7 @@ private                      {return m(KW_PRIVATE);}
 Boolean                      {return m(KW_BOOLEAN);}
 dynamic                      {return m(KW_DYNAMIC);}
 extends                      {return m(KW_EXTENDS);}
+return                       {return m(KW_RETURN);}
 public                       {return m(KW_PUBLIC);}
 native                       {return m(KW_NATIVE);}
 static                       {return m(KW_STATIC);}
