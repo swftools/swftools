@@ -22,14 +22,14 @@ package {
 
             /* test that assignment expressions do indeed return the
                right value */
-            x = (y=1);   assert(x==1 && y==1);
-            x = (y++);   assert(x==1 && y==2);
-            x = (y--);   assert(x==2 && y==1);
-            x = (++y);   assert(x==2 && y==2);
-            x = (--y);   assert(x==1 && y==1);
-            x = (y += 1);assert(x==2 && y==2);
-            x = (y -= 1);assert(x==1 && y==1);
-            x = y = 5;   assert(x==5 && y==5);
+            x = (y=1);   assert(x==1 && y==1); //x=1;y=1;
+            x = (y++);   assert(x==1 && y==2); //x=1;y=2;
+            x = (y--);   assert(x==2 && y==1); //x=2;y=1;
+            x = (++y);   assert(x==2 && y==2); //x=2;y=2;
+            x = (--y);   assert(x==1 && y==1); //x=1;y=1;
+            x = (y += 1);assert(x==2 && y==2); //x=2;y=2;
+            x = (y -= 1);assert(x==1 && y==1); //x=1;y=1;
+            x = y = 5;   assert(x==5 && y==5); //x=5;y=5;
 
             y = 5;
             x = (y*=5);  assert(x==25 && y==25);
@@ -46,7 +46,7 @@ package {
             var b:int = 2;
             var c:int = 3;
             var d:int = 4;
-            a += (b += (c += (d += 1)))
+            a += b += c += d += 1
             assert(a==11 && b==10 && c==8 && d==5);
         }
     }
