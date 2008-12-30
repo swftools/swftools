@@ -767,6 +767,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     int slot = 0;
     if(!strcmp(state->clsinfo->name,name)) {
         state->m = abc_class_constructor(state->cls, type2);
+        name = "__as3_constructor__";
     } else {
         if(flags&FLAG_STATIC)
             state->m = abc_class_staticmethod(state->cls, type2, &mname);
@@ -1883,11 +1884,16 @@ VAR_READ : T_IDENTIFIER {
     $$.t = 0;
     $$.c = 0;
     int i;
+    classinfo_t*a = 0;
     memberinfo_t*f = 0;
+
+    /* look at variables */
     if((i = find_variable($1, &$$.t)) >= 0) {
         // $1 is a local variable
         $$.c = abc_getlocal($$.c, i);
-    } else if(f = registry_findmember(state->clsinfo, $1)) {
+
+    /* look at current class' members */
+    } else if((f = registry_findmember(state->clsinfo, $1))) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
         int i_am_static = (state->minfo?(state->minfo->flags&FLAG_STATIC):FLAG_STATIC);
@@ -1916,8 +1922,22 @@ VAR_READ : T_IDENTIFIER {
         } else {
             $$.t = f->type;
         }
+    
+    /* look at classes in the current package */
+    } else if((a = registry_findclass(state->package, $1))) {
+        if(a->slot) {
+            $$.c = abc_getglobalscope($$.c);
+            $$.c = abc_getslot($$.c, a->slot);
+        } else {
+            MULTINAME(m, a);
+            $$.c = abc_getlex2($$.c, &m);
+        }
+        /* this is not entirely correct (this is the class itself,
+           not an object of this class) */
+        $$.t = a;
+
+    /* unknown object, let the avm2 resolve it */
     } else {
-        // let the avm2 resolve $1 
         if(strcmp($1,"trace"))
             warning("Couldn't resolve %s, doing late binding", $1);
         state->late_binding = 1;
