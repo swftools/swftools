@@ -52,13 +52,13 @@
     typedcode_list_t*value_list;
     param_t* param;
     params_t params;
-    char*string;
+    string_t str;
     constant_t*constant;
 }
 
 
 %token<token> T_IDENTIFIER
-%token<string> T_STRING
+%token<str> T_STRING
 %token<token> T_REGEXP
 %token<token> T_EMPTY
 %token<number_int> T_INT
@@ -1084,7 +1084,7 @@ ONE_VARIABLE: {} T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
         state->initcode = abc_pushundefined(state->initcode);
         state->initcode = abc_setlocal(state->initcode, index);
     }*/
-    printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
+    //printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
 }
 
 /* ------------ control flow ------------------------- */
@@ -1257,7 +1257,7 @@ STATICCONSTANT : T_BYTE {$$ = constant_new_int($1);}
 STATICCONSTANT : T_INT {$$ = constant_new_int($1);}
 STATICCONSTANT : T_UINT {$$ = constant_new_uint($1);}
 STATICCONSTANT : T_FLOAT {$$ = constant_new_float($1);}
-STATICCONSTANT : T_STRING {$$ = constant_new_string($1);}
+STATICCONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);}
 //STATICCONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
 STATICCONSTANT : KW_TRUE {$$ = constant_new_true($1);}
 STATICCONSTANT : KW_FALSE {$$ = constant_new_false($1);}
@@ -1302,7 +1302,9 @@ PARAM:  T_IDENTIFIER ':' TYPE MAYBESTATICCONSTANT {
 }
 PARAM:  T_IDENTIFIER MAYBESTATICCONSTANT {
      $$ = malloc(sizeof(param_t));
-     $$->name=$1->text;$$->type = TYPE_ANY;
+     $$->name=$1->text;
+     $$->type = TYPE_ANY;
+     $$->value = $2;
 }
 
 FUNCTION_DECLARATION: MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
@@ -1789,7 +1791,7 @@ CONSTANT : T_UINT {$$.c = abc_pushuint(0, $1);
 CONSTANT : T_FLOAT {$$.c = abc_pushdouble(0, $1);
                     $$.t = TYPE_FLOAT;
                    }
-CONSTANT : T_STRING {$$.c = abc_pushstring(0, $1);
+CONSTANT : T_STRING {$$.c = abc_pushstring2(0, &$1);
                      $$.t = TYPE_STRING;
                     }
 CONSTANT : KW_TRUE {$$.c = abc_pushtrue(0);
