@@ -4,11 +4,17 @@ package {
 
     public class Main extends flash.display.MovieClip {
         function Main() {
-            var a:Array = new Array(1,2,3,4);
-            if(a[0]==1) trace("ok 1/4");
-            if(a[1]==2) trace("ok 2/4");
-            if(a[2]==3) trace("ok 3/4");
-            if(a[3]==4) trace("ok 4/4");
+            var a:Array = new Array(1,2,3);
+            if(a[0]==1) trace("ok 1/8");
+            if(a[1]==2) trace("ok 2/8");
+            if(a[2]==3) trace("ok 3/8");
+            if(a.length==3) trace("ok 4/8");
+
+            var b:Array = [1,2,3];
+            if(b[0]==1) trace("ok 5/8");
+            if(b[1]==2) trace("ok 6/8");
+            if(b[2]==3) trace("ok 7/8");
+            if(b.length=3) trace("ok 8/8");
         }
     }
 }
