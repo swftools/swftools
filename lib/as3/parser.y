@@ -1505,8 +1505,12 @@ NEW : "new" CLASS MAYBE_PARAM_VALUES {
     MULTINAME(m, $2);
     $$.c = code_new();
 
-    /* TODO: why do we have to *find* our own classes? */
-    $$.c = abc_findpropstrict2($$.c, &m);
+    if($2->slot) {
+        $$.c = abc_getglobalscope($$.c);
+        $$.c = abc_getslot($$.c, $2->slot);
+    } else {
+        $$.c = abc_findpropstrict2($$.c, &m);
+    }
 
     typedcode_list_t*l = $3;
     int len = 0;
@@ -1515,7 +1519,10 @@ NEW : "new" CLASS MAYBE_PARAM_VALUES {
         l = l->next;
         len ++;
     }
-    $$.c = abc_constructprop2($$.c, &m, len);
+    if($2->slot)
+        $$.c = abc_construct($$.c, len);
+    else
+        $$.c = abc_constructprop2($$.c, &m, len);
     $$.t = $2;
 }
 
