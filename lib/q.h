@@ -135,15 +135,23 @@ void ringbuffer_put(ringbuffer_t*r, void*buf, int size);
 int ringbuffer_read(ringbuffer_t*r, void*buf, int size);
 void ringbuffer_clear(ringbuffer_t*r);
 
+/* old style functions- should be renamed */
 string_t string_new(const char*text, int len);
 string_t string_new2(const char*text);
+void string_dup(string_t*str, const char*text);
+void string_dup2(string_t*str, const char*text, int len);
+
+char* string_cstr(string_t*str);
+char* string_escape(string_t*str);
+string_t* string_new3(const char*text, int len);
+string_t* string_new4(const char*text);
+void string_free(string_t*s);
 unsigned int string_hash(const string_t*str);
 unsigned int string_hash2(const char*str);
 unsigned int string_hash3(const char*str, int len);
 void string_set(string_t*str, const char*text);
 void string_set2(string_t*str, const char*text, int len);
-void string_dup(string_t*str, const char*text);
-void string_dup2(string_t*str, const char*text, int len);
+string_t*string_dup3(string_t*s);
 int string_equals(string_t*str, const char*text);
 
 void stringarray_init(stringarray_t*sa, int hashsize);

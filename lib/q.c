@@ -318,9 +318,71 @@ string_t string_new2(const char*text)
     s.str = text;
     return s;
 }
+string_t* string_new3(const char*text, int len)
+{
+    if(!text) {
+        string_t*s = malloc(sizeof(string_t));
+        s->len = 0;
+        s->str = 0;
+        return s;
+    } else {
+        string_t*s = malloc(sizeof(string_t)+len+1);
+        s->len = len;
+        s->str = (const char*)(s+1);
+        memcpy((char*)s->str, text, len);
+        ((char*)s->str)[len]=0;
+        return s;
+    }
+}
+string_t* string_new4(const char*text)
+{
+    int l = strlen(text);
+    return string_new3(text, l);
+}
+
+void string_free(string_t*s)
+{
+    if(!s) 
+        return;
+    s->len = 0;
+    if((string_t*)(s->str) == s+1) {
+        s->str = 0;
+        rfx_free(s);
+    } else {
+        rfx_free((char*)(s->str));
+        s->str = 0;
+        rfx_free(s);
+    }
+}
 char* string_cstr(string_t*str)
 {
     return strdup_n(str->str, str->len);
+}
+char* string_escape(string_t*str)
+{
+    int t;
+    int len = 0;
+    for(t=0;t<str->len;t++) {
+        if(str->str[t]<0x20)
+            len+=3;
+        else
+            len++;
+    }
+    char*s = malloc(len+1);
+    char*p=s;
+    for(t=0;t<str->len;t++) {
+        if(str->str[t]<0x20) {
+            *p++ ='\\';
+            unsigned char c = str->str[t];
+            *p++ = "0123456789abcdef"[c>>4];
+            *p++ = "0123456789abcdef"[c&0x0f];
+        } else {
+            *p++ = str->str[t];
+        }
+    }
+    *p++ = 0;
+    assert(p == &s[len+1]);
+    return s;
 }
 
 unsigned int crc32_add_byte(unsigned int checksum, unsigned char b) 
@@ -567,6 +629,8 @@ void charptr_free(void*o)
 
 char stringstruct_equals(const void*o1, const void*o2) 
 {
+    if(!o1 || !o2) 
+        return o1==o2;
     string_t*s1 = (string_t*)o1;
     string_t*s2 = (string_t*)o2;
     int l = s1->len<s2->len?s1->len:s2->len;
@@ -578,18 +642,29 @@ char stringstruct_equals(const void*o1, const void*o2)
 }
 unsigned int stringstruct_hash(const void*o) 
 {
+    if(!o) return 0;
     return string_hash(o);
 }
-void*stringstruct_dup(const void*o) 
+string_t*string_dup3(string_t*o)
 {
-    string_t*s = malloc(sizeof(string_t));
-    string_set2(s, ((string_t*)o)->str, ((string_t*)o)->len);
+    if(!o) return 0;
+    if(!o->str) {
+        string_t*s = malloc(sizeof(string_t));
+        s->str=0;
+        s->len=0;
+        return s;
+    }
+    string_t*s = rfx_alloc(sizeof(string_t)+o->len+1);
+    s->len = o->len;
+    s->str = (const char*)(s+1);
+    memcpy((char*)s->str, o->str, s->len);
+    ((char*)s->str)[s->len]=0;
     return s;
 }
 void stringstruct_free(void*o) 
 {
-    rfx_free((void*)(((string_t*)o)->str));
-    rfx_free((void*)o);
+    if(o)
+        string_free(o);
 }
 
 type_t ptr_type = {
@@ -609,7 +684,7 @@ type_t charptr_type = {
 type_t stringstruct_type = {
     equals: stringstruct_equals,
     hash: stringstruct_hash,
-    dup: stringstruct_dup,
+    dup: (dup_func)string_dup3,
     free: stringstruct_free,
 };
 
