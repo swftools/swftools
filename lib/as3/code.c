@@ -1103,10 +1103,12 @@ code_t*code_dup(code_t*c)
 
 code_t*code_cutlast(code_t*c)
 {
+    if(!c) return c;
     assert(!c->next);
     code_t*prev = c->prev;
     c->prev = 0;
-    prev->next=0;
+    if(prev)
+        prev->next=0;
     code_free(c);
     return prev;
 }
