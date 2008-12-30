@@ -63,4 +63,4 @@ testpaths: testpaths.c ../librfxswf.a ../libbase.a
 	gcc $(D) -DMAIN -o testpaths testpaths.c ../librfxswf.a ../libbase.a -lz -ljpeg
 
 clean:
-	rm -f *.o *.yy.c *.tab.c *.tab.h testreadwrite swfdump testpaths testwrite
+	rm -f *.o *.yy.c *.tab.c *.tab.h testreadwrite swfdump testpaths testwrite ../librfxswf.a
