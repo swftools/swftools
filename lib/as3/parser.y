@@ -924,16 +924,16 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
         if(m->type != QNAME)
             syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
         if(!justassign) {
-            use_temp_var = 1;
             prefix = abc_dup(prefix); // we need the object, too
         }
+        use_temp_var = 1;
     } else if(r->opcode == OPCODE_GETSLOT) {
         write->opcode = OPCODE_SETSLOT;
         write->data[0] = r->data[0];
         if(!justassign) {
-            use_temp_var = 1;
             prefix = abc_dup(prefix); // we need the object, too
         }
+        use_temp_var = 1;
     } else if(r->opcode == OPCODE_GETLOCAL) { 
         write->opcode = OPCODE_SETLOCAL;
         write->data[0] = r->data[0];
@@ -991,13 +991,26 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
     } else {
         /* even smaller version: overwrite the value without reading
            it out first */
-        if(prefix) {
-            c = code_append(c, prefix);
+        if(!use_temp_var) {
+            if(prefix) {
+                c = code_append(c, prefix);
+                c = abc_dup(c);
+            }
+            c = code_append(c, middlepart);
+            c = code_append(c, write);
+            c = code_append(c, r);
+        } else {
+            temp = gettempvar();
+            if(prefix) {
+                c = code_append(c, prefix);
+                c = abc_dup(c);
+            }
+            c = code_append(c, middlepart);
             c = abc_dup(c);
+            c = abc_setlocal(c, temp);
+            c = code_append(c, write);
+            c = abc_getlocal(c, temp);
         }
-        c = code_append(c, middlepart);
-        c = code_append(c, write);
-        c = code_append(c, r);
     }
 
     return c;
