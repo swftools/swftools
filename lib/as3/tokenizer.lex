@@ -268,30 +268,47 @@ static inline int m(int type)
 
 
 static char numberbuf[64];
-static inline int handlenumber()
+static char*nrbuf()
 {
     if(yyleng>sizeof(numberbuf)-1)
         syntaxerror("decimal number overflow");
-
     char*s = numberbuf;
     memcpy(s, yytext, yyleng);
     s[yyleng]=0;
+    return s;
+}
 
-    int t;
-    char is_float=0;
-    for(t=0;t<yyleng;t++) {
-        if(yytext[t]=='.') {
-            if(is_float)
-                syntaxerror("Invalid number");
-            is_float=1;
-        } else if(!strchr("-0123456789", yytext[t])) {
-            syntaxerror("Invalid number");
-        }
-    }
-    if(is_float) {
-        avm2_lval.number_float = atof(s);
-        return T_FLOAT;
-    } 
+static inline int setint(int v)
+{
+    avm2_lval.number_int = v;
+    if(v>-128)
+        return T_BYTE;
+    else if(v>=-32768)
+        return T_SHORT;
+    else
+        return T_INT;
+}
+static inline int setuint(unsigned int v)
+{
+    avm2_lval.number_uint = v;
+    if(v<128)
+        return T_BYTE;
+    else if(v<32768)
+        return T_SHORT;
+    else
+        return T_UINT;
+}
+
+static inline int handlefloat()
+{
+    char*s = nrbuf();
+    avm2_lval.number_float = atof(s);
+    return T_FLOAT;
+}
+
+static inline int handleint()
+{
+    char*s = nrbuf();
     char l = (yytext[0]=='-');
 
     char*max = l?"1073741824":"2147483647";
@@ -308,26 +325,44 @@ static inline int handlenumber()
     }
     if(yytext[0]=='-') {
         int v = atoi(s);
-        avm2_lval.number_int = v;
-        if(v>-128)
-            return T_BYTE;
-        else if(v>=-32768)
-            return T_SHORT;
-        else
-            return T_INT;
+        return setint(v);
     } else {
         unsigned int v = 0;
+        int t;
         for(t=0;t<yyleng;t++) {
             v*=10;
             v+=yytext[t]-'0';
         }
-        avm2_lval.number_uint = v;
-        if(v<128)
-            return T_BYTE;
-        else if(v<32768)
-            return T_SHORT;
-        else
-            return T_UINT;
+        return setuint(v);
+    }
+}
+
+static inline int handlehex()
+{
+    char l = (yytext[0]=='-');
+
+    if(yyleng-l>8)
+        syntaxerror("integer overflow");
+    int t;
+    unsigned int v = 0;
+    for(t=l;t<yyleng;t++) {
+        v<<=4;
+        char c = yytext[t];
+        if(c>='0' && c<='9')
+            v|=(c&15);
+        else if(c>='a' && c<='f' ||
+                c>='A' && c<='F')
+            v|=(c&0x0f)+9;
+    }
+    if(l && v>1073741824)
+        syntaxerror("signed integer overflow");
+    if(!l && v>2147483647)
+        syntaxerror("unsigned integer overflow");
+
+    if(l) {
+        return setint(-(int)v);
+    } else {
+        return setuint(v);
     }
 }
 
@@ -347,8 +382,13 @@ void initialize_scanner();
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
 
-NUMBER	 [0-9]+(\.[0-9]*)?|-?\.[0-9]+
-NUMBERWITHSIGN [+-]?({NUMBER})
+HEXINT    0x[a-zA-Z0-9]+
+INT       [0-9]+
+FLOAT     [0-9]+(\.[0-9]*)?|\.[0-9]+
+
+HEXWITHSIGN [+-]?({HEXINT})
+INTWITHSIGN [+-]?({INT})
+FLOATWITHSIGN [+-]?({FLOAT})
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
@@ -368,13 +408,17 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return m(T_REGEXP);} 
-{NUMBERWITHSIGN}             {c(); BEGIN(INITIAL);return handlenumber();}
+{HEXWITHSIGN}                {c(); BEGIN(INITIAL);return handlehex();}
+{INTWITHSIGN}                {c(); BEGIN(INITIAL);return handleint();}
+{FLOATWITHSIGN}              {c(); BEGIN(INITIAL);return handlefloat();}
 }
 
 \xef\xbb\xbf                 {/* utf 8 bom */}
 {S}                          {c();}
 
-{NUMBER}                     {c(); BEGIN(INITIAL);return handlenumber();}
+{HEXINT}                     {c(); BEGIN(INITIAL);return handlehex();}
+{INT}                        {c(); BEGIN(INITIAL);return handleint();}
+{FLOAT}                      {c(); BEGIN(INITIAL);return handlefloat();}
 
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
@@ -409,6 +453,7 @@ implements                   {c();return m(KW_IMPLEMENTS);}
 interface                    {c();return m(KW_INTERFACE);}
 namespace                    {c();return m(KW_NAMESPACE);}
 protected                    {c();return m(KW_PROTECTED);}
+undefined                    {c();return m(KW_UNDEFINED);}
 override                     {c();return m(KW_OVERRIDE);}
 internal                     {c();return m(KW_INTERNAL);}
 function                     {c();return m(KW_FUNCTION);}
@@ -422,12 +467,14 @@ public                       {c();return m(KW_PUBLIC);}
 native                       {c();return m(KW_NATIVE);}
 static                       {c();return m(KW_STATIC);}
 import                       {c();return m(KW_IMPORT);}
+typeof                       {c();return m(KW_TYPEOF);}
 while                        {c();return m(KW_WHILE);}
 class                        {c();return m(KW_CLASS);}
 const                        {c();return m(KW_CONST);}
 final                        {c();return m(KW_FINAL);}
 false                        {c();return m(KW_FALSE);}
 break                        {c();return m(KW_BREAK);}
+void                         {c();return m(KW_VOID);}
 true                         {c();return m(KW_TRUE);}
 null                         {c();return m(KW_NULL);}
 else                         {c();return m(KW_ELSE);}
