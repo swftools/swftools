@@ -1091,10 +1091,15 @@ void swf_WriteABC(TAG*abctag, void*code)
 	//swf_SetU30(tag, c->old.max_scope_depth);
 
 	swf_SetU30(tag, c->stats->max_stack);
-        if(list_length(c->method->parameters)+1 <= c->stats->local_count)
+
+        int param_num = list_length(c->method->parameters)+1;
+        if(c->method->flags&METHOD_NEED_REST)
+            param_num++;
+        if(param_num <= c->stats->local_count)
 	    swf_SetU30(tag, c->stats->local_count);
         else
-	    swf_SetU30(tag, list_length(c->method->parameters)+1);
+	    swf_SetU30(tag, param_num);
+
 	swf_SetU30(tag, c->init_scope_depth);
 	swf_SetU30(tag, c->stats->max_scope_depth+
                         c->init_scope_depth);
