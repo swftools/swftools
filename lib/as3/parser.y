@@ -53,6 +53,7 @@
     param_t* param;
     params_t params;
     char*string;
+    constant_t*constant;
 }
 
 
@@ -158,6 +159,7 @@
 %type <params> MAYBE_PARAM_LIST
 %type <token> MODIFIERS
 %type <token> MODIFIER_LIST
+%type <constant> STATICCONSTANT MAYBESTATICCONSTANT
 %type <classinfo_list> IMPLEMENTS_LIST
 %type <classinfo> EXTENDS
 %type <classinfo_list> EXTENDS_LIST
@@ -296,11 +298,16 @@ typedef struct _state {
     memberinfo_t*minfo;
     abc_method_body_t*m;
 
-    array_t*vars;
+    dict_t*vars;
     int local_var_base;
     char late_binding;
 } state_t;
 
+typedef struct _global {
+    int variable_count;
+} global_t;
+
+static global_t*global = 0;
 static state_t* state = 0;
 
 DECLARE_LIST(state);
@@ -318,6 +325,11 @@ DECLARE_LIST(state);
     multiname_t m = {MULTINAMEL, 0, &m##_nsset, 0};
 
 static state_list_t*state_stack=0;
+    
+static void init_globals()
+{
+    global = rfx_calloc(sizeof(global_t));
+}
 
 static void new_state()
 {
@@ -330,7 +342,7 @@ static void new_state()
     sl->next = state_stack;
     sl->state = s;
     if(oldstate) {
-        s->local_var_base = array_length(oldstate->vars) + oldstate->local_var_base;
+        s->local_var_base = oldstate->vars->num + oldstate->local_var_base;
     }
     if(!s->imports) {
         s->imports = dict_new();
@@ -338,7 +350,7 @@ static void new_state()
     state_stack = sl;
     state = s;
     state->level++;
-    state->vars = array_new();
+    state->vars = dict_new();
     state->initcode = 0;
     state->has_own_imports = 0;
 }
@@ -370,6 +382,7 @@ static void old_state()
 }
 void initialize_state()
 {
+    init_globals();
     new_state();
 
     state->file = abc_file_new();
@@ -608,72 +621,6 @@ static void endclass()
 
     old_state();
 }
-static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
-                          params_t*params, classinfo_t*type)
-{
-    token_list_t*t;
-    new_state();
-    state->function = name->text;
-    
-    if(state->m) {
-        syntaxerror("not able to start another method scope");
-    }
-
-    multiname_t*type2 = sig2mname(type);
-    if(!strcmp(state->clsinfo->name,name->text)) {
-        state->m = abc_class_constructor(state->cls, type2, 0);
-    } else {
-        state->minfo = memberinfo_register(state->clsinfo, name->text, MEMBER_METHOD);
-        state->m = abc_class_method(state->cls, type2, name->text, 0);
-        // getslot on a member slot only returns "undefined", so no need
-        // to actually store these
-        //state->minfo->slot = state->m->method->trait->slot_id;
-    }
-    if(getset->type == KW_GET) {
-        state->m->method->trait->kind = TRAIT_GETTER;
-    }
-    if(getset->type == KW_SET) {
-        state->m->method->trait->kind = TRAIT_SETTER;
-    }
-    if(params->varargs) {
-        state->m->method->flags |= METHOD_NEED_REST;
-    }
-
-    param_list_t*p;
-    for(p=params->list;p;p=p->next) {
-        if(params->varargs && !p->next) {
-            break; //varargs: omit last parameter in function signature
-        }
-        multiname_t*m = sig2mname(p->param->type);
-	list_append(state->m->method->parameters, m);
-    }
-
-    /* state->vars is initialized by state_new */
-    array_append(state->vars, "this", state->clsinfo);
-    for(p=params->list;p;p=p->next) {
-        array_append(state->vars, p->param->name, 0);
-    }
-}
-static void endfunction(code_t*body)
-{
-    code_t*c = 0;
-    if(state->late_binding) {
-        c = abc_getlocal_0(c);
-        c = abc_pushscope(c);
-    }
-    c = code_append(c, state->initcode);
-    c = code_append(c, body);
-
-    /* append return if necessary */
-    if(!c || c->opcode != OPCODE_RETURNVOID && 
-             c->opcode != OPCODE_RETURNVALUE)
-        c = abc_returnvoid(c);
-    
-    if(state->m->code) syntaxerror("internal error");
-    state->m->code = c;
-    old_state();
-}
-
 
 static token_t* empty_token()
 {
@@ -703,16 +650,21 @@ void extend_s(token_t*list, char*seperator, token_t*add) {
     list->text[l1+l2+l3]=0;
 }
 
+typedef struct _variable {
+    int index;
+    classinfo_t*type;
+} variable_t;
+
 static int find_variable(char*name, classinfo_t**m)
 {
     state_list_t* s = state_stack;
     while(s) {
-        int i = array_find(s->state->vars, name);
-        if(i>=0) {
+        variable_t*v = dict_lookup(s->state->vars, name);
+        if(v) {
             if(m) {
-                *m = array_getvalue(s->state->vars, i);
+                *m = v->type;
             }
-            return i + s->state->local_var_base;
+            return v->index;
         }
         s = s->next;
     }
@@ -727,11 +679,15 @@ static int find_variable_safe(char*name, classinfo_t**m)
 }
 static char variable_exists(char*name) 
 {
-    return array_contains(state->vars, name);
+    return dict_lookup(state->vars, name)!=0;
 }
 static int new_variable(char*name, classinfo_t*type)
 {
-    return array_append(state->vars, name, type) + state->local_var_base;
+    NEW(variable_t, v);
+    v->index = global->variable_count;
+    v->type = type;
+    dict_put(state->vars, name, v);
+    return global->variable_count++;
 }
 #define TEMPVARNAME "__as3_temp__"
 static int gettempvar()
@@ -748,7 +704,6 @@ code_t* killvars(code_t*c)
 {
     int t;
     for(t=0;t<state->vars->num;t++) {
-        classinfo_t*type = array_getvalue(state->vars, t);
         //do this always, otherwise register types don't match
         //in the verifier when doing nested loops
         //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
@@ -757,6 +712,103 @@ code_t* killvars(code_t*c)
     }
     return c;
 }
+
+
+static void check_constant_against_type(classinfo_t*t, constant_t*c)
+{
+#define xassert(b) if(!(b)) syntaxerror("Invalid default value %s for type '%s'", constant_tostring(c), t->name)
+   if(TYPE_IS_NUMBER(t)) {
+        xassert(c->type == CONSTANT_FLOAT
+             || c->type == CONSTANT_INT
+             || c->type == CONSTANT_UINT);
+   } else if(TYPE_IS_UINT(t)) {
+        xassert(c->type == CONSTANT_UINT ||
+               (c->type == CONSTANT_INT && c->i>0));
+   } else if(TYPE_IS_INT(t)) {
+        xassert(c->type == CONSTANT_INT);
+   } else if(TYPE_IS_BOOLEAN(t)) {
+        xassert(c->type == CONSTANT_TRUE
+             || c->type == CONSTANT_FALSE);
+   }
+}
+
+static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
+                          params_t*params, classinfo_t*type)
+{
+    token_list_t*t;
+    new_state();
+    global->variable_count = 0;
+    state->function = name->text;
+    
+    if(state->m) {
+        syntaxerror("not able to start another method scope");
+    }
+
+    multiname_t*type2 = sig2mname(type);
+    if(!strcmp(state->clsinfo->name,name->text)) {
+        state->m = abc_class_constructor(state->cls, type2, 0);
+    } else {
+        state->minfo = memberinfo_register(state->clsinfo, name->text, MEMBER_METHOD);
+        state->minfo->return_type = type;
+        state->m = abc_class_method(state->cls, type2, name->text, 0);
+        // getslot on a member slot only returns "undefined", so no need
+        // to actually store these
+        //state->minfo->slot = state->m->method->trait->slot_id;
+    }
+    if(getset->type == KW_GET) {
+        state->m->method->trait->kind = TRAIT_GETTER;
+    }
+    if(getset->type == KW_SET) {
+        state->m->method->trait->kind = TRAIT_SETTER;
+    }
+    if(params->varargs) {
+        state->m->method->flags |= METHOD_NEED_REST;
+    }
+
+    char opt=0;
+    param_list_t*p=0;
+    for(p=params->list;p;p=p->next) {
+        if(params->varargs && !p->next) {
+            break; //varargs: omit last parameter in function signature
+        }
+        multiname_t*m = sig2mname(p->param->type);
+	list_append(state->m->method->parameters, m);
+        if(p->param->value) {
+            check_constant_against_type(p->param->type, p->param->value);
+            opt=1;list_append(state->m->method->optional_parameters, p->param->value);
+        } else if(opt) {
+            syntaxerror("non-optional parameter not allowed after optional parameters");
+        }
+    }
+
+    /* state->vars is initialized by state_new */
+    if(new_variable("this", state->clsinfo)!=0) syntaxerror("Internal error");
+
+    for(p=params->list;p;p=p->next) {
+        new_variable(p->param->name, p->param->type);
+    }
+}
+static void endfunction(code_t*body)
+{
+    code_t*c = 0;
+    if(state->late_binding) {
+        c = abc_getlocal_0(c);
+        c = abc_pushscope(c);
+    }
+    c = code_append(c, state->initcode);
+    c = code_append(c, body);
+
+    /* append return if necessary */
+    if(!c || c->opcode != OPCODE_RETURNVOID && 
+             c->opcode != OPCODE_RETURNVALUE)
+        c = abc_returnvoid(c);
+    
+    if(state->m->code) syntaxerror("internal error");
+    state->m->code = c;
+    old_state();
+}
+
+
 
 char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
 {
@@ -822,6 +874,11 @@ char is_pushundefined(code_t*c)
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
 }
 
+void parserassert(int b)
+{
+    if(!b) syntaxerror("internal error: assertion failed");
+}
+
 static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
 {
     /* converts this:
@@ -849,6 +906,8 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
         prefix = 0;
     }
 
+    int use_temp_var = 0;
+
     /* generate the write instruction, and maybe append a dup to the prefix code */
     code_t* write = abc_nop(0);
     if(r->opcode == OPCODE_GETPROPERTY) {
@@ -857,13 +916,17 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
         write->data[0] = multiname_clone(m);
         if(m->type != QNAME)
             syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
-        if(!justassign)
+        if(!justassign) {
             prefix = abc_dup(prefix); // we need the object, too
+            use_temp_var = 1;
+        }
     } else if(r->opcode == OPCODE_GETSLOT) {
         write->opcode = OPCODE_SETSLOT;
         write->data[0] = r->data[0];
-        if(!justassign)
+        if(!justassign) {
             prefix = abc_dup(prefix); // we need the object, too
+            use_temp_var = 1;
+        }
     } else if(r->opcode == OPCODE_GETLOCAL) { 
         write->opcode = OPCODE_SETLOCAL;
         write->data[0] = r->data[0];
@@ -883,20 +946,36 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
     
     int temp = -1;
     if(!justassign) {
-        /* read value, modify it with middle part, and write it again,
-           using prefix only once and making sure (by using a temporary
-           register) that the return value is what we just wrote */
-        temp = gettempvar();
-        c = code_append(c, prefix);
-        c = code_append(c, r);
-        c = code_append(c, middlepart);
-        c = abc_dup(c);
-        c = abc_setlocal(c, temp);
-        c = code_append(c, write);
-        c = abc_getlocal(c, temp);
-        c = abc_kill(c, temp);
+        if(use_temp_var) {
+            /* with getproperty/getslot, we have to be extra careful not
+               to execute the read code twice, as it might have side-effects
+               (e.g. if the property is in fact a setter/getter combination)
+
+               So read the value, modify it, and write it again,
+               using prefix only once and making sure (by using a temporary
+               register) that the return value is what we just wrote */
+            temp = gettempvar();
+            c = code_append(c, prefix);
+            c = code_append(c, r);
+            c = code_append(c, middlepart);
+            c = abc_dup(c);
+            c = abc_setlocal(c, temp);
+            c = code_append(c, write);
+            c = abc_getlocal(c, temp);
+            c = abc_kill(c, temp);
+        } else {
+            /* if we're allowed to execute the read code twice, things
+               are easier */
+            code_t* r2 = code_dup(r);
+            //c = code_append(c, prefix);
+            parserassert(!prefix);
+            c = code_append(c, r);
+            c = code_append(c, middlepart);
+            c = code_append(c, write);
+            c = code_append(c, r2);
+        }
     } else {
-        /* simpler version: overwrite the value without reading
+        /* even smaller version: overwrite the value without reading
            it out first */
         if(prefix) {
             c = code_append(c, prefix);
@@ -981,15 +1060,13 @@ ONE_VARIABLE: {} T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
             $$ = abc_setlocal($$, index);
         }
 
-        /* push default value for type on stack */
-        state->initcode = defaultvalue(state->initcode, $3);
-        state->initcode = abc_setlocal(state->initcode, index);
+        /* if this is a typed variable:
+           push default value for type on stack */
+        if($3) {
+            state->initcode = defaultvalue(state->initcode, $3);
+            state->initcode = abc_setlocal(state->initcode, index);
+        }
     } else {
-        /* only bother to actually set this variable if its syntax is either
-            var x:type;
-           or
-            var x=expr;
-        */
         if($4.c->prev || $4.c->opcode != OPCODE_PUSHUNDEFINED) {
             $$ = $4.c;
             $$ = abc_coerce_a($$);
@@ -1168,6 +1245,21 @@ SLOT_DECLARATION: MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     }
 }
 
+/* ------------ constants -------------------------------------- */
+
+MAYBESTATICCONSTANT: {$$=0;}
+MAYBESTATICCONSTANT: '=' STATICCONSTANT {$$=$2;}
+
+STATICCONSTANT : T_BYTE {$$ = constant_new_int($1);}
+STATICCONSTANT : T_INT {$$ = constant_new_int($1);}
+STATICCONSTANT : T_UINT {$$ = constant_new_uint($1);}
+STATICCONSTANT : T_FLOAT {$$ = constant_new_float($1);}
+STATICCONSTANT : T_STRING {$$ = constant_new_string($1);}
+//STATICCONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
+STATICCONSTANT : KW_TRUE {$$ = constant_new_true($1);}
+STATICCONSTANT : KW_FALSE {$$ = constant_new_false($1);}
+STATICCONSTANT : KW_NULL {$$ = constant_new_null($1);}
+
 /* ------------ classes and interfaces (body, functions) ------- */
 
 // non-vararg version
@@ -1199,11 +1291,13 @@ PARAM_LIST: PARAM {
     memset(&$$,0,sizeof($$));
     list_append($$.list, $1);
 }
-PARAM:  T_IDENTIFIER ':' TYPE {
+PARAM:  T_IDENTIFIER ':' TYPE MAYBESTATICCONSTANT {
      $$ = malloc(sizeof(param_t));
-     $$->name=$1->text;$$->type = $3;
+     $$->name=$1->text;
+     $$->type = $3;
+     $$->value = $4;
 }
-PARAM:  T_IDENTIFIER          {
+PARAM:  T_IDENTIFIER MAYBESTATICCONSTANT {
      $$ = malloc(sizeof(param_t));
      $$->name=$1->text;$$->type = TYPE_ANY;
 }
@@ -1339,8 +1433,9 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
     }
    
     memberinfo_t*f = 0;
+   
     if(TYPE_IS_FUNCTION($1.t) &&
-       (f = registry_findmember($1.t, "__funcptr__"))) {
+       (f = registry_findmember($1.t, "call"))) {
         $$.t = f->return_type;
     } else {
         $$.c = abc_coerce_a($$.c);
@@ -1409,7 +1504,13 @@ E : E "||" E {$$.t = join_types($1.t, $3.t, 'O');
               code_t*label = $$.c = abc_label($$.c);
               jmp->branch = label;
              }
-E : E "&&" E {$$.t = join_types($1.t, $3.t, 'A');
+E : E "&&" E {
+              $$.t = join_types($1.t, $3.t, 'A');
+              /*printf("%08x:\n",$1.t);
+              code_dump($1.c, 0, 0, "", stdout);
+              printf("%08x:\n",$3.t);
+              code_dump($3.c, 0, 0, "", stdout);
+              printf("joining %08x and %08x to %08x\n", $1.t, $3.t, $$.t);*/
               $$.c = $1.c;
               $$.c = converttype($$.c, $1.t, $$.t);
               $$.c = abc_dup($$.c);
