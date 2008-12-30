@@ -81,9 +81,10 @@ type_t memberinfo_type = {
 // ------------------------- constructors --------------------------------
 
 #define AVERAGE_NUMBER_OF_MEMBERS 8
-classinfo_t* classinfo_register(int access, char*package, char*name)
+classinfo_t* classinfo_register(int access, char*package, char*name, int num_interfaces)
 {
-    NEW(classinfo_t,c);
+    classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+(sizeof(classinfo_t*)*(num_interfaces+1)));
+    c->interfaces[0] = 0;
     c->access = access;
     c->package = package;
     c->name = name;

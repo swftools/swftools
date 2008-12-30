@@ -61,7 +61,7 @@ extern type_t function_signature_type;
 
 void registry_init();
         
-classinfo_t* classinfo_register(int access, char*package, char*name);
+classinfo_t* classinfo_register(int access, char*package, char*name, int num_interfaces);
 memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 type);
 
 // static multinames
