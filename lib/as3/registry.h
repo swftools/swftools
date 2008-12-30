@@ -31,11 +31,11 @@ DECLARE_LIST(classinfo);
 DECLARE(memberinfo);
 
 struct _classinfo {
-    /* this is very similar to a QNAME */
     U8 access;
     U8 flags;
     const char*package;
     const char*name;
+    int slot;
 
     classinfo_t*superclass;
     dict_t members;
