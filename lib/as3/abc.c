@@ -716,7 +716,6 @@ void* swf_ReadABC(TAG*tag)
         DEBUG printf("method %d) %s %s flags=%02x\n", t, m->name, params_tostring(m->parameters), m->flags);
 
         if(m->flags&0x08) {
-            /* TODO optional parameters */
             m->optional_parameters = list_new();
             int num = swf_GetU30(tag);
             int s;
