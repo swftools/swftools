@@ -170,21 +170,12 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
     list_append(c->interfaces, multiname_clone(interface));
 }
 
-abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, int num_params, va_list va)
+static abc_method_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, char body, int num_params, va_list va)
 {
-    /* construct code (method body) object */
-    NEW(abc_method_body_t,c);
-    array_append(file->method_bodies, NO_KEY, c);
-    c->index = array_length(file->method_bodies);
-    c->file = file;
-    c->traits = list_new();
-    c->code = 0;
-
     /* construct method object */
     NEW(abc_method_t,m);
     m->index = array_length(file->methods);
     array_append(file->methods, NO_KEY, m);
-
     m->return_type = returntype;
 
     int t;
@@ -193,31 +184,41 @@ abc_method_body_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*retu
 	list_append(m->parameters, multiname_fromstring(param));
     }
 
-    /* crosslink the two objects */
-    m->body = c;
-    c->method = m;
+    if(body) {
+        /* construct code (method body) object */
+        NEW(abc_method_body_t,c);
+        array_append(file->method_bodies, NO_KEY, c);
+        c->index = array_length(file->method_bodies);
+        c->file = file;
+        c->traits = list_new();
+        c->code = 0;
 
-    return c;
+        /* crosslink the two objects */
+        m->body = c;
+        c->method = m;
+    }
+
+    return m;
 }
 
-abc_method_body_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
+abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
 {
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
+    abc_method_t* m = add_method(cls->file, cls, returntype, 1, num_params, va);
     va_end(va);
-    cls->constructor = c->method;
-    return c;
+    cls->constructor = m;
+    return m;
 }
 
-abc_method_body_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
+abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
 {
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
+    abc_method_t* m = add_method(cls->file, cls, returntype, 1, num_params, va);
     va_end(va);
-    cls->static_constructor = c->method;
-    return c;
+    cls->static_constructor = m;
+    return m;
 }
 
 trait_t*trait_new(int type, multiname_t*name, int data1, int data2, constant_t*v)
@@ -255,21 +256,21 @@ trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
     return trait;
 }
 
-abc_method_body_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...)
+abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...)
 {
     abc_file_t*file = cls->file;
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(cls->file, cls, returntype, num_params, va);
+    abc_method_t* m = add_method(cls->file, cls, returntype, !(cls->flags&CLASS_INTERFACE), num_params, va);
     va_end(va);
-    trait_t*t = trait_new_method(multiname_fromstring(name), c->method);
-    c->method->trait = t;
+    trait_t*t = trait_new_method(multiname_fromstring(name), m);
+    m->trait = t;
     /* start assigning traits at position #1.
        Weird things happen when assigning slot 0- slot 0 and 1 seem
        to be identical */
     t->slot_id = list_length(cls->traits)+1;
     list_append(cls->traits, t);
-    return c;
+    return m;
 }
 
 trait_t* abc_class_slot(abc_class_t*cls, char*name, multiname_t*type)
@@ -322,9 +323,9 @@ abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype, int num_pa
 {
     va_list va;
     va_start(va, num_params);
-    abc_method_body_t* c = add_method(file, 0, returntype, num_params, va);
+    abc_method_t*m = add_method(file, 0, returntype, 1, num_params, va);
     abc_script_t* s = malloc(sizeof(abc_script_t));
-    s->method = c->method;
+    s->method = m;
     s->traits = list_new();
     s->file = file;
     array_append(file->scripts, NO_KEY, s);
@@ -1284,7 +1285,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     swf_SetU16(tag, 0);
     swf_SetString(tag, "rfx.MainTimeline");
 
-    c = abc_class_staticconstructor(cls, 0, 0);
+    c = abc_class_staticconstructor(cls, 0, 0)->body;
     c->old.max_stack = 1;
     c->old.local_count = 1;
     c->old.init_scope_depth = 9;
@@ -1294,7 +1295,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     __ pushscope(c);
     __ returnvoid(c);
 
-    c = abc_class_constructor(cls, 0, 0);
+    c = abc_class_constructor(cls, 0, 0)->body;
     c->old.max_stack = 3;
     c->old.local_count = 1;
     c->old.init_scope_depth = 10;
@@ -1330,7 +1331,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 __ getlex(c,framename);
                 __ callpropvoid(c,"[package]::addFrameScript",2);
 
-                f = abc_class_method(cls, 0, framename, 0);
+                f = abc_class_method(cls, 0, framename, 0)->body;
                 f->old.max_stack = 3;
                 f->old.local_count = 1;
                 f->old.init_scope_depth = 10;
@@ -1358,7 +1359,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 needs_framescript = 1;
 
                 abc_method_body_t*h =
-                    abc_class_method(cls, 0, functionname, 1, "flash.events::MouseEvent");
+                    abc_class_method(cls, 0, functionname, 1, "flash.events::MouseEvent")->body;
                 h->old.max_stack = 6;
                 h->old.local_count = 2;
                 h->old.init_scope_depth = 10;
