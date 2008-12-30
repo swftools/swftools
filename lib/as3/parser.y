@@ -903,6 +903,8 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
     }
     if(TYPE_IS_FUNCTION(from) && TYPE_IS_FUNCTION(to))
         return c;
+    if(TYPE_IS_CLASS(from) && TYPE_IS_CLASS(to))
+        return c;
     syntaxerror("can't convert type %s to %s", from->name, to->name);
 }
 
