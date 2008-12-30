@@ -1048,16 +1048,13 @@ code_t* code_append(code_t*code, code_t*toappend)
 lookupswitch_t*lookupswitch_dup(lookupswitch_t*l)
 {
     lookupswitch_t*n = malloc(sizeof(lookupswitch_t));
-    fprintf(stderr, "lookupswitch dupping not supported yet\n");
+    fprintf(stderr, "Error: lookupswitch dupping not supported yet\n");
     n->targets = list_clone(l->targets);
     return 0;
 }
 
 code_t*code_dup(code_t*c)
 {
-    /* misses branch relocation */
-    fprintf(stderr, "dupping not supported yet\n");
-    return 0;
     if(!c) return 0;
 
     while(c->prev) c = c->prev;
@@ -1068,6 +1065,10 @@ code_t*code_dup(code_t*c)
         memcpy(n, c, sizeof(code_t));
 
         opcode_t*op = opcode_get(c->opcode);
+        if(c->branch) {
+            fprintf(stderr, "Error: Can't duplicate branching code\n");
+            return 0;
+        }
         char*p = op?op->params:"";
         int pos=0;
         while(*p) {
