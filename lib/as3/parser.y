@@ -297,6 +297,16 @@ DECLARE_LIST(state);
     m##_l.namespace = &m##_ns; \
     multiname_t m = {MULTINAMEL, 0, &m##_nsset, 0};
 
+static namespace_t ns1 = {ACCESS_PRIVATE, ""};
+static namespace_t ns2 = {ACCESS_PROTECTED, ""};
+static namespace_t ns3 = {ACCESS_PACKAGEINTERNAL, ""};
+static namespace_t ns4 = {ACCESS_PACKAGE, ""};
+static namespace_list_t nl4 = {&ns4,0};
+static namespace_list_t nl3 = {&ns3,&nl4};
+static namespace_list_t nl2 = {&ns2,&nl3};
+static namespace_list_t nl1 = {&ns1,&nl2};
+static namespace_set_t nopackage_namespace_set = {&nl1};
+
 static state_list_t*state_stack=0;
     
 static void init_globals()
@@ -358,7 +368,7 @@ void initialize_state()
     state->file = abc_file_new();
     state->file->flags &= ~ABCFILE_LAZY;
     
-    state->init = abc_initscript(state->file, 0, 0);
+    state->init = abc_initscript(state->file, 0);
     code_t*c = state->init->method->body->code;
 
     c = abc_getlocal_0(c);
@@ -564,7 +574,7 @@ static void endclass()
 {
     if(state->cls_init) {
         if(!state->cls->constructor) {
-            abc_method_t*m = abc_class_constructor(state->cls, 0, 0);
+            abc_method_t*m = abc_class_constructor(state->cls, 0);
             m->body->code = code_append(m->body->code, state->cls_init);
             m->body->code = abc_returnvoid(m->body->code);
         } else {
@@ -576,8 +586,9 @@ static void endclass()
     }
     if(state->cls_static_init) {
         if(!state->cls->static_constructor) {
-            abc_method_t*m = abc_class_staticconstructor(state->cls, 0, 0);
-            m->body->code = state->cls_static_init;
+            abc_method_t*m = abc_class_staticconstructor(state->cls, 0);
+            m->body->code = code_append(m->body->code, state->cls_static_init);
+            m->body->code = abc_returnvoid(m->body->code);
         } else {
             state->cls->static_constructor->body->code = 
                 code_append(state->cls_static_init, state->cls->static_constructor->body->code);
@@ -673,7 +684,7 @@ static void check_constant_against_type(classinfo_t*t, constant_t*c)
    }
 }
 
-static memberinfo_t*registerfunction(enum yytokentype getset, char*name, params_t*params, classinfo_t*return_type, int slot)
+static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*name, params_t*params, classinfo_t*return_type, int slot)
 {
     memberinfo_t*minfo = 0;
     if(getset != KW_GET && getset != KW_SET) {
@@ -711,7 +722,30 @@ static memberinfo_t*registerfunction(enum yytokentype getset, char*name, params_
         /* can't assign a slot as getter and setter might have different slots */
         //minfo->slot = slot;
     }
+    if(flags&FLAG_STATIC) minfo->flags |= FLAG_STATIC;
+    if(flags&FLAG_PUBLIC) minfo->flags |= FLAG_PUBLIC;
+    if(flags&FLAG_PRIVATE) minfo->flags |= FLAG_PRIVATE;
+    if(flags&FLAG_PROTECTED) minfo->flags |= FLAG_PROTECTED;
+    if(flags&FLAG_INTERNAL) minfo->flags |= FLAG_INTERNAL;
     return minfo;
+}
+
+static int flags2access(int flags)
+{
+    int access = 0;
+    if(flags&FLAG_PUBLIC)  {
+        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        access = ACCESS_PACKAGE;
+    } else if(flags&FLAG_PRIVATE) {
+        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        access = ACCESS_PRIVATE;
+    } else if(flags&FLAG_PROTECTED) {
+        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        access = ACCESS_PROTECTED;
+    } else {
+        access = ACCESS_PACKAGEINTERNAL;
+    }
+    return access;
 }
 
 static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
@@ -726,13 +760,19 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         syntaxerror("not able to start another method scope");
     }
 
+    namespace_t mname_ns = {flags2access(flags), ""};
+    multiname_t mname = {QNAME, &mname_ns, 0, name};
+
     multiname_t*type2 = sig2mname(return_type);
     if(!strcmp(state->clsinfo->name,name)) {
-        state->m = abc_class_constructor(state->cls, type2, 0);
+        state->m = abc_class_constructor(state->cls, type2);
     } else {
-        state->m = abc_class_method(state->cls, type2, name, 0);
+        if(flags&FLAG_STATIC)
+            state->m = abc_class_staticmethod(state->cls, type2, &mname);
+        else
+            state->m = abc_class_method(state->cls, type2, &mname);
         int slot = state->m->trait->slot_id;
-        state->minfo = registerfunction(getset, name, params, return_type, slot);
+        state->minfo = registerfunction(getset, flags, name, params, return_type, slot);
     }
 
     if(getset == KW_GET) state->m->trait->kind = TRAIT_GETTER;
@@ -921,7 +961,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
         write->opcode = OPCODE_SETPROPERTY;
         multiname_t*m = (multiname_t*)r->data[0];
         write->data[0] = multiname_clone(m);
-        if(m->type != QNAME)
+        if(m->type != QNAME && m->type != MULTINAME)
             syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
         if(!justassign) {
             prefix = abc_dup(prefix); // we need the object, too
@@ -1260,8 +1300,9 @@ IDECLARATION : "var" T_IDENTIFIER {
     syntaxerror("variable declarations not allowed in interfaces");
 }
 IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE {
-    if($1&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_INTERNAL|FLAG_PROTECTED)) {
-        syntaxerror("invalid method modifiers: interface methods are always public");
+    $1 |= FLAG_PUBLIC;
+    if($1&(FLAG_PRIVATE|FLAG_INTERNAL|FLAG_PROTECTED)) {
+        syntaxerror("invalid method modifiers: interface methods always need to be public");
     }
     startfunction(0,$1,$3,$4,&$6,$8);
     endfunction(0);
@@ -1270,30 +1311,47 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
 /* ------------ classes and interfaces (body, slots ) ------- */
 
 VARCONST: "var" | "const"
-SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
 
+SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
+    int flags = $1;
     memberinfo_t* info = memberinfo_register(state->clsinfo, $3, MEMBER_SLOT);
     info->type = $4;
-
+    info->flags = flags;
     trait_t*t=0;
-    if($4) {
-        MULTINAME(m, $4);
-        t=abc_class_slot(state->cls, $3, &m);
+
+    namespace_t mname_ns = {flags2access(flags), ""};
+    multiname_t mname = {QNAME, &mname_ns, 0, $3};
+
+    if(!(flags&FLAG_STATIC)) {
+        if($4) {
+            MULTINAME(m, $4);
+            t=abc_class_slot(state->cls, &mname, &m);
+            info->slot = t->slot_id;
+        } else {
+            t=abc_class_slot(state->cls, &mname, 0);
+        }
     } else {
-        t=abc_class_slot(state->cls, $3, 0);
+        if($4) {
+            MULTINAME(m, $4);
+            t=abc_class_staticslot(state->cls, &mname, &m);
+            //info->slot = t->slot_id;
+        } else {
+            t=abc_class_staticslot(state->cls, &mname, 0);
+        }
     }
-    if($2==KW_CONST) {
-        t->kind= TRAIT_CONST;
-    }
-    info->slot = t->slot_id;
     if($5.c && !is_pushundefined($5.c)) {
         code_t*c = 0;
         c = abc_getlocal_0(c);
         c = code_append(c, $5.c);
         c = converttype(c, $5.t, $4);
         c = abc_setslot(c, t->slot_id);
-        //c = abc_setproperty(c, $3); 
-        state->cls_init = code_append(state->cls_init, c);
+        if(!(flags&FLAG_STATIC))
+            state->cls_init = code_append(state->cls_init, c);
+        else
+            state->cls_static_init = code_append(state->cls_static_init, c);
+    }
+    if($2==KW_CONST) {
+        t->kind= TRAIT_CONST;
     }
 }
 
@@ -1789,9 +1847,14 @@ E : E '.' T_IDENTIFIER
                  if(f && f->slot) {
                      $$.c = abc_getslot($$.c, f->slot);
                  } else {
-                     namespace_t ns = {$$.t->access, ""}; // needs to be "", not $$.t->package
-                     multiname_t m = {QNAME, &ns, 0, $3};
-                     $$.c = abc_getproperty2($$.c, &m);
+                     if(f) {
+                         namespace_t ns = {flags2access(f->flags), ""}; // needs to be "", not $$.t->package (!)
+                         multiname_t m = {QNAME, &ns, 0, $3};
+                         $$.c = abc_getproperty2($$.c, &m);
+                     } else {
+                         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
+                         $$.c = abc_getproperty2($$.c, &m);
+                     }
                  }
                  /* determine type */
                  if(f) {
@@ -1805,8 +1868,10 @@ E : E '.' T_IDENTIFIER
                     $$.t = registry_getanytype();
                  }
              } else {
-                 namespace_t ns = {ACCESS_PACKAGE, ""};
-                 multiname_t m = {QNAME, &ns, 0, $3};
+                 /* when resolving a property on an unknown type, we do know the
+                    name of the property (and don't seem to need the package), but
+                    we do need to make avm2 try out all access modes */
+                 multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
                  $$.c = abc_getproperty2($$.c, &m);
                  $$.c = abc_coerce_a($$.c);
                  $$.t = registry_getanytype();
@@ -1821,31 +1886,44 @@ VAR_READ : T_IDENTIFIER {
     if((i = find_variable($1, &$$.t)) >= 0) {
         // $1 is a local variable
         $$.c = abc_getlocal($$.c, i);
-    } else if((f = registry_findmember(state->clsinfo, $1))) {
+    } else if(f = registry_findmember(state->clsinfo, $1)) {
         // $1 is a function in this class
+        if(f->flags&FLAG_STATIC) {
+            /* there doesn't seem to be any "static" way to access
+               static properties of a class */
+            state->late_binding = 1;
+            $$.t = f->type;
+            namespace_t ns = {flags2access(f->flags), ""};
+            multiname_t m = {QNAME, &ns, 0, $1};
+            $$.c = abc_findpropstrict2($$.c, &m);
+            $$.c = abc_getproperty2($$.c, &m);
+        } else {
+            if(f->slot>0) {
+                $$.c = abc_getlocal_0($$.c);
+                $$.c = abc_getslot($$.c, f->slot);
+            } else {
+                namespace_t ns = {flags2access(f->flags), ""};
+                multiname_t m = {QNAME, &ns, 0, $1};
+                $$.c = abc_getlocal_0($$.c);
+                $$.c = abc_getproperty2($$.c, &m);
+            }
+        }
         if(f->kind == MEMBER_METHOD) {
             $$.t = TYPE_FUNCTION(f);
         } else {
             $$.t = f->type;
-        }
-        if(f->slot>0) {
-            $$.c = abc_getlocal_0($$.c);
-            $$.c = abc_getslot($$.c, f->slot);
-        } else {
-            namespace_t ns = {state->clsinfo->access, ""};
-            multiname_t m = {QNAME, &ns, 0, $1};
-            $$.c = abc_getlocal_0($$.c);
-            $$.c = abc_getproperty2($$.c, &m);
         }
     } else {
         // let the avm2 resolve $1 
         if(strcmp($1,"trace"))
         warning("Couldn't resolve %s, doing late binding", $1);
         state->late_binding = 1;
+                
+        multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
 
         $$.t = 0;
-        $$.c = abc_findpropstrict($$.c, $1);
-        $$.c = abc_getproperty($$.c, $1);
+        $$.c = abc_findpropstrict2($$.c, &m);
+        $$.c = abc_getproperty2($$.c, &m);
     }
 }
 
