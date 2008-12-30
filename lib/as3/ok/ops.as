@@ -20,6 +20,7 @@ package {
                * 'in' is tested by in.as
                * || and && are tested in boolvalue.as
                * <op>= is tested in assignments.as
+               * typeof is tested in typeof.as
             */
 
             /* test unary minus */
@@ -51,7 +52,7 @@ package {
 
             /* test bit operations */
             trace("[bit operations]");
-            assert(!(0xaaaaaaaa & 0x55555555))
+            assert(!(0xaaaaaa & 0x555555))
             assert((0xaa | 0x55) == 0xff);
             assert((0xff ^ 0x55) == 0xaa);
             assert((1 & ~1) == 0);
@@ -64,23 +65,16 @@ package {
             assert((-1>>1)==-1);
             assert((-1>>1)==-1);
             assert((-1>>>1)>0);
-
-            /* test typeof */
-            trace("[typeof]");
-            assert(typeof(3)=="number" && 
-                   typeof("")=="string" &&
-                   typeof(this)=="object" &&
-                   typeof(undefined)=="undefined" &&
-                   typeof(null)=="object" &&
-                   typeof(assert)=="function" &&
-                   typeof(Main)=="object");
-            
+ 
             /* test void */
             trace("[void]");
             var v = void;
             assert(String(v)=="undefined");
+            v = void 3;
+            assert(String(v)=="undefined");
 
             /* test comma */
+            trace("[comma]");
             assert( (1,2,3,4) == 4);
         }
     }
