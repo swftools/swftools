@@ -51,6 +51,7 @@ char classinfo_equals(classinfo_t*c1, classinfo_t*c2);
 
 struct _memberinfo {
     U8 kind;
+    U8 flags;
     const char*name;
     union {
         classinfo_t*return_type;
