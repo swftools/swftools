@@ -51,6 +51,7 @@ struct _pool {
 typedef enum access_type
 {ACCESS_STANDARD=0x16,
  ACCESS_PACKAGE=0x16,
+ ACCESS_PUBLIC=0x16,
  ACCESS_PACKAGEINTERNAL=0x17,
  ACCESS_PROTECTED=0x18,
  ACCESS_EXPLICIT=0x19,
@@ -86,7 +87,7 @@ struct _constant {
         double f;
         int i;
         unsigned int u;
-        char*s;
+        string_t* s;
         namespace_t*ns;
     };
     int type;
@@ -96,6 +97,7 @@ constant_t* constant_new_int(int x);
 constant_t* constant_new_uint(unsigned int x);
 constant_t* constant_new_float(double x);
 constant_t* constant_new_string(char*s);
+constant_t* constant_new_string2(const char*s, int len);
 constant_t* constant_new_namespace(namespace_t*ns);
 constant_t* constant_new_true();
 constant_t* constant_new_false();
@@ -147,7 +149,8 @@ char* namespace_tostring(namespace_t*ns);
 int pool_lookup_int(pool_t*pool, int i);
 unsigned int pool_lookup_uint(pool_t*pool, int i);
 double pool_lookup_float(pool_t*pool, int i);
-char*pool_lookup_string(pool_t*pool, int i);
+const char*pool_lookup_string(pool_t*pool, int i);
+string_t pool_lookup_string2(pool_t*pool, int i);
 namespace_t*pool_lookup_namespace(pool_t*pool, int i);
 namespace_set_t*pool_lookup_namespace_set(pool_t*pool, int i);
 multiname_t*pool_lookup_multiname(pool_t*pool, int i);
@@ -166,6 +169,7 @@ int pool_register_int(pool_t*p, int i);
 int pool_register_uint(pool_t*p, unsigned int i);
 int pool_register_float(pool_t*p, double d);
 int pool_register_string(pool_t*pool, const char*s);
+int pool_register_string2(pool_t*pool, string_t*s);
 int pool_register_namespace(pool_t*pool, namespace_t*ns);
 int pool_register_namespace_set(pool_t*pool, namespace_set_t*set);
 int pool_register_multiname(pool_t*pool, multiname_t*n);

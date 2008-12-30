@@ -661,7 +661,14 @@ constant_t* constant_new_float(double f)
 constant_t* constant_new_string(char*s)
 {
     NEW(constant_t,c);
-    c->s = strdup(s);
+    c->s = string_new4(s);
+    c->type = CONSTANT_STRING;
+    return c;
+}
+constant_t* constant_new_string2(const char*s, int len)
+{
+    NEW(constant_t,c);
+    c->s = string_new3(s, len);
     c->type = CONSTANT_STRING;
     return c;
 }
@@ -715,7 +722,8 @@ constant_t* constant_fromindex(pool_t*pool, int index, int type)
     } else if(c->type == CONSTANT_FLOAT) {
         c->f = pool_lookup_float(pool, index);
     } else if(c->type == CONSTANT_STRING) {
-        c->s = strdup(pool_lookup_string(pool, index));
+        string_t s = pool_lookup_string2(pool, index);
+        c->s = string_dup3(&s);
     } else if(UNIQUE_CONSTANT(c->type)) {
         // ok
     } else {
@@ -741,7 +749,8 @@ char* constant_tostring(constant_t*c)
         sprintf(buf, "%f", c->f);
         return strdup(buf);
     } else if(c->type == CONSTANT_STRING) {
-        return strdup(c->s);
+        /* should we escape the string? \0 bytes won't be printed */
+        return strdup_n(c->s->str,c->s->len);
     } else if(c->type == CONSTANT_TRUE) {
         return strdup("true");
     } else if(c->type == CONSTANT_FALSE) {
@@ -779,7 +788,7 @@ int constant_get_index(pool_t*pool, constant_t*c)
     } else if(c->type == CONSTANT_FLOAT) {
         return pool_register_float(pool, c->f);
     } else if(c->type == CONSTANT_STRING) {
-        return pool_register_string(pool, c->s);
+        return pool_register_string2(pool, c->s);
     } else if(!constant_has_index(c)) {
         return 1;
     } else {
@@ -792,7 +801,7 @@ void constant_free(constant_t*c)
     if(!c)
         return;
     if(c->type == CONSTANT_STRING) {
-        free(c->s);c->s=0;
+        string_free(c->s);
     } else if (NS_TYPE(c->type)) {
         namespace_destroy(c->ns);c->ns=0;
     }
@@ -818,11 +827,18 @@ int pool_register_float(pool_t*p, double d)
     assert(pos!=0);
     return pos;
 }
-int pool_register_string(pool_t*pool, const char*s)
+int pool_register_string(pool_t*pool, const char*str)
 {
-    if(!s) return 0;
-    ptroff_t l = strlen(s);
-    int pos = array_append_if_new(pool->x_strings, s, (void*)l);
+    if(!str) return 0;
+    string_t s = string_new2(str);
+    int pos = array_append_if_new(pool->x_strings, &s, 0);
+    assert(pos!=0);
+    return pos;
+}
+int pool_register_string2(pool_t*pool, string_t*s)
+{
+    if(!s || !s->str) return 0;
+    int pos = array_append_if_new(pool->x_strings, s, 0);
     assert(pos!=0);
     return pos;
 }
@@ -911,11 +927,12 @@ int pool_find_namespace_set(pool_t*pool, namespace_set_t*set)
     }
     return i;
 }
-int pool_find_string(pool_t*pool, const char*s)
+int pool_find_string(pool_t*pool, const char*str)
 {
-    if(!s)
+    if(!str)
         return 0;
-    int i = array_find(pool->x_strings, s);
+    string_t s = string_new2(str);
+    int i = array_find(pool->x_strings, &s);
     if(i<=0) {
         fprintf(stderr, "Couldn't find string \"%s\" in constant pool\n", s);
         return 0;
@@ -951,15 +968,16 @@ double pool_lookup_float(pool_t*pool, int i)
     if(!i) return __builtin_nan("");
     return *(double*)array_getkey(pool->x_floats, i);
 }
-char*pool_lookup_string(pool_t*pool, int i)
+const char*pool_lookup_string(pool_t*pool, int i)
 {
-    return (char*)array_getkey(pool->x_strings, i);
+    string_t*s = array_getkey(pool->x_strings, i);
+    if(!s) return 0;
+    return s->str;
 }
 string_t pool_lookup_string2(pool_t*pool, int i)
 {
-    char*s = (char*)array_getkey(pool->x_strings, i);
-    int len = (int)(ptroff_t)array_getvalue(pool->x_strings, i);
-    return string_new(s,len);
+    string_t*s = array_getkey(pool->x_strings, i);
+    return *s;
 }
 namespace_t*pool_lookup_namespace(pool_t*pool, int i)
 {
@@ -981,7 +999,7 @@ pool_t*pool_new()
     p->x_ints = array_new2(&uint_type);
     p->x_uints = array_new2(&uint_type);
     p->x_floats = array_new2(&float_type);
-    p->x_strings = array_new2(&charptr_type);
+    p->x_strings = array_new2(&stringstruct_type);
     p->x_namespaces = array_new2(&namespace_type);
     p->x_namespace_sets = array_new2(&namespace_set_type);
     p->x_multinames = array_new2(&multiname_type);
@@ -1032,12 +1050,10 @@ void pool_read(pool_t*pool, TAG*tag)
     DEBUG printf("%d strings\n", num_strings);
     for(t=1;t<num_strings;t++) {
 	int len = swf_GetU30(tag);
-	char*s = malloc(len+1);
-	swf_GetBlock(tag, s, len);
-	s[len] = 0;
-	array_append(pool->x_strings, s, (void*)(ptroff_t)len);
-        free(s);
-	DEBUG printf("%d) \"%s\"\n", t, pool->x_strings->d[t].name);
+        string_t s = string_new(&tag->data[tag->pos], len);
+	swf_GetBlock(tag, 0, len);
+	array_append(pool->x_strings, &s, 0);
+	DEBUG printf("%d) \"%s\"\n", t, ((string_t*)array_getkey(pool->x_strings, t))->str);
     }
     int num_namespaces = swf_GetU30(tag);
     DEBUG printf("%d namespaces\n", num_namespaces);
@@ -1046,7 +1062,7 @@ void pool_read(pool_t*pool, TAG*tag)
 	int namenr = swf_GetU30(tag);
 	const char*name = 0; 
         if(namenr)
-            name = array_getkey(pool->x_strings, namenr);
+            name = pool_lookup_string(pool, namenr);
         namespace_t*ns = namespace_new(type, name);
 	array_append(pool->x_namespaces, ns, 0);
 	DEBUG printf("%d) %02x \"%s\"\n", t, type, namespace_tostring(ns));
@@ -1082,17 +1098,17 @@ void pool_read(pool_t*pool, TAG*tag)
             m.ns = (namespace_t*)array_getkey(pool->x_namespaces, namespace_index);
             int name_index = swf_GetU30(tag);
             if(name_index) // 0 = '*' (any)
-	        m.name = array_getkey(pool->x_strings, name_index);
+	        m.name = pool_lookup_string(pool, name_index);
 	} else if(m.type==0x0f || m.type==0x10) {
             int name_index = swf_GetU30(tag);
             if(name_index) // 0 = '*' (any name)
-	        m.name = array_getkey(pool->x_strings, name_index);
+	        m.name = pool_lookup_string(pool, name_index);
 	} else if(m.type==0x11 || m.type==0x12) {
 	} else if(m.type==0x09 || m.type==0x0e) {
             int name_index = swf_GetU30(tag);
             int namespace_set_index = swf_GetU30(tag);
             if(name_index)
-	        m.name = array_getkey(pool->x_strings, name_index);
+	        m.name = pool_lookup_string(pool, name_index);
 	    m.namespace_set = (namespace_set_t*)array_getkey(pool->x_namespace_sets, namespace_set_index);
         } else if(m.type==0x1b || m.type==0x1c) {
             int namespace_set_index = swf_GetU30(tag);
