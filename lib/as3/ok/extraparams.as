@@ -2,7 +2,12 @@ package {
     import flash.display.MovieClip;
 
     public class Main extends flash.display.MovieClip {
+        public function test2(s,...numbers) {
+        }
         public function test(s,...numbers) {
+            
+            //test2(s,...numbers);
+
             if(s=="ok")
                 trace("ok 1/3");
             if(numbers[0]==1 &&
