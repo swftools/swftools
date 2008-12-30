@@ -336,6 +336,10 @@ void initialize_scanner();
 
 #define c() {countlines(yytext, yyleng);}
 
+//Boolean                      {c();return m(KW_BOOLEAN);}
+//int                          {c();return m(KW_INT);}
+//uint                         {c();return m(KW_UINT);}
+//Number                       {c();return m(KW_NUMBER);}
 %}
 
 %s REGEXPOK
@@ -378,6 +382,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 [&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 [|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}
 [!][=]                       {c();BEGIN(REGEXPOK);return m(T_NE);}
+[!][=][=]                    {c();BEGIN(REGEXPOK);return m(T_NEE);}
 [=][=][=]                    {c();BEGIN(REGEXPOK);return m(T_EQEQEQ);}
 [=][=]                       {c();BEGIN(REGEXPOK);return m(T_EQEQ);}
 [>][=]                       {c();return m(T_GE);}
@@ -409,7 +414,6 @@ internal                     {c();return m(KW_INTERNAL);}
 function                     {c();return m(KW_FUNCTION);}
 package                      {c();return m(KW_PACKAGE);}
 private                      {c();return m(KW_PRIVATE);}
-Boolean                      {c();return m(KW_BOOLEAN);}
 dynamic                      {c();return m(KW_DYNAMIC);}
 extends                      {c();return m(KW_EXTENDS);}
 delete                       {c();return m(KW_DELETE);}
@@ -418,7 +422,6 @@ public                       {c();return m(KW_PUBLIC);}
 native                       {c();return m(KW_NATIVE);}
 static                       {c();return m(KW_STATIC);}
 import                       {c();return m(KW_IMPORT);}
-Number                       {c();return m(KW_NUMBER);}
 while                        {c();return m(KW_WHILE);}
 class                        {c();return m(KW_CLASS);}
 const                        {c();return m(KW_CONST);}
@@ -426,11 +429,9 @@ final                        {c();return m(KW_FINAL);}
 false                        {c();return m(KW_FALSE);}
 break                        {c();return m(KW_BREAK);}
 true                         {c();return m(KW_TRUE);}
-uint                         {c();return m(KW_UINT);}
 null                         {c();return m(KW_NULL);}
 else                         {c();return m(KW_ELSE);}
 use                          {c();return m(KW_USE);}
-int                          {c();return m(KW_INT);}
 new                          {c();return m(KW_NEW);}
 get                          {c();return m(KW_GET);}
 for                          {c();return m(KW_FOR);}
