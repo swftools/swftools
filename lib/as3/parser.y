@@ -254,7 +254,6 @@ typedef struct _classstate {
 typedef struct _methodstate {
     /* method data */
     memberinfo_t*info;
-    dict_t*vars;
     char late_binding;
     /* code that needs to be executed at the start of
        a method (like initializing local registers) */
@@ -273,6 +272,8 @@ typedef struct _state {
   
     classstate_t*cls;   
     methodstate_t*method;
+    
+    dict_t*vars;
 } state_t;
 
 typedef struct _global {
@@ -353,6 +354,7 @@ static void new_state()
     state = s;
     state->level++;
     state->has_own_imports = 0;    
+    state->vars = dict_new();
 }
 static void state_has_imports()
 {
@@ -634,7 +636,7 @@ static int find_variable(char*name, classinfo_t**m)
     while(s) {
         variable_t*v = 0;
         if(s->state->method)
-            v = dict_lookup(s->state->method->vars, name);
+            v = dict_lookup(s->state->vars, name);
         if(v) {
             if(m) {
                 *m = v->type;
@@ -654,14 +656,14 @@ static int find_variable_safe(char*name, classinfo_t**m)
 }
 static char variable_exists(char*name) 
 {
-    return dict_lookup(state->method->vars, name)!=0;
+    return dict_lookup(state->vars, name)!=0;
 }
 static int new_variable(char*name, classinfo_t*type)
 {
     NEW(variable_t, v);
     v->index = global->variable_count;
     v->type = type;
-    dict_put(state->method->vars, name, v);
+    dict_put(state->vars, name, v);
     return global->variable_count++;
 }
 #define TEMPVARNAME "__as3_temp__"
@@ -669,17 +671,16 @@ static int gettempvar()
 {
     int i = find_variable(TEMPVARNAME, 0);
     if(i<0) {
-        return new_variable(TEMPVARNAME, 0);
-    } else {
-        return i;
+        i = new_variable(TEMPVARNAME, 0);
     }
+    return i;
 }
 
 code_t* killvars(code_t*c) 
 {
     int t;
-    for(t=0;t<state->method->vars->hashsize;t++) {
-        dictentry_t*e =state->method->vars->slots[t];
+    for(t=0;t<state->vars->hashsize;t++) {
+        dictentry_t*e =state->vars->slots[t];
         while(e) {
             variable_t*v = (variable_t*)e->data;
             //do this always, otherwise register types don't match
@@ -722,7 +723,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
         minfo->return_type = return_type;
         // getslot on a member slot only returns "undefined", so no need
         // to actually store these
-        //state->minfo->slot = state->method->a bc->method->trait->slot_id;
+        //state->minfo->slot = state->method->abc->method->trait->slot_id;
     } else {
         int gs = getset==KW_GET?MEMBER_GET:MEMBER_SET;
         classinfo_t*type=0;
@@ -788,13 +789,15 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     state->method->has_super = 0;
 
     global->variable_count = 0;
-    state->method->vars = dict_new();
+
     /* state->vars is initialized by state_new */
     if(new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info)!=0) syntaxerror("Internal error");
     param_list_t*p=0;
     for(p=params->list;p;p=p->next) {
         new_variable(p->param->name, p->param->type);
     }
+    if(state->method->is_constructor)
+        name = "__as3_constructor__";
     state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
 }
 
@@ -810,7 +813,6 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     int slot = 0;
     if(state->method->is_constructor) {
         f = abc_class_constructor(state->cls->abc, type2);
-        name = "__as3_constructor__";
     } else {
         if(flags&FLAG_STATIC)
             f = abc_class_staticmethod(state->cls->abc, type2, &mname);
@@ -818,7 +820,8 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
             f = abc_class_method(state->cls->abc, type2, &mname);
         slot = f->trait->slot_id;
     }
-    state->method->info->slot = slot;
+    //flash doesn't seem to allow us to access function slots
+    //state->method->info->slot = slot;
 
     if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
     if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
@@ -1658,6 +1661,11 @@ FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
     for(l=$3;l;l=l->next) {
         $$.c = code_append($$.c, l->typedcode->c);len++;
     }
+    /*
+    this is dependent on the control path, check this somewhere else
+    if(state->method->has_super)
+        syntaxerror("constructor may call super() only once");
+    */
     state->method->has_super = 1;
     $$.c = abc_constructsuper($$.c, len);
     $$.c = abc_pushundefined($$.c);
