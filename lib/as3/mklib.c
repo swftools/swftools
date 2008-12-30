@@ -191,10 +191,11 @@ void load_libraries(char*filename, int pass, FILE*fi)
                 default:
                     fprintf(stderr, "Unknown trait type %d\n", trait->kind);
             }
+            int flags = is_static?FLAG_STATIC:0;
             if(pass==0) {
                 fprintf(fi, "static memberinfo_t %s;\n", id2);
             } if(pass==1) {
-                fprintf(fi, "static memberinfo_t %s = {%s, \"%s\"", id2, type, name);
+                fprintf(fi, "static memberinfo_t %s = {%s, 0x%02x, \"%s\"", id2, type, flags, name);
                 if(!retvalue)
                     fprintf(fi, ", 0");
                 else
