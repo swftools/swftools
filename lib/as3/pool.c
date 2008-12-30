@@ -180,7 +180,7 @@ char* namespace_tostring(namespace_t*ns)
     U8 type = ns->access;
     access = access2str(type);
     char*s = escape_string(ns->name);
-    char*string = (char*)malloc(strlen(access)+strlen(s)+3);
+    char*string = (char*)malloc(strlen(access)+strlen(s)+7);
     if(!s)
         sprintf(string, "[%s]NULL", access, s);
     else if(!*s)
