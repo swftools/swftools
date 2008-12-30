@@ -74,17 +74,15 @@ def runcmd(cmd,args,wait):
     fo.close()
     return ret,output
 
-class Test:
-    def __init__(self, nr, file):
+class TestBase:
+    def __init__(self, nr, file, run):
         self.nr = nr
+        self.dorun = run
         self.file = file
         self.flash_output = None
         self.flash_error = None
         self.compile_output = None
         self.compile_error = None
-        self.compile()
-        if not self.compile_error:
-            self.run()
 
     def compile(self):
         try: os.unlink("abc.swf");
@@ -106,52 +104,86 @@ class Test:
             self.flash_error = 1
 
     def doprint(self):
-        def r(s,l):
-            if(len(s)>=l):
-                return s
-            return (" "*(l-len(s))) + s
-        def l(s,l):
-            if(len(s)>=l):
-                return s
-            return s + (" "*(l-len(s)))
-
-        print r(str(self.nr),3)," ",
+        print self.r(str(self.nr),3)," ",
         if self.compile_error:
-            print "err"," - ",
+            if self.dorun:
+                print "err"," - ",
+            else:
+                print "err","   ",
         else:
             print "ok ",
-            if not self.flash_error:
-                print "ok ",
+            if self.dorun:
+                if not self.flash_error:
+                    print "ok ",
+                else:
+                    print "err",
             else:
-                print "err",
+                print "   ",
         print " ",
-        print file
+        print self.file
 
     def doprintlong(self):
         print self.nr, self.file
         print "================================"
         print "compile:", (test.compile_error and "error" or "ok")
         print test.compile_output
+        if not self.dorun:
+            return
         print "================================"
         print "run:", (test.flash_error and "error" or "ok")
         print test.flash_output
         print "================================"
 
+    def r(self,s,l):
+        if(len(s)>=l):
+            return s
+        return (" "*(l-len(s))) + s
+    def l(self,s,l):
+        if(len(s)>=l):
+            return s
+        return s + (" "*(l-len(s)))
+
+class Test(TestBase):
+    def __init__(self, nr, file):
+        TestBase.__init__(self, nr, file, run=1)
+        self.compile()
+        if not self.compile_error:
+            self.run()
+
+class ErrTest(TestBase):
+    def __init__(self, nr, file):
+        TestBase.__init__(self, nr, file, run=0)
+        self.compile()
+        self.compile_error = not self.compile_error
+
+class Suite:
+    def __init__(self, dir):
+        self.dir = dir
+        self.errtest = "err" in dir
+    def run(self, nr):
+        print "-"*40,"tests \""+self.dir+"\"","-"*40
+        for file in sorted(os.listdir(self.dir)):
+            if not file.endswith(".as"):
+                continue
+            nr = nr + 1
+            file = os.path.join(self.dir, file)
+            if checknum>=0 and nr!=checknum:
+                continue
+            if self.errtest:
+                test = ErrTest(nr,file)
+            else:
+                test = Test(nr,file)
+            if checknum!=nr:
+                test.doprint()
+            else:
+                test.doprintlong()
+        return nr
+
 checknum=-1
 if len(sys.argv)>1:
     checknum = int(sys.argv[1])
 
-for nr,file in sorted(enumerate(os.listdir("ok"))):
-    if not file.endswith(".as"):
-        continue
-    file = os.path.join("ok", file)
-    if checknum>=0 and nr!=checknum:
-        continue
-    test = Test(nr,file)
-
-    if checknum!=nr:
-        test.doprint()
-    else:
-        test.doprintlong()
-
+nr = 0
+nr = Suite("err").run(nr)
+nr = Suite("ok").run(nr)
 
