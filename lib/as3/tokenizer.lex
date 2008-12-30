@@ -279,6 +279,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 [-][=]                       {c();return m(T_MINUSBY);}
 [/][=]                       {c();return m(T_DIVBY);}
 [%][=]                       {c();return m(T_MODBY);}
+[*][=]                       {c();return m(T_MULBY);}
 [>][>][=]                    {c();return m(T_SHRBY);}
 [<][<][=]                    {c();return m(T_SHLBY);}
 [>][>][>][=]                 {c();return m(T_USHRBY);}
