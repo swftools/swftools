@@ -7,7 +7,7 @@ package {
     }
     public class Main extends flash.display.MovieClip {
         var count:int = 1;
-        var num:int = 27;
+        var num:int = 53;
         function assert(b) {
             if(b) {
                 trace("ok "+count+"/"+num);
@@ -82,6 +82,12 @@ package {
             // test that <,>,<=,>= have higher precedence than as, in
             compare(1<2 as Boolean, true)
             //compare(1<2 in [true,true,true], true)
+            
+            // test that as,in have higher precedence than ==,!=
+            compare(1==1 as Boolean, false);
+            compare(1!=1 as Boolean, true);
+            compare(false == true is Boolean, false);
+            compare(true != true is Boolean, false);
 
             // test that >,<,>=,<= have higher precedence than ==, !=, ===, !==
             compare(true == 3<4, true)
