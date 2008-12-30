@@ -673,8 +673,49 @@ static void check_constant_against_type(classinfo_t*t, constant_t*c)
    }
 }
 
+static memberinfo_t*registerfunction(enum yytokentype getset, char*name, params_t*params, classinfo_t*return_type, int slot)
+{
+    memberinfo_t*minfo = 0;
+    if(getset != KW_GET && getset != KW_SET) {
+        if(registry_findmember(state->clsinfo, name)) {
+            syntaxerror("class already contains a member/method called '%s'", name);
+        }
+        minfo = memberinfo_register(state->clsinfo, name, MEMBER_METHOD);
+        minfo->return_type = return_type;
+        // getslot on a member slot only returns "undefined", so no need
+        // to actually store these
+        //state->minfo->slot = state->m->method->trait->slot_id;
+    } else {
+        int gs = getset==KW_GET?MEMBER_GET:MEMBER_SET;
+        classinfo_t*type=0;
+        if(getset == KW_GET)
+            type = return_type;
+        else if(params->list)
+            type = params->list->param->type;
+        if((minfo=registry_findmember(state->clsinfo, name))) {
+            if(minfo->kind & ~(MEMBER_GET|MEMBER_SET))
+                syntaxerror("class already contains a member or method called '%s'", name);
+            if(minfo->kind & gs)
+                syntaxerror("getter/setter for '%s' already defined", name);
+            /* make a setter or getter into a getset */
+            minfo->kind |= gs;
+            if(!minfo->type) 
+                minfo->type = type;
+            else
+                if(type && minfo->type != type)
+                    syntaxerror("different type in getter and setter");
+        } else {
+            minfo = memberinfo_register(state->clsinfo, name, gs);
+            minfo->type = type;
+        }
+        /* can't assign a slot as getter and setter might have different slots */
+        //minfo->slot = slot;
+    }
+    return minfo;
+}
+
 static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
-                          params_t*params, classinfo_t*type)
+                          params_t*params, classinfo_t*return_type)
 {
     token_list_t*t;
     new_state();
@@ -685,27 +726,18 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         syntaxerror("not able to start another method scope");
     }
 
-    multiname_t*type2 = sig2mname(type);
+    multiname_t*type2 = sig2mname(return_type);
     if(!strcmp(state->clsinfo->name,name)) {
         state->m = abc_class_constructor(state->cls, type2, 0);
     } else {
-        state->minfo = memberinfo_register(state->clsinfo, name, MEMBER_METHOD);
-        state->minfo->return_type = type;
-
         state->m = abc_class_method(state->cls, type2, name, 0);
-        // getslot on a member slot only returns "undefined", so no need
-        // to actually store these
-        //state->minfo->slot = state->m->method->trait->slot_id;
+        int slot = state->m->trait->slot_id;
+        state->minfo = registerfunction(getset, name, params, return_type, slot);
     }
-    if(getset == KW_GET) {
-        state->m->trait->kind = TRAIT_GETTER;
-    }
-    if(getset == KW_SET) {
-        state->m->trait->kind = TRAIT_SETTER;
-    }
-    if(params->varargs) {
-        state->m->flags |= METHOD_NEED_REST;
-    }
+
+    if(getset == KW_GET) state->m->trait->kind = TRAIT_GETTER;
+    if(getset == KW_SET) state->m->trait->kind = TRAIT_SETTER;
+    if(params->varargs) state->m->flags |= METHOD_NEED_REST;
 
     char opt=0;
     param_list_t*p=0;
@@ -803,6 +835,14 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
     if(TYPE_IS_NUMBER(from) && TYPE_IS_INT(to)) {
         return abc_coerce2(c, &m);
     }
+    /* these are subject to overflow */
+    if(TYPE_IS_INT(from) && TYPE_IS_UINT(to)) {
+        return abc_coerce2(c, &m);
+    }
+    if(TYPE_IS_UINT(from) && TYPE_IS_INT(to)) {
+        return abc_coerce2(c, &m);
+    }
+
     classinfo_t*supertype = from;
     while(supertype) {
         if(supertype == to) {
@@ -819,6 +859,8 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         }
         supertype = supertype->superclass;
     }
+    if(TYPE_IS_FUNCTION(from) && TYPE_IS_FUNCTION(to))
+        return c;
     syntaxerror("can't convert type %s to %s", from->name, to->name);
 }
 
@@ -1675,6 +1717,7 @@ E : E "++" { code_t*c = 0;
              classinfo_t*type = $1.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  c=abc_increment_i(c);
+                 type = TYPE_INT;
              } else {
                  c=abc_increment(c);
                  type = TYPE_NUMBER;
@@ -1687,6 +1730,7 @@ E : E "--" { code_t*c = 0;
              classinfo_t*type = $1.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  c=abc_decrement_i(c);
+                 type = TYPE_INT;
              } else {
                  c=abc_decrement(c);
                  type = TYPE_NUMBER;
@@ -1700,6 +1744,7 @@ E : "++" E { code_t*c = 0;
              classinfo_t*type = $2.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  c=abc_increment_i(c);
+                 type = TYPE_INT;
              } else {
                  c=abc_increment(c);
                  type = TYPE_NUMBER;
@@ -1713,6 +1758,7 @@ E : "--" E { code_t*c = 0;
              classinfo_t*type = $2.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  c=abc_decrement_i(c);
+                 type = TYPE_INT;
              } else {
                  c=abc_decrement(c);
                  type = TYPE_NUMBER;
