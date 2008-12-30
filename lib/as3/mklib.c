@@ -130,6 +130,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
             fprintf(fi, "static classinfo_t %s;\n", id);
         } else if(pass==1) {
             fprintf(fi, "static classinfo_t %s = {0x%02x, 0x%02x, \"%s\", \"%s\"", id, access, flags, package, name);
+            fprintf(fi, ", 0"); //slot
             if(superid)
                 fprintf(fi, ", &%s, interfaces:{", superid);
             else
