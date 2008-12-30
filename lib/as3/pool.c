@@ -181,7 +181,13 @@ char* namespace_tostring(namespace_t*ns)
     access = access2str(type);
     char*s = escape_string(ns->name);
     char*string = (char*)malloc(strlen(access)+strlen(s)+3);
-    int l = sprintf(string, "[%s]%s", access, s);
+    if(!s)
+        sprintf(string, "[%s]NULL", access, s);
+    else if(!*s)
+        sprintf(string, "[%s]\"\"", access, s);
+    else 
+        sprintf(string, "[%s]", access, s);
+
     free(s);
     return string;
 }
