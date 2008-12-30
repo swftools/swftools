@@ -97,8 +97,8 @@ static void parse_metadata(TAG*tag, abc_file_t*file, pool_t*pool)
         for(s=0;s<num;s++) {
             int i1 = swf_GetU30(tag);
             int i2 = swf_GetU30(tag);
-            char*key = i1?pool_lookup_string(pool, i1):"";
-            char*value = i2?pool_lookup_string(pool, i2):"";
+            const char*key = i1?pool_lookup_string(pool, i1):"";
+            const char*value = i2?pool_lookup_string(pool, i2):"";
             DEBUG printf("    %s=%s\n", key, value);
             array_append(items, key, strdup(value));
         }
@@ -342,7 +342,10 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
     else
         return_type = strdup("void");
     char*paramstr = params_tostring(m->parameters);
-    fprintf(fo, "%s%s %s %s=%s %s (%d params)\n", prefix, type, return_type, name, m->name, paramstr, list_length(m->parameters));
+    fprintf(fo, "%s%s %s %s=%s %s (%d params, %d optional)\n", prefix, type, return_type, name, m->name, paramstr, 
+            list_length(m->parameters),
+            list_length(m->optional_parameters)
+            );
     free(paramstr);paramstr=0;
     free(return_type);return_type=0;
 
@@ -730,7 +733,7 @@ void* swf_ReadABC(TAG*tag)
             /* debug information- not used by avm2 */
             multiname_list_t*l = m->parameters;
             while(l) {
-	        char*name = pool_lookup_string(pool, swf_GetU30(tag));
+	        const char*name = pool_lookup_string(pool, swf_GetU30(tag));
                 l = l->next;
             }
 	}
