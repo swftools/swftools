@@ -97,6 +97,7 @@
 %token<token> KW_OVERRIDE
 %token<token> KW_FINAL
 %token<token> KW_GET "get"
+%token<token> KW_SUPER "super"
 %token<token> KW_EXTENDS
 %token<token> KW_FALSE "false"
 %token<token> KW_TRUE "true"
@@ -214,7 +215,7 @@
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
-%nonassoc "false" "true" "null" "undefined"
+%nonassoc "false" "true" "null" "undefined" "super"
 
      
 %{
@@ -242,37 +243,42 @@ typedef struct _import {
 
 DECLARE_LIST(import);
 
-typedef struct _state {
-    abc_file_t*file;
-    abc_script_t*init;
+typedef struct _classstate {
+    /* class data */
+    classinfo_t*info;
+    abc_class_t*abc;
+    code_t*init;
+    code_t*static_init;
+} classstate_t;
 
-    int level;
-
-    char*package;     
-    char*function;
+typedef struct _methodstate {
+    /* method data */
+    memberinfo_t*info;
+    dict_t*vars;
+    char late_binding;
     /* code that needs to be executed at the start of
        a method (like initializing local registers) */
     code_t*initcode;
+    char is_constructor;
+    char has_super;
+} methodstate_t;
 
+typedef struct _state {
+    int level;
+
+    char*package;     
     import_list_t*wildcard_imports;
     dict_t*imports;
     char has_own_imports;
-   
-    /* class data */
-    classinfo_t*clsinfo;
-    abc_class_t*cls;
-    code_t*cls_init;
-    code_t*cls_static_init;
-    
-    /* method data */
-    memberinfo_t*minfo;
-    abc_method_t*m;
-
-    dict_t*vars;
-    char late_binding;
+  
+    classstate_t*cls;   
+    methodstate_t*method;
 } state_t;
 
 typedef struct _global {
+    abc_file_t*file;
+    abc_script_t*init;
+
     int variable_count;
 } global_t;
 
@@ -281,7 +287,27 @@ static state_t* state = 0;
 
 DECLARE_LIST(state);
 
-#define MULTINAME(m,x) multiname_t m;namespace_t m##_ns;registry_fill_multiname(&m, &m##_ns, x);
+#define MULTINAME(m,x) \
+    multiname_t m;\
+    namespace_t m##_ns;\
+    registry_fill_multiname(&m, &m##_ns, x);
+                    
+#define MEMBER_MULTINAME(m,f) \
+    multiname_t m;\
+    namespace_t m##_ns;\
+    if(f) { \
+        m##_ns.access = flags2access(f->flags); \
+        m##_ns.name = ""; \
+        m.type = QNAME; \
+        m.ns = &m##_ns; \
+        m.namespace_set = 0; \
+        m.name = f->name; \
+    } else { \
+        m.type = MULTINAME; \
+        m.ns =0; \
+        m.namespace_set = &nopackage_namespace_set; \
+        m.name = f->name; \
+    }
 
 /* warning: list length of namespace set is undefined */
 #define MULTINAME_LATE(m, access, package) \
@@ -326,9 +352,7 @@ static void new_state()
     state_stack = sl;
     state = s;
     state->level++;
-    state->vars = dict_new();
-    state->initcode = 0;
-    state->has_own_imports = 0;
+    state->has_own_imports = 0;    
 }
 static void state_has_imports()
 {
@@ -346,26 +370,29 @@ static void old_state()
     state_stack = state_stack->next;
     free(old);
     state = state_stack->state;
-    /*if(state->initcode) {
+    /*if(state->method->initcode) {
         printf("residual initcode\n");
-        code_dump(state->initcode, 0, 0, "", stdout);
+        code_dump(state->method->initcode, 0, 0, "", stdout);
     }*/
     if(oldstate->has_own_imports) {
         list_free(oldstate->wildcard_imports);
         dict_destroy(oldstate->imports);oldstate->imports=0;
     }
-    state->initcode = code_append(state->initcode, oldstate->initcode);
+    if(state->method)
+        state->method->initcode = 
+            code_append(state->method->initcode, 
+                        oldstate->method->initcode);
 }
 void initialize_state()
 {
     init_globals();
     new_state();
 
-    state->file = abc_file_new();
-    state->file->flags &= ~ABCFILE_LAZY;
+    global->file = abc_file_new();
+    global->file->flags &= ~ABCFILE_LAZY;
     
-    state->init = abc_initscript(state->file, 0);
-    code_t*c = state->init->method->body->code;
+    global->init = abc_initscript(global->file, 0);
+    code_t*c = global->init->method->body->code;
 
     c = abc_getlocal_0(c);
     c = abc_pushscope(c);
@@ -400,21 +427,21 @@ void initialize_state()
     c = abc_pushstring(c, "[entering global init function]");
     c = abc_callpropvoid(c, "[package]::trace", 1);
     
-    state->init->method->body->code = c;
+    global->init->method->body->code = c;
 }
 void* finalize_state()
 {
     if(state->level!=1) {
         syntaxerror("unexpected end of file");
     }
-    abc_method_body_t*m = state->init->method->body;
+    abc_method_body_t*m = global->init->method->body;
     //__ popscope(m);
     
     __ findpropstrict(m, "[package]::trace");
     __ pushstring(m, "[leaving global init function]");
     __ callpropvoid(m, "[package]::trace", 1);
     __ returnvoid(m);
-    return state->file;
+    return global->file;
 }
 
 
@@ -440,6 +467,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("inner classes now allowed"); 
     }
     new_state();
+    state->cls = rfx_calloc(sizeof(classstate_t));
 
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
@@ -478,39 +506,40 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
     }
    
+
     /* build info struct */
     int num_interfaces = (list_length(implements));
-    state->clsinfo = classinfo_register(access, package, classname, num_interfaces);
-    state->clsinfo->superclass = extends;
+    state->cls->info = classinfo_register(access, package, classname, num_interfaces);
+    state->cls->info->superclass = extends?extends:TYPE_OBJECT;
     int pos = 0;
     classinfo_list_t*l = implements;
     for(l=implements;l;l=l->next) {
-        state->clsinfo->interfaces[pos++] = l->classinfo;
+        state->cls->info->interfaces[pos++] = l->classinfo;
     }
-
-    MULTINAME(classname2,state->clsinfo);
     
     multiname_t*extends2 = sig2mname(extends);
+
+    MULTINAME(classname2,state->cls->info);
 
     /*if(extends) {
         state->cls_init = abc_getlocal_0(state->cls_init);
         state->cls_init = abc_constructsuper(state->cls_init, 0);
     }*/
 
-    state->cls = abc_class_new(state->file, &classname2, extends2);
-    if(flags&FLAG_FINAL) abc_class_final(state->cls);
-    if(flags&FLAG_DYNAMIC) abc_class_sealed(state->cls);
-    if(interface) abc_class_interface(state->cls);
+    state->cls->abc = abc_class_new(global->file, &classname2, extends2);
+    if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
+    if(flags&FLAG_DYNAMIC) abc_class_sealed(state->cls->abc);
+    if(interface) abc_class_interface(state->cls->abc);
 
     for(mlist=implements;mlist;mlist=mlist->next) {
         MULTINAME(m, mlist->classinfo);
-        abc_class_add_interface(state->cls, &m);
+        abc_class_add_interface(state->cls->abc, &m);
     }
 
     /* now write the construction code for this class */
-    int slotindex = abc_initscript_addClassTrait(state->init, &classname2, state->cls);
+    int slotindex = abc_initscript_addClassTrait(global->init, &classname2, state->cls->abc);
 
-    abc_method_body_t*m = state->init->method->body;
+    abc_method_body_t*m = global->init->method->body;
     __ getglobalscope(m);
     classinfo_t*s = extends;
 
@@ -549,7 +578,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         __ getlocal_0(m);
         __ pushscope(m);count++;
     }
-    __ newclass(m,state->cls);
+    __ newclass(m,state->cls->abc);
     while(count--) {
         __ popscope(m);
     }
@@ -568,26 +597,26 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
 
 static void endclass()
 {
-    if(state->cls_init) {
-        if(!state->cls->constructor) {
-            abc_method_t*m = abc_class_constructor(state->cls, 0);
-            m->body->code = code_append(m->body->code, state->cls_init);
+    if(state->cls->init) {
+        if(!state->cls->abc->constructor) {
+            abc_method_t*m = abc_class_constructor(state->cls->abc, 0);
+            m->body->code = code_append(m->body->code, state->cls->init);
             m->body->code = abc_returnvoid(m->body->code);
         } else {
-            code_t*c = state->cls->constructor->body->code;
-            c = code_append(state->cls_init, c);
-            state->cls->constructor->body->code = c;
+            code_t*c = state->cls->abc->constructor->body->code;
+            c = code_append(state->cls->init, c);
+            state->cls->abc->constructor->body->code = c;
 
         }
     }
-    if(state->cls_static_init) {
-        if(!state->cls->static_constructor) {
-            abc_method_t*m = abc_class_staticconstructor(state->cls, 0);
-            m->body->code = code_append(m->body->code, state->cls_static_init);
+    if(state->cls->static_init) {
+        if(!state->cls->abc->static_constructor) {
+            abc_method_t*m = abc_class_staticconstructor(state->cls->abc, 0);
+            m->body->code = code_append(m->body->code, state->cls->static_init);
             m->body->code = abc_returnvoid(m->body->code);
         } else {
-            state->cls->static_constructor->body->code = 
-                code_append(state->cls_static_init, state->cls->static_constructor->body->code);
+            state->cls->abc->static_constructor->body->code = 
+                code_append(state->cls->static_init, state->cls->abc->static_constructor->body->code);
         }
     }
 
@@ -603,7 +632,9 @@ static int find_variable(char*name, classinfo_t**m)
 {
     state_list_t* s = state_stack;
     while(s) {
-        variable_t*v = dict_lookup(s->state->vars, name);
+        variable_t*v = 0;
+        if(s->state->method)
+            v = dict_lookup(s->state->method->vars, name);
         if(v) {
             if(m) {
                 *m = v->type;
@@ -623,14 +654,14 @@ static int find_variable_safe(char*name, classinfo_t**m)
 }
 static char variable_exists(char*name) 
 {
-    return dict_lookup(state->vars, name)!=0;
+    return dict_lookup(state->method->vars, name)!=0;
 }
 static int new_variable(char*name, classinfo_t*type)
 {
     NEW(variable_t, v);
     v->index = global->variable_count;
     v->type = type;
-    dict_put(state->vars, name, v);
+    dict_put(state->method->vars, name, v);
     return global->variable_count++;
 }
 #define TEMPVARNAME "__as3_temp__"
@@ -647,8 +678,8 @@ static int gettempvar()
 code_t* killvars(code_t*c) 
 {
     int t;
-    for(t=0;t<state->vars->hashsize;t++) {
-        dictentry_t*e =state->vars->slots[t];
+    for(t=0;t<state->method->vars->hashsize;t++) {
+        dictentry_t*e =state->method->vars->slots[t];
         while(e) {
             variable_t*v = (variable_t*)e->data;
             //do this always, otherwise register types don't match
@@ -684,14 +715,14 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
 {
     memberinfo_t*minfo = 0;
     if(getset != KW_GET && getset != KW_SET) {
-        if(registry_findmember(state->clsinfo, name)) {
+        if(registry_findmember(state->cls->info, name)) {
             syntaxerror("class already contains a member/method called '%s'", name);
         }
-        minfo = memberinfo_register(state->clsinfo, name, MEMBER_METHOD);
+        minfo = memberinfo_register(state->cls->info, name, MEMBER_METHOD);
         minfo->return_type = return_type;
         // getslot on a member slot only returns "undefined", so no need
         // to actually store these
-        //state->minfo->slot = state->m->method->trait->slot_id;
+        //state->minfo->slot = state->method->a bc->method->trait->slot_id;
     } else {
         int gs = getset==KW_GET?MEMBER_GET:MEMBER_SET;
         classinfo_t*type=0;
@@ -699,7 +730,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
             type = return_type;
         else if(params->list)
             type = params->list->param->type;
-        if((minfo=registry_findmember(state->clsinfo, name))) {
+        if((minfo=registry_findmember(state->cls->info, name))) {
             if(minfo->kind & ~(MEMBER_GET|MEMBER_SET))
                 syntaxerror("class already contains a member or method called '%s'", name);
             if(minfo->kind & gs)
@@ -712,7 +743,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
                 if(type && minfo->type != type)
                     syntaxerror("different type in getter and setter");
         } else {
-            minfo = memberinfo_register(state->clsinfo, name, gs);
+            minfo = memberinfo_register(state->cls->info, name, gs);
             minfo->type = type;
         }
         /* can't assign a slot as getter and setter might have different slots */
@@ -747,35 +778,51 @@ static int flags2access(int flags)
 static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type)
 {
-    token_list_t*t;
-    new_state();
-    global->variable_count = 0;
-    state->function = name;
-    
-    if(state->m) {
+    if(state->method) {
         syntaxerror("not able to start another method scope");
     }
+    new_state();
+    state->method = rfx_calloc(sizeof(methodstate_t));
+    state->method->initcode = 0;
+    state->method->is_constructor = !strcmp(state->cls->info->name,name);
+    state->method->has_super = 0;
 
+    global->variable_count = 0;
+    state->method->vars = dict_new();
+    /* state->vars is initialized by state_new */
+    if(new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info)!=0) syntaxerror("Internal error");
+    param_list_t*p=0;
+    for(p=params->list;p;p=p->next) {
+        new_variable(p->param->name, p->param->type);
+    }
+    state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
+}
+
+static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
+                          params_t*params, classinfo_t*return_type, code_t*body)
+{
     namespace_t mname_ns = {flags2access(flags), ""};
     multiname_t mname = {QNAME, &mname_ns, 0, name};
 
+    abc_method_t*f = 0;
+
     multiname_t*type2 = sig2mname(return_type);
     int slot = 0;
-    if(!strcmp(state->clsinfo->name,name)) {
-        state->m = abc_class_constructor(state->cls, type2);
+    if(state->method->is_constructor) {
+        f = abc_class_constructor(state->cls->abc, type2);
         name = "__as3_constructor__";
     } else {
         if(flags&FLAG_STATIC)
-            state->m = abc_class_staticmethod(state->cls, type2, &mname);
+            f = abc_class_staticmethod(state->cls->abc, type2, &mname);
         else
-            state->m = abc_class_method(state->cls, type2, &mname);
-        slot = state->m->trait->slot_id;
+            f = abc_class_method(state->cls->abc, type2, &mname);
+        slot = f->trait->slot_id;
     }
-    state->minfo = registerfunction(getset, flags, name, params, return_type, slot);
+    state->method->info->slot = slot;
 
-    if(getset == KW_GET) state->m->trait->kind = TRAIT_GETTER;
-    if(getset == KW_SET) state->m->trait->kind = TRAIT_SETTER;
-    if(params->varargs) state->m->flags |= METHOD_NEED_REST;
+    if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
+    if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
+    if(params->varargs) f->flags |= METHOD_NEED_REST;
 
     char opt=0;
     param_list_t*p=0;
@@ -784,42 +831,16 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
             break; //varargs: omit last parameter in function signature
         }
         multiname_t*m = sig2mname(p->param->type);
-	list_append(state->m->parameters, m);
+	list_append(f->parameters, m);
         if(p->param->value) {
             check_constant_against_type(p->param->type, p->param->value);
-            opt=1;list_append(state->m->optional_parameters, p->param->value);
+            opt=1;list_append(f->optional_parameters, p->param->value);
         } else if(opt) {
             syntaxerror("non-optional parameter not allowed after optional parameters");
         }
     }
-
-    /* state->vars is initialized by state_new */
-    if(new_variable((flags&FLAG_STATIC)?"class":"this", state->clsinfo)!=0) syntaxerror("Internal error");
-
-    for(p=params->list;p;p=p->next) {
-        new_variable(p->param->name, p->param->type);
-    }
-}
-static void endfunction(code_t*body)
-{
+    f->body->code = body;
         
-    if(!(state->cls->flags & CLASS_INTERFACE)) {
-        code_t*c = 0;
-        if(state->late_binding) {
-            c = abc_getlocal_0(c);
-            c = abc_pushscope(c);
-        }
-        c = code_append(c, state->initcode);
-        c = code_append(c, body);
-
-        /* append return if necessary */
-        if(!c || c->opcode != OPCODE_RETURNVOID && 
-                 c->opcode != OPCODE_RETURNVALUE) {
-            c = abc_returnvoid(c);
-        }
-        if(state->m->body->code) syntaxerror("internal error");
-        state->m->body->code = c;
-    }
     old_state();
 }
 
@@ -1180,8 +1201,8 @@ ONE_VARIABLE: {} T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
         /* if this is a typed variable:
            push default value for type on stack */
         if($3) {
-            state->initcode = defaultvalue(state->initcode, $3);
-            state->initcode = abc_setlocal(state->initcode, index);
+            state->method->initcode = defaultvalue(state->method->initcode, $3);
+            state->method->initcode = abc_setlocal(state->method->initcode, index);
         }
     } else {
         if($4.c->prev || $4.c->opcode != OPCODE_PUSHUNDEFINED) {
@@ -1195,8 +1216,8 @@ ONE_VARIABLE: {} T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
     
     /* that's the default for a local register, anyway
         else {
-        state->initcode = abc_pushundefined(state->initcode);
-        state->initcode = abc_setlocal(state->initcode, index);
+        state->method->initcode = abc_pushundefined(state->method->initcode);
+        state->method->initcode = abc_setlocal(state->method->initcode, index);
     }*/
     //printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
 }
@@ -1208,7 +1229,7 @@ MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
 IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
-    $$ = state->initcode;state->initcode=0;
+    $$ = state->method->initcode;state->method->initcode=0;
 
     $$ = code_append($$, $4.c);
     code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
@@ -1231,7 +1252,7 @@ FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
 
 FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
-    $$ = state->initcode;state->initcode=0;
+    $$ = state->method->initcode;state->method->initcode=0;
 
     $$ = code_append($$, $4);
     code_t*loopstart = $$ = abc_label($$);
@@ -1248,7 +1269,7 @@ FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CO
 }
 
 WHILE : "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
-    $$ = state->initcode;state->initcode=0;
+    $$ = state->method->initcode;state->method->initcode=0;
 
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
@@ -1355,7 +1376,7 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
         syntaxerror("invalid method modifiers: interface methods always need to be public");
     }
     startfunction(0,$1,$3,$4,&$6,$8);
-    endfunction(0);
+    endfunction(0,$1,$3,$4,&$6,$8, 0);
 }
 
 /* ------------ classes and interfaces (body, slots ) ------- */
@@ -1364,7 +1385,7 @@ VARCONST: "var" | "const"
 
 SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     int flags = $1;
-    memberinfo_t* info = memberinfo_register(state->clsinfo, $3, MEMBER_SLOT);
+    memberinfo_t* info = memberinfo_register(state->cls->info, $3, MEMBER_SLOT);
     info->type = $4;
     info->flags = flags;
     trait_t*t=0;
@@ -1375,17 +1396,17 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
     if(!(flags&FLAG_STATIC)) {
         if($4) {
             MULTINAME(m, $4);
-            t=abc_class_slot(state->cls, &mname, &m);
+            t=abc_class_slot(state->cls->abc, &mname, &m);
         } else {
-            t=abc_class_slot(state->cls, &mname, 0);
+            t=abc_class_slot(state->cls->abc, &mname, 0);
         }
         info->slot = t->slot_id;
     } else {
         if($4) {
             MULTINAME(m, $4);
-            t=abc_class_staticslot(state->cls, &mname, &m);
+            t=abc_class_staticslot(state->cls->abc, &mname, &m);
         } else {
-            t=abc_class_staticslot(state->cls, &mname, 0);
+            t=abc_class_staticslot(state->cls->abc, &mname, 0);
         }
         info->slot = t->slot_id;
     }
@@ -1396,9 +1417,9 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
         c = converttype(c, $5.t, $4);
         c = abc_setslot(c, t->slot_id);
         if(!(flags&FLAG_STATIC))
-            state->cls_init = code_append(state->cls_init, c);
+            state->cls->init = code_append(state->cls->init, c);
         else
-            state->cls_static_init = code_append(state->cls_static_init, c);
+            state->cls->static_init = code_append(state->cls->static_init, c);
     }
     if($2==KW_CONST) {
         t->kind= TRAIT_CONST;
@@ -1471,8 +1492,26 @@ GETSET : "get" {$$=$1;}
 FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
                       MAYBETYPE '{' {startfunction(0,$1,$3,$4,&$6,$8)} MAYBECODE '}' 
 {
-    if(!state->m) syntaxerror("internal error: undefined function");
-    endfunction($11);
+    code_t*c = 0;
+    if(state->method->late_binding) {
+        c = abc_getlocal_0(c);
+        c = abc_pushscope(c);
+    }
+    if(state->method->is_constructor && !state->method->has_super) {
+        // generate default constructor
+        c = abc_getlocal_0(c);
+        c = abc_constructsuper(c, 0);
+    }
+
+    c = code_append(c, state->method->initcode);
+    c = code_append(c, $11);
+
+    /* append return if necessary */
+    if(!c || c->opcode != OPCODE_RETURNVOID && 
+             c->opcode != OPCODE_RETURNVALUE) {
+        c = abc_returnvoid(c);
+    }
+    endfunction(0,$1,$3,$4,&$6,$8,c);
 }
 
 /* ------------- package + class ids --------------- */
@@ -1577,7 +1616,7 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = abc_callproperty2($$.c, name, len);
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
-        trait_t*t = abc_class_find_slotid(state->cls,slot);//FIXME
+        trait_t*t = abc_class_find_slotid(state->cls->abc,slot);//FIXME
         if(t->kind!=TRAIT_METHOD) {
             //flash allows to assign closures to members.
             //syntaxerror("not a function");
@@ -1587,6 +1626,11 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = code_append($$.c, paramcode);
         //$$.c = abc_callmethod($$.c, t->method, len); //#1051 illegal early access binding
         $$.c = abc_callproperty2($$.c, name, len);
+    } else if($$.c->opcode == OPCODE_GETSUPER) {
+        name = multiname_clone($$.c->data[0]);
+        $$.c = code_cutlast($$.c);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_callsuper2($$.c, name, len);
     } else {
         $$.c = abc_getlocal_0($$.c);
         $$.c = code_append($$.c, paramcode);
@@ -1602,6 +1646,23 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.t = TYPE_ANY;
     }
 }
+FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
+    if(!state->cls) syntaxerror("super() not allowed outside of a class");
+    if(!state->method) syntaxerror("super() not allowed outside of a function");
+    if(!state->method->is_constructor) syntaxerror("super() not allowed outside of a constructor");
+
+    $$.c = code_new();
+    $$.c = abc_getlocal_0($$.c);
+    typedcode_list_t*l = 0;
+    int len = 0;
+    for(l=$3;l;l=l->next) {
+        $$.c = code_append($$.c, l->typedcode->c);len++;
+    }
+    state->method->has_super = 1;
+    $$.c = abc_constructsuper($$.c, len);
+    $$.c = abc_pushundefined($$.c);
+    $$.t = TYPE_ANY;
+}
 
 DELETE: "delete" E {
     $$.c = $2.c;
@@ -1613,7 +1674,7 @@ DELETE: "delete" E {
         $$.c->opcode = OPCODE_DELETEPROPERTY;
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
-        multiname_t*name = abc_class_find_slotid(state->cls,slot)->name;
+        multiname_t*name = abc_class_find_slotid(state->cls->abc,slot)->name;
         $$.c = code_cutlast($$.c);
         $$.c = abc_deleteproperty2($$.c, name);
     } else {
@@ -1642,7 +1703,9 @@ EXPRESSION : EXPRESSION ',' E %prec below_minus {
     $$.c = code_append($$.c,$3.c);
     $$.t = $3.t;
 }
-VOIDEXPRESSION : EXPRESSION %prec below_minus {$$=cut_last_push($1.c);}
+VOIDEXPRESSION : EXPRESSION %prec below_minus {
+    $$=cut_last_push($1.c);
+}
 
 // ----------------------- expression evaluation -------------------------------------
 
@@ -2005,14 +2068,27 @@ E : "--" %prec minusminus_prefix E { code_t*c = 0;
              $$.t = $2.t;
            }
 
+E : "super" '.' T_IDENTIFIER 
+           { if(!state->cls->info)
+                  syntaxerror("super keyword not allowed outside a class");
+              classinfo_t*t = state->cls->info->superclass;
+              if(!t) t = TYPE_OBJECT;
+
+              memberinfo_t*f = registry_findmember(t, $3);
+              namespace_t ns = {flags2access(f->flags), ""};
+              MEMBER_MULTINAME(m, f);
+              $$.c = 0;
+              $$.c = abc_getlocal_0($$.c);
+              $$.c = abc_getsuper2($$.c, &m);
+              $$.t = memberinfo_gettype(f);
+           }
+
 E : E '.' T_IDENTIFIER
             {$$.c = $1.c;
              classinfo_t*t = $1.t;
              char is_static = 0;
-             if(TYPE_IS_CLASS(t)) {
-                 memberinfo_t*m = registry_findmember($1.t, "prototype");
-                 if(!m) syntaxerror("identifier '%s' not found in anonymous class", $3);
-                 t = m->type;
+             if(TYPE_IS_CLASS(t) && t->cls) {
+                 t = t->cls;
                  is_static = 1;
              }
              if(t) {
@@ -2020,34 +2096,20 @@ E : E '.' T_IDENTIFIER
                  char noslot = 0;
                  if(f && !is_static != !(f->flags&FLAG_STATIC))
                     noslot=1;
-
                  if(f && f->slot && !noslot) {
                      $$.c = abc_getslot($$.c, f->slot);
                  } else {
-                     if(f) {
-                         namespace_t ns = {flags2access(f->flags), ""}; // needs to be "", not $$.t->package (!)
-                         multiname_t m = {QNAME, &ns, 0, $3};
-                         $$.c = abc_getproperty2($$.c, &m);
-                     } else {
-                         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
-                         $$.c = abc_getproperty2($$.c, &m);
-                     }
+                     MEMBER_MULTINAME(m, f);
+                     $$.c = abc_getproperty2($$.c, &m);
                  }
                  /* determine type */
-                 if(f) {
-                    if(f->kind == MEMBER_METHOD) {
-                        $$.t = TYPE_FUNCTION(f);
-                    } else {
-                        $$.t = f->type;
-                    }
-                 } else {
+                 $$.t = memberinfo_gettype(f);
+                 if(!$$.t)
                     $$.c = abc_coerce_a($$.c);
-                    $$.t = registry_getanytype();
-                 }
              } else {
                  /* when resolving a property on an unknown type, we do know the
                     name of the property (and don't seem to need the package), but
-                    we do need to make avm2 try out all access modes */
+                    we need to make avm2 try out all access modes */
                  multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
                  $$.c = abc_getproperty2($$.c, &m);
                  $$.c = abc_coerce_a($$.c);
@@ -2068,14 +2130,14 @@ VAR_READ : T_IDENTIFIER {
         $$.c = abc_getlocal($$.c, i);
 
     /* look at current class' members */
-    } else if((f = registry_findmember(state->clsinfo, $1))) {
+    } else if((f = registry_findmember(state->cls->info, $1))) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
-        int i_am_static = (state->minfo?(state->minfo->flags&FLAG_STATIC):FLAG_STATIC);
+        int i_am_static = ((state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC);
         if(var_is_static != i_am_static) {
             /* there doesn't seem to be any "static" way to access
                static properties of a class */
-            state->late_binding = 1;
+            state->method->late_binding = 1;
             $$.t = f->type;
             namespace_t ns = {flags2access(f->flags), ""};
             multiname_t m = {QNAME, &ns, 0, $1};
@@ -2113,7 +2175,7 @@ VAR_READ : T_IDENTIFIER {
     } else {
         if(strcmp($1,"trace"))
             warning("Couldn't resolve '%s', doing late binding", $1);
-        state->late_binding = 1;
+        state->method->late_binding = 1;
                 
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
 
