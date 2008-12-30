@@ -49,7 +49,7 @@ struct _memberinfo {
     U8 kind;
     const char*name;
     union {
-        classinfo_t*returnvalue;
+        classinfo_t*return_type;
         classinfo_t*type;
     };
     classinfo_list_t*params;
@@ -73,7 +73,9 @@ classinfo_t* registry_getintclass();
 classinfo_t* registry_getuintclass();
 classinfo_t* registry_getnullclass();
 classinfo_t* registry_getbooleanclass();
+classinfo_t* registry_getfunctionclass();
 classinfo_t* registry_getMovieClip();
+classinfo_t* registry_getfunctionclass(memberinfo_t*f);
 
 classinfo_t* registry_findclass(const char*package, const char*name);
 memberinfo_t* registry_findmember(classinfo_t*cls, const char*name);
@@ -81,6 +83,7 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name);
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
 multiname_t* classinfo_to_multiname(classinfo_t*cls);
 
+char registry_isfunctionclass();
 /* convenience functions */
 #define sig2mname(x) classinfo_to_multiname(x)
 #define TYPE_ANY                  registry_getanytype()
@@ -97,6 +100,10 @@ multiname_t* classinfo_to_multiname(classinfo_t*cls);
 #define TYPE_IS_BOOLEAN(t)((t) == registry_getbooleanclass())
 #define TYPE_STRING               registry_getstringclass()
 #define TYPE_IS_STRING(t) ((t) == registry_getstringclass())
+
+#define TYPE_FUNCTION(f)          registry_getfunctionclass(f)
+#define TYPE_IS_FUNCTION(t)       registry_isfunctionclass(t)
+
 #define TYPE_NULL                 registry_getnullclass()
 #define TYPE_IS_NULL(t)   ((t) == registry_getnullclass())
         

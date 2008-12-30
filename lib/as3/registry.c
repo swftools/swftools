@@ -91,6 +91,29 @@ classinfo_t* classinfo_register(int access, char*package, char*name)
     dict_init(&c->members,AVERAGE_NUMBER_OF_MEMBERS);
     return c;
 }
+
+/* function pointers get their own type class */
+static dict_t* functionobjects = 0;
+classinfo_t* registry_getfunctionclass(memberinfo_t*f) {
+    if(!functionobjects) {
+        functionobjects = dict_new2(&ptr_type);
+    } else {
+        classinfo_t*c = dict_lookup(functionobjects, f);
+        if(c)
+            return c;
+    }
+
+    NEW(classinfo_t,c);
+    c->access = ACCESS_PUBLIC;
+    c->package = "";
+    c->name = "Function";
+    dict_init(&c->members,1);
+    dict_put(&c->members, "__funcptr__", f);
+
+    dict_put(functionobjects, f, c);
+    return c;
+}
+
 memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 kind)
 {
     NEW(memberinfo_t,m);
@@ -146,15 +169,48 @@ multiname_t* classinfo_to_multiname(classinfo_t*cls)
 }
 
 // ----------------------- builtin types ------------------------------
-classinfo_t* registry_getanytype() {return 0;/*FIXME*/}
+classinfo_t* registry_getanytype() {return 0;}
 
-classinfo_t* registry_getobjectclass() {return registry_safefindclass("", "Object");}
-classinfo_t* registry_getstringclass() {return registry_safefindclass("", "String");}
-classinfo_t* registry_getintclass() {return registry_safefindclass("", "int");}
-classinfo_t* registry_getuintclass() {return registry_safefindclass("", "uint");}
-classinfo_t* registry_getbooleanclass() {return registry_safefindclass("", "Boolean");}
-classinfo_t* registry_getnumberclass() {return registry_safefindclass("", "Number");}
-classinfo_t* registry_getMovieClip() {return registry_safefindclass("flash.display", "MovieClip");}
+char registry_isfunctionclass(classinfo_t*c) {
+    return (c && c->package && c->name && 
+            !strcmp(c->package, "") && !strcmp(c->name, "Function"));
+}
+
+classinfo_t* registry_getobjectclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "Object");
+    return c;
+}
+classinfo_t* registry_getstringclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "String");
+    return c;
+}
+classinfo_t* registry_getintclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "int");
+    return c;
+}
+classinfo_t* registry_getuintclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "uint");
+    return c;
+}
+classinfo_t* registry_getbooleanclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "Boolean");
+    return c;
+}
+classinfo_t* registry_getnumberclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "Number");
+    return c;
+}
+classinfo_t* registry_getMovieClip() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("flash.display", "MovieClip");
+    return c;
+}
 
 // ----------------------- builtin dummy types -------------------------
 classinfo_t nullclass = {
