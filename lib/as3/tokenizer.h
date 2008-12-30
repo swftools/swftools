@@ -45,6 +45,7 @@ struct _token {
 struct _param {
     char*name;
     classinfo_t*type;
+    constant_t*value;
 };
 
 struct _params {
