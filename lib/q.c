@@ -523,6 +523,23 @@ void stringarray_destroy(stringarray_t*sa)
 
 // ------------------------------- type_t -------------------------------
 
+char ptr_equals(const void*o1, const void*o2) 
+{
+    return o1==o2;
+}
+unsigned int ptr_hash(const void*o) 
+{
+    return string_hash3(o, sizeof(o));
+}
+void* ptr_dup(const void*o) 
+{
+    return (void*)o;
+}
+void ptr_free(void*o) 
+{
+    return;
+}
+
 char charptr_equals(const void*o1, const void*o2) 
 {
     if(!o1 || !o2)
@@ -547,6 +564,7 @@ void charptr_free(void*o)
         rfx_free(o);
     }
 }
+
 char stringstruct_equals(const void*o1, const void*o2) 
 {
     string_t*s1 = (string_t*)o1;
@@ -574,6 +592,12 @@ void stringstruct_free(void*o)
     rfx_free((void*)o);
 }
 
+type_t ptr_type = {
+    equals: ptr_equals,
+    hash: ptr_hash,
+    dup: ptr_dup,
+    free: ptr_free,
+};
 
 type_t charptr_type = {
     equals: charptr_equals,
