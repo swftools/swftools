@@ -32,6 +32,7 @@ DECLARE(token);
 DECLARE_LIST(token);
 DECLARE(param);
 DECLARE_LIST(param);
+DECLARE(params);
 DECLARE(typedcode);
 DECLARE_LIST(typedcode);
 
@@ -46,9 +47,17 @@ struct _param {
     classinfo_t*type;
 };
 
+struct _params {
+    param_list_t*list;
+    char varargs;
+};
+
 struct _typedcode {
     code_t*c;
     classinfo_t*t;
+    
+    /* if t == TYPE_FUNCTION */
+    memberinfo_t*f;
 };
 
 extern char start_of_expression;
