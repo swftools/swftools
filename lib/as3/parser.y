@@ -764,6 +764,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     multiname_t mname = {QNAME, &mname_ns, 0, name};
 
     multiname_t*type2 = sig2mname(return_type);
+    int slot = 0;
     if(!strcmp(state->clsinfo->name,name)) {
         state->m = abc_class_constructor(state->cls, type2);
     } else {
@@ -771,9 +772,9 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
             state->m = abc_class_staticmethod(state->cls, type2, &mname);
         else
             state->m = abc_class_method(state->cls, type2, &mname);
-        int slot = state->m->trait->slot_id;
-        state->minfo = registerfunction(getset, flags, name, params, return_type, slot);
+        slot = state->m->trait->slot_id;
     }
+    state->minfo = registerfunction(getset, flags, name, params, return_type, slot);
 
     if(getset == KW_GET) state->m->trait->kind = TRAIT_GETTER;
     if(getset == KW_SET) state->m->trait->kind = TRAIT_SETTER;
@@ -796,7 +797,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     }
 
     /* state->vars is initialized by state_new */
-    if(new_variable("this", state->clsinfo)!=0) syntaxerror("Internal error");
+    if(new_variable((flags&FLAG_STATIC)?"class":"this", state->clsinfo)!=0) syntaxerror("Internal error");
 
     for(p=params->list;p;p=p->next) {
         new_variable(p->param->name, p->param->type);
@@ -1326,18 +1327,18 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
         if($4) {
             MULTINAME(m, $4);
             t=abc_class_slot(state->cls, &mname, &m);
-            info->slot = t->slot_id;
         } else {
             t=abc_class_slot(state->cls, &mname, 0);
         }
+        info->slot = t->slot_id;
     } else {
         if($4) {
             MULTINAME(m, $4);
             t=abc_class_staticslot(state->cls, &mname, &m);
-            //info->slot = t->slot_id;
         } else {
             t=abc_class_staticslot(state->cls, &mname, 0);
         }
+        info->slot = t->slot_id;
     }
     if($5.c && !is_pushundefined($5.c)) {
         code_t*c = 0;
@@ -1888,7 +1889,9 @@ VAR_READ : T_IDENTIFIER {
         $$.c = abc_getlocal($$.c, i);
     } else if(f = registry_findmember(state->clsinfo, $1)) {
         // $1 is a function in this class
-        if(f->flags&FLAG_STATIC) {
+        int var_is_static = (f->flags&FLAG_STATIC);
+        int i_am_static = (state->minfo?(state->minfo->flags&FLAG_STATIC):FLAG_STATIC);
+        if(var_is_static != i_am_static) {
             /* there doesn't seem to be any "static" way to access
                static properties of a class */
             state->late_binding = 1;
@@ -1916,7 +1919,7 @@ VAR_READ : T_IDENTIFIER {
     } else {
         // let the avm2 resolve $1 
         if(strcmp($1,"trace"))
-        warning("Couldn't resolve %s, doing late binding", $1);
+            warning("Couldn't resolve %s, doing late binding", $1);
         state->late_binding = 1;
                 
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
