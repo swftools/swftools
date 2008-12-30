@@ -93,7 +93,7 @@ classinfo_t* classinfo_register(int access, char*package, char*name, int num_int
     return c;
 }
 
-/* function pointers get their own type class */
+/* function and class pointers get their own type class */
 static dict_t* functionobjects = 0;
 classinfo_t* registry_getfunctionclass(memberinfo_t*f) {
     if(!functionobjects) {
@@ -112,6 +112,32 @@ classinfo_t* registry_getfunctionclass(memberinfo_t*f) {
     dict_put(&c->members, "call", f);
 
     dict_put(functionobjects, f, c);
+    return c;
+}
+static dict_t* classobjects = 0;
+classinfo_t* registry_getclassclass(classinfo_t*a) {
+    if(!classobjects) {
+        classobjects = dict_new2(&ptr_type);
+    } else {
+        classinfo_t*c = dict_lookup(classobjects, a);
+        if(c)
+            return c;
+    }
+
+    NEW(classinfo_t,c);
+    c->access = ACCESS_PUBLIC;
+    c->package = "";
+    c->name = "Class";
+    
+    NEW(memberinfo_t,m);
+    m->kind = MEMBER_SLOT;
+    m->name = "prototype";
+    m->type = a;
+
+    dict_init(&c->members,1);
+    dict_put(&c->members, "prototype", m);
+
+    dict_put(classobjects, a, c);
     return c;
 }
 
@@ -175,6 +201,10 @@ classinfo_t* registry_getanytype() {return 0;}
 char registry_isfunctionclass(classinfo_t*c) {
     return (c && c->package && c->name && 
             !strcmp(c->package, "") && !strcmp(c->name, "Function"));
+}
+char registry_isclassclass(classinfo_t*c) {
+    return (c && c->package && c->name && 
+            !strcmp(c->package, "") && !strcmp(c->name, "Class"));
 }
 
 classinfo_t* registry_getobjectclass() {
