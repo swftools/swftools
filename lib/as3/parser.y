@@ -80,13 +80,16 @@
 %token<token> KW_NEW "new"
 %token<token> KW_NATIVE
 %token<token> KW_FUNCTION "function"
+%token<token> KW_UNDEFINED "undefined"
 %token<token> KW_FOR "for"
 %token<token> KW_CLASS "class"
 %token<token> KW_CONST "const"
 %token<token> KW_SET "set"
+%token<token> KW_VOID "void"
 %token<token> KW_STATIC
 %token<token> KW_IMPORT "import"
 %token<token> KW_RETURN "return"
+%token<token> KW_TYPEOF "typeof"
 %token<token> KW_INTERFACE "interface"
 %token<token> KW_NULL "null"
 %token<token> KW_VAR "var"
@@ -200,7 +203,7 @@
 %left below_minus
 %left '-' '+'
 %left '/' '*' '%'
-%left plusplus_prefix minusminus_prefix '~' '!' "delete" "typeof" //FIXME: *unary* + - should be here, too
+%left plusplus_prefix minusminus_prefix '~' '!' "void" "delete" "typeof" //FIXME: *unary* + - should be here, too
 %left "--" "++" 
 %left '[' ']' '{' "new" '.' ".." "::"
 %nonassoc T_IDENTIFIER
@@ -211,7 +214,7 @@
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
-%nonassoc "false" "true" "null"
+%nonassoc "false" "true" "null" "undefined"
 
      
 %{
@@ -1413,9 +1416,9 @@ STATICCONSTANT : T_UINT {$$ = constant_new_uint($1);}
 STATICCONSTANT : T_FLOAT {$$ = constant_new_float($1);}
 STATICCONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);}
 //STATICCONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
-STATICCONSTANT : KW_TRUE {$$ = constant_new_true($1);}
-STATICCONSTANT : KW_FALSE {$$ = constant_new_false($1);}
-STATICCONSTANT : KW_NULL {$$ = constant_new_null($1);}
+STATICCONSTANT : "true" {$$ = constant_new_true($1);}
+STATICCONSTANT : "false" {$$ = constant_new_false($1);}
+STATICCONSTANT : "null" {$$ = constant_new_null($1);}
 
 /* ------------ classes and interfaces (body, functions) ------- */
 
@@ -1671,13 +1674,16 @@ CONSTANT : T_FLOAT {$$.c = abc_pushdouble(0, $1);
 CONSTANT : T_STRING {$$.c = abc_pushstring2(0, &$1);
                      $$.t = TYPE_STRING;
                     }
-CONSTANT : KW_TRUE {$$.c = abc_pushtrue(0);
+CONSTANT : "undefined" {$$.c = abc_pushundefined(0);
+                    $$.t = TYPE_ANY;
+                   }
+CONSTANT : "true" {$$.c = abc_pushtrue(0);
                     $$.t = TYPE_BOOLEAN;
                    }
-CONSTANT : KW_FALSE {$$.c = abc_pushfalse(0);
+CONSTANT : "false" {$$.c = abc_pushfalse(0);
                      $$.t = TYPE_BOOLEAN;
                     }
-CONSTANT : KW_NULL {$$.c = abc_pushnull(0);
+CONSTANT : "null" {$$.c = abc_pushnull(0);
                     $$.t = TYPE_NULL;
                    }
 
@@ -1822,7 +1828,24 @@ E : E "is" E {$$.c = code_append($1.c, $3.c);
               $$.t = TYPE_BOOLEAN;
              }
 
-E : '(' E ')' {$$=$2;}
+E : "typeof" '(' E ')' {
+              $$.c = $3.c;
+              $$.c = abc_typeof($$.c);
+              $$.t = TYPE_STRING;
+             }
+
+E : "void" E {
+              $$.c = cut_last_push($2.c);
+              $$.c = abc_pushundefined($$.c);
+              $$.t = TYPE_ANY;
+             }
+
+E : "void" { $$.c = abc_pushundefined(0);
+             $$.t = TYPE_ANY;
+           }
+
+E : '(' EXPRESSION ')' {$$=$2;} //allow commas in here, too
+
 E : '-' E {
   $$=$2;
   if(IS_INT($2)) {
@@ -2089,7 +2112,7 @@ VAR_READ : T_IDENTIFIER {
     /* unknown object, let the avm2 resolve it */
     } else {
         if(strcmp($1,"trace"))
-            warning("Couldn't resolve %s, doing late binding", $1);
+            warning("Couldn't resolve '%s', doing late binding", $1);
         state->late_binding = 1;
                 
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
