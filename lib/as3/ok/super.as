@@ -16,7 +16,7 @@ package {
             super();
         }
     }
-    class F extends D {
+    class F extends E {
         function F() {
             //implicit super call
         }
