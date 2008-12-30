@@ -31,15 +31,11 @@ DECLARE_LIST(classinfo);
 DECLARE(memberinfo);
 
 struct _classinfo {
+    /* this is very similar to a QNAME */
     U8 access;
     U8 flags;
     const char*package;
     const char*name;
-    union {
-        int slot;        // slot nr in initscript traits
-        classinfo_t*cls; // specific class of a Class type
-        memberinfo_t*function; //specific function of a Function type
-    };
 
     classinfo_t*superclass;
     dict_t members;
@@ -55,7 +51,6 @@ char classinfo_equals(classinfo_t*c1, classinfo_t*c2);
 
 struct _memberinfo {
     U8 kind;
-    U8 flags;
     const char*name;
     union {
         classinfo_t*return_type;
@@ -82,10 +77,9 @@ classinfo_t* registry_getintclass();
 classinfo_t* registry_getuintclass();
 classinfo_t* registry_getnullclass();
 classinfo_t* registry_getbooleanclass();
-classinfo_t* memberinfo_asclass();
+classinfo_t* registry_getfunctionclass();
 classinfo_t* registry_getMovieClip();
-classinfo_t* memberinfo_asclass(memberinfo_t*f);
-classinfo_t* registry_getclassclass(classinfo_t*a);
+classinfo_t* registry_getfunctionclass(memberinfo_t*f);
 
 classinfo_t* registry_findclass(const char*package, const char*name);
 memberinfo_t* registry_findmember(classinfo_t*cls, const char*name);
@@ -94,10 +88,6 @@ void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
 multiname_t* classinfo_to_multiname(classinfo_t*cls);
 
 char registry_isfunctionclass();
-char registry_isclassclass();
-
-classinfo_t* memberinfo_gettype(memberinfo_t*);
-
 /* convenience functions */
 #define sig2mname(x) classinfo_to_multiname(x)
 #define TYPE_ANY                  registry_getanytype()
@@ -115,13 +105,8 @@ classinfo_t* memberinfo_gettype(memberinfo_t*);
 #define TYPE_STRING               registry_getstringclass()
 #define TYPE_IS_STRING(t) ((t) == registry_getstringclass())
 
-#define TYPE_OBJECT               registry_getobjectclass()
-
-#define TYPE_FUNCTION(f)          memberinfo_asclass(f)
+#define TYPE_FUNCTION(f)          registry_getfunctionclass(f)
 #define TYPE_IS_FUNCTION(t)       registry_isfunctionclass(t)
-
-#define TYPE_CLASS(f)             registry_getclassclass(f)
-#define TYPE_IS_CLASS(t)          registry_isclassclass(t)
 
 #define TYPE_NULL                 registry_getnullclass()
 #define TYPE_IS_NULL(t)   ((t) == registry_getnullclass())
