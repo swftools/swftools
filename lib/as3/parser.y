@@ -299,7 +299,6 @@ typedef struct _state {
     abc_method_body_t*m;
 
     dict_t*vars;
-    int local_var_base;
     char late_binding;
 } state_t;
 
@@ -341,9 +340,6 @@ static void new_state()
         memcpy(s, state, sizeof(state_t)); //shallow copy
     sl->next = state_stack;
     sl->state = s;
-    if(oldstate) {
-        s->local_var_base = oldstate->vars->num + oldstate->local_var_base;
-    }
     if(!s->imports) {
         s->imports = dict_new();
     }
@@ -703,12 +699,16 @@ static int gettempvar()
 code_t* killvars(code_t*c) 
 {
     int t;
-    for(t=0;t<state->vars->num;t++) {
-        //do this always, otherwise register types don't match
-        //in the verifier when doing nested loops
-        //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
-            c = abc_kill(c, t+state->local_var_base);
-        //}
+    for(t=0;t<state->vars->hashsize;t++) {
+        dictentry_t*e =state->vars->slots[t];
+        while(e) {
+            variable_t*v = (variable_t*)e->data;
+            //do this always, otherwise register types don't match
+            //in the verifier when doing nested loops
+            //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
+            c = abc_kill(c, v->index);
+            e = e->next;
+        }
     }
     return c;
 }
@@ -906,8 +906,6 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
         prefix = 0;
     }
 
-    int use_temp_var = 0;
-
     /* generate the write instruction, and maybe append a dup to the prefix code */
     code_t* write = abc_nop(0);
     if(r->opcode == OPCODE_GETPROPERTY) {
@@ -918,14 +916,12 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
             syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
         if(!justassign) {
             prefix = abc_dup(prefix); // we need the object, too
-            use_temp_var = 1;
         }
     } else if(r->opcode == OPCODE_GETSLOT) {
         write->opcode = OPCODE_SETSLOT;
         write->data[0] = r->data[0];
         if(!justassign) {
             prefix = abc_dup(prefix); // we need the object, too
-            use_temp_var = 1;
         }
     } else if(r->opcode == OPCODE_GETLOCAL) { 
         write->opcode = OPCODE_SETLOCAL;
@@ -946,7 +942,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
     
     int temp = -1;
     if(!justassign) {
-        if(use_temp_var) {
+#if 1
             /* with getproperty/getslot, we have to be extra careful not
                to execute the read code twice, as it might have side-effects
                (e.g. if the property is in fact a setter/getter combination)
@@ -963,9 +959,10 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
             c = code_append(c, write);
             c = abc_getlocal(c, temp);
             c = abc_kill(c, temp);
-        } else {
-            /* if we're allowed to execute the read code twice, things
-               are easier */
+#else
+            /* if we're allowed to execute the read code twice *and*
+               the middlepart doesn't modify the code, things are easier.
+            */
             code_t* r2 = code_dup(r);
             //c = code_append(c, prefix);
             parserassert(!prefix);
@@ -973,7 +970,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
             c = code_append(c, middlepart);
             c = code_append(c, write);
             c = code_append(c, r2);
-        }
+#endif
     } else {
         /* even smaller version: overwrite the value without reading
            it out first */
@@ -1607,6 +1604,19 @@ E : E "--" { code_t*c = 0;
              $$.c = toreadwrite($1.c, c, 0);
              $$.t = $1.t;
             }
+
+E : "++" E { code_t*c = 0;
+             classinfo_t*type = $2.t;
+             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
+                 c=abc_increment_i(c);
+             } else {
+                 c=abc_increment(c);
+                 type = TYPE_NUMBER;
+             }
+             c=converttype(c, type, $2.t);
+             $$.c = toreadwrite($2.c, c, 0);
+             $$.t = $2.t;
+           }
 
 E : E '.' T_IDENTIFIER
             {$$.c = $1.c;
