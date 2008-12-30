@@ -108,7 +108,7 @@ classinfo_t* registry_getfunctionclass(memberinfo_t*f) {
     c->package = "";
     c->name = "Function";
     dict_init(&c->members,1);
-    dict_put(&c->members, "__funcptr__", f);
+    dict_put(&c->members, "call", f);
 
     dict_put(functionobjects, f, c);
     return c;
