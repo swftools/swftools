@@ -40,7 +40,7 @@ void test_lexer()
         if(token>=32 && token<256) {
             printf("'%c'\n", token);
         } else {
-            printf("%s\n", token2string(avm2_lval));
+            printf("%s\n", token2string(token, avm2_lval));
         }
     }
 }
