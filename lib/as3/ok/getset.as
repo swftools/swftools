@@ -8,6 +8,9 @@ package package2 {
             trace("ok 1/2");
             return 1;
         }
+
+        public function set n(n:uint) {
+        }
     }
 }
 
@@ -19,6 +22,7 @@ package {
         function Main() {
             var t:Test = new Test();
             t.x++;
+            t.n = 3;
         }
     }
 }
