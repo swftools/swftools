@@ -78,6 +78,19 @@ void syntaxerror(const char*format, ...)
     fflush(stderr);
     exit(1);
 }
+void warning(const char*format, ...)
+{
+    char buf[1024];
+    int l;
+    va_list arglist;
+    if(!verbose)
+	return;
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
+    fflush(stderr);
+}
 
 
 #ifndef YY_CURRENT_BUFFER
@@ -116,6 +129,109 @@ void handleInclude(char*text, int len, char quotes)
     //BEGIN(INITIAL); keep context
 }
 
+string_t string_unescape(const char*in, int l)
+{
+    int len=0;
+    const char*s = in;
+    const char*end = &in[l];
+    char*n = (char*)malloc(l);
+    char*o = n;
+    while(s<end) {
+        if(*s!='\\') {
+            o[len++] = *s;
+            s++;
+            continue;
+        }
+        s++; //skip past '\'
+        if(s==end) syntaxerror("invalid \\ at end of string");
+
+        /* handle the various line endings (mac, dos, unix) */
+        if(*s=='\r') { 
+            s++; 
+            if(s==end) break;
+            if(*s=='\n') 
+                s++;
+            continue;
+        }
+        if(*s=='\n')  {
+            s++;
+            continue;
+        }
+        switch(*s) {
+	    case '\\': o[len++] = '\\';s++; break;
+	    case '"': o[len++] = '"';s++; break;
+	    case 'b': o[len++] = '\b';s++; break;
+	    case 'f': o[len++] = '\f';s++; break;
+	    case 'n': o[len++] = '\n';s++; break;
+	    case 'r': o[len++] = '\r';s++; break;
+	    case 't': o[len++] = '\t';s++; break;
+            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': {
+                unsigned int num=0;
+                int nr = 0;
+		while(strchr("01234567", *s) && nr<3 && s<end) {
+                    num <<= 3;
+                    num |= *s-'0';
+                    nr++;
+                    s++;
+                }
+                if(num>256) 
+                    syntaxerror("octal number out of range (0-255): %d", num);
+                o[len++] = num;
+                continue;
+            }
+	    case 'x': case 'u': {
+		int max=2;
+		char bracket = 0;
+                char unicode = 0;
+		if(*s == 'u') {
+		    max = 6;
+                    unicode = 1;
+                }
+                s++;
+                if(s==end) syntaxerror("invalid \\u or \\x at end of string");
+		if(*s == '{')  {
+                    s++;
+                    if(s==end) syntaxerror("invalid \\u{ at end of string");
+		    bracket=1;
+		}
+		unsigned int num=0;
+                int nr = 0;
+		while(strchr("0123456789abcdefABCDEF", *s) && (bracket || nr < max) && s<end) {
+		    num <<= 4;
+		    if(*s>='0' && *s<='9') num |= *s - '0';
+		    if(*s>='a' && *s<='f') num |= *s - 'a' + 10;
+		    if(*s>='A' && *s<='F') num |= *s - 'A' + 10;
+                    nr++;
+		    s++;
+		}
+		if(bracket) {
+                    if(*s=='}' && s<end) {
+                        s++;
+                    } else {
+                        syntaxerror("missing terminating '}'");
+                    }
+		}
+                if(unicode) {
+                    char*utf8 = getUTF8(num);
+                    while(*utf8) {
+                        o[len++] = *utf8++;
+                    }
+                } else {
+                    if(num>256) 
+                        syntaxerror("byte out of range (0-255): %d", num);
+                    o[len++] = num;
+                }
+		break;
+	    }
+            default:
+                syntaxerror("unknown escape sequence: \"\\%c\"", *s);
+        }
+    }
+    string_t out = string_new(n, len);
+    o[len]=0;
+    return out; 
+}
+
 static void handleString(char*s, int len)
 {
     if(s[0]=='"') {
@@ -127,25 +243,29 @@ static void handleString(char*s, int len)
         s++;len-=2;
     }
     else syntaxerror("String incorrectly terminated");
-    s[len] = 0;
-    avm2_lval.string = s;
+
+    
+    avm2_lval.str = string_unescape(s, len);
 }
 
 
 char start_of_expression;
 
-static inline int m(int type)
+static inline int mkid(int type)
 {
     char*s = malloc(yyleng+1);
     memcpy(s, yytext, yyleng);
     s[yyleng]=0;
-
-    NEW(token_t,t);
-    t->type = type;
-    t->text = s;
-    avm2_lval.token = t;
+    avm2_lval.id = s;
     return type;
 }
+
+static inline int m(int type)
+{
+    avm2_lval.token = type;
+    return type;
+}
+
 
 static char numberbuf[64];
 static inline int handlenumber()
@@ -227,7 +347,7 @@ NUMBER	 -?[0-9]+(\.[0-9]*)?
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
-MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[\x00-\x1f])*[*]+[/]
+MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n]*\n
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 %%
@@ -260,10 +380,20 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 [=][=]                       {c();BEGIN(REGEXPOK);return m(T_EQEQ);}
 [>][=]                       {c();return m(T_GE);}
 [<][=]                       {c();return m(T_LE);}
-[+][=]                       {c();return m(T_PLUSBY);}
-[-][=]                       {c();return m(T_MINUSBY);}
 [-][-]                       {c();BEGIN(INITIAL);return m(T_MINUSMINUS);}
 [+][+]                       {c();BEGIN(INITIAL);return m(T_PLUSPLUS);}
+[+][=]                       {c();return m(T_PLUSBY);}
+[-][=]                       {c();return m(T_MINUSBY);}
+[/][=]                       {c();return m(T_DIVBY);}
+[%][=]                       {c();return m(T_MODBY);}
+[*][=]                       {c();return m(T_MULBY);}
+[>][>][=]                    {c();return m(T_SHRBY);}
+[<][<][=]                    {c();return m(T_SHLBY);}
+[>][>][>][=]                 {c();return m(T_USHRBY);}
+[<][<]                       {c();return m(T_SHL);}
+[>][>][>]                    {c();return m(T_USHR);}
+[>][>]                       {c();return m(T_SHR);}
+\.\.\.                       {c();return m(T_DOTDOTDOT);}
 \.\.                         {c();return m(T_DOTDOT);}
 \.                           {c();return m('.');}
 ::                           {c();return m(T_COLONCOLON);}
@@ -306,7 +436,7 @@ var                          {c();return m(KW_VAR);}
 is                           {c();return m(KW_IS) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
-{NAME}                       {c();BEGIN(INITIAL);return m(T_IDENTIFIER);}
+{NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,.<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
 [\)\]]                            {c();BEGIN(INITIAL);return m(yytext[0]);}
@@ -350,9 +480,8 @@ int yywrap()
 }
 
 static char mbuf[256];
-char*token2string(token_t*t)
+char*token2string(enum yytokentype nr)
 {
-    int nr=t->type;
     if(nr==T_STRING)     return "<string>";
     else if(nr==T_INT)     return "<int>";
     else if(nr==T_UINT)     return "<uint>";
@@ -397,12 +526,8 @@ char*token2string(token_t*t)
     else if(nr==KW_VAR)        return "var";
     else if(nr==KW_IS)         return "is";
     else if(nr==KW_AS)         return "as";
-    else if(nr==T_IDENTIFIER) {
-        if(strlen(t->text)>sizeof(mbuf)-1)
-            return "ID(...)";
-        sprintf(mbuf, "ID(%s)", t->text);
-        return mbuf;
-    } else {
+    else if(nr==T_IDENTIFIER)  return "ID";
+    else {
         sprintf(mbuf, "%d", nr);
         return mbuf;
     }
