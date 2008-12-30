@@ -108,12 +108,14 @@ classinfo_t* registry_getfunctionclass(memberinfo_t*f) {
     c->access = ACCESS_PUBLIC;
     c->package = "";
     c->name = "Function";
+    
     dict_init(&c->members,1);
-    dict_put(&c->members, "call", f);
+    c->function = f;
 
     dict_put(functionobjects, f, c);
     return c;
 }
+
 static dict_t* classobjects = 0;
 classinfo_t* registry_getclassclass(classinfo_t*a) {
     if(!classobjects) {
@@ -128,14 +130,8 @@ classinfo_t* registry_getclassclass(classinfo_t*a) {
     c->access = ACCESS_PUBLIC;
     c->package = "";
     c->name = "Class";
-    
-    NEW(memberinfo_t,m);
-    m->kind = MEMBER_SLOT;
-    m->name = "prototype";
-    m->type = a;
-
     dict_init(&c->members,1);
-    dict_put(&c->members, "prototype", m);
+    c->cls = a;
 
     dict_put(classobjects, a, c);
     return c;

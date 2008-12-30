@@ -35,7 +35,11 @@ struct _classinfo {
     U8 flags;
     const char*package;
     const char*name;
-    int slot;
+    union {
+        int slot;        // slot nr in initscript traits
+        classinfo_t*cls; // specific class of a Class type
+        memberinfo_t*function; //specific function of a Function type
+    };
 
     classinfo_t*superclass;
     dict_t members;
