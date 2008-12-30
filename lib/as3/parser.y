@@ -928,6 +928,40 @@ void parserassert(int b)
     if(!b) syntaxerror("internal error: assertion failed");
 }
 
+static classinfo_t* find_class(char*name)
+{
+    classinfo_t*c=0;
+
+    c = registry_findclass(state->package, name);
+
+    /* try explicit imports */
+    dictentry_t* e = dict_get_slot(state->imports, name);
+    while(e) {
+        if(c)
+            break;
+        if(!strcmp(e->key, name)) {
+            c = (classinfo_t*)e->data;
+        }
+        e = e->next;
+    }
+
+    /* try package.* imports */
+    import_list_t*l = state->wildcard_imports;
+    while(l) {
+        if(c)
+            break;
+        //printf("does package %s contain a class %s?\n", l->import->package, name);
+        c = registry_findclass(l->import->package, name);
+        l = l->next;
+    }
+
+    /* try global package */
+    if(!c) {
+        c = registry_findclass("", name);
+    }
+    return c;
+}
+
 static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore)
 {
     /* converts this:
@@ -1432,34 +1466,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
 CLASS: T_IDENTIFIER {
 
     /* try current package */
-    $$ = registry_findclass(state->package, $1);
-
-    /* try explicit imports */
-    dictentry_t* e = dict_get_slot(state->imports, $1);
-    while(e) {
-        if($$)
-            break;
-        if(!strcmp(e->key, $1)) {
-            $$ = (classinfo_t*)e->data;
-        }
-        e = e->next;
-    }
-
-    /* try package.* imports */
-    import_list_t*l = state->wildcard_imports;
-    while(l) {
-        if($$)
-            break;
-        //printf("does package %s contain a class %s?\n", l->import->package, $1);
-        $$ = registry_findclass(l->import->package, $1);
-        l = l->next;
-    }
-
-    /* try global package */
-    if(!$$) {
-        $$ = registry_findclass("", $1);
-    }
-
+    $$ = find_class($1);
     if(!$$) syntaxerror("Could not find class %s\n", $1);
 }
 
@@ -1930,8 +1937,8 @@ VAR_READ : T_IDENTIFIER {
             $$.t = f->type;
         }
     
-    /* look at classes in the current package */
-    } else if((a = registry_findclass(state->package, $1))) {
+    /* look at classes in the current package and imported classes */
+    } else if((a = find_class($1))) {
         if(a->slot) {
             $$.c = abc_getglobalscope($$.c);
             $$.c = abc_getslot($$.c, a->slot);
