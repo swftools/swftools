@@ -113,6 +113,7 @@
 %token<token> T_EQEQ "=="
 %token<token> T_EQEQEQ "==="
 %token<token> T_NE "!="
+%token<token> T_NEE "!=="
 %token<token> T_LE "<="
 %token<token> T_GE ">="
 %token<token> T_DIVBY "/=" 
@@ -184,6 +185,7 @@
 %left below_semicolon
 %left ';'
 %left ','
+%nonassoc below_assignment // for ?:, contrary to spec
 %right '=' "*=" "/=" "%=" "+=" "-=" "<<=" ">>=" ">>>=" "&=" "^=" "|="
 %right '?' ':'
 %left "||"
@@ -192,6 +194,7 @@
 %nonassoc '^'
 %nonassoc '&'
 %nonassoc "==" "!=" "===" "!=="
+%nonassoc "is" "as"
 %nonassoc "<=" '<' ">=" '>' "instanceof" // TODO: support "a < b < c" syntax?
 %left "<<" ">>" ">>>" 
 %left below_minus
@@ -199,7 +202,6 @@
 %left '/' '*' '%'
 %left plusplus_prefix minusminus_prefix '~' '!' "delete" "typeof" //FIXME: *unary* + - should be here, too
 %left "--" "++" 
-%nonassoc "is" "as"
 %left '[' ']' '{' "new" '.' ".." "::"
 %nonassoc T_IDENTIFIER
 %left below_else
@@ -1492,11 +1494,13 @@ QNAME_LIST : QNAME_LIST ',' QNAME {$$=$1;list_append($$,$3);}
 
 TYPE : QNAME      {$$=$1;}
      | '*'        {$$=registry_getanytype();}
+    /*
      |  "String"  {$$=registry_getstringclass();}
      |  "int"     {$$=registry_getintclass();}
      |  "uint"    {$$=registry_getuintclass();}
      |  "Boolean" {$$=registry_getbooleanclass();}
      |  "Number"  {$$=registry_getnumberclass();}
+    */
 
 MAYBETYPE: ':' TYPE {$$=$2;}
 MAYBETYPE:          {$$=0;}
@@ -1588,9 +1592,8 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
    
     memberinfo_t*f = 0;
    
-    if(TYPE_IS_FUNCTION($1.t) &&
-       (f = registry_findmember($1.t, "call"))) {
-        $$.t = f->return_type;
+    if(TYPE_IS_FUNCTION($1.t) && $1.t->function) {
+        $$.t = $1.t->function->return_type;
     } else {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
@@ -1696,6 +1699,9 @@ E : E "==" E {$$.c = code_append($1.c,$3.c);$$.c = abc_equals($$.c);
              }
 E : E "===" E {$$.c = code_append($1.c,$3.c);$$.c = abc_strictequals($$.c);
               $$.t = TYPE_BOOLEAN;
+              }
+E : E "!==" E {$$.c = code_append($1.c,$3.c);$$.c = abc_strictequals($$.c);$$.c = abc_not($$.c);
+              $$.t = TYPE_BOOLEAN;
              }
 E : E "!=" E {$$.c = code_append($1.c,$3.c);$$.c = abc_equals($$.c);$$.c = abc_not($$.c);
               $$.t = TYPE_BOOLEAN;
@@ -1745,6 +1751,11 @@ E : E '&' E {$$.c = code_append($1.c,$3.c);
              $$.t = TYPE_INT;
             }
 
+E : E '^' E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_bitxor($$.c);
+             $$.t = TYPE_INT;
+            }
+
 E : E '|' E {$$.c = code_append($1.c,$3.c);
              $$.c = abc_bitor($$.c);
              $$.t = TYPE_INT;
@@ -1759,6 +1770,19 @@ E : E '-' E {$$.c = code_append($1.c,$3.c);
                 $$.t = TYPE_NUMBER;
              }
             }
+E : E ">>" E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_rshift($$.c);
+             $$.t = TYPE_INT;
+            }
+E : E ">>>" E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_urshift($$.c);
+             $$.t = TYPE_INT;
+            }
+E : E "<<" E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_lshift($$.c);
+             $$.t = TYPE_INT;
+            }
+
 E : E '/' E {$$.c = code_append($1.c,$3.c);
              $$.c = abc_divide($$.c);
              $$.t = TYPE_NUMBER;
@@ -1781,8 +1805,23 @@ E : E '*' E {$$.c = code_append($1.c,$3.c);
              }
             }
 
-E : E "as" E
-E : E "is" E
+E : E "as" E {char use_astype=0; // flash player's astype works differently than astypelate
+              if(use_astype && TYPE_IS_CLASS($3.t)) {
+                MULTINAME(m,$3.t->cls);
+                $$.c = abc_astype2($1.c, &m);
+                $$.t = $3.t->cls;
+              } else {
+                $$.c = code_append($1.c, $3.c);
+                $$.c = abc_astypelate($$.c);
+                $$.t = TYPE_ANY;
+              }
+             }
+
+E : E "is" E {$$.c = code_append($1.c, $3.c);
+              $$.c = abc_istypelate($$.c);
+              $$.t = TYPE_BOOLEAN;
+             }
+
 E : '(' E ')' {$$=$2;}
 E : '-' E {
   $$=$2;
@@ -1815,6 +1854,7 @@ E : E "*=" E {
                $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
               }
+
 E : E "%=" E { 
                code_t*c = abc_modulo($3.c);
                c=converttype(c, join_types($1.t, $3.t, '%'), $1.t);
@@ -1873,6 +1913,17 @@ E : E '=' E { code_t*c = 0;
               c = converttype(c, $3.t, $1.t);
               $$.c = toreadwrite($1.c, c, 1, 0);
               $$.t = $1.t;
+            }
+
+E : E '?' E ':' E %prec below_assignment { 
+              $$.c = $1.c;
+              code_t*j1 = $$.c = abc_iffalse($$.c, 0);
+              $$.c = code_append($$.c, $3.c);
+              code_t*j2 = $$.c = abc_jump($$.c, 0);
+              $$.c = j1->branch = abc_label($$.c);
+              $$.c = code_append($$.c, $5.c);
+              $$.c = j2->branch = abc_label($$.c);
+              $$.t = join_types($3.t,$5.t,'?');
             }
 
 // TODO: use inclocal where appropriate
