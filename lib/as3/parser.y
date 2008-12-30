@@ -51,7 +51,7 @@
     typedcode_t value;
     typedcode_list_t*value_list;
     param_t* param;
-    param_list_t* param_list;
+    params_t params;
     char*string;
 }
 
@@ -124,6 +124,7 @@
 %token<token> T_MINUSMINUS "--"
 %token<token> T_PLUSPLUS "++"
 %token<token> T_DOTDOT ".."
+%token<token> T_DOTDOTDOT "..."
 %token<token> T_SHL "<<"
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
@@ -153,8 +154,8 @@
 %type <classinfo> MAYBETYPE
 %type <token> GETSET
 %type <param> PARAM
-%type <param_list> PARAM_LIST
-%type <param_list> MAYBE_PARAM_LIST
+%type <params> PARAM_LIST
+%type <params> MAYBE_PARAM_LIST
 %type <token> MODIFIERS
 %type <token> MODIFIER_LIST
 %type <classinfo_list> IMPLEMENTS_LIST
@@ -184,8 +185,8 @@
 %nonassoc ">>="
 %nonassoc "<<="
 %nonassoc ">>>="
-%nonassoc "||"
-%nonassoc "&&"
+%left "||"
+%left "&&"
 %nonassoc '|'
 %nonassoc '^'
 %nonassoc '&'
@@ -305,6 +306,16 @@ static state_t* state = 0;
 DECLARE_LIST(state);
 
 #define MULTINAME(m,x) multiname_t m;namespace_t m##_ns;registry_fill_multiname(&m, &m##_ns, x);
+
+/* warning: list length of namespace set is undefined */
+#define MULTINAME_LATE(m, access, package) \
+    namespace_t m##_ns = {access, package}; \
+    namespace_set_t m##_nsset; \
+    namespace_list_t m##_l;m##_l.next = 0; \
+    m##_nsset.namespaces = &m##_l; \
+    m##_nsset = m##_nsset; \
+    m##_l.namespace = &m##_ns; \
+    multiname_t m = {MULTINAMEL, 0, &m##_nsset, 0};
 
 static state_list_t*state_stack=0;
 
@@ -598,7 +609,7 @@ static void endclass()
     old_state();
 }
 static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
-                          param_list_t*params, classinfo_t*type)
+                          params_t*params, classinfo_t*type)
 {
     token_list_t*t;
     new_state();
@@ -614,7 +625,9 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     } else {
         state->minfo = memberinfo_register(state->clsinfo, name->text, MEMBER_METHOD);
         state->m = abc_class_method(state->cls, type2, name->text, 0);
-        state->minfo->slot = state->m->method->trait->slot_id;
+        // getslot on a member slot only returns "undefined", so no need
+        // to actually store these
+        //state->minfo->slot = state->m->method->trait->slot_id;
     }
     if(getset->type == KW_GET) {
         state->m->method->trait->kind = TRAIT_GETTER;
@@ -622,16 +635,22 @@ static void startfunction(token_t*ns, token_t*mod, token_t*getset, token_t*name,
     if(getset->type == KW_SET) {
         state->m->method->trait->kind = TRAIT_SETTER;
     }
+    if(params->varargs) {
+        state->m->method->flags |= METHOD_NEED_REST;
+    }
 
     param_list_t*p;
-    for(p=params;p;p=p->next) {
+    for(p=params->list;p;p=p->next) {
+        if(params->varargs && !p->next) {
+            break; //varargs: omit last parameter in function signature
+        }
         multiname_t*m = sig2mname(p->param->type);
 	list_append(state->m->method->parameters, m);
     }
 
     /* state->vars is initialized by state_new */
-    array_append(state->vars, "this", 0);
-    for(p=params;p;p=p->next) {
+    array_append(state->vars, "this", state->clsinfo);
+    for(p=params->list;p;p=p->next) {
         array_append(state->vars, p->param->name, 0);
     }
 }
@@ -644,8 +663,12 @@ static void endfunction(code_t*body)
     }
     c = code_append(c, state->initcode);
     c = code_append(c, body);
-    c = abc_returnvoid(c);
 
+    /* append return if necessary */
+    if(!c || c->opcode != OPCODE_RETURNVOID && 
+             c->opcode != OPCODE_RETURNVALUE)
+        c = abc_returnvoid(c);
+    
     if(state->m->code) syntaxerror("internal error");
     state->m->code = c;
     old_state();
@@ -755,7 +778,13 @@ void breakjumpsto(code_t*c, code_t*jump)
 
 classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
 {
-    return registry_getanytype(); // FIXME
+    if(!type1 || !type2) 
+        return registry_getanytype();
+    if(TYPE_IS_ANY(type1) || TYPE_IS_ANY(type2))
+        return registry_getanytype();
+    if(type1 == type2)
+        return type1;
+    return registry_getanytype();
 }
 code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 {
@@ -793,7 +822,7 @@ char is_pushundefined(code_t*c)
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
 }
 
-static code_t* toreadwrite(code_t*in, code_t*middlepart)
+static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
 {
     /* converts this:
 
@@ -804,10 +833,11 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart)
        [prefix code] ([dup]) [read instruction] [middlepart] [setvar] [write instruction] [getvar]
     */
     
+    if(in && in->opcode == OPCODE_COERCE_A) {
+        in = code_cutlast(in);
+    }
     if(in->next)
         syntaxerror("internal error");
-
-    int temp = gettempvar();
 
     /* chop off read instruction */
     code_t*prefix = in;
@@ -827,11 +857,13 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart)
         write->data[0] = multiname_clone(m);
         if(m->type != QNAME)
             syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
-        prefix = abc_dup(prefix); // we need the object, too
+        if(!justassign)
+            prefix = abc_dup(prefix); // we need the object, too
     } else if(r->opcode == OPCODE_GETSLOT) {
         write->opcode = OPCODE_SETSLOT;
         write->data[0] = r->data[0];
-        prefix = abc_dup(prefix); // we need the object, too
+        if(!justassign)
+            prefix = abc_dup(prefix); // we need the object, too
     } else if(r->opcode == OPCODE_GETLOCAL) { 
         write->opcode = OPCODE_SETLOCAL;
         write->data[0] = r->data[0];
@@ -849,14 +881,29 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart)
     }
     code_t* c = 0;
     
-    c = code_append(c, prefix);
-    c = code_append(c, r);
-    c = code_append(c, middlepart);
-    c = abc_dup(c);
-    c = abc_setlocal(c, temp);
-    c = code_append(c, write);
-    c = abc_getlocal(c, temp);
-    c = abc_kill(c, temp);
+    int temp = -1;
+    if(!justassign) {
+        /* read value, modify it with middle part, and write it again,
+           using prefix only once and making sure (by using a temporary
+           register) that the return value is what we just wrote */
+        temp = gettempvar();
+        c = code_append(c, prefix);
+        c = code_append(c, r);
+        c = code_append(c, middlepart);
+        c = abc_dup(c);
+        c = abc_setlocal(c, temp);
+        c = code_append(c, write);
+        c = abc_getlocal(c, temp);
+        c = abc_kill(c, temp);
+    } else {
+        /* simpler version: overwrite the value without reading
+           it out first */
+        c = code_append(c, prefix);
+        c = abc_dup(c);
+        c = code_append(c, middlepart);
+        c = code_append(c, write);
+        c = code_append(c, r);
+    }
 
     return c;
 }
@@ -879,7 +926,8 @@ CODE: CODEPIECE {$$=$1;}
 
 CODEPIECE: PACKAGE_DECLARATION   {$$=code_new();/*enters a scope*/}
 CODEPIECE: CLASS_DECLARATION     {$$=code_new();/*enters a scope*/}
-CODEPIECE: INTERFACE_DECLARATION {/*TODO*/$$=code_new();}
+CODEPIECE: FUNCTION_DECLARATION  {$$=code_new();/*enters a scope*/}
+CODEPIECE: INTERFACE_DECLARATION {$$=code_new();}
 CODEPIECE: IMPORT                {$$=code_new();/*adds imports to current scope*/}
 CODEPIECE: ';'                   {$$=code_new();}
 CODEPIECE: VARIABLE_DECLARATION  {$$=$1}
@@ -890,7 +938,6 @@ CODEPIECE: BREAK                 {$$=$1}
 CODEPIECE: RETURN                {$$=$1}
 CODEPIECE: IF                    {$$=$1}
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=code_new();}
-CODEPIECE: FUNCTION_DECLARATION  {/*TODO*/$$=code_new();}
 CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=code_new();}
 
 CODEBLOCK :  '{' MAYBECODE '}' {$$=$2;}
@@ -1089,6 +1136,8 @@ DECLARATION : ';'
 DECLARATION : SLOT_DECLARATION
 DECLARATION : FUNCTION_DECLARATION
 
+/* ------------ classes and interfaces (body, slots ) ------- */
+
 VARCONST: "var" | "const"
 SLOT_DECLARATION: MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
 
@@ -1117,8 +1166,48 @@ SLOT_DECLARATION: MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     }
 }
 
+/* ------------ classes and interfaces (body, functions) ------- */
+
+// non-vararg version
+MAYBE_PARAM_LIST: {
+    memset(&$$,0,sizeof($$));
+}
+MAYBE_PARAM_LIST: PARAM_LIST {
+    $$=$1;
+}
+
+// vararg version
+MAYBE_PARAM_LIST: "..." PARAM {
+    memset(&$$,0,sizeof($$));
+    $$.varargs=1;
+    list_append($$.list, $2);
+}
+MAYBE_PARAM_LIST: PARAM_LIST ',' "..." PARAM {
+    $$ =$1;
+    $$.varargs=1;
+    list_append($$.list, $4);
+}
+
+// non empty
+PARAM_LIST: PARAM_LIST ',' PARAM {
+    $$ = $1;
+    list_append($$.list, $3);
+}
+PARAM_LIST: PARAM {
+    memset(&$$,0,sizeof($$));
+    list_append($$.list, $1);
+}
+PARAM:  T_IDENTIFIER ':' TYPE {
+     $$ = malloc(sizeof(param_t));
+     $$->name=$1->text;$$->type = $3;
+}
+PARAM:  T_IDENTIFIER          {
+     $$ = malloc(sizeof(param_t));
+     $$->name=$1->text;$$->type = TYPE_ANY;
+}
+
 FUNCTION_DECLARATION: MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
-                      MAYBETYPE '{' {startfunction(0,$1,$3,$4,$6,$8)} MAYBECODE '}' 
+                      MAYBETYPE '{' {startfunction(0,$1,$3,$4,&$6,$8)} MAYBECODE '}' 
 {
     if(!state->m) syntaxerror("internal error: undefined function");
     endfunction($11);
@@ -1216,32 +1305,42 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         l = l->next;
         len ++;
     }
-
+       
     $$.c = $1.c;
-    if($$.c->opcode == OPCODE_GETPROPERTY) {
-        multiname_t*name = multiname_clone($$.c->data[0]);
+    if($$.c->opcode == OPCODE_COERCE_A) {
         $$.c = code_cutlast($$.c);
-        $$.c = code_append($$.c, paramcode);
-        $$.c = abc_callproperty2($$.c, name, len);
+    }
+
+    $$.t = TYPE_ANY;
+    multiname_t*name = 0;
+    if($$.c->opcode == OPCODE_GETPROPERTY) {
+        name = multiname_clone($$.c->data[0]);
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
         trait_t*t = abc_class_find_slotid(state->cls,slot);//FIXME
-        if(t->kind!=TRAIT_METHOD) {syntaxerror("not a function");}
-        
-        abc_method_t*m = t->method;
-        $$.c = code_cutlast($$.c);
-        $$.c = code_append($$.c, paramcode);
-
-        //$$.c = abc_callmethod($$.c, m, len); //#1051 illegal early access binding
-        $$.c = abc_callproperty2($$.c, t->name, len);
+        if(t->kind!=TRAIT_METHOD) {
+            //flash allows to assign closures to members.
+            //syntaxerror("not a function");
+        }
+        name = t->name;
     } else {
-        int i = find_variable_safe("this", 0);
-        $$.c = abc_getlocal($$.c, i);
-        $$.c = code_append($$.c, paramcode);
-        $$.c = abc_call($$.c, len);
+        code_dump($$.c, 0, 0, "", stdout);
+        syntaxerror("Object is not callable");
     }
-    /* TODO: look up the functions's return value */
-    $$.t = TYPE_ANY;
+        
+    $$.c = code_cutlast($$.c);
+    $$.c = code_append($$.c, paramcode);
+    //$$.c = abc_callmethod($$.c, m, len); //#1051 illegal early access binding
+    $$.c = abc_callproperty2($$.c, name, len);
+   
+    memberinfo_t*f = 0;
+    if(TYPE_IS_FUNCTION($1.t) &&
+       (f = registry_findmember($1.t, "__funcptr__"))) {
+        $$.t = f->return_type;
+    } else {
+        $$.c = abc_coerce_a($$.c);
+        $$.t = TYPE_ANY;
+    }
 }
 
 RETURN: "return" %prec prec_none {
@@ -1257,11 +1356,11 @@ NONCOMMAEXPRESSION : E        %prec prec_belowminus {$$=$1;}
 EXPRESSION : E                %prec prec_belowminus {$$ = $1;}
 EXPRESSION : EXPRESSION ',' E %prec prec_belowminus {
     $$.c = $1.c;
-    $$.c = abc_pop($$.c);
+    $$.c = cut_last_push($$.c);
     $$.c = code_append($$.c,$3.c);
     $$.t = $3.t;
 }
-VOIDEXPRESSION : EXPRESSION %prec prec_belowminus {$$=abc_pop($1.c);}
+VOIDEXPRESSION : EXPRESSION %prec prec_belowminus {$$=cut_last_push($1.c);}
 
 // ----------------------- expression evaluation -------------------------------------
 
@@ -1299,9 +1398,9 @@ E : E "||" E {$$.t = join_types($1.t, $3.t, 'O');
               $$.c = converttype($$.c, $1.t, $$.t);
               $$.c = abc_dup($$.c);
               code_t*jmp = $$.c = abc_iftrue($$.c, 0);
-              $$.c = abc_pop($$.c);
+              $$.c = cut_last_push($$.c);
               $$.c = code_append($$.c,$3.c);
-              $$.c = converttype($$.c, $1.t, $$.t);
+              $$.c = converttype($$.c, $3.t, $$.t);
               code_t*label = $$.c = abc_label($$.c);
               jmp->branch = label;
              }
@@ -1310,29 +1409,12 @@ E : E "&&" E {$$.t = join_types($1.t, $3.t, 'A');
               $$.c = converttype($$.c, $1.t, $$.t);
               $$.c = abc_dup($$.c);
               code_t*jmp = $$.c = abc_iffalse($$.c, 0);
-              $$.c = abc_pop($$.c);
+              $$.c = cut_last_push($$.c);
               $$.c = code_append($$.c,$3.c);
-              $$.c = converttype($$.c, $1.t, $$.t);
+              $$.c = converttype($$.c, $3.t, $$.t);
               code_t*label = $$.c = abc_label($$.c);
               jmp->branch = label;              
              }
-
-E : E '.' T_IDENTIFIER
-            {$$.c = $1.c;
-             if($$.t) {
-                 //namespace_t ns = {$$.t->access, (char*)$$.t->package};
-                 namespace_t ns = {$$.t->access, ""};
-                 multiname_t m = {QNAME, &ns, 0, $3->text};
-                 $$.c = abc_getproperty2($$.c, &m);
-                /* FIXME: get type of ($1.t).$3 */
-                 $$.t = registry_getanytype();
-             } else {
-                 namespace_t ns = {ACCESS_PACKAGE, ""};
-                 multiname_t m = {QNAME, &ns, 0, $3->text};
-                 $$.c = abc_getproperty2($$.c, &m);
-                 $$.t = registry_getanytype();
-             }
-            }
 
 E : '!' E    {$$.c=$2.c;
               $$.c = abc_not($$.c);
@@ -1356,6 +1438,14 @@ E : E "is" E
 E : '(' E ')' {$$=$2;}
 E : '-' E {$$=$2;}
 
+E : E '[' E ']' {
+  $$.c = $1.c;
+  $$.c = code_append($$.c, $3.c);
+ 
+  MULTINAME_LATE(m, $1.t?$1.t->access:ACCESS_PACKAGE, "");
+  $$.c = abc_getproperty2($$.c, &m);
+}
+
 E : E "+=" E { 
                code_t*c = $3.c;
                if(TYPE_IS_INT($3.t) || TYPE_IS_UINT($3.t)) {
@@ -1365,7 +1455,7 @@ E : E "+=" E {
                }
                c=converttype(c, join_types($1.t, $3.t, '+'), $1.t);
                
-               $$.c = toreadwrite($1.c, c);
+               $$.c = toreadwrite($1.c, c, 0);
                $$.t = $1.t;
               }
 E : E "-=" E { code_t*c = $3.c; 
@@ -1376,14 +1466,13 @@ E : E "-=" E { code_t*c = $3.c;
                }
                c=converttype(c, join_types($1.t, $3.t, '-'), $1.t);
                
-               $$.c = toreadwrite($1.c, c);
+               $$.c = toreadwrite($1.c, c, 0);
                $$.t = $1.t;
              }
 E : E '=' E { code_t*c = 0;
-              c = abc_pop(c);
               c = code_append(c, $3.c);
               c = converttype(c, $3.t, $1.t);
-              $$.c = toreadwrite($1.c, c);
+              $$.c = toreadwrite($1.c, c, 1);
               $$.t = $1.t;
             }
 
@@ -1397,7 +1486,7 @@ E : E "++" { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c);
+             $$.c = toreadwrite($1.c, c, 0);
              $$.t = $1.t;
            }
 E : E "--" { code_t*c = 0;
@@ -1409,27 +1498,69 @@ E : E "--" { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c);
+             $$.c = toreadwrite($1.c, c, 0);
              $$.t = $1.t;
+            }
+
+E : E '.' T_IDENTIFIER
+            {$$.c = $1.c;
+             if($$.t) {
+                 memberinfo_t*f = registry_findmember($$.t, $3->text);
+
+                 if(f && f->slot) {
+                     $$.c = abc_getslot($$.c, f->slot);
+                 } else {
+                     namespace_t ns = {$$.t->access, ""}; // needs to be "", not $$.t->package
+                     multiname_t m = {QNAME, &ns, 0, $3->text};
+                     $$.c = abc_getproperty2($$.c, &m);
+                 }
+                 /* determine type */
+                 if(f) {
+                    if(f->kind == MEMBER_METHOD) {
+                        $$.t = TYPE_FUNCTION(f);
+                    } else {
+                        $$.t = f->type;
+                    }
+                 } else {
+                    $$.c = abc_coerce_a($$.c);
+                    $$.t = registry_getanytype();
+                 }
+             } else {
+                 namespace_t ns = {ACCESS_PACKAGE, ""};
+                 multiname_t m = {QNAME, &ns, 0, $3->text};
+                 $$.c = abc_getproperty2($$.c, &m);
+                 $$.c = abc_coerce_a($$.c);
+                 $$.t = registry_getanytype();
+             }
             }
 
 VAR_READ : T_IDENTIFIER {
     $$.t = 0;
     $$.c = 0;
     int i;
-    memberinfo_t*m;
+    memberinfo_t*f = 0;
     if((i = find_variable($1->text, &$$.t)) >= 0) {
+        // $1 is a local variable
         $$.c = abc_getlocal($$.c, i);
-    } else if((m = registry_findmember(state->clsinfo, $1->text))) {
-        $$.t = m->type;
-        if(m->slot>0) {
-            $$.c = abc_getlocal_0($$.c);
-            $$.c = abc_getslot($$.c, m->slot);
+    } else if((f = registry_findmember(state->clsinfo, $1->text))) {
+        // $1 is a function in this class
+        if(f->kind == MEMBER_METHOD) {
+            $$.t = TYPE_FUNCTION(f);
         } else {
+            $$.t = f->type;
+        }
+        if(f->slot>0) {
             $$.c = abc_getlocal_0($$.c);
-            $$.c = abc_getproperty($$.c, $1->text);
+            $$.c = abc_getslot($$.c, f->slot);
+        } else {
+            namespace_t ns = {state->clsinfo->access, ""};
+            multiname_t m = {QNAME, &ns, 0, $1->text};
+            $$.c = abc_getlocal_0($$.c);
+            $$.c = abc_getproperty2($$.c, &m);
         }
     } else {
+        // let the avm2 resolve $1 
+        if(strcmp($1->text,"trace"))
         warning("Couldn't resolve %s, doing late binding", $1->text);
         state->late_binding = 1;
 
@@ -1508,15 +1639,6 @@ USE_NAMESPACE : "use" "namespace" T_IDENTIFIER
 GETSET : "get" {$$=$1;}
        | "set" {$$=$1;}
        |       {$$=empty_token();}
-
-MAYBE_PARAM_LIST: {$$=list_new();}
-MAYBE_PARAM_LIST: PARAM_LIST {$$=$1;}
-PARAM_LIST: PARAM_LIST ',' PARAM {$$ =$1;         list_append($$, $3);}
-PARAM_LIST: PARAM                {$$ = list_new();list_append($$, $1);}
-PARAM:  T_IDENTIFIER ':' TYPE {$$ = malloc(sizeof(param_t));
-                               $$->name=$1->text;$$->type = $3;}
-PARAM:  T_IDENTIFIER          {$$ = malloc(sizeof(param_t));
-                               $$->name=$1->text;$$->type = TYPE_ANY;}
 
 IDECLARATION : VARIABLE_DECLARATION
 IDECLARATION : FUNCTION_DECLARATION
