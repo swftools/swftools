@@ -117,9 +117,12 @@ code_t* abc_convert_s(code_t*prev);
 code_t* abc_debug(code_t*prev, void* debuginfo);
 #define debug(method,debuginfo) (method->code = abc_debug(method->code,debuginfo))
 #define OPCODE_DEBUG 0xef
-code_t* abc_debugfile(code_t*prev, char* s);
-#define debugfile(method,s) (method->code = abc_debugfile(method->code,s))
+code_t* abc_debugfile(code_t*prev, char* name);
+#define debugfile(method,name) (method->code = abc_debugfile(method->code,name))
 #define OPCODE_DEBUGFILE 0xf1
+code_t* abc_debugfile2(code_t*prev, string_t* s);
+#define debugfile2(method,s) (method->code = abc_debugfile2(method->code,s))
+#define OPCODE_DEBUGFILE2 0xf1
 code_t* abc_debugline(code_t*prev, int v);
 #define debugline(method,v) (method->code = abc_debugline(method->code,v))
 #define OPCODE_DEBUGLINE 0xf0
@@ -147,9 +150,12 @@ code_t* abc_divide(code_t*prev);
 code_t* abc_dup(code_t*prev);
 #define dup(method) (method->code = abc_dup(method->code))
 #define OPCODE_DUP 0x2a
-code_t* abc_dxns(code_t*prev, char* s);
-#define dxns(method,s) (method->code = abc_dxns(method->code,s))
+code_t* abc_dxns(code_t*prev, char* name);
+#define dxns(method,name) (method->code = abc_dxns(method->code,name))
 #define OPCODE_DXNS 0x06
+code_t* abc_dxns2(code_t*prev, string_t* s);
+#define dxns2(method,s) (method->code = abc_dxns2(method->code,s))
+#define OPCODE_DXNS2 0x06
 code_t* abc_dxnslate(code_t*prev);
 #define dxnslate(method) (method->code = abc_dxnslate(method->code))
 #define OPCODE_DXNSLATE 0x07
@@ -411,9 +417,12 @@ code_t* abc_pushscope(code_t*prev);
 code_t* abc_pushshort(code_t*prev, int v);
 #define pushshort(method,v) (method->code = abc_pushshort(method->code,v))
 #define OPCODE_PUSHSHORT 0x25
-code_t* abc_pushstring(code_t*prev, char* s);
-#define pushstring(method,s) (method->code = abc_pushstring(method->code,s))
+code_t* abc_pushstring(code_t*prev, char* name);
+#define pushstring(method,name) (method->code = abc_pushstring(method->code,name))
 #define OPCODE_PUSHSTRING 0x2c
+code_t* abc_pushstring2(code_t*prev, string_t* s);
+#define pushstring2(method,s) (method->code = abc_pushstring2(method->code,s))
+#define OPCODE_PUSHSTRING2 0x2c
 code_t* abc_pushtrue(code_t*prev);
 #define pushtrue(method) (method->code = abc_pushtrue(method->code))
 #define OPCODE_PUSHTRUE 0x26

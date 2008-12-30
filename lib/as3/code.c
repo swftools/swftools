@@ -325,7 +325,8 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
                 int j = swf_GetS24(tag);
                 data = (void*)(ptroff_t)j;
             } else if(*p == 's') { // string
-                data = strdup((char*)pool_lookup_string(pool, swf_GetU30(tag)));
+                string_t s = pool_lookup_string2(pool, swf_GetU30(tag));
+                data = string_dup3(&s);
             } else if(*p == 'D') { // debug
                 /*type, usually 1*/
                 U8 type = swf_GetU8(tag);
@@ -494,7 +495,7 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
                 skip = (c->branch->pos) - c->pos - 4;
             len += swf_SetS24(tag, skip);
         } else if(*p == 's') { // string
-            int index = pool_register_string(pool, data);
+            int index = pool_register_string2(pool, (string_t*)data);
             len += swf_SetU30(tag, index);
         } else if(*p == 'D') { // debug statement
             if(tag)
@@ -926,7 +927,9 @@ int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*p
                     else
                         fprintf(fo, "%08x", c->branch);
                 } else if(*p == 's') {
-                    fprintf(fo, "\"%s\"", data);
+                    char*s = string_escape((string_t*)data);
+                    fprintf(fo, "\"%s\"", s);
+                    free(s);
                 } else if(*p == 'D') {
                     fprintf(fo, "[register %02x=%s]", (ptroff_t)c->data[1], (char*)c->data[0]);
                 } else if(*p == 'S') {
@@ -1074,7 +1077,9 @@ code_t*code_dup(code_t*c)
         while(*p) {
             if(*p == '2') { //multiname
                 c->data[pos] = multiname_clone(c->data[pos]);
-            } else if(*p == 's' || *p == 'D') {
+            } else if(*p == 's') {
+                c->data[pos] = string_dup3(c->data[pos]);
+            } else if(*p == 'D') {
                 c->data[pos] = strdup(c->data[pos]);
             } else if(*p == 'f') {
                 double old = *(double*)c->data[pos];

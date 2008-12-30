@@ -225,10 +225,16 @@ code_t* abc_debug(code_t*prev, void* debuginfo)
     /* FIXME: write debuginfo debuginfo */
     return self;
 }
-code_t* abc_debugfile(code_t*prev, char* s)
+code_t* abc_debugfile(code_t*prev, char* name)
 {
     code_t*self = add_opcode(prev, 0xf1);
-    self->data[0] = strdup(s);
+    self->data[0] = string_new4(name);
+    return self;
+}
+code_t* abc_debugfile2(code_t*prev, string_t* s)
+{
+    code_t*self = add_opcode(prev, 0xf1);
+    self->data[0] = string_dup3(s);
     return self;
 }
 code_t* abc_debugline(code_t*prev, int v)
@@ -281,10 +287,16 @@ code_t* abc_dup(code_t*prev)
     code_t*self = add_opcode(prev, 0x2a);
     return self;
 }
-code_t* abc_dxns(code_t*prev, char* s)
+code_t* abc_dxns(code_t*prev, char* name)
 {
     code_t*self = add_opcode(prev, 0x06);
-    self->data[0] = strdup(s);
+    self->data[0] = string_new4(name);
+    return self;
+}
+code_t* abc_dxns2(code_t*prev, string_t* s)
+{
+    code_t*self = add_opcode(prev, 0x06);
+    self->data[0] = string_dup3(s);
     return self;
 }
 code_t* abc_dxnslate(code_t*prev)
@@ -790,10 +802,16 @@ code_t* abc_pushshort(code_t*prev, int v)
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
-code_t* abc_pushstring(code_t*prev, char* s)
+code_t* abc_pushstring(code_t*prev, char* name)
 {
     code_t*self = add_opcode(prev, 0x2c);
-    self->data[0] = strdup(s);
+    self->data[0] = string_new4(name);
+    return self;
+}
+code_t* abc_pushstring2(code_t*prev, string_t* s)
+{
+    code_t*self = add_opcode(prev, 0x2c);
+    self->data[0] = string_dup3(s);
     return self;
 }
 code_t* abc_pushtrue(code_t*prev)

@@ -43,7 +43,7 @@ for line in fi.readlines():
         op,name,params = m.group(1),m.group(2),m.group(3)
 
         iterations=1
-        if "2" in params:
+        if "2" in params or "s" in params:
             iterations=2
 
         for iteration in range(iterations):
@@ -62,7 +62,10 @@ for line in fi.readlines():
                     else:
                         type,pname="multiname_t*","name"
                 elif c == "s":
-                    type,pname="char*","s"
+                    if iteration==0:
+                        type,pname="char*","name"
+                    else:
+                        type,pname="string_t*","s"
                 elif c in "nubs":
                     type,pname="int","v"
                 elif c == "m":
@@ -120,7 +123,10 @@ for line in fi.readlines():
                 elif(c == "b"):
                     foc.write("    self->data[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
                 elif(c == "s"):
-                    foc.write("    self->data[%d] = strdup(%s);\n" % (i,pname))
+                    if iteration==0:
+                        foc.write("    self->data[%d] = string_new4(%s);\n" % (i,pname))
+                    else:
+                        foc.write("    self->data[%d] = string_dup3(%s);\n" % (i,pname))
                 elif(c == "m"):
                     foc.write("    self->data[%d] = %s;\n" % (i,pname))
                 elif(c == "c"):
