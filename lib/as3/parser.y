@@ -103,6 +103,7 @@
 %token<token> KW_WHILE "while"
 %token<token> KW_NUMBER "Number"
 %token<token> KW_STRING "String"
+%token<token> KW_DELETE "delete"
 %token<token> KW_IF "if"
 %token<token> KW_ELSE  "else"
 %token<token> KW_BREAK   "break"
@@ -132,9 +133,6 @@
 %token<token> T_SHL "<<"
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
-%token<token> T_SEMICOLON ';'
-%token<token> T_STAR '*'
-%token<token> T_DOT '.'
 
 %type <id> X_IDENTIFIER PACKAGE
 %type <token> VARCONST
@@ -150,7 +148,7 @@
 %type <code> VOIDEXPRESSION
 %type <value> EXPRESSION NONCOMMAEXPRESSION
 %type <value> MAYBEEXPRESSION
-%type <value> E
+%type <value> E DELETE
 %type <value> CONSTANT
 %type <code> FOR IF WHILE MAYBEELSE BREAK RETURN
 %type <token> USE_NAMESPACE
@@ -180,45 +178,38 @@
 %type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST MAYBE_PARAM_VALUES
 
 // precedence: from low to high
-// http://livedocs.adobe.com/flash/9.0/main/wwhelp/wwhimpl/common/html/wwhelp.htm?context=LiveDocs_Parts&file=00000012.html
 
 %left prec_none
+
+%left below_semicolon
+%left ';'
+%left ','
+%right '=' "*=" "/=" "%=" "+=" "-=" "<<=" ">>=" ">>>=" "&=" "^=" "|="
 %right '?' ':'
-%right '=' "/=" "%=" "*=" "+=" "-=" ">>=" "<<=" ">>>="
 %left "||"
 %left "&&"
 %nonassoc '|'
 %nonassoc '^'
 %nonassoc '&'
-%nonassoc "!=" "==" "===" "<=" '<' ">=" '>' // TODO: support "a < b < c" syntax?
-%nonassoc "is"
-%left prec_belowminus
-%left '-'
-%left '+'
-%left "<<"
-%left ">>>"
-%left ">>"
-%left '%'
-%left '/'
-%left '*'
-%left '!'
-%left '~'
-%left "--" "++"
-%left '['
-%nonassoc "as"
-%left '.' ".." "::"
+%nonassoc "==" "!=" "===" "!=="
+%nonassoc "<=" '<' ">=" '>' "instanceof" // TODO: support "a < b < c" syntax?
+%left "<<" ">>" ">>>" 
+%left below_minus
+%left '-' '+'
+%left '/' '*' '%'
+%left plusplus_prefix minusminus_prefix '~' '!' "delete" "typeof" //FIXME: *unary* + - should be here, too
+%left "--" "++" 
+%nonassoc "is" "as"
+%left '[' ']' '{' "new" '.' ".." "::"
 %nonassoc T_IDENTIFIER
-%left below_semicolon
-%left ';'
+%left below_else
 %nonassoc "else"
 %left '('
 
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
-%nonassoc "new" "false" "true" "null"
-
-%left prec_highest
+%nonassoc "false" "true" "null"
 
      
 %{
@@ -999,12 +990,26 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
         write->opcode = OPCODE_SETPROPERTY;
         multiname_t*m = (multiname_t*)r->data[0];
         write->data[0] = multiname_clone(m);
-        if(m->type != QNAME && m->type != MULTINAME)
-            syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
-        if(!justassign) {
-            prefix = abc_dup(prefix); // we need the object, too
+        if(m->type == QNAME || m->type == MULTINAME) {
+            if(!justassign) {
+                prefix = abc_dup(prefix); // we need the object, too
+            }
+            use_temp_var = 1;
+        } else if(m->type == MULTINAMEL) {
+            if(!justassign) {
+                /* dupping two values on the stack requires 5 operations and one register- 
+                   couldn't adobe just have given us a dup2? */
+                int temp = gettempvar();
+                prefix = abc_setlocal(prefix, temp);
+                prefix = abc_dup(prefix);
+                prefix = abc_getlocal(prefix, temp);
+                prefix = abc_swap(prefix);
+                prefix = abc_getlocal(prefix, temp);
+            }
+            use_temp_var = 1;
+        } else {
+            syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname/multiname)");
         }
-        use_temp_var = 1;
     } else if(r->opcode == OPCODE_GETSLOT) {
         write->opcode = OPCODE_SETSLOT;
         write->data[0] = r->data[0];
@@ -1094,6 +1099,8 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
     return c;
 }
 
+#define IS_INT(a) (TYPE_IS_INT((a).t) || TYPE_IS_UINT((a).t))
+#define BOTH_INT(a,b) (IS_INT(a) && IS_INT(b))
 
 %}
 
@@ -1104,7 +1111,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
 
 PROGRAM: MAYBECODE
 
-MAYBECODE: CODE {$$=$1;}
+MAYBECODE: CODE {$$=$1;/*TODO: do something with this code if we're not in a function*/}
 MAYBECODE:      {$$=code_new();}
 
 CODE: CODE CODEPIECE {$$=code_append($1,$2);}
@@ -1191,7 +1198,7 @@ ONE_VARIABLE: {} T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
 
 /* ------------ control flow ------------------------- */
 
-MAYBEELSE:  %prec prec_none {$$ = code_new();}
+MAYBEELSE:  %prec below_else {$$ = code_new();}
 MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
@@ -1494,7 +1501,7 @@ TYPE : QNAME      {$$=$1;}
 MAYBETYPE: ':' TYPE {$$=$2;}
 MAYBETYPE:          {$$=0;}
 
-/* ----------function calls, constructor calls ------ */
+/* ----------function calls, delete, constructor calls ------ */
 
 MAYBE_PARAM_VALUES :  %prec prec_none {$$=0;}
 MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2}
@@ -1590,6 +1597,27 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
     }
 }
 
+DELETE: "delete" E {
+    $$.c = $2.c;
+    if($$.c->opcode == OPCODE_COERCE_A) {
+        $$.c = code_cutlast($$.c);
+    }
+    multiname_t*name = 0;
+    if($$.c->opcode == OPCODE_GETPROPERTY) {
+        $$.c->opcode = OPCODE_DELETEPROPERTY;
+    } else if($$.c->opcode == OPCODE_GETSLOT) {
+        int slot = (int)(ptroff_t)$$.c->data[0];
+        multiname_t*name = abc_class_find_slotid(state->cls,slot)->name;
+        $$.c = code_cutlast($$.c);
+        $$.c = abc_deleteproperty2($$.c, name);
+    } else {
+        $$.c = abc_getlocal_0($$.c);
+        MULTINAME_LATE(m, $2.t?$2.t->access:ACCESS_PACKAGE, "");
+        $$.c = abc_deleteproperty2($$.c, &m);
+    }
+    $$.t = TYPE_BOOLEAN;
+}
+
 RETURN: "return" %prec prec_none {
     $$ = abc_returnvoid(0);
 }
@@ -1597,23 +1625,25 @@ RETURN: "return" EXPRESSION {
     $$ = $2.c;
     $$ = abc_returnvalue($$);
 }
+
 // ----------------------- expression types -------------------------------------
 
-NONCOMMAEXPRESSION : E        %prec prec_belowminus {$$=$1;}
-EXPRESSION : E                %prec prec_belowminus {$$ = $1;}
-EXPRESSION : EXPRESSION ',' E %prec prec_belowminus {
+NONCOMMAEXPRESSION : E        %prec below_minus {$$=$1;}
+EXPRESSION : E                %prec below_minus {$$ = $1;}
+EXPRESSION : EXPRESSION ',' E %prec below_minus {
     $$.c = $1.c;
     $$.c = cut_last_push($$.c);
     $$.c = code_append($$.c,$3.c);
     $$.t = $3.t;
 }
-VOIDEXPRESSION : EXPRESSION %prec prec_belowminus {$$=cut_last_push($1.c);}
+VOIDEXPRESSION : EXPRESSION %prec below_minus {$$=cut_last_push($1.c);}
 
 // ----------------------- expression evaluation -------------------------------------
 
 E : CONSTANT
 E : VAR_READ %prec T_IDENTIFIER {$$ = $1;}
 E : NEW                         {$$ = $1;}
+E : DELETE                      {$$ = $1;}
 E : T_REGEXP                    {$$.c = abc_pushundefined(0); /* FIXME */
                                  $$.t = TYPE_ANY;
                                 }
@@ -1705,22 +1735,65 @@ E : '!' E    {$$.c=$2.c;
               $$.t = TYPE_BOOLEAN;
              }
 
-E : E '-' E
-E : E '/' E
-E : E '+' E {$$.c = code_append($1.c,$3.c);$$.c = abc_add($$.c);$$.c=abc_coerce_a($$.c);
-             $$.t = join_types($1.t, $3.t, '+');
+E : '~' E    {$$.c=$2.c;
+              $$.c = abc_bitnot($$.c);
+              $$.t = TYPE_INT;
+             }
+
+E : E '&' E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_bitand($$.c);
+             $$.t = TYPE_INT;
             }
-E : E '%' E {$$.c = code_append($1.c,$3.c);$$.c = abc_modulo($$.c);$$.c=abc_coerce_a($$.c);
-             $$.t = join_types($1.t, $3.t, '%');
+
+E : E '|' E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_bitor($$.c);
+             $$.t = TYPE_INT;
             }
-E : E '*' E {$$.c = code_append($1.c,$3.c);$$.c = abc_multiply($$.c);$$.c=abc_coerce_a($$.c);
-             $$.t = join_types($1.t, $3.t, '*');
+
+E : E '-' E {$$.c = code_append($1.c,$3.c);
+             if(BOTH_INT($1,$3)) {
+                $$.c = abc_subtract_i($$.c);
+                $$.t = TYPE_INT;
+             } else {
+                $$.c = abc_subtract($$.c);
+                $$.t = TYPE_NUMBER;
+             }
+            }
+E : E '/' E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_divide($$.c);
+             $$.t = TYPE_NUMBER;
+            }
+E : E '+' E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_add($$.c);
+             $$.t = TYPE_NUMBER;
+            }
+E : E '%' E {$$.c = code_append($1.c,$3.c);
+             $$.c = abc_modulo($$.c);
+             $$.t = TYPE_NUMBER;
+            }
+E : E '*' E {$$.c = code_append($1.c,$3.c);
+             if(BOTH_INT($1,$3)) {
+                $$.c = abc_multiply_i($$.c);
+                $$.t = TYPE_INT;
+             } else {
+                $$.c = abc_multiply($$.c);
+                $$.t = TYPE_NUMBER;
+             }
             }
 
 E : E "as" E
 E : E "is" E
 E : '(' E ')' {$$=$2;}
-E : '-' E {$$=$2;}
+E : '-' E {
+  $$=$2;
+  if(IS_INT($2)) {
+   $$.c=abc_negate_i($$.c);
+   $$.t = TYPE_INT;
+  } else {
+   $$.c=abc_negate($$.c);
+   $$.t = TYPE_NUMBER;
+  }
+}
 
 E : E '[' E ']' {
   $$.c = $1.c;
@@ -1728,11 +1801,12 @@ E : E '[' E ']' {
  
   MULTINAME_LATE(m, $1.t?$1.t->access:ACCESS_PACKAGE, "");
   $$.c = abc_getproperty2($$.c, &m);
+  $$.t = 0; // array elements have unknown type
 }
 
 E : E "*=" E { 
                code_t*c = $3.c;
-               if(TYPE_IS_INT($3.t) || TYPE_IS_UINT($3.t)) {
+               if(BOTH_INT($1,$3)) {
                 c=abc_multiply_i(c);
                } else {
                 c=abc_multiply(c);
@@ -1829,7 +1903,7 @@ E : E "--" { code_t*c = 0;
              $$.t = $1.t;
             }
 
-E : "++" E { code_t*c = 0;
+E : "++" %prec plusplus_prefix E { code_t*c = 0;
              classinfo_t*type = $2.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  c=abc_increment_i(c);
@@ -1843,7 +1917,7 @@ E : "++" E { code_t*c = 0;
              $$.t = $2.t;
            }
 
-E : "--" E { code_t*c = 0;
+E : "--" %prec minusminus_prefix E { code_t*c = 0;
              classinfo_t*type = $2.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
                  c=abc_decrement_i(c);
