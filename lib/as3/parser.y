@@ -1868,7 +1868,7 @@ E : E '.' T_IDENTIFIER
              if(t) {
                  memberinfo_t*f = registry_findmember(t, $3);
                  char noslot = 0;
-                 if(!is_static != !(f->flags&FLAG_STATIC))
+                 if(f && !is_static != !(f->flags&FLAG_STATIC))
                     noslot=1;
 
                  if(f && f->slot && !noslot) {
