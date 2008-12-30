@@ -93,29 +93,6 @@ classinfo_t* classinfo_register(int access, char*package, char*name, int num_int
     return c;
 }
 
-/* function and class pointers get their own type class */
-static dict_t* functionobjects = 0;
-classinfo_t* registry_getfunctionclass(memberinfo_t*f) {
-    if(!functionobjects) {
-        functionobjects = dict_new2(&ptr_type);
-    } else {
-        classinfo_t*c = dict_lookup(functionobjects, f);
-        if(c)
-            return c;
-    }
-
-    NEW(classinfo_t,c);
-    c->access = ACCESS_PUBLIC;
-    c->package = "";
-    c->name = "Function";
-    
-    dict_init(&c->members,1);
-    c->function = f;
-
-    dict_put(functionobjects, f, c);
-    return c;
-}
-
 static dict_t* classobjects = 0;
 classinfo_t* registry_getclassclass(classinfo_t*a) {
     if(!classobjects) {
@@ -191,6 +168,43 @@ multiname_t* classinfo_to_multiname(classinfo_t*cls)
     return multiname_new(ns,cls->name);
 }
 
+// ----------------------- memberinfo methods ------------------------------
+
+/* function and class pointers get their own type class */
+static dict_t* functionobjects = 0;
+classinfo_t* memberinfo_asclass(memberinfo_t*f) {
+    if(!functionobjects) {
+        functionobjects = dict_new2(&ptr_type);
+    } else {
+        classinfo_t*c = dict_lookup(functionobjects, f);
+        if(c)
+            return c;
+    }
+
+    NEW(classinfo_t,c);
+    c->access = ACCESS_PUBLIC;
+    c->package = "";
+    c->name = "Function";
+    
+    dict_init(&c->members,1);
+    c->function = f;
+
+    dict_put(functionobjects, f, c);
+    return c;
+}
+
+classinfo_t* memberinfo_gettype(memberinfo_t*f)
+{
+    if(f) {
+       if(f->kind == MEMBER_METHOD) {
+           return memberinfo_asclass(f);
+       } else {
+           return f->type;
+       }
+    } else {
+       return registry_getanytype();
+    }
+}
 // ----------------------- builtin types ------------------------------
 classinfo_t* registry_getanytype() {return 0;}
 
