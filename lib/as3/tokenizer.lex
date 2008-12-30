@@ -474,6 +474,7 @@ const                        {c();return m(KW_CONST);}
 final                        {c();return m(KW_FINAL);}
 false                        {c();return m(KW_FALSE);}
 break                        {c();return m(KW_BREAK);}
+super                        {c();return m(KW_SUPER);}
 void                         {c();return m(KW_VOID);}
 true                         {c();return m(KW_TRUE);}
 null                         {c();return m(KW_NULL);}
