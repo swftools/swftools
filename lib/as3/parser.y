@@ -114,6 +114,7 @@
 %token<token> T_GE ">="
 %token<token> T_DIVBY "/=" 
 %token<token> T_MODBY "%="
+%token<token> T_MULBY "*="
 %token<token> T_PLUSBY "+=" 
 %token<token> T_MINUSBY "-="
 %token<token> T_SHRBY ">>="
@@ -181,12 +182,7 @@
 
 %left prec_none
 %right '?' ':'
-%nonassoc '='
-%nonassoc "/=" "%="
-%nonassoc "+=" "-="
-%nonassoc ">>="
-%nonassoc "<<="
-%nonassoc ">>>="
+%right '=' "/=" "%=" "*=" "+=" "-=" ">>=" "<<=" ">>>="
 %left "||"
 %left "&&"
 %nonassoc '|'
@@ -879,7 +875,7 @@ void parserassert(int b)
     if(!b) syntaxerror("internal error: assertion failed");
 }
 
-static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
+static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore)
 {
     /* converts this:
 
@@ -906,6 +902,8 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
         prefix = 0;
     }
 
+    char use_temp_var = readbefore;
+
     /* generate the write instruction, and maybe append a dup to the prefix code */
     code_t* write = abc_nop(0);
     if(r->opcode == OPCODE_GETPROPERTY) {
@@ -915,12 +913,14 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
         if(m->type != QNAME)
             syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname)");
         if(!justassign) {
+            use_temp_var = 1;
             prefix = abc_dup(prefix); // we need the object, too
         }
     } else if(r->opcode == OPCODE_GETSLOT) {
         write->opcode = OPCODE_SETSLOT;
         write->data[0] = r->data[0];
         if(!justassign) {
+            use_temp_var = 1;
             prefix = abc_dup(prefix); // we need the object, too
         }
     } else if(r->opcode == OPCODE_GETLOCAL) { 
@@ -942,7 +942,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
     
     int temp = -1;
     if(!justassign) {
-#if 1
+        if(use_temp_var) {
             /* with getproperty/getslot, we have to be extra careful not
                to execute the read code twice, as it might have side-effects
                (e.g. if the property is in fact a setter/getter combination)
@@ -953,13 +953,19 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
             temp = gettempvar();
             c = code_append(c, prefix);
             c = code_append(c, r);
+            if(readbefore) {
+                c = abc_dup(c);
+                c = abc_setlocal(c, temp);
+            }
             c = code_append(c, middlepart);
-            c = abc_dup(c);
-            c = abc_setlocal(c, temp);
+            if(!readbefore) {
+                c = abc_dup(c);
+                c = abc_setlocal(c, temp);
+            }
             c = code_append(c, write);
             c = abc_getlocal(c, temp);
             c = abc_kill(c, temp);
-#else
+        } else {
             /* if we're allowed to execute the read code twice *and*
                the middlepart doesn't modify the code, things are easier.
             */
@@ -970,7 +976,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
             c = code_append(c, middlepart);
             c = code_append(c, write);
             c = code_append(c, r2);
-#endif
+        }
     } else {
         /* even smaller version: overwrite the value without reading
            it out first */
@@ -1549,6 +1555,47 @@ E : E '[' E ']' {
   $$.c = abc_getproperty2($$.c, &m);
 }
 
+E : E "*=" E { 
+               code_t*c = $3.c;
+               if(TYPE_IS_INT($3.t) || TYPE_IS_UINT($3.t)) {
+                c=abc_multiply_i(c);
+               } else {
+                c=abc_multiply(c);
+               }
+               c=converttype(c, join_types($1.t, $3.t, '*'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E "%=" E { 
+               code_t*c = abc_modulo($3.c);
+               c=converttype(c, join_types($1.t, $3.t, '%'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E "<<=" E { 
+               code_t*c = abc_lshift($3.c);
+               c=converttype(c, join_types($1.t, $3.t, '<'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E ">>=" E { 
+               code_t*c = abc_rshift($3.c);
+               c=converttype(c, join_types($1.t, $3.t, '>'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E ">>>=" E { 
+               code_t*c = abc_urshift($3.c);
+               c=converttype(c, join_types($1.t, $3.t, 'U'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E "/=" E { 
+               code_t*c = abc_divide($3.c);
+               c=converttype(c, join_types($1.t, $3.t, '/'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
 E : E "+=" E { 
                code_t*c = $3.c;
                if(TYPE_IS_INT($3.t) || TYPE_IS_UINT($3.t)) {
@@ -1558,7 +1605,7 @@ E : E "+=" E {
                }
                c=converttype(c, join_types($1.t, $3.t, '+'), $1.t);
                
-               $$.c = toreadwrite($1.c, c, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
               }
 E : E "-=" E { code_t*c = $3.c; 
@@ -1569,13 +1616,13 @@ E : E "-=" E { code_t*c = $3.c;
                }
                c=converttype(c, join_types($1.t, $3.t, '-'), $1.t);
                
-               $$.c = toreadwrite($1.c, c, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
              }
 E : E '=' E { code_t*c = 0;
               c = code_append(c, $3.c);
               c = converttype(c, $3.t, $1.t);
-              $$.c = toreadwrite($1.c, c, 1);
+              $$.c = toreadwrite($1.c, c, 1, 0);
               $$.t = $1.t;
             }
 
@@ -1589,19 +1636,19 @@ E : E "++" { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c, 0);
+             $$.c = toreadwrite($1.c, c, 0, 1);
              $$.t = $1.t;
            }
 E : E "--" { code_t*c = 0;
              classinfo_t*type = $1.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
-                 c=abc_increment_i(c);
+                 c=abc_decrement_i(c);
              } else {
-                 c=abc_increment(c);
+                 c=abc_decrement(c);
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c, 0);
+             $$.c = toreadwrite($1.c, c, 0, 1);
              $$.t = $1.t;
             }
 
@@ -1614,7 +1661,20 @@ E : "++" E { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $2.t);
-             $$.c = toreadwrite($2.c, c, 0);
+             $$.c = toreadwrite($2.c, c, 0, 0);
+             $$.t = $2.t;
+           }
+
+E : "--" E { code_t*c = 0;
+             classinfo_t*type = $2.t;
+             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
+                 c=abc_decrement_i(c);
+             } else {
+                 c=abc_decrement(c);
+                 type = TYPE_NUMBER;
+             }
+             c=converttype(c, type, $2.t);
+             $$.c = toreadwrite($2.c, c, 0, 0);
              $$.t = $2.t;
            }
 
