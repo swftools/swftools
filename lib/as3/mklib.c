@@ -192,6 +192,12 @@ void load_libraries(char*filename, int pass, FILE*fi)
                     fprintf(stderr, "Unknown trait type %d\n", trait->kind);
             }
             int flags = is_static?FLAG_STATIC:0;
+
+            if(access == ACCESS_PACKAGE) flags|=FLAG_PUBLIC;
+            if(access == ACCESS_PRIVATE) flags|=FLAG_PRIVATE;
+            if(access == ACCESS_PROTECTED) flags|=FLAG_PROTECTED;
+            if(access == ACCESS_PACKAGEINTERNAL) flags|=FLAG_INTERNAL;
+
             if(pass==0) {
                 fprintf(fi, "static memberinfo_t %s;\n", id2);
             } if(pass==1) {
