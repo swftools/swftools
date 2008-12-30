@@ -170,19 +170,13 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
     list_append(c->interfaces, multiname_clone(interface));
 }
 
-static abc_method_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, char body, int num_params, va_list va)
+static abc_method_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, char body)
 {
     /* construct method object */
     NEW(abc_method_t,m);
     m->index = array_length(file->methods);
     array_append(file->methods, NO_KEY, m);
     m->return_type = returntype;
-
-    int t;
-    for(t=0;t<num_params;t++) {
-	const char*param = va_arg(va, const char*);
-	list_append(m->parameters, multiname_fromstring(param));
-    }
 
     if(body) {
         /* construct code (method body) object */
@@ -201,22 +195,16 @@ static abc_method_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*re
     return m;
 }
 
-abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
+abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype)
 {
-    va_list va;
-    va_start(va, num_params);
-    abc_method_t* m = add_method(cls->file, cls, returntype, 1, num_params, va);
-    va_end(va);
+    abc_method_t* m = add_method(cls->file, cls, returntype, 1);
     cls->constructor = m;
     return m;
 }
 
-abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...) 
+abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype)
 {
-    va_list va;
-    va_start(va, num_params);
-    abc_method_t* m = add_method(cls->file, cls, returntype, 1, num_params, va);
-    va_end(va);
+    abc_method_t* m = add_method(cls->file, cls, returntype, 1);
     cls->static_constructor = m;
     return m;
 }
@@ -256,33 +244,49 @@ trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
     return trait;
 }
 
-abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...)
+abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, multiname_t*name)
 {
     abc_file_t*file = cls->file;
-    va_list va;
-    va_start(va, num_params);
-    abc_method_t* m = add_method(cls->file, cls, returntype, !(cls->flags&CLASS_INTERFACE), num_params, va);
-    va_end(va);
-    trait_t*t = trait_new_method(multiname_fromstring(name), m);
-    m->trait = t;
+    abc_method_t* m = add_method(cls->file, cls, returntype, !(cls->flags&CLASS_INTERFACE));
+    m->trait = trait_new_method(multiname_clone(name), m);
     /* start assigning traits at position #1.
        Weird things happen when assigning slot 0- slot 0 and 1 seem
        to be identical */
-    t->slot_id = list_length(cls->traits)+1;
-    list_append(cls->traits, t);
+    m->trait->slot_id = list_length(cls->traits)+1;
+    list_append(cls->traits, m->trait);
+    return m;
+}
+abc_method_t* abc_class_staticmethod(abc_class_t*cls, multiname_t*returntype, multiname_t*name)
+{
+    abc_file_t*file = cls->file;
+    abc_method_t* m = add_method(cls->file, cls, returntype, !(cls->flags&CLASS_INTERFACE));
+    m->trait = trait_new_method(multiname_clone(name), m);
+    m->trait->slot_id = list_length(cls->static_traits)+1;
+    list_append(cls->static_traits, m->trait);
     return m;
 }
 
-trait_t* abc_class_slot(abc_class_t*cls, char*name, multiname_t*type)
+trait_t* abc_class_slot(abc_class_t*cls, multiname_t*name, multiname_t*type)
 {
     abc_file_t*file = cls->file;
-    multiname_t*m_name = multiname_fromstring(name);
+    multiname_t*m_name = multiname_clone(name);
     multiname_t*m_type = multiname_clone(type);
     trait_t*t = trait_new_member(m_type, m_name, 0);
     t->slot_id = list_length(cls->traits)+1;
     list_append(cls->traits, t);
     return t;
 }
+trait_t* abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*type)
+{
+    abc_file_t*file = cls->file;
+    multiname_t*m_name = multiname_clone(name);
+    multiname_t*m_type = multiname_clone(type);
+    trait_t*t = trait_new_member(m_type, m_name, 0);
+    t->slot_id = list_length(cls->static_traits)+1;
+    list_append(cls->static_traits, t);
+    return t;
+}
+
 
 trait_t* abc_class_find_slotid(abc_class_t*cls, int slotid)
 {
@@ -319,17 +323,14 @@ int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc
     return slotid;
 }
 
-abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype, int num_params, ...) 
+abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype)
 {
-    va_list va;
-    va_start(va, num_params);
-    abc_method_t*m = add_method(file, 0, returntype, 1, num_params, va);
+    abc_method_t*m = add_method(file, 0, returntype, 1);
     abc_script_t* s = malloc(sizeof(abc_script_t));
     s->method = m;
     s->traits = list_new();
     s->file = file;
     array_append(file->scripts, NO_KEY, s);
-    va_end(va);
     return s;
 }
 
@@ -1285,7 +1286,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     swf_SetU16(tag, 0);
     swf_SetString(tag, "rfx.MainTimeline");
 
-    c = abc_class_staticconstructor(cls, 0, 0)->body;
+    c = abc_class_staticconstructor(cls, 0)->body;
     c->old.max_stack = 1;
     c->old.local_count = 1;
     c->old.init_scope_depth = 9;
@@ -1295,7 +1296,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     __ pushscope(c);
     __ returnvoid(c);
 
-    c = abc_class_constructor(cls, 0, 0)->body;
+    c = abc_class_constructor(cls, 0)->body;
     c->old.max_stack = 3;
     c->old.local_count = 1;
     c->old.init_scope_depth = 10;
@@ -1331,7 +1332,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 __ getlex(c,framename);
                 __ callpropvoid(c,"[package]::addFrameScript",2);
 
-                f = abc_class_method(cls, 0, framename, 0)->body;
+                f = abc_class_method(cls, 0, multiname_fromstring(framename))->body;
                 f->old.max_stack = 3;
                 f->old.local_count = 1;
                 f->old.init_scope_depth = 10;
@@ -1359,7 +1360,9 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 needs_framescript = 1;
 
                 abc_method_body_t*h =
-                    abc_class_method(cls, 0, functionname, 1, "flash.events::MouseEvent")->body;
+                    abc_class_method(cls, 0, multiname_fromstring(functionname))->body;
+                list_append(h->method->parameters, multiname_fromstring("flash.events::MouseEvent"));
+
                 h->old.max_stack = 6;
                 h->old.local_count = 2;
                 h->old.init_scope_depth = 10;
@@ -1434,13 +1437,13 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
             char buttonname[80];
             sprintf(buttonname, "::button%d", swf_GetDefineID(tag));
             multiname_t*s = multiname_fromstring(buttonname);
-            abc_class_slot(cls, buttonname, s);
+            abc_class_slot(cls, multiname_fromstring(buttonname), s);
         }
         tag = tag->next;
     }
 
 
-    abc_script_t*s = abc_initscript(file, 0, 0);
+    abc_script_t*s = abc_initscript(file, 0);
     c = s->method->body;
     c->old.max_stack = 2;
     c->old.local_count = 1;

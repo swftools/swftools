@@ -141,10 +141,12 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
 
 trait_t* abc_class_find_slotid(abc_class_t*c, int slotid);
 
-abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
-abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype, int num_params, ...);
-abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, char*name, int num_params, ...);
-trait_t*           abc_class_slot(abc_class_t*cls, char*name, multiname_t*type);
+abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype);
+abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, multiname_t*name);
+abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype);
+abc_method_t* abc_class_staticmethod(abc_class_t*cls, multiname_t*returntype, multiname_t*name);
+trait_t*      abc_class_slot(abc_class_t*cls, multiname_t*name, multiname_t*type);
+trait_t*      abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*type);
 
 struct _abc_exception {
     code_t*from;
@@ -185,7 +187,7 @@ typedef struct _abc_script {
 } abc_script_t;
 
 abc_method_t* abc_nullmethod(abc_file_t*file);
-abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype, int num_params, ...);
+abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype);
 
 #define __ 
 
