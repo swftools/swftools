@@ -343,7 +343,8 @@ void initialize_scanner();
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
 
-NUMBER	 -?[0-9]+(\.[0-9]*)?|-?\.[0-9]+
+NUMBER	 [0-9]+(\.[0-9]*)?|-?\.[0-9]+
+NUMBERWITHSIGN [+-]?({NUMBER})
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
@@ -363,6 +364,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return m(T_REGEXP);} 
+{NUMBERWITHSIGN}             {c(); BEGIN(INITIAL);return handlenumber();}
 }
 
 \xef\xbb\xbf                 {/* utf 8 bom */}
@@ -410,6 +412,7 @@ private                      {c();return m(KW_PRIVATE);}
 Boolean                      {c();return m(KW_BOOLEAN);}
 dynamic                      {c();return m(KW_DYNAMIC);}
 extends                      {c();return m(KW_EXTENDS);}
+delete                       {c();return m(KW_DELETE);}
 return                       {c();return m(KW_RETURN);}
 public                       {c();return m(KW_PUBLIC);}
 native                       {c();return m(KW_NATIVE);}
@@ -485,6 +488,7 @@ char*token2string(enum yytokentype nr, YYSTYPE v)
     if(nr==T_STRING)     return "<string>";
     else if(nr==T_INT)     return "<int>";
     else if(nr==T_UINT)     return "<uint>";
+    else if(nr==T_BYTE)     return "<byte>";
     else if(nr==T_FLOAT)     return "<float>";
     else if(nr==T_REGEXP)     return "REGEXP";
     else if(nr==T_EOF)        return "***END***";
