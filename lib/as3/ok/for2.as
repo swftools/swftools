@@ -11,7 +11,7 @@ package {
 
             y = 0;
            
-            var z:uint = 0;
+            var o,z:uint = 0;
             for(x++,y++;x<20;x++,y++) {
                 z++;
             }
