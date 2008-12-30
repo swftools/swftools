@@ -1105,3 +1105,41 @@ code_t*code_cutlast(code_t*c)
     return prev;
 }
 
+code_t* cut_last_push(code_t*c)
+{
+    while(c) {
+        if(!c) break;
+        opcode_t*op = opcode_get(c->opcode);
+        /* cut conversion type operations */
+        if(op->stack_minus == -1 && op->stack_plus == 1 && !(op->flags)) {
+            c = code_cutlast(c);
+            continue;
+        }
+        /* cut any type of push */
+        else if(op->stack_minus == 0 && op->stack_plus == 1 && !(op->flags)) {
+            return code_cutlast(c);
+        }
+        /* cut register lookups */
+        else if(c->opcode == OPCODE_GETLOCAL ||
+           c->opcode == OPCODE_GETLOCAL_0 ||
+           c->opcode == OPCODE_GETLOCAL_1 ||
+           c->opcode == OPCODE_GETLOCAL_2 ||
+           c->opcode == OPCODE_GETLOCAL_3) {
+            return code_cutlast(c);
+        }
+        /* discard function call values */
+        else if(c->opcode == OPCODE_CALLPROPERTY) {
+            c->opcode = OPCODE_CALLPROPVOID;
+            return c;
+        } else if(c->opcode == OPCODE_CALLSUPER) {
+            c->opcode = OPCODE_CALLSUPERVOID;
+            return c;
+        }
+        else
+            break;
+    }
+    c = abc_pop(c);
+    return c;
+}
+
+

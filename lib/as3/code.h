@@ -97,6 +97,8 @@ void codestats_free(codestats_t*s);
 
 code_t* code_append(code_t*code, code_t*toappend);
 
+code_t* cut_last_push(code_t*_c);
+
 #define code_new() (0)
 
 #endif
