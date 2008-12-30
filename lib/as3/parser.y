@@ -898,8 +898,10 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign)
     } else {
         /* simpler version: overwrite the value without reading
            it out first */
-        c = code_append(c, prefix);
-        c = abc_dup(c);
+        if(prefix) {
+            c = code_append(c, prefix);
+            c = abc_dup(c);
+        }
         c = code_append(c, middlepart);
         c = code_append(c, write);
         c = code_append(c, r);
@@ -1315,6 +1317,9 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
     multiname_t*name = 0;
     if($$.c->opcode == OPCODE_GETPROPERTY) {
         name = multiname_clone($$.c->data[0]);
+        $$.c = code_cutlast($$.c);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_callproperty2($$.c, name, len);
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
         trait_t*t = abc_class_find_slotid(state->cls,slot);//FIXME
@@ -1323,15 +1328,15 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
             //syntaxerror("not a function");
         }
         name = t->name;
+        $$.c = code_cutlast($$.c);
+        $$.c = code_append($$.c, paramcode);
+        //$$.c = abc_callmethod($$.c, t->method, len); //#1051 illegal early access binding
+        $$.c = abc_callproperty2($$.c, name, len);
     } else {
-        code_dump($$.c, 0, 0, "", stdout);
-        syntaxerror("Object is not callable");
+        $$.c = abc_getlocal_0($$.c);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_call($$.c, len);
     }
-        
-    $$.c = code_cutlast($$.c);
-    $$.c = code_append($$.c, paramcode);
-    //$$.c = abc_callmethod($$.c, m, len); //#1051 illegal early access binding
-    $$.c = abc_callproperty2($$.c, name, len);
    
     memberinfo_t*f = 0;
     if(TYPE_IS_FUNCTION($1.t) &&
