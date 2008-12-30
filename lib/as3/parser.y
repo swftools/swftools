@@ -365,12 +365,42 @@ void initialize_state()
     state->file->flags &= ~ABCFILE_LAZY;
     
     state->init = abc_initscript(state->file, 0, 0);
-    abc_method_body_t*m = state->init->method->body;
-    __ getlocal_0(m);
-    __ pushscope(m);
-    __ findpropstrict(m, "[package]::trace");
-    __ pushstring(m, "[entering global init function]");
-    __ callpropvoid(m, "[package]::trace", 1);
+    code_t*c = state->init->method->body->code;
+
+    c = abc_getlocal_0(c);
+    c = abc_pushscope(c);
+  
+    /* findpropstrict doesn't just return a scope object- it
+       also makes it "active" somehow. Push local_0 on the
+       scope stack and read it back with findpropstrict, it'll
+       contain properties like "trace". Trying to find the same
+       property on a "vanilla" local_0 yields only a "undefined" */
+    //c = abc_findpropstrict(c, "[package]::trace");
+    
+    /*c = abc_getlocal_0(c);
+    c = abc_findpropstrict(c, "[package]::trace");
+    c = abc_coerce_a(c);
+    c = abc_setlocal_1(c);
+
+    c = abc_pushbyte(c, 0);
+    c = abc_setlocal_2(c);
+   
+    code_t*xx = c = abc_label(c);
+    c = abc_findpropstrict(c, "[package]::trace");
+    c = abc_pushstring(c, "prop:");
+    c = abc_hasnext2(c, 1, 2);
+    c = abc_dup(c);
+    c = abc_setlocal_3(c);
+    c = abc_callpropvoid(c, "[package]::trace", 2);
+    c = abc_getlocal_3(c);
+    c = abc_kill(c, 3);
+    c = abc_iftrue(c,xx);*/
+
+    c = abc_findpropstrict(c, "[package]::trace");
+    c = abc_pushstring(c, "[entering global init function]");
+    c = abc_callpropvoid(c, "[package]::trace", 1);
+    
+    state->init->method->body->code = c;
 }
 void* finalize_state()
 {
@@ -771,7 +801,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart)
 
        to this:
 
-       [prefix code] ([dup]) [read instruction] [setvar] [middlepart] [write instruction] [getvar]
+       [prefix code] ([dup]) [read instruction] [middlepart] [setvar] [write instruction] [getvar]
     */
     
     if(in->next)
@@ -790,7 +820,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart)
     }
 
     /* generate the write instruction, and maybe append a dup to the prefix code */
-    code_t* write = abc_nop(middlepart);
+    code_t* write = abc_nop(0);
     if(r->opcode == OPCODE_GETPROPERTY) {
         write->opcode = OPCODE_SETPROPERTY;
         multiname_t*m = (multiname_t*)r->data[0];
@@ -817,12 +847,14 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart)
         code_dump(r, 0, 0, "", stdout);
         syntaxerror("illegal lvalue: can't assign a value to this expression");
     }
-    code_t* c = prefix;
+    code_t* c = 0;
+    
+    c = code_append(c, prefix);
     c = code_append(c, r);
-
+    c = code_append(c, middlepart);
     c = abc_dup(c);
     c = abc_setlocal(c, temp);
-    c = code_append(c, middlepart);
+    c = code_append(c, write);
     c = abc_getlocal(c, temp);
     c = abc_kill(c, temp);
 
