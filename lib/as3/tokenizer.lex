@@ -251,18 +251,21 @@ static void handleString(char*s, int len)
 
 char start_of_expression;
 
-static inline int m(int type)
+static inline int mkid(int type)
 {
     char*s = malloc(yyleng+1);
     memcpy(s, yytext, yyleng);
     s[yyleng]=0;
-
-    NEW(token_t,t);
-    t->type = type;
-    t->text = s;
-    avm2_lval.token = t;
+    avm2_lval.id = s;
     return type;
 }
+
+static inline int m(int type)
+{
+    avm2_lval.token = type;
+    return type;
+}
+
 
 static char numberbuf[64];
 static inline int handlenumber()
@@ -340,7 +343,7 @@ void initialize_scanner();
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
 
-NUMBER	 -?[0-9]+(\.[0-9]*)?
+NUMBER	 -?[0-9]+(\.[0-9]*)?|-?\.[0-9]+
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
@@ -433,9 +436,9 @@ var                          {c();return m(KW_VAR);}
 is                           {c();return m(KW_IS) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
-{NAME}                       {c();BEGIN(INITIAL);return m(T_IDENTIFIER);}
+{NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
 
-[+-\/*^~@$!%&\(=\[\]\{\}|?:;,.<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
+[+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
 [\)\]]                            {c();BEGIN(INITIAL);return m(yytext[0]);}
 
 .		             {char c1=yytext[0];
@@ -477,9 +480,8 @@ int yywrap()
 }
 
 static char mbuf[256];
-char*token2string(token_t*t)
+char*token2string(enum yytokentype nr, YYSTYPE v)
 {
-    int nr=t->type;
     if(nr==T_STRING)     return "<string>";
     else if(nr==T_INT)     return "<int>";
     else if(nr==T_UINT)     return "<uint>";
@@ -524,12 +526,8 @@ char*token2string(token_t*t)
     else if(nr==KW_VAR)        return "var";
     else if(nr==KW_IS)         return "is";
     else if(nr==KW_AS)         return "as";
-    else if(nr==T_IDENTIFIER) {
-        if(strlen(t->text)>sizeof(mbuf)-1)
-            return "ID(...)";
-        sprintf(mbuf, "ID(%s)", t->text);
-        return mbuf;
-    } else {
+    else if(nr==T_IDENTIFIER)  return "ID";
+    else {
         sprintf(mbuf, "%d", nr);
         return mbuf;
     }
