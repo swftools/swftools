@@ -1,7 +1,10 @@
 package some.other.packag3 {
     public class Class4 {
-        public function Class4() {
-            trace("ok 4/4");
+        public function Class4(x=1) {
+            if(x) {
+                trace("ok 4/4");
+                return new Class4(0);
+            }
         }
     }
 }
