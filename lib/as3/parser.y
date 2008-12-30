@@ -1857,10 +1857,21 @@ E : "--" E { code_t*c = 0;
 
 E : E '.' T_IDENTIFIER
             {$$.c = $1.c;
-             if($$.t) {
-                 memberinfo_t*f = registry_findmember($$.t, $3);
+             classinfo_t*t = $1.t;
+             char is_static = 0;
+             if(TYPE_IS_CLASS(t)) {
+                 memberinfo_t*m = registry_findmember($1.t, "prototype");
+                 if(!m) syntaxerror("identifier '%s' not found in anonymous class", $3);
+                 t = m->type;
+                 is_static = 1;
+             }
+             if(t) {
+                 memberinfo_t*f = registry_findmember(t, $3);
+                 char noslot = 0;
+                 if(!is_static != !(f->flags&FLAG_STATIC))
+                    noslot=1;
 
-                 if(f && f->slot) {
+                 if(f && f->slot && !noslot) {
                      $$.c = abc_getslot($$.c, f->slot);
                  } else {
                      if(f) {
@@ -1946,9 +1957,7 @@ VAR_READ : T_IDENTIFIER {
             MULTINAME(m, a);
             $$.c = abc_getlex2($$.c, &m);
         }
-        /* this is not entirely correct (this is the class itself,
-           not an object of this class) */
-        $$.t = a;
+        $$.t = TYPE_CLASS(a);
 
     /* unknown object, let the avm2 resolve it */
     } else {
