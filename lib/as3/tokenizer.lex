@@ -129,6 +129,109 @@ void handleInclude(char*text, int len, char quotes)
     //BEGIN(INITIAL); keep context
 }
 
+string_t string_unescape(const char*in, int l)
+{
+    int len=0;
+    const char*s = in;
+    const char*end = &in[l];
+    char*n = (char*)malloc(l);
+    char*o = n;
+    while(s<end) {
+        if(*s!='\\') {
+            o[len++] = *s;
+            s++;
+            continue;
+        }
+        s++; //skip past '\'
+        if(s==end) syntaxerror("invalid \\ at end of string");
+
+        /* handle the various line endings (mac, dos, unix) */
+        if(*s=='\r') { 
+            s++; 
+            if(s==end) break;
+            if(*s=='\n') 
+                s++;
+            continue;
+        }
+        if(*s=='\n')  {
+            s++;
+            continue;
+        }
+        switch(*s) {
+	    case '\\': o[len++] = '\\';s++; break;
+	    case '"': o[len++] = '"';s++; break;
+	    case 'b': o[len++] = '\b';s++; break;
+	    case 'f': o[len++] = '\f';s++; break;
+	    case 'n': o[len++] = '\n';s++; break;
+	    case 'r': o[len++] = '\r';s++; break;
+	    case 't': o[len++] = '\t';s++; break;
+            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': {
+                unsigned int num=0;
+                int nr = 0;
+		while(strchr("01234567", *s) && nr<3 && s<end) {
+                    num <<= 3;
+                    num |= *s-'0';
+                    nr++;
+                    s++;
+                }
+                if(num>256) 
+                    syntaxerror("octal number out of range (0-255): %d", num);
+                o[len++] = num;
+                continue;
+            }
+	    case 'x': case 'u': {
+		int max=2;
+		char bracket = 0;
+                char unicode = 0;
+		if(*s == 'u') {
+		    max = 6;
+                    unicode = 1;
+                }
+                s++;
+                if(s==end) syntaxerror("invalid \\u or \\x at end of string");
+		if(*s == '{')  {
+                    s++;
+                    if(s==end) syntaxerror("invalid \\u{ at end of string");
+		    bracket=1;
+		}
+		unsigned int num=0;
+                int nr = 0;
+		while(strchr("0123456789abcdefABCDEF", *s) && (bracket || nr < max) && s<end) {
+		    num <<= 4;
+		    if(*s>='0' && *s<='9') num |= *s - '0';
+		    if(*s>='a' && *s<='f') num |= *s - 'a' + 10;
+		    if(*s>='A' && *s<='F') num |= *s - 'A' + 10;
+                    nr++;
+		    s++;
+		}
+		if(bracket) {
+                    if(*s=='}' && s<end) {
+                        s++;
+                    } else {
+                        syntaxerror("missing terminating '}'");
+                    }
+		}
+                if(unicode) {
+                    char*utf8 = getUTF8(num);
+                    while(*utf8) {
+                        o[len++] = *utf8++;
+                    }
+                } else {
+                    if(num>256) 
+                        syntaxerror("byte out of range (0-255): %d", num);
+                    o[len++] = num;
+                }
+		break;
+	    }
+            default:
+                syntaxerror("unknown escape sequence: \"\\%c\"", *s);
+        }
+    }
+    string_t out = string_new(n, len);
+    o[len]=0;
+    return out; 
+}
+
 static void handleString(char*s, int len)
 {
     if(s[0]=='"') {
@@ -140,8 +243,9 @@ static void handleString(char*s, int len)
         s++;len-=2;
     }
     else syntaxerror("String incorrectly terminated");
-    s[len] = 0;
-    avm2_lval.string = s;
+
+    
+    avm2_lval.str = string_unescape(s, len);
 }
 
 
