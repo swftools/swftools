@@ -505,6 +505,7 @@ native                       {c();return m(KW_NATIVE);}
 static                       {c();return m(KW_STATIC);}
 import                       {c();return m(KW_IMPORT);}
 typeof                       {c();return m(KW_TYPEOF);}
+throw                        {c();return m(KW_THROW);}
 class                        {c();return m(KW_CLASS);}
 const                        {c();return m(KW_CONST);}
 catch                        {c();return m(KW_CATCH);}
