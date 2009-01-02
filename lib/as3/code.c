@@ -911,7 +911,7 @@ int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*p
                     free(m);
                 } else if(*p == 'm') {
                     abc_method_t*m = (abc_method_t*)data;
-                    fprintf(fo, "[method %s]", m->name);
+                    fprintf(fo, "[method %08x %s]", m, m->name);
                 } else if(*p == 'c') {
                     abc_class_t*cls = (abc_class_t*)data;
                     char*classname = multiname_tostring(cls->classname);
