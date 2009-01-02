@@ -25,6 +25,11 @@ package {
             switch(1) {
                 case 10:
             }
+            
+            switch(1) {
+                case 1: late1 = false; break;
+            }
         }
+        var late1:Boolean;
     }
 }
