@@ -887,6 +887,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         syntaxerror("not able to start another method scope");
     }
     new_state();
+    global->variable_count = 0;
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->initcode = 0;
     state->method->has_super = 0;
@@ -897,13 +898,10 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
     } else {
         state->method->is_global = 1;
-        new_variable("globalscope", 0, 0);
-       
-        /* for global methods, always push local_0 on the scope stack: */
-        state->method->late_binding = 1;
-    }
+        state->method->late_binding = 1; // for global methods, always push local_0 on the scope stack
 
-    global->variable_count = 0;
+        new_variable("globalscope", 0, 0);
+    }
 
     /* state->vars is initialized by state_new */
 
