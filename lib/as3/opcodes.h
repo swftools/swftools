@@ -501,7 +501,16 @@ code_t* abc_urshift(code_t*prev);
 code_t* abc_applytype(code_t*prev, int v);
 #define applytype(method,v) (method->code = abc_applytype(method->code,v))
 #define OPCODE_APPLYTYPE 0x53
-code_t* abc___break__(code_t*prev);
-#define __break__(method) (method->code = abc___break__(method->code))
+code_t* abc___continue__(code_t*prev, char* name);
+#define __continue__(method,name) (method->code = abc___continue__(method->code,name))
+#define OPCODE___CONTINUE__ 0xfe
+code_t* abc___continue__2(code_t*prev, string_t* s);
+#define __continue__2(method,s) (method->code = abc___continue__2(method->code,s))
+#define OPCODE___CONTINUE__2 0xfe
+code_t* abc___break__(code_t*prev, char* name);
+#define __break__(method,name) (method->code = abc___break__(method->code,name))
 #define OPCODE___BREAK__ 0xff
+code_t* abc___break__2(code_t*prev, string_t* s);
+#define __break__2(method,s) (method->code = abc___break__2(method->code,s))
+#define OPCODE___BREAK__2 0xff
 #endif
