@@ -83,6 +83,10 @@ abc_file_t*abc_file_new();
 #define TRAIT_CLASS 4
 #define TRAIT_FUNCTION 5
 #define TRAIT_CONST 6
+            
+#define TRAIT_ATTR_FINAL 0x10
+#define TRAIT_ATTR_OVERRIDE 0x20
+#define TRAIT_ATTR_METADATA 0x40
 
 
 struct _trait {
@@ -103,6 +107,8 @@ struct _trait {
     };
     constant_t*value;
 };
+
+trait_t*trait_new_method(trait_list_t**traits, multiname_t*name, abc_method_t*m);
 
 #define CLASS_SEALED 1
 #define CLASS_FINAL 2
@@ -131,6 +137,8 @@ struct _abc_class {
     int index; //filled in during writing
 };
 
+abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body);
+
 abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass);
 abc_class_t* abc_class_new2(abc_file_t*file, char*classname, char*superclass);
 void abc_class_sealed(abc_class_t*c);
@@ -141,9 +149,10 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
 
 trait_t* abc_class_find_slotid(abc_class_t*c, int slotid);
 
-abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype);
+abc_method_t* abc_class_getconstructor(abc_class_t*cls, multiname_t*returntype);
+abc_method_t* abc_class_getstaticconstructor(abc_class_t*cls, multiname_t*returntype);
+
 abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, multiname_t*name);
-abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype);
 abc_method_t* abc_class_staticmethod(abc_class_t*cls, multiname_t*returntype, multiname_t*name);
 trait_t*      abc_class_slot(abc_class_t*cls, multiname_t*name, multiname_t*type);
 trait_t*      abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*type);

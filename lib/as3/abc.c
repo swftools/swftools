@@ -170,7 +170,7 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
     list_append(c->interfaces, multiname_clone(interface));
 }
 
-static abc_method_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*returntype, char body)
+abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body)
 {
     /* construct method object */
     NEW(abc_method_t,m);
@@ -200,7 +200,7 @@ abc_method_t* abc_class_getconstructor(abc_class_t*cls, multiname_t*returntype)
     if(cls->constructor) {
         return cls->constructor;
     }
-    abc_method_t* m = add_method(cls->file, cls, returntype, 1);
+    abc_method_t* m = abc_method_new(cls->file, returntype, 1);
     cls->constructor = m;
     return m;
 }
@@ -210,7 +210,7 @@ abc_method_t* abc_class_getstaticconstructor(abc_class_t*cls, multiname_t*return
     if(cls->static_constructor) {
         return cls->static_constructor;
     }
-    abc_method_t* m = add_method(cls->file, cls, returntype, 1);
+    abc_method_t* m = abc_method_new(cls->file, returntype, 1);
     cls->static_constructor = m;
     return m;
 }
@@ -227,7 +227,7 @@ trait_t*trait_new(int type, multiname_t*name, int data1, int data2, constant_t*v
     trait->value = v;
     return trait;
 }
-trait_t*trait_new_member(multiname_t*type, multiname_t*name,constant_t*v)
+trait_t*trait_new_member(trait_list_t**traits, multiname_t*type, multiname_t*name,constant_t*v)
 {
     int kind = TRAIT_SLOT;
     trait_t*trait = malloc(sizeof(trait_t));
@@ -236,9 +236,12 @@ trait_t*trait_new_member(multiname_t*type, multiname_t*name,constant_t*v)
     trait->attributes = kind&0xf0;
     trait->name = name;
     trait->type_name = type;
+    
+    trait->slot_id = list_length_(traits)+1;
+    list_append_(traits, trait);
     return trait;
 }
-trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
+trait_t*trait_new_method(trait_list_t**traits, multiname_t*name, abc_method_t*m)
 {
     int type = TRAIT_METHOD;
     trait_t*trait = malloc(sizeof(trait_t));
@@ -247,28 +250,27 @@ trait_t*trait_new_method(multiname_t*name, abc_method_t*m)
     trait->attributes = type&0xf0;
     trait->name = name;
     trait->method = m;
+    
+    /* start assigning traits at position #1.
+       Weird things happen when assigning slot 0- slot 0 and 1 seem
+       to be identical */
+    trait->slot_id = list_length_(traits)+1;
+    list_append_(traits, trait);
     return trait;
 }
 
 abc_method_t* abc_class_method(abc_class_t*cls, multiname_t*returntype, multiname_t*name)
 {
     abc_file_t*file = cls->file;
-    abc_method_t* m = add_method(cls->file, cls, returntype, !(cls->flags&CLASS_INTERFACE));
-    m->trait = trait_new_method(multiname_clone(name), m);
-    /* start assigning traits at position #1.
-       Weird things happen when assigning slot 0- slot 0 and 1 seem
-       to be identical */
-    m->trait->slot_id = list_length(cls->traits)+1;
-    list_append(cls->traits, m->trait);
+    abc_method_t* m = abc_method_new(cls->file, returntype, !(cls->flags&CLASS_INTERFACE));
+    m->trait = trait_new_method(&cls->traits, multiname_clone(name), m);
     return m;
 }
 abc_method_t* abc_class_staticmethod(abc_class_t*cls, multiname_t*returntype, multiname_t*name)
 {
     abc_file_t*file = cls->file;
-    abc_method_t* m = add_method(cls->file, cls, returntype, !(cls->flags&CLASS_INTERFACE));
-    m->trait = trait_new_method(multiname_clone(name), m);
-    m->trait->slot_id = list_length(cls->static_traits)+1;
-    list_append(cls->static_traits, m->trait);
+    abc_method_t* m = abc_method_new(cls->file, returntype, !(cls->flags&CLASS_INTERFACE));
+    m->trait = trait_new_method(&cls->static_traits, multiname_clone(name), m);
     return m;
 }
 
@@ -277,9 +279,7 @@ trait_t* abc_class_slot(abc_class_t*cls, multiname_t*name, multiname_t*type)
     abc_file_t*file = cls->file;
     multiname_t*m_name = multiname_clone(name);
     multiname_t*m_type = multiname_clone(type);
-    trait_t*t = trait_new_member(m_type, m_name, 0);
-    t->slot_id = list_length(cls->traits)+1;
-    list_append(cls->traits, t);
+    trait_t*t = trait_new_member(&cls->traits, m_type, m_name, 0);
     return t;
 }
 trait_t* abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*type)
@@ -287,9 +287,7 @@ trait_t* abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*typ
     abc_file_t*file = cls->file;
     multiname_t*m_name = multiname_clone(name);
     multiname_t*m_type = multiname_clone(type);
-    trait_t*t = trait_new_member(m_type, m_name, 0);
-    t->slot_id = list_length(cls->static_traits)+1;
-    list_append(cls->static_traits, t);
+    trait_t*t = trait_new_member(&cls->traits, m_type, m_name, 0);
     return t;
 }
 
@@ -331,7 +329,7 @@ int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc
 
 abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype)
 {
-    abc_method_t*m = add_method(file, 0, returntype, 1);
+    abc_method_t*m = abc_method_new(file, returntype, 1);
     abc_script_t* s = malloc(sizeof(abc_script_t));
     s->method = m;
     s->traits = list_new();
