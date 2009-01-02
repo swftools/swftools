@@ -340,10 +340,17 @@ abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype)
     return s;
 }
 
-static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file);
+static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file, dict_t*methods_seen);
 
-static void dump_method(FILE*fo, const char*prefix, const char*attr, const char*type, const char*name, abc_method_t*m, abc_file_t*file)
+static void dump_method(FILE*fo, const char*prefix, 
+                                 const char*attr, 
+                                 const char*type, 
+                                 const char*name, 
+                                 abc_method_t*m, abc_file_t*file, dict_t*methods_seen)
 {
+    if(methods_seen)
+        dict_put(methods_seen, m, 0);
+
     char*return_type = 0;
     if(m->return_type)
         return_type = multiname_tostring(m->return_type);
@@ -386,7 +393,7 @@ static void dump_method(FILE*fo, const char*prefix, const char*attr, const char*
     char prefix2[80];
     sprintf(prefix2, "%s    ", prefix);
     if(c->traits)
-        traits_dump(fo, prefix, c->traits, file);
+        traits_dump(fo, prefix, c->traits, file, methods_seen);
     fprintf(fo, "%s{\n", prefix);
     code_dump(c->code, c->exceptions, file, prefix2, fo);
     fprintf(fo, "%s}\n\n", prefix);
@@ -551,7 +558,7 @@ static void traits_write(pool_t*pool, TAG*tag, trait_list_t*traits)
 }
 
 
-static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file)
+static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file, dict_t*methods_seen)
 {
     int t;
     while(traits) {
@@ -574,16 +581,16 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 
 	if(kind == TRAIT_METHOD) {
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, type, "method", name, m, file);
+	    dump_method(fo, prefix, type, "method", name, m, file, methods_seen);
 	} else if(kind == TRAIT_GETTER) {
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, type, "getter", name, m, file);
+	    dump_method(fo, prefix, type, "getter", name, m, file, methods_seen);
         } else if(kind == TRAIT_SETTER) {
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, type, "setter", name, m, file);
+	    dump_method(fo, prefix, type, "setter", name, m, file, methods_seen);
 	} else if(kind == TRAIT_FUNCTION) { // function
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, type, "function", name, m, file);
+	    dump_method(fo, prefix, type, "function", name, m, file, methods_seen);
 	} else if(kind == TRAIT_CLASS) { // class
             abc_class_t*cls = trait->cls;
             if(!cls) {
@@ -630,6 +637,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
         fprintf(fo, "%s#\n", prefix);
     }
 
+    dict_t*methods_seen = dict_new2(&ptr_type);
     for(t=0;t<file->classes->num;t++) {
         abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
         char prefix2[80];
@@ -667,25 +675,45 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
             fprintf(fo, "extra flags=%02x\n", cls->flags&0xf0);
 	fprintf(fo, "%s{\n", prefix);
 
-        if(cls->static_constructor)
-            dump_method(fo, prefix2, "", "staticconstructor", "", cls->static_constructor, file);
-        traits_dump(fo, prefix2, cls->static_traits, file);
+        dict_put(methods_seen, cls->static_constructor, 0);
+        dict_put(methods_seen, cls->constructor, 0);
+
+        if(cls->static_constructor) {
+            dump_method(fo, prefix2, "", "staticconstructor", "", cls->static_constructor, file, methods_seen);
+        }
+        traits_dump(fo, prefix2, cls->static_traits, file, methods_seen);
 	
         char*n = multiname_tostring(cls->classname);
         if(cls->constructor)
-	    dump_method(fo, prefix2, "", "constructor", n, cls->constructor, file);
+	    dump_method(fo, prefix2, "", "constructor", n, cls->constructor, file, methods_seen);
         free(n);
-	traits_dump(fo, prefix2,cls->traits, file);
+	traits_dump(fo, prefix2,cls->traits, file, methods_seen);
         fprintf(fo, "%s}\n", prefix);
-
     }
     fprintf(fo, "%s\n", prefix);
 
     for(t=0;t<file->scripts->num;t++) {
         abc_script_t*s = (abc_script_t*)array_getvalue(file->scripts, t);
-        dump_method(fo, prefix, "", "initmethod", "init", s->method, file);
-        traits_dump(fo, prefix, s->traits, file);
+        dump_method(fo, prefix, "", "initmethod", "init", s->method, file, methods_seen);
+        traits_dump(fo, prefix, s->traits, file, methods_seen);
     }
+    
+    char extra=0;
+    for(t=0;t<file->methods->num;t++) {
+        abc_method_t*m = (abc_method_t*)array_getvalue(file->methods, t);
+        if(!dict_contains(methods_seen, m)) {
+            if(!extra) {
+                extra=1;
+                fprintf(fo, "\n");
+                fprintf(fo, "%s//internal (non-class non-script) methods:\n", prefix);
+            }
+            char name[18];
+            sprintf(name, "%08x ", m);
+            dump_method(fo, prefix, "", "internalmethod", name, m, file, methods_seen);
+        }
+    }
+    dict_destroy(methods_seen);
+
     return file;
 }
 
