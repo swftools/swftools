@@ -50,10 +50,17 @@ struct _params {
 struct _typedcode {
     code_t*c;
     classinfo_t*t;
-    
-    /* if t == TYPE_FUNCTION */
-    memberinfo_t*f;
 };
+
+/* small helper structs: */
+typedef struct _codeandnumber {
+    code_t*cc;
+    int len;
+} codeandnumber_t;
+typedef struct _for_start {
+    char*name;
+    char each;
+} for_start_t;
 
 #define FLAG_PUBLIC 1
 #define FLAG_FINAL 2
