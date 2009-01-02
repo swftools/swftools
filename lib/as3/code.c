@@ -466,7 +466,7 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
            c->opcode == OPCODE___CONTINUE__) {
             fprintf(stderr, "Unresolved %s\n", op->name);
         } else {
-            fprintf(stderr, "Error: writing undefined internal opcode %s", op->name);
+            fprintf(stderr, "Error: writing undefined internal opcode %s\n", op->name);
         }
     }
 
