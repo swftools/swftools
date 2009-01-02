@@ -397,6 +397,7 @@ void initialize_scanner();
 %s BEGINNING
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
+_        \[^a-zA-Z0-9_\\]
 
 HEXINT    0x[a-zA-Z0-9]+
 INT       [0-9]+
@@ -439,12 +440,14 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
-{NAME}{S}*:{S}*for           {c();handleLabel(yytext, yyleng-3);return T_FOR;}
-{NAME}{S}*:{S}*do            {c();handleLabel(yytext, yyleng-2);return T_DO;}
-{NAME}{S}*:{S}*while         {c();handleLabel(yytext, yyleng-5);return T_WHILE;}
+{NAME}{S}*:{S}*for{_}        {c();handleLabel(yytext, yyleng-3);return T_FOR;}
+{NAME}{S}*:{S}*do{_}         {c();handleLabel(yytext, yyleng-2);return T_DO;}
+{NAME}{S}*:{S}*while{_}      {c();handleLabel(yytext, yyleng-5);return T_WHILE;}
+{NAME}{S}*:{S}*switch{_}     {c();handleLabel(yytext, yyleng-6);return T_SWITCH;}
 for                          {c();avm2_lval.id="";return T_FOR;}
 do                           {c();avm2_lval.id="";return T_DO;}
 while                        {c();avm2_lval.id="";return T_WHILE;}
+switch                       {c();avm2_lval.id="";return T_SWITCH;}
 
 [&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 [|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}
@@ -482,6 +485,7 @@ continue                     {c();return m(KW_CONTINUE);}
 override                     {c();return m(KW_OVERRIDE);}
 internal                     {c();return m(KW_INTERNAL);}
 function                     {c();return m(KW_FUNCTION);}
+default                      {c();return m(KW_DEFAULT);}
 package                      {c();return m(KW_PACKAGE);}
 private                      {c();return m(KW_PRIVATE);}
 dynamic                      {c();return m(KW_DYNAMIC);}
@@ -495,6 +499,7 @@ import                       {c();return m(KW_IMPORT);}
 typeof                       {c();return m(KW_TYPEOF);}
 class                        {c();return m(KW_CLASS);}
 const                        {c();return m(KW_CONST);}
+catch                        {c();return m(KW_CATCH);}
 final                        {c();return m(KW_FINAL);}
 false                        {c();return m(KW_FALSE);}
 break                        {c();return m(KW_BREAK);}
@@ -503,11 +508,13 @@ void                         {c();return m(KW_VOID);}
 true                         {c();return m(KW_TRUE);}
 null                         {c();return m(KW_NULL);}
 else                         {c();return m(KW_ELSE);}
+case                         {c();return m(KW_CASE);}
 use                          {c();return m(KW_USE);}
 new                          {c();return m(KW_NEW);}
 get                          {c();return m(KW_GET);}
 set                          {c();return m(KW_SET);}
 var                          {c();return m(KW_VAR);}
+try                          {c();return m(KW_TRY);}
 is                           {c();return m(KW_IS) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
