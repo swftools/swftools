@@ -108,8 +108,6 @@ struct _trait {
     constant_t*value;
 };
 
-trait_t*trait_new_method(trait_list_t**traits, multiname_t*name, abc_method_t*m);
-
 #define CLASS_SEALED 1
 #define CLASS_FINAL 2
 #define CLASS_INTERFACE 4
@@ -136,8 +134,6 @@ struct _abc_class {
     
     int index; //filled in during writing
 };
-
-abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body);
 
 abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass);
 abc_class_t* abc_class_new2(abc_file_t*file, char*classname, char*superclass);
