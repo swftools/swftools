@@ -755,8 +755,15 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
 {
     memberinfo_t*minfo = 0;
     if(getset != KW_GET && getset != KW_SET) {
-        if(registry_findmember(state->cls->info, name)) {
-            syntaxerror("class already contains a member/method called '%s'", name);
+        if((minfo = registry_findmember(state->cls->info, name, 0))) {
+            if(minfo->parent == state->cls->info) {
+                syntaxerror("class already contains a member/method called '%s'", name);
+            } else if(!minfo->parent) {
+                syntaxerror("internal error: overriding method %s, which doesn't have parent", name);
+            } else {
+                if(!(minfo->flags&(FLAG_STATIC|FLAG_PRIVATE)))
+                    syntaxerror("function %s already exists in superclass. Did you forget the 'override' keyword?");
+            }
         }
         minfo = memberinfo_register(state->cls->info, name, MEMBER_METHOD);
         minfo->return_type = return_type;
@@ -770,7 +777,8 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
             type = return_type;
         else if(params->list)
             type = params->list->param->type;
-        if((minfo=registry_findmember(state->cls->info, name))) {
+        // not sure wether to look into superclasses here, too
+        if((minfo=registry_findmember(state->cls->info, name, 0))) {
             if(minfo->kind & ~(MEMBER_GET|MEMBER_SET))
                 syntaxerror("class already contains a member or method called '%s'", name);
             if(minfo->kind & gs)
@@ -794,6 +802,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
     if(flags&FLAG_PRIVATE) minfo->flags |= FLAG_PRIVATE;
     if(flags&FLAG_PROTECTED) minfo->flags |= FLAG_PROTECTED;
     if(flags&FLAG_INTERNAL) minfo->flags |= FLAG_INTERNAL;
+    if(flags&FLAG_OVERRIDE) minfo->flags |= FLAG_OVERRIDE;
     return minfo;
 }
 
@@ -864,6 +873,7 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     //flash doesn't seem to allow us to access function slots
     //state->method->info->slot = slot;
 
+    if(flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
     if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
     if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
     if(params->varargs) f->flags |= METHOD_NEED_REST;
@@ -1394,7 +1404,7 @@ MAYBE_CASE_LIST : CASE_LIST DEFAULT {$$=code_append($1,$2);}
 CASE_LIST: CASE             {$$=$1}
 CASE_LIST: CASE_LIST CASE   {$$=code_append($$,$2);}
 
-CASE: "case" CONSTANT ':' MAYBECODE {
+CASE: "case" E ':' MAYBECODE {
     $$ = abc_dup(0);
     $$ = code_append($$, $2.c);
     code_t*j = $$ = abc_ifne($$, 0);
@@ -1419,7 +1429,7 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
         if(c->opcode == OPCODE_IFNE) {
             if(!c->next) syntaxerror("internal error in fallthrough handling");
             lastblock=c->next;
-        } else if(c->opcode == OPCODE___CONTINUE__) {
+        } else if(c->opcode == OPCODE___FALLTHROUGH__) {
             if(lastblock) {
                 c->opcode = OPCODE_JUMP;
                 c->branch = lastblock;
@@ -2265,7 +2275,7 @@ E : "super" '.' T_IDENTIFIER
               classinfo_t*t = state->cls->info->superclass;
               if(!t) t = TYPE_OBJECT;
 
-              memberinfo_t*f = registry_findmember(t, $3);
+              memberinfo_t*f = registry_findmember(t, $3, 1);
               namespace_t ns = {flags2access(f->flags), ""};
               MEMBER_MULTINAME(m, f, $3);
               $$.c = 0;
@@ -2283,7 +2293,7 @@ E : E '.' T_IDENTIFIER
                  is_static = 1;
              }
              if(t) {
-                 memberinfo_t*f = registry_findmember(t, $3);
+                 memberinfo_t*f = registry_findmember(t, $3, 1);
                  char noslot = 0;
                  if(f && !is_static != !(f->flags&FLAG_STATIC))
                     noslot=1;
@@ -2321,7 +2331,7 @@ VAR_READ : T_IDENTIFIER {
         $$.c = abc_getlocal($$.c, i);
 
     /* look at current class' members */
-    } else if((f = registry_findmember(state->cls->info, $1))) {
+    } else if((f = registry_findmember(state->cls->info, $1, 1))) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
         int i_am_static = ((state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC);
@@ -2351,7 +2361,7 @@ VAR_READ : T_IDENTIFIER {
             $$.t = f->type;
         }
     
-    /* look at classes in the current package and imported classes */
+    /* look at actual classes, in the current package and imported */
     } else if((a = find_class($1))) {
         if(a->flags & FLAG_METHOD) {
             MULTINAME(m, a);
