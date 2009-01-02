@@ -211,7 +211,7 @@
 %nonassoc '^'
 %nonassoc '&'
 %nonassoc "==" "!=" "===" "!=="
-%nonassoc "is" "as"
+%nonassoc "is" "as" "in"
 %nonassoc "<=" '<' ">=" '>' "instanceof" // TODO: support "a < b < c" syntax?
 %left "<<" ">>" ">>>" 
 %left below_minus
@@ -222,6 +222,7 @@
 %nonassoc below_curly
 %left '[' ']' '{' "new" '.' ".." "::"
 %nonassoc T_IDENTIFIER
+%left above_identifier
 %left below_else
 %nonassoc "else"
 %left '('
@@ -2102,6 +2103,11 @@ E : E '*' E {$$.c = code_append($1.c,$3.c);
                 $$.t = TYPE_NUMBER;
              }
             }
+
+E : E "in" E {$$.c = code_append($1.c,$3.c);
+              $$.c = abc_in($$.c);
+              $$.t = TYPE_BOOLEAN;
+             }
 
 E : E "as" E {char use_astype=0; // flash player's astype works differently than astypelate
               if(use_astype && TYPE_IS_CLASS($3.t)) {
