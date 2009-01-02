@@ -29,5 +29,6 @@
 #include "registry.h"
 
 dict_t* builtin_getclasses();
+dict_t* builtin_getglobalfunctions();
 
 #endif

@@ -953,6 +953,18 @@ code_t* abc_applytype(code_t*prev, int v)
     self->data[0] = (void*)(ptroff_t)v;
     return self;
 }
+code_t* abc___fallthrough__(code_t*prev, char* name)
+{
+    code_t*self = add_opcode(prev, 0xfd);
+    self->data[0] = string_new4(name);
+    return self;
+}
+code_t* abc___fallthrough__2(code_t*prev, string_t* s)
+{
+    code_t*self = add_opcode(prev, 0xfd);
+    self->data[0] = string_dup3(s);
+    return self;
+}
 code_t* abc___continue__(code_t*prev, char* name)
 {
     code_t*self = add_opcode(prev, 0xfe);
