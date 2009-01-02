@@ -339,7 +339,7 @@ static inline int handleint()
 
 static inline int handlehex()
 {
-    char l = (yytext[0]=='-');
+    char l = (yytext[0]=='-')+2;
 
     if(yyleng-l>8)
         syntaxerror("integer overflow");
@@ -359,7 +359,7 @@ static inline int handlehex()
     if(!l && v>2147483647)
         syntaxerror("unsigned integer overflow");
 
-    if(l) {
+    if(l==3) {
         return setint(-(int)v);
     } else {
         return setuint(v);
