@@ -109,7 +109,7 @@ char* kind2string(int kind)
 {
 }
 
-void write_member_info(FILE*fi, char*id2, const char*name, int flags, trait_t*trait)
+void write_member_info(FILE*fi, char*parent, char*id2, const char*name, int flags, trait_t*trait)
 {
     char*retvalue = 0;
     char*type="0";
@@ -141,6 +141,12 @@ void write_member_info(FILE*fi, char*id2, const char*name, int flags, trait_t*tr
         fprintf(fi, ", 0");
     else
         fprintf(fi, ", &%s", retvalue);
+  
+    if(!parent) 
+        fprintf(fi, ", 0");
+    else
+        fprintf(fi, ", &%s", parent); // parent
+
     fprintf(fi, "};\n");
 }
 
@@ -257,7 +263,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                 if(pass==0) {
                     fprintf(fi, "static memberinfo_t %s;\n", id2);
                 } if(pass==1) {
-                    write_member_info(fi, id2, name, flags, trait);
+                    write_member_info(fi, id, id2, name, flags, trait);
                 } else if(pass==2) {
                     fprintf(fi, "    dict_put(&%s.members, \"%s\", &%s);\n", id, name, id2);
                 }
@@ -317,7 +323,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                     fprintf(fi, "static memberinfo_t %s;\n", id2);
                     fprintf(fi, "static classinfo_t %s_class;\n", id2);
                 } else if(pass==1) {
-                    write_member_info(fi, id2, name, flags, trait);
+                    write_member_info(fi, 0, id2, name, flags, trait);
                     fprintf(fi, "static classinfo_t %s_class = {0x%02x, 0x%02x, \"%s\", \"%s\", &%s, 0, members:{0}};\n", 
                             id2,
                             trait->name->ns->access, clsflags,
