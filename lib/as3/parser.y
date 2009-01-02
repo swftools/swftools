@@ -58,6 +58,8 @@
     char*id;
     constant_t*constant;
     for_start_t for_start;
+    abc_exception_t *exception;
+    abc_exception_list_t *exception_list;
 }
 
 
@@ -95,6 +97,7 @@
 %token<token> KW_CASE "case"
 %token<token> KW_SET "set"
 %token<token> KW_VOID "void"
+%token<token> KW_THROW "throw"
 %token<token> KW_STATIC
 %token<token> KW_INSTANCEOF "instanceof"
 %token<token> KW_IMPORT "import"
@@ -160,7 +163,9 @@
 %type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH
 %type <code> PACKAGE_DECLARATION SLOT_DECLARATION
 %type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
-%type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST
+%type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW 
+%type <exception> CATCH
+%type <exception_list> CATCH_LIST
 %type <code> CLASS_DECLARATION
 %type <code> NAMESPACE_DECLARATION
 %type <code> INTERFACE_DECLARATION
@@ -169,7 +174,7 @@
 %type <value> MAYBEEXPRESSION
 %type <value> E DELETE
 %type <value> CONSTANT
-%type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE
+%type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY
 %type <token> USE_NAMESPACE
 %type <code> FOR_INIT
 %type <code> IMPORT
@@ -289,6 +294,7 @@ typedef struct _methodstate {
     char is_constructor;
     char has_super;
     char is_global;
+    abc_exception_list_t*exceptions;
 } methodstate_t;
 
 typedef struct _state {
@@ -302,6 +308,8 @@ typedef struct _state {
   
     classstate_t*cls;   
     methodstate_t*method;
+
+    char*exception_name;
     
     dict_t*vars;
 } state_t;
@@ -957,11 +965,13 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     }
     check_code_for_break(body);
 
-    if(f->body)
+    if(f->body) {
         f->body->code = body;
-    else //interface
+        f->body->exceptions = state->method->exceptions;
+    } else { //interface
         if(body)
             syntaxerror("interface methods can't have a method body");
+    }
        
     free(state->method);state->method=0;
     old_state();
@@ -1316,18 +1326,16 @@ CODE_STATEMENT: WHILE
 CODE_STATEMENT: DO_WHILE 
 CODE_STATEMENT: SWITCH 
 CODE_STATEMENT: IF
+CODE_STATEMENT: TRY
 
 // code which may appear anywhere
-//CODEPIECE: PACKAGE_DECLARATION
-//CODEPIECE: CLASS_DECLARATION
-//CODEPIECE: FUNCTION_DECLARATION
-//CODEPIECE: INTERFACE_DECLARATION
 CODEPIECE: ';' {$$=0;}
 CODEPIECE: VARIABLE_DECLARATION
 CODEPIECE: CODE_STATEMENT
 CODEPIECE: BREAK
 CODEPIECE: CONTINUE
 CODEPIECE: RETURN
+CODEPIECE: THROW
 
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=0;}
 CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=0;}
@@ -1583,6 +1591,70 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
         c=c->prev;
     }
     old_state();
+}
+
+/* ------------ try / catch /finally ---------------- */
+
+FINALLY: "finally" '{' CODE '}'
+MAYBE_FINALLY: | FINALLY 
+
+CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name=$3;new_variable($3, $4, 0);} 
+        '{' CODE '}' {
+    code_t*c = 0;
+    int i = find_variable_safe($3)->index;
+    c = abc_setlocal(c, i);
+    c = code_append(c, $8);
+    c = abc_kill(c, i);
+    
+    namespace_t name_ns = {ACCESS_PACKAGE, ""};
+    multiname_t name = {QNAME, &name_ns, 0, $3};
+
+    NEW(abc_exception_t, e)
+    e->exc_type = sig2mname($4);
+    e->var_name = multiname_clone(&name);
+    e->target = code_start(c);
+    $$ = e;
+    old_state();
+}
+
+CATCH_LIST: CATCH {$$=list_new();list_append($$,$1);}
+CATCH_LIST: CATCH_LIST CATCH {$$=$1;list_append($$,$2);}
+
+TRY : "try" '{' CODE '}' CATCH_LIST MAYBE_FINALLY {
+    code_t*start = code_start($3);
+    $$=$3;
+
+    code_t*out = abc_nop(0);
+    code_t*jmp = $$ = abc_jump($$, out);
+
+    abc_exception_list_t*l = $5;
+    while(l) {
+        abc_exception_t*e = l->abc_exception;
+        e->from = start;
+        e->to = jmp;
+        $$ = code_append($$, e->target);
+        $$ = abc_jump($$, out);
+        l = l->next;
+    }
+    $$ = code_append($$, out);
+    jmp->branch = out;
+        
+    list_concat(state->method->exceptions, $5);
+}
+
+/* ------------ throw ------------------------------- */
+
+THROW : "throw" EXPRESSION {
+    $$=$2.c;
+    $$=abc_throw($$);
+}
+THROW : "throw" %prec prec_none {
+    if(!state->exception_name)
+        syntaxerror("re-throw only possible within a catch block");
+    variable_t*v = find_variable(state->exception_name);
+    $$=code_new();
+    $$=abc_getlocal($$, v->index);
+    $$=abc_throw($$);
 }
 
 /* ------------ packages and imports ---------------- */
