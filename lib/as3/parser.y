@@ -360,11 +360,6 @@ static namespace_list_t nl2 = {&ns2,&nl3};
 static namespace_list_t nl1 = {&ns1,&nl2};
 static namespace_set_t nopackage_namespace_set = {&nl1};
 
-static void init_globals()
-{
-    global = rfx_calloc(sizeof(global_t));
-}
-
 static void new_state()
 {
     NEW(state_t, s);
@@ -425,8 +420,10 @@ static void old_state()
 }
 void initialize_state()
 {
-    init_globals();
+    global = rfx_calloc(sizeof(global_t));
     new_state();
+
+    state->package = current_filename;
 
     global->file = abc_file_new();
     global->file->flags &= ~ABCFILE_LAZY;
@@ -491,9 +488,6 @@ void* finalize_state()
 
 static void startpackage(char*name)
 {
-    if(state->package) {
-        syntaxerror("Packages can not be nested."); 
-    } 
     new_state();
     /*printf("entering package \"%s\"\n", name);*/
     state->package = strdup(name);
@@ -822,13 +816,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
     memberinfo_t*minfo = 0;
     if(!state->cls) {
         //package method
-        minfo = rfx_calloc(sizeof(memberinfo_t));
-        classinfo_t*c = classinfo_register(flags2access(flags), state->package, name, 0);
-        c->flags |= FLAG_METHOD;
-        c->function = minfo;
-        minfo->kind = MEMBER_METHOD;
-        minfo->name = name;
-        minfo->flags = FLAG_STATIC;
+        minfo = memberinfo_register_global(flags2access(flags), state->package, name, MEMBER_METHOD);
         minfo->return_type = return_type;
     } else if(getset != KW_GET && getset != KW_SET) {
         //class method
@@ -1099,14 +1087,15 @@ static classinfo_t* find_class(char*name)
     classinfo_t*c=0;
 
     c = registry_findclass(state->package, name);
+    if(c) return c;
 
     /* try explicit imports */
     dictentry_t* e = dict_get_slot(state->imports, name);
+    if(c) return c;
     while(e) {
-        if(c)
-            break;
         if(!strcmp(e->key, name)) {
             c = (classinfo_t*)e->data;
+            if(c) return c;
         }
         e = e->next;
     }
@@ -1114,18 +1103,21 @@ static classinfo_t* find_class(char*name)
     /* try package.* imports */
     import_list_t*l = state->wildcard_imports;
     while(l) {
-        if(c)
-            break;
         //printf("does package %s contain a class %s?\n", l->import->package, name);
         c = registry_findclass(l->import->package, name);
+        if(c) return c;
         l = l->next;
     }
 
     /* try global package */
-    if(!c) {
-        c = registry_findclass("", name);
-    }
-    return c;
+    c = registry_findclass("", name);
+    if(c) return c;
+   
+    /* try local "filename" package */
+    c = registry_findclass(current_filename, name);
+    if(c) return c;
+
+    return 0;
 }
 
 static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore)
@@ -1296,6 +1288,7 @@ PROGRAM_CODE: PACKAGE_DECLARATION
             | FUNCTION_DECLARATION
             | SLOT_DECLARATION
             | PACKAGE_INITCODE
+            | ';'
 
 MAYBE_INPACKAGE_CODE_LIST: | INPACKAGE_CODE_LIST
 INPACKAGE_CODE_LIST: INPACKAGE_CODE 
@@ -1306,6 +1299,7 @@ INPACKAGE_CODE: INTERFACE_DECLARATION
               | FUNCTION_DECLARATION
               | SLOT_DECLARATION
               | PACKAGE_INITCODE
+              | ';'
 
 MAYBECODE: CODE {$$=$1;}
 MAYBECODE: {$$=code_new();}
@@ -1324,11 +1318,11 @@ CODE_STATEMENT: SWITCH
 CODE_STATEMENT: IF
 
 // code which may appear anywhere
-CODEPIECE: ';'                   {$$=0;}
 //CODEPIECE: PACKAGE_DECLARATION
 //CODEPIECE: CLASS_DECLARATION
 //CODEPIECE: FUNCTION_DECLARATION
 //CODEPIECE: INTERFACE_DECLARATION
+CODEPIECE: ';' {$$=0;}
 CODEPIECE: VARIABLE_DECLARATION
 CODEPIECE: CODE_STATEMENT
 CODEPIECE: BREAK
@@ -1695,42 +1689,53 @@ VARCONST: "var" | "const"
 
 SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     int flags = $1;
-    memberinfo_t* info = memberinfo_register(state->cls->info, $3, MEMBER_SLOT);
+    memberinfo_t* info = state->cls?
+            memberinfo_register(state->cls->info, $3, MEMBER_SLOT):
+            memberinfo_register_global(flags2access($1), state->package, $3, MEMBER_SLOT);
+
     info->type = $4;
     info->flags = flags;
-    trait_t*t=0;
 
+    /* slot name */
     namespace_t mname_ns = {flags2access(flags), ""};
     multiname_t mname = {QNAME, &mname_ns, 0, $3};
-
-    if(!(flags&FLAG_STATIC)) {
-        if($4) {
-            MULTINAME(m, $4);
-            t=abc_class_slot(state->cls->abc, &mname, &m);
-        } else {
-            t=abc_class_slot(state->cls->abc, &mname, 0);
-        }
-        info->slot = t->slot_id;
+  
+    trait_list_t**traits;
+    code_t**code;
+    if(!state->cls) {
+        // global variable
+        traits = &global->init->traits;
+        code = &global->init->method->body->code;
+    } else if(flags&FLAG_STATIC) {
+        // static variable
+        traits = &state->cls->abc->static_traits;
+        code = &state->cls->static_init;
     } else {
-        if($4) {
-            MULTINAME(m, $4);
-            t=abc_class_staticslot(state->cls->abc, &mname, &m);
-        } else {
-            t=abc_class_staticslot(state->cls->abc, &mname, 0);
-        }
-        info->slot = t->slot_id;
+        // instance variable
+        traits = &state->cls->abc->traits;
+        code = &state->cls->init;
     }
+    
+    trait_t*t=0;
+    if($4) {
+        MULTINAME(m, $4);
+        t = trait_new_member(traits, multiname_clone(&m), multiname_clone(&mname), 0);
+    } else {
+        t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
+    }
+    info->slot = t->slot_id;
+    
+    /* initalization code (if needed) */
+    code_t*c = 0;
     if($5.c && !is_pushundefined($5.c)) {
-        code_t*c = 0;
         c = abc_getlocal_0(c);
         c = code_append(c, $5.c);
         c = converttype(c, $5.t, $4);
         c = abc_setslot(c, t->slot_id);
-        if(!(flags&FLAG_STATIC))
-            state->cls->init = code_append(state->cls->init, c);
-        else
-            state->cls->static_init = code_append(state->cls->static_init, c);
     }
+
+    *code = code_append(*code, c);
+
     if($2==KW_CONST) {
         t->kind= TRAIT_CONST;
     }
