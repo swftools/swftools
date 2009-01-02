@@ -81,8 +81,8 @@ int main(int argn, char*argv[])
     swf.fileVersion = 9;
     swf.frameRate = 0x2500;
     swf.movieSize.xmin = swf.movieSize.ymin = 0;
-    swf.movieSize.xmax = 1024*20;
-    swf.movieSize.ymax = 768*20;
+    swf.movieSize.xmax = 20*20;
+    swf.movieSize.ymax = 10*20;
     TAG*tag = swf.firstTag = swf_InsertTag(0, ST_DOABC);
     swf_WriteABC(tag, code);
 
