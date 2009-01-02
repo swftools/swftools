@@ -195,15 +195,21 @@ static abc_method_t* add_method(abc_file_t*file, abc_class_t*cls, multiname_t*re
     return m;
 }
 
-abc_method_t* abc_class_constructor(abc_class_t*cls, multiname_t*returntype)
+abc_method_t* abc_class_getconstructor(abc_class_t*cls, multiname_t*returntype)
 {
+    if(cls->constructor) {
+        return cls->constructor;
+    }
     abc_method_t* m = add_method(cls->file, cls, returntype, 1);
     cls->constructor = m;
     return m;
 }
 
-abc_method_t* abc_class_staticconstructor(abc_class_t*cls, multiname_t*returntype)
+abc_method_t* abc_class_getstaticconstructor(abc_class_t*cls, multiname_t*returntype)
 {
+    if(cls->static_constructor) {
+        return cls->static_constructor;
+    }
     abc_method_t* m = add_method(cls->file, cls, returntype, 1);
     cls->static_constructor = m;
     return m;
@@ -336,7 +342,7 @@ abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype)
 
 static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_file_t*file);
 
-static void dump_method(FILE*fo, const char*prefix, const char*type, const char*name, abc_method_t*m, abc_file_t*file)
+static void dump_method(FILE*fo, const char*prefix, const char*attr, const char*type, const char*name, abc_method_t*m, abc_file_t*file)
 {
     char*return_type = 0;
     if(m->return_type)
@@ -344,7 +350,7 @@ static void dump_method(FILE*fo, const char*prefix, const char*type, const char*
     else
         return_type = strdup("void");
     char*paramstr = params_tostring(m->parameters);
-    fprintf(fo, "%s%s %s %s=%s %s (%d params, %d optional)\n", prefix, type, return_type, name, m->name, paramstr, 
+    fprintf(fo, "%s%s%s %s %s=%s %s (%d params, %d optional)\n", prefix, attr, type, return_type, name, m->name, paramstr, 
             list_length(m->parameters),
             list_length(m->optional_parameters)
             );
@@ -553,18 +559,31 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 	char*name = multiname_tostring(trait->name);
 	U8 kind = trait->kind;
         U8 attributes = trait->attributes;
+
+        char a = attributes & (TRAIT_ATTR_OVERRIDE|TRAIT_ATTR_FINAL);
+        char* type = "";
+        if(a==TRAIT_ATTR_FINAL)
+            type = "final ";
+        else if(a==TRAIT_ATTR_OVERRIDE)
+            type = "override ";
+        else if(a==(TRAIT_ATTR_OVERRIDE|TRAIT_ATTR_FINAL))
+            type = "final override ";
+        
+        if(attributes&TRAIT_ATTR_METADATA)
+            fprintf(fo, "<metadata>");
+
 	if(kind == TRAIT_METHOD) {
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, "method", name, m, file);
+	    dump_method(fo, prefix, type, "method", name, m, file);
 	} else if(kind == TRAIT_GETTER) {
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, "getter", name, m, file);
+	    dump_method(fo, prefix, type, "getter", name, m, file);
         } else if(kind == TRAIT_SETTER) {
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, "setter", name, m, file);
+	    dump_method(fo, prefix, type, "setter", name, m, file);
 	} else if(kind == TRAIT_FUNCTION) { // function
             abc_method_t*m = trait->method;
-	    dump_method(fo, prefix, "function", name, m, file);
+	    dump_method(fo, prefix, type, "function", name, m, file);
 	} else if(kind == TRAIT_CLASS) { // class
             abc_class_t*cls = trait->cls;
             if(!cls) {
@@ -649,12 +668,12 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 	fprintf(fo, "%s{\n", prefix);
 
         if(cls->static_constructor)
-            dump_method(fo, prefix2,"staticconstructor", "", cls->static_constructor, file);
+            dump_method(fo, prefix2, "", "staticconstructor", "", cls->static_constructor, file);
         traits_dump(fo, prefix2, cls->static_traits, file);
 	
         char*n = multiname_tostring(cls->classname);
         if(cls->constructor)
-	    dump_method(fo, prefix2, "constructor", n, cls->constructor, file);
+	    dump_method(fo, prefix2, "", "constructor", n, cls->constructor, file);
         free(n);
 	traits_dump(fo, prefix2,cls->traits, file);
         fprintf(fo, "%s}\n", prefix);
@@ -664,7 +683,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 
     for(t=0;t<file->scripts->num;t++) {
         abc_script_t*s = (abc_script_t*)array_getvalue(file->scripts, t);
-        dump_method(fo, prefix,"initmethod", "init", s->method, file);
+        dump_method(fo, prefix, "", "initmethod", "init", s->method, file);
         traits_dump(fo, prefix, s->traits, file);
     }
     return file;
@@ -1286,7 +1305,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     swf_SetU16(tag, 0);
     swf_SetString(tag, "rfx.MainTimeline");
 
-    c = abc_class_staticconstructor(cls, 0)->body;
+    c = abc_class_getstaticconstructor(cls, 0)->body;
     c->old.max_stack = 1;
     c->old.local_count = 1;
     c->old.init_scope_depth = 9;
@@ -1296,7 +1315,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     __ pushscope(c);
     __ returnvoid(c);
 
-    c = abc_class_constructor(cls, 0)->body;
+    c = abc_class_getconstructor(cls, 0)->body;
     c->old.max_stack = 3;
     c->old.local_count = 1;
     c->old.init_scope_depth = 10;
