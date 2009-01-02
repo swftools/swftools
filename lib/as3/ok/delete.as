@@ -6,7 +6,7 @@ package {
     public dynamic class Main extends flash.display.MovieClip {
         function Main() {
             this.xx = new C;
-            if(this.xx is C) trace("ok 1/5");
+            if(this.xx is C) trace("ok 1/2");
             delete this.xx;
             if(this.xx is C) trace("error");
 
@@ -15,7 +15,7 @@ package {
             if(a[0]==1 &&
                a[1]==2 &&
                String(a[2])=="undefined" &&
-               a[3]==4) trace("ok 2/5");
+               a[3]==4) trace("ok 2/2");
 
             //TODO: we can also delete from XML
         }
