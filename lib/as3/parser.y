@@ -876,7 +876,12 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
         }
     }
     check_code_for_break(body);
-    f->body->code = body;
+
+    if(f->body)
+        f->body->code = body;
+    else //interface
+        if(body)
+            syntaxerror("interface methods can't have a method body");
         
     old_state();
 }
