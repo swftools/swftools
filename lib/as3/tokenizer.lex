@@ -129,16 +129,13 @@ void handleInclude(char*text, int len, char quotes)
     //BEGIN(INITIAL); keep context
 }
 
-string_t string_unescape(const char*in, int l)
+static int do_unescape(const char*s, const char*end, char*n) 
 {
-    int len=0;
-    const char*s = in;
-    const char*end = &in[l];
-    char*n = (char*)malloc(l);
     char*o = n;
+    int len=0;
     while(s<end) {
         if(*s!='\\') {
-            o[len++] = *s;
+            if(o) o[len] = *s;len++;
             s++;
             continue;
         }
@@ -158,13 +155,13 @@ string_t string_unescape(const char*in, int l)
             continue;
         }
         switch(*s) {
-	    case '\\': o[len++] = '\\';s++; break;
-	    case '"': o[len++] = '"';s++; break;
-	    case 'b': o[len++] = '\b';s++; break;
-	    case 'f': o[len++] = '\f';s++; break;
-	    case 'n': o[len++] = '\n';s++; break;
-	    case 'r': o[len++] = '\r';s++; break;
-	    case 't': o[len++] = '\t';s++; break;
+	    case '\\': if(o) o[len] = '\\';s++;len++; break;
+	    case '"': if(o) o[len] = '"';s++;len++; break;
+	    case 'b': if(o) o[len] = '\b';s++;len++; break;
+	    case 'f': if(o) o[len] = '\f';s++;len++; break;
+	    case 'n': if(o) o[len] = '\n';s++;len++; break;
+	    case 'r': if(o) o[len] = '\r';s++;len++; break;
+	    case 't': if(o) o[len] = '\t';s++;len++; break;
             case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': {
                 unsigned int num=0;
                 int nr = 0;
@@ -176,7 +173,7 @@ string_t string_unescape(const char*in, int l)
                 }
                 if(num>256) 
                     syntaxerror("octal number out of range (0-255): %d", num);
-                o[len++] = num;
+                if(o) o[len] = num;len++;
                 continue;
             }
 	    case 'x': case 'u': {
@@ -214,12 +211,12 @@ string_t string_unescape(const char*in, int l)
                 if(unicode) {
                     char*utf8 = getUTF8(num);
                     while(*utf8) {
-                        o[len++] = *utf8++;
+                        if(o) o[len] = *utf8;utf8++;len++;
                     }
                 } else {
                     if(num>256) 
                         syntaxerror("byte out of range (0-255): %d", num);
-                    o[len++] = num;
+                    if(o) o[len] = num;len++;
                 }
 		break;
 	    }
@@ -227,8 +224,19 @@ string_t string_unescape(const char*in, int l)
                 syntaxerror("unknown escape sequence: \"\\%c\"", *s);
         }
     }
+    if(o) o[len]=0;
+    return len;
+}
+
+static string_t string_unescape(const char*in, int l)
+{
+    const char*s = in;
+    const char*end = &in[l];
+
+    int len = do_unescape(s, end, 0);
+    char*n = (char*)malloc(len+1);
+    do_unescape(s, end, n);
     string_t out = string_new(n, len);
-    o[len]=0;
     return out; 
 }
 
@@ -504,6 +512,7 @@ final                        {c();return m(KW_FINAL);}
 false                        {c();return m(KW_FALSE);}
 break                        {c();return m(KW_BREAK);}
 super                        {c();return m(KW_SUPER);}
+each                         {c();return m(KW_EACH);}
 void                         {c();return m(KW_VOID);}
 true                         {c();return m(KW_TRUE);}
 null                         {c();return m(KW_NULL);}
@@ -516,6 +525,7 @@ set                          {c();return m(KW_SET);}
 var                          {c();return m(KW_VAR);}
 try                          {c();return m(KW_TRY);}
 is                           {c();return m(KW_IS) ;}
+in                           {c();return m(KW_IN) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
 {NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
