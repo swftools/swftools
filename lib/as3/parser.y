@@ -72,6 +72,7 @@
 %token<id> T_FOR "for"
 %token<id> T_WHILE "while"
 %token<id> T_DO "do"
+%token<id> T_SWITCH "switch"
 
 %token<token> KW_IMPLEMENTS
 %token<token> KW_NAMESPACE "namespace"
@@ -88,6 +89,8 @@
 %token<token> KW_CONTINUE "continue"
 %token<token> KW_CLASS "class"
 %token<token> KW_CONST "const"
+%token<token> KW_CATCH "catch"
+%token<token> KW_CASE "case"
 %token<token> KW_SET "set"
 %token<token> KW_VOID "void"
 %token<token> KW_STATIC
@@ -102,6 +105,7 @@
 %token<token> KW_OVERRIDE
 %token<token> KW_FINAL
 %token<token> KW_GET "get"
+%token<token> KW_TRY "try"
 %token<token> KW_SUPER "super"
 %token<token> KW_EXTENDS
 %token<token> KW_FALSE "false"
@@ -111,6 +115,7 @@
 %token<token> KW_INT "int"
 %token<token> KW_NUMBER "Number"
 %token<token> KW_STRING "String"
+%token<token> KW_DEFAULT "default"
 %token<token> KW_DELETE "delete"
 %token<token> KW_IF "if"
 %token<token> KW_ELSE  "else"
@@ -147,7 +152,7 @@
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE
-%type <code> CODEBLOCK MAYBECODE
+%type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH
 %type <token> PACKAGE_DECLARATION
 %type <token> FUNCTION_DECLARATION
 %type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST
@@ -1192,9 +1197,13 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
 
 /* ------------ code blocks / statements ---------------- */
 
-PROGRAM: MAYBECODE
+PROGRAM: MAYBECODE {
+    /* todo: do something with this code if we're outside a function */
+    if($1)
+        warning("ignored code");
+}
 
-MAYBECODE: CODE {$$=$1;/*TODO: do something with this code if we're not in a function*/}
+MAYBECODE: CODE {$$=$1;}
 MAYBECODE: {$$=code_new();}
 
 CODE: CODE CODEPIECE {
@@ -1215,6 +1224,7 @@ CODEPIECE: VOIDEXPRESSION        {$$=$1}
 CODEPIECE: FOR                   {$$=$1}
 CODEPIECE: WHILE                 {$$=$1}
 CODEPIECE: DO_WHILE              {$$=$1}
+CODEPIECE: SWITCH                {$$=$1}
 CODEPIECE: BREAK                 {$$=$1}
 CODEPIECE: CONTINUE              {$$=$1}
 CODEPIECE: RETURN                {$$=$1}
@@ -1292,7 +1302,7 @@ MAYBEELSE:  %prec below_else {$$ = code_new();}
 MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
-IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
+IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
     $$ = code_new();
     $$ = code_append($$, $4.c);
     code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
@@ -1375,6 +1385,49 @@ CONTINUE : "continue" %prec prec_none {
 }
 CONTINUE : "continue" T_IDENTIFIER {
     $$ = abc___continue__(0, $2);
+}
+
+MAYBE_CASE_LIST :           {$$=0;}
+MAYBE_CASE_LIST : CASE_LIST {$$=$1;}
+MAYBE_CASE_LIST : DEFAULT   {$$=$1;}
+MAYBE_CASE_LIST : CASE_LIST DEFAULT {$$=code_append($1,$2);}
+CASE_LIST: CASE             {$$=$1}
+CASE_LIST: CASE_LIST CASE   {$$=code_append($$,$2);}
+
+CASE: "case" CONSTANT ':' MAYBECODE {
+    $$ = abc_dup(0);
+    $$ = code_append($$, $2.c);
+    code_t*j = $$ = abc_ifne($$, 0);
+    $$ = code_append($$, $4);
+    $$ = abc___continue__($$, "");
+    code_t*e = $$ = abc_nop($$);
+    j->branch = e;
+}
+DEFAULT: "default" ':' MAYBECODE {
+    $$ = $3;
+}
+SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
+    $$=$4.c;
+    $$ = code_append($$, $7);
+    code_t*out = $$ = abc_pop($$);
+    breakjumpsto($$, $1, out);
+    
+    code_t*c = $$,*lastblock=0;
+    while(c) {
+        if(c->opcode == OPCODE_IFNE) {
+            lastblock=c->next;
+        } else if(c->opcode == OPCODE___CONTINUE__) {
+            if(lastblock) {
+                c->opcode = OPCODE_JUMP;
+                c->branch = lastblock;
+            } else {
+                /* fall through end of switch */
+                c->opcode = OPCODE_NOP;
+            }
+        }
+        c=c->prev;
+    }
+    old_state();
 }
 
 /* ------------ packages and imports ---------------- */
