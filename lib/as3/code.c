@@ -1039,6 +1039,14 @@ code_t* code_end(code_t*code)
         code = code->next;
     return code;
 }
+code_t* code_start(code_t*code)
+{
+    if(!code)
+        return 0;
+    while(code->prev)
+        code = code->prev;
+    return code;
+}
 
 code_t* code_append(code_t*code, code_t*toappend)
 {

@@ -95,6 +95,8 @@ codestats_t* code_get_statistics(code_t*code, abc_exception_list_t*exceptions);
 void codestats_print(codestats_t*s);
 void codestats_free(codestats_t*s);
 
+code_t* code_start(code_t*c);
+
 code_t* code_append(code_t*code, code_t*toappend);
 
 code_t* cut_last_push(code_t*_c);
