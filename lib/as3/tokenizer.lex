@@ -455,6 +455,7 @@ interface                    {c();return m(KW_INTERFACE);}
 namespace                    {c();return m(KW_NAMESPACE);}
 protected                    {c();return m(KW_PROTECTED);}
 undefined                    {c();return m(KW_UNDEFINED);}
+continue                     {c();return m(KW_CONTINUE);}
 override                     {c();return m(KW_OVERRIDE);}
 internal                     {c();return m(KW_INTERNAL);}
 function                     {c();return m(KW_FUNCTION);}
@@ -489,6 +490,7 @@ var                          {c();return m(KW_VAR);}
 is                           {c();return m(KW_IS) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
+do                           {c();return m(KW_DO);}
 {NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
