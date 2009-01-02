@@ -56,14 +56,15 @@ struct _typedcode {
 };
 
 #define FLAG_PUBLIC 1
-#define FLAG_PRIVATE 2
+#define FLAG_FINAL 2
 #define FLAG_PROTECTED 4
 #define FLAG_STATIC 8
 #define FLAG_DYNAMIC 16
-#define FLAG_FINAL 32
+#define FLAG_PRIVATE 32
 #define FLAG_OVERRIDE 64
-#define FLAG_NATIVE 128
-#define FLAG_INTERNAL 256
+#define FLAG_METHOD 64
+#define FLAG_INTERNAL 128
+#define FLAG_NATIVE 256
 
 extern char start_of_expression;
 
