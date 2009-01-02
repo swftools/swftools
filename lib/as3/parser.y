@@ -156,14 +156,14 @@
 %type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT
 %type <token> VARCONST
 %type <code> CODE
-%type <code> CODEPIECE
+%type <code> CODEPIECE CODE_STATEMENT
 %type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH
-%type <token> PACKAGE_DECLARATION
-%type <token> FUNCTION_DECLARATION
+%type <code> PACKAGE_DECLARATION SLOT_DECLARATION
+%type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
 %type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST
-%type <token> CLASS_DECLARATION
-%type <token> NAMESPACE_DECLARATION
-%type <token> INTERFACE_DECLARATION
+%type <code> CLASS_DECLARATION
+%type <code> NAMESPACE_DECLARATION
+%type <code> INTERFACE_DECLARATION
 %type <code> VOIDEXPRESSION
 %type <value> EXPRESSION NONCOMMAEXPRESSION
 %type <value> MAYBEEXPRESSION
@@ -172,7 +172,7 @@
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE
 %type <token> USE_NAMESPACE
 %type <code> FOR_INIT
-%type <token> IMPORT
+%type <code> IMPORT
 %type <classinfo> MAYBETYPE
 %type <token> GETSET
 %type <param> PARAM
@@ -377,7 +377,7 @@ static void new_state()
     state = s;
     state->level++;
     state->has_own_imports = 0;    
-    state->vars = dict_new();
+    state->vars = dict_new(); 
     state->old = oldstate;
 }
 static void state_has_imports()
@@ -430,6 +430,7 @@ void initialize_state()
 
     global->file = abc_file_new();
     global->file->flags &= ~ABCFILE_LAZY;
+    global->variable_count = 1;
     
     global->init = abc_initscript(global->file, 0);
     code_t*c = global->init->method->body->code;
@@ -496,6 +497,7 @@ static void startpackage(char*name)
     new_state();
     /*printf("entering package \"%s\"\n", name);*/
     state->package = strdup(name);
+    global->variable_count = 1;
 }
 static void endpackage()
 {
@@ -514,6 +516,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("inner classes now allowed"); 
     }
     new_state();
+    global->variable_count = 1;
     state->cls = rfx_calloc(sizeof(classstate_t));
 
     token_list_t*t=0;
@@ -723,6 +726,7 @@ static int new_variable(char*name, classinfo_t*type, char init)
     NEW(variable_t, v);
     v->index = global->variable_count;
     v->type = type;
+    
     dict_put(state->vars, name, v);
 
     if(init && state->method && type) {
@@ -1280,46 +1284,70 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
 
 /* ------------ code blocks / statements ---------------- */
 
-PROGRAM: MAYBECODE {
-    /* todo: do something with this code if we're outside a function */
-    if($1)
-        warning("ignored code");
-}
+PROGRAM: MAYBE_PROGRAM_CODE_LIST
+
+MAYBE_PROGRAM_CODE_LIST: | PROGRAM_CODE_LIST 
+PROGRAM_CODE_LIST: PROGRAM_CODE 
+                 | PROGRAM_CODE_LIST PROGRAM_CODE
+
+PROGRAM_CODE: PACKAGE_DECLARATION 
+            | INTERFACE_DECLARATION 
+            | CLASS_DECLARATION
+            | FUNCTION_DECLARATION
+            | SLOT_DECLARATION
+            | PACKAGE_INITCODE
+
+MAYBE_INPACKAGE_CODE_LIST: | INPACKAGE_CODE_LIST
+INPACKAGE_CODE_LIST: INPACKAGE_CODE 
+                   | INPACKAGE_CODE_LIST INPACKAGE_CODE
+
+INPACKAGE_CODE: INTERFACE_DECLARATION 
+              | CLASS_DECLARATION
+              | FUNCTION_DECLARATION
+              | SLOT_DECLARATION
+              | PACKAGE_INITCODE
 
 MAYBECODE: CODE {$$=$1;}
 MAYBECODE: {$$=code_new();}
 
-CODE: CODE CODEPIECE {
-    $$=code_append($1,$2);
-}
-CODE: CODEPIECE {
-    $$=$1;
-}
+CODE: CODE CODEPIECE {$$=code_append($1,$2);}
+CODE: CODEPIECE {$$=$1;}
 
-CODEPIECE: PACKAGE_DECLARATION   {$$=code_new();/*enters a scope*/}
-CODEPIECE: CLASS_DECLARATION     {$$=code_new();/*enters a scope*/}
-CODEPIECE: FUNCTION_DECLARATION  {$$=code_new();/*enters a scope*/}
-CODEPIECE: INTERFACE_DECLARATION {$$=code_new();}
-CODEPIECE: IMPORT                {$$=code_new();/*adds imports to current scope*/}
-CODEPIECE: ';'                   {$$=code_new();}
-CODEPIECE: VARIABLE_DECLARATION  {$$=$1}
-CODEPIECE: VOIDEXPRESSION        {$$=$1}
-CODEPIECE: FOR                   {$$=$1}
-CODEPIECE: FOR_IN                {$$=$1}
-CODEPIECE: WHILE                 {$$=$1}
-CODEPIECE: DO_WHILE              {$$=$1}
-CODEPIECE: SWITCH                {$$=$1}
-CODEPIECE: BREAK                 {$$=$1}
-CODEPIECE: CONTINUE              {$$=$1}
-CODEPIECE: RETURN                {$$=$1}
-CODEPIECE: IF                    {$$=$1}
-CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=code_new();}
-CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=code_new();}
+// code which also may appear outside a method
+CODE_STATEMENT: IMPORT 
+CODE_STATEMENT: VOIDEXPRESSION 
+CODE_STATEMENT: FOR 
+CODE_STATEMENT: FOR_IN 
+CODE_STATEMENT: WHILE 
+CODE_STATEMENT: DO_WHILE 
+CODE_STATEMENT: SWITCH 
+CODE_STATEMENT: IF
+
+// code which may appear anywhere
+CODEPIECE: ';'                   {$$=0;}
+//CODEPIECE: PACKAGE_DECLARATION
+//CODEPIECE: CLASS_DECLARATION
+//CODEPIECE: FUNCTION_DECLARATION
+//CODEPIECE: INTERFACE_DECLARATION
+CODEPIECE: VARIABLE_DECLARATION
+CODEPIECE: CODE_STATEMENT
+CODEPIECE: BREAK
+CODEPIECE: CONTINUE
+CODEPIECE: RETURN
+
+CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=0;}
+CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=0;}
 
 CODEBLOCK :  '{' CODE '}' {$$=$2;}
 CODEBLOCK :  '{' '}'      {$$=0;}
 CODEBLOCK :  CODEPIECE ';'             {$$=$1;}
 CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
+
+/* ------------ package init code ------------------- */
+
+PACKAGE_INITCODE: CODE_STATEMENT {
+    if($1) warning("code ignored");
+}
 
 /* ------------ variables --------------------------- */
 
@@ -1571,8 +1599,8 @@ X_IDENTIFIER: T_IDENTIFIER
 PACKAGE: PACKAGE '.' X_IDENTIFIER {$$ = concat3($1,".",$3);free($1);$1=0;}
 PACKAGE: X_IDENTIFIER             {$$=strdup($1);}
 
-PACKAGE_DECLARATION : "package" PACKAGE '{' {startpackage($2);free($2);$2=0;} MAYBECODE '}' {endpackage()}
-PACKAGE_DECLARATION : "package" '{' {startpackage("")} MAYBECODE '}' {endpackage()}
+PACKAGE_DECLARATION : "package" PACKAGE '{' {startpackage($2);free($2);$2=0;} MAYBE_INPACKAGE_CODE_LIST '}' {endpackage();$$=0;}
+PACKAGE_DECLARATION : "package" '{' {startpackage("")} MAYBE_INPACKAGE_CODE_LIST '}' {endpackage();$$=0;}
 
 IMPORT : "import" QNAME {
        classinfo_t*c = $2;
@@ -1619,29 +1647,35 @@ IMPLEMENTS_LIST : KW_IMPLEMENTS QNAME_LIST {$$=$2;}
 CLASS_DECLARATION : MAYBE_MODIFIERS "class" T_IDENTIFIER 
                               EXTENDS IMPLEMENTS_LIST 
                               '{' {startclass($1,$3,$4,$5, 0);} 
-                              MAYBE_DECLARATION_LIST 
-                              '}' {endclass();}
+                              MAYBE_CLASS_BODY 
+                              '}' {endclass();$$=0;}
 
 INTERFACE_DECLARATION : MAYBE_MODIFIERS "interface" T_IDENTIFIER 
                               EXTENDS_LIST 
                               '{' {startclass($1,$3,0,$4,1);}
-                              MAYBE_IDECLARATION_LIST 
-                              '}' {endclass();}
+                              MAYBE_INTERFACE_BODY 
+                              '}' {endclass();$$=0;}
 
 /* ------------ classes and interfaces (body) -------------- */
 
-MAYBE_DECLARATION_LIST : 
-MAYBE_DECLARATION_LIST : DECLARATION_LIST
-DECLARATION_LIST : DECLARATION
-DECLARATION_LIST : DECLARATION_LIST DECLARATION
-DECLARATION : ';'
-DECLARATION : SLOT_DECLARATION
-DECLARATION : FUNCTION_DECLARATION
+MAYBE_CLASS_BODY : 
+MAYBE_CLASS_BODY : CLASS_BODY
+CLASS_BODY : CLASS_BODY_ITEM
+CLASS_BODY : CLASS_BODY CLASS_BODY_ITEM
+CLASS_BODY_ITEM : ';'
+CLASS_BODY_ITEM : SLOT_DECLARATION
+CLASS_BODY_ITEM : FUNCTION_DECLARATION
 
-MAYBE_IDECLARATION_LIST : 
-MAYBE_IDECLARATION_LIST : IDECLARATION_LIST
-IDECLARATION_LIST : IDECLARATION
-IDECLARATION_LIST : IDECLARATION_LIST IDECLARATION
+CLASS_BODY_ITEM : CODE_STATEMENT {
+    code_t*c = state->cls->static_init;
+    c = code_append(c, $1);  
+    state->cls->static_init = c;
+}
+
+MAYBE_INTERFACE_BODY : 
+MAYBE_INTERFACE_BODY : INTERFACE_BODY
+INTERFACE_BODY : IDECLARATION
+INTERFACE_BODY : INTERFACE_BODY IDECLARATION
 IDECLARATION : ';'
 IDECLARATION : "var" T_IDENTIFIER {
     syntaxerror("variable declarations not allowed in interfaces");
@@ -1700,6 +1734,8 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
     if($2==KW_CONST) {
         t->kind= TRAIT_CONST;
     }
+
+    $$=0;
 }
 
 /* ------------ constants -------------------------------------- */
@@ -1780,6 +1816,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
     }
     c = wrap_function(c, state->method->initcode, $11);
     endfunction(0,$1,$3,$4,&$6,$8,c);
+    $$=0;
 }
 
 /* ------------- package + class ids --------------- */
@@ -2503,9 +2540,9 @@ VAR_READ : T_IDENTIFIER {
 
 // ----------------- namespaces -------------------------------------------------
 
-NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER {$$=$2;}
-NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER '=' T_IDENTIFIER {$$=$2;}
-NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER '=' T_STRING {$$=$2;}
+NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER {$$=0;}
+NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER '=' T_IDENTIFIER {$$=0;}
+NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER '=' T_STRING {$$=0;}
 
-USE_NAMESPACE : "use" "namespace" T_IDENTIFIER
+USE_NAMESPACE : "use" "namespace" T_IDENTIFIER {$$=0;}
 
