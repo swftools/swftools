@@ -1242,12 +1242,10 @@ IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
     if($7) {
         myjmp = $$ = abc_jump($$, 0);
     }
-    myif->branch = $$ = abc_label($$);
+    myif->branch = $$ = abc_nop($$);
     if($7) {
         $$ = code_append($$, $7);
-        // might use a nop here too, depending on whether
-        // the code $7 reaches the end or not
-        myjmp->branch = $$ = abc_label($$);
+        myjmp->branch = $$ = abc_nop($$);
     }
     
     $$ = killvars($$);old_state();
@@ -1260,13 +1258,13 @@ FOR_INIT : VOIDEXPRESSION
 FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     $$ = code_new();
     $$ = code_append($$, $4);
-    code_t*loopstart = $$ = abc_nop($$);
+    code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $6.c);
     code_t*myif = $$ = abc_iffalse($$, 0);
     $$ = code_append($$, $10);
     $$ = code_append($$, $8);
     $$ = abc_jump($$, loopstart);
-    code_t*out = $$ = abc_label($$);
+    code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, out);
     myif->branch = out;
 
