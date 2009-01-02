@@ -62,6 +62,7 @@ struct _memberinfo {
         classinfo_t*return_type;
         classinfo_t*type;
     };
+    classinfo_t*parent;
     classinfo_list_t*params;
     int slot;
 };
@@ -89,7 +90,7 @@ classinfo_t* memberinfo_asclass(memberinfo_t*f);
 classinfo_t* registry_getclassclass(classinfo_t*a);
 
 classinfo_t* registry_findclass(const char*package, const char*name);
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*name);
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char superclasses);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
 multiname_t* classinfo_to_multiname(classinfo_t*cls);

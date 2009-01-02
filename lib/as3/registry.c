@@ -119,6 +119,7 @@ memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 kind)
     NEW(memberinfo_t,m);
     m->kind = kind;
     m->name = strdup(name);
+    m->parent = cls;
     dict_put(&cls->members, name, m);
     return m;
 }
@@ -146,9 +147,31 @@ classinfo_t* registry_findclass(const char*package, const char*name)
         printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
 }
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*name)
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursive)
 {
-    return (memberinfo_t*)dict_lookup(&cls->members, name);
+    if(!recursive) {
+        return (memberinfo_t*)dict_lookup(&cls->members, name);
+    }
+    /* look at classes directly extended by this class */
+    memberinfo_t*m = 0;
+    classinfo_t*s = cls;
+    while(s) {
+        m = (memberinfo_t*)dict_lookup(&s->members, name);
+        if(m) return m;
+        s = s->superclass;
+    }
+    /* look at interfaces, and parent interfaces */
+    int t=0;
+    while(cls->interfaces[t]) {
+        classinfo_t*s = cls->interfaces[t];
+        while(s) {
+            m = (memberinfo_t*)dict_lookup(&s->members, name);
+            if(m) return m;
+            s = s->superclass;
+        }
+    }
+    return 0;
+
 }
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c)
 {
