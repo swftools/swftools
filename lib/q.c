@@ -800,10 +800,12 @@ int dict_count(dict_t*h)
     return h->num;
 }
 
-void* dict_lookup(dict_t*h, const void*key)
+void dict_do_lookup(dict_t*h, const void*key, void***match)
 {
-    if(!h->num)
-        return 0;
+    if(!h->num) {
+        *match = 0;
+        return;
+    }
     
     unsigned int ohash = h->key_type->hash(key);
     unsigned int hash = ohash % h->hashsize;
@@ -811,7 +813,8 @@ void* dict_lookup(dict_t*h, const void*key)
     /* check first entry for match */
     dictentry_t*e = h->slots[hash];
     if(e && h->key_type->equals(e->key, key)) {
-        return e->data;
+        *match = &e->data;
+        return;
     } else if(e) {
         e = e->next;
     }
@@ -832,12 +835,28 @@ void* dict_lookup(dict_t*h, const void*key)
     /* check subsequent entries for a match */
     while(e) {
         if(h->key_type->equals(e->key, key)) {
-            return e->data;
+            *match = &e->data;
+            return;
         }
         e = e->next;
     }
+    *match = 0;
+}
+void* dict_lookup(dict_t*h, const void*key)
+{
+    void**data = 0;
+    dict_do_lookup(h, key, &data);
+    if(data)
+        return *data;
     return 0;
 }
+char dict_contains(dict_t*h, const void*key)
+{
+    void**data = 0;
+    dict_do_lookup(h, key, &data);
+    return !!data;
+}
+
 char dict_del(dict_t*h, const void*key)
 {
     if(!h->num)
