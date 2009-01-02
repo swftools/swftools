@@ -931,7 +931,7 @@ code_t*defaultvalue(code_t*c, classinfo_t*type)
     } else if(TYPE_IS_UINT(type)) {
        c = abc_pushuint(c, 0);
     } else if(TYPE_IS_FLOAT(type)) {
-       c = abc_pushdouble(c, 0.0);
+       c = abc_pushnan(c);
     } else if(TYPE_IS_BOOLEAN(type)) {
        c = abc_pushfalse(c);
     } else {
