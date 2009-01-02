@@ -37,6 +37,7 @@
 #define OP_LOOKUPSWITCH 512
 #define OP_NEED_ACTIVATION 1024
 #define OP_STACK_ARGS2 2048
+#define OP_INTERNAL 32768
 
 /* 2 = u30 index into multiname
    m = u30 index into method
@@ -200,8 +201,8 @@ opcode_t opcodes[]={
 {0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
 
 /* dummy instruction. Warning: this one is not actually supported by flash */
-{0xfe, "__continue__", "s",           0, 0, 0, OP_RETURN},
-{0xff, "__break__", "s",            0, 0, 0, OP_RETURN},
+{0xfe, "__continue__", "s",           0, 0, 0, OP_RETURN|OP_INTERNAL},
+{0xff, "__break__", "s",            0, 0, 0, OP_RETURN|OP_INTERNAL},
 };
 
 static U8 op2index[256] = {254};
@@ -458,6 +459,15 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
     if(tag)
         swf_SetU8(tag, c->opcode);
     len++;
+
+    if(op->flags & OP_INTERNAL) {
+        if(c->opcode == OPCODE___BREAK__ ||
+           c->opcode == OPCODE___CONTINUE__) {
+            fprintf(stderr, "Unresolved %s\n", op->name);
+        } else {
+            fprintf(stderr, "Error: writing undefined internal opcode %s", op->name);
+        }
+    }
 
     while(*p) {
         void*data = c->data[pos++];
