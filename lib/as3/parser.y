@@ -81,6 +81,7 @@
 %token<token> KW_NATIVE
 %token<token> KW_FUNCTION "function"
 %token<token> KW_UNDEFINED "undefined"
+%token<token> KW_CONTINUE "continue"
 %token<token> KW_FOR "for"
 %token<token> KW_CLASS "class"
 %token<token> KW_CONST "const"
@@ -114,6 +115,7 @@
 %token<token> KW_BREAK   "break"
 %token<token> KW_IS "is"
 %token<token> KW_AS "as"
+%token<token> KW_DO "do"
 
 %token<token> T_EQEQ "=="
 %token<token> T_EQEQEQ "==="
@@ -140,7 +142,7 @@
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
 
-%type <id> X_IDENTIFIER PACKAGE
+%type <id> X_IDENTIFIER PACKAGE MAYBELABEL
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE
@@ -156,7 +158,7 @@
 %type <value> MAYBEEXPRESSION
 %type <value> E DELETE
 %type <value> CONSTANT
-%type <code> FOR IF WHILE MAYBEELSE BREAK RETURN
+%type <code> FOR IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE
 %type <token> USE_NAMESPACE
 %type <code> FOR_INIT
 %type <token> IMPORT
@@ -870,16 +872,24 @@ char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
     return 1; // FIXME
 }
 
-void breakjumpsto(code_t*c, code_t*jump) 
+void breakjumpsto(code_t*c, char*name, code_t*jump) 
 {
-    while(c->prev) 
-        c=c->prev;
     while(c) {
         if(c->opcode == OPCODE___BREAK__) {
             c->opcode = OPCODE_JUMP;
             c->branch = jump;
         }
-        c = c->next;
+        c=c->prev;
+    }
+}
+void continuejumpsto(code_t*c, char*name, code_t*jump) 
+{
+    while(c) {
+        if(c->opcode == OPCODE___CONTINUE__) {
+            c->opcode = OPCODE_JUMP;
+            c->branch = jump;
+        }
+        c = c->prev;
     }
 }
 
@@ -1176,7 +1186,9 @@ CODEPIECE: VARIABLE_DECLARATION  {$$=$1}
 CODEPIECE: VOIDEXPRESSION        {$$=$1}
 CODEPIECE: FOR                   {$$=$1}
 CODEPIECE: WHILE                 {$$=$1}
+CODEPIECE: DO_WHILE              {$$=$1}
 CODEPIECE: BREAK                 {$$=$1}
+CODEPIECE: CONTINUE              {$$=$1}
 CODEPIECE: RETURN                {$$=$1}
 CODEPIECE: IF                    {$$=$1}
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=code_new();}
@@ -1269,43 +1281,73 @@ IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
     $$ = killvars($$);old_state();
 }
 
+MAYBELABEL : T_IDENTIFIER ':' {$$=$1;}
+MAYBELABEL :                  {$$="";}
+
 FOR_INIT : {$$=code_new();}
 FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
 
-FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
+FOR : MAYBELABEL "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     $$ = code_new();
-    $$ = code_append($$, $4);
+    $$ = code_append($$, $5);
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $6.c);
+    $$ = code_append($$, $7.c);
     code_t*myif = $$ = abc_iffalse($$, 0);
-    $$ = code_append($$, $10);
-    $$ = code_append($$, $8);
+    $$ = code_append($$, $11);
+    code_t*cont = $$ = abc_nop($$);
+    $$ = code_append($$, $9);
     $$ = abc_jump($$, loopstart);
     code_t*out = $$ = abc_nop($$);
-    breakjumpsto($$, out);
+    breakjumpsto($$, $1, out);
+    continuejumpsto($$, $1, cont);
     myif->branch = out;
 
     $$ = killvars($$);old_state();
 }
 
-WHILE : "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
+WHILE : MAYBELABEL "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     $$ = code_new();
 
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $6);
+    $$ = code_append($$, $7);
     myjmp->branch = $$ = abc_nop($$);
-    $$ = code_append($$, $4.c);
+    $$ = code_append($$, $5.c);
     $$ = abc_iftrue($$, loopstart);
     code_t*out = $$ = abc_nop($$);
-    breakjumpsto($$, out);
+    breakjumpsto($$, $1, out);
+    continuejumpsto($$, $1, loopstart);
 
-    $$ = killvars($$);old_state();
+    $$ = killvars($$);
+    old_state();
 }
 
-BREAK : "break" {
-    $$ = abc___break__(0);
+DO_WHILE : MAYBELABEL "do" {new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
+    $$ = code_new();
+    code_t*loopstart = $$ = abc_label($$);
+    $$ = code_append($$, $4);
+    code_t*cont = $$ = abc_nop($$);
+    $$ = code_append($$, $7.c);
+    $$ = abc_iftrue($$, loopstart);
+    code_t*out = $$ = abc_nop($$);
+    breakjumpsto($$, $1, out);
+    continuejumpsto($$, $1, cont);
+    $$ = killvars($$);
+    old_state();
+}
+
+BREAK : "break" %prec prec_none {
+    $$ = abc___break__(0, "");
+}
+BREAK : "break" T_IDENTIFIER {
+    $$ = abc___break__(0, $2);
+}
+CONTINUE : "continue" %prec prec_none {
+    $$ = abc___continue__(0, "");
+}
+CONTINUE : "continue" T_IDENTIFIER {
+    $$ = abc___continue__(0, $2);
 }
 
 /* ------------ packages and imports ---------------- */
