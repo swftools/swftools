@@ -380,10 +380,6 @@ static void old_state()
         list_free(oldstate->wildcard_imports);
         dict_destroy(oldstate->imports);oldstate->imports=0;
     }
-    if(state->method)
-        state->method->initcode = 
-            code_append(state->method->initcode, 
-                        oldstate->method->initcode);
 }
 void initialize_state()
 {
@@ -930,8 +926,12 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 
 code_t*defaultvalue(code_t*c, classinfo_t*type)
 {
-    if(TYPE_IS_INT(type) || TYPE_IS_UINT(type) || TYPE_IS_FLOAT(type)) {
+    if(TYPE_IS_INT(type)) {
        c = abc_pushbyte(c, 0);
+    } else if(TYPE_IS_UINT(type)) {
+       c = abc_pushuint(c, 0);
+    } else if(TYPE_IS_FLOAT(type)) {
+       c = abc_pushdouble(c, 0.0);
     } else if(TYPE_IS_BOOLEAN(type)) {
        c = abc_pushfalse(c);
     } else {
@@ -1232,8 +1232,7 @@ MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
 IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
-    $$ = state->method->initcode;state->method->initcode=0;
-
+    $$ = code_new();
     $$ = code_append($$, $4.c);
     code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
    
@@ -1255,8 +1254,7 @@ FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
 
 FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
-    $$ = state->method->initcode;state->method->initcode=0;
-
+    $$ = code_new();
     $$ = code_append($$, $4);
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $6.c);
@@ -1272,8 +1270,7 @@ FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CO
 }
 
 WHILE : "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
-    $$ = state->method->initcode;state->method->initcode=0;
-
+    $$ = code_new();
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $6);
