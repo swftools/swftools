@@ -527,8 +527,9 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
 
     state->cls->abc = abc_class_new(global->file, &classname2, extends2);
     if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
-    if(flags&FLAG_DYNAMIC) abc_class_sealed(state->cls->abc);
+    if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
     if(interface) abc_class_interface(state->cls->abc);
+    abc_class_protectedNS(state->cls->abc, classname);
 
     for(mlist=implements;mlist;mlist=mlist->next) {
         MULTINAME(m, mlist->classinfo);
@@ -1244,6 +1245,8 @@ IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
     myif->branch = $$ = abc_label($$);
     if($7) {
         $$ = code_append($$, $7);
+        // might use a nop here too, depending on whether
+        // the code $7 reaches the end or not
         myjmp->branch = $$ = abc_label($$);
     }
     
@@ -1257,7 +1260,7 @@ FOR_INIT : VOIDEXPRESSION
 FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     $$ = code_new();
     $$ = code_append($$, $4);
-    code_t*loopstart = $$ = abc_label($$);
+    code_t*loopstart = $$ = abc_nop($$);
     $$ = code_append($$, $6.c);
     code_t*myif = $$ = abc_iffalse($$, 0);
     $$ = code_append($$, $10);
@@ -1272,13 +1275,14 @@ FOR : "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CO
 
 WHILE : "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     $$ = code_new();
+
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $6);
-    myjmp->branch = $$ = abc_label($$);
+    myjmp->branch = $$ = abc_nop($$);
     $$ = code_append($$, $4.c);
     $$ = abc_iftrue($$, loopstart);
-    code_t*out = $$ = abc_label($$);
+    code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, out);
 
     $$ = killvars($$);old_state();
