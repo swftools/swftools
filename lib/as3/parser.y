@@ -288,6 +288,7 @@ typedef struct _methodstate {
     code_t*initcode;
     char is_constructor;
     char has_super;
+    char is_global;
 } methodstate_t;
 
 typedef struct _state {
@@ -794,10 +795,39 @@ static void check_constant_against_type(classinfo_t*t, constant_t*c)
    }
 }
 
+static int flags2access(int flags)
+{
+    int access = 0;
+    if(flags&FLAG_PUBLIC)  {
+        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        access = ACCESS_PACKAGE;
+    } else if(flags&FLAG_PRIVATE) {
+        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        access = ACCESS_PRIVATE;
+    } else if(flags&FLAG_PROTECTED) {
+        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        access = ACCESS_PROTECTED;
+    } else {
+        access = ACCESS_PACKAGEINTERNAL;
+    }
+    return access;
+}
+
 static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*name, params_t*params, classinfo_t*return_type, int slot)
 {
     memberinfo_t*minfo = 0;
-    if(getset != KW_GET && getset != KW_SET) {
+    if(!state->cls) {
+        //package method
+        minfo = rfx_calloc(sizeof(memberinfo_t));
+        classinfo_t*c = classinfo_register(flags2access(flags), state->package, name, 0);
+        c->flags |= FLAG_METHOD;
+        c->function = minfo;
+        minfo->kind = MEMBER_METHOD;
+        minfo->name = name;
+        minfo->flags = FLAG_STATIC;
+        minfo->return_type = return_type;
+    } else if(getset != KW_GET && getset != KW_SET) {
+        //class method
         if((minfo = registry_findmember(state->cls->info, name, 0))) {
             if(minfo->parent == state->cls->info) {
                 syntaxerror("class already contains a member/method called '%s'", name);
@@ -814,6 +844,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
         // to actually store these
         //state->minfo->slot = state->method->abc->method->trait->slot_id;
     } else {
+        //class getter/setter
         int gs = getset==KW_GET?MEMBER_GET:MEMBER_SET;
         classinfo_t*type=0;
         if(getset == KW_GET)
@@ -849,24 +880,6 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
     return minfo;
 }
 
-static int flags2access(int flags)
-{
-    int access = 0;
-    if(flags&FLAG_PUBLIC)  {
-        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
-        access = ACCESS_PACKAGE;
-    } else if(flags&FLAG_PRIVATE) {
-        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
-        access = ACCESS_PRIVATE;
-    } else if(flags&FLAG_PROTECTED) {
-        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
-        access = ACCESS_PROTECTED;
-    } else {
-        access = ACCESS_PACKAGEINTERNAL;
-    }
-    return access;
-}
-
 static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type)
 {
@@ -876,15 +889,24 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     new_state();
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->initcode = 0;
-    state->method->is_constructor = !strcmp(state->cls->info->name,name);
     state->method->has_super = 0;
-    
-    state->cls->has_constructor |= state->method->is_constructor;
+    if(state->cls) {
+        state->method->is_constructor = !strcmp(state->cls->info->name,name);
+        state->cls->has_constructor |= state->method->is_constructor;
+        
+        new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
+    } else {
+        state->method->is_global = 1;
+        new_variable("globalscope", 0, 0);
+       
+        /* for global methods, always push local_0 on the scope stack: */
+        state->method->late_binding = 1;
+    }
 
     global->variable_count = 0;
 
     /* state->vars is initialized by state_new */
-    if(new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0)!=0) syntaxerror("Internal error");
+
     param_list_t*p=0;
     for(p=params->list;p;p=p->next) {
         new_variable(p->param->name, p->param->type, 0);
@@ -897,21 +919,28 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
 static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
-    namespace_t mname_ns = {flags2access(flags), ""};
-    multiname_t mname = {QNAME, &mname_ns, 0, name};
-
     abc_method_t*f = 0;
 
     multiname_t*type2 = sig2mname(return_type);
     int slot = 0;
     if(state->method->is_constructor) {
         f = abc_class_getconstructor(state->cls->abc, type2);
-    } else {
+    } else if(!state->method->is_global) {
+        namespace_t mname_ns = {flags2access(flags), ""};
+        multiname_t mname = {QNAME, &mname_ns, 0, name};
+
         if(flags&FLAG_STATIC)
             f = abc_class_staticmethod(state->cls->abc, type2, &mname);
         else
             f = abc_class_method(state->cls->abc, type2, &mname);
         slot = f->trait->slot_id;
+    } else {
+        namespace_t mname_ns = {flags2access(flags), state->package};
+        multiname_t mname = {QNAME, &mname_ns, 0, name};
+
+        f = abc_method_new(global->file, type2, 1);
+        trait_t*t = trait_new_method(&global->init->traits, multiname_clone(&mname), f);
+        //abc_code_t*c = global->init->method->body->code;
     }
     //flash doesn't seem to allow us to access function slots
     //state->method->info->slot = slot;
@@ -2407,7 +2436,7 @@ VAR_READ : T_IDENTIFIER {
         $$.t = v->type;
 
     /* look at current class' members */
-    } else if((f = registry_findmember(state->cls->info, $1, 1))) {
+    } else if(state->cls && (f = registry_findmember(state->cls->info, $1, 1))) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
         int i_am_static = ((state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC);
