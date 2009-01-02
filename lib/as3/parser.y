@@ -87,6 +87,7 @@
 %token<token> KW_SET "set"
 %token<token> KW_VOID "void"
 %token<token> KW_STATIC
+%token<token> KW_INSTANCEOF "instanceof"
 %token<token> KW_IMPORT "import"
 %token<token> KW_RETURN "return"
 %token<token> KW_TYPEOF "typeof"
@@ -1889,6 +1890,12 @@ E : E "as" E {char use_astype=0; // flash player's astype works differently than
                 $$.c = abc_astypelate($$.c);
                 $$.t = TYPE_ANY;
               }
+             }
+
+E : E "instanceof" E 
+             {$$.c = code_append($1.c, $3.c);
+              $$.c = abc_instanceof($$.c);
+              $$.t = TYPE_BOOLEAN;
              }
 
 E : E "is" E {$$.c = code_append($1.c, $3.c);
