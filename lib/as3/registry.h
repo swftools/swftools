@@ -31,6 +31,17 @@ DECLARE(classinfo);
 DECLARE(memberinfo);
 DECLARE_LIST(classinfo);
 
+#define FLAG_PUBLIC 1
+#define FLAG_FINAL 2
+#define FLAG_PROTECTED 4
+#define FLAG_STATIC 8
+#define FLAG_DYNAMIC 16
+#define FLAG_PRIVATE 32
+#define FLAG_OVERRIDE 64
+#define FLAG_METHOD 64
+#define FLAG_INTERNAL 128
+#define FLAG_NATIVE 256
+
 struct _classinfo {
     U8 access;
     U8 flags;
@@ -72,8 +83,9 @@ extern type_t memberinfo_type;
 
 void registry_init();
         
-classinfo_t* classinfo_register(int access, char*package, char*name, int num_interfaces);
+classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces);
 memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 type);
+memberinfo_t* memberinfo_register_global(U8 access, const char*package, const char*name, U8 kind);
 
 // static multinames
 classinfo_t* registry_getanytype();

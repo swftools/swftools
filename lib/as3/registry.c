@@ -81,7 +81,7 @@ type_t memberinfo_type = {
 // ------------------------- constructors --------------------------------
 
 #define AVERAGE_NUMBER_OF_MEMBERS 8
-classinfo_t* classinfo_register(int access, char*package, char*name, int num_interfaces)
+classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces)
 {
     classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+(sizeof(classinfo_t*)*(num_interfaces+1)));
     c->interfaces[0] = 0;
@@ -123,6 +123,20 @@ memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 kind)
     dict_put(&cls->members, name, m);
     return m;
 }
+memberinfo_t* memberinfo_register_global(U8 access, const char*package, const char*name, U8 kind)
+{
+    NEW(memberinfo_t, m);
+    m->kind = kind;
+    m->flags = FLAG_STATIC;
+    m->name = name;
+    m->parent = 0;
+
+    classinfo_t*c = classinfo_register(access, package, name, 0);
+    c->function = m;
+    c->flags |= FLAG_METHOD;
+    return m;
+}
+
 
 // --------------- builtin classes (from builtin.c) ----------------------
 
