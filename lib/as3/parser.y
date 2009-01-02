@@ -50,12 +50,14 @@
     double number_float;
     code_t*code;
     typedcode_t value;
-    typedcode_list_t*value_list;
+    //typedcode_list_t*value_list;
+    codeandnumber_t value_list;
     param_t* param;
     params_t params;
     string_t str;
     char*id;
     constant_t*constant;
+    for_start_t for_start;
 }
 
 
@@ -104,6 +106,7 @@
 %token<token> KW_DYNAMIC "dynamic"
 %token<token> KW_OVERRIDE
 %token<token> KW_FINAL
+%token<token> KW_EACH "each"
 %token<token> KW_GET "get"
 %token<token> KW_TRY "try"
 %token<token> KW_SUPER "super"
@@ -121,6 +124,7 @@
 %token<token> KW_ELSE  "else"
 %token<token> KW_BREAK   "break"
 %token<token> KW_IS "is"
+%token<token> KW_IN "in"
 %token<token> KW_AS "as"
 
 %token<token> T_EQEQ "=="
@@ -148,7 +152,8 @@
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
 
-%type <id> X_IDENTIFIER PACKAGE
+%type <for_start> FOR_START
+%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE
@@ -164,7 +169,7 @@
 %type <value> MAYBEEXPRESSION
 %type <value> E DELETE
 %type <value> CONSTANT
-%type <code> FOR IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE
+%type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE
 %type <token> USE_NAMESPACE
 %type <code> FOR_INIT
 %type <token> IMPORT
@@ -182,7 +187,6 @@
 %type <classinfo> CLASS PACKAGEANDCLASS QNAME
 %type <classinfo_list> QNAME_LIST
 %type <classinfo> TYPE
-%type <token> VAR
 //%type <token> VARIABLE
 %type <value> VAR_READ
 %type <value> NEW
@@ -235,7 +239,18 @@ static int yyerror(char*s)
 {
    syntaxerror("%s", s); 
 }
-static char* concat3str(const char* t1, const char* t2, const char* t3)
+
+static char* concat2(const char* t1, const char* t2)
+{
+    int l1 = strlen(t1);
+    int l2 = strlen(t2);
+    char*text = malloc(l1+l2+1);
+    memcpy(text   , t1, l1);
+    memcpy(text+l1, t2, l2);
+    text[l1+l2] = 0;
+    return text;
+}
+static char* concat3(const char* t1, const char* t2, const char* t3)
 {
     int l1 = strlen(t1);
     int l2 = strlen(t2);
@@ -275,6 +290,7 @@ typedef struct _methodstate {
 } methodstate_t;
 
 typedef struct _state {
+    struct _state*old;
     int level;
 
     char*package;     
@@ -342,8 +358,6 @@ static namespace_list_t nl2 = {&ns2,&nl3};
 static namespace_list_t nl1 = {&ns1,&nl2};
 static namespace_set_t nopackage_namespace_set = {&nl1};
 
-static state_list_t*state_stack=0;
-    
 static void init_globals()
 {
     global = rfx_calloc(sizeof(global_t));
@@ -352,21 +366,17 @@ static void init_globals()
 static void new_state()
 {
     NEW(state_t, s);
-    NEW(state_list_t, sl);
-
     state_t*oldstate = state;
     if(state)
         memcpy(s, state, sizeof(state_t)); //shallow copy
-    sl->next = state_stack;
-    sl->state = s;
     if(!s->imports) {
         s->imports = dict_new();
     }
-    state_stack = sl;
     state = s;
     state->level++;
     state->has_own_imports = 0;    
     state->vars = dict_new();
+    state->old = oldstate;
 }
 static void state_has_imports()
 {
@@ -375,23 +385,41 @@ static void state_has_imports()
     state->has_own_imports = 1;
 }
 
+static void state_destroy(state_t*state)
+{
+    if(state->has_own_imports) {
+        list_free(state->wildcard_imports);
+        dict_destroy(state->imports);state->imports=0;
+    }
+    if(state->imports && (!state->old || state->old->imports!=state->imports)) {
+        dict_destroy(state->imports);state->imports=0;
+    }
+    if(state->vars) {
+        int t;
+        for(t=0;t<state->vars->hashsize;t++) {
+            dictentry_t*e =state->vars->slots[t];
+            while(e) {
+                free(e->data);e->data=0;
+                e = e->next;
+            }
+        }
+        dict_destroy(state->vars);state->vars=0;
+    }
+    
+    free(state);
+}
+
 static void old_state()
 {
-    if(!state_stack || !state_stack->next)
+    if(!state || !state->old)
         syntaxerror("invalid nesting");
-    state_t*oldstate = state;
-    state_list_t*old = state_stack;
-    state_stack = state_stack->next;
-    free(old);
-    state = state_stack->state;
+    state_t*leaving = state;
+    state = state->old;
     /*if(state->method->initcode) {
         printf("residual initcode\n");
         code_dump(state->method->initcode, 0, 0, "", stdout);
     }*/
-    if(oldstate->has_own_imports) {
-        list_free(oldstate->wildcard_imports);
-        dict_destroy(oldstate->imports);oldstate->imports=0;
-    }
+    state_destroy(leaving);
 }
 void initialize_state()
 {
@@ -451,6 +479,9 @@ void* finalize_state()
     __ pushstring(m, "[leaving global init function]");
     __ callpropvoid(m, "[package]::trace", 1);
     __ returnvoid(m);
+
+    state_destroy(state);
+
     return global->file;
 }
 
@@ -462,11 +493,15 @@ static void startpackage(char*name)
     } 
     new_state();
     /*printf("entering package \"%s\"\n", name);*/
-    state->package = name;
+    state->package = strdup(name);
 }
 static void endpackage()
 {
     /*printf("leaving package \"%s\"\n", state->package);*/
+
+    //used e.g. in classinfo_register:
+    //free(state->package);state->package=0;
+
     old_state();
 }
 
@@ -602,7 +637,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     /* flash.display.MovieClip handling */
     if(!globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
         if(state->package && state->package[0]) {
-            globalclass = concat3str(state->package, ".", classname);
+            globalclass = concat3(state->package, ".", classname);
         } else {
             globalclass = strdup(classname);
         }
@@ -646,6 +681,7 @@ static void endclass()
         abc_class_getstaticconstructor(state->cls->abc,0)->body->code = c;*/
     }
 
+    free(state->cls);state->cls=0;
     old_state();
 }
 
@@ -654,50 +690,56 @@ typedef struct _variable {
     classinfo_t*type;
 } variable_t;
 
-static int find_variable(char*name, classinfo_t**m)
+static variable_t* find_variable(char*name)
 {
-    state_list_t* s = state_stack;
+    state_t* s = state;
     while(s) {
         variable_t*v = 0;
-        if(s->state->method)
-            v = dict_lookup(s->state->vars, name);
+        if(s->method)
+            v = dict_lookup(s->vars, name);
         if(v) {
-            if(m) {
-                *m = v->type;
-            }
-            return v->index;
+            return v;
         }
-        s = s->next;
+        s = s->old;
     }
-    return -1;
+    return 0;
 } 
-static int find_variable_safe(char*name, classinfo_t**m)
+static variable_t* find_variable_safe(char*name)
 {
-    int i = find_variable(name, m);
-    if(i<0)
+    variable_t* v = find_variable(name);
+    if(!v)
         syntaxerror("undefined variable: %s", name);
-    return i;
+    return v;
 }
 static char variable_exists(char*name) 
 {
     return dict_lookup(state->vars, name)!=0;
 }
-static int new_variable(char*name, classinfo_t*type)
+code_t*defaultvalue(code_t*c, classinfo_t*type);
+static int new_variable(char*name, classinfo_t*type, char init)
 {
     NEW(variable_t, v);
     v->index = global->variable_count;
     v->type = type;
     dict_put(state->vars, name, v);
+
+    if(init && state->method && type) {
+        /* if this is a typed variable:
+           push default value for type on stack at the very beginning of the
+           method, so that it always has that type regardless of the control
+           path */
+        state->method->initcode = defaultvalue(state->method->initcode, type);
+        state->method->initcode = abc_setlocal(state->method->initcode, v->index);
+    }
     return global->variable_count++;
 }
 #define TEMPVARNAME "__as3_temp__"
 static int gettempvar()
 {
-    int i = find_variable(TEMPVARNAME, 0);
-    if(i<0) {
-        i = new_variable(TEMPVARNAME, 0);
-    }
-    return i;
+    variable_t*v = find_variable(TEMPVARNAME);
+    if(v) 
+        return v->index;
+    return new_variable(TEMPVARNAME, 0, 0);
 }
 
 code_t* killvars(code_t*c) 
@@ -710,7 +752,7 @@ code_t* killvars(code_t*c)
             //do this always, otherwise register types don't match
             //in the verifier when doing nested loops
             //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
-            c = abc_kill(c, v->index);
+            c = abc_kill(c, v->index); 
             e = e->next;
         }
     }
@@ -841,10 +883,10 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     global->variable_count = 0;
 
     /* state->vars is initialized by state_new */
-    if(new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info)!=0) syntaxerror("Internal error");
+    if(new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0)!=0) syntaxerror("Internal error");
     param_list_t*p=0;
     for(p=params->list;p;p=p->next) {
-        new_variable(p->param->name, p->param->type);
+        new_variable(p->param->name, p->param->type, 0);
     }
     if(state->method->is_constructor)
         name = "__as3_constructor__";
@@ -900,7 +942,8 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     else //interface
         if(body)
             syntaxerror("interface methods can't have a method body");
-        
+       
+    free(state->method);state->method=0;
     old_state();
 }
 
@@ -1184,7 +1227,6 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
             temp = gettempvar();
             if(prefix) {
                 c = code_append(c, prefix);
-                c = abc_dup(c);
             }
             c = code_append(c, middlepart);
             c = abc_dup(c);
@@ -1232,6 +1274,7 @@ CODEPIECE: ';'                   {$$=code_new();}
 CODEPIECE: VARIABLE_DECLARATION  {$$=$1}
 CODEPIECE: VOIDEXPRESSION        {$$=$1}
 CODEPIECE: FOR                   {$$=$1}
+CODEPIECE: FOR_IN                {$$=$1}
 CODEPIECE: WHILE                 {$$=$1}
 CODEPIECE: DO_WHILE              {$$=$1}
 CODEPIECE: SWITCH                {$$=$1}
@@ -1254,43 +1297,36 @@ MAYBEEXPRESSION : '=' NONCOMMAEXPRESSION {$$=$2;}
                                   $$.t=TYPE_ANY;
                                  }
 
-VAR : "const" | "var"
-VARIABLE_DECLARATION : VAR VARIABLE_LIST {$$=$2;}
+VARIABLE_DECLARATION : "var" VARIABLE_LIST {$$=$2;}
+VARIABLE_DECLARATION : "const" VARIABLE_LIST {$$=$2;}
 
 VARIABLE_LIST: ONE_VARIABLE                   {$$ = $1;}
 VARIABLE_LIST: VARIABLE_LIST ',' ONE_VARIABLE {$$ = code_append($1, $3);}
 
-ONE_VARIABLE: {} T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
+ONE_VARIABLE: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
 {
-    if(variable_exists($2))
-        syntaxerror("Variable %s already defined", $2);
+    if(variable_exists($1))
+        syntaxerror("Variable %s already defined", $1);
    
-    if(!is_subtype_of($4.t, $3)) {
-        syntaxerror("Can't convert %s to %s", $4.t->name, 
-                                              $3->name);
+    if(!is_subtype_of($3.t, $2)) {
+        syntaxerror("Can't convert %s to %s", $3.t->name, 
+                                              $2->name);
     }
 
-    int index = new_variable($2, $3);
+    int index = new_variable($1, $2, 1);
     
-    if($3) {
-        if($4.c->prev || $4.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = $4.c;
-            $$ = converttype($$, $4.t, $3);
+    if($2) {
+        if($3.c->prev || $3.c->opcode != OPCODE_PUSHUNDEFINED) {
+            $$ = $3.c;
+            $$ = converttype($$, $3.t, $2);
             $$ = abc_setlocal($$, index);
         } else {
-            $$ = defaultvalue(0, $3);
+            $$ = defaultvalue(0, $2);
             $$ = abc_setlocal($$, index);
         }
-
-        /* if this is a typed variable:
-           push default value for type on stack */
-        if($3) {
-            state->method->initcode = defaultvalue(state->method->initcode, $3);
-            state->method->initcode = abc_setlocal(state->method->initcode, index);
-        }
     } else {
-        if($4.c->prev || $4.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = $4.c;
+        if($3.c->prev || $3.c->opcode != OPCODE_PUSHUNDEFINED) {
+            $$ = $3.c;
             $$ = abc_coerce_a($$);
             $$ = abc_setlocal($$, index);
         } else {
@@ -1333,23 +1369,76 @@ IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
 FOR_INIT : {$$=code_new();}
 FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
+FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
+    $$=$2;new_variable($2,$3,1);
+}
+FOR_IN_INIT : T_IDENTIFIER {
+    $$=$1;
+}
 
-FOR : T_FOR '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
+FOR_START : T_FOR '(' {new_state();$$.name=$1;$$.each=0;}
+FOR_START : T_FOR "each" '(' {new_state();$$.name=$1;$$.each=1;}
+
+FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
+    if($1.each) syntaxerror("invalid syntax: ; not allowed in for each statement");
     $$ = code_new();
-    $$ = code_append($$, $4);
+    $$ = code_append($$, $2);
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $6.c);
+    $$ = code_append($$, $4.c);
     code_t*myif = $$ = abc_iffalse($$, 0);
-    $$ = code_append($$, $10);
-    code_t*cont = $$ = abc_nop($$);
     $$ = code_append($$, $8);
+    code_t*cont = $$ = abc_nop($$);
+    $$ = code_append($$, $6);
     $$ = abc_jump($$, loopstart);
     code_t*out = $$ = abc_nop($$);
-    breakjumpsto($$, $1, out);
-    continuejumpsto($$, $1, cont);
+    breakjumpsto($$, $1.name, out);
+    continuejumpsto($$, $1.name, cont);
     myif->branch = out;
 
     $$ = killvars($$);old_state();
+}
+
+FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
+    variable_t*var = find_variable($2);
+    char*tmp1name = concat2($2, "__tmp1__");
+    int it = new_variable(tmp1name, TYPE_INT, 0);
+    char*tmp2name = concat2($2, "__array__");
+    int array = new_variable(tmp1name, 0, 0);
+
+    $$ = code_new();
+    $$ = code_append($$, $4.c);
+    $$ = abc_coerce_a($$);
+    $$ = abc_setlocal($$, array);
+    $$ = abc_pushbyte($$, 0);
+    $$ = abc_setlocal($$, it);
+
+    code_t*loopstart = $$ = abc_label($$);
+    
+    $$ = abc_hasnext2($$, array, it);
+    code_t*myif = $$ = abc_iffalse($$, 0);
+    $$ = abc_getlocal($$, array);
+    $$ = abc_getlocal($$, it);
+    if(!$1.each)
+        $$ = abc_nextname($$);
+    else
+        $$ = abc_nextvalue($$);
+    $$ = converttype($$, 0, var->type);
+    $$ = abc_setlocal($$, var->index);
+
+    $$ = code_append($$, $6);
+    $$ = abc_jump($$, loopstart);
+    
+    code_t*out = $$ = abc_nop($$);
+    breakjumpsto($$, $1.name, out);
+    continuejumpsto($$, $1.name, loopstart);
+    
+    $$ = killvars($$);
+    
+    myif->branch = out;
+
+    old_state();
+    free(tmp1name);
+    free(tmp2name);
 }
 
 WHILE : T_WHILE '(' {new_state();} EXPRESSION ')' CODEBLOCK {
@@ -1448,10 +1537,10 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
 X_IDENTIFIER: T_IDENTIFIER
             | "package" {$$="package";}
 
-PACKAGE: PACKAGE '.' X_IDENTIFIER {$$ = concat3str($1,".",$3);}
-PACKAGE: X_IDENTIFIER             {$$=$1;}
+PACKAGE: PACKAGE '.' X_IDENTIFIER {$$ = concat3($1,".",$3);free($1);$1=0;}
+PACKAGE: X_IDENTIFIER             {$$=strdup($1);}
 
-PACKAGE_DECLARATION : "package" PACKAGE '{' {startpackage($2)} MAYBECODE '}' {endpackage()}
+PACKAGE_DECLARATION : "package" PACKAGE '{' {startpackage($2);free($2);$2=0;} MAYBECODE '}' {endpackage()}
 PACKAGE_DECLARATION : "package" '{' {startpackage("")} MAYBECODE '}' {endpackage()}
 
 IMPORT : "import" QNAME {
@@ -1674,6 +1763,7 @@ CLASS: T_IDENTIFIER {
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
     $$ = registry_findclass($1, $3);
     if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1, $3);
+    free($1);$1=0;
 }
 
 QNAME: PACKAGEANDCLASS
@@ -1698,19 +1788,18 @@ MAYBETYPE:          {$$=0;}
 
 /* ----------function calls, delete, constructor calls ------ */
 
-MAYBE_PARAM_VALUES :  %prec prec_none {$$=0;}
+MAYBE_PARAM_VALUES :  %prec prec_none {$$.cc=0;$$.len=0;}
 MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2}
 
-MAYBE_EXPRESSION_LIST : {$$=0;}
+MAYBE_EXPRESSION_LIST : {$$.cc=0;$$.len=0;}
 MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
-EXPRESSION_LIST : NONCOMMAEXPRESSION             {$$=list_new();
-                                                  typedcode_t*t = malloc(sizeof(typedcode_t));
-                                                  *t = $1;
-                                                  list_append($$, t);}
-EXPRESSION_LIST : EXPRESSION_LIST ',' NONCOMMAEXPRESSION {$$=$1;
-                                                  typedcode_t*t = malloc(sizeof(typedcode_t));
-                                                  *t = $3;
-                                                  list_append($$, t);}
+EXPRESSION_LIST : NONCOMMAEXPRESSION             {$$.len=1;
+                                                  $$.cc = $1.c;
+                                                 }
+EXPRESSION_LIST : EXPRESSION_LIST ',' NONCOMMAEXPRESSION {
+                                                  $$.len= $1.len+1;
+                                                  $$.cc = code_append($1.cc, $3.c);
+                                                  }
 
 NEW : "new" CLASS MAYBE_PARAM_VALUES {
     MULTINAME(m, $2);
@@ -1723,17 +1812,12 @@ NEW : "new" CLASS MAYBE_PARAM_VALUES {
         $$.c = abc_findpropstrict2($$.c, &m);
     }
 
-    typedcode_list_t*l = $3;
-    int len = 0;
-    while(l) {
-        $$.c = code_append($$.c, l->typedcode->c); // push parameters on stack
-        l = l->next;
-        len ++;
-    }
+    $$.c = code_append($$.c, $3.cc);
+
     if($2->slot)
-        $$.c = abc_construct($$.c, len);
+        $$.c = abc_construct($$.c, $3.len);
     else
-        $$.c = abc_constructprop2($$.c, &m, len);
+        $$.c = abc_constructprop2($$.c, &m, $3.len);
     $$.t = $2;
 }
 
@@ -1742,47 +1826,41 @@ NEW : "new" CLASS MAYBE_PARAM_VALUES {
          call (for closures)
 */
 FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
-    typedcode_list_t*l = $3;
-    int len = 0;
-    code_t*paramcode = 0;
-    while(l) {
-        paramcode = code_append(paramcode, l->typedcode->c); // push parameters on stack
-        l = l->next;
-        len ++;
-    }
-       
+    
     $$.c = $1.c;
     if($$.c->opcode == OPCODE_COERCE_A) {
         $$.c = code_cutlast($$.c);
     }
+    code_t*paramcode = $3.cc;
 
     $$.t = TYPE_ANY;
-    multiname_t*name = 0;
     if($$.c->opcode == OPCODE_GETPROPERTY) {
-        name = multiname_clone($$.c->data[0]);
+        multiname_t*name = $$.c->data[0];$$.c->data[0]=0;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_callproperty2($$.c, name, len);
+        $$.c = abc_callproperty2($$.c, name, $3.len);
+        multiname_destroy(name);
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
         trait_t*t = abc_class_find_slotid(state->cls->abc,slot);//FIXME
         if(t->kind!=TRAIT_METHOD) {
             //ok: flash allows to assign closures to members.
         }
-        name = t->name;
+        multiname_t*name = t->name;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
         //$$.c = abc_callmethod($$.c, t->method, len); //#1051 illegal early access binding
-        $$.c = abc_callproperty2($$.c, name, len);
+        $$.c = abc_callproperty2($$.c, name, $3.len);
     } else if($$.c->opcode == OPCODE_GETSUPER) {
-        name = multiname_clone($$.c->data[0]);
+        multiname_t*name = $$.c->data[0];$$.c->data[0]=0;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_callsuper2($$.c, name, len);
+        $$.c = abc_callsuper2($$.c, name, $3.len);
+        multiname_destroy(name);
     } else {
         $$.c = abc_getlocal_0($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_call($$.c, len);
+        $$.c = abc_call($$.c, $3.len);
     }
    
     memberinfo_t*f = 0;
@@ -1793,6 +1871,7 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
     }
+
 }
 FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
     if(!state->cls) syntaxerror("super() not allowed outside of a class");
@@ -1801,18 +1880,15 @@ FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
 
     $$.c = code_new();
     $$.c = abc_getlocal_0($$.c);
-    typedcode_list_t*l = 0;
-    int len = 0;
-    for(l=$3;l;l=l->next) {
-        $$.c = code_append($$.c, l->typedcode->c);len++;
-    }
+
+    $$.c = code_append($$.c, $3.cc);
     /*
     this is dependent on the control path, check this somewhere else
     if(state->method->has_super)
         syntaxerror("constructor may call super() only once");
     */
     state->method->has_super = 1;
-    $$.c = abc_constructsuper($$.c, len);
+    $$.c = abc_constructsuper($$.c, $3.len);
     $$.c = abc_pushundefined($$.c);
     $$.t = TYPE_ANY;
 }
@@ -2090,43 +2166,33 @@ E : E '[' E ']' {
 
 E : '[' MAYBE_EXPRESSION_LIST ']' {
     $$.c = code_new();
-    typedcode_list_t*l = 0;
-    int len = 0;
-    for(l=$2;l;l=l->next) {
-        $$.c = code_append($$.c, l->typedcode->c);len++;
-    }
-    $$.c = abc_newarray($$.c, len);
+    $$.c = code_append($$.c, $2.cc);
+    $$.c = abc_newarray($$.c, $2.len);
     $$.t = registry_getarrayclass();
 }
 
-MAYBE_EXPRPAIR_LIST : {$$=0;}
+MAYBE_EXPRPAIR_LIST : {$$.cc=0;$$.len=0;}
 MAYBE_EXPRPAIR_LIST : EXPRPAIR_LIST {$$=$1};
 
 EXPRPAIR_LIST : NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
-    typedcode_t*t1 = malloc(sizeof(typedcode_t));*t1 = $1;
-    typedcode_t*t2 = malloc(sizeof(typedcode_t));*t2 = $3;
-    $$ = 0;
-    list_append($$, t1);
-    list_append($$, t2);
+    $$.cc = 0;
+    $$.cc = code_append($$.cc, $1.c);
+    $$.cc = code_append($$.cc, $3.c);
+    $$.len = 2;
 }
 EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
-    $$=$1;
-    typedcode_t*t1 = malloc(sizeof(typedcode_t));*t1 = $3;
-    typedcode_t*t2 = malloc(sizeof(typedcode_t));*t2 = $5;
-    list_append($$, t1);
-    list_append($$, t2);
+    $$.cc = $1.cc;
+    $$.len = $1.len+2;
+    $$.cc = code_append($$.cc, $3.c);
+    $$.cc = code_append($$.cc, $5.c);
 }
 //MAYBECOMMA: ','
 //MAYBECOMMA:
 
 E : '{' MAYBE_EXPRPAIR_LIST '}' {
     $$.c = code_new();
-    typedcode_list_t*l = 0;
-    int len = 0;
-    for(l=$2;l;l=l->next) {
-        $$.c = code_append($$.c, l->typedcode->c);len++;
-    }
-    $$.c = abc_newobject($$.c, len/2);
+    $$.c = code_append($$.c, $2.cc);
+    $$.c = abc_newobject($$.c, $2.len/2);
     $$.t = registry_getobjectclass();
 }
 
@@ -2321,14 +2387,15 @@ E : E '.' T_IDENTIFIER
 VAR_READ : T_IDENTIFIER {
     $$.t = 0;
     $$.c = 0;
-    int i;
     classinfo_t*a = 0;
     memberinfo_t*f = 0;
 
+    variable_t*v;
     /* look at variables */
-    if((i = find_variable($1, &$$.t)) >= 0) {
+    if((v = find_variable($1))) {
         // $1 is a local variable
-        $$.c = abc_getlocal($$.c, i);
+        $$.c = abc_getlocal($$.c, v->index);
+        $$.t = v->type;
 
     /* look at current class' members */
     } else if((f = registry_findmember(state->cls->info, $1, 1))) {
