@@ -1399,7 +1399,9 @@ CASE: "case" CONSTANT ':' MAYBECODE {
     $$ = code_append($$, $2.c);
     code_t*j = $$ = abc_ifne($$, 0);
     $$ = code_append($$, $4);
-    $$ = abc___continue__($$, "");
+    if($$->opcode != OPCODE___BREAK__) {
+        $$ = abc___fallthrough__($$, "");
+    }
     code_t*e = $$ = abc_nop($$);
     j->branch = e;
 }
@@ -1415,6 +1417,7 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
     code_t*c = $$,*lastblock=0;
     while(c) {
         if(c->opcode == OPCODE_IFNE) {
+            if(!c->next) syntaxerror("internal error in fallthrough handling");
             lastblock=c->next;
         } else if(c->opcode == OPCODE___CONTINUE__) {
             if(lastblock) {
