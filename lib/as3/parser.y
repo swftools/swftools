@@ -1952,6 +1952,17 @@ E : E '[' E ']' {
   $$.t = 0; // array elements have unknown type
 }
 
+E : '[' MAYBE_EXPRESSION_LIST ']' {
+    $$.c = code_new();
+    typedcode_list_t*l = 0;
+    int len = 0;
+    for(l=$2;l;l=l->next) {
+        $$.c = code_append($$.c, l->typedcode->c);len++;
+    }
+    $$.c = abc_newarray($$.c, len);
+    $$.t = registry_getarrayclass();
+}
+
 E : E "*=" E { 
                code_t*c = $3.c;
                if(BOTH_INT($1,$3)) {
