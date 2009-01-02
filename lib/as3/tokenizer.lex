@@ -449,6 +449,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 \.                           {c();return m('.');}
 ::                           {c();return m(T_COLONCOLON);}
 :                            {c();return m(':');}
+instanceof                   {c();return m(KW_INSTANCEOF);}
 implements                   {c();return m(KW_IMPLEMENTS);}
 interface                    {c();return m(KW_INTERFACE);}
 namespace                    {c();return m(KW_NAMESPACE);}
