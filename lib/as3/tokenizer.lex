@@ -519,6 +519,7 @@ true                         {c();return m(KW_TRUE);}
 null                         {c();return m(KW_NULL);}
 else                         {c();return m(KW_ELSE);}
 case                         {c();return m(KW_CASE);}
+with                         {c();return m(KW_WITH);}
 use                          {c();return m(KW_USE);}
 new                          {c();return m(KW_NEW);}
 get                          {c();return m(KW_GET);}
