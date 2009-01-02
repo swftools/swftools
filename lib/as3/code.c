@@ -200,7 +200,8 @@ opcode_t opcodes[]={
 //0x53: seen in builtin.abc
 {0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
 
-/* dummy instruction. Warning: this one is not actually supported by flash */
+/* dummy instructions. Warning: these are not actually supported by flash */
+{0xfd, "__fallthrough__", "s",           0, 0, 0, OP_INTERNAL},
 {0xfe, "__continue__", "s",           0, 0, 0, OP_RETURN|OP_INTERNAL},
 {0xff, "__break__", "s",            0, 0, 0, OP_RETURN|OP_INTERNAL},
 };
