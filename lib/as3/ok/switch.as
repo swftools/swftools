@@ -21,6 +21,10 @@ package {
             switch(1) {
                 case 2: trace("error");break;
             }
+            
+            switch(1) {
+                case 10:
+            }
         }
     }
 }
