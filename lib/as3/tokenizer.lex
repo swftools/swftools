@@ -366,6 +366,20 @@ static inline int handlehex()
     }
 }
 
+void handleLabel(char*text, int len)
+{
+    int t;
+    for(t=len-1;t>=0;--t) {
+        if(text[t]!=' ' &&
+           text[t]!='.')
+            break;
+    }
+    char*s = malloc(t+1);
+    memcpy(s, yytext, t);
+    s[t]=0;
+    avm2_lval.id = s;
+}
+
 void initialize_scanner();
 #define YY_USER_INIT initialize_scanner();
 
@@ -375,6 +389,8 @@ void initialize_scanner();
 //int                          {c();return m(KW_INT);}
 //uint                         {c();return m(KW_UINT);}
 //Number                       {c();return m(KW_NUMBER);}
+
+
 %}
 
 %s REGEXPOK
@@ -423,6 +439,13 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
+{NAME}{S}*:{S}*for           {c();handleLabel(yytext, yyleng-3);return T_FOR;}
+{NAME}{S}*:{S}*do            {c();handleLabel(yytext, yyleng-2);return T_DO;}
+{NAME}{S}*:{S}*while         {c();handleLabel(yytext, yyleng-5);return T_WHILE;}
+for                          {c();avm2_lval.id="";return T_FOR;}
+do                           {c();avm2_lval.id="";return T_DO;}
+while                        {c();avm2_lval.id="";return T_WHILE;}
+
 [&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 [|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}
 [!][=]                       {c();BEGIN(REGEXPOK);return m(T_NE);}
@@ -470,7 +493,6 @@ native                       {c();return m(KW_NATIVE);}
 static                       {c();return m(KW_STATIC);}
 import                       {c();return m(KW_IMPORT);}
 typeof                       {c();return m(KW_TYPEOF);}
-while                        {c();return m(KW_WHILE);}
 class                        {c();return m(KW_CLASS);}
 const                        {c();return m(KW_CONST);}
 final                        {c();return m(KW_FINAL);}
@@ -484,13 +506,11 @@ else                         {c();return m(KW_ELSE);}
 use                          {c();return m(KW_USE);}
 new                          {c();return m(KW_NEW);}
 get                          {c();return m(KW_GET);}
-for                          {c();return m(KW_FOR);}
 set                          {c();return m(KW_SET);}
 var                          {c();return m(KW_VAR);}
 is                           {c();return m(KW_IS) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
-do                           {c();return m(KW_DO);}
 {NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
@@ -577,7 +597,6 @@ char*token2string(enum yytokentype nr, YYSTYPE v)
     else if(nr==KW_INT)        return "int";
     else if(nr==KW_NEW)        return "new";
     else if(nr==KW_GET)        return "get";
-    else if(nr==KW_FOR)        return "for";
     else if(nr==KW_SET)        return "set";
     else if(nr==KW_VAR)        return "var";
     else if(nr==KW_IS)         return "is";
