@@ -529,7 +529,11 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     state->cls->abc = abc_class_new(global->file, &classname2, extends2);
     if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
     if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
-    if(interface) abc_class_interface(state->cls->abc);
+    if(interface) {
+        state->cls->info->flags |= CLASS_INTERFACE;
+        abc_class_interface(state->cls->abc);
+    }
+
     abc_class_protectedNS(state->cls->abc, classname);
 
     for(mlist=implements;mlist;mlist=mlist->next) {
@@ -610,7 +614,7 @@ static code_t* wrap_function(code_t*c,code_t*initcode, code_t*body)
 
 static void endclass()
 {
-    if(!state->cls->has_constructor) {
+    if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
         code_t*c = 0;
         c = abc_getlocal_0(c);
         c = abc_constructsuper(c, 0);
@@ -1627,8 +1631,7 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         int slot = (int)(ptroff_t)$$.c->data[0];
         trait_t*t = abc_class_find_slotid(state->cls->abc,slot);//FIXME
         if(t->kind!=TRAIT_METHOD) {
-            //flash allows to assign closures to members.
-            //syntaxerror("not a function");
+            //ok: flash allows to assign closures to members.
         }
         name = t->name;
         $$.c = code_cutlast($$.c);
@@ -2182,14 +2185,21 @@ VAR_READ : T_IDENTIFIER {
     
     /* look at classes in the current package and imported classes */
     } else if((a = find_class($1))) {
-        if(a->slot) {
-            $$.c = abc_getglobalscope($$.c);
-            $$.c = abc_getslot($$.c, a->slot);
-        } else {
+        if(a->flags & FLAG_METHOD) {
             MULTINAME(m, a);
-            $$.c = abc_getlex2($$.c, &m);
+            $$.c = abc_findpropstrict2($$.c, &m);
+            $$.c = abc_getproperty2($$.c, &m);
+            $$.t = TYPE_FUNCTION(a->function);
+        } else {
+            if(a->slot) {
+                $$.c = abc_getglobalscope($$.c);
+                $$.c = abc_getslot($$.c, a->slot);
+            } else {
+                MULTINAME(m, a);
+                $$.c = abc_getlex2($$.c, &m);
+            }
+            $$.t = TYPE_CLASS(a);
         }
-        $$.t = TYPE_CLASS(a);
 
     /* unknown object, let the avm2 resolve it */
     } else {
