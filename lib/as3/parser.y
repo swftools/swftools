@@ -1343,12 +1343,13 @@ WHILE : MAYBELABEL "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $7);
-    myjmp->branch = $$ = abc_nop($$);
+    code_t*cont = $$ = abc_nop($$);
+    myjmp->branch = cont;
     $$ = code_append($$, $5.c);
     $$ = abc_iftrue($$, loopstart);
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
-    continuejumpsto($$, $1, loopstart);
+    continuejumpsto($$, $1, cont);
 
     $$ = killvars($$);
     old_state();
