@@ -1153,6 +1153,11 @@ code_t* cut_last_push(code_t*c)
         } else if(c->opcode == OPCODE_CALLSUPER) {
             c->opcode = OPCODE_CALLSUPERVOID;
             return c;
+        } else if(c->opcode == OPCODE_NEWOBJECT ||
+                  c->opcode == OPCODE_NEWARRAY) {
+            // we can discard these if they're not eating up stack parameters
+            if(!c->data[0])
+                return code_cutlast(c);
         }
         else
             break;
