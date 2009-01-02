@@ -709,6 +709,21 @@ code_t* killvars(code_t*c)
     return c;
 }
 
+void check_code_for_break(code_t*c)
+{
+    while(c) {
+        if(c->opcode == OPCODE___BREAK__) {
+            char*name = string_cstr(c->data[0]);
+            syntaxerror("Unresolved \"break %s\"", name);
+        }
+        if(c->opcode == OPCODE___CONTINUE__) {
+            char*name = string_cstr(c->data[0]);
+            syntaxerror("Unresolved \"continue %s\"", name);
+        }
+        c=c->prev;
+    }
+}
+
 
 static void check_constant_against_type(classinfo_t*t, constant_t*c)
 {
@@ -860,6 +875,7 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
             syntaxerror("non-optional parameter not allowed after optional parameters");
         }
     }
+    check_code_for_break(body);
     f->body->code = body;
         
     old_state();
@@ -876,8 +892,11 @@ void breakjumpsto(code_t*c, char*name, code_t*jump)
 {
     while(c) {
         if(c->opcode == OPCODE___BREAK__) {
-            c->opcode = OPCODE_JUMP;
-            c->branch = jump;
+            string_t*name2 = c->data[0];
+            if(!name2->len || !strncmp(name2->str, name, name2->len)) {
+                c->opcode = OPCODE_JUMP;
+                c->branch = jump;
+            }
         }
         c=c->prev;
     }
@@ -886,8 +905,11 @@ void continuejumpsto(code_t*c, char*name, code_t*jump)
 {
     while(c) {
         if(c->opcode == OPCODE___CONTINUE__) {
-            c->opcode = OPCODE_JUMP;
-            c->branch = jump;
+            string_t*name2 = c->data[0];
+            if(!name2->len || !strncmp(name2->str, name, name2->len)) {
+                c->opcode = OPCODE_JUMP;
+                c->branch = jump;
+            }
         }
         c = c->prev;
     }
@@ -1173,8 +1195,12 @@ PROGRAM: MAYBECODE
 MAYBECODE: CODE {$$=$1;/*TODO: do something with this code if we're not in a function*/}
 MAYBECODE:      {$$=code_new();}
 
-CODE: CODE CODEPIECE {$$=code_append($1,$2);}
-CODE: CODEPIECE {$$=$1;}
+CODE: CODE CODEPIECE {
+    $$=code_append($1,$2);
+}
+CODE: CODEPIECE {
+    $$=$1;
+}
 
 CODEPIECE: PACKAGE_DECLARATION   {$$=code_new();/*enters a scope*/}
 CODEPIECE: CLASS_DECLARATION     {$$=code_new();/*enters a scope*/}
