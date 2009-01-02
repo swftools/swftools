@@ -78,16 +78,16 @@
 %token<id> T_DO "do"
 %token<id> T_SWITCH "switch"
 
-%token<token> KW_IMPLEMENTS
+%token<token> KW_IMPLEMENTS "implements"
 %token<token> KW_NAMESPACE "namespace"
 %token<token> KW_PACKAGE "package"
-%token<token> KW_PROTECTED
-%token<token> KW_PUBLIC
-%token<token> KW_PRIVATE
+%token<token> KW_PROTECTED "protected"
+%token<token> KW_PUBLIC "public"
+%token<token> KW_PRIVATE "private"
 %token<token> KW_USE "use"
-%token<token> KW_INTERNAL
+%token<token> KW_INTERNAL "internal"
 %token<token> KW_NEW "new"
-%token<token> KW_NATIVE
+%token<token> KW_NATIVE "native"
 %token<token> KW_FUNCTION "function"
 %token<token> KW_UNDEFINED "undefined"
 %token<token> KW_CONTINUE "continue"
@@ -98,7 +98,8 @@
 %token<token> KW_SET "set"
 %token<token> KW_VOID "void"
 %token<token> KW_THROW "throw"
-%token<token> KW_STATIC
+%token<token> KW_STATIC "static"
+%token<token> KW_WITH "with"
 %token<token> KW_INSTANCEOF "instanceof"
 %token<token> KW_IMPORT "import"
 %token<token> KW_RETURN "return"
@@ -107,13 +108,13 @@
 %token<token> KW_NULL "null"
 %token<token> KW_VAR "var"
 %token<token> KW_DYNAMIC "dynamic"
-%token<token> KW_OVERRIDE
-%token<token> KW_FINAL
+%token<token> KW_OVERRIDE "override"
+%token<token> KW_FINAL "final"
 %token<token> KW_EACH "each"
 %token<token> KW_GET "get"
 %token<token> KW_TRY "try"
 %token<token> KW_SUPER "super"
-%token<token> KW_EXTENDS
+%token<token> KW_EXTENDS "extends"
 %token<token> KW_FALSE "false"
 %token<token> KW_TRUE "true"
 %token<token> KW_BOOLEAN "Boolean"
@@ -160,7 +161,7 @@
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE CODE_STATEMENT
-%type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH
+%type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH WITH
 %type <code> PACKAGE_DECLARATION SLOT_DECLARATION
 %type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
 %type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW 
@@ -1326,6 +1327,7 @@ CODE_STATEMENT: WHILE
 CODE_STATEMENT: DO_WHILE 
 CODE_STATEMENT: SWITCH 
 CODE_STATEMENT: IF
+CODE_STATEMENT: WITH
 CODE_STATEMENT: TRY
 
 // code which may appear anywhere
@@ -1655,6 +1657,15 @@ THROW : "throw" %prec prec_none {
     $$=code_new();
     $$=abc_getlocal($$, v->index);
     $$=abc_throw($$);
+}
+
+/* ------------ with -------------------------------- */
+
+WITH : "with" '(' EXPRESSION ')' CODEBLOCK {
+     $$ = $3.c;
+     $$ = abc_pushscope($$);
+     $$ = code_append($$, $5);
+     $$ = abc_popscope($$);
 }
 
 /* ------------ packages and imports ---------------- */
