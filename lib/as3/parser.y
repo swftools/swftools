@@ -69,6 +69,10 @@
 %token<number_uint> T_SHORT
 %token<number_float> T_FLOAT
 
+%token<id> T_FOR "for"
+%token<id> T_WHILE "while"
+%token<id> T_DO "do"
+
 %token<token> KW_IMPLEMENTS
 %token<token> KW_NAMESPACE "namespace"
 %token<token> KW_PACKAGE "package"
@@ -82,7 +86,6 @@
 %token<token> KW_FUNCTION "function"
 %token<token> KW_UNDEFINED "undefined"
 %token<token> KW_CONTINUE "continue"
-%token<token> KW_FOR "for"
 %token<token> KW_CLASS "class"
 %token<token> KW_CONST "const"
 %token<token> KW_SET "set"
@@ -106,7 +109,6 @@
 %token<token> KW_BOOLEAN "Boolean"
 %token<token> KW_UINT "uint"
 %token<token> KW_INT "int"
-%token<token> KW_WHILE "while"
 %token<token> KW_NUMBER "Number"
 %token<token> KW_STRING "String"
 %token<token> KW_DELETE "delete"
@@ -115,7 +117,6 @@
 %token<token> KW_BREAK   "break"
 %token<token> KW_IS "is"
 %token<token> KW_AS "as"
-%token<token> KW_DO "do"
 
 %token<token> T_EQEQ "=="
 %token<token> T_EQEQEQ "==="
@@ -142,7 +143,7 @@
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
 
-%type <id> X_IDENTIFIER PACKAGE MAYBELABEL
+%type <id> X_IDENTIFIER PACKAGE
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE
@@ -183,7 +184,7 @@
 //%type <token> T_IDENTIFIER
 %type <token> MODIFIER
 %type <value> FUNCTIONCALL
-%type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST MAYBE_PARAM_VALUES
+%type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST MAYBE_PARAM_VALUES MAYBE_EXPRPAIR_LIST EXPRPAIR_LIST
 
 // precedence: from low to high
 
@@ -209,6 +210,7 @@
 %left '/' '*' '%'
 %left plusplus_prefix minusminus_prefix '~' '!' "void" "delete" "typeof" //FIXME: *unary* + - should be here, too
 %left "--" "++" 
+%nonassoc below_curly
 %left '[' ']' '{' "new" '.' ".." "::"
 %nonassoc T_IDENTIFIER
 %left below_else
@@ -219,6 +221,7 @@
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
 %nonassoc "false" "true" "null" "undefined" "super"
+
 
      
 %{
@@ -944,19 +947,13 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         return abc_coerce2(c, &m);
     }
     
-    if(TYPE_IS_NUMBER(from) && TYPE_IS_UINT(to)) {
+    if((TYPE_IS_NUMBER(from) || TYPE_IS_UINT(from) || TYPE_IS_INT(from)) &&
+       (TYPE_IS_NUMBER(to) || TYPE_IS_UINT(to) || TYPE_IS_INT(to))) {
+        // allow conversion between number types
         return abc_coerce2(c, &m);
     }
-    if(TYPE_IS_NUMBER(from) && TYPE_IS_INT(to)) {
-        return abc_coerce2(c, &m);
-    }
-    /* these are subject to overflow */
-    if(TYPE_IS_INT(from) && TYPE_IS_UINT(to)) {
-        return abc_coerce2(c, &m);
-    }
-    if(TYPE_IS_UINT(from) && TYPE_IS_INT(to)) {
-        return abc_coerce2(c, &m);
-    }
+    //printf("%s.%s\n", from.package, from.name);
+    //printf("%s.%s\n", to.package, to.name);
 
     classinfo_t*supertype = from;
     while(supertype) {
@@ -967,7 +964,7 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         int t=0;
         while(supertype->interfaces[t]) {
             if(supertype->interfaces[t]==to) {
-                // to type is one of from's interfaces
+                // target type is one of from's interfaces
                 return abc_coerce2(c, &m);
             }
             t++;
@@ -1198,7 +1195,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
 PROGRAM: MAYBECODE
 
 MAYBECODE: CODE {$$=$1;/*TODO: do something with this code if we're not in a function*/}
-MAYBECODE:      {$$=code_new();}
+MAYBECODE: {$$=code_new();}
 
 CODE: CODE CODEPIECE {
     $$=code_append($1,$2);
@@ -1225,7 +1222,8 @@ CODEPIECE: IF                    {$$=$1}
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=code_new();}
 CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=code_new();}
 
-CODEBLOCK :  '{' MAYBECODE '}' {$$=$2;}
+CODEBLOCK :  '{' CODE '}' {$$=$2;}
+CODEBLOCK :  '{' '}'      {$$=0;}
 CODEBLOCK :  CODEPIECE ';'             {$$=$1;}
 CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
 
@@ -1312,22 +1310,19 @@ IF  : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
     $$ = killvars($$);old_state();
 }
 
-MAYBELABEL : T_IDENTIFIER ':' {$$=$1;}
-MAYBELABEL :                  {$$="";}
-
 FOR_INIT : {$$=code_new();}
 FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
 
-FOR : MAYBELABEL "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
+FOR : T_FOR '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     $$ = code_new();
-    $$ = code_append($$, $5);
+    $$ = code_append($$, $4);
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $7.c);
+    $$ = code_append($$, $6.c);
     code_t*myif = $$ = abc_iffalse($$, 0);
-    $$ = code_append($$, $11);
+    $$ = code_append($$, $10);
     code_t*cont = $$ = abc_nop($$);
-    $$ = code_append($$, $9);
+    $$ = code_append($$, $8);
     $$ = abc_jump($$, loopstart);
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
@@ -1337,15 +1332,15 @@ FOR : MAYBELABEL "for" '(' {new_state();} FOR_INIT ';' EXPRESSION ';' VOIDEXPRES
     $$ = killvars($$);old_state();
 }
 
-WHILE : MAYBELABEL "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
+WHILE : T_WHILE '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     $$ = code_new();
 
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $7);
+    $$ = code_append($$, $6);
     code_t*cont = $$ = abc_nop($$);
     myjmp->branch = cont;
-    $$ = code_append($$, $5.c);
+    $$ = code_append($$, $4.c);
     $$ = abc_iftrue($$, loopstart);
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
@@ -1355,12 +1350,12 @@ WHILE : MAYBELABEL "while" '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     old_state();
 }
 
-DO_WHILE : MAYBELABEL "do" {new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
+DO_WHILE : T_DO {new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
     $$ = code_new();
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $4);
+    $$ = code_append($$, $3);
     code_t*cont = $$ = abc_nop($$);
-    $$ = code_append($$, $7.c);
+    $$ = code_append($$, $6.c);
     $$ = abc_iftrue($$, loopstart);
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
@@ -1623,6 +1618,7 @@ QNAME_LIST : QNAME_LIST ',' QNAME {$$=$1;list_append($$,$3);}
 
 TYPE : QNAME      {$$=$1;}
      | '*'        {$$=registry_getanytype();}
+     | "void"     {$$=registry_getanytype();}
     /*
      |  "String"  {$$=registry_getstringclass();}
      |  "int"     {$$=registry_getintclass();}
@@ -2035,6 +2031,37 @@ E : '[' MAYBE_EXPRESSION_LIST ']' {
     }
     $$.c = abc_newarray($$.c, len);
     $$.t = registry_getarrayclass();
+}
+
+MAYBE_EXPRPAIR_LIST : {$$=0;}
+MAYBE_EXPRPAIR_LIST : EXPRPAIR_LIST {$$=$1};
+
+EXPRPAIR_LIST : NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
+    typedcode_t*t1 = malloc(sizeof(typedcode_t));*t1 = $1;
+    typedcode_t*t2 = malloc(sizeof(typedcode_t));*t2 = $3;
+    $$ = 0;
+    list_append($$, t1);
+    list_append($$, t2);
+}
+EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
+    $$=$1;
+    typedcode_t*t1 = malloc(sizeof(typedcode_t));*t1 = $3;
+    typedcode_t*t2 = malloc(sizeof(typedcode_t));*t2 = $5;
+    list_append($$, t1);
+    list_append($$, t2);
+}
+//MAYBECOMMA: ','
+//MAYBECOMMA:
+
+E : '{' MAYBE_EXPRPAIR_LIST '}' {
+    $$.c = code_new();
+    typedcode_list_t*l = 0;
+    int len = 0;
+    for(l=$2;l;l=l->next) {
+        $$.c = code_append($$.c, l->typedcode->c);len++;
+    }
+    $$.c = abc_newobject($$.c, len/2);
+    $$.t = registry_getobjectclass();
 }
 
 E : E "*=" E { 
