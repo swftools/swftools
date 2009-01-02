@@ -397,7 +397,7 @@ void initialize_scanner();
 %s BEGINNING
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
-_        \[^a-zA-Z0-9_\\]
+_        [^a-zA-Z0-9_\\]
 
 HEXINT    0x[a-zA-Z0-9]+
 INT       [0-9]+
@@ -440,10 +440,10 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
-{NAME}{S}*:{S}*for{_}        {c();handleLabel(yytext, yyleng-3);return T_FOR;}
-{NAME}{S}*:{S}*do{_}         {c();handleLabel(yytext, yyleng-2);return T_DO;}
-{NAME}{S}*:{S}*while{_}      {c();handleLabel(yytext, yyleng-5);return T_WHILE;}
-{NAME}{S}*:{S}*switch{_}     {c();handleLabel(yytext, yyleng-6);return T_SWITCH;}
+{NAME}{S}*:{S}*for/{_}        {c();handleLabel(yytext, yyleng-3);return T_FOR;}
+{NAME}{S}*:{S}*do/{_}         {c();handleLabel(yytext, yyleng-2);return T_DO;}
+{NAME}{S}*:{S}*while/{_}      {c();handleLabel(yytext, yyleng-5);return T_WHILE;}
+{NAME}{S}*:{S}*switch/{_}     {c();handleLabel(yytext, yyleng-6);return T_SWITCH;}
 for                          {c();avm2_lval.id="";return T_FOR;}
 do                           {c();avm2_lval.id="";return T_DO;}
 while                        {c();avm2_lval.id="";return T_WHILE;}
