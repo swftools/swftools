@@ -1234,6 +1234,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
             c = abc_setlocal(c, temp);
             c = code_append(c, write);
             c = abc_getlocal(c, temp);
+            c = abc_kill(c, temp);
         }
     }
 
