@@ -289,7 +289,7 @@ trait_t* abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*typ
     abc_file_t*file = cls->file;
     multiname_t*m_name = multiname_clone(name);
     multiname_t*m_type = multiname_clone(type);
-    trait_t*t = trait_new_member(&cls->traits, m_type, m_name, 0);
+    trait_t*t = trait_new_member(&cls->static_traits, m_type, m_name, 0);
     return t;
 }
 
