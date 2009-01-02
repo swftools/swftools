@@ -91,6 +91,7 @@ int main(int argn, char*argv[])
         swf_SetU16(tag, 1);
         swf_SetU16(tag, 0);
         swf_SetString(tag, globalclass);
+        free(globalclass);globalclass=0;
     } else {
         printf("Warning: no global public MovieClip subclass\n");
     }
@@ -103,6 +104,8 @@ int main(int argn, char*argv[])
     int f = open("abc.swf",O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0644);
     swf_WriteSWF(f,&swf);
     close(f);
+
+    swf_FreeTags(&swf);
 
     return 0;
 }
