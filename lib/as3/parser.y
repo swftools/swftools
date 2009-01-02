@@ -1147,6 +1147,8 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
                 prefix = abc_getlocal(prefix, temp);
                 prefix = abc_swap(prefix);
                 prefix = abc_getlocal(prefix, temp);
+                if(!use_temp_var);
+                    prefix = abc_kill(prefix, temp);
             }
             use_temp_var = 1;
         } else {
