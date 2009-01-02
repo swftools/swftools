@@ -227,6 +227,11 @@ classinfo_t* registry_getstringclass() {
     if(!c) c = registry_safefindclass("", "String");
     return c;
 }
+classinfo_t* registry_getarrayclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "Array");
+    return c;
+}
 classinfo_t* registry_getintclass() {
     static classinfo_t*c = 0;
     if(!c) c = registry_safefindclass("", "int");
