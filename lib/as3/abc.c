@@ -227,6 +227,7 @@ trait_t*trait_new(int type, multiname_t*name, int data1, int data2, constant_t*v
     trait->value = v;
     return trait;
 }
+
 trait_t*trait_new_member(trait_list_t**traits, multiname_t*type, multiname_t*name,constant_t*v)
 {
     int kind = TRAIT_SLOT;
@@ -236,8 +237,9 @@ trait_t*trait_new_member(trait_list_t**traits, multiname_t*type, multiname_t*nam
     trait->attributes = kind&0xf0;
     trait->name = name;
     trait->type_name = type;
-    
-    trait->slot_id = list_length_(traits)+1;
+   
+    trait->slot_id = list_length(*traits)+1;
+    trait_list_t*l = *traits;
     list_append_(traits, trait);
     return trait;
 }
@@ -254,7 +256,7 @@ trait_t*trait_new_method(trait_list_t**traits, multiname_t*name, abc_method_t*m)
     /* start assigning traits at position #1.
        Weird things happen when assigning slot 0- slot 0 and 1 seem
        to be identical */
-    trait->slot_id = list_length_(traits)+1;
+    trait->slot_id = list_length(*traits)+1;
     list_append_(traits, trait);
     return trait;
 }
