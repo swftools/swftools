@@ -95,7 +95,7 @@
 %token<token> KW_INTERFACE "interface"
 %token<token> KW_NULL "null"
 %token<token> KW_VAR "var"
-%token<token> KW_DYNAMIC
+%token<token> KW_DYNAMIC "dynamic"
 %token<token> KW_OVERRIDE
 %token<token> KW_FINAL
 %token<token> KW_GET "get"
@@ -484,7 +484,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     printf("\n");
     */
 
-    if(flags&~(FLAG_INTERNAL|FLAG_PUBLIC|FLAG_FINAL))
+    if(flags&~(FLAG_INTERNAL|FLAG_PUBLIC|FLAG_FINAL|FLAG_DYNAMIC))
         syntaxerror("invalid modifier(s)");
 
     if((flags&(FLAG_PUBLIC|FLAG_INTERNAL)) == (FLAG_PUBLIC|FLAG_INTERNAL))
