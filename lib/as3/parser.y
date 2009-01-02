@@ -595,29 +595,33 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     multiname_destroy(extends2);
 }
 
+static code_t* wrap_function(code_t*c,code_t*initcode, code_t*body)
+{
+    c = code_append(c, initcode);
+    c = code_append(c, body);
+    /* append return if necessary */
+    if(!c || c->opcode != OPCODE_RETURNVOID && 
+             c->opcode != OPCODE_RETURNVALUE) {
+        c = abc_returnvoid(c);
+    }
+    return c;
+}
+
 static void endclass()
 {
     if(state->cls->init) {
-        if(!state->cls->abc->constructor) {
-            abc_method_t*m = abc_class_constructor(state->cls->abc, 0);
-            m->body->code = code_append(m->body->code, state->cls->init);
-            m->body->code = abc_returnvoid(m->body->code);
-        } else {
-            code_t*c = state->cls->abc->constructor->body->code;
-            c = code_append(state->cls->init, c);
-            state->cls->abc->constructor->body->code = c;
-
-        }
+        abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
+        m->body->code = wrap_function(0, state->cls->init, m->body->code);
     }
     if(state->cls->static_init) {
-        if(!state->cls->abc->static_constructor) {
-            abc_method_t*m = abc_class_staticconstructor(state->cls->abc, 0);
-            m->body->code = code_append(m->body->code, state->cls->static_init);
-            m->body->code = abc_returnvoid(m->body->code);
-        } else {
-            state->cls->abc->static_constructor->body->code = 
-                code_append(state->cls->static_init, state->cls->abc->static_constructor->body->code);
-        }
+        abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
+        m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
+    } else {
+        // handy for scope testing 
+        /*code_t*c = 0;
+        c = abc_pop(c);
+        c = abc_pop(c);
+        abc_class_getstaticconstructor(state->cls->abc,0)->body->code = c;*/
     }
 
     old_state();
@@ -810,7 +814,7 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     multiname_t*type2 = sig2mname(return_type);
     int slot = 0;
     if(state->method->is_constructor) {
-        f = abc_class_constructor(state->cls->abc, type2);
+        f = abc_class_getconstructor(state->cls->abc, type2);
     } else {
         if(flags&FLAG_STATIC)
             f = abc_class_staticmethod(state->cls->abc, type2, &mname);
@@ -1501,19 +1505,11 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
         c = abc_pushscope(c);
     }
     if(state->method->is_constructor && !state->method->has_super) {
-        // generate default constructor
+        // call default constructor
         c = abc_getlocal_0(c);
         c = abc_constructsuper(c, 0);
     }
-
-    c = code_append(c, state->method->initcode);
-    c = code_append(c, $11);
-
-    /* append return if necessary */
-    if(!c || c->opcode != OPCODE_RETURNVOID && 
-             c->opcode != OPCODE_RETURNVALUE) {
-        c = abc_returnvoid(c);
-    }
+    c = wrap_function(c, state->method->initcode, $11);
     endfunction(0,$1,$3,$4,&$6,$8,c);
 }
 
