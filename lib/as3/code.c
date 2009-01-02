@@ -200,7 +200,8 @@ opcode_t opcodes[]={
 {0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
 
 /* dummy instruction. Warning: this one is not actually supported by flash */
-{0xff, "__break__", "",             0, 0, 0, OP_RETURN},
+{0xfe, "__continue__", "s",           0, 0, 0, OP_RETURN},
+{0xff, "__break__", "s",            0, 0, 0, OP_RETURN},
 };
 
 static U8 op2index[256] = {254};
