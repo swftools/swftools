@@ -293,7 +293,7 @@ DECLARE_LIST(state);
     namespace_t m##_ns;\
     registry_fill_multiname(&m, &m##_ns, x);
                     
-#define MEMBER_MULTINAME(m,f) \
+#define MEMBER_MULTINAME(m,f,n) \
     multiname_t m;\
     namespace_t m##_ns;\
     if(f) { \
@@ -307,7 +307,7 @@ DECLARE_LIST(state);
         m.type = MULTINAME; \
         m.ns =0; \
         m.namespace_set = &nopackage_namespace_set; \
-        m.name = f->name; \
+        m.name = n; \
     }
 
 /* warning: list length of namespace set is undefined */
@@ -2081,7 +2081,7 @@ E : "super" '.' T_IDENTIFIER
 
               memberinfo_t*f = registry_findmember(t, $3);
               namespace_t ns = {flags2access(f->flags), ""};
-              MEMBER_MULTINAME(m, f);
+              MEMBER_MULTINAME(m, f, $3);
               $$.c = 0;
               $$.c = abc_getlocal_0($$.c);
               $$.c = abc_getsuper2($$.c, &m);
@@ -2104,7 +2104,7 @@ E : E '.' T_IDENTIFIER
                  if(f && f->slot && !noslot) {
                      $$.c = abc_getslot($$.c, f->slot);
                  } else {
-                     MEMBER_MULTINAME(m, f);
+                     MEMBER_MULTINAME(m, f, $3);
                      $$.c = abc_getproperty2($$.c, &m);
                  }
                  /* determine type */
