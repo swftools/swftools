@@ -1113,16 +1113,26 @@ code_t*code_dup(code_t*c)
     return last;
 }
 
+code_t*code_cut(code_t*c)
+{
+    if(!c) return c;
+    code_t*prev = c->prev;
+    code_t*next = c->next;
+    c->prev = 0;
+    c->next = 0;
+    if(prev) prev->next=next;
+    if(next) next->prev=prev;
+    code_free(c);
+    
+    if(next) return code_end(next);
+    else     return prev;
+}
+
 code_t*code_cutlast(code_t*c)
 {
     if(!c) return c;
     assert(!c->next);
-    code_t*prev = c->prev;
-    c->prev = 0;
-    if(prev)
-        prev->next=0;
-    code_free(c);
-    return prev;
+    return code_cut(c);
 }
 
 code_t* cut_last_push(code_t*c)
@@ -1159,8 +1169,14 @@ code_t* cut_last_push(code_t*c)
             // we can discard these if they're not eating up stack parameters
             if(!c->data[0])
                 return code_cutlast(c);
-        }
-        else
+        } else if(op->stack_minus ==0 && op->stack_plus == 0 && 
+                !(op->flags&~(OP_REGISTER|OP_SET_DXNS)) && c->prev) {
+            // trim code *before* the kill, inclocal, declocal, dxns
+            code_t*p = c->prev; 
+            p->next = 0;
+            c->prev = 0;
+            return code_append(cut_last_push(p), c);
+        } else
             break;
     }
     c = abc_pop(c);
