@@ -250,6 +250,7 @@ typedef struct _classstate {
     abc_class_t*abc;
     code_t*init;
     code_t*static_init;
+    char has_constructor;
 } classstate_t;
 
 typedef struct _methodstate {
@@ -609,6 +610,13 @@ static code_t* wrap_function(code_t*c,code_t*initcode, code_t*body)
 
 static void endclass()
 {
+    if(!state->cls->has_constructor) {
+        code_t*c = 0;
+        c = abc_getlocal_0(c);
+        c = abc_constructsuper(c, 0);
+        state->cls->init = code_append(state->cls->init, c);
+    }
+
     if(state->cls->init) {
         abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
         m->body->code = wrap_function(0, state->cls->init, m->body->code);
@@ -789,6 +797,8 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     state->method->initcode = 0;
     state->method->is_constructor = !strcmp(state->cls->info->name,name);
     state->method->has_super = 0;
+    
+    state->cls->has_constructor |= state->method->is_constructor;
 
     global->variable_count = 0;
 
