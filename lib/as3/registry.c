@@ -169,6 +169,7 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
             if(m) return m;
             s = s->superclass;
         }
+        t++;
     }
     return 0;
 
@@ -187,8 +188,8 @@ multiname_t* classinfo_to_multiname(classinfo_t*cls)
     if(!cls)
         return 0;
     multiname_t*m=0;
-    namespace_t*ns = namespace_new(cls->access, cls->package);
-    return multiname_new(ns,cls->name);
+    namespace_t ns = {cls->access, (char*)cls->package};
+    return multiname_new(&ns,cls->name);
 }
 
 // ----------------------- memberinfo methods ------------------------------
