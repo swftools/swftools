@@ -1,4 +1,5 @@
-all: parser testreadwrite swfdump testwrite testrewrite testpaths mklib
+all: parser swfdump mklib
+tests: testwrite testrewrite testpaths testreadwrite 
 
 D=-g -pg
 
