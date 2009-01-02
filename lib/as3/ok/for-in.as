@@ -7,27 +7,38 @@ package {
             for(var x in a) {
                 j += x;
             }
-            if(j==45) trace("ok 1/4");
+            if(j==45) trace("ok 1/5");
            
             var y;
             j = 0;
             for(y in a) {
                 j += y;
             }
-            if(j==45) trace("ok 2/4");
+            if(j==45) trace("ok 2/5");
             
             j = 0;
             for each(var x in a) {
                 j += x;
             }
-            if(j==55) trace("ok 3/4");
+            if(j==55) trace("ok 3/5");
             
-            var y = 0;
+            var z = 0;
             j = 0;
-            for each(y in a) {
-                j += y;
+            for each(z in a) {
+                j += z;
             }
-            if(j==55) trace("ok 4/4");
+            if(j==55) trace("ok 4/5");
+            
+            var i:int = 0;
+            j = 0;
+            for each(i in a) {
+                j += i;
+                if(i==6)
+                    break;
+                else
+                    continue;
+            }
+            if(j==16) trace("ok 5/5");
         }
     }
 }
