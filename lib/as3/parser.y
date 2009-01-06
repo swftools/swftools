@@ -422,23 +422,50 @@ static void old_state()
     state = state->old;
     state_destroy(leaving);
 }
-void initialize_state()
+
+void initialize_parser()
 {
     global = rfx_calloc(sizeof(global_t));
-    new_state();
-
-    state->package = current_filename;
-
     global->file = abc_file_new();
     global->file->flags &= ~ABCFILE_LAZY;
     global->variable_count = 1;
-    
-    global->init = abc_initscript(global->file, 0);
+    global->init = abc_initscript(global->file);
     code_t*c = global->init->method->body->code;
-
     c = abc_getlocal_0(c);
     c = abc_pushscope(c);
-  
+    /*c = abc_findpropstrict(c, "[package]::trace");
+    c = abc_pushstring(c, "[entering global init function]");
+    c = abc_callpropvoid(c, "[package]::trace", 1);*/
+    global->init->method->body->code = c;
+}
+
+void initialize_file(char*filename)
+{
+    new_state();
+    state->package = filename;
+}
+void finish_file()
+{
+    if(!state || state->level!=1) {
+        syntaxerror("unexpected end of file");
+    }
+    state_destroy(state);state=0;
+}
+
+void* finish_parser()
+{
+    code_t*c = global->init->method->body->code;
+    /*c = abc_findpropstrict(c, "[package]::trace");
+      c = abc_pushstring(c, "[leaving global init function]");
+      c = abc_callpropvoid(c, "[package]::trace", 1);*/
+    c = abc_returnvoid(c);
+    global->init->method->body->code = c;
+    return global->file;
+}
+
+
+static void xx_scopetest() 
+{
     /* findpropstrict doesn't just return a scope object- it
        also makes it "active" somehow. Push local_0 on the
        scope stack and read it back with findpropstrict, it'll
@@ -464,29 +491,6 @@ void initialize_state()
     c = abc_getlocal_3(c);
     c = abc_kill(c, 3);
     c = abc_iftrue(c,xx);*/
-
-    c = abc_findpropstrict(c, "[package]::trace");
-    c = abc_pushstring(c, "[entering global init function]");
-    c = abc_callpropvoid(c, "[package]::trace", 1);
-    
-    global->init->method->body->code = c;
-}
-void* finalize_state()
-{
-    if(state->level!=1) {
-        syntaxerror("unexpected end of file");
-    }
-    abc_method_body_t*m = global->init->method->body;
-    //__ popscope(m);
-    
-    __ findpropstrict(m, "[package]::trace");
-    __ pushstring(m, "[leaving global init function]");
-    __ callpropvoid(m, "[package]::trace", 1);
-    __ returnvoid(m);
-
-    state_destroy(state);state=0;
-
-    return global->file;
 }
 
 
@@ -616,7 +620,7 @@ static void endpackage()
     old_state();
 }
 
-char*globalclass=0;
+char*as3_globalclass=0;
 static void startclass(int flags, char*classname, classinfo_t*extends, classinfo_list_t*implements, char interface)
 {
     if(state->cls) {
@@ -738,11 +742,11 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     __ setslot(m, slotindex);
 
     /* flash.display.MovieClip handling */
-    if(!globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
+    if(!as3_globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
         if(state->package && state->package[0]) {
-            globalclass = concat3(state->package, ".", classname);
+            as3_globalclass = concat3(state->package, ".", classname);
         } else {
-            globalclass = strdup(classname);
+            as3_globalclass = strdup(classname);
         }
     }
     multiname_destroy(extends2);
@@ -1400,7 +1404,7 @@ CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
 /* ------------ package init code ------------------- */
 
 PACKAGE_INITCODE: CODE_STATEMENT {
-    if($1) warning("code ignored");
+    if($1) as3_warning("code ignored");
 }
 
 /* ------------ variables --------------------------- */
@@ -2720,7 +2724,7 @@ VAR_READ : T_IDENTIFIER {
     /* unknown object, let the avm2 resolve it */
     } else {
         if(strcmp($1,"trace"))
-            warning("Couldn't resolve '%s', doing late binding", $1);
+            as3_softwarning("Couldn't resolve '%s', doing late binding", $1);
         state->method->late_binding = 1;
                 
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
