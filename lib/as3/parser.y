@@ -60,12 +60,13 @@
     for_start_t for_start;
     abc_exception_t *exception;
     abc_exception_list_t *exception_list;
+    regexp_t regexp;
 }
 
 
 %token<id> T_IDENTIFIER
 %token<str> T_STRING
-%token<token> T_REGEXP
+%token<regexp> T_REGEXP
 %token<token> T_EMPTY
 %token<number_int> T_INT
 %token<number_uint> T_UINT
@@ -337,8 +338,7 @@ DECLARE_LIST(state);
     multiname_t m;\
     namespace_t m##_ns;\
     if(f) { \
-        m##_ns.access = flags2access(f->flags); \
-        m##_ns.name = ""; \
+        m##_ns = flags2namespace(f->flags, ""); \
         m.type = QNAME; \
         m.ns = &m##_ns; \
         m.namespace_set = 0; \
@@ -490,7 +490,7 @@ void* finalize_state()
     __ callpropvoid(m, "[package]::trace", 1);
     __ returnvoid(m);
 
-    state_destroy(state);
+    state_destroy(state);state=0;
 
     return global->file;
 }
@@ -536,10 +536,10 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     printf("\n");
     */
 
-    if(flags&~(FLAG_INTERNAL|FLAG_PUBLIC|FLAG_FINAL|FLAG_DYNAMIC))
+    if(flags&~(FLAG_PACKAGEINTERNAL|FLAG_PUBLIC|FLAG_FINAL|FLAG_DYNAMIC))
         syntaxerror("invalid modifier(s)");
 
-    if((flags&(FLAG_PUBLIC|FLAG_INTERNAL)) == (FLAG_PUBLIC|FLAG_INTERNAL))
+    if((flags&(FLAG_PUBLIC|FLAG_PACKAGEINTERNAL)) == (FLAG_PUBLIC|FLAG_PACKAGEINTERNAL))
         syntaxerror("public and internal not supported at the same time.");
 
     /* create the class name, together with the proper attributes */
@@ -803,23 +803,28 @@ static void check_constant_against_type(classinfo_t*t, constant_t*c)
    }
 }
 
+
 static int flags2access(int flags)
 {
     int access = 0;
     if(flags&FLAG_PUBLIC)  {
-        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
+            syntaxerror("invalid combination of access levels");
         access = ACCESS_PACKAGE;
     } else if(flags&FLAG_PRIVATE) {
-        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
+            syntaxerror("invalid combination of access levels");
         access = ACCESS_PRIVATE;
     } else if(flags&FLAG_PROTECTED) {
-        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_INTERNAL)) syntaxerror("invalid combination of access levels");
+        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_PACKAGEINTERNAL)) 
+            syntaxerror("invalid combination of access levels");
         access = ACCESS_PROTECTED;
     } else {
         access = ACCESS_PACKAGEINTERNAL;
     }
     return access;
 }
+
 
 static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*name, params_t*params, classinfo_t*return_type, int slot)
 {
@@ -877,7 +882,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
     if(flags&FLAG_PUBLIC) minfo->flags |= FLAG_PUBLIC;
     if(flags&FLAG_PRIVATE) minfo->flags |= FLAG_PRIVATE;
     if(flags&FLAG_PROTECTED) minfo->flags |= FLAG_PROTECTED;
-    if(flags&FLAG_INTERNAL) minfo->flags |= FLAG_INTERNAL;
+    if(flags&FLAG_PACKAGEINTERNAL) minfo->flags |= FLAG_PACKAGEINTERNAL;
     if(flags&FLAG_OVERRIDE) minfo->flags |= FLAG_OVERRIDE;
     return minfo;
 }
@@ -926,7 +931,7 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     if(state->method->is_constructor) {
         f = abc_class_getconstructor(state->cls->abc, type2);
     } else if(!state->method->is_global) {
-        namespace_t mname_ns = {flags2access(flags), ""};
+        namespace_t mname_ns = flags2namespace(flags, "");
         multiname_t mname = {QNAME, &mname_ns, 0, name};
 
         if(flags&FLAG_STATIC)
@@ -935,7 +940,7 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
             f = abc_class_method(state->cls->abc, type2, &mname);
         slot = f->trait->slot_id;
     } else {
-        namespace_t mname_ns = {flags2access(flags), state->package};
+        namespace_t mname_ns = flags2namespace(flags, state->package);
         multiname_t mname = {QNAME, &mname_ns, 0, name};
 
         f = abc_method_new(global->file, type2, 1);
@@ -1711,7 +1716,7 @@ MODIFIER : KW_PUBLIC {$$=FLAG_PUBLIC;}
          | KW_FINAL {$$=FLAG_FINAL;}
          | KW_OVERRIDE {$$=FLAG_OVERRIDE;}
          | KW_NATIVE {$$=FLAG_NATIVE;}
-         | KW_INTERNAL {$$=FLAG_INTERNAL;}
+         | KW_INTERNAL {$$=FLAG_PACKAGEINTERNAL;}
 
 EXTENDS : {$$=registry_getobjectclass();}
 EXTENDS : KW_EXTENDS QNAME {$$=$2;}
@@ -1760,7 +1765,7 @@ IDECLARATION : "var" T_IDENTIFIER {
 }
 IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE {
     $1 |= FLAG_PUBLIC;
-    if($1&(FLAG_PRIVATE|FLAG_INTERNAL|FLAG_PROTECTED)) {
+    if($1&(FLAG_PRIVATE|FLAG_PACKAGEINTERNAL|FLAG_PROTECTED)) {
         syntaxerror("invalid method modifiers: interface methods always need to be public");
     }
     startfunction(0,$1,$3,$4,&$6,$8);
@@ -2089,19 +2094,37 @@ EXPRESSION : EXPRESSION ',' E %prec below_minus {
     $$.c = code_append($$.c,$3.c);
     $$.t = $3.t;
 }
-VOIDEXPRESSION : EXPRESSION %prec below_minus {
+VOIDEXPRESSION : E %prec below_minus {
     $$=cut_last_push($1.c);
 }
 
 // ----------------------- expression evaluation -------------------------------------
 
+//V : CONSTANT                    {$$ = 0;}
 E : CONSTANT
+//V : VAR_READ %prec T_IDENTIFIER {$$ = 0;}
 E : VAR_READ %prec T_IDENTIFIER {$$ = $1;}
+//V : NEW                         {$$ = $1.c;}
 E : NEW                         {$$ = $1;}
+//V : DELETE                      {$$ = $1.c;}
 E : DELETE                      {$$ = $1;}
-E : T_REGEXP                    {$$.c = abc_pushundefined(0); /* FIXME */
-                                 $$.t = TYPE_ANY;
-                                }
+
+E : T_REGEXP {
+    $$.c = 0;
+    namespace_t ns = {ACCESS_PACKAGE, ""};
+    multiname_t m = {QNAME, &ns, 0, "RegExp"};
+    if(!$1.options) {
+        $$.c = abc_getlex2($$.c, &m);
+        $$.c = abc_pushstring($$.c, $1.pattern);
+        $$.c = abc_construct($$.c, 1);
+    } else {
+        $$.c = abc_getlex2($$.c, &m);
+        $$.c = abc_pushstring($$.c, $1.pattern);
+        $$.c = abc_pushstring($$.c, $1.options);
+        $$.c = abc_construct($$.c, 2);
+    }
+    $$.t = TYPE_REGEXP;
+}
 
 CONSTANT : T_BYTE {$$.c = abc_pushbyte(0, $1);
                    //MULTINAME(m, registry_getintclass());
@@ -2510,7 +2533,7 @@ E : "super" '.' T_IDENTIFIER
               if(!t) t = TYPE_OBJECT;
 
               memberinfo_t*f = registry_findmember(t, $3, 1);
-              namespace_t ns = {flags2access(f->flags), ""};
+              namespace_t ns = flags2namespace(f->flags, "");
               MEMBER_MULTINAME(m, f, $3);
               $$.c = 0;
               $$.c = abc_getlocal_0($$.c);
