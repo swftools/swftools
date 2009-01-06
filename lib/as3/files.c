@@ -131,6 +131,9 @@ char*find_file(char*filename)
         }
         return 0;
     }
+    if(!i) {
+        as3_warning("Include directory stack is empty, while looking for file %s", filename);
+    }
     while(i) {
         char*p = concat_paths(i->path, filename);
         fi = fopen(p, "rb");
@@ -146,12 +149,12 @@ char*find_file(char*filename)
 char*enter_file(char*filename, void*state)
 {
     if(include_stack_ptr >= MAX_INCLUDE_DEPTH) {
-    	syntaxerror("Includes nested too deeply");
+    	as3_error("Includes nested too deeply");
 	exit(1);
     }
     char*fullfilename = find_file(filename);
     if(!fullfilename) {
-    	syntaxerror("Couldn't find file %s", filename);
+    	as3_error("Couldn't find file %s", filename);
         include_dir_t*i = current_include_dirs;
         while(i) {
             fprintf(stderr, "include dir: %s\n", i->path);
