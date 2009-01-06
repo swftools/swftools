@@ -1,1 +1,1 @@
-*.sc *.jpeg *.jpg *.zip *.ttf m swfcombine swfextract swfdump wav2swf png2swf jpeg2swf swfstrings swfc parser.yy.c test.html Makefile output swfbbox font2swf gif2swf pdf2swf
+*.sc *.jpeg *.jpg *.zip *.ttf m swfcombine swfextract swfdump wav2swf png2swf jpeg2swf swfstrings swfc parser.yy.c test.html Makefile output swfbbox font2swf gif2swf pdf2swf as3compile swfbytes swfrender
