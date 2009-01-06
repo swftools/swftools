@@ -159,7 +159,7 @@
 %token<token> T_SHR ">>"
 
 %type <for_start> FOR_START
-%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT
+%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE CODE_STATEMENT
@@ -177,7 +177,8 @@
 %type <value> MAYBEEXPRESSION
 %type <value> E DELETE
 %type <value> CONSTANT
-%type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY
+%type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
+%type <value> INNERFUNCTION
 %type <token> USE_NAMESPACE
 %type <code> FOR_INIT
 %type <code> IMPORT
@@ -238,7 +239,8 @@
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
-%nonassoc "false" "true" "null" "undefined" "super"
+%nonassoc "false" "true" "null" "undefined" "super" "function"
+%nonassoc above_function
 
 
      
@@ -1374,7 +1376,6 @@ CODE: CODEPIECE {$$=$1;}
 
 // code which also may appear outside a method
 CODE_STATEMENT: IMPORT 
-CODE_STATEMENT: VOIDEXPRESSION 
 CODE_STATEMENT: FOR 
 CODE_STATEMENT: FOR_IN 
 CODE_STATEMENT: WHILE 
@@ -1383,11 +1384,12 @@ CODE_STATEMENT: SWITCH
 CODE_STATEMENT: IF
 CODE_STATEMENT: WITH
 CODE_STATEMENT: TRY
+CODE_STATEMENT: VOIDEXPRESSION 
 
 // code which may appear anywhere
 CODEPIECE: ';' {$$=0;}
-CODEPIECE: VARIABLE_DECLARATION
 CODEPIECE: CODE_STATEMENT
+CODEPIECE: VARIABLE_DECLARATION
 CODEPIECE: BREAK
 CODEPIECE: CONTINUE
 CODEPIECE: RETURN
@@ -1487,6 +1489,8 @@ IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
 FOR_INIT : {$$=code_new();}
 FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
+
+// TODO: why doesn't an %prec above_identifier resolve the r-r conflict here?
 FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
     $$=$2;new_variable($2,$3,1);
 }
@@ -1762,7 +1766,7 @@ IMPORT : "import" PACKAGE '.' '*' {
 
 /* ------------ classes and interfaces (header) -------------- */
 
-MAYBE_MODIFIERS : {$$=0;}
+MAYBE_MODIFIERS : %prec above_function {$$=0;}
 MAYBE_MODIFIERS : MODIFIER_LIST {$$=$1}
 MODIFIER_LIST : MODIFIER               {$$=$1;}
 MODIFIER_LIST : MODIFIER_LIST MODIFIER {$$=$1|$2;}
@@ -1972,6 +1976,14 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
     $$=0;
 }
 
+MAYBE_IDENTIFIER: T_IDENTIFIER
+MAYBE_IDENTIFIER: {$$=0;}
+INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE '{' MAYBECODE '}'
+{
+    syntaxerror("nested functions not supported yet");
+}
+
+
 /* ------------- package + class ids --------------- */
 
 CLASS: T_IDENTIFIER {
@@ -2159,6 +2171,7 @@ VOIDEXPRESSION : EXPRESSION %prec below_minus {
 
 // ----------------------- expression evaluation -------------------------------------
 
+E : INNERFUNCTION %prec prec_none {$$ = $1;}
 //V : CONSTANT                    {$$ = 0;}
 E : CONSTANT
 //V : VAR_READ %prec T_IDENTIFIER {$$ = 0;}
