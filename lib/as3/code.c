@@ -201,7 +201,6 @@ opcode_t opcodes[]={
 {0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
 
 /* dummy instructions. Warning: these are not actually supported by flash */
-{0xfc, "__rethrow__", "",           0, 0, 0, OP_THROW|OP_INTERNAL},
 {0xfd, "__fallthrough__", "s",           0, 0, 0, OP_INTERNAL},
 {0xfe, "__continue__", "s",           0, 0, 0, OP_RETURN|OP_INTERNAL},
 {0xff, "__break__", "s",            0, 0, 0, OP_RETURN|OP_INTERNAL},
@@ -846,11 +845,7 @@ void stats_free(currentstats_t*stats)
     }
 }
 
-int code_dump(code_t*c)
-{
-    return code_dump2(c, 0, 0, "", stdout);
-}
-int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
+int code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
 {
     abc_exception_list_t*e = exceptions;
     c = code_start(c);
@@ -929,8 +924,8 @@ int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*
                     int n = (ptroff_t)data;
                     fprintf(fo, "r%d", n);
                 } else if(*p == 'b') {
-                    int b = (signed char)(ptroff_t)data;
-                    fprintf(fo, "%d", b);
+                    int b = (ptroff_t)data;
+                    fprintf(fo, "%02x", b);
                 } else if(*p == 'j') {
                     if(c->branch)
                         fprintf(fo, "->%d", c->branch->pos);
@@ -948,7 +943,7 @@ int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*
                     if(l->def)
                         fprintf(fo, "default->%d", l->def->pos);
                     else
-                        fprintf(fo, "default->00000000");
+                        fprintf(fo, "default->00000000", l->def->pos);
                     code_list_t*t = l->targets;
                     while(t) {
                         if(t->code)
@@ -1011,15 +1006,13 @@ code_t* add_opcode(code_t*atag, U8 op)
 {
     code_t*tmp = (code_t*)rfx_calloc(sizeof(code_t));
     tmp->opcode = op;
+    tmp->next = 0;
     if(atag) {
 	tmp->prev = atag;
         tmp->next = atag->next;
-        if(tmp->next)
-            tmp->next->prev = tmp;
 	atag->next = tmp;
     } else {
 	tmp->prev = 0;
-        tmp->next = 0;
     }
     return tmp;
 }
@@ -1145,7 +1138,6 @@ code_t*code_cutlast(code_t*c)
 
 code_t* cut_last_push(code_t*c)
 {
-    assert(!c->next);
     while(c) {
         if(!c) break;
         opcode_t*op = opcode_get(c->opcode);
