@@ -1122,6 +1122,20 @@ int list_length_(void*_list)
         return 0;
     return l->info[0].size;
 }
+void list_concat_(void*_l1, void*_l2)
+{
+    commonlist_t**l1 = (commonlist_t**)_l1;
+    commonlist_t**l2 = (commonlist_t**)_l2;
+
+    if(!*l1) {
+        *l1 = *l2;
+    } else if(*l2) {
+        (*l1)->info[0].last->next = *l2;
+        (*l1)->info[0].last = (*l2)->info[0].last;
+        (*l1)->info[0].size += (*l2)->info[0].size;
+    }
+    *l2 = 0;
+}
 void list_append_(void*_list, void*entry)
 {
     commonlist_t**list = (commonlist_t**)_list;

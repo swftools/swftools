@@ -223,8 +223,10 @@ void*list_clone_(void*_list);
 void list_append_(void*_list, void*entry);
 void list_prepend_(void*_list, void*entry);
 void list_free_(void*_list);
+void list_concat_(void*l1, void*l2);
 #define list_new() ((void*)0)
 #define list_append(list, e) {sizeof((list)->next);list_append_(&(list),(e));}
+#define list_concat(l1, l2) {sizeof((l1)->next);sizeof((l2)->next);list_concat_(&(l1),&(l2));}
 #define list_prepend(list, e) {sizeof((list)->next);list_prepend_(&(list),(e));}
 #define list_free(list) {sizeof((list)->next);list_free_(&(list));}
 #define list_clone(list) (sizeof((list)->next),list_clone_(&(list)))
