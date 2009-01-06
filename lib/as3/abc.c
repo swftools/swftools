@@ -329,9 +329,9 @@ int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc
     return slotid;
 }
 
-abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype)
+abc_script_t* abc_initscript(abc_file_t*file)
 {
-    abc_method_t*m = abc_method_new(file, returntype, 1);
+    abc_method_t*m = abc_method_new(file, 0, 1);
     abc_script_t* s = malloc(sizeof(abc_script_t));
     s->method = m;
     s->traits = list_new();
@@ -461,10 +461,6 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
 	    trait->cls = (abc_class_t*)array_getvalue(file->classes, swf_GetU30(tag));
 	    DEBUG printf("  class %s %d %d\n", name, trait->slot_id, trait->cls);
 	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
-            /* a slot is a variable in a class that is shared amonst all instances
-               of the same type, but which has a unique location in each object 
-               (in other words, slots are non-static, traits are static)
-             */
 	    trait->slot_id = swf_GetU30(tag);
             trait->type_name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
 	    int vindex = swf_GetU30(tag);
@@ -602,9 +598,9 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 	    int slot_id = trait->slot_id;
 	    char*type_name = multiname_tostring(trait->type_name);
             char*value = constant_tostring(trait->value);
-	    fprintf(fo, "%sslot %d: %s%s %s %s %s\n", prefix, trait->slot_id, 
-                    kind==TRAIT_CONST?"const ":"", type_name, name, 
-                    value?"=":"", value);
+	    fprintf(fo, "%sslot %d: %s %s:%s %s %s\n", prefix, trait->slot_id, 
+                    kind==TRAIT_CONST?"const":"var", name, type_name, 
+                    value?"=":"", value?value:"");
             if(value) free(value);
             free(type_name);
 	} else {
@@ -1484,13 +1480,15 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
             char buttonname[80];
             sprintf(buttonname, "::button%d", swf_GetDefineID(tag));
             multiname_t*s = multiname_fromstring(buttonname);
-            abc_class_slot(cls, multiname_fromstring(buttonname), s);
+            //abc_class_slot(cls, multiname_fromstring(buttonname), s);
+            abc_class_slot(cls, multiname_fromstring(buttonname), 
+                                multiname_fromstring("flash.display::SimpleButton"));
         }
         tag = tag->next;
     }
 
 
-    abc_script_t*s = abc_initscript(file, 0);
+    abc_script_t*s = abc_initscript(file);
     c = s->method->body;
     c->old.max_stack = 2;
     c->old.local_count = 1;
@@ -1533,4 +1531,40 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 
     swf_WriteABC(abctag, file);
 }
+
+TAG*swf_AddAS3FontDefine(TAG*tag, U16 id, char*fontname)
+{
+    tag = swf_InsertTag(tag, ST_DOABC);
+    abc_file_t*file = abc_file_new();
+
+    //abc_class_t*cls = abc_class_new2(file, fontname, "flash.display::MovieClip");
+    //abc_class_slot(cls, multiname_fromstring(fontname), multiname_fromstring("flash.text::Font"));
+
+    abc_class_t*cls = abc_class_new2(file, fontname, "flash.text::Font");
+
+    abc_script_t*s = abc_initscript(file);
+    code_t*c = s->method->body->code;
+    c = abc_getlocal_0(c);
+    c = abc_pushscope(c);
+    c = abc_getscopeobject(c, 0);
+    c = abc_getlex(c,"flash.text::Font");
+    c = abc_pushscope(c);
+    c = abc_getlex(c,"flash.text::Font");
+    c = abc_newclass(c,cls);
+    c = abc_popscope(c);
+    c = abc_initproperty(c, fontname);
+    c = abc_returnvoid(c);
+    s->method->body->code = c;
+
+    abc_initscript_addClassTrait(s, multiname_fromstring(fontname), cls);
+    swf_WriteABC(tag, file);
+	
+    tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
+    swf_SetU16(tag, 1);
+    swf_SetU16(tag, id);
+    swf_SetString(tag, fontname);
+
+    return tag;
+}
+
 
