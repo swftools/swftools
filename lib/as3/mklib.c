@@ -150,13 +150,19 @@ void write_member_info(FILE*fi, char*parent, char*id2, const char*name, int flag
     fprintf(fi, "};\n");
 }
 
-int access2flags(int access)
+int access2flags(multiname_t*m)
 {
+    int access = m->ns->access;
     int flags=0;
     if(access == ACCESS_PACKAGE) flags|=FLAG_PUBLIC;
     if(access == ACCESS_PRIVATE) flags|=FLAG_PRIVATE;
     if(access == ACCESS_PROTECTED) flags|=FLAG_PROTECTED;
-    if(access == ACCESS_PACKAGEINTERNAL) flags|=FLAG_INTERNAL;
+    if(access == ACCESS_PACKAGEINTERNAL) flags|=FLAG_PACKAGEINTERNAL;
+    if(access == ACCESS_NAMESPACE) {
+        if(!strcmp(m->ns->name, "http://adobe.com/AS3/2006/builtin")) {
+            flags|=FLAG_NAMESPACE_ADOBE;
+        }
+    }
     return flags;
 }
 
@@ -258,7 +264,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                 }
                 int flags = is_static?FLAG_STATIC:0;
                 //flags |= access2flags(access);
-                flags |= access2flags(trait->name->ns->access);
+                flags |= access2flags(trait->name);
 
                 if(pass==0) {
                     fprintf(fi, "static memberinfo_t %s;\n", id2);
@@ -315,7 +321,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                 const char*name = trait->name->name;
                 char*pid = mkpid(package);
                 char*id2 = mkid2(trait->name);
-                int flags = FLAG_STATIC|access2flags(trait->name->ns->access);
+                int flags = FLAG_STATIC|access2flags(trait->name);
                 NEW(memberinfo_t,m);
                 char np = 0;
                 int clsflags = FLAG_STATIC | FLAG_METHOD;
