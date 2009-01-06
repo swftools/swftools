@@ -3,7 +3,7 @@ package some.other.packag3 {
         public function Class4(x=1) {
             if(x) {
                 trace("ok 4/6");
-                return new Class4(0);
+                new Class4(0);
             }
         }
     }
@@ -47,9 +47,9 @@ package {
             new Class4();
 
             var x = Class5;
-            new Class5;
+            new x;
             var y:Class = Class6;
-            new Class6();
+            new y;
         }
     }
 }
