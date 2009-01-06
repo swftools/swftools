@@ -80,4 +80,7 @@ void as3_softwarning(const char*format, ...);
 
 #define T_EOF 0
 
+extern int avm2_lex();
+extern int avm2_lex_destroy();
+
 #endif
