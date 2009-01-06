@@ -253,6 +253,7 @@
 static int yyerror(char*s)
 {
    syntaxerror("%s", s); 
+   return 0; //make gcc happy
 }
 
 static char* concat2(const char* t1, const char* t2)
@@ -449,6 +450,8 @@ void initialize_file(char*filename)
 {
     new_state();
     state->package = filename;
+    // needed for state->method->late_binding:
+    state->method = rfx_calloc(sizeof(methodstate_t));
 }
 void finish_file()
 {
@@ -601,8 +604,8 @@ static code_t* wrap_function(code_t*c,code_t*header, code_t*body)
     c = code_append(c, header);
     c = code_append(c, var_block(body));
     /* append return if necessary */
-    if(!c || c->opcode != OPCODE_RETURNVOID && 
-             c->opcode != OPCODE_RETURNVALUE) {
+    if(!c || (c->opcode != OPCODE_RETURNVOID && 
+              c->opcode != OPCODE_RETURNVALUE)) {
         c = abc_returnvoid(c);
     }
     return c;
@@ -1103,6 +1106,7 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
     if(TYPE_IS_CLASS(from) && TYPE_IS_CLASS(to))
         return c;
     syntaxerror("can't convert type %s to %s", from->name, to->name);
+    return 0; // make gcc happy
 }
 
 code_t*defaultvalue(code_t*c, classinfo_t*type)
@@ -1191,6 +1195,7 @@ static int getlocalnr(code_t*c)
     else if(c->opcode == OPCODE_GETLOCAL_2) {return 2;}
     else if(c->opcode == OPCODE_GETLOCAL_3) {return 3;}
     else syntaxerror("Internal error: opcode %02x is not a getlocal call", c->opcode);
+    return 0;
 }
 
 static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore)
@@ -1353,9 +1358,17 @@ char is_break_or_jump(code_t*c)
     return 0;
 }
 
-#define NEED_EXTRA_STACK_ARG
-static code_t* insert_finally(code_t*c, code_t*finally)
+
+#define IS_FINALLY_TARGET(op) \
+        ((op) == OPCODE___CONTINUE__ || \
+         (op) == OPCODE___BREAK__ || \
+         (op) == OPCODE_RETURNVOID || \
+         (op) == OPCODE_RETURNVALUE || \
+         (op) == OPCODE___RETHROW__)
+
+static code_t* insert_finally_lookup(code_t*c, code_t*finally, int tempvar)
 {
+#define NEED_EXTRA_STACK_ARG
     code_t*finally_label = abc_nop(0);
     NEW(lookupswitch_t, l);
     //_lookupswitch
@@ -1364,21 +1377,27 @@ static code_t* insert_finally(code_t*c, code_t*finally)
     int count=0;
     while(i) {
         code_t*prev = i->prev;
-        if(i->opcode == OPCODE___CONTINUE__ ||
-           i->opcode == OPCODE___BREAK__ ||
-           i->opcode == OPCODE_RETURNVOID ||
-           i->opcode == OPCODE_RETURNVALUE ||
-           i->opcode == OPCODE___RETHROW__) 
-        {
-           if(i->opcode == OPCODE___RETHROW__)
-                i->opcode = OPCODE_NOP;
+        if(IS_FINALLY_TARGET(i->opcode)) {
            code_t*p = prev;
+           char needvalue=0;
+           if(i->opcode == OPCODE___RETHROW__ ||
+              i->opcode == OPCODE_RETURNVALUE) {
+               if(i->opcode == OPCODE___RETHROW__)
+                 i->opcode = OPCODE_THROW;
+               needvalue=1;
+               p = abc_coerce_a(p);
+               p = abc_setlocal(p, tempvar);
+           }
            p = abc_pushbyte(p, count++);
            p = abc_jump(p, finally_label);
            code_t*target = p = abc_label(p);
 #ifdef NEED_EXTRA_STACK_ARG
            p = abc_pop(p);
 #endif
+           if(needvalue) {
+               p = abc_getlocal(p, tempvar);
+           }
+
            p->next = i;i->prev = p;
            list_append(l->targets, target);
         }
@@ -1400,6 +1419,59 @@ static code_t* insert_finally(code_t*c, code_t*finally)
 #endif
 
     return c;
+}
+
+static code_t* insert_finally_simple(code_t*c, code_t*finally, int tempvar)
+{
+    code_t*i = c;
+    while(i) {
+        code_t*prev = i->prev;
+        if(IS_FINALLY_TARGET(i->opcode)) {
+           if(i->opcode == OPCODE___RETHROW__)
+                i->opcode = OPCODE_THROW;
+           code_t*end = code_dup(finally);
+           code_t*start = code_start(end);
+           if(prev) prev->next = start;
+           start->prev = prev;
+           i->prev = end;
+           end->next = i;
+        }
+        i = prev;
+    }
+    return code_append(c, finally);
+}
+
+code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
+{
+    if(!finally)
+        return c;
+    code_t*i = c;
+    char cantdup=0;
+    int num_insertion_points=0;
+    while(i) {
+        if(IS_FINALLY_TARGET(i->opcode))
+            num_insertion_points++;
+        i = i->prev;
+    }
+    i = finally;
+    int code_size=0;
+    while(i) {
+        code_size++;
+        if(i->branch || i->opcode == OPCODE_LOOKUPSWITCH) {
+            cantdup=1;
+        }
+        i = i->prev;
+    }
+    int simple_version_cost = (1+num_insertion_points)*code_size;
+    int lookup_version_cost = 4*num_insertion_points + 5;
+
+    if(cantdup || simple_version_cost > lookup_version_cost) {
+        printf("lookup %d > *%d*\n", simple_version_cost, lookup_version_cost);
+        return insert_finally_lookup(c, finally, tempvar);
+    } else {
+        printf("simple *%d* < %d\n", simple_version_cost, lookup_version_cost);
+        return insert_finally_simple(c, finally, tempvar);
+    }
 }
 
 %}
@@ -1739,7 +1811,8 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name
 
     code_t*c = 0;
     int i = find_variable_safe($3)->index;
-    e->target = c = abc_setlocal(0, i);
+    e->target = c = abc_nop(0);
+    c = abc_setlocal(c, i);
     c = code_append(c, $8);
     c = abc_kill(c, i);
 
@@ -1747,35 +1820,55 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name
     old_state();
 }
 FINALLY: "finally" '{' {new_state();state->exception_name=0;} MAYBECODE '}' {
-    NEW(abc_exception_t, e)
-    e->exc_type = 0; //all exceptions
-    e->var_name = 0; //no name
-    e->target = 0;
-    $$ = e;
-    e->to = var_block($4);
-    old_state();
+    $4 = var_block($4);
+    if(!$4) {
+        $$=0;
+        old_state();
+    } else {
+        NEW(abc_exception_t, e)
+        e->exc_type = 0; //all exceptions
+        e->var_name = 0; //no name
+        e->target = 0;
+        e->to = abc_nop(0);
+        e->to = code_append(e->to, $4);
+        old_state();
+        $$ = e;
+    }
 }
 
 CATCH_LIST: CATCH {$$.l=list_new();$$.finally=0;list_append($$.l,$1);}
 CATCH_LIST: CATCH_LIST CATCH {$$=$1;list_append($$.l,$2);}
 CATCH_FINALLY_LIST: CATCH_LIST {$$=$1};
 CATCH_FINALLY_LIST: CATCH_LIST FINALLY {
-    $$ = $1;list_append($$.l,$2);
-    $$.finally = $2->to;$2->to=0;
+    $$ = $1;
+    $$.finally = 0;
+    if($2) {
+        list_append($$.l,$2);
+        $$.finally = $2->to;$2->to=0;
+    }
 }
 CATCH_FINALLY_LIST: FINALLY {
-    $$.l=list_new();list_append($$.l,$1);
-    $$.finally = $1->to;$1->to=0;
+    $$.l=list_new();
+    $$.finally = 0;
+    if($1) {
+        list_append($$.l,$1);
+        $$.finally = $1->to;$1->to=0;
+    }
 }
 
 TRY : "try" '{' {new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
-    code_t*start = abc_nop(0);
-    code_t*end = $$ = code_append(start, $4);
     code_t*out = abc_nop(0);
-   
+
+    code_t*start = abc_nop(0);
+    $$ = code_append(start, $4);
     if(!is_break_or_jump($4)) {
-        end = $$ = abc_jump($$, out);
+        $$ = abc_jump($$, out);
     }
+    code_t*end = $$ = abc_nop($$);
+  
+    int tmp;
+    if($6.finally)
+        tmp = new_variable("__finally__", 0, 0);
     
     abc_exception_list_t*l = $6.l;
     int count=0;
@@ -1785,24 +1878,20 @@ TRY : "try" '{' {new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
             $$ = code_append($$, e->target);
             $$ = abc_jump($$, out);
         } else {
+            parserassert((ptroff_t)$6.finally);
             // finally block
-            int tmp = new_variable("__finally__", 0, 0);
-            e->target = 
-            $$ = abc_coerce_a($$);
-            $$ = abc_setlocal($$, tmp);
+            e->target = $$ = abc_nop($$);
             $$ = abc___rethrow__($$);
-            $$ = abc_getlocal($$, tmp);
-            $$ = abc_throw($$);
         }
         
         e->from = start;
-        e->to = end->next;
+        e->to = end;
 
         l = l->next;
     }
     $$ = code_append($$, out);
 
-    $$ = insert_finally($$, $6.finally);
+    $$ = insert_finally($$, $6.finally, tmp);
         
     list_concat(state->method->exceptions, $6.l);
    
@@ -2649,7 +2738,7 @@ E : E '?' E ':' E %prec below_assignment {
 
 E : E "++" { code_t*c = 0;
              classinfo_t*type = $1.t;
-             if(is_getlocal($1.c) && TYPE_IS_INT($1.t) || TYPE_IS_NUMBER($1.t)) {
+             if((is_getlocal($1.c) && TYPE_IS_INT($1.t)) || TYPE_IS_NUMBER($1.t)) {
                  int nr = getlocalnr($1.c);
                  code_free($1.c);$1.c=0;
                  if(TYPE_IS_INT($1.t)) {
