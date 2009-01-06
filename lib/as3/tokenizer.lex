@@ -580,6 +580,7 @@ continue                     {c();return m(KW_CONTINUE);}
 override                     {c();return m(KW_OVERRIDE);}
 internal                     {c();return m(KW_INTERNAL);}
 function                     {c();return m(KW_FUNCTION);}
+finally                      {c();return m(KW_FINALLY);}
 default                      {c();return m(KW_DEFAULT);}
 package                      {c();return m(KW_PACKAGE);}
 private                      {c();return m(KW_PRIVATE);}
