@@ -290,6 +290,11 @@ classinfo_t* registry_getnumberclass() {
     if(!c) c = registry_safefindclass("", "Number");
     return c;
 }
+classinfo_t* registry_getregexpclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = registry_safefindclass("", "RegExp");
+    return c;
+}
 classinfo_t* registry_getMovieClip() {
     static classinfo_t*c = 0;
     if(!c) c = registry_safefindclass("flash.display", "MovieClip");
@@ -304,3 +309,23 @@ classinfo_t* registry_getnullclass() {
     return &nullclass;
 }
 
+// ---------------------------------------------------------------------
+namespace_t flags2namespace(int flags, char*package)
+{
+    namespace_t ns;
+    ns.name = package;
+    if(flags&FLAG_PUBLIC)  {
+        ns.access = ACCESS_PACKAGE;
+    } else if(flags&FLAG_PRIVATE) {
+        ns.access = ACCESS_PRIVATE;
+    } else if(flags&FLAG_PROTECTED) {
+        ns.access = ACCESS_PROTECTED;
+    } else if(flags&FLAG_NAMESPACE_ADOBE) {
+        ns.access = ACCESS_NAMESPACE;
+        assert(!package || !package[0]);
+        ns.name = "http://adobe.com/AS3/2006/builtin";
+    } else {
+        ns.access = ACCESS_PACKAGEINTERNAL;
+    }
+    return ns;
+}
