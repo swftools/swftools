@@ -148,6 +148,8 @@ char*find_file(char*filename)
 
 char*enter_file(char*filename, void*state)
 {
+    filename = strdup(filename);
+
     if(include_stack_ptr >= MAX_INCLUDE_DEPTH) {
     	as3_error("Includes nested too deeply");
 	exit(1);
@@ -165,7 +167,7 @@ char*enter_file(char*filename, void*state)
     include_stack[include_stack_ptr] = state;
     line_stack[include_stack_ptr] = current_line;
     column_stack[include_stack_ptr] = current_column;
-    shortfilename_stack[include_stack_ptr] = current_filename_short = strdup(filename);
+    shortfilename_stack[include_stack_ptr] = current_filename_short;
     filename_stack[include_stack_ptr] = current_filename;
     includedir_stack[include_stack_ptr] = current_include_dirs;
     add_include_dir(get_path(fullfilename));
@@ -175,20 +177,21 @@ char*enter_file(char*filename, void*state)
 
     current_line=1;
     current_column=0;
-    current_filename=fullfilename;
+    current_filename = fullfilename;
+    current_filename_short = filename;
     return fullfilename;
 }
 
 void* leave_file()
 {
     dbg("leaving file %s", current_filename);
-    if(--include_stack_ptr<0) {
+    if(--include_stack_ptr<=0) {
         return 0;
     } else {
-        current_column = column_stack[include_stack_ptr];
-        current_line = line_stack[include_stack_ptr];
         free(current_filename);current_filename = filename_stack[include_stack_ptr];
         free(current_filename_short);current_filename_short = shortfilename_stack[include_stack_ptr];
+        current_column = column_stack[include_stack_ptr];
+        current_line = line_stack[include_stack_ptr];
         current_include_dirs = includedir_stack[include_stack_ptr];
         return include_stack[include_stack_ptr];
     }
