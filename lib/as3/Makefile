@@ -24,7 +24,7 @@ D=-g -pg
 #	gcc $(D) -c parser.tab.c -o parser.tab.o
 
 
-tokenizer.yy.h tokenizer.yy.c: tokenizer.lex Makefile tokenizer.h
+tokenizer.yy.c: tokenizer.lex tokenizer.h
 	flex -Pavm2_ -8 -B -otokenizer.yy.c tokenizer.lex
 
 parser.tab.h parser.tab.c: parser.y parser.h
@@ -36,16 +36,16 @@ main.o: main.c parser.tab.h parser.h
 mklib.o: mklib.c parser.tab.h parser.h
 	gcc $(D) -c mklib.c -o mklib.o
 
-parser: parser.tab.o main.o files.o tokenizer.yy.o ../librfxswf.a ../libbase.a parser.tab.h 
-	gcc $(D) parser.tab.o main.o tokenizer.yy.o ../librfxswf.a ../libbase.a -o parser -lz
+parser: main.o tokenizer.yy.o ../librfxswf.a ../libbase.a parser.tab.h 
+	gcc $(D) main.o ../librfxswf.a ../libbase.a -o parser -lz
 
-mklib: mklib.o files.o ../libbase.a
+mklib: mklib.o ../librfxswf.a ../libbase.a
 	gcc $(D) mklib.o ../librfxswf.a ../libbase.a -o mklib -lz
 
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -
 
-../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c tokenizer.yy.h
+../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c
 	cd ..; make librfxswf.a
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
