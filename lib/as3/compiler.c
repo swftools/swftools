@@ -31,7 +31,6 @@
 /* flex/bison definitions */
 extern void avm2_set_in (FILE *  in_str );
 extern int avm2_parse();
-extern int avm2_lex_destroy();
 
 void as3_setverbosity(int level)
 {
