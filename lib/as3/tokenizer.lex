@@ -31,18 +31,6 @@
 #include "tokenizer.h"
 #include "files.h"
 
-static void countlines(char*text, int len) {
-    int t;
-    for(t=0;t<len;t++) {
-	if(text[t]=='\n') {
-	    current_line++;
-	    current_column=0;
-	} else {
-	    current_column++;
-	}
-    }
-}
-
 static int verbose = 1;
 static void dbg(const char*format, ...)
 {
@@ -80,6 +68,7 @@ void syntaxerror(const char*format, ...)
 }
 void warning(const char*format, ...)
 {
+    return;
     char buf[1024];
     int l;
     va_list arglist;
@@ -397,7 +386,7 @@ void handleLabel(char*text, int len)
     int t;
     for(t=len-1;t>=0;--t) {
         if(text[t]!=' ' &&
-           text[t]!='.')
+           text[t]!=':')
             break;
     }
     char*s = malloc(t+1);
@@ -406,10 +395,47 @@ void handleLabel(char*text, int len)
     avm2_lval.id = s;
 }
 
+static int handleregexp()
+{
+    char*s = malloc(yyleng);
+    int len=yyleng-1;
+    memcpy(s, yytext+1, len);
+    s[len] = 0;
+    int t;
+    for(t=len;t>=0;--t) {
+        if(s[t]=='/') {
+            s[t] = 0;
+            break;
+        }
+    }
+    avm2_lval.regexp.pattern = s;
+    if(t==len) {
+        avm2_lval.regexp.options = 0;
+    } else {
+        avm2_lval.regexp.options = s+t+1;
+    }
+    return T_REGEXP;
+}
+
 void initialize_scanner();
 #define YY_USER_INIT initialize_scanner();
 
-#define c() {countlines(yytext, yyleng);}
+/* count the number of lines+columns consumed by this token */
+static inline void l() {
+    int t;
+    for(t=0;t<yyleng;t++) {
+	if(yytext[t]=='\n') {
+	    current_line++;
+	    current_column=0;
+	} else {
+	    current_column++;
+	}
+    }
+}
+/* count the number of columns consumed by this token */
+static inline void c() {
+    current_column+=yyleng;
+}
 
 //Boolean                      {c();return m(KW_BOOLEAN);}
 //int                          {c();return m(KW_INT);}
@@ -441,23 +467,23 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 %%
 
 
-{SINGLELINE_COMMENT}         {c(); /* single line comment */}
-{MULTILINE_COMMENT}          {c(); /* multi line comment */}
+{SINGLELINE_COMMENT}         {l(); /* single line comment */}
+{MULTILINE_COMMENT}          {l(); /* multi line comment */}
 [/][*]                       {syntaxerror("syntax error: unterminated comment", yytext);}
 
-^include{S}+{STRING}{S}*/\n    {c();handleInclude(yytext, yyleng, 1);}
-^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {c();handleInclude(yytext, yyleng, 0);}
-{STRING}                     {c(); BEGIN(INITIAL);handleString(yytext, yyleng);return T_STRING;}
+^include{S}+{STRING}{S}*/\n    {l();handleInclude(yytext, yyleng, 1);}
+^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {l();handleInclude(yytext, yyleng, 0);}
+{STRING}                     {l(); BEGIN(INITIAL);handleString(yytext, yyleng);return T_STRING;}
 
 <BEGINNING,REGEXPOK>{
-{REGEXP}                     {c(); BEGIN(INITIAL);return m(T_REGEXP);} 
+{REGEXP}                     {c(); BEGIN(INITIAL);return handleregexp();} 
 {HEXWITHSIGN}                {c(); BEGIN(INITIAL);return handlehex();}
 {INTWITHSIGN}                {c(); BEGIN(INITIAL);return handleint();}
 {FLOATWITHSIGN}              {c(); BEGIN(INITIAL);return handlefloat();}
 }
 
 \xef\xbb\xbf                 {/* utf 8 bom */}
-{S}                          {c();}
+{S}                          {l();}
 
 {HEXINT}                     {c(); BEGIN(INITIAL);return handlehex();}
 {INT}                        {c(); BEGIN(INITIAL);return handleint();}
@@ -466,10 +492,10 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
-{NAME}{S}*:{S}*for/{_}        {c();handleLabel(yytext, yyleng-3);return T_FOR;}
-{NAME}{S}*:{S}*do/{_}         {c();handleLabel(yytext, yyleng-2);return T_DO;}
-{NAME}{S}*:{S}*while/{_}      {c();handleLabel(yytext, yyleng-5);return T_WHILE;}
-{NAME}{S}*:{S}*switch/{_}     {c();handleLabel(yytext, yyleng-6);return T_SWITCH;}
+{NAME}{S}*:{S}*for/{_}        {l();handleLabel(yytext, yyleng-3);return T_FOR;}
+{NAME}{S}*:{S}*do/{_}         {l();handleLabel(yytext, yyleng-2);return T_DO;}
+{NAME}{S}*:{S}*while/{_}      {l();handleLabel(yytext, yyleng-5);return T_WHILE;}
+{NAME}{S}*:{S}*switch/{_}     {l();handleLabel(yytext, yyleng-6);return T_SWITCH;}
 for                          {c();avm2_lval.id="";return T_FOR;}
 do                           {c();avm2_lval.id="";return T_DO;}
 while                        {c();avm2_lval.id="";return T_WHILE;}
@@ -552,7 +578,7 @@ as                           {c();return m(KW_AS);}
 {NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
-[\)\]]                            {c();BEGIN(INITIAL);return m(yytext[0]);}
+[\)\]]                           {c();BEGIN(INITIAL);return m(yytext[0]);}
 
 .		             {char c1=yytext[0];
                               char buf[128];
@@ -573,7 +599,7 @@ as                           {c();return m(KW_AS);}
 			      exit(1);
 		              yyterminate();
 		             }
-<<EOF>>		             {c();
+<<EOF>>		             {l();
                               void*b = leave_file();
 			      if (!b) {
 			         yyterminate();
