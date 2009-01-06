@@ -3,7 +3,7 @@ package {
     import flash.display.MovieClip
     public class Main extends flash.display.MovieClip {
         var count:int = 1;
-        var num:int = 27;
+        var num:int = 28;
         function assert(b:Boolean) {
             if(b) {
                 trace("ok "+count+"/"+num);
@@ -57,6 +57,8 @@ package {
             assert((0xff ^ 0x55) == 0xaa);
             assert((1 & ~1) == 0);
             assert((1|~1)==~0);
+            
+            assert((1|2|4|8|16|32|64|128) == 0xff);
            
             /* test shift operations */
             trace("[shift operations]");
