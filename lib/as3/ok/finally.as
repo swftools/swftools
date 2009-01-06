@@ -7,7 +7,7 @@ package {
                 return;
                 trace("error");
             } finally {
-                trace("ok 1/8");
+                trace("ok 1/9");
             }
             trace("error");
         }
@@ -18,7 +18,7 @@ package {
                     break;
                     trace("error");
                 } finally {
-                    trace("ok 2/8");
+                    trace("ok 2/9");
                 }
                 trace("error");
             } while(true);
@@ -28,7 +28,7 @@ package {
             try {
                 var x = 1+1;
             } finally {
-                trace("ok 3/8");
+                trace("ok 3/9");
             }
         }
         
@@ -38,11 +38,11 @@ package {
                     throw new Error();
                     trace("error");
                 } finally {
-                    trace("ok 4/8");
+                    trace("ok 4/9");
                 }
                 trace("error");
             } catch(e:Error) {
-                trace("ok 5/8");
+                trace("ok 5/9");
             }
         }
         
@@ -57,22 +57,30 @@ package {
                 x*=2;
             }
             if(x==2)
-                trace("ok 6/8");
+                trace("ok 6/9");
         }
 
-        function fail() {
+        function fail1() {
             try {
                 throw new Error();
             } finally {
-                trace("ok 7/8");
+                trace("ok 7/9");
+            }
+        }
+        
+        function fail2() {
+            try {
+                fail1();
+            } finally {
+                trace("ok 8/9");
             }
         }
         
         function test_exception3() {
             try {
-                fail();
+                fail2();
             } catch(e:Error) {
-                trace("ok 8/8");
+                trace("ok 9/9");
             }
         }
 
