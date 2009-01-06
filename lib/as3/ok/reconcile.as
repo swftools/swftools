@@ -13,7 +13,7 @@
                     if(dataBuffer)
                         break;
                 }
-                trace("ok 1/5");
+                trace("ok 1/6");
             }
 
             public function test2() {
@@ -21,7 +21,7 @@
                 while(output.length<1) {
                     output += "abc".charAt(0);
                 }
-                trace("ok 2/5");
+                trace("ok 2/6");
             }
 
             public function test3() {
@@ -32,27 +32,34 @@
                     }
                     break;
                 }
-                trace("ok 3/5");
+                trace("ok 3/6");
             }
+
+            public var b:Boolean = false;
 
             public function test4() {
                 var x:int;
                 var y:uint;
-                if(escape("")) {
+                if(b) {
                     x = x+y;
                     y = y+x;
                 }
-                trace("ok 4/5");
+                trace("ok 4/6");
             }
             public function test5() {
                 var x:int;
                 var y:uint;
                 var z:int;
-                if(escape("")) {
+                if(b) {
                     x = x*y;
                     z = x*z;
                 }
-                trace("ok 5/5");
+                trace("ok 5/6");
+            }
+            public function test6() {
+                var i:int = b?3.0:3;
+                var j:uint = b?3:"abc";
+                trace("ok 6/6");
             }
 
             public function Main() {
@@ -61,6 +68,7 @@
                 test3();
                 test4();
                 test5();
+                test6();
             }
         }
 }
