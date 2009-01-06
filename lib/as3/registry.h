@@ -31,6 +31,23 @@ DECLARE(classinfo);
 DECLARE(memberinfo);
 DECLARE_LIST(classinfo);
 
+/* member/class flags */
+#define FLAG_PUBLIC 1
+#define FLAG_PROTECTED 2
+#define FLAG_NAMESPACE_ADOBE 4
+#define FLAG_PRIVATE 8
+#define FLAG_PACKAGEINTERNAL 16
+#define FLAG_FINAL 32
+
+/* member flags */
+#define FLAG_STATIC 64
+#define FLAG_OVERRIDE 128
+#define FLAG_NATIVE 256
+
+/* class flags */
+#define FLAG_METHOD 64
+#define FLAG_DYNAMIC 128
+
 struct _classinfo {
     U8 access;
     U8 flags;
@@ -62,6 +79,7 @@ struct _memberinfo {
         classinfo_t*return_type;
         classinfo_t*type;
     };
+    classinfo_t*parent;
     classinfo_list_t*params;
     int slot;
 };
@@ -71,24 +89,27 @@ extern type_t memberinfo_type;
 
 void registry_init();
         
-classinfo_t* classinfo_register(int access, char*package, char*name, int num_interfaces);
+classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces);
 memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 type);
+memberinfo_t* memberinfo_register_global(U8 access, const char*package, const char*name, U8 kind);
 
 // static multinames
 classinfo_t* registry_getanytype();
+classinfo_t* registry_getarrayclass();
 classinfo_t* registry_getobjectclass();
 classinfo_t* registry_getnumberclass();
 classinfo_t* registry_getstringclass();
 classinfo_t* registry_getintclass();
 classinfo_t* registry_getuintclass();
 classinfo_t* registry_getnullclass();
+classinfo_t* registry_getregexpclass();
 classinfo_t* registry_getbooleanclass();
 classinfo_t* registry_getMovieClip();
 classinfo_t* memberinfo_asclass(memberinfo_t*f);
 classinfo_t* registry_getclassclass(classinfo_t*a);
 
 classinfo_t* registry_findclass(const char*package, const char*name);
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*name);
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char superclasses);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
 multiname_t* classinfo_to_multiname(classinfo_t*cls);
@@ -97,6 +118,8 @@ char registry_isfunctionclass();
 char registry_isclassclass();
 
 classinfo_t* memberinfo_gettype(memberinfo_t*);
+
+namespace_t flags2namespace(int flags, char*package);
 
 /* convenience functions */
 #define sig2mname(x) classinfo_to_multiname(x)
@@ -114,6 +137,8 @@ classinfo_t* memberinfo_gettype(memberinfo_t*);
 #define TYPE_IS_BOOLEAN(t)((t) == registry_getbooleanclass())
 #define TYPE_STRING               registry_getstringclass()
 #define TYPE_IS_STRING(t) ((t) == registry_getstringclass())
+#define TYPE_REGEXP               registry_getregexpclass()
+#define TYPE_IS_REGEXP(t) ((t) == registry_getregexpclass())
 
 #define TYPE_OBJECT               registry_getobjectclass()
 
