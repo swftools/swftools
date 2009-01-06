@@ -73,8 +73,8 @@ static struct options_t options[] = {
 {"s", "shapes"},
 {"F", "fonts"},
 {"p", "placements"},
-{"b", "bbox"},
 {"B", "buttons"},
+{"b", "bbox"},
 {"X", "width"},
 {"Y", "height"},
 {"r", "rate"},
@@ -185,6 +185,7 @@ void args_callback_usage(char *name)
     printf("-s , --shapes                  Show shape coordinates/styles\n");
     printf("-F , --fonts                   Show font information\n");
     printf("-p , --placements              Show placement information\n");
+    printf("-B , --buttons                 Show button information\n");
     printf("-b , --bbox                    Print tag's bounding boxes\n");
     printf("-X , --width                   Prints out a string of the form \"-X width\".\n");
     printf("-Y , --height                  Prints out a string of the form \"-Y height\".\n");

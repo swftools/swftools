@@ -546,6 +546,7 @@ static struct options_t options[] = {
 {"y", "yoffset"},
 {"X", "width"},
 {"Y", "height"},
+{"T", "flashversion"},
 {"v", "verbose"},
 {"V", "version"},
 {"f", "fit-to-movie"},
@@ -593,6 +594,7 @@ void args_callback_usage(char *name)
     printf("-y , --yoffset <offset>        vertically offset images by <offset>\n");
     printf("-X , --width <width>           Force movie width to <width> (default: autodetect)\n");
     printf("-Y , --height <height>         Force movie height to <height> (default: autodetect)\n");
+    printf("-T , --flashversion <version>      Set flash file version to <version>\n");
     printf("-v , --verbose <level>         Set verbose level to <level> (0=quiet, 1=default, 2=debug)\n");
     printf("-V , --version                 Print version information and exit\n");
     printf("-f , --fit-to-movie            Fit images to movie size\n");

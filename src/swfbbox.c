@@ -127,8 +127,8 @@ void args_callback_usage(char *name)
     printf("-h , --help                    Print help and exit\n");
     printf("-b , --bbox                    Show movie bounding box (default)\n");
     printf("-B , --newbbox                 Show recalculated (optimized/expanded) bounding box\n");
-    printf("-e , --expand                  Write out a new file using the recalculated bounding box\n");
-    printf("-O , --optimize                Recalculate bounding boxes\n");
+    printf("-e , --expand                  Write out a new file using the recalculated header bounding box\n");
+    printf("-O , --optimize                Recalculate all object bounding boxes (except for the header)\n");
     printf("-S , --swifty                  Print out transformed bounding boxes\n");
     printf("-c , --clip                    Clip bounding boxes to movie size\n");
     printf("-o , --output <filename>       Set output filename to <filename> (for -O)\n");
