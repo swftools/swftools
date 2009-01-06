@@ -291,9 +291,6 @@ typedef struct _methodstate {
     /* method data */
     memberinfo_t*info;
     char late_binding;
-    /* code that needs to be executed at the start of
-       a method (like initializing local registers) */
-    code_t*initcode;
     char is_constructor;
     char has_super;
     char is_global;
@@ -303,7 +300,7 @@ typedef struct _methodstate {
 typedef struct _state {
     struct _state*old;
     int level;
-
+    
     char*package;     
     import_list_t*wildcard_imports;
     dict_t*imports;
@@ -421,11 +418,8 @@ static void old_state()
     if(!state || !state->old)
         syntaxerror("invalid nesting");
     state_t*leaving = state;
+    
     state = state->old;
-    /*if(state->method->initcode) {
-        printf("residual initcode\n");
-        code_dump(state->method->initcode, 0, 0, "", stdout);
-    }*/
     state_destroy(leaving);
 }
 void initialize_state()
@@ -493,6 +487,115 @@ void* finalize_state()
     state_destroy(state);state=0;
 
     return global->file;
+}
+
+
+typedef struct _variable {
+    int index;
+    classinfo_t*type;
+    char init;
+} variable_t;
+
+static variable_t* find_variable(char*name)
+{
+    state_t* s = state;
+    while(s) {
+        variable_t*v = 0;
+        if(s->method)
+            v = dict_lookup(s->vars, name);
+        if(v) {
+            return v;
+        }
+        s = s->old;
+    }
+    return 0;
+} 
+static variable_t* find_variable_safe(char*name)
+{
+    variable_t* v = find_variable(name);
+    if(!v)
+        syntaxerror("undefined variable: %s", name);
+    return v;
+}
+static char variable_exists(char*name) 
+{
+    return dict_lookup(state->vars, name)!=0;
+}
+code_t*defaultvalue(code_t*c, classinfo_t*type);
+static int new_variable(char*name, classinfo_t*type, char init)
+{
+    NEW(variable_t, v);
+    v->index = global->variable_count;
+    v->type = type;
+    v->init = init;
+    
+    dict_put(state->vars, name, v);
+
+    return global->variable_count++;
+}
+#define TEMPVARNAME "__as3_temp__"
+static int gettempvar()
+{
+    variable_t*v = find_variable(TEMPVARNAME);
+    if(v) 
+        return v->index;
+    return new_variable(TEMPVARNAME, 0, 0);
+}
+
+code_t* var_block(code_t*body) 
+{
+    code_t*c = 0;
+    code_t*k = 0;
+    int t;
+    int num=0;
+    for(t=0;t<state->vars->hashsize;t++) {
+        dictentry_t*e = state->vars->slots[t];
+        while(e) {
+            variable_t*v = (variable_t*)e->data;
+            if(v->type && v->init) {
+                c = defaultvalue(c, v->type);
+                c = abc_setlocal(c, v->index);
+                k = abc_kill(k, v->index); 
+                num++;
+            }
+            e = e->next;
+        }
+    }
+
+    if(k) {
+        code_t*x = body;
+        while(x) {
+            if(x->opcode== OPCODE___BREAK__ ||
+               x->opcode== OPCODE___CONTINUE__) {
+               /* link kill code before break/continue */
+                code_t*e = code_dup(k);
+                code_t*s = code_start(e);
+                s->prev = x->prev;
+                if(x->prev) {
+                    x->prev->next = s;
+                }
+                e->next = x;
+                x->prev = e;
+            }
+            x = x->prev;
+        }
+    }
+    
+    c = code_append(c, body);
+    c = code_append(c, k);
+    return c;
+}
+
+static code_t* wrap_function(code_t*c,code_t*header, code_t*body)
+{
+    c = code_append(c, header);
+    c = code_append(c, var_block(body));
+    /* append return if necessary */
+    if(!c || c->opcode != OPCODE_RETURNVOID && 
+             c->opcode != OPCODE_RETURNVALUE) {
+        c = abc_returnvoid(c);
+    }
+    return c;
 }
 
 
@@ -654,18 +757,6 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     multiname_destroy(extends2);
 }
 
-static code_t* wrap_function(code_t*c,code_t*initcode, code_t*body)
-{
-    c = code_append(c, initcode);
-    c = code_append(c, body);
-    /* append return if necessary */
-    if(!c || c->opcode != OPCODE_RETURNVOID && 
-             c->opcode != OPCODE_RETURNVALUE) {
-        c = abc_returnvoid(c);
-    }
-    return c;
-}
-
 static void endclass()
 {
     if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
@@ -692,81 +783,6 @@ static void endclass()
 
     free(state->cls);state->cls=0;
     old_state();
-}
-
-typedef struct _variable {
-    int index;
-    classinfo_t*type;
-} variable_t;
-
-static variable_t* find_variable(char*name)
-{
-    state_t* s = state;
-    while(s) {
-        variable_t*v = 0;
-        if(s->method)
-            v = dict_lookup(s->vars, name);
-        if(v) {
-            return v;
-        }
-        s = s->old;
-    }
-    return 0;
-} 
-static variable_t* find_variable_safe(char*name)
-{
-    variable_t* v = find_variable(name);
-    if(!v)
-        syntaxerror("undefined variable: %s", name);
-    return v;
-}
-static char variable_exists(char*name) 
-{
-    return dict_lookup(state->vars, name)!=0;
-}
-code_t*defaultvalue(code_t*c, classinfo_t*type);
-static int new_variable(char*name, classinfo_t*type, char init)
-{
-    NEW(variable_t, v);
-    v->index = global->variable_count;
-    v->type = type;
-    
-    dict_put(state->vars, name, v);
-
-    if(init && state->method && type) {
-        /* if this is a typed variable:
-           push default value for type on stack at the very beginning of the
-           method, so that it always has that type regardless of the control
-           path */
-        state->method->initcode = defaultvalue(state->method->initcode, type);
-        state->method->initcode = abc_setlocal(state->method->initcode, v->index);
-    }
-    return global->variable_count++;
-}
-#define TEMPVARNAME "__as3_temp__"
-static int gettempvar()
-{
-    variable_t*v = find_variable(TEMPVARNAME);
-    if(v) 
-        return v->index;
-    return new_variable(TEMPVARNAME, 0, 0);
-}
-
-code_t* killvars(code_t*c) 
-{
-    int t;
-    for(t=0;t<state->vars->hashsize;t++) {
-        dictentry_t*e =state->vars->slots[t];
-        while(e) {
-            variable_t*v = (variable_t*)e->data;
-            //do this always, otherwise register types don't match
-            //in the verifier when doing nested loops
-            //if(!TYPE_IS_BUILTIN_SIMPLE(type)) {
-            c = abc_kill(c, v->index); 
-            e = e->next;
-        }
-    }
-    return c;
 }
 
 void check_code_for_break(code_t*c)
@@ -896,8 +912,8 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     new_state();
     global->variable_count = 0;
     state->method = rfx_calloc(sizeof(methodstate_t));
-    state->method->initcode = 0;
     state->method->has_super = 0;
+
     if(state->cls) {
         state->method->is_constructor = !strcmp(state->cls->info->name,name);
         state->cls->has_constructor |= state->method->is_constructor;
@@ -1018,12 +1034,25 @@ void continuejumpsto(code_t*c, char*name, code_t*jump)
     }
 }
 
+#define IS_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)))
+#define IS_NUMBER_OR_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)) || TYPE_IS_NUMBER((a)))
+#define BOTH_INT(a,b) (IS_INT(a) && IS_INT(b))
+
 classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
 {
     if(!type1 || !type2) 
         return registry_getanytype();
     if(TYPE_IS_ANY(type1) || TYPE_IS_ANY(type2))
         return registry_getanytype();
+
+    if(op=='+') {
+        if(IS_NUMBER_OR_INT(type1) && IS_NUMBER_OR_INT(type2)) {
+            return TYPE_NUMBER;
+        } else {
+            return TYPE_ANY;
+        }
+    }
+
     if(type1 == type2)
         return type1;
     return registry_getanytype();
@@ -1083,8 +1112,12 @@ code_t*defaultvalue(code_t*c, classinfo_t*type)
        c = abc_pushnan(c);
     } else if(TYPE_IS_BOOLEAN(type)) {
        c = abc_pushfalse(c);
+    } else if(!type) {
+       //c = abc_pushundefined(c);
     } else {
        c = abc_pushnull(c);
+       MULTINAME(m, type);
+       c = abc_coerce2(c, &m);
     }
     return c;
 }
@@ -1283,8 +1316,6 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
     return c;
 }
 
-#define IS_INT(a) (TYPE_IS_INT((a).t) || TYPE_IS_UINT((a).t))
-#define BOTH_INT(a,b) (IS_INT(a) && IS_INT(b))
 
 %}
 
@@ -1418,6 +1449,7 @@ MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
 IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
+     
     $$ = code_new();
     $$ = code_append($$, $4.c);
     code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
@@ -1431,8 +1463,8 @@ IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
         $$ = code_append($$, $7);
         myjmp->branch = $$ = abc_nop($$);
     }
-    
-    $$ = killvars($$);old_state();
+    $$ = var_block($$);
+    old_state();
 }
 
 FOR_INIT : {$$=code_new();}
@@ -1464,7 +1496,8 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     continuejumpsto($$, $1.name, cont);
     myif->branch = out;
 
-    $$ = killvars($$);old_state();
+    $$ = var_block($$);
+    old_state();
 }
 
 FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
@@ -1501,16 +1534,17 @@ FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
     breakjumpsto($$, $1.name, out);
     continuejumpsto($$, $1.name, loopstart);
     
-    $$ = killvars($$);
-    
     myif->branch = out;
 
+    $$ = var_block($$);
     old_state();
+
     free(tmp1name);
     free(tmp2name);
 }
 
 WHILE : T_WHILE '(' {new_state();} EXPRESSION ')' CODEBLOCK {
+
     $$ = code_new();
 
     code_t*myjmp = $$ = abc_jump($$, 0);
@@ -1524,7 +1558,7 @@ WHILE : T_WHILE '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     breakjumpsto($$, $1, out);
     continuejumpsto($$, $1, cont);
 
-    $$ = killvars($$);
+    $$ = var_block($$);
     old_state();
 }
 
@@ -1538,7 +1572,8 @@ DO_WHILE : T_DO {new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
     continuejumpsto($$, $1, cont);
-    $$ = killvars($$);
+    
+    $$ = var_block($$);
     old_state();
 }
 
@@ -1598,6 +1633,8 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
         }
         c=c->prev;
     }
+   
+    $$ = var_block($$);
     old_state();
 }
 
@@ -1608,34 +1645,36 @@ MAYBE_FINALLY: | FINALLY
 
 CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name=$3;new_variable($3, $4, 0);} 
         '{' CODE '}' {
-    code_t*c = 0;
-    int i = find_variable_safe($3)->index;
-    c = abc_setlocal(c, i);
-    c = code_append(c, $8);
-    c = abc_kill(c, i);
-    
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
     multiname_t name = {QNAME, &name_ns, 0, $3};
-
+    
     NEW(abc_exception_t, e)
     e->exc_type = sig2mname($4);
     e->var_name = multiname_clone(&name);
-    e->target = code_start(c);
     $$ = e;
+
+    code_t*c = 0;
+    int i = find_variable_safe($3)->index;
+    e->target = c = abc_setlocal(0, i);
+    c = code_append(c, $8);
+    c = abc_kill(c, i);
+
+    c = var_block(c);
     old_state();
+    
 }
 
 CATCH_LIST: CATCH {$$=list_new();list_append($$,$1);}
 CATCH_LIST: CATCH_LIST CATCH {$$=$1;list_append($$,$2);}
 
-TRY : "try" '{' CODE '}' CATCH_LIST MAYBE_FINALLY {
-    code_t*start = code_start($3);
-    $$=$3;
+TRY : "try" '{' {new_state();} CODE '}' CATCH_LIST MAYBE_FINALLY {
+    code_t*start = code_start($4);
+    $$=$4;
 
     code_t*out = abc_nop(0);
     code_t*jmp = $$ = abc_jump($$, out);
 
-    abc_exception_list_t*l = $5;
+    abc_exception_list_t*l = $6;
     while(l) {
         abc_exception_t*e = l->abc_exception;
         e->from = start;
@@ -1647,7 +1686,10 @@ TRY : "try" '{' CODE '}' CATCH_LIST MAYBE_FINALLY {
     $$ = code_append($$, out);
     jmp->branch = out;
         
-    list_concat(state->method->exceptions, $5);
+    list_concat(state->method->exceptions, $6);
+   
+    $$ = var_block($$);
+    old_state();
 }
 
 /* ------------ throw ------------------------------- */
@@ -1908,7 +1950,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
         c = abc_getlocal_0(c);
         c = abc_constructsuper(c, 0);
     }
-    c = wrap_function(c, state->method->initcode, $11);
+    c = wrap_function(c, 0, $11);
     endfunction(0,$1,$3,$4,&$6,$8,c);
     $$=0;
 }
@@ -2094,7 +2136,7 @@ EXPRESSION : EXPRESSION ',' E %prec below_minus {
     $$.c = code_append($$.c,$3.c);
     $$.t = $3.t;
 }
-VOIDEXPRESSION : E %prec below_minus {
+VOIDEXPRESSION : EXPRESSION %prec below_minus {
     $$=cut_last_push($1.c);
 }
 
@@ -2240,7 +2282,7 @@ E : E '|' E {$$.c = code_append($1.c,$3.c);
             }
 
 E : E '-' E {$$.c = code_append($1.c,$3.c);
-             if(BOTH_INT($1,$3)) {
+             if(BOTH_INT($1.t,$3.t)) {
                 $$.c = abc_subtract_i($$.c);
                 $$.t = TYPE_INT;
              } else {
@@ -2265,16 +2307,21 @@ E : E '/' E {$$.c = code_append($1.c,$3.c);
              $$.c = abc_divide($$.c);
              $$.t = TYPE_NUMBER;
             }
-E : E '+' E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_add($$.c);
-             $$.t = TYPE_NUMBER;
-            }
 E : E '%' E {$$.c = code_append($1.c,$3.c);
              $$.c = abc_modulo($$.c);
              $$.t = TYPE_NUMBER;
             }
+E : E '+' E {$$.c = code_append($1.c,$3.c);
+             if(BOTH_INT($1.t, $3.t)) {
+                $$.c = abc_add_i($$.c);
+                $$.t = TYPE_INT;
+             } else {
+                $$.c = abc_add($$.c);
+                $$.t = join_types($1.t,$3.t,'+');
+             }
+            }
 E : E '*' E {$$.c = code_append($1.c,$3.c);
-             if(BOTH_INT($1,$3)) {
+             if(BOTH_INT($1.t,$3.t)) {
                 $$.c = abc_multiply_i($$.c);
                 $$.t = TYPE_INT;
              } else {
@@ -2331,7 +2378,7 @@ E : '(' EXPRESSION ')' {$$=$2;} //allow commas in here, too
 
 E : '-' E {
   $$=$2;
-  if(IS_INT($2)) {
+  if(IS_INT($2.t)) {
    $$.c=abc_negate_i($$.c);
    $$.t = TYPE_INT;
   } else {
@@ -2383,7 +2430,7 @@ E : '{' MAYBE_EXPRPAIR_LIST '}' {
 
 E : E "*=" E { 
                code_t*c = $3.c;
-               if(BOTH_INT($1,$3)) {
+               if(BOTH_INT($1.t,$3.t)) {
                 c=abc_multiply_i(c);
                } else {
                 c=abc_multiply(c);
