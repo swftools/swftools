@@ -6,8 +6,11 @@ package {
 
             outerloop:
             for(i=0;i<100;i++) {
+                var x1:String;
                 for(j=0;j<100;j++) {
+                    var x2:String;
                     for(k=0;k<100;k++) {
+                        var x3:String;
                         trace("ok 1/2");
                         break outerloop;
                         trace("error");
@@ -18,9 +21,12 @@ package {
             }
             
             for(i=0;i<100;i++) {
+                var x1:String;
                 midloop:
                 for(j=0;j<100;j++) {
+                    var x2:String;
                     for(k=0;k<100;k++) {
+                        var x3:String;
                         trace("ok 2/2");
                         break midloop;
                         trace("error");
