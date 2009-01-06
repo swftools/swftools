@@ -197,7 +197,7 @@ typedef struct _abc_script {
 } abc_script_t;
 
 abc_method_t* abc_nullmethod(abc_file_t*file);
-abc_script_t* abc_initscript(abc_file_t*file, multiname_t*returntype);
+abc_script_t* abc_initscript(abc_file_t*file);
 
 #define __ 
 
