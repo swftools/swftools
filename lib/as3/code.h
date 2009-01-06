@@ -82,7 +82,8 @@ code_t*code_dup(code_t*c);
 code_t*add_opcode(code_t*atag, U8 op);
 
 code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**codelookup);
-int        code_dump(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo);
+int        code_dump(code_t*c);
+int        code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo);
 void       code_write(TAG*tag, code_t*code, pool_t*pool, abc_file_t*file);
 void       code_free(code_t*c);
 code_t* code_atposition(codelookup_t*l, int pos);

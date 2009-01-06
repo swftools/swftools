@@ -395,7 +395,7 @@ static void dump_method(FILE*fo, const char*prefix,
     if(c->traits)
         traits_dump(fo, prefix, c->traits, file, methods_seen);
     fprintf(fo, "%s{\n", prefix);
-    code_dump(c->code, c->exceptions, file, prefix2, fo);
+    code_dump2(c->code, c->exceptions, file, prefix2, fo);
     fprintf(fo, "%s}\n\n", prefix);
 }
 
