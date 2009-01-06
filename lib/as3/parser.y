@@ -137,6 +137,7 @@
 %token<token> T_NEE "!=="
 %token<token> T_LE "<="
 %token<token> T_GE ">="
+%token<token> T_ORBY "|=" 
 %token<token> T_DIVBY "/=" 
 %token<token> T_MODBY "%="
 %token<token> T_MULBY "*="
@@ -213,7 +214,7 @@
 %right '?' ':'
 %left "||"
 %left "&&"
-%nonassoc '|'
+%left '|'
 %nonassoc '^'
 %nonassoc '&'
 %nonassoc "==" "!=" "===" "!=="
@@ -2396,6 +2397,12 @@ E : E ">>>=" E {
 E : E "/=" E { 
                code_t*c = abc_divide($3.c);
                c=converttype(c, join_types($1.t, $3.t, '/'), $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E "|=" E { 
+               code_t*c = abc_bitor($3.c);
+               c=converttype(c, TYPE_INT, $1.t);
                $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
               }
