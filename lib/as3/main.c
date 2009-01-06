@@ -30,9 +30,13 @@
 #include "tokenizer.h"
 #include "parser.tab.h"
 #include "parser.h"
+#include "compiler.h"
 
-void test_lexer()
+void test_lexer(char*filename)
 {
+    char*fullfilename = enter_file(filename, 0);
+    FILE*fi = fopen(fullfilename, "rb");
+    avm2_set_in(fi);
     while(1) {
         int token = avm2_lex();
         if(token==T_EOF)
@@ -49,7 +53,6 @@ int main(int argn, char*argv[])
 {
     char*filename = 0;
     char buf[512];
-    void*code=0;
     
     if(argn<=1) {
         fprintf(stderr, "please supply a filename\n");
@@ -57,27 +60,14 @@ int main(int argn, char*argv[])
     }
     filename=argv[1];
     
-    add_include_dir(getcwd(buf, 512));
-    
-    char*fullfilename = enter_file(filename, 0);
-    FILE*fi = fopen(fullfilename, "rb");
-    if(!fi) {
-        perror(fullfilename);
-        return 1;
-    }
-    avm2_set_in(fi);
-
-    registry_init();
-    initialize_state();
-
     if(argn>2 && !strcmp(argv[2], "-lex")) {
-        test_lexer();
+        test_lexer(filename);
         return 0;
     }
-    avm2_parse();
-    code = finalize_state();
-    avm2_lex_destroy();
-    fclose(fi);
+    
+    as3_add_include_dir(getcwd(buf, 512));
+    as3_parse_file(filename);
+    void*code = as3_getcode();
 
     SWF swf;
     memset(&swf, 0, sizeof(swf));
@@ -89,12 +79,11 @@ int main(int argn, char*argv[])
     TAG*tag = swf.firstTag = swf_InsertTag(0, ST_DOABC);
     swf_WriteABC(tag, code);
 
-    if(globalclass) {
+    if(as3_getglobalclass()) {
         tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
         swf_SetU16(tag, 1);
         swf_SetU16(tag, 0);
-        swf_SetString(tag, globalclass);
-        free(globalclass);globalclass=0;
+        swf_SetString(tag, as3_getglobalclass());
     } else {
         printf("Warning: no global public MovieClip subclass\n");
     }
