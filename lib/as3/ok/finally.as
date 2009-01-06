@@ -54,7 +54,7 @@ package {
             } catch(e:Error) {
                 x=1;
             } finally {
-                x*=2;
+                x++;
             }
             if(x==2)
                 trace("ok 6/9");
