@@ -1373,7 +1373,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 
     gfxmatrix_t m = this->current_font_matrix;
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
-    m.tx += originX; m.ty += originY;
+    //m.tx += originX; m.ty += originY;
 
     if(render == RENDER_FILL || render == RENDER_INVISIBLE) {
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
