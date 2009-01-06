@@ -146,6 +146,7 @@ static int do_unescape(const char*s, const char*end, char*n)
         switch(*s) {
 	    case '\\': if(o) o[len] = '\\';s++;len++; break;
 	    case '"': if(o) o[len] = '"';s++;len++; break;
+	    case '\'': if(o) o[len] = '\'';s++;len++; break;
 	    case 'b': if(o) o[len] = '\b';s++;len++; break;
 	    case 'f': if(o) o[len] = '\f';s++;len++; break;
 	    case 'n': if(o) o[len] = '\n';s++;len++; break;
