@@ -42,6 +42,8 @@ static int verbose = 1;
 static struct options_t options[] = {
 {"h", "help"},
 {"V", "version"},
+{"v", "verbose"},
+{"q", "quiet"},
 {"C", "cgi"},
 {"X", "width"},
 {"Y", "height"},
@@ -107,6 +109,8 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-V , --version                 Print version info and exit\n");
+    printf("-v , --verbose                 Increase verbosity\n");
+    printf("-q , --quiet                   Decrease verbosity\n");
     printf("-C , --cgi                     Output to stdout (for use in CGI environments)\n");
     printf("-X , --width                   Set target SWF width\n");
     printf("-Y , --height                  Set target SWF width\n");
