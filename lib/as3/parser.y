@@ -2701,7 +2701,11 @@ VAR_READ : T_IDENTIFIER {
             MULTINAME(m, a);
             $$.c = abc_findpropstrict2($$.c, &m);
             $$.c = abc_getproperty2($$.c, &m);
-            $$.t = TYPE_FUNCTION(a->function);
+            if(a->function->kind == MEMBER_METHOD) {
+                $$.t = TYPE_FUNCTION(a->function);
+            } else {
+                $$.t = a->function->type;
+            }
         } else {
             if(a->slot) {
                 $$.c = abc_getglobalscope($$.c);
