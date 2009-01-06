@@ -49,6 +49,7 @@ int main(int argn, char*argv[])
 {
     char*filename = 0;
     char buf[512];
+    void*code=0;
     
     if(argn<=1) {
         fprintf(stderr, "please supply a filename\n");
@@ -56,25 +57,27 @@ int main(int argn, char*argv[])
     }
     filename=argv[1];
     
-    registry_init();
-    
     add_include_dir(getcwd(buf, 512));
+    
     char*fullfilename = enter_file(filename, 0);
-
     FILE*fi = fopen(fullfilename, "rb");
     if(!fi) {
         perror(fullfilename);
         return 1;
     }
-    initialize_state();
     avm2_set_in(fi);
+
+    registry_init();
+    initialize_state();
 
     if(argn>2 && !strcmp(argv[2], "-lex")) {
         test_lexer();
         return 0;
     }
     avm2_parse();
-    void*code = finalize_state();
+    code = finalize_state();
+    avm2_lex_destroy();
+    fclose(fi);
 
     SWF swf;
     memset(&swf, 0, sizeof(swf));
