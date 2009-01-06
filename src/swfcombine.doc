@@ -92,3 +92,6 @@ swfcombine -o combined.swf master.swf foo=slave.swf
 As a result, the slave movie should be visible inside the master movie
 at the position where the rectangle used to be.
 
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

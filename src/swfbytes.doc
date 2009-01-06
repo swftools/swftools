@@ -1,0 +1,17 @@
+Usage: %s [-OS] file.swf
+
+Tool for simplifying hex-editing SWF files.
+
+With this tool and a text editor, you can perform some basic
+editing operations on SWF files.
+
+-h, --help 
+    Print help and exit
+-v, --verbose
+    Be more verbose
+-V, --version
+    Print program version and exit
+
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

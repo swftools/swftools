@@ -39,3 +39,6 @@ compression algorithm is used).
 -s, --scale <percent>
     Scale image to <percent>% size.
 
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

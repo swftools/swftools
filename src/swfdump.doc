@@ -49,3 +49,6 @@ display placement information about objects.
 -u, --used
     Show referred IDs for each Tag.
 
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

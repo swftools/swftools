@@ -21,3 +21,6 @@ be viewable.
 -V, --version
     Print version info and exit
 
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

@@ -28,3 +28,6 @@ It can also dump the corners of the bounding boxes of all frames of a movie.
 -V, --version
     Print program version and exit
 
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

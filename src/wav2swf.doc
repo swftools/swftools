@@ -36,3 +36,6 @@ Takes a wav file and converts it to a swf movie.
     Be more verbose
     Be more verbose. (Use more than one -v for greater effect)
 
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>
