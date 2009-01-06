@@ -1365,7 +1365,7 @@ void swf_WriteFont(SWFFONT * font, char *filename)
 
     memset(&swf, 0x00, sizeof(SWF));
 
-    swf.fileVersion = 4;
+    swf.fileVersion = 9;
     swf.frameRate = 0x4000;
 
     /* if we use DefineFont1 to store the characters,
@@ -1389,6 +1389,17 @@ void swf_WriteFont(SWFFONT * font, char *filename)
     } else {
 	t = swf_InsertTag(t, ST_DEFINEFONT2);
 	swf_FontSetDefine2(t, font);
+    }
+    if(font->name) {
+	t = swf_InsertTag(t, ST_NAMECHARACTER);
+        swf_SetU16(t, WRITEFONTID);
+        swf_SetString(t, font->name);
+	t = swf_InsertTag(t, ST_EXPORTASSETS);
+        swf_SetU16(t, 1);
+        swf_SetU16(t, WRITEFONTID);
+        swf_SetString(t, font->name);
+
+        t = swf_AddAS3FontDefine(t, WRITEFONTID, font->name);
     }
 
     if (storeGlyphNames && font->glyphnames) {
