@@ -215,7 +215,7 @@
 %left "||"
 %left "&&"
 %left '|'
-%nonassoc '^'
+%left '^'
 %nonassoc '&'
 %nonassoc "==" "!=" "===" "!=="
 %nonassoc "is" "as" "in"
