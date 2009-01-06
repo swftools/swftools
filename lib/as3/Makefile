@@ -3,29 +3,32 @@ tests: testwrite testrewrite testpaths testreadwrite
 
 D=-g -pg
 
-abc.o: abc.c abc.h ../q.h pool.h
-	gcc $(D) -c abc.c -o abc.o
+#compiled by ../Makefile (into librfxswf.a)
+#
+#abc.o: abc.c abc.h ../q.h pool.h
+#	gcc $(D) -c abc.c -o abc.o
+#
+#pool.o: pool.c pool.h
+#	gcc $(D) -c pool.c -o pool.o
+#
+#files.o: files.h files.c
+#	gcc $(D) -c files.c -o files.o
+#
+#registry.o: registry.h registry.c
+#	gcc $(D) -c registry.c -o registry.o
+#
+#tokenizer.yy.o: tokenizer.yy.c tokenizer.h parser.tab.h
+#	gcc $(D) -c tokenizer.yy.c -o tokenizer.yy.o
+#
+#parser.tab.o: parser.tab.c parser.tab.h parser.h
+#	gcc $(D) -c parser.tab.c -o parser.tab.o
 
-pool.o: pool.c pool.h
-	gcc $(D) -c pool.c -o pool.o
 
-files.o: files.h files.c
-	gcc $(D) -c files.c -o files.o
-
-registry.o: registry.h registry.c
-	gcc $(D) -c registry.c -o registry.o
-
-tokenizer.yy.c: tokenizer.lex Makefile tokenizer.h
+tokenizer.yy.h tokenizer.yy.c: tokenizer.lex Makefile tokenizer.h
 	flex -Pavm2_ -8 -B -otokenizer.yy.c tokenizer.lex
-
-tokenizer.yy.o: tokenizer.yy.c tokenizer.h parser.tab.h
-	gcc $(D) -c tokenizer.yy.c -o tokenizer.yy.o
 
 parser.tab.h parser.tab.c: parser.y parser.h
 	bison -v --defines -pavm2_ parser.y -o parser.tab.c
-
-parser.tab.o: parser.tab.c parser.tab.h parser.h
-	gcc $(D) -c parser.tab.c -o parser.tab.o
 
 main.o: main.c parser.tab.h parser.h
 	gcc $(D) -c main.c -o main.o
@@ -42,7 +45,7 @@ mklib: mklib.o files.o ../libbase.a
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -
 
-../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h
+../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c tokenizer.yy.h
 	cd ..; make librfxswf.a
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
