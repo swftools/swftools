@@ -501,6 +501,9 @@ code_t* abc_urshift(code_t*prev);
 code_t* abc_applytype(code_t*prev, int v);
 #define applytype(method,v) (method->code = abc_applytype(method->code,v))
 #define OPCODE_APPLYTYPE 0x53
+code_t* abc___rethrow__(code_t*prev);
+#define __rethrow__(method) (method->code = abc___rethrow__(method->code))
+#define OPCODE___RETHROW__ 0xfc
 code_t* abc___fallthrough__(code_t*prev, char* name);
 #define __fallthrough__(method,name) (method->code = abc___fallthrough__(method->code,name))
 #define OPCODE___FALLTHROUGH__ 0xfd
