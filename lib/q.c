@@ -393,10 +393,12 @@ unsigned int crc32_add_byte(unsigned int checksum, unsigned char b)
 }
 unsigned int crc32_add_string(unsigned int checksum, const char*s)
 {
+    if(!crc32)
+        crc32_init();
     if(!s)
         return checksum;
     while(*s) {
-        checksum = crc32_add_byte(checksum, *s);
+        checksum = checksum>>8 ^ crc32[(*s^checksum)&0xff];
         s++;
     }
     return checksum;
@@ -800,11 +802,10 @@ int dict_count(dict_t*h)
     return h->num;
 }
 
-void dict_do_lookup(dict_t*h, const void*key, void***match)
+static inline dictentry_t* dict_do_lookup(dict_t*h, const void*key)
 {
     if(!h->num) {
-        *match = 0;
-        return;
+        return 0;
     }
     
     unsigned int ohash = h->key_type->hash(key);
@@ -813,8 +814,7 @@ void dict_do_lookup(dict_t*h, const void*key, void***match)
     /* check first entry for match */
     dictentry_t*e = h->slots[hash];
     if(e && h->key_type->equals(e->key, key)) {
-        *match = &e->data;
-        return;
+        return e;
     } else if(e) {
         e = e->next;
     }
@@ -830,31 +830,40 @@ void dict_do_lookup(dict_t*h, const void*key, void***match)
         dict_expand(h, newsize);
         hash = ohash % h->hashsize;
         e = h->slots[hash];
+        if(e && h->key_type->equals(e->key, key)) {
+            // omit move to front
+            return e;
+        } else if(e) {
+            e = e->next;
+        }
     }
 
     /* check subsequent entries for a match */
+    dictentry_t*last = h->slots[hash];
     while(e) {
         if(h->key_type->equals(e->key, key)) {
-            *match = &e->data;
-            return;
+            /* move to front- makes a difference of about 10% in most applications */
+            last->next = e->next;
+            e->next = h->slots[hash];
+            h->slots[hash] = e;
+            return e;
         }
+        last=e;
         e = e->next;
     }
-    *match = 0;
+    return 0;
 }
 void* dict_lookup(dict_t*h, const void*key)
 {
-    void**data = 0;
-    dict_do_lookup(h, key, &data);
-    if(data)
-        return *data;
+    dictentry_t*e = dict_do_lookup(h, key);
+    if(e)
+        return e->data;
     return 0;
 }
 char dict_contains(dict_t*h, const void*key)
 {
-    void**data = 0;
-    dict_do_lookup(h, key, &data);
-    return !!data;
+    dictentry_t*e = dict_do_lookup(h, key);
+    return !!e;
 }
 
 char dict_del(dict_t*h, const void*key)
