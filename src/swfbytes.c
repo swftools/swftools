@@ -1,5 +1,5 @@
 /* swfbytes.c
-   A tool for modifying swf files
+   A tool for modifying swfs on the tag level
 
    Part of the swftools package.
    
@@ -375,4 +375,3 @@ int main (int argc,char ** argv)
 
     return 0;
 }
-
