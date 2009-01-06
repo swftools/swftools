@@ -478,7 +478,7 @@ multiname_t* multiname_clone(multiname_t*other)
 
 char* access2str(int type)
 {
-    if(type==0x08) return "access08";
+    if(type==0x08) return "namespace";
     else if(type==0x16) return "public";
     else if(type==0x17) return "packageinternal";
     else if(type==0x18) return "protected";
