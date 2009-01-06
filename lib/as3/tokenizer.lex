@@ -31,13 +31,53 @@
 #include "tokenizer.h"
 #include "files.h"
 
-static int verbose = 1;
+int as3_verbosity = 1;
+void as3_error(const char*format, ...)
+{
+    char buf[1024];
+    int l;
+    va_list arglist;
+    if(as3_verbosity<0)
+        exit(1);
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+    fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename_short, current_line, current_column, buf);
+    fflush(stderr);
+    exit(1);
+}
+void as3_warning(const char*format, ...)
+{
+    char buf[1024];
+    int l;
+    va_list arglist;
+    if(as3_verbosity<1)
+        return;
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
+    fflush(stderr);
+}
+void as3_softwarning(const char*format, ...)
+{
+    char buf[1024];
+    int l;
+    va_list arglist;
+    if(as3_verbosity<2)
+	return;
+    va_start(arglist, format);
+    vsprintf(buf, format, arglist);
+    va_end(arglist);
+    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
+    fflush(stderr);
+}
 static void dbg(const char*format, ...)
 {
     char buf[1024];
     int l;
     va_list arglist;
-    if(!verbose)
+    if(as3_verbosity<3)
 	return;
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
@@ -52,34 +92,6 @@ static void dbg(const char*format, ...)
     fflush(stdout);
 }
 
-void syntaxerror(const char*format, ...)
-{
-    char buf[1024];
-    int l;
-    va_list arglist;
-    if(!verbose)
-	return;
-    va_start(arglist, format);
-    vsprintf(buf, format, arglist);
-    va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename_short, current_line, current_column, buf);
-    fflush(stderr);
-    exit(1);
-}
-void warning(const char*format, ...)
-{
-    return;
-    char buf[1024];
-    int l;
-    va_list arglist;
-    if(!verbose)
-	return;
-    va_start(arglist, format);
-    vsprintf(buf, format, arglist);
-    va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
-    fflush(stderr);
-}
 
 
 #ifndef YY_CURRENT_BUFFER
@@ -316,14 +328,14 @@ static inline int handleint()
 
     char*max = l?"1073741824":"2147483647";
     if(yyleng-l>10) {
-        warning("integer overflow: %s", s);
+        as3_warning("integer overflow: %s (converted to Number)", s);
         return handlefloat();
     }
     if(yyleng-l==10) {
         int t;
         for(t=0;t<yyleng-l;t++) {
             if(yytext[l+t]>max[t]) {
-                warning("integer overflow: %s", s);
+                as3_warning("integer overflow: %s (converted to Number)", s);
                 return handlefloat();
             }
             else if(yytext[l+t]<max[t])
@@ -344,34 +356,59 @@ static inline int handleint()
     }
 }
 
+static inline int handlehexfloat()
+{
+    char l = (yytext[0]=='-')+2;
+    double d=0;
+    char dot=0;
+    double base=1;
+    int t;
+    for(t=l;t<yyleng;t++) {
+        char c = yytext[t];
+        if(c=='.') {
+            dot=1;
+            continue;
+        }
+        if(!dot) {
+            d*=16;
+        } else {
+            base*=1/16.0;
+        }
+        if(c>='0' && c<='9')
+            d+=(c&15)*base;
+        else if((c>='a' && c<='f') || (c>='A' && c<='F'))
+            d+=((c&0x0f)+9)*base;
+    }
+    return setfloat(d);
+}
 static inline int handlehex()
 {
     char l = (yytext[0]=='-')+2;
+    int len = yyleng;
 
-    if(yyleng-l>8) {
+    if(len-l>8) {
         char*s = nrbuf();
         syntaxerror("integer overflow %s", s);
     }
 
     int t;
     unsigned int v = 0;
-    for(t=l;t<yyleng;t++) {
+    for(t=l;t<len;t++) {
         v<<=4;
         char c = yytext[t];
         if(c>='0' && c<='9')
             v|=(c&15);
-        else if(c>='a' && c<='f' ||
-                c>='A' && c<='F')
+        else if((c>='a' && c<='f') || (c>='A' && c<='F'))
             v|=(c&0x0f)+9;
     }
     if(l && v>1073741824) {
         char*s = nrbuf();
-        warning("signed integer overflow: %s", s);
+        as3_warning("signed integer overflow: %s (converted to Number)", s);
         return setfloat(v);
     }
     if(!l && v>2147483647) {
         char*s = nrbuf();
-        warning("unsigned integer overflow: %s", s);
+        as3_warning("unsigned integer overflow: %s (converted to Number)", s);
         return setfloat(v);
     }
 
@@ -453,10 +490,12 @@ NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
 _        [^a-zA-Z0-9_\\]
 
 HEXINT    0x[a-zA-Z0-9]+
+HEXFLOAT  0x[a-zA-Z0-9]*\.[a-zA-Z0-9]*
 INT       [0-9]+
 FLOAT     [0-9]+(\.[0-9]*)?|\.[0-9]+
 
 HEXWITHSIGN [+-]?({HEXINT})
+HEXFLOATWITHSIGN [+-]?({HEXFLOAT})
 INTWITHSIGN [+-]?({INT})
 FLOATWITHSIGN [+-]?({FLOAT})
 
@@ -479,6 +518,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return handleregexp();} 
 {HEXWITHSIGN}                {c(); BEGIN(INITIAL);return handlehex();}
+{HEXFLOATWITHSIGN}                {c(); BEGIN(INITIAL);return handlehexfloat();}
 {INTWITHSIGN}                {c(); BEGIN(INITIAL);return handleint();}
 {FLOATWITHSIGN}              {c(); BEGIN(INITIAL);return handlefloat();}
 }
@@ -487,6 +527,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 {S}                          {l();}
 
 {HEXINT}                     {c(); BEGIN(INITIAL);return handlehex();}
+{HEXFLOAT}                   {c(); BEGIN(INITIAL);return handlehexfloat();}
 {INT}                        {c(); BEGIN(INITIAL);return handleint();}
 {FLOAT}                      {c(); BEGIN(INITIAL);return handlefloat();}
 
