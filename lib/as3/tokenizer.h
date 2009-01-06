@@ -61,6 +61,10 @@ typedef struct _for_start {
     char*name;
     char each;
 } for_start_t;
+typedef struct _regexp {
+    char*pattern;
+    char*options;
+} regexp_t;
 
 extern char start_of_expression;
 
