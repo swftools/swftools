@@ -1,0 +1,28 @@
+Usage: %s file.as [-o file.swf] 
+
+Compile .as ActionScript 3.0 files to swf.
+
+Compiles a file written in ActionScript to a SWF file.
+
+-h, --help
+    Print short help message and exit
+-V, --version
+    Print version info and exit
+-v, --verbose
+    Increase verbosity
+-q, --quiet
+    Decrease verbosity
+-C, --cgi
+    Output to stdout (for use in CGI environments)
+-X, --width
+    Set target SWF width
+-Y, --height
+    Set target SWF width
+-r, --rate
+    Set target SWF framerate
+-T, --flashversion <num>
+    Set target SWF flash version to <num>.
+    <num> must be >= 9.
+-o, --output <filename>
+    Set output file to <filename>.
+
