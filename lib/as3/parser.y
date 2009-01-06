@@ -59,8 +59,11 @@
     constant_t*constant;
     for_start_t for_start;
     abc_exception_t *exception;
-    abc_exception_list_t *exception_list;
     regexp_t regexp;
+    struct {
+        abc_exception_list_t *l;
+        code_t*finally;
+    } catch_list;
 }
 
 
@@ -90,6 +93,7 @@
 %token<token> KW_NEW "new"
 %token<token> KW_NATIVE "native"
 %token<token> KW_FUNCTION "function"
+%token<token> KW_FINALLY "finally"
 %token<token> KW_UNDEFINED "undefined"
 %token<token> KW_CONTINUE "continue"
 %token<token> KW_CLASS "class"
@@ -167,8 +171,8 @@
 %type <code> PACKAGE_DECLARATION SLOT_DECLARATION
 %type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
 %type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW 
-%type <exception> CATCH
-%type <exception_list> CATCH_LIST
+%type <exception> CATCH FINALLY
+%type <catch_list> CATCH_LIST CATCH_FINALLY_LIST
 %type <code> CLASS_DECLARATION
 %type <code> NAMESPACE_DECLARATION
 %type <code> INTERFACE_DECLARATION
@@ -1265,7 +1269,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
     } else if(r->opcode == OPCODE_GETLOCAL_3) { 
         write->opcode = OPCODE_SETLOCAL_3;
     } else {
-        code_dump(r, 0, 0, "", stdout);
+        code_dump(r);
         syntaxerror("illegal lvalue: can't assign a value to this expression");
     }
     code_t* c = 0;
@@ -1331,10 +1335,72 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
             c = abc_kill(c, temp);
         }
     }
-
     return c;
 }
 
+char is_break_or_jump(code_t*c)
+{
+    if(!c)
+        return 0;
+    if(c->opcode == OPCODE_JUMP ||
+       c->opcode == OPCODE___BREAK__ ||
+       c->opcode == OPCODE___CONTINUE__ ||
+       c->opcode == OPCODE_THROW ||
+       c->opcode == OPCODE_RETURNVOID ||
+       c->opcode == OPCODE_RETURNVALUE) {
+       return 1;
+    }
+    return 0;
+}
+
+#define NEED_EXTRA_STACK_ARG
+static code_t* insert_finally(code_t*c, code_t*finally)
+{
+    code_t*finally_label = abc_nop(0);
+    NEW(lookupswitch_t, l);
+    //_lookupswitch
+
+    code_t*i = c;
+    int count=0;
+    while(i) {
+        code_t*prev = i->prev;
+        if(i->opcode == OPCODE___CONTINUE__ ||
+           i->opcode == OPCODE___BREAK__ ||
+           i->opcode == OPCODE_RETURNVOID ||
+           i->opcode == OPCODE_RETURNVALUE ||
+           i->opcode == OPCODE___RETHROW__) 
+        {
+           if(i->opcode == OPCODE___RETHROW__)
+                i->opcode = OPCODE_NOP;
+           code_t*p = prev;
+           p = abc_pushbyte(p, count++);
+           p = abc_jump(p, finally_label);
+           code_t*target = p = abc_label(p);
+#ifdef NEED_EXTRA_STACK_ARG
+           p = abc_pop(p);
+#endif
+           p->next = i;i->prev = p;
+           list_append(l->targets, target);
+        }
+        i = prev;
+    }
+
+    code_t*j,*f;
+    c = abc_pushbyte(c, -1);
+    c = code_append(c, finally_label);
+    c = code_append(c, finally);
+
+#ifdef NEED_EXTRA_STACK_ARG
+    c = abc_dup(c);
+#endif
+    c = abc_lookupswitch(c, l);
+    c = l->def = abc_label(c);
+#ifdef NEED_EXTRA_STACK_ARG
+    c = abc_pop(c);
+#endif
+
+    return c;
+}
 
 %}
 
@@ -1661,11 +1727,8 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
 
 /* ------------ try / catch /finally ---------------- */
 
-FINALLY: "finally" '{' CODE '}'
-MAYBE_FINALLY: | FINALLY 
-
 CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name=$3;new_variable($3, $4, 0);} 
-        '{' CODE '}' {
+        '{' MAYBECODE '}' {
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
     multiname_t name = {QNAME, &name_ns, 0, $3};
     
@@ -1682,32 +1745,66 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name
 
     c = var_block(c);
     old_state();
-    
+}
+FINALLY: "finally" '{' {new_state();state->exception_name=0;} MAYBECODE '}' {
+    NEW(abc_exception_t, e)
+    e->exc_type = 0; //all exceptions
+    e->var_name = 0; //no name
+    e->target = 0;
+    $$ = e;
+    e->to = var_block($4);
+    old_state();
 }
 
-CATCH_LIST: CATCH {$$=list_new();list_append($$,$1);}
-CATCH_LIST: CATCH_LIST CATCH {$$=$1;list_append($$,$2);}
+CATCH_LIST: CATCH {$$.l=list_new();$$.finally=0;list_append($$.l,$1);}
+CATCH_LIST: CATCH_LIST CATCH {$$=$1;list_append($$.l,$2);}
+CATCH_FINALLY_LIST: CATCH_LIST {$$=$1};
+CATCH_FINALLY_LIST: CATCH_LIST FINALLY {
+    $$ = $1;list_append($$.l,$2);
+    $$.finally = $2->to;$2->to=0;
+}
+CATCH_FINALLY_LIST: FINALLY {
+    $$.l=list_new();list_append($$.l,$1);
+    $$.finally = $1->to;$1->to=0;
+}
 
-TRY : "try" '{' {new_state();} CODE '}' CATCH_LIST MAYBE_FINALLY {
-    code_t*start = code_start($4);
-    $$=$4;
-
+TRY : "try" '{' {new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
+    code_t*start = abc_nop(0);
+    code_t*end = $$ = code_append(start, $4);
     code_t*out = abc_nop(0);
-    code_t*jmp = $$ = abc_jump($$, out);
-
-    abc_exception_list_t*l = $6;
+   
+    if(!is_break_or_jump($4)) {
+        end = $$ = abc_jump($$, out);
+    }
+    
+    abc_exception_list_t*l = $6.l;
+    int count=0;
     while(l) {
         abc_exception_t*e = l->abc_exception;
+        if(e->var_name) {
+            $$ = code_append($$, e->target);
+            $$ = abc_jump($$, out);
+        } else {
+            // finally block
+            int tmp = new_variable("__finally__", 0, 0);
+            e->target = 
+            $$ = abc_coerce_a($$);
+            $$ = abc_setlocal($$, tmp);
+            $$ = abc___rethrow__($$);
+            $$ = abc_getlocal($$, tmp);
+            $$ = abc_throw($$);
+        }
+        
         e->from = start;
-        e->to = jmp;
-        $$ = code_append($$, e->target);
-        $$ = abc_jump($$, out);
+        e->to = end->next;
+
         l = l->next;
     }
     $$ = code_append($$, out);
-    jmp->branch = out;
+
+    $$ = insert_finally($$, $6.finally);
         
-    list_concat(state->method->exceptions, $6);
+    list_concat(state->method->exceptions, $6.l);
    
     $$ = var_block($$);
     old_state();
