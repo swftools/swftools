@@ -12,6 +12,3 @@ editing operations on SWF files.
 -V, --version
     Print program version and exit
 
-.SH AUTHOR
-
-Matthias Kramm <kramm@quiss.org>
