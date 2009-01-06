@@ -625,19 +625,10 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     new_state();
     global->variable_count = 1;
     state->cls = rfx_calloc(sizeof(classstate_t));
+    state->method = rfx_calloc(sizeof(methodstate_t)); // method state, for static constructor
 
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
-    /*printf("entering class %s\n", name);
-    printf("  modifiers: ");for(t=modifiers->tokens;t;t=t->next) printf("%s ", t->token);printf("\n");
-    if(extends) 
-        printf("  extends: %s.%s\n", extends->package, extends->name);
-    printf("  implements (%d): ", list_length(implements));
-    for(mlist=implements;mlist;mlist=mlist->next)  {
-        printf("%s ", mlist->classinfo?mlist->classinfo->name:0);
-    }
-    printf("\n");
-    */
 
     if(flags&~(FLAG_PACKAGEINTERNAL|FLAG_PUBLIC|FLAG_FINAL|FLAG_DYNAMIC))
         syntaxerror("invalid modifier(s)");
@@ -765,6 +756,13 @@ static void endclass()
         c = abc_constructsuper(c, 0);
         state->cls->init = code_append(state->cls->init, c);
     }
+    if(!state->method->late_binding) {
+        // class initialization code uses late binding
+        code_t*c = 0;
+        c = abc_getlocal_0(c);
+        c = abc_pushscope(c);
+        state->cls->static_init = code_append(c, state->cls->static_init);
+    }
 
     if(state->cls->init) {
         abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
@@ -773,15 +771,10 @@ static void endclass()
     if(state->cls->static_init) {
         abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
         m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
-    } else {
-        // handy for scope testing 
-        /*code_t*c = 0;
-        c = abc_pop(c);
-        c = abc_pop(c);
-        abc_class_getstaticconstructor(state->cls->abc,0)->body->code = c;*/
     }
 
     free(state->cls);state->cls=0;
+    free(state->method);state->method=0;
     old_state();
 }
 
@@ -906,7 +899,7 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
 static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type)
 {
-    if(state->method) {
+    if(state->method && state->method->info) {
         syntaxerror("not able to start another method scope");
     }
     new_state();
@@ -1168,6 +1161,26 @@ static classinfo_t* find_class(char*name)
     if(c) return c;
 
     return 0;
+}
+
+static char is_getlocal(code_t*c)
+{
+    if(!c || c->prev || c->next)
+        return 0;
+    return(c->opcode == OPCODE_GETLOCAL
+        || c->opcode == OPCODE_GETLOCAL_0
+        || c->opcode == OPCODE_GETLOCAL_1
+        || c->opcode == OPCODE_GETLOCAL_2
+        || c->opcode == OPCODE_GETLOCAL_3);
+}
+static int getlocalnr(code_t*c)
+{
+    if(c->opcode == OPCODE_GETLOCAL) {return (ptroff_t)c->data[0];}
+    else if(c->opcode == OPCODE_GETLOCAL_0) {return 0;}
+    else if(c->opcode == OPCODE_GETLOCAL_1) {return 1;}
+    else if(c->opcode == OPCODE_GETLOCAL_2) {return 2;}
+    else if(c->opcode == OPCODE_GETLOCAL_3) {return 3;}
+    else syntaxerror("Internal error: opcode %02x is not a getlocal call", c->opcode);
 }
 
 static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore)
@@ -2281,15 +2294,6 @@ E : E '|' E {$$.c = code_append($1.c,$3.c);
              $$.t = TYPE_INT;
             }
 
-E : E '-' E {$$.c = code_append($1.c,$3.c);
-             if(BOTH_INT($1.t,$3.t)) {
-                $$.c = abc_subtract_i($$.c);
-                $$.t = TYPE_INT;
-             } else {
-                $$.c = abc_subtract($$.c);
-                $$.t = TYPE_NUMBER;
-             }
-            }
 E : E ">>" E {$$.c = code_append($1.c,$3.c);
              $$.c = abc_rshift($$.c);
              $$.t = TYPE_INT;
@@ -2318,6 +2322,15 @@ E : E '+' E {$$.c = code_append($1.c,$3.c);
              } else {
                 $$.c = abc_add($$.c);
                 $$.t = join_types($1.t,$3.t,'+');
+             }
+            }
+E : E '-' E {$$.c = code_append($1.c,$3.c);
+             if(BOTH_INT($1.t,$3.t)) {
+                $$.c = abc_subtract_i($$.c);
+                $$.t = TYPE_INT;
+             } else {
+                $$.c = abc_subtract($$.c);
+                $$.t = TYPE_NUMBER;
              }
             }
 E : E '*' E {$$.c = code_append($1.c,$3.c);
@@ -2478,23 +2491,24 @@ E : E "|=" E {
               }
 E : E "+=" E { 
                code_t*c = $3.c;
-               if(TYPE_IS_INT($3.t) || TYPE_IS_UINT($3.t)) {
+
+               if(TYPE_IS_INT($1.t)) {
                 c=abc_add_i(c);
                } else {
                 c=abc_add(c);
+                c=converttype(c, join_types($1.t, $3.t, '+'), $1.t);
                }
-               c=converttype(c, join_types($1.t, $3.t, '+'), $1.t);
                
                $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
               }
 E : E "-=" E { code_t*c = $3.c; 
-               if(TYPE_IS_INT($3.t) || TYPE_IS_UINT($3.t)) {
+               if(TYPE_IS_INT($1.t)) {
                 c=abc_subtract_i(c);
                } else {
                 c=abc_subtract(c);
+                c=converttype(c, join_types($1.t, $3.t, '-'), $1.t);
                }
-               c=converttype(c, join_types($1.t, $3.t, '-'), $1.t);
                
                $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
@@ -2507,30 +2521,45 @@ E : E '=' E { code_t*c = 0;
             }
 
 E : E '?' E ':' E %prec below_assignment { 
+              $$.t = join_types($3.t,$5.t,'?');
               $$.c = $1.c;
               code_t*j1 = $$.c = abc_iffalse($$.c, 0);
               $$.c = code_append($$.c, $3.c);
+              $$.c = converttype($$.c, $3.t, $$.t);
               code_t*j2 = $$.c = abc_jump($$.c, 0);
               $$.c = j1->branch = abc_label($$.c);
               $$.c = code_append($$.c, $5.c);
+              $$.c = converttype($$.c, $3.t, $$.t);
               $$.c = j2->branch = abc_label($$.c);
-              $$.t = join_types($3.t,$5.t,'?');
             }
 
-// TODO: use inclocal where appropriate
 E : E "++" { code_t*c = 0;
              classinfo_t*type = $1.t;
-             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
-                 c=abc_increment_i(c);
-                 type = TYPE_INT;
+             if(is_getlocal($1.c) && TYPE_IS_INT($1.t) || TYPE_IS_NUMBER($1.t)) {
+                 int nr = getlocalnr($1.c);
+                 code_free($1.c);$1.c=0;
+                 if(TYPE_IS_INT($1.t)) {
+                    $$.c = abc_getlocal(0, nr);
+                    $$.c = abc_inclocal_i($$.c, nr);
+                 } else if(TYPE_IS_NUMBER($1.t)) {
+                    $$.c = abc_getlocal(0, nr);
+                    $$.c = abc_inclocal($$.c, nr);
+                 } else syntaxerror("internal error");
              } else {
-                 c=abc_increment(c);
-                 type = TYPE_NUMBER;
+                 if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
+                     c=abc_increment_i(c);
+                     type = TYPE_INT;
+                 } else {
+                     c=abc_increment(c);
+                     type = TYPE_NUMBER;
+                 }
+                 c=converttype(c, type, $1.t);
+                 $$.c = toreadwrite($1.c, c, 0, 1);
+                 $$.t = $1.t;
              }
-             c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c, 0, 1);
-             $$.t = $1.t;
            }
+
+// TODO: use inclocal, like with ++
 E : E "--" { code_t*c = 0;
              classinfo_t*type = $1.t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
