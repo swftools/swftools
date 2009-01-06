@@ -25,8 +25,10 @@
 #define __abc_parser_h__
 
 /* first public class overloading MovieClip, if any */
-extern char*globalclass;
+extern char*as3_globalclass;
 
-void initialize_state();
-void* finalize_state();
+void initialize_parser();
+void initialize_file(char*filename);
+void finish_file();
+void* finish_parser();
 #endif
