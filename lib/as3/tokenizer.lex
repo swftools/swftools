@@ -332,8 +332,10 @@ static inline int handleint()
     if(yyleng-l==10) {
         int t;
         for(t=0;t<yyleng-l;t++) {
-            if(yytext[l+t]>max[t])
-                syntaxerror("integer overflow %s > %s", s+l,max);
+            if(yytext[l+t]>max[t]) {
+                warning("integer overflow: %s", s);
+                return handlefloat();
+            }
             else if(yytext[l+t]<max[t])
                 break;
         }
