@@ -1106,6 +1106,7 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     i->swf->movieSize.ymin = 0;
     i->swf->movieSize.xmax = 0;
     i->swf->movieSize.ymax = 0;
+    i->swf->fileAttributes = 9; // as3, local-with-network
     
     i->swf->firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     i->tag = i->swf->firstTag;
