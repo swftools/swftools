@@ -1138,6 +1138,7 @@ code_t*code_cutlast(code_t*c)
 
 code_t* cut_last_push(code_t*c)
 {
+    assert(!c->next);
     while(c) {
         if(!c) break;
         opcode_t*op = opcode_get(c->opcode);
