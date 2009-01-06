@@ -80,6 +80,10 @@ void args_callback_usage(char *name)
 }
 int args_callback_command(char*name,char*val)
 {
+    if(filename) {
+        fprintf(stderr, "Please specify only one font\n");
+        exit(1);
+    }
     filename = name;
     return 0;
 }
