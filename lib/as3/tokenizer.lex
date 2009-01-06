@@ -306,6 +306,11 @@ static inline int setuint(unsigned int v)
     else
         return T_UINT;
 }
+static inline int setfloat(double v)
+{
+    avm2_lval.number_float = v;
+    return T_FLOAT;
+}
 
 static inline int handlefloat()
 {
@@ -320,8 +325,10 @@ static inline int handleint()
     char l = (yytext[0]=='-');
 
     char*max = l?"1073741824":"2147483647";
-    if(yyleng-l>10)
-        syntaxerror("integer overflow");
+    if(yyleng-l>10) {
+        warning("integer overflow: %s", s);
+        return handlefloat();
+    }
     if(yyleng-l==10) {
         int t;
         for(t=0;t<yyleng-l;t++) {
@@ -349,8 +356,11 @@ static inline int handlehex()
 {
     char l = (yytext[0]=='-')+2;
 
-    if(yyleng-l>8)
-        syntaxerror("integer overflow");
+    if(yyleng-l>8) {
+        char*s = nrbuf();
+        syntaxerror("integer overflow %s", s);
+    }
+
     int t;
     unsigned int v = 0;
     for(t=l;t<yyleng;t++) {
@@ -362,10 +372,16 @@ static inline int handlehex()
                 c>='A' && c<='F')
             v|=(c&0x0f)+9;
     }
-    if(l && v>1073741824)
-        syntaxerror("signed integer overflow");
-    if(!l && v>2147483647)
-        syntaxerror("unsigned integer overflow");
+    if(l && v>1073741824) {
+        char*s = nrbuf();
+        warning("signed integer overflow: %s", s);
+        return setfloat(v);
+    }
+    if(!l && v>2147483647) {
+        char*s = nrbuf();
+        warning("unsigned integer overflow: %s", s);
+        return setfloat(v);
+    }
 
     if(l==3) {
         return setint(-(int)v);
@@ -472,6 +488,7 @@ switch                       {c();avm2_lval.id="";return T_SWITCH;}
 [/][=]                       {c();return m(T_DIVBY);}
 [%][=]                       {c();return m(T_MODBY);}
 [*][=]                       {c();return m(T_MULBY);}
+[|][=]                       {c();return m(T_ORBY);}
 [>][>][=]                    {c();return m(T_SHRBY);}
 [<][<][=]                    {c();return m(T_SHLBY);}
 [>][>][>][=]                 {c();return m(T_USHRBY);}
