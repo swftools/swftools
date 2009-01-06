@@ -748,6 +748,7 @@ void swf_WriteABC(TAG*tag, void*code);
 void swf_FreeABC(void*code);
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events);
 TAG*swf_AddAS3FontDefine(TAG*tag, U16 id, char*fontname);
+#include "as3/compiler.h"
 
 // swfaction.c
 
