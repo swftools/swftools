@@ -40,43 +40,30 @@ int abc_RegisterPrivateNameSpace(abc_file_t*file, const char*name);
 /* TODO: switch to a datastructure with just values */
 #define NO_KEY ""
 
-static char* params_tostring(multiname_list_t*list)
+static void params_dump(FILE*fo, multiname_list_t*l, constant_list_t*o)
 {
-    multiname_list_t*l;
-    int n = list_length(list);
-    char**names = (char**)malloc(sizeof(char*)*n);
-    
-    l = list;
-    n = 0;
-    int size = 0;
-    while(l) {
-        names[n] = multiname_tostring(l->multiname);
-        size += strlen(names[n]) + 2;
-        n++;l=l->next;
-    }
+    int n = list_length(l);
+    int no = list_length(o);
+    int i = 0;
 
-    char* params = malloc(size+15);
-    params[0]='(';
-    params[1]=0;
-    l = list;
-    int s=0;
-    n = 0;
+    fprintf(fo, "(");
     while(l) {
-        if(s)
-            strcat(params, ", ");
-        strcat(params, names[n]);
-        free(names[n]);
-        l = l->next;
-        n++;
-        s=1;
+        char*s = multiname_tostring(l->multiname);
+        fprintf(fo, s);
+        free(s);
+        if(i>=n-no) {
+            s = constant_tostring(o->constant);
+            fprintf(fo, " = ");
+            fprintf(fo, s);
+            free(s);
+            o = o->next;
+        }
+
+        if(l->next)
+            fprintf(fo, ", ");
+        l = l->next;i++;
     }
-    free(names);
-    /*char num[20];
-    sprintf(num, "[%d params]", n);
-    strcat(params, num);*/
-    strcat(params, ")");
-    int t;
-    return params;
+    fprintf(fo, ")");
 }
 
 //#define DEBUG
@@ -356,12 +343,13 @@ static void dump_method(FILE*fo, const char*prefix,
         return_type = multiname_tostring(m->return_type);
     else
         return_type = strdup("void");
-    char*paramstr = params_tostring(m->parameters);
-    fprintf(fo, "%s%s%s %s %s=%s %s (%d params, %d optional)\n", prefix, attr, type, return_type, name, m->name, paramstr, 
-            list_length(m->parameters),
-            list_length(m->optional_parameters)
-            );
-    free(paramstr);paramstr=0;
+
+    fprintf(fo, "%s", prefix);
+    fprintf(fo, "%s %s", attr, type);
+    fprintf(fo, "%s %s=%s", return_type, name, m->name);
+    params_dump(fo, m->parameters, m->optional_parameters);
+    fprintf(fo, "(%d params, %d optional)\n", list_length(m->parameters), list_length(m->optional_parameters));
+
     free(return_type);return_type=0;
 
     abc_method_body_t*c = m->body;
@@ -614,7 +602,7 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
 void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 {
     abc_file_t* file = (abc_file_t*)code;
-        
+
     if(file->name) {
         fprintf(fo, "%s#\n", prefix);
         fprintf(fo, "%s#name: %s\n", prefix, file->name);
@@ -704,7 +692,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
                 fprintf(fo, "%s//internal (non-class non-script) methods:\n", prefix);
             }
             char name[18];
-            sprintf(name, "%08x ", m);
+            sprintf(name, "%08x ", m->index);
             dump_method(fo, prefix, "", "internalmethod", name, m, file, methods_seen);
         }
     }
@@ -732,6 +720,7 @@ void* swf_ReadABC(TAG*tag)
     }
 
     pool_read(pool, tag);
+    //pool_dump(pool, stdout);
 
     int num_methods = swf_GetU30(tag);
     DEBUG printf("%d methods\n", num_methods);
@@ -761,7 +750,9 @@ void* swf_ReadABC(TAG*tag)
 
 	m->flags = swf_GetU8(tag);
 	
-        DEBUG printf("method %d) %s %s flags=%02x\n", t, m->name, params_tostring(m->parameters), m->flags);
+        DEBUG printf("method %d) %s ", m->name);
+        DEBUG params_dump(stdout, m->parameters, m->optional_parameters);
+        DEBUG printf("flags=%02x\n", t, m->flags);
 
         if(m->flags&0x08) {
             m->optional_parameters = list_new();
@@ -772,6 +763,7 @@ void* swf_ReadABC(TAG*tag)
                 U8 vkind = swf_GetU8(tag); // specifies index type for "val"
                 constant_t*c = constant_fromindex(pool, vindex, vkind);
                 list_append(m->optional_parameters, c);
+
             }
         }
 	if(m->flags&0x80) {
@@ -1060,8 +1052,13 @@ void swf_WriteABC(TAG*abctag, void*code)
             swf_SetU30(tag, list_length(m->optional_parameters));
             constant_list_t*l = m->optional_parameters;
             while(l) {
-                swf_SetU30(tag, constant_get_index(pool, l->constant));
-                swf_SetU8(tag, l->constant->type);
+                int i = constant_get_index(pool, l->constant);
+                swf_SetU30(tag, i);
+                if(!i) {
+                    swf_SetU8(tag, CONSTANT_NULL);
+                } else {
+                    swf_SetU8(tag, l->constant->type);
+                }
                 l = l->next;
             }
         }
@@ -1138,7 +1135,6 @@ void swf_WriteABC(TAG*abctag, void*code)
 	//swf_SetU30(tag, c->old.max_scope_depth);
 
 	swf_SetU30(tag, c->stats->max_stack);
-
         int param_num = list_length(c->method->parameters)+1;
         if(c->method->flags&METHOD_NEED_REST)
             param_num++;
