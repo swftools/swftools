@@ -1544,7 +1544,8 @@ CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
 /* ------------ package init code ------------------- */
 
 PACKAGE_INITCODE: CODE_STATEMENT {
-    if($1) as3_warning("code ignored");
+    code_t**cc = &global->init->method->body->code;
+    *cc = code_append(*cc, $1);
 }
 
 /* ------------ variables --------------------------- */
