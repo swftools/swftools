@@ -1,3 +1,4 @@
-*.swf CVS parser.output parser.tab.c parser.tab.h tokenizer.yy.c *.as mklib parser builtin.abc playerglobal.abc swfdump test.html c m
+*.swf CVS parser.output *.as mklib parser builtin.abc playerglobal.abc swfdump test.html c m
 testwrite testrewrite testpaths testreadwrite 
 testwrite.c testrewrite.c testpaths.c testreadwrite.c
+parser.tab.c parser.tab.h tokenizer.yy.c 
