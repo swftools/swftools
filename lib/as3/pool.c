@@ -734,7 +734,7 @@ constant_t* constant_fromindex(pool_t*pool, int index, int type)
 char* constant_tostring(constant_t*c)
 {
     if(!c)
-        return 0;
+        return strdup("NULL");
     char buf[32];
     if(NS_TYPE(c->type)) {
         return namespace_tostring(c->ns);
@@ -1118,6 +1118,55 @@ void pool_read(pool_t*pool, TAG*tag)
 	}
         DEBUG printf("multiname %d) %s\n", t, multiname_tostring(&m));
 	array_append(pool->x_multinames, &m, 0);
+    }
+} 
+
+void pool_dump(pool_t*pool, FILE*fo)
+{
+    int t;
+    fprintf(fo, "%d integers:\n", pool->x_ints->num);
+    for(t=1;t<pool->x_ints->num;t++) {
+        S32 val = *(int*)array_getkey(pool->x_ints, t);
+        fprintf(fo, "%d) %d\n", t, val);
+    }
+    fprintf(fo, "%d integers:\n", pool->x_uints->num);
+    for(t=1;t<pool->x_uints->num;t++) {
+        U32 val = *(unsigned int*)array_getkey(pool->x_uints, t);
+        fprintf(fo, "%d) %d\n", t, val);
+    }
+    fprintf(fo, "%d floats:\n", pool->x_floats->num);
+    for(t=1;t<pool->x_floats->num;t++) {
+        double d = pool_lookup_float(pool, t);
+        fprintf(fo, "%d) %f\n", t, d);
+    }
+    fprintf(fo, "%d strings:\n", pool->x_strings->num);
+    for(t=1;t<pool->x_strings->num;t++) {
+        string_t str = pool_lookup_string2(pool, t);
+        fprintf(fo, "%d) ", t);
+        fwrite(str.str, str.len, 1, fo);
+        fprintf(fo, "\n", t);
+    }
+    fprintf(fo, "%d namespaces:\n", pool->x_namespaces->num);
+    for(t=1;t<pool->x_namespaces->num;t++) {
+	namespace_t*ns= (namespace_t*)array_getkey(pool->x_namespaces, t);
+        char*s = namespace_tostring(ns);
+        fprintf(fo, "%d) %s\n", t, s);
+        free(s);
+    }
+    fprintf(fo, "%d namespace sets:\n", pool->x_namespace_sets->num);
+    for(t=1;t<pool->x_namespace_sets->num;t++) {
+        namespace_set_t*set = (namespace_set_t*)array_getkey(pool->x_namespace_sets, t);
+        char*s = namespace_set_tostring(set);
+        fprintf(fo, "%d) %s\n", t, s);
+        free(s);
+    }
+
+    fprintf(fo, "%d multinames:\n", pool->x_multinames->num);
+    for(t=1;t<pool->x_multinames->num;t++) {
+	multiname_t*m = (multiname_t*)array_getkey(pool->x_multinames, t);
+        char*s = multiname_tostring(m);
+        fprintf(fo, "%d) %s\n", t, s);
+        free(s);
     }
 } 
 
