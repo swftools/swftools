@@ -6,6 +6,9 @@
 #define IDC_ALLUSERS 1012
 #define IDC_CURRENTUSER 1013
 
+#define IDC_SPACE1  1032
+#define IDC_SPACE2  1033
+
 #define IDC_TITLE  1002
 #define IDC_LICENSE 1003
 #define IDC_BITMAP 1004
