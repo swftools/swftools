@@ -14,9 +14,12 @@
    sodipodi:version="0.32"
    inkscape:version="0.45.1"
    version="1.0"
-   sodipodi:docbase="/home/kramm/docs/svg"
+   sodipodi:docbase="/home/kramm/c/swftools/doc"
    sodipodi:docname="pygfx.svg"
-   inkscape:output_extension="org.inkscape.output.svg.inkscape">
+   inkscape:output_extension="org.inkscape.output.svg.inkscape"
+   inkscape:export-filename="/home/kramm/c/swftools/doc/pygfx.png"
+   inkscape:export-xdpi="43.200001"
+   inkscape:export-ydpi="43.200001">
   <defs
      id="defs4">
     <marker
@@ -150,7 +153,7 @@
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow1Lend);stroke-opacity:1"
-       d="M 549.5,192.86218 L 619.5,292.86218"
+       d="M 549.5,192.86218 L 620,282.36218"
        id="path3158"
        sodipodi:nodetypes="cc" />
     <path
@@ -165,7 +168,7 @@
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow1Lend);stroke-opacity:1"
-       d="M 549.5,182.86218 L 619.5,232.86218"
+       d="M 549.5,182.86218 L 620,222.36218"
        id="path3164"
        sodipodi:nodetypes="cc" />
     <text
@@ -259,17 +262,17 @@
          x="49"
          y="183.36218">Bitmap</tspan></text>
     <path
-       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
        d="M 150,112.36218 L 210,152.36218"
        id="path4373"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
        d="M 150,172.36218 L 210,172.36218"
        id="path4375"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
        d="M 150,232.36218 L 210,192.36218"
        id="path4377"
        sodipodi:nodetypes="cc" />
