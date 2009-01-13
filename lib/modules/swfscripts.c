@@ -364,5 +364,3 @@ void AVM2_InsertButtonLink(SWF*swf)
 
 
 
-
-
