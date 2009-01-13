@@ -55,7 +55,10 @@ char float_equals(const void*_v1, const void*_v2) {
     const double*v2=_v2;
     if(!v1 || !v2) 
         return v1==v2;
-    return *v1==*v2;
+    
+    if(*v1==*v2) return 1;
+    if(*v1!=*v1 && *v2!=*v2) return 1; //both values are NaN
+    return 0;
 }
 
 type_t float_type = {
@@ -1121,43 +1124,43 @@ void pool_read(pool_t*pool, TAG*tag)
     }
 } 
 
-void pool_dump(pool_t*pool, FILE*fo)
+void pool_dump(pool_t*pool, FILE*fo, char flags)
 {
     int t;
     fprintf(fo, "%d integers:\n", pool->x_ints->num);
     for(t=1;t<pool->x_ints->num;t++) {
         S32 val = *(int*)array_getkey(pool->x_ints, t);
-        fprintf(fo, "%d) %d\n", t, val);
+        if(flags&1) fprintf(fo, "%d) %d\n", t, val);
     }
-    fprintf(fo, "%d integers:\n", pool->x_uints->num);
+    fprintf(fo, "%d unsigned integers:\n", pool->x_uints->num);
     for(t=1;t<pool->x_uints->num;t++) {
         U32 val = *(unsigned int*)array_getkey(pool->x_uints, t);
-        fprintf(fo, "%d) %d\n", t, val);
+        if(flags&1) fprintf(fo, "%d) %d\n", t, val);
     }
     fprintf(fo, "%d floats:\n", pool->x_floats->num);
     for(t=1;t<pool->x_floats->num;t++) {
         double d = pool_lookup_float(pool, t);
-        fprintf(fo, "%d) %f\n", t, d);
+        if(flags&2) fprintf(fo, "%d) %f\n", t, d);
     }
     fprintf(fo, "%d strings:\n", pool->x_strings->num);
     for(t=1;t<pool->x_strings->num;t++) {
         string_t str = pool_lookup_string2(pool, t);
-        fprintf(fo, "%d) ", t);
-        fwrite(str.str, str.len, 1, fo);
-        fprintf(fo, "\n", t);
+        if(flags&1) fprintf(fo, "%d) ", t);
+        if(flags&1) fwrite(str.str, str.len, 1, fo);
+        if(flags&1) fprintf(fo, "\n", t);
     }
     fprintf(fo, "%d namespaces:\n", pool->x_namespaces->num);
     for(t=1;t<pool->x_namespaces->num;t++) {
 	namespace_t*ns= (namespace_t*)array_getkey(pool->x_namespaces, t);
         char*s = namespace_tostring(ns);
-        fprintf(fo, "%d) %s\n", t, s);
+        if(flags&1) fprintf(fo, "%d) %s\n", t, s);
         free(s);
     }
     fprintf(fo, "%d namespace sets:\n", pool->x_namespace_sets->num);
     for(t=1;t<pool->x_namespace_sets->num;t++) {
         namespace_set_t*set = (namespace_set_t*)array_getkey(pool->x_namespace_sets, t);
         char*s = namespace_set_tostring(set);
-        fprintf(fo, "%d) %s\n", t, s);
+        if(flags&1) fprintf(fo, "%d) %s\n", t, s);
         free(s);
     }
 
@@ -1165,7 +1168,7 @@ void pool_dump(pool_t*pool, FILE*fo)
     for(t=1;t<pool->x_multinames->num;t++) {
 	multiname_t*m = (multiname_t*)array_getkey(pool->x_multinames, t);
         char*s = multiname_tostring(m);
-        fprintf(fo, "%d) %s\n", t, s);
+        if(flags&1) fprintf(fo, "%d) %s\n", t, s);
         free(s);
     }
 } 

@@ -204,6 +204,6 @@ pool_t*pool_new();
 void pool_read(pool_t*pool, TAG*tag);
 void pool_write(pool_t*pool, TAG*tag);
 void pool_destroy(pool_t*pool);
-void pool_dump(pool_t*pool, FILE*fo);
+void pool_dump(pool_t*pool, FILE*fo, char flags);
 
 #endif
