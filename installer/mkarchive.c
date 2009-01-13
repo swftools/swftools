@@ -261,6 +261,20 @@ int main (int argn, char*argv[])
     int t;
     char buf[320];
 
+    int fullsize = 0;
+    for(t=1;t<argn;t++)
+    {
+	if(argv[t][0]!='-')
+	{
+	    FILE*fi=fopen(argv[t],"rb");
+	    fseek(fi,0,SEEK_END);
+	    long l=ftell(fi);
+	    fclose(fi);
+	    fullsize += l;
+	}
+    }
+
+
 #ifdef ZLIB
     writer_t*include_writer = writer_init_includewriter("crnfiles.c");
     writer_t*zwriter = writer_init_zwriter(include_writer);
@@ -372,6 +386,10 @@ int main (int argn, char*argv[])
         exit(1);
     }
 #endif
+
+    fi = fopen("crnfiles.c", "ab+");
+    fprintf(fi, "\nint crn_decompressed_size=%d;\n", fullsize);
+    fclose(fi);
 
     return 0;
 }
