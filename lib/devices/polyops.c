@@ -25,16 +25,19 @@
 #include <unistd.h>
 #endif
 #include <memory.h>
+#include <assert.h>
 #include <string.h>
 #include <math.h>
 #include "../mem.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfxpoly.h"
+#include "../log.h"
 #include "polyops.h"
 
 typedef struct _clip {
     gfxpoly_t*poly;
+    int openclips;
     struct _clip*next;
 } clip_t;
 
@@ -85,19 +88,49 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
     dbg("polyops_startclip");
     internal_t*i = (internal_t*)dev->internal;
 
+    gfxpoly_t* oldclip = i->clip?i->clip->poly:0;
     gfxpoly_t* poly = gfxpoly_fillToPoly(line);
+    gfxpoly_t* currentclip = 0;
+    int type = 0;
 
-    if(i->clip) {
-	gfxpoly_t*old = i->clip->poly;
-	clip_t*n = i->clip;
-	i->clip = (clip_t*)rfx_calloc(sizeof(clip_t));
-	i->clip->next = n;
-	i->clip->poly = gfxpoly_intersect(poly, old);
-	gfxpoly_free(poly);
-    } else {
-	i->clip = (clip_t*)rfx_calloc(sizeof(clip_t));
-	i->clip->poly = poly;
+    /* we can't rely on gfxpoly actually being able to convert
+       a gfxline into a gfxpoly- for polygons which are too
+       complex or just degenerate, this might fail. So handle
+       all the cases where polygon conversion or intersection
+       might fail */
+    if(!poly && !oldclip) {
+	i->out->startclip(i->out,line);
+	currentclip = 0;
+	type = 1;
+    } else if(!poly && oldclip) {
+	gfxline_t*oldclipline = gfxpoly_to_gfxline(oldclip);
+	i->out->startclip(i->out,oldclipline);
+	i->out->startclip(i->out,line);
+	currentclip = 0;
+	type = 2;
+    } else if(poly && oldclip) {
+	gfxpoly_t*intersection = gfxpoly_intersect(poly, oldclip);
+	if(intersection) {
+	    // this case is what usually happens 
+	    gfxpoly_free(poly);poly=0;
+	    currentclip = intersection;
+	    type = 0;
+	} else {
+	    gfxline_t*oldclipline = gfxpoly_to_gfxline(oldclip);
+	    i->out->startclip(i->out, oldclipline);
+	    currentclip = poly;
+	    type = 1;
+	}
+    } else if(poly && !oldclip) {
+	currentclip = poly;
+	type = 0;
     }
+
+    clip_t*n = i->clip;
+    i->clip = (clip_t*)rfx_calloc(sizeof(clip_t));
+    i->clip->next = n;
+    i->clip->poly = currentclip;
+    i->clip->openclips = type;
 }
 
 void polyops_endclip(struct _gfxdevice*dev)
@@ -105,23 +138,65 @@ void polyops_endclip(struct _gfxdevice*dev)
     dbg("polyops_endclip");
     internal_t*i = (internal_t*)dev->internal;
 
-    if(i->clip) {
-	clip_t*old = i->clip;
-	i->clip = i->clip->next;
-	gfxpoly_free(old->poly);old->poly = 0;
-	old->next = 0;free(old);
-    } else {
-	fprintf(stderr, "Error: endclip without startclip\n");
+    if(!i->clip) {
+	msg("<error> endclip without startclip (in: polyops)\n");
+	return;
     }
+
+    clip_t*old = i->clip;
+    i->clip = i->clip->next;
+    if(old->poly) {
+	gfxpoly_free(old->poly);old->poly = 0;
+    }
+    int t;
+    for(t=0;t<old->openclips;t++)
+	i->out->endclip(i->out);
+
+    old->next = 0;free(old);
 }
 
 static void addtounion(struct _gfxdevice*dev, gfxpoly_t*poly)
 {
     internal_t*i = (internal_t*)dev->internal;
-    if(i->polyunion) {
+    if(poly && i->polyunion) {
 	gfxpoly_t*old = i->polyunion;
-	i->polyunion = gfxpoly_union(poly,i->polyunion);
+	gfxpoly_t*newpoly = gfxpoly_union(poly,i->polyunion);
+	i->polyunion = newpoly;
 	gfxpoly_free(old);
+    }
+}
+
+gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly)
+{
+    internal_t*i = (internal_t*)dev->internal;
+    if(i->clip && i->clip->poly) {
+	gfxpoly_t*old = poly;
+	if(poly) {
+	    poly = gfxpoly_intersect(poly, i->clip->poly);
+	    gfxpoly_free(old);
+	}
+    }
+    addtounion(dev, poly);
+    gfxline_t*gfxline = 0;
+    if(poly) {
+	// this is the case where everything went right
+	gfxline_t*line = gfxpoly_to_gfxline(poly);
+	gfxpoly_free(poly);
+	return line;
+    } else {
+	if(i->clip && i->clip->poly) {
+	    /* convert current clipping from a polygon to an
+	       actual "startclip" written to the output */
+	    assert(i->clip->openclips <= 1);
+	    gfxline_t*clipline = gfxpoly_to_gfxline(i->clip->poly);
+	    i->out->startclip(i->out, clipline);
+	    gfxline_free(clipline);
+	    gfxpoly_free(i->clip->poly);i->clip->poly = 0;
+	    i->clip->openclips++;
+	    return 0;
+	} else {
+	    return 0;
+	}
     }
 }
 
@@ -129,18 +204,16 @@ void polyops_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfx
 {
     dbg("polyops_stroke");
     internal_t*i = (internal_t*)dev->internal;
-    //i->out->stroke(i->out, line, width, color, cap_style, joint_style, miterLimit);
+
     gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, cap_style, joint_style, miterLimit);
-    if(i->clip) {
-	gfxpoly_t*old = poly;
-	poly = gfxpoly_intersect(poly, i->clip->poly);
-	gfxpoly_free(old);
+    gfxline_t*line2 = handle_poly(dev, poly);
+
+    if(line2) {
+	if(i->out) i->out->fill(i->out, line2, color);
+	gfxline_free(line2);
+    } else {
+	if(i->out) i->out->stroke(i->out, line, width, color, cap_style, joint_style, miterLimit);
     }
-    addtounion(dev, poly);
-    gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
-    if(i->out) i->out->fill(i->out, gfxline, color);
-    gfxline_free(gfxline);
-    gfxpoly_free(poly);
 }
 
 void polyops_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
@@ -149,52 +222,46 @@ void polyops_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     internal_t*i = (internal_t*)dev->internal;
 
     gfxpoly_t*poly = gfxpoly_fillToPoly(line);
+    gfxline_t*line2 = handle_poly(dev, poly);
 
-    if(i->clip) {
-	gfxpoly_t*old = poly;
-	poly = gfxpoly_intersect(poly, i->clip->poly);
-	gfxpoly_free(old);
+    if(line2) {
+	if(i->out) i->out->fill(i->out, line2, color);
+	gfxline_free(line2);
+    } else {
+	if(i->out) i->out->fill(i->out, line, color);
     }
-    addtounion(dev,poly);
-    gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
-    if(i->out) i->out->fill(i->out, gfxline, color);
-    gfxline_free(gfxline);
-    gfxpoly_free(poly);
 }
 
 void polyops_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     dbg("polyops_fillbitmap");
     internal_t*i = (internal_t*)dev->internal;
-    gfxpoly_t* poly = gfxpoly_fillToPoly(line);
+    
+    gfxpoly_t*poly = gfxpoly_fillToPoly(line);
+    gfxline_t*line2 = handle_poly(dev, poly);
 
-    if(i->clip) {
-	gfxpoly_t*old = poly;
-	poly = gfxpoly_intersect(poly, i->clip->poly);
-	gfxpoly_free(old);
+    if(line2) {
+	if(i->out) i->out->fillbitmap(i->out, line2, img, matrix, cxform);
+	gfxline_free(line2);
+    } else {
+	if(i->out) i->out->fillbitmap(i->out, line, img, matrix, cxform);
     }
-    addtounion(dev,poly);
-    gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
-    if(i->out) i->out->fillbitmap(i->out, gfxline, img, matrix, cxform);
-    gfxline_free(gfxline);
-    gfxpoly_free(poly);
 }
 
 void polyops_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
     dbg("polyops_fillgradient");
     internal_t*i = (internal_t*)dev->internal;
-    gfxpoly_t* poly  = gfxpoly_fillToPoly(line);
-    if(i->clip) {
-	gfxpoly_t*old = poly;
-	poly  = gfxpoly_intersect(poly, i->clip->poly);
-	gfxpoly_free(old);
+    
+    gfxpoly_t*poly = gfxpoly_fillToPoly(line);
+    gfxline_t*line2 = handle_poly(dev, poly);
+
+    if(line2) {
+	if(i->out) i->out->fillgradient(i->out, line2, gradient, type, matrix);
+	gfxline_free(line2);
+    } else {
+	if(i->out) i->out->fillgradient(i->out, line, gradient, type, matrix);
     }
-    addtounion(dev,poly);
-    gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
-    if(i->out) i->out->fillgradient(i->out, gfxline, gradient, type, matrix);
-    gfxline_free(gfxline);
-    gfxpoly_free(poly);
 }
 
 void polyops_addfont(struct _gfxdevice*dev, gfxfont_t*font)
@@ -213,24 +280,25 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
     gfxline_t*glyph = gfxline_clone(font->glyphs[glyphnr].line);
     gfxline_transform(glyph, matrix);
 
-    if(i->clip) {
+    if(i->clip && i->clip->poly) {
 	gfxbbox_t bbox = gfxline_getbbox(glyph);
 	gfxpoly_t*dummybox = gfxpoly_createbox(bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax);
-	gfxpoly_t*poly = gfxpoly_intersect(dummybox, i->clip->poly);
-	gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
-	gfxbbox_t bbox2 = gfxline_getbbox(gfxline);
-	double w = bbox2.xmax - bbox2.xmin;
-	double h = bbox2.ymax - bbox2.ymin;
-	
-	addtounion(dev, poly); // TODO: use the whole char, not just the bbox?
 
-	if(w < 0.001 || h < 0.001) /* character was clipped completely */ {
-	} else if(fabs((bbox.xmax - bbox.xmin) - w) > 0.05 ||
-                  fabs((bbox.ymax - bbox.ymin) - h) > 0.05) {
-	    /* notable change in character size: character was clipped 
-	       TODO: handle diagonal cuts
-	     */
-	    polyops_fill(dev, glyph, color);
+	gfxline_t*gfxline = handle_poly(dev, dummybox);
+	if(gfxline) {
+	    gfxbbox_t bbox2 = gfxline_getbbox(gfxline);
+	    double w = bbox2.xmax - bbox2.xmin;
+	    double h = bbox2.ymax - bbox2.ymin;
+	    if(w < 0.001 || h < 0.001) /* character was clipped completely */ {
+	    } else if(fabs((bbox.xmax - bbox.xmin) - w) > 0.05 ||
+		      fabs((bbox.ymax - bbox.ymin) - h) > 0.05) {
+		/* notable change in character size: character was clipped 
+		   TODO: how to deal with diagonal cuts?
+		 */
+		polyops_fill(dev, glyph, color);
+	    } else {
+		if(i->out) i->out->drawchar(i->out, font, glyphnr, color, matrix);
+	    }
 	} else {
 	    if(i->out) i->out->drawchar(i->out, font, glyphnr, color, matrix);
 	}
