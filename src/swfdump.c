@@ -1047,7 +1047,7 @@ int main (int argc,char ** argv)
     if(html)
     {
 	char*fileversions[] = {"","1,0,0,0", "2,0,0,0","3,0,0,0","4,0,0,0",
-			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0","9,0,0,0","10,0,0,0"};
+			       "5,0,0,0","6,0,23,0","7,0,0,0","8,0,0,0","9,0,0,0","10,0,0,0", "11,0,0,0", "12,0,0,0"};
 	if(swf.fileVersion>10) {
 	    fprintf(stderr, "Fileversion>10\n");
 	    exit(1);
@@ -1072,9 +1072,11 @@ int main (int argc,char ** argv)
 		   "  <PARAM NAME=\"PLAY\" VALUE=\"true\">\n" 
 		   "  <PARAM NAME=\"LOOP\" VALUE=\"true\">\n"
 		   "  <PARAM NAME=\"QUALITY\" VALUE=\"high\">\n"
+		   "  <PARAM NAME=\"ALLOWSCRIPTACCESS\" VALUE=\"always\">\n"
 		   "  <EMBED SRC=\"%s\" WIDTH=\"%d\" HEIGHT=\"%d\"\n" //bgcolor=#ffffff?
 		   "   PLAY=\"true\" ALIGN=\"\" LOOP=\"true\" QUALITY=\"high\"\n"
 		   "   TYPE=\"application/x-shockwave-flash\"\n"
+                   "   ALLOWSCRIPTACCESS=\"always\"\n"
 		   "   PLUGINSPAGE=\"http://www.macromedia.com/go/getflashplayer\">\n"
 		   "  </EMBED>\n" 
 		   "</OBJECT>\n", xsize, ysize, fileversions[swf.fileVersion], 
@@ -1199,7 +1201,7 @@ int main (int argc,char ** argv)
             swf_SetTagPos(tag, 0);
             U32 flags = swf_GetU32(tag);
             char*s = swf_GetString(tag);
-            if(flags) {
+            if(flags&~1) {
                 printf(" flags=%08x", flags);
             }
             if(*s) {
