@@ -152,8 +152,8 @@ void polyops_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
 
     if(i->clip) {
 	gfxpoly_t*old = poly;
-	poly  = gfxpoly_intersect(poly, i->clip->poly);
-	gfxpoly_free(poly);
+	poly = gfxpoly_intersect(poly, i->clip->poly);
+	gfxpoly_free(old);
     }
     addtounion(dev,poly);
     gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
@@ -259,6 +259,10 @@ gfxresult_t* polyops_finish(struct _gfxdevice*dev)
 {
     dbg("polyops_finish");
     internal_t*i = (internal_t*)dev->internal;
+
+    if(i->polyunion) {
+	gfxpoly_free(i->polyunion);i->polyunion=0;
+    }
     if(i->out) {
 	return i->out->finish(i->out);
     } else {
