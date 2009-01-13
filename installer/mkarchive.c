@@ -58,6 +58,7 @@ static void writer_ifwrite_finish(writer_t*w)
     ifwrite_t *i= (ifwrite_t*)w->internal;
     fprintf(i->fi, "\"%s\"\n", i->buf);
     fprintf(i->fi, ";\n");
+    fprintf(i->fi, "int crndata_len = %d;\n", i->pos);
     fclose(i->fi);
     printf("wrote file %s\n", i->filename);
     free(w->internal);w->internal = 0;
@@ -273,9 +274,21 @@ int main (int argn, char*argv[])
 
 			    fread(buf,l,1,fi);
 			    zwriter->write(zwriter,id,3);
-			    zwriter->write(zwriter,&l,4);
+			    unsigned char b1=l;
+			    unsigned char b2=l>>8;
+			    unsigned char b3=l>>16;
+			    unsigned char b4=l>>24;
+			    zwriter->write(zwriter,&b1,1);
+			    zwriter->write(zwriter,&b2,1);
+			    zwriter->write(zwriter,&b3,1);
+			    zwriter->write(zwriter,&b4,1);
 			    int sl=strlen(argv[t]);
-			    zwriter->write(zwriter,argv[t],sl+1); //write filename
+			    if(sl>255) {
+				fprintf(stderr, "Error: filename %s too long\n", argv[t]);
+			    }
+			    unsigned char b = sl;
+			    zwriter->write(zwriter,&b,1); //write filename len
+			    zwriter->write(zwriter,argv[t],sl); //write filename
 			    zwriter->write(zwriter,buf,l); //write data
 			    fprintf(stderr,"[%s] %s: %d bytes written.\n", id, argv[t], l);
 			    fclose(fi);
@@ -287,6 +300,9 @@ int main (int argn, char*argv[])
 		    }
 	    }
     }
+    char*id_end = "END";
+    zwriter->write(zwriter,id_end,3);
     zwriter->finish(zwriter);
+    return 0;
 }
 
