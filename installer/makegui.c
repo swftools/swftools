@@ -24,6 +24,7 @@
 int main(int argn, char*argv[])
 {
     char flag = 2;
+    FILE*fi = fopen(argv[1], "rb+");
     if(argn<2) {
 	printf("Usage:\n");
 	printf("\t%s program.exe [console]\n", argv[0]);
@@ -35,7 +36,6 @@ int main(int argn, char*argv[])
 	}
     }
 
-    FILE*fi = fopen(argv[1], "rb+");
     if(!fi) {
 	perror(argv[1]);
 	exit(1);
