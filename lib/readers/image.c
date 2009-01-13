@@ -80,7 +80,9 @@ void imagepage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, g
 void image_doc_destroy(gfxdocument_t*gfx)
 {
     image_doc_internal_t*i= (image_doc_internal_t*)gfx->internal;
-    // ...
+
+    free(i->image.data);i->image.data = 0;
+
     free(gfx->internal);gfx->internal=0;
     free(gfx);gfx=0;
 }
