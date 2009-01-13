@@ -14,6 +14,37 @@ typedef struct _writer
     void *internal;
 } writer_t;
 
+/* ---------------------------- file writer ------------------------------- */
+
+typedef struct
+{
+    FILE*fi;
+} filewrite_t;
+static int writer_filewrite_write(writer_t*w, void* data, int len) 
+{
+    filewrite_t * fw= (filewrite_t*)w->internal;
+    return fwrite(data, len, 1, fw->fi);
+}
+static void writer_filewrite_finish(writer_t*w)
+{
+    filewrite_t *mr = (filewrite_t*)w->internal;
+    fclose(mr->fi);
+    free(w->internal);
+    memset(w, 0, sizeof(writer_t));
+}
+writer_t*writer_init_filewriter(char*filename)
+{
+    writer_t*w = malloc(sizeof(writer_t));
+    FILE*fi = fopen(filename, "wb");
+    filewrite_t *mr = (filewrite_t *)malloc(sizeof(filewrite_t));
+    mr->fi = fi;
+    memset(w, 0, sizeof(writer_t));
+    w->write = writer_filewrite_write;
+    w->finish = writer_filewrite_finish;
+    w->internal = mr;
+    return w;
+}
+
 /* ---------------------------- include file filter ------------------------------- */
 
 typedef struct _ifwrite
@@ -109,6 +140,7 @@ static int writer_zlibdeflate_write(writer_t*writer, void* data, int len)
 {
     struct zlibdeflate_t*z = (struct zlibdeflate_t*)writer->internal;
     int ret;
+
     if(!z) {
 	fprintf(stderr, "zlib not initialized!\n");
 	return 0;
@@ -229,8 +261,15 @@ int main (int argn, char*argv[])
     int t;
     char buf[320];
 
+#ifdef ZLIB
     writer_t*include_writer = writer_init_includewriter("crnfiles.c");
     writer_t*zwriter = writer_init_zwriter(include_writer);
+#else //LZMA
+    unlink("crnfiles.dat");
+    unlink("crnfiles.7z");
+    unlink("crnfiles.c");
+    writer_t*zwriter = writer_init_filewriter("crnfiles.dat");
+#endif
 
     qsort(argv+1, argn-1, sizeof(argv[0]), compare_filenames);
 
@@ -303,6 +342,37 @@ int main (int argn, char*argv[])
     char*id_end = "END";
     zwriter->write(zwriter,id_end,3);
     zwriter->finish(zwriter);
+
+#ifndef ZLIB
+    if(system("do_lzma e crnfiles.dat crnfiles.7z")&0xff00) {
+	perror("do_lzma");
+	exit(1);
+    }
+    FILE*fi = fopen("crnfiles.7z", "rb");
+    if(!fi) {
+	perror("crnfiles.7z");
+	exit(1);
+    }
+    writer_t*w = writer_init_includewriter("crnfiles.c");
+    while(!feof(fi)) {
+	char buf[4096];
+	int len = fread(buf,1,4096,fi);
+	if(!len)
+	    break;
+	w->write(w, buf, len);
+    }
+    w->finish(w);
+    fclose(fi);
+    if(unlink("crnfiles.dat")) {
+        perror("crnfiles.dat");
+        exit(1);
+    }
+    if(unlink("crnfiles.7z")) {
+        perror("crnfiles.7z");
+        exit(1);
+    }
+#endif
+
     return 0;
 }
 
