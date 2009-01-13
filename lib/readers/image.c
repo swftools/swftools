@@ -157,3 +157,11 @@ gfxsource_t*gfxsource_image_create()
     src->open = image_open;
     return src;
 }
+
+
+
+
+
+
+
+

@@ -699,3 +699,11 @@ gfxsource_t*gfxsource_swf_create()
     src->open = swf_open;
     return src;
 }
+
+
+
+
+
+
+
+
