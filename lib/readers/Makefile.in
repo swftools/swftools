@@ -1,0 +1,28 @@
+# Generated automatically from Makefile.in by configure.
+top_builddir = ../..
+srcdir = .
+top_srcdir = ../..
+include ../../Makefile.common
+
+all: ../libswf$(A)
+
+libswf: ../libswf$(A)
+
+swf.$(O): swf.c swf.h
+	$(C) swf.c -o swf.$(O)
+
+libswf_objects = swf.$(O) 
+
+../libswf$(A): $(libswf_objects)
+	$(AR) r ../libswf$(A)
+	$(RANLIB) ../libswf$(A)
+
+swfrender: $(libswf_objects) ../../src/swfrender.c ../devices/render.$(O)
+	$(L) ../../src/swfrender.c $(libswf_objects) ../librfxswf$(A) ../gfxtools.$(O) ../png.$(O) ../devices/render.$(O) -o swfrender $(LIBS)
+
+install:
+uninstall:
+
+clean: 
+	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
+
