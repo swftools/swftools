@@ -220,7 +220,6 @@ static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx, MAT
 	convertCXForm(cx, &gfxcx);
 	MATRIX m2;
 	swf_MatrixJoin(&m2, po_m, &f->m);
-	swf_DumpMatrix(stdout, &m2);
 	convertMatrix(&m2, &m);
         m.m00/=20.0; m.m10/=20.0;
         m.m01/=20.0; m.m11/=20.0;
