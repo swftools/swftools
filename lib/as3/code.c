@@ -292,6 +292,7 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
             head = code = c;
         } else {
             code->next = c;
+            c->prev = code;
             code = c;
         }
 
