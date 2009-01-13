@@ -31,7 +31,6 @@
 
 #include "../gocr/pnm.h"
 #include "../gocr/pgm2asc.h"
-#include "../gocr/ocr0.h"
 
 typedef struct _textpage {
     char*text;
