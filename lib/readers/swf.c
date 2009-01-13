@@ -481,7 +481,7 @@ void swf_doc_destroy(gfxdocument_t*gfx)
     free(gfx);gfx=0;
 }
 
-void swf_doc_set_parameter(gfxdocument_t*gfx, char*name, char*value)
+void swf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     swf_doc_internal_t*i= (swf_doc_internal_t*)gfx->internal;
 }
@@ -509,12 +509,12 @@ gfxpage_t* swf_doc_getpage(gfxdocument_t*doc, int page)
     return swf_page;
 }
 
-void swf_set_parameter(gfxsource_t*src, char*name, char*value)
+void swf_set_parameter(gfxsource_t*src, const char*name, const char*value)
 {
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
 }
 
-gfxdocument_t*swf_open(gfxsource_t*src, char*filename)
+gfxdocument_t*swf_open(gfxsource_t*src, const char*filename)
 {
     gfxdocument_t*swf_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(swf_doc, 0, sizeof(gfxdocument_t));
