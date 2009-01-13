@@ -260,6 +260,7 @@ int main (int argn, char*argv[])
 {
     int t;
     char buf[320];
+    int num = 0;
 
     int fullsize = 0;
     for(t=1;t<argn;t++)
@@ -267,10 +268,13 @@ int main (int argn, char*argv[])
 	if(argv[t][0]!='-')
 	{
 	    FILE*fi=fopen(argv[t],"rb");
-	    fseek(fi,0,SEEK_END);
-	    long l=ftell(fi);
-	    fclose(fi);
-	    fullsize += l;
+	    if(fi) {
+		fseek(fi,0,SEEK_END);
+		long l=ftell(fi);
+		fclose(fi);
+		fullsize += l;
+		num++;
+	    }
 	}
     }
 
@@ -284,6 +288,14 @@ int main (int argn, char*argv[])
     unlink("crnfiles.c");
     writer_t*zwriter = writer_init_filewriter("crnfiles.dat");
 #endif
+    unsigned char n1=num;
+    unsigned char n2=num>>8;
+    unsigned char n3=num>>16;
+    unsigned char n4=num>>24;
+    zwriter->write(zwriter,&n1,1);
+    zwriter->write(zwriter,&n2,1);
+    zwriter->write(zwriter,&n3,1);
+    zwriter->write(zwriter,&n4,1);
 
     qsort(argv+1, argn-1, sizeof(argv[0]), compare_filenames);
 
