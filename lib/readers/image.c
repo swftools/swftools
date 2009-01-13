@@ -1,9 +1,13 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../gfxtools.h"
 #include "../log.h"
 #include "../mem.h"
-#include "../rfxswf.h"
+#include "../jpeg.h"
+#include "../png.h"
 #include "image.h"
 
 typedef struct _image_page_internal
@@ -12,6 +16,7 @@ typedef struct _image_page_internal
 
 typedef struct _image_doc_internal
 {
+    gfximage_t img;
 } image_doc_internal_t;
 
 void imagepage_destroy(gfxpage_t*image_page)
@@ -25,11 +30,51 @@ void imagepage_render(gfxpage_t*page, gfxdevice_t*output)
 {
     image_page_internal_t*i = (image_page_internal_t*)page->internal;
     image_doc_internal_t*pi = (image_doc_internal_t*)page->parent->internal;
+
+    gfxcxform_t cxform;
+    memset(&cxform, 0, sizeof(cxform));
+    cxform.rr = 1;
+    cxform.gg = 1;
+    cxform.bb = 1;
+    cxform.aa = 1;
+
+    gfxmatrix_t m;
+    memset(&m, 0, sizeof(m));
+    m.m00 = 1;
+    m.m11 = 1;
+
+    gfxline_t* rect = gfxline_makerectangle(0, 0, pi->img.width, pi->img.height);
+    output->fillbitmap(output, rect, &pi->img, &m, &cxform);
+    gfxline_free(rect);
 }
 
 void imagepage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfxcoord_t y, gfxcoord_t _x1, gfxcoord_t _y1, gfxcoord_t _x2, gfxcoord_t _y2)
 {
+    image_page_internal_t*i = (image_page_internal_t*)page->internal;
     image_doc_internal_t*pi = (image_doc_internal_t*)page->parent->internal;
+
+    gfxcxform_t cxform;
+    memset(&cxform, 0, sizeof(cxform));
+    cxform.rr = 1;
+    cxform.gg = 1;
+    cxform.bb = 1;
+    cxform.aa = 1;
+
+    gfxmatrix_t m;
+    memset(&m, 0, sizeof(m));
+    m.m00 = 1;
+    m.m11 = 1;
+    m.tx = x;
+    m.ty = y;
+    
+    gfxline_t* rect = gfxline_makerectangle(0, 0, pi->img.width, pi->img.height);
+    gfxline_t* rect2 = gfxline_makerectangle(_x1, _y1, _x2, _y2);
+
+    output->startclip(output, rect2);
+    output->fillbitmap(output, rect, &pi->img, &m, &cxform);
+    output->endclip(output);
+    gfxline_free(rect);
+    gfxline_free(rect2);
 }
 
 void image_doc_destroy(gfxdocument_t*gfx)
@@ -40,7 +85,7 @@ void image_doc_destroy(gfxdocument_t*gfx)
     free(gfx);gfx=0;
 }
 
-void image_doc_set_parameter(gfxdocument_t*gfx, char*name, char*value)
+void image_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     image_doc_internal_t*i= (image_doc_internal_t*)gfx->internal;
 }
@@ -59,19 +104,19 @@ gfxpage_t* image_doc_getpage(gfxdocument_t*doc, int page)
     image_page->destroy = imagepage_destroy;
     image_page->render = imagepage_render;
     image_page->rendersection = imagepage_rendersection;
-    image_page->width = di->width;
-    image_page->height = di->height;
+    image_page->width = di->img.width;
+    image_page->height = di->img.height;
     image_page->parent = doc;
     image_page->nr = page;
     return image_page;
 }
 
-static void image_set_parameter(gfxsource_t*src, char*name, char*value)
+static void image_set_parameter(gfxsource_t*src, const char*name, const char*value)
 {
     msg("<verbose> (gfxsource_image) setting parameter %s to \"%s\"", name, value);
 }
 
-static gfxdocument_t*image_open(gfxsource_t*src, char*filename)
+static gfxdocument_t*image_open(gfxsource_t*src, const char*filename)
 {
     gfxdocument_t*image_doc = (gfxdocument_t*)malloc(sizeof(gfxdocument_t));
     memset(image_doc, 0, sizeof(gfxdocument_t));
@@ -82,10 +127,17 @@ static gfxdocument_t*image_open(gfxsource_t*src, char*filename)
     int width = 0;
     int height = 0;
 
-    if(!getPNG(filename, &width, &height, &data)) {
+    if(!getPNG(filename, &width, &height, (unsigned char**)&data)) {
+	if(!jpeg_load(filename, (unsigned char**)&data, &width, &height)) {
+	    msg("<error> Couldn't load image %s", filename);
+	    return 0;
+	}
     }
+    i->img.data = data;
+    i->img.width = width;
+    i->img.height = height;
 
-    image_doc->num_pages = i->image.frameCount;
+    image_doc->num_pages = 1;
     image_doc->internal = i;
     image_doc->get = 0;
     image_doc->destroy = image_doc_destroy;
