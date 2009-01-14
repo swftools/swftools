@@ -54,6 +54,10 @@ movie. swfcombine can be used to perform the latter.
     Force movie bbox width to <width> (default: use master width (not with -t))
 -Y  --height  <height>      
     Force movie bbox height to <height> (default: use master height (not with -t))
+-N  --local-with-networking 
+    Make output file "local-with-networking"
+-L  --local-with-filesystem
+    Make output file "local-with-filesystem"
 -z  --zlib    <zlib>        
     Enable Flash 6 (MX) Zlib Compression
     Use Flash MX (SWF 6) Zlib encoding for the output. The resulting SWF will be
