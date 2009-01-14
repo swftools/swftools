@@ -40,6 +40,8 @@ struct config_t
    char cat;
    char merge;
    char isframe;
+   char local_with_networking;
+   char local_with_filesystem;
    int loglevel;
    int sizex;
    char hassizex;
@@ -171,6 +173,16 @@ int args_callback_option(char*name,char*val) {
 	config.scaley = atoi(val)/100.0;
 	return 1;
     }
+    else if (!strcmp(name, "N"))
+    {
+	config.local_with_networking = 1;
+	return 0;
+    }
+    else if (!strcmp(name, "L"))
+    {
+	config.local_with_filesystem = 1;
+	return 0;
+    }
     else if (!strcmp(name, "t") || !strcmp(name, "T"))
     {
 	if(master_filename) {
@@ -212,6 +224,8 @@ static struct options_t options[] = {
 {"r", "rate"},
 {"X", "width"},
 {"Y", "height"},
+{"N", "local-with-networking"},
+{"L", "local-with-filesystem"},
 {"z", "zlib"},
 {0,0}
 };
@@ -289,6 +303,8 @@ void args_callback_usage(char *name)
     printf("-r , --rate <fps>              Set movie framerate to <fps> (frames/sec)\n");
     printf("-X , --width <width>           Force movie bbox width to <width> (default: use master width (not with -t))\n");
     printf("-Y , --height <height>          Force movie bbox height to <height> (default: use master height (not with -t))\n");
+    printf("-N , --local-with-networking     Make output file \"local-with-networking\"\n");
+    printf("-L , --local-with-filesystem     Make output file \"local-with-filesystem\"\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("\n");
 }
@@ -1300,6 +1316,11 @@ int main(int argn, char *argv[])
 
     if(!newswf.fileVersion)
 	newswf.fileVersion = 4;
+
+    if(config.local_with_filesystem)
+        newswf.fileAttributes &= ~FILEATTRIBUTE_USENETWORK;
+    if(config.local_with_networking)
+        newswf.fileAttributes |= FILEATTRIBUTE_USENETWORK;
 
     fi = open(outputname, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
 
