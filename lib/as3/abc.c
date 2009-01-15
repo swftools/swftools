@@ -720,7 +720,8 @@ void* swf_ReadABC(TAG*tag)
     }
 
     pool_read(pool, tag);
-    //pool_dump(pool, stdout);
+    pool_dump(pool, stdout, 2);
+    printf("pool is %d bytes\n", tag->pos);
 
     int num_methods = swf_GetU30(tag);
     DEBUG printf("%d methods\n", num_methods);
@@ -737,7 +738,7 @@ void* swf_ReadABC(TAG*tag)
 	for(s=0;s<param_count;s++) {
 	    int type_index = swf_GetU30(tag);
             
-            /* type_index might be 0, which probably means "..." (varargs) */
+            /* type_index might be 0 ("*") */
             multiname_t*param = type_index?multiname_clone(pool_lookup_multiname(pool, type_index)):0;
             list_append(m->parameters, param);
         }
@@ -926,10 +927,11 @@ void* swf_ReadABC(TAG*tag)
     return file;
 }
 
-void swf_WriteABC(TAG*abctag, void*code)
+static pool_t*writeABC(TAG*abctag, void*code, pool_t*pool)
 {
     abc_file_t*file = (abc_file_t*)code;
-    pool_t*pool = pool_new();
+    if(!pool) 
+        pool = pool_new();
 
     TAG*tmp = swf_InsertTag(0,0);
     TAG*tag = tmp;
@@ -1188,6 +1190,14 @@ void swf_WriteABC(TAG*abctag, void*code)
     swf_SetBlock(tag, tmp->data, tmp->len);
 
     swf_DeleteTag(0, tmp);
+    return pool;
+}
+
+void swf_WriteABC(TAG*abctag, void*code)
+{
+    pool_t*pool = writeABC(abctag, code, 0);
+    pool_optimize(pool);
+    writeABC(abctag, code, pool);
     pool_destroy(pool);
 }
 

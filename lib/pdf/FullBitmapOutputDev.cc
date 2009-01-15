@@ -589,3 +589,6 @@ void FullBitmapOutputDev::clearSoftMask(GfxState *state)
     msg("<debug> clearSoftMask");
     rgbdev->clearSoftMask(state);
 }
+
+
+

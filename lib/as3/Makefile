@@ -1,4 +1,4 @@
-all: parser swfdump mklib
+all: parser swfdump mklib tests
 tests: testwrite testrewrite testpaths testreadwrite 
 
 D=-g -pg
@@ -68,3 +68,5 @@ testpaths: testpaths.c ../librfxswf.a ../libbase.a
 
 clean:
 	rm -f *.o *.yy.c *.tab.c *.tab.h testreadwrite swfdump testpaths testwrite ../librfxswf.a
+
+.PHONY: tests

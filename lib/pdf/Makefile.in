@@ -4,7 +4,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: ../libpdf$(A)
+all: ../libpdf$(A) pdf2swf$(E)
 
 libpdf: ../libpdf$(A)
 
@@ -21,7 +21,7 @@ xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O)
 		  xpdf/JArithmeticDecoder.$(O) xpdf/Gfx.$(O) xpdf/GfxFont.$(O) xpdf/CMap.$(O) xpdf/CharCodeToUnicode.$(O) \
 		  xpdf/PSTokenizer.$(O) xpdf/FontEncodingTables.$(O) xpdf/BuiltinFont.$(O) xpdf/BuiltinFontTables.$(O) \
 		  xpdf/GfxState.$(O) xpdf/Function.$(O) xpdf/Annot.$(O) xpdf/NameToCharCode.$(O) xpdf/UnicodeMap.$(O) \
-		  xpdf/SecurityHandler.$(O)
+		  xpdf/SecurityHandler.$(O) #xpdf/OptionalContent.$(O)
 
 splash_in_source = @splash_in_source@
 splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState.$(O) xpdf/Splash.$(O) \

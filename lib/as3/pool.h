@@ -201,6 +201,7 @@ void namespace_destroy(namespace_t*n);
 
 /* pool constructors/destructors */
 pool_t*pool_new();
+void pool_optimize();
 void pool_read(pool_t*pool, TAG*tag);
 void pool_write(pool_t*pool, TAG*tag);
 void pool_destroy(pool_t*pool);

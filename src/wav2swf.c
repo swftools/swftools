@@ -227,7 +227,7 @@ int main (int argc,char ** argv)
 	exit(1);
     }
 
-    if(!wav_read(filename, &wav))
+    if(!wav_read(&wav, filename))
     {
 	msg("<fatal> Error reading %s", filename);
 	exit(1);

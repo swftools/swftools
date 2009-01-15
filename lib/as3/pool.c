@@ -810,23 +810,52 @@ void constant_free(constant_t*c)
     }
     free(c);
 }
+// --------------------------- optimizing -----------------------------------
+
+static int array_append_or_increase(array_t*array, void*key)
+{
+    int pos = array_find(array, key);
+    if(pos>=0) {
+        array->d[pos].data++;
+        return pos;
+    } else {
+        return array_append(array, key, 0);
+    }
+}
+static int compare_arrayentry(const void*_c1, const void*_c2)
+{
+    const array_entry_t*c1 = _c1;
+    const array_entry_t*c2 = _c2;
+    return c1->data - c2->data;
+}
+static void reshuffle_array(array_t*array)
+{
+    qsort(array->d, array->num, sizeof(array->d[0]), compare_arrayentry);
+    dict_destroy(array->entry2pos);
+    array->entry2pos = dict_new();
+    int t;
+    for(t=0;t<array->num;t++) {
+        dict_put(array->entry2pos, array->d[t].name, (void*)(ptroff_t)(t+1));
+    }
+}
+
 // ------------------------------- pool -------------------------------------
 
 int pool_register_uint(pool_t*p, unsigned int i)
 {
-    int pos = array_append_if_new(p->x_uints, &i, 0);
+    int pos = array_append_or_increase(p->x_uints, &i);
     assert(pos!=0);
     return pos;
 }
 int pool_register_int(pool_t*p, int i)
 {
-    int pos = array_append_if_new(p->x_ints, &i, 0);
+    int pos = array_append_or_increase(p->x_ints, &i);
     assert(pos!=0);
     return pos;
 }
 int pool_register_float(pool_t*p, double d)
 {
-    int pos = array_append_if_new(p->x_floats, &d, 0);
+    int pos = array_append_or_increase(p->x_floats, &d);
     assert(pos!=0);
     return pos;
 }
@@ -834,35 +863,35 @@ int pool_register_string(pool_t*pool, const char*str)
 {
     if(!str) return 0;
     string_t s = string_new2(str);
-    int pos = array_append_if_new(pool->x_strings, &s, 0);
+    int pos = array_append_or_increase(pool->x_strings, &s);
     assert(pos!=0);
     return pos;
 }
 int pool_register_string2(pool_t*pool, string_t*s)
 {
     if(!s || !s->str) return 0;
-    int pos = array_append_if_new(pool->x_strings, s, 0);
+    int pos = array_append_or_increase(pool->x_strings, s);
     assert(pos!=0);
     return pos;
 }
 int pool_register_namespace(pool_t*pool, namespace_t*ns)
 {
     if(!ns) return 0;
-    int pos = array_append_if_new(pool->x_namespaces, ns, 0);
+    int pos = array_append_or_increase(pool->x_namespaces, ns);
     assert(pos!=0);
     return pos;
 }
 int pool_register_namespace_set(pool_t*pool, namespace_set_t*set)
 {
     if(!set) return 0;
-    int pos = array_append_if_new(pool->x_namespace_sets, set, 0);
+    int pos = array_append_or_increase(pool->x_namespace_sets, set);
     assert(pos!=0);
     return pos;
 }
 int pool_register_multiname(pool_t*pool, multiname_t*n)
 {
     if(!n) return 0;
-    int pos = array_append_if_new(pool->x_multinames, n, 0);
+    int pos = array_append_or_increase(pool->x_multinames, n);
     assert(pos!=0);
     return pos;
 }
@@ -870,7 +899,7 @@ int pool_register_multiname2(pool_t*pool, char*name)
 {
     if(!name) return 0;
     multiname_t*n = multiname_fromstring(name);
-    int pos = array_append_if_new(pool->x_multinames, n, 0);
+    int pos = array_append_or_increase(pool->x_multinames, n);
     multiname_destroy(n);
     assert(pos!=0);
     return pos;
@@ -1017,6 +1046,17 @@ pool_t*pool_new()
     array_append(p->x_namespace_sets, 0, 0);
     array_append(p->x_multinames, 0, 0);
     return p;
+}
+
+void pool_optimize(pool_t*p)
+{
+    reshuffle_array(p->x_ints);
+    reshuffle_array(p->x_uints);
+    reshuffle_array(p->x_floats);
+    reshuffle_array(p->x_strings);
+    reshuffle_array(p->x_namespaces);
+    reshuffle_array(p->x_namespace_sets);
+    reshuffle_array(p->x_multinames);
 }
 
 #define DEBUG if(0)

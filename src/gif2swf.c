@@ -1,6 +1,6 @@
 /* -*- mode: c; tab-width: 4; -*- ---------------------------[for (x)emacs]--
 
-   $Id: gif2swf.c,v 1.7 2008/03/12 19:13:31 kramm Exp $
+   $Id: gif2swf.c,v 1.7 2008/02/08 11:43:12 kramm Exp $
    GIF to SWF converter tool
 
    Part of the swftools package.
