@@ -26,7 +26,7 @@
   Contains functions which describe the version of LAME.
 
   \author A.L. Faber
-  \version \$Id: version.c,v 1.2 2006/02/09 16:57:15 kramm Exp $
+  \version \$Id: version.c,v 1.2 2006/02/09 16:56:23 kramm Exp $
   \ingroup libmp3lame
 */
 

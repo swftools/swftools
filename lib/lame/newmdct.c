@@ -24,7 +24,7 @@
  *         Special Thanks to Patrick De Smet for your advices.
  */
 
-/* $Id: newmdct.c,v 1.2 2006/02/09 16:54:39 kramm Exp $ */
+/* $Id: newmdct.c,v 1.2 2006/02/09 16:56:23 kramm Exp $ */
 
 #include <stdlib.h>
 #include "config_static.h"

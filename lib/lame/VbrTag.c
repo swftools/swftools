@@ -19,7 +19,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: VbrTag.c,v 1.2 2006/02/09 16:53:06 kramm Exp $ */
+/* $Id: VbrTag.c,v 1.2 2006/02/09 16:56:23 kramm Exp $ */
 
 #include <stdlib.h>
 #include "config_static.h"

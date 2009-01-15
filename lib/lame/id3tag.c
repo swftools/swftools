@@ -28,7 +28,7 @@
  * NOTE: See http://id3.org/ for more information about ID3 tag formats.
  */
 
-/* $Id: id3tag.c,v 1.2 2006/02/09 16:54:02 kramm Exp $ */
+/* $Id: id3tag.c,v 1.2 2006/02/09 16:56:23 kramm Exp $ */
 
 #include <stdlib.h>
 #include "config_static.h"

@@ -19,7 +19,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* $Id: psymodel.c,v 1.2 2006/02/09 16:54:55 kramm Exp $ */
+/* $Id: psymodel.c,v 1.2 2006/02/09 16:56:23 kramm Exp $ */
 
 
 /*

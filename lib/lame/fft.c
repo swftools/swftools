@@ -31,7 +31,7 @@
 **           Takehiro  - some dirty hack for speed up
 */
 
-/* $Id: fft.c,v 1.2 2006/02/09 16:53:48 kramm Exp $ */
+/* $Id: fft.c,v 1.2 2006/02/09 16:56:23 kramm Exp $ */
 
 #include <stdlib.h>
 #include "config_static.h"
