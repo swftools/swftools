@@ -1486,7 +1486,7 @@ void swf_ReadABCfile(char*filename, SWF*swf)
 {
     memset(swf, 0, sizeof(SWF));
     swf->fileVersion=9;
-    swf->fileAttributes=1; //as3
+    swf->fileAttributes=FILEATTRIBUTE_AS3; //as3
     TAG*tag = swf->firstTag = swf_InsertTag(0, ST_RAWABC);
     memfile_t*file = memfile_open(filename);
     swf_SetBlock(tag, file->data, file->len);
@@ -1523,9 +1523,9 @@ int WriteExtraTags(SWF*swf, writer_t*writer)
 
     if(swf->fileVersion >= 9) {
         if(!has_fileattributes) {
-            U32 flags = swf->fileAttributes|0x08; // 16 = has symbolclass tag | 8 = actionscript3 | 1 = usenetwork
+            U32 flags = swf->fileAttributes|FILEATTRIBUTE_AS3; // 16 = has symbolclass tag | 8 = actionscript3 | 1 = usenetwork
             if(has_version_8_action && !has_version_9_action)
-                flags &= ~0x08;
+                flags &= ~FILEATTRIBUTE_AS3;
             TAG*fileattrib = swf_InsertTag(0, ST_FILEATTRIBUTES);
             swf_SetU32(fileattrib, flags);
             if(writer) {
@@ -1539,7 +1539,7 @@ int WriteExtraTags(SWF*swf, writer_t*writer)
             if(swf_WriteTag2(writer, has_fileattributes)<0) 
                 return -1;
         }
-        if(!has_scenedescription) {
+        if(0 && !has_scenedescription) {
             TAG*scene = swf_InsertTag(0, ST_SCENEDESCRIPTION);
             swf_SetU16(scene, 1);
             swf_SetString(scene, (U8*)"Scene 1");

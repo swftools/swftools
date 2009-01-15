@@ -148,6 +148,9 @@ typedef struct _SOUNDINFO
     U32* right;
 } SOUNDINFO;
 
+#define FILEATTRIBUTE_USENETWORK 1
+#define FILEATTRIBUTE_AS3 8
+#define FILEATTRIBUTE_SYMBOLCLASS 16
 typedef struct _SWF
 { U8            fileVersion;
   U8		compressed;     // SWF or SWC?
