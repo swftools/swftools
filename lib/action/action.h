@@ -1,6 +1,6 @@
 /* action.h
  *
- * $Id: action.h,v 1.1 2004/02/02 10:12:34 kramm Exp $
+ * $Id: action.h,v 1.1 2004/05/08 17:09:35 kramm Exp $
  * 
  * Notice: This header file contains declarations of functions and types that
  * are just used internally. All library functions and types that are supposed

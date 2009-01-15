@@ -1,6 +1,6 @@
 /* assembler.h
  * 
- * $Id: assembler.h,v 1.1 2004/02/02 10:12:34 kramm Exp $
+ * $Id: assembler.h,v 1.1 2004/05/08 17:11:33 kramm Exp $
  * 
  * Notice: This header file contains declarations of functions and types that
  * are just used internally. All library functions and types that are supposed
