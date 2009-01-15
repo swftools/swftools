@@ -40,10 +40,13 @@
  * ISO MPEG Audio Subgroup Software Simulation Group (1996)
  * ISO 13818-3 MPEG-2 Audio Encoder - Lower Sampling Frequency Extension
  *
- * $Id: l3psy.h,v 1.1 2002/01/10 17:30:00 kramm Exp $
+ * $Id: l3psy.h,v 1.1 2004/05/08 12:13:21 kramm Exp $
  *
 
  * $Log: l3psy.h,v $
+ * Revision 1.1  2004/05/08 12:13:21  kramm
+ * Version 0.94.1 of the bladeenc mp3 encoder
+ *
  * Revision 1.1  2002/01/10 17:30:00  kramm
  * Version 0.94.1 of the bladeenc mp3 encoder
  *
