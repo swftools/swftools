@@ -178,8 +178,9 @@ dict_t*dict_clone(dict_t*);
 
 void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const void*key, void*val), void*data);
 void dict_foreach_value(dict_t*h, void (*runFunction)(void*));
-void dict_free_all(dict_t*h, void (*freeFunction)(void*));
+void dict_free_all(dict_t*h, char free_keys, void (*free_data_function)(void*));
 void dict_clear(dict_t*h);
+void dict_destroy_shallow(dict_t*dict);
 void dict_destroy(dict_t*dict);
 
 void map_init(map_t*map);

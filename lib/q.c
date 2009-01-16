@@ -932,16 +932,18 @@ void dict_foreach_value(dict_t*h, void (*runFunction)(void*))
     }
 }
 
-void dict_free_all(dict_t*h, void (*freeFunction)(void*))
+void dict_free_all(dict_t*h, char free_keys, void (*free_data_function)(void*))
 {
     int t;
     for(t=0;t<h->hashsize;t++) {
         dictentry_t*e = h->slots[t];
         while(e) {
             dictentry_t*next = e->next;
-            h->key_type->free(e->key);
-            if(freeFunction) {
-                freeFunction(e->data);
+            if(free_keys) {
+                h->key_type->free(e->key);
+            }
+            if(free_data_function) {
+                free_data_function(e->data);
             }
             memset(e, 0, sizeof(dictentry_t));
             rfx_free(e);
@@ -953,9 +955,20 @@ void dict_free_all(dict_t*h, void (*freeFunction)(void*))
     memset(h, 0, sizeof(dict_t));
 }
 
+void dict_clear_shallow(dict_t*h) 
+{
+    dict_free_all(h, 0, 0);
+}
+
 void dict_clear(dict_t*h) 
 {
-    dict_free_all(h, 0);
+    dict_free_all(h, 1, 0);
+}
+
+void dict_destroy_shallow(dict_t*dict)
+{
+    dict_clear_shallow(dict);
+    rfx_free(dict);
 }
 
 void dict_destroy(dict_t*dict)
@@ -1010,7 +1023,7 @@ void map_dump(map_t*map, FILE*fi, const char*prefix)
 void map_clear(map_t*map)
 {
     map_internal_t*m = (map_internal_t*)map->internal;
-    dict_free_all(&m->d, freestring);
+    dict_free_all(&m->d, 1, freestring);
     rfx_free(m);
 }
 void map_destroy(map_t*map)
