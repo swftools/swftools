@@ -41,6 +41,11 @@
 #else
 #include "GHash.h"
 #endif
+#include "../gfxdevice.h"
+#include "../gfxtools.h"
+#include "../gfxfont.h"
+
+#define INTERNAL_FONT_SIZE 1024.0
 
 struct GlyphInfo
 {
@@ -65,6 +70,7 @@ struct FontInfo
 
     void grow(int size);
 
+    gfxfont_t*gfxfont;
     GfxFont*font;
     double max_size;
     int num_glyphs;
@@ -83,12 +89,16 @@ class InfoOutputDev: public OutputDev
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
 
+    gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src);
+
     public:
     int x1,y1,x2,y2;
     int num_links;
     int num_images;
     int num_fonts;
     int num_polygons;
+
+    gfxfontlist_t*fonts;
 
     InfoOutputDev(XRef*xref);
     virtual ~InfoOutputDev(); 
