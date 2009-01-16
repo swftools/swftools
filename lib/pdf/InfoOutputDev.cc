@@ -23,6 +23,7 @@ InfoOutputDev::InfoOutputDev(XRef*xref)
     num_images = 0;
     num_fonts = 0;
     num_polygons= 0;
+    fonts = 0;
     currentfont = 0;
     currentglyph = 0;
     id2font = new GHash(1);
@@ -62,6 +63,7 @@ FontInfo::FontInfo()
     this->lastchar = -1;
     this->lastx = 0;
     this->lasty = 0;
+    this->gfxfont = 0;
 }
 FontInfo::~FontInfo()
 {
@@ -105,6 +107,108 @@ void InfoOutputDev::drawLink(Link *link, Catalog *catalog)
 {
     num_links++;
 }
+   
+/* there's not yet a way to set this */
+int config_fontquality = 10;
+int config_bigchar = 0;
+
+/*  } else if(!strcmp(key,"fontquality")) {
+        this->config_fontquality = atof(value);
+	if(this->config_fontquality<=1)
+	    this->config_fontquality=1;
+    } else if(!strcmp(key,"bigchar")) {
+        this->config_bigchar = atoi(value);
+    }
+ */
+
+gfxfont_t* InfoOutputDev::createGfxFont(GfxFont*xpdffont, FontInfo*src)
+{
+    gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
+    memset(font, 0, sizeof(gfxfont_t));
+
+    font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*src->num_glyphs);
+    memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
+    font->id = 0;
+    int t;
+
+    double quality = (INTERNAL_FONT_SIZE * 200 / config_fontquality) / src->max_size;
+    double scale = 1;
+    //printf("%d glyphs\n", font->num_glyphs);
+    font->num_glyphs = 0;
+    font->ascent = fabs(src->descender);
+    font->descent = fabs(src->ascender);
+    
+    for(t=0;t<src->num_glyphs;t++) {
+	if(src->glyphs[t]) {
+	    SplashPath*path = src->glyphs[t]->path;
+	    int len = path?path->getLength():0;
+	    //printf("glyph %d) %08x (%d line segments)\n", t, path, len);
+	    gfxglyph_t*glyph = &font->glyphs[font->num_glyphs];
+	    src->glyphs[t]->glyphid = font->num_glyphs;
+	    glyph->unicode = src->glyphs[t]->unicode;
+	    if(glyph->unicode >= font->max_unicode)
+		font->max_unicode = glyph->unicode+1;
+	    gfxdrawer_t drawer;
+	    gfxdrawer_target_gfxline(&drawer);
+	    int s;
+	    int count = 0;
+	    double xmax = 0;
+	    for(s=0;s<len;s++) {
+		Guchar f;
+		double x, y;
+		path->getPoint(s, &x, &y, &f);
+		if(!s || x > xmax)
+		    xmax = x;
+		if(f&splashPathFirst) {
+		    drawer.moveTo(&drawer, x*scale, y*scale);
+		}
+		if(f&splashPathCurve) {
+		    double x2,y2;
+		    path->getPoint(++s, &x2, &y2, &f);
+		    if(f&splashPathCurve) {
+			double x3,y3;
+			path->getPoint(++s, &x3, &y3, &f);
+			gfxdraw_cubicTo(&drawer, x*scale, y*scale, x2*scale, y2*scale, x3*scale, y3*scale, quality);
+		    } else {
+			drawer.splineTo(&drawer, x*scale, y*scale, x2*scale, y2*scale);
+		    }
+		} else {
+		    drawer.lineTo(&drawer, x*scale, y*scale);
+		}
+	     //   printf("%f %f %s %s\n", x, y, (f&splashPathCurve)?"curve":"",
+	     //       			  (f&splashPathFirst)?"first":"",
+	     //       			  (f&splashPathLast)?"last":"");
+	    }
+
+	    glyph->line = (gfxline_t*)drawer.result(&drawer);
+	    if(src->glyphs[t]->advance>0) {
+		glyph->advance = src->glyphs[t]->advance;
+	    } else {
+		msg("<warning> Approximating advance value for glyph %d", t);
+		glyph->advance = xmax*scale;
+	    }
+	    if(config_bigchar) {
+		double max = src->glyphs[t]->advance_max;
+		if(max>0 && max > glyph->advance) {
+		    glyph->advance = max;
+		}
+	    }
+
+	    font->num_glyphs++;
+	}
+    }
+    font->unicode2glyph = (int*)malloc(sizeof(int)*font->max_unicode);
+    memset(font->unicode2glyph, -1, sizeof(int)*font->max_unicode);
+    for(t=0;t<font->num_glyphs;t++) {
+	if(font->glyphs[t].unicode>0 && font->glyphs[t].unicode<font->max_unicode) {
+	    font->unicode2glyph[font->glyphs[t].unicode] = t;
+	}
+
+    }
+    msg("<trace> %d glyphs.", t, font->num_glyphs);
+    return font;
+}
+
 double InfoOutputDev::getMaximumFontSize(char*id)
 {
     FontInfo*info = (FontInfo*)id2font->lookup(id);
@@ -171,6 +275,11 @@ void InfoOutputDev::updateFont(GfxState *state)
     } else {
         currentfont->ascender = currentfont->descender = 0;
     }
+
+    currentfont->gfxfont = this->createGfxFont(font, currentfont);
+    currentfont->gfxfont->id = strdup(id);
+    fonts = gfxfontlist_addfont(fonts, currentfont->gfxfont);
+
     free(id);
 }
 
