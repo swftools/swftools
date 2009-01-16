@@ -1,6 +1,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "mem.h"
 
 // memory allocation
@@ -10,6 +11,11 @@ void rfx_free(void*ptr)
   if(!ptr)
     return;
   free(ptr);
+}
+
+void start_debugger()
+{
+    //*(int*)0=0;
 }
 
 void* rfx_alloc(int size)
@@ -24,7 +30,7 @@ void* rfx_alloc(int size)
   ptr = malloc(size);
   if(!ptr) {
     fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
-    /* TODO: we should send a signal, so that the debugger kicks in? */
+    start_debugger();
     exit(1);
   }
   return ptr;
@@ -46,7 +52,7 @@ void* rfx_realloc(void*data, int size)
 
   if(!ptr) {
     fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
-    /* TODO: we should send a signal, so that the debugger kicks in? */
+    start_debugger();
     exit(1);
   }
   return ptr;
@@ -66,7 +72,7 @@ void* rfx_calloc(int size)
 #endif
   if(!ptr) {
     fprintf(stderr, "FATAL: Out of memory (while trying to claim %d bytes)\n", size);
-    /* TODO: we should send a signal, so that the debugger kicks in? */
+    start_debugger();
     exit(1);
   }
 #ifndef HAVE_CALLOC
