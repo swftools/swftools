@@ -43,6 +43,22 @@ void addGlobalFont(const char*filename);
 void addGlobalLanguageDir(const char*dir);
 void addGlobalFontDir(const char*dirname);
 
+class GFXOutputGlobals {
+public:
+  feature_t*featurewarnings;
+  gfxfontlist_t*gfxfontlist;
+  int textmodeinfo; // did we write "Text will be rendered as polygon" yet?
+  int jpeginfo; // did we write "File contains jpegs" yet?
+  int pbminfo; // did we write "File contains jpegs" yet?
+  int linkinfo; // did we write "File contains links" yet?
+  int*pages;
+  int pagebuflen;
+  int pagepos;
+
+  GFXOutputGlobals();
+  ~GFXOutputGlobals();
+};
+
 class GFXOutputDev:  public CommonOutputDev {
 public:
   gfxdevice_t* device;
@@ -219,42 +235,24 @@ public:
   void showfeature(const char*feature,char fully, char warn);
   void warnfeature(const char*feature,char fully);
   void infofeature(const char*feature);
+  
+  char* searchFont(const char*name);
+  char* substituteFont(GfxFont*gfxFont, char*oldname);
+  char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
 
-  feature_t*featurewarnings;
 
+  int currentpage;
   char outer_clip_box; //whether the page clip box is still on
-
-  gfxfontlist_t*gfxfontlist;
-
-  GBool do_interpretType3Chars;
-
   InfoOutputDev*info;
   GFXOutputState states[64];
   int statepos;
 
-  int currentpage;
-
   PDFDoc*doc;
   XRef*xref;
-
-  char* searchFont(const char*name);
-  char* substituteFont(GfxFont*gfxFont, char*oldname);
-  char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
-  int t1id;
-  int textmodeinfo; // did we write "Text will be rendered as polygon" yet?
-  int jpeginfo; // did we write "File contains jpegs" yet?
-  int pbminfo; // did we write "File contains jpegs" yet?
-  int linkinfo; // did we write "File contains links" yet?
 
   int type3active; // are we between beginType3()/endType3()?
 
   GfxState *laststate;
-
-  char type3Warning;
-
-  const char* substitutetarget[256];
-  const char* substitutesource[256];
-  int substitutepos;
 
   int user_movex,user_movey;
   int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
@@ -270,10 +268,6 @@ public:
   gfxfont_t* current_gfxfont;
   FontInfo*current_fontinfo;
   gfxmatrix_t current_font_matrix;
-
-  int*pages;
-  int pagebuflen;
-  int pagepos;
 
   /* config */
   int config_use_fontconfig;

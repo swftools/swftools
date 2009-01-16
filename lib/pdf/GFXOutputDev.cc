@@ -151,10 +151,43 @@ static void dbg(const char*format, ...)
     fflush(stdout);
 }
 
+GFXOutputGlobals*gfxglobals=0;
+
+GFXOutputGlobals::GFXOutputGlobals()
+{
+    this->pages = 0;
+    this->pagebuflen = 0;
+    this->pagepos = 0;
+    this->featurewarnings = 0;
+    this->jpeginfo = 0;
+    this->textmodeinfo = 0;
+    this->linkinfo = 0;
+    this->pbminfo = 0;
+    this->gfxfontlist = gfxfontlist_create();
+}
+GFXOutputGlobals::~GFXOutputGlobals()
+{
+    if(this->pages) {
+	free(this->pages); this->pages = 0;
+    }
+    feature_t*f = this->featurewarnings;
+    while(f) {
+	feature_t*next = f->next;
+	if(f->string) {
+	    free(f->string);f->string =0;
+	}
+	f->next = 0;
+	free(f);
+	f = next;
+    }
+    this->featurewarnings = 0;
+
+    gfxfontlist_free(this->gfxfontlist, 1);this->gfxfontlist = 0;
+}
 
 void GFXOutputDev::showfeature(const char*feature, char fully, char warn)
 {
-    feature_t*f = this->featurewarnings;
+    feature_t*f = gfxglobals->featurewarnings;
     while(f) {
 	if(!strcmp(feature, f->string))
 	    return;
@@ -162,8 +195,8 @@ void GFXOutputDev::showfeature(const char*feature, char fully, char warn)
     }
     f = (feature_t*)malloc(sizeof(feature_t));
     f->string = strdup(feature);
-    f->next = this->featurewarnings;
-    this->featurewarnings = f;
+    f->next = gfxglobals->featurewarnings;
+    gfxglobals->featurewarnings = f;
     if(warn) {
 	msg("<warning> %s not yet %ssupported!",feature,fully?"fully ":"");
 	if(this->config_break_on_warning) {
@@ -294,7 +327,7 @@ static int config_use_fontconfig = 1;
 static int fcinitcalled = 0; 
 
 GFXGlobalParams::GFXGlobalParams()
-: GlobalParams("")
+: GlobalParams((char*)"")
 {
     //setupBaseFonts(char *dir); //not tested yet
 }
@@ -537,19 +570,16 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 
 GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
 {
+    if(!gfxglobals)
+        gfxglobals = new GFXOutputGlobals();
+
     this->info = info;
     this->doc = doc;
     this->xref = doc->getXRef();
     
-    this->jpeginfo = 0;
-    this->textmodeinfo = 0;
-    this->linkinfo = 0;
-    this->pbminfo = 0;
     this->type3active = 0;
     this->statepos = 0;
     this->xref = 0;
-    this->substitutepos = 0;
-    this->type3Warning = 0;
     this->user_movex = 0;
     this->user_movey = 0;
     this->clipmovex = 0;
@@ -561,9 +591,6 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
     this->outer_clip_box = 0;
-    this->pages = 0;
-    this->pagebuflen = 0;
-    this->pagepos = 0;
     this->config_bigchar=0;
     this->config_convertgradients=1;
     this->config_break_on_warning=0;
@@ -573,12 +600,9 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_fontquality = 10;
     this->config_optimize_polygons = 0;
     this->config_multiply = 1;
-
-    this->gfxfontlist = gfxfontlist_create();
     this->dashPattern = 0;
   
     memset(states, 0, sizeof(states));
-    this->featurewarnings = 0;
 };
 
 void GFXOutputDev::setParameter(const char*key, const char*value)
@@ -1229,27 +1253,9 @@ void GFXOutputDev::finish()
 GFXOutputDev::~GFXOutputDev() 
 {
     finish();
-
-    if(this->pages) {
-	free(this->pages); this->pages = 0;
-    }
     if(this->dashPattern) {
         free(this->dashPattern);this->dashPattern = 0;
     }
-    
-    feature_t*f = this->featurewarnings;
-    while(f) {
-	feature_t*next = f->next;
-	if(f->string) {
-	    free(f->string);f->string =0;
-	}
-	f->next = 0;
-	free(f);
-	f = next;
-    }
-    this->featurewarnings = 0;
-
-    gfxfontlist_free(this->gfxfontlist, 1);this->gfxfontlist = 0;
 };
 GBool GFXOutputDev::upsideDown() 
 {
@@ -1379,9 +1385,9 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
-	if(!textmodeinfo) {
+	if(!gfxglobals->textmodeinfo) {
 	    msg("<notice> Some texts will be rendered as shape");
-	    textmodeinfo = 1;
+	    gfxglobals->textmodeinfo = 1;
 	}
 	gfxline_t*glyph = current_gfxfont->glyphs[glyphid].line;
 	gfxline_t*tglyph = gfxline_clone(glyph);
@@ -1666,8 +1672,8 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
                     }
                     else if(strstr(s, "last") || strstr(s, "end"))
                     {
-			if(pages && pagepos>0)
-			    page = pages[pagepos-1];
+			if(gfxglobals->pages && gfxglobals->pagepos>0)
+			    page = gfxglobals->pages[gfxglobals->pagepos-1];
                     }
                     else if(strstr(s, "first") || strstr(s, "top"))
                     {
@@ -1715,18 +1721,18 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
     
     msg("<trace> drawlink s=%s", s);
 
-    if(!linkinfo && (page || s))
+    if(!gfxglobals->linkinfo && (page || s))
     {
         msg("<notice> File contains links");
-        linkinfo = 1;
+        gfxglobals->linkinfo = 1;
     }
     
     if(page>0)
     {
         int t;
 	int lpage = -1;
-        for(t=1;t<=pagepos;t++) {
-            if(pages[t]==page) {
+        for(t=1;t<=gfxglobals->pagepos;t++) {
+            if(gfxglobals->pages[t]==page) {
 		lpage = t;
                 break;
 	    }
@@ -1982,11 +1988,11 @@ void GFXOutputDev::updateFont(GfxState *state)
 	dumpFontInfo("<verbose>", gfxFont);
     }
     
-    gfxfont_t*font = gfxfontlist_findfont(this->gfxfontlist,id);
+    gfxfont_t*font = gfxfontlist_findfont(gfxglobals->gfxfontlist,id);
     if(!font) {
 	font = this->createGfxFont(gfxFont, current_fontinfo);
         font->id = strdup(id);
-	this->gfxfontlist = gfxfontlist_addfont(this->gfxfontlist, font);
+	gfxglobals->gfxfontlist = gfxfontlist_addfont(gfxglobals->gfxfontlist, font);
     }
     device->addfont(device, font);
 
@@ -2206,17 +2212,17 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       x4 = (int)(x4);y4 = (int)(y4);
   }
 
-  if(!pbminfo && !(str->getKind()==strDCT)) {
+  if(!gfxglobals->pbminfo && !(str->getKind()==strDCT)) {
       if(!type3active) {
 	  msg("<notice> File contains pbm pictures %s",mask?"(masked)":"");
-	  pbminfo = 1;
+	  gfxglobals->pbminfo = 1;
       }
       if(mask)
       msg("<verbose> drawing %d by %d masked picture", width, height);
   }
-  if(!jpeginfo && (str->getKind()==strDCT)) {
+  if(!gfxglobals->jpeginfo && (str->getKind()==strDCT)) {
       msg("<notice> File contains jpeg pictures");
-      jpeginfo = 1;
+      gfxglobals->jpeginfo = 1;
   }
 
   if(mask) {
@@ -2610,25 +2616,25 @@ void GFXOutputDev::preparePage(int pdfpage, int outputpage)
     if(pdfpage < 0)
 	return;
 
-    if(!this->pages) {
-	this->pagebuflen = 1024;
-	if(pdfpage > this->pagebuflen)
-	    this->pagebuflen = pdfpage+1;
-	this->pages = (int*)malloc(this->pagebuflen*sizeof(int));
-	memset(this->pages, -1, this->pagebuflen*sizeof(int));
+    if(!gfxglobals->pages) {
+	gfxglobals->pagebuflen = 1024;
+	if(pdfpage > gfxglobals->pagebuflen)
+	    gfxglobals->pagebuflen = pdfpage+1;
+	gfxglobals->pages = (int*)malloc(gfxglobals->pagebuflen*sizeof(int));
+	memset(gfxglobals->pages, -1, gfxglobals->pagebuflen*sizeof(int));
     }
 
-    while(pdfpage >= this->pagebuflen)
+    while(pdfpage >= gfxglobals->pagebuflen)
     {
-	int oldlen = this->pagebuflen;
-	this->pagebuflen+=1024;
-	this->pages = (int*)realloc(this->pages, this->pagebuflen*sizeof(int));
-	memset(&this->pages[oldlen], -1, (this->pagebuflen-oldlen)*sizeof(int));
+	int oldlen = gfxglobals->pagebuflen;
+	gfxglobals->pagebuflen+=1024;
+	gfxglobals->pages = (int*)realloc(gfxglobals->pages, gfxglobals->pagebuflen*sizeof(int));
+	memset(&gfxglobals->pages[oldlen], -1, (gfxglobals->pagebuflen-oldlen)*sizeof(int));
     }
 
-    this->pages[pdfpage] = outputpage;
-    if(pdfpage>this->pagepos)
-	this->pagepos = pdfpage;
+    gfxglobals->pages[pdfpage] = outputpage;
+    if(pdfpage > gfxglobals->pagepos)
+	gfxglobals->pagepos = pdfpage;
 }
 
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
