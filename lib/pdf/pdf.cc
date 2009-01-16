@@ -21,6 +21,18 @@ static char* global_page_range = 0;
 
 static int globalparams_count=0;
 
+typedef struct _parameter
+{
+    struct _parameter *next;
+    const char*name;
+    const char*value;
+} parameter_t;
+typedef struct _parameterlist
+{
+    parameter_t* device_config;
+    parameter_t* device_config_next;
+} parameterlist_t;
+
 typedef struct _pdf_page_info
 {
     int xMin, yMin, xMax, yMax;
@@ -33,15 +45,26 @@ typedef struct _pdf_page_info
 
 typedef struct _pdf_doc_internal
 {
+    int config_bitmap_optimizing;
+    int config_full_bitmap_optimizing;
+    parameterlist_t parameters;
+
     int protect;
     int nocopy;
+    
     PDFDoc*doc;
     Object docinfo;
     InfoOutputDev*info;
-    CommonOutputDev*outputDev;
+
     pdf_page_info_t*pages;
     gfxdevice_t* middev;
     char*filename;
+
+    /* page map */
+    int*pagemap;
+    int pagemap_size;
+    int pagemap_pos;
+
     gfxsource_t*parent;
 } pdf_doc_internal_t;
 
@@ -54,21 +77,10 @@ typedef struct _dev_output_internal
     CommonOutputDev*outputDev;
 } dev_output_internal_t;
 
-typedef struct _parameter
-{
-    struct _parameter *next;
-    const char*name;
-    const char*value;
-} parameter_t;
 
 typedef struct _gfxsource_internal
 {
-    int config_bitmap_optimizing;
-    int config_full_bitmap_optimizing;
-
-    parameter_t* device_config;
-    parameter_t* device_config_next;
-
+    parameterlist_t parameters;
 } gfxsource_internal_t;
 
 
@@ -81,6 +93,33 @@ static const char* dirseparator()
 #endif
 }
 
+static void storeDeviceParameter(parameterlist_t*i, const char*name, const char*value)
+{
+    parameter_t*o = i->device_config;
+    while(o) {
+        if(!strcmp(name, o->name)) {
+            /* overwrite old value */
+            free((void*)o->value);
+            o->value = strdup(value);
+            return;
+        }
+        o = o->next;
+    }
+    parameter_t*p = new parameter_t();
+    p->name = strdup(name);
+    p->value = strdup(value);
+    p->next = 0;
+
+    if(i->device_config_next) {
+	i->device_config_next->next = p;
+	i->device_config_next = p;
+    } else {
+	i->device_config = p;
+	i->device_config_next = p;
+    }
+}
+
+
 
 void pdfpage_destroy(gfxpage_t*pdf_page)
 {
@@ -89,13 +128,38 @@ void pdfpage_destroy(gfxpage_t*pdf_page)
     free(pdf_page);pdf_page=0;
 }
 
-void render2(gfxpage_t*page, gfxdevice_t*dev)
+static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,int x2,int y2)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    
-    if(pi->middev) {
-	gfxdevice_rescale_setdevice(pi->middev, dev);
-	pi->middev->setparameter(pi->middev, "protect", "1");
+    gfxsource_internal_t*i = (gfxsource_internal_t*)pi->parent->internal;
+
+    CommonOutputDev*outputDev = 0;
+    if(pi->config_full_bitmap_optimizing) {
+	FullBitmapOutputDev*d = new FullBitmapOutputDev(pi->info, pi->doc);
+	outputDev = (CommonOutputDev*)d;
+    } else if(pi->config_bitmap_optimizing) {
+	BitmapOutputDev*d = new BitmapOutputDev(pi->info, pi->doc);
+	outputDev = (CommonOutputDev*)d;
+    } else {
+	GFXOutputDev*d = new GFXOutputDev(pi->info, pi->doc);
+	outputDev = (CommonOutputDev*)d;
+    }
+    /* pass global parameters to PDF driver*/
+    parameter_t*p = i->parameters.device_config;
+    while(p) {
+	outputDev->setParameter(p->name, p->value);
+	p = p->next;
+    }
+    outputDev->setPageMap(pi->pagemap, pi->pagemap_pos);
+    outputDev->setMove(x,y);
+    outputDev->setClip(x1,y1,x2,y2);
+
+    gfxdevice_t* middev=0;
+    if(multiply>1) {
+    	middev = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
+	gfxdevice_rescale_init(middev, 0x00000000, 0, 0, 1.0 / multiply);
+        gfxdevice_rescale_setdevice(middev, dev);
+	middev->setparameter(middev, "protect", "1");
 	dev = pi->middev;
     } 
 	
@@ -109,25 +173,19 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
 	return;
     }
 
-    pi->outputDev->setDevice(dev);
-
     if(pi->protect) {
         dev->setparameter(dev, "protect", "1");
     }
-    
-    /* pass global parameters to output device */
-    parameter_t*p = ((gfxsource_internal_t*)pi->parent->internal)->device_config;
-    while(p) {
-	dev->setparameter(dev, p->name, p->value);
-	p = p->next;
-    }
-    pi->doc->displayPage((OutputDev*)pi->outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, /*doLinks*/(int)1);
-    pi->doc->processLinks((OutputDev*)pi->outputDev, page->nr);
-    pi->outputDev->finishPage();
 
-    pi->outputDev->setDevice(0);
-    if(pi->middev) {
-	gfxdevice_rescale_setdevice(pi->middev, 0x00000000);
+    outputDev->setDevice(dev);
+    pi->doc->displayPage((OutputDev*)outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, /*doLinks*/(int)1);
+    pi->doc->processLinks((OutputDev*)outputDev, page->nr);
+    outputDev->finishPage();
+    outputDev->setDevice(0);
+
+    if(middev) {
+	gfxdevice_rescale_setdevice(middev, 0x00000000);
+	middev->finish(middev);
     }
 }
 
@@ -135,9 +193,7 @@ void render2(gfxpage_t*page, gfxdevice_t*dev)
 void pdfpage_render(gfxpage_t*page, gfxdevice_t*output)
 {
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
-    pi->outputDev->setMove(0,0);
-    pi->outputDev->setClip(0,0,0,0);
-    render2(page, output);
+    render2(page, output, 0,0, 0,0,0,0);
 }
 
 void pdfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfxcoord_t y, gfxcoord_t _x1, gfxcoord_t _y1, gfxcoord_t _x2, gfxcoord_t _y2)
@@ -147,22 +203,14 @@ void pdfpage_rendersection(gfxpage_t*page, gfxdevice_t*output, gfxcoord_t x, gfx
     int x1=(int)_x1,y1=(int)_y1,x2=(int)_x2,y2=(int)_y2;
     if((x1|y1|x2|y2)==0) x2++;
 
-    pi->outputDev->setMove((int)x*multiply,(int)y*multiply);
-    pi->outputDev->setClip((int)x1*multiply,(int)y1*multiply,(int)x2*multiply,(int)y2*multiply);
-    render2(page, output);
+    render2(page, output, (int)x*multiply,(int)y*multiply,
+                          (int)x1*multiply,(int)y1*multiply,(int)x2*multiply,(int)y2*multiply);
 }
 
 void pdf_doc_destroy(gfxdocument_t*gfx)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
 
-    if(i->outputDev) {
-	delete i->outputDev;i->outputDev=0;
-    }
-    if(i->middev) {
-	gfxdevice_rescale_setdevice(i->middev, 0x00000000);
-	i->middev->finish(i->middev);
-    }
     delete i->doc; i->doc=0;
     free(i->pages); i->pages = 0;
 
@@ -192,16 +240,42 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
     }*/
 }
 
+static void add_page_to_map(gfxdocument_t*gfx, int pdfpage, int outputpage)
+{
+    pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
+    if(pdfpage < 0)
+	return;
+    if(pdfpage >= i->pagemap_size) {
+	int oldlen = i->pagemap_size;
+	i->pagemap_size = oldlen + 1024;
+	if(pdfpage > i->pagemap_size)
+	    i->pagemap_size = pdfpage+1;
+
+        if(i->pages) {
+            i->pagemap = (int*)malloc(i->pagemap_size*sizeof(int));
+        } else {
+	    i->pagemap = (int*)realloc(i->pages, i->pagemap_size*sizeof(int));
+        }
+	memset(&i->pagemap[oldlen], -1, (i->pagemap_size-oldlen)*sizeof(int));
+    }
+    i->pagemap[pdfpage] = outputpage;
+    if(pdfpage > i->pagemap_pos)
+	i->pagemap_pos = pdfpage;
+}
+
 void pdf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
-    CommonOutputDev*o = i->outputDev;
     if(!strcmp(name, "pagemap")) {
 	int pdfpage=0, outputpage=0;
 	sscanf(value,"%d:%d", &pdfpage, &outputpage);
-	o->preparePage(pdfpage, outputpage);
+        add_page_to_map(gfx, pdfpage, outputpage);
+    } else if(!strcmp(name, "poly2bitmap")) {
+        i->config_bitmap_optimizing = atoi(value);
+    } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
+        i->config_full_bitmap_optimizing = atoi(value);
     } else {
-        o->setParameter(name, value);
+        storeDeviceParameter(&i->parameters, name, value);
     }
 }
 
@@ -305,35 +379,10 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 }
 
 
-static void storeDeviceParameter(gfxsource_internal_t*i, const char*name, const char*value)
-{
-    parameter_t*o = i->device_config;
-    while(o) {
-        if(!strcmp(name, o->name)) {
-            /* overwrite old value */
-            free((void*)o->value);
-            o->value = strdup(value);
-            return;
-        }
-        o = o->next;
-    }
-    parameter_t*p = new parameter_t();
-    p->name = strdup(name);
-    p->value = strdup(value);
-    p->next = 0;
-
-    if(i->device_config_next) {
-	i->device_config_next->next = p;
-	i->device_config_next = p;
-    } else {
-	i->device_config = p;
-	i->device_config_next = p;
-    }
-}
-
 static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value)
 {
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
+    parameterlist_t*p = &i->parameters;
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strncmp(name, "fontdir", strlen("fontdir"))) {
         addGlobalFontDir(value);
@@ -347,23 +396,19 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	char buf[80];
 	zoom = atof(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	storeDeviceParameter(i, "jpegsubpixels", buf);
+	storeDeviceParameter(p, "jpegsubpixels", buf);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	storeDeviceParameter(i, "ppmsubpixels", buf);
+	storeDeviceParameter(p, "ppmsubpixels", buf);
     } else if(!strcmp(name, "jpegdpi")) {
 	char buf[80];
 	jpeg_dpi = atoi(value);
 	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	storeDeviceParameter(i, "jpegsubpixels", buf);
+	storeDeviceParameter(p, "jpegsubpixels", buf);
     } else if(!strcmp(name, "ppmdpi")) {
 	char buf[80];
 	ppm_dpi = atoi(value);
 	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	storeDeviceParameter(i, "ppmsubpixels", buf);
-    } else if(!strcmp(name, "poly2bitmap")) {
-        i->config_bitmap_optimizing = atoi(value);
-    } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
-        i->config_full_bitmap_optimizing = atoi(value);
+	storeDeviceParameter(p, "ppmsubpixels", buf);
     } else if(!strcmp(name, "multiply")) {
         multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
@@ -450,30 +495,6 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	}
     }
 
-    if(isrc->config_full_bitmap_optimizing) {
-	FullBitmapOutputDev*outputDev = new FullBitmapOutputDev(i->info, i->doc);
-	i->outputDev = (CommonOutputDev*)outputDev;
-    } else if(isrc->config_bitmap_optimizing) {
-	BitmapOutputDev*outputDev = new BitmapOutputDev(i->info, i->doc);
-	i->outputDev = (CommonOutputDev*)outputDev;
-    } else {
-	GFXOutputDev*outputDev = new GFXOutputDev(i->info, i->doc);
-	i->outputDev = (CommonOutputDev*)outputDev;
-    }
-
-    /* pass global parameters to PDF driver*/
-    parameter_t*p = isrc->device_config;
-    while(p) {
-	i->outputDev->setParameter(p->name, p->value);
-	p = p->next;
-    }
-
-    i->middev = 0;
-    if(multiply>1) {
-    	i->middev = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
-	gfxdevice_rescale_init(i->middev, 0x00000000, 0, 0, 1.0 / multiply);
-    }
-
     pdf_doc->get = 0;
     pdf_doc->destroy = pdf_doc_destroy;
     pdf_doc->set_parameter = pdf_doc_set_parameter;
@@ -491,7 +512,7 @@ void pdf_destroy(gfxsource_t*src)
 	return;
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
     
-    parameter_t*p = i->device_config;
+    parameter_t*p = i->parameters.device_config;
     while(p) {
 	parameter_t*next = p->next;
 	if(p->name) free((void*)p->name);p->name = 0;
@@ -499,7 +520,7 @@ void pdf_destroy(gfxsource_t*src)
 	p->next = 0;delete p;
 	p = next;
     }
-    i->device_config=i->device_config_next=0;
+    i->parameters.device_config=i->parameters.device_config_next=0;
     
     free(src->internal);src->internal=0;
 
