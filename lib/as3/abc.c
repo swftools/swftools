@@ -877,7 +877,7 @@ void* swf_ReadABC(TAG*tag)
 	array_append(file->method_bodies, NO_KEY, c);
     }
     if(tag->len - tag->pos) {
-	fprintf(stderr, "%d unparsed bytes remaining in ABC block\n", tag->len - tag->pos);
+	fprintf(stderr, "ERROR: %d unparsed bytes remaining in ABC block\n", tag->len - tag->pos);
 	return 0;
     }
 
@@ -1197,12 +1197,15 @@ void swf_WriteABC(TAG*abctag, void*code)
 {
     pool_t*pool = writeABC(abctag, code, 0);
     pool_optimize(pool);
+    swf_ResetTag(abctag, abctag->id);
     writeABC(abctag, code, pool);
     pool_destroy(pool);
 }
 
 void abc_file_free(abc_file_t*file)
 {
+    if(!file)
+        return;
     int t;
     if(file->metadata) {
         for(t=0;t<file->metadata->num;t++) {
