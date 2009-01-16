@@ -35,8 +35,8 @@ class CommonOutputDev: public OutputDev
     virtual void setMove(int x,int y) = 0;
     virtual void setClip(int x1,int y1,int x2,int y2) = 0;
     virtual void setParameter(const char*key, const char*value) = 0;
+    virtual void setPageMap(int*pagemap, int pagemap_len) = 0;
   
-    virtual void preparePage(int pdfpage, int outputpage) = 0;
     virtual void finishPage() {};
 };
 #endif //__deviceinterface_h__
