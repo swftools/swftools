@@ -72,7 +72,7 @@ typedef struct _gfxsource_internal
 } gfxsource_internal_t;
 
 
-static char* dirseparator()
+static const char* dirseparator()
 {
 #ifdef WIN32
     return "\\";
@@ -228,13 +228,13 @@ gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
     return pdf_page;
 }
 
-static char*getInfoString(Dict *infoDict, char *key)
+static char*getInfoString(Dict *infoDict, const char *key)
 {
     Object obj;
     GString *s1, *s2;
     int i;
 
-    if (infoDict && infoDict->lookup(key, &obj)->isString()) {
+    if (infoDict && infoDict->lookup((char*)key, &obj)->isString()) {
 	s1 = obj.getString();
 	if ((s1->getChar(0) & 0xff) == 0xfe &&
 	    (s1->getChar(1) & 0xff) == 0xff) {
@@ -261,12 +261,12 @@ static char*getInfoString(Dict *infoDict, char *key)
     return strdup("");
 }
 
-static char*getInfoDate(Dict *infoDict, char *key) 
+static char*getInfoDate(Dict *infoDict, const char *key) 
 {
     Object obj;
     char *s;
 
-    if (infoDict && infoDict->lookup(key, &obj)->isString()) {
+    if (infoDict && infoDict->lookup((char*)key, &obj)->isString()) {
 	s = obj.getString()->getCString();
 	if (s[0] == 'D' && s[1] == ':') {
 	  s += 2;
