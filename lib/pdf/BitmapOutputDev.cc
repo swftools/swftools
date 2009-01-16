@@ -153,8 +153,9 @@ void BitmapOutputDev::setParameter(const char*key, const char*value)
     }
     this->gfxdev->setParameter(key, value);
 }
-void BitmapOutputDev::preparePage(int pdfpage, int outputpage)
+void BitmapOutputDev::setPageMap(int*page2page, int num_pages)
 {
+    this->gfxdev->setPageMap(page2page, num_pages);
 }
 
 static void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymin, int*xmax, int*ymax)
