@@ -87,9 +87,9 @@ void FullBitmapOutputDev::setClip(int x1,int y1,int x2,int y2)
 void FullBitmapOutputDev::setParameter(const char*key, const char*value)
 {
 }
-void FullBitmapOutputDev::preparePage(int pdfpage, int outputpage)
+void FullBitmapOutputDev::setPageMap(int*pagemap, int pagemap_len)
 {
-    gfxdev->preparePage(pdfpage, outputpage);
+    gfxdev->setPageMap(pagemap, pagemap_len);
 }
 
 static void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymin, int*xmax, int*ymax)

@@ -44,7 +44,7 @@ public:
     virtual void setMove(int x,int y);
     virtual void setClip(int x1,int y1,int x2,int y2);
     virtual void setParameter(const char*key, const char*value);
-    virtual void preparePage(int pdfpage, int outputpage);
+    virtual void setPageMap(int*pagemap, int pagemap_len);
 
     // OutputDev:
     virtual GBool upsideDown();
