@@ -826,13 +826,14 @@ static int compare_arrayentry(const void*_c1, const void*_c2)
 {
     const array_entry_t*c1 = _c1;
     const array_entry_t*c2 = _c2;
-    return c1->data - c2->data;
+    return c2->data - c1->data;
 }
 static void reshuffle_array(array_t*array)
 {
-    qsort(array->d, array->num, sizeof(array->d[0]), compare_arrayentry);
-    dict_destroy(array->entry2pos);
-    array->entry2pos = dict_new();
+    qsort(array->d+1, array->num-1, sizeof(array->d[0]), compare_arrayentry);
+    dict_t*d = dict_new2(array->entry2pos->key_type);
+    dict_destroy_shallow(array->entry2pos);
+    array->entry2pos = d;
     int t;
     for(t=0;t<array->num;t++) {
         dict_put(array->entry2pos, array->d[t].name, (void*)(ptroff_t)(t+1));
@@ -1170,22 +1171,26 @@ void pool_dump(pool_t*pool, FILE*fo, char flags)
     fprintf(fo, "%d integers:\n", pool->x_ints->num);
     for(t=1;t<pool->x_ints->num;t++) {
         S32 val = *(int*)array_getkey(pool->x_ints, t);
-        if(flags&1) fprintf(fo, "%d) %d\n", t, val);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_ints, t);
+        if(flags&1) fprintf(fo, "%5d %d) %d\n", freq, t, val);
     }
     fprintf(fo, "%d unsigned integers:\n", pool->x_uints->num);
     for(t=1;t<pool->x_uints->num;t++) {
         U32 val = *(unsigned int*)array_getkey(pool->x_uints, t);
-        if(flags&1) fprintf(fo, "%d) %d\n", t, val);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_uints, t);
+        if(flags&1) fprintf(fo, "%5d %d) %d\n", freq, t, val);
     }
     fprintf(fo, "%d floats:\n", pool->x_floats->num);
     for(t=1;t<pool->x_floats->num;t++) {
         double d = pool_lookup_float(pool, t);
-        if(flags&2) fprintf(fo, "%d) %f\n", t, d);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_floats, t);
+        if(flags&2) fprintf(fo, "%5d %d) %f\n", freq, t, d);
     }
     fprintf(fo, "%d strings:\n", pool->x_strings->num);
     for(t=1;t<pool->x_strings->num;t++) {
         string_t str = pool_lookup_string2(pool, t);
-        if(flags&1) fprintf(fo, "%d) ", t);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_strings, t);
+        if(flags&1) fprintf(fo, "%5d %d) ", freq, t);
         if(flags&1) fwrite(str.str, str.len, 1, fo);
         if(flags&1) fprintf(fo, "\n", t);
     }
@@ -1193,14 +1198,16 @@ void pool_dump(pool_t*pool, FILE*fo, char flags)
     for(t=1;t<pool->x_namespaces->num;t++) {
 	namespace_t*ns= (namespace_t*)array_getkey(pool->x_namespaces, t);
         char*s = namespace_tostring(ns);
-        if(flags&1) fprintf(fo, "%d) %s\n", t, s);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_namespaces, t);
+        if(flags&1) fprintf(fo, "%5d %d) %s\n", freq, t, s);
         free(s);
     }
     fprintf(fo, "%d namespace sets:\n", pool->x_namespace_sets->num);
     for(t=1;t<pool->x_namespace_sets->num;t++) {
         namespace_set_t*set = (namespace_set_t*)array_getkey(pool->x_namespace_sets, t);
         char*s = namespace_set_tostring(set);
-        if(flags&1) fprintf(fo, "%d) %s\n", t, s);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_namespace_sets, t);
+        if(flags&1) fprintf(fo, "%5d %d) %s\n", freq, t, s);
         free(s);
     }
 
@@ -1208,7 +1215,8 @@ void pool_dump(pool_t*pool, FILE*fo, char flags)
     for(t=1;t<pool->x_multinames->num;t++) {
 	multiname_t*m = (multiname_t*)array_getkey(pool->x_multinames, t);
         char*s = multiname_tostring(m);
-        if(flags&1) fprintf(fo, "%d) %s\n", t, s);
+        int freq = (int)(ptroff_t)array_getvalue(pool->x_multinames, t);
+        if(flags&1) fprintf(fo, "%5d %d) %s\n", freq, t, s);
         free(s);
     }
 } 
