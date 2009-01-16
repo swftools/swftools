@@ -155,21 +155,14 @@ GFXOutputGlobals*gfxglobals=0;
 
 GFXOutputGlobals::GFXOutputGlobals()
 {
-    this->pages = 0;
-    this->pagebuflen = 0;
-    this->pagepos = 0;
     this->featurewarnings = 0;
     this->jpeginfo = 0;
     this->textmodeinfo = 0;
     this->linkinfo = 0;
     this->pbminfo = 0;
-    this->gfxfontlist = gfxfontlist_create();
 }
 GFXOutputGlobals::~GFXOutputGlobals()
 {
-    if(this->pages) {
-	free(this->pages); this->pages = 0;
-    }
     feature_t*f = this->featurewarnings;
     while(f) {
 	feature_t*next = f->next;
@@ -181,8 +174,6 @@ GFXOutputGlobals::~GFXOutputGlobals()
 	f = next;
     }
     this->featurewarnings = 0;
-
-    gfxfontlist_free(this->gfxfontlist, 1);this->gfxfontlist = 0;
 }
 
 void GFXOutputDev::showfeature(const char*feature, char fully, char warn)
@@ -597,10 +588,11 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
-    this->config_fontquality = 10;
     this->config_optimize_polygons = 0;
     this->config_multiply = 1;
     this->dashPattern = 0;
+    this->page2page = 0;
+    this->num_pages = 0;
   
     memset(states, 0, sizeof(states));
 };
@@ -623,14 +615,7 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
             this->config_multiply=1;
     } else if(!strcmp(key,"optimize_polygons")) {
         this->config_optimize_polygons = atoi(value);
-    } else if(!strcmp(key,"bigchar")) {
-        this->config_bigchar = atoi(value);
-    } else if(!strcmp(key,"fontquality")) {
-        this->config_fontquality = atof(value);
-	if(this->config_fontquality<=1)
-	    this->config_fontquality=1;
     }
-    
 }
   
 void GFXOutputDev::setDevice(gfxdevice_t*dev)
@@ -1294,7 +1279,6 @@ char* makeStringPrintable(char*str)
     tmp_printstr[len] = 0;
     return tmp_printstr;
 }
-#define INTERNAL_FONT_SIZE 1024.0
 void GFXOutputDev::updateFontMatrix(GfxState*state)
 {
     double* ctm = state->getCTM();
@@ -1672,8 +1656,9 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
                     }
                     else if(strstr(s, "last") || strstr(s, "end"))
                     {
-			if(gfxglobals->pages && gfxglobals->pagepos>0)
-			    page = gfxglobals->pages[gfxglobals->pagepos-1];
+                        if(this->page2page && this->num_pages) {
+			    page = this->page2page[this->num_pages-1];
+                        }
                     }
                     else if(strstr(s, "first") || strstr(s, "top"))
                     {
@@ -1727,19 +1712,19 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         gfxglobals->linkinfo = 1;
     }
     
-    if(page>0)
-    {
+    if(page>0) {
         int t;
 	int lpage = -1;
-        for(t=1;t<=gfxglobals->pagepos;t++) {
-            if(gfxglobals->pages[t]==page) {
+        for(t=1;t<=this->num_pages;t++) {
+            if(this->page2page[t]==page) {
 		lpage = t;
                 break;
 	    }
 	}
         if(lpage<0) {
 	    lpage = page;
-	}
+        }
+
 	char buf[80];
 	sprintf(buf, "page%d", lpage);
 	device->drawlink(device, points, buf);
@@ -1814,6 +1799,12 @@ void GFXOutputDev::updateLineDash(GfxState *state)
         this->dashPattern = p;
     }
 }
+  
+void GFXOutputDev::setPageMap(int*page2page, int num_pages)
+{
+    this->page2page = page2page;
+    this->num_pages = num_pages;
+}
 
 void GFXOutputDev::updateLineWidth(GfxState *state)
 {
@@ -1871,95 +1862,6 @@ void GFXOutputDev::updateStrokeColor(GfxState *state)
     state->getStrokeRGB(&rgb);
 }
 
-
-gfxfont_t* GFXOutputDev::createGfxFont(GfxFont*xpdffont, FontInfo*src)
-{
-    gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
-    memset(font, 0, sizeof(gfxfont_t));
-
-    font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*src->num_glyphs);
-    memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
-    font->id = 0;
-    int t;
-
-    double quality = (INTERNAL_FONT_SIZE * 200 / config_fontquality) / src->max_size;
-    double scale = 1;
-    //printf("%d glyphs\n", font->num_glyphs);
-    font->num_glyphs = 0;
-    font->ascent = fabs(src->descender);
-    font->descent = fabs(src->ascender);
-    
-    for(t=0;t<src->num_glyphs;t++) {
-	if(src->glyphs[t]) {
-	    SplashPath*path = src->glyphs[t]->path;
-	    int len = path?path->getLength():0;
-	    //printf("glyph %d) %08x (%d line segments)\n", t, path, len);
-	    gfxglyph_t*glyph = &font->glyphs[font->num_glyphs];
-	    src->glyphs[t]->glyphid = font->num_glyphs;
-	    glyph->unicode = src->glyphs[t]->unicode;
-	    if(glyph->unicode >= font->max_unicode)
-		font->max_unicode = glyph->unicode+1;
-	    gfxdrawer_t drawer;
-	    gfxdrawer_target_gfxline(&drawer);
-	    int s;
-	    int count = 0;
-	    double xmax = 0;
-	    for(s=0;s<len;s++) {
-		Guchar f;
-		double x, y;
-		path->getPoint(s, &x, &y, &f);
-		if(!s || x > xmax)
-		    xmax = x;
-		if(f&splashPathFirst) {
-		    drawer.moveTo(&drawer, x*scale, y*scale);
-		}
-		if(f&splashPathCurve) {
-		    double x2,y2;
-		    path->getPoint(++s, &x2, &y2, &f);
-		    if(f&splashPathCurve) {
-			double x3,y3;
-			path->getPoint(++s, &x3, &y3, &f);
-			gfxdraw_cubicTo(&drawer, x*scale, y*scale, x2*scale, y2*scale, x3*scale, y3*scale, quality);
-		    } else {
-			drawer.splineTo(&drawer, x*scale, y*scale, x2*scale, y2*scale);
-		    }
-		} else {
-		    drawer.lineTo(&drawer, x*scale, y*scale);
-		}
-	     //   printf("%f %f %s %s\n", x, y, (f&splashPathCurve)?"curve":"",
-	     //       			  (f&splashPathFirst)?"first":"",
-	     //       			  (f&splashPathLast)?"last":"");
-	    }
-
-	    glyph->line = (gfxline_t*)drawer.result(&drawer);
-	    if(src->glyphs[t]->advance>0) {
-		glyph->advance = src->glyphs[t]->advance;
-	    } else {
-		msg("<warning> Approximating advance value for glyph %d", t);
-		glyph->advance = xmax*scale;
-	    }
-	    if(this->config_bigchar) {
-		double max = src->glyphs[t]->advance_max;
-		if(max>0 && max > glyph->advance) {
-		    glyph->advance = max;
-		}
-	    }
-
-	    font->num_glyphs++;
-	}
-    }
-    font->unicode2glyph = (int*)malloc(sizeof(int)*font->max_unicode);
-    memset(font->unicode2glyph, -1, sizeof(int)*font->max_unicode);
-    for(t=0;t<font->num_glyphs;t++) {
-	if(font->glyphs[t].unicode>0 && font->glyphs[t].unicode<font->max_unicode) {
-	    font->unicode2glyph[font->glyphs[t].unicode] = t;
-	}
-
-    }
-    msg("<trace> %d glyphs.", t, font->num_glyphs);
-    return font;
-}
-
 void GFXOutputDev::updateFont(GfxState *state) 
 {
     GfxFont* gfxFont = state->getFont();
@@ -1987,16 +1889,9 @@ void GFXOutputDev::updateFont(GfxState *state)
     if(!this->current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", gfxFont);
     }
-    
-    gfxfont_t*font = gfxfontlist_findfont(gfxglobals->gfxfontlist,id);
-    if(!font) {
-	font = this->createGfxFont(gfxFont, current_fontinfo);
-        font->id = strdup(id);
-	gfxglobals->gfxfontlist = gfxfontlist_addfont(gfxglobals->gfxfontlist, font);
-    }
-    device->addfont(device, font);
 
-    current_gfxfont = font;
+    current_gfxfont = this->current_fontinfo->gfxfont;
+    device->addfont(device, current_gfxfont);
     free(id);
 
     updateFontMatrix(state);
@@ -2609,32 +2504,6 @@ void addGlobalFontDir(const char*dirname)
 #else
     msg("<warning> No dirent.h- unable to add font dir %s", dirname);
 #endif
-}
-
-void GFXOutputDev::preparePage(int pdfpage, int outputpage)
-{
-    if(pdfpage < 0)
-	return;
-
-    if(!gfxglobals->pages) {
-	gfxglobals->pagebuflen = 1024;
-	if(pdfpage > gfxglobals->pagebuflen)
-	    gfxglobals->pagebuflen = pdfpage+1;
-	gfxglobals->pages = (int*)malloc(gfxglobals->pagebuflen*sizeof(int));
-	memset(gfxglobals->pages, -1, gfxglobals->pagebuflen*sizeof(int));
-    }
-
-    while(pdfpage >= gfxglobals->pagebuflen)
-    {
-	int oldlen = gfxglobals->pagebuflen;
-	gfxglobals->pagebuflen+=1024;
-	gfxglobals->pages = (int*)realloc(gfxglobals->pages, gfxglobals->pagebuflen*sizeof(int));
-	memset(&gfxglobals->pages[oldlen], -1, (gfxglobals->pagebuflen-oldlen)*sizeof(int));
-    }
-
-    gfxglobals->pages[pdfpage] = outputpage;
-    if(pdfpage > gfxglobals->pagepos)
-	gfxglobals->pagepos = pdfpage;
 }
 
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,

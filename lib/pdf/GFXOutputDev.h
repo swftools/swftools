@@ -46,14 +46,11 @@ void addGlobalFontDir(const char*dirname);
 class GFXOutputGlobals {
 public:
   feature_t*featurewarnings;
-  gfxfontlist_t*gfxfontlist;
+
   int textmodeinfo; // did we write "Text will be rendered as polygon" yet?
   int jpeginfo; // did we write "File contains jpegs" yet?
   int pbminfo; // did we write "File contains jpegs" yet?
   int linkinfo; // did we write "File contains links" yet?
-  int*pages;
-  int pagebuflen;
-  int pagepos;
 
   GFXOutputGlobals();
   ~GFXOutputGlobals();
@@ -198,8 +195,6 @@ public:
   virtual void type3D0(GfxState *state, double wx, double wy);
   virtual void type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury);
 
-  virtual void preparePage(int pdfpage, int outputpage);
-
   char* searchForSuitableFont(GfxFont*gfxFont);
 
   void finish();
@@ -215,6 +210,8 @@ public:
   //virtual GBool getVectorAntialias() { return gFalse; }
   //virtual void setVectorAntialias(GBool vaa) {}
   //virtual void psXObject(Stream *psStream, Stream *level1Stream) {}
+
+  virtual void setPageMap(int*pagemap, int pagemap_len);
 
   private:
   gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey);
@@ -239,6 +236,10 @@ public:
   char* searchFont(const char*name);
   char* substituteFont(GfxFont*gfxFont, char*oldname);
   char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
+
+  /* for page mapping */
+  int* page2page;
+  int num_pages;
 
 
   int currentpage;
