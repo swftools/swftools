@@ -340,22 +340,22 @@ static void free_outline(void* o)
 
 static void freeDictionaries()
 {
-    dict_free_all(&instances, free_instance);
-    dict_free_all(&characters, free);
-    dict_free_all(&images, free);
-    dict_free_all(&textures, free);
-    dict_free_all(&outlines, free_outline);
-    dict_free_all(&gradients, free_gradient);
-    dict_free_all(&filters, free);
-    dict_free_all(&fonts, free_font);
-    dict_free_all(&sounds, free);
-    dict_free_all(&interpolations, free);
+    dict_free_all(&instances, 1, free_instance);
+    dict_free_all(&characters, 1, free);
+    dict_free_all(&images, 1, free);
+    dict_free_all(&textures, 1, free);
+    dict_free_all(&outlines, 1, free_outline);
+    dict_free_all(&gradients, 1, free_gradient);
+    dict_free_all(&filters, 1, free);
+    dict_free_all(&fonts, 1, free_font);
+    dict_free_all(&sounds, 1, free);
+    dict_free_all(&interpolations, 1, free);
     cleanUp = 0;
 }
 
 static void freeFontDictionary()
 {
-    dict_free_all(&fonts, free_font);
+    dict_free_all(&fonts, 1, free_font);
 }
 
 static void incrementid()
@@ -993,7 +993,7 @@ static void s_endSprite()
         syntaxerror("internal error(7)");
     /* TODO: before clearing, prepend "<spritename>." to names and
              copy into old instances dict */
-    dict_free_all(&instances, free_instance);
+    dict_free_all(&instances, 1, free_instance);
 
     currentframe = stack[stackpos].oldframe;
     currentrect = stack[stackpos].oldrect;
