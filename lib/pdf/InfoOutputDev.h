@@ -94,9 +94,11 @@ class InfoOutputDev: public OutputDev
     public:
     int x1,y1,x2,y2;
     int num_links;
-    int num_images;
+    int num_ppm_images;
+    int num_jpeg_images;
     int num_fonts;
     int num_polygons;
+    int num_textfields;
 
     gfxfontlist_t*fonts;
 

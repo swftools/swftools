@@ -20,7 +20,8 @@
 InfoOutputDev::InfoOutputDev(XRef*xref) 
 {
     num_links = 0;
-    num_images = 0;
+    num_jpeg_images = 0;
+    num_ppm_images = 0;
     num_fonts = 0;
     num_polygons= 0;
     fonts = 0;
@@ -409,14 +410,16 @@ void InfoOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
 			   GBool inlineImg) 
 {
-    num_images++;
+    if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
+
     OutputDev::drawImageMask(state,ref,str,width,height,invert,inlineImg);
 }
 void InfoOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
 		       int *maskColors, GBool inlineImg)
 {
-    num_images++;
+    if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
+
     OutputDev::drawImage(state,ref,str,width,height,colorMap,maskColors,inlineImg);
 }
 void InfoOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
@@ -426,6 +429,8 @@ void InfoOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				int maskWidth, int maskHeight,
 				GBool maskInvert) 
 {
+    if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
+
     OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskInvert);
 }
 
@@ -436,5 +441,7 @@ void InfoOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *st
 				    int maskWidth, int maskHeight,
 				    GfxImageColorMap *maskColorMap) 
 {
+    if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
+
     OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskColorMap);
 }

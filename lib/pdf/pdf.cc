@@ -488,7 +488,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	    i->pages[t-1].yMax = i->info->y2;
 	    i->pages[t-1].width = i->info->x2 - i->info->x1;
 	    i->pages[t-1].height = i->info->y2 - i->info->y1;
-	    i->pages[t-1].number_of_images = i->info->num_images;
+	    i->pages[t-1].number_of_images = i->info->num_ppm_images + i->info->num_jpeg_images;
 	    i->pages[t-1].number_of_links = i->info->num_links;
 	    i->pages[t-1].number_of_fonts = i->info->num_fonts;
 	    i->pages[t-1].has_info = 1;
