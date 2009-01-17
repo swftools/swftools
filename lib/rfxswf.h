@@ -164,6 +164,7 @@ typedef struct _SWF
 
 // Basic Functions
 
+SWF* swf_OpenSWF(char*filename);
 int  swf_ReadSWF2(reader_t*reader, SWF * swf);   // Reads SWF via callback
 int  swf_ReadSWF(int handle,SWF * swf);     // Reads SWF to memory (malloc'ed), returns length or <0 if fails
 int  swf_WriteSWF2(writer_t*writer, SWF * swf);     // Writes SWF via callback, returns length or <0 if fails

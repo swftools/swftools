@@ -1475,6 +1475,19 @@ int swf_ReadSWF2(reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed
   return reader->pos;
 }
 
+SWF* swf_OpenSWF(char*filename)
+{
+  int fi = open(filename, O_RDONLY|O_BINARY);
+  if(fi<0) {
+      fprintf(stderr, "Failed to open %s\n", filename);
+      return 0;
+  }
+  SWF* swf = rfx_alloc(sizeof(SWF));
+  swf_ReadSWF(fi, swf);
+  close(fi);
+  return swf;
+}
+
 int swf_ReadSWF(int handle, SWF * swf)
 {
   reader_t reader;
