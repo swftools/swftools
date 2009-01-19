@@ -463,7 +463,7 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
     sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
 
-    if(dbg_btm_counter==12) {
+    if(0) {
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
