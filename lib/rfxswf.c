@@ -1591,7 +1591,9 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
   t = swf->firstTag;
   frameCount = 0;
 
-  len += WriteExtraTags(swf, 0);
+  if(swf->firstTag && !no_extra_tags) {
+    len += WriteExtraTags(swf, 0);
+  }
   while(t) {
       len += swf_WriteTag(-1,t);
       if(t->id == ST_DEFINESPRITE && !swf_IsFolded(t)) inSprite++;
@@ -1673,7 +1675,7 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
       return -1;
     }
 
-    if(!no_extra_tags) {
+    if(swf->firstTag && !no_extra_tags) {
         WriteExtraTags(swf, writer);
     }
     t = swf->firstTag;
