@@ -734,7 +734,7 @@ MATRIX * swf_MatrixMapTriangle(MATRIX * m,int dx,int dy,
                     int x0,int y0,int x1,int y1,int x2,int y2);
 int swf_GetNumUsedIDs(TAG * t);
 void swf_GetUsedIDs(TAG * t, int * positions);
-void swf_Relocate(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[a]==0 means id a is free
+char swf_Relocate(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[a]==0 means id a is free
 void swf_RelocateDepth(SWF*swf, char*bitmap); // bitmap is 65536 bytes, bitmap[d]==0 means depth d is free
 
 TAG* swf_Concatenate (TAG*list1,TAG*list2); // warning: both list1 and list2 are invalid after this call.

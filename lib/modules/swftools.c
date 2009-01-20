@@ -966,12 +966,13 @@ void swf_GetUsedIDs(TAG * t, int * positions)
     enumerateUsedIDs(t, 0, callbackFillin, &ptr);
 }
 
-void swf_Relocate (SWF*swf, char*bitmap)
+char swf_Relocate (SWF*swf, char*bitmap)
 {
     TAG*tag;
     int slaveids[65536];
     memset(slaveids, -1, sizeof(slaveids));
     tag = swf->firstTag;
+    char ok = 1;
     while(tag)
     {
 	int num; 
@@ -987,8 +988,7 @@ void swf_Relocate (SWF*swf, char*bitmap)
 
 	    if(!bitmap[id]) { //free
 		newid = id;
-	    }
-	    else {
+	    } else {
 		newid = 0;
 		for (t=1;t<65536;t++)
 		{
@@ -998,6 +998,10 @@ void swf_Relocate (SWF*swf, char*bitmap)
 			break;
 		    }
 		}
+                if(t==65536) {
+                    fprintf(stderr, "swf_Relocate: Couldn't relocate: Out of IDs");
+                    return 0;
+                }
 	    }
 	    bitmap[newid] = 1;
 	    slaveids[id] = newid;
@@ -1015,6 +1019,7 @@ void swf_Relocate (SWF*swf, char*bitmap)
 		if(slaveids[id]<0) {
 		    fprintf(stderr, "swf_Relocate: Mapping id (%d) never encountered before in %s\n", id,
 			    swf_TagGetName(tag));
+                    ok = 0;
 		} else {
 		    id = slaveids[id];
 		    PUT16(&tag->data[ptr[t]], id);
@@ -1023,6 +1028,7 @@ void swf_Relocate (SWF*swf, char*bitmap)
 	}
 	tag=tag->next;
     }
+    return ok;
 }
 
 /* untested */
