@@ -206,7 +206,7 @@ gfxfont_t* InfoOutputDev::createGfxFont(GfxFont*xpdffont, FontInfo*src)
 	}
 
     }
-    msg("<trace> %d glyphs.", t, font->num_glyphs);
+    //msg("<trace> %d glyphs.", t, font->num_glyphs);
     return font;
 }
 
