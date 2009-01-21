@@ -24,6 +24,7 @@ src/parser.yy.c
 lib/*.a
 c
 t
+r
 cming
 gen
 Makefile
