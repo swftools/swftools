@@ -21,7 +21,6 @@ typedef struct _swf_page_internal
 typedef struct _swf_doc_internal
 {
     map16_t*id2char;
-    int clips;
     SWF swf;
     int width,height;
     MATRIX m;
@@ -409,9 +408,11 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
     TAG*tag = startTag;
     int frame = 1;
     int insprite = 0;
+
+    SWF*swf = rfx_calloc(sizeof(SWF));
+    swf->firstTag = startTag;
+
     for(;tag;tag = tag->next) {
-	if(tag->id == ST_END) 
-	    break;
 	if(tag->id == ST_DEFINESPRITE) {
 	    while(tag->id != ST_END)
 		tag = tag->next;
@@ -437,7 +438,7 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
 	    U16 depth = swf_GetDepth(tag);
 	    map16_remove_id(depthmap, depth);
 	}
-	if(tag->id == ST_SHOWFRAME || tag->id == ST_END) {
+	if(tag->id == ST_SHOWFRAME || tag->id == ST_END || !tag->next) {
 	    if(frame == frame_to_extract) {
 		return depthmap;
 	    }
@@ -446,20 +447,13 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
 		map16_enumerate(depthmap, increaseAge, 0);
 	    }
 	}
+	if(tag->id == ST_END) 
+	    break;
     }
-    fprintf(stderr, "gfxsource_swf: frame %d not found\n", frame_to_extract);
     return depthmap;
 }
 
 // ---- rendering ----
-
-static void stopClippings(int from, render_t*r)
-{
-    int t;
-    for(t=from;t<r->clips;t++)
-	r->device->endclip(r->device);
-    r->clips = from;
-}
 
 void swf_ShapeApplyMatrix(SHAPE2*shape, MATRIX*m)
 {
@@ -513,7 +507,6 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
 	       } else { 
 		   r->device->startclip(r->device, line);
                    r->clips_waiting[p->po.clipdepth]++;
-		   r->clips++;
 	       }
 	   }
 	   gfxline_free(line);
@@ -554,11 +547,23 @@ static void placeObject(void*self, int id, void*data)
         return;
     }
     if(c->type == TYPE_SPRITE) {
-        int oldclip = r->clips;
+        int*old_clips_waiting = r->clips_waiting;
+        r->clips_waiting = rfx_calloc(sizeof(r->clips_waiting[0])*65536);
+
         sprite_t* s = (sprite_t*)c->data;
-        map16_t* depths = extractFrame(c->tag, p->age % s->frameCount);
+
+        map16_t* depths = extractFrame(c->tag->next, p->age % s->frameCount);
         map16_enumerate(depths, placeObject, r);
-        stopClippings(oldclip, r);
+       
+        int t;
+        for(t=0;t<65536;t++) {
+            int i;
+            for(i=0; i<r->clips_waiting[t]; i++) {
+                r->device->endclip(r->device);
+            }
+        }
+        free(r->clips_waiting);
+        r->clips_waiting = old_clips_waiting;
         return;
     }
     renderCharacter(r, p, c);
@@ -587,9 +592,11 @@ void swfpage_render(gfxpage_t*page, gfxdevice_t*output)
     int t;
     for(t=0;t<65536;t++) {
         int i;
+
         for(i=0; i<r.clips_waiting[t]; i++) {
             output->endclip(output);
         }
+
 	if(depths->ids[t]) {
 	    placeObject(&r, t, depths->ids[t]);
 	}
@@ -699,11 +706,4 @@ gfxsource_t*gfxsource_swf_create()
     src->open = swf_open;
     return src;
 }
-
-
-
-
-
-
-
 
