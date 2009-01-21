@@ -1,0 +1,126 @@
+top_builddir = .
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+
+programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) @PDF2SWF@
+opt_programs = swfbytes$(E)
+all: $(programs)
+
+include Makefile.common
+include Makefile.depend
+
+executables = src/wav2swf.c src/png2swf.c src/pdf2swf.c src/gif2swf.c \
+	src/swfcombine.c src/swfdump.c src/swfextract.c src/swfstrings.c \
+	src/swfbbox.c src/jpeg2swf.c src/swfrender.c \
+	src/font2swf.c src/swfbytes.c src/swfc.c \
+	src/swfc-feedback.c src/swfc-history.c src/swfc-interpolation.c src/parser.yy.c
+
+lame_objects = lib/lame/psymodel.$(O) lib/lame/fft.$(O) lib/lame/newmdct.$(O) lib/lame/quantize.$(O) lib/lame/takehiro.$(O) lib/lame/reservoir.$(O) lib/lame/quantize_pvt.$(O) lib/lame/vbrquantize.$(O) lib/lame/encoder.$(O) lib/lame/id3tag.$(O) lib/lame/version.$(O) lib/lame/tables.$(O) lib/lame/util.$(O) lib/lame/bitstream.$(O) lib/lame/set_get.$(O) lib/lame/VbrTag.$(O) lib/lame/lame.$(O)
+lame_in_source = @lame_in_source@
+
+h263_objects = lib/h.263/dct.$(O) lib/h.263/h263tables.$(O) lib/h.263/swfvideo.$(O)
+
+as12compiler_objects = lib/action/assembler.$(O) lib/action/compile.$(O) lib/action/lex.swf4.$(O) lib/action/lex.swf5.$(O) lib/action/libming.$(O) lib/action/swf4compiler.tab.$(O) lib/action/swf5compiler.tab.$(O) lib/action/actioncompiler.$(O)
+as12compiler_in_source = $(as12compiler_objects)
+
+as3compiler_objects = lib/as3/abc.$(O) lib/as3/utils.$(O) lib/as3/files.$(O)
+
+rfxswf_modules =  lib/modules/swfbits.c lib/modules/swfaction.c lib/modules/swfdump.c lib/modules/swfcgi.c lib/modules/swfbutton.c lib/modules/swftext.c lib/modules/swffont.c lib/modules/swftools.c lib/modules/swfsound.c lib/modules/swfshape.c lib/modules/swfobject.c lib/modules/swfdraw.c lib/modules/swffilter.c lib/modules/swfrender.c lib/h.263/swfvideo.c
+
+base_objects=lib/q.$(O) lib/utf8.$(O) lib/png.$(O) lib/jpeg.$(O) lib/wav.$(O) lib/mp3.$(O) lib/os.$(O) lib/bitio.$(O) lib/log.$(O) lib/mem.$(O) 
+gfx_objects=lib/gfxtools.$(O) lib/gfxfont.$(O) lib/gfxpoly.$(O) lib/devices/dummy.$(O) lib/devices/file.$(O) lib/devices/render.$(O) lib/devices/text.$(O) lib/devices/record.$(O) lib/devices/ops.$(O) lib/devices/polyops.$(O) lib/devices/bbox.$(O) lib/devices/rescale.$(O) #@DEVICE_OPENGL@
+
+art_objects = lib/art/art_affine.$(O) lib/art/art_alphagamma.$(O) lib/art/art_bpath.$(O) lib/art/art_gray_svp.$(O) lib/art/art_misc.$(O) lib/art/art_pixbuf.$(O) lib/art/art_rect.$(O) lib/art/art_rect_svp.$(O) lib/art/art_rect_uta.$(O) lib/art/art_render.$(O) lib/art/art_render_gradient.$(O) lib/art/art_render_mask.$(O) lib/art/art_render_svp.$(O) lib/art/art_rgb.$(O) lib/art/art_rgb_a_affine.$(O) lib/art/art_rgb_affine.$(O) lib/art/art_rgb_affine_private.$(O) lib/art/art_rgb_bitmap_affine.$(O) lib/art/art_rgb_pixbuf_affine.$(O) lib/art/art_rgb_rgba_affine.$(O) lib/art/art_rgb_svp.$(O) lib/art/art_rgba.$(O) lib/art/art_svp.$(O) lib/art/art_svp_intersect.$(O) lib/art/art_svp_ops.$(O) lib/art/art_svp_point.$(O) lib/art/art_svp_render_aa.$(O) lib/art/art_svp_vpath.$(O) lib/art/art_svp_vpath_stroke.$(O) lib/art/art_svp_wind.$(O) lib/art/art_uta.$(O) lib/art/art_uta_ops.$(O) lib/art/art_uta_rect.$(O) lib/art/art_uta_svp.$(O) lib/art/art_uta_vpath.$(O) lib/art/art_vpath.$(O) lib/art/art_vpath_bpath.$(O) lib/art/art_vpath_dash.$(O) lib/art/art_vpath_svp.$(O)
+art_in_source = @art_in_source@
+
+rfxswf_objects=lib/modules/swfaction.$(O) lib/modules/swfbits.$(O) lib/modules/swfbutton.$(O) lib/modules/swfcgi.$(O) lib/modules/swfdraw.$(O) lib/modules/swfdump.$(O) lib/modules/swffilter.$(O) lib/modules/swffont.$(O) lib/modules/swfobject.$(O) lib/modules/swfrender.$(O) lib/modules/swfshape.$(O) lib/modules/swfsound.$(O) lib/modules/swftext.$(O) lib/modules/swftools.$(O)
+ocr_objects=lib/gocr/box.$(O) lib/gocr/database.$(O) lib/gocr/detect.$(O) lib/gocr/job.$(O) lib/gocr/lines.$(O) lib/gocr/list.$(O) lib/gocr/ocr0.$(O) lib/gocr/ocr0n.$(O) lib/gocr/ocr1.$(O) lib/gocr/otsu.$(O) lib/gocr/output.$(O) lib/gocr/pgm2asc.$(O) lib/gocr/pixel.$(O) lib/gocr/progress.$(O) lib/gocr/remove.$(O) lib/gocr/unicode.$(O)
+
+OBJECTS=$(executables) $(lame_in_source) $(h263_objects) $(as12compiler_in_source)  \
+	$(rfxswf_modules) $(base_objects) $(gfx_objects) $(art_objects) \
+	$(rfx_objects) $(ocr_objects)
+
+SOURCES=$(patsubst %.$(O),%.c,$(OBJECTS))
+
+
+libpdf_objects = lib/pdf/GFXOutputDev.$(O) lib/pdf/InfoOutputDev.$(O) lib/pdf/BitmapOutputDev.$(O) lib/pdf/FullBitmapOutputDev.$(O) lib/pdf/pdf.$(O) lib/pdf/fonts.$(O)
+
+xpdf_in_source = @xpdf_in_source@
+xpdf_objects =  lib/pdf/xpdf/GHash.$(O) lib/pdf/xpdf/GList.$(O) lib/pdf/xpdf/GString.$(O) lib/pdf/xpdf/gmem.$(O) lib/pdf/xpdf/gfile.$(O) \
+		  lib/pdf/xpdf/FoFiTrueType.$(O) lib/pdf/xpdf/FoFiType1.$(O) lib/pdf/xpdf/FoFiType1C.$(O) lib/pdf/xpdf/FoFiBase.$(O) lib/pdf/xpdf/FoFiEncodings.$(O) \
+		  lib/pdf/xpdf/OutputDev.$(O) lib/pdf/xpdf/PDFDoc.$(O) lib/pdf/xpdf/Error.$(O) lib/pdf/xpdf/Stream.$(O) lib/pdf/xpdf/Object.$(O) \
+		  lib/pdf/xpdf/Decrypt.$(O) lib/pdf/xpdf/Array.$(O) lib/pdf/xpdf/XRef.$(O) lib/pdf/xpdf/Dict.$(O) lib/pdf/xpdf/Parser.$(O) \
+		  lib/pdf/xpdf/Lexer.$(O) lib/pdf/xpdf/Outline.$(O) lib/pdf/xpdf/PDFDocEncoding.$(O) lib/pdf/xpdf/Catalog.$(O) \
+		  lib/pdf/xpdf/Link.$(O) lib/pdf/xpdf/GlobalParams.$(O) lib/pdf/xpdf/JBIG2Stream.$(O) lib/pdf/xpdf/Page.$(O) lib/pdf/xpdf/JPXStream.$(O) \
+		  lib/pdf/xpdf/JArithmeticDecoder.$(O) lib/pdf/xpdf/Gfx.$(O) lib/pdf/xpdf/GfxFont.$(O) lib/pdf/xpdf/CMap.$(O) lib/pdf/xpdf/CharCodeToUnicode.$(O) \
+		  lib/pdf/xpdf/PSTokenizer.$(O) lib/pdf/xpdf/FontEncodingTables.$(O) lib/pdf/xpdf/BuiltinFont.$(O) lib/pdf/xpdf/BuiltinFontTables.$(O) \
+		  lib/pdf/xpdf/GfxState.$(O) lib/pdf/xpdf/Function.$(O) lib/pdf/xpdf/Annot.$(O) lib/pdf/xpdf/NameToCharCode.$(O) lib/pdf/xpdf/UnicodeMap.$(O) \
+		  lib/pdf/xpdf/SecurityHandler.$(O) #lib/pdf/xpdf/OptionalContent.$(O)
+
+splash_in_source = @splash_in_source@
+splash_objects = lib/pdf/xpdf/SplashOutputDev.$(O) lib/pdf/xpdf/SplashFont.$(O) lib/pdf/xpdf/SplashState.$(O) lib/pdf/xpdf/Splash.$(O) \
+		 lib/pdf/xpdf/SplashBitmap.$(O) lib/pdf/xpdf/SplashClip.$(O) lib/pdf/xpdf/SplashPattern.$(O) \
+		 lib/pdf/xpdf/SplashFontEngine.$(O) lib/pdf/xpdf/SplashFontFile.$(O) lib/pdf/xpdf/SplashFontFileID.$(O) \
+		 lib/pdf/xpdf/SplashScreen.$(O) lib/pdf/xpdf/SplashPath.$(O) lib/pdf/xpdf/SplashXPath.$(O) lib/pdf/xpdf/SplashXPathScanner.$(O) \
+		 lib/pdf/xpdf/SplashFTFontEngine.$(O) lib/pdf/xpdf/SplashFTFontFile.$(O) lib/pdf/xpdf/SplashFTFont.$(O)
+
+Makefile.deps: $(SOURCES)
+	rm -f Makefile.deps
+	for s in $(SOURCES);do $(DEP) $$s >> Makefile.deps || >Makefile.deps;done
+	@echo "Dependencies have been regenerated. Please re-run make."
+	@false
+
+%.$(O): %.c Makefile.deps
+	$(C) $< -o $@
+
+lib/libpdf$(A):
+	cd lib/pdf;$(MAKE)
+
+# TODO: include the following rule only if lex is available
+src/parser.yy.c: src/parser.lex
+	flex -B -s -osrc/parser.yy.c src/parser.lex
+
+%$(E): src/%.$(O) lib/librfxswf$(A) lib/libbase$(A)
+	$(L) $< -o $@ lib/librfxswf$(A) lib/libbase$(A) $(LIBS)
+
+PDF2SWF_OBJ=lib/libpdf$(A) lib/devices/polyops.$(O) lib/devices/swf.$(O) lib/librfxswf$(A) lib/libgfx$(A) lib/libbase$(A)
+pdf2swf$(E): src/pdf2swf.$(O) $(PDF2SWF_OBJ)
+	$(LL) src/pdf2swf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
+	$(STRIP) $@
+
+SWFRENDER_OBJ=lib/libgfxswf$(A) lib/libgfx$(A) lib/librfxswf$(A) lib/libbase$(A) 
+swfrender$(E): src/swfrender.$(O) $(SWFRENDER_OBJ)
+	$(L) src/swfrender.$(O) -o $@ $(SWFRENDER_OBJ) $(LIBS)
+
+swfc$(E): src/parser.yy.$(O) src/swfc.$(O) src/swfc-feedback.$(O) src/swfc-history.$(O) src/swfc-interpolation.$(O) lib/librfxswf$(A) lib/libbase$(A) 
+	$(L) src/parser.yy.$(O) src/swfc.$(O) src/swfc-feedback.$(O) src/swfc-history.$(O) src/swfc-interpolation.$(O) -o $@ lib/librfxswf$(A) lib/libbase$(A) $(LIBS)
+	$(STRIP) $@
+
+install:
+	$(mkinstalldirs) $(bindir)
+	$(mkinstalldirs) $(man1dir)
+	@for file in $(programs) $(opt_programs); do if test -f $$file;then $(INSTALL_BIN);$(INSTALL_MAN1);fi;done
+	
+uninstall:
+	@for file in $(programs) $(opt_programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
+
+clean: 
+	for d in . src lib lib/pdf lib/as3 lib/lame lib/action lib/modules swfs;do rm -f $$d/*.o $$d/*.obj $$d/*.lo $$d/*.la $$d/*~ $$d/gmon.out;done
+	rm -f $(programs)
+	@rm -f gif2swf swfbbox swfbytes swfbytes swfdump pdf2swf wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf
+	@rm -f gif2swf.exe swfbytes.exe swfbytes.exe pdf2swf.exe swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
+	@rm -f gif2swf$(E) pdf2swf$(E) swfbytes$(E) swfbytes$(E) swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)
+
+doc:
+	perl parsedoc.pl src/wav2swf.doc
+	perl parsedoc.pl src/png2swf.doc
+	perl parsedoc.pl src/gif2swf.doc
+	perl parsedoc.pl src/swfbbox.doc
+	perl parsedoc.pl src/font2swf.doc
+	perl parsedoc.pl src/jpeg2swf.doc
+	perl parsedoc.pl src/swfcombine.doc
+	perl parsedoc.pl src/swfdump.doc
+	perl parsedoc.pl src/swfc.doc
+	perl parsedoc.pl src/swfbytes.doc
+
+.PHONY: clean doc 
