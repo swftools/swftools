@@ -1,1 +1,15 @@
-box buttontest dumpfont edittext glyphshape jpegtest shape1 sound sprites text transtest zlibtest test.html
+box
+buttontest
+dumpfont
+edittext
+glyphshape
+jpegtest
+shape1
+sound
+sprites
+text
+transtest
+hexfont
+protect
+zlibtest
+test.html
