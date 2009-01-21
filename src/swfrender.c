@@ -15,6 +15,7 @@
 static struct options_t options[] = {
 {"h", "help"},
 {"o", "output"},
+{"p", "pages"},
 {"l", "legacy"},
 {"V", "version"},
 {"X", "width"},
@@ -26,6 +27,7 @@ static int ng = 1;
 static char*filename = 0;
 static char*outputname = "output.png";
 static int quantize = 0;
+static char*pagerange = 0;
 
 static int width = 0;
 static int height = 0;
@@ -52,6 +54,9 @@ int args_callback_option(char*name,char*val)
     } else if(!strcmp(name, "q")) {
 	quantize = 1;
 	return 0;
+    } else if(!strcmp(name, "p")) {
+	pagerange = val;
+	return 1;
     } else if(!strcmp(name, "s")) {
 	char*s = strdup(val);
 	char*c = strchr(s, '=');
@@ -170,6 +175,8 @@ int main(int argn, char*argv[])
 
 	int t;
 	for(t=1;t<=doc->num_pages;t++) {
+            if(!is_in_range(t, pagerange))
+                continue;
 	    gfxpage_t* page = doc->getpage(doc, t);
 	    dev->startpage(dev, page->width, page->height);
 	    page->render(page, dev);
