@@ -1,1 +1,12 @@
-Makefile Makefile.common config.h config.log config.cache libtool release config.status 3rdparty
+Makefile
+Makefile.common
+config.h
+config.log
+config.cache
+libtool
+release
+config.status
+3rdparty
+*.o
+*.pdf
+*.swf
