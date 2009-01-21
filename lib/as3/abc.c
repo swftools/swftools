@@ -720,8 +720,6 @@ void* swf_ReadABC(TAG*tag)
     }
 
     pool_read(pool, tag);
-    pool_dump(pool, stdout, 2);
-    printf("pool is %d bytes\n", tag->pos);
 
     int num_methods = swf_GetU30(tag);
     DEBUG printf("%d methods\n", num_methods);
