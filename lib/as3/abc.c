@@ -345,7 +345,7 @@ static void dump_method(FILE*fo, const char*prefix,
         return_type = strdup("void");
 
     fprintf(fo, "%s", prefix);
-    fprintf(fo, "%s %s", attr, type);
+    fprintf(fo, "%s %s ", attr, type);
     fprintf(fo, "%s %s=%s", return_type, name, m->name);
     params_dump(fo, m->parameters, m->optional_parameters);
     fprintf(fo, "(%d params, %d optional)\n", list_length(m->parameters), list_length(m->optional_parameters));
