@@ -7,7 +7,7 @@ opt_programs = swfbytes$(E)
 all: $(programs)
 
 include Makefile.common
-include Makefile.depend
+include Makefile.deps
 
 executables = src/wav2swf.c src/png2swf.c src/pdf2swf.c src/gif2swf.c \
 	src/swfcombine.c src/swfdump.c src/swfextract.c src/swfstrings.c \
