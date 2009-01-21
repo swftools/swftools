@@ -1,6 +1,7 @@
-Usage: %s [-OS] file.swf
+Usage: %s [-v] file.swf > file.hexdump
+OR:    %s file.hexdump
 
-Tool for simplifying hex-editing SWF files.
+Tool for simplifying the hex-editing of SWF files.
 
 With this tool and a text editor, you can perform some basic
 editing operations on SWF files.
