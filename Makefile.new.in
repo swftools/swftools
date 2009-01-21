@@ -2,7 +2,7 @@ top_builddir = .
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 
-programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) @PDF2SWF@
+programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) as3compile$(E) swfrender$(E) @PDF2SWF@
 opt_programs = swfbytes$(E)
 all: $(programs)
 
@@ -107,7 +107,7 @@ uninstall:
 clean: 
 	for d in . src lib lib/pdf lib/as3 lib/lame lib/action lib/modules swfs;do rm -f $$d/*.o $$d/*.obj $$d/*.lo $$d/*.la $$d/*~ $$d/gmon.out;done
 	rm -f $(programs)
-	@rm -f gif2swf swfbbox swfbytes swfbytes swfdump pdf2swf wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf
+	@rm -f gif2swf swfbbox swfbytes swfbytes swfdump pdf2swf wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf as3compile
 	@rm -f gif2swf.exe swfbytes.exe swfbytes.exe pdf2swf.exe swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe
 	@rm -f gif2swf$(E) pdf2swf$(E) swfbytes$(E) swfbytes$(E) swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E)
 
@@ -122,5 +122,6 @@ doc:
 	perl parsedoc.pl src/swfdump.doc
 	perl parsedoc.pl src/swfc.doc
 	perl parsedoc.pl src/swfbytes.doc
+	perl parsedoc.pl src/as3compile.doc
 
 .PHONY: clean doc 
