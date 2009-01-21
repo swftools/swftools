@@ -84,6 +84,8 @@ gfxfont_t*gfxfontlist_findfont(gfxfontlist_t*list, char*id);
 char gfxfontlist_hasfont(gfxfontlist_t*list, gfxfont_t*font);
 void gfxfontlist_free(gfxfontlist_t*list, char deletefonts);
 
+gfxbbox_t* gfxline_isrectangle(gfxline_t*_l);
+
 gfxline_t*gfxline_makerectangle(int x1, int y1, int x2, int y2);
 void gfxline_show(gfxline_t*line, FILE*fi);
 

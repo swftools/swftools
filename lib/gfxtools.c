@@ -1,10 +1,10 @@
-/* gfxtools.c 
+/* gfxtools.c
 
    Various utility functions for dealing with gfxdevices.
 
    Part of the swftools package.
 
-   Copyright (c) 2005 Matthias Kramm <kramm@quiss.org> 
+   Copyright (c) 2005 Matthias Kramm <kramm@quiss.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -90,9 +90,9 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     }
 
     l->type = gfx_splineTo;
-    d->x = l->x = x; 
+    d->x = l->x = x;
     d->y = l->y = y;
-    l->sx = sx; 
+    l->sx = sx;
     l->sy = sy;
     l->next = 0;
     if(i->next)
@@ -145,7 +145,7 @@ typedef struct cspline_t
 
 static void mkspline(qspline_abc_t*s, double x, double y, gfxline_t*l)
 {
-    /* 
+    /*
        Form 1: x = t*t*l->x + 2*t*(1-t)*l->sx + (1-t)*(1-t)*x;
        Form 2: x = a*t*t + b*t + c
     */
@@ -182,7 +182,7 @@ static double get_spline_len(qspline_abc_t*s)
 	double dy = s->ay*(2*i+1)*r2 + s->by*r;
 	len += sqrt(dx*dx+dy*dy);
     }
-    /*printf("Spline from %f,%f to %f,%f has len %f (%f)\n", s->cx, s->cy, 
+    /*printf("Spline from %f,%f to %f,%f has len %f (%f)\n", s->cx, s->cy,
 	    s->cx + s->bx + s->ax,
 	    s->cy + s->by + s->ay, len,
 	    sqrt((s->bx + s->ax)*(s->bx + s->ax) + (s->by + s->ay)*(s->by + s->ay))
@@ -334,20 +334,31 @@ gfxline_t * gfxline_clone(gfxline_t*line)
     }
     return dest;
 }
+
+static char splineIsStraight(double x, double y, gfxline_t*l)
+{
+    if(l->type == gfx_moveTo)
+        return 0;
+    if(l->type == gfx_lineTo)
+        return 1;
+    double dx = l->x-x;
+    double dy = l->y-y;
+    double sx = l->sx-x;
+    double sy = l->sy-y;
+    if(fabs(dx*sy - dy*sx) < 0.000001 && (dx*sx + dy*sy) >= 0) {
+        return 1;
+    }
+    return 0;
+}
+
 void gfxline_optimize(gfxline_t*line)
 {
     gfxline_t*l = line;
     /* step 1: convert splines to lines, where possible */
     double x=0,y=0;
     while(l) {
-	if(l->type == gfx_splineTo) {
-	    double dx = l->x-x;
-	    double dy = l->y-y;
-	    double sx = l->sx-x;
-	    double sy = l->sy-y;
-	    if(fabs(dx*sy - dy*sx) < 0.000001 && (dx*sx + dy*sy) >= 0) {
-		l->type = gfx_lineTo;
-	    }
+	if(l->type == gfx_splineTo && splineIsStraight(x,y,l)) {
+	    l->type = gfx_lineTo;
 	}
 	x = l->x;
 	y = l->y;
@@ -457,7 +468,7 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
     unsigned int istart = 0;
     int num = 0;
     int level = 0;
-    
+
     while(istart<0x80000000)
     {
 	unsigned int iend = istart + istep;
@@ -482,14 +493,14 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
 
 	/* depending on where we are in the spline, we either try to match
 	   the left or right tangent */
-	if(start<0.5) 
+	if(start<0.5)
 	    left=1;
 	/* get derivative */
 	pos = left?start:end;
 	qpos = pos*pos;
-	test.control.x = s->end.x*(3*qpos) + 3*s->control2.x*(2*pos-3*qpos) + 
+	test.control.x = s->end.x*(3*qpos) + 3*s->control2.x*(2*pos-3*qpos) +
 		    3*s->control1.x*(1-4*pos+3*qpos) + s->start.x*(-3+6*pos-3*qpos);
-	test.control.y = s->end.y*(3*qpos) + 3*s->control2.y*(2*pos-3*qpos) + 
+	test.control.y = s->end.y*(3*qpos) + 3*s->control2.y*(2*pos-3*qpos) +
 		    3*s->control1.y*(1-4*pos+3*qpos) + s->start.y*(-3+6*pos-3*qpos);
 	if(left) {
 	    test.control.x *= (end-start)/2;
@@ -534,12 +545,12 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
 	}
 #else // quadratic error: *much* faster!
 
-	/* convert control point representation to 
+	/* convert control point representation to
 	   d*x^3 + c*x^2 + b*x + a */
 	dx= s->end.x  - s->control2.x*3 + s->control1.x*3 - s->start.x;
 	dy= s->end.y  - s->control2.y*3 + s->control1.y*3 - s->start.y;
-	
-	/* we need to do this for the subspline between [start,end], not [0,1] 
+
+	/* we need to do this for the subspline between [start,end], not [0,1]
 	   as a transformation of t->a*t+b does nothing to highest coefficient
 	   of the spline except multiply it with a^3, we just need to modify
 	   d here. */
@@ -547,9 +558,9 @@ static int approximate3(const cspline_t*s, qspline_t*q, int size, double quality
 	 dx*=m*m*m;
 	 dy*=m*m*m;
 	}
-	
+
 	/* use the integral over (f(x)-g(x))^2 between 0 and 1
-	   to measure the approximation quality. 
+	   to measure the approximation quality.
 	   (it boils down to const*d^2) */
 	recurse = (dx*dx + dy*dy > quality2);
 #endif
@@ -595,7 +606,7 @@ void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, doubl
     c.control2.y = c2y;
     c.end.x = x;
     c.end.y = y;
-    
+
     num = approximate3(&c, q, 128, maxerror);
 
     for(t=0;t<num;t++) {
@@ -669,20 +680,6 @@ gfxbbox_t gfxline_getbbox(gfxline_t*line)
 	line = line->next;
     }
     return bbox;
-}
-
-void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
-{
-    while(line) {
-	if(line->type == gfx_moveTo) {
-	    fprintf(fi, "%smoveTo %.2f %.2f\n", prefix, line->x, line->y);
-	} else if(line->type == gfx_lineTo) {
-	    fprintf(fi, "%slineTo %.2f %.2f\n", prefix, line->x, line->y);
-	} else if(line->type == gfx_splineTo) {
-	    fprintf(fi, "%ssplineTo (%.2f %.2f) %.2f %.2f\n", prefix, line->sx, line->sy, line->x, line->y);
-	}
-	line = line->next;
-    }
 }
 
 gfxline_t* gfxline_append(gfxline_t*line1, gfxline_t*line2)
@@ -832,6 +829,71 @@ gfxline_t*gfxline_makerectangle(int x1,int y1,int x2, int y2)
     return line;
 }
 
+gfxbbox_t* gfxline_isrectangle(gfxline_t*_l)
+{
+    if(!_l)
+        return 0;
+
+    gfxline_t*l = gfxline_clone(_l);
+    gfxline_optimize(l);
+
+    double x1,x2,y1,y2;
+    int xc=0,yc=0;
+    char corners=0;
+
+    char prev=0;
+    char fail=0;
+    for(;l; l=l->next) {
+        double x = l->x;
+        double y = l->y;
+
+        char top=0,left=0;
+
+        if(xc==2 && x!=x1 && x!=x2) {fail=1;break;}
+        else if(xc>=1 && x==x1) {left=0;}
+        else if(xc==2 && x==x2) {left=1;}
+        else if(xc==1 && x!=x1) {x2 = x; xc=2; left=1;}
+        else if(xc==0) {x1 = x; xc=1;left=0;}
+        else {fprintf(stderr, "Internal error in rectangle detection\n");}
+
+        if(yc==2 && y!=y1 && y!=y2) {fail=1;break;}
+        else if(yc>=1 && y==y1) {top=0;}
+        else if(yc==2 && y==y2) {top=1;}
+        else if(yc==1 && y!=y1) {y2 = y; yc=2; top=1;}
+        else if(yc==0) {y1 = y; yc=1;top=0;}
+        else {fprintf(stderr, "Internal error in rectangle detection\n");}
+
+        char pos=top<<1|left;
+
+        if((pos^prev)==3) {
+            /* diagonal lines not allowed */
+            fail=1;break;
+        }
+        prev = pos;
+
+        /* no corner except the first one may be touched twice */
+        if(pos && (corners & 1<<pos)) {
+            fail=1;break;
+        }
+        /* mark which corners have been touched so far */
+        corners |= 1<<pos;
+    }
+    if(fail) {
+        gfxline_free(l);
+        return 0;
+    }
+
+    if(corners!=0x0f) return 0; // not all 4 corners reached
+
+    if(x2<x1) {double x = x2;x2=x1;x1=x;}
+    if(y2<y1) {double y = y2;y2=y1;y1=y;}
+
+    gfxbbox_t*r = malloc(sizeof(gfxbbox_t));
+    r->xmin = x1; r->ymin = y1;
+    r->xmax = x2; r->ymax = y2;
+    return r;
+}
+
 void gfximage_transform(gfximage_t*img, gfxcxform_t*cxform)
 {
     int t;
@@ -862,3 +924,17 @@ void gfximage_transform(gfximage_t*img, gfxcxform_t*cxform)
 	pixel->a = a;
     }
 }
+void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
+{
+    while(line) {
+	if(line->type == gfx_moveTo) {
+	    fprintf(fi, "%smoveTo %.2f %.2f\n", prefix, line->x, line->y);
+	} else if(line->type == gfx_lineTo) {
+	    fprintf(fi, "%slineTo %.2f %.2f\n", prefix, line->x, line->y);
+	} else if(line->type == gfx_splineTo) {
+	    fprintf(fi, "%ssplineTo (%.2f %.2f) %.2f %.2f\n", prefix, line->sx, line->sy, line->x, line->y);
+	}
+	line = line->next;
+    }
+}
+
