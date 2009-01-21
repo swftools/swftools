@@ -1253,6 +1253,7 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
     int t;
     RGBA color;
 
+    swf_OptimizeTagOrder(swf);
     swf_FoldAll(swf);
     
     character_t* idtable = (character_t*)rfx_calloc(sizeof(character_t)*65536);            // id to character mapping
