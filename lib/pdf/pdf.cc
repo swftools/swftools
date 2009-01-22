@@ -150,6 +150,12 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 	outputDev->setParameter(p->name, p->value);
 	p = p->next;
     }
+    p = pi->parameters.device_config;
+    while(p) {
+	outputDev->setParameter(p->name, p->value);
+	p = p->next;
+    }
+
     outputDev->setPageMap(pi->pagemap, pi->pagemap_pos);
     outputDev->setMove(x,y);
     outputDev->setClip(x1,y1,x2,y2);
