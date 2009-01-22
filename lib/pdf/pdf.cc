@@ -182,11 +182,13 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
     pi->doc->processLinks((OutputDev*)outputDev, page->nr);
     outputDev->finishPage();
     outputDev->setDevice(0);
+    delete outputDev;
 
     if(middev) {
 	gfxdevice_rescale_setdevice(middev, 0x00000000);
 	middev->finish(middev);
     }
+
 }
 
     
