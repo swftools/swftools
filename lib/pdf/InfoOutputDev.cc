@@ -17,14 +17,18 @@
 #include "../log.h"
 #include <math.h>
 
+/* there's not yet a way to set this */
+int config_fontquality = 10;
+int config_bigchar = 0;
+
 InfoOutputDev::InfoOutputDev(XRef*xref) 
 {
     num_links = 0;
     num_jpeg_images = 0;
     num_ppm_images = 0;
+    num_textfields = 0;
     num_fonts = 0;
     num_polygons= 0;
-    fonts = 0;
     currentfont = 0;
     currentglyph = 0;
     id2font = new GHash(1);
@@ -54,8 +58,9 @@ void FontInfo::grow(int size)
 	this->num_glyphs = size;
     }
 }
-FontInfo::FontInfo()
+FontInfo::FontInfo(char*id)
 {
+    this->id = strdup(id);
     this->charid2glyph = 0;
     this->seen = 0;
     this->num_glyphs = 0;
@@ -68,6 +73,7 @@ FontInfo::FontInfo()
 }
 FontInfo::~FontInfo()
 {
+    if(this->id) {free(this->id);this->id=0;}
     this->font = 0;
     if(this->charid2glyph) {
 	free(this->charid2glyph);
@@ -83,46 +89,8 @@ FontInfo::~FontInfo()
     }
     free(glyphs);glyphs=0;
 }
-GBool InfoOutputDev::upsideDown() {return gTrue;}
-GBool InfoOutputDev::useDrawChar() {return gTrue;}
-GBool InfoOutputDev::interpretType3Chars() {return gTrue;}
-GBool InfoOutputDev::useTilingPatternFill() {return gTrue;}
 
-void InfoOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
-{
-    double x1,y1,x2,y2;
-    state->transform(crop_x1,crop_y1,&x1,&y1);
-    state->transform(crop_x2,crop_y2,&x2,&y2);
-    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
-    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-    this->x1 = (int)x1;
-    this->y1 = (int)y1;
-    this->x2 = (int)x2;
-    this->y2 = (int)y2;
-    msg("<verbose> Generating info structure for page %d", pageNum);
-}
-void InfoOutputDev::endPage()
-{
-}
-void InfoOutputDev::drawLink(Link *link, Catalog *catalog) 
-{
-    num_links++;
-}
-   
-/* there's not yet a way to set this */
-int config_fontquality = 10;
-int config_bigchar = 0;
-
-/*  } else if(!strcmp(key,"fontquality")) {
-        this->config_fontquality = atof(value);
-	if(this->config_fontquality<=1)
-	    this->config_fontquality=1;
-    } else if(!strcmp(key,"bigchar")) {
-        this->config_bigchar = atoi(value);
-    }
- */
-
-gfxfont_t* InfoOutputDev::createGfxFont(GfxFont*xpdffont, FontInfo*src)
+gfxfont_t* createGfxFont(FontInfo*src)
 {
     gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
     memset(font, 0, sizeof(gfxfont_t));
@@ -206,9 +174,53 @@ gfxfont_t* InfoOutputDev::createGfxFont(GfxFont*xpdffont, FontInfo*src)
 	}
 
     }
-    //msg("<trace> %d glyphs.", t, font->num_glyphs);
     return font;
 }
+
+
+gfxfont_t* FontInfo::getGfxFont()
+{
+    if(!this->gfxfont) {
+        this->gfxfont = createGfxFont(this);
+        this->gfxfont->id = strdup(this->id);
+    }
+    return this->gfxfont;
+}
+
+GBool InfoOutputDev::upsideDown() {return gTrue;}
+GBool InfoOutputDev::useDrawChar() {return gTrue;}
+GBool InfoOutputDev::interpretType3Chars() {return gTrue;}
+GBool InfoOutputDev::useTilingPatternFill() {return gTrue;}
+
+void InfoOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
+{
+    double x1,y1,x2,y2;
+    state->transform(crop_x1,crop_y1,&x1,&y1);
+    state->transform(crop_x2,crop_y2,&x2,&y2);
+    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
+    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
+    this->x1 = (int)x1;
+    this->y1 = (int)y1;
+    this->x2 = (int)x2;
+    this->y2 = (int)y2;
+    msg("<verbose> Generating info structure for page %d", pageNum);
+}
+void InfoOutputDev::endPage()
+{
+}
+void InfoOutputDev::drawLink(Link *link, Catalog *catalog) 
+{
+    num_links++;
+}
+   
+/*  } else if(!strcmp(key,"fontquality")) {
+        this->config_fontquality = atof(value);
+	if(this->config_fontquality<=1)
+	    this->config_fontquality=1;
+    } else if(!strcmp(key,"bigchar")) {
+        this->config_bigchar = atoi(value);
+    }
+ */
 
 double InfoOutputDev::getMaximumFontSize(char*id)
 {
@@ -256,7 +268,7 @@ void InfoOutputDev::updateFont(GfxState *state)
 
     currentfont = (FontInfo*)id2font->lookup(id);
     if(!currentfont) {
-	currentfont = new FontInfo;
+	currentfont = new FontInfo(id);
 	currentfont->font = font;
 	currentfont->max_size = 0;
 	GString* idStr = new GString(id);
@@ -276,10 +288,6 @@ void InfoOutputDev::updateFont(GfxState *state)
     } else {
         currentfont->ascender = currentfont->descender = 0;
     }
-
-    currentfont->gfxfont = this->createGfxFont(font, currentfont);
-    currentfont->gfxfont->id = strdup(id);
-    fonts = gfxfontlist_addfont(fonts, currentfont->gfxfont);
 
     free(id);
 }
@@ -317,6 +325,9 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     if(currentfont && currentfont->max_size < len) {
 	currentfont->max_size = len;
     }
+    
+    num_textfields++;
+
     currentfont->grow(code+1);
     GlyphInfo*g = currentfont->glyphs[code];
     if(!g) {
@@ -353,7 +364,7 @@ GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double 
     char*id = getFontID(font);
     currentfont = (FontInfo*)id2font->lookup(id);
     if(!currentfont) {
-	currentfont = new FontInfo;
+	currentfont = new FontInfo(id);
 	currentfont->font = font;
 	GString* idStr = new GString(id);
 	id2font->add(idStr, (void*)currentfont);
@@ -444,4 +455,15 @@ void InfoOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *st
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
     OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskColorMap);
+}
+    
+void InfoOutputDev::dumpfonts(gfxdevice_t*dev)
+{
+    GHashIter*i;
+    GString*key;
+    FontInfo*font;
+    id2font->startIter(&i);
+    while(id2font->getNext(&i, &key, (void**)&font)) {
+        dev->addfont(dev, font->getGfxFont());
+    }
 }

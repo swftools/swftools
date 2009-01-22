@@ -579,6 +579,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->user_clipy1 = 0;
     this->user_clipx2 = 0;
     this->user_clipy2 = 0;
+    this->current_fontinfo = 0;
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
     this->outer_clip_box = 0;
@@ -762,6 +763,13 @@ static void dumpFontInfo(const char*loglevel, GfxFont*font)
 
 void dump_outline(gfxline_t*line)
 {
+    /*gfxbbox_t*r = gfxline_isrectangle(line);
+    if(!r)
+        printf("is not a rectangle\n");
+    else
+        printf("is a rectangle: (%f,%f)-(%f-%f)\n", r->xmin, r->ymin, r->xmax, r->ymax);
+    */
+
     while(line) {
 	if(line->type == gfx_moveTo) {
 	    msg("<debug> |     moveTo %.2f %.2f", line->x,line->y);
@@ -1882,6 +1890,7 @@ void GFXOutputDev::updateFont(GfxState *state)
     }
 
     this->current_fontinfo = this->info->getFont(id);
+
     if(!this->current_fontinfo) {
 	msg("<error> Internal Error: no fontinfo for font %s", id);
 	return;
@@ -1890,7 +1899,7 @@ void GFXOutputDev::updateFont(GfxState *state)
 	dumpFontInfo("<verbose>", gfxFont);
     }
 
-    current_gfxfont = this->current_fontinfo->gfxfont;
+    current_gfxfont = this->current_fontinfo->getGfxFont();
     device->addfont(device, current_gfxfont);
     free(id);
 

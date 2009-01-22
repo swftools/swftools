@@ -58,10 +58,16 @@ struct GlyphInfo
     double advance_max;
 };
 
-struct FontInfo
+class FontInfo
 {
-    FontInfo();
+    gfxfont_t*gfxfont;
+
+    char*id;
+public:
+    FontInfo(char*id);
     ~FontInfo();
+
+    gfxfont_t* getGfxFont();
 
     double lastx,lasty;
     int lastchar;
@@ -70,7 +76,6 @@ struct FontInfo
 
     void grow(int size);
 
-    gfxfont_t*gfxfont;
     GfxFont*font;
     double max_size;
     int num_glyphs;
@@ -89,8 +94,6 @@ class InfoOutputDev: public OutputDev
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
 
-    gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src);
-
     public:
     int x1,y1,x2,y2;
     int num_links;
@@ -100,7 +103,8 @@ class InfoOutputDev: public OutputDev
     int num_polygons;
     int num_textfields;
 
-    gfxfontlist_t*fonts;
+    void finish();
+    void dumpfonts(gfxdevice_t*dev);
 
     InfoOutputDev(XRef*xref);
     virtual ~InfoOutputDev(); 
@@ -144,6 +148,7 @@ class InfoOutputDev: public OutputDev
 				      Stream *maskStr,
 				      int maskWidth, int maskHeight,
 				      GfxImageColorMap *maskColorMap);
+
     virtual FontInfo* getFont(char*id);
 };
 
