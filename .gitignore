@@ -5,6 +5,8 @@
 *.swf
 *.ps
 *.pyc
+lib/python/*.so
+lib/python/*.dll
 swfcombine
 swfextract
 swfdump
