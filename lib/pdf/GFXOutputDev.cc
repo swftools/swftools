@@ -93,11 +93,12 @@ typedef struct _fontfile
 static fontfile_t* global_fonts = 0;
 static fontfile_t* global_fonts_next = 0;
 
+static fontfile_t* global_fontdirs = 0;
+static fontfile_t* global_fontdirs_next = 0;
+
 static int fontnum = 0;
 
 /* config */
-
-static char* lastfontdir = 0;
 
 struct fontentry {
     const char*pdffont;
@@ -394,6 +395,17 @@ char* fontconfig_searchForFont(char*name)
 	    fprintf(fi, "<dir>WINDOWSFONTDIR</dir>\n");
 #endif
 	    fprintf(fi, "<dir>~/.fonts</dir>\n");
+
+            /* add external font dirs to fontconfig's config. Maybe fc will make more out
+               of them than we did 
+                FIXME: we don't do that yet if there's a system config file
+             */
+            fontfile_t*fd = global_fontdirs;
+            while(fd) {
+	        fprintf(fi, "<dir>%s</dir>\n", fd->filename);
+                fd = fd->next;
+            }
+
 #ifdef WIN32
 	    fprintf(fi, "<cachedir>WINDOWSTEMPDIR_FONTCONFIG_CACHE</cachedir>\n");
 #endif
@@ -524,7 +536,9 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
     
     int bestlen = 0x7fffffff;
     const char*bestfilename = 0;
-    
+   
+#ifndef HAVE_FONTCONFIG
+    /* if we don't have fontconfig, try a simple approach */
     fontfile_t*f = global_fonts;
     while(f) {
 	if(strstr(f->filename, name)) {
@@ -535,6 +549,7 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
         }
         f = f->next;
     }
+#endif
 
     /* if we didn't find anything up to now, try looking for the
        font via fontconfig */
@@ -546,6 +561,7 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
     }
 
     if(filename) {
+        msg("<verbose> Font %s maps to %s\n", name, filename);
 	DisplayFontParamKind kind = detectFontType(filename);
         DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), kind);
 	if(kind == displayFontTT) {
@@ -2477,7 +2493,6 @@ void addGlobalFontDir(const char*dirname)
 {
 #ifdef HAVE_DIRENT_H
     msg("<notice> Adding %s to font directories", dirname);
-    lastfontdir = strdup(dirname);
     DIR*dir = opendir(dirname);
     if(!dir) {
 	msg("<warning> Couldn't open directory %s", dirname);
@@ -2511,8 +2526,18 @@ void addGlobalFontDir(const char*dirname)
     }
     closedir(dir);
 #else
-    msg("<warning> No dirent.h- unable to add font dir %s", dirname);
+    msg("<warning> No dirent.h");
 #endif
+    
+    fontfile_t* f = (fontfile_t*)malloc(sizeof(fontfile_t));
+    memset(f, 0, sizeof(fontfile_t));
+    f->filename = dirname;
+    if(global_fontdirs_next) {
+        global_fontdirs_next->next = f;
+        global_fontdirs_next = global_fontdirs_next->next;
+    } else {
+        global_fontdirs_next = global_fontdirs = f;
+    }
 }
 
 void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
