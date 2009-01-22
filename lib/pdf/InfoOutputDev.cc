@@ -88,6 +88,8 @@ FontInfo::~FontInfo()
 	}
     }
     free(glyphs);glyphs=0;
+    if(this->gfxfont)
+        gfxfont_free(this->gfxfont);
 }
 
 gfxfont_t* createGfxFont(FontInfo*src)
