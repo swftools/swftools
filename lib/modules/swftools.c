@@ -1025,6 +1025,7 @@ char swf_Relocate (SWF*swf, char*bitmap)
 		    PUT16(&tag->data[ptr[t]], id);
 		}
 	    }
+            free(ptr);
 	}
 	tag=tag->next;
     }
@@ -1057,6 +1058,7 @@ void swf_Relocate2(SWF*swf, int*id2id)
 		    PUT16(&tag->data[ptr[t]], id);
 		}
 	    }
+            free(ptr);
 	}
     }
 }
