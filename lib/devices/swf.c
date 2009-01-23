@@ -1622,6 +1622,8 @@ void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
     actions = action_End(actions);
    
     drawlink(dev, actions, 0, points, 0, url);
+
+    swf_ActionFree(actions);
 }
 void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
 {
@@ -1648,6 +1650,8 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
     sprintf(name, "page%d", page);
 
     drawlink(dev, actions, 0, points, 0, name);
+    
+    swf_ActionFree(actions);
 }
 
 /* Named Links (a.k.a. Acrobatmenu) are used to implement various gadgets

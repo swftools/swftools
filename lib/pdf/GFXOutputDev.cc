@@ -1627,7 +1627,8 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
             LinkDest *dest=NULL;
             if (ha->getDest()==NULL) 
                 dest=catalog->findDest(ha->getNamedDest());
-            else dest=ha->getDest();
+            else 
+                dest=ha->getDest()->copy();
             if (dest){ 
               if (dest->isPageRef()){
                 Ref pageref=dest->getPageRef();
@@ -1636,6 +1637,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
               else  page=dest->getPageNum();
               sprintf(buf, "%d", page);
               s = strdup(buf);
+              delete dest;
             }
         }
         break;
