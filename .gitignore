@@ -23,6 +23,7 @@ as3compile
 swfbytes
 swfrender
 src/parser.yy.c
+src/swfc
 lib/*.a
 c
 t
@@ -53,4 +54,8 @@ installer/makegui
 installer/mkarchive
 installer/swftools-small.bmp
 installer/uninstall.exe
-
+lib/pdf/switch
+lib/pdf/xpdf*
+swfs/PreLoaderTemplate
+swfs/keyboard_viewer
+swfs/simple_viewer
