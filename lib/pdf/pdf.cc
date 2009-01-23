@@ -437,6 +437,12 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
     }	
 }
 
+void pdf_doc_prepare(gfxdocument_t*doc, gfxdevice_t*dev)
+{
+    pdf_doc_internal_t*i= (pdf_doc_internal_t*)doc->internal;
+    i->info->dumpfonts(dev);
+}
+
 static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 {
     gfxsource_internal_t*isrc = (gfxsource_internal_t*)src->internal;
@@ -513,8 +519,8 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     pdf_doc->set_parameter = pdf_doc_set_parameter;
     pdf_doc->getinfo = pdf_doc_getinfo;
     pdf_doc->getpage = pdf_doc_getpage;
-
-
+    pdf_doc->prepare = pdf_doc_prepare;
+    
     return pdf_doc;
 
 }
