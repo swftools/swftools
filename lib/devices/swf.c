@@ -1780,6 +1780,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     i->swflastx = i->swflasty = 0;
     drawgfxline(dev, points, 1);
     swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(i->shape);
 
     /* shape2 */
     myshapeid2 = getNewID(dev);
@@ -1803,6 +1804,7 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     i->swflastx = i->swflasty = 0;
     drawgfxline(dev, points, 1);
     swf_ShapeSetEnd(i->tag);
+    swf_ShapeFree(i->shape);
 
     if(!mouseover)
     {
