@@ -48,6 +48,7 @@ typedef struct _gfxdocument
     void  (*set_parameter)(struct _gfxdocument*gfx, const char*name, const char*value);
     char* (*getinfo)(struct _gfxdocument*gfx, const char*key);
     struct _gfxpage* (*getpage)(struct _gfxdocument*gfx, int page);
+    void  (*prepare)(struct _gfxdocument*gfx, gfxdevice_t*device);
     void*internal;
 } gfxdocument_t;
 
