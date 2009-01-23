@@ -158,10 +158,3 @@ gfxsource_t*gfxsource_image_create()
     return src;
 }
 
-
-
-
-
-
-
-
