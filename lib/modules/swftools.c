@@ -30,7 +30,7 @@ SFIXED RFXSWF_SP(SFIXED a1,SFIXED a2,SFIXED b1,SFIXED b2)
 { S64 a = ((S64)a1*(S64)b1+(S64)a2*(S64)b2)>>16;
   SFIXED result = (SFIXED)(a);
   if(a!=result) 
-      fprintf(stderr, "Warning: overflow in matrix multiplication");
+      fprintf(stderr, "Warning: overflow in matrix multiplication\n");
   return result;
 }
 SFIXED RFXSWF_QFIX(int zaehler,int nenner) // bildet Quotient von zwei INTs in SFIXED
@@ -999,7 +999,7 @@ char swf_Relocate (SWF*swf, char*bitmap)
 		    }
 		}
                 if(t==65536) {
-                    fprintf(stderr, "swf_Relocate: Couldn't relocate: Out of IDs");
+                    fprintf(stderr, "swf_Relocate: Couldn't relocate: Out of IDs\n");
                     return 0;
                 }
 	    }
