@@ -1382,6 +1382,100 @@ static void decodeMonochromeImage(RGBA*data, int width, int height, RGBA*colors)
     }
 }
 
+static void blurImage(RGBA*src, int width, int height, int r)
+{
+    int e = 2; // r times e is the sampling interval
+    double*gauss = (double*)malloc(r*e*sizeof(double));
+    double sum=0;
+    int x;
+    for(x=0;x<r*e;x++) {
+        double t = (x - r*e/2.0)/r;
+        gauss[x] = exp(-0.5*t*t);
+        sum += gauss[x];
+    }
+    int*weights = (int*)malloc(r*e*sizeof(int));
+    for(x=0;x<r*e;x++) {
+        weights[x] = (int)(gauss[x]*65536.0001/sum);
+    }
+    int range = r*e/2;
+
+    RGBA*dest = malloc(sizeof(RGBA)*width*height);
+
+    int y;
+    for(y=0;y<height;y++) {
+        RGBA*s = &src[y*width];
+        RGBA*d = &dest[y*width];
+        for(x=0;x<range;x++) {
+            d[x] = s[x];
+        }
+        for(x=range;x<width-range;x++) {
+            int r=0;
+            int g=0;
+            int b=0;
+            int a=0;
+            int*f = weights;
+            int xx;
+            for(xx=x-range;xx<x+range;xx++) {
+                r += s[xx].r * f[0];
+                g += s[xx].g * f[0];
+                b += s[xx].b * f[0];
+                a += s[xx].a * f[0];
+                f++;
+            }
+            d[x].r = r >> 16;
+            d[x].g = g >> 16;
+            d[x].b = b >> 16;
+            d[x].a = a >> 16;
+        }
+        for(x=width-range;x<width;x++) {
+            d[x] = s[x];
+        }
+    }
+
+    memcpy(src, dest, width*height*sizeof(RGBA));
+
+    for(x=0;x<width;x++) {
+        RGBA*s = &src[x];
+        RGBA*d = &dest[x];
+        int yy=0;
+        for(y=0;y<range;y++) {
+            d[yy] = s[yy];
+            yy+=width;
+        }
+        for(y=range;y<height-range;y++) {
+            int r=0;
+            int g=0;
+            int b=0;
+            int a=0;
+            int*f = weights;
+            int cy,cyy=yy-range*width;
+            for(cy=y-range;cy<y+range;cy++) {
+                r += s[cyy].r * f[0];
+                g += s[cyy].g * f[0];
+                b += s[cyy].b * f[0];
+                a += s[cyy].a * f[0];
+                cyy += width;
+                f++;
+            }
+            d[yy].r = r >> 16;
+            d[yy].g = g >> 16;
+            d[yy].b = b >> 16;
+            d[yy].a = a >> 16;
+            yy += width;
+        }
+        for(y=0;y<range;y++) {
+            d[yy] = s[yy];
+            yy += width;
+        }
+    }
+    memcpy(src, dest, width*height*sizeof(RGBA));
+
+    free(dest);
+    free(weights);
+    free(gauss);
+}
+
+
 RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight)
 {
     int x,y;
@@ -1397,6 +1491,14 @@ RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheig
     if(swf_ImageGetNumberOfPaletteEntries2(data, width, height) == 2) {
 	monochrome=1;
 	encodeMonochromeImage(data, width, height, monochrome_colors);
+        int r1 = width / newwidth;
+        int r2 = height / newheight;
+        int r = r1<r2?r1:r2;
+        if(r>4) {
+            /* high-resolution monochrome images are usually dithered, so 
+               low-pass filter them first to get rid of any moire patterns */
+            blurImage(data, width, height, r+1);
+        }
     }
 
     tmpline = (rgba_int_t*)malloc(width*sizeof(rgba_int_t));
