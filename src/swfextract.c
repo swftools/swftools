@@ -675,13 +675,17 @@ void handlejpeg(TAG*tag)
     else if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
 	U32 end = GET32(&tag->data[2])+6;
 	int pos = findjpegboundary(&tag->data[6], tag->len-6);
-	if(pos<0)
-	    return;
-	pos+=6;
-	fi = save_fopen(filename, "wb");
-	fwrite(&tag->data[6], pos-6, 1, fi);
-	fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
-	fclose(fi);
+	if(pos<0) {
+            fi = save_fopen(filename, "wb");
+            fwrite(&tag->data[6], end-6, 1, fi);
+            fclose(fi);
+        } else {
+            pos+=6;
+            fi = save_fopen(filename, "wb");
+            fwrite(&tag->data[6], pos-6, 1, fi);
+            fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
+            fclose(fi);
+        }
     }
     else {
 	int id = GET16(tag->data);
