@@ -1399,12 +1399,12 @@ static void blurImage(RGBA*src, int width, int height, int r)
     }
     int range = r*e/2;
 
-    RGBA*dest = malloc(sizeof(RGBA)*width*height);
+    RGBA*tmp = malloc(sizeof(RGBA)*width*height);
 
     int y;
     for(y=0;y<height;y++) {
         RGBA*s = &src[y*width];
-        RGBA*d = &dest[y*width];
+        RGBA*d = &tmp[y*width];
         for(x=0;x<range;x++) {
             d[x] = s[x];
         }
@@ -1432,11 +1432,9 @@ static void blurImage(RGBA*src, int width, int height, int r)
         }
     }
 
-    memcpy(src, dest, width*height*sizeof(RGBA));
-
     for(x=0;x<width;x++) {
-        RGBA*s = &src[x];
-        RGBA*d = &dest[x];
+        RGBA*s = &tmp[x];
+        RGBA*d = &src[x];
         int yy=0;
         for(y=0;y<range;y++) {
             d[yy] = s[yy];
@@ -1468,9 +1466,8 @@ static void blurImage(RGBA*src, int width, int height, int r)
             yy += width;
         }
     }
-    memcpy(src, dest, width*height*sizeof(RGBA));
 
-    free(dest);
+    free(tmp);
     free(weights);
     free(gauss);
 }
