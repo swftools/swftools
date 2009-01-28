@@ -1423,12 +1423,9 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 ActionTAG*oldaction = swf_ButtonGetAction(tag);
                 if(oldaction && oldaction->op == ACTION__GOTOFRAME) {
                     int framenr = GET16(oldaction->data);
-                    if(framenr>254) {
-                        fprintf(stderr, "Warning: Couldn't translate jump to frame %d to flash 9 actionscript\n", framenr);
-                    }
                     if(!events) {
                         __ findpropstrict(h,"[package]::gotoAndStop");
-                        __ pushbyte(h,framenr+1);
+                        __ pushuint(h,framenr+1);
                         __ callpropvoid(h,"[package]::gotoAndStop", 1);
                     } else {
                         char framename[80];
