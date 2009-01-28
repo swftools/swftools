@@ -45,7 +45,7 @@ mklib: mklib.o ../librfxswf.a ../libbase.a
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -
 
-../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c
+../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c
 	cd ..; make librfxswf.a
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
@@ -53,6 +53,9 @@ mklib: mklib.o ../librfxswf.a ../libbase.a
 
 swfdump: ../librfxswf.a ../../src/swfdump.c ../libbase.a abc.c abc.h pool.c pool.h code.c opcodes.c ../q.c ../q.h
 	gcc -g ../../src/swfdump.c ../librfxswf.a ../libbase.a -ljpeg -lz -lfreetype -o swfdump
+
+pdf2swf: ../librfxswf.a ../../src/pdf2swf.c ../libpdf.a ../libbase.a
+	g++ -g ../../src/pdf2swf.c ../libgfxswf.a ../libpdf.a ../libgfx.a ../librfxswf.a ../libbase.a -ljpeg -lz -lfreetype -lfontconfig -o pdf2swf 
 
 testreadwrite: testreadwrite.c ../librfxswf.a ../libbase.a
 	gcc $(D) -DMAIN -o testreadwrite testreadwrite.c ../librfxswf.a ../libbase.a -lz -ljpeg
