@@ -64,6 +64,9 @@ int main(int argn, char*argv[])
         test_lexer(filename);
         return 0;
     }
+
+    //extern int avm2_debug;
+    //avm2_debug = 1;
     
     as3_add_include_dir(getcwd(buf, 512));
     as3_parse_file(filename);
