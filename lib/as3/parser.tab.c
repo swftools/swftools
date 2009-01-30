@@ -4894,7 +4894,7 @@ yyreduce:
 
 /* Line 1464 of skeleton.m4  */
 #line 2011 "parser.y"
-    {(yyval.classinfo_list)=list_new();}
+    {PASS12 (yyval.classinfo_list)=list_new();}
     }
     break;
 
@@ -4905,7 +4905,7 @@ yyreduce:
 
 /* Line 1464 of skeleton.m4  */
 #line 2012 "parser.y"
-    {(yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);}
+    {PASS12 (yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);}
     }
     break;
 
