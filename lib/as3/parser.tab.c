@@ -1937,7 +1937,7 @@ static const yytype_uint16 yyrline[] =
     2567,  2573,  2578,  2584,  2590,  2594,  2596,  2607,  2616,  2623,
     2624,  2626,  2632,  2641,  2648,  2660,  2666,  2672,  2678,  2684,
     2690,  2696,  2709,  2720,  2727,  2740,  2767,  2781,  2795,  2809,
-    2824,  2858,  2945,  2946,  2947,  2949
+    2824,  2858,  2956,  2957,  2958,  2960
 };
 #endif
 
@@ -6066,40 +6066,49 @@ yyreduce:
         // $1 is a local variable
         (yyval.value).c = abc_getlocal((yyval.value).c, v->index);
         (yyval.value).t = v->type;
+        break;
+    }
+
+    int i_am_static = (state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC;
 
     /* look at current class' members */
-    } else if(state->cls && (f = registry_findmember(state->cls->info, (yyvsp[(1) - (1)].id), 1))) {
+    if(state->cls && (f = registry_findmember(state->cls->info, (yyvsp[(1) - (1)].id), 1)) &&
+        (f->flags&FLAG_STATIC) >= i_am_static) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
-        int i_am_static = ((state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC);
-        if(var_is_static != i_am_static) {
-            /* there doesn't seem to be any "static" way to access
-               static properties of a class */
+
+        if(f->kind == MEMBER_METHOD) {
+            (yyval.value).t = TYPE_FUNCTION(f);
+        } else {
+            (yyval.value).t = f->type;
+        }
+        if(var_is_static && !i_am_static) {
+        /* access to a static member from a non-static location.
+           do this via findpropstrict:
+           there doesn't seem to be any non-lookup way to access
+           static properties of a class */
             state->method->late_binding = 1;
             (yyval.value).t = f->type;
             namespace_t ns = {flags2access(f->flags), ""};
             multiname_t m = {QNAME, &ns, 0, (yyvsp[(1) - (1)].id)};
             (yyval.value).c = abc_findpropstrict2((yyval.value).c, &m);
             (yyval.value).c = abc_getproperty2((yyval.value).c, &m);
+            break;
+        } else if(f->slot>0) {
+            (yyval.value).c = abc_getlocal_0((yyval.value).c);
+            (yyval.value).c = abc_getslot((yyval.value).c, f->slot);
+            break;
         } else {
-            if(f->slot>0) {
-                (yyval.value).c = abc_getlocal_0((yyval.value).c);
-                (yyval.value).c = abc_getslot((yyval.value).c, f->slot);
-            } else {
-                namespace_t ns = {flags2access(f->flags), ""};
-                multiname_t m = {QNAME, &ns, 0, (yyvsp[(1) - (1)].id)};
-                (yyval.value).c = abc_getlocal_0((yyval.value).c);
-                (yyval.value).c = abc_getproperty2((yyval.value).c, &m);
-            }
+            namespace_t ns = {flags2access(f->flags), ""};
+            multiname_t m = {QNAME, &ns, 0, (yyvsp[(1) - (1)].id)};
+            (yyval.value).c = abc_getlocal_0((yyval.value).c);
+            (yyval.value).c = abc_getproperty2((yyval.value).c, &m);
+            break;
         }
-        if(f->kind == MEMBER_METHOD) {
-            (yyval.value).t = TYPE_FUNCTION(f);
-        } else {
-            (yyval.value).t = f->type;
-        }
+    } 
     
     /* look at actual classes, in the current package and imported */
-    } else if((a = find_class((yyvsp[(1) - (1)].id)))) {
+    if((a = find_class((yyvsp[(1) - (1)].id)))) {
         if(a->flags & FLAG_METHOD) {
             MULTINAME(m, a);
             (yyval.value).c = abc_findpropstrict2((yyval.value).c, &m);
@@ -6119,9 +6128,11 @@ yyreduce:
             }
             (yyval.value).t = TYPE_CLASS(a);
         }
+        break;
+    }
 
     /* unknown object, let the avm2 resolve it */
-    } else {
+    if(1) {
         if(strcmp((yyvsp[(1) - (1)].id),"trace"))
             as3_softwarning("Couldn't resolve '%s', doing late binding", (yyvsp[(1) - (1)].id));
         state->method->late_binding = 1;
@@ -6138,35 +6149,35 @@ yyreduce:
   case 282:
 
 /* Line 1455 of yacc.c  */
-#line 2945 "parser.y"
+#line 2956 "parser.y"
     {(yyval.code)=0;;}
     break;
 
   case 283:
 
 /* Line 1455 of yacc.c  */
-#line 2946 "parser.y"
+#line 2957 "parser.y"
     {(yyval.code)=0;;}
     break;
 
   case 284:
 
 /* Line 1455 of yacc.c  */
-#line 2947 "parser.y"
+#line 2958 "parser.y"
     {(yyval.code)=0;;}
     break;
 
   case 285:
 
 /* Line 1455 of yacc.c  */
-#line 2949 "parser.y"
+#line 2960 "parser.y"
     {(yyval.token)=0;;}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 6170 "parser.tab.c"
+#line 6181 "parser.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

@@ -2867,40 +2867,49 @@ VAR_READ : T_IDENTIFIER {
         // $1 is a local variable
         $$.c = abc_getlocal($$.c, v->index);
         $$.t = v->type;
+        break;
+    }
+
+    int i_am_static = (state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC;
 
     /* look at current class' members */
-    } else if(state->cls && (f = registry_findmember(state->cls->info, $1, 1))) {
+    if(state->cls && (f = registry_findmember(state->cls->info, $1, 1)) &&
+        (f->flags&FLAG_STATIC) >= i_am_static) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
-        int i_am_static = ((state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC);
-        if(var_is_static != i_am_static) {
-            /* there doesn't seem to be any "static" way to access
-               static properties of a class */
+
+        if(f->kind == MEMBER_METHOD) {
+            $$.t = TYPE_FUNCTION(f);
+        } else {
+            $$.t = f->type;
+        }
+        if(var_is_static && !i_am_static) {
+        /* access to a static member from a non-static location.
+           do this via findpropstrict:
+           there doesn't seem to be any non-lookup way to access
+           static properties of a class */
             state->method->late_binding = 1;
             $$.t = f->type;
             namespace_t ns = {flags2access(f->flags), ""};
             multiname_t m = {QNAME, &ns, 0, $1};
             $$.c = abc_findpropstrict2($$.c, &m);
             $$.c = abc_getproperty2($$.c, &m);
+            break;
+        } else if(f->slot>0) {
+            $$.c = abc_getlocal_0($$.c);
+            $$.c = abc_getslot($$.c, f->slot);
+            break;
         } else {
-            if(f->slot>0) {
-                $$.c = abc_getlocal_0($$.c);
-                $$.c = abc_getslot($$.c, f->slot);
-            } else {
-                namespace_t ns = {flags2access(f->flags), ""};
-                multiname_t m = {QNAME, &ns, 0, $1};
-                $$.c = abc_getlocal_0($$.c);
-                $$.c = abc_getproperty2($$.c, &m);
-            }
+            namespace_t ns = {flags2access(f->flags), ""};
+            multiname_t m = {QNAME, &ns, 0, $1};
+            $$.c = abc_getlocal_0($$.c);
+            $$.c = abc_getproperty2($$.c, &m);
+            break;
         }
-        if(f->kind == MEMBER_METHOD) {
-            $$.t = TYPE_FUNCTION(f);
-        } else {
-            $$.t = f->type;
-        }
+    } 
     
     /* look at actual classes, in the current package and imported */
-    } else if((a = find_class($1))) {
+    if((a = find_class($1))) {
         if(a->flags & FLAG_METHOD) {
             MULTINAME(m, a);
             $$.c = abc_findpropstrict2($$.c, &m);
@@ -2920,9 +2929,11 @@ VAR_READ : T_IDENTIFIER {
             }
             $$.t = TYPE_CLASS(a);
         }
+        break;
+    }
 
     /* unknown object, let the avm2 resolve it */
-    } else {
+    if(1) {
         if(strcmp($1,"trace"))
             as3_softwarning("Couldn't resolve '%s', doing late binding", $1);
         state->method->late_binding = 1;
