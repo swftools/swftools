@@ -132,6 +132,7 @@ class TestBase:
         self.compile_error = 0
         self.compile_output = output
         if ret:
+            self.compile_output += "\nExit status %d" % (-ret)
             self.compile_error = 1
             return 0
         if not os.path.isfile("abc.swf"):
@@ -171,13 +172,13 @@ class TestBase:
     def doprintlong(self):
         print self.nr, self.file
         print "================================"
-        print "compile:", (test.compile_error and "error" or "ok")
-        print test.compile_output
+        print "compile:", (self.compile_error and "error" or "ok")
+        print self.compile_output
         if not self.dorun:
             return
         print "================================"
-        print "run:", (test.flash_error and "error" or "ok")
-        print test.flash_output
+        print "run:", (self.flash_error and "error" or "ok")
+        print self.flash_output
         print "================================"
 
     def r(self,s,l):
