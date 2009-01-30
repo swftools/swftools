@@ -150,6 +150,7 @@ classinfo_t* registry_safefindclass(const char*package, const char*name)
     assert(c);
     return c;
 }
+
 classinfo_t* registry_findclass(const char*package, const char*name)
 {
     assert(classes);
@@ -161,6 +162,20 @@ classinfo_t* registry_findclass(const char*package, const char*name)
         printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
 }
+void registry_dumpclasses()
+{
+    int t;
+    for(t=0;t<classes->hashsize;t++) {
+        dictentry_t*e = classes->slots[t];
+        while(e) {
+            dictentry_t*next = e->next;
+            classinfo_t*i = (classinfo_t*)e->key;
+            printf("%s.%s\n", i->package, i->name);
+            e = e->next;
+        }
+    }
+}
+
 memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursive)
 {
     if(!recursive) {

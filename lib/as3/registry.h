@@ -109,6 +109,7 @@ classinfo_t* memberinfo_asclass(memberinfo_t*f);
 classinfo_t* registry_getclassclass(classinfo_t*a);
 
 classinfo_t* registry_findclass(const char*package, const char*name);
+void registry_dumpclasses();
 memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char superclasses);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
