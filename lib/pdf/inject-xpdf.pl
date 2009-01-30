@@ -12,9 +12,9 @@ mkdir("$directory/tmp/");
 
 chdir("$directory/tmp/") or die;
 system("tar -zxvf ../../$filename") and die;
-system("find -type f -exec mv {} .. \\;") and die;
+system("find . -type f -exec mv {} .. \\;") and die;
 chdir("..");
-system("find -type d -exec rmdir {} \\; 2> /dev/null");
+system("find . -type d -exec rmdir {} \\; 2> /dev/null");
 
 $c = 'find . \( -name "*.cc" -or -name "*.h" -or -name "*.c" \) -exec cp {} {}.orig \;';
 print "$c\n";
