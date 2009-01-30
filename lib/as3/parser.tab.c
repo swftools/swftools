@@ -49,7 +49,7 @@
 #define YYBISON_VERSION "2.4"
 
 /* Skeleton name.  */
-#define YYSKELETON_NAME "yacc.c"
+#define YYSKELETON_NAME "./skeleton.m4"
 
 /* Pure parsers.  */
 #define YYPURE 0
@@ -75,7 +75,7 @@
 
 /* Copy the first part of user declarations.  */
 
-/* Line 189 of yacc.c  */
+/* Line 198 of skeleton.m4  */
 #line 23 "parser.y"
 
 #include <stdlib.h>
@@ -91,7 +91,7 @@
 
 
 
-/* Line 189 of yacc.c  */
+/* Line 198 of skeleton.m4  */
 #line 96 "parser.tab.c"
 
 /* Enabling traces.  */
@@ -227,12 +227,12 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union 
-/* Line 214 of yacc.c  */
+/* Line 223 of skeleton.m4  */
 #line 41 "parser.y"
 tokenunion
 {
 
-/* Line 214 of yacc.c  */
+/* Line 223 of skeleton.m4  */
 #line 41 "parser.y"
 
     enum yytokentype token;
@@ -263,7 +263,7 @@ tokenunion
 
 
 
-/* Line 214 of yacc.c  */
+/* Line 223 of skeleton.m4  */
 #line 268 "parser.tab.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
@@ -274,7 +274,7 @@ tokenunion
 
 /* Copy the second part of user declarations.  */
 
-/* Line 264 of yacc.c  */
+/* Line 273 of skeleton.m4  */
 #line 251 "parser.y"
 
 
@@ -455,6 +455,16 @@ static void old_state()
     state_t*leaving = state;
     
     state = state->old;
+    
+    if(leaving->method && leaving->method != state->method) {
+        free(leaving->method);
+        leaving->method=0;
+    }
+    if(leaving->cls && leaving->cls != state->cls) {
+        free(leaving->cls);
+        leaving->cls=0;
+    }
+    
     state_destroy(leaving);
 }
 
@@ -657,6 +667,12 @@ static void endpackage()
     old_state();
 }
 
+void parserassert(int b)
+{
+    if(!b) syntaxerror("internal error: assertion failed");
+}
+
+
 char*as3_globalclass=0;
 static void startclass(int flags, char*classname, classinfo_t*extends, classinfo_list_t*implements, char interface)
 {
@@ -691,131 +707,135 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("public classes only allowed inside a package");
     }
 
-    if(registry_findclass(package, classname)) {
-        syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
-    }
-   
-
-    /* build info struct */
-    int num_interfaces = (list_length(implements));
-    state->cls->info = classinfo_register(access, package, classname, num_interfaces);
-    state->cls->info->superclass = extends?extends:TYPE_OBJECT;
-    int pos = 0;
-    classinfo_list_t*l = implements;
-    for(l=implements;l;l=l->next) {
-        state->cls->info->interfaces[pos++] = l->classinfo;
+    if(as3_pass==1) {
+        if(registry_findclass(package, classname)) {
+            syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
+        }
+        /* build info struct */
+        int num_interfaces = (list_length(implements));
+        state->cls->info = classinfo_register(access, package, classname, num_interfaces);
     }
     
-    multiname_t*extends2 = sig2mname(extends);
+    if(as3_pass == 2) {
+        state->cls->info = registry_findclass(package, classname);
+        parserassert((int)state->cls->info);
 
-    MULTINAME(classname2,state->cls->info);
+        /* fill out interfaces and extends (we couldn't resolve those during the first pass) */
+        state->cls->info->superclass = extends?extends:TYPE_OBJECT;
+        int pos = 0;
+        classinfo_list_t*l = implements;
+        for(l=implements;l;l=l->next) {
+            state->cls->info->interfaces[pos++] = l->classinfo;
+        }
 
-    /*if(extends) {
-        state->cls_init = abc_getlocal_0(state->cls_init);
-        state->cls_init = abc_constructsuper(state->cls_init, 0);
-    }*/
+        /* generate the abc code for this class */
+        MULTINAME(classname2,state->cls->info);
+        multiname_t*extends2 = sig2mname(extends);
 
-    state->cls->abc = abc_class_new(global->file, &classname2, extends2);
-    if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
-    if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
-    if(interface) {
-        state->cls->info->flags |= CLASS_INTERFACE;
-        abc_class_interface(state->cls->abc);
-    }
+        state->cls->abc = abc_class_new(global->file, &classname2, extends2);
+        if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
+        if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
+        if(interface) {
+            state->cls->info->flags |= CLASS_INTERFACE;
+            abc_class_interface(state->cls->abc);
+        }
 
-    abc_class_protectedNS(state->cls->abc, classname);
+        abc_class_protectedNS(state->cls->abc, classname);
 
-    for(mlist=implements;mlist;mlist=mlist->next) {
-        MULTINAME(m, mlist->classinfo);
-        abc_class_add_interface(state->cls->abc, &m);
-    }
+        for(mlist=implements;mlist;mlist=mlist->next) {
+            MULTINAME(m, mlist->classinfo);
+            abc_class_add_interface(state->cls->abc, &m);
+        }
 
-    /* now write the construction code for this class */
-    int slotindex = abc_initscript_addClassTrait(global->init, &classname2, state->cls->abc);
+        /* write the construction code for this class to the global init
+           function */
+        int slotindex = abc_initscript_addClassTrait(global->init, &classname2, state->cls->abc);
 
-    abc_method_body_t*m = global->init->method->body;
-    __ getglobalscope(m);
-    classinfo_t*s = extends;
+        abc_method_body_t*m = global->init->method->body;
+        __ getglobalscope(m);
+        classinfo_t*s = extends;
 
-    int count=0;
-    
-    while(s) {
-        //TODO: take a look at the current scope stack, maybe 
-        //      we can re-use something
-        s = s->superclass;
-        if(!s) 
-        break;
-       
-        multiname_t*s2 = sig2mname(s);
-        __ getlex2(m, s2);
-        multiname_destroy(s2);
+        int count=0;
+        
+        while(s) {
+            //TODO: take a look at the current scope stack, maybe 
+            //      we can re-use something
+            s = s->superclass;
+            if(!s) 
+            break;
+           
+            multiname_t*s2 = sig2mname(s);
+            __ getlex2(m, s2);
+            multiname_destroy(s2);
 
-        __ pushscope(m); count++;
-        m->code = m->code->prev->prev; // invert
-    }
-    /* continue appending after last op end */
-    while(m->code && m->code->next) m->code = m->code->next; 
+            __ pushscope(m); count++;
+            m->code = m->code->prev->prev; // invert
+        }
+        /* continue appending after last op end */
+        while(m->code && m->code->next) m->code = m->code->next; 
 
-    /* TODO: if this is one of *our* classes, we can also 
-             do a getglobalscope/getslot <nr> (which references
-             the init function's slots) */
-    if(extends2) {
-        __ getlex2(m, extends2);
-        __ dup(m);
-        /* notice: we get a Verify Error #1107 if the top elemnt on the scope
-           stack is not the superclass */
-        __ pushscope(m);count++;
-    } else {
-        __ pushnull(m);
-        /* notice: we get a verify error #1107 if the top element on the scope 
-           stack is not the global object */
-        __ getlocal_0(m);
-        __ pushscope(m);count++;
-    }
-    __ newclass(m,state->cls->abc);
-    while(count--) {
-        __ popscope(m);
-    }
-    __ setslot(m, slotindex);
-
-    /* flash.display.MovieClip handling */
-    if(!as3_globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
-        if(state->package && state->package[0]) {
-            as3_globalclass = concat3(state->package, ".", classname);
+        /* TODO: if this is one of *our* classes, we can also 
+                 do a getglobalscope/getslot <nr> (which references
+                 the init function's slots) */
+        if(extends2) {
+            __ getlex2(m, extends2);
+            __ dup(m);
+            /* notice: we get a Verify Error #1107 if the top elemnt on the scope
+               stack is not the superclass */
+            __ pushscope(m);count++;
         } else {
-            as3_globalclass = strdup(classname);
+            __ pushnull(m);
+            /* notice: we get a verify error #1107 if the top element on the scope 
+               stack is not the global object */
+            __ getlocal_0(m);
+            __ pushscope(m);count++;
+        }
+        __ newclass(m,state->cls->abc);
+        while(count--) {
+            __ popscope(m);
+        }
+        __ setslot(m, slotindex);
+        multiname_destroy(extends2);
+
+        /* flash.display.MovieClip handling */
+
+        if(!as3_globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
+            if(state->package && state->package[0]) {
+                as3_globalclass = concat3(state->package, ".", classname);
+            } else {
+                as3_globalclass = strdup(classname);
+            }
         }
     }
-    multiname_destroy(extends2);
 }
 
 static void endclass()
 {
-    if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
-        code_t*c = 0;
-        c = abc_getlocal_0(c);
-        c = abc_constructsuper(c, 0);
-        state->cls->init = code_append(state->cls->init, c);
-    }
-    if(!state->method->late_binding) {
-        // class initialization code uses late binding
-        code_t*c = 0;
-        c = abc_getlocal_0(c);
-        c = abc_pushscope(c);
-        state->cls->static_init = code_append(c, state->cls->static_init);
+    if(as3_pass == 2) {
+        if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
+            code_t*c = 0;
+            c = abc_getlocal_0(c);
+            c = abc_constructsuper(c, 0);
+            state->cls->init = code_append(state->cls->init, c);
+        }
+        if(!state->method->late_binding) {
+            // class initialization code uses late binding
+            code_t*c = 0;
+            c = abc_getlocal_0(c);
+            c = abc_pushscope(c);
+            state->cls->static_init = code_append(c, state->cls->static_init);
+        }
+
+        if(state->cls->init) {
+            abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
+            m->body->code = wrap_function(0, state->cls->init, m->body->code);
+        }
+        if(state->cls->static_init) {
+            abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
+            m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
+        }
     }
 
-    if(state->cls->init) {
-        abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
-        m->body->code = wrap_function(0, state->cls->init, m->body->code);
-    }
-    if(state->cls->static_init) {
-        abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
-        m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
-    }
-
-    free(state->cls);state->cls=0;
-    free(state->method);state->method=0;
     old_state();
 }
 
@@ -944,36 +964,50 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         syntaxerror("not able to start another method scope");
     }
     new_state();
-    global->variable_count = 0;
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->has_super = 0;
 
     if(state->cls) {
         state->method->is_constructor = !strcmp(state->cls->info->name,name);
         state->cls->has_constructor |= state->method->is_constructor;
-        
-        new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
     } else {
         state->method->is_global = 1;
         state->method->late_binding = 1; // for global methods, always push local_0 on the scope stack
-
-        new_variable("globalscope", 0, 0);
-    }
-
-    /* state->vars is initialized by state_new */
-
-    param_list_t*p=0;
-    for(p=params->list;p;p=p->next) {
-        new_variable(p->param->name, p->param->type, 0);
     }
     if(state->method->is_constructor)
         name = "__as3_constructor__";
-    state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
+
+    if(as3_pass == 1) {
+        state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
+    }
+
+    if(as3_pass == 2) {
+        /* retrieve the member info that we stored in the first pass.
+           TODO: better getter/setter support? */
+        if(!state->cls) state->method->info = registry_findclass(state->package, name)->function;
+        else            state->method->info = registry_findmember(state->cls->info, name, 0);
+
+        global->variable_count = 0;
+        /* state->vars is initialized by state_new */
+        if(!state->method->is_global)
+            new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
+        else
+            new_variable("globalscope", 0, 0);
+        param_list_t*p=0;
+        for(p=params->list;p;p=p->next) {
+            new_variable(p->param->name, p->param->type, 0);
+        }
+    } 
 }
 
 static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
+    if(as3_pass==1) {
+        old_state();
+        return;
+    }
+
     abc_method_t*f = 0;
 
     multiname_t*type2 = sig2mname(return_type);
@@ -1030,7 +1064,6 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
             syntaxerror("interface methods can't have a method body");
     }
        
-    free(state->method);state->method=0;
     old_state();
 }
 
@@ -1162,11 +1195,6 @@ char is_pushundefined(code_t*c)
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
 }
 
-void parserassert(int b)
-{
-    if(!b) syntaxerror("internal error: assertion failed");
-}
-
 static classinfo_t* find_class(char*name)
 {
     classinfo_t*c=0;
@@ -1199,7 +1227,7 @@ static classinfo_t* find_class(char*name)
     if(c) return c;
    
     /* try local "filename" package */
-    c = registry_findclass(current_filename, name);
+    c = registry_findclass(current_filename_short, name);
     if(c) return c;
 
     return 0;
@@ -1502,10 +1530,16 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
     }
 }
 
+#define PASS1 }} if(as3_pass == 1) {{
+#define PASS1END }} if(as3_pass == 2) {{
+#define PASS2 }} if(as3_pass == 2) {{
+#define PASS12 }} {{
+#define PASS12END }} if(as3_pass == 2) {{
 
 
-/* Line 264 of yacc.c  */
-#line 1509 "parser.tab.c"
+
+/* Line 273 of skeleton.m4  */
+#line 1543 "parser.tab.c"
 
 #ifdef short
 # undef short
@@ -1909,35 +1943,35 @@ static const yytype_int16 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,  1484,  1484,  1486,  1486,  1487,  1488,  1490,  1491,  1492,
-    1493,  1494,  1495,  1496,  1498,  1498,  1499,  1500,  1502,  1503,
-    1504,  1505,  1506,  1507,  1509,  1510,  1512,  1513,  1516,  1517,
-    1518,  1519,  1520,  1521,  1522,  1523,  1524,  1525,  1528,  1529,
-    1530,  1531,  1532,  1533,  1534,  1536,  1537,  1539,  1540,  1541,
-    1542,  1546,  1553,  1554,  1558,  1559,  1561,  1562,  1564,  1605,
-    1606,  1609,  1609,  1628,  1629,  1630,  1633,  1636,  1640,  1641,
-    1643,  1663,  1706,  1706,  1725,  1725,  1740,  1743,  1746,  1749,
-    1753,  1754,  1755,  1756,  1757,  1758,  1760,  1771,  1774,  1774,
-    1803,  1803,  1823,  1823,  1840,  1841,  1842,  1843,  1851,  1860,
-    1860,  1905,  1909,  1920,  1929,  1930,  1932,  1933,  1935,  1935,
-    1936,  1936,  1938,  1946,  1956,  1957,  1958,  1959,  1961,  1962,
-    1963,  1964,  1965,  1966,  1967,  1968,  1969,  1971,  1972,  1974,
-    1975,  1977,  1978,  1982,  1980,  1988,  1986,  1994,  1995,  1996,
-    1997,  1998,  1999,  2000,  2002,  2008,  2009,  2010,  2011,  2012,
-    2013,  2016,  2027,  2027,  2029,  2087,  2088,  2090,  2091,  2092,
-    2093,  2094,  2096,  2097,  2098,  2103,  2106,  2111,  2116,  2123,
-    2127,  2132,  2138,  2144,  2145,  2146,  2149,  2148,  2166,  2167,
-    2168,  2176,  2183,  2189,  2190,  2192,  2193,  2195,  2196,  2197,
-    2206,  2207,  2211,  2212,  2214,  2215,  2216,  2219,  2224,  2248,
-    2296,  2316,  2337,  2340,  2347,  2348,  2349,  2355,  2361,  2363,
-    2365,  2367,  2369,  2371,  2388,  2393,  2396,  2399,  2402,  2405,
-    2408,  2411,  2414,  2417,  2421,  2422,  2425,  2428,  2431,  2434,
-    2437,  2440,  2443,  2447,  2458,  2476,  2481,  2486,  2491,  2496,
-    2501,  2505,  2509,  2514,  2518,  2522,  2531,  2540,  2550,  2555,
-    2567,  2573,  2578,  2584,  2590,  2594,  2596,  2607,  2616,  2623,
-    2624,  2626,  2632,  2641,  2648,  2660,  2666,  2672,  2678,  2684,
-    2690,  2696,  2709,  2720,  2727,  2740,  2767,  2781,  2795,  2809,
-    2824,  2858,  2956,  2957,  2958,  2960
+       0,  1517,  1517,  1519,  1519,  1520,  1521,  1523,  1524,  1525,
+    1526,  1527,  1528,  1529,  1531,  1531,  1532,  1533,  1535,  1536,
+    1537,  1538,  1539,  1540,  1542,  1543,  1545,  1546,  1549,  1550,
+    1551,  1552,  1553,  1554,  1555,  1556,  1557,  1558,  1561,  1562,
+    1563,  1564,  1565,  1566,  1567,  1569,  1570,  1572,  1573,  1574,
+    1575,  1579,  1586,  1587,  1591,  1592,  1594,  1595,  1597,  1638,
+    1639,  1642,  1642,  1661,  1662,  1663,  1666,  1669,  1673,  1674,
+    1676,  1696,  1739,  1739,  1758,  1758,  1773,  1776,  1779,  1782,
+    1786,  1787,  1788,  1789,  1790,  1791,  1793,  1804,  1807,  1807,
+    1836,  1836,  1856,  1856,  1873,  1874,  1875,  1876,  1884,  1893,
+    1893,  1938,  1942,  1953,  1962,  1963,  1965,  1966,  1968,  1968,
+    1970,  1970,  1973,  1981,  1991,  1992,  1993,  1994,  1996,  1997,
+    1998,  1999,  2000,  2001,  2002,  2003,  2004,  2006,  2007,  2009,
+    2010,  2012,  2013,  2017,  2015,  2023,  2021,  2029,  2030,  2031,
+    2032,  2033,  2034,  2035,  2037,  2043,  2044,  2045,  2046,  2047,
+    2048,  2051,  2063,  2063,  2065,  2123,  2124,  2126,  2127,  2128,
+    2129,  2130,  2132,  2133,  2134,  2139,  2142,  2147,  2152,  2159,
+    2163,  2168,  2174,  2180,  2181,  2182,  2185,  2184,  2205,  2206,
+    2207,  2215,  2223,  2231,  2232,  2234,  2235,  2237,  2238,  2239,
+    2248,  2249,  2253,  2254,  2256,  2257,  2258,  2261,  2266,  2290,
+    2338,  2358,  2379,  2382,  2389,  2390,  2391,  2397,  2403,  2405,
+    2407,  2409,  2411,  2413,  2430,  2435,  2438,  2441,  2444,  2447,
+    2450,  2453,  2456,  2459,  2463,  2464,  2467,  2470,  2473,  2476,
+    2479,  2482,  2485,  2489,  2500,  2518,  2523,  2528,  2533,  2538,
+    2543,  2547,  2551,  2556,  2560,  2564,  2573,  2582,  2592,  2597,
+    2609,  2615,  2620,  2626,  2632,  2636,  2638,  2649,  2658,  2665,
+    2666,  2668,  2674,  2683,  2690,  2702,  2708,  2714,  2720,  2726,
+    2732,  2738,  2751,  2762,  2769,  2782,  2809,  2823,  2837,  2851,
+    2866,  2900,  2998,  2999,  3000,  3002
 };
 #endif
 
@@ -3594,141 +3628,215 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 24:
+        
+    case 24:
+    if(as3_pass==2) {
 
-/* Line 1455 of yacc.c  */
-#line 1509 "parser.y"
-    {(yyval.code)=(yyvsp[(1) - (1)].code);;}
-    break;
-
-  case 25:
-
-/* Line 1455 of yacc.c  */
-#line 1510 "parser.y"
-    {(yyval.code)=code_new();;}
-    break;
-
-  case 26:
-
-/* Line 1455 of yacc.c  */
-#line 1512 "parser.y"
-    {(yyval.code)=code_append((yyvsp[(1) - (2)].code),(yyvsp[(2) - (2)].code));;}
-    break;
-
-  case 27:
-
-/* Line 1455 of yacc.c  */
-#line 1513 "parser.y"
-    {(yyval.code)=(yyvsp[(1) - (1)].code);;}
-    break;
-
-  case 38:
-
-/* Line 1455 of yacc.c  */
-#line 1528 "parser.y"
-    {(yyval.code)=0;;}
-    break;
-
-  case 45:
-
-/* Line 1455 of yacc.c  */
-#line 1536 "parser.y"
-    {/*TODO*/(yyval.code)=0;;}
-    break;
-
-  case 46:
-
-/* Line 1455 of yacc.c  */
-#line 1537 "parser.y"
-    {/*TODO*/(yyval.code)=0;;}
-    break;
-
-  case 47:
-
-/* Line 1455 of yacc.c  */
-#line 1539 "parser.y"
-    {(yyval.code)=(yyvsp[(2) - (3)].code);;}
-    break;
-
-  case 48:
-
-/* Line 1455 of yacc.c  */
-#line 1540 "parser.y"
-    {(yyval.code)=0;;}
-    break;
-
-  case 49:
-
-/* Line 1455 of yacc.c  */
-#line 1541 "parser.y"
-    {(yyval.code)=(yyvsp[(1) - (2)].code);;}
-    break;
-
-  case 50:
-
-/* Line 1455 of yacc.c  */
+/* Line 1464 of skeleton.m4  */
 #line 1542 "parser.y"
-    {(yyval.code)=(yyvsp[(1) - (1)].code);;}
+    {(yyval.code)=(yyvsp[(1) - (1)].code);}
+    }
     break;
 
-  case 51:
 
-/* Line 1455 of yacc.c  */
+  
+    case 25:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1543 "parser.y"
+    {(yyval.code)=code_new();}
+    }
+    break;
+
+
+  
+    case 26:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1545 "parser.y"
+    {(yyval.code)=code_append((yyvsp[(1) - (2)].code),(yyvsp[(2) - (2)].code));}
+    }
+    break;
+
+
+  
+    case 27:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
 #line 1546 "parser.y"
+    {(yyval.code)=(yyvsp[(1) - (1)].code);}
+    }
+    break;
+
+
+  
+    case 38:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1561 "parser.y"
+    {(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 45:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1569 "parser.y"
+    {/*TODO*/(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 46:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1570 "parser.y"
+    {/*TODO*/(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 47:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1572 "parser.y"
+    {(yyval.code)=(yyvsp[(2) - (3)].code);}
+    }
+    break;
+
+
+  
+    case 48:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1573 "parser.y"
+    {(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 49:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1574 "parser.y"
+    {(yyval.code)=(yyvsp[(1) - (2)].code);}
+    }
+    break;
+
+
+  
+    case 50:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1575 "parser.y"
+    {(yyval.code)=(yyvsp[(1) - (1)].code);}
+    }
+    break;
+
+
+  
+    case 51:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1579 "parser.y"
     {
     code_t**cc = &global->init->method->body->code;
     *cc = code_append(*cc, (yyvsp[(1) - (1)].code));
-;}
+}
+    }
     break;
 
-  case 52:
 
-/* Line 1455 of yacc.c  */
-#line 1553 "parser.y"
-    {(yyval.value)=(yyvsp[(2) - (2)].value);;}
+  
+    case 52:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1586 "parser.y"
+    {(yyval.value)=(yyvsp[(2) - (2)].value);}
+    }
     break;
 
-  case 53:
 
-/* Line 1455 of yacc.c  */
-#line 1554 "parser.y"
+  
+    case 53:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1587 "parser.y"
     {(yyval.value).c=abc_pushundefined(0);
                                   (yyval.value).t=TYPE_ANY;
-                                 ;}
+                                 }
+    }
     break;
 
-  case 54:
 
-/* Line 1455 of yacc.c  */
-#line 1558 "parser.y"
-    {(yyval.code)=(yyvsp[(2) - (2)].code);;}
+  
+    case 54:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1591 "parser.y"
+    {(yyval.code)=(yyvsp[(2) - (2)].code);}
+    }
     break;
 
-  case 55:
 
-/* Line 1455 of yacc.c  */
-#line 1559 "parser.y"
-    {(yyval.code)=(yyvsp[(2) - (2)].code);;}
+  
+    case 55:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1592 "parser.y"
+    {(yyval.code)=(yyvsp[(2) - (2)].code);}
+    }
     break;
 
-  case 56:
 
-/* Line 1455 of yacc.c  */
-#line 1561 "parser.y"
-    {(yyval.code) = (yyvsp[(1) - (1)].code);;}
+  
+    case 56:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1594 "parser.y"
+    {(yyval.code) = (yyvsp[(1) - (1)].code);}
+    }
     break;
 
-  case 57:
 
-/* Line 1455 of yacc.c  */
-#line 1562 "parser.y"
-    {(yyval.code) = code_append((yyvsp[(1) - (3)].code), (yyvsp[(3) - (3)].code));;}
+  
+    case 57:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1595 "parser.y"
+    {(yyval.code) = code_append((yyvsp[(1) - (3)].code), (yyvsp[(3) - (3)].code));}
+    }
     break;
 
-  case 58:
 
-/* Line 1455 of yacc.c  */
-#line 1565 "parser.y"
+  
+    case 58:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1598 "parser.y"
     {
     if(variable_exists((yyvsp[(1) - (3)].id)))
         syntaxerror("Variable %s already defined", (yyvsp[(1) - (3)].id));
@@ -3765,34 +3873,50 @@ yyreduce:
         state->method->initcode = abc_setlocal(state->method->initcode, index);
     }*/
     //printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
-;}
+}
+    }
     break;
 
-  case 59:
 
-/* Line 1455 of yacc.c  */
-#line 1605 "parser.y"
-    {(yyval.code) = code_new();;}
+  
+    case 59:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1638 "parser.y"
+    {(yyval.code) = code_new();}
+    }
     break;
 
-  case 60:
 
-/* Line 1455 of yacc.c  */
-#line 1606 "parser.y"
-    {(yyval.code)=(yyvsp[(2) - (2)].code);;}
+  
+    case 60:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1639 "parser.y"
+    {(yyval.code)=(yyvsp[(2) - (2)].code);}
+    }
     break;
 
-  case 61:
 
-/* Line 1455 of yacc.c  */
-#line 1609 "parser.y"
-    {new_state();;}
+  
+    case 61:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1642 "parser.y"
+    {new_state();}
+    }
     break;
 
-  case 62:
 
-/* Line 1455 of yacc.c  */
-#line 1609 "parser.y"
+  
+    case 62:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1642 "parser.y"
     {
      
     (yyval.code) = code_new();
@@ -3810,52 +3934,76 @@ yyreduce:
     }
     (yyval.code) = var_block((yyval.code));
     old_state();
-;}
+}
+    }
     break;
 
-  case 63:
 
-/* Line 1455 of yacc.c  */
-#line 1628 "parser.y"
-    {(yyval.code)=code_new();;}
+  
+    case 63:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1661 "parser.y"
+    {(yyval.code)=code_new();}
+    }
     break;
 
-  case 66:
 
-/* Line 1455 of yacc.c  */
-#line 1633 "parser.y"
+  
+    case 66:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1666 "parser.y"
     {
     (yyval.id)=(yyvsp[(2) - (3)].id);new_variable((yyvsp[(2) - (3)].id),(yyvsp[(3) - (3)].classinfo),1);
-;}
+}
+    }
     break;
 
-  case 67:
 
-/* Line 1455 of yacc.c  */
-#line 1636 "parser.y"
+  
+    case 67:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1669 "parser.y"
     {
     (yyval.id)=(yyvsp[(1) - (1)].id);
-;}
+}
+    }
     break;
 
-  case 68:
 
-/* Line 1455 of yacc.c  */
-#line 1640 "parser.y"
-    {new_state();(yyval.for_start).name=(yyvsp[(1) - (2)].id);(yyval.for_start).each=0;;}
+  
+    case 68:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1673 "parser.y"
+    {new_state();(yyval.for_start).name=(yyvsp[(1) - (2)].id);(yyval.for_start).each=0;}
+    }
     break;
 
-  case 69:
 
-/* Line 1455 of yacc.c  */
-#line 1641 "parser.y"
-    {new_state();(yyval.for_start).name=(yyvsp[(1) - (3)].id);(yyval.for_start).each=1;;}
+  
+    case 69:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1674 "parser.y"
+    {new_state();(yyval.for_start).name=(yyvsp[(1) - (3)].id);(yyval.for_start).each=1;}
+    }
     break;
 
-  case 70:
 
-/* Line 1455 of yacc.c  */
-#line 1643 "parser.y"
+  
+    case 70:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1676 "parser.y"
     {
     if((yyvsp[(1) - (8)].for_start).each) syntaxerror("invalid syntax: ; not allowed in for each statement");
     (yyval.code) = code_new();
@@ -3874,13 +4022,17 @@ yyreduce:
 
     (yyval.code) = var_block((yyval.code));
     old_state();
-;}
+}
+    }
     break;
 
-  case 71:
 
-/* Line 1455 of yacc.c  */
-#line 1663 "parser.y"
+  
+    case 71:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1696 "parser.y"
     {
     variable_t*var = find_variable((yyvsp[(2) - (6)].id));
     char*tmp1name = concat2((yyvsp[(2) - (6)].id), "__tmp1__");
@@ -3922,20 +4074,28 @@ yyreduce:
 
     free(tmp1name);
     free(tmp2name);
-;}
+}
+    }
     break;
 
-  case 72:
 
-/* Line 1455 of yacc.c  */
-#line 1706 "parser.y"
-    {new_state();;}
+  
+    case 72:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1739 "parser.y"
+    {new_state();}
+    }
     break;
 
-  case 73:
 
-/* Line 1455 of yacc.c  */
-#line 1706 "parser.y"
+  
+    case 73:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1739 "parser.y"
     {
 
     (yyval.code) = code_new();
@@ -3953,20 +4113,28 @@ yyreduce:
 
     (yyval.code) = var_block((yyval.code));
     old_state();
-;}
+}
+    }
     break;
 
-  case 74:
 
-/* Line 1455 of yacc.c  */
-#line 1725 "parser.y"
-    {new_state();;}
+  
+    case 74:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1758 "parser.y"
+    {new_state();}
+    }
     break;
 
-  case 75:
 
-/* Line 1455 of yacc.c  */
-#line 1725 "parser.y"
+  
+    case 75:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1758 "parser.y"
     {
     (yyval.code) = code_new();
     code_t*loopstart = (yyval.code) = abc_label((yyval.code));
@@ -3980,91 +4148,135 @@ yyreduce:
     
     (yyval.code) = var_block((yyval.code));
     old_state();
-;}
+}
+    }
     break;
 
-  case 76:
 
-/* Line 1455 of yacc.c  */
-#line 1740 "parser.y"
+  
+    case 76:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1773 "parser.y"
     {
     (yyval.code) = abc___break__(0, "");
-;}
+}
+    }
     break;
 
-  case 77:
 
-/* Line 1455 of yacc.c  */
-#line 1743 "parser.y"
+  
+    case 77:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1776 "parser.y"
     {
     (yyval.code) = abc___break__(0, (yyvsp[(2) - (2)].id));
-;}
+}
+    }
     break;
 
-  case 78:
 
-/* Line 1455 of yacc.c  */
-#line 1746 "parser.y"
+  
+    case 78:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1779 "parser.y"
     {
     (yyval.code) = abc___continue__(0, "");
-;}
+}
+    }
     break;
 
-  case 79:
 
-/* Line 1455 of yacc.c  */
-#line 1749 "parser.y"
+  
+    case 79:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1782 "parser.y"
     {
     (yyval.code) = abc___continue__(0, (yyvsp[(2) - (2)].id));
-;}
+}
+    }
     break;
 
-  case 80:
 
-/* Line 1455 of yacc.c  */
-#line 1753 "parser.y"
-    {(yyval.code)=0;;}
+  
+    case 80:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1786 "parser.y"
+    {(yyval.code)=0;}
+    }
     break;
 
-  case 81:
 
-/* Line 1455 of yacc.c  */
-#line 1754 "parser.y"
-    {(yyval.code)=(yyvsp[(1) - (1)].code);;}
-    break;
+  
+    case 81:
+    if(as3_pass==2) {
 
-  case 82:
-
-/* Line 1455 of yacc.c  */
-#line 1755 "parser.y"
-    {(yyval.code)=(yyvsp[(1) - (1)].code);;}
-    break;
-
-  case 83:
-
-/* Line 1455 of yacc.c  */
-#line 1756 "parser.y"
-    {(yyval.code)=code_append((yyvsp[(1) - (2)].code),(yyvsp[(2) - (2)].code));;}
-    break;
-
-  case 84:
-
-/* Line 1455 of yacc.c  */
-#line 1757 "parser.y"
+/* Line 1464 of skeleton.m4  */
+#line 1787 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
+    }
     break;
 
-  case 85:
 
-/* Line 1455 of yacc.c  */
-#line 1758 "parser.y"
-    {(yyval.code)=code_append((yyval.code),(yyvsp[(2) - (2)].code));;}
+  
+    case 82:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1788 "parser.y"
+    {(yyval.code)=(yyvsp[(1) - (1)].code);}
+    }
     break;
 
-  case 86:
 
-/* Line 1455 of yacc.c  */
-#line 1760 "parser.y"
+  
+    case 83:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1789 "parser.y"
+    {(yyval.code)=code_append((yyvsp[(1) - (2)].code),(yyvsp[(2) - (2)].code));}
+    }
+    break;
+
+
+  
+    case 84:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1790 "parser.y"
+    {(yyval.code)=(yyvsp[(1) - (1)].code);}
+    }
+    break;
+
+
+  
+    case 85:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1791 "parser.y"
+    {(yyval.code)=code_append((yyval.code),(yyvsp[(2) - (2)].code));}
+    }
+    break;
+
+
+  
+    case 86:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1793 "parser.y"
     {
     (yyval.code) = abc_dup(0);
     (yyval.code) = code_append((yyval.code), (yyvsp[(2) - (4)].value).c);
@@ -4075,29 +4287,41 @@ yyreduce:
     }
     code_t*e = (yyval.code) = abc_nop((yyval.code));
     j->branch = e;
-;}
+}
+    }
     break;
 
-  case 87:
 
-/* Line 1455 of yacc.c  */
-#line 1771 "parser.y"
+  
+    case 87:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1804 "parser.y"
     {
     (yyval.code) = (yyvsp[(3) - (3)].code);
-;}
+}
+    }
     break;
 
-  case 88:
 
-/* Line 1455 of yacc.c  */
-#line 1774 "parser.y"
-    {new_state();;}
+  
+    case 88:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1807 "parser.y"
+    {new_state();}
+    }
     break;
 
-  case 89:
 
-/* Line 1455 of yacc.c  */
-#line 1774 "parser.y"
+  
+    case 89:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1807 "parser.y"
     {
     (yyval.code)=(yyvsp[(4) - (8)].value).c;
     (yyval.code) = code_append((yyval.code), (yyvsp[(7) - (8)].code));
@@ -4123,20 +4347,28 @@ yyreduce:
    
     (yyval.code) = var_block((yyval.code));
     old_state();
-;}
+}
+    }
     break;
 
-  case 90:
 
-/* Line 1455 of yacc.c  */
-#line 1803 "parser.y"
-    {new_state();state->exception_name=(yyvsp[(3) - (5)].id);new_variable((yyvsp[(3) - (5)].id), (yyvsp[(4) - (5)].classinfo), 0);;}
+  
+    case 90:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1836 "parser.y"
+    {new_state();state->exception_name=(yyvsp[(3) - (5)].id);new_variable((yyvsp[(3) - (5)].id), (yyvsp[(4) - (5)].classinfo), 0);}
+    }
     break;
 
-  case 91:
 
-/* Line 1455 of yacc.c  */
-#line 1804 "parser.y"
+  
+    case 91:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1837 "parser.y"
     {
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
     multiname_t name = {QNAME, &name_ns, 0, (yyvsp[(3) - (9)].id)};
@@ -4155,20 +4387,28 @@ yyreduce:
 
     c = var_block(c);
     old_state();
-;}
+}
+    }
     break;
 
-  case 92:
 
-/* Line 1455 of yacc.c  */
-#line 1823 "parser.y"
-    {new_state();state->exception_name=0;;}
+  
+    case 92:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1856 "parser.y"
+    {new_state();state->exception_name=0;}
+    }
     break;
 
-  case 93:
 
-/* Line 1455 of yacc.c  */
-#line 1823 "parser.y"
+  
+    case 93:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1856 "parser.y"
     {
     (yyvsp[(4) - (5)].code) = var_block((yyvsp[(4) - (5)].code));
     if(!(yyvsp[(4) - (5)].code)) {
@@ -4184,34 +4424,50 @@ yyreduce:
         old_state();
         (yyval.exception) = e;
     }
-;}
+}
+    }
     break;
 
-  case 94:
 
-/* Line 1455 of yacc.c  */
-#line 1840 "parser.y"
-    {(yyval.catch_list).l=list_new();(yyval.catch_list).finally=0;list_append((yyval.catch_list).l,(yyvsp[(1) - (1)].exception));;}
+  
+    case 94:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1873 "parser.y"
+    {(yyval.catch_list).l=list_new();(yyval.catch_list).finally=0;list_append((yyval.catch_list).l,(yyvsp[(1) - (1)].exception));}
+    }
     break;
 
-  case 95:
 
-/* Line 1455 of yacc.c  */
-#line 1841 "parser.y"
-    {(yyval.catch_list)=(yyvsp[(1) - (2)].catch_list);list_append((yyval.catch_list).l,(yyvsp[(2) - (2)].exception));;}
+  
+    case 95:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1874 "parser.y"
+    {(yyval.catch_list)=(yyvsp[(1) - (2)].catch_list);list_append((yyval.catch_list).l,(yyvsp[(2) - (2)].exception));}
+    }
     break;
 
-  case 96:
 
-/* Line 1455 of yacc.c  */
-#line 1842 "parser.y"
+  
+    case 96:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1875 "parser.y"
     {(yyval.catch_list)=(yyvsp[(1) - (1)].catch_list);}
+    }
     break;
 
-  case 97:
 
-/* Line 1455 of yacc.c  */
-#line 1843 "parser.y"
+  
+    case 97:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1876 "parser.y"
     {
     (yyval.catch_list) = (yyvsp[(1) - (2)].catch_list);
     (yyval.catch_list).finally = 0;
@@ -4219,13 +4475,17 @@ yyreduce:
         list_append((yyval.catch_list).l,(yyvsp[(2) - (2)].exception));
         (yyval.catch_list).finally = (yyvsp[(2) - (2)].exception)->to;(yyvsp[(2) - (2)].exception)->to=0;
     }
-;}
+}
+    }
     break;
 
-  case 98:
 
-/* Line 1455 of yacc.c  */
-#line 1851 "parser.y"
+  
+    case 98:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1884 "parser.y"
     {
     (yyval.catch_list).l=list_new();
     (yyval.catch_list).finally = 0;
@@ -4233,20 +4493,28 @@ yyreduce:
         list_append((yyval.catch_list).l,(yyvsp[(1) - (1)].exception));
         (yyval.catch_list).finally = (yyvsp[(1) - (1)].exception)->to;(yyvsp[(1) - (1)].exception)->to=0;
     }
-;}
+}
+    }
     break;
 
-  case 99:
 
-/* Line 1455 of yacc.c  */
-#line 1860 "parser.y"
-    {new_state();;}
+  
+    case 99:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1893 "parser.y"
+    {new_state();}
+    }
     break;
 
-  case 100:
 
-/* Line 1455 of yacc.c  */
-#line 1860 "parser.y"
+  
+    case 100:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1893 "parser.y"
     {
     code_t*out = abc_nop(0);
 
@@ -4288,23 +4556,31 @@ yyreduce:
    
     (yyval.code) = var_block((yyval.code));
     old_state();
-;}
+}
+    }
     break;
 
-  case 101:
 
-/* Line 1455 of yacc.c  */
-#line 1905 "parser.y"
+  
+    case 101:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1938 "parser.y"
     {
     (yyval.code)=(yyvsp[(2) - (2)].value).c;
     (yyval.code)=abc_throw((yyval.code));
-;}
+}
+    }
     break;
 
-  case 102:
 
-/* Line 1455 of yacc.c  */
-#line 1909 "parser.y"
+  
+    case 102:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1942 "parser.y"
     {
     if(!state->exception_name)
         syntaxerror("re-throw only possible within a catch block");
@@ -4312,74 +4588,110 @@ yyreduce:
     (yyval.code)=code_new();
     (yyval.code)=abc_getlocal((yyval.code), v->index);
     (yyval.code)=abc_throw((yyval.code));
-;}
+}
+    }
     break;
 
-  case 103:
 
-/* Line 1455 of yacc.c  */
-#line 1920 "parser.y"
+  
+    case 103:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1953 "parser.y"
     {
      (yyval.code) = (yyvsp[(3) - (5)].value).c;
      (yyval.code) = abc_pushscope((yyval.code));
      (yyval.code) = code_append((yyval.code), (yyvsp[(5) - (5)].code));
      (yyval.code) = abc_popscope((yyval.code));
-;}
+}
+    }
     break;
 
-  case 105:
 
-/* Line 1455 of yacc.c  */
-#line 1930 "parser.y"
-    {(yyval.id)="package";;}
+  
+    case 105:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1963 "parser.y"
+    {PASS12 (yyval.id)="package";}
+    }
     break;
 
-  case 106:
 
-/* Line 1455 of yacc.c  */
-#line 1932 "parser.y"
-    {(yyval.id) = concat3((yyvsp[(1) - (3)].id),".",(yyvsp[(3) - (3)].id));free((yyvsp[(1) - (3)].id));(yyvsp[(1) - (3)].id)=0;;}
+  
+    case 106:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1965 "parser.y"
+    {PASS12 (yyval.id) = concat3((yyvsp[(1) - (3)].id),".",(yyvsp[(3) - (3)].id));free((yyvsp[(1) - (3)].id));(yyvsp[(1) - (3)].id)=0;}
+    }
     break;
 
-  case 107:
 
-/* Line 1455 of yacc.c  */
-#line 1933 "parser.y"
-    {(yyval.id)=strdup((yyvsp[(1) - (1)].id));;}
+  
+    case 107:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1966 "parser.y"
+    {PASS12 (yyval.id)=strdup((yyvsp[(1) - (1)].id));}
+    }
     break;
 
-  case 108:
 
-/* Line 1455 of yacc.c  */
-#line 1935 "parser.y"
-    {startpackage((yyvsp[(2) - (3)].id));free((yyvsp[(2) - (3)].id));(yyvsp[(2) - (3)].id)=0;;}
+  
+    case 108:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1968 "parser.y"
+    {PASS12 startpackage((yyvsp[(2) - (3)].id));free((yyvsp[(2) - (3)].id));(yyvsp[(2) - (3)].id)=0;}
+    }
     break;
 
-  case 109:
 
-/* Line 1455 of yacc.c  */
-#line 1935 "parser.y"
-    {endpackage();(yyval.code)=0;;}
+  
+    case 109:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1969 "parser.y"
+    {PASS12 endpackage();(yyval.code)=0;}
+    }
     break;
 
-  case 110:
 
-/* Line 1455 of yacc.c  */
-#line 1936 "parser.y"
-    {startpackage("");}
+  
+    case 110:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1970 "parser.y"
+    {PASS12 startpackage("");}
+    }
     break;
 
-  case 111:
 
-/* Line 1455 of yacc.c  */
-#line 1936 "parser.y"
-    {endpackage();(yyval.code)=0;;}
+  
+    case 111:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1971 "parser.y"
+    {PASS12 endpackage();(yyval.code)=0;}
+    }
     break;
 
-  case 112:
 
-/* Line 1455 of yacc.c  */
-#line 1938 "parser.y"
+  
+    case 112:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1973 "parser.y"
     {
        classinfo_t*c = (yyvsp[(2) - (2)].classinfo);
        if(!c) 
@@ -4387,221 +4699,334 @@ yyreduce:
        state_has_imports();
        dict_put(state->imports, c->name, c);
        (yyval.code)=0;
-;}
+}
+    }
     break;
 
-  case 113:
 
-/* Line 1455 of yacc.c  */
-#line 1946 "parser.y"
+  
+    case 113:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1981 "parser.y"
     {
        NEW(import_t,i);
        i->package = (yyvsp[(2) - (4)].id);
        state_has_imports();
        list_append(state->wildcard_imports, i);
        (yyval.code)=0;
-;}
+}
+    }
     break;
 
-  case 114:
 
-/* Line 1455 of yacc.c  */
-#line 1956 "parser.y"
-    {(yyval.flags)=0;;}
+  
+    case 114:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1991 "parser.y"
+    {PASS12 (yyval.flags)=0;}
+    }
     break;
 
-  case 115:
 
-/* Line 1455 of yacc.c  */
-#line 1957 "parser.y"
-    {(yyval.flags)=(yyvsp[(1) - (1)].flags);}
+  
+    case 115:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1992 "parser.y"
+    {PASS12 (yyval.flags)=(yyvsp[(1) - (1)].flags);}
+    }
     break;
 
-  case 116:
 
-/* Line 1455 of yacc.c  */
-#line 1958 "parser.y"
-    {(yyval.flags)=(yyvsp[(1) - (1)].token);;}
+  
+    case 116:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1993 "parser.y"
+    {PASS12 (yyval.flags)=(yyvsp[(1) - (1)].token);}
+    }
     break;
 
-  case 117:
 
-/* Line 1455 of yacc.c  */
-#line 1959 "parser.y"
-    {(yyval.flags)=(yyvsp[(1) - (2)].flags)|(yyvsp[(2) - (2)].token);;}
+  
+    case 117:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1994 "parser.y"
+    {PASS12 (yyval.flags)=(yyvsp[(1) - (2)].flags)|(yyvsp[(2) - (2)].token);}
+    }
     break;
 
-  case 118:
 
-/* Line 1455 of yacc.c  */
-#line 1961 "parser.y"
-    {(yyval.token)=FLAG_PUBLIC;;}
+  
+    case 118:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1996 "parser.y"
+    {PASS12 (yyval.token)=FLAG_PUBLIC;}
+    }
     break;
 
-  case 119:
 
-/* Line 1455 of yacc.c  */
-#line 1962 "parser.y"
-    {(yyval.token)=FLAG_PRIVATE;;}
+  
+    case 119:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1997 "parser.y"
+    {PASS12 (yyval.token)=FLAG_PRIVATE;}
+    }
     break;
 
-  case 120:
 
-/* Line 1455 of yacc.c  */
-#line 1963 "parser.y"
-    {(yyval.token)=FLAG_PROTECTED;;}
+  
+    case 120:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1998 "parser.y"
+    {PASS12 (yyval.token)=FLAG_PROTECTED;}
+    }
     break;
 
-  case 121:
 
-/* Line 1455 of yacc.c  */
-#line 1964 "parser.y"
-    {(yyval.token)=FLAG_STATIC;;}
+  
+    case 121:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 1999 "parser.y"
+    {PASS12 (yyval.token)=FLAG_STATIC;}
+    }
     break;
 
-  case 122:
 
-/* Line 1455 of yacc.c  */
-#line 1965 "parser.y"
-    {(yyval.token)=FLAG_DYNAMIC;;}
+  
+    case 122:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2000 "parser.y"
+    {PASS12 (yyval.token)=FLAG_DYNAMIC;}
+    }
     break;
 
-  case 123:
 
-/* Line 1455 of yacc.c  */
-#line 1966 "parser.y"
-    {(yyval.token)=FLAG_FINAL;;}
+  
+    case 123:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2001 "parser.y"
+    {PASS12 (yyval.token)=FLAG_FINAL;}
+    }
     break;
 
-  case 124:
 
-/* Line 1455 of yacc.c  */
-#line 1967 "parser.y"
-    {(yyval.token)=FLAG_OVERRIDE;;}
-    break;
+  
+    case 124:
+    if(as3_pass==2) {
 
-  case 125:
-
-/* Line 1455 of yacc.c  */
-#line 1968 "parser.y"
-    {(yyval.token)=FLAG_NATIVE;;}
-    break;
-
-  case 126:
-
-/* Line 1455 of yacc.c  */
-#line 1969 "parser.y"
-    {(yyval.token)=FLAG_PACKAGEINTERNAL;;}
-    break;
-
-  case 127:
-
-/* Line 1455 of yacc.c  */
-#line 1971 "parser.y"
-    {(yyval.classinfo)=registry_getobjectclass();;}
-    break;
-
-  case 128:
-
-/* Line 1455 of yacc.c  */
-#line 1972 "parser.y"
-    {(yyval.classinfo)=(yyvsp[(2) - (2)].classinfo);;}
-    break;
-
-  case 129:
-
-/* Line 1455 of yacc.c  */
-#line 1974 "parser.y"
-    {(yyval.classinfo_list)=list_new();;}
-    break;
-
-  case 130:
-
-/* Line 1455 of yacc.c  */
-#line 1975 "parser.y"
-    {(yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);;}
-    break;
-
-  case 131:
-
-/* Line 1455 of yacc.c  */
-#line 1977 "parser.y"
-    {(yyval.classinfo_list)=list_new();;}
-    break;
-
-  case 132:
-
-/* Line 1455 of yacc.c  */
-#line 1978 "parser.y"
-    {(yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);;}
-    break;
-
-  case 133:
-
-/* Line 1455 of yacc.c  */
-#line 1982 "parser.y"
-    {startclass((yyvsp[(1) - (6)].flags),(yyvsp[(3) - (6)].id),(yyvsp[(4) - (6)].classinfo),(yyvsp[(5) - (6)].classinfo_list), 0);;}
-    break;
-
-  case 134:
-
-/* Line 1455 of yacc.c  */
-#line 1984 "parser.y"
-    {endclass();(yyval.code)=0;;}
-    break;
-
-  case 135:
-
-/* Line 1455 of yacc.c  */
-#line 1988 "parser.y"
-    {startclass((yyvsp[(1) - (5)].flags),(yyvsp[(3) - (5)].id),0,(yyvsp[(4) - (5)].classinfo_list),1);;}
-    break;
-
-  case 136:
-
-/* Line 1455 of yacc.c  */
-#line 1990 "parser.y"
-    {endclass();(yyval.code)=0;;}
-    break;
-
-  case 144:
-
-/* Line 1455 of yacc.c  */
+/* Line 1464 of skeleton.m4  */
 #line 2002 "parser.y"
+    {PASS12 (yyval.token)=FLAG_OVERRIDE;}
+    }
+    break;
+
+
+  
+    case 125:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2003 "parser.y"
+    {PASS12 (yyval.token)=FLAG_NATIVE;}
+    }
+    break;
+
+
+  
+    case 126:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2004 "parser.y"
+    {PASS12 (yyval.token)=FLAG_PACKAGEINTERNAL;}
+    }
+    break;
+
+
+  
+    case 127:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2006 "parser.y"
+    {(yyval.classinfo)=registry_getobjectclass();}
+    }
+    break;
+
+
+  
+    case 128:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2007 "parser.y"
+    {(yyval.classinfo)=(yyvsp[(2) - (2)].classinfo);}
+    }
+    break;
+
+
+  
+    case 129:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2009 "parser.y"
+    {(yyval.classinfo_list)=list_new();}
+    }
+    break;
+
+
+  
+    case 130:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2010 "parser.y"
+    {(yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);}
+    }
+    break;
+
+
+  
+    case 131:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2012 "parser.y"
+    {PASS12 (yyval.classinfo_list)=list_new();}
+    }
+    break;
+
+
+  
+    case 132:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2013 "parser.y"
+    {PASS12 (yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);}
+    }
+    break;
+
+
+  
+    case 133:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2017 "parser.y"
+    {PASS12 startclass((yyvsp[(1) - (6)].flags),(yyvsp[(3) - (6)].id),(yyvsp[(4) - (6)].classinfo),(yyvsp[(5) - (6)].classinfo_list), 0);}
+    }
+    break;
+
+
+  
+    case 134:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2019 "parser.y"
+    {PASS12 endclass();(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 135:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2023 "parser.y"
+    {PASS12 startclass((yyvsp[(1) - (5)].flags),(yyvsp[(3) - (5)].id),0,(yyvsp[(4) - (5)].classinfo_list),1);}
+    }
+    break;
+
+
+  
+    case 136:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2025 "parser.y"
+    {PASS12 endclass();(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 144:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2037 "parser.y"
     {
     code_t*c = state->cls->static_init;
     c = code_append(c, (yyvsp[(1) - (1)].code));  
     state->cls->static_init = c;
-;}
+}
+    }
     break;
 
-  case 150:
 
-/* Line 1455 of yacc.c  */
-#line 2013 "parser.y"
+  
+    case 150:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2048 "parser.y"
     {
     syntaxerror("variable declarations not allowed in interfaces");
-;}
+}
+    }
     break;
 
-  case 151:
 
-/* Line 1455 of yacc.c  */
-#line 2016 "parser.y"
+  
+    case 151:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2051 "parser.y"
     {
+    PASS12
     (yyvsp[(1) - (8)].flags) |= FLAG_PUBLIC;
     if((yyvsp[(1) - (8)].flags)&(FLAG_PRIVATE|FLAG_PACKAGEINTERNAL|FLAG_PROTECTED)) {
         syntaxerror("invalid method modifiers: interface methods always need to be public");
     }
     startfunction(0,(yyvsp[(1) - (8)].flags),(yyvsp[(3) - (8)].token),(yyvsp[(4) - (8)].id),&(yyvsp[(6) - (8)].params),(yyvsp[(8) - (8)].classinfo));
     endfunction(0,(yyvsp[(1) - (8)].flags),(yyvsp[(3) - (8)].token),(yyvsp[(4) - (8)].id),&(yyvsp[(6) - (8)].params),(yyvsp[(8) - (8)].classinfo), 0);
-;}
+}
+    }
     break;
 
-  case 154:
 
-/* Line 1455 of yacc.c  */
-#line 2029 "parser.y"
+  
+    case 154:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2065 "parser.y"
     {
     int flags = (yyvsp[(1) - (5)].flags);
     memberinfo_t* info = state->cls?
@@ -4656,196 +5081,290 @@ yyreduce:
     }
 
     (yyval.code)=0;
-;}
+}
+    }
     break;
 
-  case 155:
 
-/* Line 1455 of yacc.c  */
-#line 2087 "parser.y"
-    {(yyval.constant)=0;;}
+  
+    case 155:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2123 "parser.y"
+    {(yyval.constant)=0;}
+    }
     break;
 
-  case 156:
 
-/* Line 1455 of yacc.c  */
-#line 2088 "parser.y"
-    {(yyval.constant)=(yyvsp[(2) - (2)].constant);;}
+  
+    case 156:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2124 "parser.y"
+    {(yyval.constant)=(yyvsp[(2) - (2)].constant);}
+    }
     break;
 
-  case 157:
 
-/* Line 1455 of yacc.c  */
-#line 2090 "parser.y"
-    {(yyval.constant) = constant_new_int((yyvsp[(1) - (1)].number_uint));;}
+  
+    case 157:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2126 "parser.y"
+    {(yyval.constant) = constant_new_int((yyvsp[(1) - (1)].number_uint));}
+    }
     break;
 
-  case 158:
 
-/* Line 1455 of yacc.c  */
-#line 2091 "parser.y"
-    {(yyval.constant) = constant_new_int((yyvsp[(1) - (1)].number_int));;}
+  
+    case 158:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2127 "parser.y"
+    {(yyval.constant) = constant_new_int((yyvsp[(1) - (1)].number_int));}
+    }
     break;
 
-  case 159:
 
-/* Line 1455 of yacc.c  */
-#line 2092 "parser.y"
-    {(yyval.constant) = constant_new_uint((yyvsp[(1) - (1)].number_uint));;}
+  
+    case 159:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2128 "parser.y"
+    {(yyval.constant) = constant_new_uint((yyvsp[(1) - (1)].number_uint));}
+    }
     break;
 
-  case 160:
 
-/* Line 1455 of yacc.c  */
-#line 2093 "parser.y"
-    {(yyval.constant) = constant_new_float((yyvsp[(1) - (1)].number_float));;}
+  
+    case 160:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2129 "parser.y"
+    {(yyval.constant) = constant_new_float((yyvsp[(1) - (1)].number_float));}
+    }
     break;
 
-  case 161:
 
-/* Line 1455 of yacc.c  */
-#line 2094 "parser.y"
-    {(yyval.constant) = constant_new_string2((yyvsp[(1) - (1)].str).str,(yyvsp[(1) - (1)].str).len);;}
+  
+    case 161:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2130 "parser.y"
+    {(yyval.constant) = constant_new_string2((yyvsp[(1) - (1)].str).str,(yyvsp[(1) - (1)].str).len);}
+    }
     break;
 
-  case 162:
 
-/* Line 1455 of yacc.c  */
-#line 2096 "parser.y"
-    {(yyval.constant) = constant_new_true((yyvsp[(1) - (1)].token));;}
+  
+    case 162:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2132 "parser.y"
+    {(yyval.constant) = constant_new_true((yyvsp[(1) - (1)].token));}
+    }
     break;
 
-  case 163:
 
-/* Line 1455 of yacc.c  */
-#line 2097 "parser.y"
-    {(yyval.constant) = constant_new_false((yyvsp[(1) - (1)].token));;}
+  
+    case 163:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2133 "parser.y"
+    {(yyval.constant) = constant_new_false((yyvsp[(1) - (1)].token));}
+    }
     break;
 
-  case 164:
 
-/* Line 1455 of yacc.c  */
-#line 2098 "parser.y"
-    {(yyval.constant) = constant_new_null((yyvsp[(1) - (1)].token));;}
+  
+    case 164:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2134 "parser.y"
+    {(yyval.constant) = constant_new_null((yyvsp[(1) - (1)].token));}
+    }
     break;
 
-  case 165:
 
-/* Line 1455 of yacc.c  */
-#line 2103 "parser.y"
+  
+    case 165:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2139 "parser.y"
     {
     memset(&(yyval.params),0,sizeof((yyval.params)));
-;}
+}
+    }
     break;
 
-  case 166:
 
-/* Line 1455 of yacc.c  */
-#line 2106 "parser.y"
+  
+    case 166:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2142 "parser.y"
     {
     (yyval.params)=(yyvsp[(1) - (1)].params);
-;}
+}
+    }
     break;
 
-  case 167:
 
-/* Line 1455 of yacc.c  */
-#line 2111 "parser.y"
+  
+    case 167:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2147 "parser.y"
     {
     memset(&(yyval.params),0,sizeof((yyval.params)));
     (yyval.params).varargs=1;
     list_append((yyval.params).list, (yyvsp[(2) - (2)].param));
-;}
+}
+    }
     break;
 
-  case 168:
 
-/* Line 1455 of yacc.c  */
-#line 2116 "parser.y"
+  
+    case 168:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2152 "parser.y"
     {
     (yyval.params) =(yyvsp[(1) - (4)].params);
     (yyval.params).varargs=1;
     list_append((yyval.params).list, (yyvsp[(4) - (4)].param));
-;}
+}
+    }
     break;
 
-  case 169:
 
-/* Line 1455 of yacc.c  */
-#line 2123 "parser.y"
+  
+    case 169:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2159 "parser.y"
     {
     (yyval.params) = (yyvsp[(1) - (3)].params);
     list_append((yyval.params).list, (yyvsp[(3) - (3)].param));
-;}
+}
+    }
     break;
 
-  case 170:
 
-/* Line 1455 of yacc.c  */
-#line 2127 "parser.y"
+  
+    case 170:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2163 "parser.y"
     {
     memset(&(yyval.params),0,sizeof((yyval.params)));
     list_append((yyval.params).list, (yyvsp[(1) - (1)].param));
-;}
+}
+    }
     break;
 
-  case 171:
 
-/* Line 1455 of yacc.c  */
-#line 2132 "parser.y"
+  
+    case 171:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2168 "parser.y"
     {
      (yyval.param) = malloc(sizeof(param_t));
      (yyval.param)->name=(yyvsp[(1) - (4)].id);
      (yyval.param)->type = (yyvsp[(3) - (4)].classinfo);
      (yyval.param)->value = (yyvsp[(4) - (4)].constant);
-;}
+}
+    }
     break;
 
-  case 172:
 
-/* Line 1455 of yacc.c  */
-#line 2138 "parser.y"
+  
+    case 172:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2174 "parser.y"
     {
      (yyval.param) = malloc(sizeof(param_t));
      (yyval.param)->name=(yyvsp[(1) - (2)].id);
      (yyval.param)->type = TYPE_ANY;
      (yyval.param)->value = (yyvsp[(2) - (2)].constant);
-;}
+}
+    }
     break;
 
-  case 173:
 
-/* Line 1455 of yacc.c  */
-#line 2144 "parser.y"
-    {(yyval.token)=(yyvsp[(1) - (1)].token);;}
+  
+    case 173:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2180 "parser.y"
+    {(yyval.token)=(yyvsp[(1) - (1)].token);}
+    }
     break;
 
-  case 174:
 
-/* Line 1455 of yacc.c  */
-#line 2145 "parser.y"
-    {(yyval.token)=(yyvsp[(1) - (1)].token);;}
+  
+    case 174:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2181 "parser.y"
+    {(yyval.token)=(yyvsp[(1) - (1)].token);}
+    }
     break;
 
-  case 175:
 
-/* Line 1455 of yacc.c  */
-#line 2146 "parser.y"
-    {(yyval.token)=0;;}
+  
+    case 175:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2182 "parser.y"
+    {(yyval.token)=0;}
+    }
     break;
 
-  case 176:
 
-/* Line 1455 of yacc.c  */
-#line 2149 "parser.y"
-    {startfunction(0,(yyvsp[(1) - (9)].flags),(yyvsp[(3) - (9)].token),(yyvsp[(4) - (9)].id),&(yyvsp[(6) - (9)].params),(yyvsp[(8) - (9)].classinfo));}
+  
+    case 176:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2185 "parser.y"
+    {PASS12 startfunction(0,(yyvsp[(1) - (9)].flags),(yyvsp[(3) - (9)].token),(yyvsp[(4) - (9)].id),&(yyvsp[(6) - (9)].params),(yyvsp[(8) - (9)].classinfo));}
+    }
     break;
 
-  case 177:
 
-/* Line 1455 of yacc.c  */
-#line 2150 "parser.y"
+  
+    case 177:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2186 "parser.y"
     {
+    PASS1 old_state();
+    PASS2
     code_t*c = 0;
     if(state->method->late_binding) {
         c = abc_getlocal_0(c);
@@ -4857,143 +5376,215 @@ yyreduce:
         c = abc_constructsuper(c, 0);
     }
     c = wrap_function(c, 0, (yyvsp[(11) - (12)].code));
+
     endfunction(0,(yyvsp[(1) - (12)].flags),(yyvsp[(3) - (12)].token),(yyvsp[(4) - (12)].id),&(yyvsp[(6) - (12)].params),(yyvsp[(8) - (12)].classinfo),c);
     (yyval.code)=0;
-;}
+}
+    }
     break;
 
-  case 179:
 
-/* Line 1455 of yacc.c  */
-#line 2167 "parser.y"
-    {(yyval.id)=0;;}
+  
+    case 179:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2206 "parser.y"
+    {(yyval.id)=0;}
+    }
     break;
 
-  case 180:
 
-/* Line 1455 of yacc.c  */
-#line 2169 "parser.y"
+  
+    case 180:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2208 "parser.y"
     {
     syntaxerror("nested functions not supported yet");
-;}
+}
+    }
     break;
 
-  case 181:
 
-/* Line 1455 of yacc.c  */
-#line 2176 "parser.y"
+  
+    case 181:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2215 "parser.y"
     {
-
+    PASS1 (yyval.classinfo)=0;
+    PASS2
     /* try current package */
     (yyval.classinfo) = find_class((yyvsp[(1) - (1)].id));
     if(!(yyval.classinfo)) syntaxerror("Could not find class %s\n", (yyvsp[(1) - (1)].id));
-;}
+}
+    }
     break;
 
-  case 182:
 
-/* Line 1455 of yacc.c  */
-#line 2183 "parser.y"
+  
+    case 182:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2223 "parser.y"
     {
+    PASS1 (yyval.classinfo)=0;
+    PASS2
     (yyval.classinfo) = registry_findclass((yyvsp[(1) - (3)].id), (yyvsp[(3) - (3)].id));
     if(!(yyval.classinfo)) syntaxerror("Couldn't find class %s.%s\n", (yyvsp[(1) - (3)].id), (yyvsp[(3) - (3)].id));
     free((yyvsp[(1) - (3)].id));(yyvsp[(1) - (3)].id)=0;
-;}
+}
+    }
     break;
 
-  case 185:
 
-/* Line 1455 of yacc.c  */
-#line 2192 "parser.y"
-    {(yyval.classinfo_list)=list_new();list_append((yyval.classinfo_list), (yyvsp[(1) - (1)].classinfo));;}
+  
+    case 185:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2234 "parser.y"
+    {PASS12 (yyval.classinfo_list)=list_new();list_append((yyval.classinfo_list), (yyvsp[(1) - (1)].classinfo));}
+    }
     break;
 
-  case 186:
 
-/* Line 1455 of yacc.c  */
-#line 2193 "parser.y"
-    {(yyval.classinfo_list)=(yyvsp[(1) - (3)].classinfo_list);list_append((yyval.classinfo_list),(yyvsp[(3) - (3)].classinfo));;}
+  
+    case 186:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2235 "parser.y"
+    {PASS12 (yyval.classinfo_list)=(yyvsp[(1) - (3)].classinfo_list);list_append((yyval.classinfo_list),(yyvsp[(3) - (3)].classinfo));}
+    }
     break;
 
-  case 187:
 
-/* Line 1455 of yacc.c  */
-#line 2195 "parser.y"
-    {(yyval.classinfo)=(yyvsp[(1) - (1)].classinfo);;}
+  
+    case 187:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2237 "parser.y"
+    {(yyval.classinfo)=(yyvsp[(1) - (1)].classinfo);}
+    }
     break;
 
-  case 188:
 
-/* Line 1455 of yacc.c  */
-#line 2196 "parser.y"
-    {(yyval.classinfo)=registry_getanytype();;}
+  
+    case 188:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2238 "parser.y"
+    {(yyval.classinfo)=registry_getanytype();}
+    }
     break;
 
-  case 189:
 
-/* Line 1455 of yacc.c  */
-#line 2197 "parser.y"
-    {(yyval.classinfo)=registry_getanytype();;}
+  
+    case 189:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2239 "parser.y"
+    {(yyval.classinfo)=registry_getanytype();}
+    }
     break;
 
-  case 190:
 
-/* Line 1455 of yacc.c  */
-#line 2206 "parser.y"
-    {(yyval.classinfo)=(yyvsp[(2) - (2)].classinfo);;}
+  
+    case 190:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2248 "parser.y"
+    {(yyval.classinfo)=(yyvsp[(2) - (2)].classinfo);}
+    }
     break;
 
-  case 191:
 
-/* Line 1455 of yacc.c  */
-#line 2207 "parser.y"
-    {(yyval.classinfo)=0;;}
+  
+    case 191:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2249 "parser.y"
+    {(yyval.classinfo)=0;}
+    }
     break;
 
-  case 192:
 
-/* Line 1455 of yacc.c  */
-#line 2211 "parser.y"
-    {(yyval.value_list).cc=0;(yyval.value_list).len=0;;}
+  
+    case 192:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2253 "parser.y"
+    {(yyval.value_list).cc=0;(yyval.value_list).len=0;}
+    }
     break;
 
-  case 193:
 
-/* Line 1455 of yacc.c  */
-#line 2212 "parser.y"
+  
+    case 193:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2254 "parser.y"
     {(yyval.value_list)=(yyvsp[(2) - (3)].value_list);}
+    }
     break;
 
-  case 194:
 
-/* Line 1455 of yacc.c  */
-#line 2214 "parser.y"
-    {(yyval.value_list).cc=0;(yyval.value_list).len=0;;}
+  
+    case 194:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2256 "parser.y"
+    {(yyval.value_list).cc=0;(yyval.value_list).len=0;}
+    }
     break;
 
-  case 196:
 
-/* Line 1455 of yacc.c  */
-#line 2216 "parser.y"
+  
+    case 196:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2258 "parser.y"
     {(yyval.value_list).len=1;
                                                   (yyval.value_list).cc = (yyvsp[(1) - (1)].value).c;
-                                                 ;}
+                                                 }
+    }
     break;
 
-  case 197:
 
-/* Line 1455 of yacc.c  */
-#line 2219 "parser.y"
+  
+    case 197:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2261 "parser.y"
     {
                                                   (yyval.value_list).len= (yyvsp[(1) - (3)].value_list).len+1;
                                                   (yyval.value_list).cc = code_append((yyvsp[(1) - (3)].value_list).cc, (yyvsp[(3) - (3)].value).c);
-                                                  ;}
+                                                  }
+    }
     break;
 
-  case 198:
 
-/* Line 1455 of yacc.c  */
-#line 2224 "parser.y"
+  
+    case 198:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2266 "parser.y"
     {
     MULTINAME(m, (yyvsp[(2) - (3)].classinfo));
     (yyval.value).c = code_new();
@@ -5012,13 +5603,17 @@ yyreduce:
     else
         (yyval.value).c = abc_constructprop2((yyval.value).c, &m, (yyvsp[(3) - (3)].value_list).len);
     (yyval.value).t = (yyvsp[(2) - (3)].classinfo);
-;}
+}
+    }
     break;
 
-  case 199:
 
-/* Line 1455 of yacc.c  */
-#line 2248 "parser.y"
+  
+    case 199:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2290 "parser.y"
     {
     
     (yyval.value).c = (yyvsp[(1) - (4)].value).c;
@@ -5066,13 +5661,17 @@ yyreduce:
         (yyval.value).t = TYPE_ANY;
     }
 
-;}
+}
+    }
     break;
 
-  case 200:
 
-/* Line 1455 of yacc.c  */
-#line 2296 "parser.y"
+  
+    case 200:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2338 "parser.y"
     {
     if(!state->cls) syntaxerror("super() not allowed outside of a class");
     if(!state->method) syntaxerror("super() not allowed outside of a function");
@@ -5091,13 +5690,17 @@ yyreduce:
     (yyval.value).c = abc_constructsuper((yyval.value).c, (yyvsp[(3) - (4)].value_list).len);
     (yyval.value).c = abc_pushundefined((yyval.value).c);
     (yyval.value).t = TYPE_ANY;
-;}
+}
+    }
     break;
 
-  case 201:
 
-/* Line 1455 of yacc.c  */
-#line 2316 "parser.y"
+  
+    case 201:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2358 "parser.y"
     {
     (yyval.value).c = (yyvsp[(2) - (2)].value).c;
     if((yyval.value).c->opcode == OPCODE_COERCE_A) {
@@ -5117,95 +5720,139 @@ yyreduce:
         (yyval.value).c = abc_deleteproperty2((yyval.value).c, &m);
     }
     (yyval.value).t = TYPE_BOOLEAN;
-;}
+}
+    }
     break;
 
-  case 202:
 
-/* Line 1455 of yacc.c  */
-#line 2337 "parser.y"
+  
+    case 202:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2379 "parser.y"
     {
     (yyval.code) = abc_returnvoid(0);
-;}
+}
+    }
     break;
 
-  case 203:
 
-/* Line 1455 of yacc.c  */
-#line 2340 "parser.y"
+  
+    case 203:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2382 "parser.y"
     {
     (yyval.code) = (yyvsp[(2) - (2)].value).c;
     (yyval.code) = abc_returnvalue((yyval.code));
-;}
+}
+    }
     break;
 
-  case 204:
 
-/* Line 1455 of yacc.c  */
-#line 2347 "parser.y"
-    {(yyval.value)=(yyvsp[(1) - (1)].value);;}
+  
+    case 204:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2389 "parser.y"
+    {(yyval.value)=(yyvsp[(1) - (1)].value);}
+    }
     break;
 
-  case 205:
 
-/* Line 1455 of yacc.c  */
-#line 2348 "parser.y"
-    {(yyval.value) = (yyvsp[(1) - (1)].value);;}
+  
+    case 205:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2390 "parser.y"
+    {(yyval.value) = (yyvsp[(1) - (1)].value);}
+    }
     break;
 
-  case 206:
 
-/* Line 1455 of yacc.c  */
-#line 2349 "parser.y"
+  
+    case 206:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2391 "parser.y"
     {
     (yyval.value).c = (yyvsp[(1) - (3)].value).c;
     (yyval.value).c = cut_last_push((yyval.value).c);
     (yyval.value).c = code_append((yyval.value).c,(yyvsp[(3) - (3)].value).c);
     (yyval.value).t = (yyvsp[(3) - (3)].value).t;
-;}
+}
+    }
     break;
 
-  case 207:
 
-/* Line 1455 of yacc.c  */
-#line 2355 "parser.y"
+  
+    case 207:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2397 "parser.y"
     {
     (yyval.code)=cut_last_push((yyvsp[(1) - (1)].value).c);
-;}
+}
+    }
     break;
 
-  case 208:
 
-/* Line 1455 of yacc.c  */
-#line 2361 "parser.y"
-    {(yyval.value) = (yyvsp[(1) - (1)].value);;}
+  
+    case 208:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2403 "parser.y"
+    {(yyval.value) = (yyvsp[(1) - (1)].value);}
+    }
     break;
 
-  case 210:
 
-/* Line 1455 of yacc.c  */
-#line 2365 "parser.y"
-    {(yyval.value) = (yyvsp[(1) - (1)].value);;}
+  
+    case 210:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2407 "parser.y"
+    {(yyval.value) = (yyvsp[(1) - (1)].value);}
+    }
     break;
 
-  case 211:
 
-/* Line 1455 of yacc.c  */
-#line 2367 "parser.y"
-    {(yyval.value) = (yyvsp[(1) - (1)].value);;}
+  
+    case 211:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2409 "parser.y"
+    {(yyval.value) = (yyvsp[(1) - (1)].value);}
+    }
     break;
 
-  case 212:
 
-/* Line 1455 of yacc.c  */
-#line 2369 "parser.y"
-    {(yyval.value) = (yyvsp[(1) - (1)].value);;}
+  
+    case 212:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2411 "parser.y"
+    {(yyval.value) = (yyvsp[(1) - (1)].value);}
+    }
     break;
 
-  case 213:
 
-/* Line 1455 of yacc.c  */
-#line 2371 "parser.y"
+  
+    case 213:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2413 "parser.y"
     {
     (yyval.value).c = 0;
     namespace_t ns = {ACCESS_PACKAGE, ""};
@@ -5221,177 +5868,253 @@ yyreduce:
         (yyval.value).c = abc_construct((yyval.value).c, 2);
     }
     (yyval.value).t = TYPE_REGEXP;
-;}
+}
+    }
     break;
 
-  case 214:
 
-/* Line 1455 of yacc.c  */
-#line 2388 "parser.y"
+  
+    case 214:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2430 "parser.y"
     {(yyval.value).c = abc_pushbyte(0, (yyvsp[(1) - (1)].number_uint));
                    //MULTINAME(m, registry_getintclass());
                    //$$.c = abc_coerce2($$.c, &m); // FIXME
                    (yyval.value).t = TYPE_INT;
-                  ;}
+                  }
+    }
     break;
 
-  case 215:
 
-/* Line 1455 of yacc.c  */
-#line 2393 "parser.y"
+  
+    case 215:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2435 "parser.y"
     {(yyval.value).c = abc_pushshort(0, (yyvsp[(1) - (1)].number_uint));
                     (yyval.value).t = TYPE_INT;
-                   ;}
+                   }
+    }
     break;
 
-  case 216:
 
-/* Line 1455 of yacc.c  */
-#line 2396 "parser.y"
+  
+    case 216:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2438 "parser.y"
     {(yyval.value).c = abc_pushint(0, (yyvsp[(1) - (1)].number_int));
                   (yyval.value).t = TYPE_INT;
-                 ;}
+                 }
+    }
     break;
 
-  case 217:
 
-/* Line 1455 of yacc.c  */
-#line 2399 "parser.y"
+  
+    case 217:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2441 "parser.y"
     {(yyval.value).c = abc_pushuint(0, (yyvsp[(1) - (1)].number_uint));
                    (yyval.value).t = TYPE_UINT;
-                  ;}
+                  }
+    }
     break;
 
-  case 218:
 
-/* Line 1455 of yacc.c  */
-#line 2402 "parser.y"
+  
+    case 218:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2444 "parser.y"
     {(yyval.value).c = abc_pushdouble(0, (yyvsp[(1) - (1)].number_float));
                     (yyval.value).t = TYPE_FLOAT;
-                   ;}
+                   }
+    }
     break;
 
-  case 219:
 
-/* Line 1455 of yacc.c  */
-#line 2405 "parser.y"
+  
+    case 219:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2447 "parser.y"
     {(yyval.value).c = abc_pushstring2(0, &(yyvsp[(1) - (1)].str));
                      (yyval.value).t = TYPE_STRING;
-                    ;}
+                    }
+    }
     break;
 
-  case 220:
 
-/* Line 1455 of yacc.c  */
-#line 2408 "parser.y"
+  
+    case 220:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2450 "parser.y"
     {(yyval.value).c = abc_pushundefined(0);
                     (yyval.value).t = TYPE_ANY;
-                   ;}
+                   }
+    }
     break;
 
-  case 221:
 
-/* Line 1455 of yacc.c  */
-#line 2411 "parser.y"
+  
+    case 221:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2453 "parser.y"
     {(yyval.value).c = abc_pushtrue(0);
                     (yyval.value).t = TYPE_BOOLEAN;
-                   ;}
+                   }
+    }
     break;
 
-  case 222:
 
-/* Line 1455 of yacc.c  */
-#line 2414 "parser.y"
+  
+    case 222:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2456 "parser.y"
     {(yyval.value).c = abc_pushfalse(0);
                      (yyval.value).t = TYPE_BOOLEAN;
-                    ;}
+                    }
+    }
     break;
 
-  case 223:
 
-/* Line 1455 of yacc.c  */
-#line 2417 "parser.y"
+  
+    case 223:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2459 "parser.y"
     {(yyval.value).c = abc_pushnull(0);
                     (yyval.value).t = TYPE_NULL;
-                   ;}
+                   }
+    }
     break;
 
-  case 225:
 
-/* Line 1455 of yacc.c  */
-#line 2422 "parser.y"
+  
+    case 225:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2464 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_greaterequals((yyval.value).c);(yyval.value).c=abc_not((yyval.value).c);
              (yyval.value).t = TYPE_BOOLEAN;
-            ;}
+            }
+    }
     break;
 
-  case 226:
 
-/* Line 1455 of yacc.c  */
-#line 2425 "parser.y"
+  
+    case 226:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2467 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_greaterthan((yyval.value).c);
              (yyval.value).t = TYPE_BOOLEAN;
-            ;}
+            }
+    }
     break;
 
-  case 227:
 
-/* Line 1455 of yacc.c  */
-#line 2428 "parser.y"
+  
+    case 227:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2470 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_greaterthan((yyval.value).c);(yyval.value).c=abc_not((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 228:
 
-/* Line 1455 of yacc.c  */
-#line 2431 "parser.y"
+  
+    case 228:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2473 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_greaterequals((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 229:
 
-/* Line 1455 of yacc.c  */
-#line 2434 "parser.y"
+  
+    case 229:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2476 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_equals((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 230:
 
-/* Line 1455 of yacc.c  */
-#line 2437 "parser.y"
+  
+    case 230:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2479 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_strictequals((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-              ;}
+              }
+    }
     break;
 
-  case 231:
 
-/* Line 1455 of yacc.c  */
-#line 2440 "parser.y"
+  
+    case 231:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2482 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_strictequals((yyval.value).c);(yyval.value).c = abc_not((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 232:
 
-/* Line 1455 of yacc.c  */
-#line 2443 "parser.y"
+  
+    case 232:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2485 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);(yyval.value).c = abc_equals((yyval.value).c);(yyval.value).c = abc_not((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 233:
 
-/* Line 1455 of yacc.c  */
-#line 2447 "parser.y"
+  
+    case 233:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2489 "parser.y"
     {(yyval.value).t = join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, 'O');
               (yyval.value).c = (yyvsp[(1) - (3)].value).c;
               (yyval.value).c = converttype((yyval.value).c, (yyvsp[(1) - (3)].value).t, (yyval.value).t);
@@ -5402,13 +6125,17 @@ yyreduce:
               (yyval.value).c = converttype((yyval.value).c, (yyvsp[(3) - (3)].value).t, (yyval.value).t);
               code_t*label = (yyval.value).c = abc_label((yyval.value).c);
               jmp->branch = label;
-             ;}
+             }
+    }
     break;
 
-  case 234:
 
-/* Line 1455 of yacc.c  */
-#line 2458 "parser.y"
+  
+    case 234:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2500 "parser.y"
     {
               (yyval.value).t = join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, 'A');
               /*printf("%08x:\n",$1.t);
@@ -5425,113 +6152,157 @@ yyreduce:
               (yyval.value).c = converttype((yyval.value).c, (yyvsp[(3) - (3)].value).t, (yyval.value).t);
               code_t*label = (yyval.value).c = abc_label((yyval.value).c);
               jmp->branch = label;              
-             ;}
+             }
+    }
     break;
 
-  case 235:
 
-/* Line 1455 of yacc.c  */
-#line 2476 "parser.y"
+  
+    case 235:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2518 "parser.y"
     {(yyval.value).c=(yyvsp[(2) - (2)].value).c;
               (yyval.value).c = abc_not((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 236:
 
-/* Line 1455 of yacc.c  */
-#line 2481 "parser.y"
+  
+    case 236:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2523 "parser.y"
     {(yyval.value).c=(yyvsp[(2) - (2)].value).c;
               (yyval.value).c = abc_bitnot((yyval.value).c);
               (yyval.value).t = TYPE_INT;
-             ;}
+             }
+    }
     break;
 
-  case 237:
 
-/* Line 1455 of yacc.c  */
-#line 2486 "parser.y"
+  
+    case 237:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2528 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_bitand((yyval.value).c);
              (yyval.value).t = TYPE_INT;
-            ;}
+            }
+    }
     break;
 
-  case 238:
 
-/* Line 1455 of yacc.c  */
-#line 2491 "parser.y"
+  
+    case 238:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2533 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_bitxor((yyval.value).c);
              (yyval.value).t = TYPE_INT;
-            ;}
+            }
+    }
     break;
 
-  case 239:
 
-/* Line 1455 of yacc.c  */
-#line 2496 "parser.y"
+  
+    case 239:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2538 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_bitor((yyval.value).c);
              (yyval.value).t = TYPE_INT;
-            ;}
+            }
+    }
     break;
 
-  case 240:
 
-/* Line 1455 of yacc.c  */
-#line 2501 "parser.y"
+  
+    case 240:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2543 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_rshift((yyval.value).c);
              (yyval.value).t = TYPE_INT;
-            ;}
+            }
+    }
     break;
 
-  case 241:
 
-/* Line 1455 of yacc.c  */
-#line 2505 "parser.y"
+  
+    case 241:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2547 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_urshift((yyval.value).c);
              (yyval.value).t = TYPE_INT;
-            ;}
+            }
+    }
     break;
 
-  case 242:
 
-/* Line 1455 of yacc.c  */
-#line 2509 "parser.y"
+  
+    case 242:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2551 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_lshift((yyval.value).c);
              (yyval.value).t = TYPE_INT;
-            ;}
+            }
+    }
     break;
 
-  case 243:
 
-/* Line 1455 of yacc.c  */
-#line 2514 "parser.y"
+  
+    case 243:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2556 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_divide((yyval.value).c);
              (yyval.value).t = TYPE_NUMBER;
-            ;}
+            }
+    }
     break;
 
-  case 244:
 
-/* Line 1455 of yacc.c  */
-#line 2518 "parser.y"
+  
+    case 244:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2560 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              (yyval.value).c = abc_modulo((yyval.value).c);
              (yyval.value).t = TYPE_NUMBER;
-            ;}
+            }
+    }
     break;
 
-  case 245:
 
-/* Line 1455 of yacc.c  */
-#line 2522 "parser.y"
+  
+    case 245:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2564 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              if(BOTH_INT((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t)) {
                 (yyval.value).c = abc_add_i((yyval.value).c);
@@ -5540,13 +6311,17 @@ yyreduce:
                 (yyval.value).c = abc_add((yyval.value).c);
                 (yyval.value).t = join_types((yyvsp[(1) - (3)].value).t,(yyvsp[(3) - (3)].value).t,'+');
              }
-            ;}
+            }
+    }
     break;
 
-  case 246:
 
-/* Line 1455 of yacc.c  */
-#line 2531 "parser.y"
+  
+    case 246:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2573 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              if(BOTH_INT((yyvsp[(1) - (3)].value).t,(yyvsp[(3) - (3)].value).t)) {
                 (yyval.value).c = abc_subtract_i((yyval.value).c);
@@ -5555,13 +6330,17 @@ yyreduce:
                 (yyval.value).c = abc_subtract((yyval.value).c);
                 (yyval.value).t = TYPE_NUMBER;
              }
-            ;}
+            }
+    }
     break;
 
-  case 247:
 
-/* Line 1455 of yacc.c  */
-#line 2540 "parser.y"
+  
+    case 247:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2582 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
              if(BOTH_INT((yyvsp[(1) - (3)].value).t,(yyvsp[(3) - (3)].value).t)) {
                 (yyval.value).c = abc_multiply_i((yyval.value).c);
@@ -5570,23 +6349,31 @@ yyreduce:
                 (yyval.value).c = abc_multiply((yyval.value).c);
                 (yyval.value).t = TYPE_NUMBER;
              }
-            ;}
+            }
+    }
     break;
 
-  case 248:
 
-/* Line 1455 of yacc.c  */
-#line 2550 "parser.y"
+  
+    case 248:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2592 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c,(yyvsp[(3) - (3)].value).c);
               (yyval.value).c = abc_in((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 249:
 
-/* Line 1455 of yacc.c  */
-#line 2555 "parser.y"
+  
+    case 249:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2597 "parser.y"
     {char use_astype=0; // flash player's astype works differently than astypelate
               if(use_astype && TYPE_IS_CLASS((yyvsp[(3) - (3)].value).t)) {
                 MULTINAME(m,(yyvsp[(3) - (3)].value).t->cls);
@@ -5597,71 +6384,99 @@ yyreduce:
                 (yyval.value).c = abc_astypelate((yyval.value).c);
                 (yyval.value).t = TYPE_ANY;
               }
-             ;}
+             }
+    }
     break;
 
-  case 250:
 
-/* Line 1455 of yacc.c  */
-#line 2568 "parser.y"
+  
+    case 250:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2610 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c, (yyvsp[(3) - (3)].value).c);
               (yyval.value).c = abc_instanceof((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 251:
 
-/* Line 1455 of yacc.c  */
-#line 2573 "parser.y"
+  
+    case 251:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2615 "parser.y"
     {(yyval.value).c = code_append((yyvsp[(1) - (3)].value).c, (yyvsp[(3) - (3)].value).c);
               (yyval.value).c = abc_istypelate((yyval.value).c);
               (yyval.value).t = TYPE_BOOLEAN;
-             ;}
+             }
+    }
     break;
 
-  case 252:
 
-/* Line 1455 of yacc.c  */
-#line 2578 "parser.y"
+  
+    case 252:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2620 "parser.y"
     {
               (yyval.value).c = (yyvsp[(3) - (4)].value).c;
               (yyval.value).c = abc_typeof((yyval.value).c);
               (yyval.value).t = TYPE_STRING;
-             ;}
+             }
+    }
     break;
 
-  case 253:
 
-/* Line 1455 of yacc.c  */
-#line 2584 "parser.y"
+  
+    case 253:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2626 "parser.y"
     {
               (yyval.value).c = cut_last_push((yyvsp[(2) - (2)].value).c);
               (yyval.value).c = abc_pushundefined((yyval.value).c);
               (yyval.value).t = TYPE_ANY;
-             ;}
+             }
+    }
     break;
 
-  case 254:
 
-/* Line 1455 of yacc.c  */
-#line 2590 "parser.y"
+  
+    case 254:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2632 "parser.y"
     { (yyval.value).c = abc_pushundefined(0);
              (yyval.value).t = TYPE_ANY;
-           ;}
+           }
+    }
     break;
 
-  case 255:
 
-/* Line 1455 of yacc.c  */
-#line 2594 "parser.y"
-    {(yyval.value)=(yyvsp[(2) - (3)].value);;}
+  
+    case 255:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2636 "parser.y"
+    {(yyval.value)=(yyvsp[(2) - (3)].value);}
+    }
     break;
 
-  case 256:
 
-/* Line 1455 of yacc.c  */
-#line 2596 "parser.y"
+  
+    case 256:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2638 "parser.y"
     {
   (yyval.value)=(yyvsp[(2) - (2)].value);
   if(IS_INT((yyvsp[(2) - (2)].value).t)) {
@@ -5671,13 +6486,17 @@ yyreduce:
    (yyval.value).c=abc_negate((yyval.value).c);
    (yyval.value).t = TYPE_NUMBER;
   }
-;}
+}
+    }
     break;
 
-  case 257:
 
-/* Line 1455 of yacc.c  */
-#line 2607 "parser.y"
+  
+    case 257:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2649 "parser.y"
     {
   (yyval.value).c = (yyvsp[(1) - (4)].value).c;
   (yyval.value).c = code_append((yyval.value).c, (yyvsp[(3) - (4)].value).c);
@@ -5685,75 +6504,103 @@ yyreduce:
   MULTINAME_LATE(m, (yyvsp[(1) - (4)].value).t?(yyvsp[(1) - (4)].value).t->access:ACCESS_PACKAGE, "");
   (yyval.value).c = abc_getproperty2((yyval.value).c, &m);
   (yyval.value).t = 0; // array elements have unknown type
-;}
+}
+    }
     break;
 
-  case 258:
 
-/* Line 1455 of yacc.c  */
-#line 2616 "parser.y"
+  
+    case 258:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2658 "parser.y"
     {
     (yyval.value).c = code_new();
     (yyval.value).c = code_append((yyval.value).c, (yyvsp[(2) - (3)].value_list).cc);
     (yyval.value).c = abc_newarray((yyval.value).c, (yyvsp[(2) - (3)].value_list).len);
     (yyval.value).t = registry_getarrayclass();
-;}
+}
+    }
     break;
 
-  case 259:
 
-/* Line 1455 of yacc.c  */
-#line 2623 "parser.y"
-    {(yyval.value_list).cc=0;(yyval.value_list).len=0;;}
+  
+    case 259:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2665 "parser.y"
+    {(yyval.value_list).cc=0;(yyval.value_list).len=0;}
+    }
     break;
 
-  case 260:
 
-/* Line 1455 of yacc.c  */
-#line 2624 "parser.y"
+  
+    case 260:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2666 "parser.y"
     {(yyval.value_list)=(yyvsp[(1) - (1)].value_list);}
+    }
     break;
 
-  case 261:
 
-/* Line 1455 of yacc.c  */
-#line 2626 "parser.y"
+  
+    case 261:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2668 "parser.y"
     {
     (yyval.value_list).cc = 0;
     (yyval.value_list).cc = code_append((yyval.value_list).cc, (yyvsp[(1) - (3)].value).c);
     (yyval.value_list).cc = code_append((yyval.value_list).cc, (yyvsp[(3) - (3)].value).c);
     (yyval.value_list).len = 2;
-;}
+}
+    }
     break;
 
-  case 262:
 
-/* Line 1455 of yacc.c  */
-#line 2632 "parser.y"
+  
+    case 262:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2674 "parser.y"
     {
     (yyval.value_list).cc = (yyvsp[(1) - (5)].value_list).cc;
     (yyval.value_list).len = (yyvsp[(1) - (5)].value_list).len+2;
     (yyval.value_list).cc = code_append((yyval.value_list).cc, (yyvsp[(3) - (5)].value).c);
     (yyval.value_list).cc = code_append((yyval.value_list).cc, (yyvsp[(5) - (5)].value).c);
-;}
+}
+    }
     break;
 
-  case 263:
 
-/* Line 1455 of yacc.c  */
-#line 2641 "parser.y"
+  
+    case 263:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2683 "parser.y"
     {
     (yyval.value).c = code_new();
     (yyval.value).c = code_append((yyval.value).c, (yyvsp[(2) - (3)].value_list).cc);
     (yyval.value).c = abc_newobject((yyval.value).c, (yyvsp[(2) - (3)].value_list).len/2);
     (yyval.value).t = registry_getobjectclass();
-;}
+}
+    }
     break;
 
-  case 264:
 
-/* Line 1455 of yacc.c  */
-#line 2648 "parser.y"
+  
+    case 264:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2690 "parser.y"
     { 
                code_t*c = (yyvsp[(3) - (3)].value).c;
                if(BOTH_INT((yyvsp[(1) - (3)].value).t,(yyvsp[(3) - (3)].value).t)) {
@@ -5764,85 +6611,113 @@ yyreduce:
                c=converttype(c, join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, '*'), (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 265:
 
-/* Line 1455 of yacc.c  */
-#line 2660 "parser.y"
+  
+    case 265:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2702 "parser.y"
     { 
                code_t*c = abc_modulo((yyvsp[(3) - (3)].value).c);
                c=converttype(c, join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, '%'), (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 266:
 
-/* Line 1455 of yacc.c  */
-#line 2666 "parser.y"
+  
+    case 266:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2708 "parser.y"
     { 
                code_t*c = abc_lshift((yyvsp[(3) - (3)].value).c);
                c=converttype(c, join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, '<'), (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 267:
 
-/* Line 1455 of yacc.c  */
-#line 2672 "parser.y"
+  
+    case 267:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2714 "parser.y"
     { 
                code_t*c = abc_rshift((yyvsp[(3) - (3)].value).c);
                c=converttype(c, join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, '>'), (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 268:
 
-/* Line 1455 of yacc.c  */
-#line 2678 "parser.y"
+  
+    case 268:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2720 "parser.y"
     { 
                code_t*c = abc_urshift((yyvsp[(3) - (3)].value).c);
                c=converttype(c, join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, 'U'), (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 269:
 
-/* Line 1455 of yacc.c  */
-#line 2684 "parser.y"
+  
+    case 269:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2726 "parser.y"
     { 
                code_t*c = abc_divide((yyvsp[(3) - (3)].value).c);
                c=converttype(c, join_types((yyvsp[(1) - (3)].value).t, (yyvsp[(3) - (3)].value).t, '/'), (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 270:
 
-/* Line 1455 of yacc.c  */
-#line 2690 "parser.y"
+  
+    case 270:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2732 "parser.y"
     { 
                code_t*c = abc_bitor((yyvsp[(3) - (3)].value).c);
                c=converttype(c, TYPE_INT, (yyvsp[(1) - (3)].value).t);
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 271:
 
-/* Line 1455 of yacc.c  */
-#line 2696 "parser.y"
+  
+    case 271:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2738 "parser.y"
     { 
                code_t*c = (yyvsp[(3) - (3)].value).c;
 
@@ -5855,13 +6730,17 @@ yyreduce:
                
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-              ;}
+              }
+    }
     break;
 
-  case 272:
 
-/* Line 1455 of yacc.c  */
-#line 2709 "parser.y"
+  
+    case 272:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2751 "parser.y"
     { code_t*c = (yyvsp[(3) - (3)].value).c; 
                if(TYPE_IS_INT((yyvsp[(1) - (3)].value).t)) {
                 c=abc_subtract_i(c);
@@ -5872,25 +6751,33 @@ yyreduce:
                
                (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 0, 0);
                (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-             ;}
+             }
+    }
     break;
 
-  case 273:
 
-/* Line 1455 of yacc.c  */
-#line 2720 "parser.y"
+  
+    case 273:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2762 "parser.y"
     { code_t*c = 0;
               c = code_append(c, (yyvsp[(3) - (3)].value).c);
               c = converttype(c, (yyvsp[(3) - (3)].value).t, (yyvsp[(1) - (3)].value).t);
               (yyval.value).c = toreadwrite((yyvsp[(1) - (3)].value).c, c, 1, 0);
               (yyval.value).t = (yyvsp[(1) - (3)].value).t;
-            ;}
+            }
+    }
     break;
 
-  case 274:
 
-/* Line 1455 of yacc.c  */
-#line 2727 "parser.y"
+  
+    case 274:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2769 "parser.y"
     { 
               (yyval.value).t = join_types((yyvsp[(3) - (5)].value).t,(yyvsp[(5) - (5)].value).t,'?');
               (yyval.value).c = (yyvsp[(1) - (5)].value).c;
@@ -5902,13 +6789,17 @@ yyreduce:
               (yyval.value).c = code_append((yyval.value).c, (yyvsp[(5) - (5)].value).c);
               (yyval.value).c = converttype((yyval.value).c, (yyvsp[(3) - (5)].value).t, (yyval.value).t);
               (yyval.value).c = j2->branch = abc_label((yyval.value).c);
-            ;}
+            }
+    }
     break;
 
-  case 275:
 
-/* Line 1455 of yacc.c  */
-#line 2740 "parser.y"
+  
+    case 275:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2782 "parser.y"
     { code_t*c = 0;
              classinfo_t*type = (yyvsp[(1) - (2)].value).t;
              if((is_getlocal((yyvsp[(1) - (2)].value).c) && TYPE_IS_INT((yyvsp[(1) - (2)].value).t)) || TYPE_IS_NUMBER((yyvsp[(1) - (2)].value).t)) {
@@ -5933,13 +6824,17 @@ yyreduce:
                  (yyval.value).c = toreadwrite((yyvsp[(1) - (2)].value).c, c, 0, 1);
                  (yyval.value).t = (yyvsp[(1) - (2)].value).t;
              }
-           ;}
+           }
+    }
     break;
 
-  case 276:
 
-/* Line 1455 of yacc.c  */
-#line 2767 "parser.y"
+  
+    case 276:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2809 "parser.y"
     { code_t*c = 0;
              classinfo_t*type = (yyvsp[(1) - (2)].value).t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
@@ -5952,13 +6847,17 @@ yyreduce:
              c=converttype(c, type, (yyvsp[(1) - (2)].value).t);
              (yyval.value).c = toreadwrite((yyvsp[(1) - (2)].value).c, c, 0, 1);
              (yyval.value).t = (yyvsp[(1) - (2)].value).t;
-            ;}
+            }
+    }
     break;
 
-  case 277:
 
-/* Line 1455 of yacc.c  */
-#line 2781 "parser.y"
+  
+    case 277:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2823 "parser.y"
     { code_t*c = 0;
              classinfo_t*type = (yyvsp[(2) - (2)].value).t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
@@ -5971,13 +6870,17 @@ yyreduce:
              c=converttype(c, type, (yyvsp[(2) - (2)].value).t);
              (yyval.value).c = toreadwrite((yyvsp[(2) - (2)].value).c, c, 0, 0);
              (yyval.value).t = (yyvsp[(2) - (2)].value).t;
-           ;}
+           }
+    }
     break;
 
-  case 278:
 
-/* Line 1455 of yacc.c  */
-#line 2795 "parser.y"
+  
+    case 278:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2837 "parser.y"
     { code_t*c = 0;
              classinfo_t*type = (yyvsp[(2) - (2)].value).t;
              if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
@@ -5990,13 +6893,17 @@ yyreduce:
              c=converttype(c, type, (yyvsp[(2) - (2)].value).t);
              (yyval.value).c = toreadwrite((yyvsp[(2) - (2)].value).c, c, 0, 0);
              (yyval.value).t = (yyvsp[(2) - (2)].value).t;
-           ;}
+           }
+    }
     break;
 
-  case 279:
 
-/* Line 1455 of yacc.c  */
-#line 2810 "parser.y"
+  
+    case 279:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2852 "parser.y"
     { if(!state->cls->info)
                   syntaxerror("super keyword not allowed outside a class");
               classinfo_t*t = state->cls->info->superclass;
@@ -6009,13 +6916,17 @@ yyreduce:
               (yyval.value).c = abc_getlocal_0((yyval.value).c);
               (yyval.value).c = abc_getsuper2((yyval.value).c, &m);
               (yyval.value).t = memberinfo_gettype(f);
-           ;}
+           }
+    }
     break;
 
-  case 280:
 
-/* Line 1455 of yacc.c  */
-#line 2825 "parser.y"
+  
+    case 280:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2867 "parser.y"
     {(yyval.value).c = (yyvsp[(1) - (3)].value).c;
              classinfo_t*t = (yyvsp[(1) - (3)].value).t;
              char is_static = 0;
@@ -6047,13 +6958,17 @@ yyreduce:
                  (yyval.value).c = abc_coerce_a((yyval.value).c);
                  (yyval.value).t = registry_getanytype();
              }
-            ;}
+            }
+    }
     break;
 
-  case 281:
 
-/* Line 1455 of yacc.c  */
-#line 2858 "parser.y"
+  
+    case 281:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2900 "parser.y"
     {
     (yyval.value).t = 0;
     (yyval.value).c = 0;
@@ -6143,41 +7058,59 @@ yyreduce:
         (yyval.value).c = abc_findpropstrict2((yyval.value).c, &m);
         (yyval.value).c = abc_getproperty2((yyval.value).c, &m);
     }
-;}
-    break;
-
-  case 282:
-
-/* Line 1455 of yacc.c  */
-#line 2956 "parser.y"
-    {(yyval.code)=0;;}
-    break;
-
-  case 283:
-
-/* Line 1455 of yacc.c  */
-#line 2957 "parser.y"
-    {(yyval.code)=0;;}
-    break;
-
-  case 284:
-
-/* Line 1455 of yacc.c  */
-#line 2958 "parser.y"
-    {(yyval.code)=0;;}
-    break;
-
-  case 285:
-
-/* Line 1455 of yacc.c  */
-#line 2960 "parser.y"
-    {(yyval.token)=0;;}
+}
+    }
     break;
 
 
+  
+    case 282:
+    if(as3_pass==2) {
 
-/* Line 1455 of yacc.c  */
-#line 6181 "parser.tab.c"
+/* Line 1464 of skeleton.m4  */
+#line 2998 "parser.y"
+    {(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 283:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 2999 "parser.y"
+    {(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 284:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 3000 "parser.y"
+    {(yyval.code)=0;}
+    }
+    break;
+
+
+  
+    case 285:
+    if(as3_pass==2) {
+
+/* Line 1464 of skeleton.m4  */
+#line 3002 "parser.y"
+    {(yyval.token)=0;}
+    }
+    break;
+
+
+
+
+/* Line 1464 of skeleton.m4  */
+#line 7114 "parser.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

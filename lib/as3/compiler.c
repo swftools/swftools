@@ -55,17 +55,34 @@ void as3_parse_file(char*filename)
         initialize_parser();
     }
 
+    as3_pass = 0;
+    
     char*fullfilename = enter_file(filename, 0);
     FILE*fi = fopen(fullfilename, "rb");
     if(!fi) {
 	syntaxerror("Couldn't find file %s: %s", fullfilename, strerror(errno));
     }
+    /* pass 1 */
+    as3_pass = 1;
     avm2_set_in(fi);
     initialize_file(filename);
     avm2_parse();
     avm2_lex_destroy();
-    fclose(fi);
     finish_file();
+
+    /* pass 2 */
+    // TODO: this should re-use tokens!
+    enter_file(filename, 0);
+    as3_pass = 2;
+    fseek(fi, 0, SEEK_SET);
+    avm2_set_in(fi);
+    initialize_file(filename);
+    avm2_parse();
+    avm2_lex_destroy();
+    finish_file();
+
+    fclose(fi);
+
 }
 
 static void*as3code = 0;

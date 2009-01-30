@@ -73,6 +73,7 @@ typedef token_t*tokenptr_t;
 #include "parser.tab.h"
 
 extern int as3_verbosity;
+extern int as3_pass;
 #define syntaxerror as3_error
 void as3_error(const char*format, ...);
 void as3_warning(const char*format, ...);

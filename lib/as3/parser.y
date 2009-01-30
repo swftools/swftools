@@ -427,6 +427,16 @@ static void old_state()
     state_t*leaving = state;
     
     state = state->old;
+    
+    if(leaving->method && leaving->method != state->method) {
+        free(leaving->method);
+        leaving->method=0;
+    }
+    if(leaving->cls && leaving->cls != state->cls) {
+        free(leaving->cls);
+        leaving->cls=0;
+    }
+    
     state_destroy(leaving);
 }
 
@@ -629,6 +639,12 @@ static void endpackage()
     old_state();
 }
 
+void parserassert(int b)
+{
+    if(!b) syntaxerror("internal error: assertion failed");
+}
+
+
 char*as3_globalclass=0;
 static void startclass(int flags, char*classname, classinfo_t*extends, classinfo_list_t*implements, char interface)
 {
@@ -663,131 +679,135 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("public classes only allowed inside a package");
     }
 
-    if(registry_findclass(package, classname)) {
-        syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
-    }
-   
-
-    /* build info struct */
-    int num_interfaces = (list_length(implements));
-    state->cls->info = classinfo_register(access, package, classname, num_interfaces);
-    state->cls->info->superclass = extends?extends:TYPE_OBJECT;
-    int pos = 0;
-    classinfo_list_t*l = implements;
-    for(l=implements;l;l=l->next) {
-        state->cls->info->interfaces[pos++] = l->classinfo;
+    if(as3_pass==1) {
+        if(registry_findclass(package, classname)) {
+            syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
+        }
+        /* build info struct */
+        int num_interfaces = (list_length(implements));
+        state->cls->info = classinfo_register(access, package, classname, num_interfaces);
     }
     
-    multiname_t*extends2 = sig2mname(extends);
+    if(as3_pass == 2) {
+        state->cls->info = registry_findclass(package, classname);
+        parserassert((int)state->cls->info);
 
-    MULTINAME(classname2,state->cls->info);
+        /* fill out interfaces and extends (we couldn't resolve those during the first pass) */
+        state->cls->info->superclass = extends?extends:TYPE_OBJECT;
+        int pos = 0;
+        classinfo_list_t*l = implements;
+        for(l=implements;l;l=l->next) {
+            state->cls->info->interfaces[pos++] = l->classinfo;
+        }
 
-    /*if(extends) {
-        state->cls_init = abc_getlocal_0(state->cls_init);
-        state->cls_init = abc_constructsuper(state->cls_init, 0);
-    }*/
+        /* generate the abc code for this class */
+        MULTINAME(classname2,state->cls->info);
+        multiname_t*extends2 = sig2mname(extends);
 
-    state->cls->abc = abc_class_new(global->file, &classname2, extends2);
-    if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
-    if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
-    if(interface) {
-        state->cls->info->flags |= CLASS_INTERFACE;
-        abc_class_interface(state->cls->abc);
-    }
+        state->cls->abc = abc_class_new(global->file, &classname2, extends2);
+        if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
+        if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
+        if(interface) {
+            state->cls->info->flags |= CLASS_INTERFACE;
+            abc_class_interface(state->cls->abc);
+        }
 
-    abc_class_protectedNS(state->cls->abc, classname);
+        abc_class_protectedNS(state->cls->abc, classname);
 
-    for(mlist=implements;mlist;mlist=mlist->next) {
-        MULTINAME(m, mlist->classinfo);
-        abc_class_add_interface(state->cls->abc, &m);
-    }
+        for(mlist=implements;mlist;mlist=mlist->next) {
+            MULTINAME(m, mlist->classinfo);
+            abc_class_add_interface(state->cls->abc, &m);
+        }
 
-    /* now write the construction code for this class */
-    int slotindex = abc_initscript_addClassTrait(global->init, &classname2, state->cls->abc);
+        /* write the construction code for this class to the global init
+           function */
+        int slotindex = abc_initscript_addClassTrait(global->init, &classname2, state->cls->abc);
 
-    abc_method_body_t*m = global->init->method->body;
-    __ getglobalscope(m);
-    classinfo_t*s = extends;
+        abc_method_body_t*m = global->init->method->body;
+        __ getglobalscope(m);
+        classinfo_t*s = extends;
 
-    int count=0;
-    
-    while(s) {
-        //TODO: take a look at the current scope stack, maybe 
-        //      we can re-use something
-        s = s->superclass;
-        if(!s) 
-        break;
-       
-        multiname_t*s2 = sig2mname(s);
-        __ getlex2(m, s2);
-        multiname_destroy(s2);
+        int count=0;
+        
+        while(s) {
+            //TODO: take a look at the current scope stack, maybe 
+            //      we can re-use something
+            s = s->superclass;
+            if(!s) 
+            break;
+           
+            multiname_t*s2 = sig2mname(s);
+            __ getlex2(m, s2);
+            multiname_destroy(s2);
 
-        __ pushscope(m); count++;
-        m->code = m->code->prev->prev; // invert
-    }
-    /* continue appending after last op end */
-    while(m->code && m->code->next) m->code = m->code->next; 
+            __ pushscope(m); count++;
+            m->code = m->code->prev->prev; // invert
+        }
+        /* continue appending after last op end */
+        while(m->code && m->code->next) m->code = m->code->next; 
 
-    /* TODO: if this is one of *our* classes, we can also 
-             do a getglobalscope/getslot <nr> (which references
-             the init function's slots) */
-    if(extends2) {
-        __ getlex2(m, extends2);
-        __ dup(m);
-        /* notice: we get a Verify Error #1107 if the top elemnt on the scope
-           stack is not the superclass */
-        __ pushscope(m);count++;
-    } else {
-        __ pushnull(m);
-        /* notice: we get a verify error #1107 if the top element on the scope 
-           stack is not the global object */
-        __ getlocal_0(m);
-        __ pushscope(m);count++;
-    }
-    __ newclass(m,state->cls->abc);
-    while(count--) {
-        __ popscope(m);
-    }
-    __ setslot(m, slotindex);
-
-    /* flash.display.MovieClip handling */
-    if(!as3_globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
-        if(state->package && state->package[0]) {
-            as3_globalclass = concat3(state->package, ".", classname);
+        /* TODO: if this is one of *our* classes, we can also 
+                 do a getglobalscope/getslot <nr> (which references
+                 the init function's slots) */
+        if(extends2) {
+            __ getlex2(m, extends2);
+            __ dup(m);
+            /* notice: we get a Verify Error #1107 if the top elemnt on the scope
+               stack is not the superclass */
+            __ pushscope(m);count++;
         } else {
-            as3_globalclass = strdup(classname);
+            __ pushnull(m);
+            /* notice: we get a verify error #1107 if the top element on the scope 
+               stack is not the global object */
+            __ getlocal_0(m);
+            __ pushscope(m);count++;
+        }
+        __ newclass(m,state->cls->abc);
+        while(count--) {
+            __ popscope(m);
+        }
+        __ setslot(m, slotindex);
+        multiname_destroy(extends2);
+
+        /* flash.display.MovieClip handling */
+
+        if(!as3_globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
+            if(state->package && state->package[0]) {
+                as3_globalclass = concat3(state->package, ".", classname);
+            } else {
+                as3_globalclass = strdup(classname);
+            }
         }
     }
-    multiname_destroy(extends2);
 }
 
 static void endclass()
 {
-    if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
-        code_t*c = 0;
-        c = abc_getlocal_0(c);
-        c = abc_constructsuper(c, 0);
-        state->cls->init = code_append(state->cls->init, c);
-    }
-    if(!state->method->late_binding) {
-        // class initialization code uses late binding
-        code_t*c = 0;
-        c = abc_getlocal_0(c);
-        c = abc_pushscope(c);
-        state->cls->static_init = code_append(c, state->cls->static_init);
+    if(as3_pass == 2) {
+        if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
+            code_t*c = 0;
+            c = abc_getlocal_0(c);
+            c = abc_constructsuper(c, 0);
+            state->cls->init = code_append(state->cls->init, c);
+        }
+        if(!state->method->late_binding) {
+            // class initialization code uses late binding
+            code_t*c = 0;
+            c = abc_getlocal_0(c);
+            c = abc_pushscope(c);
+            state->cls->static_init = code_append(c, state->cls->static_init);
+        }
+
+        if(state->cls->init) {
+            abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
+            m->body->code = wrap_function(0, state->cls->init, m->body->code);
+        }
+        if(state->cls->static_init) {
+            abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
+            m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
+        }
     }
 
-    if(state->cls->init) {
-        abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
-        m->body->code = wrap_function(0, state->cls->init, m->body->code);
-    }
-    if(state->cls->static_init) {
-        abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
-        m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
-    }
-
-    free(state->cls);state->cls=0;
-    free(state->method);state->method=0;
     old_state();
 }
 
@@ -916,36 +936,50 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         syntaxerror("not able to start another method scope");
     }
     new_state();
-    global->variable_count = 0;
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->has_super = 0;
 
     if(state->cls) {
         state->method->is_constructor = !strcmp(state->cls->info->name,name);
         state->cls->has_constructor |= state->method->is_constructor;
-        
-        new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
     } else {
         state->method->is_global = 1;
         state->method->late_binding = 1; // for global methods, always push local_0 on the scope stack
-
-        new_variable("globalscope", 0, 0);
-    }
-
-    /* state->vars is initialized by state_new */
-
-    param_list_t*p=0;
-    for(p=params->list;p;p=p->next) {
-        new_variable(p->param->name, p->param->type, 0);
     }
     if(state->method->is_constructor)
         name = "__as3_constructor__";
-    state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
+
+    if(as3_pass == 1) {
+        state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
+    }
+
+    if(as3_pass == 2) {
+        /* retrieve the member info that we stored in the first pass.
+           TODO: better getter/setter support? */
+        if(!state->cls) state->method->info = registry_findclass(state->package, name)->function;
+        else            state->method->info = registry_findmember(state->cls->info, name, 0);
+
+        global->variable_count = 0;
+        /* state->vars is initialized by state_new */
+        if(!state->method->is_global)
+            new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
+        else
+            new_variable("globalscope", 0, 0);
+        param_list_t*p=0;
+        for(p=params->list;p;p=p->next) {
+            new_variable(p->param->name, p->param->type, 0);
+        }
+    } 
 }
 
 static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
+    if(as3_pass==1) {
+        old_state();
+        return;
+    }
+
     abc_method_t*f = 0;
 
     multiname_t*type2 = sig2mname(return_type);
@@ -1002,7 +1036,6 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
             syntaxerror("interface methods can't have a method body");
     }
        
-    free(state->method);state->method=0;
     old_state();
 }
 
@@ -1134,11 +1167,6 @@ char is_pushundefined(code_t*c)
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
 }
 
-void parserassert(int b)
-{
-    if(!b) syntaxerror("internal error: assertion failed");
-}
-
 static classinfo_t* find_class(char*name)
 {
     classinfo_t*c=0;
@@ -1171,7 +1199,7 @@ static classinfo_t* find_class(char*name)
     if(c) return c;
    
     /* try local "filename" package */
-    c = registry_findclass(current_filename, name);
+    c = registry_findclass(current_filename_short, name);
     if(c) return c;
 
     return 0;
@@ -1474,8 +1502,13 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
     }
 }
 
-%}
+#define PASS1 }} if(as3_pass == 1) {{
+#define PASS1END }} if(as3_pass == 2) {{
+#define PASS2 }} if(as3_pass == 2) {{
+#define PASS12 }} {{
+#define PASS12END }} if(as3_pass == 2) {{
 
+%}
 
 %%
 
@@ -1754,7 +1787,7 @@ MAYBE_CASE_LIST :           {$$=0;}
 MAYBE_CASE_LIST : CASE_LIST {$$=$1;}
 MAYBE_CASE_LIST : DEFAULT   {$$=$1;}
 MAYBE_CASE_LIST : CASE_LIST DEFAULT {$$=code_append($1,$2);}
-CASE_LIST: CASE             {$$=$1}
+CASE_LIST: CASE             {$$=$1;}
 CASE_LIST: CASE_LIST CASE   {$$=code_append($$,$2);}
 
 CASE: "case" E ':' MAYBECODE {
@@ -1839,7 +1872,7 @@ FINALLY: "finally" '{' {new_state();state->exception_name=0;} MAYBECODE '}' {
 
 CATCH_LIST: CATCH {$$.l=list_new();$$.finally=0;list_append($$.l,$1);}
 CATCH_LIST: CATCH_LIST CATCH {$$=$1;list_append($$.l,$2);}
-CATCH_FINALLY_LIST: CATCH_LIST {$$=$1};
+CATCH_FINALLY_LIST: CATCH_LIST {$$=$1;}
 CATCH_FINALLY_LIST: CATCH_LIST FINALLY {
     $$ = $1;
     $$.finally = 0;
@@ -1927,13 +1960,15 @@ WITH : "with" '(' EXPRESSION ')' CODEBLOCK {
 /* ------------ packages and imports ---------------- */
 
 X_IDENTIFIER: T_IDENTIFIER
-            | "package" {$$="package";}
+            | "package" {PASS12 $$="package";}
 
-PACKAGE: PACKAGE '.' X_IDENTIFIER {$$ = concat3($1,".",$3);free($1);$1=0;}
-PACKAGE: X_IDENTIFIER             {$$=strdup($1);}
+PACKAGE: PACKAGE '.' X_IDENTIFIER {PASS12 $$ = concat3($1,".",$3);free($1);$1=0;}
+PACKAGE: X_IDENTIFIER             {PASS12 $$=strdup($1);}
 
-PACKAGE_DECLARATION : "package" PACKAGE '{' {startpackage($2);free($2);$2=0;} MAYBE_INPACKAGE_CODE_LIST '}' {endpackage();$$=0;}
-PACKAGE_DECLARATION : "package" '{' {startpackage("")} MAYBE_INPACKAGE_CODE_LIST '}' {endpackage();$$=0;}
+PACKAGE_DECLARATION : "package" PACKAGE '{' {PASS12 startpackage($2);free($2);$2=0;}
+                                MAYBE_INPACKAGE_CODE_LIST '}' {PASS12 endpackage();$$=0;}
+PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");} 
+                                MAYBE_INPACKAGE_CODE_LIST '}' {PASS12 endpackage();$$=0;}
 
 IMPORT : "import" QNAME {
        classinfo_t*c = $2;
@@ -1953,20 +1988,20 @@ IMPORT : "import" PACKAGE '.' '*' {
 
 /* ------------ classes and interfaces (header) -------------- */
 
-MAYBE_MODIFIERS : %prec above_function {$$=0;}
-MAYBE_MODIFIERS : MODIFIER_LIST {$$=$1}
-MODIFIER_LIST : MODIFIER               {$$=$1;}
-MODIFIER_LIST : MODIFIER_LIST MODIFIER {$$=$1|$2;}
+MAYBE_MODIFIERS : %prec above_function {PASS12 $$=0;}
+MAYBE_MODIFIERS : MODIFIER_LIST        {PASS12 $$=$1;}
+MODIFIER_LIST : MODIFIER               {PASS12 $$=$1;}
+MODIFIER_LIST : MODIFIER_LIST MODIFIER {PASS12 $$=$1|$2;}
 
-MODIFIER : KW_PUBLIC {$$=FLAG_PUBLIC;}
-         | KW_PRIVATE {$$=FLAG_PRIVATE;}
-         | KW_PROTECTED {$$=FLAG_PROTECTED;}
-         | KW_STATIC {$$=FLAG_STATIC;}
-         | KW_DYNAMIC {$$=FLAG_DYNAMIC;}
-         | KW_FINAL {$$=FLAG_FINAL;}
-         | KW_OVERRIDE {$$=FLAG_OVERRIDE;}
-         | KW_NATIVE {$$=FLAG_NATIVE;}
-         | KW_INTERNAL {$$=FLAG_PACKAGEINTERNAL;}
+MODIFIER : KW_PUBLIC {PASS12 $$=FLAG_PUBLIC;}
+         | KW_PRIVATE {PASS12 $$=FLAG_PRIVATE;}
+         | KW_PROTECTED {PASS12 $$=FLAG_PROTECTED;}
+         | KW_STATIC {PASS12 $$=FLAG_STATIC;}
+         | KW_DYNAMIC {PASS12 $$=FLAG_DYNAMIC;}
+         | KW_FINAL {PASS12 $$=FLAG_FINAL;}
+         | KW_OVERRIDE {PASS12 $$=FLAG_OVERRIDE;}
+         | KW_NATIVE {PASS12 $$=FLAG_NATIVE;}
+         | KW_INTERNAL {PASS12 $$=FLAG_PACKAGEINTERNAL;}
 
 EXTENDS : {$$=registry_getobjectclass();}
 EXTENDS : KW_EXTENDS QNAME {$$=$2;}
@@ -1974,20 +2009,20 @@ EXTENDS : KW_EXTENDS QNAME {$$=$2;}
 EXTENDS_LIST : {$$=list_new();}
 EXTENDS_LIST : KW_EXTENDS QNAME_LIST {$$=$2;}
 
-IMPLEMENTS_LIST : {$$=list_new();}
-IMPLEMENTS_LIST : KW_IMPLEMENTS QNAME_LIST {$$=$2;}
+IMPLEMENTS_LIST : {PASS12 $$=list_new();}
+IMPLEMENTS_LIST : KW_IMPLEMENTS QNAME_LIST {PASS12 $$=$2;}
 
 CLASS_DECLARATION : MAYBE_MODIFIERS "class" T_IDENTIFIER 
                               EXTENDS IMPLEMENTS_LIST 
-                              '{' {startclass($1,$3,$4,$5, 0);} 
+                              '{' {PASS12 startclass($1,$3,$4,$5, 0);} 
                               MAYBE_CLASS_BODY 
-                              '}' {endclass();$$=0;}
+                              '}' {PASS12 endclass();$$=0;}
 
 INTERFACE_DECLARATION : MAYBE_MODIFIERS "interface" T_IDENTIFIER 
                               EXTENDS_LIST 
-                              '{' {startclass($1,$3,0,$4,1);}
+                              '{' {PASS12 startclass($1,$3,0,$4,1);}
                               MAYBE_INTERFACE_BODY 
-                              '}' {endclass();$$=0;}
+                              '}' {PASS12 endclass();$$=0;}
 
 /* ------------ classes and interfaces (body) -------------- */
 
@@ -2014,6 +2049,7 @@ IDECLARATION : "var" T_IDENTIFIER {
     syntaxerror("variable declarations not allowed in interfaces");
 }
 IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE {
+    PASS12
     $1 |= FLAG_PUBLIC;
     if($1&(FLAG_PRIVATE|FLAG_PACKAGEINTERNAL|FLAG_PROTECTED)) {
         syntaxerror("invalid method modifiers: interface methods always need to be public");
@@ -2146,8 +2182,10 @@ GETSET : "get" {$$=$1;}
        |       {$$=0;}
 
 FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
-                      MAYBETYPE '{' {startfunction(0,$1,$3,$4,&$6,$8)} MAYBECODE '}' 
+                      MAYBETYPE '{' {PASS12 startfunction(0,$1,$3,$4,&$6,$8);} MAYBECODE '}' 
 {
+    PASS1 old_state();
+    PASS2
     code_t*c = 0;
     if(state->method->late_binding) {
         c = abc_getlocal_0(c);
@@ -2159,6 +2197,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
         c = abc_constructsuper(c, 0);
     }
     c = wrap_function(c, 0, $11);
+
     endfunction(0,$1,$3,$4,&$6,$8,c);
     $$=0;
 }
@@ -2174,13 +2213,16 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE '{
 /* ------------- package + class ids --------------- */
 
 CLASS: T_IDENTIFIER {
-
+    PASS1 $$=0;
+    PASS2
     /* try current package */
     $$ = find_class($1);
     if(!$$) syntaxerror("Could not find class %s\n", $1);
 }
 
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
+    PASS1 $$=0;
+    PASS2
     $$ = registry_findclass($1, $3);
     if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1, $3);
     free($1);$1=0;
@@ -2189,8 +2231,8 @@ PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
 QNAME: PACKAGEANDCLASS
      | CLASS
 
-QNAME_LIST : QNAME {$$=list_new();list_append($$, $1);}
-QNAME_LIST : QNAME_LIST ',' QNAME {$$=$1;list_append($$,$3);}
+QNAME_LIST : QNAME {PASS12 $$=list_new();list_append($$, $1);}
+QNAME_LIST : QNAME_LIST ',' QNAME {PASS12 $$=$1;list_append($$,$3);}
 
 TYPE : QNAME      {$$=$1;}
      | '*'        {$$=registry_getanytype();}
@@ -2209,7 +2251,7 @@ MAYBETYPE:          {$$=0;}
 /* ----------function calls, delete, constructor calls ------ */
 
 MAYBE_PARAM_VALUES :  %prec prec_none {$$.cc=0;$$.len=0;}
-MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2}
+MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2;}
 
 MAYBE_EXPRESSION_LIST : {$$.cc=0;$$.len=0;}
 MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
@@ -2621,7 +2663,7 @@ E : '[' MAYBE_EXPRESSION_LIST ']' {
 }
 
 MAYBE_EXPRPAIR_LIST : {$$.cc=0;$$.len=0;}
-MAYBE_EXPRPAIR_LIST : EXPRPAIR_LIST {$$=$1};
+MAYBE_EXPRPAIR_LIST : EXPRPAIR_LIST {$$=$1;}
 
 EXPRPAIR_LIST : NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
     $$.cc = 0;

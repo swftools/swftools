@@ -31,6 +31,8 @@
 #include "tokenizer.h"
 #include "files.h"
 
+int as3_pass = 0;
+
 int as3_verbosity = 1;
 void as3_error(const char*format, ...)
 {
