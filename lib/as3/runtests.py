@@ -24,6 +24,8 @@ import sys
 import os
 import time
 import subprocess
+import marshal
+from optparse import OptionParser
 
 def check(s):
     row = None
@@ -74,6 +76,45 @@ def runcmd(cmd,args,wait):
     fo.close()
     return ret,output
 
+class Cache:
+    def __init__(self, filename):
+        try:
+            self.filename2status = marshal.load(open(filename, "rb"))
+        except IOError:
+            self.filename2status = {}
+
+    def parse_args(self):
+        parser = OptionParser()
+        parser.add_option("-d", "--diff", dest="diff", help="Only run tests that failed the last time",action="store_true")
+        (options, args) = parser.parse_args()
+        self.__dict__.update(options.__dict__)
+
+        self.checknum=-1
+        if len(args):
+            self.checknum = int(args[0])
+
+    @staticmethod
+    def load(filename):
+        return Cache(filename)
+
+    def save(self, filename):
+        fi = open(filename, "wb")
+        marshal.dump(self.filename2status, fi)
+        fi.close()
+
+    def highlight(self, nr, filename):
+        return self.checknum==nr
+
+    def skip_file(self, nr, filename):
+        if self.checknum>=0 and nr!=self.checknum:
+            return 1
+        if self.diff and self.filename2status[filename]=="ok":
+            return 1
+        return 0
+
+    def file_status(self, filename, status):
+        self.filename2status[filename] = status
+
 class TestBase:
     def __init__(self, nr, file, run):
         self.nr = nr
@@ -92,8 +133,11 @@ class TestBase:
         self.compile_output = output
         if ret:
             self.compile_error = 1
+            return 0
         if not os.path.isfile("abc.swf"):
             self.compile_error = 1
+            return 0
+        return 1
 
     def run(self):
         ret,output = runcmd("flashplayer",["abc.swf"],wait=1)
@@ -102,6 +146,8 @@ class TestBase:
         
         if not check(self.flash_output):
             self.flash_error = 1
+            return 0
+        return 1
 
     def doprint(self):
         print self.r(str(self.nr),3)," ",
@@ -144,21 +190,27 @@ class TestBase:
         return s + (" "*(l-len(s)))
 
 class Test(TestBase):
-    def __init__(self, nr, file):
+    def __init__(self, cache, nr, file):
         TestBase.__init__(self, nr, file, run=1)
-        self.compile()
-        if not self.compile_error:
-            self.run()
+        if self.compile() and self.run():
+            cache.file_status(file, "ok")
+        else:
+            cache.file_status(file, "error")
 
 class ErrTest(TestBase):
-    def __init__(self, nr, file):
+    def __init__(self, cache, nr, file):
         TestBase.__init__(self, nr, file, run=0)
-        self.compile()
-        self.compile_error = not self.compile_error
+        if self.compile():
+            cache.file_status(file, "error")
+            self.compile_error = True
+        else:
+            cache.file_status(file, "ok")
+            self.compile_error = False
 
 class Suite:
-    def __init__(self, dir):
+    def __init__(self, cache, dir):
         self.dir = dir
+        self.cache = cache
         self.errtest = "err" in dir
     def run(self, nr):
         print "-"*40,"tests \""+self.dir+"\"","-"*40
@@ -167,23 +219,26 @@ class Suite:
                 continue
             nr = nr + 1
             file = os.path.join(self.dir, file)
-            if checknum>=0 and nr!=checknum:
+
+            if cache.skip_file(nr, file):
                 continue
+
             if self.errtest:
-                test = ErrTest(nr,file)
+                test = ErrTest(cache, nr, file)
             else:
-                test = Test(nr,file)
-            if checknum!=nr:
+                test = Test(cache, nr, file)
+
+            if not cache.highlight(nr, file):
                 test.doprint()
             else:
                 test.doprintlong()
         return nr
 
-checknum=-1
-if len(sys.argv)>1:
-    checknum = int(sys.argv[1])
+cache = Cache.load(".tests.cache")
+cache.parse_args()
 
 nr = 0
-nr = Suite("err").run(nr)
-nr = Suite("ok").run(nr)
+nr = Suite(cache, "err").run(nr)
+nr = Suite(cache, "ok").run(nr)
 
+cache.save(".tests.cache")
