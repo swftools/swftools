@@ -224,11 +224,11 @@ void load_libraries(char*filename, int pass, FILE*fi)
                 fprintf(fi, "static classinfo_t %s;\n", id);
             } else if(pass==1) {
                 fprintf(fi, "static classinfo_t %s = {0x%02x, 0x%02x, \"%s\", \"%s\"", id, access, flags, package, name);
-                fprintf(fi, ", 0"); //slot
+                fprintf(fi, ", (void*)0"); //slot
                 if(superid)
                     fprintf(fi, ", &%s, interfaces:{", superid);
                 else
-                    fprintf(fi, ", 0, {");
+                    fprintf(fi, ", (void*)0, interfaces:{");
                 if(cls->interfaces) {
                     multiname_list_t*i=cls->interfaces;
                     while(i) {
@@ -237,7 +237,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                         i = i->next;
                     }
                 }
-                fprintf(fi, "0}};\n");
+                fprintf(fi, "(void*)0}};\n");
             } else if(pass==2) {
                 trait_list_t*l=cls->traits;
                 fprintf(fi, "    dict_put(d, &%s, &%s);\n", id, id);
@@ -330,7 +330,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                     fprintf(fi, "static classinfo_t %s_class;\n", id2);
                 } else if(pass==1) {
                     write_member_info(fi, 0, id2, name, flags, trait);
-                    fprintf(fi, "static classinfo_t %s_class = {0x%02x, 0x%02x, \"%s\", \"%s\", &%s, 0, members:{0}};\n", 
+                    fprintf(fi, "static classinfo_t %s_class = {0x%02x, 0x%02x, \"%s\", \"%s\", &%s, (void*)0, members:{(void*)0}};\n", 
                             id2,
                             trait->name->ns->access, clsflags,
                             package, name, 
