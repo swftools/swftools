@@ -2079,6 +2079,7 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
     code_t**code;
     if(!state->cls) {
         // global variable
+        mname_ns.name = state->package;
         traits = &global->init->traits;
         code = &global->init->method->body->code;
     } else if(flags&FLAG_STATIC) {
