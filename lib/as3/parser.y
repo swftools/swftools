@@ -950,6 +950,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         name = "__as3_constructor__";
 
     if(as3_pass == 1) {
+        return_type = 0;
         state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
     }
 
@@ -958,6 +959,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
            TODO: better getter/setter support? */
         if(!state->cls) state->method->info = registry_findclass(state->package, name)->function;
         else            state->method->info = registry_findmember(state->cls->info, name, 0);
+        state->method->info->return_type = return_type;
 
         global->variable_count = 0;
         /* state->vars is initialized by state_new */
@@ -2650,7 +2652,7 @@ E : '-' E {
 E : E '[' E ']' {
   $$.c = $1.c;
   $$.c = code_append($$.c, $3.c);
- 
+
   MULTINAME_LATE(m, $1.t?$1.t->access:ACCESS_PACKAGE, "");
   $$.c = abc_getproperty2($$.c, &m);
   $$.t = 0; // array elements have unknown type
