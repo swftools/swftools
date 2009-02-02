@@ -57,7 +57,6 @@ typedef struct _pdf_doc_internal
     InfoOutputDev*info;
 
     pdf_page_info_t*pages;
-    gfxdevice_t* middev;
     char*filename;
 
     /* page map */
@@ -171,7 +170,7 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 	gfxdevice_rescale_init(middev, 0x00000000, 0, 0, 1.0 / multiply);
         gfxdevice_rescale_setdevice(middev, dev);
 	middev->setparameter(middev, "protect", "1");
-	dev = pi->middev;
+	dev = middev;
     } 
 	
     if(!pi) {
