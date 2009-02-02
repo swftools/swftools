@@ -82,6 +82,7 @@ struct _memberinfo {
     classinfo_t*parent;
     classinfo_list_t*params;
     int slot;
+    dict_t*subfunctions;
 };
 
 extern type_t classinfo_type;
