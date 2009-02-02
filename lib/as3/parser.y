@@ -301,6 +301,7 @@ typedef struct _methodstate {
     char is_constructor;
     char has_super;
     char is_global;
+    char inner;
     abc_exception_list_t*exceptions;
 } methodstate_t;
 
@@ -929,6 +930,32 @@ static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
     return minfo;
 }
 
+static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
+{
+    parserassert(state->method && state->method->info);
+    memberinfo_t*parent_method = state->method->info;
+
+    if(as3_pass==1) {
+        // not valid yet
+        params = 0;
+        return_type = 0;
+    }
+
+    new_state();
+    state->method = rfx_calloc(sizeof(methodstate_t));
+    state->method->inner = 1;
+    
+    NEW(memberinfo_t,minfo);
+    minfo->return_type = return_type;
+    minfo->name = name;
+
+    if(!parent_method->subfunctions) 
+        parent_method->subfunctions = dict_new();
+
+    dict_put(parent_method->subfunctions, name, minfo);
+    state->method->info = minfo;
+}
+
 static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type)
 {
@@ -974,19 +1001,21 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     } 
 }
 
-static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
+static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
     if(as3_pass==1) {
         old_state();
-        return;
+        return 0;
     }
 
     abc_method_t*f = 0;
 
     multiname_t*type2 = sig2mname(return_type);
     int slot = 0;
-    if(state->method->is_constructor) {
+    if(state->method->inner) {
+        f = abc_method_new(global->file, type2, 1);
+    } else if(state->method->is_constructor) {
         f = abc_class_getconstructor(state->cls->abc, type2);
     } else if(!state->method->is_global) {
         namespace_t mname_ns = flags2namespace(flags, "");
@@ -1039,9 +1068,8 @@ static void endfunction(token_t*ns, int flags, enum yytokentype getset, char*nam
     }
        
     old_state();
+    return f;
 }
-
-
 
 char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
 {
@@ -2189,6 +2217,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
 {
     PASS1 old_state();
     PASS2
+    if(!state->method->info) syntaxerror("internal error");
     code_t*c = 0;
     if(state->method->late_binding) {
         c = abc_getlocal_0(c);
@@ -2207,9 +2236,21 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
 
 MAYBE_IDENTIFIER: T_IDENTIFIER
 MAYBE_IDENTIFIER: {$$=0;}
-INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE '{' MAYBECODE '}'
+INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE 
+               '{' {PASS12 innerfunction($2,&$4,$6);} MAYBECODE '}'
 {
-    syntaxerror("nested functions not supported yet");
+    PASS1 old_state();
+    PASS2
+    memberinfo_t*f = state->method->info;
+    if(!f) syntaxerror("internal error");
+
+    code_t*c = 0;
+    c = wrap_function(c, 0, $9);
+
+    abc_method_t*abc = endfunction(0,0,0,$2,&$4,$6,c);
+    
+    $$.c = abc_newfunction(0, abc);
+    $$.t = TYPE_FUNCTION(f);
 }
 
 
