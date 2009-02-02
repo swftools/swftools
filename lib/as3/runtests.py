@@ -25,6 +25,7 @@ import os
 import time
 import subprocess
 import marshal
+import select
 from optparse import OptionParser
 
 def check(s):
@@ -58,22 +59,30 @@ def check(s):
     return 0
 
 def runcmd(cmd,args,wait):
-    #fo = open(tempfile, "wb")
-    fo= os.tmpfile()
+    #fo = os.tmpfile()
+    fi,fo = os.pipe()
+    fo = os.fdopen(fo, "wb")
     p = subprocess.Popen([cmd] + args, executable=cmd, stdout=fo, stderr=fo)
     ret = -1
+    output = ""
     for i in range(wait*10):
+        if fi in select.select([fi],[],[], 0.01)[0]:
+            output += os.read(fi, 8192)
+            if "[exit]" in output:
+                break
         ret = p.poll()
         if ret is not None:
             break
         time.sleep(0.1)
     else:
         os.kill(p.pid, 9)
-        os.system("killall -9 "+cmd)
-  
-    fo.seek(0)
-    output = fo.read()
+        os.system("killall -9 %s >/dev/null 2>/dev/null" % cmd)
     fo.close()
+   
+    if fi in select.select([fi],[],[], 0.01)[0]:
+        output += os.read(fi, 8192)
+
+    os.close(fi)
     return ret,output
 
 class Cache:
