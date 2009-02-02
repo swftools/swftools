@@ -25,10 +25,10 @@ D=-g -pg
 
 
 tokenizer.yy.c: tokenizer.lex tokenizer.h
-	flex -Pavm2_ -8 -B -otokenizer.yy.c tokenizer.lex
+	flex -Pas3_ -8 -B -otokenizer.yy.c tokenizer.lex
 
 parser.tab.h parser.tab.c: parser.y parser.h skeleton.m4
-	bison -S ./skeleton.m4 -v --defines -pavm2_ parser.y -o parser.tab.c
+	bison -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
 
 main.o: main.c parser.tab.h parser.h
 	gcc $(D) -c main.c -o main.o
