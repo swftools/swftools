@@ -23,6 +23,8 @@ package {
             trace(foobar.z);
             foobar.f1();
             foobar.f2();
+            
+            trace("[exit]");
         }
     }
 }

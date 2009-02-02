@@ -22,6 +22,7 @@ package {
             for(var a2=0;a2<99;a2++) {
                 if(a2==80) trace("ok 4/4");
             }
+            trace("[exit]");
         }
     }
 }

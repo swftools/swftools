@@ -9,3 +9,4 @@ function f()
     trace("ok 3/3");
 }
 f()
+trace("[exit]");

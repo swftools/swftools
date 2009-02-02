@@ -20,6 +20,7 @@ package {
 
         function Main() {
             trace(Main.message);
+            trace("[exit]");
         }
     }
 }

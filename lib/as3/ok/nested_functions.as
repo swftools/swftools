@@ -28,6 +28,7 @@ package {
             trace(x1);
             trace(x2);
 
+            trace("[exit]");
         }
     }
 }

@@ -19,6 +19,7 @@ package {
             if(b==10.0) trace("ok 6/8");
             if(c==0.25) trace("ok 7/8");
             if(d==10.625) trace("ok 8/8");
+            trace("[exit]");
         }
     }
 }

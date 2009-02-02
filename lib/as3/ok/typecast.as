@@ -31,6 +31,7 @@ package {
             if(int(false)==0) trace("ok 6/7");
 
             trace(String(new C)) //will call toString()
+            trace("[exit]");
         }
     }
 }

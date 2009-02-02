@@ -32,3 +32,5 @@ package {
 }
 
 trace(np_x);
+
+trace("[exit]");

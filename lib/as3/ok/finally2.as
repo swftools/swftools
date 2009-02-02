@@ -161,6 +161,7 @@ package {
             test_exception3();
             test_empty();
             test_mixed();
+            trace("[exit]");
         }
     }
 }

@@ -41,6 +41,7 @@ package test.package {
             sum+=a;
             if(sum!=4321) trace("error");
             else trace("ok 3/3");
+            trace("[exit]");
         }
     }
 }

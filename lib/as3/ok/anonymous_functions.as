@@ -17,6 +17,8 @@ package {
             l("ok 2/3");
 
             run(function(text) {trace(text)}, "ok 3/3")
+
+            trace("[exit]");
         }
     }
 }

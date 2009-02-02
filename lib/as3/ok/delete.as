@@ -18,6 +18,8 @@ package {
                a[3]==4) trace("ok 2/2");
 
             //TODO: we can also delete from XML
+            
+            trace("[exit]");
         }
     }
 }

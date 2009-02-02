@@ -12,6 +12,7 @@ package {
             f1()
             trace("ok 2/3")
             f3()
+            trace("[exit]");
         }
     }
 }

@@ -13,6 +13,8 @@ package {
             trace(ok2);
             trace(this.ok3);
             trace(Main.ok4);
+            
+            trace("[exit]");
         }
     }
 }

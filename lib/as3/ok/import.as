@@ -24,6 +24,7 @@ package {
             new Class2();
             var t = new TextEvent("type",true,true,"ok 3/3");
             trace(t.text);
+            trace("[exit]");
         }
     }
 }

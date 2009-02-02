@@ -14,6 +14,8 @@ package {
             else        trace("error");
             if(a[1]==1) trace("ok 2/2");
             else        trace("error");
+            
+            trace("[exit]");
         }
     }
 }

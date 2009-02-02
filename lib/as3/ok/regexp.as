@@ -27,6 +27,8 @@ package {
             /* test quotes */
             if(" \" ".search(/"/) == 1) trace("ok 6/7");
             if(' \' '.search(/'/) == 1) trace("ok 7/7");
+            
+            trace("[exit]");
         }
     }
 }

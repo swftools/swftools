@@ -33,6 +33,8 @@ package {
             if(x is D) trace("ok 3/5");
             if(x instanceof X) trace("ok 4/5");
             if(x instanceof D) trace("ok 5/5");
+            
+            trace("[exit]");
         }
     }
 }

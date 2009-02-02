@@ -20,6 +20,8 @@ package {
             var x:I2 = new C;
             x.f();
             x.g();
+            
+            trace("[exit]");
         }
     }
 }

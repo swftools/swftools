@@ -25,6 +25,8 @@ package {
             //omit "this":
             s2 = "ok 4/4";
             printok3();
+            
+            trace("[exit]");
         }
     }
 }

@@ -22,6 +22,7 @@ package {
         public function Main() {
             f(); // run static function
             print_xx();
+            trace("[exit]");
         }
     }
 }

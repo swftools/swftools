@@ -46,6 +46,7 @@ package {
             catch(x:*) {
                 trace((x as MyOtherError).ok5);
             }
+            trace("[exit]");
 
         }
     }

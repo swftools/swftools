@@ -78,6 +78,8 @@ package {
             /* test comma */
             trace("[comma]");
             assert( (1,2,3,4) == 4);
+            
+            trace("[exit]");
         }
     }
 }

@@ -23,6 +23,7 @@ package {
             var t:Test = new Test();
             t.x++;
             t.n = 3;
+            trace("[exit]");
         }
     }
 }

@@ -39,6 +39,8 @@ package test.package {
             }
             if(i!=30) trace("error");
             else trace("ok 4/4");
+            
+            trace("[exit]");
         }
     }
 }

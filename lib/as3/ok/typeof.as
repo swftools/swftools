@@ -11,6 +11,7 @@ package {
             if(typeof(f)=="function") trace("ok 6/7");
             if(typeof(Main)=="object" ||
                typeof(Main)=="movieclip") trace("ok 7/7");
+            trace("[exit]");
         }
     }
 }

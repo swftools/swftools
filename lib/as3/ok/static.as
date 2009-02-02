@@ -37,6 +37,7 @@ package {
             
             if(TextEvent.TEXT_INPUT == "textInput") 
                 trace("ok 10/10");
+            trace("[exit]");
         }
     }
 }

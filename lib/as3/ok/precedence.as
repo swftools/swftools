@@ -143,6 +143,7 @@ package {
             v += 3,4;
             compare(v,3)
 
+            trace("[exit]");
         }
 
     }

@@ -34,6 +34,8 @@ package {
             if(this.u==0) trace("ok 12/14");
             if(String(this.f)=="NaN") trace("ok 13/14");
             if(this.m===null) trace("ok 14/14");
+            
+            trace("[exit]");
         }
     }
 }

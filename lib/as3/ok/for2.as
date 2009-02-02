@@ -17,6 +17,7 @@ package {
             }
             if(z==9) trace("ok 2/2");
             else     trace("error");
+            trace("[exit]");
         }
     }
 }

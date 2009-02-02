@@ -23,6 +23,7 @@ package {
                y.charAt(3) == "\\" &&
                y.charAt(4) == "\7")
             trace("ok 5/5")
+            trace("[exit]");
         }
     }
 }

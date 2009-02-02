@@ -36,6 +36,8 @@ package {
                 break;
                 trace("error");
             }
+            
+            trace("[exit]");
         }
     }
 }

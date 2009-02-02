@@ -30,6 +30,8 @@ package test.package {
             if(b>d) trace("error");else trace("ok 17/18");
 
             trace("ok 18/18");
+            
+            trace("[exit]");
         }
     }
 }

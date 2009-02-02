@@ -50,6 +50,8 @@ package {
             var d:int = 4;
             a += b += c += d += 1
             assert(a==11 && b==10 && c==8 && d==5);
+
+            trace("[exit]");
         }
     }
 }

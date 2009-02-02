@@ -50,6 +50,7 @@ package {
             new x;
             var y:Class = Class6;
             new y;
+            trace("[exit]");
         }
     }
 }

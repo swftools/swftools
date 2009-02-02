@@ -18,6 +18,7 @@ package {
         }
         function Main() {
             test("ok", 1,2,3,4);
+            trace("[exit]");
         }
     }
 }

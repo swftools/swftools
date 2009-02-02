@@ -5,6 +5,7 @@ package {
             message1 = "ok 1/2";
             this.message2 = "ok 2/2";
             printok1();
+            trace("[exit]");
         }
         public function printok1() {
             printok2(17);

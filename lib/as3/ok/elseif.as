@@ -9,6 +9,8 @@ package {
             } else {
                 trace("error");
             }
+            
+            trace("[exit]");
         }
     }
 }

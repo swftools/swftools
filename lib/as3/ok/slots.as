@@ -17,6 +17,7 @@ package {
             trace(this.s2);
             trace(this.s3);
             trace(this.s4);
+            trace("[exit]");
         }
     }
 }

@@ -39,6 +39,7 @@ package {
                     continue;
             }
             if(j==16) trace("ok 5/5");
+            trace("[exit]");
         }
     }
 }

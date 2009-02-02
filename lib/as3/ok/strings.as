@@ -28,6 +28,7 @@ package {
             else trace("ok 4/5");
             if(this.mystring.charAt(3)!='\xff') trace("error");
             else trace("ok 5/5");
+            trace("[exit]");
         }
     }
 }

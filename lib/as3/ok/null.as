@@ -10,6 +10,7 @@ package {
             if(x === y) {
                 trace("ok 2/2");
             }
+            trace("[exit]");
 
         }
     }

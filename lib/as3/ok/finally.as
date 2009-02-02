@@ -91,6 +91,7 @@ package {
             test_exception();
             test_exception2();
             test_exception3();
+            trace("[exit]");
         }
     }
 }

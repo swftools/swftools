@@ -50,6 +50,8 @@ package {
             testfalse();
             testnull();
             testfloat2();
+            
+            trace("[exit]");
         }
     }
 }

@@ -21,6 +21,7 @@ package {
                 trace(ok3);
                 ok4();
             }
+            trace("[exit]");
         }
     }
 }

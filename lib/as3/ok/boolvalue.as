@@ -35,6 +35,8 @@ package {
             if(true || error() || false) trace("ok 12/16");
             if(ok3() || true || true) trace("ok 14/16");
             if(false || false || ok4()) trace("ok 16/16");
+            
+            trace("[exit]");
         }
     }
 }

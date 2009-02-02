@@ -25,6 +25,7 @@ package {
     public class Main extends flash.display.MovieClip {
         function Main() {
             new F
+            trace("[exit]");
         }
     }
 }

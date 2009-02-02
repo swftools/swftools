@@ -33,6 +33,7 @@ package {
     public class Main extends flash.display.MovieClip {
         public function Main() {
             p_A()
+            trace("[exit]");
         }
     }
 }

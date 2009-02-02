@@ -22,6 +22,8 @@ package {
 
             x = (new Other).print2;
             x();
+            
+            trace("[exit]");
         }
     }
 }

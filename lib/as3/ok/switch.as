@@ -29,6 +29,7 @@ package {
             switch(1) {
                 case 1: late1 = false; break;
             }
+            trace("[exit]");
         }
         var late1:Boolean;
     }

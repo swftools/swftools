@@ -16,6 +16,8 @@ package {
             trace(m.ok1);
             trace(m.ok2);
             trace(m.ok3);
+            
+            trace("[exit]");
         }
     }
 }

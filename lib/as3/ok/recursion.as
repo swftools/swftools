@@ -13,6 +13,8 @@ package {
 
         public function Main() {
             write(1);
+            
+            trace("[exit]");
         }
     }
 }

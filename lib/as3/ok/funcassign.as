@@ -25,6 +25,7 @@ package {
             this.b(2);
             this.c = ok3;
             if(!this.c()) trace("error");
+            trace("[exit]");
         }
     }
 }

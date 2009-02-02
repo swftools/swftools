@@ -12,6 +12,7 @@ package {
         function Main() {
             var x:I1 = new TestI1();
             x.f();
+            trace("[exit]");
         }
     }
     public interface I2 {

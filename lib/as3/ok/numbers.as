@@ -34,6 +34,7 @@ package test.package {
             if(String(a14) == "171662463") trace("ok 14/15");
             var a15 = -0xa3b5c7f;
             if(String(a15) == "-171662463") trace("ok 15/15");
+            trace("[exit]");
         }
     }
 }

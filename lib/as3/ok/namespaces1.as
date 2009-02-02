@@ -60,6 +60,7 @@ package {
             my.namespaces.Test.test()
 
             my.namespaces.Test.test3()
+            trace("[exit]");
         }
     }
 }

@@ -35,6 +35,7 @@ package {
             if("r" in o) trace("ok 7/7");
             delete o["r"];
             if("r" in o) trace("error");
+            trace("[exit]");
         }
     }
 }

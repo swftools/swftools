@@ -17,6 +17,8 @@ package {
             trace((new Test).getok1());
             var t = new Test;
             trace(t.getok2());
+            
+            trace("[exit]");
         }
     }
 }

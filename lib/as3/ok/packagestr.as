@@ -24,6 +24,8 @@ package {
             var t = flash.utils.getTimer();
             if(t is int)
                 trace("ok 4/4");
+
+            trace("[exit]");
         }
     }
 }

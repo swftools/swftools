@@ -36,6 +36,7 @@ package {
 
             cls.c += 1;
             cls.c -= cls.a;
+            trace("[exit]");
         }
     }
 }

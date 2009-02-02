@@ -20,6 +20,8 @@ package {
 
             x.f = function() {trace("ok 2/2")};
             x.f();
+            
+            trace("[exit]");
         }
     }
 }
