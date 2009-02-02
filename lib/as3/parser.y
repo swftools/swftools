@@ -250,11 +250,12 @@
      
 %{
 
-static int yyerror(char*s)
+static int a3_error(char*s)
 {
    syntaxerror("%s", s); 
    return 0; //make gcc happy
 }
+
 
 static char* concat2(const char* t1, const char* t2)
 {
@@ -302,6 +303,7 @@ typedef struct _methodstate {
     char has_super;
     char is_global;
     char inner;
+    int variable_count;
     abc_exception_list_t*exceptions;
 } methodstate_t;
 
@@ -325,8 +327,6 @@ typedef struct _state {
 typedef struct _global {
     abc_file_t*file;
     abc_script_t*init;
-
-    int variable_count;
 } global_t;
 
 static global_t*global = 0;
@@ -446,14 +446,11 @@ void initialize_parser()
     global = rfx_calloc(sizeof(global_t));
     global->file = abc_file_new();
     global->file->flags &= ~ABCFILE_LAZY;
-    global->variable_count = 1;
+    
     global->init = abc_initscript(global->file);
     code_t*c = global->init->method->body->code;
     c = abc_getlocal_0(c);
     c = abc_pushscope(c);
-    /*c = abc_findpropstrict(c, "[package]::trace");
-    c = abc_pushstring(c, "[entering global init function]");
-    c = abc_callpropvoid(c, "[package]::trace", 1);*/
     global->init->method->body->code = c;
 }
 
@@ -461,9 +458,11 @@ void initialize_file(char*filename)
 {
     new_state();
     state->package = filename;
-    // needed for state->method->late_binding:
+    
     state->method = rfx_calloc(sizeof(methodstate_t));
+    state->method->variable_count = 1;
 }
+
 void finish_file()
 {
     if(!state || state->level!=1) {
@@ -549,13 +548,13 @@ code_t*defaultvalue(code_t*c, classinfo_t*type);
 static int new_variable(char*name, classinfo_t*type, char init)
 {
     NEW(variable_t, v);
-    v->index = global->variable_count;
+    v->index = state->method->variable_count;
     v->type = type;
     v->init = init;
     
     dict_put(state->vars, name, v);
 
-    return global->variable_count++;
+    return state->method->variable_count++;
 }
 #define TEMPVARNAME "__as3_temp__"
 static int gettempvar()
@@ -628,7 +627,6 @@ static void startpackage(char*name)
     new_state();
     /*printf("entering package \"%s\"\n", name);*/
     state->package = strdup(name);
-    global->variable_count = 1;
 }
 static void endpackage()
 {
@@ -653,9 +651,9 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("inner classes now allowed"); 
     }
     new_state();
-    global->variable_count = 1;
     state->cls = rfx_calloc(sizeof(classstate_t));
     state->method = rfx_calloc(sizeof(methodstate_t)); // method state, for static constructor
+    state->method->variable_count = 1;
 
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
@@ -944,15 +942,36 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
     new_state();
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->inner = 1;
-    
-    NEW(memberinfo_t,minfo);
-    minfo->return_type = return_type;
-    minfo->name = name;
+    state->method->variable_count = 0;
+   
+    memberinfo_t*minfo = 0;
 
-    if(!parent_method->subfunctions) 
-        parent_method->subfunctions = dict_new();
+    /* TODO: we need some better way to pass things from pass1 to pass2 */
+    char myname[200];
+    sprintf(myname, "as3-innerfunction-%d-%d", current_line, current_column);
 
-    dict_put(parent_method->subfunctions, name, minfo);
+    if(as3_pass == 1) {
+        minfo = rfx_calloc(sizeof(memberinfo_t));
+        minfo->name = name;
+        if(!parent_method->subfunctions) 
+            parent_method->subfunctions = dict_new();
+        if(name)
+            dict_put(parent_method->subfunctions, name, minfo);
+        dict_put(parent_method->subfunctions, myname, minfo);
+    }
+
+    if(as3_pass == 2) {
+        minfo = dict_lookup(parent_method->subfunctions, myname);
+        parserassert(minfo);
+
+        minfo->return_type = return_type;
+
+        new_variable("FIXME", 0, 0); //FIXME: is local_0 "this"?
+        param_list_t*p=0;
+        for(p=params->list;p;p=p->next) {
+            new_variable(p->param->name, p->param->type, 0);
+        }
+    }
     state->method->info = minfo;
 }
 
@@ -965,6 +984,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     new_state();
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->has_super = 0;
+    state->method->variable_count = 0;
 
     if(state->cls) {
         state->method->is_constructor = !strcmp(state->cls->info->name,name);
@@ -988,7 +1008,6 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         else            state->method->info = registry_findmember(state->cls->info, name, 0);
         state->method->info->return_type = return_type;
 
-        global->variable_count = 0;
         /* state->vars is initialized by state_new */
         if(!state->method->is_global)
             new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
@@ -2228,6 +2247,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
         c = abc_getlocal_0(c);
         c = abc_constructsuper(c, 0);
     }
+
     c = wrap_function(c, 0, $11);
 
     endfunction(0,$1,$3,$4,&$6,$8,c);
@@ -2235,7 +2255,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
 }
 
 MAYBE_IDENTIFIER: T_IDENTIFIER
-MAYBE_IDENTIFIER: {$$=0;}
+MAYBE_IDENTIFIER: {PASS12 $$=0;}
 INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE 
                '{' {PASS12 innerfunction($2,&$4,$6);} MAYBECODE '}'
 {
