@@ -22,7 +22,6 @@ pdf2swf
 as3compile
 swfbytes
 swfrender
-src/parser.yy.c
 src/swfc
 lib/*.a
 c
