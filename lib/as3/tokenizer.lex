@@ -257,7 +257,7 @@ static void handleString(char*s, int len)
     else syntaxerror("String incorrectly terminated");
 
     
-    avm2_lval.str = string_unescape(s, len);
+    a3_lval.str = string_unescape(s, len);
 }
 
 
@@ -268,13 +268,13 @@ static inline int mkid(int type)
     char*s = malloc(yyleng+1);
     memcpy(s, yytext, yyleng);
     s[yyleng]=0;
-    avm2_lval.id = s;
+    a3_lval.id = s;
     return type;
 }
 
 static inline int m(int type)
 {
-    avm2_lval.token = type;
+    a3_lval.token = type;
     return type;
 }
 
@@ -292,7 +292,7 @@ static char*nrbuf()
 
 static inline int setint(int v)
 {
-    avm2_lval.number_int = v;
+    a3_lval.number_int = v;
     if(v>-128)
         return T_BYTE;
     else if(v>=-32768)
@@ -302,7 +302,7 @@ static inline int setint(int v)
 }
 static inline int setuint(unsigned int v)
 {
-    avm2_lval.number_uint = v;
+    a3_lval.number_uint = v;
     if(v<128)
         return T_BYTE;
     else if(v<32768)
@@ -312,14 +312,14 @@ static inline int setuint(unsigned int v)
 }
 static inline int setfloat(double v)
 {
-    avm2_lval.number_float = v;
+    a3_lval.number_float = v;
     return T_FLOAT;
 }
 
 static inline int handlefloat()
 {
     char*s = nrbuf();
-    avm2_lval.number_float = atof(s);
+    a3_lval.number_float = atof(s);
     return T_FLOAT;
 }
 
@@ -432,7 +432,7 @@ void handleLabel(char*text, int len)
     char*s = malloc(t+1);
     memcpy(s, yytext, t);
     s[t]=0;
-    avm2_lval.id = s;
+    a3_lval.id = s;
 }
 
 static int handleregexp()
@@ -448,11 +448,11 @@ static int handleregexp()
             break;
         }
     }
-    avm2_lval.regexp.pattern = s;
+    a3_lval.regexp.pattern = s;
     if(t==len) {
-        avm2_lval.regexp.options = 0;
+        a3_lval.regexp.options = 0;
     } else {
-        avm2_lval.regexp.options = s+t+1;
+        a3_lval.regexp.options = s+t+1;
     }
     return T_REGEXP;
 }
@@ -520,7 +520,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return handleregexp();} 
 {HEXWITHSIGN}                {c(); BEGIN(INITIAL);return handlehex();}
-{HEXFLOATWITHSIGN}                {c(); BEGIN(INITIAL);return handlehexfloat();}
+{HEXFLOATWITHSIGN}           {c(); BEGIN(INITIAL);return handlehexfloat();}
 {INTWITHSIGN}                {c(); BEGIN(INITIAL);return handleint();}
 {FLOATWITHSIGN}              {c(); BEGIN(INITIAL);return handlefloat();}
 }
@@ -540,10 +540,10 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 {NAME}{S}*:{S}*do/{_}         {l();handleLabel(yytext, yyleng-2);return T_DO;}
 {NAME}{S}*:{S}*while/{_}      {l();handleLabel(yytext, yyleng-5);return T_WHILE;}
 {NAME}{S}*:{S}*switch/{_}     {l();handleLabel(yytext, yyleng-6);return T_SWITCH;}
-for                          {c();avm2_lval.id="";return T_FOR;}
-do                           {c();avm2_lval.id="";return T_DO;}
-while                        {c();avm2_lval.id="";return T_WHILE;}
-switch                       {c();avm2_lval.id="";return T_SWITCH;}
+for                          {c();a3_lval.id="";return T_FOR;}
+do                           {c();a3_lval.id="";return T_DO;}
+while                        {c();a3_lval.id="";return T_WHILE;}
+switch                       {c();a3_lval.id="";return T_SWITCH;}
 
 [&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 [|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}

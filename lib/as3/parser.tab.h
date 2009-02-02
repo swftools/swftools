@@ -191,6 +191,6 @@ tokenunion
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
-extern YYSTYPE avm2_lval;
+extern YYSTYPE a3_lval;
 
 
