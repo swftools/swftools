@@ -36,15 +36,15 @@ void test_lexer(char*filename)
 {
     char*fullfilename = enter_file(filename, 0);
     FILE*fi = fopen(fullfilename, "rb");
-    avm2_set_in(fi);
+    as3_set_in(fi);
     while(1) {
-        int token = avm2_lex();
+        int token = as3_lex();
         if(token==T_EOF)
             break;
         if(token>=32 && token<256) {
             printf("'%c'\n", token);
         } else {
-            printf("%s\n", token2string(token, avm2_lval));
+            printf("%s\n", token2string(token, a3_lval));
         }
     }
 }
