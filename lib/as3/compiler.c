@@ -29,8 +29,10 @@
 #include <errno.h>
 
 /* flex/bison definitions */
-extern void avm2_set_in (FILE *  in_str );
-extern int avm2_parse();
+extern void as3_set_in (FILE *  in_str );
+extern int a3_parse();
+extern int as3_lex();
+extern int as3_lex_destroy();
 
 void as3_setverbosity(int level)
 {
@@ -43,6 +45,11 @@ void as3_add_include_dir(char*dir)
 
 static char registry_initialized = 0;
 static char parser_initialized = 0;
+
+void a3_lex()
+{
+    as3_lex();
+}
 
 void as3_parse_file(char*filename) 
 {
@@ -64,10 +71,10 @@ void as3_parse_file(char*filename)
     }
     /* pass 1 */
     as3_pass = 1;
-    avm2_set_in(fi);
+    as3_set_in(fi);
     initialize_file(filename);
-    avm2_parse();
-    avm2_lex_destroy();
+    a3_parse();
+    as3_lex_destroy();
     finish_file();
 
     /* pass 2 */
@@ -75,10 +82,10 @@ void as3_parse_file(char*filename)
     enter_file(filename, 0);
     as3_pass = 2;
     fseek(fi, 0, SEEK_SET);
-    avm2_set_in(fi);
+    as3_set_in(fi);
     initialize_file(filename);
-    avm2_parse();
-    avm2_lex_destroy();
+    a3_parse();
+    as3_lex_destroy();
     finish_file();
 
     fclose(fi);
