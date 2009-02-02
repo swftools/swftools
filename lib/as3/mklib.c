@@ -147,7 +147,7 @@ void write_member_info(FILE*fi, char*parent, char*id2, const char*name, int flag
     else
         fprintf(fi, ", &%s", parent); // parent
 
-    fprintf(fi, "};\n");
+    fprintf(fi, ", 0,0,0};\n");
 }
 
 int access2flags(multiname_t*m)
