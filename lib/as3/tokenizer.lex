@@ -245,6 +245,12 @@ static string_t string_unescape(const char*in, int l)
     return out; 
 }
 
+static void handleCData(char*s, int len)
+{
+    a3_lval.str.str = s+9;    // <![CDATA[
+    a3_lval.str.len = len-9-3;// ]]>
+}
+
 static void handleString(char*s, int len)
 {
     if(as3_pass < 2) {
@@ -508,6 +514,7 @@ HEXFLOATWITHSIGN [+-]?({HEXFLOAT})
 INTWITHSIGN [+-]?({INT})
 FLOATWITHSIGN [+-]?({FLOAT})
 
+CDATA    <!\[CDATA\[([^]]|\][^]]|\]\][^>])*\]*\]\]\>
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
 MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
@@ -523,6 +530,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 ^include{S}+{STRING}{S}*/\n    {l();handleInclude(yytext, yyleng, 1);}
 ^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {l();handleInclude(yytext, yyleng, 0);}
 {STRING}                     {l(); BEGIN(INITIAL);handleString(yytext, yyleng);return T_STRING;}
+{CDATA}                      {l(); BEGIN(INITIAL);handleCData(yytext, yyleng);return T_STRING;}
 
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return handleregexp();} 
