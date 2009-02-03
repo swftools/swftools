@@ -1,6 +1,5 @@
 package {
     import flash.display.MovieClip
-    import flash.events.DataEvent
     import flash.utils.*
 
     public class Main extends flash.display.MovieClip {
@@ -9,6 +8,12 @@ package {
             var x:String = flash.events.DataEvent.DATA;
             if(x == "data")
                 trace("ok 1/4");
+
+            var flash:Object = new Object();
+            flash["events"] = new Object();
+
+            import flash.events.DataEvent
+            //trace(flash.events); should fail
 
             /* class, with full path */
             var y = new flash.events.DataEvent("");
@@ -26,6 +31,12 @@ package {
                 trace("ok 4/4");
 
             trace("[exit]");
+        }
+        function test2() {
+            /* this test breaks in Flex */
+            var flash:Object = new Object();
+            flash["events"] = new Object();
+            trace(flash.events); //should work- no active import
         }
     }
 }
