@@ -2282,6 +2282,10 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
         c = abc_getlocal_0(c);
         c = abc_pushscope(c);
     }
+    /*if(state->method->innerfunctions) {
+        c = abc_newactivation(c);
+        c = abc_pushscope(c);
+    }*/
     if(state->method->is_constructor && !state->method->has_super) {
         // call default constructor
         c = abc_getlocal_0(c);
@@ -2378,6 +2382,16 @@ EXPRESSION_LIST : EXPRESSION_LIST ',' NONCOMMAEXPRESSION {
                                                   $$.cc = code_append($1.cc, $3.c);
                                                   }
 
+/*NEW : "new" E {
+    $$ = $2;
+    if($2.c->opcode == OPCODE_CALL)
+        $2.c->opcode = OPCODE_CONSTRUCT;
+    else if($2.c->opcode == OPCODE_CALLPROPERTY)
+        $2.c->opcode = OPCODE_CONSTRUCTPROP;
+    else
+        as3_error("invalid argument to 'new'");
+}*/
+
 NEW : "new" CLASS MAYBE_PARAM_VALUES {
     MULTINAME(m, $2);
     $$.c = code_new();
@@ -2435,7 +2449,7 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = abc_callsuper2($$.c, name, $3.len);
         multiname_destroy(name);
     } else {
-        $$.c = abc_getlocal_0($$.c);
+        $$.c = abc_getglobalscope($$.c);
         $$.c = code_append($$.c, paramcode);
         $$.c = abc_call($$.c, $3.len);
     }
@@ -2448,8 +2462,8 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
     }
-
 }
+
 FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
     if(!state->cls) syntaxerror("super() not allowed outside of a class");
     if(!state->method) syntaxerror("super() not allowed outside of a function");
