@@ -207,20 +207,18 @@ opcode_t opcodes[]={
 {0xff, "__break__", "s",            0, 0, 0, OP_RETURN|OP_INTERNAL},
 };
 
-static U8 op2index[256] = {254};
+static opcode_t* op2op[256] = {0,0,0};
 
-opcode_t* opcode_get(U8 op)
+static inline opcode_t* opcode_get(U8 op)
 {
     int t;
-    if(op2index[0]==254) {
-        memset(op2index, 255, sizeof(op2index));
+    if(!op2op[0x02]) {
+        memset(op2op, 0, sizeof(op2op));
         for(t=0;t<sizeof(opcodes)/sizeof(opcodes[0]);t++) {
-            op2index[opcodes[t].opcode] = t;
+            op2op[opcodes[t].opcode] = &opcodes[t];
         }
     }
-    if(op2index[op]!=255)
-        return &opcodes[op2index[op]];
-    return 0;
+    return op2op[op];
 }
 
 static code_t*pos2code(code_t**bytepos, code_t*c, int pos, int len)
