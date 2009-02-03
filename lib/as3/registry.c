@@ -103,7 +103,7 @@ classinfo_t* registry_getclassclass(classinfo_t*a) {
             return c;
     }
 
-    NEW(classinfo_t,c);
+    classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+sizeof(classinfo_t*));
     c->access = ACCESS_PUBLIC;
     c->package = "";
     c->name = "Class";
@@ -234,7 +234,7 @@ classinfo_t* memberinfo_asclass(memberinfo_t*f) {
             return c;
     }
 
-    NEW(classinfo_t,c);
+    classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+sizeof(classinfo_t*));
     c->access = ACCESS_PUBLIC;
     c->package = "";
     c->name = "Function";
