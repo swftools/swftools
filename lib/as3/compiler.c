@@ -26,7 +26,6 @@
 #include "parser.h"
 #include "parser.tab.h"
 #include "compiler.h"
-#include <errno.h>
 
 /* flex/bison definitions */
 extern void as3_set_in (FILE *  in_str );
@@ -46,9 +45,35 @@ void as3_add_include_dir(char*dir)
 static char registry_initialized = 0;
 static char parser_initialized = 0;
 
-void a3_lex()
+//#define STORE_TOKENS
+
+#ifdef STORE_TOKENS
+static mem_t tokens;
+#endif
+
+int a3_lex()
 {
-    as3_lex();
+    as3_tokencount++;
+#ifdef STORE_TOKENS
+    if(as3_pass==1) {
+        int token = as3_lex();
+        /* FIXME: current_file needs to be stored, too */
+        mem_put(&tokens, &token, sizeof(token));
+        mem_put(&tokens, &a3_lval, sizeof(a3_lval));
+        mem_put(&tokens, &current_line, sizeof(current_line));
+        mem_put(&tokens, &current_column, sizeof(current_column));
+        return token;
+    } else {
+        int token;
+        mem_get(&tokens, &token, sizeof(token));
+        mem_get(&tokens, &a3_lval, sizeof(a3_lval));
+        mem_get(&tokens, &current_line, sizeof(current_line));
+        mem_get(&tokens, &current_column, sizeof(current_column));
+        return token;
+    }
+#else
+    return as3_lex();
+#endif
 }
 
 void as3_parse_file(char*filename) 
@@ -60,27 +85,35 @@ void as3_parse_file(char*filename)
     if(!parser_initialized) {
         parser_initialized = 1;
         initialize_parser();
+#if defined(STORE_TOKENS)
+        mem_init(&tokens);
+#endif
     }
 
-    as3_pass = 0;
-    
-    char*fullfilename = enter_file(filename, 0);
-    FILE*fi = fopen(fullfilename, "rb");
-    if(!fi) {
-	syntaxerror("Couldn't find file %s: %s", fullfilename, strerror(errno));
-    }
+#ifdef STORE_TOKENS
+    tokens.pos = 0;
+    tokens.read_pos = 0;
+#endif
+
+    FILE*fi = enter_file2(filename, 0);
+
     /* pass 1 */
     as3_pass = 1;
+    as3_tokencount=0;
     as3_set_in(fi);
     initialize_file(filename);
     a3_parse();
     as3_lex_destroy();
     finish_file();
+    
+#ifdef STORE_TOKENS
+    tokens.read_pos = 0;
+#endif
 
     /* pass 2 */
-    // TODO: this should re-use tokens!
-    enter_file(filename, 0);
     as3_pass = 2;
+    as3_tokencount=0;
+    enter_file(filename, 0);
     fseek(fi, 0, SEEK_SET);
     as3_set_in(fi);
     initialize_file(filename);
@@ -111,6 +144,9 @@ void as3_destroy()
     if(parser_initialized) {
         parser_initialized = 0;
         swf_FreeABC(finish_parser());
+#ifdef STORE_TOKENS
+        mem_clear(&tokens);
+#endif
     }
     if(as3_globalclass) {
         free(as3_globalclass);as3_globalclass=0;
