@@ -58,11 +58,17 @@ int main(int argn, char*argv[])
         fprintf(stderr, "please supply a filename\n");
         exit(1);
     }
-    filename=argv[1];
-    
-    if(argn>2 && !strcmp(argv[2], "-lex")) {
-        test_lexer(filename);
-        return 0;
+    filename=argv[argn-1];
+   
+    int t=0;
+    for(t=1;t<argn-1;t++) {
+        if(!strcmp(argv[t], "-lex")) {
+            test_lexer(filename);
+            return 0;
+        }
+        if(!strcmp(argv[t], "-v")) {
+            as3_verbosity++;
+        }
     }
 
     //extern int avm2_debug;
