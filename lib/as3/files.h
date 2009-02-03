@@ -30,6 +30,7 @@ extern char* current_filename_short;
 void add_include_dir(char*dir);
 
 char* enter_file(char*filename, void*state);
+FILE* enter_file2(char*filename, void*state);
 void* leave_file();
 
 #endif

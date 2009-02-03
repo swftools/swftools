@@ -23,7 +23,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <memory.h>
+#include <errno.h>
 #include "files.h"
+#include "tokenizer.h"
 
 static int verbose = 0;
 static void dbg(const char*format, ...)
@@ -181,6 +183,17 @@ char*enter_file(char*filename, void*state)
     current_filename_short = filename;
     return fullfilename;
 }
+
+FILE*enter_file2(char*filename, void*state)
+{
+    char*fullfilename = enter_file(filename, state);
+    FILE*fi = fopen(fullfilename, "rb");
+    if(!fi) {
+	as3_error("Couldn't find file %s: %s", fullfilename, strerror(errno));
+    }
+    return fi;
+}
+
 
 void* leave_file()
 {
