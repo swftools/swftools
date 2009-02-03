@@ -1152,8 +1152,9 @@ char *as3_text;
 #include "files.h"
 
 int as3_pass = 0;
-
 int as3_verbosity = 1;
+unsigned int as3_tokencount = 0;
+
 void as3_error(const char*format, ...)
 {
     char buf[1024];
@@ -1366,6 +1367,12 @@ static string_t string_unescape(const char*in, int l)
 
 static void handleString(char*s, int len)
 {
+    if(as3_pass < 2) {
+        // don't bother decoding strings in pass 1
+        memset(&a3_lval, 0, sizeof(a3_lval));
+        return;
+    }
+
     if(s[0]=='"') {
         if(s[len-1]!='"') syntaxerror("String doesn't end with '\"'");
         s++;len-=2;
@@ -1605,7 +1612,7 @@ static inline void c() {
 
 
 
-#line 1609 "tokenizer.yy.c"
+#line 1616 "tokenizer.yy.c"
 
 #define INITIAL 0
 #define REGEXPOK 1
@@ -1792,11 +1799,11 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 509 "tokenizer.lex"
+#line 516 "tokenizer.lex"
 
 
 
-#line 1800 "tokenizer.yy.c"
+#line 1807 "tokenizer.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -1879,18 +1886,18 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 512 "tokenizer.lex"
+#line 519 "tokenizer.lex"
 {l(); /* single line comment */}
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
 YY_RULE_SETUP
-#line 513 "tokenizer.lex"
+#line 520 "tokenizer.lex"
 {l(); /* multi line comment */}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 514 "tokenizer.lex"
+#line 521 "tokenizer.lex"
 {syntaxerror("syntax error: unterminated comment", as3_text);}
 	YY_BREAK
 case 4:
@@ -1899,7 +1906,7 @@ case 4:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up as3_text again */
 YY_RULE_SETUP
-#line 516 "tokenizer.lex"
+#line 523 "tokenizer.lex"
 {l();handleInclude(as3_text, as3_leng, 1);}
 	YY_BREAK
 case 5:
@@ -1908,76 +1915,76 @@ case 5:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up as3_text again */
 YY_RULE_SETUP
-#line 517 "tokenizer.lex"
+#line 524 "tokenizer.lex"
 {l();handleInclude(as3_text, as3_leng, 0);}
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 518 "tokenizer.lex"
+#line 525 "tokenizer.lex"
 {l(); BEGIN(INITIAL);handleString(as3_text, as3_leng);return T_STRING;}
 	YY_BREAK
 
 case 7:
 YY_RULE_SETUP
-#line 521 "tokenizer.lex"
+#line 528 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handleregexp();} 
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 522 "tokenizer.lex"
+#line 529 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handlehex();}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 523 "tokenizer.lex"
+#line 530 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handlehexfloat();}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 524 "tokenizer.lex"
+#line 531 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handleint();}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 525 "tokenizer.lex"
+#line 532 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handlefloat();}
 	YY_BREAK
 
 case 12:
 YY_RULE_SETUP
-#line 528 "tokenizer.lex"
+#line 535 "tokenizer.lex"
 {/* utf 8 bom */}
 	YY_BREAK
 case 13:
 /* rule 13 can match eol */
 YY_RULE_SETUP
-#line 529 "tokenizer.lex"
+#line 536 "tokenizer.lex"
 {l();}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 531 "tokenizer.lex"
+#line 538 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handlehex();}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 532 "tokenizer.lex"
+#line 539 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handlehexfloat();}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 533 "tokenizer.lex"
+#line 540 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handleint();}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 534 "tokenizer.lex"
+#line 541 "tokenizer.lex"
 {c(); BEGIN(INITIAL);return handlefloat();}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 536 "tokenizer.lex"
+#line 543 "tokenizer.lex"
 {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 	YY_BREAK
@@ -1987,7 +1994,7 @@ case 19:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up as3_text again */
 YY_RULE_SETUP
-#line 539 "tokenizer.lex"
+#line 546 "tokenizer.lex"
 {l();handleLabel(as3_text, as3_leng-3);return T_FOR;}
 	YY_BREAK
 case 20:
@@ -1996,7 +2003,7 @@ case 20:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up as3_text again */
 YY_RULE_SETUP
-#line 540 "tokenizer.lex"
+#line 547 "tokenizer.lex"
 {l();handleLabel(as3_text, as3_leng-2);return T_DO;}
 	YY_BREAK
 case 21:
@@ -2005,7 +2012,7 @@ case 21:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up as3_text again */
 YY_RULE_SETUP
-#line 541 "tokenizer.lex"
+#line 548 "tokenizer.lex"
 {l();handleLabel(as3_text, as3_leng-5);return T_WHILE;}
 	YY_BREAK
 case 22:
@@ -2014,423 +2021,424 @@ case 22:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up as3_text again */
 YY_RULE_SETUP
-#line 542 "tokenizer.lex"
+#line 549 "tokenizer.lex"
 {l();handleLabel(as3_text, as3_leng-6);return T_SWITCH;}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 543 "tokenizer.lex"
+#line 550 "tokenizer.lex"
 {c();a3_lval.id="";return T_FOR;}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 544 "tokenizer.lex"
+#line 551 "tokenizer.lex"
 {c();a3_lval.id="";return T_DO;}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 545 "tokenizer.lex"
+#line 552 "tokenizer.lex"
 {c();a3_lval.id="";return T_WHILE;}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 546 "tokenizer.lex"
+#line 553 "tokenizer.lex"
 {c();a3_lval.id="";return T_SWITCH;}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 548 "tokenizer.lex"
+#line 555 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 549 "tokenizer.lex"
+#line 556 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(T_OROR);}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 550 "tokenizer.lex"
+#line 557 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(T_NE);}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 551 "tokenizer.lex"
+#line 558 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(T_NEE);}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 552 "tokenizer.lex"
+#line 559 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(T_EQEQEQ);}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 553 "tokenizer.lex"
+#line 560 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(T_EQEQ);}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 554 "tokenizer.lex"
+#line 561 "tokenizer.lex"
 {c();return m(T_GE);}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 555 "tokenizer.lex"
+#line 562 "tokenizer.lex"
 {c();return m(T_LE);}
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 556 "tokenizer.lex"
+#line 563 "tokenizer.lex"
 {c();BEGIN(INITIAL);return m(T_MINUSMINUS);}
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 557 "tokenizer.lex"
+#line 564 "tokenizer.lex"
 {c();BEGIN(INITIAL);return m(T_PLUSPLUS);}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 558 "tokenizer.lex"
+#line 565 "tokenizer.lex"
 {c();return m(T_PLUSBY);}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 559 "tokenizer.lex"
+#line 566 "tokenizer.lex"
 {c();return m(T_MINUSBY);}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 560 "tokenizer.lex"
+#line 567 "tokenizer.lex"
 {c();return m(T_DIVBY);}
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 561 "tokenizer.lex"
+#line 568 "tokenizer.lex"
 {c();return m(T_MODBY);}
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 562 "tokenizer.lex"
+#line 569 "tokenizer.lex"
 {c();return m(T_MULBY);}
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 563 "tokenizer.lex"
+#line 570 "tokenizer.lex"
 {c();return m(T_ORBY);}
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 564 "tokenizer.lex"
+#line 571 "tokenizer.lex"
 {c();return m(T_SHRBY);}
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 565 "tokenizer.lex"
+#line 572 "tokenizer.lex"
 {c();return m(T_SHLBY);}
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 566 "tokenizer.lex"
+#line 573 "tokenizer.lex"
 {c();return m(T_USHRBY);}
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 567 "tokenizer.lex"
+#line 574 "tokenizer.lex"
 {c();return m(T_SHL);}
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 568 "tokenizer.lex"
+#line 575 "tokenizer.lex"
 {c();return m(T_USHR);}
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 569 "tokenizer.lex"
+#line 576 "tokenizer.lex"
 {c();return m(T_SHR);}
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 570 "tokenizer.lex"
+#line 577 "tokenizer.lex"
 {c();return m(T_DOTDOTDOT);}
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 571 "tokenizer.lex"
+#line 578 "tokenizer.lex"
 {c();return m(T_DOTDOT);}
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 572 "tokenizer.lex"
+#line 579 "tokenizer.lex"
 {c();return m('.');}
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 573 "tokenizer.lex"
+#line 580 "tokenizer.lex"
 {c();return m(T_COLONCOLON);}
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 574 "tokenizer.lex"
+#line 581 "tokenizer.lex"
 {c();return m(':');}
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 575 "tokenizer.lex"
+#line 582 "tokenizer.lex"
 {c();return m(KW_INSTANCEOF);}
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 576 "tokenizer.lex"
+#line 583 "tokenizer.lex"
 {c();return m(KW_IMPLEMENTS);}
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 577 "tokenizer.lex"
+#line 584 "tokenizer.lex"
 {c();return m(KW_INTERFACE);}
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 578 "tokenizer.lex"
+#line 585 "tokenizer.lex"
 {c();return m(KW_NAMESPACE);}
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 579 "tokenizer.lex"
+#line 586 "tokenizer.lex"
 {c();return m(KW_PROTECTED);}
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 580 "tokenizer.lex"
+#line 587 "tokenizer.lex"
 {c();return m(KW_UNDEFINED);}
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 581 "tokenizer.lex"
+#line 588 "tokenizer.lex"
 {c();return m(KW_CONTINUE);}
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 582 "tokenizer.lex"
+#line 589 "tokenizer.lex"
 {c();return m(KW_OVERRIDE);}
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 583 "tokenizer.lex"
+#line 590 "tokenizer.lex"
 {c();return m(KW_INTERNAL);}
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 584 "tokenizer.lex"
+#line 591 "tokenizer.lex"
 {c();return m(KW_FUNCTION);}
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 585 "tokenizer.lex"
+#line 592 "tokenizer.lex"
 {c();return m(KW_FINALLY);}
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 586 "tokenizer.lex"
+#line 593 "tokenizer.lex"
 {c();return m(KW_DEFAULT);}
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 587 "tokenizer.lex"
+#line 594 "tokenizer.lex"
 {c();return m(KW_PACKAGE);}
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 588 "tokenizer.lex"
+#line 595 "tokenizer.lex"
 {c();return m(KW_PRIVATE);}
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 589 "tokenizer.lex"
+#line 596 "tokenizer.lex"
 {c();return m(KW_DYNAMIC);}
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 590 "tokenizer.lex"
+#line 597 "tokenizer.lex"
 {c();return m(KW_EXTENDS);}
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 591 "tokenizer.lex"
+#line 598 "tokenizer.lex"
 {c();return m(KW_DELETE);}
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 592 "tokenizer.lex"
+#line 599 "tokenizer.lex"
 {c();return m(KW_RETURN);}
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 593 "tokenizer.lex"
+#line 600 "tokenizer.lex"
 {c();return m(KW_PUBLIC);}
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 594 "tokenizer.lex"
+#line 601 "tokenizer.lex"
 {c();return m(KW_NATIVE);}
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 595 "tokenizer.lex"
+#line 602 "tokenizer.lex"
 {c();return m(KW_STATIC);}
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 596 "tokenizer.lex"
+#line 603 "tokenizer.lex"
 {c();return m(KW_IMPORT);}
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 597 "tokenizer.lex"
+#line 604 "tokenizer.lex"
 {c();return m(KW_TYPEOF);}
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 598 "tokenizer.lex"
+#line 605 "tokenizer.lex"
 {c();return m(KW_THROW);}
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 599 "tokenizer.lex"
+#line 606 "tokenizer.lex"
 {c();return m(KW_CLASS);}
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 600 "tokenizer.lex"
+#line 607 "tokenizer.lex"
 {c();return m(KW_CONST);}
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 601 "tokenizer.lex"
+#line 608 "tokenizer.lex"
 {c();return m(KW_CATCH);}
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 602 "tokenizer.lex"
+#line 609 "tokenizer.lex"
 {c();return m(KW_FINAL);}
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 603 "tokenizer.lex"
+#line 610 "tokenizer.lex"
 {c();return m(KW_FALSE);}
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 604 "tokenizer.lex"
+#line 611 "tokenizer.lex"
 {c();return m(KW_BREAK);}
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 605 "tokenizer.lex"
+#line 612 "tokenizer.lex"
 {c();return m(KW_SUPER);}
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 606 "tokenizer.lex"
+#line 613 "tokenizer.lex"
 {c();return m(KW_EACH);}
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 607 "tokenizer.lex"
+#line 614 "tokenizer.lex"
 {c();return m(KW_VOID);}
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 608 "tokenizer.lex"
+#line 615 "tokenizer.lex"
 {c();return m(KW_TRUE);}
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 609 "tokenizer.lex"
+#line 616 "tokenizer.lex"
 {c();return m(KW_NULL);}
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 610 "tokenizer.lex"
+#line 617 "tokenizer.lex"
 {c();return m(KW_ELSE);}
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 611 "tokenizer.lex"
+#line 618 "tokenizer.lex"
 {c();return m(KW_CASE);}
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 612 "tokenizer.lex"
+#line 619 "tokenizer.lex"
 {c();return m(KW_WITH);}
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 613 "tokenizer.lex"
+#line 620 "tokenizer.lex"
 {c();return m(KW_USE);}
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 614 "tokenizer.lex"
+#line 621 "tokenizer.lex"
 {c();return m(KW_NEW);}
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 615 "tokenizer.lex"
+#line 622 "tokenizer.lex"
 {c();return m(KW_GET);}
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 616 "tokenizer.lex"
+#line 623 "tokenizer.lex"
 {c();return m(KW_SET);}
 	YY_BREAK
 case 96:
 YY_RULE_SETUP
-#line 617 "tokenizer.lex"
+#line 624 "tokenizer.lex"
 {c();return m(KW_VAR);}
 	YY_BREAK
 case 97:
 YY_RULE_SETUP
-#line 618 "tokenizer.lex"
+#line 625 "tokenizer.lex"
 {c();return m(KW_TRY);}
 	YY_BREAK
 case 98:
 YY_RULE_SETUP
-#line 619 "tokenizer.lex"
+#line 626 "tokenizer.lex"
 {c();return m(KW_IS) ;}
 	YY_BREAK
 case 99:
 YY_RULE_SETUP
-#line 620 "tokenizer.lex"
+#line 627 "tokenizer.lex"
 {c();return m(KW_IN) ;}
 	YY_BREAK
 case 100:
 YY_RULE_SETUP
-#line 621 "tokenizer.lex"
+#line 628 "tokenizer.lex"
 {c();return m(KW_IF) ;}
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 622 "tokenizer.lex"
+#line 629 "tokenizer.lex"
 {c();return m(KW_AS);}
 	YY_BREAK
 case 102:
 YY_RULE_SETUP
-#line 623 "tokenizer.lex"
+#line 630 "tokenizer.lex"
 {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
 	YY_BREAK
 case 103:
 YY_RULE_SETUP
-#line 625 "tokenizer.lex"
+#line 632 "tokenizer.lex"
 {c();BEGIN(REGEXPOK);return m(as3_text[0]);}
 	YY_BREAK
 case 104:
 YY_RULE_SETUP
-#line 626 "tokenizer.lex"
+#line 633 "tokenizer.lex"
 {c();BEGIN(INITIAL);return m(as3_text[0]);}
 	YY_BREAK
 case 105:
 YY_RULE_SETUP
-#line 628 "tokenizer.lex"
-{char c1=as3_text[0];
+#line 635 "tokenizer.lex"
+{/* ERROR */
+                              char c1=as3_text[0];
                               char buf[128];
                               buf[0] = as3_text[0];
                               int t;
@@ -2453,7 +2461,7 @@ YY_RULE_SETUP
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(REGEXPOK):
 case YY_STATE_EOF(BEGINNING):
-#line 647 "tokenizer.lex"
+#line 655 "tokenizer.lex"
 {l();
                               void*b = leave_file();
 			      if (!b) {
@@ -2468,10 +2476,10 @@ case YY_STATE_EOF(BEGINNING):
 	YY_BREAK
 case 106:
 YY_RULE_SETUP
-#line 659 "tokenizer.lex"
+#line 667 "tokenizer.lex"
 ECHO;
 	YY_BREAK
-#line 2475 "tokenizer.yy.c"
+#line 2483 "tokenizer.yy.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -3481,7 +3489,7 @@ void as3_free (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 659 "tokenizer.lex"
+#line 667 "tokenizer.lex"
 
 
 
