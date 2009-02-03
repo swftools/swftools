@@ -235,18 +235,21 @@ extern int a3_lex();
 %left plusplus_prefix minusminus_prefix '~' '!' "void" "delete" "typeof" //FIXME: *unary* + - should be here, too
 %left "--" "++" 
 %nonassoc below_curly
-%left '[' ']' '{' "new" '.' ".." "::"
+
+%left '('
+%left new2
+%left '[' ']' "new" '{' '.' ".." "::"
+
 %nonassoc T_IDENTIFIER
 %left above_identifier
 %left below_else
 %nonassoc "else"
-%left '('
 
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
 %nonassoc "false" "true" "null" "undefined" "super" "function"
-%nonassoc above_function
+%left above_function
 
 
      
@@ -625,6 +628,44 @@ code_t* var_block(code_t*body)
     return c;
 }
 
+#define parserassert(b) {if(!(b)) parsererror(__FILE__, __LINE__,__func__);}
+
+static void parsererror(const char*file, int line, const char*f)
+{
+    syntaxerror("internal error in %s, %s:%d", f, file, line);
+}
+
+   
+code_t* method_header()
+{
+    code_t*c = 0;
+    if(state->method->late_binding && !state->method->inner) {
+        c = abc_getlocal_0(c);
+        c = abc_pushscope(c);
+    }
+    /*if(state->method->innerfunctions) {
+        c = abc_newactivation(c);
+        c = abc_pushscope(c);
+    }*/
+    if(state->method->is_constructor && !state->method->has_super) {
+        // call default constructor
+        c = abc_getlocal_0(c);
+        c = abc_constructsuper(c, 0);
+    }
+    methodstate_list_t*l = state->method->innerfunctions;
+    while(l) {
+        parserassert(l->methodstate->abc);
+        c = abc_newfunction(c, l->methodstate->abc);
+        c = abc_setlocal(c, l->methodstate->var_index);
+        free(l->methodstate);l->methodstate=0;
+        l = l->next;
+    }
+    list_free(state->method->innerfunctions);
+    state->method->innerfunctions = 0;
+    return c;
+}
+    
+
 static code_t* wrap_function(code_t*c,code_t*header, code_t*body)
 {
     c = code_append(c, header);
@@ -652,14 +693,6 @@ static void endpackage()
     //free(state->package);state->package=0;
 
     old_state();
-}
-
-#define _TRACE_ {printf("vfw: %s: %d (%s)\n",__FILE__,__LINE__,__func__);fflush(stdout);}
-#define parserassert(b) {if(!(b)) parsererror(__FILE__, __LINE__,__func__);}
-
-static void parsererror(const char*file, int line, const char*f)
-{
-    syntaxerror("internal error in %s, %s:%d", f, file, line);
 }
 
 
@@ -2277,31 +2310,8 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
     PASS1 old_state();
     PASS2
     if(!state->method->info) syntaxerror("internal error");
-    code_t*c = 0;
-    if(state->method->late_binding) {
-        c = abc_getlocal_0(c);
-        c = abc_pushscope(c);
-    }
-    /*if(state->method->innerfunctions) {
-        c = abc_newactivation(c);
-        c = abc_pushscope(c);
-    }*/
-    if(state->method->is_constructor && !state->method->has_super) {
-        // call default constructor
-        c = abc_getlocal_0(c);
-        c = abc_constructsuper(c, 0);
-    }
-    methodstate_list_t*l = state->method->innerfunctions;
-    while(l) {
-        parserassert(l->methodstate->abc);
-        c = abc_newfunction(c, l->methodstate->abc);
-        c = abc_setlocal(c, l->methodstate->var_index);
-        free(l->methodstate);l->methodstate=0;
-        l = l->next;
-    }
-    list_free(state->method->innerfunctions);
-    state->method->innerfunctions = 0;
-
+    
+    code_t*c = method_header();
     c = wrap_function(c, 0, $11);
 
     endfunction(0,$1,$3,$4,&$6,$8,c);
@@ -2317,8 +2327,8 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
     PASS2
     memberinfo_t*f = state->method->info;
     if(!f) syntaxerror("internal error");
-
-    code_t*c = 0;
+    
+    code_t*c = method_header();
     c = wrap_function(c, 0, $9);
 
     int index = state->method->var_index;
@@ -2381,35 +2391,38 @@ EXPRESSION_LIST : EXPRESSION_LIST ',' NONCOMMAEXPRESSION {
                                                   $$.len= $1.len+1;
                                                   $$.cc = code_append($1.cc, $3.c);
                                                   }
-
-/*NEW : "new" E {
-    $$ = $2;
-    if($2.c->opcode == OPCODE_CALL)
-        $2.c->opcode = OPCODE_CONSTRUCT;
-    else if($2.c->opcode == OPCODE_CALLPROPERTY)
-        $2.c->opcode = OPCODE_CONSTRUCTPROP;
-    else
-        as3_error("invalid argument to 'new'");
-}*/
-
-NEW : "new" CLASS MAYBE_PARAM_VALUES {
-    MULTINAME(m, $2);
-    $$.c = code_new();
-
-    if($2->slot) {
-        $$.c = abc_getglobalscope($$.c);
-        $$.c = abc_getslot($$.c, $2->slot);
+               
+XX : %prec new2
+NEW : "new" E XX MAYBE_PARAM_VALUES {
+    $$.c = $2.c;
+    if($$.c->opcode == OPCODE_COERCE_A) $$.c = code_cutlast($$.c);
+    
+    code_t*paramcode = $4.cc;
+    if($$.c->opcode == OPCODE_GETPROPERTY) {
+        multiname_t*name = $$.c->data[0];$$.c->data[0]=0;
+        $$.c = code_cutlast($$.c);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_constructprop2($$.c, name, $4.len);
+        multiname_destroy(name);
+    } else if($$.c->opcode == OPCODE_GETSLOT) {
+        int slot = (int)(ptroff_t)$$.c->data[0];
+        trait_t*t = abc_class_find_slotid(state->cls->abc,slot);//FIXME
+        multiname_t*name = t->name;
+        $$.c = code_cutlast($$.c);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_constructprop2($$.c, name, $4.len);
     } else {
-        $$.c = abc_findpropstrict2($$.c, &m);
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_construct($$.c, $4.len);
     }
-
-    $$.c = code_append($$.c, $3.cc);
-
-    if($2->slot)
-        $$.c = abc_construct($$.c, $3.len);
-    else
-        $$.c = abc_constructprop2($$.c, &m, $3.len);
-    $$.t = $2;
+   
+    $$.t = TYPE_ANY;
+    if(TYPE_IS_CLASS($2.t) && $2.t->cls) {
+        $$.t = $2.t->cls;
+    } else {
+        $$.c = abc_coerce_a($$.c);
+        $$.t = TYPE_ANY;
+    }
 }
 
 /* TODO: use abc_call (for calling local variables),
@@ -2453,8 +2466,6 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = code_append($$.c, paramcode);
         $$.c = abc_call($$.c, $3.len);
     }
-   
-    memberinfo_t*f = 0;
    
     if(TYPE_IS_FUNCTION($1.t) && $1.t->function) {
         $$.t = $1.t->function->return_type;

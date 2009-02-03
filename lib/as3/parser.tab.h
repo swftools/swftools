@@ -137,9 +137,10 @@
      minusminus_prefix = 355,
      plusplus_prefix = 356,
      below_curly = 357,
-     above_identifier = 358,
-     below_else = 359,
-     above_function = 360
+     new2 = 358,
+     above_identifier = 359,
+     below_else = 360,
+     above_function = 361
    };
 #endif
 
@@ -184,7 +185,7 @@ tokenunion
 
 
 /* Line 1685 of skeleton.m4  */
-#line 188 "parser.tab.h"
+#line 189 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
