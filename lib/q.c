@@ -68,7 +68,9 @@ static int mem_put_(mem_t*m,const void*data, int length, int null)
     int n = m->pos;
     m->pos += length + (null?1:0);
     if(m->pos > m->len) { 
-        m->len = (m->pos+63)&~63;
+        int v1 = (m->pos+63)&~63;
+        int v2 = m->len + m->len / 2;
+        m->len = v1>v2?v1:v2;
 	m->buffer = m->buffer?(char*)rfx_realloc(m->buffer,m->len):(char*)rfx_alloc(m->len);
     }
     assert(n+length <= m->len);
@@ -84,6 +86,15 @@ int mem_put(mem_t*m,void*data, int length)
 int mem_putstring(mem_t*m,string_t str)
 {
     return mem_put_(m, str.str, str.len, 1);
+}
+int mem_get(mem_t*m, void*data, int length)
+{
+    if(m->read_pos + length > m->pos) {
+        length = m->pos - m->read_pos;
+    }
+    memcpy(data, m->buffer+m->read_pos, length);
+    m->read_pos += length;
+    return length;
 }
 
 // ------------------------------- ringbuffer_t -------------------------------
@@ -593,7 +604,7 @@ char ptr_equals(const void*o1, const void*o2)
 }
 unsigned int ptr_hash(const void*o) 
 {
-    return string_hash3(o, sizeof(o));
+    return string_hash3(&o, sizeof(o));
 }
 void* ptr_dup(const void*o) 
 {

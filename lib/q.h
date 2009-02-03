@@ -35,6 +35,7 @@ typedef struct _mem_t {
     char*buffer;
     int len;
     int pos;
+    int read_pos;
 } mem_t;
 
 /* fifo buffered growing mem region */
@@ -127,6 +128,7 @@ unsigned int crc32_add_string(unsigned int crc32, const char*s);
 void mem_init(mem_t*mem);
 int mem_put(mem_t*m, void*data, int length);
 int mem_putstring(mem_t*m, string_t str);
+int mem_get(mem_t*m, void*data, int length);
 void mem_clear(mem_t*mem);
 void mem_destroy(mem_t*mem);
 
