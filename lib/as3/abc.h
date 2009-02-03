@@ -138,6 +138,7 @@ struct _abc_class {
     int index; //filled in during writing
 };
 
+void abc_method_init(abc_method_t*m, abc_file_t*file, multiname_t*returntype, char body);
 abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body);
 
 abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass);

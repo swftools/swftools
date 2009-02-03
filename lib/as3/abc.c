@@ -157,10 +157,9 @@ void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
     list_append(c->interfaces, multiname_clone(interface));
 }
 
-abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body)
+void abc_method_init(abc_method_t*m, abc_file_t*file, multiname_t*returntype, char body)
 {
     /* construct method object */
-    NEW(abc_method_t,m);
     m->index = array_length(file->methods);
     array_append(file->methods, NO_KEY, m);
     m->return_type = returntype;
@@ -178,7 +177,11 @@ abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body)
         m->body = c;
         c->method = m;
     }
-
+}
+abc_method_t* abc_method_new(abc_file_t*file, multiname_t*returntype, char body)
+{
+    NEW(abc_method_t,m);
+    abc_method_init(m, file, returntype, body);
     return m;
 }
 
