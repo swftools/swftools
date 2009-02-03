@@ -140,8 +140,10 @@ class TestBase:
         ret,output = runcmd("./parser",[self.file],wait=60)
         self.compile_error = 0
         self.compile_output = output
+        self.exit_status = 0
         if ret:
             self.compile_output += "\nExit status %d" % (-ret)
+            self.exit_status = -ret
             self.compile_error = 1
             return 0
         if not os.path.isfile("abc.swf"):
@@ -163,11 +165,14 @@ class TestBase:
         print self.r(str(self.nr),3)," ",
         if self.compile_error:
             if self.dorun:
-                print "err"," - ",
+                if self.exit_status == 11:
+                    print "crash"," - ",
+                else:
+                    print "err  "," - ",
             else:
-                print "err","   ",
+                print "err  ","   ",
         else:
-            print "ok ",
+            print "ok   ",
             if self.dorun:
                 if not self.flash_error:
                     print "ok ",
