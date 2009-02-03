@@ -74,6 +74,7 @@ typedef token_t*tokenptr_t;
 
 extern int as3_verbosity;
 extern int as3_pass;
+extern unsigned int as3_tokencount;
 #define syntaxerror as3_error
 void as3_error(const char*format, ...);
 void as3_warning(const char*format, ...);

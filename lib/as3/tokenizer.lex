@@ -32,8 +32,9 @@
 #include "files.h"
 
 int as3_pass = 0;
-
 int as3_verbosity = 1;
+unsigned int as3_tokencount = 0;
+
 void as3_error(const char*format, ...)
 {
     char buf[1024];
@@ -246,6 +247,12 @@ static string_t string_unescape(const char*in, int l)
 
 static void handleString(char*s, int len)
 {
+    if(as3_pass < 2) {
+        // don't bother decoding strings in pass 1
+        memset(&a3_lval, 0, sizeof(a3_lval));
+        return;
+    }
+
     if(s[0]=='"') {
         if(s[len-1]!='"') syntaxerror("String doesn't end with '\"'");
         s++;len-=2;
@@ -625,7 +632,8 @@ as                           {c();return m(KW_AS);}
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
 [\)\]]                           {c();BEGIN(INITIAL);return m(yytext[0]);}
 
-.		             {char c1=yytext[0];
+.		             {/* ERROR */
+                              char c1=yytext[0];
                               char buf[128];
                               buf[0] = yytext[0];
                               int t;
