@@ -604,7 +604,7 @@ char ptr_equals(const void*o1, const void*o2)
 }
 unsigned int ptr_hash(const void*o) 
 {
-    return string_hash3(&o, sizeof(o));
+    return string_hash3((const char*)&o, sizeof(o));
 }
 void* ptr_dup(const void*o) 
 {
@@ -1209,6 +1209,20 @@ void list_free_(void*_list)
     commonlist_t*l = *list;
     while(l) {
         commonlist_t*next = l->next;
+        free(l);
+        l = next;
+    }
+    *list = 0;
+}
+void list_deep_free_(void*_list)
+{
+    commonlist_t**list = (commonlist_t**)_list;
+    commonlist_t*l = *list;
+    while(l) {
+        commonlist_t*next = l->next;
+        if(l->entry) {
+            free(l->entry);l->entry=0;
+        }
         free(l);
         l = next;
     }
