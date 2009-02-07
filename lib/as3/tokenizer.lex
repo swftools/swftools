@@ -281,6 +281,7 @@ static void handleCData(char*s, int len)
 {
     a3_lval.str.str = s+9;    // <![CDATA[
     a3_lval.str.len = len-9-3;// ]]>
+    a3_lval.str.str = strdup_n(a3_lval.str.str, a3_lval.str.len);
 }
 
 static void handleString(char*s, int len)
