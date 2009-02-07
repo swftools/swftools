@@ -31,6 +31,7 @@
 #include "registry.h"
 #include "code.h"
 #include "opcodes.h"
+#include "compiler.h"
 
 extern int a3_lex();
 
@@ -199,8 +200,8 @@ extern int a3_lex();
 %type <classinfo_list> IMPLEMENTS_LIST
 %type <classinfo> EXTENDS
 %type <classinfo_list> EXTENDS_LIST
-%type <classinfo> CLASS PACKAGEANDCLASS QNAME
-%type <classinfo_list> QNAME_LIST
+%type <classinfo> CLASS PACKAGEANDCLASS CLASS_SPEC
+%type <classinfo_list> CLASS_SPEC_LIST
 %type <classinfo> TYPE
 //%type <token> VARIABLE
 %type <value> VAR_READ
@@ -458,6 +459,9 @@ static void old_state()
 
 void initialize_file(char*filename)
 {
+    if(state) {
+        syntaxerror("invalid call to initialize_file during parsing of another file");
+    }
     new_state();
     state->package = strdup(filename);
     
@@ -470,7 +474,10 @@ void finish_file()
     if(!state || state->level!=1) {
         syntaxerror("unexpected end of file in pass %d", as3_pass);
     }
-    free(state->package);state->package=0;
+    free(state->method);state->method=0;
+
+    //free(state->package);state->package=0; // used in registry
+
     state_destroy(state);state=0;
 }
 
@@ -705,8 +712,6 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     }
     new_state();
     state->cls = rfx_calloc(sizeof(classstate_t));
-    state->method = rfx_calloc(sizeof(methodstate_t)); // method state, for static constructor
-    state->method->variable_count = 1;
 
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
@@ -722,7 +727,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     char*package=0;
 
     if(!(flags&FLAG_PUBLIC) && !state->package) {
-        access = ACCESS_PRIVATE; package = current_filename;
+        access = ACCESS_PRIVATE; package = strdup(current_filename_short);
     } else if(!(flags&FLAG_PUBLIC) && state->package) {
         access = ACCESS_PACKAGEINTERNAL; package = state->package;
     } else if(state->package) {
@@ -732,6 +737,10 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     }
 
     if(as3_pass==1) {
+        state->method = rfx_calloc(sizeof(methodstate_t)); // method state, for static constructor
+        state->method->variable_count = 1;
+        dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
+
         if(registry_findclass(package, classname)) {
             syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
         }
@@ -741,6 +750,8 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     }
     
     if(as3_pass == 2) {
+        state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+
         state->cls->info = registry_findclass(package, classname);
         parserassert((int)state->cls->info);
 
@@ -1310,7 +1321,7 @@ static classinfo_t* find_class(char*name)
     /* try global package */
     c = registry_findclass("", name);
     if(c) return c;
-   
+  
     /* try local "filename" package */
     c = registry_findclass(current_filename_short, name);
     if(c) return c;
@@ -1349,7 +1360,6 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
 
        [prefix code] ([dup]) [read instruction] [middlepart] [setvar] [write instruction] [getvar]
     */
-    
     if(in && in->opcode == OPCODE_COERCE_A) {
         in = code_cutlast(in);
     }
@@ -1469,6 +1479,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
             c = code_append(c, write);
             c = code_append(c, r);
         } else {
+            code_free(r);r=0;
             temp = gettempvar();
             if(prefix) {
                 c = code_append(c, prefix);
@@ -1639,6 +1650,7 @@ PROGRAM_CODE: PACKAGE_DECLARATION
             | FUNCTION_DECLARATION
             | SLOT_DECLARATION
             | PACKAGE_INITCODE
+            | T_IDENTIFIER "::" T_IDENTIFIER '{' PROGRAM_CODE_LIST '}' // conditional compilation
             | ';'
 
 MAYBE_INPACKAGE_CODE_LIST: | INPACKAGE_CODE_LIST
@@ -1650,6 +1662,7 @@ INPACKAGE_CODE: INTERFACE_DECLARATION
               | FUNCTION_DECLARATION
               | SLOT_DECLARATION
               | PACKAGE_INITCODE
+              | T_IDENTIFIER "::" T_IDENTIFIER '{' INPACKAGE_CODE_LIST '}' // conditional compilation
               | ';'
 
 MAYBECODE: CODE {$$=$1;}
@@ -1725,6 +1738,7 @@ ONE_VARIABLE: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
             $$ = converttype($$, $3.t, $2);
             $$ = abc_setlocal($$, index);
         } else {
+            code_free($3.c);
             $$ = defaultvalue(0, $2);
             $$ = abc_setlocal($$, index);
         }
@@ -1734,6 +1748,7 @@ ONE_VARIABLE: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
             $$ = abc_coerce_a($$);
             $$ = abc_setlocal($$, index);
         } else {
+            code_free($3.c);
             $$ = code_new();
         }
     }
@@ -2083,7 +2098,13 @@ PACKAGE_DECLARATION : "package" PACKAGE '{' {PASS12 startpackage($2);free($2);$2
 PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");} 
                                 MAYBE_INPACKAGE_CODE_LIST '}' {PASS12 endpackage();$$=0;}
 
-IMPORT : "import" QNAME {
+IMPORT : "import" PACKAGEANDCLASS {
+       PASS1 
+       if(!registry_findclass($2->package, $2->name)) {
+           as3_schedule_class($2->package, $2->name);
+       }
+
+       PASS2
        classinfo_t*c = $2;
        if(!c) 
             syntaxerror("Couldn't import class\n");
@@ -2092,6 +2113,12 @@ IMPORT : "import" QNAME {
        $$=0;
 }
 IMPORT : "import" PACKAGE '.' '*' {
+       PASS1 
+       if(strncmp("flash.", $2, 6)) {
+           as3_schedule_package($2);
+       }
+
+       PASS2
        NEW(import_t,i);
        i->package = $2;
        state_has_imports();
@@ -2117,13 +2144,13 @@ MODIFIER : KW_PUBLIC {PASS12 $$=FLAG_PUBLIC;}
          | KW_INTERNAL {PASS12 $$=FLAG_PACKAGEINTERNAL;}
 
 EXTENDS : {$$=registry_getobjectclass();}
-EXTENDS : KW_EXTENDS QNAME {$$=$2;}
+EXTENDS : KW_EXTENDS CLASS_SPEC {$$=$2;}
 
 EXTENDS_LIST : {PASS12 $$=list_new();}
-EXTENDS_LIST : KW_EXTENDS QNAME_LIST {PASS12 $$=$2;}
+EXTENDS_LIST : KW_EXTENDS CLASS_SPEC_LIST {PASS12 $$=$2;}
 
 IMPLEMENTS_LIST : {PASS12 $$=list_new();}
-IMPLEMENTS_LIST : KW_IMPLEMENTS QNAME_LIST {PASS12 $$=$2;}
+IMPLEMENTS_LIST : KW_IMPLEMENTS CLASS_SPEC_LIST {PASS12 $$=$2;}
 
 CLASS_DECLARATION : MAYBE_MODIFIERS "class" T_IDENTIFIER 
                               EXTENDS IMPLEMENTS_LIST 
@@ -2242,7 +2269,7 @@ STATICCONSTANT : T_BYTE {$$ = constant_new_int($1);}
 STATICCONSTANT : T_INT {$$ = constant_new_int($1);}
 STATICCONSTANT : T_UINT {$$ = constant_new_uint($1);}
 STATICCONSTANT : T_FLOAT {$$ = constant_new_float($1);}
-STATICCONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);}
+STATICCONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);free((char*)$1.str);}
 //STATICCONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
 STATICCONSTANT : "true" {$$ = constant_new_true($1);}
 STATICCONSTANT : "false" {$$ = constant_new_false($1);}
@@ -2354,20 +2381,24 @@ CLASS: T_IDENTIFIER {
 }
 
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
-    PASS1 $$=0;
+    PASS1 static classinfo_t c;
+          memset(&c, 0, sizeof(c));
+          c.package = $1;
+          c.name = $3;
+          $$=&c;
     PASS2
     $$ = registry_findclass($1, $3);
     if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1, $3);
     free($1);$1=0;
 }
 
-QNAME: PACKAGEANDCLASS
-     | CLASS
+CLASS_SPEC: PACKAGEANDCLASS
+          | CLASS
 
-QNAME_LIST : QNAME {PASS12 $$=list_new();list_append($$, $1);}
-QNAME_LIST : QNAME_LIST ',' QNAME {PASS12 $$=$1;list_append($$,$3);}
+CLASS_SPEC_LIST : CLASS_SPEC {PASS12 $$=list_new();list_append($$, $1);}
+CLASS_SPEC_LIST : CLASS_SPEC_LIST ',' CLASS_SPEC {PASS12 $$=$1;list_append($$,$3);}
 
-TYPE : QNAME      {$$=$1;}
+TYPE : CLASS_SPEC {$$=$1;}
      | '*'        {$$=registry_getanytype();}
      | "void"     {$$=registry_getanytype();}
     /*
@@ -2591,7 +2622,7 @@ CONSTANT : T_UINT {$$.c = abc_pushuint(0, $1);
 CONSTANT : T_FLOAT {$$.c = abc_pushdouble(0, $1);
                     $$.t = TYPE_FLOAT;
                    }
-CONSTANT : T_STRING {$$.c = abc_pushstring2(0, &$1);
+CONSTANT : T_STRING {$$.c = abc_pushstring2(0, &$1);free((char*)$1.str);
                      $$.t = TYPE_STRING;
                     }
 CONSTANT : "undefined" {$$.c = abc_pushundefined(0);
