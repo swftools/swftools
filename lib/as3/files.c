@@ -49,11 +49,6 @@ static void dbg(const char*format, ...)
 }
 
 
-typedef struct _include_dir {
-    char*path;
-    struct _include_dir*next;
-} include_dir_t;
-
 int current_line=1;
 int current_column=0;
 char* current_filename=0;
@@ -134,7 +129,7 @@ char is_absolute(char*filename)
     return 0;
 }
 
-char*find_file(char*filename)
+char*find_file(const char*filename)
 {
     include_dir_t*i = current_include_dirs;
     FILE*fi = 0;
@@ -154,6 +149,8 @@ char*find_file(char*filename)
             if(fi) {
                 fclose(fi);
                 return p;
+            } else {
+                free(p);
             }
             i = i->next;
         }

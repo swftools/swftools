@@ -22,14 +22,20 @@
 #ifndef __avm2_files_h__
 #define __avm2_files_h__
 
+typedef struct _include_dir {
+    char*path;
+    struct _include_dir*next;
+} include_dir_t;
+
 extern int current_line;
 extern int current_column;
 extern char* current_filename;
 extern char* current_filename_short;
+extern include_dir_t* current_include_dirs;
 
 void add_include_dir(char*dir);
 
-char*find_file(char*filename);
+char*find_file(const char*filename);
 void enter_file(const char*name, const char*filename, void*state);
 FILE* enter_file2(const char*name, const char*filename, void*state);
 void* leave_file();
