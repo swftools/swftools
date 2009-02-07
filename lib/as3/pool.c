@@ -828,16 +828,24 @@ static int compare_arrayentry(const void*_c1, const void*_c2)
     const array_entry_t*c2 = _c2;
     return c2->data - c1->data;
 }
+
+static void* nodup(const void*o) {return (void*)o;}
+
 static void reshuffle_array(array_t*array)
 {
     qsort(array->d+1, array->num-1, sizeof(array->d[0]), compare_arrayentry);
-    dict_t*d = dict_new2(array->entry2pos->key_type);
+    type_t* old_type = array->entry2pos->key_type;
+    type_t old_type_nodup = *old_type;
+    old_type_nodup.dup = nodup;
+    dict_t*d = dict_new2(&old_type_nodup);
     dict_destroy_shallow(array->entry2pos);
     array->entry2pos = d;
     int t;
     for(t=0;t<array->num;t++) {
         dict_put(array->entry2pos, array->d[t].name, (void*)(ptroff_t)(t+1));
     }
+    d->key_type = old_type;
+
 }
 
 // ------------------------------- pool -------------------------------------
