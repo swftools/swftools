@@ -28,7 +28,6 @@
 #include "compiler.h"
 
 /* flex/bison definitions */
-extern void as3_set_in (FILE *  in_str );
 extern int a3_parse();
 extern int as3_lex();
 extern int as3_lex_destroy();
@@ -76,7 +75,7 @@ int a3_lex()
 #endif
 }
 
-void as3_parse_file(char*filename) 
+static void as3_parse(const char*name, const char*filename, void*mem, int length)
 {
     if(!registry_initialized) {
         registry_initialized = 1;
@@ -95,13 +94,19 @@ void as3_parse_file(char*filename)
     tokens.read_pos = 0;
 #endif
 
-    FILE*fi = enter_file2(filename, 0);
+    FILE*fi = 0;
+    if(filename) {
+        fi = enter_file2(name, filename, 0);
+        as3_file_input(fi);
+    } else {
+        enter_file(name, name, 0);
+        as3_buffer_input(mem, length);
+    }
 
     /* pass 1 */
     as3_pass = 1;
     as3_tokencount=0;
-    as3_set_in(fi);
-    initialize_file(filename);
+    initialize_file(name);
     a3_parse();
     as3_lex_destroy();
     finish_file();
@@ -110,19 +115,39 @@ void as3_parse_file(char*filename)
     tokens.read_pos = 0;
 #endif
 
+    if(filename) {
+        fclose(fi);
+        fi = enter_file2(name, filename, 0);
+        as3_file_input(fi);
+    } else {
+        enter_file(name, name, 0);
+        as3_buffer_input(mem, length);
+    }
+
     /* pass 2 */
     as3_pass = 2;
     as3_tokencount=0;
-    enter_file(filename, 0);
-    fseek(fi, 0, SEEK_SET);
-    as3_set_in(fi);
-    initialize_file(filename);
+    initialize_file(name);
     a3_parse();
     as3_lex_destroy();
     finish_file();
 
-    fclose(fi);
+    if(filename) {
+        fclose(fi);
+    }
+}
 
+void as3_parse_bytearray(const char*name, void*mem, int length)
+{
+    as3_parse(name, 0, mem, length);
+}
+
+void as3_parse_file(const char*filename) 
+{
+    char*fullfilename = find_file(filename);
+    if(!fullfilename)
+        return; // not found
+    as3_parse(filename, fullfilename, 0,0);
 }
 
 static void*as3code = 0;
