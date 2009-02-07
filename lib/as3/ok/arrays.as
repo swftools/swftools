@@ -14,7 +14,7 @@ package {
             if(b[0]==1) trace("ok 5/8");
             if(b[1]==2) trace("ok 6/8");
             if(b[2]==3) trace("ok 7/8");
-            if(b.length=3) trace("ok 8/8");
+            if(b.length==3) trace("ok 8/8");
             
             trace("[exit]");
         }
