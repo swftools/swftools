@@ -847,6 +847,12 @@ void stats_free(currentstats_t*stats)
 
 int code_dump(code_t*c)
 {
+    code_t*cc = code_start(c);
+    while(cc) {
+        assert(!cc->next || cc->next->prev == cc);
+        cc = cc->next;
+    }
+
     return code_dump2(c, 0, 0, "", stdout);
 }
 int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*prefix, FILE*fo)
@@ -1130,7 +1136,7 @@ code_t*code_cut(code_t*c)
     if(prev) prev->next=next;
     if(next) next->prev=prev;
     code_free(c);
-    
+
     if(next) return code_end(next);
     else     return prev;
 }
