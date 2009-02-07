@@ -26,6 +26,10 @@
 #include "parser.h"
 #include "parser.tab.h"
 #include "compiler.h"
+#include "../os.h"
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
 
 /* flex/bison definitions */
 extern int a3_parse();
@@ -75,7 +79,7 @@ int a3_lex()
 #endif
 }
 
-static void as3_parse(const char*name, const char*filename, void*mem, int length)
+static void as3_parse_file_or_array(int pass, const char*name, const char*filename, void*mem, int length)
 {
     if(!registry_initialized) {
         registry_initialized = 1;
@@ -88,11 +92,7 @@ static void as3_parse(const char*name, const char*filename, void*mem, int length
         mem_init(&tokens);
 #endif
     }
-
-#ifdef STORE_TOKENS
-    tokens.pos = 0;
-    tokens.read_pos = 0;
-#endif
+    as3_pass=pass;
 
     FILE*fi = 0;
     if(filename) {
@@ -103,43 +103,60 @@ static void as3_parse(const char*name, const char*filename, void*mem, int length
         as3_buffer_input(mem, length);
     }
 
-    /* pass 1 */
-    as3_pass = 1;
     as3_tokencount=0;
     initialize_file(name);
     a3_parse();
     as3_lex_destroy();
     finish_file();
-    
-#ifdef STORE_TOKENS
-    tokens.read_pos = 0;
-#endif
+}
 
-    if(filename) {
-        fclose(fi);
-        fi = enter_file2(name, filename, 0);
-        as3_file_input(fi);
+typedef struct _scheduled_file {
+    char*filename;
+    struct _scheduled_file*next;
+} scheduled_file_t;
+
+static scheduled_file_t*scheduled=0;
+dict_t*scheduled_dict=0;
+
+void as3_parse_scheduled()
+{
+    while(scheduled) {
+        scheduled_file_t*old = scheduled;
+        as3_parse_file(scheduled->filename);
+        scheduled = scheduled->next;
+        free(old->filename);
+        free(old);
+    }
+    if(scheduled_dict) {
+        dict_destroy(scheduled_dict);
+        scheduled_dict=0;
+    }
+}
+void as3_schedule_file(const char*filename) 
+{
+    if(!scheduled_dict) 
+        scheduled_dict = dict_new();
+
+    if(dict_lookup(scheduled_dict, filename)) {
+        return; //already processed
     } else {
-        enter_file(name, name, 0);
-        as3_buffer_input(mem, length);
+        dict_put(scheduled_dict, filename, 0);
     }
 
-    /* pass 2 */
-    as3_pass = 2;
-    as3_tokencount=0;
-    initialize_file(name);
-    a3_parse();
-    as3_lex_destroy();
-    finish_file();
-
-    if(filename) {
-        fclose(fi);
-    }
+    NEW(scheduled_file_t, f);
+    f->filename = strdup(filename);
+    f->next = scheduled; // dfs
+    scheduled = f;
+    printf("schedule %s\n", filename);
 }
 
 void as3_parse_bytearray(const char*name, void*mem, int length)
 {
-    as3_parse(name, 0, mem, length);
+    as3_parse_file_or_array(1, name, 0, mem, length);
+    as3_parse_scheduled();
+    
+    as3_parse_file_or_array(2, name, 0, mem, length);
+    as3_parse_scheduled();
 }
 
 void as3_parse_file(const char*filename) 
@@ -147,7 +164,96 @@ void as3_parse_file(const char*filename)
     char*fullfilename = find_file(filename);
     if(!fullfilename)
         return; // not found
-    as3_parse(filename, fullfilename, 0,0);
+    
+    as3_parse_file_or_array(1, filename, fullfilename, 0,0);
+    as3_parse_scheduled();
+
+    as3_parse_file_or_array(2, filename, fullfilename, 0,0);
+    as3_parse_scheduled();
+
+    free(fullfilename);
+}
+
+void as3_schedule_package(const char*package)
+{
+    char*dirname = strdup(package);
+    int s=0;
+    while(dirname[s]) {
+        if(package[s]=='.') dirname[s]='/';
+        s++;
+    };
+    char ok=0;
+#ifdef HAVE_DIRENT_H
+    include_dir_t*i = current_include_dirs;
+    while(i) {
+        char*fulldirname = concatPaths(i->path, dirname);
+        DIR*dir = opendir(dirname);
+        if(dir) {
+            ok = 1;
+            struct dirent*ent;
+            while(1) {
+                ent = readdir(dir);
+                if (!ent) 
+                    break;
+                char*name = ent->d_name;
+                char type = 0;
+                if(!name) continue;
+                int l=strlen(name);
+                if(l<4)
+                    continue;
+                if(strncasecmp(&name[l-3], ".as", 3)) 
+                    continue;
+                char*fullfilename = concatPaths(dirname, name);
+                as3_schedule_file(fullfilename);
+                free(fullfilename);
+            }
+        }
+        free(fulldirname);
+        i = i->next;
+    }
+#endif
+    if(!ok)
+        as3_warning("Could not find package %s", package);
+}
+
+void as3_schedule_class(const char*package, const char*cls)
+{
+    if(!cls) {
+        as3_schedule_package(package);
+        return;
+    }
+    int l1 = package?strlen(package):0;
+    int l2 = cls?strlen(cls):0;
+    char*filename = malloc(l1+l2+5);
+    int s=0,t=0;
+    while(package[s]) {
+        if(package[s]=='.')
+            filename[t++]='/';
+        else
+            filename[t++] = package[s];
+        s++;
+    }
+    if(t)
+        filename[t++] = '/';
+
+    strcpy(filename+t, cls);
+    strcpy(filename+t+l2, ".as");
+    char*f=0;
+    if(!(f=find_file(filename))) {
+        int i;
+        /* try lower case filename (not packagename!), too */
+        for(i=t;i<t+l2;i++) {
+            if(filename[i]>='A' && filename[i]<='Z')
+                filename[i] += 'a'-'A';
+        }
+        if(!(f=find_file(filename))) {
+            strcpy(filename+t, cls);
+            strcpy(filename+t+l2, ".as");
+            as3_warning("Could not open file %s", filename);
+            return;
+        }
+    }
+    as3_schedule_file(f);
 }
 
 static void*as3code = 0;

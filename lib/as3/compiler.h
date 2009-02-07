@@ -3,8 +3,12 @@
 
 void as3_setverbosity(int level);
 void as3_add_include_dir(char*dir);
+
 void as3_parse_file(const char*filename);
 void as3_parse_bytearray(const char*name, void*mem, int length);
+void as3_schedule_package(const char*package);
+void as3_schedule_class(const char*package, const char*cls);
+
 void as3_warning(const char*format, ...);
 char* as3_getglobalclass();
 void* as3_getcode();
