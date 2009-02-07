@@ -34,9 +34,10 @@
 
 void test_lexer(char*filename)
 {
-    char*fullfilename = enter_file(filename, 0);
+    char*fullfilename = find_file(filename);
+    enter_file(filename, fullfilename, 0);
     FILE*fi = fopen(fullfilename, "rb");
-    as3_set_in(fi);
+    as3_file_input(fi);
     while(1) {
         int token = as3_lex();
         if(token==T_EOF)
@@ -69,13 +70,21 @@ int main(int argn, char*argv[])
         if(!strcmp(argv[t], "-v")) {
             as3_verbosity++;
         }
+        if(!strcmp(argv[t], "-q")) {
+            as3_verbosity--;
+        }
     }
 
     //extern int avm2_debug;
     //avm2_debug = 1;
     
     as3_add_include_dir(getcwd(buf, 512));
+
+    //memfile_t*m = memfile_open(filename);
+    //as3_parse_bytearray(filename, m->data, m->len);
+    //memfile_close(m);
     as3_parse_file(filename);
+
     void*code = as3_getcode();
 
     SWF swf;
