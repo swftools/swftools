@@ -80,6 +80,9 @@ void as3_error(const char*format, ...);
 void as3_warning(const char*format, ...);
 void as3_softwarning(const char*format, ...);
 
+void as3_buffer_input(void*buffer, int len);
+void as3_file_input(FILE*fi);
+
 #define T_EOF 0
 
 extern int avm2_lex();

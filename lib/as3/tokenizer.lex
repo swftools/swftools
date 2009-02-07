@@ -95,11 +95,42 @@ static void dbg(const char*format, ...)
     fflush(stdout);
 }
 
-
-
 #ifndef YY_CURRENT_BUFFER
 #define YY_CURRENT_BUFFER yy_current_buffer
 #endif
+
+static void*as3_buffer=0;
+static int as3_buffer_pos=0;
+static int as3_buffer_len=0;
+void as3_file_input(FILE*fi)
+{
+    as3_in = fi;
+    as3_buffer = 0;
+}
+void as3_buffer_input(void*buffer, int len)
+{
+    as3_buffer = buffer;
+    as3_buffer_len = len;
+    as3_buffer_pos = 0;
+    as3_in = 0;
+}
+
+#define YY_INPUT(buf,result,max_size) { \
+  if(!as3_buffer) { \
+      errno=0; \
+      while((result = fread(buf, 1, max_size, as3_in))==0 && ferror(as3_in)) \
+      { if(errno != EINTR) {YY_FATAL_ERROR("input in flex scanner failed"); break;} \
+        errno=0; clearerr(as3_in); \
+      } \
+  } else { \
+      int to_read = max_size; \
+      if(to_read + as3_buffer_pos > as3_buffer_len) \
+          to_read = as3_buffer_len - as3_buffer_pos; \
+      memcpy(buf, as3_buffer+as3_buffer_pos, to_read); \
+      as3_buffer_pos += to_read; \
+      result=to_read; \
+  } \
+}
 
 void handleInclude(char*text, int len, char quotes)
 {
@@ -123,7 +154,8 @@ void handleInclude(char*text, int len, char quotes)
         filename = strdup(&text[i1]);
     }
     
-    char*fullfilename = enter_file(filename, YY_CURRENT_BUFFER);
+    char*fullfilename = find_file(filename);
+    enter_file2(filename, fullfilename, YY_CURRENT_BUFFER);
     yyin = fopen(fullfilename, "rb");
     if (!yyin) {
 	syntaxerror("Couldn't open include file \"%s\"\n", fullfilename);
@@ -276,7 +308,7 @@ static void handleString(char*s, int len)
 
 char start_of_expression;
 
-static inline int mkid(int type)
+static inline int handleIdentifier(int type)
 {
     char*s = malloc(yyleng+1);
     memcpy(s, yytext, yyleng);
@@ -495,7 +527,6 @@ static inline void c() {
 //uint                         {c();return m(KW_UINT);}
 //Number                       {c();return m(KW_NUMBER);}
 
-
 %}
 
 %s REGEXPOK
@@ -635,7 +666,7 @@ is                           {c();return m(KW_IS) ;}
 in                           {c();return m(KW_IN) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
-{NAME}                       {c();BEGIN(INITIAL);return mkid(T_IDENTIFIER);}
+{NAME}                       {c();BEGIN(INITIAL);return handleIdentifier(T_IDENTIFIER);}
 
 [+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
 [\)\]]                           {c();BEGIN(INITIAL);return m(yytext[0]);}
@@ -737,4 +768,5 @@ void initialize_scanner()
 {
     BEGIN(BEGINNING);
 }
+
 
