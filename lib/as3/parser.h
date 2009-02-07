@@ -28,7 +28,7 @@
 extern char*as3_globalclass;
 
 void initialize_parser();
-void initialize_file(char*filename);
+void initialize_file(const char*filename);
 void finish_file();
 void* finish_parser();
 #endif
