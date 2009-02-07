@@ -47,11 +47,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 #endif
 
 #if defined(CYGWIN)
-static char seperator = '/';
+char path_seperator = '/';
 #elif defined(WIN32)
-static char seperator = '\\';
+char path_seperator = '\\';
 #else
-static char seperator = '/';
+char path_seperator = '/';
 #endif
 
 #ifdef WIN32
@@ -146,14 +146,14 @@ char* concatPaths(const char*base, const char*add)
     int l2 = strlen(add);
     int pos = 0;
     char*n = 0;
-    while(l1 && base[l1-1] == seperator)
+    while(l1 && base[l1-1] == path_seperator)
 	l1--;
-    while(pos < l2 && add[pos] == seperator)
+    while(pos < l2 && add[pos] == path_seperator)
 	pos++;
 
     n = (char*)malloc(l1 + (l2-pos) + 2);
     memcpy(n,base,l1);
-    n[l1]=seperator;
+    n[l1]=path_seperator;
     strcpy(&n[l1+1],&add[pos]);
     return n;
 }

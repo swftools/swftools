@@ -29,6 +29,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 extern "C" {
 #endif
 
+extern char*path_seperator;
+
 #ifdef WIN32
 char* getRegistryEntry(char*path);
 int setRegistryEntry(char*key,char*value);
