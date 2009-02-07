@@ -149,12 +149,12 @@
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union 
 /* Line 1685 of skeleton.m4  */
-#line 43 "parser.y"
+#line 44 "parser.y"
 tokenunion
 {
 
 /* Line 1685 of skeleton.m4  */
-#line 43 "parser.y"
+#line 44 "parser.y"
 
     enum yytokentype token;
     int flags;
