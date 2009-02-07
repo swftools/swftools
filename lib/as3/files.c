@@ -74,11 +74,23 @@ void add_include_dir(char*dir)
 {
     include_dir_t*d = malloc(sizeof(include_dir_t));
     memset(d , 0, sizeof(include_dir_t));
-    d->path = dir;
+    d->path = strdup(dir);
     d->next = current_include_dirs;
     current_include_dirs = d;
 }
-char*get_path(char*file)
+
+void del_include_dirs(include_dir_t*d, include_dir_t*d2)
+{
+    while(d && d!=d2) {
+        include_dir_t*next = d->next;
+        free(d->path);d->path=0;
+        d->next = 0;
+        free(d);
+        d = next;
+    }
+}
+
+char*get_path(const char*file)
 {
     char*path = strdup(file);
     char*r1 = strrchr(path, '/');
@@ -121,6 +133,7 @@ char is_absolute(char*filename)
         return 1;
     return 0;
 }
+
 char*find_file(char*filename)
 {
     include_dir_t*i = current_include_dirs;
@@ -131,39 +144,34 @@ char*find_file(char*filename)
             fclose(fi);
             return strdup(filename);
         }
-        return 0;
-    }
-    if(!i) {
-        as3_warning("Include directory stack is empty, while looking for file %s", filename);
-    }
-    while(i) {
-        char*p = concat_paths(i->path, filename);
-        fi = fopen(p, "rb");
-        if(fi) {
-            fclose(fi);
-            return p;
+    } else {
+        if(!i) {
+            as3_warning("Include directory stack is empty, while looking for file %s", filename);
         }
+        while(i) {
+            char*p = concat_paths(i->path, filename);
+            fi = fopen(p, "rb");
+            if(fi) {
+                fclose(fi);
+                return p;
+            }
+            i = i->next;
+        }
+    }
+
+    as3_error("Couldn't find file %s", filename);
+    i = current_include_dirs;
+    while(i) {
+        fprintf(stderr, "include dir: %s\n", i->path);
         i = i->next;
     }
     return 0;
 }
 
-char*enter_file(char*filename, void*state)
+void enter_file(const char*name, const char*filename, void*state)
 {
-    filename = strdup(filename);
-
     if(include_stack_ptr >= MAX_INCLUDE_DEPTH) {
     	as3_error("Includes nested too deeply");
-	exit(1);
-    }
-    char*fullfilename = find_file(filename);
-    if(!fullfilename) {
-    	as3_error("Couldn't find file %s", filename);
-        include_dir_t*i = current_include_dirs;
-        while(i) {
-            fprintf(stderr, "include dir: %s\n", i->path);
-            i = i->next;
-        }
 	exit(1);
     }
     include_stack[include_stack_ptr] = state;
@@ -172,28 +180,28 @@ char*enter_file(char*filename, void*state)
     shortfilename_stack[include_stack_ptr] = current_filename_short;
     filename_stack[include_stack_ptr] = current_filename;
     includedir_stack[include_stack_ptr] = current_include_dirs;
-    add_include_dir(get_path(fullfilename));
+    char*dir = get_path(filename);
+    add_include_dir(dir);
+    free(dir);
     include_stack_ptr++;
     
-    dbg("entering file %s", fullfilename);
+    dbg("entering file %s", filename);
 
     current_line=1;
     current_column=0;
-    current_filename = fullfilename;
-    current_filename_short = filename;
-    return fullfilename;
+    current_filename = strdup(filename);
+    current_filename_short = strdup(name);
 }
 
-FILE*enter_file2(char*filename, void*state)
+FILE*enter_file2(const char*name, const char*filename, void*state)
 {
-    char*fullfilename = enter_file(filename, state);
-    FILE*fi = fopen(fullfilename, "rb");
+    enter_file(name, filename, state);
+    FILE*fi = fopen(filename, "rb");
     if(!fi) {
-	as3_error("Couldn't find file %s: %s", fullfilename, strerror(errno));
+	as3_error("Couldn't find file %s: %s", filename, strerror(errno));
     }
     return fi;
 }
-
 
 void* leave_file()
 {
@@ -205,6 +213,7 @@ void* leave_file()
         free(current_filename_short);current_filename_short = shortfilename_stack[include_stack_ptr];
         current_column = column_stack[include_stack_ptr];
         current_line = line_stack[include_stack_ptr];
+        del_include_dirs(includedir_stack[include_stack_ptr], current_include_dirs);
         current_include_dirs = includedir_stack[include_stack_ptr];
         return include_stack[include_stack_ptr];
     }
