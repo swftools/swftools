@@ -459,7 +459,7 @@ static void old_state()
 void initialize_file(char*filename)
 {
     new_state();
-    state->package = filename;
+    state->package = strdup(filename);
     
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->variable_count = 1;
@@ -470,6 +470,7 @@ void finish_file()
     if(!state || state->level!=1) {
         syntaxerror("unexpected end of file in pass %d", as3_pass);
     }
+    free(state->package);state->package=0;
     state_destroy(state);state=0;
 }
 
@@ -2168,6 +2169,7 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
     }
     startfunction(0,$1,$3,$4,&$6,$8);
     endfunction(0,$1,$3,$4,&$6,$8, 0);
+    list_deep_free($6.list);
 }
 
 /* ------------ classes and interfaces (body, slots ) ------- */
@@ -2307,7 +2309,7 @@ GETSET : "get" {$$=$1;}
 FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
                       MAYBETYPE '{' {PASS12 startfunction(0,$1,$3,$4,&$6,$8);} MAYBECODE '}' 
 {
-    PASS1 old_state();
+    PASS1 old_state();list_deep_free($6.list);
     PASS2
     if(!state->method->info) syntaxerror("internal error");
     
@@ -2315,6 +2317,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
     c = wrap_function(c, 0, $11);
 
     endfunction(0,$1,$3,$4,&$6,$8,c);
+    list_deep_free($6.list);
     $$=0;
 }
 
@@ -2323,7 +2326,7 @@ MAYBE_IDENTIFIER: {PASS12 $$=0;}
 INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE 
                '{' {PASS12 innerfunction($2,&$4,$6);} MAYBECODE '}'
 {
-    PASS1 old_state();
+    PASS1 old_state();list_deep_free($4.list);
     PASS2
     memberinfo_t*f = state->method->info;
     if(!f) syntaxerror("internal error");
@@ -2333,6 +2336,7 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 
     int index = state->method->var_index;
     endfunction(0,0,0,$2,&$4,$6,c);
+    list_deep_free($4.list);
     
     $$.c = abc_getlocal(0, index);
     $$.t = TYPE_FUNCTION(f);
