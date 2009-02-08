@@ -70,7 +70,7 @@ extern int a3_lex();
 }
 
 
-%token<id> T_IDENTIFIER
+%token<id> T_IDENTIFIER T_NAMESPACE
 %token<str> T_STRING
 %token<regexp> T_REGEXP
 %token<token> T_EMPTY
@@ -186,7 +186,7 @@ extern int a3_lex();
 %type <value> CONSTANT
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
 %type <value> INNERFUNCTION
-%type <token> USE_NAMESPACE
+%type <code> USE_NAMESPACE
 %type <code> FOR_INIT
 %type <code> IMPORT
 %type <classinfo> MAYBETYPE
@@ -209,7 +209,7 @@ extern int a3_lex();
 //%type <token> T_IDENTIFIER
 %type <token> MODIFIER
 %type <value> FUNCTIONCALL
-%type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST MAYBE_PARAM_VALUES MAYBE_EXPRPAIR_LIST EXPRPAIR_LIST
+%type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST EXPRESSION_LIST_AND_COMMA MAYBE_PARAM_VALUES MAYBE_EXPRPAIR_LIST EXPRPAIR_LIST
 
 // precedence: from low to high
 
@@ -239,7 +239,7 @@ extern int a3_lex();
 
 %left '('
 %left new2
-%left '[' ']' "new" '{' '.' ".." "::"
+%left '[' ']' "new" '{' '.' ".." "::" '@'
 
 %nonassoc T_IDENTIFIER
 %left above_identifier
@@ -305,7 +305,7 @@ DECLARE_LIST(methodstate);
 
 typedef struct _methodstate {
     /* method data */
-    memberinfo_t*info;
+    methodinfo_t*info;
     char late_binding;
     char is_constructor;
     char has_super;
@@ -343,6 +343,7 @@ typedef struct _global {
     abc_file_t*file;
     abc_script_t*init;
     dict_t*token2info;
+    dict_t*file2token2info;
 } global_t;
 
 static global_t*global = 0;
@@ -353,13 +354,15 @@ DECLARE_LIST(state);
 #define MULTINAME(m,x) \
     multiname_t m;\
     namespace_t m##_ns;\
-    registry_fill_multiname(&m, &m##_ns, x);
+    (x)->package; \
+    registry_fill_multiname(&m, &m##_ns, (slotinfo_t*)(x));
                     
 #define MEMBER_MULTINAME(m,f,n) \
     multiname_t m;\
     namespace_t m##_ns;\
     if(f) { \
-        m##_ns = flags2namespace(f->flags, ""); \
+        m##_ns.access = (f)->access; \
+        m##_ns.name = ""; \
         m.type = QNAME; \
         m.ns = &m##_ns; \
         m.namespace_set = 0; \
@@ -457,16 +460,25 @@ static void old_state()
     state_destroy(leaving);
 }
 
+static char* internal_filename_package = 0;
 void initialize_file(char*filename)
 {
     if(state) {
         syntaxerror("invalid call to initialize_file during parsing of another file");
     }
     new_state();
-    state->package = strdup(filename);
+    state->package = internal_filename_package = strdup(filename);
     
     state->method = rfx_calloc(sizeof(methodstate_t));
     state->method->variable_count = 1;
+
+    global->token2info = dict_lookup(global->file2token2info, 
+                                     current_filename // use long version
+                                    );
+    if(!global->token2info) {
+        global->token2info = dict_new2(&ptr_type);
+        dict_put(global->file2token2info, current_filename, global->token2info);
+    }
 }
 
 void finish_file()
@@ -486,7 +498,8 @@ void initialize_parser()
     global = rfx_calloc(sizeof(global_t));
     global->file = abc_file_new();
     global->file->flags &= ~ABCFILE_LAZY;
-    global->token2info = dict_new2(&ptr_type);
+    global->file2token2info = dict_new();
+    global->token2info = 0;
     
     global->init = abc_initscript(global->file);
     code_t*c = global->init->method->body->code;
@@ -503,7 +516,11 @@ void* finish_parser()
       c = abc_callpropvoid(c, "[package]::trace", 1);*/
     c = abc_returnvoid(c);
     global->init->method->body->code = c;
-    dict_destroy(global->token2info);global->token2info=0;
+
+    dict_free_all(global->file2token2info, 1, (void*)dict_destroy);
+
+    global->token2info=0;
+
     return global->file;
 }
 
@@ -703,9 +720,35 @@ static void endpackage()
     old_state();
 }
 
+#define FLAG_PUBLIC 256
+#define FLAG_PROTECTED 512
+#define FLAG_PRIVATE 1024
+#define FLAG_PACKAGEINTERNAL 2048
+#define FLAG_NAMESPACE 4096
+
+static int flags2access(int flags)
+{
+    int access = 0;
+    if(flags&FLAG_PUBLIC)  {
+        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
+            syntaxerror("invalid combination of access levels");
+        access = ACCESS_PACKAGE;
+    } else if(flags&FLAG_PRIVATE) {
+        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
+            syntaxerror("invalid combination of access levels");
+        access = ACCESS_PRIVATE;
+    } else if(flags&FLAG_PROTECTED) {
+        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_PACKAGEINTERNAL)) 
+            syntaxerror("invalid combination of access levels");
+        access = ACCESS_PROTECTED;
+    } else {
+        access = ACCESS_PACKAGEINTERNAL;
+    }
+    return access;
+}
 
 char*as3_globalclass=0;
-static void startclass(int flags, char*classname, classinfo_t*extends, classinfo_list_t*implements, char interface)
+static void startclass(int flags, char*classname, classinfo_t*extends, classinfo_list_t*implements)
 {
     if(state->cls) {
         syntaxerror("inner classes now allowed"); 
@@ -716,7 +759,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
 
-    if(flags&~(FLAG_PACKAGEINTERNAL|FLAG_PUBLIC|FLAG_FINAL|FLAG_DYNAMIC))
+    if(flags&~(FLAG_PACKAGEINTERNAL|FLAG_PUBLIC|FLAG_FINAL|FLAG_DYNAMIC|FLAG_INTERFACE))
         syntaxerror("invalid modifier(s)");
 
     if((flags&(FLAG_PUBLIC|FLAG_PACKAGEINTERNAL)) == (FLAG_PUBLIC|FLAG_PACKAGEINTERNAL))
@@ -726,11 +769,11 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     int access=0;
     char*package=0;
 
-    if(!(flags&FLAG_PUBLIC) && !state->package) {
-        access = ACCESS_PRIVATE; package = strdup(current_filename_short);
-    } else if(!(flags&FLAG_PUBLIC) && state->package) {
+    if(!(flags&FLAG_PUBLIC) && state->package==internal_filename_package) {
+        access = ACCESS_PRIVATE; package = internal_filename_package;
+    } else if(!(flags&FLAG_PUBLIC) && state->package!=internal_filename_package) {
         access = ACCESS_PACKAGEINTERNAL; package = state->package;
-    } else if(state->package) {
+    } else if(state->package!=internal_filename_package) {
         access = ACCESS_PACKAGE; package = state->package;
     } else {
         syntaxerror("public classes only allowed inside a package");
@@ -741,25 +784,31 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         state->method->variable_count = 1;
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
 
-        if(registry_findclass(package, classname)) {
+        if(registry_find(package, classname)) {
             syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
         }
         /* build info struct */
         int num_interfaces = (list_length(implements));
         state->cls->info = classinfo_register(access, package, classname, num_interfaces);
+        state->cls->info->flags |= flags & (FLAG_DYNAMIC|FLAG_INTERFACE|FLAG_FINAL);
     }
     
     if(as3_pass == 2) {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
 
-        state->cls->info = registry_findclass(package, classname);
+        state->cls->info = (classinfo_t*)registry_find(package, classname);
         parserassert((int)state->cls->info);
+
+        if(extends && (extends->flags & FLAG_FINAL))
+            syntaxerror("Can't extend final class '%s'", extends->name);
 
         /* fill out interfaces and extends (we couldn't resolve those during the first pass) */
         state->cls->info->superclass = extends?extends:TYPE_OBJECT;
         int pos = 0;
         classinfo_list_t*l = implements;
         for(l=implements;l;l=l->next) {
+            if(!(l->classinfo->flags & FLAG_INTERFACE))
+                syntaxerror("'%s' is not an interface", l->classinfo->name);
             state->cls->info->interfaces[pos++] = l->classinfo;
         }
 
@@ -768,10 +817,9 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         multiname_t*extends2 = sig2mname(extends);
 
         state->cls->abc = abc_class_new(global->file, &classname2, extends2);
-        if(flags&FLAG_FINAL) abc_class_final(state->cls->abc);
-        if(!(flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
-        if(interface) {
-            state->cls->info->flags |= CLASS_INTERFACE;
+        if(state->cls->info->flags&FLAG_FINAL) abc_class_final(state->cls->abc);
+        if(!(state->cls->info->flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
+        if(state->cls->info->flags&FLAG_INTERFACE) {
             abc_class_interface(state->cls->abc);
         }
 
@@ -834,7 +882,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
 
         /* flash.display.MovieClip handling */
 
-        if(!as3_globalclass && (flags&FLAG_PUBLIC) && classinfo_equals(registry_getMovieClip(),extends)) {
+        if(!as3_globalclass && (flags&FLAG_PUBLIC) && slotinfo_equals((slotinfo_t*)registry_getMovieClip(),(slotinfo_t*)extends)) {
             if(state->package && state->package[0]) {
                 as3_globalclass = concat3(state->package, ".", classname);
             } else {
@@ -847,7 +895,7 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
 static void endclass()
 {
     if(as3_pass == 2) {
-        if(!state->cls->has_constructor && !(state->cls->info->flags&CLASS_INTERFACE)) {
+        if(!state->cls->has_constructor && !(state->cls->info->flags&FLAG_INTERFACE)) {
             code_t*c = 0;
             c = abc_getlocal_0(c);
             c = abc_constructsuper(c, 0);
@@ -908,86 +956,88 @@ static void check_constant_against_type(classinfo_t*t, constant_t*c)
    }
 }
 
-
-static int flags2access(int flags)
+static void check_override(memberinfo_t*m, int flags)
 {
-    int access = 0;
-    if(flags&FLAG_PUBLIC)  {
-        if(access&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
-            syntaxerror("invalid combination of access levels");
-        access = ACCESS_PACKAGE;
-    } else if(flags&FLAG_PRIVATE) {
-        if(access&(FLAG_PUBLIC|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
-            syntaxerror("invalid combination of access levels");
-        access = ACCESS_PRIVATE;
-    } else if(flags&FLAG_PROTECTED) {
-        if(access&(FLAG_PUBLIC|FLAG_PRIVATE|FLAG_PACKAGEINTERNAL)) 
-            syntaxerror("invalid combination of access levels");
-        access = ACCESS_PROTECTED;
-    } else {
-        access = ACCESS_PACKAGEINTERNAL;
+    if(!m)
+        return;
+    if(m->parent == state->cls->info)
+        syntaxerror("class '%s' already contains a method/slot '%s'", m->parent->name, m->name);
+    if(!m->parent)
+        syntaxerror("internal error: overriding method %s, which doesn't have parent", m->name);
+    if(m->access==ACCESS_PRIVATE)
+        return;
+    if(m->flags & FLAG_FINAL)
+        syntaxerror("can't override final member %s", m->name);
+    if((m->flags & FLAG_STATIC) && !(flags&FLAG_STATIC))
+        syntaxerror("can't override static member %s", m->name);
+    if(!(m->flags & FLAG_STATIC) && (flags&FLAG_STATIC))
+        syntaxerror("can't override non-static member %s with static declaration", m->name);
+
+    if(!(flags&FLAG_OVERRIDE)) {
+        if(m->parent && !(m->parent->flags&FLAG_INTERFACE)) {
+            if(m->kind == INFOTYPE_METHOD)
+                syntaxerror("can't override without explicit 'override' declaration");
+            else
+                syntaxerror("can't override '%s'", m->name);
+        }
     }
-    return access;
 }
 
-
-static memberinfo_t*registerfunction(enum yytokentype getset, int flags, char*name, params_t*params, classinfo_t*return_type, int slot)
+static methodinfo_t*registerfunction(enum yytokentype getset, int flags, char*name, params_t*params, classinfo_t*return_type, int slot)
 {
-    memberinfo_t*minfo = 0;
+    methodinfo_t*minfo = 0;
+    U8 access = flags2access(flags);
     if(!state->cls) {
         //package method
-        minfo = memberinfo_register_global(flags2access(flags), state->package, name, MEMBER_METHOD);
+        minfo = methodinfo_register_global(access, state->package, name);
         minfo->return_type = return_type;
     } else if(getset != KW_GET && getset != KW_SET) {
         //class method
-        if((minfo = registry_findmember(state->cls->info, name, 0))) {
-            if(minfo->parent == state->cls->info) {
-                syntaxerror("class already contains a member/method called '%s'", name);
-            } else if(!minfo->parent) {
-                syntaxerror("internal error: overriding method %s, which doesn't have parent", name);
-            } else {
-                if(!(minfo->flags&(FLAG_STATIC|FLAG_PRIVATE)))
-                    syntaxerror("function %s already exists in superclass. Did you forget the 'override' keyword?");
-            }
+        memberinfo_t* m = registry_findmember(state->cls->info, name, 0);
+        if(m) {
+            syntaxerror("class already contains a %s '%s'", infotypename((slotinfo_t*)m), m->name);
         }
-        minfo = memberinfo_register(state->cls->info, name, MEMBER_METHOD);
+        minfo = methodinfo_register_onclass(state->cls->info, access, name);
         minfo->return_type = return_type;
         // getslot on a member slot only returns "undefined", so no need
         // to actually store these
         //state->minfo->slot = state->method->abc->method->trait->slot_id;
     } else {
         //class getter/setter
-        int gs = getset==KW_GET?MEMBER_GET:MEMBER_SET;
+        int gs = getset==KW_GET?SUBTYPE_GET:SUBTYPE_SET;
         classinfo_t*type=0;
         if(getset == KW_GET)
             type = return_type;
         else if(params->list && params->list->param)
             type = params->list->param->type;
         // not sure wether to look into superclasses here, too
-        if((minfo=registry_findmember(state->cls->info, name, 0))) {
-            if(minfo->kind & ~(MEMBER_GET|MEMBER_SET))
-                syntaxerror("class already contains a member or method called '%s'", name);
-            if(minfo->kind & gs)
+        minfo = (methodinfo_t*)registry_findmember(state->cls->info, name, 1);
+        if(minfo) {
+            if(minfo->kind!=INFOTYPE_SLOT)
+                syntaxerror("class already contains a method called '%s'", name);
+            if(!(minfo->subtype & (SUBTYPE_GETSET)))
+                syntaxerror("class already contains a field called '%s'", name);
+            if(minfo->subtype & gs)
                 syntaxerror("getter/setter for '%s' already defined", name);
             /* make a setter or getter into a getset */
-            minfo->kind |= gs;
-            if(!minfo->type) 
-                minfo->type = type;
-            else
-                if(type && minfo->type != type)
+            minfo->subtype |= gs;
+            if(!minfo->return_type) {
+                minfo->return_type = type;
+            } else {
+                if(minfo && minfo->return_type != type)
                     syntaxerror("different type in getter and setter");
+            }
         } else {
-            minfo = memberinfo_register(state->cls->info, name, gs);
-            minfo->type = type;
+            minfo = methodinfo_register_onclass(state->cls->info, access, name);
+            minfo->kind = INFOTYPE_SLOT; //hack
+            minfo->subtype = gs;
+            minfo->return_type = type;
         }
         /* can't assign a slot as getter and setter might have different slots */
         //minfo->slot = slot;
     }
+    if(flags&FLAG_FINAL) minfo->flags |= FLAG_FINAL;
     if(flags&FLAG_STATIC) minfo->flags |= FLAG_STATIC;
-    if(flags&FLAG_PUBLIC) minfo->flags |= FLAG_PUBLIC;
-    if(flags&FLAG_PRIVATE) minfo->flags |= FLAG_PRIVATE;
-    if(flags&FLAG_PROTECTED) minfo->flags |= FLAG_PROTECTED;
-    if(flags&FLAG_PACKAGEINTERNAL) minfo->flags |= FLAG_PACKAGEINTERNAL;
     if(flags&FLAG_OVERRIDE) minfo->flags |= FLAG_OVERRIDE;
     return minfo;
 }
@@ -1035,7 +1085,7 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
         state->method->variable_count = 0;
         state->method->abc = rfx_calloc(sizeof(abc_method_t));
 
-        NEW(memberinfo_t,minfo);
+        NEW(methodinfo_t,minfo);
         minfo->name = name;
         state->method->info = minfo;
 
@@ -1084,6 +1134,11 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     if(as3_pass == 2) {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
         parserassert(state->method);
+
+        if(state->cls) {
+            memberinfo_t*m = registry_findmember(state->cls->info, name, 2);
+            check_override(m, flags);
+        }
             
         if(state->cls) { 
             state->cls->has_constructor |= state->method->is_constructor;
@@ -1112,7 +1167,7 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
     } else if(state->method->is_constructor) {
         f = abc_class_getconstructor(state->cls->abc, type2);
     } else if(!state->method->is_global) {
-        namespace_t mname_ns = flags2namespace(flags, "");
+        namespace_t mname_ns = {state->method->info->access, ""};
         multiname_t mname = {QNAME, &mname_ns, 0, name};
 
         if(flags&FLAG_STATIC)
@@ -1121,7 +1176,7 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
             f = abc_class_method(state->cls->abc, type2, &mname);
         slot = f->trait->slot_id;
     } else {
-        namespace_t mname_ns = flags2namespace(flags, state->package);
+        namespace_t mname_ns = {state->method->info->access, state->package};
         multiname_t mname = {QNAME, &mname_ns, 0, name};
 
         f = abc_method_new(global->file, type2, 1);
@@ -1262,6 +1317,8 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         return c;
     if(TYPE_IS_CLASS(from) && TYPE_IS_CLASS(to))
         return c;
+    if(TYPE_IS_NULL(from) && !IS_NUMBER_OR_INT(to))
+        return c;
     syntaxerror("can't convert type %s to %s", from->name, to->name);
     return 0; // make gcc happy
 }
@@ -1291,11 +1348,11 @@ char is_pushundefined(code_t*c)
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
 }
 
-static classinfo_t* find_class(char*name)
+static slotinfo_t* find_class(char*name)
 {
-    classinfo_t*c=0;
+    slotinfo_t*c=0;
 
-    c = registry_findclass(state->package, name);
+    c = registry_find(state->package, name);
     if(c) return c;
 
     /* try explicit imports */
@@ -1303,7 +1360,7 @@ static classinfo_t* find_class(char*name)
     if(c) return c;
     while(e) {
         if(!strcmp(e->key, name)) {
-            c = (classinfo_t*)e->data;
+            c = (slotinfo_t*)e->data;
             if(c) return c;
         }
         e = e->next;
@@ -1313,17 +1370,17 @@ static classinfo_t* find_class(char*name)
     import_list_t*l = state->wildcard_imports;
     while(l) {
         //printf("does package %s contain a class %s?\n", l->import->package, name);
-        c = registry_findclass(l->import->package, name);
+        c = registry_find(l->import->package, name);
         if(c) return c;
         l = l->next;
     }
 
     /* try global package */
-    c = registry_findclass("", name);
+    c = registry_find("", name);
     if(c) return c;
   
     /* try local "filename" package */
-    c = registry_findclass(current_filename_short, name);
+    c = registry_find(internal_filename_package, name);
     if(c) return c;
 
     return 0;
@@ -1650,7 +1707,7 @@ PROGRAM_CODE: PACKAGE_DECLARATION
             | FUNCTION_DECLARATION
             | SLOT_DECLARATION
             | PACKAGE_INITCODE
-            | T_IDENTIFIER "::" T_IDENTIFIER '{' PROGRAM_CODE_LIST '}' // conditional compilation
+            | CONDITIONAL_COMPILATION '{' MAYBE_PROGRAM_CODE_LIST '}' // conditional compilation
             | ';'
 
 MAYBE_INPACKAGE_CODE_LIST: | INPACKAGE_CODE_LIST
@@ -1662,7 +1719,7 @@ INPACKAGE_CODE: INTERFACE_DECLARATION
               | FUNCTION_DECLARATION
               | SLOT_DECLARATION
               | PACKAGE_INITCODE
-              | T_IDENTIFIER "::" T_IDENTIFIER '{' INPACKAGE_CODE_LIST '}' // conditional compilation
+              | CONDITIONAL_COMPILATION '{' MAYBE_INPACKAGE_CODE_LIST '}' // conditional compilation
               | ';'
 
 MAYBECODE: CODE {$$=$1;}
@@ -1682,6 +1739,7 @@ CODE_STATEMENT: IF
 CODE_STATEMENT: WITH
 CODE_STATEMENT: TRY
 CODE_STATEMENT: VOIDEXPRESSION 
+CODE_STATEMENT: USE_NAMESPACE
 
 // code which may appear anywhere
 CODEPIECE: ';' {$$=0;}
@@ -1691,9 +1749,9 @@ CODEPIECE: BREAK
 CODEPIECE: CONTINUE
 CODEPIECE: RETURN
 CODEPIECE: THROW
+CODEPIECE: CONDITIONAL_COMPILATION '{' CODE '}' {$$=$3;}
 
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=0;}
-CODEPIECE: USE_NAMESPACE         {/*TODO*/$$=0;}
 
 CODEBLOCK :  '{' CODE '}' {$$=$2;}
 CODEBLOCK :  '{' '}'      {$$=0;}
@@ -1706,6 +1764,10 @@ PACKAGE_INITCODE: CODE_STATEMENT {
     code_t**cc = &global->init->method->body->code;
     *cc = code_append(*cc, $1);
 }
+
+/* ------------ conditional compilation ------------- */
+
+CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER 
 
 /* ------------ variables --------------------------- */
 
@@ -2100,7 +2162,7 @@ PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");}
 
 IMPORT : "import" PACKAGEANDCLASS {
        PASS1 
-       if(!registry_findclass($2->package, $2->name)) {
+       if(!registry_find($2->package, $2->name)) {
            as3_schedule_class($2->package, $2->name);
        }
 
@@ -2142,6 +2204,7 @@ MODIFIER : KW_PUBLIC {PASS12 $$=FLAG_PUBLIC;}
          | KW_OVERRIDE {PASS12 $$=FLAG_OVERRIDE;}
          | KW_NATIVE {PASS12 $$=FLAG_NATIVE;}
          | KW_INTERNAL {PASS12 $$=FLAG_PACKAGEINTERNAL;}
+         | T_NAMESPACE {PASS12 $$=FLAG_NAMESPACE;}
 
 EXTENDS : {$$=registry_getobjectclass();}
 EXTENDS : KW_EXTENDS CLASS_SPEC {$$=$2;}
@@ -2154,13 +2217,13 @@ IMPLEMENTS_LIST : KW_IMPLEMENTS CLASS_SPEC_LIST {PASS12 $$=$2;}
 
 CLASS_DECLARATION : MAYBE_MODIFIERS "class" T_IDENTIFIER 
                               EXTENDS IMPLEMENTS_LIST 
-                              '{' {PASS12 startclass($1,$3,$4,$5, 0);} 
+                              '{' {PASS12 startclass($1,$3,$4,$5);} 
                               MAYBE_CLASS_BODY 
                               '}' {PASS12 endclass();$$=0;}
 
 INTERFACE_DECLARATION : MAYBE_MODIFIERS "interface" T_IDENTIFIER 
                               EXTENDS_LIST 
-                              '{' {PASS12 startclass($1,$3,0,$4,1);}
+                              '{' {PASS12 startclass($1|FLAG_INTERFACE,$3,0,$4);}
                               MAYBE_INTERFACE_BODY 
                               '}' {PASS12 endclass();$$=0;}
 
@@ -2171,6 +2234,7 @@ MAYBE_CLASS_BODY : CLASS_BODY
 CLASS_BODY : CLASS_BODY_ITEM
 CLASS_BODY : CLASS_BODY CLASS_BODY_ITEM
 CLASS_BODY_ITEM : ';'
+CLASS_BODY_ITEM : CONDITIONAL_COMPILATION '{' MAYBE_CLASS_BODY '}'
 CLASS_BODY_ITEM : SLOT_DECLARATION
 CLASS_BODY_ITEM : FUNCTION_DECLARATION
 
@@ -2205,15 +2269,29 @@ VARCONST: "var" | "const"
 
 SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
     int flags = $1;
-    memberinfo_t* info = state->cls?
-            memberinfo_register(state->cls->info, $3, MEMBER_SLOT):
-            memberinfo_register_global(flags2access($1), state->package, $3, MEMBER_SLOT);
+    U8 access = flags2access($1);
+
+    varinfo_t* info = 0;
+    if(state->cls) {
+        memberinfo_t*i = registry_findmember(state->cls->info, $3, 1);
+        if(i) {
+            check_override(i, flags);
+        }
+
+        info = varinfo_register_onclass(state->cls->info, access, $3);
+    } else {
+        slotinfo_t*i = registry_find(state->package, $3);
+        if(i) {
+            syntaxerror("package %s already contains '%s'", state->package, $3);
+        }
+        info = varinfo_register_global(access, state->package, $3);
+    }
 
     info->type = $4;
     info->flags = flags;
 
     /* slot name */
-    namespace_t mname_ns = {flags2access(flags), ""};
+    namespace_t mname_ns = {access, ""};
     multiname_t mname = {QNAME, &mname_ns, 0, $3};
   
     trait_list_t**traits;
@@ -2274,6 +2352,11 @@ STATICCONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);free((char*)
 STATICCONSTANT : "true" {$$ = constant_new_true($1);}
 STATICCONSTANT : "false" {$$ = constant_new_false($1);}
 STATICCONSTANT : "null" {$$ = constant_new_null($1);}
+STATICCONSTANT : T_IDENTIFIER {
+    // TODO
+    as3_warning("Couldn't resolve %s", $1);
+    $$ = constant_new_null($1);
+}
 
 /* ------------ classes and interfaces (body, functions) ------- */
 
@@ -2355,7 +2438,7 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 {
     PASS1 old_state();list_deep_free($4.list);
     PASS2
-    memberinfo_t*f = state->method->info;
+    methodinfo_t*f = state->method->info;
     if(!f) syntaxerror("internal error");
     
     code_t*c = method_header();
@@ -2376,8 +2459,9 @@ CLASS: T_IDENTIFIER {
     PASS1 $$=0;
     PASS2
     /* try current package */
-    $$ = find_class($1);
-    if(!$$) syntaxerror("Could not find class %s\n", $1);
+    slotinfo_t*s = find_class($1);
+    if(!s) syntaxerror("Could not find class/method %s\n", $1);
+    $$ = (classinfo_t*)s;
 }
 
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
@@ -2387,9 +2471,10 @@ PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
           c.name = $3;
           $$=&c;
     PASS2
-    $$ = registry_findclass($1, $3);
-    if(!$$) syntaxerror("Couldn't find class %s.%s\n", $1, $3);
+    slotinfo_t*s = registry_find($1, $3);
+    if(!s) syntaxerror("Couldn't find class/method %s.%s\n", $1, $3);
     free($1);$1=0;
+    $$ = (classinfo_t*)s;
 }
 
 CLASS_SPEC: PACKAGEANDCLASS
@@ -2419,12 +2504,16 @@ MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2;}
 
 MAYBE_EXPRESSION_LIST : {$$.cc=0;$$.len=0;}
 MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
+MAYBE_EXPRESSION_LIST : EXPRESSION_LIST_AND_COMMA
+
 EXPRESSION_LIST : NONCOMMAEXPRESSION             {$$.len=1;
                                                   $$.cc = $1.c;
                                                  }
-EXPRESSION_LIST : EXPRESSION_LIST ',' NONCOMMAEXPRESSION {
+
+EXPRESSION_LIST_AND_COMMA: EXPRESSION_LIST ',' {$$ = $1;}
+EXPRESSION_LIST : EXPRESSION_LIST_AND_COMMA NONCOMMAEXPRESSION {
                                                   $$.len= $1.len+1;
-                                                  $$.cc = code_append($1.cc, $3.c);
+                                                  $$.cc = code_append($1.cc, $2.c);
                                                   }
                
 XX : %prec new2
@@ -2452,8 +2541,8 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
     }
    
     $$.t = TYPE_ANY;
-    if(TYPE_IS_CLASS($2.t) && $2.t->cls) {
-        $$.t = $2.t->cls;
+    if(TYPE_IS_CLASS($2.t) && $2.t->data) {
+        $$.t = $2.t->data;
     } else {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
@@ -2502,8 +2591,8 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = abc_call($$.c, $3.len);
     }
    
-    if(TYPE_IS_FUNCTION($1.t) && $1.t->function) {
-        $$.t = $1.t->function->return_type;
+    if(TYPE_IS_FUNCTION($1.t) && $1.t->data) {
+        $$.t = ((methodinfo_t*)($1.t->data))->return_type;
     } else {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
@@ -2772,10 +2861,10 @@ E : E "in" E {$$.c = code_append($1.c,$3.c);
              }
 
 E : E "as" E {char use_astype=0; // flash player's astype works differently than astypelate
-              if(use_astype && TYPE_IS_CLASS($3.t)) {
-                MULTINAME(m,$3.t->cls);
+              if(use_astype && TYPE_IS_CLASS($3.t) && $3.t->data) {
+                MULTINAME(m, (classinfo_t*)($3.t->data));
                 $$.c = abc_astype2($1.c, &m);
-                $$.t = $3.t->cls;
+                $$.t = $3.t->data;
               } else {
                 $$.c = code_append($1.c, $3.c);
                 $$.c = abc_astypelate($$.c);
@@ -3032,20 +3121,59 @@ E : "super" '.' T_IDENTIFIER
               if(!t) t = TYPE_OBJECT;
 
               memberinfo_t*f = registry_findmember(t, $3, 1);
-              namespace_t ns = flags2namespace(f->flags, "");
+              namespace_t ns = {f->access, ""};
               MEMBER_MULTINAME(m, f, $3);
               $$.c = 0;
               $$.c = abc_getlocal_0($$.c);
               $$.c = abc_getsuper2($$.c, &m);
-              $$.t = memberinfo_gettype(f);
+              $$.t = slotinfo_gettype((slotinfo_t*)f);
            }
+
+E : '@' T_IDENTIFIER {
+              // attribute TODO
+              $$.c = abc_pushundefined(0);
+              $$.t = 0;
+              as3_warning("ignored @ operator");
+           }
+
+E : E '.' '@' T_IDENTIFIER {
+              // child attribute  TODO
+              $$.c = abc_pushundefined(0);
+              $$.t = 0;
+              as3_warning("ignored .@ operator");
+           }
+
+E : E '.' T_IDENTIFIER "::" T_IDENTIFIER {
+              // namespace declaration TODO
+              $$.c = abc_pushundefined(0);
+              $$.t = 0;
+              as3_warning("ignored :: operator");
+           }
+
+E : E ".." T_IDENTIFIER {
+              // descendants TODO
+              $$.c = abc_pushundefined(0);
+              $$.t = 0;
+              as3_warning("ignored .. operator");
+           }
+
+E : E '.' '(' E ')' {
+              // filter TODO
+              $$.c = abc_pushundefined(0);
+              $$.t = 0;
+              as3_warning("ignored .() operator");
+           }
+
+//VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
+
+
 
 E : E '.' T_IDENTIFIER
             {$$.c = $1.c;
              classinfo_t*t = $1.t;
              char is_static = 0;
-             if(TYPE_IS_CLASS(t) && t->cls) {
-                 t = t->cls;
+             if(TYPE_IS_CLASS(t) && t->data) {
+                 t = t->data;
                  is_static = 1;
              }
              if(t) {
@@ -3060,7 +3188,7 @@ E : E '.' T_IDENTIFIER
                      $$.c = abc_getproperty2($$.c, &m);
                  }
                  /* determine type */
-                 $$.t = memberinfo_gettype(f);
+                 $$.t = slotinfo_gettype((slotinfo_t*)f);
                  if(!$$.t)
                     $$.c = abc_coerce_a($$.c);
              } else {
@@ -3077,7 +3205,7 @@ E : E '.' T_IDENTIFIER
 VAR_READ : T_IDENTIFIER {
     $$.t = 0;
     $$.c = 0;
-    classinfo_t*a = 0;
+    slotinfo_t*a = 0;
     memberinfo_t*f = 0;
 
     variable_t*v;
@@ -3097,7 +3225,7 @@ VAR_READ : T_IDENTIFIER {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
 
-        if(f->kind == MEMBER_METHOD) {
+        if(f->kind == INFOTYPE_METHOD) {
             $$.t = TYPE_FUNCTION(f);
         } else {
             $$.t = f->type;
@@ -3109,7 +3237,7 @@ VAR_READ : T_IDENTIFIER {
            static properties of a class */
             state->method->late_binding = 1;
             $$.t = f->type;
-            namespace_t ns = {flags2access(f->flags), ""};
+            namespace_t ns = {f->access, ""};
             multiname_t m = {QNAME, &ns, 0, $1};
             $$.c = abc_findpropstrict2($$.c, &m);
             $$.c = abc_getproperty2($$.c, &m);
@@ -3119,7 +3247,7 @@ VAR_READ : T_IDENTIFIER {
             $$.c = abc_getslot($$.c, f->slot);
             break;
         } else {
-            namespace_t ns = {flags2access(f->flags), ""};
+            namespace_t ns = {f->access, ""};
             multiname_t m = {QNAME, &ns, 0, $1};
             $$.c = abc_getlocal_0($$.c);
             $$.c = abc_getproperty2($$.c, &m);
@@ -3129,24 +3257,34 @@ VAR_READ : T_IDENTIFIER {
     
     /* look at actual classes, in the current package and imported */
     if((a = find_class($1))) {
-        if(a->flags & FLAG_METHOD) {
+        if(a->access == ACCESS_PACKAGEINTERNAL &&
+           strcmp(a->package, state->package) &&
+           strcmp(a->package, internal_filename_package)
+           )
+           syntaxerror("Can't access internal %s %s in package '%s' from package '%s'",
+                infotypename(a),$1, a->package, state->package);
+
+        if(a->kind != INFOTYPE_CLASS) {
             MULTINAME(m, a);
             $$.c = abc_findpropstrict2($$.c, &m);
             $$.c = abc_getproperty2($$.c, &m);
-            if(a->function->kind == MEMBER_METHOD) {
-                $$.t = TYPE_FUNCTION(a->function);
+            if(a->kind == INFOTYPE_METHOD) {
+                methodinfo_t*f = (methodinfo_t*)a;
+                $$.t = TYPE_FUNCTION(f);
             } else {
-                $$.t = a->function->type;
+                varinfo_t*v = (varinfo_t*)a;
+                $$.t = v->type;
             }
         } else {
-            if(a->slot) {
+            classinfo_t*c = (classinfo_t*)a;
+            if(c->slot) {
                 $$.c = abc_getglobalscope($$.c);
-                $$.c = abc_getslot($$.c, a->slot);
+                $$.c = abc_getslot($$.c, c->slot);
             } else {
-                MULTINAME(m, a);
+                MULTINAME(m, c);
                 $$.c = abc_getlex2($$.c, &m);
             }
-            $$.t = TYPE_CLASS(a);
+            $$.t = TYPE_CLASS(c);
         }
         break;
     }
@@ -3164,16 +3302,15 @@ VAR_READ : T_IDENTIFIER {
     }
 }
 
-//TODO: 
-//VARIABLE : VARIABLE ".." T_IDENTIFIER // descendants
-//VARIABLE : VARIABLE "::" VARIABLE // namespace declaration
-//VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
-
 // ----------------- namespaces -------------------------------------------------
 
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER {$$=0;}
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER '=' T_IDENTIFIER {$$=0;}
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS "namespace" T_IDENTIFIER '=' T_STRING {$$=0;}
 
-USE_NAMESPACE : "use" "namespace" T_IDENTIFIER {$$=0;}
+USE_NAMESPACE : "use" "namespace" T_IDENTIFIER {
+    PASS12
+    tokenizer_register_namespace($3);
+    $$=0;
+}
 
