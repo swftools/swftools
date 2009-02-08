@@ -145,6 +145,8 @@ ${name}/lib/modules/swfdraw.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/as3/code.c \
 ${name}/lib/as3/code.h \
+${name}/lib/as3/import.c \
+${name}/lib/as3/import.h \
 ${name}/lib/as3/registry.c \
 ${name}/lib/as3/registry.h \
 ${name}/lib/as3/builtin.c \
