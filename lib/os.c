@@ -269,7 +269,8 @@ void memfile_close(memfile_t*file)
 #else
     free(file->data);
 #endif
-    file->data = file->len = 0;
+    file->data = 0;
+    file->len = 0;
     free(file);
 }
 
