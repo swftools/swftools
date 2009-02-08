@@ -31,6 +31,7 @@
 #include "parser.tab.h"
 #include "parser.h"
 #include "compiler.h"
+#include "import.h"
 
 void test_lexer(char*filename)
 {
@@ -61,6 +62,8 @@ int main(int argn, char*argv[])
     }
     filename=argv[argn-1];
    
+    as3_add_include_dir(getcwd(buf, 512));
+
     int t=0;
     for(t=1;t<argn-1;t++) {
         if(!strcmp(argv[t], "-lex")) {
@@ -73,12 +76,15 @@ int main(int argn, char*argv[])
         if(!strcmp(argv[t], "-q")) {
             as3_verbosity--;
         }
+        if(!strcmp(argv[t], "-I")) {
+            as3_add_include_dir(argv[++t]);
+        }
     }
 
     //extern int avm2_debug;
     //avm2_debug = 1;
-    
-    as3_add_include_dir(getcwd(buf, 512));
+
+    registry_init();
 
     //memfile_t*m = memfile_open(filename);
     //as3_parse_bytearray(filename, m->data, m->len);
