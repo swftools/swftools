@@ -125,18 +125,18 @@ void write_member_info(FILE*fi, char*parent, char*id2, const char*name, int flag
                 retvalue = 0;
         } //fallthrough
         case TRAIT_FUNCTION:
-            type = "MEMBER_METHOD";
+            type = "INFOTYPE_METHOD";
             break;
         case TRAIT_CONST:
         case TRAIT_GETTER:
         case TRAIT_SETTER:
         case TRAIT_SLOT:
-            type = "MEMBER_SLOT";
+            type = "INFOTYPE_SLOT";
             break;
         default:
             fprintf(stderr, "Unknown trait type %d\n", trait->kind);
     }
-    fprintf(fi, "static memberinfo_t %s = {%s, 0x%02x, \"%s\"", id2, type, flags, name);
+    fprintf(fi, "static memberinfo_t %s = {%s, 0x%02x, \"%s\"", type, flags, id2, name);
     if(!retvalue)
         fprintf(fi, ", 0");
     else
@@ -154,15 +154,6 @@ int access2flags(multiname_t*m)
 {
     int access = m->ns->access;
     int flags=0;
-    if(access == ACCESS_PACKAGE) flags|=FLAG_PUBLIC;
-    if(access == ACCESS_PRIVATE) flags|=FLAG_PRIVATE;
-    if(access == ACCESS_PROTECTED) flags|=FLAG_PROTECTED;
-    if(access == ACCESS_PACKAGEINTERNAL) flags|=FLAG_PACKAGEINTERNAL;
-    if(access == ACCESS_NAMESPACE) {
-        if(!strcmp(m->ns->name, "http://adobe.com/AS3/2006/builtin")) {
-            flags|=FLAG_NAMESPACE_ADOBE;
-        }
-    }
     return flags;
 }
 
@@ -324,7 +315,7 @@ void load_libraries(char*filename, int pass, FILE*fi)
                 int flags = FLAG_STATIC|access2flags(trait->name);
                 NEW(memberinfo_t,m);
                 char np = 0;
-                int clsflags = FLAG_STATIC | FLAG_METHOD;
+                int clsflags = FLAG_STATIC;
                 if(pass==0) {
                     fprintf(fi, "static memberinfo_t %s;\n", id2);
                     fprintf(fi, "static classinfo_t %s_class;\n", id2);
@@ -374,7 +365,7 @@ int main()
    
     fprintf(fi, "dict_t* builtin_getclasses()\n");
     fprintf(fi, "{\n");
-    fprintf(fi, "    dict_t*d = dict_new2(&classinfo_type);\n");
+    fprintf(fi, "    dict_t*d = dict_new2(&slotinfo_type);\n");
     load_libraries("builtin.abc", 2, fi);
     load_libraries("playerglobal.abc", 2, fi);
     load_libraries("builtin.abc", 3, fi);
