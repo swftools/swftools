@@ -109,6 +109,8 @@ void as3_file_input(FILE*fi)
 }
 void as3_buffer_input(void*buffer, int len)
 {
+    if(!buffer)
+        syntaxerror("trying to parse zero bytearray");
     as3_buffer = buffer;
     as3_buffer_len = len;
     as3_buffer_pos = 0;
@@ -308,15 +310,6 @@ static void handleString(char*s, int len)
 
 
 char start_of_expression;
-
-static inline int handleIdentifier(int type)
-{
-    char*s = malloc(yyleng+1);
-    memcpy(s, yytext, yyleng);
-    s[yyleng]=0;
-    a3_lval.id = s;
-    return type;
-}
 
 static inline int m(int type)
 {
@@ -523,6 +516,29 @@ static inline void c() {
     current_column+=yyleng;
 }
 
+static trie_t*namespaces = 0;
+void tokenizer_register_namespace(const char*id)
+{
+    trie_put(&namespaces, id);
+}
+static inline tokenizer_is_namespace(const char*id)
+{
+    return trie_lookup(namespaces, id);
+}
+
+static inline int handleIdentifier()
+{
+    char*s = malloc(yyleng+1);
+    memcpy(s, yytext, yyleng);
+    s[yyleng]=0;
+    a3_lval.id = s;
+    if(tokenizer_is_namespace(s)) 
+        return T_NAMESPACE;
+    else
+        return T_IDENTIFIER;
+}
+
+
 //Boolean                      {c();return m(KW_BOOLEAN);}
 //int                          {c();return m(KW_INT);}
 //uint                         {c();return m(KW_UINT);}
@@ -539,7 +555,7 @@ _        [^a-zA-Z0-9_\\]
 HEXINT    0x[a-zA-Z0-9]+
 HEXFLOAT  0x[a-zA-Z0-9]*\.[a-zA-Z0-9]*
 INT       [0-9]+
-FLOAT     [0-9]+(\.[0-9]*)?|\.[0-9]+
+FLOAT     ([0-9]+(\.[0-9]*)?|\.[0-9]+)(e[0-9]+)?
 
 HEXWITHSIGN [+-]?({HEXINT})
 HEXFLOATWITHSIGN [+-]?({HEXFLOAT})
@@ -566,19 +582,19 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 <BEGINNING,REGEXPOK>{
 {REGEXP}                     {c(); BEGIN(INITIAL);return handleregexp();} 
-{HEXWITHSIGN}                {c(); BEGIN(INITIAL);return handlehex();}
-{HEXFLOATWITHSIGN}           {c(); BEGIN(INITIAL);return handlehexfloat();}
-{INTWITHSIGN}                {c(); BEGIN(INITIAL);return handleint();}
-{FLOATWITHSIGN}              {c(); BEGIN(INITIAL);return handlefloat();}
+{HEXWITHSIGN}/{_}            {c(); BEGIN(INITIAL);return handlehex();}
+{HEXFLOATWITHSIGN}/{_}       {c(); BEGIN(INITIAL);return handlehexfloat();}
+{INTWITHSIGN}/{_}            {c(); BEGIN(INITIAL);return handleint();}
+{FLOATWITHSIGN}/{_}          {c(); BEGIN(INITIAL);return handlefloat();}
 }
 
 \xef\xbb\xbf                 {/* utf 8 bom */}
 {S}                          {l();}
 
-{HEXINT}                     {c(); BEGIN(INITIAL);return handlehex();}
-{HEXFLOAT}                   {c(); BEGIN(INITIAL);return handlehexfloat();}
-{INT}                        {c(); BEGIN(INITIAL);return handleint();}
-{FLOAT}                      {c(); BEGIN(INITIAL);return handlefloat();}
+{HEXINT}/{_}                 {c(); BEGIN(INITIAL);return handlehex();}
+{HEXFLOAT}/{_}               {c(); BEGIN(INITIAL);return handlehexfloat();}
+{INT}/{_}                    {c(); BEGIN(INITIAL);return handleint();}
+{FLOAT}/{_}                  {c(); BEGIN(INITIAL);return handlefloat();}
 
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
@@ -667,9 +683,10 @@ is                           {c();return m(KW_IS) ;}
 in                           {c();return m(KW_IN) ;}
 if                           {c();return m(KW_IF) ;}
 as                           {c();return m(KW_AS);}
-{NAME}                       {c();BEGIN(INITIAL);return handleIdentifier(T_IDENTIFIER);}
+{NAME}                       {c();BEGIN(INITIAL);return handleIdentifier();}
 
-[+-\/*^~@$!%&\(=\[\]\{\}|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
+[\]\}]                       {c();BEGIN(INITIAL);return m(yytext[0]);}
+[+-\/*^~@$!%&\(=\[\{|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
 [\)\]]                           {c();BEGIN(INITIAL);return m(yytext[0]);}
 
 .		             {/* ERROR */
