@@ -278,6 +278,40 @@ void** heap_flatten(heap_t*h)
     return nodes;
 }
 
+// ------------------------------- trie --------------------------------------
+
+void trie_put(trie_t**t, unsigned const char*id)
+{
+    if(!*t) {
+        (*t) = rfx_calloc(sizeof(trie_t));
+        (*t)->rest = (unsigned char*)strdup(id);
+        return;
+    } 
+    if((*t)->rest && (*t)->rest[0]) {
+        // shift whatever's currently in here one node down
+        trie_put(&(*t)->row[(*t)->rest[0]], (*t)->rest+1);
+        (*t)->rest = 0;
+    }
+    if(id[0]) {
+        trie_put(&(*t)->row[id[0]], id+1);
+    } else {
+        (*t)->rest = "";
+    }
+}
+
+int trie_lookup(trie_t*t, unsigned const char*id)
+{
+    while(t) {
+        if(t->rest && !strcmp(t->rest, id))
+            return 1;
+        t = t->row[id[0]];
+        if(!*id) 
+            return 0;
+        id++;
+    }
+    return 0;
+}
+
 // ------------------------------- crc32 --------------------------------------
 static unsigned int*crc32 = 0;
 static void crc32_init(void)

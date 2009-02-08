@@ -120,6 +120,12 @@ typedef struct _heap
     int(*compare)(const void *, const void *);
 } heap_t;
 
+typedef struct _trie {
+    struct _trie*row[256];
+    unsigned char*rest;
+} trie_t;
+
+
 char* strdup_n(const char*str, int size);
 
 unsigned int crc32_add_byte(unsigned int crc32, unsigned char b);
@@ -200,6 +206,9 @@ void* heap_max(heap_t*h);
 void* heap_chopmax(heap_t*h);
 void heap_dump(heap_t*h, FILE*fi);
 void** heap_flatten(heap_t*h);
+
+void trie_put(trie_t**t, unsigned const char*id);
+int trie_lookup(trie_t*t, unsigned const char*id);
 
 array_t* array_new();
 array_t* array_new2(type_t*type);
