@@ -6,6 +6,9 @@ void as3_add_include_dir(char*dir);
 
 void as3_parse_file(const char*filename);
 void as3_parse_bytearray(const char*name, void*mem, int length);
+void as3_parse_directory(const char*dir);
+
+char as3_schedule_directory(const char*dir);
 void as3_schedule_package(const char*package);
 void as3_schedule_class(const char*package, const char*cls);
 

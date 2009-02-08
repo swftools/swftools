@@ -184,14 +184,16 @@ void as3_parse_file(const char*filename)
     free(fullfilename);
 }
 
-void as3_schedule_package(const char*package)
+void as3_parse_directory(const char*dir)
 {
-    char*dirname = strdup(package);
-    int s=0;
-    while(dirname[s]) {
-        if(package[s]=='.') dirname[s]='/';
-        s++;
-    };
+    as3_schedule_directory(dir);
+    as3_parse_scheduled(1);
+    as3_schedule_directory(dir);
+    as3_parse_scheduled(2);
+}
+
+char as3_schedule_directory(const char*dirname)
+{
     char ok=0;
 #ifdef HAVE_DIRENT_H
     include_dir_t*i = current_include_dirs;
@@ -222,7 +224,18 @@ void as3_schedule_package(const char*package)
         i = i->next;
     }
 #endif
-    if(!ok)
+    return ok;
+}
+
+void as3_schedule_package(const char*package)
+{
+    char*dirname = strdup(package);
+    int s=0;
+    while(dirname[s]) {
+        if(dirname[s]=='.') dirname[s]='/';
+        s++;
+    };
+    if(!as3_schedule_directory(package))
         as3_softwarning("Could not find package %s in file system", package);
 }
 
