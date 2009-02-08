@@ -30,7 +30,7 @@ static dict_t*classes=0;
 
 // ----------------------- class signature ------------------------------
 
-char classinfo_equals(classinfo_t*c1, classinfo_t*c2)
+char slotinfo_equals(slotinfo_t*c1, slotinfo_t*c2)
 {
     if(!!c1 != !!c2)
         return 0;
@@ -41,7 +41,7 @@ char classinfo_equals(classinfo_t*c1, classinfo_t*c2)
     }
     return 0;
 }
-static unsigned int classinfo_hash(classinfo_t*c)
+static unsigned int slotinfo_hash(slotinfo_t*c)
 {
     unsigned int hash = 0;
     hash = crc32_add_string(hash, c->package);
@@ -50,31 +50,12 @@ static unsigned int classinfo_hash(classinfo_t*c)
 }
 
 static void* dummy_clone(void*other) {return other;}
-static void dummy_destroy(classinfo_t*c) {}
+static void dummy_destroy(slotinfo_t*c) {}
 
-type_t classinfo_type = {
-    hash: (hash_func)classinfo_hash,
-    equals: (equals_func)classinfo_equals,
-    /* all signatures are static */
-    dup: (dup_func)dummy_clone,
-    free: (free_func)dummy_destroy,
-};
-
-// ----------------------- function signature ------------------------------
-
-static char memberinfo_equals(memberinfo_t*f1, memberinfo_t*f2)
-{
-    return !strcmp(f1->name, f2->name);
-}
-static unsigned int memberinfo_hash(memberinfo_t*f)
-{
-    return crc32_add_string(0, f->name);
-}
-type_t memberinfo_type = {
-    hash: (hash_func)memberinfo_hash,
-    equals: (equals_func)memberinfo_equals,
-    /* all signatures are static */
-    dup: (dup_func)dummy_clone,
+type_t slotinfo_type = {
+    hash: (hash_func)slotinfo_hash,
+    equals: (equals_func)slotinfo_equals,
+    dup: (dup_func)dummy_clone, // all signatures are static
     free: (free_func)dummy_destroy,
 };
 
@@ -85,6 +66,7 @@ classinfo_t* classinfo_register(int access, const char*package, const char*name,
 {
     classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+(sizeof(classinfo_t*)*(num_interfaces+1)));
     c->interfaces[0] = 0;
+    c->kind = INFOTYPE_CLASS;
     c->access = access;
     c->package = package;
     c->name = name;
@@ -92,85 +74,86 @@ classinfo_t* classinfo_register(int access, const char*package, const char*name,
     dict_init(&c->members,AVERAGE_NUMBER_OF_MEMBERS);
     return c;
 }
-
-static dict_t* classobjects = 0;
-classinfo_t* registry_getclassclass(classinfo_t*a) {
-    if(!classobjects) {
-        classobjects = dict_new2(&ptr_type);
-    } else {
-        classinfo_t*c = dict_lookup(classobjects, a);
-        if(c)
-            return c;
-    }
-
-    classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+sizeof(classinfo_t*));
-    c->access = ACCESS_PUBLIC;
-    c->package = "";
-    c->name = "Class";
-    dict_init(&c->members,1);
-    c->cls = a;
-
-    dict_put(classobjects, a, c);
-    return c;
-}
-
-memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 kind)
+methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*name)
 {
-    NEW(memberinfo_t,m);
-    m->kind = kind;
-    m->name = strdup(name);
+    NEW(methodinfo_t,m);
+    m->kind = INFOTYPE_METHOD;
+    m->access = access;
+    m->name = name;
     m->parent = cls;
     dict_put(&cls->members, name, m);
     return m;
 }
-memberinfo_t* memberinfo_register_global(U8 access, const char*package, const char*name, U8 kind)
+varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access, const char*name)
 {
-    NEW(memberinfo_t, m);
-    m->kind = kind;
-    m->flags = FLAG_STATIC;
+    NEW(varinfo_t,m);
+    m->kind = INFOTYPE_SLOT;
+    m->access = access;
     m->name = name;
-    m->parent = 0;
-
-    classinfo_t*c = classinfo_register(access, package, name, 0);
-    c->function = m;
-    c->flags |= FLAG_METHOD;
+    m->parent = cls;
+    dict_put(&cls->members, name, m);
     return m;
 }
-
+methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name)
+{
+    NEW(methodinfo_t, m);
+    m->kind = INFOTYPE_METHOD;
+    m->flags = FLAG_STATIC;
+    m->access = access;
+    m->package = package;
+    m->name = name;
+    m->parent = 0;
+    dict_put(classes, m, m);
+    return m;
+}
+varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name)
+{
+    NEW(varinfo_t, m);
+    m->kind = INFOTYPE_SLOT;
+    m->flags = FLAG_STATIC;
+    m->access = access;
+    m->package = package;
+    m->name = name;
+    m->parent = 0;
+    dict_put(classes, m, m);
+    return m;
+}
 
 // --------------- builtin classes (from builtin.c) ----------------------
 
 void registry_init()
 {
-    classes = builtin_getclasses();
+    if(!classes)
+        classes = builtin_getclasses();
 }
-classinfo_t* registry_safefindclass(const char*package, const char*name)
-{
-    classinfo_t*c = registry_findclass(package, name);
-    assert(c);
-    return c;
-}
-
-classinfo_t* registry_findclass(const char*package, const char*name)
+slotinfo_t* registry_find(const char*package, const char*name)
 {
     assert(classes);
-    classinfo_t tmp;
+    slotinfo_t tmp;
     tmp.package = package;
     tmp.name = name;
-    classinfo_t* c = (classinfo_t*)dict_lookup(classes, &tmp);
+    slotinfo_t* c = (slotinfo_t*)dict_lookup(classes, &tmp);
     /*if(c)
         printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
 }
-void registry_dumpclasses()
+slotinfo_t* registry_safefind(const char*package, const char*name)
+{
+    slotinfo_t*c = registry_find(package, name);
+    if(!c) {
+        printf("%s.%s\n", package, name);
+    }
+    assert(c);
+    return c;
+}
+void registry_dump()
 {
     int t;
     for(t=0;t<classes->hashsize;t++) {
         dictentry_t*e = classes->slots[t];
         while(e) {
-            dictentry_t*next = e->next;
-            classinfo_t*i = (classinfo_t*)e->key;
-            printf("%s.%s\n", i->package, i->name);
+            slotinfo_t*i = (slotinfo_t*)e->key;
+            printf("[%s] %s.%s\n", access2str(i->access), i->package, i->name);
             e = e->next;
         }
     }
@@ -182,11 +165,17 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
         return (memberinfo_t*)dict_lookup(&cls->members, name);
     }
     /* look at classes directly extended by this class */
-    memberinfo_t*m = 0;
+    slotinfo_t*m = 0;
     classinfo_t*s = cls;
+
+    if(recursive>1) // check *only* superclasses
+        s = s->superclass;
+
     while(s) {
-        m = (memberinfo_t*)dict_lookup(&s->members, name);
-        if(m) return m;
+        m = (slotinfo_t*)dict_lookup(&s->members, name);
+        if(m) {
+            return (memberinfo_t*)m;
+        }
         s = s->superclass;
     }
     /* look at interfaces, and parent interfaces */
@@ -194,8 +183,10 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
     while(cls->interfaces[t]) {
         classinfo_t*s = cls->interfaces[t];
         while(s) {
-            m = (memberinfo_t*)dict_lookup(&s->members, name);
-            if(m) return m;
+            m = (slotinfo_t*)dict_lookup(&s->members, name);
+            if(m) {
+                return (memberinfo_t*)m;
+            }
             s = s->superclass;
         }
         t++;
@@ -203,7 +194,7 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
     return 0;
 
 }
-void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c)
+void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c)
 {
     m->type = QNAME;
     m->ns = n;
@@ -212,7 +203,7 @@ void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c)
     m->name = c->name;
     m->namespace_set = 0;
 }
-multiname_t* classinfo_to_multiname(classinfo_t*cls)
+multiname_t* classinfo_to_multiname(slotinfo_t*cls)
 {
     if(!cls)
         return 0;
@@ -223,9 +214,10 @@ multiname_t* classinfo_to_multiname(classinfo_t*cls)
 
 // ----------------------- memberinfo methods ------------------------------
 
-/* function and class pointers get their own type class */
+/* hacky code to wrap a variable or function into a "type"
+   object, but keep a pointer to the "value" */
 static dict_t* functionobjects = 0;
-classinfo_t* memberinfo_asclass(memberinfo_t*f) {
+classinfo_t* slotinfo_asclass(slotinfo_t*f) {
     if(!functionobjects) {
         functionobjects = dict_new2(&ptr_type);
     } else {
@@ -237,23 +229,29 @@ classinfo_t* memberinfo_asclass(memberinfo_t*f) {
     classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+sizeof(classinfo_t*));
     c->access = ACCESS_PUBLIC;
     c->package = "";
-    c->name = "Function";
+    if(f->kind == INFOTYPE_METHOD)
+        c->name = "Function";
+    else if(f->kind == INFOTYPE_CLASS)
+        c->name = "Class";
+    else if(f->kind == INFOTYPE_SLOT)
+        c->name = "Object";
     
     dict_init(&c->members,1);
-    c->function = f;
-
+    c->data = f;
     dict_put(functionobjects, f, c);
     return c;
 }
 
-classinfo_t* memberinfo_gettype(memberinfo_t*f)
+classinfo_t* slotinfo_gettype(slotinfo_t*f)
 {
     if(f) {
-       if(f->kind == MEMBER_METHOD) {
-           return memberinfo_asclass(f);
-       } else {
-           return f->type;
-       }
+       if(f->kind == INFOTYPE_METHOD) {
+           return slotinfo_asclass(f);
+       } else if(f->kind == INFOTYPE_SLOT) {
+           varinfo_t*v = (varinfo_t*)f;
+           return v->type;
+       } else 
+           return 0;
     } else {
        return registry_getanytype();
     }
@@ -272,75 +270,71 @@ char registry_isclassclass(classinfo_t*c) {
 
 classinfo_t* registry_getobjectclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "Object");
+    if(!c) c = (classinfo_t*)registry_safefind("", "Object");
     return c;
 }
 classinfo_t* registry_getstringclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "String");
+    if(!c) c = (classinfo_t*)registry_safefind("", "String");
     return c;
 }
 classinfo_t* registry_getarrayclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "Array");
+    if(!c) c = (classinfo_t*)registry_safefind("", "Array");
     return c;
 }
 classinfo_t* registry_getintclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "int");
+    if(!c) c = (classinfo_t*)registry_safefind("", "int");
     return c;
 }
 classinfo_t* registry_getuintclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "uint");
+    if(!c) c = (classinfo_t*)registry_safefind("", "uint");
     return c;
 }
 classinfo_t* registry_getbooleanclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "Boolean");
+    if(!c) c = (classinfo_t*)registry_safefind("", "Boolean");
     return c;
 }
 classinfo_t* registry_getnumberclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "Number");
+    if(!c) c = (classinfo_t*)registry_safefind("", "Number");
     return c;
 }
 classinfo_t* registry_getregexpclass() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("", "RegExp");
+    if(!c) c = (classinfo_t*)registry_safefind("", "RegExp");
     return c;
 }
 classinfo_t* registry_getMovieClip() {
     static classinfo_t*c = 0;
-    if(!c) c = registry_safefindclass("flash.display", "MovieClip");
+    if(!c) c = (classinfo_t*)registry_safefind("flash.display", "MovieClip");
     return c;
 }
 
 // ----------------------- builtin dummy types -------------------------
 classinfo_t nullclass = {
-    ACCESS_PACKAGE, 0, "", "null", 0, 0, 0,
+    INFOTYPE_CLASS,0,0,ACCESS_PACKAGE, "", "null", 0, 0, 0
 };
 classinfo_t* registry_getnullclass() {
     return &nullclass;
 }
 
-// ---------------------------------------------------------------------
-namespace_t flags2namespace(int flags, char*package)
+namespace_t access2namespace(U8 access, char*package)
 {
     namespace_t ns;
+    ns.access = access;
     ns.name = package;
-    if(flags&FLAG_PUBLIC)  {
-        ns.access = ACCESS_PACKAGE;
-    } else if(flags&FLAG_PRIVATE) {
-        ns.access = ACCESS_PRIVATE;
-    } else if(flags&FLAG_PROTECTED) {
-        ns.access = ACCESS_PROTECTED;
-    } else if(flags&FLAG_NAMESPACE_ADOBE) {
-        ns.access = ACCESS_NAMESPACE;
-        assert(!package || !package[0]);
-        ns.name = "http://adobe.com/AS3/2006/builtin";
-    } else {
-        ns.access = ACCESS_PACKAGEINTERNAL;
-    }
     return ns;
 }
+
+char* infotypename(slotinfo_t*s)
+{
+    if(s->kind == INFOTYPE_CLASS) return "class";
+    else if(s->kind == INFOTYPE_SLOT) return "member";
+    else if(s->kind == INFOTYPE_METHOD) return "method";
+    else return "object";
+}
+

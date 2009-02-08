@@ -26,73 +26,103 @@
 
 #include "pool.h"
 
-DECLARE(packageinfo);
+DECLARE(slotinfo);
 DECLARE(classinfo);
 DECLARE(memberinfo);
+DECLARE(methodinfo);
+DECLARE(varinfo);
 DECLARE_LIST(classinfo);
 
 /* member/class flags */
-#define FLAG_PUBLIC 1
-#define FLAG_PROTECTED 2
-#define FLAG_NAMESPACE_ADOBE 4
-#define FLAG_PRIVATE 8
-#define FLAG_PACKAGEINTERNAL 16
-#define FLAG_FINAL 32
+#define FLAG_FINAL 1
 
 /* member flags */
-#define FLAG_STATIC 64
-#define FLAG_OVERRIDE 128
-#define FLAG_NATIVE 256
+#define FLAG_STATIC 2
+#define FLAG_OVERRIDE 8
+#define FLAG_NATIVE 16
 
 /* class flags */
-#define FLAG_METHOD 64
-#define FLAG_DYNAMIC 128
+#define FLAG_DYNAMIC 8
+#define FLAG_INTERFACE 16
 
-struct _classinfo {
-    U8 access;
-    U8 flags;
+#define INFOTYPE_SLOT 1
+#define INFOTYPE_METHOD 2
+#define INFOTYPE_CLASS 3
+#define SUBTYPE_GET 1
+#define SUBTYPE_SET 2
+#define SUBTYPE_GETSET 3
+
+struct _slotinfo {
+    U8 kind,subtype,flags,access;
     const char*package;
     const char*name;
-    union {
-        ptroff_t slot;        // slot nr in initscript traits
-        classinfo_t*cls; // specific class of a Class type
-        memberinfo_t*function; //specific function of a Function type
-    };
-
+    int slot;
+};
+struct _classinfo {
+    U8 kind,subtype,flags,access;
+    const char*package;
+    const char*name;
+    int slot;
     classinfo_t*superclass;
     dict_t members;
+    void*data; //TODO: get rid of this- parser.y should pass type/value/code triples around
     classinfo_t*interfaces[];
 };
-char classinfo_equals(classinfo_t*c1, classinfo_t*c2);
-
-#define MEMBER_SLOT 1
-#define MEMBER_GET 2
-#define MEMBER_SET 4
-#define MEMBER_GETSET 6
-#define MEMBER_METHOD 8
-
 struct _memberinfo {
-    U8 kind;
-    U8 flags;
+    U8 kind,subtype,flags,access;
+    const char*package;
     const char*name;
+    int slot;
     union {
         classinfo_t*return_type;
         classinfo_t*type;
     };
     classinfo_t*parent;
-    classinfo_list_t*params;
+};
+struct _methodinfo {
+    U8 kind,subtype,flags,access;
+    const char*package;
+    const char*name;
     int slot;
-    void*deprecated;
+    classinfo_t*return_type;
+    classinfo_t*parent;
+    classinfo_list_t*params;
+};
+struct _varinfo {
+    U8 kind,subtype,flags,access;
+    const char*package;
+    const char*name;
+    int slot;
+    classinfo_t*type;
+    classinfo_t*parent;
+    constant_t*value;
 };
 
-extern type_t classinfo_type;
-extern type_t memberinfo_type;
+extern type_t slotinfo_type;
+char slotinfo_equals(slotinfo_t*c1, slotinfo_t*c2);
 
 void registry_init();
         
 classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces);
-memberinfo_t* memberinfo_register(classinfo_t*cls, const char*name, U8 type);
-memberinfo_t* memberinfo_register_global(U8 access, const char*package, const char*name, U8 kind);
+methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*name);
+methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name);
+varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access, const char*name);
+varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name);
+
+slotinfo_t* registry_find(const char*package, const char*name);
+void registry_dump();
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char superclasses);
+
+void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c);
+multiname_t* classinfo_to_multiname(slotinfo_t*cls);
+
+char registry_isfunctionclass();
+char registry_isclassclass();
+
+classinfo_t* slotinfo_asclass(slotinfo_t*f);
+classinfo_t* slotinfo_gettype(slotinfo_t*);
+
+namespace_t access2namespace(U8 access, char*package);
 
 // static multinames
 classinfo_t* registry_getanytype();
@@ -106,25 +136,12 @@ classinfo_t* registry_getnullclass();
 classinfo_t* registry_getregexpclass();
 classinfo_t* registry_getbooleanclass();
 classinfo_t* registry_getMovieClip();
-classinfo_t* memberinfo_asclass(memberinfo_t*f);
 classinfo_t* registry_getclassclass(classinfo_t*a);
 
-classinfo_t* registry_findclass(const char*package, const char*name);
-void registry_dumpclasses();
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char superclasses);
-
-void registry_fill_multiname(multiname_t*m, namespace_t*n, classinfo_t*c);
-multiname_t* classinfo_to_multiname(classinfo_t*cls);
-
-char registry_isfunctionclass();
-char registry_isclassclass();
-
-classinfo_t* memberinfo_gettype(memberinfo_t*);
-
-namespace_t flags2namespace(int flags, char*package);
+char* infotypename(slotinfo_t*s);
 
 /* convenience functions */
-#define sig2mname(x) classinfo_to_multiname(x)
+#define sig2mname(x) (x->superclass,classinfo_to_multiname((slotinfo_t*)(x)))
 #define TYPE_ANY                  registry_getanytype()
 #define TYPE_IS_ANY(t)    ((t) == registry_getanytype())
 #define TYPE_INT                  registry_getintclass()
@@ -144,10 +161,10 @@ namespace_t flags2namespace(int flags, char*package);
 
 #define TYPE_OBJECT               registry_getobjectclass()
 
-#define TYPE_FUNCTION(f)          memberinfo_asclass(f)
+#define TYPE_FUNCTION(f)          ((f)->return_type,slotinfo_asclass((slotinfo_t*)(f)))
 #define TYPE_IS_FUNCTION(t)       registry_isfunctionclass(t)
 
-#define TYPE_CLASS(f)             registry_getclassclass(f)
+#define TYPE_CLASS(f)             ((f)->superclass,slotinfo_asclass((slotinfo_t*)(f)))
 #define TYPE_IS_CLASS(t)          registry_isclassclass(t)
 
 #define TYPE_NULL                 registry_getnullclass()
