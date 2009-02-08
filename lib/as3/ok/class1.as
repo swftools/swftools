@@ -1,5 +1,7 @@
 package test1 {
+
     public class Main extends flash.display.MovieClip {
+        var x:Main=null;
         function Main() {
             trace("ok");
             trace("[exit]");
