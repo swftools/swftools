@@ -845,8 +845,8 @@ int main(int argn, char *argv[])
 	if(result->save(result, outputname) < 0) {
 	    exit(1);
 	}
-	int width = (int)result->get(result, "width");
-	int height = (int)result->get(result, "height");
+	int width = (int)(ptroff_t)result->get(result, "width");
+	int height = (int)(ptroff_t)result->get(result, "height");
 	result->destroy(result);result=0;
 
 	if(preloader || viewer) {
