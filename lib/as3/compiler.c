@@ -123,17 +123,21 @@ dict_t*scheduled_dict=0;
 
 void as3_parse_scheduled(int pass)
 {
-    scheduled_file_t*s = scheduled;
-    scheduled = 0;
-    while(s) {
-        scheduled_file_t*old = s;
-        as3_parse_file_or_array(pass, s->name, s->filename, 0,0);
-        s = s->next;
+    //printf("[pass %d] parse scheduled\n", pass);
 
-        free(old->filename);
-        free(old->name);
-        old->filename = old->name = 0;
-        free(old);
+    while(scheduled) {
+        scheduled_file_t*s = scheduled;
+        scheduled = 0;
+        while(s) {
+            scheduled_file_t*old = s;
+            as3_parse_file_or_array(pass, s->name, s->filename, 0,0);
+            s = s->next;
+
+            free(old->filename);
+            free(old->name);
+            old->filename = old->name = 0;
+            free(old);
+        }
     }
     if(scheduled_dict) {
         dict_destroy(scheduled_dict);
@@ -145,13 +149,12 @@ void as3_schedule_file(const char*name, const char*filename)
     if(!scheduled_dict) 
         scheduled_dict = dict_new();
     
-    //printf("schedule %s %s\n", name, filename);
-
     if(dict_contains(scheduled_dict, filename)) {
         return; //already processed
     } else {
         dict_put(scheduled_dict, filename, 0);
     }
+    //printf("[pass %d] schedule %s %s\n", as3_pass, name, filename);
 
     NEW(scheduled_file_t, f);
     f->name = strdup(name);
@@ -186,8 +189,10 @@ void as3_parse_file(const char*filename)
 
 void as3_parse_directory(const char*dir)
 {
+    as3_pass=1;
     as3_schedule_directory(dir);
     as3_parse_scheduled(1);
+    as3_pass=2;
     as3_schedule_directory(dir);
     as3_parse_scheduled(2);
 }
