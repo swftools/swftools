@@ -189,8 +189,7 @@ char* namespace_tostring(namespace_t*ns)
     else if(!*s)
         sprintf(string, "[%s]\"\"", access, s);
     else 
-        sprintf(string, "[%s]", access, s);
-
+        sprintf(string, "[%s]%s", access, s);
     free(s);
     return string;
 }
@@ -567,7 +566,7 @@ char* multiname_tostring(multiname_t*m)
         strcat(mname,s);
         free(s);
     } else {
-        fprintf(stderr, "Invalid multiname type: %02x\n", m->type);
+        return strdup("<invalid>");
     }
     free(name);
     return mname;
@@ -1144,6 +1143,12 @@ void pool_read(pool_t*pool, TAG*tag)
     for(t=1;t<num_multinames;t++) {
         multiname_t m;
         memset(&m, 0, sizeof(multiname_t));
+        
+        /*int s;
+        for(s=0;s<8;s++)
+            printf("0x%02x ", tag->data[tag->pos+s]);
+        printf("\n");*/
+
 	m.type = swf_GetU8(tag);
 	if(m.type==0x07 || m.type==0x0d) {
 	    int namespace_index = swf_GetU30(tag);
@@ -1165,6 +1170,17 @@ void pool_read(pool_t*pool, TAG*tag)
         } else if(m.type==0x1b || m.type==0x1c) {
             int namespace_set_index = swf_GetU30(tag);
 	    m.namespace_set = (namespace_set_t*)array_getkey(pool->x_namespace_sets, namespace_set_index);
+        } else if(m.type==0x1d) {
+            int v1 = swf_GetU30(tag);
+            int v2 = swf_GetU30(tag);
+            int v3 = swf_GetU30(tag);
+            //printf("%02x %02x %02x\n", v1, v2, v3);
+            m.type = 0x07;
+            m.namespace_set = 0;
+            m.name = pool_lookup_string(pool, v1);
+            m.ns = pool_lookup_namespace(pool, v2);
+            /* not sure what to do with v3-
+               it's definitely not a namespace */
 	} else {
 	    printf("can't parse type %d multinames yet\n", m.type);
 	}
