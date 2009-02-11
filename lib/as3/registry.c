@@ -235,6 +235,9 @@ classinfo_t* slotinfo_asclass(slotinfo_t*f) {
         c->name = "Class";
     else if(f->kind == INFOTYPE_SLOT)
         c->name = "Object";
+    else {
+        c->name = "undefined";
+    }
     
     dict_init(&c->members,1);
     c->data = f;
