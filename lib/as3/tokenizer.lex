@@ -566,7 +566,7 @@ CDATA    <!\[CDATA\[([^]]|\][^]]|\]\][^>])*\]*\]\]\>
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
 MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
-SINGLELINE_COMMENT \/\/[^\n]*\n
+SINGLELINE_COMMENT \/\/[^\n\r]*[\n\r]
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 %%
 
@@ -731,12 +731,27 @@ int yywrap()
 static char mbuf[256];
 char*token2string(enum yytokentype nr, YYSTYPE v)
 {
-    if(nr==T_STRING)     return "<string>";
+    if(nr==T_STRING) {
+        char*s = malloc(v.str.len+10);
+        strcpy(s, "<string>");
+        memcpy(s+8, v.str.str, v.str.len);
+        sprintf(s+8+v.str.len, " (%d bytes)", v.str.len);
+        return s;
+    }
+    else if(nr==T_REGEXP) {
+        char*s = malloc(strlen(v.regexp.pattern)+10);
+        sprintf(s, "<regexp>%s", v.regexp.pattern);
+        return s;
+    }
+    else if(nr==T_IDENTIFIER) {
+        char*s = malloc(strlen(v.id)+10);
+        sprintf(s, "<ID>%s", v.id);
+        return s;
+    }
     else if(nr==T_INT)     return "<int>";
     else if(nr==T_UINT)     return "<uint>";
     else if(nr==T_BYTE)     return "<byte>";
     else if(nr==T_FLOAT)     return "<float>";
-    else if(nr==T_REGEXP)     return "REGEXP";
     else if(nr==T_EOF)        return "***END***";
     else if(nr==T_GE)         return ">=";
     else if(nr==T_LE)         return "<=";
@@ -775,7 +790,6 @@ char*token2string(enum yytokentype nr, YYSTYPE v)
     else if(nr==KW_VAR)        return "var";
     else if(nr==KW_IS)         return "is";
     else if(nr==KW_AS)         return "as";
-    else if(nr==T_IDENTIFIER)  return "ID";
     else {
         sprintf(mbuf, "%d", nr);
         return mbuf;
