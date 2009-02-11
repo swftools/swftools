@@ -294,6 +294,30 @@ void BitmapOutputDev::flushText()
     this->emptypage = 0;
 }
 
+void writeMonoBitmap(SplashBitmap*btm, char*filename)
+{
+    int width8 = (btm->getWidth()+7)/8;
+    int width = btm->getWidth();
+    int height = btm->getHeight();
+    gfxcolor_t*b = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
+    unsigned char*data = btm->getDataPtr();
+    int x,y;
+    for(y=0;y<height;y++) {
+        unsigned char*l = &data[width8*y];
+        gfxcolor_t*d = &b[width*y];
+        for(x=0;x<width;x++) {
+            if(l[x>>3]&(128>>(x&7))) {
+                d[x].r = d[x].g = d[x].b = 255;
+            } else {
+                d[x].r = d[x].g = d[x].b = 0;
+            }
+            d[x].a = 255;
+        }
+    }
+    writePNG(filename, (unsigned char*)b, width, height);
+    free(b);
+}
+
 void writeBitmap(SplashBitmap*bitmap, char*filename)
 {
     int y,x;
@@ -303,9 +327,10 @@ void writeBitmap(SplashBitmap*bitmap, char*filename)
 
     gfxcolor_t*data = (gfxcolor_t*)malloc(sizeof(gfxcolor_t)*width*height);
 
-    unsigned char aa=0;
-    if(bitmap->getMode()==splashModeMono1)
-        aa=255;
+    if(bitmap->getMode()==splashModeMono1) {
+        writeMonoBitmap(bitmap, filename);
+        return;
+    }
 
     for(y=0;y<height;y++) {
 	gfxcolor_t*line = &data[y*width];
@@ -315,12 +340,7 @@ void writeBitmap(SplashBitmap*bitmap, char*filename)
 	    line[x].r = c[0];
 	    line[x].g = c[1];
 	    line[x].b = c[2];
-            if(aa) {
-	        line[x].a = aa;
-            } else {
-	        int a = bitmap->getAlpha(x,y);
-	        line[x].a = a;
-            }
+	    line[x].a =  bitmap->getAlpha(x,y);
 	}
     }
     writePNG(filename, (unsigned char*)data, width, height);
@@ -335,7 +355,7 @@ void writeAlpha(SplashBitmap*bitmap, char*filename)
     int height = bitmap->getHeight();
     
     if(bitmap->getMode()==splashModeMono1) {
-        writeBitmap(bitmap, filename);
+        writeMonoBitmap(bitmap, filename);
         return;
     }
 
@@ -696,11 +716,8 @@ GBool BitmapOutputDev::intersection(int x1, int y1, int x2, int y2)
         unsigned char*data2 = (unsigned char*)textpixels;
         msg("<verbose> Testing area (%d,%d,%d,%d), runx=%d,runy=%d", x1,y1,x2,y2, runx, runy);
         for(y=0;y<runy;y++) {
-            compare8(data1,data2,runx);
-            /*for(x=0;x<runx;x++) {
-                if(data1[x]&data2[x])
-                    return gTrue;
-            }*/
+            if(compare8(data1,data2,runx))
+                return gTrue;
             data1+=width8;
             data2+=width8;
         }
