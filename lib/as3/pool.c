@@ -521,7 +521,7 @@ char* multiname_tostring(multiname_t*m)
     char*name = m->name?escape_string(m->name):strdup("*");
     int namelen = strlen(name);
 
-    if(m->type==QNAME || m->type==QNAMEA) {
+    if(m->type==QNAME || m->type==QNAMEA || m->type==POSTFIXTYPE) {
         char*nsname = escape_string(m->ns->name);
         mname = malloc(strlen(nsname)+namelen+32);
         strcpy(mname, "<q");
@@ -1171,16 +1171,11 @@ void pool_read(pool_t*pool, TAG*tag)
             int namespace_set_index = swf_GetU30(tag);
 	    m.namespace_set = (namespace_set_t*)array_getkey(pool->x_namespace_sets, namespace_set_index);
         } else if(m.type==0x1d) {
-            int v1 = swf_GetU30(tag);
-            int v2 = swf_GetU30(tag);
-            int v3 = swf_GetU30(tag);
-            //printf("%02x %02x %02x\n", v1, v2, v3);
-            m.type = 0x07;
-            m.namespace_set = 0;
-            m.name = pool_lookup_string(pool, v1);
-            m.ns = pool_lookup_namespace(pool, v2);
-            /* not sure what to do with v3-
-               it's definitely not a namespace */
+            int v1 = swf_GetU30(tag); //multiname
+            int v2 = swf_GetU30(tag); //counter?
+            int v3 = swf_GetU30(tag); //multiname
+            // e.g. Vector<int> ... we only store the parent object
+            m = *(multiname_t*)array_getkey(pool->x_multinames, v1);
 	} else {
 	    printf("can't parse type %d multinames yet\n", m.type);
 	}

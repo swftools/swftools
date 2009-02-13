@@ -120,7 +120,7 @@ typedef enum multiname_type
  RTQNAMELA=0x12,
  MULTINAMEA=0x0E,
  MULTINAMELA=0x1C,
- MULTIX=0x1D
+ POSTFIXTYPE=0x1D
 } multiname_type_t;
 
 char* access2str(int type);
