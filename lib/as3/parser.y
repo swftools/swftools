@@ -139,6 +139,7 @@ extern int a3_lex();
 %token<token> KW_IN "in"
 %token<token> KW_AS "as"
 
+%token<token> T_DICTSTART "{ (dictionary)"
 %token<token> T_EQEQ "=="
 %token<token> T_EQEQEQ "==="
 %token<token> T_NE "!="
@@ -151,6 +152,7 @@ extern int a3_lex();
 %token<token> T_MULBY "*="
 %token<token> T_PLUSBY "+=" 
 %token<token> T_MINUSBY "-="
+%token<token> T_XORBY "^="
 %token<token> T_SHRBY ">>="
 %token<token> T_SHLBY "<<="
 %token<token> T_USHRBY ">>>="
@@ -239,7 +241,7 @@ extern int a3_lex();
 
 %left '('
 %left new2
-%left '[' ']' "new" '{' '.' ".." "::" '@'
+%left '[' ']' "new" '{' "{ (dictionary)" '.' ".." "::" '@'
 
 %nonassoc T_IDENTIFIER
 %left above_identifier
@@ -292,18 +294,23 @@ typedef struct _import {
 
 DECLARE_LIST(import);
 
+DECLARE(methodstate);
+DECLARE_LIST(methodstate);
+
 typedef struct _classstate {
     /* class data */
     classinfo_t*info;
     abc_class_t*abc;
-    code_t*init;
-    code_t*static_init;
+   
+    methodstate_t*init;
+    methodstate_t*static_init;
+    //code_t*init;
+    //code_t*static_init;
+
     char has_constructor;
 } classstate_t;
 
-DECLARE_LIST(methodstate);
-
-typedef struct _methodstate {
+struct _methodstate {
     /* method data */
     methodinfo_t*info;
     char late_binding;
@@ -316,10 +323,11 @@ typedef struct _methodstate {
     abc_method_t*abc;
     int var_index; // for inner methods
 
+    code_t*header;
     abc_exception_list_t*exceptions;
     
     methodstate_list_t*innerfunctions;
-} methodstate_t;
+};
 
 typedef struct _state {
     struct _state*old;
@@ -452,13 +460,18 @@ static void old_state()
         free(leaving->method);
         leaving->method=0;
     }
-    if(leaving->cls && leaving->cls != state->cls) {
+    if(as3_pass>1 && leaving->cls && leaving->cls != state->cls) {
         free(leaving->cls);
         leaving->cls=0;
     }
     
     state_destroy(leaving);
 }
+
+static code_t* method_header(methodstate_t*m);
+static code_t* wrap_function(code_t*c,code_t*header, code_t*body);
+static void function_initvars(methodstate_t*m, params_t*params, int flags);
+
 
 static char* internal_filename_package = 0;
 void initialize_file(char*filename)
@@ -469,15 +482,22 @@ void initialize_file(char*filename)
     new_state();
     state->package = internal_filename_package = strdup(filename);
     
-    state->method = rfx_calloc(sizeof(methodstate_t));
-    state->method->variable_count = 1;
-
     global->token2info = dict_lookup(global->file2token2info, 
                                      current_filename // use long version
                                     );
     if(!global->token2info) {
         global->token2info = dict_new2(&ptr_type);
         dict_put(global->file2token2info, current_filename, global->token2info);
+    }
+  
+    if(as3_pass==1) {
+        state->method = rfx_calloc(sizeof(methodstate_t));
+        dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
+    } else {
+        state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+        function_initvars(state->method, 0, 0);
+        global->init = abc_initscript(global->file);
+        state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
     }
 }
 
@@ -486,10 +506,15 @@ void finish_file()
     if(!state || state->level!=1) {
         syntaxerror("unexpected end of file in pass %d", as3_pass);
     }
-    free(state->method);state->method=0;
+
+    if(as3_pass==2) {
+        code_t*header = method_header(state->method);
+        code_t*c = wrap_function(header, 0, global->init->method->body->code);
+        global->init->method->body->code = c;
+        free(state->method);state->method=0;
+    }
 
     //free(state->package);state->package=0; // used in registry
-
     state_destroy(state);state=0;
 }
 
@@ -500,23 +525,10 @@ void initialize_parser()
     global->file->flags &= ~ABCFILE_LAZY;
     global->file2token2info = dict_new();
     global->token2info = 0;
-    
-    global->init = abc_initscript(global->file);
-    code_t*c = global->init->method->body->code;
-    c = abc_getlocal_0(c);
-    c = abc_pushscope(c);
-    global->init->method->body->code = c;
 }
 
 void* finish_parser()
 {
-    code_t*c = global->init->method->body->code;
-    /*c = abc_findpropstrict(c, "[package]::trace");
-      c = abc_pushstring(c, "[leaving global init function]");
-      c = abc_callpropvoid(c, "[package]::trace", 1);*/
-    c = abc_returnvoid(c);
-    global->init->method->body->code = c;
-
     dict_free_all(global->file2token2info, 1, (void*)dict_destroy);
 
     global->token2info=0;
@@ -661,23 +673,18 @@ static void parsererror(const char*file, int line, const char*f)
 }
 
    
-code_t* method_header()
+static code_t* method_header(methodstate_t*m)
 {
     code_t*c = 0;
-    if(state->method->late_binding && !state->method->inner) {
+    if(m->late_binding && !m->inner) {
         c = abc_getlocal_0(c);
         c = abc_pushscope(c);
     }
-    /*if(state->method->innerfunctions) {
+    /*if(m->innerfunctions) {
         c = abc_newactivation(c);
         c = abc_pushscope(c);
     }*/
-    if(state->method->is_constructor && !state->method->has_super) {
-        // call default constructor
-        c = abc_getlocal_0(c);
-        c = abc_constructsuper(c, 0);
-    }
-    methodstate_list_t*l = state->method->innerfunctions;
+    methodstate_list_t*l = m->innerfunctions;
     while(l) {
         parserassert(l->methodstate->abc);
         c = abc_newfunction(c, l->methodstate->abc);
@@ -685,8 +692,17 @@ code_t* method_header()
         free(l->methodstate);l->methodstate=0;
         l = l->next;
     }
-    list_free(state->method->innerfunctions);
-    state->method->innerfunctions = 0;
+    if(m->header) {
+        c = code_append(c, m->header);
+        m->header = 0;
+    }
+    if(m->is_constructor && !m->has_super) {
+        // call default constructor
+        c = abc_getlocal_0(c);
+        c = abc_constructsuper(c, 0);
+    }
+    list_free(m->innerfunctions);
+    m->innerfunctions = 0;
     return c;
 }
     
@@ -747,6 +763,31 @@ static int flags2access(int flags)
     return access;
 }
 
+static void function_initvars(methodstate_t*m, params_t*params, int flags)
+{
+    if(m->inner)
+        new_variable("this", 0, 0);
+    else if(!m->is_global)
+        new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0);
+    else
+        new_variable("globalscope", 0, 0);
+
+    if(params) {
+        param_list_t*p=0;
+        for(p=params->list;p;p=p->next) {
+            new_variable(p->param->name, p->param->type, 0);
+        }
+    }
+    
+    methodstate_list_t*l = m->innerfunctions;
+    while(l) {
+        methodstate_t*m = l->methodstate;
+        m->var_index = new_variable(m->info->name, TYPE_FUNCTION(m->info), 0);
+        l = l->next;
+    }
+}
+
+
 char*as3_globalclass=0;
 static void startclass(int flags, char*classname, classinfo_t*extends, classinfo_list_t*implements)
 {
@@ -754,8 +795,6 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         syntaxerror("inner classes now allowed"); 
     }
     new_state();
-    state->cls = rfx_calloc(sizeof(classstate_t));
-
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
 
@@ -780,9 +819,18 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     }
 
     if(as3_pass==1) {
-        state->method = rfx_calloc(sizeof(methodstate_t)); // method state, for static constructor
-        state->method->variable_count = 1;
-        dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
+        state->cls = rfx_calloc(sizeof(classstate_t));
+        state->cls->init = rfx_calloc(sizeof(methodstate_t));
+        state->cls->static_init = rfx_calloc(sizeof(methodstate_t));
+        /* notice: we make no effort to initialize the top variable (local0) here,
+           even though it has special meaning. We just rely on the facat
+           that pass 1 won't do anything with variables */
+        
+        dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->cls);
+
+        /* set current method to constructor- all code within the class-level (except
+           static variable initializations) will be executed during construction time */
+        state->method = state->cls->init;
 
         if(registry_find(package, classname)) {
             syntaxerror("Package \"%s\" already contains a class called \"%s\"", package, classname);
@@ -794,10 +842,13 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     }
     
     if(as3_pass == 2) {
-        state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
-
-        state->cls->info = (classinfo_t*)registry_find(package, classname);
-        parserassert((int)state->cls->info);
+        state->cls = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+        
+        state->method = state->cls->init;
+        parserassert(state->cls && state->cls->info);
+        
+        function_initvars(state->cls->init, 0, 0);
+        function_initvars(state->cls->static_init, 0, 0);
 
         if(extends && (extends->flags & FLAG_FINAL))
             syntaxerror("Can't extend final class '%s'", extends->name);
@@ -892,6 +943,19 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
     }
 }
 
+static void setstaticfunction(int x)
+{
+    if(state->cls) {
+        if(x&FLAG_STATIC) {
+            state->method = state->cls->static_init;
+        } else {
+            state->method = state->cls->init;
+        }
+    } else {
+        parserassert(state->method);
+    }
+}
+
 static void endclass()
 {
     if(as3_pass == 2) {
@@ -899,23 +963,23 @@ static void endclass()
             code_t*c = 0;
             c = abc_getlocal_0(c);
             c = abc_constructsuper(c, 0);
-            state->cls->init = code_append(state->cls->init, c);
+            state->cls->init->header = code_append(state->cls->init->header, c);
+            state->cls->has_constructor=1;
         }
-        if(!state->method->late_binding) {
-            // class initialization code uses late binding
-            code_t*c = 0;
-            c = abc_getlocal_0(c);
-            c = abc_pushscope(c);
-            state->cls->static_init = code_append(c, state->cls->static_init);
-        }
-
         if(state->cls->init) {
-            abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
-            m->body->code = wrap_function(0, state->cls->init, m->body->code);
+            if(state->cls->info->flags&FLAG_INTERFACE) {
+                if(state->cls->init->header) 
+                    syntaxerror("interface can not have class-level code");
+            } else {
+                abc_method_t*m = abc_class_getconstructor(state->cls->abc, 0);
+                code_t*c = method_header(state->cls->init);
+                m->body->code = wrap_function(c, 0, m->body->code);
+            }
         }
         if(state->cls->static_init) {
             abc_method_t*m = abc_class_getstaticconstructor(state->cls->abc, 0);
-            m->body->code = wrap_function(0, state->cls->static_init, m->body->code);
+            code_t*c = method_header(state->cls->static_init);
+            m->body->code = wrap_function(c, 0, m->body->code);
         }
     }
 
@@ -1042,31 +1106,9 @@ static methodinfo_t*registerfunction(enum yytokentype getset, int flags, char*na
     return minfo;
 }
 
-static void function_initvars(params_t*params, int flags)
-{
-    if(state->method->inner)
-        new_variable("this", 0, 0);
-    else if(!state->method->is_global)
-        new_variable((flags&FLAG_STATIC)?"class":"this", state->cls->info, 0);
-    else
-        new_variable("globalscope", 0, 0);
-
-    param_list_t*p=0;
-    for(p=params->list;p;p=p->next) {
-        new_variable(p->param->name, p->param->type, 0);
-    }
-    
-    methodstate_list_t*l = state->method->innerfunctions;
-    while(l) {
-        methodstate_t*m = l->methodstate;
-        m->var_index = new_variable(m->info->name, TYPE_FUNCTION(m->info), 0);
-        l = l->next;
-    }
-}
-
 static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
 {
-    parserassert(state->method && state->method->info);
+    //parserassert(state->method && state->method->info);
 
     methodstate_t*parent_method = state->method;
 
@@ -1086,10 +1128,13 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
         state->method->abc = rfx_calloc(sizeof(abc_method_t));
 
         NEW(methodinfo_t,minfo);
+        minfo->kind = INFOTYPE_METHOD;
+        minfo->access = ACCESS_PACKAGEINTERNAL;
         minfo->name = name;
         state->method->info = minfo;
 
-        list_append(parent_method->innerfunctions, state->method);
+        if(parent_method)
+            list_append(parent_method->innerfunctions, state->method);
 
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
     }
@@ -1099,7 +1144,7 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
         parserassert(state->method);
 
         state->method->info->return_type = return_type;
-        function_initvars(params, 0);
+        function_initvars(state->method, params, 0);
     }
 }
 
@@ -1114,7 +1159,6 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
     if(as3_pass == 1) {
         state->method = rfx_calloc(sizeof(methodstate_t));
         state->method->has_super = 0;
-        state->method->variable_count = 0;
 
         if(state->cls) {
             state->method->is_constructor = !strcmp(state->cls->info->name,name);
@@ -1145,7 +1189,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         }
         
         state->method->info->return_type = return_type;
-        function_initvars(params, flags);
+        function_initvars(state->method, params, flags);
     } 
 }
 
@@ -1740,6 +1784,8 @@ CODE_STATEMENT: WITH
 CODE_STATEMENT: TRY
 CODE_STATEMENT: VOIDEXPRESSION 
 CODE_STATEMENT: USE_NAMESPACE
+CODE_STATEMENT: '{' CODE '}' {$$=$2;}
+CODE_STATEMENT: '{' '}' {$$=0;}
 
 // code which may appear anywhere
 CODEPIECE: ';' {$$=0;}
@@ -1753,8 +1799,8 @@ CODEPIECE: CONDITIONAL_COMPILATION '{' CODE '}' {$$=$3;}
 
 CODEPIECE: NAMESPACE_DECLARATION {/*TODO*/$$=0;}
 
-CODEBLOCK :  '{' CODE '}' {$$=$2;}
-CODEBLOCK :  '{' '}'      {$$=0;}
+//CODEBLOCK :  '{' CODE '}' {$$=$2;}
+//CODEBLOCK :  '{' '}'      {$$=0;}
 CODEBLOCK :  CODEPIECE ';'             {$$=$1;}
 CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
 
@@ -2239,9 +2285,9 @@ CLASS_BODY_ITEM : SLOT_DECLARATION
 CLASS_BODY_ITEM : FUNCTION_DECLARATION
 
 CLASS_BODY_ITEM : CODE_STATEMENT {
-    code_t*c = state->cls->static_init;
+    code_t*c = state->cls->static_init->header;
     c = code_append(c, $1);  
-    state->cls->static_init = c;
+    state->cls->static_init->header = c;
 }
 
 MAYBE_INTERFACE_BODY : 
@@ -2267,7 +2313,7 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
 
 VARCONST: "var" | "const"
 
-SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION {
+SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER {setstaticfunction($1);} MAYBETYPE MAYBEEXPRESSION {
     int flags = $1;
     U8 access = flags2access($1);
 
@@ -2277,7 +2323,6 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
         if(i) {
             check_override(i, flags);
         }
-
         info = varinfo_register_onclass(state->cls->info, access, $3);
     } else {
         slotinfo_t*i = registry_find(state->package, $3);
@@ -2287,7 +2332,7 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
         info = varinfo_register_global(access, state->package, $3);
     }
 
-    info->type = $4;
+    info->type = $5;
     info->flags = flags;
 
     /* slot name */
@@ -2304,16 +2349,16 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
     } else if(flags&FLAG_STATIC) {
         // static variable
         traits = &state->cls->abc->static_traits;
-        code = &state->cls->static_init;
+        code = &state->cls->static_init->header;
     } else {
         // instance variable
         traits = &state->cls->abc->traits;
-        code = &state->cls->init;
+        code = &state->cls->init->header;
     }
     
     trait_t*t=0;
-    if($4) {
-        MULTINAME(m, $4);
+    if($5) {
+        MULTINAME(m, $5);
         t = trait_new_member(traits, multiname_clone(&m), multiname_clone(&mname), 0);
     } else {
         t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
@@ -2322,10 +2367,10 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
     
     /* initalization code (if needed) */
     code_t*c = 0;
-    if($5.c && !is_pushundefined($5.c)) {
+    if($6.c && !is_pushundefined($6.c)) {
         c = abc_getlocal_0(c);
-        c = code_append(c, $5.c);
-        c = converttype(c, $5.t, $4);
+        c = code_append(c, $6.c);
+        c = converttype(c, $6.t, $5);
         c = abc_setslot(c, t->slot_id);
     }
 
@@ -2336,6 +2381,7 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER MAYBETYPE MAYBEEXPRESSIO
     }
 
     $$=0;
+    setstaticfunction(0);
 }
 
 /* ------------ constants -------------------------------------- */
@@ -2423,7 +2469,7 @@ FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_P
     PASS2
     if(!state->method->info) syntaxerror("internal error");
     
-    code_t*c = method_header();
+    code_t*c = method_header(state->method);
     c = wrap_function(c, 0, $11);
 
     endfunction(0,$1,$3,$4,&$6,$8,c);
@@ -2439,9 +2485,9 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
     PASS1 old_state();list_deep_free($4.list);
     PASS2
     methodinfo_t*f = state->method->info;
-    if(!f) syntaxerror("internal error");
+    if(!f || !f->kind) syntaxerror("internal error");
     
-    code_t*c = method_header();
+    code_t*c = method_header(state->method);
     c = wrap_function(c, 0, $9);
 
     int index = state->method->var_index;
@@ -2946,7 +2992,7 @@ EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
 //MAYBECOMMA: ','
 //MAYBECOMMA:
 
-E : '{' MAYBE_EXPRPAIR_LIST '}' {
+E : "{ (dictionary)" MAYBE_EXPRPAIR_LIST '}' {
     $$.c = code_new();
     $$.c = code_append($$.c, $2.cc);
     $$.c = abc_newobject($$.c, $2.len/2);
@@ -2997,6 +3043,12 @@ E : E "/=" E {
               }
 E : E "|=" E { 
                code_t*c = abc_bitor($3.c);
+               c=converttype(c, TYPE_INT, $1.t);
+               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.t = $1.t;
+              }
+E : E "^=" E { 
+               code_t*c = abc_bitxor($3.c);
                c=converttype(c, TYPE_INT, $1.t);
                $$.c = toreadwrite($1.c, c, 0, 0);
                $$.t = $1.t;
