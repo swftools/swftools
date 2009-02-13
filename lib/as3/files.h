@@ -40,4 +40,7 @@ void enter_file(const char*name, const char*filename, void*state);
 FILE* enter_file2(const char*name, const char*filename, void*state);
 void* leave_file();
 
+char* concat_paths(const char*base, const char*add);
+char* normalize_path(const char*path);
+
 #endif

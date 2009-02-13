@@ -100,6 +100,78 @@ char*get_path(const char*file)
         return strdup(".");
     }
 }
+char* normalize_path(const char*path)
+{
+    char*n = 0, *d = 0;
+    if(path[0] != '/') {
+        char buf[512];
+        char*c = getcwd(buf,512);
+        int l = strlen(buf);
+        d = n = malloc(l+strlen(path)+10);
+        strcpy(n, buf);d += l;
+        if(!l || n[l-1]!='/') {
+            *d='/';d++;
+        }
+    } else {
+        d = n = strdup(path);
+    }
+    const char*s=path;
+    char init = 1;
+
+    while(*s) {
+        if(init && s[0] == '.' && (s[1]=='/' || s[1]=='\0')) {
+            if(!s[1]) break;
+            s+=2;
+            init=1;
+            continue;
+        }
+        if(init && s[0] == '.' && s[1] == '.' && (s[2] == '/' || s[2]=='\0')) {
+            // step one down
+            char*last = 0;
+            if(d<=n) 
+                return 0;
+            *--d = 0;
+            if(!(last=strrchr(n, '/'))) {
+                return 0;
+            }
+            d = last+1;
+            if(!s[2]) break;
+            s+=3;
+            init=1;
+            continue;
+        }
+
+        *d = *s;
+        if(*s=='/') init=1;
+        else init=0;
+        d++;s++;
+    }
+    if(d!=n && d[-1]=='/') 
+        d--;
+    *d = 0;
+    return n;
+}
+static void testnormalize()
+{
+#define TEST(x) {printf("%s -> %s\n", (x), normalize_path(x));}
+    TEST(".");
+    TEST("../as3");
+    TEST("../as3/");
+    TEST("../as3/parser.y");
+    TEST("../as3/ok/../ok/scope.as");
+    TEST("ok/scope.as");
+    TEST("ok/./scope.as");
+    TEST("./ok/scope.as");
+    TEST("./");
+    TEST("/tmp/");
+    TEST("/./tmp/");
+    TEST("../");
+    TEST("/");
+    TEST("/tmp");
+    TEST("/tmp/../usr/");
+}
+
+
 char* concat_paths(const char*base, const char*add)
 {
     int l1 = strlen(base);
@@ -116,7 +188,7 @@ char* concat_paths(const char*base, const char*add)
     memcpy(&n[l1+1],&add[pos],l2-pos+1);
     return n;
 }
-char is_absolute(char*filename) 
+char is_absolute(const char*filename) 
 {
     if(!filename || !filename[0])
         return 0;
