@@ -588,6 +588,9 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 {FLOATWITHSIGN}/{_}          {c(); BEGIN(INITIAL);return handlefloat();}
 }
 
+<REGEXPOK>[\{]               {c(); BEGIN(REGEXPOK);return m(T_DICTSTART);}
+[\{]                         {c(); BEGIN(INITIAL); return m('{');}
+
 \xef\xbb\xbf                 {/* utf 8 bom */}
 {S}                          {l();}
 
@@ -599,14 +602,14 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
-{NAME}{S}*:{S}*for/{_}        {l();handleLabel(yytext, yyleng-3);return T_FOR;}
-{NAME}{S}*:{S}*do/{_}         {l();handleLabel(yytext, yyleng-2);return T_DO;}
-{NAME}{S}*:{S}*while/{_}      {l();handleLabel(yytext, yyleng-5);return T_WHILE;}
-{NAME}{S}*:{S}*switch/{_}     {l();handleLabel(yytext, yyleng-6);return T_SWITCH;}
-for                          {c();a3_lval.id="";return T_FOR;}
-do                           {c();a3_lval.id="";return T_DO;}
-while                        {c();a3_lval.id="";return T_WHILE;}
-switch                       {c();a3_lval.id="";return T_SWITCH;}
+{NAME}{S}*:{S}*for/{_}       {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-3);return T_FOR;}
+{NAME}{S}*:{S}*do/{_}        {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-2);return T_DO;}
+{NAME}{S}*:{S}*while/{_}     {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-5);return T_WHILE;}
+{NAME}{S}*:{S}*switch/{_}    {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-6);return T_SWITCH;}
+for                          {c();BEGIN(INITIAL);a3_lval.id="";return T_FOR;}
+do                           {c();BEGIN(INITIAL);a3_lval.id="";return T_DO;}
+while                        {c();BEGIN(INITIAL);a3_lval.id="";return T_WHILE;}
+switch                       {c();BEGIN(INITIAL);a3_lval.id="";return T_SWITCH;}
 
 [&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 [|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}
@@ -614,79 +617,80 @@ switch                       {c();a3_lval.id="";return T_SWITCH;}
 [!][=][=]                    {c();BEGIN(REGEXPOK);return m(T_NEE);}
 [=][=][=]                    {c();BEGIN(REGEXPOK);return m(T_EQEQEQ);}
 [=][=]                       {c();BEGIN(REGEXPOK);return m(T_EQEQ);}
-[>][=]                       {c();return m(T_GE);}
-[<][=]                       {c();return m(T_LE);}
+[>][=]                       {c();BEGIN(REGEXPOK);return m(T_GE);}
+[<][=]                       {c();BEGIN(REGEXPOK);return m(T_LE);}
 [-][-]                       {c();BEGIN(INITIAL);return m(T_MINUSMINUS);}
 [+][+]                       {c();BEGIN(INITIAL);return m(T_PLUSPLUS);}
-[+][=]                       {c();return m(T_PLUSBY);}
-[-][=]                       {c();return m(T_MINUSBY);}
-[/][=]                       {c();return m(T_DIVBY);}
-[%][=]                       {c();return m(T_MODBY);}
-[*][=]                       {c();return m(T_MULBY);}
-[|][=]                       {c();return m(T_ORBY);}
-[>][>][=]                    {c();return m(T_SHRBY);}
-[<][<][=]                    {c();return m(T_SHLBY);}
-[>][>][>][=]                 {c();return m(T_USHRBY);}
-[<][<]                       {c();return m(T_SHL);}
-[>][>][>]                    {c();return m(T_USHR);}
-[>][>]                       {c();return m(T_SHR);}
-\.\.\.                       {c();return m(T_DOTDOTDOT);}
-\.\.                         {c();return m(T_DOTDOT);}
-\.                           {c();return m('.');}
-::                           {c();return m(T_COLONCOLON);}
-:                            {c();return m(':');}
-instanceof                   {c();return m(KW_INSTANCEOF);}
-implements                   {c();return m(KW_IMPLEMENTS);}
-interface                    {c();return m(KW_INTERFACE);}
-namespace                    {c();return m(KW_NAMESPACE);}
-protected                    {c();return m(KW_PROTECTED);}
-undefined                    {c();return m(KW_UNDEFINED);}
-continue                     {c();return m(KW_CONTINUE);}
-override                     {c();return m(KW_OVERRIDE);}
-internal                     {c();return m(KW_INTERNAL);}
-function                     {c();return m(KW_FUNCTION);}
-finally                      {c();return m(KW_FINALLY);}
-default                      {c();return m(KW_DEFAULT);}
-package                      {c();return m(KW_PACKAGE);}
-private                      {c();return m(KW_PRIVATE);}
-dynamic                      {c();return m(KW_DYNAMIC);}
-extends                      {c();return m(KW_EXTENDS);}
-delete                       {c();return m(KW_DELETE);}
-return                       {c();return m(KW_RETURN);}
-public                       {c();return m(KW_PUBLIC);}
-native                       {c();return m(KW_NATIVE);}
-static                       {c();return m(KW_STATIC);}
-import                       {c();return m(KW_IMPORT);}
-typeof                       {c();return m(KW_TYPEOF);}
-throw                        {c();return m(KW_THROW);}
-class                        {c();return m(KW_CLASS);}
-const                        {c();return m(KW_CONST);}
-catch                        {c();return m(KW_CATCH);}
-final                        {c();return m(KW_FINAL);}
-false                        {c();return m(KW_FALSE);}
-break                        {c();return m(KW_BREAK);}
-super                        {c();return m(KW_SUPER);}
-each                         {c();return m(KW_EACH);}
-void                         {c();return m(KW_VOID);}
-true                         {c();return m(KW_TRUE);}
-null                         {c();return m(KW_NULL);}
-else                         {c();return m(KW_ELSE);}
-case                         {c();return m(KW_CASE);}
-with                         {c();return m(KW_WITH);}
-use                          {c();return m(KW_USE);}
-new                          {c();return m(KW_NEW);}
-get                          {c();return m(KW_GET);}
-set                          {c();return m(KW_SET);}
-var                          {c();return m(KW_VAR);}
-try                          {c();return m(KW_TRY);}
-is                           {c();return m(KW_IS) ;}
-in                           {c();return m(KW_IN) ;}
-if                           {c();return m(KW_IF) ;}
-as                           {c();return m(KW_AS);}
+[+][=]                       {c();BEGIN(REGEXPOK);return m(T_PLUSBY);}
+[\^][=]                      {c();BEGIN(REGEXPOK);return m(T_XORBY);}
+[-][=]                       {c();BEGIN(REGEXPOK);return m(T_MINUSBY);}
+[/][=]                       {c();BEGIN(REGEXPOK);return m(T_DIVBY);}
+[%][=]                       {c();BEGIN(REGEXPOK);return m(T_MODBY);}
+[*][=]                       {c();BEGIN(REGEXPOK);return m(T_MULBY);}
+[|][=]                       {c();BEGIN(REGEXPOK);return m(T_ORBY);}
+[>][>][=]                    {c();BEGIN(REGEXPOK);return m(T_SHRBY);}
+[<][<][=]                    {c();BEGIN(REGEXPOK);return m(T_SHLBY);}
+[>][>][>][=]                 {c();BEGIN(REGEXPOK);return m(T_USHRBY);}
+[<][<]                       {c();BEGIN(REGEXPOK);return m(T_SHL);}
+[>][>][>]                    {c();BEGIN(REGEXPOK);return m(T_USHR);}
+[>][>]                       {c();BEGIN(REGEXPOK);return m(T_SHR);}
+\.\.\.                       {c();BEGIN(REGEXPOK);return m(T_DOTDOTDOT);}
+\.\.                         {c();BEGIN(REGEXPOK);return m(T_DOTDOT);}
+\.                           {c();BEGIN(REGEXPOK);return m('.');}
+::                           {c();BEGIN(REGEXPOK);return m(T_COLONCOLON);}
+:                            {c();BEGIN(INITIAL);return m(':');}
+instanceof                   {c();BEGIN(REGEXPOK);return m(KW_INSTANCEOF);}
+implements                   {c();BEGIN(REGEXPOK);return m(KW_IMPLEMENTS);}
+interface                    {c();BEGIN(INITIAL);return m(KW_INTERFACE);}
+namespace                    {c();BEGIN(INITIAL);return m(KW_NAMESPACE);}
+protected                    {c();BEGIN(INITIAL);return m(KW_PROTECTED);}
+undefined                    {c();BEGIN(INITIAL);return m(KW_UNDEFINED);}
+continue                     {c();BEGIN(INITIAL);return m(KW_CONTINUE);}
+override                     {c();BEGIN(INITIAL);return m(KW_OVERRIDE);}
+internal                     {c();BEGIN(INITIAL);return m(KW_INTERNAL);}
+function                     {c();BEGIN(INITIAL);return m(KW_FUNCTION);}
+finally                      {c();BEGIN(INITIAL);return m(KW_FINALLY);}
+default                      {c();BEGIN(INITIAL);return m(KW_DEFAULT);}
+package                      {c();BEGIN(INITIAL);return m(KW_PACKAGE);}
+private                      {c();BEGIN(INITIAL);return m(KW_PRIVATE);}
+dynamic                      {c();BEGIN(INITIAL);return m(KW_DYNAMIC);}
+extends                      {c();BEGIN(INITIAL);return m(KW_EXTENDS);}
+delete                       {c();BEGIN(REGEXPOK);return m(KW_DELETE);}
+return                       {c();BEGIN(REGEXPOK);return m(KW_RETURN);}
+public                       {c();BEGIN(INITIAL);return m(KW_PUBLIC);}
+native                       {c();BEGIN(INITIAL);return m(KW_NATIVE);}
+static                       {c();BEGIN(INITIAL);return m(KW_STATIC);}
+import                       {c();BEGIN(REGEXPOK);return m(KW_IMPORT);}
+typeof                       {c();BEGIN(REGEXPOK);return m(KW_TYPEOF);}
+throw                        {c();BEGIN(REGEXPOK);return m(KW_THROW);}
+class                        {c();BEGIN(INITIAL);return m(KW_CLASS);}
+const                        {c();BEGIN(INITIAL);return m(KW_CONST);}
+catch                        {c();BEGIN(INITIAL);return m(KW_CATCH);}
+final                        {c();BEGIN(INITIAL);return m(KW_FINAL);}
+false                        {c();BEGIN(INITIAL);return m(KW_FALSE);}
+break                        {c();BEGIN(INITIAL);return m(KW_BREAK);}
+super                        {c();BEGIN(INITIAL);return m(KW_SUPER);}
+each                         {c();BEGIN(INITIAL);return m(KW_EACH);}
+void                         {c();BEGIN(INITIAL);return m(KW_VOID);}
+true                         {c();BEGIN(INITIAL);return m(KW_TRUE);}
+null                         {c();BEGIN(INITIAL);return m(KW_NULL);}
+else                         {c();BEGIN(INITIAL);return m(KW_ELSE);}
+case                         {c();BEGIN(REGEXPOK);return m(KW_CASE);}
+with                         {c();BEGIN(REGEXPOK);return m(KW_WITH);}
+use                          {c();BEGIN(REGEXPOK);return m(KW_USE);}
+new                          {c();BEGIN(REGEXPOK);return m(KW_NEW);}
+get                          {c();BEGIN(INITIAL);return m(KW_GET);}
+set                          {c();BEGIN(INITIAL);return m(KW_SET);}
+var                          {c();BEGIN(INITIAL);return m(KW_VAR);}
+try                          {c();BEGIN(INITIAL);return m(KW_TRY);}
+is                           {c();BEGIN(REGEXPOK);return m(KW_IS) ;}
+in                           {c();BEGIN(REGEXPOK);return m(KW_IN) ;}
+if                           {c();BEGIN(INITIAL);return m(KW_IF) ;}
+as                           {c();BEGIN(REGEXPOK);return m(KW_AS);}
 {NAME}                       {c();BEGIN(INITIAL);return handleIdentifier();}
 
-[\]\}]                       {c();BEGIN(INITIAL);return m(yytext[0]);}
-[+-\/*^~@$!%&\(=\[\{|?:;,<>] {c();BEGIN(REGEXPOK);return m(yytext[0]);}
+[\]\}*]                       {c();BEGIN(INITIAL);return m(yytext[0]);}
+[+-\/^~@$!%&\(=\[|?:;,<>]   {c();BEGIN(REGEXPOK);return m(yytext[0]);}
 [\)\]]                           {c();BEGIN(INITIAL);return m(yytext[0]);}
 
 .		             {/* ERROR */
