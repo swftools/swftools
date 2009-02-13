@@ -5,7 +5,7 @@ package {
     public class Main extends flash.display.MovieClip {
 
         var count:int = 1;
-        var num:int = 16;
+        var num:int = 17;
 
         function assert(b:Boolean) {
             if(b) {
@@ -41,6 +41,11 @@ package {
             x = (y/=2);  assert(x==1 && y==1);
             x = 0x55;
             x |= 0x0f;   assert(x==0x5f);
+
+            x=3;y=3;
+            x ^= 7;
+            y = y^7;
+            assert(x==y);
 
             /* nested assignment expressions need different temporary
                registers- make sure they don't collide */
