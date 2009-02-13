@@ -27,6 +27,9 @@
 #include "parser.tab.h"
 #include "compiler.h"
 #include "../os.h"
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
@@ -49,6 +52,9 @@ static char registry_initialized = 0;
 static char parser_initialized = 0;
 
 //#define STORE_TOKENS
+
+#define DEBUG
+//#define DEBUG if(0)
 
 #ifdef STORE_TOKENS
 static mem_t tokens;
@@ -96,11 +102,11 @@ static void as3_parse_file_or_array(int pass, const char*name, const char*filena
 
     FILE*fi = 0;
     if(filename) {
-        //printf("[pass %d] parse file %s %s\n", pass, name, filename);
+        DEBUG printf("[pass %d] parse file %s %s\n", pass, name, filename);
         fi = enter_file2(name, filename, 0);
         as3_file_input(fi);
     } else {
-        //printf("[pass %d] parse bytearray %s (%d bytes)\n", pass, name, length);
+        DEBUG printf("[pass %d] parse bytearray %s (%d bytes)\n", pass, name, length);
         enter_file(name, name, 0);
         as3_buffer_input(mem, length);
     }
@@ -123,7 +129,7 @@ dict_t*scheduled_dict=0;
 
 void as3_parse_scheduled(int pass)
 {
-    //printf("[pass %d] parse scheduled\n", pass);
+    DEBUG printf("[pass %d] parse scheduled\n", pass);
 
     while(scheduled) {
         scheduled_file_t*s = scheduled;
@@ -144,17 +150,21 @@ void as3_parse_scheduled(int pass)
         scheduled_dict=0;
     }
 }
+
 void as3_schedule_file(const char*name, const char*filename) 
 {
-    if(!scheduled_dict) 
+    if(!scheduled_dict) {
         scheduled_dict = dict_new();
+    }
+
+    filename = normalize_path(filename);
     
     if(dict_contains(scheduled_dict, filename)) {
         return; //already processed
     } else {
         dict_put(scheduled_dict, filename, 0);
     }
-    //printf("[pass %d] schedule %s %s\n", as3_pass, name, filename);
+    DEBUG printf("[pass %d] schedule %s %s\n", as3_pass, name, filename);
 
     NEW(scheduled_file_t, f);
     f->name = strdup(name);
@@ -191,6 +201,8 @@ void as3_parse_directory(const char*dir)
 {
     as3_pass=1;
     as3_schedule_directory(dir);
+    if(!scheduled)
+        as3_warning("Directory %s doesn't contain any ActionScript files", dir);
     as3_parse_scheduled(1);
     as3_pass=2;
     as3_schedule_directory(dir);
@@ -199,12 +211,14 @@ void as3_parse_directory(const char*dir)
 
 char as3_schedule_directory(const char*dirname)
 {
+    DEBUG printf("[pass %d] schedule directory %s\n", as3_pass, dirname);
     char ok=0;
 #ifdef HAVE_DIRENT_H
     include_dir_t*i = current_include_dirs;
     while(i) {
-        char*fulldirname = concatPaths(i->path, dirname);
-        DIR*dir = opendir(dirname);
+        char*fulldirname = concat_paths(i->path, dirname);
+        DEBUG printf("[pass %d] ... %s\n", as3_pass, fulldirname);
+        DIR*dir = opendir(fulldirname);
         if(dir) {
             ok = 1;
             struct dirent*ent;
@@ -220,7 +234,7 @@ char as3_schedule_directory(const char*dirname)
                     continue;
                 if(strncasecmp(&name[l-3], ".as", 3)) 
                     continue;
-                char*fullfilename = concatPaths(dirname, name);
+                char*fullfilename = concatPaths(fulldirname, name);
                 as3_schedule_file(name, fullfilename);
                 free(fullfilename);
             }
@@ -234,6 +248,7 @@ char as3_schedule_directory(const char*dirname)
 
 void as3_schedule_package(const char*package)
 {
+    DEBUG printf("[pass %d] schedule package %s\n", as3_pass, package);
     char*dirname = strdup(package);
     int s=0;
     while(dirname[s]) {
@@ -246,6 +261,7 @@ void as3_schedule_package(const char*package)
 
 void as3_schedule_class(const char*package, const char*cls)
 {
+    DEBUG printf("[pass %d] schedule class %s.%s\n",  as3_pass, package, cls);
     if(!cls) {
         as3_schedule_package(package);
         return;
