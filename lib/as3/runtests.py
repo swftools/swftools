@@ -137,7 +137,7 @@ class TestBase:
     def compile(self):
         try: os.unlink("abc.swf");
         except: pass
-        ret,output = runcmd("./parser",[self.file],wait=60)
+        ret,output = runcmd("./parser",[self.file],wait=1)
         self.compile_error = 0
         self.compile_output = output
         self.exit_status = 0
@@ -253,7 +253,7 @@ cache = Cache.load(".tests.cache")
 cache.parse_args()
 
 nr = 0
-nr = Suite(cache, "err").run(nr)
+#nr = Suite(cache, "err").run(nr)
 nr = Suite(cache, "ok").run(nr)
 
 cache.save(".tests.cache")
