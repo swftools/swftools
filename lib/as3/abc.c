@@ -933,6 +933,8 @@ static pool_t*writeABC(TAG*abctag, void*code, pool_t*pool)
     abc_file_t*file = (abc_file_t*)code;
     if(!pool) 
         pool = pool_new();
+    if(!file)
+        file = abc_file_new();
 
     TAG*tmp = swf_InsertTag(0,0);
     TAG*tag = tmp;
