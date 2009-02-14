@@ -1363,7 +1363,9 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         return c;
     if(TYPE_IS_NULL(from) && !IS_NUMBER_OR_INT(to))
         return c;
-    syntaxerror("can't convert type %s to %s", from->name, to->name);
+    syntaxerror("can't convert type %s%s%s to %s%s%s", 
+        from->package, from->package?".":"", from->name, 
+        to->package, to->package?".":"", to->name);
     return 0; // make gcc happy
 }
 
