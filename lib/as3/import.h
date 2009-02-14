@@ -24,6 +24,7 @@
 
 #include "abc.h"
 
+void as3_import_file(char*filename);
 void as3_import_swf(char*filename);
 void as3_import_abc(char*filename);
 void as3_import_code(abc_file_t*f);

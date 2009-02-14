@@ -26,7 +26,7 @@
 #include "registry.h"
 #include "builtin.h"
 
-static dict_t*classes=0;
+dict_t*registry_classes=0;
 
 // ----------------------- class signature ------------------------------
 
@@ -70,7 +70,7 @@ classinfo_t* classinfo_register(int access, const char*package, const char*name,
     c->access = access;
     c->package = package;
     c->name = name;
-    dict_put(classes, c, c);
+    dict_put(registry_classes, c, c);
     dict_init(&c->members,AVERAGE_NUMBER_OF_MEMBERS);
     return c;
 }
@@ -103,7 +103,7 @@ methodinfo_t* methodinfo_register_global(U8 access, const char*package, const ch
     m->package = package;
     m->name = name;
     m->parent = 0;
-    dict_put(classes, m, m);
+    dict_put(registry_classes, m, m);
     return m;
 }
 varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name)
@@ -115,7 +115,7 @@ varinfo_t* varinfo_register_global(U8 access, const char*package, const char*nam
     m->package = package;
     m->name = name;
     m->parent = 0;
-    dict_put(classes, m, m);
+    dict_put(registry_classes, m, m);
     return m;
 }
 
@@ -123,16 +123,16 @@ varinfo_t* varinfo_register_global(U8 access, const char*package, const char*nam
 
 void registry_init()
 {
-    if(!classes)
-        classes = builtin_getclasses();
+    if(!registry_classes)
+        registry_classes = builtin_getclasses();
 }
 slotinfo_t* registry_find(const char*package, const char*name)
 {
-    assert(classes);
+    assert(registry_classes);
     slotinfo_t tmp;
     tmp.package = package;
     tmp.name = name;
-    slotinfo_t* c = (slotinfo_t*)dict_lookup(classes, &tmp);
+    slotinfo_t* c = (slotinfo_t*)dict_lookup(registry_classes, &tmp);
     /*if(c)
         printf("%s.%s->%08x (%s.%s)\n", package, name, c, c->package, c->name);*/
     return c;
@@ -149,8 +149,8 @@ slotinfo_t* registry_safefind(const char*package, const char*name)
 void registry_dump()
 {
     int t;
-    for(t=0;t<classes->hashsize;t++) {
-        dictentry_t*e = classes->slots[t];
+    for(t=0;t<registry_classes->hashsize;t++) {
+        dictentry_t*e = registry_classes->slots[t];
         while(e) {
             slotinfo_t*i = (slotinfo_t*)e->key;
             printf("[%s] %s.%s\n", access2str(i->access), i->package, i->name);

@@ -24,11 +24,13 @@
 #include <memory.h>
 #include "../rfxswf.h"
 #include "../os.h"
+#include "../q.h"
 #include "pool.h"
 #include "files.h"
 #include "tokenizer.h"
 #include "parser.tab.h"
 #include "parser.h"
+#include "import.h"
 
 void fixstring(char*s)
 {
@@ -42,7 +44,7 @@ void fixstring(char*s)
     }
 }
 
-char* mkpid(const char*package)
+static char* mkpid(const char*package)
 {
     char*id = malloc(strlen(package)+20);
     strcpy(id, "package_");
@@ -53,7 +55,7 @@ char* mkpid(const char*package)
     fixstring(id);
     return id;
 }
-char* mkid(const char*package, const char*name)
+static char* mkcid(const char*package, const char*name)
 {
     char*id = malloc(strlen(package)+strlen(name)+10);
     strcpy(id, package);
@@ -62,25 +64,27 @@ char* mkid(const char*package, const char*name)
     fixstring(id);
     return id;
 }
-
-char*mkid2(multiname_t*m)
+static char* mkptr2(const char*package, const char*name)
 {
-    if(m->type == QNAME)
-        return mkid(m->ns->name, m->name);
-    else if(m->type == MULTINAME) {
-        namespace_list_t*l = m->namespace_set->namespaces;
-        while(l) {
-            if(l->namespace->name &&
-               l->namespace->name[0])
-                break;
-            l = l->next;
-        }
-        return mkid(l->namespace->name, m->name);
-    }
-    else {
-        fprintf(stderr, "can't convert multiname type %d\n", m->type);
-    }
+    char*id = malloc(strlen(package)+strlen(name)+10);
+    strcpy(id, "&");
+    strcat(id, package);
+    strcat(id, "_");
+    strcat(id, name);
+    fixstring(id+1);
+    return id;
 }
+static char* mkid2(const char*cls, const char*member)
+{
+    char*id = malloc(strlen(cls)+strlen(member)+10);
+    strcpy(id, cls);
+    strcat(id, "_");
+    strcat(id, member);
+    fixstring(id);
+    return id;
+}
+#define mkid(s) ((s)?mkcid((s)->package, (s)->name):"0")
+#define mkptr(s) ((s)?mkptr2((s)->package, (s)->name):"0")
 
 static array_t*tosort=0;
 static int compare_classes(const void*v1, const void*v2)
@@ -105,282 +109,169 @@ static int compare_traits(const void*v1, const void*v2)
     return strcmp(x1->name->name, x2->name->name);
 }
 
-char* kind2string(int kind)
+dict_t* builtin_getclasses()
 {
+    return dict_new2(&slotinfo_type);
 }
 
-void write_member_info(FILE*fi, char*parent, char*id2, const char*name, int flags, trait_t*trait)
-{
-    char*retvalue = 0;
-    char*type="0";
-    switch(trait->kind) {
-        case TRAIT_METHOD: {
-            multiname_t*ret = trait->method->return_type;
+extern dict_t*registry_classes;
 
-            if(!ret)
-                retvalue = 0;
-            else
-                retvalue = mkid(ret->ns->name, ret->name);
-            if(ret && !strcmp(ret->name, "void"))
-                retvalue = 0;
-        } //fallthrough
-        case TRAIT_FUNCTION:
-            type = "INFOTYPE_METHOD";
-            break;
-        case TRAIT_CONST:
-        case TRAIT_GETTER:
-        case TRAIT_SETTER:
-        case TRAIT_SLOT:
-            type = "INFOTYPE_SLOT";
-            break;
-        default:
-            fprintf(stderr, "Unknown trait type %d\n", trait->kind);
+char*mktype(slotinfo_t*s) 
+{
+    if(s->kind == INFOTYPE_CLASS) {
+        return "classinfo_t";
+    } else if(s->kind == INFOTYPE_METHOD) {
+        return "methodinfo_t";
+    } else if(s->kind == INFOTYPE_SLOT) {
+        return "varinfo_t";
     }
-    fprintf(fi, "static memberinfo_t %s = {%s, 0x%02x, \"%s\"", type, flags, id2, name);
-    if(!retvalue)
-        fprintf(fi, ", 0");
-    else
-        fprintf(fi, ", &%s", retvalue);
-  
-    if(!parent) 
-        fprintf(fi, ", 0");
-    else
-        fprintf(fi, ", &%s", parent); // parent
-
-    fprintf(fi, ", 0,0,0};\n");
 }
 
-int access2flags(multiname_t*m)
-{
-    int access = m->ns->access;
-    int flags=0;
-    return flags;
-}
+void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix);
 
-void load_libraries(char*filename, int pass, FILE*fi)
+void write_slotinfo_decl(FILE*fi, slotinfo_t*s, char*prefix)
 {
-    SWF swf;
-    memset(&swf, 0, sizeof(SWF));
-    TAG*tag = swf_InsertTag(0, ST_RAWABC);
-    memfile_t*file = memfile_open(filename);
-    tag->data = file->data;
-    tag->len = file->len;
-    abc_file_t*abc = swf_ReadABC(tag);
-    //swf_DumpABC(stdout, abc, "");
+    fprintf(fi, "%s", prefix);
+    char*id = mkid(s);
+    fprintf(fi, "static %s %s;\n", mktype(s), id);
 
-    if(pass<=2) {
-        int*index = malloc(abc->classes->num*sizeof(int));
+    if(s->kind == INFOTYPE_CLASS) {
+        classinfo_t*c = (classinfo_t*)s;
+        dict_t*d = &c->members;
         int t;
-        tosort=abc->classes;
-        for(t=0;t<abc->classes->num;t++) {index[t]=t;}
-        qsort(index, abc->classes->num, sizeof(int), compare_classes);
-
-        if(pass==-1) {
-            const char*last_package = "-*-";
-            for(t=0;t<abc->classes->num;t++) {
-                abc_class_t*cls = array_getvalue(abc->classes, index[t]);
-                const char*package = cls->classname->ns->name;
-                char*pid = mkpid(package);
-                if(strcmp(last_package, package)) {
-                    last_package = package;
-                    fprintf(fi, "static packageinfo_t %s = {\"%s\"};\n", pid, package);
-                }
-            }
-        }
-
-        if(pass>=0)
-        for(t=0;t<abc->classes->num;t++) {
-            abc_class_t*cls = array_getvalue(abc->classes, index[t]);
-            int access = cls->classname->ns->access;
-            if(access==ACCESS_PRIVATE ||
-               access==ACCESS_PACKAGEINTERNAL)
-                continue;
-            if(!strncmp(cls->classname->ns->name, "__AS3", 5))
-                continue;
-
-            const char*package = cls->classname->ns->name;
-            const char*name = cls->classname->name;
-            const char*superpackage = 0;
-            const char*supername = 0;
-            char*superid = 0;
-            if(cls->superclass) {
-                superpackage = cls->superclass->ns->name;
-                supername = cls->superclass->name;
-                superid = mkid(superpackage, supername);
-            }
-            char*id = mkid(package, name);
-            U8 flags = cls->flags;
-            
-            if(pass==0)  {
-                fprintf(fi, "static classinfo_t %s;\n", id);
-            } else if(pass==1) {
-                fprintf(fi, "static classinfo_t %s = {0x%02x, 0x%02x, \"%s\", \"%s\"", id, access, flags, package, name);
-                fprintf(fi, ", (void*)0"); //slot
-                if(superid)
-                    fprintf(fi, ", &%s, interfaces:{", superid);
-                else
-                    fprintf(fi, ", (void*)0, interfaces:{");
-                if(cls->interfaces) {
-                    multiname_list_t*i=cls->interfaces;
-                    while(i) {
-                        char*iid = mkid2(i->multiname);
-                        fprintf(fi, "&%s, ", iid);
-                        i = i->next;
-                    }
-                }
-                fprintf(fi, "(void*)0}};\n");
-            } else if(pass==2) {
-                trait_list_t*l=cls->traits;
-                fprintf(fi, "    dict_put(d, &%s, &%s);\n", id, id);
-                fprintf(fi, "    dict_init(&%s.members, %d);\n", id, list_length(l)+1);
-            }
-
-          
-            trait_list_t*l=0;
-            char is_static = 0;
-            dict_t*d = dict_new();
-            l = cls->traits;
+        for(t=0;t<d->hashsize;t++) {
+            dictentry_t*l = d->slots[t];
             while(l) {
-                trait_t*trait = l->trait;
-                if(trait->name->ns->access==ACCESS_PRIVATE)
-                    goto cont;
-                const char*name = trait->name->name;
-                char id2[1024];
-                sprintf(id2, "%s_%s", id, name);
-                
-                if(dict_lookup(d, name)) {
-                    goto cont;
-                } else {
-                    dict_put(d, (char*)name, (char*)name);
-                }
-                int flags = is_static?FLAG_STATIC:0;
-                //flags |= access2flags(access);
-                flags |= access2flags(trait->name);
-
-                if(pass==0) {
-                    fprintf(fi, "static memberinfo_t %s;\n", id2);
-                } if(pass==1) {
-                    write_member_info(fi, id, id2, name, flags, trait);
-                } else if(pass==2) {
-                    fprintf(fi, "    dict_put(&%s.members, \"%s\", &%s);\n", id, name, id2);
-                }
-    cont:
+                slotinfo_t*s2 = (slotinfo_t*)l->data;
+                fprintf(fi, "static %s %s;\n", mktype(s2), mkid2(id, s2->name));
                 l = l->next;
-                if(!l && !is_static) {
-                    l = cls->static_traits;
-                    is_static = 1;
-                }
             }
-            
-            dict_destroy(d);
-
-            if(id) free(id);
-            if(superid) free(superid);
         }
-        free(index);
     }
-
-    if(pass==0 || pass==1 || pass==3) {
+}
+void write_initinfo(FILE*fi, slotinfo_t*s, char*prefix)
+{
+    if(s->kind == INFOTYPE_CLASS) {
+        classinfo_t*c = (classinfo_t*)s;
+        fprintf(fi, "%s", prefix);
+        char*id = mkid(c);
+        dict_t*d = &c->members;
+        fprintf(fi, "dict_init(&%s.members, %d);\n", id, d->hashsize);
         int t;
-
-#define IS_PUBLIC_MEMBER(trait) ((trait)->kind != TRAIT_CLASS)
-  
-        /* count public functions */
-        int num_methods=0;
-        for(t=0;t<abc->scripts->num;t++) {
-            trait_list_t*l = ((abc_script_t*)array_getvalue(abc->scripts, t))->traits;
-            for(;l;l=l->next) {
-                num_methods += IS_PUBLIC_MEMBER(l->trait);
-            }
-        }
-        trait_t**traits = (trait_t**)malloc(num_methods*sizeof(trait_t*));
-        num_methods=0;
-        for(t=0;t<abc->scripts->num;t++) {
-            trait_list_t*l = ((abc_script_t*)array_getvalue(abc->scripts, t))->traits;
-            for(;l;l=l->next) {
-                if(IS_PUBLIC_MEMBER(l->trait)) {
-                    traits[num_methods++] = l->trait;
-                }
-            }
-        }
-        qsort(traits, num_methods, sizeof(trait_t*), compare_traits);
-        const char*last_package = "-xxx-";
-        for(t=0;t<num_methods;t++) {
-            trait_t*trait = traits[t];
-            if(IS_PUBLIC_MEMBER(trait)) {
-                const char*package = trait->name->ns->name;
-                const char*name = trait->name->name;
-                char*pid = mkpid(package);
-                char*id2 = mkid2(trait->name);
-                int flags = FLAG_STATIC|access2flags(trait->name);
-                NEW(memberinfo_t,m);
-                char np = 0;
-                int clsflags = FLAG_STATIC;
-                if(pass==0) {
-                    fprintf(fi, "static memberinfo_t %s;\n", id2);
-                    fprintf(fi, "static classinfo_t %s_class;\n", id2);
-                } else if(pass==1) {
-                    write_member_info(fi, 0, id2, name, flags, trait);
-                    fprintf(fi, "static classinfo_t %s_class = {0x%02x, 0x%02x, \"%s\", \"%s\", &%s, (void*)0, members:{(void*)0}};\n", 
-                            id2,
-                            trait->name->ns->access, clsflags,
-                            package, name, 
-                            id2);
-                } else if(pass==3) {
-                    /*if(np) {
-                        fprintf(fi, "    dict_init(%s.classes, 1); //not used yet\n", pid);
-                        fprintf(fi, "    dict_init(%s.functions, 1);\n", pid);
-                    }
-                    fprintf(fi, "    dict_put(&%s.functions, \"%s\", &%s);\n", pid, name, id2);*/
-                    fprintf(fi, "    dict_put(d, &%s_class, &%s_class);\n", id2, id2);
-                }
-            } else if(trait->kind == TRAIT_CLASS) {
-                // ignore classes, these are treated above
-            } else {
-                printf("%02x %s\n", trait->kind, multiname_tostring(trait->name));
+        for(t=0;t<d->hashsize;t++) {
+            dictentry_t*l = d->slots[t];
+            while(l) {
+                slotinfo_t*s2 = (slotinfo_t*)l->data;
+                fprintf(fi, "%s", prefix);
+                fprintf(fi, "dict_put(&%s.members, \"%s\", &%s);\n", id, s2->name, mkid2(id, s2->name));
+                l = l->next;
             }
         }
     }
+}
+void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
+{
+    fprintf(fi, "%s", prefix);
+    fprintf(fi, "static %s %s = {", mktype(s), id);
+    fprintf(fi, "0x%02x, 0x%02x, 0x%02x, 0x%02x, ", s->kind, s->subtype, s->flags, s->access);
+    if(s->package)
+        fprintf(fi, "\"%s\", ", s->package);
+    else
+        fprintf(fi, "0, ");
+    
+    if(s->name)
+        fprintf(fi, "\"%s\", ", s->name);
+    else
+        fprintf(fi, "0, ");
 
-    swf_FreeABC(abc);
-    memfile_close(file);tag->data=0;
-    swf_DeleteTag(0, tag);
+    fprintf(fi, "%d, ", s->slot);
+
+    if(s->kind == INFOTYPE_CLASS) {
+        classinfo_t*c = (classinfo_t*)s;
+        fprintf(fi, "%s, ", mkptr(c->superclass));
+        fprintf(fi, "interfaces: {");
+        int t;
+        for(t=0;c->interfaces[t];t++) {
+            fprintf(fi, "%c", mkptr(c->interfaces[t]));
+            if(c->interfaces[t+1]) 
+                fprintf(fi, ", ");
+        }
+        fprintf(fi, "0}};\n");
+    }
+    if(s->kind == INFOTYPE_METHOD) {
+        methodinfo_t*m = (methodinfo_t*)s;
+        fprintf(fi, "%s, ", mkptr(m->return_type));
+        fprintf(fi, "%s, ", mkptr(m->parent));
+        fprintf(fi, "0"); // params TODO
+        fprintf(fi, "};\n");
+    }
+    if(s->kind == INFOTYPE_SLOT) {
+        varinfo_t*m = (varinfo_t*)s;
+        fprintf(fi, "%s, ", mkptr(m->type));
+        fprintf(fi, "%s, ", mkptr(m->parent));
+        fprintf(fi, "0"); // value TODO
+        fprintf(fi, "};\n");
+    }
+    
+    if(s->kind == INFOTYPE_CLASS) {
+        classinfo_t*c = (classinfo_t*)s;
+        dict_t*d = &c->members;
+        int t;
+        for(t=0;t<d->hashsize;t++) {
+            dictentry_t*l = d->slots[t];
+            while(l) {
+                slotinfo_t*s2 = (slotinfo_t*)l->data;
+                write_slotinfo(fi, s2, mkid2(id,s2->name), prefix);
+                l = l->next;
+            }
+        }
+    }
 }
 
 int main()
 {
+    registry_classes = builtin_getclasses();
+
+    as3_import_abc("/home/kramm/c/swftools/lib/as3/builtin.abc");
+    as3_import_abc("/home/kramm/c/swftools/lib/as3/playerglobal.abc");
+
     FILE*fi = fopen("builtin.c", "wb");
-    fprintf(fi, "#include \"builtin.h\"\n");
 
-    //load_libraries("builtin.abc", -1, fi);
-    //load_libraries("playerglobal.abc", -1, fi);
-    //fprintf(fi, "static packageinfo_t package_flash_debugger = {\"flash.debugger\"};\n");
-    //fprintf(fi, "static packageinfo_t package_flash_profiler = {\"flash.profiler\"};\n");
+    int t;
+    int pass;
 
-    load_libraries("builtin.abc", 0, fi);
-    load_libraries("playerglobal.abc", 0, fi);
-    
-    load_libraries("builtin.abc", 1, fi);
-    load_libraries("playerglobal.abc", 1, fi);
-   
-    fprintf(fi, "dict_t* builtin_getclasses()\n");
-    fprintf(fi, "{\n");
-    fprintf(fi, "    dict_t*d = dict_new2(&slotinfo_type);\n");
-    load_libraries("builtin.abc", 2, fi);
-    load_libraries("playerglobal.abc", 2, fi);
-    load_libraries("builtin.abc", 3, fi);
-    load_libraries("playerglobal.abc", 3, fi);
+
+    for(pass=1;pass<=3;pass++) {
+        if(pass==1) {
+            fprintf(fi, "#include \"builtin.h\"\n");
+            fprintf(fi, "\n");
+        }
+        if(pass==3) {
+            fprintf(fi, "dict_t* builtin_getclasses()\n");
+            fprintf(fi, "{\n");
+            fprintf(fi, "    dict_t*d = dict_new2(&slotinfo_type);\n");
+        }
+        for(t=0;t<registry_classes->hashsize;t++) {
+            dictentry_t*l = registry_classes->slots[t];
+            while(l) {
+                slotinfo_t*s = (slotinfo_t*)l->key;
+                //printf("%08x %s %s\n", s, s->package, s->name);
+                char*id = mkid(s);
+                if(pass==1) {
+                    write_slotinfo_decl(fi, s, "");
+                }
+                if(pass==2) {
+                    write_slotinfo(fi, s, mkid(s), "");
+                }
+                if(pass==3) {
+                    fprintf(fi, "    dict_put(d, &%s, &%s);\n", id, id);
+                    write_initinfo(fi, s, "    ");
+                }
+                l = l->next;
+            }
+        }
+    }
     fprintf(fi, "    return d;\n");
     fprintf(fi, "}\n");
-    fprintf(fi, "\n");
-    
-    //fprintf(fi, "dict_t* builtin_getglobalfunctions()\n");
-    //fprintf(fi, "{\n");
-    //fprintf(fi, "    dict_t*d = dict_new();\n");
-    //load_libraries("builtin.abc", 3, fi);
-    //load_libraries("playerglobal.abc", 3, fi);
-    //fprintf(fi, "    return d;\n");
-    //fprintf(fi, "}\n");
 
-    fclose(fi);
 }

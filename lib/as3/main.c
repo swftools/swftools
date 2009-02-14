@@ -64,6 +64,8 @@ int main(int argn, char*argv[])
    
     as3_add_include_dir(getcwd(buf, 512));
 
+    registry_init();
+
     int t=0;
     for(t=1;t<argn-1;t++) {
         if(!strcmp(argv[t], "-lex")) {
@@ -79,17 +81,22 @@ int main(int argn, char*argv[])
         if(!strcmp(argv[t], "-I")) {
             as3_add_include_dir(argv[++t]);
         }
+        if(!strcmp(argv[t], "-l")) {
+            as3_import_file(argv[++t]);
+        }
     }
 
     //extern int avm2_debug;
     //avm2_debug = 1;
 
-    registry_init();
-
     //memfile_t*m = memfile_open(filename);
     //as3_parse_bytearray(filename, m->data, m->len);
     //memfile_close(m);
-    as3_parse_file(filename);
+    if(!strcmp(filename, ".")) {
+        as3_parse_directory(".");
+    } else {
+        as3_parse_file(filename);
+    }
 
     void*code = as3_getcode();
 

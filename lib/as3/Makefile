@@ -40,8 +40,8 @@ parser: main.o tokenizer.yy.o ../librfxswf.a ../libbase.a parser.tab.h
 	gcc $(D) main.o ../librfxswf.a ../libbase.a -o parser -lz
 
 rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o abc.o opcodes.o code.o pool.o scripts.o
-mklib: mklib.o $(rfxswf_modules) ../libbase.a
-	gcc $(D) mklib.o $(rfxswf_modules) ../libbase.a -o mklib -lz -lm -lfreetype -ljpeg
+mklib: mklib.o $(rfxswf_modules) import.o registry.o ../libbase.a
+	gcc $(D) mklib.o $(rfxswf_modules) import.o registry.o ../libbase.a -o mklib -lz -lm -lfreetype -ljpeg
 
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -

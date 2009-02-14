@@ -243,7 +243,7 @@ extern int a3_lex();
 %left new2
 %left '[' ']' "new" '{' "{ (dictionary)" '.' ".." "::" '@'
 
-%nonassoc T_IDENTIFIER
+%left T_IDENTIFIER
 %left above_identifier
 %left below_else
 %nonassoc "else"
@@ -1899,6 +1899,8 @@ FOR_INIT : VARIABLE_DECLARATION
 FOR_INIT : VOIDEXPRESSION
 
 // TODO: why doesn't an %prec above_identifier resolve the r-r conflict here?
+//       (I don't see any easy way to revolve this conflict otherwise, as we
+//        can't touch VAR_READ without upsetting the precedence about "return")
 FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
     $$=$2;new_variable($2,$3,1);
 }

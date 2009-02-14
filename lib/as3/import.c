@@ -55,6 +55,20 @@ void as3_import_swf(char*filename)
     free(swf);
 }
 
+void as3_import_file(char*filename)
+{
+    FILE*fi = fopen(filename, "rb");
+    if(!fi) return;
+    char head[3];
+    fread(head, 3, 1, fi);
+    fclose(fi);
+    if(!strncmp(head, "FWS", 3) ||
+       !strncmp(head, "FWC", 3))
+        as3_import_swf(filename);
+    else
+        as3_import_abc(filename);
+}
+
 static int compare_traits(const void*v1, const void*v2)
 {
     trait_t* x1 = *(trait_t**)v1;
@@ -123,6 +137,7 @@ void as3_import_code(abc_file_t*abc)
             } else {
                 goto cont;
             }
+
             s->flags = is_static?FLAG_STATIC:0;
             s->parent = c;
 
@@ -169,6 +184,7 @@ void as3_import_code(abc_file_t*abc)
             } else {
                 m = (memberinfo_t*)varinfo_register_global(access, package, name);
             }
+            m->return_type = 0;
             m->parent = 0;
         }
     }
