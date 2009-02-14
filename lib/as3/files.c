@@ -249,9 +249,11 @@ void enter_file(const char*name, const char*filename, void*state)
     shortfilename_stack[include_stack_ptr] = current_filename_short;
     filename_stack[include_stack_ptr] = current_filename;
     includedir_stack[include_stack_ptr] = current_include_dirs;
-    char*dir = get_path(filename);
+    
+    /*char*dir = get_path(filename);
     add_include_dir(dir);
-    free(dir);
+    free(dir);*/
+
     include_stack_ptr++;
     
     dbg("entering file %s", filename);
