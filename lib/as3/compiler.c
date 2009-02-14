@@ -53,8 +53,8 @@ static char parser_initialized = 0;
 
 //#define STORE_TOKENS
 
-#define DEBUG
-//#define DEBUG if(0)
+//#define DEBUG
+#define DEBUG if(0)
 
 #ifdef STORE_TOKENS
 static mem_t tokens;
