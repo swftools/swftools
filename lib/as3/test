@@ -42,7 +42,10 @@ def check(s):
             if "/" not in line:
                 return 0
             i = line.index('/')
-            nr,len = int(line[3:i]),int(line[i+1:])
+            try:
+                nr,len = int(line[3:i]),int(line[i+1:])
+            except ValueError:
+                return 0
             if nr<1 or nr>len:
                 return 0
             if not row:
