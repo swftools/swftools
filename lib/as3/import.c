@@ -63,10 +63,11 @@ void as3_import_file(char*filename)
     fread(head, 3, 1, fi);
     fclose(fi);
     if(!strncmp(head, "FWS", 3) ||
-       !strncmp(head, "FWC", 3))
+       !strncmp(head, "CWS", 3)) {
         as3_import_swf(filename);
-    else
+    } else {
         as3_import_abc(filename);
+    }
 }
 
 static int compare_traits(const void*v1, const void*v2)
