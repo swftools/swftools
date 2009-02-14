@@ -1,10 +1,10 @@
 #!/usr/bin/python
 #
-# runtests.py
+# test.py
 #
 # Run compiler unit tests
 #
-# Copyright (c) 2008 Matthias Kramm <kramm@quiss.org>
+# Copyright (c) 2008/2009 Matthias Kramm <kramm@quiss.org>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -87,16 +87,27 @@ def runcmd(cmd,args,wait):
 
 class Cache:
     def __init__(self, filename):
+        self.filename_milestone = filename+"_milestone"
         try:
             self.filename2status = marshal.load(open(filename, "rb"))
         except IOError:
             self.filename2status = {}
+        try:
+            self.milestone = marshal.load(open(filename, "rb"))
+        except IOError:
+            self.milstone = {}
 
     def parse_args(self):
         parser = OptionParser()
         parser.add_option("-d", "--diff", dest="diff", help="Only run tests that failed the last time",action="store_true")
+        parser.add_option("-a", "--all", dest="all", help="Run all tests (also tests expected fail)",action="store_true")
+        parser.add_option("-t", "--tag", dest="tag", help="Mark the current pass/fail statistic as milestone",action="store_true")
         (options, args) = parser.parse_args()
         self.__dict__.update(options.__dict__)
+        self.runtime = 1
+        if self.tag: 
+            self.all = 1
+            self.runtime = 5 # allow more time if we're tagging this state
 
         self.checknum=-1
         if len(args):
@@ -110,12 +121,19 @@ class Cache:
         fi = open(filename, "wb")
         marshal.dump(self.filename2status, fi)
         fi.close()
+        if self.tag:
+            assert(self.all)
+            fi = open(self.filename_milestone, "wb")
+            marshal.dump(self.filename2status, fi)
+            fi.close()
 
     def highlight(self, nr, filename):
         return self.checknum==nr
 
     def skip_file(self, nr, filename):
         if self.checknum>=0 and nr!=self.checknum:
+            return 1
+        if not self.all and self.milestone[filename]!="ok":
             return 1
         if self.diff and self.filename2status[filename]=="ok":
             return 1
@@ -125,7 +143,8 @@ class Cache:
         self.filename2status[filename] = status
 
 class TestBase:
-    def __init__(self, nr, file, run):
+    def __init__(self, cache, nr, file, run):
+        self.cache = cache
         self.nr = nr
         self.dorun = run
         self.file = file
@@ -137,7 +156,7 @@ class TestBase:
     def compile(self):
         try: os.unlink("abc.swf");
         except: pass
-        ret,output = runcmd("./parser",[self.file],wait=1)
+        ret,output = runcmd("./parser",[self.file],wait=cache.runtime)
         self.compile_error = 0
         self.compile_output = output
         self.exit_status = 0
@@ -152,7 +171,7 @@ class TestBase:
         return 1
 
     def run(self):
-        ret,output = runcmd("flashplayer",["abc.swf"],wait=1)
+        ret,output = runcmd("flashplayer",["abc.swf"],wait=cache.runtime)
         os.system("killall flashplayer")
         self.flash_output = output
         
@@ -206,7 +225,7 @@ class TestBase:
 
 class Test(TestBase):
     def __init__(self, cache, nr, file):
-        TestBase.__init__(self, nr, file, run=1)
+        TestBase.__init__(self, cache, nr, file, run=1)
         if self.compile() and self.run():
             cache.file_status(file, "ok")
         else:
@@ -214,7 +233,7 @@ class Test(TestBase):
 
 class ErrTest(TestBase):
     def __init__(self, cache, nr, file):
-        TestBase.__init__(self, nr, file, run=0)
+        TestBase.__init__(self, cache, nr, file, run=0)
         if self.compile():
             cache.file_status(file, "error")
             self.compile_error = True
@@ -253,7 +272,7 @@ cache = Cache.load(".tests.cache")
 cache.parse_args()
 
 nr = 0
-#nr = Suite(cache, "err").run(nr)
+nr = Suite(cache, "err").run(nr)
 nr = Suite(cache, "ok").run(nr)
 
 cache.save(".tests.cache")
