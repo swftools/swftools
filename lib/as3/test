@@ -70,6 +70,8 @@ def runcmd(cmd,args,wait):
             output += os.read(fi, 8192)
             if "[exit]" in output:
                 break
+            if "rror" in output:
+                break
         ret = p.poll()
         if ret is not None:
             break
@@ -87,13 +89,14 @@ def runcmd(cmd,args,wait):
 
 class Cache:
     def __init__(self, filename):
+        self.filename = filename
         self.filename_milestone = filename+"_milestone"
         try:
-            self.filename2status = marshal.load(open(filename, "rb"))
+            self.filename2status = marshal.load(open(self.filename, "rb"))
         except IOError:
             self.filename2status = {}
         try:
-            self.milestone = marshal.load(open(filename, "rb"))
+            self.milestone = marshal.load(open(self.filename_milestone, "rb"))
         except IOError:
             self.milstone = {}
 
@@ -103,6 +106,15 @@ class Cache:
         parser.add_option("-a", "--all", dest="all", help="Run all tests (also tests expected fail)",action="store_true")
         parser.add_option("-t", "--tag", dest="tag", help="Mark the current pass/fail statistic as milestone",action="store_true")
         (options, args) = parser.parse_args()
+
+        if args and args[0]=="add":
+            self.all = 1
+            self.tag = 1
+            self.milestone[args[1]] = "ok"
+            self.filename2status = self.milestone
+            self.save()
+            sys.exit(0)
+
         self.__dict__.update(options.__dict__)
         self.runtime = 1
         if self.tag: 
@@ -117,8 +129,8 @@ class Cache:
     def load(filename):
         return Cache(filename)
 
-    def save(self, filename):
-        fi = open(filename, "wb")
+    def save(self):
+        fi = open(self.filename, "wb")
         marshal.dump(self.filename2status, fi)
         fi.close()
         if self.tag:
@@ -275,4 +287,4 @@ nr = 0
 nr = Suite(cache, "err").run(nr)
 nr = Suite(cache, "ok").run(nr)
 
-cache.save(".tests.cache")
+cache.save()
