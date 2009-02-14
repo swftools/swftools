@@ -190,6 +190,9 @@ void dict_free_all(dict_t*h, char free_keys, void (*free_data_function)(void*));
 void dict_clear(dict_t*h);
 void dict_destroy_shallow(dict_t*dict);
 void dict_destroy(dict_t*dict);
+#define DICT_ITERATE_DATA(d,t,v) int v##_i;dictentry_t*v##_e;t v;for(v##_i=0;v##_i<(d)->hashsize;v##_i++) for(v##_e=(d)->slots[v##_i]; v##_e && ((v=(t)v##_e->data)||1); v##_e=v##_e->next)
+#define DICT_ITERATE_KEY(d,t,v)  int v##_i;dictentry_t*v##_e;t v;for(v##_i=0;v##_i<(d)->hashsize;v##_i++) for(v##_e=(d)->slots[v##_i];v##_e && ((v=(t)v##_e->key)||1);v##_e=v##_e->next)
+#define DICT_ITERATE_ITEMS(d,t1,v1,t2,v2) int v1##_i;dictentry_t*v1##_e;t1 v1;t2 v2;for(v1##_i=0;v1##_i<(d)->hashsize;v1##_i++) for(v1##_e=(d)->slots[v1##_i]; v1##_e && (((v1=(t1)v1##_e->key)&&(v2=(t2)v1##_e->data))||1); v1##_e=v1##_e->next)
 
 void map_init(map_t*map);
 void map_put(map_t*map, string_t t1, string_t t2);
