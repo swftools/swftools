@@ -35,6 +35,7 @@ DECLARE_LIST(classinfo);
 
 /* member/class flags */
 #define FLAG_FINAL 1
+#define FLAG_BUILTIN 128
 
 /* member flags */
 #define FLAG_STATIC 2
