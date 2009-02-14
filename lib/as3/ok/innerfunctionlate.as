@@ -22,6 +22,8 @@ package {
             function f3(t1,t2,t3) {
                 trace(t1+" "+t2+"/"+t3);
             }
+
+            trace("[exit]");
         }
     }
 }

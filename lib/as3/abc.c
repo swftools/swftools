@@ -284,11 +284,11 @@ trait_t* abc_class_staticslot(abc_class_t*cls, multiname_t*name, multiname_t*typ
 }
 
 
-trait_t* abc_class_find_slotid(abc_class_t*cls, int slotid)
+trait_t* traits_find_slotid(trait_list_t*traits, int slotid)
 {
     trait_list_t*l;
     trait_t*t=0;
-    for(l=cls->traits;l;l=l->next) {
+    for(l=traits;l;l=l->next) {
         if(l->trait->slot_id==slotid) {
             t=l->trait; 
             break;

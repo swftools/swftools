@@ -323,8 +323,12 @@ struct _methodstate {
 
     char inner;
     char uses_parent_function;
+    int uses_slots;
+    dict_t*slots;
+
     abc_method_t*abc;
     int var_index; // for inner methods
+    char is_a_slot; // for inner methods
 
     code_t*header;
     abc_exception_list_t*exceptions;
@@ -372,12 +376,12 @@ DECLARE_LIST(state);
     multiname_t m;\
     namespace_t m##_ns;\
     if(f) { \
-        m##_ns.access = (f)->access; \
+        m##_ns.access = ((slotinfo_t*)(f))->access; \
         m##_ns.name = ""; \
         m.type = QNAME; \
         m.ns = &m##_ns; \
         m.namespace_set = 0; \
-        m.name = f->name; \
+        m.name = ((slotinfo_t*)(f))->name; \
     } else { \
         m.type = MULTINAME; \
         m.ns =0; \
@@ -419,6 +423,7 @@ static void new_state()
     state->has_own_imports = 0;    
     state->vars = dict_new(); 
     state->old = oldstate;
+    state->new_vars = 0;
 }
 static void state_has_imports()
 {
@@ -573,24 +578,27 @@ typedef struct _variable {
     int index;
     classinfo_t*type;
     char init;
-    methodstate_t*method;
+    methodstate_t*is_inner_method;
 } variable_t;
 
 static variable_t* find_variable(state_t*s, char*name)
 {
     while(s) {
         variable_t*v = 0;
-        if(s->method)
-            v = dict_lookup(s->vars, name);
-        if(v) {
-            return v;
-        }
-        if(s->new_vars)
-            break;
+        v = dict_lookup(s->vars, name);
+        if(v) return v;
+        if(s->new_vars) break;
         s = s->old;
     }
     return 0;
-} 
+}
+static variable_t* find_slot(state_t*s, const char*name)
+{
+    if(s->method && s->method->slots)
+        return dict_lookup(s->method->slots, name);
+    return 0;
+}
+
 static variable_t* find_variable_safe(state_t*s, char*name)
 {
     variable_t* v = find_variable(s, name);
@@ -603,25 +611,36 @@ static char variable_exists(char*name)
     return dict_contains(state->vars, name);
 }
 code_t*defaultvalue(code_t*c, classinfo_t*type);
-static int new_variable(const char*name, classinfo_t*type, char init)
+
+static variable_t* new_variable2(const char*name, classinfo_t*type, char init, char maybeslot)
 {
+    if(maybeslot) {
+        variable_t*v = find_slot(state, name);
+        if(v)
+            return v;
+    }
+
     NEW(variable_t, v);
-    v->index = state->method->variable_count;
+    v->index = state->method->variable_count++;
     v->type = type;
     v->init = init;
-    v->method = state->method;
     
     dict_put(state->vars, name, v);
 
-    return state->method->variable_count++;
+    return v;
 }
+static int new_variable(const char*name, classinfo_t*type, char init, char maybeslot)
+{
+    return new_variable2(name, type, init, maybeslot)->index;
+}
+
 #define TEMPVARNAME "__as3_temp__"
 static int gettempvar()
 {
     variable_t*v = find_variable(state, TEMPVARNAME);
     if(v) 
         return v->index;
-    return new_variable(TEMPVARNAME, 0, 0);
+    return new_variable(TEMPVARNAME, 0, 0, 0);
 }
 
 code_t* var_block(code_t*body) 
@@ -687,19 +706,27 @@ static void parsererror(const char*file, int line, const char*f)
 static code_t* method_header(methodstate_t*m)
 {
     code_t*c = 0;
-    if(m->late_binding && !m->inner) {
+    if(m->uses_slots || (m->late_binding && !m->inner)) {
         c = abc_getlocal_0(c);
         c = abc_pushscope(c);
     }
-    /*if(m->innerfunctions) {
+    if(m->uses_slots) {
         c = abc_newactivation(c);
         c = abc_pushscope(c);
-    }*/
+    }
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
         parserassert(l->methodstate->abc);
-        c = abc_newfunction(c, l->methodstate->abc);
-        c = abc_setlocal(c, l->methodstate->var_index);
+        if(m->uses_slots && l->methodstate->is_a_slot) {
+            c = abc_getscopeobject(c, 1);
+            c = abc_newfunction(c, l->methodstate->abc);
+            c = abc_dup(c);
+            c = abc_setlocal(c, l->methodstate->var_index);
+            c = abc_setslot(c, l->methodstate->var_index);
+        } else {
+            c = abc_newfunction(c, l->methodstate->abc);
+            c = abc_setlocal(c, l->methodstate->var_index);
+        }
         free(l->methodstate);l->methodstate=0;
         l = l->next;
     }
@@ -779,27 +806,34 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
     if(var0) {
         int index = -1;
         if(m->inner)
-            index = new_variable("this", 0, 0);
+            index = new_variable("this", 0, 0, 0);
         else if(!m->is_global)
-            index = new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0);
+            index = new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0, 0);
         else
-            index = new_variable("globalscope", 0, 0);
+            index = new_variable("globalscope", 0, 0, 0);
         if(index)
             *(int*)0=0;
         parserassert(!index);
+    }
+    if(m->uses_slots) {
+        /* as variables and slots share the same number, make sure
+           that those variable indices are reserved */
+        m->variable_count = m->uses_slots; 
     }
 
     if(params) {
         param_list_t*p=0;
         for(p=params->list;p;p=p->next) {
-            new_variable(p->param->name, p->param->type, 0);
+            new_variable(p->param->name, p->param->type, 0, 1);
         }
     }
     
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
         methodstate_t*m = l->methodstate;
-        m->var_index = new_variable(m->info->name, TYPE_FUNCTION(m->info), 0);
+        variable_t* v = new_variable2(m->info->name, TYPE_FUNCTION(m->info), 0, 1);
+        m->var_index = v->index;
+        v->is_inner_method = m;
         l = l->next;
     }
 }
@@ -1173,6 +1207,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         syntaxerror("not able to start another method scope");
     }
     new_state();
+    state->new_vars = 1;
     
     if(as3_pass == 1) {
         state->method = rfx_calloc(sizeof(methodstate_t));
@@ -1222,6 +1257,7 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
         function_initvars(state->method, 0, 0, 0);
 
         methodstate_list_t*ml = state->method->innerfunctions;
+        dict_t*xvars = dict_new();
         while(ml) {
             methodstate_t*m = ml->methodstate;
             parserassert(m->inner);
@@ -1234,7 +1270,8 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
                         /* check parent method's variables */
                         if(find_variable(state, l->key)) {
                             m->uses_parent_function = 1;
-                            break;
+                            state->method->uses_slots = 1;
+                            dict_put(xvars, l->key, 0);
                         }
                         l = l->next;
                     }
@@ -1246,14 +1283,33 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
             }
             ml = ml->next;
         }
+        if(state->method->uses_slots) {
+            state->method->slots = dict_new();
+            int i = 1;
+            DICT_ITERATE_ITEMS(state->vars, char*, name, variable_t*, v) {
+                if(v->index && dict_contains(xvars, name)) {
+                    v->init = 0;
+                    v->index = i++;
+                    if(v->is_inner_method) {
+                        v->is_inner_method->is_a_slot = 1;
+                    }
+                    //v->type = 0;
+                    dict_put(state->method->slots, name, v);
+                }
+            }
+            state->method->uses_slots = i;
+            dict_destroy(state->vars);state->vars = 0;
+        }
+        dict_destroy(xvars);
+
         old_state();
         return 0;
     }
 
     if(as3_pass==2) {
-        if(state->method->uses_parent_function){
+        /*if(state->method->uses_parent_function){
             syntaxerror("accessing variables of parent function from inner functions not supported yet");
-        }
+        }*/
 
         abc_method_t*f = 0;
 
@@ -1304,6 +1360,17 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
                 syntaxerror("non-optional parameter not allowed after optional parameters");
             }
         }
+        if(state->method->slots) {
+            DICT_ITERATE_ITEMS(state->method->slots, char*, name, variable_t*, v) {
+                if(v->index) {
+                    multiname_t*mname = multiname_new(namespace_new(ACCESS_PACKAGE, ""), name);
+                    multiname_t*type = sig2mname(v->type);
+                    trait_t*t = trait_new_member(&f->body->traits, type, mname, 0);
+                    t->slot_id = v->index;
+                }
+            }
+        }
+
         check_code_for_break(body);
 
         if(f->body) {
@@ -1894,42 +1961,57 @@ PASS12
     if(variable_exists($1))
         syntaxerror("Variable %s already defined", $1);
 PASS1
-    new_variable($1, $2, 1);
+    new_variable($1, 0, 1, 0);
 PASS2
    
     if(!is_subtype_of($3.t, $2)) {
         syntaxerror("Can't convert %s to %s", $3.t->name, 
                                               $2->name);
     }
-    int index = new_variable($1, $2, 1);
+
+    char slot = 0;
+    int index = 0;
+    if(state->method->uses_slots) {
+        variable_t* v = find_slot(state, $1);
+        if(v && !v->init) {
+            // this variable is stored in a slot
+            v->init = 1;
+            v->type = $2;
+            slot = 1;
+            index = v->index;
+        }
+    }
+    if(!index) {
+        index = new_variable($1, $2, 1, 0);
+    }
+
+    $$ = slot?abc_getscopeobject(0, 1):0;
     
     if($2) {
         if($3.c->prev || $3.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = $3.c;
+            $$ = code_append($$, $3.c);
             $$ = converttype($$, $3.t, $2);
-            $$ = abc_setlocal($$, index);
         } else {
             code_free($3.c);
-            $$ = defaultvalue(0, $2);
-            $$ = abc_setlocal($$, index);
+            $$ = defaultvalue($$, $2);
         }
     } else {
         if($3.c->prev || $3.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = $3.c;
+            $$ = code_append($$, $3.c);
             $$ = abc_coerce_a($$);
-            $$ = abc_setlocal($$, index);
         } else {
+            // don't do anything
             code_free($3.c);
-            $$ = code_new();
+            code_free($$);
+            $$ = 0;
+            break;
         }
     }
-    
-    /* that's the default for a local register, anyway
-        else {
-        state->method->initcode = abc_pushundefined(state->method->initcode);
-        state->method->initcode = abc_setlocal(state->method->initcode, index);
-    }*/
-    //printf("variable %s -> %d (%s)\n", $2->text, index, $4.t?$4.t->name:"");
+    if(slot) {
+        $$ = abc_setslot($$, index);
+    } else {
+        $$ = abc_setlocal($$, index);
+    }
 }
 
 /* ------------ control flow ------------------------- */
@@ -1965,8 +2047,8 @@ FOR_INIT : VOIDEXPRESSION
 //       (I don't see any easy way to revolve this conflict otherwise, as we
 //        can't touch VAR_READ without upsetting the precedence about "return")
 FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
-    PASS12
-    $$=$2;new_variable($2,$3,1);
+    PASS1 $$=$2;new_variable($2,0,1,0);
+    PASS2 $$=$2;new_variable($2,$3,1,0);
 }
 FOR_IN_INIT : T_IDENTIFIER {
     PASS12
@@ -1999,9 +2081,9 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
 FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
     variable_t*var = find_variable(state, $2);
     char*tmp1name = concat2($2, "__tmp1__");
-    int it = new_variable(tmp1name, TYPE_INT, 0);
+    int it = new_variable(tmp1name, TYPE_INT, 0, 0);
     char*tmp2name = concat2($2, "__array__");
-    int array = new_variable(tmp1name, 0, 0);
+    int array = new_variable(tmp1name, 0, 0, 0);
 
     $$ = code_new();
     $$ = code_append($$, $4.c);
@@ -2137,7 +2219,11 @@ SWITCH : T_SWITCH '(' {PASS12 new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
 
 /* ------------ try / catch /finally ---------------- */
 
-CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();state->exception_name=$3;new_variable($3, $4, 0);} 
+CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();
+                                                      state->exception_name=$3;
+                                               PASS1 new_variable($3, 0, 0, 0);
+                                               PASS2 new_variable($3, $4, 0, 0);
+                                              } 
         '{' MAYBECODE '}' {
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
     multiname_t name = {QNAME, &name_ns, 0, $3};
@@ -2205,7 +2291,7 @@ TRY : "try" '{' {PASS12 new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
   
     int tmp;
     if($6.finally)
-        tmp = new_variable("__finally__", 0, 0);
+        tmp = new_variable("__finally__", 0, 0, 0);
     
     abc_exception_list_t*l = $6.l;
     int count=0;
@@ -2526,9 +2612,9 @@ PARAM:  T_IDENTIFIER MAYBESTATICCONSTANT {
      PASS2
      $$->value = $2;
 }
-GETSET : "get" {$$=$1;}
-       | "set" {$$=$1;}
-       |       {$$=0;}
+GETSET : "get"
+       | "set"
+       | {PASS12 $$=0;}
 
 FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
                       MAYBETYPE '{' {PASS12 startfunction(0,$1,$3,$4,&$6,$8);} MAYBECODE '}' 
@@ -2647,7 +2733,7 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
         multiname_destroy(name);
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
-        trait_t*t = abc_class_find_slotid(state->cls->abc,slot);//FIXME
+        trait_t*t = traits_find_slotid(state->cls->abc->traits,slot);//FIXME
         multiname_t*name = t->name;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
@@ -2685,9 +2771,9 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = code_append($$.c, paramcode);
         $$.c = abc_callproperty2($$.c, name, $3.len);
         multiname_destroy(name);
-    } else if($$.c->opcode == OPCODE_GETSLOT) {
+    } else if($$.c->opcode == OPCODE_GETSLOT && $$.c->prev->opcode != OPCODE_GETSCOPEOBJECT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
-        trait_t*t = abc_class_find_slotid(state->cls->abc,slot);//FIXME
+        trait_t*t = traits_find_slotid(state->cls->abc->traits,slot);
         if(t->kind!=TRAIT_METHOD) {
             //ok: flash allows to assign closures to members.
         }
@@ -2747,7 +2833,7 @@ DELETE: "delete" E {
         $$.c->opcode = OPCODE_DELETEPROPERTY;
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
-        multiname_t*name = abc_class_find_slotid(state->cls->abc,slot)->name;
+        multiname_t*name = traits_find_slotid(state->cls->abc->traits,slot)->name;
         $$.c = code_cutlast($$.c);
         $$.c = abc_deleteproperty2($$.c, name);
     } else {
@@ -3349,6 +3435,12 @@ VAR_READ : T_IDENTIFIER {
     if((v = find_variable(state, $1))) {
         // $1 is a local variable
         $$.c = abc_getlocal($$.c, v->index);
+        $$.t = v->type;
+        break;
+    }
+    if((v = find_slot(state, $1))) {
+        $$.c = abc_getscopeobject($$.c, 1);
+        $$.c = abc_getslot($$.c, v->index);
         $$.t = v->type;
         break;
     }

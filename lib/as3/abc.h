@@ -149,7 +149,7 @@ void abc_class_interface(abc_class_t*c);
 void abc_class_protectedNS(abc_class_t*c, char*namespace);
 void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
 
-trait_t* abc_class_find_slotid(abc_class_t*c, int slotid);
+trait_t* traits_find_slotid(trait_list_t*traits, int slotid);
 
 abc_method_t* abc_class_getconstructor(abc_class_t*cls, multiname_t*returntype);
 abc_method_t* abc_class_getstaticconstructor(abc_class_t*cls, multiname_t*returntype);

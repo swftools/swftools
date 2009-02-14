@@ -15,6 +15,7 @@ package {
                 }
                 f(j+1);
             }
+            trace("[exit]");
         }
     }
 }
