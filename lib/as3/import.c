@@ -98,6 +98,7 @@ void as3_import_code(abc_file_t*abc)
                 
         multiname_list_t*i=cls->interfaces;
         classinfo_t*c = classinfo_register(access, package, name, list_length(i));
+        c->flags|=FLAG_BUILTIN;
 
         if(cls->flags & CLASS_FINAL)
             c->flags |= FLAG_FINAL;
@@ -140,6 +141,7 @@ void as3_import_code(abc_file_t*abc)
             }
 
             s->flags = is_static?FLAG_STATIC:0;
+            s->flags |= FLAG_BUILTIN;
             s->parent = c;
 
             cont:
@@ -185,6 +187,7 @@ void as3_import_code(abc_file_t*abc)
             } else {
                 m = (memberinfo_t*)varinfo_register_global(access, package, name);
             }
+            m->flags |= FLAG_BUILTIN;
             m->return_type = 0;
             m->parent = 0;
         }
