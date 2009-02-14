@@ -470,7 +470,7 @@ static void old_state()
 
 static code_t* method_header(methodstate_t*m);
 static code_t* wrap_function(code_t*c,code_t*header, code_t*body);
-static void function_initvars(methodstate_t*m, params_t*params, int flags);
+static void function_initvars(methodstate_t*m, params_t*params, int flags, char var0);
 
 
 static char* internal_filename_package = 0;
@@ -495,7 +495,7 @@ void initialize_file(char*filename)
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
     } else {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
-        function_initvars(state->method, 0, 0);
+        function_initvars(state->method, 0, 0, 1);
         global->init = abc_initscript(global->file);
         state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
     }
@@ -566,11 +566,11 @@ static void xx_scopetest()
     c = abc_iftrue(c,xx);*/
 }
 
-
 typedef struct _variable {
     int index;
     classinfo_t*type;
     char init;
+    methodstate_t*method;
 } variable_t;
 
 static variable_t* find_variable(char*name)
@@ -607,6 +607,7 @@ static int new_variable(const char*name, classinfo_t*type, char init)
     v->index = state->method->variable_count;
     v->type = type;
     v->init = init;
+    v->method = state->method;
     
     dict_put(state->vars, name, v);
 
@@ -763,14 +764,20 @@ static int flags2access(int flags)
     return access;
 }
 
-static void function_initvars(methodstate_t*m, params_t*params, int flags)
+static void function_initvars(methodstate_t*m, params_t*params, int flags, char var0)
 {
-    if(m->inner)
-        new_variable("this", 0, 0);
-    else if(!m->is_global)
-        new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0);
-    else
-        new_variable("globalscope", 0, 0);
+    if(var0) {
+        int index = -1;
+        if(m->inner)
+            index = new_variable("this", 0, 0);
+        else if(!m->is_global)
+            index = new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0);
+        else
+            index = new_variable("globalscope", 0, 0);
+        if(index)
+            *(int*)0=0;
+        parserassert(!index);
+    }
 
     if(params) {
         param_list_t*p=0;
@@ -846,9 +853,9 @@ static void startclass(int flags, char*classname, classinfo_t*extends, classinfo
         
         state->method = state->cls->init;
         parserassert(state->cls && state->cls->info);
-        
-        function_initvars(state->cls->init, 0, 0);
-        function_initvars(state->cls->static_init, 0, 0);
+       
+        function_initvars(state->cls->init, 0, 0, 1);
+        function_initvars(state->cls->static_init, 0, 0, 0);
 
         if(extends && (extends->flags & FLAG_FINAL))
             syntaxerror("Can't extend final class '%s'", extends->name);
@@ -1137,14 +1144,17 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
             list_append(parent_method->innerfunctions, state->method);
 
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
+        
+        function_initvars(state->method, params, 0, 1);
     }
 
     if(as3_pass == 2) {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+        state->method->variable_count = 0;
         parserassert(state->method);
 
         state->method->info->return_type = return_type;
-        function_initvars(state->method, params, 0);
+        function_initvars(state->method, params, 0, 1);
     }
 }
 
@@ -1171,12 +1181,15 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
 
         return_type = 0;
         state->method->info = registerfunction(getset, flags, name, params, return_type, 0);
+       
+        function_initvars(state->method, params, flags, 1);
         
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
     }
 
     if(as3_pass == 2) {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+        state->method->variable_count = 0;
         parserassert(state->method);
 
         if(state->cls) {
@@ -1189,7 +1202,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         }
         
         state->method->info->return_type = return_type;
-        function_initvars(state->method, params, flags);
+        function_initvars(state->method, params, flags, 1);
     } 
 }
 
@@ -1197,7 +1210,6 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
     if(as3_pass==1) {
-        old_state();
         return 0;
     }
 
@@ -1260,7 +1272,6 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
             syntaxerror("interface methods can't have a method body");
     }
        
-    old_state();
     return f;
 }
 
@@ -1833,14 +1844,17 @@ VARIABLE_LIST: VARIABLE_LIST ',' ONE_VARIABLE {$$ = code_append($1, $3);}
 
 ONE_VARIABLE: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
 {
+PASS12
     if(variable_exists($1))
         syntaxerror("Variable %s already defined", $1);
+PASS1
+    new_variable($1, $2, 1);
+PASS2
    
     if(!is_subtype_of($3.t, $2)) {
         syntaxerror("Can't convert %s to %s", $3.t->name, 
                                               $2->name);
     }
-
     int index = new_variable($1, $2, 1);
     
     if($2) {
@@ -1878,7 +1892,7 @@ MAYBEELSE:  %prec below_else {$$ = code_new();}
 MAYBEELSE: "else" CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
-IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
+IF : "if" '(' {PASS12 new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
      
     $$ = code_new();
     $$ = code_append($$, $4.c);
@@ -1894,7 +1908,7 @@ IF : "if" '(' {new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
         myjmp->branch = $$ = abc_nop($$);
     }
     $$ = var_block($$);
-    old_state();
+    PASS12 old_state();
 }
 
 FOR_INIT : {$$=code_new();}
@@ -1905,14 +1919,16 @@ FOR_INIT : VOIDEXPRESSION
 //       (I don't see any easy way to revolve this conflict otherwise, as we
 //        can't touch VAR_READ without upsetting the precedence about "return")
 FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
+    PASS12
     $$=$2;new_variable($2,$3,1);
 }
 FOR_IN_INIT : T_IDENTIFIER {
+    PASS12
     $$=$1;
 }
 
-FOR_START : T_FOR '(' {new_state();$$.name=$1;$$.each=0;}
-FOR_START : T_FOR "each" '(' {new_state();$$.name=$1;$$.each=1;}
+FOR_START : T_FOR '(' {PASS12 new_state();$$.name=$1;$$.each=0;}
+FOR_START : T_FOR "each" '(' {PASS12 new_state();$$.name=$1;$$.each=1;}
 
 FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     if($1.each) syntaxerror("invalid syntax: ; not allowed in for each statement");
@@ -1931,7 +1947,7 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     myif->branch = out;
 
     $$ = var_block($$);
-    old_state();
+    PASS12 old_state();
 }
 
 FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
@@ -1971,13 +1987,14 @@ FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
     myif->branch = out;
 
     $$ = var_block($$);
-    old_state();
 
     free(tmp1name);
     free(tmp2name);
+
+    PASS12 old_state();
 }
 
-WHILE : T_WHILE '(' {new_state();} EXPRESSION ')' CODEBLOCK {
+WHILE : T_WHILE '(' {PASS12 new_state();} EXPRESSION ')' CODEBLOCK {
 
     $$ = code_new();
 
@@ -1993,10 +2010,10 @@ WHILE : T_WHILE '(' {new_state();} EXPRESSION ')' CODEBLOCK {
     continuejumpsto($$, $1, cont);
 
     $$ = var_block($$);
-    old_state();
+    PASS12 old_state();
 }
 
-DO_WHILE : T_DO {new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
+DO_WHILE : T_DO {PASS12 new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
     $$ = code_new();
     code_t*loopstart = $$ = abc_label($$);
     $$ = code_append($$, $3);
@@ -2008,7 +2025,7 @@ DO_WHILE : T_DO {new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
     continuejumpsto($$, $1, cont);
     
     $$ = var_block($$);
-    old_state();
+    PASS12 old_state();
 }
 
 BREAK : "break" %prec prec_none {
@@ -2045,7 +2062,7 @@ CASE: "case" E ':' MAYBECODE {
 DEFAULT: "default" ':' MAYBECODE {
     $$ = $3;
 }
-SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
+SWITCH : T_SWITCH '(' {PASS12 new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
     $$=$4.c;
     $$ = code_append($$, $7);
     code_t*out = $$ = abc_pop($$);
@@ -2069,12 +2086,12 @@ SWITCH : T_SWITCH '(' {new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
     }
    
     $$ = var_block($$);
-    old_state();
+    PASS12 old_state();
 }
 
 /* ------------ try / catch /finally ---------------- */
 
-CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name=$3;new_variable($3, $4, 0);} 
+CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();state->exception_name=$3;new_variable($3, $4, 0);} 
         '{' MAYBECODE '}' {
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
     multiname_t name = {QNAME, &name_ns, 0, $3};
@@ -2092,13 +2109,12 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {new_state();state->exception_name
     c = abc_kill(c, i);
 
     c = var_block(c);
-    old_state();
+    PASS12 old_state();
 }
-FINALLY: "finally" '{' {new_state();state->exception_name=0;} MAYBECODE '}' {
+FINALLY: "finally" '{' {PASS12 new_state();state->exception_name=0;} MAYBECODE '}' {
     $4 = var_block($4);
     if(!$4) {
         $$=0;
-        old_state();
     } else {
         NEW(abc_exception_t, e)
         e->exc_type = 0; //all exceptions
@@ -2106,9 +2122,9 @@ FINALLY: "finally" '{' {new_state();state->exception_name=0;} MAYBECODE '}' {
         e->target = 0;
         e->to = abc_nop(0);
         e->to = code_append(e->to, $4);
-        old_state();
         $$ = e;
     }
+    PASS12 old_state();
 }
 
 CATCH_LIST: CATCH {$$.l=list_new();$$.finally=0;list_append($$.l,$1);}
@@ -2131,7 +2147,7 @@ CATCH_FINALLY_LIST: FINALLY {
     }
 }
 
-TRY : "try" '{' {new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
+TRY : "try" '{' {PASS12 new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
     code_t*out = abc_nop(0);
 
     code_t*start = abc_nop(0);
@@ -2171,7 +2187,7 @@ TRY : "try" '{' {new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
     list_concat(state->method->exceptions, $6.l);
    
     $$ = var_block($$);
-    old_state();
+    PASS12 old_state();
 }
 
 /* ------------ throw ------------------------------- */
@@ -2312,7 +2328,8 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
     }
     startfunction(0,$1,$3,$4,&$6,$8);
     endfunction(0,$1,$3,$4,&$6,$8, 0);
-    list_deep_free($6.list);
+
+    old_state();list_deep_free($6.list);
 }
 
 /* ------------ classes and interfaces (body, slots ) ------- */
@@ -2449,19 +2466,19 @@ PARAM_LIST: PARAM {
 }
 
 PARAM:  T_IDENTIFIER ':' TYPE MAYBESTATICCONSTANT {
-     PASS1 $$=0;
-     PASS2
-     $$ = malloc(sizeof(param_t));
+     PASS12
+     $$ = rfx_calloc(sizeof(param_t));
      $$->name=$1;
      $$->type = $3;
+     PASS2
      $$->value = $4;
 }
 PARAM:  T_IDENTIFIER MAYBESTATICCONSTANT {
-     PASS1 $$=0;
-     PASS2
-     $$ = malloc(sizeof(param_t));
+     PASS12
+     $$ = rfx_calloc(sizeof(param_t));
      $$->name=$1;
      $$->type = TYPE_ANY;
+     PASS2
      $$->value = $2;
 }
 GETSET : "get" {$$=$1;}
@@ -2471,16 +2488,14 @@ GETSET : "get" {$$=$1;}
 FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
                       MAYBETYPE '{' {PASS12 startfunction(0,$1,$3,$4,&$6,$8);} MAYBECODE '}' 
 {
-    PASS1 old_state();list_deep_free($6.list);
-    PASS2
     if(!state->method->info) syntaxerror("internal error");
     
     code_t*c = method_header(state->method);
     c = wrap_function(c, 0, $11);
 
     endfunction(0,$1,$3,$4,&$6,$8,c);
-    list_deep_free($6.list);
     $$=0;
+    PASS12 old_state();list_deep_free($6.list);
 }
 
 MAYBE_IDENTIFIER: T_IDENTIFIER
@@ -2488,8 +2503,6 @@ MAYBE_IDENTIFIER: {PASS12 $$=0;}
 INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE 
                '{' {PASS12 innerfunction($2,&$4,$6);} MAYBECODE '}'
 {
-    PASS1 old_state();list_deep_free($4.list);
-    PASS2
     methodinfo_t*f = state->method->info;
     if(!f || !f->kind) syntaxerror("internal error");
     
@@ -2498,10 +2511,10 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 
     int index = state->method->var_index;
     endfunction(0,0,0,$2,&$4,$6,c);
-    list_deep_free($4.list);
     
     $$.c = abc_getlocal(0, index);
     $$.t = TYPE_FUNCTION(f);
+    PASS12 old_state();list_deep_free($4.list);
 }
 
 
