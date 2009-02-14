@@ -1011,7 +1011,7 @@ static void check_constant_against_type(classinfo_t*t, constant_t*c)
              || c->type == CONSTANT_UINT);
    } else if(TYPE_IS_UINT(t)) {
         xassert(c->type == CONSTANT_UINT ||
-               (c->type == CONSTANT_INT && c->i>0));
+               (c->type == CONSTANT_INT && c->i>=0));
    } else if(TYPE_IS_INT(t)) {
         xassert(c->type == CONSTANT_INT);
    } else if(TYPE_IS_BOOLEAN(t)) {
@@ -1363,10 +1363,11 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         return c;
     if(TYPE_IS_NULL(from) && !IS_NUMBER_OR_INT(to))
         return c;
-    syntaxerror("can't convert type %s%s%s to %s%s%s", 
+
+    as3_error("can't convert type %s%s%s to %s%s%s", 
         from->package, from->package?".":"", from->name, 
         to->package, to->package?".":"", to->name);
-    return 0; // make gcc happy
+    return c;
 }
 
 code_t*defaultvalue(code_t*c, classinfo_t*type)
@@ -2211,8 +2212,9 @@ PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");}
                                 MAYBE_INPACKAGE_CODE_LIST '}' {PASS12 endpackage();$$=0;}
 
 IMPORT : "import" PACKAGEANDCLASS {
-       PASS1 
-       if(!registry_find($2->package, $2->name)) {
+       PASS12
+       slotinfo_t*s = registry_find($2->package, $2->name);
+       if(!s) {// || !(s->flags&FLAG_BUILTIN)) {
            as3_schedule_class($2->package, $2->name);
        }
 
@@ -2225,7 +2227,7 @@ IMPORT : "import" PACKAGEANDCLASS {
        $$=0;
 }
 IMPORT : "import" PACKAGE '.' '*' {
-       PASS1 
+       PASS12
        if(strncmp("flash.", $2, 6)) {
            as3_schedule_package($2);
        }
@@ -2508,9 +2510,8 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 CLASS: T_IDENTIFIER {
     PASS1 $$=0;
     PASS2
-    /* try current package */
     slotinfo_t*s = find_class($1);
-    if(!s) syntaxerror("Could not find class/method %s\n", $1);
+    if(!s) syntaxerror("Could not find class/method %s (current package: %s)\n", $1, state->package);
     $$ = (classinfo_t*)s;
 }
 
