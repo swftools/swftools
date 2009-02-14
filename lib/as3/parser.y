@@ -319,7 +319,10 @@ struct _methodstate {
     char is_global;
     int variable_count;
 
+    dict_t*unresolved_variables;
+
     char inner;
+    char uses_parent_function;
     abc_method_t*abc;
     int var_index; // for inner methods
 
@@ -573,9 +576,8 @@ typedef struct _variable {
     methodstate_t*method;
 } variable_t;
 
-static variable_t* find_variable(char*name)
+static variable_t* find_variable(state_t*s, char*name)
 {
-    state_t* s = state;
     while(s) {
         variable_t*v = 0;
         if(s->method)
@@ -589,16 +591,16 @@ static variable_t* find_variable(char*name)
     }
     return 0;
 } 
-static variable_t* find_variable_safe(char*name)
+static variable_t* find_variable_safe(state_t*s, char*name)
 {
-    variable_t* v = find_variable(name);
+    variable_t* v = find_variable(s, name);
     if(!v)
         syntaxerror("undefined variable: %s", name);
     return v;
 }
 static char variable_exists(char*name) 
 {
-    return dict_lookup(state->vars, name)!=0;
+    return dict_contains(state->vars, name);
 }
 code_t*defaultvalue(code_t*c, classinfo_t*type);
 static int new_variable(const char*name, classinfo_t*type, char init)
@@ -616,7 +618,7 @@ static int new_variable(const char*name, classinfo_t*type, char init)
 #define TEMPVARNAME "__as3_temp__"
 static int gettempvar()
 {
-    variable_t*v = find_variable(TEMPVARNAME);
+    variable_t*v = find_variable(state, TEMPVARNAME);
     if(v) 
         return v->index;
     return new_variable(TEMPVARNAME, 0, 0);
@@ -664,6 +666,14 @@ code_t* var_block(code_t*body)
     c = code_append(c, body);
     c = code_append(c, k);
     return c;
+}
+
+void unknown_variable(char*name) 
+{
+    if(!state->method->unresolved_variables)
+        state->method->unresolved_variables = dict_new();
+    if(!dict_contains(state->method->unresolved_variables, name))
+        dict_put(state->method->unresolved_variables, name, 0);
 }
 
 #define parserassert(b) {if(!(b)) parsererror(__FILE__, __LINE__,__func__);}
@@ -1120,9 +1130,7 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
     methodstate_t*parent_method = state->method;
 
     if(as3_pass==1) {
-        // not valid yet
-        params = 0;
-        return_type = 0;
+        return_type = 0; // not valid in pass 1
     }
 
     new_state();
@@ -1144,7 +1152,7 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
             list_append(parent_method->innerfunctions, state->method);
 
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
-        
+       
         function_initvars(state->method, params, 0, 1);
     }
 
@@ -1191,7 +1199,7 @@ static void startfunction(token_t*ns, int flags, enum yytokentype getset, char*n
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
         state->method->variable_count = 0;
         parserassert(state->method);
-
+                
         if(state->cls) {
             memberinfo_t*m = registry_findmember(state->cls->info, name, 2);
             check_override(m, flags);
@@ -1210,69 +1218,107 @@ static abc_method_t* endfunction(token_t*ns, int flags, enum yytokentype getset,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
     if(as3_pass==1) {
+        // store inner methods in variables
+        function_initvars(state->method, 0, 0, 0);
+
+        methodstate_list_t*ml = state->method->innerfunctions;
+        while(ml) {
+            methodstate_t*m = ml->methodstate;
+            parserassert(m->inner);
+            if(m->unresolved_variables) {
+                dict_t*d = m->unresolved_variables;
+                int t;
+                for(t=0;t<d->hashsize;t++) {
+                    dictentry_t*l = d->slots[t]; 
+                    while(l) {
+                        /* check parent method's variables */
+                        if(find_variable(state, l->key)) {
+                            m->uses_parent_function = 1;
+                            break;
+                        }
+                        l = l->next;
+                    }
+                    if(l) break;
+                }
+
+                dict_destroy(m->unresolved_variables);
+                m->unresolved_variables = 0;
+            }
+            ml = ml->next;
+        }
+        old_state();
         return 0;
     }
 
-    abc_method_t*f = 0;
-
-    multiname_t*type2 = sig2mname(return_type);
-    int slot = 0;
-    if(state->method->inner) {
-        f = state->method->abc;
-        abc_method_init(f, global->file, type2, 1);
-    } else if(state->method->is_constructor) {
-        f = abc_class_getconstructor(state->cls->abc, type2);
-    } else if(!state->method->is_global) {
-        namespace_t mname_ns = {state->method->info->access, ""};
-        multiname_t mname = {QNAME, &mname_ns, 0, name};
-
-        if(flags&FLAG_STATIC)
-            f = abc_class_staticmethod(state->cls->abc, type2, &mname);
-        else
-            f = abc_class_method(state->cls->abc, type2, &mname);
-        slot = f->trait->slot_id;
-    } else {
-        namespace_t mname_ns = {state->method->info->access, state->package};
-        multiname_t mname = {QNAME, &mname_ns, 0, name};
-
-        f = abc_method_new(global->file, type2, 1);
-        trait_t*t = trait_new_method(&global->init->traits, multiname_clone(&mname), f);
-        //abc_code_t*c = global->init->method->body->code;
-    }
-    //flash doesn't seem to allow us to access function slots
-    //state->method->info->slot = slot;
-
-    if(flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
-    if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
-    if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
-    if(params->varargs) f->flags |= METHOD_NEED_REST;
-
-    char opt=0;
-    param_list_t*p=0;
-    for(p=params->list;p;p=p->next) {
-        if(params->varargs && !p->next) {
-            break; //varargs: omit last parameter in function signature
+    if(as3_pass==2) {
+        if(state->method->uses_parent_function){
+            syntaxerror("accessing variables of parent function from inner functions not supported yet");
         }
-        multiname_t*m = sig2mname(p->param->type);
-	list_append(f->parameters, m);
-        if(p->param->value) {
-            check_constant_against_type(p->param->type, p->param->value);
-            opt=1;list_append(f->optional_parameters, p->param->value);
-        } else if(opt) {
-            syntaxerror("non-optional parameter not allowed after optional parameters");
-        }
-    }
-    check_code_for_break(body);
 
-    if(f->body) {
-        f->body->code = body;
-        f->body->exceptions = state->method->exceptions;
-    } else { //interface
-        if(body)
-            syntaxerror("interface methods can't have a method body");
+        abc_method_t*f = 0;
+
+        multiname_t*type2 = sig2mname(return_type);
+        int slot = 0;
+        if(state->method->inner) {
+            f = state->method->abc;
+            abc_method_init(f, global->file, type2, 1);
+        } else if(state->method->is_constructor) {
+            f = abc_class_getconstructor(state->cls->abc, type2);
+        } else if(!state->method->is_global) {
+            namespace_t mname_ns = {state->method->info->access, ""};
+            multiname_t mname = {QNAME, &mname_ns, 0, name};
+
+            if(flags&FLAG_STATIC)
+                f = abc_class_staticmethod(state->cls->abc, type2, &mname);
+            else
+                f = abc_class_method(state->cls->abc, type2, &mname);
+            slot = f->trait->slot_id;
+        } else {
+            namespace_t mname_ns = {state->method->info->access, state->package};
+            multiname_t mname = {QNAME, &mname_ns, 0, name};
+
+            f = abc_method_new(global->file, type2, 1);
+            trait_t*t = trait_new_method(&global->init->traits, multiname_clone(&mname), f);
+            //abc_code_t*c = global->init->method->body->code;
+        }
+        //flash doesn't seem to allow us to access function slots
+        //state->method->info->slot = slot;
+
+        if(flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
+        if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
+        if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
+        if(params->varargs) f->flags |= METHOD_NEED_REST;
+
+        char opt=0;
+        param_list_t*p=0;
+        for(p=params->list;p;p=p->next) {
+            if(params->varargs && !p->next) {
+                break; //varargs: omit last parameter in function signature
+            }
+            multiname_t*m = sig2mname(p->param->type);
+            list_append(f->parameters, m);
+            if(p->param->value) {
+                check_constant_against_type(p->param->type, p->param->value);
+                opt=1;list_append(f->optional_parameters, p->param->value);
+            } else if(opt) {
+                syntaxerror("non-optional parameter not allowed after optional parameters");
+            }
+        }
+        check_code_for_break(body);
+
+        if(f->body) {
+            f->body->code = body;
+            f->body->exceptions = state->method->exceptions;
+        } else { //interface
+            if(body)
+                syntaxerror("interface methods can't have a method body");
+        }
+
+        old_state();
+        return f;
     }
-       
-    return f;
+        
+    return 0;
 }
 
 char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
@@ -1951,7 +1997,7 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
 }
 
 FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
-    variable_t*var = find_variable($2);
+    variable_t*var = find_variable(state, $2);
     char*tmp1name = concat2($2, "__tmp1__");
     int it = new_variable(tmp1name, TYPE_INT, 0);
     char*tmp2name = concat2($2, "__array__");
@@ -2102,7 +2148,7 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();state->excepti
     $$ = e;
 
     code_t*c = 0;
-    int i = find_variable_safe($3)->index;
+    int i = find_variable_safe(state, $3)->index;
     e->target = c = abc_nop(0);
     c = abc_setlocal(c, i);
     c = code_append(c, $8);
@@ -2199,7 +2245,7 @@ THROW : "throw" EXPRESSION {
 THROW : "throw" %prec prec_none {
     if(!state->exception_name)
         syntaxerror("re-throw only possible within a catch block");
-    variable_t*v = find_variable(state->exception_name);
+    variable_t*v = find_variable(state, state->exception_name);
     $$=code_new();
     $$=abc_getlocal($$, v->index);
     $$=abc_throw($$);
@@ -2328,8 +2374,7 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
     }
     startfunction(0,$1,$3,$4,&$6,$8);
     endfunction(0,$1,$3,$4,&$6,$8, 0);
-
-    old_state();list_deep_free($6.list);
+    list_deep_free($6.list);
 }
 
 /* ------------ classes and interfaces (body, slots ) ------- */
@@ -2488,14 +2533,18 @@ GETSET : "get" {$$=$1;}
 FUNCTION_DECLARATION: MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LIST ')' 
                       MAYBETYPE '{' {PASS12 startfunction(0,$1,$3,$4,&$6,$8);} MAYBECODE '}' 
 {
+    PASS1 
+    endfunction(0,$1,$3,$4,&$6,0,0);
+    PASS2
     if(!state->method->info) syntaxerror("internal error");
     
     code_t*c = method_header(state->method);
     c = wrap_function(c, 0, $11);
 
     endfunction(0,$1,$3,$4,&$6,$8,c);
+    PASS12
+    list_deep_free($6.list);
     $$=0;
-    PASS12 old_state();list_deep_free($6.list);
 }
 
 MAYBE_IDENTIFIER: T_IDENTIFIER
@@ -2503,6 +2552,9 @@ MAYBE_IDENTIFIER: {PASS12 $$=0;}
 INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE 
                '{' {PASS12 innerfunction($2,&$4,$6);} MAYBECODE '}'
 {
+    PASS1
+    endfunction(0,0,0,$2,&$4,0,0);
+    PASS2
     methodinfo_t*f = state->method->info;
     if(!f || !f->kind) syntaxerror("internal error");
     
@@ -2514,7 +2566,8 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
     
     $$.c = abc_getlocal(0, index);
     $$.t = TYPE_FUNCTION(f);
-    PASS12 old_state();list_deep_free($4.list);
+
+    PASS12 list_deep_free($4.list);
 }
 
 
@@ -3273,6 +3326,19 @@ E : E '.' T_IDENTIFIER
             }
 
 VAR_READ : T_IDENTIFIER {
+    PASS1
+    /* Queue unresolved identifiers for checking against the parent
+       function's variables.
+       We consider everything which is not a local variable "unresolved".
+       This encompasses class names, members of the surrounding class
+       etc. which *correct* because local variables of the parent function
+       would shadow those.
+       */
+    if(state->method->inner && !find_variable(state, $1)) {
+        unknown_variable($1);
+    }
+    PASS2
+
     $$.t = 0;
     $$.c = 0;
     slotinfo_t*a = 0;
@@ -3280,7 +3346,7 @@ VAR_READ : T_IDENTIFIER {
 
     variable_t*v;
     /* look at variables */
-    if((v = find_variable($1))) {
+    if((v = find_variable(state, $1))) {
         // $1 is a local variable
         $$.c = abc_getlocal($$.c, v->index);
         $$.t = v->type;
