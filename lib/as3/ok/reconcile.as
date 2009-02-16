@@ -13,7 +13,7 @@
                     if(dataBuffer)
                         break;
                 }
-                trace("ok 1/7");
+                trace("ok 1/8");
             }
 
             public function test2() {
@@ -21,7 +21,7 @@
                 while(output.length<1) {
                     output += "abc".charAt(0);
                 }
-                trace("ok 2/7");
+                trace("ok 2/8");
             }
 
             public function test3() {
@@ -32,7 +32,7 @@
                     }
                     break;
                 }
-                trace("ok 3/7");
+                trace("ok 3/8");
             }
 
             public var b:Boolean = false;
@@ -44,7 +44,7 @@
                     x = x+y;
                     y = y+x;
                 }
-                trace("ok 4/7");
+                trace("ok 4/8");
             }
             public function test5() {
                 var x:int;
@@ -54,19 +54,42 @@
                     x = x*y;
                     z = x*z;
                 }
-                trace("ok 5/7");
+                trace("ok 5/8");
             }
             public function test6() {
                 var i:int = b?3.0:3;
                 var j:uint = b?3:"abc";
-                trace("ok 6/7");
+                trace("ok 6/8");
             }
             public function test7() {
                 var j:Number = 0;
                 if(b) {
                     j += 8;
                 }
-                trace("ok 7/7");
+                trace("ok 7/8");
+            }
+            public function s():String {
+                return "x";
+            }
+            public function test8() {
+                var x:String = "abcd";
+
+                var i:String = "test";
+                // test return types of system libraries
+                if(!b) {
+                    i = x.charAt(0);
+                }
+                var a = "test";
+                // test return types of system libraries
+                if(!b) {
+                    a = x.charAt(0);
+                }
+
+                // ...and local functions
+                if(!b) {
+                    i = s();
+                }
+                trace("ok 8/8");
             }
 
             public function Main() {
@@ -77,6 +100,7 @@
                 test5();
                 test6();
                 test7();
+                test8();
             
                 trace("[exit]");
             }
