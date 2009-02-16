@@ -127,7 +127,7 @@ char* access2str(int type);
 
 struct _namespace {
     U8 access;
-    char*name;
+    const char*name;
 };
 struct _namespace_set {
     namespace_list_t*namespaces;

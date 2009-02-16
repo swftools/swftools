@@ -1653,14 +1653,14 @@ static inline int handleint()
 
     char*max = l?"1073741824":"2147483647";
     if(as3_leng-l>10) {
-        as3_warning("integer overflow: %s (converted to Number)", s);
+        as3_softwarning("integer overflow: %s (converted to Number)", s);
         return handlefloat();
     }
     if(as3_leng-l==10) {
         int t;
         for(t=0;t<as3_leng-l;t++) {
             if(as3_text[l+t]>max[t]) {
-                as3_warning("integer overflow: %s (converted to Number)", s);
+                as3_softwarning("integer overflow: %s (converted to Number)", s);
                 return handlefloat();
             }
             else if(as3_text[l+t]<max[t])
@@ -1728,12 +1728,12 @@ static inline int handlehex()
     }
     if(l && v>1073741824) {
         char*s = nrbuf();
-        as3_warning("signed integer overflow: %s (converted to Number)", s);
+        as3_softwarning("signed integer overflow: %s (converted to Number)", s);
         return setfloat(v);
     }
     if(!l && v>2147483647) {
         char*s = nrbuf();
-        as3_warning("unsigned integer overflow: %s (converted to Number)", s);
+        as3_softwarning("unsigned integer overflow: %s (converted to Number)", s);
         return setfloat(v);
     }
 

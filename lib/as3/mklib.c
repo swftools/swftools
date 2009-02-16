@@ -192,9 +192,8 @@ void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
         fprintf(fi, "interfaces: {");
         int t;
         for(t=0;c->interfaces[t];t++) {
-            fprintf(fi, "%c", mkptr(c->interfaces[t]));
-            if(c->interfaces[t+1]) 
-                fprintf(fi, ", ");
+            fprintf(fi, "%s", mkptr(c->interfaces[t]));
+            fprintf(fi, ", ");
         }
         fprintf(fi, "0}};\n");
     }

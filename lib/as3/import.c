@@ -22,6 +22,7 @@
 #include "import.h"
 #include "abc.h"
 #include "registry.h"
+#include "tokenizer.h"
 #include "../os.h"
 
 void as3_import_abc(char*filename)
@@ -80,6 +81,32 @@ static int compare_traits(const void*v1, const void*v2)
     return strcmp(x1->name->name, x2->name->name);
 }
 
+static classinfo_t*resolve_class(char*what, multiname_t*n)
+{
+    if(!n) return 0;
+    if(!n->name[0] || !strcmp(n->name, "void")) return 0;
+
+    classinfo_t*c = 0;
+    if(n->ns && n->ns->name) {
+        c = (classinfo_t*)registry_find(n->ns->name, n->name);
+    } else if(n->namespace_set) {
+        namespace_list_t*s = n->namespace_set->namespaces;
+        while(s) {
+            c = (classinfo_t*)registry_find(s->namespace->name, n->name);
+            if(c)
+                break;
+            s = s->next;
+        }
+    }
+
+    if(!c) {
+        as3_warning("import: couldn't resolve %s %s", what, n->name);
+        return 0;
+    }
+    if(c->kind != INFOTYPE_CLASS)
+        as3_warning("import: %s %s resolves to something that's not a class", what, n->name);
+    return c;
+}
 
 void as3_import_code(abc_file_t*abc)
 {
@@ -90,8 +117,8 @@ void as3_import_code(abc_file_t*abc)
         if(access==ACCESS_PRIVATE ||
            access==ACCESS_PACKAGEINTERNAL)
             continue;
-        if(!strncmp(cls->classname->ns->name, "__AS3", 5))
-            continue;
+        //if(!strncmp(cls->classname->ns->name, "__AS3", 5))
+        //    continue;
 
         const char*package = strdup(cls->classname->ns->name);
         const char*name = strdup(cls->classname->name);
@@ -106,16 +133,22 @@ void as3_import_code(abc_file_t*abc)
             c->flags |= FLAG_INTERFACE;
         if(!(cls->flags & CLASS_SEALED))
             c->flags |= FLAG_DYNAMIC;
-        /*
-          FIXME 
-           int nr = 0;
+    }
+    
+    for(t=0;t<abc->classes->num;t++) {
+        abc_class_t*cls = array_getvalue(abc->classes, t);
+        const char*package = strdup(cls->classname->ns->name);
+        const char*name = strdup(cls->classname->name);
+        classinfo_t*c = (classinfo_t*)registry_find(package, name);
+        if(!c) continue;
+
+        int nr = 0;
+        multiname_list_t*i = cls->interfaces;
         while(i) {
-            c->interfaces[nr++] = i->multiname;
+            c->interfaces[nr++] = resolve_class("interface", i->multiname);
             i = i->next;
         }
-        c->superclass = ...
-         
-         */
+        c->superclass = resolve_class("superclass", cls->superclass);
       
         trait_list_t*l=0;
         char is_static = 0;
@@ -133,12 +166,16 @@ void as3_import_code(abc_file_t*abc)
             memberinfo_t*s = 0;
             if(trait->kind == TRAIT_METHOD) {
                 s = (memberinfo_t*)methodinfo_register_onclass(c, access, name);
+                s->return_type = resolve_class("return type", trait->method->return_type);
             } else if(trait->kind == TRAIT_SLOT ||
                       trait->kind == TRAIT_GETTER) {
                 s = (memberinfo_t*)varinfo_register_onclass(c, access, name);
+                s->type = resolve_class("type", trait->type_name);
             } else {
                 goto cont;
             }
+            if(access==ACCESS_NAMESPACE)
+                s->package = strdup(trait->name->ns->name);
 
             s->flags = is_static?FLAG_STATIC:0;
             s->flags |= FLAG_BUILTIN;
@@ -153,7 +190,7 @@ void as3_import_code(abc_file_t*abc)
         }
     }
 
-#   define IS_PUBLIC_MEMBER(trait) ((trait)->kind != TRAIT_CLASS)
+#   define IS_PUBLIC_MEMBER(trait) ((trait)->kind != TRAIT_CLASS && (trait)->name->ns->access != ACCESS_PRIVATE)
 
     /* count public functions */
     int num_methods=0;
@@ -184,11 +221,12 @@ void as3_import_code(abc_file_t*abc)
             memberinfo_t*m = 0;
             if(trait->kind == TRAIT_METHOD) {
                 m = (memberinfo_t*)methodinfo_register_global(access, package, name);
+                m->return_type = resolve_class("return type", trait->method->return_type);
             } else {
                 m = (memberinfo_t*)varinfo_register_global(access, package, name);
+                m->type = resolve_class("type", trait->type_name);
             }
             m->flags |= FLAG_BUILTIN;
-            m->return_type = 0;
             m->parent = 0;
         }
     }
