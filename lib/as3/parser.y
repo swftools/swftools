@@ -328,6 +328,7 @@ struct _methodstate {
 
     abc_method_t*abc;
     int var_index; // for inner methods
+    int slot_index; // for inner methods
     char is_a_slot; // for inner methods
 
     code_t*header;
@@ -722,7 +723,7 @@ static code_t* method_header(methodstate_t*m)
             c = abc_newfunction(c, l->methodstate->abc);
             c = abc_dup(c);
             c = abc_setlocal(c, l->methodstate->var_index);
-            c = abc_setslot(c, l->methodstate->var_index);
+            c = abc_setslot(c, l->methodstate->slot_index);
         } else {
             c = abc_newfunction(c, l->methodstate->abc);
             c = abc_setlocal(c, l->methodstate->var_index);
@@ -817,7 +818,9 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
     }
     if(m->uses_slots) {
         /* as variables and slots share the same number, make sure
-           that those variable indices are reserved */
+           that those variable indices are reserved. It's up to the
+           optimizer to later shuffle the variables down to lower
+           indices */
         m->variable_count = m->uses_slots; 
     }
 
@@ -833,6 +836,7 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
         methodstate_t*m = l->methodstate;
         variable_t* v = new_variable2(m->info->name, TYPE_FUNCTION(m->info), 0, 1);
         m->var_index = v->index;
+        m->slot_index = v->index;
         v->is_inner_method = m;
         l = l->next;
     }
@@ -3250,7 +3254,7 @@ E : E '?' E ':' E %prec below_assignment {
               code_t*j2 = $$.c = abc_jump($$.c, 0);
               $$.c = j1->branch = abc_label($$.c);
               $$.c = code_append($$.c, $5.c);
-              $$.c = converttype($$.c, $3.t, $$.t);
+              $$.c = converttype($$.c, $5.t, $$.t);
               $$.c = j2->branch = abc_label($$.c);
             }
 
