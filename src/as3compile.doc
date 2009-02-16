@@ -20,6 +20,10 @@ Compiles a file written in ActionScript to a SWF file.
     Set target SWF width
 -r, --rate
     Set target SWF framerate
+-l, --library <file>
+    Include library file <file>
+-I, --include <dir>
+    Add include dir <dir>
 -T, --flashversion <num>
     Set target SWF flash version to <num>.
     <num> must be >= 9.

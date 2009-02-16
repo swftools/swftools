@@ -48,6 +48,8 @@ static struct options_t options[] = {
 {"X", "width"},
 {"Y", "height"},
 {"r", "rate"},
+{"l", "library"},
+{"I", "include"},
 {"T", "flashversion"},
 {"o", "output"},
 {0,0}
@@ -92,6 +94,14 @@ int args_callback_option(char*name,char*val)
 	do_cgi = 1;
 	return 0;
     }
+    else if(!strcmp(name, "-l")) {
+        as3_import_file(val);
+	return 1;
+    }
+    else if(!strcmp(name, "-I")) {
+        as3_add_include_dir(val);
+	return 1;
+    }
     else {
         printf("Unknown option: -%s\n", name);
 	exit(1);
@@ -115,6 +125,8 @@ void args_callback_usage(char *name)
     printf("-X , --width                   Set target SWF width\n");
     printf("-Y , --height                  Set target SWF width\n");
     printf("-r , --rate                    Set target SWF framerate\n");
+    printf("-l , --library <file>          Include library file <file>\n");
+    printf("-I , --include <dir>           Add include dir <dir>\n");
     printf("-T , --flashversion <num>      Set target SWF flash version to <num>.\n");
     printf("-o , --output <filename>       Set output file to <filename>.\n");
     printf("\n");
@@ -155,8 +167,18 @@ void writeSWF(SWF*swf)
 
 int main (int argc,char ** argv)
 {
+    char buf[512];
+    char*currentdir = getcwd(buf, 512);
+    if(!currentdir) {
+        as3_warning("Could not determine the current directory");
+    } else {
+        as3_add_include_dir(currentdir);
+    }
+    registry_init();
+
     int t;
     processargs(argc, argv);
+    as3_setverbosity(verbose);
 
     if(!filename) {
 	args_callback_usage(argv[0]);
@@ -165,16 +187,6 @@ int main (int argc,char ** argv)
     if(!outputname) {
 	outputname = stripFilename(filename, ".swf");
         //as3_warning("output name not given, writing to %s", outputname);
-    }
-
-    as3_setverbosity(verbose);
-
-    char buf[512];
-    char*currentdir = getcwd(buf, 512);
-    if(!currentdir) {
-        as3_warning("Could not determine the current directory");
-    } else {
-        as3_add_include_dir(currentdir);
     }
 
     as3_parse_file(filename);
@@ -199,7 +211,6 @@ int main (int argc,char ** argv)
     } else {
         as3_warning("no global public MovieClip subclass");
     }
-
     
     as3_destroy();
 
