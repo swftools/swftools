@@ -174,6 +174,7 @@ void stringarray_destroy(stringarray_t*sa);
 dict_t*dict_new();
 dict_t*dict_new2(type_t*type);
 void dict_init(dict_t*dict, int size);
+void dict_init2(dict_t*dict, type_t*type, int size);
 dictentry_t*dict_put(dict_t*h, const void*key, void* data);
 void dict_put2(dict_t*h, const char*s, void*data);
 int dict_count(dict_t*h);

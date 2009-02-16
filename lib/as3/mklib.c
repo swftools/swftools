@@ -156,14 +156,15 @@ void write_initinfo(FILE*fi, slotinfo_t*s, char*prefix)
         fprintf(fi, "%s", prefix);
         char*id = mkid(c);
         dict_t*d = &c->members;
-        fprintf(fi, "dict_init(&%s.members, %d);\n", id, d->hashsize);
+        fprintf(fi, "dict_init2(&%s.members, &slotinfo_type, %d);\n", id, d->hashsize);
         int t;
         for(t=0;t<d->hashsize;t++) {
             dictentry_t*l = d->slots[t];
             while(l) {
                 slotinfo_t*s2 = (slotinfo_t*)l->data;
                 fprintf(fi, "%s", prefix);
-                fprintf(fi, "dict_put(&%s.members, \"%s\", &%s);\n", id, s2->name, mkid2(id, s2->name));
+                char*id2 = mkid2(id, s2->name);
+                fprintf(fi, "dict_put(&%s.members, &%s, &%s);\n", id, id2,id2);
                 l = l->next;
             }
         }

@@ -159,23 +159,22 @@ void as3_import_code(abc_file_t*abc)
             if(access==ACCESS_PRIVATE)
                 goto cont;
             const char*name = trait->name->name;
-            if(registry_findmember(c, name, 0))
+            char* ns= ACCESS_NAMESPACE?strdup(trait->name->ns->name):"";
+            if(registry_findmember(c, ns, name, 0))
                 goto cont;
             name = strdup(name);
 
             memberinfo_t*s = 0;
             if(trait->kind == TRAIT_METHOD) {
-                s = (memberinfo_t*)methodinfo_register_onclass(c, access, name);
+                s = (memberinfo_t*)methodinfo_register_onclass(c, access, ns, name);
                 s->return_type = resolve_class("return type", trait->method->return_type);
             } else if(trait->kind == TRAIT_SLOT ||
                       trait->kind == TRAIT_GETTER) {
-                s = (memberinfo_t*)varinfo_register_onclass(c, access, name);
+                s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
                 s->type = resolve_class("type", trait->type_name);
             } else {
                 goto cont;
             }
-            if(access==ACCESS_NAMESPACE)
-                s->package = strdup(trait->name->ns->name);
 
             s->flags = is_static?FLAG_STATIC:0;
             s->flags |= FLAG_BUILTIN;

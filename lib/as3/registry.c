@@ -71,27 +71,29 @@ classinfo_t* classinfo_register(int access, const char*package, const char*name,
     c->package = package;
     c->name = name;
     dict_put(registry_classes, c, c);
-    dict_init(&c->members,AVERAGE_NUMBER_OF_MEMBERS);
+    dict_init2(&c->members, &slotinfo_type, AVERAGE_NUMBER_OF_MEMBERS);
     return c;
 }
-methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*name)
+methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name)
 {
     NEW(methodinfo_t,m);
     m->kind = INFOTYPE_METHOD;
     m->access = access;
     m->name = name;
+    m->package = ns;
     m->parent = cls;
-    dict_put(&cls->members, name, m);
+    dict_put(&cls->members, m, m);
     return m;
 }
-varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access, const char*name)
+varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name)
 {
     NEW(varinfo_t,m);
     m->kind = INFOTYPE_SLOT;
     m->access = access;
     m->name = name;
+    m->package = ns;
     m->parent = cls;
-    dict_put(&cls->members, name, m);
+    dict_put(&cls->members, m, m);
     return m;
 }
 methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name)
@@ -159,10 +161,14 @@ void registry_dump()
     }
 }
 
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursive)
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*name, char recursive)
 {
+    memberinfo_t tmp;
+    tmp.name = name;
+    tmp.package = ns?ns:"";
+
     if(!recursive) {
-        return (memberinfo_t*)dict_lookup(&cls->members, name);
+        return (memberinfo_t*)dict_lookup(&cls->members, &tmp);
     }
     /* look at classes directly extended by this class */
     slotinfo_t*m = 0;
@@ -172,7 +178,7 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
         s = s->superclass;
 
     while(s) {
-        m = (slotinfo_t*)dict_lookup(&s->members, name);
+        m = (slotinfo_t*)dict_lookup(&s->members, &tmp);
         if(m) {
             return (memberinfo_t*)m;
         }
@@ -183,7 +189,7 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
     while(cls->interfaces[t]) {
         classinfo_t*s = cls->interfaces[t];
         while(s) {
-            m = (slotinfo_t*)dict_lookup(&s->members, name);
+            m = (slotinfo_t*)dict_lookup(&s->members, &tmp);
             if(m) {
                 return (memberinfo_t*)m;
             }
@@ -192,8 +198,19 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char recursi
         t++;
     }
     return 0;
-
 }
+
+memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, const char*name, char superclasses)
+{
+    while(ns) {
+        memberinfo_t*m = registry_findmember(cls, ns->namespace->name, name, superclasses);
+        if(m) return m;
+        ns = ns->next;
+    }
+    return registry_findmember(cls, "", name, superclasses);
+}
+
+
 void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c)
 {
     m->type = QNAME;
@@ -239,7 +256,7 @@ classinfo_t* slotinfo_asclass(slotinfo_t*f) {
         c->name = "undefined";
     }
     
-    dict_init(&c->members,1);
+    dict_init2(&c->members, &slotinfo_type, 1);
     c->data = f;
     dict_put(functionobjects, f, c);
     return c;

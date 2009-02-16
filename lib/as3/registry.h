@@ -32,6 +32,7 @@ DECLARE(memberinfo);
 DECLARE(methodinfo);
 DECLARE(varinfo);
 DECLARE_LIST(classinfo);
+DECLARE_LIST(slotinfo);
 
 /* member/class flags */
 #define FLAG_FINAL 1
@@ -105,14 +106,15 @@ char slotinfo_equals(slotinfo_t*c1, slotinfo_t*c2);
 void registry_init();
         
 classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces);
-methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*name);
+methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name);
 methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name);
-varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access, const char*name);
+varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access,  const char*ns, const char*name);
 varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name);
 
 slotinfo_t* registry_find(const char*package, const char*name);
 void registry_dump();
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*name, char superclasses);
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*name, char superclasses);
+memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, const char*name, char superclasses);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c);
 multiname_t* classinfo_to_multiname(slotinfo_t*cls);

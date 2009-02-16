@@ -764,6 +764,14 @@ void dict_init(dict_t*h, int size)
     h->num = 0;
     h->key_type = &charptr_type;
 }
+void dict_init2(dict_t*h, type_t*t, int size) 
+{
+    memset(h, 0, sizeof(dict_t));
+    h->hashsize = size;
+    h->slots = h->hashsize?(dictentry_t**)rfx_calloc(sizeof(dictentry_t*)*h->hashsize):0;
+    h->num = 0;
+    h->key_type = t;
+}
 
 dict_t*dict_clone(dict_t*o)
 {

@@ -148,9 +148,9 @@ class Cache:
     def skip_file(self, nr, filename):
         if self.checknum>=0 and nr!=self.checknum:
             return 1
-        if not self.all and self.milestone[filename]!="ok":
+        if not self.all and self.milestone.get(filename,"new")!="ok":
             return 1
-        if self.diff and self.filename2status[filename]=="ok":
+        if self.diff and self.filename2status(filename,"new")=="ok":
             return 1
         return 0
 

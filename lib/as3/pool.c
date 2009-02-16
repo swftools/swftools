@@ -275,7 +275,7 @@ namespace_t* namespace_new_private(const char*name) {
 void namespace_destroy(namespace_t*n)
 {
     if(n) {
-        free(n->name);n->name=0;
+        free((char*)n->name);n->name=0;
         n->access=0x00;
         free(n);
     }

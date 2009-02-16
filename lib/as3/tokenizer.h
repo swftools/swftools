@@ -34,6 +34,7 @@ DECLARE(param);
 DECLARE_LIST(param);
 DECLARE(params);
 DECLARE(typedcode);
+DECLARE(modifiers);
 DECLARE_LIST(typedcode);
 
 struct _param {
@@ -50,6 +51,10 @@ struct _params {
 struct _typedcode {
     code_t*c;
     classinfo_t*t;
+};
+struct _modifiers {
+    int flags;
+    char*ns;
 };
 
 /* small helper structs: */
