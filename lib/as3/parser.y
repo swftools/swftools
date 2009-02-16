@@ -175,7 +175,7 @@ extern int a3_lex();
 %type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH WITH
 %type <code> PACKAGE_DECLARATION SLOT_DECLARATION
 %type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
-%type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW 
+%type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW
 %type <exception> CATCH FINALLY
 %type <catch_list> CATCH_LIST CATCH_FINALLY_LIST
 %type <code> CLASS_DECLARATION
@@ -377,8 +377,10 @@ DECLARE_LIST(state);
     multiname_t m;\
     namespace_t m##_ns;\
     if(f) { \
-        m##_ns.access = ((slotinfo_t*)(f))->access; \
-        m##_ns.name = ""; \
+        if((m##_ns.access = ((slotinfo_t*)(f))->access)==ACCESS_NAMESPACE) \
+            m##_ns.name = ((slotinfo_t*)(f))->package; \
+        else \
+            m##_ns.name = ""; \
         m.type = QNAME; \
         m.ns = &m##_ns; \
         m.namespace_set = 0; \
@@ -1903,7 +1905,7 @@ MAYBECODE: {$$=code_new();}
 CODE: CODE CODEPIECE {$$=code_append($1,$2);}
 CODE: CODEPIECE {$$=$1;}
 
-// code which also may appear outside a method
+// code which may appear outside of methods
 CODE_STATEMENT: IMPORT 
 CODE_STATEMENT: FOR 
 CODE_STATEMENT: FOR_IN 
@@ -1918,7 +1920,7 @@ CODE_STATEMENT: USE_NAMESPACE
 CODE_STATEMENT: '{' CODE '}' {$$=$2;}
 CODE_STATEMENT: '{' '}' {$$=0;}
 
-// code which may appear anywhere
+// code which may appear in methods
 CODEPIECE: ';' {$$=0;}
 CODEPIECE: CODE_STATEMENT
 CODEPIECE: VARIABLE_DECLARATION
@@ -3334,7 +3336,6 @@ E : "super" '.' T_IDENTIFIER
               if(!t) t = TYPE_OBJECT;
 
               memberinfo_t*f = registry_findmember(t, $3, 1);
-              namespace_t ns = {f->access, ""};
               MEMBER_MULTINAME(m, f, $3);
               $$.c = 0;
               $$.c = abc_getlocal_0($$.c);
