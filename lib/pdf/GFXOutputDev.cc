@@ -1539,6 +1539,11 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
         /*if(user_clipy1 > y1)*/ y1 = user_clipy1;
         /*if(user_clipy2 < y2)*/ y2 = user_clipy2;
 	msg("<verbose> Using user clip box %f/%f/%f/%f",x1,y1,x2,y2);
+    } else {
+        x1 += this->clipmovex;
+        y1 += this->clipmovey;
+        x2 += this->clipmovex;
+        y2 += this->clipmovey;
     }
 
     //msg("<verbose> Bounding box is (%f,%f)-(%f,%f) [shifted by %d/%d]", x1,y1,x2,y2, user_movex, user_movey);
