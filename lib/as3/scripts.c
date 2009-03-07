@@ -91,7 +91,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
             if(!f && (tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2 || stop_each_frame)) {
                 /* make the contructor add a frame script */
                 __ findpropstrict(c,"[package]::addFrameScript");
-                __ pushbyte(c,frame);
+                __ pushuint(c,frame);
                 __ getlex(c,framename);
                 __ callpropvoid(c,"[package]::addFrameScript",2);
 
