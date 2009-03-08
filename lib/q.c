@@ -933,7 +933,7 @@ char dict_del(dict_t*h, const void*key)
             memset(e, 0, sizeof(dictentry_t));
             rfx_free(e);
             if(e == head) {
-                h->slots[hash] = 0;
+                h->slots[hash] = next;
             } else {
                 assert(prev);
                 prev->next = next;
