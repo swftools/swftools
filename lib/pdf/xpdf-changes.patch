@@ -958,3 +958,19 @@ diff -u -r1.5 -r1.6
        return gFalse;
      }
      *name = new GString(s);
+--- xpdf/Gfx.cc.orig	2009-03-08 17:10:40.000000000 +0100
++++ xpdf/Gfx.cc	2009-03-08 17:18:23.000000000 +0100
+@@ -3188,8 +3188,11 @@
+ 			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
+ 			    &dx, &dy, &originX, &originY);
+       dx = dx * state->getFontSize() + state->getCharSpace();
+-      if (n == 1 && *p == ' ') {
+-	dx += state->getWordSpace();
++      if (n == 1 && (*p == ' ' || *p == 0)) {
++        double w=state->getWordSpace();
++        if (w==0 && dx==0)
++          w=state->getFontSize()/3; // workaround for zero word space
++        dx += w;
+       }
+       dx *= state->getHorizScaling();
+       dy *= state->getFontSize();
