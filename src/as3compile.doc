@@ -24,6 +24,10 @@ Compiles a file written in ActionScript to a SWF file.
     Include library file <file>
 -I, --include <dir>
     Add include dir <dir>
+-N, --local-with-network
+    Make output file "local with networking"
+-L, --local-with-filesystem
+    Make output file "local with filesystem"
 -T, --flashversion <num>
     Set target SWF flash version to <num>.
     <num> must be >= 9.

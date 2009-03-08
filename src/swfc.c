@@ -177,6 +177,7 @@ static struct level
    /* for swf (0): */
    SWF*swf;
    char*filename;
+   char as3;
 
    /* for sprites (1): */
    TAG*tag;
@@ -1029,6 +1030,22 @@ static void s_endSWF()
     //    tag = swf_InsertTag(tag, ST_SHOWFRAME);
     tag = swf_InsertTag(tag, ST_SHOWFRAME);
 
+    if(stack[0].as3) {
+        TAG*tag = swf->firstTag;
+        tag = swf_InsertTag(tag, ST_DOABC);
+        void*code = as3_getcode();
+        swf_WriteABC(tag, code);
+        if(as3_getglobalclass()) {
+            tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
+            swf_SetU16(tag, 1);
+            swf_SetU16(tag, 0);
+            swf_SetString(tag, as3_getglobalclass());
+        } else {
+            warning("no global public MovieClip subclass");
+        }
+        as3_destroy();
+    }
+
     tag = swf_InsertTag(tag, ST_END);
 
     swf_OptimizeTagOrder(swf);
@@ -1864,19 +1881,20 @@ void s_blur(const char*name, double blurx, double blury, int passes)
 
 void s_action(const char*text)
 {
-    ActionTAG* a = 0;
-    a = swf_ActionCompile(text, stack[0].swf->fileVersion);
-    if(!a)
-    {
+    if(stack[0].swf->fileVersion < 9) {
+        ActionTAG* a = 0;
+        a = swf_ActionCompile(text, stack[0].swf->fileVersion);
+        if(!a) {
+            swf_ActionFree(a);
+            syntaxerror("Couldn't compile ActionScript");
+        }
+        tag = swf_InsertTag(tag, ST_DOACTION);
+        swf_ActionSet(tag, a);
         swf_ActionFree(a);
-        syntaxerror("Couldn't compile ActionScript");
+    } else {
+        as3_parse_bytearray(stack[0].filename, text, strlen(text));
+        stack[0].as3 = 1;
     }
-
-    tag = swf_InsertTag(tag, ST_DOACTION);
-
-    swf_ActionSet(tag, a);
-
-    swf_ActionFree(a);
 }
 
 void s_initaction(const char*character, const char*text)

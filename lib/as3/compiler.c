@@ -85,7 +85,7 @@ int a3_lex()
 #endif
 }
 
-static void as3_parse_file_or_array(int pass, const char*name, const char*filename, void*mem, int length)
+static void as3_parse_file_or_array(int pass, const char*name, const char*filename, const void*mem, int length)
 {
     if(!registry_initialized) {
         registry_initialized = 1;
@@ -108,7 +108,7 @@ static void as3_parse_file_or_array(int pass, const char*name, const char*filena
     } else {
         DEBUG printf("[pass %d] parse bytearray %s (%d bytes)\n", pass, name, length);
         enter_file(name, name, 0);
-        as3_buffer_input(mem, length);
+        as3_buffer_input((void*)mem, length);
     }
 
     as3_tokencount=0;
@@ -173,7 +173,7 @@ void as3_schedule_file(const char*name, const char*filename)
     scheduled = f;
 }
 
-void as3_parse_bytearray(const char*name, void*mem, int length)
+void as3_parse_bytearray(const char*name, const void*mem, int length)
 {
     as3_parse_file_or_array(1, name, 0, mem, length);
     as3_parse_scheduled(1);

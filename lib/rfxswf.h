@@ -753,6 +753,7 @@ void swf_FreeABC(void*code);
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events);
 TAG*swf_AddAS3FontDefine(TAG*tag, U16 id, char*fontname);
 #include "as3/compiler.h"
+#include "as3/import.h"
 
 // swfaction.c
 

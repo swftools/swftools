@@ -108,8 +108,9 @@ static classinfo_t*resolve_class(char*what, multiname_t*n)
     return c;
 }
 
-void as3_import_code(abc_file_t*abc)
+void as3_import_code(void*_abc)
 {
+    abc_file_t*abc = _abc;
     int t;
     for(t=0;t<abc->classes->num;t++) {
         abc_class_t*cls = array_getvalue(abc->classes, t);

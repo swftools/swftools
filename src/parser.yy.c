@@ -734,12 +734,12 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 }
 
 #define MAX_INCLUDE_DEPTH 16
-YY_BUFFER_STATE include_stack[MAX_INCLUDE_DEPTH];
-int line_stack[MAX_INCLUDE_DEPTH];
-int column_stack[MAX_INCLUDE_DEPTH];
-int include_stack_ptr = 0;
+static YY_BUFFER_STATE include_stack[MAX_INCLUDE_DEPTH];
+static int line_stack[MAX_INCLUDE_DEPTH];
+static int column_stack[MAX_INCLUDE_DEPTH];
+static int include_stack_ptr = 0;
 
-void handleInclude(char*text, int len)
+static void handleInclude(char*text, int len)
 {
     text+=9;len-=9;
     while(len >=1 && (text[0] == ' ' || text[0] == '\t')) {

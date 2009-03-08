@@ -22,10 +22,9 @@
 #ifndef __as3_import_h__
 #define __as3_import_h__
 
-#include "abc.h"
-
 void as3_import_file(char*filename);
 void as3_import_swf(char*filename);
 void as3_import_abc(char*filename);
-void as3_import_code(abc_file_t*f);
+void as3_import_code(void*f);
+
 #endif

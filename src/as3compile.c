@@ -38,6 +38,8 @@ static double width = 400;
 static double height = 300;
 static int flashversion = 9;
 static int verbose = 1;
+static char local_with_networking = 0;
+static char local_with_filesystem = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -101,6 +103,16 @@ int args_callback_option(char*name,char*val)
     else if(!strcmp(name, "-I")) {
         as3_add_include_dir(val);
 	return 1;
+    }
+    else if (!strcmp(name, "N"))
+    {
+	local_with_networking = 1;
+	return 0;
+    }
+    else if (!strcmp(name, "L"))
+    {
+	local_with_filesystem = 1;
+	return 0;
     }
     else {
         printf("Unknown option: -%s\n", name);
@@ -218,6 +230,11 @@ int main (int argc,char ** argv)
     tag = swf_InsertTag(tag, ST_END);
 
     swf_FreeABC(code);
+    
+    if(local_with_filesystem)
+        swf.fileAttributes &= ~FILEATTRIBUTE_USENETWORK;
+    if(local_with_networking)
+        swf.fileAttributes |= FILEATTRIBUTE_USENETWORK;
 
     writeSWF(&swf);
     swf_FreeTags(&swf);
