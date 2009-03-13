@@ -25,6 +25,8 @@
 #include "tokenizer.h"
 #include "../os.h"
 
+static void import_code(void*_abc, char*filename, int pass);
+
 void as3_import_abc(char*filename)
 {
     TAG*tag = swf_InsertTag(0, ST_RAWABC);
@@ -32,7 +34,8 @@ void as3_import_abc(char*filename)
     tag->data = file->data;
     tag->len = file->len;
     abc_file_t*abc = swf_ReadABC(tag);
-    as3_import_code(abc);
+    import_code(abc, filename, 0);
+    import_code(abc, filename, 1);
     swf_FreeABC(abc);
     memfile_close(file);
     free(tag);
@@ -44,14 +47,27 @@ void as3_import_swf(char*filename)
     if(!swf)
         return;
     TAG*tag = swf->firstTag;
+
+    /* pass 1 */
     while(tag) {
         if(tag->id == ST_DOABC || tag->id == ST_RAWABC) {
             abc_file_t*abc = swf_ReadABC(tag);
-            as3_import_code(abc);
+            import_code(abc, filename, 0);
             swf_FreeABC(abc);
         }
         tag = tag->next;
     }
+
+    /* pass 2 */
+    while(tag) {
+        if(tag->id == ST_DOABC || tag->id == ST_RAWABC) {
+            abc_file_t*abc = swf_ReadABC(tag);
+            import_code(abc, filename, 1);
+            swf_FreeABC(abc);
+        }
+        tag = tag->next;
+    }
+
     swf_FreeTags(swf);
     free(swf);
 }
@@ -81,7 +97,7 @@ static int compare_traits(const void*v1, const void*v2)
     return strcmp(x1->name->name, x2->name->name);
 }
 
-static classinfo_t*resolve_class(char*what, multiname_t*n)
+static classinfo_t*resolve_class(char*filename, char*what, multiname_t*n)
 {
     if(!n) return 0;
     if(!n->name[0] || !strcmp(n->name, "void")) return 0;
@@ -100,41 +116,44 @@ static classinfo_t*resolve_class(char*what, multiname_t*n)
     }
 
     if(!c) {
-        as3_warning("import: couldn't resolve %s %s", what, n->name);
+        as3_warning("import %s: couldn't resolve %s %s.%s", filename, what, n->ns->name, n->name);
         return 0;
     }
     if(c->kind != INFOTYPE_CLASS)
-        as3_warning("import: %s %s resolves to something that's not a class", what, n->name);
+        as3_warning("import %s: %s %s resolves to something that's not a class", filename, what, n->name);
     return c;
 }
 
-void as3_import_code(void*_abc)
+static void import_code(void*_abc, char*filename, int pass)
 {
     abc_file_t*abc = _abc;
     int t;
-    for(t=0;t<abc->classes->num;t++) {
-        abc_class_t*cls = array_getvalue(abc->classes, t);
-        U8 access = cls->classname->ns->access;
-        if(access==ACCESS_PRIVATE ||
-           access==ACCESS_PACKAGEINTERNAL)
-            continue;
-        //if(!strncmp(cls->classname->ns->name, "__AS3", 5))
-        //    continue;
+    if(pass==0) {
+        for(t=0;t<abc->classes->num;t++) {
+            abc_class_t*cls = array_getvalue(abc->classes, t);
+            U8 access = cls->classname->ns->access;
+            if(access==ACCESS_PRIVATE ||
+               access==ACCESS_PACKAGEINTERNAL)
+                continue;
+            //if(!strncmp(cls->classname->ns->name, "__AS3", 5))
+            //    continue;
 
-        const char*package = strdup(cls->classname->ns->name);
-        const char*name = strdup(cls->classname->name);
-                
-        multiname_list_t*i=cls->interfaces;
-        classinfo_t*c = classinfo_register(access, package, name, list_length(i));
-        c->flags|=FLAG_BUILTIN;
+            const char*package = strdup(cls->classname->ns->name);
+            const char*name = strdup(cls->classname->name);
+                    
+            multiname_list_t*i=cls->interfaces;
+            classinfo_t*c = classinfo_register(access, package, name, list_length(i));
+            c->flags|=FLAG_BUILTIN;
 
-        if(cls->flags & CLASS_FINAL)
-            c->flags |= FLAG_FINAL;
-        if(cls->flags & CLASS_INTERFACE)
-            c->flags |= FLAG_INTERFACE;
-        if(!(cls->flags & CLASS_SEALED))
-            c->flags |= FLAG_DYNAMIC;
-    }
+            if(cls->flags & CLASS_FINAL)
+                c->flags |= FLAG_FINAL;
+            if(cls->flags & CLASS_INTERFACE)
+                c->flags |= FLAG_INTERFACE;
+            if(!(cls->flags & CLASS_SEALED))
+                c->flags |= FLAG_DYNAMIC;
+        }
+        return;
+    } 
     
     for(t=0;t<abc->classes->num;t++) {
         abc_class_t*cls = array_getvalue(abc->classes, t);
@@ -146,10 +165,10 @@ void as3_import_code(void*_abc)
         int nr = 0;
         multiname_list_t*i = cls->interfaces;
         while(i) {
-            c->interfaces[nr++] = resolve_class("interface", i->multiname);
+            c->interfaces[nr++] = resolve_class(filename, "interface", i->multiname);
             i = i->next;
         }
-        c->superclass = resolve_class("superclass", cls->superclass);
+        c->superclass = resolve_class(filename, "superclass", cls->superclass);
       
         trait_list_t*l=0;
         char is_static = 0;
@@ -168,11 +187,11 @@ void as3_import_code(void*_abc)
             memberinfo_t*s = 0;
             if(trait->kind == TRAIT_METHOD) {
                 s = (memberinfo_t*)methodinfo_register_onclass(c, access, ns, name);
-                s->return_type = resolve_class("return type", trait->method->return_type);
+                s->return_type = resolve_class(filename, "return type", trait->method->return_type);
             } else if(trait->kind == TRAIT_SLOT ||
                       trait->kind == TRAIT_GETTER) {
                 s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
-                s->type = resolve_class("type", trait->type_name);
+                s->type = resolve_class(filename, "type", trait->type_name);
             } else {
                 goto cont;
             }
@@ -221,13 +240,19 @@ void as3_import_code(void*_abc)
             memberinfo_t*m = 0;
             if(trait->kind == TRAIT_METHOD) {
                 m = (memberinfo_t*)methodinfo_register_global(access, package, name);
-                m->return_type = resolve_class("return type", trait->method->return_type);
+                m->return_type = resolve_class(filename, "return type", trait->method->return_type);
             } else {
                 m = (memberinfo_t*)varinfo_register_global(access, package, name);
-                m->type = resolve_class("type", trait->type_name);
+                m->type = resolve_class(filename, "type", trait->type_name);
             }
             m->flags |= FLAG_BUILTIN;
             m->parent = 0;
         }
     }
+}
+
+void as3_import_code(void*_abc)
+{
+    import_code(_abc, "", 0);
+    import_code(_abc, "", 1);
 }
