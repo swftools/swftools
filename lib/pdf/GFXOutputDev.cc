@@ -1363,7 +1363,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 
     // check for invisible text -- this is used by Acrobat Capture
     if (render == RENDER_INVISIBLE) {
-	col.a = 255;
+	col.a = 0;
 	if(!config_extrafontdata)
 	    return;
     }
