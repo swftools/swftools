@@ -3,6 +3,8 @@ package my.namespaces {
     public namespace ns2 = "http://www.swftools.org/";
     public namespace ns3 = "http://yet.some.other/namespace";
     public namespace ns4 = "bla bla";
+    
+    public namespace ns5 = "bla bla 2";
 
     public class Test {
 
@@ -42,6 +44,8 @@ package {
     public class Main extends flash.display.MovieClip {
 
         use namespace my.namespaces.ns2;
+        import my.namespaces.*;
+        use namespace ns5;
 
         private function test1() {
             my.namespaces.Test.test()
