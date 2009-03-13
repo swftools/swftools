@@ -175,7 +175,7 @@ extern int a3_lex();
 %type <code> CODE
 %type <code> CODEPIECE CODE_STATEMENT
 %type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH WITH
-%type <code> PACKAGE_DECLARATION SLOT_DECLARATION
+%type <code> PACKAGE_DECLARATION SLOT_DECLARATION SLOT_LIST ONE_SLOT
 %type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
 %type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW
 %type <exception> CATCH FINALLY
@@ -1012,10 +1012,14 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
     }
 }
 
-static void setstaticfunction(int x)
+static int slotstate_varconst = 0;
+static modifiers_t*slotstate_flags = 0;
+static void setslotstate(modifiers_t* flags, int varconst)
 {
+    slotstate_varconst = varconst;
+    slotstate_flags = flags;
     if(state->cls) {
-        if(x&FLAG_STATIC) {
+        if(flags && flags->flags&FLAG_STATIC) {
             state->method = state->cls->static_init;
         } else {
             state->method = state->cls->init;
@@ -1123,7 +1127,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
     if(!state->cls) {
         //package method
         minfo = methodinfo_register_global(ns.access, state->package, name);
-        minfo->return_type = return_type;
+        minfo->return_type = 0; // save this for pass 2
     } else if(getset != KW_GET && getset != KW_SET) {
         //class method
         memberinfo_t* m = registry_findmember(state->cls->info, ns.name, name, 0);
@@ -1134,7 +1138,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
             syntaxerror("class already contains a %s '%s'", infotypename((slotinfo_t*)m), m->name);
         }
         minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
-        minfo->return_type = return_type;
+        minfo->return_type = 0; // save this for pass 2 
         // getslot on a member slot only returns "undefined", so no need
         // to actually store these
         //state->minfo->slot = state->method->abc->method->trait->slot_id;
@@ -1142,10 +1146,12 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
         //class getter/setter
         int gs = getset==KW_GET?SUBTYPE_GET:SUBTYPE_SET;
         classinfo_t*type=0;
-        if(getset == KW_GET)
+        if(getset == KW_GET) {
             type = return_type;
-        else if(params->list && params->list->param)
+        } else if(params->list && params->list->param && !params->list->next) {
             type = params->list->param->type;
+        } else
+            syntaxerror("setter function needs to take exactly one argument");
         // not sure wether to look into superclasses here, too
         minfo = (methodinfo_t*)registry_findmember(state->cls->info, ns.name, name, 1);
         if(minfo) {
@@ -1157,17 +1163,22 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
                 syntaxerror("getter/setter for '%s' already defined", name);
             /* make a setter or getter into a getset */
             minfo->subtype |= gs;
-            if(!minfo->return_type) {
-                minfo->return_type = type;
-            } else {
-                if(minfo && minfo->return_type != type)
-                    syntaxerror("different type in getter and setter");
-            }
+            
+            /*
+            FIXME: this check needs to be done in pass 2
+            
+            if((!minfo->return_type != !type) ||
+                (minfo->return_type && type && 
+                 !strcmp(minfo->return_type->name, type->name))) {
+                syntaxerror("different type in getter and setter: %s and %s", 
+                    minfo->return_type?minfo->return_type->name:"*", 
+                    type?type->name:"*");
+            }*/
         } else {
             minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
             minfo->kind = INFOTYPE_SLOT; //hack
             minfo->subtype = gs;
-            minfo->return_type = type;
+            minfo->return_type = 0;
         }
         /* can't assign a slot as getter and setter might have different slots */
         //minfo->slot = slot;
@@ -1244,7 +1255,6 @@ static void startfunction(modifiers_t*mod, enum yytokentype getset, char*name,
         if(state->method->is_constructor)
             name = "__as3_constructor__";
 
-        return_type = 0;
         state->method->info = registerfunction(getset, mod, name, params, return_type, 0);
        
         function_initvars(state->method, params, mod->flags, 1);
@@ -1396,6 +1406,10 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         }
 
         check_code_for_break(body);
+
+        if(state->method->exceptions &&
+           (state->method->late_binding || state->method->uses_slots)) 
+           syntaxerror("try/catch and activation or late binding not supported yet within the same method");
 
         if(f->body) {
             f->body->code = body;
@@ -2364,7 +2378,7 @@ THROW : "throw" %prec prec_none {
 
 WITH : "with" '(' EXPRESSION ')' CODEBLOCK {
      $$ = $3.c;
-     $$ = abc_pushscope($$);
+     $$ = abc_pushwith($$);
      $$ = code_append($$, $5);
      $$ = abc_popscope($$);
 }
@@ -2499,33 +2513,39 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
 
 VARCONST: "var" | "const"
 
-SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER {setstaticfunction($1.flags);} MAYBETYPE MAYBEEXPRESSION {
-    int flags = $1.flags;
-    namespace_t ns = modifiers2access(&$1);
+SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST {setslotstate(&$1,$2);} SLOT_LIST {$$=$4;setslotstate(0, 0);}
+
+SLOT_LIST: ONE_SLOT               {$$ = $1;}
+SLOT_LIST: SLOT_LIST ',' ONE_SLOT {$$ = code_append($1, $3);}
+
+ONE_SLOT: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
+{
+    int flags = slotstate_flags->flags;
+    namespace_t ns = modifiers2access(slotstate_flags);
 
     varinfo_t* info = 0;
     if(state->cls) {
-        memberinfo_t*i = registry_findmember(state->cls->info, ns.name, $3, 1);
+        memberinfo_t*i = registry_findmember(state->cls->info, ns.name, $1, 1);
         if(i) {
             check_override(i, flags);
         }
-        info = varinfo_register_onclass(state->cls->info, ns.access, ns.name, $3);
+        info = varinfo_register_onclass(state->cls->info, ns.access, ns.name, $1);
     } else {
-        slotinfo_t*i = registry_find(state->package, $3);
+        slotinfo_t*i = registry_find(state->package, $1);
         if(i) {
-            syntaxerror("package %s already contains '%s'", state->package, $3);
+            syntaxerror("package %s already contains '%s'", state->package, $1);
         }
         if(ns.name && ns.name[0]) {
             syntaxerror("namespaces not allowed on package-level variables");
         }
-        info = varinfo_register_global(ns.access, state->package, $3);
+        info = varinfo_register_global(ns.access, state->package, $1);
     }
 
-    info->type = $5;
+    info->type = $2;
     info->flags = flags;
 
     /* slot name */
-    multiname_t mname = {QNAME, &ns, 0, $3};
+    multiname_t mname = {QNAME, &ns, 0, $1};
   
     trait_list_t**traits;
     code_t**code;
@@ -2545,8 +2565,8 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER {setstaticfunction($1.fl
     }
     
     trait_t*t=0;
-    if($5) {
-        MULTINAME(m, $5);
+    if($2) {
+        MULTINAME(m, $2);
         t = trait_new_member(traits, multiname_clone(&m), multiname_clone(&mname), 0);
     } else {
         t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
@@ -2555,21 +2575,20 @@ SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST T_IDENTIFIER {setstaticfunction($1.fl
     
     /* initalization code (if needed) */
     code_t*c = 0;
-    if($6.c && !is_pushundefined($6.c)) {
+    if($3.c && !is_pushundefined($3.c)) {
         c = abc_getlocal_0(c);
-        c = code_append(c, $6.c);
-        c = converttype(c, $6.t, $5);
+        c = code_append(c, $3.c);
+        c = converttype(c, $3.t, $2);
         c = abc_setslot(c, t->slot_id);
     }
 
     *code = code_append(*code, c);
 
-    if($2==KW_CONST) {
+    if(slotstate_varconst==KW_CONST) {
         t->kind= TRAIT_CONST;
     }
 
     $$=0;
-    setstaticfunction(0);
 }
 
 /* ------------ constants -------------------------------------- */
@@ -2588,7 +2607,7 @@ STATICCONSTANT : "false" {$$ = constant_new_false($1);}
 STATICCONSTANT : "null" {$$ = constant_new_null($1);}
 STATICCONSTANT : T_IDENTIFIER {
     // TODO
-    as3_warning("Couldn't resolve %s", $1);
+    as3_warning("Couldn't evaluate constant value of %s", $1);
     $$ = constant_new_null($1);
 }
 
@@ -2723,9 +2742,9 @@ CLASS_SPEC: PACKAGEANDCLASS
 CLASS_SPEC_LIST : CLASS_SPEC {PASS12 $$=list_new();list_append($$, $1);}
 CLASS_SPEC_LIST : CLASS_SPEC_LIST ',' CLASS_SPEC {PASS12 $$=$1;list_append($$,$3);}
 
-TYPE : CLASS_SPEC {$$=$1;}
-     | '*'        {$$=registry_getanytype();}
-     | "void"     {$$=registry_getanytype();}
+TYPE : CLASS_SPEC {PASS12 $$=$1;}
+     | '*'        {PASS12 $$=registry_getanytype();}
+     | "void"     {PASS12 $$=registry_getanytype();}
     /*
      |  "String"  {$$=registry_getstringclass();}
      |  "int"     {$$=registry_getintclass();}
@@ -2734,8 +2753,8 @@ TYPE : CLASS_SPEC {$$=$1;}
      |  "Number"  {$$=registry_getnumberclass();}
     */
 
-MAYBETYPE: ':' TYPE {$$=$2;}
-MAYBETYPE:          {$$=0;}
+MAYBETYPE: ':' TYPE {PASS12 $$=$2;}
+MAYBETYPE:          {PASS12 $$=0;}
 
 /* ----------function calls, delete, constructor calls ------ */
 
@@ -3584,9 +3603,9 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID '=' T_IDENTIFIER {
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID '=' T_STRING {
     $$=0;
 }
-USE_NAMESPACE : "use" PACKAGEANDCLASS {
+USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12
-    tokenizer_register_namespace($2->name);
+    tokenizer_register_namespace($3->name);
     $$=0;
 }
 

@@ -687,7 +687,7 @@ is                           {c();BEGIN(REGEXPOK);return m(KW_IS) ;}
 in                           {c();BEGIN(REGEXPOK);return m(KW_IN) ;}
 if                           {c();BEGIN(INITIAL);return m(KW_IF) ;}
 as                           {c();BEGIN(REGEXPOK);return m(KW_AS);}
-{NAME}                       {c();BEGIN(INITIAL);return handleIdentifier();}
+$?{NAME}                       {c();BEGIN(INITIAL);return handleIdentifier();}
 
 [\]\}*]                       {c();BEGIN(INITIAL);return m(yytext[0]);}
 [+-\/^~@$!%&\(=\[|?:;,<>]   {c();BEGIN(REGEXPOK);return m(yytext[0]);}
