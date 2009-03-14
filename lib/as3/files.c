@@ -201,7 +201,7 @@ char is_absolute(const char*filename)
     return 0;
 }
 
-char*find_file(const char*filename)
+char*find_file(const char*filename, char error)
 {
     include_dir_t*i = current_include_dirs;
     FILE*fi = 0;
@@ -212,7 +212,7 @@ char*find_file(const char*filename)
             return strdup(filename);
         }
     } else {
-        if(!i) {
+        if(!i && error) {
             as3_warning("Include directory stack is empty, while looking for file %s", filename);
         }
         while(i) {
@@ -226,6 +226,9 @@ char*find_file(const char*filename)
             }
             i = i->next;
         }
+    }
+    if(!error) {
+        return 0;
     }
 
     as3_error("Couldn't find file %s", filename);
