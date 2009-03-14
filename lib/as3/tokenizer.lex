@@ -259,8 +259,15 @@ static int do_unescape(const char*s, const char*end, char*n)
                 }
 		break;
 	    }
-            default:
-                syntaxerror("unknown escape sequence: \"\\%c\"", *s);
+            default: {
+	        if(o) {
+                    o[len+0] = '\\';
+                    o[len+1] = *s;
+                }
+                s++;
+                len+=2;
+                break;
+            }
         }
     }
     if(o) o[len]=0;
