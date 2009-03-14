@@ -201,9 +201,10 @@ opcode_t opcodes[]={
 {0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
 
 /* dummy instructions. Warning: these are not actually supported by flash */
+{0xfb, "__pushpackage__", "s",      0, 1, 0, OP_INTERNAL},
 {0xfc, "__rethrow__", "",           0, 0, 0, OP_THROW|OP_INTERNAL},
-{0xfd, "__fallthrough__", "s",           0, 0, 0, OP_INTERNAL},
-{0xfe, "__continue__", "s",           0, 0, 0, OP_RETURN|OP_INTERNAL},
+{0xfd, "__fallthrough__", "s",      0, 0, 0, OP_INTERNAL},
+{0xfe, "__continue__", "s",         0, 0, 0, OP_RETURN|OP_INTERNAL},
 {0xff, "__break__", "s",            0, 0, 0, OP_RETURN|OP_INTERNAL},
 };
 
