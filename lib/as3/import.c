@@ -58,6 +58,7 @@ void as3_import_swf(char*filename)
         tag = tag->next;
     }
 
+    tag = swf->firstTag;
     /* pass 2 */
     while(tag) {
         if(tag->id == ST_DOABC || tag->id == ST_RAWABC) {
@@ -153,7 +154,7 @@ static void import_code(void*_abc, char*filename, int pass)
                 c->flags |= FLAG_DYNAMIC;
         }
         return;
-    } 
+    }
     
     for(t=0;t<abc->classes->num;t++) {
         abc_class_t*cls = array_getvalue(abc->classes, t);
