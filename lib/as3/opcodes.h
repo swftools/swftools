@@ -501,6 +501,12 @@ code_t* abc_urshift(code_t*prev);
 code_t* abc_applytype(code_t*prev, int v);
 #define applytype(method,v) (method->code = abc_applytype(method->code,v))
 #define OPCODE_APPLYTYPE 0x53
+code_t* abc___pushpackage__(code_t*prev, char* name);
+#define __pushpackage__(method,name) (method->code = abc___pushpackage__(method->code,name))
+#define OPCODE___PUSHPACKAGE__ 0xfb
+code_t* abc___pushpackage__2(code_t*prev, string_t* s);
+#define __pushpackage__2(method,s) (method->code = abc___pushpackage__2(method->code,s))
+#define OPCODE___PUSHPACKAGE__2 0xfb
 code_t* abc___rethrow__(code_t*prev);
 #define __rethrow__(method) (method->code = abc___rethrow__(method->code))
 #define OPCODE___RETHROW__ 0xfc

@@ -156,7 +156,7 @@ void handleInclude(char*text, int len, char quotes)
         filename = strdup(&text[i1]);
     }
     
-    char*fullfilename = find_file(filename);
+    char*fullfilename = find_file(filename, 1);
     enter_file2(filename, fullfilename, YY_CURRENT_BUFFER);
     yyin = fopen(fullfilename, "rb");
     if (!yyin) {
@@ -638,7 +638,7 @@ switch                       {c();BEGIN(INITIAL);a3_lval.id="";return T_SWITCH;}
 \.\.                         {c();BEGIN(REGEXPOK);return m(T_DOTDOT);}
 \.                           {c();BEGIN(REGEXPOK);return m('.');}
 ::                           {c();BEGIN(REGEXPOK);return m(T_COLONCOLON);}
-:                            {c();BEGIN(INITIAL);return m(':');}
+:                            {c();BEGIN(REGEXPOK);return m(':');}
 instanceof                   {c();BEGIN(REGEXPOK);return m(KW_INSTANCEOF);}
 implements                   {c();BEGIN(REGEXPOK);return m(KW_IMPLEMENTS);}
 interface                    {c();BEGIN(INITIAL);return m(KW_INTERFACE);}

@@ -1471,7 +1471,7 @@ void handleInclude(char*text, int len, char quotes)
         filename = strdup(&text[i1]);
     }
     
-    char*fullfilename = find_file(filename);
+    char*fullfilename = find_file(filename, 1);
     enter_file2(filename, fullfilename, YY_CURRENT_BUFFER);
     as3_in = fopen(fullfilename, "rb");
     if (!as3_in) {
@@ -2479,7 +2479,7 @@ YY_RULE_SETUP
 case 57:
 YY_RULE_SETUP
 #line 641 "tokenizer.lex"
-{c();BEGIN(INITIAL);return m(':');}
+{c();BEGIN(REGEXPOK);return m(':');}
 	YY_BREAK
 case 58:
 YY_RULE_SETUP

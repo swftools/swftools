@@ -347,8 +347,9 @@ typedef struct _state {
     
     char*package;     
     import_list_t*wildcard_imports;
-    namespace_list_t*active_namespaces;
+    dict_t*import_toplevel_packages;
     dict_t*imports;
+    namespace_list_t*active_namespaces;
     char has_own_imports;
     char new_vars; // e.g. transition between two functions
   
@@ -426,6 +427,9 @@ static void new_state()
     if(!s->imports) {
         s->imports = dict_new();
     }
+    if(!s->import_toplevel_packages) {
+        s->import_toplevel_packages = dict_new(); 
+    }
     state = s;
     state->level++;
     state->has_own_imports = 0;    
@@ -438,6 +442,18 @@ static void state_has_imports()
     state->wildcard_imports = list_clone(state->wildcard_imports);
     state->imports = dict_clone(state->imports);
     state->has_own_imports = 1;
+}
+static void import_toplevel(const char*package)
+{
+    char* s = strdup(package);
+    while(1) {
+        dict_put(state->import_toplevel_packages, s, 0);
+        char*x = strrchr(s, '.');
+        if(!x)
+            break;
+        *x = 0;
+    }
+    free(s);
 }
 
 static void state_destroy(state_t*state)
@@ -815,6 +831,7 @@ static namespace_t modifiers2access(modifiers_t*mod)
     }
     return ns;
 }
+static slotinfo_t* find_class(const char*name);
 
 static void function_initvars(methodstate_t*m, params_t*params, int flags, char var0)
 {
@@ -835,7 +852,18 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
            that those variable indices are reserved. It's up to the
            optimizer to later shuffle the variables down to lower
            indices */
-        m->variable_count = m->uses_slots; 
+        m->variable_count = m->uses_slots;
+        DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
+            if(v->type) {
+                if(v->type->package)
+                    v->type = (classinfo_t*)registry_find(v->type->package, v->type->name);
+                else
+                    v->type = (classinfo_t*)find_class(v->type->name);
+                if(!v->type || v->type->kind != INFOTYPE_CLASS) {
+                    syntaxerror("Couldn't find class %s", v->type->name);
+                }
+            }
+        }
     }
 
     if(params) {
@@ -863,6 +891,7 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
     if(state->cls) {
         syntaxerror("inner classes now allowed"); 
     }
+
     new_state();
     token_list_t*t=0;
     classinfo_list_t*mlist=0;
@@ -872,6 +901,11 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
 
     if((mod->flags&(FLAG_PUBLIC|FLAG_PACKAGEINTERNAL)) == (FLAG_PUBLIC|FLAG_PACKAGEINTERNAL))
         syntaxerror("public and internal not supported at the same time.");
+    
+    if(!(mod->flags&FLAG_INTERFACE) && !extends) {
+        // all classes extend object
+        extends = registry_getobjectclass();
+    }
 
     /* create the class name, together with the proper attributes */
     int access=0;
@@ -923,7 +957,7 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
             syntaxerror("Can't extend final class '%s'", extends->name);
 
         /* fill out interfaces and extends (we couldn't resolve those during the first pass) */
-        state->cls->info->superclass = extends?extends:TYPE_OBJECT;
+        state->cls->info->superclass = extends;
         int pos = 0;
         classinfo_list_t*l = implements;
         for(l=implements;l;l=l->next) {
@@ -1070,6 +1104,10 @@ void check_code_for_break(code_t*c)
             char*name = string_cstr(c->data[0]);
             syntaxerror("Unresolved \"continue %s\"", name);
         }
+        if(c->opcode == OPCODE___PUSHPACKAGE__) {
+            char*name = string_cstr(c->data[0]);
+            syntaxerror("Can't reference a package (%s) as such", name);
+        }
         c=c->prev;
     }
 }
@@ -1105,12 +1143,15 @@ static void check_override(memberinfo_t*m, int flags)
         return;
     if(m->flags & FLAG_FINAL)
         syntaxerror("can't override final member %s", m->name);
+    
+    /* allow this. it's no issue.
     if((m->flags & FLAG_STATIC) && !(flags&FLAG_STATIC))
-        syntaxerror("can't override static member %s", m->name);
+        syntaxerror("can't override static member %s", m->name);*/
+
     if(!(m->flags & FLAG_STATIC) && (flags&FLAG_STATIC))
         syntaxerror("can't override non-static member %s with static declaration", m->name);
 
-    if(!(flags&FLAG_OVERRIDE)) {
+    if(!(flags&FLAG_OVERRIDE) && !(flags&FLAG_STATIC) && !(m->flags&FLAG_STATIC)) {
         if(m->parent && !(m->parent->flags&FLAG_INTERFACE)) {
             if(m->kind == INFOTYPE_METHOD)
                 syntaxerror("can't override without explicit 'override' declaration");
@@ -1219,7 +1260,7 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
             list_append(parent_method->innerfunctions, state->method);
 
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
-       
+    
         function_initvars(state->method, params, 0, 1);
     }
 
@@ -1291,7 +1332,9 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         function_initvars(state->method, 0, 0, 0);
 
         methodstate_list_t*ml = state->method->innerfunctions;
+        
         dict_t*xvars = dict_new();
+
         while(ml) {
             methodstate_t*m = ml->methodstate;
             parserassert(m->inner);
@@ -1302,7 +1345,8 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
                     dictentry_t*l = d->slots[t]; 
                     while(l) {
                         /* check parent method's variables */
-                        if(find_variable(state, l->key)) {
+                        variable_t*v;
+                        if((v=find_variable(state, l->key))) {
                             m->uses_parent_function = 1;
                             state->method->uses_slots = 1;
                             dict_put(xvars, l->key, 0);
@@ -1317,6 +1361,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             }
             ml = ml->next;
         }
+        
         if(state->method->uses_slots) {
             state->method->slots = dict_new();
             int i = 1;
@@ -1334,8 +1379,6 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             state->method->uses_slots = i;
             dict_destroy(state->vars);state->vars = 0;
         }
-        dict_destroy(xvars);
-
         old_state();
         return 0;
     }
@@ -1408,8 +1451,10 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         check_code_for_break(body);
 
         if(state->method->exceptions &&
-           (state->method->late_binding || state->method->uses_slots)) 
-           syntaxerror("try/catch and activation or late binding not supported yet within the same method");
+           (state->method->late_binding || state->method->uses_slots)) {
+           //syntaxerror("try/catch and activation or late binding not supported yet within the same method");
+           as3_warning("try/catch and activation or late binding not supported yet within the same method");
+        }
 
         if(f->body) {
             f->body->code = body;
@@ -1557,7 +1602,7 @@ char is_pushundefined(code_t*c)
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
 }
 
-static slotinfo_t* find_class(char*name)
+static slotinfo_t* find_class(const char*name)
 {
     slotinfo_t*c=0;
 
@@ -1593,6 +1638,43 @@ static slotinfo_t* find_class(char*name)
     if(c) return c;
 
     return 0;
+}
+typedcode_t push_class(slotinfo_t*a)
+{
+    typedcode_t x;
+    x.c = 0;
+    x.t = 0;
+    if(a->access == ACCESS_PACKAGEINTERNAL &&
+       strcmp(a->package, state->package) &&
+       strcmp(a->package, internal_filename_package)
+       ) {
+       syntaxerror("Can't access internal %s %s in package '%s' from package '%s'",
+            infotypename(a), a->name, a->package, state->package);
+    }
+
+    if(a->kind != INFOTYPE_CLASS) {
+        MULTINAME(m, a);
+        x.c = abc_findpropstrict2(x.c, &m);
+        x.c = abc_getproperty2(x.c, &m);
+        if(a->kind == INFOTYPE_METHOD) {
+            methodinfo_t*f = (methodinfo_t*)a;
+            x.t = TYPE_FUNCTION(f);
+        } else {
+            varinfo_t*v = (varinfo_t*)a;
+            x.t = v->type;
+        }
+    } else {
+        classinfo_t*c = (classinfo_t*)a;
+        if(c->slot) {
+            x.c = abc_getglobalscope(x.c);
+            x.c = abc_getslot(x.c, c->slot);
+        } else {
+            MULTINAME(m, c);
+            x.c = abc_getlex2(x.c, &m);
+        }
+        x.t = TYPE_CLASS(c);
+    }
+    return x;
 }
 
 static char is_getlocal(code_t*c)
@@ -1641,7 +1723,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
     } else {
         prefix = 0;
     }
-
+        
     char use_temp_var = readbefore;
 
     /* generate the write instruction, and maybe append a dup to the prefix code */
@@ -1690,6 +1772,10 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
         write->opcode = OPCODE_SETLOCAL_2;
     } else if(r->opcode == OPCODE_GETLOCAL_3) { 
         write->opcode = OPCODE_SETLOCAL_3;
+    } else if(r->opcode == OPCODE_GETSUPER) { 
+        write->opcode = OPCODE_SETSUPER;
+        multiname_t*m = (multiname_t*)r->data[0];
+        write->data[0] = multiname_clone(m);
     } else {
         code_dump(r);
         syntaxerror("illegal lvalue: can't assign a value to this expression");
@@ -2117,6 +2203,10 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
 
 FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
     variable_t*var = find_variable(state, $2);
+    if(!var) {
+        syntaxerror("variable %s not known in this scope", $2);
+    }
+
     char*tmp1name = concat2($2, "__tmp1__");
     int it = new_variable(tmp1name, TYPE_INT, 0, 0);
     char*tmp2name = concat2($2, "__array__");
@@ -2399,7 +2489,7 @@ PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");}
 IMPORT : "import" PACKAGEANDCLASS {
        PASS12
        slotinfo_t*s = registry_find($2->package, $2->name);
-       if(!s) {// || !(s->flags&FLAG_BUILTIN)) {
+       if(!s && as3_pass==1) {// || !(s->flags&FLAG_BUILTIN)) {
            as3_schedule_class($2->package, $2->name);
        }
 
@@ -2409,11 +2499,12 @@ IMPORT : "import" PACKAGEANDCLASS {
             syntaxerror("Couldn't import class\n");
        state_has_imports();
        dict_put(state->imports, c->name, c);
+       import_toplevel(c->package);
        $$=0;
 }
 IMPORT : "import" PACKAGE '.' '*' {
        PASS12
-       if(strncmp("flash.", $2, 6)) {
+       if(strncmp("flash.", $2, 6) && as3_pass==1) {
            as3_schedule_package($2);
        }
 
@@ -2422,6 +2513,7 @@ IMPORT : "import" PACKAGE '.' '*' {
        i->package = $2;
        state_has_imports();
        list_append(state->wildcard_imports, i);
+       import_toplevel(i->package);
        $$=0;
 }
 
@@ -2451,7 +2543,7 @@ MODIFIER : KW_PUBLIC {PASS12 $$.flags=FLAG_PUBLIC;$$.ns=0;}
                                $$.ns=$1;
                        }
 
-EXTENDS : {$$=registry_getobjectclass();}
+EXTENDS : {$$=0;}
 EXTENDS : KW_EXTENDS CLASS_SPEC {$$=$2;}
 
 EXTENDS_LIST : {PASS12 $$=list_new();}
@@ -2606,9 +2698,12 @@ STATICCONSTANT : "true" {$$ = constant_new_true($1);}
 STATICCONSTANT : "false" {$$ = constant_new_false($1);}
 STATICCONSTANT : "null" {$$ = constant_new_null($1);}
 STATICCONSTANT : T_IDENTIFIER {
-    // TODO
-    as3_warning("Couldn't evaluate constant value of %s", $1);
-    $$ = constant_new_null($1);
+    if(!strcmp($1, "NaN")) {
+        $$ = constant_new_float(__builtin_nan(""));
+    } else {
+        as3_warning("Couldn't evaluate constant value of %s", $1);
+        $$ = constant_new_null($1);
+    }
 }
 
 /* ------------ classes and interfaces (body, functions) ------- */
@@ -2713,10 +2808,15 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 /* ------------- package + class ids --------------- */
 
 CLASS: T_IDENTIFIER {
-    PASS1 static slotinfo_t c;
+    PASS1 static classinfo_t c;
           memset(&c, 0, sizeof(c));
+          c.kind = INFOTYPE_CLASS;
+          c.subtype = 255;
           c.name = $1;
-          $$ = (classinfo_t*)&c;
+          $$ = &c;
+   
+          /* let the compiler know that we might be looking for this soon */
+          as3_schedule_class_noerror(state->package, $1);
     PASS2
     slotinfo_t*s = find_class($1);
     if(!s) syntaxerror("Could not find class/method %s (current package: %s)\n", $1, state->package);
@@ -2724,11 +2824,13 @@ CLASS: T_IDENTIFIER {
 }
 
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
-    PASS1 static slotinfo_t c;
+    PASS1 static classinfo_t c;
           memset(&c, 0, sizeof(c));
+          c.kind = INFOTYPE_CLASS;
+          c.subtype = 255;
           c.package = $1;
           c.name = $3;
-          $$=(classinfo_t*)&c;
+          $$ = &c;
     PASS2
     slotinfo_t*s = registry_find($1, $3);
     if(!s) syntaxerror("Couldn't find class/method %s.%s\n", $1, $3);
@@ -3312,7 +3414,7 @@ E : E '?' E ':' E %prec below_assignment {
 
 E : E "++" { code_t*c = 0;
              classinfo_t*type = $1.t;
-             if((is_getlocal($1.c) && TYPE_IS_INT($1.t)) || TYPE_IS_NUMBER($1.t)) {
+             if(is_getlocal($1.c) && (TYPE_IS_INT($1.t) || TYPE_IS_NUMBER($1.t))) {
                  int nr = getlocalnr($1.c);
                  code_free($1.c);$1.c=0;
                  if(TYPE_IS_INT($1.t)) {
@@ -3433,39 +3535,55 @@ E : E '.' '(' E ')' {
 
 
 
-E : E '.' T_IDENTIFIER
-            {$$.c = $1.c;
-             classinfo_t*t = $1.t;
-             char is_static = 0;
-             if(TYPE_IS_CLASS(t) && t->data) {
-                 t = t->data;
-                 is_static = 1;
-             }
-             if(t) {
-                 memberinfo_t*f = registry_findmember_nsset(t, state->active_namespaces, $3, 1);
-                 char noslot = 0;
-                 if(f && !is_static != !(f->flags&FLAG_STATIC))
-                    noslot=1;
-                 if(f && f->slot && !noslot) {
-                     $$.c = abc_getslot($$.c, f->slot);
-                 } else {
-                     MEMBER_MULTINAME(m, f, $3);
-                     $$.c = abc_getproperty2($$.c, &m);
-                 }
-                 /* determine type */
-                 $$.t = slotinfo_gettype((slotinfo_t*)f);
-                 if(!$$.t)
-                    $$.c = abc_coerce_a($$.c);
-             } else {
-                 /* when resolving a property on an unknown type, we do know the
-                    name of the property (and don't seem to need the package), but
-                    we need to make avm2 try out all access modes */
-                 multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
-                 $$.c = abc_getproperty2($$.c, &m);
-                 $$.c = abc_coerce_a($$.c);
-                 $$.t = registry_getanytype();
-             }
-            }
+E : E '.' T_IDENTIFIER {
+    $$.c = $1.c;
+    classinfo_t*t = $1.t;
+    char is_static = 0;
+    if(TYPE_IS_CLASS(t) && t->data) {
+        t = t->data;
+        is_static = 1;
+    }
+    if(t) {
+        if(t->subtype==0xff) {
+            syntaxerror("syntaxerror: trying to resolve property '%s' on incomplete object '%s'", $3, t->name);
+        }
+        memberinfo_t*f = registry_findmember_nsset(t, state->active_namespaces, $3, 1);
+        char noslot = 0;
+        if(f && !is_static != !(f->flags&FLAG_STATIC))
+           noslot=1;
+        if(f && f->slot && !noslot) {
+            $$.c = abc_getslot($$.c, f->slot);
+        } else {
+            MEMBER_MULTINAME(m, f, $3);
+            $$.c = abc_getproperty2($$.c, &m);
+        }
+        /* determine type */
+        $$.t = slotinfo_gettype((slotinfo_t*)f);
+        if(!$$.t)
+           $$.c = abc_coerce_a($$.c);
+    } else if($1.c && $1.c->opcode == OPCODE___PUSHPACKAGE__) {
+        string_t*package = $1.c->data[0];
+        char*package2 = concat3(package->str, ".", $3);
+        if(dict_contains(state->import_toplevel_packages, package2)) {
+            $$.c = $1.c;
+            $$.c->data[0] = string_new4(package2);
+            $$.t = 0;
+        } else {
+            slotinfo_t*a = registry_find(package->str, $3);
+            if(!a) 
+                syntaxerror("couldn't resolve %s", package2);
+            $$ = push_class(a);
+        }
+    } else {
+        /* when resolving a property on an unknown type, we do know the
+           name of the property (and don't seem to need the package), but
+           we need to make avm2 try out all access modes */
+        multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
+        $$.c = abc_getproperty2($$.c, &m);
+        $$.c = abc_coerce_a($$.c);
+        $$.t = registry_getanytype();
+    }
+}
 
 VAR_READ : T_IDENTIFIER {
     PASS1
@@ -3473,12 +3591,16 @@ VAR_READ : T_IDENTIFIER {
        function's variables.
        We consider everything which is not a local variable "unresolved".
        This encompasses class names, members of the surrounding class
-       etc. which *correct* because local variables of the parent function
+       etc. which is *correct* because local variables of the parent function
        would shadow those.
        */
     if(state->method->inner && !find_variable(state, $1)) {
         unknown_variable($1);
     }
+   
+    /* let the compiler know that it might check the current directory/package
+       for this identifier- maybe there's a file $1.as defining $1. */
+    as3_schedule_class_noerror(state->package, $1);
     PASS2
 
     $$.t = 0;
@@ -3541,41 +3663,21 @@ VAR_READ : T_IDENTIFIER {
     
     /* look at actual classes, in the current package and imported */
     if((a = find_class($1))) {
-        if(a->access == ACCESS_PACKAGEINTERNAL &&
-           strcmp(a->package, state->package) &&
-           strcmp(a->package, internal_filename_package)
-           )
-           syntaxerror("Can't access internal %s %s in package '%s' from package '%s'",
-                infotypename(a),$1, a->package, state->package);
+        $$ = push_class(a);
+        break;
+    }
 
-        if(a->kind != INFOTYPE_CLASS) {
-            MULTINAME(m, a);
-            $$.c = abc_findpropstrict2($$.c, &m);
-            $$.c = abc_getproperty2($$.c, &m);
-            if(a->kind == INFOTYPE_METHOD) {
-                methodinfo_t*f = (methodinfo_t*)a;
-                $$.t = TYPE_FUNCTION(f);
-            } else {
-                varinfo_t*v = (varinfo_t*)a;
-                $$.t = v->type;
-            }
-        } else {
-            classinfo_t*c = (classinfo_t*)a;
-            if(c->slot) {
-                $$.c = abc_getglobalscope($$.c);
-                $$.c = abc_getslot($$.c, c->slot);
-            } else {
-                MULTINAME(m, c);
-                $$.c = abc_getlex2($$.c, &m);
-            }
-            $$.t = TYPE_CLASS(c);
-        }
+    /* look through package prefixes */
+    if(dict_contains(state->import_toplevel_packages, $1)) {
+        $$.c = abc___pushpackage__($$.c, $1);
+        $$.t = 0;
         break;
     }
 
     /* unknown object, let the avm2 resolve it */
     if(1) {
-        as3_softwarning("Couldn't resolve '%s', doing late binding", $1);
+        //as3_softwarning("Couldn't resolve '%s', doing late binding", $1);
+        as3_warning("Couldn't resolve '%s', doing late binding", $1);
         state->method->late_binding = 1;
                 
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};

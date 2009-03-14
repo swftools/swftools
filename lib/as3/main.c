@@ -35,7 +35,7 @@
 
 void test_lexer(char*filename)
 {
-    char*fullfilename = find_file(filename);
+    char*fullfilename = find_file(filename, 1);
     enter_file(filename, fullfilename, 0);
     FILE*fi = fopen(fullfilename, "rb");
     as3_file_input(fi);
