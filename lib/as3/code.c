@@ -1179,11 +1179,11 @@ code_t* cut_last_push(code_t*c)
         } else if(c->opcode == OPCODE_CALLSUPER) {
             c->opcode = OPCODE_CALLSUPERVOID;
             return c;
-        } else if(c->opcode == OPCODE_NEWOBJECT ||
-                  c->opcode == OPCODE_NEWARRAY) {
+        } else if((c->opcode == OPCODE_NEWOBJECT ||
+                   c->opcode == OPCODE_NEWARRAY) &&
+                   !c->data[0]) {
             // we can discard these if they're not eating up stack parameters
-            if(!c->data[0])
-                return code_cutlast(c);
+            return code_cutlast(c);
         } else if(op->stack_minus ==0 && op->stack_plus == 0 && 
                 !(op->flags&~(OP_REGISTER|OP_SET_DXNS)) && c->prev) {
             // trim code *before* the kill, inclocal, declocal, dxns
