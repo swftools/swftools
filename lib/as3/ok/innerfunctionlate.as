@@ -1,5 +1,6 @@
 package {
     import flash.display.MovieClip
+    import flash.events.Event
 
     public class Main extends flash.display.MovieClip {
         public function Main() {
@@ -21,6 +22,10 @@ package {
             }
             function f3(t1,t2,t3) {
                 trace(t1+" "+t2+"/"+t3);
+            }
+
+            var f4 = function(e:Event) {
+                trace(e.type);
             }
 
             trace("[exit]");

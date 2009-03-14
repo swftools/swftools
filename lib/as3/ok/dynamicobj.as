@@ -20,7 +20,9 @@ package {
 
             x.f = function() {trace("ok 2/2")};
             x.f();
-            
+
+            var str:String = "key";
+            var y:Object = {str:{}};
             trace("[exit]");
         }
     }

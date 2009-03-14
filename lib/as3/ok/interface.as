@@ -1,5 +1,6 @@
 package {
     import flash.display.MovieClip
+    import flash.utils.ByteArray
     public interface I1 {
         function f()
     }
@@ -16,5 +17,6 @@ package {
         }
     }
     public interface I2 {
+	function init(key:ByteArray):void;
     }
 }
