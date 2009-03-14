@@ -85,6 +85,13 @@ int a3_lex()
 #endif
 }
 
+typedef struct _compile_list {
+    const char*name;
+    const char*filename;
+    struct _compile_list*next;
+} compile_list_t;
+static compile_list_t*compile_list=0;
+
 static void as3_parse_file_or_array(int pass, const char*name, const char*filename, const void*mem, int length)
 {
     if(!registry_initialized) {
@@ -102,6 +109,13 @@ static void as3_parse_file_or_array(int pass, const char*name, const char*filena
 
     FILE*fi = 0;
     if(filename) {
+        if(as3_pass==1 && !mem) {
+            compile_list_t*c = rfx_calloc(sizeof(compile_list_t));
+            c->next = compile_list;
+            c->name = strdup(name);
+            c->filename = strdup(filename);
+            compile_list = c;
+        }
         DEBUG printf("[pass %d] parse file %s %s\n", pass, name, filename);
         fi = enter_file2(name, filename, 0);
         as3_file_input(fi);
@@ -173,40 +187,53 @@ void as3_schedule_file(const char*name, const char*filename)
     scheduled = f;
 }
 
+void as3_parse_list()
+{
+    while(compile_list) {
+        as3_parse_file_or_array(2, compile_list->name, compile_list->filename, 0,0);
+        compile_list = compile_list->next;
+    }
+}
+
 void as3_parse_bytearray(const char*name, const void*mem, int length)
 {
+    as3_pass = 1;
     as3_parse_file_or_array(1, name, 0, mem, length);
     as3_parse_scheduled(1);
     
+    as3_pass = 2;
     as3_parse_file_or_array(2, name, 0, mem, length);
-    as3_parse_scheduled(2);
+    as3_parse_list();
 }
 
 void as3_parse_file(const char*filename) 
 {
-    char*fullfilename = find_file(filename);
+    char*fullfilename = find_file(filename, 1);
     if(!fullfilename)
         return; // not found
-    
+
+    compile_list = 0;
+    as3_pass = 1;
     as3_parse_file_or_array(1, filename, fullfilename, 0,0);
     as3_parse_scheduled(1);
 
-    as3_parse_file_or_array(2, filename, fullfilename, 0,0);
-    as3_parse_scheduled(2);
+    as3_pass = 2;
+    as3_parse_list();
 
     free(fullfilename);
 }
 
 void as3_parse_directory(const char*dir)
 {
+    compile_list = 0;
     as3_pass=1;
     as3_schedule_directory(dir);
     if(!scheduled)
         as3_warning("Directory %s doesn't contain any ActionScript files", dir);
     as3_parse_scheduled(1);
+
     as3_pass=2;
-    as3_schedule_directory(dir);
-    as3_parse_scheduled(2);
+    as3_parse_list();
 }
 
 char as3_schedule_directory(const char*dirname)
@@ -255,13 +282,15 @@ void as3_schedule_package(const char*package)
         if(dirname[s]=='.') dirname[s]='/';
         s++;
     };
-    if(!as3_schedule_directory(package))
+    if(!as3_schedule_directory(dirname))
         as3_softwarning("Could not find package %s in file system", package);
 }
 
-void as3_schedule_class(const char*package, const char*cls)
+static void schedule_class(const char*package, const char*cls, char error)
 {
-    DEBUG printf("[pass %d] schedule class %s.%s\n",  as3_pass, package, cls);
+    if(error) {
+        DEBUG printf("[pass %d] schedule class %s.%s\n",  as3_pass, package, cls);
+    }
     if(!cls) {
         as3_schedule_package(package);
         return;
@@ -283,22 +312,35 @@ void as3_schedule_class(const char*package, const char*cls)
     strcpy(filename+t, cls);
     strcpy(filename+t+l2, ".as");
     char*f=0;
-    if(!(f=find_file(filename))) {
+    if(!(f=find_file(filename, error))) {
         int i;
         /* try lower case filename (not packagename!), too */
         for(i=t;i<t+l2;i++) {
             if(filename[i]>='A' && filename[i]<='Z')
                 filename[i] += 'a'-'A';
         }
-        if(!(f=find_file(filename))) {
-            strcpy(filename+t, cls);
-            strcpy(filename+t+l2, ".as");
-            as3_warning("Could not open file %s", filename);
+        if(!(f=find_file(filename, error))) {
+            if(error) {
+                strcpy(filename+t, cls);
+                strcpy(filename+t+l2, ".as");
+                as3_warning("Could not open file %s", filename);
+            }
             return;
         }
     }
     as3_schedule_file(filename, f);
 }
+
+void as3_schedule_class(const char*package, const char*cls)
+{
+    schedule_class(package, cls, 1);
+}
+
+void as3_schedule_class_noerror(const char*package, const char*cls)
+{
+    schedule_class(package, cls, 0);
+}
+
 
 static void*as3code = 0;
 void* as3_getcode()

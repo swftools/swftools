@@ -11,6 +11,7 @@ void as3_parse_directory(const char*dir);
 char as3_schedule_directory(const char*dir);
 void as3_schedule_package(const char*package);
 void as3_schedule_class(const char*package, const char*cls);
+void as3_schedule_class_noerror(const char*package, const char*cls);
 
 void as3_warning(const char*format, ...);
 char* as3_getglobalclass();
