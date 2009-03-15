@@ -774,8 +774,8 @@ diff -u -r1.5 -r1.6
  }
  
  void SplashFont::initCache() {
---- xpdf/SplashFTFont.cc.orig	2008-09-09 21:31:01.000000000 +0200
-+++ xpdf/SplashFTFont.cc	2008-10-05 17:37:32.000000000 +0200
+--- xpdf/SplashFTFont.cc.orig	2009-03-08 17:19:08.000000000 +0100
++++ xpdf/SplashFTFont.cc	2009-03-15 19:18:11.000000000 +0100
 @@ -46,6 +46,7 @@
    int x, y;
  
@@ -817,7 +817,16 @@ diff -u -r1.5 -r1.6
    ff = (SplashFTFontFile *)fontFile;
    ff->face->size = sizeObj;
    FT_Set_Transform(ff->face, &textMatrix, NULL);
-@@ -268,6 +281,8 @@
+@@ -262,17 +275,24 @@
+     // skip the TrueType notdef glyph
+     return NULL;
+   }
+-  if (FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP)) {
++  int error = 0;
++  if ((error=FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP|FT_LOAD_NO_HINTING))) {
++      fprintf(stderr, "Truetype wasn't able to load glyph %d, error %d\n", gid, error);
+     return NULL;
+   }
    if (FT_Get_Glyph(slot, &glyph)) {
      return NULL;
    }
@@ -826,6 +835,15 @@ diff -u -r1.5 -r1.6
    path.path = new SplashPath();
    path.textScale = textScale;
    path.needClose = gFalse;
+-  FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
++  error = FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
+ 		       &outlineFuncs, &path);
++  if(error) {
++      fprintf(stderr, "Truetype wasn't able to read glyph %d, error %d\n", gid, error);
++  }
+   if (path.needClose) {
+     path.path->close();
+   }
 --- xpdf/SplashFTFont.h.orig	2008-09-09 21:31:01.000000000 +0200
 +++ xpdf/SplashFTFont.h	2008-10-04 17:39:57.000000000 +0200
 @@ -42,6 +42,9 @@
