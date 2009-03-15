@@ -212,6 +212,7 @@ void heap_dump(heap_t*h, FILE*fi);
 void** heap_flatten(heap_t*h);
 
 void trie_put(trie_t**t, unsigned const char*id);
+char trie_remove(trie_t*t, unsigned const char*id);
 int trie_lookup(trie_t*t, unsigned const char*id);
 
 array_t* array_new();

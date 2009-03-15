@@ -528,6 +528,10 @@ void tokenizer_register_namespace(const char*id)
 {
     trie_put(&namespaces, id);
 }
+void tokenizer_unregister_namespace(const char*id)
+{
+    trie_remove(namespaces, id);
+}
 static inline tokenizer_is_namespace(const char*id)
 {
     return trie_lookup(namespaces, id);

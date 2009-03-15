@@ -250,7 +250,7 @@ namespace_t* namespace_new(U8 access, const char*name)
     ns->name = name?strdup(name):0;
     return ns;
 }
-namespace_t* namespace_new_undefined(const char*name) {
+namespace_t* namespace_new_namespace(const char*name) {
     return namespace_new(0x08, name); // public?
 }
 namespace_t* namespace_new_package(const char*name) {

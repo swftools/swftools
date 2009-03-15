@@ -35,6 +35,8 @@ DECLARE_LIST(param);
 DECLARE(params);
 DECLARE(typedcode);
 DECLARE(modifiers);
+DECLARE(namespace_decl);
+DECLARE_LIST(namespace_decl);
 DECLARE_LIST(typedcode);
 
 struct _param {
@@ -55,6 +57,10 @@ struct _typedcode {
 struct _modifiers {
     int flags;
     char*ns;
+};
+struct _namespace_decl {
+    const char*name;
+    const char*url;
 };
 
 /* small helper structs: */
@@ -89,6 +95,7 @@ void as3_buffer_input(void*buffer, int len);
 void as3_file_input(FILE*fi);
 
 void tokenizer_register_namespace(const char*id);
+void tokenizer_unregister_namespace(const char*id);
 
 #define T_EOF 0
 

@@ -178,6 +178,7 @@ int pool_register_multiname2(pool_t*pool, char*name);
 
 /* creation */
 namespace_t* namespace_new(U8 access, const char*name);
+namespace_t* namespace_new_namespace(const char*name);
 namespace_t* namespace_new_package(const char*name);
 namespace_t* namespace_new_packageinternal(const char*name);
 namespace_t* namespace_new_protected(const char*name);

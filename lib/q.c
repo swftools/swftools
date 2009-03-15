@@ -295,7 +295,7 @@ void trie_put(trie_t**t, unsigned const char*id)
     if(id[0]) {
         trie_put(&(*t)->row[id[0]], id+1);
     } else {
-        (*t)->rest = "";
+        (*t)->rest = strdup("");
     }
 }
 
@@ -304,13 +304,27 @@ int trie_lookup(trie_t*t, unsigned const char*id)
     while(t) {
         if(t->rest && !strcmp(t->rest, id))
             return 1;
-        t = t->row[id[0]];
         if(!*id) 
             return 0;
-        id++;
+        t = t->row[*id++];
     }
     return 0;
 }
+
+char trie_remove(trie_t*t, unsigned const char*id)
+{
+    while(t) {
+        if(t->rest && !strcmp(t->rest, id)) {
+            free(t->rest);
+            t->rest = 0;
+            return 1;
+        }
+        if(!*id) 
+            return 0;
+        t = t->row[*id++];
+    }
+}
+
 
 // ------------------------------- crc32 --------------------------------------
 static unsigned int*crc32 = 0;

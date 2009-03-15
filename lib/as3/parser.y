@@ -65,6 +65,7 @@ extern int a3_lex();
     abc_exception_t *exception;
     regexp_t regexp;
     modifiers_t flags;
+    namespace_decl_t* namespace_decl;
     struct {
         abc_exception_list_t *l;
         code_t*finally;
@@ -170,7 +171,8 @@ extern int a3_lex();
 %token<token> T_SHR ">>"
 
 %type <for_start> FOR_START
-%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER NAMESPACE_ID
+%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER
+%type <namespace_decl>  NAMESPACE_ID
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE CODE_STATEMENT
@@ -350,6 +352,7 @@ typedef struct _state {
     dict_t*import_toplevel_packages;
     dict_t*imports;
     namespace_list_t*active_namespaces;
+    namespace_decl_list_t*new_namespaces;
     char has_own_imports;
     char new_vars; // e.g. transition between two functions
   
@@ -433,6 +436,7 @@ static void new_state()
     state = s;
     state->level++;
     state->has_own_imports = 0;    
+    state->new_namespaces = 0;
     state->vars = dict_new(); 
     state->old = oldstate;
     state->new_vars = 0;
@@ -487,6 +491,12 @@ static void old_state()
     state_t*leaving = state;
     
     state = state->old;
+
+    namespace_decl_list_t*nl=leaving->new_namespaces;
+    while(nl) {
+        tokenizer_unregister_namespace(nl->namespace_decl->name);
+        nl = nl->next;
+    }
     
     if(as3_pass>1 && leaving->method && leaving->method != state->method && !leaving->method->inner) {
         free(leaving->method);
@@ -3692,21 +3702,40 @@ VAR_READ : T_IDENTIFIER {
 
 NAMESPACE_ID : "namespace" T_IDENTIFIER {
     PASS12
-    tokenizer_register_namespace($2);
-    $$=$2;
+    NEW(namespace_decl_t,n);
+    n->name = $2;
+    n->url = 0;
+    $$=n;
+}
+NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_IDENTIFIER {
+    PASS12
+    NEW(namespace_decl_t,n);
+    n->name = $2;
+    n->url = $4;
+    $$=n;
+}
+NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_STRING {
+    PASS12
+    NEW(namespace_decl_t,n);
+    n->name = $2;
+    n->url = $4.str;
+    $$=n;
+}
+NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
+    PASS12
+    list_append(state->new_namespaces, $2);
+    tokenizer_register_namespace($2->name);
+    $$=0;
 }
 
-NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
-    $$=0;
-}
-NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID '=' T_IDENTIFIER {
-    $$=0;
-}
-NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID '=' T_STRING {
-    $$=0;
-}
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12
+    NEW(namespace_decl_t,n);
+    n->name = $3->name;
+    n->url = 0;
+    /* FIXME: for pass2, we should now try to figure out what the URL of 
+              this thing is */
+    list_append(state->new_namespaces, n);
     tokenizer_register_namespace($3->name);
     $$=0;
 }

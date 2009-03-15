@@ -182,6 +182,7 @@ tokenunion
     abc_exception_t *exception;
     regexp_t regexp;
     modifiers_t flags;
+    namespace_decl_t* namespace_decl;
     struct {
         abc_exception_list_t *l;
         code_t*finally;
@@ -190,7 +191,7 @@ tokenunion
 
 
 /* Line 1685 of skeleton.m4  */
-#line 194 "parser.tab.h"
+#line 195 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
