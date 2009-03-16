@@ -5,11 +5,11 @@ package {
     public class MyError {
     }
     public class MyOtherError {
-        var ok5="ok 5/7";
+        var ok5="ok 5/8";
     }
     public class ClassWithStaticFunctions {
         static function ok7() {
-            trace("ok 7/7");
+            trace("ok 7/8");
         }
     }
     public class Main extends flash.display.MovieClip {
@@ -24,7 +24,7 @@ package {
                 flash.net.navigateToURL;
             } catch (e:Error) {
             }
-            trace("ok 6/7");
+            trace("ok 6/8");
 
             with(getClass()) {
                 try {
@@ -33,6 +33,22 @@ package {
                     ok7();
                 }
             }
+        }
+        public function checkActivation():void
+        {
+            var y:uint = 0;
+            var inc_y = function() {
+                y = y + 1;
+            }
+            
+            try {
+              inc_y();
+              throw new Error;
+            } catch(e:Error) {
+                inc_y();
+            }
+            if(y!=2) trace("error")
+            else    trace("ok 8/8");
         }
 		
 
@@ -44,7 +60,7 @@ package {
                 // MyError is not of the Error class
                 trace("error");
             } catch(error:MyError) {
-                trace("ok 1/7");
+                trace("ok 1/8");
             } catch(x) {
                 trace("error");
             }
@@ -55,11 +71,11 @@ package {
             } catch(error:MyError) {
                 trace("error");
             } catch(x:*) { // ":*" is the same as ""
-                trace("ok 2/7");
+                trace("ok 2/8");
             }
             
             try {
-                trace("ok 3/7");
+                trace("ok 3/8");
                 // don't throw any error
             } catch(error:MyError) {
                 trace("error");
@@ -69,7 +85,7 @@ package {
                 trace("error");
             }
 
-            trace("ok 4/7");
+            trace("ok 4/8");
 
             try {throw new MyOtherError} 
             catch(x:*) {
@@ -77,6 +93,7 @@ package {
             }
 
             checkScope();
+            checkActivation();
             
             trace("[exit]");
         }
