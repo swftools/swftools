@@ -431,12 +431,12 @@ static PyObject* f_createOpenGL(PyObject* parent, PyObject* args, PyObject* kwar
 }
 #endif
 
-static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
+static char callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
 {
     OutputObject*self = (OutputObject*)dev->internal;
 
     if(!PyObject_HasAttrString(self->pyobj, function))
-        return PY_NONE;
+        return 0;
 
     va_list ap;
     va_start(ap, format);
@@ -451,6 +451,9 @@ static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*forma
         } else if(p=='i') {
             int i = va_arg(ap, int);
             PyTuple_SetItem(tuple, pos, PyInt_FromLong(i));
+        } else if(p=='d') {
+            int i = va_arg(ap, double);
+            PyTuple_SetItem(tuple, pos, PyFloat_FromDouble(i));
         } else if(p=='c') {
             void* ptr = va_arg(ap, void*);
             gfxcolor_t*col = (gfxcolor_t*)ptr;
@@ -511,10 +514,10 @@ static PyObject*callback_python(char*function, gfxdevice_t*dev, const char*forma
     if(!result) { 
         PyErr_Print();
         PyErr_Clear();
-        return 0;
+        return 1;
     } else {
         Py_DECREF(result);
-        return 0;
+        return 1;
     }
 }
     
@@ -551,7 +554,7 @@ static void my_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolo
         joint = "round";
     else if(joint_style == gfx_joinBevel)
         joint = "bevel";
-    callback_python("stroke", dev, "licssi", line, width, color, cap, joint, miterLimit);
+    callback_python("stroke", dev, "ldcssi", line, width, color, cap, joint, miterLimit);
 }
 static void my_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
@@ -569,9 +572,19 @@ static void my_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     callback_python("addfont", dev, "f", font);
 }
-static void my_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+static void my_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
-    callback_python("drawchar", dev, "ficm", font, glyph, color, matrix);
+    if(!callback_python("drawchar", dev, "ficm", font, glyphnr, color, matrix))
+    {
+        if(!font)
+            return;
+        gfxglyph_t*glyph = &font->glyphs[glyphnr];
+        gfxline_t*line2 = gfxline_clone(glyph->line);
+        gfxline_transform(line2, matrix);
+        my_fill(dev, line2, color);
+        gfxline_free(line2);
+        return;
+    }
 }
 static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
