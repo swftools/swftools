@@ -59,6 +59,74 @@ type_t slotinfo_type = {
     free: (free_func)dummy_destroy,
 };
 
+// ----------------------- resolving ----------------------------------
+slotinfo_t* registry_resolve(slotinfo_t*_s)
+{
+    if(!_s || _s->kind != INFOTYPE_UNRESOLVED)
+        return _s;
+    unresolvedinfo_t*s = (unresolvedinfo_t*)_s;
+
+    if(s->package)
+        return registry_find(s->package, s->name);
+
+    namespace_list_t*l = s->nsset;
+    while(l) {
+        slotinfo_t* n = registry_find(l->namespace->name, s->name);
+        if(n) return n;
+        l = l->next;
+    }
+    return 0;
+}
+
+static slotinfo_list_t*unresolved = 0;
+static void schedule_for_resolve(slotinfo_t*s)
+{
+    list_append(unresolved, s);
+}
+static void resolve_on_slot(slotinfo_t*_member)
+{
+    if(_member->kind == INFOTYPE_SLOT) {
+        varinfo_t*member = (varinfo_t*)_member;
+        member->type = (classinfo_t*)registry_resolve((slotinfo_t*)member->type);
+    } else if(_member->kind == INFOTYPE_METHOD) {
+        methodinfo_t*member = (methodinfo_t*)_member;
+        member->return_type = (classinfo_t*)registry_resolve((slotinfo_t*)member->return_type);
+        classinfo_list_t*l = member->params;
+        while(l) {
+            l->classinfo = (classinfo_t*)registry_resolve((slotinfo_t*)l->classinfo);
+            l = l->next;
+        }
+    } else fprintf(stderr, "Internal Error: bad slot %s", _member->name);
+}
+static void resolve_on_class(slotinfo_t*_cls)
+{
+    classinfo_t*cls = (classinfo_t*)_cls;
+    cls->superclass = (classinfo_t*)registry_resolve((slotinfo_t*)cls->superclass);
+    DICT_ITERATE_DATA(&cls->members,slotinfo_t*,m) {
+        resolve_on_slot(m);
+    }
+    int t=0;
+    while(cls->interfaces[t]) {
+        cls->interfaces[t] = (classinfo_t*)registry_resolve((slotinfo_t*)cls->interfaces[t]);
+        t++;
+    }
+}
+void registry_resolve_all()
+{
+    while(unresolved) {
+        slotinfo_t*_s = unresolved->slotinfo;
+        if(_s->kind == INFOTYPE_CLASS) {
+            resolve_on_class(_s);
+        } else if(_s->kind == INFOTYPE_METHOD || _s->kind == INFOTYPE_SLOT) {
+            resolve_on_slot(_s);
+        } else {
+            fprintf(stderr, "Internal Error: object %s.%s has bad type\n", _s->package, _s->name);
+        }
+        slotinfo_list_t*tofree = unresolved;
+        unresolved = unresolved->next;
+        free(tofree);
+    }
+}
 // ------------------------- constructors --------------------------------
 
 #define AVERAGE_NUMBER_OF_MEMBERS 8
@@ -72,6 +140,8 @@ classinfo_t* classinfo_register(int access, const char*package, const char*name,
     c->name = name;
     dict_put(registry_classes, c, c);
     dict_init2(&c->members, &slotinfo_type, AVERAGE_NUMBER_OF_MEMBERS);
+
+    schedule_for_resolve((slotinfo_t*)c);
     return c;
 }
 methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name)
@@ -106,6 +176,8 @@ methodinfo_t* methodinfo_register_global(U8 access, const char*package, const ch
     m->name = name;
     m->parent = 0;
     dict_put(registry_classes, m, m);
+    
+    schedule_for_resolve((slotinfo_t*)m);
     return m;
 }
 varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name)
@@ -118,6 +190,8 @@ varinfo_t* varinfo_register_global(U8 access, const char*package, const char*nam
     m->name = name;
     m->parent = 0;
     dict_put(registry_classes, m, m);
+    
+    schedule_for_resolve((slotinfo_t*)m);
     return m;
 }
 
@@ -188,12 +262,14 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*nam
     int t=0;
     while(cls->interfaces[t]) {
         classinfo_t*s = cls->interfaces[t];
-        while(s) {
-            m = (slotinfo_t*)dict_lookup(&s->members, &tmp);
-            if(m) {
-                return (memberinfo_t*)m;
+        if(s->kind != INFOTYPE_UNRESOLVED) {
+            while(s) {
+                m = (slotinfo_t*)dict_lookup(&s->members, &tmp);
+                if(m) {
+                    return (memberinfo_t*)m;
+                }
+                s = s->superclass;
             }
-            s = s->superclass;
         }
         t++;
     }

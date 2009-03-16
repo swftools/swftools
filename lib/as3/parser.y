@@ -217,7 +217,7 @@ extern int a3_lex();
 %type <value> NEW
 //%type <token> T_IDENTIFIER
 %type <value> FUNCTIONCALL
-%type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST EXPRESSION_LIST_AND_COMMA MAYBE_PARAM_VALUES MAYBE_EXPRPAIR_LIST EXPRPAIR_LIST
+%type <value_list> MAYBE_EXPRESSION_LIST EXPRESSION_LIST EXPRESSION_LIST_AND_COMMA MAYBE_PARAM_VALUES MAYBE_EXPRPAIR_LIST EXPRPAIR_LIST WITH_HEAD
 
 // precedence: from low to high
 
@@ -319,6 +319,7 @@ typedef struct _classstate {
 struct _methodstate {
     /* method data */
     methodinfo_t*info;
+    char has_exceptions;
     char late_binding;
     char is_constructor;
     char has_super;
@@ -338,6 +339,8 @@ struct _methodstate {
     char is_a_slot; // for inner methods
 
     code_t*header;
+
+    code_t*scope_code;
     abc_exception_list_t*exceptions;
     
     methodstate_list_t*innerfunctions;
@@ -535,11 +538,11 @@ void initialize_file(char*filename)
     if(as3_pass==1) {
         state->method = rfx_calloc(sizeof(methodstate_t));
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
+        state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
     } else {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
         function_initvars(state->method, 0, 0, 1);
         global->init = abc_initscript(global->file);
-        state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
     }
 }
 
@@ -658,8 +661,9 @@ static variable_t* new_variable2(const char*name, classinfo_t*type, char init, c
     v->index = state->method->variable_count++;
     v->type = type;
     v->init = init;
-    
-    dict_put(state->vars, name, v);
+ 
+    if(name) 
+        dict_put(state->vars, name, v);
 
     return v;
 }
@@ -737,17 +741,27 @@ static void parsererror(const char*file, int line, const char*f)
 }
 
    
-static code_t* method_header(methodstate_t*m)
+static code_t* add_scope_code(code_t*c, methodstate_t*m)
 {
-    code_t*c = 0;
     if(m->uses_slots || (m->late_binding && !m->inner)) {
         c = abc_getlocal_0(c);
         c = abc_pushscope(c);
     }
     if(m->uses_slots) {
+        /* FIXME: does this need to be the same activation object as
+                  in the function header? */
         c = abc_newactivation(c);
         c = abc_pushscope(c);
     }
+    return c;
+}
+
+static code_t* method_header(methodstate_t*m)
+{
+    code_t*c = 0;
+
+    c = add_scope_code(c, m);
+
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
         parserassert(l->methodstate->abc);
@@ -857,23 +871,13 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
             *(int*)0=0;
         parserassert(!index);
     }
+
     if(m->uses_slots) {
         /* as variables and slots share the same number, make sure
            that those variable indices are reserved. It's up to the
            optimizer to later shuffle the variables down to lower
            indices */
         m->variable_count = m->uses_slots;
-        DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
-            if(v->type) {
-                if(v->type->package)
-                    v->type = (classinfo_t*)registry_find(v->type->package, v->type->name);
-                else
-                    v->type = (classinfo_t*)find_class(v->type->name);
-                if(!v->type || v->type->kind != INFOTYPE_CLASS) {
-                    syntaxerror("Couldn't find class %s", v->type->name);
-                }
-            }
-        }
     }
 
     if(params) {
@@ -882,15 +886,34 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
             new_variable(p->param->name, p->param->type, 0, 1);
         }
     }
+
+    if(as3_pass==2) {
+        m->scope_code = add_scope_code(m->scope_code, m);
+    }
+
     
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
         methodstate_t*m = l->methodstate;
+        
         variable_t* v = new_variable2(m->info->name, TYPE_FUNCTION(m->info), 0, 1);
         m->var_index = v->index;
         m->slot_index = v->index;
         v->is_inner_method = m;
+
         l = l->next;
+    }
+    
+    if(as3_pass==2 && m->slots) {
+        /* exchange unresolved identifiers with the actual objects */
+        DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
+            if(v->type && v->type->kind == INFOTYPE_UNRESOLVED) {
+                v->type = (classinfo_t*)registry_resolve((slotinfo_t*)v->type);
+                if(!v->type || v->type->kind != INFOTYPE_CLASS) {
+                    syntaxerror("Couldn't find class %s", v->type->name);
+                }
+            }
+        }
     }
 }
 
@@ -912,6 +935,7 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
     if((mod->flags&(FLAG_PUBLIC|FLAG_PACKAGEINTERNAL)) == (FLAG_PUBLIC|FLAG_PACKAGEINTERNAL))
         syntaxerror("public and internal not supported at the same time.");
     
+    //if(!(mod->flags&FLAG_INTERFACE) && !extends) {
     if(!(mod->flags&FLAG_INTERFACE) && !extends) {
         // all classes extend object
         extends = registry_getobjectclass();
@@ -952,6 +976,12 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
         int num_interfaces = (list_length(implements));
         state->cls->info = classinfo_register(access, package, classname, num_interfaces);
         state->cls->info->flags |= mod->flags & (FLAG_DYNAMIC|FLAG_INTERFACE|FLAG_FINAL);
+        
+        int pos = 0;
+        classinfo_list_t*l = implements;
+        for(l=implements;l;l=l->next) {
+            state->cls->info->interfaces[pos++] = l->classinfo;
+        }
     }
     
     if(as3_pass == 2) {
@@ -965,16 +995,17 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
 
         if(extends && (extends->flags & FLAG_FINAL))
             syntaxerror("Can't extend final class '%s'", extends->name);
+        
+        int pos = 0;
+        while(state->cls->info->interfaces[pos]) {
+            if(!(state->cls->info->interfaces[pos]->flags & FLAG_INTERFACE))
+                syntaxerror("'%s' is not an interface", 
+                    state->cls->info->interfaces[pos]->name);
+            pos++;
+        }
 
         /* fill out interfaces and extends (we couldn't resolve those during the first pass) */
         state->cls->info->superclass = extends;
-        int pos = 0;
-        classinfo_list_t*l = implements;
-        for(l=implements;l;l=l->next) {
-            if(!(l->classinfo->flags & FLAG_INTERFACE))
-                syntaxerror("'%s' is not an interface", l->classinfo->name);
-            state->cls->info->interfaces[pos++] = l->classinfo;
-        }
 
         /* generate the abc code for this class */
         MULTINAME(classname2,state->cls->info);
@@ -1125,6 +1156,7 @@ void check_code_for_break(code_t*c)
 
 static void check_constant_against_type(classinfo_t*t, constant_t*c)
 {
+    return;
 #define xassert(b) if(!(b)) syntaxerror("Invalid default value %s for type '%s'", constant_tostring(c), t->name)
    if(TYPE_IS_NUMBER(t)) {
         xassert(c->type == CONSTANT_FLOAT
@@ -1376,6 +1408,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             state->method->slots = dict_new();
             int i = 1;
             DICT_ITERATE_ITEMS(state->vars, char*, name, variable_t*, v) {
+                if(!name) syntaxerror("internal error");
                 if(v->index && dict_contains(xvars, name)) {
                     v->init = 0;
                     v->index = i++;
@@ -1460,11 +1493,10 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
 
         check_code_for_break(body);
 
-        if(state->method->exceptions &&
-           (state->method->late_binding || state->method->uses_slots)) {
-           //syntaxerror("try/catch and activation or late binding not supported yet within the same method");
-           as3_warning("try/catch and activation or late binding not supported yet within the same method");
-        }
+        /* Seems this works now.
+        if(state->method->exceptions && state->method->uses_slots) {
+           as3_warning("try/catch and activation not supported yet within the same method");
+        }*/
 
         if(f->body) {
             f->body->code = body;
@@ -1610,6 +1642,36 @@ code_t*defaultvalue(code_t*c, classinfo_t*type)
 char is_pushundefined(code_t*c)
 {
     return (c && !c->prev && !c->next && c->opcode == OPCODE_PUSHUNDEFINED);
+}
+
+static const char* get_package_from_name(const char*name)
+{
+    /* try explicit imports */
+    dictentry_t* e = dict_get_slot(state->imports, name);
+    while(e) {
+        if(!strcmp(e->key, name)) {
+            slotinfo_t*c = (slotinfo_t*)e->data;
+            if(c) return c->package;
+        }
+        e = e->next;
+    }
+    return 0;
+}
+static namespace_list_t*get_current_imports()
+{
+    namespace_list_t*searchlist = 0;
+    
+    list_append(searchlist, namespace_new_package(state->package));
+
+    import_list_t*l = state->wildcard_imports;
+    while(l) {
+        namespace_t*ns = namespace_new_package(l->import->package);
+        list_append(searchlist, ns);
+        l = l->next;
+    }
+    list_append(searchlist, namespace_new_package(""));
+    list_append(searchlist, namespace_new_package(internal_filename_package));
+    return searchlist;
 }
 
 static slotinfo_t* find_class(const char*name)
@@ -1980,10 +2042,10 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
     int lookup_version_cost = 4*num_insertion_points + 5;
 
     if(cantdup || simple_version_cost > lookup_version_cost) {
-        printf("lookup %d > *%d*\n", simple_version_cost, lookup_version_cost);
+        //printf("(use lookup) simple=%d > lookup=%d\n", simple_version_cost, lookup_version_cost);
         return insert_finally_lookup(c, finally, tempvar);
     } else {
-        printf("simple *%d* < %d\n", simple_version_cost, lookup_version_cost);
+        //printf("(use simple) simple=%d < lookup=%d\n", simple_version_cost, lookup_version_cost);
         return insert_finally_simple(c, finally, tempvar);
     }
 }
@@ -2374,6 +2436,7 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();
     int i = find_variable_safe(state, $3)->index;
     e->target = c = abc_nop(0);
     c = abc_setlocal(c, i);
+    c = code_append(c, code_dup(state->method->scope_code));
     c = code_append(c, $8);
     c = abc_kill(c, i);
 
@@ -2416,7 +2479,10 @@ CATCH_FINALLY_LIST: FINALLY {
     }
 }
 
-TRY : "try" '{' {PASS12 new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
+TRY : "try" '{' {PASS12 new_state();
+                 state->method->has_exceptions=1;
+                 state->method->late_binding=1;//for invariant scope_code
+                } MAYBECODE '}' CATCH_FINALLY_LIST {
     code_t*out = abc_nop(0);
 
     code_t*start = abc_nop(0);
@@ -2441,6 +2507,7 @@ TRY : "try" '{' {PASS12 new_state();} MAYBECODE '}' CATCH_FINALLY_LIST {
             parserassert((ptroff_t)$6.finally);
             // finally block
             e->target = $$ = abc_nop($$);
+            $$ = code_append($$, code_dup(state->method->scope_code));
             $$ = abc___rethrow__($$);
         }
         
@@ -2476,11 +2543,31 @@ THROW : "throw" %prec prec_none {
 
 /* ------------ with -------------------------------- */
 
-WITH : "with" '(' EXPRESSION ')' CODEBLOCK {
-     $$ = $3.c;
+WITH_HEAD : "with" '(' EXPRESSION ')' {
+     new_state();
+     if(state->method->has_exceptions) {
+         char var[32];
+         sprintf(var, "#with#_%d", as3_tokencount);
+         int v = new_variable(var,$3.t,0,0);
+         state->method->scope_code = abc_getlocal(state->method->scope_code, v);
+         state->method->scope_code = abc_pushwith(state->method->scope_code);
+         $$.number = v;
+     }
+     $$.cc = $3.c;
+} 
+WITH : WITH_HEAD CODEBLOCK {
+     /* remove getlocal;pushwith from scope code again */
+     state->method->scope_code = code_cutlast(code_cutlast(state->method->scope_code));
+
+     $$ = $1.cc;
+     if(state->method->has_exceptions) {
+         $$ = abc_dup($$);
+         $$ = abc_setlocal($$, $1.number);
+     }
      $$ = abc_pushwith($$);
-     $$ = code_append($$, $5);
+     $$ = code_append($$, $2);
      $$ = abc_popscope($$);
+     old_state();
 }
 
 /* ------------ packages and imports ---------------- */
@@ -2553,8 +2640,8 @@ MODIFIER : KW_PUBLIC {PASS12 $$.flags=FLAG_PUBLIC;$$.ns=0;}
                                $$.ns=$1;
                        }
 
-EXTENDS : {$$=0;}
-EXTENDS : KW_EXTENDS CLASS_SPEC {$$=$2;}
+EXTENDS : {PASS12 $$=0;}
+EXTENDS : KW_EXTENDS CLASS_SPEC {PASS12 $$=$2;}
 
 EXTENDS_LIST : {PASS12 $$=list_new();}
 EXTENDS_LIST : KW_EXTENDS CLASS_SPEC_LIST {PASS12 $$=$2;}
@@ -2818,15 +2905,18 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 /* ------------- package + class ids --------------- */
 
 CLASS: T_IDENTIFIER {
-    PASS1 static classinfo_t c;
-          memset(&c, 0, sizeof(c));
-          c.kind = INFOTYPE_CLASS;
-          c.subtype = 255;
-          c.name = $1;
-          $$ = &c;
-   
-          /* let the compiler know that we might be looking for this soon */
-          as3_schedule_class_noerror(state->package, $1);
+    PASS1 NEW(unresolvedinfo_t,c);
+          memset(c, 0, sizeof(*c));
+          c->kind = INFOTYPE_UNRESOLVED;
+          c->name = $1;
+          c->package = get_package_from_name($1);
+          if(!c->package) {
+              c->nsset = get_current_imports();
+              /* make the compiler look for this class in the current directory,
+                 just in case: */
+              as3_schedule_class_noerror(state->package, $1);
+          }
+          $$ = (classinfo_t*)c;
     PASS2
     slotinfo_t*s = find_class($1);
     if(!s) syntaxerror("Could not find class/method %s (current package: %s)\n", $1, state->package);
@@ -2834,13 +2924,12 @@ CLASS: T_IDENTIFIER {
 }
 
 PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
-    PASS1 static classinfo_t c;
-          memset(&c, 0, sizeof(c));
-          c.kind = INFOTYPE_CLASS;
-          c.subtype = 255;
-          c.package = $1;
-          c.name = $3;
-          $$ = &c;
+    PASS1 NEW(unresolvedinfo_t,c);
+          memset(c, 0, sizeof(*c));
+          c->kind = INFOTYPE_UNRESOLVED;
+          c->package = $1;
+          c->name = $3;
+          $$ = (classinfo_t*)c;
     PASS2
     slotinfo_t*s = registry_find($1, $3);
     if(!s) syntaxerror("Couldn't find class/method %s.%s\n", $1, $3);
@@ -2870,20 +2959,20 @@ MAYBETYPE:          {PASS12 $$=0;}
 
 /* ----------function calls, delete, constructor calls ------ */
 
-MAYBE_PARAM_VALUES :  %prec prec_none {$$.cc=0;$$.len=0;}
+MAYBE_PARAM_VALUES :  %prec prec_none {$$.cc=0;$$.number=0;}
 MAYBE_PARAM_VALUES : '(' MAYBE_EXPRESSION_LIST ')' {$$=$2;}
 
-MAYBE_EXPRESSION_LIST : {$$.cc=0;$$.len=0;}
+MAYBE_EXPRESSION_LIST : {$$.cc=0;$$.number=0;}
 MAYBE_EXPRESSION_LIST : EXPRESSION_LIST
 MAYBE_EXPRESSION_LIST : EXPRESSION_LIST_AND_COMMA
 
-EXPRESSION_LIST : NONCOMMAEXPRESSION             {$$.len=1;
+EXPRESSION_LIST : NONCOMMAEXPRESSION             {$$.number=1;
                                                   $$.cc = $1.c;
                                                  }
 
 EXPRESSION_LIST_AND_COMMA: EXPRESSION_LIST ',' {$$ = $1;}
 EXPRESSION_LIST : EXPRESSION_LIST_AND_COMMA NONCOMMAEXPRESSION {
-                                                  $$.len= $1.len+1;
+                                                  $$.number= $1.number+1;
                                                   $$.cc = code_append($1.cc, $2.c);
                                                   }
                
@@ -2897,7 +2986,7 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
         multiname_t*name = $$.c->data[0];$$.c->data[0]=0;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_constructprop2($$.c, name, $4.len);
+        $$.c = abc_constructprop2($$.c, name, $4.number);
         multiname_destroy(name);
     } else if($$.c->opcode == OPCODE_GETSLOT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
@@ -2905,10 +2994,10 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
         multiname_t*name = t->name;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_constructprop2($$.c, name, $4.len);
+        $$.c = abc_constructprop2($$.c, name, $4.number);
     } else {
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_construct($$.c, $4.len);
+        $$.c = abc_construct($$.c, $4.number);
     }
    
     $$.t = TYPE_ANY;
@@ -2937,7 +3026,7 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         multiname_t*name = $$.c->data[0];$$.c->data[0]=0;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_callproperty2($$.c, name, $3.len);
+        $$.c = abc_callproperty2($$.c, name, $3.number);
         multiname_destroy(name);
     } else if($$.c->opcode == OPCODE_GETSLOT && $$.c->prev->opcode != OPCODE_GETSCOPEOBJECT) {
         int slot = (int)(ptroff_t)$$.c->data[0];
@@ -2949,17 +3038,17 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
         //$$.c = abc_callmethod($$.c, t->method, len); //#1051 illegal early access binding
-        $$.c = abc_callproperty2($$.c, name, $3.len);
+        $$.c = abc_callproperty2($$.c, name, $3.number);
     } else if($$.c->opcode == OPCODE_GETSUPER) {
         multiname_t*name = $$.c->data[0];$$.c->data[0]=0;
         $$.c = code_cutlast($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_callsuper2($$.c, name, $3.len);
+        $$.c = abc_callsuper2($$.c, name, $3.number);
         multiname_destroy(name);
     } else {
         $$.c = abc_getglobalscope($$.c);
         $$.c = code_append($$.c, paramcode);
-        $$.c = abc_call($$.c, $3.len);
+        $$.c = abc_call($$.c, $3.number);
     }
    
     if(TYPE_IS_FUNCTION($1.t) && $1.t->data) {
@@ -2986,7 +3075,7 @@ FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
     */
     state->method->has_super = 1;
 
-    $$.c = abc_constructsuper($$.c, $3.len);
+    $$.c = abc_constructsuper($$.c, $3.number);
     $$.c = abc_pushundefined($$.c);
     $$.t = TYPE_ANY;
 }
@@ -3295,22 +3384,22 @@ E : E '[' E ']' {
 E : '[' MAYBE_EXPRESSION_LIST ']' {
     $$.c = code_new();
     $$.c = code_append($$.c, $2.cc);
-    $$.c = abc_newarray($$.c, $2.len);
+    $$.c = abc_newarray($$.c, $2.number);
     $$.t = registry_getarrayclass();
 }
 
-MAYBE_EXPRPAIR_LIST : {$$.cc=0;$$.len=0;}
+MAYBE_EXPRPAIR_LIST : {$$.cc=0;$$.number=0;}
 MAYBE_EXPRPAIR_LIST : EXPRPAIR_LIST {$$=$1;}
 
 EXPRPAIR_LIST : NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
     $$.cc = 0;
     $$.cc = code_append($$.cc, $1.c);
     $$.cc = code_append($$.cc, $3.c);
-    $$.len = 2;
+    $$.number = 2;
 }
 EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
     $$.cc = $1.cc;
-    $$.len = $1.len+2;
+    $$.number = $1.number+2;
     $$.cc = code_append($$.cc, $3.c);
     $$.cc = code_append($$.cc, $5.c);
 }
@@ -3320,7 +3409,7 @@ EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
 E : "{ (dictionary)" MAYBE_EXPRPAIR_LIST '}' {
     $$.c = code_new();
     $$.c = code_append($$.c, $2.cc);
-    $$.c = abc_newobject($$.c, $2.len/2);
+    $$.c = abc_newobject($$.c, $2.number/2);
     $$.t = registry_getobjectclass();
 }
 
@@ -3554,7 +3643,7 @@ E : E '.' T_IDENTIFIER {
         is_static = 1;
     }
     if(t) {
-        if(t->subtype==0xff) {
+        if(t->subtype==INFOTYPE_UNRESOLVED) {
             syntaxerror("syntaxerror: trying to resolve property '%s' on incomplete object '%s'", $3, t->name);
         }
         memberinfo_t*f = registry_findmember_nsset(t, state->active_namespaces, $3, 1);

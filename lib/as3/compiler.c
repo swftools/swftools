@@ -56,33 +56,10 @@ static char parser_initialized = 0;
 //#define DEBUG
 #define DEBUG if(0)
 
-#ifdef STORE_TOKENS
-static mem_t tokens;
-#endif
-
 int a3_lex()
 {
     as3_tokencount++;
-#ifdef STORE_TOKENS
-    if(as3_pass==1) {
-        int token = as3_lex();
-        /* FIXME: current_file needs to be stored, too */
-        mem_put(&tokens, &token, sizeof(token));
-        mem_put(&tokens, &a3_lval, sizeof(a3_lval));
-        mem_put(&tokens, &current_line, sizeof(current_line));
-        mem_put(&tokens, &current_column, sizeof(current_column));
-        return token;
-    } else {
-        int token;
-        mem_get(&tokens, &token, sizeof(token));
-        mem_get(&tokens, &a3_lval, sizeof(a3_lval));
-        mem_get(&tokens, &current_line, sizeof(current_line));
-        mem_get(&tokens, &current_column, sizeof(current_column));
-        return token;
-    }
-#else
     return as3_lex();
-#endif
 }
 
 typedef struct _compile_list {
@@ -92,7 +69,7 @@ typedef struct _compile_list {
 } compile_list_t;
 static compile_list_t*compile_list=0;
 
-static void as3_parse_file_or_array(int pass, const char*name, const char*filename, const void*mem, int length)
+static void as3_parse_file_or_array(const char*name, const char*filename, const void*mem, int length)
 {
     if(!registry_initialized) {
         registry_initialized = 1;
@@ -101,26 +78,23 @@ static void as3_parse_file_or_array(int pass, const char*name, const char*filena
     if(!parser_initialized) {
         parser_initialized = 1;
         initialize_parser();
-#if defined(STORE_TOKENS)
-        mem_init(&tokens);
-#endif
     }
-    as3_pass=pass;
 
     FILE*fi = 0;
     if(filename) {
         if(as3_pass==1 && !mem) {
+            // record the fact that we compiled this file
             compile_list_t*c = rfx_calloc(sizeof(compile_list_t));
             c->next = compile_list;
             c->name = strdup(name);
             c->filename = strdup(filename);
             compile_list = c;
         }
-        DEBUG printf("[pass %d] parse file %s %s\n", pass, name, filename);
+        DEBUG printf("[pass %d] parse file %s %s\n", as3_pass, name, filename);
         fi = enter_file2(name, filename, 0);
         as3_file_input(fi);
     } else {
-        DEBUG printf("[pass %d] parse bytearray %s (%d bytes)\n", pass, name, length);
+        DEBUG printf("[pass %d] parse bytearray %s (%d bytes)\n", as3_pass, name, length);
         enter_file(name, name, 0);
         as3_buffer_input((void*)mem, length);
     }
@@ -141,16 +115,16 @@ typedef struct _scheduled_file {
 static scheduled_file_t*scheduled=0;
 dict_t*scheduled_dict=0;
 
-void as3_parse_scheduled(int pass)
+void as3_parse_scheduled()
 {
-    DEBUG printf("[pass %d] parse scheduled\n", pass);
+    DEBUG printf("[pass %d] parse scheduled\n", as3_pass);
 
     while(scheduled) {
         scheduled_file_t*s = scheduled;
         scheduled = 0;
         while(s) {
             scheduled_file_t*old = s;
-            as3_parse_file_or_array(pass, s->name, s->filename, 0,0);
+            as3_parse_file_or_array(s->name, s->filename, 0,0);
             s = s->next;
 
             free(old->filename);
@@ -190,7 +164,7 @@ void as3_schedule_file(const char*name, const char*filename)
 void as3_parse_list()
 {
     while(compile_list) {
-        as3_parse_file_or_array(2, compile_list->name, compile_list->filename, 0,0);
+        as3_parse_file_or_array(compile_list->name, compile_list->filename, 0,0);
         compile_list = compile_list->next;
     }
 }
@@ -198,11 +172,13 @@ void as3_parse_list()
 void as3_parse_bytearray(const char*name, const void*mem, int length)
 {
     as3_pass = 1;
-    as3_parse_file_or_array(1, name, 0, mem, length);
-    as3_parse_scheduled(1);
+    as3_parse_file_or_array(name, 0, mem, length);
+    as3_parse_scheduled();
+    
+    registry_resolve_all();
     
     as3_pass = 2;
-    as3_parse_file_or_array(2, name, 0, mem, length);
+    as3_parse_file_or_array(name, 0, mem, length);
     as3_parse_list();
 }
 
@@ -214,8 +190,10 @@ void as3_parse_file(const char*filename)
 
     compile_list = 0;
     as3_pass = 1;
-    as3_parse_file_or_array(1, filename, fullfilename, 0,0);
-    as3_parse_scheduled(1);
+    as3_parse_file_or_array(filename, fullfilename, 0,0);
+    as3_parse_scheduled();
+    
+    registry_resolve_all();
 
     as3_pass = 2;
     as3_parse_list();
@@ -226,13 +204,16 @@ void as3_parse_file(const char*filename)
 void as3_parse_directory(const char*dir)
 {
     compile_list = 0;
-    as3_pass=1;
+
+    as3_pass = 1;
     as3_schedule_directory(dir);
     if(!scheduled)
         as3_warning("Directory %s doesn't contain any ActionScript files", dir);
-    as3_parse_scheduled(1);
+    as3_parse_scheduled();
 
-    as3_pass=2;
+    registry_resolve_all();
+
+    as3_pass = 2;
     as3_parse_list();
 }
 

@@ -30,6 +30,7 @@ DECLARE(slotinfo);
 DECLARE(classinfo);
 DECLARE(memberinfo);
 DECLARE(methodinfo);
+DECLARE(unresolvedinfo);
 DECLARE(varinfo);
 DECLARE_LIST(classinfo);
 DECLARE_LIST(slotinfo);
@@ -50,6 +51,7 @@ DECLARE_LIST(slotinfo);
 #define INFOTYPE_SLOT 1
 #define INFOTYPE_METHOD 2
 #define INFOTYPE_CLASS 3
+#define INFOTYPE_UNRESOLVED 4
 #define SUBTYPE_GET 1
 #define SUBTYPE_SET 2
 #define SUBTYPE_GETSET 3
@@ -60,6 +62,13 @@ struct _slotinfo {
     const char*name;
     int slot;
 };
+struct _unresolvedinfo {
+    U8 kind,subtype,flags,access;
+    const char*package;
+    const char*name;
+    int slot;
+    namespace_list_t*nsset;
+};
 struct _classinfo {
     U8 kind,subtype,flags,access;
     const char*package;
@@ -68,7 +77,7 @@ struct _classinfo {
     classinfo_t*superclass;
     dict_t members;
     void*data; //TODO: get rid of this- parser.y should pass type/value/code triples around
-    classinfo_t*interfaces[];
+    classinfo_t*interfaces[0];
 };
 struct _memberinfo {
     U8 kind,subtype,flags,access;
@@ -110,6 +119,9 @@ methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char
 methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name);
 varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access,  const char*ns, const char*name);
 varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name);
+
+slotinfo_t* registry_resolve(slotinfo_t*s);
+void registry_resolve_all();
 
 slotinfo_t* registry_find(const char*package, const char*name);
 void registry_dump();

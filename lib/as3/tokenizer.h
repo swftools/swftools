@@ -66,7 +66,7 @@ struct _namespace_decl {
 /* small helper structs: */
 typedef struct _codeandnumber {
     code_t*cc;
-    int len;
+    int number;
 } codeandnumber_t;
 typedef struct _for_start {
     char*name;
