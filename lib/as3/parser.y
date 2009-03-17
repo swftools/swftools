@@ -363,6 +363,8 @@ typedef struct _state {
     methodstate_t*method;
 
     char*exception_name;
+
+    int switch_var;
     
     dict_t*vars;
 } state_t;
@@ -649,6 +651,11 @@ static char variable_exists(char*name)
 }
 code_t*defaultvalue(code_t*c, classinfo_t*type);
 
+static int alloc_local()
+{
+    return state->method->variable_count++;
+}
+
 static variable_t* new_variable2(const char*name, classinfo_t*type, char init, char maybeslot)
 {
     if(maybeslot) {
@@ -658,7 +665,7 @@ static variable_t* new_variable2(const char*name, classinfo_t*type, char init, c
     }
 
     NEW(variable_t, v);
-    v->index = state->method->variable_count++;
+    v->index = alloc_local();
     v->type = type;
     v->init = init;
  
@@ -1156,7 +1163,6 @@ void check_code_for_break(code_t*c)
 
 static void check_constant_against_type(classinfo_t*t, constant_t*c)
 {
-    return;
 #define xassert(b) if(!(b)) syntaxerror("Invalid default value %s for type '%s'", constant_tostring(c), t->name)
    if(TYPE_IS_NUMBER(t)) {
         xassert(c->type == CONSTANT_FLOAT
@@ -2376,7 +2382,7 @@ CASE_LIST: CASE             {$$=$1;}
 CASE_LIST: CASE_LIST CASE   {$$=code_append($$,$2);}
 
 CASE: "case" E ':' MAYBECODE {
-    $$ = abc_dup(0);
+    $$ = abc_getlocal(0, state->switch_var);
     $$ = code_append($$, $2.c);
     code_t*j = $$ = abc_ifne($$, 0);
     $$ = code_append($$, $4);
@@ -2389,10 +2395,12 @@ CASE: "case" E ':' MAYBECODE {
 DEFAULT: "default" ':' MAYBECODE {
     $$ = $3;
 }
-SWITCH : T_SWITCH '(' {PASS12 new_state();} E ')' '{' MAYBE_CASE_LIST '}' {
+SWITCH : T_SWITCH '(' {PASS12 new_state();state->switch_var=alloc_local();} E ')' '{' MAYBE_CASE_LIST '}' {
     $$=$4.c;
+    $$ = abc_setlocal($$, state->switch_var);
     $$ = code_append($$, $7);
-    code_t*out = $$ = abc_pop($$);
+
+    code_t*out = $$ = abc_kill($$, state->switch_var);
     breakjumpsto($$, $1, out);
     
     code_t*c = $$,*lastblock=0;
@@ -2546,9 +2554,7 @@ THROW : "throw" %prec prec_none {
 WITH_HEAD : "with" '(' EXPRESSION ')' {
      new_state();
      if(state->method->has_exceptions) {
-         char var[32];
-         sprintf(var, "#with#_%d", as3_tokencount);
-         int v = new_variable(var,$3.t,0,0);
+         int v = alloc_local();
          state->method->scope_code = abc_getlocal(state->method->scope_code, v);
          state->method->scope_code = abc_pushwith(state->method->scope_code);
          $$.number = v;
