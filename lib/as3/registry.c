@@ -404,6 +404,11 @@ classinfo_t* registry_getregexpclass() {
     if(!c) c = (classinfo_t*)registry_safefind("", "RegExp");
     return c;
 }
+classinfo_t* registry_getnamespaceclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = (classinfo_t*)registry_safefind("", "Namespace");
+    return c;
+}
 classinfo_t* registry_getMovieClip() {
     static classinfo_t*c = 0;
     if(!c) c = (classinfo_t*)registry_safefind("flash.display", "MovieClip");

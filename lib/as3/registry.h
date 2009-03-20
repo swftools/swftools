@@ -152,6 +152,7 @@ classinfo_t* registry_getregexpclass();
 classinfo_t* registry_getbooleanclass();
 classinfo_t* registry_getMovieClip();
 classinfo_t* registry_getclassclass(classinfo_t*a);
+classinfo_t* registry_getnamespaceclass();
 
 char* infotypename(slotinfo_t*s);
 
@@ -173,6 +174,8 @@ char* infotypename(slotinfo_t*s);
 #define TYPE_IS_STRING(t) ((t) == registry_getstringclass())
 #define TYPE_REGEXP               registry_getregexpclass()
 #define TYPE_IS_REGEXP(t) ((t) == registry_getregexpclass())
+#define TYPE_NAMESPACE            registry_getnamespaceclass()
+#define TYPE_IS_NAMESPACE(t) ((t) == registry_getnamespaceclass())
 
 #define TYPE_OBJECT               registry_getobjectclass()
 

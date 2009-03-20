@@ -356,6 +356,7 @@ typedef struct _state {
     dict_t*imports;
     namespace_list_t*active_namespaces;
     namespace_decl_list_t*new_namespaces;
+    dict_t*namespace2url;
     char has_own_imports;
     char new_vars; // e.g. transition between two functions
   
@@ -445,6 +446,7 @@ static void new_state()
     state->vars = dict_new(); 
     state->old = oldstate;
     state->new_vars = 0;
+    state->namespace2url = 0;
 }
 static void state_has_imports()
 {
@@ -502,6 +504,8 @@ static void old_state()
         tokenizer_unregister_namespace(nl->namespace_decl->name);
         nl = nl->next;
     }
+    if(leaving->namespace2url)
+        dict_destroy(leaving->namespace2url);
     
     if(as3_pass>1 && leaving->method && leaving->method != state->method && !leaving->method->inner) {
         free(leaving->method);
@@ -844,7 +848,14 @@ static namespace_t modifiers2access(modifiers_t*mod)
         if(mod->flags&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
             syntaxerror("invalid combination of access levels and namespaces");
         ns.access = ACCESS_NAMESPACE;
-        ns.name = mod->ns;
+        state_t*s = state;
+        const char*url = (const char*)dict_lookup(state->namespace2url, mod->ns);
+        if(!url) {
+            /* shouldn't happen- the tokenizer only reports something as a namespace
+               if it was already registered */
+            syntaxerror("unknown namespace: %s", mod->ns);
+        }
+        ns.name = url;
     } else if(mod->flags&FLAG_PUBLIC)  {
         if(mod->flags&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
             syntaxerror("invalid combination of access levels");
@@ -1163,6 +1174,7 @@ void check_code_for_break(code_t*c)
 
 static void check_constant_against_type(classinfo_t*t, constant_t*c)
 {
+    return;
 #define xassert(b) if(!(b)) syntaxerror("Invalid default value %s for type '%s'", constant_tostring(c), t->name)
    if(TYPE_IS_NUMBER(t)) {
         xassert(c->type == CONSTANT_FLOAT
@@ -1373,8 +1385,6 @@ static void startfunction(modifiers_t*mod, enum yytokentype getset, char*name,
 static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
-    int flags = mod?mod->flags:0;
-
     if(as3_pass==1) {
         // store inner methods in variables
         function_initvars(state->method, 0, 0, 0);
@@ -1447,10 +1457,10 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         } else if(state->method->is_constructor) {
             f = abc_class_getconstructor(state->cls->abc, type2);
         } else if(!state->method->is_global) {
-            namespace_t mname_ns = {state->method->info->access, ""};
+            namespace_t mname_ns = modifiers2access(mod);
             multiname_t mname = {QNAME, &mname_ns, 0, name};
 
-            if(flags&FLAG_STATIC)
+            if(mod->flags&FLAG_STATIC)
                 f = abc_class_staticmethod(state->cls->abc, type2, &mname);
             else
                 f = abc_class_method(state->cls->abc, type2, &mname);
@@ -1466,7 +1476,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         //flash doesn't seem to allow us to access function slots
         //state->method->info->slot = slot;
 
-        if(flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
+        if(mod->flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
         if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
         if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
         if(params->varargs) f->flags |= METHOD_NEED_REST;
@@ -1940,6 +1950,18 @@ char is_break_or_jump(code_t*c)
     return 0;
 }
 
+void register_namespace(const char*name, const char*url)
+{
+    NEW(namespace_decl_t,n);
+    n->name = name;
+    n->url = url;
+    if(!state->namespace2url) {
+        state->namespace2url = dict_new();
+    }
+    dict_put(state->namespace2url, name, url);
+    list_append(state->new_namespaces, n);
+    tokenizer_register_namespace(name);
+}
 
 #define IS_FINALLY_TARGET(op) \
         ((op) == OPCODE___CONTINUE__ || \
@@ -2580,6 +2602,7 @@ WITH : WITH_HEAD CODEBLOCK {
 
 X_IDENTIFIER: T_IDENTIFIER
             | "package" {PASS12 $$="package";}
+            | T_NAMESPACE {PASS12 $$=$1;}
 
 PACKAGE: PACKAGE '.' X_IDENTIFIER {PASS12 $$ = concat3($1,".",$3);free($1);$1=0;}
 PACKAGE: X_IDENTIFIER             {PASS12 $$=strdup($1);}
@@ -2910,7 +2933,7 @@ INNERFUNCTION: "function" MAYBE_IDENTIFIER '(' MAYBE_PARAM_LIST ')' MAYBETYPE
 
 /* ------------- package + class ids --------------- */
 
-CLASS: T_IDENTIFIER {
+CLASS: X_IDENTIFIER {
     PASS1 NEW(unresolvedinfo_t,c);
           memset(c, 0, sizeof(*c));
           c->kind = INFOTYPE_UNRESOLVED;
@@ -2929,7 +2952,7 @@ CLASS: T_IDENTIFIER {
     $$ = (classinfo_t*)s;
 }
 
-PACKAGEANDCLASS : PACKAGE '.' T_IDENTIFIER {
+PACKAGEANDCLASS : PACKAGE '.' X_IDENTIFIER {
     PASS1 NEW(unresolvedinfo_t,c);
           memset(c, 0, sizeof(*c));
           c->kind = INFOTYPE_UNRESOLVED;
@@ -3799,7 +3822,7 @@ NAMESPACE_ID : "namespace" T_IDENTIFIER {
     PASS12
     NEW(namespace_decl_t,n);
     n->name = $2;
-    n->url = 0;
+    n->url = $2;
     $$=n;
 }
 NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_IDENTIFIER {
@@ -3818,20 +3841,23 @@ NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_STRING {
 }
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
     PASS12
-    list_append(state->new_namespaces, $2);
-    tokenizer_register_namespace($2->name);
+    register_namespace($2->name, $2->url);
+
+    namespace_t access = modifiers2access(&$1);
+    varinfo_t* var = varinfo_register_global(access.access, state->package, $2->name);
+    var->type = TYPE_NAMESPACE;
+    namespace_t ns;
+    ns.access = ACCESS_NAMESPACE;
+    ns.name = $2->url;
+    var->value = constant_new_namespace(&ns);
+
     $$=0;
 }
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12
-    NEW(namespace_decl_t,n);
-    n->name = $3->name;
-    n->url = 0;
-    /* FIXME: for pass2, we should now try to figure out what the URL of 
-              this thing is */
-    list_append(state->new_namespaces, n);
-    tokenizer_register_namespace($3->name);
+    char*url = 0;
+    register_namespace($3->name, url);
     $$=0;
 }
 

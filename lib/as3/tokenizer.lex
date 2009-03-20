@@ -295,12 +295,6 @@ static void handleCData(char*s, int len)
 
 static void handleString(char*s, int len)
 {
-    if(as3_pass < 2) {
-        // don't bother decoding strings in pass 1
-        memset(&a3_lval, 0, sizeof(a3_lval));
-        return;
-    }
-
     if(s[0]=='"') {
         if(s[len-1]!='"') syntaxerror("String doesn't end with '\"'");
         s++;len-=2;
@@ -310,7 +304,6 @@ static void handleString(char*s, int len)
         s++;len-=2;
     }
     else syntaxerror("String incorrectly terminated");
-
     
     a3_lval.str = string_unescape(s, len);
 }
