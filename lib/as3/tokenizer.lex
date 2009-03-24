@@ -516,18 +516,18 @@ static inline void c() {
     current_column+=yyleng;
 }
 
-static trie_t*namespaces = 0;
-void tokenizer_register_namespace(const char*id)
+trie_t*active_namespaces = 0;
+/*void tokenizer_register_namespace(const char*id)
 {
-    trie_put(&namespaces, id);
+    trie_put(namespaces, id, 0);
 }
 void tokenizer_unregister_namespace(const char*id)
 {
     trie_remove(namespaces, id);
-}
+}*/
 static inline tokenizer_is_namespace(const char*id)
 {
-    return trie_lookup(namespaces, id);
+    return trie_contains(active_namespaces, id);
 }
 
 static inline int handleIdentifier()

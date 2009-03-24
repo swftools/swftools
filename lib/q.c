@@ -280,38 +280,35 @@ void** heap_flatten(heap_t*h)
 
 // ------------------------------- trie --------------------------------------
 
-void trie_put(trie_t**t, unsigned const char*id)
+trie_t*trie_new()
+{
+    return (trie_t*)rfx_calloc(sizeof(trie_t));
+}
+static char _trie_put(trielayer_t**t, unsigned const char*id, void*data)
 {
     if(!*t) {
         (*t) = rfx_calloc(sizeof(trie_t));
         (*t)->rest = (unsigned char*)strdup(id);
-        return;
+        (*t)->data = data;
+        return 0;
     } 
     if((*t)->rest && (*t)->rest[0]) {
-        // shift whatever's currently in here one node down
-        trie_put(&(*t)->row[(*t)->rest[0]], (*t)->rest+1);
+        // make room: shift whatever's currently in here one node down
+        _trie_put(&(*t)->row[(*t)->rest[0]], (*t)->rest+1, (*t)->data);
         (*t)->rest = 0;
     }
     if(id[0]) {
-        trie_put(&(*t)->row[id[0]], id+1);
+        return _trie_put(&(*t)->row[id[0]], id+1, data);
     } else {
+        char overwrite = 0;
+        if((*t)->rest) 
+            overwrite = 1;
         (*t)->rest = strdup("");
+        (*t)->data = data;
+        return overwrite;
     }
 }
-
-int trie_lookup(trie_t*t, unsigned const char*id)
-{
-    while(t) {
-        if(t->rest && !strcmp(t->rest, id))
-            return 1;
-        if(!*id) 
-            return 0;
-        t = t->row[*id++];
-    }
-    return 0;
-}
-
-char trie_remove(trie_t*t, unsigned const char*id)
+static char _trie_remove(trielayer_t*t, unsigned const char*id)
 {
     while(t) {
         if(t->rest && !strcmp(t->rest, id)) {
@@ -322,6 +319,126 @@ char trie_remove(trie_t*t, unsigned const char*id)
         if(!*id) 
             return 0;
         t = t->row[*id++];
+    }
+    return 0;
+}
+
+static void trie_rollback_removes(trie_t*t, unsigned const char*id, void*data);
+static void trie_rollback_adds(trie_t*t, unsigned const char*id, void*data);
+
+void trie_put(trie_t*t, unsigned const char*id, void*data)
+{
+    if(!t->rollback) {
+        _trie_put(&t->start, id, data);
+    } else {
+        char contains = trie_contains(t, id);
+        void*olddata = contains?trie_lookup(t, id):0;
+        trie_rollback_removes(t, id, data);
+        _trie_put(&t->start, id, data);
+        if(contains) {
+            trie_rollback_adds(t, id, olddata);
+        }
+    }
+}
+char trie_remove(trie_t*t, unsigned const char*id)
+{
+    if(!t->rollback) {
+        return _trie_remove(t->start, id);
+    } else {
+        void*olddata = trie_lookup(t, id);
+        char exists = _trie_remove(t->start, id);
+        if(exists) {
+            trie_rollback_removes(t, id, olddata);
+        }
+        return exists;
+    }
+}
+int trie_contains(trie_t*trie, unsigned const char*id)
+{
+    trielayer_t*t = trie->start;
+    while(t) {
+        if(t->rest && !strcmp(t->rest, id))
+            return 1;
+        if(!*id) 
+            return 0;
+        t = t->row[*id++];
+    }
+    return 0;
+}
+void* trie_lookup(trie_t*trie, unsigned const char*id)
+{
+    trielayer_t*t = trie->start;
+    while(t) {
+        if(t->rest && !strcmp(t->rest, id))
+            return t->data;
+        if(!*id) 
+            return 0;
+        t = t->row[*id++];
+    }
+    return 0;
+}
+
+typedef struct _triememory {
+    const unsigned char*key;
+    void*data;
+    struct _triememory*next;
+} triememory_t;
+
+typedef struct _trierollback {
+    triememory_t*add;
+    triememory_t*remove;
+    struct _trierollback*prev;
+} trierollback_t;
+
+static void trie_rollback_removes(trie_t*t, unsigned const char*id, void*data)
+{
+    trierollback_t*rollback = (trierollback_t*)t->rollback;
+    triememory_t*m = (triememory_t*)rfx_calloc(sizeof(triememory_t));
+    m->key = id;
+    m->data = data;
+    m->next = rollback->add;
+    rollback->add = m;
+}
+static void trie_rollback_adds(trie_t*t, unsigned const char*id, void*data)
+{
+    trierollback_t*rollback = (trierollback_t*)t->rollback;
+    triememory_t*m = (triememory_t*)rfx_calloc(sizeof(triememory_t));
+    m->key = id;
+    m->data = data;
+    m->next = rollback->remove;
+    rollback->remove = m;
+}
+
+void trie_remember(trie_t*t)
+{
+    trierollback_t*old = (trierollback_t*)t->rollback;
+    t->rollback = (trierollback_t*)rfx_calloc(sizeof(trierollback_t));
+    ((trierollback_t*)t->rollback)->prev = old;
+}
+
+void trie_rollback(trie_t*t)
+{
+    trierollback_t*rollback = (trierollback_t*)t->rollback;
+    if(!rollback) {
+        fprintf(stderr, "Internal error: can't roll back this trie any further\n");
+        return;
+    }
+    t->rollback = ((trierollback_t*)t->rollback)->prev;
+
+    triememory_t*remove = rollback->remove;
+    while(remove) {
+        triememory_t*next = remove->next;
+        if(!trie_remove(t, remove->key)) {
+            fprintf(stderr, "Internal error: can't delete key %s in trie during rollback\n", remove->key);
+        }
+        free(remove);
+        remove = next;
+    }
+    triememory_t*add = rollback->add;
+    while(add) {
+        triememory_t*next = add->next;
+        trie_put(t, add->key, add->data);
+        add = next;
     }
 }
 
@@ -1295,3 +1412,4 @@ void*list_clone_(void*_list)
     return dest;
 
 }
+

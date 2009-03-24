@@ -77,7 +77,7 @@ struct _classinfo {
     classinfo_t*superclass;
     dict_t members;
     void*data; //TODO: get rid of this- parser.y should pass type/value/code triples around
-    classinfo_t*interfaces[0];
+    classinfo_t*interfaces[];
 };
 struct _memberinfo {
     U8 kind,subtype,flags,access;

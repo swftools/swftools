@@ -354,9 +354,7 @@ typedef struct _state {
     import_list_t*wildcard_imports;
     dict_t*import_toplevel_packages;
     dict_t*imports;
-    namespace_list_t*active_namespaces;
-    namespace_decl_list_t*new_namespaces;
-    dict_t*namespace2url;
+    
     char has_own_imports;
     char new_vars; // e.g. transition between two functions
   
@@ -442,11 +440,11 @@ static void new_state()
     state = s;
     state->level++;
     state->has_own_imports = 0;    
-    state->new_namespaces = 0;
     state->vars = dict_new(); 
     state->old = oldstate;
     state->new_vars = 0;
-    state->namespace2url = 0;
+
+    trie_remember(active_namespaces);
 }
 static void state_has_imports()
 {
@@ -493,20 +491,14 @@ static void state_destroy(state_t*state)
 
 static void old_state()
 {
+    trie_rollback(active_namespaces);
+
     if(!state || !state->old)
         syntaxerror("invalid nesting");
     state_t*leaving = state;
     
     state = state->old;
 
-    namespace_decl_list_t*nl=leaving->new_namespaces;
-    while(nl) {
-        tokenizer_unregister_namespace(nl->namespace_decl->name);
-        nl = nl->next;
-    }
-    if(leaving->namespace2url)
-        dict_destroy(leaving->namespace2url);
-    
     if(as3_pass>1 && leaving->method && leaving->method != state->method && !leaving->method->inner) {
         free(leaving->method);
         leaving->method=0;
@@ -530,6 +522,9 @@ void initialize_file(char*filename)
     if(state) {
         syntaxerror("invalid call to initialize_file during parsing of another file");
     }
+    
+    active_namespaces = trie_new();
+
     new_state();
     state->package = internal_filename_package = strdup(filename);
     
@@ -849,7 +844,7 @@ static namespace_t modifiers2access(modifiers_t*mod)
             syntaxerror("invalid combination of access levels and namespaces");
         ns.access = ACCESS_NAMESPACE;
         state_t*s = state;
-        const char*url = (const char*)dict_lookup(state->namespace2url, mod->ns);
+        const char*url = (const char*)trie_lookup(active_namespaces, mod->ns);
         if(!url) {
             /* shouldn't happen- the tokenizer only reports something as a namespace
                if it was already registered */
@@ -874,6 +869,12 @@ static namespace_t modifiers2access(modifiers_t*mod)
     return ns;
 }
 static slotinfo_t* find_class(const char*name);
+
+memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse)
+{
+    /* FIXME- we need to loop through namespaces here */
+    return registry_findmember(cls, "", name, recurse);
+}
 
 static void function_initvars(methodstate_t*m, params_t*params, int flags, char var0)
 {
@@ -1476,7 +1477,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         //flash doesn't seem to allow us to access function slots
         //state->method->info->slot = slot;
 
-        if(mod->flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
+        if(mod && mod->flags&FLAG_OVERRIDE) f->trait->attributes |= TRAIT_ATTR_OVERRIDE;
         if(getset == KW_GET) f->trait->kind = TRAIT_GETTER;
         if(getset == KW_SET) f->trait->kind = TRAIT_SETTER;
         if(params->varargs) f->flags |= METHOD_NEED_REST;
@@ -1948,19 +1949,6 @@ char is_break_or_jump(code_t*c)
        return 1;
     }
     return 0;
-}
-
-void register_namespace(const char*name, const char*url)
-{
-    NEW(namespace_decl_t,n);
-    n->name = name;
-    n->url = url;
-    if(!state->namespace2url) {
-        state->namespace2url = dict_new();
-    }
-    dict_put(state->namespace2url, name, url);
-    list_append(state->new_namespaces, n);
-    tokenizer_register_namespace(name);
 }
 
 #define IS_FINALLY_TARGET(op) \
@@ -2655,7 +2643,6 @@ MODIFIER_LIST : MODIFIER_LIST MODIFIER {
     $$.ns=$1.ns?$1.ns:$2.ns;
 
 }
-
 MODIFIER : KW_PUBLIC {PASS12 $$.flags=FLAG_PUBLIC;$$.ns=0;}
          | KW_PRIVATE {PASS12 $$.flags=FLAG_PRIVATE;$$.ns=0;}
          | KW_PROTECTED {PASS12 $$.flags=FLAG_PROTECTED;$$.ns=0;}
@@ -3615,7 +3602,7 @@ E : "super" '.' T_IDENTIFIER
               classinfo_t*t = state->cls->info->superclass;
               if(!t) t = TYPE_OBJECT;
 
-              memberinfo_t*f = registry_findmember_nsset(t, state->active_namespaces, $3, 1);
+              memberinfo_t*f = findmember_nsset(t, $3, 1);
 
               MEMBER_MULTINAME(m, f, $3);
               $$.c = 0;
@@ -3675,7 +3662,7 @@ E : E '.' T_IDENTIFIER {
         if(t->subtype==INFOTYPE_UNRESOLVED) {
             syntaxerror("syntaxerror: trying to resolve property '%s' on incomplete object '%s'", $3, t->name);
         }
-        memberinfo_t*f = registry_findmember_nsset(t, state->active_namespaces, $3, 1);
+        memberinfo_t*f = findmember_nsset(t, $3, 1);
         char noslot = 0;
         if(f && !is_static != !(f->flags&FLAG_STATIC))
            noslot=1;
@@ -3754,7 +3741,7 @@ VAR_READ : T_IDENTIFIER {
     int i_am_static = (state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC;
 
     /* look at current class' members */
-    if(state->cls && (f = registry_findmember_nsset(state->cls->info, state->active_namespaces, $1, 1)) &&
+    if(state->cls && (f = findmember_nsset(state->cls->info, $1, 1)) &&
         (f->flags&FLAG_STATIC) >= i_am_static) {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
@@ -3841,7 +3828,7 @@ NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_STRING {
 }
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
     PASS12
-    register_namespace($2->name, $2->url);
+    trie_put(active_namespaces, $2->name, (void*)$2->url);
 
     namespace_t access = modifiers2access(&$1);
     varinfo_t* var = varinfo_register_global(access.access, state->package, $2->name);
@@ -3857,7 +3844,7 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12
     char*url = 0;
-    register_namespace($3->name, url);
+    trie_put(active_namespaces, $3->name, url);
     $$=0;
 }
 

@@ -110,8 +110,7 @@ typedef struct _stringarray_t
 } stringarray_t;
 
 /* heap */
-typedef struct _heap
-{
+typedef struct _heap {
     void**elements;
     char*data;
     int elem_size;
@@ -120,11 +119,17 @@ typedef struct _heap
     int(*compare)(const void *, const void *);
 } heap_t;
 
-typedef struct _trie {
-    struct _trie*row[256];
+/* trie (with rollback) */
+typedef struct _trielayer {
+    struct _trielayer*row[256];
     unsigned char*rest;
-} trie_t;
+    void*data;
+} trielayer_t;
 
+typedef struct _trie {
+    trielayer_t* start;
+    void*rollback;
+} trie_t;
 
 char* strdup_n(const char*str, int size);
 
@@ -211,9 +216,13 @@ void* heap_chopmax(heap_t*h);
 void heap_dump(heap_t*h, FILE*fi);
 void** heap_flatten(heap_t*h);
 
-void trie_put(trie_t**t, unsigned const char*id);
+trie_t*trie_new();
+void trie_put(trie_t*t, unsigned const char*id, void*data);
 char trie_remove(trie_t*t, unsigned const char*id);
-int trie_lookup(trie_t*t, unsigned const char*id);
+void*trie_lookup(trie_t*t, unsigned const char*id);
+int trie_contains(trie_t*t, unsigned const char*id);
+void trie_remember(trie_t*t);
+void trie_rollback(trie_t*t);
 
 array_t* array_new();
 array_t* array_new2(type_t*type);

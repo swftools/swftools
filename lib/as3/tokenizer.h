@@ -81,6 +81,8 @@ extern char start_of_expression;
 
 typedef token_t*tokenptr_t;
 
+extern trie_t*active_namespaces;
+
 #include "parser.tab.h"
 
 extern int as3_verbosity;
@@ -93,9 +95,6 @@ void as3_softwarning(const char*format, ...);
 
 void as3_buffer_input(void*buffer, int len);
 void as3_file_input(FILE*fi);
-
-void tokenizer_register_namespace(const char*id);
-void tokenizer_unregister_namespace(const char*id);
 
 #define T_EOF 0
 
