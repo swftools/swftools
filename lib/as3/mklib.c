@@ -156,7 +156,7 @@ void write_initinfo(FILE*fi, slotinfo_t*s, char*prefix)
         fprintf(fi, "%s", prefix);
         char*id = mkid(c);
         dict_t*d = &c->members;
-        fprintf(fi, "dict_init2(&%s.members, &slotinfo_type, %d);\n", id, d->hashsize);
+        fprintf(fi, "dict_init2(&%s.members, &memberinfo_type, %d);\n", id, d->hashsize);
         int t;
         for(t=0;t<d->hashsize;t++) {
             dictentry_t*l = d->slots[t];
@@ -170,8 +170,42 @@ void write_initinfo(FILE*fi, slotinfo_t*s, char*prefix)
         }
     }
 }
+
+void write_constant(FILE*fi, constant_t*value, char*id, char*prefix)
+{
+    if(NS_TYPE(value->type)) {
+        fprintf(fi, "%s", prefix);
+        fprintf(fi, "static namespace_t %s_constant_ns = {0x%02x, \"%s\"};\n", id, value->ns->access, value->ns->name);
+    } else if(value->type == CONSTANT_STRING) {
+        fprintf(fi, "%s", prefix);
+        fprintf(fi, "static string_t %s_constant_s = {\"%s\", %d};\n", id, value->s->str, value->s->len);
+    }
+    fprintf(fi, "%s", prefix);
+    fprintf(fi, "static constant_t %s_constant = ", id);
+    fprintf(fi, "{type: %d", value->type);
+    if(NS_TYPE(value->type)) {
+        fprintf(fi, ", &%s_constant_ns", id);
+    } else if(value->type == CONSTANT_INT) {
+        fprintf(fi, ",i: %d,", value->type);
+    } else if(value->type == CONSTANT_UINT) {
+        fprintf(fi, ",u: %u", value->u);
+    } else if(value->type == CONSTANT_FLOAT) {
+        if(!isnan(value->f) && !isinf(value->f))
+            fprintf(fi, ", %f", value->f);
+    } else if(value->type == CONSTANT_STRING) {
+        fprintf(fi, ", &%s_constant_s", id);
+    }
+    fprintf(fi, "};\n");
+}
+
 void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
 {
+    if(s->kind == INFOTYPE_SLOT) {
+        varinfo_t*v = (varinfo_t*)s;
+        if(v->value) {
+            write_constant(fi, v->value, id, prefix);
+        }
+    }
     fprintf(fi, "%s", prefix);
     fprintf(fi, "static %s %s = {", mktype(s), id);
     fprintf(fi, "0x%02x, 0x%02x, 0x%02x, 0x%02x, ", s->kind, s->subtype, s->flags, s->access);
@@ -209,7 +243,8 @@ void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
         varinfo_t*m = (varinfo_t*)s;
         fprintf(fi, "%s, ", mkptr(m->type));
         fprintf(fi, "%s, ", mkptr(m->parent));
-        fprintf(fi, "0"); // value TODO
+        if(!m->value) fprintf(fi, "0");
+        else          fprintf(fi, "&%s_constant", id);
         fprintf(fi, "};\n");
     }
     
@@ -271,6 +306,8 @@ int main()
             }
         }
     }
+    fprintf(fi, "    _NaN_constant.f =  __builtin_nan(\"\");\n");
+    fprintf(fi, "    _Infinity_constant.f = __builtin_inf();\n");
     fprintf(fi, "    return d;\n");
     fprintf(fi, "}\n");
 

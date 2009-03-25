@@ -109,6 +109,7 @@ struct _varinfo {
     constant_t*value;
 };
 
+extern type_t memberinfo_type;
 extern type_t slotinfo_type;
 char slotinfo_equals(slotinfo_t*c1, slotinfo_t*c2);
 
@@ -138,6 +139,8 @@ classinfo_t* slotinfo_asclass(slotinfo_t*f);
 classinfo_t* slotinfo_gettype(slotinfo_t*);
 
 namespace_t access2namespace(U8 access, char*package);
+
+char registry_ispackage(char*package);
 
 // static multinames
 classinfo_t* registry_getanytype();

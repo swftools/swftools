@@ -48,12 +48,24 @@ static unsigned int slotinfo_hash(slotinfo_t*c)
     hash = crc32_add_string(hash, c->name);
     return hash;
 }
+static unsigned int memberinfo_hash(slotinfo_t*c)
+{
+    unsigned int hash = 0;
+    hash = crc32_add_string(hash, c->name);
+    return hash;
+}
 
 static void* dummy_clone(void*other) {return other;}
 static void dummy_destroy(slotinfo_t*c) {}
 
 type_t slotinfo_type = {
     hash: (hash_func)slotinfo_hash,
+    equals: (equals_func)slotinfo_equals,
+    dup: (dup_func)dummy_clone, // all signatures are static
+    free: (free_func)dummy_destroy,
+};
+type_t memberinfo_type = {
+    hash: (hash_func)memberinfo_hash,
     equals: (equals_func)slotinfo_equals,
     dup: (dup_func)dummy_clone, // all signatures are static
     free: (free_func)dummy_destroy,
@@ -139,7 +151,7 @@ classinfo_t* classinfo_register(int access, const char*package, const char*name,
     c->package = package;
     c->name = name;
     dict_put(registry_classes, c, c);
-    dict_init2(&c->members, &slotinfo_type, AVERAGE_NUMBER_OF_MEMBERS);
+    dict_init2(&c->members, &memberinfo_type, AVERAGE_NUMBER_OF_MEMBERS);
 
     schedule_for_resolve((slotinfo_t*)c);
     return c;
@@ -332,7 +344,7 @@ classinfo_t* slotinfo_asclass(slotinfo_t*f) {
         c->name = "undefined";
     }
     
-    dict_init2(&c->members, &slotinfo_type, 1);
+    dict_init2(&c->members, &memberinfo_type, 1);
     c->data = f;
     dict_put(functionobjects, f, c);
     return c;
@@ -351,6 +363,13 @@ classinfo_t* slotinfo_gettype(slotinfo_t*f)
     } else {
        return registry_getanytype();
     }
+}
+
+// ----------------------- package handling ---------------------------
+char registry_ispackage(char*package)
+{
+    /* crude approximation of "the real thing", but sufficient for now */
+    return !strncmp(package, "flash", 5);
 }
 // ----------------------- builtin types ------------------------------
 classinfo_t* registry_getanytype() {return 0;}

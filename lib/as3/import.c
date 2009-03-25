@@ -243,8 +243,10 @@ static void import_code(void*_abc, char*filename, int pass)
                 m = (memberinfo_t*)methodinfo_register_global(access, package, name);
                 m->return_type = resolve_class(filename, "return type", trait->method->return_type);
             } else {
-                m = (memberinfo_t*)varinfo_register_global(access, package, name);
-                m->type = resolve_class(filename, "type", trait->type_name);
+                varinfo_t*v = varinfo_register_global(access, package, name);
+                v->type = resolve_class(filename, "type", trait->type_name);
+                v->value = constant_clone(trait->value);
+                m = (memberinfo_t*)v;
             }
             m->flags |= FLAG_BUILTIN;
             m->parent = 0;

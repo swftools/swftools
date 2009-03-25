@@ -82,17 +82,20 @@ CONSTANT_NAMESPACE_STATICPROTECTED=0x1A,
 CONSTANT_NAMESPACE_PRIVATE=0x05,
 } contant_type_t;
 
+#define NS_TYPE(x) ((x) == 0x08 || (x) == 0x16 || (x) == 0x17 || (x) == 0x18 || (x) == 0x19 || (x) == 0x1a || (x) == 0x05)
+
 struct _constant {
+    int type;
     union {
+        string_t* s;
+        namespace_t*ns;
         double f;
         int i;
         unsigned int u;
-        string_t* s;
-        namespace_t*ns;
     };
-    int type;
 };
 
+constant_t* constant_clone();
 constant_t* constant_new_int(int x);
 constant_t* constant_new_uint(unsigned int x);
 constant_t* constant_new_float(double x);

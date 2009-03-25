@@ -9,8 +9,10 @@ package {
             if(x == "data")
                 trace("ok 1/4");
 
+            /* This definition makes the below fail for as3compile, while
+               it still works in Flex.
             var flash:Object = new Object();
-            flash["events"] = new Object();
+            flash["events"] = new Object();*/
 
             import flash.events.DataEvent
             //trace(flash.events); should fail

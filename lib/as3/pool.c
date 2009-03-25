@@ -634,9 +634,6 @@ type_t multiname_type = {
 
 // ------------------------------- constants -------------------------------------
 
-#define NS_TYPE(x) ((x) == 0x08 || (x) == 0x16 || (x) == 0x17 || (x) == 0x18 ||  \
-                                   (x) == 0x19 || (x) == 0x1a || (x) == 0x05)
-
 #define UNIQUE_CONSTANT(x) ((x) == CONSTANT_TRUE || (x) == CONSTANT_FALSE || (x) == CONSTANT_NULL || (x) == CONSTANT_UNDEFINED)
 
 constant_t* constant_new_int(int i) 
@@ -704,6 +701,18 @@ constant_t* constant_new_undefined()
 {
     NEW(constant_t,c);
     c->type = CONSTANT_UNDEFINED;
+    return c;
+}
+constant_t* constant_clone(constant_t*other)
+{
+    if(!other) return 0;
+    constant_t*c = malloc(sizeof(constant_t));
+    memcpy(c, other, sizeof(constant_t));
+    if(NS_TYPE(c->type)) {
+        c->ns = namespace_clone(other->ns);
+    } else if(c->type == CONSTANT_STRING) {
+        c->s = string_dup3(other->s);
+    }
     return c;
 }
 constant_t* constant_fromindex(pool_t*pool, int index, int type)

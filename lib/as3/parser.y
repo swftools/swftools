@@ -354,6 +354,8 @@ typedef struct _state {
     import_list_t*wildcard_imports;
     dict_t*import_toplevel_packages;
     dict_t*imports;
+
+    namespace_list_t*active_namespace_urls;
     
     char has_own_imports;
     char new_vars; // e.g. transition between two functions
@@ -445,6 +447,9 @@ static void new_state()
     state->new_vars = 0;
 
     trie_remember(active_namespaces);
+   
+    if(oldstate)
+        state->active_namespace_urls = list_clone(oldstate->active_namespace_urls);
 }
 static void state_has_imports()
 {
@@ -486,6 +491,9 @@ static void state_destroy(state_t*state)
         dict_destroy(state->vars);state->vars=0;
     }
     
+    list_free(state->active_namespace_urls)
+    state->active_namespace_urls = 0;
+    
     free(state);
 }
 
@@ -507,7 +515,7 @@ static void old_state()
         free(leaving->cls);
         leaving->cls=0;
     }
-    
+
     state_destroy(leaving);
 }
 
@@ -848,6 +856,7 @@ static namespace_t modifiers2access(modifiers_t*mod)
         if(!url) {
             /* shouldn't happen- the tokenizer only reports something as a namespace
                if it was already registered */
+            trie_dump(active_namespaces);
             syntaxerror("unknown namespace: %s", mod->ns);
         }
         ns.name = url;
@@ -870,10 +879,16 @@ static namespace_t modifiers2access(modifiers_t*mod)
 }
 static slotinfo_t* find_class(const char*name);
 
-memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse)
+static memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse)
 {
-    /* FIXME- we need to loop through namespaces here */
-    return registry_findmember(cls, "", name, recurse);
+    return registry_findmember_nsset(cls, state->active_namespace_urls, name, recurse);
+}
+
+void add_active_url(const char*url)
+{
+    NEW(namespace_t,n);
+    n->name = url;
+    list_append(state->active_namespace_urls, n);
 }
 
 static void function_initvars(methodstate_t*m, params_t*params, int flags, char var0)
@@ -2930,7 +2945,7 @@ CLASS: X_IDENTIFIER {
               c->nsset = get_current_imports();
               /* make the compiler look for this class in the current directory,
                  just in case: */
-              as3_schedule_class_noerror(state->package, $1);
+              //as3_schedule_class_noerror(state->package, $1);
           }
           $$ = (classinfo_t*)c;
     PASS2
@@ -3679,15 +3694,17 @@ E : E '.' T_IDENTIFIER {
     } else if($1.c && $1.c->opcode == OPCODE___PUSHPACKAGE__) {
         string_t*package = $1.c->data[0];
         char*package2 = concat3(package->str, ".", $3);
-        if(dict_contains(state->import_toplevel_packages, package2)) {
+
+        slotinfo_t*a = registry_find(package->str, $3);
+        if(a) {
+            $$ = push_class(a);
+        } else if(dict_contains(state->import_toplevel_packages, package2) ||
+                  registry_ispackage(package2)) {
             $$.c = $1.c;
             $$.c->data[0] = string_new4(package2);
             $$.t = 0;
         } else {
-            slotinfo_t*a = registry_find(package->str, $3);
-            if(!a) 
-                syntaxerror("couldn't resolve %s", package2);
-            $$ = push_class(a);
+            syntaxerror("couldn't resolve %s", package2);
         }
     } else {
         /* when resolving a property on an unknown type, we do know the
@@ -3713,9 +3730,9 @@ VAR_READ : T_IDENTIFIER {
         unknown_variable($1);
     }
    
-    /* let the compiler know that it might check the current directory/package
+    /* let the compiler know that it might want to check the current directory/package
        for this identifier- maybe there's a file $1.as defining $1. */
-    as3_schedule_class_noerror(state->package, $1);
+    //as3_schedule_class_noerror(state->package, $1);
     PASS2
 
     $$.t = 0;
@@ -3783,7 +3800,8 @@ VAR_READ : T_IDENTIFIER {
     }
 
     /* look through package prefixes */
-    if(dict_contains(state->import_toplevel_packages, $1)) {
+    if(dict_contains(state->import_toplevel_packages, $1) || 
+       registry_ispackage($1)) {
         $$.c = abc___pushpackage__($$.c, $1);
         $$.t = 0;
         break;
@@ -3842,9 +3860,17 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
 }
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
-    PASS12
-    char*url = 0;
-    trie_put(active_namespaces, $3->name, url);
+    
+    const char*url = $3->name;
+    varinfo_t*s = (varinfo_t*)$3;
+    if(!s || s->kind != INFOTYPE_SLOT)
+        syntaxerror("%s.%s is not a public namespace (%d)", $3->package, $3->name, s?s->kind:-1);
+    if(!s->value || !NS_TYPE(s->value->type))
+        syntaxerror("%s.%s is not a namespace", $3->package, $3->name);
+    url = s->value->ns->name;
+
+    trie_put(active_namespaces, $3->name, (void*)url);
+    add_active_url(url);
     $$=0;
 }
 
