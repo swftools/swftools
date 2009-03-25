@@ -33,6 +33,7 @@ package {
         {
             this.test1()
             this.test2()
+            trace("[exit]");
         }
     }
 }

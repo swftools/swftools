@@ -23,6 +23,7 @@ package {
                         trace("ok 6/6");
                 }
             }
+            trace("[exit]");
         }
     }
 }

@@ -4,6 +4,7 @@ package {
 
     public class Main extends flash.display.MovieClip {
         public function test(e:Event) {
+
             if(e.type instanceof String) {
                 trace("ok");
             }

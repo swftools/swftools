@@ -951,10 +951,11 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
         /* exchange unresolved identifiers with the actual objects */
         DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
             if(v->type && v->type->kind == INFOTYPE_UNRESOLVED) {
-                v->type = (classinfo_t*)registry_resolve((slotinfo_t*)v->type);
-                if(!v->type || v->type->kind != INFOTYPE_CLASS) {
-                    syntaxerror("Couldn't find class %s", v->type->name);
+                classinfo_t*type = (classinfo_t*)registry_resolve((slotinfo_t*)v->type);
+                if(!type || type->kind != INFOTYPE_CLASS) {
+                    syntaxerror("Couldn't find class %s::%s (%s)", v->type->package, v->type->name, name);
                 }
+                v->type = type;
             }
         }
     }
@@ -2630,8 +2631,6 @@ IMPORT : "import" PACKAGEANDCLASS {
        if(!s && as3_pass==1) {// || !(s->flags&FLAG_BUILTIN)) {
            as3_schedule_class($2->package, $2->name);
        }
-
-       PASS2
        classinfo_t*c = $2;
        if(!c) 
             syntaxerror("Couldn't import class\n");
@@ -2646,7 +2645,6 @@ IMPORT : "import" PACKAGE '.' '*' {
            as3_schedule_package($2);
        }
 
-       PASS2
        NEW(import_t,i);
        i->package = $2;
        state_has_imports();
