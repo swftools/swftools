@@ -10,10 +10,10 @@ package import2 {
     public class C2 extends C1 implements I2 {
     }
     
-    import import2.II1
-    import import2.II2
-    import import2.CC1
-    import import2.CC2
+    import import1.II1
+    import import1.II2
+    import import1.CC1
+    import import1.CC2
 
     public class Main extends flash.display.MovieClip {
         public function Main() {

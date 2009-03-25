@@ -2,14 +2,14 @@ package {
     import flash.display.MovieClip
     public class Main extends flash.display.MovieClip {
         
-        const ok1:String = "ok 1/4";
-        static const ok2:String = "ok 2/4";
+        const ok1:String = "ok 1/6";
+        static const ok2:String = "ok 2/6";
         
-        const ok3:String = "ok 3/4";
-        static const ok4:String = "ok 4/4";
+        const ok3:String = "ok 3/6";
+        static const ok4:String = "ok 4/6";
         
-        const ok5:String = "ok 3/4";
-        static const ok6:String = "ok 4/4";
+        const ok5:String = "ok 5/6";
+        static const ok6:String = "ok 6/6";
 
         function Main() {
             trace(ok1);

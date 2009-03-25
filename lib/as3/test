@@ -106,7 +106,7 @@ class Cache:
     def parse_args(self):
         parser = OptionParser()
         parser.add_option("-d", "--diff", dest="diff", help="Only run tests that failed the last time",action="store_true")
-        parser.add_option("-a", "--all", dest="all", help="Run all tests (also tests expected fail)",action="store_true")
+        parser.add_option("-a", "--all", dest="all", help="Run all tests (also tests expected to fail)",action="store_true")
         parser.add_option("-t", "--tag", dest="tag", help="Mark the current pass/fail statistic as milestone",action="store_true")
         (options, args) = parser.parse_args()
 

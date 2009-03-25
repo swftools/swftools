@@ -332,6 +332,7 @@ struct _methodstate {
     char uses_parent_function;
     int uses_slots;
     dict_t*slots;
+    int activation_var;
 
     abc_method_t*abc;
     int var_index; // for inner methods
@@ -755,17 +756,26 @@ static void parsererror(const char*file, int line, const char*f)
 }
 
    
-static code_t* add_scope_code(code_t*c, methodstate_t*m)
+static code_t* add_scope_code(code_t*c, methodstate_t*m, char init)
 {
-    if(m->uses_slots || (m->late_binding && !m->inner)) {
+    if(m->uses_slots || (m->late_binding && !m->inner)) { //???? especially inner functions need the pushscope
         c = abc_getlocal_0(c);
         c = abc_pushscope(c);
     }
     if(m->uses_slots) {
-        /* FIXME: does this need to be the same activation object as
-                  in the function header? */
-        c = abc_newactivation(c);
-        c = abc_pushscope(c);
+        /* FIXME: this alloc_local() causes variable indexes to be
+           different in pass2 than in pass1 */
+        if(!m->activation_var)
+            m->activation_var = alloc_local();
+        if(init) {
+            c = abc_newactivation(c);
+            c = abc_dup(c);
+            c = abc_pushscope(c);
+            c = abc_setlocal(c, m->activation_var);
+        } else {
+            c = abc_getlocal(c, m->activation_var);
+            c = abc_pushscope(c);
+        }
     }
     return c;
 }
@@ -774,7 +784,7 @@ static code_t* method_header(methodstate_t*m)
 {
     code_t*c = 0;
 
-    c = add_scope_code(c, m);
+    c = add_scope_code(c, m, 1);
 
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
@@ -921,11 +931,6 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
         }
     }
 
-    if(as3_pass==2) {
-        m->scope_code = add_scope_code(m->scope_code, m);
-    }
-
-    
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
         methodstate_t*m = l->methodstate;
@@ -936,6 +941,10 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
         v->is_inner_method = m;
 
         l = l->next;
+    }
+    
+    if(as3_pass==2) {
+        m->scope_code = add_scope_code(m->scope_code, m, 0);
     }
     
     if(as3_pass==2 && m->slots) {
@@ -3758,8 +3767,11 @@ VAR_READ : T_IDENTIFIER {
     int i_am_static = (state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC;
 
     /* look at current class' members */
-    if(state->cls && (f = findmember_nsset(state->cls->info, $1, 1)) &&
-        (f->flags&FLAG_STATIC) >= i_am_static) {
+    if(!state->method->inner && 
+        state->cls && 
+        (f = findmember_nsset(state->cls->info, $1, 1)) &&
+        (f->flags&FLAG_STATIC) >= i_am_static) 
+    {
         // $1 is a function in this class
         int var_is_static = (f->flags&FLAG_STATIC);
 

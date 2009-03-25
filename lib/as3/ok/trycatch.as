@@ -36,9 +36,9 @@ package {
         }
         public function checkActivation():void
         {
-            var y:uint = 0;
+            var yy:uint = 0;
             var inc_y = function() {
-                y = y + 1;
+                yy = yy + 1;
             }
             
             try {
@@ -47,8 +47,8 @@ package {
             } catch(e:Error) {
                 inc_y();
             }
-            if(y!=2) trace("error")
-            else    trace("ok 8/8");
+            if(yy!=2) trace("error ("+yy+")")
+            else      trace("ok 8/8");
         }
 		
 
