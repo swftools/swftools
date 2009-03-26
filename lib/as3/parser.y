@@ -625,6 +625,7 @@ typedef struct _variable {
     int index;
     classinfo_t*type;
     char init;
+    char is_parameter;
     methodstate_t*is_inner_method;
 } variable_t;
 
@@ -811,6 +812,19 @@ static code_t* method_header(methodstate_t*m)
         c = abc_getlocal_0(c);
         c = abc_constructsuper(c, 0);
     }
+
+    if(m->slots) {
+        /* all parameters that are used by inner functions
+           need to be copied from local to slot */
+        parserassert(m->activation_var);
+        DICT_ITERATE_ITEMS(m->slots,char*,name,variable_t*,v) {
+            if(v->is_parameter) {
+                c = abc_getlocal(c, m->activation_var); 
+                c = abc_getlocal(c, v->index); 
+                c = abc_setslot(c, v->index); 
+            }
+        }
+    }
     list_free(m->innerfunctions);
     m->innerfunctions = 0;
     return c;
@@ -927,8 +941,12 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
     if(params) {
         param_list_t*p=0;
         for(p=params->list;p;p=p->next) {
-            new_variable(p->param->name, p->param->type, 0, 1);
+            variable_t*v = new_variable2(p->param->name, p->param->type, 0, 1);
+            v->is_parameter = 1;
         }
+    }
+    if(m->uses_slots) {
+        dict_dump(m->slots, stdout, "");
     }
 
     methodstate_list_t*l = m->innerfunctions;
