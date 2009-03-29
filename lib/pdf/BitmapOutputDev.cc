@@ -563,7 +563,7 @@ GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 	int width8 = (width+7)/8;
 	int height = clip0bitmap->getHeight();
 
-        if(fixBBox(&x1,&y1,&x2,&y2,width,height)) {
+        if(!fixBBox(&x1,&y1,&x2,&y2,width,height)) {
             /* area is outside or null */
             return gFalse;
         }
