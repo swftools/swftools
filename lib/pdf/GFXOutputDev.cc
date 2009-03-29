@@ -58,7 +58,7 @@
 #include "OutputDev.h"
 #include "GfxFont.h"
 #include "GfxState.h"
-#include "NameToUnicodeTable.h"
+//#include "NameToUnicodeTable.h"
 #include "GlobalParams.h"
 #include "GFXOutputDev.h"
 
@@ -601,7 +601,6 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_extrafontdata = 0;
     this->config_optimize_polygons = 0;
     this->config_multiply = 1;
-    this->dashPattern = 0;
     this->page2page = 0;
     this->num_pages = 0;
   
@@ -1057,7 +1056,6 @@ void GFXOutputDev::endPage()
 	device->endclip(device);
 	outer_clip_box = 0;
     }
-    this->dashPattern = 0;
     /* notice: we're not fully done yet with this page- there might still be 
        a few calls to drawLink() yet to come */
 }
@@ -1089,16 +1087,21 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     if(lineCap == 0) capType = gfx_capButt;
     else if(lineCap == 1) capType = gfx_capRound;
     else if(lineCap == 2) capType = gfx_capSquare;
+    else msg("<error> Invalid line cap type");
 
     gfx_joinType joinType = gfx_joinRound;
     if(lineJoin == 0) joinType = gfx_joinMiter;
     else if(lineJoin == 1) joinType = gfx_joinRound;
     else if(lineJoin == 2) joinType = gfx_joinBevel;
+    else msg("<error> Invalid line join type");
 
     gfxline_t*line2 = 0;
 
-    if(this->dashLength && this->dashPattern) {
-	float * dash = (float*)malloc(sizeof(float)*(this->dashLength+1));
+    int dashLength = states[statepos].dashLength;
+    double*dashPattern = states[statepos].dashPattern;
+    double dashStart = states[statepos].dashStart;
+    if(dashLength && dashPattern) {
+	float * dash = (float*)malloc(sizeof(float)*(dashLength+1));
 	int t;
 
         /* try to find out how much the transformation matrix would
@@ -1109,26 +1112,33 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
            the current transformation matrix. However there are few
            PDFs which actually stretch a dashed path in a non-orthonormal
            way */
-        double tx1, ty1, tx2, ty2;
+        double tx1, ty1, tx2, ty2, tx3, ty3;
 	this->transformXY(state, 0, 0, &tx1, &ty1);
-	this->transformXY(state, 1, 1, &tx2, &ty2);
-        double f = sqrt(sqr(tx2-tx1)+sqr(ty2-ty1)) / SQRT2;
+	this->transformXY(state, 0, 1, &tx2, &ty2);
+	this->transformXY(state, 1, 0, &tx3, &ty3);
+        double d1 = sqrt(sqr(tx2-tx1)+sqr(ty2-ty1));
+        double d2 = sqrt(sqr(tx3-tx1)+sqr(ty3-ty1));
+        if(fabs(d1-d2)>0.5)
+            warnfeature("non-ortogonally dashed strokes", 0);
+        double f = (d1+d2)/2;
 
-	msg("<trace> %d dashes", this->dashLength);
-	msg("<trace> |  phase: %f", this->dashStart);
-	for(t=0;t<this->dashLength;t++) {
-	    dash[t] = (float)this->dashPattern[t] * f;
-            if(!dash[t])
+	msg("<trace> %d dashes", dashLength);
+	msg("<trace> |  phase: %f", dashStart);
+	for(t=0;t<dashLength;t++) {
+	    dash[t] = (float)dashPattern[t] * f;
+            if(!dash[t]) {
                 dash[t] = 1e-37;
-	    msg("<trace> |  d%-3d: %f", t, this->dashPattern[t]);
+            }
+	    msg("<trace> |  d%-3d: %f", t, dashPattern[t]);
 	}
-	dash[this->dashLength] = -1;
+	dash[dashLength] = -1;
 	if(getLogLevel() >= LOGLEVEL_TRACE) {
 	    dump_outline(line);
 	}
+        
+        line2 = gfxtool_dash_line(line, dash, (float)(dashStart*f));
+        line = line2;
 
-	line2 = gfxtool_dash_line(line, dash, (float)(this->dashStart*f));
-	line = line2;
 	free(dash);
 	msg("<trace> After dashing:");
     }
@@ -1137,8 +1147,8 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
         msg("<trace> stroke width=%f join=%s cap=%s dashes=%d color=%02x%02x%02x%02x",
 		width,
 		lineJoin==0?"miter": (lineJoin==1?"round":"bevel"),
-		lineCap==0?"butt": (lineJoin==1?"round":"square"),
-		this->dashLength,
+		lineCap==0?"butt": (lineCap==1?"round":"square"),
+		dashLength,
 		col.r,col.g,col.b,col.a
 		);
         dump_outline(line);
@@ -1256,9 +1266,6 @@ void GFXOutputDev::finish()
 GFXOutputDev::~GFXOutputDev() 
 {
     finish();
-    if(this->dashPattern) {
-        free(this->dashPattern);this->dashPattern = 0;
-    }
 };
 GBool GFXOutputDev::upsideDown() 
 {
@@ -1566,9 +1573,9 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     states[statepos].clipbbox.xmax = x2;
     states[statepos].clipbbox.ymax = y2;
     
-    this->dashPattern = 0;
-    this->dashLength = 0;
-    this->dashStart = 0;
+    states[statepos].dashPattern = 0;
+    states[statepos].dashLength = 0;
+    states[statepos].dashStart = 0;
 }
 
 
@@ -1779,6 +1786,10 @@ void GFXOutputDev::saveState(GfxState *state) {
     states[statepos].clipping = 0;
     states[statepos].olddevice = 0;
     states[statepos].clipbbox = states[statepos-1].clipbbox;
+
+    states[statepos].dashPattern = states[statepos-1].dashPattern;
+    states[statepos].dashStart = states[statepos-1].dashStart;
+    states[statepos].dashLength = states[statepos-1].dashLength;
 };
 
 void GFXOutputDev::restoreState(GfxState *state) {
@@ -1794,6 +1805,14 @@ void GFXOutputDev::restoreState(GfxState *state) {
   if(states[statepos].softmask) {
       clearSoftMask(state);
   }
+
+  if(states[statepos].dashPattern) {
+      if(!statepos || states[statepos-1].dashPattern != states[statepos].dashPattern) {
+          free(states[statepos].dashPattern);
+          states[statepos].dashPattern = 0;
+      }
+  }
+
   updateAll(state);
   
   while(states[statepos].clipping) {
@@ -1810,18 +1829,25 @@ void GFXOutputDev::restoreState(GfxState *state) {
  
 void GFXOutputDev::updateLineDash(GfxState *state) 
 {
-    if(this->dashPattern) {
-        free(this->dashPattern);this->dashPattern = 0;
+    if(states[statepos].dashPattern &&
+       (!statepos || states[statepos-1].dashPattern != states[statepos].dashPattern)) {
+        free(states[statepos].dashPattern);
+        states[statepos].dashPattern = 0;
     }
     double *pattern = 0;
-    state->getLineDash(&pattern, &this->dashLength, &this->dashStart);
-    msg("<debug> updateLineDash, %d dashes", this->dashLength);
-    if(!this->dashLength) {
-        this->dashPattern = 0;
+    int dashLength;
+    double dashStart;
+    state->getLineDash(&pattern, &dashLength, &dashStart);
+    msg("<debug> updateLineDash, %d dashes", dashLength);
+    if(!dashLength) {
+        states[statepos].dashPattern = 0;
+        states[statepos].dashLength = 0;
     } else {
-        double*p = (double*)malloc(this->dashLength*sizeof(this->dashPattern[0]));
-        memcpy(p, pattern, this->dashLength*sizeof(this->dashPattern[0]));
-        this->dashPattern = p;
+        double*p = (double*)malloc(dashLength*sizeof(states[statepos].dashPattern[0]));
+        memcpy(p, pattern, dashLength*sizeof(states[statepos].dashPattern[0]));
+        states[statepos].dashPattern = p;
+        states[statepos].dashLength = dashLength;
+        states[statepos].dashStart = dashStart;
     }
 }
   

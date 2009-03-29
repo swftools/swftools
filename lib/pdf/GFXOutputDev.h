@@ -29,6 +29,10 @@ class GFXOutputState {
     gfxresult_t* softmaskrecording; // for soft masks
 
     gfxdevice_t* olddevice;
+  
+    double *dashPattern;
+    int dashLength;
+    double dashStart;
 
     GfxState*state;
 };
@@ -281,10 +285,6 @@ public:
   int config_multiply;
   int config_bigchar;
   double config_fontquality;
-    
-  double *dashPattern;
-  int dashLength;
-  double dashStart;
 };
 
 class GFXGlobalParams:  public GlobalParams {
