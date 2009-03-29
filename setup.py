@@ -121,6 +121,10 @@ class ConfigScript:
     def system_has_property(self,name):
         if name.startswith("STD"):
             return 1
+        elif name.startswith("INTERNAL"):
+            return 1
+        elif "POPPLER" in name:
+            return None
         elif name.startswith("HAVE_") and name.endswith("_H"):
             header = name[5:].lower()
             c = header.rfind("_")

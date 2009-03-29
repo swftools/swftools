@@ -1412,7 +1412,9 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
    
 	/* calculate the bbox of this character */
 	int x1 = (int)x, x2 = (int)x+1, y1 = (int)y, y2 = (int)y+1;
-	SplashPath*path = clip0dev->getCurrentFont()->getGlyphPath(code);
+        SplashFont*font = clip0dev->getCurrentFont();
+	SplashPath*path = font?font->getGlyphPath(code):NULL;
+
         if(!path) {
             if(code)
                 msg("<error> couldn't create outline for char %d", code);

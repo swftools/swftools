@@ -949,6 +949,10 @@ static pool_t*writeABC(TAG*abctag, void*code, pool_t*pool)
                 NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
                 // don't bother to set m->index
                 body->method = m; m->body = body;
+		if(c->superclass && c->superclass->name && !strcmp(c->superclass->name,"Object")) {
+		    __ getlocal_0(body);
+		    __ constructsuper(body, 0);
+		}
                 __ returnvoid(body);
                 c->constructor = m;
             } else {

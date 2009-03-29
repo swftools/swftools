@@ -204,17 +204,22 @@ U32 swf_GetBits(TAG * t,int nbits)
   if (!t->readBit) t->readBit = 0x80;
   while (nbits)
   { res<<=1;
+#ifdef DEBUG_RFXSWF
+    if (t->pos>=t->len) 
+    { fprintf(stderr,"GetBits() out of bounds: TagID = %i, pos=%d, len=%d\n",t->id, t->pos, t->len);
+      int i,m=t->len>10?10:t->len;
+      for(i=-1;i<m;i++) {
+        fprintf(stderr, "(%d)%02x ", i, t->data[i]);
+      } 
+      fprintf(stderr, "\n");
+      return res;
+    }
+#endif
     if (t->data[t->pos]&t->readBit) res|=1;
     t->readBit>>=1;
     nbits--;
     if (!t->readBit)
     { if (nbits) t->readBit = 0x80;
-      #ifdef DEBUG_RFXSWF
-      if (t->pos>=t->len) 
-      { fprintf(stderr,"GetBits() out of bounds: TagID = %i\n",t->id);
-        return res;
-      }
-      #endif
       t->pos++;
     }
   }
@@ -368,7 +373,12 @@ int swf_GetS30(TAG*tag)
     while(1) {
 	U8 b = swf_GetU8(tag);
         nr++;
-	s|=(b&127)<<shift;
+	nt i,m=t->len>10?10:t->len;
+                for(i=0;i<m;i++) {
+                            fprintf(stderr, "%02x ", t->data[i]);
+                                    } 
+                        fprintf(stderr, "\n");
+                        s|=(b&127)<<shift;
 	shift+=7;
 	if(!(b&128) || shift>=32) {
             if(b&64) {

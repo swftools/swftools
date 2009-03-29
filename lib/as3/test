@@ -28,6 +28,11 @@ import marshal
 import select
 from optparse import OptionParser
 
+CMD_ARGS=[]
+#CMD = "./parser"
+CMD="as3compile"
+CMD_ARGS=["-o","abc.swf"]
+
 def check(s):
     row = None
     ok = 0
@@ -101,7 +106,7 @@ class Cache:
         try:
             self.milestone = marshal.load(open(self.filename_milestone, "rb"))
         except IOError:
-            self.milstone = {}
+            self.milestone = {}
 
     def parse_args(self):
         parser = OptionParser()
@@ -171,7 +176,7 @@ class TestBase:
     def compile(self):
         try: os.unlink("abc.swf");
         except: pass
-        ret,output = runcmd("./parser",[self.file],wait=cache.runtime)
+        ret,output = runcmd(CMD,CMD_ARGS+[self.file],wait=cache.runtime)
         self.compile_error = 0
         self.compile_output = output
         self.exit_status = 0

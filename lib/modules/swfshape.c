@@ -349,7 +349,12 @@ int swf_ShapeSetMove(TAG * t,SHAPE * s,S32 x,S32 y)
   
   b = swf_CountBits(x,0);
   b = swf_CountBits(y,b);
-  
+
+  if(b>31) {
+      fprintf(stderr, "Warning: bad moveTo (%f,%f)\n", x/20.0, y/20.0);
+      b=31;
+  }
+    
   swf_SetBits(t,b,5);
   swf_SetBits(t,x,b);
   swf_SetBits(t,y,b);

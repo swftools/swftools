@@ -223,6 +223,7 @@ void*trie_lookup(trie_t*t, unsigned const char*id);
 int trie_contains(trie_t*t, unsigned const char*id);
 void trie_remember(trie_t*t);
 void trie_rollback(trie_t*t);
+void trie_dump(trie_t*t);
 
 array_t* array_new();
 array_t* array_new2(type_t*type);
@@ -257,7 +258,7 @@ void list_concat_(void*l1, void*l2);
 #define list_prepend(list, e) {sizeof((list)->next);list_prepend_(&(list),(e));}
 #define list_free(list) {sizeof((list)->next);list_free_(&(list));}
 #define list_deep_free(list) {sizeof((list)->next);list_deep_free_(&(list));}
-#define list_clone(list) (sizeof((list)->next),list_clone_(&(list)))
+#define list_clone(list) (sizeof((list)->next),(list?list_clone_(&(list)):0))
 #define list_length(list) (sizeof((list)->next),list_length_(list))
 
 #ifdef __cplusplus

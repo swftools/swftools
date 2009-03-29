@@ -10002,6 +10002,7 @@ fi
 done
 
     else
+        USES_EXTERNAL_LIBART=1
 	CPPFLAGS="$CPPFLAGS $LIBART_CFLAGS"
         cat >>confdefs.h <<\_ACEOF
 #define INTERNAL_LIBART 0
@@ -10555,6 +10556,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
     else
+        USES_EXTERNAL_POPPLER=1
 	CPPFLAGS="$CPPFLAGS $POPPLER_CFLAGS"
         cat >>confdefs.h <<\_ACEOF
 #define HAVE_POPPLER 1
@@ -10927,8 +10929,8 @@ else
     if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
         echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
     fi
-    # iterate through version 2.2 to 2.5
-    for v in 2 3 4 5; do
+    # iterate through version 2.2 to 2.6
+    for v in 2 3 4 5 6; do
         # Linux
         if test -f "/usr/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
@@ -11189,6 +11191,20 @@ fi
 
 
 
+if test "$USES_EXTERNAL_POPPLER";then
+    echo "*"
+    echo "*"
+    echo "* uses external poppler library"
+    echo "*"
+    echo "*"
+fi
+if test "$USES_EXTERNAL_LIBART";then
+    echo "*"
+    echo "*"
+    echo "* uses external libart library"
+    echo "*"
+    echo "*"
+fi
 
 if test -f "release.in"; then release_in="./release"; fi
 if test -f "Makefile.new.in"; then mk_in="./Makefile.new"; fi

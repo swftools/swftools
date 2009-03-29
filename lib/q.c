@@ -287,7 +287,7 @@ trie_t*trie_new()
 static char _trie_put(trielayer_t**t, unsigned const char*id, void*data)
 {
     if(!*t) {
-        (*t) = rfx_calloc(sizeof(trie_t));
+        (*t) = rfx_calloc(sizeof(trielayer_t));
         (*t)->rest = (unsigned char*)strdup(id);
         (*t)->data = data;
         return 0;
@@ -333,11 +333,11 @@ void trie_put(trie_t*t, unsigned const char*id, void*data)
     } else {
         char contains = trie_contains(t, id);
         void*olddata = contains?trie_lookup(t, id):0;
-        trie_rollback_removes(t, id, data);
         _trie_put(&t->start, id, data);
         if(contains) {
             trie_rollback_adds(t, id, olddata);
         }
+        trie_rollback_removes(t, id, data);
     }
 }
 char trie_remove(trie_t*t, unsigned const char*id)
@@ -348,7 +348,7 @@ char trie_remove(trie_t*t, unsigned const char*id)
         void*olddata = trie_lookup(t, id);
         char exists = _trie_remove(t->start, id);
         if(exists) {
-            trie_rollback_removes(t, id, olddata);
+            trie_rollback_adds(t, id, olddata);
         }
         return exists;
     }
@@ -381,33 +381,57 @@ void* trie_lookup(trie_t*trie, unsigned const char*id)
 typedef struct _triememory {
     const unsigned char*key;
     void*data;
+    char del; // 0/1
     struct _triememory*next;
 } triememory_t;
 
 typedef struct _trierollback {
-    triememory_t*add;
-    triememory_t*remove;
+    triememory_t*ops;
     struct _trierollback*prev;
 } trierollback_t;
 
-static void trie_rollback_removes(trie_t*t, unsigned const char*id, void*data)
-{
-    trierollback_t*rollback = (trierollback_t*)t->rollback;
-    triememory_t*m = (triememory_t*)rfx_calloc(sizeof(triememory_t));
-    m->key = id;
-    m->data = data;
-    m->next = rollback->add;
-    rollback->add = m;
-}
 static void trie_rollback_adds(trie_t*t, unsigned const char*id, void*data)
 {
     trierollback_t*rollback = (trierollback_t*)t->rollback;
     triememory_t*m = (triememory_t*)rfx_calloc(sizeof(triememory_t));
     m->key = id;
     m->data = data;
-    m->next = rollback->remove;
-    rollback->remove = m;
+    m->del = 0;
+    m->next = rollback->ops;
+    rollback->ops = m;
 }
+static void trie_rollback_removes(trie_t*t, unsigned const char*id, void*data)
+{
+    trierollback_t*rollback = (trierollback_t*)t->rollback;
+    triememory_t*m = (triememory_t*)rfx_calloc(sizeof(triememory_t));
+    m->key = id;
+    m->data = data;
+    m->del = 1;
+    m->next = rollback->ops;
+    rollback->ops = m;
+}
+
+void _trie_dump(trielayer_t*t, char*buffer, int pos)
+{
+    int i;
+    for(i=0;i<256;i++) {
+        if(t->row[i]) {
+            buffer[pos]=i;
+            _trie_dump(t->row[i], buffer, pos+1);
+        }
+    }
+    if(t->rest) {
+        buffer[pos]=0;
+        printf("%s%s %08x\n", buffer, t->rest, t->data);
+    }
+}
+
+void trie_dump(trie_t*t) 
+{
+    char buffer[256];
+    _trie_dump(t->start, buffer, 0);
+}
+
 
 void trie_remember(trie_t*t)
 {
@@ -425,20 +449,20 @@ void trie_rollback(trie_t*t)
     }
     t->rollback = ((trierollback_t*)t->rollback)->prev;
 
-    triememory_t*remove = rollback->remove;
-    while(remove) {
-        triememory_t*next = remove->next;
-        if(!trie_remove(t, remove->key)) {
-            fprintf(stderr, "Internal error: can't delete key %s in trie during rollback\n", remove->key);
+    triememory_t*op = rollback->ops;
+    while(op) {
+        triememory_t*next = op->next;
+        if(op->del) {
+            if(!_trie_remove(t->start, op->key)) {
+                fprintf(stderr, "Internal error: can't delete key %s in trie during rollback\n", op->key);
+            }
+        } else {
+            if(_trie_put(&t->start, op->key, op->data)) {
+                fprintf(stderr, "Internal error: overwrote key %s in trie during rollback\n", op->key);
+            }
         }
-        free(remove);
-        remove = next;
-    }
-    triememory_t*add = rollback->add;
-    while(add) {
-        triememory_t*next = add->next;
-        trie_put(t, add->key, add->data);
-        add = next;
+        free(op);
+        op = next;
     }
 }
 

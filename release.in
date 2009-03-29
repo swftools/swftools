@@ -58,7 +58,6 @@ ${name}/avi2swf/v2swf.h \
 ${name}/avi2swf/avi2swf.1"
 
 MAKEFILES="${name}/src/Makefile.in \
-${name}/pdf2swf/fonts/Makefile.in \
 ${name}/lib/readers/Makefile.in \
 ${name}/lib/art/Makefile.in \
 ${name}/lib/Makefile.in \
@@ -166,6 +165,8 @@ ${name}/lib/as3/tokenizer.h \
 ${name}/lib/as3/tokenizer.yy.c \
 ${name}/lib/as3/parser.tab.c \
 ${name}/lib/as3/parser.tab.h \
+${name}/lib/as3/scripts.c \
+${name}/lib/as3/scripts.h \
 ${name}/lib/action/action.h \
 ${name}/lib/action/actioncompiler.c \
 ${name}/lib/action/actioncompiler.h \

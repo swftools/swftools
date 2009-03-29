@@ -30,11 +30,11 @@
 static char * filename = 0;
 static int verbose;
 
-struct options_t options[] =
-{
- {"v","verbose"},
- {"V","version"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"v", "verbose"},
+{"V", "version"},
+{0,0}
 };
 
 int args_callback_option(char*name,char*val)
@@ -55,12 +55,16 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
-{    
-    printf("Usage: %s [-at] file.swf\n", name);
-    printf("\t-h , --help\t\t Print help and exit\n");
-    printf("\t-v , --verbose\t\t Be more verbose\n");
-    printf("\t-V , --version\t\t Print program version and exit\n");
+void args_callback_usage(char *name)
+{
+    printf("\n");
+    printf("Usage: %s [-v] file.swf > file.hexdump\n", name);
+    printf("OR:    %s file.hexdump\n", name);
+    printf("\n");
+    printf("-h , --help                    Print help and exit\n");
+    printf("-v , --verbose                 Be more verbose\n");
+    printf("-V , --version                 Print program version and exit\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {
