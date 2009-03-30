@@ -417,13 +417,13 @@ GBool BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
    
     msg("<trace> Testing new text data against current bitmap data, state=%s, counter=%d\n", STATE_NAME[layerstate], dbg_btm_counter);
     
-    char filename1[80];
-    char filename2[80];
-    char filename3[80];
-    sprintf(filename1, "state%dboolbitmap_afternewtext.png", dbg_btm_counter);
-    sprintf(filename2, "state%dbooltext_afternewtext.png", dbg_btm_counter);
-    sprintf(filename3, "state%dbitmap_afternewtext.png", dbg_btm_counter);
     if(0) {
+        char filename1[80];
+        char filename2[80];
+        char filename3[80];
+        sprintf(filename1, "state%dboolbitmap_afternewtext.png", dbg_btm_counter);
+        sprintf(filename2, "state%dbooltext_afternewtext.png", dbg_btm_counter);
+        sprintf(filename3, "state%dbitmap_afternewtext.png", dbg_btm_counter);
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
@@ -476,14 +476,13 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     /* similar to checkNewText() above, only in reverse */
     msg("<trace> Testing new graphics data against current text data, state=%s, counter=%d\n", STATE_NAME[layerstate], dbg_btm_counter);
 
-    char filename1[80];
-    char filename2[80];
-    char filename3[80];
-    sprintf(filename1, "state%dboolbitmap_afternewgfx.png", dbg_btm_counter);
-    sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
-    sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
-
     if(0) {
+        char filename1[80];
+        char filename2[80];
+        char filename3[80];
+        sprintf(filename1, "state%dboolbitmap_afternewgfx.png", dbg_btm_counter);
+        sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
+        sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
@@ -576,9 +575,10 @@ GBool BitmapOutputDev::clip0and1differ(int x1,int y1,int x2,int y2)
 
 	for(y=y1;y<y2;y++) {
 	    unsigned char*row1 = &clip0bitmap->getDataPtr()[width8*y+x18];
-	    unsigned char*row2 = &clip1bitmap->getDataPtr()[width8*y+x28];
-	    if(memcmp(row1, row2, x28-x18))
+	    unsigned char*row2 = &clip1bitmap->getDataPtr()[width8*y+x18];
+	    if(memcmp(row1, row2, x28-x18)) {
 		return gTrue;
+            }
 	}
 	return gFalse;
     } else {
@@ -1450,6 +1450,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		state->setRender(oldrender);
 	    }
 	} else {
+
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
