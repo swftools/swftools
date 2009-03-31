@@ -22,17 +22,16 @@ else
             fi
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
         # Mac OS X
-        elif test -f "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
-            #TODO: test for /System/Library/Frameworks/Python.framework/Versions/2.3/Python ?
+        elif test -f "/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
             PYTHON_LIB="-framework Python" 
-            if test -f "/Library/Python/2.$v/PIL/_imaging.so";then
+            if test -f "/Library/Frameworks/Python.framework/Versions/2.$v/site-packages/PIL/_imaging.so";then
                 PYTHON_LIB2="$PYTHON_LIB /Library/Python/2.$v/PIL/_imaging.so"
                 HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"
             fi
-            PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
+            PYTHON_INCLUDES="-I/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
 	# Mac OS X [Fink]:
         elif test "(" -f "/sw/lib/python2.$v/config/libpython2.$v.dylib" \
 	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.a" \
