@@ -2598,9 +2598,9 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
     
     this->device = states[statepos].olddevice;
     if(!this->device) {
-	msg("<fatal> bad state nesting in transparency group- PDF file broken?");
-	/* if these errors occur more often, we should build a seperate
-	   transparency group stack, like xpdf/SplashOutputDev.cc does */
+	msg("<fatal> Bad state nesting in transparency group");
+	msg("<fatal> Notice: this is a known problem, which will be fixed in 0.9.1");
+	msg("<fatal> In the meantime, please convert the file with -s poly2bitmap");
 	restoreState(state);
 	this->device = states[statepos].olddevice;
     }
