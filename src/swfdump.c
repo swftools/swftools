@@ -343,6 +343,35 @@ void dumpFont(TAG*tag, char*prefix)
 	swf_Shape2Free(shape);
 	free(shape);
     }
+    
+    /*
+      not part of the file
+
+    printf("%sencoding table:", prefix, prefix);
+    char filled0=0, lastfilled=0;
+    for(t=0;t<font->maxascii;t++) {
+        if((t&15)==0) {
+            printf("\n%s%08x ", prefix, t);
+            int s;
+            if(!filled0 && t) {
+                for(s=t;s<font->maxascii;s++) {
+                    if(font->ascii2glyph[s]>=0) break;
+                }
+                if(s>t+32) {
+                    printf("*");
+                    t = ((s-16)&~15)-1;
+                    continue;
+                }
+            }
+            filled0 = 0;
+            for(s=t;s<t+16 && s<font->maxascii;s++) {
+                if(font->ascii2glyph[s]>=0) filled0=1;
+            }
+        }
+        printf("%4d ", font->ascii2glyph[t]);
+    }
+    printf("\n");*/
+
     swf_FontFree(font);
 }
 
@@ -985,8 +1014,8 @@ int main (int argc,char ** argv)
     char header[3];
     read(f, header, 3);
     char compressed = (header[0]=='C');
-    char isflash = header[0]=='F' && header[1] == 'W' && header[2] == 'S' ||
-                   header[0]=='C' && header[1] == 'W' && header[2] == 'S';
+    char isflash = (header[0]=='F' && header[1] == 'W' && header[2] == 'S') ||
+                   (header[0]=='C' && header[1] == 'W' && header[2] == 'S');
     close(f);
 
     int fl=strlen(filename);
