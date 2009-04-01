@@ -30,6 +30,7 @@ static char * filename = 0;
 static char * destfilename = "output.swf";
 static int all=0;
 static int verbose=0;
+static char * fontname = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -53,6 +54,10 @@ int args_callback_option(char*name,char*val)
 	verbose ++;
 	return 0;
     }
+    else if(!strcmp(name, "n")) {
+	fontname = val;
+	return 0;
+    }
     else if(!strcmp(name, "a")) {
 	all = 1;
 	return 0;
@@ -74,6 +79,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");
+    printf("-n , --name <name>             Name of the font (class) in the output file\n");
     printf("-o , --output <filename>       Write output to file <filename>.\n");
     printf("-V , --version                 Print version info and exit\n");
     printf("\n");
@@ -93,6 +99,9 @@ static void convertFont(char*infile, char*outfile)
     SWFFONT * font;
     
     font = swf_LoadFont(infile);
+
+    if(fontname)
+        font->name = fontname;
 
     swf_WriteFont(font, outfile);
     swf_FontFree(font);
