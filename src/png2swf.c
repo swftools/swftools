@@ -751,7 +751,14 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 
     int width=0, height=0;
 
+#ifndef HAVE_JPEGLIB
     if(global.mkjpeg) {
+        global.mkjpeg = 0;
+        msg("<warning> No jpeg support compiled in");
+    }
+#endif
+    if(global.mkjpeg) {
+#ifdef HAVE_JPEGLIB
 	RGBA*data = 0;
 	getPNG(sname, &width, &height, (unsigned char**)&data);
 	if(!data) 
@@ -765,6 +772,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 	    swf_SetU16(t, id);
 	    swf_SetJPEGBits2(t, width,height,data,global.mkjpeg);
 	}
+#endif
     } else if(1) {
 	RGBA*data = 0;
 	getPNG(sname, &width, &height, (unsigned char**)&data);
