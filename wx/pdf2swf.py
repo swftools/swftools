@@ -7,6 +7,7 @@ import os
 sys.path+=["../lib/python"]
 import gfx
 import images
+import stat
 
 basedir = os.getcwd()
 
@@ -67,6 +68,8 @@ def swfcombine(params):
     else:
         locations = [os.path.join(basedir, "swfcombine.exe"), 
                      "c:\\swftools\\swfcombine.exe"]
+        params = ['"'+p+'"' for p in params]
+
     for e in locations:
         if os.path.isfile(e):
             exe = e
@@ -74,11 +77,15 @@ def swfcombine(params):
 
     if hasattr(os,"spawnv"):
         print "spawnv",exe,params
-        ret = os.spawnv(os.P_WAIT, exe, [exe]+params)
+        ret = -1
+        try:
+            ret = os.spawnv(os.P_WAIT, exe, ["swfcombine"]+params)
+        except:
+            ret = -1
         if not ret:
             return
 
-    cmd = exe + " " + (" ".join(params))
+    cmd = '"' + exe + '"' + " " + (" ".join(params))
     print "system",cmd
     ret = os.system(cmd)
     if ret&0xff00:
@@ -674,13 +681,19 @@ class State:
             page.render(swf)
             swf.endpage()
         swf.save(filename)
+        if not os.path.isfile(filename):
+            error("Couldn't create file "+filename)
 
         if gfx_options.get("rfxview",None):
             rfxview = os.path.join(basedir, "rfxview.swf")
             if not os.path.isfile(rfxview):
                 error("File rfxview.swf not found in working directory")
             else:
+                size1 = os.stat(filename)[stat.ST_SIZE]
                 swfcombine([rfxview,"viewport="+filename,"-o",filename])
+                size2 = os.stat(filename)[stat.ST_SIZE]
+                if size1 == size2:
+                    error("Couldn't add viewer to file "+filename)
         
         if html:
             version = int(gfx_options.get("flashversion", "8"))
