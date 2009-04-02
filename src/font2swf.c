@@ -56,7 +56,7 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "n")) {
 	fontname = val;
-	return 0;
+	return 1;
     }
     else if(!strcmp(name, "a")) {
 	all = 1;
@@ -101,7 +101,7 @@ static void convertFont(char*infile, char*outfile)
     font = swf_LoadFont(infile);
 
     if(fontname)
-        font->name = fontname;
+        font->name = strdup(fontname);
 
     swf_WriteFont(font, outfile);
     swf_FontFree(font);
