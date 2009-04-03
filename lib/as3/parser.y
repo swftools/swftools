@@ -170,6 +170,7 @@ extern int a3_lex();
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
 
+%type <number_int> CONDITIONAL_COMPILATION
 %type <for_start> FOR_START
 %type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER
 %type <namespace_decl>  NAMESPACE_ID
@@ -427,6 +428,15 @@ static namespace_list_t nl3 = {&ns3,&nl4};
 static namespace_list_t nl2 = {&ns2,&nl3};
 static namespace_list_t nl1 = {&ns1,&nl2};
 static namespace_set_t nopackage_namespace_set = {&nl1};
+
+dict_t*conditionals=0;
+void as3_set_definition(const char*c)
+{
+    if(!conditionals) 
+        conditionals = dict_new();
+    if(!dict_contains(conditionals,c))
+        dict_put(conditionals,c,0);
+}
 
 static void new_state()
 {
@@ -945,9 +955,6 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
             v->is_parameter = 1;
         }
     }
-    if(m->uses_slots) {
-        dict_dump(m->slots, stdout, "");
-    }
 
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
@@ -1277,9 +1284,6 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
         //class method
         memberinfo_t* m = registry_findmember(state->cls->info, ns.name, name, 0);
         if(m) {
-            printf("%s.%s | %s.%s\n", 
-                m->package, m->name,
-                ns.name, name);
             syntaxerror("class already contains a %s '%s'", infotypename((slotinfo_t*)m), m->name);
         }
         minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
@@ -1676,6 +1680,7 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
     as3_error("can't convert type %s%s%s to %s%s%s", 
         from->package, from->package?".":"", from->name, 
         to->package, to->package?".":"", to->name);
+
     return c;
 }
 
@@ -2112,8 +2117,9 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 #define PASS1 }} if(as3_pass == 1) {{
 #define PASS1END }} if(as3_pass == 2) {{
 #define PASS2 }} if(as3_pass == 2) {{
-#define PASS12 }} {{
+#define PASS12 }} if(as3_pass == 1 || as3_pass == 2) {{
 #define PASS12END }} if(as3_pass == 2) {{
+#define PASS_ALWAYS }} {{
 
 %}
 
@@ -2133,7 +2139,7 @@ PROGRAM_CODE: PACKAGE_DECLARATION
             | FUNCTION_DECLARATION
             | SLOT_DECLARATION
             | PACKAGE_INITCODE
-            | CONDITIONAL_COMPILATION '{' MAYBE_PROGRAM_CODE_LIST '}' // conditional compilation
+            | CONDITIONAL_COMPILATION '{' MAYBE_PROGRAM_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}
             | ';'
 
 MAYBE_INPACKAGE_CODE_LIST: | INPACKAGE_CODE_LIST
@@ -2145,7 +2151,7 @@ INPACKAGE_CODE: INTERFACE_DECLARATION
               | FUNCTION_DECLARATION
               | SLOT_DECLARATION
               | PACKAGE_INITCODE
-              | CONDITIONAL_COMPILATION '{' MAYBE_INPACKAGE_CODE_LIST '}' // conditional compilation
+              | CONDITIONAL_COMPILATION '{' MAYBE_INPACKAGE_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}
               | ';'
 
 MAYBECODE: CODE {$$=$1;}
@@ -2178,7 +2184,7 @@ CODEPIECE: BREAK
 CODEPIECE: CONTINUE
 CODEPIECE: RETURN
 CODEPIECE: THROW
-CODEPIECE: CONDITIONAL_COMPILATION '{' CODE '}' {$$=$3;}
+CODEPIECE: CONDITIONAL_COMPILATION '{' CODE '}' {PASS_ALWAYS as3_pass=$1;}
 
 //CODEBLOCK :  '{' CODE '}' {$$=$2;}
 //CODEBLOCK :  '{' '}'      {$$=0;}
@@ -2194,7 +2200,15 @@ PACKAGE_INITCODE: CODE_STATEMENT {
 
 /* ------------ conditional compilation ------------- */
 
-CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER 
+CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
+    PASS12
+    $$=as3_pass;
+    char*key = concat3($1,"::",$3);
+    if(!conditionals || !dict_contains(conditionals, key)) {
+        as3_pass=0;
+    }
+    free(key);
+}
 
 /* ------------ variables --------------------------- */
 
@@ -2725,7 +2739,7 @@ MAYBE_CLASS_BODY : CLASS_BODY
 CLASS_BODY : CLASS_BODY_ITEM
 CLASS_BODY : CLASS_BODY CLASS_BODY_ITEM
 CLASS_BODY_ITEM : ';'
-CLASS_BODY_ITEM : CONDITIONAL_COMPILATION '{' MAYBE_CLASS_BODY '}'
+CLASS_BODY_ITEM : CONDITIONAL_COMPILATION '{' MAYBE_CLASS_BODY '}' {PASS_ALWAYS as3_pass=$1;}
 CLASS_BODY_ITEM : SLOT_DECLARATION
 CLASS_BODY_ITEM : FUNCTION_DECLARATION
 
@@ -2758,79 +2772,89 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
 
 VARCONST: "var" | "const"
 
-SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST {setslotstate(&$1,$2);} SLOT_LIST {$$=$4;setslotstate(0, 0);}
+SLOT_DECLARATION: MAYBE_MODIFIERS VARCONST {PASS12 setslotstate(&$1,$2);} SLOT_LIST {PASS12 $$=$4;setslotstate(0, 0);}
 
-SLOT_LIST: ONE_SLOT               {$$ = $1;}
-SLOT_LIST: SLOT_LIST ',' ONE_SLOT {$$ = code_append($1, $3);}
+SLOT_LIST: ONE_SLOT               {PASS12 $$=0;}
+SLOT_LIST: SLOT_LIST ',' ONE_SLOT {PASS12 $$=0;}
 
 ONE_SLOT: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
 {
+PASS12
     int flags = slotstate_flags->flags;
     namespace_t ns = modifiers2access(slotstate_flags);
 
-    varinfo_t* info = 0;
-    if(state->cls) {
-        memberinfo_t*i = registry_findmember(state->cls->info, ns.name, $1, 1);
-        if(i) {
-            check_override(i, flags);
+    if(as3_pass == 1) {
+
+        varinfo_t* info = 0;
+        if(state->cls) {
+            memberinfo_t*i = registry_findmember(state->cls->info, ns.name, $1, 1);
+            if(i) {
+                check_override(i, flags);
+            }
+            info = varinfo_register_onclass(state->cls->info, ns.access, ns.name, $1);
+        } else {
+            slotinfo_t*i = registry_find(state->package, $1);
+            if(i) {
+                syntaxerror("package %s already contains '%s'", state->package, $1);
+            }
+            if(ns.name && ns.name[0]) {
+                syntaxerror("namespaces not allowed on package-level variables");
+            }
+            info = varinfo_register_global(ns.access, state->package, $1);
         }
-        info = varinfo_register_onclass(state->cls->info, ns.access, ns.name, $1);
-    } else {
-        slotinfo_t*i = registry_find(state->package, $1);
-        if(i) {
-            syntaxerror("package %s already contains '%s'", state->package, $1);
+
+        info->type = $2;
+        info->flags = flags;
+        
+        dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, info);
+    }
+
+    if(as3_pass == 2) {
+        varinfo_t*info = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+
+        /* slot name */
+        multiname_t mname = {QNAME, &ns, 0, $1};
+      
+        trait_list_t**traits;
+        code_t**code;
+        if(!state->cls) {
+            // global variable
+            ns.name = state->package;
+            traits = &global->init->traits;
+            code = &global->init->method->body->code;
+        } else if(flags&FLAG_STATIC) {
+            // static variable
+            traits = &state->cls->abc->static_traits;
+            code = &state->cls->static_init->header;
+        } else {
+            // instance variable
+            traits = &state->cls->abc->traits;
+            code = &state->cls->init->header;
         }
-        if(ns.name && ns.name[0]) {
-            syntaxerror("namespaces not allowed on package-level variables");
+        
+        trait_t*t=0;
+        if($2) {
+            MULTINAME(m, $2);
+            t = trait_new_member(traits, multiname_clone(&m), multiname_clone(&mname), 0);
+        } else {
+            t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
         }
-        info = varinfo_register_global(ns.access, state->package, $1);
-    }
+        info->slot = t->slot_id;
+        
+        /* initalization code (if needed) */
+        code_t*c = 0;
+        if($3.c && !is_pushundefined($3.c)) {
+            c = abc_getlocal_0(c);
+            c = code_append(c, $3.c);
+            c = converttype(c, $3.t, $2);
+            c = abc_setslot(c, t->slot_id);
+        }
 
-    info->type = $2;
-    info->flags = flags;
+        *code = code_append(*code, c);
 
-    /* slot name */
-    multiname_t mname = {QNAME, &ns, 0, $1};
-  
-    trait_list_t**traits;
-    code_t**code;
-    if(!state->cls) {
-        // global variable
-        ns.name = state->package;
-        traits = &global->init->traits;
-        code = &global->init->method->body->code;
-    } else if(flags&FLAG_STATIC) {
-        // static variable
-        traits = &state->cls->abc->static_traits;
-        code = &state->cls->static_init->header;
-    } else {
-        // instance variable
-        traits = &state->cls->abc->traits;
-        code = &state->cls->init->header;
-    }
-    
-    trait_t*t=0;
-    if($2) {
-        MULTINAME(m, $2);
-        t = trait_new_member(traits, multiname_clone(&m), multiname_clone(&mname), 0);
-    } else {
-        t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
-    }
-    info->slot = t->slot_id;
-    
-    /* initalization code (if needed) */
-    code_t*c = 0;
-    if($3.c && !is_pushundefined($3.c)) {
-        c = abc_getlocal_0(c);
-        c = code_append(c, $3.c);
-        c = converttype(c, $3.t, $2);
-        c = abc_setslot(c, t->slot_id);
-    }
-
-    *code = code_append(*code, c);
-
-    if(slotstate_varconst==KW_CONST) {
-        t->kind= TRAIT_CONST;
+        if(slotstate_varconst==KW_CONST) {
+            t->kind= TRAIT_CONST;
+        }
     }
 
     $$=0;
@@ -3709,8 +3733,9 @@ E : E '.' T_IDENTIFIER {
         if(f && f->slot && !noslot) {
             $$.c = abc_getslot($$.c, f->slot);
         } else {
-            if(!f) 
+            if(!f) {
                 as3_warning("Access of undefined property '%s' in %s", $3, t->name);
+            }
             
             MEMBER_MULTINAME(m, f, $3);
             $$.c = abc_getproperty2($$.c, &m);

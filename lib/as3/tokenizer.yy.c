@@ -1360,7 +1360,7 @@ void as3_error(const char*format, ...)
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename_short, current_line, current_column, buf);
+    fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename, current_line, current_column, buf);
     fflush(stderr);
     exit(1);
 }
@@ -1374,7 +1374,7 @@ void as3_warning(const char*format, ...)
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
+    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename, current_line, current_column, buf);
     fflush(stderr);
 }
 void as3_softwarning(const char*format, ...)
@@ -1387,7 +1387,7 @@ void as3_softwarning(const char*format, ...)
     va_start(arglist, format);
     vsprintf(buf, format, arglist);
     va_end(arglist);
-    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename_short, current_line, current_column, buf);
+    fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename, current_line, current_column, buf);
     fflush(stderr);
 }
 static void dbg(const char*format, ...)

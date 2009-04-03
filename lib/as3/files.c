@@ -53,6 +53,7 @@ int current_line=1;
 int current_column=0;
 char* current_filename=0;
 char* current_filename_short=0;
+char* current_filename_long=0;
 include_dir_t* current_include_dirs=0;
 
 #define MAX_INCLUDE_DEPTH 16
@@ -62,6 +63,7 @@ int line_stack[MAX_INCLUDE_DEPTH];
 int column_stack[MAX_INCLUDE_DEPTH];
 char* filename_stack[MAX_INCLUDE_DEPTH];
 char* shortfilename_stack[MAX_INCLUDE_DEPTH];
+char* longfilename_stack[MAX_INCLUDE_DEPTH];
 include_dir_t* includedir_stack[MAX_INCLUDE_DEPTH];
 int include_stack_ptr = 0;
 
@@ -250,6 +252,7 @@ void enter_file(const char*name, const char*filename, void*state)
     line_stack[include_stack_ptr] = current_line;
     column_stack[include_stack_ptr] = current_column;
     shortfilename_stack[include_stack_ptr] = current_filename_short;
+    longfilename_stack[include_stack_ptr] = current_filename_long;
     filename_stack[include_stack_ptr] = current_filename;
     includedir_stack[include_stack_ptr] = current_include_dirs;
     
@@ -263,8 +266,9 @@ void enter_file(const char*name, const char*filename, void*state)
 
     current_line=1;
     current_column=0;
-    current_filename = strdup(filename);
+    current_filename = strdup(name);
     current_filename_short = strdup(name);
+    current_filename_long = strdup(filename);
 }
 
 FILE*enter_file2(const char*name, const char*filename, void*state)
@@ -285,6 +289,7 @@ void* leave_file()
     } else {
         free(current_filename);current_filename = filename_stack[include_stack_ptr];
         free(current_filename_short);current_filename_short = shortfilename_stack[include_stack_ptr];
+        free(current_filename_long);current_filename_long = longfilename_stack[include_stack_ptr];
         current_column = column_stack[include_stack_ptr];
         current_line = line_stack[include_stack_ptr];
         del_include_dirs(includedir_stack[include_stack_ptr], current_include_dirs);

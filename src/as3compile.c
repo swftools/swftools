@@ -47,6 +47,7 @@ static struct options_t options[] = {
 {"v", "verbose"},
 {"q", "quiet"},
 {"C", "cgi"},
+{"D", "define"},
 {"X", "width"},
 {"Y", "height"},
 {"r", "rate"},
@@ -108,6 +109,10 @@ int args_callback_option(char*name,char*val)
     else if(!strcmp(name, "R")) {
         as3_set_option("recurse","1");
 	return 0;
+    }
+    else if(!strcmp(name, "D")) {
+        as3_set_define(val);
+	return 1;
     }
     else if (!strcmp(name, "N"))
     {

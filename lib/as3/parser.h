@@ -27,6 +27,8 @@
 /* first public class overloading MovieClip, if any */
 extern char*as3_globalclass;
 
+void set_conditional(const char*part1, const char*part2);
+
 void initialize_parser();
 void initialize_file(const char*name, const char*filename);
 void finish_file();

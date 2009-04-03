@@ -31,6 +31,7 @@ extern int current_line;
 extern int current_column;
 extern char* current_filename;
 extern char* current_filename_short;
+extern char* current_filename_long;
 extern include_dir_t* current_include_dirs;
 
 void add_include_dir(char*dir);

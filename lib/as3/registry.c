@@ -290,12 +290,19 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*nam
 
 memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, const char*name, char superclasses)
 {
+    memberinfo_t*m = 0;
     while(ns) {
-        memberinfo_t*m = registry_findmember(cls, ns->namespace->name, name, superclasses);
+        m = registry_findmember(cls, ns->namespace->name, name, superclasses);
         if(m) return m;
         ns = ns->next;
     }
-    return registry_findmember(cls, "", name, superclasses);
+    m = registry_findmember(cls, "", name, superclasses);
+    if(m) return m;
+    /* TODO: it maybe would be faster to just store the builtin namespace as "" in
+             builtins.c */
+    m = registry_findmember(cls, "http://adobe.com/AS3/2006/builtin", name, superclasses);
+    if(m) return m;
+    return 0;
 }
 
 
@@ -334,13 +341,15 @@ classinfo_t* slotinfo_asclass(slotinfo_t*f) {
     classinfo_t*c = rfx_calloc(sizeof(classinfo_t)+sizeof(classinfo_t*));
     c->access = ACCESS_PUBLIC;
     c->package = "";
-    if(f->kind == INFOTYPE_METHOD)
+    if(f->kind == INFOTYPE_METHOD) {
         c->name = "Function";
-    else if(f->kind == INFOTYPE_CLASS)
+        c->superclass = registry_getobjectclass();
+    } else if(f->kind == INFOTYPE_CLASS) {
         c->name = "Class";
-    else if(f->kind == INFOTYPE_SLOT)
+        c->superclass = registry_getobjectclass();
+    } else if(f->kind == INFOTYPE_SLOT) {
         c->name = "Object";
-    else {
+    } else {
         c->name = "undefined";
     }
     
