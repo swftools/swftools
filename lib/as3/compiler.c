@@ -39,6 +39,8 @@ extern int a3_parse();
 extern int as3_lex();
 extern int as3_lex_destroy();
 
+static char config_recurse = 0;
+
 void as3_setverbosity(int level)
 {
     as3_verbosity=level;
@@ -46,6 +48,12 @@ void as3_setverbosity(int level)
 void as3_add_include_dir(char*dir)
 {
     add_include_dir(dir);
+}
+void as3_set_option(char*key, char*value)
+{
+    if(!strcmp(key, "recurse")) {
+        config_recurse=atoi(value);
+    }
 }
 
 static char registry_initialized = 0;
@@ -319,7 +327,9 @@ void as3_schedule_class(const char*package, const char*cls)
 
 void as3_schedule_class_noerror(const char*package, const char*cls)
 {
-    schedule_class(package, cls, 0);
+    if(config_recurse) {
+        schedule_class(package, cls, 0);
+    }
 }
 
 

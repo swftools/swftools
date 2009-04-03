@@ -2970,7 +2970,7 @@ CLASS: X_IDENTIFIER {
               c->nsset = get_current_imports();
               /* make the compiler look for this class in the current directory,
                  just in case: */
-              //as3_schedule_class_noerror(state->package, $1);
+              as3_schedule_class_noerror(state->package, $1);
           }
           $$ = (classinfo_t*)c;
     PASS2
@@ -3182,13 +3182,9 @@ VOIDEXPRESSION : EXPRESSION %prec below_minus {
 // ----------------------- expression evaluation -------------------------------------
 
 E : INNERFUNCTION %prec prec_none {$$ = $1;}
-//V : CONSTANT                    {$$ = 0;}
 E : CONSTANT
-//V : VAR_READ %prec T_IDENTIFIER {$$ = 0;}
 E : VAR_READ %prec T_IDENTIFIER {$$ = $1;}
-//V : NEW                         {$$ = $1.c;}
 E : NEW                         {$$ = $1;}
-//V : DELETE                      {$$ = $1.c;}
 E : DELETE                      {$$ = $1;}
 
 E : FUNCTIONCALL
@@ -3686,8 +3682,12 @@ E : E '.' '(' E ')' {
               as3_warning("ignored .() operator");
            }
 
-//VARIABLE : VARIABLE "::" '[' EXPRESSION ']' // qualified expression
-
+//E : E "::" '[' E ']' {
+//              // qualified expression TODO
+//              $$.c = abc_pushundefined(0);
+//              $$.t = 0;
+//              as3_warning("ignored ::[] operator");
+//           }
 
 
 E : E '.' T_IDENTIFIER {
@@ -3709,6 +3709,9 @@ E : E '.' T_IDENTIFIER {
         if(f && f->slot && !noslot) {
             $$.c = abc_getslot($$.c, f->slot);
         } else {
+            if(!f) 
+                as3_warning("Access of undefined property '%s' in %s", $3, t->name);
+            
             MEMBER_MULTINAME(m, f, $3);
             $$.c = abc_getproperty2($$.c, &m);
         }
@@ -3735,6 +3738,7 @@ E : E '.' T_IDENTIFIER {
         /* when resolving a property on an unknown type, we do know the
            name of the property (and don't seem to need the package), but
            we need to make avm2 try out all access modes */
+        as3_warning("Resolving %s on unknown type", $3);
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
         $$.c = abc_getproperty2($$.c, &m);
         $$.c = abc_coerce_a($$.c);
@@ -3757,7 +3761,7 @@ VAR_READ : T_IDENTIFIER {
    
     /* let the compiler know that it might want to check the current directory/package
        for this identifier- maybe there's a file $1.as defining $1. */
-    //as3_schedule_class_noerror(state->package, $1);
+    as3_schedule_class_noerror(state->package, $1);
     PASS2
 
     $$.t = 0;
@@ -3803,7 +3807,7 @@ VAR_READ : T_IDENTIFIER {
            static properties of a class */
             state->method->late_binding = 1;
             $$.t = f->type;
-            namespace_t ns = {f->access, ""};
+            namespace_t ns = {f->access, f->package};
             multiname_t m = {QNAME, &ns, 0, $1};
             $$.c = abc_findpropstrict2($$.c, &m);
             $$.c = abc_getproperty2($$.c, &m);
@@ -3813,7 +3817,7 @@ VAR_READ : T_IDENTIFIER {
             $$.c = abc_getslot($$.c, f->slot);
             break;
         } else {
-            namespace_t ns = {f->access, ""};
+            namespace_t ns = {f->access, f->package};
             multiname_t m = {QNAME, &ns, 0, $1};
             $$.c = abc_getlocal_0($$.c);
             $$.c = abc_getproperty2($$.c, &m);
@@ -3888,9 +3892,16 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
 }
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
-    
+    PASS12
     const char*url = $3->name;
+
     varinfo_t*s = (varinfo_t*)$3;
+    if(s->kind == INFOTYPE_UNRESOLVED) {
+        s = (varinfo_t*)registry_resolve((slotinfo_t*)s);
+        if(!s)
+            syntaxerror("Couldn't resolve namespace %s", $3->name);
+    }
+
     if(!s || s->kind != INFOTYPE_SLOT)
         syntaxerror("%s.%s is not a public namespace (%d)", $3->package, $3->name, s?s->kind:-1);
     if(!s->value || !NS_TYPE(s->value->type))

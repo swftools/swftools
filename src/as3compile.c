@@ -53,6 +53,7 @@ static struct options_t options[] = {
 {"l", "library"},
 {"I", "include"},
 {"T", "flashversion"},
+{"R", "recurse"},
 {"o", "output"},
 {0,0}
 };
@@ -96,13 +97,17 @@ int args_callback_option(char*name,char*val)
 	do_cgi = 1;
 	return 0;
     }
-    else if(!strcmp(name, "-l")) {
+    else if(!strcmp(name, "l")) {
         as3_import_file(val);
 	return 1;
     }
-    else if(!strcmp(name, "-I")) {
+    else if(!strcmp(name, "I")) {
         as3_add_include_dir(val);
 	return 1;
+    }
+    else if(!strcmp(name, "R")) {
+        as3_set_option("recurse","1");
+	return 0;
     }
     else if (!strcmp(name, "N"))
     {

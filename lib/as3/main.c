@@ -78,6 +78,9 @@ int main(int argn, char*argv[])
         if(!strcmp(argv[t], "-q")) {
             as3_verbosity--;
         }
+        if(!strcmp(argv[t], "-R")) {
+            as3_set_option("recurse","1");
+        }
         if(!strcmp(argv[t], "-I")) {
             as3_add_include_dir(argv[++t]);
         }
