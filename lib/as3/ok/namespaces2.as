@@ -22,6 +22,7 @@ package {
             {
                 this.tf(1);
                 tf(2);
+                trace("[exit]");
             }
 	    
 	}

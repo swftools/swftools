@@ -29,8 +29,8 @@ import select
 from optparse import OptionParser
 
 CMD_ARGS=[]
-#CMD = "./parser"
-CMD="as3compile"
+CMD = "./parser"
+#CMD="as3compile"
 CMD_ARGS=["-o","abc.swf"]
 
 def check(s):
@@ -130,8 +130,12 @@ class Cache:
             self.runtime = 5 # allow more time if we're tagging this state
 
         self.checknum=-1
+        self.checkfile=None
         if len(args):
-            self.checknum = int(args[0])
+            try:
+                self.checknum = int(args[0])
+            except ValueError:
+                self.checkfile = args[0]
 
     @staticmethod
     def load(filename):
@@ -148,10 +152,14 @@ class Cache:
             fi.close()
 
     def highlight(self, nr, filename):
+        if self.checkfile and filename==self.checkfile:
+            return 1
         return self.checknum==nr
 
     def skip_file(self, nr, filename):
         if self.checknum>=0 and nr!=self.checknum:
+            return 1
+        if self.checkfile and filename!=self.checkfile:
             return 1
         if not self.all and self.milestone.get(filename,"new")!="ok":
             return 1
