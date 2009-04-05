@@ -68,6 +68,7 @@ extern int a3_lex();
     regexp_t regexp;
     modifiers_t flags;
     namespace_decl_t* namespace_decl;
+    node_t*node;
     struct {
         abc_exception_list_t *l;
         code_t*finally;
@@ -154,6 +155,7 @@ extern int a3_lex();
 %token<token> T_DIVBY "/=" 
 %token<token> T_MODBY "%="
 %token<token> T_MULBY "*="
+%token<token> T_ANDBY "&="
 %token<token> T_PLUSBY "+=" 
 %token<token> T_MINUSBY "-="
 %token<token> T_XORBY "^="
@@ -190,7 +192,8 @@ extern int a3_lex();
 %type <code> VOIDEXPRESSION
 %type <value> EXPRESSION NONCOMMAEXPRESSION
 %type <value> MAYBEEXPRESSION
-%type <value> E DELETE
+%type <value> DELETE
+%type <node> E
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
 %type <value> INNERFUNCTION
 %type <code> USE_NAMESPACE
@@ -214,7 +217,7 @@ extern int a3_lex();
 
 %type <classinfo> TYPE
 //%type <token> VARIABLE
-%type <value> VAR_READ
+%type <value> VAR_READ MEMBER
 %type <value> NEW
 //%type <token> T_IDENTIFIER
 %type <value> FUNCTIONCALL
@@ -436,7 +439,7 @@ static namespace_list_t nl1 = {&ns1,&nl2};
 static namespace_set_t nopackage_namespace_set = {&nl1};
 
 static dict_t*definitions=0;
-void as3_set_definition(const char*c)
+void as3_set_define(const char*c)
 {
     if(!definitions) 
         definitions = dict_new();
@@ -549,6 +552,8 @@ void initialize_file(char*filename)
         state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
     } else {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+        if(!state->method)
+            syntaxerror("internal error: skewed tokencount");
         function_initvars(state->method, 0, 0, 1);
         global->init = abc_initscript(global->file);
     }
@@ -559,8 +564,10 @@ void finish_file()
     if(!state || state->level!=1) {
         syntaxerror("unexpected end of file in pass %d", as3_pass);
     }
-
+    
     if(as3_pass==2) {
+        dict_del(global->file2token2info, current_filename);
+
         code_t*header = method_header(state->method);
         code_t*c = wrap_function(header, 0, global->init->method->body->code);
         global->init->method->body->code = c;
@@ -676,7 +683,7 @@ static int new_variable(const char*name, classinfo_t*type, char init, char maybe
 }
 
 #define TEMPVARNAME "__as3_temp__"
-static int gettempvar()
+int gettempvar()
 {
     variable_t*v = find_variable(state, TEMPVARNAME);
     if(v) 
@@ -1548,49 +1555,8 @@ void continuejumpsto(code_t*c, char*name, code_t*jump)
     }
 }
 
-/* TODO: move this to ast.c */
-#define IS_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)))
 #define IS_NUMBER_OR_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)) || TYPE_IS_NUMBER((a)))
-#define BOTH_INT(a,b) (IS_INT(a) && IS_INT(b))
-static classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
-{
-    if(!type1 || !type2) 
-        return registry_getanytype();
-    if(TYPE_IS_ANY(type1) || TYPE_IS_ANY(type2))
-        return registry_getanytype();
 
-    if(op=='+') {
-        if(IS_NUMBER_OR_INT(type1) && IS_NUMBER_OR_INT(type2)) {
-            return TYPE_NUMBER;
-        } else {
-            return TYPE_ANY;
-        }
-    }
-
-    if(type1 == type2)
-        return type1;
-    return registry_getanytype();
-}
-static char is_getlocal(code_t*c)
-{
-    if(!c || c->prev || c->next)
-        return 0;
-    return(c->opcode == OPCODE_GETLOCAL
-        || c->opcode == OPCODE_GETLOCAL_0
-        || c->opcode == OPCODE_GETLOCAL_1
-        || c->opcode == OPCODE_GETLOCAL_2
-        || c->opcode == OPCODE_GETLOCAL_3);
-}
-static int getlocalnr(code_t*c)
-{
-    if(c->opcode == OPCODE_GETLOCAL) {return (ptroff_t)c->data[0];}
-    else if(c->opcode == OPCODE_GETLOCAL_0) {return 0;}
-    else if(c->opcode == OPCODE_GETLOCAL_1) {return 1;}
-    else if(c->opcode == OPCODE_GETLOCAL_2) {return 2;}
-    else if(c->opcode == OPCODE_GETLOCAL_3) {return 3;}
-    else syntaxerror("Internal error: opcode %02x is not a getlocal call", c->opcode);
-    return 0;
-}
 code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 {
     if(from==to)
@@ -1765,168 +1731,6 @@ typedcode_t push_class(slotinfo_t*a)
     return x;
 }
 
-
-code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore, char pushvalue)
-{
-    /* converts this:
-
-       [prefix code] [read instruction]
-
-       to this:
-
-       [prefix code] ([dup]) [read instruction] [middlepart] [setvar] [write instruction] [getvar]
-    */
-    if(in && in->opcode == OPCODE_COERCE_A) {
-        in = code_cutlast(in);
-    }
-    if(in->next)
-        syntaxerror("internal error");
-
-    /* chop off read instruction */
-    code_t*prefix = in;
-    code_t*r = in;
-    if(r->prev) {
-        prefix = r->prev;r->prev = 0;
-        prefix->next=0;
-    } else {
-        prefix = 0;
-    }
-        
-    char use_temp_var = readbefore;
-
-    /* generate the write instruction, and maybe append a dup to the prefix code */
-    code_t* write = abc_nop(0);
-    if(r->opcode == OPCODE_GETPROPERTY) {
-        write->opcode = OPCODE_SETPROPERTY;
-        multiname_t*m = (multiname_t*)r->data[0];
-        write->data[0] = multiname_clone(m);
-        if(m->type == QNAME || m->type == MULTINAME) {
-            if(!justassign) {
-                prefix = abc_dup(prefix); // we need the object, too
-            }
-            use_temp_var = 1;
-        } else if(m->type == MULTINAMEL) {
-            if(!justassign) {
-                /* dupping two values on the stack requires 5 operations and one register- 
-                   couldn't adobe just have given us a dup2? */
-                int temp = gettempvar();
-                prefix = abc_setlocal(prefix, temp);
-                prefix = abc_dup(prefix);
-                prefix = abc_getlocal(prefix, temp);
-                prefix = abc_swap(prefix);
-                prefix = abc_getlocal(prefix, temp);
-                if(!use_temp_var);
-                    prefix = abc_kill(prefix, temp);
-            }
-            use_temp_var = 1;
-        } else {
-            syntaxerror("illegal lvalue: can't assign a value to this expression (not a qname/multiname)");
-        }
-    } else if(r->opcode == OPCODE_GETSLOT) {
-        write->opcode = OPCODE_SETSLOT;
-        write->data[0] = r->data[0];
-        if(!justassign) {
-            prefix = abc_dup(prefix); // we need the object, too
-        }
-        use_temp_var = 1;
-    } else if(r->opcode == OPCODE_GETLOCAL) { 
-        write->opcode = OPCODE_SETLOCAL;
-        write->data[0] = r->data[0];
-    } else if(r->opcode == OPCODE_GETLOCAL_0) { 
-        write->opcode = OPCODE_SETLOCAL_0;
-    } else if(r->opcode == OPCODE_GETLOCAL_1) { 
-        write->opcode = OPCODE_SETLOCAL_1;
-    } else if(r->opcode == OPCODE_GETLOCAL_2) { 
-        write->opcode = OPCODE_SETLOCAL_2;
-    } else if(r->opcode == OPCODE_GETLOCAL_3) { 
-        write->opcode = OPCODE_SETLOCAL_3;
-    } else if(r->opcode == OPCODE_GETSUPER) { 
-        write->opcode = OPCODE_SETSUPER;
-        multiname_t*m = (multiname_t*)r->data[0];
-        write->data[0] = multiname_clone(m);
-    } else {
-        code_dump(r);
-        syntaxerror("illegal lvalue: can't assign a value to this expression");
-    }
-    code_t* c = 0;
-    
-    int temp = -1;
-    if(!justassign) {
-        if(use_temp_var) {
-            /* with getproperty/getslot, we have to be extra careful not
-               to execute the read code twice, as it might have side-effects
-               (e.g. if the property is in fact a setter/getter combination)
-
-               So read the value, modify it, and write it again,
-               using prefix only once and making sure (by using a temporary
-               register) that the return value is what we just wrote */
-            temp = gettempvar();
-            c = code_append(c, prefix);
-            c = code_append(c, r);
-            if(pushvalue && readbefore) {
-                c = abc_dup(c);
-                c = abc_setlocal(c, temp);
-            }
-            c = code_append(c, middlepart);
-            if(pushvalue && !readbefore) {
-                c = abc_dup(c);
-                c = abc_setlocal(c, temp);
-            }
-            c = code_append(c, write);
-            if(pushvalue) {
-                c = abc_getlocal(c, temp);
-                c = abc_kill(c, temp);
-            }
-        } else {
-            /* if we're allowed to execute the read code twice *and*
-               the middlepart doesn't modify the code, things are easier.
-            */
-            //c = code_append(c, prefix);
-            parserassert(!prefix);
-            code_t* r2 = 0;
-            if(pushvalue) {
-                r2 = code_dup(r);
-            }
-            c = code_append(c, r);
-            c = code_append(c, middlepart);
-            c = code_append(c, write);
-            if(pushvalue) {
-                c = code_append(c, r2);
-            }
-        }
-    } else {
-        /* even smaller version: overwrite the value without reading
-           it out first */
-        if(!use_temp_var) {
-            if(prefix) {
-                c = code_append(c, prefix);
-                c = abc_dup(c);
-            }
-            c = code_append(c, middlepart);
-            c = code_append(c, write);
-            if(pushvalue) {
-                c = code_append(c, r);
-            }
-        } else {
-            code_free(r);r=0;
-            temp = gettempvar();
-            if(prefix) {
-                c = code_append(c, prefix);
-            }
-            c = code_append(c, middlepart);
-            if(pushvalue) {
-                c = abc_dup(c);
-                c = abc_setlocal(c, temp);
-            }
-            c = code_append(c, write);
-            if(pushvalue) {
-                c = abc_getlocal(c, temp);
-                c = abc_kill(c, temp);
-            }
-        }
-    }
-    return c;
-}
 
 char is_break_or_jump(code_t*c)
 {
@@ -2401,7 +2205,7 @@ CASE_LIST: CASE_LIST CASE   {$$=code_append($$,$2);}
 
 CASE: "case" E ':' MAYBECODE {
     $$ = abc_getlocal(0, state->switch_var);
-    $$ = code_append($$, $2.c);
+    $$ = code_append($$, node_read($2).c);
     code_t*j = $$ = abc_ifne($$, 0);
     $$ = code_append($$, $4);
     if($$->opcode != OPCODE___BREAK__) {
@@ -2414,7 +2218,7 @@ DEFAULT: "default" ':' MAYBECODE {
     $$ = $3;
 }
 SWITCH : T_SWITCH '(' {PASS12 new_state();state->switch_var=alloc_local();} E ')' '{' MAYBE_CASE_LIST '}' {
-    $$=$4.c;
+    $$ = node_read($4).c;
     $$ = abc_setlocal($$, state->switch_var);
     $$ = code_append($$, $7);
 
@@ -3053,7 +2857,8 @@ EXPRESSION_LIST : EXPRESSION_LIST_AND_COMMA NONCOMMAEXPRESSION {
                
 XX : %prec new2
 NEW : "new" E XX MAYBE_PARAM_VALUES {
-    $$.c = $2.c;
+    typedcode_t v = node_read($2);
+    $$.c = v.c;
     if($$.c->opcode == OPCODE_COERCE_A) $$.c = code_cutlast($$.c);
     
     code_t*paramcode = $4.cc;
@@ -3076,8 +2881,8 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
     }
    
     $$.t = TYPE_ANY;
-    if(TYPE_IS_CLASS($2.t) && $2.t->data) {
-        $$.t = $2.t->data;
+    if(TYPE_IS_CLASS(v.t) && v.t->data) {
+        $$.t = v.t->data;
     } else {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
@@ -3089,8 +2894,9 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
          call (for closures)
 */
 FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
-    
-    $$.c = $1.c;
+   
+    typedcode_t v = node_read($1);
+    $$.c = v.c;
     if($$.c->opcode == OPCODE_COERCE_A) {
         $$.c = code_cutlast($$.c);
     }
@@ -3126,8 +2932,8 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         $$.c = abc_call($$.c, $3.number);
     }
    
-    if(TYPE_IS_FUNCTION($1.t) && $1.t->data) {
-        $$.t = ((methodinfo_t*)($1.t->data))->return_type;
+    if(TYPE_IS_FUNCTION(v.t) && v.t->data) {
+        $$.t = ((methodinfo_t*)(v.t->data))->return_type;
     } else {
         $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
@@ -3156,7 +2962,8 @@ FUNCTIONCALL : "super" '(' MAYBE_EXPRESSION_LIST ')' {
 }
 
 DELETE: "delete" E {
-    $$.c = $2.c;
+    typedcode_t v = node_read($2);
+    $$.c = v.c;
     if($$.c->opcode == OPCODE_COERCE_A) {
         $$.c = code_cutlast($$.c);
     }
@@ -3170,7 +2977,7 @@ DELETE: "delete" E {
         $$.c = abc_deleteproperty2($$.c, name);
     } else {
         $$.c = abc_getlocal_0($$.c);
-        MULTINAME_LATE(m, $2.t?$2.t->access:ACCESS_PACKAGE, "");
+        MULTINAME_LATE(m, v.t?v.t->access:ACCESS_PACKAGE, "");
         $$.c = abc_deleteproperty2($$.c, &m);
     }
     $$.t = TYPE_BOOLEAN;
@@ -3186,248 +2993,19 @@ RETURN: "return" EXPRESSION {
 
 // ----------------------- expression types -------------------------------------
 
-NONCOMMAEXPRESSION : E        %prec below_minus {$$=$1;}
-EXPRESSION : E                %prec below_minus {$$ = $1;}
+NONCOMMAEXPRESSION : E        %prec below_minus {$$ = node_read($1);}
+EXPRESSION : E                %prec below_minus {$$ = node_read($1);}
 EXPRESSION : EXPRESSION ',' E %prec below_minus {
     $$.c = $1.c;
     $$.c = cut_last_push($$.c);
-    $$.c = code_append($$.c,$3.c);
-    $$.t = $3.t;
+    typedcode_t v = node_read($3);
+    $$.c = code_append($$.c,v.c);
+    $$.t = v.t;
 }
-VOIDEXPRESSION : EXPRESSION %prec below_minus {
-    $$=cut_last_push($1.c);
-}
-
-// ----------------------- expression evaluation -------------------------------------
-
-E : INNERFUNCTION %prec prec_none {$$ = $1;}
-E : VAR_READ %prec T_IDENTIFIER   {$$ = $1;}
-E : NEW                           {$$ = $1;}
-E : DELETE                        {$$ = $1;}
-
-E : FUNCTIONCALL
-
-E : CONSTANT {
-    node_t*n = mkconstnode($1);
-    $$ = node_read(n);
-}
-
-E : T_REGEXP {
-    $$.c = 0;
-    namespace_t ns = {ACCESS_PACKAGE, ""};
-    multiname_t m = {QNAME, &ns, 0, "RegExp"};
-    if(!$1.options) {
-        $$.c = abc_getlex2($$.c, &m);
-        $$.c = abc_pushstring($$.c, $1.pattern);
-        $$.c = abc_construct($$.c, 1);
-    } else {
-        $$.c = abc_getlex2($$.c, &m);
-        $$.c = abc_pushstring($$.c, $1.pattern);
-        $$.c = abc_pushstring($$.c, $1.options);
-        $$.c = abc_construct($$.c, 2);
-    }
-    $$.t = TYPE_REGEXP;
-}
-
-E : E '<' E {$$.c = code_append($1.c,$3.c);$$.c = abc_greaterequals($$.c);$$.c=abc_not($$.c);
-             $$.t = TYPE_BOOLEAN;
-            }
-E : E '>' E {$$.c = code_append($1.c,$3.c);$$.c = abc_greaterthan($$.c);
-             $$.t = TYPE_BOOLEAN;
-            }
-E : E "<=" E {$$.c = code_append($1.c,$3.c);$$.c = abc_greaterthan($$.c);$$.c=abc_not($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-E : E ">=" E {$$.c = code_append($1.c,$3.c);$$.c = abc_greaterequals($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-E : E "==" E {$$.c = code_append($1.c,$3.c);$$.c = abc_equals($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-E : E "===" E {$$.c = code_append($1.c,$3.c);$$.c = abc_strictequals($$.c);
-              $$.t = TYPE_BOOLEAN;
-              }
-E : E "!==" E {$$.c = code_append($1.c,$3.c);$$.c = abc_strictequals($$.c);$$.c = abc_not($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-E : E "!=" E {$$.c = code_append($1.c,$3.c);$$.c = abc_equals($$.c);$$.c = abc_not($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-
-E : E "||" E {$$.t = join_types($1.t, $3.t, 'O');
-              $$.c = $1.c;
-              $$.c = converttype($$.c, $1.t, $$.t);
-              $$.c = abc_dup($$.c);
-              code_t*jmp = $$.c = abc_iftrue($$.c, 0);
-              $$.c = cut_last_push($$.c);
-              $$.c = code_append($$.c,$3.c);
-              $$.c = converttype($$.c, $3.t, $$.t);
-              code_t*label = $$.c = abc_label($$.c);
-              jmp->branch = label;
-             }
-E : E "&&" E {
-              $$.t = join_types($1.t, $3.t, 'A');
-              /*printf("%08x:\n",$1.t);
-              code_dump($1.c, 0, 0, "", stdout);
-              printf("%08x:\n",$3.t);
-              code_dump($3.c, 0, 0, "", stdout);
-              printf("joining %08x and %08x to %08x\n", $1.t, $3.t, $$.t);*/
-              $$.c = $1.c;
-              $$.c = converttype($$.c, $1.t, $$.t);
-              $$.c = abc_dup($$.c);
-              code_t*jmp = $$.c = abc_iffalse($$.c, 0);
-              $$.c = cut_last_push($$.c);
-              $$.c = code_append($$.c,$3.c);
-              $$.c = converttype($$.c, $3.t, $$.t);
-              code_t*label = $$.c = abc_label($$.c);
-              jmp->branch = label;              
-             }
-
-E : '!' E    {$$.c=$2.c;
-              $$.c = abc_not($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-
-E : '~' E    {$$.c=$2.c;
-              $$.c = abc_bitnot($$.c);
-              $$.t = TYPE_INT;
-             }
-
-E : E '&' E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_bitand($$.c);
-             $$.t = TYPE_INT;
-            }
-
-E : E '^' E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_bitxor($$.c);
-             $$.t = TYPE_INT;
-            }
-
-E : E '|' E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_bitor($$.c);
-             $$.t = TYPE_INT;
-            }
-
-E : E ">>" E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_rshift($$.c);
-             $$.t = TYPE_INT;
-            }
-E : E ">>>" E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_urshift($$.c);
-             $$.t = TYPE_INT;
-            }
-E : E "<<" E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_lshift($$.c);
-             $$.t = TYPE_INT;
-            }
-
-E : E '/' E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_divide($$.c);
-             $$.t = TYPE_NUMBER;
-            }
-E : E '%' E {$$.c = code_append($1.c,$3.c);
-             $$.c = abc_modulo($$.c);
-             $$.t = TYPE_NUMBER;
-            }
-E : E '+' E {$$.c = code_append($1.c,$3.c);
-             if(BOTH_INT($1.t, $3.t)) {
-                $$.c = abc_add_i($$.c);
-                $$.t = TYPE_INT;
-             } else {
-                $$.c = abc_add($$.c);
-                $$.t = join_types($1.t,$3.t,'+');
-             }
-            }
-E : E '-' E {$$.c = code_append($1.c,$3.c);
-             if(BOTH_INT($1.t,$3.t)) {
-                $$.c = abc_subtract_i($$.c);
-                $$.t = TYPE_INT;
-             } else {
-                $$.c = abc_subtract($$.c);
-                $$.t = TYPE_NUMBER;
-             }
-            }
-E : E '*' E {$$.c = code_append($1.c,$3.c);
-             if(BOTH_INT($1.t,$3.t)) {
-                $$.c = abc_multiply_i($$.c);
-                $$.t = TYPE_INT;
-             } else {
-                $$.c = abc_multiply($$.c);
-                $$.t = TYPE_NUMBER;
-             }
-            }
-
-E : E "in" E {$$.c = code_append($1.c,$3.c);
-              $$.c = abc_in($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-
-E : E "as" E {char use_astype=0; // flash player's astype works differently than astypelate
-              if(use_astype && TYPE_IS_CLASS($3.t) && $3.t->data) {
-                MULTINAME(m, (classinfo_t*)($3.t->data));
-                $$.c = abc_astype2($1.c, &m);
-                $$.t = $3.t->data;
-              } else {
-                $$.c = code_append($1.c, $3.c);
-                $$.c = abc_astypelate($$.c);
-                $$.t = TYPE_ANY;
-              }
-             }
-
-E : E "instanceof" E 
-             {$$.c = code_append($1.c, $3.c);
-              $$.c = abc_instanceof($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-
-E : E "is" E {$$.c = code_append($1.c, $3.c);
-              $$.c = abc_istypelate($$.c);
-              $$.t = TYPE_BOOLEAN;
-             }
-
-E : "typeof" '(' E ')' {
-              $$.c = $3.c;
-              $$.c = abc_typeof($$.c);
-              $$.t = TYPE_STRING;
-             }
-
-E : "void" E {
-              $$.c = cut_last_push($2.c);
-              $$.c = abc_pushundefined($$.c);
-              $$.t = TYPE_ANY;
-             }
-
-E : "void" { $$.c = abc_pushundefined(0);
-             $$.t = TYPE_ANY;
-           }
-
-E : '(' EXPRESSION ')' {$$=$2;} //allow commas in here, too
-
-E : '-' E {
-  $$.c = $2.c;
-  if(IS_INT($2.t)) {
-   $$.c=abc_negate_i($$.c);
-   $$.t = TYPE_INT;
-  } else {
-   $$.c=abc_negate($$.c);
-   $$.t = TYPE_NUMBER;
-  }
-}
-
-E : E '[' E ']' {
-  $$.c = $1.c;
-  $$.c = code_append($$.c, $3.c);
-
-  MULTINAME_LATE(m, $1.t?$1.t->access:ACCESS_PACKAGE, "");
-  $$.c = abc_getproperty2($$.c, &m);
-  $$.t = 0; // array elements have unknown type
-}
-
-E : '[' MAYBE_EXPRESSION_LIST ']' {
-    $$.c = code_new();
-    $$.c = code_append($$.c, $2.cc);
-    $$.c = abc_newarray($$.c, $2.number);
-    $$.t = registry_getarrayclass();
+VOIDEXPRESSION : E                    %prec below_minus { $$=node_exec($1); }
+VOIDEXPRESSION : VOIDEXPRESSION ',' E %prec below_minus { 
+    $$ = $1;
+    $$ = code_append($$, node_exec($3)); 
 }
 
 MAYBE_EXPRPAIR_LIST : {$$.cc=0;$$.number=0;}
@@ -3445,230 +3023,154 @@ EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
     $$.cc = code_append($$.cc, $3.c);
     $$.cc = code_append($$.cc, $5.c);
 }
-//MAYBECOMMA: ','
-//MAYBECOMMA:
 
-E : "{ (dictionary)" MAYBE_EXPRPAIR_LIST '}' {
-    $$.c = code_new();
-    $$.c = code_append($$.c, $2.cc);
-    $$.c = abc_newobject($$.c, $2.number/2);
-    $$.t = registry_getobjectclass();
+// ----------------------- expression evaluation -------------------------------------
+
+E : INNERFUNCTION %prec prec_none {$$ = mkcodenode($1);}
+E : VAR_READ %prec T_IDENTIFIER   {$$ = mkcodenode($1);}
+E : MEMBER %prec '.'              {$$ = mkcodenode($1);}
+E : NEW                           {$$ = mkcodenode($1);}
+E : DELETE                        {$$ = mkcodenode($1);}
+E : FUNCTIONCALL                  {$$ = mkcodenode($1);}
+
+E : CONSTANT { 
+    $$ = mkconstnode($1);
 }
 
-E : E "*=" E { 
-               code_t*c = $3.c;
-               if(BOTH_INT($1.t,$3.t)) {
-                c=abc_multiply_i(c);
-               } else {
-                c=abc_multiply(c);
-               }
-               c=converttype(c, join_types($1.t, $3.t, '*'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
+/* regexp */
+E : T_REGEXP {
+    typedcode_t v;
+    v.c = 0;
+    namespace_t ns = {ACCESS_PACKAGE, ""};
+    multiname_t m = {QNAME, &ns, 0, "RegExp"};
+    if(!$1.options) {
+        v.c = abc_getlex2(v.c, &m);
+        v.c = abc_pushstring(v.c, $1.pattern);
+        v.c = abc_construct(v.c, 1);
+    } else {
+        v.c = abc_getlex2(v.c, &m);
+        v.c = abc_pushstring(v.c, $1.pattern);
+        v.c = abc_pushstring(v.c, $1.options);
+        v.c = abc_construct(v.c, 2);
+    }
+    v.t = TYPE_REGEXP;
+    $$ = mkcodenode(v);
+}
 
-E : E "%=" E { 
-               code_t*c = abc_modulo($3.c);
-               c=converttype(c, join_types($1.t, $3.t, '%'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E "<<=" E { 
-               code_t*c = abc_lshift($3.c);
-               c=converttype(c, join_types($1.t, $3.t, '<'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E ">>=" E { 
-               code_t*c = abc_rshift($3.c);
-               c=converttype(c, join_types($1.t, $3.t, '>'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E ">>>=" E { 
-               code_t*c = abc_urshift($3.c);
-               c=converttype(c, join_types($1.t, $3.t, 'U'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E "/=" E { 
-               code_t*c = abc_divide($3.c);
-               c=converttype(c, join_types($1.t, $3.t, '/'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E "|=" E { 
-               code_t*c = abc_bitor($3.c);
-               c=converttype(c, TYPE_INT, $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E "^=" E { 
-               code_t*c = abc_bitxor($3.c);
-               c=converttype(c, TYPE_INT, $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E "+=" E { 
-               code_t*c = $3.c;
+/* array */
+E : '[' MAYBE_EXPRESSION_LIST ']' {
+    typedcode_t v;
+    v.c = code_new();
+    v.c = code_append(v.c, $2.cc);
+    v.c = abc_newarray(v.c, $2.number);
+    v.t = registry_getarrayclass();
+    $$ = mkcodenode(v);
+}
 
-               if(TYPE_IS_INT($1.t)) {
-                c=abc_add_i(c);
-               } else {
-                c=abc_add(c);
-                c=converttype(c, join_types($1.t, $3.t, '+'), $1.t);
-               }
-               
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-              }
-E : E "-=" E { code_t*c = $3.c; 
-               if(TYPE_IS_INT($1.t)) {
-                c=abc_subtract_i(c);
-               } else {
-                c=abc_subtract(c);
-                c=converttype(c, join_types($1.t, $3.t, '-'), $1.t);
-               }
-               
-               $$.c = toreadwrite($1.c, c, 0, 0, 1);
-               $$.t = $1.t;
-             }
-E : E '=' E { code_t*c = 0;
-              c = code_append(c, $3.c);
-              c = converttype(c, $3.t, $1.t);
-              $$.c = toreadwrite($1.c, c, 1, 0, 1);
-              $$.t = $1.t;
-            }
+/* dictionary */
+E : "{ (dictionary)" MAYBE_EXPRPAIR_LIST '}' {
+    typedcode_t v;
+    v.c = code_new();
+    v.c = code_append(v.c, $2.cc);
+    v.c = abc_newobject(v.c, $2.number/2);
+    v.t = registry_getobjectclass();
+    $$ =  mkcodenode(v);
+}
 
-E : E '?' E ':' E %prec below_assignment { 
-              $$.t = join_types($3.t,$5.t,'?');
-              $$.c = $1.c;
-              code_t*j1 = $$.c = abc_iffalse($$.c, 0);
-              $$.c = code_append($$.c, $3.c);
-              $$.c = converttype($$.c, $3.t, $$.t);
-              code_t*j2 = $$.c = abc_jump($$.c, 0);
-              $$.c = j1->branch = abc_label($$.c);
-              $$.c = code_append($$.c, $5.c);
-              $$.c = converttype($$.c, $5.t, $$.t);
-              $$.c = j2->branch = abc_label($$.c);
-            }
+E : E '<' E {$$ = mknode2(&node_lt,$1,$3);}
+E : E '>' E {$$ = mknode2(&node_gt,$1,$3);}
+E : E "<=" E {$$ = mknode2(&node_le,$1,$3);}
+E : E ">=" E {$$ = mknode2(&node_ge,$1,$3);}
+E : E "==" E {$$ = mknode2(&node_eqeq,$1,$3);}
+E : E "===" E {$$ = mknode2(&node_eqeqeq,$1,$3);}
+E : E "!==" E {$$ = mknode2(&node_noteqeq,$1,$3);}
+E : E "!=" E {$$ = mknode2(&node_noteq,$1,$3);}
+E : E "||" E {$$ = mknode2(&node_oror,$1,$3);}
+E : E "&&" E {$$ = mknode2(&node_andand,$1,$3);}
+E : '!' E    {$$ = mknode1(&node_not, $2);}
+E : '~' E    {$$ = mknode1(&node_bitnot, $2);}
+E : E '&' E {$$ = mknode2(&node_bitand, $1, $3);}
+E : E '^' E {$$ = mknode2(&node_bitxor, $1, $3);}
+E : E '|' E {$$ = mknode2(&node_bitor, $1, $3);}
+E : E ">>" E {$$ = mknode2(&node_shr, $1, $3);}
+E : E ">>>" E {$$ = mknode2(&node_ushr, $1, $3);}
+E : E "<<" E {$$ = mknode2(&node_shl, $1, $3);}
+E : E '/' E {$$ = mknode2(&node_div, $1, $3);}
+E : E '%' E {$$ = mknode2(&node_mod, $1, $3);}
+E : E '+' E {$$ = mknode2(&node_plus, $1, $3);}
+E : E '-' E {$$ = mknode2(&node_minus, $1, $3);}
+E : E '*' E {$$ = mknode2(&node_multiply, $1, $3);}
+E : E "in" E {$$ = mknode2(&node_in, $1, $3);}
+E : E "as" E {$$ = mknode2(&node_as, $1, $3);}
+E : E "instanceof" E {$$ = mknode2(&node_instanceof, $1, $3);}
+E : E "is" E {$$ = mknode2(&node_is, $1, $3);}
+E : "typeof" '(' E ')' {$$ = mknode1(&node_typeof, $3);}
+E : "void" E {$$ = mknode1(&node_void, $2);}
+E : "void" { $$ = mkconstnode(constant_new_undefined());}
+E : '(' EXPRESSION ')' { /*allow commas in here, too */ $$=mkcodenode($2);}
+E : '-' E {$$ = mknode1(&node_neg, $2);}
+E : E '[' E ']' {$$ = mknode2(&node_arraylookup, $1,$3);}
+E : E "*=" E {$$ = mknode2(&node_muleq, $1, $3);}
+E : E "%=" E {$$ = mknode2(&node_modeq, $1, $3);}
+E : E "<<=" E {$$ = mknode2(&node_shleq, $1, $3);}
+E : E ">>=" E {$$ = mknode2(&node_shreq, $1, $3);}
+E : E ">>>=" E {$$ = mknode2(&node_ushreq, $1, $3);}
+E : E "/=" E { $$ = mknode2(&node_diveq, $1, $3);}
+E : E "|=" E { $$ = mknode2(&node_bitoreq, $1, $3);}
+E : E "^=" E { $$ = mknode2(&node_bitxoreq, $1, $3);}
+E : E "&=" E { $$ = mknode2(&node_bitandeq, $1, $3);}
+E : E "+=" E { $$ = mknode2(&node_pluseq, $1, $3);}
+E : E "-=" E { $$ = mknode2(&node_minuseq, $1, $3);}
+E : E '=' E { $$ = mknode2(&node_assign, $1, $3);}
+E : E '?' E ':' E %prec below_assignment { $$ = mknode3(&node_tenary, $1, $3, $5);}
 
-E : E "++" { code_t*c = 0;
-             classinfo_t*type = $1.t;
-             if(is_getlocal($1.c) && (TYPE_IS_INT($1.t) || TYPE_IS_NUMBER($1.t))) {
-                 int nr = getlocalnr($1.c);
-                 code_free($1.c);$1.c=0;
-                 if(TYPE_IS_INT($1.t)) {
-                    $$.c = abc_getlocal(0, nr);
-                    $$.c = abc_inclocal_i($$.c, nr);
-                 } else if(TYPE_IS_NUMBER($1.t)) {
-                    $$.c = abc_getlocal(0, nr);
-                    $$.c = abc_inclocal($$.c, nr);
-                 } else syntaxerror("internal error");
-             } else {
-                 if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
-                     c=abc_increment_i(c);
-                     type = TYPE_INT;
-                 } else {
-                     c=abc_increment(c);
-                     type = TYPE_NUMBER;
-                 }
-                 c=converttype(c, type, $1.t);
-                 $$.c = toreadwrite($1.c, c, 0, 1, 1);
-                 $$.t = $1.t;
-             }
-           }
-
-// TODO: use inclocal, like with ++
-E : E "--" { code_t*c = 0;
-             classinfo_t*type = $1.t;
-             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
-                 c=abc_decrement_i(c);
-                 type = TYPE_INT;
-             } else {
-                 c=abc_decrement(c);
-                 type = TYPE_NUMBER;
-             }
-             c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c, 0, 1, 1);
-             $$.t = $1.t;
-            }
-
-E : "++" %prec plusplus_prefix E { code_t*c = 0;
-             classinfo_t*type = $2.t;
-             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
-                 c=abc_increment_i(c);
-                 type = TYPE_INT;
-             } else {
-                 c=abc_increment(c);
-                 type = TYPE_NUMBER;
-             }
-             c=converttype(c, type, $2.t);
-             $$.c = toreadwrite($2.c, c, 0, 0, 1);
-             $$.t = $2.t;
-           }
-
-E : "--" %prec minusminus_prefix E { code_t*c = 0;
-             classinfo_t*type = $2.t;
-             if(TYPE_IS_INT(type) || TYPE_IS_UINT(type)) {
-                 c=abc_decrement_i(c);
-                 type = TYPE_INT;
-             } else {
-                 c=abc_decrement(c);
-                 type = TYPE_NUMBER;
-             }
-             c=converttype(c, type, $2.t);
-             $$.c = toreadwrite($2.c, c, 0, 0, 1);
-             $$.t = $2.t;
-           }
+E : E "++" { $$ = mknode1(&node_rplusplus, $1);}
+E : E "--" { $$ = mknode1(&node_rminusminus, $1);}
+E : "++" %prec plusplus_prefix E {$$ = mknode1(&node_lplusplus, $2); }
+E : "--" %prec minusminus_prefix E {$$ = mknode1(&node_lminusminus, $2); }
 
 E : "super" '.' T_IDENTIFIER 
            { if(!state->cls->info)
                   syntaxerror("super keyword not allowed outside a class");
               classinfo_t*t = state->cls->info->superclass;
               if(!t) t = TYPE_OBJECT;
-
               memberinfo_t*f = findmember_nsset(t, $3, 1);
-
               MEMBER_MULTINAME(m, f, $3);
-              $$.c = 0;
-              $$.c = abc_getlocal_0($$.c);
-              $$.c = abc_getsuper2($$.c, &m);
-              $$.t = slotinfo_gettype((slotinfo_t*)f);
+              typedcode_t v;
+              v.c = 0;
+              v.c = abc_getlocal_0(v.c);
+              v.c = abc_getsuper2(v.c, &m);
+              v.t = slotinfo_gettype((slotinfo_t*)f);
+              $$ = mkcodenode(v);
            }
 
 E : '@' T_IDENTIFIER {
               // attribute TODO
-              $$.c = abc_pushundefined(0);
-              $$.t = 0;
+              $$ = mkdummynode();
               as3_warning("ignored @ operator");
            }
 
 E : E '.' '@' T_IDENTIFIER {
               // child attribute  TODO
-              $$.c = abc_pushundefined(0);
-              $$.t = 0;
+              $$ = mkdummynode();
               as3_warning("ignored .@ operator");
            }
 
 E : E '.' T_IDENTIFIER "::" T_IDENTIFIER {
               // namespace declaration TODO
-              $$.c = abc_pushundefined(0);
-              $$.t = 0;
+              $$ = mkdummynode();
               as3_warning("ignored :: operator");
            }
 
 E : E ".." T_IDENTIFIER {
               // descendants TODO
-              $$.c = abc_pushundefined(0);
-              $$.t = 0;
+              $$ = mkdummynode();
               as3_warning("ignored .. operator");
            }
 
 E : E '.' '(' E ')' {
               // filter TODO
-              $$.c = abc_pushundefined(0);
-              $$.t = 0;
+              $$ = mkdummynode();
               as3_warning("ignored .() operator");
            }
 
@@ -3679,10 +3181,10 @@ E : E '.' '(' E ')' {
 //              as3_warning("ignored ::[] operator");
 //           }
 
-
-E : E '.' T_IDENTIFIER {
-    $$.c = $1.c;
-    classinfo_t*t = $1.t;
+MEMBER : E '.' T_IDENTIFIER {
+    typedcode_t v1 = node_read($1);
+    $$.c = v1.c;
+    classinfo_t*t = v1.t;
     char is_static = 0;
     if(TYPE_IS_CLASS(t) && t->data) {
         t = t->data;
@@ -3710,8 +3212,8 @@ E : E '.' T_IDENTIFIER {
         $$.t = slotinfo_gettype((slotinfo_t*)f);
         if(!$$.t)
            $$.c = abc_coerce_a($$.c);
-    } else if($1.c && $1.c->opcode == OPCODE___PUSHPACKAGE__) {
-        string_t*package = $1.c->data[0];
+    } else if(v1.c && v1.c->opcode == OPCODE___PUSHPACKAGE__) {
+        string_t*package = v1.c->data[0];
         char*package2 = concat3(package->str, ".", $3);
 
         slotinfo_t*a = registry_find(package->str, $3);
@@ -3719,7 +3221,7 @@ E : E '.' T_IDENTIFIER {
             $$ = push_class(a);
         } else if(dict_contains(state->import_toplevel_packages, package2) ||
                   registry_ispackage(package2)) {
-            $$.c = $1.c;
+            $$.c = v1.c;
             $$.c->data[0] = string_new4(package2);
             $$.t = 0;
         } else {

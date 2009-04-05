@@ -27,13 +27,13 @@
 #include "registry.h"
 #include "code.h"
 #include "opcodes.h"
+#include "ast.h"
 
 DECLARE(token);
 DECLARE_LIST(token);
 DECLARE(param);
 DECLARE_LIST(param);
 DECLARE(params);
-DECLARE(typedcode);
 DECLARE(modifiers);
 DECLARE(namespace_decl);
 DECLARE_LIST(namespace_decl);
@@ -58,12 +58,6 @@ struct _namespace_decl {
     const char*name;
     const char*url;
 };
-
-struct _typedcode {
-    code_t*c;
-    classinfo_t*t;
-};
-
 
 /* small helper structs: */
 typedef struct _codeandnumber {

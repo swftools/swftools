@@ -579,6 +579,7 @@ switch                       {c();BEGIN(INITIAL);a3_lval.id="";return T_SWITCH;}
 [%][=]                       {c();BEGIN(REGEXPOK);return m(T_MODBY);}
 [*][=]                       {c();BEGIN(REGEXPOK);return m(T_MULBY);}
 [|][=]                       {c();BEGIN(REGEXPOK);return m(T_ORBY);}
+[&][=]                       {c();BEGIN(REGEXPOK);return m(T_ANDBY);}
 [>][>][=]                    {c();BEGIN(REGEXPOK);return m(T_SHRBY);}
 [<][<][=]                    {c();BEGIN(REGEXPOK);return m(T_SHLBY);}
 [>][>][>][=]                 {c();BEGIN(REGEXPOK);return m(T_USHRBY);}

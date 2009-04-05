@@ -83,7 +83,7 @@ int main(int argn, char*argv[])
             char*c = argv[t+1];
             if(!strstr(c, "::"))
                 printf("Error: compile definition must contain \"::\"\n");
-            as3_set_definition(c);
+            as3_set_define(c);
         }
         if(!strcmp(argv[t], "-R")) {
             as3_set_option("recurse","1");

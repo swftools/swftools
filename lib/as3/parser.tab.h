@@ -116,25 +116,26 @@
      T_DIVBY = 332,
      T_MODBY = 333,
      T_MULBY = 334,
-     T_PLUSBY = 335,
-     T_MINUSBY = 336,
-     T_XORBY = 337,
-     T_SHRBY = 338,
-     T_SHLBY = 339,
-     T_USHRBY = 340,
-     T_OROR = 341,
-     T_ANDAND = 342,
-     T_COLONCOLON = 343,
-     T_MINUSMINUS = 344,
-     T_PLUSPLUS = 345,
-     T_DOTDOT = 346,
-     T_DOTDOTDOT = 347,
-     T_SHL = 348,
-     T_USHR = 349,
-     T_SHR = 350,
-     prec_none = 351,
-     below_semicolon = 352,
-     below_assignment = 353,
+     T_ANDBY = 335,
+     T_PLUSBY = 336,
+     T_MINUSBY = 337,
+     T_XORBY = 338,
+     T_SHRBY = 339,
+     T_SHLBY = 340,
+     T_USHRBY = 341,
+     T_OROR = 342,
+     T_ANDAND = 343,
+     T_COLONCOLON = 344,
+     T_MINUSMINUS = 345,
+     T_PLUSPLUS = 346,
+     T_DOTDOT = 347,
+     T_DOTDOTDOT = 348,
+     T_SHL = 349,
+     T_USHR = 350,
+     T_SHR = 351,
+     prec_none = 352,
+     below_semicolon = 353,
+     below_assignment = 354,
      below_minus = 355,
      minusminus_prefix = 356,
      plusplus_prefix = 357,
@@ -182,6 +183,7 @@ tokenunion
     regexp_t regexp;
     modifiers_t flags;
     namespace_decl_t* namespace_decl;
+    node_t*node;
     struct {
         abc_exception_list_t *l;
         code_t*finally;
@@ -190,7 +192,7 @@ tokenunion
 
 
 /* Line 1685 of skeleton.m4  */
-#line 194 "parser.tab.h"
+#line 196 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

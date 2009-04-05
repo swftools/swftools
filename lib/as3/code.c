@@ -1102,18 +1102,27 @@ code_t*code_dup(code_t*c)
 {
     if(!c) return 0;
 
-    while(c->prev) c = c->prev;
+    dict_t*pos2pos = dict_new2(&ptr_type);
 
     code_t*last = 0;
+    c = code_start(c);
+    code_t*start = 0;
+    char does_branch = 0;
     while(c) {
         NEW(code_t, n);
         memcpy(n, c, sizeof(code_t));
+        if(!start) 
+            start=n;
+
+        if(c->opcode == OPCODE_LABEL || c->opcode == OPCODE_NOP) {
+            dict_put(pos2pos, c, n);
+        }
+        if(c->branch) {
+            does_branch = 1;
+        }
 
         opcode_t*op = opcode_get(c->opcode);
-        if(c->branch || c->opcode == OPCODE_LABEL) {
-            fprintf(stderr, "Error: Can't duplicate branching code\n");
-            return 0;
-        }
+        
         char*p = op?op->params:"";
         int pos=0;
         while(*p) {
@@ -1142,6 +1151,22 @@ code_t*code_dup(code_t*c)
         last = n;
         c = c->next;
     }
+   
+    if(does_branch) {
+        c = start;
+        while(c) {
+            if(c->branch) {
+                code_t*target = dict_lookup(pos2pos, c->branch);
+                if(!target) {
+                    fprintf(stderr, "Error: Can't find branch target in code_dup\n");
+                    return 0;
+                }
+                c->branch = target;
+            }
+            c = c->next;
+        }
+    }
+    dict_destroy(pos2pos);
     return last;
 }
 

@@ -50,7 +50,7 @@ void as3_add_include_dir(char*dir)
 {
     add_include_dir(dir);
 }
-void as3_set_option(char*key, char*value)
+void as3_set_option(const char*key, const char*value)
 {
     if(!strcmp(key, "recurse")) {
         config_recurse=atoi(value);
