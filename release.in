@@ -161,6 +161,10 @@ ${name}/lib/as3/abc.h \
 ${name}/lib/as3/compiler.c \
 ${name}/lib/as3/compiler.h \
 ${name}/lib/as3/parser.h \
+${name}/lib/as3/common.h \
+${name}/lib/as3/common.c \
+${name}/lib/as3/ast.h \
+${name}/lib/as3/ast.c \
 ${name}/lib/as3/tokenizer.h \
 ${name}/lib/as3/tokenizer.yy.c \
 ${name}/lib/as3/parser.tab.c \
@@ -488,6 +492,10 @@ ${name}/lib/python/tagmap.c \
 ${name}/lib/python/tagmap.h \
 ${name}/setup.py"
 
+WXPDF2SWF=" \
+${name}/wx/pdf2swf.py \
+${name}/wx/images.py"
+
 CONFIGURE="${name}/configure.in \
 ${name}/configure \
 ${name}/config.h.in \
@@ -512,7 +520,7 @@ ${name}/ChangeLog \
 ${name}/FAQ"
 
 tar -chf ${name}.tar \
-${SOURCES} ${AVI2SWF} ${MAKEFILES} ${DOC} ${LIB} ${PYTHON} ${CONFIGURE} \
+${SOURCES} ${AVI2SWF} ${MAKEFILES} ${DOC} ${LIB} ${PYTHON} ${WXPDF2SWF} ${CONFIGURE} \
 ${name}/INSTALL \
 ${name}/COPYING \
 ${name}/AUTHORS \
