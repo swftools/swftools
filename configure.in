@@ -291,8 +291,9 @@ else
 	    fi
 	fi
 	AC_CHECK_LIB(mp3lame, lame_init,, NO_LIBMP3LAME=1)
-	AC_CHECK_HEADERS(lame.h)
-	if test "x$NO_LIBMP3LAME" "!=" "x1" -a "x$ac_cv_header_lame_h" "!=" "x";then
+        HASLAMEHEADER=
+	AC_CHECK_HEADERS(lame.h,HASLAMEHEADER=1)
+	if test "x$NO_LIBMP3LAME" "!=" "x1" -a "x$HASLAMEHEADER" '!=' "x";then
 	    AC_DEFINE([HAVE_LAME], [1])
 	fi
     fi
