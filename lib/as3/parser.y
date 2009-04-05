@@ -33,6 +33,7 @@
 #include "code.h"
 #include "opcodes.h"
 #include "compiler.h"
+#include "ast.h"
 
 extern int a3_lex();
 
@@ -80,8 +81,6 @@ extern int a3_lex();
 %token<token> T_EMPTY
 %token<number_int> T_INT
 %token<number_uint> T_UINT
-%token<number_uint> T_BYTE
-%token<number_uint> T_SHORT
 %token<number_float> T_FLOAT
 
 %token<id> T_FOR "for"
@@ -102,6 +101,7 @@ extern int a3_lex();
 %token<token> KW_FUNCTION "function"
 %token<token> KW_FINALLY "finally"
 %token<token> KW_UNDEFINED "undefined"
+%token<token> KW_NAN "NaN"
 %token<token> KW_CONTINUE "continue"
 %token<token> KW_CLASS "class"
 %token<token> KW_CONST "const"
@@ -191,7 +191,6 @@ extern int a3_lex();
 %type <value> EXPRESSION NONCOMMAEXPRESSION
 %type <value> MAYBEEXPRESSION
 %type <value> E DELETE
-%type <value> CONSTANT
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
 %type <value> INNERFUNCTION
 %type <code> USE_NAMESPACE
@@ -205,7 +204,7 @@ extern int a3_lex();
 %type <flags> MAYBE_MODIFIERS
 %type <flags> MODIFIER_LIST
 %type <flags> MODIFIER
-%type <constant> STATICCONSTANT MAYBESTATICCONSTANT
+%type <constant> CONSTANT MAYBECONSTANT
 %type <classinfo_list> IMPLEMENTS_LIST
 %type <classinfo> EXTENDS CLASS_SPEC
 %type <classinfo_list> EXTENDS_LIST
@@ -258,7 +257,7 @@ extern int a3_lex();
 
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
-%nonassoc T_INT T_UINT T_BYTE T_SHORT T_FLOAT
+%nonassoc T_INT T_UINT T_FLOAT KW_NAN
 %nonassoc "false" "true" "null" "undefined" "super" "function"
 %left above_function
 
@@ -1609,10 +1608,21 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
     if((TYPE_IS_NUMBER(from) || TYPE_IS_UINT(from) || TYPE_IS_INT(from)) &&
        (TYPE_IS_NUMBER(to) || TYPE_IS_UINT(to) || TYPE_IS_INT(to))) {
         // allow conversion between number types
+        if(TYPE_IS_UINT(to))
+            return abc_convert_u(c);
+        else if(TYPE_IS_INT(to))
+            return abc_convert_i(c);
+        else if(TYPE_IS_NUMBER(to))
+            return abc_convert_d(c);
         return abc_coerce2(c, &m);
     }
-    //printf("%s.%s\n", from.package, from.name);
-    //printf("%s.%s\n", to.package, to.name);
+
+    if(TYPE_IS_BOOLEAN(to))
+        return abc_convert_b(c);
+    if(TYPE_IS_STRING(to))
+        return abc_convert_s(c);
+    if(TYPE_IS_OBJECT(to))
+        return abc_convert_o(c);
 
     classinfo_t*supertype = from;
     while(supertype) {
@@ -1638,8 +1648,8 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         return c;
 
     as3_error("can't convert type %s%s%s to %s%s%s", 
-        from->package, from->package?".":"", from->name, 
-        to->package, to->package?".":"", to->name);
+        from->package, from->package[0]?".":"", from->name, 
+        to->package, to->package[0]?".":"", to->name);
 
     return c;
 }
@@ -2842,26 +2852,31 @@ PASS12
 
 /* ------------ constants -------------------------------------- */
 
-MAYBESTATICCONSTANT: {$$=0;}
-MAYBESTATICCONSTANT: '=' STATICCONSTANT {$$=$2;}
+MAYBECONSTANT: {$$=0;}
+MAYBECONSTANT: '=' CONSTANT {$$=$2;}
 
-STATICCONSTANT : T_BYTE {$$ = constant_new_int($1);}
-STATICCONSTANT : T_INT {$$ = constant_new_int($1);}
-STATICCONSTANT : T_UINT {$$ = constant_new_uint($1);}
-STATICCONSTANT : T_FLOAT {$$ = constant_new_float($1);}
-STATICCONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);free((char*)$1.str);}
-//STATICCONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
-STATICCONSTANT : "true" {$$ = constant_new_true($1);}
-STATICCONSTANT : "false" {$$ = constant_new_false($1);}
-STATICCONSTANT : "null" {$$ = constant_new_null($1);}
-STATICCONSTANT : T_IDENTIFIER {
+//CONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
+CONSTANT : T_INT {$$ = constant_new_int($1);}
+CONSTANT : T_UINT {
+    $$ = constant_new_uint($1);
+}
+CONSTANT : T_FLOAT {$$ = constant_new_float($1);}
+CONSTANT : T_STRING {$$ = constant_new_string2($1.str,$1.len);free((char*)$1.str);}
+CONSTANT : "true" {$$ = constant_new_true($1);}
+CONSTANT : "false" {$$ = constant_new_false($1);}
+CONSTANT : "null" {$$ = constant_new_null($1);}
+CONSTANT : "undefined" {$$ = constant_new_undefined($1);}
+CONSTANT : KW_NAN {$$ = constant_new_float(__builtin_nan(""));}
+
+/*
+CONSTANT : T_IDENTIFIER {
     if(!strcmp($1, "NaN")) {
         $$ = constant_new_float(__builtin_nan(""));
     } else {
         as3_warning("Couldn't evaluate constant value of %s", $1);
         $$ = constant_new_null($1);
     }
-}
+}*/
 
 /* ------------ classes and interfaces (body, functions) ------- */
 
@@ -2901,7 +2916,7 @@ PARAM_LIST: PARAM {
     list_append($$.list, $1);
 }
 
-PARAM:  T_IDENTIFIER ':' TYPE MAYBESTATICCONSTANT {
+PARAM:  T_IDENTIFIER ':' TYPE MAYBECONSTANT {
      PASS12
      $$ = rfx_calloc(sizeof(param_t));
      $$->name=$1;
@@ -2909,7 +2924,7 @@ PARAM:  T_IDENTIFIER ':' TYPE MAYBESTATICCONSTANT {
      PASS2
      $$->value = $4;
 }
-PARAM:  T_IDENTIFIER MAYBESTATICCONSTANT {
+PARAM:  T_IDENTIFIER MAYBECONSTANT {
      PASS12
      $$ = rfx_calloc(sizeof(param_t));
      $$->name=$1;
@@ -3186,12 +3201,16 @@ VOIDEXPRESSION : EXPRESSION %prec below_minus {
 // ----------------------- expression evaluation -------------------------------------
 
 E : INNERFUNCTION %prec prec_none {$$ = $1;}
-E : CONSTANT
-E : VAR_READ %prec T_IDENTIFIER {$$ = $1;}
-E : NEW                         {$$ = $1;}
-E : DELETE                      {$$ = $1;}
+E : VAR_READ %prec T_IDENTIFIER   {$$ = $1;}
+E : NEW                           {$$ = $1;}
+E : DELETE                        {$$ = $1;}
 
 E : FUNCTIONCALL
+
+E : CONSTANT {
+    node_t*n = mkconstnode($1);
+    $$ = node_read(n);
+}
 
 E : T_REGEXP {
     $$.c = 0;
@@ -3209,39 +3228,6 @@ E : T_REGEXP {
     }
     $$.t = TYPE_REGEXP;
 }
-
-CONSTANT : T_BYTE {$$.c = abc_pushbyte(0, $1);
-                   //MULTINAME(m, registry_getintclass());
-                   //$$.c = abc_coerce2($$.c, &m); // FIXME
-                   $$.t = TYPE_INT;
-                  }
-CONSTANT : T_SHORT {$$.c = abc_pushshort(0, $1);
-                    $$.t = TYPE_INT;
-                   }
-CONSTANT : T_INT {$$.c = abc_pushint(0, $1);
-                  $$.t = TYPE_INT;
-                 }
-CONSTANT : T_UINT {$$.c = abc_pushuint(0, $1);
-                   $$.t = TYPE_UINT;
-                  }
-CONSTANT : T_FLOAT {$$.c = abc_pushdouble(0, $1);
-                    $$.t = TYPE_FLOAT;
-                   }
-CONSTANT : T_STRING {$$.c = abc_pushstring2(0, &$1);free((char*)$1.str);
-                     $$.t = TYPE_STRING;
-                    }
-CONSTANT : "undefined" {$$.c = abc_pushundefined(0);
-                    $$.t = TYPE_ANY;
-                   }
-CONSTANT : "true" {$$.c = abc_pushtrue(0);
-                    $$.t = TYPE_BOOLEAN;
-                   }
-CONSTANT : "false" {$$.c = abc_pushfalse(0);
-                     $$.t = TYPE_BOOLEAN;
-                    }
-CONSTANT : "null" {$$.c = abc_pushnull(0);
-                    $$.t = TYPE_NULL;
-                   }
 
 E : E '<' E {$$.c = code_append($1.c,$3.c);$$.c = abc_greaterequals($$.c);$$.c=abc_not($$.c);
              $$.t = TYPE_BOOLEAN;

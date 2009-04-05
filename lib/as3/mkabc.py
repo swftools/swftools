@@ -66,6 +66,8 @@ for line in fi.readlines():
                         type,pname="char*","name"
                     else:
                         type,pname="string_t*","s"
+                elif c == "N":
+                    type,pname="namespace_t*","ns"
                 elif c in "nubs":
                     type,pname="int","v"
                 elif c == "m":
@@ -116,6 +118,8 @@ for line in fi.readlines():
                     foc.write("    self->data[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
                 elif(c in "IU"):
                     foc.write("    self->data[%d] = (void*)(ptroff_t)%s;\n" % (i,pname))
+                elif(c in "N"):
+                    foc.write("    self->data[%d] = namespace_clone(%s);\n" % (i,pname))
                 elif(c in "f"):
                     foc.write("    double*fp = malloc(sizeof(double));\n")
                     foc.write("    *fp = %s;\n" % (pname))

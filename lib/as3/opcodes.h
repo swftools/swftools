@@ -402,8 +402,8 @@ code_t* abc_pushfalse(code_t*prev);
 code_t* abc_pushint(code_t*prev, int i);
 #define pushint(method,i) (method->code = abc_pushint(method->code,i))
 #define OPCODE_PUSHINT 0x2d
-code_t* abc_pushnamespace(code_t*prev, int v);
-#define pushnamespace(method,v) (method->code = abc_pushnamespace(method->code,v))
+code_t* abc_pushnamespace(code_t*prev, namespace_t* ns);
+#define pushnamespace(method,ns) (method->code = abc_pushnamespace(method->code,ns))
 #define OPCODE_PUSHNAMESPACE 0x31
 code_t* abc_pushnan(code_t*prev);
 #define pushnan(method) (method->code = abc_pushnan(method->code))

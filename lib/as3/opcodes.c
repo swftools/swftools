@@ -775,10 +775,10 @@ code_t* abc_pushint(code_t*prev, int i)
     self->data[0] = (void*)(ptroff_t)i;
     return self;
 }
-code_t* abc_pushnamespace(code_t*prev, int v)
+code_t* abc_pushnamespace(code_t*prev, namespace_t* ns)
 {
     code_t*self = add_opcode(prev, 0x31);
-    self->data[0] = (void*)(ptroff_t)v;
+    self->data[0] = namespace_clone(ns);
     return self;
 }
 code_t* abc_pushnan(code_t*prev)

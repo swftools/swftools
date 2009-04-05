@@ -45,6 +45,7 @@
    i = u30 index into method info
    b = byte
    c = u30 index into class
+   N = u30 index into namespaces
    s = string (u30 index into strings)
    S = switch
    u = u30
@@ -166,7 +167,7 @@ opcode_t opcodes[]={
 {0x2f, "pushdouble", "f",       0, 1, 0, 0}, //index into floats
 {0x27, "pushfalse", "",         0, 1, 0, 0},
 {0x2d, "pushint", "I",          0, 1, 0, 0}, //index into ints
-{0x31, "pushnamespace", "u",    0, 1, 0, 0}, //index into namespace TODO
+{0x31, "pushnamespace", "N",    0, 1, 0, 0}, //index into namespace
 {0x28, "pushnan", "",           0, 1, 0, 0},
 {0x20, "pushnull", "",          0, 1, 0, 0},
 {0x30, "pushscope", "",        -1, 0, 1, 0},
@@ -197,8 +198,7 @@ opcode_t opcodes[]={
 {0xa7, "urshift", "",          -2, 1, 0, 0},
 
 /* opcodes not documented, but seen in the wild */
-//0x53: seen in builtin.abc
-{0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS},
+{0x53, "applytype", "n",       -1, 1, 0, OP_STACK_ARGS}, //seen in builtin.abc
 
 /* dummy instructions. Warning: these are not actually supported by flash */
 {0xfb, "__pushpackage__", "s",      0, 1, 0, OP_INTERNAL},
@@ -305,6 +305,8 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
                 data = (void*)(ptroff_t)swf_GetU30(tag);
             } else if(*p == '2') { //multiname
                 data = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
+            } else if(*p == 'N') { //namespace
+                data = namespace_clone(pool_lookup_namespace(pool, swf_GetU30(tag)));
             } else if(*p == 'U') { //uint
                 data = (void*)(ptroff_t)pool_lookup_uint(pool, swf_GetU30(tag));
             } else if(*p == 'I') { //int
@@ -428,6 +430,8 @@ void code_free(code_t*c)
             void*data = c->data[pos];
             if(*p == '2') { //multiname
                 multiname_destroy(data);
+            } else if(*p == 'N') { //namespace
+                namespace_destroy(data);
             } else if(strchr("sDf", *p)) {
                 free(data);
             } else if(strchr("S", *p)) {
@@ -472,6 +476,9 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
         } else if(*p == '2') { //multiname
             multiname_t*m = (multiname_t*)data;
             len += swf_SetU30(tag, pool_register_multiname(pool, m));
+        } else if(*p == 'N') { //namespace
+            namespace_t*ns = (namespace_t*)data;
+            len += swf_SetU30(tag, pool_register_namespace(pool, ns));
         } else if(*p == 'm') { //method
             abc_method_t*m = (abc_method_t*)data;
             len += swf_SetU30(tag, m->index);
@@ -631,6 +638,8 @@ static void dumpstack(currentstats_t*stats)
         }
         if(op->params[0]=='2') {
             printf(" %s", multiname_tostring(c->data[0]));
+        } else if(op->params[0]=='N') {
+            printf(" %s", namespace_tostring(c->data[0]));
         }
         printf("\n");
     }
@@ -806,6 +815,8 @@ static currentstats_t* code_get_stats(code_t*code, abc_exception_list_t*exceptio
             printf("%5d) %s %08x\n", t, op->name, c->branch);
         } else if(op->params[0]=='2') {
             printf("%5d) %s %s\n", t, op->name, multiname_tostring(c->data[0]));
+        } else if(op->params[0]=='N') {
+            printf("%5d) %s %s\n", t, op->name, namespace_tostring(c->data[0]));
         } else {
             printf("%5d) %s\n", t, op->name);
         }
@@ -912,6 +923,11 @@ int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*
                 } else if(*p == '2') {
                     multiname_t*n = (multiname_t*)data;
                     char* m = multiname_tostring(n);
+                    fprintf(fo, "%s", m);
+                    free(m);
+                } else if(*p == 'N') {
+                    namespace_t*ns = (namespace_t*)data;
+                    char* m = namespace_tostring(ns);
                     fprintf(fo, "%s", m);
                     free(m);
                 } else if(*p == 'm') {
@@ -1103,6 +1119,8 @@ code_t*code_dup(code_t*c)
         while(*p) {
             if(*p == '2') { //multiname
                 c->data[pos] = multiname_clone(c->data[pos]);
+            } else if(*p == 'N') { //multiname
+                c->data[pos] = namespace_clone(c->data[pos]);
             } else if(*p == 's') {
                 c->data[pos] = string_dup3(c->data[pos]);
             } else if(*p == 'D') {

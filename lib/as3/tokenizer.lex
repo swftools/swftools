@@ -291,22 +291,7 @@ static char*nrbuf()
 static inline int setint(int v)
 {
     a3_lval.number_int = v;
-    if(v>-128)
-        return T_BYTE;
-    else if(v>=-32768)
-        return T_SHORT;
-    else
-        return T_INT;
-}
-static inline int setuint(unsigned int v)
-{
-    a3_lval.number_uint = v;
-    if(v<128)
-        return T_BYTE;
-    else if(v<32768)
-        return T_SHORT;
-    else
-        return T_UINT;
+    return T_INT;
 }
 static inline int setfloat(double v)
 {
@@ -326,7 +311,9 @@ static inline int handleint()
     char*s = nrbuf();
     char l = (yytext[0]=='-');
 
-    char*max = l?"1073741824":"2147483647";
+    //char*max = l?"1073741824":"2147483647";
+    char*max = l?"2147483648":"2147483647";
+
     if(yyleng-l>10) {
         as3_softwarning("integer overflow: %s (converted to Number)", s);
         return handlefloat();
@@ -352,7 +339,7 @@ static inline int handleint()
             v*=10;
             v+=yytext[t]-'0';
         }
-        return setuint(v);
+        return setint(v);
     }
 }
 
@@ -401,21 +388,21 @@ static inline int handlehex()
         else if((c>='a' && c<='f') || (c>='A' && c<='F'))
             v|=(c&0x0f)+9;
     }
-    if(l && v>1073741824) {
+    if(l && v>=0x80000000) {
         char*s = nrbuf();
-        as3_softwarning("signed integer overflow: %s (converted to Number)", s);
+        as3_softwarning("integer overflow: %s (converted to Number)", s);
         return setfloat(v);
     }
-    if(!l && v>2147483647) {
+    if(!l && v>0x7fffffff) {
         char*s = nrbuf();
-        as3_softwarning("unsigned integer overflow: %s (converted to Number)", s);
+        as3_softwarning("integer overflow: %s (converted to Number)", s);
         return setfloat(v);
     }
 
     if(l==3) {
         return setint(-(int)v);
     } else {
-        return setuint(v);
+        return setint(v);
     }
 }
 
@@ -561,6 +548,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 {HEXFLOAT}/{_}               {c(); BEGIN(INITIAL);return handlehexfloat();}
 {INT}/{_}                    {c(); BEGIN(INITIAL);return handleint();}
 {FLOAT}/{_}                  {c(); BEGIN(INITIAL);return handlefloat();}
+NaN                          {c(); BEGIN(INITIAL);return m(KW_NAN);}
 
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
@@ -717,7 +705,6 @@ char*token2string(enum yytokentype nr, YYSTYPE v)
     }
     else if(nr==T_INT)     return "<int>";
     else if(nr==T_UINT)     return "<uint>";
-    else if(nr==T_BYTE)     return "<byte>";
     else if(nr==T_FLOAT)     return "<float>";
     else if(nr==T_EOF)        return "***END***";
     else if(nr==T_GE)         return ">=";
