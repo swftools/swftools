@@ -27,6 +27,7 @@
 #include "../rfxswf.h"
 #include "../os.h"
 #include "files.h"
+#include "common.h"
 #include "tokenizer.h"
 #include "parser.tab.h"
 #include "parser.h"

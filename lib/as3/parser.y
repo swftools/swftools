@@ -27,6 +27,7 @@
 #include "abc.h"
 #include "pool.h"
 #include "files.h"
+#include "common.h"
 #include "tokenizer.h"
 #include "registry.h"
 #include "code.h"
@@ -271,6 +272,13 @@ static int a3_error(char*s)
    return 0; //make gcc happy
 }
 
+static void parsererror(const char*file, int line, const char*f)
+{
+    syntaxerror("internal error in %s, %s:%d", f, file, line);
+}
+
+#define parserassert(b) {if(!(b)) parsererror(__FILE__, __LINE__,__func__);}
+
 
 static char* concat2(const char* t1, const char* t2)
 {
@@ -298,7 +306,6 @@ static char* concat3(const char* t1, const char* t2, const char* t3)
 typedef struct _import {
     char*package;
 } import_t;
-
 DECLARE_LIST(import);
 
 DECLARE(methodstate);
@@ -429,13 +436,13 @@ static namespace_list_t nl2 = {&ns2,&nl3};
 static namespace_list_t nl1 = {&ns1,&nl2};
 static namespace_set_t nopackage_namespace_set = {&nl1};
 
-dict_t*conditionals=0;
+static dict_t*definitions=0;
 void as3_set_definition(const char*c)
 {
-    if(!conditionals) 
-        conditionals = dict_new();
-    if(!dict_contains(conditionals,c))
-        dict_put(conditionals,c,0);
+    if(!definitions) 
+        definitions = dict_new();
+    if(!dict_contains(definitions,c))
+        dict_put(definitions,c,0);
 }
 
 static void new_state()
@@ -461,24 +468,6 @@ static void new_state()
    
     if(oldstate)
         state->active_namespace_urls = list_clone(oldstate->active_namespace_urls);
-}
-static void state_has_imports()
-{
-    state->wildcard_imports = list_clone(state->wildcard_imports);
-    state->imports = dict_clone(state->imports);
-    state->has_own_imports = 1;
-}
-static void import_toplevel(const char*package)
-{
-    char* s = strdup(package);
-    while(1) {
-        dict_put(state->import_toplevel_packages, s, 0);
-        char*x = strrchr(s, '.');
-        if(!x)
-            break;
-        *x = 0;
-    }
-    free(s);
 }
 
 static void state_destroy(state_t*state)
@@ -595,40 +584,8 @@ void initialize_parser()
 void* finish_parser()
 {
     dict_free_all(global->file2token2info, 1, (void*)dict_destroy);
-
     global->token2info=0;
-
     return global->file;
-}
-
-
-static void xx_scopetest() 
-{
-    /* findpropstrict doesn't just return a scope object- it
-       also makes it "active" somehow. Push local_0 on the
-       scope stack and read it back with findpropstrict, it'll
-       contain properties like "trace". Trying to find the same
-       property on a "vanilla" local_0 yields only a "undefined" */
-    //c = abc_findpropstrict(c, "[package]::trace");
-    
-    /*c = abc_getlocal_0(c);
-    c = abc_findpropstrict(c, "[package]::trace");
-    c = abc_coerce_a(c);
-    c = abc_setlocal_1(c);
-
-    c = abc_pushbyte(c, 0);
-    c = abc_setlocal_2(c);
-   
-    code_t*xx = c = abc_label(c);
-    c = abc_findpropstrict(c, "[package]::trace");
-    c = abc_pushstring(c, "prop:");
-    c = abc_hasnext2(c, 1, 2);
-    c = abc_dup(c);
-    c = abc_setlocal_3(c);
-    c = abc_callpropvoid(c, "[package]::trace", 2);
-    c = abc_getlocal_3(c);
-    c = abc_kill(c, 3);
-    c = abc_iftrue(c,xx);*/
 }
 
 typedef struct _variable {
@@ -664,11 +621,32 @@ static variable_t* find_variable_safe(state_t*s, char*name)
         syntaxerror("undefined variable: %s", name);
     return v;
 }
+
 static char variable_exists(char*name) 
 {
     return dict_contains(state->vars, name);
 }
-code_t*defaultvalue(code_t*c, classinfo_t*type);
+
+static code_t*defaultvalue(code_t*c, classinfo_t*type)
+{
+    if(TYPE_IS_INT(type)) {
+       c = abc_pushbyte(c, 0);
+    } else if(TYPE_IS_UINT(type)) {
+       c = abc_pushuint(c, 0);
+    } else if(TYPE_IS_FLOAT(type)) {
+       c = abc_pushnan(c);
+    } else if(TYPE_IS_BOOLEAN(type)) {
+       c = abc_pushfalse(c);
+    } else if(!type) {
+       //c = abc_pushundefined(c);
+        syntaxerror("internal error: can't generate default value for * type");
+    } else {
+       c = abc_pushnull(c);
+       MULTINAME(m, type);
+       c = abc_coerce2(c, &m);
+    }
+    return c;
+}
 
 static int alloc_local()
 {
@@ -707,7 +685,7 @@ static int gettempvar()
     return new_variable(TEMPVARNAME, 0, 0, 0);
 }
 
-code_t* var_block(code_t*body) 
+static code_t* var_block(code_t*body) 
 {
     code_t*c = 0;
     code_t*k = 0;
@@ -751,7 +729,7 @@ code_t* var_block(code_t*body)
     return c;
 }
 
-void unknown_variable(char*name) 
+static void unknown_variable(char*name) 
 {
     if(!state->method->unresolved_variables)
         state->method->unresolved_variables = dict_new();
@@ -759,14 +737,6 @@ void unknown_variable(char*name)
         dict_put(state->method->unresolved_variables, name, 0);
 }
 
-#define parserassert(b) {if(!(b)) parsererror(__FILE__, __LINE__,__func__);}
-
-static void parsererror(const char*file, int line, const char*f)
-{
-    syntaxerror("internal error in %s, %s:%d", f, file, line);
-}
-
-   
 static code_t* add_scope_code(code_t*c, methodstate_t*m, char init)
 {
     if(m->uses_slots || (m->late_binding && !m->inner)) { //???? especially inner functions need the pushscope
@@ -853,20 +823,15 @@ static code_t* wrap_function(code_t*c,code_t*header, code_t*body)
     return c;
 }
 
-
 static void startpackage(char*name)
 {
     new_state();
-    /*printf("entering package \"%s\"\n", name);*/
     state->package = strdup(name);
 }
 static void endpackage()
 {
-    /*printf("leaving package \"%s\"\n", state->package);*/
-
     //used e.g. in classinfo_register:
     //free(state->package);state->package=0;
-
     old_state();
 }
 
@@ -916,13 +881,6 @@ static slotinfo_t* find_class(const char*name);
 static memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse)
 {
     return registry_findmember_nsset(cls, state->active_namespace_urls, name, recurse);
-}
-
-void add_active_url(const char*url)
-{
-    NEW(namespace_t,n);
-    n->name = url;
-    list_append(state->active_namespace_urls, n);
 }
 
 static void function_initvars(methodstate_t*m, params_t*params, int flags, char var0)
@@ -1156,23 +1114,6 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
     }
 }
 
-static int slotstate_varconst = 0;
-static modifiers_t*slotstate_flags = 0;
-static void setslotstate(modifiers_t* flags, int varconst)
-{
-    slotstate_varconst = varconst;
-    slotstate_flags = flags;
-    if(state->cls) {
-        if(flags && flags->flags&FLAG_STATIC) {
-            state->method = state->cls->static_init;
-        } else {
-            state->method = state->cls->init;
-        }
-    } else {
-        parserassert(state->method);
-    }
-}
-
 static void endclass()
 {
     if(as3_pass == 2) {
@@ -1214,6 +1155,12 @@ void check_code_for_break(code_t*c)
             char*name = string_cstr(c->data[0]);
             syntaxerror("Unresolved \"continue %s\"", name);
         }
+        if(c->opcode == OPCODE___RETHROW__) {
+            syntaxerror("Unresolved \"rethrow\"");
+        }
+        if(c->opcode == OPCODE___FALLTHROUGH__) {
+            syntaxerror("Unresolved \"fallthrough\"");
+        }
         if(c->opcode == OPCODE___PUSHPACKAGE__) {
             char*name = string_cstr(c->data[0]);
             syntaxerror("Can't reference a package (%s) as such", name);
@@ -1222,10 +1169,8 @@ void check_code_for_break(code_t*c)
     }
 }
 
-
 static void check_constant_against_type(classinfo_t*t, constant_t*c)
 {
-    return;
 #define xassert(b) if(!(b)) syntaxerror("Invalid default value %s for type '%s'", constant_tostring(c), t->name)
    if(TYPE_IS_NUMBER(t)) {
         xassert(c->type == CONSTANT_FLOAT
@@ -1577,11 +1522,6 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
     return 0;
 }
 
-char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
-{
-    return 1; // FIXME
-}
-
 void breakjumpsto(code_t*c, char*name, code_t*jump) 
 {
     while(c) {
@@ -1609,11 +1549,11 @@ void continuejumpsto(code_t*c, char*name, code_t*jump)
     }
 }
 
+/* TODO: move this to ast.c */
 #define IS_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)))
 #define IS_NUMBER_OR_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)) || TYPE_IS_NUMBER((a)))
 #define BOTH_INT(a,b) (IS_INT(a) && IS_INT(b))
-
-classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
+static classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
 {
     if(!type1 || !type2) 
         return registry_getanytype();
@@ -1631,6 +1571,26 @@ classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, char op)
     if(type1 == type2)
         return type1;
     return registry_getanytype();
+}
+static char is_getlocal(code_t*c)
+{
+    if(!c || c->prev || c->next)
+        return 0;
+    return(c->opcode == OPCODE_GETLOCAL
+        || c->opcode == OPCODE_GETLOCAL_0
+        || c->opcode == OPCODE_GETLOCAL_1
+        || c->opcode == OPCODE_GETLOCAL_2
+        || c->opcode == OPCODE_GETLOCAL_3);
+}
+static int getlocalnr(code_t*c)
+{
+    if(c->opcode == OPCODE_GETLOCAL) {return (ptroff_t)c->data[0];}
+    else if(c->opcode == OPCODE_GETLOCAL_0) {return 0;}
+    else if(c->opcode == OPCODE_GETLOCAL_1) {return 1;}
+    else if(c->opcode == OPCODE_GETLOCAL_2) {return 2;}
+    else if(c->opcode == OPCODE_GETLOCAL_3) {return 3;}
+    else syntaxerror("Internal error: opcode %02x is not a getlocal call", c->opcode);
+    return 0;
 }
 code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 {
@@ -1683,26 +1643,7 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 
     return c;
 }
-
-code_t*defaultvalue(code_t*c, classinfo_t*type)
-{
-    if(TYPE_IS_INT(type)) {
-       c = abc_pushbyte(c, 0);
-    } else if(TYPE_IS_UINT(type)) {
-       c = abc_pushuint(c, 0);
-    } else if(TYPE_IS_FLOAT(type)) {
-       c = abc_pushnan(c);
-    } else if(TYPE_IS_BOOLEAN(type)) {
-       c = abc_pushfalse(c);
-    } else if(!type) {
-       //c = abc_pushundefined(c);
-    } else {
-       c = abc_pushnull(c);
-       MULTINAME(m, type);
-       c = abc_coerce2(c, &m);
-    }
-    return c;
-}
+/* move to ast.c todo end */
 
 char is_pushundefined(code_t*c)
 {
@@ -1814,28 +1755,8 @@ typedcode_t push_class(slotinfo_t*a)
     return x;
 }
 
-static char is_getlocal(code_t*c)
-{
-    if(!c || c->prev || c->next)
-        return 0;
-    return(c->opcode == OPCODE_GETLOCAL
-        || c->opcode == OPCODE_GETLOCAL_0
-        || c->opcode == OPCODE_GETLOCAL_1
-        || c->opcode == OPCODE_GETLOCAL_2
-        || c->opcode == OPCODE_GETLOCAL_3);
-}
-static int getlocalnr(code_t*c)
-{
-    if(c->opcode == OPCODE_GETLOCAL) {return (ptroff_t)c->data[0];}
-    else if(c->opcode == OPCODE_GETLOCAL_0) {return 0;}
-    else if(c->opcode == OPCODE_GETLOCAL_1) {return 1;}
-    else if(c->opcode == OPCODE_GETLOCAL_2) {return 2;}
-    else if(c->opcode == OPCODE_GETLOCAL_3) {return 3;}
-    else syntaxerror("Internal error: opcode %02x is not a getlocal call", c->opcode);
-    return 0;
-}
 
-static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore)
+code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char readbefore, char pushvalue)
 {
     /* converts this:
 
@@ -1932,29 +1853,36 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
             temp = gettempvar();
             c = code_append(c, prefix);
             c = code_append(c, r);
-            if(readbefore) {
+            if(pushvalue && readbefore) {
                 c = abc_dup(c);
                 c = abc_setlocal(c, temp);
             }
             c = code_append(c, middlepart);
-            if(!readbefore) {
+            if(pushvalue && !readbefore) {
                 c = abc_dup(c);
                 c = abc_setlocal(c, temp);
             }
             c = code_append(c, write);
-            c = abc_getlocal(c, temp);
-            c = abc_kill(c, temp);
+            if(pushvalue) {
+                c = abc_getlocal(c, temp);
+                c = abc_kill(c, temp);
+            }
         } else {
             /* if we're allowed to execute the read code twice *and*
                the middlepart doesn't modify the code, things are easier.
             */
-            code_t* r2 = code_dup(r);
             //c = code_append(c, prefix);
             parserassert(!prefix);
+            code_t* r2 = 0;
+            if(pushvalue) {
+                r2 = code_dup(r);
+            }
             c = code_append(c, r);
             c = code_append(c, middlepart);
             c = code_append(c, write);
-            c = code_append(c, r2);
+            if(pushvalue) {
+                c = code_append(c, r2);
+            }
         }
     } else {
         /* even smaller version: overwrite the value without reading
@@ -1966,7 +1894,9 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
             }
             c = code_append(c, middlepart);
             c = code_append(c, write);
-            c = code_append(c, r);
+            if(pushvalue) {
+                c = code_append(c, r);
+            }
         } else {
             code_free(r);r=0;
             temp = gettempvar();
@@ -1974,11 +1904,15 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
                 c = code_append(c, prefix);
             }
             c = code_append(c, middlepart);
-            c = abc_dup(c);
-            c = abc_setlocal(c, temp);
+            if(pushvalue) {
+                c = abc_dup(c);
+                c = abc_setlocal(c, temp);
+            }
             c = code_append(c, write);
-            c = abc_getlocal(c, temp);
-            c = abc_kill(c, temp);
+            if(pushvalue) {
+                c = abc_getlocal(c, temp);
+                c = abc_kill(c, temp);
+            }
         }
     }
     return c;
@@ -2204,13 +2138,20 @@ CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
     PASS12
     $$=as3_pass;
     char*key = concat3($1,"::",$3);
-    if(!conditionals || !dict_contains(conditionals, key)) {
+    if(!definitions || !dict_contains(definitions, key)) {
         as3_pass=0;
     }
     free(key);
 }
 
 /* ------------ variables --------------------------- */
+
+%code {
+    char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
+    {
+        return 1; // FIXME
+    }
+};
 
 MAYBEEXPRESSION : '=' NONCOMMAEXPRESSION {$$=$2;}
                 |                {$$.c=abc_pushundefined(0);
@@ -2657,6 +2598,26 @@ PACKAGE_DECLARATION : "package" PACKAGE '{' {PASS12 startpackage($2);free($2);$2
 PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");} 
                                 MAYBE_INPACKAGE_CODE_LIST '}' {PASS12 endpackage();$$=0;}
 
+%code {
+    static void state_has_imports()
+    {
+        state->wildcard_imports = list_clone(state->wildcard_imports);
+        state->imports = dict_clone(state->imports);
+        state->has_own_imports = 1;
+    }
+    static void import_toplevel(const char*package)
+    {
+        char* s = strdup(package);
+        while(1) {
+            dict_put(state->import_toplevel_packages, s, 0);
+            char*x = strrchr(s, '.');
+            if(!x)
+                break;
+            *x = 0;
+        }
+        free(s);
+    }
+};
 IMPORT : "import" PACKAGEANDCLASS {
        PASS12
        slotinfo_t*s = registry_find($2->package, $2->name);
@@ -2769,6 +2730,25 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
 }
 
 /* ------------ classes and interfaces (body, slots ) ------- */
+
+%code {
+    static int slotstate_varconst = 0;
+    static modifiers_t*slotstate_flags = 0;
+    static void setslotstate(modifiers_t* flags, int varconst)
+    {
+        slotstate_varconst = varconst;
+        slotstate_flags = flags;
+        if(state->cls) {
+            if(flags && flags->flags&FLAG_STATIC) {
+                state->method = state->cls->static_init;
+            } else {
+                state->method = state->cls->init;
+            }
+        } else {
+            parserassert(state->method);
+        }
+    }
+};
 
 VARCONST: "var" | "const"
 
@@ -3438,7 +3418,7 @@ E : "void" { $$.c = abc_pushundefined(0);
 E : '(' EXPRESSION ')' {$$=$2;} //allow commas in here, too
 
 E : '-' E {
-  $$=$2;
+  $$.c = $2.c;
   if(IS_INT($2.t)) {
    $$.c=abc_negate_i($$.c);
    $$.t = TYPE_INT;
@@ -3497,50 +3477,50 @@ E : E "*=" E {
                 c=abc_multiply(c);
                }
                c=converttype(c, join_types($1.t, $3.t, '*'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 
 E : E "%=" E { 
                code_t*c = abc_modulo($3.c);
                c=converttype(c, join_types($1.t, $3.t, '%'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E "<<=" E { 
                code_t*c = abc_lshift($3.c);
                c=converttype(c, join_types($1.t, $3.t, '<'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E ">>=" E { 
                code_t*c = abc_rshift($3.c);
                c=converttype(c, join_types($1.t, $3.t, '>'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E ">>>=" E { 
                code_t*c = abc_urshift($3.c);
                c=converttype(c, join_types($1.t, $3.t, 'U'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E "/=" E { 
                code_t*c = abc_divide($3.c);
                c=converttype(c, join_types($1.t, $3.t, '/'), $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E "|=" E { 
                code_t*c = abc_bitor($3.c);
                c=converttype(c, TYPE_INT, $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E "^=" E { 
                code_t*c = abc_bitxor($3.c);
                c=converttype(c, TYPE_INT, $1.t);
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E "+=" E { 
@@ -3553,7 +3533,7 @@ E : E "+=" E {
                 c=converttype(c, join_types($1.t, $3.t, '+'), $1.t);
                }
                
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
               }
 E : E "-=" E { code_t*c = $3.c; 
@@ -3564,13 +3544,13 @@ E : E "-=" E { code_t*c = $3.c;
                 c=converttype(c, join_types($1.t, $3.t, '-'), $1.t);
                }
                
-               $$.c = toreadwrite($1.c, c, 0, 0);
+               $$.c = toreadwrite($1.c, c, 0, 0, 1);
                $$.t = $1.t;
              }
 E : E '=' E { code_t*c = 0;
               c = code_append(c, $3.c);
               c = converttype(c, $3.t, $1.t);
-              $$.c = toreadwrite($1.c, c, 1, 0);
+              $$.c = toreadwrite($1.c, c, 1, 0, 1);
               $$.t = $1.t;
             }
 
@@ -3608,7 +3588,7 @@ E : E "++" { code_t*c = 0;
                      type = TYPE_NUMBER;
                  }
                  c=converttype(c, type, $1.t);
-                 $$.c = toreadwrite($1.c, c, 0, 1);
+                 $$.c = toreadwrite($1.c, c, 0, 1, 1);
                  $$.t = $1.t;
              }
            }
@@ -3624,7 +3604,7 @@ E : E "--" { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $1.t);
-             $$.c = toreadwrite($1.c, c, 0, 1);
+             $$.c = toreadwrite($1.c, c, 0, 1, 1);
              $$.t = $1.t;
             }
 
@@ -3638,7 +3618,7 @@ E : "++" %prec plusplus_prefix E { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $2.t);
-             $$.c = toreadwrite($2.c, c, 0, 0);
+             $$.c = toreadwrite($2.c, c, 0, 0, 1);
              $$.t = $2.t;
            }
 
@@ -3652,7 +3632,7 @@ E : "--" %prec minusminus_prefix E { code_t*c = 0;
                  type = TYPE_NUMBER;
              }
              c=converttype(c, type, $2.t);
-             $$.c = toreadwrite($2.c, c, 0, 0);
+             $$.c = toreadwrite($2.c, c, 0, 0, 1);
              $$.t = $2.t;
            }
 
@@ -3915,6 +3895,15 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
 
     $$=0;
 }
+
+%code {
+    void add_active_url(const char*url)
+    {
+        NEW(namespace_t,n);
+        n->name = url;
+        list_append(state->active_namespace_urls, n);
+    }
+};
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12

@@ -50,10 +50,6 @@ struct _params {
     char varargs;
 };
 
-struct _typedcode {
-    code_t*c;
-    classinfo_t*t;
-};
 struct _modifiers {
     int flags;
     char*ns;
@@ -62,6 +58,12 @@ struct _namespace_decl {
     const char*name;
     const char*url;
 };
+
+struct _typedcode {
+    code_t*c;
+    classinfo_t*t;
+};
+
 
 /* small helper structs: */
 typedef struct _codeandnumber {
@@ -85,13 +87,7 @@ extern trie_t*active_namespaces;
 
 #include "parser.tab.h"
 
-extern int as3_verbosity;
-extern int as3_pass;
 extern unsigned int as3_tokencount;
-#define syntaxerror as3_error
-void as3_error(const char*format, ...);
-void as3_warning(const char*format, ...);
-void as3_softwarning(const char*format, ...);
 
 void as3_buffer_input(void*buffer, int len);
 void as3_file_input(FILE*fi);

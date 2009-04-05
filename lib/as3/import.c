@@ -22,6 +22,8 @@
 #include "import.h"
 #include "abc.h"
 #include "registry.h"
+#include "common.h"
+#include "common.h"
 #include "tokenizer.h"
 #include "../os.h"
 

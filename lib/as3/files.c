@@ -25,6 +25,7 @@
 #include <memory.h>
 #include <errno.h>
 #include "files.h"
+#include "common.h"
 #include "tokenizer.h"
 
 static int verbose = 0;

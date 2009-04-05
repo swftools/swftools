@@ -9544,6 +9544,7 @@ else
   NO_LIBMP3LAME=1
 fi
 
+        HASLAMEHEADER=
 
 for ac_header in lame.h
 do
@@ -9684,12 +9685,12 @@ if test `eval 'as_val=${'$as_ac_Header'}
   cat >>confdefs.h <<_ACEOF
 #define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
-
+ HASLAMEHEADER=1
 fi
 
 done
 
-	if test "x$NO_LIBMP3LAME" "!=" "x1" -a "x$ac_cv_header_lame_h" "!=" "x";then
+	if test "x$NO_LIBMP3LAME" "!=" "x1" -a "x$HASLAMEHEADER" '!=' "x";then
 	    cat >>confdefs.h <<\_ACEOF
 #define HAVE_LAME 1
 _ACEOF
@@ -10002,7 +10003,6 @@ fi
 done
 
     else
-        USES_EXTERNAL_LIBART=1
 	CPPFLAGS="$CPPFLAGS $LIBART_CFLAGS"
         cat >>confdefs.h <<\_ACEOF
 #define INTERNAL_LIBART 0
@@ -10556,7 +10556,6 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
     else
-        USES_EXTERNAL_POPPLER=1
 	CPPFLAGS="$CPPFLAGS $POPPLER_CFLAGS"
         cat >>confdefs.h <<\_ACEOF
 #define HAVE_POPPLER 1
@@ -10943,17 +10942,16 @@ else
             fi
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
         # Mac OS X
-        elif test -f "/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
-            #TODO: test for /System/Library/Frameworks/Python.framework/Versions/2.3/Python ?
+        elif test -f "/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
             PY_VERSION=2.$v
             PYTHON_LIB="-framework Python"
-            if test -f "/Library/Python/2.$v/PIL/_imaging.so";then
+            if test -f "/Library/Frameworks/Python.framework/Versions/2.$v/site-packages/PIL/_imaging.so";then
                 PYTHON_LIB2="$PYTHON_LIB /Library/Python/2.$v/PIL/_imaging.so"
                 HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"
             fi
-            PYTHON_INCLUDES="-I/System/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
+            PYTHON_INCLUDES="-I/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
 	# Mac OS X [Fink]:
         elif test "(" -f "/sw/lib/python2.$v/config/libpython2.$v.dylib" \
 	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.a" \
@@ -11190,21 +11188,6 @@ fi
 
 
 
-
-if test "$USES_EXTERNAL_POPPLER";then
-    echo "*"
-    echo "*"
-    echo "* uses external poppler library"
-    echo "*"
-    echo "*"
-fi
-if test "$USES_EXTERNAL_LIBART";then
-    echo "*"
-    echo "*"
-    echo "* uses external libart library"
-    echo "*"
-    echo "*"
-fi
 
 if test -f "release.in"; then release_in="./release"; fi
 if test -f "Makefile.new.in"; then mk_in="./Makefile.new"; fi
