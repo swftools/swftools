@@ -203,7 +203,13 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
 	fprintf(stderr, "gfxtool: outline doesn't start with a moveTo");
 	return;
     }
-    if(!r || (r[0]<=0 && r[0]>-0.01)) {
+    
+    int i;
+    double dashlen=0;
+    for(i=0;r[i]>=0;i++) {
+        dashlen+=r[i];
+    }
+    if(!r || (r[0]<=0 && r[0]>-0.01) || dashlen<0.001) {
         // no dashing. just draw the thing
         while(line) {
             if(line->type == gfx_moveTo) {
@@ -221,7 +227,6 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
 	fprintf(stderr, "gfxtool: invalid (negative) dashes: %f, phase=%f", r[0], phase);
 	return;
     }
-
 
     for(;line;line=line->next) {
 	if(line->type == gfx_moveTo) {
