@@ -48,6 +48,15 @@
     code_t*c=0;\
     classinfo_t*t=0;
 
+#define EVAL_HEADER_LEFTRIGHT \
+    constant_t left = n->child[0]->type->eval(n->child[0]);\
+    constant_t right = n->child[1]->type->eval(n->child[1]);\
+    constant_t r; \
+    if(left.type==CONSTANT_UNKNOWN || right.type==CONSTANT_UNKNOWN) {\
+        r.type = CONSTANT_UNKNOWN;return r; \
+    }
+
+
 #define RET \
     typedcode_t r; \
     r.c = c; \
@@ -57,12 +66,12 @@
 static classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, nodetype_t*t)
 {
     if(!type1 || !type2)
-        return registry_getanytype();
+        return TYPE_ANY;
     if(TYPE_IS_ANY(type1) || TYPE_IS_ANY(type2))
-        return registry_getanytype();
+        return TYPE_ANY;
     if(type1 == type2)
         return type1;
-    return registry_getanytype();
+    return TYPE_ANY;
 }
 static char is_getlocal(code_t*c)
 {
@@ -253,6 +262,32 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
 
 code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to);
 
+int constant_to_int(constant_t*c) 
+{
+    switch(c->type) {
+        case CONSTANT_INT:    return c->i;
+        case CONSTANT_UINT:   return (int)c->u;
+        case CONSTANT_FLOAT:  return c->f;
+        case CONSTANT_TRUE:   return 1;
+        case CONSTANT_FALSE:  return 0;
+        case CONSTANT_STRING: return atoi(c->s->str);
+        default: syntaxerror("can't convert this constant to an integer");
+    }
+}
+
+double constant_to_float(constant_t*c) 
+{
+    switch(c->type) {
+        case CONSTANT_INT:    return (double)c->i;
+        case CONSTANT_UINT:   return (double)c->u;
+        case CONSTANT_FLOAT:  return c->f;
+        case CONSTANT_TRUE:   return (double)1;
+        case CONSTANT_FALSE:  return (double)0;
+        case CONSTANT_STRING: return atof(c->s->str);
+        default: syntaxerror("can't convert this constant to a float");
+    }
+}
+
 // -------------------------- x + y -----------------------------------
 
 typedcode_t node_plus_write(node_t*n)
@@ -277,10 +312,41 @@ code_t* node_plus_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_plus_eval(node_t*n)
+{
+    EVAL_HEADER_LEFTRIGHT;
+    char left_int = left.type == CONSTANT_INT || left.type == CONSTANT_UINT;
+    if(left_int && (right.type == CONSTANT_INT || right.type == CONSTANT_UINT)) { 
+        /* FIXME: what to do about signed/unsigned overflows? */
+        int i = constant_to_int(&left) + constant_to_int(&right);
+        r.type = CONSTANT_INT;
+        r.i = i;
+    } else if(left_int && right.type == CONSTANT_FLOAT) {
+        double f = constant_to_int(&left) + constant_to_float(&right);
+        r.type = CONSTANT_FLOAT;
+        r.f = f;
+    } else if(left.type == CONSTANT_STRING) {
+        char*add = constant_tostring(&right);
+        int l1 = left.s->len;
+        int l2 = strlen(add);
+        char*s = malloc(l1+l2+1);
+        memcpy(s, left.s->str, l1);
+        memcpy(s+l1, add, l2);
+        s[l1+l2]=0;
+        r.type = CONSTANT_STRING;
+        r.s = malloc(sizeof(string_t));
+        r.s->str = s;
+        r.s->len = l1+l2;
+    } else {
+        r.type = CONSTANT_UNKNOWN;
+    }
+    return r;
+}
 nodetype_t node_plus =
 {
 name:"plus",
 flags:NODE_HAS_CHILDREN,
+eval:node_plus_eval,
 write:node_plus_write,
 read:node_plus_read,
 exec:node_plus_exec,
@@ -310,10 +376,15 @@ code_t* node_minus_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_minus_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_minus =
 {
 name:"minus",
 flags:NODE_HAS_CHILDREN,
+eval: node_minus_eval,
 write: node_minus_write,
 read: node_minus_read,
 exec: node_minus_exec
@@ -380,10 +451,15 @@ code_t* node_lplusplus_exec(node_t*n)
     }
     return c;
 }
+constant_t node_lplusplus_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_lplusplus =
 {
 name: "lplusplus",
 flags:NODE_HAS_CHILDREN,
+eval: node_lplusplus_eval,
 write: node_lplusplus_write,
 read: node_lplusplus_read,
 exec: node_lplusplus_exec
@@ -451,10 +527,15 @@ code_t* node_lminusminus_exec(node_t*n)
     }
     return c;
 }
+constant_t node_lminusminus_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_lminusminus =
 {
 name: "lminusminus",
 flags:NODE_HAS_CHILDREN,
+eval: node_lminusminus_eval,
 write: node_lminusminus_write,
 read: node_lminusminus_read,
 exec: node_lminusminus_exec
@@ -523,10 +604,15 @@ code_t* node_rplusplus_exec(node_t*n)
     }
     return c;
 }
+constant_t node_rplusplus_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_rplusplus =
 {
 name: "rplusplus",
 flags:NODE_HAS_CHILDREN,
+eval: node_rplusplus_eval,
 write: node_rplusplus_write,
 read: node_rplusplus_read,
 exec: node_rplusplus_exec
@@ -593,10 +679,15 @@ code_t* node_rminusminus_exec(node_t*n)
     }
     return c;
 }
+constant_t node_rminusminus_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_rminusminus =
 {
 name: "rminusminus",
 flags:NODE_HAS_CHILDREN,
+eval: node_rminusminus_eval,
 write: node_rminusminus_write,
 read: node_rminusminus_read,
 exec: node_rminusminus_exec
@@ -626,10 +717,15 @@ code_t* node_multiply_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_multiply_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_multiply =
 {
 name: "multiply",
 flags:NODE_HAS_CHILDREN,
+eval: node_multiply_eval,
 write: node_multiply_write,
 read: node_multiply_read,
 exec: node_multiply_exec
@@ -654,10 +750,15 @@ code_t* node_div_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_div_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_div =
 {
 name: "div",
 flags:NODE_HAS_CHILDREN,
+eval: node_div_eval,
 write: node_div_write,
 read: node_div_read,
 exec: node_div_exec
@@ -682,10 +783,15 @@ code_t* node_mod_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_mod_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_mod =
 {
 name: "mod",
 flags:NODE_HAS_CHILDREN,
+eval: node_mod_eval,
 write: node_mod_write,
 read: node_mod_read,
 exec: node_mod_exec
@@ -710,10 +816,15 @@ code_t* node_lt_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_lt_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_lt =
 {
 name: "lt",
 flags:NODE_HAS_CHILDREN,
+eval: node_lt_eval,
 write: node_lt_write,
 read: node_lt_read,
 exec: node_lt_exec
@@ -738,10 +849,15 @@ code_t* node_gt_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_gt_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_gt =
 {
 name: "gt",
 flags:NODE_HAS_CHILDREN,
+eval: node_gt_eval,
 write: node_gt_write,
 read: node_gt_read,
 exec: node_gt_exec
@@ -766,10 +882,15 @@ code_t* node_le_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_le_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_le = //<=
 {
 name: "le",
 flags:NODE_HAS_CHILDREN,
+eval: node_le_eval,
 write: node_le_write,
 read: node_le_read,
 exec: node_le_exec
@@ -794,10 +915,15 @@ code_t* node_ge_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_ge_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_ge = //>=
 {
 name: "ge",
 flags:NODE_HAS_CHILDREN,
+eval: node_ge_eval,
 write: node_ge_write,
 read: node_ge_read,
 exec: node_ge_exec
@@ -822,10 +948,15 @@ code_t* node_eqeq_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_eqeq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_eqeq = //==
 {
 name: "eqeq",
 flags:NODE_HAS_CHILDREN,
+eval: node_eqeq_eval,
 write: node_eqeq_write,
 read: node_eqeq_read,
 exec: node_eqeq_exec
@@ -850,10 +981,15 @@ code_t* node_eqeqeq_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_eqeqeq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_eqeqeq = //===
 {
 name: "eqeqeq",
 flags:NODE_HAS_CHILDREN,
+eval: node_eqeqeq_eval,
 write: node_eqeqeq_write,
 read: node_eqeqeq_read,
 exec: node_eqeqeq_exec
@@ -879,10 +1015,15 @@ code_t* node_noteqeq_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_noteqeq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_noteqeq = //!==
 {
 name: "noteqeq",
 flags:NODE_HAS_CHILDREN,
+eval: node_noteqeq_eval,
 write: node_noteqeq_write,
 read: node_noteqeq_read,
 exec: node_noteqeq_exec
@@ -908,10 +1049,15 @@ code_t* node_noteq_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_noteq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_noteq = //!=
 {
 name: "noteq",
 flags:NODE_HAS_CHILDREN,
+eval: node_noteq_eval,
 write: node_noteq_write,
 read: node_noteq_read,
 exec: node_noteq_exec
@@ -949,10 +1095,15 @@ code_t* node_oror_exec(node_t*n)
     jmp->branch = label;
     return c;
 }
+constant_t node_oror_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_oror = //||
 {
 name: "oror",
 flags:NODE_HAS_CHILDREN,
+eval: node_oror_eval,
 write: node_oror_write,
 read: node_oror_read,
 exec: node_oror_exec
@@ -990,10 +1141,15 @@ code_t* node_andand_exec(node_t*n)
     jmp->branch = label;
     return c;
 }
+constant_t node_andand_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_andand = //&&
 {
 name: "andand",
 flags:NODE_HAS_CHILDREN,
+eval: node_andand_eval,
 write: node_andand_write,
 read: node_andand_read,
 exec: node_andand_exec
@@ -1018,10 +1174,15 @@ code_t* node_not_exec(node_t*n)
     EXEC_HEADER_ONE;
     return x;
 }
+constant_t node_not_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_not =
 {
 name: "not",
 flags:NODE_HAS_CHILDREN,
+eval: node_not_eval,
 write: node_not_write,
 read: node_not_read,
 exec: node_not_exec
@@ -1046,10 +1207,15 @@ code_t* node_bitnot_exec(node_t*n)
     EXEC_HEADER_ONE;
     return x;
 }
+constant_t node_bitnot_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitnot =
 {
 name: "bitnot",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitnot_eval,
 write: node_bitnot_write,
 read: node_bitnot_read,
 exec: node_bitnot_exec
@@ -1074,10 +1240,15 @@ code_t* node_bitand_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_bitand_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitand =
 {
 name: "bitand",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitand_eval,
 write: node_bitand_write,
 read: node_bitand_read,
 exec: node_bitand_exec
@@ -1102,10 +1273,15 @@ code_t* node_bitxor_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_bitxor_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitxor =
 {
 name: "bitxor",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitxor_eval,
 write: node_bitxor_write,
 read: node_bitxor_read,
 exec: node_bitxor_exec
@@ -1130,10 +1306,15 @@ code_t* node_bitor_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_bitor_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitor =
 {
 name: "bitor",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitor_eval,
 write: node_bitor_write,
 read: node_bitor_read,
 exec: node_bitor_exec
@@ -1158,10 +1339,15 @@ code_t* node_shr_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_shr_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_shr = //>>
 {
 name: "shr",
 flags:NODE_HAS_CHILDREN,
+eval: node_shr_eval,
 write: node_shr_write,
 read: node_shr_read,
 exec: node_shr_exec
@@ -1186,10 +1372,15 @@ code_t* node_shl_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_shl_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_shl = //<<
 {
 name: "shl",
 flags:NODE_HAS_CHILDREN,
+eval: node_shl_eval,
 write: node_shl_write,
 read: node_shl_read,
 exec: node_shl_exec
@@ -1214,10 +1405,15 @@ code_t* node_ushr_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_ushr_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_ushr = //>>>
 {
 name: "ushr",
 flags:NODE_HAS_CHILDREN,
+eval: node_ushr_eval,
 write: node_ushr_write,
 read: node_ushr_read,
 exec: node_ushr_exec
@@ -1242,10 +1438,15 @@ code_t* node_in_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_in_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_in = //in
 {
 name: "in",
 flags:NODE_HAS_CHILDREN,
+eval: node_in_eval,
 write: node_in_write,
 read: node_in_read,
 exec: node_in_exec
@@ -1273,10 +1474,15 @@ code_t* node_as_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_as_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_as = //as
 {
 name: "as",
 flags:NODE_HAS_CHILDREN,
+eval: node_as_eval,
 write: node_as_write,
 read: node_as_read,
 exec: node_as_exec
@@ -1301,10 +1507,15 @@ code_t* node_instanceof_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_instanceof_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_instanceof = //instanceof
 {
 name: "instanceof",
 flags:NODE_HAS_CHILDREN,
+eval: node_instanceof_eval,
 write: node_instanceof_write,
 read: node_instanceof_read,
 exec: node_instanceof_exec
@@ -1329,10 +1540,15 @@ code_t* node_is_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_is_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_is = //is
 {
 name: "is",
 flags:NODE_HAS_CHILDREN,
+eval: node_is_eval,
 write: node_is_write,
 read: node_is_read,
 exec: node_is_exec
@@ -1366,10 +1582,15 @@ code_t* node_arraylookup_exec(node_t*n)
     EXEC_HEADER_LEFTRIGHT;
     return code_append(left, right);
 }
+constant_t node_arraylookup_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_arraylookup =
 {
 name: "arraylookup",
 flags:NODE_HAS_CHILDREN,
+eval: node_arraylookup_eval,
 write: node_arraylookup_write,
 read: node_arraylookup_read,
 exec: node_arraylookup_exec
@@ -1394,10 +1615,15 @@ code_t* node_typeof_exec(node_t*n)
     EXEC_HEADER_ONE;
     return x;
 }
+constant_t node_typeof_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_typeof = //typeof
 {
 name: "typeof",
 flags:NODE_HAS_CHILDREN,
+eval: node_typeof_eval,
 write: node_typeof_write,
 read: node_typeof_read,
 exec: node_typeof_exec
@@ -1421,10 +1647,15 @@ code_t* node_void_exec(node_t*n)
     EXEC_HEADER_ONE;
     return x;
 }
+constant_t node_void_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_void = //void
 {
 name: "void",
 flags:NODE_HAS_CHILDREN,
+eval: node_void_eval,
 write: node_void_write,
 read: node_void_read,
 exec: node_void_exec
@@ -1454,10 +1685,15 @@ code_t* node_neg_exec(node_t*n)
     EXEC_HEADER_ONE;
     return x;
 }
+constant_t node_neg_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_neg = //-
 {
 name: "neg",
 flags:NODE_HAS_CHILDREN,
+eval: node_neg_eval,
 write: node_neg_write,
 read: node_neg_read,
 exec: node_neg_exec
@@ -1501,10 +1737,15 @@ code_t* node_muleq_exec(node_t*n)
     c = converttype(c, f, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_muleq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_muleq =
 {
 name: "muleq",
 flags:NODE_HAS_CHILDREN,
+eval: node_muleq_eval,
 write: node_muleq_write,
 read: node_muleq_read,
 exec: node_muleq_exec
@@ -1532,10 +1773,15 @@ code_t* node_modeq_exec(node_t*n)
     c = converttype(c, TYPE_NUMBER, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_modeq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_modeq = //%=
 {
 name: "modeq",
 flags:NODE_HAS_CHILDREN,
+eval: node_modeq_eval,
 write: node_modeq_write,
 read: node_modeq_read,
 exec: node_modeq_exec
@@ -1563,10 +1809,15 @@ code_t* node_shleq_exec(node_t*n)
     c = converttype(c, TYPE_INT, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_shleq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_shleq = //<<=
 {
 name: "shleq",
 flags:NODE_HAS_CHILDREN,
+eval: node_shleq_eval,
 write: node_shleq_write,
 read: node_shleq_read,
 exec: node_shleq_exec
@@ -1594,10 +1845,15 @@ code_t* node_shreq_exec(node_t*n)
     c = converttype(c, TYPE_INT, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_shreq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_shreq = //>>=
 {
 name: "shreq",
 flags:NODE_HAS_CHILDREN,
+eval: node_shreq_eval,
 write: node_shreq_write,
 read: node_shreq_read,
 exec: node_shreq_exec
@@ -1625,10 +1881,15 @@ code_t* node_ushreq_exec(node_t*n)
     c = converttype(c, TYPE_UINT, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_ushreq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_ushreq = //>>>=
 {
 name: "ushreq",
 flags:NODE_HAS_CHILDREN,
+eval: node_ushreq_eval,
 write: node_ushreq_write,
 read: node_ushreq_read,
 exec: node_ushreq_exec
@@ -1656,10 +1917,15 @@ code_t* node_diveq_exec(node_t*n)
     c = converttype(c, TYPE_NUMBER, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_diveq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_diveq =
 {
 name: "diveq",
 flags:NODE_HAS_CHILDREN,
+eval: node_diveq_eval,
 write: node_diveq_write,
 read: node_diveq_read,
 exec: node_diveq_exec
@@ -1687,10 +1953,15 @@ code_t* node_bitoreq_exec(node_t*n)
     c = converttype(c, TYPE_INT, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_bitoreq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitoreq = //|=
 {
 name: "bitoreq",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitoreq_eval,
 write: node_bitoreq_write,
 read: node_bitoreq_read,
 exec: node_bitoreq_exec
@@ -1718,10 +1989,15 @@ code_t* node_bitxoreq_exec(node_t*n)
     c = converttype(c, TYPE_INT, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_bitxoreq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitxoreq = //^=
 {
 name: "bitxoreq",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitxoreq_eval,
 write: node_bitxoreq_write,
 read: node_bitxoreq_read,
 exec: node_bitxoreq_exec
@@ -1749,10 +2025,15 @@ code_t* node_bitandeq_exec(node_t*n)
     c = converttype(c, TYPE_INT, left.t);
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_bitandeq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_bitandeq = //^=
 {
 name: "bitandeq",
 flags:NODE_HAS_CHILDREN,
+eval: node_bitandeq_eval,
 write: node_bitandeq_write,
 read: node_bitandeq_read,
 exec: node_bitandeq_exec
@@ -1790,10 +2071,15 @@ code_t* node_pluseq_exec(node_t*n)
     }
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_pluseq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_pluseq = //+=
 {
 name: "pluseq",
 flags:NODE_HAS_CHILDREN,
+eval: node_pluseq_eval,
 write: node_pluseq_write,
 read: node_pluseq_read,
 exec: node_pluseq_exec
@@ -1831,10 +2117,15 @@ code_t* node_minuseq_exec(node_t*n)
     }
     return toreadwrite(left.c, c, 0, 0, 0);
 }
+constant_t node_minuseq_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_minuseq = //-=
 {
 name: "minuseq",
 flags:NODE_HAS_CHILDREN,
+eval: node_minuseq_eval,
 write: node_minuseq_write,
 read: node_minuseq_read,
 exec: node_minuseq_exec
@@ -1862,10 +2153,15 @@ code_t* node_assign_exec(node_t*n)
     c = converttype(c, right.t, left.t);
     return toreadwrite(left.c, c, 1, 0, 0);
 }
+constant_t node_assign_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_assign =
 {
 name: "assign",
 flags:NODE_HAS_CHILDREN,
+eval: node_assign_eval,
 write: node_assign_write,
 read: node_assign_read,
 exec: node_assign_exec
@@ -1911,10 +2207,15 @@ code_t* node_tenary_exec(node_t*n)
     c = j2->branch = abc_label(c);
     return c;
 }
+constant_t node_tenary_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_tenary =
 {
 name: "tenary",
 flags:NODE_HAS_CHILDREN,
+eval: node_tenary_eval,
 write: node_tenary_write,
 read: node_tenary_read,
 exec: node_tenary_exec
@@ -1948,10 +2249,15 @@ code_t* node_comma_exec(node_t*n)
     }
     return c;
 }
+constant_t node_comma_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_comma =
 {
 name: "expr",
 flags: NODE_HAS_CHILDREN,
+eval: node_comma_eval,
 write: node_comma_write,
 read: node_comma_read,
 exec: node_comma_exec
@@ -1970,10 +2276,15 @@ typedcode_t node_new_read(node_t*n)
 code_t* node_new_exec(node_t*n)
 {
 }
+constant_t node_new_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_new = //new
 {
 write: node_new_write,
 read: node_new_read,
+eval: node_new_eval,
 exec: node_new_exec
 };
 
@@ -1988,10 +2299,15 @@ typedcode_t node_delete_read(node_t*n)
 code_t* node_delete_exec(node_t*n)
 {
 }
+constant_t node_delete_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_delete = //delete
 {
 write: node_delete_write,
 read: node_delete_read,
+eval: node_delete_eval,
 exec: node_delete_exec
 };
 
@@ -2006,10 +2322,15 @@ typedcode_t node_dot_read(node_t*n)
 code_t* node_dot_exec(node_t*n)
 {
 }
+constant_t node_dot_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_dot =
 {
 write: node_dot_write,
 read: node_dot_read,
+eval: node_dot_eval,
 exec: node_dot_exec
 };
 
@@ -2025,10 +2346,15 @@ code_t* node_dotdot_exec(node_t*n)
 {
 
 }
+constant_t node_dotdot_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_dotdot = //..
 {
 write: node_dotdot_write,
 read: node_dotdot_read,
+eval: node_dotdot_eval,
 exec: node_dotdot_exec
 };
 
@@ -2043,10 +2369,15 @@ typedcode_t node_dotat_read(node_t*n)
 code_t* node_dotat_exec(node_t*n)
 {
 }
+constant_t node_dotat_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_dotat = //.@
 {
 write: node_dotat_write,
 read: node_dotat_read,
+eval: node_dotat_eval,
 exec: node_dotat_exec
 };
 
@@ -2061,10 +2392,15 @@ typedcode_t node_dotstar_read(node_t*n)
 code_t* node_dotstar_exec(node_t*n)
 {
 }
+constant_t node_dotstar_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_dotstar = //.*
 {
 write: node_dotstar_write,
 read: node_dotstar_read,
+eval: node_dotstar_eval,
 exec: node_dotstar_exec
 };
 
@@ -2079,10 +2415,15 @@ typedcode_t node_filter_read(node_t*n)
 code_t* node_filter_exec(node_t*n)
 {
 }
+constant_t node_filter_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_filter = //.(
 {
 write: node_filter_write,
 read: node_filter_read,
+eval: node_filter_eval,
 exec: node_filter_exec
 };
 
@@ -2097,10 +2438,15 @@ typedcode_t node_call_read(node_t*n)
 code_t* node_call_exec(node_t*n)
 {
 }
+constant_t node_call_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_call = //functioncall
 {
 write: node_call_write,
 read: node_call_read,
+eval: node_call_eval,
 exec: node_call_exec
 };
 
@@ -2115,10 +2461,15 @@ typedcode_t node_at_read(node_t*n)
 code_t* node_at_exec(node_t*n)
 {
 }
+constant_t node_at_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_at = //@
 {
 write: node_at_write,
 read: node_at_read,
+eval: node_at_eval,
 exec: node_at_exec
 };
 
@@ -2133,10 +2484,15 @@ typedcode_t node_dotns_read(node_t*n)
 code_t* node_dotns_exec(node_t*n)
 {
 }
+constant_t node_dotns_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_dotns = //.::
 {
 write: node_dotns_write,
 read: node_dotns_read,
+eval: node_dotns_eval,
 exec: node_dotns_exec
 };
 #endif
@@ -2216,10 +2572,18 @@ code_t* node_const_exec(node_t*n)
 {
     return 0;
 }
+constant_t node_const_eval(node_t*n)
+{
+    constant_t*c = constant_clone(n->value);
+    constant_t r = *c;
+    free(c); //shallow free
+    return r;
+}
 nodetype_t node_const =
 {
 name: "const",
 flags:0,
+eval: node_const_eval,
 write: node_const_write,
 read: node_const_read,
 exec: node_const_exec
@@ -2245,16 +2609,21 @@ code_t* node_code_exec(node_t*n)
     c = cut_last_push(c);
     return c;
 }
+constant_t node_code_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_code =
 {
 name: "code",
 flags:0,
+eval: node_code_eval,
 write: node_code_write,
 read: node_code_read,
 exec: node_code_exec
 };
 
-// ------------------------ code node ------------------------------
+// ------------------------ dummy node ------------------------------
               
 typedcode_t node_dummy_write(node_t*n)
 {
@@ -2264,17 +2633,22 @@ typedcode_t node_dummy_read(node_t*n)
 {
     typedcode_t t;
     t.c = abc_pushundefined(0);
-    t.t = 0;
+    t.t = TYPE_ANY;
     return t;
 }
 code_t* node_dummy_exec(node_t*n)
 {
     return 0;
 }
+constant_t node_dummy_eval(node_t*n)
+{
+    constant_t r;r.type=CONSTANT_UNKNOWN;return r;
+}
 nodetype_t node_dummy =
 {
 name: "dummy",
 flags:0,
+eval: node_dummy_eval,
 write: node_dummy_write,
 read: node_dummy_read,
 exec: node_dummy_exec
@@ -2391,6 +2765,12 @@ typedcode_t node_read(node_t*n)
 code_t* node_exec(node_t*n)
 {
     code_t*c = n->type->exec(n);
+    node_free(n);
+    return c;
+}
+constant_t node_eval(node_t*n)
+{
+    constant_t c = n->type->eval(n);
     node_free(n);
     return c;
 }

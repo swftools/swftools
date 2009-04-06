@@ -80,6 +80,7 @@ CONSTANT_NAMESPACE_PROTECTED=0x18,
 CONSTANT_NAMESPACE_EXPLICIT=0x19,
 CONSTANT_NAMESPACE_STATICPROTECTED=0x1A,
 CONSTANT_NAMESPACE_PRIVATE=0x05,
+CONSTANT_UNKNOWN=0x55, /*used internally */
 } contant_type_t;
 
 #define NS_TYPE(x) ((x) == 0x08 || (x) == 0x16 || (x) == 0x17 || (x) == 0x18 || (x) == 0x19 || (x) == 0x1a || (x) == 0x05)

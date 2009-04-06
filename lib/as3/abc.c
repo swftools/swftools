@@ -591,7 +591,7 @@ static void traits_dump(FILE*fo, const char*prefix, trait_list_t*traits, abc_fil
             char*value = constant_tostring(trait->value);
 	    fprintf(fo, "%sslot %d: %s %s:%s %s %s\n", prefix, trait->slot_id, 
                     kind==TRAIT_CONST?"const":"var", name, type_name, 
-                    value?"=":"", value?value:"");
+                    trait->value?"=":"", trait->value?value:"");
             if(value) free(value);
             free(type_name);
 	} else {

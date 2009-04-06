@@ -370,7 +370,7 @@ classinfo_t* slotinfo_gettype(slotinfo_t*f)
        } else 
            return 0;
     } else {
-       return registry_getanytype();
+       return TYPE_ANY;
     }
 }
 
@@ -381,7 +381,6 @@ char registry_ispackage(char*package)
     return !strncmp(package, "flash", 5);
 }
 // ----------------------- builtin types ------------------------------
-classinfo_t* registry_getanytype() {return 0;}
 
 char registry_isfunctionclass(classinfo_t*c) {
     return (c && c->package && c->name && 

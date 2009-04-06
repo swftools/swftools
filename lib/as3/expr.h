@@ -25,6 +25,7 @@
 #include "../q.h"
 #include "code.h"
 #include "registry.h"
+#include "pool.h"
 
 DECLARE(node);
 DECLARE(typedcode);
@@ -44,6 +45,7 @@ struct _nodetype {
     typedcode_t (*write)(node_t*n);
     typedcode_t (*read)(node_t*n);
     code_t* (*exec)(node_t*n);
+    constant_t (*eval)(node_t*n);
 };
 
 extern nodetype_t node_plus;
@@ -138,6 +140,7 @@ node_t* mknode3(nodetype_t*t, node_t*one, node_t*two, node_t*three);
 void node_free(node_t*n);
 typedcode_t node_read(node_t*n); //read and free
 code_t* node_exec(node_t*n); //exec and free
+constant_t node_eval(node_t*n); //eval and free
 void node_dump(node_t*n);
 
 #endif

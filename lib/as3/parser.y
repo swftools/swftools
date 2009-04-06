@@ -191,7 +191,7 @@ extern int a3_lex();
 %type <code> INTERFACE_DECLARATION
 %type <code> VOIDEXPRESSION
 %type <value> EXPRESSION NONCOMMAEXPRESSION
-%type <value> MAYBEEXPRESSION
+%type <node> MAYBEEXPRESSION
 %type <value> DELETE
 %type <node> E COMMA_EXPRESSION
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
@@ -686,9 +686,13 @@ static int new_variable(const char*name, classinfo_t*type, char init, char maybe
 int gettempvar()
 {
     variable_t*v = find_variable(state, TEMPVARNAME);
+    int i;
     if(v) 
-        return v->index;
-    return new_variable(TEMPVARNAME, 0, 0, 0);
+        i = v->index;
+    else
+        i = new_variable(TEMPVARNAME, 0, 0, 0);
+    parserassert(i);
+    return i;
 }
 
 static code_t* var_block(code_t*body) 
@@ -899,8 +903,6 @@ static void function_initvars(methodstate_t*m, params_t*params, int flags, char 
             index = new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0, 0);
         else
             index = new_variable("globalscope", 0, 0, 0);
-        if(index)
-            *(int*)0=0;
         parserassert(!index);
     }
 
@@ -992,6 +994,7 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
         state->cls = rfx_calloc(sizeof(classstate_t));
         state->cls->init = rfx_calloc(sizeof(methodstate_t));
         state->cls->static_init = rfx_calloc(sizeof(methodstate_t));
+        state->cls->static_init->variable_count=1;
         /* notice: we make no effort to initialize the top variable (local0) here,
            even though it has special meaning. We just rely on the facat
            that pass 1 won't do anything with variables */
@@ -1967,10 +1970,8 @@ CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
     }
 };
 
-MAYBEEXPRESSION : '=' NONCOMMAEXPRESSION {$$=$2;}
-                |                {$$.c=abc_pushundefined(0);
-                                  $$.t=TYPE_ANY;
-                                 }
+MAYBEEXPRESSION : '=' E {$$=$2;}
+                |       {$$=mkdummynode();}
 
 VARIABLE_DECLARATION : "var" VARIABLE_LIST {$$=$2;}
 VARIABLE_DECLARATION : "const" VARIABLE_LIST {$$=$2;}
@@ -1987,11 +1988,6 @@ PASS1
     new_variable($1, 0, 1, 0);
 PASS2
    
-    if(!is_subtype_of($3.t, $2)) {
-        syntaxerror("Can't convert %s to %s", $3.t->name, 
-                                              $2->name);
-    }
-
     char slot = 0;
     int index = 0;
     if(state->method->uses_slots) {
@@ -2010,21 +2006,25 @@ PASS2
 
     $$ = slot?abc_getscopeobject(0, 1):0;
     
+    typedcode_t v = node_read($3);
+    if(!is_subtype_of(v.t, $2)) {
+        syntaxerror("Can't convert %s to %s", v.t->name, $2->name);
+    }
     if($2) {
-        if($3.c->prev || $3.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = code_append($$, $3.c);
-            $$ = converttype($$, $3.t, $2);
+        if(v.c->prev || v.c->opcode != OPCODE_PUSHUNDEFINED) {
+            $$ = code_append($$, v.c);
+            $$ = converttype($$, v.t, $2);
         } else {
-            code_free($3.c);
+            code_free(v.c);
             $$ = defaultvalue($$, $2);
         }
     } else {
-        if($3.c->prev || $3.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = code_append($$, $3.c);
+        if(v.c->prev || v.c->opcode != OPCODE_PUSHUNDEFINED) {
+            $$ = code_append($$, v.c);
             $$ = abc_coerce_a($$);
         } else {
             // don't do anything
-            code_free($3.c);
+            code_free(v.c);
             code_free($$);
             $$ = 0;
             break;
@@ -2634,17 +2634,24 @@ PASS12
             t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
         }
         info->slot = t->slot_id;
-        
-        /* initalization code (if needed) */
-        code_t*c = 0;
-        if($3.c && !is_pushundefined($3.c)) {
-            c = abc_getlocal_0(c);
-            c = code_append(c, $3.c);
-            c = converttype(c, $3.t, $2);
-            c = abc_setslot(c, t->slot_id);
+       
+        constant_t cval = $3->type->eval($3);
+        if(cval.type!=CONSTANT_UNKNOWN) {
+            /* compile time constant */
+            t->value = malloc(sizeof(constant_t));
+            memcpy(t->value, &cval, sizeof(constant_t));
+        } else {
+            typedcode_t v = node_read($3);
+            /* initalization code (if needed) */
+            code_t*c = 0;
+            if(v.c && !is_pushundefined(v.c)) {
+                c = abc_getlocal_0(c);
+                c = code_append(c, v.c);
+                c = converttype(c, v.t, $2);
+                c = abc_setslot(c, t->slot_id);
+            }
+            *code = code_append(*code, c);
         }
-
-        *code = code_append(*code, c);
 
         if(slotstate_varconst==KW_CONST) {
             t->kind= TRAIT_CONST;
@@ -2823,8 +2830,8 @@ CLASS_SPEC_LIST : CLASS_SPEC {PASS12 $$=list_new();list_append($$, $1);}
 CLASS_SPEC_LIST : CLASS_SPEC_LIST ',' CLASS_SPEC {PASS12 $$=$1;list_append($$,$3);}
 
 TYPE : CLASS_SPEC {PASS12 $$=$1;}
-     | '*'        {PASS12 $$=registry_getanytype();}
-     | "void"     {PASS12 $$=registry_getanytype();}
+     | '*'        {PASS12 $$=TYPE_ANY;}
+     | "void"     {PASS12 $$=TYPE_ANY;}
     /*
      |  "String"  {$$=registry_getstringclass();}
      |  "int"     {$$=registry_getintclass();}
@@ -3240,7 +3247,7 @@ MEMBER : E '.' T_IDENTIFIER {
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
         $$.c = abc_getproperty2($$.c, &m);
         $$.c = abc_coerce_a($$.c);
-        $$.t = registry_getanytype();
+        $$.t = TYPE_ANY;
     }
 }
 

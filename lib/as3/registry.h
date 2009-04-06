@@ -162,8 +162,8 @@ char* infotypename(slotinfo_t*s);
 /* convenience functions */
 #define sig2mname(x) (x->superclass,classinfo_to_multiname((slotinfo_t*)(x)))
 
-#define TYPE_ANY                     registry_getanytype()
-#define TYPE_IS_ANY(t)       ((t) == registry_getanytype())
+#define TYPE_ANY             (0)
+#define TYPE_IS_ANY(t)       ((t) == 0)
 #define TYPE_INT                     registry_getintclass()
 #define TYPE_IS_INT(t)       ((t) == registry_getintclass())
 #define TYPE_UINT                    registry_getuintclass()

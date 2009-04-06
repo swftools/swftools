@@ -800,6 +800,10 @@ int constant_get_index(pool_t*pool, constant_t*c)
         return pool_register_float(pool, c->f);
     } else if(c->type == CONSTANT_STRING) {
         return pool_register_string2(pool, c->s);
+    } else if(c->type == CONSTANT_UNDEFINED) {
+        /* write undefined with index 0 (and no type). Otherwise, the FlashPlayer 
+           seems to throw an "attempt to read out of bounds" exception */
+        return 0;
     } else if(!constant_has_index(c)) {
         return 1;
     } else {
