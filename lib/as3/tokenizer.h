@@ -27,7 +27,7 @@
 #include "registry.h"
 #include "code.h"
 #include "opcodes.h"
-#include "ast.h"
+#include "expr.h"
 
 DECLARE(token);
 DECLARE_LIST(token);

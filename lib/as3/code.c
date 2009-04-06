@@ -371,15 +371,15 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
         if(c) {
             opcode_t*op = opcode_get(c->opcode);
             if(op->flags & (OP_JUMP|OP_BRANCH)) {
-                printf("%5d) %02x %s %d\n", t, tag->data[start+t], op->name, c->data[0]);
+                printf("%50d) %02x %s %d\n", t, tag->data[start+t], op->name, c->data[0]);
             } else {
-                printf("%5d) %02x %s\n", t, tag->data[start+t], op->name);
+                printf("%50d) %02x %s\n", t, tag->data[start+t], op->name);
             }
         } else {
-            printf("%5d) %02x\n", t, tag->data[start+t]);
+            printf("%50d) %02x\n", t, tag->data[start+t]);
         }
     }
-    //printf("%5d) %02x\n", t, tag->data[start+t]);
+    //printf("%05d) %02x\n", t, tag->data[start+t]);
 #endif
 
     code_t*c = head;
@@ -625,7 +625,7 @@ static void dumpstack(currentstats_t*stats)
     for(t=0;t<stats->num;t++) {
         code_t*c = stats->stack[t].code;
         opcode_t*op = opcode_get(c->opcode);
-        printf("%5d) %c %d:%d %s", t, (stats->stack[t].flags&FLAG_SEEN)?'x':'|', 
+        printf("%05d) %c %d:%d %s", t, (stats->stack[t].flags&FLAG_SEEN)?'x':'|', 
                                stats->stack[t].stackpos,
                                stats->stack[t].scopepos,
                                op->name);
@@ -812,17 +812,17 @@ static currentstats_t* code_get_stats(code_t*code, abc_exception_list_t*exceptio
     for(t=0;t<num;t++) {
         opcode_t*op = opcode_get(c->opcode);
         if(op->flags & (OP_JUMP|OP_BRANCH)) {
-            printf("%5d) %s %08x\n", t, op->name, c->branch);
+            printf("%05d) %s %08x\n", t, op->name, c->branch);
         } else if(op->params[0]=='2') {
-            printf("%5d) %s %s\n", t, op->name, multiname_tostring(c->data[0]));
+            printf("%05d) %s %s\n", t, op->name, multiname_tostring(c->data[0]));
         } else if(op->params[0]=='N') {
-            printf("%5d) %s %s\n", t, op->name, namespace_tostring(c->data[0]));
+            printf("%05d) %s %s\n", t, op->name, namespace_tostring(c->data[0]));
         } else {
-            printf("%5d) %s\n", t, op->name);
+            printf("%05d) %s\n", t, op->name);
         }
         c = c->next;
     }
-    //printf("%5d) %02x\n", t, tag->data[start+t]);
+    //printf("%05d) %02x\n", t, tag->data[start+t]);
 #endif
 
     num = 0;
@@ -903,13 +903,13 @@ int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*
 
             if(stats) {
                 int f = stats->stack[c->pos].flags;
-                fprintf(fo, "%s%5d) %c %d:%d %s ", prefix, c->pos, 
+                fprintf(fo, "%s%05d) %c %d:%d %s ", prefix, c->pos, 
                                        (f&FLAG_ERROR)?'E':((f&FLAG_SEEN)?'+':'|'),
                                        stats->stack[c->pos].stackpos,
                                        stats->stack[c->pos].scopepos,
                                        op->name);
             } else {
-                fprintf(fo, "%s%5d) ? ?:? %s ", prefix, c->pos, op->name);
+                fprintf(fo, "%s%05d) ? ?:? %s ", prefix, c->pos, op->name);
             }
 
             while(*p) {

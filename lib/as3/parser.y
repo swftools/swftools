@@ -33,7 +33,7 @@
 #include "code.h"
 #include "opcodes.h"
 #include "compiler.h"
-#include "ast.h"
+#include "expr.h"
 
 extern int a3_lex();
 
@@ -193,7 +193,7 @@ extern int a3_lex();
 %type <value> EXPRESSION NONCOMMAEXPRESSION
 %type <value> MAYBEEXPRESSION
 %type <value> DELETE
-%type <node> E
+%type <node> E COMMA_EXPRESSION
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
 %type <value> INNERFUNCTION
 %type <code> USE_NAMESPACE
@@ -2993,16 +2993,21 @@ RETURN: "return" EXPRESSION {
 
 // ----------------------- expression types -------------------------------------
 
-NONCOMMAEXPRESSION : E        %prec below_minus {$$ = node_read($1);}
-EXPRESSION : E                %prec below_minus {$$ = node_read($1);}
-EXPRESSION : EXPRESSION ',' E %prec below_minus {
-    $$.c = $1.c;
-    $$.c = cut_last_push($$.c);
-    typedcode_t v = node_read($3);
-    $$.c = code_append($$.c,v.c);
-    $$.t = v.t;
+NONCOMMAEXPRESSION : E %prec below_minus {
+    $$ = node_read($1);
 }
-VOIDEXPRESSION : E                    %prec below_minus { $$=node_exec($1); }
+EXPRESSION : COMMA_EXPRESSION {
+    $$ = node_read($1);
+}
+COMMA_EXPRESSION : E %prec below_minus {
+    $$ = mkmultinode(&node_comma, $1);
+}
+COMMA_EXPRESSION : COMMA_EXPRESSION ',' E %prec below_minus {
+    $$ = multinode_extend($1, $3);
+}
+VOIDEXPRESSION : E %prec below_minus { 
+    $$ = node_exec($1); 
+}
 VOIDEXPRESSION : VOIDEXPRESSION ',' E %prec below_minus { 
     $$ = $1;
     $$ = code_append($$, node_exec($3)); 
@@ -3107,7 +3112,7 @@ E : E "is" E {$$ = mknode2(&node_is, $1, $3);}
 E : "typeof" '(' E ')' {$$ = mknode1(&node_typeof, $3);}
 E : "void" E {$$ = mknode1(&node_void, $2);}
 E : "void" { $$ = mkconstnode(constant_new_undefined());}
-E : '(' EXPRESSION ')' { /*allow commas in here, too */ $$=mkcodenode($2);}
+E : '(' COMMA_EXPRESSION ')' { $$=$2;}
 E : '-' E {$$ = mknode1(&node_neg, $2);}
 E : E '[' E ']' {$$ = mknode2(&node_arraylookup, $1,$3);}
 E : E "*=" E {$$ = mknode2(&node_muleq, $1, $3);}

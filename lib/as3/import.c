@@ -176,6 +176,10 @@ static void import_code(void*_abc, char*filename, int pass)
         trait_list_t*l=0;
         char is_static = 0;
         l = cls->traits;
+        if(!l) {
+            l = cls->static_traits;
+            is_static = 1;
+        }
         while(l) {
             trait_t*trait = l->trait;
             U8 access = trait->name->ns->access;

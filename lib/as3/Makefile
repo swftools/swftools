@@ -39,14 +39,14 @@ mklib.o: mklib.c parser.tab.h parser.h
 parser: main.o tokenizer.yy.o ../librfxswf.a ../libbase.a parser.tab.h 
 	gcc $(D) main.o ../librfxswf.a ../libbase.a -o parser -lz
 
-rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o abc.o opcodes.o code.o pool.o scripts.o ast.o common.o
+rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o abc.o opcodes.o code.o pool.o scripts.o expr.o common.o
 mklib: mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o ../libbase.a
 	gcc $(D) mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o ../libbase.a -o mklib -lz -lm -lfreetype -ljpeg
 
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -
 
-../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h ast.c ast.h
+../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h
 	cd ..; make librfxswf.a
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
