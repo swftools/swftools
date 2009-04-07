@@ -43,12 +43,13 @@ DECLARE_LIST(slotinfo);
 #define FLAG_STATIC 2
 #define FLAG_OVERRIDE 8
 #define FLAG_NATIVE 16
+#define FLAG_CONST 32
 
 /* class flags */
 #define FLAG_DYNAMIC 8
 #define FLAG_INTERFACE 16
 
-#define INFOTYPE_SLOT 1
+#define INFOTYPE_VAR 1
 #define INFOTYPE_METHOD 2
 #define INFOTYPE_CLASS 3
 #define INFOTYPE_UNRESOLVED 4
@@ -90,7 +91,7 @@ struct _memberinfo {
     };
     classinfo_t*parent;
 };
-struct _methodinfo {
+struct _methodinfo /*extends memberinfo*/ {
     U8 kind,subtype,flags,access;
     const char*package;
     const char*name;
@@ -99,7 +100,7 @@ struct _methodinfo {
     classinfo_t*parent;
     classinfo_list_t*params;
 };
-struct _varinfo {
+struct _varinfo /*extends memberinfo*/ {
     U8 kind,subtype,flags,access;
     const char*package;
     const char*name;

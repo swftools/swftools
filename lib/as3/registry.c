@@ -97,7 +97,7 @@ static void schedule_for_resolve(slotinfo_t*s)
 }
 static void resolve_on_slot(slotinfo_t*_member)
 {
-    if(_member->kind == INFOTYPE_SLOT) {
+    if(_member->kind == INFOTYPE_VAR) {
         varinfo_t*member = (varinfo_t*)_member;
         member->type = (classinfo_t*)registry_resolve((slotinfo_t*)member->type);
     } else if(_member->kind == INFOTYPE_METHOD) {
@@ -129,7 +129,7 @@ void registry_resolve_all()
         slotinfo_t*_s = unresolved->slotinfo;
         if(_s->kind == INFOTYPE_CLASS) {
             resolve_on_class(_s);
-        } else if(_s->kind == INFOTYPE_METHOD || _s->kind == INFOTYPE_SLOT) {
+        } else if(_s->kind == INFOTYPE_METHOD || _s->kind == INFOTYPE_VAR) {
             resolve_on_slot(_s);
         } else {
             fprintf(stderr, "Internal Error: object %s.%s has bad type\n", _s->package, _s->name);
@@ -170,7 +170,7 @@ methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char
 varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name)
 {
     NEW(varinfo_t,m);
-    m->kind = INFOTYPE_SLOT;
+    m->kind = INFOTYPE_VAR;
     m->access = access;
     m->name = name;
     m->package = ns;
@@ -195,7 +195,7 @@ methodinfo_t* methodinfo_register_global(U8 access, const char*package, const ch
 varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name)
 {
     NEW(varinfo_t, m);
-    m->kind = INFOTYPE_SLOT;
+    m->kind = INFOTYPE_VAR;
     m->flags = FLAG_STATIC;
     m->access = access;
     m->package = package;
@@ -347,7 +347,7 @@ classinfo_t* slotinfo_asclass(slotinfo_t*f) {
     } else if(f->kind == INFOTYPE_CLASS) {
         c->name = "Class";
         c->superclass = registry_getobjectclass();
-    } else if(f->kind == INFOTYPE_SLOT) {
+    } else if(f->kind == INFOTYPE_VAR) {
         c->name = "Object";
     } else {
         c->name = "undefined";
@@ -364,7 +364,7 @@ classinfo_t* slotinfo_gettype(slotinfo_t*f)
     if(f) {
        if(f->kind == INFOTYPE_METHOD) {
            return slotinfo_asclass(f);
-       } else if(f->kind == INFOTYPE_SLOT) {
+       } else if(f->kind == INFOTYPE_VAR) {
            varinfo_t*v = (varinfo_t*)f;
            return v->type;
        } else 
@@ -461,7 +461,7 @@ namespace_t access2namespace(U8 access, char*package)
 char* infotypename(slotinfo_t*s)
 {
     if(s->kind == INFOTYPE_CLASS) return "class";
-    else if(s->kind == INFOTYPE_SLOT) return "member";
+    else if(s->kind == INFOTYPE_VAR) return "member";
     else if(s->kind == INFOTYPE_METHOD) return "method";
     else return "object";
 }

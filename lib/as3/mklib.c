@@ -122,7 +122,7 @@ char*mktype(slotinfo_t*s)
         return "classinfo_t";
     } else if(s->kind == INFOTYPE_METHOD) {
         return "methodinfo_t";
-    } else if(s->kind == INFOTYPE_SLOT) {
+    } else if(s->kind == INFOTYPE_VAR) {
         return "varinfo_t";
     }
 }
@@ -200,7 +200,7 @@ void write_constant(FILE*fi, constant_t*value, char*id, char*prefix)
 
 void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
 {
-    if(s->kind == INFOTYPE_SLOT) {
+    if(s->kind == INFOTYPE_VAR) {
         varinfo_t*v = (varinfo_t*)s;
         if(v->value) {
             write_constant(fi, v->value, id, prefix);
@@ -239,7 +239,7 @@ void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
         fprintf(fi, "0"); // params TODO
         fprintf(fi, "};\n");
     }
-    if(s->kind == INFOTYPE_SLOT) {
+    if(s->kind == INFOTYPE_VAR) {
         varinfo_t*m = (varinfo_t*)s;
         fprintf(fi, "%s, ", mkptr(m->type));
         fprintf(fi, "%s, ", mkptr(m->parent));

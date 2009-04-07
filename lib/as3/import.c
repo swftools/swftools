@@ -199,6 +199,16 @@ static void import_code(void*_abc, char*filename, int pass)
                       trait->kind == TRAIT_GETTER) {
                 s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
                 s->type = resolve_class(filename, "type", trait->type_name);
+#if 0 // some variables are apparently both a static const and a slot
+      // needs split of static/non-static first
+            } else if(trait->kind == TRAIT_CONST) {
+                varinfo_t*v = (varinfo_t*)varinfo_register_onclass(c, access, ns, name);
+                v->type = resolve_class(filename, "type", trait->type_name);
+                v->flags |= FLAG_CONST;
+                /* leave this alone for now- it blows up the file too much 
+                v->value = constant_clone(trait->value);*/
+                s = (memberinfo_t*)v;
+#endif
             } else {
                 goto cont;
             }
@@ -252,6 +262,7 @@ static void import_code(void*_abc, char*filename, int pass)
                 varinfo_t*v = varinfo_register_global(access, package, name);
                 v->type = resolve_class(filename, "type", trait->type_name);
                 v->value = constant_clone(trait->value);
+                v->flags |= trait->kind==TRAIT_CONST?FLAG_CONST:0;
                 m = (memberinfo_t*)v;
             }
             m->flags |= FLAG_BUILTIN;

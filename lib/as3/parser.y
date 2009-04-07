@@ -194,6 +194,7 @@ extern int a3_lex();
 %type <node> MAYBEEXPRESSION
 %type <value> DELETE
 %type <node> E COMMA_EXPRESSION
+%type <node> VAR_READ
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
 %type <value> INNERFUNCTION
 %type <code> USE_NAMESPACE
@@ -217,7 +218,7 @@ extern int a3_lex();
 
 %type <classinfo> TYPE
 //%type <token> VARIABLE
-%type <value> VAR_READ MEMBER
+%type <value> MEMBER
 %type <value> NEW
 //%type <token> T_IDENTIFIER
 %type <value> FUNCTIONCALL
@@ -1258,7 +1259,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
         // not sure wether to look into superclasses here, too
         minfo = (methodinfo_t*)registry_findmember(state->cls->info, ns.name, name, 1);
         if(minfo) {
-            if(minfo->kind!=INFOTYPE_SLOT)
+            if(minfo->kind!=INFOTYPE_VAR)
                 syntaxerror("class already contains a method called '%s'", name);
             if(!(minfo->subtype & (SUBTYPE_GETSET)))
                 syntaxerror("class already contains a field called '%s'", name);
@@ -1279,7 +1280,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
             }*/
         } else {
             minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
-            minfo->kind = INFOTYPE_SLOT; //hack
+            minfo->kind = INFOTYPE_VAR; //hack
             minfo->subtype = gs;
             minfo->return_type = 0;
         }
@@ -2640,6 +2641,7 @@ PASS12
             /* compile time constant */
             t->value = malloc(sizeof(constant_t));
             memcpy(t->value, &cval, sizeof(constant_t));
+            info->value = constant_clone(t->value);
         } else {
             typedcode_t v = node_read($3);
             /* initalization code (if needed) */
@@ -2655,6 +2657,7 @@ PASS12
 
         if(slotstate_varconst==KW_CONST) {
             t->kind= TRAIT_CONST;
+            info->flags |= FLAG_CONST;
         }
     }
 
@@ -2664,7 +2667,12 @@ PASS12
 /* ------------ constants -------------------------------------- */
 
 MAYBECONSTANT: {$$=0;}
-MAYBECONSTANT: '=' CONSTANT {$$=$2;}
+MAYBECONSTANT: '=' E {
+  $$ = malloc(sizeof(constant_t));
+  *$$ = node_eval($2);
+  if($$->type == CONSTANT_UNKNOWN)
+    syntaxerror("can't evaluate default parameter value (needs to be a compile-time constant)");
+}
 
 //CONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
 CONSTANT : T_INT {$$ = constant_new_int($1);}
@@ -3039,11 +3047,11 @@ EXPRPAIR_LIST : EXPRPAIR_LIST ',' NONCOMMAEXPRESSION ':' NONCOMMAEXPRESSION {
 // ----------------------- expression evaluation -------------------------------------
 
 E : INNERFUNCTION %prec prec_none {$$ = mkcodenode($1);}
-E : VAR_READ %prec T_IDENTIFIER   {$$ = mkcodenode($1);}
 E : MEMBER %prec '.'              {$$ = mkcodenode($1);}
 E : NEW                           {$$ = mkcodenode($1);}
 E : DELETE                        {$$ = mkcodenode($1);}
 E : FUNCTIONCALL                  {$$ = mkcodenode($1);}
+E : VAR_READ %prec T_IDENTIFIER   {$$ = $1;}
 
 E : CONSTANT { 
     $$ = mkconstnode($1);
@@ -3269,8 +3277,11 @@ VAR_READ : T_IDENTIFIER {
     as3_schedule_class_noerror(state->package, $1);
     PASS2
 
-    $$.t = 0;
-    $$.c = 0;
+    typedcode_t o;
+    o.t = 0;
+    o.c = 0;
+    $$ = 0;
+
     slotinfo_t*a = 0;
     memberinfo_t*f = 0;
 
@@ -3278,14 +3289,16 @@ VAR_READ : T_IDENTIFIER {
     /* look at variables */
     if((v = find_variable(state, $1))) {
         // $1 is a local variable
-        $$.c = abc_getlocal($$.c, v->index);
-        $$.t = v->type;
+        o.c = abc_getlocal(o.c, v->index);
+        o.t = v->type;
+        $$ = mkcodenode(o);
         break;
     }
     if((v = find_slot(state, $1))) {
-        $$.c = abc_getscopeobject($$.c, 1);
-        $$.c = abc_getslot($$.c, v->index);
-        $$.t = v->type;
+        o.c = abc_getscopeobject(o.c, 1);
+        o.c = abc_getslot(o.c, v->index);
+        o.t = v->type;
+        $$ = mkcodenode(o);
         break;
     }
 
@@ -3294,53 +3307,70 @@ VAR_READ : T_IDENTIFIER {
     /* look at current class' members */
     if(!state->method->inner && 
         state->cls && 
-        (f = findmember_nsset(state->cls->info, $1, 1)) &&
-        (f->flags&FLAG_STATIC) >= i_am_static) 
+        (f = findmember_nsset(state->cls->info, $1, 1)))
     {
-        // $1 is a function in this class
+        // $1 is a member or attribute in this class
         int var_is_static = (f->flags&FLAG_STATIC);
 
-        if(f->kind == INFOTYPE_METHOD) {
-            $$.t = TYPE_FUNCTION(f);
-        } else {
-            $$.t = f->type;
-        }
-        if(var_is_static && !i_am_static) {
-        /* access to a static member from a non-static location.
-           do this via findpropstrict:
-           there doesn't seem to be any non-lookup way to access
-           static properties of a class */
-            state->method->late_binding = 1;
-            $$.t = f->type;
-            namespace_t ns = {f->access, f->package};
-            multiname_t m = {QNAME, &ns, 0, $1};
-            $$.c = abc_findpropstrict2($$.c, &m);
-            $$.c = abc_getproperty2($$.c, &m);
-            break;
-        } else if(f->slot>0) {
-            $$.c = abc_getlocal_0($$.c);
-            $$.c = abc_getslot($$.c, f->slot);
-            break;
-        } else {
-            namespace_t ns = {f->access, f->package};
-            multiname_t m = {QNAME, &ns, 0, $1};
-            $$.c = abc_getlocal_0($$.c);
-            $$.c = abc_getproperty2($$.c, &m);
-            break;
+        if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
+            /* if the variable is a constant (and we know what is evaluates to), we
+               can just use the value itself */
+            varinfo_t*v = (varinfo_t*)f;
+            if(v->value) {
+                $$ = mkconstnode(v->value);
+                break;
+            }
+        } 
+       
+        if(var_is_static >= i_am_static) {
+            if(f->kind == INFOTYPE_METHOD) {
+                o.t = TYPE_FUNCTION(f);
+            } else {
+                o.t = f->type;
+            }
+
+            if(var_is_static && !i_am_static) {
+            /* access to a static member from a non-static location.
+               do this via findpropstrict:
+               there doesn't seem to be any non-lookup way to access
+               static properties of a class */
+                state->method->late_binding = 1;
+                o.t = f->type;
+                namespace_t ns = {f->access, f->package};
+                multiname_t m = {QNAME, &ns, 0, $1};
+                o.c = abc_findpropstrict2(o.c, &m);
+                o.c = abc_getproperty2(o.c, &m);
+                $$ = mkcodenode(o);
+                break;
+            } else if(f->slot>0) {
+                o.c = abc_getlocal_0(o.c);
+                o.c = abc_getslot(o.c, f->slot);
+                $$ = mkcodenode(o);
+                break;
+            } else {
+                namespace_t ns = {f->access, f->package};
+                multiname_t m = {QNAME, &ns, 0, $1};
+                o.c = abc_getlocal_0(o.c);
+                o.c = abc_getproperty2(o.c, &m);
+                $$ = mkcodenode(o);
+                break;
+            }
         }
     } 
     
     /* look at actual classes, in the current package and imported */
     if((a = find_class($1))) {
-        $$ = push_class(a);
+        o = push_class(a);
+        $$ = mkcodenode(o);
         break;
     }
 
     /* look through package prefixes */
     if(dict_contains(state->import_toplevel_packages, $1) || 
        registry_ispackage($1)) {
-        $$.c = abc___pushpackage__($$.c, $1);
-        $$.t = 0;
+        o.c = abc___pushpackage__(o.c, $1);
+        o.t = 0;
+        $$ = mkcodenode(o); //?
         break;
     }
 
@@ -3352,9 +3382,11 @@ VAR_READ : T_IDENTIFIER {
                 
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
 
-        $$.t = 0;
-        $$.c = abc_findpropstrict2($$.c, &m);
-        $$.c = abc_getproperty2($$.c, &m);
+        o.t = 0;
+        o.c = abc_findpropstrict2(o.c, &m);
+        o.c = abc_getproperty2(o.c, &m);
+        $$ = mkcodenode(o);
+        break;
     }
 }
 
@@ -3416,7 +3448,7 @@ USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
             syntaxerror("Couldn't resolve namespace %s", $3->name);
     }
 
-    if(!s || s->kind != INFOTYPE_SLOT)
+    if(!s || s->kind != INFOTYPE_VAR)
         syntaxerror("%s.%s is not a public namespace (%d)", $3->package, $3->name, s?s->kind:-1);
     if(!s->value || !NS_TYPE(s->value->type))
         syntaxerror("%s.%s is not a namespace", $3->package, $3->name);

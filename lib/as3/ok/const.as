@@ -9,7 +9,7 @@ package {
         static const ok4:String = "ok 4/6";
         
         const ok5:String = "ok 5/6";
-        static const ok6:String = "ok 6/6";
+        static const ok6:String = "ok "+"6/6";
 
         function Main() {
             trace(ok1);
