@@ -17,7 +17,7 @@ package {
         /* test access to other classes static fields during our init code */
         static var os;
         os = Capabilities.os;
-
+    
         function Main() {
             trace(Main.message);
             trace("[exit]");

@@ -471,72 +471,105 @@ static int opcode_write(TAG*tag, code_t*c, pool_t*pool, abc_file_t*file, int len
     while(*p) {
         void*data = c->data[pos++];
         assert(pos<=2);
-        if(*p == 'n') { // number
-            len += swf_SetU30(tag, (ptroff_t)data);
-        } else if(*p == '2') { //multiname
-            multiname_t*m = (multiname_t*)data;
-            len += swf_SetU30(tag, pool_register_multiname(pool, m));
-        } else if(*p == 'N') { //namespace
-            namespace_t*ns = (namespace_t*)data;
-            len += swf_SetU30(tag, pool_register_namespace(pool, ns));
-        } else if(*p == 'm') { //method
-            abc_method_t*m = (abc_method_t*)data;
-            len += swf_SetU30(tag, m->index);
-        } else if(*p == 'c') { //classinfo 
-            abc_class_t*cls = (abc_class_t*)data;
-            len += swf_SetU30(tag, cls->index);
-        } else if(*p == 'i') { //methodbody
-            abc_method_body_t*m = (abc_method_body_t*)data;
-            len += swf_SetU30(tag, m->index);
-        } else if(*p == 'I') { // int
-            len += swf_SetU30(tag, pool_register_int(pool, (ptroff_t)data));
-        } else if(*p == 'U') { // uint
-            len += swf_SetU30(tag, pool_register_uint(pool, (ptroff_t)data));
-        } else if(*p == 'f') { //  float
-            len += swf_SetU30(tag, pool_register_float(pool, *(double*)data));
-        } else if(*p == 'u') { // integer
-            len += swf_SetU30(tag, (ptroff_t)data);
-        } else if(*p == 'r') { // integer
-            len += swf_SetU30(tag, (ptroff_t)data);
-        } else if(*p == 'b') { // byte
-            if(tag)
-                swf_SetU8(tag, (ptroff_t)data);
-            len++;
-        } else if(*p == 'j') { // jump
-            int skip = length-c->pos-4;
-            if(c->branch) 
-                skip = (c->branch->pos) - c->pos - 4;
-            len += swf_SetS24(tag, skip);
-        } else if(*p == 's') { // string
-            int index = pool_register_string2(pool, (string_t*)data);
-            len += swf_SetU30(tag, index);
-        } else if(*p == 'D') { // debug statement
-            if(tag)
-                swf_SetU8(tag, 1);
-            len++;
-            len+=swf_SetU30(tag, pool_register_string(pool,c->data[0]));
-            if(tag)
-                swf_SetU8(tag, (ptroff_t)c->data[1]);
-            len++;
-            len+=swf_SetU30(tag, 0);
-        } else if(*p == 'S') { // switch statement
-            lookupswitch_t*l = (lookupswitch_t*)data;
-            int offset = 0;
-            len+=swf_SetS24(tag, l->def->pos-c->pos+offset); //default
-            code_list_t*t = l->targets;
-            if(list_length(t)) {
-                len+=swf_SetU30(tag, list_length(t)-1); //nr-1
-                code_list_t*t = l->targets;
-                while(t) {
-                    len+=swf_SetS24(tag, t->code->pos - c->pos+offset);
-                    t = t->next;
-                }
-            } else {
-                len+=swf_SetU30(tag, 0); //nr-1
-                len+=swf_SetS24(tag, l->def->pos-c->pos+offset);
+        switch(*p) {
+            case 'n': { // number
+                len += swf_SetU30(tag, (ptroff_t)data);
+                break;
             }
-        } else {
-            printf("Can't parse opcode param type \"%c\"\n", *p);
+            case '2': { //multiname
+                multiname_t*m = (multiname_t*)data;
+                len += swf_SetU30(tag, pool_register_multiname(pool, m));
+                break;
+            }
+            case 'N': { //namespace
+                namespace_t*ns = (namespace_t*)data;
+                len += swf_SetU30(tag, pool_register_namespace(pool, ns));
+                break;
+            }
+            case 'm': { //method
+                abc_method_t*m = (abc_method_t*)data;
+                len += swf_SetU30(tag, m->index);
+                break;
+            }
+            case 'c': { //classinfo 
+                abc_class_t*cls = (abc_class_t*)data;
+                len += swf_SetU30(tag, cls->index);
+                break;
+            }
+            case 'i': { //methodbody
+                abc_method_body_t*m = (abc_method_body_t*)data;
+                len += swf_SetU30(tag, m->index);
+                break;
+            }
+            case 'I': { // int
+                len += swf_SetU30(tag, pool_register_int(pool, (ptroff_t)data));
+                break;
+            }
+            case 'U': { // uint
+                len += swf_SetU30(tag, pool_register_uint(pool, (ptroff_t)data));
+                break;
+            }
+            case 'f': { //  float
+                len += swf_SetU30(tag, pool_register_float(pool, *(double*)data));
+                break;
+            }
+            case 'u': { // integer
+                len += swf_SetU30(tag, (ptroff_t)data);
+                break;
+            }
+            case 'r': { // integer
+                len += swf_SetU30(tag, (ptroff_t)data);
+                break;
+            }
+            case 'b': { // byte
+                if(tag)
+                    swf_SetU8(tag, (ptroff_t)data);
+                len++;
+                break;
+            }
+            case 'j': { // jump
+                int skip = length-c->pos-4;
+                if(c->branch) 
+                    skip = (c->branch->pos) - c->pos - 4;
+                len += swf_SetS24(tag, skip);
+                break;
+            }
+            case 's': { // string
+                int index = pool_register_string2(pool, (string_t*)data);
+                len += swf_SetU30(tag, index);
+                break;
+            }
+            case 'D': { // debug statement
+                if(tag)
+                    swf_SetU8(tag, 1);
+                len++;
+                len+=swf_SetU30(tag, pool_register_string(pool,c->data[0]));
+                if(tag)
+                    swf_SetU8(tag, (ptroff_t)c->data[1]);
+                len++;
+                len+=swf_SetU30(tag, 0);
+                break;
+            }
+            case 'S': { // switch statement
+                lookupswitch_t*l = (lookupswitch_t*)data;
+                int offset = 0;
+                len+=swf_SetS24(tag, l->def->pos-c->pos+offset); //default
+                code_list_t*t = l->targets;
+                if(list_length(t)) {
+                    len+=swf_SetU30(tag, list_length(t)-1); //nr-1
+                    code_list_t*t = l->targets;
+                    while(t) {
+                        len+=swf_SetS24(tag, t->code->pos - c->pos+offset);
+                        t = t->next;
+                    }
+                } else {
+                    len+=swf_SetU30(tag, 0); //nr-1
+                    len+=swf_SetS24(tag, l->def->pos-c->pos+offset);
+                }
+                break;
+            }
+            default:
+                printf("Can't parse opcode param type \"%c\"\n", *p);
         }
         p++;
     }

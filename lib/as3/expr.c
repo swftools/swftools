@@ -337,6 +337,7 @@ constant_t node_plus_eval(node_t*n)
         r.s = malloc(sizeof(string_t));
         r.s->str = s;
         r.s->len = l1+l2;
+        free(add);
     } else {
         r.type = CONSTANT_UNKNOWN;
     }
@@ -1464,7 +1465,11 @@ typedcode_t node_as_read(node_t*n)
     READ_HEADER_LEFTRIGHT;
     c = code_append(left.c, right.c);
     c = abc_astypelate(c);
-    t = TYPE_ANY;
+    if(TYPE_IS_CLASS(right.t) && right.t->data) {
+        t = (classinfo_t*)right.t->data;
+    } else {
+        t = TYPE_ANY;
+    }
     RET;
 }
 code_t* node_as_exec(node_t*n)
@@ -2563,7 +2568,12 @@ typedcode_t node_const_read(node_t*n)
         case CONSTANT_NAMESPACE_PRIVATE:
             c = abc_pushnamespace(0, v->ns);
         break;
-        default: syntaxerror("invalid constant");
+        case CONSTANT_UNKNOWN:
+            syntaxerror("internal error: invalid constant");
+        default: 
+            *(int*)0=0;
+            syntaxerror("invalid constant (%d)", v->type);
+
     }
     RET;
 }
@@ -2597,9 +2607,9 @@ typedcode_t node_code_write(node_t*n)
 }
 typedcode_t node_code_read(node_t*n)
 {
-    /* TODO: this dup might be unnecessary- n->code.c is only read out once */
     typedcode_t t;
-    t.c = code_dup(n->code.c);
+    t.c = n->code.c;
+    n->code.c=0;
     t.t = n->code.t;
     return t;
 }
@@ -2744,13 +2754,13 @@ node_t* mknode3(nodetype_t*t, node_t*one, node_t*two, node_t*three)
 void node_free(node_t*n)
 {
     int t;
-    if(n->type == &node_const) {
-        constant_free(n->value);n->value = 0;
-    }
-    else if(n->type == &node_code) {
-        code_free(n->code.c);n->code.c = 0;
-    }
-    else for(t=0;t<n->num_children;t++) {
+    if(n->type == &node_code) {
+        if(n->code.c) {
+            code_free(n->code.c);n->code.c = 0;
+        }
+    } else if(n->type == &node_const) {
+        /* keep, this is not our reference */
+    } else for(t=0;t<n->num_children;t++) {
         node_free(n->child[t]);n->child[t] = 0;
     }
     free(n);
@@ -2812,7 +2822,7 @@ void node_dump2(node_t*n, const char*p1, const char*p2, FILE*fi)
         fprintf(fi, "%s%s (%s)\n", p1, n->type->name, s);
         free(s);
     } else if(n->type == &node_code) {
-        fprintf(fi, "%s%s\n", p1, n->type->name);
+        fprintf(fi, "%s%s (%s)\n", p1, n->type->name, n->code.t?n->code.t->name:"*");
         code_dump2(n->code.c, 0, 0, (char*)p2, fi);
     } else {
         fprintf(fi, "%s%s\n", p1, n->type->name);

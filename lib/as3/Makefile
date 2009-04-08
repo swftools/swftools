@@ -1,28 +1,10 @@
-all: parser swfdump mklib tests
+all: parser swfdump mklib
 tests: testwrite testrewrite testpaths testreadwrite 
 
 D=-g -pg
 
-#compiled by ../Makefile (into librfxswf.a)
-#
-#abc.o: abc.c abc.h ../q.h pool.h
-#	gcc $(D) -c abc.c -o abc.o
-#
-#pool.o: pool.c pool.h
-#	gcc $(D) -c pool.c -o pool.o
-#
-#files.o: files.h files.c
-#	gcc $(D) -c files.c -o files.o
-#
-#registry.o: registry.h registry.c
-#	gcc $(D) -c registry.c -o registry.o
-#
-#tokenizer.yy.o: tokenizer.yy.c tokenizer.h parser.tab.h
-#	gcc $(D) -c tokenizer.yy.c -o tokenizer.yy.o
-#
-#parser.tab.o: parser.tab.c parser.tab.h parser.h
-#	gcc $(D) -c parser.tab.c -o parser.tab.o
-
+MODULES = abc.o opcodes.o code.o pool.o scripts.o expr.o common.o initcode.o
+SOURCES = abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h common.c common.h initcode.c initcode.h
 
 tokenizer.yy.c: tokenizer.lex tokenizer.h
 	flex -Pas3_ -8 -B -otokenizer.yy.c tokenizer.lex
@@ -39,20 +21,20 @@ mklib.o: mklib.c parser.tab.h parser.h
 parser: main.o tokenizer.yy.o ../librfxswf.a ../libbase.a parser.tab.h 
 	gcc $(D) main.o ../librfxswf.a ../libbase.a -o parser -lz
 
-rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o abc.o opcodes.o code.o pool.o scripts.o expr.o common.o
+rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o $(MODULES)
 mklib: mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o ../libbase.a
 	gcc $(D) mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o ../libbase.a -o mklib -lz -lm -lfreetype -ljpeg
 
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -
 
-../librfxswf.a: ../rfxswf.h ../rfxswf.c abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h
+../librfxswf.a: ../rfxswf.h ../rfxswf.c $(SOURCES)
 	cd ..; make librfxswf.a
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
 	cd ..; make libbase.a
 
-swfdump: ../librfxswf.a ../../src/swfdump.c ../libbase.a abc.c abc.h pool.c pool.h code.c opcodes.c ../q.c ../q.h
+swfdump: ../librfxswf.a ../../src/swfdump.c ../libbase.a $(SOURCES) ../q.c ../q.h
 	gcc -g ../../src/swfdump.c ../librfxswf.a ../libbase.a -ljpeg -lz -lfreetype -o swfdump
 
 pdf2swf: ../librfxswf.a ../../src/pdf2swf.c ../libpdf.a ../libbase.a

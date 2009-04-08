@@ -264,6 +264,9 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*nam
         s = s->superclass;
 
     while(s) {
+        if(s->kind == INFOTYPE_UNRESOLVED)
+            break;
+
         m = (slotinfo_t*)dict_lookup(&s->members, &tmp);
         if(m) {
             return (memberinfo_t*)m;
@@ -299,7 +302,8 @@ memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, co
     m = registry_findmember(cls, "", name, superclasses);
     if(m) return m;
     /* TODO: it maybe would be faster to just store the builtin namespace as "" in
-             builtins.c */
+             builtins.c (update: some members (e.g. XML.length) are present both for
+            "" and "http:...builtin") */
     m = registry_findmember(cls, "http://adobe.com/AS3/2006/builtin", name, superclasses);
     if(m) return m;
     return 0;
@@ -461,8 +465,34 @@ namespace_t access2namespace(U8 access, char*package)
 char* infotypename(slotinfo_t*s)
 {
     if(s->kind == INFOTYPE_CLASS) return "class";
-    else if(s->kind == INFOTYPE_VAR) return "member";
-    else if(s->kind == INFOTYPE_METHOD) return "method";
+    else if(s->kind == INFOTYPE_VAR) return "var";
+    else if(s->kind == INFOTYPE_METHOD) return "function";
     else return "object";
+}
+
+void slotinfo_dump(slotinfo_t*s)
+{
+    if(s->package[0]) {
+        printf("%s %s.%s", infotypename(s), s->package, s->name);
+    } else {
+        printf("%s %s", infotypename(s), s->name);
+    }
+    if(s->kind == INFOTYPE_CLASS) {
+        classinfo_t*c = (classinfo_t*)s;
+    }
+    else if(s->kind == INFOTYPE_VAR) {
+        varinfo_t*v = (varinfo_t*)s;
+        printf(":%s", v->type?v->type->name:"*");
+        if(v->value)
+            printf("=%s", constant_tostring(v->value));
+        if(v->slot)
+            printf(" (slot:%d)", v->slot);
+    }
+    else if(s->kind == INFOTYPE_METHOD) {
+        methodinfo_t*m = (methodinfo_t*)s;
+    }
+    else {
+    }
+    printf("\n");
 }
 

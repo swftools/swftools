@@ -131,6 +131,12 @@ memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*nam
 memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, const char*name, char superclasses);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c);
+#define MULTINAME(m,x) \
+    multiname_t m;\
+    namespace_t m##_ns;\
+    (x)->package; \
+    registry_fill_multiname(&m, &m##_ns, (slotinfo_t*)(x));
+                    
 multiname_t* classinfo_to_multiname(slotinfo_t*cls);
 
 char registry_isfunctionclass();
@@ -159,6 +165,7 @@ classinfo_t* registry_getclassclass(classinfo_t*a);
 classinfo_t* registry_getnamespaceclass();
 
 char* infotypename(slotinfo_t*s);
+void slotinfo_dump(slotinfo_t*s);
 
 /* convenience functions */
 #define sig2mname(x) (x->superclass,classinfo_to_multiname((slotinfo_t*)(x)))

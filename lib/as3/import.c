@@ -143,7 +143,7 @@ static void import_code(void*_abc, char*filename, int pass)
 
             const char*package = strdup(cls->classname->ns->name);
             const char*name = strdup(cls->classname->name);
-                    
+
             multiname_list_t*i=cls->interfaces;
             classinfo_t*c = classinfo_register(access, package, name, list_length(i));
             c->flags|=FLAG_BUILTIN;
@@ -180,9 +180,11 @@ static void import_code(void*_abc, char*filename, int pass)
             l = cls->static_traits;
             is_static = 1;
         }
+        dict_t*names = dict_new();
         while(l) {
             trait_t*trait = l->trait;
             U8 access = trait->name->ns->access;
+
             if(access==ACCESS_PRIVATE)
                 goto cont;
             const char*name = trait->name->name;
@@ -195,20 +197,29 @@ static void import_code(void*_abc, char*filename, int pass)
             if(trait->kind == TRAIT_METHOD) {
                 s = (memberinfo_t*)methodinfo_register_onclass(c, access, ns, name);
                 s->return_type = resolve_class(filename, "return type", trait->method->return_type);
-            } else if(trait->kind == TRAIT_SLOT ||
-                      trait->kind == TRAIT_GETTER) {
+                dict_put(names, name, 0);
+            } else if(trait->kind == TRAIT_SLOT) {
                 s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
                 s->type = resolve_class(filename, "type", trait->type_name);
-#if 0 // some variables are apparently both a static const and a slot
-      // needs split of static/non-static first
+                dict_put(names, name, 0);
+            } else if(trait->kind == TRAIT_GETTER) {
+                s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
+                s->type = resolve_class(filename, "type", trait->method->return_type);
+                dict_put(names, name, 0);
             } else if(trait->kind == TRAIT_CONST) {
-                varinfo_t*v = (varinfo_t*)varinfo_register_onclass(c, access, ns, name);
-                v->type = resolve_class(filename, "type", trait->type_name);
-                v->flags |= FLAG_CONST;
-                /* leave this alone for now- it blows up the file too much 
-                v->value = constant_clone(trait->value);*/
-                s = (memberinfo_t*)v;
-#endif
+                /* some variables (e.g. XML.length) are apparently both a method and a slot.
+                   needs split of static/non-static first */
+                if(!dict_contains(names, name)) {
+                    varinfo_t*v = (varinfo_t*)varinfo_register_onclass(c, access, ns, name);
+                    v->type = resolve_class(filename, "type", trait->type_name);
+                    v->flags |= FLAG_CONST;
+                    /* leave this alone for now- it blows up the file too much 
+                    v->value = constant_clone(trait->value);*/
+                    s = (memberinfo_t*)v;
+                    dict_put(names, name, 0);
+                } else 
+                    goto cont;
+
             } else {
                 goto cont;
             }
@@ -224,6 +235,7 @@ static void import_code(void*_abc, char*filename, int pass)
                 is_static = 1;
             }
         }
+        dict_destroy(names);
     }
 
 #   define IS_PUBLIC_MEMBER(trait) ((trait)->kind != TRAIT_CLASS && (trait)->name->ns->access != ACCESS_PRIVATE)

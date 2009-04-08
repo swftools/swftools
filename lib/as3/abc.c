@@ -950,10 +950,10 @@ static pool_t*writeABC(TAG*abctag, void*code, pool_t*pool)
                 // don't bother to set m->index
                 body->method = m; m->body = body;
 		if(c->superclass && c->superclass->name && strcmp(c->superclass->name,"Object")) {
-		    __ getlocal_0(body);
-		    __ constructsuper(body, 0);
+		    body->code = abc_getlocal_0(body->code);
+		    body->code = abc_constructsuper(body->code, 0);
 		}
-                __ returnvoid(body);
+                body->code = abc_returnvoid(body->code);
                 c->constructor = m;
             } else {
                 NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
@@ -964,7 +964,7 @@ static pool_t*writeABC(TAG*abctag, void*code, pool_t*pool)
             NEW(abc_method_t,m);array_append(file->methods, NO_KEY, m);
             NEW(abc_method_body_t,body);array_append(file->method_bodies, NO_KEY, body);
             body->method = m; m->body = body;
-            __ returnvoid(body);
+            body->code = abc_returnvoid(0);
             c->static_constructor = m;
         }
     }
