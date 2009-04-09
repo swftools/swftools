@@ -86,6 +86,11 @@ extern unsigned int as3_tokencount;
 void as3_buffer_input(void*buffer, int len);
 void as3_file_input(FILE*fi);
 
+void tokenizer_begin_xml();
+void tokenizer_begin_xmltext();
+void tokenizer_end_xmltext();
+void tokenizer_end_xml();
+
 #define T_EOF 0
 
 extern int avm2_lex();

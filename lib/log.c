@@ -205,7 +205,7 @@ void msg(const char* format, ...)
 		return;
     }
 
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
 	va_end(arglist);
     strcat(buf, "\n");
     log_str(buf);

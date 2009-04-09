@@ -7,12 +7,7 @@ package {
 	
 	dynamic public class OverrideProxy extends Proxy {
             flash_proxy override function callProperty($name:*, ...$args:Array):* {
-                    var returnValue:* = _tweens[$name].apply(null, $args);
-                    realign();
-                    if (!isNaN(_pauseTime)) {
-                            pause(); //in case any tweens were added that weren't paused!
-                    }
-                    return returnValue;
+                    return none;
             }
         }
 	dynamic public class Main extends flash.display.MovieClip {

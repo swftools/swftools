@@ -29,7 +29,7 @@ void syntaxerror(char*format, ...)
     char buf[1024];
     va_list arglist;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     fprintf(stderr, "\"%s\", line %d column %d: error- %s\n", filename, line, column, buf);
     if (cleanUp)
@@ -42,7 +42,7 @@ void warning(char*format, ...)
     char buf[1024];
     va_list arglist;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     fprintf(stderr, "\"%s\", line %d column %d: warning- %s\n", filename, line, column, buf);
 }

@@ -15,7 +15,7 @@ void as3_error(const char*format, ...)
     if(as3_verbosity<0)
         exit(1);
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename, current_line, current_column, buf);
     fflush(stderr);
@@ -29,7 +29,7 @@ void as3_warning(const char*format, ...)
     if(as3_verbosity<1)
         return;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     fprintf(stdout, "%s:%d:%d: warning: %s\n", current_filename, current_line, current_column, buf);
     fflush(stdout);
@@ -42,7 +42,7 @@ void as3_softwarning(const char*format, ...)
     if(as3_verbosity<2)
 	return;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename, current_line, current_column, buf);
     fflush(stderr);

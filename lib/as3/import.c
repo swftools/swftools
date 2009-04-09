@@ -103,7 +103,9 @@ static int compare_traits(const void*v1, const void*v2)
 static classinfo_t*resolve_class(char*filename, char*what, multiname_t*n)
 {
     if(!n) return 0;
-    if(!n->name[0] || !strcmp(n->name, "void")) return 0;
+    if(!n->name[0]) return 0;
+    if(!strcmp(n->name, "void")) 
+        return &voidclass;
 
     classinfo_t*c = 0;
     if(n->ns && n->ns->name) {

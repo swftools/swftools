@@ -136,14 +136,15 @@
      prec_none = 352,
      below_semicolon = 353,
      below_assignment = 354,
-     below_minus = 355,
-     minusminus_prefix = 356,
-     plusplus_prefix = 357,
-     below_curly = 358,
-     new2 = 359,
-     above_identifier = 360,
-     below_else = 361,
-     above_function = 362
+     below_lt = 355,
+     below_minus = 356,
+     minusminus_prefix = 357,
+     plusplus_prefix = 358,
+     below_curly = 359,
+     new2 = 360,
+     above_identifier = 361,
+     below_else = 362,
+     above_function = 363
    };
 #endif
 
@@ -192,7 +193,7 @@ tokenunion
 
 
 /* Line 1685 of skeleton.m4  */
-#line 196 "parser.tab.h"
+#line 197 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

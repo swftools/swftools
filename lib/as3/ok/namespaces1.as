@@ -12,7 +12,7 @@ package my.namespaces {
             trace("error");
         }
         ns2 static function test() {
-            trace("ok 2/4");
+            trace("ok 2/6");
             use namespace my.namespaces.ns2;
             (new Test()).test2()
         }
@@ -21,12 +21,15 @@ package my.namespaces {
         }
 
         ns1 function test2() {trace("error");}
-        ns2 function test2() {trace("ok 3/4");}
+        ns2 function test2() {trace("ok 3/6");}
         ns3 function test2() {trace("error");}
 
         ns4 static function test3() {
-            trace("ok 4/4");
+            trace("ok 4/6");
         }
+
+        ns1 function test4() {trace("ok 5/6");}
+        ns2 function test4() {trace("ok 6/6");}
     }
 }
     
@@ -40,7 +43,7 @@ package {
     
     public namespace ns4clone = "bla bla";
     use namespace ns4clone;
-
+    
     public class Main extends flash.display.MovieClip {
 
         use namespace my.namespaces.ns2;
@@ -59,11 +62,17 @@ package {
             } catch(e:Error) {
                 // Proxy is similar to an interface, and will throw some kind
                 // of "class not implemented" exception
-                trace("ok 1/4");
+                trace("ok 1/6");
             }
             my.namespaces.Test.test()
-
             my.namespaces.Test.test3()
+
+            use namespace my.namespaces.ns1;
+            use namespace my.namespaces.ns2;
+            var test:Test = new Test();
+            test.ns1::test4();
+            test.ns2::test4();
+
             trace("[exit]");
         }
     }

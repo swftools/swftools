@@ -176,7 +176,7 @@ extern int a3_lex();
 
 %type <number_int> CONDITIONAL_COMPILATION
 %type <for_start> FOR_START
-%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER
+%type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER ID_OR_NS SUBNODE
 %type <namespace_decl>  NAMESPACE_ID
 %type <token> VARCONST
 %type <code> CODE
@@ -213,10 +213,9 @@ extern int a3_lex();
 %type <classinfo_list> IMPLEMENTS_LIST
 %type <classinfo> EXTENDS CLASS_SPEC
 %type <classinfo_list> EXTENDS_LIST
-
 %type <classinfo> CLASS PACKAGEANDCLASS
 %type <classinfo_list> CLASS_SPEC_LIST
-
+%type <id> XML XML2 XMLNODE XMLATTRIBUTE XMLATTRIBUTES MAYBE_XMLATTRIBUTES XMLTEXT
 %type <classinfo> TYPE
 //%type <token> VARIABLE
 %type <value> MEMBER
@@ -244,6 +243,7 @@ extern int a3_lex();
 %nonassoc '&'
 %nonassoc "==" "!=" "===" "!=="
 %nonassoc "is" "as" "in"
+%left below_lt
 %nonassoc "<=" '<' ">=" '>' "instanceof" // TODO: support "a < b < c" syntax?
 %left "<<" ">>" ">>>" 
 %left below_minus
@@ -559,7 +559,6 @@ void initialize_file(char*filename)
         if(!state->method)
             syntaxerror("internal error: skewed tokencount");
         function_initvars(state->method, 0, 0, 1);
-        global->classinit = abc_initscript(global->file);
         global->init = abc_initscript(global->file);
     }
 }
@@ -572,10 +571,9 @@ void finish_file()
     
     if(as3_pass==2) {
         dict_del(global->file2token2info, current_filename);
-
         code_t*header = method_header(state->method);
         code_t*c = wrap_function(header, 0, global->init->method->body->code);
-        global->init->method->body->code = c;
+        global->init->method->body->code = abc_returnvoid(c);
         free(state->method);state->method=0;
     }
 
@@ -590,6 +588,7 @@ void initialize_parser()
     global->file->flags &= ~ABCFILE_LAZY;
     global->file2token2info = dict_new();
     global->token2info = 0;
+    global->classinit = abc_initscript(global->file);
 }
 
 void* finish_parser()
@@ -1055,9 +1054,13 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
         /* generate the abc code for this class */
         MULTINAME(classname2,state->cls->info);
         multiname_t*extends2 = sig2mname(extends);
-        state->cls->abc = abc_class_new(global->file, &classname2, extends2);
-        multiname_destroy(extends2);
 
+        /* don't add the class to the class index just yet- that will be done later
+           by initscript */
+        state->cls->abc = abc_class_new(0, &classname2, extends2);
+        state->cls->abc->file = global->file;
+
+        multiname_destroy(extends2);
         if(state->cls->info->flags&FLAG_FINAL) abc_class_final(state->cls->abc);
         if(!(state->cls->info->flags&FLAG_DYNAMIC)) abc_class_sealed(state->cls->abc);
         if(state->cls->info->flags&FLAG_INTERFACE) {
@@ -1245,7 +1248,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
             minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
             minfo->kind = INFOTYPE_VAR; //hack
             minfo->subtype = gs;
-            minfo->return_type = return_type;
+            minfo->return_type = type;
         }
 
         /* can't assign a slot as getter and setter might have different slots */
@@ -1427,8 +1430,13 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         } else if(state->method->is_constructor) {
             f = abc_class_getconstructor(state->cls->abc, type2);
         } else if(!state->method->is_global) {
-            namespace_t mname_ns = modifiers2access(mod);
-            multiname_t mname = {QNAME, &mname_ns, 0, name};
+            namespace_t ns = modifiers2access(mod);
+          
+            /* deal with protected */
+            if(ns.access == ACCESS_PROTECTED && state->cls)
+                ns.name = state->cls->info->name;
+
+            multiname_t mname = {QNAME, &ns, 0, name};
 
             if(mod->flags&FLAG_STATIC)
                 f = abc_class_staticmethod(state->cls->abc, type2, &mname);
@@ -2540,6 +2548,40 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
             parserassert(state->method);
         }
     }
+    static trait_t* add_abc_slot(modifiers_t* modifiers, const char*name, multiname_t*m, code_t***c)
+    {
+        int flags = modifiers->flags;
+        namespace_t ns = modifiers2access(modifiers);
+        /* deal with protected */
+        if(ns.access == ACCESS_PROTECTED && state->cls)
+            ns.name = state->cls->info->name;
+
+        /* slot name */
+        multiname_t mname = {QNAME, &ns, 0, name};
+      
+        trait_list_t**traits;
+        code_t**code=0;
+        if(!state->cls) {
+            // global variable
+            ns.name = state->package;
+            traits = &global->init->traits;
+            code = &global->init->method->body->code;
+        } else if(flags&FLAG_STATIC) {
+            // static variable
+            traits = &state->cls->abc->static_traits;
+            code = &state->cls->static_init->header;
+        } else {
+            // instance variable
+            traits = &state->cls->abc->traits;
+            code = &state->cls->init->header;
+        }
+        if(c)
+            *c = code;
+        if(m) 
+            memcpy(m, &mname, sizeof(multiname_t));
+            
+        return trait_new_member(traits, 0, multiname_clone(&mname), 0);
+    }
 };
 
 VARCONST: "var" | "const"
@@ -2584,34 +2626,20 @@ PASS12
     if(as3_pass == 2) {
         varinfo_t*info = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
 
-        /* slot name */
-        multiname_t mname = {QNAME, &ns, 0, $1};
-      
-        trait_list_t**traits;
+        multiname_t mname;
         code_t**code;
-        if(!state->cls) {
-            // global variable
-            ns.name = state->package;
-            traits = &global->init->traits;
-            code = &global->init->method->body->code;
-        } else if(flags&FLAG_STATIC) {
-            // static variable
-            traits = &state->cls->abc->static_traits;
-            code = &state->cls->static_init->header;
-        } else {
-            // instance variable
-            traits = &state->cls->abc->traits;
-            code = &state->cls->init->header;
-        }
-        
-        trait_t*t=0;
+        trait_t*t = add_abc_slot(slotstate_flags, $1, &mname, &code);
+
         if($2) {
             MULTINAME(m, $2);
-            t = trait_new_member(traits, multiname_clone(&m), multiname_clone(&mname), 0);
-        } else {
-            t = trait_new_member(traits, 0, multiname_clone(&mname), 0);
+            t->type_name = multiname_clone(&m);
         }
         info->slot = t->slot_id;
+        
+        /* workaround for "VerifyError: Error #1053: Illegal override of ::test2 in C1" 
+           FIXME: is there a way to use slots and still don't have conflicting overrides?
+        */
+        info->slot = t->slot_id = 0;
        
         constant_t cval = $3->type->eval($3);
         if(cval.type!=CONSTANT_UNKNOWN) {
@@ -2627,7 +2655,11 @@ PASS12
                 c = abc_getlocal_0(c);
                 c = code_append(c, v.c);
                 c = converttype(c, v.t, $2);
-                c = abc_setslot(c, t->slot_id);
+                if(!t->slot_id) {
+                    c = abc_setproperty2(c, &mname);
+                } else {
+                    c = abc_setslot(c, t->slot_id);
+                }
             }
             *code = code_append(*code, c);
         }
@@ -2647,8 +2679,9 @@ MAYBECONSTANT: {$$=0;}
 MAYBECONSTANT: '=' E {
   $$ = malloc(sizeof(constant_t));
   *$$ = node_eval($2);
-  if($$->type == CONSTANT_UNKNOWN)
+  if($$->type == CONSTANT_UNKNOWN) {
     syntaxerror("can't evaluate default parameter value (needs to be a compile-time constant)");
+  }
 }
 
 //CONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
@@ -2673,6 +2706,48 @@ CONSTANT : T_IDENTIFIER {
         $$ = constant_new_null($1);
     }
 }*/
+
+/* ---------------------------xml ------------------------------ */
+
+%code {
+    static int xml_level = 0;
+};
+
+XML: XMLNODE
+
+OPEN : '<' {PASS_ALWAYS tokenizer_begin_xml();xml_level++;}
+CLOSE : '>' {PASS_ALWAYS tokenizer_begin_xmltext();}
+CLOSE2 : {PASS_ALWAYS if(!--xml_level) tokenizer_end_xml(); else tokenizer_begin_xmltext();}
+
+XMLTEXT : {$$="";}
+XMLTEXT : XMLTEXT T_STRING {$$=concat2($1, string_cstr(&$2));}
+XMLTEXT : XMLTEXT '>' {$$=concat2($1, ">");}
+
+XML2 : XMLNODE XMLTEXT {$$=concat2($1,$2);}
+XML2 : XML2 XMLNODE XMLTEXT {$$=concat3($1,$2,$3);free($1);free($2);free($3);}
+
+XMLNODE : OPEN T_IDENTIFIER MAYBE_XMLATTRIBUTES CLOSE XMLTEXT '<' '/' T_IDENTIFIER CLOSE2 '>' {
+    $$ = allocprintf("<%s%s>%s</%s>", $2, $3, $5, $8);
+    free($2);free($3);free($5);free($8);
+}
+XMLNODE : OPEN T_IDENTIFIER MAYBE_XMLATTRIBUTES '/' CLOSE2 '>' {
+    $$ = allocprintf("<%s%s/>", $2, $3);
+}
+XMLNODE : OPEN T_IDENTIFIER MAYBE_XMLATTRIBUTES CLOSE XMLTEXT XML2 '<' '/' T_IDENTIFIER CLOSE2 '>' {
+    $$ = allocprintf("<%s%s>%s%s</%s>", $2, $3, $5, $6, $9);
+    free($2);free($3);free($5);free($6);free($6);free($9);
+}
+
+MAYBE_XMLATTRIBUTES:                      {$$=strdup("");}
+MAYBE_XMLATTRIBUTES: XMLATTRIBUTES        {$$=concat2(" ",$1);}
+XMLATTRIBUTES: XMLATTRIBUTE               {$$=$1;}
+XMLATTRIBUTES: XMLATTRIBUTES XMLATTRIBUTE {$$=concat3($1," ",$2);free($1);free($2);}
+XMLATTRIBUTE: T_IDENTIFIER '=' T_STRING {
+    char* str = string_cstr(&$3);
+    $$=allocprintf("%s=\"%s\"", $1,str);
+    free(str);
+    free($1);free((char*)$3.str);
+}
 
 /* ------------ classes and interfaces (body, functions) ------- */
 
@@ -2816,7 +2891,7 @@ CLASS_SPEC_LIST : CLASS_SPEC_LIST ',' CLASS_SPEC {PASS12 $$=$1;list_append($$,$3
 
 TYPE : CLASS_SPEC {PASS12 $$=$1;}
      | '*'        {PASS12 $$=TYPE_ANY;}
-     | "void"     {PASS12 $$=TYPE_ANY;}
+     | "void"     {PASS12 $$=TYPE_VOID;}
     /*
      |  "String"  {$$=registry_getstringclass();}
      |  "int"     {$$=registry_getintclass();}
@@ -2988,22 +3063,22 @@ RETURN: "return" EXPRESSION {
 
 // ----------------------- expression types -------------------------------------
 
-NONCOMMAEXPRESSION : E %prec below_minus {
+NONCOMMAEXPRESSION : E %prec below_lt {
     $$ = node_read($1);
 }
 EXPRESSION : COMMA_EXPRESSION {
     $$ = node_read($1);
 }
-COMMA_EXPRESSION : E %prec below_minus {
+COMMA_EXPRESSION : E %prec below_lt {
     $$ = mkmultinode(&node_comma, $1);
 }
-COMMA_EXPRESSION : COMMA_EXPRESSION ',' E %prec below_minus {
+COMMA_EXPRESSION : COMMA_EXPRESSION ',' E %prec below_lt {
     $$ = multinode_extend($1, $3);
 }
 VOIDEXPRESSION : E %prec below_minus { 
     $$ = node_exec($1); 
 }
-VOIDEXPRESSION : VOIDEXPRESSION ',' E %prec below_minus { 
+VOIDEXPRESSION : VOIDEXPRESSION ',' E %prec below_lt { 
     $$ = $1;
     $$ = code_append($$, node_exec($3)); 
 }
@@ -3038,6 +3113,18 @@ E : VAR_READ %prec T_IDENTIFIER   {$$ = $1;}
 
 E : CONSTANT { 
     $$ = mkconstnode($1);
+}
+
+E : XML {
+    typedcode_t v;
+    v.c = 0;
+    namespace_t ns = {ACCESS_PACKAGE, ""};
+    multiname_t m = {QNAME, &ns, 0, "XML"};
+    v.c = abc_getlex2(v.c, &m);
+    v.c = abc_pushstring(v.c, $1);
+    v.c = abc_construct(v.c, 1);
+    v.t = TYPE_XML;
+    $$ = mkcodenode(v);
 }
 
 /* regexp */
@@ -3148,43 +3235,96 @@ E : "super" '.' T_IDENTIFIER
            }
 
 E : '@' T_IDENTIFIER {
-              // attribute TODO
-              $$ = mkdummynode();
-              as3_warning("ignored @ operator");
-           }
-
-E : E '.' '@' T_IDENTIFIER {
-              // child attribute  TODO
-              $$ = mkdummynode();
-              as3_warning("ignored .@ operator");
-           }
-
-E : E '.' T_IDENTIFIER "::" T_IDENTIFIER {
-              // namespace declaration TODO
-              $$ = mkdummynode();
-              as3_warning("ignored :: operator");
-           }
-
-E : E ".." T_IDENTIFIER {
-              // descendants TODO
-              $$ = mkdummynode();
-              as3_warning("ignored .. operator");
-           }
+    // attribute occuring in .() loops 
+    // TODO
+    $$ = mkdummynode();
+    as3_warning("ignored @ operator");
+}
 
 E : E '.' '(' E ')' {
-              // filter TODO
-              $$ = mkdummynode();
-              as3_warning("ignored .() operator");
-           }
+    // filter 
+    // TODO: this needs to be implemented using a loop
+    $$ = mkdummynode();
+    as3_warning("ignored .() operator");
+}
 
-//E : E "::" '[' E ']' {
-//              // qualified expression TODO
-//              $$.c = abc_pushundefined(0);
-//              $$.t = 0;
-//              as3_warning("ignored ::[] operator");
-//           }
+ID_OR_NS : T_IDENTIFIER {$$=$1;}
+ID_OR_NS : T_NAMESPACE {$$=(char*)$1;}
+SUBNODE: T_IDENTIFIER
+       | '*' {$$="*";}
 
-MEMBER : E '.' T_IDENTIFIER {
+E : E '.' ID_OR_NS "::" SUBNODE {
+    typedcode_t v = node_read($1);
+    typedcode_t w = node_read(resolve_identifier($3));
+    v.c = code_append(v.c, w.c);
+    if(!TYPE_IS_NAMESPACE(w.t)) {
+        as3_softwarning("%s might not be a namespace", $3);
+    }
+    v.c = converttype(v.c, w.t, TYPE_NAMESPACE);
+    multiname_t m = {RTQNAME, 0, 0, $5};
+    v.c = abc_getproperty2(v.c, &m);
+    if(TYPE_IS_XML(v.t)) {
+        v.t = TYPE_XMLLIST;
+    } else {
+        v.c = abc_coerce_a(v.c);
+        v.t = TYPE_ANY;
+    }
+    $$ = mkcodenode(v);
+}
+E : E ".." SUBNODE {
+    typedcode_t v = node_read($1);
+    multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
+    v.c = abc_getdescendants2(v.c, &m);
+    v.t = TYPE_XMLLIST;
+    $$ = mkcodenode(v);
+}
+E : E '.' '[' E ']' {
+    typedcode_t v = node_read($1);
+    typedcode_t w = node_read($4);
+    multiname_t m = {MULTINAMEL, 0, &nopackage_namespace_set, 0};
+    v.c = code_append(v.c, w.c);
+    v.c = converttype(w.c, w.t, TYPE_STRING);
+    v.c = abc_getproperty2(v.c, &m);
+    v.t = TYPE_XMLLIST;
+    $$ = mkcodenode(v);
+}
+
+E : E '.' '@' SUBNODE {
+    typedcode_t v = node_read($1);
+    multiname_t m = {MULTINAMEA, 0, &nopackage_namespace_set, $4};
+    v.c = abc_getproperty2(v.c, &m);
+    v.t = TYPE_STRING;
+    $$ = mkcodenode(v);
+}
+E : E ".." '@' SUBNODE {
+    typedcode_t v = node_read($1);
+    multiname_t m = {MULTINAMEA, 0, &nopackage_namespace_set, $4};
+    v.c = abc_getdescendants2(v.c, &m);
+    v.t = TYPE_STRING;
+    $$ = mkcodenode(v);
+}
+E : E '.' '@' '[' E ']' {
+    typedcode_t v = node_read($1);
+    typedcode_t w = node_read($5);
+    multiname_t m = {MULTINAMELA, 0, &nopackage_namespace_set, 0};
+    v.c = code_append(v.c, w.c);
+    v.c = converttype(w.c, w.t, TYPE_STRING);
+    v.c = abc_getproperty2(v.c, &m);
+    v.t = TYPE_STRING;
+    $$ = mkcodenode(v);
+}
+E : E ".." '@' '[' E ']' {
+    typedcode_t v = node_read($1);
+    typedcode_t w = node_read($5);
+    multiname_t m = {MULTINAMELA, 0, &nopackage_namespace_set, 0};
+    v.c = code_append(v.c, w.c);
+    v.c = converttype(w.c, w.t, TYPE_STRING);
+    v.c = abc_getdescendants2(v.c, &m);
+    v.t = TYPE_STRING;
+    $$ = mkcodenode(v);
+}
+
+MEMBER : E '.' SUBNODE {
     typedcode_t v1 = node_read($1);
     $$.c = v1.c;
     classinfo_t*t = v1.t;
@@ -3193,7 +3333,12 @@ MEMBER : E '.' T_IDENTIFIER {
         t = t->data;
         is_static = 1;
     }
-    if(t) {
+    if(TYPE_IS_XML(t)) {
+        multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
+        $$.c = abc_getproperty2($$.c, &m);
+        $$.c = abc_coerce_a($$.c);
+        $$.t = TYPE_XMLLIST;
+    } else if(t) {
         if(t->subtype==INFOTYPE_UNRESOLVED) {
             syntaxerror("syntaxerror: trying to resolve property '%s' on incomplete object '%s'", $3, t->name);
         }
@@ -3242,6 +3387,113 @@ MEMBER : E '.' T_IDENTIFIER {
     }
 }
 
+%code {
+    node_t* resolve_identifier(char*name)
+    {
+        typedcode_t o;
+        o.t = 0;
+        o.c = 0;
+
+        slotinfo_t*a = 0;
+        memberinfo_t*f = 0;
+
+        variable_t*v;
+        /* look at variables */
+        if((v = find_variable(state, name))) {
+            // name is a local variable
+            o.c = abc_getlocal(o.c, v->index);
+            o.t = v->type;
+            return mkcodenode(o);
+        }
+        if((v = find_slot(state, name))) {
+            o.c = abc_getscopeobject(o.c, 1);
+            o.c = abc_getslot(o.c, v->index);
+            o.t = v->type;
+            return mkcodenode(o);
+        }
+
+        int i_am_static = (state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC;
+
+        /* look at current class' members */
+        if(!state->method->inner && 
+            state->cls && 
+            (f = findmember_nsset(state->cls->info, name, 1)))
+        {
+            // name is a member or attribute in this class
+            int var_is_static = (f->flags&FLAG_STATIC);
+
+            if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
+                /* if the variable is a constant (and we know what is evaluates to), we
+                   can just use the value itself */
+                varinfo_t*v = (varinfo_t*)f;
+                if(v->value) {
+                    return mkconstnode(v->value);
+                }
+            }
+           
+            if(var_is_static >= i_am_static) {
+                if(f->kind == INFOTYPE_METHOD) {
+                    o.t = TYPE_FUNCTION(f);
+                } else {
+                    o.t = f->type;
+                }
+
+                if(var_is_static && !i_am_static) {
+                /* access to a static member from a non-static location.
+                   do this via findpropstrict:
+                   there doesn't seem to be any non-lookup way to access
+                   static properties of a class */
+                    state->method->late_binding = 1;
+                    o.t = f->type;
+                    namespace_t ns = {f->access, f->package};
+                    multiname_t m = {QNAME, &ns, 0, name};
+                    o.c = abc_findpropstrict2(o.c, &m);
+                    o.c = abc_getproperty2(o.c, &m);
+                    return mkcodenode(o);
+                } else if(f->slot>0) {
+                    o.c = abc_getlocal_0(o.c);
+                    o.c = abc_getslot(o.c, f->slot);
+                    return mkcodenode(o);
+                } else {
+                    namespace_t ns = {f->access, f->package};
+                    multiname_t m = {QNAME, &ns, 0, name};
+                    o.c = abc_getlocal_0(o.c);
+                    o.c = abc_getproperty2(o.c, &m);
+                    return mkcodenode(o);
+                }
+            }
+        } 
+        
+        /* look at actual classes, in the current package and imported */
+        if((a = find_class(name))) {
+            o = push_class(a);
+            return mkcodenode(o);
+        }
+
+        /* look through package prefixes */
+        if(dict_contains(state->import_toplevel_packages, name) || 
+           registry_ispackage(name)) {
+            o.c = abc___pushpackage__(o.c, name);
+            o.t = 0;
+            return mkcodenode(o); //?
+        }
+
+        /* unknown object, let the avm2 resolve it */
+        if(1) {
+            //as3_softwarning("Couldn't resolve '%s', doing late binding", name);
+            as3_warning("Couldn't resolve '%s', doing late binding", name);
+            state->method->late_binding = 1;
+                    
+            multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, name};
+
+            o.t = 0;
+            o.c = abc_findpropstrict2(o.c, &m);
+            o.c = abc_getproperty2(o.c, &m);
+            return mkcodenode(o);
+        }
+    }
+};
+
 VAR_READ : T_IDENTIFIER {
     PASS1
     /* Queue unresolved identifiers for checking against the parent
@@ -3251,129 +3503,31 @@ VAR_READ : T_IDENTIFIER {
        etc. which is *correct* because local variables of the parent function
        would shadow those.
        */
-    if(state->method->inner && !find_variable(state, $1)) {
-        unknown_variable($1);
+    if(!find_variable(state, $1)) {
+        if(state->method->inner) {
+            unknown_variable($1);
+        }
+        /* let the compiler know that it might want to check the current directory/package
+           for this identifier- maybe there's a file $1.as defining $1. */
+        as3_schedule_class_noerror(state->package, $1);
     }
    
-    /* let the compiler know that it might want to check the current directory/package
-       for this identifier- maybe there's a file $1.as defining $1. */
-    as3_schedule_class_noerror(state->package, $1);
+    $$ = 0;
     PASS2
 
-    typedcode_t o;
-    o.t = 0;
-    o.c = 0;
-    $$ = 0;
-
-    slotinfo_t*a = 0;
-    memberinfo_t*f = 0;
-
-    variable_t*v;
-    /* look at variables */
-    if((v = find_variable(state, $1))) {
-        // $1 is a local variable
-        o.c = abc_getlocal(o.c, v->index);
-        o.t = v->type;
-        $$ = mkcodenode(o);
-        break;
-    }
-    if((v = find_slot(state, $1))) {
-        o.c = abc_getscopeobject(o.c, 1);
-        o.c = abc_getslot(o.c, v->index);
-        o.t = v->type;
-        $$ = mkcodenode(o);
-        break;
-    }
-
-    int i_am_static = (state->method && state->method->info)?(state->method->info->flags&FLAG_STATIC):FLAG_STATIC;
-
-    /* look at current class' members */
-    if(!state->method->inner && 
-        state->cls && 
-        (f = findmember_nsset(state->cls->info, $1, 1)))
-    {
-        // $1 is a member or attribute in this class
-        int var_is_static = (f->flags&FLAG_STATIC);
-
-        if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
-            /* if the variable is a constant (and we know what is evaluates to), we
-               can just use the value itself */
-            varinfo_t*v = (varinfo_t*)f;
-            if(v->value) {
-                $$ = mkconstnode(v->value);
-                break;
-            }
-        }
-       
-        if(var_is_static >= i_am_static) {
-            if(f->kind == INFOTYPE_METHOD) {
-                o.t = TYPE_FUNCTION(f);
-            } else {
-                o.t = f->type;
-            }
-
-            if(var_is_static && !i_am_static) {
-            /* access to a static member from a non-static location.
-               do this via findpropstrict:
-               there doesn't seem to be any non-lookup way to access
-               static properties of a class */
-                state->method->late_binding = 1;
-                o.t = f->type;
-                namespace_t ns = {f->access, f->package};
-                multiname_t m = {QNAME, &ns, 0, $1};
-                o.c = abc_findpropstrict2(o.c, &m);
-                o.c = abc_getproperty2(o.c, &m);
-                $$ = mkcodenode(o);
-                break;
-            } else if(f->slot>0) {
-                o.c = abc_getlocal_0(o.c);
-                o.c = abc_getslot(o.c, f->slot);
-                $$ = mkcodenode(o);
-                break;
-            } else {
-                namespace_t ns = {f->access, f->package};
-                multiname_t m = {QNAME, &ns, 0, $1};
-                o.c = abc_getlocal_0(o.c);
-                o.c = abc_getproperty2(o.c, &m);
-                $$ = mkcodenode(o);
-                break;
-            }
-        }
-    } 
-    
-    /* look at actual classes, in the current package and imported */
-    if((a = find_class($1))) {
-        o = push_class(a);
-        $$ = mkcodenode(o);
-        break;
-    }
-
-    /* look through package prefixes */
-    if(dict_contains(state->import_toplevel_packages, $1) || 
-       registry_ispackage($1)) {
-        o.c = abc___pushpackage__(o.c, $1);
-        o.t = 0;
-        $$ = mkcodenode(o); //?
-        break;
-    }
-
-    /* unknown object, let the avm2 resolve it */
-    if(1) {
-        //as3_softwarning("Couldn't resolve '%s', doing late binding", $1);
-        as3_warning("Couldn't resolve '%s', doing late binding", $1);
-        state->method->late_binding = 1;
-                
-        multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $1};
-
-        o.t = 0;
-        o.c = abc_findpropstrict2(o.c, &m);
-        o.c = abc_getproperty2(o.c, &m);
-        $$ = mkcodenode(o);
-        break;
-    }
+    $$ = resolve_identifier($1);
 }
 
 // ----------------- namespaces -------------------------------------------------
+
+%code {
+    void add_active_url(const char*url)
+    {
+        NEW(namespace_t,n);
+        n->name = url;
+        list_append(state->active_namespace_urls, n);
+    }
+};
 
 NAMESPACE_ID : "namespace" T_IDENTIFIER {
     PASS12
@@ -3407,18 +3561,16 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
     ns.access = ACCESS_NAMESPACE;
     ns.name = $2->url;
     var->value = constant_new_namespace(&ns);
+      
+    if(as3_pass==2) {
+        MULTINAME(m, TYPE_NAMESPACE);
+        trait_t*t = add_abc_slot(&$1, $2->name, 0, 0);
+        t->value = var->value;
+        t->type_name = multiname_clone(&m);
+    }
 
     $$=0;
 }
-
-%code {
-    void add_active_url(const char*url)
-    {
-        NEW(namespace_t,n);
-        n->name = url;
-        list_append(state->active_namespace_urls, n);
-    }
-};
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12

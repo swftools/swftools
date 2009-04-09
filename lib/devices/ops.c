@@ -46,7 +46,7 @@ static void dbg(char*format, ...)
     int l;
     va_list arglist;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     l = strlen(buf);
     while(l && buf[l-1]=='\n') {

@@ -119,7 +119,8 @@ abc_file_t*abc_file_new()
 abc_class_t* abc_class_new(abc_file_t*file, multiname_t*classname, multiname_t*superclass) {
     
     NEW(abc_class_t,c);
-    array_append(file->classes, NO_KEY, c);
+    if(file)
+        array_append(file->classes, NO_KEY, c);
 
     c->file = file;
     c->classname = multiname_clone(classname);
@@ -345,7 +346,7 @@ static void dump_method(FILE*fo, const char*prefix,
     if(m->return_type)
         return_type = multiname_tostring(m->return_type);
     else
-        return_type = strdup("void");
+        return_type = strdup("*");
 
     fprintf(fo, "%s", prefix);
     fprintf(fo, "%s %s ", attr, type);
@@ -647,6 +648,8 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
             char*supername = multiname_tostring(cls->superclass);
             fprintf(fo, " extends %s", supername);
             free(supername);
+        }
+        if(cls->interfaces) {
             multiname_list_t*ilist = cls->interfaces;
             if(ilist)
                 fprintf(fo, " implements");
@@ -1128,6 +1131,9 @@ static pool_t*writeABC(TAG*abctag, void*code, pool_t*pool)
     swf_SetU30(tag, file->scripts->num);
     for(t=0;t<file->scripts->num;t++) {
 	abc_script_t*s = (abc_script_t*)array_getvalue(file->scripts, t);
+        if(!s->method->body || !s->method->body->code) {
+            fprintf(stderr, "Internal Error: initscript has no body\n");
+        }
 	swf_SetU30(tag, s->method->index); //!=t!
 	traits_write(pool, tag, s->traits);
     }

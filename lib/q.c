@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <assert.h>
 #include <memory.h>
@@ -46,6 +47,21 @@ char*qstrdup(const char*string)
 char*qstrndup(const char*string, int len)
 {
     return strdup_n(string, len);
+}
+char* allocprintf(const char*format, ...)
+{
+    va_list arglist1;
+    va_start(arglist1, format);
+    char dummy;
+    int l = vsnprintf(&dummy, 1, format, arglist1);
+    va_end(arglist1);
+
+    va_list arglist2;
+    va_start(arglist2, format);
+    char*buf = malloc(l+1);
+    vsnprintf(buf, l+1, format, arglist2);
+    va_end(arglist2);
+    return buf;
 }
 
 // ------------------------------- mem_t --------------------------------------

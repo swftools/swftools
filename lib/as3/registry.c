@@ -435,6 +435,16 @@ classinfo_t* registry_getregexpclass() {
     if(!c) c = (classinfo_t*)registry_safefind("", "RegExp");
     return c;
 }
+classinfo_t* registry_getxmlclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = (classinfo_t*)registry_safefind("", "XML");
+    return c;
+}
+classinfo_t* registry_getxmllistclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = (classinfo_t*)registry_safefind("", "XMLList");
+    return c;
+}
 classinfo_t* registry_getnamespaceclass() {
     static classinfo_t*c = 0;
     if(!c) c = (classinfo_t*)registry_safefind("", "Namespace");
@@ -452,6 +462,12 @@ classinfo_t nullclass = {
 };
 classinfo_t* registry_getnullclass() {
     return &nullclass;
+}
+classinfo_t voidclass = {
+    INFOTYPE_CLASS,0,0,ACCESS_PACKAGE, "", "void", 0, 0, 0
+};
+classinfo_t* registry_getvoidclass() {
+    return &voidclass;
 }
 
 namespace_t access2namespace(U8 access, char*package)

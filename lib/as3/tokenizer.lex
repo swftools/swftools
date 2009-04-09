@@ -42,7 +42,7 @@ static void dbg(const char*format, ...)
     if(as3_verbosity<3)
 	return;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     l = strlen(buf);
     while(l && buf[l-1]=='\n') {
@@ -123,7 +123,7 @@ void handleInclude(char*text, int len, char quotes)
     }
 
     yy_switch_to_buffer(yy_create_buffer( yyin, YY_BUF_SIZE ) );
-    //BEGIN(INITIAL); keep context
+    //BEGIN(DEFAULT); keep context
 }
 
 static int do_unescape(const char*s, const char*end, char*n) 
@@ -252,6 +252,12 @@ static void handleCData(char*s, int len)
     a3_lval.str.str = strdup_n(a3_lval.str.str, a3_lval.str.len);
 }
 
+static void handleRaw(char*s, int len)
+{
+    a3_lval.str.len = len;
+    a3_lval.str.str = strdup_n(s, a3_lval.str.len);
+}
+
 static void handleString(char*s, int len)
 {
     if(s[0]=='"') {
@@ -275,7 +281,6 @@ static inline int m(int type)
     a3_lval.token = type;
     return type;
 }
-
 
 static char numberbuf[64];
 static char*nrbuf()
@@ -471,7 +476,7 @@ void tokenizer_unregister_namespace(const char*id)
 {
     trie_remove(namespaces, id);
 }*/
-static inline tokenizer_is_namespace(const char*id)
+static inline char tokenizer_is_namespace(const char*id)
 {
     return trie_contains(active_namespaces, id);
 }
@@ -487,17 +492,23 @@ static inline int handleIdentifier()
     else
         return T_IDENTIFIER;
 }
+static int tokenerror();
 
 
 //Boolean                      {c();return m(KW_BOOLEAN);}
 //int                          {c();return m(KW_INT);}
 //uint                         {c();return m(KW_UINT);}
 //Number                       {c();return m(KW_NUMBER);}
+//XMLCOMMENT  <!--([^->]|(-/[^-])|(--/[^>]))*-->
 
+//{XMLCOMMENT}                 
 %}
 
 %s REGEXPOK
 %s BEGINNING
+%s DEFAULT
+%x XMLTEXT
+%x XML
 
 NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
 _        [^a-zA-Z0-9_\\]
@@ -512,7 +523,10 @@ HEXFLOATWITHSIGN [+-]?({HEXFLOAT})
 INTWITHSIGN [+-]?({INT})
 FLOATWITHSIGN [+-]?({FLOAT})
 
-CDATA    <!\[CDATA\[([^]]|\][^]]|\]\][^>])*\]*\]\]\>
+CDATA       <!\[CDATA\[([^]]|\][^]]|\]\][^>])*\]*\]\]\>
+XMLCOMMENT  <!--([^->]|[-]+[^>-]|>)*-*-->
+XML         <[^>]+{S}>
+
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
 MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
@@ -527,40 +541,64 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 ^include{S}+{STRING}{S}*/\n    {l();handleInclude(yytext, yyleng, 1);}
 ^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {l();handleInclude(yytext, yyleng, 0);}
-{STRING}                     {l(); BEGIN(INITIAL);handleString(yytext, yyleng);return T_STRING;}
-{CDATA}                      {l(); BEGIN(INITIAL);handleCData(yytext, yyleng);return T_STRING;}
+{STRING}                     {l(); BEGIN(DEFAULT);handleString(yytext, yyleng);return T_STRING;}
+{CDATA}                      {l(); BEGIN(DEFAULT);handleCData(yytext, yyleng);return T_STRING;}
+
+<DEFAULT,BEGINNING,REGEXPOK>{
+{XMLCOMMENT}                 {l(); BEGIN(DEFAULT);handleRaw(yytext, yyleng);return T_STRING;}
+}
+
+<XML>{
+{STRING}                     {l(); handleString(yytext, yyleng);return T_STRING;}
+[<]                          {c(); return m('<');}
+[/]                          {c(); return m('/');}
+[>]                          {c(); return m('>');}
+[=]                          {c(); return m('=');}
+{NAME}                       {c(); handleRaw(yytext, yyleng);return T_IDENTIFIER;}
+{S}                          {l();}
+<<EOF>>                      {syntaxerror("unexpected end of file");}
+}
+
+<XMLTEXT>{
+[^<>]+                       {l(); BEGIN(DEFAULT);handleRaw(yytext, yyleng);return T_STRING;}
+[<]                          {c(); BEGIN(XML);return m('<');}
+[>]                          {c(); return m('>');}
+{XMLCOMMENT}                 {l(); handleRaw(yytext, yyleng);return T_STRING;}
+{CDATA}                      {l(); handleRaw(yytext, yyleng);return T_STRING;}
+<<EOF>>                      {syntaxerror("unexpected end of file");}
+}
 
 <BEGINNING,REGEXPOK>{
-{REGEXP}                     {c(); BEGIN(INITIAL);return handleregexp();} 
-{HEXWITHSIGN}/{_}            {c(); BEGIN(INITIAL);return handlehex();}
-{HEXFLOATWITHSIGN}/{_}       {c(); BEGIN(INITIAL);return handlehexfloat();}
-{INTWITHSIGN}/{_}            {c(); BEGIN(INITIAL);return handleint();}
-{FLOATWITHSIGN}/{_}          {c(); BEGIN(INITIAL);return handlefloat();}
+{REGEXP}                     {c(); BEGIN(DEFAULT);return handleregexp();} 
+{HEXWITHSIGN}/{_}            {c(); BEGIN(DEFAULT);return handlehex();}
+{HEXFLOATWITHSIGN}/{_}       {c(); BEGIN(DEFAULT);return handlehexfloat();}
+{INTWITHSIGN}/{_}            {c(); BEGIN(DEFAULT);return handleint();}
+{FLOATWITHSIGN}/{_}          {c(); BEGIN(DEFAULT);return handlefloat();}
 }
 
 <REGEXPOK>[\{]               {c(); BEGIN(REGEXPOK);return m(T_DICTSTART);}
-[\{]                         {c(); BEGIN(INITIAL); return m('{');}
+[\{]                         {c(); BEGIN(DEFAULT); return m('{');}
 
 \xef\xbb\xbf                 {/* utf 8 bom */}
 {S}                          {l();}
 
-{HEXINT}/{_}                 {c(); BEGIN(INITIAL);return handlehex();}
-{HEXFLOAT}/{_}               {c(); BEGIN(INITIAL);return handlehexfloat();}
-{INT}/{_}                    {c(); BEGIN(INITIAL);return handleint();}
-{FLOAT}/{_}                  {c(); BEGIN(INITIAL);return handlefloat();}
-NaN                          {c(); BEGIN(INITIAL);return m(KW_NAN);}
+{HEXINT}/{_}                 {c(); BEGIN(DEFAULT);return handlehex();}
+{HEXFLOAT}/{_}               {c(); BEGIN(DEFAULT);return handlehexfloat();}
+{INT}/{_}                    {c(); BEGIN(DEFAULT);return handleint();}
+{FLOAT}/{_}                  {c(); BEGIN(DEFAULT);return handlefloat();}
+NaN                          {c(); BEGIN(DEFAULT);return m(KW_NAN);}
 
 3rr0r                        {/* for debugging: generates a tokenizer-level error */
                               syntaxerror("3rr0r");}
 
-{NAME}{S}*:{S}*for/{_}       {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-3);return T_FOR;}
-{NAME}{S}*:{S}*do/{_}        {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-2);return T_DO;}
-{NAME}{S}*:{S}*while/{_}     {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-5);return T_WHILE;}
-{NAME}{S}*:{S}*switch/{_}    {l();BEGIN(INITIAL);handleLabel(yytext, yyleng-6);return T_SWITCH;}
-for                          {c();BEGIN(INITIAL);a3_lval.id="";return T_FOR;}
-do                           {c();BEGIN(INITIAL);a3_lval.id="";return T_DO;}
-while                        {c();BEGIN(INITIAL);a3_lval.id="";return T_WHILE;}
-switch                       {c();BEGIN(INITIAL);a3_lval.id="";return T_SWITCH;}
+{NAME}{S}*:{S}*for/{_}       {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-3);return T_FOR;}
+{NAME}{S}*:{S}*do/{_}        {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-2);return T_DO;}
+{NAME}{S}*:{S}*while/{_}     {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-5);return T_WHILE;}
+{NAME}{S}*:{S}*switch/{_}    {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-6);return T_SWITCH;}
+for                          {c();BEGIN(DEFAULT);a3_lval.id="";return T_FOR;}
+do                           {c();BEGIN(DEFAULT);a3_lval.id="";return T_DO;}
+while                        {c();BEGIN(DEFAULT);a3_lval.id="";return T_WHILE;}
+switch                       {c();BEGIN(DEFAULT);a3_lval.id="";return T_SWITCH;}
 
 [&][&]                       {c();BEGIN(REGEXPOK);return m(T_ANDAND);}
 [|][|]                       {c();BEGIN(REGEXPOK);return m(T_OROR);}
@@ -570,8 +608,8 @@ switch                       {c();BEGIN(INITIAL);a3_lval.id="";return T_SWITCH;}
 [=][=]                       {c();BEGIN(REGEXPOK);return m(T_EQEQ);}
 [>][=]                       {c();BEGIN(REGEXPOK);return m(T_GE);}
 [<][=]                       {c();BEGIN(REGEXPOK);return m(T_LE);}
-[-][-]                       {c();BEGIN(INITIAL);return m(T_MINUSMINUS);}
-[+][+]                       {c();BEGIN(INITIAL);return m(T_PLUSPLUS);}
+[-][-]                       {c();BEGIN(DEFAULT);return m(T_MINUSMINUS);}
+[+][+]                       {c();BEGIN(DEFAULT);return m(T_PLUSPLUS);}
 [+][=]                       {c();BEGIN(REGEXPOK);return m(T_PLUSBY);}
 [\^][=]                      {c();BEGIN(REGEXPOK);return m(T_XORBY);}
 [-][=]                       {c();BEGIN(REGEXPOK);return m(T_MINUSBY);}
@@ -593,78 +631,61 @@ switch                       {c();BEGIN(INITIAL);a3_lval.id="";return T_SWITCH;}
 :                            {c();BEGIN(REGEXPOK);return m(':');}
 instanceof                   {c();BEGIN(REGEXPOK);return m(KW_INSTANCEOF);}
 implements                   {c();BEGIN(REGEXPOK);return m(KW_IMPLEMENTS);}
-interface                    {c();BEGIN(INITIAL);return m(KW_INTERFACE);}
-namespace                    {c();BEGIN(INITIAL);return m(KW_NAMESPACE);}
-protected                    {c();BEGIN(INITIAL);return m(KW_PROTECTED);}
-undefined                    {c();BEGIN(INITIAL);return m(KW_UNDEFINED);}
-continue                     {c();BEGIN(INITIAL);return m(KW_CONTINUE);}
-override                     {c();BEGIN(INITIAL);return m(KW_OVERRIDE);}
-internal                     {c();BEGIN(INITIAL);return m(KW_INTERNAL);}
-function                     {c();BEGIN(INITIAL);return m(KW_FUNCTION);}
-finally                      {c();BEGIN(INITIAL);return m(KW_FINALLY);}
-default                      {c();BEGIN(INITIAL);return m(KW_DEFAULT);}
-package                      {c();BEGIN(INITIAL);return m(KW_PACKAGE);}
-private                      {c();BEGIN(INITIAL);return m(KW_PRIVATE);}
-dynamic                      {c();BEGIN(INITIAL);return m(KW_DYNAMIC);}
-extends                      {c();BEGIN(INITIAL);return m(KW_EXTENDS);}
+interface                    {c();BEGIN(DEFAULT);return m(KW_INTERFACE);}
+namespace                    {c();BEGIN(DEFAULT);return m(KW_NAMESPACE);}
+protected                    {c();BEGIN(DEFAULT);return m(KW_PROTECTED);}
+undefined                    {c();BEGIN(DEFAULT);return m(KW_UNDEFINED);}
+continue                     {c();BEGIN(DEFAULT);return m(KW_CONTINUE);}
+override                     {c();BEGIN(DEFAULT);return m(KW_OVERRIDE);}
+internal                     {c();BEGIN(DEFAULT);return m(KW_INTERNAL);}
+function                     {c();BEGIN(DEFAULT);return m(KW_FUNCTION);}
+finally                      {c();BEGIN(DEFAULT);return m(KW_FINALLY);}
+default                      {c();BEGIN(DEFAULT);return m(KW_DEFAULT);}
+package                      {c();BEGIN(DEFAULT);return m(KW_PACKAGE);}
+private                      {c();BEGIN(DEFAULT);return m(KW_PRIVATE);}
+dynamic                      {c();BEGIN(DEFAULT);return m(KW_DYNAMIC);}
+extends                      {c();BEGIN(DEFAULT);return m(KW_EXTENDS);}
 delete                       {c();BEGIN(REGEXPOK);return m(KW_DELETE);}
 return                       {c();BEGIN(REGEXPOK);return m(KW_RETURN);}
-public                       {c();BEGIN(INITIAL);return m(KW_PUBLIC);}
-native                       {c();BEGIN(INITIAL);return m(KW_NATIVE);}
-static                       {c();BEGIN(INITIAL);return m(KW_STATIC);}
+public                       {c();BEGIN(DEFAULT);return m(KW_PUBLIC);}
+native                       {c();BEGIN(DEFAULT);return m(KW_NATIVE);}
+static                       {c();BEGIN(DEFAULT);return m(KW_STATIC);}
 import                       {c();BEGIN(REGEXPOK);return m(KW_IMPORT);}
 typeof                       {c();BEGIN(REGEXPOK);return m(KW_TYPEOF);}
 throw                        {c();BEGIN(REGEXPOK);return m(KW_THROW);}
-class                        {c();BEGIN(INITIAL);return m(KW_CLASS);}
-const                        {c();BEGIN(INITIAL);return m(KW_CONST);}
-catch                        {c();BEGIN(INITIAL);return m(KW_CATCH);}
-final                        {c();BEGIN(INITIAL);return m(KW_FINAL);}
-false                        {c();BEGIN(INITIAL);return m(KW_FALSE);}
-break                        {c();BEGIN(INITIAL);return m(KW_BREAK);}
-super                        {c();BEGIN(INITIAL);return m(KW_SUPER);}
-each                         {c();BEGIN(INITIAL);return m(KW_EACH);}
-void                         {c();BEGIN(INITIAL);return m(KW_VOID);}
-true                         {c();BEGIN(INITIAL);return m(KW_TRUE);}
-null                         {c();BEGIN(INITIAL);return m(KW_NULL);}
-else                         {c();BEGIN(INITIAL);return m(KW_ELSE);}
+class                        {c();BEGIN(DEFAULT);return m(KW_CLASS);}
+const                        {c();BEGIN(DEFAULT);return m(KW_CONST);}
+catch                        {c();BEGIN(DEFAULT);return m(KW_CATCH);}
+final                        {c();BEGIN(DEFAULT);return m(KW_FINAL);}
+false                        {c();BEGIN(DEFAULT);return m(KW_FALSE);}
+break                        {c();BEGIN(DEFAULT);return m(KW_BREAK);}
+super                        {c();BEGIN(DEFAULT);return m(KW_SUPER);}
+each                         {c();BEGIN(DEFAULT);return m(KW_EACH);}
+void                         {c();BEGIN(DEFAULT);return m(KW_VOID);}
+true                         {c();BEGIN(DEFAULT);return m(KW_TRUE);}
+null                         {c();BEGIN(DEFAULT);return m(KW_NULL);}
+else                         {c();BEGIN(DEFAULT);return m(KW_ELSE);}
 case                         {c();BEGIN(REGEXPOK);return m(KW_CASE);}
 with                         {c();BEGIN(REGEXPOK);return m(KW_WITH);}
 use                          {c();BEGIN(REGEXPOK);return m(KW_USE);}
 new                          {c();BEGIN(REGEXPOK);return m(KW_NEW);}
-get                          {c();BEGIN(INITIAL);return m(KW_GET);}
-set                          {c();BEGIN(INITIAL);return m(KW_SET);}
-var                          {c();BEGIN(INITIAL);return m(KW_VAR);}
-try                          {c();BEGIN(INITIAL);return m(KW_TRY);}
+get                          {c();BEGIN(DEFAULT);return m(KW_GET);}
+set                          {c();BEGIN(DEFAULT);return m(KW_SET);}
+var                          {c();BEGIN(DEFAULT);return m(KW_VAR);}
+try                          {c();BEGIN(DEFAULT);return m(KW_TRY);}
 is                           {c();BEGIN(REGEXPOK);return m(KW_IS) ;}
 in                           {c();BEGIN(REGEXPOK);return m(KW_IN) ;}
-if                           {c();BEGIN(INITIAL);return m(KW_IF) ;}
+if                           {c();BEGIN(DEFAULT);return m(KW_IF) ;}
 as                           {c();BEGIN(REGEXPOK);return m(KW_AS);}
-$?{NAME}                       {c();BEGIN(INITIAL);return handleIdentifier();}
+$?{NAME}                       {c();BEGIN(DEFAULT);return handleIdentifier();}
 
-[\]\}*]                       {c();BEGIN(INITIAL);return m(yytext[0]);}
+[\]\}*]                       {c();BEGIN(DEFAULT);return m(yytext[0]);}
 [+-\/^~@$!%&\(=\[|?:;,<>]   {c();BEGIN(REGEXPOK);return m(yytext[0]);}
-[\)\]]                           {c();BEGIN(INITIAL);return m(yytext[0]);}
+[\)\]]                           {c();BEGIN(DEFAULT);return m(yytext[0]);}
 
-.		             {/* ERROR */
-                              char c1=yytext[0];
-                              char buf[128];
-                              buf[0] = yytext[0];
-                              int t;
-                              for(t=1;t<128;t++) {
-		                  char c = buf[t]=input();
-		                  if(c=='\n' || c==EOF)  {
-                                      buf[t] = 0;
-		                      break;
-                                  }
-		              }
-			      if(c1>='0' && c1<='9')
-			          syntaxerror("syntax error: %s (identifiers must not start with a digit)");
-                              else
-		                  syntaxerror("syntax error: %s", buf);
-		              printf("\n");
-			      exit(1);
-		              yyterminate();
-		             }
+<DEFAULT,BEGINNING,REGEXPOK,XML,XMLTEXT>{
+.		             {tokenerror();}
+}
 <<EOF>>		             {l();
                               void*b = leave_file();
 			      if (!b) {
@@ -683,6 +704,29 @@ int yywrap()
 {
     return 1;
 }
+
+static int tokenerror()
+{
+    char c1=yytext[0];
+    char buf[128];
+    buf[0] = yytext[0];
+    int t;
+    for(t=1;t<128;t++) {
+        char c = buf[t]=input();
+        if(c=='\n' || c==EOF)  {
+            buf[t] = 0;
+            break;
+        }
+    }
+    if(c1>='0' && c1<='9')
+        syntaxerror("syntax error: %s (identifiers must not start with a digit)");
+    else
+        syntaxerror("syntax error: %s", buf);
+    printf("\n");
+    exit(1);
+    yyterminate();
+}
+
 
 static char mbuf[256];
 char*token2string(enum yytokentype nr, YYSTYPE v)
@@ -749,6 +793,23 @@ char*token2string(enum yytokentype nr, YYSTYPE v)
         sprintf(mbuf, "%d", nr);
         return mbuf;
     }
+}
+
+void tokenizer_begin_xml()
+{
+    BEGIN(XML);
+}
+void tokenizer_begin_xmltext()
+{
+    BEGIN(XMLTEXT);
+}
+void tokenizer_end_xmltext()
+{
+    BEGIN(XML);
+}
+void tokenizer_end_xml()
+{
+    BEGIN(DEFAULT);
 }
 
 void initialize_scanner()

@@ -142,7 +142,7 @@ package {
 
             /* ----- special characters ----- */
 
-            var x20 = <x> >&</x>;
+            var x20 = <x> > & </x>;
             assert(x20.toString() == ">&");
             var x21 = <x a="&quot;&lt;&gt;"/>;
             assert(x21.@a == "\"<>");

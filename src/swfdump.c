@@ -954,7 +954,7 @@ void dumperror(const char* format, ...)
     va_list arglist;
 
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
 
     if(!html && !xy)

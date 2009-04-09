@@ -158,11 +158,15 @@ classinfo_t* registry_getstringclass();
 classinfo_t* registry_getintclass();
 classinfo_t* registry_getuintclass();
 classinfo_t* registry_getnullclass();
+classinfo_t* registry_getvoidclass();
 classinfo_t* registry_getregexpclass();
+classinfo_t* registry_getxmlclass();
+classinfo_t* registry_getxmllistclass();
 classinfo_t* registry_getbooleanclass();
 classinfo_t* registry_getMovieClip();
 classinfo_t* registry_getclassclass(classinfo_t*a);
 classinfo_t* registry_getnamespaceclass();
+extern classinfo_t voidclass;
 
 char* infotypename(slotinfo_t*s);
 void slotinfo_dump(slotinfo_t*s);
@@ -196,6 +200,12 @@ void slotinfo_dump(slotinfo_t*s);
 #define TYPE_IS_CLASS(t)     registry_isclassclass(t)
 #define TYPE_NULL            registry_getnullclass()
 #define TYPE_IS_NULL(t)      ((t) == registry_getnullclass())
+#define TYPE_VOID            registry_getvoidclass()
+#define TYPE_IS_VOID(t)      ((t) == registry_getvoidclass())
+#define TYPE_XML            registry_getxmlclass()
+#define TYPE_IS_XML(t)      ((t) == registry_getxmlclass())
+#define TYPE_XMLLIST        registry_getxmllistclass()
+#define TYPE_IS_XMLLIST(t)  ((t) == registry_getxmllistclass())
         
 #define TYPE_IS_BUILTIN_SIMPLE(type) (TYPE_IS_INT(type) || \
                                       TYPE_IS_UINT(type) || \

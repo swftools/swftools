@@ -88,7 +88,7 @@ int systemf(const char* format, ...)
     int ret;
     va_list arglist;
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
 
     if(!system_quiet) {
@@ -439,23 +439,6 @@ int args_callback_option(char*name,char*val) {
     return 0;
 }
 
-/*struct docoptions_t options[] =
-{{"o","output","filename::Specify output file"},
- {"V","version","Print program version"},
- {"i","ignore","Ignore draw order (makes the SWF file smaller, but may produce graphic errors)"},
- {"z","zlib","Use Flash 6 (MX) zlib compression (Needs at least Flash 6 Plugin to play)"},
- {"s","shapes","Don't use SWF Fonts, but store everything as shape"},
- {"j","jpegquality","Set quality of embedded jpeg pictures (default: 85)"},
- {"p","pages","Convert only pages in range. (E.g. 3-85)"},
- {"w","samewindow","Don't open a new browser window for links in the SWF"},
- {"f","fonts","Stroe full fonts in SWF. (Don't reduce to used characters)"},
- {"F","fontpath","path::Add directory to font search path"},
- {"B","viewer","name::Link viewer \"name\" to the pdf"},
- {"L","preloader","file.swf::Link preloader \"file.swf\" to the pdf"},
- {"b","defaultviewer","Link default viewer to the pdf"},
- {"l","defaultpreloader","Link default preloader to the pdf"}
- {0,0}
-};*/
 static struct options_t options[] = {
 {"h", "help"},
 {"V", "version"},
@@ -512,7 +495,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-V , --version                 Print version info and exit\n");
-    printf("-o , --output file.swf         Direct output to file.swf. If file.swf contains '%d' (file%d.swf), then each page \n");
+    printf("-o , --output file.swf         Direct output to file.swf. If file.swf contains '%%' (file%%.swf), then each page goes to a seperate file.\n");
     printf("-p , --pages range             Convert only pages in range with range e.g. 1-20 or 1,4,6,9-11 or\n");
     printf("-P , --password password       Use password for deciphering the pdf.\n");
     printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");
