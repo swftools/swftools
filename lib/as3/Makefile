@@ -9,7 +9,7 @@ SOURCES = abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c reg
 tokenizer.yy.c: tokenizer.lex tokenizer.h
 	flex -Pas3_ -8 -B -otokenizer.yy.c tokenizer.lex
 
-parser.tab.h parser.tab.c: parser.y parser.h skeleton.m4
+parser.tab.h parser.tab.c: parser.y parser.h skeleton.m4 Makefile
 	bison -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
 
 main.o: main.c parser.tab.h parser.h

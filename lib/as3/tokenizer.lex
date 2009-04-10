@@ -76,6 +76,9 @@ void as3_buffer_input(void*buffer, int len)
     as3_in = 0;
 }
 
+//#undef BEGIN
+//#define BEGIN(x) {(yy_start) = 1 + 2 *x;dbg("entering state %d", x);}
+
 #define YY_INPUT(buf,result,max_size) { \
   if(!as3_buffer) { \
       errno=0; \
@@ -550,6 +553,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 
 <XML>{
 {STRING}                     {l(); handleString(yytext, yyleng);return T_STRING;}
+[{]                          {c(); BEGIN(REGEXPOK);return m('{');}
 [<]                          {c(); return m('<');}
 [/]                          {c(); return m('/');}
 [>]                          {c(); return m('>');}
@@ -560,7 +564,8 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 }
 
 <XMLTEXT>{
-[^<>]+                       {l(); BEGIN(DEFAULT);handleRaw(yytext, yyleng);return T_STRING;}
+[^<>{]+                      {l(); handleRaw(yytext, yyleng);return T_STRING;}
+[{]                          {c(); BEGIN(REGEXPOK);return m('{');}
 [<]                          {c(); BEGIN(XML);return m('<');}
 [>]                          {c(); return m('>');}
 {XMLCOMMENT}                 {l(); handleRaw(yytext, yyleng);return T_STRING;}
@@ -635,6 +640,7 @@ interface                    {c();BEGIN(DEFAULT);return m(KW_INTERFACE);}
 namespace                    {c();BEGIN(DEFAULT);return m(KW_NAMESPACE);}
 protected                    {c();BEGIN(DEFAULT);return m(KW_PROTECTED);}
 undefined                    {c();BEGIN(DEFAULT);return m(KW_UNDEFINED);}
+arguments                    {c();BEGIN(DEFAULT);return m(KW_ARGUMENTS);}
 continue                     {c();BEGIN(DEFAULT);return m(KW_CONTINUE);}
 override                     {c();BEGIN(DEFAULT);return m(KW_OVERRIDE);}
 internal                     {c();BEGIN(DEFAULT);return m(KW_INTERNAL);}
@@ -721,7 +727,7 @@ static int tokenerror()
     if(c1>='0' && c1<='9')
         syntaxerror("syntax error: %s (identifiers must not start with a digit)");
     else
-        syntaxerror("syntax error: %s", buf);
+        syntaxerror("syntax error [%d]: %s", (yy_start-1)/2, buf);
     printf("\n");
     exit(1);
     yyterminate();
@@ -797,18 +803,22 @@ char*token2string(enum yytokentype nr, YYSTYPE v)
 
 void tokenizer_begin_xml()
 {
+    dbg("begin reading xml");
     BEGIN(XML);
 }
 void tokenizer_begin_xmltext()
 {
+    dbg("begin reading xml text");
     BEGIN(XMLTEXT);
 }
 void tokenizer_end_xmltext()
 {
+    dbg("end reading xml text");
     BEGIN(XML);
 }
 void tokenizer_end_xml()
 {
+    dbg("end reading xml");
     BEGIN(DEFAULT);
 }
 

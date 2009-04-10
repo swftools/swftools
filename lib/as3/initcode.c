@@ -92,7 +92,7 @@ void initcode_add_classlist(abc_script_t*init, parsedclass_list_t*_classes)
         /* write the construction code for this class to the global init
            function */
         MULTINAME(classname2,cls);
-        int slotindex = abc_initscript_addClassTrait(init, &classname2, abc);
+        trait_t*trait = abc_initscript_addClassTrait(init, &classname2, abc);
 
         c = abc_getglobalscope(c);
         classinfo_t*s = cls->superclass;
@@ -137,7 +137,7 @@ void initcode_add_classlist(abc_script_t*init, parsedclass_list_t*_classes)
         while(count--) {
             c = abc_popscope(c);
         }
-        c = abc_setslot(c, slotindex);
+        c = abc_setslot(c, trait->slot_id);
         multiname_destroy(extends2);
     }
     c = abc_returnvoid(c);

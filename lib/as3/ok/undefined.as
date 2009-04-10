@@ -4,6 +4,7 @@ package {
         var xx = undefined;
         function Main() {
             trace("ok");
+            trace("[exit]");
         }
     }
 }

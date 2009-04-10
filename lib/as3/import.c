@@ -190,7 +190,7 @@ static void import_code(void*_abc, char*filename, int pass)
             if(access==ACCESS_PRIVATE)
                 goto cont;
             const char*name = trait->name->name;
-            char* ns= ACCESS_NAMESPACE?strdup(trait->name->ns->name):"";
+            char* ns = access==ACCESS_NAMESPACE?strdup(trait->name->ns->name):"";
             if(registry_findmember(c, ns, name, 0))
                 goto cont;
             name = strdup(name);

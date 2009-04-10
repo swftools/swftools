@@ -142,7 +142,9 @@ package {
 
             /* ----- special characters ----- */
 
-            var x20 = <x> > & </x>;
+            trace("[special characters]");
+
+            var x20 = <x> >& </x>;
             assert(x20.toString() == ">&");
             var x21 = <x a="&quot;&lt;&gt;"/>;
             assert(x21.@a == "\"<>");
@@ -150,8 +152,10 @@ package {
 
             /* ----- substitution ----- */
 
-            var x2:XML = <{"tree"} {"na"+"me"}="test">
-                             <{{3: "branch"}[3]} bname={"t1"}>{"Branch" + " " + 1}</{"branch"}>
+            trace("[substitution]");
+
+            var x2:XML = <{"tree"} {"na"+"me"}="test" {"t=x"}>
+                             <{{three: "branch"}["three"]} bname={"t1"}>{"Branch" + " " + 1}</{"branch"}>
                             <branch bname="t2">Branch 2</branch>
                         </tree>
             assert(x1 == x2);

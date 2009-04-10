@@ -16,6 +16,7 @@ package {
         public function Main() {
             var e = new Event("");
             test(e);
+            trace("[exit]");
         }
     }
 }

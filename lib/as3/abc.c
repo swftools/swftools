@@ -309,7 +309,7 @@ void abc_method_body_addClassTrait(abc_method_body_t*code, char*multiname, int s
 
 /* notice: traits of a method (body) belonging to an init script
    and traits of the init script are *not* the same thing */
-int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc_class_t*cls)
+trait_t* abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc_class_t*cls)
 {
     abc_file_t*file = script->file;
     multiname_t*m = multiname_clone(multiname);
@@ -317,7 +317,7 @@ int abc_initscript_addClassTrait(abc_script_t*script, multiname_t*multiname, abc
     trait_t*trait = trait_new(TRAIT_CLASS, m, slotid, 0, 0);
     trait->cls = cls;
     list_append(script->traits, trait);
-    return slotid;
+    return trait;
 }
 
 abc_script_t* abc_initscript(abc_file_t*file)

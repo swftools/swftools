@@ -159,6 +159,7 @@ classinfo_t* registry_getintclass();
 classinfo_t* registry_getuintclass();
 classinfo_t* registry_getnullclass();
 classinfo_t* registry_getvoidclass();
+classinfo_t* registry_getarrayclass();
 classinfo_t* registry_getregexpclass();
 classinfo_t* registry_getxmlclass();
 classinfo_t* registry_getxmllistclass();
@@ -192,6 +193,8 @@ void slotinfo_dump(slotinfo_t*s);
 #define TYPE_IS_OBJECT(t)    ((t) == registry_getobjectclass())
 #define TYPE_REGEXP                  registry_getregexpclass()
 #define TYPE_IS_REGEXP(t)    ((t) == registry_getregexpclass())
+#define TYPE_ARRAY                   registry_getarrayclass()
+#define TYPE_IS_ARRAY(t)     ((t) == registry_getarrayclass())
 #define TYPE_NAMESPACE            registry_getnamespaceclass()
 #define TYPE_IS_NAMESPACE(t) ((t) == registry_getnamespaceclass())
 #define TYPE_FUNCTION(f)     ((f)->return_type,slotinfo_asclass((slotinfo_t*)(f)))
@@ -212,6 +215,8 @@ void slotinfo_dump(slotinfo_t*s);
                                       TYPE_IS_FLOAT(type) || \
                                       TYPE_IS_BOOLEAN(type) || \
                                       TYPE_IS_STRING(type))
+
+#define IS_NUMBER_OR_INT(a) (TYPE_IS_INT((a)) || TYPE_IS_UINT((a)) || TYPE_IS_NUMBER((a)))
 
 
 #endif

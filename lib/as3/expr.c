@@ -65,10 +65,21 @@
 
 static classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, nodetype_t*t)
 {
-    if(!type1 || !type2)
+    if(TYPE_IS_ANY(type1))
         return TYPE_ANY;
-    if(TYPE_IS_ANY(type1) || TYPE_IS_ANY(type2))
-        return TYPE_ANY;
+    
+    if(t == &node_plus) {
+        if(TYPE_IS_XMLLIST(type1))
+            return type1;
+        if(BOTH_INT(type1, type2))
+            return TYPE_INT;
+        if(IS_NUMBER_OR_INT(type1) && IS_NUMBER_OR_INT(type2))
+            return TYPE_NUMBER;
+        if(TYPE_IS_ANY(type2))
+            return TYPE_ANY;
+        return TYPE_OBJECT; // e.g. string+string = object
+    }
+
     if(type1 == type2)
         return type1;
     return TYPE_ANY;
@@ -132,7 +143,8 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
         write->opcode = OPCODE_SETPROPERTY;
         multiname_t*m = (multiname_t*)r->data[0];
         write->data[0] = multiname_clone(m);
-        if(m->type == QNAME || m->type == MULTINAME) {
+        if(m->type == QNAME || m->type == MULTINAME ||
+           m->type == QNAMEA || m->type == MULTINAMEA) {
             if(!justassign) {
                 prefix = abc_dup(prefix); // we need the object, too
             }
@@ -2058,7 +2070,7 @@ typedcode_t node_pluseq_read(node_t*n)
        c = abc_add_i(c);
     } else {
        c = abc_add(c);
-       c = converttype(c, TYPE_NUMBER, left.t);
+       c = converttype(c, join_types(left.t,right.t,&node_plus), left.t);
     }
     c = toreadwrite(left.c, c, 0, 0, 1);
     t = left.t;
@@ -2072,7 +2084,7 @@ code_t* node_pluseq_exec(node_t*n)
        c = abc_add_i(c);
     } else {
        c = abc_add(c);
-       c = converttype(c, TYPE_NUMBER, left.t);
+       c = converttype(c, join_types(left.t,right.t,&node_plus), left.t);
     }
     return toreadwrite(left.c, c, 0, 0, 0);
 }
@@ -2831,8 +2843,8 @@ void node_dump2(node_t*n, const char*p1, const char*p2, FILE*fi)
 
 void node_dump(node_t*n)
 {
-    printf("---------------------------VVVV\n");
+    printf("------------VVVV---------------\n");
     node_dump2(n,"","",stdout);
-    printf("---------------------------^^^^\n");
+    printf("-------------------------------\n");
 }
 
