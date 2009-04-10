@@ -2714,7 +2714,7 @@ float parsePercent(const char*str)
     if(!l)
 	return 1.0;
     if(str[l-1]=='%') {
-	return atoi(str)/100.0;
+	return atof(str)/100.0;
     }
     syntaxerror("Expression '%s' is not a percentage", str);
     return 0;
