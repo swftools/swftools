@@ -748,14 +748,12 @@ static code_t* var_block(code_t*body)
     code_t*k = 0;
     int t;
     int num=0;
-    for(t=0;t<state->vars->hashsize;t++) {
-        DICT_ITERATE_DATA(state->vars, variable_t*, v) {
-            if(v->type && v->init) {
-                c = defaultvalue(c, v->type);
-                c = abc_setlocal(c, v->index);
-                k = abc_kill(k, v->index); 
-                num++;
-            }
+    DICT_ITERATE_DATA(state->vars, variable_t*, v) {
+        if(v->type && v->init) {
+            c = defaultvalue(c, v->type);
+            c = abc_setlocal(c, v->index);
+            k = abc_kill(k, v->index); 
+            num++;
         }
     }
 
@@ -1902,11 +1900,11 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 273 of skeleton.m4  */
-#line 1906 "parser.tab.c"
+#line 1904 "parser.tab.c"
 /* Unqualified %code blocks.  */
 
 /* Line 274 of skeleton.m4  */
-#line 1983 "parser.y"
+#line 1981 "parser.y"
 
     char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
     {
@@ -1915,7 +1913,7 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 2433 "parser.y"
+#line 2431 "parser.y"
 
     static void state_has_imports()
     {
@@ -1938,7 +1936,7 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 2566 "parser.y"
+#line 2564 "parser.y"
 
     static int slotstate_varconst = 0;
     static modifiers_t*slotstate_flags = 0;
@@ -1984,6 +1982,10 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
             // instance variable
             traits = &state->cls->abc->traits;
             code = &state->cls->init->header;
+            
+            if(ns.access == ACCESS_PROTECTED) {
+                ns.name = concat3(state->cls->info->package,":",state->cls->info->name);
+            }
         }
         if(c)
             *c = code;
@@ -1995,13 +1997,13 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 2746 "parser.y"
+#line 2748 "parser.y"
 
     static int xml_level = 0;
 
 
 /* Line 274 of skeleton.m4  */
-#line 3525 "parser.y"
+#line 3527 "parser.y"
 
     node_t* resolve_identifier(char*name)
     {
@@ -2118,7 +2120,7 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 3667 "parser.y"
+#line 3669 "parser.y"
 
     void add_active_url(const char*url)
     {
@@ -2130,7 +2132,7 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 2134 "parser.tab.c"
+#line 2136 "parser.tab.c"
 
 #ifdef short
 # undef short
@@ -2563,42 +2565,42 @@ static const yytype_int16 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,  1887,  1887,  1889,  1889,  1890,  1891,  1893,  1894,  1895,
-    1896,  1897,  1898,  1899,  1900,  1902,  1902,  1903,  1904,  1906,
-    1907,  1908,  1909,  1910,  1911,  1912,  1914,  1915,  1917,  1920,
-    1923,  1924,  1925,  1926,  1927,  1928,  1929,  1930,  1931,  1932,
-    1933,  1934,  1935,  1936,  1937,  1940,  1941,  1942,  1943,  1944,
-    1945,  1946,  1947,  1959,  1960,  1964,  1971,  1990,  1991,  1993,
-    1994,  1996,  1997,  1999,  2059,  2060,  2063,  2063,  2082,  2083,
-    2084,  2089,  2093,  2098,  2099,  2101,  2121,  2169,  2169,  2188,
-    2188,  2203,  2206,  2209,  2212,  2216,  2217,  2218,  2219,  2220,
-    2221,  2223,  2234,  2237,  2237,  2268,  2268,  2293,  2293,  2309,
-    2310,  2311,  2312,  2320,  2329,  2329,  2378,  2382,  2393,  2403,
-    2420,  2421,  2422,  2423,  2425,  2426,  2428,  2428,  2430,  2430,
-    2453,  2467,  2483,  2484,  2485,  2486,  2493,  2494,  2495,  2496,
-    2497,  2498,  2499,  2500,  2501,  2502,  2506,  2507,  2509,  2510,
-    2512,  2513,  2517,  2515,  2523,  2521,  2530,  2531,  2532,  2533,
-    2534,  2535,  2536,  2537,  2539,  2545,  2546,  2547,  2548,  2549,
-    2550,  2553,  2621,  2621,  2623,  2623,  2625,  2626,  2628,  2712,
-    2713,  2722,  2723,  2726,  2727,  2728,  2729,  2730,  2731,  2732,
-    2750,  2752,  2753,  2754,  2756,  2756,  2760,  2760,  2764,  2765,
-    2768,  2769,  2771,  2772,  2774,  2775,  2777,  2781,  2784,  2789,
-    2790,  2791,  2792,  2794,  2797,  2801,  2804,  2807,  2817,  2821,
-    2827,  2833,  2841,  2846,  2852,  2860,  2868,  2869,  2870,  2873,
-    2872,  2889,  2890,  2892,  2891,  2915,  2934,  2948,  2949,  2951,
-    2952,  2954,  2955,  2956,  2965,  2966,  2970,  2971,  2973,  2974,
-    2975,  2977,  2981,  2982,  2987,  2988,  3032,  3082,  3103,  3125,
-    3128,  3135,  3138,  3141,  3144,  3147,  3150,  3155,  3156,  3158,
-    3159,  3160,  3161,  3162,  3164,  3170,  3179,  3180,  3181,  3182,
-    3183,  3184,  3186,  3190,  3202,  3220,  3231,  3241,  3250,  3251,
-    3252,  3253,  3254,  3255,  3256,  3257,  3258,  3259,  3260,  3261,
-    3262,  3263,  3264,  3265,  3266,  3267,  3268,  3269,  3270,  3271,
-    3272,  3273,  3274,  3275,  3276,  3277,  3278,  3279,  3280,  3281,
-    3282,  3283,  3284,  3285,  3286,  3287,  3288,  3289,  3290,  3291,
-    3292,  3293,  3294,  3295,  3297,  3298,  3299,  3300,  3302,  3317,
-    3325,  3325,  3379,  3380,  3381,  3382,  3383,  3391,  3409,  3416,
-    3427,  3434,  3441,  3451,  3462,  3640,  3676,  3683,  3690,  3697,
-    3719,  3724
+       0,  1885,  1885,  1887,  1887,  1888,  1889,  1891,  1892,  1893,
+    1894,  1895,  1896,  1897,  1898,  1900,  1900,  1901,  1902,  1904,
+    1905,  1906,  1907,  1908,  1909,  1910,  1912,  1913,  1915,  1918,
+    1921,  1922,  1923,  1924,  1925,  1926,  1927,  1928,  1929,  1930,
+    1931,  1932,  1933,  1934,  1935,  1938,  1939,  1940,  1941,  1942,
+    1943,  1944,  1945,  1957,  1958,  1962,  1969,  1988,  1989,  1991,
+    1992,  1994,  1995,  1997,  2057,  2058,  2061,  2061,  2080,  2081,
+    2082,  2087,  2091,  2096,  2097,  2099,  2119,  2167,  2167,  2186,
+    2186,  2201,  2204,  2207,  2210,  2214,  2215,  2216,  2217,  2218,
+    2219,  2221,  2232,  2235,  2235,  2266,  2266,  2291,  2291,  2307,
+    2308,  2309,  2310,  2318,  2327,  2327,  2376,  2380,  2391,  2401,
+    2418,  2419,  2420,  2421,  2423,  2424,  2426,  2426,  2428,  2428,
+    2451,  2465,  2481,  2482,  2483,  2484,  2491,  2492,  2493,  2494,
+    2495,  2496,  2497,  2498,  2499,  2500,  2504,  2505,  2507,  2508,
+    2510,  2511,  2515,  2513,  2521,  2519,  2528,  2529,  2530,  2531,
+    2532,  2533,  2534,  2535,  2537,  2543,  2544,  2545,  2546,  2547,
+    2548,  2551,  2623,  2623,  2625,  2625,  2627,  2628,  2630,  2714,
+    2715,  2724,  2725,  2728,  2729,  2730,  2731,  2732,  2733,  2734,
+    2752,  2754,  2755,  2756,  2758,  2758,  2762,  2762,  2766,  2767,
+    2770,  2771,  2773,  2774,  2776,  2777,  2779,  2783,  2786,  2791,
+    2792,  2793,  2794,  2796,  2799,  2803,  2806,  2809,  2819,  2823,
+    2829,  2835,  2843,  2848,  2854,  2862,  2870,  2871,  2872,  2875,
+    2874,  2891,  2892,  2894,  2893,  2917,  2936,  2950,  2951,  2953,
+    2954,  2956,  2957,  2958,  2967,  2968,  2972,  2973,  2975,  2976,
+    2977,  2979,  2983,  2984,  2989,  2990,  3034,  3084,  3105,  3127,
+    3130,  3137,  3140,  3143,  3146,  3149,  3152,  3157,  3158,  3160,
+    3161,  3162,  3163,  3164,  3166,  3172,  3181,  3182,  3183,  3184,
+    3185,  3186,  3188,  3192,  3204,  3222,  3233,  3243,  3252,  3253,
+    3254,  3255,  3256,  3257,  3258,  3259,  3260,  3261,  3262,  3263,
+    3264,  3265,  3266,  3267,  3268,  3269,  3270,  3271,  3272,  3273,
+    3274,  3275,  3276,  3277,  3278,  3279,  3280,  3281,  3282,  3283,
+    3284,  3285,  3286,  3287,  3288,  3289,  3290,  3291,  3292,  3293,
+    3294,  3295,  3296,  3297,  3299,  3300,  3301,  3302,  3304,  3319,
+    3327,  3327,  3381,  3382,  3383,  3384,  3385,  3393,  3411,  3418,
+    3429,  3436,  3443,  3453,  3464,  3642,  3678,  3685,  3692,  3699,
+    3721,  3726
 };
 #endif
 
@@ -4517,7 +4519,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1899 "parser.y"
+#line 1897 "parser.y"
     {PASS_ALWAYS as3_pass=(yyvsp[(1) - (4)].number_int);}
     }
     break;
@@ -4528,7 +4530,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1911 "parser.y"
+#line 1909 "parser.y"
     {PASS_ALWAYS as3_pass=(yyvsp[(1) - (4)].number_int);}
     }
     break;
@@ -4539,7 +4541,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1914 "parser.y"
+#line 1912 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
     }
     break;
@@ -4550,7 +4552,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1915 "parser.y"
+#line 1913 "parser.y"
     {(yyval.code)=code_new();}
     }
     break;
@@ -4561,7 +4563,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1917 "parser.y"
+#line 1915 "parser.y"
     {
     (yyval.code)=code_append((yyvsp[(1) - (2)].code),(yyvsp[(2) - (2)].code));
 }
@@ -4574,7 +4576,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1920 "parser.y"
+#line 1918 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
     }
     break;
@@ -4585,7 +4587,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1936 "parser.y"
+#line 1934 "parser.y"
     {(yyval.code)=(yyvsp[(2) - (3)].code);}
     }
     break;
@@ -4596,7 +4598,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1937 "parser.y"
+#line 1935 "parser.y"
     {(yyval.code)=0;}
     }
     break;
@@ -4607,7 +4609,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1940 "parser.y"
+#line 1938 "parser.y"
     {(yyval.code)=0;}
     }
     break;
@@ -4618,7 +4620,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1947 "parser.y"
+#line 1945 "parser.y"
     {
     PASS_ALWAYS 
     if(as3_pass) {
@@ -4637,7 +4639,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1959 "parser.y"
+#line 1957 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (2)].code);}
     }
     break;
@@ -4648,7 +4650,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1960 "parser.y"
+#line 1958 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
     }
     break;
@@ -4659,7 +4661,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1964 "parser.y"
+#line 1962 "parser.y"
     {
     code_t**cc = &global->init->method->body->code;
     *cc = code_append(*cc, (yyvsp[(1) - (1)].code));
@@ -4673,7 +4675,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1971 "parser.y"
+#line 1969 "parser.y"
     {
     PASS12
     (yyval.number_int)=as3_pass;
@@ -4692,7 +4694,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1990 "parser.y"
+#line 1988 "parser.y"
     {(yyval.node)=(yyvsp[(2) - (2)].node);}
     }
     break;
@@ -4703,7 +4705,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1991 "parser.y"
+#line 1989 "parser.y"
     {(yyval.node)=mkdummynode();}
     }
     break;
@@ -4714,7 +4716,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1993 "parser.y"
+#line 1991 "parser.y"
     {(yyval.code)=(yyvsp[(2) - (2)].code);}
     }
     break;
@@ -4725,7 +4727,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1994 "parser.y"
+#line 1992 "parser.y"
     {(yyval.code)=(yyvsp[(2) - (2)].code);}
     }
     break;
@@ -4736,7 +4738,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1996 "parser.y"
+#line 1994 "parser.y"
     {(yyval.code) = (yyvsp[(1) - (1)].code);}
     }
     break;
@@ -4747,7 +4749,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 1997 "parser.y"
+#line 1995 "parser.y"
     {(yyval.code) = code_append((yyvsp[(1) - (3)].code), (yyvsp[(3) - (3)].code));}
     }
     break;
@@ -4758,7 +4760,7 @@ yyreduce:
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2000 "parser.y"
+#line 1998 "parser.y"
     {
 PASS12
     if(variable_exists((yyvsp[(1) - (3)].id)))
@@ -4824,7 +4826,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2059 "parser.y"
+#line 2057 "parser.y"
     {(yyval.code) = code_new();}
     }
     break;
@@ -4835,7 +4837,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2060 "parser.y"
+#line 2058 "parser.y"
     {(yyval.code)=(yyvsp[(2) - (2)].code);}
     }
     break;
@@ -4846,7 +4848,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2063 "parser.y"
+#line 2061 "parser.y"
     {PASS12 new_state();}
     }
     break;
@@ -4857,7 +4859,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2063 "parser.y"
+#line 2061 "parser.y"
     {
      
     (yyval.code) = code_new();
@@ -4885,7 +4887,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2082 "parser.y"
+#line 2080 "parser.y"
     {(yyval.code)=code_new();}
     }
     break;
@@ -4896,7 +4898,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2089 "parser.y"
+#line 2087 "parser.y"
     {
     PASS1 (yyval.id)=(yyvsp[(2) - (3)].id);new_variable((yyvsp[(2) - (3)].id),0,1,0);
     PASS2 (yyval.id)=(yyvsp[(2) - (3)].id);new_variable((yyvsp[(2) - (3)].id),(yyvsp[(3) - (3)].classinfo),1,0);
@@ -4910,7 +4912,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2093 "parser.y"
+#line 2091 "parser.y"
     {
     PASS12
     (yyval.id)=(yyvsp[(1) - (1)].id);
@@ -4924,7 +4926,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2098 "parser.y"
+#line 2096 "parser.y"
     {PASS12 new_state();(yyval.for_start).name=(yyvsp[(1) - (2)].id);(yyval.for_start).each=0;}
     }
     break;
@@ -4935,7 +4937,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2099 "parser.y"
+#line 2097 "parser.y"
     {PASS12 new_state();(yyval.for_start).name=(yyvsp[(1) - (3)].id);(yyval.for_start).each=1;}
     }
     break;
@@ -4946,7 +4948,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2101 "parser.y"
+#line 2099 "parser.y"
     {
     if((yyvsp[(1) - (8)].for_start).each) syntaxerror("invalid syntax: ; not allowed in for each statement");
     (yyval.code) = code_new();
@@ -4975,7 +4977,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2121 "parser.y"
+#line 2119 "parser.y"
     {
     variable_t*var = find_variable(state, (yyvsp[(2) - (6)].id));
     if(!var) {
@@ -5032,7 +5034,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2169 "parser.y"
+#line 2167 "parser.y"
     {PASS12 new_state();}
     }
     break;
@@ -5043,7 +5045,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2169 "parser.y"
+#line 2167 "parser.y"
     {
 
     (yyval.code) = code_new();
@@ -5071,7 +5073,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2188 "parser.y"
+#line 2186 "parser.y"
     {PASS12 new_state();}
     }
     break;
@@ -5082,7 +5084,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2188 "parser.y"
+#line 2186 "parser.y"
     {
     (yyval.code) = code_new();
     code_t*loopstart = (yyval.code) = abc_label((yyval.code));
@@ -5106,7 +5108,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2203 "parser.y"
+#line 2201 "parser.y"
     {
     (yyval.code) = abc___break__(0, "");
 }
@@ -5119,7 +5121,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2206 "parser.y"
+#line 2204 "parser.y"
     {
     (yyval.code) = abc___break__(0, (yyvsp[(2) - (2)].id));
 }
@@ -5132,7 +5134,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2209 "parser.y"
+#line 2207 "parser.y"
     {
     (yyval.code) = abc___continue__(0, "");
 }
@@ -5145,7 +5147,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2212 "parser.y"
+#line 2210 "parser.y"
     {
     (yyval.code) = abc___continue__(0, (yyvsp[(2) - (2)].id));
 }
@@ -5158,7 +5160,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2216 "parser.y"
+#line 2214 "parser.y"
     {(yyval.code)=0;}
     }
     break;
@@ -5169,7 +5171,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2217 "parser.y"
+#line 2215 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
     }
     break;
@@ -5180,7 +5182,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2218 "parser.y"
+#line 2216 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
     }
     break;
@@ -5191,7 +5193,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2219 "parser.y"
+#line 2217 "parser.y"
     {(yyval.code)=code_append((yyvsp[(1) - (2)].code),(yyvsp[(2) - (2)].code));}
     }
     break;
@@ -5202,7 +5204,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2220 "parser.y"
+#line 2218 "parser.y"
     {(yyval.code)=(yyvsp[(1) - (1)].code);}
     }
     break;
@@ -5213,7 +5215,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2221 "parser.y"
+#line 2219 "parser.y"
     {(yyval.code)=code_append((yyval.code),(yyvsp[(2) - (2)].code));}
     }
     break;
@@ -5224,7 +5226,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2223 "parser.y"
+#line 2221 "parser.y"
     {
     (yyval.code) = abc_getlocal(0, state->switch_var);
     (yyval.code) = code_append((yyval.code), node_read((yyvsp[(2) - (4)].node)).c);
@@ -5245,7 +5247,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2234 "parser.y"
+#line 2232 "parser.y"
     {
     (yyval.code) = (yyvsp[(3) - (3)].code);
 }
@@ -5258,7 +5260,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2237 "parser.y"
+#line 2235 "parser.y"
     {PASS12 new_state();state->switch_var=alloc_local();}
     }
     break;
@@ -5269,7 +5271,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2237 "parser.y"
+#line 2235 "parser.y"
     {
     (yyval.code) = node_read((yyvsp[(4) - (8)].node)).c;
     (yyval.code) = abc_setlocal((yyval.code), state->switch_var);
@@ -5307,7 +5309,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2268 "parser.y"
+#line 2266 "parser.y"
     {PASS12 new_state();
                                                       state->exception_name=(yyvsp[(3) - (5)].id);
                                                PASS1 new_variable((yyvsp[(3) - (5)].id), 0, 0, 0);
@@ -5322,7 +5324,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2273 "parser.y"
+#line 2271 "parser.y"
     {
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
     multiname_t name = {QNAME, &name_ns, 0, (yyvsp[(3) - (9)].id)};
@@ -5352,7 +5354,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2293 "parser.y"
+#line 2291 "parser.y"
     {PASS12 new_state();state->exception_name=0;}
     }
     break;
@@ -5363,7 +5365,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2293 "parser.y"
+#line 2291 "parser.y"
     {
     (yyvsp[(4) - (5)].code) = var_block((yyvsp[(4) - (5)].code));
     if(!(yyvsp[(4) - (5)].code)) {
@@ -5388,7 +5390,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2309 "parser.y"
+#line 2307 "parser.y"
     {(yyval.catch_list).l=list_new();(yyval.catch_list).finally=0;list_append((yyval.catch_list).l,(yyvsp[(1) - (1)].exception));}
     }
     break;
@@ -5399,7 +5401,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2310 "parser.y"
+#line 2308 "parser.y"
     {(yyval.catch_list)=(yyvsp[(1) - (2)].catch_list);list_append((yyval.catch_list).l,(yyvsp[(2) - (2)].exception));}
     }
     break;
@@ -5410,7 +5412,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2311 "parser.y"
+#line 2309 "parser.y"
     {(yyval.catch_list)=(yyvsp[(1) - (1)].catch_list);}
     }
     break;
@@ -5421,7 +5423,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2312 "parser.y"
+#line 2310 "parser.y"
     {
     (yyval.catch_list) = (yyvsp[(1) - (2)].catch_list);
     (yyval.catch_list).finally = 0;
@@ -5439,7 +5441,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2320 "parser.y"
+#line 2318 "parser.y"
     {
     (yyval.catch_list).l=list_new();
     (yyval.catch_list).finally = 0;
@@ -5457,7 +5459,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2329 "parser.y"
+#line 2327 "parser.y"
     {PASS12 new_state();
                  state->method->has_exceptions=1;
                  state->method->late_binding=1;//for invariant scope_code
@@ -5471,7 +5473,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2332 "parser.y"
+#line 2330 "parser.y"
     {
     code_t*out = abc_nop(0);
 
@@ -5524,7 +5526,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2378 "parser.y"
+#line 2376 "parser.y"
     {
     (yyval.code)=(yyvsp[(2) - (2)].value).c;
     (yyval.code)=abc_throw((yyval.code));
@@ -5538,7 +5540,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2382 "parser.y"
+#line 2380 "parser.y"
     {
     if(!state->exception_name)
         syntaxerror("re-throw only possible within a catch block");
@@ -5556,7 +5558,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2393 "parser.y"
+#line 2391 "parser.y"
     {
      new_state();
      if(state->method->has_exceptions) {
@@ -5576,7 +5578,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2403 "parser.y"
+#line 2401 "parser.y"
     {
      /* remove getlocal;pushwith from scope code again */
      state->method->scope_code = code_cutlast(code_cutlast(state->method->scope_code));
@@ -5600,7 +5602,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2421 "parser.y"
+#line 2419 "parser.y"
     {PASS12 (yyval.id)="package";}
     }
     break;
@@ -5611,7 +5613,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2422 "parser.y"
+#line 2420 "parser.y"
     {PASS12 (yyval.id)="namespace";}
     }
     break;
@@ -5622,7 +5624,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2423 "parser.y"
+#line 2421 "parser.y"
     {PASS12 (yyval.id)=(yyvsp[(1) - (1)].id);}
     }
     break;
@@ -5633,7 +5635,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2425 "parser.y"
+#line 2423 "parser.y"
     {PASS12 (yyval.id) = concat3((yyvsp[(1) - (3)].id),".",(yyvsp[(3) - (3)].id));free((yyvsp[(1) - (3)].id));(yyvsp[(1) - (3)].id)=0;}
     }
     break;
@@ -5644,7 +5646,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2426 "parser.y"
+#line 2424 "parser.y"
     {PASS12 (yyval.id)=strdup((yyvsp[(1) - (1)].id));}
     }
     break;
@@ -5655,7 +5657,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2428 "parser.y"
+#line 2426 "parser.y"
     {PASS12 startpackage((yyvsp[(2) - (3)].id));free((yyvsp[(2) - (3)].id));(yyvsp[(2) - (3)].id)=0;}
     }
     break;
@@ -5666,7 +5668,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2429 "parser.y"
+#line 2427 "parser.y"
     {PASS12 endpackage();(yyval.code)=0;}
     }
     break;
@@ -5677,7 +5679,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2430 "parser.y"
+#line 2428 "parser.y"
     {PASS12 startpackage("");}
     }
     break;
@@ -5688,7 +5690,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2431 "parser.y"
+#line 2429 "parser.y"
     {PASS12 endpackage();(yyval.code)=0;}
     }
     break;
@@ -5699,7 +5701,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2453 "parser.y"
+#line 2451 "parser.y"
     {
        PASS12
        slotinfo_t*s = registry_find((yyvsp[(2) - (2)].classinfo)->package, (yyvsp[(2) - (2)].classinfo)->name);
@@ -5723,7 +5725,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2467 "parser.y"
+#line 2465 "parser.y"
     {
        PASS12
        if(strncmp("flash.", (yyvsp[(2) - (4)].id), 6) && as3_pass==1) {
@@ -5746,7 +5748,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2483 "parser.y"
+#line 2481 "parser.y"
     {PASS12 (yyval.flags).flags=0;(yyval.flags).ns=0;}
     }
     break;
@@ -5757,7 +5759,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2484 "parser.y"
+#line 2482 "parser.y"
     {PASS12 (yyval.flags)=(yyvsp[(1) - (1)].flags);}
     }
     break;
@@ -5768,7 +5770,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2485 "parser.y"
+#line 2483 "parser.y"
     {PASS12 (yyval.flags)=(yyvsp[(1) - (1)].flags);}
     }
     break;
@@ -5779,7 +5781,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2486 "parser.y"
+#line 2484 "parser.y"
     {
     PASS12 
     (yyval.flags).flags=(yyvsp[(1) - (2)].flags).flags|(yyvsp[(2) - (2)].flags).flags;
@@ -5796,7 +5798,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2493 "parser.y"
+#line 2491 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_PUBLIC;(yyval.flags).ns=0;}
     }
     break;
@@ -5807,7 +5809,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2494 "parser.y"
+#line 2492 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_PRIVATE;(yyval.flags).ns=0;}
     }
     break;
@@ -5818,7 +5820,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2495 "parser.y"
+#line 2493 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_PROTECTED;(yyval.flags).ns=0;}
     }
     break;
@@ -5829,7 +5831,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2496 "parser.y"
+#line 2494 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_STATIC;(yyval.flags).ns=0;}
     }
     break;
@@ -5840,7 +5842,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2497 "parser.y"
+#line 2495 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_DYNAMIC;(yyval.flags).ns=0;}
     }
     break;
@@ -5851,7 +5853,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2498 "parser.y"
+#line 2496 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_FINAL;(yyval.flags).ns=0;}
     }
     break;
@@ -5862,7 +5864,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2499 "parser.y"
+#line 2497 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_OVERRIDE;(yyval.flags).ns=0;}
     }
     break;
@@ -5873,7 +5875,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2500 "parser.y"
+#line 2498 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_NATIVE;(yyval.flags).ns=0;}
     }
     break;
@@ -5884,7 +5886,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2501 "parser.y"
+#line 2499 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_PACKAGEINTERNAL;(yyval.flags).ns=0;}
     }
     break;
@@ -5895,7 +5897,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2502 "parser.y"
+#line 2500 "parser.y"
     {PASS12 (yyval.flags).flags=FLAG_NAMESPACE;
                                (yyval.flags).ns=(yyvsp[(1) - (1)].id);
                        }
@@ -5908,7 +5910,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2506 "parser.y"
+#line 2504 "parser.y"
     {PASS12 (yyval.classinfo)=0;}
     }
     break;
@@ -5919,7 +5921,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2507 "parser.y"
+#line 2505 "parser.y"
     {PASS12 (yyval.classinfo)=(yyvsp[(2) - (2)].classinfo);}
     }
     break;
@@ -5930,7 +5932,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2509 "parser.y"
+#line 2507 "parser.y"
     {PASS12 (yyval.classinfo_list)=list_new();}
     }
     break;
@@ -5941,7 +5943,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2510 "parser.y"
+#line 2508 "parser.y"
     {PASS12 (yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);}
     }
     break;
@@ -5952,7 +5954,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2512 "parser.y"
+#line 2510 "parser.y"
     {PASS12 (yyval.classinfo_list)=list_new();}
     }
     break;
@@ -5963,7 +5965,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2513 "parser.y"
+#line 2511 "parser.y"
     {PASS12 (yyval.classinfo_list)=(yyvsp[(2) - (2)].classinfo_list);}
     }
     break;
@@ -5974,7 +5976,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2517 "parser.y"
+#line 2515 "parser.y"
     {PASS12 startclass(&(yyvsp[(1) - (6)].flags),(yyvsp[(3) - (6)].id),(yyvsp[(4) - (6)].classinfo),(yyvsp[(5) - (6)].classinfo_list));}
     }
     break;
@@ -5985,7 +5987,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2519 "parser.y"
+#line 2517 "parser.y"
     {PASS12 endclass();(yyval.code)=0;}
     }
     break;
@@ -5996,7 +5998,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2523 "parser.y"
+#line 2521 "parser.y"
     {PASS12 (yyvsp[(1) - (5)].flags).flags|=FLAG_INTERFACE;
                                           startclass(&(yyvsp[(1) - (5)].flags),(yyvsp[(3) - (5)].id),0,(yyvsp[(4) - (5)].classinfo_list));}
     }
@@ -6008,7 +6010,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2526 "parser.y"
+#line 2524 "parser.y"
     {PASS12 endclass();(yyval.code)=0;}
     }
     break;
@@ -6019,7 +6021,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2535 "parser.y"
+#line 2533 "parser.y"
     {PASS_ALWAYS as3_pass=(yyvsp[(1) - (4)].number_int);}
     }
     break;
@@ -6030,7 +6032,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2539 "parser.y"
+#line 2537 "parser.y"
     {
     code_t*c = state->cls->static_init->header;
     c = code_append(c, (yyvsp[(1) - (1)].code));  
@@ -6045,7 +6047,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2550 "parser.y"
+#line 2548 "parser.y"
     {
     syntaxerror("variable declarations not allowed in interfaces");
 }
@@ -6058,7 +6060,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2553 "parser.y"
+#line 2551 "parser.y"
     {
     PASS12
     (yyvsp[(1) - (8)].flags).flags |= FLAG_PUBLIC;
@@ -6078,7 +6080,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2623 "parser.y"
+#line 2625 "parser.y"
     {PASS12 setslotstate(&(yyvsp[(1) - (2)].flags),(yyvsp[(2) - (2)].token));}
     }
     break;
@@ -6089,7 +6091,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2623 "parser.y"
+#line 2625 "parser.y"
     {PASS12 (yyval.code)=(yyvsp[(4) - (4)].code);setslotstate(0, 0);}
     }
     break;
@@ -6100,7 +6102,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2625 "parser.y"
+#line 2627 "parser.y"
     {PASS12 (yyval.code)=0;}
     }
     break;
@@ -6111,7 +6113,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2626 "parser.y"
+#line 2628 "parser.y"
     {PASS12 (yyval.code)=0;}
     }
     break;
@@ -6122,7 +6124,7 @@ PASS2
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2629 "parser.y"
+#line 2631 "parser.y"
     {
 PASS12
     int flags = slotstate_flags->flags;
@@ -6212,7 +6214,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2712 "parser.y"
+#line 2714 "parser.y"
     {(yyval.constant)=0;}
     }
     break;
@@ -6223,7 +6225,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2713 "parser.y"
+#line 2715 "parser.y"
     {
   (yyval.constant) = malloc(sizeof(constant_t));
   *(yyval.constant) = node_eval((yyvsp[(2) - (2)].node));
@@ -6240,7 +6242,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2722 "parser.y"
+#line 2724 "parser.y"
     {(yyval.constant) = constant_new_int((yyvsp[(1) - (1)].number_int));}
     }
     break;
@@ -6251,7 +6253,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2723 "parser.y"
+#line 2725 "parser.y"
     {
     (yyval.constant) = constant_new_uint((yyvsp[(1) - (1)].number_uint));
 }
@@ -6264,7 +6266,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2726 "parser.y"
+#line 2728 "parser.y"
     {(yyval.constant) = constant_new_float((yyvsp[(1) - (1)].number_float));}
     }
     break;
@@ -6275,7 +6277,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2727 "parser.y"
+#line 2729 "parser.y"
     {(yyval.constant) = constant_new_string2((yyvsp[(1) - (1)].str).str,(yyvsp[(1) - (1)].str).len);free((char*)(yyvsp[(1) - (1)].str).str);}
     }
     break;
@@ -6286,7 +6288,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2728 "parser.y"
+#line 2730 "parser.y"
     {(yyval.constant) = constant_new_true((yyvsp[(1) - (1)].token));}
     }
     break;
@@ -6297,7 +6299,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2729 "parser.y"
+#line 2731 "parser.y"
     {(yyval.constant) = constant_new_false((yyvsp[(1) - (1)].token));}
     }
     break;
@@ -6308,7 +6310,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2730 "parser.y"
+#line 2732 "parser.y"
     {(yyval.constant) = constant_new_null((yyvsp[(1) - (1)].token));}
     }
     break;
@@ -6319,7 +6321,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2731 "parser.y"
+#line 2733 "parser.y"
     {(yyval.constant) = constant_new_undefined((yyvsp[(1) - (1)].token));}
     }
     break;
@@ -6330,7 +6332,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2732 "parser.y"
+#line 2734 "parser.y"
     {(yyval.constant) = constant_new_float(__builtin_nan(""));}
     }
     break;
@@ -6341,7 +6343,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2752 "parser.y"
+#line 2754 "parser.y"
     {PASS_ALWAYS if(!xml_level++) tokenizer_begin_xml();}
     }
     break;
@@ -6352,7 +6354,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2753 "parser.y"
+#line 2755 "parser.y"
     {PASS_ALWAYS tokenizer_begin_xmltext();}
     }
     break;
@@ -6363,7 +6365,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2754 "parser.y"
+#line 2756 "parser.y"
     {PASS_ALWAYS if(!--xml_level) tokenizer_end_xml(); else tokenizer_begin_xmltext();}
     }
     break;
@@ -6374,7 +6376,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2756 "parser.y"
+#line 2758 "parser.y"
     {PASS_ALWAYS tokenizer_begin_xmltext();}
     }
     break;
@@ -6385,7 +6387,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2756 "parser.y"
+#line 2758 "parser.y"
     {
     (yyval.id)=strdup("{...}");
     as3_warning("xml string substitution not yet supported");
@@ -6399,7 +6401,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2760 "parser.y"
+#line 2762 "parser.y"
     {PASS_ALWAYS tokenizer_begin_xml();}
     }
     break;
@@ -6410,7 +6412,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2760 "parser.y"
+#line 2762 "parser.y"
     {
     (yyval.id)=strdup("{...}");
     as3_warning("xml string substitution not yet supported");
@@ -6424,7 +6426,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2764 "parser.y"
+#line 2766 "parser.y"
     {(yyval.id)="";}
     }
     break;
@@ -6435,7 +6437,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2765 "parser.y"
+#line 2767 "parser.y"
     {
     (yyval.id) = concat2((yyvsp[(1) - (2)].id), "{...}");
 }
@@ -6448,7 +6450,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2768 "parser.y"
+#line 2770 "parser.y"
     {(yyval.id)=concat2((yyvsp[(1) - (2)].id), string_cstr(&(yyvsp[(2) - (2)].str)));}
     }
     break;
@@ -6459,7 +6461,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2769 "parser.y"
+#line 2771 "parser.y"
     {(yyval.id)=concat2((yyvsp[(1) - (2)].id), ">");}
     }
     break;
@@ -6470,7 +6472,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2771 "parser.y"
+#line 2773 "parser.y"
     {(yyval.id)=concat2((yyvsp[(1) - (2)].id),(yyvsp[(2) - (2)].id));}
     }
     break;
@@ -6481,7 +6483,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2772 "parser.y"
+#line 2774 "parser.y"
     {(yyval.id)=concat3((yyvsp[(1) - (3)].id),(yyvsp[(2) - (3)].id),(yyvsp[(3) - (3)].id));free((yyvsp[(1) - (3)].id));free((yyvsp[(2) - (3)].id));free((yyvsp[(3) - (3)].id));}
     }
     break;
@@ -6492,7 +6494,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2774 "parser.y"
+#line 2776 "parser.y"
     {(yyval.id)=(yyvsp[(1) - (1)].id);}
     }
     break;
@@ -6503,7 +6505,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2775 "parser.y"
+#line 2777 "parser.y"
     {(yyval.id)=(yyvsp[(1) - (1)].id);}
     }
     break;
@@ -6514,7 +6516,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2777 "parser.y"
+#line 2779 "parser.y"
     {
     (yyval.id) = allocprintf("<%s%s>%s</%s>", (yyvsp[(2) - (10)].id), (yyvsp[(3) - (10)].id), (yyvsp[(5) - (10)].id), (yyvsp[(8) - (10)].id));
     free((yyvsp[(2) - (10)].id));free((yyvsp[(3) - (10)].id));free((yyvsp[(5) - (10)].id));free((yyvsp[(8) - (10)].id));
@@ -6528,7 +6530,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2781 "parser.y"
+#line 2783 "parser.y"
     {
     (yyval.id) = allocprintf("<%s%s/>", (yyvsp[(2) - (6)].id), (yyvsp[(3) - (6)].id));
 }
@@ -6541,7 +6543,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2784 "parser.y"
+#line 2786 "parser.y"
     {
     (yyval.id) = allocprintf("<%s%s>%s%s</%s>", (yyvsp[(2) - (11)].id), (yyvsp[(3) - (11)].id), (yyvsp[(5) - (11)].id), (yyvsp[(6) - (11)].id), (yyvsp[(9) - (11)].id));
     free((yyvsp[(2) - (11)].id));free((yyvsp[(3) - (11)].id));free((yyvsp[(5) - (11)].id));free((yyvsp[(6) - (11)].id));free((yyvsp[(9) - (11)].id));
@@ -6555,7 +6557,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2789 "parser.y"
+#line 2791 "parser.y"
     {(yyval.id)=strdup("");}
     }
     break;
@@ -6566,7 +6568,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2790 "parser.y"
+#line 2792 "parser.y"
     {(yyval.id)=concat2(" ",(yyvsp[(1) - (1)].id));}
     }
     break;
@@ -6577,7 +6579,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2791 "parser.y"
+#line 2793 "parser.y"
     {(yyval.id)=(yyvsp[(1) - (1)].id);}
     }
     break;
@@ -6588,7 +6590,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2792 "parser.y"
+#line 2794 "parser.y"
     {(yyval.id)=concat3((yyvsp[(1) - (2)].id)," ",(yyvsp[(2) - (2)].id));free((yyvsp[(1) - (2)].id));free((yyvsp[(2) - (2)].id));}
     }
     break;
@@ -6599,7 +6601,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2794 "parser.y"
+#line 2796 "parser.y"
     {
     (yyval.id) = strdup("{...}");
 }
@@ -6612,7 +6614,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2797 "parser.y"
+#line 2799 "parser.y"
     {
     char* str = string_cstr(&(yyvsp[(3) - (3)].str));
     (yyval.id) = concat2("{...}=",str);
@@ -6626,7 +6628,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2801 "parser.y"
+#line 2803 "parser.y"
     {
     (yyval.id) = strdup("{...}={...}");
 }
@@ -6639,7 +6641,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2804 "parser.y"
+#line 2806 "parser.y"
     {
     (yyval.id) = concat2((yyvsp[(1) - (3)].id),"={...}");
 }
@@ -6652,7 +6654,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2807 "parser.y"
+#line 2809 "parser.y"
     {
     char* str = string_cstr(&(yyvsp[(3) - (3)].str));
     (yyval.id)=allocprintf("%s=%s", (yyvsp[(1) - (3)].id),str);
@@ -6668,7 +6670,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2817 "parser.y"
+#line 2819 "parser.y"
     {
     PASS12
     memset(&(yyval.params),0,sizeof((yyval.params)));
@@ -6682,7 +6684,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2821 "parser.y"
+#line 2823 "parser.y"
     {
     PASS12
     (yyval.params)=(yyvsp[(1) - (1)].params);
@@ -6696,7 +6698,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2827 "parser.y"
+#line 2829 "parser.y"
     {
     PASS12
     memset(&(yyval.params),0,sizeof((yyval.params)));
@@ -6712,7 +6714,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2833 "parser.y"
+#line 2835 "parser.y"
     {
     PASS12
     (yyval.params) =(yyvsp[(1) - (4)].params);
@@ -6728,7 +6730,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2841 "parser.y"
+#line 2843 "parser.y"
     {
     PASS12
     (yyval.params) = (yyvsp[(1) - (3)].params);
@@ -6743,7 +6745,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2846 "parser.y"
+#line 2848 "parser.y"
     {
     PASS12
     memset(&(yyval.params),0,sizeof((yyval.params)));
@@ -6758,7 +6760,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2852 "parser.y"
+#line 2854 "parser.y"
     {
      PASS12
      (yyval.param) = rfx_calloc(sizeof(param_t));
@@ -6776,7 +6778,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2860 "parser.y"
+#line 2862 "parser.y"
     {
      PASS12
      (yyval.param) = rfx_calloc(sizeof(param_t));
@@ -6794,7 +6796,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2870 "parser.y"
+#line 2872 "parser.y"
     {PASS12 (yyval.token)=0;}
     }
     break;
@@ -6805,7 +6807,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2873 "parser.y"
+#line 2875 "parser.y"
     {PASS12 startfunction(&(yyvsp[(1) - (9)].flags),(yyvsp[(3) - (9)].token),(yyvsp[(4) - (9)].id),&(yyvsp[(6) - (9)].params),(yyvsp[(8) - (9)].classinfo));}
     }
     break;
@@ -6816,7 +6818,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2874 "parser.y"
+#line 2876 "parser.y"
     {
     PASS1 
     endfunction(&(yyvsp[(1) - (12)].flags),(yyvsp[(3) - (12)].token),(yyvsp[(4) - (12)].id),&(yyvsp[(6) - (12)].params),0,0);
@@ -6840,7 +6842,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2890 "parser.y"
+#line 2892 "parser.y"
     {PASS12 (yyval.id)=0;}
     }
     break;
@@ -6851,7 +6853,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2892 "parser.y"
+#line 2894 "parser.y"
     {PASS12 innerfunction((yyvsp[(2) - (7)].id),&(yyvsp[(4) - (7)].params),(yyvsp[(6) - (7)].classinfo));}
     }
     break;
@@ -6862,7 +6864,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2893 "parser.y"
+#line 2895 "parser.y"
     {
     PASS1
     endfunction(0,0,(yyvsp[(2) - (10)].id),&(yyvsp[(4) - (10)].params),0,0);
@@ -6890,7 +6892,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2915 "parser.y"
+#line 2917 "parser.y"
     {
     PASS1 NEW(unresolvedinfo_t,c);
           memset(c, 0, sizeof(*c));
@@ -6918,7 +6920,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2934 "parser.y"
+#line 2936 "parser.y"
     {
     PASS1 NEW(unresolvedinfo_t,c);
           memset(c, 0, sizeof(*c));
@@ -6941,7 +6943,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2951 "parser.y"
+#line 2953 "parser.y"
     {PASS12 (yyval.classinfo_list)=list_new();list_append((yyval.classinfo_list), (yyvsp[(1) - (1)].classinfo));}
     }
     break;
@@ -6952,7 +6954,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2952 "parser.y"
+#line 2954 "parser.y"
     {PASS12 (yyval.classinfo_list)=(yyvsp[(1) - (3)].classinfo_list);list_append((yyval.classinfo_list),(yyvsp[(3) - (3)].classinfo));}
     }
     break;
@@ -6963,7 +6965,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2954 "parser.y"
+#line 2956 "parser.y"
     {PASS12 (yyval.classinfo)=(yyvsp[(1) - (1)].classinfo);}
     }
     break;
@@ -6974,7 +6976,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2955 "parser.y"
+#line 2957 "parser.y"
     {PASS12 (yyval.classinfo)=TYPE_ANY;}
     }
     break;
@@ -6985,7 +6987,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2956 "parser.y"
+#line 2958 "parser.y"
     {PASS12 (yyval.classinfo)=TYPE_VOID;}
     }
     break;
@@ -6996,7 +6998,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2965 "parser.y"
+#line 2967 "parser.y"
     {PASS12 (yyval.classinfo)=(yyvsp[(2) - (2)].classinfo);}
     }
     break;
@@ -7007,7 +7009,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2966 "parser.y"
+#line 2968 "parser.y"
     {PASS12 (yyval.classinfo)=0;}
     }
     break;
@@ -7018,7 +7020,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2970 "parser.y"
+#line 2972 "parser.y"
     {(yyval.value_list).cc=0;(yyval.value_list).number=0;}
     }
     break;
@@ -7029,7 +7031,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2971 "parser.y"
+#line 2973 "parser.y"
     {(yyval.value_list)=(yyvsp[(2) - (3)].value_list);}
     }
     break;
@@ -7040,7 +7042,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2973 "parser.y"
+#line 2975 "parser.y"
     {(yyval.value_list).cc=0;(yyval.value_list).number=0;}
     }
     break;
@@ -7051,7 +7053,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2977 "parser.y"
+#line 2979 "parser.y"
     {(yyval.value_list).number=1;
                                                   (yyval.value_list).cc = (yyvsp[(1) - (1)].value).c;
                                                  }
@@ -7064,7 +7066,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2981 "parser.y"
+#line 2983 "parser.y"
     {(yyval.value_list) = (yyvsp[(1) - (2)].value_list);}
     }
     break;
@@ -7075,7 +7077,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2982 "parser.y"
+#line 2984 "parser.y"
     {
                                                   (yyval.value_list).number= (yyvsp[(1) - (2)].value_list).number+1;
                                                   (yyval.value_list).cc = code_append((yyvsp[(1) - (2)].value_list).cc, (yyvsp[(2) - (2)].value).c);
@@ -7089,7 +7091,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 2988 "parser.y"
+#line 2990 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(2) - (4)].node));
     (yyval.value).c = v.c;
@@ -7138,7 +7140,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3032 "parser.y"
+#line 3034 "parser.y"
     {
    
     typedcode_t v = node_read((yyvsp[(1) - (4)].node));
@@ -7197,7 +7199,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3082 "parser.y"
+#line 3084 "parser.y"
     {
     if(!state->cls) syntaxerror("super() not allowed outside of a class");
     if(!state->method) syntaxerror("super() not allowed outside of a function");
@@ -7227,7 +7229,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3103 "parser.y"
+#line 3105 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(2) - (2)].node));
     (yyval.value).c = v.c;
@@ -7258,7 +7260,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3125 "parser.y"
+#line 3127 "parser.y"
     {
     (yyval.code) = abc_returnvoid(0);
 }
@@ -7271,7 +7273,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3128 "parser.y"
+#line 3130 "parser.y"
     {
     (yyval.code) = (yyvsp[(2) - (2)].value).c;
     (yyval.code) = abc_returnvalue((yyval.code));
@@ -7285,7 +7287,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3135 "parser.y"
+#line 3137 "parser.y"
     {
     (yyval.value) = node_read((yyvsp[(1) - (1)].node));
 }
@@ -7298,7 +7300,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3138 "parser.y"
+#line 3140 "parser.y"
     {
     (yyval.value) = node_read((yyvsp[(1) - (1)].node));
 }
@@ -7311,7 +7313,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3141 "parser.y"
+#line 3143 "parser.y"
     {
     (yyval.node) = mkmultinode(&node_comma, (yyvsp[(1) - (1)].node));
 }
@@ -7324,7 +7326,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3144 "parser.y"
+#line 3146 "parser.y"
     {
     (yyval.node) = multinode_extend((yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));
 }
@@ -7337,7 +7339,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3147 "parser.y"
+#line 3149 "parser.y"
     { 
     (yyval.code) = node_exec((yyvsp[(1) - (1)].node)); 
 }
@@ -7350,7 +7352,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3150 "parser.y"
+#line 3152 "parser.y"
     { 
     (yyval.code) = (yyvsp[(1) - (3)].code);
     (yyval.code) = code_append((yyval.code), node_exec((yyvsp[(3) - (3)].node))); 
@@ -7364,7 +7366,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3155 "parser.y"
+#line 3157 "parser.y"
     {(yyval.value_list).cc=0;(yyval.value_list).number=0;}
     }
     break;
@@ -7375,7 +7377,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3156 "parser.y"
+#line 3158 "parser.y"
     {(yyval.value_list)=(yyvsp[(1) - (1)].value_list);}
     }
     break;
@@ -7386,7 +7388,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3158 "parser.y"
+#line 3160 "parser.y"
     {(yyval.code)=abc_pushstring(0,(yyvsp[(1) - (1)].id));}
     }
     break;
@@ -7397,7 +7399,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3159 "parser.y"
+#line 3161 "parser.y"
     {(yyval.code)=abc_pushstring2(0,&(yyvsp[(1) - (1)].str));}
     }
     break;
@@ -7408,7 +7410,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3160 "parser.y"
+#line 3162 "parser.y"
     {syntaxerror("dictionary keys must be strings");}
     }
     break;
@@ -7419,7 +7421,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3161 "parser.y"
+#line 3163 "parser.y"
     {syntaxerror("dictionary keys must be strings");}
     }
     break;
@@ -7430,7 +7432,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3162 "parser.y"
+#line 3164 "parser.y"
     {syntaxerror("dictionary keys must be strings");}
     }
     break;
@@ -7441,7 +7443,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3164 "parser.y"
+#line 3166 "parser.y"
     {
     (yyval.value_list).cc = 0;
     (yyval.value_list).cc = code_append((yyval.value_list).cc, (yyvsp[(1) - (3)].code));
@@ -7457,7 +7459,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3170 "parser.y"
+#line 3172 "parser.y"
     {
     (yyval.value_list).cc = (yyvsp[(1) - (5)].value_list).cc;
     (yyval.value_list).number = (yyvsp[(1) - (5)].value_list).number+2;
@@ -7473,7 +7475,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3179 "parser.y"
+#line 3181 "parser.y"
     {(yyval.node) = mkcodenode((yyvsp[(1) - (1)].value));}
     }
     break;
@@ -7484,7 +7486,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3180 "parser.y"
+#line 3182 "parser.y"
     {(yyval.node) = mkcodenode((yyvsp[(1) - (1)].value));}
     }
     break;
@@ -7495,7 +7497,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3181 "parser.y"
+#line 3183 "parser.y"
     {(yyval.node) = mkcodenode((yyvsp[(1) - (1)].value));}
     }
     break;
@@ -7506,7 +7508,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3182 "parser.y"
+#line 3184 "parser.y"
     {(yyval.node) = mkcodenode((yyvsp[(1) - (1)].value));}
     }
     break;
@@ -7517,7 +7519,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3183 "parser.y"
+#line 3185 "parser.y"
     {(yyval.node) = mkcodenode((yyvsp[(1) - (1)].value));}
     }
     break;
@@ -7528,7 +7530,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3184 "parser.y"
+#line 3186 "parser.y"
     {(yyval.node) = (yyvsp[(1) - (1)].node);}
     }
     break;
@@ -7539,7 +7541,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3186 "parser.y"
+#line 3188 "parser.y"
     { 
     (yyval.node) = mkconstnode((yyvsp[(1) - (1)].constant));
 }
@@ -7552,7 +7554,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3190 "parser.y"
+#line 3192 "parser.y"
     {
     typedcode_t v;
     v.c = 0;
@@ -7572,7 +7574,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3202 "parser.y"
+#line 3204 "parser.y"
     {
     typedcode_t v;
     v.c = 0;
@@ -7599,7 +7601,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3220 "parser.y"
+#line 3222 "parser.y"
     {
     PASS1
     state->method->need_arguments = 1;
@@ -7618,7 +7620,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3231 "parser.y"
+#line 3233 "parser.y"
     {
     typedcode_t v;
     v.c = code_new();
@@ -7636,7 +7638,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3241 "parser.y"
+#line 3243 "parser.y"
     {
     typedcode_t v;
     v.c = code_new();
@@ -7654,7 +7656,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3250 "parser.y"
+#line 3252 "parser.y"
     {(yyval.node) = mknode2(&node_lt,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7665,7 +7667,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3251 "parser.y"
+#line 3253 "parser.y"
     {(yyval.node) = mknode2(&node_gt,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7676,7 +7678,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3252 "parser.y"
+#line 3254 "parser.y"
     {(yyval.node) = mknode2(&node_le,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7687,7 +7689,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3253 "parser.y"
+#line 3255 "parser.y"
     {(yyval.node) = mknode2(&node_ge,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7698,7 +7700,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3254 "parser.y"
+#line 3256 "parser.y"
     {(yyval.node) = mknode2(&node_eqeq,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7709,7 +7711,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3255 "parser.y"
+#line 3257 "parser.y"
     {(yyval.node) = mknode2(&node_eqeqeq,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7720,7 +7722,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3256 "parser.y"
+#line 3258 "parser.y"
     {(yyval.node) = mknode2(&node_noteqeq,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7731,7 +7733,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3257 "parser.y"
+#line 3259 "parser.y"
     {(yyval.node) = mknode2(&node_noteq,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7742,7 +7744,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3258 "parser.y"
+#line 3260 "parser.y"
     {(yyval.node) = mknode2(&node_oror,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7753,7 +7755,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3259 "parser.y"
+#line 3261 "parser.y"
     {(yyval.node) = mknode2(&node_andand,(yyvsp[(1) - (3)].node),(yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7764,7 +7766,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3260 "parser.y"
+#line 3262 "parser.y"
     {(yyval.node) = mknode1(&node_not, (yyvsp[(2) - (2)].node));}
     }
     break;
@@ -7775,7 +7777,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3261 "parser.y"
+#line 3263 "parser.y"
     {(yyval.node) = mknode1(&node_bitnot, (yyvsp[(2) - (2)].node));}
     }
     break;
@@ -7786,7 +7788,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3262 "parser.y"
+#line 3264 "parser.y"
     {(yyval.node) = mknode2(&node_bitand, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7797,7 +7799,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3263 "parser.y"
+#line 3265 "parser.y"
     {(yyval.node) = mknode2(&node_bitxor, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7808,7 +7810,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3264 "parser.y"
+#line 3266 "parser.y"
     {(yyval.node) = mknode2(&node_bitor, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7819,7 +7821,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3265 "parser.y"
+#line 3267 "parser.y"
     {(yyval.node) = mknode2(&node_shr, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7830,7 +7832,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3266 "parser.y"
+#line 3268 "parser.y"
     {(yyval.node) = mknode2(&node_ushr, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7841,7 +7843,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3267 "parser.y"
+#line 3269 "parser.y"
     {(yyval.node) = mknode2(&node_shl, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7852,7 +7854,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3268 "parser.y"
+#line 3270 "parser.y"
     {(yyval.node) = mknode2(&node_div, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7863,7 +7865,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3269 "parser.y"
+#line 3271 "parser.y"
     {(yyval.node) = mknode2(&node_mod, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7874,7 +7876,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3270 "parser.y"
+#line 3272 "parser.y"
     {(yyval.node) = mknode2(&node_plus, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7885,7 +7887,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3271 "parser.y"
+#line 3273 "parser.y"
     {(yyval.node) = mknode2(&node_minus, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7896,7 +7898,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3272 "parser.y"
+#line 3274 "parser.y"
     {(yyval.node) = mknode2(&node_multiply, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7907,7 +7909,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3273 "parser.y"
+#line 3275 "parser.y"
     {(yyval.node) = mknode2(&node_in, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7918,7 +7920,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3274 "parser.y"
+#line 3276 "parser.y"
     {(yyval.node) = mknode2(&node_as, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7929,7 +7931,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3275 "parser.y"
+#line 3277 "parser.y"
     {(yyval.node) = mknode2(&node_instanceof, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7940,7 +7942,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3276 "parser.y"
+#line 3278 "parser.y"
     {(yyval.node) = mknode2(&node_is, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -7951,7 +7953,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3277 "parser.y"
+#line 3279 "parser.y"
     {(yyval.node) = mknode1(&node_typeof, (yyvsp[(3) - (4)].node));}
     }
     break;
@@ -7962,7 +7964,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3278 "parser.y"
+#line 3280 "parser.y"
     {(yyval.node) = mknode1(&node_void, (yyvsp[(2) - (2)].node));}
     }
     break;
@@ -7973,7 +7975,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3279 "parser.y"
+#line 3281 "parser.y"
     { (yyval.node) = mkconstnode(constant_new_undefined());}
     }
     break;
@@ -7984,7 +7986,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3280 "parser.y"
+#line 3282 "parser.y"
     { (yyval.node)=(yyvsp[(2) - (3)].node);}
     }
     break;
@@ -7995,7 +7997,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3281 "parser.y"
+#line 3283 "parser.y"
     {(yyval.node) = mknode1(&node_neg, (yyvsp[(2) - (2)].node));}
     }
     break;
@@ -8006,7 +8008,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3282 "parser.y"
+#line 3284 "parser.y"
     {(yyval.node) = mknode2(&node_arraylookup, (yyvsp[(1) - (4)].node),(yyvsp[(3) - (4)].node));}
     }
     break;
@@ -8017,7 +8019,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3283 "parser.y"
+#line 3285 "parser.y"
     {(yyval.node) = mknode2(&node_muleq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8028,7 +8030,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3284 "parser.y"
+#line 3286 "parser.y"
     {(yyval.node) = mknode2(&node_modeq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8039,7 +8041,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3285 "parser.y"
+#line 3287 "parser.y"
     {(yyval.node) = mknode2(&node_shleq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8050,7 +8052,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3286 "parser.y"
+#line 3288 "parser.y"
     {(yyval.node) = mknode2(&node_shreq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8061,7 +8063,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3287 "parser.y"
+#line 3289 "parser.y"
     {(yyval.node) = mknode2(&node_ushreq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8072,7 +8074,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3288 "parser.y"
+#line 3290 "parser.y"
     { (yyval.node) = mknode2(&node_diveq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8083,7 +8085,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3289 "parser.y"
+#line 3291 "parser.y"
     { (yyval.node) = mknode2(&node_bitoreq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8094,7 +8096,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3290 "parser.y"
+#line 3292 "parser.y"
     { (yyval.node) = mknode2(&node_bitxoreq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8105,7 +8107,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3291 "parser.y"
+#line 3293 "parser.y"
     { (yyval.node) = mknode2(&node_bitandeq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8116,7 +8118,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3292 "parser.y"
+#line 3294 "parser.y"
     { (yyval.node) = mknode2(&node_pluseq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8127,7 +8129,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3293 "parser.y"
+#line 3295 "parser.y"
     { (yyval.node) = mknode2(&node_minuseq, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8138,7 +8140,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3294 "parser.y"
+#line 3296 "parser.y"
     { (yyval.node) = mknode2(&node_assign, (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node));}
     }
     break;
@@ -8149,7 +8151,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3295 "parser.y"
+#line 3297 "parser.y"
     { (yyval.node) = mknode3(&node_tenary, (yyvsp[(1) - (5)].node), (yyvsp[(3) - (5)].node), (yyvsp[(5) - (5)].node));}
     }
     break;
@@ -8160,7 +8162,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3297 "parser.y"
+#line 3299 "parser.y"
     { (yyval.node) = mknode1(&node_rplusplus, (yyvsp[(1) - (2)].node));}
     }
     break;
@@ -8171,7 +8173,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3298 "parser.y"
+#line 3300 "parser.y"
     { (yyval.node) = mknode1(&node_rminusminus, (yyvsp[(1) - (2)].node));}
     }
     break;
@@ -8182,7 +8184,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3299 "parser.y"
+#line 3301 "parser.y"
     {(yyval.node) = mknode1(&node_lplusplus, (yyvsp[(2) - (2)].node)); }
     }
     break;
@@ -8193,7 +8195,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3300 "parser.y"
+#line 3302 "parser.y"
     {(yyval.node) = mknode1(&node_lminusminus, (yyvsp[(2) - (2)].node)); }
     }
     break;
@@ -8204,7 +8206,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3303 "parser.y"
+#line 3305 "parser.y"
     { if(!state->cls->info)
                   syntaxerror("super keyword not allowed outside a class");
               classinfo_t*t = state->cls->info->superclass;
@@ -8227,7 +8229,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3317 "parser.y"
+#line 3319 "parser.y"
     {
     typedcode_t v;
     multiname_t m = {MULTINAMEA, 0, &nopackage_namespace_set, (yyvsp[(2) - (2)].id)};
@@ -8244,7 +8246,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3325 "parser.y"
+#line 3327 "parser.y"
     {PASS12 new_state();state->xmlfilter=1;}
     }
     break;
@@ -8255,7 +8257,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3325 "parser.y"
+#line 3327 "parser.y"
     {
     PASS1 old_state();
     PASS2
@@ -8318,7 +8320,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3379 "parser.y"
+#line 3381 "parser.y"
     {(yyval.id)=(yyvsp[(1) - (1)].id);}
     }
     break;
@@ -8329,7 +8331,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3380 "parser.y"
+#line 3382 "parser.y"
     {(yyval.id)="*";}
     }
     break;
@@ -8340,7 +8342,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3381 "parser.y"
+#line 3383 "parser.y"
     {(yyval.id)=(char*)(yyvsp[(1) - (1)].id);}
     }
     break;
@@ -8351,7 +8353,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3383 "parser.y"
+#line 3385 "parser.y"
     {(yyval.id)="*";}
     }
     break;
@@ -8362,7 +8364,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3391 "parser.y"
+#line 3393 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (5)].node));
     typedcode_t w = node_read(resolve_identifier((yyvsp[(3) - (5)].id)));
@@ -8390,7 +8392,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3409 "parser.y"
+#line 3411 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (3)].node));
     multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, (yyvsp[(3) - (3)].id)};
@@ -8407,7 +8409,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3416 "parser.y"
+#line 3418 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (5)].node));
     typedcode_t w = node_read((yyvsp[(4) - (5)].node));
@@ -8427,7 +8429,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3427 "parser.y"
+#line 3429 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (4)].node));
     multiname_t m = {MULTINAMEA, 0, &nopackage_namespace_set, (yyvsp[(4) - (4)].id)};
@@ -8444,7 +8446,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3434 "parser.y"
+#line 3436 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (4)].node));
     multiname_t m = {MULTINAMEA, 0, &nopackage_namespace_set, (yyvsp[(4) - (4)].id)};
@@ -8461,7 +8463,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3441 "parser.y"
+#line 3443 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (6)].node));
     typedcode_t w = node_read((yyvsp[(5) - (6)].node));
@@ -8481,7 +8483,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3451 "parser.y"
+#line 3453 "parser.y"
     {
     typedcode_t v = node_read((yyvsp[(1) - (6)].node));
     typedcode_t w = node_read((yyvsp[(5) - (6)].node));
@@ -8501,7 +8503,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3462 "parser.y"
+#line 3464 "parser.y"
     {
     typedcode_t v1 = node_read((yyvsp[(1) - (3)].node));
     (yyval.value).c = v1.c;
@@ -8573,7 +8575,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3640 "parser.y"
+#line 3642 "parser.y"
     {
     PASS1
     /* Queue unresolved identifiers for checking against the parent
@@ -8607,7 +8609,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3676 "parser.y"
+#line 3678 "parser.y"
     {
     PASS12
     NEW(namespace_decl_t,n);
@@ -8624,7 +8626,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3683 "parser.y"
+#line 3685 "parser.y"
     {
     PASS12
     NEW(namespace_decl_t,n);
@@ -8641,7 +8643,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3690 "parser.y"
+#line 3692 "parser.y"
     {
     PASS12
     NEW(namespace_decl_t,n);
@@ -8658,7 +8660,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3697 "parser.y"
+#line 3699 "parser.y"
     {
     PASS12
     trie_put(active_namespaces, (yyvsp[(2) - (2)].namespace_decl)->name, (void*)(yyvsp[(2) - (2)].namespace_decl)->url);
@@ -8689,7 +8691,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3720 "parser.y"
+#line 3722 "parser.y"
     {
     as3_warning("default xml namespaces not supported yet");
 }
@@ -8702,7 +8704,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3724 "parser.y"
+#line 3726 "parser.y"
     {
     PASS12
     const char*url = (yyvsp[(3) - (3)].classinfo)->name;
@@ -8731,7 +8733,7 @@ PASS12
 
 
 /* Line 1464 of skeleton.m4  */
-#line 8735 "parser.tab.c"
+#line 8737 "parser.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

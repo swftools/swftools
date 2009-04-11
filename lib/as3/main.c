@@ -71,10 +71,14 @@ int main(int argn, char*argv[])
     registry_init();
 
     int t=0;
+    char*mainclass = 0;
     for(t=1;t<argn-1;t++) {
         if(!strcmp(argv[t], "-lex")) {
             test_lexer(filename);
             return 0;
+        }
+        if(!strcmp(argv[t], "-M")) {
+            mainclass = argv[++t];
         }
         if(!strcmp(argv[t], "-v")) {
             as3_verbosity++;
@@ -123,11 +127,14 @@ int main(int argn, char*argv[])
     TAG*tag = swf.firstTag = swf_InsertTag(0, ST_DOABC);
     swf_WriteABC(tag, code);
 
-    if(as3_getglobalclass()) {
+    if(!mainclass)
+        mainclass = as3_getglobalclass();
+
+    if(mainclass) {
         tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
         swf_SetU16(tag, 1);
         swf_SetU16(tag, 0);
-        swf_SetString(tag, as3_getglobalclass());
+        swf_SetString(tag, mainclass);
     } else {
         printf("Warning: no global public MovieClip subclass\n");
     }

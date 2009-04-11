@@ -199,7 +199,7 @@ void as3_parse_file(const char*filename)
 
     compile_list = 0;
     as3_pass = 1;
-    as3_parse_file_or_array(filename, fullfilename, 0,0);
+    as3_schedule_file(filename, fullfilename);
     as3_parse_scheduled();
     
     registry_resolve_all();

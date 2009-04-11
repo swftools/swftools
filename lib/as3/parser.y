@@ -727,14 +727,12 @@ static code_t* var_block(code_t*body)
     code_t*k = 0;
     int t;
     int num=0;
-    for(t=0;t<state->vars->hashsize;t++) {
-        DICT_ITERATE_DATA(state->vars, variable_t*, v) {
-            if(v->type && v->init) {
-                c = defaultvalue(c, v->type);
-                c = abc_setlocal(c, v->index);
-                k = abc_kill(k, v->index); 
-                num++;
-            }
+    DICT_ITERATE_DATA(state->vars, variable_t*, v) {
+        if(v->type && v->init) {
+            c = defaultvalue(c, v->type);
+            c = abc_setlocal(c, v->index);
+            k = abc_kill(k, v->index); 
+            num++;
         }
     }
 
@@ -2608,6 +2606,10 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
             // instance variable
             traits = &state->cls->abc->traits;
             code = &state->cls->init->header;
+            
+            if(ns.access == ACCESS_PROTECTED) {
+                ns.name = concat3(state->cls->info->package,":",state->cls->info->name);
+            }
         }
         if(c)
             *c = code;

@@ -18,6 +18,7 @@ int compare_parsedclass(const void *_v1, const void *_v2)
     assert(!c1 || !c2); // otherwise we would have a loop
     assert(!c1 || c1==p1->cls);
     assert(!c2 || c2==p2->cls);
+
     if(c1) {
         return -1;
     }
@@ -36,10 +37,11 @@ int compare_parsedclass(const void *_v1, const void *_v2)
     if(c2) {
         return 1;
     }
+
     return 0;
 }
 
-void add_parent(parsedclass_t*p, classinfo_t*c, dict_t*s2p, char soft)
+static void add_parent(parsedclass_t*p, classinfo_t*c, dict_t*s2p, char soft)
 {
     dict_t*parents = soft?(&p->usedclasses_deep):(&p->parents);
     int t;
@@ -118,12 +120,44 @@ parsedclass_t** initcode_sort_classlist(parsedclass_list_t*classes)
         list[i++] = l->parsedclass;
     }
     
-    /* sort and flatten */
-    qsort(list, count, sizeof(void**), compare_parsedclass);
+    /* sort and flatten.
+       We unfortunately need to do insertion sort O(n^2) as
+       our dependencies are only partially ordered */
+    int j;
+    for(i=0;i<count;i++) {
+        for(j=i+1;j<count;j++) {
+            int r = compare_parsedclass(list+i,list+j);
+            if(r>0) {
+                parsedclass_t*p1 = list[i];
+                parsedclass_t*p2 = list[j];
+                list[i] = p2;
+                list[j] = p1;
+            }
+        }
+    }
 
     parsedclass_t**list2 = malloc(sizeof(parsedclass_t*)*(count+1));
     for(i=0;i<count;i++) {
         list2[i] = (parsedclass_t*)list[i];
+#ifdef DEBUG
+        parsedclass_t*p = list[i];
+        printf("%s\n", p->cls->name);
+        if(p->cls->superclass)
+            printf("  extends %s\n", p->cls->superclass->name);
+        int t;
+        for(t=0;p->cls->interfaces[t];t++)
+            printf("  interface %s\n", p->cls->interfaces[t]->name);
+        DICT_ITERATE_KEY(&p->usedclasses, classinfo_t*, c) {
+            printf("  uses %s\n", c->name);
+        }
+        DICT_ITERATE_KEY(&p->parents, parsedclass_t*, pp) {
+            printf("  depends on (deep) %s\n", pp->cls->name);
+        }
+        DICT_ITERATE_KEY(&p->usedclasses_deep, parsedclass_t*, px) {
+            printf("  uses (deep) %s\n", px->cls->name);
+        }
+        printf("\n");
+#endif
     }
     list2[count]=0;
     free(list);
@@ -159,10 +193,6 @@ void initcode_add_classlist(abc_script_t*init, parsedclass_list_t*_classes)
            function */
         MULTINAME(classname2,cls);
         trait_t*trait = abc_initscript_addClassTrait(init, &classname2, abc);
-
-        c = abc_findpropstrict(c, "trace");
-        c = abc_pushstring(c, allocprintf("initialize class %s", cls->name));
-        c = abc_callpropvoid(c, "trace", 1);
 
         c = abc_getglobalscope(c);
         classinfo_t*s = cls->superclass;
@@ -216,4 +246,3 @@ void initcode_add_classlist(abc_script_t*init, parsedclass_list_t*_classes)
 
     init->method->body->code = c;
 }
-
