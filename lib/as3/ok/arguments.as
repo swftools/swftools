@@ -56,6 +56,7 @@ package {
             test_innerfunction();
             test_innerslotfunction();
             test_slottedfunction("ok 7/8", "ok 8/8");
+            trace("[exit]");
         }
     }
 }

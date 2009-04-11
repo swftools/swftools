@@ -138,6 +138,7 @@ extern int a3_lex();
 %token<token> KW_NUMBER "Number"
 %token<token> KW_STRING "String"
 %token<token> KW_DEFAULT "default"
+%token<token> KW_DEFAULT_XML "default xml"
 %token<token> KW_DELETE "delete"
 %token<token> KW_IF "if"
 %token<token> KW_ELSE  "else"
@@ -199,7 +200,7 @@ extern int a3_lex();
 %type <node> VAR_READ
 %type <code> FOR FOR_IN IF WHILE DO_WHILE MAYBEELSE BREAK RETURN CONTINUE TRY 
 %type <value> INNERFUNCTION
-%type <code> USE_NAMESPACE
+%type <code> USE_NAMESPACE DEFAULT_NAMESPACE
 %type <code> FOR_INIT
 %type <code> IMPORT
 %type <classinfo> MAYBETYPE
@@ -327,6 +328,7 @@ typedef struct _classstate {
     methodstate_t*static_init;
     //code_t*init;
     //code_t*static_init;
+    parsedclass_t*dependencies;
 
     char has_constructor;
 } classstate_t;
@@ -683,8 +685,10 @@ static variable_t* new_variable2(const char*name, classinfo_t*type, char init, c
 {
     if(maybeslot) {
         variable_t*v = find_slot(state, name);
-        if(v)
+        if(v) {
+            alloc_local(); 
             return v;
+        }
     }
 
     NEW(variable_t, v);
@@ -724,16 +728,13 @@ static code_t* var_block(code_t*body)
     int t;
     int num=0;
     for(t=0;t<state->vars->hashsize;t++) {
-        dictentry_t*e = state->vars->slots[t];
-        while(e) {
-            variable_t*v = (variable_t*)e->data;
+        DICT_ITERATE_DATA(state->vars, variable_t*, v) {
             if(v->type && v->init) {
                 c = defaultvalue(c, v->type);
                 c = abc_setlocal(c, v->index);
                 k = abc_kill(k, v->index); 
                 num++;
             }
-            e = e->next;
         }
     }
 
@@ -916,6 +917,21 @@ static memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char rec
     return registry_findmember_nsset(cls, state->active_namespace_urls, name, recurse);
 }
 
+static void innerfunctions2vars(methodstate_t*m)
+{
+    methodstate_list_t*l = m->innerfunctions;
+    while(l) {
+        methodstate_t*m = l->methodstate;
+        
+        variable_t* v = new_variable2(m->info->name, TYPE_FUNCTION(m->info), 0, 0);
+        m->var_index = v->index;
+        if(m->is_a_slot)
+            m->slot_index = m->is_a_slot;
+        v->is_inner_method = m;
+        l = l->next;
+    }
+}
+
 static void function_initvars(methodstate_t*m, char has_params, params_t*params, int flags, char var0)
 {
     if(var0) {
@@ -935,46 +951,29 @@ static void function_initvars(methodstate_t*m, char has_params, params_t*params,
             variable_t*v = new_variable2(p->param->name, p->param->type, 0, 1);
             v->is_parameter = 1;
         }
-        variable_t*v = new_variable2("arguments", TYPE_ARRAY, 0, 0);
         if(as3_pass==2 && m->need_arguments) {
+            /* arguments can never be used by an innerfunction (the inner functions
+               have their own arguments var), so it's ok to  not initialize this until
+               pass 2. (We don't know whether we need it before, anyway) */
+            variable_t*v = new_variable2("arguments", TYPE_ARRAY, 0, 0);
             m->need_arguments = v->index;
         }
     }
     
-    if(m->uses_slots) {
-        /* as variables and slots share the same number, make sure
-           that those variable indices are reserved. It's up to the
-           optimizer to later shuffle the variables down to lower
-           indices */
-        m->variable_count = m->uses_slots;
-    }
-
-
-    methodstate_list_t*l = m->innerfunctions;
-    while(l) {
-        methodstate_t*m = l->methodstate;
-        
-        variable_t* v = new_variable2(m->info->name, TYPE_FUNCTION(m->info), 0, 1);
-        m->var_index = v->index;
-        m->slot_index = v->index;
-        v->is_inner_method = m;
-
-        l = l->next;
-    }
+    innerfunctions2vars(m);
     
     if(as3_pass==2) {
         m->scope_code = add_scope_code(m->scope_code, m, 0);
-    }
-    
-    if(as3_pass==2 && m->slots) {
-        /* exchange unresolved identifiers with the actual objects */
-        DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
-            if(v->type && v->type->kind == INFOTYPE_UNRESOLVED) {
-                classinfo_t*type = (classinfo_t*)registry_resolve((slotinfo_t*)v->type);
-                if(!type || type->kind != INFOTYPE_CLASS) {
-                    syntaxerror("Couldn't find class %s::%s (%s)", v->type->package, v->type->name, name);
+        if(m->slots) {
+            /* exchange unresolved identifiers with the actual objects */
+            DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
+                if(v->type && v->type->kind == INFOTYPE_UNRESOLVED) {
+                    classinfo_t*type = (classinfo_t*)registry_resolve((slotinfo_t*)v->type);
+                    if(!type || type->kind != INFOTYPE_CLASS) {
+                        syntaxerror("Couldn't find class %s::%s (%s)", v->type->package, v->type->name, name);
+                    }
+                    v->type = type;
                 }
-                v->type = type;
             }
         }
     }
@@ -1094,10 +1093,8 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
             abc_class_add_interface(state->cls->abc, &m);
         }
 
-        NEW(parsedclass_t,p);
-        p->cls = state->cls->info;
-        p->abc = state->cls->abc;
-        list_append(global->classes, p);
+        state->cls->dependencies = parsedclass_new(state->cls->info, state->cls->abc);
+        list_append(global->classes, state->cls->dependencies);
 
         /* flash.display.MovieClip handling */
         if(!as3_globalclass && (mod->flags&FLAG_PUBLIC) && slotinfo_equals((slotinfo_t*)registry_getMovieClip(),(slotinfo_t*)extends)) {
@@ -1313,6 +1310,7 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
     if(as3_pass == 1) {
         state->method = rfx_calloc(sizeof(methodstate_t));
         state->method->inner = 1;
+        state->method->is_static = parent_method->is_static;
         state->method->variable_count = 0;
         state->method->abc = rfx_calloc(sizeof(abc_method_t));
 
@@ -1393,8 +1391,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
     if(as3_pass==1) {
-        // store inner methods in variables
-        function_initvars(state->method, 0, 0, 0, 0);
+        innerfunctions2vars(state->method);
 
         methodstate_list_t*ml = state->method->innerfunctions;
         
@@ -1406,23 +1403,16 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             if(m->unresolved_variables) {
                 dict_t*d = m->unresolved_variables;
                 int t;
-                for(t=0;t<d->hashsize;t++) {
-                    dictentry_t*l = d->slots[t]; 
-                    while(l) {
-                        /* check parent method's variables */
-                        variable_t*v;
-                        if((v=find_variable(state, l->key))) {
-                            m->uses_parent_function = 1;
-                            state->method->uses_slots = 1;
-                            dict_put(xvars, l->key, 0);
-                        }
-                        l = l->next;
+                DICT_ITERATE_KEY(d, char*, id) {
+                    /* check parent method's variables */
+                    variable_t*v;
+                    if((v=find_variable(state, id))) {
+                        m->uses_parent_function = 1;
+                        state->method->uses_slots = 1;
+                        dict_put(xvars, id, 0);
                     }
-                    if(l) break;
                 }
-
-                dict_destroy(m->unresolved_variables);
-                m->unresolved_variables = 0;
+                dict_destroy(m->unresolved_variables);m->unresolved_variables = 0;
             }
             ml = ml->next;
         }
@@ -1434,11 +1424,11 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
                 if(!name) syntaxerror("internal error");
                 if(v->index && dict_contains(xvars, name)) {
                     v->init = 0;
-                    v->index = i++;
+                    v->index = i;
                     if(v->is_inner_method) {
-                        v->is_inner_method->is_a_slot = 1;
+                        v->is_inner_method->is_a_slot = i;
                     }
-                    //v->type = 0;
+                    i++;
                     dict_put(state->method->slots, name, v);
                 }
             }
@@ -1502,7 +1492,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
                 check_constant_against_type(p->param->type, p->param->value);
                 opt=1;list_append(f->optional_parameters, p->param->value);
             } else if(opt) {
-                syntaxerror("non-optional parameter not allowed after optional parameters");
+                syntaxerror("function %s: non-optional parameter not allowed after optional parameters", name);
             }
         }
         if(state->method->slots) {
@@ -1717,6 +1707,7 @@ typedcode_t push_class(slotinfo_t*a)
             infotypename(a), a->name, a->package, state->package);
     }
 
+
     if(a->kind != INFOTYPE_CLASS) {
         MULTINAME(m, a);
         x.c = abc_findpropstrict2(x.c, &m);
@@ -1728,7 +1719,13 @@ typedcode_t push_class(slotinfo_t*a)
             varinfo_t*v = (varinfo_t*)a;
             x.t = v->type;
         }
+        return x;
     } else {
+        if(state->cls && state->method == state->cls->static_init) {
+            /* we're in the static initializer. 
+               record the fact that we're using this class here */
+            parsedclass_add_dependency(state->cls->dependencies, (classinfo_t*)a);
+        }
         classinfo_t*c = (classinfo_t*)a;
         //if(c->slot) {
         if(0) { //Error #1026: Slot 1 exceeds slotCount=0 of global
@@ -1923,6 +1920,7 @@ CODE: CODE CODEPIECE {
 CODE: CODEPIECE {$$=$1;}
 
 // code which may appear outside of methods
+CODE_STATEMENT: DEFAULT_NAMESPACE 
 CODE_STATEMENT: IMPORT 
 CODE_STATEMENT: FOR 
 CODE_STATEMENT: FOR_IN 
@@ -1938,7 +1936,7 @@ CODE_STATEMENT: NAMESPACE_DECLARATION
 CODE_STATEMENT: '{' CODE '}' {$$=$2;}
 CODE_STATEMENT: '{' '}' {$$=0;}
 
-// code which may appear in methods
+// code which may appear in methods (includes the above)
 CODEPIECE: ';' {$$=0;}
 CODEPIECE: CODE_STATEMENT
 CODEPIECE: VARIABLE_DECLARATION
@@ -2421,6 +2419,7 @@ WITH : WITH_HEAD CODEBLOCK {
 
 X_IDENTIFIER: T_IDENTIFIER
             | "package" {PASS12 $$="package";}
+            | "namespace" {PASS12 $$="namespace";}
             | T_NAMESPACE {PASS12 $$=$1;}
 
 PACKAGE: PACKAGE '.' X_IDENTIFIER {PASS12 $$ = concat3($1,".",$3);free($1);$1=0;}
@@ -2807,7 +2806,7 @@ XMLATTRIBUTE: T_IDENTIFIER '=' XMLEXPR2 {
 }
 XMLATTRIBUTE: T_IDENTIFIER '=' T_STRING {
     char* str = string_cstr(&$3);
-    $$=allocprintf("%s=\"%s\"", $1,str);
+    $$=allocprintf("%s=%s", $1,str);
     free(str);
     free($1);free((char*)$3.str);
 }
@@ -3378,9 +3377,16 @@ E : E '.' '(' {PASS12 new_state();state->xmlfilter=1;} E ')' {
 }
 
 ID_OR_NS : T_IDENTIFIER {$$=$1;}
+ID_OR_NS : '*' {$$="*";}
 ID_OR_NS : T_NAMESPACE {$$=(char*)$1;}
-SUBNODE: T_IDENTIFIER
+SUBNODE: X_IDENTIFIER
        | '*' {$$="*";}
+
+/*
+MAYBE_NS: T_IDENTIFIER "::" {$$=$1;}
+        | T_NAMESPACE "::" {$$=(char*)$1;}
+        | '*' "::" {$$="*";}
+        | {$$=0;}*/
 
 E : E '.' ID_OR_NS "::" SUBNODE {
     typedcode_t v = node_read($1);
@@ -3708,6 +3714,11 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
     }
 
     $$=0;
+}
+
+DEFAULT_NAMESPACE : "default xml" "namespace" '=' E 
+{
+    as3_warning("default xml namespaces not supported yet");
 }
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {

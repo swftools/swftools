@@ -5,10 +5,11 @@ package {
     public class Main extends flash.display.MovieClip {
         static public var ok:String = "ok";
 
-        public function Main() {
+        function test(x,y) 
+        {
             trace("ok 1/5")
-            var x = msg(2, 5)
-            var y = msg(3, 5)
+            x = msg(2, 5)
+            y = msg(3, 5)
             trace(x);
             trace(y);
 
@@ -29,6 +30,10 @@ package {
             trace(x2);
 
             trace("[exit]");
+        }
+
+        public function Main() {
+            test(3,4);
         }
     }
 }

@@ -529,6 +529,8 @@ FLOATWITHSIGN [+-]?({FLOAT})
 CDATA       <!\[CDATA\[([^]]|\][^]]|\]\][^>])*\]*\]\]\>
 XMLCOMMENT  <!--([^->]|[-]+[^>-]|>)*-*-->
 XML         <[^>]+{S}>
+XMLID       [A-Za-z0-9_\x80-\xff]+([:][A-Za-z0-9_\x80-\xff]+)?
+XMLSTRING   ["][^"]*["]
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 [ \n\r\t]
@@ -552,13 +554,13 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 }
 
 <XML>{
-{STRING}                     {l(); handleString(yytext, yyleng);return T_STRING;}
+{XMLSTRING}                  {l(); handleRaw(yytext, yyleng);return T_STRING;}
 [{]                          {c(); BEGIN(REGEXPOK);return m('{');}
 [<]                          {c(); return m('<');}
 [/]                          {c(); return m('/');}
 [>]                          {c(); return m('>');}
 [=]                          {c(); return m('=');}
-{NAME}                       {c(); handleRaw(yytext, yyleng);return T_IDENTIFIER;}
+{XMLID}                      {c(); handleRaw(yytext, yyleng);return T_IDENTIFIER;}
 {S}                          {l();}
 <<EOF>>                      {syntaxerror("unexpected end of file");}
 }
@@ -600,6 +602,7 @@ NaN                          {c(); BEGIN(DEFAULT);return m(KW_NAN);}
 {NAME}{S}*:{S}*do/{_}        {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-2);return T_DO;}
 {NAME}{S}*:{S}*while/{_}     {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-5);return T_WHILE;}
 {NAME}{S}*:{S}*switch/{_}    {l();BEGIN(DEFAULT);handleLabel(yytext, yyleng-6);return T_SWITCH;}
+default{S}xml                {l();BEGIN(DEFAULT);return m(KW_DEFAULT_XML);}
 for                          {c();BEGIN(DEFAULT);a3_lval.id="";return T_FOR;}
 do                           {c();BEGIN(DEFAULT);a3_lval.id="";return T_DO;}
 while                        {c();BEGIN(DEFAULT);a3_lval.id="";return T_WHILE;}
@@ -637,8 +640,8 @@ switch                       {c();BEGIN(DEFAULT);a3_lval.id="";return T_SWITCH;}
 instanceof                   {c();BEGIN(REGEXPOK);return m(KW_INSTANCEOF);}
 implements                   {c();BEGIN(REGEXPOK);return m(KW_IMPLEMENTS);}
 interface                    {c();BEGIN(DEFAULT);return m(KW_INTERFACE);}
-namespace                    {c();BEGIN(DEFAULT);return m(KW_NAMESPACE);}
 protected                    {c();BEGIN(DEFAULT);return m(KW_PROTECTED);}
+namespace                    {c();BEGIN(DEFAULT);return m(KW_NAMESPACE);}
 undefined                    {c();BEGIN(DEFAULT);return m(KW_UNDEFINED);}
 arguments                    {c();BEGIN(DEFAULT);return m(KW_ARGUMENTS);}
 continue                     {c();BEGIN(DEFAULT);return m(KW_CONTINUE);}

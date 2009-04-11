@@ -27,6 +27,8 @@ package {
     public class Main extends MovieClip {
         function Main() {
             var c:C9 = new C9;
+            trace("ok");
+            trace("[exit]");
         }
     }
 }

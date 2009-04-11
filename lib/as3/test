@@ -135,7 +135,7 @@ class Cache:
         self.runtime = 1
         if self.tag: 
             self.all = 1
-            self.runtime = 5 # allow more time if we're tagging this state
+            self.runtime = 3 # allow more time if we're tagging this state
         
         if self.valgrind:
             global CMD,CMD_ARGS
