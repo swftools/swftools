@@ -435,6 +435,11 @@ classinfo_t* registry_getregexpclass() {
     if(!c) c = (classinfo_t*)registry_safefind("", "RegExp");
     return c;
 }
+classinfo_t* registry_getdateclass() {
+    static classinfo_t*c = 0;
+    if(!c) c = (classinfo_t*)registry_safefind("", "Date");
+    return c;
+}
 classinfo_t* registry_getxmlclass() {
     static classinfo_t*c = 0;
     if(!c) c = (classinfo_t*)registry_safefind("", "XML");

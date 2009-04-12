@@ -665,6 +665,9 @@ static code_t*defaultvalue(code_t*c, classinfo_t*type)
        c = abc_pushnan(c);
     } else if(TYPE_IS_BOOLEAN(type)) {
        c = abc_pushfalse(c);
+    } else if(TYPE_IS_STRING(type)) {
+       c = abc_pushnull(c);
+       c = abc_coerce_s(c);
     } else if(!type) {
        //c = abc_pushundefined(c);
         syntaxerror("internal error: can't generate default value for * type");
@@ -1587,12 +1590,18 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
     if(TYPE_IS_STRING(to))
         return abc_convert_s(c);
     if(TYPE_IS_OBJECT(to))
-        return abc_convert_o(c);
+        return abc_coerce2(c, &m);
+    if(TYPE_IS_OBJECT(from) && TYPE_IS_XMLLIST(to))
+        return abc_coerce2(c, &m);
+    if(TYPE_IS_OBJECT(from) && TYPE_IS_ARRAY(to))
+        return abc_coerce2(c, &m);
 
     classinfo_t*supertype = from;
     while(supertype) {
         if(supertype == to) {
-             // target type is one of from's superclasses
+             /* target type is one of from's superclasses.
+                (not sure we need this coerce - as far as the verifier
+                 is concerned, object==object (i think) */
              return abc_coerce2(c, &m);
         }
         int t=0;
@@ -1618,7 +1627,17 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
 
     return c;
 }
-/* move to ast.c todo end */
+code_t* coerce_to_type(code_t*c, classinfo_t*t)
+{
+    if(!t) {
+        return abc_coerce_a(c);
+    } else if(TYPE_IS_STRING(t)) {
+        return abc_coerce_s(c);
+    } else {
+        MULTINAME(m, t);
+        return abc_coerce2(c, &m);
+    }
+}
 
 char is_pushundefined(code_t*c)
 {
@@ -3076,8 +3095,8 @@ FUNCTIONCALL : E '(' MAYBE_EXPRESSION_LIST ')' {
         // calling a class is like a typecast
         $$.t = (classinfo_t*)v.t->data;
     } else {
-        $$.c = abc_coerce_a($$.c);
         $$.t = TYPE_ANY;
+        $$.c = abc_coerce_a($$.c);
     }
 }
 

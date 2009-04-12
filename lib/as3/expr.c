@@ -65,21 +65,27 @@
 
 static classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, nodetype_t*t)
 {
-    if(TYPE_IS_ANY(type1))
-        return TYPE_ANY;
-    
     if(t == &node_plus) {
-        if(TYPE_IS_XMLLIST(type1))
-            return type1;
+        if((TYPE_IS_XMLLIST(type1) || TYPE_IS_XML(type1)) &&
+           (TYPE_IS_XMLLIST(type2) || TYPE_IS_XML(type2)))
+            return TYPE_OBJECT;
         if(BOTH_INT(type1, type2))
             return TYPE_INT;
         if(IS_NUMBER_OR_INT(type1) && IS_NUMBER_OR_INT(type2))
             return TYPE_NUMBER;
-        if(TYPE_IS_ANY(type2))
+        if(TYPE_IS_DATE(type1) || TYPE_IS_DATE(type2))
+            return TYPE_OBJECT;
+        if(TYPE_IS_STRING(type1) || TYPE_IS_STRING(type2)) {
+            /* depending on where the strings come from, the result type
+               of an "add" might be an object or a string, depending on the
+               verifier's mood. So basically we just don't know the type. */
+            return TYPE_VOID;
+        }
+        if(TYPE_IS_ANY(type1) || TYPE_IS_ANY(type2))
             return TYPE_ANY;
-        return TYPE_OBJECT; // e.g. string+string = object
+        return TYPE_OBJECT; // e.g. array+array = object
     }
-
+    
     if(type1 == type2)
         return type1;
     return TYPE_ANY;
@@ -329,7 +335,6 @@ constant_t node_plus_eval(node_t*n)
     EVAL_HEADER_LEFTRIGHT;
     char left_int = left.type == CONSTANT_INT || left.type == CONSTANT_UINT;
     if(left_int && (right.type == CONSTANT_INT || right.type == CONSTANT_UINT)) { 
-        /* FIXME: what to do about signed/unsigned overflows? */
         int i = constant_to_int(&left) + constant_to_int(&right);
         r.type = CONSTANT_INT;
         r.i = i;
