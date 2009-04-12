@@ -791,6 +791,31 @@ void dump_outline(gfxline_t*line)
     }
 }
 
+void gfxPath_dump(GfxPath*path)
+{
+    int num = path->getNumSubpaths();
+    int t;
+    int cpos=0;
+    for(t = 0; t < num; t++) {
+	GfxSubpath *subpath = path->getSubpath(t);
+	int subnum = subpath->getNumPoints();
+        int s;	
+        for(s=0;s<subnum;s++) {
+	   double x=subpath->getX(s);
+           double y=subpath->getY(s);
+	   if(s==0 && !subpath->getCurve(s)) {
+                printf("M %f %f\n", x, y);
+           } else if(s==0 && subpath->getCurve(s)) {
+                printf("E %f %f\n", x, y);
+	   } else if(subpath->getCurve(s)) {
+                printf("C %f %f\n", x, y);
+	   } else {
+                printf("T %f %f\n", x, y);
+	   }
+	}
+    }
+}
+
 gfxline_t* GFXOutputDev::gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey)
 {
     int num = path->getNumSubpaths();

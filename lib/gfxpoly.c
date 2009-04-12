@@ -384,11 +384,13 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 
     pos = 0;
     l2 = line;
+    int lastmove=-1;
     while(l2) {
 	if(l2->type == gfx_moveTo) {
 	    vec[pos].code = ART_MOVETO_OPEN;
 	    vec[pos].x = l2->x;
 	    vec[pos].y = l2->y;
+            lastmove=pos;
 	    pos++; 
 	    assert(pos<=len);
 	} else if(l2->type == gfx_lineTo) {
@@ -413,6 +415,16 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
 	}
 	x = l2->x;
 	y = l2->y;
+       
+        /* let closed line segments start w/ MOVETO instead of MOVETO_OPEN */
+        if(lastmove>=0 && l2->type!=gfx_moveTo && (!l2->next || l2->next->type == gfx_moveTo)) {
+            if(vec[lastmove].x == l2->x &&
+               vec[lastmove].y == l2->y) {
+                assert(vec[lastmove].code == ART_MOVETO_OPEN);
+                vec[lastmove].code = ART_MOVETO;
+            }
+        }
+
 	l2 = l2->next;
     }
     vec[pos++].code = ART_END;
