@@ -163,12 +163,14 @@ ${name}/lib/as3/compiler.h \
 ${name}/lib/as3/parser.h \
 ${name}/lib/as3/common.h \
 ${name}/lib/as3/common.c \
-${name}/lib/as3/ast.h \
-${name}/lib/as3/ast.c \
-${name}/lib/as3/tokenizer.h \
 ${name}/lib/as3/tokenizer.yy.c \
+${name}/lib/as3/tokenizer.h \
+${name}/lib/as3/expr.h \
+${name}/lib/as3/expr.c \
 ${name}/lib/as3/parser.tab.c \
 ${name}/lib/as3/parser.tab.h \
+${name}/lib/as3/initcode.c \
+${name}/lib/as3/initcode.h \
 ${name}/lib/as3/scripts.c \
 ${name}/lib/as3/scripts.h \
 ${name}/lib/action/action.h \

@@ -573,7 +573,7 @@ void initialize_file(char*filename)
         if(!state->method)
             syntaxerror("internal error: skewed tokencount");
         function_initvars(state->method, 0, 0, 0, 1);
-        global->init = abc_initscript(global->file);
+        global->init = 0;
     }
 }
 
@@ -586,9 +586,12 @@ void finish_file()
     if(as3_pass==2) {
         dict_del(global->file2token2info, current_filename);
         code_t*header = method_header(state->method);
-        code_t*c = wrap_function(header, 0, global->init->method->body->code);
-        global->init->method->body->code = abc_returnvoid(c);
-        free(state->method);state->method=0;
+        //if(global->init->method->body->code || global->init->traits) {
+        if(global->init) {
+            code_t*c = wrap_function(header, 0, global->init->method->body->code);
+            global->init->method->body->code = abc_returnvoid(c);
+            free(state->method);state->method=0;
+        }
     }
 
     //free(state->package);state->package=0; // used in registry
@@ -1469,6 +1472,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             multiname_t mname = {QNAME, &mname_ns, 0, name};
 
             f = abc_method_new(global->file, type2, 1);
+            if(!global->init) global->init = abc_initscript(global->file);
             trait_t*t = trait_new_method(&global->init->traits, multiname_clone(&mname), f);
             //abc_code_t*c = global->init->method->body->code;
         }
@@ -1979,8 +1983,12 @@ CODEBLOCK :  CODEPIECE %prec below_semicolon {$$=$1;}
 /* ------------ package init code ------------------- */
 
 PACKAGE_INITCODE: CODE_STATEMENT {
-    code_t**cc = &global->init->method->body->code;
-    *cc = code_append(*cc, $1);
+    if($1) {
+        if(!global->init) 
+            global->init = abc_initscript(global->file);
+        code_t**cc = &global->init->method->body->code;
+        *cc = code_append(*cc, $1);
+    }
 }
 
 /* ------------ conditional compilation ------------- */
@@ -2614,6 +2622,7 @@ IDECLARATION : MAYBE_MODIFIERS "function" GETSET T_IDENTIFIER '(' MAYBE_PARAM_LI
         code_t**code=0;
         if(!state->cls) {
             // global variable
+            if(!global->init) global->init = abc_initscript(global->file);
             ns.name = state->package;
             traits = &global->init->traits;
             code = &global->init->method->body->code;

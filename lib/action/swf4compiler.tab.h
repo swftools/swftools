@@ -1,27 +1,37 @@
-/* A Bison parser, made by GNU Bison 1.875.  */
 
-/* Skeleton parser for Yacc-like parsing with Bison,
-   Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002 Free Software Foundation, Inc.
+/* A Bison parser, made by GNU Bison 2.4.  */
 
-   This program is free software; you can redistribute it and/or modify
+/* Skeleton interface for Bison's Yacc-like parsers in C
+   
+      Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006
+   Free Software Foundation, Inc.
+   
+   This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+   
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-
+   
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* As a special exception, when this file is copied by Bison into a
-   Bison output file, you may use that output file without restriction.
-   This special exception was added by the Free Software Foundation
-   in version 1.24 of Bison.  */
+/* As a special exception, you may create a larger work that contains
+   part or all of the Bison parser skeleton and distribute that work
+   under terms of your choice, so long as that work isn't itself a
+   parser generator using the skeleton or a modified version thereof
+   as a parser skeleton.  Alternatively, if you modify or redistribute
+   the parser skeleton itself, you may (at your option) remove this
+   special exception, which will cause the skeleton and the resulting
+   Bison output files to be licensed under the GNU General Public
+   License without this special exception.
+   
+   This special exception was added by the Free Software Foundation in
+   version 2.2 of Bison.  */
+
 
 /* Tokens.  */
 #ifndef YYTOKENTYPE
@@ -96,91 +106,31 @@
      NEGATE = 322
    };
 #endif
-#define BREAK 258
-#define FOR 259
-#define CONTINUE 260
-#define IF 261
-#define ELSE 262
-#define DO 263
-#define WHILE 264
-#define THIS 265
-#define EVAL 266
-#define TIME 267
-#define RANDOM 268
-#define LENGTH 269
-#define INT 270
-#define CONCAT 271
-#define DUPLICATECLIP 272
-#define REMOVECLIP 273
-#define TRACE 274
-#define STARTDRAG 275
-#define STOPDRAG 276
-#define ORD 277
-#define CHR 278
-#define CALLFRAME 279
-#define GETURL 280
-#define GETURL1 281
-#define LOADMOVIE 282
-#define LOADVARIABLES 283
-#define POSTURL 284
-#define SUBSTR 285
-#define GETPROPERTY 286
-#define NEXTFRAME 287
-#define PREVFRAME 288
-#define PLAY 289
-#define STOP 290
-#define TOGGLEQUALITY 291
-#define STOPSOUNDS 292
-#define GOTOFRAME 293
-#define GOTOANDPLAY 294
-#define FRAMELOADED 295
-#define SETTARGET 296
-#define TELLTARGET 297
-#define STRING 298
-#define NUMBER 299
-#define IDENTIFIER 300
-#define PATH 301
-#define GETURL_METHOD 302
-#define EQ 303
-#define LE 304
-#define GE 305
-#define NE 306
-#define LAN 307
-#define LOR 308
-#define INC 309
-#define DEC 310
-#define IEQ 311
-#define DEQ 312
-#define MEQ 313
-#define SEQ 314
-#define STREQ 315
-#define STRNE 316
-#define STRCMP 317
-#define PARENT 318
-#define END 319
-#define UMINUS 320
-#define POSTFIX 321
-#define NEGATE 322
 
 
 
+#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+typedef union YYSTYPE
+{
 
-#if ! defined (YYSTYPE) && ! defined (YYSTYPE_IS_DECLARED)
+/* Line 1676 of yacc.c  */
 #line 17 "swf4compiler.y"
-typedef union YYSTYPE {
+
   Buffer action;
   char *str;
   SWFActionFunction function;
   SWFGetUrl2Method getURLMethod;
+
+
+
+/* Line 1676 of yacc.c  */
+#line 128 "swf4compiler.tab.h"
 } YYSTYPE;
-/* Line 1240 of yacc.c.  */
-#line 177 "swf4compiler.tab.h"
+# define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
-# define YYSTYPE_IS_TRIVIAL 1
 #endif
 
 extern YYSTYPE swf4lval;
-
 
 

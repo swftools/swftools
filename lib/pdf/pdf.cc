@@ -45,12 +45,14 @@ typedef struct _pdf_page_info
 
 typedef struct _pdf_doc_internal
 {
-    int config_bitmap_optimizing;
-    int config_full_bitmap_optimizing;
+    char config_bitmap_optimizing;
+    char config_full_bitmap_optimizing;
+    char config_print;
     parameterlist_t parameters;
 
     int protect;
     int nocopy;
+    int noprint;
     
     PDFDoc*doc;
     Object docinfo;
@@ -132,10 +134,8 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
     pdf_doc_internal_t*pi = (pdf_doc_internal_t*)page->parent->internal;
     gfxsource_internal_t*i = (gfxsource_internal_t*)pi->parent->internal;
 
-    if(pi->nocopy) {
-        msg("<fatal> PDF disallows copying");
-        exit(0);
-    }
+    if(!pi->config_print && pi->nocopy) {msg("<fatal> PDF disallows copying");exit(0);}
+    if(pi->config_print && pi->noprint) {msg("<fatal> PDF disallows printing");exit(0);}
 
     CommonOutputDev*outputDev = 0;
     if(pi->config_full_bitmap_optimizing) {
@@ -188,7 +188,7 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
     }
 
     outputDev->setDevice(dev);
-    pi->doc->displayPage((OutputDev*)outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, /*doLinks*/(int)1);
+    pi->doc->displayPage((OutputDev*)outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, pi->config_print);
     pi->doc->processLinks((OutputDev*)outputDev, page->nr);
     outputDev->finishPage();
     outputDev->setDevice(0);
@@ -286,6 +286,8 @@ void pdf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
         i->config_bitmap_optimizing = atoi(value);
     } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
         i->config_full_bitmap_optimizing = atoi(value);
+    } else if(!strcmp(name, "asprint")) {
+        i->config_print = 1;
     } else {
         storeDeviceParameter(&i->parameters, name, value);
     }
@@ -488,6 +490,9 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
           if(!i->doc->okToCopy()) {
               i->nocopy = 1;
           }
+          if(!i->doc->okToPrint()) {
+              i->noprint = 1;
+          }
           if(!i->doc->okToChange() || !i->doc->okToAddNotes())
               i->protect = 1;
     }
@@ -498,7 +503,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     memset(i->pages,0,sizeof(pdf_page_info_t)*pdf_doc->num_pages);
     for(t=1;t<=pdf_doc->num_pages;t++) {
 	if(!global_page_range || is_in_range(t, global_page_range)) {
-	    i->doc->displayPage((OutputDev*)i->info, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, /*doLinks*/(int)1);
+	    i->doc->displayPage((OutputDev*)i->info, t, zoom, zoom, /*rotate*/0, /*usemediabox*/true, /*crop*/true, i->config_print);
 	    i->doc->processLinks((OutputDev*)i->info, t);
 	    i->pages[t-1].xMin = i->info->x1;
 	    i->pages[t-1].yMin = i->info->y1;
