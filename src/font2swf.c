@@ -79,7 +79,6 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");
-    printf("-n , --name <name>             Name of the font (class) in the output file\n");
     printf("-o , --output <filename>       Write output to file <filename>.\n");
     printf("-V , --version                 Print version info and exit\n");
     printf("\n");

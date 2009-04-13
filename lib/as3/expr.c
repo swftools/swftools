@@ -155,7 +155,7 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
                 prefix = abc_dup(prefix); // we need the object, too
             }
             use_temp_var = 1;
-        } else if(m->type == MULTINAMEL) {
+        } else if(m->type == MULTINAMEL || m->type == MULTINAMELA) {
             if(!justassign) {
                 /* dupping two values on the stack requires 5 operations and one register- 
                    couldn't adobe just have given us a dup2? */

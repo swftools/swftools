@@ -40,6 +40,7 @@ static int flashversion = 9;
 static int verbose = 1;
 static char local_with_networking = 0;
 static char local_with_filesystem = 0;
+static char*mainclass = 0;
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -47,14 +48,16 @@ static struct options_t options[] = {
 {"v", "verbose"},
 {"q", "quiet"},
 {"C", "cgi"},
+{"R", "resolve"},
 {"D", "define"},
 {"X", "width"},
 {"Y", "height"},
 {"r", "rate"},
 {"l", "library"},
 {"I", "include"},
+{"N", "local-with-network"},
+{"L", "local-with-filesystem"},
 {"T", "flashversion"},
-{"R", "recurse"},
 {"o", "output"},
 {0,0}
 };
@@ -72,6 +75,10 @@ int args_callback_option(char*name,char*val)
     }
     else if(!strcmp(name, "r")) {
 	framerate = atof(val);
+        return 1;
+    }
+    else if(!strcmp(name, "M")) {
+        mainclass = val;
         return 1;
     }
     else if(!strcmp(name, "v")) {
@@ -144,11 +151,15 @@ void args_callback_usage(char *name)
     printf("-v , --verbose                 Increase verbosity\n");
     printf("-q , --quiet                   Decrease verbosity\n");
     printf("-C , --cgi                     Output to stdout (for use in CGI environments)\n");
+    printf("-R , --resolve                 Try to resolve undefined classes automatically.\n");
+    printf("-D , --define <namespace::variable>    Set a compile time variable (for doing conditional compilation)\n");
     printf("-X , --width                   Set target SWF width\n");
     printf("-Y , --height                  Set target SWF width\n");
     printf("-r , --rate                    Set target SWF framerate\n");
-    printf("-l , --library <file>          Include library file <file>\n");
-    printf("-I , --include <dir>           Add include dir <dir>\n");
+    printf("-l , --library <file>          Include library file <file>. <file> can be an .abc or .swf file.\n");
+    printf("-I , --include <dir>           Add additional include dir <dir>.\n");
+    printf("-N , --local-with-network      Make output file \"local with networking\"\n");
+    printf("-L , --local-with-filesystem     Make output file \"local with filesystem\"\n");
     printf("-T , --flashversion <num>      Set target SWF flash version to <num>.\n");
     printf("-o , --output <filename>       Set output file to <filename>.\n");
     printf("\n");
@@ -225,7 +236,9 @@ int main (int argc,char ** argv)
     TAG*tag = swf.firstTag = swf_InsertTag(0, ST_DOABC);
     swf_WriteABC(tag, code);
 
-    if(as3_getglobalclass()) {
+    if(!mainclass)
+        mainclass = as3_getglobalclass();
+    if(mainclass) {
         tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
         swf_SetU16(tag, 1);
         swf_SetU16(tag, 0);

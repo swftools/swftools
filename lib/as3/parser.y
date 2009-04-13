@@ -266,7 +266,8 @@ extern int a3_lex();
 
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
-%nonassoc T_INT T_UINT T_FLOAT KW_NAN
+%nonassoc T_INT T_UINT T_FLOAT KW_NAN 
+%left T_NAMESPACE
 %nonassoc "false" "true" "null" "undefined" "super" "function"
 %left above_function
 
@@ -570,6 +571,7 @@ void initialize_file(char*filename)
         state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
     } else {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
+        state->method->variable_count = 0;
         if(!state->method)
             syntaxerror("internal error: skewed tokencount");
         function_initvars(state->method, 0, 0, 0, 1);
@@ -2445,6 +2447,7 @@ WITH : WITH_HEAD CODEBLOCK {
 X_IDENTIFIER: T_IDENTIFIER
             | "package" {PASS12 $$="package";}
             | "namespace" {PASS12 $$="namespace";}
+            | "NaN" {PASS12 $$="NaN";}
             | T_NAMESPACE {PASS12 $$=$1;}
 
 PACKAGE: PACKAGE '.' X_IDENTIFIER {PASS12 $$ = concat3($1,".",$3);free($1);$1=0;}
@@ -2475,18 +2478,24 @@ PACKAGE_DECLARATION : "package" '{' {PASS12 startpackage("");}
         free(s);
     }
 };
+
+IMPORT : "import" T_IDENTIFIER {
+       PASS12
+       slotinfo_t*s = registry_find(state->package, $2);
+       if(!s && as3_pass==1) {as3_schedule_class(state->package, $2);}
+       state_has_imports();
+       dict_put(state->imports, state->package, $2);
+       $$=0;
+}
 IMPORT : "import" PACKAGEANDCLASS {
        PASS12
        slotinfo_t*s = registry_find($2->package, $2->name);
        if(!s && as3_pass==1) {// || !(s->flags&FLAG_BUILTIN)) {
            as3_schedule_class($2->package, $2->name);
        }
-       classinfo_t*c = $2;
-       if(!c) 
-            syntaxerror("Couldn't import class\n");
        state_has_imports();
-       dict_put(state->imports, c->name, c);
-       import_toplevel(c->package);
+       dict_put(state->imports, $2->name, $2);
+       import_toplevel($2->package);
        $$=0;
 }
 IMPORT : "import" PACKAGE '.' '*' {
@@ -2761,14 +2770,9 @@ CONSTANT : "null" {$$ = constant_new_null($1);}
 CONSTANT : "undefined" {$$ = constant_new_undefined($1);}
 CONSTANT : KW_NAN {$$ = constant_new_float(__builtin_nan(""));}
 
-/*
-CONSTANT : T_IDENTIFIER {
-    if(!strcmp($1, "NaN")) {
-        $$ = constant_new_float(__builtin_nan(""));
-    } else {
-        as3_warning("Couldn't evaluate constant value of %s", $1);
-        $$ = constant_new_null($1);
-    }
+/*CONSTANT : T_NAMESPACE {
+    // TODO
+    $$ = constant_new_namespace(namespace_new_namespace($1.url));
 }*/
 
 /* ---------------------------xml ------------------------------ */
@@ -3304,7 +3308,7 @@ E : E "in" E {$$ = mknode2(&node_in, $1, $3);}
 E : E "as" E {$$ = mknode2(&node_as, $1, $3);}
 E : E "instanceof" E {$$ = mknode2(&node_instanceof, $1, $3);}
 E : E "is" E {$$ = mknode2(&node_is, $1, $3);}
-E : "typeof" '(' E ')' {$$ = mknode1(&node_typeof, $3);}
+E : "typeof" E  {$$ = mknode1(&node_typeof, $2);}
 E : "void" E {$$ = mknode1(&node_void, $2);}
 E : "void" { $$ = mkconstnode(constant_new_undefined());}
 E : '(' COMMA_EXPRESSION ')' { $$=$2;}
@@ -3749,6 +3753,7 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
 DEFAULT_NAMESPACE : "default xml" "namespace" '=' E 
 {
     as3_warning("default xml namespaces not supported yet");
+    $$ = 0;
 }
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {

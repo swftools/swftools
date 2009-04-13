@@ -1,4 +1,4 @@
-.TH as3compile "1" "February 2009" "as3compile" "swftools"
+.TH as3compile "1" "April 2009" "as3compile" "swftools"
 .SH NAME
 as3compile - Compile .as ActionScript 3.0 files to swf.
 
@@ -6,7 +6,7 @@ as3compile - Compile .as ActionScript 3.0 files to swf.
 .B as3compile file.as [-o file.swf] 
 
 .SH DESCRIPTION
-Compiles a file written in ActionScript to a SWF file.
+Compiles a file written in ActionScript 3.0 to a SWF file.
 
 .SH OPTIONS
 .TP
@@ -25,6 +25,12 @@ Compiles a file written in ActionScript to a SWF file.
 \fB\-C\fR, \fB\-\-cgi\fR 
     Output to stdout (for use in CGI environments)
 .TP
+\fB\-R\fR, \fB\-\-resolve\fR 
+    This flag will cause the compiler to try filenames like "FooBar.as" for classes named "FooBar".
+.TP
+\fB\-D\fR, \fB\-\-define\fR \fInamespace::variable\fR
+    Set a compile time variable (for doing conditional compilation)
+.TP
 \fB\-X\fR, \fB\-\-width\fR 
     Set target SWF width
 .TP
@@ -35,16 +41,48 @@ Compiles a file written in ActionScript to a SWF file.
     Set target SWF framerate
 .TP
 \fB\-l\fR, \fB\-\-library\fR \fIfile\fR
-    Include library file \fIfile\fR
+    Include library file \fIfile\fR. <file> can be an .abc or .swf file.
 .TP
 \fB\-I\fR, \fB\-\-include\fR \fIdir\fR
-    Add include dir \fIdir\fR
+    Add additional include dir \fIdir\fR.
+.TP
+\fB\-N\fR, \fB\-\-local-with-network\fR 
+    Make output file "local with networking"
+.TP
+\fB\-L\fR, \fB\-\-local-with-filesystem\fR 
+    Make output file "local with filesystem"
 .TP
 \fB\-T\fR, \fB\-\-flashversion\fR \fInum\fR
     \fInum\fR must be >= 9.
 .TP
 \fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
     Set output file to \fIfilename\fR.
+.SH EXAMPLE
+
+ The following is a basic as3 file that can be compiled e.g.
+ with \fBas3compile -X 400 -Y 400 smiley.as\fR
+
+ // smiley.as
+ package
+ {
+     import flash.display.MovieClip
+ 
+     public class Main extends MovieClip
+     {
+         function Main()
+         {
+             this.graphics.beginFill(0xcccc00)
+             this.graphics.drawCircle(200,200,200)
+             this.graphics.endFill()
+             this.graphics.beginFill(0x000000)
+             this.graphics.drawCircle(140,150,50)
+             this.graphics.drawCircle(260,150,50)
+             this.graphics.drawRoundRect(140,270,120,10,20);
+             this.graphics.endFill()
+         }
+     }
+ }
+
 .SH AUTHOR
 
 Matthias Kramm <kramm@quiss.org>

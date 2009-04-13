@@ -2,7 +2,7 @@ Usage: %s file.as [-o file.swf]
 
 Compile .as ActionScript 3.0 files to swf.
 
-Compiles a file written in ActionScript to a SWF file.
+Compiles a file written in ActionScript 3.0 to a SWF file.
 
 -h, --help
     Print short help message and exit
@@ -14,6 +14,11 @@ Compiles a file written in ActionScript to a SWF file.
     Decrease verbosity
 -C, --cgi
     Output to stdout (for use in CGI environments)
+-R, --resolve
+    Try to resolve undefined classes automatically.
+    This flag will cause the compiler to try filenames like "FooBar.as" for classes named "FooBar".
+-D, --define <namespace::variable>
+    Set a compile time variable (for doing conditional compilation)
 -X, --width
     Set target SWF width
 -Y, --height
@@ -21,9 +26,9 @@ Compiles a file written in ActionScript to a SWF file.
 -r, --rate
     Set target SWF framerate
 -l, --library <file>
-    Include library file <file>
+    Include library file <file>. <file> can be an .abc or .swf file.
 -I, --include <dir>
-    Add include dir <dir>
+    Add additional include dir <dir>.
 -N, --local-with-network
     Make output file "local with networking"
 -L, --local-with-filesystem
@@ -33,6 +38,32 @@ Compiles a file written in ActionScript to a SWF file.
     <num> must be >= 9.
 -o, --output <filename>
     Set output file to <filename>.
+
+.SH EXAMPLE
+
+ The following is a basic as3 file that can be compiled e.g.
+ with \fBas3compile -X 400 -Y 400 smiley.as\fR
+
+ // smiley.as
+ package
+ {
+     import flash.display.MovieClip
+ 
+     public class Main extends MovieClip
+     {
+         function Main()
+         {
+             this.graphics.beginFill(0xcccc00)
+             this.graphics.drawCircle(200,200,200)
+             this.graphics.endFill()
+             this.graphics.beginFill(0x000000)
+             this.graphics.drawCircle(140,150,50)
+             this.graphics.drawCircle(260,150,50)
+             this.graphics.drawRoundRect(140,270,120,10,20);
+             this.graphics.endFill()
+         }
+     }
+ }
 
 .SH AUTHOR
 

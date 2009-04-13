@@ -15,6 +15,13 @@ package {
             else if(false) trace("error");
             else if(true) trace("ok 5/5");
             else if(false) trace("error");
+
+            if(true) {
+                var x;
+            } else {
+                var x;
+            }
+
             trace("[exit]");
         }
     }

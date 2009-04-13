@@ -23,6 +23,7 @@ package {
             {
                 this.tf(1);
                 tf(2);
+                var ns:Namespace = flash_proxy;
                 trace("[exit]");
             }
 	    

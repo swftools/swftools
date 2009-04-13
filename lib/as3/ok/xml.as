@@ -117,6 +117,10 @@ package {
             assert(x10 != x11);
             x11.b.@a = "x";
             assert(x10 == x11);
+            x11.b.@["a"] = "y";
+            assert(x10 != x11);
+            x11.b.@["a"] = "x";
+            assert(x10 == x11);
 
             var x12:XML = <x><a/></x>;
             x12.a += <b/>;
