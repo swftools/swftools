@@ -657,7 +657,7 @@ constant_t* constant_new_float(double f)
     c->type = CONSTANT_FLOAT;
     return c;
 }
-constant_t* constant_new_string(char*s)
+constant_t* constant_new_string(const char*s)
 {
     NEW(constant_t,c);
     c->s = string_new4(s);

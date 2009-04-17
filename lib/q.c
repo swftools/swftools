@@ -265,6 +265,7 @@ void* heap_max(heap_t*h)
 void* heap_chopmax(heap_t*h)
 {
     void*p = h->elements[0];
+    assert(h->size);
     h->elements[0] = h->elements[--h->size];
     down(h,0);
     return p;

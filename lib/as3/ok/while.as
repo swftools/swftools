@@ -16,6 +16,9 @@ package test.package {
             if(i!=21) trace("error");
             else trace("ok 2/3");
 
+
+            /* notice: this type of overloading behaves differently if
+               this function is switched into compatibility mode */
             var x1=0;
             var a=1;
             var sum=0;
@@ -41,6 +44,7 @@ package test.package {
             sum+=a;
             if(sum!=4321) trace("error");
             else trace("ok 3/3");
+            
             trace("[exit]");
         }
     }

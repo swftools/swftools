@@ -100,7 +100,7 @@ constant_t* constant_clone();
 constant_t* constant_new_int(int x);
 constant_t* constant_new_uint(unsigned int x);
 constant_t* constant_new_float(double x);
-constant_t* constant_new_string(char*s);
+constant_t* constant_new_string(const char*s);
 constant_t* constant_new_string2(const char*s, int len);
 constant_t* constant_new_namespace(namespace_t*ns);
 constant_t* constant_new_true();

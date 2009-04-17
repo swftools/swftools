@@ -2,7 +2,7 @@ package {
     import flash.display.MovieClip
     public class Main extends flash.display.MovieClip {
         var count:int = 1;
-        var num:int = 29;
+        var num:int = 31;
         function assert(b:Boolean) {
             if(b) {
                 trace("ok "+count+"/"+num);
@@ -157,8 +157,8 @@ package {
             /* ----- substitution ----- */
 
             trace("[substitution]");
-
-            var x2:XML = <{"tree"} {"na"+"me"}="test" {"t=x"}>
+            x1.@t = "x";
+            var x2:XML = <{"tree"} {"na"+"me"}="test" {"t=\"x\""}>
                              <{{three: "branch"}["three"]} bname={"t1"}>{"Branch" + " " + 1}</{"branch"}>
                             <branch bname="t2">Branch 2</branch>
                         </tree>

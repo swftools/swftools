@@ -278,6 +278,32 @@ static code_t* toreadwrite(code_t*in, code_t*middlepart, char justassign, char r
     return c;
 }
 
+typedcode_t push_constant(constant_t*v)
+{
+    typedcode_t t;
+    switch(v->type) {
+        case CONSTANT_INT: t.c = abc_pushint(0, v->i);t.t = TYPE_INT;break;
+        case CONSTANT_UINT: t.c = abc_pushuint(0, v->u);t.t = TYPE_UINT;break;
+        case CONSTANT_FLOAT: t.c = abc_pushdouble(0, v->f);t.t = TYPE_FLOAT;break;
+        case CONSTANT_TRUE: t.c = abc_pushtrue(0);t.t = TYPE_BOOLEAN;break;
+        case CONSTANT_FALSE: t.c = abc_pushfalse(0);t.t = TYPE_BOOLEAN;break;
+        case CONSTANT_STRING: t.c = abc_pushstring2(0, v->s);t.t = TYPE_STRING;break;
+        case CONSTANT_NULL: t.c = abc_pushnull(0);t.t = TYPE_NULL;break;
+        case CONSTANT_UNDEFINED: t.c = abc_pushundefined(0);t.t = TYPE_ANY;break;
+        case CONSTANT_NAMESPACE:
+        case CONSTANT_NAMESPACE_PACKAGE:
+        case CONSTANT_NAMESPACE_PACKAGEINTERNAL:
+        case CONSTANT_NAMESPACE_PROTECTED:
+        case CONSTANT_NAMESPACE_EXPLICIT:
+        case CONSTANT_NAMESPACE_STATICPROTECTED:
+        case CONSTANT_NAMESPACE_PRIVATE:
+            t.c = abc_pushnamespace(0, v->ns);t.t = TYPE_NAMESPACE;break;
+        default:
+            syntaxerror("internal error: bad constant");
+    }
+    return t;
+}
+
 code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to);
 
 int constant_to_int(constant_t*c) 
@@ -2719,6 +2745,16 @@ node_t* mkmultinode(nodetype_t*t, node_t*one)
     return n;
 }
 
+node_t* mkstringnode(const char*s)
+{
+    return mkconstnode(constant_new_string(s));
+}
+
+node_t* mkaddnode(node_t*n1, node_t*n2)
+{
+    return mknode2(&node_plus, n1, n2);
+}
+
 node_t* multinode_extend(node_t*n, node_t*add)
 {
     n->child = realloc(n->child, (n->num_children+1)*sizeof(node_t*));
@@ -2785,9 +2821,16 @@ void node_free(node_t*n)
 
 typedcode_t node_read(node_t*n)
 {
-    typedcode_t t = n->type->read(n);
-    node_free(n);
-    return t;
+    constant_t c = n->type->eval(n);
+    if(c.type == CONSTANT_UNKNOWN) {
+        typedcode_t t = n->type->read(n);
+        node_free(n);
+        return t;
+    } else {
+        typedcode_t t = push_constant(&c);
+        node_free(n);
+        return t;
+    }
 }
 code_t* node_exec(node_t*n)
 {

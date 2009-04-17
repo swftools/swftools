@@ -133,6 +133,8 @@ struct _node {
 node_t* mkdummynode();
 node_t* mkconstnode(constant_t*c);
 node_t* mkcodenode(typedcode_t c);
+node_t* mkstringnode(const char*s);
+node_t* mkaddnode(node_t*n1, node_t*n2);
 node_t* mkmultinode(nodetype_t*t, node_t*one);
 node_t* mknode1(nodetype_t*t, node_t*node);
 node_t* mknode2(nodetype_t*t, node_t*left, node_t*right);

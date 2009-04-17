@@ -176,14 +176,14 @@ extern int a3_lex();
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
 
-%type <number_int> CONDITIONAL_COMPILATION
+%type <number_int> CONDITIONAL_COMPILATION EMBED_START
 %type <for_start> FOR_START
 %type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER ID_OR_NS SUBNODE
 %type <namespace_decl>  NAMESPACE_ID
 %type <token> VARCONST
 %type <code> CODE
 %type <code> CODEPIECE CODE_STATEMENT
-%type <code> CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH WITH
+%type <code> CODEBLOCK IF_CODEBLOCK MAYBECODE MAYBE_CASE_LIST CASE_LIST DEFAULT CASE SWITCH WITH
 %type <code> PACKAGE_DECLARATION SLOT_DECLARATION SLOT_LIST ONE_SLOT
 %type <code> FUNCTION_DECLARATION PACKAGE_INITCODE
 %type <code> VARIABLE_DECLARATION ONE_VARIABLE VARIABLE_LIST THROW
@@ -217,7 +217,7 @@ extern int a3_lex();
 %type <classinfo_list> EXTENDS_LIST
 %type <classinfo> CLASS PACKAGEANDCLASS
 %type <classinfo_list> CLASS_SPEC_LIST
-%type <id> XML XML2 XMLNODE XMLATTRIBUTE XMLATTRIBUTES MAYBE_XMLATTRIBUTES XMLTEXT XML_ID_OR_EXPR XMLEXPR1 XMLEXPR2
+%type <node>  XMLEXPR1 XMLEXPR2 XML2 XMLNODE XMLATTRIBUTE XMLATTRIBUTES MAYBE_XMLATTRIBUTES XMLTEXT XML_ID_OR_EXPR XML
 %type <classinfo> TYPE
 //%type <token> VARIABLE
 %type <value> MEMBER
@@ -349,6 +349,7 @@ struct _methodstate {
 
     char inner;
     char uses_parent_function;
+    char no_variable_scoping;
     int uses_slots;
     dict_t*slots;
     int activation_var;
@@ -624,21 +625,26 @@ typedef struct _variable {
     int index;
     classinfo_t*type;
     char init;
+    char kill;
     char is_parameter;
     methodstate_t*is_inner_method;
 } variable_t;
 
 static variable_t* find_variable(state_t*s, char*name)
 {
-    state_t*top = s;
-    while(s) {
-        variable_t*v = 0;
-        v = dict_lookup(s->vars, name);
-        if(v) return v;
-        if(s->new_vars) break;
-        s = s->old;
+    if(s->method->no_variable_scoping) {
+        return dict_lookup(s->allvars, name);
+    } else {
+        state_t*top = s;
+        while(s) {
+            variable_t*v = 0;
+            v = dict_lookup(s->vars, name);
+            if(v) return v;
+            if(s->new_vars) break;
+            s = s->old;
+        }
+        return 0;
     }
-    return dict_lookup(top->allvars, name);
 }
 static variable_t* find_slot(state_t*s, const char*name)
 {
@@ -702,10 +708,24 @@ static variable_t* new_variable2(const char*name, classinfo_t*type, char init, c
     NEW(variable_t, v);
     v->index = alloc_local();
     v->type = type;
-    v->init = init;
+    v->init = v->kill = init;
  
     if(name) {
-        dict_put(state->vars, name, v);
+        if(!state->method->no_variable_scoping) 
+        {
+            if(dict_contains(state->vars, name))
+                syntaxerror("variable %s already defined", name);
+            dict_put(state->vars, name, v);
+        }
+        if(state->method->no_variable_scoping && 
+           as3_pass==2 && 
+           dict_contains(state->allvars, name)) 
+        {
+            variable_t*v = dict_lookup(state->allvars, name);
+            if(v->type != type)
+                syntaxerror("variable %s already defined.", name);
+            return v;
+        }
         dict_put(state->allvars, name, v);
     }
 
@@ -729,18 +749,18 @@ int gettempvar()
     return i;
 }
 
-static code_t* var_block(code_t*body) 
+static code_t* var_block(code_t*body, dict_t*vars) 
 {
     code_t*c = 0;
     code_t*k = 0;
     int t;
-    int num=0;
-    DICT_ITERATE_DATA(state->vars, variable_t*, v) {
+    DICT_ITERATE_DATA(vars, variable_t*, v) {
         if(v->type && v->init) {
             c = defaultvalue(c, v->type);
             c = abc_setlocal(c, v->index);
+        }
+        if(v->type && v->kill) {
             k = abc_kill(k, v->index); 
-            num++;
         }
     }
 
@@ -854,7 +874,7 @@ static code_t* method_header(methodstate_t*m)
 static code_t* wrap_function(code_t*c,code_t*header, code_t*body)
 {
     c = code_append(c, header);
-    c = code_append(c, var_block(body));
+    c = code_append(c, var_block(body, state->method->no_variable_scoping?state->allvars:state->vars));
     /* append return if necessary */
     if(!c || (c->opcode != OPCODE_RETURNVOID && 
               c->opcode != OPCODE_RETURNVALUE)) {
@@ -1402,6 +1422,16 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         methodstate_list_t*ml = state->method->innerfunctions;
         
         dict_t*xvars = dict_new();
+        
+        if(state->method->unresolved_variables) {
+            DICT_ITERATE_KEY(state->method->unresolved_variables, char*, vname) {
+                if(dict_contains(state->allvars, vname)) {
+                    state->method->no_variable_scoping = 1;
+                    as3_warning("function %s uses forward or outer block variable references (%s): switching into compatiblity mode", name, vname);
+                    break;
+                }
+            }
+        }
 
         while(ml) {
             methodstate_t*m = ml->methodstate;
@@ -1418,7 +1448,8 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
                         dict_put(xvars, id, 0);
                     }
                 }
-                dict_destroy(m->unresolved_variables);m->unresolved_variables = 0;
+                dict_destroy(m->unresolved_variables);
+                m->unresolved_variables = 0;
             }
             ml = ml->next;
         }
@@ -1429,7 +1460,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             DICT_ITERATE_ITEMS(state->vars, char*, name, variable_t*, v) {
                 if(!name) syntaxerror("internal error");
                 if(v->index && dict_contains(xvars, name)) {
-                    v->init = 0;
+                    v->init = v->kill = 0;
                     v->index = i;
                     if(v->is_inner_method) {
                         v->is_inner_method->is_a_slot = i;
@@ -1932,6 +1963,7 @@ INPACKAGE_CODE: INTERFACE_DECLARATION
               | SLOT_DECLARATION
               | PACKAGE_INITCODE
               | CONDITIONAL_COMPILATION '{' MAYBE_INPACKAGE_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}
+              | '[' EMBED_START E ']' {PASS_ALWAYS as3_pass=$2;PASS1 as3_warning("embed command ignored");}
               | ';'
 
 MAYBECODE: CODE {$$=$1;}
@@ -1993,6 +2025,14 @@ PACKAGE_INITCODE: CODE_STATEMENT {
     }
 }
 
+/* ------------ embed code ------------- */
+
+EMBED_START: %prec above_function {
+    PASS_ALWAYS
+    $$ = as3_pass;
+    as3_pass=0;
+}
+
 /* ------------ conditional compilation ------------- */
 
 CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
@@ -2011,6 +2051,14 @@ CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
     char is_subtype_of(classinfo_t*type, classinfo_t*supertype)
     {
         return 1; // FIXME
+    }
+    char do_init_variable(char*name)
+    {
+        if(!state->method->no_variable_scoping)
+            return 0;
+        if(!state->new_vars)
+            return 1;
+        return 1;
     }
 };
 
@@ -2034,76 +2082,78 @@ PASS2
    
     char slot = 0;
     int index = 0;
+    variable_t*v = 0;
     if(state->method->uses_slots) {
-        variable_t* v = find_slot(state, $1);
+        v = find_slot(state, $1);
         if(v && !v->init) {
             // this variable is stored in a slot
             v->init = 1;
             v->type = $2;
             slot = 1;
-            index = v->index;
         }
     }
-    if(!index) {
-        index = new_variable($1, $2, 1, 0);
+    if(!v) {
+        v = new_variable2($1, $2, 1, 0);
     }
 
     $$ = slot?abc_getscopeobject(0, 1):0;
     
-    typedcode_t v = node_read($3);
-    if(!is_subtype_of(v.t, $2)) {
-        syntaxerror("Can't convert %s to %s", v.t->name, $2->name);
+    typedcode_t val = node_read($3);
+    if(!is_subtype_of(val.t, $2)) {
+        syntaxerror("Can't convert %s to %s", val.t->name, $2->name);
     }
     if($2) {
-        if(v.c->prev || v.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = code_append($$, v.c);
-            $$ = converttype($$, v.t, $2);
+        if(val.c->prev || val.c->opcode != OPCODE_PUSHUNDEFINED) {
+            $$ = code_append($$, val.c);
+            $$ = converttype($$, val.t, $2);
         } else {
-            code_free(v.c);
+            code_free(val.c);
             $$ = defaultvalue($$, $2);
         }
     } else {
-        if(v.c->prev || v.c->opcode != OPCODE_PUSHUNDEFINED) {
-            $$ = code_append($$, v.c);
+        if(val.c->prev || val.c->opcode != OPCODE_PUSHUNDEFINED) {
+            $$ = code_append($$, val.c);
             $$ = abc_coerce_a($$);
         } else {
             // don't do anything
-            code_free(v.c);
+            code_free(val.c);
             code_free($$);
             $$ = 0;
             break;
         }
     }
     if(slot) {
-        $$ = abc_setslot($$, index);
+        $$ = abc_setslot($$, v->index);
     } else {
-        $$ = abc_setlocal($$, index);
+        $$ = abc_setlocal($$, v->index);
+        v->init = do_init_variable($1);
     }
 }
 
 /* ------------ control flow ------------------------- */
 
+IF_CODEBLOCK: {PASS12 new_state();} CODEBLOCK {
+    $$ = var_block($2, state->vars);
+    PASS12 old_state();
+}
 MAYBEELSE:  %prec below_else {$$ = code_new();}
-MAYBEELSE: "else" CODEBLOCK {$$=$2;}
+MAYBEELSE: "else" IF_CODEBLOCK {$$=$2;}
 //MAYBEELSE: ';' "else" CODEBLOCK {$$=$3;}
 
-IF : "if" '(' {PASS12 new_state();} EXPRESSION ')' CODEBLOCK MAYBEELSE {
-     
+IF : "if" '(' EXPRESSION ')' IF_CODEBLOCK MAYBEELSE {
     $$ = code_new();
-    $$ = code_append($$, $4.c);
+    $$ = code_append($$, $3.c);
     code_t*myjmp,*myif = $$ = abc_iffalse($$, 0);
    
-    $$ = code_append($$, $6);
-    if($7) {
+    $$ = code_append($$, $5);
+    if($6) {
         myjmp = $$ = abc_jump($$, 0);
     }
     myif->branch = $$ = abc_nop($$);
-    if($7) {
-        $$ = code_append($$, $7);
+    if($6) {
+        $$ = code_append($$, $6);
         myjmp->branch = $$ = abc_nop($$);
     }
-    $$ = var_block($$);
-    PASS12 old_state();
 }
 
 FOR_INIT : {$$=code_new();}
@@ -2125,7 +2175,7 @@ FOR_IN_INIT : T_IDENTIFIER {
 FOR_START : T_FOR '(' {PASS12 new_state();$$.name=$1;$$.each=0;}
 FOR_START : T_FOR "each" '(' {PASS12 new_state();$$.name=$1;$$.each=1;}
 
-FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
+FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' IF_CODEBLOCK {
     if($1.each) syntaxerror("invalid syntax: ; not allowed in for each statement");
     $$ = code_new();
     $$ = code_append($$, $2);
@@ -2141,20 +2191,17 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' CODEBLOCK {
     continuejumpsto($$, $1.name, cont);
     myif->branch = out;
 
-    $$ = var_block($$);
+    $$ = var_block($$, state->vars);
     PASS12 old_state();
 }
 
-FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
+FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' IF_CODEBLOCK {
     variable_t*var = find_variable(state, $2);
     if(!var) {
         syntaxerror("variable %s not known in this scope", $2);
     }
-
-    char*tmp1name = concat2($2, "__tmp1__");
-    int it = new_variable(tmp1name, TYPE_INT, 0, 0);
-    char*tmp2name = concat2($2, "__array__");
-    int array = new_variable(tmp1name, 0, 0, 0);
+    int it = alloc_local();
+    int array = alloc_local();
 
     $$ = code_new();
     $$ = code_append($$, $4.c);
@@ -2185,46 +2232,38 @@ FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' CODEBLOCK {
     
     myif->branch = out;
 
-    $$ = var_block($$);
-
-    free(tmp1name);
-    free(tmp2name);
+    $$ = abc_kill($$, it);
+    $$ = abc_kill($$, array);
 
     PASS12 old_state();
 }
 
-WHILE : T_WHILE '(' {PASS12 new_state();} EXPRESSION ')' CODEBLOCK {
+WHILE : T_WHILE '(' EXPRESSION ')' IF_CODEBLOCK {
 
     $$ = code_new();
 
     code_t*myjmp = $$ = abc_jump($$, 0);
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $6);
+    $$ = code_append($$, $5);
     code_t*cont = $$ = abc_nop($$);
     myjmp->branch = cont;
-    $$ = code_append($$, $4.c);
+    $$ = code_append($$, $3.c);
     $$ = abc_iftrue($$, loopstart);
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
     continuejumpsto($$, $1, cont);
-
-    $$ = var_block($$);
-    PASS12 old_state();
 }
 
-DO_WHILE : T_DO {PASS12 new_state();} CODEBLOCK "while" '(' EXPRESSION ')' {
+DO_WHILE : T_DO IF_CODEBLOCK "while" '(' EXPRESSION ')' {
     $$ = code_new();
     code_t*loopstart = $$ = abc_label($$);
-    $$ = code_append($$, $3);
+    $$ = code_append($$, $2);
     code_t*cont = $$ = abc_nop($$);
-    $$ = code_append($$, $6.c);
+    $$ = code_append($$, $5.c);
     $$ = abc_iftrue($$, loopstart);
     code_t*out = $$ = abc_nop($$);
     breakjumpsto($$, $1, out);
     continuejumpsto($$, $1, cont);
-    
-    $$ = var_block($$);
-    PASS12 old_state();
 }
 
 BREAK : "break" %prec prec_none {
@@ -2286,7 +2325,7 @@ SWITCH : T_SWITCH '(' {PASS12 new_state();state->switch_var=alloc_local();} E ')
         c=c->prev;
     }
    
-    $$ = var_block($$);
+    $$ = var_block($$, state->vars);
     PASS12 old_state();
 }
 
@@ -2314,11 +2353,11 @@ CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();
     c = code_append(c, $8);
     c = abc_kill(c, i);
 
-    c = var_block(c);
+    c = var_block(c, state->vars);
     PASS12 old_state();
 }
 FINALLY: "finally" '{' {PASS12 new_state();state->exception_name=0;} MAYBECODE '}' {
-    $4 = var_block($4);
+    $4 = var_block($4, state->vars);
     if(!$4) {
         $$=0;
     } else {
@@ -2368,7 +2407,7 @@ TRY : "try" '{' {PASS12 new_state();
   
     int tmp;
     if($6.finally)
-        tmp = new_variable("__finally__", 0, 0, 0);
+        tmp = alloc_local();
     
     abc_exception_list_t*l = $6.l;
     int count=0;
@@ -2396,7 +2435,7 @@ TRY : "try" '{' {PASS12 new_state();
         
     list_concat(state->method->exceptions, $6.l);
    
-    $$ = var_block($$);
+    $$ = var_block($$, state->vars);
     PASS12 old_state();
 }
 
@@ -2781,66 +2820,97 @@ CONSTANT : KW_NAN {$$ = constant_new_float(__builtin_nan(""));}
     static int xml_level = 0;
 };
 
-XML: XMLNODE
+XML: XMLNODE {
+   multiname_t m = {QNAME, &stdns, 0, "XML"};
+   typedcode_t v;
+   v.c = 0;
+   v.c = abc_getlex2(v.c, &m);
+   v.c = code_append(v.c, node_read($1).c);
+   v.c = abc_construct(v.c, 1);
+   v.t = TYPE_XML;
+   $$ = mkcodenode(v);
+}
 
 OPEN : '<' {PASS_ALWAYS if(!xml_level++) tokenizer_begin_xml();}
 CLOSE : '>' {PASS_ALWAYS tokenizer_begin_xmltext();}
 CLOSE2 : {PASS_ALWAYS if(!--xml_level) tokenizer_end_xml(); else tokenizer_begin_xmltext();}
 
 XMLEXPR1 : '{' E {PASS_ALWAYS tokenizer_begin_xmltext();} '}' {
-    $$=strdup("{...}");
-    as3_warning("xml string substitution not yet supported");
+    $$ = $2;
 }
 XMLEXPR2 : '{' E {PASS_ALWAYS tokenizer_begin_xml();} '}' {
-    $$=strdup("{...}");
-    as3_warning("xml string substitution not yet supported");
+    $$ = $2;
 }
-XMLTEXT : {$$="";}
+XMLTEXT : {$$=mkstringnode("");}
 XMLTEXT : XMLTEXT XMLEXPR1 {
-    $$ = concat2($1, "{...}");
+    $$ = mkaddnode($1,$2);
 }
-XMLTEXT : XMLTEXT T_STRING {$$=concat2($1, string_cstr(&$2));}
-XMLTEXT : XMLTEXT '>' {$$=concat2($1, ">");}
-
-XML2 : XMLNODE XMLTEXT {$$=concat2($1,$2);}
-XML2 : XML2 XMLNODE XMLTEXT {$$=concat3($1,$2,$3);free($1);free($2);free($3);}
-
-XML_ID_OR_EXPR: T_IDENTIFIER {$$=$1;}
-XML_ID_OR_EXPR: XMLEXPR2      {$$=$1;}
-
-XMLNODE : OPEN XML_ID_OR_EXPR MAYBE_XMLATTRIBUTES CLOSE XMLTEXT '<' '/' XML_ID_OR_EXPR CLOSE2 '>' {
-    $$ = allocprintf("<%s%s>%s</%s>", $2, $3, $5, $8);
-    free($2);free($3);free($5);free($8);
+XMLTEXT : XMLTEXT T_STRING {
+    char* str = string_cstr(&$2);
+    $$ = mkaddnode($1,mkstringnode(str));
+    free(str);
 }
+XMLTEXT : XMLTEXT '>' {
+    $$ = mkaddnode($1, mkstringnode(">"));
+}
+XML2 : XMLNODE XMLTEXT {
+    $$ = mkaddnode($1,$2);
+}
+XML2 : XML2 XMLNODE XMLTEXT {
+    $$ = mkaddnode($1, mkaddnode($2,$3));
+}
+XML_ID_OR_EXPR: T_IDENTIFIER {
+    $$ = mkstringnode($1);
+}
+XML_ID_OR_EXPR: XMLEXPR2 {
+    $$ = $1;
+}
+
+MAYBE_XMLATTRIBUTES: {
+    $$ = mkstringnode("");
+}
+MAYBE_XMLATTRIBUTES: XMLATTRIBUTES {
+    $$ = mkaddnode(mkstringnode(" "),$1);
+}
+
 XMLNODE : OPEN XML_ID_OR_EXPR MAYBE_XMLATTRIBUTES '/' CLOSE2 '>' {
-    $$ = allocprintf("<%s%s/>", $2, $3);
+    //$$ = allocprintf("<%s%s/>", $2, $3, $5, $8);
+    $$ = mkaddnode(mkaddnode(mkaddnode(mkstringnode("<"),$2),$3),mkstringnode("/>"));
+}
+XMLNODE : OPEN XML_ID_OR_EXPR MAYBE_XMLATTRIBUTES CLOSE XMLTEXT '<' '/' XML_ID_OR_EXPR CLOSE2 '>' {
+    //$$ = allocprintf("<%s%s>%s</%s>", $2, $3, $5, $8);
+    $$ = mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(
+         mkstringnode("<"),$2),$3),mkstringnode(">")),$5),mkstringnode("</")),$8),mkstringnode(">"));
 }
 XMLNODE : OPEN XML_ID_OR_EXPR MAYBE_XMLATTRIBUTES CLOSE XMLTEXT XML2 '<' '/' XML_ID_OR_EXPR CLOSE2 '>' {
-    $$ = allocprintf("<%s%s>%s%s</%s>", $2, $3, $5, $6, $9);
-    free($2);free($3);free($5);free($6);free($9);
+    //$$ = allocprintf("<%s%s>%s%s</%s>", $2, $3, $5, $6, $9);
+    $$ = mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(mkaddnode(
+         mkstringnode("<"),$2),$3),mkstringnode(">")),$5),$6),mkstringnode("</")),$9),mkstringnode(">"));
 }
 
-MAYBE_XMLATTRIBUTES:                      {$$=strdup("");}
-MAYBE_XMLATTRIBUTES: XMLATTRIBUTES        {$$=concat2(" ",$1);}
-XMLATTRIBUTES: XMLATTRIBUTE               {$$=$1;}
-XMLATTRIBUTES: XMLATTRIBUTES XMLATTRIBUTE {$$=concat3($1," ",$2);free($1);free($2);}
-
+XMLATTRIBUTES: XMLATTRIBUTE {
+    $$ = $1;
+}
+XMLATTRIBUTES: XMLATTRIBUTES XMLATTRIBUTE {
+    $$ = mkaddnode($1, mkaddnode(mkstringnode(" "),$2));
+}
 XMLATTRIBUTE: XMLEXPR2 {
-    $$ = strdup("{...}");
+    $$ = $1;
 }
 XMLATTRIBUTE: XMLEXPR2 '=' T_STRING {
     char* str = string_cstr(&$3);
-    $$ = concat2("{...}=",str);
+    $$ = mkaddnode($1, mkstringnode(concat2("=",str)));
+    free(str);
 }
 XMLATTRIBUTE: XMLEXPR2 '=' XMLEXPR2 {
-    $$ = strdup("{...}={...}");
+    $$ = mkaddnode($1, mkaddnode(mkstringnode("=\""), mkaddnode($3, mkstringnode("\""))));
 }
 XMLATTRIBUTE: T_IDENTIFIER '=' XMLEXPR2 {
-    $$ = concat2($1,"={...}");
+    $$ = mkaddnode(mkaddnode(mkstringnode(concat2($1,"=\"")), $3), mkstringnode("\""));
 }
 XMLATTRIBUTE: T_IDENTIFIER '=' T_STRING {
     char* str = string_cstr(&$3);
-    $$=allocprintf("%s=%s", $1,str);
+    $$=mkstringnode(allocprintf("%s=%s", $1,str));
     free(str);
     free($1);free((char*)$3.str);
 }
@@ -3222,14 +3292,7 @@ E : CONSTANT {
 }
 
 E : XML {
-    typedcode_t v;
-    v.c = 0;
-    multiname_t m = {QNAME, &stdns, 0, "XML"};
-    v.c = abc_getlex2(v.c, &m);
-    v.c = abc_pushstring(v.c, $1);
-    v.c = abc_construct(v.c, 1);
-    v.t = TYPE_XML;
-    $$ = mkcodenode(v);
+    $$ = $1;
 }
 
 /* regexp */
@@ -3402,7 +3465,7 @@ E : E '.' '(' {PASS12 new_state();state->xmlfilter=1;} E ')' {
     c = abc_kill(c, result);
     c = abc_kill(c, index);
     
-    c = var_block(c);
+    c = var_block(c, state->vars);
     old_state();
     typedcode_t r;
     r.c = c;
@@ -3519,7 +3582,9 @@ MEMBER : E '.' SUBNODE {
             $$.c = abc_getslot($$.c, f->slot);
         } else {
             if(!f) {
-                as3_softwarning("Access of undefined property '%s' in %s", $3, t->name);
+                if(!TYPE_IS_XMLLIST(t)) {
+                    as3_softwarning("Access of undefined property '%s' in %s", $3, t->name);
+                }
             }
             MEMBER_MULTINAME(m, f, $3);
             $$.c = abc_getproperty2($$.c, &m);
@@ -3682,9 +3747,7 @@ VAR_READ : T_IDENTIFIER {
        */
 
     if(!find_variable(state, $1)) {
-        if(state->method->inner) {
-            unknown_variable($1);
-        }
+        unknown_variable($1);
         /* let the compiler know that it might want to check the current directory/package
            for this identifier- maybe there's a file $1.as defining $1. */
         as3_schedule_class_noerror(state->package, $1);
