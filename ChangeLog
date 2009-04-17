@@ -278,10 +278,12 @@
 
 0.9.0:
 	* pdf2swf: Added support for Flash 8 Flashtype
-	* src/swfdump: now dumps a few more Flash 8 tags (like DEFINESHAPE4)
-	* pdf2swf: Common fonts are now linked directly into the executable (removes need for InstallPath in registry)
-	* pdf2swf: New optimizing levels -O1 -O2
-	* pdf2swf: Added direct gradient conversion
-	* setup.py: Added Python setup script
+	* pdf2swf: numerous bugfixes
+	* pdf2swf: support for gradients
+	* pdf2swf: support for different optimization levels (-O1, -O2, --flatten)
+	* src/swfdump: Flash 8/9 support
+	* pdf2swf: Common fonts are now linked directly into the executable
+	* setup.py: added Python setup script
 	* lib/python/gfx: New python module for accessing pdf2swf functionality
-	* lib/modules/swfabc.c: New module for the Flash9 AVM2 Actionscript
+	* as3compile: New tool, for compiling ActionScript 3.0
+	* swfc: added AS3.0 support

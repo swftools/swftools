@@ -10,9 +10,15 @@ except ImportError:
 
 cc = ccompiler.new_compiler()
 
+# leave it to gcc to detect c/c++ files. we'll be linking against -lstdc++
+# later on to ensure we do have all the c++ libraries, so we don't need to
+# compile *everything* as c++ just because of the few .cc files.
+cc.language_map[".cc"] = "c"
+
 import os
 import sys
 import stat
+import re
 
 DATADIR = "/usr/share/swftools/"
 
@@ -123,6 +129,14 @@ class ConfigScript:
             return 1
         elif name.startswith("INTERNAL"):
             return 1
+        elif name == "PACKAGE":
+            return "\"swftools\""
+        elif name == "VERSION":
+            fi = open("configure.in", "rb")
+            for line in fi.readlines():
+                if line.startswith("VERSION="):
+                    return '"'+line[8:].strip()+'"'
+            return "unknown"
         elif "POPPLER" in name:
             return None
         elif name.startswith("HAVE_") and name.endswith("_H"):

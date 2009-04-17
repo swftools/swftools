@@ -25,7 +25,7 @@ AC_ARG_WITH([poppler],
 [  --with-poppler          use poppler instead of internal xpdf (currently broken)], [USE_POPPLER=true])
 
 PACKAGE=swftools
-VERSION=2008-09-22-1956
+VERSION=0.9.0
 
 
 # ------------------------------------------------------------------

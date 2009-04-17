@@ -25,6 +25,8 @@ Compiles a file written in ActionScript 3.0 to a SWF file.
     Set target SWF width
 -r, --rate
     Set target SWF framerate
+-M, --mainclass
+    Set the name of the main class (extending flash.display.MovieClip)
 -l, --library <file>
     Include library file <file>. <file> can be an .abc or .swf file.
 -I, --include <dir>

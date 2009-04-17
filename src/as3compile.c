@@ -53,6 +53,7 @@ static struct options_t options[] = {
 {"X", "width"},
 {"Y", "height"},
 {"r", "rate"},
+{"M", "mainclass"},
 {"l", "library"},
 {"I", "include"},
 {"N", "local-with-network"},
@@ -118,6 +119,10 @@ int args_callback_option(char*name,char*val)
 	return 0;
     }
     else if(!strcmp(name, "D")) {
+        if(!strstr(val, "::")) {
+            fprintf(stderr, "Error: compile definition must contain \"::\"\n");
+            exit(1);
+        }
         as3_set_define(val);
 	return 1;
     }
@@ -156,6 +161,7 @@ void args_callback_usage(char *name)
     printf("-X , --width                   Set target SWF width\n");
     printf("-Y , --height                  Set target SWF width\n");
     printf("-r , --rate                    Set target SWF framerate\n");
+    printf("-M , --mainclass               Set the name of the main class (extending flash.display.MovieClip)\n");
     printf("-l , --library <file>          Include library file <file>. <file> can be an .abc or .swf file.\n");
     printf("-I , --include <dir>           Add additional include dir <dir>.\n");
     printf("-N , --local-with-network      Make output file \"local with networking\"\n");
@@ -222,7 +228,12 @@ int main (int argc,char ** argv)
         //as3_warning("output name not given, writing to %s", outputname);
     }
 
-    as3_parse_file(filename);
+    if(!strcmp(filename, ".")) {
+        as3_parse_directory(".");
+    } else {
+        as3_parse_file(filename);
+    }
+
     void*code = as3_getcode();
 
     SWF swf;
