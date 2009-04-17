@@ -4,17 +4,29 @@ $filename = $ARGV[0];
 
 $filename or die "no filename";
 
-$directory = $filename;
-$directory =~ s/.tar.gz$//g;
+$basename = $filename;
+$basename =~ s/.tar.gz$//g;
+$directory = $basename;
 
 mkdir("$directory");
 mkdir("$directory/tmp/");
 
 chdir("$directory/tmp/") or die;
-system("tar -zxvf ../../$filename") and die;
+
+print "Extracting $filename\n";
+system("tar -zxf ../../$filename") and die;
 system("find . -type f -exec mv {} .. \\;") and die;
 chdir("..");
 system("find . -type d -exec rmdir {} \\; 2> /dev/null");
+
+print "Applying security patches...\n";
+for($a=1;$a<10;$a++) {
+    $patchname = "../${basename}pl$a.patch";
+    if(-f $patchname) {
+        print "*pl$a.patch\n";
+        system("patch -s < $patchname") and die;
+    }
+}
 
 $c = 'find . \( -name "*.cc" -or -name "*.h" -or -name "*.c" \) -exec cp {} {}.orig \;';
 print "$c\n";
