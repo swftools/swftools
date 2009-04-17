@@ -1451,17 +1451,17 @@ void* swfresult_get(gfxresult_t*gfx, const char*name)
     if(!strcmp(name, "swf")) {
 	return (void*)swf_CopySWF(swf);
     } else if(!strcmp(name, "xmin")) {
-	return (void*)(swf->movieSize.xmin/20);
+	return (void*)(ptroff_t)(swf->movieSize.xmin/20);
     } else if(!strcmp(name, "ymin")) {
-	return (void*)(swf->movieSize.ymin/20);
+	return (void*)(ptroff_t)(swf->movieSize.ymin/20);
     } else if(!strcmp(name, "xmax")) {
-	return (void*)(swf->movieSize.xmax/20);
+	return (void*)(ptroff_t)(swf->movieSize.xmax/20);
     } else if(!strcmp(name, "ymax")) {
-	return (void*)(swf->movieSize.ymax/20);
+	return (void*)(ptroff_t)(swf->movieSize.ymax/20);
     } else if(!strcmp(name, "width")) {
-	return (void*)((swf->movieSize.xmax - swf->movieSize.xmin)/20);
+	return (void*)(ptroff_t)((swf->movieSize.xmax - swf->movieSize.xmin)/20);
     } else if(!strcmp(name, "height")) {
-	return (void*)((swf->movieSize.ymax - swf->movieSize.ymin)/20);
+	return (void*)(ptroff_t)((swf->movieSize.ymax - swf->movieSize.ymin)/20);
     }
     return 0;
 }
