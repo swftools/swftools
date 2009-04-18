@@ -24,6 +24,7 @@ package {
         public function Main() 
         {
             var b:B = new B();
+            trace("[exit]");
         }
     }
 

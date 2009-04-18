@@ -13,7 +13,7 @@ package {
             a[0]();
             a[0]();
             if(y!=2) trace("error")
-            else     trace("ok 1/2");
+            else     trace("ok 1/3");
         }
         public function test2(y:uint)
         {
@@ -25,12 +25,23 @@ package {
             inc_y();
             
             if(y!=2) trace("error")
-            else     trace("ok 2/2");
+            else     trace("ok 2/3");
         }
+
+        var msg:String = "ok 3/3";
+        public function test3(y:int)
+        {
+            var f = function() {
+                trace(msg);
+            }
+            f();
+        }
+
         public function Main()
         {
             this.test1(0,5)
             this.test2(0)
+            this.test3(0)
             trace("[exit]");
         }
     }

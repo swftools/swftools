@@ -369,6 +369,13 @@ struct _methodstate {
     methodstate_list_t*innerfunctions;
 };
 
+void methodstate_destroy(methodstate_t*m) 
+{
+    dict_destroy(m->unresolved_variables);
+    m->unresolved_variables = 0;
+    list_free(m->innerfunctions);m->innerfunctions=0;
+}
+
 typedef struct _state {
     struct _state*old;
     int level;
@@ -529,8 +536,7 @@ static void old_state()
     state = state->old;
 
     if(as3_pass>1 && leaving->method && leaving->method != state->method && !leaving->method->inner) {
-        free(leaving->method);
-        leaving->method=0;
+        methodstate_destroy(leaving->method);leaving->method=0;
     }
     if(as3_pass>1 && leaving->cls && leaving->cls != state->cls) {
         free(leaving->cls);
@@ -646,10 +652,10 @@ static variable_t* find_variable(state_t*s, char*name)
         return 0;
     }
 }
-static variable_t* find_slot(state_t*s, const char*name)
+static variable_t* find_slot(methodstate_t*m, const char*name)
 {
-    if(s->method && s->method->slots)
-        return dict_lookup(s->method->slots, name);
+    if(m && m->slots)
+        return dict_lookup(m->slots, name);
     return 0;
 }
 
@@ -695,10 +701,10 @@ static int alloc_local()
     return state->method->variable_count++;
 }
 
-static variable_t* new_variable2(const char*name, classinfo_t*type, char init, char maybeslot)
+static variable_t* new_variable2(methodstate_t*method, const char*name, classinfo_t*type, char init, char maybeslot)
 {
     if(maybeslot) {
-        variable_t*v = find_slot(state, name);
+        variable_t*v = find_slot(method, name);
         if(v) {
             alloc_local(); 
             return v;
@@ -711,13 +717,15 @@ static variable_t* new_variable2(const char*name, classinfo_t*type, char init, c
     v->init = v->kill = init;
  
     if(name) {
-        if(!state->method->no_variable_scoping) 
+        if(!method->no_variable_scoping) 
         {
-            if(dict_contains(state->vars, name))
+            if(dict_contains(state->vars, name)) {
+                *(int*)0=0;
                 syntaxerror("variable %s already defined", name);
+            }
             dict_put(state->vars, name, v);
         }
-        if(state->method->no_variable_scoping && 
+        if(method->no_variable_scoping && 
            as3_pass==2 && 
            dict_contains(state->allvars, name)) 
         {
@@ -731,9 +739,9 @@ static variable_t* new_variable2(const char*name, classinfo_t*type, char init, c
 
     return v;
 }
-static int new_variable(const char*name, classinfo_t*type, char init, char maybeslot)
+static int new_variable(methodstate_t*method, const char*name, classinfo_t*type, char init, char maybeslot)
 {
-    return new_variable2(name, type, init, maybeslot)->index;
+    return new_variable2(method, name, type, init, maybeslot)->index;
 }
 
 #define TEMPVARNAME "__as3_temp__"
@@ -744,7 +752,7 @@ int gettempvar()
     if(v) 
         i = v->index;
     else
-        i = new_variable(TEMPVARNAME, 0, 0, 0);
+        i = new_variable(state->method, TEMPVARNAME, 0, 0, 0);
     parserassert(i);
     return i;
 }
@@ -798,7 +806,7 @@ static void unknown_variable(char*name)
 
 static code_t* add_scope_code(code_t*c, methodstate_t*m, char init)
 {
-    if(m->uses_slots || (m->late_binding && !m->inner)) { //???? especially inner functions need the pushscope
+    if(m->uses_slots || m->innerfunctions || (m->late_binding && !m->inner)) {
         c = abc_getlocal_0(c);
         c = abc_pushscope(c);
     }
@@ -949,7 +957,7 @@ static void innerfunctions2vars(methodstate_t*m)
     while(l) {
         methodstate_t*m = l->methodstate;
         
-        variable_t* v = new_variable2(m->info->name, TYPE_FUNCTION(m->info), 0, 0);
+        variable_t* v = new_variable2(state->method, m->info->name, TYPE_FUNCTION(m->info), 0, 0);
         m->var_index = v->index;
         if(m->is_a_slot)
             m->slot_index = m->is_a_slot;
@@ -963,25 +971,30 @@ static void function_initvars(methodstate_t*m, char has_params, params_t*params,
     if(var0) {
         int index = -1;
         if(m->inner)
-            index = new_variable("this", 0, 0, 0);
+            index = new_variable(m, "this", 0, 0, 0);
         else if(!m->is_global)
-            index = new_variable((flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0, 0);
+            index = new_variable(m, (flags&FLAG_STATIC)?"class":"this", state->cls?state->cls->info:0, 0, 0);
         else
-            index = new_variable("globalscope", 0, 0, 0);
+            index = new_variable(m, "globalscope", 0, 0, 0);
+        if(index) {
+            DICT_ITERATE_ITEMS(state->vars, char*, name, variable_t*, v) {
+                printf("%s %d\n", name, v->index);
+            }
+        }
         parserassert(!index);
     }
 
     if(has_params) {
         param_list_t*p=0;
         for(p=params->list;p;p=p->next) {
-            variable_t*v = new_variable2(p->param->name, p->param->type, 0, 1);
+            variable_t*v = new_variable2(m, p->param->name, p->param->type, 0, 1);
             v->is_parameter = 1;
         }
         if(as3_pass==2 && m->need_arguments) {
             /* arguments can never be used by an innerfunction (the inner functions
                have their own arguments var), so it's ok to  not initialize this until
                pass 2. (We don't know whether we need it before, anyway) */
-            variable_t*v = new_variable2("arguments", TYPE_ARRAY, 0, 0);
+            variable_t*v = new_variable2(m, "arguments", TYPE_ARRAY, 0, 0);
             m->need_arguments = v->index;
         }
     }
@@ -1051,7 +1064,6 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
         state->cls->init = rfx_calloc(sizeof(methodstate_t));
         state->cls->static_init = rfx_calloc(sizeof(methodstate_t));
         state->cls->static_init->is_static=FLAG_STATIC;
-        state->cls->static_init->variable_count=1;
         /* notice: we make no effort to initialize the top variable (local0) here,
            even though it has special meaning. We just rely on the fact
            that pass 1 won't do anything with variables */
@@ -1081,10 +1093,12 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
     if(as3_pass == 2) {
         state->cls = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
     
-        state->method = state->cls->init;
         parserassert(state->cls && state->cls->info);
        
+        state->method = state->cls->static_init;
+
         function_initvars(state->cls->init, 0, 0, 0, 1);
+        state->cls->static_init->variable_count=1;
         function_initvars(state->cls->static_init, 0, 0, 0, 0);
 
         if(extends && (extends->flags & FLAG_FINAL))
@@ -1324,9 +1338,13 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
     //parserassert(state->method && state->method->info);
 
     methodstate_t*parent_method = state->method;
+    variable_t*v = 0;
 
     if(as3_pass==1) {
         return_type = 0; // not valid in pass 1
+        if(name) {
+            v = new_variable2(parent_method, name, 0, 0, 0);
+        }
     }
 
     new_state();
@@ -1339,6 +1357,9 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
         state->method->is_static = parent_method->is_static;
         state->method->variable_count = 0;
         state->method->abc = rfx_calloc(sizeof(abc_method_t));
+        if(v) {
+            v->is_inner_method = state->method;
+        }
 
         NEW(methodinfo_t,minfo);
         minfo->kind = INFOTYPE_METHOD;
@@ -1413,51 +1434,57 @@ static void startfunction(modifiers_t*mod, enum yytokentype getset, char*name,
     } 
 }
 
+static void insert_unresolved(methodstate_t*m, dict_t*xvars, dict_t*allvars)
+{
+    parserassert(m->inner);
+    if(m->unresolved_variables) {
+        dict_t*d = m->unresolved_variables;
+        int t;
+        DICT_ITERATE_KEY(d, char*, id) {
+            /* check parent method's variables */
+            variable_t*v;
+            if(dict_contains(allvars, id)) {
+                m->uses_parent_function = 1;
+                state->method->uses_slots = 1;
+                dict_put(xvars, id, 0);
+            }
+        }
+    }
+    methodstate_list_t*ml = m->innerfunctions;
+    while(ml) {
+        insert_unresolved(ml->methodstate, xvars, allvars);
+        ml = ml->next;
+    }
+}
+
 static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*name,
                           params_t*params, classinfo_t*return_type, code_t*body)
 {
     if(as3_pass==1) {
-        innerfunctions2vars(state->method);
-
-        methodstate_list_t*ml = state->method->innerfunctions;
-        
         dict_t*xvars = dict_new();
         
         if(state->method->unresolved_variables) {
             DICT_ITERATE_KEY(state->method->unresolved_variables, char*, vname) {
-                if(dict_contains(state->allvars, vname)) {
-                    state->method->no_variable_scoping = 1;
-                    as3_warning("function %s uses forward or outer block variable references (%s): switching into compatiblity mode", name, vname);
-                    break;
+                if(!state->method->no_variable_scoping && dict_contains(state->allvars, vname)) {
+                    variable_t*v = dict_lookup(state->allvars, vname);
+                    if(!v->is_inner_method) {
+                        state->method->no_variable_scoping = 1;
+                        as3_warning("function %s uses forward or outer block variable references (%s): switching into compatiblity mode", name, vname);
+                    }
                 }
             }
         }
 
+        methodstate_list_t*ml = state->method->innerfunctions;
         while(ml) {
-            methodstate_t*m = ml->methodstate;
-            parserassert(m->inner);
-            if(m->unresolved_variables) {
-                dict_t*d = m->unresolved_variables;
-                int t;
-                DICT_ITERATE_KEY(d, char*, id) {
-                    /* check parent method's variables */
-                    variable_t*v;
-                    if((v=find_variable(state, id))) {
-                        m->uses_parent_function = 1;
-                        state->method->uses_slots = 1;
-                        dict_put(xvars, id, 0);
-                    }
-                }
-                dict_destroy(m->unresolved_variables);
-                m->unresolved_variables = 0;
-            }
+            insert_unresolved(ml->methodstate, xvars, state->allvars);
             ml = ml->next;
         }
         
         if(state->method->uses_slots) {
             state->method->slots = dict_new();
             int i = 1;
-            DICT_ITERATE_ITEMS(state->vars, char*, name, variable_t*, v) {
+            DICT_ITERATE_ITEMS(state->allvars, char*, name, variable_t*, v) {
                 if(!name) syntaxerror("internal error");
                 if(v->index && dict_contains(xvars, name)) {
                     v->init = v->kill = 0;
@@ -2074,17 +2101,17 @@ VARIABLE_LIST: VARIABLE_LIST ',' ONE_VARIABLE {$$ = code_append($1, $3);}
 ONE_VARIABLE: T_IDENTIFIER MAYBETYPE MAYBEEXPRESSION
 {
 PASS12
-    if(variable_exists($1))
+    if(variable_exists($1)) 
         syntaxerror("Variable %s already defined", $1);
 PASS1
-    new_variable($1, 0, 1, 0);
+    new_variable(state->method, $1, 0, 1, 0);
 PASS2
    
     char slot = 0;
     int index = 0;
     variable_t*v = 0;
     if(state->method->uses_slots) {
-        v = find_slot(state, $1);
+        v = find_slot(state->method, $1);
         if(v && !v->init) {
             // this variable is stored in a slot
             v->init = 1;
@@ -2093,7 +2120,7 @@ PASS2
         }
     }
     if(!v) {
-        v = new_variable2($1, $2, 1, 0);
+        v = new_variable2(state->method, $1, $2, 1, 0);
     }
 
     $$ = slot?abc_getscopeobject(0, 1):0;
@@ -2164,8 +2191,8 @@ FOR_INIT : VOIDEXPRESSION
 //       (I don't see any easy way to revolve this conflict otherwise, as we
 //        can't touch VAR_READ without upsetting the precedence about "return")
 FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
-    PASS1 $$=$2;new_variable($2,0,1,0);
-    PASS2 $$=$2;new_variable($2,$3,1,0);
+    PASS1 $$=$2;new_variable(state->method, $2,0,1,0);
+    PASS2 $$=$2;new_variable(state->method, $2,$3,1,0);
 }
 FOR_IN_INIT : T_IDENTIFIER {
     PASS12
@@ -2235,6 +2262,7 @@ FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' IF_CODEBLOCK {
     $$ = abc_kill($$, it);
     $$ = abc_kill($$, array);
 
+    $$ = var_block($$, state->vars);
     PASS12 old_state();
 }
 
@@ -2333,8 +2361,8 @@ SWITCH : T_SWITCH '(' {PASS12 new_state();state->switch_var=alloc_local();} E ')
 
 CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();
                                                       state->exception_name=$3;
-                                               PASS1 new_variable($3, 0, 0, 0);
-                                               PASS2 new_variable($3, $4, 0, 0);
+                                               PASS1 new_variable(state->method, $3, 0, 0, 0);
+                                               PASS2 new_variable(state->method, $3, $4, 0, 0);
                                               } 
         '{' MAYBECODE '}' {
     namespace_t name_ns = {ACCESS_PACKAGE, ""};
@@ -3639,7 +3667,7 @@ MEMBER : E '.' SUBNODE {
             o.t = v->type;
             return mkcodenode(o);
         }
-        if((v = find_slot(state, name))) {
+        if((v = find_slot(state->method, name))) {
             o.c = abc_getscopeobject(o.c, 1);
             o.c = abc_getslot(o.c, v->index);
             o.t = v->type;

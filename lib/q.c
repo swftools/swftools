@@ -1198,6 +1198,8 @@ void dict_destroy_shallow(dict_t*dict)
 
 void dict_destroy(dict_t*dict)
 {
+    if(!dict)
+        return;
     dict_clear(dict);
     rfx_free(dict);
 }
