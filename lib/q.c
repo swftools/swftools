@@ -197,35 +197,62 @@ void ringbuffer_clear(ringbuffer_t*r)
 
 // ------------------------------- heap_t -------------------------------
 
-void heap_init(heap_t*h,int n,int elem_size, int(*compare)(const void *, const void *))
+void heap_init(heap_t*h,int elem_size, int(*compare)(const void *, const void *))
 {
     memset(h, 0, sizeof(heap_t));
-    h->max_size = n;
     h->size = 0;
     h->elem_size = elem_size;
     h->compare = compare;
-    h->elements = (void**)rfx_calloc(n*sizeof(void*));
-    h->data = (char*)rfx_calloc(h->max_size*h->elem_size);
+    h->elements = 0;
+    h->max_size = 0;
+}
+heap_t* heap_new(int elem_size, int(*compare)(const void *, const void *))
+{
+    heap_t*h = malloc(sizeof(heap_t));
+    heap_init(h, elem_size, compare);
+    return h;
+}
+heap_t* heap_clone(heap_t*o)
+{
+    heap_t*h = malloc(sizeof(heap_t));
+    memcpy(h, o, sizeof(heap_t));
+    h->elements = rfx_alloc(sizeof(void*)*h->size);
+    int t;
+    for(t=0;t<h->size;t++) {
+        h->elements[t] = rfx_alloc(h->elem_size);
+        memcpy(h->elements[t], o->elements[t], h->elem_size);
+    }
+    return h;
 }
 void heap_clear(heap_t*h)
 {
+    int t;
+    for(t=0;t<h->size;t++) {
+        rfx_free(h->elements[t]);
+        h->elements[t]=0;
+    }
     rfx_free(h->elements);
-    rfx_free(h->data);
+}
+void heap_destroy(heap_t*h)
+{
+    heap_clear(h);
+    free(h);
 }
 
-#define HEAP_NODE_SMALLER(h,node1,node2) ((h)->compare((node1),(node2))>0)
+#define HEAP_NODE_LARGER(h,node1,node2) ((h)->compare((node1),(node2))>0)
+#define HEAP_NODE_SMALLER(h,node1,node2) ((h)->compare((node1),(node2))<0)
 
 static void up(heap_t*h, int node)
 {
     void*node_p = h->elements[node];
     int parent = node;
+    int tmp = node;
     do {
 	node = parent;
 	if(!node) break;
 	parent = (node-1)/2;
 	h->elements[node] = h->elements[parent];
-    } while(HEAP_NODE_SMALLER(h,h->elements[parent], node_p));
-
+    } while(HEAP_NODE_SMALLER(h, h->elements[parent], node_p));
     h->elements[node] = node_p;
 }
 static void down(heap_t*h, int node)
@@ -250,22 +277,33 @@ static void down(heap_t*h, int node)
 void heap_put(heap_t*h, void*e) 
 {
     int pos = h->size++;
-    memcpy(&h->data[pos*h->elem_size],e,h->elem_size);
-    h->elements[pos] = &h->data[pos];
+    void*data = rfx_alloc(h->elem_size);
+    memcpy(data,e,h->elem_size);
+
+    if(pos>=h->max_size) {
+        h->max_size = h->max_size<15?15:(h->max_size+1)*2-1;
+        h->elements = (void**)rfx_realloc(h->elements, h->max_size*sizeof(void*));
+        assert(pos<h->max_size);
+    }
+
+    h->elements[pos] = data;
     up(h, pos);
 }
 int heap_size(heap_t*h)
 {
     return h->size;
 }
-void* heap_max(heap_t*h)
+void* heap_peek(heap_t*h)
 {
+    if(!h || !h->size) 
+        return 0;
     return h->elements[0];
 }
 void* heap_chopmax(heap_t*h)
 {
+    if(!h->size)
+        return 0;
     void*p = h->elements[0];
-    assert(h->size);
     h->elements[0] = h->elements[--h->size];
     down(h,0);
     return p;
@@ -283,7 +321,7 @@ void heap_dump(heap_t*h, FILE*fi)
 }
 void** heap_flatten(heap_t*h)
 {
-    void**nodes = (void**)rfx_alloc(h->size*sizeof(void*));
+    void**nodes = (void**)rfx_alloc((h->size+1)*sizeof(void*));
     void**p = nodes;
    
     while(h->size) {
@@ -292,6 +330,7 @@ void** heap_flatten(heap_t*h)
 	printf("\n");*/
 	*p++ = heap_chopmax(h);
     }
+    *p++ = 0;
     return nodes;
 }
 
@@ -991,6 +1030,10 @@ dictentry_t* dict_put(dict_t*h, const void*key, void* data)
 {
     unsigned int hash = h->key_type->hash(key);
     dictentry_t*e = (dictentry_t*)rfx_alloc(sizeof(dictentry_t));
+    
+    if(!h->hashsize)
+        dict_expand(h, 1);
+
     unsigned int hash2 = hash % h->hashsize;
     
     e->key = h->key_type->dup(key);

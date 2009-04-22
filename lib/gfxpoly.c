@@ -449,7 +449,7 @@ static ArtVpath* gfxline_to_ArtVpath(gfxline_t*line, char fill)
     }
 
     /* Find adjacent identical points. If an ajdacent pair of identical
-       points is found, the second is removed.
+       points is found, the second one is removed.
        So moveto x,y lineto x,y becomes moveto x,y
           lineto x,y lineto x,y becomes lineto x,y
           lineto x,y moveto x,y becomes lineto x,y

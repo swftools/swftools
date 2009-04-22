@@ -29,7 +29,7 @@ t
 r
 cming
 gen
-Makefile
+./Makefile
 Makefile.common
 Makefile.new
 Makefile.depend
