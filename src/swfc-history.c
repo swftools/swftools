@@ -322,7 +322,7 @@ void filterState_append(filterState_t* first, filterState_t* newChange)
     	    for (i = 0; i < first->value->num; i++)
     	    {
     	    	newList = (char*)malloc(strlen(list1) + strlen(filtername[first->value->filter[i]->type]) + 2);
-    	    	newList = strcat(strcat(list1, "+"), filtername[first->value->filter[i]->type]);
+    	    	strcpy(newList, strcat(strcat(list1, "+"), filtername[first->value->filter[i]->type]));
     	    	free(list1);
     	    	list1 = newList;
     	    }
@@ -331,7 +331,7 @@ void filterState_append(filterState_t* first, filterState_t* newChange)
     	    for (i = 0; i < newChange->value->num; i++)
     	    {
     	    	newList = (char*)malloc(strlen(list1) + strlen(filtername[newChange->value->filter[i]->type]) + 2);
-    	    	newList = strcat(strcat(list2, "+"), filtername[newChange->value->filter[i]->type]);
+    	    	strcpy(newList, strcat(strcat(list2, "+"), filtername[newChange->value->filter[i]->type]));
     	    	free(list2);
     	    	list2 = newList;
     	    }
