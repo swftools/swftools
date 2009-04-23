@@ -269,7 +269,8 @@ void as3_schedule_package(const char*package)
     char*dirname = strdup(package);
     int s=0;
     while(dirname[s]) {
-        if(dirname[s]=='.') dirname[s]='/';
+        if(dirname[s]=='.') 
+            dirname[s] = path_seperator;
         s++;
     };
     if(!as3_schedule_directory(dirname))
