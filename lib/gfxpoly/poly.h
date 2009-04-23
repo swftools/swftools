@@ -13,6 +13,12 @@ typedef struct _point {
     int32_t y;
 } point_t;
 
+typedef struct _edge {
+    point_t a;
+    point_t b;
+    struct _edge *next;
+} edge_t;
+
 typedef struct _segment {
     point_t a;
     point_t b;
@@ -30,9 +36,10 @@ typedef struct _segment {
 
 #define LINE_EQ(p,s) ((double)(s)->delta.y*(p).x - (double)(s)->delta.x*(p).y - (s)->k)
 
-typedef segment_t gfxpoly_t;
+typedef edge_t gfxpoly_t;
 gfxpoly_t* gfxpoly_new();
 void gfxpoly_dump(gfxpoly_t*poly);
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly);
 
 typedef struct _event {
     eventtype_t type;

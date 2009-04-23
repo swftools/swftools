@@ -7,6 +7,10 @@ actlist_t* actlist_new()
     NEW(actlist_t, a);
     return a;
 }
+void actlist_destroy(actlist_t*a)
+{
+    free(a);
+}
 
 void actlist_verify_and_dump(actlist_t*a, int32_t y)
 {
@@ -17,23 +21,26 @@ void actlist_verify_and_dump(actlist_t*a, int32_t y)
         if(y) {
             double x = ((double)s->delta.x*(y-s->a.y)/s->delta.y)+s->a.x;
             if(s!=a->list) {
-                if(lastx>x) printf("?%f<->%f? ", lastx, x);
+                if(lastx>x) fprintf(stderr, "?%f<->%f? ", lastx, x);
             }
             lastx = x;
         }
         assert(!s->left || s->left->right == s);
         assert(!s->right || s->right->left == s);
-        printf("[%d]", s->nr);
+        fprintf(stderr, "[%d]", s->nr);
         s = s->right;
-        if(s) printf(" ");
-        else printf("\n");
+        if(s) fprintf(stderr, " ");
+        else fprintf(stderr, "\n");
     }
 }
 
 segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
 {
     /* this runs in O(n) right now, and should be optimized using a splay
-       tree to run in ammortized O(log(n)) */
+       tree to run in ammortized O(log(n)) 
+       (update: currently only 2.5% of the algorithm's running time is spent here,
+        so maybe we don't need to bother)
+     */
     segment_t*last=0, *s = a->list;
     if(!s) return last;
     while(s) {
@@ -109,33 +116,4 @@ void actlist_swap(actlist_t*a, segment_t*s1, segment_t*s2)
 {
     actlist_delete(a, s1);
     actlist_insert_after(a, s2, s1);
-}
-
-void actlist_invert_fromto(actlist_t*a, segment_t*s1, segment_t*s2)
-{
-    segment_t*left = s1->left;
-    segment_t*right = s2->right;
-    segment_t*s = s1;
-    assert(s!=s2);
-    while(1) {
-        assert(s);
-        segment_t*l = s->left;
-        segment_t*r = s->right;
-        s->left = r;
-        s->right = l;
-        if(s==s2)
-            break;
-        s = r;
-    }
-    s2->left = left;
-    s1->right = right;
-    if(left) {
-        left->right = s2;
-    } else {
-        assert(a->list == s1);
-        a->list = s2; 
-    }
-    if(right) {
-        right->left = s1;
-    }
 }

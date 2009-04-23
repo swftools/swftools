@@ -1470,6 +1470,7 @@ int swf_ReadSWF2(reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed
     swf->frameCount = SWAP16(swf->frameCount);
 
     /* read tags and connect to list */
+    t1.next = 0;
     t = &t1;
     while (t) {
       t = swf_ReadTag(reader,t);
@@ -1479,7 +1480,8 @@ int swf_ReadSWF2(reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed
       }
     }
     swf->firstTag = t1.next;
-    t1.next->prev = NULL;
+    if(t1.next)
+      t1.next->prev = NULL;
   }
   
   return reader->pos;
@@ -1707,6 +1709,21 @@ int  swf_WriteSWF2(writer_t*writer, SWF * swf)     // Writes SWF to file, return
       return (int)fileSize;
     }
   }
+}
+
+int swf_SaveSWF(SWF * swf, char*filename)
+{
+    int fi = open(filename, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
+    if(fi<0) {
+        perror(filename);
+        return 0;
+    }
+    if(swf_WriteSWF(fi, swf)<0) {
+        fprintf(stderr, "Unable to write output file: %s\n", filename);
+        return 0;
+    }
+    close(fi);
+    return 1;
 }
 
 int  swf_WriteSWF(int handle, SWF * swf)     // Writes SWF to file, returns length or <0 if fails

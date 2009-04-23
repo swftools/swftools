@@ -1144,7 +1144,7 @@ char dict_del(dict_t*h, const void*key)
     while(e) {
         if(h->key_type->equals(e->key, key)) {
             dictentry_t*next = e->next;
-            rfx_free((void*)e->key);
+            h->key_type->free(e->key);
             memset(e, 0, sizeof(dictentry_t));
             rfx_free(e);
             if(e == head) {
