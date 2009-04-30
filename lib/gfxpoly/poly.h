@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include "../q.h"
 
-typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
-typedef enum {EVENT_CROSS, EVENT_END, EVENT_START} eventtype_t;
+typedef enum {DIR_UP, DIR_DOWN, DIR_HORIZONTAL} segment_dir_t;
+typedef enum {EVENT_CROSS, EVENT_END, EVENT_HORIZONTAL, EVENT_START} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
 typedef struct _point {
@@ -30,11 +30,14 @@ typedef struct _segment {
     struct _segment*right;
     int tmp;
     point_t pos;
+    point_t new_point;
+    point_t new_pos;
 
     dict_t scheduled_crossings;
 } segment_t;
 
 #define LINE_EQ(p,s) ((double)(s)->delta.y*(p).x - (double)(s)->delta.x*(p).y - (s)->k)
+#define XPOS(s,ypos) ((s)->a.x + ceil(((s)->delta.x * (double)((ypos) - (s)->a.y)) / (s)->delta.y))
 
 typedef edge_t gfxpoly_t;
 gfxpoly_t* gfxpoly_new();

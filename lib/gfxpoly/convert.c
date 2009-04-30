@@ -21,7 +21,7 @@ static inline void gfxpoly_add_edge(edge_t**list, double _x1, double _y1, double
     int y1 = ceil(_y1);
     int x2 = ceil(_x2);
     int y2 = ceil(_y2);
-    if(y1!=y2) {
+    if(x1!=x2 || y1!=y2) {
         edge_t*s = edge_new(x1, y1, x2, y2);
         s->next = *list;
         *list = s;

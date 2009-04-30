@@ -8,10 +8,12 @@ typedef struct _actlist
 {
     //SPLAY_HEAD(root, actnode_t);
     segment_t*list;
+    int size;
 } actlist_t;
 
 actlist_t* actlist_new();
 void actlist_destroy(actlist_t*a);
+int actlist_size(actlist_t*a);
 void actlist_verify_and_dump(actlist_t*a, int32_t y);
 segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2);  // finds segment immediately to the left of p1 (breaking ties w/ p2)
 void actlist_insert(actlist_t*a, point_t p, segment_t*s);

@@ -76,6 +76,7 @@ static void actlist_insert_after(actlist_t*a, segment_t*left, segment_t*s)
         s->left->right = s;
     if(s->right) 
         s->right->left = s;
+    a->size++;
 }
 
 void actlist_insert(actlist_t*a, point_t p, segment_t*s)
@@ -95,6 +96,11 @@ void actlist_delete(actlist_t*a, segment_t*s)
         s->right->left = s->left;
     }
     s->left = s->right = 0;
+    a->size--;
+}
+int actlist_size(actlist_t*a)
+{
+    return a->size;
 }
 
 segment_t* actlist_leftmost(actlist_t*a)
@@ -109,7 +115,8 @@ segment_t* actlist_left(actlist_t*a, segment_t*s)
 
 segment_t* actlist_right(actlist_t*a, segment_t*s)
 {
-    return s->right;
+    if(s) return s->right;
+    else  return a->list;
 }
 
 void actlist_swap(actlist_t*a, segment_t*s1, segment_t*s2)

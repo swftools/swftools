@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "poly.h"
+
 typedef struct _xrow {
     int32_t*x;
     int num;

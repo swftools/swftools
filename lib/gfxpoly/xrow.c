@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <memory.h>
 #include "../mem.h"
 #include "xrow.h"
 

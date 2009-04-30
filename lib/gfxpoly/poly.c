@@ -50,6 +50,7 @@ typedef struct _status {
     actlist_t*actlist;
     heap_t*queue;
     edge_t*output;
+    xrow_t*xrow;
 #ifdef DEBUG
     dict_t*seen_crossings; //list of crossing we saw so far
     dict_t*intersecting_segs; //list of segments intersecting in this scanline
@@ -112,7 +113,9 @@ inline static event_t event_new()
 
 void event_dump(event_t*e)
 {
-    if(e->type == EVENT_START) {
+    if(e->type == EVENT_HORIZONTAL) {
+        fprintf(stderr, "Horizontal [%d] (%d,%d) -> (%d,%d)\n", e->s1->nr, e->s1->a.x, e->s1->a.y, e->s1->b.x, e->s1->b.y);
+    } else if(e->type == EVENT_START) {
         fprintf(stderr, "event: segment [%d] starts at (%d,%d)\n", e->s1->nr, e->p.x, e->p.y);
     } else if(e->type == EVENT_END) {
         fprintf(stderr, "event: segment [%d] ends at (%d,%d)\n", e->s1->nr, e->p.x, e->p.y);
@@ -128,13 +131,18 @@ static inline min32(int32_t v1, int32_t v2) {return v1<v2?v1:v2;}
 
 void segment_init(segment_t*s, int x1, int y1, int x2, int y2)
 {
-    assert(y1!=y2);
     if(y1<y2) {
         s->dir = DIR_DOWN;
-    } else {
+    } else if(y1>y2) {
         int x = x1;x1=x2;x2=x;
         int y = y1;y1=y2;y2=y;
         s->dir = DIR_UP;
+    } else {
+        s->dir = DIR_HORIZONTAL;
+        if(x1>x2) {
+            int x = x1;x1=x2;x2=x;
+            int y = y1;y1=y2;y2=y;
+        }
     }
     s->a.x = x1;
     s->a.y = y1;
@@ -146,8 +154,10 @@ void segment_init(segment_t*s, int x1, int y1, int x2, int y2)
     s->delta.y = y2-y1;
     s->pos = s->a;
     s->tmp = -1;
-#ifdef DEBUG
-    static int segment_count=0; //for debugging
+    s->new_point.y = y1-1;
+#define XDEBUG
+#ifdef XDEBUG
+    static int segment_count=0;
     s->nr = segment_count++;
 #endif
 
@@ -184,8 +194,13 @@ void segment_destroy(segment_t*s)
 
 void gfxpoly_enqueue(edge_t*list, heap_t*queue)
 {
-    edge_t*l = list;
-    while(l) {
+    edge_t*l;
+    for(l=list;l;l=l->next) {
+        if(l->a.x == l->b.x && 
+           l->a.y == l->b.y) {
+            fprintf(stderr, "Warning: intersector input contains zero-length segments\n");
+            continue;
+        }
         segment_t*s = segment_new(l->a.x, l->a.y, l->b.x, l->b.y);
 #ifdef DEBUG
         fprintf(stderr, "[%d] (%d,%d) -> (%d,%d) %s\n",
@@ -193,12 +208,11 @@ void gfxpoly_enqueue(edge_t*list, heap_t*queue)
                 s->dir==DIR_UP?"up":"down");
 #endif
         event_t e = event_new();
-        e.type = EVENT_START;
+        e.type = s->dir==DIR_HORIZONTAL?EVENT_HORIZONTAL:EVENT_START;
         e.p = s->a;
         e.s1 = s;
         e.s2 = 0;
         heap_put(queue, &e);
-        l = l->next;
     }
 }
 
@@ -242,6 +256,9 @@ void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     }
     
     if(dict_contains(&s1->scheduled_crossings, s2)) {
+        /* FIXME: this whole segment hashing thing is really slow */
+        //fprintf(stderr, "Encountered crossing between [%d] and [%d] twice\n", s1->nr, s2->nr);
+
         // we already know about this one
         return;
     }
@@ -369,27 +386,6 @@ void exchange_two(status_t*status, event_t*e)
         schedule_crossing(status, s1, right);
 }
 
-void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
-{
-#ifdef DEBUG
-    if(s->pos.x == p.x && s->pos.y == p.y) {
-        fprintf(stderr, "Error: tried to add (%d,%d) to segment [%d] twice\n", p.x, p.y, s->nr);
-    }
-#endif
-    assert(s->pos.x != p.x || s->pos.y != p.y);
-#ifdef DEBUG
-    fprintf(stderr, "[%d] gets extra point (%d,%d)\n", s->nr, p.x, p.y);
-#endif
-
-    edge_t*e = malloc(sizeof(edge_t));
-    e->a = s->pos;
-    e->b = p;
-    e->next = status->output;
-    status->output = e;
-    
-    s->pos = p;
-}
-
 typedef struct _box {
     point_t left1, left2, right1, right2;
 } box_t;
@@ -402,7 +398,36 @@ static inline box_t box_new(int x, int y)
     box.left2.y = box.right2.y = y;
     return box;
 }
-        
+
+void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
+{
+    edge_t*e = malloc(sizeof(edge_t));
+    e->a = s->pos;
+    e->b = p;
+    assert(e->a.y != e->b.y);
+    e->next = status->output;
+    status->output = e;
+}
+
+void mark_point_in_segment(status_t*status, segment_t*s, point_t p)
+{
+#ifdef DEBUG
+    if(s->pos.x == p.x && s->pos.y == p.y) {
+        fprintf(stderr, "Error: tried to add (%d,%d) to segment [%d] twice\n", p.x, p.y, s->nr);
+    }
+#endif
+    assert(s->pos.x != p.x || s->pos.y != p.y);
+#ifdef DEBUG
+    fprintf(stderr, "[%d] gets extra point (%d,%d)\n", s->nr, p.x, p.y);
+    if(!dict_contains(status->segs_with_point, s))
+        dict_put(status->segs_with_point, s, 0);
+#endif
+    if(s->new_point.y != p.y) {
+        s->new_point = p;
+    }
+    s->new_pos = p;
+}
+
 /* possible optimizations:
    1.) keep two different active lists around, one for negative and one for
        positive slopes
@@ -411,23 +436,20 @@ static inline box_t box_new(int x, int y)
 */
 /*
    SLOPE_POSITIVE:
-       +     \ +        
+      \+     \ +        
 ------ I      \I       
       -I\----  I      
        I \   --I\---
        I  \    I \  -------
        +   \   +  \
 */
-void add_points_to_positively_sloped_segments(status_t*status, xrow_t*xrow, int32_t y)
+static void mark_points_in_positively_sloped_segments(status_t*status, int32_t y)
 {
     int t;
-    for(t=0;t<xrow->num;t++) {
-        box_t box = box_new(xrow->x[t], y);
+    for(t=0;t<status->xrow->num;t++) {
+        box_t box = box_new(status->xrow->x[t], y);
         segment_t*seg = actlist_find(status->actlist, box.left2, box.left2);
-        if(seg) 
-            seg = seg->right;
-        else    
-            seg = actlist_leftmost(status->actlist);
+        seg = actlist_right(status->actlist, seg);
         while(seg) {
             if(seg->a.y == y) {
                 // this segment just started, ignore it
@@ -437,15 +459,12 @@ void add_points_to_positively_sloped_segments(status_t*status, xrow_t*xrow, int3
                 double d1 = LINE_EQ(box.right1, seg);
                 double d2 = LINE_EQ(box.right2, seg);
                 if(d1>=0 || d2>=0) {
-#ifdef DEBUG
-                    dict_put(status->segs_with_point, seg, 0);
-#endif
-                    insert_point_into_segment(status, seg, box.right2);
+                    mark_point_in_segment(status, seg, box.right2);
                 } else {
                     break;
                 }
             }
-            seg = seg->right;
+            seg = actlist_right(status->actlist, seg);
         }
     }
 }
@@ -457,11 +476,11 @@ void add_points_to_positively_sloped_segments(status_t*status, xrow_t*xrow, int3
    |   I    | /I   /
    |  /+    |/ +  /
 */
-void add_points_to_negatively_sloped_segments(status_t*status, xrow_t*xrow, int32_t y)
+static void mark_points_in_negatively_sloped_segments(status_t*status, int32_t y)
 {
     int t;
-    for(t=xrow->num-1;t>=0;t--) {
-        box_t box = box_new(xrow->x[t], y);
+    for(t=status->xrow->num-1;t>=0;t--) {
+        box_t box = box_new(status->xrow->x[t], y);
         segment_t*seg = actlist_find(status->actlist, box.right2, box.right2);
         while(seg) {
             if(seg->a.y == y) {
@@ -472,22 +491,75 @@ void add_points_to_negatively_sloped_segments(status_t*status, xrow_t*xrow, int3
                 double d1 = LINE_EQ(box.left1, seg);
                 double d2 = LINE_EQ(box.left2, seg);
                 if(d1<0 || d2<0) {
-#ifdef DEBUG
-                    dict_put(status->segs_with_point, seg, 0);
-#endif
-                    insert_point_into_segment(status, seg, box.right2);
+                    mark_point_in_segment(status, seg, box.right2);
                 } else {
                     break;
                 }
             }
-            seg = seg->left;
+            seg = actlist_left(status->actlist, seg);
         }
     }
+}
+
+static void add_points(status_t*status)
+{
+    /* TODO: we could use some clever second linked list structure so that we
+             only need to process points which we know we marked */
+    int t;
+    segment_t*s = actlist_leftmost(status->actlist);
+    while(s) {
+        if(s->new_point.y == status->y) {
+            insert_point_into_segment(status, s, s->new_point);
+            s->pos = s->new_pos;
+        }
+        s = actlist_right(status->actlist, s);
+    }
+}
+
+void intersect_with_horizontal(status_t*status, segment_t*h)
+{
+    segment_t* left = actlist_find(status->actlist, h->a, h->a);
+    segment_t* right = actlist_find(status->actlist, h->b, h->b);
+
+    segment_t* s = right;
+
+    while(s!=left) {
+        assert(s);
+        /*
+           x1 + ((x2-x1)*(y-y1)) / dy = 
+           (x1*(y2-y) + x2*(y-y1)) / dy
+        */
+        point_t p;
+        p.y = status->y;
+        p.x = XPOS(s, p.y);
+#ifdef DEBUG
+        fprintf(stderr, "...into [%d] (%d,%d) -> (%d,%d) at (%d,%d)\n", s->nr, 
+                s->a.x, s->a.y,
+                s->b.x, s->b.y,
+                p.x, p.y
+                );
+#endif
+        assert(p.x >= h->a.x);
+        assert(p.x <= h->b.x);
+        assert(s->delta.x > 0 && p.x >= s->a.x || s->delta.x <= 0 && p.x <= s->a.x);
+        assert(s->delta.x > 0 && p.x <= s->b.x || s->delta.x <= 0 && p.x >= s->b.x);
+        xrow_add(status->xrow, p.x);
+
+        s = actlist_left(status->actlist, s);
+    }
+    xrow_add(status->xrow, h->a.x);
 }
 
 void event_apply(status_t*status, event_t*e)
 {
     switch(e->type) {
+        case EVENT_HORIZONTAL: {
+#ifdef DEBUG
+            event_dump(e);
+#endif
+            intersect_with_horizontal(status, e->s1);
+            break;
+        }
         case EVENT_END: {
             //delete segment from list
             segment_t*s = e->s1;
@@ -577,7 +649,7 @@ edge_t* gfxpoly_process(edge_t*poly)
     gfxpoly_dump(poly);
 #endif
     
-    xrow_t*xrow = xrow_new();
+    status.xrow = xrow_new();
 
     event_t*e = heap_chopmax(queue);
     while(e) {
@@ -588,17 +660,20 @@ edge_t* gfxpoly_process(edge_t*poly)
         fprintf(stderr, "----------------------------------- %d\n", status.y);
         actlist_verify_and_dump(status.actlist, status.y-1);
 #endif
-        xrow_reset(xrow);
+        xrow_reset(status.xrow);
         do {
-            xrow_add(xrow, e->p.x);
+            if(e->type != EVENT_HORIZONTAL) {
+                xrow_add(status.xrow, e->p.x);
+            }
             event_apply(&status, e);
             free(e);
             e = heap_chopmax(queue);
         } while(e && status.y == e->p.y);
 
-        xrow_sort(xrow);
-        add_points_to_positively_sloped_segments(&status, xrow, status.y);
-        add_points_to_negatively_sloped_segments(&status, xrow, status.y);
+        xrow_sort(status.xrow);
+        mark_points_in_positively_sloped_segments(&status, status.y);
+        mark_points_in_negatively_sloped_segments(&status, status.y);
+        add_points(&status);
 #ifdef DEBUG
         check_status(&status);
         dict_destroy(status.intersecting_segs);
@@ -610,7 +685,7 @@ edge_t* gfxpoly_process(edge_t*poly)
 #endif
     actlist_destroy(status.actlist);
     heap_destroy(queue);
-    xrow_destroy(xrow);
+    xrow_destroy(status.xrow);
 
     return status.output;
 }

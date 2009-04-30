@@ -54,21 +54,19 @@ int test1()
     gfxpoly_process(poly);
 }
 
-int test2()
+int test_square(int width, int height, int num)
 {
-#define N 50
-#define RANGE 150
     int t;
-    gfxline_t* line = malloc(sizeof(gfxline_t)*N);
-    for(t=0;t<N;t++) {
+    gfxline_t* line = malloc(sizeof(gfxline_t)*num);
+    for(t=0;t<num;t++) {
         line[t].type = t?gfx_lineTo:gfx_moveTo;
-        line[t].x = (lrand48()%RANGE)-RANGE/2;
-        line[t].y = (lrand48()%RANGE)-RANGE/2;
+        line[t].x = (lrand48()%width)-width/2;
+        line[t].y = (lrand48()%height)-height/2;
         line[t].next = &line[t+1];
     }
-    line[N-1].x = line[0].x;
-    line[N-1].y = line[0].y;
-    line[N-1].next = 0;
+    line[num-1].x = line[0].x;
+    line[num-1].y = line[0].y;
+    line[num-1].next = 0;
     
     gfxpoly_t*poly = gfxpoly_fillToPoly(line);
     gfxpoly_t*poly2 = gfxpoly_process(poly);
@@ -77,25 +75,37 @@ int test2()
     gfxpoly_destroy(poly2);
 }
 
+int test2()
+{
+    test_square(200,5, 1000);
+    test_square(5,200, 1000);
+    test_square(10,10, 200);
+    test_square(500,500, 50);
+    test_square(65536,65536,256);
+}
+
 #include "../rfxswf.h"
 void test3()
 {
 #undef N
 #undef RANGE
-#define N 250
-#define RANGE 150
+#define N 20
+#define RANGE 400
 
     int i;
-    gfxline_t* line = malloc(sizeof(gfxline_t)*N);
+    gfxline_t* line = malloc(sizeof(gfxline_t)*N*2);
     for(i=0;i<N;i++) {
         line[i].type = i?gfx_lineTo:gfx_moveTo;
         line[i].x = lrand48()%RANGE - RANGE/2;
         line[i].y = lrand48()%RANGE - RANGE/2;
         line[i].next = &line[i+1];
+        line[i+N].x = lrand48()%RANGE - RANGE/2;
+        line[i+N].y = lrand48()%RANGE - RANGE/2;
+        line[i+N].next = &line[N+i+1];
     }
-    line[N-1].x = line[0].x;
-    line[N-1].y = line[0].y;
-    line[N-1].next = 0;
+    line[N*2-1].x = line[0].x;
+    line[N*2-1].y = line[0].y;
+    line[N*2-1].next = 0;
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(m));
@@ -131,17 +141,33 @@ void test3()
         RGBA rgb;
         rgb.r = rgb.g = 0x00; rgb.b = 0xff;
         rgb.a = 255;
-        int j = swf_ShapeAddSolidFillStyle(s,&rgb);
+        int fs = swf_ShapeAddSolidFillStyle(s,&rgb);
+        int ls = swf_ShapeAddLineStyle(s,20,&rgb);
         swf_SetU16(tag,t+1);
         swf_SetRect(tag,&swf.movieSize);
         swf_SetShapeHeader(tag,s);
-        swf_ShapeSetAll(tag,s,0,0,0,j,0);
+
+#ifdef FILL
+        swf_ShapeSetAll(tag,s,0,0,0,fs,0);
         edge_t*e = poly2;
         while(e) {
             swf_ShapeSetMove(tag, s, e->a.x*20, e->a.y*20);
             swf_ShapeSetLine(tag, s, e->b.x*20 - e->a.x*20, e->b.y*20 - e->a.y*20);
             e = e->next;
         }
+#else
+        swf_ShapeSetAll(tag,s,0,0,ls,0,0);
+        edge_t*e = poly2;
+        while(e) {
+            swf_ShapeSetMove(tag, s, e->a.x*20, e->a.y*20);
+            swf_ShapeSetLine(tag, s, e->b.x*20 - e->a.x*20, e->b.y*20 - e->a.y*20);
+            
+            swf_ShapeSetCircle(tag, s, e->a.x*20, e->a.y*20, 5*20, 5*20);
+            swf_ShapeSetCircle(tag, s, e->b.x*20, e->b.y*20, 5*20, 5*20);
+            e = e->next;
+        }
+#endif
+
         swf_ShapeSetEnd(tag);
         swf_ShapeFree(s);
 
@@ -166,5 +192,5 @@ void test3()
 
 int main()
 {
-    test3();
+    test2();
 }
