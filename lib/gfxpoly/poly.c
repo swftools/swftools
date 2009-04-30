@@ -138,8 +138,12 @@ void segment_init(segment_t*s, int x1, int y1, int x2, int y2)
         int y = y1;y1=y2;y2=y;
         s->dir = DIR_UP;
     } else {
-        s->dir = DIR_HORIZONTAL;
+        /* up/down for horizontal segments is handled by "rotating"
+           them 90° anticlockwise in screen coordinates (tilt your head to 
+           the right) */
+        s->dir = DIR_UP;
         if(x1>x2) {
+            s->dir = DIR_DOWN;
             int x = x1;x1=x2;x2=x;
             int y = y1;y1=y2;y2=y;
         }
@@ -153,7 +157,6 @@ void segment_init(segment_t*s, int x1, int y1, int x2, int y2)
     s->delta.x = x2-x1;
     s->delta.y = y2-y1;
     s->pos = s->a;
-    s->tmp = -1;
     s->new_point.y = y1-1;
 #define XDEBUG
 #ifdef XDEBUG
@@ -208,7 +211,7 @@ void gfxpoly_enqueue(edge_t*list, heap_t*queue)
                 s->dir==DIR_UP?"up":"down");
 #endif
         event_t e = event_new();
-        e.type = s->dir==DIR_HORIZONTAL?EVENT_HORIZONTAL:EVENT_START;
+        e.type = s->delta.y ? EVENT_START : EVENT_HORIZONTAL;
         e.p = s->a;
         e.s1 = s;
         e.s2 = 0;

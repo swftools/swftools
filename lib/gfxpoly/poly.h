@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "../q.h"
 
-typedef enum {DIR_UP, DIR_DOWN, DIR_HORIZONTAL} segment_dir_t;
+typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_HORIZONTAL, EVENT_START} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
@@ -13,9 +13,14 @@ typedef struct _point {
     int32_t y;
 } point_t;
 
+typedef struct _fillstyle {
+    char is_filled;
+} fillstyle_t;
+
 typedef struct _edge {
     point_t a;
     point_t b;
+    fillstyle_t*style;
     struct _edge *next;
 } edge_t;
 
@@ -24,11 +29,14 @@ typedef struct _segment {
     point_t b;
     point_t delta;
     double k; //k = a.x*b.y-a.y*b.x = delta.y*a.x - delta.x*a.y (=0 for points on the segment)
+    
     segment_dir_t dir;
+    fillstyle_t*style;
+
     int nr;
     struct _segment*left;
     struct _segment*right;
-    int tmp;
+    
     point_t pos;
     point_t new_point;
     point_t new_pos;
