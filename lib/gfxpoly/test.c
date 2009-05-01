@@ -37,7 +37,7 @@ int test1()
     b = gfxline_append(b, box1);
     b = gfxline_append(b, box2);
     b = gfxline_append(b, box3);
-    b = gfxline_append(b, star);
+    //b = gfxline_append(b, star);
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
@@ -45,7 +45,7 @@ int test1()
     matrix.m00=cos(ua);matrix.m10=sin(ua);
     matrix.m01=-sin(ua);matrix.m11=cos(ua);
 
-    gfxline_transform(b, &matrix);
+    //gfxline_transform(b, &matrix);
     gfxpoly_t*poly = gfxpoly_fillToPoly(b, 0.05);
     gfxline_free(box1);
     gfxline_free(box2);
@@ -172,8 +172,14 @@ void test3()
         swf_ShapeSetAll(tag,s,0,0,0,fs,0);
         edge_t*e = poly2->edges;
         while(e) {
+#define ROTATE
+#ifdef ROTATE
+            swf_ShapeSetMove(tag, s, e->a.y, e->a.x);
+            swf_ShapeSetLine(tag, s, e->b.y - e->a.y, e->b.x - e->a.x);
+#else
             swf_ShapeSetMove(tag, s, e->a.x, e->a.y);
             swf_ShapeSetLine(tag, s, e->b.x - e->a.x, e->b.y - e->a.y);
+#endif
             e = e->next;
         }
 #else
@@ -255,5 +261,5 @@ void test4()
 
 int main()
 {
-    test4();
+    test3();
 }

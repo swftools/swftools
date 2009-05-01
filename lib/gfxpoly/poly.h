@@ -5,7 +5,7 @@
 #include "../q.h"
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
-typedef enum {EVENT_CROSS, EVENT_END, EVENT_HORIZONTAL, EVENT_START} eventtype_t;
+typedef enum {EVENT_CROSS, EVENT_END, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
 typedef struct _point {
