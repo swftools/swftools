@@ -70,6 +70,7 @@ typedef struct _gfxpoly {
 } gfxpoly_t;
 
 gfxpoly_t* gfxpoly_new(double gridsize);
+char gfxpoly_check(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);
 gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule);
 

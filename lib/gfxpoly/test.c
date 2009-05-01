@@ -70,12 +70,11 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     line[num-1].y = line[0].y;
     line[num-1].next = 0;
     
-    windrule_t*rule = &windrule_circular;
-    
     gfxpoly_t*poly = gfxpoly_fillToPoly(line, gridsize);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
     gfxline_free(line);
 
+    windrule_t*rule = &windrule_circular;
+    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
     if(bitmaptest) {
         intbbox_t bbox = intbbox_new(0, 0, width, height);
         unsigned char*bitmap1 = render_polygon(poly, &bbox, 1.0, rule);
@@ -85,9 +84,8 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
             assert(!"bitmaps don't match");
         }
     }
-
-    gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
+    gfxpoly_destroy(poly);
 }
 
 int test2()
@@ -213,7 +211,49 @@ void test3()
     swf_SaveSWF(&swf, "test.swf");
 }
 
+#include <dirent.h>
+void test4()
+{
+    char*dir = "ps";
+    DIR*_dir = opendir(dir);
+    if(!_dir) return;
+    struct dirent*file;
+    while(1) {
+        file = readdir(_dir);
+        if (!file) 
+            break;
+        if(!strstr(file->d_name, ".ps")) 
+            continue;
+
+        char* filename = allocprintf("%s/%s", dir, file->d_name);
+        windrule_t*rule = &windrule_evenodd;
+        gfxpoly_t*poly = gfxpoly_from_file(filename, 0.01);
+        free(filename);
+
+        double zoom = 1.0;
+        intbbox_t bbox = intbbox_from_polygon(poly, zoom);
+
+        if(!gfxpoly_check(poly)) {
+            printf("bad polygon\n");
+            continue;
+        }
+
+        gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
+        unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule);
+        unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd);
+        if(!bitmap_ok(&bbox, bitmap1) || !bitmap_ok(&bbox, bitmap2)) {
+            save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+            assert(!"error in bitmaps");
+        }
+        if(!compare_bitmaps(&bbox, bitmap1, bitmap2)) {
+            save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+            assert(!"bitmaps don't match");
+        }
+        gfxpoly_destroy(poly2);
+    }
+}
+
 int main()
 {
-    test3();
+    test4();
 }

@@ -265,7 +265,7 @@ intbbox_t get_svp_bbox(ArtSVP*svp, double zoom)
             if(x1 < b.xmin) b.xmin = x1;
             if(y1 < b.ymin) b.ymin = y1;
             if(x2 > b.xmax) b.xmax = x2;
-            if(y2 > b.xmax) b.ymax = y2;
+            if(y2 > b.ymax) b.ymax = y2;
         }
     }
     if(b.xmax > (int)(MAX_WIDTH*zoom))
@@ -304,49 +304,37 @@ intbbox_t get_svp_bbox(ArtSVP*svp, double zoom)
 
 int compare_bitmaps(intbbox_t*bbox, unsigned char*data1, unsigned char*data2)
 {
-    int similar = 0;
+    if(!data1 || !data2) 
+        return 0;
     int x,y;
     int height = bbox->height;
     int width = bbox->width;
     int width8 = (width+7) >> 3;
     unsigned char*l1 = &data1[width8];
     unsigned char*l2 = &data2[width8];
-    int fail = 0;
     for(y=1;y<height-1;y++) {
         for(x=0;x<width8;x++) {
             unsigned a = l1[x-width8] & l1[x] & l1[x+width8];
             unsigned b = l2[x-width8] & l2[x] & l2[x+width8];
+            
+            if((a&B11100000) && !(l2[x]&B01000000)) return 0;
+            if((a&B01110000) && !(l2[x]&B00100000)) return 0;
+            if((a&B00111000) && !(l2[x]&B00010000)) return 0;
+            if((a&B00011100) && !(l2[x]&B00001000)) return 0;
+            if((a&B00001110) && !(l2[x]&B00000100)) return 0;
+            if((a&B00000111) && !(l2[x]&B00000010)) return 0;
 
-            if((a&B11100000) && !(l2[x]&B01000000))
-                fail == 1;
-            if((a&B01110000) && !(l2[x]&B00100000))
-                fail == 1;
-            if((a&B00111000) && !(l2[x]&B00010000))
-                fail == 1;
-            if((a&B00011100) && !(l2[x]&B00001000))
-                fail == 1;
-            if((a&B00001110) && !(l2[x]&B00000100))
-                fail == 1;
-            if((a&B00000111) && !(l2[x]&B00000010))
-                fail == 1;
-
-            if((b&B11100000) && !(l1[x]&B01000000))
-                fail == 1;
-            if((b&B01110000) && !(l1[x]&B00100000))
-                fail == 1;
-            if((b&B00111000) && !(l1[x]&B00010000))
-                fail == 1;
-            if((b&B00011100) && !(l1[x]&B00001000))
-                fail == 1;
-            if((b&B00001110) && !(l1[x]&B00000100))
-                fail == 1;
-            if((b&B00000111) && !(l1[x]&B00000010))
-                fail == 1;
+            if((b&B11100000) && !(l1[x]&B01000000)) return 0;
+            if((b&B01110000) && !(l1[x]&B00100000)) return 0;
+            if((b&B00111000) && !(l1[x]&B00010000)) return 0;
+            if((b&B00011100) && !(l1[x]&B00001000)) return 0;
+            if((b&B00001110) && !(l1[x]&B00000100)) return 0;
+            if((b&B00000111) && !(l1[x]&B00000010)) return 0;
         }
         l1 += width8;
         l2 += width8;
     }
-    return !fail;
+    return 1;
 }
 
 
@@ -1145,14 +1133,9 @@ gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
     msg("<verbose> Converting circular-filled gfxline of %d segments to even-odd filled gfxline", gfxline_len(line));
     ArtSVP* svp = gfxfillToSVP(line, 1);
 
-    /* TODO: ART_WIND_RULE_POSITIVE means that a shape is visible if
-             positive and negative line segments add up to something positive.
-             I *think* that clockwise fill in PDF is defined in a way, however,
-             that the *last* shape's direction will determine whether something
-             is filled */
     ArtSVP* svp_rewinded;
     
-    svp_rewinded = run_intersector(svp, ART_WIND_RULE_POSITIVE);
+    svp_rewinded = run_intersector(svp, ART_WIND_RULE_NONZERO);
     if(!svp_rewinded) {
 	art_svp_free(svp);
 	return 0;

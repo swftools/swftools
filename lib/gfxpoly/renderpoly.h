@@ -18,4 +18,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 intbbox_t intbbox_new(int x1, int y1, int x2, int y2);
 intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom);
 
+int bitmap_ok(intbbox_t*bbox, unsigned char*data);
+int compare_bitmaps(intbbox_t*bbox, unsigned char*data1, unsigned char*data2);
+
 #endif

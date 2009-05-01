@@ -8,6 +8,7 @@ typedef struct _renderpoint
     double x;
     segment_dir_t dir;
     fillstyle_t*fs;
+    edge_t*e; //only for debugging
     int polygon_nr;
 } renderpoint_t;
 
@@ -27,16 +28,18 @@ typedef struct _renderbuf
     renderline_t*lines;
 } renderbuf_t;
 
-static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs, int polygon_nr)
+static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs, int polygon_nr, edge_t*e)
 {
     renderpoint_t p;
     p.x = x;
     p.dir = dir;
     p.fs = fs;
+    p.e = e;
     p.polygon_nr = polygon_nr;
 
     if(x >= buf->bbox.xmax || y >= buf->bbox.ymax || y < buf->bbox.ymin) 
         return;
+    
     renderline_t*l = &buf->lines[y-buf->bbox.ymin];
 
     if(l->num == l->size) {
@@ -47,8 +50,7 @@ static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir
     l->num++;
 }
 #define CUT 0.5
-#define INT(x) ((int)((x)+16)-16)
-static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs, int polygon_nr)
+static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs, int polygon_nr, edge_t*e)
 {
     x1 *= buf->zoom;
     y1 *= buf->zoom;
@@ -65,14 +67,14 @@ static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2
     }
     diffx = x2 - x1;
     diffy = y2 - y1;
-    ny1 = INT(y1)+CUT;
-    ny2 = INT(y2)+CUT;
+    ny1 = floor(y1)+CUT;
+    ny2 = floor(y2)+CUT;
 
     if(ny1 < y1) {
-        ny1 = INT(y1) + 1.0 + CUT;
+        ny1 = floor(y1) + 1.0 + CUT;
     }
     if(ny2 >= y2) {
-        ny2 = INT(y2) - 1.0 + CUT;
+        ny2 = floor(y2) - 1.0 + CUT;
     }
     if(ny1 > ny2)
         return;
@@ -81,14 +83,14 @@ static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2
     x1 = x1 + (ny1-y1)*stepx;
     x2 = x2 + (ny2-y2)*stepx;
 
-    int posy=INT(ny1);
-    int endy=INT(ny2);
+    int posy=floor(ny1);
+    int endy=floor(ny2);
     double posx=0;
     double startx = x1;
 
     while(posy<=endy) {
         double xx = startx + posx;
-        add_pixel(buf, xx, posy, dir, fs, polygon_nr);
+        add_pixel(buf, xx, posy, dir, fs, polygon_nr, e);
         posx+=stepx;
         posy++;
     }
@@ -140,7 +142,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
     edge_t*e;
     int polygon_nr = 0;
     for(e=polygon->edges;e;e=e->next) {
-        add_line(buf, e->a.x, e->a.y, e->b.x, e->b.y, e->style, polygon_nr);
+        add_line(buf, e->a.x, e->a.y, e->b.x, e->b.y, e->style, polygon_nr, e);
     }
 
     for(y=0;y<buf->height;y++) {
@@ -168,10 +170,9 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
             lastx = x;
         }
         if(fill.is_filled && lastx!=buf->width) {
-            
-            return 0;// return an error, we're bleeding
-
-            fill_bitwise(line, lastx, buf->width);
+            /* we're bleeding, fill over padding, too. */
+            fprintf(stderr, "Polygon %08x is bleeding in line %d\n", polygon, y);
+            fill_bitwise(line, lastx, width8*8);
         }
     }
     
@@ -209,19 +210,19 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
     intbbox_t b = {0,0,0,0};
     edge_t*e = polygon->edges;
 
-    zoom *= polygon->gridsize;
+    double g = zoom*polygon->gridsize;
 
     if(e) {
-        b.xmin = e->a.x*zoom;
-        b.ymin = e->a.y*zoom;
-        b.xmax = e->a.x*zoom;
-        b.ymax = e->a.y*zoom;
+        b.xmin = e->a.x*g;
+        b.ymin = e->a.y*g;
+        b.xmax = e->a.x*g;
+        b.ymax = e->a.y*g;
     }
     for(e=polygon->edges;e;e=e->next) {
-        double x_min = min(e->a.x,e->b.x)*zoom;
-        double y_min = min(e->a.y,e->b.y)*zoom;
-        double x_max = max(e->a.x,e->b.x)*zoom;
-        double y_max = max(e->a.y,e->b.y)*zoom;
+        double x_min = min(e->a.x,e->b.x)*g;
+        double y_min = min(e->a.y,e->b.y)*g;
+        double x_max = max(e->a.x,e->b.x)*g;
+        double y_max = max(e->a.y,e->b.y)*g;
         int x1 = floor(x_min);
         int y1 = floor(y_min);
         int x2 = ceil(x_max);
@@ -229,8 +230,9 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
         if(x1 < b.xmin) b.xmin = x1;
         if(y1 < b.ymin) b.ymin = y1;
         if(x2 > b.xmax) b.xmax = x2;
-        if(y2 > b.xmax) b.ymax = y2;
+        if(y2 > b.ymax) b.ymax = y2;
     }
+
     if(b.xmax > (int)(MAX_WIDTH*zoom))
 	b.xmax = (int)(MAX_WIDTH*zoom);
     if(b.ymax > (int)(MAX_HEIGHT*zoom))
@@ -244,9 +246,15 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 	b.xmin = b.xmax;
     if(b.ymin > b.ymax) 
 	b.ymin = b.ymax;
+        
+    b.xmax += 8;
+    while(((b.xmax - b.xmin)&0x07) != 0x04)
+        b.xmax++;
 
     b.width = b.xmax - b.xmin;
     b.height = b.ymax - b.ymin;
+    printf("%dx%d\n", b.width, b.height);
+
     return b;
 }
 
@@ -269,8 +277,24 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 #define B00000010 0x02
 #define B00000001 0x01
 
+int bitmap_ok(intbbox_t*bbox, unsigned char*data)
+{
+    int y;
+    int width8 = (bbox->width+7) >> 3;
+    if((bbox->width&7) == 0)
+        return 1;
+    for(y=0;y<bbox->height;y++) {
+        if(data[width8-1]&0x01)
+            return 0; //bleeding
+        data += width8;
+    }
+    return 1;
+}
+
 int compare_bitmaps(intbbox_t*bbox, unsigned char*data1, unsigned char*data2)
 {
+    if(!data1 || !data2) 
+        return 0;
     int x,y;
     int height = bbox->height;
     int width = bbox->width;

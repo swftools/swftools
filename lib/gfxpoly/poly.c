@@ -3,6 +3,7 @@
 #include <memory.h>
 #include <math.h>
 #include "../mem.h"
+#include "../types.h"
 #include "../q.h"
 #include "poly.h"
 #include "active.h"
@@ -100,12 +101,45 @@ void gfxpoly_destroy(gfxpoly_t*poly)
     }
     free(poly);
 }
+char gfxpoly_check(gfxpoly_t*poly)
+{
+    edge_t* s = poly->edges;
+    dict_t*d = dict_new2(&point_type);
+    while(s) {
+        if(!dict_contains(d, &s->a)) {
+            dict_put(d, &s->a, (void*)(ptroff_t)1);
+        } else {
+            int count = (ptroff_t)dict_lookup(d, &s->a);
+            dict_del(d, &s->a);
+            count++;
+            dict_put(d, &s->a, (void*)(ptroff_t)count);
+        }
+        if(!dict_contains(d, &s->b)) {
+            dict_put(d, &s->b, (void*)(ptroff_t)1);
+        } else {
+            int count = (ptroff_t)dict_lookup(d, &s->b);
+            dict_del(d, &s->b);
+            count++;
+            dict_put(d, &s->b, (void*)(ptroff_t)count);
+        }
+        s = s->next;
+    }
+    DICT_ITERATE_ITEMS(d, point_t*, p, void*, c) {
+        int count = (ptroff_t)c;
+        if(count&1) {
+            fprintf(stderr, "Point (%f,%f) occurs %d times\n", p->x*poly->gridsize, p->y*poly->gridsize, count);
+            return 0;
+        }
+    }
+    return 1;
+}
 
 void gfxpoly_dump(gfxpoly_t*poly)
 {
-    edge_t* s = (edge_t*)poly;
+    edge_t* s = poly->edges;
+    double g = poly->gridsize;
     while(s) {
-        fprintf(stderr, "(%d,%d) -> (%d,%d)\n", s->a.x, s->a.y, s->b.x, s->b.y);
+        fprintf(stderr, "(%f,%f) -> (%f,%f)\n", s->a.x*g, s->a.y*g, s->b.x*g, s->b.y*g);
         s = s->next;
     }
 }
