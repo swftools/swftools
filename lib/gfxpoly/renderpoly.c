@@ -8,6 +8,7 @@ typedef struct _renderpoint
     double x;
     segment_dir_t dir;
     fillstyle_t*fs;
+    int polygon_nr;
 } renderpoint_t;
 
 typedef struct _renderline
@@ -26,12 +27,13 @@ typedef struct _renderbuf
     renderline_t*lines;
 } renderbuf_t;
 
-static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs)
+static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs, int polygon_nr)
 {
     renderpoint_t p;
     p.x = x;
     p.dir = dir;
     p.fs = fs;
+    p.polygon_nr = polygon_nr;
 
     if(x >= buf->bbox.xmax || y >= buf->bbox.ymax || y < buf->bbox.ymin) 
         return;
@@ -46,7 +48,7 @@ static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir
 }
 #define CUT 0.5
 #define INT(x) ((int)((x)+16)-16)
-static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs)
+static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs, int polygon_nr)
 {
     x1 *= buf->zoom;
     y1 *= buf->zoom;
@@ -86,7 +88,7 @@ static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2
 
     while(posy<=endy) {
         double xx = startx + posx;
-        add_pixel(buf, xx, posy, dir, fs);
+        add_pixel(buf, xx, posy, dir, fs, polygon_nr);
         posx+=stepx;
         posy++;
     }
@@ -122,7 +124,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
     buf->width = (bbox->xmax - bbox->xmin);
     buf->height = (bbox->ymax - bbox->ymin);
     buf->bbox = *bbox;
-    buf->zoom = zoom;
+    buf->zoom = zoom * polygon->gridsize;
     int width8 = (buf->width+7) >> 3;
     unsigned char* image = (unsigned char*)malloc(width8*buf->height);
     memset(image, 0, width8*buf->height);
@@ -136,8 +138,9 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
     }
 
     edge_t*e;
-    for(e=polygon;e;e=e->next) {
-        add_line(buf, e->a.x, e->a.y, e->b.x, e->b.y, e->style);
+    int polygon_nr = 0;
+    for(e=polygon->edges;e;e=e->next) {
+        add_line(buf, e->a.x, e->a.y, e->b.x, e->b.y, e->style, polygon_nr);
     }
 
     for(y=0;y<buf->height;y++) {
@@ -148,7 +151,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
         qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
         int lastx = 0;
 
-        windstate_t*fill = 0;
+        windstate_t fill = rule->start(1);
         for(n=0;n<num;n++) {
             renderpoint_t*p = &points[n];
             int x = (int)(p->x - bbox->xmin);
@@ -158,14 +161,18 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
             if(x > buf->width) {
                 break;
             }
-            if(fill->is_filled && x!=lastx) {
+            if(fill.is_filled && x!=lastx) {
                 fill_bitwise(line, lastx, x);
             }
-            fill = rule->add(fill, p->fs, p->dir, polygon);
+            fill = rule->add(fill, p->fs, p->dir, p->polygon_nr);
             lastx = x;
         }
-        if(fill->is_filled && lastx!=buf->width)
+        if(fill.is_filled && lastx!=buf->width) {
+            
+            return 0;// return an error, we're bleeding
+
             fill_bitwise(line, lastx, buf->width);
+        }
     }
     
     for(y=0;y<buf->height;y++) {
@@ -184,19 +191,33 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 static inline max(double a, double b) {return a>b?a:b;}
 static inline min(double a, double b) {return a<b?a:b;}
 
-intbbox_t get_polygon_bbox(gfxpoly_t*polygon, double zoom)
+intbbox_t intbbox_new(int x1, int y1, int x2, int y2)
+{
+    intbbox_t b;
+    b.xmin = x1;
+    b.ymin = y1;
+    b.xmax = x2;
+    b.ymax = y2;
+    b.width = x2-x1;
+    b.height = y2-y1;
+    return b;
+}
+
+intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 {
     int t;
     intbbox_t b = {0,0,0,0};
-    edge_t*e = polygon;
+    edge_t*e = polygon->edges;
+
+    zoom *= polygon->gridsize;
 
     if(e) {
-        b.xmin = e->a.x;
-        b.ymin = e->a.y;
-        b.xmax = e->a.x;
-        b.ymax = e->a.y;
+        b.xmin = e->a.x*zoom;
+        b.ymin = e->a.y*zoom;
+        b.xmax = e->a.x*zoom;
+        b.ymax = e->a.y*zoom;
     }
-    for(e=polygon;e;e=e->next) {
+    for(e=polygon->edges;e;e=e->next) {
         double x_min = min(e->a.x,e->b.x)*zoom;
         double y_min = min(e->a.y,e->b.y)*zoom;
         double x_max = max(e->a.x,e->b.x)*zoom;
@@ -229,6 +250,10 @@ intbbox_t get_polygon_bbox(gfxpoly_t*polygon, double zoom)
     return b;
 }
 
+#define B11111000 0xf8
+#define B01111100 0x7c
+#define B00111110 0x3e
+#define B00011111 0x1f
 #define B11100000 0xe0
 #define B01110000 0x70
 #define B00111000 0x38
@@ -246,47 +271,90 @@ intbbox_t get_polygon_bbox(gfxpoly_t*polygon, double zoom)
 
 int compare_bitmaps(intbbox_t*bbox, unsigned char*data1, unsigned char*data2)
 {
-    int similar = 0;
     int x,y;
     int height = bbox->height;
     int width = bbox->width;
     int width8 = (width+7) >> 3;
-    unsigned char*l1 = &data1[width8];
-    unsigned char*l2 = &data2[width8];
-    int fail = 0;
-    for(y=1;y<height-1;y++) {
+    unsigned char*l1 = &data1[width8*2];
+    unsigned char*l2 = &data2[width8*2];
+    for(y=2;y<height-2;y++) {
         for(x=0;x<width8;x++) {
-            unsigned a = l1[x-width8] & l1[x] & l1[x+width8];
-            unsigned b = l2[x-width8] & l2[x] & l2[x+width8];
+            unsigned char a1 = l1[x-width8*2] & l1[x-width8] & l1[x] & 
+                              l1[x+width8] & l1[x+width8*2];
+            unsigned char b1 = l2[x-width8*2] & l2[x-width8] & l2[x] & 
+                              l2[x+width8] & l2[x+width8*2];
+            unsigned char a2 = l1[x-width8*2] | l1[x-width8] | l1[x] | 
+                              l1[x+width8] | l1[x+width8*2];
+            unsigned char b2 = l2[x-width8*2] | l2[x-width8] | l2[x] | 
+                              l2[x+width8] | l2[x+width8*2];
 
-            if((a&B11100000) && !(l2[x]&B01000000))
-                fail == 1;
-            if((a&B01110000) && !(l2[x]&B00100000))
-                fail == 1;
-            if((a&B00111000) && !(l2[x]&B00010000))
-                fail == 1;
-            if((a&B00011100) && !(l2[x]&B00001000))
-                fail == 1;
-            if((a&B00001110) && !(l2[x]&B00000100))
-                fail == 1;
-            if((a&B00000111) && !(l2[x]&B00000010))
-                fail == 1;
-
-            if((b&B11100000) && !(l1[x]&B01000000))
-                fail == 1;
-            if((b&B01110000) && !(l1[x]&B00100000))
-                fail == 1;
-            if((b&B00111000) && !(l1[x]&B00010000))
-                fail == 1;
-            if((b&B00011100) && !(l1[x]&B00001000))
-                fail == 1;
-            if((b&B00001110) && !(l1[x]&B00000100))
-                fail == 1;
-            if((b&B00000111) && !(l1[x]&B00000010))
-                fail == 1;
+            char fail = 0;
+            if((a1&B11111000)==B11111000 && (b2&B11111000)==0) fail=2;
+            if((a1&B01111100)==B01111100 && (b2&B01111100)==0) fail=3;
+            if((a1&B00111110)==B00111110 && (b2&B00111110)==0) fail=4;
+            if((a1&B00011111)==B00011111 && (b2&B00011111)==0) fail=5;
+            if((b1&B11111000)==B11111000 && (a2&B11111000)==0) fail=2;
+            if((b1&B01111100)==B01111100 && (a2&B01111100)==0) fail=3;
+            if((b1&B00111110)==B00111110 && (a2&B00111110)==0) fail=4;
+            if((b1&B00011111)==B00011111 && (a2&B00011111)==0) fail=5;
+            if(fail) {
+                return 0;
+            }
         }
         l1 += width8;
         l2 += width8;
     }
-    return !fail;
+    return 1;
+}
+
+#include "../png.h"
+void save_two_bitmaps(intbbox_t*b, unsigned char*data1, unsigned char*data2, char*filename)
+{
+    int width8 = (b->width+7) >> 3;
+    unsigned char*data = malloc(b->width*b->height*4*4);
+    unsigned char*p = data;
+    int x,y;
+    unsigned char*b1 = data1;
+    unsigned char*b2 = data2;
+    compare_bitmaps(b, data1, data2);
+//#   define MARK ((abs(x-badx)<3 && abs(y-bady)<3)*255)
+#define MARK 0
+    for(y=0;y<b->height;y++) {
+        for(x=0;x<b->width;x++) {
+            unsigned char c1 = (b1[x>>3]&(0x80>>(x&7)))?255:0;
+            unsigned char c2 = (b2[x>>3]&(0x80>>(x&7)))?255:0;
+            *p++ = 255;
+            *p++ = c1^c2;
+            *p++ = c1^c2;
+            *p++ = MARK;
+        }
+        for(x=0;x<b->width;x++) {
+            unsigned char c = (b2[x>>3]&(0x80>>(x&7)))?255:0;
+            *p++ = 255;
+            *p++ = c;
+            *p++ = c;
+            *p++ = MARK;
+        }
+        b1 += width8;
+        b2 += width8;
+    }
+    b1 = data1;
+    for(y=0;y<b->height;y++) {
+        for(x=0;x<b->width;x++) {
+            unsigned char c = (b1[x>>3]&(0x80>>(x&7)))?255:0;
+            *p++ = 255;
+            *p++ = c;
+            *p++ = c;
+            *p++ = MARK;
+        }
+        for(x=0;x<b->width;x++) {
+            *p++ = 255;
+            *p++ = 0;
+            *p++ = 0;
+            *p++ = 0;
+        }
+        b1 += width8;
+    }
+    writePNG(filename, data, b->width*2, b->height*2);
+    free(data);
 }

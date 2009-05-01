@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include <memory.h>
 #include <math.h>
 #include "../gfxtools.h"
 #include "poly.h"
 #include "convert.h"
+#include "renderpoly.h"
 
 gfxline_t*mkstar(int x1, int y1, int x2, int y2)
 {
@@ -44,44 +46,61 @@ int test1()
     matrix.m01=-sin(ua);matrix.m11=cos(ua);
 
     gfxline_transform(b, &matrix);
-    gfxpoly_t*poly = gfxpoly_fillToPoly(b);
+    gfxpoly_t*poly = gfxpoly_fillToPoly(b, 0.05);
     gfxline_free(box1);
     gfxline_free(box2);
     gfxline_free(box3);
     gfxline_free(star);
 
     gfxpoly_dump(poly);
-    gfxpoly_process(poly);
+    gfxpoly_process(poly, &windrule_evenodd);
 }
 
-int test_square(int width, int height, int num)
+int test_square(int width, int height, int num, double gridsize, char bitmaptest)
 {
     int t;
     gfxline_t* line = malloc(sizeof(gfxline_t)*num);
     for(t=0;t<num;t++) {
         line[t].type = t?gfx_lineTo:gfx_moveTo;
-        line[t].x = (lrand48()%width)-width/2;
-        line[t].y = (lrand48()%height)-height/2;
+        line[t].x = (lrand48()%width);
+        line[t].y = (lrand48()%height);
         line[t].next = &line[t+1];
     }
     line[num-1].x = line[0].x;
     line[num-1].y = line[0].y;
     line[num-1].next = 0;
     
-    gfxpoly_t*poly = gfxpoly_fillToPoly(line);
-    gfxpoly_t*poly2 = gfxpoly_process(poly);
+    windrule_t*rule = &windrule_circular;
+    
+    gfxpoly_t*poly = gfxpoly_fillToPoly(line, gridsize);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
     gfxline_free(line);
+
+    if(bitmaptest) {
+        intbbox_t bbox = intbbox_new(0, 0, width, height);
+        unsigned char*bitmap1 = render_polygon(poly, &bbox, 1.0, rule);
+        unsigned char*bitmap2 = render_polygon(poly2, &bbox, 1.0, &windrule_evenodd);
+        if(!compare_bitmaps(&bbox, bitmap1, bitmap2)) {
+            save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+            assert(!"bitmaps don't match");
+        }
+    }
+
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
 }
 
 int test2()
 {
-    test_square(200,5, 1000);
-    test_square(5,200, 1000);
-    test_square(10,10, 200);
-    test_square(500,500, 50);
-    test_square(65536,65536,256);
+    test_square(400,400, 3, 0.05, 1);
+
+    int t;
+    for(t=0;t<400;t++) {
+        test_square(400,400, 50, 0.05, 1);
+        test_square(200,3, 1000, 1.0, 0);
+        test_square(3,200, 1000, 1.0, 0);
+        test_square(10,10, 200, 1.0, 0);
+    }
 }
 
 #include "../rfxswf.h"
@@ -89,7 +108,7 @@ void test3()
 {
 #undef N
 #undef RANGE
-#define N 20
+#define N 100
 #define RANGE 400
 
     int i;
@@ -99,13 +118,16 @@ void test3()
         line[i].x = lrand48()%RANGE - RANGE/2;
         line[i].y = lrand48()%RANGE - RANGE/2;
         line[i].next = &line[i+1];
-        line[i+N].x = lrand48()%RANGE - RANGE/2;
-        line[i+N].y = lrand48()%RANGE - RANGE/2;
-        line[i+N].next = &line[N+i+1];
+        line[N*2-i-1].type = gfx_lineTo;
+        line[N*2-i-1].x = line[i].x;
+        line[N*2-i-1].y = line[i].y;
+        line[N*2-i-1].next = &line[N*2-i];
     }
-    line[N*2-1].x = line[0].x;
-    line[N*2-1].y = line[0].y;
     line[N*2-1].next = 0;
+
+    line[N-1].x = line[0].x;
+    line[N-1].y = line[0].y;
+    line[N-1].next = 0;
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(m));
@@ -132,8 +154,8 @@ void test3()
         gfxline_t*l = gfxline_clone(line);
         gfxline_transform(l, &m);
         
-        gfxpoly_t*poly = gfxpoly_fillToPoly(l);
-        gfxpoly_t*poly2 = gfxpoly_process(poly);
+        gfxpoly_t*poly = gfxpoly_fillToPoly(l, 0.05);
+        gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_circular);
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
         SHAPE* s;
@@ -147,23 +169,24 @@ void test3()
         swf_SetRect(tag,&swf.movieSize);
         swf_SetShapeHeader(tag,s);
 
+#define FILL
 #ifdef FILL
         swf_ShapeSetAll(tag,s,0,0,0,fs,0);
-        edge_t*e = poly2;
+        edge_t*e = poly2->edges;
         while(e) {
-            swf_ShapeSetMove(tag, s, e->a.x*20, e->a.y*20);
-            swf_ShapeSetLine(tag, s, e->b.x*20 - e->a.x*20, e->b.y*20 - e->a.y*20);
+            swf_ShapeSetMove(tag, s, e->a.x, e->a.y);
+            swf_ShapeSetLine(tag, s, e->b.x - e->a.x, e->b.y - e->a.y);
             e = e->next;
         }
 #else
         swf_ShapeSetAll(tag,s,0,0,ls,0,0);
-        edge_t*e = poly2;
+        edge_t*e = poly2->edges;
         while(e) {
-            swf_ShapeSetMove(tag, s, e->a.x*20, e->a.y*20);
-            swf_ShapeSetLine(tag, s, e->b.x*20 - e->a.x*20, e->b.y*20 - e->a.y*20);
+            swf_ShapeSetMove(tag, s, e->a.x, e->a.y);
+            swf_ShapeSetLine(tag, s, e->b.x - e->a.x, e->b.y - e->a.y);
             
-            swf_ShapeSetCircle(tag, s, e->a.x*20, e->a.y*20, 5*20, 5*20);
-            swf_ShapeSetCircle(tag, s, e->b.x*20, e->b.y*20, 5*20, 5*20);
+            swf_ShapeSetCircle(tag, s, e->a.x, e->a.y, 5*20, 5*20);
+            swf_ShapeSetCircle(tag, s, e->b.x, e->b.y, 5*20, 5*20);
             e = e->next;
         }
 #endif
@@ -192,5 +215,5 @@ void test3()
 
 int main()
 {
-    test2();
+    test3();
 }

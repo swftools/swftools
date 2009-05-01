@@ -25,7 +25,7 @@ poly.o: poly.c poly.h active.h ../q.h
 wind.o: wind.c wind.h poly.h
 	$(CC) -c wind.c -o wind.o
 
-renderpoly.o: renderpoly.c wind.h poly.h
+renderpoly.o: renderpoly.c wind.h poly.h renderpoly.h
 	$(CC) -c renderpoly.c -o renderpoly.o
 
 xrow.o: xrow.c xrow.h ../q.h ../mem.h

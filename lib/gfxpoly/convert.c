@@ -28,19 +28,23 @@ static inline void gfxpoly_add_edge(edge_t**list, double _x1, double _y1, double
     }
 }
 
-gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
+gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line, double gridsize)
 {
     edge_t*s = 0;
 
     /* factor that determines into how many line fragments a spline is converted */
     double subfraction = 2.4;//0.3
 
+    double z = 1.0 / gridsize;
+
     double lastx=0, lasty=0;
     assert(!line || line[0].type == gfx_moveTo);
     while(line) {
+        double x = line->x*z;
+        double y = line->y*z;
         if(line->type == gfx_moveTo) {
         } else if(line->type == gfx_lineTo) {
-            gfxpoly_add_edge(&s, lastx, lasty, line->x, line->y);
+            gfxpoly_add_edge(&s, lastx, lasty, x, y);
 	} else if(line->type == gfx_splineTo) {
             int parts = (int)(sqrt(fabs(line->x-2*line->sx+lastx) + 
                                    fabs(line->y-2*line->sy+lasty))*subfraction);
@@ -49,20 +53,23 @@ gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
             int i;
 	    for(i=0;i<parts;i++) {
 		double t = (double)i*stepsize;
-		double x = line->x*t*t + 2*line->sx*t*(1-t) + x*(1-t)*(1-t);
-		double y = line->y*t*t + 2*line->sy*t*(1-t) + y*(1-t)*(1-t);
-                gfxpoly_add_edge(&s, lastx, lasty, x, y);
-                lastx = x;
-                lasty = y;
+		double sx = (line->x*t*t + 2*line->sx*t*(1-t) + x*(1-t)*(1-t))*z;
+		double sy = (line->y*t*t + 2*line->sy*t*(1-t) + y*(1-t)*(1-t))*z;
+                gfxpoly_add_edge(&s, lastx, lasty, sx, sy);
+                lastx = sx;
+                lasty = sy;
 	    }
-            gfxpoly_add_edge(&s, lastx, lasty, line->x, line->y);
+            gfxpoly_add_edge(&s, lastx, lasty, x, y);
         }
-        lastx = line->x;
-        lasty = line->y;
+        lastx = x;
+        lasty = y;
         line = line->next;
     }
 
     gfxline_free(line);
-    return s;
+
+    gfxpoly_t*p = gfxpoly_new(gridsize);
+    p->edges = s;
+    return p;
 }
 

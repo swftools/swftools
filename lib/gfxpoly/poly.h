@@ -24,6 +24,20 @@ typedef struct _edge {
     struct _edge *next;
 } edge_t;
 
+typedef struct _windstate
+{
+    char is_filled;
+    int wind_nr;
+    int num_polygons;
+} windstate_t;
+
+typedef struct _windrule
+{
+    windstate_t (*start)(int num_polygons);
+    windstate_t (*add)(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int polygon_nr);
+    fillstyle_t* (*diff)(windstate_t*left, windstate_t*right);
+} windrule_t;
+
 typedef struct _segment {
     point_t a;
     point_t b;
@@ -31,15 +45,18 @@ typedef struct _segment {
     double k; //k = a.x*b.y-a.y*b.x = delta.y*a.x - delta.x*a.y (=0 for points on the segment)
     
     segment_dir_t dir;
-    fillstyle_t*style;
-
+    fillstyle_t*fs;
+    fillstyle_t*fs_out;
+    char fs_out_ok;
+    
+    int polygon_nr;
+    windstate_t wind;
     int nr;
+
     struct _segment*left;
     struct _segment*right;
     
     point_t pos;
-    point_t new_point;
-    point_t new_pos;
 
     dict_t scheduled_crossings;
 } segment_t;
@@ -47,10 +64,14 @@ typedef struct _segment {
 #define LINE_EQ(p,s) ((double)(s)->delta.y*(p).x - (double)(s)->delta.x*(p).y - (s)->k)
 #define XPOS(s,ypos) ((s)->a.x + ceil(((s)->delta.x * (double)((ypos) - (s)->a.y)) / (s)->delta.y))
 
-typedef edge_t gfxpoly_t;
-gfxpoly_t* gfxpoly_new();
+typedef struct _gfxpoly {
+    double gridsize;
+    edge_t*edges;
+} gfxpoly_t;
+
+gfxpoly_t* gfxpoly_new(double gridsize);
 void gfxpoly_dump(gfxpoly_t*poly);
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly);
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule);
 
 typedef struct _event {
     eventtype_t type;
@@ -58,9 +79,5 @@ typedef struct _event {
     segment_t*s1;
     segment_t*s2;
 } event_t;
-
-void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
-segment_t*segment_new(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
-void segment_insert_before(segment_t**list, segment_t*add);
 
 #endif
