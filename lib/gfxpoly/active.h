@@ -14,13 +14,15 @@ typedef struct _actlist
 actlist_t* actlist_new();
 void actlist_destroy(actlist_t*a);
 int actlist_size(actlist_t*a);
-void actlist_verify_and_dump(actlist_t*a, int32_t y);
+void actlist_verify(actlist_t*a, int32_t y);
+void actlist_dump(actlist_t*a, int32_t y);
 segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2);  // finds segment immediately to the left of p1 (breaking ties w/ p2)
 void actlist_insert(actlist_t*a, point_t p, segment_t*s);
 void actlist_delete(actlist_t*a, segment_t*s);
 void actlist_swap(actlist_t*a, segment_t*s1, segment_t*s2);
 segment_t* actlist_left(actlist_t*a, segment_t*s);
 segment_t* actlist_leftmost(actlist_t*a);
+segment_t* actlist_rightmost(actlist_t*a);
 segment_t* actlist_right(actlist_t*a, segment_t*s);
 
 #endif

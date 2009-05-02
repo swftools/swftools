@@ -12,7 +12,27 @@ void actlist_destroy(actlist_t*a)
     free(a);
 }
 
-void actlist_verify_and_dump(actlist_t*a, int32_t y)
+void actlist_dump(actlist_t*a, int32_t y)
+{
+    segment_t*s = a->list;
+    double lastx;
+    char bad = 0;
+    while(s) {
+        if(y) {
+            double x = ((double)s->delta.x*(y-s->a.y)/s->delta.y)+s->a.x;
+            if(s!=a->list) {
+                if(lastx>x) 
+                    fprintf(stderr, "?%f<->%f? ", lastx, x);
+            }
+            lastx = x;
+        }
+        fprintf(stderr, "[%d]", s->nr);
+        s = s->right;
+        if(s) fprintf(stderr, " ");
+        else fprintf(stderr, "\n");
+    }
+}
+void actlist_verify(actlist_t*a, int32_t y)
 {
     segment_t*s = a->list;
     assert(!s || !s->left);
@@ -21,16 +41,13 @@ void actlist_verify_and_dump(actlist_t*a, int32_t y)
         if(y) {
             double x = ((double)s->delta.x*(y-s->a.y)/s->delta.y)+s->a.x;
             if(s!=a->list) {
-                if(lastx>x) fprintf(stderr, "?%f<->%f? ", lastx, x);
+                assert(lastx<=x);
             }
             lastx = x;
         }
         assert(!s->left || s->left->right == s);
         assert(!s->right || s->right->left == s);
-        fprintf(stderr, "[%d]", s->nr);
         s = s->right;
-        if(s) fprintf(stderr, " ");
-        else fprintf(stderr, "\n");
     }
 }
 
@@ -106,6 +123,18 @@ int actlist_size(actlist_t*a)
 segment_t* actlist_leftmost(actlist_t*a)
 {
     return a->list;
+}
+
+segment_t* actlist_rightmost(actlist_t*a)
+{
+    /* this is only used in checks, so it doesn't matter that it's slow */
+    segment_t*s = a->list;
+    segment_t*last = 0;
+    while(s) {
+        last = s;
+        s = s->right;
+    }
+    return last;
 }
 
 segment_t* actlist_left(actlist_t*a, segment_t*s)

@@ -3,16 +3,16 @@
 #include <assert.h>
 #include <string.h>
 #include "../gfxdevice.h"
+#include "../mem.h"
 #include "poly.h"
 
 static edge_t*edge_new(int x1, int y1, int x2, int y2)
 {
-    edge_t*s = malloc(sizeof(edge_t));
+    edge_t*s = rfx_calloc(sizeof(edge_t));
     s->a.x = x1;
     s->a.y = y1;
     s->b.x = x2;
     s->b.y = y2;
-    s->next = 0;
     return s;
 }
 
@@ -29,7 +29,7 @@ static inline void gfxpoly_add_edge(gfxpoly_t*poly, double _x1, double _y1, doub
     }
 }
 
-gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line, double gridsize)
+gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
 {
     gfxpoly_t*p = gfxpoly_new(gridsize);
 

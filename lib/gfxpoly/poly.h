@@ -5,7 +5,7 @@
 #include "../q.h"
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
-typedef enum {EVENT_CROSS, EVENT_END, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
+typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
 typedef struct _point {
@@ -21,6 +21,7 @@ typedef struct _edge {
     point_t a;
     point_t b;
     fillstyle_t*style;
+    int tmp;
     struct _edge *next;
 } edge_t;
 
@@ -43,6 +44,7 @@ typedef struct _segment {
     point_t b;
     point_t delta;
     double k; //k = a.x*b.y-a.y*b.x = delta.y*a.x - delta.x*a.y (=0 for points on the segment)
+    int minx, maxx;
     
     segment_dir_t dir;
     fillstyle_t*fs;
@@ -55,14 +57,31 @@ typedef struct _segment {
 
     struct _segment*left;
     struct _segment*right;
-    
+    char changed;
+
     point_t pos;
 
     dict_t scheduled_crossings;
 } segment_t;
 
 #define LINE_EQ(p,s) ((double)(s)->delta.y*(p).x - (double)(s)->delta.x*(p).y - (s)->k)
-#define XPOS(s,ypos) ((s)->a.x + ceil(((s)->delta.x * (double)((ypos) - (s)->a.y)) / (s)->delta.y))
+
+/* x1 + ((x2-x1)*(y-y1)) / dy = 
+   (x1*(y2-y1) + (x2-x1)*(y-y1)) / dy =
+   (x1*(y2-y)  +  x2    *(y-y1)) / dy =
+   (x1*y2 - x2*y1 + x2*y - y*x1) / dy =
+   (k + x2*y - x1*y) / dy
+   (k + dx*y) / dy
+*/
+//#define XPOS(s,ypos) ((s)->a.x + ((s)->delta.x * (double)((ypos) - (s)->a.y)) / (s)->delta.y)
+#define XPOS(s,ypos) (((s)->k + (double)(s)->delta.x*ypos) / (s)->delta.y)
+
+#define XPOS_INT(s,ypos) ((int)ceil(XPOS((s),ypos)))
+#define XDIFF(s1,s2,ypos) (((s1)->k + (double)(s1)->delta.x*ypos)*(s2)->delta.y - \
+                           ((s2)->k + (double)(s1)->delta.x*ypos)*(s1)->delta.y)
+
+// rewrite as XDIFF==0?
+#define XPOS_EQ(s1,s2,ypos) (XPOS((s1),(ypos))==XPOS((s2),(ypos)))
 
 typedef struct _gfxpoly {
     double gridsize;
@@ -71,6 +90,7 @@ typedef struct _gfxpoly {
 
 gfxpoly_t* gfxpoly_new(double gridsize);
 char gfxpoly_check(gfxpoly_t*poly);
+int gfxpoly_size(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);
 gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule);
 

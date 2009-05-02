@@ -253,8 +253,6 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 
     b.width = b.xmax - b.xmin;
     b.height = b.ymax - b.ymin;
-    printf("%dx%d\n", b.width, b.height);
-
     return b;
 }
 

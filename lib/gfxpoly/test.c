@@ -26,6 +26,118 @@ gfxline_t*mkstar(int x1, int y1, int x2, int y2)
     return line;
 }
 
+gfxline_t* mkrandomshape(int range, int n)
+{
+    int i;
+    gfxline_t* line = malloc(sizeof(gfxline_t)*n*2);
+    for(i=0;i<n;i++) {
+        line[i].type = i?gfx_lineTo:gfx_moveTo;
+        line[i].x = lrand48()%range - range/2;
+        line[i].y = lrand48()%range - range/2;
+        line[i].next = &line[i+1];
+        line[n*2-i-1].type = gfx_lineTo;
+        line[n*2-i-1].x = line[i].x;
+        line[n*2-i-1].y = line[i].y;
+        line[n*2-i-1].next = &line[n*2-i];
+    }
+    line[n*2-1].next = 0;
+    line[n-1].x = line[0].x;
+    line[n-1].y = line[0].y;
+    line[n-1].next = 0;
+}
+
+gfxline_t* mkchessboard()
+{
+    gfxline_t*b = 0;
+    int x,y;
+    unsigned int r = 0;
+    int spacing = 20;
+
+    //int num_caros = 40;
+    //int l = 5;
+    //char do_centerpiece=1;
+
+    int num_caros = 4;
+    int l=1;
+    char do_centerpiece=0;
+
+    for(x=-l;x<=l;x++) 
+    for(y=-l;y<=l;y++) {
+        /* pseudo random */ 
+        r = crc32_add_byte(r, x);r = crc32_add_byte(r, y);
+        if(r&1) {
+            gfxline_t*box;
+            if(r&2) {
+                box = gfxline_makerectangle(x*spacing,y*spacing,(x+1)*spacing,(y+1)*spacing);
+            } else {
+                box = gfxline_makerectangle((x+1)*spacing,y*spacing,x*spacing,(y+1)*spacing);
+            }
+            b = gfxline_append(b, box);
+        }
+    }
+
+    int t;
+    for(t=0;t<num_caros;t++) {
+        r = crc32_add_byte(r, t);
+        int x=(r%10-5)*spacing;
+        int y=((r>>4)%10-5)*spacing;
+        int sizex = ((r>>8)%4)*spacing;
+        int sizey = sizex;
+        if(r&65536)
+            sizex = -sizex;
+        gfxline_t*l = malloc(sizeof(gfxline_t)*5);
+        l[0].type = gfx_moveTo;l[0].next = &l[1];
+        l[1].type = gfx_lineTo;l[1].next = &l[2];
+        l[2].type = gfx_lineTo;l[2].next = &l[3];
+        l[3].type = gfx_lineTo;l[3].next = &l[4];
+        l[4].type = gfx_lineTo;l[4].next = 0;
+        l[0].x = x;
+        l[0].y = y-sizey;
+        l[1].x = x+sizex;
+        l[1].y = y;
+        l[2].x = x;
+        l[2].y = y+sizey;
+        l[3].x = x-sizex;
+        l[3].y = y;
+        l[4].x = x;
+        l[4].y = y-sizey;
+        gfxline_append(b, l);
+    }
+    if(do_centerpiece)
+    for(t=0;t<5;t++) {
+        gfxline_t*l = gfxline_makerectangle(-9*spacing,-10,9*spacing,10);
+        gfxmatrix_t matrix;
+        memset(&matrix, 0, sizeof(gfxmatrix_t));
+        double ua=t*0.43;
+        matrix.m00=cos(ua);matrix.m10=sin(ua);
+        matrix.m01=-sin(ua);matrix.m11=cos(ua);
+        gfxline_transform(l, &matrix);
+        gfxline_append(b, l);
+    }
+    return b;
+}
+
+int test0()
+{
+    gfxline_t* b = mkchessboard();
+
+    gfxmatrix_t m;
+    memset(&m, 0, sizeof(gfxmatrix_t));
+    int t = 28;
+    m.m00 = cos(t*M_PI/180.0);
+    m.m01 = sin(t*M_PI/180.0);
+    m.m10 = -sin(t*M_PI/180.0);
+    m.m11 = cos(t*M_PI/180.0);
+    m.tx = 400*1.41/2;
+    m.ty = 400*1.41/2;
+    gfxline_transform(b, &m);
+
+    gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd);
+    gfxpoly_destroy(poly2);
+    gfxpoly_destroy(poly);
+}
+
 int test1()
 {
     gfxline_t*box1 = gfxline_makerectangle(50,50,150,150);
@@ -46,14 +158,17 @@ int test1()
     matrix.m01=-sin(ua);matrix.m11=cos(ua);
 
     //gfxline_transform(b, &matrix);
-    gfxpoly_t*poly = gfxpoly_fillToPoly(b, 0.05);
+
+    gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
     gfxline_free(box1);
     gfxline_free(box2);
     gfxline_free(box3);
     gfxline_free(star);
 
     gfxpoly_dump(poly);
-    gfxpoly_process(poly, &windrule_evenodd);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd);
+    gfxpoly_destroy(poly2);
+    gfxpoly_destroy(poly);
 }
 
 int test_square(int width, int height, int num, double gridsize, char bitmaptest)
@@ -70,7 +185,7 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     line[num-1].y = line[0].y;
     line[num-1].next = 0;
     
-    gfxpoly_t*poly = gfxpoly_fillToPoly(line, gridsize);
+    gfxpoly_t*poly = gfxpoly_from_gfxline(line, gridsize);
     gfxline_free(line);
 
     windrule_t*rule = &windrule_circular;
@@ -109,23 +224,10 @@ void test3()
 #define N 100
 #define RANGE 400
 
-    int i;
-    gfxline_t* line = malloc(sizeof(gfxline_t)*N*2);
-    for(i=0;i<N;i++) {
-        line[i].type = i?gfx_lineTo:gfx_moveTo;
-        line[i].x = lrand48()%RANGE - RANGE/2;
-        line[i].y = lrand48()%RANGE - RANGE/2;
-        line[i].next = &line[i+1];
-        line[N*2-i-1].type = gfx_lineTo;
-        line[N*2-i-1].x = line[i].x;
-        line[N*2-i-1].y = line[i].y;
-        line[N*2-i-1].next = &line[N*2-i];
-    }
-    line[N*2-1].next = 0;
-
-    line[N-1].x = line[0].x;
-    line[N-1].y = line[0].y;
-    line[N-1].next = 0;
+    //gfxline_t*line = mkrandomshape(RANGE, N);
+    //windrule_t*rule = &windrule_circular;
+    gfxline_t*line = mkchessboard();
+    windrule_t*rule = &windrule_evenodd;
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(m));
@@ -149,11 +251,13 @@ void test3()
         m.m11 = cos(t*M_PI/180.0);
         m.tx = RANGE*1.41/2;
         m.ty = RANGE*1.41/2;
+        printf("%d\n", t);
+
         gfxline_t*l = gfxline_clone(line);
         gfxline_transform(l, &m);
         
-        gfxpoly_t*poly = gfxpoly_fillToPoly(l, 0.05);
-        gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_circular);
+        gfxpoly_t*poly = gfxpoly_from_gfxline(l, 0.05);
+        gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
         SHAPE* s;
@@ -259,7 +363,129 @@ void test4()
     }
 }
 
+#include "../gfxdevice.h"
+#include "../pdf/pdf.h"
+
+void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color) 
+{
+    gfxpoly_t*poly = gfxpoly_from_gfxline(line, 0.05);
+    printf("%d segments\n", gfxpoly_size(poly));
+
+    if(!gfxpoly_check(poly)) {
+        gfxpoly_destroy(poly);
+        printf("bad polygon\n");
+        return;
+    }
+
+    windrule_t*rule = &windrule_evenodd;
+    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
+        
+    double zoom = 1.0;
+    intbbox_t bbox = intbbox_from_polygon(poly, zoom);
+    unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule);
+    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd);
+    if(!bitmap_ok(&bbox, bitmap1)) {
+        printf("bad polygon or error in renderer\n");
+        return;
+    }
+    if(!bitmap_ok(&bbox, bitmap2)) {
+        save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+        assert(!"error in bitmap");
+    }
+    if(!compare_bitmaps(&bbox, bitmap1, bitmap2)) {
+        save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+        assert(!"bitmaps don't match");
+    }
+
+    gfxpoly_destroy(poly);
+    gfxpoly_destroy(poly2);
+}
+int extract_polygons_setparameter(gfxdevice_t*dev, const char*key, const char*value) {
+    return 0;
+}
+void extract_polygons_startclip(gfxdevice_t*dev, gfxline_t*line) 
+{
+    extract_polygons_fill(dev, line, 0);
+}
+void extract_polygons_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform)
+{
+    extract_polygons_fill(dev, line, 0);
+}
+void extract_polygons_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*gradcoord2devcoord)
+{
+    extract_polygons_fill(dev, line, 0);
+}
+void extract_polygons_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+{
+    extract_polygons_fill(dev, line, 0);
+}
+void extract_polygons_addfont(gfxdevice_t*dev, gfxfont_t*font)
+{
+    int t;
+    for(t=0;t<font->num_glyphs;t++) {
+        //extract_polygons_fill(dev, font->glyphs[t].line, 0);
+    }
+}
+void extract_polygons_endclip(gfxdevice_t*dev)
+{
+}
+void extract_polygons_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
+{
+}
+void extract_polygons_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
+{
+}
+    
+gfxdevice_t extract_polygons = 
+{
+name: "extract polygons",
+setparameter:extract_polygons_setparameter,
+startclip: extract_polygons_startclip,
+endclip: extract_polygons_endclip,
+stroke: extract_polygons_stroke,
+fill: extract_polygons_fill,
+fillbitmap: extract_polygons_fillbitmap,
+fillgradient: extract_polygons_fillgradient,
+addfont: extract_polygons_addfont,
+drawchar: extract_polygons_drawchar,
+drawlink: extract_polygons_drawlink,
+startpage: 0,
+endpage: 0,
+geterror: 0,
+finish: 0,
+internal: 0
+};
+
+void test5()
+{
+    char*dir = "pdfs";
+    DIR*_dir = opendir(dir);
+    if(!_dir) return;
+    struct dirent*file;
+    while(1) {
+        file = readdir(_dir);
+        if (!file) 
+            break;
+        if(!strstr(file->d_name, ".pdf")) 
+            continue;
+        char* filename = allocprintf("%s/%s", dir, file->d_name);
+
+        gfxsource_t*driver = gfxsource_pdf_create();
+        gfxdocument_t*doc = driver->open(driver, filename);
+        gfxdevice_t*out = &extract_polygons;
+        int t;
+        for(t=1;t<=doc->num_pages;t++) {
+            printf("%s (page %d)\n", filename, t);
+            gfxpage_t* page = doc->getpage(doc, t);
+            page->render(page, out);
+            page->destroy(page);
+            break;
+        }
+        free(filename);
+    }
+}
+
 int main()
 {
-    test3();
+    test0();
 }

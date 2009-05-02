@@ -31,7 +31,7 @@ renderpoly.o: renderpoly.c wind.h poly.h renderpoly.h
 xrow.o: xrow.c xrow.h ../q.h ../mem.h
 	$(CC) -c xrow.c -o xrow.o
 
-SWF = ../librfxswf.a
+SWF = ../librfxswf.a ../libpdf.a ../libgfx.a -lstdc++ -lfontconfig
 test: ../libbase.a ../libgfx.a test.c $(OBJS) poly.h convert.h
 	$(CC) test.c $(OBJS) $(SWF) ../libbase.a ../libgfx.a -o test -lm -lz -ljpeg -lfreetype
 
