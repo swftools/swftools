@@ -175,6 +175,7 @@ void gfxpoly_dump(gfxpoly_t*poly)
 gfxpoly_t* gfxpoly_save(gfxpoly_t*poly, const char*filename)
 {
     FILE*fi = fopen(filename, "wb");
+    fprintf(fi, "%% gridsize %f\n", poly->gridsize);
     fprintf(fi, "%% begin\n");
     edge_t* s = poly->edges;
     while(s) {
@@ -216,7 +217,7 @@ static inline min32(int32_t v1, int32_t v2) {return v1<v2?v1:v2;}
 void segment_dump(segment_t*s)
 {
     fprintf(stderr, "(%d,%d)->(%d,%d) ", s->a.x, s->a.y, s->b.x, s->b.y);
-    fprintf(stderr, " dx:%d dy:%d k:%f dx/dy=%f\n", s->delta.x, s->delta.y, s->k, 
+    fprintf(stderr, " dx:%d dy:%d k:%f dx/dy=%f\n", s->delta.x, s->delta.y, s->k,
             (double)s->delta.x / s->delta.y);
 }
 
@@ -521,7 +522,7 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
 
     if(s->fs_out) {
 #ifdef DEBUG
-        fprintf(stderr, "[%d] receives next point (%d,%d)->(%d,%d) (drawing)\n", s->nr, 
+        fprintf(stderr, "[%d] receives next point (%d,%d)->(%d,%d) (drawing)\n", s->nr,
                 s->pos.x, s->pos.y, p.x, p.y);
 #endif
         // omit horizontal lines
@@ -552,16 +553,9 @@ typedef struct _segrange {
     segment_t*segmax;
 } segrange_t;
 
-static inline char xpos_eq(segment_t*s1, segment_t*s2, int y)
-{
-    if(XPOS_EQ(s1, s2, y)) {
-        return 1;
-    }
-    return 0;
-}
-
 void segrange_adjust_endpoints(segrange_t*range, int y)
 {
+#define XPOS_EQ(s1,s2,ypos) (XPOS((s1),(ypos))==XPOS((s2),(ypos)))
 #ifdef CHECK
     /* this would mean that the segment left/right of the minimum/maximum
        intersects the current segment exactly at the scanline, but somehow
@@ -570,12 +564,13 @@ void segrange_adjust_endpoints(segrange_t*range, int y)
     assert(!max || !max->right || !XPOS_EQ(max, max->right, y));
 #endif
 
+    /* this doesn't actually ever happen anymore (see checks above) */
     segment_t*min = range->segmin;
     segment_t*max = range->segmax;
-    if(min) while(min->left && xpos_eq(min, min->left, y)) {
+    if(min) while(min->left && XPOS_EQ(min, min->left, y)) {
         min = min->left;
     }
-    if(max) while(max->right && xpos_eq(max, max->right, y)) {
+    if(max) while(max->right && XPOS_EQ(max, max->right, y)) {
         max = max->right;
     }
     range->segmin = min;
@@ -621,9 +616,8 @@ static void add_points_to_positively_sloped_segments(status_t*status, int32_t y,
     for(t=0;t<status->xrow->num;t++) {
         box_t box = box_new(status->xrow->x[t], y);
         segment_t*seg = actlist_find(status->actlist, box.left2, box.left2);
-       
-        seg = actlist_right(status->actlist, seg);
 
+        seg = actlist_right(status->actlist, seg);
         while(seg) {
             if(seg->a.y == y) {
                 // this segment started in this scanline, ignore it
@@ -665,7 +659,7 @@ static void add_points_to_negatively_sloped_segments(status_t*status, int32_t y,
     for(t=status->xrow->num-1;t>=0;t--) {
         box_t box = box_new(status->xrow->x[t], y);
         segment_t*seg = actlist_find(status->actlist, box.right2, box.right2);
-        
+
         while(seg) {
             if(seg->a.y == y) {
                 // this segment started in this scanline, ignore it
@@ -710,7 +704,7 @@ void add_points_to_ending_segments(status_t*status, int32_t y)
         segment_t*next = seg->right;seg->right=0;
 
         assert(seg->b.y == status->y);
-  
+
         if(status->xrow->num == 1) {
             // shortcut
             point_t p = {status->xrow->x[0], y};
@@ -773,12 +767,12 @@ static void recalculate_windings(status_t*status, segrange_t*range)
     s = actlist_leftmost(status->actlist);
     while(s && s!=range->segmin) {
         assert(!s->changed);
-        s = actlist_right(status->actlist, s);
+        s = s->right;
     }
     s = actlist_rightmost(status->actlist);
     while(s && s!=range->segmax) {
         assert(!s->changed);
-        s = actlist_left(status->actlist, s);
+        s = s->left;
     }
     /* in check mode, go through the whole interval so we can test
        that all polygons where the fillstyle changed also have seg->changed=1 */
@@ -790,7 +784,7 @@ static void recalculate_windings(status_t*status, segrange_t*range)
         end = actlist_right(status->actlist, end);
     while(s!=end) {
 #ifndef CHECK
-        if(s->changed) 
+        if(s->changed)
 #endif
         {
             segment_t* left = actlist_left(status->actlist, s);
@@ -807,7 +801,7 @@ static void recalculate_windings(status_t*status, segrange_t*range)
             fprintf(stderr, "[%d] %s/%d/%s/%s ", s->nr, s->dir==DIR_UP?"up":"down", s->wind.wind_nr, s->wind.is_filled?"fill":"nofill", s->fs_out?"draw":"omit");
 #endif
         }
-        s = actlist_right(status->actlist, s);
+        s = s->right;
     }
 #ifdef DEBUG
     fprintf(stderr, "\n");
@@ -825,8 +819,13 @@ void intersect_with_horizontal(status_t*status, segment_t*h)
     xrow_add(status->xrow, h->a.x);
     point_t o = h->a;
 
-    left = actlist_right(status->actlist, left);
-    right = actlist_right(status->actlist, right);
+    if(!right) {
+        assert(!left);
+        return;
+    }
+
+    left = actlist_right(status->actlist, left); //first seg to the right of h->a
+    right = right->right; //first seg to the right of h->b
     segment_t* s = left;
 
     while(s!=right) {
@@ -845,7 +844,7 @@ void intersect_with_horizontal(status_t*status, segment_t*h)
         assert(s->delta.x > 0 && x <= s->b.x || s->delta.x <= 0 && x >= s->b.x);
         xrow_add(status->xrow, x);
 
-        s = actlist_right(status->actlist, s);
+        s = s->right;
     }
 }
 

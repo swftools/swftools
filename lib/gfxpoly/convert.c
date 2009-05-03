@@ -104,6 +104,7 @@ gfxpoly_t* gfxpoly_from_file(const char*filename, double gridsize)
         return 0;
     }
     int count = 0;
+    double g = 0;
     double lastx=0,lasty=0;
     while(1) {
         char*line = readline(fi);
@@ -124,10 +125,16 @@ gfxpoly_t* gfxpoly_from_file(const char*filename, double gridsize)
             }
             lastx = x;
             lasty = y;
+        } else if(sscanf(line, "%% gridsize %lf", &g) == 1) {
+            p->gridsize = g;
         }
         free(line);
     }
     fclose(fi);
-    printf("loaded %d points from %s\n", count, filename);
+    if(g) {
+        printf("loaded %d points from %s (gridsize %f)\n", count, filename, g);
+    } else {
+        printf("loaded %d points from %s\n", count, filename);
+    }
     return p;
 }

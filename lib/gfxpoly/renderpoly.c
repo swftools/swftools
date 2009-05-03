@@ -36,10 +36,10 @@ static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir
     p.fs = fs;
     p.e = e;
     p.polygon_nr = polygon_nr;
-
-    if(x >= buf->bbox.xmax || y >= buf->bbox.ymax || y < buf->bbox.ymin) 
-        return;
     
+    if(y >= buf->bbox.ymax || y < buf->bbox.ymin) 
+        return;
+
     renderline_t*l = &buf->lines[y-buf->bbox.ymin];
 
     if(l->num == l->size) {
@@ -130,7 +130,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
     int width8 = (buf->width+7) >> 3;
     unsigned char* image = (unsigned char*)malloc(width8*buf->height);
     memset(image, 0, width8*buf->height);
-    
+
     buf->lines = (renderline_t*)rfx_alloc(buf->height*sizeof(renderline_t));
     int y;
     for(y=0;y<buf->height;y++) {
@@ -152,18 +152,18 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 	int num = buf->lines[y].num;
         qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
         int lastx = 0;
-
+        
         windstate_t fill = rule->start(1);
         for(n=0;n<num;n++) {
             renderpoint_t*p = &points[n];
             int x = (int)(p->x - bbox->xmin);
-            
+
             if(x < lastx)
-                x = lastx;
-            if(x > buf->width) {
-                break;
-            }
-            if(fill.is_filled && x!=lastx) {
+                x = lastx; 
+            if(x > buf->width)
+                x = buf->width;
+
+            if(fill.is_filled && lastx<x) {
                 fill_bitwise(line, lastx, x);
             }
             fill = rule->add(fill, p->fs, p->dir, p->polygon_nr);
@@ -232,7 +232,7 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
         if(x2 > b.xmax) b.xmax = x2;
         if(y2 > b.ymax) b.ymax = y2;
     }
-
+    
     if(b.xmax > (int)(MAX_WIDTH*zoom))
 	b.xmax = (int)(MAX_WIDTH*zoom);
     if(b.ymax > (int)(MAX_HEIGHT*zoom))

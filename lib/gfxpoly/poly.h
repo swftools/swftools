@@ -5,7 +5,7 @@
 #include "../q.h"
 
 //#define DEBUG
-//#define CHECKS
+#define CHECKS
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
@@ -81,10 +81,7 @@ typedef struct _segment {
 
 #define XPOS_INT(s,ypos) ((int)ceil(XPOS((s),ypos)))
 #define XDIFF(s1,s2,ypos) (((s1)->k + (double)(s1)->delta.x*ypos)*(s2)->delta.y - \
-                           ((s2)->k + (double)(s1)->delta.x*ypos)*(s1)->delta.y)
-
-// rewrite as XDIFF==0?
-#define XPOS_EQ(s1,s2,ypos) (XPOS((s1),(ypos))==XPOS((s2),(ypos)))
+                           ((s2)->k + (double)(s2)->delta.x*ypos)*(s1)->delta.y)
 
 typedef struct _gfxpoly {
     double gridsize;

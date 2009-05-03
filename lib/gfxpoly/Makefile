@@ -1,6 +1,6 @@
 all: testheap test
 
-CC = gcc -g -pg
+CC = gcc -g -O2
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
 	cd ..; make libbase.a

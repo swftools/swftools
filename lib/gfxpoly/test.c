@@ -137,7 +137,7 @@ int test0()
     gfxpoly_destroy(poly);
 }
 
-int test1()
+int test1(int argn, char*argv[])
 {
     gfxline_t*box1 = gfxline_makerectangle(50,50,150,150);
     // put box2 and box3 on top of each other *snicker*
@@ -202,7 +202,7 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     gfxpoly_destroy(poly);
 }
 
-int test2()
+int test2(int argn, char*argv[])
 {
     test_square(400,400, 3, 0.05, 1);
 
@@ -216,7 +216,7 @@ int test2()
 }
 
 #include "../rfxswf.h"
-void test3()
+void test3(int argn, char*argv[])
 {
 #undef N
 #undef RANGE
@@ -320,7 +320,7 @@ void test3()
 }
 
 #include <dirent.h>
-void test4()
+void test4(int argn, char*argv[])
 {
     char*dir = "ps";
     DIR*_dir = opendir(dir);
@@ -333,10 +333,18 @@ void test4()
         if(!strstr(file->d_name, ".ps")) 
             continue;
 
-        char* filename = allocprintf("%s/%s", dir, file->d_name);
+        char* filename;
+
+        if(argn<2)
+            filename = allocprintf("%s/%s", dir, file->d_name);
+        else
+            filename = argv[1];
+
         windrule_t*rule = &windrule_evenodd;
         gfxpoly_t*poly = gfxpoly_from_file(filename, 1.0);//0.01);
-        free(filename);
+
+        if(argn!=2)
+            free(filename);
 
         double zoom = 1.0;
         intbbox_t bbox = intbbox_from_polygon(poly, zoom);
@@ -357,8 +365,14 @@ void test4()
             save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
             assert(!"bitmaps don't match");
         }
+        free(bitmap1);
+        free(bitmap2);
+        gfxpoly_destroy(poly);
         gfxpoly_destroy(poly2);
+        if(argn==2) 
+            break;
     }
+    closedir(_dir);
 }
 
 #include "../gfxdevice.h"
@@ -376,16 +390,16 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     }
 
     windrule_t*rule = &windrule_evenodd;
-    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
         
     double zoom = 1.0;
     intbbox_t bbox = intbbox_from_polygon(poly, zoom);
     unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule);
-    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd);
     if(!bitmap_ok(&bbox, bitmap1)) {
         printf("bad polygon or error in renderer\n");
         return;
     }
+    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
+    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd);
     if(!bitmap_ok(&bbox, bitmap2)) {
         save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
         assert(!"error in bitmap");
@@ -394,6 +408,8 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
         save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
         assert(!"bitmaps don't match");
     }
+    free(bitmap1);
+    free(bitmap2);
 
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
@@ -454,8 +470,9 @@ finish: 0,
 internal: 0
 };
 
-void test5()
+void test5(int argn, char*argv[])
 {
+    gfxsource_t*driver = gfxsource_pdf_create();
     char*dir = "pdfs";
     DIR*_dir = opendir(dir);
     if(!_dir) return;
@@ -468,7 +485,6 @@ void test5()
             continue;
         char* filename = allocprintf("%s/%s", dir, file->d_name);
 
-        gfxsource_t*driver = gfxsource_pdf_create();
         gfxdocument_t*doc = driver->open(driver, filename);
         gfxdevice_t*out = &extract_polygons;
         int t;
@@ -477,13 +493,15 @@ void test5()
             gfxpage_t* page = doc->getpage(doc, t);
             page->render(page, out);
             page->destroy(page);
-            break;
         }
+        doc->destroy(doc);
         free(filename);
     }
+    closedir(_dir);
+    driver->destroy(driver);
 }
 
-int main()
+int main(int argn, char*argv[])
 {
-    test3();
+    test5(argn, argv);
 }
