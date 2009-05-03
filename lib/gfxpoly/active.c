@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "../q.h"
 #include "active.h"
 

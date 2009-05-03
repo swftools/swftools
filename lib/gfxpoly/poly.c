@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <assert.h>
 #include <memory.h>
 #include <math.h>
 #include "../mem.h"
@@ -10,15 +9,14 @@
 #include "xrow.h"
 #include "wind.h"
 
-#define DEBUG
-#define CHECKS
-
-#ifndef CHECKS
-#ifdef assert
-#undef assert
-#endif
-#define assert(x)
-#endif
+static gfxpoly_t*current_polygon = 0;
+void gfxpoly_fail(char*expr, char*file, int line, const char*function)
+{
+    fprintf(stderr, "assert(%s) failed in %s in line %d: %s\n", expr, file, line, function);
+    fprintf(stderr, "I'm saving a debug file \"poly.ps\" to the current directory.\n");
+    gfxpoly_save(current_polygon, "poly.ps");
+    exit(1);
+}
 
 char point_equals(const void*o1, const void*o2)
 {
@@ -61,6 +59,7 @@ typedef struct _status {
     edge_t*output;
     xrow_t*xrow;
     windrule_t*windrule;
+    segment_t*ending_segments;
 #ifdef CHECKS
     dict_t*seen_crossings; //list of crossing we saw so far
     dict_t*intersecting_segs; //list of segments intersecting in this scanline
@@ -155,9 +154,11 @@ char gfxpoly_check(gfxpoly_t*poly)
         int count = (ptroff_t)c;
         if(count&1) {
             fprintf(stderr, "Point (%f,%f) occurs %d times\n", p->x*poly->gridsize, p->y*poly->gridsize, count);
+            dict_destroy(d);
             return 0;
         }
     }
+    dict_destroy(d);
     return 1;
 }
 
@@ -169,6 +170,22 @@ void gfxpoly_dump(gfxpoly_t*poly)
         fprintf(stderr, "(%f,%f) -> (%f,%f)\n", s->a.x*g, s->a.y*g, s->b.x*g, s->b.y*g);
         s = s->next;
     }
+}
+
+gfxpoly_t* gfxpoly_save(gfxpoly_t*poly, const char*filename)
+{
+    FILE*fi = fopen(filename, "wb");
+    fprintf(fi, "%% begin\n");
+    edge_t* s = poly->edges;
+    while(s) {
+        fprintf(fi, "%g setgray\n", s->b.y < s->a.y ? 0.7 : 0);
+        fprintf(fi, "%d %d moveto\n", s->a.x, s->a.y);
+        fprintf(fi, "%d %d lineto\n", s->b.x, s->b.y);
+        fprintf(fi, "stroke\n");
+        s = s->next;
+    }
+    fprintf(fi, "showpage\n");
+    fclose(fi);
 }
 
 inline static event_t event_new()
@@ -604,22 +621,27 @@ static void add_points_to_positively_sloped_segments(status_t*status, int32_t y,
     for(t=0;t<status->xrow->num;t++) {
         box_t box = box_new(status->xrow->x[t], y);
         segment_t*seg = actlist_find(status->actlist, box.left2, box.left2);
+       
         seg = actlist_right(status->actlist, seg);
 
         while(seg) {
             if(seg->a.y == y) {
                 // this segment started in this scanline, ignore it
                 seg->changed = 1;last = seg;if(!first) {first=seg;}
-            } else if(seg->delta.x < 0) {
+            } else if(seg->delta.x <= 0) {
                 // ignore segment w/ negative slope
             } else {
+                last = seg;if(!first) {first=seg;}
                 double d1 = LINE_EQ(box.right1, seg);
                 double d2 = LINE_EQ(box.right2, seg);
-                if(d1>=0 || d2>=0) {
-                    seg->changed = 1;last = seg;if(!first) {first=seg;}
+                if(d1>0 || d2>=0) {
+                    seg->changed = 1;
                     insert_point_into_segment(status, seg, box.right2);
                 } else {
-                    break;
+                    /* we unfortunately can't break here- the active list is sorted according
+                       to the *bottom* of the scanline. hence pretty much everything that's still
+                       coming might reach into our box */
+                    //break;
                 }
             }
             seg = actlist_right(status->actlist, seg);
@@ -639,7 +661,6 @@ static void add_points_to_positively_sloped_segments(status_t*status, int32_t y,
 static void add_points_to_negatively_sloped_segments(status_t*status, int32_t y, segrange_t*range)
 {
     segment_t*first=0, *last = 0;
-    int firstx,lastx;
     int t;
     for(t=status->xrow->num-1;t>=0;t--) {
         box_t box = box_new(status->xrow->x[t], y);
@@ -649,17 +670,17 @@ static void add_points_to_negatively_sloped_segments(status_t*status, int32_t y,
             if(seg->a.y == y) {
                 // this segment started in this scanline, ignore it
                 seg->changed = 1;last = seg;if(!first) {first=seg;}
-                if(!first) {first=seg; firstx = seg->a.x;}
-            } else if(seg->delta.x >= 0) {
+            } else if(seg->delta.x > 0) {
                 // ignore segment w/ positive slope
             } else {
+                last = seg;if(!first) {first=seg;}
                 double d1 = LINE_EQ(box.left1, seg);
                 double d2 = LINE_EQ(box.left2, seg);
                 if(d1<0 || d2<0) {
-                    seg->changed = 1;last = seg;if(!first) {first=seg;}
+                    seg->changed = 1;
                     insert_point_into_segment(status, seg, box.right2);
                 } else {
-                    break;
+                    //break;
                 }
             }
             seg = actlist_left(status->actlist, seg);
@@ -667,6 +688,64 @@ static void add_points_to_negatively_sloped_segments(status_t*status, int32_t y,
     }
     segrange_test_segment_min(range, last, y);
     segrange_test_segment_max(range, first, y);
+}
+
+/* segments ending in the current scanline need xrow treatment like everything else.
+   (consider an intersection taking place just above a nearly horizontal segment
+   ending on the current scanline- the intersection would snap down *below* the
+   ending segment if we don't add the intersection point to the latter right away)
+   we need to treat ending segments seperately, however. we have to delete them from
+   the active list right away to make room for intersect operations (which might
+   still be in the current scanline- consider two 45° polygons and a vertical polygon
+   intersecting on an integer coordinate). but once they're no longer in the active list,
+   we can't use the add_points_to_*_sloped_segments() functions anymore, and re-adding
+   them to the active list just for point snapping would be overkill.
+   (One other option to consider, however, would be to create a new active list only
+    for ending segments)
+*/
+void add_points_to_ending_segments(status_t*status, int32_t y)
+{
+    segment_t*seg = status->ending_segments;
+    while(seg) {
+        segment_t*next = seg->right;seg->right=0;
+
+        assert(seg->b.y == status->y);
+  
+        if(status->xrow->num == 1) {
+            // shortcut
+            point_t p = {status->xrow->x[0], y};
+            insert_point_into_segment(status, seg, p);
+        } else {
+            int t;
+            int start=0,end=status->xrow->num,dir=1;
+            if(seg->delta.x < 0) {
+                start = status->xrow->num-1;
+                end = dir = -1;
+            }
+            for(t=start;t!=end;t+=dir) {
+                box_t box = box_new(status->xrow->x[t], y);
+                double d0 = LINE_EQ(box.left1, seg);
+                double d1 = LINE_EQ(box.left2, seg);
+                double d2 = LINE_EQ(box.right1, seg);
+                double d3 = LINE_EQ(box.right2, seg);
+                if(!(d0>=0 && d1>=0 && d2>=0 && d3>0 ||
+                     d0<=0 && d1<=0 && d2<=0 && d3<0)) {
+                    insert_point_into_segment(status, seg, box.right2);
+                    break;
+                }
+            }
+
+#ifdef CHECKS
+            /* we *need* to find a point to insert. the segment's own end point
+               is in that list, for Pete's sake. */
+            assert(t!=end);
+#endif
+        }
+        // now that this is done, too, we can also finally free this segment
+        segment_destroy(seg);
+        seg = next;
+    }
+    status->ending_segments = 0;
 }
 
 static void recalculate_windings(status_t*status, segrange_t*range)
@@ -677,6 +756,17 @@ static void recalculate_windings(status_t*status, segrange_t*range)
     segment_t*end = range->segmax;
     segment_t*last = 0;
 
+#ifdef DEBUG
+    s = actlist_leftmost(status->actlist);
+    while(s) {
+        fprintf(stderr, "[%d]%d%s ", s->nr, s->changed,
+            s == range->segmin?"S":(
+            s == range->segmax?"E":""));
+        s = s->right;
+    }
+    fprintf(stderr, "\n");
+    s = range->segmin;
+#endif
 #ifdef CHECKS
     /* test sanity: check that we don't have changed segments
        outside of the given range */
@@ -782,13 +872,14 @@ void event_apply(status_t*status, event_t*e)
             assert(!dict_contains(status->intersecting_segs, s));
             assert(!dict_contains(status->segs_with_point, s));
 #endif
-            insert_point_into_segment(status, s, s->b);
             segment_t*left = actlist_left(status->actlist, s);
             segment_t*right = actlist_right(status->actlist, s);
             actlist_delete(status->actlist, s);
             if(left && right)
                 schedule_crossing(status, left, right);
-            segment_destroy(s);e->s1=0;
+
+            s->left = 0; s->right = status->ending_segments;
+            status->ending_segments = s;
             break;
         }
         case EVENT_START: {
@@ -949,6 +1040,7 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule)
 
 gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule)
 {
+    current_polygon = poly;
     heap_t* queue = heap_new(sizeof(event_t), compare_events);
 
     gfxpoly_enqueue(poly->edges, queue, windrule->start(1), /*polygon nr*/0);
@@ -991,8 +1083,13 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule)
         xrow_sort(status.xrow);
         segrange_t range;
         memset(&range, 0, sizeof(range));
+#ifdef DEBUG
+        actlist_dump(status.actlist, status.y);
+#endif
         add_points_to_positively_sloped_segments(&status, status.y, &range);
         add_points_to_negatively_sloped_segments(&status, status.y, &range);
+        add_points_to_ending_segments(&status, status.y);
+
         recalculate_windings(&status, &range);
 #ifdef CHECKS
         check_status(&status);

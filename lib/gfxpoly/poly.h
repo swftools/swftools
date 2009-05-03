@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "../q.h"
 
+//#define DEBUG
+//#define CHECKS
+
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
@@ -88,10 +91,13 @@ typedef struct _gfxpoly {
     edge_t*edges;
 } gfxpoly_t;
 
+void gfxpoly_fail(char*expr, char*file, int line, const char*function);
+
 gfxpoly_t* gfxpoly_new(double gridsize);
 char gfxpoly_check(gfxpoly_t*poly);
 int gfxpoly_size(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);
+gfxpoly_t* gfxpoly_save(gfxpoly_t*poly, const char*filename);
 gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule);
 
 typedef struct _event {
@@ -100,5 +106,15 @@ typedef struct _event {
     segment_t*s1;
     segment_t*s2;
 } event_t;
+
+#ifndef CHECKS
+#ifdef assert
+#undef assert
+#endif
+#define assert(x)
+#else
+#define assert(x) ((x)?0:gfxpoly_fail(__STRING(x), __FILE__, __LINE__, __PRETTY_FUNCTION__))
+#endif
+
 
 #endif

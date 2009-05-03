@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #include <memory.h>
 #include <math.h>
 #include "../gfxtools.h"
@@ -53,13 +52,13 @@ gfxline_t* mkchessboard()
     unsigned int r = 0;
     int spacing = 20;
 
-    //int num_caros = 40;
-    //int l = 5;
-    //char do_centerpiece=1;
+    int num_caros = 40;
+    int l = 5;
+    char do_centerpiece=1;
 
-    int num_caros = 4;
-    int l=1;
-    char do_centerpiece=0;
+    //int num_caros = 4;
+    //int l=1;
+    //char do_centerpiece=0;
 
     for(x=-l;x<=l;x++) 
     for(y=-l;y<=l;y++) {
@@ -251,7 +250,6 @@ void test3()
         m.m11 = cos(t*M_PI/180.0);
         m.tx = RANGE*1.41/2;
         m.ty = RANGE*1.41/2;
-        printf("%d\n", t);
 
         gfxline_t*l = gfxline_clone(line);
         gfxline_transform(l, &m);
@@ -337,7 +335,7 @@ void test4()
 
         char* filename = allocprintf("%s/%s", dir, file->d_name);
         windrule_t*rule = &windrule_evenodd;
-        gfxpoly_t*poly = gfxpoly_from_file(filename, 0.01);
+        gfxpoly_t*poly = gfxpoly_from_file(filename, 1.0);//0.01);
         free(filename);
 
         double zoom = 1.0;
@@ -487,5 +485,5 @@ void test5()
 
 int main()
 {
-    test0();
+    test3();
 }

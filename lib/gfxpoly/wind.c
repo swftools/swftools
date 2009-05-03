@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "wind.h"
 
 fillstyle_t fillstyle_default;
