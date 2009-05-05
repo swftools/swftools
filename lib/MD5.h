@@ -25,4 +25,8 @@
 #define __MD5_h__
 char * crypt_md5(const char *pw, const char *salt);
 void hash_md5(const unsigned char*buf, int len, unsigned char*dest); //dest needs to be 16 bytes wide
+
+void* init_md5();
+void update_md5(void*ctx, unsigned char*data, int len);
+void finish_md5(void*ctx, unsigned char*dest);
 #endif

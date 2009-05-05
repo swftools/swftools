@@ -302,7 +302,7 @@ intbbox_t get_svp_bbox(ArtSVP*svp, double zoom)
 #define B00000010 0x02
 #define B00000001 0x01
 
-int compare_bitmaps(intbbox_t*bbox, unsigned char*data1, unsigned char*data2)
+static int compare_bitmaps(intbbox_t*bbox, unsigned char*data1, unsigned char*data2)
 {
     if(!data1 || !data2) 
         return 0;

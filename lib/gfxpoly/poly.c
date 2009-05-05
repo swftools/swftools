@@ -887,7 +887,8 @@ void event_apply(status_t*status, event_t*e)
             event_dump(e);
 #endif
             segment_t*s = e->s1;
-            actlist_insert(status->actlist, e->p, s);
+	    assert(e->p.x == s->a.x && e->p.y == s->a.y);
+            actlist_insert(status->actlist, s->a, s->b, s);
             segment_t*left = actlist_left(status->actlist, s);
             segment_t*right = actlist_right(status->actlist, s);
             if(left)
@@ -989,7 +990,8 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule)
             windstate_t before,after;
             switch(e->type) {
                 case EVENT_START: {
-                    actlist_insert(actlist, e->p, s);
+		    assert(e->p.x == s->a.x && e->p.y == s->a.y);
+                    actlist_insert(actlist, s->a, s->b, s);
                     event_t e;
                     e.type = EVENT_END;
                     e.p = s->b;

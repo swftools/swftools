@@ -33,6 +33,7 @@
 #include "../config.h"
 
 #include <string.h>
+#include <memory.h>
 
 #ifndef _NETINET6_MD5_H_
 #define _NETINET6_MD5_H_
@@ -174,6 +175,24 @@ void hash_md5(const unsigned char*buf, int len, unsigned char*dest)
     MD5Update(&ctx, buf, len);
     MD5Final(dest, &ctx);
 }
+
+void* init_md5()
+{
+    MD5_CTX* ctx = malloc(sizeof(MD5_CTX));
+    memset(ctx, 0, sizeof(MD5_CTX));
+    MD5Init(ctx);
+    return ctx;
+}
+void update_md5(void*ctx, unsigned char*data, int len)
+{
+    MD5Update(ctx, data, len);
+}
+void finish_md5(void*ctx, unsigned char*dest)
+{
+    MD5Final(dest, ctx);
+    free(ctx);
+}
+
 
 char * crypt_md5(const char *pw, const char *salt)
 {

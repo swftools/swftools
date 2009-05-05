@@ -6,6 +6,7 @@
 
 //#define DEBUG
 #define CHECKS
+//#define SPLAY
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
@@ -58,6 +59,11 @@ typedef struct _segment {
     windstate_t wind;
     int nr;
 
+#ifdef SPLAY
+    struct _segment*parent;
+    struct _segment*leftchild;
+    struct _segment*rightchild;
+#endif
     struct _segment*left;
     struct _segment*right;
     char changed;

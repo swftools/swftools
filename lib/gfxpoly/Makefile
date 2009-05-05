@@ -1,4 +1,4 @@
-all: testheap test
+all: test
 
 CC = gcc -g -O2
 
