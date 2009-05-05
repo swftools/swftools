@@ -21,33 +21,50 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <time.h>
 #include "abc.h"
+#include "../MD5.h"
 
 void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
 {
     int num_frames = 0;
     int has_buttons = 0;
     TAG*tag=swf->firstTag;
+
+    void*md5 = init_md5();
+
     while(tag) {
         if(tag->id == ST_SHOWFRAME)
             num_frames++;
         if(tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2)
             has_buttons = 1;
+	update_md5(md5, tag->data, tag->len);
         tag = tag->next;
     }
+    int t = time(0);
+    update_md5(md5, (unsigned char*)&t, sizeof(t));
+
+    unsigned char h[16];
+    unsigned char file_signature[33];
+    finish_md5(md5, h);
+    sprintf(file_signature, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+	    h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],h[8],h[9],h[10],h[11],h[12],h[13],h[14],h[15]);
+
+    char scenename1[80], scenename2[80];
+    sprintf(scenename1, "rfx.MainTimeline_%s", file_signature);
+    sprintf(scenename2, "rfx::MainTimeline_%s", file_signature);
 
     abc_file_t*file = abc_file_new();
     abc_method_body_t*c = 0;
    
-    abc_class_t*cls = abc_class_new2(file, "rfx::MainTimeline", "flash.display::MovieClip");
-    abc_class_protectedNS(cls, "rfx:MainTimeline");
+    abc_class_t*cls = abc_class_new2(file, scenename2, "flash.display::MovieClip");
   
     TAG*abctag = swf_InsertTagBefore(swf, swf->firstTag, ST_DOABC);
     
     tag = swf_InsertTag(abctag, ST_SYMBOLCLASS);
     swf_SetU16(tag, 1);
     swf_SetU16(tag, 0);
-    swf_SetString(tag, "rfx.MainTimeline");
+    swf_SetString(tag, scenename1);
 
     c = abc_class_getstaticconstructor(cls, 0)->body;
     c->old.max_stack = 1;
@@ -86,7 +103,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
             char needs_framescript=0;
             char buttonname[80];
             char functionname[80];
-            sprintf(framename, "[packageinternal]rfx::frame%d", frame);
+            sprintf(framename, "[packageinternal]rfx::frame%d_%s", frame, file_signature);
             
             if(!f && (tag->id == ST_DEFINEBUTTON || tag->id == ST_DEFINEBUTTON2 || stop_each_frame)) {
                 /* make the contructor add a frame script */
@@ -116,7 +133,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                 __ getlex(f,buttonname);
                 __ getlex(f,"flash.events::MouseEvent");
                 __ getproperty(f, "::CLICK");
-                sprintf(functionname, "::clickbutton%d", swf_GetDefineID(tag));
+                sprintf(functionname, "::clickbutton%d_%s", swf_GetDefineID(tag), file_signature);
                 __ getlex(f,functionname);
                 __ callpropvoid(f, "::addEventListener" ,2);
 
@@ -142,7 +159,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
                         __ callpropvoid(h,"[package]::gotoAndStop", 1);
                     } else {
                         char framename[80];
-                        sprintf(framename, "frame%d", framenr);
+                        sprintf(framename, "frame%d_%s", framenr, file_signature);
                         __ getlocal_0(h); //this
                         __ findpropstrict(h, "[package]flash.events::TextEvent");
                         __ pushstring(h, "link");
@@ -242,7 +259,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     __ returnvoid(c);
 
     //abc_method_body_addClassTrait(c, "rfx:MainTimeline", 1, cls);
-    multiname_t*classname = multiname_fromstring("rfx::MainTimeline");
+    multiname_t*classname = multiname_fromstring(scenename2);
     abc_initscript_addClassTrait(s, classname, cls);
     multiname_destroy(classname);
 
