@@ -5,8 +5,8 @@
 #include "../q.h"
 
 //#define DEBUG
-#define CHECKS
-//#define SPLAY
+//#define CHECKS
+#define SPLAY
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;

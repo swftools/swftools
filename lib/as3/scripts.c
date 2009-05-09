@@ -255,7 +255,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     __ popscope(c);
     __ popscope(c);
     __ popscope(c);
-    __ initproperty(c,"rfx::MainTimeline");
+    __ initproperty(c,scenename2);
     __ returnvoid(c);
 
     //abc_method_body_addClassTrait(c, "rfx:MainTimeline", 1, cls);
