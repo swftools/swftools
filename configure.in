@@ -19,8 +19,6 @@ AC_ARG_ENABLE(optimizations,
 [  --enable-optimizations  turn on compiler optimizations (recommended for avi2swf)], OPTIMIZE=true)
 AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in], DISABLE_LAME=true)
-AC_ARG_WITH([external-libart],
-[  --with-external-libart  use external libart library (currently broken)], [EXTERNAL_LIBART=true])
 AC_ARG_WITH([poppler],
 [  --with-poppler          use poppler instead of internal xpdf (currently broken)], [USE_POPPLER=true])
 
@@ -90,6 +88,10 @@ case $host_os in
 	CFLAGS="$CFLAGS"
 	CXXFLAGS="$CXXFLAGS -fno-rtti"
 	SHARED="-bundle"
+	if test -d /opt/local/include && test -d /opt/local/lib; then
+	    CPPFLAGS="${CPPFLAGS} -I/opt/local/include"
+	    LDFLAGS="${LDFLAGS} -L/opt/local/lib"
+	fi
 	# Use fink packages if available.
 	#if test -d /sw/include && test -d /sw/lib; then
 	#    CPPFLAGS="${CPPFLAGS} -I/sw/include"
@@ -111,7 +113,7 @@ if test "x$GCC_IS_OK" '=' "x";then
     echo "***************************************************"
     echo "* Your gcc is too old to compile this!"
     echo "* "
-    echo "* The last version compilable by this compiler is "
+    echo "* The last version compileable by this compiler is "
     echo "* swftools 0.7.0, which you can download from "
     echo "* http://www.swftools.org/swftools-0.7.0.tar.gz "
     echo "* ."
@@ -137,7 +139,7 @@ fi
  AC_PROG_LN_S
  AC_CHECK_PROGS(UNCOMPRESS, gzip uncompress compress, )
 
-PKG_PROG_PKG_CONFIG
+dnl PKG_PROG_PKG_CONFIG
 
 dnl Checks for system services
 OBJEXT="o"
@@ -300,44 +302,30 @@ else
 fi
 AC_SUBST(lame_in_source)
 
-art_in_source='$(art_objects)'
 AC_DEFINE([INTERNAL_LIBART], [1], [use internal libart library])
-
-if test "x$EXTERNAL_LIBART" = "xtrue"; then
-    art_in_source=
-    PKG_CHECK_MODULES([LIBART],[libart-2.0],,[libart_pkgconfig_libart=no])
-    if test "x$libart_pkgconfig_libart" = "xno"; then
-        AC_CHECK_HEADERS([libart_lgpl/libart.h],[
-           AC_CHECK_LIB([art_lgpl_2],[art_new],,[])
-        ],[AC_MSG_ERROR([No libart library found. This library is required.])])
-    else
-	CPPFLAGS="$CPPFLAGS $LIBART_CFLAGS"
-        AC_DEFINE([INTERNAL_LIBART], [0])
-        LIBS="$LIBS $LIBART_LIBS"
-    fi
-fi
-AC_SUBST([art_in_source])
-
-xpdf_in_source='$(xpdf_objects)'
+art_in_source='$(art_objects)'
 splash_in_source='$(splash_objects)'
+xpdf_in_source='$(xpdf_objects)'
 
-if test "x$USE_POPPLER" = "xtrue"; then
-    xpdf_in_source=
-    splash_in_source=
-    AC_DEFINE([HAVE_POPPLER],[1],[use poppler])
-    PKG_CHECK_MODULES([POPPLER],[poppler poppler-splash],,[poppler_pkgconfig=no])
-    if test "x$poppler_pkgconfig" = "xno"; then
-        AC_LANG_PUSH([C++])
-        AC_CHECK_HEADERS([OutputDev.h],[
-           AC_CHECK_LIB([poppler],[main],,[])
-        ],[AC_MSG_ERROR([No poppler library found. This library is required.])])
-        AC_LANG_POP
-    else
-	CPPFLAGS="$CPPFLAGS $POPPLER_CFLAGS"
-        AC_DEFINE([HAVE_POPPLER], [1])
-        LIBS="$LIBS $POPPLER_LIBS"
-    fi
-fi
+dnl if test "x$USE_POPPLER" = "xtrue"; then
+dnl     xpdf_in_source=
+dnl     splash_in_source=
+dnl     AC_DEFINE([HAVE_POPPLER],[1],[use poppler])
+dnl     PKG_CHECK_MODULES([POPPLER],[poppler poppler-splash],,[poppler_pkgconfig=no])
+dnl     if test "x$poppler_pkgconfig" = "xno"; then
+dnl         AC_LANG_PUSH([C++])
+dnl         AC_CHECK_HEADERS([OutputDev.h],[
+dnl            AC_CHECK_LIB([poppler],[main],,[])
+dnl         ],[AC_MSG_ERROR([No poppler library found. This library is required.])])
+dnl         AC_LANG_POP
+dnl     else
+dnl 	CPPFLAGS="$CPPFLAGS $POPPLER_CFLAGS"
+dnl         AC_DEFINE([HAVE_POPPLER], [1])
+dnl         LIBS="$LIBS $POPPLER_LIBS"
+dnl     fi
+dnl fi
+
+AC_SUBST([art_in_source])
 AC_SUBST([xpdf_in_source])
 AC_SUBST([splash_in_source])
 
