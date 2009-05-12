@@ -1,4 +1,6 @@
+#include <stdlib.h>
 #include <memory.h>
+#include <math.h>
 #include "../q.h"
 #include "active.h"
 
@@ -57,6 +59,11 @@ void actlist_verify(actlist_t*a, int32_t y)
     }
 }
 
+static inline double single_cmp(segment_t*s, point_t p1)
+{
+    return LINE_EQ(p1, s);
+}
+
 static inline double cmp(segment_t*s, point_t p1, point_t p2)
 {
     double d = LINE_EQ(p1, s);
@@ -73,13 +80,105 @@ static inline double cmp(segment_t*s, point_t p1, point_t p2)
     return d;
 }
 
+#ifdef SPLAY
+static void actlist_splay_dump(actlist_t*a);
 segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
 {
-    /* this runs in O(n) right now, and should be optimized using a splay
-       tree to run in ammortized O(log(n)) 
-       (update: currently only 2.5% of the algorithm's running time is spent here,
-        so maybe we don't need to bother)
-     */
+#ifdef CHECKS
+    segment_t*t = a->list;
+    char to_the_left = 0;
+    char fail = 0;
+    while(t) {
+	double d = single_cmp(t, p1);
+	assert(!(d>=0 && to_the_left));
+	if(d<0) to_the_left=1;
+	t = t->right;
+    }
+#if 0
+    if(a->size > 100) {
+	static actlist_t*last = 0;
+	if(last != a) {
+	    last = a;
+	    actlist_splay_dump(a);
+	}
+    }
+#endif
+#endif
+    segment_t*last=0, *s = a->root;
+    if(!s) return 0;
+    double d=0;
+    int depth = 0;
+    while(s) {
+        last = s;
+	depth++;
+	d = single_cmp(s, p1);
+        if(d<=0) {
+	    s = s->leftchild;
+	} else {
+	    s = s->rightchild;
+	}
+    }
+//#ifdef DEBUG
+#if 0
+    if(a->size > 1) {
+	/* 80% hit, average cost per miss ~ 4 nodes */
+	int expected_depth = (int)((double)log2((double)a->size+1))+1;
+	static int hits = 0;
+	static int misses = 0;
+	static int miss_cost = 0;
+	if(depth <= expected_depth) hits++;
+	else {misses++;
+	    miss_cost += depth - expected_depth;
+	}
+	if(hits && misses)
+	    fprintf(stderr, "%02.2f%% %f\n", hits / (double)(hits+misses), miss_cost / (double)misses);
+    }
+#endif
+
+    segment_t*out = last;
+    if(d<0 || (d==0 && LINE_EQ(p2,last)<0)) {
+	last = last->left;
+	if(!last) {
+	    assert(cmp(a->list, p1, p2)<0);
+	    return 0;
+	}
+    } else {
+	while(last->right && cmp(last->right, p1, p2)>=0) {
+	    last = last->right;
+	}
+    }
+
+#ifdef CHECKS
+    segment_t*l=0;
+    s = a->list;
+    while(s) {
+        if(cmp(s, p1, p2)<0)
+            break;
+        l = s;s = s->right;
+    }
+    if(l!=last) {
+	printf("[%d]!=[%d]\n", SEGNR(l), SEGNR(last));
+	printf("after tree: [%d]\n", SEGNR(out));
+	actlist_splay_dump(a);
+	s = a->list;
+	while(s) {
+	    double d1 = single_cmp(s,p1);
+	    double d2 = cmp(s,p1,p2);
+	    int x1 = d1<0?-1:(d1>0?1:0);
+	    int x2 = d2<0?-1:(d2>0?1:0);
+	    printf("[%d](%d,%d) ", SEGNR(s), x1, x2);
+	    s = s->right;
+	}
+	printf("\n");
+    }
+    assert(l == last);
+#endif
+
+    return last;
+}
+#else
+segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
+{
     segment_t*last=0, *s = a->list;
     if(!s) return last;
     while(s) {
@@ -91,8 +190,8 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
     }
     return last;
 }
+#endif
 
-#define SEGNR(s) ((s)?(s)->nr:-1)
 #ifdef SPLAY
 
 #define LINK(node,side,child) (node)->side = (child);if(child) {(child)->parent = (node);}
@@ -175,29 +274,47 @@ static int actlist_splay_verify(actlist_t*a)
     if(c) return 0;
     return 1;
 }
-static void actlist_splay_dump2(actlist_t*a, segment_t*s, int indent)
+static void actlist_splay_dump2(actlist_t*a, segment_t*s, char*mid, char*up, char*down)
 {
     if(!s) return;
-    int t;
+    
     if(s->leftchild || s->rightchild) {
-	fprintf(stderr, "(");
-	fprintf(stderr, "[%d]", SEGNR(s->leftchild));
+        int t;
+
 	if(s->leftchild) {
-	    actlist_splay_dump2(a, s->leftchild, indent+8);
+	    char*o3 = malloc(strlen(up)+3);
+	    strcpy(o3, up);strcat(o3, "+-");
+	    char*newup = malloc(strlen(up)+3);
+	    strcpy(newup, up);strcat(newup, "| ");
+	    char*newup2 = malloc(strlen(up)+3);
+	    strcpy(newup2, up);strcat(newup2, "  ");
+	    actlist_splay_dump2(a, s->leftchild, o3, newup2, newup);
+	    fprintf(stderr, "%s| \n", up);
+	    free(newup);
+	    free(newup2);
+	    free(o3);
 	}
-	fprintf(stderr, ",");
-	fprintf(stderr, "[%d]", SEGNR(s->rightchild));
+        fprintf(stderr, "%s[%d]\n", mid, SEGNR(s));
 	if(s->rightchild) {
-	    actlist_splay_dump2(a, s->rightchild, indent+8);
+	    char*o3 = malloc(strlen(down)+3);
+	    strcpy(o3, down);strcat(o3, "+-");
+	    char*newdown = malloc(strlen(down)+3);
+	    strcpy(newdown, down);strcat(newdown, "| ");
+	    char*newdown2 = malloc(strlen(down)+3);
+	    strcpy(newdown2, down);strcat(newdown2, "  ");
+	    fprintf(stderr, "%s| \n", down);
+	    actlist_splay_dump2(a, s->rightchild, o3, newdown, newdown2);
+	    free(newdown);
+	    free(newdown2);
+	    free(o3);
 	}
-	fprintf(stderr, ")");
+    } else {
+        fprintf(stderr, "%s[%d]\n", mid, SEGNR(s));
     }
 }
 static void actlist_splay_dump(actlist_t*a)
 {
-    fprintf(stderr, "[%d]", SEGNR(a->root));
-    actlist_splay_dump2(a, a->root, 1);
-    fprintf(stderr, "\n");
+    actlist_splay_dump2(a, a->root, "", "", "");
 }
 
 
@@ -569,10 +686,8 @@ void actlist_swap(actlist_t*a, segment_t*s1, segment_t*s2)
     if(s2->leftchild) s2->leftchild->parent = s2;
     if(s1->rightchild) s1->rightchild->parent = s1;
     if(s2->rightchild) s2->rightchild->parent = s2;
-    if(!actlist_splay_verify(a)) {
-	actlist_splay_dump(a);
-	actlist_dump(a, s1->a.y);
-    }
+
+    assert(actlist_splay_verify(a));
 #endif
 
 //#endif

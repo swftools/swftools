@@ -5,7 +5,7 @@
 #include "../q.h"
 
 //#define DEBUG
-//#define CHECKS
+#define CHECKS
 #define SPLAY
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
@@ -42,6 +42,8 @@ typedef struct _windrule
     windstate_t (*add)(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int polygon_nr);
     fillstyle_t* (*diff)(windstate_t*left, windstate_t*right);
 } windrule_t;
+
+#define SEGNR(s) ((s)?(s)->nr:-1)
 
 typedef struct _segment {
     point_t a;
