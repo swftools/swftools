@@ -425,9 +425,9 @@ int swf_ShapeSetLine(TAG * t,SHAPE * s,S32 x,S32 y)
     b = swf_CountBits(y,b);
     if (b<2) b=2;
     if(b >= 18) {
-        if(b >= 18 + 6) {
+        if(b > 18 + 6) {
             /* do not split into more than 64 segments. If the line is *that* long, something's broken */
-            fprintf(stderr, "Warning: Line to %.2f,%.2f is too long\n", (double)x,(double)y);
+            fprintf(stderr, "Warning: Line to %.2f,%.2f is too long (%d bits)\n", (double)x,(double)y, b);
             return -1;
         } else {
             /* split line */

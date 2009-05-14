@@ -313,12 +313,38 @@ typedef struct _plotxy
     double x,y;
 } plotxy_t;
 
+static inline int twipsnap(double f)
+{
+    /* if(f < -0x40000000/20.0) {
+	fprintf(stderr, "Warning: Coordinate underflow (%f)\n", f);
+	f = -0x40000000/20.0;
+    } else if(f>0x3fffffff/20.0) {
+	fprintf(stderr, "Warning: Coordinate overflow (%f)\n", f);
+	f = 0x3fffffff/20.0;
+    }*/
+
+    /* clamp coordinates to a rectangle with the property that we
+       can represent a line from the upper left corner to the upper
+       right corner using no more than 64 strokes */
+    const double min = -(1<<(18+4))/20.0;
+    const double max = ((1<<(18+4))-1)/20.0;
+    if(f < min) {
+	fprintf(stderr, "Warning: Coordinate underflow (%f)\n", f);
+	f = min;
+    } else if(f>max) {
+	fprintf(stderr, "Warning: Coordinate overflow (%f)\n", f);
+	f = max;
+    }
+
+    return (int)(f*20);
+}
+
 // write a move-to command into the swf
 static int movetoxy(gfxdevice_t*dev, TAG*tag, plotxy_t p0)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    int rx = (int)(p0.x*20);
-    int ry = (int)(p0.y*20);
+    int rx = twipsnap(p0.x);
+    int ry = twipsnap(p0.y);
     if(rx!=i->swflastx || ry!=i->swflasty || i->fillstylechanged) {
       swf_ShapeSetMove (tag, i->shape, rx,ry);
       i->fillstylechanged = 0;
@@ -380,8 +406,8 @@ static void addPointToBBox(gfxdevice_t*dev, int px, int py)
 static void linetoxy(gfxdevice_t*dev, TAG*tag, plotxy_t p0)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    int px = (int)(p0.x*20);
-    int py = (int)(p0.y*20);
+    int px = twipsnap(p0.x);
+    int py = twipsnap(p0.y);
     int rx = (px-i->swflastx);
     int ry = (py-i->swflasty);
     if(rx|ry) {
@@ -419,12 +445,12 @@ static void splineto(gfxdevice_t*dev, TAG*tag, plotxy_t control,plotxy_t end)
     int lastlastx = i->swflastx;
     int lastlasty = i->swflasty;
 
-    int cx = ((int)(control.x*20)-i->swflastx);
-    int cy = ((int)(control.y*20)-i->swflasty);
+    int cx = (twipsnap(control.x)-i->swflastx);
+    int cy = (twipsnap(control.y)-i->swflasty);
     i->swflastx += cx;
     i->swflasty += cy;
-    int ex = ((int)(end.x*20)-i->swflastx);
-    int ey = ((int)(end.y*20)-i->swflasty);
+    int ex = (twipsnap(end.x)-i->swflastx);
+    int ey = (twipsnap(end.y)-i->swflasty);
     i->swflastx += ex;
     i->swflasty += ey;
     
@@ -1866,9 +1892,9 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
         m = i->page_matrix;
         m.tx = p.x;
         m.ty = p.y;
-	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&m,0,name);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&m,0,(U8*)name);
     } else {
-	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&i->page_matrix,0,name);
+	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&i->page_matrix,0,(U8*)name);
     }
 }
 
