@@ -67,7 +67,10 @@ typedef struct _status {
 #endif
 } status_t;
 
-int compare_events_simple(const void*_a,const void*_b)
+/* compare_events_simple differs from compare_events in that it schedules
+   events from left to right regardless of type. It's only used in horizontal
+   processing, in order to get an x-wise sorting of the current scanline */
+static int compare_events_simple(const void*_a,const void*_b)
 {
     event_t* a = (event_t*)_a;
     event_t* b = (event_t*)_b;
@@ -83,7 +86,7 @@ int compare_events_simple(const void*_a,const void*_b)
         return 0;
 }
 
-int compare_events(const void*_a,const void*_b)
+static int compare_events(const void*_a,const void*_b)
 {
     event_t* a = (event_t*)_a;
     event_t* b = (event_t*)_b;
@@ -300,9 +303,9 @@ void gfxpoly_enqueue(edge_t*list, heap_t*queue, windstate_t initial, int polygon
             continue;
         }
         segment_t*s = segment_new(l->a.x, l->a.y, l->b.x, l->b.y, initial, polygon_nr);
+#ifdef DEBUG
         if(l->tmp)
             s->nr = l->tmp;
-#ifdef DEBUG
         fprintf(stderr, "[%d] (%d,%d) -> (%d,%d) %s\n",
                 s->nr, s->a.x, s->a.y, s->b.x, s->b.y,
                 s->dir==DIR_UP?"up":"down");
@@ -528,7 +531,9 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
         // omit horizontal lines
         if(s->pos.y != p.y) {
             edge_t*e = rfx_calloc(sizeof(edge_t));
+#ifdef DEBUG
             e->tmp = s->nr;
+#endif
             e->a = s->pos;
             e->b = p;
             assert(e->a.y != e->b.y);
@@ -543,9 +548,6 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
     s->pos = p;
 }
 
-/* by restricting the recalculation of line segments to a range between the lowest
-   and the highest modified segment, we only do about a 33% overprocessing of fill
-   styles. (update: that statistic might be outdated now that xmin/xmax are double) */
 typedef struct _segrange {
     double xmin;
     segment_t*segmin;
@@ -969,7 +971,6 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule)
         actlist_dump(actlist, y-1);
 #endif
 #ifdef CHECKS
-        /* FIXME: this actually fails sometimes */
         actlist_verify(actlist, y-1);
 #endif
         do {

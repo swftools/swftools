@@ -5,7 +5,7 @@
 #include "../q.h"
 
 //#define DEBUG
-#define CHECKS
+//#define CHECKS
 #define SPLAY
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
@@ -25,7 +25,9 @@ typedef struct _edge {
     point_t a;
     point_t b;
     fillstyle_t*style;
+#ifdef DEBUG
     int tmp;
+#endif
     struct _edge *next;
 } edge_t;
 

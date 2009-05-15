@@ -89,7 +89,20 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
     char to_the_left = 0;
     char fail = 0;
     while(t) {
+	/* this check doesn't work out with cmp() because during horizontal
+	   processing, both segments ending as well as segments starting will
+	   be active in this scanline */
+	//double d = cmp(t, p1, p2);
 	double d = single_cmp(t, p1);
+	if(d>=0 && to_the_left) {
+	    segment_t*s = a->list;
+	    while(s) {
+		fprintf(stderr, "[%d] %f/%f (%d,%d) -> (%d,%d)\n", s->nr,
+			single_cmp(s,p1), cmp(s,p1,p2),
+			s->a.x, s->a.y, s->b.x, s->b.y);
+		s = s->right;
+	    }
+	}
 	assert(!(d>=0 && to_the_left));
 	if(d<0) to_the_left=1;
 	t = t->right;
@@ -445,7 +458,6 @@ static void actlist_insert_after(actlist_t*a, segment_t*left, segment_t*s)
 
     if(a->root) {
 	move_to_root(a, left);
-	
 	if(left) {
 	    LINK(s,leftchild,a->root);
 	    // steal right child from (previous) root
@@ -454,18 +466,6 @@ static void actlist_insert_after(actlist_t*a, segment_t*left, segment_t*s)
 	} else {
 	    LINK(s,rightchild,a->root);
 	}
-
-	/*if(cmp(a->root, s->a, s->b) < 0) {
-	    LINK(s,rightchild,a->root);
-	    // steal left child from (previous) root
-	    LINK(s,leftchild,a->root->leftchild);
-	    a->root->leftchild = 0;
-	} else {
-	    LINK(s,leftchild,a->root);
-	    // steal right child from (previous) root
-	    LINK(s,rightchild,a->root->rightchild);
-	    a->root->rightchild = 0;
-	}*/
     }
     a->root = s;
     a->root->parent = 0;
@@ -551,6 +551,9 @@ segment_t* actlist_leftmost(actlist_t*a)
 segment_t* actlist_rightmost(actlist_t*a)
 {
     /* this is only used in checks, so it doesn't matter that it's slow */
+#ifndef CHECKS
+    fprintf(stderr, "Warning: actlist_rightmost should not be used\n");
+#endif
     segment_t*s = a->list;
     segment_t*last = 0;
     while(s) {
@@ -564,18 +567,6 @@ void actlist_insert(actlist_t*a, point_t p1, point_t p2, segment_t*s)
 {
     segment_t*left = actlist_find(a, p1, p2);
     actlist_insert_after(a, left, s);
-}
-
-
-segment_t* actlist_left(actlist_t*a, segment_t*s)
-{
-    return s->left;
-}
-
-segment_t* actlist_right(actlist_t*a, segment_t*s)
-{
-    if(s) return s->right;
-    else  return a->list;
 }
 
 void actlist_swap(actlist_t*a, segment_t*s1, segment_t*s2)

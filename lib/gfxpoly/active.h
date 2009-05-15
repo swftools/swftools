@@ -12,6 +12,9 @@ typedef struct _actlist
 #endif
 } actlist_t;
 
+#define actlist_left(a,s) ((s)->left)
+#define actlist_right(a,s) ((s)?(s)->right:(a)->list)
+
 actlist_t* actlist_new();
 void actlist_destroy(actlist_t*a);
 int actlist_size(actlist_t*a);
@@ -21,9 +24,7 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2);  // finds segment 
 void actlist_insert(actlist_t*a, point_t p1, point_t p2, segment_t*s);
 void actlist_delete(actlist_t*a, segment_t*s);
 void actlist_swap(actlist_t*a, segment_t*s1, segment_t*s2);
-segment_t* actlist_left(actlist_t*a, segment_t*s);
 segment_t* actlist_leftmost(actlist_t*a);
 segment_t* actlist_rightmost(actlist_t*a);
-segment_t* actlist_right(actlist_t*a, segment_t*s);
 
 #endif
