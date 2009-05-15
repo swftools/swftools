@@ -5,6 +5,9 @@
 #include "../mem.h"
 #include "poly.h"
 
+/* factor that determines into how many line fragments a spline is converted */
+#define SUBFRACTION (2.4)
+
 static edge_t*edge_new(int x1, int y1, int x2, int y2)
 {
     edge_t*s = rfx_calloc(sizeof(edge_t));
@@ -21,6 +24,7 @@ static inline void gfxpoly_add_edge(gfxpoly_t*poly, double _x1, double _y1, doub
     int y1 = ceil(_y1);
     int x2 = ceil(_x2);
     int y2 = ceil(_y2);
+
     if(x1!=x2 || y1!=y2) {
         edge_t*s = edge_new(x1, y1, x2, y2);
         s->next = poly->edges;
@@ -31,9 +35,6 @@ static inline void gfxpoly_add_edge(gfxpoly_t*poly, double _x1, double _y1, doub
 gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
 {
     gfxpoly_t*p = gfxpoly_new(gridsize);
-
-    /* factor that determines into how many line fragments a spline is converted */
-    double subfraction = 2.4;//0.3
 
     double z = 1.0 / gridsize;
 
@@ -47,7 +48,7 @@ gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
             gfxpoly_add_edge(p, lastx, lasty, x, y);
 	} else if(line->type == gfx_splineTo) {
             int parts = (int)(sqrt(fabs(line->x-2*line->sx+lastx) + 
-                                   fabs(line->y-2*line->sy+lasty))*subfraction);
+                                   fabs(line->y-2*line->sy+lasty))*SUBFRACTION);
             if(!parts) parts = 1;
 	    double stepsize = 1.0/parts;
             int i;
@@ -65,10 +66,22 @@ gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
         lasty = y;
         line = line->next;
     }
-
+    
     gfxline_free(line);
     return p;
 }
+
+typedef struct _gfxstroke {
+    segment_dir_t dir;
+    point_t*stroke;
+    fillstyle_t*fs;
+    int num_points;
+} gfxstroke_t;
+typedef struct _gfxcompactpoly {
+    double gridsize;
+    int num_strokes;
+    gfxstroke_t strokes[0];
+} gfxcompactpoly_t;
 
 static char* readline(FILE*fi)
 {
