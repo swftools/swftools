@@ -5,18 +5,15 @@ fillstyle_t fillstyle_default;
 windstate_t windstate_nonfilled = {
     is_filled: 0,
     wind_nr: 0,
-
-    /* TODO: move num_polygons into windstate_t.internal */
-    num_polygons: 1,
 };
 
 // -------------------- even/odd ----------------------
 
-windstate_t evenodd_start(int num_polygons)
+windstate_t evenodd_start(windcontext_t*context)
 {
     return windstate_nonfilled;
 }
-windstate_t evenodd_add(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t evenodd_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
 {
     left.is_filled ^= 1;
     return left;
@@ -37,12 +34,12 @@ windrule_t windrule_evenodd = {
 
 // -------------------- circular ----------------------
 
-windstate_t circular_start(int num_polygons)
+windstate_t circular_start(windcontext_t*context)
 {
     return windstate_nonfilled;
 }
 
-windstate_t circular_add(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t circular_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
 {
     /* which one is + and which one - doesn't actually make any difference */
     if(dir == DIR_DOWN)
@@ -70,19 +67,18 @@ windrule_t windrule_circular = {
 
 // -------------------- intersect ----------------------
 
-windstate_t intersect_start(int num_polygons)
+windstate_t intersect_start(windcontext_t*context)
 {
     windstate_t w;
-    w.num_polygons = num_polygons;
     return w;
 }
 
-windstate_t intersect_add(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t intersect_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
 {
-    assert(master < left.num_polygons);
+    assert(master < context->num_polygons);
 
     left.wind_nr ^= 1<<master;
-    if(left.wind_nr == (1<<left.num_polygons)-1)
+    if(left.wind_nr == (1<<context->num_polygons)-1)
         left.is_filled = 1;
     return left;
 }
@@ -103,12 +99,12 @@ windrule_t windrule_intersect = {
 
 // -------------------- union ----------------------
 
-windstate_t union_start(int num_polygons)
+windstate_t union_start(windcontext_t*context)
 {
     return windstate_nonfilled;
 }
 
-windstate_t union_add(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t union_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
 {
     assert(master<sizeof(left.wind_nr)*8); //up to 32/64 polygons max
     left.wind_nr ^= 1<<master;

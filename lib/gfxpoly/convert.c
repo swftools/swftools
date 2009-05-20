@@ -20,6 +20,18 @@ static edge_t*edge_new(int x1, int y1, int x2, int y2)
 
 static inline void gfxpoly_add_edge(gfxpoly_t*poly, double _x1, double _y1, double _x2, double _y2)
 {
+    /* we clamp to 31 bit instead of 32 bit because we use
+       a (x1-x2) shortcut when comparing coordinates
+    */
+    if(_x1 < -0x40000000) _x1 = -0x40000000;
+    if(_x1 >  0x3fffffff) _x1 =  0x3fffffff;
+    if(_y1 < -0x40000000) _y1 = -0x40000000;
+    if(_y1 >  0x3fffffff) _y1 =  0x3fffffff;
+    if(_x2 < -0x40000000) _x2 = -0x40000000;
+    if(_x2 >  0x3fffffff) _x2 =  0x3fffffff;
+    if(_y2 < -0x40000000) _y2 = -0x40000000;
+    if(_y2 >  0x3fffffff) _y2 =  0x3fffffff;
+
     int x1 = ceil(_x1);
     int y1 = ceil(_y1);
     int x2 = ceil(_x2);

@@ -116,13 +116,16 @@ gfxline_t* mkchessboard()
     return b;
 }
 
+static windcontext_t onepolygon = {1};
+
 int test0()
 {
     gfxline_t* b = mkchessboard();
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(gfxmatrix_t));
-    int t = 28;
+    int t;
+    for(t=0;t<360;t++) {
     m.m00 = cos(t*M_PI/180.0);
     m.m01 = sin(t*M_PI/180.0);
     m.m10 = -sin(t*M_PI/180.0);
@@ -132,9 +135,10 @@ int test0()
     gfxline_transform(b, &m);
 
     gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
     gfxpoly_destroy(poly2);
     gfxpoly_destroy(poly);
+}
 }
 
 int test1(int argn, char*argv[])
@@ -165,7 +169,7 @@ int test1(int argn, char*argv[])
     gfxline_free(star);
 
     gfxpoly_dump(poly);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
     gfxpoly_destroy(poly2);
     gfxpoly_destroy(poly);
 }
@@ -188,11 +192,11 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     gfxline_free(line);
 
     windrule_t*rule = &windrule_circular;
-    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, rule, &onepolygon);
     if(bitmaptest) {
         intbbox_t bbox = intbbox_new(0, 0, width, height);
-        unsigned char*bitmap1 = render_polygon(poly, &bbox, 1.0, rule);
-        unsigned char*bitmap2 = render_polygon(poly2, &bbox, 1.0, &windrule_evenodd);
+        unsigned char*bitmap1 = render_polygon(poly, &bbox, 1.0, rule, &onepolygon);
+        unsigned char*bitmap2 = render_polygon(poly2, &bbox, 1.0, &windrule_evenodd, &onepolygon);
         if(!compare_bitmaps(&bbox, bitmap1, bitmap2)) {
             save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
             assert(!"bitmaps don't match");
@@ -226,7 +230,8 @@ void test3(int argn, char*argv[])
     //gfxline_t*line = mkrandomshape(RANGE, N);
     //windrule_t*rule = &windrule_circular;
     gfxline_t*line = mkchessboard();
-    windrule_t*rule = &windrule_evenodd;
+    //windrule_t*rule = &windrule_evenodd;
+    windrule_t*rule = &windrule_circular;
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(m));
@@ -255,7 +260,7 @@ void test3(int argn, char*argv[])
         gfxline_transform(l, &m);
         
         gfxpoly_t*poly = gfxpoly_from_gfxline(l, 0.05);
-        gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
+        gfxpoly_t*poly2 = gfxpoly_process(poly, rule, &onepolygon);
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
         SHAPE* s;
@@ -319,6 +324,20 @@ void test3(int argn, char*argv[])
     swf_SaveSWF(&swf, "test.swf");
 }
 
+void rotate90(gfxpoly_t*poly)
+{
+    edge_t*e = poly->edges;
+    while(e) {
+	point_t a = e->a;
+	point_t b = e->b;
+	e->a.x = a.y;
+	e->a.y = a.x;
+	e->b.x = b.y;
+	e->b.y = b.x;
+	e = e->next;
+    }
+}
+
 #include <dirent.h>
 void test4(int argn, char*argv[])
 {
@@ -347,26 +366,35 @@ void test4(int argn, char*argv[])
             free(filename);
 
         double zoom = 1.0;
-        intbbox_t bbox = intbbox_from_polygon(poly, zoom);
 
         if(!gfxpoly_check(poly)) {
             printf("bad polygon\n");
             continue;
         }
 
-        gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
-        unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule);
-        unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd);
-        if(!bitmap_ok(&bbox, bitmap1) || !bitmap_ok(&bbox, bitmap2)) {
-            save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
-            assert(!"error in bitmaps");
-        }
-        if(!compare_bitmaps(&bbox, bitmap1, bitmap2)) {
-            save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
-            assert(!"bitmaps don't match");
-        }
-        free(bitmap1);
-        free(bitmap2);
+        gfxpoly_t*poly2 = gfxpoly_process(poly, rule, &onepolygon);
+
+	int pass;
+	for(pass=0;pass<2;pass++) {
+	    intbbox_t bbox = intbbox_from_polygon(poly, zoom);
+	    unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule, &onepolygon);
+	    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd, &onepolygon);
+	    if(!bitmap_ok(&bbox, bitmap1) || !bitmap_ok(&bbox, bitmap2)) {
+		save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+		assert(!"error in bitmaps");
+	    }
+	    if(!compare_bitmaps(&bbox, bitmap1, bitmap2)) {
+		save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
+		assert(!"bitmaps don't match");
+	    }
+	    free(bitmap1);
+	    free(bitmap2);
+	    
+	    // second pass renders the 90° rotated version
+	    rotate90(poly);
+	    rotate90(poly2);
+	}
+
         gfxpoly_destroy(poly);
         gfxpoly_destroy(poly2);
         if(argn==2) 
@@ -381,7 +409,12 @@ void test4(int argn, char*argv[])
 void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color) 
 {
     gfxpoly_t*poly = gfxpoly_from_gfxline(line, 0.05);
-    printf("%d segments\n", gfxpoly_size(poly));
+    if(gfxpoly_size(poly)>100000) {
+	printf("%d segments (skipping)\n", gfxpoly_size(poly));
+	return;
+    } else {
+	printf("%d segments\n", gfxpoly_size(poly));
+    }
 
     if(!gfxpoly_check(poly)) {
         gfxpoly_destroy(poly);
@@ -393,13 +426,13 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
         
     double zoom = 1.0;
     intbbox_t bbox = intbbox_from_polygon(poly, zoom);
-    unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule);
+    unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule, &onepolygon);
     if(!bitmap_ok(&bbox, bitmap1)) {
         printf("bad polygon or error in renderer\n");
         return;
     }
-    gfxpoly_t*poly2 = gfxpoly_process(poly, rule);
-    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, rule, &onepolygon);
+    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd, &onepolygon);
     if(!bitmap_ok(&bbox, bitmap2)) {
         save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
         assert(!"error in bitmap");
@@ -503,5 +536,5 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test5(argn, argv);
+    test3(argn, argv);
 }

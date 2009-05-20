@@ -120,7 +120,7 @@ static void fill_bitwise(unsigned char*line, int x1, int x2)
     }
 }
 
-unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, windrule_t*rule)
+unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, windrule_t*rule, windcontext_t*context)
 {
     renderbuf_t _buf, *buf=&_buf;
     buf->width = (bbox->xmax - bbox->xmin);
@@ -153,7 +153,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
         qsort(points, num, sizeof(renderpoint_t), compare_renderpoints);
         int lastx = 0;
         
-        windstate_t fill = rule->start(1);
+        windstate_t fill = rule->start(context);
         for(n=0;n<num;n++) {
             renderpoint_t*p = &points[n];
             int x = (int)(p->x - bbox->xmin);
@@ -166,7 +166,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
             if(fill.is_filled && lastx<x) {
                 fill_bitwise(line, lastx, x);
             }
-            fill = rule->add(fill, p->fs, p->dir, p->polygon_nr);
+            fill = rule->add(context, fill, p->fs, p->dir, p->polygon_nr);
             lastx = x;
         }
         if(fill.is_filled && lastx!=buf->width) {

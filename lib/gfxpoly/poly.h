@@ -5,7 +5,7 @@
 #include "../q.h"
 
 //#define DEBUG
-//#define CHECKS
+#define CHECKS
 #define SPLAY
 
 typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
@@ -35,13 +35,18 @@ typedef struct _windstate
 {
     char is_filled;
     int wind_nr;
-    int num_polygons;
 } windstate_t;
+
+/* TODO: maybe we should merge windcontext and windrule */
+typedef struct _windcontext
+{
+    int num_polygons;
+} windcontext_t;
 
 typedef struct _windrule
 {
-    windstate_t (*start)(int num_polygons);
-    windstate_t (*add)(windstate_t left, fillstyle_t*edge, segment_dir_t dir, int polygon_nr);
+    windstate_t (*start)(windcontext_t* num_polygons);
+    windstate_t (*add)(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int polygon_nr);
     fillstyle_t* (*diff)(windstate_t*left, windstate_t*right);
 } windrule_t;
 
@@ -52,12 +57,14 @@ typedef struct _segment {
     point_t b;
     point_t delta;
     double k; //k = a.x*b.y-a.y*b.x = delta.y*a.x - delta.x*a.y (=0 for points on the segment)
-    int minx, maxx;
+    int32_t minx, maxx;
     
     segment_dir_t dir;
     fillstyle_t*fs;
     fillstyle_t*fs_out;
+#ifdef CHECKS
     char fs_out_ok;
+#endif
     
     int polygon_nr;
     windstate_t wind;
@@ -105,7 +112,7 @@ char gfxpoly_check(gfxpoly_t*poly);
 int gfxpoly_size(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);
 gfxpoly_t* gfxpoly_save(gfxpoly_t*poly, const char*filename);
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule);
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context);
 
 typedef struct _event {
     eventtype_t type;
