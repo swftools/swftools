@@ -8,7 +8,7 @@
 #define CHECKS
 #define SPLAY
 
-typedef enum {DIR_UP, DIR_DOWN} segment_dir_t;
+typedef enum {DIR_UP, DIR_DOWN, DIR_UNKNOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
@@ -104,6 +104,18 @@ typedef struct _gfxpoly {
     double gridsize;
     edge_t*edges;
 } gfxpoly_t;
+
+typedef struct _gfxstroke {
+    segment_dir_t dir;
+    int num_points;
+    point_t*points;
+    fillstyle_t*fs;
+} gfxstroke_t;
+typedef struct _gfxcompactpoly {
+    double gridsize;
+    int num_strokes;
+    gfxstroke_t*strokes;
+} gfxcompactpoly_t;
 
 void gfxpoly_fail(char*expr, char*file, int line, const char*function);
 

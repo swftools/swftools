@@ -135,6 +135,7 @@ int test0()
     gfxline_transform(b, &m);
 
     gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
+    gfxline_free(b);
     gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
     gfxpoly_destroy(poly2);
     gfxpoly_destroy(poly);
@@ -408,6 +409,8 @@ void test4(int argn, char*argv[])
 
 void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color) 
 {
+    gfxcompactpoly_t*c = gfxcompactpoly_from_gfxline(line, 0.05);
+    gfxcompactpoly_free(c);
     gfxpoly_t*poly = gfxpoly_from_gfxline(line, 0.05);
     if(gfxpoly_size(poly)>100000) {
 	printf("%d segments (skipping)\n", gfxpoly_size(poly));
@@ -536,5 +539,5 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test3(argn, argv);
+    test5(argn, argv);
 }

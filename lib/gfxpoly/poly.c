@@ -596,7 +596,6 @@ static void segrange_test_segment_min(segrange_t*range, segment_t*seg, int32_t y
     /* we need to calculate the xpos anew (and can't use start coordinate or
        intersection coordinate), because we need the xpos exactly at the end of
        this scanline.
-       TODO: might be faster to use XPOS_COMPARE here (see also _max)
      */
     double x = XPOS(seg, y);
     if(!range->segmin || x<range->xmin) {
@@ -652,7 +651,7 @@ static void add_points_to_positively_sloped_segments(status_t*status, int32_t y,
                     //break;
                 }
             }
-            seg = actlist_right(status->actlist, seg);
+            seg = seg->right;
         }
     }
     segrange_test_segment_min(range, first, y);
@@ -691,7 +690,7 @@ static void add_points_to_negatively_sloped_segments(status_t*status, int32_t y,
                     //break;
                 }
             }
-            seg = actlist_left(status->actlist, seg);
+            seg = seg->left;
         }
     }
     segrange_test_segment_min(range, last, y);
@@ -721,6 +720,7 @@ static void add_points_to_ending_segments(status_t*status, int32_t y)
 
         if(status->xrow->num == 1) {
             // shortcut
+	    assert(seg->b.x == status->xrow->x[0]);
             point_t p = {status->xrow->x[0], y};
             insert_point_into_segment(status, seg, p);
         } else {
@@ -798,7 +798,7 @@ static void recalculate_windings(status_t*status, segrange_t*range)
 #endif
 
     if(end)
-        end = actlist_right(status->actlist, end);
+        end = end->right;
     while(s!=end) {
 #ifndef CHECKS
         if(s->changed)
@@ -888,12 +888,13 @@ static void event_apply(status_t*status, event_t*e)
             assert(!dict_contains(status->intersecting_segs, s));
             assert(!dict_contains(status->segs_with_point, s));
 #endif
-            segment_t*left = actlist_left(status->actlist, s);
-            segment_t*right = actlist_right(status->actlist, s);
+            segment_t*left = s->left;
+            segment_t*right = s->right;
             actlist_delete(status->actlist, s);
             if(left && right)
                 schedule_crossing(status, left, right);
 
+	    /* schedule segment for xrow handling */
             s->left = 0; s->right = status->ending_segments;
             status->ending_segments = s;
             break;
@@ -906,8 +907,8 @@ static void event_apply(status_t*status, event_t*e)
             segment_t*s = e->s1;
 	    assert(e->p.x == s->a.x && e->p.y == s->a.y);
             actlist_insert(status->actlist, s->a, s->b, s);
-            segment_t*left = actlist_left(status->actlist, s);
-            segment_t*right = actlist_right(status->actlist, s);
+            segment_t*left = s->left;
+            segment_t*right = s->right;
             if(left)
                 schedule_crossing(status, left, s);
             if(right)
@@ -920,10 +921,11 @@ static void event_apply(status_t*status, event_t*e)
 #ifdef DEBUG
             event_dump(e);
 #endif
-            if(actlist_right(status->actlist, e->s1) == e->s2 &&
-               actlist_left(status->actlist, e->s2) == e->s1) {
+            if(e->s1->right == e->s2) {
+		assert(e->s2->left == e->s1);
                 exchange_two(status, e);
             } else {
+		assert(e->s2->left != e->s1);
 #ifdef DEBUG
 		fprintf(stderr, "Ignore this crossing ([%d] not next to [%d])\n", e->s1->nr, e->s2->nr);
 #endif
@@ -999,18 +1001,18 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 		assert(x<e->p.x);
                 edge_t*l= malloc(sizeof(edge_t));
                 l->a.y = l->b.y = y;
-		/* TODO: strictly speaking we need to draw from low x to high x so that left/right fillstyles add up
-		         (because the horizontal line's fill style controls the area *below* the line)
+		/* we draw from low x to high x so that left/right fillstyles add up
+                   (because the horizontal line's fill style controls the area *below* the line)
 		 */
-                l->a.x = x;
-                l->b.x = e->p.x;
+                l->a.x = e->p.x;
+                l->b.x = x;
                 l->next = poly->edges;
                 poly->edges = l;
 #ifdef CHECKS
 		/* the output should always be intersection free polygons, so check this horizontal
 		   line isn't hacking through any segments in the active list */
-		segment_t* start = actlist_find(actlist, l->a, l->a);
-		segment_t* s = actlist_find(actlist, l->b, l->b);
+		segment_t* start = actlist_find(actlist, l->b, l->b);
+		segment_t* s = actlist_find(actlist, l->a, l->a);
 		while(s!=start) {
 		    assert(s->a.y == y || s->b.y == y);
 		    s = s->left;
@@ -1020,7 +1022,6 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
             segment_t*left = 0;
             segment_t*s = e->s1;
 
-            windstate_t before,after;
             switch(e->type) {
                 case EVENT_START: {
 		    assert(e->p.x == s->a.x && e->p.y == s->a.y);
@@ -1032,17 +1033,11 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
                     e.s2 = 0;
                     heap_put(queue, &e);
                     left = actlist_left(actlist, s);
-
-                    before = left?left->wind:windrule->start(context);
-                    after = s->wind = windrule->add(context, before, s->fs, s->dir, s->polygon_nr);
                     break;
                 }
                 case EVENT_END: {
                     left = actlist_left(actlist, s);
                     actlist_delete(actlist, s);
-
-                    before = s->wind;
-                    after = left?left->wind:windrule->start(context);
                     break;
                 }
                 default: assert(0);
