@@ -834,6 +834,37 @@ gfxline_t*gfxline_makerectangle(int x1,int y1,int x2, int y2)
     return line;
 }
 
+gfxline_t*gfxline_makecircle(double x,double y,double rx, double ry)
+{
+    double C1 = 0.2930;    
+    double C2 = 0.4140;   
+    double begin = 0.7070; 
+    gfxline_t* line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t)*9);
+    int t;
+    line[0].type = gfx_moveTo;
+    line[0].x = x+begin*rx;
+    line[0].y = y+begin*ry;
+    for(t=1;t<9;t++) {
+	line[t-1].next = &line[t];
+	line[t].type = gfx_splineTo;
+    }
+    line[t].next = 0;
+#define R(nr,cx,cy,mx,my) \
+    line[nr].sx = line[nr-1].x + (cx); \
+    line[nr].sy = line[nr-1].y + (cy); \
+    line[nr].x = line[nr].sx + (mx); \
+    line[nr].y = line[nr].sy + (my);
+    R(1, -C1*rx,  C1*ry, -C2*rx,      0);
+    R(2, -C2*rx,      0, -C1*rx, -C1*ry);
+    R(3, -C1*rx, -C1*ry,      0, -C2*ry);
+    R(4,      0, -C2*ry,  C1*rx, -C1*ry);
+    R(5,  C1*rx, -C1*ry,  C2*rx,      0);
+    R(6,  C2*rx,      0,  C1*rx,  C1*ry);
+    R(7,  C1*rx,  C1*ry,      0,  C2*ry);
+    R(8,      0,  C2*ry, -C1*rx,  C1*ry);
+    return line;
+}
+
 gfxbbox_t* gfxline_isrectangle(gfxline_t*_l)
 {
     if(!_l)

@@ -46,7 +46,7 @@ void actlist_verify(actlist_t*a, int32_t y)
                 /* we need to re-evaluate the x of the previous segment. if we
                    try to store it, it might end up being converted to a double,
                    which will make it non-equal to (and possibly larger than) the
-                   "long double" the FPU has in it's register. This only happens
+                   "long double" the FPU has in its register. This only happens
                    when compiler optimizations are turned on. */
                 assert((XPOS(s, y) - XPOS(l, y)) >= 0);
                 assert(XDIFF(s,l,y) >= 0);

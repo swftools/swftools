@@ -188,24 +188,20 @@ typedef struct _compactpoly {
     segment_dir_t dir;
 } compactpoly_t;
 
-void add_segment(compactpoly_t*data, point_t start, segment_dir_t dir)
-{
-    if(data->poly->num_strokes == data->strokes_size) {
-	data->strokes_size <<= 1;
-	assert(data->strokes_size > data->poly->num_strokes);
-	data->poly->strokes = rfx_realloc(data->poly->strokes, data->strokes_size);
-    }
-    data->poly->strokes[data->poly->num_strokes].dir = dir;
-    data->points[0] = start;
-    data->num_points = 1;
-    data->dir = dir;
-}
 void finish_segment(compactpoly_t*data)
 {
     if(data->num_points <= 1)
 	return;
+    if(data->poly->num_strokes == data->strokes_size) {
+	data->strokes_size <<= 1;
+	assert(data->strokes_size > data->poly->num_strokes);
+	data->poly->strokes = rfx_realloc(data->poly->strokes, sizeof(gfxstroke_t)*data->strokes_size);
+    }
     point_t*p = malloc(sizeof(point_t)*data->num_points);
-    data->poly->strokes[data->poly->num_strokes-1].points = p;
+    gfxstroke_t*s = &data->poly->strokes[data->poly->num_strokes];
+    s->num_points = data->num_points;
+    s->dir = data->dir;
+    s->points = p;
     if(data->dir == DIR_UP) {
 	int t;
 	int s = data->num_points;
@@ -232,16 +228,17 @@ static void compactlineto(void*_data, double _x, double _y)
     point_t p;
     p.x = convert_coord(_x);
     p.y = convert_coord(_y);
-    if(p.y < data->last.y && data->dir != DIR_UP ||
-       p.y > data->last.y && data->dir != DIR_DOWN) {
-	data->dir = p.y > data->last.y ? DIR_DOWN : DIR_UP;
+    if(p.y <  data->last.y && data->dir != DIR_UP ||
+       p.y >= data->last.y && data->dir != DIR_DOWN) {
 	finish_segment(data);
-	add_segment(data, data->last, data->dir);
+	data->dir = p.y > data->last.y ? DIR_DOWN : DIR_UP;
+	data->points[0] = data->last;
+	data->num_points = 1;
     }
     if(data->points_size == data->num_points) {
 	data->points_size <<= 1;
 	assert(data->points_size > data->num_points);
-	data->points = rfx_realloc(data->points, data->points_size);
+	data->points = rfx_realloc(data->points, sizeof(point_t)*data->points_size);
     }
     data->points[data->num_points++] = p;
 }
@@ -259,13 +256,14 @@ static void compactinit(compactpoly_t*data, double gridsize)
     data->strokes_size = 16;
     data->num_points = 0;
     data->points_size = 16;
+    data->dir = DIR_UNKNOWN;
     data->points = (point_t*)rfx_alloc(sizeof(point_t)*data->points_size);
     data->poly->strokes = (gfxstroke_t*)rfx_alloc(sizeof(gfxstroke_t)*data->strokes_size);
 }
 static gfxcompactpoly_t*compactfinish(compactpoly_t*data)
 {
     finish_segment(data);
-    data->poly->strokes = rfx_realloc(data->poly->strokes, sizeof(gfxstroke_t)*data->poly->num_strokes);
+    data->poly->strokes = (gfxstroke_t*)rfx_realloc(data->poly->strokes, sizeof(gfxstroke_t)*data->poly->num_strokes);
     free(data->points);
     return data->poly;
 }

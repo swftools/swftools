@@ -28,21 +28,17 @@ gfxline_t*mkstar(int x1, int y1, int x2, int y2)
 gfxline_t* mkrandomshape(int range, int n)
 {
     int i;
-    gfxline_t* line = malloc(sizeof(gfxline_t)*n*2);
+    gfxline_t* line = malloc(sizeof(gfxline_t)*n);
     for(i=0;i<n;i++) {
         line[i].type = i?gfx_lineTo:gfx_moveTo;
         line[i].x = lrand48()%range - range/2;
         line[i].y = lrand48()%range - range/2;
         line[i].next = &line[i+1];
-        line[n*2-i-1].type = gfx_lineTo;
-        line[n*2-i-1].x = line[i].x;
-        line[n*2-i-1].y = line[i].y;
-        line[n*2-i-1].next = &line[n*2-i];
     }
-    line[n*2-1].next = 0;
     line[n-1].x = line[0].x;
     line[n-1].y = line[0].y;
     line[n-1].next = 0;
+    return line;
 }
 
 gfxline_t* mkchessboard()
@@ -102,16 +98,35 @@ gfxline_t* mkchessboard()
         l[4].y = y-sizey;
         gfxline_append(b, l);
     }
-    if(do_centerpiece)
-    for(t=0;t<5;t++) {
-        gfxline_t*l = gfxline_makerectangle(-9*spacing,-10,9*spacing,10);
-        gfxmatrix_t matrix;
-        memset(&matrix, 0, sizeof(gfxmatrix_t));
-        double ua=t*0.43;
-        matrix.m00=cos(ua);matrix.m10=sin(ua);
-        matrix.m01=-sin(ua);matrix.m11=cos(ua);
-        gfxline_transform(l, &matrix);
-        gfxline_append(b, l);
+    if(do_centerpiece) {
+	for(t=0;t<5;t++) {
+	    gfxline_t*l = gfxline_makerectangle(-9*spacing,-10,9*spacing,10);
+	    gfxmatrix_t matrix;
+	    memset(&matrix, 0, sizeof(gfxmatrix_t));
+	    double ua=t*0.43;
+	    matrix.m00=cos(ua);matrix.m10=sin(ua);
+	    matrix.m01=-sin(ua);matrix.m11=cos(ua);
+	    gfxline_transform(l, &matrix);
+	    gfxline_append(b, l);
+	}
+	gfxline_append(b, gfxline_makecircle(100,100,100,100));
+    }
+    return b;
+}
+
+gfxline_t* make_circles()
+{
+    gfxline_t*b = 0;
+    unsigned int c = 0;
+    int t;
+    for(t=0;t<30;t++) {
+        c = crc32_add_byte(c, t);
+	int x = c%200;
+	c = crc32_add_byte(c, t);
+	int y = c%200;;
+	c = crc32_add_byte(c, t^0x55);
+	int r = c%100;
+	b = gfxline_append(b, gfxline_makecircle(x,y,r,r));
     }
     return b;
 }
@@ -120,26 +135,28 @@ static windcontext_t onepolygon = {1};
 
 int test0()
 {
-    gfxline_t* b = mkchessboard();
+    //gfxline_t* b = mkchessboard();
+    //gfxline_t* b = mkrandomshape(100,7);
+    gfxline_t* b = gfxline_makecircle(100,100,100,100);
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(gfxmatrix_t));
     int t;
     for(t=0;t<360;t++) {
-    m.m00 = cos(t*M_PI/180.0);
-    m.m01 = sin(t*M_PI/180.0);
-    m.m10 = -sin(t*M_PI/180.0);
-    m.m11 = cos(t*M_PI/180.0);
-    m.tx = 400*1.41/2;
-    m.ty = 400*1.41/2;
-    gfxline_transform(b, &m);
+	m.m00 = cos(t*M_PI/180.0);
+	m.m01 = sin(t*M_PI/180.0);
+	m.m10 = -sin(t*M_PI/180.0);
+	m.m11 = cos(t*M_PI/180.0);
+	m.tx = 400*1.41/2;
+	m.ty = 400*1.41/2;
+	gfxline_transform(b, &m);
+	gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
 
-    gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
+	gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
+	gfxpoly_destroy(poly2);
+	gfxpoly_destroy(poly);
+    }
     gfxline_free(b);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
-    gfxpoly_destroy(poly2);
-    gfxpoly_destroy(poly);
-}
 }
 
 int test1(int argn, char*argv[])
@@ -230,9 +247,10 @@ void test3(int argn, char*argv[])
 
     //gfxline_t*line = mkrandomshape(RANGE, N);
     //windrule_t*rule = &windrule_circular;
-    gfxline_t*line = mkchessboard();
-    //windrule_t*rule = &windrule_evenodd;
-    windrule_t*rule = &windrule_circular;
+    //gfxline_t*line = mkchessboard();
+    gfxline_t*line = make_circles();
+    windrule_t*rule = &windrule_evenodd;
+    //windrule_t*rule = &windrule_circular;
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(m));
@@ -250,6 +268,7 @@ void test3(int argn, char*argv[])
 
     int t;
     for(t=0;t<360;t++) {
+	fprintf(stderr, "%d\n", t);
         m.m00 = cos(t*M_PI/180.0);
         m.m01 = sin(t*M_PI/180.0);
         m.m10 = -sin(t*M_PI/180.0);
@@ -409,19 +428,24 @@ void test4(int argn, char*argv[])
 
 void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color) 
 {
-    gfxcompactpoly_t*c = gfxcompactpoly_from_gfxline(line, 0.05);
-    gfxcompactpoly_free(c);
+    //gfxcompactpoly_t*c = gfxcompactpoly_from_gfxline(line, 0.05);
+    //gfxcompactpoly_free(c);
+
     gfxpoly_t*poly = gfxpoly_from_gfxline(line, 0.05);
+
+    gfxline_dump(line, stderr, "");
+    gfxpoly_dump(poly);
+
     if(gfxpoly_size(poly)>100000) {
-	printf("%d segments (skipping)\n", gfxpoly_size(poly));
+	fprintf(stderr, "%d segments (skipping)\n", gfxpoly_size(poly));
 	return;
     } else {
-	printf("%d segments\n", gfxpoly_size(poly));
+	//fprintf(stderr, "%d segments\n", gfxpoly_size(poly));
     }
 
     if(!gfxpoly_check(poly)) {
         gfxpoly_destroy(poly);
-        printf("bad polygon\n");
+        fprintf(stderr, "bad polygon\n");
         return;
     }
 
@@ -431,7 +455,7 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     intbbox_t bbox = intbbox_from_polygon(poly, zoom);
     unsigned char*bitmap1 = render_polygon(poly, &bbox, zoom, rule, &onepolygon);
     if(!bitmap_ok(&bbox, bitmap1)) {
-        printf("bad polygon or error in renderer\n");
+        fprintf(stderr, "bad polygon or error in renderer\n");
         return;
     }
     gfxpoly_t*poly2 = gfxpoly_process(poly, rule, &onepolygon);
@@ -521,16 +545,21 @@ void test5(int argn, char*argv[])
             continue;
         char* filename = allocprintf("%s/%s", dir, file->d_name);
 
+	if(argn>1) 
+	    filename = argv[1];
+
         gfxdocument_t*doc = driver->open(driver, filename);
         gfxdevice_t*out = &extract_polygons;
         int t;
         for(t=1;t<=doc->num_pages;t++) {
-            printf("%s (page %d)\n", filename, t);
+            fprintf(stderr, "%s (page %d)\n", filename, t);
             gfxpage_t* page = doc->getpage(doc, t);
             page->render(page, out);
             page->destroy(page);
         }
         doc->destroy(doc);
+	if(argn>1) 
+	    break;
         free(filename);
     }
     closedir(_dir);
@@ -539,5 +568,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test5(argn, argv);
+    test3(argn, argv);
 }
+

@@ -13,7 +13,10 @@
 static gfxpoly_t*current_polygon = 0;
 void gfxpoly_fail(char*expr, char*file, int line, const char*function)
 {
-    if(!current_polygon) {fprintf(stderr, "error outside polygon\n");exit(1);}
+    if(!current_polygon) {
+	fprintf(stderr, "assert(%s) failed in %s in line %d: %s\n", expr, file, line, function);
+	exit(1);
+    }
 
     void*md5 = init_md5();
     
@@ -110,15 +113,21 @@ static int compare_events(const void*_a,const void*_b)
     /* we need to schedule end after intersect (so that a segment about
        to end has a chance to tear up a few other segs first) and start
        events after end (in order not to confuse the intersection check, which
-       assumes there's an actual y overlap between active segments)). 
+       assumes there's an actual y overlap between active segments, and 
+       because ending segments in the active list make it difficult to insert
+       starting segments at the right position)). 
        Horizontal lines come last, because the only purpose
        they have is to create snapping coordinates for the segments (still)
        existing in this scanline.
     */
     d = b->type - a->type;
     if(d) return d;
-    d = b->p.x - a->p.x;
-    return d;
+    return 0;
+
+    /* I don't see any reason why we would need to order by x- at least as long
+       as we do horizontal lines in a seperate pass */
+    //d = b->p.x - a->p.x;
+    //return d;
 }
 
 gfxpoly_t* gfxpoly_new(double gridsize)
@@ -186,6 +195,7 @@ void gfxpoly_dump(gfxpoly_t*poly)
 {
     edge_t* s = poly->edges;
     double g = poly->gridsize;
+    fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
     while(s) {
         fprintf(stderr, "(%f,%f) -> (%f,%f)\n", s->a.x*g, s->a.y*g, s->b.x*g, s->b.y*g);
         s = s->next;
@@ -358,7 +368,6 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     /* the code that's required (and the checks you can perform) before
        it can be said with 100% certainty that we indeed have a valid crossing
        amazes me every time. -mk */
-
 #ifdef CHECKS
     assert(s1!=s2);
     assert(s1->right == s2);
@@ -1046,12 +1055,11 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
             x = e->p.x;
             fill ^= 1;//(before.is_filled != after.is_filled);
 #ifdef DEBUG
-            fprintf(stderr, "%d) event=%s[%d] left:[%d] x:%d before:%d after:%d\n",
+            fprintf(stderr, "%d) event=%s[%d] left:[%d] x:%d\n",
                     y, e->type==EVENT_START?"start":"end",
                     s->nr,
                     left?left->nr:-1,
-                    x,
-                    before.is_filled, after.is_filled);
+                    x);
 #endif
 
             if(e->type == EVENT_END)
