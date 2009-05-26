@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 #include "../q.h"
+#include "../types.h"
 
 //#define DEBUG
 #define CHECKS
 #define SPLAY
 
 typedef enum {DIR_UP, DIR_DOWN, DIR_UNKNOWN} segment_dir_t;
-typedef enum {EVENT_CROSS, EVENT_END, EVENT_CORNER, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
+typedef enum {EVENT_CROSS, EVENT_END, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
 typedef struct _point {
@@ -52,6 +53,18 @@ typedef struct _windrule
 
 #define SEGNR(s) ((s)?(s)->nr:-1)
 
+typedef struct _gfxpolystroke {
+    segment_dir_t dir;
+    int num_points;
+    point_t*points;
+    fillstyle_t*fs;
+} gfxpolystroke_t;
+typedef struct _gfxcompactpoly {
+    double gridsize;
+    int num_strokes;
+    gfxpolystroke_t*strokes;
+} gfxcompactpoly_t;
+
 typedef struct _segment {
     point_t a;
     point_t b;
@@ -68,7 +81,7 @@ typedef struct _segment {
     
     int polygon_nr;
     windstate_t wind;
-    int nr;
+    ptroff_t nr;
 
 #ifdef SPLAY
     struct _segment*parent;
@@ -80,6 +93,9 @@ typedef struct _segment {
     char changed;
 
     point_t pos;
+
+    gfxpolystroke_t*stroke;
+    int stroke_pos;
 
     dict_t scheduled_crossings;
 } segment_t;
@@ -105,33 +121,14 @@ typedef struct _gfxpoly {
     edge_t*edges;
 } gfxpoly_t;
 
-typedef struct _gfxstroke {
-    segment_dir_t dir;
-    int num_points;
-    point_t*points;
-    fillstyle_t*fs;
-} gfxstroke_t;
-typedef struct _gfxcompactpoly {
-    double gridsize;
-    int num_strokes;
-    gfxstroke_t*strokes;
-} gfxcompactpoly_t;
-
 void gfxpoly_fail(char*expr, char*file, int line, const char*function);
 
 gfxpoly_t* gfxpoly_new(double gridsize);
-char gfxpoly_check(gfxpoly_t*poly);
-int gfxpoly_size(gfxpoly_t*poly);
-void gfxpoly_dump(gfxpoly_t*poly);
-gfxpoly_t* gfxpoly_save(gfxpoly_t*poly, const char*filename);
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context);
-
-typedef struct _event {
-    eventtype_t type;
-    point_t p;
-    segment_t*s1;
-    segment_t*s2;
-} event_t;
+char gfxcompactpoly_check(gfxcompactpoly_t*poly);
+int gfxcompactpoly_size(gfxcompactpoly_t*poly);
+void gfxcompactpoly_dump(gfxcompactpoly_t*poly);
+void gfxcompactpoly_save(gfxcompactpoly_t*poly, const char*filename);
+gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windcontext_t*context);
 
 #ifndef CHECKS
 #ifdef assert

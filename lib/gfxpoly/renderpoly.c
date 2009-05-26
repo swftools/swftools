@@ -128,6 +128,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
     buf->bbox = *bbox;
     buf->zoom = zoom * polygon->gridsize;
     int width8 = (buf->width+7) >> 3;
+    char bleeding = 0;
     unsigned char* image = (unsigned char*)malloc(width8*buf->height);
     memset(image, 0, width8*buf->height);
 
@@ -173,6 +174,8 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
             /* we're bleeding, fill over padding, too. */
             fprintf(stderr, "Polygon %08x is bleeding in line %d\n", polygon, y);
             fill_bitwise(line, lastx, width8*8);
+	    assert(line[width8-1]&0x01);
+	    bleeding = 1;
         }
     }
     
@@ -181,6 +184,9 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
             free(buf->lines[y].points);
         }
         memset(&buf->lines[y], 0, sizeof(renderline_t));
+    }
+    if(bleeding) {
+	assert(!bitmap_ok(bbox, image));
     }
     free(buf->lines);buf->lines=0;
     return image;
@@ -192,6 +198,14 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 static inline max(double a, double b) {return a>b?a:b;}
 static inline min(double a, double b) {return a<b?a:b;}
 
+static int adjust_x(int xmin, int xmax)
+{
+    xmax += 8;
+    while(((xmax - xmin)&0x07) != 0x04)
+        xmax++;
+    return xmax;
+}
+
 intbbox_t intbbox_new(int x1, int y1, int x2, int y2)
 {
     intbbox_t b;
@@ -199,8 +213,9 @@ intbbox_t intbbox_new(int x1, int y1, int x2, int y2)
     b.ymin = y1;
     b.xmax = x2;
     b.ymax = y2;
-    b.width = x2-x1;
-    b.height = y2-y1;
+    b.xmax = adjust_x(b.xmin, b.xmax);
+    b.width = b.xmax - b.xmin;
+    b.height = b.ymax - b.ymin;
     return b;
 }
 
@@ -246,10 +261,8 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 	b.xmin = b.xmax;
     if(b.ymin > b.ymax) 
 	b.ymin = b.ymax;
-        
-    b.xmax += 8;
-    while(((b.xmax - b.xmin)&0x07) != 0x04)
-        b.xmax++;
+    
+    b.xmax = adjust_x(b.xmin, b.xmax);
 
     b.width = b.xmax - b.xmin;
     b.height = b.ymax - b.ymin;
@@ -279,8 +292,6 @@ int bitmap_ok(intbbox_t*bbox, unsigned char*data)
 {
     int y;
     int width8 = (bbox->width+7) >> 3;
-    if((bbox->width&7) == 0)
-        return 1;
     for(y=0;y<bbox->height;y++) {
         if(data[width8-1]&0x01)
             return 0; //bleeding

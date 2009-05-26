@@ -9,8 +9,9 @@
 #include "active.h"
 #include "xrow.h"
 #include "wind.h"
+#include "convert.h"
 
-static gfxpoly_t*current_polygon = 0;
+static gfxcompactpoly_t*current_polygon = 0;
 void gfxpoly_fail(char*expr, char*file, int line, const char*function)
 {
     if(!current_polygon) {
@@ -19,14 +20,14 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
     }
 
     void*md5 = init_md5();
-    
-    edge_t* s = current_polygon->edges;
-    while(s) {
-	update_md5(md5, (unsigned char*)&s->a.x, sizeof(s->a.x));
-	update_md5(md5, (unsigned char*)&s->a.y, sizeof(s->a.y));
-	update_md5(md5, (unsigned char*)&s->b.x, sizeof(s->b.x));
-	update_md5(md5, (unsigned char*)&s->b.y, sizeof(s->b.y));
-	s = s->next;
+   
+    int s,t;
+    for(s=0;s<current_polygon->num_strokes;s++) {
+	gfxpolystroke_t*stroke = &current_polygon->strokes[s];
+	for(t=0;t<stroke->num_points;t++) {
+	    update_md5(md5, (unsigned char*)&stroke->points[t].x, sizeof(stroke->points[t].x));
+	    update_md5(md5, (unsigned char*)&stroke->points[t].y, sizeof(stroke->points[t].y));
+	}
     }
     unsigned char h[16];
     char filename[32+4+1];
@@ -37,7 +38,7 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
     fprintf(stderr, "assert(%s) failed in %s in line %d: %s\n", expr, file, line, function);
     fprintf(stderr, "I'm saving a debug file \"%s\" to the current directory.\n", filename);
 
-    gfxpoly_save(current_polygon, filename);
+    gfxcompactpoly_save(current_polygon, filename);
     exit(1);
 }
 
@@ -78,17 +79,24 @@ typedef struct _status {
     int32_t y;
     actlist_t*actlist;
     heap_t*queue;
-    edge_t*output;
     xrow_t*xrow;
     windrule_t*windrule;
     windcontext_t*context;
     segment_t*ending_segments;
+    polywriter_t writer;
 #ifdef CHECKS
     dict_t*seen_crossings; //list of crossing we saw so far
     dict_t*intersecting_segs; //list of segments intersecting in this scanline
     dict_t*segs_with_point; //lists of segments that received a point in this scanline
 #endif
 } status_t;
+
+typedef struct _event {
+    eventtype_t type;
+    point_t p;
+    segment_t*s1;
+    segment_t*s2;
+} event_t;
 
 /* compare_events_simple differs from compare_events in that it schedules
    events from left to right regardless of type. It's only used in horizontal
@@ -148,12 +156,23 @@ void gfxpoly_destroy(gfxpoly_t*poly)
 }
 int gfxpoly_size(gfxpoly_t*poly)
 {
-    edge_t* s = poly->edges;
-    int t=0;
-    while(s) {
-        s = s->next;t++;
+    edge_t*e = poly->edges;
+    int count = 0;
+    while(e) {
+	count++;
+	e = e->next;
     }
-    return t;
+    return count;
+}
+int gfxcompactpoly_size(gfxcompactpoly_t*poly)
+{
+    int s,t;
+    int edges = 0;
+    for(t=0;t<poly->num_strokes;t++) {
+	gfxpolystroke_t*stroke = &poly->strokes[t];
+	edges += stroke->num_points-1;
+    }
+    return edges;
 }
 
 char gfxpoly_check(gfxpoly_t*poly)
@@ -191,6 +210,37 @@ char gfxpoly_check(gfxpoly_t*poly)
     return 1;
 }
 
+char gfxcompactpoly_check(gfxcompactpoly_t*poly)
+{
+    dict_t*d = dict_new2(&point_type);
+    int s,t;
+    for(t=0;t<poly->num_strokes;t++) {
+	gfxpolystroke_t*stroke = &poly->strokes[t];
+	for(s=0;s<stroke->num_points;s++) {
+	    point_t p = stroke->points[s];
+	    int num = (s>=1 && s<stroke->num_points-1)?2:1; // mid points are two points (start+end)
+	    if(!dict_contains(d, &p)) {
+		dict_put(d, &p, (void*)(ptroff_t)num);
+	    } else {
+		int count = (ptroff_t)dict_lookup(d, &p);
+		dict_del(d, &p);
+		count+=num;
+		dict_put(d, &p, (void*)(ptroff_t)count);
+	    }
+	}
+    }
+    DICT_ITERATE_ITEMS(d, point_t*, p, void*, c) {
+        int count = (ptroff_t)c;
+        if(count&1) {
+            fprintf(stderr, "Point (%f,%f) occurs %d times\n", p->x*poly->gridsize, p->y*poly->gridsize, count);
+            dict_destroy(d);
+            return 0;
+        }
+    }
+    dict_destroy(d);
+    return 1;
+}
+
 void gfxpoly_dump(gfxpoly_t*poly)
 {
     edge_t* s = poly->edges;
@@ -202,18 +252,38 @@ void gfxpoly_dump(gfxpoly_t*poly)
     }
 }
 
-gfxpoly_t* gfxpoly_save(gfxpoly_t*poly, const char*filename)
+void gfxcompactpoly_dump(gfxcompactpoly_t*poly)
+{
+    int s,t;
+    double g = poly->gridsize;
+    fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
+    for(t=0;t<poly->num_strokes;t++) {
+	gfxpolystroke_t*stroke = &poly->strokes[t];
+	for(s=0;s<stroke->num_points-1;s++) {
+	    point_t a = stroke->points[s];
+	    point_t b = stroke->points[s+1];
+	    fprintf(stderr, "%s(%f,%f) -> (%f,%f)%s\n", s?" ":"[", a.x*g, a.y*g, b.x*g, b.y*g,
+		                                        s==stroke->num_points-2?"]":"");
+	}
+    }
+}
+
+void gfxcompactpoly_save(gfxcompactpoly_t*poly, const char*filename)
 {
     FILE*fi = fopen(filename, "wb");
     fprintf(fi, "%% gridsize %f\n", poly->gridsize);
     fprintf(fi, "%% begin\n");
-    edge_t* s = poly->edges;
-    while(s) {
-        fprintf(fi, "%g setgray\n", s->b.y < s->a.y ? 0.7 : 0);
-        fprintf(fi, "%d %d moveto\n", s->a.x, s->a.y);
-        fprintf(fi, "%d %d lineto\n", s->b.x, s->b.y);
-        fprintf(fi, "stroke\n");
-        s = s->next;
+    int s,t;
+    for(t=0;t<poly->num_strokes;t++) {
+	gfxpolystroke_t*stroke = &poly->strokes[t];
+	for(s=0;s<stroke->num_points-1;s++) {
+	    point_t a = stroke->points[s];
+	    point_t b = stroke->points[s+1];
+	    fprintf(fi, "%g setgray\n", stroke->dir==DIR_UP ? 0.7 : 0);
+	    fprintf(fi, "%d %d moveto\n", a.x, a.y);
+	    fprintf(fi, "%d %d lineto\n", b.x, b.y);
+	    fprintf(fi, "stroke\n");
+	}
     }
     fprintf(fi, "showpage\n");
     fclose(fi);
@@ -236,8 +306,6 @@ static void event_dump(event_t*e)
         fprintf(stderr, "event: segment [%d] ends at (%d,%d)\n", e->s1->nr, e->p.x, e->p.y);
     } else if(e->type == EVENT_CROSS) {
         fprintf(stderr, "event: segment [%d] and [%d] intersect at (%d,%d)\n", e->s1->nr, e->s2->nr, e->p.x, e->p.y);
-    } else if(e->type == EVENT_CORNER) {
-        fprintf(stderr, "event: segment [%d] ends, segment [%d] starts, at (%d,%d)\n", e->s1->nr, e->s2->nr, e->p.x, e->p.y);
     } else {
         assert(0);
     }
@@ -253,18 +321,17 @@ static void segment_dump(segment_t*s)
             (double)s->delta.x / s->delta.y);
 }
 
-static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int polygon_nr)
+static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int polygon_nr, segment_dir_t dir)
 {
-    if(y1<y2) {
-        s->dir = DIR_DOWN;
-    } else if(y1>y2) {
-        int32_t x = x1;x1=x2;x2=x;
-        int32_t y = y1;y1=y2;y2=y;
-        s->dir = DIR_UP;
+    s->dir = dir;
+    if(y1!=y2) {
+	assert(y1<y2);
     } else {
         /* up/down for horizontal segments is handled by "rotating"
            them 90° anticlockwise in screen coordinates (tilt your head to
-           the right) */
+           the right) 
+           TODO: is this still needed?
+	 */
         s->dir = DIR_UP;
         if(x1>x2) {
             s->dir = DIR_DOWN;
@@ -285,11 +352,8 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
 
     s->pos = s->a;
     s->polygon_nr = polygon_nr;
-#define XDEBUG
-#ifdef XDEBUG
     static int segment_count=0;
     s->nr = segment_count++;
-#endif
 
 #ifdef CHECKS
     assert(LINE_EQ(s->a, s) == 0);
@@ -309,45 +373,67 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
     assert(LINE_EQ(p, s) >= 0);
 #endif
 
+    /* TODO: make this int_type */
     dict_init2(&s->scheduled_crossings, &ptr_type, 0);
 }
 
-static segment_t* segment_new(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int polygon_nr)
+static segment_t* segment_new(point_t a, point_t b, int polygon_nr, segment_dir_t dir)
 {
     segment_t*s = (segment_t*)rfx_calloc(sizeof(segment_t));
-    segment_init(s, x1, y1, x2, y2, polygon_nr);
+    segment_init(s, a.x, a.y, b.x, b.y, polygon_nr, dir);
     return s;
 }
 
-static void segment_destroy(segment_t*s)
+static void segment_clear(segment_t*s)
 {
     dict_clear(&s->scheduled_crossings);
+}
+static void segment_destroy(segment_t*s)
+{
+    segment_clear(s);
     free(s);
 }
 
-static void gfxpoly_enqueue(edge_t*list, heap_t*queue, int polygon_nr)
+static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr, int pos)
 {
-    edge_t*l;
-    for(l=list;l;l=l->next) {
-        if(l->a.x == l->b.x &&
-           l->a.y == l->b.y) {
-            fprintf(stderr, "Warning: intersector input contains zero-length segments\n");
-            continue;
-        }
-        segment_t*s = segment_new(l->a.x, l->a.y, l->b.x, l->b.y, polygon_nr);
+    while(pos < stroke->num_points-1) {
+	assert(stroke->points[pos].y <= stroke->points[pos+1].y);
+	segment_t*s = segment_new(stroke->points[pos], stroke->points[pos+1], polygon_nr, stroke->dir);
+	s->stroke = stroke;
+	s->stroke_pos = ++pos;
 #ifdef DEBUG
-        if(l->tmp)
-            s->nr = l->tmp;
-        fprintf(stderr, "[%d] (%d,%d) -> (%d,%d) %s\n",
-                s->nr, s->a.x, s->a.y, s->b.x, s->b.y,
-                s->dir==DIR_UP?"up":"down");
+	/*if(l->tmp)
+	    s->nr = l->tmp;*/
+	fprintf(stderr, "[%d] (%d,%d) -> (%d,%d) %s (%d more to come)\n",
+		s->nr, s->a.x, s->a.y, s->b.x, s->b.y,
+		s->dir==DIR_UP?"up":"down", stroke->num_points - 1 - pos);
 #endif
-        event_t e = event_new();
-        e.type = s->delta.y ? EVENT_START : EVENT_HORIZONTAL;
-        e.p = s->a;
-        e.s1 = s;
-        e.s2 = 0;
-        heap_put(queue, &e);
+	event_t e = event_new();
+	e.type = s->delta.y ? EVENT_START : EVENT_HORIZONTAL;
+	e.p = s->a;
+	e.s1 = s;
+	e.s2 = 0;
+	heap_put(queue, &e);
+	if(e.type != EVENT_HORIZONTAL) {
+	    break;
+	}
+    }
+}
+
+static void gfxpoly_enqueue(gfxcompactpoly_t*p, heap_t*queue, int polygon_nr)
+{
+    int t;
+    for(t=0;t<p->num_strokes;t++) {
+	gfxpolystroke_t*stroke = &p->strokes[t];
+	assert(stroke->num_points > 1);
+
+#ifdef CHECKS
+	int s;
+	for(s=0;s<stroke->num_points-1;s++) {
+	    assert(stroke->points[s].y <= stroke->points[s+1].y);
+	}
+#endif
+	advance_stroke(queue, stroke, polygon_nr, 0);
     }
 }
 
@@ -392,13 +478,21 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
 #endif
 
     if(s1->maxx <= s2->minx) {
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: bounding boxes don't intersect\n", s1->nr, s2->nr);
+#endif
         /* bounding boxes don't intersect */
         return;
     }
 
-    if(dict_contains(&s1->scheduled_crossings, s2)) {
+    if(dict_contains(&s1->scheduled_crossings, (void*)(ptroff_t)s2->nr)) {
         /* FIXME: this whole segment hashing thing is really slow */
-        //fprintf(stderr, "Encountered crossing between [%d] and [%d] twice\n", s1->nr, s2->nr);
+#ifdef DEBUG
+        fprintf(stderr, "[%d] doesn't intersect with [%d] because: we already scheduled this intersection\n", s1->nr, s2->nr);
+//	DICT_ITERATE_KEY(&s1->scheduled_crossings, void*, x) {
+//	    fprintf(stderr, "[%d]<->[%d]\n", s1->nr, (int)(ptroff_t)x);
+//	}
+#endif
         return; // we already know about this one
     }
 
@@ -411,6 +505,9 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
 #endif
             return;
         } else {
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: they are parallel to each other\n", s1->nr, s2->nr);
+#endif
             /* lines are parallel */
             return;
         }
@@ -419,9 +516,16 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     double bsign2 = LINE_EQ(s1->b, s2);
     if(asign2<0 && bsign2<0) {
         // segment1 is completely to the left of segment2
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s1->nr, s2->nr);
+#endif
         return;
     }
     if(asign2>0 && bsign2>0)  {
+	// TODO: can this ever happen?
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s2->nr, s1->nr);
+#endif
         // segment2 is completely to the left of segment1
         return;
     }
@@ -443,10 +547,16 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     double bsign1 = LINE_EQ(s2->b, s1);
     if(asign1<0 && bsign1<0) {
         // segment1 is completely to the left of segment2
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s1->nr, s2->nr);
+#endif
         return;
     }
     if(asign1>0 && bsign1>0)  {
         // segment2 is completely to the left of segment1
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s2->nr, s1->nr);
+#endif
         return;
     }
     if(asign1==0) {
@@ -489,8 +599,8 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
 
     /* we insert into each other's intersection history because these segments might switch
        places and we still want to look them up quickly after they did */
-    dict_put(&s1->scheduled_crossings, s2, 0);
-    dict_put(&s2->scheduled_crossings, s1, 0);
+    dict_put(&s1->scheduled_crossings, (void*)(ptroff_t)(s2->nr), 0);
+    dict_put(&s2->scheduled_crossings, (void*)(ptroff_t)(s1->nr), 0);
 
     event_t e = event_new();
     e.type = EVENT_CROSS;
@@ -556,15 +666,11 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
 #endif
         // omit horizontal lines
         if(s->pos.y != p.y) {
-            edge_t*e = rfx_calloc(sizeof(edge_t));
-#ifdef DEBUG
-            e->tmp = s->nr;
-#endif
-            e->a = s->pos;
-            e->b = p;
-            assert(e->a.y != e->b.y);
-            e->next = status->output;
-            status->output = e;
+            point_t a = s->pos;
+            point_t b = p;
+            assert(a.y != b.y);
+	    status->writer.moveto(&status->writer, a.x, a.y);
+	    status->writer.lineto(&status->writer, b.x, b.y);
         }
     } else {
 #ifdef DEBUG
@@ -819,15 +925,15 @@ static void recalculate_windings(status_t*status, segrange_t*range)
             fillstyle_t*fs_old = s->fs_out;
             s->fs_out = status->windrule->diff(&wind, &s->wind);
 
+#ifdef DEBUG
+            fprintf(stderr, "[%d] %s/%d/%s/%s %s\n", s->nr, s->dir==DIR_UP?"up":"down", s->wind.wind_nr, s->wind.is_filled?"fill":"nofill", s->fs_out?"draw":"omit",
+		    fs_old!=s->fs_out?"CHANGED":"");
+#endif
             assert(!(!s->changed && fs_old!=s->fs_out));
             s->changed = 0;
 
 #ifdef CHECKS
             s->fs_out_ok = 1;
-#endif
-#ifdef DEBUG
-            fprintf(stderr, "[%d] %s/%d/%s/%s %s\n", s->nr, s->dir==DIR_UP?"up":"down", s->wind.wind_nr, s->wind.is_filled?"fill":"nofill", s->fs_out?"draw":"omit",
-		    fs_old!=s->fs_out?"CHANGED":"");
 #endif
         }
         s = s->right;
@@ -878,11 +984,13 @@ static void event_apply(status_t*status, event_t*e)
 {
     switch(e->type) {
         case EVENT_HORIZONTAL: {
+            segment_t*s = e->s1;
 #ifdef DEBUG
             event_dump(e);
 #endif
-            intersect_with_horizontal(status, e->s1);
-            segment_destroy(e->s1);e->s1=0;
+            intersect_with_horizontal(status, s);
+	    advance_stroke(status->queue, s->stroke, s->polygon_nr, s->stroke_pos);
+            segment_destroy(s);e->s1=0;
             break;
         }
         case EVENT_END: {
@@ -906,6 +1014,7 @@ static void event_apply(status_t*status, event_t*e)
 	    /* schedule segment for xrow handling */
             s->left = 0; s->right = status->ending_segments;
             status->ending_segments = s;
+	    advance_stroke(status->queue, s->stroke, s->polygon_nr, s->stroke_pos);
             break;
         }
         case EVENT_START: {
@@ -922,7 +1031,7 @@ static void event_apply(status_t*status, event_t*e)
                 schedule_crossing(status, left, s);
             if(right)
                 schedule_crossing(status, s, right);
-            schedule_endpoint(status, e->s1);
+            schedule_endpoint(status, s);
             break;
         }
         case EVENT_CROSS: {
@@ -940,8 +1049,8 @@ static void event_apply(status_t*status, event_t*e)
 #endif
                 /* ignore this crossing for now (there are some line segments in between).
                    it'll get rescheduled as soon as the "obstacles" are gone */
-                char del1 = dict_del(&e->s1->scheduled_crossings, e->s2);
-                char del2 = dict_del(&e->s2->scheduled_crossings, e->s1);
+                char del1 = dict_del(&e->s1->scheduled_crossings, (void*)(ptroff_t)e->s2->nr);
+                char del2 = dict_del(&e->s2->scheduled_crossings, (void*)(ptroff_t)e->s1->nr);
                 assert(del1 && del2);
 #ifdef CHECKS
                 point_t pair;
@@ -972,7 +1081,7 @@ static void check_status(status_t*status)
 }
 #endif
 
-static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context)
+static void add_horizontals(gfxcompactpoly_t*poly, windrule_t*windrule, windcontext_t*context)
 {
     /*
           |..|        |...........|                 |           |
@@ -986,11 +1095,14 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
     fprintf(stderr, "========================================================================\n");
 #endif
     heap_t* queue = heap_new(sizeof(event_t), compare_events_simple);
-    gfxpoly_enqueue(poly->edges, queue, 0);
+    gfxpoly_enqueue(poly, queue, 0);
 
     actlist_t* actlist = actlist_new();
 
     event_t*e = heap_chopmax(queue);
+    int newstrokes_size = 4;
+    int num_newstrokes = 0;
+    gfxpolystroke_t*newstrokes = malloc(sizeof(gfxpolystroke_t)*newstrokes_size);
     while(e) {
         int32_t y = e->p.y;
         int32_t x = 0;
@@ -1008,20 +1120,30 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
                 fprintf(stderr, "%d) draw horizontal line from %d to %d\n", y, x, e->p.x);
 #endif
 		assert(x<e->p.x);
-                edge_t*l= malloc(sizeof(edge_t));
-                l->a.y = l->b.y = y;
+
+		if(num_newstrokes == newstrokes_size) {
+		    newstrokes_size = (newstrokes_size)<<1;
+		    newstrokes = rfx_realloc(newstrokes, sizeof(gfxpolystroke_t)*newstrokes_size);
+		}
+                gfxpolystroke_t*stroke = &newstrokes[num_newstrokes++];
+		stroke->num_points = 2;
+		stroke->points = malloc(sizeof(point_t)*2);
+		stroke->dir = DIR_UP; // FIXME
+		stroke->fs = 0;
+		point_t a,b;
+                a.y = b.y = y;
 		/* we draw from low x to high x so that left/right fillstyles add up
                    (because the horizontal line's fill style controls the area *below* the line)
 		 */
-                l->a.x = e->p.x;
-                l->b.x = x;
-                l->next = poly->edges;
-                poly->edges = l;
+                a.x = e->p.x;
+                b.x = x;
+		stroke->points[0] = a;
+		stroke->points[1] = b;
 #ifdef CHECKS
 		/* the output should always be intersection free polygons, so check this horizontal
 		   line isn't hacking through any segments in the active list */
-		segment_t* start = actlist_find(actlist, l->b, l->b);
-		segment_t* s = actlist_find(actlist, l->a, l->a);
+		segment_t* start = actlist_find(actlist, b, b);
+		segment_t* s = actlist_find(actlist, a, a);
 		while(s!=start) {
 		    assert(s->a.y == y || s->b.y == y);
 		    s = s->left;
@@ -1047,6 +1169,7 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
                 case EVENT_END: {
                     left = actlist_left(actlist, s);
                     actlist_delete(actlist, s);
+		    advance_stroke(queue, s->stroke, s->polygon_nr, s->stroke_pos);
                     break;
                 }
                 default: assert(0);
@@ -1071,16 +1194,22 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 
         assert(!fill); // check that polygon is not bleeding
     }
+
+    poly->strokes = rfx_realloc(poly->strokes, sizeof(gfxpolystroke_t)*(num_newstrokes+poly->num_strokes));
+    memcpy(&poly->strokes[poly->num_strokes], newstrokes, sizeof(gfxpolystroke_t)*num_newstrokes);
+    poly->num_strokes += num_newstrokes;
+    free(newstrokes);
+
     actlist_destroy(actlist);
     heap_destroy(queue);
 }
 
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context)
+gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windcontext_t*context)
 {
     current_polygon = poly;
     heap_t* queue = heap_new(sizeof(event_t), compare_events);
 
-    gfxpoly_enqueue(poly->edges, queue, /*polygon nr*/0);
+    gfxpoly_enqueue(poly, queue, /*polygon nr*/0);
 
     status_t status;
     memset(&status, 0, sizeof(status_t));
@@ -1088,8 +1217,12 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     status.windrule = windrule;
     status.context = context;
     status.actlist = actlist_new();
+    gfxcompactpolywriter_init(&status.writer);
+    status.writer.setgridsize(&status.writer, poly->gridsize);
+
 #ifdef CHECKS
     status.seen_crossings = dict_new2(&point_type);
+    int lasty=heap_peek(queue)?((event_t*)heap_peek(queue))->p.y-1:0;
 #endif
 
     status.xrow = xrow_new();
@@ -1097,6 +1230,7 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     event_t*e = heap_chopmax(queue);
     while(e) {
         status.y = e->p.y;
+	assert(status.y>=lasty);
 #ifdef CHECKS
         status.intersecting_segs = dict_new2(&ptr_type);
         status.segs_with_point = dict_new2(&ptr_type);
@@ -1141,9 +1275,7 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     heap_destroy(queue);
     xrow_destroy(status.xrow);
 
-    gfxpoly_t*p = gfxpoly_new(poly->gridsize);
-    p->edges = status.output;
-
+    gfxcompactpoly_t*p = (gfxcompactpoly_t*)status.writer.finish(&status.writer);
     add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
-    return p;
+    return gfxpoly_from_gfxcompactpoly(p);
 }
