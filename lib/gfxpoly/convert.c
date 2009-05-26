@@ -354,6 +354,7 @@ void gfxcompactpoly_destroy(gfxcompactpoly_t*poly)
     int t;
     for(t=0;t<poly->num_strokes;t++) {
 	free(poly->strokes[t].points);
+	poly->strokes[t].points = 0;
     }
     free(poly->strokes);
     free(poly);

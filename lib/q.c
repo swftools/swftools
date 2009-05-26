@@ -524,13 +524,14 @@ void trie_rollback(trie_t*t)
 
 
 // ------------------------------- crc32 --------------------------------------
-static unsigned int*crc32 = 0;
+static unsigned int crc32[256];
+static char crc32_initialized=0;
 static void crc32_init(void)
 {
     int t;
-    if(crc32) 
+    if(crc32_initialized) 
         return;
-    crc32= (unsigned int*)rfx_alloc(sizeof(unsigned int)*256);
+    crc32_initialized = 1;
     for(t=0; t<256; t++) {
         unsigned int c = t;
         int s;

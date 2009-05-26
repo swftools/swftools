@@ -1277,5 +1277,7 @@ gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windconte
 
     gfxcompactpoly_t*p = (gfxcompactpoly_t*)status.writer.finish(&status.writer);
     add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
-    return gfxpoly_from_gfxcompactpoly(p);
+    gfxpoly_t*pp = gfxpoly_from_gfxcompactpoly(p);
+    gfxcompactpoly_destroy(p);
+    return pp;
 }

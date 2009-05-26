@@ -114,12 +114,12 @@ gfxline_t* mkchessboard()
     return b;
 }
 
-gfxline_t* make_circles()
+gfxline_t* make_circles(int n)
 {
     gfxline_t*b = 0;
     unsigned int c = 0;
     int t;
-    for(t=0;t<30;t++) {
+    for(t=0;t<n;t++) {
         c = crc32_add_byte(c, t);
 	int x = c%200;
 	c = crc32_add_byte(c, t);
@@ -134,28 +134,31 @@ gfxline_t* make_circles()
 
 static windcontext_t onepolygon = {1};
 
-int test0()
+int test_speed()
 {
     //gfxline_t* b = mkchessboard();
     //gfxline_t* b = mkrandomshape(100,7);
-    gfxline_t* b = gfxline_makecircle(100,100,100,100);
+    gfxline_t* b = make_circles(30);
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(gfxmatrix_t));
     int t;
-    for(t=0;t<360;t++) {
+    for(t=0;t<10;t++) {
+	printf("%d\n", t);
 	m.m00 = cos(t*M_PI/180.0);
 	m.m01 = sin(t*M_PI/180.0);
 	m.m10 = -sin(t*M_PI/180.0);
 	m.m11 = cos(t*M_PI/180.0);
 	m.tx = 400*1.41/2;
 	m.ty = 400*1.41/2;
-	gfxline_transform(b, &m);
+	gfxline_t*l = gfxline_clone(b);
+	gfxline_transform(l, &m);
 	gfxcompactpoly_t*poly = gfxcompactpoly_from_gfxline(b, 0.05);
 
 	gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
 	gfxcompactpoly_destroy(poly);
 	gfxpoly_destroy(poly2);
+	gfxline_free(l);
     }
     gfxline_free(b);
 }
@@ -276,7 +279,7 @@ void test3(int argn, char*argv[])
     //gfxline_t*line = mkrandomshape(RANGE, N);
     //windrule_t*rule = &windrule_circular;
     //gfxline_t*line = mkchessboard();
-    gfxline_t*line = make_circles();
+    gfxline_t*line = make_circles(30);
     windrule_t*rule = &windrule_evenodd;
     //windrule_t*rule = &windrule_circular;
 
@@ -603,6 +606,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test4(argn, argv);
+    test_speed(argn, argv);
 }
 
