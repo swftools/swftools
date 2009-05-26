@@ -143,7 +143,7 @@ int test_speed()
     gfxmatrix_t m;
     memset(&m, 0, sizeof(gfxmatrix_t));
     int t;
-    for(t=0;t<10;t++) {
+    for(t=0;t<360;t++) {
 	printf("%d\n", t);
 	m.m00 = cos(t*M_PI/180.0);
 	m.m01 = sin(t*M_PI/180.0);

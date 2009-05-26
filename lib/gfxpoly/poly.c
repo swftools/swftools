@@ -485,6 +485,8 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
         return;
     }
 
+#define REMEMBER_CROSSINGS
+#ifdef REMEMBER_CROSSINGS
     if(dict_contains(&s1->scheduled_crossings, (void*)(ptroff_t)s2->nr)) {
         /* FIXME: this whole segment hashing thing is really slow */
 #ifdef DEBUG
@@ -495,6 +497,7 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
 #endif
         return; // we already know about this one
     }
+#endif
 
     double det = (double)s1->delta.x*s2->delta.y - (double)s1->delta.y*s2->delta.x;
     if(!det) {
@@ -582,6 +585,10 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     p.x = (int32_t)ceil((-la*s2->delta.x + lb*s1->delta.x) / det);
     p.y = (int32_t)ceil((+lb*s1->delta.y - la*s2->delta.y) / det);
 
+#ifndef REMEMBER_CROSSINGS
+    if(p.y < status->y) return;
+#endif
+
     assert(p.y >= status->y);
 #ifdef CHECKS
     assert(p.x >= s1->minx && p.x <= s1->maxx);
@@ -590,17 +597,21 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     point_t pair;
     pair.x = s1->nr;
     pair.y = s2->nr;
+#ifdef REMEMBER_CROSSINGS
     assert(!dict_contains(status->seen_crossings, &pair));
     dict_put(status->seen_crossings, &pair, 0);
+#endif
 #endif
 #ifdef DEBUG
     fprintf(stderr, "schedule crossing between [%d] and [%d] at (%d,%d)\n", s1->nr, s2->nr, p.x, p.y);
 #endif
 
+#ifdef REMEMBER_CROSSINGS
     /* we insert into each other's intersection history because these segments might switch
        places and we still want to look them up quickly after they did */
     dict_put(&s1->scheduled_crossings, (void*)(ptroff_t)(s2->nr), 0);
     dict_put(&s2->scheduled_crossings, (void*)(ptroff_t)(s1->nr), 0);
+#endif
 
     event_t e = event_new();
     e.type = EVENT_CROSS;
@@ -1047,17 +1058,21 @@ static void event_apply(status_t*status, event_t*e)
 #ifdef DEBUG
 		fprintf(stderr, "Ignore this crossing ([%d] not next to [%d])\n", e->s1->nr, e->s2->nr);
 #endif
+#ifdef REMEMBER_CROSSINGS
                 /* ignore this crossing for now (there are some line segments in between).
                    it'll get rescheduled as soon as the "obstacles" are gone */
                 char del1 = dict_del(&e->s1->scheduled_crossings, (void*)(ptroff_t)e->s2->nr);
                 char del2 = dict_del(&e->s2->scheduled_crossings, (void*)(ptroff_t)e->s1->nr);
                 assert(del1 && del2);
+#endif
 #ifdef CHECKS
                 point_t pair;
                 pair.x = e->s1->nr;
                 pair.y = e->s2->nr;
+#ifdef REMEMBER_CROSSINGS
                 assert(dict_contains(status->seen_crossings, &pair));
                 dict_del(status->seen_crossings, &pair);
+#endif
 #endif
             }
         }
@@ -1276,6 +1291,7 @@ gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windconte
     xrow_destroy(status.xrow);
 
     gfxcompactpoly_t*p = (gfxcompactpoly_t*)status.writer.finish(&status.writer);
+
     add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
     gfxpoly_t*pp = gfxpoly_from_gfxcompactpoly(p);
     gfxcompactpoly_destroy(p);

@@ -89,6 +89,7 @@ typedef struct _swfoutput_internal
     int config_enablezlib;
     int config_insertstoptag;
     int config_watermark;
+    int config_noclips;
     int config_flashversion;
     int config_reordertags;
     int config_showclipshapes;
@@ -2021,6 +2022,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_caplinewidth = atof(value);
     } else if(!strcmp(name, "linktarget")) {
 	i->config_linktarget = strdup(value);
+    } else if(!strcmp(name, "noclips")) {
+	i->config_noclips = atoi(value);
     } else if(!strcmp(name, "dumpfonts")) {
 	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "animate")) {
@@ -2313,6 +2316,8 @@ static void drawoutline(gfxdevice_t*dev, gfxline_t*line)
 static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->config_noclips)
+	return;
 
     endtext(dev);
     endshape(dev);
@@ -2379,6 +2384,8 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
 static void swf_endclip(gfxdevice_t*dev)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->config_noclips)
+	return;
     if(i->textid>=0)
 	endtext(dev);
     if(i->shapeid>=0)
