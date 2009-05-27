@@ -22,16 +22,6 @@ typedef struct _fillstyle {
     char is_filled;
 } fillstyle_t;
 
-typedef struct _edge {
-    point_t a;
-    point_t b;
-    fillstyle_t*style;
-#ifdef DEBUG
-    int tmp;
-#endif
-    struct _edge *next;
-} edge_t;
-
 typedef struct _windstate
 {
     char is_filled;
@@ -58,12 +48,13 @@ typedef struct _gfxpolystroke {
     int num_points;
     point_t*points;
     fillstyle_t*fs;
+    struct _gfxpolystroke*next;
 } gfxpolystroke_t;
-typedef struct _gfxcompactpoly {
+typedef struct _gfxpoly {
     double gridsize;
     int num_strokes;
     gfxpolystroke_t*strokes;
-} gfxcompactpoly_t;
+} gfxpoly_t;
 
 typedef struct _segment {
     point_t a;
@@ -116,19 +107,13 @@ typedef struct _segment {
 #define XDIFF(s1,s2,ypos) (((s1)->k + (double)(s1)->delta.x*ypos)*(s2)->delta.y - \
                            ((s2)->k + (double)(s2)->delta.x*ypos)*(s1)->delta.y)
 
-typedef struct _gfxpoly {
-    double gridsize;
-    edge_t*edges;
-} gfxpoly_t;
-
 void gfxpoly_fail(char*expr, char*file, int line, const char*function);
 
-gfxpoly_t* gfxpoly_new(double gridsize);
-char gfxcompactpoly_check(gfxcompactpoly_t*poly);
-int gfxcompactpoly_size(gfxcompactpoly_t*poly);
-void gfxcompactpoly_dump(gfxcompactpoly_t*poly);
-void gfxcompactpoly_save(gfxcompactpoly_t*poly, const char*filename);
-gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windcontext_t*context);
+char gfxpoly_check(gfxpoly_t*poly);
+int gfxpoly_size(gfxpoly_t*poly);
+void gfxpoly_dump(gfxpoly_t*poly);
+void gfxpoly_save(gfxpoly_t*poly, const char*filename);
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context);
 
 #ifndef CHECKS
 #ifdef assert

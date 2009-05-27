@@ -8,7 +8,6 @@ typedef struct _renderpoint
     double x;
     segment_dir_t dir;
     fillstyle_t*fs;
-    edge_t*e; //only for debugging
     int polygon_nr;
 } renderpoint_t;
 
@@ -28,13 +27,12 @@ typedef struct _renderbuf
     renderline_t*lines;
 } renderbuf_t;
 
-static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs, int polygon_nr, edge_t*e)
+static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs, int polygon_nr)
 {
     renderpoint_t p;
     p.x = x;
     p.dir = dir;
     p.fs = fs;
-    p.e = e;
     p.polygon_nr = polygon_nr;
     
     if(y >= buf->bbox.ymax || y < buf->bbox.ymin) 
@@ -50,7 +48,7 @@ static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir
     l->num++;
 }
 #define CUT 0.5
-static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs, int polygon_nr, edge_t*e)
+static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs, int polygon_nr)
 {
     x1 *= buf->zoom;
     y1 *= buf->zoom;
@@ -90,7 +88,7 @@ static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2
 
     while(posy<=endy) {
         double xx = startx + posx;
-        add_pixel(buf, xx, posy, dir, fs, polygon_nr, e);
+        add_pixel(buf, xx, posy, dir, fs, polygon_nr);
         posx+=stepx;
         posy++;
     }
@@ -140,10 +138,15 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
         buf->lines[y].num = 0;
     }
 
-    edge_t*e;
     int polygon_nr = 0;
-    for(e=polygon->edges;e;e=e->next) {
-        add_line(buf, e->a.x, e->a.y, e->b.x, e->b.y, e->style, polygon_nr, e);
+    int s,t;
+    for(s=0;s<polygon->num_strokes;s++) {
+	gfxpolystroke_t*stroke = &polygon->strokes[s];
+	for(t=0;t<stroke->num_points-1;t++) {
+	    point_t a = stroke->points[t];
+	    point_t b = stroke->points[t+1];
+	    add_line(buf, a.x, a.y, b.x, b.y, stroke->fs, polygon_nr);
+	}
     }
 
     for(y=0;y<buf->height;y++) {
@@ -221,31 +224,30 @@ intbbox_t intbbox_new(int x1, int y1, int x2, int y2)
 
 intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 {
-    int t;
     intbbox_t b = {0,0,0,0};
-    edge_t*e = polygon->edges;
 
     double g = zoom*polygon->gridsize;
 
-    if(e) {
-        b.xmin = e->a.x*g;
-        b.ymin = e->a.y*g;
-        b.xmax = e->a.x*g;
-        b.ymax = e->a.y*g;
+    if(polygon->num_strokes && polygon->strokes[0].num_points) {
+        b.xmin = polygon->strokes[0].points[0].x*g;
+        b.ymin = polygon->strokes[0].points[0].y*g;
+        b.xmax = polygon->strokes[0].points[0].x*g;
+        b.ymax = polygon->strokes[0].points[0].y*g;
     }
-    for(e=polygon->edges;e;e=e->next) {
-        double x_min = min(e->a.x,e->b.x)*g;
-        double y_min = min(e->a.y,e->b.y)*g;
-        double x_max = max(e->a.x,e->b.x)*g;
-        double y_max = max(e->a.y,e->b.y)*g;
-        int x1 = floor(x_min);
-        int y1 = floor(y_min);
-        int x2 = ceil(x_max);
-        int y2 = ceil(y_max);
-        if(x1 < b.xmin) b.xmin = x1;
-        if(y1 < b.ymin) b.ymin = y1;
-        if(x2 > b.xmax) b.xmax = x2;
-        if(y2 > b.ymax) b.ymax = y2;
+    int s,t;
+    for(s=0;s<polygon->num_strokes;s++) {
+	gfxpolystroke_t*stroke = &polygon->strokes[s];
+	for(t=0;t<stroke->num_points;t++) {
+	    point_t p = stroke->points[t];
+	    int x1 = floor(p.x);
+	    int y1 = floor(p.y);
+	    int x2 = ceil(p.x);
+	    int y2 = ceil(p.y);
+	    if(x1 < b.xmin) b.xmin = x1;
+	    if(y1 < b.ymin) b.ymin = y1;
+	    if(x2 > b.xmax) b.xmax = x2;
+	    if(y2 > b.ymax) b.ymax = y2;
+	}
     }
     
     if(b.xmax > (int)(MAX_WIDTH*zoom))

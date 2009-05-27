@@ -9,16 +9,6 @@
 /* factor that determines into how many line fragments a spline is converted */
 #define SUBFRACTION (2.4)
 
-static edge_t*edge_new(int x1, int y1, int x2, int y2)
-{
-    edge_t*s = rfx_calloc(sizeof(edge_t));
-    s->a.x = x1;
-    s->a.y = y1;
-    s->b.x = x2;
-    s->b.y = y2;
-    return s;
-}
-
 static inline int32_t convert_coord(double x, double z)
 {
     /* we clamp to 31 bit instead of 32 bit because we use
@@ -125,56 +115,8 @@ static void convert_file(const char*filename, polywriter_t*w, double gridsize)
     }
 }
 
-typedef struct _stdpoly {
-    gfxpoly_t*poly;
-    double lastx,lasty;
-} stdpoly_t;
-
-static void stdmoveto(polywriter_t*w, int x, int y)
-{
-    stdpoly_t*d = (stdpoly_t*)w->internal;
-    d->lastx = x;d->lasty = y;
-}
-static void stdlineto(polywriter_t*w, int x, int y)
-{
-    stdpoly_t*d = (stdpoly_t*)w->internal;
-    int x1 = d->lastx;
-    int y1 = d->lasty;
-    int x2 = x;
-    int y2 = y;
-    if(x1!=x2 || y1!=y2) {
-        edge_t*s = edge_new(x1, y1, x2, y2);
-        s->next = d->poly->edges;
-        d->poly->edges = s;
-    }
-    d->lastx = x;d->lasty = y;
-}
-static void stdsetgridsize(polywriter_t*w, double gridsize)
-{
-    stdpoly_t*d = (stdpoly_t*)w->internal;
-    d->poly->gridsize = gridsize;
-}
-static void* stdfinish(polywriter_t*w)
-{
-    stdpoly_t*d = (stdpoly_t*)w->internal;
-    gfxpoly_t*poly =  d->poly;
-    free(w->internal);w->internal = 0;
-    return poly;
-}
-void gfxpolywriter_init(polywriter_t*w)
-{
-    w->moveto = stdmoveto;
-    w->lineto = stdlineto;
-    w->setgridsize = stdsetgridsize;
-    w->finish = stdfinish;
-    stdpoly_t*data = w->internal = malloc(sizeof(stdpoly_t));
-    data->poly = gfxpoly_new(1.0);
-    data->lastx = 0;
-    data->lasty = 0;
-}
-
 typedef struct _compactpoly {
-    gfxcompactpoly_t*poly;
+    gfxpoly_t*poly;
     point_t last;
     int strokes_size;
     point_t*points;
@@ -216,7 +158,7 @@ void finish_segment(compactpoly_t*data)
 #endif
     data->poly->num_strokes++;
 }
-static void compactmoveto(polywriter_t*w, int x, int y)
+static void compactmoveto(polywriter_t*w, int32_t x, int32_t y)
 {
     compactpoly_t*data = (compactpoly_t*)w->internal;
     point_t p;
@@ -227,7 +169,7 @@ static void compactmoveto(polywriter_t*w, int x, int y)
     }
     data->last = p;
 }
-static void compactlineto(polywriter_t*w, int x, int y)
+static void compactlineto(polywriter_t*w, int32_t x, int32_t y)
 {
     compactpoly_t*data = (compactpoly_t*)w->internal;
     point_t p;
@@ -271,18 +213,18 @@ static void*compactfinish(polywriter_t*w)
     data->poly->strokes = (gfxpolystroke_t*)rfx_realloc(data->poly->strokes, sizeof(gfxpolystroke_t)*data->poly->num_strokes);
     //qsort(data->poly->strokes, data->poly->num_strokes, sizeof(gfxpolystroke_t), compare_stroke);
     free(data->points);
-    gfxcompactpoly_t*poly = data->poly;
+    gfxpoly_t*poly = data->poly;
     free(w->internal);w->internal = 0;
     return (void*)poly;
 }
-void gfxcompactpolywriter_init(polywriter_t*w)
+void gfxpolywriter_init(polywriter_t*w)
 {
     w->moveto = compactmoveto;
     w->lineto = compactlineto;
     w->setgridsize = compactsetgridsize;
     w->finish = compactfinish;
     compactpoly_t*data = w->internal = rfx_calloc(sizeof(compactpoly_t));
-    data->poly = rfx_calloc(sizeof(gfxcompactpoly_t));
+    data->poly = rfx_calloc(sizeof(gfxpoly_t));
     data->poly->gridsize = 1.0;
     data->last.x = data->last.y = 0;
     data->strokes_size = 16;
@@ -296,60 +238,21 @@ void gfxcompactpolywriter_init(polywriter_t*w)
 
 gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
 {
-    polywriter_t w;
-    gfxpolywriter_init(&w);
-    w.setgridsize(&w, gridsize);
-    convert_gfxline(line, &w, gridsize);
-    return w.finish(&w);
+    polywriter_t writer;
+    gfxpolywriter_init(&writer);
+    writer.setgridsize(&writer, gridsize);
+    convert_gfxline(line, &writer, gridsize);
+    return (gfxpoly_t*)writer.finish(&writer);
 }
 gfxpoly_t* gfxpoly_from_file(const char*filename, double gridsize)
 {
-    polywriter_t w;
-    gfxpolywriter_init(&w);
-    w.setgridsize(&w, gridsize);
-    convert_file(filename, &w, gridsize);
-    return w.finish(&w);
-}
-gfxcompactpoly_t* gfxcompactpoly_from_gfxline(gfxline_t*line, double gridsize)
-{
     polywriter_t writer;
-    gfxcompactpolywriter_init(&writer);
-    writer.setgridsize(&writer, gridsize);
-    convert_gfxline(line, &writer, gridsize);
-    return (gfxcompactpoly_t*)writer.finish(&writer);
-}
-gfxcompactpoly_t* gfxcompactpoly_from_file(const char*filename, double gridsize)
-{
-    polywriter_t writer;
-    gfxcompactpolywriter_init(&writer);
+    gfxpolywriter_init(&writer);
     writer.setgridsize(&writer, gridsize);
     convert_file(filename, &writer, gridsize);
-    return (gfxcompactpoly_t*)writer.finish(&writer);
+    return (gfxpoly_t*)writer.finish(&writer);
 }
-gfxpoly_t*gfxpoly_from_gfxcompactpoly(gfxcompactpoly_t*poly)
-{
-    int s,t;
-    int pass;
-    gfxpoly_t*poly2 = gfxpoly_new(poly->gridsize);
-    for(t=0;t<poly->num_strokes;t++) {
-	gfxpolystroke_t*stroke = &poly->strokes[t];
-	for(s=0;s<stroke->num_points-1;s++) {
-	    point_t a = stroke->points[s];
-	    point_t b = stroke->points[s+1];
-	    edge_t*e = 0;
-	    if(stroke->dir == DIR_UP) {
-		e = edge_new(a.x,a.y,b.x,b.y);
-	    } else {
-		e = edge_new(b.x,b.y,a.x,a.y);
-	    }
-	    e->style = stroke->fs;
-	    e->next = poly2->edges;
-	    poly2->edges = e;
-	}
-    }
-    return poly2;
-}
-void gfxcompactpoly_destroy(gfxcompactpoly_t*poly)
+void gfxpoly_destroy(gfxpoly_t*poly)
 {
     int t;
     for(t=0;t<poly->num_strokes;t++) {

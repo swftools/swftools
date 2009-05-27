@@ -11,7 +11,7 @@
 #include "wind.h"
 #include "convert.h"
 
-static gfxcompactpoly_t*current_polygon = 0;
+static gfxpoly_t*current_polygon = 0;
 void gfxpoly_fail(char*expr, char*file, int line, const char*function)
 {
     if(!current_polygon) {
@@ -38,7 +38,7 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
     fprintf(stderr, "assert(%s) failed in %s in line %d: %s\n", expr, file, line, function);
     fprintf(stderr, "I'm saving a debug file \"%s\" to the current directory.\n", filename);
 
-    gfxcompactpoly_save(current_polygon, filename);
+    gfxpoly_save(current_polygon, filename);
     exit(1);
 }
 
@@ -138,33 +138,7 @@ static int compare_events(const void*_a,const void*_b)
     //return d;
 }
 
-gfxpoly_t* gfxpoly_new(double gridsize)
-{
-    gfxpoly_t*p = (gfxpoly_t*)rfx_calloc(sizeof(gfxpoly_t));
-    p->gridsize = gridsize;
-    return p;
-}
-void gfxpoly_destroy(gfxpoly_t*poly)
-{
-    edge_t* s = poly->edges;
-    while(s) {
-        edge_t*next  = s->next;
-        free(s);
-        s = next;
-    }
-    free(poly);
-}
 int gfxpoly_size(gfxpoly_t*poly)
-{
-    edge_t*e = poly->edges;
-    int count = 0;
-    while(e) {
-	count++;
-	e = e->next;
-    }
-    return count;
-}
-int gfxcompactpoly_size(gfxcompactpoly_t*poly)
 {
     int s,t;
     int edges = 0;
@@ -176,41 +150,6 @@ int gfxcompactpoly_size(gfxcompactpoly_t*poly)
 }
 
 char gfxpoly_check(gfxpoly_t*poly)
-{
-    edge_t* s = poly->edges;
-    dict_t*d = dict_new2(&point_type);
-    while(s) {
-        if(!dict_contains(d, &s->a)) {
-            dict_put(d, &s->a, (void*)(ptroff_t)1);
-        } else {
-            int count = (ptroff_t)dict_lookup(d, &s->a);
-            dict_del(d, &s->a);
-            count++;
-            dict_put(d, &s->a, (void*)(ptroff_t)count);
-        }
-        if(!dict_contains(d, &s->b)) {
-            dict_put(d, &s->b, (void*)(ptroff_t)1);
-        } else {
-            int count = (ptroff_t)dict_lookup(d, &s->b);
-            dict_del(d, &s->b);
-            count++;
-            dict_put(d, &s->b, (void*)(ptroff_t)count);
-        }
-        s = s->next;
-    }
-    DICT_ITERATE_ITEMS(d, point_t*, p, void*, c) {
-        int count = (ptroff_t)c;
-        if(count&1) {
-            fprintf(stderr, "Point (%f,%f) occurs %d times\n", p->x*poly->gridsize, p->y*poly->gridsize, count);
-            dict_destroy(d);
-            return 0;
-        }
-    }
-    dict_destroy(d);
-    return 1;
-}
-
-char gfxcompactpoly_check(gfxcompactpoly_t*poly)
 {
     dict_t*d = dict_new2(&point_type);
     int s,t;
@@ -243,17 +182,6 @@ char gfxcompactpoly_check(gfxcompactpoly_t*poly)
 
 void gfxpoly_dump(gfxpoly_t*poly)
 {
-    edge_t* s = poly->edges;
-    double g = poly->gridsize;
-    fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
-    while(s) {
-        fprintf(stderr, "(%f,%f) -> (%f,%f)\n", s->a.x*g, s->a.y*g, s->b.x*g, s->b.y*g);
-        s = s->next;
-    }
-}
-
-void gfxcompactpoly_dump(gfxcompactpoly_t*poly)
-{
     int s,t;
     double g = poly->gridsize;
     fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
@@ -268,7 +196,7 @@ void gfxcompactpoly_dump(gfxcompactpoly_t*poly)
     }
 }
 
-void gfxcompactpoly_save(gfxcompactpoly_t*poly, const char*filename)
+void gfxpoly_save(gfxpoly_t*poly, const char*filename)
 {
     FILE*fi = fopen(filename, "wb");
     fprintf(fi, "%% gridsize %f\n", poly->gridsize);
@@ -420,7 +348,7 @@ static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr,
     }
 }
 
-static void gfxpoly_enqueue(gfxcompactpoly_t*p, heap_t*queue, int polygon_nr)
+static void gfxpoly_enqueue(gfxpoly_t*p, heap_t*queue, int polygon_nr)
 {
     int t;
     for(t=0;t<p->num_strokes;t++) {
@@ -658,7 +586,6 @@ static inline box_t box_new(int32_t x, int32_t y)
     box.left2.y = box.right2.y = y;
     return box;
 }
-
 
 static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
 {
@@ -1096,7 +1023,7 @@ static void check_status(status_t*status)
 }
 #endif
 
-static void add_horizontals(gfxcompactpoly_t*poly, windrule_t*windrule, windcontext_t*context)
+static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context)
 {
     /*
           |..|        |...........|                 |           |
@@ -1219,7 +1146,7 @@ static void add_horizontals(gfxcompactpoly_t*poly, windrule_t*windrule, windcont
     heap_destroy(queue);
 }
 
-gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windcontext_t*context)
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context)
 {
     current_polygon = poly;
     heap_t* queue = heap_new(sizeof(event_t), compare_events);
@@ -1232,7 +1159,7 @@ gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windconte
     status.windrule = windrule;
     status.context = context;
     status.actlist = actlist_new();
-    gfxcompactpolywriter_init(&status.writer);
+    gfxpolywriter_init(&status.writer);
     status.writer.setgridsize(&status.writer, poly->gridsize);
 
 #ifdef CHECKS
@@ -1290,10 +1217,8 @@ gfxpoly_t* gfxpoly_process(gfxcompactpoly_t*poly, windrule_t*windrule, windconte
     heap_destroy(queue);
     xrow_destroy(status.xrow);
 
-    gfxcompactpoly_t*p = (gfxcompactpoly_t*)status.writer.finish(&status.writer);
+    gfxpoly_t*p = (gfxpoly_t*)status.writer.finish(&status.writer);
 
     add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
-    gfxpoly_t*pp = gfxpoly_from_gfxcompactpoly(p);
-    gfxcompactpoly_destroy(p);
-    return pp;
+    return p;
 }
