@@ -22,8 +22,8 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
     void*md5 = init_md5();
    
     int s,t;
-    for(s=0;s<current_polygon->num_strokes;s++) {
-	gfxpolystroke_t*stroke = &current_polygon->strokes[s];
+    gfxpolystroke_t*stroke = current_polygon->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(t=0;t<stroke->num_points;t++) {
 	    update_md5(md5, (unsigned char*)&stroke->points[t].x, sizeof(stroke->points[t].x));
 	    update_md5(md5, (unsigned char*)&stroke->points[t].y, sizeof(stroke->points[t].y));
@@ -142,8 +142,8 @@ int gfxpoly_size(gfxpoly_t*poly)
 {
     int s,t;
     int edges = 0;
-    for(t=0;t<poly->num_strokes;t++) {
-	gfxpolystroke_t*stroke = &poly->strokes[t];
+    gfxpolystroke_t*stroke = poly->strokes;
+    for(;stroke;stroke=stroke->next) {
 	edges += stroke->num_points-1;
     }
     return edges;
@@ -153,8 +153,8 @@ char gfxpoly_check(gfxpoly_t*poly)
 {
     dict_t*d = dict_new2(&point_type);
     int s,t;
-    for(t=0;t<poly->num_strokes;t++) {
-	gfxpolystroke_t*stroke = &poly->strokes[t];
+    gfxpolystroke_t*stroke = poly->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(s=0;s<stroke->num_points;s++) {
 	    point_t p = stroke->points[s];
 	    int num = (s>=1 && s<stroke->num_points-1)?2:1; // mid points are two points (start+end)
@@ -185,8 +185,8 @@ void gfxpoly_dump(gfxpoly_t*poly)
     int s,t;
     double g = poly->gridsize;
     fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
-    for(t=0;t<poly->num_strokes;t++) {
-	gfxpolystroke_t*stroke = &poly->strokes[t];
+    gfxpolystroke_t*stroke = poly->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(s=0;s<stroke->num_points-1;s++) {
 	    point_t a = stroke->points[s];
 	    point_t b = stroke->points[s+1];
@@ -202,8 +202,8 @@ void gfxpoly_save(gfxpoly_t*poly, const char*filename)
     fprintf(fi, "%% gridsize %f\n", poly->gridsize);
     fprintf(fi, "%% begin\n");
     int s,t;
-    for(t=0;t<poly->num_strokes;t++) {
-	gfxpolystroke_t*stroke = &poly->strokes[t];
+    gfxpolystroke_t*stroke = poly->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(s=0;s<stroke->num_points-1;s++) {
 	    point_t a = stroke->points[s];
 	    point_t b = stroke->points[s+1];
@@ -351,8 +351,8 @@ static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr,
 static void gfxpoly_enqueue(gfxpoly_t*p, heap_t*queue, int polygon_nr)
 {
     int t;
-    for(t=0;t<p->num_strokes;t++) {
-	gfxpolystroke_t*stroke = &p->strokes[t];
+    gfxpolystroke_t*stroke = p->strokes;
+    for(;stroke;stroke=stroke->next) {
 	assert(stroke->num_points > 1);
 
 #ifdef CHECKS
@@ -1042,9 +1042,6 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
     actlist_t* actlist = actlist_new();
 
     event_t*e = heap_chopmax(queue);
-    int newstrokes_size = 4;
-    int num_newstrokes = 0;
-    gfxpolystroke_t*newstrokes = malloc(sizeof(gfxpolystroke_t)*newstrokes_size);
     while(e) {
         int32_t y = e->p.y;
         int32_t x = 0;
@@ -1063,11 +1060,10 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 #endif
 		assert(x<e->p.x);
 
-		if(num_newstrokes == newstrokes_size) {
-		    newstrokes_size = (newstrokes_size)<<1;
-		    newstrokes = rfx_realloc(newstrokes, sizeof(gfxpolystroke_t)*newstrokes_size);
-		}
-                gfxpolystroke_t*stroke = &newstrokes[num_newstrokes++];
+                gfxpolystroke_t*stroke = rfx_calloc(sizeof(gfxpolystroke_t));
+		stroke->next = poly->strokes;
+		poly->strokes = stroke;
+
 		stroke->num_points = 2;
 		stroke->points = malloc(sizeof(point_t)*2);
 		stroke->dir = DIR_UP; // FIXME
@@ -1136,11 +1132,6 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 
         assert(!fill); // check that polygon is not bleeding
     }
-
-    poly->strokes = rfx_realloc(poly->strokes, sizeof(gfxpolystroke_t)*(num_newstrokes+poly->num_strokes));
-    memcpy(&poly->strokes[poly->num_strokes], newstrokes, sizeof(gfxpolystroke_t)*num_newstrokes);
-    poly->num_strokes += num_newstrokes;
-    free(newstrokes);
 
     actlist_destroy(actlist);
     heap_destroy(queue);

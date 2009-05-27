@@ -52,7 +52,6 @@ typedef struct _gfxpolystroke {
 } gfxpolystroke_t;
 typedef struct _gfxpoly {
     double gridsize;
-    int num_strokes;
     gfxpolystroke_t*strokes;
 } gfxpoly_t;
 

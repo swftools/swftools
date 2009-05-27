@@ -118,7 +118,6 @@ static void convert_file(const char*filename, polywriter_t*w, double gridsize)
 typedef struct _compactpoly {
     gfxpoly_t*poly;
     point_t last;
-    int strokes_size;
     point_t*points;
     int num_points;
     int points_size;
@@ -130,13 +129,10 @@ void finish_segment(compactpoly_t*data)
 {
     if(data->num_points <= 1)
 	return;
-    if(data->poly->num_strokes == data->strokes_size) {
-	data->strokes_size <<= 1;
-	assert(data->strokes_size > data->poly->num_strokes);
-	data->poly->strokes = rfx_realloc(data->poly->strokes, sizeof(gfxpolystroke_t)*data->strokes_size);
-    }
     point_t*p = malloc(sizeof(point_t)*data->num_points);
-    gfxpolystroke_t*s = &data->poly->strokes[data->poly->num_strokes];
+    gfxpolystroke_t*s = rfx_calloc(sizeof(gfxpolystroke_t));
+    s->next = data->poly->strokes;
+    data->poly->strokes = s;
     s->num_points = data->num_points;
     s->dir = data->dir;
     s->points = p;
@@ -156,7 +152,6 @@ void finish_segment(compactpoly_t*data)
 	assert(p[t].y<=p[t+1].y);
     }
 #endif
-    data->poly->num_strokes++;
 }
 static void compactmoveto(polywriter_t*w, int32_t x, int32_t y)
 {
@@ -210,7 +205,6 @@ static void*compactfinish(polywriter_t*w)
 {
     compactpoly_t*data = (compactpoly_t*)w->internal;
     finish_segment(data);
-    data->poly->strokes = (gfxpolystroke_t*)rfx_realloc(data->poly->strokes, sizeof(gfxpolystroke_t)*data->poly->num_strokes);
     //qsort(data->poly->strokes, data->poly->num_strokes, sizeof(gfxpolystroke_t), compare_stroke);
     free(data->points);
     gfxpoly_t*poly = data->poly;
@@ -227,13 +221,12 @@ void gfxpolywriter_init(polywriter_t*w)
     data->poly = rfx_calloc(sizeof(gfxpoly_t));
     data->poly->gridsize = 1.0;
     data->last.x = data->last.y = 0;
-    data->strokes_size = 16;
     data->num_points = 0;
     data->points_size = 16;
     data->new = 1;
     data->dir = DIR_UNKNOWN;
     data->points = (point_t*)rfx_alloc(sizeof(point_t)*data->points_size);
-    data->poly->strokes = (gfxpolystroke_t*)rfx_alloc(sizeof(gfxpolystroke_t)*data->strokes_size);
+    data->poly->strokes = 0;
 }
 
 gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
@@ -255,11 +248,13 @@ gfxpoly_t* gfxpoly_from_file(const char*filename, double gridsize)
 void gfxpoly_destroy(gfxpoly_t*poly)
 {
     int t;
-    for(t=0;t<poly->num_strokes;t++) {
-	free(poly->strokes[t].points);
-	poly->strokes[t].points = 0;
+    gfxpolystroke_t*stroke = poly->strokes;
+    while(stroke) {
+	gfxpolystroke_t*next = stroke->next;
+	free(stroke->points);
+	free(stroke);
+	stroke = next;
     }
-    free(poly->strokes);
     free(poly);
 }
 

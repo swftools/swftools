@@ -126,7 +126,8 @@ gfxline_t* make_circles(int n)
 	int y = c%200;;
 	c = crc32_add_byte(c, t^0x55);
 	int r = c%100;
-	b = gfxline_append(b, gfxline_makecircle(x,y,r,r));
+	gfxline_t*c = gfxline_makecircle(x,y,r,r);
+	b = gfxline_append(b, c);
 	//b = gfxline_append(b, gfxline_makerectangle(10,10,100,100));
     }
     return b;
@@ -183,8 +184,8 @@ int test1(int argn, char*argv[])
     //gfxline_transform(b, &matrix);
 
     gfxline_dump(b, stderr, "");
-
     gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
+    
     gfxline_free(box1);
     gfxline_free(box2);
     gfxline_free(box3);
@@ -287,6 +288,7 @@ void test3(int argn, char*argv[])
         gfxline_transform(l, &m);
 
         gfxpoly_t*poly1 = gfxpoly_from_gfxline(l, 0.05);
+
         gfxpoly_t*poly2 = gfxpoly_process(poly1, rule, &onepolygon);
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
@@ -303,11 +305,11 @@ void test3(int argn, char*argv[])
 
 #define FILL
 #ifdef FILL
-        swf_ShapeSetAll(tag,s,0,0,0,fs,0);
+        swf_ShapeSetAll(tag,s,UNDEFINED_COORD,UNDEFINED_COORD,0,fs,0);
 
 	int i,j;
-	for(i=0;i<poly2->num_strokes;i++) {
-	    gfxpolystroke_t*stroke = &poly2->strokes[i];
+	gfxpolystroke_t*stroke = poly2->strokes;
+	for(;stroke;stroke=stroke->next) {
 	    for(j=0;j<stroke->num_points-1;j++) {
 		point_t a = stroke->points[j];
 		point_t b = stroke->points[j+1];
@@ -359,8 +361,8 @@ void test3(int argn, char*argv[])
 void rotate90(gfxpoly_t*poly)
 {
     int i,j;
-    for(i=0;i<poly->num_strokes;i++) {
-	gfxpolystroke_t*stroke = &poly->strokes[i];
+    gfxpolystroke_t*stroke = poly->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(j=0;j<stroke->num_points;j++) {
 	    point_t a = stroke->points[j];
 	    stroke->points[j].x = a.y;

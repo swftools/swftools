@@ -140,8 +140,8 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 
     int polygon_nr = 0;
     int s,t;
-    for(s=0;s<polygon->num_strokes;s++) {
-	gfxpolystroke_t*stroke = &polygon->strokes[s];
+    gfxpolystroke_t*stroke = polygon->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(t=0;t<stroke->num_points-1;t++) {
 	    point_t a = stroke->points[t];
 	    point_t b = stroke->points[t+1];
@@ -228,15 +228,15 @@ intbbox_t intbbox_from_polygon(gfxpoly_t*polygon, double zoom)
 
     double g = zoom*polygon->gridsize;
 
-    if(polygon->num_strokes && polygon->strokes[0].num_points) {
-        b.xmin = polygon->strokes[0].points[0].x*g;
-        b.ymin = polygon->strokes[0].points[0].y*g;
-        b.xmax = polygon->strokes[0].points[0].x*g;
-        b.ymax = polygon->strokes[0].points[0].y*g;
+    if(polygon->strokes && polygon->strokes->num_points) {
+        b.xmin = polygon->strokes->points[0].x*g;
+        b.ymin = polygon->strokes->points[0].y*g;
+        b.xmax = polygon->strokes->points[0].x*g;
+        b.ymax = polygon->strokes->points[0].y*g;
     }
     int s,t;
-    for(s=0;s<polygon->num_strokes;s++) {
-	gfxpolystroke_t*stroke = &polygon->strokes[s];
+    gfxpolystroke_t*stroke = polygon->strokes;
+    for(;stroke;stroke=stroke->next) {
 	for(t=0;t<stroke->num_points;t++) {
 	    point_t p = stroke->points[t];
 	    int x1 = floor(p.x);

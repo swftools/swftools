@@ -644,14 +644,12 @@ char* string_escape(string_t*str)
 
 unsigned int crc32_add_byte(unsigned int checksum, unsigned char b) 
 {
-    if(!crc32)
-        crc32_init();
+    crc32_init();
     return checksum>>8 ^ crc32[(b^checksum)&0xff];
 }
 unsigned int crc32_add_string(unsigned int checksum, const char*s)
 {
-    if(!crc32)
-        crc32_init();
+    crc32_init();
     if(!s)
         return checksum;
     while(*s) {
@@ -665,8 +663,7 @@ unsigned int string_hash(const string_t*str)
 {
     int t;
     unsigned int checksum = 0;
-    if(!crc32)
-        crc32_init();
+    crc32_init();
     for(t=0;t<str->len;t++) {
         checksum = checksum>>8 ^ crc32[(str->str[t]^checksum)&0xff];
     }
@@ -676,8 +673,7 @@ unsigned int string_hash2(const char*str)
 {
     unsigned int checksum = 0;
     const char*p = str;
-    if(!crc32)
-        crc32_init();
+    crc32_init();
     while(*p) {
         checksum = checksum>>8 ^ crc32[(*p^checksum)&0xff];
         p++;
