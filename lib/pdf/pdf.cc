@@ -14,8 +14,7 @@
 #include "../args.h"
 
 static double zoom = 72; /* xpdf: 86 */
-static int jpeg_dpi = 0;
-static int ppm_dpi = 0;
+static int zoomtowidth = 0;
 static int multiply = 1;
 static char* global_page_range = 0;
 
@@ -406,23 +405,13 @@ static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value
 	addGlobalFont(value);
     } else if(!strncmp(name, "languagedir", strlen("languagedir"))) {
         addGlobalLanguageDir(value);
+    } else if(!strcmp(name, "zoomtowidth")) {
+	zoomtowidth = atoi(value);
     } else if(!strcmp(name, "zoom")) {
 	char buf[80];
 	zoom = atof(value);
-	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	storeDeviceParameter(p, "jpegsubpixels", buf);
-	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	storeDeviceParameter(p, "ppmsubpixels", buf);
-    } else if(!strcmp(name, "jpegdpi")) {
-	char buf[80];
-	jpeg_dpi = atoi(value);
-	sprintf(buf, "%f", (double)jpeg_dpi/(double)zoom);
-	storeDeviceParameter(p, "jpegsubpixels", buf);
-    } else if(!strcmp(name, "ppmdpi")) {
-	char buf[80];
-	ppm_dpi = atoi(value);
-	sprintf(buf, "%f", (double)ppm_dpi/(double)zoom);
-	storeDeviceParameter(p, "ppmsubpixels", buf);
+    } else if(!strcmp(name, "jpegdpi") || !strcmp(name, "ppmdpi")) {
+	msg("<error> %s not supported anymore. Please use jpegsubpixels/ppmsubpixels");
     } else if(!strcmp(name, "multiply")) {
         multiply = atoi(value);
     } else if(!strcmp(name, "help")) {
@@ -495,6 +484,14 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
           }
           if(!i->doc->okToChange() || !i->doc->okToAddNotes())
               i->protect = 1;
+    }
+	
+    if(zoomtowidth && i->doc->getNumPages()) {
+	Page*page = i->doc->getCatalog()->getPage(1);
+	PDFRectangle *r = page->getCropBox();
+	double width_before = r->x2 - r->x1;
+	zoom = 72.0 * zoomtowidth / width_before;
+	msg("<notice> Rendering at %f DPI. (Page width at 72 DPI: %f, target width: %d)", zoom, width_before, zoomtowidth);
     }
 
     i->info = new InfoOutputDev(i->doc->getXRef());
