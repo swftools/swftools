@@ -32,7 +32,7 @@ void actlist_dump(actlist_t*a, int32_t y)
         fprintf(stderr, "[%d]", s->nr);
         s = s->right;
         if(s) fprintf(stderr, " ");
-        else fprintf(stderr, "\n");
+        else fprintf(stderr, " y=%d\n", y);
     }
 }
 void actlist_verify(actlist_t*a, int32_t y)
@@ -95,6 +95,7 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
 	//double d = cmp(t, p1, p2);
 	double d = single_cmp(t, p1);
 	if(d>=0 && to_the_left) {
+	    actlist_dump(a, p1.y);
 	    segment_t*s = a->list;
 	    while(s) {
 		fprintf(stderr, "[%d] %f/%f (%d,%d) -> (%d,%d)\n", s->nr,
@@ -148,6 +149,7 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
     }
 #endif
 
+    /* this can be optimized for (is not needed in) normal mode (as opposed to horizontal postprocess mode) */
     segment_t*out = last;
     if(d<0 || (d==0 && LINE_EQ(p2,last)<0)) {
 	last = last->left;

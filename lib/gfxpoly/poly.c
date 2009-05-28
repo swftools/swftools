@@ -187,10 +187,11 @@ void gfxpoly_dump(gfxpoly_t*poly)
     fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
     gfxpolystroke_t*stroke = poly->strokes;
     for(;stroke;stroke=stroke->next) {
+	fprintf(stderr, "%08x", stroke);
 	for(s=0;s<stroke->num_points-1;s++) {
 	    point_t a = stroke->points[s];
 	    point_t b = stroke->points[s+1];
-	    fprintf(stderr, "%s(%f,%f) -> (%f,%f)%s\n", s?" ":"[", a.x*g, a.y*g, b.x*g, b.y*g,
+	    fprintf(stderr, "%s (%f,%f) -> (%f,%f)%s\n", s?"        ":"", a.x*g, a.y*g, b.x*g, b.y*g,
 		                                        s==stroke->num_points-2?"]":"");
 	}
     }
@@ -204,14 +205,14 @@ void gfxpoly_save(gfxpoly_t*poly, const char*filename)
     int s,t;
     gfxpolystroke_t*stroke = poly->strokes;
     for(;stroke;stroke=stroke->next) {
-	for(s=0;s<stroke->num_points-1;s++) {
-	    point_t a = stroke->points[s];
-	    point_t b = stroke->points[s+1];
 	    fprintf(fi, "%g setgray\n", stroke->dir==DIR_UP ? 0.7 : 0);
-	    fprintf(fi, "%d %d moveto\n", a.x, a.y);
-	    fprintf(fi, "%d %d lineto\n", b.x, b.y);
-	    fprintf(fi, "stroke\n");
+	point_t p = stroke->points[0];
+	fprintf(fi, "%d %d moveto\n", p.x, p.y);
+	for(s=1;s<stroke->num_points;s++) {
+	    p = stroke->points[s];
+	    fprintf(fi, "%d %d lineto\n", p.x, p.y);
 	}
+	fprintf(fi, "stroke\n");
     }
     fprintf(fi, "showpage\n");
     fclose(fi);
@@ -255,10 +256,10 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
     if(y1!=y2) {
 	assert(y1<y2);
     } else {
-        /* up/down for horizontal segments is handled by "rotating"
+        /* We need to make sure horizontal segments always go from left to right.
+	   "up/down" for horizontal segments is handled by "rotating"
            them 90° anticlockwise in screen coordinates (tilt your head to
-           the right) 
-           TODO: is this still needed?
+           the right).
 	 */
         s->dir = DIR_UP;
         if(x1>x2) {
@@ -324,17 +325,23 @@ static void segment_destroy(segment_t*s)
 
 static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr, int pos)
 {
+    if(!stroke) 
+	return;
+    segment_t*s = 0;
+    /* we need to queue multiple segments at once because we need to process start events
+       before horizontal events */
     while(pos < stroke->num_points-1) {
 	assert(stroke->points[pos].y <= stroke->points[pos+1].y);
-	segment_t*s = segment_new(stroke->points[pos], stroke->points[pos+1], polygon_nr, stroke->dir);
-	s->stroke = stroke;
-	s->stroke_pos = ++pos;
+	s = segment_new(stroke->points[pos], stroke->points[pos+1], polygon_nr, stroke->dir);
+	pos++;
+	s->stroke = 0;
+	s->stroke_pos = 0;
 #ifdef DEBUG
 	/*if(l->tmp)
 	    s->nr = l->tmp;*/
-	fprintf(stderr, "[%d] (%d,%d) -> (%d,%d) %s (%d more to come)\n",
+	fprintf(stderr, "[%d] (%d,%d) -> (%d,%d) %s (stroke %08x, %d more to come)\n",
 		s->nr, s->a.x, s->a.y, s->b.x, s->b.y,
-		s->dir==DIR_UP?"up":"down", stroke->num_points - 1 - pos);
+		s->dir==DIR_UP?"up":"down", stroke, stroke->num_points - 1 - pos);
 #endif
 	event_t e = event_new();
 	e.type = s->delta.y ? EVENT_START : EVENT_HORIZONTAL;
@@ -345,6 +352,14 @@ static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr,
 	if(e.type != EVENT_HORIZONTAL) {
 	    break;
 	}
+    }
+    if(s) {
+#ifdef DEBUG
+	fprintf(stderr, "attaching contingency of stroke %08x to segment [%d] %s\n",
+		stroke, s, s->delta.y?"":"(horizontal)");
+#endif
+	s->stroke = stroke;
+	s->stroke_pos = pos;
     }
 }
 
@@ -413,8 +428,7 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
         return;
     }
 
-#define REMEMBER_CROSSINGS
-#ifdef REMEMBER_CROSSINGS
+#ifndef DONT_REMEMBER_CROSSINGS
     if(dict_contains(&s1->scheduled_crossings, (void*)(ptroff_t)s2->nr)) {
         /* FIXME: this whole segment hashing thing is really slow */
 #ifdef DEBUG
@@ -443,8 +457,24 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
             return;
         }
     }
+
     double asign2 = LINE_EQ(s1->a, s2);
+    if(asign2==0) {
+        // segment1 touches segment2 in a single point (ignored)
+#ifdef DEBUG
+        fprintf(stderr, "Notice: segment [%d]'s start point touches segment [%d]\n", s1->nr, s2->nr);
+#endif
+        return;
+    }
     double bsign2 = LINE_EQ(s1->b, s2);
+    if(bsign2==0) {
+        // segment1 touches segment2 in a single point (ignored)
+#ifdef DEBUG
+        fprintf(stderr, "Notice: segment [%d]'s end point touches segment [%d]\n", s1->nr, s2->nr);
+#endif
+        return;
+    }
+
     if(asign2<0 && bsign2<0) {
         // segment1 is completely to the left of segment2
 #ifdef DEBUG
@@ -453,43 +483,17 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
         return;
     }
     if(asign2>0 && bsign2>0)  {
-	// TODO: can this ever happen?
+        // segment1 is completely to the right of segment2
+#ifndef DONT_REMEMBER_CROSSINGS
+	assert(0);
+#endif
 #ifdef DEBUG
             fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s2->nr, s1->nr);
 #endif
-        // segment2 is completely to the left of segment1
         return;
     }
-    if(asign2==0) {
-        // segment1 touches segment2 in a single point (ignored)
-#ifdef DEBUG
-        fprintf(stderr, "Notice: segment [%d]'s start point touches segment [%d]\n", s1->nr, s2->nr);
-#endif
-        return;
-    }
-    if(bsign2==0) {
-        // segment1 touches segment2 in a single point (ignored)
-#ifdef DEBUG
-        fprintf(stderr, "Notice: segment [%d]'s end point touches segment [%d]\n", s1->nr, s2->nr);
-#endif
-        return;
-    }
+    
     double asign1 = LINE_EQ(s2->a, s1);
-    double bsign1 = LINE_EQ(s2->b, s1);
-    if(asign1<0 && bsign1<0) {
-        // segment1 is completely to the left of segment2
-#ifdef DEBUG
-            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s1->nr, s2->nr);
-#endif
-        return;
-    }
-    if(asign1>0 && bsign1>0)  {
-        // segment2 is completely to the left of segment1
-#ifdef DEBUG
-            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s2->nr, s1->nr);
-#endif
-        return;
-    }
     if(asign1==0) {
         // segment2 touches segment1 in a single point (ignored)
 #ifdef DEBUG
@@ -497,6 +501,7 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
 #endif
         return;
     }
+    double bsign1 = LINE_EQ(s2->b, s1);
     if(asign2==0) {
         // segment2 touches segment1 in a single point (ignored)
 #ifdef DEBUG
@@ -504,6 +509,34 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
 #endif
         return;
     }
+
+    if(asign1<0 && bsign1<0) {
+        // segment2 is completely to the left of segment1
+#ifndef DONT_REMEMBER_CROSSINGS
+	assert(0);
+#endif
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s1->nr, s2->nr);
+#endif
+        return;
+    }
+    if(asign1>0 && bsign1>0)  {
+        // segment2 is completely to the right of segment1
+#ifdef DEBUG
+            fprintf(stderr, "[%d] doesn't intersect with [%d] because: [%d] is completely to the left of [%d]\n", s1->nr, s2->nr, s2->nr, s1->nr);
+#endif
+        return;
+    }
+
+#ifdef DONT_REMEMBER_CROSSINGS
+    /* s2 crosses s1 from *left* to *right*. This is a crossing we already processed- 
+       there's not way s2 would be to the left of s1 otherwise */
+    if(asign1<0 && bsign1>0) return;
+    if(asign2>0 && bsign2<0) return;
+#endif
+
+    assert(!(asign1<0 && bsign1>0));
+    assert(!(asign2>0 && bsign2<0));
 
     /* TODO: should we precompute these? */
     double la = (double)s1->a.x*(double)s1->b.y - (double)s1->a.y*(double)s1->b.x;
@@ -513,10 +546,6 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     p.x = (int32_t)ceil((-la*s2->delta.x + lb*s1->delta.x) / det);
     p.y = (int32_t)ceil((+lb*s1->delta.y - la*s2->delta.y) / det);
 
-#ifndef REMEMBER_CROSSINGS
-    if(p.y < status->y) return;
-#endif
-
     assert(p.y >= status->y);
 #ifdef CHECKS
     assert(p.x >= s1->minx && p.x <= s1->maxx);
@@ -525,7 +554,7 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     point_t pair;
     pair.x = s1->nr;
     pair.y = s2->nr;
-#ifdef REMEMBER_CROSSINGS
+#ifndef DONT_REMEMBER_CROSSINGS
     assert(!dict_contains(status->seen_crossings, &pair));
     dict_put(status->seen_crossings, &pair, 0);
 #endif
@@ -534,7 +563,7 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     fprintf(stderr, "schedule crossing between [%d] and [%d] at (%d,%d)\n", s1->nr, s2->nr, p.x, p.y);
 #endif
 
-#ifdef REMEMBER_CROSSINGS
+#ifndef DONT_REMEMBER_CROSSINGS
     /* we insert into each other's intersection history because these segments might switch
        places and we still want to look them up quickly after they did */
     dict_put(&s1->scheduled_crossings, (void*)(ptroff_t)(s2->nr), 0);
@@ -985,7 +1014,7 @@ static void event_apply(status_t*status, event_t*e)
 #ifdef DEBUG
 		fprintf(stderr, "Ignore this crossing ([%d] not next to [%d])\n", e->s1->nr, e->s2->nr);
 #endif
-#ifdef REMEMBER_CROSSINGS
+#ifndef DONT_REMEMBER_CROSSINGS
                 /* ignore this crossing for now (there are some line segments in between).
                    it'll get rescheduled as soon as the "obstacles" are gone */
                 char del1 = dict_del(&e->s1->scheduled_crossings, (void*)(ptroff_t)e->s2->nr);
@@ -996,7 +1025,7 @@ static void event_apply(status_t*status, event_t*e)
                 point_t pair;
                 pair.x = e->s1->nr;
                 pair.y = e->s2->nr;
-#ifdef REMEMBER_CROSSINGS
+#ifndef DONT_REMEMBER_CROSSINGS
                 assert(dict_contains(status->seen_crossings, &pair));
                 dict_del(status->seen_crossings, &pair);
 #endif

@@ -7,7 +7,10 @@
 
 //#define DEBUG
 #define CHECKS
+
+/* features */
 #define SPLAY
+#define DONT_REMEMBER_CROSSINGS
 
 typedef enum {DIR_UP, DIR_DOWN, DIR_UNKNOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_START, EVENT_HORIZONTAL} eventtype_t;

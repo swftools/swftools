@@ -181,6 +181,7 @@ static void compactlineto(polywriter_t*w, int32_t x, int32_t y)
 	data->points[0] = data->last;
 	data->num_points = 1;
     }
+    data->new = 0;
 
     if(data->points_size == data->num_points) {
 	data->points_size <<= 1;
