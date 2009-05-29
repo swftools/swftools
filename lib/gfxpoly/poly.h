@@ -6,7 +6,7 @@
 #include "../types.h"
 
 //#define DEBUG
-#define CHECKS
+//#define CHECKS
 
 /* features */
 #define SPLAY
@@ -48,6 +48,7 @@ typedef struct _windrule
 
 typedef struct _gfxpolystroke {
     segment_dir_t dir;
+    int points_size;
     int num_points;
     point_t*points;
     fillstyle_t*fs;

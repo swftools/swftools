@@ -136,7 +136,8 @@ typedef struct _status {
     windrule_t*windrule;
     windcontext_t*context;
     segment_t*ending_segments;
-    polywriter_t writer;
+
+    gfxpolystroke_t*strokes;
 #ifdef CHECKS
     dict_t*seen_crossings; //list of crossing we saw so far
     dict_t*intersecting_segs; //list of segments intersecting in this scanline
@@ -647,13 +648,38 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
         fprintf(stderr, "[%d] receives next point (%d,%d)->(%d,%d) (drawing)\n", s->nr,
                 s->pos.x, s->pos.y, p.x, p.y);
 #endif
+	/* XXX we probably will never output circular/anticircular polygons, but if
+	   we do, we would need to set the segment direction here */
+	fillstyle_t*fs = s->fs_out;
+
         // omit horizontal lines
         if(s->pos.y != p.y) {
             point_t a = s->pos;
             point_t b = p;
             assert(a.y != b.y);
-	    status->writer.moveto(&status->writer, a.x, a.y);
-	    status->writer.lineto(&status->writer, b.x, b.y);
+
+            gfxpolystroke_t*stroke = status->strokes;
+	    while(stroke) {
+		point_t p = stroke->points[stroke->num_points-1];
+		if(p.x == a.x && p.y == a.y && stroke->fs == fs)
+		    break;
+		stroke = stroke->next;
+	    }
+	    if(!stroke) {
+		stroke = rfx_calloc(sizeof(gfxpolystroke_t));
+		stroke->dir = DIR_DOWN;
+		stroke->fs = fs;
+		stroke->next = status->strokes;
+		status->strokes = stroke;
+		stroke->points_size = 2;
+		stroke->points = rfx_calloc(sizeof(point_t)*stroke->points_size);
+		stroke->points[0] = a;
+		stroke->num_points = 1;
+	    } else if(stroke->num_points == stroke->points_size) {
+		stroke->points_size *= 2;
+		stroke->points = rfx_realloc(stroke->points, sizeof(point_t)*stroke->points_size);
+	    }
+	    stroke->points[stroke->num_points++] = b;
         }
     } else {
 #ifdef DEBUG
@@ -1195,8 +1221,6 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     status.windrule = windrule;
     status.context = context;
     status.actlist = actlist_new();
-    gfxpolywriter_init(&status.writer);
-    status.writer.setgridsize(&status.writer, poly->gridsize);
 
 #ifdef CHECKS
     status.seen_crossings = dict_new2(&point_type);
@@ -1254,8 +1278,11 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     queue_destroy(&status.queue);
     xrow_destroy(status.xrow);
 
-    gfxpoly_t*p = (gfxpoly_t*)status.writer.finish(&status.writer);
+    gfxpoly_t*p = (gfxpoly_t*)malloc(sizeof(gfxpoly_t));
+    p->gridsize = poly->gridsize;
+    p->strokes = status.strokes;
 
+    gfxpoly_dump(p);
     add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
     return p;
 }

@@ -139,7 +139,7 @@ int test_speed()
 {
     //gfxline_t* b = mkchessboard();
     //gfxline_t* b = mkrandomshape(100,7);
-    gfxline_t* b = make_circles(100);
+    gfxline_t* b = make_circles(30);
 
     gfxmatrix_t m;
     memset(&m, 0, sizeof(gfxmatrix_t));
@@ -439,21 +439,33 @@ void test4(int argn, char*argv[])
 #include "../gfxdevice.h"
 #include "../pdf/pdf.h"
 
+static int max_segments = 0;
+static int max_any_segments = 0;
 void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color) 
 {
     //gfxpoly_t*c = gfxpoly_from_gfxline(line, 0.05);
     //gfxpoly_free(c);
 
+    //gfxpoly_t*poly1 = gfxpoly_from_gfxline(line, 0.05);
     gfxpoly_t*poly1 = gfxpoly_from_gfxline(line, 0.05);
 
     //gfxline_dump(line, stderr, "");
     //gfxpoly_dump(poly);
 
-    if(gfxpoly_size(poly1)>100000) {
-	fprintf(stderr, "%d segments (skipping)\n", gfxpoly_size(poly1));
+    int size = gfxpoly_size(poly1);
+    if(size == 4) {
+	//rectangles are boring.
+	gfxpoly_destroy(poly1);
+	return;
+    }
+
+    max_any_segments = size > max_any_segments? size : max_any_segments;
+    if(size>100000) {
+	fprintf(stderr, "%d segments (skipping)\n", size);
 	return;
     } else {
-	//fprintf(stderr, "%d segments\n", gfxpoly_size(poly));
+	max_segments = size > max_segments? size : max_segments;
+	fprintf(stderr, "%d segments (max so far: %d/%d)\n", size, max_segments, max_any_segments);
     }
 
     if(!gfxpoly_check(poly1)) {

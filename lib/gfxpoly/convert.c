@@ -133,7 +133,7 @@ void finish_segment(compactpoly_t*data)
     gfxpolystroke_t*s = rfx_calloc(sizeof(gfxpolystroke_t));
     s->next = data->poly->strokes;
     data->poly->strokes = s;
-    s->num_points = data->num_points;
+    s->num_points = s->points_size = data->num_points;
     s->dir = data->dir;
     s->points = p;
     assert(data->dir != DIR_UNKNOWN);
