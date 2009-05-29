@@ -90,7 +90,9 @@ typedef struct _segment {
     gfxpolystroke_t*stroke;
     int stroke_pos;
 
+#ifndef DONT_REMEMBER_CROSSINGS
     dict_t scheduled_crossings;
+#endif
 } segment_t;
 
 #define LINE_EQ(p,s) ((double)(s)->delta.y*(p).x - (double)(s)->delta.x*(p).y - (s)->k)

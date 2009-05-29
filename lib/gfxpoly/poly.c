@@ -10,6 +10,7 @@
 #include "xrow.h"
 #include "wind.h"
 #include "convert.h"
+#include "heap.h"
 
 static gfxpoly_t*current_polygon = 0;
 void gfxpoly_fail(char*expr, char*file, int line, const char*function)
@@ -75,22 +76,6 @@ static type_t point_type = {
     free: point_free,
 };
 
-typedef struct _status {
-    int32_t y;
-    actlist_t*actlist;
-    heap_t*queue;
-    xrow_t*xrow;
-    windrule_t*windrule;
-    windcontext_t*context;
-    segment_t*ending_segments;
-    polywriter_t writer;
-#ifdef CHECKS
-    dict_t*seen_crossings; //list of crossing we saw so far
-    dict_t*intersecting_segs; //list of segments intersecting in this scanline
-    dict_t*segs_with_point; //lists of segments that received a point in this scanline
-#endif
-} status_t;
-
 typedef struct _event {
     eventtype_t type;
     point_t p;
@@ -101,7 +86,7 @@ typedef struct _event {
 /* compare_events_simple differs from compare_events in that it schedules
    events from left to right regardless of type. It's only used in horizontal
    processing, in order to get an x-wise sorting of the current scanline */
-static int compare_events_simple(const void*_a,const void*_b)
+static inline int compare_events_simple(const void*_a,const void*_b)
 {
     event_t* a = (event_t*)_a;
     event_t* b = (event_t*)_b;
@@ -112,7 +97,7 @@ static int compare_events_simple(const void*_a,const void*_b)
     return 0;
 }
 
-static int compare_events(const void*_a,const void*_b)
+static inline int compare_events(const void*_a,const void*_b)
 {
     event_t* a = (event_t*)_a;
     event_t* b = (event_t*)_b;
@@ -137,6 +122,28 @@ static int compare_events(const void*_a,const void*_b)
     //d = b->p.x - a->p.x;
     //return d;
 }
+
+#define COMPARE_EVENTS(x,y) (compare_events(x,y)>0)
+#define COMPARE_EVENTS_SIMPLE(x,y) (compare_events_simple(x,y)>0)
+HEAP_DEFINE(queue,event_t,COMPARE_EVENTS);
+HEAP_DEFINE(hqueue,event_t,COMPARE_EVENTS_SIMPLE);
+
+typedef struct _status {
+    int32_t y;
+    actlist_t*actlist;
+    queue_t queue;
+    xrow_t*xrow;
+    windrule_t*windrule;
+    windcontext_t*context;
+    segment_t*ending_segments;
+    polywriter_t writer;
+#ifdef CHECKS
+    dict_t*seen_crossings; //list of crossing we saw so far
+    dict_t*intersecting_segs; //list of segments intersecting in this scanline
+    dict_t*segs_with_point; //lists of segments that received a point in this scanline
+#endif
+} status_t;
+
 
 int gfxpoly_size(gfxpoly_t*poly)
 {
@@ -218,11 +225,14 @@ void gfxpoly_save(gfxpoly_t*poly, const char*filename)
     fclose(fi);
 }
 
-inline static event_t event_new()
+inline static event_t* event_new()
 {
-    event_t e;
-    memset(&e, 0, sizeof(e));
+    event_t*e = rfx_calloc(sizeof(event_t));
     return e;
+}
+inline static void event_free(event_t*e)
+{
+    free(e);
 }
 
 static void event_dump(event_t*e)
@@ -302,8 +312,9 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
     assert(LINE_EQ(p, s) >= 0);
 #endif
 
-    /* TODO: make this int_type */
+#ifndef DONT_REMEMBER_CROSSINGS
     dict_init2(&s->scheduled_crossings, &ptr_type, 0);
+#endif
 }
 
 static segment_t* segment_new(point_t a, point_t b, int polygon_nr, segment_dir_t dir)
@@ -315,7 +326,9 @@ static segment_t* segment_new(point_t a, point_t b, int polygon_nr, segment_dir_
 
 static void segment_clear(segment_t*s)
 {
+#ifndef DONT_REMEMBER_CROSSINGS
     dict_clear(&s->scheduled_crossings);
+#endif
 }
 static void segment_destroy(segment_t*s)
 {
@@ -323,7 +336,7 @@ static void segment_destroy(segment_t*s)
     free(s);
 }
 
-static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr, int pos)
+static void advance_stroke(queue_t*queue, hqueue_t*hqueue, gfxpolystroke_t*stroke, int polygon_nr, int pos)
 {
     if(!stroke) 
 	return;
@@ -343,13 +356,16 @@ static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr,
 		s->nr, s->a.x, s->a.y, s->b.x, s->b.y,
 		s->dir==DIR_UP?"up":"down", stroke, stroke->num_points - 1 - pos);
 #endif
-	event_t e = event_new();
-	e.type = s->delta.y ? EVENT_START : EVENT_HORIZONTAL;
-	e.p = s->a;
-	e.s1 = s;
-	e.s2 = 0;
-	heap_put(queue, &e);
-	if(e.type != EVENT_HORIZONTAL) {
+	event_t* e = event_new();
+	e->type = s->delta.y ? EVENT_START : EVENT_HORIZONTAL;
+	e->p = s->a;
+	e->s1 = s;
+	e->s2 = 0;
+	
+	if(queue) queue_put(queue, e);
+	else hqueue_put(hqueue, e);
+
+	if(e->type != EVENT_HORIZONTAL) {
 	    break;
 	}
     }
@@ -363,7 +379,7 @@ static void advance_stroke(heap_t*queue, gfxpolystroke_t*stroke, int polygon_nr,
     }
 }
 
-static void gfxpoly_enqueue(gfxpoly_t*p, heap_t*queue, int polygon_nr)
+static void gfxpoly_enqueue(gfxpoly_t*p, queue_t*queue, hqueue_t*hqueue, int polygon_nr)
 {
     int t;
     gfxpolystroke_t*stroke = p->strokes;
@@ -376,7 +392,7 @@ static void gfxpoly_enqueue(gfxpoly_t*p, heap_t*queue, int polygon_nr)
 	    assert(stroke->points[s].y <= stroke->points[s+1].y);
 	}
 #endif
-	advance_stroke(queue, stroke, polygon_nr, 0);
+	advance_stroke(queue, hqueue, stroke, polygon_nr, 0);
     }
 }
 
@@ -384,12 +400,12 @@ static void schedule_endpoint(status_t*status, segment_t*s)
 {
     // schedule end point of segment
     assert(s->b.y > status->y);
-    event_t e;
-    e.type = EVENT_END;
-    e.p = s->b;
-    e.s1 = s;
-    e.s2 = 0;
-    heap_put(status->queue, &e);
+    event_t*e = event_new();
+    e->type = EVENT_END;
+    e->p = s->b;
+    e->s1 = s;
+    e->s2 = 0;
+    queue_put(&status->queue, e);
 }
 
 static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
@@ -570,12 +586,12 @@ static void schedule_crossing(status_t*status, segment_t*s1, segment_t*s2)
     dict_put(&s2->scheduled_crossings, (void*)(ptroff_t)(s1->nr), 0);
 #endif
 
-    event_t e = event_new();
-    e.type = EVENT_CROSS;
-    e.p = p;
-    e.s1 = s1;
-    e.s2 = s2;
-    heap_put(status->queue, &e);
+    event_t* e = event_new();
+    e->type = EVENT_CROSS;
+    e->p = p;
+    e->s1 = s1;
+    e->s2 = s2;
+    queue_put(&status->queue, e);
     return;
 }
 
@@ -956,7 +972,7 @@ static void event_apply(status_t*status, event_t*e)
             event_dump(e);
 #endif
             intersect_with_horizontal(status, s);
-	    advance_stroke(status->queue, s->stroke, s->polygon_nr, s->stroke_pos);
+	    advance_stroke(&status->queue, 0, s->stroke, s->polygon_nr, s->stroke_pos);
             segment_destroy(s);e->s1=0;
             break;
         }
@@ -981,7 +997,7 @@ static void event_apply(status_t*status, event_t*e)
 	    /* schedule segment for xrow handling */
             s->left = 0; s->right = status->ending_segments;
             status->ending_segments = s;
-	    advance_stroke(status->queue, s->stroke, s->polygon_nr, s->stroke_pos);
+	    advance_stroke(&status->queue, 0, s->stroke, s->polygon_nr, s->stroke_pos);
             break;
         }
         case EVENT_START: {
@@ -1065,18 +1081,19 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 #ifdef DEBUG
     fprintf(stderr, "========================================================================\n");
 #endif
-    heap_t* queue = heap_new(sizeof(event_t), compare_events_simple);
-    gfxpoly_enqueue(poly, queue, 0);
+    hqueue_t hqueue;
+    hqueue_init(&hqueue);
+    gfxpoly_enqueue(poly, 0, &hqueue, 0);
 
     actlist_t* actlist = actlist_new();
-
-    event_t*e = heap_chopmax(queue);
+	
+    event_t*e = hqueue_get(&hqueue);
     while(e) {
         int32_t y = e->p.y;
         int32_t x = 0;
         char fill = 0;
 #ifdef DEBUG
-        fprintf(stderr, "----------------------------------- %d\n", y);
+        fprintf(stderr, "HORIZONTALS ----------------------------------- %d\n", y);
         actlist_dump(actlist, y-1);
 #endif
 #ifdef CHECKS
@@ -1119,24 +1136,24 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
             }
             segment_t*left = 0;
             segment_t*s = e->s1;
-
+    
             switch(e->type) {
                 case EVENT_START: {
 		    assert(e->p.x == s->a.x && e->p.y == s->a.y);
                     actlist_insert(actlist, s->a, s->b, s);
-                    event_t e;
-                    e.type = EVENT_END;
-                    e.p = s->b;
-                    e.s1 = s;
-                    e.s2 = 0;
-                    heap_put(queue, &e);
+                    event_t* e = event_new();
+                    e->type = EVENT_END;
+                    e->p = s->b;
+                    e->s1 = s;
+                    e->s2 = 0;
+                    hqueue_put(&hqueue, e);
                     left = actlist_left(actlist, s);
                     break;
                 }
                 case EVENT_END: {
                     left = actlist_left(actlist, s);
                     actlist_delete(actlist, s);
-		    advance_stroke(queue, s->stroke, s->polygon_nr, s->stroke_pos);
+		    advance_stroke(0, &hqueue, s->stroke, s->polygon_nr, s->stroke_pos);
                     break;
                 }
                 default: assert(0);
@@ -1155,27 +1172,26 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
             if(e->type == EVENT_END)
                 segment_destroy(s);
 
-            free(e);
-            e = heap_chopmax(queue);
+	    event_free(e);
+            e = hqueue_get(&hqueue);
         } while(e && y == e->p.y);
 
         assert(!fill); // check that polygon is not bleeding
     }
 
     actlist_destroy(actlist);
-    heap_destroy(queue);
+    hqueue_destroy(&hqueue);
 }
 
 gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context)
 {
     current_polygon = poly;
-    heap_t* queue = heap_new(sizeof(event_t), compare_events);
-
-    gfxpoly_enqueue(poly, queue, /*polygon nr*/0);
 
     status_t status;
     memset(&status, 0, sizeof(status_t));
-    status.queue = queue;
+    queue_init(&status.queue);
+    gfxpoly_enqueue(poly, &status.queue, 0, /*polygon nr*/0);
+
     status.windrule = windrule;
     status.context = context;
     status.actlist = actlist_new();
@@ -1184,16 +1200,17 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
 
 #ifdef CHECKS
     status.seen_crossings = dict_new2(&point_type);
-    int lasty=heap_peek(queue)?((event_t*)heap_peek(queue))->p.y-1:0;
+    int32_t lasty=-0x80000000;
 #endif
 
     status.xrow = xrow_new();
 
-    event_t*e = heap_chopmax(queue);
+    event_t*e = queue_get(&status.queue);
     while(e) {
         status.y = e->p.y;
-	assert(status.y>=lasty);
 #ifdef CHECKS
+	assert(status.y>=lasty);
+	lasty = status.y;
         status.intersecting_segs = dict_new2(&ptr_type);
         status.segs_with_point = dict_new2(&ptr_type);
 #endif
@@ -1209,8 +1226,8 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
         do {
             xrow_add(status.xrow, e->p.x);
             event_apply(&status, e);
-            free(e);
-            e = heap_chopmax(queue);
+	    event_free(e);
+            e = queue_get(&status.queue);
         } while(e && status.y == e->p.y);
 
         xrow_sort(status.xrow);
@@ -1234,7 +1251,7 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     dict_destroy(status.seen_crossings);
 #endif
     actlist_destroy(status.actlist);
-    heap_destroy(queue);
+    queue_destroy(&status.queue);
     xrow_destroy(status.xrow);
 
     gfxpoly_t*p = (gfxpoly_t*)status.writer.finish(&status.writer);

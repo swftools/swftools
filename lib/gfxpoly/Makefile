@@ -21,7 +21,7 @@ active.o: active.c active.h poly.h
 convert.o: convert.c convert.h poly.h
 	$(CC) -c convert.c -o convert.o
 
-poly.o: poly.c poly.h active.h ../q.h
+poly.o: poly.c poly.h active.h heap.h ../q.h
 	$(CC) -c poly.c -o poly.o
 
 wind.o: wind.c wind.h poly.h
