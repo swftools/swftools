@@ -486,6 +486,7 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
     }
 
     if(!png_read_header(fi, &header)) {
+	fclose(fi);
 	return 0;
     }
 

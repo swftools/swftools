@@ -362,6 +362,7 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
 
     jpeg_finish_decompress(&cinfo);
     jpeg_destroy_decompress(&cinfo);
+    fclose(fi);
     return 1;
 }
 
