@@ -163,7 +163,7 @@ int png_read_header(FILE*fi, struct png_header*header)
     U8 head2[8];
     U8*data;
     fread(head2,8,1,fi);
-    if(strncmp(head,head2,4))
+    if(strncmp((char*)head,(char*)head2,4))
 	return 0;
    
     while(png_read_chunk(&id, &len, &data, fi))
@@ -792,8 +792,8 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     swf_GetMatrix(NULL, &m);
     m.sx = (int)(20 * 0x10000);
     m.sy = (int)(20 * 0x10000);
-    m.tx = -10;
-    m.ty = -10;
+    m.tx = 0;
+    m.ty = 0;
     fs = swf_ShapeAddBitmapFillStyle(s, &m, id, 1);
 
     swf_SetU16(t, id + 1);	// id
@@ -1080,7 +1080,7 @@ int main(int argc, char **argv)
 
     global.framerate = 1.0;
     global.verbose = 1;
-    global.version = 6;
+    global.version = 8;
     global.scale = 1.0;
 
     processargs(argc, argv);
