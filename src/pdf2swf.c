@@ -640,11 +640,6 @@ int main(int argn, char *argv[])
 	exit(1);
     }
 
-    if(info_only) {
-	show_info(driver, filename);
-	return 0;
-    }
-
     if(!outputname)
     {
 	if(filename) {
@@ -662,23 +657,28 @@ int main(int argn, char *argv[])
     // test if the page range is o.k.
     is_in_range(0x7fffffff, pagerange);
 
-    if(pagerange)
-	driver->set_parameter(driver, "pages", pagerange);
-
     if (!filename) {
 	args_callback_usage(argv[0]);
 	exit(0);
+    }
+    
+    char fullname[256];
+    if(password && *password) {
+	sprintf(fullname, "%s|%s", filename, password);
+	filename = fullname;
+    }
+    
+    if(pagerange)
+	driver->set_parameter(driver, "pages", pagerange);
+
+    if(info_only) {
+	show_info(driver, filename);
+	return 0;
     }
 
     /* add fonts */
     for(t=0;t<fontpathpos;t++) {
 	driver->set_parameter(driver, "fontdir", fontpaths[t]);
-    }
-
-    char fullname[256];
-    if(password && *password) {
-	sprintf(fullname, "%s|%s", filename, password);
-	filename = fullname;
     }
 
     char*u = 0;

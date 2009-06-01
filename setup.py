@@ -261,7 +261,9 @@ rfxswf_sources = [
 "lib/action/lex.swf4.c", "lib/action/lex.swf5.c", "lib/action/libming.c",
 "lib/action/swf4compiler.tab.c", 
 "lib/as3/abc.c", "lib/as3/code.c", "lib/as3/pool.c", "lib/as3/files.c", "lib/as3/opcodes.c", 
-"lib/action/swf5compiler.tab.c", "lib/action/actioncompiler.c"
+"lib/as3/scripts.c", "lib/as3/common.c", "lib/as3/builtin.c", "lib/as3/compiler.c", "lib/as3/expr.c", "lib/as3/import.c",
+"lib/as3/initcode.c", "lib/as3/parser.tab.c", "lib/as3/registry.c", "lib/as3/tokenizer.yy.c",
+"lib/action/swf5compiler.tab.c", "lib/action/actioncompiler.c",
 ]
 libpdf_sources = [
 "lib/pdf/GFXOutputDev.cc", "lib/pdf/InfoOutputDev.cc", "lib/pdf/BitmapOutputDev.cc",

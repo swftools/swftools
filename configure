@@ -1311,11 +1311,6 @@ Optional Features:
   --enable-optimizations  turn on compiler optimizations (recommended for avi2swf)
   --disable-lame          don't compile any L.A.M.E. mp3 encoding code in
 
-Optional Packages:
-  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
-  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-poppler          use poppler instead of internal xpdf (currently broken)
-
 Some influential environment variables:
   CC          C compiler command
   CFLAGS      C compiler flags
@@ -1779,13 +1774,11 @@ fi
 
 # Check whether --enable-lame was given.
 if test "${enable_lame+set}" = set; then
-  enableval=$enable_lame; DISABLE_LAME=true
+  enableval=$enable_lame; if test "x$enable_lame" = "xno";then
+    DISABLE_LAME=yes
 fi
-
-
-# Check whether --with-poppler was given.
-if test "${with_poppler+set}" = set; then
-  withval=$with_poppler; USE_POPPLER=true
+else
+  DISABLE_LAME=
 fi
 
 
