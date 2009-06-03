@@ -62,9 +62,10 @@ static void linedraw_lineTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
     gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
 
     if(!i->start) {
-	/* starts with a line, not with a moveto. That needs we first
-	   need an explicit moveto to (0,0) */
-	linedraw_moveTo(d, 0, 0);
+	/* starts with a line, not with a moveto. As this is the first
+	   entry in the list, this is probably *meant* to be a moveto */
+	linedraw_moveTo(d, x, y);
+	return;
     }
 
     l->type = gfx_lineTo;
@@ -84,8 +85,7 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
 
     if(!i->start) {
-	/* starts with a line, not with a moveto. That needs we first
-	   need an explicit moveto to (0,0) */
+	fprintf(stderr, "Error: drawing startpoint is a spline\n");
 	linedraw_moveTo(d, 0, 0);
     }
 

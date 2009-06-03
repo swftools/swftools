@@ -2,6 +2,7 @@
 #define __poly_convert_h__
 
 #include "../gfxdevice.h"
+#include "../gfxtools.h"
 #include "poly.h"
 
 typedef struct _polywriter
@@ -12,6 +13,8 @@ typedef struct _polywriter
     void*(*finish)(struct _polywriter*);
     void*internal;
 } polywriter_t;
+
+void gfxdrawer_target_poly(gfxdrawer_t*d, double gridsize);
 
 void gfxpolywriter_init(polywriter_t*w);
 gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize);

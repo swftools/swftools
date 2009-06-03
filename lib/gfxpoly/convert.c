@@ -259,3 +259,79 @@ void gfxpoly_destroy(gfxpoly_t*poly)
     free(poly);
 }
 
+typedef struct _polydraw_internal
+{
+    int32_t lastx, lasty;
+    double z;
+    polywriter_t writer;
+} polydraw_internal_t;
+
+static void polydraw_moveTo(gfxdrawer_t*d, gfxcoord_t _x, gfxcoord_t _y)
+{
+    polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
+    int32_t x = convert_coord(_x, i->z);
+    int32_t y = convert_coord(_y, i->z);
+    if(i->lastx != x || i->lasty != y) {
+	i->writer.moveto(&i->writer, x, y);
+    }
+    i->lastx = x;
+    i->lasty = y;
+}
+static void polydraw_lineTo(gfxdrawer_t*d, gfxcoord_t _x, gfxcoord_t _y)
+{
+    polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
+    int32_t x = convert_coord(_x, i->z);
+    int32_t y = convert_coord(_y, i->z);
+    if(i->lastx != x || i->lasty != y) {
+	i->writer.lineto(&i->writer, x, y);
+    }
+    i->lastx = x;
+    i->lasty = y;
+}
+static void polydraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxcoord_t x, gfxcoord_t y)
+{
+    polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
+    double c = fabs(x-2*sx+i->lastx) + fabs(y-2*sy+i->lasty);
+    int parts = (int)(sqrt(c)*SUBFRACTION);
+    if(!parts) parts = 1;
+    int t;
+    int32_t nx,ny;
+    for(t=0;t<parts;t++) {
+	nx = convert_coord((double)(t*t*x + 2*t*(parts-t)*sx + (parts-t)*(parts-t)*i->lastx)/(double)(parts*parts), i->z);
+	ny = convert_coord((double)(t*t*y + 2*t*(parts-t)*sy + (parts-t)*(parts-t)*i->lasty)/(double)(parts*parts), i->z);
+	if(nx != i->lastx || ny != i->lasty) {
+	    i->writer.lineto(&i->writer, nx, ny);
+	    i->lastx = nx; i->lasty = ny;
+	}
+    }
+    nx = convert_coord(x,i->z);
+    ny = convert_coord(y,i->z);
+    if(nx != i->lastx || ny != i->lasty) {
+	i->writer.lineto(&i->writer, nx, ny);
+	i->lastx = nx; i->lasty = ny;
+    }
+}
+static void* polydraw_result(gfxdrawer_t*d)
+{
+    polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
+    void*result = i->writer.finish(&i->writer);
+    rfx_free(i);
+    memset(d, 0, sizeof(gfxdrawer_t));
+    return result;
+}
+
+void gfxdrawer_target_poly(gfxdrawer_t*d, double gridsize)
+{
+    polydraw_internal_t*i = (polydraw_internal_t*)rfx_calloc(sizeof(polydraw_internal_t));
+    d->internal = i;
+    i->lastx = 0x7fffffff; // convert_coord can never return this value
+    i->lasty = 0x7fffffff;
+    d->moveTo = polydraw_moveTo;
+    d->lineTo = polydraw_lineTo;
+    d->splineTo = polydraw_splineTo;
+    d->result = polydraw_result;
+    gfxpolywriter_init(&i->writer);
+    i->writer.setgridsize(&i->writer, gridsize);
+    i->z = 1.0 / gridsize;
+}
+

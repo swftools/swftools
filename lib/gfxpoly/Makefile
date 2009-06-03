@@ -1,7 +1,7 @@
-all: test
+all: test stroke
 include ../../Makefile.common
 
-CC = gcc -g -O2
+CC = gcc -g
 #CC = gcc -O3
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
@@ -32,6 +32,9 @@ renderpoly.o: renderpoly.c wind.h poly.h renderpoly.h
 
 xrow.o: xrow.c xrow.h ../q.h ../mem.h
 	$(CC) -c xrow.c -o xrow.o
+
+stroke: stroke.c ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a
+	$(CC) stroke.c ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a -o stroke $(LIBS)
 
 SWF = ../librfxswf.a ../libpdf.a ../libgfx.a -lstdc++
 test: ../libbase.a ../libgfx.a test.c $(OBJS) poly.h convert.h
