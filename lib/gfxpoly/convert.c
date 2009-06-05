@@ -5,6 +5,7 @@
 #include "../mem.h"
 #include "poly.h"
 #include "convert.h"
+#include "wind.h"
 
 /* factor that determines into how many line fragments a spline is converted */
 #define SUBFRACTION (2.4)
@@ -380,5 +381,24 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
     }
     l[count-1].next = 0;
     return l;
+}
+
+static windcontext_t onepolygon = {1};
+gfxline_t* gfxpoly_circular_to_evenodd(gfxline_t*line, double gridsize)
+{
+    gfxpoly_t*poly = gfxpoly_from_fill(line, gridsize);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_circular, &onepolygon);
+    gfxline_t*line2 = gfxline_from_gfxpoly(poly2);
+    gfxpoly_destroy(poly);
+    gfxpoly_destroy(poly2);
+    return line2;
+}
+
+gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2, double gridsize)
+{
+    gfxline_t* line = gfxline_makerectangle(x1, y1, x2, y2);
+    gfxpoly_t* poly = gfxpoly_from_fill(line, gridsize);
+    gfxline_free(line);
+    return poly;
 }
 

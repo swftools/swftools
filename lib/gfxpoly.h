@@ -28,27 +28,32 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include "../lib/mem.h"
-#include "../lib/gfxdevice.h"
-#include "../lib/gfxtools.h"
+#include "mem.h"
+#include "gfxdevice.h"
+#include "gfxtools.h"
+
+/* A "grid" value is the granularity at which polygon intersection operates.
+   It usually makes sense this to the smallest value that can actually be represented
+   in the output device (like 0.05 = 1 twip for SWF).  */
+#define DEFAULT_GRID (0.05)
 
 typedef struct _gfxpoly {
 } gfxpoly_t;
 
-void gfxpoly_free(gfxpoly_t*);
+void gfxpoly_destroy(gfxpoly_t*poly);
 
 /* constructors */
-gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line);
-gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit);
-gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2);
+gfxpoly_t* gfxpoly_from_fill(gfxline_t*line, double gridsize);
+gfxpoly_t* gfxpoly_from_stroke(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit, double gridsize);
 
-/* boolean operations */
-gfxpoly_t* gfxpoly_intersect(gfxpoly_t*line1, gfxpoly_t*line2);
-gfxpoly_t* gfxpoly_union(gfxpoly_t*line1, gfxpoly_t*line2);
+/* operators */
+gfxpoly_t* gfxpoly_intersect(gfxpoly_t*p1, gfxpoly_t*p2);
+gfxpoly_t* gfxpoly_union(gfxpoly_t*p1, gfxpoly_t*p2);
 
-/* other things */
-gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly);
-gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line);
+/* conversion functions */
+gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2, double gridsize);
+gfxline_t* gfxline_from_gfxpoly(gfxpoly_t*poly);
+gfxline_t* gfxpoly_circular_to_evenodd(gfxline_t*line, double gridsize);
 
 #ifdef __cplusplus
 }

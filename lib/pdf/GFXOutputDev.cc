@@ -1180,8 +1180,8 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
     }
 
     if(flags&STROKE_FILL) {
-        gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, capType, joinType, miterLimit);
-        gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
+        gfxpoly_t* poly = gfxpoly_from_stroke(line, width, capType, joinType, miterLimit, DEFAULT_GRID);
+        gfxline_t*gfxline = gfxline_from_gfxpoly(poly);
 	if(getLogLevel() >= LOGLEVEL_TRACE)  {
 	    dump_outline(gfxline);
 	}
@@ -1195,7 +1195,7 @@ void GFXOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int flags)
             device->fill(device, gfxline, &col);
         }
         gfxline_free(gfxline);
-	gfxpoly_free(poly);
+	gfxpoly_destroy(poly);
     } else {
         if(flags&STROKE_CLIP) 
             msg("<error> Stroke&clip not supported at the same time");
@@ -1248,7 +1248,7 @@ void GFXOutputDev::clip(GfxState *state)
     msg("<trace> clip");
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
     if(config_optimize_polygons) {
-	gfxline_t*line2 = gfxline_circularToEvenOdd(line);
+	gfxline_t*line2 = gfxpoly_circular_to_evenodd(line, DEFAULT_GRID);
 	gfxline_free(line);
 	line = line2;
     }
@@ -2469,7 +2469,7 @@ void GFXOutputDev::fill(GfxState *state)
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
     if(config_optimize_polygons) {
-        gfxline_t*line2 = gfxline_circularToEvenOdd(line);
+        gfxline_t*line2 = gfxpoly_circular_to_evenodd(line, DEFAULT_GRID);
         gfxline_free(line);
         line = line2;
     }

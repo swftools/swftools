@@ -2547,11 +2547,11 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
 	if(has_dots)
 	    gfxline_fix_short_edges(line);
 	/* we need to convert the line into a polygon */
-	gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, cap_style, joint_style, miterLimit);
-	gfxline_t*gfxline = gfxpoly_to_gfxline(poly);
+	gfxpoly_t* poly = gfxpoly_from_stroke(line, width, cap_style, joint_style, miterLimit, DEFAULT_GRID);
+	gfxline_t*gfxline = gfxline_from_gfxpoly(poly);
 	dev->fill(dev, gfxline, color);
 	gfxline_free(gfxline);
-	gfxpoly_free(poly);
+	gfxpoly_destroy(poly);
 	return;
     }
 

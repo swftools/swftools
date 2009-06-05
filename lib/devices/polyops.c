@@ -92,7 +92,7 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
     internal_t*i = (internal_t*)dev->internal;
 
     gfxpoly_t* oldclip = i->clip?i->clip->poly:0;
-    gfxpoly_t* poly = gfxpoly_fillToPoly(line);
+    gfxpoly_t* poly = gfxpoly_from_fill(line, DEFAULT_GRID);
     if(poly) 
         i->good_polygons++;
     else
@@ -111,7 +111,7 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
 	currentclip = 0;
 	type = 1;
     } else if(!poly && oldclip) {
-	gfxline_t*oldclipline = gfxpoly_to_gfxline(oldclip);
+	gfxline_t*oldclipline = gfxline_from_gfxpoly(oldclip);
 	i->out->startclip(i->out,oldclipline);
 	i->out->startclip(i->out,line);
 	currentclip = 0;
@@ -121,12 +121,12 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
 	if(intersection) {
             i->good_polygons++;
 	    // this case is what usually happens 
-	    gfxpoly_free(poly);poly=0;
+	    gfxpoly_destroy(poly);poly=0;
 	    currentclip = intersection;
 	    type = 0;
 	} else {
             i->bad_polygons++;
-	    gfxline_t*oldclipline = gfxpoly_to_gfxline(oldclip);
+	    gfxline_t*oldclipline = gfxline_from_gfxpoly(oldclip);
 	    i->out->startclip(i->out, oldclipline);
 	    currentclip = poly;
 	    type = 1;
@@ -156,7 +156,7 @@ void polyops_endclip(struct _gfxdevice*dev)
     clip_t*old = i->clip;
     i->clip = i->clip->next;
     if(old->poly) {
-	gfxpoly_free(old->poly);old->poly = 0;
+	gfxpoly_destroy(old->poly);old->poly = 0;
     }
     int t;
     for(t=0;t<old->openclips;t++)
@@ -172,7 +172,7 @@ static void addtounion(struct _gfxdevice*dev, gfxpoly_t*poly)
 	gfxpoly_t*old = i->polyunion;
 	gfxpoly_t*newpoly = gfxpoly_union(poly,i->polyunion);
 	i->polyunion = newpoly;
-	gfxpoly_free(old);
+	gfxpoly_destroy(old);
     }
 }
 
@@ -183,7 +183,7 @@ static gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly, char*ok)
 	gfxpoly_t*old = poly;
 	if(poly) {
 	    poly = gfxpoly_intersect(poly, i->clip->poly);
-	    gfxpoly_free(old);
+	    gfxpoly_destroy(old);
 	}
     }
 
@@ -196,8 +196,8 @@ static gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly, char*ok)
     gfxline_t*gfxline = 0;
     if(poly) {
 	// this is the case where everything went right
-	gfxline_t*line = gfxpoly_to_gfxline(poly);
-	gfxpoly_free(poly);
+	gfxline_t*line = gfxline_from_gfxpoly(poly);
+	gfxpoly_destroy(poly);
         *ok = 1;
 	return line;
     } else {
@@ -205,10 +205,10 @@ static gfxline_t* handle_poly(gfxdevice_t*dev, gfxpoly_t*poly, char*ok)
 	    /* convert current clipping from a polygon to an
 	       actual "startclip" written to the output */
 	    assert(i->clip->openclips <= 1);
-	    gfxline_t*clipline = gfxpoly_to_gfxline(i->clip->poly);
+	    gfxline_t*clipline = gfxline_from_gfxpoly(i->clip->poly);
 	    i->out->startclip(i->out, clipline);
 	    gfxline_free(clipline);
-	    gfxpoly_free(i->clip->poly);i->clip->poly = 0;
+	    gfxpoly_destroy(i->clip->poly);i->clip->poly = 0;
 	    i->clip->openclips++;
 	    return 0;
 	} else {
@@ -222,7 +222,7 @@ void polyops_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfx
     dbg("polyops_stroke");
     internal_t*i = (internal_t*)dev->internal;
 
-    gfxpoly_t* poly = gfxpoly_strokeToPoly(line, width, cap_style, joint_style, miterLimit);
+    gfxpoly_t* poly = gfxpoly_from_stroke(line, width, cap_style, joint_style, miterLimit, DEFAULT_GRID);
     char ok = 0;
     gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
@@ -240,7 +240,7 @@ void polyops_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     dbg("polyops_fill");
     internal_t*i = (internal_t*)dev->internal;
 
-    gfxpoly_t*poly = gfxpoly_fillToPoly(line);
+    gfxpoly_t*poly = gfxpoly_from_fill(line, DEFAULT_GRID);
     char ok = 0;
     gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
@@ -257,7 +257,7 @@ void polyops_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, g
     dbg("polyops_fillbitmap");
     internal_t*i = (internal_t*)dev->internal;
     
-    gfxpoly_t*poly = gfxpoly_fillToPoly(line);
+    gfxpoly_t*poly = gfxpoly_from_fill(line, DEFAULT_GRID);
     char ok = 0;
     gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
@@ -274,7 +274,7 @@ void polyops_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*g
     dbg("polyops_fillgradient");
     internal_t*i = (internal_t*)dev->internal;
     
-    gfxpoly_t*poly = gfxpoly_fillToPoly(line);
+    gfxpoly_t*poly = gfxpoly_from_fill(line, DEFAULT_GRID);
     char ok = 0;
     gfxline_t*line2 = handle_poly(dev, poly, &ok);
 
@@ -304,7 +304,7 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
 
     if(i->clip && i->clip->poly) {
 	gfxbbox_t bbox = gfxline_getbbox(glyph);
-	gfxpoly_t*dummybox = gfxpoly_createbox(bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax);
+	gfxpoly_t*dummybox = gfxpoly_createbox(bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax, DEFAULT_GRID);
 
         char ok=0;
 	gfxline_t*gfxline = handle_poly(dev, dummybox, &ok);
@@ -353,7 +353,7 @@ gfxresult_t* polyops_finish(struct _gfxdevice*dev)
 
 
     if(i->polyunion) {
-	gfxpoly_free(i->polyunion);i->polyunion=0;
+	gfxpoly_destroy(i->polyunion);i->polyunion=0;
     } else {
         if(i->bad_polygons) {
             msg("<notice> --flatten success rate: %.1f%% (%d failed polygons)", i->good_polygons*100.0 / (i->good_polygons + i->bad_polygons), i->bad_polygons);
@@ -369,7 +369,7 @@ gfxresult_t* polyops_finish(struct _gfxdevice*dev)
 gfxline_t*gfxdevice_union_getunion(struct _gfxdevice*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    return gfxpoly_to_gfxline(i->polyunion);
+    return gfxline_from_gfxpoly(i->polyunion);
 }
 
 void gfxdevice_removeclippings_init(gfxdevice_t*dev, gfxdevice_t*out)
@@ -425,6 +425,7 @@ void gfxdevice_union_init(gfxdevice_t*dev,gfxdevice_t*out)
     dev->finish = polyops_finish;
 
     i->out = out;
-    i->polyunion = gfxpoly_strokeToPoly(0, 0, gfx_capButt, gfx_joinMiter, 0);
+    /* create empty polygon */
+    i->polyunion = gfxpoly_from_stroke(0, 0, gfx_capButt, gfx_joinMiter, 0, DEFAULT_GRID);
 }
 
