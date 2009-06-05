@@ -1,6 +1,7 @@
 #include <math.h>
 #include "../gfxtools.h"
 #include "stroke.h"
+#include "convert.h"
 
 int main()
 {

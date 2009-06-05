@@ -1,7 +1,7 @@
 all: test stroke
 include ../../Makefile.common
 
-CC = gcc -O3 -fomit-frame-pointer
+CC = gcc -O2 -g
 #CC = gcc -O3
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
@@ -13,7 +13,7 @@ CC = gcc -O3 -fomit-frame-pointer
 testheap: ../libbase.a testheap.c
 	$(CC) testheap.c ../libbase.a -o testheap -lm -lz -ljpeg
 
-OBJS = active.o convert.o poly.o wind.o renderpoly.o xrow.o
+OBJS = active.o convert.o poly.o wind.o renderpoly.o xrow.o stroke.o
 
 active.o: active.c active.h poly.h
 	$(CC) -c active.c -o active.o
@@ -36,12 +36,14 @@ xrow.o: xrow.c xrow.h ../q.h ../mem.h
 stroke.o: stroke.c poly.h convert.h wind.h
 	$(CC) -c stroke.c -o stroke.o
 
-stroke: test_stroke.c stroke.o $(OBJS) ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a
-	$(CC) test_stroke.c stroke.o $(OBJS) ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a -o stroke $(LIBS)
+GFX=../gfxfont.o ../gfxtools.o  ../devices/ops.o ../devices/polyops.o ../devices/text.o ../devices/bbox.o ../devices/render.o ../devices/rescale.o ../devices/record.o
 
-SWF = ../librfxswf.a ../libpdf.a ../libgfx.a -lstdc++
-test: ../libbase.a ../libgfx.a test.c $(OBJS) poly.h convert.h
-	$(CC) test.c $(OBJS) $(SWF) ../libbase.a ../libgfx.a -o test $(LIBS)
+stroke: test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a ../libbase.a 
+	$(CC) test_stroke.c $(OBJS) ../librfxswf.a ../libgfxswf.a $(GFX) ../libbase.a -o stroke $(LIBS)
+
+SWF = ../librfxswf.a ../libpdf.a -lstdc++
+test: ../libbase.a test.c $(OBJS) poly.h convert.h $(GFX) 
+	$(CC) test.c $(OBJS) $(SWF) ../libbase.a $(GFX) -o test $(LIBS)
 
 clean: 
 	rm -f *.o test stroke

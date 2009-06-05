@@ -190,6 +190,10 @@ int test0(int argn, char*argv[])
     gfxline_free(box1);
     gfxline_free(box2);
     gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
+    gfxpoly_dump(poly3);
+    gfxline_t*line = gfxline_from_gfxpoly(poly3);
+    gfxline_dump(line, stdout, "");
+    gfxline_free(line);
     gfxpoly_destroy(poly1);
     gfxpoly_destroy(poly2);
     gfxpoly_destroy(poly3);

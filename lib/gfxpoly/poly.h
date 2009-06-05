@@ -6,7 +6,7 @@
 #include "../types.h"
 
 //#define DEBUG
-//#define CHECKS
+#define CHECKS
 
 /* features */
 #define SPLAY
@@ -16,10 +16,12 @@ typedef enum {DIR_UP, DIR_DOWN, DIR_UNKNOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
+#define INVALID_COORD (0x7fffffff)
 typedef struct _point {
     int32_t x;
     int32_t y;
 } point_t;
+type_t point_type;
 
 typedef struct _fillstyle {
     void*internal;

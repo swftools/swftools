@@ -3,7 +3,6 @@
 #include <math.h>
 #include "../mem.h"
 #include "../types.h"
-#include "../q.h"
 #include "../MD5.h"
 #include "poly.h"
 #include "active.h"
@@ -69,7 +68,7 @@ static void point_free(void*o)
     p->y = 0;
     free(p);
 }
-static type_t point_type = {
+type_t point_type = {
     equals: point_equals,
     hash: point_hash,
     dup: point_dup,

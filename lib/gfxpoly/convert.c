@@ -345,8 +345,8 @@ void gfxdrawer_target_poly(gfxdrawer_t*d, double gridsize)
 {
     polydraw_internal_t*i = (polydraw_internal_t*)rfx_calloc(sizeof(polydraw_internal_t));
     d->internal = i;
-    i->lastx = 0x7fffffff; // convert_coord can never return this value
-    i->lasty = 0x7fffffff;
+    i->lastx = INVALID_COORD; // convert_coord can never return this value
+    i->lasty = INVALID_COORD;
     d->moveTo = polydraw_moveTo;
     d->lineTo = polydraw_lineTo;
     d->splineTo = polydraw_splineTo;
@@ -356,6 +356,7 @@ void gfxdrawer_target_poly(gfxdrawer_t*d, double gridsize)
     i->z = 1.0 / gridsize;
 }
 
+#if 0
 gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 {
     gfxpolystroke_t*stroke;
@@ -380,6 +381,77 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 	count+=stroke->num_points;
     }
     l[count-1].next = 0;
+    return l;
+}
+#endif
+
+gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
+{
+    gfxpolystroke_t*stroke;
+    int count = 0;
+    if(!poly->strokes)
+	return 0;
+    dict_t*d = dict_new2(&point_type);
+    dict_t*todo = dict_new2(&ptr_type);
+    for(stroke=poly->strokes;stroke;stroke=stroke->next) {
+	dict_put(todo, stroke, stroke);
+	assert(stroke->num_points>1);
+	count += stroke->num_points;
+	if(stroke->dir == DIR_UP) {
+	    dict_put(d, &stroke->points[stroke->num_points-1], stroke);
+	} else {
+	    dict_put(d, &stroke->points[0], stroke);
+	}
+    }
+    gfxpolystroke_t*next_todo = poly->strokes;
+    gfxline_t*l = malloc(sizeof(gfxline_t)*count);
+    count = 0;
+    stroke = poly->strokes;
+    point_t last = {INVALID_COORD, INVALID_COORD};
+    while(stroke) {
+	assert(dict_contains(todo, stroke));
+	int t;
+	int pos = 0;
+	int incr = 1;
+	if(stroke->dir == DIR_UP) {
+	    pos = stroke->num_points-1;
+	    incr = -1;
+	}
+	if(last.x != stroke->points[pos].x || last.y != stroke->points[pos].y) {
+	    l[count].x = stroke->points[pos].x * poly->gridsize;
+	    l[count].y = stroke->points[pos].y * poly->gridsize;
+	    l[count].type = gfx_moveTo;
+	    l[count].next = &l[count+1];
+	    count++;
+	}
+	pos += incr;
+	for(t=1;t<stroke->num_points;t++) {
+	    l[count].x = stroke->points[pos].x * poly->gridsize;
+	    l[count].y = stroke->points[pos].y * poly->gridsize;
+	    l[count].type = gfx_lineTo;
+	    l[count].next = &l[count+1];
+	    count++;
+	    pos += incr;
+	}
+	last = stroke->points[pos-incr];
+	char del = dict_del(todo, stroke);
+	assert(del);
+	assert(!dict_contains(todo, stroke));
+
+	/* try to find a poly which starts at the point we drew last */
+	stroke = dict_lookup(d, &last);
+	while(!dict_contains(todo, stroke)) {
+	    stroke = next_todo;
+	    if(!next_todo) {
+		stroke = 0;
+		break;
+	    }
+	    next_todo = next_todo->next;
+	}
+    }
+    l[count-1].next = 0;
+    dict_destroy(todo);
+    dict_destroy(d);
     return l;
 }
 
