@@ -33,6 +33,7 @@ typedef struct _linedraw_internal
 {
     gfxline_t*start;
     gfxline_t*next;
+    gfxcoord_t x0,y0;
 } linedraw_internal_t;
 
 static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
@@ -46,6 +47,8 @@ static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
 	return;
 
     }
+    i->x0 = x;
+    i->y0 = y;
     l->sx = l->sy = 0;
     d->x = l->x = x;
     d->y = l->y = y;
@@ -102,6 +105,11 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     if(!i->start)
 	i->start = l;
 }
+static void* linedraw_close(gfxdrawer_t*d)
+{
+    linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
+    linedraw_lineTo(d, i->x0, i->y0);
+}
 static void* linedraw_result(gfxdrawer_t*d)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
@@ -120,6 +128,7 @@ void gfxdrawer_target_gfxline(gfxdrawer_t*d)
     d->moveTo = linedraw_moveTo;
     d->lineTo = linedraw_lineTo;
     d->splineTo = linedraw_splineTo;
+    d->close = linedraw_close;
     d->result = linedraw_result;
 }
 

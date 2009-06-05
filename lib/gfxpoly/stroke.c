@@ -56,9 +56,6 @@ static void draw_arc(gfxdrawer_t*draw, double x, double y, double a1, double a2,
 
 static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double width, gfx_capType cap, gfx_joinType join, double limit)
 {
-    char do_draw=0;
-    leftright_t lastdir = LEFT;
-
     width/=2;
     if(width<=0) 
 	width = 0.05;
@@ -134,7 +131,7 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 	    lastw = w;
 	}
 	/* draw stroke ends. We draw duplicates of some points here. The drawer
-	   implementationshould be smart enough to remove them. */
+	   implementation should be smart enough to remove them. */
 	double c = cos(lastw-M_PI/2)*width;
 	double s = sin(lastw-M_PI/2)*width;
 	if(cap == gfx_capButt) {
@@ -156,6 +153,7 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 	incr=-1;
 	lastw += M_PI; // for dots
     }
+    draw->close(draw);
 }
 
 static void draw_stroke(gfxline_t*start, gfxdrawer_t*draw, double width, gfx_capType cap, gfx_joinType join, double miterLimit)
@@ -191,7 +189,8 @@ static void draw_stroke(gfxline_t*start, gfxdrawer_t*draw, double width, gfx_cap
     pos = 0;
     while(line) {
 	if(line->type == gfx_moveTo) {
-	    if(pos) draw_single_stroke(points, pos, draw, width, cap, join, miterLimit);
+	    if(pos)
+		draw_single_stroke(points, pos, draw, width, cap, join, miterLimit);
 	    pos = 0;
 	} else if(line->type == gfx_splineTo) {
             int parts = (int)(sqrt(fabs(line->x-2*line->sx+lastx) + fabs(line->y-2*line->sy+lasty))*SUBFRACTION);

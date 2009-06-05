@@ -38,6 +38,7 @@ typedef struct _gfxdrawer
     void (*moveTo)(struct _gfxdrawer*d, gfxcoord_t x, gfxcoord_t y);
     void (*lineTo)(struct _gfxdrawer*d, gfxcoord_t x, gfxcoord_t y);
     void (*splineTo)(struct _gfxdrawer*d, gfxcoord_t sx, gfxcoord_t sy, gfxcoord_t x, gfxcoord_t y);
+    void (*close)(struct _gfxdrawer*d);
     void* (*result)(struct _gfxdrawer*d);
 } gfxdrawer_t;
 

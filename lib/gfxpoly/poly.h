@@ -6,7 +6,7 @@
 #include "../types.h"
 
 //#define DEBUG
-#define CHECKS
+//#define CHECKS
 
 /* features */
 #define SPLAY

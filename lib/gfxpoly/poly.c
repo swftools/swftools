@@ -167,6 +167,7 @@ int gfxpoly_size(gfxpoly_t*poly)
 
 char gfxpoly_check(gfxpoly_t*poly)
 {
+    current_polygon = poly;
     dict_t*d = dict_new2(&point_type);
     int s,t;
     gfxpolystroke_t*stroke = poly->strokes;

@@ -11,6 +11,7 @@ int main()
     gfxdevice_t dev;
     gfxdevice_swf_init(&dev);
     dev.setparameter(&dev, "framerate", "25.0");
+    dev.setparameter(&dev, "disable_polygon_conversion", "1");
     int t;
     for(t=0;t<300;t++) {
 	dev.startpage(&dev, 700,700);
@@ -80,14 +81,14 @@ int main()
 	//gfxpoly_t*p2 = gfxpoly_from_fill(f, 0.05);
 	gfxline_t*l2 = gfxline_clone(l);
 
-	double c = cos(t*M_PI/75);
-	double s = sin(t*M_PI/75);
+	double c = cos(t*M_PI/50.0);
+	double s = sin(t*M_PI/50.0);
 	static int x1 = 0, xdir = 1;
 	static int y1 = 0, ydir = 5;
-	x1+=xdir; if(x1>=150)  {x1=300-x1;xdir=-xdir;} if(x1<-150) {x1=-300-x1;xdir=-xdir;}
-	y1+=ydir; if(y1>=150)  {y1=300-y1;ydir=-ydir;} if(y1<-150) {y1=-300-y1;ydir=-ydir;}
-	gfxmatrix_t m = { c, s, -(350+x1)*c-350*s+350,
-	                 -s, c,  350*s-(350+x1)*c+350};
+	x1 = sin(t*M_PI/60.0)*50;
+	y1 = -sin(t*M_PI/50.0)*50;
+	gfxmatrix_t m = { c,  s,  -(350+x1)*c-(350+y1)*s+350,
+	                  s, -c,  -(350+x1)*s+(350+y1)*c+350};
 	gfxline_transform(l2, &m);
 	gfxpoly_t*p2 = gfxpoly_from_stroke(l2, width, gfx_capRound, gfx_joinRound, 500, 0.05);
 	assert(gfxpoly_check(p2));

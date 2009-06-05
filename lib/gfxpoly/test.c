@@ -6,6 +6,7 @@
 #include "poly.h"
 #include "convert.h"
 #include "renderpoly.h"
+#include "stroke.h"
 
 gfxline_t*mkstar(int x1, int y1, int x2, int y2)
 {
@@ -171,6 +172,8 @@ int test0(int argn, char*argv[])
     gfxline_t*box2 = gfxline_makerectangle(-100,-100,100,100);
     gfxline_t*box3 = gfxline_makerectangle(-100,-100,100,100);
     //gfxline_append(box2, box3);
+
+    gfxpoly_check(gfxpoly_from_stroke(box1, 2.0, gfx_capRound, gfx_joinRound, 0, 0.05));
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));

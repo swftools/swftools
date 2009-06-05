@@ -264,6 +264,7 @@ typedef struct _polydraw_internal
 {
     double lx, ly;
     int32_t lastx, lasty;
+    int32_t x0, y0;
     double z;
     char last;
     polywriter_t writer;
@@ -279,6 +280,8 @@ static void polydraw_moveTo(gfxdrawer_t*d, gfxcoord_t _x, gfxcoord_t _y)
     }
     i->lx = _x;
     i->ly = _y;
+    i->x0 = x;
+    i->y0 = y;
     i->lastx = x;
     i->lasty = y;
     i->last = 1;
@@ -332,6 +335,21 @@ static void polydraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     i->lasty = ny;
     i->last = 1;
 }
+static void polydraw_close(gfxdrawer_t*d)
+{
+    polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
+    assert(!(i->last && (i->x0 == INVALID_COORD || i->y0 == INVALID_COORD)));
+    if(!i->last)
+	return;
+    if(i->lastx != i->x0 || i->lasty != i->y0) {
+	i->writer.lineto(&i->writer, i->x0, i->y0);
+	i->lastx = i->x0;
+	i->lasty = i->y0;
+    }
+    i->last = 0;
+    i->x0 = INVALID_COORD;
+    i->y0 = INVALID_COORD;
+}
 static void* polydraw_result(gfxdrawer_t*d)
 {
     polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
@@ -347,9 +365,12 @@ void gfxdrawer_target_poly(gfxdrawer_t*d, double gridsize)
     d->internal = i;
     i->lastx = INVALID_COORD; // convert_coord can never return this value
     i->lasty = INVALID_COORD;
+    i->x0 = INVALID_COORD;
+    i->y0 = INVALID_COORD;
     d->moveTo = polydraw_moveTo;
     d->lineTo = polydraw_lineTo;
     d->splineTo = polydraw_splineTo;
+    d->close = polydraw_close;
     d->result = polydraw_result;
     gfxpolywriter_init(&i->writer);
     i->writer.setgridsize(&i->writer, gridsize);
@@ -393,6 +414,8 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 	return 0;
     dict_t*d = dict_new2(&point_type);
     dict_t*todo = dict_new2(&ptr_type);
+    gfxpolystroke_t*stroke_min= poly->strokes;
+    int32_t y_min=stroke_min->points[0].y;
     for(stroke=poly->strokes;stroke;stroke=stroke->next) {
 	dict_put(todo, stroke, stroke);
 	assert(stroke->num_points>1);
@@ -402,12 +425,18 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 	} else {
 	    dict_put(d, &stroke->points[0], stroke);
 	}
+	if(stroke->points[0].y < y_min) {
+	    y_min = stroke->points[0].y;
+	    stroke_min = stroke;
+	}
     }
     gfxpolystroke_t*next_todo = poly->strokes;
     gfxline_t*l = malloc(sizeof(gfxline_t)*count);
     count = 0;
-    stroke = poly->strokes;
+    stroke = stroke_min;
+    
     point_t last = {INVALID_COORD, INVALID_COORD};
+    char should_connect = 0;
     while(stroke) {
 	assert(dict_contains(todo, stroke));
 	int t;
@@ -423,6 +452,7 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 	    l[count].type = gfx_moveTo;
 	    l[count].next = &l[count+1];
 	    count++;
+	    assert(!should_connect);
 	}
 	pos += incr;
 	for(t=1;t<stroke->num_points;t++) {
@@ -440,7 +470,9 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 
 	/* try to find a poly which starts at the point we drew last */
 	stroke = dict_lookup(d, &last);
+	should_connect = 1;
 	while(!dict_contains(todo, stroke)) {
+	    should_connect = 0;
 	    stroke = next_todo;
 	    if(!next_todo) {
 		stroke = 0;
