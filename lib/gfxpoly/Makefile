@@ -1,7 +1,7 @@
 all: test stroke
 include ../../Makefile.common
 
-CC = gcc -g
+CC = gcc -O3 -fomit-frame-pointer
 #CC = gcc -O3
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
@@ -33,12 +33,15 @@ renderpoly.o: renderpoly.c wind.h poly.h renderpoly.h
 xrow.o: xrow.c xrow.h ../q.h ../mem.h
 	$(CC) -c xrow.c -o xrow.o
 
-stroke: stroke.c ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a
-	$(CC) stroke.c ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a -o stroke $(LIBS)
+stroke.o: stroke.c poly.h convert.h wind.h
+	$(CC) -c stroke.c -o stroke.o
+
+stroke: test_stroke.c stroke.o $(OBJS) ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a
+	$(CC) test_stroke.c stroke.o $(OBJS) ../libgfx.a ../libbase.a ../librfxswf.a ../libgfxswf.a -o stroke $(LIBS)
 
 SWF = ../librfxswf.a ../libpdf.a ../libgfx.a -lstdc++
 test: ../libbase.a ../libgfx.a test.c $(OBJS) poly.h convert.h
 	$(CC) test.c $(OBJS) $(SWF) ../libbase.a ../libgfx.a -o test $(LIBS)
 
 clean: 
-	rm -f *.o test
+	rm -f *.o test stroke

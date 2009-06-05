@@ -230,7 +230,7 @@ void gfxpolywriter_init(polywriter_t*w)
     data->poly->strokes = 0;
 }
 
-gfxpoly_t* gfxpoly_from_gfxline(gfxline_t*line, double gridsize)
+gfxpoly_t* gfxpoly_from_fill(gfxline_t*line, double gridsize)
 {
     polywriter_t writer;
     gfxpolywriter_init(&writer);
@@ -261,8 +261,10 @@ void gfxpoly_destroy(gfxpoly_t*poly)
 
 typedef struct _polydraw_internal
 {
+    double lx, ly;
     int32_t lastx, lasty;
     double z;
+    char last;
     polywriter_t writer;
 } polydraw_internal_t;
 
@@ -274,31 +276,45 @@ static void polydraw_moveTo(gfxdrawer_t*d, gfxcoord_t _x, gfxcoord_t _y)
     if(i->lastx != x || i->lasty != y) {
 	i->writer.moveto(&i->writer, x, y);
     }
+    i->lx = _x;
+    i->ly = _y;
     i->lastx = x;
     i->lasty = y;
+    i->last = 1;
 }
 static void polydraw_lineTo(gfxdrawer_t*d, gfxcoord_t _x, gfxcoord_t _y)
 {
     polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
+    if(!i->last) {
+	polydraw_moveTo(d, _x, _y);
+	return;
+    }
     int32_t x = convert_coord(_x, i->z);
     int32_t y = convert_coord(_y, i->z);
     if(i->lastx != x || i->lasty != y) {
 	i->writer.lineto(&i->writer, x, y);
     }
+    i->lx = _x;
+    i->ly = _y;
     i->lastx = x;
     i->lasty = y;
+    i->last = 1;
 }
 static void polydraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxcoord_t x, gfxcoord_t y)
 {
     polydraw_internal_t*i = (polydraw_internal_t*)d->internal;
-    double c = fabs(x-2*sx+i->lastx) + fabs(y-2*sy+i->lasty);
+    if(!i->last) {
+	polydraw_moveTo(d, x, y);
+	return;
+    }
+    double c = fabs(x-2*sx+i->lx) + fabs(y-2*sy+i->ly);
     int parts = (int)(sqrt(c)*SUBFRACTION);
     if(!parts) parts = 1;
     int t;
     int32_t nx,ny;
     for(t=0;t<parts;t++) {
-	nx = convert_coord((double)(t*t*x + 2*t*(parts-t)*sx + (parts-t)*(parts-t)*i->lastx)/(double)(parts*parts), i->z);
-	ny = convert_coord((double)(t*t*y + 2*t*(parts-t)*sy + (parts-t)*(parts-t)*i->lasty)/(double)(parts*parts), i->z);
+	nx = convert_coord((double)(t*t*x + 2*t*(parts-t)*sx + (parts-t)*(parts-t)*i->lx)/(double)(parts*parts), i->z);
+	ny = convert_coord((double)(t*t*y + 2*t*(parts-t)*sy + (parts-t)*(parts-t)*i->ly)/(double)(parts*parts), i->z);
 	if(nx != i->lastx || ny != i->lasty) {
 	    i->writer.lineto(&i->writer, nx, ny);
 	    i->lastx = nx; i->lasty = ny;
@@ -308,8 +324,12 @@ static void polydraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     ny = convert_coord(y,i->z);
     if(nx != i->lastx || ny != i->lasty) {
 	i->writer.lineto(&i->writer, nx, ny);
-	i->lastx = nx; i->lasty = ny;
     }
+    i->lx = x;
+    i->ly = y;
+    i->lastx = nx; 
+    i->lasty = ny;
+    i->last = 1;
 }
 static void* polydraw_result(gfxdrawer_t*d)
 {
@@ -333,5 +353,32 @@ void gfxdrawer_target_poly(gfxdrawer_t*d, double gridsize)
     gfxpolywriter_init(&i->writer);
     i->writer.setgridsize(&i->writer, gridsize);
     i->z = 1.0 / gridsize;
+}
+
+gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
+{
+    gfxpolystroke_t*stroke;
+    int count = 0;
+    for(stroke=poly->strokes;stroke;stroke=stroke->next) {
+	assert(stroke->num_points);
+	count += stroke->num_points;
+    }
+    if(!count) return 0;
+    gfxline_t*l = malloc(sizeof(gfxline_t)*count);
+    count = 0;
+    /* TODO: it might make sense to concatenate strokes */
+    for(stroke=poly->strokes;stroke;stroke=stroke->next) {
+	int t;
+	for(t=0;t<stroke->num_points;t++) {
+	    l[count+t].x = stroke->points[t].x * poly->gridsize;
+	    l[count+t].y = stroke->points[t].y * poly->gridsize;
+	    l[count+t].type = gfx_lineTo;
+	    l[count+t].next = &l[count+t+1];
+	}
+	l[count].type = gfx_moveTo;
+	count+=stroke->num_points;
+    }
+    l[count-1].next = 0;
+    return l;
 }
 

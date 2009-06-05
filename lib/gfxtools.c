@@ -86,7 +86,8 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
 
     if(!i->start) {
 	fprintf(stderr, "Error: drawing startpoint is a spline\n");
-	linedraw_moveTo(d, 0, 0);
+	linedraw_moveTo(d, x, y);
+	return;
     }
 
     l->type = gfx_splineTo;

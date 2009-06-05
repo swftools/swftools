@@ -146,6 +146,15 @@ typedef struct _status {
 } status_t;
 
 
+int gfxpoly_num_segments(gfxpoly_t*poly)
+{
+    gfxpolystroke_t*stroke = poly->strokes;
+    int count = 0;
+    for(;stroke;stroke=stroke->next) {
+	count++;
+    }
+    return count;
+}
 int gfxpoly_size(gfxpoly_t*poly)
 {
     int s,t;
@@ -371,10 +380,6 @@ static void advance_stroke(queue_t*queue, hqueue_t*hqueue, gfxpolystroke_t*strok
 	}
     }
     if(s) {
-#ifdef DEBUG
-	fprintf(stderr, "attaching contingency of stroke %08x to segment [%d] %s\n",
-		stroke, s, s->delta.y?"":"(horizontal)");
-#endif
 	s->stroke = stroke;
 	s->stroke_pos = pos;
     }
@@ -935,7 +940,8 @@ static void recalculate_windings(status_t*status, segrange_t*range)
             s->fs_out = status->windrule->diff(&wind, &s->wind);
 
 #ifdef DEBUG
-            fprintf(stderr, "[%d] %s/%d/%s/%s %s\n", s->nr, s->dir==DIR_UP?"up":"down", s->wind.wind_nr, s->wind.is_filled?"fill":"nofill", s->fs_out?"draw":"omit",
+            fprintf(stderr, "[%d] dir=%s wind=%d wind.filled=%s fs_old/new=%s/%s %s\n", s->nr, s->dir==DIR_UP?"up":"down", s->wind.wind_nr, s->wind.is_filled?"fill":"nofill", 
+		    fs_old?"draw":"omit", s->fs_out?"draw":"omit",
 		    fs_old!=s->fs_out?"CHANGED":"");
 #endif
             assert(!(!s->changed && fs_old!=s->fs_out));
@@ -1202,21 +1208,28 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
             e = hqueue_get(&hqueue);
         } while(e && y == e->p.y);
 
-        assert(!fill); // check that polygon is not bleeding
+#ifdef CHECKS
+	char bleeding = fill;
+        assert(!bleeding);
+#endif
     }
 
     actlist_destroy(actlist);
     hqueue_destroy(&hqueue);
 }
 
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context)
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule, windcontext_t*context)
 {
-    current_polygon = poly;
+    current_polygon = poly1;
 
     status_t status;
     memset(&status, 0, sizeof(status_t));
     queue_init(&status.queue);
-    gfxpoly_enqueue(poly, &status.queue, 0, /*polygon nr*/0);
+    gfxpoly_enqueue(poly1, &status.queue, 0, /*polygon nr*/0);
+    if(poly2) {
+	assert(poly1->gridsize == poly2->gridsize);
+	gfxpoly_enqueue(poly2, &status.queue, 0, /*polygon nr*/1);
+    }
 
     status.windrule = windrule;
     status.context = context;
@@ -1279,10 +1292,19 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*co
     xrow_destroy(status.xrow);
 
     gfxpoly_t*p = (gfxpoly_t*)malloc(sizeof(gfxpoly_t));
-    p->gridsize = poly->gridsize;
+    p->gridsize = poly1->gridsize;
     p->strokes = status.strokes;
 
-    gfxpoly_dump(p);
     add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
     return p;
+}
+
+static windcontext_t twopolygons = {2};
+gfxpoly_t* gfxpoly_intersect(gfxpoly_t*p1, gfxpoly_t*p2)
+{
+    return gfxpoly_process(p1, p2, &windrule_intersect, &twopolygons);
+}
+gfxpoly_t* gfxpoly_union(gfxpoly_t*p1, gfxpoly_t*p2)
+{
+    return gfxpoly_process(p1, p2, &windrule_union, &twopolygons);
 }

@@ -22,7 +22,7 @@ typedef struct _point {
 } point_t;
 
 typedef struct _fillstyle {
-    char is_filled;
+    void*internal;
 } fillstyle_t;
 
 typedef struct _windstate
@@ -115,10 +115,14 @@ typedef struct _segment {
 void gfxpoly_fail(char*expr, char*file, int line, const char*function);
 
 char gfxpoly_check(gfxpoly_t*poly);
+int gfxpoly_num_segments(gfxpoly_t*poly);
 int gfxpoly_size(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);
 void gfxpoly_save(gfxpoly_t*poly, const char*filename);
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*context);
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule, windcontext_t*context);
+
+gfxpoly_t* gfxpoly_intersect(gfxpoly_t*p1, gfxpoly_t*p2);
+gfxpoly_t* gfxpoly_union(gfxpoly_t*p1, gfxpoly_t*p2);
 
 #ifndef CHECKS
 #ifdef assert

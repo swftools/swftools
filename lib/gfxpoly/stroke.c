@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <assert.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#include "poly.h"
+#include "wind.h"
+#include "convert.h"
 
 /* notice: left/right for a coordinate system where y goes up, not down */
 typedef enum {LEFT=0, RIGHT=1} leftright_t;
@@ -45,7 +47,7 @@ static void draw_arc(gfxdrawer_t*draw, double x, double y, double a1, double a2,
 	//double dy = (-c*step/2 + lasty);
 	double dx = x + cos(a-step/2)*r2;
 	double dy = y + sin(a-step/2)*r2;
-	//draw->lineto(draw, xx, yy);
+	//draw->lineTo(draw, xx, yy);
 	draw->splineTo(draw, dx, dy, xx, yy);
 	lastx = xx;
 	lasty = yy;
@@ -56,10 +58,6 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 {
     char do_draw=0;
     leftright_t lastdir = LEFT;
-    int start = 0;
-    int end = num-1;
-    int incr = 1;
-    int pos = 0;
 
     width/=2;
     if(width<=0) 
@@ -75,6 +73,11 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 	    num--;
 	}
     }
+    
+    int start = 0;
+    int end = num-1;
+    int incr = 1;
+    int pos = 0;
 
     double alimit = atan(limit / width);
 
@@ -82,9 +85,9 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
        adding a stroke outline to the right side and line caps after each
        pass */
     int pass;
+    double lastw=0;
     for(pass=0;pass<2;pass++) {
 	int pos;
-	double lastw=0;
 	for(pos=start;pos!=end;pos+=incr) {
 	    //printf("%d) %.2f %.2f\n", pos, p[pos].x, p[pos].y);
 	    double dx = p[pos+incr].x - p[pos].x;
@@ -130,16 +133,20 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 
 	    lastw = w;
 	}
-	/* draw stroke ends */
+	/* draw stroke ends. We draw duplicates of some points here. The drawer
+	   implementationshould be smart enough to remove them. */
+	double c = cos(lastw-M_PI/2)*width;
+	double s = sin(lastw-M_PI/2)*width;
 	if(cap == gfx_capButt) {
-	    double c = cos(lastw-M_PI/2)*width;
-	    double s = sin(lastw-M_PI/2)*width;
+	    draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
 	    draw->lineTo(draw, p[pos].x-c, p[pos].y-s);
 	} else if(cap == gfx_capRound) {
+	    draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
 	    draw_arc(draw, p[pos].x, p[pos].y, lastw-M_PI/2, lastw+M_PI/2, width);
 	} else if(cap == gfx_capSquare) {
 	    double c = cos(lastw-M_PI/2)*width;
 	    double s = sin(lastw-M_PI/2)*width;
+	    draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
 	    draw->lineTo(draw, p[pos].x+c-s, p[pos].y+s+c);
 	    draw->lineTo(draw, p[pos].x-c-s, p[pos].y-s+c);
 	    draw->lineTo(draw, p[pos].x-c, p[pos].y-s);
@@ -147,6 +154,7 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 	start=num-1;
 	end=0;
 	incr=-1;
+	lastw += M_PI; // for dots
     }
 }
 
@@ -206,61 +214,16 @@ static void draw_stroke(gfxline_t*start, gfxdrawer_t*draw, double width, gfx_cap
     free(points);
 }
 
-int main()
+static windcontext_t onepolygon = {1};
+gfxpoly_t* gfxpoly_from_stroke(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit, double gridsize)
 {
-    gfxline_t l[4];
-    l[0].type = gfx_moveTo;
-    l[0].x = 100;l[0].sx=2;
-    l[0].y = 100;l[0].sy=2;
-    l[0].next = &l[1];
-    l[1].type = gfx_lineTo;
-    l[1].x = 100;l[1].sx=2;
-    l[1].y = 200;l[1].sy=-2;
-    l[1].next = &l[2];
-    l[2].type = gfx_lineTo;
-    l[2].x = 250;l[2].sx=4;
-    l[2].y = 200;l[2].sy=0;
-    l[2].next = &l[3];
-    l[3].type = gfx_lineTo;
-    l[3].x = 200;l[3].sx=0;
-    l[3].y = 150;l[3].sy=4;
-    l[3].next = 0;
-
-
-    gfxdevice_t dev;
-    gfxdevice_swf_init(&dev);
-    dev.setparameter(&dev, "framerate", "25.0");
-    int t;
-    for(t=0;t<300;t++) {
-	dev.startpage(&dev, 700,700);
-	gfxline_t*g = l;
-	while(g) {
-	    g->x += g->sx;
-	    g->y += g->sy;
-	    if(g->x<200) {g->x=400-g->x;g->sx=-g->sx;}
-	    if(g->y<200) {g->y=400-g->y;g->sy=-g->sy;}
-	    if(g->x>500) {g->x=1000-g->x;g->sx=-g->sx;}
-	    if(g->y>500) {g->y=1000-g->y;g->sy=-g->sy;}
-	    g = g->next;
-	}
-	gfxdrawer_t d;
-	gfxdrawer_target_gfxline(&d);
-	double width = t/3.0;
-	if(width>50) width=100-width;
-
-	draw_stroke(l, &d, width, gfx_capRound, gfx_joinBevel, 500);
-	gfxline_t*line = (gfxline_t*)d.result(&d);
-	//gfxline_dump(line, stdout, "");
-
-	gfxcolor_t black = {255,0,0,0};
-	gfxcolor_t cyan = {255,0,128,128};
-	dev.stroke(&dev, l, 2, &black, gfx_capRound, gfx_joinRound, 0);
-	dev.stroke(&dev, line, 2, &cyan, gfx_capRound, gfx_joinRound, 0);
-	gfxline_free(line);
-	dev.endpage(&dev);
-    }
-
-    gfxresult_t* result = dev.finish(&dev);
-    result->save(result, "test.swf");
-    result->destroy(result);
+    gfxdrawer_t d;
+    gfxdrawer_target_poly(&d, gridsize);
+    draw_stroke(line, &d, width, cap_style, joint_style, miterLimit);
+    gfxpoly_t*poly = (gfxpoly_t*)d.result(&d);
+    assert(gfxpoly_check(poly));
+    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_circular, &onepolygon);
+    gfxpoly_destroy(poly);
+    return poly2;
 }
+

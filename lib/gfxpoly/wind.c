@@ -69,8 +69,7 @@ windrule_t windrule_circular = {
 
 windstate_t intersect_start(windcontext_t*context)
 {
-    windstate_t w;
-    return w;
+    return windstate_nonfilled;
 }
 
 windstate_t intersect_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
@@ -78,8 +77,7 @@ windstate_t intersect_add(windcontext_t*context, windstate_t left, fillstyle_t*e
     assert(master < context->num_polygons);
 
     left.wind_nr ^= 1<<master;
-    if(left.wind_nr == (1<<context->num_polygons)-1)
-        left.is_filled = 1;
+    left.is_filled = (left.wind_nr == (1<<context->num_polygons)-1);
     return left;
 }
 
@@ -108,8 +106,7 @@ windstate_t union_add(windcontext_t*context, windstate_t left, fillstyle_t*edge,
 {
     assert(master<sizeof(left.wind_nr)*8); //up to 32/64 polygons max
     left.wind_nr ^= 1<<master;
-    if(left.wind_nr!=0)
-        left.is_filled = 1;
+    left.is_filled = (left.wind_nr!=0);
     return left;
 }
 

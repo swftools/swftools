@@ -134,6 +134,7 @@ gfxline_t* make_circles(int n)
 }
 
 static windcontext_t onepolygon = {1};
+static windcontext_t twopolygons = {2};
 
 int test_speed()
 {
@@ -154,15 +155,46 @@ int test_speed()
 	m.ty = 400*1.41/2;
 	gfxline_t*l = gfxline_clone(b);
 	gfxline_transform(l, &m);
-	gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
+	gfxpoly_t*poly = gfxpoly_from_fill(b, 0.05);
 
-	gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
+	gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
 	gfxpoly_destroy(poly);
 	gfxpoly_destroy(poly2);
 	gfxline_free(l);
     }
     gfxline_free(b);
 }
+
+int test0(int argn, char*argv[])
+{
+    gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
+    gfxline_t*box2 = gfxline_makerectangle(-100,-100,100,100);
+    gfxline_t*box3 = gfxline_makerectangle(-100,-100,100,100);
+    //gfxline_append(box2, box3);
+
+    gfxmatrix_t matrix;
+    memset(&matrix, 0, sizeof(gfxmatrix_t));
+    double ua=M_PI/4;
+    matrix.m00=cos(ua);matrix.m10=sin(ua);
+    matrix.m01=-sin(ua);matrix.m11=cos(ua);
+    //gfxline_transform(box1, &matrix);
+    
+    //gfxline_t*b = 0;
+    //b = gfxline_append(b, box1);
+    //b = gfxline_append(b, box2);
+    //gfxline_dump(b, stderr, "");
+
+    gfxpoly_t*poly1 = gfxpoly_from_fill(box1, 0.05);
+    gfxpoly_t*poly2 = gfxpoly_from_fill(box2, 0.05);
+    
+    gfxline_free(box1);
+    gfxline_free(box2);
+    gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
+    gfxpoly_destroy(poly1);
+    gfxpoly_destroy(poly2);
+    gfxpoly_destroy(poly3);
+}
+
 
 int test1(int argn, char*argv[])
 {
@@ -184,7 +216,7 @@ int test1(int argn, char*argv[])
     //gfxline_transform(b, &matrix);
 
     gfxline_dump(b, stderr, "");
-    gfxpoly_t*poly = gfxpoly_from_gfxline(b, 0.05);
+    gfxpoly_t*poly = gfxpoly_from_fill(b, 0.05);
     
     gfxline_free(box1);
     gfxline_free(box2);
@@ -192,7 +224,7 @@ int test1(int argn, char*argv[])
     gfxline_free(star);
 
     gfxpoly_dump(poly);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, &windrule_evenodd, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
 }
@@ -211,11 +243,11 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     line[num-1].y = line[0].y;
     line[num-1].next = 0;
 
-    gfxpoly_t*poly1 = gfxpoly_from_gfxline(line, gridsize);
+    gfxpoly_t*poly1 = gfxpoly_from_fill(line, gridsize);
     gfxline_free(line);
 
     windrule_t*rule = &windrule_circular;
-    gfxpoly_t*poly2 = gfxpoly_process(poly1, rule, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
     if(bitmaptest) {
         intbbox_t bbox = intbbox_new(0, 0, width, height);
         unsigned char*bitmap1 = render_polygon(poly1, &bbox, 1.0, rule, &onepolygon);
@@ -287,9 +319,9 @@ void test3(int argn, char*argv[])
         gfxline_t*l = gfxline_clone(line);
         gfxline_transform(l, &m);
 
-        gfxpoly_t*poly1 = gfxpoly_from_gfxline(l, 0.05);
+        gfxpoly_t*poly1 = gfxpoly_from_fill(l, 0.05);
 
-        gfxpoly_t*poly2 = gfxpoly_process(poly1, rule, &onepolygon);
+        gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
         SHAPE* s;
@@ -405,7 +437,7 @@ void test4(int argn, char*argv[])
             continue;
         }
 
-        gfxpoly_t*poly2 = gfxpoly_process(poly1, rule, &onepolygon);
+        gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
 
 	int pass;
 	for(pass=0;pass<2;pass++) {
@@ -443,11 +475,11 @@ static int max_segments = 0;
 static int max_any_segments = 0;
 void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color) 
 {
-    //gfxpoly_t*c = gfxpoly_from_gfxline(line, 0.05);
+    //gfxpoly_t*c = gfxpoly_from_fill(line, 0.05);
     //gfxpoly_free(c);
 
-    //gfxpoly_t*poly1 = gfxpoly_from_gfxline(line, 0.05);
-    gfxpoly_t*poly1 = gfxpoly_from_gfxline(line, 0.05);
+    //gfxpoly_t*poly1 = gfxpoly_from_fill(line, 0.05);
+    gfxpoly_t*poly1 = gfxpoly_from_fill(line, 0.05);
 
     //gfxline_dump(line, stderr, "");
     //gfxpoly_dump(poly);
@@ -483,7 +515,7 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
         fprintf(stderr, "bad polygon or error in renderer\n");
         return;
     }
-    gfxpoly_t*poly2 = gfxpoly_process(poly1, rule, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
     unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd, &onepolygon);
     if(!bitmap_ok(&bbox, bitmap2)) {
         save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
@@ -593,6 +625,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test4(argn, argv);
+    test0(argn, argv);
 }
 
