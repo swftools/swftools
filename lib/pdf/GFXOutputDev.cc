@@ -599,7 +599,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
-    this->config_optimize_polygons = 0;
+    this->config_optimize_polygons = 1;
     this->config_multiply = 1;
     this->page2page = 0;
     this->num_pages = 0;
