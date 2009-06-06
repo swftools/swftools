@@ -281,7 +281,7 @@ public:
   int config_transparent;
   int config_extrafontdata;
   int config_convertgradients;
-  int config_optimize_polygons;
+  int config_disable_polygon_conversion;
   int config_multiply;
   int config_bigchar;
   double config_fontquality;

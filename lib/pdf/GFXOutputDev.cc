@@ -599,7 +599,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
-    this->config_optimize_polygons = 1;
+    this->config_disable_polygon_conversion = 0;
     this->config_multiply = 1;
     this->page2page = 0;
     this->num_pages = 0;
@@ -623,8 +623,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_multiply = atoi(value);
         if(this->config_multiply<1) 
             this->config_multiply=1;
-    } else if(!strcmp(key,"optimize_polygons")) {
-        this->config_optimize_polygons = atoi(value);
+    } else if(!strcmp(key,"disable_polygon_conversion")) {
+        this->config_disable_polygon_conversion = atoi(value);
     }
 }
   
@@ -1247,7 +1247,7 @@ void GFXOutputDev::clip(GfxState *state)
     GfxPath * path = state->getPath();
     msg("<trace> clip");
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-    if(config_optimize_polygons) {
+    if(!config_disable_polygon_conversion) {
 	gfxline_t*line2 = gfxpoly_circular_to_evenodd(line, DEFAULT_GRID);
 	gfxline_free(line);
 	line = line2;
@@ -2468,7 +2468,7 @@ void GFXOutputDev::fill(GfxState *state)
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-    if(config_optimize_polygons) {
+    if(!config_disable_polygon_conversion) {
         gfxline_t*line2 = gfxpoly_circular_to_evenodd(line, DEFAULT_GRID);
         gfxline_free(line);
         line = line2;

@@ -325,6 +325,7 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
 	} else {
 	    if(i->out) i->out->drawchar(i->out, font, glyphnr, color, matrix);
 	}
+	gfxline_free(gfxline);
     } else {
 	if(i->out) i->out->drawchar(i->out, font, glyphnr, color, matrix);
     }
@@ -351,7 +352,6 @@ gfxresult_t* polyops_finish(struct _gfxdevice*dev)
     dbg("polyops_finish");
     internal_t*i = (internal_t*)dev->internal;
 
-
     if(i->polyunion) {
 	gfxpoly_destroy(i->polyunion);i->polyunion=0;
     } else {
@@ -359,8 +359,10 @@ gfxresult_t* polyops_finish(struct _gfxdevice*dev)
             msg("<notice> --flatten success rate: %.1f%% (%d failed polygons)", i->good_polygons*100.0 / (i->good_polygons + i->bad_polygons), i->bad_polygons);
         }
     }
-    if(i->out) {
-	return i->out->finish(i->out);
+    gfxdevice_t*out = i->out;
+    free(i);memset(dev, 0, sizeof(gfxdevice_t));
+    if(out) {
+	return out->finish(out);
     } else {
 	return 0;
     }
