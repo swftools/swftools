@@ -34,6 +34,7 @@ typedef struct _linedraw_internal
     gfxline_t*start;
     gfxline_t*next;
     gfxcoord_t x0,y0;
+    char has_moveto;
 } linedraw_internal_t;
 
 static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
@@ -41,12 +42,7 @@ static void linedraw_moveTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
     gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
     l->type = gfx_moveTo;
-    if((int)((d->x * 5120) == (int)(x * 5120)) &&
-       (int)((d->y * 5120) == (int)(y * 5120))) {
-	/* never mind- we're already there */
-	return;
-
-    }
+    i->has_moveto = 1;
     i->x0 = x;
     i->y0 = y;
     l->sx = l->sy = 0;
@@ -64,7 +60,7 @@ static void linedraw_lineTo(gfxdrawer_t*d, gfxcoord_t x, gfxcoord_t y)
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
     gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
 
-    if(!i->start) {
+    if(!i->has_moveto) {
 	/* starts with a line, not with a moveto. As this is the first
 	   entry in the list, this is probably *meant* to be a moveto */
 	linedraw_moveTo(d, x, y);
@@ -87,8 +83,7 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
     gfxline_t*l = (gfxline_t*)rfx_alloc(sizeof(gfxline_t));
 
-    if(!i->start) {
-	fprintf(stderr, "Error: drawing startpoint is a spline\n");
+    if(!i->has_moveto) {
 	linedraw_moveTo(d, x, y);
 	return;
     }
@@ -105,10 +100,15 @@ static void linedraw_splineTo(gfxdrawer_t*d, gfxcoord_t sx, gfxcoord_t sy, gfxco
     if(!i->start)
 	i->start = l;
 }
-static void* linedraw_close(gfxdrawer_t*d)
+static void linedraw_close(gfxdrawer_t*d)
 {
     linedraw_internal_t*i = (linedraw_internal_t*)d->internal;
+    if(!i->has_moveto) 
+	return;
     linedraw_lineTo(d, i->x0, i->y0);
+    i->has_moveto = 0;
+    i->x0 = 0;
+    i->y0 = 0;
 }
 static void* linedraw_result(gfxdrawer_t*d)
 {

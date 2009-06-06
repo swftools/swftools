@@ -37,17 +37,15 @@ static void draw_arc(gfxdrawer_t*draw, double x, double y, double a1, double a2,
        possible values for step */
     double r2 = r*(2-sqrt(0.5+0.5*cos(step)));
 
+    draw->lineTo(draw, x+cos(a1)*r,y+sin(a1)*r);
     for(t=1;t<=steps;t++) {
 	double a = a1 + t*step;
 	double c = cos(a)*r;
 	double s = sin(a)*r;
 	double xx = c + x;
 	double yy = s + y;
-	//double dx = (s*step/2 + lastx);
-	//double dy = (-c*step/2 + lasty);
 	double dx = x + cos(a-step/2)*r2;
 	double dy = y + sin(a-step/2)*r2;
-	//draw->lineTo(draw, xx, yy);
 	draw->splineTo(draw, dx, dy, xx, yy);
 	lastx = xx;
 	lasty = yy;
@@ -62,38 +60,43 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 
     /* remove duplicate points */
     int s=1,t;
+    gfxpoint_t last = p[0];
     for(t=1;t<num;t++) {
-	p[s] = p[t];
-	if(p[t].x != p[t-1].x || p[t].y != p[t-1].y) {
-	    s++;
-	} else {
-	    num--;
+	if(p[t].x != last.x || p[t].y != last.y) {
+	    p[s++] = last = p[t];
 	}
     }
+    num = s;
+    
+    char closed = (num>2 && p[0].x == p[num-1].x && p[0].y == p[num-1].y);
     
     int start = 0;
     int end = num-1;
     int incr = 1;
     int pos = 0;
 
-    double alimit = atan(limit / width);
-
+    double lastw=0;
     /* iterate through the points two times: first forward, then backward,
        adding a stroke outline to the right side and line caps after each
        pass */
     int pass;
-    double lastw=0;
     for(pass=0;pass<2;pass++) {
+	if(closed) {
+	    double dx = p[end].x - p[end-incr].x;
+	    double dy = p[end].y - p[end-incr].y;
+	    lastw = atan2(dy,dx);
+	    if(lastw<0) lastw+=M_PI*2;
+	}
+    
 	int pos;
 	for(pos=start;pos!=end;pos+=incr) {
 	    //printf("%d) %.2f %.2f\n", pos, p[pos].x, p[pos].y);
 	    double dx = p[pos+incr].x - p[pos].x;
 	    double dy = p[pos+incr].y - p[pos].y;
-	    double l = sqrt(dx*dx+dy*dy);
 	    double w = atan2(dy,dx);
 	    if(w<0) w+=M_PI*2;
 	    
-	    if(pos!=start) {
+	    if(closed || pos!=start) {
 		double d = w-lastw;
 		leftright_t turn;
 		if(d>=0 && d<M_PI) turn=LEFT;
@@ -102,61 +105,63 @@ static void draw_single_stroke(gfxpoint_t*p, int num, gfxdrawer_t*draw, double w
 		else if(d<=-M_PI) {turn=LEFT;d+=M_PI*2;}
 		else {assert(0);}
 		if(turn!=LEFT || join==gfx_joinBevel) {
-		    /* TODO: does a bevel join extend beyond the segment (i.e.,
-		       is it like a square cap or like a butt cap? */
+		    // nothing to do. bevel joins are easy
 		} else if(join==gfx_joinRound) {
 		    draw_arc(draw, p[pos].x, p[pos].y, lastw-M_PI/2, w-M_PI/2, width);
 		} else if(join==gfx_joinMiter) {
-		    if(d/2<alimit) {
-			double r2 = width*(1-sin(d/2)+tan(d/2));
-			double addx = cos(lastw-M_PI/2+d/2)*r2;
-			double addy = sin(lastw-M_PI/2+d/2)*r2;
-			draw->lineTo(draw, p[pos].x+addx, p[pos].y+addy);
-		    } else {
-			/* convert to bevel join, which always looks the same (is
-			   independent of miterLimit TODO: verify this */
-		    }
+		    double xw = M_PI/2 - d/2;
+		    if(xw>0) {
+			double r2 = 1.0 / sin(M_PI/2-d/2);
+			if(r2 < limit) {
+			    r2 *= width;
+			    double addx = cos(lastw-M_PI/2+d/2)*r2;
+			    double addy = sin(lastw-M_PI/2+d/2)*r2;
+			    draw->lineTo(draw, p[pos].x+addx, p[pos].y+addy);
+			}
+		    } 
 		}
 	    }
 
 	    double addx = cos(w-M_PI/2)*width;
 	    double addy = sin(w-M_PI/2)*width;
 	    draw->lineTo(draw, p[pos].x+addx, p[pos].y+addy);
-	    //printf("-- %.2f %.2f (angle:%d)\n", px1, py1, (int)(180*w/M_PI));
 	    double px2 = p[pos+incr].x + addx;
 	    double py2 = p[pos+incr].y + addy;
-	    //printf("-- %.2f %.2f (angle:%d)\n", px2, py2, (int)(180*w/M_PI));
 	    draw->lineTo(draw, p[pos+incr].x+addx, p[pos+incr].y+addy);
-
 	    lastw = w;
 	}
-	/* draw stroke ends. We draw duplicates of some points here. The drawer
-	   implementation should be smart enough to remove them. */
-	double c = cos(lastw-M_PI/2)*width;
-	double s = sin(lastw-M_PI/2)*width;
-	if(cap == gfx_capButt) {
-	    draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
-	    draw->lineTo(draw, p[pos].x-c, p[pos].y-s);
-	} else if(cap == gfx_capRound) {
-	    draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
-	    draw_arc(draw, p[pos].x, p[pos].y, lastw-M_PI/2, lastw+M_PI/2, width);
-	} else if(cap == gfx_capSquare) {
+
+	if(closed) {
+	    draw->close(draw);
+	} else {
+	    /* draw stroke ends. We draw duplicates of some points here. The drawer
+	       implementation should be smart enough to remove them. */
 	    double c = cos(lastw-M_PI/2)*width;
 	    double s = sin(lastw-M_PI/2)*width;
-	    draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
-	    draw->lineTo(draw, p[pos].x+c-s, p[pos].y+s+c);
-	    draw->lineTo(draw, p[pos].x-c-s, p[pos].y-s+c);
-	    draw->lineTo(draw, p[pos].x-c, p[pos].y-s);
+	    if(cap == gfx_capButt) {
+		draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
+		draw->lineTo(draw, p[pos].x-c, p[pos].y-s);
+	    } else if(cap == gfx_capRound) {
+		draw_arc(draw, p[pos].x, p[pos].y, lastw-M_PI/2, lastw+M_PI/2, width);
+	    } else if(cap == gfx_capSquare) {
+		double c = cos(lastw-M_PI/2)*width;
+		double s = sin(lastw-M_PI/2)*width;
+		draw->lineTo(draw, p[pos].x+c, p[pos].y+s);
+		draw->lineTo(draw, p[pos].x+c-s, p[pos].y+s+c);
+		draw->lineTo(draw, p[pos].x-c-s, p[pos].y-s+c);
+		draw->lineTo(draw, p[pos].x-c, p[pos].y-s);
+	    }
+	    lastw += M_PI; // for dots
 	}
 	start=num-1;
 	end=0;
 	incr=-1;
-	lastw += M_PI; // for dots
     }
-    draw->close(draw);
+    if(!closed)
+	draw->close(draw);
 }
 
-static void draw_stroke(gfxline_t*start, gfxdrawer_t*draw, double width, gfx_capType cap, gfx_joinType join, double miterLimit)
+void draw_stroke(gfxline_t*start, gfxdrawer_t*draw, double width, gfx_capType cap, gfx_joinType join, double miterLimit)
 {
     if(!start) 
 	return;

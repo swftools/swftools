@@ -3,7 +3,7 @@
 #include "stroke.h"
 #include "convert.h"
 
-int main()
+int test_stroke1()
 {
     gfxline_t l[512], f[256*5];
 
@@ -129,4 +129,72 @@ int main()
     gfxresult_t* result = dev.finish(&dev);
     result->save(result, "test.swf");
     result->destroy(result);
+}
+
+int test_stroke2()
+{
+    gfxline_t l[4];
+    l[0].type = gfx_moveTo;
+    l[0].x = 100;l[0].sx=2;
+    l[0].y = 100;l[0].sy=2;
+    l[0].next = &l[1];
+    l[1].type = gfx_lineTo;
+    l[1].x = 100;l[1].sx=2;
+    l[1].y = 200;l[1].sy=-2;
+    l[1].next = &l[2];
+    l[2].type = gfx_lineTo;
+    l[2].x = 250;l[2].sx=4;
+    l[2].y = 200;l[2].sy=0;
+    l[2].next = &l[3];
+    l[3].type = gfx_lineTo;
+    l[3].x = 200;l[3].sx=0;
+    l[3].y = 150;l[3].sy=4;
+    l[3].next = 0;
+
+
+    gfxdevice_t dev;
+    gfxdevice_swf_init(&dev);
+    dev.setparameter(&dev, "framerate", "25.0");
+    int t;
+    for(t=0;t<300;t++) {
+	dev.startpage(&dev, 700,700);
+	gfxline_t*g = l;
+	while(g) {
+	    g->x += g->sx;
+	    g->y += g->sy;
+	    if(g->x<200) {g->x=400-g->x;g->sx=-g->sx;}
+	    if(g->y<200) {g->y=400-g->y;g->sy=-g->sy;}
+	    if(g->x>500) {g->x=1000-g->x;g->sx=-g->sx;}
+	    if(g->y>500) {g->y=1000-g->y;g->sy=-g->sy;}
+	    g = g->next;
+	}
+	//l[3].x = l[0].x;
+	//l[3].y = l[0].y;
+
+	gfxdrawer_t d;
+	gfxdrawer_target_gfxline(&d);
+	double width = t/3.0;
+	if(width>50) width=100-width;
+	width = 40;
+
+	draw_stroke(l, &d, width, gfx_capSquare, gfx_joinMiter, 500);
+	gfxline_t*line = (gfxline_t*)d.result(&d);
+	//gfxline_dump(line, stdout, "");
+
+	gfxcolor_t black = {255,0,0,0};
+	gfxcolor_t cyan = {255,0,128,128};
+	dev.stroke(&dev, l, 2, &black, gfx_capRound, gfx_joinRound, 0);
+	dev.stroke(&dev, line, 2, &cyan, gfx_capRound, gfx_joinRound, 0);
+	gfxline_free(line);
+	dev.endpage(&dev);
+    }
+
+    gfxresult_t* result = dev.finish(&dev);
+    result->save(result, "test.swf");
+    result->destroy(result);
+}
+
+int main()
+{
+    test_stroke2();
 }

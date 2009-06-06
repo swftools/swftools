@@ -446,6 +446,9 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 	    pos = stroke->num_points-1;
 	    incr = -1;
 	}
+	/* TODO: keeping the up/down order intact increases the polygon size
+	         considerably. If this is going to be an even/odd polygon,
+		 we could ignore it and save some space */
 	if(last.x != stroke->points[pos].x || last.y != stroke->points[pos].y) {
 	    l[count].x = stroke->points[pos].x * poly->gridsize;
 	    l[count].y = stroke->points[pos].y * poly->gridsize;
