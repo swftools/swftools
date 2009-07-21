@@ -125,6 +125,7 @@ char*mktype(slotinfo_t*s)
     } else if(s->kind == INFOTYPE_VAR) {
         return "varinfo_t";
     }
+    return "**ERROR**";
 }
 
 void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix);
@@ -310,5 +311,5 @@ int main()
     fprintf(fi, "    _Infinity_constant.f = __builtin_inf();\n");
     fprintf(fi, "    return d;\n");
     fprintf(fi, "}\n");
-
+    return 0;
 }

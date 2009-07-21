@@ -3129,6 +3129,9 @@ NEW : "new" E XX MAYBE_PARAM_VALUES {
         $$.c = code_append($$.c, paramcode);
         $$.c = abc_constructprop2($$.c, name, $4.number);
         multiname_destroy(name);
+    } else if(is_getlocal($$.c)) {
+        $$.c = code_append($$.c, paramcode);
+        $$.c = abc_construct($$.c, $4.number);
     } else if(TYPE_IS_CLASS(v.t) && v.t->data) {
         code_free($$.c);
         classinfo_t*c = v.t->data;
