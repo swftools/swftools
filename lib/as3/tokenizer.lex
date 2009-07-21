@@ -110,10 +110,10 @@ void handleInclude(char*text, int len, char quotes)
     } else {
         int i1=0,i2=len;
         // find start
-        while(!strchr(" \n\r\t", text[i1])) i1++;
+        while(!strchr(" \n\r\t\xa0", text[i1])) i1++;
         // strip
-        while(strchr(" \n\r\t", text[i1])) i1++;
-        while(strchr(" \n\r\t", text[i2-1])) i2--;
+        while(strchr(" \n\r\t\xa0", text[i1])) i1++;
+        while(strchr(" \n\r\t\xa0", text[i2-1])) i2--;
         if(i2!=len) text[i2]=0;
         filename = strdup(&text[i1]);
     }
@@ -533,7 +533,7 @@ XMLID       [A-Za-z0-9_\x80-\xff]+([:][A-Za-z0-9_\x80-\xff]+)?
 XMLSTRING   ["][^"]*["]
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
-S 	 [ \n\r\t]
+S 	 [ \n\r\t\xa0]
 MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n\r]*[\n\r]
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
@@ -545,7 +545,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 [/][*]                       {syntaxerror("syntax error: unterminated comment", yytext);}
 
 ^include{S}+{STRING}{S}*/\n    {l();handleInclude(yytext, yyleng, 1);}
-^include{S}+[^" \t\r\n][\x20-\xff]*{S}*/\n    {l();handleInclude(yytext, yyleng, 0);}
+^include{S}+[^" \t\xa0\r\n][\x20-\xff]*{S}*/\n    {l();handleInclude(yytext, yyleng, 0);}
 {STRING}                     {l(); BEGIN(DEFAULT);handleString(yytext, yyleng);return T_STRING;}
 {CDATA}                      {l(); BEGIN(DEFAULT);handleCData(yytext, yyleng);return T_STRING;}
 
