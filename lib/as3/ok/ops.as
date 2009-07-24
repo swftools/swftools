@@ -3,7 +3,7 @@ package {
     import flash.display.MovieClip
     public class Main extends flash.display.MovieClip {
         var count:int = 1;
-        var num:int = 28;
+        var num:int = 30;
         function assert(b:Boolean) {
             if(b) {
                 trace("ok "+count+"/"+num);
@@ -38,6 +38,13 @@ package {
             assert(10%4==2);
             assert(2+3==5);
             assert(2-3==-1);
+
+	    /* test or */
+	    var y = 0;
+	    var x = y || 1;
+	    assert(x);
+	    var z = x && 1;
+	    assert(z);
 
             /* test not */
             trace("[not]");

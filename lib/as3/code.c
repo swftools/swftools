@@ -1225,6 +1225,19 @@ code_t*code_cutlast(code_t*c)
     return code_cut(c);
 }
 
+char is_getlocal(code_t*c)
+{
+    if(!c) return 0;
+    if(c->opcode == OPCODE_GETLOCAL ||
+       c->opcode == OPCODE_GETLOCAL_0 ||
+       c->opcode == OPCODE_GETLOCAL_1 ||
+       c->opcode == OPCODE_GETLOCAL_2 ||
+       c->opcode == OPCODE_GETLOCAL_3) {
+	return 1;
+    }
+    return 0;
+}
+
 code_t* cut_last_push(code_t*c)
 {
     assert(!c->next);

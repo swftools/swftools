@@ -213,7 +213,7 @@ class TestBase:
         return 1
 
     def run(self):
-        ret,output = runcmd("flashplayer",["abc.swf"],wait=cache.runtime)
+        ret,output = runcmd("flashplayer",[os.path.join(os.getcwd(),"abc.swf")],wait=cache.runtime)
         os.system("killall flashplayer")
         self.flash_output = output
         
