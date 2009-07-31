@@ -12,12 +12,13 @@
 
 static inline int32_t convert_coord(double x, double z)
 {
-    /* we clamp to 31 bit instead of 32 bit because we use
-       a (x1-x2) shortcut when comparing coordinates
+    /* we clamp to 26 bit because: 
+       a) we use a (x1-x2) shortcut when comparing coordinates
+       b) we need to be able to multiply two coordinates and store them in a double w/o loss of precision
     */
     x *= z;
-    if(x < -0x40000000) x = -0x40000000;
-    if(x >  0x3fffffff) x =  0x3fffffff;
+    if(x < -0x2000000) x = -0x2000000;
+    if(x >  0x1ffffff) x =  0x1ffffff;
     return ceil(x);
 }
 

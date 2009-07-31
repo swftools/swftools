@@ -305,6 +305,11 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
     s->nr = segment_count++;
 
 #ifdef CHECKS
+    /* notice: on some systems (with some compilers), for the line 
+       (1073741823,-1073741824)->(1073741823,1073741823)
+       we get LINE_EQ(s->a, s) == 1. 
+       That's why we now clamp to 26 bit.
+    */
     assert(LINE_EQ(s->a, s) == 0);
     assert(LINE_EQ(s->b, s) == 0);
 
