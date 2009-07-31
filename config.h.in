@@ -219,6 +219,8 @@
 /* Define to 1 if this machine has network byte order*/
 #undef WORDS_BIGENDIAN
 
+#undef LOWERCASE_UPPERCASE
+
 /* Define to 0 on non-windows systems */
 #undef O_BINARY
 

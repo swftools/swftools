@@ -34,6 +34,8 @@ movie. swfcombine can be used to perform the latter.
     Clip the slave objects by the corresponding master objects
 -v  --verbose               
     Be verbose. Use more than one -v for greater effect 
+-F  --flashversion
+    Set the flash version of the output file.
 -d  --dummy                 
     Don't require slave objects (for changing movie attributes)
     Don't require the presence of slave objects. Usually used together with \fB\-X\fR, \fB\-Y\fR or \fB\-r\fR.

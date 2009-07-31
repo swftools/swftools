@@ -118,6 +118,25 @@ char is_absolute(const char*filename)
     return 0;
 }
 
+char* filename_to_lowercase(const char*name)
+{
+    char*n = strdup(name);
+    //char*x1 = strrchr(name, '/');
+    //char*x2 = strrchr(name, '\\');
+    char*s = n;
+    //if(x1+1>s) s=x1+1;
+    //if(x2+1>s) s=x2+1;
+    while(*s) {
+	/* FIXME: what we probably should do here is use libc's tolower().
+	   I don't really know yet, though, how Windows (or MacOS X) handles
+	   lowercasing of Unicode filenames */
+	if(*s>='A' && *s<='Z')
+	    *s += 'a'-'A';
+	s++;
+    }
+    return n;
+}
+
 char* normalize_path(const char*path)
 {
     char*n = 0, *d = 0;
@@ -167,6 +186,11 @@ char* normalize_path(const char*path)
     if(d!=n && d[-1]==path_seperator) 
         d--;
     *d = 0;
+ 
+#ifdef LOWERCASE_UPPERCASE
+    n = filename_to_lowercase(n);
+#endif
+    
     return n;
 }
 static void testnormalize()
@@ -300,3 +324,4 @@ void* leave_file()
         return include_stack[include_stack_ptr];
     }
 }
+

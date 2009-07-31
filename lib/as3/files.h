@@ -43,5 +43,6 @@ void* leave_file();
 
 char* concat_paths(const char*base, const char*add);
 char* normalize_path(const char*path);
+char* filename_to_lowercase(const char*name);
 
 #endif

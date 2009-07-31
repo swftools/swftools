@@ -18,6 +18,7 @@ void as3_error(const char*format, ...)
     vsnprintf(buf, sizeof(buf)-1, format, arglist);
     va_end(arglist);
     fprintf(stderr, "%s:%d:%d: error: %s\n", current_filename, current_line, current_column, buf);
+    fprintf(stderr, "%s\n", current_filename_long);
     fflush(stderr);
     exit(1);
 }

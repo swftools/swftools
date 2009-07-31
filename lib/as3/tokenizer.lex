@@ -505,6 +505,7 @@ static int tokenerror();
 //XMLCOMMENT  <!--([^->]|(-/[^-])|(--/[^>]))*-->
 
 //{XMLCOMMENT}                 
+
 %}
 
 %s REGEXPOK

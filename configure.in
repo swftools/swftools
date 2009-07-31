@@ -335,7 +335,8 @@ AC_SUBST([xpdf_in_source])
 AC_SUBST([splash_in_source])
 
 # ------------------------------------------------------------------
- 
+
+RFX_CHECK_LOWERCASE_UPPERCASE
 RFX_CHECK_AVI2SWF
 if test "x${AVIFILE}" = "xtrue"; then
     VIDEO_LIBS="$VIDEO_LIBS $AVIFILE_LIBS"
