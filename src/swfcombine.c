@@ -47,6 +47,7 @@ struct config_t
    char hassizex;
    int sizey;
    char hassizey;
+   int flashversion;
    int framerate;
    int movex;
    int movey;
@@ -211,6 +212,7 @@ static struct options_t options[] = {
 {"o", "output"},
 {"t", "stack"},
 {"T", "stack1"},
+{"F", "version"},
 {"m", "merge"},
 {"a", "cat"},
 {"l", "overlay"},
@@ -875,6 +877,8 @@ void adjustheader(SWF*swf)
 	swf->movieSize.ymax = 
 	swf->movieSize.ymin + config.sizey;
     }
+    if(config.flashversion)
+	swf->fileVersion = config.flashversion;
 }
 
 void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
@@ -887,6 +891,8 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	msg("<fatal> Can't combine --cat and --frame");
 	exit(1);
     }
+    if(config.flashversion)
+	master->fileVersion = config.flashversion;
    
     tag = master->firstTag;
     while(tag)
@@ -997,6 +1003,17 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		  msg("<notice> Slave file attached to object %d.", defineid);
 		}
 	    }
+	} else if(tag->id == ST_SYMBOLCLASS) {
+	    /* a symbolclass tag is like a define tag: it defines id 0000 */
+	    int num = swf_GetU16(tag);
+	    int t;
+	    for(t=0;t<num;t++) {
+		U16 id = swf_GetU16(tag);
+		if(!id) {
+		    masterbitmap[id] = 1;
+		}
+		swf_GetString(tag);
+	    }
 	} else if(tag->id == ST_PLACEOBJECT2) {
 	    char * name = swf_GetName(tag);
 	    int id = swf_GetPlaceID(tag);
@@ -1051,6 +1068,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     }
 
     swf_Relocate (slave, masterbitmap);
+    
     if(config.merge)
 	swf_RelocateDepth (slave, depthbitmap);
     jpeg_assert(slave, master);

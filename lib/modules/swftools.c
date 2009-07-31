@@ -612,6 +612,7 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	    callback(tag, tag->pos + base, callback_data); //button id
 	break;
 
+	case ST_SYMBOLCLASS:
 	case ST_EXPORTASSETS: {
 	    int num =  swf_GetU16(tag);
 	    int t;
@@ -973,11 +974,11 @@ char swf_Relocate (SWF*swf, char*bitmap)
     memset(slaveids, -1, sizeof(slaveids));
     tag = swf->firstTag;
     char ok = 1;
+    int current_id=0;
     while(tag)
     {
 	int num; 
 	int *ptr;
-	int t;
 
 	if(swf_isDefiningTag(tag))
 	{
@@ -990,15 +991,15 @@ char swf_Relocate (SWF*swf, char*bitmap)
 		newid = id;
 	    } else {
 		newid = 0;
-		for (t=1;t<65536;t++)
+		for(current_id++;current_id<65536;current_id++)
 		{
-		    if(!bitmap[t])
+		    if(!bitmap[current_id])
 		    {
-			newid = t;
+			newid = current_id;
 			break;
 		    }
 		}
-                if(t==65536) {
+                if(current_id==65536) {
                     fprintf(stderr, "swf_Relocate: Couldn't relocate: Out of IDs\n");
                     return 0;
                 }
@@ -1013,17 +1014,41 @@ char swf_Relocate (SWF*swf, char*bitmap)
 	if(num) {
 	    ptr = (int*)rfx_alloc(sizeof(int)*num);
 	    swf_GetUsedIDs(tag, ptr);
-
+	    int t;
 	    for(t=0;t<num;t++) {
 		int id = GET16(&tag->data[ptr[t]]);
 		if(slaveids[id]<0) {
-		    fprintf(stderr, "swf_Relocate: Mapping id (%d) never encountered before in %s\n", id,
-			    swf_TagGetName(tag));
-                    ok = 0;
+		    if(!id && bitmap[id]) {
+			/* id 0 is only used in SWF versions >=9. It's the ID of
+			   the main timeline. It's used in e.g. SYMBOLTAG tags, but
+			   never defined, so if we're asked to reallocate it, we have 
+			   to allocate an ID for it on the fly. */
+			int newid = 0;
+			for(current_id++;current_id<65536;current_id++) {
+			    if(!bitmap[current_id]) {
+				newid = current_id;
+				break;
+			    }
+			}
+			if(current_id==65536) {
+			    fprintf(stderr, "swf_Relocate: Couldn't relocate: Out of IDs\n");
+			    return 0;
+			}
+			bitmap[newid] = 1;
+			slaveids[id] = newid;
+			id = newid;
+		    } else if(!bitmap[id]) {
+			/* well- we don't know this id, but it's not reserved anyway, so just
+			   leave it alone */
+		    } else {
+			fprintf(stderr, "swf_Relocate: Mapping id (%d) never encountered before in %s\n", id,
+				swf_TagGetName(tag));
+			ok = 0;
+		    }
 		} else {
 		    id = slaveids[id];
-		    PUT16(&tag->data[ptr[t]], id);
 		}
+		PUT16(&tag->data[ptr[t]], id);
 	    }
             free(ptr);
 	}
