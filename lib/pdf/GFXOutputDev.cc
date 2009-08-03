@@ -2504,8 +2504,8 @@ void addGlobalFont(const char*filename)
     memset(f, 0, sizeof(fontfile_t));
     f->filename = filename;
     int len = strlen(filename);
-    char*r1 = strrchr(filename, '/');
-    char*r2 = strrchr(filename, '\\');
+    char*r1 = strrchr((char*)filename, '/');
+    char*r2 = strrchr((char*)filename, '\\');
     if(r2>r1)
         r1 = r2;
     if(r1) {

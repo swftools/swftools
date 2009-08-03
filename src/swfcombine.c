@@ -226,7 +226,7 @@ static struct options_t options[] = {
 {"r", "rate"},
 {"X", "width"},
 {"Y", "height"},
-{"N", "local-with-networking"},
+{"N", "local-with-network"},
 {"L", "local-with-filesystem"},
 {"z", "zlib"},
 {0,0}

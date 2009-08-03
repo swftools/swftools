@@ -1381,6 +1381,24 @@ void s_quicktime(const char*name, const char*url)
     incrementid();
 }
 
+void s_video(const char *name, int width, int height)
+{
+    SRECT r;
+
+    memset(&r, 0, sizeof(r));
+
+    tag = swf_InsertTag(tag, ST_DEFINEVIDEOSTREAM);
+    swf_SetU16(tag, id);
+    swf_SetU16(tag, 0); // numframes
+    swf_SetU16(tag, width);
+    swf_SetU16(tag, height);
+    swf_SetU8(tag, 0); // videoflags
+    swf_SetU8(tag, 0); // codecid
+
+    s_addcharacter(name, id, tag, r);
+    incrementid();
+}
+
 void s_edittext(const char*name, const char*fontname, int size, int width, int height, const char*text, RGBA*color, int maxlength, const char*variable, int flags, int align)
 {
     SWFFONT*font = 0;
@@ -3822,6 +3840,15 @@ static int c_quicktime(map_t*args)
     return 0;
 }
 
+static int c_video(map_t*args)
+{
+    const char*name = lu(args, "name");
+    int width = parseInt(lu(args, "width"));
+    int height = parseInt(lu(args, "height"));
+    s_video(name, width, height);
+    return 0;
+}
+
 static int c_image(map_t*args)
 {
     const char*command = lu(args, "commandname");
@@ -4091,6 +4118,7 @@ static struct {
  {"font", c_font, "name filename glyphs="},
  {"soundtrack", c_soundtrack, "filename"},
  {"quicktime", c_quicktime, "url"},
+ {"video", c_video, "name width= height="},
 
     // generators of primitives
 
