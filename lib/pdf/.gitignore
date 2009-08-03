@@ -1,1 +1,9 @@
-m pdf2swf *.o *.obj *.pdf *.swf switch Makefile
+m
+pdf2swf
+pdftoppm
+*.o
+*.obj
+*.pdf
+*.swf
+switch
+Makefile

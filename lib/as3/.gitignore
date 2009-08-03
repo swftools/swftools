@@ -2,3 +2,10 @@
 testwrite testrewrite testpaths testreadwrite 
 testwrite.c testrewrite.c testpaths.c testreadwrite.c
 parser.tab.c parser.tab.h tokenizer.yy.c 
+.tests.cache
+tags
+parser
+parser.output
+run
+mklib
+t.as

@@ -5,6 +5,13 @@
 *.swf
 *.ps
 *.pyc
+*.png
+*.diff
+*.PDF
+*.wav
+m
+*dSYM
+tags
 lib/python/*.so
 lib/python/*.dll
 swfcombine
@@ -29,6 +36,10 @@ t
 r
 cming
 gen
+Makefile
+lib/pdf/Makefile
+src/Makefile
+swfs/Makefile
 ./Makefile
 Makefile.common
 Makefile.new
@@ -58,3 +69,9 @@ lib/pdf/xpdf*
 swfs/PreLoaderTemplate
 swfs/keyboard_viewer
 swfs/simple_viewer
+avi2swf/Makefile
+lib/Makefile
+lib/action/Makefile
+lib/python/Makefile
+lib/readers/Makefile
+tmp/

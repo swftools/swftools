@@ -11,5 +11,6 @@ else
     AC_MSG_RESULT(no)
 fi
 ])
-
+rm -f __abcdefghijklmnopqrstuvwxyz.txt
+rm -f __ABCDEFGHIJKLMNOPQRSTUVWXYZ.txt
 
