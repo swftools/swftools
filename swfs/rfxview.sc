@@ -240,6 +240,33 @@
   
 .frame 1
 
+.box background_box line=1 color=#00000030 fill=#00000030 width=800 height=600
+.sprite background
+    .put background_box x=0 y=0
+.end
+.put background
+
+# horizontal scroll outline
+.box hscroll_box line=1 color=#000000 width=800-20 height=10
+.sprite hscroll_outline
+    .put hscroll_box x=0 y=0
+.end
+.put hscroll_outline
+
+# vertical scroll outline
+.box vscroll_box line=1 color=#000000 width=10 height=600-20
+.sprite vscroll_outline
+    .put vscroll_box x=0 y=0
+.end
+.put vscroll_outline
+
+# content outline
+.box content_box width=100 height=100 line=1 color=#000000
+.sprite content_outline
+    .put content_box x=0 y=0
+.end
+.put content_outline
+
 .put p1=plusbutton x=width-25-20 y=20 pin=center
 .put m1=minusbutton x=width-50-20 y=20 pin=center
 .put o1=oneonebutton x=width-75-20 y=20 pin=center
@@ -247,10 +274,6 @@
 
 .put l1=leftbutton x=width/2-100 y=20 pin=center
 .put r1=rightbutton x=width/2+100 y=20 pin=center
-
-.sprite background
-.end
-.put background
 
 .sprite vscrollbar
     .box vscroll2_shadow line=0 fill=#00000033 width=14 height=100
@@ -380,6 +403,27 @@
     contentwidth = fullwidth - 40;
     contentheight = fullheight - 70;
 
+    background._width = fullwidth-1;
+    background._height = fullheight-1;
+
+    // resize/position hscroll outline
+    hscroll_outline._x = 10;
+    hscroll_outline._y = fullheight-20;
+    hscroll_outline._width = fullwidth-40;
+    hscroll_outline._height = 10;
+
+    // resize/position vscroll outline
+    vscroll_outline._x = fullwidth-20;
+    vscroll_outline._y = 40;
+    vscroll_outline._width = 10;
+    vscroll_outline._height = fullheight-70;
+
+    // resize/position content outline
+    content_outline._x = 9;
+    content_outline._y = 39;
+    content_outline._width = contentwidth+1;
+    content_outline._height = contentheight+1;
+
     // move all objects to their proper positions
     vscrollbar._x = fullwidth-22;
     hscrollbar._y = fullheight-22;
@@ -394,37 +438,6 @@
     et._x = fullwidth/2 - (et._width+etmiddle._width+et_total_pages._width)/2;
     etmiddle._x = fullwidth/2 - (et._width+etmiddle._width+et_total_pages._width)/2 + et._width;
     et_total_pages._x = fullwidth/2 - (et._width+etmiddle._width+et_total_pages._width)/2 + et._width+etmiddle._width;
-
-    //.box f width=width-40 height=height-40-30 line=0 fill=black
-    //.box vscroll1 width=10 height=height-40-30 line=1 color=#00000060 fill=grad7
-    //.box hscroll1 height=10 width=width-40 line=1 color=#00000060 fill=grad72
-    //.put vscroll1 x=width-20 y=40
-    //.put hscroll1 x=10 y=height-20
-	
-    // horizontal scrollbar
-    background.lineStyle(1, 0, 0x60);
-    background.moveTo(10         ,fullheight-20);
-    background.lineTo(10         ,fullheight-10);
-    background.lineTo(10+fullwidth-40,fullheight-10);
-    background.lineTo(10+fullwidth-40,fullheight-20);
-    background.lineTo(10         ,fullheight-20);
-    
-    // vertical scrollbar
-    background.moveTo(fullwidth-20 ,40);
-    background.lineTo(fullwidth-20 ,fullheight-30);
-    background.lineTo(fullwidth-10 ,fullheight-30);
-    background.lineTo(fullwidth-10 ,40);
-    background.lineTo(fullwidth-20 ,40);
-
-    // content area
-    background.lineStyle(1, 0);
-    background.startFill(0x000000);
-    background.moveTo(9, 39);
-    background.lineTo(fullwidth-30+1, 39);
-    background.lineTo(fullwidth-30+1, fullheight-29);
-    background.lineTo(9, fullheight-29);
-    background.lineTo(9, 39);
-    background.endFill();
     
     areabutton._xscale = contentwidth;
     areabutton._yscale = contentheight;
@@ -440,9 +453,17 @@
     //debugtxt.text = Stage.width+ " x " + Stage.height;
     //debugtxt.text = zoomtype;
 
-    setPageNr = function() {
+    setPageNr = function(setscroll) {
         current_pagenumber = pagenr;
-	viewport.gotoAndStop(pagenr);
+        viewport.gotoAndStop(pagenr);
+        if(!setscroll) {
+            viewport._y = top;
+            swfpos2scrollbars();
+        }
+        else {
+            viewport._y = setscroll;                
+            swfpos2scrollbars();
+        }
     };
    
     setNoScrollZoomLevel = function() {
@@ -627,6 +648,36 @@
 	}
     };
     dragrefresh = setInterval(refreshDrag, 20);
+
+    var mouseListener = new Object();
+
+    mouseListener.onMouseWheel = function(delta) {
+        divideDelta = delta/Math.abs(delta);
+        viewport._y = viewport._y + 30*zoom*divideDelta;
+        swfpos2scrollbars();
+        if(viewport._y < top-scrollyrange) {
+            if(pagenr < viewport._totalframes) {
+                pageNr = pageNr + 1;
+                setPageNr();
+            }
+            else {
+                viewport._y = top-scrollyrange;
+                swfpos2scrollbars();
+            }
+        }
+        else if(viewport._y > top) {
+            if(pagenr > 1) {
+                pageNr = pageNr - 1;
+                setPageNr(top-scrollyrange);
+            }
+            else {
+                viewport._y = top;
+                swfpos2scrollbars();
+            }
+        }
+    };
+
+    Mouse.addListener(mouseListener);
 .end
 
 .end
