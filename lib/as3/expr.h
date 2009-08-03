@@ -1,4 +1,4 @@
-/* ast.h
+/* expr.h
 
    Extension module for the rfxswf library.
    Part of the swftools package.

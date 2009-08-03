@@ -1,8 +1,8 @@
-/* code.c
+/* mklib.c
 
    File to generate builtin.c
 
-   Copyright (c) 2008 Matthias Kramm <kramm@quiss.org>
+   Copyright (c) 2008,2009 Matthias Kramm <kramm@quiss.org>
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

@@ -1,4 +1,4 @@
-/* ast.c
+/* expr.c
 
    Extension module for the rfxswf library.
    Part of the swftools package.
