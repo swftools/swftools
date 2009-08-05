@@ -1003,6 +1003,18 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		  msg("<notice> Slave file attached to object %d.", defineid);
 		}
 	    }
+	} else if(tag->id == ST_EXPORTASSETS) {
+	    int t;
+	    int num = swf_GetU16(tag);
+	    for(t=0;t<num;t++)
+	    {
+		U16 id = swf_GetU16(tag);
+		char*name = swf_GetString(tag);
+		if(spriteid<0 && slavename && !strcmp(name,slavename)) {
+		    spriteid = id;
+		    msg("<notice> Slave file attached to object %d exported as %s.", id, name);
+		}
+	    }
 	} else if(tag->id == ST_SYMBOLCLASS) {
 	    /* a symbolclass tag is like a define tag: it defines id 0000 */
 	    int num = swf_GetU16(tag);
