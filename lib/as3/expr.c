@@ -90,16 +90,6 @@ static classinfo_t*join_types(classinfo_t*type1, classinfo_t*type2, nodetype_t*t
         return type1;
     return TYPE_ANY;
 }
-static char is_getlocal(code_t*c)
-{
-    if(!c || c->prev || c->next)
-        return 0;
-    return(c->opcode == OPCODE_GETLOCAL
-        || c->opcode == OPCODE_GETLOCAL_0
-        || c->opcode == OPCODE_GETLOCAL_1
-        || c->opcode == OPCODE_GETLOCAL_2
-        || c->opcode == OPCODE_GETLOCAL_3);
-}
 static int getlocalnr(code_t*c)
 {
     if(c->opcode == OPCODE_GETLOCAL) {return (ptroff_t)c->data[0];}
