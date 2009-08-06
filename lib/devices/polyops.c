@@ -315,9 +315,8 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
 	    gfxbbox_t bbox2 = gfxline_getbbox(gfxline);
 	    double w = bbox2.xmax - bbox2.xmin;
 	    double h = bbox2.ymax - bbox2.ymin;
-	    if(w < 0.001 || h < 0.001) /* character was clipped completely */ {
-	    } else if(fabs((bbox.xmax - bbox.xmin) - w) > DEFAULT_GRID*2 ||
-		      fabs((bbox.ymax - bbox.ymin) - h) > DEFAULT_GRID*2) {
+	    if(fabs((bbox.xmax - bbox.xmin) - w) > DEFAULT_GRID*2 ||
+	       fabs((bbox.ymax - bbox.ymin) - h) > DEFAULT_GRID*2) {
 		/* notable change in character size: character was clipped 
 		   TODO: how to deal with diagonal cuts?
 		 */

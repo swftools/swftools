@@ -831,7 +831,7 @@ void gfxfontlist_free(gfxfontlist_t*list, char deletefonts)
     }
 }
 
-gfxline_t*gfxline_makerectangle(int x1,int y1,int x2, int y2)
+gfxline_t*gfxline_makerectangle(double x1,double y1,double x2, double y2)
 {
     gfxline_t* line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t)*5);
     line[0].x = x1;line[0].y = y1;line[0].type = gfx_moveTo;line[0].next = &line[1];
