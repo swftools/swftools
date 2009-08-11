@@ -75,7 +75,7 @@ class Pixel
 	gray2 = pixel.rgb.inject(0) {|sum,e| sum+e}
 	gray1 > gray2 or raise PixelError.new(self,"is not brighter than",pixel)
     end
-    def should_be_less_bright_than(pixel)
+    def should_be_darker_than(pixel)
 	gray1 = @rgb.inject(0) {|sum,e| sum+e}
 	gray2 = pixel.rgb.inject(0) {|sum,e| sum+e}
 	gray1 < gray2 or raise PixelError.new(self,"is not less bright than",pixel)
