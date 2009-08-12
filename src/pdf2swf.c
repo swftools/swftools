@@ -738,6 +738,10 @@ int main(int argn, char *argv[])
 	    frame++;
 	}
     }
+    if(pagerange && !pagenum && frame==1) {
+	fprintf(stderr, "No pages in range %s", pagerange);
+	exit(1);
+    }
 
     pagenum = 0;
 

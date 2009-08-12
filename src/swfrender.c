@@ -135,6 +135,7 @@ int main(int argn, char*argv[])
 	    fprintf(stderr,"%s is not a valid SWF file or contains errors.\n",argv[1]);
 	    close(fi);
 	}
+	assert(swf.movieSize.xmax > swf.movieSize.xmin && swf.movieSize.ymax > swf.movieSize.ymin);
 	RENDERBUF buf;
 	swf_Render_Init(&buf, 0,0, (swf.movieSize.xmax - swf.movieSize.xmin) / 20,
 				   (swf.movieSize.ymax - swf.movieSize.ymin) / 20, 2, 1);
