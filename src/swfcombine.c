@@ -42,6 +42,8 @@ struct config_t
    char isframe;
    char local_with_networking;
    char local_with_filesystem;
+   char accelerated_blit;
+   char hardware_gpu;
    int loglevel;
    int sizex;
    char hassizex;
@@ -184,6 +186,16 @@ int args_callback_option(char*name,char*val) {
 	config.local_with_filesystem = 1;
 	return 0;
     }
+    else if (!strcmp(name, "B"))
+    {
+	config.accelerated_blit = 1;
+	return 0;
+    }
+    else if (!strcmp(name, "G"))
+    {
+	config.hardware_gpu = 1;
+	return 0;
+    }
     else if (!strcmp(name, "t") || !strcmp(name, "T"))
     {
 	if(master_filename) {
@@ -212,12 +224,12 @@ static struct options_t options[] = {
 {"o", "output"},
 {"t", "stack"},
 {"T", "stack1"},
-{"F", "version"},
 {"m", "merge"},
 {"a", "cat"},
 {"l", "overlay"},
 {"c", "clip"},
 {"v", "verbose"},
+{"F", "flashversion"},
 {"d", "dummy"},
 {"f", "frame"},
 {"x", "movex"},
@@ -226,7 +238,9 @@ static struct options_t options[] = {
 {"r", "rate"},
 {"X", "width"},
 {"Y", "height"},
-{"N", "local-with-network"},
+{"N", "local-with-networking"},
+{"G", "hardware-gpu"},
+{"B", "accelerated-blit"},
 {"L", "local-with-filesystem"},
 {"z", "zlib"},
 {0,0}
@@ -297,6 +311,7 @@ void args_callback_usage(char *name)
     printf("-l , --overlay                 Don't remove any master objects, only overlay new objects\n");
     printf("-c , --clip                    Clip the slave objects by the corresponding master objects\n");
     printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect \n");
+    printf("-F , --flashversion            Set the flash version of the output file.\n");
     printf("-d , --dummy                   Don't require slave objects (for changing movie attributes)\n");
     printf("-f , --frame                   The following identifier is a frame or framelabel, not an id or objectname\n");
     printf("-x , --movex <xpos>            x Adjust position of slave by <xpos> pixels\n");
@@ -306,6 +321,8 @@ void args_callback_usage(char *name)
     printf("-X , --width <width>           Force movie bbox width to <width> (default: use master width (not with -t))\n");
     printf("-Y , --height <height>          Force movie bbox height to <height> (default: use master height (not with -t))\n");
     printf("-N , --local-with-networking     Make output file \"local-with-networking\"\n");
+    printf("-G , --hardware-gpu            Set the \"use hardware gpu\" bit in the output file\n");
+    printf("-B , --accelerated-blit        Set the \"use accelerated blit\" bit in the output file\n");
     printf("-L , --local-with-filesystem     Make output file \"local-with-filesystem\"\n");
     printf("-z , --zlib <zlib>             Enable Flash 6 (MX) Zlib Compression\n");
     printf("\n");
@@ -1351,6 +1368,10 @@ int main(int argn, char *argv[])
         newswf.fileAttributes &= ~FILEATTRIBUTE_USENETWORK;
     if(config.local_with_networking)
         newswf.fileAttributes |= FILEATTRIBUTE_USENETWORK;
+    if(config.accelerated_blit)
+        newswf.fileAttributes |= FILEATTRIBUTE_USEACCELERATEDBLIT;
+    if(config.hardware_gpu)
+        newswf.fileAttributes |= FILEATTRIBUTE_USEHARDWAREGPU;
 
     fi = open(outputname, O_BINARY|O_RDWR|O_TRUNC|O_CREAT, 0777);
 

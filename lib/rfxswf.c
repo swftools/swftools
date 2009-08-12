@@ -1561,8 +1561,19 @@ int WriteExtraTags(SWF*swf, writer_t*writer)
             }
             swf_DeleteTag(0, fileattrib);
         } else {
-            if(swf_WriteTag2(writer, has_fileattributes)<0) 
-                return -1;
+	    if(swf->fileAttributes) {
+	      /* if we're writing a file out again where we might have possible
+		 modified the fileattributes in the header, adjust the tag data */
+	      TAG*tt = swf_CopyTag(0,has_fileattributes);
+	      U32 flags = swf_GetU32(tt) | swf->fileAttributes;
+	      swf_ResetTag(tt, tt->id);
+	      swf_SetU32(tt, flags);
+	      if(swf_WriteTag2(writer, has_fileattributes)<0) return -1;
+	      swf_DeleteTag(0, tt);
+	    } else {
+		if(swf_WriteTag2(writer, has_fileattributes)<0) 
+		    return -1;
+	    }
         }
         if(0 && !has_scenedescription) {
             TAG*scene = swf_InsertTag(0, ST_SCENEDESCRIPTION);

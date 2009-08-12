@@ -1220,10 +1220,12 @@ int main (int argc,char ** argv)
         else if(tag->id == ST_FILEATTRIBUTES) {
             swf_SetTagPos(tag, 0);
             U32 flags = swf_GetU32(tag);
-            if(flags&1) printf(" usenetwork");
-            if(flags&8) printf(" as3");
-            if(flags&16) printf(" symbolclass");
-            if(flags&~(1|8|16))
+            if(flags&FILEATTRIBUTE_USENETWORK) printf(" usenetwork");
+            if(flags&FILEATTRIBUTE_AS3) printf(" as3");
+            if(flags&FILEATTRIBUTE_SYMBOLCLASS) printf(" symbolclass");
+            if(flags&FILEATTRIBUTE_USEHARDWAREGPU) printf(" hardware-gpu");
+            if(flags&FILEATTRIBUTE_USEACCELERATEDBLIT) printf(" accelerated-blit");
+            if(flags&~(1|8|16|32|64))
                 printf(" flags=%02x", flags);
         }
         else if(tag->id == ST_DOABC) {

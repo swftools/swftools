@@ -1,4 +1,4 @@
-.TH swfcombine "1" "April 2009" "swfcombine" "swftools"
+.TH swfcombine "1" "August 2009" "swfcombine" "swftools"
 .SH NAME
 swfcombine - a tool for combining swf (flash) files
 
@@ -49,6 +49,9 @@ movie. swfcombine can be used to perform the latter.
 \fB\-v\fR, \fB\-\-verbose\fR 
     Be verbose. Use more than one -v for greater effect 
 .TP
+\fB\-F\fR, \fB\-\-flashversion\fR 
+    Set the flash version of the output file.
+.TP
 \fB\-d\fR, \fB\-\-dummy\fR 
     Don't require the presence of slave objects. Usually used together with \fB\-X\fR, \fB\-Y\fR or \fB\-r\fR.
 .TP
@@ -76,6 +79,12 @@ movie. swfcombine can be used to perform the latter.
 .TP
 \fB\-N\fR, \fB\-\-local-with-networking\fR 
     Make output file "local-with-networking"
+.TP
+\fB\-G\fR, \fB\-\-hardware-gpu\fR 
+    Set the "use hardware gpu" bit in the output file
+.TP
+\fB\-B\fR, \fB\-\-accelerated-blit\fR 
+    Set the "use accelerated blit" bit in the output file
 .TP
 \fB\-L\fR, \fB\-\-local-with-filesystem\fR 
     Make output file "local-with-filesystem"

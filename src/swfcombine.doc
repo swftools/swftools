@@ -58,6 +58,10 @@ movie. swfcombine can be used to perform the latter.
     Force movie bbox height to <height> (default: use master height (not with -t))
 -N  --local-with-networking 
     Make output file "local-with-networking"
+-G  --hardware-gpu
+    Set the "use hardware gpu" bit in the output file
+-B  --accelerated-blit
+    Set the "use accelerated blit" bit in the output file
 -L  --local-with-filesystem
     Make output file "local-with-filesystem"
 -z  --zlib    <zlib>        
