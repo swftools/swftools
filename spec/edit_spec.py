@@ -53,10 +53,52 @@ class AreaPlain(AreaCheck):
 class AreaNotPlain(AreaCheck):
     pass
 
+checktypes = [PixelColorCheck,PixelBrighterThan,PixelDarkerThan,PixelEqualTo,AreaPlain,AreaNotPlain]
+
+def convert_to_ppm(pdf):
+    print pdf
+    f = os.popen("pdfinfo "+pdf, "rb")
+    info = f.read()
+    f.close()
+    width,heigth = re.compile(r"Page size:\s*([0-9]+) x ([0-9]+) pts").findall(info)[0]
+    dpi = int(72.0 * 612 / int(width))
+    os.system("pdftoppm -r "+str(dpi)+" -f 1 -l 1 "+pdf+" test")
+    return "test-000001.ppm"
+
 class Model:
     def __init__(self, filename, checks):
         self.filename = filename
+        self.imgfilename = convert_to_ppm(filename)
+        self.bitmap = wx.Bitmap(self.imgfilename)
+        self.image = wx.ImageFromBitmap(self.bitmap)
+        self.width = self.bitmap.GetWidth()
+        self.height = self.bitmap.GetHeight()
         self.checks = checks
+        self.xy2check = {}
+        self.appendListeners = []
+        self.drawModeListeners = []
+        self.drawmode = PixelColorCheck
+        
+    def setdrawmode(self, mode):
+        self.drawmode = mode
+        for f in self.drawModeListeners:
+            f()
+
+    def find(self, x, y):
+        return self.xy2check.get((x,y),None)
+
+    def delete(self, check):
+        i = self.checks.index(check)
+        del self.checks[i]
+        del self.xy2check[(check.x,check.y)]
+        for f in self.appendListeners:
+            f(check)
+
+    def append(self, check):
+        self.checks += [check]
+        self.xy2check[(check.x,check.y)] = check
+        for f in self.appendListeners:
+            f(check)
 
     @staticmethod
     def load(filename):
@@ -85,19 +127,20 @@ class Model:
                 if filename:
                     raise Exception("can't load multi-file specs (in line %d)" % (nr+1))
                 filename = m.group(1);
+                model = Model(filename, [])
                 continue
             m = r_pixelcolor.match(line)
-            if m: checks += [PixelColorCheck(int(m.group(1)),int(m.group(2)),int(m.group(3),16))];continue
+            if m: model.append(PixelColorCheck(int(m.group(1)),int(m.group(2)),int(m.group(3),16)));continue
             m = r_pixelbrighter.match(line)
-            if m: checks += [PixelBrighterThan(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4)))];continue
+            if m: model.append(PixelBrighterThan(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
             m = r_pixeldarker.match(line)
-            if m: checks += [PixelDarkerThan(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4)))];continue
+            if m: model.append(PixelDarkerThan(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
             m = r_pixelequalto.match(line)
-            if m: checks += [PixelEqualTo(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4)))];continue
+            if m: model.append(PixelEqualTo(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
             m = r_areaplain.match(line)
-            if m: checks += [AreaPlain(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4)))];continue
+            if m: model.append(AreaPlain(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
             m = r_areanotplain.match(line)
-            if m: checks += [AreaNotPlain(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4)))];continue
+            if m: model.append(AreaNotPlain(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
             if r_width.match(line) or r_height.match(line):
                 continue # compatibility
             if r_describe.match(line) or r_end.match(line) or r_header.match(line):
@@ -106,7 +149,7 @@ class Model:
             raise Exception("invalid file format: can't load this file (in line %d)" % (nr+1))
 
         fi.close()
-        return Model(filename, checks)
+        return model
 
     def save(self):
         path = os.path.splitext(self.filename)[0]+".rb"
@@ -131,97 +174,39 @@ class Model:
         fi.write("end\n")
         fi.close()
 
-
-class ImageFrame(wx.Frame):
-    def __init__(self, application, model):
-        wx.Frame.__init__(self, None, -1, style = wx.DEFAULT_FRAME_STYLE, pos=(50,50))
-        self.application = application
+class ZoomWindow(wx.Window):
+    def __init__(self, parent, model):
+        wx.Window.__init__(self, parent, pos=(0,0), size=(15*32,15*32))
         self.model = model
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.Bind(wx.EVT_MOUSE_EVENTS, self.OnMouse)
-        self.bitmap = wx.Bitmap(model.filename)
-        self.width = self.bitmap.GetWidth()
-        self.height = self.bitmap.GetHeight()
-        self.bitmap_x = 500
-        self.bitmap_y = 32
-        self.SetSize((self.width+self.bitmap_x+32, max(self.height+self.bitmap_y, 15*32)))
-        self.image = wx.ImageFromBitmap(self.bitmap)
         self.x = 0
         self.y = 0
-        self.createToolbar()
 
-    def createToolbar(self):
-        tsize = (16,16)
-        self.toolbar = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
-        self.toolbar.AddSimpleTool(wx.ID_OPEN,
-                                   wx.ArtProvider.GetBitmap(wx.ART_FILE_OPEN, wx.ART_TOOLBAR, tsize),
-                                   "Open")
-        self.toolbar.AddSimpleTool(wx.ID_SAVE,
-                                   wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, tsize),
-                                   "Save selected pages")
-        self.toolbar.AddSimpleTool(wx.ID_PREFERENCES,
-                                   wx.ArtProvider.GetBitmap(wx.ART_LIST_VIEW, wx.ART_TOOLBAR, tsize),
-                                   "Options")
-        #self.toolbar.AddSeparator()
-        self.toolbar.Realize()
-
-    def OnMouseClick(self, event):
-        x = min(max(event.X  - self.bitmap_x, 0), self.width-1)
-        y = min(max(event.Y  - self.bitmap_y, 0), self.height-1)
-        if y not in self.model.pixels:
-            self.model.pixels[y] = {}
-        if y in self.model.pixels and x in self.model.pixels[y]:
-            del self.model.pixels[y][x]
-        else:
-            color = self.image.GetRed(x,y)<<16 | self.image.GetGreen(x,y)<<8 | self.image.GetBlue(x,y)
-            self.model.pixels[y][x] = color
+    def setpos(self,x,y):
+        self.x = x
+        self.y = y
         self.Refresh()
-
-    def OnMouse(self, event):
-        if event.LeftIsDown():
-            return self.OnMouseClick(event)
-        lastx = self.x
-        lasty = self.y
-        self.x = min(max(event.X  - self.bitmap_x, 0), self.width-1)
-        self.y = min(max(event.Y  - self.bitmap_y, 0), self.height-1)
-        if lastx!=self.x or lasty!=self.y:
-            self.Refresh()
-
+    
     def OnPaint(self, event):
         dc = wx.PaintDC(self)
         self.Draw(dc)
-
+    
     def Draw(self,dc=None):
         if not dc:
             dc = wx.ClientDC(self)
-      
         dc.SetBackground(wx.Brush((0,0,0)))
-        dc.DrawBitmap(self.bitmap, self.bitmap_x, self.bitmap_y, False)
-
-        for yy,row in self.model.pixels.items():
-            for xx in row.keys():
-                x = xx+self.bitmap_x
-                y = yy+self.bitmap_y
-                l = 0
-                for r in range(10):
-                    r = (r+1)*3.141526/5
-                    dc.DrawLine(x+10*math.sin(l), y+10*math.cos(l), x+10*math.sin(r), y+10*math.cos(r))
-                    l = r
-                dc.DrawLine(x,y,x+1,y)
-
         color = (0,255,0)
         for yy in range(15):
             y = self.y+yy-8
-            marked = self.model.pixels.get(y, {})
             for xx in range(15):
                 x = self.x+xx-8
-                if 0<=x<self.width and 0<=y<self.height:
-                    color = (self.image.GetRed(x,y), self.image.GetGreen(x,y), self.image.GetBlue(x,y))
+                if 0<=x<self.model.width and 0<=y<self.model.height:
+                    color = (self.model.image.GetRed(x,y), self.model.image.GetGreen(x,y), self.model.image.GetBlue(x,y))
                 else:
                     color = (0,0,0)
-                dc.SetBrush(wx.Brush(color))
                 dc.SetPen(wx.Pen(color))
-                m = x in marked
+                m = self.model.find(x,y)
+                dc.SetBrush(wx.Brush(color))
                 dc.DrawRectangle(32*xx, 32*yy, 32, 32)
 
                 if (xx==8 and yy==8) or m:
@@ -237,18 +222,117 @@ class ImageFrame(wx.Frame):
                     #dc.SetPen(wx.Pen((0, 0, 0)))
                     #dc.SetPen(wx.Pen(color))
 
+class ImageWindow(wx.Window):
+    def __init__(self, parent, model, zoom):
+        wx.Window.__init__(self, parent)
+        self.model = model
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_MOUSE_EVENTS, self.OnMouse)
+        self.SetSize((model.width, model.height))
+        self.zoom = zoom
+        self.x = 0
+        self.y = 0
+        self.lastx = 0
+        self.lasty = 0
+        self.firstclick = None
+        self.model.drawModeListeners += [self.reset]
+
+    def reset(self):
+        self.firstclick = None
+
+    def OnMouseClick(self, event):
+        x = min(max(event.X, 0), self.model.width-1)
+        y = min(max(event.Y, 0), self.model.height-1)
+        if self.model.drawmode == PixelColorCheck:
+            check = self.model.find(x,y)
+            if check:
+                self.model.delete(check)
+            else:
+                color = self.model.image.GetRed(x,y)<<16 | self.model.image.GetGreen(x,y)<<8 | self.model.image.GetBlue(x,y)
+                self.model.append(PixelColorCheck(x,y,color))
+        else:
+            if not self.firstclick:
+                self.firstclick = (x,y)
+            else:
+                x1,y1 = self.firstclick
+                self.model.append(self.model.drawmode(x1,y1,x,y))
+                self.firstclick = None
+
+        self.Refresh()
+
+    def OnMouse(self, event):
+        if event.LeftIsDown():
+            return self.OnMouseClick(event)
+        lastx = self.x
+        lasty = self.y
+        self.x = min(max(event.X, 0), self.model.width-1)
+        self.y = min(max(event.Y, 0), self.model.height-1)
+        if lastx!=self.x or lasty!=self.y:
+            self.zoom.setpos(self.x,self.y)
+            self.Refresh()
+
+    def OnPaint(self, event):
+        dc = wx.PaintDC(self)
+        self.Draw(dc)
+
+    def Draw(self,dc=None):
+        if not dc:
+            dc = wx.ClientDC(self)
+      
+        dc.SetBackground(wx.Brush((0,0,0)))
+        dc.DrawBitmap(self.model.bitmap, 0, 0, False)
+
+        if self.firstclick:
+            x,y = self.firstclick
+            if AreaCheck in self.model.drawmode.__bases__:
+                dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                dc.DrawRectangle(x,y,self.x-x,self.y-y)
+                dc.SetBrush(wx.WHITE_BRUSH)
+            elif TwoPixelCheck in self.model.drawmode.__bases__:
+                x,y = self.firstclick
+                dc.DrawLine(x,y,self.x,self.y)
+
+        for check in self.model.checks:
+            if AreaCheck in check.__class__.__bases__:
+                dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                dc.DrawRectangle(check.x,check.y,check.x2-check.x,check.y2-check.y)
+                dc.SetBrush(wx.WHITE_BRUSH)
+            else:
+                x = check.x
+                y = check.y
+                l = 0
+                for r in range(10):
+                    r = (r+1)*3.141526/5
+                    dc.DrawLine(x+10*math.sin(l), y+10*math.cos(l), x+10*math.sin(r), y+10*math.cos(r))
+                    l = r
+                dc.DrawLine(x,y,x+1,y)
+                if TwoPixelCheck in check.__class__.__bases__:
+                    dc.DrawLine(x,y,check.x2,check.y2)
+
 class EntryPanel(scrolled.ScrolledPanel):
     def __init__(self, parent, model):
         self.model = model
-        scrolled.ScrolledPanel.__init__(self, parent, -1)
-        vbox = wx.BoxSizer(wx.VERTICAL)
+        scrolled.ScrolledPanel.__init__(self, parent, -1, size=(480,10*32), pos=(0,16*32))
+        self.id2check = {}
+        self.append(None)
 
-        for check in model.checks:
+    def delete(self, event):
+        self.model.delete(self.id2check[event.Id])
+
+    def append(self, check):
+        self.vbox = wx.BoxSizer(wx.VERTICAL)
+        self.vbox.Add(wx.StaticLine(self, -1, size=(500,-1)), 0, wx.ALL, 5)
+        for nr,check in enumerate(model.checks):
             hbox = wx.BoxSizer(wx.HORIZONTAL) 
+            
+            button = wx.Button(self, label="X", size=(32,32))
+            hbox.Add(button, 0, wx.ALIGN_CENTER_VERTICAL)
+            hbox.Add((16,16))
+            self.id2check[button.Id] = check
+            self.Bind(wx.EVT_BUTTON, self.delete, button)
 
             desc = wx.StaticText(self, -1, check.left())
             hbox.Add(desc, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
-           
             if isinstance(check,AreaCheck):
                 choices = ["is plain","is not plain"]
                 lb = wx.Choice(self, -1, (100, 50), choices = choices)
@@ -264,20 +348,74 @@ class EntryPanel(scrolled.ScrolledPanel):
             desc = wx.StaticText(self, -1, check.right())
             hbox.Add(desc, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
 
-            vbox.Add(hbox)
-            vbox.Add(wx.StaticLine(self, -1, size=(360,-1)), 0, wx.ALL, 5)
-            #vbox.Add((20,20))
-
-        self.SetSizer(vbox)
+            self.vbox.Add(hbox)
+            self.vbox.Add(wx.StaticLine(self, -1, size=(500,-1)), 0, wx.ALL, 5)
+        self.end = wx.Window(self, -1, size=(1,1))
+        self.vbox.Add(self.end)
+        self.SetSizer(self.vbox)
         self.SetAutoLayout(1)
-        self.SetupScrolling()
+        self.SetupScrolling(scrollToTop=False)
+        self.ScrollChildIntoView(self.end)
+
+class ToolChoiceWindow(wx.Choice):
+    def __init__(self, parent, model):
+        self.model = model
+        self.choices = [c.__name__ for c in checktypes]
+        wx.Choice.__init__(self, parent, -1, (100,50), choices = self.choices)
+        self.Bind(wx.EVT_CHOICE, self.choice)
+    def choice(self, event):
+        self.model.setdrawmode(eval(self.choices[self.GetCurrentSelection()]))
 
 class MainFrame(wx.Frame):
     def __init__(self, application, model):
         wx.Frame.__init__(self, None, -1, style = wx.DEFAULT_FRAME_STYLE, pos=(50,50))
         self.application = application
+      
+        self.toolchoice = ToolChoiceWindow(self, model)
+        self.toolchoice.Show()
+        self.zoom = ZoomWindow(self, model)
+        self.zoom.Show()
+        self.image = ImageWindow(self, model, self.zoom)
+        self.image.Show()
         self.entries = EntryPanel(self, model)
         self.entries.Show()
+        self.createToolbar()
+        model.appendListeners += [self.append]
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self.zoom)
+        hbox.Add((16,16))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(self.toolchoice)
+        vbox.Add(self.image)
+        hbox.Add(vbox)
+        #vbox.Add(self.entries)
+        self.SetSizer(hbox)
+        self.SetAutoLayout(True)
+        hbox.Fit(self)
+
+    def append(self, new):
+        self.entries.Hide()
+        e = self.entries
+        del self.entries
+        e.Destroy()
+        self.entries = EntryPanel(self, model)
+        self.entries.Show()
+
+    def createToolbar(self):
+        tsize = (16,16)
+        self.toolbar = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
+        self.toolbar.AddSimpleTool(wx.ID_CUT,
+                                   wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK, wx.ART_TOOLBAR, tsize),
+                                   "Remove")
+        self.toolbar.AddSimpleTool(wx.ID_SETUP,
+                                   wx.ArtProvider.GetBitmap(wx.ART_TIP, wx.ART_TOOLBAR, tsize),
+                                   "Add")
+        self.toolbar.AddSimpleTool(wx.ID_SETUP,
+                                   wx.ArtProvider.GetBitmap(wx.ART_GO_UP, wx.ART_TOOLBAR, tsize),
+                                   "Add")
+        #self.toolbar.AddSeparator()
+        self.toolbar.Realize()
 
 
 #class ScrollFrame(wx.Frame):
@@ -291,8 +429,8 @@ def getpixels(filename, p):
     return model.pixels
 
 if __name__ == "__main__":
-    model = Model.load(sys.argv[1])
     app = wx.PySimpleApp()
+    model = Model.load(sys.argv[1])
     main = MainFrame(app, model)
     main.Show()
     app.MainLoop()
