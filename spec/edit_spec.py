@@ -482,8 +482,7 @@ if __name__ == "__main__":
     parser.add_option("-t", "--test", dest="test", help="Test checks against swf", action="store_true")
     (options, args) = parser.parse_args()
 
-    if options.test:
-        TESTMODE = True
+    TESTMODE = options.test
 
     app = wx.PySimpleApp()
     model = Model.load(args[0])
