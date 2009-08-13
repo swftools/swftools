@@ -128,7 +128,7 @@ int main(int argn, char*argv[])
 	fi = open(filename, O_RDONLY|O_BINARY);
 	if (fi<=0) { 
 	    fprintf(stderr,"Couldn't open %s\n", filename);
-	    perror(argv[1]);
+	    perror(filename);
 	    exit(1);
 	}
 	if(swf_ReadSWF(fi,&swf)<0) { 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import wx
 import wx.lib.scrolledpanel as scrolled
 import os
@@ -16,6 +17,8 @@ class Check:
         return "pixel at (%d,%d)" % (self.x,self.y)
     def right(self):
         return ""
+    def verifies(self, model):
+        return True
 
 class PixelColorCheck(Check):
     def __init__(self, x,y, color):
@@ -23,6 +26,10 @@ class PixelColorCheck(Check):
         self.color = color
     def right(self):
         return "is of color 0x%06x" % self.color
+    def verifies(self, model):
+        p = model.getPixel(self.x,self.y)
+        val = p[0]<<16 | p[1]<<8 | p[2]
+        return val == self.color
 
 class TwoPixelCheck(Check): 
     def __init__(self, x,y, x2,y2):
@@ -55,6 +62,8 @@ class AreaNotPlain(AreaCheck):
 
 checktypes = [PixelColorCheck,PixelBrighterThan,PixelDarkerThan,PixelEqualTo,AreaPlain,AreaNotPlain]
 
+global TESTMODE
+
 def convert_to_ppm(pdf):
     print pdf
     f = os.popen("pdfinfo "+pdf, "rb")
@@ -62,13 +71,21 @@ def convert_to_ppm(pdf):
     f.close()
     width,heigth = re.compile(r"Page size:\s*([0-9]+) x ([0-9]+) pts").findall(info)[0]
     dpi = int(72.0 * 612 / int(width))
-    os.system("pdftoppm -r "+str(dpi)+" -f 1 -l 1 "+pdf+" test")
+    if TESTMODE:
+        os.system("pdf2swf -s zoom="+str(dpi)+" -p1 "+pdf+" -o test.swf")
+        os.system("swfrender --legacy test.swf -o test.png")
+        os.unlink("test.swf")
+        return "test.png"
+    else:
+        os.system("pdftoppm -r "+str(dpi)+" -f 1 -l 1 "+pdf+" test")
     return "test-000001.ppm"
 
+
 class Model:
-    def __init__(self, filename, checks):
-        self.filename = filename
-        self.imgfilename = convert_to_ppm(filename)
+    def __init__(self, specfile, docfile, checks):
+        self.specfile = specfile
+        self.docfile = docfile
+        self.imgfilename = convert_to_ppm(self.docfile)
         self.bitmap = wx.Bitmap(self.imgfilename)
         self.image = wx.ImageFromBitmap(self.bitmap)
         self.width = self.bitmap.GetWidth()
@@ -78,6 +95,13 @@ class Model:
         self.appendListeners = []
         self.drawModeListeners = []
         self.drawmode = PixelColorCheck
+
+    def close(self):
+        try: os.unlink(self.imgfilename)
+        except: pass
+
+    def getPixel(self,x,y):
+        return (self.image.GetRed(x,y), self.image.GetGreen(x,y), self.image.GetBlue(x,y))
         
     def setdrawmode(self, mode):
         self.drawmode = mode
@@ -102,7 +126,18 @@ class Model:
 
     @staticmethod
     def load(filename):
-        path = os.path.splitext(filename)[0]+".rb"
+        # convenience, allow to do "edit_spec.py file.pdf"
+        p,ext = os.path.splitext(filename)
+        if ext!=".rb":
+            path = p+".rb"
+            if not os.path.isfile(path):
+                path = p+".spec.rb"
+                if not os.path.isfile(path):
+                    print "No file %s found, creating new..." % path
+                    return Model(path, filename, [])
+        else:
+            path = filename
+
         fi = open(path, "rb")
         r_file = re.compile(r"^convert_file \"([^\"]*)\"")
         r_pixelcolor = re.compile(r"^pixel_at\(([0-9]+),([0-9]+)\).should_be_of_color (0x[0-9a-fA-F]+)")
@@ -127,7 +162,7 @@ class Model:
                 if filename:
                     raise Exception("can't load multi-file specs (in line %d)" % (nr+1))
                 filename = m.group(1);
-                model = Model(filename, [])
+                model = Model(path, filename, [])
                 continue
             m = r_pixelcolor.match(line)
             if m: model.append(PixelColorCheck(int(m.group(1)),int(m.group(2)),int(m.group(3),16)));continue
@@ -152,10 +187,10 @@ class Model:
         return model
 
     def save(self):
-        path = os.path.splitext(self.filename)[0]+".rb"
+        path = self.specfile
         fi = open(path, "wb")
         fi.write("require File.dirname(__FILE__) + '/spec_helper'\n\ndescribe \"pdf conversion\" do\n")
-        fi.write("    convert_file \"%s\" do\n" % self.filename)
+        fi.write("    convert_file \"%s\" do\n" % self.docfile)
         for check in self.checks:
             c = check.__class__
             if c == PixelColorCheck:
@@ -201,7 +236,7 @@ class ZoomWindow(wx.Window):
             for xx in range(15):
                 x = self.x+xx-8
                 if 0<=x<self.model.width and 0<=y<self.model.height:
-                    color = (self.model.image.GetRed(x,y), self.model.image.GetGreen(x,y), self.model.image.GetBlue(x,y))
+                    color = self.model.getPixel(x,y)
                 else:
                     color = (0,0,0)
                 dc.SetPen(wx.Pen(color))
@@ -248,7 +283,8 @@ class ImageWindow(wx.Window):
             if check:
                 self.model.delete(check)
             else:
-                color = self.model.image.GetRed(x,y)<<16 | self.model.image.GetGreen(x,y)<<8 | self.model.image.GetBlue(x,y)
+                p = slef.model.GetPixel(x,y)
+                color = p[0]<<16|p[1]<<8|p[2]
                 self.model.append(PixelColorCheck(x,y,color))
         else:
             if not self.firstclick:
@@ -282,6 +318,8 @@ class ImageWindow(wx.Window):
         dc.SetBackground(wx.Brush((0,0,0)))
         dc.DrawBitmap(self.model.bitmap, 0, 0, False)
 
+        red = wx.Pen((192,0,0),2)
+
         if self.firstclick:
             x,y = self.firstclick
             if AreaCheck in self.model.drawmode.__bases__:
@@ -293,6 +331,10 @@ class ImageWindow(wx.Window):
                 dc.DrawLine(x,y,self.x,self.y)
 
         for check in self.model.checks:
+            if TESTMODE and not check.verifies(model):
+                dc.SetPen(red)
+            else:
+                dc.SetPen(wx.BLACK_PEN)
             if AreaCheck in check.__class__.__bases__:
                 dc.SetBrush(wx.TRANSPARENT_BRUSH)
                 dc.DrawRectangle(check.x,check.y,check.x2-check.x,check.y2-check.y)
@@ -308,6 +350,7 @@ class ImageWindow(wx.Window):
                 dc.DrawLine(x,y,x+1,y)
                 if TwoPixelCheck in check.__class__.__bases__:
                     dc.DrawLine(x,y,check.x2,check.y2)
+            dc.SetPen(wx.BLACK_PEN)
 
 class EntryPanel(scrolled.ScrolledPanel):
     def __init__(self, parent, model):
@@ -331,23 +374,37 @@ class EntryPanel(scrolled.ScrolledPanel):
             self.id2check[button.Id] = check
             self.Bind(wx.EVT_BUTTON, self.delete, button)
 
+            def setdefault(lb,nr):
+                lb.Select(nr);self.Bind(wx.EVT_CHOICE, lambda lb:lb.EventObject.Select(nr), lb)
+
             desc = wx.StaticText(self, -1, check.left())
+
             hbox.Add(desc, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
             if isinstance(check,AreaCheck):
                 choices = ["is plain","is not plain"]
                 lb = wx.Choice(self, -1, (100, 50), choices = choices)
+                if isinstance(check,AreaPlain):
+                    setdefault(lb,0)
+                else:
+                    setdefault(lb,1)
                 hbox.Add(lb, 0, wx.ALIGN_LEFT|wx.ALL, 5)
             elif isinstance(check,TwoPixelCheck):
                 choices = ["is the same as","is brighter than","is darker than"]
                 lb = wx.Choice(self, -1, (100, 50), choices = choices)
                 hbox.Add(lb, 0, wx.ALIGN_LEFT|wx.ALL, 5)
+                if isinstance(check, PixelEqualTo):
+                    setdefault(lb,0)
+                elif isinstance(check, PixelBrighterThan):
+                    setdefault(lb,1)
+                elif isinstance(check, PixelDarkerThan):
+                    setdefault(lb,2)
             elif isinstance(check,PixelColorCheck):
                 # TODO: color control
                 pass
             
-            desc = wx.StaticText(self, -1, check.right())
-            hbox.Add(desc, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
-
+            desc2 = wx.StaticText(self, -1, check.right())
+            hbox.Add(desc2, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
+            
             self.vbox.Add(hbox)
             self.vbox.Add(wx.StaticLine(self, -1, size=(500,-1)), 0, wx.ALL, 5)
         self.end = wx.Window(self, -1, size=(1,1))
@@ -418,20 +475,21 @@ class MainFrame(wx.Frame):
         self.toolbar.Realize()
 
 
-#class ScrollFrame(wx.Frame):
-
-def getpixels(filename, p):
-    model = Model(filename, p)
-    app = wx.PySimpleApp()
-    main = MainFrame(app, model)
-    main.Show()
-    app.MainLoop()
-    return model.pixels
-
 if __name__ == "__main__":
+    from optparse import OptionParser
+    global TESTMODE
+    parser = OptionParser()
+    parser.add_option("-t", "--test", dest="test", help="Test checks against swf", action="store_true")
+    (options, args) = parser.parse_args()
+
+    if options.test:
+        TESTMODE = True
+
     app = wx.PySimpleApp()
-    model = Model.load(sys.argv[1])
+    model = Model.load(args[0])
+
     main = MainFrame(app, model)
     main.Show()
     app.MainLoop()
     model.save()
+    model.close()

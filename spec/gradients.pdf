@@ -1,0 +1,361 @@
+%PDF-1.6
+%הדֿׂ
+1 0 obj
+[/PDF/ImageB/ImageC/ImageI/Text]
+endobj
+4 0 obj
+<</Length 5 0 R
+>>
+stream
+0 0 0 rg
+
+endstream
+endobj
+5 0 obj
+9
+endobj
+6 0 obj
+<</ShadingType 3
+/ColorSpace/DeviceRGB
+/Coords[160 160 0 160 160 320]
+/Function<</FunctionType 2
+/Domain[0 1]
+/N 1
+/Range[0 1 0 1 0 1]
+/C0[0 0 0]
+/C1[1 1 1]>>>>
+endobj
+7 0 obj
+<</Length 8 0 R
+>>
+stream
+
+endstream
+endobj
+8 0 obj
+0
+endobj
+9 0 obj
+<</PatternType 2
+/Shading 6 0 R
+>>
+endobj
+10 0 obj
+<</Length 11 0 R
+>>
+stream
+/Pattern cs/P0 scn
+0 0 m
+80 80 80 240 0 320 c
+80 240 240 240 320 320 c
+240 240 240 80 320 0 c
+240 80 80 80 0 0 c
+f
+0 0 m
+80 80 80 240 0 320 c
+80 240 240 240 320 320 c
+240 240 240 80 320 0 c
+240 80 80 80 0 0 c
+S
+0 0 0.4 rg
+
+endstream
+endobj
+11 0 obj
+222
+endobj
+12 0 obj
+<</ShadingType 2
+/ColorSpace/DeviceRGB
+/Coords[200 0 520 320]
+/Function<</FunctionType 2
+/Domain[0 1]
+/N 1
+/Range[0 1 0 1 0 1]
+/C0[0 0 0.4]
+/C1[1 1 1]>>>>
+endobj
+13 0 obj
+<</Length 14 0 R
+>>
+stream
+
+endstream
+endobj
+14 0 obj
+0
+endobj
+15 0 obj
+<</PatternType 2
+/Shading 12 0 R
+>>
+endobj
+16 0 obj
+<</Length 17 0 R
+>>
+stream
+/Pattern cs/P1 scn
+200 0 m
+280 80 280 240 200 320 c
+280 240 440 240 520 320 c
+440 240 440 80 520 0 c
+440 80 280 80 200 0 c
+f
+200 0 m
+280 80 280 240 200 320 c
+280 240 440 240 520 320 c
+440 240 440 80 520 0 c
+440 80 280 80 200 0 c
+S
+0 0 0.4 rg
+
+endstream
+endobj
+17 0 obj
+242
+endobj
+18 0 obj
+<</ShadingType 3
+/ColorSpace/DeviceRGB
+/Coords[620 340 0 620 340 220]
+/Function<</FunctionType 2
+/Domain[0 1]
+/N 1
+/Range[0 1 0 1 0 1]
+/C0[0 0 0.4]
+/C1[1 1 1]>>>>
+endobj
+19 0 obj
+<</Length 20 0 R
+>>
+stream
+
+endstream
+endobj
+20 0 obj
+0
+endobj
+21 0 obj
+<</PatternType 2
+/Shading 18 0 R
+>>
+endobj
+22 0 obj
+<</Length 23 0 R
+>>
+stream
+/Pattern cs/P2 scn
+580 80 m
+580 640 l
+660 640 l
+660 80 l
+580 80 l
+f
+580 80 m
+580 640 l
+660 640 l
+660 80 l
+580 80 l
+S
+0 0 0.4 rg
+
+endstream
+endobj
+23 0 obj
+128
+endobj
+24 0 obj
+<</ShadingType 2
+/ColorSpace/DeviceRGB
+/Coords[680 80 680 640]
+/Function<</FunctionType 2
+/Domain[0 1]
+/N 1
+/Range[0 1 0 1 0 1]
+/C0[0 0 0.4]
+/C1[1 1 1]>>>>
+endobj
+25 0 obj
+<</Length 26 0 R
+>>
+stream
+
+endstream
+endobj
+26 0 obj
+0
+endobj
+27 0 obj
+<</PatternType 2
+/Shading 24 0 R
+>>
+endobj
+28 0 obj
+<</Length 29 0 R
+>>
+stream
+/Pattern cs/P3 scn
+680 80 m
+680 640 l
+760 640 l
+760 80 l
+680 80 l
+f
+680 80 m
+680 640 l
+760 640 l
+760 80 l
+680 80 l
+S
+0 0 0.4 rg
+
+endstream
+endobj
+29 0 obj
+128
+endobj
+30 0 obj
+<</ShadingType 2
+/ColorSpace/DeviceRGB
+/Coords[130 380 450 380]
+/Function<</FunctionType 2
+/Domain[0 1]
+/N 1
+/Range[0 1 0 1 0 1]
+/C0[0 0 0.4]
+/C1[1 1 1]>>>>
+endobj
+31 0 obj
+<</Length 32 0 R
+>>
+stream
+
+endstream
+endobj
+32 0 obj
+0
+endobj
+33 0 obj
+<</PatternType 2
+/Shading 30 0 R
+>>
+endobj
+34 0 obj
+<</Length 35 0 R
+>>
+stream
+/Pattern cs/P4 scn
+130 380 m
+130 460 l
+450 460 l
+450 380 l
+130 380 l
+f
+130 380 m
+130 460 l
+450 460 l
+450 380 l
+130 380 l
+S
+
+endstream
+endobj
+35 0 obj
+123
+endobj
+36 0 obj
+[ 4 0 R 7 0 R 10 0 R 13 0 R 16 0 R 19 0 R 22 0 R 25 0 R 28 0 R 31 0 R 34 0 R]
+endobj
+37 0 obj
+<</ProcSet 1 0 R
+/Pattern<</P0 9 0 R
+/P1 15 0 R
+/P2 21 0 R
+/P3 27 0 R
+/P4 33 0 R
+>>
+/Shading<</Sh0 6 0 R
+/Sh1 12 0 R
+/Sh2 18 0 R
+/Sh3 24 0 R
+/Sh4 30 0 R
+>>
+>>
+endobj
+38 0 obj
+<</Title (gradients)
+/Creator (pdflib_py)
+/Author (pdflib)
+/CreationDate (D:20090813183507+02'00')
+/Producer (PDFlib Lite 7.0.2p8 \(Python 2.5.4/Linux\))
+>>
+endobj
+3 0 obj
+<</Type/Page
+/Parent 2 0 R
+/Contents 36 0 R
+/Resources 37 0 R
+/MediaBox[0 0 1024 800]
+>>
+endobj
+2 0 obj
+<</Type/Pages
+/Count 1
+/Kids[ 3 0 R]>>
+endobj
+39 0 obj
+<</Type/Catalog
+/Pages 2 0 R
+>>
+endobj
+xref
+0 40
+0000000000 65535 f 
+0000000015 00000 n 
+0000003386 00000 n 
+0000003282 00000 n 
+0000000063 00000 n 
+0000000124 00000 n 
+0000000141 00000 n 
+0000000317 00000 n 
+0000000369 00000 n 
+0000000386 00000 n 
+0000000436 00000 n 
+0000000712 00000 n 
+0000000732 00000 n 
+0000000903 00000 n 
+0000000957 00000 n 
+0000000975 00000 n 
+0000001027 00000 n 
+0000001323 00000 n 
+0000001343 00000 n 
+0000001522 00000 n 
+0000001576 00000 n 
+0000001594 00000 n 
+0000001646 00000 n 
+0000001828 00000 n 
+0000001848 00000 n 
+0000002020 00000 n 
+0000002074 00000 n 
+0000002092 00000 n 
+0000002144 00000 n 
+0000002326 00000 n 
+0000002346 00000 n 
+0000002519 00000 n 
+0000002573 00000 n 
+0000002591 00000 n 
+0000002643 00000 n 
+0000002820 00000 n 
+0000002840 00000 n 
+0000002934 00000 n 
+0000003109 00000 n 
+0000003440 00000 n 
+trailer
+<</Size 40
+/Root 39 0 R
+/Info 38 0 R
+/ID[<A0E82BF89312F184E84C0D3E46EE0F2B><A0E82BF89312F184E84C0D3E46EE0F2B>]
+>>
+startxref
+3488
+%%EOF

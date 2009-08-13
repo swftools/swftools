@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../devices/rescale.h"
@@ -447,7 +449,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     i->filename = strdup(filename);
 
     char*x = 0;
-    if((x = strchr(filename, '|'))) {
+    if((x = strchr((char*)filename, '|'))) {
 	*x = 0;
 	userPassword = x+1;
     }
