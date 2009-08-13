@@ -23,14 +23,20 @@
 #include <fcntl.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/utf8.h"
 
-char * filename = 0;
+static char * filename = 0;
+static char showfonts = 0;
+static int x=0,y=0,w=0,h=0;
 
-struct options_t options[] =
-{
- {"v","verbose"},
- {"V","version"},
- {0,0}
+static struct options_t options[] = {
+{"f", "fonts"},
+{"x", "xpos"},
+{"y", "ypos"},
+{"W", "width"},
+{"H", "height"},
+{"V", "version"},
+{0,0}
 };
 
 int args_callback_option(char*name,char*val)
@@ -38,6 +44,27 @@ int args_callback_option(char*name,char*val)
     if(!strcmp(name, "V")) {
         printf("swfstrings - part of %s %s\n", PACKAGE, VERSION);
         exit(0);
+    } else if(!strcmp(name, "x")) {
+	x = atoi(val);
+	return 1;
+    } else if(!strcmp(name, "y")) {
+	y = atoi(val);
+	return 1;
+    } else if(!strcmp(name, "W")) {
+	w = atoi(val);
+	return 1;
+    } else if(!strcmp(name, "H")) {
+	h = atoi(val);
+	return 1;
+    } else if(!strcmp(name, "f")) {
+	showfonts = 1;
+	return 0;
+    } else if(!strcmp(name, "V")) {
+        printf("swfstrings - part of %s %s\n", PACKAGE, VERSION);
+        exit(0);
+    } else {
+	fprintf(stderr, "Unknown option: -%s\n", name);
+	exit(1);
     }
     return 0;
 }
@@ -45,10 +72,18 @@ int args_callback_longoption(char*name,char*val)
 {
     return args_long2shortoption(options, name, val);
 }
-void args_callback_usage(char*name)
-{    
-    printf("\nreflex SWF Text Scan Utility\n(w) 2000 by Rainer Boehme <rb@reflex-studio.de>\n\nUsage: %s filename.swf\n", name);
-    exit(0);
+void args_callback_usage(char *name)
+{
+    printf("\n");
+    printf("Usage: %s [options] file.swf\n", name);
+    printf("\n");
+    printf("-f , --fonts                   Print out font information for each text block\n");
+    printf("-x , --xpos <x>                Set bounding box x coordinate\n");
+    printf("-y , --ypos <y>                Set bounding box y coordinate\n");
+    printf("-W , --width <width>           Set bounding box width\n");
+    printf("-H , --height <height>         Set bounding box height\n");
+    printf("-V , --version                 Print version information and exit\n");
+    printf("\n");
 }
 int args_callback_command(char*name,char*val)
 {
@@ -60,49 +95,126 @@ int args_callback_command(char*name,char*val)
     return 0;
 }
 
-SWF swf;
-  
+static SWF swf;
+static int fontnum = 0;
+static SWFFONT**fonts = 0;
+
+void fontcallback1(void*self, U16 id,U8 * name)
+{ fontnum++;
+}
+
+void fontcallback2(void*self, U16 id,U8 * name)
+{ 
+  swf_FontExtract(&swf,id,&fonts[fontnum]);
+  fontnum++;
+}
+
+
+void textcallback(void*self, int*glyphs, int*advance, int nr, int fontid, int fontsize, int startx, int starty, RGBA*color) 
+{
+    SWFFONT*font = 0;
+    int t;
+    for(t=0;t<fontnum;t++)
+    {
+	if(fonts[t]->id == fontid) {
+	    font = fonts[t];
+	    break;
+	}
+    }
+
+    if(showfonts) {
+	if(font)
+	    printf("#<font %d \"%s\"%s%s>\n", fontid, font->name, swf_FontIsBold(font)?" bold":"",swf_FontIsItalic(font)?" italic":"");
+	printf("#<color #%02x%02x%02x%02x>\n", color->r, color->g, color->b, color->a);
+	printf("#<size %d>\n", fontsize);
+    }
+
+    for(t=0;t<nr;t++)
+    {
+	int xx = startx + advance[t]/20;
+	if(x|y|w|h) {
+	    /* TODO: this does not do any matrix handling yet */
+
+	    if(xx < x || starty < y || xx > x+w || starty > y+h) {
+		/* outside of bounding box */
+		continue;
+	    }
+	}
+
+	unsigned char a; 
+	int advance = 0;
+	if(font>=0) {
+	    if(glyphs[t]<0 || glyphs[t] >= font->numchars  /*glyph is not in range*/
+		    || !font->glyph2ascii /* font has ascii<->glyph mapping */
+	      ) a = glyphs[t];
+	    else {
+		if(font->glyph2ascii[glyphs[t]])
+		    a = font->glyph2ascii[glyphs[t]];
+		else
+		    a = glyphs[t];
+	    }
+	} else {
+	    a = glyphs[t];
+	}
+
+	if(a>=32) {
+	    char* utf8 = getUTF8(a);
+	    printf("%s", utf8);
+	} else {
+	    printf("\\x%x", (int)a);
+	}
+    }
+    printf("\n");
+}
+
 void fontcallback(void*self,U16 id,U8 * name)
 { SWFFONT* font;
   TAG* t;
   
   swf_FontExtract(&swf,id,&font);
-  printf("#<font %d \"%s\"%s%s>\n",id, name,swf_FontIsBold(font)?" bold":"",swf_FontIsItalic(font)?" italic":"");
 
   t = swf.firstTag;
 
-  while (t)
-  { 
-    if(swf_isTextTag(t))
-	swf_TextPrintDefineText(t,font);
-    t = swf_NextTag(t);
-  }
-  
   swf_FontFree(font);
 }
 
+
 int main (int argc,char ** argv)
-{ int f;
+{ 
+    int f;
+    processargs(argc, argv);
+    if(!filename)
+	exit(0);
 
-  processargs(argc, argv);
-  if(!filename)
-      exit(0);
+    f = open(filename,O_RDONLY|O_BINARY);
+    if (f<0 || swf_ReadSWF(f,&swf)<0) {
+	fprintf(stderr,"%s is not a valid SWF file or contains errors.\n",filename);
+	if(f>=0) close(f);
+	exit(-1);
+    }
+    close(f);
+    
+    if(x|y|w|h) {
+	if(!w) w = (swf.movieSize.xmax - swf.movieSize.xmin) / 20;
+	if(!h) h = (swf.movieSize.ymax - swf.movieSize.ymin) / 20;
+    }
 
-  f = open(filename,O_RDONLY|O_BINARY);
-  if (f>=0)
-  { if FAILED(swf_ReadSWF(f,&swf))
-    { fprintf(stderr,"%s is not a valid SWF file or contains errors.\n",filename);
-      close(f);
+    fontnum = 0;
+    swf_FontEnumerate(&swf,&fontcallback1, 0);
+    fonts = (SWFFONT**)malloc(fontnum*sizeof(SWFFONT*));
+    fontnum = 0;
+    swf_FontEnumerate(&swf,&fontcallback2, 0);
+ 
+    TAG*tag = swf.firstTag;
+    while (tag)
+    { 
+	if(swf_isTextTag(tag)) {
+	    swf_ParseDefineText(tag, textcallback, 0);
+	}
+	tag = tag->next;
     }
-    else
-    { close(f);
-      swf_FontEnumerate(&swf,&fontcallback,0);
-      swf_FreeTags(&swf);
-    }
-  } else {
-      fprintf(stderr,"File not found: %s\n",argv[1]);
-  }
   
-  return 0;
+    swf_FreeTags(&swf);
+    return 0;
 }
 

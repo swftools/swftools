@@ -375,9 +375,9 @@ void dumpFont(TAG*tag, char*prefix)
     swf_FontFree(font);
 }
 
-SWF swf;
-int fontnum = 0;
-SWFFONT**fonts;
+static SWF swf;
+static int fontnum = 0;
+static SWFFONT**fonts;
 
 void textcallback(void*self, int*glyphs, int*ypos, int nr, int fontid, int fontsize, int startx, int starty, RGBA*color) 
 {
