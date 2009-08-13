@@ -10,7 +10,8 @@ if test `cat __abcdefghijklmnopqrstuvwxyz.txt` = "test2";then
 else
     AC_MSG_RESULT(no)
 fi
-])
+
 rm -f __abcdefghijklmnopqrstuvwxyz.txt
 rm -f __ABCDEFGHIJKLMNOPQRSTUVWXYZ.txt
+])
 
