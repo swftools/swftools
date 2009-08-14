@@ -41,15 +41,19 @@ class ConversionFailed < Exception
 end
 
 class Area
-    def initialize(x1,y1,x2,y2,data)
-	@x1,@y1,@x2,@y2 = x1,y1,x2,y2
-	@rgb = Array.new(data.size/3) do |i| data.slice(i*3,3) end
+    def initialize(x1,y1,x2,y2,file)
+	@x1,@y1,@x2,@y2,@file = x1,y1,x2,y2,file
     end
     def should_be_plain_colored
+	@rgb = @file.get_area(@x1,@y1,@x2,@y2) unless @rgb
 	@rgb.minmax == [@rgb[0],@rgb[0]] or raise AreaError.new(self,"is not plain colored")
     end
     def should_not_be_plain_colored
+	@rgb = @file.get_area(@x1,@y1,@x2,@y2) unless @rgb
 	@rgb.minmax != [@rgb[0],@rgb[0]] or raise AreaError.new(self,"is plain colored")
+    end
+    def should_contain_text(text)
+	@file.get_text(@x1,@y1,@x2,@y2) == text or raise AreaError.new(self, "doesn't contain text #{text}")
     end
     def to_s
 	"(#{@x1},#{@y1},#{@x2},#{@y2})"
@@ -92,15 +96,21 @@ class DocFile
 	@filename = filename
 	@page = page
     end
-    def load()
+    def convert()
+	return if @swfname
 	@swfname = @filename.gsub(/.pdf$/i,"")+".swf"
+	`pdfinfo #{@filename}` =~ /Page size:\s*([0-9]+) x ([0-9]+) pts/
+	width,height = $1,$2
+	dpi = (72.0 * 612 / width.to_i).to_i
+	output = `pdf2swf --flatten -s zoom=#{dpi} -p #{@page} #{@filename} -o #{@swfname} 2>&1`
+	#output = `pdf2swf -s zoom=#{dpi} --flatten -p #{@page} #{@filename} -o #{@swfname} 2>&1`
+	raise ConversionFailed.new(output,@swfname) unless File.exists?(@swfname)
+    end
+    def render()
+	return if @img
+	convert()
 	@pngname = @filename.gsub(/.pdf$/i,"")+".png"
 	begin
-	    `pdfinfo #{@filename}` =~ /Page size:\s*([0-9]+) x ([0-9]+) pts/
-	    width,height = $1,$2
-	    dpi = (72.0 * 612 / width.to_i).to_i
-	    output = `pdf2swf -s zoom=#{dpi} --flatten -p #{@page} #{@filename} -o #{@swfname} 2>&1`
-	    raise ConversionFailed.new(output,@swfname) unless File.exists?(@swfname)
 	    output = `swfrender --legacy #{@swfname} -o #{@pngname} 2>&1`
 	    raise ConversionFailed.new(output,@pngname) unless File.exists?(@pngname)
 	    @img = Magick::Image.read(@pngname).first
@@ -109,21 +119,30 @@ class DocFile
 	    `rm -f #{@pngname}`
 	end
     end
-    def area_at(x1,y1,x2,y2)
-	self.load()
+    def get_text(x1,y1,x2,y2)
+	self.convert()
+	puts "swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}"
+	puts `swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`
+	`swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`
+    end
+    def get_area(x1,y1,x2,y2)
+	self.render()
 	data = @img.export_pixels(x1, y1, x2-x1, y2-y1, "RGB")
-	return Area.new(x1,y1,x2,y2,data)
+	Array.new(data.size/3) do |i| data.slice(i*3,3) end
+    end
+    def area_at(x1,y1,x2,y2)
+	return Area.new(x1,y1,x2,y2,self)
     end
     def width()
-	self.load()
+	self.render()
 	return @img.columns
     end
     def height()
-	self.load()
+	self.render()
 	return @img.rows
     end
     def pixel_at(x,y)
-	self.load()
+	self.render()
 	data = @img.export_pixels(x, y, 1, 1, "RGB")
 	return Pixel.new(x,y,data)
     end

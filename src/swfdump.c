@@ -415,10 +415,24 @@ void textcallback(void*self, int*glyphs, int*ypos, int nr, int fontid, int fonts
     printf("\n");
 }
 
-void handleText(TAG*tag) 
+void handleText(TAG*tag, char*prefix) 
 {
   printf("\n");
-  swf_ParseDefineText(tag,textcallback, 0);
+  if(placements) {
+      swf_SetTagPos(tag, 0);
+      swf_GetU16(tag);
+      swf_GetRect(tag, 0);
+      swf_ResetReadBits(tag);
+      MATRIX m;
+      swf_GetMatrix(tag, &m);
+      printf("%s| Matrix\n",prefix);
+      printf("%s| %5.3f %5.3f %6.2f\n", prefix, m.sx/65536.0, m.r1/65536.0, m.tx/20.0);
+      printf("%s| %5.3f %5.3f %6.2f\n", prefix, m.r0/65536.0, m.sy/65536.0, m.ty/20.0);
+      swf_SetTagPos(tag, 0);
+  }
+  if(showtext) {
+      swf_ParseDefineText(tag,textcallback, 0);
+  }
 }
 	    
 void handleDefineSound(TAG*tag)
@@ -1363,10 +1377,7 @@ int main (int argc,char ** argv)
 	    printf(" URL: %s\n", s);
 	}
 	else if(tag->id == ST_DEFINETEXT || tag->id == ST_DEFINETEXT2) {
-	    if(showtext)
-		handleText(tag);
-	    else
-		printf("\n");
+	    handleText(tag, myprefix);
 	}
 	else if(tag->id == ST_DEFINESCALINGGRID) {
 	    U16 id = swf_GetU16(tag);

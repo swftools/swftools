@@ -320,6 +320,10 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
 		/* notable change in character size: character was clipped 
 		   TODO: how to deal with diagonal cuts?
 		 */
+		msg("<trace> Character %d was clipped: (%f,%f,%f,%f) -> (%f,%f,%f,%f)",
+			glyphnr, 
+			bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax,
+			bbox2.xmin,bbox2.ymin,bbox2.xmax,bbox2.ymax);
 		polyops_fill(dev, glyph, color);
 	    } else {
 		if(i->out) i->out->drawchar(i->out, font, glyphnr, color, matrix);

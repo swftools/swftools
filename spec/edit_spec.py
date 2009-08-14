@@ -60,7 +60,12 @@ class AreaPlain(AreaCheck):
 class AreaNotPlain(AreaCheck):
     pass
 
-checktypes = [PixelColorCheck,PixelBrighterThan,PixelDarkerThan,PixelEqualTo,AreaPlain,AreaNotPlain]
+class AreaText(AreaCheck):
+    def __init__(self, x,y, x2, y2, text=""):
+        AreaCheck.__init__(self,x,y,x2,y2)
+        self.text = text
+
+checktypes = [PixelColorCheck,PixelBrighterThan,PixelDarkerThan,PixelEqualTo,AreaPlain,AreaNotPlain,AreaText]
 
 global TESTMODE
 
@@ -146,6 +151,7 @@ class Model:
         r_pixelequalto = re.compile(r"^pixel_at\(([0-9]+),([0-9]+)\).should_be_the_same_as pixel_at\(([0-9]+),([0-9]+)\)")
         r_areaplain = re.compile(r"^area_at\(([0-9]+),([0-9]+),([0-9]+),([0-9]+)\).should_be_plain_colored")
         r_areanotplain = re.compile(r"^area_at\(([0-9]+),([0-9]+),([0-9]+),([0-9]+)\).should_not_be_plain_colored")
+        r_areatext = re.compile(r"^area_at\(([0-9]+),([0-9]+),([0-9]+),([0-9]+)\).should_contain_text '(.*)'")
         r_width = re.compile(r"^width.should be ([0-9]+)")
         r_height = re.compile(r"^height.should be ([0-9]+)")
         r_describe = re.compile(r"^describe \"pdf conversion\"")
@@ -176,6 +182,8 @@ class Model:
             if m: model.append(AreaPlain(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
             m = r_areanotplain.match(line)
             if m: model.append(AreaNotPlain(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4))));continue
+            m = r_areatext.match(line)
+            if m: model.append(AreaText(int(m.group(1)),int(m.group(2)),int(m.group(3)),int(m.group(4)),m.group(5)));continue
             if r_width.match(line) or r_height.match(line):
                 continue # compatibility
             if r_describe.match(line) or r_end.match(line) or r_header.match(line):
@@ -205,6 +213,8 @@ class Model:
                 fi.write("        area_at(%d,%d,%d,%d).should_be_plain_colored\n" % (check.x,check.y,check.x2,check.y2))
             elif c == AreaNotPlain:
                 fi.write("        area_at(%d,%d,%d,%d).should_not_be_plain_colored\n" % (check.x,check.y,check.x2,check.y2))
+            elif c == AreaText:
+                fi.write("        area_at(%d,%d,%d,%d).should_contain_text '%s'\n" % (check.x,check.y,check.x2,check.y2,check.text))
         fi.write("    end\n")
         fi.write("end\n")
         fi.close()
@@ -362,6 +372,10 @@ class EntryPanel(scrolled.ScrolledPanel):
     def delete(self, event):
         self.model.delete(self.id2check[event.Id])
 
+    def text(self, event):
+        check = self.id2check[event.GetEventObject().Id]
+        check.text = event.GetString()
+
     def append(self, check):
         self.vbox = wx.BoxSizer(wx.VERTICAL)
         self.vbox.Add(wx.StaticLine(self, -1, size=(500,-1)), 0, wx.ALL, 5)
@@ -381,13 +395,20 @@ class EntryPanel(scrolled.ScrolledPanel):
 
             hbox.Add(desc, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
             if isinstance(check,AreaCheck):
-                choices = ["is plain","is not plain"]
+                choices = ["is plain","is not plain","contains text"]
                 lb = wx.Choice(self, -1, (100, 50), choices = choices)
-                if isinstance(check,AreaPlain):
-                    setdefault(lb,0)
-                else:
-                    setdefault(lb,1)
                 hbox.Add(lb, 0, wx.ALIGN_LEFT|wx.ALL, 5)
+                if isinstance(check, AreaPlain):
+                    setdefault(lb,0)
+                elif isinstance(check, AreaNotPlain):
+                    setdefault(lb,1)
+                else:
+                    setdefault(lb,2)
+                    tb = wx.TextCtrl(self, -1, check.text, size=(100, 25))
+                    self.id2check[tb.Id] = check
+                    self.Bind(wx.EVT_TEXT, self.text, tb)
+
+                    hbox.Add(tb, 0, wx.ALIGN_LEFT|wx.ALL, 5)
             elif isinstance(check,TwoPixelCheck):
                 choices = ["is the same as","is brighter than","is darker than"]
                 lb = wx.Choice(self, -1, (100, 50), choices = choices)

@@ -131,13 +131,21 @@ void textcallback(void*self, int*glyphs, int*advance, int nr, int fontid, int fo
 
     for(t=0;t<nr;t++)
     {
-	int xx = startx + advance[t]/20;
-	if(x|y|w|h) {
-	    /* TODO: this does not do any matrix handling yet */
+	int xx = startx + advance[t];
+	int yy = starty;
+	MATRIX*m = (MATRIX*)self;
+	
+	SPOINT p = {xx,yy};
+	p = swf_TurnPoint(p, m);
+	xx = p.x / 20;
+	yy = p.y / 20;
 
-	    if(xx < x || starty < y || xx > x+w || starty > y+h) {
+	if(x|y|w|h) {
+	    if(xx < x || yy < y || xx > x+w || yy > y+h) {
 		/* outside of bounding box */
-		continue;
+		///printf("(%d+%d,%d) -> (%d,%d)\n", startx, advance[t]/20, starty, xx, yy);
+		if(t==nr-1) return;
+		else continue;
 	    }
 	}
 
@@ -178,6 +186,7 @@ void fontcallback(void*self,U16 id,U8 * name)
   swf_FontFree(font);
 }
 
+TAG**id2tag = 0;
 
 int main (int argc,char ** argv)
 { 
@@ -199,6 +208,8 @@ int main (int argc,char ** argv)
 	if(!h) h = (swf.movieSize.ymax - swf.movieSize.ymin) / 20;
     }
 
+    id2tag = malloc(sizeof(TAG)*65536);
+
     fontnum = 0;
     swf_FontEnumerate(&swf,&fontcallback1, 0);
     fonts = (SWFFONT**)malloc(fontnum*sizeof(SWFFONT*));
@@ -209,7 +220,22 @@ int main (int argc,char ** argv)
     while (tag)
     { 
 	if(swf_isTextTag(tag)) {
-	    swf_ParseDefineText(tag, textcallback, 0);
+	    id2tag[swf_GetDefineID(tag)] = tag;
+	} else if(swf_isPlaceTag(tag)) {
+	    SWFPLACEOBJECT po;
+	    swf_SetTagPos(tag, 0);
+	    swf_GetPlaceObject(tag, &po);
+	    if(!po.move && id2tag[po.id]) {
+		TAG*text = id2tag[po.id];
+		swf_SetTagPos(text, 0);
+		swf_GetU16(text);
+		swf_GetRect(text, NULL);
+		swf_ResetReadBits(text);
+		MATRIX m,tm;
+		swf_GetMatrix(text, &tm);
+		swf_MatrixJoin(&m, &po.matrix, &tm);
+		swf_ParseDefineText(text, textcallback, &m);
+	    }
 	}
 	tag = tag->next;
     }
