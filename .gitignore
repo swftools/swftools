@@ -24,6 +24,7 @@ swfstrings
 swfc 
 swfbbox
 font2swf
+src/pdf2pdf
 gif2swf
 pdf2swf
 as3compile

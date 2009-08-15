@@ -375,7 +375,7 @@ static void move_to_root(actlist_t*a, segment_t*s)
     }
 }
 
-static int actlist_splay(actlist_t*a, point_t p1, point_t p2)
+static void actlist_splay(actlist_t*a, point_t p1, point_t p2)
 {
     if(!a->list) return;
 

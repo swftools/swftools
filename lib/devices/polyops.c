@@ -105,7 +105,11 @@ void polyops_startclip(struct _gfxdevice*dev, gfxline_t*line)
        a gfxline into a gfxpoly- for polygons which are too
        complex or just degenerate, this might fail. So handle
        all the cases where polygon conversion or intersection
-       might go awry */
+       might go awry 
+       UPDATE: this is not needed anymore. The new gfxpoly
+       implementation is stable enough so it always returns
+       a valid result. Still, it's good practice.
+     */
     if(!poly && !oldclip) {
 	i->out->startclip(i->out,line);
 	currentclip = 0;

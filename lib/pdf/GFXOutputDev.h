@@ -228,8 +228,8 @@ public:
 				   Stream *maskStr, int maskWidth, int maskHeight, GBool maskInvert, GfxImageColorMap*maskColorMap);
 
   void strokeGfxline(GfxState *state, gfxline_t*line, int flags);
-  void clipToGfxLine(GfxState *state, gfxline_t*line);
-  void fillGfxLine(GfxState *state, gfxline_t*line);
+  void clipToGfxLine(GfxState *state, gfxline_t*line, char evenodd);
+  void fillGfxLine(GfxState *state, gfxline_t*line, char evenodd);
 
   gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src);
 
@@ -284,6 +284,7 @@ public:
   int config_disable_polygon_conversion;
   int config_multiply;
   int config_bigchar;
+  int config_drawonlyshapes;
   double config_fontquality;
 };
 

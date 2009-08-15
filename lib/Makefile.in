@@ -3,9 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-DEVICES = devices/swf.$(O) #devices/lrf.$(O) devices/opengl.$(O)
-
-all: librfxswf$(A) libpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A) libocr$(A) $(DEVICES)
+all: librfxswf$(A) libpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A) libocr$(A)
 
 lame_objects = lame/psymodel.$(O) lame/fft.$(O) lame/newmdct.$(O) lame/quantize.$(O) lame/takehiro.$(O) lame/reservoir.$(O) lame/quantize_pvt.$(O) lame/vbrquantize.$(O) lame/encoder.$(O) lame/id3tag.$(O) lame/version.$(O) lame/tables.$(O) lame/util.$(O) lame/bitstream.$(O) lame/set_get.$(O) lame/VbrTag.$(O) lame/lame.$(O)
 lame_in_source = @lame_in_source@
@@ -21,7 +19,7 @@ gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfx
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c
 
 base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
-gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@
+gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
 
 rfxswf_objects=modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O)
 ocr_objects=gocr/box.$(O) gocr/database.$(O) gocr/detect.$(O) gocr/job.$(O) gocr/lines.$(O) gocr/list.$(O) gocr/ocr0.$(O) gocr/ocr0n.$(O) gocr/ocr1.$(O) gocr/otsu.$(O) gocr/output.$(O) gocr/pgm2asc.$(O) gocr/pixel.$(O) gocr/progress.$(O) gocr/remove.$(O) gocr/unicode.$(O)
@@ -168,7 +166,7 @@ uninstall:
 
 clean: 
 	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
-	for dir in modules devices swf as3 h.263;do rm -f $$dir/*.o $$dir/*.obj $$dir/*.lo $$dir/*.a $$dir/*.lib $$dir/*.la $$dir/gmon.out;done
+	for dir in modules devices swf as3 h.263 gfxpoly;do rm -f $$dir/*.o $$dir/*.obj $$dir/*.lo $$dir/*.a $$dir/*.lib $$dir/*.la $$dir/gmon.out;done
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..

@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) as3compile$(E) @PDF2SWF@
+programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) as3compile$(E) @PDF2SWF@ @PDF2PDF@
 opt_programs = swfbytes$(E)
 
 all: $(programs)
@@ -14,6 +14,8 @@ png2swf.$(O): png2swf.c
 	$(C) png2swf.c -o $@
 pdf2swf.$(O): pdf2swf.c
 	$(C) pdf2swf.c -o $@
+pdf2pdf.$(O): pdf2pdf.c
+	$(C) pdf2pdf.c -o $@
 gif2swf.$(O): gif2swf.c
 	$(C) gif2swf.c -o $@
 swfcombine.$(O): swfcombine.c
@@ -99,9 +101,12 @@ swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libb
 	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libgfxswf$(A) ../lib/libbase$(A) $(LIBS) 
 	$(STRIP) $@
 
-PDF2SWF_OBJ=../lib/libpdf$(A) ../lib/devices/polyops.$(O) ../lib/devices/swf.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
+PDF2SWF_OBJ=../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
 pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)
 	$(LL) pdf2swf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
+	$(STRIP) $@
+pdf2pdf$(E): pdf2pdf.$(O) $(PDF2SWF_OBJ)
+	$(LL) pdf2pdf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
 swfc$(E): parser.$(O) swfc.$(O) swfc-feedback.$(O) swfc-history.$(O) swfc-interpolation.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A) 
 	$(L) parser.$(O) swfc.$(O) swfc-feedback.$(O) swfc-history.$(O) swfc-interpolation.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)

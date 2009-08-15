@@ -130,6 +130,9 @@
 /* Define if you have the <zlib.h> header file.  */
 #undef HAVE_ZLIB_H
 
+/* Define if you have the <pdflib.h> header file.  */
+#undef HAVE_PDFLIB_H
+
 /* Define if you have the <avifile/version.h> header file.  */
 #undef HAVE_AVIFILE_VERSION_H
 
@@ -161,8 +164,10 @@
 #undef HAVE_OUTPUTDEV_H
 
 /* Define if you have the jpeg library (-ljpeg).  */
-/* Define if you have the jpeg library (-ljpeg).  */
 #undef HAVE_LIBJPEG
+
+/* Define if you have the jpeg library (-ljpeg).  */
+#undef HAVE_LIBPDF
 
 /* Define if you have the m library (-lm).  */
 #undef HAVE_LIBM

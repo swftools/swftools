@@ -23,6 +23,7 @@
 #define __q_h__
 
 #include <stdio.h>
+#include "mem.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -223,7 +223,8 @@ if test "x$ZLIBMISSING" = "xtrue";then
     echo
     exit
 fi
- 
+
+AC_CHECK_LIB(pdf, PDF_open_file,, PDFLIBMISSING=true)
 AC_CHECK_LIB(jpeg, jpeg_write_raw_data,, JPEGLIBMISSING=true)
 AC_CHECK_LIB(ungif, DGifOpen,, UNGIFMISSING=true)
 if test "$UNGIFMISSING";then
@@ -243,7 +244,7 @@ dnl Checks for header files.
  AC_HEADER_DIRENT
  AC_HEADER_STDC
 
- AC_CHECK_HEADERS(zlib.h gif_lib.h io.h wchar.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/mman.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h sys/time.h sys/resource.h)
+ AC_CHECK_HEADERS(zlib.h gif_lib.h io.h wchar.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/mman.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h sys/time.h sys/resource.h pdflib.h)
 
 AC_DEFINE_UNQUOTED([PACKAGE], ["$PACKAGE"], [Name of package])
 AC_DEFINE_UNQUOTED([VERSION], ["$VERSION"], [Version number of package])
@@ -389,6 +390,9 @@ if test "x$JPEGLIBMISSING" = "xtrue";then
     DISABLEJPEG2SWF=true
     PARTIAL=true
 fi
+if test "x$PDFLIBMISSING" = "xtrue";then
+    DISABLEPDF2PDF=true;
+fi
 #if test "x$T1LIBMISSING" = "xtrue";then
 #    MISSINGLIBS="${MISSINGLIBS} t1lib"
 #fi
@@ -398,6 +402,9 @@ if test "x$UNGIFMISSING" = "xtrue";then
     PARTIAL=true
 fi
 
+if test "x${ac_cv_header_pdflib_h}" '!=' "xyes";then
+    DISABLEPDF2PDF=true;
+fi
 if test "x${ac_cv_header_jpeglib_h}" '!=' "xyes"; then
     DISABLEPDF2SWF=true;
     DISABLEJPEG2SWF=true;
@@ -457,6 +464,16 @@ if test "x${DISABLEPDF2SWF}" = "xtrue"; then
 fi
 AC_SUBST(PDF2SWF)
 AC_SUBST(LIBPDF)
+
+PDF2PDF='pdf2pdf$(E)'
+DEVICE_PDF='devices/pdf.$(O)'
+if test "x${DISABLEPDF2PDF}" = "xtrue"; then
+  #echo "* Disabling pdf2pdf tool..."
+  PDF2PDF=
+  DEVICE_PDF=
+fi
+AC_SUBST(DEVICE_PDF)
+AC_SUBST(PDF2PDF)
 
 if test "x${ZLIBMISSING}" = "xtrue"; then
   echo

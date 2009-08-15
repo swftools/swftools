@@ -599,6 +599,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_remapunicode=0;
     this->config_transparent=0;
     this->config_extrafontdata = 0;
+    this->config_drawonlyshapes = 0;
     this->config_disable_polygon_conversion = 0;
     this->config_multiply = 1;
     this->page2page = 0;
@@ -615,6 +616,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_remapunicode = atoi(value);
     } else if(!strcmp(key,"transparent")) {
         this->config_transparent = atoi(value);
+    } else if(!strcmp(key,"drawonlyshapes")) {
+        this->config_drawonlyshapes = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
     } else if(!strcmp(key,"convertgradients")) {
@@ -1219,20 +1222,21 @@ gfxcolor_t getFillColor(GfxState * state)
     return col;
 }
 
-void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line) 
+void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line, char evenodd) 
 {
     gfxcolor_t col = getFillColor(state);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> fill %02x%02x%02x%02x", col.r, col.g, col.b, col.a);
+        msg("<trace> %sfill %02x%02x%02x%02x%s", evenodd?"eo":"", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
     device->fill(device, line, &col);
 }
 
-void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line) 
+void GFXOutputDev::clipToGfxLine(GfxState *state, gfxline_t*line, char evenodd) 
 {
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
+        msg("<trace> %sclip", evenodd?"eo":"");
         dump_outline(line);
     }
     gfxbbox_t bbox = gfxline_getbbox(line);
@@ -1252,7 +1256,7 @@ void GFXOutputDev::clip(GfxState *state)
 	gfxline_free(line);
 	line = line2;
     }
-    clipToGfxLine(state, line);
+    clipToGfxLine(state, line, 0);
     gfxline_free(line);
 }
 
@@ -1260,7 +1264,7 @@ void GFXOutputDev::eoClip(GfxState *state)
 {
     GfxPath * path = state->getPath();
     gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-    clipToGfxLine(state, line);
+    clipToGfxLine(state, line, 1);
     gfxline_free(line);
 }
 void GFXOutputDev::clipToStrokePath(GfxState *state)
@@ -1415,7 +1419,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     
     msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
 
-    if(render == RENDER_FILL || render == RENDER_INVISIBLE) {
+    if((render == RENDER_FILL && !config_drawonlyshapes) || render == RENDER_INVISIBLE) {
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
@@ -1453,11 +1457,11 @@ void GFXOutputDev::endString(GfxState *state)
 	   however */
 	device->setparameter(device, "mark","TXT");
 	if((render&3) == RENDER_FILL) {
-	    fillGfxLine(state, current_text_stroke);
+	    fillGfxLine(state, current_text_stroke, 0);
 	    gfxline_free(current_text_stroke);
 	    current_text_stroke = 0;
 	} else if((render&3) == RENDER_FILLSTROKE) {
-	    fillGfxLine(state, current_text_stroke);
+	    fillGfxLine(state, current_text_stroke, 0);
 	    strokeGfxline(state, current_text_stroke,0);
 	    gfxline_free(current_text_stroke);
 	    current_text_stroke = 0;
@@ -1477,7 +1481,7 @@ void GFXOutputDev::endTextObject(GfxState *state)
     
     if(current_text_clip) {
 	device->setparameter(device, "mark","TXT");
-	clipToGfxLine(state, current_text_clip);
+	clipToGfxLine(state, current_text_clip, 0);
 	device->setparameter(device, "mark","");
 	gfxline_free(current_text_clip);
 	current_text_clip = 0;
@@ -2473,7 +2477,7 @@ void GFXOutputDev::fill(GfxState *state)
         gfxline_free(line);
         line = line2;
     }
-    fillGfxLine(state, line);
+    fillGfxLine(state, line, 0);
     gfxline_free(line);
 }
 
@@ -2484,7 +2488,7 @@ void GFXOutputDev::eoFill(GfxState *state)
 
     GfxPath * path = state->getPath();
     gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
-    fillGfxLine(state, line);
+    fillGfxLine(state, line, 1);
     gfxline_free(line);
 }
 
