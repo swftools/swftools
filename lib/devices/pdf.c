@@ -43,11 +43,14 @@ int pdf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 void pdf_startpage(gfxdevice_t*dev, int width, int height)
 {
     internal_t*i = (internal_t*)dev->internal;
-   
-    i->tempfile = strdup("tmp.pdf");
-    PDF_open_file(i->p, i->tempfile);
-    PDF_set_parameter(i->p, "usercoordinates", "true");
-    PDF_set_parameter(i->p, "topdown", "true");
+
+    if(!i->tempfile) {
+	i->tempfile = strdup("tmp.pdf");
+	PDF_open_file(i->p, i->tempfile);
+	PDF_set_parameter(i->p, "usercoordinates", "true");
+	PDF_set_parameter(i->p, "topdown", "true");
+    }
+
     PDF_begin_page(i->p, width, height);
     PDF_set_parameter(i->p, "fillrule", "evenodd");
 }
@@ -169,8 +172,6 @@ void pdf_endpage(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
     PDF_end_page(i->p);
-    PDF_close(i->p);
-    PDF_delete(i->p);
 }
 
 typedef struct pdfresult_internal {
@@ -212,6 +213,9 @@ void* pdfresult_get(gfxresult_t*gfx, const char*name)
 gfxresult_t* pdf_finish(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
+    
+    PDF_close(i->p);
+    PDF_delete(i->p);
 
     gfxresult_t*result = (gfxresult_t*)malloc(sizeof(gfxresult_t));
     memset(result, 0, sizeof(gfxresult_t));
