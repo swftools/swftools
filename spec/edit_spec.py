@@ -293,7 +293,7 @@ class ImageWindow(wx.Window):
             if check:
                 self.model.delete(check)
             else:
-                p = slef.model.GetPixel(x,y)
+                p = self.model.getPixel(x,y)
                 color = p[0]<<16|p[1]<<8|p[2]
                 self.model.append(PixelColorCheck(x,y,color))
         else:
