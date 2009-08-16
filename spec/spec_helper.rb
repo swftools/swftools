@@ -91,6 +91,14 @@ class Pixel
 	"(#{@x},#{@y})"
     end
 end
+
+$tempfiles = []
+Kernel.at_exit do
+    $tempfiles.each do |file|
+	`rm -f #{file}`
+    end
+end
+
 class DocFile
     def initialize(filename, page)
 	@filename = filename
@@ -99,6 +107,7 @@ class DocFile
     def convert()
 	return if @swfname
 	@swfname = @filename.gsub(/.pdf$/i,"")+".swf"
+	$tempfiles += [@swfname]
 	`pdfinfo #{@filename}` =~ /Page size:\s*([0-9]+) x ([0-9]+) pts/
 	width,height = $1,$2
 	dpi = (72.0 * 612 / width.to_i).to_i
@@ -115,15 +124,14 @@ class DocFile
 	    raise ConversionFailed.new(output,@pngname) unless File.exists?(@pngname)
 	    @img = Magick::Image.read(@pngname).first
 	ensure
-	    `rm -f #{@swfname}`
 	    `rm -f #{@pngname}`
 	end
     end
     def get_text(x1,y1,x2,y2)
 	self.convert()
-	puts "swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}"
-	puts `swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`
-	`swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`
+	#puts "swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}"
+	#puts `swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`
+	`swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`.chomp
     end
     def get_area(x1,y1,x2,y2)
 	self.render()

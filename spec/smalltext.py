@@ -10,7 +10,7 @@ PDF_begin_page(p, 612, 200)
 font = PDF_load_font(p, "Helvetica", "host", "")
 
 PDF_setfont(p, font, 6.0)
-PDF_set_text_pos(p, 40, 100);PDF_show(p, "|")
+PDF_set_text_pos(p, 40, 100);PDF_show(p, "'")
 PDF_set_text_pos(p, 80, 100);PDF_show(p, "i")
 PDF_set_text_pos(p, 120, 100);PDF_show(p, "l")
 PDF_set_text_pos(p, 160, 100);PDF_show(p, "-")

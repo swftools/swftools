@@ -28,6 +28,7 @@
 #include <assert.h>
 #include "gfxtools.h"
 #include "gfxfont.h"
+#include "jpeg.h"
 
 typedef struct _linedraw_internal
 {
@@ -985,5 +986,20 @@ void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
 	}
 	line = line->next;
     }
+}
+
+void gfximage_save_jpeg(gfximage_t*img, char*filename, int quality)
+{
+    unsigned char*data = malloc(img->width*img->height*3);
+    int t;
+    int size = img->width*img->height;
+    int s = 0;
+    for(t=0;t<size;t++) {
+	data[s+0] = img->data[t].r;
+	data[s+1] = img->data[t].g;
+	data[s+2] = img->data[t].b;
+	s+=3;
+    }
+    jpeg_save(data, img->width, img->height, quality, filename);
 }
 

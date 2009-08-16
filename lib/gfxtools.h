@@ -85,6 +85,8 @@ gfxfont_t*gfxfontlist_findfont(gfxfontlist_t*list, char*id);
 char gfxfontlist_hasfont(gfxfontlist_t*list, gfxfont_t*font);
 void gfxfontlist_free(gfxfontlist_t*list, char deletefonts);
 
+void gfximage_save_jpeg(gfximage_t*img, char*filename, int quality);
+
 gfxbbox_t* gfxline_isrectangle(gfxline_t*_l);
 
 gfxline_t*gfxline_makerectangle(double x1, double y1, double x2, double y2);

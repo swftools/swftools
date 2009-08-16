@@ -24,6 +24,9 @@
 #include <unistd.h>
 #include <memory.h>
 #include <pdflib.h>
+#include <math.h>
+#include "../os.h"
+#include "../jpeg.h"
 #include "../types.h"
 #include "../mem.h"
 #include "../gfxdevice.h"
@@ -45,7 +48,7 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
     internal_t*i = (internal_t*)dev->internal;
 
     if(!i->tempfile) {
-	i->tempfile = strdup("tmp.pdf");
+	i->tempfile = strdup(mktempname(0));
 	PDF_open_file(i->p, i->tempfile);
 	PDF_set_parameter(i->p, "usercoordinates", "true");
 	PDF_set_parameter(i->p, "topdown", "true");
@@ -91,7 +94,7 @@ void pdf_startclip(gfxdevice_t*dev, gfxline_t*line)
     if(mkline(line, i->p))
 	PDF_clip(i->p);
     else   
-	; // TODO: not sure about this
+	; // TODO: strictly speaking, an empty clip clears everything
 
 }
 void pdf_endclip(gfxdevice_t*dev)
@@ -127,8 +130,20 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    //PDFLIB_API int PDFLIB_CALL
-    //PDF_load_image(i->pPDF *p, const char *imagetype, const char *filename, int len, const char *optlist);
+    double l1 = sqrt(matrix->m00*matrix->m00+matrix->m01*matrix->m01)*img->width;
+    double l2 = sqrt(matrix->m10*matrix->m10+matrix->m11*matrix->m11)*img->height;
+    double r = atan2(matrix->m01, matrix->m00);
+
+    /* fit_image needs the lower left corner of the image */
+    double x = matrix->tx + matrix->m10*img->height;
+    double y = matrix->ty + matrix->m11*img->height;
+
+    char*tempfile = mktempname(0);
+    char options[80];
+    sprintf(options, "boxsize {%f %f} fitmethod meet rotate %f", l1, l2, r*180/M_PI);
+    gfximage_save_jpeg(img, tempfile, 99);
+    int imgid = PDF_load_image(i->p, "jpeg", tempfile, 0, "");
+    PDF_fit_image(i->p, imgid, x, y, options);
 }
 
 void pdf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
