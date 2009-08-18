@@ -50,6 +50,7 @@ typedef struct _gfxpoint
 typedef struct _gfxfontlist
 {
     gfxfont_t*font;
+    void*user;
     struct _gfxfontlist*next;
 } gfxfontlist_t;
 
@@ -81,8 +82,10 @@ void gfxmatrix_multiply(gfxmatrix_t*m1, gfxmatrix_t*m2, gfxmatrix_t*dest);
 
 gfxfontlist_t* gfxfontlist_create();
 gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font);
+gfxfontlist_t*gfxfontlist_addfont2(gfxfontlist_t*list, gfxfont_t*font, void*user);
 gfxfont_t*gfxfontlist_findfont(gfxfontlist_t*list, char*id);
 char gfxfontlist_hasfont(gfxfontlist_t*list, gfxfont_t*font);
+void* gfxfontlist_getuserdata(gfxfontlist_t*list, const char*id);
 void gfxfontlist_free(gfxfontlist_t*list, char deletefonts);
 
 void gfximage_save_jpeg(gfximage_t*img, char*filename, int quality);

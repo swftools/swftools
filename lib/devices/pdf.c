@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <assert.h>
 #include <memory.h>
 #include <pdflib.h>
 #include <math.h>
@@ -35,6 +36,7 @@
 typedef struct _internal {
     PDF* p;
     char*tempfile;
+    gfxfontlist_t*fontlist;
 } internal_t;
 
 int pdf_setparameter(gfxdevice_t*dev, const char*key, const char*value)
@@ -90,7 +92,6 @@ void pdf_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
     PDF_save(i->p);
-    PDF_set_parameter(i->p, "fillrule", "evenodd");
     if(mkline(line, i->p))
 	PDF_clip(i->p);
     else   
@@ -119,7 +120,6 @@ void pdf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
     PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
-    PDF_set_parameter(i->p, "fillrule", "evenodd");
 	
     if(mkline(line, i->p)) {
 	PDF_fill(i->p);
@@ -151,30 +151,79 @@ void pdf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, g
     internal_t*i = (internal_t*)dev->internal;
 }
 
+static char type3 = 1;
+
 void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
+
+    if(type3) {
+	int fontid = 0;
+	if(!gfxfontlist_hasfont(i->fontlist, font)) {
+
+	    static int fontnr = 1;
+	    char fontname[32];
+	    sprintf(fontname, "font%d", fontnr++);
+	    int l = strlen(fontname);
+	    char fontname2[64];
+	    int t;
+	    for(t=0;t<l+1;t++) {
+		fontname2[t*2+0] = fontname[t];
+		fontname2[t*2+1] = 0;
+	    }
+
+	    PDF_begin_font(i->p, fontname2, l*2, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, "");
+	    int num = font->num_glyphs<256-32?font->num_glyphs:256-32;
+	    for(t=0;t<num;t++) {
+		gfxglyph_t*g = &font->glyphs[t];
+		gfxbbox_t bbox = gfxline_getbbox(g->line);
+		char name[32];
+		sprintf(name, "chr%d", t+32);
+		PDF_encoding_set_char(i->p, fontname, t+32, name, 0);
+		PDF_begin_glyph(i->p, name, g->advance, bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax);
+		if(mkline(g->line, i->p))
+		    PDF_fill(i->p);
+		PDF_end_glyph(i->p);
+	    }
+	    PDF_end_font(i->p);
+	    fontid = PDF_load_font(i->p, fontname2, l*2, fontname, "");
+	    
+	    i->fontlist = gfxfontlist_addfont2(i->fontlist, font, (void*)(ptroff_t)fontid);
+	}
+    }
 }
 
 void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     internal_t*i = (internal_t*)dev->internal;
+
     if(!font)
 	return;
-    /* align characters to whole pixels */
-    matrix->tx = (int)matrix->tx;
-    matrix->ty = (int)matrix->ty;
 
     gfxglyph_t*glyph = &font->glyphs[glyphnr];
-    gfxline_t*line2 = gfxline_clone(glyph->line);
-    gfxline_transform(line2, matrix);
     PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
-    PDF_set_parameter(i->p, "fillrule", "evenodd");
-    
-    if(mkline(line2, i->p)) {
-	PDF_fill(i->p);
+    char as_shape = 0;
+    if(!type3) as_shape=1;
+    if(glyphnr>256-32) as_shape=1;
+    gfxmatrix_dump(matrix, stdout, "");
+    if(fabs(matrix->m00 + matrix->m11) > 0.01) as_shape=1;
+    if(fabs(fabs(matrix->m01) + fabs(matrix->m10)) > 0.01) as_shape=1;
+
+    if(as_shape) {
+	gfxline_t*line2 = gfxline_clone(glyph->line);
+	gfxline_transform(line2, matrix);
+	if(mkline(line2, i->p)) {
+	    PDF_fill(i->p);
+	}
+	gfxline_free(line2);
+    } else {
+	assert(gfxfontlist_hasfont(i->fontlist, font));
+	int fontid = (int)(ptroff_t)gfxfontlist_getuserdata(i->fontlist, font->id);
+	PDF_setfont(i->p, fontid, matrix->m00);
+	char name[32];
+	sprintf(name, "%c\0", glyphnr+32);
+	PDF_show_xy2(i->p, name, strlen(name), matrix->tx, matrix->ty);
     }
-    gfxline_free(line2);
     return;
 }
 

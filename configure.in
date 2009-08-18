@@ -308,8 +308,6 @@ else
 fi
 AC_SUBST(lame_in_source)
 
-AC_DEFINE([INTERNAL_LIBART], [1], [use internal libart library])
-art_in_source='$(art_objects)'
 splash_in_source='$(splash_objects)'
 xpdf_in_source='$(xpdf_objects)'
 
@@ -331,7 +329,6 @@ dnl         LIBS="$LIBS $POPPLER_LIBS"
 dnl     fi
 dnl fi
 
-AC_SUBST([art_in_source])
 AC_SUBST([xpdf_in_source])
 AC_SUBST([splash_in_source])
 

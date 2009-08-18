@@ -40,6 +40,8 @@
 
 static gfxsource_t*driver = 0;
 
+static int maxwidth = 0;
+static int maxheight = 0;
 static char * outputname = 0;
 static int loglevel = 3;
 static char * pagerange = 0;
@@ -98,6 +100,16 @@ int args_callback_option(char*name,char*val) {
 	    driver->set_parameter(driver, s,"1");
         }
         free(s);
+	return 1;
+    }
+    else if (!strcmp(name, "X"))
+    {
+        maxwidth = atoi(val);
+	return 1;
+    }
+    else if (!strcmp(name, "Y"))
+    {
+        maxheight = atoi(val);
 	return 1;
     }
     else if (!strcmp(name, "V"))
@@ -193,7 +205,7 @@ int main(int argn, char *argv[])
     }
 
     gfxdocument_t* doc = driver->open(driver, filename);
-    doc->set_parameter(doc, "drawonlyshapes", "1");
+    //doc->set_parameter(doc, "drawonlyshapes", "1");
     doc->set_parameter(doc, "disable_polygon_conversion", "1");
 
     if(!doc) {
@@ -207,6 +219,13 @@ int main(int argn, char *argv[])
     /*gfxdevice_t wrap;
     gfxdevice_removeclippings_init(&wrap, out);
     out = &wrap;*/
+
+    gfxdevice_t rescale;
+    if(maxwidth || maxheight) {
+        gfxdevice_rescale_init(&rescale, out, maxwidth, maxheight, 0);
+        out = &rescale;
+        out->setparameter(out, "keepratio", "1");
+    }
 
     int pagenr;
     for(pagenr = 1; pagenr <= doc->num_pages; pagenr++) 

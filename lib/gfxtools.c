@@ -795,7 +795,18 @@ char gfxfontlist_hasfont(gfxfontlist_t*list, gfxfont_t*font)
     }
     return 0;
 }
-gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
+void*gfxfontlist_getuserdata(gfxfontlist_t*list, const char*id)
+{
+    gfxfontlist_t*l = list;
+    while(l) {
+	if(!strcmp((char*)l->font->id, id)) {
+	    return l->user;
+	}
+	l = l->next;
+    }
+    return 0;
+}
+gfxfontlist_t*gfxfontlist_addfont2(gfxfontlist_t*list, gfxfont_t*font, void*user)
 {
     gfxfontlist_t*last=0,*l = list;
     while(l) {
@@ -810,6 +821,7 @@ gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
     }
     l = (gfxfontlist_t*)rfx_calloc(sizeof(gfxfontlist_t));
     l->font = font;
+    l->user = user;
     l->next = 0;
     if(last) {
 	last->next = l;
@@ -817,6 +829,10 @@ gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
     } else {
 	return l;
     }
+}
+gfxfontlist_t*gfxfontlist_addfont(gfxfontlist_t*list, gfxfont_t*font)
+{
+    return gfxfontlist_addfont2(list, font, 0);
 }
 void gfxfontlist_free(gfxfontlist_t*list, char deletefonts)
 {
