@@ -53,7 +53,8 @@ class Area
 	@rgb.minmax != [@rgb[0],@rgb[0]] or raise AreaError.new(self,"is plain colored")
     end
     def should_contain_text(text)
-	@file.get_text(@x1,@y1,@x2,@y2) == text or raise AreaError.new(self, "doesn't contain text #{text}")
+	text2 = @file.get_text(@x1,@y1,@x2,@y2) 
+	text2 == text or raise AreaError.new(self, "doesn't contain text \"#{text}\" (found: \"#{text2}\")")
     end
     def to_s
 	"(#{@x1},#{@y1},#{@x2},#{@y2})"
