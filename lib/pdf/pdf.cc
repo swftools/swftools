@@ -394,13 +394,24 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 }
 
 
+/* shortcut to InfoOutputDev.cc */
+extern int config_addspace;
+extern int config_fontquality;
+extern int config_bigchar;
+
 static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value)
 {
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
-    parameterlist_t*p = &i->parameters;
+
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strncmp(name, "fontdir", strlen("fontdir"))) {
         addGlobalFontDir(value);
+    } else if(!strcmp(name, "detectspaces")) {
+	config_addspace = atoi(value);
+    } else if(!strcmp(name, "fontquality")) {
+	config_fontquality = atoi(value);
+    } else if(!strcmp(name, "bigchar")) {
+	config_bigchar = atoi(value);
     } else if(!strcmp(name, "pages")) {
 	global_page_range = strdup(value);
     } else if(!strncmp(name, "font", strlen("font")) && name[4]!='q') {

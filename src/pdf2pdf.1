@@ -1,0 +1,40 @@
+.TH pdf2pdf "1" "August 2009" "pdf2pdf" "swftools"
+.SH NAME
+pdf2pdf - Runs a pdf through the pdf2swf conversion engine, and writes it back to a pdf.
+
+.SH Synopsis
+.B pdf2pdf <pdffile>
+
+.SH DESCRIPTION
+Runs a pdf through the pdf2swf conversion engine, and writes it 
+back to a pdf.
+
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR 
+    Print short help message and exit
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR 
+    Be verbose. Use more than one -v for greater effect.
+.TP
+\fB\-p\fR, \fB\-\-pages\fR \fIpages\fR
+    Pages to convert
+.TP
+\fB\-X\fR, \fB\-\-width\fR \fIwidth\fR
+    Make sure the output pdf is \fIwidth\fR pixels wide
+.TP
+\fB\-Y\fR, \fB\-\-height\fR \fIheight\fR
+    Make sure the output pdf is \fIheight\fR pixels high
+.TP
+\fB\-s\fR, \fB\-\-set\fR \fIparameter>=<value\fR
+    Set \fIparameter\fR to <value>
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIfilename\fR
+    Write output to file \fIfilename\fR. (If not given, the output will go
+    to a file with the extension .print.pdf)
+.TP
+\fB\-V\fR, \fB\-\-version\fR 
+    Print version info and exit
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

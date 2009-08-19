@@ -274,6 +274,12 @@ public:
   FontInfo*current_fontinfo;
   gfxmatrix_t current_font_matrix;
 
+  gfxfont_t* last_char_gfxfont;
+  int last_char;
+  double last_char_x;
+  double last_char_y;
+  char last_char_was_space;
+
   /* config */
   int config_use_fontconfig;
   int config_break_on_warning;

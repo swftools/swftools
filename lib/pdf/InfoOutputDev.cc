@@ -16,8 +16,9 @@
 #include "GfxState.h"
 #include "../log.h"
 #include <math.h>
+#include <assert.h>
 
-/* there's not yet a way to set this */
+int config_addspace = 1;
 int config_fontquality = 10;
 int config_bigchar = 0;
 
@@ -70,6 +71,7 @@ FontInfo::FontInfo(char*id)
     this->lastx = 0;
     this->lasty = 0;
     this->gfxfont = 0;
+    this->space_char = -1;
 }
 FontInfo::~FontInfo()
 {
@@ -92,7 +94,42 @@ FontInfo::~FontInfo()
         gfxfont_free(this->gfxfont);
 }
 
-gfxfont_t* createGfxFont(FontInfo*src)
+static int findSpace(gfxfont_t*font)
+{
+    int first_space = -1;
+    int t;
+    for(t=0;t<font->num_glyphs;t++) {
+	gfxglyph_t*g = &font->glyphs[t];
+	if(GLYPH_IS_SPACE(g)) {
+	    if(g->unicode == 32) return t;
+	    if(first_space<0)
+		first_space = t;
+	}
+    }
+    if(GLYPH_IS_SPACE(&font->glyphs[32])) {
+	return 32;
+    }
+    return first_space;
+}
+
+static int addSpace(gfxfont_t*font)
+{
+    font->num_glyphs++;
+    font->glyphs = (gfxglyph_t*)realloc(font->glyphs, sizeof(gfxglyph_t)*font->num_glyphs);
+    gfxglyph_t*g = &font->glyphs[font->num_glyphs-1];
+    memset(g, 0, sizeof(*g));
+    g->unicode = 32;
+    //g->advance = font->ascent;
+    g->advance = fabs(font->ascent - font->descent)*2 / 3;
+    if(font->max_unicode > 32)
+	font->unicode2glyph[32] = font->num_glyphs-1;
+#if 0
+    g->line = gfxline_makerectangle(0, -font->ascent, g->advance, font->descent);
+#endif
+    return font->num_glyphs-1;
+}
+
+static gfxfont_t* createGfxFont(FontInfo*src)
 {
     gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
     memset(font, 0, sizeof(gfxfont_t));
@@ -185,6 +222,15 @@ gfxfont_t* FontInfo::getGfxFont()
     if(!this->gfxfont) {
         this->gfxfont = createGfxFont(this);
         this->gfxfont->id = strdup(this->id);
+	this->space_char = findSpace(this->gfxfont);
+	if(this->space_char>=0) {
+	    msg("<debug> Font %s has space char %d (unicode=%d)", 
+		    this->id, this->space_char, 
+		    this->gfxfont->glyphs[this->space_char].unicode);
+	} else if(config_addspace) {
+	    this->space_char = addSpace(this->gfxfont);
+	    msg("<debug> Appending space char to font %s, position %d", this->gfxfont->id, this->space_char);
+	}
     }
     return this->gfxfont;
 }
@@ -340,7 +386,7 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
 	g->advance = currentfont->splash_font->last_advance;
 	g->unicode = 0;
     }
-    if(uLen && (u[0]>=32 && u[0]<g->unicode || !g->unicode)) {
+    if(uLen && ((u[0]>=32 && u[0]<g->unicode) || !g->unicode)) {
 	g->unicode = u[0];
     }
     if(currentfont->lastchar>=0 && currentfont->lasty == y) {

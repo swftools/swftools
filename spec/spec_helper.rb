@@ -112,7 +112,7 @@ class DocFile
 	`pdfinfo #{@filename}` =~ /Page size:\s*([0-9]+) x ([0-9]+) pts/
 	width,height = $1,$2
 	dpi = (72.0 * 612 / width.to_i).to_i
-	output = `pdf2swf --flatten -s zoom=#{dpi} -p #{@page} #{@filename} -o #{@swfname} 2>&1`
+	output = `pdf2swf -f --flatten -s zoom=#{dpi} -p #{@page} #{@filename} -o #{@swfname} 2>&1`
 	#output = `pdf2swf -s zoom=#{dpi} --flatten -p #{@page} #{@filename} -o #{@swfname} 2>&1`
 	raise ConversionFailed.new(output,@swfname) unless File.exists?(@swfname)
     end

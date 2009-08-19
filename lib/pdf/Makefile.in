@@ -34,17 +34,17 @@ fonts.$(O): fonts.c
 	$(C) fonts.c -o $@
 cmyk.$(O): cmyk.cc
 	$(CC) -I ./ -I xpdf cmyk.cc -o $@
-GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h CommonOutputDev.h ../gfxpoly.h
+GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h
 	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
-BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h
+BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf BitmapOutputDev.cc -o $@
-FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOutputDev.h
+FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf FullBitmapOutputDev.cc -o $@
-DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h
+DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf DummyOutputDev.cc -o $@
-pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h
+pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
 
 xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc

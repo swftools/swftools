@@ -125,13 +125,16 @@ int args_callback_option(char*name,char*val) {
     return 0;
 }
 
-struct options_t options[] =
-{{"o","output"},
- {"q","quiet"},
- {"V","version"},
- {"s","set"},
- {"p","pages"},
- {0,0}
+static struct options_t options[] = {
+{"h", "help"},
+{"v", "verbose"},
+{"p", "pages"},
+{"X", "width"},
+{"Y", "height"},
+{"s", "set"},
+{"o", "output"},
+{"V", "version"},
+{0,0}
 };
 
 int args_callback_longoption(char*name,char*val) {
@@ -168,8 +171,20 @@ int args_callback_command(char*name, char*val) {
     return 0;
 }
 
-void args_callback_usage(char*name)
+void args_callback_usage(char *name)
 {
+    printf("\n");
+    printf("Usage: %s <pdffile>\n", name);
+    printf("\n");
+    printf("-h , --help                    Print short help message and exit\n");
+    printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");
+    printf("-p , --pages <pages>           Pages to convert\n");
+    printf("-X , --width <width>           Make sure the output pdf is <width> pixels wide\n");
+    printf("-Y , --height <height>         Make sure the output pdf is <height> pixels high\n");
+    printf("-s , --set <parameter>=<value>    Set <parameter> to <value>\n");
+    printf("-o , --output <filename>       Write output to file <filename>.\n");
+    printf("-V , --version                 Print version info and exit\n");
+    printf("\n");
 }
 
 int main(int argn, char *argv[])

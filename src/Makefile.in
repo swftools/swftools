@@ -97,8 +97,8 @@ as3compile$(E): as3compile.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 jpeg2swf$(E): jpeg2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) jpeg2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
-swfrender$(E): swfrender.$(O) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) ../lib/libgfxswf$(A)
-	$(L) swfrender.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libgfxswf$(A) ../lib/libbase$(A) $(LIBS) 
+swfrender$(E): swfrender.$(O) ../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
+	$(L) swfrender.$(O) -o $@ ../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) $(LIBS) 
 	$(STRIP) $@
 
 PDF2SWF_OBJ=../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
@@ -137,6 +137,7 @@ doc:
 	perl ../parsedoc.pl swfdump.doc
 	perl ../parsedoc.pl swfc.doc
 	perl ../parsedoc.pl as3compile.doc
-	#perl ../parsedoc.pl swfbytes.doc
+	perl ../parsedoc.pl swfbytes.doc
+	perl ../parsedoc.pl pdf2pdf.doc
 
 .PHONY: clean doc 

@@ -1416,10 +1416,35 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     gfxmatrix_t m = this->current_font_matrix;
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
     //m.tx += originX; m.ty += originY;
-    
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
 
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
+    
     if((render == RENDER_FILL && !config_drawonlyshapes) || render == RENDER_INVISIBLE) {
+	int space = this->current_fontinfo->space_char;
+	if(config_extrafontdata && space>=0 && m.m00 && !m.m01) {
+	    /* space char detection */
+	    if(last_char_gfxfont == current_gfxfont && 
+	       last_char_y == m.ty &&
+	       !last_char_was_space) {
+		double expected_x = last_char_x + current_gfxfont->glyphs[last_char].advance*m.m00;
+		int space = this->current_fontinfo->space_char;
+		if(m.tx - expected_x >= m.m00*64) {
+		    msg("<debug> There's a %f (%f) pixel gap between char %d and char %d, I'm inserting a space here", 
+			    m.tx-expected_x, 
+			    (m.tx-expected_x)/m.m00,
+			    last_char, glyphid);
+		    gfxmatrix_t m2 = m;
+		    m2.tx = expected_x + (m.tx - expected_x - current_gfxfont->glyphs[space].advance*m.m00)/2;
+		    if(m2.tx < expected_x) m2.tx = expected_x;
+		    device->drawchar(device, current_gfxfont, space, &col, &m2);
+		}
+	    }
+	    last_char_gfxfont = current_gfxfont;
+	    last_char = glyphid;
+	    last_char_x = m.tx;
+	    last_char_y = m.ty;
+	    last_char_was_space = GLYPH_IS_SPACE(&current_gfxfont->glyphs[glyphid]);
+	}
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     } else {
 	msg("<debug> Drawing glyph %d as shape", charid);
@@ -1605,6 +1630,8 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     states[statepos].dashPattern = 0;
     states[statepos].dashLength = 0;
     states[statepos].dashStart = 0;
+    
+    this->last_char_gfxfont = 0;
 }
 
 

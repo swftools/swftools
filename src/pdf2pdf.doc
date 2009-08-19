@@ -1,0 +1,29 @@
+Usage: %s <pdffile>
+
+Runs a pdf through the pdf2swf conversion engine, and writes it back to a pdf.
+
+Runs a pdf through the pdf2swf conversion engine, and writes it 
+back to a pdf.
+
+-h, --help
+    Print short help message and exit
+-v, --verbose
+    Be verbose. Use more than one -v for greater effect.
+-p, --pages <pages>
+    Pages to convert
+-X, --width <width>
+    Make sure the output pdf is <width> pixels wide
+-Y, --height <height>
+    Make sure the output pdf is <height> pixels high
+-s, --set <parameter>=<value>
+    Set <parameter> to <value>
+-o, --output <filename>
+    Write output to file <filename>.
+    Write output to file <filename>. (If not given, the output will go
+    to a file with the extension .print.pdf)
+-V, --version
+    Print version info and exit
+
+.SH AUTHOR
+
+Matthias Kramm <kramm@quiss.org>

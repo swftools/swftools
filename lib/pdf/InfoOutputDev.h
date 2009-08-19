@@ -46,6 +46,7 @@
 #include "../gfxfont.h"
 
 #define INTERNAL_FONT_SIZE 1024.0
+#define GLYPH_IS_SPACE(g) ((!(g)->line || ((g)->line->type==gfx_moveTo && !(g)->line->next)) && (g)->advance)
 
 struct GlyphInfo
 {
@@ -83,6 +84,7 @@ public:
     int*charid2glyph;
     SplashFont*splash_font;
     char seen;
+    int space_char;
 };
 
 extern char*getFontID(GfxFont*font);
