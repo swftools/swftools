@@ -106,7 +106,7 @@ static int findSpace(gfxfont_t*font)
 		first_space = t;
 	}
     }
-    if(GLYPH_IS_SPACE(&font->glyphs[32])) {
+    if(font->num_glyphs>32 && GLYPH_IS_SPACE(&font->glyphs[32])) {
 	return 32;
     }
     return first_space;
