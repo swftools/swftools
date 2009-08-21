@@ -1877,6 +1877,13 @@ void GFXOutputDev::restoreState(GfxState *state) {
   }
   if(states[statepos].state!=state) {
       msg("<fatal> bad state nesting");
+      if(verbose) {
+	  int t;
+	  for(t=0;t<=statepos;t++) {
+	      printf("%08x ", states[t].state);
+	  }
+	  printf("\n");
+      }
       exit(1);
   }
   states[statepos].state=0;
@@ -2654,11 +2661,7 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
     
     this->device = states[statepos].olddevice;
     if(!this->device) {
-	msg("<fatal> Bad state nesting in transparency group");
-	msg("<fatal> Notice: this is a known problem, which will be fixed in 0.9.1");
-	msg("<fatal> In the meantime, please convert the file with -s poly2bitmap");
-	restoreState(state);
-	this->device = states[statepos].olddevice;
+	msg("<error> Invalid state nesting");
     }
     states[statepos].olddevice = 0;
 

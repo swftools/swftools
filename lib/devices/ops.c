@@ -66,7 +66,7 @@ inline gfxcolor_t transform_color(internal_t*i, gfxcolor_t*col)
     col2.r = col->r;
     col2.g = col->g;
     col2.b = col->b;
-    col2.a = (col->a * i->alpha)>>8;
+    col2.a = (col->a * i->alpha)/255;
     return col2;
 }
 

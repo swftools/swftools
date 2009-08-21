@@ -992,3 +992,21 @@ diff -u -r1.5 -r1.6
        }
        dx *= state->getHorizScaling();
        dy *= state->getFontSize();
+@@ -3824,6 +3833,7 @@
+     out->beginTransparencyGroup(state, bbox, blendingColorSpace,
+ 				isolated, knockout, softMask);
+   }
++  GfxState*old_state = state;
+ 
+   // set new base matrix
+   for (i = 0; i < 6; ++i) {
+@@ -3835,6 +3845,9 @@
+   display(str, gFalse);
+ 
+   if (softMask || transpGroup) {
++    // restore graphics state
++    while(state != old_state)
++	restoreState();
+     out->endTransparencyGroup(state);
+   }
+ 
