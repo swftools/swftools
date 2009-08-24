@@ -4,7 +4,7 @@ WINDRES=/opt/xmingw/bin/i386-mingw32msvc-windres
 
 LICENSE=gpl.c
 
-all: files1.exe files2.exe uninstall.exe mkarchive
+all: files1.exe uninstall.exe mkarchive
 
 LIBS=-lgdi32 -lshlwapi -lcomctl32 -lshell32 -lole32 -luuid
 
@@ -14,11 +14,11 @@ files1.c: ../win32/*.exe mkarchive uninstall.exe
 	cd ../win32;../installer/mkarchive `find`
 	mv ../win32/crnfiles.c ./files1.c
 
-files2.c: ../win32_gui/*.exe ../win32_gui/*.swf mkarchive uninstall.exe
-	cp uninstall.exe ../win32_gui/
-	CWD=`pwd`
-	cd ../win32_gui;../installer/mkarchive `find`
-	mv ../win32_gui/crnfiles.c ./files2.c
+#files2.c: ../win32_gui/*.exe ../win32_gui/*.swf mkarchive uninstall.exe
+#	cp uninstall.exe ../win32_gui/
+#	CWD=`pwd`
+#	cd ../win32_gui;../installer/mkarchive `find`
+#	mv ../win32_gui/crnfiles.c ./files2.c
 
 %.o: %.c
 	$(CC) -c $<
@@ -27,7 +27,7 @@ mkarchive: mkarchive.c
 	gcc mkarchive.c -o mkarchive -lz
 
 crnfiles1.o: crnfiles1.c
-crnfiles2.o: crnfiles2.c
+#crnfiles2.o: crnfiles2.c
 
 #depack.o: depack.c depack.h Makefile
 #	$(CC) -c depack.c -o depack.o

@@ -8,12 +8,21 @@ ln -s ./ ${name}
 cd lib/action;make generated >/dev/null 2>&1;cd ../..
 
 SOURCES="${name}/src/swfcombine.1 \
-${name}/src/swfstrings.1 ${name}/src/swfdump.1 ${name}/src/swfextract.1 \
-${name}/src/jpeg2swf.1 ${name}/src/png2swf.1 ${name}/src/pdf2swf.1 \
-${name}/src/gif2swf.1 ${name}/src/wav2swf.1 ${name}/src/swfc.1 \
-${name}/src/swfbbox.1 ${name}/src/font2swf.1 ${name}/src/swfrender.1 \
+${name}/src/swfstrings.1 \
+${name}/src/swfdump.1 \
+${name}/src/swfextract.1 \
+${name}/src/jpeg2swf.1 \
+${name}/src/png2swf.1 \
+${name}/src/pdf2swf.1 \
+${name}/src/gif2swf.1 \
+${name}/src/wav2swf.1 \
+${name}/src/swfc.1 \
+${name}/src/swfbbox.1 \
+${name}/src/font2swf.1 \
+${name}/src/swfrender.1 \
 ${name}/src/as3compile.1 \
 ${name}/src/swfbytes.1 \
+${name}/src/pdf2pdf.1 \
 ${name}/src/swfcombine.c \
 ${name}/src/swfstrings.c \
 ${name}/src/swfdump.c \
@@ -25,6 +34,7 @@ ${name}/src/png2swf.c \
 ${name}/src/gif2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/pdf2swf.c \
+${name}/src/pdf2pdf.c \
 ${name}/src/swfc.c \
 ${name}/src/swfc-feedback.c \
 ${name}/src/swfc-history.c \
@@ -216,6 +226,8 @@ ${name}/lib/devices/render.c \
 ${name}/lib/devices/render.h \
 ${name}/lib/devices/text.c \
 ${name}/lib/devices/text.h \
+${name}/lib/devices/pdf.c \
+${name}/lib/devices/pdf.h \
 ${name}/lib/devices/polyops.c \
 ${name}/lib/devices/polyops.h \
 ${name}/lib/devices/record.c \
@@ -409,9 +421,10 @@ ${name}/lib/python/tagmap.c \
 ${name}/lib/python/tagmap.h \
 ${name}/setup.py"
 
-WXPDF2SWF=" \
-${name}/wx/pdf2swf.py \
-${name}/wx/images.py"
+WXPDF2SWF="" #TODO
+#WXPDF2SWF=" \
+#${name}/wx/pdf2swf.py \
+#${name}/wx/images.py"
 
 CONFIGURE="${name}/configure.in \
 ${name}/configure \
@@ -433,8 +446,7 @@ ${name}/missing \
 ${name}/ltmain.sh"
 
 DOC="${name}/doc/fileformat.sc \
-${name}/ChangeLog \
-${name}/FAQ"
+${name}/ChangeLog"
 
 tar -chf ${name}.tar \
 ${SOURCES} ${AVI2SWF} ${MAKEFILES} ${DOC} ${LIB} ${PYTHON} ${WXPDF2SWF} ${CONFIGURE} \

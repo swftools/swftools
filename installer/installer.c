@@ -44,6 +44,7 @@ static char path_programfiles[MAX_PATH] = "\0";
 static char pathBuf[MAX_PATH];
 static int do_abort = 0;
 
+static char* pdf2swf_dir;
 static char* pdf2swf_path;
 
 static char registry_path[1024];
@@ -557,7 +558,8 @@ static HRESULT (WINAPI *f_SHGetSpecialFolderPath)(HWND hwnd, LPTSTR lpszPath, in
 
 BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if(message == WM_INITDIALOG) {
-	pdf2swf_path = concatPaths(install_path, "pdf2swf_gui.exe");
+	pdf2swf_dir = concatPaths(install_path, "gpdf2swf");
+	pdf2swf_path = concatPaths(pdf2swf_dir, "gpdf2swf.exe");
 	FILE*fi = fopen(pdf2swf_path, "rb");
 	if(fi) {
 	    printf("a GUI program exists, creating desktop/startmenu links\n");
@@ -623,7 +625,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	    if(config_createDesktop && path_desktop[0]) {
 		char* linkName = concatPaths(path_desktop, "pdf2swf.lnk");
                 printf("Creating desktop link %s -> %s\n", linkName, pdf2swf_path);
-		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, install_path)) {
+		if(!CreateShortcut(pdf2swf_path, "pdf2swf", linkName, 0, 0, 0, pdf2swf_dir)) {
 		    MessageBox(0, "Couldn't create desktop shortcut", INSTALLER_NAME, MB_OK);
 		    return 1;
 		}
@@ -633,7 +635,7 @@ BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		CreateDirectory(group, 0);
                 addDir(group);
 		char* linkName = concatPaths(group, "pdf2swf.lnk");
-		if(!CreateShortcut(pdf2swf_path, "pdf2swf", concatPaths(group, "pdf2swf.lnk"), 0, 0, 0, install_path) ||
+		if(!CreateShortcut(pdf2swf_path, "pdf2swf", concatPaths(group, "pdf2swf.lnk"), 0, 0, 0, pdf2swf_dir) ||
 		   !CreateShortcut(uninstall_path, "uninstall", concatPaths(group, "uninstall.lnk"), 0, 0, 0, install_path)) {
 		    MessageBox(0, "Couldn't create start menu entry", INSTALLER_NAME, MB_OK);
 		    return 1;
