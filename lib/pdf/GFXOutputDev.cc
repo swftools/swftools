@@ -589,6 +589,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->user_clipy1 = 0;
     this->user_clipx2 = 0;
     this->user_clipy2 = 0;
+    this->current_gfxfont = 0;
     this->current_fontinfo = 0;
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
@@ -1227,7 +1228,7 @@ void GFXOutputDev::fillGfxLine(GfxState *state, gfxline_t*line, char evenodd)
     gfxcolor_t col = getFillColor(state);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
-        msg("<trace> %sfill %02x%02x%02x%02x%s", evenodd?"eo":"", col.r, col.g, col.b, col.a);
+        msg("<trace> %sfill %02x%02x%02x%02x", evenodd?"eo":"", col.r, col.g, col.b, col.a);
         dump_outline(line);
     }
     device->fill(device, line, &col);
