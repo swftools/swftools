@@ -273,11 +273,12 @@ RFX_CHECK_FREETYPE
 
 RFX_CHECK_FONTCONFIG
 
-RFX_CHECK_OPENGL
-if test "$HAVE_OPENGL";then
-    DEVICE_OPENGL='devices/opengl.$(O)'
-    AC_SUBST(DEVICE_OPENGL)
-fi
+# RFX_CHECK_OPENGL
+# if test "$HAVE_OPENGL";then
+#     DEVICE_OPENGL='devices/opengl.$(O)'
+#     AC_SUBST(DEVICE_OPENGL)
+# fi
+AC_SUBST(DEVICE_OPENGL)
 
 lame_in_source= 
 lame_makefile=
