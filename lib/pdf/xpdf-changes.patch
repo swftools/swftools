@@ -468,30 +468,6 @@ diff -u -r1.7 -r1.8
  #endif
  #include <string.h>
  #include <ctype.h>
-Index: config.h
---- config.h	2007-09-09 12:11:20.000000000 +0200
-+++ config.h	2007-09-09 12:11:40.000000000 +0200
-@@ -53,9 +53,9 @@
- 
- // user config file name, relative to the user's home directory
- #if defined(VMS) || (defined(WIN32) && !defined(__CYGWIN32__))
--#define xpdfUserConfigFile "xpdfrc"
-+#define xpdfUserConfigFile "pdf2swf.conf"
- #else
--#define xpdfUserConfigFile ".xpdfrc"
-+#define xpdfUserConfigFile ".pdf2swf.conf"
- #endif
- 
- // system config file name (set via the configure script)
-@@ -64,7 +64,7 @@
- #else
- // under Windows, we get the directory with the executable and then
- // append this file name
--#define xpdfSysConfigFile "xpdfrc"
-+#define xpdfSysConfigFile "pdf2swf.conf"
- #endif
- 
- //------------------------------------------------------------------------
 Index: gfile.h
 ===================================================================
 RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/gfile.h,v
