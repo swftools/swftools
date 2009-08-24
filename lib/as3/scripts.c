@@ -31,7 +31,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
     int has_buttons = 0;
     TAG*tag=swf->firstTag;
 
-    void*md5 = init_md5();
+    void*md5 = initialize_md5();
 
     while(tag) {
         if(tag->id == ST_SHOWFRAME)

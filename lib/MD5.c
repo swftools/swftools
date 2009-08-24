@@ -176,7 +176,7 @@ void hash_md5(const unsigned char*buf, int len, unsigned char*dest)
     MD5Final(dest, &ctx);
 }
 
-void* init_md5()
+void* inititialize_md5()
 {
     MD5_CTX* ctx = malloc(sizeof(MD5_CTX));
     memset(ctx, 0, sizeof(MD5_CTX));

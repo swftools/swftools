@@ -19,7 +19,7 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
 	exit(1);
     }
 
-    void*md5 = init_md5();
+    void*md5 = initialize_md5();
    
     int s,t;
     gfxpolystroke_t*stroke = current_polygon->strokes;
