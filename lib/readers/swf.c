@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <assert.h>
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
@@ -698,12 +699,20 @@ gfxdocument_t*swf_open(gfxsource_t*src, const char*filename)
     return swf_doc;
 }
 
+static void swf_destroy(gfxsource_t*src)
+{
+    memset(src, 0, sizeof(*src));
+    free(src);
+}
+
+
 gfxsource_t*gfxsource_swf_create()
 {
     gfxsource_t*src = (gfxsource_t*)malloc(sizeof(gfxsource_t));
     memset(src, 0, sizeof(gfxsource_t));
     src->set_parameter = swf_set_parameter;
     src->open = swf_open;
+    src->destroy = swf_destroy;
     return src;
 }
 

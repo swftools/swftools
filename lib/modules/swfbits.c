@@ -561,7 +561,8 @@ static void tag_init_source(struct jpeg_decompress_struct *cinfo)
 static boolean tag_fill_input_buffer(struct jpeg_decompress_struct *cinfo)
 {
     TAG *tag = (TAG *) cinfo->client_data;
-    if (tag->data[tag->pos + 0] == 0xff &&
+    if (tag->pos + 4 <= tag->len &&
+	tag->data[tag->pos + 0] == 0xff &&
 	tag->data[tag->pos + 1] == 0xd9 &&
 	tag->data[tag->pos + 2] == 0xff &&
 	tag->data[tag->pos + 3] == 0xd8) {

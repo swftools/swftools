@@ -205,9 +205,9 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
     char as_shape = 0;
     if(!type3) as_shape=1;
     if(glyphnr>256-32) as_shape=1;
-    gfxmatrix_dump(matrix, stdout, "");
     if(fabs(matrix->m00 + matrix->m11) > 0.01) as_shape=1;
     if(fabs(fabs(matrix->m01) + fabs(matrix->m10)) > 0.01) as_shape=1;
+    if(fabs(matrix->m00) < 0.01) as_shape=1;
 
     if(as_shape) {
 	gfxline_t*line2 = gfxline_clone(glyph->line);
