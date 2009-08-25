@@ -27,6 +27,7 @@
 #include <pdflib.h>
 #include <math.h>
 #include "../os.h"
+#include "../q.h"
 #include "../jpeg.h"
 #include "../types.h"
 #include "../mem.h"
@@ -60,31 +61,94 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
     PDF_set_parameter(i->p, "fillrule", "evenodd");
 }
 
-static int mkline(gfxline_t*line, PDF*p)
+static char xy_equals(void*c1, void*c2)
+{
+    return !memcmp(c1, c2, sizeof(double)*2);
+}
+static unsigned int xy_hash(void*c)
+{
+    return string_hash3(c, sizeof(double)*2);
+}
+static void* xy_clone(void*c)
+{
+    void*n = malloc(sizeof(double)*2);
+    memcpy(n, c, sizeof(double)*2);
+    return n;
+}
+static void xy_destroy(void*c)
+{
+    free(c);
+}
+static type_t xy_type = {
+    hash: (hash_func)xy_hash,
+    equals: (equals_func)xy_equals,
+    dup: (dup_func)xy_clone, // all signatures are static
+    free: (free_func)xy_destroy,
+};
+
+static int mkline(gfxline_t*line, PDF*p, char fill)
 {
     int ret = 0;
-    double x=0,y=0;
-    while(line) {
-	if(line->type == gfx_moveTo) {
-	    PDF_moveto(p, line->x, line->y);
-	} else if(line->type == gfx_lineTo) {
-	    PDF_lineto(p, line->x, line->y);
-	    ret = 1;
-	} else {
-	    /* when converting a quadratic bezier to a cubic bezier, the
-	       two new control points are both 2/3 the way from the
-	       endpoints to the old control point */
-	    double c1x = (x + line->sx*2)/3;
-	    double c1y = (y + line->sy*2)/3;
-	    double c2x = (line->x + line->sx*2)/3;
-	    double c2y = (line->y + line->sy*2)/3;
-	    PDF_curveto(p, c1x, c1y, c2x, c2y, line->x, line->y);
-	    ret = 1;
+
+    dict_t*start = dict_new2(&xy_type);
+    gfxline_t*l = line;
+    while(l) {
+	if(l->type == gfx_moveTo) {
+	    double xy[2] = {l->x, l->y};
+	    dict_put(start, xy, l);
 	}
-	x = line->x;
-	y = line->y;
-	line = line->next;
+	l = l->next;
     }
+
+    assert(!line || line->type == gfx_moveTo);
+    
+    double x=0,y=0;
+    double pos[2] = {0,0};
+    char first = 1;
+
+    while(dict_count(start)) {
+	gfxline_t*l = dict_lookup(start, pos);
+	if(!l) {
+	    DICT_ITERATE_DATA(start, gfxline_t*, l2) {
+		l = l2;
+		break;
+	    }
+	    assert(l);
+	    double xy[2] = {l->x,l->y};
+	    char d = dict_del2(start,xy,l);
+	    assert(d);
+	} else {
+	    char d = dict_del2(start,pos,l);
+	    assert(d);
+	}
+	while(l) {
+	    if(l->type == gfx_moveTo && (x!=l->x || y!=l->y || first)) {
+		first = 0;
+		PDF_moveto(p, l->x, l->y);
+	    } else if(l->type == gfx_lineTo) {
+		PDF_lineto(p, l->x, l->y);
+		ret = 1;
+	    } else {
+		/* when converting a quadratic bezier to a cubic bezier, the
+		   two new control points are both 2/3 the way from the
+		   endpoints to the old control point */
+		double c1x = (x + l->sx*2)/3;
+		double c1y = (y + l->sy*2)/3;
+		double c2x = (l->x + l->sx*2)/3;
+		double c2y = (l->y + l->sy*2)/3;
+		PDF_curveto(p, c1x, c1y, c2x, c2y, l->x, l->y);
+		ret = 1;
+	    }
+	    x = l->x;
+	    y = l->y;
+	    pos[0] = x;
+	    pos[1] = y;
+	    l = l->next;
+	    if(l && l->type == gfx_moveTo) 
+		break;
+	}
+    }
+    dict_destroy(start);
     return ret;
 }
 
@@ -92,7 +156,7 @@ void pdf_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
     PDF_save(i->p);
-    if(mkline(line, i->p))
+    if(mkline(line, i->p, 1))
 	PDF_clip(i->p);
     else   
 	; // TODO: strictly speaking, an empty clip clears everything
@@ -106,13 +170,15 @@ void pdf_endclip(gfxdevice_t*dev)
 void pdf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
     internal_t*i = (internal_t*)dev->internal;
+    if(width<1e-6)
+	return;
     PDF_setlinewidth(i->p, width);
     PDF_setlinecap(i->p, cap_style==gfx_capButt?0:(cap_style==gfx_capRound?1:2));
     PDF_setlinejoin(i->p, joint_style==gfx_joinMiter?0:(joint_style==gfx_joinRound?1:2));
     PDF_setrgbcolor_stroke(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
     if(joint_style==gfx_joinMiter)
 	PDF_setmiterlimit(i->p, miterLimit);
-    if(mkline(line, i->p))
+    if(mkline(line, i->p, 0))
 	PDF_stroke(i->p);
 }
 
@@ -121,7 +187,7 @@ void pdf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     internal_t*i = (internal_t*)dev->internal;
     PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
 	
-    if(mkline(line, i->p)) {
+    if(mkline(line, i->p, 1)) {
 	PDF_fill(i->p);
     }
 }
@@ -181,7 +247,7 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 		sprintf(name, "chr%d", t+32);
 		PDF_encoding_set_char(i->p, fontname, t+32, name, 0);
 		PDF_begin_glyph(i->p, name, g->advance, bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax);
-		if(mkline(g->line, i->p))
+		if(mkline(g->line, i->p, 1))
 		    PDF_fill(i->p);
 		PDF_end_glyph(i->p);
 	    }
@@ -212,7 +278,7 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
     if(as_shape) {
 	gfxline_t*line2 = gfxline_clone(glyph->line);
 	gfxline_transform(line2, matrix);
-	if(mkline(line2, i->p)) {
+	if(mkline(line2, i->p, 1)) {
 	    PDF_fill(i->p);
 	}
 	gfxline_free(line2);

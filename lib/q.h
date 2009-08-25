@@ -190,6 +190,7 @@ dictentry_t* dict_get_slot(dict_t*h, const void*key);
 char dict_contains(dict_t*h, const void*s);
 void* dict_lookup(dict_t*h, const void*s);
 char dict_del(dict_t*h, const void*s);
+char dict_del2(dict_t*h, const void*key, void*data);
 dict_t*dict_clone(dict_t*);
 
 void dict_foreach_keyvalue(dict_t*h, void (*runFunction)(void*data, const void*key, void*val), void*data);

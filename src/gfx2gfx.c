@@ -30,6 +30,7 @@
 #include "../../swftools/lib/gfxsource.h"
 #include "../../swftools/lib/gfxdevice.h"
 #include "../../swftools/lib/gfxpoly.h"
+#include "../../swftools/lib/devices/pdf.h"
 #include "../../swftools/lib/devices/swf.h"
 #include "../../swftools/lib/devices/text.h"
 #include "../../swftools/lib/devices/render.h"
@@ -250,13 +251,19 @@ int main(int argn, char *argv[])
         gfxdevice_t _out,*out=&_out;
         if(!strcasecmp(format, "ocr")) {
             gfxdevice_ocr_init(out);
-        } if(!strcasecmp(format, "swf")) {
+        } else if(!strcasecmp(format, "swf")) {
             gfxdevice_swf_init(out);
-        } if(!strcasecmp(format, "img") || !strcasecmp(format, "png")) {
+        } else if(!strcasecmp(format, "img") || !strcasecmp(format, "png")) {
             gfxdevice_render_init(out);
-        } if(!strcasecmp(format, "txt")) {
+	    out->setparameter(out, "antialize", "4");
+        } else if(!strcasecmp(format, "txt")) {
             gfxdevice_text_init(out);
-        }
+        } else if(!strcasecmp(format, "pdf")) {
+            gfxdevice_pdf_init(out);
+        } else {
+	    msg("<error> Invalid output format: %s", format);
+	    exit(1);
+	}
 
         int pagenr;
         for(pagenr = 1; pagenr <= doc->num_pages; pagenr++) 

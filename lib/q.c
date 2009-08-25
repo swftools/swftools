@@ -1159,6 +1159,34 @@ char dict_del(dict_t*h, const void*key)
     return 0;
 }
 
+char dict_del2(dict_t*h, const void*key, void*data)
+{
+    if(!h->num)
+        return 0;
+    unsigned int hash = h->key_type->hash(key) % h->hashsize;
+    dictentry_t*head = h->slots[hash];
+    dictentry_t*e = head, *prev=0;
+    while(e) {
+        if(h->key_type->equals(e->key, key) && e->data == data) {
+            dictentry_t*next = e->next;
+            h->key_type->free(e->key);
+            memset(e, 0, sizeof(dictentry_t));
+            rfx_free(e);
+            if(e == head) {
+                h->slots[hash] = next;
+            } else {
+                assert(prev);
+                prev->next = next;
+            }
+            h->num--;
+            return 1;
+        }
+        prev = e;
+        e = e->next;
+    }
+    return 0;
+}
+
 dictentry_t* dict_get_slot(dict_t*h, const void*key)
 {
     if(!h->num)

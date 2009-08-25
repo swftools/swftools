@@ -149,21 +149,27 @@ static gfxgradient_t* convertGradient(GRADIENT*from)
 gfxline_t* swfline_to_gfxline(SHAPELINE*line, int linestyle, int fillstyle0)
 {
     gfxdrawer_t d;
-    SCOORD x=0,y=0;
+    SCOORD x=0,y=0,xx=0,yy=0;
     gfxline_t*l;
     gfxdrawer_target_gfxline(&d);
     if(line && line->type != moveTo) {
 	fprintf(stderr, "Warning: Shape doesn't start with a moveTo\n");
     }
+    xx = line?line->x+1:0;
     while(line) {
-	if(line->fillstyle0 == fillstyle0 || line->fillstyle1 == fillstyle0 || 
+	if(line->fillstyle0 == fillstyle0 || 
+	   line->fillstyle1 == fillstyle0 || 
 	   line->linestyle == linestyle) {
 	    if(line->type == lineTo) {
-		d.moveTo(&d, x/20.0,y/20.0);
+		if(xx!=x || yy!=y) d.moveTo(&d, x/20.0,y/20.0);
 		d.lineTo(&d, line->x/20.0,line->y/20.0);
+		xx = line->x;
+		yy = line->y;
 	    } else if(line->type == splineTo) {
-		d.moveTo(&d, x/20.0,y/20.0);
+		if(xx!=x || yy!=y) d.moveTo(&d, x/20.0,y/20.0);
 		d.splineTo(&d, line->sx/20.0, line->sy/20.0, line->x/20.0,line->y/20.0);
+		xx = line->x;
+		yy = line->y;
 	    }
 	}
 	x = line->x;
