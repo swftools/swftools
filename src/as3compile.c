@@ -213,7 +213,6 @@ int main (int argc,char ** argv)
     } else {
         as3_add_include_dir(currentdir);
     }
-    registry_init();
 
     int t;
     processargs(argc, argv);

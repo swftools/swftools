@@ -34,7 +34,9 @@
 #include "../../swftools/lib/devices/text.h"
 #include "../../swftools/lib/devices/render.h"
 #include "../../swftools/lib/devices/bbox.h"
+#ifdef HAVE_LRF
 #include "../../swftools/lib/devices/lrf.h"
+#endif
 #include "../../swftools/lib/devices/ocr.h"
 #include "../../swftools/lib/devices/rescale.h"
 #include "../../swftools/lib/devices/record.h"
@@ -49,7 +51,7 @@ static char * outputname = 0;
 static int loglevel = 3;
 static char * pagerange = 0;
 static char * filename = 0;
-static const char * format = "ocr";
+static const char * format = 0;
 
 int args_callback_option(char*name,char*val) {
     if (!strcmp(name, "o"))
@@ -200,8 +202,16 @@ int main(int argn, char *argv[])
         exit(1);
     }
 
+    if(!format) {
+	char*x = strrchr(outputname, '.');
+	if(x) 
+	    format = x+1;
+    }
+
+
     gfxresult_t*result = 0;
-    if(!strcmp(format, "lrf")) {
+#ifdef HAVE_LRF
+    if(!strcasecmp(format, "lrf")) {
         gfxdevice_t lrf;
         gfxdevice_lrf_init(&lrf);
 
@@ -234,15 +244,17 @@ int main(int argn, char *argv[])
             }
         }
         result = out->finish(out);
-    } else {
+    } else 
+#endif
+    {
         gfxdevice_t _out,*out=&_out;
-        if(!strcmp(format, "ocr")) {
+        if(!strcasecmp(format, "ocr")) {
             gfxdevice_ocr_init(out);
-        } if(!strcmp(format, "swf")) {
+        } if(!strcasecmp(format, "swf")) {
             gfxdevice_swf_init(out);
-        } if(!strcmp(format, "img")) {
+        } if(!strcasecmp(format, "img") || !strcasecmp(format, "png")) {
             gfxdevice_render_init(out);
-        } if(!strcmp(format, "txt")) {
+        } if(!strcasecmp(format, "txt")) {
             gfxdevice_text_init(out);
         }
 
