@@ -390,7 +390,7 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
         sprintf(buf, "%.1f", i->doc->getPDFVersion());
         return strdup(buf);
     }
-    return 0;
+    return strdup("");
 }
 
 

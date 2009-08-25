@@ -640,18 +640,20 @@ int main(int argn, char *argv[])
 	exit(1);
     }
 
-    if(!outputname)
-    {
-	if(filename) {
-	    outputname = stripFilename(filename, ".swf");
-	    msg("<notice> Output filename not given. Writing to %s", outputname);
-	} 
-    }
-	
-    if(!outputname)
-    {
-	fprintf(stderr, "Please use -o to specify an output file\n");
-	exit(1);
+    if (!info_only) {
+        if(!outputname)
+        {
+            if(filename) {
+                outputname = stripFilename(filename, ".swf");
+                msg("<notice> Output filename not given. Writing to %s", outputname);
+            } 
+        }
+            
+        if(!outputname)
+        {
+            fprintf(stderr, "Please use -o to specify an output file\n");
+            exit(1);
+        }
     }
 
     // test if the page range is o.k.
