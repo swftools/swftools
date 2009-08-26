@@ -29,6 +29,7 @@
 #include "gfxtools.h"
 #include "gfxfont.h"
 #include "jpeg.h"
+#include "q.h"
 
 typedef struct _linedraw_internal
 {
@@ -1002,6 +1003,138 @@ void gfxline_dump(gfxline_t*line, FILE*fi, char*prefix)
 	}
 	line = line->next;
     }
+}
+
+static char gfxpoint_equals(void*c1, void*c2)
+{
+    return !memcmp(c1, c2, sizeof(gfxpoint_t));
+}
+static unsigned int gfxpoint_hash(void*c)
+{
+    return string_hash3(c, sizeof(gfxpoint_t));
+}
+static void* gfxpoint_clone(void*c)
+{
+    void*n = malloc(sizeof(gfxpoint_t));
+    memcpy(n, c, sizeof(gfxpoint_t));
+    return n;
+}
+static void gfxpoint_destroy(void*c)
+{
+    free(c);
+}
+static type_t gfxpoint_type = {
+    hash: (hash_func)gfxpoint_hash,
+    equals: (equals_func)gfxpoint_equals,
+    dup: (dup_func)gfxpoint_clone,
+    free: (free_func)gfxpoint_destroy,
+};
+
+gfxline_t* gfxline_restitch(gfxline_t*line)
+{
+    dict_t*ff = dict_new2(&gfxpoint_type);
+    dict_t*rev = dict_new2(&gfxpoint_type);
+    
+    gfxline_t*prev=0;
+    while(line) {
+	gfxline_t*next = line->next;
+	if(line->type == gfx_moveTo) {
+	    gfxpoint_t xy = {line->x, line->y};
+	    dict_put(ff, &xy, line);
+	    prev = line;
+	} else if(!line->next || line->next->type == gfx_moveTo) {
+	    if(prev) {
+		gfxpoint_t xy = {line->x, line->y};
+		dict_put(rev, &xy, prev);
+		line->next = 0;
+	    }
+	}
+	line = next;
+    }
+   
+    gfxpoint_t pos = {0,0};
+
+    gfxline_t*result = 0;
+    gfxline_t*last = 0;
+   
+    char first = 1;
+    while(dict_count(ff)) {
+	char reverse = 0, stitch = 1;
+	gfxline_t*l = dict_lookup(ff, &pos);
+	if(l) {
+	    char d = dict_del2(ff,&pos,l);assert(d);
+	} else {
+	    l = dict_lookup(rev, &pos);
+	    if(l) {
+		reverse = 1;
+		char d = dict_del2(rev,&pos,l);assert(d);
+	    }
+	}
+	if(!l) {
+	    /* try to find *any* entry. this is costly, but
+	       doesn't happen too often */
+	    stitch = 0;
+	    DICT_ITERATE_DATA(ff, gfxline_t*, l2) {
+		l = l2;
+		break;
+	    }
+	    assert(l);
+	    gfxpoint_t xy = {l->x,l->y};
+	    char d = dict_del2(ff,&xy,l);assert(d);
+	}
+	
+	gfxline_t*end = l;
+	if(!reverse) {
+	    while(end->next) end = end->next;
+	    pos.x = end->x;
+	    pos.y = end->y;
+	    char d = dict_del2(rev,&pos,l);assert(d);
+	} else {
+	    l = gfxline_reverse(l);
+	    pos.x = end->x;
+	    pos.y = end->y;
+	    char d = dict_del2(ff,&pos,end);assert(d);
+	}
+
+	assert(l->type == gfx_moveTo);
+	if(stitch && !first) {
+	    /* cut away the moveTo */
+	    gfxline_t*next = l->next;
+	    free(l);
+	    l = next;
+	}
+
+	if(!last) {
+	    result = l;
+	    last = end;
+	} else {
+	    last->next = l;
+	    last = end;
+	}
+	first = 0;
+    }
+    dict_destroy(ff);
+    dict_destroy(rev);
+    return result;
+}
+
+gfxline_t* gfxline_reverse(gfxline_t*line)
+{
+    gfxline_t*b = 0;
+    while(line) {
+	gfxline_t*next = line->next;
+	if(next && next->type != gfx_moveTo) {
+	    line->type = next->type;
+	    line->sx = next->sx;
+	    line->sy = next->sy;
+	} else {
+	    line->type = gfx_moveTo;
+	}
+	line->next = b;
+	b = line;
+	line = next;
+    }
+    return b;
 }
 
 void gfximage_save_jpeg(gfximage_t*img, char*filename, int quality)

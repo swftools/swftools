@@ -2747,6 +2747,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 
 	swf_Shape01DrawerInit(&draw, 0);
 	line = font->glyphs[t].line;
+
 	while(line) {
 	    FPOINT c,to;
 	    c.x = line->sx * GLYPH_SCALE; c.y = line->sy * GLYPH_SCALE;

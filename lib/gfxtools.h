@@ -74,6 +74,11 @@ void gfxbbox_intersect(gfxbbox_t*box1, gfxbbox_t*box2);
 
 void gfxline_transform(gfxline_t*line, gfxmatrix_t*matrix);
 
+/* tries to remove unnecessary moveTos from the gfxline */
+gfxline_t* gfxline_restitch(gfxline_t*line);
+/* reverses in place */
+gfxline_t* gfxline_reverse(gfxline_t*line);
+
 void gfxmatrix_dump(gfxmatrix_t*l, FILE*fi, char*prefix);
 void gfxmatrix_transform(gfxmatrix_t*m, gfxcoord_t* v1, gfxcoord_t*dest);
 void gfxmatrix_invert(gfxmatrix_t*src, gfxmatrix_t*dest);

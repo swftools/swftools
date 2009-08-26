@@ -37,6 +37,7 @@
 typedef struct _internal {
     PDF* p;
     char*tempfile;
+    double lastx,lasty;
     gfxfontlist_t*fontlist;
 } internal_t;
 
@@ -61,94 +62,40 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
     PDF_set_parameter(i->p, "fillrule", "evenodd");
 }
 
-static char xy_equals(void*c1, void*c2)
-{
-    return !memcmp(c1, c2, sizeof(double)*2);
-}
-static unsigned int xy_hash(void*c)
-{
-    return string_hash3(c, sizeof(double)*2);
-}
-static void* xy_clone(void*c)
-{
-    void*n = malloc(sizeof(double)*2);
-    memcpy(n, c, sizeof(double)*2);
-    return n;
-}
-static void xy_destroy(void*c)
-{
-    free(c);
-}
-static type_t xy_type = {
-    hash: (hash_func)xy_hash,
-    equals: (equals_func)xy_equals,
-    dup: (dup_func)xy_clone, // all signatures are static
-    free: (free_func)xy_destroy,
-};
-
 static int mkline(gfxline_t*line, PDF*p, char fill)
 {
-    int ret = 0;
-
-    dict_t*start = dict_new2(&xy_type);
-    gfxline_t*l = line;
-    while(l) {
-	if(l->type == gfx_moveTo) {
-	    double xy[2] = {l->x, l->y};
-	    dict_put(start, xy, l);
-	}
-	l = l->next;
-    }
-
-    assert(!line || line->type == gfx_moveTo);
-    
-    double x=0,y=0;
-    double pos[2] = {0,0};
+    double x,y;
     char first = 1;
-
-    while(dict_count(start)) {
-	gfxline_t*l = dict_lookup(start, pos);
-	if(!l) {
-	    DICT_ITERATE_DATA(start, gfxline_t*, l2) {
-		l = l2;
-		break;
-	    }
-	    assert(l);
-	    double xy[2] = {l->x,l->y};
-	    char d = dict_del2(start,xy,l);
-	    assert(d);
-	} else {
-	    char d = dict_del2(start,pos,l);
-	    assert(d);
-	}
-	while(l) {
-	    if(l->type == gfx_moveTo && (x!=l->x || y!=l->y || first)) {
-		first = 0;
-		PDF_moveto(p, l->x, l->y);
-	    } else if(l->type == gfx_lineTo) {
-		PDF_lineto(p, l->x, l->y);
-		ret = 1;
-	    } else {
-		/* when converting a quadratic bezier to a cubic bezier, the
-		   two new control points are both 2/3 the way from the
-		   endpoints to the old control point */
-		double c1x = (x + l->sx*2)/3;
-		double c1y = (y + l->sy*2)/3;
-		double c2x = (l->x + l->sx*2)/3;
-		double c2y = (l->y + l->sy*2)/3;
-		PDF_curveto(p, c1x, c1y, c2x, c2y, l->x, l->y);
-		ret = 1;
-	    }
-	    x = l->x;
-	    y = l->y;
-	    pos[0] = x;
-	    pos[1] = y;
-	    l = l->next;
-	    if(l && l->type == gfx_moveTo) 
-		break;
-	}
+    int ret = 0;
+    char free_line = 0;
+    if(fill) {
+	line = gfxline_restitch(gfxline_clone(line));
+	free_line = 1;
     }
-    dict_destroy(start);
+    while(line) {
+	if(line->type == gfx_moveTo && (x!=line->x || y!=line->y || first)) {
+	    first = 0;
+	    PDF_moveto(p, line->x, line->y);
+	} else if(line->type == gfx_lineTo) {
+	    PDF_lineto(p, line->x, line->y);
+	    ret = 1;
+	} else {
+	    /* when converting a quadratic bezier to a cubic bezier, the
+	       two new control points are both 2/3 the way from the
+	       endpoints to the old control point */
+	    double c1x = (x + line->sx*2)/3;
+	    double c1y = (y + line->sy*2)/3;
+	    double c2x = (line->x + line->sx*2)/3;
+	    double c2y = (line->y + line->sy*2)/3;
+	    PDF_curveto(p, c1x, c1y, c2x, c2y, line->x, line->y);
+	    ret = 1;
+	}
+	x = line->x;
+	y = line->y;
+	line = line->next;
+    }
+    if(free_line)
+	gfxline_free(line);
     return ret;
 }
 
@@ -273,7 +220,7 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
     if(glyphnr>256-32) as_shape=1;
     if(fabs(matrix->m00 + matrix->m11) > 0.01) as_shape=1;
     if(fabs(fabs(matrix->m01) + fabs(matrix->m10)) > 0.01) as_shape=1;
-    if(fabs(matrix->m00) < 0.01) as_shape=1;
+    if(fabs(matrix->m00) < 1e-6) as_shape=1;
 
     if(as_shape) {
 	gfxline_t*line2 = gfxline_clone(glyph->line);
@@ -288,7 +235,15 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
 	PDF_setfont(i->p, fontid, matrix->m00);
 	char name[32];
 	sprintf(name, "%c\0", glyphnr+32);
-	PDF_show_xy2(i->p, name, strlen(name), matrix->tx, matrix->ty);
+
+	if(fabs(matrix->tx - i->lastx) > 0.001 || matrix->ty != i->lasty) {
+	    PDF_show_xy2(i->p, name, strlen(name), matrix->tx, matrix->ty);
+	} else {
+	    PDF_show2(i->p, name, strlen(name));
+	}
+
+	i->lastx = matrix->tx + glyph->advance*matrix->m00;
+	i->lasty = matrix->ty;
     }
     return;
 }
@@ -383,6 +338,8 @@ void gfxdevice_pdf_init(gfxdevice_t*dev)
     dev->endpage = pdf_endpage;
     dev->finish = pdf_finish;
 
+    i->lastx = -1e38;
+    i->lasty = -1e38;
     i->p = PDF_new();
 }
 
