@@ -34,6 +34,7 @@
 #include "../../swftools/lib/devices/swf.h"
 #include "../../swftools/lib/devices/text.h"
 #include "../../swftools/lib/devices/render.h"
+#include "../../swftools/lib/devices/file.h"
 #include "../../swftools/lib/devices/bbox.h"
 #ifdef HAVE_LRF
 #include "../../swftools/lib/devices/lrf.h"
@@ -258,6 +259,8 @@ int main(int argn, char *argv[])
 	    out->setparameter(out, "antialize", "4");
         } else if(!strcasecmp(format, "txt")) {
             gfxdevice_text_init(out);
+        } else if(!strcasecmp(format, "log")) {
+            gfxdevice_file_init(out, "/tmp/device.log");
         } else if(!strcasecmp(format, "pdf")) {
             gfxdevice_pdf_init(out);
         } else {

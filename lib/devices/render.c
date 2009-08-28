@@ -89,7 +89,7 @@ typedef struct _fillinfo {
     gfxmatrix_t*matrix;
     gfxcxform_t*cxform;
     RGBA*gradient;
-    char clip_or_radial;
+    char linear_or_radial;
 } fillinfo_t;
 
 
@@ -338,7 +338,7 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
 	    int yy = (int)(yy1 - x * yinc1);
 	    int ainv;
 
-	    if(info->clip_or_radial) {
+	    if(info->linear_or_radial) {
 		if(xx<0) xx=0;
 		if(xx>=b->width) xx = b->width-1;
 		if(yy<0) yy=0;
@@ -378,6 +378,7 @@ static void fill_line_gradient(RGBA*line, U32*z, int y, int x1, int x2, fillinfo
 	/* x direction equals y direction */
 	return;
     }
+    
     det = 1.0/det;
     double xx1 =  (  (-m->tx) * m->m11 - (y - m->ty) * m->m10) * det;
     double yy1 =  (- (-m->tx) * m->m01 + (y - m->ty) * m->m00) * det;
@@ -393,7 +394,7 @@ static void fill_line_gradient(RGBA*line, U32*z, int y, int x1, int x2, fillinfo
 	    int ainv;
 
             int pos = 0;
-            if(info->clip_or_radial) {
+            if(info->linear_or_radial) {
                 double xx = xx1 + x * xinc1;
                 double yy = yy1 + y * yinc1;
                 double r = sqrt(xx*xx + yy*yy);
@@ -409,9 +410,9 @@ static void fill_line_gradient(RGBA*line, U32*z, int y, int x1, int x2, fillinfo
 	    ainv = 255-col.a;
 
 	    /* needs bitmap with premultiplied alpha */
-	    line[x].r = ((line[x].r*ainv)>>8)+col.r;
-	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
-	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
+	    line[x].r = ((line[x].r*ainv)/255)+col.r;
+	    line[x].g = ((line[x].g*ainv)/255)+col.g;
+	    line[x].b = ((line[x].b*ainv)/255)+col.b;
 	    line[x].a = 255;
 	}
 	bit <<= 1;
@@ -714,7 +715,7 @@ void render_fillgradient(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gr
     m2.m00 *= i->zoom; m2.m01 *= i->zoom; m2.tx *= i->zoom;
     m2.m10 *= i->zoom; m2.m11 *= i->zoom; m2.ty *= i->zoom;
 
-    info.clip_or_radial = type == gfxgradient_radial;
+    info.linear_or_radial = type == gfxgradient_radial;
 
     int pos = 0;
     gfxcolor_t color = {0,0,0,0};

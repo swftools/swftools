@@ -234,7 +234,15 @@ static void renderFilled(render_t*r, gfxline_t*line, FILLSTYLE*f, CXFORM*cx, MAT
     } else if(f->type == FILL_LINEAR || f->type == FILL_RADIAL) {
 	gfxmatrix_t m;
 	gfxgradient_t* g;
-	convertMatrix(&f->m, &m);
+	MATRIX* m2 = &f->m;
+	//swf_MatrixJoin(&m2, po_m, &f->m);
+
+	double z = f->type==FILL_RADIAL?4:4;
+	m.m00 = m2->sx/z/20.0; m.m10 = m2->r1/z/20.0;
+	m.m01 = m2->r0/z/20.0; m.m11 = m2->sy/z/20.0;
+	m.tx = m2->tx/20.0;
+	m.ty = m2->ty/20.0;
+
 	g = convertGradient(&f->gradient);
 	r->device->fillgradient(r->device, line, g, f->type == FILL_LINEAR ? gfxgradient_linear : gfxgradient_radial, &m);
 	free(g);
@@ -598,15 +606,13 @@ void swfpage_render(gfxpage_t*page, gfxdevice_t*output)
 
     int t;
     for(t=0;t<65536;t++) {
-        int i;
-
-        for(i=0; i<r.clips_waiting[t]; i++) {
-            output->endclip(output);
-        }
-
 	if(depths->ids[t]) {
 	    placeObject(&r, t, depths->ids[t]);
 	}
+        int i;
+        for(i=0; i<r.clips_waiting[t]; i++) {
+            output->endclip(output);
+        }
     }
     free(r.clips_waiting);
 }
