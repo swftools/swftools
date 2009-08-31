@@ -522,14 +522,17 @@ char* multiname_tostring(multiname_t*m)
     int namelen = strlen(name);
 
     if(m->type==QNAME || m->type==QNAMEA || m->type==POSTFIXTYPE) {
-        char*nsname = escape_string(m->ns->name);
+        char*nsname = m->ns?escape_string(m->ns->name):strdup("NULL");
         mname = malloc(strlen(nsname)+namelen+32);
         strcpy(mname, "<q");
         if(m->type == QNAMEA)
             strcat(mname, ",attr");
-        strcat(mname, ">[");
-        strcat(mname,access2str(m->ns->access));
-        strcat(mname, "]");
+	strcat(mname, ">");
+	if(m->ns) {
+	    strcat(mname,"[");
+	    strcat(mname,access2str(m->ns->access));
+	    strcat(mname, "]");
+	}
         strcat(mname, nsname);
         free(nsname);
         strcat(mname, "::");
@@ -1166,6 +1169,9 @@ void pool_read(pool_t*pool, TAG*tag)
 	if(m.type==0x07 || m.type==0x0d) {
 	    int namespace_index = swf_GetU30(tag);
             m.ns = (namespace_t*)array_getkey(pool->x_namespaces, namespace_index);
+	    if(!m.ns) {
+		fprintf(stderr, "Error: Illegal reference to namespace #%d in constant pool.\n", namespace_index);
+	    }
             int name_index = swf_GetU30(tag);
             if(name_index) // 0 = '*' (any)
 	        m.name = pool_lookup_string(pool, name_index);

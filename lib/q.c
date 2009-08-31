@@ -1343,14 +1343,14 @@ array_t* array_new2(type_t*type) {
 }
 void*array_getkey(array_t*array, int nr) {
     if(nr > array->num || nr<0) {
-	printf("error: reference to element %d in array[%d]\n", nr, array->num);
+	fprintf(stderr, "error: reference to element %d in array[%d]\n", nr, array->num);
 	return 0;
     }
     return array->d[nr].name;
 }
 void*array_getvalue(array_t*array, int nr) {
     if(nr > array->num || nr<0) {
-	printf("error: reference to element %d in array[%d]\n", nr, array->num);
+	fprintf(stderr, "error: reference to element %d in array[%d]\n", nr, array->num);
 	return 0;
     }
     return array->d[nr].data;
