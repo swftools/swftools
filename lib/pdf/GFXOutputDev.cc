@@ -335,6 +335,19 @@ GFXGlobalParams::~GFXGlobalParams()
 #endif
 }
 #ifdef HAVE_FONTCONFIG
+static char stralphacmp(const char*s1, const char*s2)
+{
+    while(*s1 && *s2) {
+	/* skip over space, minus, comma etc. */
+	while(*s1>=32 && *s1<=63) s1++;
+	while(*s2>=32 && *s2<=63) s2++;
+	if(*s1!=*s2)
+	    break;
+	s1++;s2++;
+    }
+    return *s1 - *s2;
+}
+
 static char fc_ismatch(FcPattern*match, char*family, char*style)
 {
     char*fcfamily=0,*fcstyle=0,*fcfullname=0,*filename=0;
@@ -348,7 +361,7 @@ static char fc_ismatch(FcPattern*match, char*family, char*style)
     if(scalable!=FcTrue || outline!=FcTrue)
 	return 0;
 
-    if (!strcasecmp(fcfamily, family)) {
+    if (!stralphacmp(fcfamily, family)) {
 	msg("<debug> Font %s-%s (%s) is a match for %s%s%s", fcfamily, fcstyle, filename, family, style?"-":"", style?style:"");
 	return 1;
     } else {
