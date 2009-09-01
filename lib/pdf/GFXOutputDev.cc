@@ -419,6 +419,7 @@ char* fontconfig_searchForFont(char*name)
         fontfile_t*fd = global_fonts;
         while(fd) {
             FcConfigAppFontAddFile(config, (FcChar8*)fd->filename);
+            msg("<debug> Adding font %s to fontconfig", fd->filename);
             fd = fd->next;
         }
 
@@ -432,17 +433,21 @@ char* fontconfig_searchForFont(char*name)
 
 	if(getLogLevel() >= LOGLEVEL_TRACE) {
 	    int t;
-	    for(t=0;t<set->nfont;t++) {
-		char*fcfamily=0,*fcstyle=0,*filename=0;
-		FcBool scalable=FcFalse, outline=FcFalse;
-		FcPatternGetString(set->fonts[t], "family", 0, (FcChar8**)&fcfamily);
-		FcPatternGetString(set->fonts[t], "style", 0, (FcChar8**)&fcstyle);
-		FcPatternGetString(set->fonts[t], "file", 0, (FcChar8**)&filename);
-		FcPatternGetBool(set->fonts[t], "outline", 0, &outline);
-		FcPatternGetBool(set->fonts[t], "scalable", 0, &scalable);
-		if(scalable && outline) {
-		    msg("<trace> %s-%s -> %s", fcfamily, fcstyle, filename);
+	    int p;
+	    for(p=0;p<2;p++) {
+		for(t=0;t<set->nfont;t++) {
+		    char*fcfamily=0,*fcstyle=0,*filename=0;
+		    FcBool scalable=FcFalse, outline=FcFalse;
+		    FcPatternGetString(set->fonts[t], "family", 0, (FcChar8**)&fcfamily);
+		    FcPatternGetString(set->fonts[t], "style", 0, (FcChar8**)&fcstyle);
+		    FcPatternGetString(set->fonts[t], "file", 0, (FcChar8**)&filename);
+		    FcPatternGetBool(set->fonts[t], "outline", 0, &outline);
+		    FcPatternGetBool(set->fonts[t], "scalable", 0, &scalable);
+		    if(scalable && outline) {
+			msg("<trace> %s (%s) -> %s", fcfamily, fcstyle, filename);
+		    }
 		}
+		set =  FcConfigGetFonts(config, FcSetApplication);
 	    }
 	}
     }
@@ -450,6 +455,8 @@ char* fontconfig_searchForFont(char*name)
     char*family = strdup(name);
     char*style = 0;
     char*dash = strchr(family, '-');
+    if(!dash) dash = strchr(family, ',');
+
     FcPattern*pattern = 0;
     if(dash) {
 	*dash = 0;
@@ -506,7 +513,7 @@ static DisplayFontParamKind detectFontType(const char*filename)
 
 DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 {
-    msg("<verbose> looking for font %s in global params", fontName->getCString());
+    msg("<verbose> looking for font %s", fontName->getCString());
 
     char*name = fontName->getCString();
     
@@ -565,8 +572,10 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 	}
 	free(filename);
         return dfp;
+    } else {
+	msg("<verbose> Font %s not found\n", name);
+	return GlobalParams::getDisplayFont(fontName);
     }
-    return GlobalParams::getDisplayFont(fontName);
 }
 
 GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)

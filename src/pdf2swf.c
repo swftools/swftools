@@ -673,14 +673,14 @@ int main(int argn, char *argv[])
     if(pagerange)
 	driver->set_parameter(driver, "pages", pagerange);
 
-    if(info_only) {
-	show_info(driver, filename);
-	return 0;
-    }
-
     /* add fonts */
     for(t=0;t<fontpathpos;t++) {
 	driver->set_parameter(driver, "fontdir", fontpaths[t]);
+    }
+
+    if(info_only) {
+	show_info(driver, filename);
+	return 0;
     }
 
     char*u = 0;
