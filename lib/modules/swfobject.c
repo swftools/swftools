@@ -153,8 +153,10 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 
 void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
 {
-    if(!tag) {
+    if(obj)
 	memset(obj, 0, sizeof(SWFPLACEOBJECT));
+
+    if(!tag) {
 	swf_GetMatrix(0, &obj->matrix);
 	swf_GetCXForm(0, &obj->cxform, 1);
 	//obj->internal = PF_CHAR|PF_MATRIX|PF_CXFORM;
