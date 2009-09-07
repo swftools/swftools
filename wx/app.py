@@ -237,8 +237,8 @@ class Pdf2Swf:
         self.Message(
                     u"In this PDF, width or height are not the same for "
                     u"each page. This might cause problems if you export "
-                    u"pages of different dimensions into the same SWF file.",
-                    u"Notice")
+                    u"pages of different dimensions into the same SWF file."
+                    )
 
     def OnMenuOpen(self, event):
         dlg = wx.FileDialog(self.view, u"Choose PDF File:",
