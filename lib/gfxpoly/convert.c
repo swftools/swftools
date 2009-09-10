@@ -175,9 +175,8 @@ static void compactlineto(polywriter_t*w, int32_t x, int32_t y)
     if(p.x == data->last.x && p.y == data->last.y)
 	return;
 
-    if(p.y < data->last.y && data->dir != DIR_UP ||
-       p.y > data->last.y && data->dir != DIR_DOWN || 
-       data->new) {
+    if((p.y < data->last.y && data->dir != DIR_UP) ||
+       (p.y > data->last.y && data->dir != DIR_DOWN) || data->new) {
 	finish_segment(data);
 	data->dir = p.y > data->last.y ? DIR_DOWN : DIR_UP;
 	data->points[0] = data->last;
@@ -407,7 +406,7 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 }
 #endif
 
-gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
+static gfxline_t*mkgfxline(gfxpoly_t*poly, char preserve_direction)
 {
     gfxpolystroke_t*stroke;
     int count = 0;
@@ -416,6 +415,7 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
     dict_t*d = dict_new2(&point_type);
     dict_t*todo = dict_new2(&ptr_type);
     gfxpolystroke_t*stroke_min= poly->strokes;
+    int32_t x_min=stroke_min->points[0].x;
     int32_t y_min=stroke_min->points[0].y;
     for(stroke=poly->strokes;stroke;stroke=stroke->next) {
 	dict_put(todo, stroke, stroke);
@@ -423,10 +423,15 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
 	count += stroke->num_points;
 	if(stroke->dir == DIR_UP) {
 	    dict_put(d, &stroke->points[stroke->num_points-1], stroke);
+	    if(!preserve_direction)
+		dict_put(d, &stroke->points[0], stroke);
 	} else {
 	    dict_put(d, &stroke->points[0], stroke);
+	    if(!preserve_direction)
+		dict_put(d, &stroke->points[stroke->num_points-1], stroke);
 	}
-	if(stroke->points[0].y < y_min) {
+	if(stroke->points[0].y < y_min ||
+	   (stroke->points[0].y == y_min && stroke->points[0].x < x_min)) {
 	    y_min = stroke->points[0].y;
 	    stroke_min = stroke;
 	}
@@ -439,17 +444,29 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
     point_t last = {INVALID_COORD, INVALID_COORD};
     char should_connect = 0;
     while(stroke) {
+	if(stroke && !preserve_direction) {
+	    char del1 = dict_del2(d, &stroke->points[0], stroke);
+	    char del2 = dict_del2(d, &stroke->points[stroke->num_points-1], stroke);
+	    assert(del1 && del2);
+	}
 	assert(dict_contains(todo, stroke));
 	int t;
 	int pos = 0;
 	int incr = 1;
-	if(stroke->dir == DIR_UP) {
-	    pos = stroke->num_points-1;
-	    incr = -1;
+	if(preserve_direction) {
+	    if(stroke->dir == DIR_UP) {
+		pos = stroke->num_points-1;
+		incr = -1;
+	    }
+	} else {
+	    // try to find matching point on either end.
+	    // Prefer downward.
+	    if(last.x == stroke->points[stroke->num_points-1].x &&
+	       last.y == stroke->points[stroke->num_points-1].y) {
+		pos = stroke->num_points-1;
+		incr = -1;
+	    }
 	}
-	/* TODO: keeping the up/down order intact increases the polygon size
-	         considerably. If this is going to be an even/odd polygon,
-		 we could ignore it and save some space */
 	if(last.x != stroke->points[pos].x || last.y != stroke->points[pos].y) {
 	    l[count].x = stroke->points[pos].x * poly->gridsize;
 	    l[count].y = stroke->points[pos].y * poly->gridsize;
@@ -489,6 +506,16 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
     dict_destroy(todo);
     dict_destroy(d);
     return l;
+}
+
+gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
+{
+    return mkgfxline(poly, 0);
+}
+
+gfxline_t*gfxline_from_gfxpoly_updown(gfxpoly_t*poly)
+{
+    return mkgfxline(poly, 1);
 }
 
 static windcontext_t onepolygon = {1};

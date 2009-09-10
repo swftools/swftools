@@ -22,6 +22,7 @@ gfxpoly_t* gfxpoly_from_file(const char*filename, double gridsize);
 void gfxpoly_destroy(gfxpoly_t*poly);
 
 gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly);
+gfxline_t*gfxline_from_gfxpoly_updown(gfxpoly_t*poly); // preserves up/down
 
 gfxline_t* gfxpoly_circular_to_evenodd(gfxline_t*line, double gridsize);
 gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2, double gridsize);
