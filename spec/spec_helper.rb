@@ -56,6 +56,10 @@ class Area
 	text2 = @file.get_text(@x1,@y1,@x2,@y2) 
 	text2 == text or raise AreaError.new(self, "doesn't contain text \"#{text}\" (found: \"#{text2}\")")
     end
+    def should_contain_link(url)
+	links = @file.get_links(@x1,@y1,@x2,@y2) 
+	(links & [url]) or raise AreaError.new(self, "doesn't contain url \"#{url}\")
+    end
     def to_s
 	"(#{@x1},#{@y1},#{@x2},#{@y2})"
     end
@@ -133,6 +137,10 @@ class DocFile
 	#puts "swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}"
 	#puts `swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`
 	`swfstrings -x #{x1} -y #{y1} -W #{x2-x1} -H #{y2-y1} #{@swfname}`.chomp
+    end
+    def get_links(x1,y1,x2,y2)
+	self.convert()
+	`swfdump -a #{@swfname}`.scan(/GetUrl2? URL:"([^"]*)"/).inject([]) do |a,u| a + u end
     end
     def get_area(x1,y1,x2,y2)
 	self.render()
