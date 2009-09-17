@@ -58,7 +58,7 @@ class Area
     end
     def should_contain_link(url)
 	links = @file.get_links(@x1,@y1,@x2,@y2) 
-	(links & [url]) or raise AreaError.new(self, "doesn't contain url \"#{url}\")
+	(links & [url]).empty? and raise AreaError.new(self, "doesn't contain url \"#{url}\"")
     end
     def to_s
 	"(#{@x1},#{@y1},#{@x2},#{@y2})"
