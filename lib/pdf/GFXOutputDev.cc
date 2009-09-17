@@ -2696,9 +2696,6 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
 
     dbg("endTransparencyGroup this->device now back to %08x (destroying %08x)", states[statepos].olddevice, this->device);
     
-    while(statepos && !states[statepos].olddevice)
-	--statepos;
-   
     this->device = states[statepos].olddevice;
     if(!this->device) {
 	msg("<error> Invalid state nesting");
