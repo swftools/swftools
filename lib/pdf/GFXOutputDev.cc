@@ -625,6 +625,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_drawonlyshapes = 0;
     this->config_disable_polygon_conversion = 0;
     this->config_multiply = 1;
+    this->config_linkdatafile = 0;
     this->page2page = 0;
     this->num_pages = 0;
   
@@ -643,6 +644,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_drawonlyshapes = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
+    } else if(!strcmp(key,"linkdatafile")) {
+        this->config_linkdatafile = strdup(value);
     } else if(!strcmp(key,"convertgradients")) {
         this->config_convertgradients = atoi(value);
     } else if(!strcmp(key,"multiply")) {
@@ -1655,6 +1658,12 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     states[statepos].dashStart = 0;
     
     this->last_char_gfxfont = 0;
+	
+    if(this->config_linkdatafile) {
+	FILE*fi = fopen(config_linkdatafile, "ab+");
+	fprintf(fi, "[page %d]\n", pageNum);
+	fclose(fi);
+    }
 }
 
 
@@ -1843,8 +1852,13 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
     else if(s)
     {
         device->drawlink(device, points, s);
+	if(this->config_linkdatafile) {
+	    FILE*fi = fopen(config_linkdatafile, "ab+");
+	    fprintf(fi, "%s\n", s);
+	    fclose(fi);
+	}
     }
-
+        
     msg("<verbose> \"%s\" link to \"%s\" (%d)", type, FIXNULL(s), page);
     free(s);s=0;
 }
