@@ -1,0 +1,4393 @@
+%PDF-1.4
+%‚„œ”
+6 0 obj 
+<<
+/FontName /Courier
+/StemV 109
+/Ascent 627
+/Flags 35
+/XHeight 435
+/Descent -373
+/ItalicAngle 0
+/FontBBox [-56 -250 678 857]
+/Type /FontDescriptor
+/CapHeight 573
+>>
+endobj 
+7 0 obj 
+<<
+/Type /Encoding
+/Differences [0 /.notdef /.notdef /.notdef 128 /.notdef 130 /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 142 /.notdef 145 /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 158 /.notdef /.notdef /space 173 /hyphen]
+/BaseEncoding /WinAnsiEncoding
+>>
+endobj 
+5 0 obj 
+<<
+/BaseFont /Courier
+/Subtype /Type1
+/FontDescriptor 6 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+9 0 obj 
+<<
+/FontName /Helvetica-BoldOblique
+/StemV 166
+/Ascent 718
+/Flags 262240
+/XHeight 532
+/Descent -207
+/ItalicAngle -12
+/FontBBox [-560 -376 1157 1000]
+/Type /FontDescriptor
+/CapHeight 718
+>>
+endobj 
+8 0 obj 
+<<
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/FontDescriptor 9 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+11 0 obj 
+<<
+/FontName /Helvetica-Bold
+/StemV 166
+/Ascent 718
+/Flags 262176
+/XHeight 532
+/Descent -207
+/ItalicAngle 0
+/FontBBox [-628 -376 2000 1010]
+/Type /FontDescriptor
+/CapHeight 718
+>>
+endobj 
+10 0 obj 
+<<
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/FontDescriptor 11 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+13 0 obj 
+<<
+/FontName /Helvetica-Oblique
+/StemV 88
+/Ascent 718
+/Flags 96
+/XHeight 523
+/Descent -207
+/ItalicAngle -12
+/FontBBox [-517 -325 1082 998]
+/Type /FontDescriptor
+/CapHeight 718
+>>
+endobj 
+12 0 obj 
+<<
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/FontDescriptor 13 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+15 0 obj 
+<<
+/FontName /Helvetica
+/StemV 88
+/Ascent 718
+/Flags 32
+/XHeight 523
+/Descent -207
+/ItalicAngle 0
+/FontBBox [-665 -325 2028 1037]
+/Type /FontDescriptor
+/CapHeight 718
+>>
+endobj 
+14 0 obj 
+<<
+/BaseFont /Helvetica
+/Subtype /Type1
+/FontDescriptor 15 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+17 0 obj 
+<<
+/FontName /Times-BoldItalic
+/StemV 166
+/Ascent 683
+/Flags 262240
+/XHeight 462
+/Descent -217
+/ItalicAngle -16
+/FontBBox [-547 -307 1206 1032]
+/Type /FontDescriptor
+/CapHeight 669
+>>
+endobj 
+16 0 obj 
+<<
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/FontDescriptor 17 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+19 0 obj 
+<<
+/FontName /Times-Bold
+/StemV 166
+/Ascent 683
+/Flags 262176
+/XHeight 461
+/Descent -217
+/ItalicAngle 0
+/FontBBox [-558 -307 2000 1026]
+/Type /FontDescriptor
+/CapHeight 676
+>>
+endobj 
+18 0 obj 
+<<
+/BaseFont /Times-Bold
+/Subtype /Type1
+/FontDescriptor 19 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+21 0 obj 
+<<
+/FontName /Times-Italic
+/StemV 88
+/Ascent 683
+/Flags 96
+/XHeight 441
+/Descent -217
+/ItalicAngle -16
+/FontBBox [-498 -307 1120 1023]
+/Type /FontDescriptor
+/CapHeight 653
+>>
+endobj 
+20 0 obj 
+<<
+/BaseFont /Times-Italic
+/Subtype /Type1
+/FontDescriptor 21 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+23 0 obj 
+<<
+/FontName /Courier-BoldOblique
+/StemV 166
+/Ascent 627
+/Flags 262243
+/XHeight 435
+/Descent -373
+/ItalicAngle -11
+/FontBBox [-48 -250 757 854]
+/Type /FontDescriptor
+/CapHeight 573
+>>
+endobj 
+22 0 obj 
+<<
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/FontDescriptor 23 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+25 0 obj 
+<<
+/FontName /Times-Roman
+/StemV 88
+/Ascent 683
+/Flags 32
+/XHeight 450
+/Descent -217
+/ItalicAngle 0
+/FontBBox [-568 -307 2000 1007]
+/Type /FontDescriptor
+/CapHeight 662
+>>
+endobj 
+24 0 obj 
+<<
+/BaseFont /Times-Roman
+/Subtype /Type1
+/FontDescriptor 25 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+27 0 obj 
+<<
+/FontName /Courier-Bold
+/StemV 166
+/Ascent 627
+/Flags 262179
+/XHeight 435
+/Descent -373
+/ItalicAngle 0
+/FontBBox [-88 -250 697 854]
+/Type /FontDescriptor
+/CapHeight 573
+>>
+endobj 
+26 0 obj 
+<<
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/FontDescriptor 27 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+30 0 obj [/PDF /ImageB /ImageC /ImageI /Text]
+endobj 
+29 0 obj 
+<<
+/ProcSet 30 0 R
+>>
+endobj 
+31 0 obj 
+<<
+/Type /Encoding
+/Differences [0 /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /P /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /e /f /g /.notdef /i /.notdef /.notdef /l /.notdef /.notdef /o /p /.notdef /r /s /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /z /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef]
+>>
+endobj 
+33 0 obj 
+<<
+/Length 247
+>>
+stream
+354 0 8 0 374 738 d1
+10 w
+8 0 m
+374 730 m
+348 736 320 738 293 738 c
+157 738 95 672 95 537 c
+95 497 l
+8 497 l
+8 398 l
+95 398 l
+95 0 l
+222 0 l
+222 398 l
+338 398 l
+338 497 l
+222 497 l
+222 539 l
+222 605 247 634 303 634 c
+322 634 345 632 365 625 c
+h
+S
+
+endstream 
+endobj 
+34 0 obj 
+<<
+/Length 145
+>>
+stream
+258 0 47 -12 210 152 d1
+10 w
+47 0 m
+129 152 m
+84 152 47 115 47 70 c
+47 25 84 -12 129 -12 c
+174 -12 210 25 210 70 c
+210 115 174 152 129 152 c
+h
+S
+
+endstream 
+endobj 
+35 0 obj 
+<<
+/Length 319
+>>
+stream
+558 0 35 -11 488 730 d1
+10 w
+35 0 m
+488 0 m
+488 730 l
+361 730 l
+361 502 l
+339 505 319 506 298 506 c
+133 506 35 390 35 222 c
+35 80 95 -11 216 -11 c
+292 -11 347 28 373 83 c
+375 83 l
+371 56 369 24 369 0 c
+h
+361 258 m
+361 173 321 95 254 95 c
+196 95 169 143 169 236 c
+169 359 221 405 294 405 c
+316 405 338 402 361 397 c
+h
+S
+
+endstream 
+endobj 
+36 0 obj 
+<<
+/Length 266
+>>
+stream
+425 0 34 -9 394 506 d1
+10 w
+34 0 m
+394 14 m
+384 123 l
+357 109 320 102 286 102 c
+201 102 168 160 168 245 c
+168 339 209 399 290 399 c
+322 399 353 391 380 381 c
+393 492 l
+361 501 325 506 291 506 c
+115 506 34 387 34 232 c
+34 63 120 -9 258 -9 c
+311 -9 360 1 394 14 c
+h
+S
+
+endstream 
+endobj 
+37 0 obj 
+<<
+/Length 338
+>>
+stream
+559 0 69 -10 523 730 d1
+10 w
+69 0 m
+523 274 m
+523 421 459 507 340 507 c
+271 507 215 473 190 419 c
+189 419 l
+194 445 197 486 197 516 c
+197 730 l
+69 730 l
+69 14 l
+126 -2 182 -10 254 -10 c
+425 -10 523 106 523 274 c
+h
+389 261 m
+389 138 336 92 264 92 c
+236 92 215 95 197 101 c
+197 241 l
+197 324 237 401 304 401 c
+362 401 389 354 389 261 c
+h
+S
+
+endstream 
+endobj 
+38 0 obj 
+<<
+/Length 342
+>>
+stream
+796 0 9 0 786 497 d1
+10 w
+9 0 m
+786 497 m
+655 497 l
+599 303 l
+584 254 574 210 564 159 c
+562 159 l
+552 208 540 252 522 309 c
+461 497 l
+338 497 l
+278 303 l
+264 259 252 214 242 159 c
+241 159 l
+229 210 215 260 202 309 c
+149 497 l
+9 497 l
+161 0 l
+293 0 l
+356 207 l
+369 248 380 286 390 332 c
+391 332 l
+400 290 408 255 419 221 c
+491 0 l
+630 0 l
+h
+S
+
+endstream 
+endobj 
+39 0 obj 
+<<
+/Length 15
+>>
+stream
+0 0 0 0 0 0 d1
+
+endstream 
+endobj 
+40 0 obj 
+<<
+/Length 348
+>>
+stream
+559 0 69 -241 523 507 d1
+10 w
+69 0 m
+523 275 m
+523 422 459 507 341 507 c
+266 507 213 472 185 414 c
+183 414 l
+187 440 188 473 188 497 c
+69 497 l
+69 -241 l
+197 -241 l
+197 -3 l
+218 -6 237 -7 261 -7 c
+433 -7 523 102 523 275 c
+h
+389 261 m
+389 138 336 92 264 92 c
+238 92 217 95 197 101 c
+197 239 l
+197 324 237 402 304 402 c
+362 402 389 354 389 261 c
+h
+S
+
+endstream 
+endobj 
+41 0 obj 
+<<
+/Length 263
+>>
+stream
+553 0 33 -10 519 507 d1
+10 w
+33 0 m
+519 258 m
+519 429 428 507 287 507 c
+136 507 33 395 33 240 c
+33 63 124 -10 265 -10 c
+414 -10 519 102 519 258 c
+h
+387 251 m
+387 150 339 99 276 99 c
+202 99 165 151 165 253 c
+165 355 221 399 278 399 c
+353 399 387 347 387 251 c
+h
+S
+
+endstream 
+endobj 
+42 0 obj 
+<<
+/Length 368
+>>
+stream
+866 0 69 0 797 508 d1
+10 w
+69 0 m
+797 0 m
+797 342 l
+797 455 744 508 648 508 c
+564 508 509 457 486 408 c
+474 456 437 508 349 508 c
+275 508 215 469 185 408 c
+183 408 l
+188 437 190 474 190 497 c
+69 497 l
+69 0 l
+197 0 l
+197 238 l
+197 331 252 401 311 401 c
+360 401 370 364 370 315 c
+370 0 l
+496 0 l
+496 238 l
+496 335 554 401 610 401 c
+657 401 669 368 669 315 c
+669 0 l
+h
+S
+
+endstream 
+endobj 
+43 0 obj 
+<<
+/Length 72
+>>
+stream
+266 0 69 0 197 730 d1
+10 w
+69 0 m
+197 0 m
+197 730 l
+69 730 l
+69 0 l
+h
+S
+
+endstream 
+endobj 
+44 0 obj 
+<<
+/Length 183
+>>
+stream
+266 0 54 0 213 716 d1
+10 w
+54 0 m
+213 639 m
+213 682 177 716 133 716 c
+89 716 54 681 54 639 c
+54 596 89 561 133 561 c
+177 561 213 596 213 639 c
+h
+197 0 m
+197 497 l
+69 497 l
+69 0 l
+h
+S
+
+endstream 
+endobj 
+32 0 obj 
+<<
+/i 33 0 R
+/P 34 0 R
+/g 35 0 R
+/f 36 0 R
+/e 37 0 R
+/z 38 0 R
+/.notdef 39 0 R
+/s 40 0 R
+/r 41 0 R
+/p 42 0 R
+/o 43 0 R
+/l 44 0 R
+>>
+endobj 
+28 0 obj 
+<<
+/FontMatrix [0.001 0 0 0.001 0 0]
+/FirstChar 80
+/Resources 29 0 R
+/Encoding 31 0 R
+/Name /www.pdflib.com
+/CharProcs 32 0 R
+/Subtype /Type3
+/LastChar 122
+/FontBBox [0 -241 797 738]
+/Type /Font
+/Widths [258 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 559 425 558 0 354 0 0 266 0 0 266 866 0 553 559 0 0 0 0 0 0 796]
+>>
+endobj 
+46 0 obj 
+<<
+/FontName /Courier-Oblique
+/StemV 109
+/Ascent 627
+/Flags 99
+/XHeight 435
+/Descent -373
+/ItalicAngle -11
+/FontBBox [-48 -250 748 857]
+/Type /FontDescriptor
+/CapHeight 573
+>>
+endobj 
+45 0 obj 
+<<
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/FontDescriptor 46 0 R
+/Type /Font
+/Encoding 7 0 R
+>>
+endobj 
+4 0 obj 
+<<
+/Font 
+<<
+/F9 5 0 R
+/F8 8 0 R
+/F7 10 0 R
+/F6 12 0 R
+/F5 14 0 R
+/F4 16 0 R
+/F3 18 0 R
+/F2 20 0 R
+/F1 24 0 R
+/F12 22 0 R
+/F0 28 0 R
+/F11 26 0 R
+/F10 45 0 R
+>>
+/ProcSet 30 0 R
+>>
+endobj 
+47 0 obj 
+<<
+/Length 55139
+>>
+stream
+q
+BT
+/F4 14.3782 Tf
+14.3782 TL
+0 4.8109 Td
+(mailie†)Tj
+/F4 10.2732 Tf
+10.2732 TL
+40.3453 2.0525 Td
+(saxifragous†)Tj
+/F5 14.4485 Tf
+14.4485 TL
+52.2291 -2.0876 Td
+(isoemodin†)Tj
+/F4 18.1148 Tf
+18.1148 TL
+69.8583 -1.8332 Td
+(outflanking†)Tj
+/F4 13.7834 Tf
+13.7834 TL
+92.1139 2.1657 Td
+(hypergol†)Tj
+/F4 18.5501 Tf
+18.5501 TL
+53.2177 -2.3833 Td
+(correction†)Tj
+/F8 21.3124 Tf
+21.3124 TL
+82.956 -1.3811 Td
+(putidly†)Tj
+/F1 13.4032 Tf
+13.4032 TL
+75.7868 3.9546 Td
+(verbification†)Tj
+/F9 15.867 Tf
+15.867 TL
+71.8412 -1.2319 Td
+(bronchus†)Tj
+/F10 22.8593 Tf
+22.8593 TL
+-538.3483 20.5039 Td
+(trantlum†)Tj
+/F1 15.3823 Tf
+15.3823 TL
+123.4402 3.7385 Td
+(arcuately†)Tj
+/F1 22.2612 Tf
+22.2612 TL
+60.2219 -3.4394 Td
+(Episcopalianism†)Tj
+/F5 18.1517 Tf
+18.1517 TL
+152.7342 2.0548 Td
+(blackwash†)Tj
+/F3 16.6152 Tf
+16.6152 TL
+89.7781 0.7682 Td
+(semihexagon†)Tj
+/F1 22.1035 Tf
+22.1035 TL
+95.5376 -2.7441 Td
+(sporangiferous†)Tj
+/F4 13.7163 Tf
+13.7163 TL
+-521.712 28.1936 Td
+(sumptuosity†)Tj
+/F12 14.2424 Tf
+14.2424 TL
+71.2699 -0.2631 Td
+(larcenic†)Tj
+/F9 20.5874 Tf
+20.5874 TL
+76.9091 -3.1725 Td
+(Porokoto†)Tj
+/F11 15.4918 Tf
+15.4918 TL
+111.1718 2.5478 Td
+(redound†)Tj
+/F2 15.0849 Tf
+15.0849 TL
+74.3608 0.2035 Td
+(chloroplatinic†)Tj
+/F7 21.5262 Tf
+21.5262 TL
+89.2575 -3.2207 Td
+(scerne†)Tj
+/F11 21.0694 Tf
+21.0694 TL
+75.3849 0.2284 Td
+(carone†)Tj
+/F2 11.8468 Tf
+11.8468 TL
+88.4914 4.6113 Td
+(hatching†)Tj
+/F1 16.6858 Tf
+16.6858 TL
+-586.8455 21.5805 Td
+(animistic†)Tj
+/F10 18.9121 Tf
+18.9121 TL
+65.3584 -1.1131 Td
+(techous†)Tj
+/F7 17.7284 Tf
+17.7284 TL
+90.7781 0.5918 Td
+(orchesography†)Tj
+/F5 14.7378 Tf
+14.7378 TL
+132.9988 1.4953 Td
+(nonbacterial†)Tj
+/F10 15.7752 Tf
+15.7752 TL
+84.3737 -0.5187 Td
+(archprelatical†)Tj
+/F4 10.8735 Tf
+10.8735 TL
+141.9766 2.4508 Td
+(indefective†)Tj
+/F1 22.0872 Tf
+22.0872 TL
+51.0294 -5.6068 Td
+(knickknack†)Tj
+/F5 23.4895 Tf
+23.4895 TL
+-566.515 23.2988 Td
+(septuagenarianism†)Tj
+/F1 15.3516 Tf
+15.3516 TL
+204.9697 4.069 Td
+(disimmure†)Tj
+/F1 21.3073 Tf
+21.3073 TL
+69.512 -2.9778 Td
+(Berberian†)Tj
+/F9 18.021 Tf
+18.021 TL
+89.3414 1.6431 Td
+(hexis†)Tj
+/F7 11.2241 Tf
+11.2241 TL
+64.8755 3.3984 Td
+(Ismailite†)Tj
+/F9 21.8417 Tf
+21.8417 TL
+48.0391 -5.3088 Td
+(unappendaged†)Tj
+/F4 20.695 Tf
+20.695 TL
+-476.7376 24.5734 Td
+(vrother†)Tj
+/F10 14.3478 Tf
+14.3478 TL
+67.2586 3.1736 Td
+(ringtoss†)Tj
+/F5 11.4464 Tf
+11.4464 TL
+77.4779 1.4507 Td
+(gillyflower†)Tj
+/F7 20.1892 Tf
+20.1892 TL
+53.4202 -4.3714 Td
+(dumortierite†)Tj
+/F5 15.727 Tf
+15.727 TL
+123.3962 2.2311 Td
+(actinozoon†)Tj
+/F2 12.156 Tf
+12.156 TL
+80.4276 1.7855 Td
+(Polonia†)Tj
+/F8 15.4351 Tf
+15.4351 TL
+41.5369 -1.6396 Td
+(magma†)Tj
+/F12 12.1788 Tf
+12.1788 TL
+58.3293 1.6282 Td
+(unmedicinal†)Tj
+/F8 17.1513 Tf
+17.1513 TL
+87.6871 -2.4863 Td
+(faunlike†)Tj
+/F8 17.4484 Tf
+17.4484 TL
+-589.5339 23.8514 Td
+(pajahuello†)Tj
+/F9 18.3396 Tf
+18.3396 TL
+91.1507 -0.4456 Td
+(unrecreating†)Tj
+/F5 19.3721 Tf
+19.3721 TL
+143.0492 -0.5162 Td
+(flowerist†)Tj
+/F9 20.1012 Tf
+20.1012 TL
+76.423 -0.3646 Td
+(Gonzalo†)Tj
+/F12 11.4439 Tf
+11.4439 TL
+96.4859 4.3287 Td
+(Deuteronomical†)Tj
+/F9 23.7968 Tf
+23.7968 TL
+102.9953 -6.1764 Td
+(hyperpurist†)Tj
+/F6 14.1282 Tf
+14.1282 TL
+-510.1041 28.8343 Td
+(disproportionalness†)Tj
+/F2 11.9556 Tf
+11.9556 TL
+126.4191 1.0863 Td
+(glycerinate†)Tj
+/F9 10.0702 Tf
+10.0702 TL
+56.7772 0.9427 Td
+(nonlegal†)Tj
+/F5 23.1452 Tf
+23.1452 TL
+54.3791 -6.5375 Td
+(repursue†)Tj
+/F10 10.6421 Tf
+10.6421 TL
+97.7654 6.2515 Td
+(spareness†)Tj
+/F7 10.7309 Tf
+10.7309 TL
+63.8528 -0.0444 Td
+(jacko†)Tj
+/F9 15.8468 Tf
+15.8468 TL
+30.4221 -2.558 Td
+(ilmenorutile†)Tj
+/F10 16.0637 Tf
+16.0637 TL
+123.6052 -0.1085 Td
+(nontextual†)Tj
+/F4 18.8217 Tf
+18.8217 TL
+-553.2208 22.621 Td
+(Trachylinae†)Tj
+/F2 18.6107 Tf
+18.6107 TL
+98.814 0.1055 Td
+(forwean†)Tj
+/F9 16.8599 Tf
+16.8599 TL
+65.6586 0.8754 Td
+(monoptic†)Tj
+/F3 23.1234 Tf
+23.1234 TL
+91.0437 -3.1317 Td
+(quintupliribbed†)Tj
+/F3 21.8652 Tf
+21.8652 TL
+162.5804 0.6291 Td
+(debasedness†)Tj
+/F4 10.3957 Tf
+10.3957 TL
+119.6684 5.7348 Td
+(cringing†)Tj
+/F3 11.4377 Tf
+11.4377 TL
+38.9942 -0.521 Td
+(fortifyingly†)Tj
+/F4 13.7119 Tf
+13.7119 TL
+-576.7593 22.8629 Td
+(Diadochian†)Tj
+/F12 13.6032 Tf
+13.6032 TL
+69.7115 0.0543 Td
+(lutanist†)Tj
+/F4 14.8369 Tf
+14.8369 TL
+73.4575 -0.6168 Td
+(arbitral†)Tj
+/F11 23.4953 Tf
+23.4953 TL
+49.8816 -4.3292 Td
+(prefriendly†)Tj
+/F9 23.4155 Tf
+23.4155 TL
+169.1664 0.0399 Td
+(Megachile†)Tj
+/F8 19.0183 Tf
+19.0183 TL
+140.4928 2.1986 Td
+(lymphocytomatosis†)Tj
+/F9 18.471 Tf
+18.471 TL
+-502.7097 24.2737 Td
+(irreparability†)Tj
+/F6 10.8041 Tf
+10.8041 TL
+166.2386 3.8334 Td
+(azofy†)Tj
+/F11 23.6353 Tf
+23.6353 TL
+28.8252 -6.4156 Td
+(multiengined†)Tj
+/F1 11.9967 Tf
+11.9967 TL
+184.3551 5.8193 Td
+(incantatory†)Tj
+/F4 23.5625 Tf
+23.5625 TL
+56.9721 -5.7829 Td
+(recurringly†)Tj
+/F10 18.0436 Tf
+18.0436 TL
+115.857 2.7595 Td
+(bushmaker†)Tj
+/F8 17.8201 Tf
+17.8201 TL
+-552.2481 24.1118 Td
+(bivittate†)Tj
+/F6 22.2513 Tf
+22.2513 TL
+73.2761 -2.2156 Td
+(nevo†)Tj
+/F6 10.3122 Tf
+10.3122 TL
+54.4266 5.9695 Td
+(sporting†)Tj
+/F5 20.8312 Tf
+20.8312 TL
+39.5472 -5.2595 Td
+(permutational†)Tj
+/F7 11.7884 Tf
+11.7884 TL
+131.9863 4.5214 Td
+(adenophthalmia†)Tj
+/F3 14.5035 Tf
+14.5035 TL
+93.6706 -1.3575 Td
+(indignant†)Tj
+/F12 21.0729 Tf
+21.0729 TL
+63.2786 -3.2847 Td
+(beguilingly†)Tj
+/F1 11.5395 Tf
+11.5395 TL
+151.7246 4.7667 Td
+(locality†)Tj
+/F6 13.2095 Tf
+13.2095 TL
+-607.9101 23.165 Td
+(yeukieness†)Tj
+/F1 12.3083 Tf
+12.3083 TL
+69.7464 0.4506 Td
+(dashmaker†)Tj
+/F4 20.543 Tf
+20.543 TL
+56.3966 -4.1174 Td
+(lymphangiectasis†)Tj
+/F11 21.5778 Tf
+21.5778 TL
+151.2379 -0.5174 Td
+(paroemiac†)Tj
+/F7 14.5447 Tf
+14.5447 TL
+129.4669 3.5165 Td
+(vermiformis†)Tj
+/F7 23.2277 Tf
+23.2277 TL
+87.2975 -4.3415 Td
+(tyee†)Tj
+/F5 14.4508 Tf
+14.4508 TL
+52.936 4.3885 Td
+(chartometer†)Tj
+/F10 22.7641 Tf
+22.7641 TL
+-547.0812 19.8433 Td
+(gridelin†)Tj
+/F8 19.7225 Tf
+19.7225 TL
+122.9263 1.5208 Td
+(Yezidi†)Tj
+/F6 16.8042 Tf
+16.8042 TL
+62.4809 1.4592 Td
+(fendillation†)Tj
+/F4 22.502 Tf
+22.502 TL
+84.9954 -2.8489 Td
+(sexualism†)Tj
+/F10 13.606 Tf
+13.606 TL
+98.1539 4.448 Td
+(derogatory†)Tj
+/F8 18.6483 Tf
+18.6483 TL
+89.7994 -2.5212 Td
+(uningenious†)Tj
+/F6 14.4391 Tf
+14.4391 TL
+116.0483 2.1046 Td
+(bemaddening†)Tj
+/F6 20.1381 Tf
+20.1381 TL
+-574.4043 21.1505 Td
+(cutin†)Tj
+/F1 12.0884 Tf
+12.0884 TL
+48.13 4.0248 Td
+(boomless†)Tj
+/F6 14.8846 Tf
+14.8846 TL
+48.692 -1.3981 Td
+(undisappointing†)Tj
+/F5 13.2836 Tf
+13.2836 TL
+108.3897 0.8005 Td
+(setwork†)Tj
+/F6 18.8077 Tf
+18.8077 TL
+49.4549 -2.762 Td
+(Strombidae†)Tj
+/F2 18.7695 Tf
+18.7695 TL
+101.3921 0.0191 Td
+(unburden†)Tj
+/F11 20.5444 Tf
+20.5444 TL
+76.6358 -0.8875 Td
+(uncram†)Tj
+/F5 21.6857 Tf
+21.6857 TL
+86.2867 -0.5706 Td
+(overproductive†)Tj
+/F7 10.4408 Tf
+10.4408 TL
+-518.9812 29.6224 Td
+(trapezial†)Tj
+/F5 14.6959 Tf
+14.6959 TL
+45.261 -2.1275 Td
+(unrepentantly†)Tj
+/F8 17.649 Tf
+17.649 TL
+93.1279 -1.4765 Td
+(antibody†)Tj
+/F1 10.4128 Tf
+10.4128 TL
+78.4497 3.6181 Td
+(photosynthesize†)Tj
+/F5 16.7868 Tf
+16.7868 TL
+69.7034 -3.187 Td
+(nonmental†)Tj
+/F1 18.2555 Tf
+18.2555 TL
+83.0444 -0.7343 Td
+(narrow†)Tj
+/F8 13.9391 Tf
+13.9391 TL
+56.2635 2.1582 Td
+(disinvigorate†)Tj
+/F1 20.936 Tf
+20.936 TL
+90.6322 -3.4985 Td
+(auxiliator†)Tj
+/F6 17.752 Tf
+17.752 TL
+85.4818 1.592 Td
+(dimethylamino†)Tj
+/F7 12.8677 Tf
+12.8677 TL
+-601.964 26.4422 Td
+(venerational†)Tj
+/F4 18.8735 Tf
+18.8735 TL
+79.381 -3.0029 Td
+(semifused†)Tj
+/F6 19.5648 Tf
+19.5648 TL
+82.3072 -0.3456 Td
+(eudaemonism†)Tj
+/F11 15.4429 Tf
+15.4429 TL
+128.3058 2.0609 Td
+(tranquillization†)Tj
+/F9 20.6041 Tf
+20.6041 TL
+157.518 -2.5806 Td
+(Sabazios†)Tj
+/F5 14.5048 Tf
+14.5048 TL
+111.2623 3.0496 Td
+(redictation†)Tj
+/F3 10.6075 Tf
+10.6075 TL
+-558.7743 25.9487 Td
+(detrimentally†)Tj
+/F2 16.5422 Tf
+16.5422 TL
+63.9316 -2.9673 Td
+(exoplasm†)Tj
+/F10 20.3362 Tf
+20.3362 TL
+66.6155 -1.897 Td
+(learn†)Tj
+/F8 14.6686 Tf
+14.6686 TL
+73.2102 2.8338 Td
+(merozoite†)Tj
+/F2 20.2352 Tf
+20.2352 TL
+73.3576 -2.7833 Td
+(misthrift†)Tj
+/F2 18.3608 Tf
+18.3608 TL
+73.6563 0.9372 Td
+(holomorphic†)Tj
+/F3 19.9976 Tf
+19.9976 TL
+98.4324 -0.8184 Td
+(uninsulated†)Tj
+/F5 14.9828 Tf
+14.9828 TL
+105.0274 2.5074 Td
+(erythrochroism†)Tj
+/F12 10.2373 Tf
+10.2373 TL
+-554.231 26.3728 Td
+(benet†)Tj
+/F11 23.0183 Tf
+23.0183 TL
+36.8543 -6.3905 Td
+(plastid†)Tj
+/F6 22.2963 Tf
+22.2963 TL
+110.4876 0.361 Td
+(nasoethmoidal†)Tj
+/F11 19.2091 Tf
+19.2091 TL
+151.191 1.5436 Td
+(unproportionableness†)Tj
+/F2 16.2711 Tf
+16.2711 TL
+242.0342 1.469 Td
+(gaudless†)Tj
+/F7 22.7525 Tf
+22.7525 TL
+61.0165 -3.2407 Td
+(backfatter†)Tj
+/F10 11.7162 Tf
+11.7162 TL
+-601.5835 29.5182 Td
+(nonextortion†)Tj
+/F3 16.3524 Tf
+16.3524 TL
+91.386 -2.3181 Td
+(runtee†)Tj
+/F9 13.1545 Tf
+13.1545 TL
+49.4988 1.5989 Td
+(clochan†)Tj
+/F7 10.0172 Tf
+10.0172 TL
+63.1418 1.5687 Td
+(marplotry†)Tj
+/F6 23.0242 Tf
+23.0242 TL
+48.984 -6.5035 Td
+(taxiarch†)Tj
+/F12 15.7064 Tf
+15.7064 TL
+87.0083 3.6589 Td
+(bradawl†)Tj
+/F7 17.0573 Tf
+17.0573 TL
+75.3905 -0.6755 Td
+(sambal†)Tj
+/F8 10.6833 Tf
+10.6833 TL
+63.5214 3.187 Td
+(orthopteron†)Tj
+/F5 10.5417 Tf
+10.5417 TL
+63.5013 0.0708 Td
+(aptitude†)Tj
+/F3 17.6711 Tf
+17.6711 TL
+40.4381 -3.5647 Td
+(soreheaded†)Tj
+/F9 14.9084 Tf
+14.9084 TL
+-582.8703 25.3813 Td
+(convolvulinolic†)Tj
+/F6 10.93 Tf
+10.93 TL
+143.1208 1.9892 Td
+(bumbarge†)Tj
+/F12 12.4611 Tf
+12.4611 TL
+52.2453 -0.7656 Td
+(uncolonize†)Tj
+/F8 23.2811 Tf
+23.2811 TL
+82.2435 -5.41 Td
+(castorite†)Tj
+/F12 12.1928 Tf
+12.1928 TL
+103.5076 5.5441 Td
+(unsubjectlike†)Tj
+/F1 15.2943 Tf
+15.2943 TL
+102.4195 -1.5507 Td
+(Geisenheimer†)Tj
+/F11 22.9033 Tf
+22.9033 TL
+88.7679 -3.8045 Td
+(unjealoused†)Tj
+/F7 21.5597 Tf
+21.5597 TL
+-572.3046 24.6718 Td
+(saccoderm†)Tj
+/F3 19.2421 Tf
+19.2421 TL
+119.8287 1.1588 Td
+(Pseudechis†)Tj
+/F11 20.7097 Tf
+20.7097 TL
+94.6135 -0.7338 Td
+(reafford†)Tj
+/F1 20.3324 Tf
+20.3324 TL
+111.8325 0.1887 Td
+(holour†)Tj
+/F11 12.9625 Tf
+12.9625 TL
+58.171 3.685 Td
+(jestproof†)Tj
+/F12 15.9659 Tf
+15.9659 TL
+77.7748 -1.5017 Td
+(subhouse†)Tj
+/F11 11.789 Tf
+11.789 TL
+86.2161 2.0885 Td
+(upsit†)Tj
+/F11 20.7082 Tf
+20.7082 TL
+42.4405 -4.4596 Td
+(interfuse†)Tj
+/F10 13.2026 Tf
+13.2026 TL
+-590.8772 27.7528 Td
+(thalassic†)Tj
+/F10 19.7599 Tf
+19.7599 TL
+79.2159 -3.2786 Td
+(Pinna†)Tj
+/F2 19.8677 Tf
+19.8677 TL
+71.1358 -0.0539 Td
+(Balthasar†)Tj
+/F10 16.2424 Tf
+16.2424 TL
+83.3449 1.8126 Td
+(impeccably†)Tj
+/F9 13.6588 Tf
+13.6588 TL
+107.1997 1.2918 Td
+(gigunu†)Tj
+/F9 20.9404 Tf
+20.9404 TL
+57.3668 -3.6408 Td
+(bachelorhood†)Tj
+/F9 20.0018 Tf
+20.0018 TL
+163.3354 0.4693 Td
+(Orakzai†)Tj
+/F7 12.432 Tf
+12.432 TL
+-561.5984 27.7849 Td
+(soapbush†)Tj
+/F3 14.4708 Tf
+14.4708 TL
+62.1723 -1.0194 Td
+(rota†)Tj
+/F1 16.8378 Tf
+16.8378 TL
+29.3324 -1.1835 Td
+(reimmersion†)Tj
+/F12 11.3967 Tf
+11.3967 TL
+89.3243 2.7205 Td
+(muddleproof†)Tj
+/F8 22.4429 Tf
+22.4429 TL
+82.0562 -5.5231 Td
+(viscidize†)Tj
+/F2 18.5884 Tf
+18.5884 TL
+99.8037 1.9273 Td
+(Geothlypis†)Tj
+/F8 10.6194 Tf
+10.6194 TL
+85.1906 3.9845 Td
+(Nice†)Tj
+/F4 13.9043 Tf
+13.9043 TL
+25.3803 -1.6425 Td
+(polypinnate†)Tj
+/F8 21.6554 Tf
+21.6554 TL
+70.6895 -3.8755 Td
+(impenetrate†)Tj
+/F4 18.543 Tf
+18.543 TL
+-543.9492 25.5562 Td
+(brambly†)Tj
+/F10 14.6981 Tf
+14.6981 TL
+67.4779 1.9224 Td
+(disappointingness†)Tj
+/F12 12.4139 Tf
+12.4139 TL
+158.7398 1.1421 Td
+(polycycly†)Tj
+/F6 14.8686 Tf
+14.8686 TL
+74.4832 -1.2273 Td
+(flob†)Tj
+/F6 23.907 Tf
+23.907 TL
+28.1016 -4.5192 Td
+(hepatorrhagia†)Tj
+/F9 13.5079 Tf
+13.5079 TL
+154.1522 5.1996 Td
+(semiwarfare†)Tj
+/F9 13.7413 Tf
+13.7413 TL
+97.2567 -0.1167 Td
+(blendure†)Tj
+/F11 20.1956 Tf
+20.1956 TL
+-580.2113 20.7728 Td
+(reneague†)Tj
+/F12 20.6134 Tf
+20.6134 TL
+109.0561 -0.2089 Td
+(foresaddle†)Tj
+/F11 15.7453 Tf
+15.7453 TL
+136.0482 2.434 Td
+(anomalocephalus†)Tj
+/F3 18.5962 Tf
+18.5962 TL
+151.1552 -1.4254 Td
+(philosophobia†)Tj
+/F4 22.8577 Tf
+22.8577 TL
+116.2818 -2.1307 Td
+(palpation†)Tj
+/F8 17.8142 Tf
+17.8142 TL
+94.6307 2.5217 Td
+(liltingness†)Tj
+/F10 15.3795 Tf
+15.3795 TL
+-607.172 25.2174 Td
+(Barringtonia†)Tj
+/F12 15.6168 Tf
+15.6168 TL
+119.9601 -0.1186 Td
+(lacunosity†)Tj
+/F6 23.2293 Tf
+23.2293 TL
+103.0708 -3.8063 Td
+(foreutter†)Tj
+/F5 11.4616 Tf
+11.4616 TL
+92.9637 5.8839 Td
+(wilily†)Tj
+/F12 11.3326 Tf
+11.3326 TL
+27.3702 0.0645 Td
+(scomberoid†)Tj
+/F4 18.1894 Tf
+18.1894 TL
+74.7953 -3.4284 Td
+(derangeable†)Tj
+/F12 19.4653 Tf
+19.4653 TL
+96.4949 -0.6379 Td
+(brandyman†)Tj
+/F7 16.4287 Tf
+16.4287 TL
+-514.6549 25.5183 Td
+(forkable†)Tj
+/F8 13.7998 Tf
+13.7998 TL
+68.475 1.3145 Td
+(mnemonically†)Tj
+/F7 20.0991 Tf
+20.0991 TL
+95.8674 -3.1496 Td
+(breaden†)Tj
+/F10 11.8532 Tf
+11.8532 TL
+83.7731 4.1229 Td
+(rateless†)Tj
+/F10 15.3801 Tf
+15.3801 TL
+64.0075 -1.7634 Td
+(parate†)Tj
+/F1 16.3227 Tf
+16.3227 TL
+64.5964 -0.4713 Td
+(passingness†)Tj
+/F11 15.2386 Tf
+15.2386 TL
+81.1564 0.542 Td
+(anticritique†)Tj
+/F10 18.6937 Tf
+18.6937 TL
+118.8611 -1.7276 Td
+(droppy†)Tj
+/F7 15.4026 Tf
+15.4026 TL
+-576.7369 25.6456 Td
+(rigging†)Tj
+/F12 13.0923 Tf
+13.0923 TL
+56.4812 1.1551 Td
+(unthrown†)Tj
+/F2 20.5573 Tf
+20.5573 TL
+70.6985 -3.7325 Td
+(explicatory†)Tj
+/F11 14.5955 Tf
+14.5955 TL
+97.6265 2.9809 Td
+(cosmolabe†)Tj
+/F9 13.5506 Tf
+13.5506 TL
+87.5732 0.5225 Td
+(pneumotherapeutics†)Tj
+/F1 19.8556 Tf
+19.8556 TL
+154.4772 -3.1525 Td
+(sutural†)Tj
+/F2 16.1025 Tf
+16.1025 TL
+59.0109 1.8765 Td
+(whoremonging†)Tj
+/F8 19.1601 Tf
+19.1601 TL
+-525.8675 22.4712 Td
+(spirillar†)Tj
+/F9 12.4259 Tf
+12.4259 TL
+74.5518 3.3671 Td
+(discolichen†)Tj
+/F10 10.8289 Tf
+10.8289 TL
+89.4665 0.7985 Td
+(evenmete†)Tj
+/F2 19.3155 Tf
+19.3155 TL
+58.476 -4.2433 Td
+(otorhinolaryngologist†)Tj
+/F5 15.2498 Tf
+15.2498 TL
+174.4001 2.0329 Td
+(ophthalmodynia†)Tj
+/F6 15.2622 Tf
+15.2622 TL
+111.8874 -0.0062 Td
+(Thiobacteria†)Tj
+/F8 11.2509 Tf
+11.2509 TL
+88.2157 2.0056 Td
+(nonrefutation†)Tj
+/F5 21.2756 Tf
+21.2756 TL
+-596.9976 18.9877 Td
+(prelature†)Tj
+/F10 13.9635 Tf
+13.9635 TL
+89.8679 3.656 Td
+(myrmicine†)Tj
+/F8 17.6403 Tf
+17.6403 TL
+83.7807 -1.8384 Td
+(bastide†)Tj
+/F6 18.3234 Tf
+18.3234 TL
+66.6629 -0.3415 Td
+(venenation†)Tj
+/F7 16.7492 Tf
+16.7492 TL
+94.7319 0.7871 Td
+(unobserved†)Tj
+/F12 23.5248 Tf
+23.5248 TL
+99.5906 -3.3878 Td
+(foresign†)Tj
+/F3 18.2098 Tf
+18.2098 TL
+127.0337 2.6575 Td
+(anagnorisis†)Tj
+/F2 17.6872 Tf
+17.6872 TL
+-561.6678 24.2613 Td
+(corsaint†)Tj
+/F8 23.3342 Tf
+23.3342 TL
+62.4004 -2.8235 Td
+(dandily†)Tj
+/F3 19.0196 Tf
+19.0196 TL
+88.18 2.1573 Td
+(Newport†)Tj
+/F10 22.7663 Tf
+22.7663 TL
+75.5268 -1.8734 Td
+(periwigpated†)Tj
+/F11 16.0565 Tf
+16.0565 TL
+177.5775 3.3549 Td
+(incalescence†)Tj
+/F12 17.0064 Tf
+17.0064 TL
+125.2411 -0.4749 Td
+(Bakutu†)Tj
+/F6 12.0033 Tf
+12.0033 TL
+71.4269 2.5016 Td
+(spookiness†)Tj
+/F7 12.382 Tf
+12.382 TL
+-600.3526 23.8106 Td
+(kineplasty†)Tj
+/F8 16.2662 Tf
+16.2662 TL
+64.0027 -1.9421 Td
+(phthalan†)Tj
+/F7 21.814 Tf
+21.814 TL
+72.3033 -2.7739 Td
+(Calorite†)Tj
+/F12 22.0924 Tf
+22.0924 TL
+87.278 -0.1392 Td
+(fatefulness†)Tj
+/F9 17.5145 Tf
+17.5145 TL
+159.065 2.2889 Td
+(unpondered†)Tj
+/F9 20.9143 Tf
+20.9143 TL
+115.5955 -1.6999 Td
+(terebinthinate†)Tj
+/F9 12.6782 Tf
+12.6782 TL
+-498.2445 28.118 Td
+(Potamonidae†)Tj
+/F8 13.8451 Tf
+13.8451 TL
+91.2833 -0.5834 Td
+(whirling†)Tj
+/F8 22.1436 Tf
+22.1436 TL
+56.931 -4.1493 Td
+(refectorial†)Tj
+/F3 18.6435 Tf
+18.6435 TL
+113.2204 1.75 Td
+(reyouth†)Tj
+/F7 18.6564 Tf
+18.6564 TL
+66.7998 -0.0064 Td
+(Frenchness†)Tj
+/F6 22.8835 Tf
+22.8835 TL
+109.9047 -2.1135 Td
+(penicillin†)Tj
+/F2 16.0624 Tf
+16.0624 TL
+94.0968 3.4105 Td
+(pendulate†)Tj
+/F5 22.0144 Tf
+22.0144 TL
+67.3657 -2.976 Td
+(scratchcard†)Tj
+/F4 21.477 Tf
+21.477 TL
+-599.6018 24.2687 Td
+(unsealer†)Tj
+/F9 11.3525 Tf
+11.3525 TL
+81.7413 5.0622 Td
+(phonasthenia†)Tj
+/F10 19.5668 Tf
+19.5668 TL
+88.5496 -4.1072 Td
+(gadwall†)Tj
+/F5 15.8742 Tf
+15.8742 TL
+93.9208 1.8463 Td
+(Skoinolon†)Tj
+/F7 16.2772 Tf
+16.2772 TL
+74.1166 -0.2015 Td
+(bossage†)Tj
+/F2 13.2545 Tf
+13.2545 TL
+70.5618 1.5114 Td
+(paleography†)Tj
+/F7 12.5985 Tf
+12.5985 TL
+70.3149 0.328 Td
+(Hippuritidae†)Tj
+/F2 20.8713 Tf
+20.8713 TL
+77.0021 -4.1364 Td
+(scolytid†)Tj
+/F5 22.0663 Tf
+22.0663 TL
+-556.2071 23.4025 Td
+(Chapanec†)Tj
+/F1 23.4582 Tf
+23.4582 TL
+106.7125 -0.696 Td
+(thriftbox†)Tj
+/F8 21.7482 Tf
+21.7482 TL
+87.9684 0.855 Td
+(calefactor†)Tj
+/F9 22.7418 Tf
+22.7418 TL
+108.7847 -0.4968 Td
+(mica†)Tj
+/F7 13.1967 Tf
+13.1967 TL
+68.2253 4.7725 Td
+(isolation†)Tj
+/F8 18.7281 Tf
+18.7281 TL
+57.9337 -2.7657 Td
+(Dave†)Tj
+/F7 13.4219 Tf
+13.4219 TL
+49.9665 2.6531 Td
+(bregmata†)Tj
+/F4 11.7077 Tf
+11.7077 TL
+64.1433 0.8571 Td
+(forbearer†)Tj
+/F2 12.0382 Tf
+12.0382 TL
+48.4465 -0.1652 Td
+(underpeopled†)Tj
+/F4 20.2878 Tf
+20.2878 TL
+-592.1808 19.8752 Td
+(winy†)Tj
+/F4 16.3646 Tf
+16.3646 TL
+44.5316 1.9616 Td
+(formaldehydesulphoxylate†)Tj
+/F12 16.0793 Tf
+16.0793 TL
+182.2852 0.1427 Td
+(ethanediol†)Tj
+/F12 23.5656 Tf
+23.5656 TL
+106.1232 -3.7432 Td
+(scotching†)Tj
+/F4 13.0841 Tf
+13.0841 TL
+141.3935 5.2407 Td
+(ester†)Tj
+/F7 12.2896 Tf
+12.2896 TL
+28.7066 0.3973 Td
+(effecter†)Tj
+/F12 20.1005 Tf
+20.1005 TL
+47.8064 -3.9055 Td
+(dosadh†)Tj
+/F10 12.531 Tf
+12.531 TL
+-550.8464 27.7848 Td
+(avania†)Tj
+/F10 20.5445 Tf
+20.5445 TL
+52.63 -4.0068 Td
+(counterpull†)Tj
+/F1 13.3539 Tf
+13.3539 TL
+147.9202 3.5953 Td
+(traversewise†)Tj
+/F4 19.723 Tf
+19.723 TL
+70.0811 -3.1846 Td
+(unqualitied†)Tj
+/F10 20.501 Tf
+20.501 TL
+98.1022 -0.389 Td
+(perduring†)Tj
+/F6 10.7835 Tf
+10.7835 TL
+123.0057 4.8587 Td
+(setting†)Tj
+/F8 18.1004 Tf
+18.1004 TL
+34.766 -3.6584 Td
+(laparorrhaphy†)Tj
+/F5 23.6358 Tf
+23.6358 TL
+-526.5053 21.2323 Td
+(superoxygenation†)Tj
+/F8 12.8529 Tf
+12.8529 TL
+193.128 5.3914 Td
+(ingrown†)Tj
+/F6 20.6429 Tf
+20.6429 TL
+53.558 -3.895 Td
+(Ferrarese†)Tj
+/F5 11.0658 Tf
+11.0658 TL
+95.2049 4.7885 Td
+(schiffli†)Tj
+/F12 21.5881 Tf
+21.5881 TL
+33.8172 -5.2611 Td
+(eyrir†)Tj
+/F10 23.1229 Tf
+23.1229 TL
+77.7171 -0.7674 Td
+(sultrily†)Tj
+/F9 19.6265 Tf
+19.6265 TL
+124.8636 1.7482 Td
+(Saan†)Tj
+/F8 20.5321 Tf
+20.5321 TL
+-578.2889 23.5472 Td
+(auramine†)Tj
+/F3 12.1008 Tf
+12.1008 TL
+96.9937 4.2157 Td
+(raglet†)Tj
+/F3 18.9489 Tf
+18.9489 TL
+33.2651 -3.4241 Td
+(anthradiquinone†)Tj
+/F8 10.4657 Tf
+10.4657 TL
+140.582 4.2416 Td
+(getaway†)Tj
+/F9 20.7428 Tf
+20.7428 TL
+44.2071 -5.1385 Td
+(chinkara†)Tj
+/F1 22.655 Tf
+22.655 TL
+112.011 -0.9561 Td
+(decephalization†)Tj
+/F10 14.0329 Tf
+14.0329 TL
+147.8466 4.3111 Td
+(pseudosymptomatic†)Tj
+/F11 22.7309 Tf
+22.7309 TL
+-574.9055 19.651 Td
+(nonschismatic†)Tj
+/F5 15.9747 Tf
+15.9747 TL
+190.9395 3.3781 Td
+(bandiness†)Tj
+/F2 19.8738 Tf
+19.8738 TL
+77.2538 -1.9496 Td
+(unsenatorial†)Tj
+/F9 13.6427 Tf
+13.6427 TL
+105.4506 3.1156 Td
+(merosymmetry†)Tj
+/F7 17.0957 Tf
+17.0957 TL
+106.4131 -1.7265 Td
+(whiffer†)Tj
+/F4 21.4903 Tf
+21.4903 TL
+60.7925 -2.1973 Td
+(hubmaking†)Tj
+/F6 13.6962 Tf
+13.6962 TL
+-540.8493 27.8971 Td
+(decan†)Tj
+/F11 15.2129 Tf
+15.2129 TL
+41.1159 -0.7584 Td
+(pyrogenetically†)Tj
+/F4 14.8002 Tf
+14.8002 TL
+146.0438 0.2063 Td
+(sternways†)Tj
+/F8 12.9077 Tf
+12.9077 TL
+63.7297 0.9463 Td
+(goetia†)Tj
+/F12 18.7315 Tf
+18.7315 TL
+41.6015 -2.9119 Td
+(bordering†)Tj
+/F12 23.6455 Tf
+23.6455 TL
+112.3891 -2.457 Td
+(reallocation†)Tj
+/F6 12.1827 Tf
+12.1827 TL
+184.4349 5.7314 Td
+(aftaba†)Tj
+/F2 18.2492 Tf
+18.2492 TL
+-589.3149 20.9668 Td
+(disinvestiture†)Tj
+/F8 12.6559 Tf
+12.6559 TL
+102.9074 2.7967 Td
+(zirconate†)Tj
+/F3 17.8748 Tf
+17.8748 TL
+59.0779 -2.6094 Td
+(unie†)Tj
+/F11 10.5717 Tf
+10.5717 TL
+37.2511 3.6515 Td
+(omega†)Tj
+/F10 11.8088 Tf
+11.8088 TL
+38.0582 -0.6186 Td
+(pseudoantique†)Tj
+/F7 11.9659 Tf
+11.9659 TL
+99.1942 -0.0785 Td
+(phocodontic†)Tj
+/F1 13.7493 Tf
+13.7493 TL
+75.1219 -0.8917 Td
+(latentness†)Tj
+/F11 11.7491 Tf
+11.7491 TL
+57.6647 1.0001 Td
+(stingray†)Tj
+/F10 18.0764 Tf
+18.0764 TL
+63.4452 -3.1636 Td
+(killeen†)Tj
+/F1 17.2956 Tf
+17.2956 TL
+-532.7205 24.3904 Td
+(overparticularly†)Tj
+/F7 12.3491 Tf
+12.3491 TL
+114.791 2.4733 Td
+(tetralemma†)Tj
+/F10 12.2848 Tf
+12.2848 TL
+69.3153 0.0321 Td
+(Shalako†)Tj
+/F11 14.9893 Tf
+14.9893 TL
+58.9672 -1.3522 Td
+(ripperman†)Tj
+/F10 20.1303 Tf
+20.1303 TL
+89.9356 -2.5705 Td
+(Sirenoidei†)Tj
+/F4 13.6805 Tf
+13.6805 TL
+132.8597 3.2249 Td
+(ultratotal†)Tj
+/F6 21.7503 Tf
+21.7503 TL
+55.8848 -4.0349 Td
+(varicated†)Tj
+/F11 23.7568 Tf
+23.7568 TL
+-521.7536 22.9967 Td
+(semisatiric†)Tj
+/F7 14.4395 Tf
+14.4395 TL
+171.0489 4.6587 Td
+(stairhead†)Tj
+/F8 18.5477 Tf
+18.5477 TL
+68.2121 -2.0541 Td
+(stuntiness†)Tj
+/F8 14.69 Tf
+14.69 TL
+97.9134 1.9289 Td
+(unagonize†)Tj
+/F11 18.3103 Tf
+18.3103 TL
+76.7256 -1.8102 Td
+(josephinite†)Tj
+/F7 15.299 Tf
+15.299 TL
+131.8344 1.5057 Td
+(preimbibe†)Tj
+/F3 12.3604 Tf
+12.3604 TL
+-545.7344 25.4693 Td
+(abutting†)Tj
+/F7 13.7645 Tf
+13.7645 TL
+47.7357 -0.7021 Td
+(corticoefferent†)Tj
+/F9 23.8056 Tf
+23.8056 TL
+100.1916 -5.0206 Td
+(enfester†)Tj
+/F4 22.9205 Tf
+22.9205 TL
+128.5503 0.4426 Td
+(urethrorrhea†)Tj
+/F6 18.1913 Tf
+18.1913 TL
+129.2715 2.3646 Td
+(jurara†)Tj
+/F11 14.5841 Tf
+14.5841 TL
+51.554 1.8036 Td
+(admittible†)Tj
+/F11 18.6364 Tf
+18.6364 TL
+96.2551 -2.0262 Td
+(Elihu†)Tj
+/F12 12.6655 Tf
+12.6655 TL
+-553.5583 26.9854 Td
+(reclaim†)Tj
+/F2 10.6176 Tf
+10.6176 TL
+60.7945 1.0239 Td
+(pregenerosity†)Tj
+/F7 17.676 Tf
+17.676 TL
+61.0408 -3.5292 Td
+(Toriness†)Tj
+/F5 15.4913 Tf
+15.4913 TL
+78.5875 1.0923 Td
+(lichenization†)Tj
+/F2 12.7831 Tf
+12.7831 TL
+89.54 1.3541 Td
+(anukabiet†)Tj
+/F1 15.4326 Tf
+15.4326 TL
+53.6121 -1.3248 Td
+(exponency†)Tj
+/F8 21.4633 Tf
+21.4633 TL
+70.7122 -3.0154 Td
+(agminate†)Tj
+/F5 19.4304 Tf
+19.4304 TL
+100.1909 1.0165 Td
+(rubiate†)Tj
+/F3 15.652 Tf
+15.652 TL
+64.8005 1.8892 Td
+(keerogue†)Tj
+/F2 13.853 Tf
+13.853 TL
+-579.2785 24.8995 Td
+(chthonian†)Tj
+/F4 12.8737 Tf
+12.8737 TL
+58.8754 0.4896 Td
+(cardioneural†)Tj
+/F11 18.9866 Tf
+18.9866 TL
+71.887 -3.0564 Td
+(felinophobe†)Tj
+/F9 20.3909 Tf
+20.3909 TL
+136.7034 -0.7021 Td
+(pollenless†)Tj
+/F9 17.6068 Tf
+17.6068 TL
+134.5797 1.392 Td
+(machicolation†)Tj
+/F8 13.3173 Tf
+13.3173 TL
+147.8972 2.1447 Td
+(tarsoptosis†)Tj
+/F12 11.4769 Tf
+11.4769 TL
+-549.9426 24.9202 Td
+(jacketing†)Tj
+/F2 10.9641 Tf
+10.9641 TL
+68.8614 0.2564 Td
+(wiener†)Tj
+/F4 19.0805 Tf
+19.0805 TL
+32.5853 -4.0582 Td
+(yomer†)Tj
+/F8 17.9757 Tf
+17.9757 TL
+53.5207 0.5524 Td
+(steward†)Tj
+/F1 23.8212 Tf
+23.8212 TL
+72.9275 -2.9227 Td
+(budmash†)Tj
+/F10 11.1781 Tf
+11.1781 TL
+91.9735 6.3215 Td
+(ultravirtuous†)Tj
+/F12 20.7672 Tf
+20.7672 TL
+93.8961 -4.7946 Td
+(satinlike†)Tj
+/F7 20.9271 Tf
+20.9271 TL
+124.6033 -0.0799 Td
+(microcellular†)Tj
+/F7 18.8391 Tf
+18.8391 TL
+-538.3677 25.044 Td
+(irreconciliableness†)Tj
+/F9 12.3435 Tf
+12.3435 TL
+175.9193 3.2478 Td
+(archispore†)Tj
+/F5 11.9463 Tf
+11.9463 TL
+81.4672 0.1986 Td
+(endosclerite†)Tj
+/F7 12.59 Tf
+12.59 TL
+67.7235 -0.3219 Td
+(linteling†)Tj
+/F7 12.3622 Tf
+12.3622 TL
+51.77 0.1139 Td
+(leucopyrite†)Tj
+/F2 13.4903 Tf
+13.4903 TL
+69.3888 -0.5641 Td
+(acieration†)Tj
+/F3 14.1773 Tf
+14.1773 TL
+58.8311 -0.3435 Td
+(physeterine†)Tj
+/F1 15.3811 Tf
+15.3811 TL
+73.6368 -0.6019 Td
+(quipu†)Tj
+/F10 14.2303 Tf
+14.2303 TL
+-578.7368 24.5754 Td
+(Pyrularia†)Tj
+/F5 19.0962 Tf
+19.0962 TL
+85.3819 -2.4329 Td
+(paganistic†)Tj
+/F2 15.3296 Tf
+15.3296 TL
+91.2796 1.8833 Td
+(apodosis†)Tj
+/F2 12.5172 Tf
+12.5172 TL
+58.3445 1.4062 Td
+(calcaneonavicular†)Tj
+/F12 23.4996 Tf
+23.4996 TL
+96.2945 -5.4912 Td
+(bothy†)Tj
+/F8 21.375 Tf
+21.375 TL
+84.5986 1.0623 Td
+(Venezuelan†)Tj
+/F9 17.8584 Tf
+17.8584 TL
+123.5473 1.7583 Td
+(overwade†)Tj
+/F4 21.2151 Tf
+21.2151 TL
+-539.4463 22.3216 Td
+(fungo†)Tj
+/F2 16.411 Tf
+16.411 TL
+57.1748 2.4021 Td
+(diverter†)Tj
+/F2 20.3534 Tf
+20.3534 TL
+56.0601 -1.9712 Td
+(semitime†)Tj
+/F12 15.7231 Tf
+15.7231 TL
+77.4448 2.3152 Td
+(campanular†)Tj
+/F2 13.3865 Tf
+13.3865 TL
+103.7721 1.1683 Td
+(aggur†)Tj
+/F10 19.1689 Tf
+19.1689 TL
+35.3271 -2.8912 Td
+(seemingness†)Tj
+/F3 15.5166 Tf
+15.5166 TL
+138.0164 1.8262 Td
+(turpentine†)Tj
+/F4 21.7254 Tf
+21.7254 TL
+73.7037 -3.1044 Td
+(beseechingly†)Tj
+/F11 11.3337 Tf
+11.3337 TL
+-541.499 29.1959 Td
+(shanghaier†)Tj
+/F2 20.156 Tf
+20.156 TL
+74.8021 -4.4112 Td
+(squalidity†)Tj
+/F9 20.243 Tf
+20.243 TL
+84.5542 -0.0435 Td
+(epigonos†)Tj
+/F6 20.26 Tf
+20.26 TL
+109.3121 -0.0085 Td
+(limous†)Tj
+/F8 23.2831 Tf
+23.2831 TL
+64.1633 -1.5116 Td
+(neurogenetic†)Tj
+/F3 11.6071 Tf
+11.6071 TL
+152.6673 5.838 Td
+(inrooted†)Tj
+/F1 21.7082 Tf
+21.7082 TL
+44.815 -5.0506 Td
+(hydrocholecystis†)Tj
+/F11 18.6096 Tf
+18.6096 TL
+-530.3141 25.5493 Td
+(Homeromastix†)Tj
+/F11 10.3765 Tf
+10.3765 TL
+145.1549 4.1166 Td
+(pockwood†)Tj
+/F6 21.1877 Tf
+21.1877 TL
+56.033 -5.4056 Td
+(unremediable†)Tj
+/F8 11.0203 Tf
+11.0203 TL
+134.2451 5.0837 Td
+(insultation†)Tj
+/F8 13.479 Tf
+13.479 TL
+58.7821 -1.2294 Td
+(unsized†)Tj
+/F12 14.5494 Tf
+14.5494 TL
+53.9296 -0.5352 Td
+(buffle†)Tj
+/F4 13.3243 Tf
+13.3243 TL
+61.1074 0.6125 Td
+(pasang†)Tj
+/F5 16.4498 Tf
+16.4498 TL
+42.5712 -1.5628 Td
+(handhaving†)Tj
+/F12 13.9056 Tf
+13.9056 TL
+-551.8232 25.2721 Td
+(carpentership†)Tj
+/F5 22.858 Tf
+22.858 TL
+116.807 -4.4762 Td
+(pretravel†)Tj
+/F1 23.3678 Tf
+23.3678 TL
+95.2722 -0.2549 Td
+(metapsychist†)Tj
+/F3 17.6449 Tf
+17.6449 TL
+127.8689 2.8615 Td
+(lagopode†)Tj
+/F10 18.2525 Tf
+18.2525 TL
+72.0618 -0.3038 Td
+(unstatesmanlike†)Tj
+/F12 10.6967 Tf
+10.6967 TL
+175.2242 3.7779 Td
+(Baptist†)Tj
+/F12 11.8789 Tf
+11.8789 TL
+-587.234 23.4089 Td
+(metate†)Tj
+/F1 20.9477 Tf
+20.9477 TL
+49.8912 -4.5344 Td
+(indoles†)Tj
+/F10 12.3561 Tf
+12.3561 TL
+65.755 4.2958 Td
+(vagrantlike†)Tj
+/F10 18.0975 Tf
+18.0975 TL
+88.9638 -2.8707 Td
+(spectacularly†)Tj
+/F9 11.8266 Tf
+11.8266 TL
+152.0194 3.1355 Td
+(judiciable†)Tj
+/F1 21.6924 Tf
+21.6924 TL
+78.0555 -4.9329 Td
+(chalkiness†)Tj
+/F12 12.4287 Tf
+12.4287 TL
+95.7938 4.6319 Td
+(disintegrationist†)Tj
+/F10 13.502 Tf
+13.502 TL
+-530.4786 23.4634 Td
+(bedur†)Tj
+/F9 14.0877 Tf
+14.0877 TL
+48.6072 -0.2929 Td
+(blustering†)Tj
+/F8 14.0253 Tf
+14.0253 TL
+92.979 0.0312 Td
+(hiragana†)Tj
+/F10 19.0992 Tf
+19.0992 TL
+62.3565 -2.5369 Td
+(intastable†)Tj
+/F4 13.559 Tf
+13.559 TL
+126.0545 2.7701 Td
+(ichneumonoid†)Tj
+/F7 14.9443 Tf
+14.9443 TL
+84.0118 -0.6926 Td
+(superrighteous†)Tj
+/F8 15.5859 Tf
+15.5859 TL
+112.9338 -0.3208 Td
+(embracive†)Tj
+/F4 16.2558 Tf
+16.2558 TL
+81.4363 -0.335 Td
+(chillagite†)Tj
+/F9 12.138 Tf
+12.138 TL
+-608.379 26.0589 Td
+(semitonically†)Tj
+/F12 12.174 Tf
+12.174 TL
+101.9596 -0.018 Td
+(text†)Tj
+/F9 20.2436 Tf
+20.2436 TL
+36.5221 -4.0348 Td
+(transcendental†)Tj
+/F10 13.3409 Tf
+13.3409 TL
+182.1928 3.4514 Td
+(panderous†)Tj
+/F3 13.7952 Tf
+13.7952 TL
+80.0456 -0.2271 Td
+(incomprehensively†)Tj
+/F12 12.9631 Tf
+12.9631 TL
+113.81 0.416 Td
+(trachelagra†)Tj
+/F12 23.0668 Tf
+23.0668 TL
+93.3342 -5.0519 Td
+(mommy†)Tj
+/F5 16.2379 Tf
+16.2379 TL
+-607.8643 27.4144 Td
+(Grammatophyllum†)Tj
+/F5 14.8567 Tf
+14.8567 TL
+137.1457 0.6906 Td
+(unsurpassableness†)Tj
+/F6 21.8553 Tf
+21.8553 TL
+132.1203 -3.4993 Td
+(unimposing†)Tj
+/F1 16.8879 Tf
+16.8879 TL
+117.8218 2.4837 Td
+(excusingly†)Tj
+/F2 13.8904 Tf
+13.8904 TL
+77.3973 1.4987 Td
+(turd†)Tj
+/F1 21.8985 Tf
+21.8985 TL
+26.6279 -4.0041 Td
+(mastigophorous†)Tj
+/F2 17.9156 Tf
+17.9156 TL
+-491.113 25.9915 Td
+(chondrotome†)Tj
+/F1 11.1192 Tf
+11.1192 TL
+99.0196 3.3982 Td
+(harebrain†)Tj
+/F2 11.8048 Tf
+11.8048 TL
+44.7658 -0.3428 Td
+(impletion†)Tj
+/F2 15.0898 Tf
+15.0898 TL
+47.5497 -1.6425 Td
+(anthropoidean†)Tj
+/F1 15.9297 Tf
+15.9297 TL
+92.6362 -0.42 Td
+(superregistration†)Tj
+/F2 19.1073 Tf
+19.1073 TL
+111.0461 -1.5888 Td
+(Austroasiatic†)Tj
+/F3 15.7388 Tf
+15.7388 TL
+106.6954 1.6843 Td
+(unrelievableness†)Tj
+/F7 19.1358 Tf
+19.1358 TL
+-501.7127 22.3015 Td
+(nosewise†)Tj
+/F5 15.0255 Tf
+15.0255 TL
+91.469 2.0551 Td
+(Aegialitis†)Tj
+/F3 18.614 Tf
+18.614 TL
+64.2941 -1.7943 Td
+(Criniger†)Tj
+/F3 10.5628 Tf
+10.5628 TL
+72.8926 4.0256 Td
+(pleurotonic†)Tj
+/F9 15.1592 Tf
+15.1592 TL
+54.282 -2.2982 Td
+(stere†)Tj
+/F3 18.8424 Tf
+18.8424 TL
+54.573 -1.8416 Td
+(nonprohibitive†)Tj
+/F3 10.2852 Tf
+10.2852 TL
+124.0775 4.2786 Td
+(Cornaceae†)Tj
+/F10 13.7758 Tf
+13.7758 TL
+49.4101 -1.7453 Td
+(viritrate†)Tj
+/F11 23.0468 Tf
+23.0468 TL
+82.655 -4.6355 Td
+(myxoid†)Tj
+/F6 21.8767 Tf
+21.8767 TL
+-593.6533 24.5851 Td
+(unpalatable†)Tj
+/F6 11.8137 Tf
+11.8137 TL
+119.1841 5.0315 Td
+(superimpending†)Tj
+/F8 18.2889 Tf
+18.2889 TL
+87.3269 -3.2376 Td
+(cogently†)Tj
+/F8 17.3496 Tf
+17.3496 TL
+80.2881 0.4696 Td
+(undiademed†)Tj
+/F1 16.1501 Tf
+16.1501 TL
+107.0125 0.5997 Td
+(pewless†)Tj
+/F2 15.1987 Tf
+15.1987 TL
+55.1689 0.4757 Td
+(grizzled†)Tj
+/F11 12.0091 Tf
+12.0091 TL
+51.9339 1.5948 Td
+(pseudolichen†)Tj
+/F5 22.679 Tf
+22.679 TL
+93.6713 -5.335 Td
+(unaffixed†)Tj
+/F1 22.1621 Tf
+22.1621 TL
+-594.5856 24.2585 Td
+(zaphrentoid†)Tj
+/F1 21.3389 Tf
+21.3389 TL
+110.168 0.4116 Td
+(eczematosis†)Tj
+/F12 17.0328 Tf
+17.0328 TL
+108.4445 2.153 Td
+(preinspection†)Tj
+/F2 15.4815 Tf
+15.4815 TL
+143.0759 0.7757 Td
+(Saivism†)Tj
+/F2 23.4242 Tf
+23.4242 TL
+52.0333 -3.9714 Td
+(drovy†)Tj
+/F10 21.9765 Tf
+21.9765 TL
+59.1931 0.7239 Td
+(traumatize†)Tj
+/F12 20.183 Tf
+20.183 TL
+-472.9147 24.8967 Td
+(conchologist†)Tj
+/F8 23.0101 Tf
+23.0101 TL
+157.4276 -1.4135 Td
+(coryphylly†)Tj
+/F3 15.3554 Tf
+15.3554 TL
+121.4932 3.8273 Td
+(bedside†)Tj
+/F11 19.1195 Tf
+19.1195 TL
+53.3294 -1.8821 Td
+(overbowed†)Tj
+/F8 21.0278 Tf
+21.0278 TL
+114.7171 -0.9541 Td
+(radiographic†)Tj
+/F12 22.8091 Tf
+22.8091 TL
+133.211 -0.8906 Td
+(Premonstratensian†)Tj
+/F7 19.6616 Tf
+19.6616 TL
+-580.1783 25.5737 Td
+(politzerization†)Tj
+/F1 18.926 Tf
+18.926 TL
+137.6508 0.3678 Td
+(randir†)Tj
+/F9 15.2889 Tf
+15.2889 TL
+49.9267 1.8185 Td
+(untrustworthiness†)Tj
+/F1 10.7615 Tf
+10.7615 TL
+165.1206 2.2637 Td
+(overfar†)Tj
+/F3 12.3639 Tf
+12.3639 TL
+33.7589 -0.8012 Td
+(sketchingly†)Tj
+/F1 11.4388 Tf
+11.4388 TL
+62.8582 0.4626 Td
+(evaluable†)Tj
+/F7 21.2894 Tf
+21.2894 TL
+46.6932 -4.9253 Td
+(unmissionized†)Tj
+/F10 14.7551 Tf
+14.7551 TL
+-496.0085 27.2671 Td
+(precordium†)Tj
+/F8 11.4254 Tf
+11.4254 TL
+97.3838 1.6648 Td
+(maintopman†)Tj
+/F8 16.9359 Tf
+16.9359 TL
+71.1006 -2.7552 Td
+(shader†)Tj
+/F5 22.5758 Tf
+22.5758 TL
+60.2409 -2.82 Td
+(Brevirostrines†)Tj
+/F11 16.0814 Tf
+16.0814 TL
+144.2595 3.2472 Td
+(zimentwater†)Tj
+/F11 20.643 Tf
+20.643 TL
+115.7858 -2.2808 Td
+(trenchlike†)Tj
+/F3 22.7891 Tf
+22.7891 TL
+-488.7706 22.927 Td
+(menial†)Tj
+/F3 17.566 Tf
+17.566 TL
+71.535 2.6115 Td
+(glazy†)Tj
+/F3 15.279 Tf
+15.279 TL
+43.4232 1.1435 Td
+(Iguvine†)Tj
+/F10 10.0509 Tf
+10.0509 TL
+53.0638 2.614 Td
+(roentgenometry†)Tj
+/F1 12.1239 Tf
+12.1239 TL
+90.4581 -1.0365 Td
+(laggen†)Tj
+/F9 13.4092 Tf
+13.4092 TL
+35.3533 -0.6427 Td
+(anakinetomeric†)Tj
+/F6 13.8121 Tf
+13.8121 TL
+120.6831 -0.2014 Td
+(newfanglement†)Tj
+/F9 10.4332 Tf
+10.4332 TL
+97.4993 1.6895 Td
+(homestead†)Tj
+/F6 12.7312 Tf
+12.7312 TL
+62.5989 -1.149 Td
+(witherly†)Tj
+/F4 11.1153 Tf
+11.1153 TL
+-574.6146 24.8079 Td
+(reiver†)Tj
+/F3 15.9399 Tf
+15.9399 TL
+29.3222 -2.4123 Td
+(cuprobismutite†)Tj
+/F11 10.4758 Tf
+10.4758 TL
+107.5944 2.7321 Td
+(spar†)Tj
+/F12 19.7127 Tf
+19.7127 TL
+31.4274 -4.6185 Td
+(megalerg†)Tj
+/F6 14.6479 Tf
+14.6479 TL
+106.4487 2.5324 Td
+(Culdee†)Tj
+/F7 19.0697 Tf
+19.0697 TL
+50.4767 -2.2109 Td
+(superanimal†)Tj
+/F11 20.9244 Tf
+20.9244 TL
+117.6408 -0.9274 Td
+(buttonholer†)Tj
+/F11 23.0601 Tf
+23.0601 TL
+150.6555 -1.0679 Td
+(causational†)Tj
+/F1 21.9968 Tf
+21.9968 TL
+-593.5656 24.5316 Td
+(wowser†)Tj
+/F8 13.9056 Tf
+13.9056 TL
+73.9093 4.0456 Td
+(contour†)Tj
+/F8 11.6872 Tf
+11.6872 TL
+55.6224 1.1092 Td
+(nonimpressionist†)Tj
+/F12 19.4086 Tf
+19.4086 TL
+100.6615 -3.8607 Td
+(preceding†)Tj
+/F6 17.11 Tf
+17.11 TL
+116.4515 1.1493 Td
+(methine†)Tj
+/F4 13.4354 Tf
+13.4354 TL
+65.6167 1.8373 Td
+(chicky†)Tj
+/F12 19.4826 Tf
+19.4826 TL
+39.1776 -3.0236 Td
+(confrater†)Tj
+/F7 13.8778 Tf
+13.8778 TL
+116.8958 2.8024 Td
+(Chamicuro†)Tj
+/F3 11.9529 Tf
+11.9529 TL
+-568.3349 24.9624 Td
+(monogynist†)Tj
+/F1 16.766 Tf
+16.766 TL
+62.0955 -2.4065 Td
+(unbraid†)Tj
+/F2 14.0219 Tf
+14.0219 TL
+55.4115 1.372 Td
+(determinably†)Tj
+/F7 18.5876 Tf
+18.5876 TL
+77.4991 -2.2828 Td
+(ruffin†)Tj
+/F12 11.727 Tf
+11.727 TL
+52.6585 3.4303 Td
+(goneoclinic†)Tj
+/F7 23.6941 Tf
+23.6941 TL
+84.4345 -5.9835 Td
+(calamite†)Tj
+/F8 21.8844 Tf
+21.8844 TL
+101.4106 0.9048 Td
+(Hydruntine†)Tj
+/F9 19.0103 Tf
+19.0103 TL
+121.5899 1.437 Td
+(itonidid†)Tj
+/F11 11.8159 Tf
+11.8159 TL
+-555.0997 27.5972 Td
+(semilichen†)Tj
+/F9 19.7472 Tf
+19.7472 TL
+77.9847 -3.9657 Td
+(agamogenetic†)Tj
+/F9 14.839 Tf
+14.839 TL
+154.0279 2.4541 Td
+(prestigious†)Tj
+/F4 10.2766 Tf
+10.2766 TL
+106.8409 2.2812 Td
+(autobiology†)Tj
+/F9 22.5303 Tf
+22.5303 TL
+52.2465 -6.1268 Td
+(Maba†)Tj
+/F1 20.8307 Tf
+20.8307 TL
+67.5909 0.8498 Td
+(toru†)Tj
+/F3 10.4971 Tf
+10.4971 TL
+38.7659 5.1668 Td
+(Chenopodium†)Tj
+/F6 15.0401 Tf
+15.0401 TL
+66.2054 -2.2715 Td
+(rhomboidally†)Tj
+/F8 19.8904 Tf
+19.8904 TL
+-563.6621 21.5749 Td
+(plap†)Tj
+/F11 18.0578 Tf
+18.0578 TL
+46.4242 0.9163 Td
+(Protephemeroidea†)Tj
+/F6 14.5156 Tf
+14.5156 TL
+184.19 1.7711 Td
+(osteocartilaginous†)Tj
+/F9 17.6048 Tf
+17.6048 TL
+121.0165 -1.5446 Td
+(inequilobed†)Tj
+/F2 22.0607 Tf
+22.0607 TL
+126.7547 -2.228 Td
+(bromacetic†)Tj
+/F6 15.2462 Tf
+15.2462 TL
+104.7665 3.4073 Td
+(brutalize†)Tj
+/F11 19.4344 Tf
+19.4344 TL
+-583.152 21.9059 Td
+(ornithodelphian†)Tj
+/F8 20.0923 Tf
+20.0923 TL
+186.5701 -0.329 Td
+(pettifogger†)Tj
+/F11 22.8801 Tf
+22.8801 TL
+110.5077 -1.3939 Td
+(tubulously†)Tj
+/F12 16.957 Tf
+16.957 TL
+151.0088 2.9615 Td
+(stepniece†)Tj
+/F8 15.661 Tf
+15.661 TL
+101.7422 0.648 Td
+(redistributor†)Tj
+/F2 21.5031 Tf
+21.5031 TL
+-549.8288 21.079 Td
+(Mizpah†)Tj
+/F2 14.8233 Tf
+14.8233 TL
+69.8852 3.3399 Td
+(Gnetaceae†)Tj
+/F1 13.6595 Tf
+13.6595 TL
+67.0901 0.5819 Td
+(infusorium†)Tj
+/F6 10.6615 Tf
+10.6615 TL
+63.3663 1.499 Td
+(Anomalon†)Tj
+/F12 11.5521 Tf
+11.5521 TL
+50.9618 -0.4453 Td
+(cardiometric†)Tj
+/F5 20.2767 Tf
+20.2767 TL
+90.106 -4.3623 Td
+(assessorial†)Tj
+/F1 16.1247 Tf
+16.1247 TL
+107.0408 2.076 Td
+(egomaniacal†)Tj
+/F5 22.9891 Tf
+22.9891 TL
+85.5255 -3.4322 Td
+(clogwood†)Tj
+/F2 17.9098 Tf
+17.9098 TL
+-533.9757 26.5396 Td
+(lutelet†)Tj
+/F5 12.6644 Tf
+12.6644 TL
+49.252 2.6227 Td
+(significavit†)Tj
+/F9 20.4673 Tf
+20.4673 TL
+61.9287 -3.9014 Td
+(yearn†)Tj
+/F2 13.6821 Tf
+13.6821 TL
+73.6821 3.3926 Td
+(smallage†)Tj
+/F8 19.9727 Tf
+19.9727 TL
+52.8266 -3.1453 Td
+(cystoschisis†)Tj
+/F12 21.6166 Tf
+21.6166 TL
+125.4486 -0.8219 Td
+(archaeologist†)Tj
+/F4 17.2195 Tf
+17.2195 TL
+181.5793 2.1985 Td
+(gelatose†)Tj
+/F2 15.3141 Tf
+15.3141 TL
+61.6974 0.9527 Td
+(urodele†)Tj
+/F11 19.5861 Tf
+19.5861 TL
+-606.4149 21.864 Td
+(diminutiveness†)Tj
+/F1 19.5818 Tf
+19.5818 TL
+176.2745 0.0021 Td
+(coappriser†)Tj
+/F2 18.7633 Tf
+18.7633 TL
+86.4537 0.4092 Td
+(macronucleus†)Tj
+/F10 22.5633 Tf
+22.5633 TL
+109.953 -1.9 Td
+(introflexion†)Tj
+/F7 21.6497 Tf
+21.6497 TL
+175.9936 0.4568 Td
+(Condylopoda†)Tj
+/F3 15.1992 Tf
+15.1992 TL
+-548.6749 27.2253 Td
+(Torosaurus†)Tj
+/F3 18.9975 Tf
+18.9975 TL
+78.9597 -1.8992 Td
+(Bouvardia†)Tj
+/F5 10.6907 Tf
+10.6907 TL
+90.2571 4.1534 Td
+(sheva†)Tj
+/F9 15.3465 Tf
+15.3465 TL
+31.4949 -2.3279 Td
+(nonconsequence†)Tj
+/F7 15.6804 Tf
+15.6804 TL
+138.1181 -0.167 Td
+(noninquiring†)Tj
+/F7 20.9088 Tf
+20.9088 TL
+100.182 -2.6142 Td
+(luminificent†)Tj
+/F1 17.7713 Tf
+17.7713 TL
+123.1529 1.5687 Td
+(cadism†)Tj
+/F5 14.8392 Tf
+14.8392 TL
+-562.1648 25.4661 Td
+(monolayer†)Tj
+/F3 17.674 Tf
+17.674 TL
+73.3946 -1.4174 Td
+(leucoencephalitis†)Tj
+/F2 16.3744 Tf
+16.3744 TL
+133.0497 0.6498 Td
+(tauromachian†)Tj
+/F11 19.9281 Tf
+19.9281 TL
+95.9702 -1.7769 Td
+(gade†)Tj
+/F2 23.3039 Tf
+23.3039 TL
+59.7844 -1.6879 Td
+(bullbaiting†)Tj
+/F8 10.1319 Tf
+10.1319 TL
+108.1302 6.586 Td
+(preadornment†)Tj
+/F1 17.1014 Tf
+17.1014 TL
+70.9331 -3.4848 Td
+(selectly†)Tj
+/F4 10.5005 Tf
+10.5005 TL
+56.52 3.3005 Td
+(Carpophaga†)Tj
+/F12 20.7854 Tf
+20.7854 TL
+-597.7823 18.8575 Td
+(district†)Tj
+/F4 19.1608 Tf
+19.1608 TL
+112.241 0.8123 Td
+(nonproductively†)Tj
+/F12 12.0332 Tf
+12.0332 TL
+132.5352 3.5638 Td
+(scapulovertebral†)Tj
+/F2 17.6899 Tf
+17.6899 TL
+122.7391 -2.8283 Td
+(brills†)Tj
+/F3 22.8271 Tf
+22.8271 TL
+41.7836 -2.5686 Td
+(androgynism†)Tj
+/F2 10.7092 Tf
+10.7092 TL
+133.8125 6.0589 Td
+(subcyaneous†)Tj
+/F12 20.0354 Tf
+20.0354 TL
+57.4015 -4.6631 Td
+(unguled†)Tj
+/F7 13.0732 Tf
+13.0732 TL
+-600.513 27.4811 Td
+(splenemphraxis†)Tj
+/F5 20.6414 Tf
+20.6414 TL
+103.1739 -3.7841 Td
+(nonsynonymous†)Tj
+/F4 19.3187 Tf
+19.3187 TL
+156.0283 0.6614 Td
+(crinkleroot†)Tj
+/F7 18.0586 Tf
+18.0586 TL
+92.8455 0.63 Td
+(ejaculative†)Tj
+/F11 15.129 Tf
+15.129 TL
+97.372 1.4648 Td
+(unctious†)Tj
+/F7 12.7622 Tf
+12.7622 TL
+81.6965 1.1834 Td
+(valveless†)Tj
+/F11 14.6999 Tf
+14.6999 TL
+60.3141 -0.9689 Td
+(Clunist†)Tj
+/F7 22.4283 Tf
+22.4283 TL
+-591.4303 20.1358 Td
+(ocelliferous†)Tj
+/F6 17.3083 Tf
+17.3083 TL
+132.1249 2.56 Td
+(distrain†)Tj
+/F9 19.0903 Tf
+19.0903 TL
+60.5963 -0.891 Td
+(unmoldered†)Tj
+/F6 18.1952 Tf
+18.1952 TL
+125.9961 0.4476 Td
+(arcade†)Tj
+/F9 23.0205 Tf
+23.0205 TL
+60.6809 -2.4127 Td
+(skaffie†)Tj
+/F2 16.5445 Tf
+16.5445 TL
+110.4984 3.238 Td
+(trochleary†)Tj
+/F12 14.8945 Tf
+14.8945 TL
+73.0606 0.825 Td
+(prelogic†)Tj
+/F3 19.9829 Tf
+19.9829 TL
+-562.9573 21.4558 Td
+(promulgation†)Tj
+/F11 16.2686 Tf
+16.2686 TL
+121.5759 1.8572 Td
+(vinification†)Tj
+/F12 13.5332 Tf
+13.5332 TL
+126.8947 1.3677 Td
+(neep†)Tj
+/F6 14.8315 Tf
+14.8315 TL
+40.5996 -0.6492 Td
+(constrainer†)Tj
+/F1 21.7917 Tf
+21.7917 TL
+77.48 -3.4801 Td
+(gentlewoman†)Tj
+/F11 17.6387 Tf
+17.6387 TL
+122.8616 2.0765 Td
+(suasionist†)Tj
+/F5 11.0767 Tf
+11.0767 TL
+116.4156 3.281 Td
+(farandole†)Tj
+/F10 14.3065 Tf
+14.3065 TL
+-605.8274 22.3851 Td
+(unhorizontal†)Tj
+/F9 16.1654 Tf
+16.1654 TL
+111.591 -0.9294 Td
+(gerrymanderer†)Tj
+/F11 11.1983 Tf
+11.1983 TL
+135.7894 2.4836 Td
+(mittimus†)Tj
+/F3 23.9121 Tf
+23.9121 TL
+60.4706 -6.3569 Td
+(sesquicentennial†)Tj
+/F4 22.1052 Tf
+22.1052 TL
+173.3867 0.9034 Td
+(ipsedixitism†)Tj
+/F2 17.7327 Tf
+17.7327 TL
+113.6209 2.1863 Td
+(unforthright†)Tj
+/F5 21.5093 Tf
+21.5093 TL
+-594.8586 22.1117 Td
+(centrifugal†)Tj
+/F6 18.2247 Tf
+18.2247 TL
+105.2018 1.6423 Td
+(bervie†)Tj
+/F6 15.8394 Tf
+15.8394 TL
+54.6923 1.1927 Td
+(romancist†)Tj
+/F5 11.3996 Tf
+11.3996 TL
+73.0511 2.2199 Td
+(previsor†)Tj
+/F9 16.1391 Tf
+16.1391 TL
+43.7062 -2.3697 Td
+(zooecium†)Tj
+/F5 10.7082 Tf
+10.7082 TL
+87.1512 2.7154 Td
+(antilynching†)Tj
+/F11 13.2705 Tf
+13.2705 TL
+59.5163 -1.2812 Td
+(nonaromatic†)Tj
+/F5 18.459 Tf
+18.459 TL
+95.5479 -2.5942 Td
+(resistlessly†)Tj
+/F4 23.2279 Tf
+23.2279 TL
+-518.8668 21.6155 Td
+(spiraltail†)Tj
+/F9 20.5543 Tf
+20.5543 TL
+91.0069 1.3368 Td
+(bleakly†)Tj
+/F12 23.9757 Tf
+23.9757 TL
+98.6607 -1.7107 Td
+(systematization†)Tj
+/F8 15.5265 Tf
+15.5265 TL
+230.1669 4.2246 Td
+(camphoronic†)Tj
+/F12 14.2195 Tf
+14.2195 TL
+101.8076 0.6535 Td
+(studiousness†)Tj
+/F10 15.9782 Tf
+15.9782 TL
+-521.642 23.1207 Td
+(rectococcygeal†)Tj
+/F2 10.837 Tf
+10.837 TL
+143.8041 2.5706 Td
+(undragooned†)Tj
+/F10 11.0877 Tf
+11.0877 TL
+60.5032 -0.1253 Td
+(thriftlessly†)Tj
+/F2 11.8168 Tf
+11.8168 TL
+86.484 -0.3646 Td
+(overname†)Tj
+/F2 14.078 Tf
+14.078 TL
+49.548 -1.1306 Td
+(imageless†)Tj
+/F1 12.5532 Tf
+12.5532 TL
+59.0432 0.7624 Td
+(downstreet†)Tj
+/F10 16.6779 Tf
+16.6779 TL
+58.2216 -2.0624 Td
+(antiluetin†)Tj
+/F9 19.0508 Tf
+19.0508 TL
+110.0739 -1.1865 Td
+(compromiser†)Tj
+/F4 16.2809 Tf
+16.2809 TL
+-567.678 25.385 Td
+(aoudad†)Tj
+/F7 15.7364 Tf
+15.7364 TL
+53.8247 0.2723 Td
+(lough†)Tj
+/F7 15.6648 Tf
+15.6648 TL
+47.2092 0.0358 Td
+(tummock†)Tj
+/F5 19.6225 Tf
+19.6225 TL
+73.9848 -1.9788 Td
+(felsobanyite†)Tj
+/F8 10.1756 Tf
+10.1756 TL
+110.1605 4.7234 Td
+(Encrinoidea†)Tj
+/F9 22.0864 Tf
+22.0864 TL
+61.0742 -5.9554 Td
+(unvaluably†)Tj
+/F10 18.9525 Tf
+18.9525 TL
+145.7703 1.5669 Td
+(hyperemphasize†)Tj
+/F10 15.0059 Tf
+15.0059 TL
+-492.0237 25.9733 Td
+(lutist†)Tj
+/F7 19.638 Tf
+19.638 TL
+63.025 -2.316 Td
+(unwashedness†)Tj
+/F10 15.3332 Tf
+15.3332 TL
+146.244 2.1524 Td
+(unchurchlike†)Tj
+/F8 19.2236 Tf
+19.2236 TL
+119.5991 -1.9452 Td
+(amidoketone†)Tj
+/F4 16.4651 Tf
+16.4651 TL
+123.9156 1.3793 Td
+(brainward†)Tj
+/F7 12.7507 Tf
+12.7507 TL
+74.5703 1.8572 Td
+(semireniform†)Tj
+/F8 20.6472 Tf
+20.6472 TL
+84.3203 -3.9482 Td
+(Choloepus†)Tj
+/F3 20.8588 Tf
+20.8588 TL
+-611.6743 23.8942 Td
+(televox†)Tj
+/F3 13.1478 Tf
+13.1478 TL
+67.7704 3.8555 Td
+(formule†)Tj
+/F3 15.2602 Tf
+15.2602 TL
+47.8317 -1.0562 Td
+(fimbrillate†)Tj
+/F9 20.076 Tf
+20.076 TL
+73.3253 -2.4079 Td
+(Hamathite†)Tj
+/F12 20.1142 Tf
+20.1142 TL
+120.4559 -0.0191 Td
+(whereby†)Tj
+/F6 14.259 Tf
+14.259 TL
+96.5482 2.9276 Td
+(nongovernmental†)Tj
+/F6 18.4155 Tf
+18.4155 TL
+114.1289 -2.0782 Td
+(tegumentary†)Tj
+/F1 17.8484 Tf
+17.8484 TL
+-520.0603 24.2835 Td
+(scap†)Tj
+/F4 16.1194 Tf
+16.1194 TL
+36.1787 0.8645 Td
+(flowing†)Tj
+/F10 17.6394 Tf
+17.6394 TL
+54.1933 -0.76 Td
+(recorruption†)Tj
+/F8 21.2839 Tf
+21.2839 TL
+137.5876 -1.8222 Td
+(quotidianness†)Tj
+/F5 13.2021 Tf
+13.2021 TL
+150.2001 4.0409 Td
+(measled†)Tj
+/F4 22.2766 Tf
+22.2766 TL
+53.561 -4.5372 Td
+(saxigenous†)Tj
+/F8 21.7733 Tf
+21.7733 TL
+108.3086 0.2516 Td
+(mostness†)Tj
+/F2 14.6877 Tf
+14.6877 TL
+-540.0294 27.5428 Td
+(sphingiform†)Tj
+/F6 14.1493 Tf
+14.1493 TL
+74.6721 0.2692 Td
+(macrocornea†)Tj
+/F5 21.8378 Tf
+21.8378 TL
+86.4944 -3.8442 Td
+(millile†)Tj
+/F9 12.0627 Tf
+12.0627 TL
+60.6434 4.8876 Td
+(knoblike†)Tj
+/F5 14.1765 Tf
+14.1765 TL
+65.1383 -1.0569 Td
+(scarlatiniform†)Tj
+/F4 12.645 Tf
+12.645 TL
+88.2201 0.7657 Td
+(bediaper†)Tj
+/F11 19.2652 Tf
+19.2652 TL
+48.1143 -3.3101 Td
+(mugwump†)Tj
+/F7 15.7218 Tf
+15.7218 TL
+92.4728 1.7717 Td
+(palmicolous†)Tj
+/F7 16.7796 Tf
+16.7796 TL
+96.1074 -0.5289 Td
+(benightedness†)Tj
+/F10 10.8494 Tf
+10.8494 TL
+-611.8628 26.9651 Td
+(anisopterous†)Tj
+/F9 13.6353 Tf
+13.6353 TL
+84.6253 -1.393 Td
+(khedival†)Tj
+/F10 14.7407 Tf
+14.7407 TL
+73.6307 -0.5527 Td
+(paleotechnic†)Tj
+/F11 23.3576 Tf
+23.3576 TL
+114.9777 -4.3084 Td
+(biomagnetism†)Tj
+/F1 14.5321 Tf
+14.5321 TL
+182.1892 4.4127 Td
+(Chilcat†)Tj
+/F4 13.9841 Tf
+13.9841 TL
+45.6164 0.274 Td
+(Japanophobe†)Tj
+/F12 14.6325 Tf
+14.6325 TL
+81.1916 -0.3242 Td
+(oenanthate†)Tj
+/F10 10.608 Tf
+10.608 TL
+-582.2308 26.0123 Td
+(anteroom†)Tj
+/F8 15.0636 Tf
+15.0636 TL
+57.2832 -2.2278 Td
+(bibliological†)Tj
+/F1 14.4509 Tf
+14.4509 TL
+92.0838 0.3064 Td
+(myodynamics†)Tj
+/F4 19.0513 Tf
+19.0513 TL
+84.6968 -2.3002 Td
+(dysaphia†)Tj
+/F4 20.0575 Tf
+20.0575 TL
+74.6238 -0.5031 Td
+(V†)Tj
+/F11 17.126 Tf
+17.126 TL
+18.3927 1.4657 Td
+(familiarity†)Tj
+/F7 18.7452 Tf
+18.7452 TL
+123.3072 -0.8096 Td
+(windproof†)Tj
+/F12 21.1317 Tf
+21.1317 TL
+95.8069 -1.1932 Td
+(electromagnetical†)Tj
+/F6 18.0188 Tf
+18.0188 TL
+-546.1945 25.5565 Td
+(dhabb†)Tj
+/F10 11.4778 Tf
+11.4778 TL
+55.1014 3.2705 Td
+(spinsterly†)Tj
+/F12 23.6062 Tf
+23.6062 TL
+75.7532 -6.0642 Td
+(herisson†)Tj
+/F11 17.454 Tf
+17.454 TL
+127.4737 3.0761 Td
+(dryly†)Tj
+/F4 17.851 Tf
+17.851 TL
+62.8344 -0.1985 Td
+(unsensually†)Tj
+/F10 21.4528 Tf
+21.4528 TL
+92.7539 -1.8009 Td
+(europium†)Tj
+/F7 20.739 Tf
+20.739 TL
+115.8453 0.3569 Td
+(volitient†)Tj
+/F3 12.1453 Tf
+12.1453 TL
+-529.7619 28.2969 Td
+(violatory†)Tj
+/F1 10.8533 Tf
+10.8533 TL
+49.5891 0.646 Td
+(becircled†)Tj
+/F11 10.3677 Tf
+10.3677 TL
+42.4906 0.2428 Td
+(peritoneoscope†)Tj
+/F11 12.2548 Tf
+12.2548 TL
+93.3097 -0.9435 Td
+(precision†)Tj
+/F8 14.8095 Tf
+14.8095 TL
+73.529 -1.2773 Td
+(flatulent†)Tj
+/F7 11.9304 Tf
+11.9304 TL
+61.7112 1.4396 Td
+(crassitude†)Tj
+/F12 11.0145 Tf
+11.0145 TL
+62.9924 0.4579 Td
+(obeisance†)Tj
+/F3 10.4991 Tf
+10.4991 TL
+66.0873 0.2577 Td
+(misanthropically†)Tj
+/F4 17.9018 Tf
+17.9018 TL
+78.46 -3.7013 Td
+(anaphoric†)Tj
+/F7 21.3115 Tf
+21.3115 TL
+80.0746 -1.7049 Td
+(therefor†)Tj
+/F6 17.1419 Tf
+17.1419 TL
+-608.2439 26.0848 Td
+(saccharimetry†)Tj
+/F8 17.8258 Tf
+17.8258 TL
+111.4395 -0.3419 Td
+(muscat†)Tj
+/F11 20.3795 Tf
+20.3795 TL
+67.3636 -1.2769 Td
+(unlenient†)Tj
+/F8 19.0111 Tf
+19.0111 TL
+122.277 0.6842 Td
+(Ephraimitish†)Tj
+/F9 19.2326 Tf
+19.2326 TL
+120.4352 -0.1108 Td
+(decaffeinize†)Tj
+/F5 23.4959 Tf
+23.4959 TL
+150.0143 -2.1316 Td
+(bourdon†)Tj
+/F5 22.3277 Tf
+22.3277 TL
+-571.5296 24.5841 Td
+(shippage†)Tj
+/F1 23.3275 Tf
+23.3275 TL
+96.8131 -0.4999 Td
+(raniform†)Tj
+/F7 23.1773 Tf
+23.1773 TL
+87.4547 0.0751 Td
+(protohydrogen†)Tj
+/F5 17.2568 Tf
+17.2568 TL
+171.2572 2.9603 Td
+(baselessly†)Tj
+/F1 13.3418 Tf
+13.3418 TL
+85.3519 1.9575 Td
+(Podocarpus†)Tj
+/F9 19.4786 Tf
+19.4786 TL
+65.5881 -3.0684 Td
+(pallidly†)Tj
+/F2 22.9727 Tf
+22.9727 TL
+105.1845 -1.7471 Td
+(odalisk†)Tj
+/F1 21.2824 Tf
+21.2824 TL
+-611.6494 24.8452 Td
+(Normanly†)Tj
+/F4 21.5264 Tf
+21.5264 TL
+91.6209 -0.122 Td
+(disrealize†)Tj
+/F9 19.7236 Tf
+19.7236 TL
+89.0977 0.9014 Td
+(isoperimetric†)Tj
+/F3 11.3875 Tf
+11.3875 TL
+165.6786 4.1681 Td
+(hemlock†)Tj
+/F5 13.6222 Tf
+13.6222 TL
+43.9671 -1.1174 Td
+(creosotic†)Tj
+/F12 21.6854 Tf
+21.6854 TL
+58.2894 -4.0316 Td
+(bark†)Tj
+/F9 22.187 Tf
+22.187 TL
+65.0563 -0.2508 Td
+(attingency†)Tj
+/F11 23.0086 Tf
+23.0086 TL
+-513.7099 23.5892 Td
+(subprofitable†)Tj
+/F9 12.1527 Tf
+12.1527 TL
+193.2718 5.4279 Td
+(naupathia†)Tj
+/F11 20.3485 Tf
+20.3485 TL
+72.9164 -4.0979 Td
+(Lamaist†)Tj
+/F4 16.9771 Tf
+16.9771 TL
+97.673 1.6857 Td
+(polyarticular†)Tj
+/F5 21.9033 Tf
+21.9033 TL
+94.8003 -2.4631 Td
+(Pterostemonaceae†)Tj
+/F5 18.6596 Tf
+18.6596 TL
+-458.6616 25.6218 Td
+(argyranthous†)Tj
+/F1 20.9854 Tf
+20.9854 TL
+114.085 -1.1629 Td
+(suclat†)Tj
+/F4 12.3932 Tf
+12.3932 TL
+54.2054 4.2961 Td
+(glucid†)Tj
+/F8 18.1307 Tf
+18.1307 TL
+34.7752 -2.8688 Td
+(readaptiveness†)Tj
+/F9 21.2577 Tf
+21.2577 TL
+137.0497 -1.5635 Td
+(uninterred†)Tj
+/F11 10.9625 Tf
+10.9625 TL
+140.301 5.1476 Td
+(tutorship†)Tj
+/F6 10.879 Tf
+10.879 TL
+65.7753 0.0418 Td
+(flagger†)Tj
+/F9 22.9612 Tf
+22.9612 TL
+36.2815 -6.0411 Td
+(spile†)Tj
+/F4 20.8823 Tf
+20.8823 TL
+-582.4731 25.0394 Td
+(intrametropolitan†)Tj
+/F2 13.3578 Tf
+13.3578 TL
+157.2438 3.7622 Td
+(dethroner†)Tj
+/F11 20.8557 Tf
+20.8557 TL
+56.0227 -3.7489 Td
+(litra†)Tj
+/F11 20.0679 Tf
+20.0679 TL
+75.0806 0.3939 Td
+(triennially†)Tj
+/F12 17.9217 Tf
+17.9217 TL
+144.4886 1.0731 Td
+(hyperpurist†)Tj
+/F10 13.333 Tf
+13.333 TL
+129.0365 2.2944 Td
+(conchiolin†)Tj
+/F10 22.3101 Tf
+22.3101 TL
+-561.8722 19.5114 Td
+(thoughtlet†)Tj
+/F6 20.8229 Tf
+20.8229 TL
+147.2469 0.7436 Td
+(bevenom†)Tj
+/F11 19.6164 Tf
+19.6164 TL
+91.4335 0.6032 Td
+(angelin†)Tj
+/F9 13.2784 Tf
+13.2784 TL
+94.1589 3.169 Td
+(gastroenterocolostomy†)Tj
+/F6 20.2486 Tf
+20.2486 TL
+175.2744 -3.4851 Td
+(antiplague†)Tj
+/F12 16.4208 Tf
+16.4208 TL
+99.0563 1.9139 Td
+(prepupa†)Tj
+/F1 17.0399 Tf
+17.0399 TL
+-607.17 23.6904 Td
+(prone†)Tj
+/F12 17.1285 Tf
+17.1285 TL
+43.0598 -0.0443 Td
+(inconvincible†)Tj
+/F6 23.1156 Tf
+23.1156 TL
+143.8796 -2.9935 Td
+(rehypothecation†)Tj
+/F9 23.2384 Tf
+23.2384 TL
+170.8933 -0.0614 Td
+(ootocous†)Tj
+/F4 14.3204 Tf
+14.3204 TL
+125.4875 4.459 Td
+(Cophetua†)Tj
+/F4 22.4497 Tf
+22.4497 TL
+60.8758 -4.0647 Td
+(unborrowed†)Tj
+/F2 11.0113 Tf
+11.0113 TL
+-544.196 29.7192 Td
+(vera†)Tj
+/F1 18.2352 Tf
+18.2352 TL
+22.3199 -3.612 Td
+(jazzer†)Tj
+/F9 22.7881 Tf
+22.7881 TL
+48.0863 -2.2764 Td
+(hydrophilism†)Tj
+/F3 22.9415 Tf
+22.9415 TL
+177.7471 -0.0767 Td
+(uninverted†)Tj
+/F12 11.8894 Tf
+11.8894 TL
+112.8033 5.526 Td
+(laurvikite†)Tj
+/F6 21.1483 Tf
+21.1483 TL
+78.4703 -4.6294 Td
+(telephotograph†)Tj
+/F12 12.4796 Tf
+12.4796 TL
+146.9596 4.3344 Td
+(Hampshire†)Tj
+/F12 15.7198 Tf
+15.7198 TL
+-586.3865 22.3799 Td
+(Fingu†)Tj
+/F8 21.4842 Tf
+21.4842 TL
+56.5913 -2.8822 Td
+(puparial†)Tj
+/F3 15.2796 Tf
+15.2796 TL
+89.5461 3.1023 Td
+(plang†)Tj
+/F9 22.6847 Tf
+22.6847 TL
+40.3381 -3.7026 Td
+(phototropy†)Tj
+/F7 10.238 Tf
+10.238 TL
+149.7193 6.2234 Td
+(inoxidable†)Tj
+/F3 22.0546 Tf
+22.0546 TL
+53.4832 -5.9083 Td
+(erepsin†)Tj
+/F5 12.1196 Tf
+12.1196 TL
+74.1255 4.9675 Td
+(Melanochroid†)Tj
+/F6 15.9466 Tf
+15.9466 TL
+76.1108 -1.9135 Td
+(archibenthic†)Tj
+/F12 15.2444 Tf
+15.2444 TL
+-539.9143 24.3511 Td
+(Eupomatiaceae†)Tj
+/F2 12.5957 Tf
+12.5957 TL
+128.0527 1.3243 Td
+(Kleinian†)Tj
+/F2 16.7644 Tf
+16.7644 TL
+46.5412 -2.0843 Td
+(oscin†)Tj
+/F3 22.4382 Tf
+22.4382 TL
+39.5806 -2.8369 Td
+(octennially†)Tj
+/F8 11.2929 Tf
+11.2929 TL
+110.3285 5.5726 Td
+(peavy†)Tj
+/F2 11.7158 Tf
+11.7158 TL
+35.1547 -0.2114 Td
+(insectiform†)Tj
+/F8 11.3335 Tf
+11.3335 TL
+55.6499 0.1911 Td
+(indissuadable†)Tj
+/F12 13.7637 Tf
+13.7637 TL
+78.7342 -1.2151 Td
+(superfunctional†)Tj
+/F9 12.8969 Tf
+12.8969 TL
+-494.0419 24.4334 Td
+(dzeren†)Tj
+/F11 11.6794 Tf
+11.6794 TL
+54.1671 0.6087 Td
+(harmonicalness†)Tj
+/F2 10.4387 Tf
+10.4387 TL
+105.1148 0.6204 Td
+(Russine†)Tj
+/F3 15.8401 Tf
+15.8401 TL
+35.0845 -2.7007 Td
+(herringbone†)Tj
+/F6 11.9366 Tf
+11.9366 TL
+87.5643 1.9518 Td
+(colorless†)Tj
+/F6 18.7843 Tf
+18.7843 TL
+50.4083 -3.4238 Td
+(astrosphere†)Tj
+/F4 23.1062 Tf
+23.1062 TL
+104.4031 -2.1609 Td
+(Beguine†)Tj
+/F3 18.4423 Tf
+18.4423 TL
+85.3772 2.3319 Td
+(pyopneumoperitonitis†)Tj
+/F8 10.118 Tf
+10.118 TL
+-522.1194 28.1622 Td
+(Mystacocete†)Tj
+/F6 13.2725 Tf
+13.2725 TL
+63.5409 -1.5773 Td
+(roof†)Tj
+/F5 11.2902 Tf
+11.2902 TL
+26.5584 0.9912 Td
+(wid†)Tj
+/F8 18.1854 Tf
+18.1854 TL
+20.0739 -3.4476 Td
+(capparidaceous†)Tj
+/F8 15.1247 Tf
+15.1247 TL
+143.5193 1.5304 Td
+(tilmus†)Tj
+/F6 10.1087 Tf
+10.1087 TL
+48.7469 2.508 Td
+(saltpan†)Tj
+/F7 13.0259 Tf
+13.0259 TL
+35.4006 -1.4586 Td
+(indevoutness†)Tj
+/F7 13.8794 Tf
+13.8794 TL
+87.5862 -0.4268 Td
+(diplospondylism†)Tj
+/F7 20.3881 Tf
+20.3881 TL
+114.1442 -3.2544 Td
+(rectitis†)Tj
+/F4 15.4087 Tf
+15.4087 TL
+-539.5704 26.4897 Td
+(overgreatness†)Tj
+/F1 16.2668 Tf
+16.2668 TL
+91.1579 -0.429 Td
+(luting†)Tj
+/F12 21.8449 Tf
+21.8449 TL
+42.0334 -2.7891 Td
+(appleberry†)Tj
+/F2 10.7182 Tf
+10.7182 TL
+144.1765 5.5634 Td
+(diesinking†)Tj
+/F7 10.7782 Tf
+10.7782 TL
+46.7421 -0.03 Td
+(Pyrausta†)Tj
+/F10 22.4764 Tf
+22.4764 TL
+48.5234 -5.8491 Td
+(hod†)Tj
+/F4 21.4475 Tf
+21.4475 TL
+53.9434 0.5144 Td
+(occipitohyoid†)Tj
+/F4 10.7589 Tf
+10.7589 TL
+123.3233 5.3443 Td
+(syndactyl†)Tj
+/F8 16.1492 Tf
+16.1492 TL
+43.9286 -2.6951 Td
+(Manvantara†)Tj
+/F2 15.9956 Tf
+15.9956 TL
+-593.8286 24.0768 Td
+(swiveleye†)Tj
+/F5 17.5353 Tf
+17.5353 TL
+65.2939 -0.7699 Td
+(hepatology†)Tj
+/F8 11.7266 Tf
+11.7266 TL
+90.6575 2.9044 Td
+(ventriloquism†)Tj
+/F10 15.0013 Tf
+15.0013 TL
+80.1512 -1.6374 Td
+(ithyphallic†)Tj
+/F11 11.622 Tf
+11.622 TL
+108.0095 1.6897 Td
+(denaturization†)Tj
+/F12 20.4049 Tf
+20.4049 TL
+104.598 -4.3914 Td
+(Aedes†)Tj
+/F6 23.0422 Tf
+23.0422 TL
+73.4575 -1.3187 Td
+(cerebroma†)Tj
+/F12 19.2302 Tf
+19.2302 TL
+-522.1675 25.906 Td
+(Uragoga†)Tj
+/F11 18.5029 Tf
+18.5029 TL
+92.3048 0.3636 Td
+(trimetrical†)Tj
+/F7 20.094 Tf
+20.094 TL
+133.2208 -0.7956 Td
+(weever†)Tj
+/F6 16.0077 Tf
+16.0077 TL
+73.7249 2.0432 Td
+(Antedon†)Tj
+/F8 18.5364 Tf
+18.5364 TL
+64.0786 -1.2644 Td
+(gyromele†)Tj
+/F4 19.0942 Tf
+19.0942 TL
+87.5659 -0.2789 Td
+(numerableness†)Tj
+/F8 16.7529 Tf
+16.7529 TL
+123.5965 1.1706 Td
+(overmarch†)Tj
+/F9 15.4326 Tf
+15.4326 TL
+-574.4915 24.6602 Td
+(ultranice†)Tj
+/F3 19.7513 Tf
+19.7513 TL
+92.5954 -2.1594 Td
+(punishability†)Tj
+/F5 20.9141 Tf
+20.9141 TL
+115.8216 -0.5814 Td
+(anodontia†)Tj
+/F3 10.4621 Tf
+10.4621 TL
+97.669 5.226 Td
+(Floridan†)Tj
+/F11 23.4154 Tf
+23.4154 TL
+41.5661 -6.4767 Td
+(rovingly†)Tj
+/F9 10.7712 Tf
+10.7712 TL
+126.4434 6.3221 Td
+(phragmocone†)Tj
+/F1 11.5577 Tf
+11.5577 TL
+77.5528 -0.3932 Td
+(anicut†)Tj
+/F10 14.8199 Tf
+14.8199 TL
+31.1365 -1.6311 Td
+(coenospecifically†)Tj
+/F1 13.943 Tf
+13.943 TL
+-582.7849 24.4385 Td
+(snuff†)Tj
+/F6 16.2413 Tf
+16.2413 TL
+32.1386 -1.1491 Td
+(arioso†)Tj
+/F6 10.4877 Tf
+10.4877 TL
+48.74 2.8768 Td
+(endite†)Tj
+/F8 19.3024 Tf
+19.3024 TL
+31.484 -4.4074 Td
+(frecken†)Tj
+/F2 21.393 Tf
+21.393 TL
+74.0246 -1.0453 Td
+(personalia†)Tj
+/F9 12.3749 Tf
+12.3749 TL
+96.8674 4.5091 Td
+(misinclination†)Tj
+/F11 18.3571 Tf
+18.3571 TL
+111.3737 -2.9911 Td
+(calorimetry†)Tj
+/F6 22.4089 Tf
+22.4089 TL
+132.1711 -2.0259 Td
+(advocator†)Tj
+/F7 21.2048 Tf
+21.2048 TL
+-526.7993 24.602 Td
+(bulbilla†)Tj
+/F7 13.9517 Tf
+13.9517 TL
+80.133 3.6266 Td
+(zeppelin†)Tj
+/F10 23.2613 Tf
+23.2613 TL
+59.6991 -4.6548 Td
+(hasteless†)Tj
+/F7 16.6415 Tf
+16.6415 TL
+139.5678 3.3099 Td
+(collyrium†)Tj
+/F2 21.7549 Tf
+21.7549 TL
+78.6147 -2.5567 Td
+(copartnership†)Tj
+/F11 18.2914 Tf
+18.2914 TL
+127.5056 1.7317 Td
+(monodram†)Tj
+/F11 12.1088 Tf
+12.1088 TL
+98.7737 3.0913 Td
+(preballot†)Tj
+/F3 10.9615 Tf
+10.9615 TL
+-584.294 24.5737 Td
+(alani†)Tj
+/F12 21.4327 Tf
+21.4327 TL
+25.891 -5.2356 Td
+(parallelotropism†)Tj
+/F7 12.9842 Tf
+12.9842 TL
+218.6133 4.2242 Td
+(cephalodiscid†)Tj
+/F5 23.976 Tf
+23.976 TL
+90.2013 -5.4959 Td
+(subindices†)Tj
+/F12 18.5535 Tf
+18.5535 TL
+119.9278 2.7112 Td
+(rivalize†)Tj
+/F8 23.4069 Tf
+23.4069 TL
+100.1891 -2.4267 Td
+(damme†)Tj
+/F4 10.262 Tf
+10.262 TL
+-554.8225 30.5724 Td
+(extravagancy†)Tj
+/F11 17.6412 Tf
+17.6412 TL
+58.9965 -3.6896 Td
+(superpositive†)Tj
+/F8 12.8495 Tf
+12.8495 TL
+148.1865 2.3959 Td
+(chiggak†)Tj
+/F12 22.7033 Tf
+22.7033 TL
+52.1305 -4.9269 Td
+(conscriptional†)Tj
+/F9 20.7563 Tf
+20.7563 TL
+204.3294 0.9735 Td
+(doomful†)Tj
+/F6 19.211 Tf
+19.211 TL
+99.6303 0.7727 Td
+(ensorcelize†)Tj
+/F12 18.4285 Tf
+18.4285 TL
+-563.2733 24.3913 Td
+(Hydroidea†)Tj
+/F7 17.9171 Tf
+17.9171 TL
+110.5708 0.2557 Td
+(inofficiosity†)Tj
+/F3 14.5588 Tf
+14.5588 TL
+105.5316 1.6791 Td
+(megachilid†)Tj
+/F9 12.3268 Tf
+12.3268 TL
+71.5858 1.116 Td
+(rabbithearted†)Tj
+/F8 16.1862 Tf
+16.1862 TL
+103.5452 -1.9297 Td
+(adawlut†)Tj
+/F12 18.1589 Tf
+18.1589 TL
+64.7609 -0.9864 Td
+(cavalier†)Tj
+/F4 22.8732 Tf
+22.8732 TL
+98.058 -2.3572 Td
+(tetramastia†)Tj
+/F10 19.0114 Tf
+19.0114 TL
+-554.0523 25.9309 Td
+(Desmarestiaceae†)Tj
+/F11 22.0214 Tf
+22.0214 TL
+182.509 -1.505 Td
+(vicegerency†)Tj
+/F2 17.0655 Tf
+17.0655 TL
+158.5544 2.478 Td
+(predisregard†)Tj
+/F5 23.7085 Tf
+23.7085 TL
+93.3822 -3.3215 Td
+(hoofless†)Tj
+/F5 10.2462 Tf
+10.2462 TL
+94.8815 6.7312 Td
+(plunderess†)Tj
+/F8 20.5369 Tf
+20.5369 TL
+52.9624 -5.1453 Td
+(forename†)Tj
+/F7 13.5301 Tf
+13.5301 TL
+-582.2895 27.5034 Td
+(teller†)Tj
+/F3 15.794 Tf
+15.794 TL
+36.0983 -1.1319 Td
+(unsobriety†)Tj
+/F9 14.6721 Tf
+14.6721 TL
+75.9059 0.5609 Td
+(revisionary†)Tj
+/F1 15.889 Tf
+15.889 TL
+105.6393 -0.6084 Td
+(intractableness†)Tj
+/F7 23.1779 Tf
+23.1779 TL
+98.4003 -3.6445 Td
+(affordable†)Tj
+/F8 12.1882 Tf
+12.1882 TL
+118.4853 5.4948 Td
+(hambroline†)Tj
+/F3 20.9647 Tf
+20.9647 TL
+69.0826 -4.3883 Td
+(Cahuapana†)Tj
+/F1 23.4713 Tf
+23.4713 TL
+-503.6117 22.7467 Td
+(distrustful†)Tj
+/F11 21.9872 Tf
+21.9872 TL
+101.0676 0.7421 Td
+(druidess†)Tj
+/F4 14.2557 Tf
+14.2557 TL
+118.7311 3.8658 Td
+(philocalic†)Tj
+/F1 23.1413 Tf
+23.1413 TL
+61.3849 -4.4428 Td
+(phiz†)Tj
+/F12 20.2052 Tf
+20.2052 TL
+45.6346 1.468 Td
+(Wappo†)Tj
+/F9 19.598 Tf
+19.598 TL
+72.7386 0.3036 Td
+(Hadhramautian†)Tj
+/F7 14.8146 Tf
+14.8146 TL
+164.6229 2.3917 Td
+(atrip†)Tj
+/F2 22.4411 Tf
+22.4411 TL
+36.2217 -3.8133 Td
+(expropriate†)Tj
+/F12 17.1658 Tf
+17.1658 TL
+-600.4013 26.6376 Td
+(fieldward†)Tj
+/F11 12.4539 Tf
+12.4539 TL
+102.995 2.356 Td
+(Cycadofilices†)Tj
+/F9 11.2095 Tf
+11.2095 TL
+104.613 0.6222 Td
+(Schrebera†)Tj
+/F5 16.7393 Tf
+16.7393 TL
+67.2568 -2.7649 Td
+(cup†)Tj
+/F10 13.6034 Tf
+13.6034 TL
+31.6373 1.5679 Td
+(unimpulsive†)Tj
+/F6 21.2249 Tf
+21.2249 TL
+97.9447 -3.8108 Td
+(rauli†)Tj
+/F9 20.3561 Tf
+20.3561 TL
+45.9944 0.4344 Td
+(kras†)Tj
+/F5 17.8963 Tf
+17.8963 TL
+61.0684 1.2299 Td
+(lincloth†)Tj
+/F5 19.59 Tf
+19.59 TL
+60.6684 -0.8468 Td
+(arabinose†)Tj
+/F3 20.4149 Tf
+20.4149 TL
+-572.1781 23.5876 Td
+(shapingly†)Tj
+/F9 12.8709 Tf
+12.8709 TL
+89.07 3.772 Td
+(siphonate†)Tj
+/F9 12.384 Tf
+12.384 TL
+77.2252 0.2434 Td
+(Euphorbia†)Tj
+/F10 18.5343 Tf
+18.5343 TL
+74.3041 -3.0751 Td
+(V†)Tj
+/F6 18.3745 Tf
+18.3745 TL
+22.2412 0.0799 Td
+(epicoracoid†)Tj
+/F6 16.1168 Tf
+16.1168 TL
+99.0567 1.1288 Td
+(quill†)Tj
+/F3 21.4985 Tf
+21.4985 TL
+33.1361 -2.6909 Td
+(lunation†)Tj
+/F2 18.219 Tf
+18.219 TL
+81.8449 1.6397 Td
+(corruptingly†)Tj
+/F2 14.8684 Tf
+14.8684 TL
+95.65 1.6753 Td
+(beautied†)Tj
+/F12 23.5561 Tf
+23.5561 TL
+-572.5281 19.6561 Td
+(wakeful†)Tj
+/F5 18.3539 Tf
+18.3539 TL
+113.0695 2.6011 Td
+(trochleariform†)Tj
+/F7 23.1231 Tf
+23.1231 TL
+117.2814 -2.3846 Td
+(honorworthy†)Tj
+/F2 13.2422 Tf
+13.2422 TL
+147.7334 4.9404 Td
+(exactress†)Tj
+/F4 15.9398 Tf
+15.9398 TL
+52.5849 -1.3488 Td
+(diaglyphic†)Tj
+/F10 21.7943 Tf
+21.7943 TL
+72.1753 -2.9273 Td
+(propugnaculum†)Tj
+/F4 16.8 Tf
+16.8 TL
+-502.8446 26.4972 Td
+(huffiness†)Tj
+/F10 14.999 Tf
+14.999 TL
+68.6111 0.9005 Td
+(indecorousness†)Tj
+/F8 15.1197 Tf
+15.1197 TL
+134.9911 -0.0603 Td
+(amimide†)Tj
+/F12 23.5512 Tf
+23.5512 TL
+65.5437 -4.2158 Td
+(iambus†)Tj
+/F10 14.371 Tf
+14.371 TL
+98.9151 4.5901 Td
+(preconcentratedly†)Tj
+/F3 20.6764 Tf
+20.6764 TL
+155.2072 -3.1527 Td
+(salep†)Tj
+/F6 10.8967 Tf
+10.8967 TL
+49.9748 4.8898 Td
+(culverineer†)Tj
+/F3 22.1215 Tf
+22.1215 TL
+-573.2429 18.3876 Td
+(trisceptral†)Tj
+/F8 20.9153 Tf
+20.9153 TL
+103.8164 0.6031 Td
+(unsuccessful†)Tj
+/F9 15.8948 Tf
+15.8948 TL
+139.4842 2.5103 Td
+(tinchill†)Tj
+/F3 10.7349 Tf
+10.7349 TL
+85.832 2.5799 Td
+(unslain†)Tj
+/F1 19.5539 Tf
+19.5539 TL
+36.1016 -4.4095 Td
+(oathful†)Tj
+/F3 10.173 Tf
+10.173 TL
+60.2846 4.6904 Td
+(unheelpieced†)Tj
+/F4 12.859 Tf
+12.859 TL
+59.0644 -1.343 Td
+(clinopyroxene†)Tj
+/F11 19.0787 Tf
+19.0787 TL
+78.2216 -3.1098 Td
+(cone†)Tj
+ET
+Q
+0.7163 0.6978 -0.6978 0.7163 60.0977 12.1894 cm
+BT
+/F0 103.1391 Tf
+1 Tr
+0 TL
+0 0 Td
+(              )Tj
+ET
+
+endstream 
+endobj 
+3 0 obj 
+<<
+/Parent 1 0 R
+/Resources 4 0 R
+/MediaBox [0 0 612 600]
+/pdftk_PageNum 1
+/Type /Page
+/Contents 47 0 R
+>>
+endobj 
+1 0 obj 
+<<
+/Kids [3 0 R]
+/Count 1
+/Type /Pages
+>>
+endobj 
+48 0 obj 
+<<
+/Pages 1 0 R
+/Type /Catalog
+>>
+endobj 
+49 0 obj 
+<<
+/Creator (˛ˇ p d f t k   1 . 4 1   -   w w w . p d f t k . c o m)
+/Producer (itext-paulo-155 \(itextpdf.sf.net-lowagie.com\))
+/ModDate (D:20091006121825-07'00')
+/CreationDate (D:20091006121825-07'00')
+>>
+endobj xref
+0 50
+0000000000 65535 f 
+0000066099 00000 n 
+0000000000 65536 n 
+0000065975 00000 n 
+0000010583 00000 n 
+0000000594 00000 n 
+0000000015 00000 n 
+0000000198 00000 n 
+0000000908 00000 n 
+0000000702 00000 n 
+0000001228 00000 n 
+0000001030 00000 n 
+0000001542 00000 n 
+0000001345 00000 n 
+0000001850 00000 n 
+0000001662 00000 n 
+0000002164 00000 n 
+0000001962 00000 n 
+0000002477 00000 n 
+0000002283 00000 n 
+0000002783 00000 n 
+0000002590 00000 n 
+0000003100 00000 n 
+0000002898 00000 n 
+0000003412 00000 n 
+0000003222 00000 n 
+0000003719 00000 n 
+0000003526 00000 n 
+0000009937 00000 n 
+0000003888 00000 n 
+0000003834 00000 n 
+0000003928 00000 n 
+0000009787 00000 n 
+0000006223 00000 n 
+0000006525 00000 n 
+0000006725 00000 n 
+0000007099 00000 n 
+0000007420 00000 n 
+0000007813 00000 n 
+0000008210 00000 n 
+0000008279 00000 n 
+0000008682 00000 n 
+0000009000 00000 n 
+0000009423 00000 n 
+0000009549 00000 n 
+0000010465 00000 n 
+0000010271 00000 n 
+0000010779 00000 n 
+0000066158 00000 n 
+0000066210 00000 n 
+trailer
+
+<<
+/Info 49 0 R
+/Root 48 0 R
+/Size 50
+/ID [<83763daa3b5c2c0ee12ec53a547b32f4><b2131c75b48dfb28be9c4573034751e3>]
+>>
+startxref
+66434
+%%EOF
