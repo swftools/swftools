@@ -406,6 +406,35 @@ int swf_SetU30String(TAG*tag, const char*str, int l)
     swf_SetBlock(tag, (void*)str, l);
     return len;
 }
+float swf_GetF16(TAG * t)
+{
+    // D16 is 1-5-10
+    // D32 is 1-8-23
+    U16 f1 = swf_GetU16(t);
+    if(!f1) return 0;
+    U32 f2 = (f1&0x8000)<<16; //sign
+    f2 |= ((f1&0x7c00)<<13)+(0x40000000-(0x4000<<13)); //exp
+    f2 |= (f1&0x03ff)<<13; //mantissa
+    fprintf(stderr, "%f = %d-%d-%x\n", *(float*)&f2, f1>>15, (f1>>10)&31, f1&0x3ff);
+    return *(float*)&f2;
+}
+void swf_SetF16(TAG * t, float f)
+{
+    U32 f1 = *(U32*)&f;
+    U16 f2 = (f1>>16)&0x8000;
+    int exp = ((f1>>23)&0xff)-0x80+0x10;
+    if(exp<0) {
+	exp = 0;
+	fprintf(stderr, "Exponent underflow in FLOAT16 encoding\n");
+    } else if(exp>=32) {
+	exp = 31;
+	fprintf(stderr, "Exponent overflow in FLOAT16 encoding\n");
+    }
+    f2 |= exp<<10;
+    f2 |= (f1>>13)&0x3ff;
+    swf_SetU16(t, f2);
+}
+
 double swf_GetD64(TAG*tag)
 {
     /* FIXME: this is not big-endian compatible */
@@ -949,7 +978,7 @@ void  swf_SetPassword(TAG * t, const char * password)
     md5string = crypt_md5(password, salt);
 
     swf_SetU16(t,0);
-    swf_SetString(t, (U8*)md5string);
+    swf_SetString(t, md5string);
 } 
 
 void swf_SetString(TAG*t, const char* s) 
@@ -957,7 +986,7 @@ void swf_SetString(TAG*t, const char* s)
     if(!s) {
         swf_SetU8(t, 0);
     } else {
-        swf_SetBlock(t,s,strlen(s)+1);
+        swf_SetBlock(t,(U8*)s,strlen(s)+1);
     }
 }
 
@@ -1578,7 +1607,7 @@ int WriteExtraTags(SWF*swf, writer_t*writer)
         if(0 && !has_scenedescription) {
             TAG*scene = swf_InsertTag(0, ST_SCENEDESCRIPTION);
             swf_SetU16(scene, 1);
-            swf_SetString(scene, (U8*)"Scene 1");
+            swf_SetString(scene, "Scene 1");
             swf_SetU8(scene, 0);
             if(writer) {
                 if(swf_WriteTag2(writer, scene)<0) 

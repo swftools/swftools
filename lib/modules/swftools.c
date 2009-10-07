@@ -1166,6 +1166,7 @@ U8 swf_isFontTag(TAG*tag)
 {
     if(tag->id == ST_DEFINEFONT ||
        tag->id == ST_DEFINEFONT2 ||
+       tag->id == ST_DEFINEFONT3 ||
        tag->id == ST_DEFINEFONTINFO)
         return 1;
     return 0;

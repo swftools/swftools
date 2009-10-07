@@ -231,6 +231,7 @@ U8    swf_GetU8(TAG * t);                   // resets Bitcount
 U16   swf_GetU16(TAG * t);
 #define swf_GetS16(tag)     ((S16)swf_GetU16(tag))
 U32   swf_GetU32(TAG * t);
+float swf_GetF16(TAG * t);
 void  swf_GetRGB(TAG * t, RGBA * col);
 void  swf_GetRGBA(TAG * t, RGBA * col);
 void  swf_GetGradient(TAG * t, GRADIENT * gradient, char alpha);
@@ -241,6 +242,7 @@ int   swf_SetU8(TAG * t,U8 v);              // resets Bitcount
 int   swf_SetU16(TAG * t,U16 v);
 void  swf_SetS16(TAG * t,int v);
 int   swf_SetU32(TAG * t,U32 v);
+void  swf_SetF16(TAG * t,float f);
 void  swf_SetString(TAG*t,const char*s);
 
 /* abc datatypes */

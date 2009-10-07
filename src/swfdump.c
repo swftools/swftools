@@ -298,7 +298,7 @@ void dumpFont(TAG*tag, char*prefix)
 {
     SWFFONT* font = malloc(sizeof(SWFFONT));
     memset(font, 0, sizeof(SWFFONT));
-    if(tag->id == ST_DEFINEFONT2) {
+    if(tag->id == ST_DEFINEFONT2 || tag->id == ST_DEFINEFONT3) {
 	swf_FontExtract_DefineFont2(0, font, tag);
     } else if(tag->id == ST_DEFINEFONT) {
 	swf_FontExtract_DefineFont(0, font, tag);
@@ -962,6 +962,57 @@ void handleExportAssets(TAG*tag, char* prefix)
     }
 }
 
+static void handleFontAlign1(TAG*tag)
+{
+    swf_SetTagPos(tag, 0);
+    U16 id = swf_GetU16(tag);
+    U8 flags = swf_GetU8(tag);
+    printf(" for font %04d, ", id);
+    if((flags&3)==0) printf("thin, ");
+    else if((flags&3)==1) printf("medium, ");
+    else if((flags&3)==2) printf("thick, ");
+    else printf("?, ");
+    int num=0;
+    while(tag->pos < tag->len) {
+	int nr = swf_GetU8(tag); // should be 2
+	int t;
+	if(nr>2) {
+	    printf("*** unsupported multiboxes ***, ");
+	    break;
+	}
+	for(t=0;t<nr;t++) {
+	    float v1 = swf_GetF16(tag);
+	    float v2 = swf_GetF16(tag);
+	}
+	U8 xyflags = swf_GetU8(tag);
+	num++;
+    }
+    printf(" %d glyphs", num);
+}
+
+static void handleFontAlign2(TAG*tag, char*prefix)
+{
+    if(!showfonts)
+	return;
+    swf_SetTagPos(tag, 0);
+    swf_GetU16(tag);
+    swf_GetU8(tag);
+    int num = 0;
+    while(tag->pos < tag->len) {
+	printf("%sglyph %d) ", prefix, num++);
+	int nr = swf_GetU8(tag); // should be 2
+	int t;
+	for(t=0;t<nr;t++) {
+	    float v1 = swf_GetF16(tag);
+	    float v2 = swf_GetF16(tag);
+	    printf("%f/%f ", v1,v2);
+	}
+	U8 xyflags = swf_GetU8(tag);
+	printf("xy:%02x\n", xyflags);
+    }
+}
+
+
 void dumperror(const char* format, ...)
 {
     char buf[1024];
@@ -1177,20 +1228,7 @@ int main (int argc,char ** argv)
 	    printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
 	}
 	
-        if(swf_isDefiningTag(tag)) {
-            U16 id = swf_GetDefineID(tag);
-            printf(" defines id %04d", id);
-            if(idtab[id])
-                dumperror("Id %04d is defined more than once.", id);
-            idtab[id] = 1;
-        }
-	else if(swf_isPseudoDefiningTag(tag)) {
-            U16 id = swf_GetDefineID(tag);
-            printf(" adds information to id %04d", id);
-            if(!idtab[id])
-                dumperror("Id %04d is not yet defined.\n", id);
-	}
-        else if(tag->id == ST_PLACEOBJECT) {
+        if(tag->id == ST_PLACEOBJECT) {
             printf(" places id %04d at depth %04x", swf_GetPlaceID(tag), swf_GetDepth(tag));
             if(swf_GetName(tag))
                 printf(" name \"%s\"",swf_GetName(tag));
@@ -1279,7 +1317,7 @@ int main (int argc,char ** argv)
 	    }
 	}
 	else if(tag->id == ST_FRAMELABEL) {
-	    int l = strlen(tag->data);
+	    int l = strlen((char*)tag->data);
 	    printf(" \"%s\"", tag->data);
 	    if((l+1) < tag->len) {
 		printf(" has %d extra bytes", tag->len-1-l);
@@ -1291,8 +1329,8 @@ int main (int argc,char ** argv)
 		dumperror("Frame %d has more than one label", 
 			issprite?spriteframe:mainframe);
 	    }
-	    if(issprite) spriteframelabel = tag->data;
-	    else framelabel = tag->data;
+	    if(issprite) spriteframelabel = (char*)tag->data;
+	    else framelabel = (char*)tag->data;
 	}
 	else if(tag->id == ST_SHOWFRAME) {
 	    char*label = issprite?spriteframelabel:framelabel;
@@ -1329,6 +1367,9 @@ int main (int argc,char ** argv)
 		printf(" %s", swf_GetString(tag));
 	    }
 	}
+	else if(tag->id == ST_DEFINEFONTALIGNZONES) {
+	    handleFontAlign1(tag);
+	}
 	else if(tag->id == ST_CSMTEXTSETTINGS) {
 	    U16 id = swf_GetU16(tag);
 	    U8 flags = swf_GetU8(tag);
@@ -1348,6 +1389,19 @@ int main (int argc,char ** argv)
 	    float sharpness = swf_GetFixed(tag);
 	    printf("s=%.2f,t=%.2f)", thickness, sharpness);
 	    swf_GetU8(tag);
+	}
+	else if(swf_isDefiningTag(tag)) {
+            U16 id = swf_GetDefineID(tag);
+            printf(" defines id %04d", id);
+            if(idtab[id])
+                dumperror("Id %04d is defined more than once.", id);
+            idtab[id] = 1;
+        }
+	else if(swf_isPseudoDefiningTag(tag)) {
+            U16 id = swf_GetDefineID(tag);
+            printf(" adds information to id %04d", id);
+            if(!idtab[id])
+                dumperror("Id %04d is not yet defined.\n", id);
 	}
 
 	if(tag->id == ST_DEFINEBITSLOSSLESS ||
@@ -1462,6 +1516,9 @@ int main (int argc,char ** argv)
 	}
 	else if(tag->id == ST_PLACEOBJECT2 || tag->id == ST_PLACEOBJECT3) {
 	    handlePlaceObject23(tag, myprefix);
+	}
+	else if(tag->id == ST_DEFINEFONTALIGNZONES) {
+	    handleFontAlign2(tag, myprefix);
 	}
 	else if(tag->id == ST_DEFINEFONTNAME) {
 	    swf_SetTagPos(tag, 0);

@@ -253,7 +253,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     int fid;
     U32 offset_start;
     U32 *offset;
-    U8 flags1, flags2, namelen;
+    U8 flags1, langcode, namelen;
     swf_SetTagPos(tag, 0);
     font->version = 2;
     fid = swf_GetU16(tag);
@@ -261,7 +261,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	return id;
     font->id = fid;
     flags1 = swf_GetU8(tag);
-    flags2 = swf_GetU8(tag);	//reserved flags
+    langcode = swf_GetU8(tag);	//reserved flags
 
     if (flags1 & 1)
 	font->style |= FONT_STYLE_BOLD;
@@ -318,7 +318,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     maxcode = 0;
     for (t = 0; t < glyphcount; t++) {
 	int code;
-	if (flags1 & 4)		// wide codes
+	if (flags1 & 4)		// wide codes (always on for definefont3)
 	    code = swf_GetU16(tag);
 	else
 	    code = swf_GetU8(tag);
@@ -498,6 +498,7 @@ int swf_FontExtract(SWF * swf, int id, SWFFONT * *font)
 	    break;
 
 	case ST_DEFINEFONT2:
+	case ST_DEFINEFONT3:
 	    nid = swf_FontExtract_DefineFont2(id, f, t);
 	    break;
 
@@ -1393,13 +1394,13 @@ void swf_WriteFont(SWFFONT * font, char *filename)
     if(font->name) {
 	t = swf_InsertTag(t, ST_NAMECHARACTER);
         swf_SetU16(t, WRITEFONTID);
-        swf_SetString(t, font->name);
+        swf_SetString(t, (char*)font->name);
 	t = swf_InsertTag(t, ST_EXPORTASSETS);
         swf_SetU16(t, 1);
         swf_SetU16(t, WRITEFONTID);
-        swf_SetString(t, font->name);
+        swf_SetString(t, (char*)font->name);
 
-        t = swf_AddAS3FontDefine(t, WRITEFONTID, font->name);
+        t = swf_AddAS3FontDefine(t, WRITEFONTID, (char*)font->name);
     }
 
     if (storeGlyphNames && font->glyphnames) {
@@ -1409,9 +1410,9 @@ void swf_WriteFont(SWFFONT * font, char *filename)
 	swf_SetU16(t, font->numchars);
 	for (c = 0; c < font->numchars; c++) {
 	    if (font->glyphnames[c])
-		swf_SetString(t, (U8*)font->glyphnames[c]);
+		swf_SetString(t, font->glyphnames[c]);
 	    else
-		swf_SetString(t, (U8*)"");
+		swf_SetString(t, "");
 	}
     }
 
@@ -1560,9 +1561,9 @@ void swf_SetEditText(TAG * tag, U16 flags, SRECT r, const char *text, RGBA * col
 	swf_SetU16(tag, layout->indent);	//indent
 	swf_SetU16(tag, layout->leading);	//leading
     }
-    swf_SetString(tag, (U8*)variable);
+    swf_SetString(tag, variable);
     if (flags & ET_HASTEXT)
-	swf_SetString(tag, (U8*)text);
+	swf_SetString(tag, text);
 }
 
 SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, const char *text, int scale)
