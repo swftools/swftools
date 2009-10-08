@@ -474,7 +474,7 @@ int swf_ShapeSetCurve(TAG * t,SHAPE * s,S32 x,S32 y,S32 ax,S32 ay)
 
     if(b >= 18) {
           fprintf(stderr, "Bit overflow in swf_ShapeSetCurve- %d (%d,%d,%d,%d)\n", b, ax,ay,x,y);
-          b = 17;
+	  return swf_ShapeSetLine(t, s, x+ax, y+ay);
     }
 
     swf_SetBits(t,2,2);
