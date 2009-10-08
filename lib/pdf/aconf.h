@@ -13,6 +13,8 @@
 
 #define HAVE_STRINGS_H 1
 
+#define TEXTOUT_WORD_LIST 1
+
 // todo:
 //
 // HAVE_STRINGS_H

@@ -8,7 +8,7 @@ all: ../libpdf$(A) pdf2swf$(E)
 
 libpdf: ../libpdf$(A)
 
-libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) pdf.$(O) fonts.$(O)
+libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O)
 
 xpdf_in_source = @xpdf_in_source@
 
@@ -21,7 +21,9 @@ xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O)
 		  xpdf/JArithmeticDecoder.$(O) xpdf/Gfx.$(O) xpdf/GfxFont.$(O) xpdf/CMap.$(O) xpdf/CharCodeToUnicode.$(O) \
 		  xpdf/PSTokenizer.$(O) xpdf/FontEncodingTables.$(O) xpdf/BuiltinFont.$(O) xpdf/BuiltinFontTables.$(O) \
 		  xpdf/GfxState.$(O) xpdf/Function.$(O) xpdf/Annot.$(O) xpdf/NameToCharCode.$(O) xpdf/UnicodeMap.$(O) \
-		  xpdf/SecurityHandler.$(O) #xpdf/OptionalContent.$(O)
+		  xpdf/SecurityHandler.$(O) xpdf/TextOutputDev.$(O) xpdf/UnicodeTypeTable.$(O)
+		  #xpdf/OptionalContent.$(O)
+
 
 splash_in_source = @splash_in_source@
 splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState.$(O) xpdf/Splash.$(O) \
@@ -40,12 +42,19 @@ InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
 BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf BitmapOutputDev.cc -o $@
+XMLOutputDev.$(O): XMLOutputDev.cc XMLOutputDev.h xpdf/TextOutputDev.h
+	$(CC) -I ./ -I xpdf XMLOutputDev.cc -o $@
 FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf FullBitmapOutputDev.cc -o $@
 DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf DummyOutputDev.cc -o $@
 pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
+
+XPDFOK = xpdf/Gfx.cc
+$(XPDFOK): Makefile.in inject-xpdf.pl xpdf-*tar.gz xpdf*patch
+	@if test xpdf-changes.patch -nt $(XPDFOK);then perl inject-xpdf.pl xpdf-3.02.tar.gz;fi
+	@if test '!' -d xpdf;then perl inject-xpdf.pl xpdf-3.02.tar.gz;fi
 
 xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc
 	$(CC) -I ./ -I xpdf xpdf/UnicodeMap.cc -o $@
@@ -140,11 +149,9 @@ xpdf/%.$(O): xpdf/%.cc
 	$(CC) -I ./ -I xpdf $< -o $@
 
 
-../libpdf$(A): $(libpdf_objects) $(xpdf_in_source) $(splash_in_source)
+../libpdf$(A): $(XPDFOK) $(libpdf_objects) $(xpdf_in_source) $(splash_in_source)
 	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_in_source) $(splash_in_source)
 	$(RANLIB) ../libpdf$(A)
-
-
 
 xpdfapp_sources=xpdf/XPDFApp.cc xpdf/XPDFCore.cc xpdf/XPDFTree.cc xpdf/XPDFViewer.cc xpdf/PDFCore.cc xpdf/TextOutputDev.cc xpdf/xpdf.cc xpdf/CoreOutputDev.cc xpdf/UnicodeTypeTable.cc xpdf/PSOutputDev.cc
 splash_sources=xpdf/Splash.cc xpdf/SplashBitmap.cc xpdf/SplashClip.cc xpdf/SplashFTFont.cc xpdf/SplashFTFontEngine.cc xpdf/SplashFTFontFile.cc xpdf/SplashFont.cc xpdf/SplashFontEngine.cc xpdf/SplashFontFile.cc xpdf/SplashFontFileID.cc xpdf/SplashOutputDev.cc xpdf/SplashPath.cc xpdf/SplashPattern.cc xpdf/SplashScreen.cc xpdf/SplashState.cc xpdf/SplashT1Font.cc xpdf/SplashT1FontEngine.cc xpdf/SplashT1FontFile.cc xpdf/SplashXPath.cc xpdf/SplashXPathScanner.cc
@@ -154,26 +161,31 @@ xpdfapp_objects=xpdf/XPDFApp.$(O) xpdf/XPDFCore.$(O) xpdf/XPDFTree.$(O) xpdf/XPD
 xxpdf$(E): $(xpdf_objects) $(xpdfapp_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . $(xpdfapp_objects) $(xpdf_objects) $(splash_objects) xpdf/parseargs.c -o xxpdf$(E) $(LIBS) -lXm -lX11
 
-pdftoppm$(E): $(xpdf_objects) $(splash_objects)
+pdftoppm$(E): $(XPDFOK) xpdf/pdftoppm.cc $(xpdf_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.cc $(xpdf_objects) $(splash_objects) xpdf/parseargs.c -o pdftoppm$(E) $(LIBS)
-pdftotext$(E): $(xpdf_objects) $(splash_objects)
-	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/TextOutput*.cc xpdf/UnicodeType*.cc xpdf/parseargs.c -o pdftotext$(E) $(LIBS)
+pdftotext$(E): $(XPDFOK) xpdf/pdftotext.cc $(xpdf_objects)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.cc $(xpdf_objects) xpdf/parseargs.c -o pdftotext$(E) $(LIBS)
+pdfinfo$(E): $(XPDFOK) xpdf/pdfinfo.cc $(xpdf_objects)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdfinfo.cc $(xpdf_objects) xpdf/parseargs.c -o pdfinfo$(E) $(LIBS)
 
 gfx_objects = ../libgfxswf$(A) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
 gfx_objects2 = $(gfx_objects) ../devices/lrf.$(O) ../libocr$(A)
 
-pdf2swf$(E): ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
+pdf2swf$(E): $(XPDFOK) ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
 	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
-gfx2gfx$(E): ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2)
+gfx2gfx$(E): $(XPDFOK) ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2)
 	$(LL) $(CPPFLAGS) -g ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2) -o gfx2gfx$(E) $(LIBS)
 
 install:
+	$(mkinstalldirs) $(bindir)
+	@for file in pdfinfo pdftoppm pdftotext; do if test -f $$file;then $(INSTALL_BIN);fi;done
+
 uninstall:
 
 
 clean: 
 	rm -f xpdf/*.o xpdf/*.obj *.o pdf2swf pdftoppm pdftotext pdf2swf.exe pdftoppm.exe pdftotext.exe *.obj *.lo *.a *.lib *.la gmon.out
 
-.PHONY: clean install uninstall check all
+.PHONY: clean install uninstall check all xpdf
 
 

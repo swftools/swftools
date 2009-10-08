@@ -415,7 +415,6 @@ float swf_GetF16(TAG * t)
     U32 f2 = (f1&0x8000)<<16; //sign
     f2 |= ((f1&0x7c00)<<13)+(0x40000000-(0x4000<<13)); //exp
     f2 |= (f1&0x03ff)<<13; //mantissa
-    fprintf(stderr, "%f = %d-%d-%x\n", *(float*)&f2, f1>>15, (f1>>10)&31, f1&0x3ff);
     return *(float*)&f2;
 }
 void swf_SetF16(TAG * t, float f)

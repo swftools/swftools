@@ -541,17 +541,6 @@ diff -u -r1.5 -r1.6
    int w, h;
    double *ctm;
    SplashCoord mat[6];
---- TextOutputDev.h	2006-11-12 12:23:01.000000000 +0100
-+++ TextOutputDev.h	2006-11-12 12:25:31.000000000 +0100
-@@ -578,7 +578,7 @@
-   //----- initialization and control
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state);
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
- 
-   // End a page.
-   virtual void endPage();
 --- TextOutputDev.cc	2006-11-12 12:22:53.000000000 +0100
 +++ TextOutputDev.cc	2006-11-12 12:25:03.000000000 +0100
 @@ -3805,7 +3805,7 @@
@@ -986,3 +975,22 @@ diff -u -r1.5 -r1.6
      out->endTransparencyGroup(state);
    }
  
+--- TextOutputDev.h.orig	2009-10-07 17:00:29.000000000 -0700
++++ TextOutputDev.h	2009-10-07 17:01:50.000000000 -0700
+@@ -170,6 +170,7 @@
+   friend class TextFlow;
+   friend class TextWordList;
+   friend class TextPage;
++  friend class XMLOutputDev;
+ };
+ 
+ //------------------------------------------------------------------------
+@@ -578,7 +579,7 @@
+   //----- initialization and control
+ 
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state);
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+ 
+   // End a page.
+   virtual void endPage();
