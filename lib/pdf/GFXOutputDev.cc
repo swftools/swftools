@@ -1658,12 +1658,6 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     states[statepos].dashStart = 0;
     
     this->last_char_gfxfont = 0;
-	
-    if(this->config_linkdatafile) {
-	FILE*fi = fopen(config_linkdatafile, "ab+");
-	fprintf(fi, "[page %d]\n", pageNum);
-	fclose(fi);
-    }
 }
 
 
