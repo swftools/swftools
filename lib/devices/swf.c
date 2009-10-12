@@ -832,10 +832,11 @@ static void chararray_writetodev(gfxdevice_t*dev, chararray_t*array, MATRIX*matr
 	swf_SetU32(i->tag, 0);//sharpness
 	swf_SetU8(i->tag, 0);//reserved
     }
-    i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
     if(invisible && i->config_flashversion>=8) {
+	i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT3);
 	swf_ObjectPlaceBlend(i->tag,textid,getNewDepth(dev),&i->page_matrix,NULL,NULL,BLENDMODE_MULTIPLY);
     } else {
+	i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
 	swf_ObjectPlace(i->tag,textid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
     }
 }
