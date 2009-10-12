@@ -802,7 +802,7 @@ static charbuffer_t*charbuffer_append(charbuffer_t*buf, SWFFONT*font, int charid
    If we set it to low, however, the char positions will be inaccurate */
 #define GLYPH_SCALE 1
 
-static void chararray_writetodev(gfxdevice_t*dev, chararray_t*array, MATRIX*matrix)
+static void chararray_writetodev(gfxdevice_t*dev, chararray_t*array, MATRIX*matrix, char invisible)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
    
@@ -833,14 +833,18 @@ static void chararray_writetodev(gfxdevice_t*dev, chararray_t*array, MATRIX*matr
 	swf_SetU8(i->tag, 0);//reserved
     }
     i->tag = swf_InsertTag(i->tag,ST_PLACEOBJECT2);
-    swf_ObjectPlace(i->tag,textid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
+    if(invisible && i->config_flashversion>=8) {
+	swf_ObjectPlaceBlend(i->tag,textid,getNewDepth(dev),&i->page_matrix,NULL,NULL,BLENDMODE_MULTIPLY);
+    } else {
+	swf_ObjectPlace(i->tag,textid,getNewDepth(dev),&i->page_matrix,NULL,NULL);
+    }
 }
 
-static void charbuffer_writetodevandfree(gfxdevice_t*dev, charbuffer_t*buf)
+static void charbuffer_writetodevandfree(gfxdevice_t*dev, charbuffer_t*buf, char invisible)
 {
     while(buf) {
 	charbuffer_t*next = buf->next;buf->next = 0;
-	chararray_writetodev(dev, buf->array, &buf->matrix);
+	chararray_writetodev(dev, buf->array, &buf->matrix, invisible);
 	chararray_destroy(buf->array);
 	free(buf);
 	buf = next;
@@ -852,7 +856,7 @@ static void endtext(gfxdevice_t*dev)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(!i->textmode)
         return;
-    charbuffer_writetodevandfree(dev, i->chardata);i->chardata = 0;
+    charbuffer_writetodevandfree(dev, i->chardata, 0);i->chardata = 0;
     i->textmode = 0;
 }
 
@@ -979,7 +983,7 @@ static void endpage(gfxdevice_t*dev)
     if(i->textmode)
 	endtext(dev);
     if(i->topchardata) {
-	charbuffer_writetodevandfree(dev, i->topchardata);
+	charbuffer_writetodevandfree(dev, i->topchardata, 1);
 	i->topchardata=0;
     }
     
@@ -3055,6 +3059,10 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	    glyph, i->swffont->id, x, y, color->r, color->g, color->b, color->a);
 
     if(color->a == 0 && i->config_invisibletexttofront) {
+	if(i->config_flashversion>=8) {
+	    // use "multiply" blend mode
+	    color->a = color->r = color->g = color->b = 255;
+	}
 	i->topchardata = charbuffer_append(i->topchardata, i->swffont, glyph, x, y, i->current_font_size, *(RGBA*)color, &i->fontmatrix);
     } else {
 	i->chardata = charbuffer_append(i->chardata, i->swffont, glyph, x, y, i->current_font_size, *(RGBA*)color, &i->fontmatrix);
