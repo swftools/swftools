@@ -93,7 +93,7 @@ char* swf_GetString(TAG*t)
 U8 swf_GetU8(TAG * t)
 { swf_ResetReadBits(t);
   #ifdef DEBUG_RFXSWF
-    if (t->pos>=t->len) 
+    if ((int)t->pos>=(int)t->len) 
     { fprintf(stderr,"GetU8() out of bounds: TagID = %i\n",t->id);
       return 0;
     }
@@ -105,7 +105,7 @@ U16 swf_GetU16(TAG * t)
 { U16 res;
   swf_ResetReadBits(t);
   #ifdef DEBUG_RFXSWF
-    if (t->pos>(t->len-2)) 
+    if ((int)t->pos>((int)t->len-2)) 
     { fprintf(stderr,"GetU16() out of bounds: TagID = %i\n",t->id);
       return 0;
     }
@@ -119,7 +119,7 @@ U32 swf_GetU32(TAG * t)
 { U32 res;
   swf_ResetReadBits(t);
   #ifdef DEBUG_RFXSWF
-    if (t->pos>(t->len-4)) 
+    if ((int)t->pos>((int)t->len-4)) 
     { fprintf(stderr,"GetU32() out of bounds: TagID = %i\n",t->id);
       return 0;
     }

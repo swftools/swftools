@@ -29,6 +29,7 @@
 #include <string.h>
 #include <memory.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "../config.h"
 
@@ -343,7 +344,7 @@ static void zlib_error(int ret, char* msg, z_stream*zs)
 	  msg,
 	  ret,
 	  zs->msg?zs->msg:"unknown");
-    perror("errno:");
+    if(errno) perror("errno:");
     exit(1);
 }
 #endif
