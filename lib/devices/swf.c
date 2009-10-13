@@ -1972,10 +1972,14 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
             swf_ButtonPostProcess(i->tag, 1);
 	}
     }
+
     char buf[80];
+    char*buf2 = 0;
     const char* name = 0;
     if(i->config_linknameurl) {
-	name = url;
+        buf2 = malloc(strlen(type)+strlen(url)+2);
+        sprintf(buf2, "%s:%s", type, url);
+        name = buf2;
     } else {
         name = buf;
         sprintf(buf, "button%d", buttonid);
@@ -1997,6 +2001,9 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     } else {
 	swf_ObjectPlace(i->tag, buttonid, getNewDepth(dev),&i->page_matrix,0,(U8*)name);
     }
+
+    if(buf2)
+	free(buf2);
 }
 
       
