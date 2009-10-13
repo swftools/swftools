@@ -39,7 +39,12 @@ class TwoPixelCheck(Check):
         return "pixel at (%d,%d)" % (self.x2,self.y2)
 
 class PixelBrighterThan(TwoPixelCheck):
-    pass
+    def verifies(self, model):
+        p1 = model.getPixel(self.x,self.y)
+        p2 = model.getPixel(self.x2,self.y2)
+        val1 = p1[0] + p1[1] + p1[2]
+        val2 = p2[0] + p2[1] + p2[2]
+        return val1 > val2
 
 class PixelDarkerThan(TwoPixelCheck):
     pass

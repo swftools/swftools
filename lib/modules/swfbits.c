@@ -1182,9 +1182,15 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
     int has_alpha = swf_ImageHasAlpha(mem,width,height);
 
     /* try lossless image */
+
+#ifdef NO_LOSSLESS
+    tag1 = swf_InsertTag(0, /*ST_DEFINEBITSLOSSLESS1/2*/0);
+    tag1->len = 0x7fffffff;
+#else
     tag1 = swf_InsertTag(0, /*ST_DEFINEBITSLOSSLESS1/2*/0);
     swf_SetU16(tag1, bitid);
     swf_SetLosslessImage(tag1, mem, width, height);
+#endif
 
 #if defined(HAVE_JPEGLIB)
     /* try jpeg image */

@@ -105,7 +105,6 @@ class InfoOutputDev: public OutputDev
     int num_polygons;
     int num_textfields;
 
-    void finish();
     void dumpfonts(gfxdevice_t*dev);
 
     InfoOutputDev(XRef*xref);

@@ -1442,10 +1442,13 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     gfxmatrix_t m = this->current_font_matrix;
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
     //m.tx += originX; m.ty += originY;
-
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
     
-    if((render == RENDER_FILL && !config_drawonlyshapes) || render == RENDER_INVISIBLE) {
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
+
+    if((render == RENDER_FILL && !config_drawonlyshapes) ||
+       (render == RENDER_FILLSTROKE && state->getTransformedLineWidth()<1.0) ||
+       (render == RENDER_INVISIBLE)) {
+
 	int space = this->current_fontinfo->space_char;
 	if(config_extrafontdata && space>=0 && m.m00 && !m.m01) {
 	    /* space char detection */
@@ -1478,6 +1481,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	    msg("<notice> Some texts will be rendered as shape");
 	    gfxglobals->textmodeinfo = 1;
 	}
+
 	gfxline_t*glyph = current_gfxfont->glyphs[glyphid].line;
 	gfxline_t*tglyph = gfxline_clone(glyph);
 	gfxline_transform(tglyph, &m);
@@ -1561,10 +1565,11 @@ GBool GFXOutputDev::beginType3Char(GfxState *state, double x, double y, double d
 
 	gfxmatrix_t m = this->current_font_matrix;
 	this->transformXY(state, 0, 0, &m.tx, &m.ty);
-	m.m00*=INTERNAL_FONT_SIZE;
+
+	/*m.m00*=INTERNAL_FONT_SIZE;
 	m.m01*=INTERNAL_FONT_SIZE;
 	m.m10*=INTERNAL_FONT_SIZE;
-	m.m11*=INTERNAL_FONT_SIZE;
+	m.m11*=INTERNAL_FONT_SIZE;*/
 
 	if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
 	    msg("<error> Invalid charid %d for font", charid);
@@ -2039,6 +2044,8 @@ void GFXOutputDev::updateFont(GfxState *state)
     current_gfxfont = this->current_fontinfo->getGfxFont();
     device->addfont(device, current_gfxfont);
     free(id);
+    
+    device->addfont(device, current_gfxfont);
 
     updateFontMatrix(state);
 }

@@ -68,9 +68,14 @@ static int reader_fileread(reader_t*reader, void* data, int len)
 	reader->pos += ret;
     return ret;
 }
+static void reader_fileread_dealloc(reader_t*r)
+{
+    memset(r, 0, sizeof(reader_t));
+}
 void reader_init_filereader(reader_t*r, int handle)
 {
     r->read = reader_fileread;
+    r->dealloc = reader_fileread_dealloc;
     r->internal = (void*)handle;
     r->type = READER_TYPE_FILE;
     r->mybyte = 0;

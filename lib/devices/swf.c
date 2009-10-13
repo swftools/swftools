@@ -218,6 +218,10 @@ static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font);
 static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action);
 static void swf_startframe(gfxdevice_t*dev, int width, int height);
 static void swf_endframe(gfxdevice_t*dev);
+static void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points);
+static void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points);
+static void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points);
+
 static gfxresult_t* swf_finish(gfxdevice_t*driver);
 
 static swfoutput_internal* init_internal_struct()
@@ -1531,7 +1535,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
 
     /* Add AVM2 actionscript */
     if(i->config_flashversion>=9 && 
-            (i->config_insertstoptag || i->hasbuttons)) {
+            (i->config_insertstoptag || i->hasbuttons) && !i->config_linknameurl) {
         swf_AddButtonLinks(i->swf, i->config_insertstoptag, 
                 i->config_internallinkfunction||i->config_externallinkfunction);
     }
@@ -1670,7 +1674,7 @@ static void swfoutput_setlinewidth(gfxdevice_t*dev, double _linewidth)
 }
 
 
-static void drawlink(gfxdevice_t*dev, ActionTAG*,ActionTAG*, gfxline_t*points, char mouseover, const char*url);
+static void drawlink(gfxdevice_t*dev, ActionTAG*,ActionTAG*, gfxline_t*points, char mouseover, char*type, const char*url);
 static void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points);
 static void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points);
 static void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points);
@@ -1736,8 +1740,8 @@ void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*points)
     }
     actions = action_End(actions);
    
-    drawlink(dev, actions, 0, points, 0, url);
-
+    drawlink(dev, actions, 0, points, 0, "url", url);
+    
     swf_ActionFree(actions);
 }
 void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
@@ -1764,7 +1768,7 @@ void swfoutput_linktopage(gfxdevice_t*dev, int page, gfxline_t*points)
     char name[80];
     sprintf(name, "page%d", page);
 
-    drawlink(dev, actions, 0, points, 0, name);
+    drawlink(dev, actions, 0, points, 0, "page", name);
     
     swf_ActionFree(actions);
 }
@@ -1784,6 +1788,7 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
     if(i->textmode)
 	endtext(dev);
 
+    char*type = 0;
     if(!strncmp(tmp, "call:", 5))
     {
 	char*x = strchr(&tmp[5], ':');
@@ -1802,6 +1807,7 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
 	}
 	actions2 = action_End(0);
 	mouseover = 0;
+        type = "call";
     }
     else
     {
@@ -1814,9 +1820,10 @@ void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points)
 	actions2 = action_PushString(actions2, "");
 	actions2 = action_SetVariable(actions2);
 	actions2 = action_End(actions2);
+        type = "subtitle";
     }
 
-    drawlink(dev, actions1, actions2, points, mouseover, name);
+    drawlink(dev, actions1, actions2, points, mouseover, type, name);
 
     swf_ActionFree(actions1);
     swf_ActionFree(actions2);
@@ -1863,7 +1870,7 @@ static void drawgfxline(gfxdevice_t*dev, gfxline_t*line, int fill)
 }
 
 
-static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gfxline_t*points, char mouseover, const char*url)
+static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gfxline_t*points, char mouseover, char*type, const char*url)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     RGBA rgb;
@@ -1876,6 +1883,11 @@ static void drawlink(gfxdevice_t*dev, ActionTAG*actions1, ActionTAG*actions2, gf
     double posy = 0;
     int buttonid = getNewID(dev);
     gfxbbox_t bbox = gfxline_getbbox(points);
+    
+    if(i->config_linknameurl) {
+        actions1 = 0;
+        actions2 = 0;
+    }
     
     i->hasbuttons = 1;
 

@@ -114,7 +114,7 @@ typedef struct _gfxdevice
     void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform); //cxform? tiling?
     void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*gradcoord2devcoord); //?
 
-    /* deprecated */ void (*addfont)(struct _gfxdevice*dev, gfxfont_t*font);
+    void (*addfont)(struct _gfxdevice*dev, gfxfont_t*font);
 
     void (*drawchar)(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 

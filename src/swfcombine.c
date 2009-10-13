@@ -1385,6 +1385,7 @@ int main(int argn, char *argv[])
 	swf_WriteSWF(fi, &newswf);
     }
     close(fi);
-    return 0;
+
+    return 0; //ok
 }
 

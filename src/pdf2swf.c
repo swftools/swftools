@@ -748,6 +748,8 @@ int main(int argn, char *argv[])
     pagenum = 0;
 
     gfxdevice_t*out = create_output_device();;
+    pdf->prepare(pdf, out);
+
     for(pagenr = 1; pagenr <= pdf->num_pages; pagenr++) 
     {
 	if(is_in_range(pagenr, pagerange)) {

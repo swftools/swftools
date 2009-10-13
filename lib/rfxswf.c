@@ -177,7 +177,9 @@ int swf_SetU16(TAG * t,U16 v)
 void swf_SetS16(TAG * t,int v)
 {
     if(v>32767 || v<-32768) {
+      #ifdef DEBUG_RFXSWF
 	fprintf(stderr, "Warning: S16 overflow: %d\n", v);
+      #endif
     }
     swf_SetU16(t, (S16)v);
 }
@@ -657,7 +659,9 @@ int swf_SetRect(TAG * t,SRECT * r)
   nbits = swf_CountBits(r->ymin,nbits);
   nbits = swf_CountBits(r->ymax,nbits);
   if(nbits>=32) {
+    #ifdef DEBUG_RFXSWF
     fprintf(stderr, "rfxswf: Warning: num_bits overflow in swf_SetRect\n");
+    #endif
     nbits=31;
   }
 
@@ -823,7 +827,9 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
     nbits = swf_CountBits(m->sy,nbits);
     if(nbits>=32) {
         /* TODO: happens on AMD64 systems for normal values? */
+        #ifdef DEBUG_RFXSWF
 	fprintf(stderr,"rfxswf: Error: matrix values too large\n");
+        #endif
 	nbits = 31;
     }
     swf_SetBits(t,nbits,5);
@@ -837,7 +843,9 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
     nbits = swf_CountBits(m->r0,0);
     nbits = swf_CountBits(m->r1,nbits);
     if(nbits>=32) {
+        #ifdef DEBUG_RFXSWF
 	fprintf(stderr,"rfxswf: Error: matrix values too large\n");
+        #endif
 	nbits = 31;
     }
     swf_SetBits(t,nbits,5);
@@ -848,7 +856,9 @@ int swf_SetMatrix(TAG * t,MATRIX * m)
   nbits = swf_CountBits(m->tx,0);
   nbits = swf_CountBits(m->ty,nbits);
   if(nbits>=32) {
+      #ifdef DEBUG_RFXSWF
       fprintf(stderr,"rfxswf: Error: matrix values too large\n");
+      #endif
       nbits = 31;
   }
   swf_SetBits(t,nbits,5);
@@ -1132,7 +1142,9 @@ TAG * swf_ReadTag(reader_t*reader, TAG * prev)
   { t->data = (U8*)rfx_alloc(t->len);
     t->memsize = t->len;
     if (reader->read(reader, t->data, t->len) != t->len) {
+      #ifdef DEBUG_RFXSWF
       fprintf(stderr, "rfxswf: Warning: Short read (tagid %d). File truncated?\n", t->id);
+      #endif
       free(t->data);t->data=0;
       free(t);
       return NULL;
@@ -1311,7 +1323,9 @@ void swf_FoldSprite(TAG * t)
   if(t->id!=ST_DEFINESPRITE)
       return;
   if(!t->len) {
+    #ifdef DEBUG_RFXSWF
       fprintf(stderr, "Error: Sprite has no ID!");
+    #endif
       return;
   }
   if(t->len>4) {

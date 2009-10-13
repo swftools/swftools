@@ -911,7 +911,7 @@ static ArtSVP* gfxfillToSVP(gfxline_t*line, int perturb)
 
 //#ifdef SHEAR
 //    double shear = find_shear_value(svp);
-//    gfxline_t*line =  gfxpoly_to_gfxline((gfxpoly_t*)svp);
+//    gfxline_t*line =  gfxline_from_gfxpoly((gfxpoly_t*)svp);
 //    gfxline_t*l = line;
 //    while(l) {
 //        l->y += l->x*shear;
@@ -963,7 +963,7 @@ ArtSVP* run_intersector(ArtSVP*svp, ArtWindRule rule)
     return result;
 }
 
-gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
+gfxline_t* gfxline_from_gfxpoly(gfxpoly_t*poly)
 {
     ArtSVP*svp = (ArtSVP*)poly;
     int size = 0;
@@ -998,7 +998,7 @@ gfxline_t* gfxpoly_to_gfxline(gfxpoly_t*poly)
     }
 }
 
-gfxpoly_t* gfxpoly_fillToPoly(gfxline_t*line)
+gfxpoly_t* gfxpoly_from_fill(gfxline_t*line, double gridsize)
 {
     /* I'm not sure whether doing perturbation here is actually
        a good idea- if that line has been run through the machinery
@@ -1098,7 +1098,7 @@ gfxpoly_t* gfxpoly_union(gfxpoly_t*poly1, gfxpoly_t*poly2)
     return (gfxpoly_t*)svp;
 }
 
-gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit)
+gfxpoly_t* gfxpoly_from_stroke(gfxline_t*line, gfxcoord_t width, gfx_capType cap_style, gfx_joinType joint_style, double miterLimit, double gridsize)
 {
     ArtVpath* vec = gfxline_to_ArtVpath(line, 0);
     msg("<verbose> Casting gfxline of %d segments to a stroke-polygon", gfxline_len(line));
@@ -1122,7 +1122,7 @@ gfxpoly_t* gfxpoly_strokeToPoly(gfxline_t*line, gfxcoord_t width, gfx_capType ca
     return (gfxpoly_t*)svp;
 }
 
-gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
+gfxline_t* gfxpoly_circular_to_evenodd(gfxline_t*line, double gridsize)
 {
     msg("<verbose> Converting circular-filled gfxline of %d segments to even-odd filled gfxline", gfxline_len(line));
     ArtSVP* svp = gfxfillToSVP(line, 1);
@@ -1135,13 +1135,13 @@ gfxline_t* gfxline_circularToEvenOdd(gfxline_t*line)
 	return 0;
     }
 
-    gfxline_t* result = gfxpoly_to_gfxline((gfxpoly_t*)svp_rewinded);
+    gfxline_t* result = gfxline_from_gfxpoly((gfxpoly_t*)svp_rewinded);
     art_svp_free(svp);
     art_svp_free(svp_rewinded);
     return result;
 }
 
-gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2)
+gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2, double gridsize)
 {
     ArtVpath *vec = art_new (ArtVpath, 5+1);
     vec[0].code = ART_MOVETO;
@@ -1167,7 +1167,7 @@ gfxpoly_t* gfxpoly_createbox(double x1, double y1,double x2, double y2)
     return (gfxpoly_t*)svp;
 }
 
-void gfxpoly_free(gfxpoly_t*poly)
+void gfxpoly_destroy(gfxpoly_t*poly)
 {
     ArtSVP*svp = (ArtSVP*)poly;
     art_svp_free(svp);
