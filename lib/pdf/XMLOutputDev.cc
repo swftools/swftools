@@ -59,15 +59,25 @@ void XMLOutputDev::endPage()
     GString*fontname = new GString();
     double fontsize = -99999;
     double base = -9999;
+    double color_r = -1;
+    double color_g = -1;
+    double color_b = -1;
     for(i=0;i<len;i++) {
 	TextWord*word = list->get(i);
 	GString*newfont = word->getFontName();
 	double newsize = word->getFontSize();
 	double newbase = word->base;
+	double newcolor_r = word->colorR;
+	double newcolor_g = word->colorG;
+	double newcolor_b = word->colorB;
 
 	if((newfont && newfont->cmp(fontname)) || 
 	   newsize != fontsize ||
-	   newbase != base) 
+	   newbase != base ||
+	   newcolor_r != color_r ||
+	   newcolor_g != color_g ||
+	   newcolor_b != color_b
+	   ) 
 	{
 	    TextFontInfo*info = word->getFontInfo();
 	    if(textTag)
@@ -94,18 +104,29 @@ void XMLOutputDev::endPage()
 		if(strstr(name, "serif")) serif = gTrue;
 	    }
 	    
-	    fprintf(out, "<t font=\"%s\" y=\"%f\" x=\"%f\" style=\"%s%s%s%s\" fontsize=\"%.0fpt\">", 
+	    fprintf(out, "<t font=\"%s\" y=\"%f\" x=\"%f\" bbox=\"%f:%f:%f:%f\" style=\"%s%s%s%s\" fontsize=\"%.0fpt\" color=\"%02x%02x%02x\">", 
 		    name,
 		    newbase,
 		    (word->rot&1)?word->yMin:word->xMin,
+		    (word->rot&1)?word->yMin:word->xMin,
+		    (word->rot&1)?word->xMin:word->yMin,
+		    (word->rot&1)?word->yMax:word->xMax,
+		    (word->rot&1)?word->xMax:word->yMax,
 		    info->isFixedWidth()?"fixed;":"",
 		    serif?"serif;":"",
 		    italic?"italic;":"",
 		    bold?"bold;":"",
-		    newsize);
+		    newsize,
+		    ((int)(newcolor_r*255))&0xff,
+		    ((int)(newcolor_g*255))&0xff,
+		    ((int)(newcolor_b*255))&0xff
+		    );
 	    fontname = newfont->copy();
 	    fontsize = newsize;
 	    base = newbase;
+	    color_r = newcolor_r;
+	    color_g = newcolor_g;
+	    color_b = newcolor_b;
 	}
 	char*s = word->getText()->getCString();
 	while(*s) {
