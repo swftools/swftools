@@ -208,7 +208,9 @@ void swf_ActionFree(ActionTAG*action)
 
 void swf_ActionSet(TAG*tag, ActionTAG*action)
 {
-    action=action->parent;
+    if(action) {
+	action=action->parent;
+    }
     while(action)
     {
 	swf_SetU8(tag, action->op);
