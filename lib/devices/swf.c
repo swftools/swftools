@@ -3079,11 +3079,12 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	    glyph, i->swffont->id, x, y, color->r, color->g, color->b, color->a);
 
     if(color->a == 0 && i->config_invisibletexttofront) {
+	RGBA color2 = *(RGBA*)color;
 	if(i->config_flashversion>=8) {
 	    // use "multiply" blend mode
-	    color->a = color->r = color->g = color->b = 255;
+	    color2.a = color2.r = color2.g = color2.b = 255;
 	}
-	i->topchardata = charbuffer_append(i->topchardata, i->swffont, glyph, x, y, i->current_font_size, *(RGBA*)color, &i->fontmatrix);
+	i->topchardata = charbuffer_append(i->topchardata, i->swffont, glyph, x, y, i->current_font_size, color2, &i->fontmatrix);
     } else {
 	i->chardata = charbuffer_append(i->chardata, i->swffont, glyph, x, y, i->current_font_size, *(RGBA*)color, &i->fontmatrix);
     }
