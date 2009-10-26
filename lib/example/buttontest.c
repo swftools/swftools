@@ -30,7 +30,7 @@ TAG* t;
 
 #define ID_BUTTON 31
 
-int useDefineButton2 = 0; // set this to 1 to use DefineButton2 Tags
+int useDefineButton2 = 1; // set this to 1 to use DefineButton2 Tags
                           // instead of DefineButton1
                
 int main (int argc,char ** argv)
@@ -46,7 +46,7 @@ int main (int argc,char ** argv)
 
   memset(&swf,0x00,sizeof(SWF));        // set global movie parameters
 
-  swf.fileVersion    = 4;               // make flash 4 compatible swf
+  swf.fileVersion    = 8;               // make flash 4 compatible swf
   swf.frameRate      = 0x1900;          // about 0x19 frames per second
   
   swf.movieSize.xmax = 20*width;        // flash units: 1 pixel = 20 units
@@ -116,8 +116,8 @@ int main (int argc,char ** argv)
       swf_ButtonSetRecord(t,BS_DOWN,36,1,NULL,NULL);
       swf_SetU8(t,0); // end of button records
 
-      swf_ButtonSetCondition(t, BC_OVERDOWN_OVERUP);
-       swf_ActionSet(t,actiontoset);
+      swf_ButtonSetCondition(t, BC_IDLE_OVERUP);
+      swf_ActionSet(t,actiontoset);
        
       swf_ButtonPostProcess(t, 1); // don't forget!
   }

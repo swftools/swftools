@@ -1,7 +1,7 @@
 # Makefile
 
 RFXSWF	= ../librfxswf.a ../libbase.a 
-LDLIBS	= -L/usr/X11R6/lib -ljpeg -lm -lz -lX11 -lfreetype -lt1
+LDLIBS	= -L/opt/local/lib/ -L/usr/X11R6/lib -ljpeg -lm -lz -lX11 -lfreetype -lt1
 #CFLAGS	= -funsigned-char
 CC	= gcc
 CXX	= g++
@@ -14,7 +14,7 @@ DBFLAGS	= -g2
 %.swf: %
 		./$<
 
-all: sound jpegtest box shape1 transtest zlibtest sprites buttontest dumpfont text glyphshape edittext protect hexfont
+all: alignzones.swf
 
 movies: sound.swf jpegtest.swf box.swf shape1.swf transtest.swf zlibtest.swf sprites.swf buttontest.swf dumpfont.swf text.swf glyphshape.swf edittext.swf
 	
@@ -50,6 +50,9 @@ transtest: $(RFXSWF) transtest.o $(RFXSWF)
 
 hexfont: $(RFXSWF) hexfont.o $(RFXSWF)
 		$(CC) -o hexfont hexfont.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
+
+alignzones: $(RFXSWF) alignzones.o $(RFXSWF)
+		$(CC) -o alignzones alignzones.o $(RFXSWF) $(LDLIBS) $(DBFLAGS)
 
 text.o: demofont.c
 text: $(RFXSWF) text.o $(RFXSWF)

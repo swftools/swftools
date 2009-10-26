@@ -483,7 +483,7 @@ int isOfType(int t, TAG*tag)
     if(t == 4 && (tag->id == ST_DEFINESOUND)) {
 	show = 1;
     }
-    if(t == 5 && (tag->id == ST_DEFINEFONT || tag->id == ST_DEFINEFONT2)) {
+    if(t == 5 && (tag->id == ST_DEFINEFONT || tag->id == ST_DEFINEFONT2 || tag->id == ST_DEFINEFONT3)) {
 	show = 1;
     }
     return show;
@@ -586,8 +586,6 @@ void handlefont(SWF*swf, TAG*tag)
 	printf("Couldn't extract font %d\n", id);
 	return;
     }
-    if(!f->layout)
-	swf_FontCreateLayout(f);
 
     swf_WriteFont(f, filename);
     swf_FontFree(f);

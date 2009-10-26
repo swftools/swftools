@@ -95,6 +95,7 @@ U8 swf_GetU8(TAG * t)
   #ifdef DEBUG_RFXSWF
     if ((int)t->pos>=(int)t->len) 
     { fprintf(stderr,"GetU8() out of bounds: TagID = %i\n",t->id);
+      *(int*)0=0;
       return 0;
     }
   #endif
@@ -408,32 +409,69 @@ int swf_SetU30String(TAG*tag, const char*str, int l)
     swf_SetBlock(tag, (void*)str, l);
     return len;
 }
+
 float swf_GetF16(TAG * t)
 {
-    // D16 is 1-5-10
-    // D32 is 1-8-23
     U16 f1 = swf_GetU16(t);
-    if(!f1) return 0;
-    U32 f2 = (f1&0x8000)<<16; //sign
-    f2 |= ((f1&0x7c00)<<13)+(0x40000000-(0x4000<<13)); //exp
-    f2 |= (f1&0x03ff)<<13; //mantissa
+    if(!(f1&0x3ff)) return 0.0;
+
+    // IEEE 16 is 1-5-10
+    // IEEE 32 is 1-8-23
+    /* gcc 4.1.2 seems to require a union here. *(float*)u doesn't work */
+    union {
+      U32 u;
+      float f;
+    } f2;
+
+    U16 e = (f1>>10)&0x1f;
+    U16 m = f1&0x3ff;
+    /* find highest bit in mantissa */
+    int h=0;
+    while(!(m&0x400)) {
+	m<<=1;
+	h++;
+    }
+    m&=0x3ff;
+    e -= h;
+    e += 0x6f;
+
+    f2.u = (f1&0x8000)<<16; //sign
+    f2.u |= e<<23; //exponent
+    f2.u |= m<<13; //mantissa
     return *(float*)&f2;
 }
+
 void swf_SetF16(TAG * t, float f)
 {
-    U32 f1 = *(U32*)&f;
-    U16 f2 = (f1>>16)&0x8000;
-    int exp = ((f1>>23)&0xff)-0x80+0x10;
-    if(exp<0) {
+    union {
+      U32 u;
+      float f;
+    } v;
+    v.f = f;
+
+    U16 result = (v.u>>16)&0x8000; //sign
+    int exp = ((v.u>>23)&0xff)-0x7f+0x10;
+    U16 m = (v.u>>13)&0x3ff;
+    //fprintf(stderr, "%f: %04x sign, %d exp, %04x mantissa\n", f, result, exp, m);
+    if(exp<-10) {
+	// underflow (clamp to 0.0)
 	exp = 0;
-	fprintf(stderr, "Exponent underflow in FLOAT16 encoding\n");
+	m = 0;
+    } else if(exp<0) {
+        // partial underflow- strip some bits
+	m = (m|0x400)>>-exp;
+	exp = 0;
     } else if(exp>=32) {
 	exp = 31;
+	m = 0x3ff;
 	fprintf(stderr, "Exponent overflow in FLOAT16 encoding\n");
+    } else {
+	exp++;
+	m = (m>>1)|0x200;
     }
-    f2 |= exp<<10;
-    f2 |= (f1>>13)&0x3ff;
-    swf_SetU16(t, f2);
+    result |= exp<<10;
+    result |= m;
+    swf_SetU16(t, result);
 }
 
 double swf_GetD64(TAG*tag)

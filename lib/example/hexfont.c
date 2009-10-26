@@ -30,11 +30,11 @@
 int main()
 {
     char* hex = "0123456789ABCDEF";
-    SWFFONT* font = swf_LoadFont("Courier.swf");
+    SWFFONT* font = swf_LoadFont("../../doc/Courier.swf");
     SWFFONT hexfont;
 
     memset(&hexfont, 0, sizeof(hexfont));
-    hexfont.name = "HexFont";
+    hexfont.name = (char*)"HexFont";
     hexfont.layout = malloc(sizeof(SWFLAYOUT));
     hexfont.numchars = 256;
     hexfont.maxascii = 256;

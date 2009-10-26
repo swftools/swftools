@@ -888,6 +888,59 @@ void swf_ShapeSetBitmapRect(TAG*tag, U16 gfxid, int width, int height)
     swf_ShapeFree(shape);
 }
 
+void swf_ShapeSetRectangle(TAG*tag, U16 shapeid, int width, int height, RGBA*rgba)
+{
+    RGBA white={255,255,255,255};
+    if(!rgba) {
+	rgba = &white;
+    }
+    SHAPE* s;
+    swf_ShapeNew(&s);
+    int fs = swf_ShapeAddSolidFillStyle(s, rgba);
+    swf_SetU16(tag,shapeid);
+    SRECT r;
+    r.xmin = 0;
+    r.xmax = 0;
+    r.ymin = width;
+    r.ymax = height;
+    swf_SetRect(tag,&r);
+    swf_SetShapeHeader(tag,s);
+    swf_ShapeSetAll(tag,s,0,0,0,fs,0);
+    swf_ShapeSetLine(tag,s,width,0);
+    swf_ShapeSetLine(tag,s,0,height);
+    swf_ShapeSetLine(tag,s,-width,0);
+    swf_ShapeSetLine(tag,s,0,-height);
+    swf_ShapeSetEnd(tag);
+    swf_ShapeFree(s);
+}
+
+void swf_ShapeSetRectangleWithBorder(TAG*tag, U16 shapeid, int width, int height, RGBA*rgba, int linewidth, RGBA*linecolor)
+{
+    RGBA white={255,255,255,255};
+    if(!rgba) {
+	rgba = &white;
+    }
+    SHAPE* s;
+    swf_ShapeNew(&s);
+    int fs = swf_ShapeAddSolidFillStyle(s, rgba);
+    int ls = swf_ShapeAddLineStyle(s, linewidth, linecolor);
+    swf_SetU16(tag,shapeid);
+    SRECT r;
+    r.xmin = 0;
+    r.xmax = 0;
+    r.ymin = width;
+    r.ymax = height;
+    swf_SetRect(tag,&r);
+    swf_SetShapeHeader(tag,s);
+    swf_ShapeSetAll(tag,s,0,0,ls,fs,0);
+    swf_ShapeSetLine(tag,s,width,0);
+    swf_ShapeSetLine(tag,s,0,height);
+    swf_ShapeSetLine(tag,s,-width,0);
+    swf_ShapeSetLine(tag,s,0,-height);
+    swf_ShapeSetEnd(tag);
+    swf_ShapeFree(s);
+}
+
 void swf_Shape2ToShape(SHAPE2*shape2, SHAPE*shape)
 {
     TAG*tag = swf_InsertTag(0,0);

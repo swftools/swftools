@@ -182,7 +182,6 @@ ActionTAG* swf_ActionGet(TAG*tag)
 void swf_ActionFree(ActionTAG*action)
 {
     if(!action) {
-	fprintf(stderr, "Warning: freeing zero action");
 	return;
     }
     action = action->parent;
@@ -208,9 +207,10 @@ void swf_ActionFree(ActionTAG*action)
 
 void swf_ActionSet(TAG*tag, ActionTAG*action)
 {
-    if(action) {
-	action=action->parent;
+    if(!action) {
+	return;
     }
+    action=action->parent;
     while(action)
     {
 	swf_SetU8(tag, action->op);

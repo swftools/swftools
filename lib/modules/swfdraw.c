@@ -97,8 +97,8 @@ static void fixEndPoint(drawer_t*draw)
 static void swf_ShapeDrawerMoveTo(drawer_t*draw, FPOINT * to)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
-    int x = to->x*20+0.001;
-    int y = to->y*20+0.001;
+    int x = floor(to->x*20);
+    int y = floor(to->y*20);
 
     /* we need to write moveto always- it
        might be that it signals the end of a polygon, otherwise
@@ -119,8 +119,8 @@ static void swf_ShapeDrawerMoveTo(drawer_t*draw, FPOINT * to)
 static void swf_ShapeDrawerLineTo(drawer_t*draw, FPOINT * to)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
-    int x = to->x*20+0.001;
-    int y = to->y*20+0.001;
+    int x = floor(to->x*20);
+    int y = floor(to->y*20);
     if(sdraw->lastx < sdraw->bbox.xmin) sdraw->bbox.xmin = sdraw->lastx;
     if(sdraw->lasty < sdraw->bbox.ymin) sdraw->bbox.ymin = sdraw->lasty;
     if(sdraw->lastx > sdraw->bbox.xmax) sdraw->bbox.xmax = sdraw->lastx;
@@ -137,10 +137,10 @@ static void swf_ShapeDrawerLineTo(drawer_t*draw, FPOINT * to)
 static void swf_ShapeDrawerSplineTo(drawer_t*draw, FPOINT * c1, FPOINT*  to)
 {
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
-    int tx = c1->x*20+0.001;
-    int ty = c1->y*20+0.001;
-    int x = to->x*20+0.001;
-    int y = to->y*20+0.001;
+    int tx = floor(c1->x*20);
+    int ty = floor(c1->y*20);
+    int x = floor(to->x*20);
+    int y = floor(to->y*20);
     if(sdraw->lastx < sdraw->bbox.xmin) sdraw->bbox.xmin = sdraw->lastx;
     if(sdraw->lasty < sdraw->bbox.ymin) sdraw->bbox.ymin = sdraw->lasty;
     if(sdraw->lastx > sdraw->bbox.xmax) sdraw->bbox.xmax = sdraw->lastx;

@@ -323,7 +323,10 @@ void dumpFont(TAG*tag, char*prefix)
     int t;
     for(t=0;t<font->numchars;t++) {
 	int u = font->glyph2ascii?font->glyph2ascii[t]:-1;
-	printf("%s== Glyph %d: advance=%d encoding=%d ==\n", prefix, t, font->glyph[t].advance, u);
+	char ustr[16];
+	if(u>=32) sprintf(ustr, " '%c'", u);
+	else      sprintf(ustr, " 0x%02x", u);
+	printf("%s== Glyph %d: advance=%d encoding=%d%s ==\n", prefix, t, font->glyph[t].advance, u, ustr);
 	SHAPE2* shape = swf_ShapeToShape2(font->glyph[t].shape);
 	SHAPELINE*line = shape->lines;
 
@@ -379,10 +382,12 @@ static SWF swf;
 static int fontnum = 0;
 static SWFFONT**fonts;
 
-void textcallback(void*self, int*glyphs, int*ypos, int nr, int fontid, int fontsize, int startx, int starty, RGBA*color) 
+void textcallback(void*self, int*glyphs, int*xpos, int nr, int fontid, int fontsize, int startx, int starty, RGBA*color) 
 {
     int font=-1,t;
-    printf("                <%2d glyphs in font %2d size %d, color #%02x%02x%02x%02x> ",nr, fontid, fontsize, color->r, color->g, color->b, color->a);
+    if(nr<1) 
+	return;
+    printf("                <%2d glyphs in font %04d size %d, color #%02x%02x%02x%02x at %.2f,%.2f> ",nr, fontid, fontsize, color->r, color->g, color->b, color->a, (startx+xpos[0])/20.0, starty/20.0);
     for(t=0;t<fontnum;t++)
     {
 	if(fonts[t]->id == fontid) {
@@ -990,25 +995,63 @@ static void handleFontAlign1(TAG*tag)
     printf(" %d glyphs", num);
 }
 
+#define ALIGN_WITH_GLYPHS
 static void handleFontAlign2(TAG*tag, char*prefix)
 {
     if(!showfonts)
 	return;
     swf_SetTagPos(tag, 0);
-    swf_GetU16(tag);
+    U16 id = swf_GetU16(tag);
     swf_GetU8(tag);
     int num = 0;
+#ifdef ALIGN_WITH_GLYPHS
+    SWF swf;
+    swf.firstTag = tag;
+    while(swf.firstTag->prev) swf.firstTag = swf.firstTag->prev;
+    SWFFONT* font = 0;
+    swf_FontExtract(&swf, id, &font);
+#endif
+    swf_SetTagPos(tag, 3);
     while(tag->pos < tag->len) {
-	printf("%sglyph %d) ", prefix, num++);
+	printf("%sglyph %d) ", prefix, num);
 	int nr = swf_GetU8(tag); // should be 2
 	int t;
 	for(t=0;t<nr;t++) {
-	    float v1 = swf_GetF16(tag);
-	    float v2 = swf_GetF16(tag);
-	    printf("%f/%f ", v1,v2);
+	    // pos
+	    float v = swf_GetF16(tag);
+	    printf("%f ", v*1024.0);
+	}
+	for(t=0;t<nr;t++) {
+	    // width
+	    float v = swf_GetF16(tag);
+	    printf("+%f ", v*1024.0);
 	}
 	U8 xyflags = swf_GetU8(tag);
 	printf("xy:%02x\n", xyflags);
+
+#ifdef ALIGN_WITH_GLYPHS
+	if(font && num<font->numchars) {
+	    SHAPE2* shape = swf_ShapeToShape2(font->glyph[num].shape);
+	    SHAPELINE*line = shape->lines;
+	    while(line) {
+		if(line->type == moveTo) {
+		    printf("%smoveTo %.2f %.2f\n", prefix, line->x/20.0, line->y/20.0);
+		} else if(line->type == lineTo) {
+		    printf("%slineTo %.2f %.2f\n", prefix, line->x/20.0, line->y/20.0);
+		} else if(line->type == splineTo) {
+		    printf("%ssplineTo (%.2f %.2f) %.2f %.2f\n", prefix,
+			    line->sx/20.0, line->sy/20.0,
+			    line->x/20.0, line->y/20.0
+			    );
+		}
+		line = line->next;
+	    }
+	    swf_Shape2Free(shape);
+	    free(shape);
+	}
+	if(num==font->numchars-1) break;
+#endif
+	num++;
     }
 }
 

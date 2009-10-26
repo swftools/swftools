@@ -475,6 +475,8 @@ int   swf_SetFillStyle(TAG * t,FILLSTYLE * f);
 int   swf_SetLineStyle(TAG * t,LINESTYLE * l);
 
 
+void swf_ShapeSetRectangle(TAG*tag, U16 shapeid, int width, int height, RGBA*rgba);
+void swf_ShapeSetRectangleWithBorder(TAG*tag, U16 shapeid, int width, int height, RGBA*rgba, int linewidth, RGBA*linecolor);
 void  swf_ShapeSetBitmapRect(TAG * t, U16 gfxid, int width, int height);
 
 //SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits);
@@ -512,8 +514,8 @@ typedef struct _KERNING
 } SWFKERNING;
 
 typedef struct _SWFLAYOUT
-{ S16          ascent;
-  S16          descent;
+{ U16          ascent;
+  U16          descent;
   S16          leading;
   SRECT      * bounds;
   U16	       kerningcount;
@@ -538,6 +540,12 @@ typedef struct _FONTUSAGE
 #define FONT_ENCODING_ANSI 2
 #define FONT_ENCODING_SHIFTJIS 4
 
+typedef struct _ALIGNZONE
+{
+    U16 x,y;
+    U16 dx,dy;
+} ALIGNZONE;
+
 typedef struct _SWFFONT
 { int		id; // -1 = not set
   U8		version; // 0 = not set, 1 = definefont, 2 = definefont2
@@ -552,6 +560,8 @@ typedef struct _SWFFONT
   U16	*	glyph2ascii;
   int	*	ascii2glyph;
   SWFGLYPH *	glyph;
+  ALIGNZONE *	alignzones;
+  U8            alignzone_flags;
   U8		language;
   char **	glyphnames;
 
@@ -601,6 +611,8 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag);
 int swf_FontExtract_DefineFontInfo(int id, SWFFONT * f, TAG * t);
 int swf_FontExtract_DefineFont(int id, SWFFONT * f, TAG * t);
 int swf_FontExtract_GlyphNames(int id, SWFFONT * f, TAG * tag);
+int swf_FontExtract_DefineFontAlignZones(int id, SWFFONT * font, TAG * tag);
+
 
 int swf_FontIsItalic(SWFFONT * f);
 int swf_FontIsBold(SWFFONT * f);
@@ -618,8 +630,10 @@ int swf_FontUse(SWFFONT* f,U8 * s);
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetDefine2(TAG * t,SWFFONT * f);
 int swf_FontSetInfo(TAG * t,SWFFONT * f);
+void swf_FontSetAlignZones(TAG*t, SWFFONT *f);
 
 void swf_FontCreateLayout(SWFFONT*f);
+void swf_FontCreateAlignZones(SWFFONT * f);
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
 
 int swf_ParseDefineText(TAG * t, void(*callback)(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA* color), void*self);

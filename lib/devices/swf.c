@@ -203,6 +203,8 @@ typedef struct _swfoutput_internal
     char* mark;
 
 } swfoutput_internal;
+
+static const int NO_FONT3=0;
     
 static void swf_fillbitmap(gfxdevice_t*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
 static int  swf_setparameter(gfxdevice_t*driver, const char*key, const char*value);
@@ -537,7 +539,7 @@ static inline int colorcompare(RGBA*a,RGBA*b)
     return 1;
 }
 
-static SRECT getcharacterbbox(chararray_t*chardata, MATRIX* m)
+static SRECT getcharacterbbox(chararray_t*chardata, MATRIX* m, int flashversion)
 {
     SRECT r;
     char debug = 0;
@@ -546,17 +548,19 @@ static SRECT getcharacterbbox(chararray_t*chardata, MATRIX* m)
     int t;
     if(debug) printf("\n");
 
+    double div = 1.0 / 1024.0;
+    if(flashversion>=8 && !NO_FONT3) {
+	div = 1.0 / 20480.0;
+    }
+
     while(chardata) {
 	for(t=0;t<chardata->pos;t++) {
 	    charatposition_t*chr = &chardata->chr[t];
 	    SRECT b = chr->font->layout->bounds[chr->charid];
-	    b.xmin *= chr->size;
-	    b.ymin *= chr->size;
-	    b.xmax *= chr->size;
-	    b.ymax *= chr->size;
-
-	    /* divide by 1024, rounding xmax/ymax up */
-	    b.xmax += 1023; b.ymax += 1023; b.xmin /= 1024; b.ymin /= 1024; b.xmax /= 1024; b.ymax /= 1024;
+	    b.xmin = floor((b.xmin*(double)chr->size) *div);
+	    b.ymin = floor((b.ymin*(double)chr->size) *div);
+	    b.xmax = ceil((b.xmax*(double)chr->size)  *div);
+	    b.ymax = ceil((b.ymax*(double)chr->size)  *div);
 
 	    b.xmin += chr->x;
 	    b.ymin += chr->y;
@@ -725,7 +729,7 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
 			    newfont = &font;
 
 			tag->writeBit = 0; // Q&D
-			swf_TextSetInfoRecord(tag, newfont, chr->size, newcolor, newx,newy);
+			swf_TextSetInfoRecord(tag, newfont, chr->size, newcolor, newx, newy);
 		    }
 
 		    lastfont = chr->font;
@@ -814,7 +818,7 @@ static void chararray_writetodev(gfxdevice_t*dev, chararray_t*array, MATRIX*matr
     i->tag = swf_InsertTag(i->tag,ST_DEFINETEXT2);
     swf_SetU16(i->tag, textid);
     SRECT r;
-    r = getcharacterbbox(array, matrix);
+    r = getcharacterbbox(array, matrix, i->config_flashversion);
     r = swf_ClipRect(i->pagebbox, r);
     swf_SetRect(i->tag,&r);
     swf_SetMatrix(i->tag, matrix);
@@ -834,6 +838,8 @@ static void chararray_writetodev(gfxdevice_t*dev, chararray_t*array, MATRIX*matr
 
 	swf_SetU32(i->tag, 0);//thickness
 	swf_SetU32(i->tag, 0);//sharpness
+	//swf_SetU32(i->tag, 0x20000);//thickness
+	//swf_SetU32(i->tag, 0x800000);//sharpness
 	swf_SetU8(i->tag, 0);//reserved
     }
     if(invisible && i->config_flashversion>=8) {
@@ -863,45 +869,6 @@ static void endtext(gfxdevice_t*dev)
         return;
     charbuffer_writetodevandfree(dev, i->chardata, 0);i->chardata = 0;
     i->textmode = 0;
-}
-
-/* sets the matrix which is to be applied to characters drawn by swfoutput_drawchar() */
-static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,double m22,double x, double y, char force)
-{
-    m11 *= 1024;
-    m12 *= 1024;
-    m21 *= 1024;
-    m22 *= 1024;
-    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
-    if(i->lastfontm11 == m11 &&
-       i->lastfontm12 == m12 &&
-       i->lastfontm21 == m21 &&
-       i->lastfontm22 == m22 && !force)
-        return;
-   if(i->textmode)
-	endtext(dev);
-    
-    i->lastfontm11 = m11;
-    i->lastfontm12 = m12;
-    i->lastfontm21 = m21;
-    i->lastfontm22 = m22;
-
-    double xsize = sqrt(m11*m11 + m12*m12);
-    double ysize = sqrt(m21*m21 + m22*m22);
-    i->current_font_size = (xsize>ysize?xsize:ysize)*1;
-    if(i->current_font_size < 1)
-	i->current_font_size = 1;
-    double ifs = 1.0 / (i->current_font_size*GLYPH_SCALE);
-
-    MATRIX m;
-    m.sx = (S32)((m11*ifs)*65536); m.r1 = (S32)((m21*ifs)*65536);
-    m.r0 = (S32)((m12*ifs)*65536); m.sy = (S32)((m22*ifs)*65536); 
-    /* this is the position of the first char to set a new fontmatrix-
-       we hope that it's close enough to all other characters using the
-       font, so we use its position as origin for the matrix */
-    m.tx = x*20;
-    m.ty = y*20;
-    i->fontmatrix = m;
 }
 
 static int watermark2_width=47;
@@ -1507,8 +1474,20 @@ void swfoutput_finalize(gfxdevice_t*dev)
 	    }
 	    int used = iterator->swffont->use && iterator->swffont->use->used_glyphs;
 	    if(used) {
-		mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
-		swf_FontSetDefine2(mtag, iterator->swffont);
+		if(i->config_flashversion<8 || NO_FONT3) {
+		    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
+		    swf_FontSetDefine2(mtag, iterator->swffont);
+		} else {
+		    mtag = swf_InsertTag(mtag, ST_DEFINEFONT3);
+		    swf_FontSetDefine2(mtag, iterator->swffont);
+	    
+		    swf_FontCreateAlignZones(iterator->swffont);
+		   
+		    if(iterator->swffont->alignzones) {
+			mtag = swf_InsertTag(mtag, ST_DEFINEFONTALIGNZONES);
+			swf_FontSetAlignZones(mtag, iterator->swffont);
+		    }
+		}
 	    }
 	}
 
@@ -2180,7 +2159,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
         printf("linkcolor=<color)           color of links (format: RRGGBBAA)\n");
         printf("linknameurl		    Link buttons will be named like the URL they refer to (handy for iterating through links with actionscript)\n");
         printf("storeallcharacters          don't reduce the fonts to used characters in the output file\n");
-        printf("enablezlib                  switch on zlib compression (also done if flashversion>=7)\n");
+        printf("enablezlib                  switch on zlib compression (also done if flashversion>=6)\n");
         printf("bboxvars                    store the bounding box of the SWF file in actionscript variables\n");
         printf("dots                        Take care to handle dots correctly\n");
         printf("reordertags=0/1             (default: 1) perform some tag optimizations\n");
@@ -2810,13 +2789,13 @@ static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*grad
     swf_FreeGradient(swfgradient);free(swfgradient);
 }
 
-static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
+static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id, int version)
 {
     SWFFONT*swffont = (SWFFONT*)rfx_calloc(sizeof(SWFFONT));
     int t;
     SRECT bounds = {0,0,0,0};
     swffont->id = -1;
-    swffont->version = 2;
+    swffont->version = version;
     swffont->name = (U8*)strdup(id);
     swffont->layout = (SWFLAYOUT*)rfx_calloc(sizeof(SWFLAYOUT));
     swffont->layout->ascent = 0;
@@ -2856,10 +2835,12 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
 	swf_Shape01DrawerInit(&draw, 0);
 	line = font->glyphs[t].line;
 
+	const double scale = GLYPH_SCALE;
 	while(line) {
 	    FPOINT c,to;
-	    c.x = line->sx * GLYPH_SCALE; c.y = line->sy * GLYPH_SCALE;
-	    to.x = line->x * GLYPH_SCALE; to.y = line->y * GLYPH_SCALE;
+	    c.x = line->sx * scale; c.y = -line->sy * scale;
+	    //to.x = floor(line->x * scale); to.y = floor(-line->y * scale);
+	    to.x = line->x * scale; to.y = -line->y * scale;
 	    if(line->type == gfx_moveTo) {
 		draw.moveTo(&draw, &to);
 	    } else if(line->type == gfx_lineTo) {
@@ -2915,12 +2896,8 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id)
        The baseline is defined as the y-position zero 
      */
 
-    swffont->layout->ascent = -bounds.ymin;
-    if(swffont->layout->ascent < 0)
-        swffont->layout->ascent = 0;
-    swffont->layout->descent = bounds.ymax;
-    if(swffont->layout->descent < 0)
-        swffont->layout->descent = 0;
+    swffont->layout->ascent = bounds.ymin<0?-bounds.ymin:0;
+    swffont->layout->descent = bounds.ymax>0?bounds.ymax:0;
     swffont->layout->leading = bounds.ymax - bounds.ymin;
 
     /* if the font has proper ascent/descent values (>0) and those define
@@ -2950,7 +2927,7 @@ static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	l = l->next;
     }
     l = (fontlist_t*)rfx_calloc(sizeof(fontlist_t));
-    l->swffont = gfxfont_to_swffont(font, font->id);
+    l->swffont = gfxfont_to_swffont(font, font->id, (i->config_flashversion>=8 && !NO_FONT3)?3:2);
     l->next = 0;
     if(last) {
 	last->next = l;
@@ -3004,6 +2981,56 @@ static void swf_switchfont(gfxdevice_t*dev, const char*fontid)
     msg("<error> Unknown font id: %s", fontid);
     return;
 }
+
+/* sets the matrix which is to be applied to characters drawn by swfoutput_drawchar() */
+static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,double m22,double x, double y, char force)
+{
+    m11 *= 1024;
+    m12 *= 1024;
+    m21 *= 1024;
+    m22 *= 1024;
+    swfoutput_internal*i = (swfoutput_internal*)dev->internal;
+    if(i->lastfontm11 == m11 &&
+       i->lastfontm12 == m12 &&
+       i->lastfontm21 == m21 &&
+       i->lastfontm22 == m22 && !force)
+        return;
+   if(i->textmode)
+	endtext(dev);
+    
+    i->lastfontm11 = m11;
+    i->lastfontm12 = m12;
+    i->lastfontm21 = m21;
+    i->lastfontm22 = m22;
+
+    double xsize = sqrt(m11*m11 + m12*m12);
+    double ysize = sqrt(m21*m21 + m22*m22);
+
+    int extrazoom = 1;
+    if(i->config_flashversion>=8 && !NO_FONT3)
+	extrazoom = 20;
+
+    i->current_font_size = (xsize>ysize?xsize:ysize)*extrazoom;
+    if(i->current_font_size < 1)
+	i->current_font_size = 1;
+
+    MATRIX m;
+    swf_GetMatrix(0, &m);
+
+    if(m21 || m12 || fabs(m11+m22)>0.001) {
+	double ifs = (double)extrazoom/(i->current_font_size);
+	m.sx =  (S32)((m11*ifs)*65536); m.r1 = -(S32)((m21*ifs)*65536);
+	m.r0 =  (S32)((m12*ifs)*65536); m.sy = -(S32)((m22*ifs)*65536); 
+    }
+
+    /* this is the position of the first char to set a new fontmatrix-
+       we hope that it's close enough to all other characters using the
+       font, so we use its position as origin for the matrix */
+    m.tx = x*20;
+    m.ty = y*20;
+    i->fontmatrix = m;
+}
+
 
 static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {

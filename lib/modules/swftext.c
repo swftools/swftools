@@ -113,7 +113,7 @@ int swf_FontEnumerate(SWF * swf, void (*FontCallback) (void*, U16, U8 *), void*s
     n = 0;
 
     while (t) {
-	if (swf_GetTagID(t) == ST_DEFINEFONT2 || swf_GetTagID(t) == ST_DEFINEFONT) {
+	if (swf_isFontTag(t)) {
 	    n++;
 	    if (FontCallback) {
 		U16 id;
@@ -373,6 +373,76 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     return font->id;
 }
 
+static float F16toFloat(U16 x)
+{
+    TAG t;
+    t.data = (void*)&x;
+    t.readBit = 0;
+    t.pos = 0;
+    t.len = 2;
+    return swf_GetF16(&t);
+}
+
+static float floatToF16(float f)
+{
+    U16 u = 0;
+    TAG t;
+    t.data = (void*)&u;
+    t.len = 0;
+    t.memsize = 2;
+    t.writeBit = 0;
+    swf_SetF16(&t, f);
+    return u;
+}
+
+int swf_FontExtract_DefineFontAlignZones(int id, SWFFONT * font, TAG * tag)
+{
+    U16 fid;
+    swf_SetTagPos(tag, 0);
+    fid = swf_GetU16(tag);
+    
+    if (fid == id) {
+	font->alignzone_flags = swf_GetU8(tag);
+	font->alignzones = rfx_calloc(sizeof(ALIGNZONE)*font->numchars);
+	int i=0;
+	while(tag->pos < tag->len) {
+	    if(i>=font->numchars)
+		break;
+	    int nr = swf_GetU8(tag); // should be 2
+	    if(nr!=1 && nr!=2) {
+		fprintf(stderr, "rfxswf: Can't parse alignzone tags with %d zones", nr);
+		break;
+	    }
+	    U16 x = swf_GetU16(tag);
+	    U16 y = swf_GetU16(tag);
+	    U16 dx = (nr==2)?swf_GetU16(tag):0xffff;
+	    U16 dy = (nr==2)?swf_GetU16(tag):0xffff;
+	    U8 xy = swf_GetU8(tag);
+
+#ifdef DEBUG_RFXSWF
+	    if((!(xy&1) && (x!=0 || (dx!=0 && dx!=0xffff))) ||
+	       (!(xy&2) && (y!=0 || (dy!=0 && dy!=0xffff)))) {
+		fprintf(stderr, "Warning: weird combination of alignzone bits and values (%d x:%04x-%04x y:%04x-%04x)\n", xy,
+			x,dx,y,dy);
+	    }
+#endif
+	    if(!(xy&1)) {
+		x = 0xffff;
+		dx = 0xffff;
+	    } else if(!(xy&2)) {
+		y = 0xffff;
+		dy = 0xffff;
+	    }
+	    font->alignzones[i].x = x;
+	    font->alignzones[i].y = y;
+	    font->alignzones[i].dx = dx;
+	    font->alignzones[i].dy = dy;
+	    i++;
+	}
+    }
+    return id;
+}
+
 
 #define FEDTJ_PRINT  0x01
 #define FEDTJ_MODIFY 0x02
@@ -500,6 +570,10 @@ int swf_FontExtract(SWF * swf, int id, SWFFONT * *font)
 	case ST_DEFINEFONT2:
 	case ST_DEFINEFONT3:
 	    nid = swf_FontExtract_DefineFont2(id, f, t);
+	    break;
+
+	case ST_DEFINEFONTALIGNZONES:
+	    nid = swf_FontExtract_DefineFontAlignZones(id, f, t);
 	    break;
 
 	case ST_DEFINEFONTINFO:
@@ -1029,6 +1103,27 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
     return 0;
 }
 
+void swf_FontSetAlignZones(TAG*t, SWFFONT *f)
+{
+    swf_SetU16(t, f->id);
+    swf_SetU8(t, f->alignzone_flags);
+    int i;
+    for(i=0;i<f->numchars;i++) {
+	ALIGNZONE*a = &f->alignzones[i];
+	U8 flags = 0;
+	if((a->x & a->dx)!=0xffff)
+	    flags |= 1;
+	if((a->y & a->dy)!=0xffff)
+	    flags |= 2;
+	swf_SetU8(t, 2);
+	if(flags&1) swf_SetU16(t, a->x); else swf_SetU16(t, 0);
+	if(flags&2) swf_SetU16(t, a->y); else swf_SetU16(t, 0);
+	if((flags&1) && a->dx!=0xffff) swf_SetU16(t, a->dx); else swf_SetU16(t, 0);
+	if((flags&2) && a->dy!=0xffff) swf_SetU16(t, a->dy); else swf_SetU16(t, 0);
+	swf_SetU8(t, flags);
+    }
+}
+
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading)
 {
     f->layout = (SWFLAYOUT *) rfx_alloc(sizeof(SWFLAYOUT));
@@ -1348,183 +1443,6 @@ SWFFONT *swf_ReadFont(const char *filename)
     }
 }
 
-void swf_WriteFont(SWFFONT * font, char *filename)
-{
-    SWF swf;
-    TAG *t;
-    SRECT r;
-    RGBA rgb;
-    int f;
-    int useDefineFont2 = 0;
-    int storeGlyphNames = 1;
-
-    if (font->layout)
-	useDefineFont2 = 1;	/* the only thing new in definefont2
-				   is layout information. */
-
-    font->id = WRITEFONTID;	//"FN"
-
-    memset(&swf, 0x00, sizeof(SWF));
-
-    swf.fileVersion = 9;
-    swf.frameRate = 0x4000;
-
-    /* if we use DefineFont1 to store the characters,
-       we have to build a textfield to store the
-       advance values. While at it, we can also
-       make the whole .swf viewable */
-
-    /* we now always create viewable swfs, even if we
-       did use definefont2 -mk */
-    t = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
-    swf.firstTag = t;
-    rgb.r = 0xef;
-    rgb.g = 0xef;
-    rgb.b = 0xff;
-    swf_SetRGB(t, &rgb);
-    if (!useDefineFont2) {
-	t = swf_InsertTag(t, ST_DEFINEFONT);
-	swf_FontSetDefine(t, font);
-	t = swf_InsertTag(t, ST_DEFINEFONTINFO);
-	swf_FontSetInfo(t, font);
-    } else {
-	t = swf_InsertTag(t, ST_DEFINEFONT2);
-	swf_FontSetDefine2(t, font);
-    }
-    if(font->name) {
-	t = swf_InsertTag(t, ST_NAMECHARACTER);
-        swf_SetU16(t, WRITEFONTID);
-        swf_SetString(t, (char*)font->name);
-	t = swf_InsertTag(t, ST_EXPORTASSETS);
-        swf_SetU16(t, 1);
-        swf_SetU16(t, WRITEFONTID);
-        swf_SetString(t, (char*)font->name);
-
-        t = swf_AddAS3FontDefine(t, WRITEFONTID, (char*)font->name);
-    }
-
-    if (storeGlyphNames && font->glyphnames) {
-	int c;
-	t = swf_InsertTag(t, ST_GLYPHNAMES);
-	swf_SetU16(t, WRITEFONTID);
-	swf_SetU16(t, font->numchars);
-	for (c = 0; c < font->numchars; c++) {
-	    if (font->glyphnames[c])
-		swf_SetString(t, font->glyphnames[c]);
-	    else
-		swf_SetString(t, "");
-	}
-    }
-
-    if (1)			//neccessary only for df1, but pretty to look at anyhow, so do it always
-    {
-	int textscale = 400;
-	int s;
-	int xmax = 0;
-	int ymax = 0;
-	int ypos = 1;
-	U8 gbits, abits;
-	int x, y, c;
-	int range = font->maxascii;
-
-	c = 0;
-	if (useDefineFont2 && range > 256) {
-	    range = 256;
-	}
-
-	for (s = 0; s < range; s++) {
-	    int g = font->ascii2glyph[s];
-	    if (g >= 0) {
-		if ((font->glyph[g].advance * textscale / 20) / 64 > xmax) {
-		    xmax = (font->glyph[g].advance * textscale / 20) / 64;
-		}
-		c++;
-	    }
-	    if ((s & 15) == 0) {
-		if (c) {
-		    ypos++;
-		}
-		c = 0;
-	    }
-	}
-	ymax = ypos * textscale * 2;
-
-	swf.movieSize.xmax = xmax * 20;
-	swf.movieSize.ymax = ymax;
-
-	t = swf_InsertTag(t, ST_DEFINETEXT);
-
-	swf_SetU16(t, font->id + 1);	// ID
-
-	r.xmin = 0;
-	r.ymin = 0;
-	r.xmax = swf.movieSize.xmax;
-	r.ymax = swf.movieSize.ymax;
-
-	swf_SetRect(t, &r);
-
-	swf_SetMatrix(t, NULL);
-
-	abits = swf_CountBits(xmax * 16, 0);
-	gbits = 8;
-
-	swf_SetU8(t, gbits);
-	swf_SetU8(t, abits);
-
-	rgb.r = 0x00;
-	rgb.g = 0x00;
-	rgb.b = 0x00;
-	ypos = 1;
-	for (y = 0; y < ((range + 15) / 16); y++) {
-	    int c = 0, lastx = -1;
-	    for (x = 0; x < 16; x++) {
-		int g = (y * 16 + x < range) ? font->ascii2glyph[y * 16 + x] : -1;
-		if (g >= 0 && font->glyph[g].shape) {
-		    c++;
-		    if (lastx < 0)
-			lastx = x * xmax;
-		}
-	    }
-	    if (c) {
-		swf_TextSetInfoRecord(t, font, textscale, &rgb, lastx + 1, textscale * ypos * 2);
-		for (x = 0; x < 16; x++) {
-		    int g = (y * 16 + x < range) ? font->ascii2glyph[y * 16 + x] : -1;
-		    if (g >= 0 && font->glyph[g].shape) {
-			if (lastx != x * xmax) {
-			    swf_TextSetInfoRecord(t, 0, 0, 0, x * xmax + 1, 0);
-			}
-			swf_SetU8(t, 1);
-			swf_SetBits(t, g, gbits);
-			swf_SetBits(t, font->glyph[g].advance / 20, abits);
-			lastx = x * xmax + (font->glyph[g].advance / 20);
-			swf_ResetWriteBits(t);
-		    }
-		}
-		ypos++;
-	    }
-	}
-	swf_SetU8(t, 0);
-
-
-	t = swf_InsertTag(t, ST_PLACEOBJECT2);
-
-	swf_ObjectPlace(t, font->id + 1, 1, NULL, NULL, NULL);
-
-	t = swf_InsertTag(t, ST_SHOWFRAME);
-
-    }
-
-    t = swf_InsertTag(t, ST_END);
-
-    f = open(filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0644);
-    if FAILED
-	(swf_WriteSWF(f, &swf)) fprintf(stderr, "WriteSWF() failed in writeFont().\n");
-    close(f);
-
-    swf_FreeTags(&swf);
-}
-
-
 void swf_SetEditText(TAG * tag, U16 flags, SRECT r, const char *text, RGBA * color, int maxlength, U16 font, U16 height, EditTextLayout * layout, const char *variable)
 {
     swf_SetRect(tag, &r);
@@ -1629,10 +1547,11 @@ SRECT swf_SetDefineText(TAG * tag, SWFFONT * font, RGBA * rgb, const char *text,
 	}
 
 	/* now set the text params- notice that a font size of
-	   1024 means that the glyphs will be displayed exactly
-	   as they would be in/with a defineshape. (Try to find
-	   *that* in the flash specs)
+	   1024 (or 1024*20 for definefont3) means that the glyphs will 
+	   be displayed exactly as they would be in/with a defineshape.
+	   This is not documented in the specs.
 	 */
+
 	/* set the actual text- notice that we just pass our scale
 	   parameter over, as TextSetCharRecord calculates with
 	   percent, too */
@@ -1657,8 +1576,8 @@ void swf_FontCreateLayout(SWFFONT * f)
 
     f->layout = (SWFLAYOUT *) rfx_calloc(sizeof(SWFLAYOUT));
     f->layout->bounds = (SRECT *) rfx_alloc(f->numchars * sizeof(SRECT));
-    f->layout->ascent = -32767;
-    f->layout->descent = -32767;
+    f->layout->ascent = 0;
+    f->layout->descent = 0;
 
     for (t = 0; t < f->numchars; t++) {
 	SHAPE2 *shape2;
@@ -1683,11 +1602,51 @@ void swf_FontCreateLayout(SWFFONT * f)
 	    f->glyph[t].advance = width;
 
 	if (-bbox.ymin > f->layout->ascent)
-	    f->layout->ascent = bbox.ymin;
+	    f->layout->ascent = -bbox.ymin;
 	if (bbox.ymax > f->layout->descent)
 	    f->layout->descent = bbox.ymax;
     }
 }
+
+#define FONTALIGN_THIN
+#define FONTALIGN_MEDIUM
+#define FONTALIGN_THICK
+
+void swf_FontCreateAlignZones(SWFFONT * f)
+{
+    if(f->alignzones)
+	return;
+    
+    f->alignzones = (ALIGNZONE*)rfx_calloc(sizeof(ALIGNZONE)*f->numchars);
+    f->alignzone_flags = 0; // thin
+
+    if(!f->layout) {
+	int t;
+	for(t=0;t<f->numchars;t++) {
+	    // just align the baseline
+	    f->alignzones[t].x = 0xffff;
+	    f->alignzones[t].y = 0;
+	    f->alignzones[t].dx = 0xffff;
+	    f->alignzones[t].dy = 0xffff;//floatToF16(460.80 / 1024.0);
+	}
+    } else {
+	int t;
+	for(t=0;t<f->numchars;t++) {
+	    // just align the baseline
+	    f->alignzones[t].x = 0xffff;
+	    f->alignzones[t].y = 0;
+	    f->alignzones[t].dx = 0xffff;
+	    f->alignzones[t].dy = 0xffff;//floatToF16(460.80 / 1024.0);
+	}
+    }
+
+/*
+    "-^_~\xad\xaf+`\xac\xb7\xf7" //chars for which to detect one y value
+    "#=:;\xb1" //chars for which to detect two y values
+    "\"\xa8" //chars for which to detect two x values
+*/
+}
+
 
 void swf_DrawText(drawer_t * draw, SWFFONT * font, int size, const char *text)
 {
@@ -1731,3 +1690,396 @@ void swf_DrawText(drawer_t * draw, SWFFONT * font, int size, const char *text)
 	advance += font->glyph[g].advance * size / 100.0 / 20.0;
     }
 }
+
+void swf_WriteFont_AS3(SWFFONT * font, char *filename)
+{
+    if(!font->layout) 
+	swf_FontCreateLayout(font);
+    
+    SWF swf;
+    memset(&swf, 0, sizeof(SWF));
+    swf.fileVersion = 9;
+    swf.frameRate = 0x4000;
+    swf.movieSize.xmax = 200;
+    swf.movieSize.ymax = 200;
+    
+    if(!font->id) font->id=1;
+
+    TAG *tag;
+    swf.firstTag = tag = swf_InsertTag(tag, ST_DEFINEFONT3);
+    swf_FontSetDefine2(tag, font);
+
+    char*name = font->name?(char*)font->name:"font";
+
+    tag = swf_InsertTag(tag, ST_NAMECHARACTER);
+    swf_SetU16(tag, font->id);
+    swf_SetString(tag, name);
+    tag = swf_InsertTag(tag, ST_EXPORTASSETS);
+    swf_SetU16(tag, 1);
+    swf_SetU16(tag, font->id);
+    swf_SetString(tag, name);
+    tag = swf_AddAS3FontDefine(tag, font->id, (char*)font->name);
+    
+    tag = swf_InsertTag(tag, ST_END);
+    swf_SaveSWF(&swf, filename);
+    swf_FreeTags(&swf);
+}
+
+void swf_WriteFont(SWFFONT * font, char *filename)
+{
+    if(!font->layout)
+	swf_FontCreateLayout(font);
+
+    char viewer = 1;
+    U16 id = 1;
+    U16 depth = 1;
+
+    font->id = id++;
+    
+    SWF swf;
+    memset(&swf, 0, sizeof(SWF));
+    swf.fileVersion = 8;
+    swf.frameRate = 0x4000;
+    swf.movieSize.xmax = 1024*20;
+    swf.movieSize.ymax = 768*20;
+    
+    TAG *tag;
+    swf.firstTag = tag = swf_InsertTag(NULL, ST_SETBACKGROUNDCOLOR);
+    swf_SetU8(tag, 0xe0);swf_SetU8(tag, 0xe0);swf_SetU8(tag, 0xff);
+
+    tag = swf_InsertTag(tag, ST_DEFINEFONT3);
+    swf_FontSetDefine2(tag, font);
+
+    if(font->glyphnames) {
+	int c;
+	tag = swf_InsertTag(tag, ST_GLYPHNAMES);
+	swf_SetU16(tag, font->id);
+	swf_SetU16(tag, font->numchars);
+	for (c = 0; c < font->numchars; c++) {
+	    if (font->glyphnames[c])
+		swf_SetString(tag, font->glyphnames[c]);
+	    else
+		swf_SetString(tag, "");
+	}
+    }
+
+    if(viewer)
+    {
+	RGBA white = {255,255,255,255};
+	RGBA black = {255,0,0,0};
+	RGBA gray50 = {255,128,128,128};
+	RGBA green = {255,0,255,0};
+	int t;
+	SCOORD miny = SCOORD_MAX;
+	SCOORD maxy = SCOORD_MIN;
+	double width = 0;
+	U16 max_advance = 0;
+	char*flags = rfx_calloc(font->numchars);
+	double*xmin = rfx_calloc(sizeof(double)*(font->numchars+1));
+	double*xmax = rfx_calloc(sizeof(double)*(font->numchars+1));
+	int*xpos = rfx_calloc(sizeof(int)*(font->numchars+1));
+	for(t=0;t<font->numchars;t++) {
+	    SHAPE*s = font->glyph[t].shape;
+	    SHAPE2*s2 = swf_ShapeToShape2(s);
+	    SRECT r = swf_GetShapeBoundingBox(s2);
+
+	    // inside a definefont3, everything is 20x the resolution:
+	    double rx1 = r.xmin / 20.0;
+	    double ry1 = r.ymin / 20.0;
+	    double rx2 = r.xmax / 20.0;
+	    double ry2 = r.ymax / 20.0;
+	    
+	    xmin[t]= rx1;
+	    xmax[t]= rx2;
+
+	    if(ry1<miny) {miny=ry1;}
+	    if(ry2>maxy) {maxy=ry2;}
+	    swf_Shape2Free(s2);free(s2);
+	    width += font->glyph[t].advance;
+	    if(font->glyph[t].advance>max_advance)
+		max_advance = font->glyph[t].advance;
+	}
+
+	if(miny==SCOORD_MAX) miny=maxy=0;
+	if(miny==maxy) maxy=miny+1;
+
+	/* scale the font so that it's 256 pixels high */
+	double scale = (int)((256.0*1024.0/(maxy-miny))*20.0);
+	double overlarge_factor;
+	int fontsize;
+	if(scale > 32767) {
+	    fontsize = 32767;
+	    overlarge_factor = scale / 32767.0;
+	} else {
+	    fontsize = scale;
+	    overlarge_factor = 1.0;
+	}
+
+	int textid = id++;
+	int spriteid = id++;
+	SRECT r;
+	r.xmin = 0;
+	r.ymin = miny*fontsize/1024;
+	r.xmax = width*fontsize/20480;
+	r.ymax = maxy*fontsize/1024;
+	tag = swf_InsertTag(tag, ST_DEFINETEXT);
+	swf_SetU16(tag, textid);
+	swf_SetRect(tag, &r);
+	swf_SetMatrix(tag, NULL);
+
+	U8 abits = 15;
+	U8 gbits = swf_CountBits(font->numchars, 0);
+	swf_SetU8(tag, gbits);
+	swf_SetU8(tag, abits);
+
+	RGBA rgb = {255,0,0,0};
+
+	swf_TextSetInfoRecord(tag, font, fontsize, &rgb, SET_TO_ZERO, SET_TO_ZERO);
+	ActionTAG*array = 0;
+	double x=0;
+	array = action_PushString(array, "xpos");
+	for(t=0;t<font->numchars;t++) {
+	    swf_SetU8(tag, 1);
+	    int width = abs((xmax[t] - xmin[t+1])*fontsize/1024) + 60;
+	    array = action_PushInt(array, x/20 +(xmin[t]*scale/1024)/20);
+	    x += width * overlarge_factor;
+	    swf_SetBits(tag, t, gbits);
+	    swf_SetBits(tag, width, abits);
+	    swf_SetU8(tag, 128);
+	}
+	array = action_PushInt(array, x/20);
+	array = action_PushInt(array, font->numchars+1);
+	array = action_InitArray(array);
+	array = action_SetVariable(array);
+	swf_SetU8(tag, 0);
+
+	if(font->layout) {
+	    tag = swf_InsertTag(tag, ST_DEFINESHAPE2);
+	    SHAPE* s;
+	    swf_ShapeNew(&s);
+	    int ls = swf_ShapeAddLineStyle(s,20,&white);
+	    int shapeid = id++;
+	    swf_SetU16(tag,shapeid);
+	    SRECT r;
+	    r.xmin = 0;
+	    r.xmax = 1024*20;
+	    r.ymin = 0;
+	    r.ymax = 256*20;
+	    swf_SetRect(tag,&r);
+	    swf_SetShapeHeader(tag,s);
+	    swf_ShapeSetAll(tag,s,0,0,ls,0,0);
+
+	    /* Ç and Â are good chars to test ascent/descent extend */
+	    int y1 = (-font->layout->ascent-miny*20.0)*256.0/(maxy-miny);
+	    int y2 = (font->layout->descent-miny*20.0)*256.0/(maxy-miny);
+
+	    swf_ShapeSetMove(tag,s,0,y1);
+	    swf_ShapeSetLine(tag,s,width,0);
+	    swf_ShapeSetMove(tag,s,0,y2);
+	    swf_ShapeSetLine(tag,s,width,0);
+
+	    swf_ShapeSetEnd(tag);
+	    swf_ShapeFree(s);
+	    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	    swf_ObjectPlace(tag, shapeid, depth++, NULL, NULL, NULL);
+	}
+
+	/* shapes */
+	
+	for(t=0;t<font->numchars;t++) {
+	    tag = swf_InsertTag(tag, ST_DEFINESHAPE2);
+	    SHAPE* s;
+	    swf_ShapeNew(&s);
+	    int ls = swf_ShapeAddLineStyle(s,20*2,&black);
+	    int ls2 = swf_ShapeAddLineStyle(s,20*2,&green);
+	    int fs = swf_ShapeAddSolidFillStyle(s, &gray50);
+	    int shapeid = id++;
+	    swf_SetU16(tag,shapeid);
+	    SRECT r;
+	    r.xmin = 0;
+	    r.xmax = 1024*20;
+	    r.ymin = 0;
+	    r.ymax = 512*20;
+	    swf_SetRect(tag,&r);
+	    swf_SetShapeHeader(tag,s);
+	    swf_ShapeSetAll(tag,s,0,0,ls,fs,0);
+	    SHAPE2*s2 = swf_ShapeToShape2(font->glyph[t].shape);
+	    SHAPELINE*l = s2->lines;
+	    int lastx=0,lasty=0;
+
+	    double x1 = (1024*20 - (xmax[t] - xmin[t])*20*2*scale/20480.0)/2;
+	    double y1 = -miny*20*scale*2/20480.0;
+	    double scalex = scale*2/20480.0;
+	    double scaley = scale*2/20480.0;
+
+	    while(l) {
+		int lx = (l->x)*scalex+x1;
+		int ly = (l->y)*scaley+y1;
+		int sx = (l->sx)*scalex+x1;
+		int sy = (l->sy)*scaley+y1;
+		if(l->type == moveTo) {
+		    swf_ShapeSetMove(tag,s,lx,ly);
+		} else if(l->type == lineTo) {
+		    swf_ShapeSetLine(tag,s,lx-lastx,ly-lasty);
+		} else if(l->type == splineTo) {
+		    swf_ShapeSetCurve(tag,s,sx-lastx,sy-lasty,lx-sx,ly-sy);
+		}
+		lastx = lx;
+		lasty = ly;
+		l = l->next;
+	    }
+	    
+	    if(font->alignzones) {
+		ALIGNZONE*zone = &font->alignzones[t];
+		swf_ShapeSetAll(tag,s,0,0,ls2,SET_TO_ZERO,SET_TO_ZERO);
+		if((zone->x&zone->dx)!=0xffff) {
+		    double x = F16toFloat(zone->x)*20480.0*scalex+x1;
+		    double dx = (F16toFloat(zone->x)+F16toFloat(zone->dx))*20480.0*scalex+x1;
+		    swf_ShapeSetMove(tag,s,x,0);
+		    swf_ShapeSetLine(tag,s,0,1024*20);
+		    swf_ShapeSetMove(tag,s,dx,0);
+		    swf_ShapeSetLine(tag,s,0,1024*20);
+		}
+		if((zone->y&zone->dy)!=0xffff) {
+		    double y = -F16toFloat(zone->y)*20480.0*scaley+y1;
+		    double dy = -(F16toFloat(zone->y)+F16toFloat(zone->dy))*20480.0*scaley+y1;
+		    swf_ShapeSetMove(tag,s,0,y);
+		    swf_ShapeSetLine(tag,s,1024*20,0);
+		    swf_ShapeSetMove(tag,s,0,dy);
+		    swf_ShapeSetLine(tag,s,1024*20,0);
+		}
+	    }
+
+	    swf_ShapeSetEnd(tag);
+	    swf_ShapeFree(s);
+	
+	    tag = swf_InsertTag(tag, ST_DEFINESPRITE);
+	    U16 spriteid=id++;
+	    swf_SetU16(tag, spriteid);
+	    swf_SetU16(tag, 1);
+	    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	    swf_ObjectPlace(tag, shapeid, 1, NULL, NULL, NULL);
+	    tag = swf_InsertTag(tag, ST_END);
+	    tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	    MATRIX m;
+	    swf_GetMatrix(0, &m);
+	    m.ty = 20000;
+	    char txt[80];
+	    sprintf(txt, "char%d", font->numchars-t);
+	    swf_ObjectPlace(tag, spriteid, depth++, &m, NULL, txt);
+	}
+	
+	/* marker */
+	tag = swf_InsertTag(tag, ST_DEFINESHAPE2);
+	int shapeid=id++;
+	RGBA blue = {0xff,0xc0,0xc0,0xff};
+	swf_ShapeSetRectangle(tag, shapeid, 20, 20, &blue);
+	tag = swf_InsertTag(tag, ST_DEFINESPRITE);
+	U16 spriteid2=id++;
+	swf_SetU16(tag, spriteid2);
+	swf_SetU16(tag, 1);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, shapeid, 1, NULL, NULL, NULL);
+	tag = swf_InsertTag(tag, ST_END);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, spriteid2, depth++, NULL, NULL, "marker");
+	
+	/* textbar */
+	tag = swf_InsertTag(tag, ST_DEFINESPRITE);
+	swf_SetU16(tag, spriteid);
+	swf_SetU16(tag, 1);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	MATRIX m;
+	swf_GetMatrix(0, &m);
+	m.sx = 65536 * overlarge_factor;
+	m.sy = 65536 * overlarge_factor;
+	m.tx = 0;
+	m.ty = -miny*256*20/(maxy-miny);
+	swf_ObjectPlace(tag, textid, 1, &m, NULL, NULL);
+	tag = swf_InsertTag(tag, ST_END);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, spriteid, depth++, NULL, NULL, "textbar");
+	
+	/* marker2 */
+	RGBA blue2 = {0x80,0x80,0xff,0x80};
+	tag = swf_InsertTag(tag, ST_DEFINESHAPE3);
+	int shapeid2=id++;
+	swf_ShapeSetRectangleWithBorder(tag, shapeid2, 20, 20, &blue2, 0, &white);
+	tag = swf_InsertTag(tag, ST_DEFINESPRITE);
+	U16 spriteid3=id++;
+	swf_SetU16(tag, spriteid3);
+	swf_SetU16(tag, 1);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, shapeid2, 1, NULL, NULL, NULL);
+	tag = swf_InsertTag(tag, ST_END);
+	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
+	swf_ObjectPlace(tag, spriteid3, depth++, NULL, NULL, "marker2");
+
+
+char*data = 
+" var mouseListener = new Object();"
+" var speed = 0;"
+" var myx = 0;"
+" var currentMouseOver, currentChar;"
+" mouseListener.onMouseDown = function() { "
+"     eval(\"_root.char\"+currentChar)._y = 20000;"
+"     currentChar = currentMouseOver;"
+"     var i = currentMouseOver;"
+"     eval(\"_root.char\"+i)._y = 256;"
+"     _root.marker2._yscale=256*100;"
+"     _root.marker2._xscale=(xpos[i-1]-xpos[i])*100;"
+"     _root.marker2._x=xpos[i]+myx;"
+" };"
+" mouseListener.onMouseMove = function() { "
+"     if(_ymouse<256) {"
+"          speed = Math.abs(_xmouse-512)>256?(512-_xmouse)/8:0;"
+"     } else {"
+"	   speed = 0;"
+"     }; "
+" }; "
+" setInterval( function(){ "
+"     if(_ymouse<256) {"
+"         var i, x=_xmouse-_root.textbar._x;"
+"         for(i=xpos.length-1;i>0;i--) {"
+"             if(x<xpos[i-1]) break;"
+"         }"
+"         currentMouseOver = i;"
+"         _root.marker._yscale=256*100;"
+"         _root.marker._xscale=(xpos[i-1]-xpos[i])*100;"
+"         _root.marker._x=xpos[i]+myx;"
+"         _root.textbar._x += 0.05;"
+"     }"
+"     if(myx+speed>0) {"
+"         speed=0;"
+"     } else if(myx+speed<-xpos[0]+1024) {"
+"         speed=0;"
+"     }"
+"     myx+=speed;"
+"     _root.textbar._x = myx;"
+"     _root.marker._x += speed;"
+"     _root.marker2._x += speed;"
+" }, 20);"
+" Mouse.addListener(mouseListener);"
+;
+	ActionTAG* atag = swf_ActionCompile(data, 6);
+
+	tag = swf_InsertTag(tag, ST_DOACTION);
+	swf_ActionSet(tag, array);
+	swf_ActionSet(tag, atag);
+	swf_SetU8(tag, 0);
+	swf_ActionFree(atag);
+
+	tag = swf_InsertTag(tag, ST_SHOWFRAME);
+
+	free(flags);
+	free(xmin);
+	free(xmax);
+    }
+
+    tag = swf_InsertTag(tag, ST_END);
+
+    swf.compressed = -1;
+    swf_SaveSWF(&swf, filename);
+    swf_FreeTags(&swf);
+}
+
