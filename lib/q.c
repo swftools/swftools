@@ -113,6 +113,36 @@ int mem_get(mem_t*m, void*data, int length)
     return length;
 }
 
+// ------------------------------- median -------------------------------------
+
+float medianf(float*a, int n)
+{
+    int i,j,l,m;
+    float x;
+    int k=n&1?n/2:n/2-1;
+    l=0; 
+    m=n-1;
+    while(l<m) {
+        x=a[k];
+        i=l;j=m;
+        do {
+            while(a[i]<x) i++;
+            while(x<a[j]) j--;
+            if(i<=j) {
+		//swap
+		float t = a[i];
+		a[i] = a[j];
+		a[j] = t;
+                i++;
+		j--;
+            }
+        } while(i<=j);
+        if(j<k) l=i;
+        if(k<i) m=j;
+    }
+    return a[k];
+}
+
 // ------------------------------- ringbuffer_t -------------------------------
 
 typedef struct _ringbuffer_internal_t

@@ -85,6 +85,7 @@ public:
     SplashFont*splash_font;
     char seen;
     int space_char;
+    float average_advance;
 };
 
 extern char*getFontID(GfxFont*font);

@@ -15,6 +15,7 @@
 #endif
 #include "GfxState.h"
 #include "../log.h"
+#include "../q.h"
 #include <math.h>
 #include <assert.h>
 
@@ -216,6 +217,20 @@ static gfxfont_t* createGfxFont(FontInfo*src)
     return font;
 }
 
+static float find_average_glyph_advance(gfxfont_t*f)
+{
+    if(!f->num_glyphs)
+	return 0.0;
+
+    float*values = (float*)malloc(sizeof(float)*f->num_glyphs);
+    int t;
+    for(t=0;t<f->num_glyphs;t++) {
+	values[t] = f->glyphs[t].advance;
+    }
+    float m = medianf(values, f->num_glyphs);
+    free(values);
+    return m;
+}
 
 gfxfont_t* FontInfo::getGfxFont()
 {
@@ -223,6 +238,8 @@ gfxfont_t* FontInfo::getGfxFont()
         this->gfxfont = createGfxFont(this);
         this->gfxfont->id = strdup(this->id);
 	this->space_char = findSpace(this->gfxfont);
+	this->average_advance = find_average_glyph_advance(this->gfxfont);
+
 	if(this->space_char>=0) {
 	    msg("<debug> Font %s has space char %d (unicode=%d)", 
 		    this->id, this->space_char, 

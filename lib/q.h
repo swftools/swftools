@@ -135,6 +135,8 @@ typedef struct _trie {
 char* strdup_n(const char*str, int size);
 char* allocprintf(const char*str, ...);
 
+float medianf(float*values, int n);
+
 unsigned int crc32_add_byte(unsigned int crc32, unsigned char b);
 unsigned int crc32_add_string(unsigned int crc32, const char*s);
 
