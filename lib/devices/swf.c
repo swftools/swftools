@@ -1480,8 +1480,9 @@ void swfoutput_finalize(gfxdevice_t*dev)
 		} else {
 		    mtag = swf_InsertTag(mtag, ST_DEFINEFONT3);
 		    swf_FontSetDefine2(mtag, iterator->swffont);
-	    
-		    swf_FontCreateAlignZones(iterator->swffont);
+	   
+		    if(i->config_flashversion>=10)
+			swf_FontCreateAlignZones(iterator->swffont);
 		   
 		    if(iterator->swffont->alignzones) {
 			mtag = swf_InsertTag(mtag, ST_DEFINEFONTALIGNZONES);
