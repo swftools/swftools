@@ -245,6 +245,9 @@ int   swf_SetU32(TAG * t,U32 v);
 void  swf_SetF16(TAG * t,float f);
 void  swf_SetString(TAG*t,const char*s);
 
+float floatToF16(float f);
+float F16toFloat(U16 x);
+
 /* abc datatypes */
 U32 swf_GetU30(TAG*tag);
 int swf_SetU30(TAG*tag, U32 u);
@@ -539,6 +542,10 @@ typedef struct _FONTUSAGE
 #define FONT_ENCODING_UNICODE 1
 #define FONT_ENCODING_ANSI 2
 #define FONT_ENCODING_SHIFTJIS 4
+
+#define FONTALIGN_THIN 0 
+#define FONTALIGN_MEDIUM 1
+#define FONTALIGN_THICK 2
 
 typedef struct _ALIGNZONE
 {

@@ -1016,15 +1016,18 @@ static void handleFontAlign2(TAG*tag, char*prefix)
 	printf("%sglyph %d) ", prefix, num);
 	int nr = swf_GetU8(tag); // should be 2
 	int t;
-	for(t=0;t<nr;t++) {
+	for(t=0;t<2;t++) {
 	    // pos
 	    float v = swf_GetF16(tag);
 	    printf("%f ", v*1024.0);
 	}
-	for(t=0;t<nr;t++) {
-	    // width
-	    float v = swf_GetF16(tag);
-	    printf("+%f ", v*1024.0);
+	int s;
+	for(s=0;s<nr-1;s++) {
+	    for(t=0;t<2;t++) {
+		// width
+		float v = swf_GetF16(tag);
+		printf("+%f ", v*1024.0);
+	    }
 	}
 	U8 xyflags = swf_GetU8(tag);
 	printf("xy:%02x\n", xyflags);

@@ -373,28 +373,6 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     return font->id;
 }
 
-static float F16toFloat(U16 x)
-{
-    TAG t;
-    t.data = (void*)&x;
-    t.readBit = 0;
-    t.pos = 0;
-    t.len = 2;
-    return swf_GetF16(&t);
-}
-
-static float floatToF16(float f)
-{
-    U16 u = 0;
-    TAG t;
-    t.data = (void*)&u;
-    t.len = 0;
-    t.memsize = 2;
-    t.writeBit = 0;
-    swf_SetF16(&t, f);
-    return u;
-}
-
 int swf_FontExtract_DefineFontAlignZones(int id, SWFFONT * font, TAG * tag)
 {
     U16 fid;
@@ -1103,27 +1081,6 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
     return 0;
 }
 
-void swf_FontSetAlignZones(TAG*t, SWFFONT *f)
-{
-    swf_SetU16(t, f->id);
-    swf_SetU8(t, f->alignzone_flags);
-    int i;
-    for(i=0;i<f->numchars;i++) {
-	ALIGNZONE*a = &f->alignzones[i];
-	U8 flags = 0;
-	if((a->x & a->dx)!=0xffff)
-	    flags |= 1;
-	if((a->y & a->dy)!=0xffff)
-	    flags |= 2;
-	swf_SetU8(t, 2);
-	if(flags&1) swf_SetU16(t, a->x); else swf_SetU16(t, 0);
-	if(flags&2) swf_SetU16(t, a->y); else swf_SetU16(t, 0);
-	if((flags&1) && a->dx!=0xffff) swf_SetU16(t, a->dx); else swf_SetU16(t, 0);
-	if((flags&2) && a->dy!=0xffff) swf_SetU16(t, a->dy); else swf_SetU16(t, 0);
-	swf_SetU8(t, flags);
-    }
-}
-
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading)
 {
     f->layout = (SWFLAYOUT *) rfx_alloc(sizeof(SWFLAYOUT));
@@ -1608,46 +1565,6 @@ void swf_FontCreateLayout(SWFFONT * f)
     }
 }
 
-#define FONTALIGN_THIN
-#define FONTALIGN_MEDIUM
-#define FONTALIGN_THICK
-
-void swf_FontCreateAlignZones(SWFFONT * f)
-{
-    if(f->alignzones)
-	return;
-    
-    f->alignzones = (ALIGNZONE*)rfx_calloc(sizeof(ALIGNZONE)*f->numchars);
-    f->alignzone_flags = 0; // thin
-
-    if(!f->layout) {
-	int t;
-	for(t=0;t<f->numchars;t++) {
-	    // just align the baseline
-	    f->alignzones[t].x = 0xffff;
-	    f->alignzones[t].y = 0;
-	    f->alignzones[t].dx = 0xffff;
-	    f->alignzones[t].dy = 0xffff;//floatToF16(460.80 / 1024.0);
-	}
-    } else {
-	int t;
-	for(t=0;t<f->numchars;t++) {
-	    // just align the baseline
-	    f->alignzones[t].x = 0xffff;
-	    f->alignzones[t].y = 0;
-	    f->alignzones[t].dx = 0xffff;
-	    f->alignzones[t].dy = 0xffff;//floatToF16(460.80 / 1024.0);
-	}
-    }
-
-/*
-    "-^_~\xad\xaf+`\xac\xb7\xf7" //chars for which to detect one y value
-    "#=:;\xb1" //chars for which to detect two y values
-    "\"\xa8" //chars for which to detect two x values
-*/
-}
-
-
 void swf_DrawText(drawer_t * draw, SWFFONT * font, int size, const char *text)
 {
     U8 *s = (U8 *) text;
@@ -2082,4 +1999,3 @@ char*data =
     swf_SaveSWF(&swf, filename);
     swf_FreeTags(&swf);
 }
-

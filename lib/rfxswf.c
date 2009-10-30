@@ -474,6 +474,28 @@ void swf_SetF16(TAG * t, float f)
     swf_SetU16(t, result);
 }
 
+float F16toFloat(U16 x)
+{
+    TAG t;
+    t.data = (void*)&x;
+    t.readBit = 0;
+    t.pos = 0;
+    t.len = 2;
+    return swf_GetF16(&t);
+}
+
+float floatToF16(float f)
+{
+    U16 u = 0;
+    TAG t;
+    t.data = (void*)&u;
+    t.len = 0;
+    t.memsize = 2;
+    t.writeBit = 0;
+    swf_SetF16(&t, f);
+    return u;
+}
+
 double swf_GetD64(TAG*tag)
 {
     /* FIXME: this is not big-endian compatible */

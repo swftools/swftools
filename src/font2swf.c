@@ -98,6 +98,7 @@ static void convertFont(char*infile, char*outfile)
     SWFFONT * font;
     
     font = swf_LoadFont(infile);
+    swf_FontCreateAlignZones(font);
 
     if(fontname)
         font->name = strdup(fontname);

@@ -1465,25 +1465,26 @@ void swfoutput_finalize(gfxdevice_t*dev)
 
     endpage(dev);
     fontlist_t *iterator = i->fontlist;
+    char use_font3 = i->config_flashversion>=8 && !NO_FONT3;
     while(iterator) {
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
+	    if(use_font3) {
+		// needs to be done before the reduce
+		swf_FontCreateAlignZones(iterator->swffont);
+	    }
 	    if(!i->config_storeallcharacters) {
 		msg("<debug> Reducing font %s", iterator->swffont->name);
 		swf_FontReduce(iterator->swffont);
 	    }
 	    int used = iterator->swffont->use && iterator->swffont->use->used_glyphs;
 	    if(used) {
-		if(i->config_flashversion<8 || NO_FONT3) {
+		if(!use_font3) {
 		    mtag = swf_InsertTag(mtag, ST_DEFINEFONT2);
 		    swf_FontSetDefine2(mtag, iterator->swffont);
 		} else {
 		    mtag = swf_InsertTag(mtag, ST_DEFINEFONT3);
 		    swf_FontSetDefine2(mtag, iterator->swffont);
-	   
-		    if(i->config_flashversion>=10)
-			swf_FontCreateAlignZones(iterator->swffont);
-		   
 		    if(iterator->swffont->alignzones) {
 			mtag = swf_InsertTag(mtag, ST_DEFINEFONTALIGNZONES);
 			swf_FontSetAlignZones(mtag, iterator->swffont);
