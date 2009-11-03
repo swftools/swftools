@@ -48,6 +48,7 @@ static int override_outputname = 0;
 static int do_cgi = 0;
 static int change_sets_all = 0;
 static int do_exports = 0;
+static char * mainclass = "";
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -183,6 +184,7 @@ static struct level
    TAG*tag;
    U16 id;
    char*name;
+   char*as3name;
    U16 olddepth;
    int oldframe;
    dict_t oldinstances;
@@ -639,7 +641,7 @@ void s_swf(const char*name, SRECT r, int version, int fps, int compress, RGBA ba
     incrementid();
 }
 
-void s_sprite(const char*name, SRECT*scalegrid)
+void s_sprite(const char*name, SRECT*scalegrid, const char*as3name)
 {
     tag = swf_InsertTag(tag, ST_DEFINESPRITE);
     swf_SetU16(tag, id); //id
@@ -654,6 +656,7 @@ void s_sprite(const char*name, SRECT*scalegrid)
     stack[stackpos].tag = tag;
     stack[stackpos].id = id;
     stack[stackpos].name = strdup(name);
+    stack[stackpos].as3name = strdup(as3name);
     if(scalegrid) {
 	stack[stackpos].scalegrid = *scalegrid;
     } else {
@@ -687,7 +690,7 @@ typedef struct _button
 
 static button_t mybutton;
 
-void s_button(const char*name)
+void s_button(const char*name, const char*as3name)
 {
     tag = swf_InsertTag(tag, ST_DEFINEBUTTON2);
     swf_SetU16(tag, id); //id
@@ -700,6 +703,7 @@ void s_button(const char*name)
     stack[stackpos].tag = tag;
     stack[stackpos].id = id;
     stack[stackpos].name = strdup(name);
+    stack[stackpos].as3name = strdup(as3name);
     stack[stackpos].oldrect = currentrect;
     memset(&currentrect, 0, sizeof(currentrect));
 
@@ -816,6 +820,14 @@ static void s_endButton()
     currentrect = stack[stackpos].oldrect;
 
     s_addcharacter(stack[stackpos].name, stack[stackpos].id, stack[stackpos].tag, r);
+
+    if(*stack[stackpos].as3name) {
+        tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
+        swf_SetU16(tag, 1);
+        swf_SetU16(tag, stack[stackpos].id);
+        swf_SetString(tag, stack[stackpos].as3name);
+    }
+
     free(stack[stackpos].name);
 }
 
@@ -1002,6 +1014,15 @@ static void s_endSprite()
     instances = stack[stackpos].oldinstances;
 
     s_addcharacter(stack[stackpos].name, stack[stackpos].id, stack[stackpos].tag, r);
+
+    if(*stack[stackpos].as3name) {
+        tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
+        swf_SetU16(tag, 1);
+        swf_SetU16(tag, stack[stackpos].id);
+        swf_SetString(tag, stack[stackpos].as3name);
+    }   
+
+
     free(stack[stackpos].name);
 }
 
@@ -1010,6 +1031,7 @@ static void s_endSWF()
     int fi;
     SWF* swf;
     char*filename;
+    char*mc="";
 
     dict_foreach_value(&instances, writeInstance);
 
@@ -1035,11 +1057,15 @@ static void s_endSWF()
         tag = swf_InsertTag(tag, ST_DOABC);
         void*code = as3_getcode();
         swf_WriteABC(tag, code);
-        if(as3_getglobalclass()) {
+        if (*mainclass)
+            mc = mainclass;
+        else if (as3_getglobalclass())
+            mc = as3_getglobalclass();
+        if(*mc) {
             tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
             swf_SetU16(tag, 1);
             swf_SetU16(tag, 0);
-            swf_SetString(tag, as3_getglobalclass());
+            swf_SetString(tag, mc);
         } else {
             warning("no global public MovieClip subclass");
         }
@@ -2806,6 +2832,7 @@ static int c_flash(map_t*args)
 	    syntaxerror("value \"%s\" not supported for the change-sets-all argument", change_modestr);
 
     do_exports=atoi(exportstr);
+    mainclass=strdup(lu(args, "mainclass"));
 
     s_swf(filename, bbox, version, fps, compress, color);
     return 0;
@@ -3696,12 +3723,13 @@ static int c_sprite(map_t*args)
 {
     const char* name = lu(args, "name");
     const char* scalinggrid = lu(args, "scalinggrid");
+    const char* as3name = lu(args, "as3name");
 
     if(scalinggrid && *scalinggrid) {
 	SRECT r = parseBox(scalinggrid);
-	s_sprite(name, &r);
+	s_sprite(name, &r, as3name);
     } else {
-	s_sprite(name, 0);
+	s_sprite(name, 0, as3name);
     }
     return 0;
 }
@@ -3886,7 +3914,8 @@ int fakechar(map_t*args)
 static int c_egon(map_t*args) {return fakechar(args);}
 static int c_button(map_t*args) {
     const char*name = lu(args, "name");
-    s_button(name);
+    const char*as3name = lu(args, "as3name");
+    s_button(name, as3name);
     return 0;
 }
 static int current_button_flags = 0;
@@ -4106,7 +4135,7 @@ static struct {
     command_func_t* func;
     char*arguments;
 } arguments[] =
-{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default @change-sets-all=no @export=1"},
+{{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default @change-sets-all=no @export=1 @mainclass="},
  {"frame", c_frame, "n=<plus>1 name= @cut=no @anchor=no"},
  // "import" type stuff
  {"swf", c_swf, "name filename"},
@@ -4144,7 +4173,7 @@ static struct {
  {"text", c_text, "name text font size=100% color=white"},
  {"edittext", c_edittext, "name font= size=100% width height text="" color=white maxlength=0 variable="" @password=0 @wordwrap=0 @multiline=0 @html=0 @noselect=0 @readonly=0 @border=0 @autosize=0 align="},
  {"morphshape", c_morphshape, "name start end"},
- {"button", c_button, "name"},
+ {"button", c_button, "name as3name="},
     {"show", c_show,             "name x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below= as="},
     {"on_press", c_on_press, "position=inside"},
     {"on_release", c_on_release, "position=anywhere"},
@@ -4176,7 +4205,7 @@ static struct {
 
     // commands which start a block
 //startclip (see above)
- {"sprite", c_sprite, "name scalinggrid="},
+ {"sprite", c_sprite, "name scalinggrid= as3name="},
  {"action", c_action, "filename="},
  {"initaction", c_initaction, "name filename="},
 
@@ -4456,7 +4485,7 @@ static void analyseArgumentsForCommand(char*command)
     	    {
     	    	if (strcmp (glyphs_to_include, ""))
     	    	{
-    	    	    swf_FontUseUTF8(font, glyphs_to_include);
+    	    	    swf_FontUseUTF8(font, glyphs_to_include, /*FIXME*/0xffff);
     	    	    font->use->glyphs_specified = 1;
     	    	}
     	    	else
@@ -4480,7 +4509,7 @@ static void analyseArgumentsForCommand(char*command)
             	    font->use->glyphs_specified = 1;
 		}
             	else
-            	    swf_FontUseUTF8(font, (U8*)lu(&args, "text"));
+            	    swf_FontUseUTF8(font, (U8*)lu(&args, "text"), 0xffff);
             }
     }
     map_clear(&args);
