@@ -853,6 +853,7 @@ int swf_FontInitUsage(SWFFONT * f)
     }
     f->use = (FONTUSAGE*)rfx_alloc(sizeof(FONTUSAGE));
     f->use->is_reduced = 0;
+    f->use->smallest_size = 0xffff;
     f->use->used_glyphs = 0;
     f->use->chars = (int*)rfx_calloc(sizeof(f->use->chars[0]) * f->numchars);
     f->use->glyphs_specified = 0;
@@ -873,13 +874,13 @@ int swf_FontUse(SWFFONT * f, U8 * s)
 	return -1;
     while (*s) {
 	if(*s < f->maxascii && f->ascii2glyph[*s]>=0)
-	    swf_FontUseGlyph(f, f->ascii2glyph[*s]);
+	    swf_FontUseGlyph(f, f->ascii2glyph[*s], /*FIXME*/0xffff);
 	s++;
     }
     return 0;
 }
 
-int swf_FontUseUTF8(SWFFONT * f, U8 * s)
+int swf_FontUseUTF8(SWFFONT * f, U8 * s, U16 size)
 {
     if( (!s))
 	return -1;
@@ -888,7 +889,7 @@ int swf_FontUseUTF8(SWFFONT * f, U8 * s)
     {
     	ascii = readUTF8char(&s);
 	if(ascii < f->maxascii && f->ascii2glyph[ascii]>=0)
-	    swf_FontUseGlyph(f, f->ascii2glyph[ascii]);
+	    swf_FontUseGlyph(f, f->ascii2glyph[ascii], size);
     }
     return 0;
 }
@@ -905,7 +906,7 @@ int swf_FontUseAll(SWFFONT* f)
     return 0;
 }
 
-int swf_FontUseGlyph(SWFFONT * f, int glyph)
+int swf_FontUseGlyph(SWFFONT * f, int glyph, U16 size)
 {
     if (!f->use)
 	swf_FontInitUsage(f);
@@ -914,6 +915,8 @@ int swf_FontUseGlyph(SWFFONT * f, int glyph)
     if(!f->use->chars[glyph])
 	f->use->used_glyphs++;
     f->use->chars[glyph] = 1;
+    if(size && size < f->use->smallest_size)
+	f->use->smallest_size = size;
     return 0;
 }
 

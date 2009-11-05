@@ -535,6 +535,7 @@ typedef struct _FONTUSAGE
   char is_reduced;
   int used_glyphs;
   int glyphs_specified;
+  U16 smallest_size;
 } FONTUSAGE;
 
 #define FONT_STYLE_BOLD 1
@@ -629,9 +630,9 @@ int swf_FontReduce(SWFFONT * f);
 int swf_FontReduce_swfc(SWFFONT * f);
 
 int swf_FontInitUsage(SWFFONT * f);
-int swf_FontUseGlyph(SWFFONT * f, int glyph);
+int swf_FontUseGlyph(SWFFONT * f, int glyph, U16 size);
 int swf_FontUseAll(SWFFONT* f);
-int swf_FontUseUTF8(SWFFONT * f, U8 * s);
+int swf_FontUseUTF8(SWFFONT * f, U8 * s, U16 size);
 int swf_FontUse(SWFFONT* f,U8 * s);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);

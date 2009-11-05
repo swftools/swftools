@@ -3117,6 +3117,6 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     } else {
 	i->chardata = charbuffer_append(i->chardata, i->swffont, glyph, x, y, i->current_font_size, *(RGBA*)color, &i->fontmatrix);
     }
-    swf_FontUseGlyph(i->swffont, glyph);
+    swf_FontUseGlyph(i->swffont, glyph, i->current_font_size);
     return;
 }

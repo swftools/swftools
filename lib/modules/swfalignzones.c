@@ -34,13 +34,13 @@ static void draw_line_xy(float*row,float*column, float x1, float y1, float x2, f
     draw_line(column, y1, y2, x1, x2, area->ymin, area->ymax);
 }
 
-static void find_best(float*_row, int width, int*_x1, int*_x2, int min_dist)
+static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int min, int max, char debug)
 {
     int x1=-1, x2=-1;
-    float max1=-1,max2=-1;
+    float max1=-1e20,max2=-1e20;
     int t;
     float*row = malloc(sizeof(float)*(width+1));
-    int filter_size = 100;
+    int filter_size = 20;
     float* filter = malloc(sizeof(float)*(filter_size*2+1));
     double var = filter_size/3;
     for(t=-filter_size;t<=filter_size;t++) {
@@ -48,7 +48,7 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_dist)
         float r = v*v/2;
 	filter[filter_size+t] = exp(-r);
     }
-    filter[0]=1;filter_size=0;
+    //filter[0]=1;filter_size=0;
 
     for(t=0;t<=width;t++) {
 	int s;
@@ -67,11 +67,29 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_dist)
 	    x1 = t;
 	}
     }
-    // invalidate everything around the maximum
-    for(t=-min_dist+1;t<min_dist;t++) {
-	if(t+x1<0 || t+x1>width) continue;
-	row[t+x1]=-1;
+
+    double scale = min_size/1024.0;
+    for(t=0;t<=width;t++) {
+	if(t==x1) {
+	    row[t]=-1e20;
+	    continue;
+	}
+	double r1 = (t<x1?t:x1)*scale;
+	double r2 = (t<x1?x1:t)*scale;
+	double d1 = r2-r1;
+	double d2 = d1+2;
+	double s = d2/d1;
+	double ext1 = r1;
+	double ext2 = width*scale-r2;
+	double add1 = ext1*s - ext1;
+	double add2 = ext2*s - ext2;
+
+	/* don't allow the char to grow more than one pixel */
+	if(add1>=1 || add2>=1) {
+	    row[t]=-1e20;
+	}
     }
+
     for(t=0;t<=width;t++) {
 	if(row[t]>max2) {
 	    max2 = row[t];
@@ -79,10 +97,23 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_dist)
 	}
     }
 
-    if(x1>0 && x2>0 && x1>x2) {int x=x1;x1=x2;x2=x;}
+    if(x1>=0 && x2>=0 && x1>x2) {int x=x1;x1=x2;x2=x;}
     *_x1=x1;
     *_x2=x2;
     free(row);
+}
+
+static int find_min_distance(int min_size, int height)
+{
+    /* find a minimum distance between two alignzones so
+       that when they both, due to pixel snapping, move 
+       into opposite directions, the subsequent character
+       scaling doesn't cause the upper/lower end of the char
+       to move outwards more than m pixels */
+    int m = 4;
+    double scale = min_size / 1024.0;
+    double max_move = (2 * 1.0 / scale)/m;
+    return (int)(height*max_move);
 }
 
 static ALIGNZONE detect_for_char(SWFFONT * f, int nr)
@@ -131,16 +162,15 @@ static ALIGNZONE detect_for_char(SWFFONT * f, int nr)
     }
 
     int t;
-
+    
     /* find two best x values */
     int x1=-1,y1=-1,x2=-1,y2=-1;
-    //int min_dist = 4000;
-    int min_dist = 1;
-    find_best(row,width,&x1,&x2,min_dist);
-    find_best(column,height,&y1,&y2,min_dist);
+    find_best(row,width,&x1,&x2,f->use->smallest_size,b.xmin,b.xmax,0);
+    char debug = f->glyph2ascii[nr]=='o' && f->id==7;
+    find_best(column,height,&y1,&y2,f->use->smallest_size,b.ymin,b.ymax,debug);
 
-    if(x1>=0) a.x  = floatToF16((x1+b.xmin) / 20480.0);
-    if(x2>=0) a.dx = floatToF16((x2-x1) / 20480.0);
+    //if(x1>=0) a.x  = floatToF16((x1+b.xmin) / 20480.0);
+    //if(x2>=0) a.dx = floatToF16((x2-x1) / 20480.0);
     if(y1>=0) a.y  = floatToF16((y1+b.ymin) / 20480.0);
     if(y2>=0) a.dy = floatToF16((y2-y1) / 20480.0);
     return a;
@@ -158,7 +188,7 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 
     
     f->alignzones = (ALIGNZONE*)rfx_calloc(sizeof(ALIGNZONE)*f->numchars);
-    f->alignzone_flags = FONTALIGN_THIN;
+    f->alignzone_flags = FONTALIGN_MEDIUM;
 
     if(!f->layout) {
 	int t;
