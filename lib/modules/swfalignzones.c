@@ -34,12 +34,8 @@ static void draw_line_xy(float*row,float*column, float x1, float y1, float x2, f
     draw_line(column, y1, y2, x1, x2, area->ymin, area->ymax);
 }
 
-#include <assert.h>
-
-static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int from, int to, char debug)
+static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int from, int to, int num, char debug)
 {
-    assert(from>=0);
-    assert(to>=0);
     int x1=-1, x2=-1;
     float max1=-1e20,max2=-1e20;
     int t;
@@ -72,38 +68,46 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int
 	}
     }
 
-    double scale = min_size/1024.0;
-    for(t=from;t<=to;t++) {
-	if(t==x1) {
-	    row[t]=-1e20;
-	    continue;
-	}
-	double r1 = (t<x1?t:x1)*scale;
-	double r2 = (t<x1?x1:t)*scale;
-	double d1 = r2-r1;
-	double d2 = d1+2;
-	double s = d2/d1;
-	double ext1 = r1-from*scale;
-	double ext2 = to*scale-r2;
-	double add1 = ext1*s - ext1;
-	double add2 = ext2*s - ext2;
 
-	/* don't allow the char to grow more than one pixel */
-	if(add1>=1 || add2>=1) {
-	    row[t]=-1e20;
+    if(num<=1) {
+	*_x1=x1;
+    } else {
+	double scale = min_size/1024.0;
+	for(t=from;t<=to;t++) {
+	    if(t==x1) {
+		row[t]=-1e20;
+		continue;
+	    }
+	    double r1 = (t<x1?t:x1)*scale;
+	    double r2 = (t<x1?x1:t)*scale;
+	    double d1 = r2-r1;
+	    double d2 = d1+2;
+	    double s = d2/d1;
+	    double ext1 = r1-from*scale;
+	    double ext2 = to*scale-r2;
+	    double add1 = ext1*s - ext1;
+	    double add2 = ext2*s - ext2;
+
+	    /* don't allow the char to grow more than one pixel */
+	    if(add1>=1 || add2>=1) {
+		row[t]=-1e20;
+	    }
 	}
+
+	for(t=from;t<=to;t++) {
+	    if(row[t]>max2) {
+		max2 = row[t];
+		x2 = t;
+	    }
+	}
+
+	if(x1>=0 && x2>=0 && x1>x2) {int x=x1;x1=x2;x2=x;}
+    
+	*_x1=x1;
+	*_x2=x2;
     }
+    
 
-    for(t=from;t<=to;t++) {
-	if(row[t]>max2) {
-	    max2 = row[t];
-	    x2 = t;
-	}
-    }
-
-    if(x1>=0 && x2>=0 && x1>x2) {int x=x1;x1=x2;x2=x;}
-    *_x1=x1;
-    *_x2=x2;
     free(row);
 }
 
@@ -156,19 +160,22 @@ static ALIGNZONE detect_for_char(SWFFONT * f, int nr, float*row, float*column, S
 
     /* find two best x values */
     int x1=-1,y1=-1,x2=-1,y2=-1;
+
+    int nr_x = 1;
     find_best(row, width, &x1, &x2, f->use->smallest_size, 
 		char_bbox.xmin - font_bbox.xmin,
-		char_bbox.xmax - font_bbox.xmin,
+		char_bbox.xmax - font_bbox.xmin, nr_x,
 		0);
+    if(nr_x>0 && x1>=0) a.x  = floatToF16((x1+font_bbox.xmin) / 20480.0);
+    if(nr_x>1 && x2>=0) a.dx = floatToF16((x2-x1) / 20480.0);
+
     find_best(column, height, &y1, &y2, f->use->smallest_size, 
 		char_bbox.ymin - font_bbox.ymin,
-		char_bbox.ymax - font_bbox.ymin,
+		char_bbox.ymax - font_bbox.ymin, 2,
 		0);
-
-    //if(x1>=0) a.x  = floatToF16((x1+b.xmin) / 20480.0);
-    //if(x2>=0) a.dx = floatToF16((x2-x1) / 20480.0);
     if(y1>=0) a.y  = floatToF16((y1+font_bbox.ymin) / 20480.0);
     if(y2>=0) a.dy = floatToF16((y2-y1) / 20480.0);
+
     return a;
 }
 
@@ -207,24 +214,22 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	int width = bounds.xmax - bounds.xmin;
 	int height = bounds.ymax - bounds.ymin;
 	float*row = rfx_calloc(sizeof(float)*(width+1));
+	float*column_global = rfx_calloc(sizeof(float)*(height+1));
 	float*column = rfx_calloc(sizeof(float)*(height+1));
-	float*row2 = rfx_calloc(sizeof(float)*(width+1));
-	float*column2 = rfx_calloc(sizeof(float)*(height+1));
 	
 	for(t=0;t<f->numchars;t++) {
-	    draw_char(f, t, row, column, bounds);
+	    draw_char(f, t, row, column_global, bounds);
 	}
-	for(t=0;t<=width;t++) {row[t]/=f->numchars/2;}
-	for(t=0;t<=height;t++) {column[t]/=f->numchars/2;}
+	for(t=0;t<=height;t++) {column_global[t]/=f->numchars/2;}
 
 	for(t=0;t<f->numchars;t++) {
-	    memcpy(row2, row, sizeof(float)*(width+1));
-	    memcpy(column2, column, sizeof(float)*(height+1));
-	    //draw_char(f, t, row2, column2, bounds);
+	    memcpy(column, column_global, sizeof(float)*(height+1));
+	    memset(row, 0, sizeof(float)*(width+1));
+	    draw_char(f, t, row, column, bounds);
 	    
 	    SRECT b = f->layout->bounds[t];
 	    negate_y(&b);
-	    f->alignzones[t] = detect_for_char(f, t, row2, column2, bounds, b);
+	    f->alignzones[t] = detect_for_char(f, t, row, column, bounds, b);
 	}
     }
 }
