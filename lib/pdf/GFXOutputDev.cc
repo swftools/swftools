@@ -2393,38 +2393,18 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
       for(t=0;t<256;t++) {
 	  pixBuf[0] = t;
 	  colorMap->getRGB(pixBuf, &rgb);
-
-	  {/*if(maskColors && *maskColors==t) {
-	      msg("<notice> Color %d is transparent", t);
-	      if (imgData->maskColors) {
-		*alpha = 0;
-		for (i = 0; i < imgData->colorMap->getNumPixelComps(); ++i) {
-		  if (pix[i] < imgData->maskColors[2*i] ||
-		      pix[i] > imgData->maskColors[2*i+1]) {
-		    *alpha = 1;
-		    break;
-		  }
-		}
-	      } else {
-		*alpha = 1;
-	      }
-	      if(!*alpha) {
-		    pal[t].r = 0;
-		    pal[t].g = 0;
-		    pal[t].b = 0;
-		    pal[t].a = 0;
-	      }
-	  } else {*/
-	      pal[t].r = (unsigned char)(colToByte(rgb.r));
-	      pal[t].g = (unsigned char)(colToByte(rgb.g));
-	      pal[t].b = (unsigned char)(colToByte(rgb.b));
-	      pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
-	  }
+	  pal[t].r = (unsigned char)(colToByte(rgb.r));
+	  pal[t].g = (unsigned char)(colToByte(rgb.g));
+	  pal[t].b = (unsigned char)(colToByte(rgb.b));
+	  pal[t].a = 255;//(U8)(rgb.b * 255 + 0.5);
       }
       for (y = 0; y < height; ++y) {
 	for (x = 0; x < width; ++x) {
 	  imgStr->getPixel(pixBuf);
 	  pic[width*y+x] = pal[pixBuf[0]];
+	  if(maskColors && *maskColors==pixBuf[0]) {
+	      pic[width*y+x].a = 0;
+	  }
 	}
       }
       if(maskbitmap) {
