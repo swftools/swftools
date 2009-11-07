@@ -829,7 +829,7 @@ void handlelossless(TAG*tag)
     }
     msg("<verbose> Uncompressed image is %d bytes (%d colormap)", datalen, (3+alpha)*cols);
     pos = 0;
-    datalen2 = datalen;
+    datalen2 = datalen+16;
     data2 = malloc(datalen2);
     palette = (RGBA*)malloc(cols*sizeof(RGBA));
 
