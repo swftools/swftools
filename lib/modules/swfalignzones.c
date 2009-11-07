@@ -60,6 +60,7 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int
 	}
 	row[t] = sum;
     }
+    free(filter);
 
     for(t=from;t<=to;t++) {
 	if(row[t]>max1) {
@@ -107,7 +108,6 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int
 	*_x2=x2;
     }
     
-
     free(row);
 }
 
@@ -192,7 +192,7 @@ void swf_FontCreateAlignZones(SWFFONT * f)
     f->alignzones = (ALIGNZONE*)rfx_calloc(sizeof(ALIGNZONE)*f->numchars);
     f->alignzone_flags = FONTALIGN_MEDIUM;
 
-    if(!f->layout) {
+    if(!f->layout || !f->use) {
 	int t;
 	for(t=0;t<f->numchars;t++) {
 	    // just align the baseline
@@ -231,6 +231,9 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	    negate_y(&b);
 	    f->alignzones[t] = detect_for_char(f, t, row, column, bounds, b);
 	}
+	free(row);
+	free(column_global);
+	free(column);
     }
 }
 
