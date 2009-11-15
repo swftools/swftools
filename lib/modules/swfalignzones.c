@@ -73,6 +73,14 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int
     if(num<=1) {
 	*_x1=x1;
     } else {
+	/* this code is slightly wrong, in that it assumes that the glyph distortion problem 
+	   gets worse when the font sizes get smaller. it doesn't. in fact, the smaller
+	   the font size, the more of the scaling bugs disappear (http://www.quiss.org/files/scaletest.swf)
+	   A better way would probably to use the font size you need for the two alignzones
+	   to come to lie in different pixels, which what I think is what makes the problems
+	   appear/disappear.
+	*/
+
 	double scale = min_size/1024.0;
 	for(t=from;t<=to;t++) {
 	    if(t==x1) {
