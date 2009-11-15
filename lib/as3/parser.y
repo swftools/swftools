@@ -271,7 +271,6 @@ extern int a3_lex();
 %nonassoc "false" "true" "null" "undefined" "super" "function"
 %left above_function
 
-
      
 %{
 
@@ -3773,6 +3772,11 @@ MEMBER : E '.' SUBNODE {
     }
 };
 
+/* TODO: causes 16 r/r conflicts */
+VAR_READ : T_NAMESPACE {
+    PASS2 
+    $$ = resolve_identifier($1);
+}
 VAR_READ : T_IDENTIFIER {
     PASS1
     /* Queue unresolved identifiers for checking against the parent

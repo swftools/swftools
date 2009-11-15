@@ -16,4 +16,5 @@
 * a jump to a jump can be redirected
 * sort variable indices by usage
 * coerce*;returnvalue can be reduced to returnvalue
+* a kill before a return can be eliminated
 * setlocal_i;getlocal_j;getlocal_i can be changed to dup;setlocal_i;getlocal_j,swap (makes it possible to remove i if not otherwise used)

@@ -1,0 +1,153 @@
+-----------------------------------------------------------------------
+
+    var x = a
+    [ExcludeClass(...)]
+
+[x=a at [ExcludeClass(...)] or x=a, then embed command?]
+
+-----------------------------------------------------------------------
+
+    if(1==2)
+        return
+    i++
+
+[return i++ or just return?]
+
+-----------------------------------------------------------------------
+
+    x = 3
+    /abc/
+    y++
+
+[x=3;regexp abc;y++ or x divided by abc divided by y++?]
+
+-----------------------------------------------------------------------
+
+    x = 5
+    -obj
+
+[x=5, evaluate "minus obj" or x=5-obj?]
+
+-----------------------------------------------------------------------
+
+    x = y as X.z
+
+[coerce y to static field z of X, or coerce y to X, then evaluate member z?]
+
+-----------------------------------------------------------------------
+    if(1==2)
+        return
+    { myloop: i++;}
+
+[return object:{myloop:i++} or execute code block with myloop label?]
+
+
+-----------------------------------------------------------------------
+
+    for(i in a in a; ...)
+
+[only after encountering the first ; it becomes clear that this is in
+ fact *not* a for-in loop]
+
+-----------------------------------------------------------------------
+
+    var x = 
+    namespace1 ++ namespace2
+    function test()
+    {
+    }
+
+[x = namespace1, increment namespace2? or is test in namespace2?]
+
+-----------------------------------------------------------------------
+
+
+    x = (a[Math.random(100)] += 10)
+
+code needed for this:
+
+    [calculate Math.random(100), gives us two stack values]
+    dup2 [a.k.a. setlocal tmp, dup , getlocal tmp, swap, getlocal tmp]
+    getproperty (consumes two stack values)
+    [code for adding 10]
+    setlocal tmp (we don't have *any* kind of useful stack exchange operations, so no way around a local register)
+    setproperty (consumes two stack values again)
+    getlocal tmp
+    kill tmp (so the verifier is happy)
+    setlocal x (finally!)
+
+-----------------------------------------------------------------------
+
+VerifyError: Error #1030: Stack depth is unbalanced. 0 != 1.
+
+0 : local position
+1 : position I'm jumping to
+
+-----------------------------------------------------------------------
+
+Verifier is buggy:
+
+verify test.package::Main()
+                        stack:
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] 
+                         locals: test.package::Main 
+  0:getlocal0
+                        stack: test.package::Main
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] 
+                         locals: test.package::Main 
+  1:pushscope
+                        stack:
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] test.package::Main 
+                         locals: test.package::Main 
+  2:jump 7
+B0:
+                        stack:
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] test.package::Main 
+                         locals: test.package::Main? 
+  6:label
+B1:
+                        stack:
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] test.package::Main? 
+                         locals: test.package::Main? 
+  7:label
+                        stack:
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] test.package::Main? 
+                         locals: test.package::Main? 
+  8:pushfalse
+                        stack: Boolean
+                        scope: [global Object$ flash.events::EventDispatcher$ flash.display::DisplayObject$ flash.display::InteractiveObject$ flash.display::DisplayObjectContainer$ flash.display::Sprite$ flash.display::MovieClip$ test.package::Main$] test.package::Main? 
+                         locals: test.package::Main? 
+  9:iftrue 6
+VerifyError: Error #1068: test.package.Main and test.package.Main cannot be reconciled.
+
+	at test.package::Main()
+
+
+static void xx_scopetest() 
+{
+    /* findpropstrict doesn't just return a scope object- it
+       also makes it "active" somehow. Push local_0 on the
+       scope stack and read it back with findpropstrict, it'll
+       contain properties like "trace". Trying to find the same
+       property on a "vanilla" local_0 yields only a "undefined" */
+    //c = abc_findpropstrict(c, "[package]::trace");
+    
+    /*c = abc_getlocal_0(c);
+    c = abc_findpropstrict(c, "[package]::trace");
+    c = abc_coerce_a(c);
+    c = abc_setlocal_1(c);
+
+    c = abc_pushbyte(c, 0);
+    c = abc_setlocal_2(c);
+   
+    code_t*xx = c = abc_label(c);
+    c = abc_findpropstrict(c, "[package]::trace");
+    c = abc_pushstring(c, "prop:");
+    c = abc_hasnext2(c, 1, 2);
+    c = abc_dup(c);
+    c = abc_setlocal_3(c);
+    c = abc_callpropvoid(c, "[package]::trace", 2);
+    c = abc_getlocal_3(c);
+    c = abc_kill(c, 3);
+    c = abc_iftrue(c,xx);*/
+}
