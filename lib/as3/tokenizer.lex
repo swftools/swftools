@@ -481,7 +481,7 @@ void tokenizer_unregister_namespace(const char*id)
 }*/
 static inline char tokenizer_is_namespace(const char*id)
 {
-    return trie_contains(active_namespaces, id);
+    return trie_contains(active_namespaces, (const unsigned char*)id);
 }
 
 static inline int handleIdentifier()

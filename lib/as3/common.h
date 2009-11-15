@@ -24,7 +24,7 @@
 #ifndef __as3_common_h__
 #define __as3_common_h__
 
-
+extern int as3_lex();
 extern int as3_verbosity;
 extern int as3_pass;
 #define syntaxerror as3_error

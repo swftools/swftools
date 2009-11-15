@@ -919,7 +919,7 @@ static namespace_t modifiers2access(modifiers_t*mod)
             syntaxerror("invalid combination of access levels and namespaces");
         ns.access = ACCESS_NAMESPACE;
         state_t*s = state;
-        const char*url = (const char*)trie_lookup(active_namespaces, mod->ns);
+        const char*url = (const char*)trie_lookup(active_namespaces, (unsigned char*)mod->ns);
         if(!url) {
             /* shouldn't happen- the tokenizer only reports something as a namespace
                if it was already registered */
@@ -2223,10 +2223,9 @@ FOR : FOR_START FOR_INIT ';' EXPRESSION ';' VOIDEXPRESSION ')' IF_CODEBLOCK {
 }
 
 FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' IF_CODEBLOCK {
-    variable_t*var = find_variable(state, $2);
-    if(!var) {
-        syntaxerror("variable %s not known in this scope", $2);
-    }
+    node_t*n = resolve_identifier($2);
+    typedcode_t w = node_write(n);
+    
     int it = alloc_local();
     int array = alloc_local();
 
@@ -2247,8 +2246,9 @@ FOR_IN : FOR_START FOR_IN_INIT "in" EXPRESSION ')' IF_CODEBLOCK {
         $$ = abc_nextname($$);
     else
         $$ = abc_nextvalue($$);
-    $$ = converttype($$, 0, var->type);
-    $$ = abc_setlocal($$, var->index);
+
+    $$ = converttype($$, 0, w.t);
+    $$ = code_append($$, w.c);
 
     $$ = code_append($$, $6);
     $$ = abc_jump($$, loopstart);
@@ -3653,6 +3653,14 @@ MEMBER : E '.' SUBNODE {
 }
 
 %code {
+    node_t* var_read(variable_t*v)
+    {
+        typedcode_t o;
+	o.c = abc_getlocal(0, v->index);
+	o.t = v->type;
+	return mkcodenode(o);
+    }
+
     node_t* resolve_identifier(char*name)
     {
         typedcode_t o;
@@ -3666,9 +3674,7 @@ MEMBER : E '.' SUBNODE {
         /* look at variables */
         if((v = find_variable(state, name))) {
             // name is a local variable
-            o.c = abc_getlocal(o.c, v->index);
-            o.t = v->type;
-            return mkcodenode(o);
+	    return var_read(v);
         }
         if((v = find_slot(state->method, name))) {
             o.c = abc_getscopeobject(o.c, 1);
@@ -3824,7 +3830,7 @@ NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_STRING {
 }
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
     PASS12
-    trie_put(active_namespaces, $2->name, (void*)$2->url);
+    trie_put(active_namespaces, (unsigned char*)$2->name, (void*)$2->url);
 
     namespace_t access = modifiers2access(&$1);
     varinfo_t* var = varinfo_register_global(access.access, state->package, $2->name);
@@ -3867,7 +3873,7 @@ USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
         syntaxerror("%s.%s is not a namespace", $3->package, $3->name);
     url = s->value->ns->name;
 
-    trie_put(active_namespaces, $3->name, (void*)url);
+    trie_put(active_namespaces, (unsigned char*)$3->name, (void*)url);
     add_active_url(url);
     $$=0;
 }

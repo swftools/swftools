@@ -136,7 +136,7 @@ char*escape_string(const char*str)
     if(!str)
         return strdup("NULL");
     int len=0;
-    unsigned const char*s=str;
+    unsigned const char*s=(unsigned const char*)str;
     while(*s) {
         if(*s<10) {
             len+=2; // \d
@@ -151,7 +151,7 @@ char*escape_string(const char*str)
     }
     char*newstr = malloc(len+1);
     char*dest = newstr;
-    s=str;
+    s=(unsigned const char*)str;
     while(*s) {
         if(*s<9) {
             dest+=sprintf(dest, "\\%d", *s);
@@ -1117,7 +1117,7 @@ void pool_read(pool_t*pool, TAG*tag)
     DEBUG printf("%d strings\n", num_strings);
     for(t=1;t<num_strings;t++) {
 	int len = swf_GetU30(tag);
-        string_t s = string_new(&tag->data[tag->pos], len);
+        string_t s = string_new((char*)&tag->data[tag->pos], len);
 	swf_GetBlock(tag, 0, len);
 	array_append(pool->x_strings, &s, 0);
 	DEBUG printf("%d) \"%s\"\n", t, ((string_t*)array_getkey(pool->x_strings, t))->str);

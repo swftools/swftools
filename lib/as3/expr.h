@@ -141,6 +141,7 @@ node_t* mknode2(nodetype_t*t, node_t*left, node_t*right);
 node_t* mknode3(nodetype_t*t, node_t*one, node_t*two, node_t*three);
 void node_free(node_t*n);
 typedcode_t node_read(node_t*n); //read and free
+typedcode_t node_write(node_t*n); //write and free
 code_t* node_exec(node_t*n); //exec and free
 constant_t node_eval(node_t*n); //eval and free
 void node_dump(node_t*n);

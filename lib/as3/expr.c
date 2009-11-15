@@ -2636,7 +2636,16 @@ exec: node_const_exec
 
 typedcode_t node_code_write(node_t*n)
 {
-    syntaxerror("not implemented yet");
+    typedcode_t t;
+    t.c = 0;
+    int tmp = gettempvar();
+    t.c = abc_setlocal(t.c, tmp);
+    code_t*w = toreadwrite(n->code.c, abc_getlocal(0,tmp), 1, 0, 0);
+    t.c = code_append(t.c, w);
+    t.c = abc_kill(t.c, tmp);
+    n->code.c=0;
+    t.t = n->code.t;
+    return t;
 }
 typedcode_t node_code_read(node_t*n)
 {
@@ -2821,6 +2830,12 @@ typedcode_t node_read(node_t*n)
         node_free(n);
         return t;
     }
+}
+typedcode_t node_write(node_t*n)
+{
+    typedcode_t t = n->type->write(n);
+    node_free(n);
+    return t;
 }
 code_t* node_exec(node_t*n)
 {

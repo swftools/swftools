@@ -81,6 +81,7 @@ extern trie_t*active_namespaces;
 
 #include "parser.tab.h"
 
+extern char*token2string(enum yytokentype nr, YYSTYPE v);
 extern unsigned int as3_tokencount;
 
 void as3_buffer_input(void*buffer, int len);

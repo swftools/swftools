@@ -1,0 +1,19 @@
+* "push<anything>;pop" can be removed (if there's no jumppoint)
+* "push<anything>;coerce;pop" can be removed (if there's no jumppoint)
+* "getlocal_i;pop" can be removed
+* "goto next;next:" can be removed (if there's no jumppoint)
+* "setlocal_i;getlocal_i" can be changed to "dup;setlocal_i"
+* for a variable without any getlocal_i, all dup;setlocal_i can be removed
+* getlocal <i> can be changed to getlocal_i for i<4, same for setlocal
+* greater followed by iftrue can be reduced to ifgt
+* equals followed by iffalse can be reduced to ifne (etc.)
+* callproperty;(coerce);pop can changed to callpropvoid
+* label can be removed
+* "getlocal_i;setlocal_i" can be removed
+* "dup;xxx;pop" can be reduced to xxx (xxx=setlocal_i, setglobalslot, pushscope)
+* "getlocal_i;increment;setlocal_i" can be replaced by inclocal_i
+* [iffalse xx;jump yy;xx: -> iftrue yy]
+* a jump to a jump can be redirected
+* sort variable indices by usage
+* coerce*;returnvalue can be reduced to returnvalue
+* setlocal_i;getlocal_j;getlocal_i can be changed to dup;setlocal_i;getlocal_j,swap (makes it possible to remove i if not otherwise used)

@@ -32,6 +32,7 @@
 
 #include "../config.h"
 
+#include <stdlib.h>
 #include <string.h>
 #include <memory.h>
 
@@ -54,17 +55,16 @@
 #endif
 #endif
 
-typedef long unsigned int u_int32_t;
-typedef long long unsigned int u_int64_t;
-typedef unsigned char u_int8_t;
+#include "types.h"
+
 typedef unsigned int u_int;
 typedef unsigned long u_long;
 typedef unsigned char u_char;
 
 typedef struct {
 	union {
-		u_int32_t	md5_state32[4];
-		u_int8_t	md5_state8[16];
+		U32	md5_state32[4];
+		U8	md5_state8[16];
 	} md5_st;
 
 #define md5_sta		md5_st.md5_state32[0]
@@ -74,20 +74,20 @@ typedef struct {
 #define md5_st8		md5_st.md5_state8
 
 	union {
-		u_int64_t	md5_count64;
-		u_int8_t	md5_count8[8];
+		U64	md5_count64;
+		U8	md5_count8[8];
 	} md5_count;
 #define md5_n	md5_count.md5_count64
 #define md5_n8	md5_count.md5_count8
 
 	u_int	md5_i;
-	u_int8_t	md5_buf[MD5_BUFLEN];
+	U8	md5_buf[MD5_BUFLEN];
 } md5_ctxt;
 
 static void md5_init(md5_ctxt *);
-static void md5_loop(md5_ctxt *, const u_int8_t *, u_int);
+static void md5_loop(md5_ctxt *, const U8 *, u_int);
 static void md5_pad(md5_ctxt *);
-static void md5_result(u_int8_t *, md5_ctxt *);
+static void md5_result(U8 *, md5_ctxt *);
 
 /* compatibility */
 #define MD5_CTX		md5_ctxt
@@ -391,7 +391,7 @@ char * crypt_md5(const char *pw, const char *salt)
 #define MD5_D0	0x10325476
 
 /* Integer part of 4294967296 times abs(sin(i)), where i is in radians. */
-static const u_int32_t T[65] = {
+static const U32 T[65] = {
 	0,
 	0xd76aa478, 	0xe8c7b756,	0x242070db,	0xc1bdceee,
 	0xf57c0faf,	0x4787c62a, 	0xa8304613,	0xfd469501,
@@ -414,7 +414,7 @@ static const u_int32_t T[65] = {
 	0xf7537e82, 	0xbd3af235, 	0x2ad7d2bb, 	0xeb86d391,
 };
 
-static const u_int8_t md5_paddat[MD5_BUFLEN] = {
+static const U8 md5_paddat[MD5_BUFLEN] = {
 	0x80,	0,	0,	0,	0,	0,	0,	0,
 	0,	0,	0,	0,	0,	0,	0,	0,
 	0,	0,	0,	0,	0,	0,	0,	0,
@@ -425,7 +425,7 @@ static const u_int8_t md5_paddat[MD5_BUFLEN] = {
 	0,	0,	0,	0,	0,	0,	0,	0,	
 };
 
-static void md5_calc(u_int8_t *, md5_ctxt *);
+static void md5_calc(U8 *, md5_ctxt *);
 
 static void md5_init(md5_ctxt *ctxt)
 {
@@ -438,7 +438,7 @@ static void md5_init(md5_ctxt *ctxt)
 	bzero(ctxt->md5_buf, sizeof(ctxt->md5_buf));
 }
 
-static void md5_loop(md5_ctxt *ctxt, const u_int8_t *input, u_int len)
+static void md5_loop(md5_ctxt *ctxt, const U8 *input, u_int len)
 {
 	u_int gap, i;
 
@@ -451,7 +451,7 @@ static void md5_loop(md5_ctxt *ctxt, const u_int8_t *input, u_int len)
 		md5_calc(ctxt->md5_buf, ctxt);
 
 		for (i = gap; i + MD5_BUFLEN <= len; i += MD5_BUFLEN) {
-			md5_calc((u_int8_t *)(input + i), ctxt);
+			md5_calc((U8 *)(input + i), ctxt);
 		}
 		
 		ctxt->md5_i = len - i;
@@ -501,7 +501,7 @@ static void md5_pad(md5_ctxt *ctxt)
 	md5_calc(ctxt->md5_buf, ctxt);
 }
 
-static void md5_result(u_int8_t *digest, md5_ctxt *ctxt)
+static void md5_result(U8 *digest, md5_ctxt *ctxt)
 {
 	/* 4 byte words */
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -519,20 +519,20 @@ static void md5_result(u_int8_t *digest, md5_ctxt *ctxt)
 #endif
 }
 
-static void md5_calc(u_int8_t *b64, md5_ctxt *ctxt)
+static void md5_calc(U8 *b64, md5_ctxt *ctxt)
 {
-	u_int32_t A = ctxt->md5_sta;
-	u_int32_t B = ctxt->md5_stb;
-	u_int32_t C = ctxt->md5_stc;
-	u_int32_t D = ctxt->md5_std;
+	U32 A = ctxt->md5_sta;
+	U32 B = ctxt->md5_stb;
+	U32 C = ctxt->md5_stc;
+	U32 D = ctxt->md5_std;
 #if BYTE_ORDER == LITTLE_ENDIAN
-	u_int32_t *X = (u_int32_t *)b64;
+	U32 *X = (U32 *)b64;
 #endif	
 #if BYTE_ORDER == BIG_ENDIAN
-	u_int32_t X[16];
+	U32 X[16];
 	/* 4 byte words */
 	/* what a brute force but fast! */
-	u_int8_t *y = (u_int8_t *)X;
+	U8 *y = (U8 *)X;
 	y[ 0] = b64[ 3]; y[ 1] = b64[ 2]; y[ 2] = b64[ 1]; y[ 3] = b64[ 0];
 	y[ 4] = b64[ 7]; y[ 5] = b64[ 6]; y[ 6] = b64[ 5]; y[ 7] = b64[ 4];
 	y[ 8] = b64[11]; y[ 9] = b64[10]; y[10] = b64[ 9]; y[11] = b64[ 8];

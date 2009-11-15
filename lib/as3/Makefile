@@ -20,7 +20,7 @@ main.o: main.c parser.tab.h parser.h
 mklib.o: mklib.c parser.tab.h parser.h
 	$(C) mklib.c -o mklib.o
 
-parser: main.o tokenizer.yy.o ../librfxswf.a ../libbase.a parser.tab.h 
+parser: main.o tokenizer.yy.c ../librfxswf.a ../libbase.a parser.tab.h 
 	$(L) main.o ../librfxswf.a ../libbase.a -o parser -lz
 
 rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o $(MODULES)

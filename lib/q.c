@@ -374,7 +374,7 @@ static char _trie_put(trielayer_t**t, unsigned const char*id, void*data)
 {
     if(!*t) {
         (*t) = rfx_calloc(sizeof(trielayer_t));
-        (*t)->rest = (unsigned char*)strdup(id);
+        (*t)->rest = (unsigned char*)strdup((char*)id);
         (*t)->data = data;
         return 0;
     } 
@@ -389,7 +389,7 @@ static char _trie_put(trielayer_t**t, unsigned const char*id, void*data)
         char overwrite = 0;
         if((*t)->rest) 
             overwrite = 1;
-        (*t)->rest = strdup("");
+        (*t)->rest = (unsigned char*)strdup("");
         (*t)->data = data;
         return overwrite;
     }
@@ -397,7 +397,7 @@ static char _trie_put(trielayer_t**t, unsigned const char*id, void*data)
 static char _trie_remove(trielayer_t*t, unsigned const char*id)
 {
     while(t) {
-        if(t->rest && !strcmp(t->rest, id)) {
+        if(t->rest && !strcmp((char*)t->rest, (char*)id)) {
             free(t->rest);
             t->rest = 0;
             return 1;
@@ -443,7 +443,7 @@ int trie_contains(trie_t*trie, unsigned const char*id)
 {
     trielayer_t*t = trie->start;
     while(t) {
-        if(t->rest && !strcmp(t->rest, id))
+        if(t->rest && !strcmp((char*)t->rest, (char*)id))
             return 1;
         if(!*id) 
             return 0;
@@ -455,7 +455,7 @@ void* trie_lookup(trie_t*trie, unsigned const char*id)
 {
     trielayer_t*t = trie->start;
     while(t) {
-        if(t->rest && !strcmp(t->rest, id))
+        if(t->rest && !strcmp((char*)t->rest, (char*)id))
             return t->data;
         if(!*id) 
             return 0;
