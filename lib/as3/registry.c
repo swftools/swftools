@@ -379,7 +379,7 @@ classinfo_t* slotinfo_gettype(slotinfo_t*f)
 }
 
 // ----------------------- package handling ---------------------------
-char registry_ispackage(char*package)
+char registry_ispackage(const char*package)
 {
     /* crude approximation of "the real thing", but sufficient for now */
     return !strncmp(package, "flash", 5);

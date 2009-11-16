@@ -487,6 +487,7 @@ char* access2str(int type)
     else if(type==0x19) return "explicit";
     else if(type==0x1A) return "staticprotected";
     else if(type==0x05) return "private";
+    else if(type==0x00) return "any";
     else {
         fprintf(stderr, "Undefined access type %02x\n", type);
         return "undefined";
@@ -902,7 +903,7 @@ int pool_register_namespace(pool_t*pool, namespace_t*ns)
 {
     if(!ns) return 0;
     int pos = array_append_or_increase(pool->x_namespaces, ns);
-    assert(pos!=0);
+    assert(pos!=0 || ns->access==ZERONAMESPACE);
     return pos;
 }
 int pool_register_namespace_set(pool_t*pool, namespace_set_t*set)
@@ -962,7 +963,7 @@ int pool_find_namespace(pool_t*pool, namespace_t*ns)
     if(!ns)
         return 0;
     int i = array_find(pool->x_namespaces, ns);
-    if(i<=0) {
+    if(i<0) {
         char*s = namespace_tostring(ns);
         fprintf(stderr, "Couldn't find namespace \"%s\" %08x in constant pool\n", s, ns);
         free(s);
@@ -1048,6 +1049,7 @@ multiname_t*pool_lookup_multiname(pool_t*pool, int i)
     return (multiname_t*)array_getkey(pool->x_multinames, i);
 }
 
+static namespace_t zeronamespace={ZERONAMESPACE,"*"};
 pool_t*pool_new()
 {
     NEW(pool_t, p);
@@ -1066,7 +1068,7 @@ pool_t*pool_new()
     array_append(p->x_uints, 0, 0);
     array_append(p->x_floats, 0, 0);
     array_append(p->x_strings, 0, 0);
-    array_append(p->x_namespaces, 0, 0);
+    array_append(p->x_namespaces, &zeronamespace, 0);
     array_append(p->x_namespace_sets, 0, 0);
     array_append(p->x_multinames, 0, 0);
     return p;

@@ -635,7 +635,7 @@ typedef struct _variable {
     methodstate_t*is_inner_method;
 } variable_t;
 
-static variable_t* find_variable(state_t*s, char*name)
+static variable_t* find_variable(state_t*s, const char*name)
 {
     if(s->method->no_variable_scoping) {
         return dict_lookup(s->allvars, name);
@@ -3509,29 +3509,46 @@ ID_OR_NS : T_NAMESPACE {$$=(char*)$1;}
 SUBNODE: X_IDENTIFIER
        | '*' {$$="*";}
 
-/*
-MAYBE_NS: T_IDENTIFIER "::" {$$=$1;}
-        | T_NAMESPACE "::" {$$=(char*)$1;}
-        | '*' "::" {$$="*";}
-        | {$$=0;}*/
+%code {
+    node_t* resolve_identifier(const char*name);
+    node_t* get_descendants(node_t*e,const char*ns,const char*subnode,char multi, char attr)
+    {
+	typedcode_t v = node_read(e);
+	typedcode_t w;
+
+	multiname_t m = {0,0,0,subnode};
+	namespace_t zero = {ZERONAMESPACE,"*"};
+	if(!strcmp(ns,"*")) {
+	    m.ns = &zero;
+	    m.type = attr?QNAMEA:QNAME;
+	} else {
+	    typedcode_t w = node_read(resolve_identifier(ns));
+	    if(!TYPE_IS_NAMESPACE(w.t)) {
+		as3_softwarning("%s might not be a namespace", ns);
+	    }
+	    v.c = code_append(v.c, w.c);
+	    v.c = converttype(v.c, w.t, TYPE_NAMESPACE);
+	    m.type = attr?RTQNAMEA:RTQNAME;
+	}
+
+	if(!multi) {
+	    v.c = abc_getproperty2(v.c, &m);
+	} else {
+	    v.c = abc_getdescendants2(v.c, &m);
+	}
+
+	if(TYPE_IS_XML(v.t)) {
+	    v.t = TYPE_XMLLIST;
+	} else {
+	    v.c = abc_coerce_a(v.c);
+	    v.t = TYPE_ANY;
+	}
+	return mkcodenode(v);
+    }
+};
 
 E : E '.' ID_OR_NS "::" SUBNODE {
-    typedcode_t v = node_read($1);
-    typedcode_t w = node_read(resolve_identifier($3));
-    v.c = code_append(v.c, w.c);
-    if(!TYPE_IS_NAMESPACE(w.t)) {
-        as3_softwarning("%s might not be a namespace", $3);
-    }
-    v.c = converttype(v.c, w.t, TYPE_NAMESPACE);
-    multiname_t m = {RTQNAME, 0, 0, $5};
-    v.c = abc_getproperty2(v.c, &m);
-    if(TYPE_IS_XML(v.t)) {
-        v.t = TYPE_XMLLIST;
-    } else {
-        v.c = abc_coerce_a(v.c);
-        v.t = TYPE_ANY;
-    }
-    $$ = mkcodenode(v);
+    $$ = get_descendants($1, $3, $5, 0, 0);
 }
 E : E ".." SUBNODE {
     typedcode_t v = node_read($1);
@@ -3539,6 +3556,9 @@ E : E ".." SUBNODE {
     v.c = abc_getdescendants2(v.c, &m);
     v.t = TYPE_XMLLIST;
     $$ = mkcodenode(v);
+}
+E : E ".." ID_OR_NS "::" SUBNODE {
+    $$ = get_descendants($1, $3, $5, 1, 0);
 }
 E : E '.' '[' E ']' {
     typedcode_t v = node_read($1);
@@ -3558,6 +3578,11 @@ E : E '.' '@' SUBNODE {
     v.t = TYPE_STRING;
     $$ = mkcodenode(v);
 }
+
+E : E '.' '@' ID_OR_NS "::" SUBNODE {
+    $$ = get_descendants($1, $4, $6, 0, 1);
+}
+
 E : E ".." '@' SUBNODE {
     typedcode_t v = node_read($1);
     multiname_t m = {MULTINAMEA, 0, &nopackage_namespace_set, $4};
@@ -3565,6 +3590,10 @@ E : E ".." '@' SUBNODE {
     v.t = TYPE_STRING;
     $$ = mkcodenode(v);
 }
+E : E ".." '@' ID_OR_NS "::" SUBNODE {
+    $$ = get_descendants($1, $4, $6, 1, 1);
+}
+
 E : E '.' '@' '[' E ']' {
     typedcode_t v = node_read($1);
     typedcode_t w = node_read($5);
@@ -3660,7 +3689,7 @@ MEMBER : E '.' SUBNODE {
 	return mkcodenode(o);
     }
 
-    node_t* resolve_identifier(char*name)
+    node_t* resolve_identifier(const char*name)
     {
         typedcode_t o;
         o.t = 0;
@@ -3749,7 +3778,7 @@ MEMBER : E '.' SUBNODE {
         if(!state->xmlfilter && 
            (dict_contains(state->import_toplevel_packages, name) || 
             registry_ispackage(name))) {
-            o.c = abc___pushpackage__(o.c, name);
+            o.c = abc___pushpackage__(o.c, (char*)name);
             o.t = 0;
             return mkcodenode(o); //?
         }
@@ -3856,8 +3885,9 @@ NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
 
 DEFAULT_NAMESPACE : "default xml" "namespace" '=' E 
 {
-    as3_warning("default xml namespaces not supported yet");
     $$ = 0;
+    $$ = code_append($$, node_read($4).c);
+    $$ = abc_dxnslate($$);
 }
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {

@@ -36,6 +36,7 @@ package {
             assert(x.test == "P2")
 
             assert(x.*::* == (x.ns1::*+x.ns2::*+x.ns3::*))
+	    //attribute with a namespace:
             assert(x..@*::* == "b");
 
             x.ns2::test = x.ns3::test;

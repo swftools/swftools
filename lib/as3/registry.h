@@ -147,7 +147,7 @@ classinfo_t* slotinfo_gettype(slotinfo_t*);
 
 namespace_t access2namespace(U8 access, char*package);
 
-char registry_ispackage(char*package);
+char registry_ispackage(const char*package);
 
 // static multinames
 classinfo_t* registry_getanytype();

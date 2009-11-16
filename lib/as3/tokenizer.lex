@@ -534,7 +534,7 @@ XMLID       [A-Za-z0-9_\x80-\xff]+([:][A-Za-z0-9_\x80-\xff]+)?
 XMLSTRING   ["][^"]*["]
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
-S 	 [ \n\r\t\xa0]
+S 	 ([ \n\r\t\xa0]|\xc2\xa0)
 MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n\r]*[\n\r]
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
@@ -731,7 +731,7 @@ static int tokenerror()
     if(c1>='0' && c1<='9')
         syntaxerror("syntax error: %s (identifiers must not start with a digit)");
     else
-        syntaxerror("syntax error [%d]: %s", (yy_start-1)/2, buf);
+        syntaxerror("syntax error [state=%d]: %s", (yy_start-1)/2, buf);
     printf("\n");
     exit(1);
     yyterminate();
