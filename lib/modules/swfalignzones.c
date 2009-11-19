@@ -238,7 +238,7 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	    printf("[font %d] pairing %c with ", f->id, f->glyph2ascii[t]);
 	    for(s=0;s<f->use->num_neighbors;s++) {
 		if(f->use->neighbors[s].char2 == t) {
-		    printf("%c ", f->glyph2ascii[f->use->neighbors[s].char1]);
+		    printf("%c (%d) ", f->glyph2ascii[f->use->neighbors[s].char1], f->use->neighbors[s].num);
 		    draw_char(f, f->use->neighbors[s].char1, row, column, bounds);
 		    drawn++;
 		}

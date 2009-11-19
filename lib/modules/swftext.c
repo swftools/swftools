@@ -967,17 +967,19 @@ void swf_FontUsePair(SWFFONT * f, int char1, int char2)
 	}
     }
 
-    if(!swf_FontUseGetPair(f, char1, char2)) {
+    int nr = swf_FontUseGetPair(f, char1, char2);
+    if(!nr) {
 	if(u->num_neighbors == u->neighbors_size) {
 	    u->neighbors_size += 4096;
 	    u->neighbors = rfx_realloc(u->neighbors, sizeof(SWFGLYPHPAIR)*u->neighbors_size);
 	}
 	u->neighbors[u->num_neighbors].char1 = char1;
 	u->neighbors[u->num_neighbors].char2 = char2;
+	u->neighbors[u->num_neighbors].num = 1;
 	hashadd(u, char1, char2, u->num_neighbors);
 	u->num_neighbors++;
     } else {
-	// increase?
+	u->neighbors[nr-1].num++;
     }
 }
 

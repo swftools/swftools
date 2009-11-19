@@ -534,6 +534,7 @@ typedef struct _SWFGLYPHPAIR
 {
     U16 char1;
     U16 char2;
+    int num;
 } SWFGLYPHPAIR;
 
 typedef struct _FONTUSAGE
