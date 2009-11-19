@@ -625,6 +625,12 @@ static void font_freeusage(SWFFONT*f)
 	if(f->use->chars) {
 	    rfx_free(f->use->chars);f->use->chars = 0;
 	}
+	if(f->use->neighbors) {
+	    rfx_free(f->use->neighbors);f->use->neighbors = 0;
+	}
+	if(f->use->neighbors_hash) {
+	    rfx_free(f->use->neighbors_hash);f->use->neighbors_hash = 0;
+	}
 	rfx_free(f->use); f->use = 0;
     }
 }
@@ -851,12 +857,9 @@ int swf_FontInitUsage(SWFFONT * f)
 	fprintf(stderr, "Usage initialized twice");
 	return -1;
     }
-    f->use = (FONTUSAGE*)rfx_alloc(sizeof(FONTUSAGE));
-    f->use->is_reduced = 0;
+    f->use = (FONTUSAGE*)rfx_calloc(sizeof(FONTUSAGE));
     f->use->smallest_size = 0xffff;
-    f->use->used_glyphs = 0;
     f->use->chars = (int*)rfx_calloc(sizeof(f->use->chars[0]) * f->numchars);
-    f->use->glyphs_specified = 0;
     return 0;
 }
 
@@ -904,6 +907,78 @@ int swf_FontUseAll(SWFFONT* f)
     	f->use->chars[i] = 1;
     f->use->used_glyphs = f->numchars;
     return 0;
+}
+
+static unsigned hash2(int char1, int char2)
+{
+    unsigned hash = char1^(char2<<8);
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
+}
+static void hashadd(FONTUSAGE*u, int char1, int char2, int nr)
+{
+    unsigned hash = hash2(char1, char2);
+    while(1) {
+	hash = hash%u->neighbors_hash_size;
+	if(!u->neighbors_hash[hash]) {
+	   u->neighbors_hash[hash] = nr+1;
+	   return;
+	}
+	hash++;
+    }
+}
+int swf_FontUseGetPair(SWFFONT * f, int char1, int char2)
+{
+    FONTUSAGE*u = f->use;
+    if(!u || !u->neighbors_hash_size) 
+	return 0;
+    unsigned hash = hash2(char1, char2);
+    while(1) {
+	hash = hash%u->neighbors_hash_size;
+	int pos = u->neighbors_hash[hash];
+	if(!pos)
+	    return 0;
+	if(pos && 
+	   u->neighbors[pos-1].char1 == char1 &&
+	   u->neighbors[pos-1].char2 == char2) {
+	    return pos;
+	}
+	hash++;
+    }
+
+}
+void swf_FontUsePair(SWFFONT * f, int char1, int char2)
+{
+    if (!f->use)
+	swf_FontInitUsage(f);
+    FONTUSAGE*u = f->use;
+
+    if(u->num_neighbors*3 >= u->neighbors_hash_size*2) {
+	if(u->neighbors_hash) {
+	    free(u->neighbors_hash);
+	}
+	u->neighbors_hash_size = u->neighbors_hash_size?u->neighbors_hash_size*2:1024;
+	u->neighbors_hash = rfx_calloc(u->neighbors_hash_size*sizeof(int));
+	int t;
+	for(t=0;t<u->num_neighbors;t++) {
+	    hashadd(u, u->neighbors[t].char1, u->neighbors[t].char2, t);
+	}
+    }
+
+    if(!swf_FontUseGetPair(f, char1, char2)) {
+	if(u->num_neighbors == u->neighbors_size) {
+	    u->neighbors_size += 4096;
+	    u->neighbors = rfx_realloc(u->neighbors, sizeof(SWFGLYPHPAIR)*u->neighbors_size);
+	}
+	u->neighbors[u->num_neighbors].char1 = char1;
+	u->neighbors[u->num_neighbors].char2 = char2;
+	hashadd(u, char1, char2, u->num_neighbors);
+	u->num_neighbors++;
+    } else {
+	// increase?
+    }
 }
 
 int swf_FontUseGlyph(SWFFONT * f, int glyph, U16 size)

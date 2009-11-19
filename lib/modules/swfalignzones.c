@@ -40,7 +40,7 @@ static void find_best(float*_row, int width, int*_x1, int*_x2, int min_size, int
     float max1=-1e20,max2=-1e20;
     int t;
     float*row = malloc(sizeof(float)*(width+1));
-    int filter_size = 20;
+    int filter_size = 10;
     float* filter = malloc(sizeof(float)*(filter_size*2+1));
     double var = filter_size/3;
     for(t=-filter_size;t<=filter_size;t++) {
@@ -169,7 +169,7 @@ static ALIGNZONE detect_for_char(SWFFONT * f, int nr, float*row, float*column, S
     /* find two best x values */
     int x1=-1,y1=-1,x2=-1,y2=-1;
 
-    int nr_x = 1;
+    int nr_x = 0;
     find_best(row, width, &x1, &x2, f->use->smallest_size, 
 		char_bbox.xmin - font_bbox.xmin,
 		char_bbox.xmax - font_bbox.xmin, nr_x,
@@ -210,9 +210,8 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	    f->alignzones[t].dy = 0xffff;//floatToF16(460.80 / 1024.0);
 	}
     } else {
-	int t;
 	SRECT bounds = {0,0,0,0};
-	
+	int t;
 	for(t=0;t<f->numchars;t++) {
 	    SRECT b = f->layout->bounds[t];
 	    negate_y(&b);
@@ -231,7 +230,25 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	for(t=0;t<=height;t++) {column_global[t]/=f->numchars/2;}
 
 	for(t=0;t<f->numchars;t++) {
-	    memcpy(column, column_global, sizeof(float)*(height+1));
+	    //memcpy(column, column_global, sizeof(float)*(height+1));
+
+	    memset(column, 0, sizeof(float)*(height+1));
+	    int s;
+	    int drawn = 0;
+	    printf("[font %d] pairing %c with ", f->id, f->glyph2ascii[t]);
+	    for(s=0;s<f->use->num_neighbors;s++) {
+		if(f->use->neighbors[s].char2 == t) {
+		    printf("%c ", f->glyph2ascii[f->use->neighbors[s].char1]);
+		    draw_char(f, f->use->neighbors[s].char1, row, column, bounds);
+		    drawn++;
+		}
+	    }
+	    printf("\n");
+
+	    for(s=0;s<=height;s++) {
+		column[t] /= drawn*2;
+	    }
+
 	    memset(row, 0, sizeof(float)*(width+1));
 	    draw_char(f, t, row, column, bounds);
 	    

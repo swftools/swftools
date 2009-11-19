@@ -623,6 +623,7 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
     int lastx;
     int lasty;
     int lastsize;
+    int lastchar;
     int charids[128];
     int charadvance[128];
     int charstorepos;
@@ -646,6 +647,7 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
         lastx = CHARMIDX;
         lasty = CHARMIDY;
         lastsize = -1;
+	lastchar = -1;
 
         if(pass==1)
         {
@@ -670,9 +672,9 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
 
 		charatposition_t*chr = &chardata->chr[t];
 
-		if(lastfont != chardata->chr[t].font || 
-			lastx!=chardata->chr[t].x ||
-			lasty!=chardata->chr[t].y ||
+		if(lastfont != chr->font || 
+			lastx!=chr->x ||
+			lasty!=chr->y ||
 			!colorcompare(&color, &chardata->chr[t].color) ||
 			charstorepos==127 ||
 			lastsize != chardata->chr[t].size ||
@@ -736,6 +738,12 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
 		    lastx = chr->x;
 		    lasty = chr->y;
 		    lastsize = chr->size;
+		} else {
+		    assert(lastchar>=0);
+		    if(pass==1 && lastchar!=chr->charid) {
+			swf_FontUsePair(chr->font, lastchar, chr->charid);
+			swf_FontUsePair(chr->font, chr->charid, lastchar);
+		    }
 		}
 
 		if(islast)
@@ -745,7 +753,7 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
 		if(t<chardata->pos-1) nextx = chardata->chr[t+1].x;
 		if(t==chardata->pos-1 && chardata->next) nextx = chardata->next->chr[0].x;
 		int dx = nextx-chr->x;
-
+		
 		int advance;
 		if(dx>=0 && (dx<(1<<(advancebits-1)) || pass==0)) {
 		   advance = dx;
@@ -754,8 +762,10 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
 		   advance = 0;
 		   lastx=chr->x;
 		}
+
 		charids[charstorepos] = chr->charid;
 		charadvance[charstorepos] = advance;
+		lastchar = chr->charid;
 		charstorepos ++;
 	    }
 	    chardata = chardata->next;

@@ -530,12 +530,24 @@ typedef struct
   SHAPE *     shape;
 } SWFGLYPH;
 
+typedef struct _SWFGLYPHPAIR
+{
+    U16 char1;
+    U16 char2;
+} SWFGLYPHPAIR;
+
 typedef struct _FONTUSAGE
 { int* chars;
   char is_reduced;
   int used_glyphs;
   int glyphs_specified;
   U16 smallest_size;
+
+  SWFGLYPHPAIR* neighbors;
+  int num_neighbors;
+  int neighbors_size;
+  int* neighbors_hash;
+  int neighbors_hash_size;
 } FONTUSAGE;
 
 #define FONT_STYLE_BOLD 1
@@ -631,6 +643,8 @@ int swf_FontReduce_swfc(SWFFONT * f);
 
 int swf_FontInitUsage(SWFFONT * f);
 int swf_FontUseGlyph(SWFFONT * f, int glyph, U16 size);
+void swf_FontUsePair(SWFFONT * f, int char1, int char2);
+int swf_FontUseGetPair(SWFFONT * f, int char1, int char2);
 int swf_FontUseAll(SWFFONT* f);
 int swf_FontUseUTF8(SWFFONT * f, U8 * s, U16 size);
 int swf_FontUse(SWFFONT* f,U8 * s);
