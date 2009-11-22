@@ -1468,7 +1468,7 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
                     variable_t*v = dict_lookup(state->allvars, vname);
                     if(!v->is_inner_method) {
                         state->method->no_variable_scoping = 1;
-                        as3_warning("function %s uses forward or outer block variable references (%s): switching into compatiblity mode", name, vname);
+                        as3_warning("function %s uses forward or outer block variable references (%s): switching into compatibility mode", name, vname);
                     }
                 }
             }
@@ -2636,6 +2636,7 @@ CLASS_BODY_ITEM : ';'
 CLASS_BODY_ITEM : CONDITIONAL_COMPILATION '{' MAYBE_CLASS_BODY '}' {PASS_ALWAYS as3_pass=$1;}
 CLASS_BODY_ITEM : SLOT_DECLARATION
 CLASS_BODY_ITEM : FUNCTION_DECLARATION
+CLASS_BODY_ITEM : '[' EMBED_START E ']' {PASS_ALWAYS as3_pass=$2;PASS1 as3_warning("embed command ignored");}
 
 CLASS_BODY_ITEM : CODE_STATEMENT {
     code_t*c = state->cls->static_init->header;
@@ -3817,6 +3818,7 @@ VAR_READ : T_NAMESPACE {
     PASS2 
     $$ = resolve_identifier($1);
 }
+
 VAR_READ : T_IDENTIFIER {
     PASS1
     /* Queue unresolved identifiers for checking against the parent
