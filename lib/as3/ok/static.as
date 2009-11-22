@@ -41,8 +41,8 @@ package {
             if(TextEvent.TEXT_INPUT == "textInput") 
                 trace("ok 10/12");
 
-            trace(this.ok11);
-            trace("ok "+Main.ok11+"/12");
+            trace(Main.ok11);
+            trace("ok "+ok11+"/12");
 
             trace("[exit]");
         }

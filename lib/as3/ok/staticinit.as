@@ -32,6 +32,7 @@ package {
         function Main() {
             fptr();
             trace(c2);
+	    trace("[exit]");
         }
     }
 }

@@ -3714,55 +3714,65 @@ MEMBER : E '.' SUBNODE {
 
         int i_am_static = state->method->is_static;
 
-        /* look at current class' members */
-        if(!state->method->inner && 
-           !state->xmlfilter &&
-            state->cls && 
-            (f = findmember_nsset(state->cls->info, name, 1, i_am_static)))
-        {
-            // name is a member or attribute in this class
-            int var_is_static = (f->flags&FLAG_STATIC);
+        if(!state->method->inner && !state->xmlfilter && state->cls)
+	{
+	    /* look at current class' members */
+	    if((f = findmember_nsset(state->cls->info, name, 1, i_am_static)))
+	    {
+		// name is a member or attribute in this class
+		int var_is_static = (f->flags&FLAG_STATIC);
 
-            if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
-                /* if the variable is a constant (and we know what is evaluates to), we
-                   can just use the value itself */
-                varinfo_t*v = (varinfo_t*)f;
-                if(v->value) {
-                    return mkconstnode(v->value);
-                }
-            }
-           
-            if(var_is_static >= i_am_static) {
-                if(f->kind == INFOTYPE_METHOD) {
-                    o.t = TYPE_FUNCTION(f);
-                } else {
-                    o.t = f->type;
-                }
+		if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
+		    /* if the variable is a constant (and we know what is evaluates to), we
+		       can just use the value itself */
+		    varinfo_t*v = (varinfo_t*)f;
+		    if(v->value) {
+			return mkconstnode(v->value);
+		    }
+		}
+	       
+		if(var_is_static >= i_am_static) {
+		    if(f->kind == INFOTYPE_METHOD) {
+			o.t = TYPE_FUNCTION(f);
+		    } else {
+			o.t = f->type;
+		    }
 
-                if(var_is_static && !i_am_static) {
-                /* access to a static member from a non-static location.
-                   do this via findpropstrict:
-                   there doesn't seem to be any non-lookup way to access
-                   static properties of a class */
-                    state->method->late_binding = 1;
-                    o.t = f->type;
-                    namespace_t ns = {f->access, f->package};
-                    multiname_t m = {QNAME, &ns, 0, name};
-                    o.c = abc_findpropstrict2(o.c, &m);
-                    o.c = abc_getproperty2(o.c, &m);
-                    return mkcodenode(o);
-                } else if(f->slot>0) {
-                    o.c = abc_getlocal_0(o.c);
-                    o.c = abc_getslot(o.c, f->slot);
-                    return mkcodenode(o);
-                } else {
-                    MEMBER_MULTINAME(m, f, name);
-                    o.c = abc_getlocal_0(o.c);
-                    o.c = abc_getproperty2(o.c, &m);
-                    return mkcodenode(o);
-                }
-            }
-        } 
+		    if(var_is_static && !i_am_static) {
+		    /* access to a static member from a non-static location.
+		       do this via findpropstrict:
+		       there doesn't seem to be any non-lookup way to access
+		       static properties of a class */
+			state->method->late_binding = 1;
+			o.t = f->type;
+			namespace_t ns = {f->access, f->package};
+			multiname_t m = {QNAME, &ns, 0, name};
+			o.c = abc_findpropstrict2(o.c, &m);
+			o.c = abc_getproperty2(o.c, &m);
+			return mkcodenode(o);
+		    } else if(f->slot>0) {
+			o.c = abc_getlocal_0(o.c);
+			o.c = abc_getslot(o.c, f->slot);
+			return mkcodenode(o);
+		    } else {
+			MEMBER_MULTINAME(m, f, name);
+			o.c = abc_getlocal_0(o.c);
+			o.c = abc_getproperty2(o.c, &m);
+			return mkcodenode(o);
+		    }
+		}
+	    } 
+	    /* special case: it's allowed to access non-static constants
+	       from a static context */
+	    if(i_am_static && (f=findmember_nsset(state->cls->info, name, 1, 0))) {
+		if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
+		    varinfo_t*v = (varinfo_t*)f;
+		    if(v->value) {
+			return mkconstnode(v->value);
+		    }
+		}
+	    }
+	}
         
         /* look at actual classes, in the current package and imported */
         if(!state->xmlfilter && (a = find_class(name))) {

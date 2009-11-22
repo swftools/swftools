@@ -2169,55 +2169,65 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
         int i_am_static = state->method->is_static;
 
-        /* look at current class' members */
-        if(!state->method->inner && 
-           !state->xmlfilter &&
-            state->cls && 
-            (f = findmember_nsset(state->cls->info, name, 1, i_am_static)))
-        {
-            // name is a member or attribute in this class
-            int var_is_static = (f->flags&FLAG_STATIC);
+        if(!state->method->inner && !state->xmlfilter && state->cls)
+	{
+	    /* look at current class' members */
+	    if((f = findmember_nsset(state->cls->info, name, 1, i_am_static)))
+	    {
+		// name is a member or attribute in this class
+		int var_is_static = (f->flags&FLAG_STATIC);
 
-            if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
-                /* if the variable is a constant (and we know what is evaluates to), we
-                   can just use the value itself */
-                varinfo_t*v = (varinfo_t*)f;
-                if(v->value) {
-                    return mkconstnode(v->value);
-                }
-            }
-           
-            if(var_is_static >= i_am_static) {
-                if(f->kind == INFOTYPE_METHOD) {
-                    o.t = TYPE_FUNCTION(f);
-                } else {
-                    o.t = f->type;
-                }
+		if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
+		    /* if the variable is a constant (and we know what is evaluates to), we
+		       can just use the value itself */
+		    varinfo_t*v = (varinfo_t*)f;
+		    if(v->value) {
+			return mkconstnode(v->value);
+		    }
+		}
+	       
+		if(var_is_static >= i_am_static) {
+		    if(f->kind == INFOTYPE_METHOD) {
+			o.t = TYPE_FUNCTION(f);
+		    } else {
+			o.t = f->type;
+		    }
 
-                if(var_is_static && !i_am_static) {
-                /* access to a static member from a non-static location.
-                   do this via findpropstrict:
-                   there doesn't seem to be any non-lookup way to access
-                   static properties of a class */
-                    state->method->late_binding = 1;
-                    o.t = f->type;
-                    namespace_t ns = {f->access, f->package};
-                    multiname_t m = {QNAME, &ns, 0, name};
-                    o.c = abc_findpropstrict2(o.c, &m);
-                    o.c = abc_getproperty2(o.c, &m);
-                    return mkcodenode(o);
-                } else if(f->slot>0) {
-                    o.c = abc_getlocal_0(o.c);
-                    o.c = abc_getslot(o.c, f->slot);
-                    return mkcodenode(o);
-                } else {
-                    MEMBER_MULTINAME(m, f, name);
-                    o.c = abc_getlocal_0(o.c);
-                    o.c = abc_getproperty2(o.c, &m);
-                    return mkcodenode(o);
-                }
-            }
-        } 
+		    if(var_is_static && !i_am_static) {
+		    /* access to a static member from a non-static location.
+		       do this via findpropstrict:
+		       there doesn't seem to be any non-lookup way to access
+		       static properties of a class */
+			state->method->late_binding = 1;
+			o.t = f->type;
+			namespace_t ns = {f->access, f->package};
+			multiname_t m = {QNAME, &ns, 0, name};
+			o.c = abc_findpropstrict2(o.c, &m);
+			o.c = abc_getproperty2(o.c, &m);
+			return mkcodenode(o);
+		    } else if(f->slot>0) {
+			o.c = abc_getlocal_0(o.c);
+			o.c = abc_getslot(o.c, f->slot);
+			return mkcodenode(o);
+		    } else {
+			MEMBER_MULTINAME(m, f, name);
+			o.c = abc_getlocal_0(o.c);
+			o.c = abc_getproperty2(o.c, &m);
+			return mkcodenode(o);
+		    }
+		}
+	    } 
+	    /* special case: it's allowed to access non-static constants
+	       from a static context */
+	    if(i_am_static && (f=findmember_nsset(state->cls->info, name, 1, 0))) {
+		if(f->kind == INFOTYPE_VAR && (f->flags&FLAG_CONST)) {
+		    varinfo_t*v = (varinfo_t*)f;
+		    if(v->value) {
+			return mkconstnode(v->value);
+		    }
+		}
+	    }
+	}
         
         /* look at actual classes, in the current package and imported */
         if(!state->xmlfilter && (a = find_class(name))) {
@@ -2258,7 +2268,7 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 3835 "parser.y"
+#line 3845 "parser.y"
 
     void add_active_url(const char*url)
     {
@@ -2270,7 +2280,7 @@ code_t* insert_finally(code_t*c, code_t*finally, int tempvar)
 
 
 /* Line 274 of skeleton.m4  */
-#line 2274 "parser.tab.c"
+#line 2284 "parser.tab.c"
 
 #ifdef short
 # undef short
@@ -2741,7 +2751,7 @@ static const yytype_uint16 yyrline[] =
     3417,  3418,  3419,  3420,  3421,  3422,  3423,  3425,  3426,  3427,
     3428,  3430,  3445,  3453,  3453,  3507,  3508,  3509,  3510,  3511,
     3551,  3554,  3561,  3564,  3575,  3583,  3587,  3594,  3598,  3608,
-    3619,  3806,  3810,  3844,  3851,  3858,  3865,  3887,  3894
+    3619,  3816,  3820,  3854,  3861,  3868,  3875,  3897,  3904
 };
 #endif
 
@@ -8812,7 +8822,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3806 "parser.y"
+#line 3816 "parser.y"
     {
     PASS2 
     (yyval.node) = resolve_identifier((yyvsp[(1) - (1)].id));
@@ -8826,7 +8836,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3810 "parser.y"
+#line 3820 "parser.y"
     {
     PASS1
     /* Queue unresolved identifiers for checking against the parent
@@ -8858,7 +8868,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3844 "parser.y"
+#line 3854 "parser.y"
     {
     PASS12
     NEW(namespace_decl_t,n);
@@ -8875,7 +8885,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3851 "parser.y"
+#line 3861 "parser.y"
     {
     PASS12
     NEW(namespace_decl_t,n);
@@ -8892,7 +8902,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3858 "parser.y"
+#line 3868 "parser.y"
     {
     PASS12
     NEW(namespace_decl_t,n);
@@ -8909,7 +8919,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3865 "parser.y"
+#line 3875 "parser.y"
     {
     PASS12
     trie_put(active_namespaces, (unsigned char*)(yyvsp[(2) - (2)].namespace_decl)->name, (void*)(yyvsp[(2) - (2)].namespace_decl)->url);
@@ -8940,7 +8950,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3888 "parser.y"
+#line 3898 "parser.y"
     {
     (yyval.code) = 0;
     (yyval.code) = code_append((yyval.code), node_read((yyvsp[(4) - (4)].node)).c);
@@ -8955,7 +8965,7 @@ PASS12
     if(as3_pass==2) {
 
 /* Line 1464 of skeleton.m4  */
-#line 3894 "parser.y"
+#line 3904 "parser.y"
     {
     PASS12
     const char*url = (yyvsp[(3) - (3)].classinfo)->name;
@@ -8984,7 +8994,7 @@ PASS12
 
 
 /* Line 1464 of skeleton.m4  */
-#line 8988 "parser.tab.c"
+#line 8998 "parser.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
