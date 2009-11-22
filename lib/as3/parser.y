@@ -945,9 +945,9 @@ static namespace_t modifiers2access(modifiers_t*mod)
 }
 static slotinfo_t* find_class(const char*name);
 
-static memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse)
+static memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse, char is_static)
 {
-    return registry_findmember_nsset(cls, state->active_namespace_urls, name, recurse);
+    return registry_findmember_nsset(cls, state->active_namespace_urls, name, recurse, is_static);
 }
 
 static void innerfunctions2vars(methodstate_t*m)
@@ -1238,7 +1238,7 @@ static void check_override(memberinfo_t*m, int flags)
 {
     if(!m)
         return;
-    if(m->parent == state->cls->info)
+    if(m->parent == state->cls->info && !((flags^m->flags)&FLAG_STATIC))
         syntaxerror("class '%s' already contains a method/slot '%s'", m->parent->name, m->name);
     if(!m->parent)
         syntaxerror("internal error: overriding method %s, which doesn't have parent", m->name);
@@ -1274,11 +1274,11 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
         minfo->return_type = return_type;
     } else if(getset != KW_GET && getset != KW_SET) {
         //class method
-        memberinfo_t* m = registry_findmember(state->cls->info, ns.name, name, 0);
+        memberinfo_t* m = registry_findmember(state->cls->info, ns.name, name, 0, mod->flags&FLAG_STATIC);
         if(m) {
             syntaxerror("class already contains a %s '%s'", infotypename((slotinfo_t*)m), m->name);
         }
-        minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
+        minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name, mod->flags&FLAG_STATIC);
         minfo->return_type = return_type;
         // getslot on a member slot only returns "undefined", so no need
         // to actually store these
@@ -1294,7 +1294,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
         } else
             syntaxerror("setter function needs to take exactly one argument");
         // not sure wether to look into superclasses here, too
-        minfo = (methodinfo_t*)registry_findmember(state->cls->info, ns.name, name, 1);
+        minfo = (methodinfo_t*)registry_findmember(state->cls->info, ns.name, name, 1, mod->flags&FLAG_STATIC);
         if(minfo) {
             if(minfo->kind!=INFOTYPE_VAR)
                 syntaxerror("class already contains a method called '%s'", name);
@@ -1316,7 +1316,7 @@ static methodinfo_t*registerfunction(enum yytokentype getset, modifiers_t*mod, c
                     type?type->name:"*");
             }*/
         } else {
-            minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name);
+            minfo = methodinfo_register_onclass(state->cls->info, ns.access, ns.name, name, mod->flags&FLAG_STATIC);
             minfo->kind = INFOTYPE_VAR; //hack
             minfo->subtype = gs;
             minfo->return_type = type;
@@ -1421,7 +1421,7 @@ static void startfunction(modifiers_t*mod, enum yytokentype getset, char*name,
         parserassert(state->method);
                 
         if(state->cls) {
-            memberinfo_t*m = registry_findmember(state->cls->info, mod->ns, name, 2);
+            memberinfo_t*m = registry_findmember(state->cls->info, mod->ns, name, 2, mod->flags&FLAG_STATIC);
             check_override(m, mod->flags);
         }
             
@@ -1683,6 +1683,7 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         return c;
     if(TYPE_IS_NULL(from) && !IS_NUMBER_OR_INT(to))
         return c;
+
 
     as3_error("can't convert type %s%s%s to %s%s%s", 
         from->package, from->package[0]?".":"", from->name, 
@@ -2740,11 +2741,11 @@ PASS12
 
         varinfo_t* info = 0;
         if(state->cls) {
-            memberinfo_t*i = registry_findmember(state->cls->info, ns.name, $1, 1);
+            memberinfo_t*i = registry_findmember(state->cls->info, ns.name, $1, 1, slotstate_flags->flags&FLAG_STATIC);
             if(i) {
                 check_override(i, flags);
             }
-            info = varinfo_register_onclass(state->cls->info, ns.access, ns.name, $1);
+            info = varinfo_register_onclass(state->cls->info, ns.access, ns.name, $1, slotstate_flags->flags&FLAG_STATIC);
         } else {
             slotinfo_t*i = registry_find(state->package, $1);
             if(i) {
@@ -3431,7 +3432,7 @@ E : "super" '.' T_IDENTIFIER
                   syntaxerror("super keyword not allowed outside a class");
               classinfo_t*t = state->cls->info->superclass;
               if(!t) t = TYPE_OBJECT;
-              memberinfo_t*f = findmember_nsset(t, $3, 1);
+              memberinfo_t*f = findmember_nsset(t, $3, 1, 0);
               MEMBER_MULTINAME(m, f, $3);
               typedcode_t v;
               v.c = 0;
@@ -3624,7 +3625,7 @@ MEMBER : E '.' SUBNODE {
         t = t->data;
         is_static = 1;
     }
-    if(TYPE_IS_XML(t)) {
+    if(TYPE_IS_XML(t) && !findmember_nsset(t, $3, 1, is_static)) {
         multiname_t m = {MULTINAME, 0, &nopackage_namespace_set, $3};
         $$.c = abc_getproperty2($$.c, &m);
         $$.c = abc_coerce_a($$.c);
@@ -3633,7 +3634,7 @@ MEMBER : E '.' SUBNODE {
         if(t->subtype==INFOTYPE_UNRESOLVED) {
             syntaxerror("syntaxerror: trying to resolve property '%s' on incomplete object '%s'", $3, t->name);
         }
-        memberinfo_t*f = findmember_nsset(t, $3, 1);
+        memberinfo_t*f = findmember_nsset(t, $3, 1, is_static);
         char noslot = 0;
         if(f && !is_static != !(f->flags&FLAG_STATIC))
            noslot=1;
@@ -3717,7 +3718,7 @@ MEMBER : E '.' SUBNODE {
         if(!state->method->inner && 
            !state->xmlfilter &&
             state->cls && 
-            (f = findmember_nsset(state->cls->info, name, 1)))
+            (f = findmember_nsset(state->cls->info, name, 1, i_am_static)))
         {
             // name is a member or attribute in this class
             int var_is_static = (f->flags&FLAG_STATIC);

@@ -66,6 +66,9 @@ static char* mkcid(const char*package, const char*name)
 }
 static char* mkptr2(const char*package, const char*name)
 {
+    if(!package[0] && !strcmp(name, "void")) {
+	return "&voidclass";
+    }
     char*id = malloc(strlen(package)+strlen(name)+10);
     strcpy(id, "&");
     strcat(id, package);
@@ -139,36 +142,36 @@ void write_slotinfo_decl(FILE*fi, slotinfo_t*s, char*prefix)
     if(s->kind == INFOTYPE_CLASS) {
         classinfo_t*c = (classinfo_t*)s;
         dict_t*d = &c->members;
-        int t;
-        for(t=0;t<d->hashsize;t++) {
-            dictentry_t*l = d->slots[t];
-            while(l) {
-                slotinfo_t*s2 = (slotinfo_t*)l->data;
-                fprintf(fi, "static %s %s;\n", mktype(s2), mkid2(id, s2->name));
-                l = l->next;
-            }
-        }
+	DICT_ITERATE_DATA(d, slotinfo_t*, s1) {
+            fprintf(fi, "static %s %s;\n", mktype(s1), mkid2(id, s1->name));
+	}
+	DICT_ITERATE_DATA(d, slotinfo_t*, s2) {
+            fprintf(fi, "static %s %s;\n", mktype(s2), mkid2(id, s2->name));
+	}
     }
 }
 void write_initinfo(FILE*fi, slotinfo_t*s, char*prefix)
 {
     if(s->kind == INFOTYPE_CLASS) {
         classinfo_t*c = (classinfo_t*)s;
-        fprintf(fi, "%s", prefix);
         char*id = mkid(c);
-        dict_t*d = &c->members;
-        fprintf(fi, "dict_init2(&%s.members, &memberinfo_type, %d);\n", id, d->hashsize);
+        dict_t*d1 = &c->members;
+        dict_t*d2 = &c->static_members;
+        fprintf(fi, "%s", prefix);
+        fprintf(fi, "dict_init2(&%s.members, &memberinfo_type, %d);\n", id, d1->hashsize);
+	fprintf(fi, "%s", prefix);
+        fprintf(fi, "dict_init2(&%s.static_members, &memberinfo_type, %d);\n", id, d2->hashsize);
         int t;
-        for(t=0;t<d->hashsize;t++) {
-            dictentry_t*l = d->slots[t];
-            while(l) {
-                slotinfo_t*s2 = (slotinfo_t*)l->data;
-                fprintf(fi, "%s", prefix);
-                char*id2 = mkid2(id, s2->name);
-                fprintf(fi, "dict_put(&%s.members, &%s, &%s);\n", id, id2,id2);
-                l = l->next;
-            }
-        }
+	DICT_ITERATE_DATA(d1,slotinfo_t*,s1) {
+	   fprintf(fi, "%s", prefix);
+	   char*id2 = mkid2(id, s1->name);
+	   fprintf(fi, "dict_put(&%s.members, &%s, &%s);\n", id, id2, id2);
+	}
+	DICT_ITERATE_DATA(d2,slotinfo_t*,s2) {
+	   fprintf(fi, "%s", prefix);
+	   char*id2 = mkid2(id, s2->name);
+	   fprintf(fi, "dict_put(&%s.static_members, &%s, &%s);\n", id, id2, id2);
+	}
     }
 }
 
@@ -252,14 +255,12 @@ void write_slotinfo(FILE*fi, slotinfo_t*s, char*id, char*prefix)
     if(s->kind == INFOTYPE_CLASS) {
         classinfo_t*c = (classinfo_t*)s;
         dict_t*d = &c->members;
-        int t;
-        for(t=0;t<d->hashsize;t++) {
-            dictentry_t*l = d->slots[t];
-            while(l) {
-                slotinfo_t*s2 = (slotinfo_t*)l->data;
-                write_slotinfo(fi, s2, mkid2(id,s2->name), prefix);
-                l = l->next;
-            }
+	DICT_ITERATE_DATA(d, slotinfo_t*, s1) {
+	    write_slotinfo(fi, s1, mkid2(id,s1->name), prefix);
+        }
+        d = &c->static_members;
+	DICT_ITERATE_DATA(d, slotinfo_t*, s2) {
+	    write_slotinfo(fi, s2, mkid2(id,s2->name), prefix);
         }
     }
 }
@@ -268,8 +269,8 @@ int main()
 {
     registry_classes = builtin_getclasses();
 
-    as3_import_abc("/home/kramm/c/swftools/lib/as3/builtin.abc");
-    as3_import_abc("/home/kramm/c/swftools/lib/as3/playerglobal.abc");
+    as3_import_abc("builtin.abc");
+    as3_import_abc("playerglobal.abc");
 
     FILE*fi = fopen("builtin.c", "wb");
 

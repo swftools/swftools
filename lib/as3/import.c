@@ -191,28 +191,30 @@ static void import_code(void*_abc, char*filename, int pass)
                 goto cont;
             const char*name = trait->name->name;
             char* ns = access==ACCESS_NAMESPACE?strdup(trait->name->ns->name):"";
-            if(registry_findmember(c, ns, name, 0))
+        
+	    if(registry_findmember(c, ns, name, 0, is_static))
                 goto cont;
+
             name = strdup(name);
 
             memberinfo_t*s = 0;
             if(trait->kind == TRAIT_METHOD) {
-                s = (memberinfo_t*)methodinfo_register_onclass(c, access, ns, name);
+                s = (memberinfo_t*)methodinfo_register_onclass(c, access, ns, name, is_static);
                 s->return_type = resolve_class(filename, "return type", trait->method->return_type);
                 dict_put(names, name, 0);
             } else if(trait->kind == TRAIT_SLOT) {
-                s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
+                s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name, is_static);
                 s->type = resolve_class(filename, "type", trait->type_name);
                 dict_put(names, name, 0);
             } else if(trait->kind == TRAIT_GETTER) {
-                s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name);
+                s = (memberinfo_t*)varinfo_register_onclass(c, access, ns, name, is_static);
                 s->type = resolve_class(filename, "type", trait->method->return_type);
                 dict_put(names, name, 0);
             } else if(trait->kind == TRAIT_CONST) {
                 /* some variables (e.g. XML.length) are apparently both a method and a slot.
                    needs split of static/non-static first */
                 if(!dict_contains(names, name)) {
-                    varinfo_t*v = (varinfo_t*)varinfo_register_onclass(c, access, ns, name);
+                    varinfo_t*v = (varinfo_t*)varinfo_register_onclass(c, access, ns, name, is_static);
                     v->type = resolve_class(filename, "type", trait->type_name);
                     v->flags |= FLAG_CONST;
                     /* leave this alone for now- it blows up the file too much 

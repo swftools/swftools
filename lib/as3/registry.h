@@ -77,6 +77,7 @@ struct _classinfo {
     int slot;
     classinfo_t*superclass;
     dict_t members;
+    dict_t static_members;
     void*data; //TODO: get rid of this- parser.y should pass type/value/code triples around
     classinfo_t*interfaces[];
 };
@@ -117,9 +118,9 @@ char slotinfo_equals(slotinfo_t*c1, slotinfo_t*c2);
 void registry_init();
         
 classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces);
-methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name);
+methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name, char is_static);
 methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name);
-varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access,  const char*ns, const char*name);
+varinfo_t* varinfo_register_onclass(classinfo_t*cls, U8 access,  const char*ns, const char*name, char is_static);
 varinfo_t* varinfo_register_global(U8 access, const char*package, const char*name);
 
 slotinfo_t* registry_resolve(slotinfo_t*s);
@@ -127,8 +128,8 @@ void registry_resolve_all();
 
 slotinfo_t* registry_find(const char*package, const char*name);
 void registry_dump();
-memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*name, char superclasses);
-memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, const char*name, char superclasses);
+memberinfo_t* registry_findmember(classinfo_t*cls, const char*ns, const char*name, char superclasses, char is_static);
+memberinfo_t* registry_findmember_nsset(classinfo_t*cls, namespace_list_t*ns, const char*name, char superclasses, char is_static);
 
 void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c);
 #define MULTINAME(m,x) \
@@ -150,6 +151,7 @@ namespace_t access2namespace(U8 access, char*package);
 char registry_ispackage(const char*package);
 
 // static multinames
+classinfo_t voidclass;
 classinfo_t* registry_getanytype();
 classinfo_t* registry_getarrayclass();
 classinfo_t* registry_getobjectclass();
