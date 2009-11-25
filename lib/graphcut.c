@@ -393,7 +393,7 @@ static weight_t decrease_weights(graph_t*map, path_t*path)
     }
     assert(min);
     if(min<=0) 
-        return;
+        return 0;
 
     for(t=0;t<path->length-1;t++) {
 	path->dir[t]->weight-=min;
@@ -530,12 +530,28 @@ static void check_graph(graph_t*g)
     }
 }
 
+void graph_reset(graph_t*g)
+{
+    int t;
+    for(t=0;t<g->num_nodes;t++) {
+	g->nodes[t].nr = t;
+	assert(g->nodes[t].nr==t);
+	halfedge_t*e = g->nodes[t].edges;
+	while(e) {
+	    e->used = 0;
+	    e->weight = e->init_weight;
+	    e = e->next;
+	}
+    }
+}
+
 weight_t graph_maxflow(graph_t*graph, node_t*pos1, node_t*pos2)
 {
     int max_flow = 0;
     graphcut_workspace_t* w = graphcut_workspace_new(graph, pos1, pos2);
 
-    check_graph(graph);
+    graph_reset(graph);
+    DBG check_graph(graph);
    
     posqueue_addpos(w->queue1, pos1); w->flags1[pos1->nr] |= ACTIVE|IN_TREE; 
     posqueue_addpos(w->queue2, pos2); w->flags2[pos2->nr] |= ACTIVE|IN_TREE; 
@@ -589,7 +605,7 @@ weight_t graph_maxflow(graph_t*graph, node_t*pos1, node_t*pos2)
     return max_flow;
 }
 
-halfedge_t*edge_new(node_t*from, node_t*to, weight_t forward_weight, weight_t backward_weight)
+halfedge_t*graph_add_edge(node_t*from, node_t*to, weight_t forward_weight, weight_t backward_weight)
 {
     halfedge_t*e1 = (halfedge_t*)rfx_calloc(sizeof(halfedge_t));
     halfedge_t*e2 = (halfedge_t*)rfx_calloc(sizeof(halfedge_t));
@@ -597,6 +613,8 @@ halfedge_t*edge_new(node_t*from, node_t*to, weight_t forward_weight, weight_t ba
     e2->fwd = e1;
     e1->node = from;
     e2->node = to;
+    e1->init_weight = forward_weight;
+    e2->init_weight = backward_weight;
     e1->weight = forward_weight;
     e2->weight = backward_weight;
 
@@ -620,10 +638,10 @@ int main()
 	    int y = t/width;
 	    int w = 1;
 #define R (lrand48()%32)
-	    if(x>0) edge_new(&g->nodes[t], &g->nodes[t-1], R, R);
-	    if(x<width-1) edge_new(&g->nodes[t], &g->nodes[t+1], R, R);
-	    if(y>0) edge_new(&g->nodes[t], &g->nodes[t-width], R, R);
-	    if(y<width-1) edge_new(&g->nodes[t], &g->nodes[t+width], R, R);
+	    if(x>0) graph_add_edge(&g->nodes[t], &g->nodes[t-1], R, R);
+	    if(x<width-1) graph_add_edge(&g->nodes[t], &g->nodes[t+1], R, R);
+	    if(y>0) graph_add_edge(&g->nodes[t], &g->nodes[t-width], R, R);
+	    if(y<width-1) graph_add_edge(&g->nodes[t], &g->nodes[t+width], R, R);
 	}
 	
 	int x = graph_maxflow(g, &g->nodes[0], &g->nodes[width*width-1]);

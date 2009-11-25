@@ -21,10 +21,7 @@
 #ifndef __graphcut_h__
 #define __graphcut_h__
 
-#include "image.h"
-
 typedef signed int weight_t;
-#define MAX_WEIGHT 0x07ffffff
 
 typedef struct _halfedge halfedge_t;
 typedef struct _node node_t;
@@ -34,6 +31,7 @@ struct _halfedge {
     node_t*node;
     struct _halfedge*fwd;
     weight_t weight;
+    weight_t init_weight;
     char used;
     halfedge_t*next;
 };
@@ -49,7 +47,7 @@ struct _graph {
 };
 
 graph_t* graph_new(int num_nodes);
-halfedge_t*edge_new(node_t*from, node_t*to, weight_t forward_weight, weight_t backward_weight);
+halfedge_t*graph_add_edge(node_t*from, node_t*to, weight_t forward_weight, weight_t backward_weight);
 weight_t graph_maxflow(graph_t*graph, node_t*pos1, node_t*pos2);
 void graph_delete(graph_t*);
 

@@ -114,6 +114,7 @@ typedef struct _swfoutput_internal
     int config_bboxvars;
     int config_disable_polygon_conversion;
     int config_normalize_polygon_positions;
+    int config_alignfonts;
     char config_disablelinks;
     RGBA config_linkcolor;
     float config_minlinewidth;
@@ -1479,7 +1480,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
     while(iterator) {
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
-	    if(use_font3) {
+	    if(use_font3 && i->config_alignfonts) {
 		// needs to be done before the reduce
 		swf_FontCreateAlignZones(iterator->swffont);
 	    }
