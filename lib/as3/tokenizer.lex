@@ -514,8 +514,8 @@ static int tokenerror();
 %x XMLTEXT
 %x XML
 
-NAME	 [a-zA-Z_][a-zA-Z0-9_\\]*
-_        [^a-zA-Z0-9_\\]
+NAME	 [a-zA-Z_\x80-\xff][a-zA-Z0-9_\\\x80-\xff]*
+_        [^a-zA-Z0-9_\\\x80-\xff]
 
 HEXINT    0x[a-zA-Z0-9]+
 HEXFLOAT  0x[a-zA-Z0-9]*\.[a-zA-Z0-9]*
