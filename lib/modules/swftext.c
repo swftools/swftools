@@ -541,7 +541,6 @@ static void updateusage(void *self, int *chars, int *xpos, int nr,
 	return;
 
     int t;
-    int firstpair=1;
     for(t=0;t<nr;t++) {
 	int x=xpos[t];
 	int y=ystart;
@@ -553,12 +552,7 @@ static void updateusage(void *self, int *chars, int *xpos, int nr,
 	   u->last!=c && !swf_ShapeIsEmpty(u->font->glyph[u->last].shape) && 
 	   !swf_ShapeIsEmpty(u->font->glyph[c].shape)) 
 	{
-	    /* ignore the first pair of every word (caps subset hack). */
-	    if(!firstpair)
-		swf_FontUsePair(u->font, u->last, c);
-	    firstpair = 0;
-	} else {
-	    firstpair = 1;
+	    swf_FontUsePair(u->font, u->last, c);
 	}
 	u->lasty = y;
 	/* FIXME: do we still need to divide advance by 20 for definefont3? */
