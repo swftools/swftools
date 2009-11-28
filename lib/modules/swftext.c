@@ -6,7 +6,7 @@
    Part of the swftools package.
 
    Copyright (c) 2001 Rainer Böhme <rfxswf@reflex-studio.de>
-   Copyright (c) 2003,2004 Matthias Kramm
+   Copyright (c) 2003,2004,2005,2006,2007,2008,2009 Matthias Kramm
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -541,6 +541,7 @@ static void updateusage(void *self, int *chars, int *xpos, int nr,
 	return;
 
     int t;
+    int firstpair=1;
     for(t=0;t<nr;t++) {
 	int x=xpos[t];
 	int y=ystart;
@@ -552,7 +553,12 @@ static void updateusage(void *self, int *chars, int *xpos, int nr,
 	   u->last!=c && !swf_ShapeIsEmpty(u->font->glyph[u->last].shape) && 
 	   !swf_ShapeIsEmpty(u->font->glyph[c].shape)) 
 	{
-	    swf_FontUsePair(u->font, u->last, c);
+	    /* ignore the first pair of every word (caps subset hack). */
+	    if(!firstpair)
+		swf_FontUsePair(u->font, u->last, c);
+	    firstpair = 0;
+	} else {
+	    firstpair = 1;
 	}
 	u->lasty = y;
 	/* FIXME: do we still need to divide advance by 20 for definefont3? */
