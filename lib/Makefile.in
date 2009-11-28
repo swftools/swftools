@@ -69,6 +69,8 @@ modules/swfdump.$(O): modules/swfdump.c rfxswf.h
 	$(C) modules/swfdump.c -o $@
 modules/swffilter.$(O): modules/swffilter.c rfxswf.h
 	$(C) modules/swffilter.c -o $@
+modules/swfalignzones.$(O): modules/swfalignzones.c graphcut.c graphcut.h rfxswf.h
+	$(C) modules/swfalignzones.c -o $@
 modules/swffont.$(O): modules/swffont.c rfxswf.h
 	$(C) modules/swffont.c -o $@
 modules/swfobject.$(O): modules/swfobject.c rfxswf.h

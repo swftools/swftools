@@ -1475,10 +1475,6 @@ void swfoutput_finalize(gfxdevice_t*dev)
     while(iterator) {
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
-	    if(use_font3 && i->config_alignfonts) {
-		// needs to be done before the reduce
-		swf_FontCreateAlignZones(iterator->swffont);
-	    }
 	    if(!i->config_storeallcharacters) {
 		msg("<debug> Reducing font %s", iterator->swffont->name);
 		swf_FontReduce(iterator->swffont);
@@ -1501,7 +1497,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
     i->tag = swf_InsertTag(i->tag,ST_END);
     TAG* tag = i->tag->prev;
    
-    if(i->config_storeallcharacters) {
+    if(use_font3 && i->config_storeallcharacters && i->config_alignfonts) {
 	swf_FontPostprocess(i->swf); // generate alignment information
     }
 
