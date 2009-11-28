@@ -616,6 +616,35 @@ static int parseFillStyleArray(TAG*tag, SHAPE2*shape)
     return 1;
 }
 
+char swf_ShapeIsEmpty(SHAPE*s)
+{
+    if(!s || !s->data) return 1;
+    TAG _tag;
+    TAG* tag = &_tag;
+    memset(tag, 0, sizeof(TAG));
+    tag->data = s->data;
+    tag->len = tag->memsize = (s->bitlen+7)/8;
+    tag->pos = 0;
+    
+    while(1) {
+	if(!swf_GetBits(tag, 1)) {
+	    U16 flags = swf_GetBits(tag, 5);
+	    if(!flags) break;
+	    if(flags&1) { //move
+		int n = swf_GetBits(tag, 5); 
+		swf_GetSBits(tag, n); //x
+		swf_GetSBits(tag, n); //y
+	    }
+	    if(flags&2) swf_GetBits(tag, s->bits.fill);
+	    if(flags&4) swf_GetBits(tag, s->bits.fill);
+	    if(flags&8) swf_GetBits(tag, s->bits.line);
+	    if(flags&16) {return 0;}
+	} else {
+	    return 0;
+	}
+    }
+    return 1;
+}
 
 /* todo: merge this with swf_GetSimpleShape */
 static SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebits, int version, SHAPE2*shape2)

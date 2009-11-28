@@ -739,12 +739,6 @@ static void chararray_writetotag(chararray_t*_chardata, TAG*tag)
 		    lastx = chr->x;
 		    lasty = chr->y;
 		    lastsize = chr->size;
-		} else {
-		    assert(lastchar>=0);
-		    if(pass==1 && lastchar!=chr->charid) {
-			swf_FontUsePair(chr->font, lastchar, chr->charid);
-			swf_FontUsePair(chr->font, chr->charid, lastchar);
-		    }
 		}
 
 		if(islast)
@@ -1477,6 +1471,7 @@ void swfoutput_finalize(gfxdevice_t*dev)
     endpage(dev);
     fontlist_t *iterator = i->fontlist;
     char use_font3 = i->config_flashversion>=8 && !NO_FONT3;
+
     while(iterator) {
 	TAG*mtag = i->swf->firstTag;
 	if(iterator->swffont) {
@@ -1496,19 +1491,19 @@ void swfoutput_finalize(gfxdevice_t*dev)
 		} else {
 		    mtag = swf_InsertTag(mtag, ST_DEFINEFONT3);
 		    swf_FontSetDefine2(mtag, iterator->swffont);
-		    if(iterator->swffont->alignzones) {
-			mtag = swf_InsertTag(mtag, ST_DEFINEFONTALIGNZONES);
-			swf_FontSetAlignZones(mtag, iterator->swffont);
-		    }
 		}
 	    }
 	}
 
         iterator = iterator->next;
     }
-	
+
     i->tag = swf_InsertTag(i->tag,ST_END);
     TAG* tag = i->tag->prev;
+   
+    if(i->config_storeallcharacters) {
+	swf_FontPostprocess(i->swf); // generate alignment information
+    }
 
     /* remove the removeobject2 tags between the last ST_SHOWFRAME
        and the ST_END- they confuse the flash player  */

@@ -255,7 +255,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     U32 *offset;
     U8 flags1, langcode, namelen;
     swf_SetTagPos(tag, 0);
-    font->version = 2;
+    font->version = tag->id==ST_DEFINEFONT3?3:2;
     fid = swf_GetU16(tag);
     if (id && id != fid)
 	return id;
@@ -278,7 +278,6 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
     font->name = (U8 *) rfx_alloc(namelen + 1);
     font->name[namelen] = 0;
     swf_GetBlock(tag, font->name, namelen);
-    font->version = 2;
     glyphcount = swf_GetU16(tag);
     font->numchars = glyphcount;
 
@@ -516,7 +515,7 @@ swf_FontExtract_DefineTextCallback(int id, SWFFONT * f, TAG * t, int jobs,
 }
 
 int swf_ParseDefineText(TAG * tag,
-		    void (*callback) (void *self, int *chars, int *ypos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA * color), void *self)
+		    void (*callback) (void *self, int *chars, int *xpos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA * color), void *self)
 {
     return swf_FontExtract_DefineTextCallback(-1, 0, tag, FEDTJ_CALLBACK, callback, self);
 }
@@ -524,6 +523,52 @@ int swf_ParseDefineText(TAG * tag,
 int swf_FontExtract_DefineText(int id, SWFFONT * f, TAG * t, int jobs)
 {
     return swf_FontExtract_DefineTextCallback(id, f, t, jobs, 0, 0);
+}
+
+typedef struct _usagetmp {
+    SWFFONT*font;
+    int lastx,lasty;
+    int last;
+} usagetmp_t;
+static void updateusage(void *self, int *chars, int *xpos, int nr, 
+	                int fontid, int fontsize, int xstart, int ystart, RGBA * color)
+{
+    usagetmp_t*u = (usagetmp_t*)self;
+    if(!u->font->use) {
+	swf_FontInitUsage(u->font);
+    }
+    if(fontid!=u->font->id)
+	return;
+
+    int t;
+    for(t=0;t<nr;t++) {
+	int x=xpos[t];
+	int y=ystart;
+	int c = chars[t];
+	if(c<0 || c>u->font->numchars)
+	    continue;
+	swf_FontUseGlyph(u->font, c, fontsize);
+	if(u->lasty == y && x>=u->lastx-200 && abs(u->lastx-x)<200 &&
+	   u->last!=c && !swf_ShapeIsEmpty(u->font->glyph[u->last].shape) && 
+	   !swf_ShapeIsEmpty(u->font->glyph[c].shape)) 
+	{
+	    swf_FontUsePair(u->font, u->last, c);
+	}
+	u->lasty = y;
+	/* FIXME: do we still need to divide advance by 20 for definefont3? */
+	u->lastx = x + (u->font->glyph[c].advance*fontsize/20480);
+	u->last = c;
+    }
+}
+
+void swf_FontUpdateUsage(SWFFONT*f, TAG* tag)
+{
+    usagetmp_t u;
+    u.font = f;
+    u.lastx = -0x80000000;
+    u.lasty = -0x80000000;
+    u.last = 0;
+    swf_ParseDefineText(tag, updateusage, &u);
 }
 
 int swf_FontExtract(SWF * swf, int id, SWFFONT * *font)
@@ -561,7 +606,11 @@ int swf_FontExtract(SWF * swf, int id, SWFFONT * *font)
 
 	case ST_DEFINETEXT:
 	case ST_DEFINETEXT2:
-	    nid = swf_FontExtract_DefineText(id, f, t, f->layout ? 0 : FEDTJ_MODIFY);
+	    if(!f->layout) {
+		nid = swf_FontExtract_DefineText(id, f, t, FEDTJ_MODIFY);
+	    }
+	    if(f->version>=3 && f->layout) 
+		swf_FontUpdateUsage(f, t);
 	    break;
 
 	case ST_GLYPHNAMES:

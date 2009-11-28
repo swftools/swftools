@@ -449,6 +449,7 @@ typedef struct _SHAPELINE
 
 int   swf_ShapeNew(SHAPE ** s);
 void  swf_ShapeFree(SHAPE * s);
+char  swf_ShapeIsEmpty(SHAPE*s);
 
 int   swf_GetSimpleShape(TAG * t,SHAPE ** s); // without Linestyle/Fillstyle Record
 int   swf_SetSimpleShape(TAG * t,SHAPE * s);   // without Linestyle/Fillstyle Record
@@ -658,6 +659,7 @@ void swf_FontSetAlignZones(TAG*t, SWFFONT *f);
 void swf_FontCreateLayout(SWFFONT*f);
 void swf_FontCreateAlignZones(SWFFONT * f);
 void swf_FontAddLayout(SWFFONT * f, int ascent, int descent, int leading);
+void swf_FontPostprocess(SWF*swf);
 
 int swf_ParseDefineText(TAG * t, void(*callback)(void*self, int*chars, int*xpos, int nr, int fontid, int fontsize, int xstart, int ystart, RGBA* color), void*self);
 
@@ -935,9 +937,9 @@ void action_fixjump(ActionMarker m1, ActionMarker m2);
 
 extern char*blendModeNames[];
 
-int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name);
-int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U16 clipaction);
-int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const U8 * name, U8 blendmode);
+int swf_ObjectPlace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const char* name);
+int swf_ObjectPlaceClip(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const char* name, U16 clipaction);
+int swf_ObjectPlaceBlend(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const char* name, U8 blendmode);
 int swf_ObjectMove(TAG * t,U16 depth,MATRIX * m,CXFORM * cx);
 
 #define PF_MOVE         0x01
@@ -977,7 +979,7 @@ typedef struct _SWFPLACEOBJECT {
     MATRIX matrix;
     CXFORM cxform;
     U16 ratio;
-    U8*name;
+    char*name;
     U16 clipdepth;
     ActionTAG* actions;
     U8 blendmode;

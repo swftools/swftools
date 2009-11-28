@@ -347,12 +347,16 @@ SWFFONT* swf_LoadTrueTypeFont(const char*filename)
     //font->layout->descent = abs(face->descender)*FT_SCALE*loadfont_scale*20/FT_SUBPIXELS/2; //face->bbox.xMax;
     //font->layout->leading = font->layout->ascent + font->layout->descent;
 
-    font->layout->ascent = -fontbbox.ymin;
-    if(font->layout->ascent < 0)
+    if(-fontbbox.ymin < 0)
         font->layout->ascent = 0;
-    font->layout->descent = fontbbox.ymax;
-    if(font->layout->descent < 0)
+    else
+	font->layout->ascent = -fontbbox.ymin;
+
+    if(-fontbbox.ymax < 0)
         font->layout->descent = 0;
+    else
+	font->layout->descent = -fontbbox.ymax;
+
     font->layout->leading = fontbbox.ymax - fontbbox.ymin;
 
     /* notice: if skip_unused is true, font->glyph2ascii, font->glyphnames and font->layout->bounds will 

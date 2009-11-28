@@ -235,15 +235,15 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	    memset(column, 0, sizeof(float)*(height+1));
 	    int s;
 	    int drawn = 0;
-	    printf("[font %d] pairing %c with ", f->id, f->glyph2ascii[t]);
 	    for(s=0;s<f->use->num_neighbors;s++) {
-		if(f->use->neighbors[s].char2 == t) {
-		    printf("%c (%d) ", f->glyph2ascii[f->use->neighbors[s].char1], f->use->neighbors[s].num);
-		    draw_char(f, f->use->neighbors[s].char1, row, column, bounds);
+		int char1 = f->use->neighbors[s].char1;
+		int char2 = f->use->neighbors[s].char2;
+		if(char1 == t || char2 == t) {
+		    int other = t==char1?char2:char1;
+		    draw_char(f, other, row, column, bounds);
 		    drawn++;
 		}
 	    }
-	    printf("\n");
 
 	    for(s=0;s<=height;s++) {
 		column[t] /= drawn*2;
@@ -259,6 +259,26 @@ void swf_FontCreateAlignZones(SWFFONT * f)
 	free(row);
 	free(column_global);
 	free(column);
+    }
+}
+
+void swf_FontPostprocess(SWF*swf)
+{
+    TAG*tag = swf->firstTag;
+    while(tag) {
+	TAG*next = tag->next;
+	if(tag->id == ST_DEFINEFONT3) {
+	    U16 id = swf_GetDefineID(tag);
+	    SWFFONT*font = 0;
+	    swf_FontExtract(swf, id, &font);
+	    if(!font->alignzones) {
+		swf_FontCreateAlignZones(font);
+		tag = swf_InsertTag(tag, ST_DEFINEFONTALIGNZONES);
+		swf_FontSetAlignZones(tag, font);
+	    }
+	    swf_FontFree(font);
+	}
+	tag = next;
     }
 }
 
@@ -287,5 +307,4 @@ void swf_FontSetAlignZones(TAG*t, SWFFONT *f)
 	swf_SetU8(t, flags);
     }
 }
-
 
