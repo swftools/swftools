@@ -49,7 +49,7 @@ static PyObject* f_DefineFont(PyObject* self, PyObject* args, PyObject* kwargs)
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s", kwlist, &filename))
 	return NULL;
 
-    font = swf_LoadFont(filename);
+    font = swf_LoadFont(filename, 0);
     if(!font) {
 	PyErr_SetString(PyExc_Exception, setError("Could not load %s", filename));
 	return NULL;
