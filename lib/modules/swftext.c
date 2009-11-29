@@ -349,6 +349,13 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 	for (t = 0; t < glyphcount; t++) {
 	    swf_ResetReadBits(tag);
 	    swf_GetRect(tag, &font->layout->bounds[t]);
+	    SRECT b = font->layout->bounds[t];
+	    if((b.xmin|b.xmax|b.ymin|b.ymax) == 0) {
+		// recalculate bounding box
+		SHAPE2 *shape2 = swf_ShapeToShape2(font->glyph[t].shape);
+		font->layout->bounds[t] = swf_GetShapeBoundingBox(shape2);
+		swf_Shape2Free(shape2);
+	    }
 	}
 
 	kerningcount = swf_GetU16(tag);
