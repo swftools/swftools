@@ -832,6 +832,12 @@ int swf_FontReduce(SWFFONT * f)
     return 0;
 }
 
+static SWFFONT* font_to_sort;
+int cmp_chars(const void*a, const void*b)
+{
+    int x = *(const int*)a;
+    int y = *(const int*)b;
+}
 void swf_FontSort(SWFFONT * font)
 {
     int i, j;
@@ -845,6 +851,8 @@ void swf_FontSort(SWFFONT * font)
     for (i = 0; i < font->numchars; i++) {
 	newplace[i] = i;
     }
+    //qsort(newplace, sizeof(newplace[0]), font->numchars, cmp_chars);
+
     for (i = 0; i < font->numchars; i++)
 	for (j = 0; j < i; j++) {
 	    if (font->glyph2ascii[i] < font->glyph2ascii[j]) {
@@ -887,8 +895,8 @@ void swf_FontSort(SWFFONT * font)
 	    font->ascii2glyph[i] = newpos[font->ascii2glyph[i]];
     }
 
-    rfx_free(newpos);
     rfx_free(newplace);
+    font->glyph2glyph = newpos;
 }
 
 void swf_FontPrepareForEditText(SWFFONT * font)
@@ -932,14 +940,14 @@ int swf_FontUse(SWFFONT * f, U8 * s)
     return 0;
 }
 
-int swf_FontUseUTF8(SWFFONT * f, U8 * s, U16 size)
+int swf_FontUseUTF8(SWFFONT * f, const U8 * s, U16 size)
 {
     if( (!s))
 	return -1;
     int ascii;
     while (*s)
     {
-    	ascii = readUTF8char(&s);
+    	ascii = readUTF8char((U8**)&s);
 	if(ascii < f->maxascii && f->ascii2glyph[ascii]>=0)
 	    swf_FontUseGlyph(f, f->ascii2glyph[ascii], size);
     }
@@ -1188,12 +1196,15 @@ int swf_FontSetDefine2(TAG * tag, SWFFONT * f)
     if (f->layout) {
 	swf_SetU16(tag, f->layout->ascent);
 	swf_SetU16(tag, f->layout->descent);
-	swf_SetU16(tag, f->layout->leading);
+	swf_SetU16(tag, 0); // flash ignores leading
+
 	for (t = 0; t < f->numchars; t++)
 	    swf_SetU16(tag, f->glyph[t].advance);
 	for (t = 0; t < f->numchars; t++) {
 	    swf_ResetWriteBits(tag);
-	    swf_SetRect(tag, &f->layout->bounds[t]);
+	    /* not used by flash, so leave this empty */
+	    SRECT b = {0,0,0,0};
+	    swf_SetRect(tag, &b);
 	}
 	swf_SetU16(tag, f->layout->kerningcount);
 	for (t = 0; t < f->layout->kerningcount; t++) {
@@ -1298,6 +1309,10 @@ void swf_FontFree(SWFFONT * f)
     {
         rfx_free(f->glyph2ascii);
         f->glyph2ascii = NULL;
+    }
+    if (f->glyph2glyph) {
+	rfx_free(f->glyph2glyph);
+	f->glyph2glyph = NULL;
     }
     font_freename(f);
     font_freelayout(f);

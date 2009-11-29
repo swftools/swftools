@@ -520,7 +520,7 @@ typedef struct _KERNING
 typedef struct _SWFLAYOUT
 { U16          ascent;
   U16          descent;
-  S16          leading;
+  U16          leading;
   SRECT      * bounds;
   U16	       kerningcount;
   SWFKERNING * kerning;
@@ -570,7 +570,7 @@ typedef struct _ALIGNZONE
 
 typedef struct _SWFFONT
 { int		id; // -1 = not set
-  U8		version; // 0 = not set, 1 = definefont, 2 = definefont2
+  U8		version; // 0 = not set, 1 = definefont, 2 = definefont2, 3 = definefont3
   U8 *          name;
   SWFLAYOUT *   layout;
   int           numchars;
@@ -581,6 +581,7 @@ typedef struct _SWFFONT
 
   U16	*	glyph2ascii;
   int	*	ascii2glyph;
+  int   *       glyph2glyph; // only if the font is resorted
   SWFGLYPH *	glyph;
   ALIGNZONE *	alignzones;
   U8            alignzone_flags;
@@ -648,8 +649,9 @@ int swf_FontUseGlyph(SWFFONT * f, int glyph, U16 size);
 void swf_FontUsePair(SWFFONT * f, int char1, int char2);
 int swf_FontUseGetPair(SWFFONT * f, int char1, int char2);
 int swf_FontUseAll(SWFFONT* f);
-int swf_FontUseUTF8(SWFFONT * f, U8 * s, U16 size);
+int swf_FontUseUTF8(SWFFONT * f, const U8 * s, U16 size);
 int swf_FontUse(SWFFONT* f,U8 * s);
+void swf_FontSort(SWFFONT * font);
 
 int swf_FontSetDefine(TAG * t,SWFFONT * f);
 int swf_FontSetDefine2(TAG * t,SWFFONT * f);
@@ -690,9 +692,9 @@ void swf_DrawText(drawer_t*draw, SWFFONT*font, int size, const char*text);
 
 // swffont.c
 
-SWFFONT* swf_LoadTrueTypeFont(const char*filename);
+SWFFONT* swf_LoadTrueTypeFont(const char*filename, char flashtype);
 SWFFONT* swf_LoadT1Font(const char*filename);
-SWFFONT* swf_LoadFont(const char*filename);
+SWFFONT* swf_LoadFont(const char*filename, char flashtype);
 
 void swf_SetLoadFontParameters(int scale, int skip_unused, int full_unicode);
 

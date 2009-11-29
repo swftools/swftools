@@ -2813,21 +2813,26 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id, int version)
     swffont->glyph2ascii = (U16*)rfx_calloc(sizeof(U16)*swffont->numchars);
     swffont->glyph = (SWFGLYPH*)rfx_calloc(sizeof(SWFGLYPH)*swffont->numchars);
     swffont->glyphnames = (char**)rfx_calloc(sizeof(char*)*swffont->numchars);
-    for(t=0;t<font->max_unicode;t++) {
-	swffont->ascii2glyph[t] = font->unicode2glyph[t];
-    }
+
     SRECT max = {0,0,0,0};
     for(t=0;t<font->num_glyphs;t++) {
 	drawer_t draw;
 	gfxline_t*line;
 	double advance = 0;
-	swffont->glyph2ascii[t] = font->glyphs[t].unicode;
-	if(swffont->glyph2ascii[t] == 0xffff || swffont->glyph2ascii[t] == 0x0000) {
+	int u = font->glyphs[t].unicode;
+	int s;
+	char twice=0;
+	for(s=0;s<font->num_glyphs;s++) {
+	    if(swffont->glyph2ascii[s]==u) 
+		twice=1;
+	}
+	if(u >= 0xe000 || u == 0x0000 || twice) {
 	    /* flash 8 flashtype requires unique unicode IDs for each character.
 	       We use the Unicode private user area to assign characters, hoping that
 	       the font doesn't contain more than 2048 glyphs */
-	    swffont->glyph2ascii[t] = 0xe000 + (t&0x1fff);
+	    u = 0xe000 + (t&0x1fff);
 	}
+	swffont->glyph2ascii[t] = u;
 
 	if(font->glyphs[t].name) {
 	    swffont->glyphnames[t] = strdup(font->glyphs[t].name);
@@ -2845,6 +2850,11 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id, int version)
 	    c.x = line->sx * scale; c.y = -line->sy * scale;
 	    //to.x = floor(line->x * scale); to.y = floor(-line->y * scale);
 	    to.x = line->x * scale; to.y = -line->y * scale;
+
+	    /*if(strstr(swffont->name, "BIRNU") && t==90) {
+		to.x += 1;
+	    }*/
+
 	    if(line->type == gfx_moveTo) {
 		draw.moveTo(&draw, &to);
 	    } else if(line->type == gfx_lineTo) {
@@ -2873,6 +2883,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id, int version)
 
 	swf_ExpandRect2(&bounds, &swffont->layout->bounds[t]);
     }
+
     for(t=0;t<font->num_glyphs;t++) {
 	SRECT bbox = swffont->layout->bounds[t];
 
@@ -2912,6 +2923,7 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id, int version)
     if(font->descent*20 > swffont->layout->descent)
 	swffont->layout->descent = font->descent*20;
 
+    swf_FontSort(swffont);
     return swffont;
 }
 
@@ -3066,6 +3078,7 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
 	msg("<warning> No character %d in font %s (%d chars)", glyph, FIXNULL((char*)i->swffont->name), i->swffont->numchars);
 	return;
     }
+    glyph = i->swffont->glyph2glyph[glyph];
     
     setfontscale(dev, matrix->m00, matrix->m01, matrix->m10, matrix->m11, matrix->tx, matrix->ty, 0);
     

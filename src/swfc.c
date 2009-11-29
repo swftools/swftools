@@ -877,7 +877,7 @@ static void free_filterlist(FILTERLIST* f_list)
     int i;
     for (i = 0; i < f_list->num; i++)
     {
-        if (f_list->filter[i]->type == FILTERTYPE_GRADIENTGLOW)
+        if(f_list->filter[i]->type == FILTERTYPE_GRADIENTGLOW)
             gradient_free(((FILTER_GRADIENTGLOW*)f_list->filter[i])->gradient);
         free(f_list->filter[i]);
     }
@@ -924,7 +924,7 @@ void setPlacement(TAG*tag, U16 id, U16 depth, MATRIX m, const char*name, paramet
     if(p->blendmode) {
     po.blendmode = p->blendmode;
     }
-    if (p->filters)
+    if(p->filters)
     	po.filters = p->filters;
     swf_SetPlaceObject(tag, &po);
 }
@@ -942,7 +942,7 @@ static void writeInstance(void* _i)
         frame++;
         while (tag && tag->id != ST_SHOWFRAME)
             tag = tag->next;
-        if (parametersChange(i->history, frame))
+        if(parametersChange(i->history, frame))
         {
             readParameters(i->history, &p, frame);
             m = s_instancepos(i->character->size, &p);
@@ -952,7 +952,7 @@ static void writeInstance(void* _i)
             else
         	tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
             setPlacement(tag, 0, i->depth, m, 0, &p, 1);
-            if (p.filters)
+            if(p.filters)
             	free_filterlist(p.filters);
         } else if(tag) {
             tag = tag->next;
@@ -1057,9 +1057,9 @@ static void s_endSWF()
         tag = swf_InsertTag(tag, ST_DOABC);
         void*code = as3_getcode();
         swf_WriteABC(tag, code);
-        if (*mainclass)
+        if(*mainclass)
             mc = mainclass;
-        else if (as3_getglobalclass())
+        else if(as3_getglobalclass())
             mc = as3_getglobalclass();
         if(*mc) {
             tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
@@ -1174,7 +1174,7 @@ int addFillStyle(SHAPE*s, SRECT*r, const char*name)
     if(name[0] == '#') {
 	parseColor2(name, &color);
 	return swf_ShapeAddSolidFillStyle(s, &color);
-    } else if ((texture = dict_lookup(&textures, name))) {
+    } else if((texture = dict_lookup(&textures, name))) {
 	return swf_ShapeAddFillStyle2(s, &texture->fs);
     } else if((image = dict_lookup(&images, name))) {
 	MATRIX m;
@@ -1184,7 +1184,7 @@ int addFillStyle(SHAPE*s, SRECT*r, const char*name)
 	m.tx = r->xmin;
 	m.ty = r->ymin;
 	return swf_ShapeAddBitmapFillStyle(s, &m, image->id, 0);
-    }  else if ((gradient = dict_lookup(&gradients, name))) {
+    }  else if((gradient = dict_lookup(&gradients, name))) {
 	SRECT r2;
 	MATRIX rot,m;
 	double ccos,csin;
@@ -1204,7 +1204,7 @@ int addFillStyle(SHAPE*s, SRECT*r, const char*name)
 	m.tx = r->xmin + (r->xmax - r->xmin)/2;
 	m.ty = r->ymin + (r->ymax - r->ymin)/2;
 	return swf_ShapeAddGradientFillStyle(s, &m, &gradient->gradient, gradient->radial);
-    }  else if (parseColor2(name, &color)) {
+    }  else if(parseColor2(name, &color)) {
 	return swf_ShapeAddSolidFillStyle(s, &color);
     } else {
 	syntaxerror("not a color/fillstyle: %s", name);
@@ -1589,24 +1589,49 @@ void s_texture(const char*name, const char*object, int x, int y, float scalex, f
     dict_put(&textures, name, texture);
 }
 
+void s_createfont(const char*name, const char*filename, const char*glyphs, char flashtype)
+{
+    if(dict_lookup(&fonts, name))
+	syntaxerror("font %s defined twice", name);
+
+    SWFFONT* font = swf_LoadFont(filename, flashtype);
+    if(font == 0) {
+	warning("Couldn't open font file \"%s\"", filename);
+	font = (SWFFONT*)malloc(sizeof(SWFFONT));
+	memset(font, 0, sizeof(SWFFONT));
+	dict_put(&fonts, name, font);
+	return;
+    }
+    swf_FontPrepareForEditText(font);
+
+    if(!strcmp(glyphs, "all")) {
+	swf_FontUseAll(font);
+	font->use->glyphs_specified = 1;
+    } else {
+	if(!glyphs[0]) {
+	    swf_FontInitUsage(font);
+	} else {
+	    swf_FontUseUTF8(font, (const U8*)glyphs, 0xffff);
+	    font->use->glyphs_specified = 1;
+	}
+    }
+    dict_put(&fonts, name, font);
+}
+
 void s_font(const char*name, const char*filename)
 {
     SWFFONT* font;
     font = dict_lookup(&fonts, name);
-    if(0)
-    {
-	/* fix the layout. Only needed for old fonts */
-	int t;
-	for(t=0;t<font->numchars;t++) {
-	    font->glyph[t].advance = 0;
-	}
-	font->layout = 0;
-	swf_FontCreateLayout(font);
-    }
     font->id = id;
     swf_FontReduce_swfc(font);
-    tag = swf_InsertTag(tag, ST_DEFINEFONT2);
+	
+    if(font->version>=3 && stack[0].swf->fileVersion < 8) {
+	warning("flashtype not supported for flash versions 8 and below");
+    }
+
+    tag = swf_InsertTag(tag, font->version==3?ST_DEFINEFONT3:ST_DEFINEFONT2);
     swf_FontSetDefine2(tag, font);
+
     if(do_exports) {
 	tag = swf_InsertTag(tag, ST_EXPORTASSETS);
 	swf_SetU16(tag, 1);
@@ -1712,7 +1737,7 @@ void s_sound(const char*name, const char*filename)
 
     incrementid();
 
-    if (samples)
+    if(samples)
         free(samples);
 }
 
@@ -1785,7 +1810,7 @@ GRADIENT parseGradient(const char*str)
 
 FILTERLIST* parseFilters(char* list)
 {
-    if (!strcmp(list, "no_filters"))
+    if(!strcmp(list, "no_filters"))
     	return 0;
     FILTER* f;
     FILTERLIST* f_list = (FILTERLIST*)malloc(sizeof(FILTERLIST));
@@ -1795,22 +1820,22 @@ FILTERLIST* parseFilters(char* list)
     while (f_start)
     {
     	f_end = strchr(f_start, ',');
-    	if (f_end)
+    	if(f_end)
     	    *f_end = '\0';
     	f = dict_lookup(&filters, f_start);
-    	if (!f)
+    	if(!f)
     	{
     	    free(f_list);
     	    syntaxerror("unknown filter %s", f_start);
     	}
-    	if (f_list->num == 8)
+    	if(f_list->num == 8)
     	{
     	    warning("too many filters in filterlist, no more than 8 please, rest ignored");
     	    break;
     	}
     	f_list->filter[f_list->num] = f;
     	f_list->num++;
-    	if (f_end)
+    	if(f_end)
     	{
     	    *f_end = ',';
     	    f_start = f_end + 1;
@@ -2043,12 +2068,12 @@ void s_includeswf(const char*name, const char*filename)
     int level = 0;
     U16 cutout[] = {ST_SETBACKGROUNDCOLOR, ST_PROTECT, ST_FREEALL, ST_REFLEX};
     f = open(filename,O_RDONLY|O_BINARY);
-    if (f<0) {
+    if(f<0) {
 	warning("Couldn't open file \"%s\": %s", filename, strerror(errno));
 	s_box(name, 0, 0, black, 20, 0);
 	return;
     }
-    if (swf_ReadSWF(f,&swf)<0) {
+    if(swf_ReadSWF(f,&swf)<0) {
 	warning("Only SWF files supported in .shape for now. File \"%s\" wasn't SWF.", filename);
 	s_box(name, 0, 0, black, 20, 0);
 	return;
@@ -2125,7 +2150,7 @@ void s_getParameters(const char*name, parameters_t* p)
     instance_t * i = dict_lookup(&instances, name);
     if(!i)
     	syntaxerror("instance '%s' unknown(10)", name);
-    if (change_sets_all)
+    if(change_sets_all)
         readParameters(i->history, p, currentframe);
     else
     	*p = i->parameters;
@@ -2224,51 +2249,51 @@ void s_put(const char*instance, const char*character, parameters_t p)
 
 void recordChanges(history_t* history, parameters_t p, int changeFunction, interpolation_t* inter)
 {
-    if (p.set & SF_X)
+    if(p.set & SF_X)
         history_remember(history, "x", currentframe, changeFunction, p.x, inter);
-    if (p.set & SF_Y)
+    if(p.set & SF_Y)
         history_remember(history, "y", currentframe, changeFunction, p.y, inter);
-    if (p.set & SF_SCALEX)
+    if(p.set & SF_SCALEX)
         history_remember(history, "scalex", currentframe, changeFunction, p.scalex, inter);
-    if (p.set & SF_SCALEY)
+    if(p.set & SF_SCALEY)
         history_remember(history, "scaley", currentframe, changeFunction, p.scaley, inter);
-    if (p.set & SF_CX_R)
+    if(p.set & SF_CX_R)
     {
         history_remember(history, "cxform.r0", currentframe, changeFunction, p.cxform.r0, inter);
         history_remember(history, "cxform.r1", currentframe, changeFunction, p.cxform.r1, inter);
     }
-    if (p.set & SF_CX_G)
+    if(p.set & SF_CX_G)
     {
         history_remember(history, "cxform.g0", currentframe, changeFunction, p.cxform.g0, inter);
         history_remember(history, "cxform.g1", currentframe, changeFunction, p.cxform.g1, inter);
     }
-    if (p.set & SF_CX_B)
+    if(p.set & SF_CX_B)
     {
         history_remember(history, "cxform.b0", currentframe, changeFunction, p.cxform.b0, inter);
         history_remember(history, "cxform.b1", currentframe, changeFunction, p.cxform.b1, inter);
     }
-    if (p.set & SF_CX_A)
+    if(p.set & SF_CX_A)
     {
         history_remember(history, "cxform.a0", currentframe, changeFunction, p.cxform.a0, inter);
         history_remember(history, "cxform.a1", currentframe, changeFunction, p.cxform.a1, inter);
     }
-    if (p.set & SF_ROTATE)
+    if(p.set & SF_ROTATE)
         history_remember(history, "rotate", currentframe, changeFunction, p.rotate, inter);
-    if (p.set & SF_SHEAR)
+    if(p.set & SF_SHEAR)
         history_remember(history, "shear", currentframe, changeFunction, p.shear, inter);
-    if (p.set & SF_PIVOT)
+    if(p.set & SF_PIVOT)
     {
         history_remember(history, "pivot.x", currentframe, changeFunction, p.pivot.x, inter);
         history_remember(history, "pivot.y", currentframe, changeFunction, p.pivot.y, inter);
     }
-    if (p.set & SF_PIN)
+    if(p.set & SF_PIN)
     {
         history_remember(history, "pin.x", currentframe, changeFunction, p.pin.x, inter);
         history_remember(history, "pin.y", currentframe, changeFunction, p.pin.y, inter);
     }
-    if (p.set & SF_BLEND)
+    if(p.set & SF_BLEND)
         history_remember(history, "blendmode", currentframe, changeFunction, p.blendmode, inter);
-    if (p.set & SF_FILTER)
+    if(p.set & SF_FILTER)
         history_rememberFilter(history, currentframe, changeFunction, p.filters, inter);
 }
 
@@ -2299,7 +2324,7 @@ void s_sweep(const char* instance, parameters_t p, float radius, int clockwise, 
 void s_toggle(const char* instance, U16 flagsOn, U16 flagsOff)
 {
     instance_t* i = dict_lookup(&instances, instance);
-    if (!i)
+    if(!i)
         syntaxerror("instance %s not known", instance);
     U16 flags = (U16)history_value(i->history, currentframe, "flags");
     flags |= flagsOn;
@@ -2594,9 +2619,9 @@ int parseTwip(const char*str)
 
 int parseArc(const char* str)
 {
-    if (!strcmp(str, "short"))
+    if(!strcmp(str, "short"))
     	return 1;
-    if (!strcmp(str, "long"))
+    if(!strcmp(str, "long"))
     	return 0;
     syntaxerror("invalid value for the arc parameter: %s", str);
     return 1;
@@ -2604,9 +2629,9 @@ int parseArc(const char* str)
 
 int parseDir(const char* str)
 {
-    if (!strcmp(str, "clockwise"))
+    if(!strcmp(str, "clockwise"))
     	return 1;
-    if (!strcmp(str, "counterclockwise"))
+    if(!strcmp(str, "counterclockwise"))
     	return 0;
     syntaxerror("invalid value for the dir parameter: %s", str);
     return 1;
@@ -2869,19 +2894,19 @@ static int c_interpolation(map_t *args)
 {
     int i;
     const char* name = lu(args, "name");
-    if (dict_lookup(&interpolations, name))
+    if(dict_lookup(&interpolations, name))
         syntaxerror("interpolation %s defined twice", name);
 
     interpolation_t* inter = (interpolation_t*)malloc(sizeof(interpolation_t));
     const char* functionstr = lu(args, "function");
     inter->function = 0;
     for (i = 0; i < sizeof(interpolationFunctions) / sizeof(interpolationFunctions[0]); i++)
-        if (!strcmp(functionstr,interpolationFunctions[i]))
+        if(!strcmp(functionstr,interpolationFunctions[i]))
         {
             inter->function = i + 1;
             break;
         }
-    if (!inter->function)
+    if(!inter->function)
         syntaxerror("unkown interpolation function %s", functionstr);
     inter->speed = parseFloat(lu(args, "speed"));
     inter->amplitude = parseTwip(lu(args, "amplitude"));
@@ -2903,49 +2928,49 @@ SPOINT getPoint(SRECT r, const char*name)
         p.y = (r.ymin + r.ymax)/2;
         return p;
     }
-    if (!strcmp(name, "bottom-center")) {
+    if(!strcmp(name, "bottom-center")) {
         SPOINT p;
         p.x = (r.xmin + r.xmax)/2;
         p.y = r.ymax;
         return p;
     }
-    if (!strcmp(name, "top-center")) {
+    if(!strcmp(name, "top-center")) {
         SPOINT p;
         p.x = (r.xmin + r.xmax)/2;
         p.y = r.ymin;
         return p;
     }
-    if (!strcmp(name, "top-left")) {
+    if(!strcmp(name, "top-left")) {
         SPOINT p;
         p.x = r.xmin;
         p.y = r.ymin;
         return p;
     }
-    if (!strcmp(name, "top-right")) {
+    if(!strcmp(name, "top-right")) {
         SPOINT p;
         p.x = r.xmax;
         p.y = r.ymin;
         return p;
     }
-    if (!strcmp(name, "bottom-right")) {
+    if(!strcmp(name, "bottom-right")) {
         SPOINT p;
         p.x = r.xmax;
         p.y = r.ymax;
         return p;
     }
-    if (!strcmp(name, "bottom-left")) {
+    if(!strcmp(name, "bottom-left")) {
         SPOINT p;
         p.x = r.xmin;
         p.y = r.ymax;
         return p;
     }
-    if (!strcmp(name, "left-center")) {
+    if(!strcmp(name, "left-center")) {
         SPOINT p;
         p.x = r.xmin;
         p.y = (r.ymin + r.ymax)/2;
         return p;
     }
-    if (!strcmp(name, "right-center")) {
+    if(!strcmp(name, "right-center")) {
         SPOINT p;
         p.x = r.xmax;
         p.y = (r.ymin + r.ymax)/2;
@@ -3058,7 +3083,7 @@ static int c_gradient(map_t*args)
 static const char* checkFiltername(map_t* args)
 {
     const char* name = lu(args, "name");
-    if (strchr(name, ','))
+    if(strchr(name, ','))
     	syntaxerror("the comma (,) is used to separate filters in filterlists. Please do not use in filternames.");
     return name;
 }
@@ -3302,7 +3327,7 @@ static int c_movement(map_t*args, int type)
         set = set | SF_Y;
     }
 
-    if (change_sets_all)
+    if(change_sets_all)
 	set = SF_ALL;
     p.set = set;
 
@@ -3312,7 +3337,7 @@ static int c_movement(map_t*args, int type)
             {
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
-                if (!inter)
+                if(!inter)
                     syntaxerror("unkown interpolation %s", interstr);
                 s_change(instance, p, inter);
             }
@@ -3321,7 +3346,7 @@ static int c_movement(map_t*args, int type)
             {
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
-                if (!inter)
+                if(!inter)
                     syntaxerror("unkown interpolation %s", interstr);
             	s_schange(instance, p, inter);
             }
@@ -3330,7 +3355,7 @@ static int c_movement(map_t*args, int type)
             {
             	const char* rstr = lu(args, "r");
             	int radius = parseTwip(rstr);
-            	if (radius <= 0)
+            	if(radius <= 0)
             		syntaxerror("sweep not possible: radius must be greater than 0.");
             	const char* dirstr = lu(args, "dir");
             	int clockwise = parseDir(dirstr);
@@ -3338,7 +3363,7 @@ static int c_movement(map_t*args, int type)
             	int short_arc = parseArc(arcstr);
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
-                if (!inter)
+                if(!inter)
                     syntaxerror("unkown interpolation %s", interstr);
             	s_sweep(instance, p, radius, clockwise, short_arc, inter);
             }
@@ -3409,7 +3434,7 @@ static int c_placement(map_t*args, int type)
 	// put or startclip
 	character = lu(args, "character");
 	parameters_clear(&p);
-    } else if (type == PT_BUTTON) {
+    } else if(type == PT_BUTTON) {
 	character = lu(args, "name");
 	parameters_clear(&p);
 	// button's show
@@ -3592,13 +3617,13 @@ static int c_placement(map_t*args, int type)
         set = set | SF_FILTER;
     }
 
-    if (type == PT_CHANGE && set & (SF_X | SF_Y))
+    if(type == PT_CHANGE && set & (SF_X | SF_Y))
 	warning("As of version 0.8.2 using the .change command to modify an \
 object's position on the stage is considered deprecated. Future \
 versions may consider x and y parameters for the .change command \
 to be illegal; please use the .move command.");
 
-    if (change_sets_all)
+    if(change_sets_all)
 	set = SF_ALL;
     p.set = set;
 
@@ -3611,7 +3636,7 @@ to be illegal; please use the .move command.");
             {
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
-                if (!inter)
+                if(!inter)
                     syntaxerror("unkown interpolation %s", interstr);
                 s_change(instance, p, inter);
             }
@@ -3620,7 +3645,7 @@ to be illegal; please use the .move command.");
             {
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
-                if (!inter)
+                if(!inter)
                     syntaxerror("unkown interpolation %s", interstr);
             	s_schange(instance, p, inter);
             }
@@ -3648,7 +3673,7 @@ static int c_put(map_t*args)
 }
 static int c_change(map_t*args)
 {
-    if (currentframe == 0)
+    if(currentframe == 0)
         warning("change commands in frame 1 will be ignored, please use the put command to set object parameters");
     c_placement(args, PT_CHANGE);
     return 0;
@@ -3698,10 +3723,10 @@ static int c_toggle(map_t* args)
     const char*instance = lu(args, "name");
     U16 flagsOn = 0x0000, flagsOff = 0xffff;
     const char* alignstr = lu(args, "fixed_alignment");
-    if (!strcmp(alignstr, "on"))
+    if(!strcmp(alignstr, "on"))
     	flagsOn += IF_FIXED_ALIGNMENT;
     else
-    	if (!strcmp(alignstr, "off"))
+    	if(!strcmp(alignstr, "off"))
     	    flagsOff -= IF_FIXED_ALIGNMENT;
     	else
     	    syntaxerror("values for toggle must be \"on\" or \"off\". %s is not legal.", alignstr);
@@ -3787,9 +3812,9 @@ static int c_primitive(map_t*args)
     if(type==0) {
 	width = parseTwip(lu(args, "width"));
 	height = parseTwip(lu(args, "height"));
-    } else if (type==1) {
+    } else if(type==1) {
 	r = parseTwip(lu(args, "r"));
-    } else if (type==2) {
+    } else if(type==2) {
 	outline = lu(args, "outline");
     }
 
@@ -4144,7 +4169,7 @@ static struct {
  {"png", c_image, "name filename"},
  {"movie", c_movie, "name filename"},
  {"sound", c_sound, "name filename"},
- {"font", c_font, "name filename glyphs="},
+ {"font", c_font, "name filename glyphs= @flashtype="},
  {"soundtrack", c_soundtrack, "filename"},
  {"quicktime", c_quicktime, "url"},
  {"video", c_video, "name width= height="},
@@ -4440,7 +4465,6 @@ static void analyseArgumentsForCommand(char*command)
 {
     int t;
     map_t args;
-    const char* fontfile;
     int nr = -1;
     U8* glyphs_to_include;
     msg("<verbose> analyse Command: %s (line %d)", command, line);
@@ -4459,51 +4483,20 @@ static void analyseArgumentsForCommand(char*command)
     map_dump(&args, stdout, "\t");fflush(stdout);
 #endif
     const char* name = lu(&args, "name");
-    if (!strcmp(command, "font"))
+    if(!strcmp(command, "font"))
     {
-    	if(dict_lookup(&fonts, name))
-            syntaxerror("font %s defined twice", name);
-
-    	SWFFONT* font;
-    	fontfile = lu(&args, "filename");
-    	font = swf_LoadFont(fontfile);
-    	if(font == 0) {
-	    warning("Couldn't open font file \"%s\"", fontfile);
-	    font = (SWFFONT*)malloc(sizeof(SWFFONT));
-	    memset(font, 0, sizeof(SWFFONT));
-    	}
-    	else
-    	{
-	    swf_FontPrepareForEditText(font);
-    	    glyphs_to_include = (U8*)lu(&args, "glyphs");
-    	    if (!strcmp(glyphs_to_include, "all"))
-    	    {
-    	    	swf_FontUseAll(font);
-    	    	font->use->glyphs_specified = 1;
-    	    }
-    	    else
-    	    {
-    	    	if (strcmp (glyphs_to_include, ""))
-    	    	{
-    	    	    swf_FontUseUTF8(font, glyphs_to_include, /*FIXME*/0xffff);
-    	    	    font->use->glyphs_specified = 1;
-    	    	}
-    	    	else
-    	    	    swf_FontInitUsage(font);
-    	    }
-    	}
-    	dict_put(&fonts, name, font);
-    }
-    else
-    {
+	const char* fontfile = lu(&args, "filename");
+	const char* glyphs = lu(&args, "glyphs");
+	const char* flashtype = lu(&args, "flashtype");
+	s_createfont(name, fontfile, glyphs, flashtype[0]);
+    } else {
         SWFFONT* font = dict_lookup(&fonts, lu(&args, "font"));
-        if (!font) {
+        if(!font) {
 	    //that's ok... it might be an edittext with a system font
             //syntaxerror("font %s is not known in line %d", lu(&args, "font"), line);
 	} else
-            if (font->use && !font->use->glyphs_specified)
-            {
-		if (!strcmp(command, "edittext"))
+            if(font->use && !font->use->glyphs_specified) {
+		if(!strcmp(command, "edittext"))
 		{
             	    swf_FontUseAll(font);
             	    font->use->glyphs_specified = 1;
@@ -4532,7 +4525,7 @@ void findFontUsage()
         readToken();
         if(type != COMMAND)
             syntaxerror("command expected");
-        if (strstr(fontRelated, text))
+        if(strstr(fontRelated, text))
             analyseArgumentsForCommand(text);
         else
             if(strcmp(text, "end"))
