@@ -156,6 +156,8 @@ static void draw_char(SWFFONT * f, int nr, float*row, float*column, SRECT b)
 	y = l->y;
 	l = l->next;
     }
+    swf_Shape2Free(s);
+    free(s);
 }
 
 static ALIGNZONE detect_for_char(SWFFONT * f, int nr, float*row, float*column, SRECT font_bbox, SRECT char_bbox)

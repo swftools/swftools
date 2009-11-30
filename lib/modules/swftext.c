@@ -354,7 +354,7 @@ int swf_FontExtract_DefineFont2(int id, SWFFONT * font, TAG * tag)
 		// recalculate bounding box
 		SHAPE2 *shape2 = swf_ShapeToShape2(font->glyph[t].shape);
 		font->layout->bounds[t] = swf_GetShapeBoundingBox(shape2);
-		swf_Shape2Free(shape2);
+		swf_Shape2Free(shape2);free(shape2);
 	    }
 	}
 
@@ -844,7 +844,9 @@ int cmp_chars(const void*a, const void*b)
 {
     int x = *(const int*)a;
     int y = *(const int*)b;
+    return 0;
 }
+
 void swf_FontSort(SWFFONT * font)
 {
     int i, j;
@@ -1290,6 +1292,13 @@ int swf_TextPrintDefineText(TAG * t, SWFFONT * f)
     return 0;
 }
 
+static void font_freealignzones(SWFFONT * f)
+{
+    if(f->alignzones)
+	free(f->alignzones);
+    f->alignzones = 0;
+}
+
 void swf_FontFree(SWFFONT * f)
 {
     int i;
@@ -1325,6 +1334,7 @@ void swf_FontFree(SWFFONT * f)
     font_freelayout(f);
     font_freeglyphnames(f);
     font_freeusage(f);
+    font_freealignzones(f);
 
     rfx_free(f);
 }
