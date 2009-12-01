@@ -625,6 +625,33 @@ halfedge_t*graph_add_edge(node_t*from, node_t*to, weight_t forward_weight, weigh
     return e1;
 }
 
+static void do_dfs(node_t*n, int color)
+{
+    int t;
+    n->tmp = color;
+    halfedge_t*e = n->edges;
+    while(e) {
+	if(e->fwd->node->tmp<0)
+	    do_dfs(e->fwd->node, color);
+	e = e->next;
+    }
+}
+
+int graph_find_components(graph_t*g)
+{
+    int t;
+    int count = 0;
+    for(t=0;t<g->num_nodes;t++) {
+	g->nodes[t].tmp = -1;
+    }
+    for(t=0;t<g->num_nodes;t++) {
+	if(g->nodes[t].tmp<0) {
+	    do_dfs(&g->nodes[t], count++);
+	}
+    }
+    return count;
+}
+
 #ifdef MAIN
 int main()
 {

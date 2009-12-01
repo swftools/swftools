@@ -38,6 +38,7 @@ struct _halfedge {
 
 struct _node {
     halfedge_t*edges;
+    int tmp;
     int nr;
 };
 
@@ -49,6 +50,7 @@ struct _graph {
 graph_t* graph_new(int num_nodes);
 halfedge_t*graph_add_edge(node_t*from, node_t*to, weight_t forward_weight, weight_t backward_weight);
 weight_t graph_maxflow(graph_t*graph, node_t*pos1, node_t*pos2);
+int graph_find_components(graph_t*g);
 void graph_delete(graph_t*);
 
 #endif
