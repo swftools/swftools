@@ -144,8 +144,8 @@ static gfxfont_t* createGfxFont(FontInfo*src)
     double scale = 1;
     //printf("%d glyphs\n", font->num_glyphs);
     font->num_glyphs = 0;
-    font->ascent = fabs(src->descender);
-    font->descent = fabs(src->ascender);
+    font->ascent = fabs(src->ascender);
+    font->descent = fabs(src->descender);
     
     for(t=0;t<src->num_glyphs;t++) {
 	if(src->glyphs[t]) {
