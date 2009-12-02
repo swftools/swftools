@@ -121,6 +121,12 @@ int rescale_setparameter(gfxdevice_t*dev, const char*key, const char*value)
     if(!strcmp(key, "keepratio")) {
 	i->keepratio = atoi(value);
 	return 1;
+    } else if(!strcmp(key, "centerx")) {
+	i->centerx = atoi(value);
+	return 1;
+    } else if(!strcmp(key, "centery")) {
+	i->centery = atoi(value);
+	return 1;
     } else {
 	if(i->out) {
 	    return i->out->setparameter(i->out,key,value);
