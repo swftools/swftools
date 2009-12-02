@@ -2970,11 +2970,6 @@ static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 		    l->swffont->layout->bounds[iii].xmax/20.0,
 		    l->swffont->layout->bounds[iii].ymax/20.0
 		    );
-	    int t;
-	    for(t=0;t<l->swffont->maxascii;t++) {
-		if(l->swffont->ascii2glyph[t] == iii)
-		    msg("<debug> | - maps to %d",t);
-	    }
 	}
     }
 }

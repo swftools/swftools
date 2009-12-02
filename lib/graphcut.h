@@ -38,7 +38,11 @@ struct _halfedge {
 
 struct _node {
     halfedge_t*edges;
-    int tmp;
+    union {
+	int tmp;
+	int component;
+	int color;
+    };
     int nr;
 };
 

@@ -203,6 +203,10 @@
 #undef HAVE_FONTCONFIG_H
 #undef HAVE_FONTCONFIG
 
+#undef HAVE_FFTW3_H
+
+#undef HAVE_FFTW3
+
 /* have/use internal l.a.m.e. mp3 library */
 #undef HAVE_LAME 
 
