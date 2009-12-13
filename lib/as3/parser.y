@@ -2373,7 +2373,7 @@ SWITCH : T_SWITCH '(' {PASS12 new_state();state->switch_var=alloc_local();} E ')
 
 CATCH: "catch" '(' T_IDENTIFIER MAYBETYPE ')' {PASS12 new_state();
                                                       state->exception_name=$3;
-                                               PASS1 new_variable(state->method, $3, 0, 0, 0);
+                                               PASS1 new_variable(state->method, $3, $4, 0, 0);
                                                PASS2 new_variable(state->method, $3, $4, 0, 0);
                                               } 
         '{' MAYBECODE '}' {
@@ -2572,6 +2572,9 @@ IMPORT : "import" PACKAGEANDCLASS {
        if(!s && as3_pass==1) {// || !(s->flags&FLAG_BUILTIN)) {
            as3_schedule_class($2->package, $2->name);
        }
+       /*if(s && s->kind == INFOTYPE_VAR && TYPE_IS_NAMESPACE(s->type)) {
+	    trie_put(active_namespaces, (unsigned char*)$2->name, 0);
+       }*/
        state_has_imports();
        dict_put(state->imports, $2->name, $2);
        import_toplevel($2->package);
@@ -3917,7 +3920,6 @@ DEFAULT_NAMESPACE : "default xml" "namespace" '=' E
 
 USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
     PASS12
-    const char*url = $3->name;
 
     varinfo_t*s = (varinfo_t*)$3;
     if(s->kind == INFOTYPE_UNRESOLVED) {
@@ -3930,8 +3932,8 @@ USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
         syntaxerror("%s.%s is not a public namespace (%d)", $3->package, $3->name, s?s->kind:-1);
     if(!s->value || !NS_TYPE(s->value->type))
         syntaxerror("%s.%s is not a namespace", $3->package, $3->name);
-    url = s->value->ns->name;
 
+    const char*url = s->value->ns->name;
     trie_put(active_namespaces, (unsigned char*)$3->name, (void*)url);
     add_active_url(url);
     $$=0;
