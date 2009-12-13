@@ -1,10 +1,12 @@
 package {
-    public class Test extends flash.display.MovieClip
+    import flash.display.MovieClip
+    public class Main extends flash.display.MovieClip
     {
-	public function Test():void
+	public function Main():void
 	{
-	    trace(ok);
-	    var ok:String = "ok";
+	    if(ok==null) trace("ok 1/2");
+	    var ok:String = "foo";
+	    if(ok=="foo") trace("ok 2/2");
 	    trace("[exit]");
 	}
     }

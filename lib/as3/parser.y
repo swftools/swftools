@@ -1,4 +1,4 @@
-/* parser.lex
+/* parser.y
 
    Routines for compiling Flash2 AVM2 ABC Actionscript
 
@@ -345,6 +345,7 @@ struct _methodstate {
     int variable_count;
 
     dict_t*unresolved_variables;
+    dict_t*allvars; // all variables (in all sublevels, but not for inner functions)
 
     char inner;
     char uses_parent_function;
@@ -368,11 +369,21 @@ struct _methodstate {
     methodstate_list_t*innerfunctions;
 };
 
+methodstate_t*methodstate_new()
+{
+    NEW(methodstate_t,m);
+    m->allvars = dict_new();
+    return m;
+}
 void methodstate_destroy(methodstate_t*m) 
 {
-    dict_destroy(m->unresolved_variables);
-    m->unresolved_variables = 0;
+    dict_destroy(m->unresolved_variables); m->unresolved_variables = 0;
     list_free(m->innerfunctions);m->innerfunctions=0;
+
+    if(m->allvars) {
+        DICT_ITERATE_DATA(m->allvars, void*, data) {free(data);}
+        m->allvars = 0;
+    }
 }
 
 typedef struct _state {
@@ -398,7 +409,6 @@ typedef struct _state {
     int switch_var;
     
     dict_t*vars;
-    dict_t*allvars; // also contains variables from sublevels
 } state_t;
 
 typedef struct _global {
@@ -510,13 +520,6 @@ static void state_destroy(state_t*state)
     if(state->vars) {
         dict_destroy(state->vars);state->vars=0;
     }
-    if(state->new_vars && state->allvars) {
-        parserassert(!state->old || state->old->allvars != state->allvars);
-        DICT_ITERATE_DATA(state->allvars, void*, data) {
-            free(data);
-        }
-        dict_destroy(state->allvars);
-    }
     
     list_free(state->active_namespace_urls)
     state->active_namespace_urls = 0;
@@ -561,7 +564,6 @@ void initialize_file(char*filename)
 
     new_state();
     state->package = internal_filename_package = strdup(filename);
-    state->allvars = dict_new();
     
     global->token2info = dict_lookup(global->file2token2info, 
                                      current_filename // use long version
@@ -575,6 +577,7 @@ void initialize_file(char*filename)
         state->method = rfx_calloc(sizeof(methodstate_t));
         dict_put(global->token2info, (void*)(ptroff_t)as3_tokencount, state->method);
         state->method->late_binding = 1; // init scripts use getglobalscope, so we need a getlocal0/pushscope
+	state->method->allvars = dict_new();
     } else {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
         state->method->variable_count = 0;
@@ -638,7 +641,7 @@ typedef struct _variable {
 static variable_t* find_variable(state_t*s, const char*name)
 {
     if(s->method->no_variable_scoping) {
-        return dict_lookup(s->allvars, name);
+        return dict_lookup(s->method->allvars, name);
     } else {
         state_t*top = s;
         while(s) {
@@ -673,6 +676,7 @@ static char variable_exists(char*name)
 
 static code_t*defaultvalue(code_t*c, classinfo_t*type)
 {
+    parserassert(!type || type->kind!=INFOTYPE_UNRESOLVED);
     if(TYPE_IS_INT(type)) {
        c = abc_pushbyte(c, 0);
     } else if(TYPE_IS_UINT(type)) {
@@ -719,21 +723,21 @@ static variable_t* new_variable2(methodstate_t*method, const char*name, classinf
         if(!method->no_variable_scoping) 
         {
             if(dict_contains(state->vars, name)) {
-                *(int*)0=0;
                 syntaxerror("variable %s already defined", name);
             }
             dict_put(state->vars, name, v);
         }
         if(method->no_variable_scoping && 
            as3_pass==2 && 
-           dict_contains(state->allvars, name)) 
+           dict_contains(state->method->allvars, name)) 
         {
-            variable_t*v = dict_lookup(state->allvars, name);
-            if(v->type != type)
+            variable_t*v = dict_lookup(state->method->allvars, name);
+            if(v->type != type && (!v->type || v->type->kind!=INFOTYPE_UNRESOLVED)) {
                 syntaxerror("variable %s already defined.", name);
+	    }
             return v;
         }
-        dict_put(state->allvars, name, v);
+        dict_put(state->method->allvars, name, v);
     }
 
     return v;
@@ -881,7 +885,7 @@ static code_t* method_header(methodstate_t*m)
 static code_t* wrap_function(code_t*c,code_t*header, code_t*body)
 {
     c = code_append(c, header);
-    c = code_append(c, var_block(body, state->method->no_variable_scoping?state->allvars:state->vars));
+    c = code_append(c, var_block(body, state->method->no_variable_scoping?state->method->allvars:state->vars));
     /* append return if necessary */
     if(!c || (c->opcode != OPCODE_RETURNVOID && 
               c->opcode != OPCODE_RETURNVALUE)) {
@@ -1004,15 +1008,26 @@ static void function_initvars(methodstate_t*m, char has_params, params_t*params,
         m->scope_code = add_scope_code(m->scope_code, m, 0);
         if(m->slots) {
             /* exchange unresolved identifiers with the actual objects */
-            DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v) {
-                if(v->type && v->type->kind == INFOTYPE_UNRESOLVED) {
-                    classinfo_t*type = (classinfo_t*)registry_resolve((slotinfo_t*)v->type);
+            DICT_ITERATE_ITEMS(m->slots, char*, name, variable_t*, v1) {
+                if(v1->type && v1->type->kind == INFOTYPE_UNRESOLVED) {
+                    classinfo_t*type = (classinfo_t*)registry_resolve((slotinfo_t*)v1->type);
                     if(!type || type->kind != INFOTYPE_CLASS) {
-                        syntaxerror("Couldn't find class %s::%s (%s)", v->type->package, v->type->name, name);
+                        syntaxerror("Couldn't find class %s::%s (%s)", v1->type->package, v1->type->name, name);
                     }
-                    v->type = type;
+                    v1->type = type;
                 }
             }
+	}
+	if(m->allvars) {
+            DICT_ITERATE_ITEMS(m->allvars, char*, name2, variable_t*, v2) {
+                if(v2->type && v2->type->kind == INFOTYPE_UNRESOLVED) {
+                    classinfo_t*type = (classinfo_t*)registry_resolve((slotinfo_t*)v2->type);
+                    if(!type || type->kind != INFOTYPE_CLASS) {
+                        syntaxerror("Couldn't find class %s::%s (%s)", v2->type->package, v2->type->name, name2);
+                    }
+                    v2->type = type;
+                }
+	    }
         }
     }
 }
@@ -1060,8 +1075,8 @@ static void startclass(modifiers_t* mod, char*classname, classinfo_t*extends, cl
 
     if(as3_pass==1) {
         state->cls = rfx_calloc(sizeof(classstate_t));
-        state->cls->init = rfx_calloc(sizeof(methodstate_t));
-        state->cls->static_init = rfx_calloc(sizeof(methodstate_t));
+        state->cls->init = methodstate_new();
+        state->cls->static_init = methodstate_new();
         state->cls->static_init->is_static=FLAG_STATIC;
         /* notice: we make no effort to initialize the top variable (local0) here,
            even though it has special meaning. We just rely on the fact
@@ -1348,10 +1363,9 @@ static void innerfunction(char*name, params_t*params, classinfo_t*return_type)
 
     new_state();
     state->new_vars = 1;
-    state->allvars = dict_new();
    
     if(as3_pass == 1) {
-        state->method = rfx_calloc(sizeof(methodstate_t));
+        state->method = methodstate_new();
         state->method->inner = 1;
         state->method->is_static = parent_method->is_static;
         state->method->variable_count = 0;
@@ -1392,10 +1406,9 @@ static void startfunction(modifiers_t*mod, enum yytokentype getset, char*name,
     }
     new_state();
     state->new_vars = 1;
-    state->allvars = dict_new();
 
     if(as3_pass == 1) {
-        state->method = rfx_calloc(sizeof(methodstate_t));
+        state->method = methodstate_new();
         state->method->has_super = 0;
         state->method->is_static = mod->flags&FLAG_STATIC;
 
@@ -1464,8 +1477,8 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
         
         if(state->method->unresolved_variables) {
             DICT_ITERATE_KEY(state->method->unresolved_variables, char*, vname) {
-                if(!state->method->no_variable_scoping && dict_contains(state->allvars, vname)) {
-                    variable_t*v = dict_lookup(state->allvars, vname);
+                if(!state->method->no_variable_scoping && dict_contains(state->method->allvars, vname)) {
+                    variable_t*v = dict_lookup(state->method->allvars, vname);
                     if(!v->is_inner_method) {
                         state->method->no_variable_scoping = 1;
                         as3_warning("function %s uses forward or outer block variable references (%s): switching into compatibility mode", name, vname);
@@ -1476,14 +1489,14 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
 
         methodstate_list_t*ml = state->method->innerfunctions;
         while(ml) {
-            insert_unresolved(ml->methodstate, xvars, state->allvars);
+            insert_unresolved(ml->methodstate, xvars, state->method->allvars);
             ml = ml->next;
         }
         
         if(state->method->uses_slots) {
             state->method->slots = dict_new();
             int i = 1;
-            DICT_ITERATE_ITEMS(state->allvars, char*, name, variable_t*, v) {
+            DICT_ITERATE_ITEMS(state->method->allvars, char*, name, variable_t*, v) {
                 if(!name) syntaxerror("internal error");
                 if(v->index && dict_contains(xvars, name)) {
                     v->init = v->kill = 0;
@@ -1498,7 +1511,6 @@ static abc_method_t* endfunction(modifiers_t*mod, enum yytokentype getset, char*
             state->method->uses_slots = i;
             dict_destroy(state->vars);state->vars = 0;
             parserassert(state->new_vars);
-            dict_destroy(state->allvars);state->allvars = 0;
         }
         old_state();
         return 0;
@@ -2104,7 +2116,7 @@ PASS12
     if(variable_exists($1)) 
         syntaxerror("Variable %s already defined", $1);
 PASS1
-    new_variable(state->method, $1, 0, 1, 0);
+    new_variable(state->method, $1, $2, 1, 0);
 PASS2
    
     char slot = 0;
