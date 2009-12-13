@@ -77,7 +77,7 @@ extern int a3_lex();
 }
 
 
-%token<id> T_IDENTIFIER T_NAMESPACE
+%token<id> T_IDENTIFIER
 %token<str> T_STRING
 %token<regexp> T_REGEXP
 %token<token> T_EMPTY
@@ -267,7 +267,6 @@ extern int a3_lex();
 // needed for "return" precedence:
 %nonassoc T_STRING T_REGEXP
 %nonassoc T_INT T_UINT T_FLOAT KW_NAN 
-%left T_NAMESPACE
 %nonassoc "false" "true" "null" "undefined" "super" "function"
 %left above_function
 
@@ -395,6 +394,7 @@ typedef struct _state {
     dict_t*import_toplevel_packages;
     dict_t*imports;
 
+    dict_t*namespaces;
     namespace_list_t*active_namespace_urls;
     
     char has_own_imports;
@@ -502,7 +502,7 @@ static void new_state()
     state->old = oldstate;
     state->new_vars = 0;
 
-    trie_remember(active_namespaces);
+    state->namespaces = dict_new();
    
     if(oldstate)
         state->active_namespace_urls = list_clone(oldstate->active_namespace_urls);
@@ -529,8 +529,6 @@ static void state_destroy(state_t*state)
 
 static void old_state()
 {
-    trie_rollback(active_namespaces);
-
     if(!state || !state->old)
         syntaxerror("invalid nesting");
     state_t*leaving = state;
@@ -560,8 +558,6 @@ void initialize_file(char*filename)
         syntaxerror("invalid call to initialize_file during parsing of another file");
     }
     
-    active_namespaces = trie_new();
-
     new_state();
     state->package = internal_filename_package = strdup(filename);
     
@@ -912,6 +908,29 @@ static void endpackage()
 #define FLAG_PACKAGEINTERNAL 2048
 #define FLAG_NAMESPACE 4096
 
+static slotinfo_t* find_class(const char*name);
+
+const char* lookup_namespace(const char*name)
+{
+    state_t*s = state;
+    while(s) {
+	const char*url = dict_lookup(s->namespaces, name);
+	if(url) 
+	    return url;
+	s = s->old;
+    }
+    varinfo_t*a;
+    registry_find(state->package, name);
+    if(( a = (varinfo_t*)find_class(name) )) {
+	if(a->kind == INFOTYPE_VAR) {
+	    if(!a->value || !NS_TYPE(a->value->type)) 
+		syntaxerror("%s.%s is not a namespace", a->package, a->name);
+	    return a->value->ns->name;
+	}
+    }
+    return 0;
+}
+
 static namespace_t modifiers2access(modifiers_t*mod)
 {
     namespace_t ns;
@@ -921,14 +940,14 @@ static namespace_t modifiers2access(modifiers_t*mod)
         if(mod->flags&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
             syntaxerror("invalid combination of access levels and namespaces");
         ns.access = ACCESS_NAMESPACE;
-        state_t*s = state;
-        const char*url = (const char*)trie_lookup(active_namespaces, (unsigned char*)mod->ns);
-        if(!url) {
-            /* shouldn't happen- the tokenizer only reports something as a namespace
-               if it was already registered */
-            trie_dump(active_namespaces);
-            syntaxerror("unknown namespace: %s", mod->ns);
-        }
+	const char*url = lookup_namespace(mod->ns);
+	if(!url) {
+	    if(as3_pass>1) {
+		syntaxerror("unknown namespace: %s (pass %d)", mod->ns, as3_pass);
+	    } else {
+		url = mod->ns;
+	    }
+	}
         ns.name = url;
     } else if(mod->flags&FLAG_PUBLIC)  {
         if(mod->flags&(FLAG_PRIVATE|FLAG_PROTECTED|FLAG_PACKAGEINTERNAL)) 
@@ -947,7 +966,6 @@ static namespace_t modifiers2access(modifiers_t*mod)
     }
     return ns;
 }
-static slotinfo_t* find_class(const char*name);
 
 static memberinfo_t* findmember_nsset(classinfo_t*cls, const char*name, char recurse, char is_static)
 {
@@ -2527,7 +2545,6 @@ X_IDENTIFIER: T_IDENTIFIER
             | "package" {PASS12 $$="package";}
             | "namespace" {PASS12 $$="namespace";}
             | "NaN" {PASS12 $$="NaN";}
-            | T_NAMESPACE {PASS12 $$=$1;}
 
 PACKAGE: PACKAGE '.' X_IDENTIFIER {PASS12 $$ = concat3($1,".",$3);free($1);$1=0;}
 PACKAGE: X_IDENTIFIER             {PASS12 $$=strdup($1);}
@@ -2615,7 +2632,7 @@ MODIFIER : KW_PUBLIC {PASS12 $$.flags=FLAG_PUBLIC;$$.ns=0;}
          | KW_OVERRIDE {PASS12 $$.flags=FLAG_OVERRIDE;$$.ns=0;}
          | KW_NATIVE {PASS12 $$.flags=FLAG_NATIVE;$$.ns=0;}
          | KW_INTERNAL {PASS12 $$.flags=FLAG_PACKAGEINTERNAL;$$.ns=0;}
-         | T_NAMESPACE {PASS12 $$.flags=FLAG_NAMESPACE;
+         | T_IDENTIFIER {PASS12 $$.flags=FLAG_NAMESPACE;
                                $$.ns=$1;
                        }
 
@@ -2840,7 +2857,6 @@ MAYBECONSTANT: '=' E {
   }
 }
 
-//CONSTANT : T_NAMESPACE {$$ = constant_new_namespace($1);}
 CONSTANT : T_INT {$$ = constant_new_int($1);}
 CONSTANT : T_UINT {
     $$ = constant_new_uint($1);
@@ -2852,11 +2868,6 @@ CONSTANT : "false" {$$ = constant_new_false($1);}
 CONSTANT : "null" {$$ = constant_new_null($1);}
 CONSTANT : "undefined" {$$ = constant_new_undefined($1);}
 CONSTANT : KW_NAN {$$ = constant_new_float(__builtin_nan(""));}
-
-/*CONSTANT : T_NAMESPACE {
-    // TODO
-    $$ = constant_new_namespace(namespace_new_namespace($1.url));
-}*/
 
 /* ---------------------------xml ------------------------------ */
 
@@ -3522,7 +3533,6 @@ E : E '.' '(' {PASS12 new_state();state->xmlfilter=1;} E ')' {
 
 ID_OR_NS : T_IDENTIFIER {$$=$1;}
 ID_OR_NS : '*' {$$="*";}
-ID_OR_NS : T_NAMESPACE {$$=(char*)$1;}
 SUBNODE: X_IDENTIFIER
        | '*' {$$="*";}
 
@@ -3828,12 +3838,6 @@ MEMBER : E '.' SUBNODE {
     }
 };
 
-/* TODO: causes 16 r/r conflicts */
-VAR_READ : T_NAMESPACE {
-    PASS2 
-    $$ = resolve_identifier($1);
-}
-
 VAR_READ : T_IDENTIFIER {
     PASS1
     /* Queue unresolved identifiers for checking against the parent
@@ -3891,7 +3895,7 @@ NAMESPACE_ID : "namespace" T_IDENTIFIER '=' T_STRING {
 }
 NAMESPACE_DECLARATION : MAYBE_MODIFIERS NAMESPACE_ID {
     PASS12
-    trie_put(active_namespaces, (unsigned char*)$2->name, (void*)$2->url);
+    dict_put(state->namespaces, (unsigned char*)$2->name, (void*)$2->url);
 
     namespace_t access = modifiers2access(&$1);
     varinfo_t* var = varinfo_register_global(access.access, state->package, $2->name);
@@ -3934,7 +3938,7 @@ USE_NAMESPACE : "use" "namespace" CLASS_SPEC {
         syntaxerror("%s.%s is not a namespace", $3->package, $3->name);
 
     const char*url = s->value->ns->name;
-    trie_put(active_namespaces, (unsigned char*)$3->name, (void*)url);
+    dict_put(state->namespaces, (unsigned char*)$3->name, (void*)url);
     add_active_url(url);
     $$=0;
 }

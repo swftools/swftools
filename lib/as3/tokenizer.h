@@ -77,8 +77,6 @@ extern char start_of_expression;
 
 typedef token_t*tokenptr_t;
 
-extern trie_t*active_namespaces;
-
 #include "parser.tab.h"
 
 extern char*token2string(enum yytokentype nr, YYSTYPE v);

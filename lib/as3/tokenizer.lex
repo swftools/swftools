@@ -470,31 +470,13 @@ static inline void c() {
     current_column+=yyleng;
 }
 
-trie_t*active_namespaces = 0;
-/*void tokenizer_register_namespace(const char*id)
-{
-    trie_put(namespaces, id, 0);
-}
-void tokenizer_unregister_namespace(const char*id)
-{
-    trie_remove(namespaces, id);
-}*/
-static inline char tokenizer_is_namespace(const char*id)
-{
-    if(!active_namespaces) return 0;
-    return trie_contains(active_namespaces, (const unsigned char*)id);
-}
-
 static inline int handleIdentifier()
 {
     char*s = malloc(yyleng+1);
     memcpy(s, yytext, yyleng);
     s[yyleng]=0;
     a3_lval.id = s;
-    if(tokenizer_is_namespace(s)) 
-        return T_NAMESPACE;
-    else
-        return T_IDENTIFIER;
+    return T_IDENTIFIER;
 }
 static int tokenerror();
 
